@@ -1,4 +1,4 @@
-/* @(#)root/base:$Name:  $:$Id: Rtypes.h,v 1.13 2002/01/10 10:21:31 rdm Exp $ */
+/* @(#)root/base:$Name:  $:$Id: Rtypes.h,v 1.13.4.1 2002/02/07 19:58:56 rdm Exp $ */
 
 /*************************************************************************
  * Copyright (C) 1995-2000, Rene Brun and Fons Rademakers.               *
@@ -126,9 +126,8 @@ template <class Tmpl> TBuffer &operator>>(TBuffer &buf, Tmpl *&obj)
    // operator>> which will be implemented either by the user or
    // by rootcint (in the dictionary file).
 
-   TBuffer &operator>>(TBuffer &buf, Tmpl *&obj);
-
-   return operator>>(buf,obj);
+   obj = (Tmpl *) buf.ReadObject(Tmpl::Class());
+   return buf;
 }
 #else
 template <class Tmpl> TBuffer &operator>>(TBuffer &buf, Tmpl *&obj);

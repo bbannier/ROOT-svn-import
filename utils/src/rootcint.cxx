@@ -1,4 +1,4 @@
-// @(#)root/utils:$Name:  $:$Id: rootcint.cxx,v 1.58 2002/01/25 11:34:50 brun Exp $
+// @(#)root/utils:$Name:  $:$Id: rootcint.cxx,v 1.58.4.1 2002/02/07 19:58:57 rdm Exp $
 // Author: Fons Rademakers   13/07/96
 
 /*************************************************************************
@@ -980,6 +980,9 @@ void WriteArrayDimensions(int dim)
 //______________________________________________________________________________
 void WriteInputOperator(G__ClassInfo &cl)
 {
+   if (cl.IsBase("TObject") || !strcmp(cl.Fullname(), "TObject"))
+      return;
+
    fprintf(fp, "//_______________________________________");
    fprintf(fp, "_______________________________________\n");
 
@@ -992,10 +995,10 @@ void WriteInputOperator(G__ClassInfo &cl)
 
    if (cl.IsTmplt()) {
       // Produce specialisation for templates:
-      fprintf(fp, "TBuffer &operator>>"
+      fprintf(fp, "template<> TBuffer &operator>>"
               "(TBuffer &buf, %s *&obj)\n{\n", cl.Fullname());
    } else {
-      fprintf(fp, "TBuffer &%soperator>>(TBuffer &buf, %s *&obj)\n{\n",
+      fprintf(fp, "template<> TBuffer &%soperator>>(TBuffer &buf, %s *&obj)\n{\n",
               space_prefix, cl.Fullname() );
    }
    fprintf(fp, "   // Read a pointer to an object of class %s.\n\n", cl.Fullname());
