@@ -7,7 +7,7 @@
  * Description:
  *  Allocate automatic variable arena 
  ************************************************************************
- * Copyright(c) 1995~2001  Masaharu Goto (MXJ02154@niftyserve.or.jp)
+ * Copyright(c) 1995~1999  Masaharu Goto (MXJ02154@niftyserve.or.jp)
  *
  * Permission to use, copy, modify and distribute this software and its 
  * documentation for any purpose is hereby granted without fee,
@@ -177,12 +177,6 @@ static long G__getstaticobject()
     }
     var = var->next;
   } while(var);
-#ifndef G__OLDIMPLEMENTATION1519
-  if(0==G__const_noerror) {
-    G__fprinterr(G__serr,"Error: No memory for static %s ",temp);
-    G__genericerror((char*)NULL);
-  }
-#else
 #ifndef G__PHILIPPE21
   if(0==G__const_noerror) 
     G__fprinterr(G__serr,"Error: No memory for static %s ",temp);
@@ -190,7 +184,6 @@ static long G__getstaticobject()
   G__fprinterr(G__serr,"Error: No memory for static %s ",temp);
 #endif
   G__genericerror((char*)NULL);
-#endif
   return(0);
 }
 
