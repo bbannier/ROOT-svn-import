@@ -30,26 +30,6 @@
 #endif
 #endif
 
-#ifdef _WIN32
-#include "windows.h"
-#include <errno.h>
-//______________________________________________________________________________
-FILE *FOpenAndSleep(const char *filename, const char *mode) {
-   int tries=0;
-   FILE *ret=0;
-   while (!ret && ++tries<51)
-      if (!(ret=fopen(filename, mode)) && tries<50)
-         if (errno!=EACCES) return 0;
-         else Sleep(200);
-   if (tries>1)  printf("fopen slept for %g seconds until it succeeeded.\n", (tries-1)/5.);
-   return ret;
-}
-
-# ifdef fopen
-#  undef fopen
-# endif
-# define fopen(A,B) FOpenAndSleep((A),(B))
-#endif
 
 #ifdef G__OLDIMPLEMENTATION1706
 #define G__OLDIMPLEMENTATION1702
@@ -10750,7 +10730,7 @@ G__value *buf;
 {
 #ifdef G__BOOL4BYTE
   if('g'==buf->type && buf->ref) 
-    return((unsigned char*)buf->ref);
+    return((int*)buf->ref);
   else if('d'==buf->type || 'f'==buf->type) 
     buf->obj.i = (int)buf->obj.d;
   else 
