@@ -576,7 +576,7 @@ ostream& operator<< ( ostream&, bool );
 
 istream& operator>> ( istream&, char& );
 istream& operator>> ( istream&, unsigned char& );
-istream& operator>> ( istream&, short& );
+//istream& operator>> ( istream&, short& );
 istream& operator>> ( istream&, unsigned short& );
 istream& operator>> ( istream&, int& );
 istream& operator>> ( istream&, unsigned int& );
@@ -597,10 +597,7 @@ template<class _Elem,
   class _Traits,
   class T> inline
   basic_istream<_Elem, _Traits>& 
-#ifndef __QNX__
-  __cdecl 
-#endif
-  operator>>(basic_istream<_Elem, _Traits>& _Istr, T& _Ch)
+  __cdecl operator>>(basic_istream<_Elem, _Traits>& _Istr, T& _Ch)
   {	// extract a signed char
     return (_Istr >> _Ch);
   }

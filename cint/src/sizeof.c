@@ -68,11 +68,7 @@ G__value *object;
   case 'C':
   case 'E': /* file ? */
   case 'Y': /* void */
-#ifndef G__OLDIMPLEMENTATION2191
-  case '1': /* pointer to function */
-#else
   case 'Q': /* pointer to function */
-#endif
     return(G__CHARALLOC);
   case 'R':
   case 'S':
@@ -93,20 +89,7 @@ G__value *object;
     return(G__P2MFALLOC);
 #ifndef G__OLDIMPLEMENTATION1604
   case 'G': /* bool */
-#ifdef G__BOOL4BYTE
-    return(G__INTALLOC);
-#else
     return(G__CHARALLOC);
-#endif
-#endif
-#ifndef G__OLDIMPLEMENTATION2189
-  case 'N':
-  case 'M':
-    return(G__LONGLONGALLOC);
-#ifndef G__OLDIMPLEMENTATION2191
-  case 'Q':
-    return(G__LONGDOUBLEALLOC);
-#endif
 #endif
   }
   return(1);
@@ -204,24 +187,11 @@ char *typename;
   typenum = G__defined_typename(typename);
   if(-1 != typenum) {
     switch(G__newtype.type[typenum]) {
-#ifndef G__OLDIMPLEMENTATION2189
-    case 'n':
-    case 'm':
-      result = sizeof(G__int64);
-      break;
-    case 'q':
-      result = sizeof(long double);
-      break;
-#endif
-#ifndef G__OLDIMPLEMENTATION1604
-    case 'g':
-#ifdef G__BOOL4BYTE
-      result = sizeof(int);
-      break;
-#endif
-#endif
     case 'b':
     case 'c':
+#ifndef G__OLDIMPLEMENTATION1604
+    case 'g':
+#endif
       result = sizeof(char);
       break;
     case 'h':
@@ -324,11 +294,7 @@ char *typename;
   if(strcmp(typename,"FILE")==0)
     return(sizeof(FILE));
 #ifndef G__OLDIMPLEMENTATION1604
-#ifdef G__BOOL4BYTE
-  if(strcmp(typename,"bool")==0) return(sizeof(int));
-#else
   if(strcmp(typename,"bool")==0) return(sizeof(unsigned char));
-#endif
 #endif
 
 #ifndef G__OLDIMPLEMENTATION406
@@ -507,26 +473,11 @@ char *typenamein;
     }
     else {
       switch(tolower(type)) {
-#ifndef G__OLDIMPLEMENTATION2189
-      case 'n':
-      case 'm':
-	size = G__LONGLONGALLOC;
-	break;
-#if 0
-      case 'q':
-	size = G__LONGDOUBLEALLOC;
-	break;
-#endif
-#endif
-#ifndef G__OLDIMPLEMENTATION1604
-      case 'g':
-#ifdef G__BOOL4BYTE
-	size = G__INTALLOC;
-	break;
-#endif
-#endif
       case 'b':
       case 'c':
+#ifndef G__OLDIMPLEMENTATION1604
+      case 'g':
+#endif
 	size = G__CHARALLOC;
 	break;
       case 'r':
@@ -1318,21 +1269,11 @@ int objsize;
 #endif
 #endif
   switch(t) {
-#ifndef G__OLDIMPLEMENTATION2189
-  case 'n':
-  case 'm':
-    *(G__int64*)(p) = (G__int64)G__Longlong(*pval);
-    break;
-#endif
-#ifndef G__OLDIMPLEMENTATION1604
-  case 'g':
-#ifdef G__BOOL4BYTE
-    *(int*)(p) = (int)G__int(*pval);
-    break;
-#endif
-#endif
   case 'c':
   case 'b':
+#ifndef G__OLDIMPLEMENTATION1604
+  case 'g':
+#endif
 #if defined(__GNUC__)
     *(int*)(p) = (int)G__int(*pval);
 #else
@@ -1565,74 +1506,13 @@ int ifn;
 
 #endif
 
-#ifndef G__OLDIMPLEMENTATION2204
-/**************************************************************************
- * G__typeconversion
- **************************************************************************/
-void G__typeconversion(ifunc,ifn,libp) 
-struct G__ifunc_table *ifunc;
-int ifn;
-struct G__param *libp;
-{
-  int formal_type,    param_type;
-  int formal_reftype, param_reftype;
-  int formal_tagnum,  param_tagnum;
-  int i;
-  for(i=0;i<libp->paran && i<ifunc->para_nu[ifn];i++) {
-    formal_type = ifunc->para_type[ifn][i];
-    param_type = libp->para[i].type;
-    formal_reftype = ifunc->para_reftype[ifn][i];
-    param_reftype = libp->para[i].obj.reftype.reftype;
-    formal_tagnum = ifunc->para_p_tagtable[ifn][i];
-    param_tagnum = libp->para[i].tagnum;
-    switch(formal_type) {
-    case 'd':
-    case 'f':
-      switch(param_type) {
-      case 'c':
-      case 's':
-      case 'i':
-      case 'l':
-      case 'b':
-      case 'r':
-      case 'h':
-      case 'k':
-	libp->para[i].obj.d = libp->para[i].obj.i;
-	libp->para[i].type = formal_type;
-	libp->para[i].ref = (long)(&libp->para[i].obj.d);
-	break;
-      }
-      break;
-    case 'c':
-    case 's':
-    case 'i':
-    case 'l':
-    case 'b':
-    case 'r':
-    case 'h':
-    case 'k':
-      switch(param_type) {
-      case 'd':
-      case 'f':
-	libp->para[i].obj.i = libp->para[i].obj.d;
-	libp->para[i].type = formal_type;
-	libp->para[i].ref = (long)(&libp->para[i].obj.i);
-	break;
-      }
-      break;
-    }
-  }
-}
-#endif
-
 #ifndef G__OLDIMPLEMENTATION1908
 /**************************************************************************
  * G__DLL_direct_globalfunc
  **************************************************************************/
 int G__DLL_direct_globalfunc(G__value *result7
-			     ,G__CONST char *funcname /* ifunc */
-			     ,struct G__param *libp
-			     ,int hash)   /* ifn */  {
+			     ,G__CONST char *funcname
+			     ,struct G__param *libp,int hash) {
   struct G__ifunc_table *ifunc = (struct G__ifunc_table*)funcname;
   int ifn=hash;
 
@@ -1643,9 +1523,6 @@ int G__DLL_direct_globalfunc(G__value *result7
 
   G__va_arg_buf G__va_arg_return;
   G__va_arg_buf G__va_arg_bufobj;
-#ifndef G__OLDIMPLEMENTATION2204
-  G__typeconversion(ifunc,ifn,libp);
-#endif
   G__va_arg_put(&G__va_arg_bufobj,libp,0);
 
   switch(ifunc->type[ifn]) {

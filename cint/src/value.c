@@ -7,7 +7,7 @@
  * Description:
  *  internal meta-data structure handling
  ************************************************************************
- * Copyright(c) 1995~2005  Masaharu Goto 
+ * Copyright(c) 1995~2003  Masaharu Goto 
  *
  * Permission to use, copy, modify and distribute this software and its 
  * documentation for any purpose is hereby granted without fee,
@@ -38,26 +38,6 @@ double value;
 }
 
 /****************************************************************
-* G__letbool(G__value buf,char type,int value)
-*   macro in G__ci.h
-****************************************************************/
-void G__letbool(buf,type,value)
-G__value *buf;
-int type;
-long value; /* used to be int */
-{
-	buf->type=type;
-	buf->obj.i=value?1:0;
-	/*
-	buf->tagnum = -1;
-	buf->typenum = -1;
-	*/
-#ifndef G__OLDIMPLEMENTATION456
-	buf->obj.reftype.reftype = G__PARANORMAL;
-#endif
-}
-
-/****************************************************************
 * G__letint(G__value buf,char type,int value)
 *   macro in G__ci.h
 ****************************************************************/
@@ -76,62 +56,6 @@ long value; /* used to be int */
 	buf->obj.reftype.reftype = G__PARANORMAL;
 #endif
 }
-
-#ifndef G__OLDIMPLEMENTATION2189
-/****************************************************************
-* G__letLonglong(G__value buf,char type,int value)
-*   macro in G__ci.h
-****************************************************************/
-void G__letLonglong(buf,type,value)
-G__value *buf;
-int type;
-G__int64 value; /* used to be int */
-{
-  buf->type=type;
-  buf->obj.ll=value;
-  /*
-    buf->tagnum = -1;
-    buf->typenum = -1;
-  */
-  /*buf->obj.reftype.reftype = G__PARANORMAL; */
-}
-
-/****************************************************************
-* G__letULonglong(G__value buf,char type,int value)
-*   macro in G__ci.h
-****************************************************************/
-void G__letULonglong(buf,type,value)
-G__value *buf;
-int type;
-G__uint64 value; /* used to be int */
-{
-  buf->type=type;
-  buf->obj.ull=value;
-  /*
-    buf->tagnum = -1;
-    buf->typenum = -1;
-  */
-  /* buf->obj.reftype.reftype = G__PARANORMAL; */
-}
-
-/****************************************************************
-* G__letLongdouble(G__value buf,char type,int value)
-*   macro in G__ci.h
-****************************************************************/
-void G__letLongdouble(buf,type,value)
-G__value *buf;
-int type;
-long double value; /* used to be int */
-{
-  buf->type=type;
-  buf->obj.ld=value;
-  /*
-    buf->tagnum = -1;
-    buf->typenum = -1;
-  */
-  /* buf->obj.reftype.reftype = G__PARANORMAL; */
-}
-#endif
 
 /****************************************************************
 * int G__isdouble(G__value buf)
@@ -210,172 +134,20 @@ G__value buf;
 }
 
 /****************************************************************
-* long G__bool(G__value buf)
-* 
-****************************************************************/
-long G__bool(buf) /* used to be int */
-G__value buf;
-{
-	switch(buf.type) {
-	case 'd':
-	case 'f':
-#ifndef G__OLDIMPLEMENTATION2207
-		return((long)(0!=buf.obj.d?1:0));
-#else
-		return((long)(buf.obj.d?1:0));
-#endif
-	default:
-		return(buf.obj.i?1:0);
-	}
-}
-
-/****************************************************************
 * long G__int(G__value buf)
 * 
 ****************************************************************/
 long G__int(buf) /* used to be int */
 G__value buf;
 {
-  switch(buf.type) {
-  case 'd':
-  case 'f':
-    return((long)buf.obj.d);
-#ifndef G__OLDIMPLEMENTATION2202
-  case 'n':
-#define G__OLDIMPLEMENTATION2229
-#ifdef G__OLDIMPLEMENTATION2229
-    G__fprinterr(G__serr,"Warning: conversion from 64bit to 32bit integer");
-    G__printlinenum();
-#endif
-    return((long)buf.obj.ll);
-  case 'm':
-#ifdef G__OLDIMPLEMENTATION2229
-    G__fprinterr(G__serr,"Warning: conversion from 64bit to 32bit integer");
-    G__printlinenum();
-#endif
-    return((long)buf.obj.ull);
-  case 'q':
-    return((long)buf.obj.ld);
-#endif
-  default:
-    return(buf.obj.i);
-  }
+	switch(buf.type) {
+	case 'd':
+	case 'f':
+		return((long)buf.obj.d);
+	default:
+		return(buf.obj.i);
+	}
 }
-
-/****************************************************************
-* long G__uint(G__value buf)
-* 
-****************************************************************/
-unsigned long G__uint(buf) /* used to be int */
-G__value buf;
-{
-  switch(buf.type) {
-  case 'd':
-  case 'f':
-    return((unsigned long)buf.obj.d);
-  case 'b':
-  case 'r':
-  case 'h':
-  case 'k':
-    return(buf.obj.ulo);
-#ifndef G__OLDIMPLEMENTATION2202
-  case 'n':
-#ifdef G__OLDIMPLEMENTATION2229
-    G__fprinterr(G__serr,"Warning: conversion from 64bit to 32bit integer");
-    G__printlinenum();
-#endif
-    return((unsigned long)buf.obj.ll);
-  case 'm':
-#ifdef G__OLDIMPLEMENTATION2229
-    G__fprinterr(G__serr,"Warning: conversion from 64bit to 32bit integer");
-    G__printlinenum();
-#endif
-    return((unsigned long)buf.obj.ull);
-  case 'q':
-    return((unsigned long)buf.obj.ld);
-#endif
-  default:
-    return((unsigned long)buf.obj.i);
-  }
-}
-
-#ifndef G__OLDIMPLEMENTATION2189
-/****************************************************************
-* G__int64 G__Longlong(G__value buf)
-* 
-****************************************************************/
-G__int64 G__Longlong(buf) /* used to be int */
-G__value buf;
-{
-  switch(buf.type) {
-  case 'd':
-  case 'f':
-    return((G__int64)buf.obj.d);
-  case 'n':
-    return((G__int64)buf.obj.ll);
-  case 'm':
-    return((G__int64)buf.obj.ull);
-  case 'q':
-    return((G__int64)buf.obj.ld);
-  default:
-    return((G__int64)buf.obj.i);
-  }
-}
-
-/****************************************************************
-* G__uint64 G__Longlong(G__value buf)
-* 
-****************************************************************/
-G__uint64 G__ULonglong(buf) /* used to be int */
-G__value buf;
-{
-  switch(buf.type) {
-  case 'd':
-  case 'f':
-    return((G__uint64)buf.obj.d);
-  case 'n':
-    return((G__uint64)buf.obj.ll);
-  case 'm':
-    return((G__uint64)buf.obj.ull);
-  case 'q':
-    return((G__uint64)buf.obj.ld);
-#if 1    /* Issue with t1134.cxx about 1<<31 being -1 or 0xffffffffUL */
-  case 'h':
-  case 'k':
-    return((G__uint64)buf.obj.uin);
-#endif
-  default:
-    /* return((G__uint64)buf.obj.uin); */
-    return((G__uint64)buf.obj.i);
-  }
-}
-
-/****************************************************************
-* long double G__Longdouble(G__value buf)
-* 
-****************************************************************/
-long double G__Longdouble(buf) /* used to be int */
-G__value buf;
-{
-  switch(buf.type) {
-  case 'd':
-  case 'f':
-    return((long double)buf.obj.d);
-  case 'n':
-    return((long double)buf.obj.ll);
-  case 'm':
-#ifdef G__WIN32
-    return((long double)buf.obj.ll);
-#else
-    return((long double)buf.obj.ull);
-#endif
-  case 'q':
-    return((long double)buf.obj.ld);
-  default:
-    return((long double)buf.obj.i);
-  }
-}
-#endif
 
 /******************************************************************
 * G__value G__toXvalue(G__value p,int var_type)
@@ -563,30 +335,8 @@ G__value p;
   }
 
   switch(p.type) {
-#ifndef G__OLDIMPLEMENTATION2189
-  case 'N':
-    result.obj.ll = (*(G__int64*)(p.obj.i));
-    result.ref = p.obj.i;
-    if(G__asm_noverflow) G__asm_inst[G__asm_cp-1]=(long)G__asm_tovalue_LL;
-    break;
-  case 'M':
-    result.obj.ull = (*(G__uint64*)(p.obj.i));
-    result.ref = p.obj.i;
-    if(G__asm_noverflow) G__asm_inst[G__asm_cp-1]=(long)G__asm_tovalue_ULL;
-    break;
-  case 'Q':
-    result.obj.ld = (*(long double*)(p.obj.i));
-    result.ref = p.obj.i;
-    if(G__asm_noverflow) G__asm_inst[G__asm_cp-1]=(long)G__asm_tovalue_LD;
-    break;
-#endif
 #ifndef G__OLDIMPLEMENTATION1982
   case 'G':
-#ifdef G__BOOL4BYTE
-    result.obj.i = (long)(*(int*)(p.obj.i));
-    if(G__asm_noverflow) G__asm_inst[G__asm_cp-1]=(long)G__asm_tovalue_I;
-    break;
-#endif
 #endif
   case 'B':
     result.obj.i = (long)(*(unsigned char *)(p.obj.i));

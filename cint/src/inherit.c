@@ -109,21 +109,12 @@ char baseaccess;
 #ifndef G__OLDIMPLEMENTATION692
   isvirtualbase = (to_base->property[to_base->basen]&G__ISVIRTUALBASE); 
 #endif
-#ifndef G__OLDIMPLEMENTATION2151
-  if(to_base->property[to_base->basen]&G__ISVIRTUALBASE) {
-    isvirtualbase |= G__ISINDIRECTVIRTUALBASE;
-  }
-#endif
   basen=to_base->basen;
   for(i=0;i<from_base->basen;i++) {
     ++basen;
     to_base->basetagnum[basen] = from_base->basetagnum[i];
     to_base->baseoffset[basen] = offset+from_base->baseoffset[i];
-#if !defined(G__OLDIMPLEMENTATION2151)
-    to_base->property[basen] 
-      = ((from_base->property[i]&(G__ISVIRTUALBASE|G__ISINDIRECTVIRTUALBASE)) 
-	  | isvirtualbase);
-#elif !defined(G__OLDIMPLEMENTATION692)
+#ifndef G__OLDIMPLEMENTATION692
     to_base->property[basen] 
       = ((from_base->property[i]&G__ISVIRTUALBASE) | isvirtualbase);
 #else
@@ -366,11 +357,6 @@ struct G__baseparam *pbaseparam;
   int donen=0;
   long addr,lval;
   double dval;
-#ifndef G__OLDIMPLEMENTATION2189
-  G__int64 llval;
-  G__uint64 ullval;
-  long double ldval;
-#endif
 #ifdef G__VIRTUALBASE
   int store_toplevelinstantiation;
   struct G__vbaseaddrlist *store_pvbaseaddrlist=NULL;
@@ -676,10 +662,6 @@ struct G__baseparam *pbaseparam;
 	    continue;
 	  }
 	  else {
-#ifndef G__OLDIMPLEMENTATION2213
-	    long local_store_globalvarpointer = G__globalvarpointer;
-	    G__globalvarpointer = G__PVOID;
-#endif
 	    addr = store_struct_offset+mem->p[i];
 	    if(isupper(mem->type[i])) {
 #ifndef G__OLDIMPLEMENTATION1870
@@ -781,40 +763,11 @@ struct G__baseparam *pbaseparam;
 		*(unsigned char*)addr = lval;
 		break;
 #endif
-#ifndef G__OLDIMPLEMENTATION2189
-	      case 'n':
-#ifndef G__OLDIMPLEMENTATION1870
-		llval = G__Longlong(G__getexpr(pbaseparam->param));
-#else
-		llval = G__Longlong(G__getexpr(pbaseparam->param[j]));
-#endif
-		*(G__int64*)addr = llval;
-		break;
-	      case 'm':
-#ifndef G__OLDIMPLEMENTATION1870
-		ullval = G__ULonglong(G__getexpr(pbaseparam->param));
-#else
-		ullval = G__ULonglong(G__getexpr(pbaseparam->param[j]));
-#endif
-		*(G__uint64*)addr = ullval;
-		break;
-	      case 'q':
-#ifndef G__OLDIMPLEMENTATION1870
-		ldval = G__Longdouble(G__getexpr(pbaseparam->param));
-#else
-		ldval = G__Longdouble(G__getexpr(pbaseparam->param[j]));
-#endif
-		*(long double*)addr = ldval;
-		break;
-#endif
 	      default:
 		G__genericerror("Error: Illegal type in member initialization");
 		break;
 	      }
 	    } /* if(isupper) else */
-#ifndef G__OLDIMPLEMENTATION2213
-	    G__globalvarpointer = local_store_globalvarpointer;
-#endif
 	  } /* if(reftype) else */
 	} /* if(flag) */
       } /* else if(!LOCALSTATIC) */

@@ -1,12 +1,5 @@
 // lib/dll_stl/str.h
 
-#include <iostream>
-#ifdef __MAKECINT__
-#pragma link off all classes;
-#pragma link off all functions;
-#pragma link off all globals;
-#endif
-
 #include <string>
 
 #ifndef __hpux
@@ -35,8 +28,7 @@ using namespace std;
 #pragma link C++ class string::iterator;
 #pragma link C++ class string::const_iterator;
 #pragma else
-//#pragma if ((G__GNUC>=3 && G__GNUC_MINOR>=1) && !defined(G__INTEL_COMPILER)) 
-#pragma if (G__GNUC_VER>=3001) && !defined(G__INTEL_COMPILER)) 
+#pragma if ((G__GNUC>=3 && G__GNUC_MINOR>=1) && !defined(G__INTEL_COMPILER)) 
 #pragma link C++ class string::iterator;
 #pragma else
 #pragma link C++ typedef string::iterator;
@@ -78,9 +70,6 @@ using namespace std;
 #pragma link C++ function operator<=(const string&,const char*);
 #pragma link C++ function operator>=(const string&,const char*);
 #pragma link C++ function operator+(const string&,const char*);
-
-#pragma link C++ function swap(string& lhs,string& rhs);
-#pragma link C++ function getline;
 //#endif // G__ROOT
 
 #endif // __MAKECINT__

@@ -336,8 +336,6 @@ int G__ignore_catch()
     G__asm_inst[G__asm_cp+2]=G__ifile.line_number;
 #if defined(G__NONSCALARFPOS2)
     G__asm_inst[G__asm_cp+3]=(long)fpos1.__pos;
-#elif defined(G__NONSCALARFPOS_QNX)
-    G__asm_inst[G__asm_cp+3]=(long)fpos1._Off;
 #else
     G__asm_inst[G__asm_cp+3]=(long)fpos1;
 #endif
@@ -923,26 +921,13 @@ char *statement;
     /* template  A<int>; this is a template instantiation */
     tcname[0] = c;
 #ifndef G__OLDIMPLEMENTATION1411
-#ifndef G__OLDIMPLEMENTATION2209
-    fseek(G__ifile.fp,-1,SEEK_CUR);
-    G__disp_mask=1;
-    c=G__fgetname_template(tcname,";");
-#else
     c=G__fgetname_template(tcname+1,";");
-#endif
     if(strcmp(tcname,"class")==0 ||
        strcmp(tcname,"struct")==0) {
       c=G__fgetstream_template(tcname,";");
     }
     else if(isspace(c)) {
 #ifndef G__OLDIMPLEMENTATION1843
-#ifndef G__OLDIMPLEMENTATION2211
-      int len = strlen(tcname);
-      int store_c;
-      while(len && ('&'==tcname[len-1] || '*'==tcname[len-1])) --len;
-      store_c = tcname[len];
-      tcname[len] = 0;
-#endif
       if(G__istypename(tcname)) {
 	G__ifile.line_number = line_number;
 	fsetpos(G__ifile.fp,&pos);
@@ -950,9 +935,6 @@ char *statement;
 	return(1);
       }
       else {
-#ifndef G__OLDIMPLEMENTATION2211
-	tcname[len] = store_c;
-#endif
 	c=G__fgetstream_template(tcname+strlen(tcname),";");
       }
 #else
@@ -3719,10 +3701,6 @@ G__value G__exec_statement()
 #endif
     
     switch( c ) {
-#ifdef G__OLDIMPLEMENTATIONxxxx_YET
-    case ',' : /* column */
-      if(!G__ansiheader) break;
-#endif
     case ' ' : /* space */
     case '\t' : /* tab */
     case '\n': /* end of line */
@@ -5439,15 +5417,9 @@ char *pvar_type;
       *pvar_type = 'a';
     }
     else {
-#ifndef G__OLDIMPLEMENTATION2191
-      G__typenum = G__search_typename(temp,'1',-1,0);
-      G__var_type = '1';
-      *pvar_type = '1';
-#else
       G__typenum = G__search_typename(temp,'Q',-1,0);
       G__var_type = 'Q';
       *pvar_type = 'Q';
-#endif
     }
     G__ifile.line_number=line;
     fsetpos(G__ifile.fp,&pos);

@@ -18,7 +18,7 @@ rem echo #####################################
 rem echo #
 rem del Release
 rem rmdir Release
-rem del G__*
-del rem *.def
-del makerem .bat
+del G__*
+del *.def
+del make.bat
 

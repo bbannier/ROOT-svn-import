@@ -7,7 +7,7 @@
  * Description:
  *  Class and member function template
  ************************************************************************
- * Copyright(c) 1995~2004  Masaharu Goto 
+ * Copyright(c) 1995~2003  Masaharu Goto 
  *
  * Permission to use, copy, modify and distribute this software and its
  * documentation for any purpose is hereby granted without fee,
@@ -515,7 +515,7 @@ char* source;
   struct G__Templatearg *targ=NULL;
   struct G__Templatearg *p=NULL;
   char type[G__MAXNAME];
-  /* int c; */
+  int c;
 #ifndef G__OLDIMPLEMENTATION2149
   int i,j,nest;
 #endif
@@ -605,11 +605,7 @@ char* source;
 
     /*  template<T*,E,int> ...
      *              ^                  */
-#ifndef G__OLDIMPLEMENTATION2180
-  } while (0) ;
-#else
   } while(','==c) ;
-#endif
 
   /*  template<T*,E,int> ...
    *                   ^                  */
@@ -897,19 +893,7 @@ int isforwarddecl;
 
 #ifndef G__OLDIMPLEMENTATION682
   /* store parent_tagnum */
-#if !defined(G__OLDIMPLEMENTATION1487) && !defined(G__OLDIMPLEMENTATION1446)
-  {
-      int env_tagnum;
-      if(-1!=G__def_tagnum) {
-	if(G__tagdefining!=G__def_tagnum) env_tagnum=G__tagdefining;
-	else                              env_tagnum=G__def_tagnum;
-      }
-      else env_tagnum = -1;
-      deftmpclass->parent_tagnum = env_tagnum;
-  }
-#else
   deftmpclass->parent_tagnum = env_tagnum;
-#endif
 #endif
 
   /* store template argument list */
@@ -1174,16 +1158,9 @@ char *name;
   while(deftmplt->next) { /* BUG FIX */
     if(hash==deftmplt->hash && strcmp(atom_name,deftmplt->name)==0) {
       /* look for ordinary scope resolution */
-      if((-1==scope_tagnum &&
-#ifndef G__OLDIMPLEMENTATION2173
-	  -1==G__tagdefining &&
-#endif
-	  (-1==deftmplt->parent_tagnum||env_tagnum==deftmplt->parent_tagnum))
-	 || (scope_tagnum==deftmplt->parent_tagnum
-#ifndef G__OLDIMPLEMENTATION2173
-	     && (-1==G__tagdefining || G__tagdefining==deftmplt->parent_tagnum)
-#endif
-	     )) {
+      if((-1==scope_tagnum&&(-1==deftmplt->parent_tagnum||
+			     env_tagnum==deftmplt->parent_tagnum))||
+	 scope_tagnum==deftmplt->parent_tagnum) {
 	return(deftmplt);
       }
       else if(-1==scope_tagnum) {
@@ -1199,12 +1176,7 @@ char *name;
 	/* look for enclosing scope resolution */
 	while(-1!=env_parent_tagnum) {
 	  env_parent_tagnum = G__struct.parent_tagnum[env_parent_tagnum];
-	  if(env_parent_tagnum==deftmplt->parent_tagnum
-#ifndef G__OLDIMPLEMENTATION2173
-	     && (-1==G__tagdefining || G__tagdefining==deftmplt->parent_tagnum)
-#endif
-	     ) 
-	    return(deftmplt);
+	  if(env_parent_tagnum==deftmplt->parent_tagnum) return(deftmplt);
 #ifndef G__OLDIMPLEMENTATION2091
           if(G__struct.baseclass[env_parent_tagnum]) {
             for(temp=0;temp<G__struct.baseclass[env_parent_tagnum]->basen;temp++) {
@@ -1646,7 +1618,6 @@ void G__declare_template()
      *4 template<class T> A<T>::B<T> f()
      *5 template<class T> A<T> f()
      *6 template<class T> A<T> A<T>::v;
-     *6'template<class T> A<T> A<T>::v = 0;
      *7 template<class T> A<T> { }  constructor
      *  also the return value could be a pointer or reference or const 
      *  or any combination of the 3
@@ -1657,19 +1628,9 @@ void G__declare_template()
     c = G__fgetname_template(temp2,"*&(;");
     while (c=='&'||c=='*') {
        /* we skip all the & and * we see and what's in between.
-          This should be removed from the func name (what we are looking for)
+          This should remove from the name of the function (what we are looking for)
           anything preceding combinations of *,& and const. */
-#ifndef G__OLDIMPLEMENTATION2157
-       c = G__fgetname_template(temp2,"*&(;=");
-#ifndef G__OLDIMPLEMENTATION2178
-        if (c=='=' && strncmp(temp2,"operator",strlen("operator"))==0) {
-           strcat(temp2,"=");
-           c = G__fgetname_template(temp2+strlen(temp2),"*&(;=");
-        }
-#endif
-#else
        c = G__fgetname_template(temp2,"*&(;");
-#endif
     }
 #else /* 2061 */
     c = G__fgetname_template(temp2,"(;");
@@ -1696,34 +1657,11 @@ void G__declare_template()
 	c = G__fgetstream(temp2+8,"(");
       }
     }
-#ifdef G__OLDIMPLEMENTATION2157_YET
-    if(isspace(c)) {
-      /* static member with initialization */
-      fsetpos(G__ifile.fp,&pos);
-      G__ifile.line_number = store_line_number;
-      if(G__dispsource) G__disp_mask=0;
-      G__createtemplatememfunc(temp);
-      /* skip body of member function template */
-      c = G__fignorestream("{;");
-      if(';'!=c) c = G__fignorestream("}");
-      G__freetemplatearg(targ);
-      return;
-    }
-#endif
-#ifndef G__OLDIMPLEMENTATION2157
-    if(';'==c || '='==c) ismemvar=1;
-#else
     if(';'==c) ismemvar=1;
-#endif
-    if('('==c||';'==c
-#ifndef G__OLDIMPLEMENTATION2157
-       || '='==c
-#endif
-       ) {
+    if('('==c||';'==c) {
       /*1 template<class T> A<T>::f()           ::f
        *3 template<class T> A<T> A<T>::f()      A<T>::f
        *6 template<class T> A<T> A<T>::v;       A<T>::v
-       *6'template<class T> A<T> A<T>::v=0;     A<T>::v
        *7 template<class T> A<T> { }  constructor
        *5 template<class T> A<T> f()            f        */
       p=strchr(temp2,':');
@@ -1746,13 +1684,6 @@ void G__declare_template()
     else if('<'==c) {
       /* Do nothing */
     }
-#ifdef G__OLDIMPLEMENTATION2157_YET
-    else if('='==c) {
-      /*6'template<class T> A<T> A<T>::v=0;     A<T>::v */
-      c = G__fignorestream(";");
-      ismemvar=1;
-    }
-#endif
     else { /* if(strncmp(temp,"::",2)==0) { */
       /*2 template<class T> A<T>::B<T> A<T>::f()  ::B<T>
        *4 template<class T> A<T>::B<T> f()        ::B<T> */
@@ -2224,14 +2155,7 @@ int *pnpara;
   /**************************************************************
   * explicitly given template argument
   **************************************************************/
-#ifndef G__OLDIMPLEMENTATION2180
-  if (paralist[0]=='>' && paralist[1]==0) 
-     c='>';
-  else
-     c=','; 
-#else
   c=',';
-#endif
   isrc=0;
   while(','==c) {
 #ifndef G__OLDIMPLEMENTATION688
@@ -2272,21 +2196,11 @@ int *pnpara;
 	{
 	  int store_memberfunc_tagnum = G__memberfunc_tagnum;
 	  int store_exec_memberfunc = G__exec_memberfunc;
-#ifndef G__OLDIMPLEMENTATION2161
-	  int store_no_exec_compile = G__no_exec_compile;
-	  int store_asm_noverflow = G__asm_noverflow;
-	  G__no_exec_compile=0;
-	  G__asm_noverflow=0;
-#endif
 	  if(-1!=G__tagdefining) {
 	    G__exec_memberfunc = 1;
 	    G__memberfunc_tagnum = G__tagdefining;
 	  }
 	  buf = G__getexpr(string);
-#ifndef G__OLDIMPLEMENTATION2161
-	  G__no_exec_compile = store_no_exec_compile;
-	  G__asm_noverflow = store_asm_noverflow;
-#endif
 	  G__exec_memberfunc = store_exec_memberfunc;
 	  G__memberfunc_tagnum = store_memberfunc_tagnum;
 	}
@@ -4258,7 +4172,7 @@ fpos_t *ppos;
 #ifndef G__OLDIMPLEMENTATION1462
             || strcmp(paraname,"typename")==0
 #endif
-	    );
+	      );
 
 #ifndef G__OLDIMPLEMENTATION1464
     /* Don't barf on an empty arg list. */

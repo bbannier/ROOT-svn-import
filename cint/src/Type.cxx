@@ -8,7 +8,7 @@
  *  Extended Run Time Type Identification API
  ************************************************************************
  * Author                  Masaharu Goto 
- * Copyright(c) 1995~2005  Masaharu Goto 
+ * Copyright(c) 1995~1999  Masaharu Goto 
  *
  * Permission to use, copy, modify and distribute this software and its 
  * documentation for any purpose is hereby granted without fee,
@@ -23,12 +23,7 @@
 #include "common.h"
 
 #ifndef G__OLDIMPLEMENTATION1586
-// This length should match or exceed the length in G__type2string
-#ifndef G__OLDIMPLEMENTATION711
-static char G__buf[G__LONGLINE];
-#else
-static char G__buf[G__MAXNAME*2];
-#endif
+static char G__buf[G__ONELINE];
 #endif
 
 /*********************************************************************
@@ -102,7 +97,7 @@ int G__TypeInfo::operator!=(const G__TypeInfo& a)
   }
 }
 ///////////////////////////////////////////////////////////////////////////
-const char* G__TypeInfo::TrueName() 
+const char* G__TypeInfo::TrueName()
 {
 #if !defined(G__OLDIMPLEMENTATION1586)
   strcpy(G__buf,
@@ -115,7 +110,7 @@ const char* G__TypeInfo::TrueName()
 #endif
 }
 ///////////////////////////////////////////////////////////////////////////
-const char* G__TypeInfo::Name() 
+const char* G__TypeInfo::Name()
 {
 #if !defined(G__OLDIMPLEMENTATION1586)
   strcpy(G__buf,G__type2string((int)type,(int)tagnum,(int)typenum,(int)reftype
@@ -129,7 +124,7 @@ const char* G__TypeInfo::Name()
 #endif
 }
 ///////////////////////////////////////////////////////////////////////////
-int G__TypeInfo::Size() const
+int G__TypeInfo::Size()
 {
   G__value buf;
   buf.type=(int)type;
@@ -171,10 +166,7 @@ long G__TypeInfo::Property()
   if(G__ClassInfo::IsValid()) property|=G__ClassInfo::Property();
 #endif
   if(isupper((int)type)) property|=G__BIT_ISPOINTER;
-#if !defined(G__OLDIMPLEMENTATION2228)
-  if(reftype==G__PARAREFERENCE||reftype>G__PARAREF) 
-    property|=G__BIT_ISREFERENCE;
-#elif !defined(G__OLDIMPLEMENTATION1453)
+#ifndef G__OLDIMPLEMENTATION1453
   if (reftype) property |= G__BIT_ISREFERENCE;
 #endif
 #ifndef G__OLDIMPLEMENTATION401

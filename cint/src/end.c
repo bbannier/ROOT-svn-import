@@ -55,10 +55,6 @@ void G__scratch_all()
   G__LockCriticalSection();
 #endif
 
-  G__lasterrorpos.line_number = 0;
-  G__lasterrorpos.filenum = -1;
-  
-
 #ifndef G__OLDIMPLEMENTATION563
   G__cintready=0; /* reset ready flag for embedded use */
 #endif
@@ -274,9 +270,6 @@ void G__scratch_all()
 
   G__reset_setup_funcs();
 
-#ifndef G__OLDIMPLEMENTATION2227
-  G__clear_errordictpos();
-#endif
 
 #ifdef G__MEMTEST
   G__memresult();
@@ -755,12 +748,6 @@ int G__close_inputfiles()
 #endif
   for(iarg=0;iarg<G__nfile;iarg++) {
     if(G__srcfile[iarg].dictpos) {
-#ifndef G__OLDIMPLEMENTATION2227
-      if(G__srcfile[iarg].dictpos->ptype &&
-	 G__srcfile[iarg].dictpos->ptype!=(char*)G__PVOID) {
-	free((void*)G__srcfile[iarg].dictpos->ptype);
-      }
-#endif
       free((void*)G__srcfile[iarg].dictpos);
       G__srcfile[iarg].dictpos=(struct G__dictposition*)NULL;
     }

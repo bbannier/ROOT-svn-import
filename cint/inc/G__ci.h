@@ -7,7 +7,7 @@
  * Description:
  *  C/C++ interpreter header file
  ************************************************************************
- * Copyright(c) 1995~2005  Masaharu Goto (cint@pcroot.cern.ch)
+ * Copyright(c) 1995~2004  Masaharu Goto (cint@pcroot.cern.ch)
  *
  * Permission to use, copy, modify and distribute this software and its 
  * documentation for any purpose is hereby granted without fee,
@@ -22,11 +22,11 @@
 #define G__CI_H
 
 #ifdef G__CINT_VER6
-#define G__CINTVERSION      6000033
-#define G__CINTVERSIONSTR  "6.0.33, Mar 14 2005"
+#define G__CINTVERSION      6000018
+#define G__CINTVERSIONSTR  "6.0.18, Sep 29 2004"
 #else
-#define G__CINTVERSION      50150169
-#define G__CINTVERSIONSTR  "5.15.169, Mar 14 2005"
+#define G__CINTVERSION      50150154
+#define G__CINTVERSIONSTR  "5.15.154, Sep 29 2004"
 #endif
 
 #define G__ALWAYS
@@ -35,30 +35,7 @@
 * SPECIAL CHANGES and CINT CORE COMPILATION SWITCH
 **********************************************************************/
 
-#define G__NATIVELONGLONG 1
-
 #ifndef G__CINT_VER6
-#define G__OLDIMPLEMENTATION2187
-#define G__OLDIMPLEMENTATION2184
-#define G__OLDIMPLEMENTATION2182
-#define G__OLDIMPLEMENTATION2177
-#define G__OLDIMPLEMENTATION2172
-#define G__OLDIMPLEMENTATION2171
-#define G__OLDIMPLEMENTATION2170
-#define G__OLDIMPLEMENTATION2169
-#define G__OLDIMPLEMENTATION2163
-#define G__OLDIMPLEMENTATION2162
-#define G__OLDIMPLEMENTATION2161
-#define G__OLDIMPLEMENTATION2160
-#define G__OLDIMPLEMENTATION2159
-#define G__OLDIMPLEMENTATION2156
-#define G__OLDIMPLEMENTATION2155
-#define G__OLDIMPLEMENTATION2154
-#define G__OLDIMPLEMENTATION2153
-#define G__OLDIMPLEMENTATION2152
-#define G__OLDIMPLEMENTATION2151
-#define G__OLDIMPLEMENTATION2150
-#define G__OLDIMPLEMENTATION2148
 #define G__OLDIMPLEMENTATION2147
 #define G__OLDIMPLEMENTATION2146
 #define G__OLDIMPLEMENTATION2143
@@ -103,12 +80,6 @@
 #define G__OLDIMPLEMENTATION2051
 #define G__OLDIMPLEMENTATION2042
 #define G__OLDIMPLEMENTATION1073
-#endif
-
-/* Native long long, unsigned long long, long double implementation */
-#ifndef G__NATIVELONGLONG
-#define G__OLDIMPLEMENTATION2189
-#define G__OLDIMPLEMENTATION2192
 #endif
 
 /* Problem remains with autoloading if library is unloaded. Tried to fix it
@@ -158,17 +129,7 @@
 
 /* For a machine which has unaddressable bool */
 #ifndef G__UNADDRESSABLEBOOL
-#ifndef G__OLDIMPLEMENTATION2186
-#if defined(__APPLE__)
-/* Fons, if you find problems, comment out G__BOOL4BYTE and uncomment
- * G__UNADDRESSABLEBOOL. Thanks */
-#define G__BOOL4BYTE
-/* #define G__UNADDRESSABLEBOOL */
-#endif
-#else /* 2186 */
-#define G__BOOL1BYTE
-/* #define G__UNADDRESSABLEBOOL */ /* ??? Philippe propose this change */
-#endif /* 2186 */
+#define G__UNADDRESSABLEBOOL
 #endif
 
 /* Speed up G__strip_quotation */
@@ -330,12 +291,6 @@
 #endif
 #endif
 
-#ifdef __QNX__
-#ifndef G__QNX
-#define G__QNX
-#endif
-#endif
-
 #ifdef _MSC_VER
 #ifndef G__VISUAL
 #define G__VISUAL 1
@@ -381,20 +336,6 @@
 #   endif
 #endif
 
-#ifndef G__OLDIMPLEMENTATION2189
-/***********************************************************************
- * Native long long support
- ***********************************************************************/
-#if defined(G__WIN32)
-typedef __int64            G__int64;
-typedef unsigned __int64   G__uint64;
-#else
-typedef long long          G__int64;
-typedef unsigned long long G__uint64;
-#endif
-
-#endif
-
 
 /***********************************************************************
  * Something that depends on platform
@@ -409,17 +350,12 @@ typedef unsigned long long G__uint64;
 #endif
 
 /* Error redirection ,  G__fprinterr */
-#if defined(G__WIN32) && !defined(G__ERRORCALLBACK)
+#if defined(G__WIN32) && !defined(G__ERRORCALLBACk)
 #define G__ERRORCALLBACK
 #endif
 #ifndef G__ERRORCALLBACK
 #define G__OLDIMPLEMENTATION1485
 #define G__OLDIMPLEMENTATION2000
-#endif
-
-/* temporary file generation */
-#if defined(G__WIN32) 
-#define G__TMPFILE
 #endif
 
 
@@ -467,7 +403,6 @@ typedef long fpos_tt; /* pos_t is defined to be a struct{32,32} in VMS.
 #else
 #define G__EXPORT
 #endif
-
 
 
 #if defined(G__SIGNEDCHAR) 
@@ -907,11 +842,6 @@ typedef struct {
     unsigned int uin;
     unsigned long ulo;
 #endif
-#ifndef G__OLDIMPLEMENTATION2189
-    G__int64 ll;
-    G__uint64 ull;
-    long double ld;
-#endif
   } obj;
   int type;
   int tagnum;
@@ -991,10 +921,6 @@ extern G__value G__null;
 #define G__FLOATALLOC  sizeof(float)
 #define G__DOUBLEALLOC sizeof(double)
 #define G__P2MFALLOC   G__sizep2memfunc
-#ifndef G__OLDIMPLEMENTATION2189
-#define G__LONGLONGALLOC sizeof(G__int64)
-#define G__LONGDOUBLEALLOC sizeof(long double)
-#endif
 #endif /* __CINT__ */
 
 #ifdef G__TESTMAIN
@@ -1408,7 +1334,7 @@ struct G__param {
 extern "C" {   /* extern C 2 */
 #endif
 
-#if defined(G__ANSIHEADER) || defined(G__ANSI)
+#ifdef G__ANSIHEADER
 typedef int (*G__InterfaceMethod)(G__value*,G__CONST char*,struct G__param*,int);
 #else
 typedef int (*G__InterfaceMethod)();
@@ -1433,9 +1359,8 @@ extern "C" { /* extern C 3 */
 * structure for class inheritance
 *
 **************************************************************************/
-#define G__ISDIRECTINHERIT         0x0001
-#define G__ISVIRTUALBASE           0x0002
-#define G__ISINDIRECTVIRTUALBASE   0x0004
+#define G__ISDIRECTINHERIT 0x0001
+#define G__ISVIRTUALBASE   0x0002
 struct G__inheritance {
   int basen;
   short basetagnum[G__MAXBASE];
@@ -1752,20 +1677,6 @@ extern void (*G__aterror)();
 #define G__P(funcparam) ()
 #endif
 
-extern G__EXPORT unsigned long G__uint G__P((G__value buf));
-
-#ifdef G__NATIVELONGLONG
-extern G__EXPORT void G__letLonglong G__P((G__value* buf,int type,G__int64 value));
-extern G__EXPORT void G__letULonglong G__P((G__value* buf,int type,G__uint64 value));
-extern G__EXPORT void G__letLongdouble G__P((G__value* buf,int type,long double value));
-extern G__EXPORT G__int64 G__Longlong G__P((G__value buf)); 
-extern G__EXPORT G__uint64 G__ULonglong G__P((G__value buf));
-extern G__EXPORT long double G__Longdouble G__P((G__value buf));
-extern G__EXPORT G__int64* G__Longlongref G__P((G__value *buf));
-extern G__EXPORT G__uint64* G__ULonglongref G__P((G__value *buf));
-extern G__EXPORT long double* G__Longdoubleref G__P((G__value *buf));
-#endif
-
 #if defined(G__DEBUG) && !defined(G__MEMTEST_C)
 #include "src/memtest.h"
 #endif
@@ -1882,11 +1793,7 @@ typedef struct {
 /* #define G__VAARG_NOSUPPORT */
 
 #ifndef G__OLDIMPLEMENTATION1696
-#ifdef __ia64__
-#define G__VAARG_INC_COPY_N 8
-#else
 #define G__VAARG_INC_COPY_N 4
-#endif
 #define G__VAARG_PASS_BY_REFERENCE 8
 #endif
 
@@ -2142,9 +2049,6 @@ extern G__EXPORT int G__delete_ipath G__P((G__CONST char *ipath));
 extern G__EXPORT void G__add_macro G__P((G__CONST char *macro));
 extern G__EXPORT void G__check_setup_version G__P((int version,G__CONST char *func));
 extern G__EXPORT long G__int G__P((G__value buf));
-#ifndef G__OLDIMPLEMENTATION2231
-extern G__EXPORT long G__int_cast G__P((G__value buf));
-#endif
 extern G__EXPORT double G__double G__P((G__value buf));
 extern G__EXPORT G__value G__calc G__P((G__CONST char *expr));
 extern G__EXPORT int  G__loadfile G__P((G__CONST char* filename));
@@ -2245,17 +2149,6 @@ extern G__EXPORT void G__set_emergencycallback G__P((void (*p2f)()));
 #endif
 #ifndef G__OLDIMPLEMENTATION1485
 extern G__EXPORT void G__set_errmsgcallback(void* p);
-#endif
-#ifndef G__OLDIMPLEMENTATION2189
-extern G__EXPORT void G__letLonglong G__P((G__value* buf,int type,G__int64 value));
-extern G__EXPORT void G__letULonglong G__P((G__value* buf,int type,G__uint64 value));
-extern G__EXPORT void G__letLongdouble G__P((G__value* buf,int type,long double value));
-extern G__EXPORT G__int64 G__Longlong G__P((G__value buf)); 
-extern G__EXPORT G__uint64 G__ULonglong G__P((G__value buf));
-extern G__EXPORT long double G__Longdouble G__P((G__value buf));
-extern G__EXPORT G__int64* G__Longlongref G__P((G__value *buf));
-extern G__EXPORT G__uint64* G__ULonglongref G__P((G__value *buf));
-extern G__EXPORT long double* G__Longdoubleref G__P((G__value *buf));
 #endif
 
 #else /* G__MULTITHREADLIBCINT */
@@ -2408,17 +2301,6 @@ static void (*G__set_emergencycallback) G__P((void (*p2f)()));
 #ifndef G__OLDIMPLEMENTATION1485
 static void (*G__set_errmsgcallback) G__P((void* p));
 #endif
-#ifndef G__OLDIMPLEMENTATION2189
-static void (*G__letLonglong) G__P((G__value* buf,int type,G__int64 value));
-static void (*G__letULonglong) G__P((G__value* buf,int type,G__uint64 value));
-static void (*G__letLongdouble) G__P((G__value* buf,int type,long double value));
-static G__int64 (*G__Longlong) G__P((G__value buf)); /* used to be int */
-static G__uint64 (*G__ULonglong) G__P((G__value buf)); /* used to be int */
-static long double (*G__Longdouble) G__P((G__value buf)); /* used to be int */
-static G__int64* (*G__Longlongref) G__P((G__value *buf));
-static G__uint64* (*G__ULonglongref) G__P((G__value *buf));
-static long double* (*G__Longdoubleref) G__P((G__value *buf));
-#endif
 
 #ifdef G__MULTITHREADLIBCINTC
 G__EXPORT void G__SetCCintApiPointers(
@@ -2553,17 +2435,6 @@ G__EXPORT void G__SetCppCintApiPointers(
 #endif
 #ifndef G__OLDIMPLEMENTATION1485
 		,void* a127
-#endif
-#ifndef G__OLDIMPLEMENTATION2189
-		,void* a128
-		,void* a129
-		,void* a130
-		,void* a131
-		,void* a132
-		,void* a133
-		,void* a134
-		,void* a135
-		,void* a136
 #endif
 		)
 {
@@ -2704,17 +2575,6 @@ G__EXPORT void G__SetCppCintApiPointers(
 #ifndef G__OLDIMPLEMENTATION1485
   G__set_errmsgcallback= (void (*) G__P((void *p)) ) a127;
 #endif
-#ifndef G__OLDIMPLEMENTATION2189
-  G__letLonglong=(void (*) G__P((G__value* buf,int type,G__int64 value)))a128;
-  G__letULonglong=(void (*) G__P((G__value* buf,int type,G__uint64 value)))a129;
-  G__letLongdouble=(void (*) G__P((G__value* buf,int type,long double value)))a130;
-  G__Longlong=(void (*) G__P((G__value buf)))a131;
-  G__ULonglong=(void (*) G__P((G__value buf)))a132;
-  G__Longdouble=(void (*) G__P((G__value buf)))a133;
-  G__Longlongref=(void (*) G__P((G__value *buf)))a134;
-  G__ULonglongref=(void (*) G__P((G__value *buf)))a135;
-  G__Longdoubleref=(void (*) G__P((G__value *buf)))a136;
-#endif
 }
 
 #endif /* G__MULTITHREADLIBCINT */
@@ -2807,16 +2667,6 @@ G__signaltype G__signal G__P((int sgnl,void (*f)(int)));
 * end of specialstdio or win32
 **************************************************************************/
 
-#ifndef G__OLDIMPLEMENTATION2189
-/***********************************************************************
- * Native long long support
- ***********************************************************************/
-extern G__EXPORT G__int64 G__expr_strtoll G__P((const char *nptr,char **endptr, register int base));
-extern G__EXPORT G__uint64 G__expr_strtoull G__P((const char *nptr, char **endptr, register int base));
-#endif
-
-
-/***********************************************************************/
 #if defined(__cplusplus) && !defined(__CINT__)
 } /* extern C 3 */
 #endif

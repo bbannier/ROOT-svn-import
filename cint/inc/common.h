@@ -285,7 +285,6 @@
 #define G__PCONSTVAR      4
 #define G__PCONSTCONSTVAR 5
 #define G__CONSTFUNC      8
-#define G__STATICCONST 0x10
 
 /**************************************************************************
 * Class charasteristics
@@ -458,7 +457,6 @@
 #define G__MEMCPY             (long)0x7fff0050
 #define G__MEMSETINT          (long)0x7fff0051
 #define G__JMPIFVIRTUALOBJ    (long)0x7fff0052
-#define G__VIRTUALADDSTROS    (long)0x7fff0053
 
 #define G__PAUSE              (long)0x7fff00fe
 
@@ -1077,8 +1075,6 @@ struct G__funclist {
 #define G__BC_COMPILEERROR 0x02
 #define G__BC_RUNTIMEERROR 0x04
 
-#define G__BC_DEBUG        0x08
-
 /*********************************************************************
 * debug interface
 *********************************************************************/
@@ -1096,9 +1092,6 @@ struct G__view {
   long struct_offset;
   int tagnum;
   int exec_memberfunc;
-#ifndef G__OLDIMPLEMENTATION2159
-  long localmem;
-#endif
 };
 #endif
 

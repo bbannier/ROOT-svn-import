@@ -78,13 +78,13 @@ public:
 //////////////////////////////////////////////////////////////////////
 #elif defined(G__GNUC) && !defined (G__KCC) 
 
-template<int inst>
+template <int inst>
 class __malloc_alloc_template {
  public:
   static void * allocate(size_t n);
   static void deallocate(void *p, size_t /* n */);
   static void * reallocate(void *p, size_t /* old_sz */, size_t new_sz);
-#if defined(G__GNUC_VER) && (G__GNUC_VER >= 2095)
+#if (G__GNUC >= 3) || ((G__GNUC == 2) && (G__GNUC_MINOR >= 95))
   static void (* __set_malloc_handler(void (*f)()))();
 #else
   static void (* set_malloc_handler(void (*f)()))();
@@ -138,9 +138,6 @@ public:
   typedef T&          reference;
   typedef const T&    const_reference;
   typedef T           value_type;
-#ifdef G__KCC
-   allocator();
-#endif
   // template members don't really work with cint yet...
 #if 0
   template <class U> struct rebind { typedef allocator<U> other; };

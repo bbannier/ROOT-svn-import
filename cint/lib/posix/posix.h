@@ -231,7 +231,7 @@ extern gid_t getgid(void);
 extern gid_t getegid(void);
 extern int setuid(uid_t uid);
 
-#if !(defined(G__APPLE) || defined(__APPLE__) || defined(G__QNX))
+#if !(defined(G__APPLE) || defined(__APPLE__))
 extern char *cuserid(char *string);
 #endif
 extern char *getlogin(void);
@@ -256,11 +256,7 @@ extern int fchown(int fd,int owner,int group);
 #else
 extern int fchown(int fd,uid_t owner,gid_t group);
 #endif
-
-#if !defined(G__QNX)
 extern int fchdir(int fd);
-#endif
-
 #if !defined(G__SUN) && !defined(G__CYGWIN)
 #elif !(defined(G__APPLE) || defined(__APPLE__))
 extern char *get_current_dir_name(void);
@@ -272,7 +268,7 @@ extern char *getwd(char *buf);
 extern int setpgrp(pid_t _pid,pid_t _pgrp);
 #elif defined(G__SUN) || defined(__sun)
 extern long setpgrp(void);
-#elif defined(G__FBSD)||defined(__FreeBSD__)||defined(G__OBSD)||defined(__OpenBSD__)||((defined(G__alpha)||defined(__alpha))&&defined(G__GNUC))||((defined(G__alpha)||defined(__alpha))&&defined(G__GNUC))
+#elif defined(G__FBSD)||defined(__FreeBSD__)||((defined(G__alpha)||defined(__alpha))&&defined(G__GNUC))||((defined(G__alpha)||defined(__alpha))&&defined(G__GNUC))
 extern int setpgrp(pid_t _pid, pid_t _pgrp);
 #elif defined(G__KCC) || defined(__KCC)
 extern pid_t setpgrp(void);

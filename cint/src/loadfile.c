@@ -7,7 +7,7 @@
  * Description:
  *  Loading source file
  ************************************************************************
- * Copyright(c) 1995~2005  Masaharu Goto 
+ * Copyright(c) 1995~2003  Masaharu Goto 
  *
  * Permission to use, copy, modify and distribute this software and its
  * documentation for any purpose is hereby granted without fee,
@@ -1429,7 +1429,7 @@ char *filenamein;
   int store_no_exec_compile;
   int store_asm_exec;
 #endif
-#if defined(R__FBSD) || defined(R__OBSD)
+#if defined(R__FBSD)
   char soext[]=SOEXT;
 #endif
 #ifndef G__OLDIMPLEMENTATION1849
@@ -1715,7 +1715,7 @@ char *filenamein;
 	  strcpy(filename+len-2,G__getmakeinfo("DLLPOST"));
 #endif
 	}
-#if defined(R__FBSD) || defined(R__OBSD)
+#if defined(R__FBSD)
 	else if (len>strlen(soext) &&
 		 strcmp(filename+len-strlen(soext),soext)==0) {
 #ifndef G__OLDIMPLEMENTATION1645
@@ -2279,7 +2279,7 @@ char *filenamein;
 	       strcmp(filename+len-3,".so")==0)) ||
      (len>4&& (strcmp(filename+len-4,".dll")==0 ||
 	       strcmp(filename+len-4,".DLL")==0)) ||
-#if defined(R__FBSD) || defined(R__OBSD)
+#if defined(R__FBSD)
      (len>strlen(soext) && strcmp(filename+len-strlen(soext), soext)==0) ||
 #endif
 #ifndef G__OLDIMPLEMENTATION1705
@@ -2295,13 +2295,6 @@ char *filenamein;
     /* Caution, G__ifile.fp is left openned.
      * This may cause trouble in future */
     fclose(G__srcfile[fentry].fp);
-#ifndef G__OLDIMPLEMENTATION2224
-    if (G__ifile.fp == G__srcfile[fentry].fp) {
-      /* Since the file is closed, the FILE* pointer is now invalid and thus
-	 we have to remove it from G__ifile! */
-      G__ifile.fp=(FILE*)NULL;
-    }
-#endif
     G__srcfile[fentry].fp=(FILE*)NULL;
 #ifndef G__OLDIMPLEMENTATION1908
     G__srcfile[fentry].slindex = G__shl_load(G__ifile.name);
@@ -2866,10 +2859,6 @@ char *name;
 #if defined(G__TMPFILE) 
   const char *appendix="_cint";
   static char tempname[G__MAXFILENAME];
-#ifndef G__OLDIMPLEMENTATION2174
-  int pid = getpid();
-  int now = clock();
-#endif
   char *tmp;
   if('\0'==G__tmpdir[0]) {
     if((tmp=getenv("CINTTMPDIR"))) strcpy(G__tmpdir,tmp);
@@ -2880,25 +2869,13 @@ char *name;
   if(name) {
     strcpy(name,(tmp=tempnam(G__tmpdir,"")));
     free((void*)tmp);
-#ifndef G__OLDIMPLEMENTATION2174
-    if(strlen(name)<G__MAXFILENAME-10) 
-      sprintf(name+strlen(name),"%d%d",pid%10000,now%10000);
-    if(strlen(name)<G__MAXFILENAME-6) strcat(name,appendix);
-#else
     if(strlen(name)<L_tmpnam-6) strcat(name,appendix);
-#endif
     return(name);
   }
   else {
     strcpy(tempname,(tmp=tempnam(G__tmpdir,"")));
     free((void*)tmp);
-#ifndef G__OLDIMPLEMENTATION2174
-    if(strlen(name)<G__MAXFILENAME-10) 
-      sprintf(name+strlen(name),"%d%d",pid%10000,now%10000);
-    if(strlen(tempname)<G__MAXFILENAME-6) strcat(tempname,appendix);
-#else
     if(strlen(tempname)<L_tmpnam-6) strcat(tempname,appendix);
-#endif
     return(tempname);
   }
 
