@@ -21,30 +21,14 @@
 #ifndef G__CI_H
 #define G__CI_H
 
-#ifdef G__CINT_VER6
-#define G__CINTVERSION      6000002
-#define G__CINTVERSIONSTR  "6.0.2, May 23 2004"
-#else
-#define G__CINTVERSION      50150138
-#define G__CINTVERSIONSTR  "5.15.138, May 23 2004"
-#endif
+#define G__CINTVERSION      50150130
+#define G__CINTVERSIONSTR  "5.15.130, Mar 30 2004"
 
 #define G__ALWAYS
 /* #define G__NEVER */
 /**********************************************************************
 * SPECIAL CHANGES and CINT CORE COMPILATION SWITCH
 **********************************************************************/
-
-#ifndef G__CINT_VER6
-#define G__OLDIMPLEMENTATION2062
-#define G__OLDIMPLEMENTATION2058
-/* #define G__OLDIMPLEMENTATION2057 */
-/* #define G__OLDIMPLEMENTATION2056 */
-#define G__OLDIMPLEMENTATION2054
-#define G__OLDIMPLEMENTATION2051
-#define G__OLDIMPLEMENTATION2042
-#define G__OLDIMPLEMENTATION1073
-#endif
 
 /* Problem remains with autoloading if library is unloaded. Tried to fix it
  * with 2015, but this has problem with ROOT. */
@@ -187,6 +171,7 @@
  * instantiation in a function. Because the change includes some
  * problems , it is turned off at this moment by defining following
  * macro. */
+#define G__OLDIMPLEMENTATION1073
 #ifdef G__OLDIMPLEMENTATION1073
 /* define related macros here */
 #endif
@@ -240,7 +225,7 @@
 * if __MAKECINT__ is defined, do not include this file
 * G__MAKECINT is automatically defined in makecint or G__makesetup script
 **************************************************************************/
-#if (!defined(__MAKECINT__)) || defined(G__API) || defined(G__BC_DICT)
+#if (!defined(__MAKECINT__)) || defined(G__API)
 
 
 #ifdef __cplusplus
@@ -1384,12 +1369,6 @@ struct G__var_array {
 #ifdef G__FONS_COMMENT
   struct G__comment_info comment[G__MEMDEPTH];
 #endif
-
-#ifndef G__OLDIMPLEMENTATION2038
-  struct G__var_array *enclosing_scope;
-  struct G__var_array **inner_scope;
-#endif
-
 } ;
 
 
@@ -1657,11 +1636,6 @@ extern int G__del_refcount G__P((void* allocedmem,void** storedmem));
 extern int G__disp_garbagecollection G__P((FILE* fout));
 #ifndef G__OLDIMPLEMENTATION1989
 struct G__ifunc_table *G__get_methodhandle G__P((char *funcname,char *argtype
-					   ,struct G__ifunc_table *p_ifunc
-					   ,long *pifn,long *poffset
-					   ,int withConversion));
-struct G__ifunc_table *G__get_methodhandle2 G__P((char *funcname
-					   ,struct G__param* libp
 					   ,struct G__ifunc_table *p_ifunc
 					   ,long *pifn,long *poffset
 					   ,int withConversion));
@@ -2057,9 +2031,6 @@ extern G__EXPORT short* G__Shortref G__P((G__value *buf));
 extern G__EXPORT int* G__Intref G__P((G__value *buf));
 extern G__EXPORT long* G__Longref G__P((G__value *buf));
 extern G__EXPORT unsigned char* G__UCharref G__P((G__value *buf));
-#ifndef G__OLDIMPLEMENTATION2047
-extern G__EXPORT unsigned char* G__Boolref G__P((G__value *buf));
-#endif
 extern G__EXPORT unsigned short* G__UShortref G__P((G__value *buf));
 extern G__EXPORT unsigned int* G__UIntref G__P((G__value *buf));
 extern G__EXPORT unsigned long* G__ULongref G__P((G__value *buf));
