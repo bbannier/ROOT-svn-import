@@ -16,23 +16,23 @@
 // Modified by Masaharu Goto
 // SGI KCC porting by Philippe Canal, Fermi-lab
 
-#include <utility>
-#include <memory>
-#include <iterator>
-#include <functional>
+#include <_utility>
+#include <_memory>
+#include <_iterator>
+#include <_functional>
 
-#if defined(G__ANSIISOLIB)
-template<class Key,class Compare=less<Key>
-        ,class Allocator=allocator<Key> >
+#if defined(G__ANSIISOLIB) || (G__GNUC>=3)
+template<class Key,class Compare=std::less<Key>
+        ,class Allocator=std::allocator<Key> >
 #elif defined(G__GNUC) && !defined(G__KCC)
-template<class Key,class Compare=less<Key>
+template<class Key,class Compare=std::less<Key>
         ,class Allocator=alloc>
 #elif defined(G__HPUX)
-template<class Key,class Compare=less<Key>
+template<class Key,class Compare=std::less<Key>
         ,class Allocator=allocator>
 #else
-template<class Key,class Compare=less<Key>
-        ,class Allocator=allocator<Key> >
+template<class Key,class Compare=std::less<Key>
+        ,class Allocator=std::allocator<Key> >
 #endif
 class set {
  public:
@@ -61,7 +61,7 @@ class set {
   class iterator
 #if defined(G__VISUAL)
 	: public _Bidit<Key,difference_type>
-#elif !defined(G__SUNPRO_C)
+#elif !defined(G__SUNPRO_C) && !defined(G__BORLANDCC5)
   	: public bidirectional_iterator<Key,difference_type>
 #endif
 	{
@@ -99,7 +99,7 @@ class set {
   class reverse_iterator
 #if defined(G__VISUAL)
 	: public _Bidit<Key,difference_type>
-#elif !defined(G__SUNPRO_C)
+#elif !defined(G__SUNPRO_C) && !defined(G__BORLANDCC5)
   	: public bidirectional_iterator<Key,difference_type>
 #endif
 	{

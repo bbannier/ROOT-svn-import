@@ -10,7 +10,7 @@
  * Copyright(c) 1995~2002  Masaharu Goto (MXJ02154@niftyserve.or.jp)
  *
  * Permission to use, copy, modify and distribute this software and its 
- * documentation for non-commercial purpose is hereby granted without fee,
+ * documentation for any purpose is hereby granted without fee,
  * provided that the above copyright notice appear in all copies and
  * that both that copyright notice and this permission notice appear
  * in supporting documentation.  The author makes no
@@ -122,7 +122,7 @@ class G__longdouble {
   friend istream& operator>>(istream& ist,G__longdouble& a);
 #endif
 
- private: 
+  //private: 
 #ifndef __CINT__
   G__double92 dat;
 #endif
@@ -176,6 +176,10 @@ inline istream& operator>>(istream& ist,G__longdouble& a) {
 }
 #endif
 
+int G__ateval(const G__longdouble& a) {
+  fprintf(stdout,"(long double)%g\n",a.dat);
+  return(1);
+}
 
 #ifdef __MAKECINT__
 /*

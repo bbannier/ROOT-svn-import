@@ -204,7 +204,18 @@ int G__using_namespace()
 	avar->comment[aig15]=var->comment[ig15]; /* questionable */
       }
     }
+#ifndef G__OLDIMPLEMENTATION1687
+    else {
+      int tagnum = G__defined_tagname(buf,1);
+      if(-1!=tagnum) {
+	/* using scope::classname; to be implemented 
+	*  Now, G__tagtable is not ready */
+      }
+      else result=1;
+    }
+#else
     else result=1;
+#endif
   }
 
   return(result);
@@ -405,6 +416,44 @@ int noerror;
     strcpy(p,temp);
   }
 
+#ifndef G__OLDIMPLEMENTATION1683
+  /* handles X<int > as X<int> */
+  p = tagname;
+  while((char*)NULL!=(p=strstr(p," >"))) {
+    if('>' != *(p-1)) {
+      strcpy(temp,p+1);
+      strcpy(p,temp);
+    }
+    ++p;
+  }
+  /* handles X <int> as X<int> */
+  p = tagname;
+  while((char*)NULL!=(p=strstr(p," <"))) {
+    strcpy(temp,p+1);
+    strcpy(p,temp);
+    ++p;
+  }
+  /* handles X<int>  as X<int> */
+  p = tagname;
+  while((char*)NULL!=(p=strstr(p,"> "))) {
+    if(strncmp(p,"> >",3)==0) {
+      p+=2;
+    }
+    else {
+      strcpy(temp,p+2);
+      strcpy(p+1,temp);
+      ++p;
+    }
+  }
+  /* handles X< int> as X<int> */
+  p = tagname;
+  while((char*)NULL!=(p=strstr(p,"< "))) {
+    strcpy(temp,p+2);
+    strcpy(p+1,temp);
+    ++p;
+  }
+#endif
+
   if(isspace(tagname[0])) strcpy(temp,tagname+1);
   else strcpy(temp,tagname);
   p = G__find_last_scope_operator (temp);
@@ -444,6 +493,16 @@ int noerror;
   if(0==len) {
     strcpy(atom_tagname,"$");
     len=1;
+  }
+#endif
+
+#ifndef G__OLDIMPLEMENTATION1697
+  for(i=G__struct.alltag-1;i>=0;i--) {
+    if(len==G__struct.hash[i]&&strcmp(atom_tagname,G__struct.name[i])==0&&
+       (((char*)NULL==p&&-1==G__struct.parent_tagnum[i])||
+	env_tagnum==G__struct.parent_tagnum[i])) {
+      return(i);
+    }
   }
 #endif
 
@@ -1091,7 +1150,11 @@ char type;
 #ifndef G__STD_NAMESPACE /* ON667 */
   else if('n'==type && strcmp(tagname,"std")==0
 #ifndef G__OLDIMPLEMENTATION1285
-	  && G__ignore_stdnamespace
+	  && (G__ignore_stdnamespace
+#ifndef G__OLDIMPLEMENTATION1692
+	      || -1!=G__def_tagnum
+#endif
+	      )
 #endif
 	  ) {
     /* namespace std, treat as global scope, namespace has no effect. */

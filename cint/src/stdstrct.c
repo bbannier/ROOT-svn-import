@@ -7,8 +7,7 @@ void G__set_c_environmentG__stdstrct() {
   G__add_compiledheader("stdstr.h");
   G__c_reset_tagtableG__stdstrct();
 }
-#include "dllrev.h"
-int G__c_dllrevG__stdstrct() { return(G__CREATEDLLREV); }
+int G__c_dllrevG__stdstrct() { return(30051515); }
 
 /* Setting up global function */
 
@@ -112,7 +111,7 @@ void G__c_setup_memvarG__stdstrct() {
 /*********************************************************
 * Global variable information setup for each class
 *********************************************************/
-void G__c_setup_globalG__stdstrct() {
+static void G__cpp_setup_global0() {
 
    /* Setting up global variables */
    G__resetplocal();
@@ -121,15 +120,22 @@ void G__c_setup_globalG__stdstrct() {
 
    G__resetglobalenv();
 }
+void G__c_setup_globalG__stdstrct() {
+  G__cpp_setup_global0();
+}
 
 /*********************************************************
 * Global function information setup for each class
 *********************************************************/
-void G__c_setup_funcG__stdstrct() {
+static void G__cpp_setup_func0() {
    G__lastifuncposition();
 
 
    G__resetifuncposition();
+}
+
+void G__c_setup_funcG__stdstrct() {
+  G__cpp_setup_func0();
 }
 
 /*********************************************************
@@ -159,7 +165,7 @@ void G__c_setup_tagtableG__stdstrct() {
    G__tagtable_setup(G__get_linked_tagnum(&G__G__stdstrctLN_dAldiv_t),sizeof(ldiv_t),-2,0,(char*)NULL,G__setup_memvardAldiv_t,NULL);
 }
 void G__c_setupG__stdstrct() {
-  G__check_setup_version(G__CREATEDLLREV,"G__c_setupG__stdstrct()");
+  G__check_setup_version(30051515,"G__c_setupG__stdstrct()");
   G__set_c_environmentG__stdstrct();
   G__c_setup_tagtableG__stdstrct();
 

@@ -57,6 +57,7 @@ G__MethodInfo {
   long Property();
   int NArg();
   int NDefaultArg();
+  int HasVarArgs();
   G__InterfaceMethod InterfaceMethod();
 #ifdef G__ASM_WHOLEFUNC
   struct G__bytecodefunc *GetBytecode();
@@ -85,9 +86,11 @@ G__MethodInfo {
   int Size();
   int IsBusy();
 #ifndef G__OLDIMPLEMENTATION644
-   FILE* FilePointer();
-   long FilePosition();
+  FILE* FilePointer();
+  long FilePosition();
 #endif
+  char* GetPrototype();
+  char* GetMangledName();
 
  protected:
   long handle;
