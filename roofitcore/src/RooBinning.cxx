@@ -1,15 +1,25 @@
 /*****************************************************************************
- * Project: BaBar detector at the SLAC PEP-II B-factory
- * Package: RooFitCore
- *    File: $Id: RooBinning.cc,v 1.1 2002/03/07 06:22:20 verkerke Exp $
- * Authors:
- *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu
- *   DK, David Kirkby, UC Irvine, davidk@slac.stanford.edu
- * History:
- *   01-Mar-2002 WV Created initial version
- *
- * Copyright (C) 2002 University of California
+ * Project: RooFit                                                           *
+ * Package: RooFitCore                                                       *
+ *    File: $Id: RooBinning.cc,v 1.6 2002/09/05 22:29:46 verkerke Exp $
+ * Authors:                                                                  *
+ *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu       *
+ *   DK, David Kirkby,    UC Irvine,         dkirkby@uci.edu                 *
+ *                                                                           *
+ * Copyright (c) 2000-2002, Regents of the University of California          *
+ *                          and Stanford University. All rights reserved.    *
+ *                                                                           *
+ * Redistribution and use in source and binary forms,                        *
+ * with or without modification, are permitted according to the terms        *
+ * listed in LICENSE (http://roofit.sourceforge.net/license.txt)             *
  *****************************************************************************/
+
+// -- CLASS DESCRIPTION [MISC] --
+// Class RooBinning is an implements RooAbsBinning in terms of
+// an array of boundary values, posing no constraints on the
+// choice of binning, thus allowing variable bin sizes. Various
+// methods allow the user to add single bin boundaries, mirrored pairs,
+// or sets of uniformly spaced boundaries.
 
 #include <iostream.h>
 #include "RooFitCore/RooBinning.hh"
@@ -43,12 +53,12 @@ RooBinning::RooBinning(Int_t nbins, Double_t xlo, Double_t xhi) : _array(0), _ow
 
 
 
-RooBinning::RooBinning(Int_t nbins, Double_t* boundaries) : _array(0), _ownBoundHi(kTRUE), _ownBoundLo(kTRUE)
+RooBinning::RooBinning(Int_t nbins, const Double_t* boundaries) : _array(0), _ownBoundHi(kTRUE), _ownBoundLo(kTRUE)
 {
   _bIter = binIterator() ;
 
   // Variable bin size constructor
-  setRange(boundaries[0],boundaries[nbins-1]) ;
+  setRange(boundaries[0],boundaries[nbins]) ;
   while(nbins--) addBoundary(boundaries[nbins]) ;
 }
 
