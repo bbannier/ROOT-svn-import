@@ -1,4 +1,4 @@
-// @(#)root/cont:$Name:  $:$Id: TClassTable.cxx,v 1.11 2001/12/02 16:50:08 brun Exp $
+// @(#)root/cont:$Name:  $:$Id: TClassTable.cxx,v 1.12 2002/01/27 16:49:43 brun Exp $
 // Author: Fons Rademakers   11/08/95
 
 /*************************************************************************
@@ -336,11 +336,11 @@ void RemoveClass(const char *cname)
 
    // don't delete class information since it is needed by the I/O system
    // to write the StreamerInfo to file
-   if (cname) { 
+   if (cname) {
      // Let's still remove this information to allow reloading later.
      // Anyway since the shared library has been unloaded, the dictionary
      // pointer is now invalid ....
-     // We still keep the TClass object around because TFile needs to 
+     // We still keep the TClass object around because TFile needs to
      // get to the TStreamerInfo.
      if (gROOT && gROOT->GetListOfClasses()) {
         TClass *cl = gROOT->GetClass(cname, kFALSE);
@@ -349,3 +349,25 @@ void RemoveClass(const char *cname)
      TClassTable::Remove(cname);
    }
 }
+
+//______________________________________________________________________________
+TNamed *R__RegisterClassTemplate(const char *name, const char *file, Int_t line)
+{
+   // Global function to register the implementation file and line of
+   // a class template (i.e. NOT a concrete class).
+
+   static TList table;
+
+   TString classname(name);
+   Ssiz_t loc = classname.Index("<");
+   if (loc >= 1) classname.Remove(loc);
+   if (file) {
+      TNamed *obj = new TNamed((const char*)classname, file);
+      obj->SetUniqueID(line);
+      table.Add(obj);
+      return obj;
+   } else {
+      return (TNamed*)table.FindObject(classname);
+   }
+}
+

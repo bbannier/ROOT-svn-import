@@ -1,4 +1,4 @@
-/* @(#)root/star:$Name:  $:$Id: Ttypes.h,v 1.6 2001/02/07 08:18:15 brun Exp $ */
+/* @(#)root/star:$Name:  $:$Id: Ttypes.h,v 1.7 2001/07/11 06:46:19 brun Exp $ */
 
 /*************************************************************************
  * Copyright (C) 1995-2000, Rene Brun and Fons Rademakers.               *
@@ -14,7 +14,7 @@
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // Stypes                                                               //
-// $Id: Ttypes.h,v 1.6 2001/02/07 08:18:15 brun Exp $
+// $Id: Ttypes.h,v 1.7 2001/07/11 06:46:19 brun Exp $
 // Basic types used by STAF - ROOT interface.                           //
 //                                                                      //
 // This header file contains the set of the macro definitions           //
@@ -51,34 +51,37 @@
 
 //___________________________________________________________________
 #define _TableClassImp_(className,structName)                       \
-   TClass *className::Class()                                       \
-          { if (!fgIsA) className::Dictionary(); return fgIsA; }    \
-   const char *className::ImplFileName() { return __FILE__; }       \
-   int className::ImplFileLine() { return __LINE__; }               \
-   TClass *className::fgIsA = 0;                                    \
-   _TableClassInit_(className,structName)
+
+
+//   _TableClassInit_(className,structName)
 
 //___________________________________________________________________
 #define TableClassStreamerImp(className)                            \
 void className::Streamer(TBuffer &R__b) {                           \
    TTable::Streamer(R__b); }
 
-//___________________________________________________________________
-#define TableClassImp(className,structName)                         \
+#if 0
    void className::Dictionary()                                     \
    {                                                                \
       TClass *c = CreateClass(_QUOTE_(className), Class_Version(),  \
                               DeclFileName(), ImplFileName(),       \
                               DeclFileLine(), ImplFileLine());      \
-                                                                    \
+      className::TableDictionary();                                 \
+   }                                                                \
+
+#endif
+
+//___________________________________________________________________
+#define TableClassImp(className,structName)                         \
+   const char* className::TableDictionary() {                       \
       char *structBuf = new char[strlen(_QUOTE2_(structName,.h))+2];\
       strcpy(structBuf,_QUOTE2_(structName,.h));                    \
       char *s = strstr(structBuf,"_st.h");                          \
       if (s) { *s = 0;  strcat(structBuf,".h"); }                   \
       TClass *r = CreateClass(_QUOTE_(structName), Class_Version(), \
                               structBuf, structBuf, 1,  1 );        \
-      fgIsA = c;                                                    \
       fgColDescriptors = new TTableDescriptor(r);                   \
+      return _QUOTE_(structName);                                   \
    }                                                                \
    _TableClassImp_(className,structName)
 
@@ -97,6 +100,8 @@ void className::Streamer(TBuffer &R__b) {                           \
 #define TableImp(name)  TableClassImp(_NAME2_(St_,name),_QUOTE2_(St_,name))
 
 #define ClassDefTable(className,structName)         \
+  public:                                           \
+     static void TableDictionary();                 \
   protected:                                        \
      static TTableDescriptor *fgColDescriptors;     \
      virtual TTableDescriptor *GetDescriptorPointer() const { return fgColDescriptors;}                 \
@@ -136,5 +141,55 @@ virtual void SetDescriptorPointer(TTableDescriptor *list)  { fgColDescriptors = 
     const structName &operator[](Int_t i) const { assert(i>=0 && i < GetNRows()); return *((const structName *)(GetTable(i))); }\
     structName *begin() const  {                      return GetNRows()? GetTable(0):0;}\
     structName *end()   const  {Int_t i = GetNRows(); return          i? GetTable(i):0;}
+
+
+template <class T> class R__TTableInitBehavior: public R__DefaultInitBehavior {
+public:
+   static const char* fgStructName; // Need to be instantiated
+#ifdef InitBuildStruct
+   virtual void Dictionary const (   
+      // or 
+      R__DefaultInitBehavior::Dictionary();
+      std::string structname = fgStructName;
+      structname += ".h";
+      
+      char *structBuf = new char[strlen(fgStructName)+2+2];
+      strcpy(structBuf,fgStructName);
+      strcat(structBuf,".h");
+      char *s = strstr(structBuf,"_st.h");
+      if (s) { *s = 0;  strcat(structBuf,".h"); }
+      TClass *r = ::CreateClass(fgStructName, Class_Version(),
+                                structBuf, structBuf, 1,  1 );
+      fgColDescriptors = new TTableDescriptor(r);
+   }
+#else
+   virtual TClass* CreateClass(const char *cname, Version_t id,
+                               const char *dfil, const char *ifil,
+                               Int_t dl, Int_t il) const {
+      TClass * cl = R__DefaultInitBehavior::CreateClass(cname, id,dfil, ifil,dl, il);
+      fgStructName = T::TableDictionary();
+      return cl;
+   }
+#if 0
+   virtual void Dictionary() const {
+      R__DefaultInitBehavior::Dictionary();
+      T::TableDictionary();
+   }
+#endif
+#endif
+   virtual void Unregister(const char* classname) const {
+      R__DefaultInitBehavior::Unregister(classname);
+      R__DefaultInitBehavior::Unregister(fgStructName);
+   }
+};
+template <class T> const char * R__TTableInitBehavior<T >::fgStructName = 0;
+
+class TTable;
+template <class RootClass> 
+const R__TTableInitBehavior<RootClass>* R__DefineBehavior( TTable*, RootClass*) 
+{
+   return new R__TTableInitBehavior<RootClass>(); 
+}
+
 
 #endif

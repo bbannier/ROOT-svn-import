@@ -1,4 +1,4 @@
-// @(#)root/base:$Name:  $:$Id: TQObject.h,v 1.10 2001/12/05 11:18:03 rdm Exp $
+// @(#)root/base:$Name:  $:$Id: TQObject.h,v 1.11 2001/12/28 12:52:04 rdm Exp $
 // Author: Valeriy Onuchin & Fons Rademakers   15/10/2000
 
 /*************************************************************************
@@ -215,17 +215,28 @@ extern Bool_t ConnectCINT(TQObject *sender, const char *signal,
 
 //---- ClassImpQ macro ----------------------------------------------
 //
-// This macro corresponds to the ClassImp macro and should be used
+// This macro used to correspond to the ClassImp macro and should be used
 // for classes derived from TQObject instead of the ClassImp macro.
 // This macro makes it possible to have a single connection from
 // all objects of the same class.
+// *** It is now obsolete ***
 
 #define ClassImpQ(name) \
-   void name::Dictionary() { \
-      fgIsA = new TQClass(Class_Name(), Class_Version(),  \
-                          DeclFileName(), ImplFileName(),  \
-                          DeclFileLine(), ImplFileLine()); \
-   } \
-   _ClassImp_(name)
+   ClassImp(name)
+
+class R__DefaultInitBehavior;
+class R__TQObjectInitBehavior : public R__DefaultInitBehavior {
+public:
+   virtual TClass *CreateClass(const char *cname, Version_t id,
+                               const char *dfil, const char *ifil,
+                               Int_t dl, Int_t il) const {
+      return new TQClass(cname, id,dfil, ifil,dl, il);
+   }
+};
+
+inline const R__TQObjectInitBehavior *R__DefineBehavior(TQObject *, void *)
+{
+   return new R__TQObjectInitBehavior();
+}
 
 #endif

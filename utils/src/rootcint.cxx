@@ -1,4 +1,4 @@
-// @(#)root/utils:$Name:  $:$Id: rootcint.cxx,v 1.57 2002/01/24 07:47:05 brun Exp $
+// @(#)root/utils:$Name:  $:$Id: rootcint.cxx,v 1.58 2002/01/25 11:34:50 brun Exp $
 // Author: Fons Rademakers   13/07/96
 
 /*************************************************************************
@@ -223,6 +223,8 @@ const char *help =
 #endif
 
 #include <time.h>
+#include <string>
+using std::string;
 
 const char *autoldtmpl = "G__auto%dLinkDef.h";
 char autold[64];
@@ -230,7 +232,7 @@ char autold[64];
 enum ESTLType {kNone, kVector, kList, kDeque, kMap, kMultimap, kSet, kMultiset};
 
 FILE *fp;
-
+char *StrDup(const char *str);
 
 //______________________________________________________________________________
 int GetClassVersion(G__ClassInfo &cl)
@@ -247,6 +249,39 @@ int GetClassVersion(G__ClassInfo &cl)
    int version = (int)G__int(G__calc(name));
    delete [] name;
    return version;
+}
+
+//______________________________________________________________________________
+int NeedTemplateKeyword(G__ClassInfo &cl) {
+
+   if (cl.IsTmplt()) {
+      char *templatename = StrDup(cl.Fullname());
+      char *loc = strstr(templatename, "<");
+      if (loc) *loc = 0;
+      struct G__Definedtemplateclass *templ = G__defined_templateclass(templatename);
+      if (templ) {
+         G__SourceFileInfo fileinfo(templ->filenum);
+         if (templ->line == cl.LineNumber() &&
+             strcmp(cl.FileName(), fileinfo.Name())==0) {
+
+            // This is an automatically instantiated templated class.
+#ifdef __KCC
+            // for now KCC works better without it !
+            return 0;
+#else
+            return 1;
+#endif
+         } else {
+
+            // This is a specialized templated class
+            return 0;
+         }
+      } else {
+         // It might be a specialization without us seeing the template definition
+         return 0;
+      }
+   }
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -950,13 +985,15 @@ void WriteInputOperator(G__ClassInfo &cl)
 
    G__ClassInfo space = cl.EnclosingSpace();
    char space_prefix[256] = "";
+#ifdef WIN32
    if (space.Property() & G__BIT_ISNAMESPACE)
       sprintf(space_prefix,"%s::",space.Fullname());
+#endif
 
    if (cl.IsTmplt()) {
       // Produce specialisation for templates:
-      fprintf(fp, "template <> TBuffer &%soperator>><%s >"
-              "(TBuffer &buf, %s *&obj)\n{\n", space_prefix, cl.TmpltArg(), cl.Fullname());
+      fprintf(fp, "TBuffer &operator>>"
+              "(TBuffer &buf, %s *&obj)\n{\n", cl.Fullname());
    } else {
       fprintf(fp, "TBuffer &%soperator>>(TBuffer &buf, %s *&obj)\n{\n",
               space_prefix, cl.Fullname() );
@@ -974,27 +1011,72 @@ void WriteInputOperator(G__ClassInfo &cl)
    fprintf(fp, "   return buf;\n}\n\n");
 }
 
+
 //______________________________________________________________________________
 void WriteClassName(G__ClassInfo &cl, int tmplt = 0)
 {
    // Write the code to set the class name and the initialization object.
 
+   int add_template_keyword = NeedTemplateKeyword(cl);
+
    fprintf(fp, "//_______________________________________");
    fprintf(fp, "_______________________________________\n");
+   fprintf(fp, "// Static variable to hold class pointer\n");
+   if (add_template_keyword) fprintf(fp, "template <> ");
+   fprintf(fp, "TClass *%s::fgIsA = 0;\n", cl.Fullname());
+   fprintf(fp, "\n");
+
+   fprintf(fp, "//_______________________________________");
+   fprintf(fp, "_______________________________________\n");
+   if (add_template_keyword) fprintf(fp, "template <> ");
    fprintf(fp, "const char *%s::Class_Name()\n{\n", cl.Fullname());
    fprintf(fp, "   // Return the class name for %s.\n", cl.Fullname());
    fprintf(fp, "   return \"%s\";\n}\n\n", cl.Fullname());
-   if (!tmplt) {
-      fprintf(fp, "// Static variable to hold initialization object\n");
-      fprintf(fp, "static %s::R__Init __gR__Init%s(%d);\n\n",
-              cl.Fullname(), G__map_cpp_name((char *)cl.Fullname()),
-              cl.RootFlag());
+
+   fprintf(fp, "//_______________________________________");
+   fprintf(fp, "_______________________________________\n");
+   if (add_template_keyword) fprintf(fp, "template <> ");
+   fprintf(fp, "const char* %s::ImplFileName()\n{\n", cl.Fullname());
+   fprintf(fp, "   return R__tInit< %s >::GetImplFileName();\n}\n\n",
+               cl.Fullname());
+
+   fprintf(fp, "//_______________________________________");
+   fprintf(fp, "_______________________________________\n");
+   if (add_template_keyword) fprintf(fp, "template <> ");
+   fprintf(fp, "int   %s::ImplFileLine()\n{\n", cl.Fullname());
+   fprintf(fp, "   return R__tInit< %s >::GetImplFileLine();\n}\n\n",
+               cl.Fullname());
+
+   fprintf(fp, "//_______________________________________");
+   fprintf(fp, "_______________________________________\n");
+   if (add_template_keyword) fprintf(fp, "template <> ");
+   fprintf(fp, "void %s::Dictionary()\n{\n", cl.Fullname());
+#if 0
+   if (cl.IsBase("TQObject")) {
+      fprintf(fp, "   fgIsA = new TQClass(Class_Name(),   Class_Version(),\n");
    } else {
-      fprintf(fp, "// Static variable to hold initialization object\n");
-      fprintf(fp, "static R__Init%s __gR__Init%s%s(%d);\n\n", cl.Name(),
-              cl.TmpltName(), G__map_cpp_name((char *)cl.TmpltArg()),
-              cl.RootFlag());
+      fprintf(fp, "   fgIsA = CreateClass(Class_Name(),   Class_Version(),\n");
    }
+   fprintf(fp, "                       DeclFileName(), ImplFileName(),\n");
+   fprintf(fp, "                       DeclFileLine(), ImplFileLine());\n");
+#else
+   fprintf(fp, "   fgIsA = R__tInit<%s >::GetClass();\n", cl.Fullname());
+#endif
+   fprintf(fp, "}\n\n");
+
+   fprintf(fp, "//_______________________________________");
+   fprintf(fp, "_______________________________________\n");
+   if (add_template_keyword) fprintf(fp, "template <> ");
+   fprintf(fp, "TClass *%s::Class()\n{\n", cl.Fullname());
+#if 0
+   fprintf(fp, "   if (!fgIsA) Dictionary(); return fgIsA;\n}\n\n");
+#else
+   fprintf(fp, "   if (!fgIsA) fgIsA = R__tInit<%s >::GetClass();\n", cl.Fullname());
+   fprintf(fp, "   return fgIsA;\n}\n\n");
+#endif
+   fprintf(fp, "// Static variable to hold initialization object\n");
+   fprintf(fp, "static R__tInit< %s > __gR__Init%s(%d);\n\n", cl.Fullname(),
+               G__map_cpp_name((char*)cl.Fullname()), cl.RootFlag());
 }
 
 //______________________________________________________________________________
@@ -1064,9 +1146,11 @@ const char *GrabIndex(G__DataMemberInfo &member, int printError)
 //______________________________________________________________________________
 void WriteStreamer(G__ClassInfo &cl)
 {
+   int add_template_keyword = NeedTemplateKeyword(cl);
 
    fprintf(fp, "//_______________________________________");
    fprintf(fp, "_______________________________________\n");
+   if (add_template_keyword) fprintf(fp, "template <> ");
    fprintf(fp, "void %s::Streamer(TBuffer &R__b)\n{\n", cl.Fullname());
    fprintf(fp, "   // Stream an object of class %s.\n\n", cl.Fullname());
 
@@ -1313,8 +1397,11 @@ void WriteAutoStreamer(G__ClassInfo &cl)
 {
    // Write Streamer() method suitable for automatic schema evolution.
 
+   int add_template_keyword = NeedTemplateKeyword(cl);
+
    fprintf(fp, "//_______________________________________");
    fprintf(fp, "_______________________________________\n");
+   if (add_template_keyword) fprintf(fp, "template <> ");
    fprintf(fp, "void %s::Streamer(TBuffer &R__b)\n{\n", cl.Fullname());
    fprintf(fp, "   // Stream an object of class %s.\n\n", cl.Fullname());
    fprintf(fp, "   if (R__b.IsReading()) {\n");
@@ -1531,8 +1618,11 @@ void WritePointersSTL(G__ClassInfo &cl)
 //______________________________________________________________________________
 void WriteShowMembers(G__ClassInfo &cl)
 {
+   int add_template_keyword = NeedTemplateKeyword(cl);
+
    fprintf(fp, "//_______________________________________");
    fprintf(fp, "_______________________________________\n");
+   if (add_template_keyword) fprintf(fp, "template <> ");
    fprintf(fp, "void %s::ShowMembers(TMemberInspector &R__insp, char *R__parent)\n{\n", cl.Fullname());
    fprintf(fp, "   // Inspect the data members of an object of class %s.\n\n", cl.Fullname());
 #ifdef  WIN32
@@ -1546,7 +1636,7 @@ void WriteShowMembers(G__ClassInfo &cl)
        fprintf(fp, "   TClass *R__cl  = msvc_bug_workaround::IsA();\n");
     } else
        fprintf(fp, "   TClass *R__cl  = %s::IsA();\n", cl.Fullname());
-#else   
+#else
    fprintf(fp, "   TClass *R__cl  = %s::IsA();\n", cl.Fullname());
 #endif
    fprintf(fp, "   Int_t   R__ncp = strlen(R__parent);\n");
@@ -1688,22 +1778,8 @@ void WriteClassCode(G__ClassInfo &cl) {
       } else {
          fprintf(stderr, "Class %s: ShowMembers() not declared\n", cl.Fullname());
       }
-      // Write Code for Class_Name() and static variable
-      // to hold initialization object (STK)
-      if (cl.IsTmplt()) {
-         if (cl.HasMethod("Class_Name")) {
-           WriteClassName(cl,1);
-         } else {
-           fprintf(stderr, "Class %s: Class_Name() and initialization object"
-                   " not declared\n", cl.Fullname());
-         }
-      } else {
-         if (cl.HasMethod("Class_Name")) {
-           WriteClassName(cl);
-         }
-      }
-   }
 
+   }
 }
 
 //______________________________________________________________________________
@@ -2207,6 +2283,9 @@ int main(int argc, char **argv)
    fprintf(fp, "#ifndef G__ROOT\n");
    fprintf(fp, "#define G__ROOT\n");
    fprintf(fp, "#endif\n\n");
+   fprintf(fp, "// Since CINT ignores the std namespace, we need to do so in this file.\n");
+   fprintf(fp, "namespace std {}; using namespace std;\n\n");
+   fprintf(fp, "#include \"RtypesImp.h\"\n\n");
 
    // Loop over all command line arguments and write include statements.
    // Skip options and any LinkDef.h.
@@ -2223,20 +2302,16 @@ int main(int argc, char **argv)
    // Loop over all classes and create Streamer() & Showmembers() methods
    G__ClassInfo cl;
 
+#if 0
    // Write all TBuffer &operator>>(...) first to allow template
    // specialisation to occur before template instantiation (STK)
    while (cl.Next()) {
       if ((cl.Property() & G__BIT_ISCLASS) && cl.Linkage() == G__CPPLINK) {
-         if (cl.HasMethod("Streamer")) {
-            if (!(cl.RootFlag() & G__NOINPUTOPERATOR)) {
-               WriteInputOperator(cl);
-            } else {
-               fprintf(stderr, "Class %s: Do not generate operator>>()\n",
-                       cl.Fullname());
-            }
+         if (cl.HasMethod("Class")) {
          }
       }
    }
+#endif
 
    // Open LinkDef file for reading, so that we can process classes
    // in order of appearence in this file (STK)
@@ -2257,6 +2332,37 @@ int main(int argc, char **argv)
          remove(argv[ifl]);
       }
       return 1;
+   }
+
+   // Write all TBuffer &operator>>(...), Class_Name(), Dictionary(), etc.
+   // first to allow template specialisation to occur before template
+   // instantiation (STK)
+   cl.Init();
+   while (cl.Next()) {
+      if ((cl.Property() & G__BIT_ISCLASS) && cl.Linkage() == G__CPPLINK) {
+         // Write Code for Class_Name() and static variable
+         // to hold initialization object (STK)
+         if (cl.IsTmplt()) {
+            if (cl.HasMethod("Class_Name")) {
+              WriteClassName(cl,1);
+            } else {
+            fprintf(stderr, "Class %s: Class_Name() and initialization object"
+                    " not declared\n", cl.Fullname());
+            }
+         } else {
+            if (cl.HasMethod("Class_Name")) {
+               WriteClassName(cl);
+            }
+         }
+         if (cl.HasMethod("Streamer")) {
+            if (!(cl.RootFlag() & G__NOINPUTOPERATOR)) {
+               WriteInputOperator(cl);
+            } else {
+               fprintf(stderr, "Class %s: Do not generate operator>>()\n",
+                       cl.Fullname());
+            }
+         }
+      }
    }
 
    // Keep track of classes processed by reading Linkdef file.

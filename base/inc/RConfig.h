@@ -1,7 +1,7 @@
 /* @(#)root/base:$Name:  $:$Id: RConfig.h,v 1.29 2002/01/24 11:39:26 rdm Exp $ */
 
 /*************************************************************************
- * Copyright (C) 1995-2000, Rene Brun and Fons Rademakers.               *
+ * Copyright (C) 1995-2002, Rene Brun and Fons Rademakers.               *
  * All rights reserved.                                                  *
  *                                                                       *
  * For the licensing terms see $ROOTSYS/LICENSE.                         *
@@ -327,18 +327,18 @@
 
 /*--- memory and object statistics -------------------------------------------*/
 
-/* #define R__NOSTATS     */
+/* #define R__NOSTATS */
 
 
 /*--- cpp --------------------------------------------------------------------*/
 
 #ifdef ANSICPP
-   /* symbol concatenation operator */
+    /* symbol concatenation operator */
 #   define _NAME1_(name) name
 #   define _NAME2_(name1,name2) name1##name2
 #   define _NAME3_(name1,name2,name3) name1##name2##name3
 
-   /* stringizing */
+    /* stringizing */
 #   define _QUOTE_(name) #name
 
 #else
@@ -351,6 +351,13 @@
 
 #endif
 
+/* produce an indentifier that is almost unique inside a file */
+#ifndef __CINT__
+#   define _R__JOIN_(X,Y) _NAME2_(X,Y)
+#   define _R__UNIQUE_(X) _R__JOIN_(X,__LINE__)
+#else
+#   define _R__UNIQUE_(X) X __LINE__
+#endif
 
 /*---- misc ------------------------------------------------------------------*/
 
