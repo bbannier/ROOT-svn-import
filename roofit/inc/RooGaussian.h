@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: BaBar detector at the SLAC PEP-II B-factory
  * Package: RooFitTools
- *    File: $Id$
+ *    File: $Id: RooGaussian.rdl,v 1.2 2001/05/17 00:48:06 verkerke Exp $
  * Authors:
  *   DK, David Kirkby, Stanford University, kirkby@hep.stanford.edu
  *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu
@@ -27,7 +27,7 @@ public:
   virtual TObject* clone() const { return new RooGaussian(*this); }
   inline virtual ~RooGaussian() { }
 
-  Int_t getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& numVars) const ;
+  Int_t getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVars) const ;
   Double_t analyticalIntegral(Int_t code) const ;
 
 protected:
@@ -36,7 +36,7 @@ protected:
   RooRealProxy mean ;
   RooRealProxy sigma ;
   
-  Double_t evaluate() const ;
+  Double_t evaluate(const RooDataSet* dset) const ;
 
 //   void initGenerator();
 //   Int_t generateDependents();
