@@ -11,7 +11,7 @@ SRCCPPIFH     = $(CINTSYSDIR)/src/sunstrm.h
 CPPIFC     = sunstrm.cxx
 CPPIFH     = sunstrm.h
 
-CPPHEADER  = iostrm.h fstrm.h sstrm.h linkdef.h
+CPPHEADER  = iostrm.h fstrm.h sstrm.h
 
 #		stdiostr.h \
 

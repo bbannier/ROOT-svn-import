@@ -236,12 +236,8 @@ void G__CallFunc::SetArgs(const char* args)
   int isrc=0;
   char *endmark=(char*)",";
 #ifndef G__OLDIMPLEMENTATION1941
-#ifndef G__OLDIMPLEMENTATION2029
   char *tmp = new char[ strlen(args)+2 ]; 
   tmp[0] = 0;
-#else
-  char tmp[G__LONGLINE];
-#endif
 #endif
 
   // separate and evaluate argument list
@@ -269,9 +265,7 @@ void G__CallFunc::SetArgs(const char* args)
     }
   } while (','==c);
 
-#ifndef G__OLDIMPLEMENTATION2029
   delete [] tmp;
-#endif
 }
 #endif
 #ifndef G__OLDIMPLEMENTATION540

@@ -8,7 +8,7 @@
  *  Extended Run Time Type Identification API
  ************************************************************************
  * Author                  Masaharu Goto 
- * Copyright(c) 1995~2004  Masaharu Goto 
+ * Copyright(c) 1995~1999  Masaharu Goto 
  *
  * Permission to use, copy, modify and distribute this software and its 
  * documentation for any purpose is hereby granted without fee,
@@ -610,13 +610,7 @@ G__InterfaceMethod G__ClassInfo::GetInterfaceMethod(const char* fname
 #endif
 			      );
 
-  if(
-#ifndef G__OLDIMPLEMENTATION2035
-     ifunc && -1==ifunc->pentry[index]->size
-#else
-     ifunc && -1==ifunc->pentry[index]->filenum
-#endif
-     ) {
+  if(ifunc && -1==ifunc->pentry[index]->filenum) {
     return((G__InterfaceMethod)ifunc->pentry[index]->p);
   }
   else {
@@ -650,72 +644,6 @@ G__MethodInfo G__ClassInfo::GetMethod(const char* fname,const char* arg
   method.Init((long)ifunc,index,this);
   return(method);
 }
-///////////////////////////////////////////////////////////////////////////
-G__MethodInfo G__ClassInfo::GetMethod(const char* fname,struct G__param* libp
-				      ,long* poffset
-				      ,MatchMode mode)
-{
-  struct G__ifunc_table *ifunc;
-  char *funcname = (char*)fname;
-  long index;
-
-  /* Search for method */
-  if(-1==tagnum) ifunc = &G__ifunc;
-  else           ifunc = G__struct.memfunc[tagnum];
-
-  ifunc = G__get_methodhandle2(funcname,libp,ifunc,&index,poffset
-			       ,(mode==ConversionMatch)?1:0);
-
-  /* Initialize method object */
-  G__MethodInfo method;
-  method.Init((long)ifunc,index,this);
-  return(method);
-}
-#ifndef G__OLDIMPLEMENTATION2059
-///////////////////////////////////////////////////////////////////////////
-G__MethodInfo G__ClassInfo::GetDefaultConstructor() {
-  long dmy;
-  G__MethodInfo method;
-  char *fname= (char*)malloc(strlen(Name())+1);
-  sprintf(fname,"%s",Name());
-  method = GetMethod(fname,"",&dmy);
-  free((void*)fname);
-  return(method);
-}
-///////////////////////////////////////////////////////////////////////////
-G__MethodInfo G__ClassInfo::GetCopyConstructor() {
-  long dmy;
-  G__MethodInfo method;
-  char *fname= (char*)malloc(strlen(Name())+1);
-  sprintf(fname,"%s",Name());
-  char *arg= (char*)malloc(strlen(Name())+10);
-  sprintf(arg,"const %s&",Name());
-  method = GetMethod(fname,arg,&dmy);
-  free((void*)arg);
-  free((void*)fname);
-  return(method);
-}
-///////////////////////////////////////////////////////////////////////////
-G__MethodInfo G__ClassInfo::GetDestructor() {
-  long dmy;
-  G__MethodInfo method;
-  char *fname= (char*)malloc(strlen(Name())+2);
-  sprintf(fname,"~%s",Name());
-  method = GetMethod(fname,"",&dmy);
-  free((void*)fname);
-  return(method);
-}
-///////////////////////////////////////////////////////////////////////////
-G__MethodInfo G__ClassInfo::GetAssignOperator() {
-  long dmy;
-  G__MethodInfo method;
-  char *arg= (char*)malloc(strlen(Name())+10);
-  sprintf(arg,"const %s&",Name());
-  method = GetMethod("operator=",arg,&dmy);
-  free((void*)arg);
-  return(method);
-}
-#endif
 ///////////////////////////////////////////////////////////////////////////
 G__DataMemberInfo G__ClassInfo::GetDataMember(const char* name,long* poffset)
 {
@@ -1025,12 +953,6 @@ void* G__ClassInfo::New(void *arena)
     return((void*)NULL);
   }
 }
-#ifndef G__OLDIMPLEMENTATION2043
-///////////////////////////////////////////////////////////////////////////
-void G__ClassInfo::Delete(void* p) const { G__calldtor(p,tagnum,1); }
-///////////////////////////////////////////////////////////////////////////
-void G__ClassInfo::Destruct(void* p) const { G__calldtor(p,tagnum,0); }
-#endif
 ///////////////////////////////////////////////////////////////////////////
 void G__ClassInfo::CheckValidRootInfo()
 {
@@ -1149,4 +1071,3 @@ struct G__friendtag* G__ClassInfo::GetFriendInfo() {
 }
 ///////////////////////////////////////////////////////////////////////////
 #endif /* ON644 */
-
