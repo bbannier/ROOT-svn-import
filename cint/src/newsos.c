@@ -64,7 +64,7 @@ fpos_t *position;
 G__newsos_nosupport(funcname)
 char *funcname;
 {
-	G__fprinterr(G__serr,
+	G__fprinterr(
 		"Limitation: %s() not supported for NewsOS\n",funcname);
 }	
 

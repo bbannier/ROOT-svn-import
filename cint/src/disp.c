@@ -18,8 +18,6 @@
  * purpose.  It is provided "as is" without express or implied warranty.
  ************************************************************************/
 
-/* #define G__FIX1 */
-
 #include "common.h"
 
 int G__browsing=1; /* used in disp.c and intrpt.c */
@@ -138,7 +136,7 @@ FILE* fp;
 char* msg;
 {
 #ifndef G__OLDIMPLEMENTATION1485
-  if(fp==G__serr) G__fprinterr(G__serr,msg);
+  if(fp==G__serr) G__fprinterr(msg);
   else fprintf(fp,msg);
     
 #else
@@ -505,7 +503,7 @@ char *fname;
     return(0);
   }
 
-  G__fprinterr(G__serr,"File %s is not loaded\n",fname);
+  G__fprinterr("File %s is not loaded\n",fname);
   return(1);
 }
 #endif
@@ -694,16 +692,6 @@ int start;
   * List of classes
   *******************************************************************/
   if('\0'==name[i]) {
-#ifndef G__OLDIMPLEMENTATION1514
-    if(base) {
-      /* In case of 'Class' command */
-      for(i=0;i<G__struct.alltag;i++) {
-	sprintf(temp,"%d",i);
-	G__display_class(fout,temp,0,0);
-      }
-      return(0);
-    }
-#endif
     /* no class name specified, list up all tagnames */
     if(G__more(fout,"List of classes\n")) return(1);
     sprintf(msg,"%-15s%5s\n","file","line");
@@ -897,7 +885,7 @@ int startin;
   if(name[i]) {
     start = G__defined_typename(name+i);
     if(-1==start) {
-      G__fprinterr(G__serr,"!!!Type %s is not defined\n",name+i);
+      G__fprinterr("!!!Type %s is not defined\n",name+i);
       return(0);
     }
     stop = start+1;
@@ -1647,7 +1635,7 @@ long offset;
   }
   else {
     if(isdigit(index[0])) {
-      G__fprinterr(G__serr,"variable name must be specified\n");
+      G__fprinterr("variable name must be specified\n");
       return(0);
     }
     else {
@@ -1878,12 +1866,6 @@ long offset;
 	  sprintf(msg,"=%g",*(double*)addr); 
 	  if(G__more(fout,msg)) return(1);
 	  break;
-#ifndef G__OLDIMPLEMENTATION1604
-	case 'g': 
-	  sprintf(msg,"=%d",(*(int*)addr)?1:0); 
-	  if(G__more(fout,msg)) return(1);
-	  break;
-#endif
 #ifndef G__FONS31
 	default: 
 	  sprintf(msg,"=0x%lx",*(long*)addr); 
@@ -1984,26 +1966,15 @@ void *p;
 }
 
 #ifndef G__TESTMAIN
-#undef G__fprinterr
 /**************************************************************************
 * G__fprinterr()
-*
-* CAUTION:
-*  In case you have problem compling following function, define G__FIX1
-* at the beginning of this file.
 **************************************************************************/
-#if defined(G__ANSI) || defined(G__WIN32) || defined(G__FIX1)
-int G__fprinterr(FILE* fp,char* fmt,...)
-#elif defined(__GNUC__)
-int G__fprinterr(pf,fmt)
-FILE* fp;
+#if defined(G__ANSI) || defined(G__WIN32)
+int G__fprinterr(char* fmt,...)
+#else
+int G__fprinterr(fmt)
 char* fmt;
 ...
-#else
-int G__fprinterr(fp,fmt,arg)
-FILE* fp;
-char* fmt;
-va_list arg;
 #endif
 {
   int result;
@@ -2015,9 +1986,7 @@ va_list arg;
     (*G__ErrMsgCallback)(buf);
   }
   else {
-    if(fp) result = vfprintf(fp,fmt,argptr);
-    else if(G__serr) result = vfprintf(G__serr,fmt,argptr);
-    else result = vfprintf(stderr,fmt,argptr);
+    result = vfprintf(G__serr,fmt,argptr);
   }
   va_end(argptr);
   return(result);
