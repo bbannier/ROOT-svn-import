@@ -21,13 +21,20 @@
 #ifndef G__CI_H
 #define G__CI_H
 
-#define G__CINTVERSION      5015028
-#define G__CINTVERSIONSTR  "5.15.28, Jan 20 2002"
+#define G__CINTVERSION      5015030
+#define G__CINTVERSIONSTR  "5.15.30, Jan 28 2002"
 
 
 /**********************************************************************
 * SPECIAL CHANGES and CINT CORE COMPILATION SWITCH
 **********************************************************************/
+
+/* Speed up G__strip_quotation */
+#ifdef G__ROOT 
+#ifndef G__CPPCONSTSTRING
+#define G__CPPCONSTSTRING
+#endif
+#endif
 
 /* Define following macro to enable multi-thread safe libcint and DLL
  * features. */
