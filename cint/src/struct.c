@@ -426,15 +426,7 @@ int tagnum;
     libname = G__struct.libname[tagnum];
     /* G__struct.type[tagnum]=0; */
     if(G__p_class_autoloading) {
-#ifndef G__OLDIMPLEMENTATION2048
-      int res;
-      G__enable_autoloading = 0;
-      res = (*G__p_class_autoloading)(G__struct.name[tagnum],libname);
-      G__enable_autoloading = 1;
-      return(res);
-#else
       return((*G__p_class_autoloading)(G__struct.name[tagnum],libname));
-#endif
     }
     else if(libname) {
       G__enable_autoloading = 0;
@@ -965,10 +957,6 @@ int type;
 #ifdef G__OLDIMPLEMENTATION1776_YET
     memset(G__struct.memvar[i],0,sizeof(struct G__var_array));
 #endif
-#ifndef G__OLDIMPLEMENTATION2038
-    G__struct.memvar[i]->enclosing_scope = (struct G__var_array*)NULL;
-    G__struct.memvar[i]->inner_scope = (struct G__var_array**)NULL;
-#endif
 #ifndef G__OLDIMPLEMENTATION1866
     G__struct.memvar[i]->ifunc = (struct G__ifunc_table*)NULL;
 #endif
@@ -1021,23 +1009,6 @@ int type;
     G__struct.memfunc[i]->pentry[0] = &G__struct.memfunc[i]->entry[0];
     G__struct.memfunc[i]->pentry[0]->bytecode=(struct G__bytecodefunc*)NULL;
     G__struct.memfunc[i]->friendtag[0]=(struct G__friendtag*)NULL;
-#ifndef G__OLDIMPLEMENTATION2039
-    G__struct.memfunc[i]->pentry[0]->size = 0; 
-    G__struct.memfunc[i]->pentry[0]->filenum = 0; 
-    G__struct.memfunc[i]->pentry[0]->line_number = 0; 
-    G__struct.memfunc[i]->ispurevirtual[0] = 0;
-    G__struct.memfunc[i]->access[0] = G__PUBLIC;
-    G__struct.memfunc[i]->ansi[0] = 1; 
-    G__struct.memfunc[i]->isconst[0] = 0; 
-    G__struct.memfunc[i]->reftype[0] = 0; 
-    G__struct.memfunc[i]->type[0] = 0; 
-    G__struct.memfunc[i]->p_tagtable[0] = -1; 
-    G__struct.memfunc[i]->p_typetable[0] = -1; 
-    G__struct.memfunc[i]->staticalloc[0] = 0; 
-#ifndef G__OLDIMPLEMENTATION2050
-    G__struct.memfunc[i]->busy[0] = 0; 
-#endif
-#endif
 
     G__struct.memfunc[i]->allifunc = 1;
 #endif
@@ -1149,10 +1120,6 @@ int *pig15;
     var->next = (struct G__var_array *)malloc(sizeof(struct G__var_array)) ;
 #ifdef G__OLDIMPLEMENTATION1776_YET
     memset(var->next,0,sizeof(struct G__var_array));
-#endif
-#ifndef G__OLDIMPLEMENTATION2038
-    var->next->enclosing_scope = (struct G__var_array*)NULL;
-    var->next->inner_scope = (struct G__var_array**)NULL;
 #endif
 #ifndef G__OLDIMPLEMENTATION1866
     var->next->ifunc = (struct G__ifunc_table*)NULL;
@@ -1805,11 +1772,6 @@ char type;
       if (baseclass->property[ivb]&G__ISDIRECTINHERIT)
         lastdirect = ivb;
 
-#ifndef G__OLDIMPLEMENTATION2037
-      /* insure the loading of the memfunc */
-      G__incsetup_memfunc(baseclass->basetagnum[ivb]); 
-#endif
-
       itab = G__struct.memfunc[baseclass->basetagnum[ivb]];
       while (itab) {
         int ifunc;
@@ -2185,21 +2147,17 @@ char type;
 
 #ifndef G__OLDIMPLEMENTATION2030
 /******************************************************************
- * G__callfunc0()
+ * G__callanyfunc()
  ******************************************************************/
-int G__callfunc0(result,ifunc,ifn,libp,p,funcmatch)
+int G__callfunc0(result,ifunc,ifn,libp,p)
 G__value *result;
 struct G__ifunc_table *ifunc;
 int ifn;
 struct G__param* libp;
 void* p;
-int funcmatch;
 {
   int stat=0;
   long store_struct_offset;
-#ifndef G__OLDIMPLEMENTATION2056
-  int store_asm_exec;
-#endif
 
   if(!ifunc->hash[ifn] || !ifunc->pentry[ifn]) {
     /* The function is not defined or masked */
@@ -2209,10 +2167,6 @@ int funcmatch;
 
   store_struct_offset = G__store_struct_offset;
   G__store_struct_offset = (long)p;
-#ifndef G__OLDIMPLEMENTATION2056
-  store_asm_exec = G__asm_exec;
-  G__asm_exec = 0;
-#endif
 
 #ifdef G__EXCEPTIONWRAPPER
   if(-1==ifunc->pentry[ifn]->size) {
@@ -2230,7 +2184,7 @@ int funcmatch;
     /* stat=G__ExceptionWrapper(G__interpret_func,result,ifunc->funcname[ifn]
        ,libp,ifunc->hash[ifn]);  this was wrong! */
     stat=G__interpret_func(result,ifunc->funcname[ifn],libp,ifunc->hash[ifn]
-			   ,ifunc,G__EXACT,funcmatch);
+			   ,ifunc,G__EXACT,G__TRYDESTRUCTOR);
   }
 #else
   if(-1==ifunc->pentry[ifn]->size) {
@@ -2246,14 +2200,11 @@ int funcmatch;
   else {
     /* interpreted function */
     stat=G__interpret_func(result,ifunc->funcname[ifn],libp,ifunc->hash[ifn]
-			   ,ifunc,G__EXACT,funcmatch);
+			   ,ifunc,G__EXACT,G__TRYDESTRUCTOR);
   }
 #endif
 
   G__store_struct_offset = store_struct_offset;
-#ifndef G__OLDIMPLEMENTATION2056
-  G__asm_exec = store_asm_exec;
-#endif
 
   return(stat);
 }
@@ -2285,7 +2236,7 @@ int isheap;
   }
   else {
     /* In callfunc0, G__store_sturct_offset is also set to p.
-     * Let G__operator_delete() return without doing anything */
+     * Let G__operator_delete() return without doing nothing */
     G__setgvp((long)p);
   }
 
@@ -2293,16 +2244,9 @@ int isheap;
   para.paran=0;
   para.parameter[0][0]=0;
   para.para[0] = G__null;
-  stat = G__callfunc0(&result,ifunc,ifn,&para,p,G__TRYDESTRUCTOR);
+  stat = G__callfunc0(&result,ifunc,ifn,&para,p);
 
   G__setgvp(store_gvp);
-
-#ifndef G__OLDIMPLEMENTATION2057
-  if(isheap && -1!=ifunc->pentry[ifn]->size) {
-    /* interpreted class */
-    free((void*)p);
-  }
-#endif
 
   return(stat);
 }

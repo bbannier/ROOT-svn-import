@@ -608,35 +608,6 @@ int G__IsFundamentalDecl()
   else {
     tagnum = G__defined_tagname(typename,1);
     if(-1!=tagnum) result = 0;
-#ifndef G__OLDIMPLEMENTATION2072
-    else {
-      int typenum = G__defined_typename(typename);	
-      if(-1!=typenum) {
-	switch(G__newtype.type[typenum]) {
-	case 'c':
-	case 's':
-	case 'i':
-	case 'l':
-	case 'b':
-	case 'r':
-	case 'h':
-	case 'k':
-	  result=1;
-	  break;
-        default:
-	  result=0;
-	}
-      }
-      else {
-        if(strcmp(typename,"unsigned")==0 ||
-           strcmp(typename,"char")==0 ||
-           strcmp(typename,"short")==0 ||
-           strcmp(typename,"int")==0 ||
-           strcmp(typename,"long")==0) result=1;
-        else result=0;
-      }
-    }
-#endif
   }
 
   /* restore file position */
@@ -1260,20 +1231,6 @@ int G__skip_comment()
 /***********************************************************************
 * G__pp_command()
 *
-*  # if      COND
-*  # ifdef   MACRO
-*  # ifndef  MACRO
-*
-*  # elif    COND
-*  # else
-*
-*  # endif
-*   ^
-*
-* to be added
-*  # num
-*  # define MACRO
-*
 ***********************************************************************/
 int G__pp_command()
 {
@@ -1726,21 +1683,6 @@ char *macro;
     stat = G__defined_typename(macro);
     G__def_tagnum = save_tagnum;
     if(stat>=0) return(1);
-  }
-#endif
-#ifndef G__OLDIMPLEMENTATION2041
-  /* search symbol macro table */
-  if(macro!=G__replacesymbol(macro)) return(1);
-  /* search  function macro table */
-  {
-    struct G__Deffuncmacro *deffuncmacro;
-    deffuncmacro = &G__deffuncmacro;
-    while(deffuncmacro->next) {
-      if(deffuncmacro->name && strcmp(macro,deffuncmacro->name)==0) {
-	return(1);
-      }
-      deffuncmacro=deffuncmacro->next;
-    }
   }
 #endif
   return(0); /* not found */
@@ -3689,10 +3631,6 @@ G__value G__exec_statement()
 	statement[iout++] = c ;
       }
       else {
-#ifndef G__OLDIMPLEMENTATION2034
-      after_replacement:
-#endif
-	
 #ifndef G__PHILIPPE33
         if (!fake_space) discard_space = 1;
 #endif
@@ -4545,16 +4483,6 @@ G__value G__exec_statement()
 #endif
               spaceflag = 0;	    
             }
-          }
-#endif
-#ifndef G__OLDIMPLEMENTATION2034
-          {
-	    char* replace = (char*)G__replacesymbol(statement);
-	    if(replace!=statement) {
-	      strcpy(statement,replace);
-	      iout = strlen(statement);
-	      goto after_replacement;
-	    }
           }
 #endif
 	  ++spaceflag;

@@ -113,10 +113,6 @@ G__ClassInfo {
   void *New();
   void *New(int n);
   void *New(void *arena);
-#ifndef G__OLDIMPLEMENTATION2043
-  void Delete(void* p) const ;
-  void Destruct(void* p) const ;
-#endif
   int InstanceCount(); 
   void ResetInstanceCount();
   void IncInstanceCount();
@@ -131,15 +127,8 @@ G__ClassInfo {
 					,MatchMode mode=ConversionMatch
 					);
   G__MethodInfo GetMethod(const char *fname,const char *arg,long* poffset
-			  ,MatchMode mode=ConversionMatch);
-  G__MethodInfo GetMethod(const char *fname,struct G__param* libp,long* poffset
-			  ,MatchMode mode=ConversionMatch);
-#ifndef G__OLDIMPLEMENTATION2059
-  G__MethodInfo GetDefaultConstructor();
-  G__MethodInfo GetCopyConstructor();
-  G__MethodInfo GetDestructor();
-  G__MethodInfo GetAssignOperator();
-#endif
+			  ,MatchMode mode=ConversionMatch
+			  );
   G__DataMemberInfo GetDataMember(const char *name,long* poffset);
   int HasMethod(const char *fname);
   int HasDataMember(const char *name);

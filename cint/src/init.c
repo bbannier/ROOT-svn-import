@@ -7,7 +7,7 @@
  * Description:
  *  Entry functions
  ************************************************************************
- * Copyright(c) 1995~2004  Masaharu Goto 
+ * Copyright(c) 1995~2003  Masaharu Goto 
  *
  * Permission to use, copy, modify and distribute this software and its 
  * documentation for any purpose is hereby granted without fee,
@@ -1908,18 +1908,10 @@ int G__init_globals()
   G__global.prev_local = (struct G__var_array *)NULL;
   G__global.prev_filenum = -1;
   G__global.tagnum = -1;
-#ifndef G__OLDIMPLEMENTATION2053
-  G__global.allvar = 0;
-#endif
 #ifndef G__OLDIMPLEMENTATION1543
   {
     int ix;
-    for(ix=0;ix<G__MEMDEPTH;ix++) {
-#ifndef G__OLDIMPLEMENTATION2053
-      G__global.hash[ix] = 0;
-#endif
-      G__global.varnamebuf[ix] = (char*)NULL;
-    }
+    for(ix=0;ix<G__MEMDEPTH;ix++) G__global.varnamebuf[ix] = (char*)NULL;
   }
 #endif
   G__cpp_aryconstruct=0;
@@ -2243,14 +2235,6 @@ void G__platformMacro()
 #ifdef __INTEL_COMPILER /* icc and ecc C++ compilers */
   sprintf(temp,"G__INTEL_COMPILER=%ld",(long)__INTEL_COMPILER); G__add_macro(temp);
 #endif
-#ifndef _AIX
-#ifdef __xlC__ /* IBM xlC compiler */
-  sprintf(temp,"G__XLC=%ld",(long)__xlC__); G__add_macro(temp); 
-#endif
-#ifdef __xlc__ /* IBM xlc compiler */
-  sprintf(temp,"G__XLC=%ld",(long)__xlc__); G__add_macro(temp);
-#endif
-#endif
 #ifndef G__OLDIMPLEMENTATION1689
   G__initcxx(); 
 #endif
@@ -2476,7 +2460,7 @@ FILE *fp;
 {
   fprintf(fp,"\n");
   fprintf(fp,"cint : C/C++ interpreter  (mailing list 'cint@root.cern.ch')\n");
-  fprintf(fp,"   Copyright(c) : 1995~2004 Masaharu Goto (gotom@hanno.jp)\n");
+  fprintf(fp,"   Copyright(c) : 1995~2003 Masaharu Goto (gotom@hanno.jp)\n");
   fprintf(fp,"   revision     : %s by M.Goto\n\n",G__cint_version());
 
 #ifdef G__DEBUG
