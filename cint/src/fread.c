@@ -7,7 +7,7 @@
  * Description:
  *  Utility to read source file
  ************************************************************************
- * Copyright(c) 1995~1999  Masaharu Goto (MXJ02154@niftyserve.or.jp)
+ * Copyright(c) 1995~2002  Masaharu Goto (MXJ02154@niftyserve.or.jp)
  *
  * Permission to use, copy, modify and distribute this software and its 
  * documentation for any purpose is hereby granted without fee,
@@ -43,7 +43,7 @@ int c;
   case G__SJIS:
     if(c<=0x1f || (0x60<=c && c<=0x7c)) return(1);
     else                                return(0);
-  case G__ONEBYTE:
+  case G__ONEBYTE: 
     return(0);
   }
   return(1);
@@ -2806,7 +2806,11 @@ struct G__comment_info *pcomment;
 
   fgetpos(G__ifile.fp,&pos);
 
+#ifndef G__OLDIMPLEMENTATION1691
+  while((isspace(c=fgetc(G__ifile.fp)) || ';'==c) && '\n'!=c && '\r'!=c) ;
+#else
   while(isspace(c=fgetc(G__ifile.fp)) && '\n'!=c && '\r'!=c) ;
+#endif
   if('/'==c) {
     c=fgetc(G__ifile.fp);
 #ifndef G__OLDIMPLEMENTATION849

@@ -21,19 +21,32 @@
 #ifndef G__CI_H
 #define G__CI_H
 
-#define G__CINTVERSION      5015036
-#define G__CINTVERSIONSTR  "5.15.36, Apr 23 2002"
+#define G__CINTVERSION      5015053
+#define G__CINTVERSIONSTR  "5.15.53, Aug 15 2002"
 
 
 /**********************************************************************
 * SPECIAL CHANGES and CINT CORE COMPILATION SWITCH
 **********************************************************************/
 
+
+/* For a machine which has unaddressable bool */
+#ifndef G__UNADDRESSABLEBOOL
+#define G__UNADDRESSABLEBOOL
+#endif
+
 /* Speed up G__strip_quotation */
 #ifdef G__ROOT 
 #ifndef G__CPPCONSTSTRING
 #define G__CPPCONSTSTRING
 #endif
+#endif
+
+/* Activate pointer to member function handling in interpreted code. 
+ * Seamless access of pointer to member between interpreted and compiled code
+ * is not implemented yet. */
+#ifndef G__PTR2MEMFUNC
+#define G__PTR2MEMFUNC
 #endif
 
 /* 1649 is not ready yet */
@@ -189,10 +202,22 @@
 #define G__VMS
 #endif
 
-#if defined(__BORLANDC__) || defined(__BCPLUSPLUS) || defined(__BCPLUSPLUS__)
+#if defined(__BORLANDC__) || defined(__BCPLUSPLUS) || defined(__BCPLUSPLUS__) || defined(G__BORLANDCC5)
 #ifndef G__BORLAND
 #define G__BORLAND
 #endif
+#endif
+
+#ifdef G__BORLANDCC5
+#define G__SHAREDLIB
+#define G__DLL_SYM_UNDERSCORE
+#define G__WIN32
+#define G__ANSI
+#define G__P2FCAST
+#define G__REDIRECTIO
+#define G__DETECT_NEWDEL
+#define G__POSIX
+#define G__STD_EXCEPTION
 #endif
 
 #if defined(_WIN32) || defined(_WINDOWS) || defined(_Windows) || defined(_WINDOWS_)
@@ -640,7 +665,11 @@ typedef int (*G__IgnoreInclude)();
 
 #ifdef G__WIN32
 #define G__MAXSTRUCT   4000  /* struct table */
+#ifdef G__BORLANDCC5
+#define G__MAXTYPEDEF  8000  /* typedef table */
+#else
 #define G__MAXTYPEDEF  4000  /* typedef table */
+#endif
 #else
 #define G__MAXSTRUCT   4000  /* struct table */
 #define G__MAXTYPEDEF  4000  /* typedef table */

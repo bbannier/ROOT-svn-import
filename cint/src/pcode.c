@@ -27,6 +27,17 @@ extern void G__delete_interpreted_object G__P((void* p));
 #endif
 #endif
 
+#ifdef G__BORLANDCC5
+double G__doubleM(G__value *buf);
+static void G__asm_toXvalue(G__value* result);
+void G__get__tm__(char *buf);
+char* G__get__date__(void);
+char* G__get__time__(void);
+int G__isInt(int type);
+int G__get_LD_Rp0_p2f(int type,long *pinst);
+int G__get_ST_Rp0_p2f(int type,long *pinst);
+#endif
+
 #ifndef __CINT__
 int G__asm_optimize3 G__P((int *start));
 #endif
@@ -331,6 +342,10 @@ long localmem;
   int sp;               /* data stack pointer */
   int strosp=0;           /* struct offset stack pointer */
   long struct_offset_stack[G__MAXSTRSTACK]; /*struct offset stack, was int */
+#ifndef G__OLDIMPLEMENTATION1659
+  int gvpp=0;           /* struct offset stack pointer */
+  long store_globalvarpointer[G__MAXSTRSTACK]; /**/
+#endif
   char *funcname;         /* function name */
   int (*pfunc)();
   struct G__param fpara;  /* func,var parameter buf */
@@ -991,12 +1006,16 @@ long localmem;
       if(G__asm_dbg) G__fprinterr(G__serr,"%3x,%d: CAST to %c\n"
 			     ,pc,sp,(char)G__asm_inst[pc+1]);
 #endif
-      G__asm_stack[sp-1].typenum = G__asm_inst[pc+2];
-      G__asm_stack[sp-1].tagnum = G__asm_inst[pc+3];
-      G__asm_cast((int)G__asm_inst[pc+1],&G__asm_stack[sp-1]);
-      if(isupper(G__asm_inst[pc+1]))
-	G__asm_stack[sp-1].obj.reftype.reftype = G__asm_inst[pc+4];
-      pc+=5;
+      {
+	int tagnum = G__asm_stack[sp-1].tagnum;
+	G__asm_stack[sp-1].typenum = G__asm_inst[pc+2];
+	G__asm_stack[sp-1].tagnum = G__asm_inst[pc+3];
+	G__asm_cast((int)G__asm_inst[pc+1],&G__asm_stack[sp-1]
+		    ,tagnum,G__asm_inst[pc+4]);
+	if(isupper(G__asm_inst[pc+1]))
+	  G__asm_stack[sp-1].obj.reftype.reftype = G__asm_inst[pc+4];
+	pc+=5;
+      }
 #ifdef G__ASM_DBG
       break;
 #else
@@ -2439,8 +2458,23 @@ long localmem;
       ***************************************/
 #ifdef G__ASM_DBG
       if(G__asm_dbg) 
-	G__fprinterr(G__serr,"%3x,%d: SETGVP %d\n",pc,sp,G__asm_inst[pc+1]);
+	G__fprinterr(G__serr,"%3x,%d: SETGVP %d %d\n",pc,sp,G__asm_inst[pc+1],gvpp);
 #endif
+#ifndef G__OLDIMPLEMENTATION1659
+      switch(G__asm_inst[pc+1]) {
+      case -1:
+	if(gvpp) G__globalvarpointer = store_globalvarpointer[--gvpp];
+	break;
+      case 0:
+	store_globalvarpointer[gvpp++] = G__globalvarpointer;
+	G__globalvarpointer = G__asm_stack[sp-1].obj.i;
+	break;
+      default:
+	store_globalvarpointer[gvpp++] = G__globalvarpointer;
+	G__globalvarpointer = G__asm_inst[pc+1];
+	break;
+      }
+#else
       if(G__asm_inst[pc+1]) {
 	G__globalvarpointer = G__asm_inst[pc+1];
       }
@@ -2448,6 +2482,7 @@ long localmem;
 	G__globalvarpointer = G__asm_stack[sp-1].obj.i;
 	/* --sp; */
       }
+#endif
       pc+=2;
 #ifdef G__ASM_DBG
       break;
@@ -6337,8 +6372,10 @@ G__value *pbuf;
 void G__suspendbytecode() 
 {
   if(G__asm_dbg && G__asm_noverflow) {
-    G__fprinterr(G__serr,"Note: Bytecode compiler suspended(off) and resumed(on)");
-    G__printlinenum();
+    if(G__dispmsg>=G__DISPNOTE) {
+      G__fprinterr(G__serr,"Note: Bytecode compiler suspended(off) and resumed(on)");
+      G__printlinenum();
+    }
   }
   G__asm_noverflow=0;
 }
@@ -6348,8 +6385,10 @@ void G__suspendbytecode()
 void G__resetbytecode() 
 {
   if(G__asm_dbg && G__asm_noverflow) {
-    G__fprinterr(G__serr,"Note: Bytecode compiler reset (off)");
-    G__printlinenum();
+    if(G__dispmsg>=G__DISPNOTE) {
+      G__fprinterr(G__serr,"Note: Bytecode compiler reset (off)");
+      G__printlinenum();
+    }
   }
   G__asm_noverflow=0;
 }
@@ -6363,16 +6402,18 @@ void G__abortbytecode()
 {
   if(G__asm_dbg && G__asm_noverflow) {
 #ifndef G__OLDIMPLEMENTATION1164
-    if(0==G__xrefflag) 
-      G__fprinterr(G__serr,"Note: Bytecode compiler stops at this line. Enclosing loop or function may be slow %d"
-	      ,G__asm_noverflow);
-    else
-      G__fprinterr(G__serr,"Note: Bytecode limitation encountered but compiler continuers for Local variable cross referencing");
+    if(G__dispmsg>=G__DISPNOTE) {
+      if(0==G__xrefflag) 
+	G__fprinterr(G__serr,"Note: Bytecode compiler stops at this line. Enclosing loop or function may be slow %d"
+		     ,G__asm_noverflow);
+      else
+	G__fprinterr(G__serr,"Note: Bytecode limitation encountered but compiler continuers for Local variable cross referencing");
 #else
-    G__fprinterr(G__serr,"Note: Bytecode compiler stops at this line. Enclosing loop or function may be slow %d"
-	    ,G__asm_noverflow);
+      G__fprinterr(G__serr,"Note: Bytecode compiler stops at this line. Enclosing loop or function may be slow %d"
+		   ,G__asm_noverflow);
 #endif
-    G__printlinenum();
+      G__printlinenum();
+    }
   }
 #ifndef G__OLDIMPLEMENTATION1164
   if(0==G__xrefflag) G__asm_noverflow=0;

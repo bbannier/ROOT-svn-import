@@ -180,7 +180,15 @@ void G__define_type()
    */
 
 #ifndef G__PHILIPPE8
+#ifndef G__OLDIMPLEMENTATION1685
+  c=G__fgetname_template(type1,"*{");
+  if('*'==c) { 
+    strcat(type1,"*");
+    c=' ';
+  }
+#else
   c=G__fgetname_template(type1,"{");
+#endif
   /* just ignore the following 4 keywords as long as they are
      followed by a space */
   while(isspace(c) &&
@@ -196,6 +204,16 @@ void G__define_type()
     c = G__fgetspace(); /* skip the next ':' */
     c=G__fgetname_template(type1,"{");
   }   
+#ifndef G__OLDIMPLEMENTATION1693
+  if (strncmp(type1,"::",2)==0) {
+    /* A leading '::' causes other typename matching function to fails so 
+       we remove it. This is not the ideal solution (neither was the one 
+       above since it does not allow for distinction between global 
+       namespace and local namespace) ... but at least it is an improvement
+       over the current behavior */
+    strcpy(type1,type1+2);
+  }
+#endif
   while( isspace(c) ) {
     len=strlen(type1);
     c = G__fgetspace();
@@ -544,6 +562,11 @@ void G__define_type()
 	G__def_struct_member = store_def_struct_member;
 #endif
       }
+#ifndef G__OLDIMPLEMENTATION1686
+      strcpy(tagname,"G__ulonglong");
+      itemp=G__defined_tagname(tagname,2);
+      G__search_typename("unsigned long long",'u',itemp,G__PARANORMAL);
+#endif
 #ifndef G__OLDIMPLEMENTATION1533
       strcpy(tagname,"G__longdouble");
       itemp=G__defined_tagname(tagname,2);
@@ -574,6 +597,11 @@ void G__define_type()
 #endif
       }
 
+#ifndef G__OLDIMPLEMENTATION1686
+      strcpy(tagname,"G__ulonglong");
+      itemp=G__defined_tagname(tagname,2);
+      G__search_typename("unsigned long long",'u',itemp,G__PARANORMAL);
+#endif
       strcpy(tagname,"G__longlong");
       itemp=G__defined_tagname(tagname,2);
       G__search_typename("long long",'u',itemp,G__PARANORMAL);
@@ -947,12 +975,21 @@ void G__define_type()
 	  do {
 	    c=G__fgetstream(memname,"=,}");
 	    if(c=='=') {
+#ifndef G__OLDIMPLEMENTATION1676
+	      int store_prerun = G__prerun;
+#endif
 #ifndef G__OLDIMPLEMENTATION1337
 	      char store_var_type = G__var_type;
 	      G__var_type = 'p';
 #endif
+#ifndef G__OLDIMPLEMENTATION1676
+	      G__prerun = 0;
+#endif
 	      c=G__fgetstream(val,",}");
 	      enumval=G__getexpr(val);
+#ifndef G__OLDIMPLEMENTATION1676
+	      G__prerun = store_prerun;
+#endif
 #ifndef G__OLDIMPLEMENTATION1337
 	      G__var_type = store_var_type;
 #endif

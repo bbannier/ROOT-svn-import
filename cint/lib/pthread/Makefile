@@ -25,7 +25,7 @@ CPPPREP     = g++ -E -C
 # Compiler and linker option
 CCDLLOPT    = -fPIC
 LDDLLOPT    = -shared
-OPTIMIZE    = -O2
+OPTIMIZE    = -O
 LDOPT       = -lm -L/usr/lib/termcap -ltermcap -lbsd -ldl -rdynamic 
 SYSMACRO    = -DG__REGEXP -DG__SHAREDLIB -DG__OSFDLL -DG__ANSI -DG__ERRORCALLBACK
 OTHMACRO    = -DG__REDIRECTIO -DG__DETECT_NEWDEL -DG__POSIX -DG__STD_EXCEPTION 
