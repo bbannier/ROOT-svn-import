@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: BaBar detector at the SLAC PEP-II B-factory
  * Package: RooFitModels
- *    File: $Id: RooBifurGauss.cc,v 1.4 2001/08/03 18:13:02 verkerke Exp $
+ *    File: $Id: RooBifurGauss.cc,v 1.7 2001/09/24 23:08:55 verkerke Exp $
  * Authors:
  *   Abi Soffer, Coloraro State University, abi@slac.stanford.edu
  * History:
@@ -10,8 +10,9 @@
  *
  * Copyright (C) 2000 Coloraro State University
  *****************************************************************************/
-#include "BaBar/BaBar.hh"
+// -- CLASS DESCRIPTION [PDF] --
 
+#include "BaBar/BaBar.hh"
 #include <iostream.h>
 #include <math.h>
 
@@ -21,7 +22,7 @@
 ClassImp(RooBifurGauss)
 
 static const char rcsid[] =
-"$Id: RooBifurGauss.cc,v 1.4 2001/08/03 18:13:02 verkerke Exp $";
+"$Id: RooBifurGauss.cc,v 1.7 2001/09/24 23:08:55 verkerke Exp $";
 
 RooBifurGauss::RooBifurGauss(const char *name, const char *title,
 			     RooAbsReal& _x, RooAbsReal& _mean,
@@ -71,7 +72,6 @@ Int_t RooBifurGauss::getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVa
 Double_t RooBifurGauss::analyticalIntegral(Int_t code) const 
 {
   switch(code) {
-  case 0: return getVal() ; 
   case 1: 
     {
       static Double_t root2 = sqrt(2) ;

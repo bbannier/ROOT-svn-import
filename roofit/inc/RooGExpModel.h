@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: BaBar detector at the SLAC PEP-II B-factory
  * Package: RooFitCore
- *    File: $Id: RooGaussModel.rdl,v 1.9 2001/10/17 05:15:06 verkerke Exp $
+ *    File: $Id: RooGExpModel.rdl,v 1.3 2001/09/24 23:08:56 verkerke Exp $
  * Authors:
  *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu
  * History:
@@ -9,41 +9,45 @@
  *
  * Copyright (C) 2001 University of California
  *****************************************************************************/
-#ifndef ROO_GAUSS_MODEL
-#define ROO_GAUSS_MODEL
+#ifndef ROO_GEXP_MODEL
+#define ROO_GEXP_MODEL
 
 #include "RooFitCore/RooResolutionModel.hh"
 #include "RooFitCore/RooRealProxy.hh"
 #include "RooFitCore/RooComplex.hh"
 #include "RooFitCore/RooMath.hh"
 
-class RooGaussModel : public RooResolutionModel {
+class RooGExpModel : public RooResolutionModel {
 public:
 
-  enum RooGaussBasis { noBasis=0, expBasisMinus= 1, expBasisSum= 2, expBasisPlus= 3,
-                                  sinBasisMinus=11, sinBasisSum=12, sinBasisPlus=13,
-                                  cosBasisMinus=21, cosBasisSum=22, cosBasisPlus=23 } ;
-  enum BasisType { none=0, expBasis=1, sinBasis=2, cosBasis=3 } ;
-  enum BasisSign { Both=0, Plus=+1, Minus=-1 } ;
+  enum RooGaussBasis { noBasis=0, expBasisPlus=1, expBasisMinus=2,
+                                  sinBasisPlus=3, sinBasisMinus=4,
+                                  cosBasisPlus=5, cosBasisMinus=6 } ;
+  enum Type { Normal, Flipped };
 
   // Constructors, assignment etc
-  inline RooGaussModel() { }
-  RooGaussModel(const char *name, const char *title, RooRealVar& x, 
-		RooAbsReal& mean, RooAbsReal& sigma) ; 
-  RooGaussModel(const char *name, const char *title, RooRealVar& x, 
-		RooAbsReal& mean, RooAbsReal& sigma, RooAbsReal& msSF) ; 
-  RooGaussModel(const char *name, const char *title, RooRealVar& x, 
-		RooAbsReal& mean, RooAbsReal& sigma, RooAbsReal& meanSF, RooAbsReal& sigmaSF) ; 
-  RooGaussModel(const RooGaussModel& other, const char* name=0);
-  virtual TObject* clone(const char* newname) const { return new RooGaussModel(*this,newname) ; }
-  virtual ~RooGaussModel();
+  inline RooGExpModel() { }
+  RooGExpModel(const char *name, const char *title, RooRealVar& x, 
+	       RooAbsReal& sigma, RooAbsReal& rlife, 
+	       Bool_t nlo=kFALSE, Type type=Normal) ; 
+
+  RooGExpModel(const char *name, const char *title, RooRealVar& x, 
+	       RooAbsReal& sigma, RooAbsReal& rlife, 
+	       RooAbsReal& srSF, 
+	       Bool_t nlo=kFALSE, Type type=Normal) ; 
+
+  RooGExpModel(const char *name, const char *title, RooRealVar& x, 
+	       RooAbsReal& sigma, RooAbsReal& rlife, 
+	       RooAbsReal& sigmaSF, RooAbsReal& rlifeSF,
+	       Bool_t nlo=kFALSE, Type type=Normal) ; 
+
+  RooGExpModel(const RooGExpModel& other, const char* name=0);
+  virtual TObject* clone(const char* newname) const { return new RooGExpModel(*this,newname) ; }
+  virtual ~RooGExpModel();
   
   virtual Int_t basisCode(const char* name) const ;
   virtual Int_t getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVars) const ;
   virtual Double_t analyticalIntegral(Int_t code) const ;
-
-  Int_t getGenerator(const RooArgSet& directVars, RooArgSet &generateVars) const;
-  void generateEvent(Int_t code);
 
 protected:
 
@@ -68,13 +72,15 @@ protected:
     return (z.im()>-4.0) ? RooMath::FastComplexErrFuncIm(z)*exp(-u*u) : evalCerfApprox(swt,u,c).im() ;
   }
   
-  
-  RooRealProxy mean ;
-  RooRealProxy sigma ;
-  RooRealProxy msf ;
-  RooRealProxy ssf ;
 
-  ClassDef(RooGaussModel,1) // Gaussian Resolution Model
+  RooRealProxy sigma ;
+  RooRealProxy rlife ;
+  RooRealProxy ssf ;
+  RooRealProxy rsf ;
+  Bool_t _flip ;
+  Bool_t _nlo ;
+
+  ClassDef(RooGExpModel,1) // GExp Resolution Model
 };
 
 #endif

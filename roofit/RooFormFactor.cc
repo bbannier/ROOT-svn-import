@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: BaBar detector at the SLAC PEP-II B-factory
  * Package: RooFitTools
- *    File: $Id: RooFormFactor.cc,v 1.1 2001/08/23 13:59:23 msgill Exp $
+ *    File: $Id: RooFormFactor.cc,v 1.4 2001/09/24 23:08:56 verkerke Exp $
  * Authors:
  *   DK, David Kirkby, Stanford University, kirkby@hep.stanford.edu
  *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu
@@ -14,8 +14,10 @@
  *
  * Copyright (C) 1999 Stanford University
  *****************************************************************************/
-#include "BaBar/BaBar.hh"
 
+// -- CLASS DESCRIPTION [PDF] --
+
+#include "BaBar/BaBar.hh"
 #include <iostream.h>
 #include <math.h>
 
@@ -34,7 +36,7 @@ ClassImp(RooFormFactor)
   ;
 
 static const char rcsid[] =
-"$Id: RooFormFactor.cc,v 1.1 2001/08/23 13:59:23 msgill Exp $";
+"$Id: RooFormFactor.cc,v 1.4 2001/09/24 23:08:56 verkerke Exp $";
 
 RooFormFactor::RooFormFactor(const char *name, const char *title,
 			     RooAbsReal& _w, RooAbsReal& _ctl, RooAbsReal& _ctv, 
@@ -82,7 +84,6 @@ Int_t RooFormFactor::getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVa
 Double_t RooFormFactor::analyticalIntegral(Int_t code) const 
 {
   switch(code) {
-  case 0: return getVal() ; 
   case 1: 
     {
 
@@ -139,11 +140,9 @@ Double_t RooFormFactor::evaluate() const {
   Double_t stl2 = stl*stl;
   Double_t stv2 = stv*stv;
  
-  
   Double_t omctl2 = (1-ctl)*(1-ctl);
   Double_t opctl2 = (1+ctl)*(1+ctl);
-  
-  
+    
   Double_t pdstr = mdstr*sqrt(w*w-1);
   
   Double_t opw2=(w+1)*(w+1);
