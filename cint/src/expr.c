@@ -54,11 +54,7 @@ char *str;
 	  ,result->tagnum
 	  ,(result->obj.i<0)?'M':'P'
 #ifndef G__OLDIMPLEMENTATION1981
-#ifndef G__PHILIPPE36
-          ,labs(result->obj.i)
-#else
 	  ,abs(result->obj.i)
-#endif
 #else
 	  ,result->obj.i
 #endif
@@ -1220,7 +1216,7 @@ char *expression;
   int iscastexpr = 0; /* whether this expression start with a cast */
 #endif
 
-  G__value defined = G__null;
+  G__value defined;
   int store_var_type = G__var_type;
   int explicitdtor = 0;
   int inew=0; /* ON994 */
@@ -2221,7 +2217,7 @@ char *item;
 	while('u'==tolower(item[ulonglen-1])||'l'==tolower(item[ulonglen-1]))
 	  item[--ulonglen]=0;
         if(strcmp(ulongmax,item)!=0) 
-          G__genericerror("Error: integer literal too large, add LL or ULL for long long integer");
+          G__genericerror("Error: integer literal too large");
       } 
 #ifndef G__OLDIMPLEMENTATION1874
       if('u'!=c) {

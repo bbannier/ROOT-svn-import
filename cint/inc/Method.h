@@ -50,9 +50,8 @@ G__MethodInfo {
 #ifndef __MAKECINT__
   int Hash() ;
   struct G__ifunc_table* ifunc();
-#endif
-  long Handle() { return(handle); }
   int Index() { return ((int)index); }
+#endif
   const char *Title() ;
   G__TypeInfo* Type() { return(&type); }
   long Property();

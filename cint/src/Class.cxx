@@ -651,72 +651,6 @@ G__MethodInfo G__ClassInfo::GetMethod(const char* fname,const char* arg
   return(method);
 }
 ///////////////////////////////////////////////////////////////////////////
-G__MethodInfo G__ClassInfo::GetMethod(const char* fname,struct G__param* libp
-				      ,long* poffset
-				      ,MatchMode mode)
-{
-  struct G__ifunc_table *ifunc;
-  char *funcname = (char*)fname;
-  long index;
-
-  /* Search for method */
-  if(-1==tagnum) ifunc = &G__ifunc;
-  else           ifunc = G__struct.memfunc[tagnum];
-
-  ifunc = G__get_methodhandle2(funcname,libp,ifunc,&index,poffset
-			       ,(mode==ConversionMatch)?1:0);
-
-  /* Initialize method object */
-  G__MethodInfo method;
-  method.Init((long)ifunc,index,this);
-  return(method);
-}
-#ifndef G__OLDIMPLEMENTATION2059
-///////////////////////////////////////////////////////////////////////////
-G__MethodInfo G__ClassInfo::GetDefaultConstructor() {
-  long dmy;
-  G__MethodInfo method;
-  char *fname= (char*)malloc(strlen(Name())+1);
-  sprintf(fname,"%s",Name());
-  method = GetMethod(fname,"",&dmy);
-  free((void*)fname);
-  return(method);
-}
-///////////////////////////////////////////////////////////////////////////
-G__MethodInfo G__ClassInfo::GetCopyConstructor() {
-  long dmy;
-  G__MethodInfo method;
-  char *fname= (char*)malloc(strlen(Name())+1);
-  sprintf(fname,"%s",Name());
-  char *arg= (char*)malloc(strlen(Name())+10);
-  sprintf(arg,"const %s&",Name());
-  method = GetMethod(fname,arg,&dmy);
-  free((void*)arg);
-  free((void*)fname);
-  return(method);
-}
-///////////////////////////////////////////////////////////////////////////
-G__MethodInfo G__ClassInfo::GetDestructor() {
-  long dmy;
-  G__MethodInfo method;
-  char *fname= (char*)malloc(strlen(Name())+2);
-  sprintf(fname,"~%s",Name());
-  method = GetMethod(fname,"",&dmy);
-  free((void*)fname);
-  return(method);
-}
-///////////////////////////////////////////////////////////////////////////
-G__MethodInfo G__ClassInfo::GetAssignOperator() {
-  long dmy;
-  G__MethodInfo method;
-  char *arg= (char*)malloc(strlen(Name())+10);
-  sprintf(arg,"const %s&",Name());
-  method = GetMethod("operator=",arg,&dmy);
-  free((void*)arg);
-  return(method);
-}
-#endif
-///////////////////////////////////////////////////////////////////////////
 G__DataMemberInfo G__ClassInfo::GetDataMember(const char* name,long* poffset)
 {
   char *varname;
@@ -1149,4 +1083,3 @@ struct G__friendtag* G__ClassInfo::GetFriendInfo() {
 }
 ///////////////////////////////////////////////////////////////////////////
 #endif /* ON644 */
-
