@@ -1,4 +1,4 @@
-// @(#)root/utils:$Name:  $:$Id: rootcint.cxx,v 1.58.4.2 2002/02/08 14:58:09 rdm Exp $
+// @(#)root/utils:$Name:  $:$Id: rootcint.cxx,v 1.58.4.3 2002/02/09 16:23:30 rdm Exp $
 // Author: Fons Rademakers   13/07/96
 
 /*************************************************************************
@@ -1063,7 +1063,7 @@ void WriteClassName(G__ClassInfo &cl, int tmplt = 0)
    fprintf(fp, "                       DeclFileName(), ImplFileName(),\n");
    fprintf(fp, "                       DeclFileLine(), ImplFileLine());\n");
 #else
-   fprintf(fp, "   fgIsA = R__tInit<%s >::GetClass();\n", cl.Fullname());
+   fprintf(fp, "   fgIsA = R__tInit< %s >::GetClass();\n", cl.Fullname());
 #endif
    fprintf(fp, "}\n\n");
 
@@ -1078,18 +1078,32 @@ void WriteClassName(G__ClassInfo &cl, int tmplt = 0)
    fprintf(fp, "   return fgIsA;\n}\n\n");
 #endif
    fprintf(fp, "// Static variable to hold initialization object\n");
-   fprintf(fp, "static R__tInit< %s > __gR__Init%s(%d);\n\n", cl.Fullname(),
-               G__map_cpp_name((char*)cl.Fullname()), cl.RootFlag());
+   fprintf(fp, "static R__tInit< %s > __gR__Init%s(\"%s\",%s::Class_Version(),\"%s\",%d,&ROOT::ShowMembers,%d);\n\n",
+           cl.Fullname(), G__map_cpp_name((char*)cl.Fullname()),
+           cl.Fullname(), cl.Fullname(), cl.FileName(), cl.LineNumber(),
+           cl.RootFlag());
 }
 
 //______________________________________________________________________________
-const char *ShortTypeName (const char *typeDesc)
+void WriteClassInit(G__ClassInfo &cl, int tmplt = 0)
+{
+   // Write the code to initialize the class name and the initialization object.
+
+   fprintf(fp, "// Static variable to hold initialization object\n");
+   fprintf(fp, "static R__tInit< %s > __gR__Init%s(\"%s\",\"%s\",%d,&ROOT::ShowMembers,%d);\n\n",
+           cl.Fullname(), G__map_cpp_name((char*)cl.Fullname()),
+           cl.Fullname(), cl.FileName(), cl.LineNumber(),
+           cl.RootFlag());
+}
+
+//______________________________________________________________________________
+const char *ShortTypeName(const char *typeDesc)
 {
    // Return the absolute type of typeDesc.
    // E.g.: typeDesc = "class TNamed**", returns "TNamed".
    // You need to use the result immediately before it is being overwritten.
 
-   static char t[64];
+   static char t[1024];
    char *s;
    if (!strstr(typeDesc, "(*)(") && (s = (char*)strchr(typeDesc, ' ')))
       strcpy(t, s+1);
@@ -1619,14 +1633,22 @@ void WritePointersSTL(G__ClassInfo &cl)
 }
 
 //______________________________________________________________________________
-void WriteShowMembers(G__ClassInfo &cl)
+void WriteShowMembers(G__ClassInfo &cl, bool outside = false)
 {
-   int add_template_keyword = NeedTemplateKeyword(cl);
+   int add_template_keyword = true;
 
    fprintf(fp, "//_______________________________________");
    fprintf(fp, "_______________________________________\n");
-   if (add_template_keyword) fprintf(fp, "template <> ");
-   fprintf(fp, "void %s::ShowMembers(TMemberInspector &R__insp, char *R__parent)\n{\n", cl.Fullname());
+   //   if (add_template_keyword) fprintf(fp, "template <> ");
+   char *prefix = "";
+
+   //   fprintf(fp, "void ROOT::ShowMembers<%s >(%s *obj, TMemberInspector &R__insp, char *R__parent)\n{\n",
+   //      cl.Fullname(),cl.Fullname());
+   fprintf(fp, "namespace ROOT {\n");
+   fprintf(fp, "void ShowMembers(%s *obj, TMemberInspector &R__insp, char *R__parent)\n{\n",
+           cl.Fullname());
+
+   prefix = "obj->";
    fprintf(fp, "   // Inspect the data members of an object of class %s.\n\n", cl.Fullname());
 #ifdef  WIN32
    // This is to work around a bad msvc C++ bug.
@@ -1637,10 +1659,19 @@ void WriteShowMembers(G__ClassInfo &cl)
        // there is a namespace involved, trigger MS VC bug workaround
        fprintf(fp, "   typedef %s msvc_bug_workaround;\n", cl.Fullname());
        fprintf(fp, "   TClass *R__cl  = msvc_bug_workaround::IsA();\n");
-    } else
-       fprintf(fp, "   TClass *R__cl  = %s::IsA();\n", cl.Fullname());
+   } else {
+      if (1 || outside) {
+         fprintf(fp, "   TClass *R__cl  = R__tInit<%s >::GetClass();\n", cl.Fullname());
+      } else {
+         fprintf(fp, "   TClass *R__cl  = %s::IsA();\n", cl.Fullname());
+      }
+   }
 #else
-   fprintf(fp, "   TClass *R__cl  = %s::IsA();\n", cl.Fullname());
+   if (1 || outside) {
+      fprintf(fp, "   TClass *R__cl  = R__tInit<%s >::GetClass();\n", cl.Fullname());
+   } else {
+      fprintf(fp, "   TClass *R__cl  = %s::IsA();\n", cl.Fullname());
+   }
 #endif
    fprintf(fp, "   Int_t   R__ncp = strlen(R__parent);\n");
    fprintf(fp, "   if (R__ncp || R__cl || R__insp.IsA()) { }\n");
@@ -1673,22 +1704,22 @@ void WriteShowMembers(G__ClassInfo &cl)
                   sprintf(cdim, "[%d]", m.MaxIndex(dim));
                   strcat(cvar, cdim);
                }
-               fprintf(fp, "   R__insp.Inspect(R__cl, R__parent, \"%s\", &%s);\n",
-                       cvar, m.Name());
+               fprintf(fp, "   R__insp.Inspect(R__cl, R__parent, \"%s\", &%s%s);\n",
+                       cvar, prefix, m.Name());
             } else if (m.Property() & G__BIT_ISPOINTER) {
-               fprintf(fp, "   R__insp.Inspect(R__cl, R__parent, \"*%s\", &%s);\n",
-                       m.Name(), m.Name());
+               fprintf(fp, "   R__insp.Inspect(R__cl, R__parent, \"*%s\", &%s%s);\n",
+                       m.Name(), prefix, m.Name());
             } else if (m.Property() & G__BIT_ISARRAY) {
                sprintf(cvar, "%s", m.Name());
                for (int dim = 0; dim < m.ArrayDim(); dim++) {
                   sprintf(cdim, "[%d]", m.MaxIndex(dim));
                   strcat(cvar, cdim);
                }
-               fprintf(fp, "   R__insp.Inspect(R__cl, R__parent, \"%s\", %s);\n",
-                       cvar, m.Name());
+               fprintf(fp, "   R__insp.Inspect(R__cl, R__parent, \"%s\", %s%s);\n",
+                       cvar, prefix, m.Name());
             } else {
-               fprintf(fp, "   R__insp.Inspect(R__cl, R__parent, \"%s\", &%s);\n",
-                       m.Name(), m.Name());
+               fprintf(fp, "   R__insp.Inspect(R__cl, R__parent, \"%s\", &%s%s);\n",
+                       m.Name(), prefix, m.Name());
             }
          } else {
             // we have an object
@@ -1696,12 +1727,12 @@ void WriteShowMembers(G__ClassInfo &cl)
             //string
             if (!strcmp(m.Type()->Name(), "string") || !strcmp(m.Type()->Name(), "string*")) {
                if (m.Property() & G__BIT_ISPOINTER) {
-                  fprintf(fp, "   R__insp.Inspect(R__cl, R__parent, \"*%s\", &%s);\n",
-                       m.Name(), m.Name());
+                  fprintf(fp, "   R__insp.Inspect(R__cl, R__parent, \"*%s\", &%s%s);\n",
+                       m.Name(), prefix, m.Name());
                   if (clflag && IsStreamable(m)) fprintf(fp, "   R__cl->SetStreamer(\"*%s\",R__%s_%s);\n", m.Name(), clName, m.Name());
                } else {
-                  fprintf(fp, "   R__insp.Inspect(R__cl, R__parent, \"%s\", &%s);\n",
-                          m.Name(), m.Name());
+                  fprintf(fp, "   R__insp.Inspect(R__cl, R__parent, \"%s\", &%s%s);\n",
+                          m.Name(), prefix, m.Name());
                   if (clflag && IsStreamable(m)) fprintf(fp, "   R__cl->SetStreamer(\"%s\",R__%s_%s);\n", m.Name(), clName, m.Name());
                }
                continue;
@@ -1714,12 +1745,12 @@ void WriteShowMembers(G__ClassInfo &cl)
                   sprintf(cdim, "[%d]", m.MaxIndex(dim));
                   strcat(cvar, cdim);
                }
-               fprintf(fp, "   R__insp.Inspect(R__cl, R__parent, \"%s\", &%s);\n", cvar,
-                       m.Name());
+               fprintf(fp, "   R__insp.Inspect(R__cl, R__parent, \"%s\", &%s%s);\n", cvar,
+                       prefix, m.Name());
                if (clflag && IsStreamable(m)) fprintf(fp, "   R__cl->SetStreamer(\"%s\",R__%s_%s);\n", cvar, clName, m.Name());
             } else if (m.Property() & G__BIT_ISPOINTER) {
-               fprintf(fp, "   R__insp.Inspect(R__cl, R__parent, \"*%s\", &%s);\n",
-                       m.Name(), m.Name());
+               fprintf(fp, "   R__insp.Inspect(R__cl, R__parent, \"*%s\", &%s%s);\n",
+                       m.Name(), prefix, m.Name());
                if (clflag && IsStreamable(m)) fprintf(fp, "   R__cl->SetStreamer(\"*%s\",R__%s_%s);\n", m.Name(), clName, m.Name());
             } else if (m.Property() & G__BIT_ISARRAY) {
                sprintf(cvar, "%s", m.Name());
@@ -1727,20 +1758,34 @@ void WriteShowMembers(G__ClassInfo &cl)
                   sprintf(cdim, "[%d]", m.MaxIndex(dim));
                   strcat(cvar, cdim);
                }
-               fprintf(fp, "   R__insp.Inspect(R__cl, R__parent, \"%s\", %s);\n",
-                       cvar, m.Name());
+               fprintf(fp, "   R__insp.Inspect(R__cl, R__parent, \"%s\", %s%s);\n",
+                       cvar, prefix, m.Name());
                if (clflag && IsStreamable(m)) fprintf(fp, "   R__cl->SetStreamer(\"%s\",R__%s_%s);\n", cvar, clName, m.Name());
             } else {
                if ((m.Type())->HasMethod("ShowMembers")) {
-                  fprintf(fp, "   R__insp.Inspect(R__cl, R__parent, \"%s\", &%s);\n",
-                          m.Name(), m.Name());
-                  fprintf(fp, "   %s.ShowMembers(R__insp, strcat(R__parent,\"%s.\")); R__parent[R__ncp] = 0;\n",
-                          m.Name(), m.Name());
+                  fprintf(fp, "   R__insp.Inspect(R__cl, R__parent, \"%s\", &%s%s);\n",
+                          m.Name(), prefix, m.Name());
+                  fprintf(fp, "   %s%s.ShowMembers(R__insp, strcat(R__parent,\"%s.\")); R__parent[R__ncp] = 0;\n",
+                          prefix,m.Name(), m.Name());
                   if (clflag && IsStreamable(m)) fprintf(fp, "   R__cl->SetStreamer(\"%s\",R__%s_%s);\n", m.Name(), clName, m.Name());
                } else {
-                  fprintf(fp, "   R__insp.Inspect(R__cl, R__parent, \"%s\", (void*)&%s);\n",
-                          m.Name(), m.Name());
+                  // NOTE: something to be added here!
+                  fprintf(fp, "   R__insp.Inspect(R__cl, R__parent, \"%s\", (void*)&%s%s);\n",
+                         m.Name(), prefix, m.Name());
+                  /* if (can call ShowStreamer) */
+
+                  char compareName[G__LONGLINE];
+                  strcpy(compareName,clName);
+                  strcat(clName,"::");
+
+                  if (strlen(m.Type()->Name()) &&
+                      strcmp(clName,m.Type()->Name())!=0 ) {
+                     // Filter out the unamed type from with a the class.
+                     fprintf(fp, "   R__tInit<%s >::ShowMembers(&%s%s, R__insp, strcat(R__parent,\"%s.\")); R__parent[R__ncp] = 0;\n",
+                             m.Type()->Name(), prefix, m.Name(), m.Name());
+                  }
                   if (clflag && IsStreamable(m)) fprintf(fp, "   R__cl->SetStreamer(\"%s\",R__%s_%s);\n", m.Name(), clName, m.Name());
+
                }
             }
          }
@@ -1752,9 +1797,23 @@ void WriteShowMembers(G__ClassInfo &cl)
 
    while (b.Next())
       if (b.HasMethod("ShowMembers"))
-         fprintf(fp, "   %s::ShowMembers(R__insp, R__parent);\n", b.Name());
+         if (1 || outside)
+            fprintf(fp, "   obj->%s::ShowMembers(R__insp, R__parent);\n", b.Name());
+         else
+            fprintf(fp, "   %s::ShowMembers(R__insp, R__parent);\n", b.Name());
+      else
+         fprintf(fp, "   R__tInit<%s >::ShowMembers(dynamic_cast<%s *>(obj ), R__insp, R__parent);\n", b.Name(), b.Name());
+   // ROOT::ShowMembers(dynamic_cast<%s *>(obj ), R__insp, R__parent);\n", b.Name());
+   //         fprintf(fp, "   ::ShowMembers(dynamic_cast<%s >(this ), R__insp, R__parent);\n", b.Name());
 
    fprintf(fp, "}\n\n");
+   fprintf(fp, "}\n\n");
+   if (!outside) {
+      fprintf(fp, "void %s::ShowMembers(TMemberInspector &R__insp, char *R__parent)\n{\n", cl.Fullname());
+      fprintf(fp, "   ROOT::ShowMembers(this, R__insp, R__parent);\n");
+      fprintf(fp, "}\n\n");
+   }
+
 }
 
 //______________________________________________________________________________
@@ -1779,7 +1838,8 @@ void WriteClassCode(G__ClassInfo &cl) {
       if (cl.HasMethod("ShowMembers")) {
          WriteShowMembers(cl);
       } else {
-         fprintf(stderr, "Class %s: ShowMembers() not declared\n", cl.Fullname());
+         WriteShowMembers(cl, true);
+         // fprintf(stderr, "Class %s: ShowMembers() not declared\n", cl.Fullname());
       }
 
    }
@@ -2279,6 +2339,9 @@ int main(int argc, char **argv)
    time_t t = time(0);
    fprintf(fp, "//\n// File generated by %s at %.24s.\n", argv[0], ctime(&t));
    fprintf(fp, "// Do NOT change. Changes will be lost next time file is generated\n//\n\n");
+   fprintf(fp, "//Break the privacy of classes\n");
+   fprintf(fp, "#define private public\n");
+   fprintf(fp, "#define protected public\n\n");
    fprintf(fp, "#include \"TClass.h\"\n");
    fprintf(fp, "#include \"TBuffer.h\"\n");
    fprintf(fp, "#include \"TMemberInspector.h\"\n");
@@ -2287,7 +2350,7 @@ int main(int argc, char **argv)
    fprintf(fp, "#define G__ROOT\n");
    fprintf(fp, "#endif\n\n");
    fprintf(fp, "// Since CINT ignores the std namespace, we need to do so in this file.\n");
-   fprintf(fp, "namespace std {}; using namespace std;\n\n");
+   fprintf(fp, "namespace std {} using namespace std;\n\n");
    fprintf(fp, "#include \"RtypesImp.h\"\n\n");
 
    // Loop over all command line arguments and write include statements.
@@ -2344,25 +2407,12 @@ int main(int argc, char **argv)
    bool has_input_error = false;
    while (cl.Next()) {
       if ((cl.Property() & G__BIT_ISCLASS) && cl.Linkage() == G__CPPLINK) {
-         // Write Code for Class_Name() and static variable
-         // to hold initialization object (STK)
-         if (cl.IsTmplt()) {
-            if (cl.HasMethod("Class_Name")) {
-              WriteClassName(cl,1);
-            } else {
-            fprintf(stderr, "Class %s: Class_Name() and initialization object"
-                    " not declared\n", cl.Fullname());
-            }
-         } else {
-            if (cl.HasMethod("Class_Name")) {
-               WriteClassName(cl);
-            }
-         }
          if (cl.HasMethod("Streamer")) {
             if (!(cl.RootFlag() & G__NOINPUTOPERATOR)) {
-               WriteInputOperator(cl);
+               // We do not write down the input operator anymore.  It is a template
+               // WriteInputOperator(cl);
             } else {
-               // Need to find out if the operator>> is actually defined for 
+               // Need to find out if the operator>> is actually defined for
                // this class.
                G__ClassInfo gcl;
                long offset;
@@ -2373,11 +2423,14 @@ int main(int argc, char **argv)
 
                fprintf(stderr, "Class %s: Do not generate operator>>()\n",
                        cl.Fullname());
-               if (!methodinfo.IsValid() || 
-                   methodinfo.ifunc()->para_p_tagtable[methodinfo.Index()][1] != cl.Tagnum() ) {
+               if (!methodinfo.IsValid() ||
+                   methodinfo.ifunc()->para_p_tagtable[methodinfo.Index()][1] != cl.Tagnum() ||
+                   strstr(methodinfo.FileName(),"Rtypes.h")!=0 ) {
                   fprintf(stderr, "ERROR: This version of ROOT require the presence of an actual declaration of:\n");
                   fprintf(stderr, "   TBuffer &operator>>(TBuffer &,%s *&);\n",cl.Fullname());
                   has_input_error = true;
+               } else {
+                  // fprintf(stderr, "WARNING: TBuffer &operator>>(TBuffer &,%s *&); defined at line %s %d \n",cl.Fullname(),methodinfo.FileName(),methodinfo.LineNumber());
                }
             }
          }
@@ -2451,6 +2504,28 @@ int main(int argc, char **argv)
       WriteClassCode(cl);
    }
 
+   cl.Init();
+   while (cl.Next()) {
+      if ((cl.Property() & G__BIT_ISCLASS) && cl.Linkage() == G__CPPLINK) {
+         // Write Code for Class_Name() and static variable
+         // to hold initialization object (STK)
+         if (cl.IsTmplt()) {
+            if (cl.HasMethod("Class_Name")) {
+               WriteClassName(cl, 1);
+            } else {
+               fprintf(stderr, "Class %s: Class_Name() and initialization object"
+                       " not declared\n", cl.Fullname());
+            }
+         } else {
+            if (cl.HasMethod("Class_Name")) {
+               WriteClassName(cl);
+            } else {
+               WriteClassInit(cl);
+            }
+         }
+      }
+   }
+
    fclose(fp);
    fclose(fpld);
 
@@ -2489,7 +2564,8 @@ int main(int argc, char **argv)
             if (!strncmp(line, "#include", 8) && strstr(line, inclf))
                continue;
             fprintf(fpd, "%s", line);
-            if (++nl == 4 && icc)
+            // '8' is because we want to put it after #defined private/protected
+            if (++nl == 8 && icc)
                fprintf(fpd, "#include \"%s\"\n", inclf);
          }
       }

@@ -1,4 +1,4 @@
-/* @(#)root/star:$Name:  $:$Id: Ttypes.h,v 1.7 2001/07/11 06:46:19 brun Exp $ */
+/* @(#)root/star:$Name:  $:$Id: Ttypes.h,v 1.7.4.1 2002/02/07 19:58:56 rdm Exp $ */
 
 /*************************************************************************
  * Copyright (C) 1995-2000, Rene Brun and Fons Rademakers.               *
@@ -14,7 +14,7 @@
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // Stypes                                                               //
-// $Id: Ttypes.h,v 1.7 2001/07/11 06:46:19 brun Exp $
+// $Id: Ttypes.h,v 1.7.4.1 2002/02/07 19:58:56 rdm Exp $
 // Basic types used by STAF - ROOT interface.                           //
 //                                                                      //
 // This header file contains the set of the macro definitions           //
@@ -164,18 +164,15 @@ public:
    }
 #else
    virtual TClass* CreateClass(const char *cname, Version_t id,
+                               const type_info& info, IsAFunc_t isa,
+                               ShowMembersFunc_t show,
                                const char *dfil, const char *ifil,
                                Int_t dl, Int_t il) const {
-      TClass * cl = R__DefaultInitBehavior::CreateClass(cname, id,dfil, ifil,dl, il);
+      TClass * cl = R__DefaultInitBehavior::CreateClass(cname, id, info, isa, show, 
+                                                        dfil, ifil,dl, il);
       fgStructName = T::TableDictionary();
       return cl;
    }
-#if 0
-   virtual void Dictionary() const {
-      R__DefaultInitBehavior::Dictionary();
-      T::TableDictionary();
-   }
-#endif
 #endif
    virtual void Unregister(const char* classname) const {
       R__DefaultInitBehavior::Unregister(classname);

@@ -1,4 +1,4 @@
-// @(#)root/meta:$Name:  $:$Id: TClass.h,v 1.18 2001/12/02 16:50:08 brun Exp $
+// @(#)root/meta:$Name:  $:$Id: TClass.h,v 1.19 2002/01/16 21:13:38 brun Exp $
 // Author: Rene Brun   07/01/95
 
 /*************************************************************************
@@ -61,9 +61,16 @@ private:
    UInt_t            fCheckSum;        //checksum of data members and base classes
    Version_t         fClassVersion;    //Class version Identifier
    G__ClassInfo     *fClassInfo;       //pointer to CINT class info class
+   const type_info  *fTypeInfo;        //pointer to the C++ type information.
+   ShowMembersFunc_t fShowMembers;     //pointer to the class's ShowMembers function
+   IsAFunc_t         fIsA;             //pointer to the class's IsA function.
 
    TMethod          *GetClassMethod(Long_t faddr);
    TMethod          *GetClassMethod(const char*name, const char* signature);
+   void Init(const char *name, Version_t cversion, const type_info *info,
+             IsAFunc_t isa, ShowMembersFunc_t showmember,
+             const char *dfil, const char *ifil,
+             Int_t dl, Int_t il);
 
    static Bool_t     fgCallingNew;     //True when TClass:New is executing
    static Int_t      fgClassCount;     //provides unique id for a each class
@@ -81,69 +88,76 @@ public:
    TClass(const char *name, Version_t cversion,
           const char *dfil = 0, const char *ifil = 0,
           Int_t dl = 0, Int_t il = 0);
-   virtual       ~TClass();
-   void           AddInstance(Bool_t heap = kFALSE) { fInstanceCount++; if (heap) fOnHeap++; }
-   virtual void   Browse(TBrowser *b);
-   void           BuildRealData(void *pointer=0);
-   Bool_t         CanIgnoreTObjectStreamer() { return TestBit(kIgnoreTObjectStreamer);}
-   Int_t          Compare(const TObject *obj) const;
-   void           Draw(Option_t *option="");
-   void          *DynamicCast(const TClass *base, void *obj, Bool_t up = kTRUE);
-   char          *EscapeChars(char * text) const;
-   UInt_t         GetCheckSum() const;
-   Version_t      GetClassVersion() const { return fClassVersion; }
-   TDataMember   *GetDataMember(const char *datamember);
-   const char    *GetDeclFileName() const { return fDeclFileName; }
-   Short_t        GetDeclFileLine() const { return fDeclFileLine; }
-   G__ClassInfo  *GetClassInfo() const { return fClassInfo; }
-   TList         *GetListOfDataMembers();
-   TList         *GetListOfBases();
-   TList         *GetListOfMethods();
-   TList         *GetListOfRealData() const { return fRealData; }
-   TList         *GetListOfAllPublicMethods();
-   TList         *GetListOfAllPublicDataMembers();
-   const char    *GetName() const { return fName.Data(); }
-   const char    *GetTitle() const;
-   const char    *GetImplFileName() const { return fImplFileName; }
-   Short_t        GetImplFileLine() const { return fImplFileLine; }
-   TClass        *GetBaseClass(const char *classname);
-   TClass        *GetBaseClass(const TClass *base);
-   Int_t          GetBaseClassOffset(const TClass *base);
-   TClass        *GetBaseDataMember(const char *datamember);
-   UInt_t         GetInstanceCount() const { return fInstanceCount; }
-   UInt_t         GetHeapInstanceCount() const { return fOnHeap; }
-   void           GetMenuItems(TList *listitems);
-   TMethod       *GetMethod(const char *method, const char *params);
-   TMethod       *GetMethodWithPrototype(const char *method, const char *proto);
-   TMethod       *GetMethodAny(const char *method);
-   TMethod       *GetMethodAllAny(const char *method);
-   Int_t          GetNdata();
-   Int_t          GetNmethods();
-   TObjArray     *GetStreamerInfos() const {return fStreamerInfo;}
-   TStreamerInfo *GetStreamerInfo(Int_t version=0);
-   ULong_t        Hash() const { return fName.Hash(); }
-   void           IgnoreTObjectStreamer(Bool_t ignore=kTRUE);
-   Bool_t         InheritsFrom(const char *cl) const;
-   Bool_t         InheritsFrom(const TClass *cl) const;
-   Bool_t         IsFolder() const {return kTRUE;}
-   Bool_t         IsLoaded() const;
-   void          *New(Bool_t defConstructor = kTRUE);
-   void          *New(void *arena, Bool_t defConstructor = kTRUE);
-   void           Destructor(void *obj, Bool_t dtorOnly = kFALSE);
-   Int_t          ReadBuffer(TBuffer &b, void *pointer, Int_t version, UInt_t start, UInt_t count);
-   Int_t          ReadBuffer(TBuffer &b, void *pointer);
-   void           ResetInstanceCount() { fInstanceCount = fOnHeap = 0; }
-   Int_t          Size() const;
-   TStreamerInfo *SetStreamerInfo(Int_t version, const char *info="");
-   void           SetUnloaded();
-   Long_t         Property() const;
-   void           SetStreamer(const char *name, Streamer_t p);
-   Int_t          WriteBuffer(TBuffer &b, void *pointer, const char *info="");
+   TClass(const char *name, Version_t cversion,
+          const type_info &info, IsAFunc_t isa,
+          ShowMembersFunc_t showmember,
+          const char *dfil, const char *ifil,
+          Int_t dl, Int_t il);
+   virtual         ~TClass();
+   void             AddInstance(Bool_t heap = kFALSE) { fInstanceCount++; if (heap) fOnHeap++; }
+   virtual void     Browse(TBrowser *b);
+   void             BuildRealData(void *pointer=0);
+   Bool_t           CanIgnoreTObjectStreamer() { return TestBit(kIgnoreTObjectStreamer);}
+   Int_t            Compare(const TObject *obj) const;
+   void             Draw(Option_t *option="");
+   void            *DynamicCast(const TClass *base, void *obj, Bool_t up = kTRUE);
+   char            *EscapeChars(char * text) const;
+   UInt_t           GetCheckSum() const;
+   Version_t        GetClassVersion() const { return fClassVersion; }
+   TDataMember     *GetDataMember(const char *datamember);
+   const char      *GetDeclFileName() const { return fDeclFileName; }
+   Short_t          GetDeclFileLine() const { return fDeclFileLine; }
+   G__ClassInfo    *GetClassInfo() const { return fClassInfo; }
+   TList           *GetListOfDataMembers();
+   TList           *GetListOfBases();
+   TList           *GetListOfMethods();
+   TList           *GetListOfRealData() const { return fRealData; }
+   TList           *GetListOfAllPublicMethods();
+   TList           *GetListOfAllPublicDataMembers();
+   const char      *GetName() const { return fName.Data(); }
+   const char      *GetTitle() const;
+   const char      *GetImplFileName() const { return fImplFileName; }
+   Short_t          GetImplFileLine() const { return fImplFileLine; }
+   TClass          *GetActualClass(const void* object) const;
+   TClass          *GetBaseClass(const char *classname);
+   TClass          *GetBaseClass(const TClass *base);
+   Int_t            GetBaseClassOffset(const TClass *base);
+   TClass          *GetBaseDataMember(const char *datamember);
+   UInt_t           GetInstanceCount() const { return fInstanceCount; }
+   UInt_t           GetHeapInstanceCount() const { return fOnHeap; }
+   void             GetMenuItems(TList *listitems);
+   TMethod         *GetMethod(const char *method, const char *params);
+   TMethod         *GetMethodWithPrototype(const char *method, const char *proto);
+   TMethod         *GetMethodAny(const char *method);
+   TMethod         *GetMethodAllAny(const char *method);
+   Int_t            GetNdata();
+   Int_t            GetNmethods();
+   TObjArray       *GetStreamerInfos() const {return fStreamerInfo;}
+   TStreamerInfo   *GetStreamerInfo(Int_t version=0);
+   const type_info *GetTypeInfo() const { return fTypeInfo; };
+   ULong_t          Hash() const { return fName.Hash(); }
+   void             IgnoreTObjectStreamer(Bool_t ignore=kTRUE);
+   Bool_t           InheritsFrom(const char *cl) const;
+   Bool_t           InheritsFrom(const TClass *cl) const;
+   Bool_t           IsFolder() const {return kTRUE;}
+   Bool_t           IsLoaded() const;
+   void            *New(Bool_t defConstructor = kTRUE);
+   void            *New(void *arena, Bool_t defConstructor = kTRUE);
+   void             Destructor(void *obj, Bool_t dtorOnly = kFALSE);
+   Int_t            ReadBuffer(TBuffer &b, void *pointer, Int_t version, UInt_t start, UInt_t count);
+   Int_t            ReadBuffer(TBuffer &b, void *pointer);
+   void             ResetInstanceCount() { fInstanceCount = fOnHeap = 0; }
+   Int_t            Size() const;
+   TStreamerInfo   *SetStreamerInfo(Int_t version, const char *info="");
+   void             SetUnloaded();
+   Long_t           Property() const;
+   void             SetStreamer(const char *name, Streamer_t p);
+   Int_t            WriteBuffer(TBuffer &b, void *pointer, const char *info="");
 
-   static Int_t   AutoBrowse(TObject *obj,TBrowser *browser);
-   static Bool_t  IsCallingNew();
-   static TClass *Load(TBuffer &b);
-   void           Store(TBuffer &b) const;
+   static Int_t     AutoBrowse(TObject *obj,TBrowser *browser);
+   static Bool_t    IsCallingNew();
+   static TClass   *Load(TBuffer &b);
+   void             Store(TBuffer &b) const;
 
    ClassDef(TClass,0)  //Dictionary containing class information
 };

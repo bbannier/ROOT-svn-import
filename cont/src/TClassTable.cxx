@@ -1,4 +1,4 @@
-// @(#)root/cont:$Name:  $:$Id: TClassTable.cxx,v 1.12 2002/01/27 16:49:43 brun Exp $
+// @(#)root/cont:$Name:  $:$Id: TClassTable.cxx,v 1.12.4.1 2002/02/07 19:58:56 rdm Exp $
 // Author: Fons Rademakers   11/08/95
 
 /*************************************************************************
@@ -19,6 +19,9 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include <stdlib.h>
+#include <string>
+#include <map>
+#include "Riostream.h"
 
 #include "TClassTable.h"
 #include "TClass.h"
@@ -37,8 +40,42 @@ int          TClassTable::fgSize;
 int          TClassTable::fgTally;
 Bool_t       TClassTable::fgSorted;
 int          TClassTable::fgCursor;
+TClassTable::IdMap_t *TClassTable::fgIdMap;
 
 ClassImp(TClassTable)
+
+//______________________________________________________________________________
+namespace ROOT {
+   class MapTypeToClassRec {
+     // This wrapper class allow to avoid putting #include <map> in the
+     // TROOT.h header file.
+   public:
+      typedef std::map<std::string,ClassRec_t*> IdMap_t;
+      typedef IdMap_t::key_type                 key_type;
+      typedef IdMap_t::mapped_type              mapped_type;
+      typedef IdMap_t::const_iterator           const_iterator;
+      typedef IdMap_t::size_type                size_type;
+
+   private:
+      IdMap_t fMap;
+
+   public:
+      IdMap_t *operator->() { return &fMap; }
+      mapped_type &operator[](const key_type &key) { return fMap[key]; }
+
+      size_type erase(const key_type &key) { return fMap.erase(key); }
+      const_iterator find(const key_type &key) const { return fMap.find(key); }
+      void printall() {
+         cerr << "Printing the typeinfo map in TClassTable\n";
+         for (const_iterator iter = fMap.begin();
+              iter != fMap.end();
+              iter++) {
+            cerr << "Key: " << iter->first.c_str()
+                 << " points to " << iter->second << endl;
+         }
+      }
+   };
+}
 
 //______________________________________________________________________________
 TClassTable::TClassTable()
@@ -49,6 +86,7 @@ TClassTable::TClassTable()
       Error("TClassTable", "only one instance of TClassTable allowed");
    fgSize  = (int)TMath::NextPrime(1000);
    fgTable = new ClassRec_t* [fgSize];
+   fgIdMap = new IdMap_t;
    memset(fgTable, 0, fgSize*sizeof(ClassRec_t*));
 }
 
@@ -107,8 +145,8 @@ void  TClassTable::Init() { fgCursor = 0; SortTable(); }
 
 
 //______________________________________________________________________________
-void TClassTable::Add(const char *cname, Version_t id, VoidFuncPtr_t dict,
-                      Int_t pragmabits)
+void TClassTable::Add(const char *cname, Version_t id,  const type_info &info,
+                      VoidFuncPtr_t dict, Int_t pragmabits)
 {
    // Add a class to the class table (this is a static function).
 
@@ -126,6 +164,9 @@ void TClassTable::Add(const char *cname, Version_t id, VoidFuncPtr_t dict,
    r->id   = id;
    r->bits = pragmabits;
    r->dict = dict;
+   r->info = &info;
+
+   (*fgIdMap)[info.name()] = r;
 
    fgTally++;
    fgSorted = kFALSE;
@@ -154,6 +195,7 @@ void TClassTable::Remove(const char *cname)
             prev->next = r->next;
          else
             fgTable[slot] = r->next;
+         fgIdMap->erase(r->info->name());
          delete [] r->name;
          delete r;
          fgTally--;
@@ -191,6 +233,7 @@ ClassRec_t *TClassTable::FindElement(const char *cname, Bool_t insert)
    r->name = 0;
    r->id   = 0;
    r->dict = 0;
+   r->info = 0;
    r->next = fgTable[slot];
    fgTable[slot] = r;
 
@@ -229,11 +272,30 @@ VoidFuncPtr_t TClassTable::GetDict(const char *cname)
 }
 
 //______________________________________________________________________________
-static int ClassComp(const void *a, const void *b)
+VoidFuncPtr_t TClassTable::GetDict(const type_info& info)
 {
-   // Function used for sorting classes alphabetically.
+   // Given the class name returns the Dictionary() function of a class
+   // (uses hash of name).
 
-   return strcmp((*(ClassRec_t **)a)->name, (*(ClassRec_t **)b)->name);
+#ifdef DEBUG_ID
+   cerr << "While Table searches for " << info.name() << " at " << &info << endl;
+   fgIdMap->printall();
+#endif
+
+   ClassRec_t *r = (*fgIdMap)[info.name()];
+   if (r) return r->dict;
+   return 0;
+}
+
+
+//______________________________________________________________________________
+extern "C" {
+   static int ClassComp(const void *a, const void *b)
+   {
+      // Function used for sorting classes alphabetically.
+
+      return strcmp((*(ClassRec_t **)a)->name, (*(ClassRec_t **)b)->name);
+   }
 }
 
 //______________________________________________________________________________
@@ -310,6 +372,7 @@ void TClassTable::Terminate()
          for (ClassRec_t *r = fgTable[i]; r; ) {
             ClassRec_t *t = r;
             r = r->next;
+            fgIdMap->erase(r->info->name());
             delete [] t->name;
             delete t;
          }
@@ -319,17 +382,19 @@ void TClassTable::Terminate()
 }
 
 //______________________________________________________________________________
-void AddClass(const char *cname, Version_t id, VoidFuncPtr_t dict,
-              Int_t pragmabits)
+void ROOT::AddClass(const char *cname, Version_t id,
+                    const type_info& info,
+                    VoidFuncPtr_t dict,
+                    Int_t pragmabits)
 {
    // Global function called by the ctor of a class's init class
    // (see the ClassImp macro).
 
-   TClassTable::Add(cname, id, dict, pragmabits);
+   TClassTable::Add(cname, id, info, dict, pragmabits);
 }
 
 //______________________________________________________________________________
-void RemoveClass(const char *cname)
+void ROOT::RemoveClass(const char *cname)
 {
    // Global function called by the dtor of a class's init class
    // (see the ClassImp macro).
@@ -351,7 +416,8 @@ void RemoveClass(const char *cname)
 }
 
 //______________________________________________________________________________
-TNamed *R__RegisterClassTemplate(const char *name, const char *file, Int_t line)
+TNamed *ROOT::RegisterClassTemplate(const char *name, const char *file,
+                                    Int_t line)
 {
    // Global function to register the implementation file and line of
    // a class template (i.e. NOT a concrete class).

@@ -1,4 +1,4 @@
-// @(#)root/cont:$Name:  $:$Id: TArrayF.h,v 1.5 2001/04/09 08:42:38 brun Exp $
+// @(#)root/cont:$Name:  $:$Id: TArrayF.h,v 1.5.4.1 2002/02/09 16:23:30 rdm Exp $
 // Author: Rene Brun   06/03/95
 
 /*************************************************************************
@@ -52,7 +52,13 @@ public:
    ClassDef(TArrayF,1)  //Array of floats
 };
 
-TBuffer &operator>>(TBuffer &buf, TArrayF *&obj);
+inline TBuffer &operator>>(TBuffer &buf, TArrayF *&obj)
+{
+   // Read TArrayF object from buffer.
+
+   obj = (TArrayF *) TArray::ReadArray(buf, TArrayF::Class());
+   return buf;
+}
 
 inline Float_t TArrayF::At(Int_t i) const
 {

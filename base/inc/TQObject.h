@@ -1,4 +1,4 @@
-// @(#)root/base:$Name:  $:$Id: TQObject.h,v 1.11 2001/12/28 12:52:04 rdm Exp $
+// @(#)root/base:$Name:  $:$Id: TQObject.h,v 1.11.4.1 2002/02/07 19:58:56 rdm Exp $
 // Author: Valeriy Onuchin & Fons Rademakers   15/10/2000
 
 /*************************************************************************
@@ -194,9 +194,12 @@ friend class TQObject;
 
 public:
    TQClass(const char *name, Version_t cversion,
+           const type_info &info, IsAFunc_t isa,
+           ShowMembersFunc_t showmembers,
            const char *dfil = 0, const char *ifil = 0,
            Int_t dl = 0, Int_t il = 0) :
-           TQObject(), TClass(name, cversion, dfil, ifil, dl, il) { }
+           TQObject(),
+           TClass(name, cversion, info, isa, showmembers, dfil, ifil, dl, il) { }
 
    virtual ~TQClass() { Disconnect(); }
 
@@ -228,13 +231,15 @@ class R__DefaultInitBehavior;
 class R__TQObjectInitBehavior : public R__DefaultInitBehavior {
 public:
    virtual TClass *CreateClass(const char *cname, Version_t id,
+                               const type_info &info, IsAFunc_t isa,
+                               ShowMembersFunc_t show,
                                const char *dfil, const char *ifil,
                                Int_t dl, Int_t il) const {
-      return new TQClass(cname, id,dfil, ifil,dl, il);
+      return new TQClass(cname, id, info, isa, show, dfil, ifil,dl, il);
    }
 };
 
-inline const R__TQObjectInitBehavior *R__DefineBehavior(TQObject *, void *)
+inline const R__TQObjectInitBehavior *R__DefineBehavior(TQObject *, TQObject *)
 {
    return new R__TQObjectInitBehavior();
 }

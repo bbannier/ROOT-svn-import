@@ -1,4 +1,4 @@
-// @(#)root/base:$Name:  $:$Id: TBuffer.h,v 1.9 2002/02/02 13:42:18 rdm Exp $
+// @(#)root/base:$Name:  $:$Id: TBuffer.h,v 1.10 2002/02/03 16:13:27 brun Exp $
 // Author: Fons Rademakers   04/05/96
 
 /*************************************************************************
@@ -42,7 +42,7 @@ protected:
    char     *fBufMax;        //End of buffer
    Int_t     fMapCount;      //Number of objects or classes in map
    Int_t     fMapSize;       //Default size of map
-   Int_t     fDisplacement;  //Value to be added to the map offsets   
+   Int_t     fDisplacement;  //Value to be added to the map offsets
    TExMap   *fMap;           //Map containing object,id pairs for reading/ writing
    TObject  *fParent;        //Pointer to the buffer parent (file) where buffer is read/written
 
@@ -77,6 +77,7 @@ public:
    virtual ~TBuffer();
 
    void     MapObject(const TObject *obj, UInt_t offset = 1);
+   void     MapObject(const void *obj, UInt_t offset = 1);
    virtual void Reset() { SetBufferOffset(); ResetMap(); }
    void     InitMap();
    void     ResetMap();
@@ -113,6 +114,9 @@ public:
 
    TObject *ReadObject(const TClass *cl);
    void     WriteObject(const TObject *obj);
+
+   //TObject *ReadObject(const TClass *cl);
+   void     WriteObject(const void *obj, TClass *actualClass);
 
    void     SetBufferDisplacement(Int_t skipped)
             { fDisplacement =  (Int_t)(Length() - skipped); }
