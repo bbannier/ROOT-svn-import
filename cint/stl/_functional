@@ -1,9 +1,0 @@
-#ifndef G__FUNCTIONAL_DLL
-#pragma include_noerr <functional.dll>
-#endif
-
-#ifdef __MAKECINT__
-#include <prec_stl/functional>
-#else
-#include <function.h>
-#endif
