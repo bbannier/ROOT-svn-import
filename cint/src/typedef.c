@@ -964,6 +964,13 @@ void G__define_type()
 #endif
        ) {
       reftype = G__PARAP2P;
+#ifndef G__OLDIMPLEMENTATION2094  /* 919 */
+      while(typename[ix]=='*') {
+        if(G__PARANORMAL==reftype) reftype = G__PARAP2P;
+        else if(reftype>=G__PARAP2P) ++ reftype;
+        ++ix;
+      }
+#endif
     }
     else {
       type=toupper(type);
@@ -1408,7 +1415,9 @@ char *typename;
       thisflag=0;
       /* global scope */
       if(-1==G__newtype.parent_tagnum[i]
-#ifndef G__OLDIMPLEMTATION1890
+#if !defined(G__OLDIMPLEMTATION2100)
+	 && (!p || (temp2==p || strcmp("std",temp2)==0))
+#elif !defined(G__OLDIMPLEMTATION1890)
 	 && (!p || temp2==p)
 #endif
 	 )

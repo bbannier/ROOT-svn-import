@@ -50,6 +50,7 @@ extern void G__setcopyflag G__P((int flag));
 #define G__NUM_STDBOTH 3
 #endif
 
+#ifdef G__OLDIMPLEMENTATION2137
 struct G__store_env {
   struct G__var_array *var_local;
   long struct_offset;
@@ -64,6 +65,7 @@ struct G__view {
   int tagnum;
   int exec_memberfunc;
 };
+#endif
 
 #ifdef G__BORLANDCC5
 void G__decrement_undo_index(int *pi);
@@ -1053,6 +1055,9 @@ int base;
 #ifdef G__OLDIMPLEMENTATION1320
   char *p=classname;
 #endif
+#ifndef G__OLDIMPLEMENTATION2092
+  int istmpnam=0;
+#endif
 
 #ifndef G__OLDIMPLEMENTATION1823
   if(strlen(classnamein)>G__BUFLEN-5) {
@@ -1079,7 +1084,14 @@ int base;
 #endif
     FILE *G__temp;
     do {
-#ifndef G__OLDIMPLEMENTATION1917
+#if !defined(G__OLDIMPLEMENTATION2092)
+      G__temp=tmpfile();
+      if(!G__temp) {
+        G__tmpnam(tname); /* not used anymore */
+        G__temp=fopen(tname,"w");
+        istmpnam=1;
+      }
+#elif !defined(G__OLDIMPLEMENTATION1917)
       G__temp=tmpfile();
 #else
       G__tmpnam(tname); /* not used anymore */
@@ -1088,7 +1100,18 @@ int base;
     } while((FILE*)NULL==G__temp && G__setTMPDIR(tname));
     if(G__temp) {
       G__display_class(G__temp,classname,base,0);
-#ifndef G__OLDIMPLEMENTATION1917
+#if !defined(G__OLDIMPLEMENTATION2092)
+      if(!istmpnam) {
+        fseek(G__temp,0L,SEEK_SET);
+        G__display_keyword(fout,keyword,G__temp);
+        fclose(G__temp);
+      }
+      else {
+        fclose(G__temp);
+        G__display_keyword(fout,keyword,tname);
+        remove(tname);
+      }
+#elif !defined(G__OLDIMPLEMENTATION1917)
       fseek(G__temp,0L,SEEK_SET);
       G__display_keyword(fout,keyword,G__temp);
       fclose(G__temp);
@@ -1395,7 +1418,10 @@ int G__pause()
     G__pause_return=0;
 
     ignore = G__process_cmd(command, prompt, &more,(int*)NULL,(G__value*)NULL);
-    if (ignore/G__PAUSE_ERROR_OFFSET) break;
+#ifndef G__OLDIMPLEMENTATION2139
+    if(G__return==G__RETURN_IMMEDIATE) break;
+#endif
+    if(ignore/G__PAUSE_ERROR_OFFSET) break;
     if(G__pause_return) break;
   }
 
@@ -1822,6 +1848,9 @@ char *com;
       if(0==com[i] || '\n'==com[i]) {
 	--i;
 	strcpy(com+i,G__input("> "));
+#ifndef G__OLDIMPLEMENTATION2139
+	if(G__return==G__RETURN_IMMEDIATE) return(-1);
+#endif
       }
 #endif
       break;
@@ -1859,6 +1888,9 @@ char *com;
     else {
       strcpy(com+i,G__input("end with ';', '@':abort > "));
     }
+#ifndef G__OLDIMPLEMENTATION2139
+    if(G__return==G__RETURN_IMMEDIATE) return(-1);
+#endif
     if('@'==com[i]) {
       com[0]=0;
       return(0);
@@ -1877,6 +1909,9 @@ char *com;
 #endif
      ) {
     strcpy(com+i,G__input("end with ';', '@':abort > "));
+#ifndef G__OLDIMPLEMENTATION2139
+    if(G__return==G__RETURN_IMMEDIATE) return(-1);
+#endif
     if('@'==com[i]) {
       com[0]=0;
       return(0);
@@ -1959,7 +1994,7 @@ char* name;
 }
 
 /******************************************************************
-* int G__process_cmd()
+* intG__process_cmd()
 ******************************************************************/
 int G__process_cmd(line, prompt, more, err, rslt)
 char *line;
@@ -1984,12 +2019,18 @@ G__value *rslt;
 /* pass to parent otherwise not re-entrant */
 #ifdef G__TMPFILE
   static char tname[G__MAXFILENAME];
-#ifdef G__OLDIMPLEMENTATION1794
+#if !defined(G__OLDIMPLEMENTATION2092)
+  char sname[G__MAXFILENAME];
+#elif !defined(G__OLDIMPLEMENTATION1794)
+#else
   char sname[G__MAXFILENAME];
 #endif
 #else
   static char tname[L_tmpnam+10];
-#ifdef G__OLDIMPLEMENTATION1794
+#if !defined(G__OLDIMPLEMENTATION2092)
+  char sname[L_tmpnam+10];
+#elif !defined(G__OLDIMPLEMENTATION1794)
+#else
   char sname[L_tmpnam+10];
 #endif
 #endif
@@ -2020,6 +2061,9 @@ G__value *rslt;
   int dmy = 0;
 #ifndef G__OLDIMPLEMENTATION1474
   int noprintflag=0;
+#endif
+#ifndef G__OLDIMPLEMENTATION2092
+  int istmpnam=0;
 #endif
 
   if(!err) err = &dmy;
@@ -2401,7 +2445,11 @@ G__value *rslt;
       case 0xffffffff: fprintf(G__sout,"level7"); break;
       default: break;
       }
+#ifdef G__64BIT
+      fprintf(G__sout,"  0x%x\n",G__security);
+#else
       fprintf(G__sout,"  0x%lx\n",G__security);
+#endif
     }
     else if(strncmp("Security",com,4)==0) {
       G__security = G__int(G__calc_internal(string));
@@ -3258,7 +3306,14 @@ G__value *rslt;
        * Display keyword help information
        *******************************************************/
       do {
-#ifndef G__OLDIMPLEMENTATION1917
+#if defined(G__OLDIMPLEMENTATION2092_YET)
+	G__temp=tmpfile();
+        if(!G__temp) {
+	  G__tmpnam(tname); /* not used anymore */
+	  G__temp=fopen(tname,"w");
+          istmpnam=1;
+        }
+#elif !defined(G__OLDIMPLEMENTATION1917)
 	G__temp=tmpfile();
 #else
 	G__tmpnam(tname); /* not used anymore */
@@ -3278,12 +3333,24 @@ G__value *rslt;
 	G__listfunc(G__temp,G__PUBLIC_PROTECTED_PRIVATE,(char*)NULL
 		    ,(struct G__ifunc_table*)NULL);
 	G__varmonitor(G__temp,&G__global,"","",0);
-#ifdef G__OLDIMPLEMENTATION1917
+#if defined(G__OLDIMPLEMENTATION2092_YET)
+        if(istmpnam) fclose(G__temp);
+#elif !defined(G__OLDIMPLEMENTATION1917)
+#else
 	fclose(G__temp);
 #endif
       
 	if(command[strlen(command)-1]==' ') command[strlen(command)-1]='\0';
-#ifndef G__OLDIMPLEMENTATION1917
+#if defined(G__OLDIMPLEMENTATION2092_YET)
+        if(!istmpnam) {
+	  G__display_keyword(G__sout,command+1,G__temp);
+	  fclose(G__temp);
+        }
+        else {
+	  G__display_keyword(G__sout,command+1,tname);
+	  remove(tname);
+        }
+#elif !defined(G__OLDIMPLEMENTATION1917)
 	G__display_keyword(G__sout,command+1,G__temp);
 	fclose(G__temp);
 #else
@@ -3390,7 +3457,12 @@ G__value *rslt;
       /*******************************************************
        * show function call stack
        *******************************************************/
+#ifndef G__OLDIMPLEMENTATION2137
+      if(G__cintv6) G__bc_showstack(G__sout);
+      else          G__showstack(G__sout);
+#else
       G__showstack(G__sout);
+#endif
     }
 
     else if(strncmp("T",com,1)==0) {
@@ -3601,6 +3673,39 @@ G__value *rslt;
       temp1=atoi(command+1);
       temp=0;
       local=G__p_local;
+#ifndef G__OLDIMPLEMENTATION2137
+      if(G__cintv6) {
+        if(G__bc_setdebugview(temp1,&view)) G__pr(G__sout,view.file);
+      }
+      else {
+        while(local && temp<temp1-1) {
+	  ++temp;
+	  local=local->prev_local;
+        }
+        if(0==temp1) {
+	  view.file = G__ifile;
+	  view.var_local = G__p_local;
+	  view.struct_offset=G__store_struct_offset;
+	  view.tagnum=G__tagnum;
+	  view.exec_memberfunc=G__exec_memberfunc;
+	  G__pr(G__sout,view.file);
+        }
+        else if(local && local->prev_local) {
+	  view.file.filenum = local->prev_filenum ;
+	  strcpy(view.file.name,G__srcfile[view.file.filenum].filename);
+	  view.file.fp = G__srcfile[view.file.filenum].fp;
+	  view.file.line_number = local->prev_line_number;
+	  view.var_local = local->prev_local;
+	  view.struct_offset=view.var_local->struct_offset;
+	  view.tagnum=view.var_local->tagnum;
+	  view.exec_memberfunc=view.var_local->exec_memberfunc;
+	  G__pr(G__sout,view.file);
+        }
+        else {
+	  fprintf(G__sout,"Stack isn't that deep\n");
+        }
+      }
+#else
       while(local && temp<temp1-1) {
 	++temp;
 	local=local->prev_local;
@@ -3627,6 +3732,7 @@ G__value *rslt;
       else {
 	fprintf(G__sout,"Stack isn't that deep\n");
       }
+#endif
     }
 
 
@@ -3996,7 +4102,16 @@ G__value *rslt;
     multi_line_command:
 #endif
       if (*more == 0) {
-#ifndef G__OLDIMPLEMENTATION1794
+#if !defined(G__OLDIMPLEMENTATION2092)
+	ftemp.fp = tmpfile();
+        if(!ftemp.fp) {
+	  do {
+	    G__tmpnam(tname); /* not used anymore */
+	    ftemp.fp = fopen(tname,"w");
+	  } while((FILE*)NULL==ftemp.fp && G__setTMPDIR(tname));
+          istmpnam=1;
+        }
+#elif !defined(G__OLDIMPLEMENTATION1794)
 	ftemp.fp = tmpfile();
 #else /* 1794 */
 	do {
@@ -4091,7 +4206,10 @@ G__value *rslt;
           *more = 0;
           prompt[0] = '\0';
         }
-#ifdef G__OLDIMPLEMENTATION1794
+#if !defined(G__OLDIMPLEMENTATION2092)
+        if(istmpnam) fclose(ftemp.fp);
+#elif !defined(G__OLDIMPLEMENTATION1794)
+#else
 	fclose(ftemp.fp);
 #endif
 
@@ -4105,7 +4223,28 @@ G__value *rslt;
         { 
           struct G__store_env store;
           G__SET_TEMPENV;
-#ifndef G__OLDIMPLEMENTATION1794
+#if !defined(G__OLDIMPLEMENTATION2092)
+          if(!istmpnam) {
+            G__command_eval=1 ;
+            buf=G__exec_tempfile_fp(ftemp.fp);
+	    if(G__security_error&&G__pautoloading&&(*G__pautoloading)(com)) {
+	      buf=G__exec_tempfile_fp(ftemp.fp);
+	    }
+            if(rslt) *rslt = buf;
+	    if(ftemp.fp) fclose(ftemp.fp);
+	    ftemp.fp = (FILE*)NULL;
+          }
+          else {
+            strcpy(sname,tname);
+            G__command_eval=1 ;
+            buf=G__exec_tempfile(sname);
+	    if(G__security_error&&G__pautoloading&&(*G__pautoloading)(com)) {
+	      buf=G__exec_tempfile(sname);
+	    }
+            if(rslt) *rslt = buf;
+            remove(sname);
+          }
+#elif !defined(G__OLDIMPLEMENTATION1794)
           G__command_eval=1 ;
           buf=G__exec_tempfile_fp(ftemp.fp);
 #ifndef G__OLDIMPLEMENTATION1968

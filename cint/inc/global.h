@@ -74,6 +74,9 @@ extern int G__asm_wholefunc_default_cp;
 
 #ifdef G__ASM_IFUNC
 extern long *G__asm_inst; /* p-code instruction buffer */
+#ifndef G__OLDIMPLEMENTATION2116
+extern int G__asm_instsize;
+#endif
 extern G__value *G__asm_stack; /* data stack */
 extern char *G__asm_name;
 extern long G__asm_inst_g[G__MAXINST]; /* p-code instruction buffer */
@@ -732,7 +735,12 @@ typedef void (*G__eolcallback_t) G__P((const char* fname,int linenum));
 extern G__eolcallback_t G__eolcallback;
 #endif
 
+#ifndef G__OLDIMPLEMENTATION2111
+extern int G__throwingexception;
+#endif
+
 extern int G__scopelevel;
+extern int G__cintv6;
 
 #ifndef __CINT__
 #ifdef __cplusplus

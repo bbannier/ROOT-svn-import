@@ -54,8 +54,8 @@ char *str;
 	  ,result->tagnum
 	  ,(result->obj.i<0)?'M':'P'
 #ifndef G__OLDIMPLEMENTATION1981
-#ifndef G__PHILIPPE36
-          ,labs(result->obj.i)
+#ifndef G__OLDIMPLEMENTATION2069
+	  ,labs(result->obj.i)
 #else
 	  ,abs(result->obj.i)
 #endif
@@ -1435,6 +1435,7 @@ char *expression;
 		strcmp(ebuf,"static_cast")==0 ||
 		strcmp(ebuf,"reinterpret_cast")==0 ||
 		strcmp(ebuf,"const_cast")==0) {
+          /* TODO, implement casts, may need to introduce new instruction */
 	  ++ig1;
           ebuf[0]='(';
 	  c=G__getstream_template(expression,&ig1,ebuf+1,">");

@@ -22,11 +22,11 @@
 #define G__CI_H
 
 #ifdef G__CINT_VER6
-#define G__CINTVERSION      6000002
-#define G__CINTVERSIONSTR  "6.0.2, May 23 2004"
+#define G__CINTVERSION      6000016
+#define G__CINTVERSIONSTR  "6.0.16, Sep 13 2004"
 #else
-#define G__CINTVERSION      50150138
-#define G__CINTVERSIONSTR  "5.15.138, May 23 2004"
+#define G__CINTVERSION      50150152
+#define G__CINTVERSIONSTR  "5.15.152, Sep 13 2004"
 #endif
 
 #define G__ALWAYS
@@ -36,6 +36,36 @@
 **********************************************************************/
 
 #ifndef G__CINT_VER6
+#define G__OLDIMPLEMENTATION2138
+#define G__OLDIMPLEMENTATION2137
+#define G__OLDIMPLEMENTATION2136
+#define G__OLDIMPLEMENTATION2135
+#define G__OLDIMPLEMENTATION2134
+#define G__OLDIMPLEMENTATION2133
+#define G__OLDIMPLEMENTATION2132
+#define G__OLDIMPLEMENTATION2131
+#define G__OLDIMPLEMENTATION2129
+#define G__OLDIMPLEMENTATION2128
+#define G__OLDIMPLEMENTATION2127
+#define G__OLDIMPLEMENTATION2122
+#define G__OLDIMPLEMENTATION2117
+#define G__OLDIMPLEMENTATION2116
+/* #define G__OLDIMPLEMENTATION2115 */
+/* #define G__OLDIMPLEMENTATION2114 */
+#define G__OLDIMPLEMENTATION2112
+#define G__OLDIMPLEMENTATION2111
+#define G__OLDIMPLEMENTATION2110
+#define G__OLDIMPLEMENTATION2109
+#define G__OLDIMPLEMENTATION2105
+#define G__OLDIMPLEMENTATION2102
+#define G__OLDIMPLEMENTATION2089
+#define G__OLDIMPLEMENTATION2087
+#define G__OLDIMPLEMENTATION2084
+#define G__OLDIMPLEMENTATION2075
+#define G__OLDIMPLEMENTATION2074
+#define G__OLDIMPLEMENTATION2073
+#define G__OLDIMPLEMENTATION2067
+#define G__OLDIMPLEMENTATION2066
 #define G__OLDIMPLEMENTATION2062
 #define G__OLDIMPLEMENTATION2058
 /* #define G__OLDIMPLEMENTATION2057 */
@@ -1164,6 +1194,12 @@ struct G__ifunc_table {
 #ifdef G__ROOTSPECIAL
   void* userparam[G__MAXIFUNC]; /* user parameter array */
 #endif
+#ifndef G__OLDIMPLEMENTATION2073
+  short vtblindex[G__MAXIFUNC]; 
+#endif
+#ifndef G__OLDIMPLEMENTATION2084
+  short vtblbasetagnum[G__MAXIFUNC];
+#endif
 };
 
 
@@ -1249,6 +1285,12 @@ struct G__ifunc_table_VMS {
 #endif
 #ifdef G__ROOTSPECIAL
   void* userparam[G__MAXIFUNC];  /* user parameter array */
+#endif
+#ifndef G__OLDIMPLEMENTATION2073
+  short vtblindex[G__MAXIFUNC]; 
+#endif
+#ifndef G__OLDIMPLEMENTATION2084
+  short vtblbasetagnum[G__MAXIFUNC];
 #endif
 };
 #endif
@@ -1461,6 +1503,10 @@ struct G__tagtable {
 #ifndef G__OLDIMPLEMENTATION2014
   char* libname[G__MAXSTRUCT];
 #endif
+#ifndef G__OLDIMPLEMENTATION2073
+  void* vtable[G__MAXSTRUCT];
+  /* short vtabledepth[G__MAXSTRUCT]; */
+#endif
 };
 
 /**************************************************************************
@@ -1655,7 +1701,19 @@ extern int G__del_alloctable G__P((void* allocmem));
 extern int G__add_refcount G__P((void* allocedmem,void** storedmem));
 extern int G__del_refcount G__P((void* allocedmem,void** storedmem));
 extern int G__disp_garbagecollection G__P((FILE* fout));
-#ifndef G__OLDIMPLEMENTATION1989
+#if !defined(G__OLDIMPLEMENTATION2079)
+struct G__ifunc_table *G__get_methodhandle G__P((char *funcname,char *argtype
+					   ,struct G__ifunc_table *p_ifunc
+					   ,long *pifn,long *poffset
+					   ,int withConversion
+                                           ,int withInheritance));
+struct G__ifunc_table *G__get_methodhandle2 G__P((char *funcname
+					   ,struct G__param* libp
+					   ,struct G__ifunc_table *p_ifunc
+					   ,long *pifn,long *poffset
+					   ,int withConversion
+                                           ,int withInheritance));
+#elif !defined(G__OLDIMPLEMENTATION1989)
 struct G__ifunc_table *G__get_methodhandle G__P((char *funcname,char *argtype
 					   ,struct G__ifunc_table *p_ifunc
 					   ,long *pifn,long *poffset
@@ -1853,6 +1911,9 @@ extern G__EXPORT void G__set_autoloading G__P((int (*p2f) G__P((char*))));
 extern G__EXPORT void G__set_class_autoloading_callback G__P((int (*p2f) G__P((char*,char*))));
 extern G__EXPORT void G__set_class_autoloading_table G__P((char* classname,char* libname));
 #endif
+#ifndef G__OLDIMPLEMENTATION2097
+extern G__EXPORT int G__set_class_autoloading G__P((int newvalue));
+#endif
 
 #ifndef G__OLDIMPLEMENTATION1210
 typedef int (*G__IgnoreInclude) G__P((const char* fname,const char* expandedfname));
@@ -1978,6 +2039,7 @@ extern G__EXPORT void G__store_tempobject G__P((G__value reg));
 extern G__EXPORT int G__inheritance_setup G__P((int tagnum,int basetagnum,long baseoffset,int baseaccess,int property));
 extern G__EXPORT void G__add_compiledheader G__P((G__CONST char *headerfile));
 extern G__EXPORT void G__add_ipath G__P((G__CONST char *ipath));
+extern G__EXPORT int G__delete_ipath G__P((G__CONST char *ipath));
 extern G__EXPORT void G__add_macro G__P((G__CONST char *macro));
 extern G__EXPORT void G__check_setup_version G__P((int version,G__CONST char *func));
 extern G__EXPORT long G__int G__P((G__value buf));

@@ -156,6 +156,8 @@
 #define G__OPR_POSTFIXDEC   15
 #define G__OPR_PREFIXDEC    16
 
+#define G__OPR_ADDVOIDPTR   17
+
 #ifndef G__OLDIMPLEMENTATION572
 #define G__OPR_POSTFIXINC_I  0x110
 #define G__OPR_PREFIXINC_I   0x111
@@ -367,95 +369,108 @@
 * number. This speeds up the execution by
 * 10~20%.
 *********************************************/
-#define G__LDST_VAR_P         0x0000
-#define G__LDST_LVAR_P        0x0001
-#define G__LDST_MSTR_P        0x0002
-#define G__LDST_VAR_INDEX     0x0003
-#define G__LDST_VAR_INDEX_OPR 0x0004
-#define G__OP2_OPTIMIZED      0x0005
-#define G__OP1_OPTIMIZED      0x0006
-#define G__LD                 0x0007
-#define G__CL                 0x0008
-#define G__OP2                0x0009
-#define G__CMPJMP             0x000a
-#define G__INCJMP             0x000b
-#define G__CNDJMP             0x000c
-#define G__JMP                0x000d
-#define G__POP                0x000e
-#define G__LD_FUNC            0x000f
-#define G__RETURN             0x0010
-#define G__CAST               0x0011
-#define G__OP1                0x0012
-#define G__LETVVAL            0x0013
-#define G__ADDSTROS           0x0014
-#define G__LETPVAL            0x0015
-#define G__TOPNTR	      0x0016
-#define G__NOT                0x0017
-#define G__BOOL               0x0018
-#define G__ISDEFAULTPARA      0x0019
+#define G__LDST_VAR_P         (long)0x0000
+#define G__LDST_LVAR_P        (long)0x0001
+#define G__LDST_MSTR_P        (long)0x0002
+#define G__LDST_VAR_INDEX     (long)0x0003
+#define G__LDST_VAR_INDEX_OPR (long)0x0004
+#define G__OP2_OPTIMIZED      (long)0x0005
+#define G__OP1_OPTIMIZED      (long)0x0006
+#define G__LD                 (long)0x0007
+#define G__CL                 (long)0x0008
+#define G__OP2                (long)0x0009
+#define G__CMPJMP             (long)0x000a
+#define G__INCJMP             (long)0x000b
+#define G__CNDJMP             (long)0x000c
+#define G__JMP                (long)0x000d
+#define G__POP                (long)0x000e
+#define G__LD_FUNC            (long)0x000f
+#define G__RETURN             (long)0x0010
+#define G__CAST               (long)0x0011
+#define G__OP1                (long)0x0012
+#define G__LETVVAL            (long)0x0013
+#define G__ADDSTROS           (long)0x0014
+#define G__LETPVAL            (long)0x0015
+#define G__TOPNTR	      (long)0x0016
+#define G__NOT                (long)0x0017
+#define G__BOOL               (long)0x0018
+#define G__ISDEFAULTPARA      (long)0x0019
 
-#define G__LD_VAR             0x001a
-#define G__ST_VAR             0x001b
-#define G__LD_MSTR            0x001c
-#define G__ST_MSTR            0x001d
-#define G__LD_LVAR            0x001e
-#define G__ST_LVAR            0x001f
-#define G__CMP2               0x0020
-#define G__PUSHSTROS          0x0021
-#define G__SETSTROS           0x0022
-#define G__POPSTROS           0x0023
-#define G__SETTEMP            0x0024
-#define G__FREETEMP           0x0025
-#define G__GETRSVD            0x0026
-#define G__REWINDSTACK        0x0027
-#define G__CND1JMP            0x0028
-#define G__LD_IFUNC	      0x0029
-#define G__NEWALLOC           0x002a
-#define G__SET_NEWALLOC       0x002b
-#define G__DELETEFREE         0x002c
-#define G__SWAP               0x002d
-#define G__BASECONV           0x002e
-#define G__STORETEMP          0x002f
-#define G__ALLOCTEMP          0x0030
-#define G__POPTEMP            0x0031
-#define G__REORDER            0x0032
-#define G__LD_THIS            0x0033
-#define G__RTN_FUNC           0x0034
-#define G__SETMEMFUNCENV      0x0035
-#define G__RECMEMFUNCENV      0x0036
-#define G__ADDALLOCTABLE      0x0037
-#define G__DELALLOCTABLE      0x0038
-/* #define G__BASECONSTRUCT     0x00XX */
-#define G__BASEDESTRUCT       0x0039
-#define G__REDECL             0x003a
-#define G__TOVALUE            0x003b
-#define G__INIT_REF           0x003c
-#define G__PUSHCPY            0x003d
-#define G__LETNEWVAL          0x003e
-#define G__SETGVP             0x003f
-#define G__TOPVALUE           0x0040
-#define G__CTOR_SETGVP        0x0041
+#define G__LD_VAR             (long)0x001a
+#define G__ST_VAR             (long)0x001b
+#define G__LD_MSTR            (long)0x001c
+#define G__ST_MSTR            (long)0x001d
+#define G__LD_LVAR            (long)0x001e
+#define G__ST_LVAR            (long)0x001f
+#define G__CMP2               (long)0x0020
+#define G__PUSHSTROS          (long)0x0021
+#define G__SETSTROS           (long)0x0022
+#define G__POPSTROS           (long)0x0023
+#define G__SETTEMP            (long)0x0024
+#define G__FREETEMP           (long)0x0025
+#define G__GETRSVD            (long)0x0026
+#define G__REWINDSTACK        (long)0x0027
+#define G__CND1JMP            (long)0x0028
+#define G__LD_IFUNC	      (long)0x0029
+#define G__NEWALLOC           (long)0x002a
+#define G__SET_NEWALLOC       (long)0x002b
+#define G__DELETEFREE         (long)0x002c
+#define G__SWAP               (long)0x002d
+#define G__BASECONV           (long)0x002e
+#define G__STORETEMP          (long)0x002f
+#define G__ALLOCTEMP          (long)0x0030
+#define G__POPTEMP            (long)0x0031
+#define G__REORDER            (long)0x0032
+#define G__LD_THIS            (long)0x0033
+#define G__RTN_FUNC           (long)0x0034
+#define G__SETMEMFUNCENV      (long)0x0035
+#define G__RECMEMFUNCENV      (long)0x0036
+#define G__ADDALLOCTABLE      (long)0x0037
+#define G__DELALLOCTABLE      (long)0x0038
+/* #define G__BASECONSTRUCT     (long)0x00XX */
+#define G__BASEDESTRUCT       (long)0x0039
+#define G__REDECL             (long)0x003a
+#define G__TOVALUE            (long)0x003b
+#define G__INIT_REF           (long)0x003c
+#define G__PUSHCPY            (long)0x003d
+#define G__LETNEWVAL          (long)0x003e
+#define G__SETGVP             (long)0x003f
+#define G__TOPVALUE           (long)0x0040
+#define G__CTOR_SETGVP        (long)0x0041
 
-#define G__THROW              0x0042
-#define G__CATCH              0x0043
-#define G__SETARYINDEX        0x0044
-#define G__RESETARYINDEX      0x0045
-#define G__GETARYINDEX        0x0046
+#define G__TRY                (long)0x0042
+#define G__TYPEMATCH          (long)0x0043
+#define G__ALLOCEXCEPTION     (long)0x0044
+#define G__DESTROYEXCEPTION   (long)0x0045
+#define G__THROW              (long)0x0046
+#define G__CATCH              (long)0x0047 /* never used */
+#define G__SETARYINDEX        (long)0x0048
+#define G__RESETARYINDEX      (long)0x0049
+#define G__GETARYINDEX        (long)0x004a
 
-#define G__ENTERSCOPE         0x0047
-#define G__EXITSCOPE          0x0048
-#define G__PUTAUTOOBJ         0x0049
-#define G__PUTHEAPOBJ         0x0050 /* not implemented yet */
-#define G__CASE               0x0051
+#define G__ENTERSCOPE         (long)0x004b
+#define G__EXITSCOPE          (long)0x004c
+#define G__PUTAUTOOBJ         (long)0x004d
+#define G__PUTHEAPOBJ         (long)0x004e /* not implemented yet */
+#define G__CASE               (long)0x004f
+/* #define G__SETARYCTOR         (long)0x0050 */
 
-#define G__NOP                0x00ff
+#define G__NOP                (long)0x00ff
 
-#define G__INSTMASK       0x000000ff
-#define G__LINENUMMASK    0xffffff00
+#define G__INSTMASK       (long)0x000000ff
+#define G__LINENUMMASK    (long)0xffffff00
 
 #define G__INST(x)  x
 /* #define G__INST(x) (x&G__INSTMASK) */ /* not ready yet */
 #define G__LINE(x) ((x&G__LINEMASK)/0x100)
+
+/********************************************
+* G__TRY G__bc_exec_try_bytecode return value
+********************************************/
+#define G__TRY_NORMAL                 1
+#define G__TRY_INTERPRETED_EXCEPTION  2
+#define G__TRY_COMPILED_EXCEPTION     3
+#define G__TRY_UNCAUGHT               9
 
 struct G__breakcontinue_list {
   int destination;
@@ -470,6 +485,16 @@ struct G__breakcontinue_list {
 #define G__MAXINST     0x1000
 #define G__MAXSTACK    0x100
 #define G__MAXSTRSTACK  0x10
+
+#ifndef G__OLDIMPLEMENTATION2132
+/*********************************************
+* G__CL  line+filenum offset
+*********************************************/
+#define G__CL_LINEMASK  0x000fffff
+#define G__CL_FILEMASK  0x00000fff
+#define G__CL_FILESHIFT 0x00100000
+#endif
+
 
 /*********************************************
 * macros for loop compiler
@@ -804,7 +829,7 @@ struct G__includepath {
 #define G__CONTUNTIL     0x20
 #define G__NOCONTUNTIL   0xdf
 #define G__TRACED        0x01
-#define G__NOTRACED       0xfe
+#define G__NOTRACED      0xfe
 
 /*********************************************************************
 * const string list
@@ -1028,6 +1053,35 @@ struct G__funclist {
 #define G__LONGLONG    1
 #define G__ULONGLONG   2
 #define G__LONGDOUBLE  3
+#endif
+
+/*********************************************************************
+* cintv6, flags
+*********************************************************************/
+/* G__cintv6 flags */
+/* #define G__CINT_VER6 1 */ /* defined in platform configuration */
+#define G__BC_CINTVER6     0x01
+#define G__BC_COMPILEERROR 0x02
+#define G__BC_RUNTIMEERROR 0x04
+
+/*********************************************************************
+* debug interface
+*********************************************************************/
+#ifndef G__OLDIMPLEMENTATION2137
+struct G__store_env {
+  struct G__var_array *var_local;
+  long struct_offset;
+  int tagnum;
+  int exec_memberfunc;
+};
+
+struct G__view {
+  struct G__input_file file;
+  struct G__var_array *var_local;
+  long struct_offset;
+  int tagnum;
+  int exec_memberfunc;
+};
 #endif
 
 /*********************************************************************

@@ -757,9 +757,15 @@ char *argv[] ;
    * Get command options
    *************************************************************/
   while((c=getopt(argc,argv
-  ,"a:b:c:d:ef:gij:kl:mn:pq:rstu:vw:x:y:z:AB:CD:EF:G:H:I:J:KM:N:O:P:QRSTU:VW:X:Y:Z:-:"))
+  ,"a:b:c:d:ef:gij:kl:mn:pq:rstu:vw:x:y:z:AB:CD:EF:G:H:I:J:KM:N:O:P:QRSTU:VW:X:Y:Z:-:@"))
 	!=EOF) {
     switch(c) {
+
+#ifndef G__OLDIMPLEMENTATION2068
+    case '@':
+      G__cintv6=1;
+      break;
+#endif
 
 #ifndef G__OLDIMPLEMENTATION1725
     case 'H': /* level of inclusion for dictionary generation */
@@ -1719,6 +1725,9 @@ int G__init_globals()
   G__asm_dt=G__MAXSTACK-1;   /* constant data address */
 #ifdef G__ASM_IFUNC
   G__asm_inst = G__asm_inst_g;
+#ifndef G__OLDIMPLEMENTATION2116
+  G__asm_instsize = 0; /* 0 means G__asm_inst is not resizable */
+#endif
   G__asm_stack = G__asm_stack_g;
   G__asm_name = G__asm_name_g;
   G__asm_name_p = 0;
@@ -2240,15 +2249,21 @@ void G__platformMacro()
 #ifdef __KCC        /* KCC  C++ compiler */
   sprintf(temp,"G__KCC=%ld",(long)__KCC); G__add_macro(temp);
 #endif
-#ifdef __INTEL_COMPILER /* icc and ecc C++ compilers */
+#if defined(__INTEL_COMPILER) && (__INTEL_COMPILER<810) /* icc and ecc C++ compilers */
   sprintf(temp,"G__INTEL_COMPILER=%ld",(long)__INTEL_COMPILER); G__add_macro(temp);
 #endif
 #ifndef _AIX
+#ifdef G__OLDIMPLEMENTATION2095
 #ifdef __xlC__ /* IBM xlC compiler */
   sprintf(temp,"G__XLC=%ld",(long)__xlC__); G__add_macro(temp); 
 #endif
+#endif
 #ifdef __xlc__ /* IBM xlc compiler */
   sprintf(temp,"G__XLC=%ld",(long)__xlc__); G__add_macro(temp);
+#ifndef G__OLDIMPLEMENTATION2095
+  sprintf(temp,"G__GNUC=%ld",(long)3 /*__GNUC__*/); G__add_macro(temp);
+  sprintf(temp,"G__GNUC_MINOR=%ld",(long)3 /*__GNUC_MINOR__*/); G__add_macro(temp);
+#endif
 #endif
 #endif
 #ifndef G__OLDIMPLEMENTATION1689
@@ -2321,6 +2336,8 @@ void G__platformMacro()
 #ifdef G__NO_STDLIBS
   sprintf(temp,"G__NO_STDLIBS=%ld",(long)G__NO_STDLIBS); G__add_macro(temp);
 #endif
+  
+  sprintf(temp,"int& G__cintv6=*(int*)(%ld);",(long)(&G__cintv6)); G__exec_text(temp);
 }
 #endif
 
