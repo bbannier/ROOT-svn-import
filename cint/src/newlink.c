@@ -18,7 +18,7 @@
  * purpose.  It is provided "as is" without express or implied warranty.
  ************************************************************************/
 
-/* #define G__OLDIMPLEMENTATION2047 */
+#define G__OLDIMPLEMENTATION2047
 #define G__OLDIMPLEMENTATION2044 /* Problem with t980.cxx */
 
 
@@ -30,26 +30,6 @@
 #endif
 #endif
 
-#ifdef _WIN32
-#include "windows.h"
-#include <errno.h>
-//______________________________________________________________________________
-FILE *FOpenAndSleep(const char *filename, const char *mode) {
-   int tries=0;
-   FILE *ret=0;
-   while (!ret && ++tries<51)
-      if (!(ret=fopen(filename, mode)) && tries<50)
-         if (errno!=EACCES) return 0;
-         else Sleep(200);
-   if (tries>1)  printf("fopen slept for %g seconds until it succeeeded.\n", (tries-1)/5.);
-   return ret;
-}
-
-# ifdef fopen
-#  undef fopen
-# endif
-# define fopen(A,B) FOpenAndSleep((A),(B))
-#endif
 
 #ifdef G__OLDIMPLEMENTATION1706
 #define G__OLDIMPLEMENTATION1702
@@ -470,7 +450,7 @@ int ifn;
 				  ,G__asm_cp,ifunc->funcname[ifn],libp->paran);
 #endif
       G__asm_inst[G__asm_cp]=G__LD_FUNC;
-      G__asm_inst[G__asm_cp+1] = (long)ifunc;
+      G__asm_inst[G__asm_cp+1] = ifunc;
       G__asm_inst[G__asm_cp+2]= ifn;
       G__asm_inst[G__asm_cp+3]=libp->paran;
       G__asm_inst[G__asm_cp+4]=(long)cppfunc;
@@ -5359,16 +5339,14 @@ int k;
 	   * void f(value_type*& x); // bad 
 	   *  reference and pointer to pointer can not happen at once */
 	  fprintf(fp,"libp->para[%d].ref?*(%s*)libp->para[%d].ref:*(%s*)(&G__Mlong(libp->para[%d]))"
-#if !defined(G__OLDIMPLEMENTATION2225)
-		  ,k,G__type2string(type,tagnum,typenum,0,isconst&G__CONSTVAR) 
-		  ,k,G__type2string(type,tagnum,typenum,0,isconst&G__CONSTVAR)
-		  ,k);
-#elif !defined(G__OLDIMPLEMENTATION1493)
+#ifndef G__OLDIMPLEMENTATION1111
+#ifndef G__OLDIMPLEMENTATION1493
 		  ,k,G__type2string(type,tagnum,typenum,0,isconst) 
 		  ,k,G__type2string(type,tagnum,typenum,0,isconst) ,k);
-#elif !defined(G__OLDIMPLEMENTATION1111)
+#else
 		  ,k,G__type2string(type,tagnum,typenum,0,0) 
 		  ,k,G__type2string(type,tagnum,typenum,0,0) ,k);
+#endif
 #else
 		  ,k,G__type2string(tolower(type),tagnum,typenum,0,0) 
 		  ,k,G__type2string(tolower(type),tagnum,typenum,0,0) ,k);
@@ -5378,12 +5356,7 @@ int k;
 	   * identical */
 	}
 	else {
-#if !defined(G__OLDIMPLEMENTATION2225)
-	    fprintf(fp,"libp->para[%d].ref?*(%s)libp->para[%d].ref:*(%s)(&G__Mlong(libp->para[%d]))"
-		,k,G__type2string(type,tagnum,typenum,2,isconst&G__CONSTVAR) 
-		,k,G__type2string(type,tagnum,typenum,2,isconst&G__CONSTVAR)
-		    ,k);
-#elif !defined(G__OLDIMPLEMENTATION1976)
+#if !defined(G__OLDIMPLEMENTATION1976)
 	    fprintf(fp,"libp->para[%d].ref?*(%s)libp->para[%d].ref:*(%s)(&G__Mlong(libp->para[%d]))"
 		    ,k,G__type2string(type,tagnum,typenum,2,isconst) 
 		    ,k,G__type2string(type,tagnum,typenum,2,isconst),k);
@@ -5393,11 +5366,7 @@ int k;
 		    ,k,G__type2string(type,tagnum,typenum,2,isconst&~G__CONSTVAR),k);
 #else /* 1973 */
 	  fprintf(fp,"libp->para[%d].ref?*(%s**)libp->para[%d].ref:*(%s**)(&G__Mlong(libp->para[%d]))"
-#if !defined(G__OLDIMPLEMENTATION2225)
-        ,k,G__type2string(tolower(type),tagnum,typenum,0,isconst&G__CONSTVAR) 
-	,k,G__type2string(tolower(type),tagnum,typenum,0,isconst&G__CONSTVAR)
-		  ,k);
-#elif !defined(G__OLDIMPLEMENTATION1493)
+#ifndef G__OLDIMPLEMENTATION1493
 		  ,k,G__type2string(tolower(type),tagnum,typenum,0,isconst) 
 		  ,k,G__type2string(tolower(type),tagnum,typenum,0,isconst),k);
 #else /* 1493 */
@@ -10750,7 +10719,7 @@ G__value *buf;
 {
 #ifdef G__BOOL4BYTE
   if('g'==buf->type && buf->ref) 
-    return((unsigned char*)buf->ref);
+    return((int*)buf->ref);
   else if('d'==buf->type || 'f'==buf->type) 
     buf->obj.i = (int)buf->obj.d;
   else 

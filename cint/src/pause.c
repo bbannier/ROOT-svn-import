@@ -690,18 +690,6 @@ static struct G__dictposition errordictpos;
 static struct G__input_file errorifile;
 #endif
 
-#ifndef G__OLDIMPLEMENTATION2227
-/******************************************************************
-* G__clear_errordictpos()
-******************************************************************/
-void G__clear_errordictpos() 
-{
-  if(0!=errordictpos.ptype && (char*)G__PVOID!=errordictpos.ptype) {
-    free((void*)errordictpos.ptype);
-    errordictpos.ptype = (char*)NULL;
-  }
-}
-#endif
 
 #ifndef G__OLDIMPLEMENTATION1066
 /******************************************************************
@@ -1124,8 +1112,8 @@ int base;
         fclose(G__temp);
       }
       else {
-        G__display_keyword(fout,keyword,G__temp);
         fclose(G__temp);
+        G__display_keyword(fout,keyword,tname);
         remove(tname);
       }
 #elif !defined(G__OLDIMPLEMENTATION1917)

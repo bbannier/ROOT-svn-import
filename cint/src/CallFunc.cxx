@@ -231,7 +231,7 @@ void G__CallFunc::SetArg(double d)
 }
 #ifdef G__NATIVELONGLONG
 ///////////////////////////////////////////////////////////////////////////
-void G__CallFunc::SetArg(G__int64 ll)
+void G__CallFunc::SetArg(long long ll)
 {
   para.para[para.paran].obj.ll = ll;  
   para.para[para.paran].ref = 0;
@@ -242,7 +242,7 @@ void G__CallFunc::SetArg(G__int64 ll)
   ++para.paran; // Increment number of argument
 }
 ///////////////////////////////////////////////////////////////////////////
-void G__CallFunc::SetArg(G__uint64 ull)
+void G__CallFunc::SetArg(unsigned long long ull)
 {
   para.para[para.paran].obj.ull = ull;  
   para.para[para.paran].ref = 0;
