@@ -2,13 +2,9 @@
 
 #include <map>
 #include <algorithm>
-#ifndef G__OLDIMPLEMENTATION2023
-#include <string>
-#else // 2023
 #if !defined(G__SUNPRO_C) && !defined(__SUNPRO_CC)
 #include <string>
 #endif
-#endif // 2023
 #ifndef __hpux
 using namespace std;
 #endif
@@ -23,7 +19,6 @@ using namespace std;
 #pragma link C++ nestedclass;
 
 #ifdef G__MAP2
-#pragma link C++ class map<int,int>;
 #pragma link C++ class map<long,int>;
 #pragma link C++ class map<long,long>;
 #pragma link C++ class map<long,float>;
@@ -38,7 +33,6 @@ using namespace std;
 #pragma link C++ class map<double,void*>;
 #pragma link C++ class map<double,char*>;
 
-#pragma link off function pair<const int,int>::operator=;
 #pragma link off function pair<const long,int>::operator=;
 #pragma link off function pair<const long,long>::operator=;
 #pragma link off function pair<const long,float>::operator=;
@@ -98,7 +92,6 @@ using namespace std;
 #pragma link off class pair<string,float>;
 #pragma link off class pair<string,double>;
 #pragma link off class pair<string,void*>;
-#pragma link off class pair<int,int>;
 #pragma link off class pair<long,int>;
 #pragma link off class pair<long,long>;
 #pragma link off class pair<long,float>;
@@ -123,7 +116,6 @@ using namespace std;
 #pragma link off class pair<const string,float>;
 #pragma link off class pair<const string,double>;
 #pragma link off class pair<const string,void*>;
-#pragma link off class pair<const int,int>;
 #pragma link off class pair<const long,int>;
 #pragma link off class pair<const long,long>;
 #pragma link off class pair<const long,float>;

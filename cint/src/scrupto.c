@@ -91,12 +91,6 @@ struct G__dictposition *dictpos;
     dictpos->definedtemplatefunc=dictpos->definedtemplatefunc->next;
 
 #ifndef G__OLDIMPLEMENTATION2014
-#ifndef G__OLDIMPLEMENTATION2024
-  if(0!=dictpos->ptype && (char*)G__PVOID!=dictpos->ptype) {
-    free((void*)dictpos->ptype);
-    dictpos->ptype = (char*)NULL;
-  }
-#endif
   if(0==dictpos->ptype) {
     int i;
     dictpos->ptype = (char*)malloc(G__struct.alltag+1);
@@ -235,15 +229,6 @@ struct G__dictposition *dictpos;
   G__freetemplatefunc(dictpos->definedtemplatefunc);
 #endif
 
-#ifndef G__OLDIMPLEMENTATION2026
-  if(dictpos->ptype && (char*)G__PVOID!=dictpos->ptype ) {
-    int i;
-    for(i=0; i<G__struct.alltag; i++) G__struct.type[i] = dictpos->ptype[i];
-    free((void*)dictpos->ptype);
-    dictpos->ptype = (char*)NULL;
-  }
-#endif
-
   /* close source files */
 #ifdef G__MEMTEST
   fprintf(G__memhist,"Closing input files\n");
@@ -252,6 +237,15 @@ struct G__dictposition *dictpos;
 
 #ifndef G__OLDIMPLEMENTATION1045
   G__tagdefining = -1;
+#endif
+
+#ifndef G__OLDIMPLEMENTATION2014
+  if(dictpos->ptype && (char*)G__PVOID!=dictpos->ptype ) {
+    int i;
+    for(i=0;i<G__struct.alltag;i++) G__struct.type[i] = dictpos->ptype[i];
+    free((void*)dictpos->ptype);
+    dictpos->ptype = (char*)NULL;
+  }
 #endif
 
 #ifndef G__OLDIMPLEMENTATION1035
@@ -472,12 +466,7 @@ int tagnum;
 	      G__store_struct_offset = store_struct_offset;
 	      G__tagnum=store_tagnum;
 	    }
-#ifndef G__OLDIMPLEMENTATION2052
-	    if(G__CPPLINK!=G__struct.iscpplink[var->p_tagtable[i]])
-	      free((void*)var->p[i]);
-#else
 	    free((void*)var->p[i]);
-#endif
 	  }
 #ifndef G__OLDIMPLEMENTATION1543
 	  if(var->varnamebuf[i]) {
@@ -774,12 +763,7 @@ int ig15;
 	  }
 	  else {
 	    G__store_struct_offset = var->p[itemp];
-	    if((i=var->varlabel[itemp][1])>0
-#ifndef G__OLDIMPLEMENTATION2025
-	       || var->paran[itemp]
-#endif
-	       ) 
-	      G__cpp_aryconstruct=i+1;
+	    if((i=var->varlabel[itemp][1])>0) G__cpp_aryconstruct=i+1;
 	    G__getfunction(temp,&itemp1,G__TRYDESTRUCTOR); 
 	    G__cpp_aryconstruct=0;
 	  }

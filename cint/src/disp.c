@@ -230,10 +230,10 @@ struct G__ifunc_table *ifunc;
       if(fname && strcmp(fname,ifunc->funcname[i])!=0) continue;
       
       if(
-#ifndef G__OLDIMPLEMENTATION2044
+#ifdef G__OLDIMPLEMENTATION1706_DEBUG
 	 ifunc->hash[i] &&
 #endif
-	 (ifunc->access[i]&access)) {
+	 ifunc->access[i]&access) {
 	
 	/* print out file name and line number */
 	if(ifunc->pentry[i]->filenum>=0) {
@@ -270,10 +270,6 @@ struct G__ifunc_table *ifunc;
 	    G__ASSERT(ifunc->pentry[i]->bytecodestatus==G__BYTECODE_SUCCESS);
 #endif
 	  }
-#ifndef G__OLDIMPLEMENTATIN2021
-	  else if(ifunc->pentry[i]->size<0) {
-	  }
-#endif
 	  else {
 	    G__ASSERT(ifunc->pentry[i]->bytecodestatus==G__BYTECODE_FAILURE||
 		      ifunc->pentry[i]->bytecodestatus==G__BYTECODE_NOTYET);
@@ -1402,36 +1398,7 @@ char *name;
   struct G__Charlist *charlist;
   int i=0;
 
-#ifndef G__OLDIMPLEMENTATION2034
-  struct G__var_array *var = &G__global;
-  int ig15;
-  char msg[G__LONGLINE];
   while(name[i]&&isspace(name[i])) i++;
-
-  while(var) {
-    for(ig15=0;ig15<var->allvar;ig15++) {
-      if(name && name[i] && strcmp(name+i,var->varnamebuf[ig15])!=0) continue;
-      if('p'==var->type[ig15]) {
-	sprintf(msg,"#define %s %d\n",var->varnamebuf[ig15]
-		,*(int*)var->p[ig15]);
-	G__more(fout,msg);
-      }
-      else if('T'==var->type[ig15]) {
-	sprintf(msg,"#define %s \"%s\"\n",var->varnamebuf[ig15]
-		,*(char**)var->p[ig15]);
-	G__more(fout,msg);
-      }
-      if(name && name[i]) return(0);
-    }
-    var=var->next;
-  }
-
-  if(G__display_replacesymbol(fout,name+i)) return(0);
-
-#else
-  while(name[i]&&isspace(name[i])) i++;
-#endif
-
   if(name[i]) {
     deffuncmacro = &G__deffuncmacro;
     while(deffuncmacro->next) {
@@ -2166,7 +2133,7 @@ void* G__get_errmsgcallback()
 *  In case you have problem compiling following function, define G__FIX1
 * in G__ci.h
 **************************************************************************/
-#if defined(G__ANSI) || defined(G__WIN32) || defined(G__FIX1) || defined(__sun)
+#if defined(G__ANSI) || defined(G__WIN32) || defined(G__FIX1)
 int G__fprinterr(FILE* fp,char* fmt,...)
 #elif defined(__GNUC__)
 int G__fprinterr(fp,fmt)
