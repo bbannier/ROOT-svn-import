@@ -44,18 +44,13 @@ G__TypeInfo : public G__ClassInfo  {
   void Init(const char *typenamein);
 #ifndef __MAKECINT__
   G__TypeInfo(G__value buf) : G__ClassInfo() { Init(buf); }
-  void Init(G__value& buf) { 
+  void Init(G__value buf) { 
     type    = buf.type; 
     typenum = buf.typenum; 
     tagnum  = buf.tagnum;
-#ifndef G__OLDIMPLEMENTATION2063
-    if(type!='d' && type!='f') reftype=buf.obj.reftype.reftype;
-    isconst = buf.isconst;
-#else
     if(isupper((int)type)) reftype=buf.obj.reftype.reftype;
     else              reftype=0;
     isconst = 0;
-#endif
   }
 #endif
   int operator==(const G__TypeInfo& a);
