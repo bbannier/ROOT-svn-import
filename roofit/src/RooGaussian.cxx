@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: BaBar detector at the SLAC PEP-II B-factory
  * Package: RooFitTools
- *    File: $Id: RooGaussian.cc,v 1.6 2001/08/03 18:13:02 verkerke Exp $
+ *    File: $Id: RooGaussian.cc,v 1.13 2001/10/13 00:39:23 david Exp $
  * Authors:
  *   DK, David Kirkby, Stanford University, kirkby@hep.stanford.edu
  *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu
@@ -11,15 +11,18 @@
  *
  * Copyright (C) 1999 Stanford University
  *****************************************************************************/
-#include "BaBar/BaBar.hh"
 
+// -- CLASS DESCRIPTION [PDF] --
+// Gaussian PDF...
+
+#include "BaBar/BaBar.hh"
 #include <iostream.h>
 #include <math.h>
 
 #include "RooFitModels/RooGaussian.hh"
 #include "RooFitCore/RooAbsReal.hh"
 #include "RooFitCore/RooRealVar.hh"
-// #include "RooFitTools/RooRandom.hh"
+#include "RooFitCore/RooRandom.hh"
 
 ClassImp(RooGaussian)
 
@@ -59,36 +62,37 @@ Int_t RooGaussian::getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVars
 
 Double_t RooGaussian::analyticalIntegral(Int_t code) const 
 {
-  switch(code) {
-  case 0: return getVal() ; 
-  case 1: 
-    {
-      static Double_t root2 = sqrt(2) ;
-      static Double_t rootPiBy2 = sqrt(atan2(0.0,-1.0)/2.0);
-      
-      Double_t xscale = root2*sigma;
-      return rootPiBy2*sigma*(erf((x.max()-mean)/xscale)-erf((x.min()-mean)/xscale));
-    }
-  }
+  assert(code==1) ;
+
+  static const Double_t root2 = sqrt(2) ;
+  static const Double_t rootPiBy2 = sqrt(atan2(0.0,-1.0)/2.0);
   
-  assert(0) ;
-  return 0 ;
+  Double_t xscale = root2*sigma;
+  return rootPiBy2*sigma*(erf((x.max()-mean)/xscale)-erf((x.min()-mean)/xscale));
 }
 
 
 
 
-// void RooGaussian::initGenerator() {
-// }
+Int_t RooGaussian::getGenerator(const RooArgSet& directVars, RooArgSet &generateVars) const
+{
+  if (matchArgs(directVars,generateVars,x)) return 1 ;  
+  return 0 ;
+}
 
-// Int_t RooGaussian::generateDependents() {
-//   Double_t value(0);
-//   Float_t fMean(mean), fSigma(sigma);
-//   Int_t calls(0);
-//   do {
-//     calls++;
-//     value= RooRandom::instance().Gaus(fMean, fSigma);
-//   } while(value <= _xptr->GetMin() || value > _xptr->GetMax());
-//   *_xptr= value;
-//   return calls;
-// }
+
+void RooGaussian::generateEvent(Int_t code)
+{
+  assert(code==1) ;
+  Double_t xgen ;
+  while(1) {    
+    xgen = RooRandom::randomGenerator()->Gaus(mean,sigma);
+    if (xgen<x.max() && xgen>x.min()) {
+      x = xgen ;
+      break;
+    }
+  }
+  return;
+}
+
+

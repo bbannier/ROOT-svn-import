@@ -1,8 +1,7 @@
-// -*- C++ -*-
 /*****************************************************************************
  * Project: BaBar detector at the SLAC PEP-II B-factory
  * Package: RooFitModels
- *    File: $Id: RooBifurGauss.rdl,v 1.3 2001/08/02 21:40:04 verkerke Exp $
+ *    File: $Id: RooBifurGauss.rdl,v 1.5 2001/09/20 01:41:48 verkerke Exp $
  * Authors:
  *   Abi Soffer, Coloraro State University, abi@slac.stanford.edu
  * History:
