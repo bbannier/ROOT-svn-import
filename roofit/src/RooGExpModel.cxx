@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: BaBar detector at the SLAC PEP-II B-factory
  * Package: RooFitCore
- *    File: $Id: RooGExpModel.cc,v 1.5 2001/10/08 05:21:18 verkerke Exp $
+ *    File: $Id: RooGExpModel.cc,v 1.7 2002/06/04 23:24:01 verkerke Exp $
  * Authors:
  *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu
  * History:
@@ -17,6 +17,7 @@
 #include "RooFitModels/RooGExpModel.hh"
 #include "RooFitCore/RooMath.hh"
 #include "RooFitCore/RooRealConstant.hh"
+#include "RooFitCore/RooRandom.hh"
 
 ClassImp(RooGExpModel) 
 ;
@@ -30,7 +31,7 @@ RooGExpModel::RooGExpModel(const char *name, const char *title, RooRealVar& x,
   rlife("rlife","Life time",this,_rlife),
   ssf("ssf","Sigma Scale Factor",this,(RooRealVar&)RooRealConstant::value(1)),
   rsf("rsf","RLife Scale Factor",this,(RooRealVar&)RooRealConstant::value(1)),
-  _nlo(nlo), _flip(type==Flipped)
+  _nlo(nlo), _flip(type==Flipped), _flatSFInt(kFALSE)
 {  
 }
 
@@ -44,7 +45,8 @@ RooGExpModel::RooGExpModel(const char *name, const char *title, RooRealVar& x,
   rlife("rlife","Life time",this,_rlife),
   ssf("ssf","Sigma Scale Factor",this,_rsSF),
   rsf("rsf","RLife Scale Factor",this,_rsSF),
-  _nlo(nlo), _flip(type==Flipped)
+  _nlo(nlo), _flip(type==Flipped),
+  _flatSFInt(kFALSE)
 {  
 }
 
@@ -58,7 +60,8 @@ RooGExpModel::RooGExpModel(const char *name, const char *title, RooRealVar& x,
   rlife("rlife","Life time",this,_rlife),
   ssf("ssf","Sigma Scale Factor",this,_sigmaSF),
   rsf("rsf","RLife Scale Factor",this,_rlifeSF),
-  _nlo(nlo), _flip(type==Flipped)
+  _nlo(nlo), _flip(type==Flipped),
+  _flatSFInt(kFALSE)
 {  
 }
 
@@ -70,7 +73,8 @@ RooGExpModel::RooGExpModel(const RooGExpModel& other, const char* name) :
   ssf("ssf",this,other.ssf),
   rsf("rsf",this,other.rsf),
   _nlo(other._nlo),
-  _flip(other._flip)
+  _flip(other._flip),
+  _flatSFInt(other._flatSFInt)
 {
 }
 
@@ -265,6 +269,14 @@ Int_t RooGExpModel::getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVar
   case cosBasisPlus:
   case cosBasisMinus:
   case cosBasisSum:
+    
+    // Optionally advertise flat integral over sigma scale factor
+    if (_flatSFInt) {
+      if (matchArgs(allVars,analVars,RooArgSet(convVar(),ssf.arg()))) {
+	return 2 ;
+      }
+    }
+
     if (matchArgs(allVars,analVars,convVar())) return 1 ;
     break ;
   }
@@ -278,9 +290,13 @@ Double_t RooGExpModel::analyticalIntegral(Int_t code) const
 {
   static Double_t root2 = sqrt(2) ;
   static Double_t rootPiBy2 = sqrt(atan2(0.0,-1.0)/2.0);
+  Double_t ssfInt(1.0) ;
 
-  // Code must be 1
-  assert(code==1) ;
+  // Code must be 1 or 2
+  assert(code==1||code==2) ;
+  if (code==2) {
+    ssfInt = (ssf.max()-ssf.min()) ;
+  }
 
   BasisType basisType = (BasisType)( (_basisCode == 0) ? 0 : (_basisCode/10) + 1 );
   BasisSign basisSign = (BasisSign)( _basisCode - 10*(basisType-1) - 2 ) ;
@@ -293,7 +309,7 @@ Double_t RooGExpModel::analyticalIntegral(Int_t code) const
 
     Double_t result = 1.0 ; // WVE inferred from limit(tau->0) of cosBasisNorm
     if (_basisCode!=0 && basisSign==Both) result *= 2 ;    
-    return result ;    
+    return result*ssfInt ;    
   }
 
   Double_t omega = (basisType!=expBasis) ?((RooAbsReal*)basis().getParameter(2))->getVal() : 0 ;
@@ -308,7 +324,7 @@ Double_t RooGExpModel::analyticalIntegral(Int_t code) const
   if (basisType==expBasis || (basisType==cosBasis && omega==0.)) {
     Double_t result = 2*tau ;
     if (basisSign==Both) result *= 2 ;
-    return result ;
+    return result*ssfInt ;
   }
   
   // *** 4th form: Convolution with exp(-t/tau)*sin(omega*t), used for sinBasis(omega<>0,tau<>0) ***
@@ -317,10 +333,10 @@ Double_t RooGExpModel::analyticalIntegral(Int_t code) const
     if (_verboseEval>0) cout << "RooGExpModel::analyticalIntegral(" << GetName() << ") 4th form omega = " 
 			     << omega << ", tau = " << tau << endl ;
     Double_t result(0) ;
-    if (wt==0) return result ;
+    if (wt==0) return result*ssfInt ;
     if (basisSign!=Minus) result += calcSinConvNorm(-1,tau,omega).im() ;
     if (basisSign!=Plus) result += calcSinConvNorm(+1,tau,omega).im() ;
-    return result ;
+    return result*ssfInt ;
   }
  
   // *** 5th form: Convolution with exp(-t/tau)*cos(omega*t), used for cosBasis(omega<>0) ***
@@ -330,7 +346,7 @@ Double_t RooGExpModel::analyticalIntegral(Int_t code) const
     Double_t result(0) ;
     if (basisSign!=Minus) result += calcSinConvNorm(-1,tau,omega).re() ;
     if (basisSign!=Plus) result += calcSinConvNorm(+1,tau,omega).re() ;
-    return result ;
+    return result*ssfInt ;
   }
   
   assert(0) ;
@@ -362,5 +378,28 @@ RooComplex RooGExpModel::evalCerfApprox(Double_t swt, Double_t u, Double_t c) co
   return v.exp()*(-zsq.exp()/(zc*rootpi) + 1)*2 ;
 }
 
+
+Int_t RooGExpModel::getGenerator(const RooArgSet& directVars, RooArgSet &generateVars, Bool_t staticInitOK) const
+{
+  if (matchArgs(directVars,generateVars,x)) return 1 ; 
+  return 0 ;
+}
+
+
+void RooGExpModel::generateEvent(Int_t code)
+{
+  assert(code==1) ;
+  Double_t xgen ;
+  while(1) {
+    Double_t xgau = RooRandom::randomGenerator()->Gaus(0,(sigma*ssf));
+    Double_t xexp = RooRandom::uniform();
+    if (!_flip) xgen= xgau + (rlife*rsf)*log(xexp);
+    else xgen= xgau - (rlife*rsf)*log(xexp);
+    if (xgen<x.max() && xgen>x.min()) {
+      x = xgen ;
+      return ;
+    }
+  }
+}
 
 

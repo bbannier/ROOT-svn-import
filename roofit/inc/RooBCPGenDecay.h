@@ -1,39 +1,40 @@
 /*****************************************************************************
  * Project: BaBar detector at the SLAC PEP-II B-factory
- * Package: RooFitCore
- *    File: $Id: RooBCPEffDecay.rdl,v 1.5 2001/12/13 22:09:35 schieti Exp $
+ * Package: RooFitModels
+ *    File:
  * Authors:
- *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu
+ * Authors:
+ *   Jim Smith, jgsmith@pizero.colorado.edu
  * History:
- *   05-Jun-2001 WV Created initial version
+ *   08-Jul-2002 JGS Created initial version
  *
  * Copyright (C) 2001 University of California
  *****************************************************************************/
-#ifndef ROO_BCP_EFF_DECAY
-#define ROO_BCP_EFF_DECAY
+#ifndef ROO_BCPGEN_DECAY
+#define ROO_BCPGEN_DECAY
 
 #include "RooFitCore/RooConvolutedPdf.hh"
 #include "RooFitCore/RooRealProxy.hh"
 #include "RooFitCore/RooCategoryProxy.hh"
 
-class RooBCPEffDecay : public RooConvolutedPdf {
+class RooBCPGenDecay : public RooConvolutedPdf {
 public:
 
   enum DecayType { SingleSided, DoubleSided, Flipped };
 
   // Constructors, assignment etc
-  inline RooBCPEffDecay() { }
-  RooBCPEffDecay(const char *name, const char *title, 
+  inline RooBCPGenDecay() { }
+  RooBCPGenDecay(const char *name, const char *title, 
 		 RooRealVar& t, RooAbsCategory& tag,
 		 RooAbsReal& tau, RooAbsReal& dm,
-		 RooAbsReal& avgMistag, RooAbsReal& CPeigenval,
+		 RooAbsReal& avgMistag, 
 		 RooAbsReal& a, RooAbsReal& b,
-		 RooAbsReal& effRatio, RooAbsReal& delMistag,
+		 RooAbsReal& delMistag,
 		 const RooResolutionModel& model, DecayType type=DoubleSided) ;
 
-  RooBCPEffDecay(const RooBCPEffDecay& other, const char* name=0);
-  virtual TObject* clone(const char* newname) const { return new RooBCPEffDecay(*this,newname) ; }
-  virtual ~RooBCPEffDecay();
+  RooBCPGenDecay(const RooBCPGenDecay& other, const char* name=0);
+  virtual TObject* clone(const char* newname) const { return new RooBCPGenDecay(*this,newname) ; }
+  virtual ~RooBCPGenDecay();
 
   virtual Double_t coefficient(Int_t basisIndex) const ;
 
@@ -46,10 +47,8 @@ public:
   
 protected:
 
-  RooRealProxy _absLambda ;
-  RooRealProxy _argLambda ;
-  RooRealProxy _effRatio ;
-  RooRealProxy _CPeigenval ;
+  RooRealProxy _avgC ;
+  RooRealProxy _avgS ;
   RooRealProxy _avgMistag ;
   RooRealProxy _delMistag ;
   RooRealProxy _t ;
@@ -63,7 +62,7 @@ protected:
   Int_t _basisSin ;
   Int_t _basisCos ;
 
-  ClassDef(RooBCPEffDecay,1) // B Mixing decay PDF
+  ClassDef(RooBCPGenDecay,1) 
 };
 
 #endif

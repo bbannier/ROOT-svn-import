@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: BaBar detector at the SLAC PEP-II B-factory
  * Package: RooFitCore
- *    File: $Id: RooGaussModel.cc,v 1.18 2002/01/16 01:35:55 verkerke Exp $
+ *    File: $Id: RooGaussModel.cc,v 1.21 2002/05/31 21:54:25 verkerke Exp $
  * Authors:
  *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu
  * History:
@@ -29,7 +29,8 @@ RooGaussModel::RooGaussModel(const char *name, const char *title, RooRealVar& x,
   mean("mean","Mean",this,_mean),
   sigma("sigma","Width",this,_sigma),
   msf("msf","Mean Scale Factor",this,(RooRealVar&)RooRealConstant::value(1)),
-  ssf("ssf","Sigma Scale Factor",this,(RooRealVar&)RooRealConstant::value(1))
+  ssf("ssf","Sigma Scale Factor",this,(RooRealVar&)RooRealConstant::value(1)),
+  _flatSFInt(kFALSE)
 {  
 }
 
@@ -41,7 +42,8 @@ RooGaussModel::RooGaussModel(const char *name, const char *title, RooRealVar& x,
   mean("mean","Mean",this,_mean),
   sigma("sigma","Width",this,_sigma),
   msf("msf","Mean Scale Factor",this,_msSF),
-  ssf("ssf","Sigma Scale Factor",this,_msSF)
+  ssf("ssf","Sigma Scale Factor",this,_msSF),
+  _flatSFInt(kFALSE)
 {  
 }
 
@@ -53,7 +55,8 @@ RooGaussModel::RooGaussModel(const char *name, const char *title, RooRealVar& x,
   mean("mean","Mean",this,_mean),
   sigma("sigma","Width",this,_sigma),
   msf("msf","Mean Scale Factor",this,_meanSF),
-  ssf("ssf","Sigma Scale Factor",this,_sigmaSF)
+  ssf("ssf","Sigma Scale Factor",this,_sigmaSF),
+  _flatSFInt(kFALSE)
 {  
 }
 
@@ -63,7 +66,8 @@ RooGaussModel::RooGaussModel(const RooGaussModel& other, const char* name) :
   mean("mean",this,other.mean),
   sigma("sigma",this,other.sigma),
   msf("msf",this,other.msf),
-  ssf("ssf",this,other.ssf)
+  ssf("ssf",this,other.ssf),
+  _flatSFInt(other._flatSFInt)
 {
 }
 
@@ -196,7 +200,7 @@ Double_t RooGaussModel::evaluate() const
 
 Int_t RooGaussModel::getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVars) const 
 {
-  switch(_basisCode) {
+  switch(_basisCode) {    
 
   // Analytical integration capability of raw PDF
   case noBasis:
@@ -215,6 +219,13 @@ Int_t RooGaussModel::getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVa
   case cosBasisSum:
   case linBasisPlus:
   case quadBasisPlus:
+    // Optionally advertise flat integral over sigma scale factor
+    if (_flatSFInt) {
+      if (matchArgs(allVars,analVars,RooArgSet(convVar(),ssf.arg()))) {
+	return 2 ;
+      }
+    }
+    
     if (matchArgs(allVars,analVars,convVar())) return 1 ;
     break ;
   }
@@ -229,9 +240,13 @@ Double_t RooGaussModel::analyticalIntegral(Int_t code) const
   static Double_t root2 = sqrt(2) ;
   static Double_t rootPiBy2 = sqrt(atan2(0.0,-1.0)/2.0);
   static Double_t rootpi = sqrt(atan2(0.0,-1.0));
+  Double_t ssfInt(1.0) ;
 
-  // Code must be 1
-  assert(code==1) ;
+  // Code must be 1 or 2
+  assert(code==1||code==2) ;
+  if (code==2) {
+    ssfInt = (ssf.max()-ssf.min()) ;
+  }
 
 
   BasisType basisType = (BasisType)( (_basisCode == 0) ? 0 : (_basisCode/10) + 1 );
@@ -256,7 +271,7 @@ Double_t RooGaussModel::analyticalIntegral(Int_t code) const
     }
 
     if (_basisCode!=0 && basisSign==Both) result *= 2 ;    
-    return result ;
+    return result*ssfInt ;
   }
 
 
@@ -282,8 +297,8 @@ Double_t RooGaussModel::analyticalIntegral(Int_t code) const
     if (_verboseEval>0) cout << "RooGaussModel::analyticalIntegral(" << GetName() << ") 3d form tau=" << tau << endl ;
 
     Double_t result(0) ;
-    if (umin<-6 && umax>6) {
-      // If integral is over >6 sigma, approximate with full integral
+    if (umin<-8 && umax>8) {
+      // If integral is over >8 sigma, approximate with full integral
       if (basisSign!=Minus) result += 2 * tau ;
       if (basisSign!=Plus)  result += 2 * tau ;      
     } else {
@@ -294,7 +309,7 @@ Double_t RooGaussModel::analyticalIntegral(Int_t code) const
 						   exp(c*c) * ( exp(xpmax)*erfc(umax+c)
 								- exp(xpmin)*erfc(umin+c) )) ;     
     }
-    return result ;
+    return result*ssfInt ;
   }
 
   // *** 4th form: Convolution with exp(-t/tau)*sin(omega*t), used for sinBasis(omega<>0,tau<>0) ***
@@ -304,7 +319,7 @@ Double_t RooGaussModel::analyticalIntegral(Int_t code) const
     if (_verboseEval>0) cout << "RooGaussModel::analyticalIntegral(" << GetName() << ") 4th form omega = " 
 			     << omega << ", tau = " << tau << endl ;
     Double_t result(0) ;
-    if (wt==0) return result ;
+    if (wt==0) return result*ssfInt ;
     if (basisSign!=Minus) {
       RooComplex evalDif(evalCerf(-wt,-umax,c) - evalCerf(-wt,-umin,c)) ;
       result += -tau/(1+wt*wt) * ( -evalDif.im() +   -wt*evalDif.re() -   -wt*(erf(-umax) - erf(-umin)) ) ; 
@@ -314,7 +329,7 @@ Double_t RooGaussModel::analyticalIntegral(Int_t code) const
       result +=  tau/(1+wt*wt) * ( -evalDif.im() +    wt*evalDif.re() -    wt*(erf(umax) - erf(umin)) ) ;
     }
 
-    return result ;
+    return result*ssfInt ;
   }
 
   // *** 5th form: Convolution with exp(-t/tau)*cos(omega*t), used for cosBasis(omega<>0) ***
@@ -332,7 +347,7 @@ Double_t RooGaussModel::analyticalIntegral(Int_t code) const
       result +=  tau/(1+wt*wt) * ( evalDif.re() +  wt*evalDif.im() + erf(umax) - erf(umin) ) ;
     }
 
-    return result ;
+    return result*ssfInt ;
   }
 
   // *** 6th form: Convolution with (t/tau)*exp(-t/tau), used for linBasis ***
@@ -355,7 +370,7 @@ Double_t RooGaussModel::analyticalIntegral(Int_t code) const
 		  (2*c/rootpi)*f1 +
 	     (1 - 2*c*c)*expc2*f2 +
 			 expc2*f3
-		);
+		)*ssfInt;
   }
 
   // *** 7th form: Convolution with (t/tau)*(t/tau)*exp(-t/tau), used for quadBasis ***
@@ -383,7 +398,7 @@ Double_t RooGaussModel::analyticalIntegral(Int_t code) const
     return -tau*( 2*f0 +
 		  (4*c/rootpi)*((1-c*c)*f1 + c*f2) +
 		  (2*c*c*(2*c*c-1) + 2)*expc2*f3 - (4*c*c-2)*expc2*f4 + expc2*f5
-                );
+                )*ssfInt;
   }
 
   assert(0) ;
@@ -410,7 +425,7 @@ RooComplex RooGaussModel::evalCerfApprox(Double_t swt, Double_t u, Double_t c) c
 
 
 
-Int_t RooGaussModel::getGenerator(const RooArgSet& directVars, RooArgSet &generateVars) const
+Int_t RooGaussModel::getGenerator(const RooArgSet& directVars, RooArgSet &generateVars, Bool_t staticInitOK) const
 {
   if (matchArgs(directVars,generateVars,x)) return 1 ;  
   return 0 ;

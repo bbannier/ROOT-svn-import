@@ -1,38 +1,36 @@
 /*****************************************************************************
  * Project: BaBar detector at the SLAC PEP-II B-factory
- * Package: RooFitCore
- *    File: $Id: RooBCPEffDecay.cc,v 1.8 2001/12/13 22:09:35 schieti Exp $
+ * Package: RooFitModels
+ *    File: 
  * Authors:
- *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu
+ *   Jim Smith, jgsmith@pizero.colorado.edu
  * History:
- *   05-Jun-2001 WV Created initial version
+ *   08-Jul-2002 JGS Created initial version
  *
- * Copyright (C) 2001 University of California
  *****************************************************************************/
 
 // -- CLASS DESCRIPTION [PDF] --
-// 
+// Implement standard CP physics model with S and C (no mention of lambda)
+// Suitably stolen and modified from RooBCPEffDecay
 
 #include <iostream.h>
 #include "RooFitCore/RooRealVar.hh"
 #include "RooFitCore/RooRandom.hh"
-#include "RooFitModels/RooBCPEffDecay.hh"
+#include "RooFitModels/RooBCPGenDecay.hh"
 
-ClassImp(RooBCPEffDecay) 
+ClassImp(RooBCPGenDecay) 
 ;
 
-RooBCPEffDecay::RooBCPEffDecay(const char *name, const char *title, 
+RooBCPGenDecay::RooBCPGenDecay(const char *name, const char *title, 
 			       RooRealVar& t, RooAbsCategory& tag,
 			       RooAbsReal& tau, RooAbsReal& dm,
-			       RooAbsReal& avgMistag, RooAbsReal& CPeigenval,
+			       RooAbsReal& avgMistag, 
 			       RooAbsReal& a, RooAbsReal& b,
-			       RooAbsReal& effRatio, RooAbsReal& delMistag,
+			       RooAbsReal& delMistag,
 			       const RooResolutionModel& model, DecayType type) :
   RooConvolutedPdf(name,title,model,t), 
-  _absLambda("absLambda","Absolute value of lambda",this,a),
-  _argLambda("argLambda","Arg(Lambda)",this,b),
-  _CPeigenval("CPeigenval","CP eigen value",this,CPeigenval),
-  _effRatio("effRatio","B0/B0bar efficiency ratio",this,effRatio),
+  _avgC("C","Coefficient of cos term",this,a),
+  _avgS("S","Coefficient of cos term",this,b),
   _avgMistag("avgMistag","Average mistag rate",this,avgMistag),
   _delMistag("delMistag","Delta mistag rate",this,delMistag),  
   _tag("tag","CP state",this,tag),
@@ -63,12 +61,10 @@ RooBCPEffDecay::RooBCPEffDecay(const char *name, const char *title,
 }
 
 
-RooBCPEffDecay::RooBCPEffDecay(const RooBCPEffDecay& other, const char* name) : 
+RooBCPGenDecay::RooBCPGenDecay(const RooBCPGenDecay& other, const char* name) : 
   RooConvolutedPdf(other,name), 
-  _absLambda("absLambda",this,other._absLambda),
-  _argLambda("argLambda",this,other._argLambda),
-  _CPeigenval("CPeigenval",this,other._CPeigenval),
-  _effRatio("effRatio",this,other._effRatio),
+  _avgC("C",this,other._avgC),
+  _avgS("S",this,other._avgS),
   _avgMistag("avgMistag",this,other._avgMistag),
   _delMistag("delMistag",this,other._delMistag),
   _tag("tag",this,other._tag),
@@ -86,33 +82,33 @@ RooBCPEffDecay::RooBCPEffDecay(const RooBCPEffDecay& other, const char* name) :
 
 
 
-RooBCPEffDecay::~RooBCPEffDecay()
+RooBCPGenDecay::~RooBCPGenDecay()
 {
   // Destructor
 }
 
 
-Double_t RooBCPEffDecay::coefficient(Int_t basisIndex) const 
+Double_t RooBCPGenDecay::coefficient(Int_t basisIndex) const 
 {
   // B0    : _tag = +1 
   // B0bar : _tag = -1 
 
   if (basisIndex==_basisExp) {
-    //exp term: (1 -/+ dw)(1+a^2)/2 
-    return (1 - _tag*_delMistag)*(1+_absLambda*_absLambda)/2 ;
+    //exp term: (1 -/+ dw)
+    return (1 - _tag*_delMistag) ;
     // =    1 + _tag*deltaDil/2
   }
 
   if (basisIndex==_basisSin) {
-    //sin term: +/- (1-2w)*ImLambda(= -etaCP * |l| * sin2b)
-    return -1*_tag*(1-2*_avgMistag)*_CPeigenval*_absLambda*_argLambda ;
-    // =   _tag*avgDil * ...
+    //sin term: +/- (1-2w)*S
+    return _tag*(1-2*_avgMistag)*_avgS ;
+    // =   _tag*avgDil * S
   }
   
   if (basisIndex==_basisCos) {
-    //cos term: +/- (1-2w)*(1-a^2)/2
-    return -1*_tag*(1-2*_avgMistag)*(1-_absLambda*_absLambda)/2 ;
-    // =   -_tag*avgDil * ...
+    //cos term: +/- (1-2w)*C
+    return -1*_tag*(1-2*_avgMistag)*_avgC ;
+    // =   -_tag*avgDil * C
   } 
   
   return 0 ;
@@ -120,7 +116,7 @@ Double_t RooBCPEffDecay::coefficient(Int_t basisIndex) const
 
 
 
-Int_t RooBCPEffDecay::getCoefAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVars) const 
+Int_t RooBCPGenDecay::getCoefAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVars) const 
 {
   if (matchArgs(allVars,analVars,_tag)) return 1 ;
   return 0 ;
@@ -128,7 +124,7 @@ Int_t RooBCPEffDecay::getCoefAnalyticalIntegral(RooArgSet& allVars, RooArgSet& a
 
 
 
-Double_t RooBCPEffDecay::coefAnalyticalIntegral(Int_t basisIndex, Int_t code) const 
+Double_t RooBCPGenDecay::coefAnalyticalIntegral(Int_t basisIndex, Int_t code) const 
 {
   switch(code) {
     // No integration
@@ -137,7 +133,7 @@ Double_t RooBCPEffDecay::coefAnalyticalIntegral(Int_t basisIndex, Int_t code) co
     // Integration over 'tag'
   case 1:
     if (basisIndex==_basisExp) {
-      return (1+_absLambda*_absLambda) ;
+      return 2 ;
     }
     
     if (basisIndex==_basisSin || basisIndex==_basisCos) {
@@ -152,10 +148,10 @@ Double_t RooBCPEffDecay::coefAnalyticalIntegral(Int_t basisIndex, Int_t code) co
 
 
 
-Int_t RooBCPEffDecay::getGenerator(const RooArgSet& directVars, RooArgSet &generateVars, Bool_t staticInitOK) const
+Int_t RooBCPGenDecay::getGenerator(const RooArgSet& directVars, RooArgSet &generateVars, Bool_t staticInitOK) const
 {
   if (staticInitOK) {
-    if (matchArgs(directVars,generateVars,_t,_tag)) return 2 ;  
+    if (matchArgs(directVars,generateVars,_t,_tag)) return 2 ;
   }
   if (matchArgs(directVars,generateVars,_t)) return 1 ;  
   return 0 ;
@@ -163,7 +159,7 @@ Int_t RooBCPEffDecay::getGenerator(const RooArgSet& directVars, RooArgSet &gener
 
 
 
-void RooBCPEffDecay::initGenerator(Int_t code)
+void RooBCPGenDecay::initGenerator(Int_t code)
 {
   if (code==2) {
     // Calculate the fraction of mixed events to generate
@@ -176,7 +172,7 @@ void RooBCPEffDecay::initGenerator(Int_t code)
 
 
 
-void RooBCPEffDecay::generateEvent(Int_t code)
+void RooBCPGenDecay::generateEvent(Int_t code)
 {
   // Generate mix-state dependent
   if (code==2) {
@@ -203,11 +199,11 @@ void RooBCPEffDecay::generateEvent(Int_t code)
 
     // Accept event if T is in generated range
     Double_t maxDil = 1.0 ;
-    Double_t al2 = _absLambda*_absLambda ;
-    Double_t maxAcceptProb = (1+al2) + fabs(maxDil*_CPeigenval*_absLambda*_argLambda) + fabs(maxDil*(1-al2)/2);        
-    Double_t acceptProb    = (1+al2)/2*(1-_tag*_delMistag) 
-                           - (_tag*(1-2*_avgMistag))*(_CPeigenval*_absLambda*_argLambda)*sin(_dm*tval) 
-                           - (_tag*(1-2*_avgMistag))*(1-al2)/2*cos(_dm*tval);
+// 2 in next line is conservative and inefficient - allows for delMistag=1!
+    Double_t maxAcceptProb = 2 + fabs(maxDil*_avgS) + fabs(maxDil*_avgC);        
+    Double_t acceptProb    = (1-_tag*_delMistag) 
+                           + (_tag*(1-2*_avgMistag))*_avgS*sin(_dm*tval) 
+                           - (_tag*(1-2*_avgMistag))*_avgC*cos(_dm*tval);
 
     Bool_t accept = maxAcceptProb*RooRandom::uniform() < acceptProb ? kTRUE : kFALSE ;
     
