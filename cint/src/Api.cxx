@@ -317,7 +317,7 @@ int G__IncludePathInfo::Next() {
 #ifdef G__STD_EXCEPTION
 #include <exception>
 #include <typeinfo>
-#ifndef __hpux
+#if !defined(__hpux) || defined(__HP_aCC)
 using namespace std;
 #endif
 #endif
@@ -398,7 +398,7 @@ extern "C" void G__operator_delete_ary(void *p) {
 #ifdef G__CPPCONSTSTRING
 #include <set>
 #include <string>
-#if !defined(__hpux) && !defined(_MSC_VER)
+#if (!defined(__hpux) && !defined(_MSC_VER)) || defined(__HP_aCC)
 using namespace std;
 #endif
 /******************************************************************
