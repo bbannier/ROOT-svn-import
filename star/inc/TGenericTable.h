@@ -1,4 +1,4 @@
-// @(#)root/star:$Name:  $Id: TGenericTable.h,v 1.3 2002/01/09 17:29:35 brun Exp $
+// @(#)root/star:$Name:  $Id: TGenericTable.h,v 1.3.4.1 2002/02/07 19:58:56 rdm Exp $
 // Author: Valery Fine(fine@bnl.gov)   30/06/2001
 // Copyright(c) 2001 [BNL] Brookhaven National Laboratory, Valeri Fine  (fine@bnl.gov). All right reserved",
 
@@ -16,8 +16,6 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 class TGenericTable : public TTable {
-  public:
-     static const char* TableDictionary();
   protected:                                        
      TTableDescriptor *fColDescriptors;     
      virtual TTableDescriptor *GetDescriptorPointer() const { return fColDescriptors;}                 

@@ -107,26 +107,6 @@ R__EXTERN Int_t gDebug;
 typedef void (*ShowMembersFunc_t)(void *obj, TMemberInspector &R__insp, char *R__parent);
 typedef TClass *(*IsAFunc_t)(const void *obj);
 
-namespace ROOT {
-   extern TClass *CreateClass(const char *cname, Version_t id,
-                              const type_info &info, IsAFunc_t isa,
-                              ShowMembersFunc_t show,
-                              const char *dfil, const char *ifil,
-                              Int_t dl, Int_t il);
-   extern void AddClass(const char *cname, Version_t id, const type_info &info,
-                        VoidFuncPtr_t dict, Int_t pragmabits);
-   extern void RemoveClass(const char *cname);
-
-   extern TNamed *RegisterClassTemplate(const char *name,
-                                        const char *file, Int_t line);
-
-  // NOTE: Cint typeid is not fully functional yet, so these classes can not
-  // be made available yet.
-  template <class T> TClass *IsA(T *obj) { return gROOT->GetClass(typeid(*obj)); }
-  template <class T> TClass *IsA(const T *obj) { return IsA((T*)obj); }
-}
-
-
 #ifndef __CINT__
 template <class Tmpl> TBuffer &operator>>(TBuffer &buf, Tmpl *&obj)
 {
@@ -148,188 +128,238 @@ template <class Tmpl> TBuffer &operator>>(TBuffer &buf, const Tmpl *&obj) {
    return operator>>(buf, (Tmpl *&) obj);
 }
 
-// Because of the template defined here, we have to insure that
-// CINT does not see this file twice, even if it is preprocessed by
-// an external preprocessor.
-#ifdef __CINT__
-#pragma define ROOT_Rtypes_In_Cint_Interpreter
-#endif
-#if defined(__CINT__) && !defined(ROOT_Rtypes_In_Cint_Interpreter)
-#pragma ifndef ROOT_Rtypes_For_Cint
-#pragma define ROOT_Rtypes_For_Cint
-#endif
 
-class R__InitBehavior {
-public:
-   virtual void Register(const char *cname, Version_t id, const type_info &info,
-                         VoidFuncPtr_t dict, Int_t pragmabits) const = 0;
-   virtual void Unregister(const char* classname) const = 0;
-   virtual TClass *CreateClass(const char *cname, Version_t id,
-                               const type_info &info, IsAFunc_t isa,
-                               ShowMembersFunc_t show,
-                               const char *dfil, const char *ifil,
-                               Int_t dl, Int_t il) const = 0;
-};
+// template <class RootClass> Short_t GetClassVersion(RootClass *);
 
-class R__DefaultInitBehavior : public R__InitBehavior {
-public:
-   virtual void Register(const char *cname, Version_t id, const type_info &info,
-                         VoidFuncPtr_t dict, Int_t pragmabits) const {
-      ROOT::AddClass(cname, id, info, dict, pragmabits);
-   }
-   virtual void Unregister(const char *classname) const {
-      ROOT::RemoveClass(classname);
-   }
-   virtual TClass *CreateClass(const char *cname, Version_t id,
-                               const type_info &info, IsAFunc_t isa,
-                               ShowMembersFunc_t show,
-                               const char *dfil, const char *ifil,
-                               Int_t dl, Int_t il) const {
-      return ROOT::CreateClass(cname, id, info, isa, show, dfil, ifil, dl, il);
-   }
-};
+namespace ROOT {
+   // NOTE: Cint typeid is not fully functional yet, so these classes can not
+   // be made available yet.
+   template <class T> TClass *IsA(T *obj) { return gROOT->GetClass(typeid(*obj)); }
+   template <class T> TClass *IsA(const T *obj) { return IsA((T*)obj); }
 
-template <class RootClass> class R__tInit {
-public:
-   typedef void (*ShowMembersFunc_t)(RootClass *obj, TMemberInspector &R__insp,
-                                     char *R__parent);
+   template <class RootClass> class ClassInfo;
 
-   static const R__InitBehavior       *fgAction;
-   static TClass                      *fgClass;
-   static Int_t                        fgVersion;
-   static const char                  *fgClassName;
-   static const char                  *fgImplFileName;
-   static Int_t                        fgImplFileLine;
-   static const char                  *fgDeclFileName;
-   static Int_t                        fgDeclFileLine;
-   static ShowMembersFunc_t            fgShowMembers;
+   template <class RootClass> Short_t SetClassVersion();
 
-   R__tInit(const char *fullClassname,
-            const char *declFilename, Int_t declFileline,
-            ShowMembersFunc_t showmembers, Int_t pragmabits) {
-      Int_t version = 1; // need to calculate some sort of unique version number
-      Init(fullClassname, version,
-           declFilename, declFileline,
-           showmembers, pragmabits);
-   }
+   extern TClass *CreateClass(const char *cname, Version_t id, 
+                              const type_info &info, IsAFunc_t isa,
+                              ShowMembersFunc_t show,
+                              const char *dfil, const char *ifil,
+                              Int_t dl, Int_t il);
+   extern void AddClass(const char *cname, Version_t id, const type_info &info,
+                        VoidFuncPtr_t dict, Int_t pragmabits);
+   extern void RemoveClass(const char *cname);
+   extern void ResetClassVersion(TClass*, const char*, Short_t);
 
-   R__tInit(const char *fullClassname, Int_t version,
-            const char *declFilename, Int_t declFileline,
-            ShowMembersFunc_t showmembers, Int_t pragmabits) {
-      Init(fullClassname, version, declFilename, declFileline,
-           showmembers, pragmabits);
-   }
+   extern TNamed *RegisterClassTemplate(const char *name,
+                                        const char *file, Int_t line);
 
-   void Init(const char *fullClassname, Int_t version,
-             const char *declFilename, Int_t declFileline,
-             ShowMembersFunc_t showmembers, Int_t pragmabits) {
-      GetAction().Register(fullClassname,
-                           version,
-                           typeid(RootClass),
-                           &Dictionary,
-                           pragmabits);
-      fgShowMembers  = showmembers;
-      fgVersion      = version;
-      fgClassName    = fullClassname;
-      fgDeclFileName = declFilename;
-      fgDeclFileLine = declFileline;
-   }
+   // This function is only implemented in the dictionary file.
+   // The parameter is 'only' for overloading resolution.
+   template <class T> ClassInfo<T> &GenerateInitInstance(const T*);
 
-   ~R__tInit() { GetAction().Unregister(GetClassName()); }
+   // Because of the template defined here, we have to insure that
+   // CINT does not see this file twice, even if it is preprocessed by
+   // an external preprocessor.
+   #ifdef __CINT__
+   #pragma define ROOT_Rtypes_In_Cint_Interpreter
+   #endif
+   #if defined(__CINT__) && !defined(ROOT_Rtypes_In_Cint_Interpreter)
+   #pragma ifndef ROOT_Rtypes_For_Cint
+   #pragma define ROOT_Rtypes_For_Cint
+   #endif
 
-   static const R__InitBehavior &GetAction() {
-      if (!fgAction) {
-         RootClass *ptr = 0;
-         fgAction = R__DefineBehavior(ptr, ptr);
+   class InitBehavior {
+   public:
+      virtual void Register(const char *cname, Version_t id, const type_info &info,
+                            VoidFuncPtr_t dict, Int_t pragmabits) const = 0;
+      virtual void Unregister(const char *classname) const = 0;
+      virtual TClass *CreateClass(const char *cname, Version_t id, 
+                                  const type_info &info, IsAFunc_t isa, 
+                                  ShowMembersFunc_t show,
+                                  const char *dfil, const char *ifil, 
+                                  Int_t dl, Int_t il) const = 0;
+   };
+   
+   class DefaultInitBehavior : public InitBehavior {
+   public:
+      virtual void Register(const char *cname, Version_t id, const type_info &info,
+                            VoidFuncPtr_t dict, Int_t pragmabits) const {
+         ROOT::AddClass(cname, id, info, dict, pragmabits);
       }
-      return *fgAction;
-   }
-   static void Dictionary() { GetClass(); }
-
-   static TClass *GetClass() {
-      if (!fgClass) {
-         fgClass = GetAction().CreateClass(GetClassName(),
-                                           GetVersion(),
-                                           typeid(RootClass),
-                                           &IsA,
-                                           &ShowMembers,
-                                           GetDeclFileName(),
-                                           GetImplFileName(),
-                                           GetDeclFileLine(),
-                                           GetImplFileLine());
+      virtual void Unregister(const char *classname) const {
+         ROOT::RemoveClass(classname);
       }
-      return fgClass;
-   }
-
-   static const char *GetClassName() {
-      return fgClassName;
-   }
-
-   static ShowMembersFunc_t GetShowMembers() {
-      return fgShowMembers;
-   }
-
-   static void SetFromTemplate() {
-      TNamed *info = ROOT::RegisterClassTemplate(GetClassName(), 0, 0);
-      if (info) SetImplFile(info->GetTitle(), info->GetUniqueID());
-   }
-
-   static int SetImplFile(const char *file, Int_t line) {
-      fgImplFileName = file;
-      fgImplFileLine = line;
-      return 0;
-   }
-
-   static const char *GetDeclFileName() {
-      return fgDeclFileName;
-   }
-
-   static Int_t GetDeclFileLine() {
-      return fgDeclFileLine;
-   }
-
-   static const char *GetImplFileName() {
-      if (!fgImplFileName) SetFromTemplate();
-      return fgImplFileName;
-   }
-
-   static Int_t GetImplFileLine() {
-      if (!fgImplFileLine) SetFromTemplate();
-      return fgImplFileLine;
-   }
-
-   static Int_t GetVersion() {
-      return fgVersion;
-   }
-
-   static void ShowMembers(RootClass *obj, TMemberInspector &R__insp,
-                           char *R__parent) {
-      if (fgShowMembers) fgShowMembers(obj, R__insp, R__parent);
-      // for now other part of the system seem to warn about this,
-      // so we can just do as if the class was 'empty'
-      // else
-      //Error("R__tInit","ShowMembers not initialized for %s",GetClassName());
-   }
-
-   static TClass* IsA(const void *obj) {
-      return ROOT::IsA((RootClass*)obj);
-   }
-
-protected:
-   static void ShowMembers(void *obj, TMemberInspector &R__insp,
-                           char *R__parent) {
-      if (fgShowMembers) fgShowMembers((RootClass*)obj, R__insp, R__parent);
-      // for now other part of the system seem to warn about this,
-      // so we can just do as if the class was 'empty'
-      // else
-      //Error("R__tInit","ShowMembers not initialized for %s",GetClassName());
-   }
-};
-
-
-#if defined(__CINT__) && !defined(ROOT_Rtypes_In_Cint_Interpreter)
-#pragma endif
+      virtual TClass *CreateClass(const char *cname, Version_t id, 
+                                  const type_info &info, IsAFunc_t isa, 
+                                  ShowMembersFunc_t show,
+                                  const char *dfil, const char *ifil, 
+                                  Int_t dl, Int_t il) const {
+         return ROOT::CreateClass(cname, id, info, isa, show, dfil, ifil, dl, il);
+      }
+   };
+   
+   template <class RootClass > class ClassInfo {
+   public:
+      typedef void (*ShowMembersFunc_t)(RootClass *obj, TMemberInspector &R__insp, 
+                                        char *R__parent);
+   protected:
+#ifdef R__WIN32
+     friend ClassInfo<RootClass > &GenerateInitInstance(const RootClass*);
+#else
+     friend ClassInfo<RootClass > &GenerateInitInstance<RootClass >(const RootClass*);
 #endif
+     
+     static const InitBehavior  *fgAction;
+     static TClass              *fgClass;
+     static Int_t                fgVersion;
+     static const char          *fgClassName;
+     static const char          *fgImplFileName;
+     static Int_t                fgImplFileLine;
+     static const char          *fgDeclFileName;
+     static Int_t                fgDeclFileLine;
+     static ShowMembersFunc_t    fgShowMembers;
+     
+     ClassInfo(const char *fullClassname,
+               const char *declFilename, Int_t declFileline,
+               ShowMembersFunc_t showmembers, Int_t pragmabits) {
+        // The basic type global varible are initialized to 0
+        Int_t version = 1; // This is the default version number. 
+        if (fgVersion !=0) version = fgVersion;
+        Init(fullClassname, version, 
+             declFilename, declFileline,
+             showmembers, pragmabits);
+     }
+     ClassInfo(const char *fullClassname, Int_t version,
+               const char *declFilename, Int_t declFileline,
+               ShowMembersFunc_t showmembers, Int_t pragmabits) {
+        Init(fullClassname, version, 
+             declFilename, declFileline,
+             showmembers, pragmabits);
+     }
+     
+     void Init(const char *fullClassname, Int_t version,
+               const char *declFilename, Int_t declFileline,
+               ShowMembersFunc_t showmembers, Int_t pragmabits) {
+        GetAction().Register(fullClassname,
+                             version,
+                             typeid(RootClass),
+                             &Dictionary,
+                             pragmabits);
+        fgShowMembers = showmembers;
+        fgVersion = version;
+        fgClassName = fullClassname;
+        fgDeclFileName = declFilename;
+        fgDeclFileLine = declFileline;
+     }
+     
+  public:
+     ~ClassInfo() { GetAction().Unregister(GetClassName()); }
+
+     static const InitBehavior &GetAction() {
+        if (!fgAction) {
+           RootClass *ptr = 0;
+           fgAction = DefineBehavior(ptr, ptr);
+        }
+        return *fgAction;
+     }
+
+     static void Dictionary() { GetClass(); }
+     
+     static TClass *GetClass() {
+        if (!fgClass) {
+           GenerateInitInstance((const RootClass*)0x0);
+           fgClass = GetAction().CreateClass(GetClassName(),
+                                             GetVersion(),
+                                             typeid(RootClass),
+                                             &IsA,
+                                             &ShowMembers,
+                                             GetDeclFileName(),
+                                             GetImplFileName(),
+                                             GetDeclFileLine(),
+                                             GetImplFileLine());
+        }
+        return fgClass;
+     }
+
+     static const char *GetClassName() {
+        return fgClassName;
+     }
+     
+     static ShowMembersFunc_t GetShowMembers() {
+        return fgShowMembers;
+     }
+
+     static Short_t SetVersion(Short_t version) {
+        ROOT::ResetClassVersion(fgClass, GetClassName(),version);
+        fgVersion = version;
+        return version;
+     }
+     
+     static void SetFromTemplate() {
+        TNamed *info = ROOT::RegisterClassTemplate(GetClassName(), 0, 0);
+        if (info) SetImplFile(info->GetTitle(), info->GetUniqueID());
+     }
+     
+     static int SetImplFile(const char *file, Int_t line) {
+        fgImplFileName = file;
+        fgImplFileLine = line;
+        return 0;
+     }
+     
+     static const char *GetDeclFileName() {
+        return fgDeclFileName;
+     }
+     
+     static Int_t GetDeclFileLine() {
+        return fgDeclFileLine;
+     }
+     
+     static const char *GetImplFileName() {
+        if (!fgImplFileName) SetFromTemplate();
+        return fgImplFileName;
+     }
+     
+     static Int_t GetImplFileLine() {
+        if (!fgImplFileLine) SetFromTemplate(); 
+        return fgImplFileLine;
+     }
+     
+     static Int_t GetVersion() {
+        return fgVersion;
+     }
+     
+     static void ShowMembers(RootClass *obj, TMemberInspector &R__insp, 
+                             char *R__parent) {
+        if (fgShowMembers) fgShowMembers(obj, R__insp, R__parent);
+        // for now other part of the system seem to warn about this,
+        // so we can just do as if the class was 'empty'
+        // else
+        //Error("R__tInit","ShowMembers not initialized for %s",GetClassName());
+     }
+     
+     static TClass* IsA(const void *obj) {
+        return ROOT::IsA( (RootClass*)obj );
+     }
+     
+  protected:
+     static void ShowMembers(void *obj, TMemberInspector &R__insp, 
+                             char *R__parent) {
+        if (fgShowMembers) fgShowMembers((RootClass*)obj,R__insp,R__parent);
+        // for now other part of the system seem to warn about this,
+        // so we can just do as if the class was 'empty'
+        // else
+        //Error("R__tInit","ShowMembers not initialized for %s",GetClassName());
+     }  
+  };
+
+  #if defined(__CINT__) && !defined(ROOT_Rtypes_In_Cint_Interpreter)
+  #pragma endif
+  #endif
+
+} // End of namespace ROOT
+
+#if !defined(R__ACCESS_IN_SYMBOL) || defined(__CINT__)
 
 #define ClassDef(name,id) \
 private: \
@@ -348,11 +378,33 @@ public: \
    static const char *ImplFileName(); \
    static int ImplFileLine();
 
+#else
+
+#define ClassDef(name,id) \
+private: \
+   static TClass *fgIsA; \
+public: \
+   friend void ROOT__ShowMembersFunc(name *obj, TMemberInspector &R__insp, char *R__parent); \
+   static TClass *Class(); \
+   static const char *Class_Name(); \
+   static Version_t Class_Version() { return id; } \
+   static void Dictionary(); \
+   virtual TClass *IsA() const { return name::Class(); } \
+   virtual void ShowMembers(TMemberInspector &insp, char *parent); \
+   virtual void Streamer(TBuffer &b); \
+   void StreamerNVirtual(TBuffer &b) { name::Streamer(b); } \
+   static const char *DeclFileName() { return __FILE__; } \
+   static int DeclFileLine() { return __LINE__; } \
+   static const char *ImplFileName(); \
+   static int ImplFileLine();
+
+#endif
+
 #define _ClassImp_(name)
 
 #define ClassImp(name) \
 static int _R__UNIQUE_(R__dummyint) = \
-            R__tInit<name >::SetImplFile(__FILE__, __LINE__);
+            ROOT::ClassInfo<name >::SetImplFile(__FILE__, __LINE__);
 
 //---- ClassDefT macros for templates with one template argument ---------------
 // ClassDefT  corresponds to ClassDef
@@ -362,6 +414,8 @@ static int _R__UNIQUE_(R__dummyint) = \
 
 
 // For now we keep ClassDefT a simple macro to avoid cint parser related issues.
+#if !defined(R__ACCESS_IN_SYMBOL) || defined(__CINT__)
+
 #define ClassDefT(name,id) \
 private: \
    static TClass *fgIsA; \
@@ -379,11 +433,33 @@ public: \
    static const char *ImplFileName(); \
    static int ImplFileLine();
 
+#else
+
+#define ClassDefT(name,id) \
+private: \
+   static TClass *fgIsA; \
+public: \
+   friend void ROOT__ShowMembersFunc(name *obj, TMemberInspector &R__insp, char *R__parent); \
+   static TClass *Class(); \
+   static const char *Class_Name(); \
+   static Version_t Class_Version() { return id; } \
+   static void Dictionary(); \
+   virtual TClass *IsA() const { return name::Class(); } \
+   virtual void ShowMembers(TMemberInspector &insp, char *parent); \
+   virtual void Streamer(TBuffer &b); \
+   void StreamerNVirtual(TBuffer &b) { name::Streamer(b); } \
+   static const char *DeclFileName() { return __FILE__; } \
+   static int DeclFileLine() { return __LINE__; } \
+   static const char *ImplFileName(); \
+   static int ImplFileLine();
+
+#endif
+
 #define ClassDefT2(name,Tmpl)
 
 #define templateClassImp(name) \
 static TNamed *_R__UNIQUE_(R__dummyholder) = \
-                R__RegisterClassTemplate(_QUOTE_(name), __FILE__, __LINE__);
+                ROOT::RegisterClassTemplate(_QUOTE_(name), __FILE__, __LINE__);
 
 #define ClassImpT(name,Tmpl) templateClassImp(name)
 
@@ -403,5 +479,13 @@ static TNamed *_R__UNIQUE_(R__dummyholder) = \
 
 #define ClassDef3T2(name,Tmpl1,Tmpl2,Tmpl3)
 #define ClassImp3T(name,Tmpl1,Tmpl2,Tmpl3) templateClassImp(name)
+
+
+//---- Macro to set the class version of non instrumented class an implementation file -----
+
+#define RootClassVersion(name, VersionNumber)                  \
+   static Short_t _R__UNIQUE_(R__dummyVersionNumber) =         \
+           ROOT::ClassInfo<name >::SetVersion( VersionNumber );
+
 
 #endif

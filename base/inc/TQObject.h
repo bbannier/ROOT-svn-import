@@ -1,4 +1,4 @@
-// @(#)root/base:$Name:  $:$Id: TQObject.h,v 1.11.4.1 2002/02/07 19:58:56 rdm Exp $
+// @(#)root/base:$Name:  $:$Id: TQObject.h,v 1.11.4.2 2002/02/25 18:03:29 rdm Exp $
 // Author: Valeriy Onuchin & Fons Rademakers   15/10/2000
 
 /*************************************************************************
@@ -198,8 +198,8 @@ public:
            ShowMembersFunc_t showmembers,
            const char *dfil = 0, const char *ifil = 0,
            Int_t dl = 0, Int_t il = 0) :
-           TQObject(),
-           TClass(name, cversion, info, isa, showmembers, dfil, ifil, dl, il) { }
+           TQObject(), 
+           TClass(name, cversion, info,isa,showmembers, dfil, ifil, dl, il) { }
 
    virtual ~TQClass() { Disconnect(); }
 
@@ -227,21 +227,23 @@ extern Bool_t ConnectCINT(TQObject *sender, const char *signal,
 #define ClassImpQ(name) \
    ClassImp(name)
 
-class R__DefaultInitBehavior;
-class R__TQObjectInitBehavior : public R__DefaultInitBehavior {
-public:
-   virtual TClass *CreateClass(const char *cname, Version_t id,
-                               const type_info &info, IsAFunc_t isa,
-                               ShowMembersFunc_t show,
-                               const char *dfil, const char *ifil,
-                               Int_t dl, Int_t il) const {
-      return new TQClass(cname, id, info, isa, show, dfil, ifil,dl, il);
-   }
-};
+namespace ROOT {
+   class DefaultInitBehavior;
+   class TQObjectInitBehavior : public DefaultInitBehavior {
+   public:
+      virtual TClass *CreateClass(const char *cname, Version_t id,
+                                  const type_info &info, IsAFunc_t isa,
+                                  ShowMembersFunc_t show,
+                                  const char *dfil, const char *ifil,
+                                  Int_t dl, Int_t il) const {
+         return new TQClass(cname, id, info, isa, show, dfil, ifil,dl, il);
+      }
+   };
 
-inline const R__TQObjectInitBehavior *R__DefineBehavior(TQObject *, TQObject *)
-{
-   return new R__TQObjectInitBehavior();
+   inline const TQObjectInitBehavior *DefineBehavior(TQObject *, TQObject *)
+   {
+      return new TQObjectInitBehavior();
+   }
 }
 
 #endif

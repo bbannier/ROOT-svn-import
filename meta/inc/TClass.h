@@ -1,4 +1,4 @@
-// @(#)root/meta:$Name:  $:$Id: TClass.h,v 1.19 2002/01/16 21:13:38 brun Exp $
+// @(#)root/meta:$Name:  $:$Id: TClass.h,v 1.19.4.1 2002/02/25 18:03:31 rdm Exp $
 // Author: Rene Brun   07/01/95
 
 /*************************************************************************
@@ -38,10 +38,10 @@ class TBuffer;
 class TStreamerInfo;
 class G__ClassInfo;
 
-
 class TClass : public TDictionary {
 
 friend class TCint;
+friend void ROOT::ResetClassVersion(TClass*, const char*, Short_t);
 
 private:
    TString           fName;            //name of class
@@ -64,6 +64,7 @@ private:
    const type_info  *fTypeInfo;        //pointer to the C++ type information.
    ShowMembersFunc_t fShowMembers;     //pointer to the class's ShowMembers function
    IsAFunc_t         fIsA;             //pointer to the class's IsA function.
+   Bool_t            fVersionUsed;     //!Indicated whether GetClassVersion has been called
 
    TMethod          *GetClassMethod(Long_t faddr);
    TMethod          *GetClassMethod(const char*name, const char* signature);
@@ -71,6 +72,8 @@ private:
              IsAFunc_t isa, ShowMembersFunc_t showmember,
              const char *dfil, const char *ifil,
              Int_t dl, Int_t il);
+
+   void              SetClassVersion(Version_t version) { fClassVersion = version; }
 
    static Bool_t     fgCallingNew;     //True when TClass:New is executing
    static Int_t      fgClassCount;     //provides unique id for a each class
@@ -103,7 +106,7 @@ public:
    void            *DynamicCast(const TClass *base, void *obj, Bool_t up = kTRUE);
    char            *EscapeChars(char * text) const;
    UInt_t           GetCheckSum() const;
-   Version_t        GetClassVersion() const { return fClassVersion; }
+   Version_t        GetClassVersion() const { ((TClass*)this)->fVersionUsed = kTRUE; return fClassVersion; }
    TDataMember     *GetDataMember(const char *datamember);
    const char      *GetDeclFileName() const { return fDeclFileName; }
    Short_t          GetDeclFileLine() const { return fDeclFileLine; }
@@ -162,8 +165,10 @@ public:
    ClassDef(TClass,0)  //Dictionary containing class information
 };
 
+namespace ROOT {
 extern TClass *CreateClass(const char *cname, Version_t id,
                            const char *dfil, const char *ifil,
                            Int_t dl, Int_t il);
+}
 
 #endif

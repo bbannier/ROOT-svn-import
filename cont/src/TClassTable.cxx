@@ -1,4 +1,4 @@
-// @(#)root/cont:$Name:  $:$Id: TClassTable.cxx,v 1.12.4.1 2002/02/07 19:58:56 rdm Exp $
+// @(#)root/cont:$Name:  $:$Id: TClassTable.cxx,v 1.12.4.2 2002/02/25 18:03:31 rdm Exp $
 // Author: Fons Rademakers   11/08/95
 
 /*************************************************************************
@@ -52,9 +52,14 @@ namespace ROOT {
    public:
       typedef std::map<std::string,ClassRec_t*> IdMap_t;
       typedef IdMap_t::key_type                 key_type;
-      typedef IdMap_t::mapped_type              mapped_type;
       typedef IdMap_t::const_iterator           const_iterator;
       typedef IdMap_t::size_type                size_type;
+#ifdef R__WIN32
+      // Window's std::map does NOT defined mapped_type
+      typedef ClassRec_t*                       mapped_type;
+#else
+      typedef IdMap_t::mapped_type              mapped_type;
+#endif
 
    private:
       IdMap_t fMap;
@@ -64,6 +69,7 @@ namespace ROOT {
       mapped_type &operator[](const key_type &key) { return fMap[key]; }
 
       size_type erase(const key_type &key) { return fMap.erase(key); }
+      const_iterator end() const { return fMap.end(); }
       const_iterator find(const key_type &key) const { return fMap.find(key); }
       void printall() {
          cerr << "Printing the typeinfo map in TClassTable\n";
@@ -392,6 +398,27 @@ void ROOT::AddClass(const char *cname, Version_t id,
 
    TClassTable::Add(cname, id, info, dict, pragmabits);
 }
+
+//______________________________________________________________________________
+void ROOT::ResetClassVersion(TClass* cl, const char* cname, Short_t newid) 
+{
+   // Update the version number.  This is called via the RootClassVersion macro
+
+   if (cname) {
+      ClassRec_t *r = TClassTable::FindElement(cname,kFALSE);
+      if (r) r->id = newid;
+   }
+   if (cl) {
+      if (cl->fVersionUsed) {
+         // Problem, the reset is called after the first usage!
+         Error("ResetClassVersion","Version number of %s can not be changed after first usage!",
+               cl->GetName());
+      } else {
+         cl->SetClassVersion(newid);
+      }
+   }  
+}
+
 
 //______________________________________________________________________________
 void ROOT::RemoveClass(const char *cname)

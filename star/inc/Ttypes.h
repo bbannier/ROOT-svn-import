@@ -1,4 +1,4 @@
-/* @(#)root/star:$Name:  $:$Id: Ttypes.h,v 1.7.4.1 2002/02/07 19:58:56 rdm Exp $ */
+/* @(#)root/star:$Name:  $:$Id: Ttypes.h,v 1.7.4.2 2002/02/25 18:03:32 rdm Exp $ */
 
 /*************************************************************************
  * Copyright (C) 1995-2000, Rene Brun and Fons Rademakers.               *
@@ -14,7 +14,7 @@
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // Stypes                                                               //
-// $Id: Ttypes.h,v 1.7.4.1 2002/02/07 19:58:56 rdm Exp $
+// $Id: Ttypes.h,v 1.7.4.2 2002/02/25 18:03:32 rdm Exp $
 // Basic types used by STAF - ROOT interface.                           //
 //                                                                      //
 // This header file contains the set of the macro definitions           //
@@ -78,8 +78,9 @@ void className::Streamer(TBuffer &R__b) {                           \
       strcpy(structBuf,_QUOTE2_(structName,.h));                    \
       char *s = strstr(structBuf,"_st.h");                          \
       if (s) { *s = 0;  strcat(structBuf,".h"); }                   \
-      TClass *r = CreateClass(_QUOTE_(structName), Class_Version(), \
-                              structBuf, structBuf, 1,  1 );        \
+      TClass *r = ROOT::CreateClass(_QUOTE_(structName),            \
+                                    Class_Version(), structBuf,     \
+                                    structBuf, 1,  1 );             \
       fgColDescriptors = new TTableDescriptor(r);                   \
       return _QUOTE_(structName);                                   \
    }                                                                \
@@ -143,50 +144,53 @@ virtual void SetDescriptorPointer(TTableDescriptor *list)  { fgColDescriptors = 
     structName *end()   const  {Int_t i = GetNRows(); return          i? GetTable(i):0;}
 
 
-template <class T> class R__TTableInitBehavior: public R__DefaultInitBehavior {
-public:
-   static const char* fgStructName; // Need to be instantiated
+namespace ROOT {
+   template <class T> class TTableInitBehavior: public DefaultInitBehavior {
+   public:
+      static const char* fgStructName; // Need to be instantiated
 #ifdef InitBuildStruct
-   virtual void Dictionary const (   
-      // or 
-      R__DefaultInitBehavior::Dictionary();
-      std::string structname = fgStructName;
-      structname += ".h";
+      virtual void Dictionary const (   
+         // or 
+         DefaultInitBehavior::Dictionary();
+         std::string structname = fgStructName;
+         structname += ".h";
       
-      char *structBuf = new char[strlen(fgStructName)+2+2];
-      strcpy(structBuf,fgStructName);
-      strcat(structBuf,".h");
-      char *s = strstr(structBuf,"_st.h");
-      if (s) { *s = 0;  strcat(structBuf,".h"); }
-      TClass *r = ::CreateClass(fgStructName, Class_Version(),
-                                structBuf, structBuf, 1,  1 );
-      fgColDescriptors = new TTableDescriptor(r);
-   }
+         char *structBuf = new char[strlen(fgStructName)+2+2];
+         strcpy(structBuf,fgStructName);
+         strcat(structBuf,".h");
+         char *s = strstr(structBuf,"_st.h");
+         if (s) { *s = 0;  strcat(structBuf,".h"); }
+         TClass *r = ::CreateClass(fgStructName, Class_Version(),
+                                   structBuf, structBuf, 1,  1 );
+         fgColDescriptors = new TTableDescriptor(r);
+         }
 #else
-   virtual TClass* CreateClass(const char *cname, Version_t id,
-                               const type_info& info, IsAFunc_t isa,
-                               ShowMembersFunc_t show,
-                               const char *dfil, const char *ifil,
-                               Int_t dl, Int_t il) const {
-      TClass * cl = R__DefaultInitBehavior::CreateClass(cname, id, info, isa, show, 
-                                                        dfil, ifil,dl, il);
-      fgStructName = T::TableDictionary();
-      return cl;
-   }
+      virtual TClass* CreateClass(const char *cname, Version_t id,
+                                  const type_info &info, IsAFunc_t isa,
+                                  ShowMembersFunc_t show,
+                                  const char *dfil, const char *ifil,
+                                  Int_t dl, Int_t il) const {
+         TClass * cl = DefaultInitBehavior::CreateClass(cname, id, info, isa, show, 
+                                                              dfil, ifil,dl, il);
+         fgStructName = T::TableDictionary();
+         return cl;
+      }
 #endif
-   virtual void Unregister(const char* classname) const {
-      R__DefaultInitBehavior::Unregister(classname);
-      R__DefaultInitBehavior::Unregister(fgStructName);
-   }
-};
-template <class T> const char * R__TTableInitBehavior<T >::fgStructName = 0;
-
-class TTable;
-template <class RootClass> 
-const R__TTableInitBehavior<RootClass>* R__DefineBehavior( TTable*, RootClass*) 
-{
-   return new R__TTableInitBehavior<RootClass>(); 
+      virtual void Unregister(const char* classname) const {
+         DefaultInitBehavior::Unregister(classname);
+         DefaultInitBehavior::Unregister(fgStructName);
+      }
+   };
+   template <class T> const char * TTableInitBehavior<T >::fgStructName = 0;
 }
 
+class TTable;
+namespace ROOT {
+   template <class RootClass> 
+      const ROOT::TTableInitBehavior<RootClass>* DefineBehavior( TTable*, RootClass*) 
+      {
+         return new ROOT::TTableInitBehavior<RootClass>(); 
+      }
+}
 
 #endif

@@ -1,4 +1,4 @@
-// @(#)root/meta:$Name:  $:$Id: TClass.cxx,v 1.69 2002/02/02 11:56:14 brun Exp $
+// @(#)root/meta:$Name:  $:$Id: TClass.cxx,v 1.69.4.1 2002/02/25 18:03:31 rdm Exp $
 // Author: Rene Brun   07/01/95
 
 /*************************************************************************
@@ -1427,6 +1427,26 @@ TClass *ROOT::CreateClass(const char *cname, Version_t id,
       return cl;
    }
    return new TClass(cname, id, info, isa, show, dfil, ifil, dl, il);
+}
+
+//______________________________________________________________________________
+TClass *ROOT::CreateClass(const char *cname, Version_t id,
+                          const char *dfil, const char *ifil,
+                          Int_t dl, Int_t il)
+{
+   // Global function called by a class' static Dictionary() method
+   // (see the ClassDef macro).
+
+   // When called via TMapFile (e.g. Update()) make sure that the dictionary
+   // gets allocated on the heap and not in the mapped file.
+   if (gMmallocDesc) {
+      void *msave  = gMmallocDesc;
+      gMmallocDesc = 0;
+      TClass *cl   = new TClass(cname, id, dfil, ifil, dl, il);
+      gMmallocDesc = msave;
+      return cl;
+   }
+   return new TClass(cname, id, dfil, ifil, dl, il);
 }
 
 //______________________________________________________________________________

@@ -1,4 +1,4 @@
-// @(#)root/cont:$Name:  $:$Id: TClassTable.h,v 1.3 2000/12/13 15:56:17 brun Exp $
+// @(#)root/cont:$Name:  $:$Id: TClassTable.h,v 1.3.4.1 2002/02/25 18:03:31 rdm Exp $
 // Author: Fons Rademakers   11/08/95
 
 /*************************************************************************
@@ -25,6 +25,9 @@
 #ifndef ROOT_TObject
 #include "TObject.h"
 #endif
+#ifndef ROOT_TString
+#include "TString.h"
+#endif
 
 struct ClassRec_t {
    char            *name;
@@ -36,8 +39,10 @@ struct ClassRec_t {
 };
 
 namespace ROOT {
-   class MapTypeToClassRec;
+  class MapTypeToClassRec;
 }
+
+//#include <map>
 
 class TClassTable : public TObject {
 
@@ -48,6 +53,11 @@ private:
    static void         SortTable();
 
    typedef ROOT::MapTypeToClassRec IdMap_t;
+#if !defined(__HP_aCC) || __HP_aCC >= 53000
+   //typedef std::map<TString, ClassRec_t*> IdMap_t;
+#else
+   //typedef map<TString, ClassRec_t*> IdMap_t;
+#endif
 
    static ClassRec_t **fgTable;
    static ClassRec_t **fgSortedTable;
@@ -56,6 +66,8 @@ private:
    static int          fgTally;
    static Bool_t       fgSorted;
    static int          fgCursor;
+
+   friend  void ROOT::ResetClassVersion(TClass*, const char*, Short_t);
 
 public:
    // bits that can be set in pragmabits

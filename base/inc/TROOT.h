@@ -1,4 +1,4 @@
-// @(#)root/base:$Name:  $:$Id: TROOT.h,v 1.21 2002/01/27 15:53:40 rdm Exp $
+// @(#)root/base:$Name:  $:$Id: TROOT.h,v 1.21.4.1 2002/02/25 18:03:29 rdm Exp $
 // Author: Rene Brun   08/12/94
 
 /*************************************************************************
@@ -46,8 +46,9 @@ class TFunction;
 class TFolder;
 class TPluginManager;
 namespace ROOT {
-  class MapTypeToTClass;
+   class MapTypeToTClass;
 }
+//#include <map>
 
 class TROOT : public TDirectory {
 
@@ -63,6 +64,12 @@ private:
 
 protected:
    typedef ROOT::MapTypeToTClass IdMap_t;
+#if !defined(__HP_aCC) || __HP_aCC >= 53000
+   //typedef std::map<TString, TClass*> IdMap_t;
+#else
+   //typedef map<TString, TClass*> IdMap_t;
+#endif
+
 
    TString         fVersion;              //ROOT version (from CMZ VERSQQ) ex 0.05/01
    Int_t           fVersionInt;           //ROOT version in integer format (501)

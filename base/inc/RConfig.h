@@ -1,4 +1,4 @@
-/* @(#)root/base:$Name:  $:$Id: RConfig.h,v 1.29 2002/01/24 11:39:26 rdm Exp $ */
+/* @(#)root/base:$Name:  $:$Id: RConfig.h,v 1.30.2.1 2002/02/07 19:58:56 rdm Exp $ */
 
 /*************************************************************************
  * Copyright (C) 1995-2002, Rene Brun and Fons Rademakers.               *
@@ -277,7 +277,9 @@
 #      define WIN32
 #   endif
 #   define R__BYTESWAP
+#   define R__ACCESS_IN_SYMBOL
 #endif
+
 
 #ifdef BORLAND
 #   define MSDOS        /* Windows will always stay MSDOS */

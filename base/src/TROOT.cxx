@@ -1,4 +1,4 @@
-// @(#)root/base:$Name:  $:$Id: TROOT.cxx,v 1.66 2002/01/28 17:33:27 rdm Exp $
+// @(#)root/base:$Name:  $:$Id: TROOT.cxx,v 1.66.4.1 2002/02/25 18:03:30 rdm Exp $
 // Author: Rene Brun   08/12/94
 
 /*************************************************************************
@@ -178,11 +178,16 @@ namespace ROOT {
      // This wrapper class allow to avoid putting #include <map> in the
      // TROOT.h header file.
    public:
-      typedef std::map<const std::string,TClass*> IdMap_t;
+      typedef std::map<std::string,TClass*> IdMap_t;
       typedef IdMap_t::key_type                   key_type;
-      typedef IdMap_t::mapped_type                mapped_type;
       typedef IdMap_t::const_iterator             const_iterator;
       typedef IdMap_t::size_type                  size_type;
+#ifdef R__WIN32
+     // Window's std::map does NOT defined mapped_type
+      typedef TClass*                             mapped_type;
+#else
+      typedef IdMap_t::mapped_type                mapped_type;
+#endif
 
    private:
       IdMap_t fMap;
@@ -192,6 +197,7 @@ namespace ROOT {
       mapped_type &operator[](const key_type &key) { return fMap[key]; }
 
       size_type erase(const key_type &key) { return fMap.erase(key); }
+      const_iterator end() const { return fMap.end(); }
       const_iterator find(const key_type &key) const { return fMap.find(key); }
       void printall() {
          cerr << "Printing the typeinfo map in TROOT\n";
@@ -765,7 +771,9 @@ TClass *TROOT::GetClass(const type_info& typeinfo, Bool_t load) const
    cerr << "While TROOT searches for " << typeinfo.name() << " at " << &typeinfo << endl;
    fIdMap->printall();
 #endif
-   TClass *cl = fIdMap->find(typeinfo.name())->second;
+   IdMap_t::const_iterator iter = fIdMap->find(typeinfo.name());
+   TClass *cl = 0;
+   if (iter != fIdMap->end()) cl = iter->second;
 
    if (cl) {
       if (cl->IsLoaded()) return cl;

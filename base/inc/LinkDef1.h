@@ -1,4 +1,4 @@
-/* @(#)root/base:$Name:  $:$Id: LinkDef1.h,v 1.10 2002/02/02 23:00:02 rdm Exp $ */
+/* @(#)root/base:$Name:  $:$Id: LinkDef1.h,v 1.10.4.1 2002/02/25 18:03:29 rdm Exp $ */
 
 /*************************************************************************
  * Copyright (C) 1995-2000, Rene Brun and Fons Rademakers.               *
@@ -113,13 +113,14 @@
 #pragma link C++ class TFile-;
 #pragma link C++ class TFileHandler+;
 #pragma link C++ class TGuiFactory;
-#pragma link C++ class TPadView3D+;
 #pragma link C++ class TStyle+;
 #pragma link C++ class TView-;
 #pragma link C++ class TVirtualX+;
 #pragma link C++ class TVirtualFitter+;
 #pragma link C++ class TVirtualPad-;
-#pragma link C++ class TVirtualGL+;
-#pragma link C++ class TVirtualPS+;
+// Those are NOT going to be saved ... so no need for a +
+#pragma link C++ class TPadView3D;
+#pragma link C++ class TVirtualGL;
+#pragma link C++ class TVirtualPS;
 
 #endif
