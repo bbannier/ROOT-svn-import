@@ -36,9 +36,12 @@ using namespace std;
 /********************************************************************
  * static variables for iostream redirection
  ********************************************************************/
-static ostream::streambuf_type *G__store_cout;
-static ostream::streambuf_type *G__store_cerr;
-static istream::streambuf_type *G__store_cin;
+static basic_streambuf<ostream::char_type,
+                       ostream::traits_type> *G__store_cout;
+static basic_streambuf<ostream::char_type,
+                       ostream::traits_type> *G__store_cerr;
+static basic_streambuf<istream::char_type,
+                       istream::traits_type> *G__store_cin;
 static ofstream  *G__redirected_cout;
 static ofstream  *G__redirected_cerr;
 static ifstream  *G__redirected_cin;
