@@ -1,4 +1,4 @@
-/* @(#)root/base:$Name:  $:$Id: Rtypes.h,v 1.13.4.1 2002/02/07 19:58:56 rdm Exp $ */
+/* @(#)root/base:$Name:  $:$Id: Rtypes.h,v 1.13.4.2 2002/02/08 14:58:09 rdm Exp $ */
 
 /*************************************************************************
  * Copyright (C) 1995-2000, Rene Brun and Fons Rademakers.               *
@@ -113,10 +113,6 @@ extern TNamed *R__RegisterClassTemplate(const char *name,
                                         const char *file, Int_t line);
 
 
-#ifndef R__WIN32
-// MS does not support this syntax ... instead we just
-// rely on the friend statement :(
-
 #ifndef __CINT__
 template <class Tmpl> TBuffer &operator>>(TBuffer &buf, Tmpl *&obj)
 {
@@ -136,12 +132,6 @@ template <class Tmpl> TBuffer &operator>>(TBuffer &buf, Tmpl *&obj);
 template <class Tmpl> TBuffer &operator>>(TBuffer &buf, const Tmpl *&obj) {
    return operator>>(buf, (Tmpl *&) obj);
 }
-
-#else // This is for windows
-
-#define R__STILL_RELY_ON_FRIEND
-
-#endif
 
 // Because of the template defined here, we have to insure that
 // CINT does not see this file twice, even if it is preprocessed by
@@ -247,30 +237,6 @@ public:
 #pragma endif
 #endif
 
-#ifdef R__STILL_RELY_ON_FRIEND
-
-#define ClassDef(name,id) \
-private: \
-   static TClass *fgIsA; \
-   friend R__tInit<name>; \
-public: \
-   static TClass *Class(); \
-   static const char *Class_Name(); \
-   static Version_t Class_Version() { return id; } \
-   static void Dictionary(); \
-   virtual TClass *IsA() const { return name::Class(); } \
-   virtual void ShowMembers(TMemberInspector &insp, char *parent); \
-   virtual void Streamer(TBuffer &b); \
-   friend TBuffer &operator>>(TBuffer &buf, name *&obj); \
-   friend TBuffer &operator>>(TBuffer &buf, const name *&obj); \
-   void StreamerNVirtual(TBuffer &b) { name::Streamer(b); } \
-   static const char *DeclFileName() { return __FILE__; } \
-   static int DeclFileLine() { return __LINE__; } \
-   static const char *ImplFileName(); \
-   static int ImplFileLine();
-
-#else
-
 #define ClassDef(name,id) \
 private: \
    static TClass *fgIsA; \
@@ -287,14 +253,12 @@ public: \
    static int DeclFileLine() { return __LINE__; } \
    static const char *ImplFileName(); \
    static int ImplFileLine();
-
-#endif
 
 #define _ClassImp_(name)
 
 #define ClassImp(name) \
 static int _R__UNIQUE_(R__dummyint) = \
-            R__tInit<name>::SetImplFile(__FILE__, __LINE__);
+            R__tInit<name >::SetImplFile(__FILE__, __LINE__);
 
 //---- ClassDefT macros for templates with one template argument ---------------
 // ClassDefT  corresponds to ClassDef
@@ -304,29 +268,6 @@ static int _R__UNIQUE_(R__dummyint) = \
 
 
 // For now we keep ClassDefT a simple macro to avoid cint parser related issues.
-#ifdef R__STILL_RELY_ON_FRIEND
-
-#define ClassDefT(name,id) \
-private: \
-   static TClass *fgIsA; \
-public: \
-   static TClass *Class(); \
-   static const char *Class_Name(); \
-   static Version_t Class_Version() { return id; } \
-   static void Dictionary(); \
-   virtual TClass *IsA() const { return name::Class(); } \
-   virtual void ShowMembers(TMemberInspector &insp, char *parent); \
-   virtual void Streamer(TBuffer &b); \
-   friend TBuffer &operator>>(TBuffer &buf, name *&obj); \
-   friend TBuffer &operator>>(TBuffer &buf, const name *&obj); \
-   void StreamerNVirtual(TBuffer &b) { name::Streamer(b); } \
-   static const char *DeclFileName() { return __FILE__; } \
-   static int DeclFileLine() { return __LINE__; } \
-   static const char *ImplFileName(); \
-   static int ImplFileLine();
-
-#else
-
 #define ClassDefT(name,id) \
 private: \
    static TClass *fgIsA; \
@@ -343,8 +284,6 @@ public: \
    static int DeclFileLine() { return __LINE__; } \
    static const char *ImplFileName(); \
    static int ImplFileLine();
-
-#endif
 
 #define ClassDefT2(name,Tmpl)
 

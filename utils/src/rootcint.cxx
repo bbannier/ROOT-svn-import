@@ -1,4 +1,4 @@
-// @(#)root/utils:$Name:  $:$Id: rootcint.cxx,v 1.58.4.1 2002/02/07 19:58:57 rdm Exp $
+// @(#)root/utils:$Name:  $:$Id: rootcint.cxx,v 1.58.4.2 2002/02/08 14:58:09 rdm Exp $
 // Author: Fons Rademakers   13/07/96
 
 /*************************************************************************
@@ -2341,6 +2341,7 @@ int main(int argc, char **argv)
    // first to allow template specialisation to occur before template
    // instantiation (STK)
    cl.Init();
+   bool has_input_error = false;
    while (cl.Next()) {
       if ((cl.Property() & G__BIT_ISCLASS) && cl.Linkage() == G__CPPLINK) {
          // Write Code for Class_Name() and static variable
@@ -2361,11 +2362,32 @@ int main(int argc, char **argv)
             if (!(cl.RootFlag() & G__NOINPUTOPERATOR)) {
                WriteInputOperator(cl);
             } else {
+               // Need to find out if the operator>> is actually defined for 
+               // this class.
+               G__ClassInfo gcl;
+               long offset;
+               char *proto = new char[strlen(cl.Fullname())+13];
+               sprintf(proto,"TBuffer&,%s*&",cl.Fullname());
+               G__MethodInfo methodinfo = gcl.GetMethod("operator>>",proto,&offset);
+               delete proto;
+
                fprintf(stderr, "Class %s: Do not generate operator>>()\n",
                        cl.Fullname());
+               if (!methodinfo.IsValid() || 
+                   methodinfo.ifunc()->para_p_tagtable[methodinfo.Index()][1] != cl.Tagnum() ) {
+                  fprintf(stderr, "ERROR: This version of ROOT require the presence of an actual declaration of:\n");
+                  fprintf(stderr, "   TBuffer &operator>>(TBuffer &,%s *&);\n",cl.Fullname());
+                  has_input_error = true;
+               }
             }
          }
       }
+   }
+   if (has_input_error) {
+      // Be a little bit makefile friendly and remove the dictionary in case of error.
+      // We could add an option -k to keep the file even in case of error.
+      if (ifl) remove(argv[ifl]);
+      exit(1);
    }
 
    // Keep track of classes processed by reading Linkdef file.

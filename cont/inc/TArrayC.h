@@ -1,4 +1,4 @@
-// @(#)root/cont:$Name:  $:$Id: TArrayC.h,v 1.3 2001/02/08 15:31:13 brun Exp $
+// @(#)root/cont:$Name:  $:$Id: TArrayC.h,v 1.4 2001/02/28 07:51:22 brun Exp $
 // Author: Rene Brun   06/03/95
 
 /*************************************************************************
@@ -51,6 +51,8 @@ public:
 
    ClassDef(TArrayC,1)  //Array of chars
 };
+
+TBuffer &operator>>(TBuffer &buf, TArrayC *&obj);
 
 inline Char_t TArrayC::At(Int_t i) const
 {

@@ -1,4 +1,4 @@
-// @(#)root/cont:$Name:  $:$Id: TArrayD.h,v 1.3 2001/02/08 15:31:13 brun Exp $
+// @(#)root/cont:$Name:  $:$Id: TArrayD.h,v 1.4 2001/02/28 07:54:22 brun Exp $
 // Author: Rene Brun   06/03/95
 
 /*************************************************************************
@@ -51,6 +51,8 @@ public:
 
    ClassDef(TArrayD,1)  //Array of doubles
 };
+
+TBuffer &operator>>(TBuffer &buf, TArrayD *&obj);
 
 inline Double_t TArrayD::At(Int_t i) const
 {
