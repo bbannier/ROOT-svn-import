@@ -732,8 +732,6 @@ typedef void (*G__eolcallback_t) G__P((const char* fname,int linenum));
 extern G__eolcallback_t G__eolcallback;
 #endif
 
-extern int G__scopelevel;
-
 #ifndef __CINT__
 #ifdef __cplusplus
 }

@@ -615,22 +615,12 @@ extern "C" void G__initcxx()
 #if (!defined(__hpux) && !defined(_MSC_VER)) || __HP_aCC >= 53000
 using namespace std;
 #endif
-
-/******************************************************************
-*  map<string,string> &G_get_symbolmacro()
-******************************************************************/
-//map<string,string> G__symbolmacro;
-map<string,string> &G__get_symbolmacro()
-{  
-  static map<string,string> G__symbolmacro;
-  return G__symbolmacro;
-}
-
+map<string,string> G__symbolmacro;
 /******************************************************************
 * void G__init_replacesymbol_body()
 ******************************************************************/
 void G__init_replacesymbol_body() {
-  G__get_symbolmacro().clear();
+  G__symbolmacro.clear();
 }
 
 /******************************************************************
@@ -645,21 +635,21 @@ extern "C" void G__init_replacesymbol() {
 ******************************************************************/
 void G__add_replacesymbol_body(const char* s1,const char* s2) {
   map<string,string>::value_type x(s1,s2);
-  G__get_symbolmacro().insert(x);
+  G__symbolmacro.insert(x);
 }
 /******************************************************************
 * void G__add_replacesymbol()
 ******************************************************************/
 extern "C" void G__add_replacesymbol(const char* s1,const char* s2) {
-  G__add_replacesymbol_body(s1,s2);
+  return(G__add_replacesymbol_body(s1,s2));
 }
 
 /******************************************************************
 * char* G__replacesymbol_body()
 ******************************************************************/
 const char* G__replacesymbol_body(const char* s) {
-  map<string,string>::iterator pos = G__get_symbolmacro().find(s);
-  if(pos!=G__get_symbolmacro().end()) return((*pos).second.c_str());
+  map<string,string>::iterator pos = G__symbolmacro.find(s);
+  if(pos!=G__symbolmacro.end()) return((*pos).second.c_str());
   else                          return(s);
 }
 
@@ -676,7 +666,7 @@ extern "C" const char* G__replacesymbol(const char* s) {
 int G__display_replacesymbol_body(FILE *fout,const char* name) {
   map<string,string>::iterator i;
   char msg[G__LONGLINE];
-  for(i=G__get_symbolmacro().begin();i!=G__get_symbolmacro().end();++i) {
+  for(i=G__symbolmacro.begin();i!=G__symbolmacro.end();++i) {
     if(!name || !name[0] || strcmp(name,(*i).first.c_str())==0) {
       sprintf(msg,"#define %s %s\n",(*i).first.c_str(),(*i).second.c_str());
       G__more(fout,msg);

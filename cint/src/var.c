@@ -965,24 +965,10 @@ int var_type;
 #ifndef G__OLDIMPLEMENTATION776
        && G__LOCALSTATIC!=var->statictype[ig15]
 #endif
-	) {
-#ifdef G__ASM_DBG
-      if(G__asm_dbg)
-        G__fprinterr(G__serr,
-	        "%3x: ST_LVAR  %s index=%d paran=%d\n"
-	        ,G__asm_cp,item,ig15,paran);
-#endif
+       ) 
       G__asm_inst[G__asm_cp]=G__ST_LVAR;
-    }
-    else {
-#ifdef G__ASM_DBG
-      if(G__asm_dbg)
-        G__fprinterr(G__serr,
-	        "%3x: ST_VAR  %s index=%d paran=%d\n"
-	        ,G__asm_cp,item,ig15,paran);
-#endif
+    else
       G__asm_inst[G__asm_cp]=G__ST_VAR;
-    }
 #else
     G__asm_inst[G__asm_cp]=G__ST_VAR;
 #endif
@@ -1096,11 +1082,8 @@ G__value result;
       else addstros_value=0;
       letvvalflag=0;
       store_asm_inst=G__asm_inst[G__asm_cp-5];
-      if(G__ST_VAR==store_asm_inst) G__asm_inst[G__asm_cp-5]=G__LD_VAR;
-#ifndef G__OLDIMPLEMENTATION2060
-      else if(G__ST_LVAR==store_asm_inst) G__asm_inst[G__asm_cp-5]=G__LD_LVAR;
-#endif
-      else                          G__asm_inst[G__asm_cp-5]=G__LD_MSTR;
+      if(G__ST_VAR==store_asm_inst) G__asm_inst[G__asm_cp-5] = G__LD_VAR;
+      else                          G__asm_inst[G__asm_cp-5] = G__LD_MSTR;
 #ifdef G__ASM_DBG
       if(G__asm_dbg) {
 	G__fprinterr(G__serr,"ST_VAR or ST_MSTR replaced with LD_VAR or LD_MSTR");
@@ -3285,7 +3268,7 @@ struct G__var_array *varglobal,*varlocal;
   struct G__var_array *var;
   char varname[G__MAXNAME*2];
   char parameter[G__MAXVARDIM][G__ONELINE];
-  G__value para[G__MAXVARDIM],result=G__null;
+  G__value para[G__MAXVARDIM],result;
   char result7[G__ONELINE];
   int ig15,paran,ig35,ig25,ary,ig2;
   int lenitem,nest=0;
@@ -5427,14 +5410,8 @@ long G__struct_offset; /* used to be int */
 #ifdef G__ASM
 	if(G__asm_noverflow) {
 	  store_asm_inst=G__asm_inst[G__asm_cp-5];
-	  if(G__ST_VAR==store_asm_inst) 
-	      G__asm_inst[G__asm_cp-5] = G__LD_VAR;
-#ifndef G__OLDIMPLEMENTATION2060
-	  else if(G__ST_LVAR==store_asm_inst) 
-	      G__asm_inst[G__asm_cp-5] = G__LD_LVAR;
-#endif
-	  else 
-	      G__asm_inst[G__asm_cp-5] = G__LD_MSTR;
+	  if(G__ST_VAR==store_asm_inst) G__asm_inst[G__asm_cp-5] = G__LD_VAR;
+	  else                          G__asm_inst[G__asm_cp-5] = G__LD_MSTR;
 	  G__asm_inst[G__asm_cp] = G__PUSHSTROS;
 	  G__asm_inst[G__asm_cp+1] = G__SETSTROS;
 	  G__inc_cp_asm(2,0);
@@ -5853,13 +5830,7 @@ int pp_inc;
 	 * If derived class pointer is assigned to 
 	 * base class pointer, add offset and assign.
 	 */
-	if(G__no_exec_compile) {
-#ifndef G__OLDIMPLEMENTATION2081
-	  /* Base class casting at this position does not make sense.
-           * because ST_VAR is already generated in G__asm_gen_stvar */
-#endif
-          return;
-	}
+	if(G__no_exec_compile) return;
 #ifndef G__OLDIMPLEMENTATION1006
 	if('U'!=result.type && 'Y'!= result.type && 0!=result.obj.i
 	   && ('u'!=result.type||result.obj.i==G__p_tempbuf->obj.ref)) {
