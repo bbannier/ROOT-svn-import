@@ -7,7 +7,7 @@
  * Description:
  *  Unary and binary operator handling
  ************************************************************************
- * Copyright(c) 1995~2004  Masaharu Goto 
+ * Copyright(c) 1995~2002  Masaharu Goto 
  *
  * Permission to use, copy, modify and distribute this software and its 
  * documentation for any purpose is hereby granted without fee,
@@ -107,7 +107,6 @@ int operator;
 }
 #endif
 
-
 #ifndef G__OLDIMPLEMENTATION470
 /***********************************************************************
 * G__doubleassignbyref()
@@ -163,20 +162,6 @@ double val;
     *(unsigned char*)defined->ref = (unsigned char)val;
     defined->obj.i = (unsigned char)val;
     break;
-#ifndef G__OLDIMPLEMENTATION2189
-  case 'n': /* long long */
-    *(G__int64*)defined->ref = (G__int64)val;
-    defined->obj.ll = (G__int64)val;
-    break;
-  case 'm': /* unsigned long long */
-    *(G__uint64*)defined->ref = (G__uint64)val;
-    defined->obj.ull = (G__uint64)val;
-    break;
-  case 'q': /* unsigned G__int64 */
-    *(long double*)defined->ref = (long double)val;
-    defined->obj.ld = (long double)val;
-    break;
-#endif
 #ifndef G__OLDIMPLEMENTATION1604
   case 'g': /* bool */
     *(unsigned char*)defined->ref = (unsigned char)(val?1:0);
@@ -235,20 +220,6 @@ long val;
     if(defined->ref) *(unsigned char*)defined->ref = (unsigned char)val;
     defined->obj.i = (unsigned char)val;
     break;
-#ifndef G__OLDIMPLEMENTATION2189
-  case 'n': /* long long */
-    if(defined->ref) *(G__int64*)defined->ref = (G__int64)val;
-    defined->obj.ll = (G__int64)val;
-    break;
-  case 'm': /* long long */
-    if(defined->ref) *(G__uint64*)defined->ref = (G__uint64)val;
-    defined->obj.ull = (G__uint64)val;
-    break;
-  case 'q': /* long double */
-    if(defined->ref) *(long double*)defined->ref = (long double)val;
-    defined->obj.ld = (long double)val;
-    break;
-#endif
 #ifndef G__OLDIMPLEMENTATION1604
   case 'g': /* bool */
     if(defined->ref) *(unsigned char*)defined->ref = (unsigned char)(val?1:0);
@@ -297,7 +268,7 @@ G__value expressionin;
 G__value *defined;
 {
   int ig2;
-  long lresult;
+  long ldefined,lexpression,lresult;
   double fdefined,fexpression;
 
   /*********************************************************
@@ -469,25 +440,15 @@ G__value *defined;
       defined->ref=0;
       break;
     case '>':
-      if(defined->type==G__null.type) {
-#ifndef G__OLDIMPLEMENTATION2230
-	G__letdouble(defined,'i',0>fexpression);
-#else
+      if(defined->type==G__null.type) 
 	G__letdouble(defined,'d',fexpression);
-#endif
-      }
       else
 	G__letint(defined,'i',fdefined>fexpression);
       defined->ref=0;
       break;
     case '<':
-      if(defined->type==G__null.type) {
-#ifndef G__OLDIMPLEMENTATION2230
-	G__letdouble(defined,'i',0<fexpression);
-#else
+      if(defined->type==G__null.type) 
 	G__letdouble(defined,'d',fexpression);
-#endif
-      }
       else
 	G__letint(defined,'i',fdefined<fexpression);
       defined->ref=0;
@@ -539,47 +500,19 @@ G__value *defined;
       break;
 #endif /* G__NONANSIOPR */
     case 'E': /* == */
-#ifndef G__OLDIMPLEMENTATION2230
-      if(defined->type==G__null.type) 
-	G__letdouble(defined,'i',0==fexpression); 
-      else
-        G__letint(defined,'i',fdefined==fexpression);
-#else
       G__letint(defined,'i',fdefined==fexpression);
-#endif
       defined->ref=0;
       break;
     case 'N': /* != */
-#ifndef G__OLDIMPLEMENTATION2230
-      if(defined->type==G__null.type) 
-	G__letdouble(defined,'i',0!=fexpression); 
-      else
-        G__letint(defined,'i',fdefined!=fexpression);
-#else
       G__letint(defined,'i',fdefined!=fexpression);
-#endif
       defined->ref=0;
       break;
     case 'G': /* >= */
-#ifndef G__OLDIMPLEMENTATION2230
-      if(defined->type==G__null.type) 
-	G__letdouble(defined,'i',0>=fexpression); 
-      else
-        G__letint(defined,'i',fdefined>=fexpression);
-#else
       G__letint(defined,'i',fdefined>=fexpression);
-#endif
       defined->ref=0;
       break;
     case 'l': /* <= */
-#ifndef G__OLDIMPLEMENTATION2230
-      if(defined->type==G__null.type) 
-	G__letdouble(defined,'i',0<=fexpression); 
-      else
-        G__letint(defined,'i',fdefined<=fexpression);
-#else
       G__letint(defined,'i',fdefined<=fexpression);
-#endif
       defined->ref=0;
       break;
 #ifndef G__OLDIMPLEMENTATION470
@@ -940,671 +873,6 @@ G__value *defined;
     }
   }
   
-#ifndef G__OLDIMPLEMENTATION2189
-  /****************************************************************
-   * long double operator long double
-   * 
-   ****************************************************************/
-  else if('q'==defined->type || 'q'==expressionin.type) { 
-    long double lddefined = G__Longdouble(*defined);
-    long double ldexpression = G__Longdouble(expressionin);
-    switch(operator) {
-    case '\0':
-      defined->ref=expressionin.ref;
-      G__letLongdouble(defined,'q',lddefined+ldexpression);
-      break;
-    case '+': /* add */
-      G__letLongdouble(defined,'q',lddefined+ldexpression);
-      defined->ref=0;
-      break;
-    case '-': /* subtract */
-      G__letLongdouble(defined,'q',lddefined-ldexpression);
-      defined->ref=0;
-      break;
-    case '*': /* multiply */
-      if(defined->type==G__null.type) lddefined=1;
-      G__letLongdouble(defined,'q',lddefined*ldexpression);
-      defined->ref=0;
-      break;
-    case '/': /* divide */
-      if(defined->type==G__null.type) lddefined=1;
-      if(ldexpression==0) {
-	if(G__no_exec_compile) G__letdouble(defined,'i',0);
-	else G__genericerror("Error: operator '/' divided by zero");
-	return;
-      }
-      G__letLongdouble(defined,'q',lddefined/ldexpression);
-      defined->ref=0;
-      break;
-
-    case '>':
-      if(defined->type==G__null.type) {
-#ifndef G__OLDIMPLEMENTATION2230
-	G__letLongdouble(defined,'i',0>ldexpression);
-#else
-	G__letLongdouble(defined,'q',ldexpression);
-#endif
-      }
-      else
-	G__letint(defined,'i',lddefined>ldexpression);
-      defined->ref=0;
-      break;
-    case '<':
-      if(defined->type==G__null.type) {
-#ifndef G__OLDIMPLEMENTATION2230
-	G__letdouble(defined,'i',0<ldexpression);
-#else
-	G__letdouble(defined,'q',ldexpression);
-#endif
-      }
-      else
-	G__letint(defined,'i',lddefined<ldexpression);
-      defined->ref=0;
-      break;
-    case '!': 
-      if(ldexpression==0) G__letint(defined,'i',1);
-      else                G__letint(defined,'i',0);
-      defined->ref=0;
-      break;
-    case 'E': /* == */
-#ifndef G__OLDIMPLEMENTATION2230
-      if(defined->type==G__null.type) 
-        G__letLongdouble(defined,'q',0); /* Expression should be false wben the var is not defined */
-      else
-        G__letint(defined,'i',lddefined==ldexpression);
-#else
-      G__letint(defined,'i',lddefined==ldexpression);
-#endif
-      defined->ref=0;
-      break;
-    case 'N': /* != */
-#ifndef G__OLDIMPLEMENTATION2230
-      if(defined->type==G__null.type) 
-        G__letLongdouble(defined,'q',1); /* Expression should be true wben the var is not defined */
-      else
-        G__letint(defined,'i',lddefined!=ldexpression);
-#else
-      G__letint(defined,'i',lddefined!=ldexpression);
-#endif
-      defined->ref=0;
-      break;
-    case 'G': /* >= */
-#ifndef G__OLDIMPLEMENTATION2230
-      if(defined->type==G__null.type) 
-        G__letLongdouble(defined,'q',0); /* Expression should be false wben the var is not defined */
-      else
-        G__letint(defined,'i',lddefined>=ldexpression);
-#else
-      G__letint(defined,'i',lddefined>=ldexpression);
-#endif
-      defined->ref=0;
-      break;
-    case 'l': /* <= */
-#ifndef G__OLDIMPLEMENTATION2230
-      if(defined->type==G__null.type) 
-        G__letLongdouble(defined,'q',0); /* Expression should be false wben the var is not defined */
-      else
-        G__letint(defined,'i',lddefined<=ldexpression);
-#else
-      G__letint(defined,'i',lddefined<=ldexpression);
-#endif
-      defined->ref=0;
-      break;
-
-    case G__OPR_ADDASSIGN:
-      if(!G__no_exec_compile&&defined->ref) 
-	G__doubleassignbyref(defined,lddefined+ldexpression);
-      break;
-    case G__OPR_SUBASSIGN:
-      if(!G__no_exec_compile&&defined->ref) 
-	G__doubleassignbyref(defined,lddefined-ldexpression);
-      break;
-    case G__OPR_MODASSIGN:
-      if(!G__no_exec_compile&&defined->ref) 
-	G__doubleassignbyref(defined
-			     ,(double)((long)lddefined%(long)ldexpression));
-      break;
-    case G__OPR_MULASSIGN:
-      if(!G__no_exec_compile&&defined->ref) 
-	G__doubleassignbyref(defined,lddefined*ldexpression);
-      break;
-    case G__OPR_DIVASSIGN:
-      if(!G__no_exec_compile&&defined->ref) 
-	G__doubleassignbyref(defined,lddefined/ldexpression);
-      break;
-    case G__OPR_ANDASSIGN:
-      if(!G__no_exec_compile&&defined->ref) 
-	G__doubleassignbyref(defined
-			     ,(double)((long)lddefined&&(long)ldexpression));
-      break;
-    case G__OPR_ORASSIGN:
-      if(!G__no_exec_compile&&defined->ref) 
-	G__doubleassignbyref(defined
-			     ,(double)((long)lddefined||(long)ldexpression));
-      break;
-    }
-
-  }
-  /****************************************************************
-   * long operator long
-   * 
-   ****************************************************************/
-  else if('n'==defined->type     || 'm'==defined->type    ||
-	  'n'==expressionin.type || 'm'==expressionin.type) {
-    int unsignedresult=0;
-    if('m'==defined->type || 'm'==expressionin.type) unsignedresult = -1;
-    if(unsignedresult) {
-      G__uint64 ulldefined = G__ULonglong(*defined);
-      G__uint64 ullexpression = G__ULonglong(expressionin);
-      switch(operator) {
-      case '\0':
-	defined->ref=expressionin.ref;
-	G__letULonglong(defined,'m',ulldefined+ullexpression);
-	break;
-      case '+': /* add */
-	G__letULonglong(defined,'m',ulldefined+ullexpression);
-	defined->ref=0;
-	break;
-      case '-': /* subtract */
-	G__letULonglong(defined,'m',ulldefined-ullexpression);
-	defined->ref=0;
-	break;
-      case '*': /* multiply */
-	if(defined->type==G__null.type) ulldefined=1;
-	G__letULonglong(defined,'m',ulldefined*ullexpression);
-	defined->ref=0;
-	break;
-      case '/': /* divide */
-	if(defined->type==G__null.type) ulldefined=1;
-	if(ullexpression==0) {
-	  if(G__no_exec_compile) G__letdouble(defined,'i',0);
-	  else G__genericerror("Error: operator '/' divided by zero");
-	  return;
-	}
-	G__letULonglong(defined,'m',ulldefined/ullexpression);
-	defined->ref=0;
-	break;
-      case '%': /* modulus */
-	if(ullexpression==0) {
-	  if(G__no_exec_compile) G__letdouble(defined,'i',0);
-	  else G__genericerror("Error: operator '%%' divided by zero");
-	  return;
-	}
-	G__letULonglong(defined,'m',ulldefined%ullexpression);
-	defined->ref=0;
-	break;
-      case '&': /* binary and */
-	if(defined->type==G__null.type) {
-	  G__letULonglong(defined,'m',ullexpression);
-	}
-	else {
-	  G__letULonglong(defined,'m',ulldefined&ullexpression);
-	}
-	defined->ref=0;
-	break;
-      case '|': /* binary or */
-	G__letULonglong(defined,'m',ulldefined|ullexpression);
-	defined->ref=0;
-	break;
-      case '^': /* binary exclusive or */
-	G__letULonglong(defined,'m',ulldefined^ullexpression);
-	defined->ref=0;
-	break;
-      case '~': /* binary inverse */
-	G__letULonglong(defined,'m',~ullexpression);
-	defined->ref=0;
-	break;
-      case 'A': /* logical and */
-	G__letULonglong(defined,'m',ulldefined&&ullexpression);
-	defined->ref=0;
-	break;
-      case 'O': /* logical or */
-	G__letULonglong(defined,'m',ulldefined||ullexpression);
-	defined->ref=0;
-	break;
-      case '>':
-	if(defined->type==G__null.type) {
-#ifndef G__OLDIMPLEMENTATION2230
-	  G__letULonglong(defined,'m',0); 
-#else
-	  G__letULonglong(defined,'m',ullexpression);
-#endif
-	}
-	else
-	  G__letint(defined,'i',ulldefined>ullexpression);
-	defined->ref=0;
-	break;
-      case '<':
-	if(defined->type==G__null.type) {
-#ifndef G__OLDIMPLEMENTATION2230
-	  G__letULonglong(defined,'m',0);
-#else
-	  G__letULonglong(defined,'m',ullexpression);
-#endif
-	}
-	else
-	  G__letint(defined,'i',ulldefined<ullexpression);
-	defined->ref=0;
-	break;
-      case 'R': /* right shift */
-	switch(defined->type) {
-	case 'b':
-	case 'r':
-	case 'h':
-	case 'k':
-	  {
-	    G__letULonglong(defined,'m',ulldefined>>ullexpression);
-	  }
-	  break;
-	default: 
-	  G__letULonglong(defined,'m',ulldefined>>ullexpression);
-	  break;
-	}
-	defined->ref=0;
-	break;
-      case 'L': /* left shift */
-	G__letULonglong(defined,'m',ulldefined<<ullexpression);
-	defined->ref=0;
-	break;
-      case '!': 
-	G__letULonglong(defined,'m',!ullexpression);
-	defined->ref=0;
-	break;
-      case 'E': /* == */
-#ifndef G__OLDIMPLEMENTATION2230
-	if(defined->type==G__null.type) 
-	  G__letULonglong(defined,'m',0); /* Expression should be false wben the var is not defined */
-	else
-	  G__letint(defined,'i',ulldefined==ullexpression);
-#else
-	G__letint(defined,'i',ulldefined==ullexpression);
-#endif
-	defined->ref=0;
-	break;
-      case 'N': /* != */
-#ifndef G__OLDIMPLEMENTATION2230
-	if(defined->type==G__null.type) 
-	  G__letULonglong(defined,'m',1); /* Expression should be true wben the var is not defined */
-	else
-          G__letint(defined,'i',ulldefined!=ullexpression);
-#else
-	G__letint(defined,'i',ulldefined!=ullexpression);
-#endif
-	defined->ref=0;
-	break;
-      case 'G': /* >= */
-#ifndef G__OLDIMPLEMENTATION2230
-	if(defined->type==G__null.type) 
-	  G__letULonglong(defined,'m',0); /* Expression should be false wben the var is not defined */
-	else
-	  G__letint(defined,'i',ulldefined>=ullexpression);
-#else
-	G__letint(defined,'i',ulldefined>=ullexpression);
-#endif
-	defined->ref=0;
-	break;
-      case 'l': /* <= */
-#ifndef G__OLDIMPLEMENTATION2230
-	if(defined->type==G__null.type) 
-	  G__letULonglong(defined,'m',0); /* Expression should be false wben the var is not defined */
-	else
-	  G__letint(defined,'i',ulldefined<=ullexpression);
-#else
-	G__letint(defined,'i',ulldefined<=ullexpression);
-#endif
-	defined->ref=0;
-	break;
-#ifndef G__OLDIMPLEMENTATION470
-      case G__OPR_ADDASSIGN:
-	if(!G__no_exec_compile&&defined->ref) 
-	  G__intassignbyref(defined,ulldefined+ullexpression);
-	break;
-      case G__OPR_SUBASSIGN:
-	if(!G__no_exec_compile&&defined->ref) 
-	  G__intassignbyref(defined,ulldefined-ullexpression);
-	break;
-      case G__OPR_MODASSIGN:
-	if(!G__no_exec_compile&&defined->ref) 
-	  G__intassignbyref(defined,ulldefined%ullexpression);
-	break;
-      case G__OPR_MULASSIGN:
-	if(!G__no_exec_compile&&defined->ref) 
-	  G__intassignbyref(defined,ulldefined*ullexpression);
-	break;
-      case G__OPR_DIVASSIGN:
-	if(!G__no_exec_compile&&defined->ref) 
-	  G__intassignbyref(defined,ulldefined/ullexpression);
-	break;
-      case G__OPR_RSFTASSIGN:
-	if(!G__no_exec_compile&&defined->ref) 
-	  G__intassignbyref(defined,ulldefined>>ullexpression);
-	break;
-      case G__OPR_LSFTASSIGN:
-	if(!G__no_exec_compile&&defined->ref) 
-	  G__intassignbyref(defined,ulldefined<<ullexpression);
-	break;
-      case G__OPR_BANDASSIGN:
-	if(!G__no_exec_compile&&defined->ref) 
-	  G__intassignbyref(defined,ulldefined&ullexpression);
-	break;
-      case G__OPR_BORASSIGN:
-	if(!G__no_exec_compile&&defined->ref) 
-	  G__intassignbyref(defined,ulldefined|ullexpression);
-	break;
-      case G__OPR_EXORASSIGN:
-	if(!G__no_exec_compile&&defined->ref) 
-	  G__intassignbyref(defined,ulldefined^ullexpression);
-	break;
-      case G__OPR_ANDASSIGN:
-	if(!G__no_exec_compile&&defined->ref) 
-	  G__intassignbyref(defined,ulldefined&&ullexpression);
-	break;
-      case G__OPR_ORASSIGN:
-	if(!G__no_exec_compile&&defined->ref) 
-	  G__intassignbyref(defined,ulldefined||ullexpression);
-	break;
-#endif
-#ifndef G__OLDIMPLEMENTATION471
-      case G__OPR_POSTFIXINC:
-	if(!G__no_exec_compile&&expressionin.ref) {
-	  *defined = expressionin;
-	  G__intassignbyref(&expressionin,ullexpression+1);
-#ifndef G__OLDIMPLEMENTATION1342
-	  defined->ref = 0;
-#endif
-	}
-	break;
-      case G__OPR_POSTFIXDEC:
-	if(!G__no_exec_compile&&expressionin.ref) {
-	  *defined = expressionin;
-	  G__intassignbyref(&expressionin,ullexpression-1);
-#ifndef G__OLDIMPLEMENTATION1342
-	  defined->ref = 0;
-#endif
-	}
-	break;
-      case G__OPR_PREFIXINC:
-      if(!G__no_exec_compile&&expressionin.ref) {
-	G__intassignbyref(&expressionin,ullexpression+1);
-	*defined = expressionin;
-      }
-      break;
-      case G__OPR_PREFIXDEC:
-	if(!G__no_exec_compile&&expressionin.ref) {
-	  G__intassignbyref(&expressionin,ullexpression-1);
-	  *defined = expressionin;
-	}
-	break;
-#endif
-      default:
-#ifndef G__OLDIMPLEMENTATION999
-	G__fprinterr(G__serr,"Error: %s ",G__getoperatorstring(operator));
-#else
-	G__fprinterr(G__serr,"Error: %c ",operator);
-#endif
-	G__genericerror("Illegal operator for integer");
-	break;
-      }
-    }
-    else {
-      G__int64 lldefined = G__Longlong(*defined);
-      G__int64 llexpression = G__Longlong(expressionin);
-      switch(operator) {
-      case '\0':
-	defined->ref=expressionin.ref;
-	G__letLonglong(defined,'n',lldefined+llexpression);
-	break;
-      case '+': /* add */
-	G__letLonglong(defined,'n',lldefined+llexpression);
-	defined->ref=0;
-	break;
-      case '-': /* subtract */
-	G__letLonglong(defined,'n',lldefined-llexpression);
-	defined->ref=0;
-	break;
-      case '*': /* multiply */
-	if(defined->type==G__null.type) lldefined=1;
-	G__letLonglong(defined,'n',lldefined*llexpression);
-	defined->ref=0;
-	break;
-      case '/': /* divide */
-	if(defined->type==G__null.type) lldefined=1;
-	if(llexpression==0) {
-	  if(G__no_exec_compile) G__letdouble(defined,'i',0);
-	  else G__genericerror("Error: operator '/' divided by zero");
-	  return;
-	}
-	G__letLonglong(defined,'n',lldefined/llexpression);
-	defined->ref=0;
-	break;
-      case '%': /* modulus */
-	if(llexpression==0) {
-	  if(G__no_exec_compile) G__letdouble(defined,'i',0);
-	  else G__genericerror("Error: operator '%%' divided by zero");
-	  return;
-	}
-	G__letLonglong(defined,'n',lldefined%llexpression);
-	defined->ref=0;
-	break;
-      case '&': /* binary and */
-	if(defined->type==G__null.type) {
-	  G__letLonglong(defined,'n',llexpression);
-	}
-	else {
-	  G__letint(defined,'i',lldefined&llexpression);
-	}
-	defined->ref=0;
-	break;
-      case '|': /* binary or */
-	G__letint(defined,'i',lldefined|llexpression);
-	defined->ref=0;
-	break;
-      case '^': /* binary exclusive or */
-	G__letULonglong(defined,'n',lldefined^llexpression);
-	defined->ref=0;
-	break;
-      case '~': /* binary inverse */
-	G__letULonglong(defined,'n',~llexpression);
-	defined->ref=0;
-	break;
-      case 'A': /* logical and */
-	G__letint(defined,'i',lldefined&&llexpression);
-	defined->ref=0;
-	break;
-      case 'O': /* logical or */
-	G__letint(defined,'i',lldefined||llexpression);
-	defined->ref=0;
-	break;
-      case '>':
-	if(defined->type==G__null.type) {
-#ifndef G__OLDIMPLEMENTATION2230
-	  G__letLonglong(defined,'n',0);
-#else
-	  G__letLonglong(defined,'n',llexpression);
-#endif
-	}
-	else
-	  G__letint(defined,'i',lldefined>llexpression);
-	defined->ref=0;
-	break;
-      case '<':
-	if(defined->type==G__null.type) {
-#ifndef G__OLDIMPLEMENTATION2230
-	  G__letLonglong(defined,'n',0);
-#else
-	  G__letLonglong(defined,'n',llexpression);
-#endif
-	}
-	else
-	  G__letint(defined,'i',lldefined<llexpression);
-	defined->ref=0;
-	break;
-      case 'R': /* right shift */
-#ifndef G__OLDIMPLEMENTATION977
-	switch(defined->type) {
-	case 'b':
-	case 'r':
-	case 'h':
-	case 'k':
-	  {
-	    G__letLonglong(defined,'n',lldefined>>llexpression);
-	  }
-	  break;
-	default: 
-	  G__letLonglong(defined,'n',lldefined>>llexpression);
-	  break;
-	}
-#else
-	G__letLonglong(defined,'n',lldefined>>llexpression);
-#endif
-	defined->ref=0;
-	break;
-      case 'L': /* left shift */
-	G__letLonglong(defined,'n',lldefined<<llexpression);
-	defined->ref=0;
-	break;
-      case '!': 
-	G__letLonglong(defined,'n',!llexpression);
-	defined->ref=0;
-	break;
-      case 'E': /* == */
-#ifndef G__OLDIMPLEMENTATION2230
-	if(defined->type==G__null.type) 
-	  G__letLonglong(defined,'n',0); /* Expression should be false wben the var is not defined */
-	else
-	  G__letint(defined,'i',lldefined==llexpression);
-#else
-	G__letint(defined,'i',lldefined==llexpression);
-#endif
-	defined->ref=0;
-	break;
-      case 'N': /* != */
-#ifndef G__OLDIMPLEMENTATION2230
-	if(defined->type==G__null.type) 
-	  G__letLonglong(defined,'n',1); /* Expression should be true wben the var is not defined */
-	else
-	  G__letint(defined,'i',lldefined!=llexpression);
-#else
-	G__letint(defined,'i',lldefined!=llexpression);
-#endif
-	defined->ref=0;
-	break;
-      case 'G': /* >= */
-#ifndef G__OLDIMPLEMENTATION2230
-	if(defined->type==G__null.type) 
-	  G__letLonglong(defined,'n',0); /* Expression should be false wben the var is not defined */
-	else
-	  G__letint(defined,'i',lldefined>=llexpression);
-#else
-	G__letint(defined,'i',lldefined>=llexpression);
-#endif
-	defined->ref=0;
-	break;
-      case 'l': /* <= */
-#ifndef G__OLDIMPLEMENTATION2230
-	if(defined->type==G__null.type) 
-	  G__letLonglong(defined,'n',0); /* Expression should be false wben the var is not defined */
-	else
-	  G__letint(defined,'i',lldefined<=llexpression);
-#else
-	G__letint(defined,'i',lldefined<=llexpression);
-#endif
-	defined->ref=0;
-	break;
-#ifndef G__OLDIMPLEMENTATION470
-      case G__OPR_ADDASSIGN:
-	if(!G__no_exec_compile&&defined->ref) 
-	  G__intassignbyref(defined,lldefined+llexpression);
-	break;
-      case G__OPR_SUBASSIGN:
-	if(!G__no_exec_compile&&defined->ref) 
-	  G__intassignbyref(defined,lldefined-llexpression);
-	break;
-      case G__OPR_MODASSIGN:
-	if(!G__no_exec_compile&&defined->ref) 
-	  G__intassignbyref(defined,lldefined%llexpression);
-	break;
-      case G__OPR_MULASSIGN:
-	if(!G__no_exec_compile&&defined->ref) 
-	  G__intassignbyref(defined,lldefined*llexpression);
-	break;
-      case G__OPR_DIVASSIGN:
-	if(!G__no_exec_compile&&defined->ref) 
-	  G__intassignbyref(defined,lldefined/llexpression);
-	break;
-      case G__OPR_RSFTASSIGN:
-	if(!G__no_exec_compile&&defined->ref) 
-	  G__intassignbyref(defined,lldefined>>llexpression);
-	break;
-      case G__OPR_LSFTASSIGN:
-	if(!G__no_exec_compile&&defined->ref) 
-	  G__intassignbyref(defined,lldefined<<llexpression);
-	break;
-      case G__OPR_BANDASSIGN:
-	if(!G__no_exec_compile&&defined->ref) 
-	  G__intassignbyref(defined,lldefined&llexpression);
-	break;
-      case G__OPR_BORASSIGN:
-	if(!G__no_exec_compile&&defined->ref) 
-	  G__intassignbyref(defined,lldefined|llexpression);
-	break;
-      case G__OPR_EXORASSIGN:
-	if(!G__no_exec_compile&&defined->ref) 
-	  G__intassignbyref(defined,lldefined^llexpression);
-	break;
-      case G__OPR_ANDASSIGN:
-	if(!G__no_exec_compile&&defined->ref) 
-	  G__intassignbyref(defined,lldefined&&llexpression);
-	break;
-      case G__OPR_ORASSIGN:
-	if(!G__no_exec_compile&&defined->ref) 
-	  G__intassignbyref(defined,lldefined||llexpression);
-	break;
-#endif
-#ifndef G__OLDIMPLEMENTATION471
-      case G__OPR_POSTFIXINC:
-	if(!G__no_exec_compile&&expressionin.ref) {
-	  *defined = expressionin;
-	  G__intassignbyref(&expressionin,llexpression+1);
-#ifndef G__OLDIMPLEMENTATION1342
-	  defined->ref = 0;
-#endif
-	}
-	break;
-      case G__OPR_POSTFIXDEC:
-	if(!G__no_exec_compile&&expressionin.ref) {
-	  *defined = expressionin;
-	  G__intassignbyref(&expressionin,llexpression-1);
-#ifndef G__OLDIMPLEMENTATION1342
-	  defined->ref = 0;
-#endif
-	}
-	break;
-      case G__OPR_PREFIXINC:
-	if(!G__no_exec_compile&&expressionin.ref) {
-	  G__intassignbyref(&expressionin,llexpression+1);
-	  *defined = expressionin;
-	}
-	break;
-      case G__OPR_PREFIXDEC:
-	if(!G__no_exec_compile&&expressionin.ref) {
-	  G__intassignbyref(&expressionin,llexpression-1);
-	  *defined = expressionin;
-	}
-	break;
-#endif
-      default:
-#ifndef G__OLDIMPLEMENTATION999
-	G__fprinterr(G__serr,"Error: %s ",G__getoperatorstring(operator));
-#else
-	G__fprinterr(G__serr,"Error: %c ",operator);
-#endif
-	G__genericerror("Illegal operator for integer");
-	break;
-      }
-    }
-  }
-#endif
   
   /****************************************************************
    * int operator int
@@ -1628,8 +896,8 @@ G__value *defined;
 #endif
 #ifndef G__OLDIMPLEMENTATION1491
     if(unsignedresult) {
-      unsigned long udefined=(unsigned long)G__uint(*defined);
-      unsigned long uexpression=(unsigned long)G__uint(expressionin);
+      unsigned long udefined=(unsigned long)G__int(*defined);
+      unsigned long uexpression=(unsigned long)G__int(expressionin);
       switch(operator) {
       case '\0':
 	defined->ref=expressionin.ref;
@@ -1697,25 +965,15 @@ G__value *defined;
 	defined->ref=0;
 	break;
       case '>':
-	if(defined->type==G__null.type) {
-#ifndef G__OLDIMPLEMENTATION2230
-	  G__letint(defined,'h',0);
-#else
+	if(defined->type==G__null.type) 
 	  G__letint(defined,'h',uexpression);
-#endif
-	}
 	else
 	  G__letint(defined,'h',udefined>uexpression);
 	defined->ref=0;
 	break;
       case '<':
-	if(defined->type==G__null.type) {
-#ifndef G__OLDIMPLEMENTATION2230
-	  G__letint(defined,'h',0);
-#else
+	if(defined->type==G__null.type) 
 	  G__letint(defined,'h',uexpression);
-#endif
-	}
 	else
 	  G__letint(defined,'h',udefined<uexpression);
 	defined->ref=0;
@@ -1771,47 +1029,19 @@ G__value *defined;
 	defined->ref=0;
 	break;
       case 'E': /* == */
-#ifndef G__OLDIMPLEMENTATION2230
-	if(defined->type==G__null.type) 
-	  G__letint(defined,'h',0); /* Expression should be false wben the var is not defined */
-	else
-	  G__letint(defined,'h',udefined==uexpression);
-#else
 	G__letint(defined,'h',udefined==uexpression);
-#endif
 	defined->ref=0;
 	break;
       case 'N': /* != */
-#ifndef G__OLDIMPLEMENTATION2230
-	if(defined->type==G__null.type) 
-	  G__letint(defined,'h',1); /* Expression should be true wben the var is not defined */
-	else
-	  G__letint(defined,'h',udefined!=uexpression);
-#else
 	G__letint(defined,'h',udefined!=uexpression);
-#endif
 	defined->ref=0;
 	break;
       case 'G': /* >= */
-#ifndef G__OLDIMPLEMENTATION2230
-	if(defined->type==G__null.type) 
-	  G__letint(defined,'h',0); /* Expression should be false wben the var is not defined */
-	else
-	  G__letint(defined,'h',udefined>=uexpression);
-#else
 	G__letint(defined,'h',udefined>=uexpression);
-#endif
 	defined->ref=0;
 	break;
       case 'l': /* <= */
-#ifndef G__OLDIMPLEMENTATION2230
-	if(defined->type==G__null.type) 
-	  G__letint(defined,'h',0); /* Expression should be false wben the var is not defined */
-	else
-	  G__letint(defined,'h',udefined<=uexpression);
-#else
 	G__letint(defined,'h',udefined<=uexpression);
-#endif
 	defined->ref=0;
 	break;
 #ifndef G__OLDIMPLEMENTATION470
@@ -1908,8 +1138,8 @@ G__value *defined;
     }
     else {
 #endif
-    long ldefined=G__int(*defined);
-    long lexpression=G__int(expressionin);
+    ldefined=G__int(*defined);
+    lexpression=G__int(expressionin);
     switch(operator) {
     case '\0':
       defined->ref=expressionin.ref;
@@ -1977,41 +1207,21 @@ G__value *defined;
       defined->ref=0;
       break;
     case '>':
-      if(defined->type==G__null.type) {
-#ifndef G__OLDIMPLEMENTATION2230
-	G__letint(defined,'i',0);
-#else
+      if(defined->type==G__null.type) 
 	G__letint(defined,'i',lexpression);
-#endif
-      }
       else
 	G__letint(defined,'i',ldefined>lexpression);
       defined->ref=0;
       break;
     case '<':
-      if(defined->type==G__null.type) {
-#ifndef G__OLDIMPLEMENTATION2230
-	G__letint(defined,'i',0);
-#else
+      if(defined->type==G__null.type) 
 	G__letint(defined,'i',lexpression);
-#endif
-      }
       else
 	G__letint(defined,'i',ldefined<lexpression);
       defined->ref=0;
       break;
     case 'R': /* right shift */
-#if !defined(G__OLDIMPLEMENTATION2193)
-        if(!G__prerun) {
-	  unsigned long udefined=(unsigned long)G__uint(*defined);
-	  unsigned long uexpression=(unsigned long)G__uint(expressionin);
-	  G__letint(defined,'h',udefined>>uexpression);
-          defined->obj.ulo = udefined>>uexpression;
-	}
-	else {
-	  G__letint(defined,'i',ldefined>>lexpression);
-	}
-#elif !defined(G__OLDIMPLEMENTATION977)
+#ifndef G__OLDIMPLEMENTATION977
       switch(defined->type) {
       case 'b':
       case 'r':
@@ -2023,7 +1233,7 @@ G__value *defined;
 	}
 	break;
       default: 
-	G__letint(defined,'h',ldefined>>lexpression);
+	G__letint(defined,'i',ldefined>>lexpression);
 	break;
       }
 #else
@@ -2032,19 +1242,7 @@ G__value *defined;
       defined->ref=0;
       break;
     case 'L': /* left shift */
-#if !defined(G__OLDIMPLEMENTATION2193)
-        if(!G__prerun) {
-	  unsigned long udefined=(unsigned long)G__uint(*defined);
-	  unsigned long uexpression=(unsigned long)G__uint(expressionin);
-	  G__letint(defined,'h',udefined<<uexpression);
-          defined->obj.ulo = udefined<<uexpression;
-	}
-	else {
-	  G__letint(defined,'i',ldefined<<lexpression);
-	}
-#else
       G__letint(defined,'i',ldefined<<lexpression);
-#endif
       defined->ref=0;
       break;
     case '@': /* power */
@@ -2073,47 +1271,19 @@ G__value *defined;
       defined->ref=0;
       break;
     case 'E': /* == */
-#ifndef G__OLDIMPLEMENTATION2230
-      if(defined->type==G__null.type)
-        G__letint(defined,'i',0); /* Expression should be false wben the var is not defined */
-      else
-        G__letint(defined,'i',ldefined==lexpression);
-#else
       G__letint(defined,'i',ldefined==lexpression);
-#endif
       defined->ref=0;
       break;
     case 'N': /* != */
-#ifndef G__OLDIMPLEMENTATION2230
-      if(defined->type==G__null.type)
-        G__letint(defined,'i',1); /* Expression should be true wben the var is not defined */
-      else
-        G__letint(defined,'i',ldefined!=lexpression);
-#else
       G__letint(defined,'i',ldefined!=lexpression);
-#endif
       defined->ref=0;
       break;
     case 'G': /* >= */
-#ifndef G__OLDIMPLEMENTATION2230
-      if(defined->type==G__null.type)
-        G__letint(defined,'i',0); /* Expression should be false wben the var is not defined */
-      else
-        G__letint(defined,'i',ldefined>=lexpression);
-#else
       G__letint(defined,'i',ldefined>=lexpression);
-#endif
       defined->ref=0;
       break;
     case 'l': /* <= */
-#ifndef G__OLDIMPLEMENTATION2230
-      if(defined->type==G__null.type)
-        G__letint(defined,'i',0); /* Expression should be false wben the var is not defined */
-      else
-        G__letint(defined,'i',ldefined<=lexpression);
-#else
       G__letint(defined,'i',ldefined<=lexpression);
-#endif
       defined->ref=0;
       break;
 #ifndef G__OLDIMPLEMENTATION470
@@ -2270,22 +1440,12 @@ int *ptagnum;
   G__fixedscope=1;
 
   /* if scope operator found at the beginning of the name, global scope */
-  /* if scope operator found at the beginning of the name, global scope 
-   * or fully qualified scope!
-   */
   if(pc==name) {
     /* strip scope operator, set hash and return */
     strcpy(temp,name+2);
     strcpy(name,temp);
     G__hash(name,(*phash),i)
-#ifndef G__OLDIMPLEMENTATION2179
-    /* If we do no have anymore scope operator, we know the request of
-       for the global name space */
-    pc = G__find_first_scope_operator(name);
-    if (pc==0) return(G__GLOBALSCOPE);
-#else    
     return(G__GLOBALSCOPE);
-#endif
   }
 
 #ifndef G__STD_NAMESPACE /* ON667 */
@@ -2326,11 +1486,7 @@ int *ptagnum;
 #endif
     member=pc+2;
     *pc='\0';
-#ifndef G__OLDIMPLEMENTATION2181
-    scopetagnum=G__defined_tagname(scope,1);
-#else
     scopetagnum=G__defined_tagname(scope,0);
-#endif
 #ifndef G__OLDIMPLEMENTATION759
     G__tagdefining = save_tagdefining;
     G__def_tagnum = save_def_tagnum;
@@ -2782,9 +1938,6 @@ G__value *defined;
   G__value buffer;
   char *pos;
   int postfixflag=0;
-#ifndef G__OLDIMPLEMENTATION2195
-  int store_asm_cp;
-#endif
   
   switch(operator) {
   case '+': /* add */
@@ -2912,9 +2065,6 @@ G__value *defined;
     G__oprovld=1;
 #ifdef G__ASM
     if(G__asm_noverflow) {
-#ifndef G__OLDIMPLEMENTATION2195
-      store_asm_cp = G__asm_cp;
-#endif
       G__asm_inst[G__asm_cp] = G__PUSHSTROS;
       G__asm_inst[G__asm_cp+1] = G__SETSTROS;
       G__inc_cp_asm(2,0);
@@ -2982,11 +2132,7 @@ G__value *defined;
 	  if(G__asm_dbg) G__fprinterr(G__serr,"LD cancelled\n");
 #endif
 	}
-#ifndef G__OLDIMPLEMENTATION2195
-	G__inc_cp_asm(store_asm_cp-G__asm_cp,0);
-#else
 	G__inc_cp_asm(-2,0); 
-#endif
 #ifdef G__ASM_DBG
 	if(G__asm_dbg) G__fprinterr(G__serr,"PUSHSTROS,SETSTROS cancelled\n");
 #endif
@@ -3072,9 +2218,6 @@ G__value *defined;
 #ifdef G__ASM
     if(G__asm_noverflow) {
 #ifdef G__ASM_IFUNC
-#ifndef G__OLDIMPLEMENTATION2195
-      store_asm_cp = G__asm_cp;
-#endif
 #ifdef G__ASM_DBG
       if(G__asm_dbg) G__fprinterr(G__serr,"%3x: SWAP\n",G__asm_cp);
 #endif
@@ -3170,14 +2313,10 @@ G__value *defined;
 #ifndef G__OLDIMPLEMENTATION2152
 	G__bc_cancel_VIRTUALADDSTROS();
 #endif
-#ifndef G__OLDIMPLEMENTATION2195
-	G__inc_cp_asm(store_asm_cp-G__asm_cp,0); 
-#else
 #ifdef G__ASM_IFUNC
 	G__inc_cp_asm(-3,0); 
 #else
 	G__inc_cp_asm(-2,0); 
-#endif
 #endif
 #ifdef G__ASM_DBG
 	if(G__asm_dbg) G__fprinterr(G__serr,"PUSHSTROS,SETSTROS cancelled\n");
@@ -3842,15 +2981,6 @@ G__value *rval;
 
   /* don't optimze if optimize level is less than 3 */
   if(G__asm_loopcompile<3) return(opr);
-
-#ifndef G__OLDIMPLEMENTATION2189
-  switch(lval->type) {
-  case 'q': case 'n': case 'm': return(opr);
-  }
-  switch(rval->type) {
-  case 'q': case 'n': case 'm': return(opr);
-  }
-#endif
 
 #ifndef G__OLDIMPLEMENTATION1007
   if(0==rval->type

@@ -232,17 +232,7 @@ char *oldtype,*newtype;
   else if(strcmp(oldtype,"double")==0) {
     type='d'+ispointer; /* bug fix */
   }
-#if !defined(G__OLDIMPLEMENTATION2189)
-  else if(strcmp(oldtype,"longlong")==0) {
-    type='n'+ispointer; 
-  }
-  else if(strcmp(oldtype,"unsignedlonglong")==0) {
-    type='m'+ispointer; 
-  }
-  else if(strcmp(oldtype,"longdouble")==0) {
-    type='q'+ispointer; 
-  }
-#elif !defined(G__OLDIMPLEMENTATION1467)
+#ifndef G__OLDIMPLEMENTATION1467
   else if(strcmp(oldtype,"longdouble")==0) {
     type='d'+ispointer; /* bug fix */
   }
@@ -466,11 +456,7 @@ char *initvalue;
 #endif
   fgetpos(G__mfp,&G__nextmacro);
   
-#ifndef G__OLDIMPLEMENTATION2191
-  G__var_type = 'j';
-#else
   G__var_type = 'm';
-#endif
   G__typenum = -1;
   G__tagnum = -1;
 #ifndef G__FONS30
@@ -575,9 +561,6 @@ int *done;
        G__ifile.filenum == callfuncmacro->call_filenum) {
 #elif defined(G__NONSCALARFPOS2)
     if(call_pos.__pos == callfuncmacro->call_pos.__pos &&
-       G__ifile.filenum == callfuncmacro->call_filenum) {
-#elif defined(G__NONSCALARFPOS_QNX)
-    if(call_pos._Off == callfuncmacro->call_pos._Off &&
        G__ifile.filenum == callfuncmacro->call_filenum) {
 #else
     if(call_pos == callfuncmacro->call_pos &&
@@ -989,9 +972,6 @@ int G__execfuncmacro_noexec (char* macroname)
 #elif defined(G__NONSCALARFPOS2)
     if(call_pos.__pos == callfuncmacro->call_pos.__pos &&
        G__ifile.filenum == callfuncmacro->call_filenum)
-#elif defined(G__NONSCALARFPOS_QNX)
-    if(call_pos._Off == callfuncmacro->call_pos._Off &&
-       G__ifile.filenum == callfuncmacro->call_filenum)       
 #else
     if(call_pos == callfuncmacro->call_pos &&
        G__ifile.filenum == callfuncmacro->call_filenum)

@@ -402,7 +402,6 @@ static int G__DemangleClassname(char *buf,const char *orig)
 #ifdef G__STD_EXCEPTION
 #include <exception>
 #include <typeinfo>
-#include <string>
 #if !defined(__hpux) || __HP_aCC >= 53000
 using namespace std;
 #endif
@@ -418,21 +417,13 @@ extern "C" int G__ExceptionWrapper(G__InterfaceMethod funcp
 {
 #ifndef G__OLDIMPLEMENTATION1726
   if(!G__catchexception) {
-#ifndef G__OLDIMPLEMENTATION2171
-    return((*funcp)(result7,funcname,libp,hash));
-#else
     (*funcp)(result7,funcname,libp,hash);
     return 1;
-#endif
   }
 #endif
   try {
-#ifndef G__OLDIMPLEMENTATION2171
-    return((*funcp)(result7,funcname,libp,hash));
-#else
     (*funcp)(result7,funcname,libp,hash);
     return 1;
-#endif
   }
 #ifndef G__OLDIMPLEMENTATION2112
   catch(G__bc_exception& x) {
@@ -512,14 +503,6 @@ extern "C" int G__ExceptionWrapper(G__InterfaceMethod funcp
     G__no_exec = 1;
 #endif
   }
-#ifndef G__OLDIMPLEMENTATION2192
-  catch(string x) {
-    G__fprinterr(G__serr,"Exception: %s\n",x.c_str());
-    G__genericerror((char*)NULL);
-    //G__return = G__RETURN_TRY;
-    //G__no_exec = 1;
-  }
-#endif
 #endif /* 1791 */
   catch(...) {
 #ifndef G__OLDIMPLEMENTATION1947
@@ -614,9 +597,6 @@ extern "C" void G__initcxx()
 #endif
 #ifdef __HP_aCC     /* HP aCC C++ compiler */
   sprintf(temp,"G__HP_aCC=%ld",(long)__HP_aCC); G__add_macro(temp);
-#if __HP_aCC > 15000
-  sprintf(temp,"G__ANSIISOLIB=1"); G__add_macro(temp);
-#endif
 #endif
 #ifdef __SUNPRO_CC  /* Sun C++ compiler */
   sprintf(temp,"G__SUNPRO_CC=%ld",(long)__SUNPRO_CC); G__add_macro(temp);

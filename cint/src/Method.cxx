@@ -8,7 +8,7 @@
  *  Extended Run Time Type Identification API
  ************************************************************************
  * Author                  Masaharu Goto 
- * Copyright(c) 1995~2005  Masaharu Goto 
+ * Copyright(c) 1995~1999  Masaharu Goto 
  *
  * Permission to use, copy, modify and distribute this software and its 
  * documentation for any purpose is hereby granted without fee,
@@ -32,9 +32,6 @@ void G__MethodInfo::Init()
 {
   handle = (long)(&G__ifunc);
   index = -1;
-#ifndef G__OLDIMPLEMENTATION2194
-  usingIndex = -1;
-#endif
   belongingclass=(G__ClassInfo*)NULL;
 }
 ///////////////////////////////////////////////////////////////////////////
@@ -43,18 +40,12 @@ void G__MethodInfo::Init(G__ClassInfo &a)
   if(a.IsValid()) {
     handle=(long)G__struct.memfunc[a.Tagnum()];
     index = -1;
-#ifndef G__OLDIMPLEMENTATION2194
-    usingIndex = -1;
-#endif
     belongingclass = &a;
     G__incsetup_memfunc((int)a.Tagnum());
   }
   else {
     handle=0;
     index = -1;
-#ifndef G__OLDIMPLEMENTATION2194
-    usingIndex = -1;
-#endif
     belongingclass=(G__ClassInfo*)NULL;
   }
 }
@@ -62,9 +53,6 @@ void G__MethodInfo::Init(G__ClassInfo &a)
 void G__MethodInfo::Init(long handlein,long indexin
 	,G__ClassInfo *belongingclassin)
 {
-#ifndef G__OLDIMPLEMENTATION2194
-  usingIndex = -1;
-#endif
   if(handlein) {
     handle = handlein;
     index = indexin;
@@ -477,16 +465,6 @@ int G__MethodInfo::Next()
 	index = -1;
       }
     } 
-#ifndef G__OLDIMPLEMENTATION2194
-    if(ifunc==0 && belongingclass==0 && 
-       usingIndex<G__globalusingnamespace.basen) {
-      ++usingIndex;
-      index=0;
-      G__incsetup_memfunc(G__globalusingnamespace.basetagnum[usingIndex]);
-      ifunc=G__struct.memfunc[G__globalusingnamespace.basetagnum[usingIndex]];
-      handle=(long)ifunc;
-    }
-#endif
     if(IsValid()) {
 #ifndef G__OLDIMPLEMENTATION1706
       if(0==ifunc->hash[index]) goto nextone;
@@ -599,8 +577,6 @@ long G__MethodInfo::FilePosition()
        ) {
 #if defined(G__NONSCALARFPOS2)
       return((long)ifunc->pentry[index]->pos.__pos);
-#elif defined(G__NONSCALARFPOS_QNX)      
-      return((long)ifunc->pentry[index]->pos._Off);
 #else
       return((long)ifunc->pentry[index]->pos);
 #endif

@@ -909,23 +909,18 @@ G__value *presult;
 #ifndef G__OLDIMPLEMENTATION2122
   if(G__cintv6) {
     G__value ltype = G__null;
-    ltype.isconst = 0;
     ltype.type = var->type[ig15];
     ltype.tagnum = var->p_tagtable[ig15];
     ltype.typenum = var->p_typetable[ig15];
     ltype.obj.reftype.reftype = var->reftype[ig15];
-    if(G__Isvalidassignment_val(&ltype,var->paran[ig15],paran,var_type
-				,presult)) {
-      G__bc_conversion(presult,var,ig15,var_type,paran); 
-    }
-    else {
+    if(!G__Isvalidassignment_val(&ltype,var->paran[ig15],paran,var_type,presult)) {
       G__fprinterr(G__serr,"Error: assignment type mismatch %s "
                     ,var->varnamebuf[ig15]);
       G__genericerror((char*)NULL);
     }
   }
 #endif
-#ifndef G__OLDIMPLEMENTATION2089 /* TODO, duplication with G__bc_conversion */
+#ifndef G__OLDIMPLEMENTATION2089
   if(G__cintv6 &&
      ('U'==var->type[ig15] || ('u'==var->type[ig15]&&
                                G__PARAREFERENCE==var->reftype[ig15]))
@@ -1156,7 +1151,7 @@ G__value result;
       else                          G__asm_inst[G__asm_cp-5]=G__LD_MSTR;
 #ifdef G__ASM_DBG
       if(G__asm_dbg) {
-	G__fprinterr(G__serr,"ST_VAR or ST_MSTR replaced with LD_VAR or LD_MSTR(1)\n");
+	G__fprinterr(G__serr,"ST_VAR or ST_MSTR replaced with LD_VAR or LD_MSTR");
 	G__printlinenum();
       }
 #endif
@@ -1486,24 +1481,10 @@ int isdecl;
       break;
 
     case G__MEMBER:
-#ifndef G__OLDIMPLEMENTATION2223
-      if(-1!=scope_tagnum) {
-	in_memfunc=1;
-	*pG__struct_offset = scope_struct_offset;
-	G__incsetup_memvar(scope_tagnum);
-	var = G__struct.memvar[scope_tagnum] ;
-      }
-      else {
-	in_memfunc=0;
-	*pG__struct_offset = scope_struct_offset;
-	var = (struct G__var_array*)NULL;
-      }
-#else
       in_memfunc=1;
       *pG__struct_offset = scope_struct_offset;
       G__incsetup_memvar(scope_tagnum);
       var = G__struct.memvar[scope_tagnum] ;
-#endif
       ilg = G__GLOBAL;
       break;
       
@@ -2142,20 +2123,6 @@ struct G__var_array *varglobal,*varlocal;
        || ('*'==item[1] && 0==G__decl)
 #endif
        ) {
-#ifndef G__OLDIMPLEMENTATION2184
-      if(G__cintv6 && G__asm_noverflow) {
-	result=G__getexpr(item);
-	G__bc_objassignment(&result,&expression);
-	return(expression); /* ??? or result */
-      }
-      else {
-	result=G__getexpr(item+1);
-	G__ASSERT(isupper(result.type)||'u'==result.type);
-	para[0]=G__letPvalue(&result,expression);
-	if(vv!=varname) free((void*)varname);
-	return(para[0]);
-      }
-#else
       result=G__getexpr(item+1);
       G__ASSERT(isupper(result.type)||'u'==result.type);
       para[0]=G__letPvalue(&result,expression);
@@ -2163,7 +2130,6 @@ struct G__var_array *varglobal,*varlocal;
       if(vv!=varname) free((void*)varname);
 #endif
       return(para[0]);
-#endif
     }
     G__handle_var_type(item,ttt);
     break;
@@ -2533,15 +2499,6 @@ struct G__var_array *varglobal,*varlocal;
     
     /* assign value */
   if(var) {
-
-#ifndef G__OLDIMPLEMENTATION2182
-    if( (G__cintv6 /* &G__BC_DEBUG */)
-       && G__asm_noverflow && 0==G__asm_exec) {
-      G__bc_assignment(var,ig15,paran,G__var_type,&result
-		       ,G__struct_offset,store_struct_offset);
-      return(result);
-    }
-#endif
 
 #ifndef G__OLDIMPLEMENTATION536
     /*******************************************************
@@ -2959,11 +2916,7 @@ struct G__var_array *varglobal,*varlocal;
 #ifndef G__OLDIMPLEMENTATION575
       if(G__security&G__SECURE_POINTER_TYPE && !G__definemacro && 
 	 isupper(var->type[ig15]) && 'p'==G__var_type && 0==paran && 
-#if !defined(G__OLDIMPLEMENTATION2191)
-	 '1'!=var->type[ig15] &&
-#else
 	 'Q'!=var->type[ig15] &&
-#endif
 	 (('Y'!=var->type[ig15] && 'Y'!=result.type && result.obj.i)||
 	  G__security&G__SECURE_CAST2P) ) {
 	if(var->type[ig15]!=result.type ||
@@ -3060,20 +3013,6 @@ struct G__var_array *varglobal,*varlocal;
       
       switch(var->type[ig15]) {
 	
-#ifndef G__OLDIMPLEMENTATION2189
-      case 'n': /* G__int64 */
-	G__ASSIGN_VAR(G__LONGLONGALLOC,G__int64,G__Longlong,result.obj.ll)
-	break;
-      case 'm': /* G__uint64 */
-	G__ASSIGN_VAR(G__LONGLONGALLOC,G__uint64
-		      ,G__ULonglong,result.obj.ull)
-	break;
-      case 'q': /* long double */
-	G__ASSIGN_VAR(G__LONGDOUBLEALLOC,long double
-		      ,G__Longdouble,result.obj.ld)
-	break;
-#endif
-
 #ifndef G__OLDIMPLEMENTATION1604
       case 'g': /* bool */
 	switch(result.type) {
@@ -3085,11 +3024,8 @@ struct G__var_array *varglobal,*varlocal;
 	  result.obj.i = result.obj.i?1:0;
 	  break;
 	}
-#ifdef G__BOOL4BYTE
-	G__ASSIGN_VAR(G__INTALLOC,int,G__int,result.obj.i)
-#else
+	/* 1666 G__ASSIGN_VAR(G__INTALLOC,int,G__int) */
 	G__ASSIGN_VAR(G__CHARALLOC,unsigned char,G__int,result.obj.i)
-#endif
 #endif
       case 'i': /* int */
 	G__ASSIGN_VAR(G__INTALLOC,int,G__int,result.obj.i)
@@ -3145,28 +3081,10 @@ struct G__var_array *varglobal,*varlocal;
 	 ***************************************/
       case 'E': /* file pointer */
       case 'Y': /* void pointer */
-#ifndef G__OLDIMPLEMENTATION2191
-      case '1': /* pointer to function */
-#else
       case 'Q': /* pointer to function */
-#endif
       case 'C': /* char pointer */
 	G__ASSIGN_PVAR(char,G__int,result.obj.i)
 	break;
-
-#ifndef G__OLDIMPLEMENTATION2189
-      case 'N':
-	G__ASSIGN_PVAR(G__int64,G__Longlong,result.obj.ll)
-	break;
-      case 'M':
-	G__ASSIGN_PVAR(G__uint64,G__ULonglong,result.obj.ull)
-	break;
-#ifndef G__OLDIMPLEMENTATION2191
-      case 'Q':
-	G__ASSIGN_PVAR(long double,G__Longdouble,result.obj.ld)
-	break;
-#endif
-#endif
 
 #ifndef G__OLDIMPLEMENTATION1604
       case 'G': /* bool */
@@ -3992,12 +3910,7 @@ struct G__var_array *varglobal,*varlocal;
 
 #ifndef G__OLDIMPLEMENTATION1119
       if(G__getarraydim && !G__IsInMacro() && 
-#ifndef G__OLDIMPLEMENTATION2191
-	 'j'!=var->type[ig15]
-#else
-	 'm'!=var->type[ig15]
-#endif
-	 &&'p'!=var->type[ig15]&&
+	 'm'!=var->type[ig15]&&'p'!=var->type[ig15]&&
 	 (0==(G__CONSTVAR&var->constvar[ig15])||
 	  (G__DYNCONST&var->constvar[ig15]))) {
         G__const_noerror=0;
@@ -4181,13 +4094,8 @@ struct G__var_array *varglobal,*varlocal;
 #ifndef G__OLDIMPLEMENTATION2145
 	  int varparan=var->paran[ig15];
 	  if('U'==var->type[ig15]) ++varparan;
-	  if(var->reftype[ig15]>G__PARAREFERENCE) {
-#ifndef G__OLDIMPLEMENTATION2170
-	    varparan += (var->reftype[ig15]%G__PARAREF)-G__PARAP2P+1;
-#else
+	  if(var->reftype[ig15]>G__PARAREFERENCE)
 	    varparan += (var->reftype[ig15]%G__PARAREF)-G__PARAP2P;
-#endif
-	  }
 	  for(ig25=0;ig25<paran&&ig25<varparan;ig25++) ;
 	  while(ig25<paran&&var->varlabel[ig15][ig25+4]) ++ig25;
 	  if(ig25<paran) {
@@ -4381,33 +4289,17 @@ struct G__var_array *varglobal,*varlocal;
 	G__GET_VAR(G__LONGALLOC,unsigned long ,G__letint,'k','K')
       case 'f': /* float */
 	G__GET_VAR(G__FLOATALLOC,float ,G__letdouble,'f','F')
-#ifndef G__OLDIMPLEMENTATION2189
-      case 'n':
-	G__GET_VAR(G__LONGLONGALLOC ,G__int64,G__letLonglong,'n' ,'N')
-      case 'm':
-	G__GET_VAR(G__LONGLONGALLOC ,G__uint64,G__letULonglong
-		   ,'m' ,'M')
-      case 'q':
-	G__GET_VAR(G__LONGDOUBLEALLOC ,long double,G__letLongdouble,'q' ,'Q')
-#endif
 #ifndef G__OLDIMPLEMENTATION1604
       case 'g': /* bool */
-#ifdef G__BOOL4BYTE
-	G__GET_VAR(G__INTALLOC ,int,G__letbool ,'g' ,'G')
-#else
+	/* 1666 G__GET_VAR(G__INTALLOC ,unsigned char ,G__letint ,'g' ,'G') */
 	G__GET_VAR(G__CHARALLOC ,unsigned char ,G__letint ,'g' ,'G')
-#endif
 #endif
 
 	  /****************************************
 	   * G__getvariable()
 	   * void pointer is same as char
 	   ****************************************/
-#ifndef G__OLDIMPLEMENTATION2191
-      case '1': /* void */
-#else
       case 'Q': /* void */
-#endif
       case 'Y': /* void */
       case 'E': /* FILE */
       case 'C': /* char pointer */
@@ -4415,26 +4307,6 @@ struct G__var_array *varglobal,*varlocal;
 		    ,tolower(var->type[ig15])
 		    ,var->type[ig15])
 	break;
-
-#ifndef G__OLDIMPLEMENTATION2189
-      case 'N': /* G__int64 */
-	G__GET_PVAR(G__int64,G__letLonglong,long
-		    ,tolower(var->type[ig15])
-		    ,var->type[ig15])
-	break;
-      case 'M': /* G__uint64 */
-	G__GET_PVAR(G__uint64,G__letULonglong,long
-		    ,tolower(var->type[ig15])
-		    ,var->type[ig15])
-	break;
-#ifndef G__OLDIMPLEMENTATION2191
-      case 'Q': /* long double */
-	G__GET_PVAR(long double,G__letLongdouble,long
-		    ,tolower(var->type[ig15])
-		    ,var->type[ig15])
-	break;
-#endif
-#endif
 
 #ifndef G__OLDIMPLEMENTATION1604
       case 'G': /* bool */
@@ -4492,11 +4364,7 @@ struct G__var_array *varglobal,*varlocal;
 	}
 	break;
 
-#ifndef G__OLDIMPLEMENTATION2191
-      case 'j': /* macro */
-#else
       case 'm': /* macro */
-#endif
 #ifndef G__OLDIMPLEMENTATION942
         {
           fpos_t pos;
@@ -4550,25 +4418,16 @@ struct G__var_array *varglobal,*varlocal;
 #if !defined(G__OLDIMPLEMENTATION481)
       case 'Z':
 	if(G__GetSpecialObject) {
-          store_var_type = G__var_type;
 	  result=(*G__GetSpecialObject)(var->varnamebuf[ig15]
 					,(void**)var->p[ig15]
 					,(void**)(var->p[ig15]+G__LONGALLOC)
 					);
-         /************************************************************
-         * G__var_type was stored in store_var_type just before the
-         * call to G__GetSpecialObject which might have recursive
-         * calls to G__getvariable() or G__getexpr()
-         * It is restored at this point.
-         ************************************************************/
-          G__var_type=store_var_type;
 #ifndef G__FONS81
 	  if (0==result.obj.i)
 	    *known2 = 0;
 	  else
 	    var->p_tagtable[ig15] = result.tagnum;
 #endif
-
 	  switch(G__var_type) {
 	  case 'p':
 	    break;
@@ -5730,7 +5589,7 @@ long G__struct_offset; /* used to be int */
 	  G__inc_cp_asm(2,0);
 #ifdef G__ASM_DBG
 	  if(G__asm_dbg) {
-	    G__fprinterr(G__serr,"ST_VAR or ST_MSTR replaced with LD_VAR or LD_MSTR(2)\n");
+	    G__fprinterr(G__serr,"ST_VAR or ST_MSTR replaced with LD_VAR or LD_MSTR");
 	    G__fprinterr(G__serr,"%3x: PUSHSTROS\n",G__asm_cp-2);
 	    G__fprinterr(G__serr,"%3x: SETSTROS\n",G__asm_cp-1);
 	  }
@@ -6222,11 +6081,7 @@ int paran;
   case 'X':
     presult->type='d';
     return;
-#ifndef G__OLDIMPLEMENTATION2191
-  case 'j': /* questionable */
-#else
   case 'm':
-#endif
     G__abortbytecode();
     presult->type='i';
     return;
@@ -6413,7 +6268,7 @@ int parameter00;
 
 #ifndef G__OLDIMPLEMENTATION1089
   if(0==G__definemacro&&G__NOLINK==G__globalcomp&&'p'==G__var_type
-#ifndef G__OLDIMPLEMENTATION1097
+#ifndef G__OLDIMPLEMENTATION1089
      && G__automaticvar
 #endif
      ) {
@@ -6675,10 +6530,10 @@ int parameter00;
 	else
 	  sprintf(ttt,"%s\\%x\\%x" ,varname,G__func_page,G__func_now);
 #endif
+#define G__OLDIMPLEMENTATION2156
 #ifndef G__OLDIMPLEMENTATION2156
 	if(G__cintv6) {
-	  if(0==G__const_noerror||result.isconst&G__STATICCONST) 
-	    strcpy(varname,ttt);
+	  if(result.isconst&G__STATICCONST) strcpy(varname,ttt);
 	  else sprintf(varname,"_%s",ttt);
 	}
 	else
@@ -7020,10 +6875,7 @@ int parameter00;
   /* store typedef identity */
   var->p_typetable[ig15] = G__typenum;
 
-#if !defined(G__OLDIMPLEMENTATION2191)
-  if('1'!=G__var_type) var->reftype[var->allvar] = G__reftype;
-  else var->reftype[var->allvar] = G__PARANORMAL;
-#elif !defined(G__OLDIMPLEMENTATION1266)
+#ifndef G__OLDIMPLEMENTATION1266
   if('Q'!=G__var_type) var->reftype[var->allvar] = G__reftype;
   else var->reftype[var->allvar] = G__PARANORMAL;
 #else
@@ -7037,9 +6889,7 @@ int parameter00;
 #endif
   var->constvar[ig15] = G__constvar ;
 #ifndef G__OLDIMPLEMENTATION2156
-  if(G__cintv6 && (result.isconst&G__STATICCONST) & var->constvar[ig15]) { 
-    var->constvar[ig15] |= result.isconst&G__STATICCONST;
-  }
+  var->constvar[ig15] |= result.isconst&G__STATICCONST;
 #endif
   
   /* allocate variable and pointer */
@@ -7282,9 +7132,6 @@ int parameter00;
        ) {
       G__fprinterr(G__serr,"Error: abstract class object '%s %s' declared",G__struct.name[G__tagnum],item);
       G__genericerror((char*)NULL);
-#ifndef G__OLDIMPLEMENTATION2221
-      G__display_purevirtualfunc(G__tagnum);
-#endif
       var->hash[ig15]=0;
     }
     /* type var; normal variable */
@@ -7354,11 +7201,7 @@ int parameter00;
   case 'Z': /* ROOT special object */
 #endif
 #endif
-#ifndef G__OLDIMPLEMENTATION2191
-  case '1': /* void */
-#else
   case 'Q': /* void */
-#endif
   case 'Y': /* void pointer */
   case 'E': /* FILE pointer */
     
@@ -7413,31 +7256,10 @@ int parameter00;
 #endif
       }
     break;
-
-#ifndef G__OLDIMPLEMENTATION2189
-  case 'n':
-  case 'N':
-    G__ALLOC_VAR_REF(G__LONGLONGALLOC,G__int64,G__Longlong)
-    break;
-  case 'm':
-  case 'M':
-    G__ALLOC_VAR_REF(G__LONGLONGALLOC,G__int64,G__ULonglong)
-    break;
-#ifndef G__OLDIMPLEMENTATION2191
-  case 'q':
-  case 'Q':
-    G__ALLOC_VAR_REF(G__LONGDOUBLEALLOC,long double,G__Longdouble)
-    break;
-#endif
-#endif
     
 #ifndef G__OLDIMPLEMENTATION1604
   case 'g': /* bool */
     result.obj.i = result.obj.i?1:0;
-#ifdef G__BOOL4BYTE
-    G__ALLOC_VAR_REF(G__INTALLOC,int,G__int)
-    break;
-#endif
   case 'G': /* bool */
 #endif
   case 'b': /* unsigned char */
@@ -7498,11 +7320,7 @@ int parameter00;
     var->hash[ig15] = 0;
     break;
 
-#ifndef G__OLDIMPLEMENTATION2191
-  case 'j': /* macro file position */
-#else
   case 'm': /* macro file position */
-#endif
     var->p[ig15] = G__malloc(1,sizeof(fpos_t),item);
     *(fpos_t *)var->p[ig15] = *(fpos_t *)result.obj.i;
     break;
@@ -7524,11 +7342,7 @@ int parameter00;
     break;
     
 #ifndef G__OLDIMPLEMENTATION1347
-#ifndef G__OLDIMPLEMENTATION2191
-    /* case '1':  */ /* function, ???Questionable??? */
-#else
   case 'q': /* function, ???Questionable??? */
-#endif
     var->p[ig15] = G__malloc(p_inc,sizeof(long),item);
     break;
 #endif
@@ -7748,18 +7562,8 @@ struct G__var_array *varglobal,*varlocal;
       G__incsetup_memvar(G__memberfunc_tagnum);
       var = G__struct.memvar[G__memberfunc_tagnum] ;
 #else
-#ifndef G__OLDIMPLEMENTATION2223
-      if(-1!=G__tagnum) {
-	G__incsetup_memvar(G__tagnum);
-	var = G__struct.memvar[G__tagnum] ;
-      }
-      else {
-	var = (struct G__var_array*)NULL;
-      }
-#else
       G__incsetup_memvar(G__tagnum);
       var = G__struct.memvar[G__tagnum] ;
-#endif
 #endif
       ilg = G__GLOBAL;
       break;
@@ -7934,9 +7738,6 @@ char *varname,*item;
     result7->tagnum = G__tagnum;
 #ifndef G__OLDIMPLEMENTATION1131
     result7->ref = 0;
-#endif
-#ifndef G__OLDIMPLEMENTATION2185
-    result7->isconst = 0;
 #endif
     return(1);
   }

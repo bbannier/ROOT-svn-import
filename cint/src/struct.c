@@ -7,7 +7,7 @@
  * Description:
  *  Struct, class, enum, union handling
  ************************************************************************
- * Copyright(c) 1995~2005  Masaharu Goto 
+ * Copyright(c) 1995~2003  Masaharu Goto 
  *
  * Permission to use, copy, modify and distribute this software and its 
  * documentation for any purpose is hereby granted without fee,
@@ -124,42 +124,6 @@ int G__using_namespace()
        * 1. global scope has baseclass information
        * 2. G__searchvariable() looks for global scope baseclass
        */
-#ifndef G__OLDIMPLEMENTATION2167
-       /* first check whether we already have this directive in 
-          memory */
-       int j;
-       int found;
-       found = 0;
-       for(j=0; j<G__globalusingnamespace.basen; ++j) {
-          struct G__inheritance *base = &G__globalusingnamespace;
-          if ( base->basetagnum[j] == basetagnum ) {
-             found = 1;
-             break;
-          }
-       }
-       if (!found) {
-#ifndef G__OLDIMPLEMENTATION686
-          if(G__globalusingnamespace.basen<G__MAXBASE) {
-             struct G__inheritance *base = &G__globalusingnamespace;
-             int* pbasen = &base->basen;
-             base->basetagnum[*pbasen]=basetagnum;
-             base->baseoffset[*pbasen]=0;
-             base->baseaccess[*pbasen]=G__PUBLIC;
-             ++(*pbasen);
-#ifdef G__OLDIMPLEMENTATION1060
-             G__fprinterr(G__serr,"Warning: using directive in global scope, not completely supported");
-             G__printlinenum();
-#endif
-          }
-          else {
-             G__genericerror("Limitation: too many using directives in global scope");
-          }
-#else
-          G__genericerror("Limitation: using directive can be only used in template/class/struct scope");
-#endif
-       }
-       result=1;
-#else /* 2167 */
 #ifndef G__OLDIMPLEMENTATION686
       if(G__globalusingnamespace.basen<G__MAXBASE) {
         struct G__inheritance *base = &G__globalusingnamespace;
@@ -180,7 +144,6 @@ int G__using_namespace()
       G__genericerror("Limitation: using directive can be only used in template/class/struct scope");
 #endif
       result=1;
-#endif /* 2167 */
     }
   }
 
@@ -1076,9 +1039,6 @@ int type;
     G__struct.memfunc[i]->pentry[0]->size = 0; 
     G__struct.memfunc[i]->pentry[0]->filenum = 0; 
     G__struct.memfunc[i]->pentry[0]->line_number = 0; 
-#ifndef G__OLDIMPLEMENTATION2200
-    G__struct.memfunc[i]->pentry[0]->bytecodestatus = G__BYTECODE_NOTYET;
-#endif
     G__struct.memfunc[i]->ispurevirtual[0] = 0;
     G__struct.memfunc[i]->access[0] = G__PUBLIC;
     G__struct.memfunc[i]->ansi[0] = 1; 
@@ -1090,12 +1050,6 @@ int type;
     G__struct.memfunc[i]->staticalloc[0] = 0; 
 #ifndef G__OLDIMPLEMENTATION2050
     G__struct.memfunc[i]->busy[0] = 0; 
-#endif
-#endif
-
-#ifndef G__OLDIMPLEMENTATION2200
-#ifdef G__FONS_COMMENT
-    G__struct.memfunc[i]->comment[0].filenum = -1;
 #endif
 #endif
 

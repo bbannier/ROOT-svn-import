@@ -29,7 +29,7 @@ template<class _Ty, class _D, class _Pt, class _Rt,
 #if defined(G__ANSIISOLIB) || (G__GNUC>=3)
 template<class T,class Allocator=std::allocator<T> >
 #elif defined(G__GNUC) && !defined(G__KCC)
-#if (G__GNUC_VER>=2095)
+#if (G__GNUC_MINOR>=95)
 template<class T,class Allocator=allocator<T> >
 #else
 template<class T,class Allocator=alloc>
@@ -175,7 +175,7 @@ class vector {
 	typedef std::reverse_iterator<iterator> reverse_iterator;
 	typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
-#elif (!defined(G__INTEL_COMPILER) && (G__GNUC_VER>3001)) 
+#elif (!defined(G__INTEL_COMPILER) && (G__GNUC>=3 && G__GNUC_MINOR>1)) 
 
 #ifndef G__OLDIMPLEMENTATION1703
   class iterator {
@@ -202,9 +202,6 @@ class vector {
       iterator& operator-=(const difference_type& __n);
       iterator operator-(const difference_type& __n) const;
       const pointer& base() const ;
-#ifndef G__OLDIMPLEMENTATION2165
-      iterator operator=(const iterator& x) ;
-#endif
   };
 
   friend bool operator==(const vector::iterator& x,const vector::iterator& y)const;
@@ -224,7 +221,7 @@ class vector {
                                                         const_iterator;
 #endif /* 1703 */
 
-#elif (!defined(G__INTEL_COMPILER) && (G__GNUC_VER>=3001))
+#elif (!defined(G__INTEL_COMPILER) && (G__GNUC>=3 && G__GNUC_MINOR==1))
 
   class iterator {
    public:
@@ -263,7 +260,7 @@ class vector {
 
   typedef const iterator const_iterator;
 
-#elif (!defined(G__INTEL_COMPILER) && (G__GNUC_VER>=3000))
+#elif (!defined(G__INTEL_COMPILER) && (G__GNUC>=3 && G__GNUC_MINOR==0))
   typedef vector<T, Allocator> vector_type;
   typedef std::__normal_iterator<T*, vector_type> iterator;
   typedef std::__normal_iterator<T*, vector_type> const_iterator;
@@ -271,9 +268,6 @@ class vector {
 #else
   typedef T* iterator;
   typedef const T* const_iterator;
-  //typedef Allocator				               allocator_type;
-  typedef reverse_iterator<iterator>	      reverse_iterator;
-  typedef reverse_iterator<const_iterator>   const_reverse_iterator;
 #endif
 
 
@@ -281,7 +275,7 @@ class vector {
   // already done above
 #elif defined(G__BORLANDCC5)
   typedef reverse_iterator<iterator> reverse_iterator;
-#elif (!defined (G__INTEL_COMPILER) && (G__GNUC_VER>=3001)) || defined(G__AIX)
+#elif (!defined (G__INTEL_COMPILER) && (G__GNUC>=3 && G__GNUC_MINOR>=1)) || defined(G__AIX)
   typedef reverse_iterator<const_iterator> const_reverse_iterator;
   typedef reverse_iterator<iterator> reverse_iterator;
 #else // G__BORLANDCC5
@@ -329,7 +323,7 @@ class vector {
   friend bool operator!=(const vector::reverse_iterator& x
                         ,const vector::reverse_iterator& y) const;
 
-#if !(G__GNUC_VER>3001) || defined(G__INTEL_COMPILER)
+#if !(G__GNUC>=3 && G__GNUC_MINOR>1) || defined(G__INTEL_COMPILER)
   typedef const reverse_iterator const_reverse_iterator;
 #endif
    

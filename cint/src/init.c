@@ -7,7 +7,7 @@
  * Description:
  *  Entry functions
  ************************************************************************
- * Copyright(c) 1995~2005  Masaharu Goto 
+ * Copyright(c) 1995~2004  Masaharu Goto 
  *
  * Permission to use, copy, modify and distribute this software and its 
  * documentation for any purpose is hereby granted without fee,
@@ -31,7 +31,7 @@ extern G__DLLINIT G__initpermanentsl;
 #endif
 
 #ifndef G__OLDIMPLEMENTATION1817
-#if defined(G__ROOT) && !defined(G__NATIVELONGLONG)
+#ifdef G__ROOT
 void G__cpp_setuplongif();
 #endif
 #endif
@@ -684,7 +684,7 @@ char *argv[] ;
 
 
 #ifndef G__OLDIMPLEMENTATION1817
-#if defined(G__ROOT) && !defined(G__NATIVELONGLONG)
+#ifdef G__ROOT
   {
     int xtagnum,xtypenum;
     G__cpp_setuplongif();
@@ -757,23 +757,14 @@ char *argv[] ;
    * Get command options
    *************************************************************/
   while((c=getopt(argc,argv
-  ,"a:b:c:d:ef:gij:kl:mn:pq:rstu:vw:x:y:z:AB:CD:EF:G:H:I:J:KM:N:O:P:QRSTU:VW:X:Y:Z:-:@+:"))
+  ,"a:b:c:d:ef:gij:kl:mn:pq:rstu:vw:x:y:z:AB:CD:EF:G:H:I:J:KM:N:O:P:QRSTU:VW:X:Y:Z:-:@"))
 	!=EOF) {
     switch(c) {
 
-#ifndef G__OLDIMPLEMENTATION2226
-    case '+':
-      G__setmemtestbreak(atoi(optarg)/10000,atoi(optarg)%10000);
-      break;
-#endif
-
 #ifndef G__OLDIMPLEMENTATION2068
-#ifdef G__CINT_VER6
     case '@':
-      if(G__cintv6==0) G__cintv6=G__CINT_VER6;
-      else if(G__cintv6==G__CINT_VER6) G__cintv6|=G__BC_DEBUG;
+      G__cintv6=1;
       break;
-#endif
 #endif
 
 #ifndef G__OLDIMPLEMENTATION1725
@@ -2200,9 +2191,6 @@ void G__platformMacro()
 #ifdef __FreeBSD__   /* FreeBSD */
   sprintf(temp,"G__FBSD=%ld",(long)__FreeBSD__); G__add_macro(temp);
 #endif
-#ifdef __OpenBSD__   /* OpenBSD */
-  sprintf(temp,"G__OBSD=%ld",(long)__OpenBSD__); G__add_macro(temp);
-#endif
 #ifdef __hpux        /* HP-UX */
   sprintf(temp,"G__HPUX=%ld",(long)__hpux); G__add_macro(temp);
 #endif
@@ -2248,10 +2236,6 @@ void G__platformMacro()
 #ifdef __GNUC_MINOR__  /* gcc/g++ minor version */
   sprintf(temp,"G__GNUC_MINOR=%ld",(long)__GNUC_MINOR__); G__add_macro(temp);
 #endif
-#if defined(__GNUC__) && defined(__GNUC_MINOR__)
-  sprintf(temp,"G__GNUC_VER=%ld",(long)__GNUC__*1000+__GNUC_MINOR__); 
-  G__add_macro(temp);
-#endif
 #ifdef __GLIBC__   /* GNU C library major version */
   sprintf(temp,"G__GLIBC=%ld",(long)__GLIBC__); G__add_macro(temp);
 #endif
@@ -2260,9 +2244,6 @@ void G__platformMacro()
 #endif
 #ifdef __HP_aCC     /* HP aCC C++ compiler */
   sprintf(temp,"G__HP_aCC=%ld",(long)__HP_aCC); G__add_macro(temp);
-#if __HP_aCC > 15000
-  sprintf(temp,"G__ANSIISOLIB=1"); G__add_macro(temp);
-#endif
 #endif
 #ifdef __SUNPRO_CC  /* Sun C++ compiler */
   sprintf(temp,"G__SUNPRO_CC=%ld",(long)__SUNPRO_CC); G__add_macro(temp);
@@ -2377,9 +2358,6 @@ void G__platformMacro()
 #endif
 #ifdef G__NO_STDLIBS
   sprintf(temp,"G__NO_STDLIBS=%ld",(long)G__NO_STDLIBS); G__add_macro(temp);
-#endif
-#ifdef G__NATIVELONGLONG
-  sprintf(temp,"G__NATIVELONGLONG=%ld",(long)G__NATIVELONGLONG); G__add_macro(temp);
 #endif
   
   sprintf(temp,"int& G__cintv6=*(int*)(%ld);",(long)(&G__cintv6)); G__exec_text(temp);
@@ -2538,7 +2516,7 @@ FILE *fp;
 {
   fprintf(fp,"\n");
   fprintf(fp,"cint : C/C++ interpreter  (mailing list 'cint@root.cern.ch')\n");
-  fprintf(fp,"   Copyright(c) : 1995~2005 Masaharu Goto (gotom@hanno.jp)\n");
+  fprintf(fp,"   Copyright(c) : 1995~2004 Masaharu Goto (gotom@hanno.jp)\n");
   fprintf(fp,"   revision     : %s by M.Goto\n\n",G__cint_version());
 
 #ifdef G__DEBUG

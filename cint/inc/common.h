@@ -1077,8 +1077,6 @@ struct G__funclist {
 #define G__BC_COMPILEERROR 0x02
 #define G__BC_RUNTIMEERROR 0x04
 
-#define G__BC_DEBUG        0x08
-
 /*********************************************************************
 * debug interface
 *********************************************************************/
@@ -1096,9 +1094,6 @@ struct G__view {
   long struct_offset;
   int tagnum;
   int exec_memberfunc;
-#ifndef G__OLDIMPLEMENTATION2159
-  long localmem;
-#endif
 };
 #endif
 

@@ -20,7 +20,6 @@
 
 #include "common.h"
 
-
 #define G__OLDIMPLEMENTATION2051
 #ifndef G__OLDIMPLEMENTATION2051
 extern void G__cpp_setupG__bcdict();
@@ -152,6 +151,7 @@ int G__getbytecodedebugmode()
 
 
 #ifndef G__OLDIMPLEMENTATION1198
+static struct G__input_file G__lasterrorpos;
 /******************************************************************
 * G__storelasterror()
 ******************************************************************/
@@ -560,18 +560,7 @@ G__value *presult3;
       if(presult3->ref) *(unsigned int*)presult3->ref = (unsigned int)presult3->obj.i;
 #endif
       flag=1;
-      break;
     }
-#ifndef G__OLDIMPLEMENTATION2189
-    if(strcmp(funcname,"longlong")==0) {
-      presult3->type='n';
-      presult3->obj.ll = G__Longlong(libp->para[0]);
-#ifndef G__OLDIMPLEMENTATION571
-      if(presult3->ref) *(G__int64*)presult3->ref = presult3->obj.ll;
-#endif
-      flag=1;
-    }
-#endif
     break;
   case 9:
     if(strcmp(funcname,"unsigned*")==0) {
@@ -579,40 +568,6 @@ G__value *presult3;
       presult3->obj.i = G__int(libp->para[0]);
 #ifndef G__OLDIMPLEMENTATION571
       if(presult3->ref) *(long*)presult3->ref = (long)presult3->obj.i;
-#endif
-      flag=1;
-      break;
-    }
-#ifndef G__OLDIMPLEMENTATION2189
-    if(strcmp(funcname,"longlong*")==0) {
-      presult3->type='N';
-      presult3->obj.i = G__int(libp->para[0]);
-#ifndef G__OLDIMPLEMENTATION571
-      if(presult3->ref) *(long*)presult3->ref = (long)presult3->obj.i;
-#endif
-      flag=1;
-      break;
-    }
-#endif
-#ifndef G__OLDIMPLEMENTATION2189
-    if(strcmp(funcname,"long long")==0) {
-      presult3->type='n';
-      presult3->obj.ll = G__Longlong(libp->para[0]);
-#ifndef G__OLDIMPLEMENTATION571
-      if(presult3->ref) *(G__int64*)presult3->ref = presult3->obj.ll;
-#endif
-      flag=1;
-    }
-#endif
-    break;
-#endif
-#ifndef G__OLDIMPLEMENTATION2189
-  case 10:
-    if(strcmp(funcname,"longdouble")==0) {
-      presult3->type='n';
-      presult3->obj.ld = G__Longdouble(libp->para[0]);
-#ifndef G__OLDIMPLEMENTATION571
-      if(presult3->ref) *(long double*)presult3->ref = presult3->obj.ld;
 #endif
       flag=1;
     }
@@ -725,48 +680,6 @@ G__value *presult3;
   case 15:
     if(strcmp(funcname,"unsigned short*")==0) {
       presult3->type='R';
-      presult3->obj.i = G__int(libp->para[0]);
-#ifndef G__OLDIMPLEMENTATION571
-      if(presult3->ref) *(long*)presult3->ref = (long)presult3->obj.i;
-#endif
-      flag=1;
-    }
-    break;
-#endif
-#ifndef G__OLDIMPLEMENTATION2189
-  case 16:
-    if(strcmp(funcname,"unsignedlonglong")==0) {
-      presult3->type='m';
-      presult3->obj.ull = G__ULonglong(libp->para[0]);
-#ifndef G__OLDIMPLEMENTATION571
-      if(presult3->ref) *(G__uint64*)presult3->ref = presult3->obj.ull;
-#endif
-      flag=1;
-    }
-    break;
-  case 17:
-    if(strcmp(funcname,"unsignedlonglong*")==0) {
-      presult3->type='M';
-      presult3->obj.i = G__int(libp->para[0]);
-#ifndef G__OLDIMPLEMENTATION571
-      if(presult3->ref) *(long*)presult3->ref = (long)presult3->obj.i;
-#endif
-      flag=1;
-    }
-    break;
-  case 18:
-    if(strcmp(funcname,"unsigned long long")==0) {
-      presult3->type='m';
-      presult3->obj.ull = G__ULonglong(libp->para[0]);
-#ifndef G__OLDIMPLEMENTATION571
-      if(presult3->ref) *(G__uint64*)presult3->ref = presult3->obj.ull;
-#endif
-      flag=1;
-    }
-    break;
-  case 19:
-    if(strcmp(funcname,"unsigned long long*")==0) {
-      presult3->type='M';
       presult3->obj.i = G__int(libp->para[0]);
 #ifndef G__OLDIMPLEMENTATION571
       if(presult3->ref) *(long*)presult3->ref = (long)presult3->obj.i;
@@ -911,11 +824,7 @@ int *known3;
   int store_typenum = G__typenum;
   long store_struct_offset = G__store_struct_offset;
 
-#ifndef G__OLDIMPLEMENTATION2166
-  result3 = G__getexpr(item);
-#else
   result3 = G__getitem(item);
-#endif
   if(0==result3.type) return(G__null);
   *known3 = 1;
 
@@ -5554,13 +5463,7 @@ int hash;
      ((hash==658)&&(strcmp(funcname,"assert")==0))||
      ((hash==626)&&(strcmp(funcname,"Assert")==0))) {
     if(G__no_exec_compile) return(1);
-    if(
-#ifndef G__OLDIMPLEMENTATION2208
-       !G__bool(libp->para[0])
-#else
-       !G__int(libp->para[0])
-#endif
-       ) {
+    if(!G__int(libp->para[0])) {
 #ifndef G__FONS31
       G__fprinterr(G__serr,"Assertion (%s) error: " ,libp->parameter[0]);
       G__genericerror((char*)NULL);
@@ -5947,15 +5850,6 @@ int hash;
   }
 #endif
 
-#ifndef G__OLDIMPLEMENTATION2226
-  if(strcmp(funcname,"G__setmemtestbreak")==0) {
-    if(G__no_exec_compile) return(1);
-    *result7=G__null;
-    G__setmemtestbreak((int)G__int(libp->para[0]),(int)G__int(libp->para[1]));
-    return(1);
-  }
-#endif
-
 #ifndef G__OLDIMPLEMENTATION1142
   if(strcmp(funcname,"G__optimizemode")==0) {
     if(G__no_exec_compile) return(1);
@@ -6158,24 +6052,6 @@ void G__printf_error()
 
 #endif
 
-#ifndef G__OLDIMPLEMENTATION2189
-void G__sprintformatll(char* result,const char* fmt,void *p,char* buf) {
-  G__int64 *pll = (G__int64*)p;
-  sprintf(buf,fmt,result,*pll);
-  strcpy(result,buf);
-}
-void G__sprintformatull(char* result,const char* fmt,void *p,char* buf) {
-  G__uint64 *pll = (G__uint64*)p;
-  sprintf(buf,fmt,result,*pll);
-  strcpy(result,buf);
-}
-void G__sprintformatld(char* result,const char* fmt,void *p,char* buf) {
-  long double *pld = (long double*)p;
-  sprintf(buf,fmt,result,*pld);
-  strcpy(result,buf);
-}
-#endif
-
 /******************************************************************
 * char *G__charformatter(ifmt,libp,outbuf)
 *
@@ -6287,17 +6163,6 @@ char *result;
       if(fmtflag==1) {
 	onefmt[ionefmt]='\0';
 	sprintf(fmt,"%%s%s",onefmt);
-#ifndef G__OLDIMPLEMENTATION2189
-	if('n'==libp->para[usedpara].type) {
-	  G__value *pval = &libp->para[usedpara]; ipara++;
-	  G__sprintformatll(result,fmt,&pval->obj.ll,onefmt);
-	}
-	else if('m'==libp->para[usedpara].type) {
-	  G__value *pval = &libp->para[usedpara]; ipara++;
-	  G__sprintformatull(result,fmt,&pval->obj.ull,onefmt);
-	}
-	else
-#endif
 #ifndef G__OLDIMPLEMENTATION1739
 	if(
 #ifndef G__OLDIMPLEMENTATION2083
@@ -6327,10 +6192,7 @@ char *result;
 	    strcat(result,fmt);
 	  }
 	  else {
-#if !defined(G__OLDIMPLEMENTATION2175)
-	    ++usedpara;
-	    sprintf(onefmt,fmt ,result,G__int(libp->para[usedpara])); ipara++; 
-#elif !defined(G__OLDIMPLEMENTATION2083)
+#ifndef G__OLDIMPLEMENTATION2083
 	    sprintf(onefmt,fmt ,result,G__int(libp->para[usedpara])); ipara++;
 #else
 	    sprintf(onefmt,fmt ,result,G__int(libp->para[ipara++]));
@@ -6367,13 +6229,6 @@ char *result;
       if(fmtflag==1) {
 	onefmt[ionefmt]='\0';
 	sprintf(fmt,"%%s%s",onefmt);
-#ifndef G__OLDIMPLEMENTATION2189
-	if('q'==libp->para[usedpara].type) {
-	  G__value *pval = &libp->para[usedpara]; ipara++;
-	  G__sprintformatld(result,fmt,&pval->obj.ld,onefmt);
-	}
-	else 
-#endif
 #ifndef G__OLDIMPLEMENTATION1913
 	if(
 #ifndef G__OLDIMPLEMENTATION2083
@@ -6396,10 +6251,7 @@ char *result;
 	    strcat(result,fmt);
 	  }
 	  else {
-#if !defined(G__OLDIMPLEMENTATION2175)
-	    ++usedpara;
-	    sprintf(onefmt,fmt,result,G__double(libp->para[usedpara]));ipara++;
-#elif !defined(G__OLDIMPLEMENTATION2083)
+#ifndef G__OLDIMPLEMENTATION2083
 	    sprintf(onefmt,fmt,result,G__double(libp->para[usedpara]));ipara++;
 #else
 	    sprintf(onefmt,fmt ,result,G__double(libp->para[ipara++]));
@@ -6427,14 +6279,6 @@ char *result;
 	fmtflag=0;
       }
       break;
-    case 'L': /* long double */
-#ifdef G__OLDIMPLEMENTATION2189_YET
-      if('q'==libp->para[usedpara].type) {
-	G__value *pval = &libp->para[usedpara]; ipara++;
-	G__sprintformatld(fmt,onefmt,result,&pval->obj.ld);
-      }
-      break;
-#endif
     case '0':
     case '1':
     case '2':
@@ -6450,6 +6294,7 @@ char *result;
     case '-':
     case '+':
     case 'l': /* long int */
+    case 'L': /* long double */
     case 'h': /* short int unsinged int */
       onefmt[ionefmt++]=pformat[ichar];
       break;
@@ -6471,9 +6316,7 @@ char *result;
 #ifndef G__OLDIMPLEMENTATION1237
     case '*': /* printf("%*s",4,"*"); */
       if(fmtflag==1) {
-#if !defined(G__OLDIMPLEMENTATION2175)
-	sprintf(onefmt+ionefmt,"%ld",G__int(libp->para[usedpara])); ipara++; usedpara++;
-#elif !defined(G__OLDIMPLEMENTATION2083)
+#ifndef G__OLDIMPLEMENTATION2083
 	sprintf(onefmt+ionefmt,"%ld",G__int(libp->para[usedpara])); ipara++;
 #else
 	sprintf(onefmt+ionefmt,"%ld",G__int(libp->para[ipara++]));

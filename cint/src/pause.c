@@ -690,18 +690,6 @@ static struct G__dictposition errordictpos;
 static struct G__input_file errorifile;
 #endif
 
-#ifndef G__OLDIMPLEMENTATION2227
-/******************************************************************
-* G__clear_errordictpos()
-******************************************************************/
-void G__clear_errordictpos() 
-{
-  if(0!=errordictpos.ptype && (char*)G__PVOID!=errordictpos.ptype) {
-    free((void*)errordictpos.ptype);
-    errordictpos.ptype = (char*)NULL;
-  }
-}
-#endif
 
 #ifndef G__OLDIMPLEMENTATION1066
 /******************************************************************
@@ -851,12 +839,7 @@ G__value buf;
   G__asm_exec = 0;
 #endif
 
-#ifndef G__OLDIMPLEMENTATION2191
-  if('1'==buf.type || 'a'==buf.type 
-     || 'n'==buf.type || 'm'==buf.type || 'q'==buf.type) return(0);
-#else
   if('Q'==buf.type || 'a'==buf.type) return(0);
-#endif
   G__valuemonitor(buf,buf2);
   sprintf(com,"G__ateval(%s)",buf2);
   G__break=0; G__step=0; G__dispsource=0;
@@ -1124,8 +1107,8 @@ int base;
         fclose(G__temp);
       }
       else {
-        G__display_keyword(fout,keyword,G__temp);
         fclose(G__temp);
+        G__display_keyword(fout,keyword,tname);
         remove(tname);
       }
 #elif !defined(G__OLDIMPLEMENTATION1917)
@@ -2024,7 +2007,7 @@ G__value *rslt;
   char command[G__LONGLINE];
   char syscom[G__LONGLINE];
   char editor[64];
-  int temp,temp1=0,temp2;
+  int temp,temp1,temp2;
   int index = -1;
   int ignore=G__PAUSE_NORMAL;
   short double_quote,single_quote;
@@ -3461,13 +3444,7 @@ G__value *rslt;
 #ifndef G__FONS23
       else if('G'==command[0]) G__varmonitor(G__sout,&G__global,command+index,"",0);
 #endif
-#ifndef G__OLDIMPLEMENTATION2159
-      else if(G__cintv6) {
-        if(G__bc_setdebugview(temp1,&view)) 
-	  G__varmonitor(G__sout,view.var_local,command+index,"",view.localmem);
-      }
-#endif
-      else G__varmonitor(G__sout,G__p_local,command+index,"",0);
+      else                G__varmonitor(G__sout,G__p_local,command+index,"",0);
       G__RESET_TEMPENV;
 
 #ifdef G__ASM

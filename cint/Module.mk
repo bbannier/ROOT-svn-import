@@ -36,7 +36,6 @@ CINTS2       := $(filter-out $(MODDIRS)/sunstrm.%,$(CINTS2))
 CINTS2       := $(filter-out $(MODDIRS)/sun5strm.%,$(CINTS2))
 CINTS2       := $(filter-out $(MODDIRS)/gcc3strm.%,$(CINTS2))
 CINTS2       := $(filter-out $(MODDIRS)/longif3.%,$(CINTS2))
-CINTS2       := $(filter-out $(MODDIRS)/accstrm.%,$(CINTS2))
 CINTS2       := $(filter-out $(MODDIRS)/iccstrm.%,$(CINTS2))
 CINTS2       := $(filter-out $(MODDIRS)/libstrm.%,$(CINTS2))
 CINTS2       := $(filter-out $(MODDIRS)/fakestrm.%,$(CINTS2))
@@ -63,14 +62,9 @@ endif
 ifeq ($(PLATFORM),fbsd)
 CINTS2       += $(MODDIRS)/libstrm.cxx
 endif
-ifeq ($(PLATFORM),obsd)
-CINTS2       += $(MODDIRS)/libstrm.cxx
-endif
 ifeq ($(PLATFORM),hpux)
 ifeq ($(ARCH),hpuxia64acc)
-CINTS2       += $(MODDIRS)/accstrm.cxx
-CINTS2       := $(filter-out $(MODDIRS)/longif.%,$(CINTS2))
-CINTS2       += $(MODDIRS)/longif3.cxx
+CINTS2       += $(MODDIRS)/fakestrm.cxx
 else
 CINTS2       += $(MODDIRS)/libstrm.cxx
 endif
@@ -149,21 +143,11 @@ else
 CINTS2       += $(MODDIRS)/iccstrm.cxx
 endif
 else
-ifeq ($(ICC_MAJOR),9)
-CINTS2       += $(MODDIRS)/gcc3strm.cxx
-else
 CINTS2       += $(MODDIRS)/iccstrm.cxx
-endif
 endif
 CINTS2       += $(MODDIRS)/longif3.cxx
 endif
 ifeq ($(GCC_MAJOR),3)
-CINTS2       := $(filter-out $(MODDIRS)/libstrm.%,$(CINTS2))
-CINTS2       := $(filter-out $(MODDIRS)/longif.%,$(CINTS2))
-CINTS2       += $(MODDIRS)/gcc3strm.cxx
-CINTS2       += $(MODDIRS)/longif3.cxx
-endif
-ifeq ($(GCC_MAJOR),4)
 CINTS2       := $(filter-out $(MODDIRS)/libstrm.%,$(CINTS2))
 CINTS2       := $(filter-out $(MODDIRS)/longif.%,$(CINTS2))
 CINTS2       += $(MODDIRS)/gcc3strm.cxx
@@ -203,14 +187,10 @@ MAKECINT     := bin/makecint$(EXEEXT)
 ##### iosenum.h #####
 IOSENUM      := $(MODDIR)/include/iosenum.h
 IOSENUMC     := $(MODDIR)/iosenum/iosenum.cxx
-ifeq ($(GCC_MAJOR),4)
-IOSENUMA     := $(MODDIR)/iosenum/iosenum.$(ARCH)3
-else
 ifeq ($(GCC_MAJOR),3)
 IOSENUMA     := $(MODDIR)/iosenum/iosenum.$(ARCH)3
 else
 IOSENUMA     := $(MODDIR)/iosenum/iosenum.$(ARCH)
-endif
 endif
 
 # used in the main Makefile
@@ -285,9 +265,6 @@ $(CINTDIRS)/gcc3strm.o: $(CINTDIRS)/gcc3strm.cxx
 
 $(CINTDIRS)/iccstrm.o: $(CINTDIRS)/iccstrm.cxx
 	$(CXX) $(OPT) $(CINTCXXFLAGS) -I$(CINTDIRL)/iccstrm -o $@ -c $<
-
-$(CINTDIRS)/accstrm.o: $(CINTDIRS)/accstrm.cxx
-	$(CXX) $(OPT) $(CINTCXXFLAGS) -I$(CINTDIRL)/accstrm -o $@ -c $<
 
 $(CINTDIRS)/stdstrct.o: $(CINTDIRS)/stdstrct.c
 	$(CC) $(OPT) $(CINTCFLAGS) -I$(CINTDIRL)/stdstrct -o $@ -c $<

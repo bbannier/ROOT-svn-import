@@ -744,9 +744,6 @@ extern void G__UnlockCriticalSection G__P((void));
 extern void G__asm_tovalue_p2p G__P((G__value *result));
 extern void G__asm_tovalue_p2p2p G__P((G__value *result));
 extern void G__asm_tovalue_p2p2p2 G__P((G__value *result));
-extern void G__asm_tovalue_LL G__P((G__value *result));
-extern void G__asm_tovalue_ULL G__P((G__value *result));
-extern void G__asm_tovalue_LD G__P((G__value *result));
 extern void G__asm_tovalue_B G__P((G__value *result));
 extern void G__asm_tovalue_C G__P((G__value *result));
 extern void G__asm_tovalue_R G__P((G__value *result));
@@ -904,9 +901,6 @@ void G__bc_struct G__P((int tagnum)) ;
 #ifndef G__OLDIMPLEMENTATION2084
 void G__bc_delete_vtbl G__P((int tagnum)) ;
 #endif
-#ifndef G__OLDIMPLEMENTATION2162
-void G__bc_disp_vtbl G__P((FILE* fp,int tagnum)) ;
-#endif
 
 #ifndef G__OLDIMPLEMENTATION2087
 G__value G__bc_new_operator G__P((const char *expression)) ;
@@ -918,14 +912,6 @@ int G__bc_exec_try_bytecode G__P((int start,int stack,G__value *presult,long loc
 int G__bc_exec_throw_bytecode G__P((G__value* pval));
 int G__bc_exec_typematch_bytecode G__P((G__value* catchtype,G__value* excptobj));
 int G__Isvalidassignment_val G__P((G__value* ltype,int varparan,int lparan,int lvar_type,G__value* rtype));
-int G__bc_conversion G__P((G__value *result,struct G__var_array* var,int ig15
-			   ,int var_type,int paran)) ;
-#endif
-
-#ifndef G__OLDIMPLEMENTATION2182
-int G__bc_assignment G__P((struct G__var_array *var,int ig15,int paran
-			   ,int var_type,G__value *prresult
-			   ,long struct_offset,long store_struct_offset));
 #endif
 
 #ifndef G__OLDIMPLEMENTATION2136
@@ -947,38 +933,9 @@ void G__bc_cancel_VIRTUALADDSTROS();
 void G__bc_REWINDSTACK G__P((int n)) ;
 #endif
 
-#ifndef G__OLDIMPLEMENTATION2160
-int G__bc_casejump G__P((void* p,int val)) ;
-#endif
-
 G__value G__alloc_exceptionbuffer G__P((int tagnum));
 
 void G__argtype2param G__P((char *argtype,struct G__param *libp));
-
-void G__letbool G__P((G__value *buf,int type,long value));
-long G__bool G__P((G__value buf));
-
-
-#ifndef G__OLDIMPLEMENTATION2189
-void G__letLonglong G__P((G__value* buf,int type,G__int64 value));
-void G__letULonglong G__P((G__value* buf,int type,G__uint64 value));
-void G__letLongdouble G__P((G__value* buf,int type,long double value));
-G__int64 G__Longlong G__P((G__value buf)); /* used to be int */
-G__uint64 G__ULonglong G__P((G__value buf)); /* used to be int */
-long double G__Longdouble G__P((G__value buf)); /* used to be int */
-#endif
-
-#ifndef G__OLDIMPLEMENTATION2221
-void G__display_purevirtualfunc G__P((int tagnum));
-#endif
-
-#ifndef G__OLDIMPLEMENTATION2226
-void G__setmemtestbreak G__P((int n,int m));
-#endif
-
-#ifndef G__OLDIMPLEMENTATION2227
-void G__clear_errordictpos();
-#endif
 
 #ifdef __cplusplus
 }

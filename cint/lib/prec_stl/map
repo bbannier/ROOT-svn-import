@@ -22,7 +22,7 @@
 #include <_functional>
 
 //////////////////////////////////////////////////////////////////////////
-#if defined(G__ANSIISOLIB) || (G__GNUC>=3) || defined(G__INTEL_COMPILER) || defined(G__KCC)
+#if defined(G__ANSIISOLIB) || (G__GNUC>=3) || defined(G__INTEL_COMPILER)
 template<class Key,class T,class Compare=std::less<Key>
         ,class Allocator=std::allocator<pair<const Key, T> > >
 
@@ -36,7 +36,7 @@ template<class Key,class T,class Compare=std::less<Key>
 
 #elif defined(G__GNUC) && !defined(G__KCC)
 
-#if (G__GNUC_VER>=2095)
+#if (G__GNUC_MINOR>=95)
 template<class Key,class T,class Compare=std::less<Key>
         ,class Allocator=allocator<T> >
 #else
@@ -85,7 +85,7 @@ class map {
 #elif defined(G__VISUAL)
 	: public _Bidit<T,difference_type> 
 #elif defined(G__SUNPRO_C) || defined(G__BORLANDCC5)
-#elif (G__GNUC_VER>=3001)
+#elif (G__GNUC>=3 && G__GNUC_MINOR>=1)
 #elif defined(G__INTEL_COMPILER)
 #elif defined(G__KCC)
 #elif defined(G__AIX)
@@ -108,7 +108,7 @@ class map {
     iterator operator++(int a);
     iterator& operator--();
     iterator operator--(int a);
-#if defined (G__VISUAL) || (defined(G__GNUC_VER) && G__GNUC_VER>=3004)
+#ifdef G__VISUAL
     bool operator==(const iterator& x) ;
     bool operator!=(const iterator& x) ;
 #endif
@@ -116,7 +116,7 @@ class map {
     bool operator==(const iterator& x) ;
 #endif
   };
-#if defined(G__GNUC) && !defined(G__KCC) && !defined(G__INTEL_COMPILER)  && !(G__GNUC_VER>=3004)
+#if defined(G__GNUC) && !defined(G__KCC) && !defined(G__INTEL_COMPILER)
   friend bool operator==(const map::iterator& x ,const map::iterator& y) const;
   friend bool operator!=(const map::iterator& x ,const map::iterator& y) const;
 #endif
@@ -129,7 +129,7 @@ class map {
 #elif defined(G__VISUAL)
 	: public _Bidit<T,difference_type> 
 #elif defined(G__SUNPRO_C) || defined(G__BORLANDCC5)
-#elif (G__GNUC_VER>=3001)
+#elif (G__GNUC>=3 && G__GNUC_MINOR>=1)
 #elif defined(G__INTEL_COMPILER)
 #elif defined(G__KCC)
 #elif defined(G__AIX)
