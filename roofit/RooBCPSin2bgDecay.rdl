@@ -1,13 +1,16 @@
 /*****************************************************************************
  * Project: BaBar detector at the SLAC PEP-II B-factory
  * Package: RooFitModels
- *    File: $Id: RooBCPSin2bgDecay.rdl,v 1.1 2002/03/12 06:02:09 walkowia Exp $
+ *    File: $Id: RooBCPSin2bgDecay.rdl,v 1.5 2002/05/31 01:07:41 verkerke Exp $
  * Authors:
  *   WW, Wolfgang Walkowiak, UC Santa Cruz, walkowia@slac.stanford.edu
  * History:
  *   05-Mar-2002 WW Created initial version
  *   12-Mar-2002 WW Added alphaD0 and rhoD0
  *   13-Mar-2002 WW Added 2nd constructor for offset type scheme
+ *   09-Apr-2002 WW Inverted sign infront of the sin() term
+ *   17-Jun-2002 WW Added two separate constructors with separate
+ *                  absLambdaPrime infront of the sin() term.
  *
  * Copyright (C) 2001 University of California
  *****************************************************************************/
@@ -26,30 +29,68 @@ public:
     // Constructors, assignment etc
     inline RooBCPSin2bgDecay() { }
     RooBCPSin2bgDecay(const char *name, const char *title, 
-		      RooRealVar& t, RooAbsCategory& tag,
+		      RooRealVar& t, 
 		      RooAbsCategory& mixState,
+		      RooAbsCategory& tagFlav,
 		      RooAbsReal& tau, RooAbsReal& dm,
 		      RooAbsReal& avgMistag,
-		      RooAbsReal& a, RooAbsReal& bPlus,
-		      RooAbsReal& bMinus, RooAbsReal& delMistag,
+		      RooAbsReal& absLambda, 
+		      RooAbsReal& argLambdaPlus,
+		      RooAbsReal& argLambdaMinus, 
+		      RooAbsReal& delMistag,
 		      RooAbsReal& alphaD0, RooAbsReal& rhoD0,
 		      const RooResolutionModel& model, 
 		      DecayType type=DoubleSided) ;
     
      RooBCPSin2bgDecay(const char *name, const char *title, 
-		      RooRealVar& t, RooAbsCategory& tag,
+		       RooRealVar& t, 
+		       RooAbsCategory& mixState,
+		       RooAbsCategory& tagFlav,
+		       RooAbsReal& tau, RooAbsReal& dm,
+		       RooAbsReal& avgMistag,
+		       RooAbsReal& absLambda,
+		       RooAbsReal& argLambdaPlus,
+		       RooAbsReal& argLambdaMinus, 
+		       RooAbsReal& delMistag,
+		       RooAbsReal& offsetD0,
+		       const RooResolutionModel& model, 
+		       DecayType type=DoubleSided) ;
+    
+    RooBCPSin2bgDecay(const char *name, const char *title, 
+		      RooRealVar& t, 
 		      RooAbsCategory& mixState,
+		      RooAbsCategory& tagFlav,
 		      RooAbsReal& tau, RooAbsReal& dm,
 		      RooAbsReal& avgMistag,
-		      RooAbsReal& a, RooAbsReal& bPlus,
-		      RooAbsReal& bMinus, RooAbsReal& delMistag,
-		      RooAbsReal& offsetD0,
+		      RooAbsReal& absLambda, 
+		      RooAbsReal& argLambdaPlus,
+		      RooAbsReal& argLambdaMinus, 
+		      RooAbsReal& delMistag,
+		      RooAbsReal& alphaD0, RooAbsReal& rhoD0,
 		      const RooResolutionModel& model, 
+		      RooAbsReal& absLambdaPrime,
 		      DecayType type=DoubleSided) ;
     
+    RooBCPSin2bgDecay(const char *name, const char *title, 
+		       RooRealVar& t, 
+		       RooAbsCategory& mixState,
+		       RooAbsCategory& tagFlav,
+		       RooAbsReal& tau, RooAbsReal& dm,
+		       RooAbsReal& avgMistag,
+		       RooAbsReal& absLambda,
+		       RooAbsReal& argLambdaPlus,
+		       RooAbsReal& argLambdaMinus, 
+		       RooAbsReal& delMistag,
+		       RooAbsReal& offsetD0,
+		       const RooResolutionModel& model, 
+		       RooAbsReal& absLambdaPrime,
+		       DecayType type=DoubleSided) ;
+    
    RooBCPSin2bgDecay(const RooBCPSin2bgDecay& other, const char* name=0);
-    virtual TObject* clone(const char* newname) const 
+
+    inline virtual TObject* clone(const char* newname) const 
 	{ return new RooBCPSin2bgDecay(*this,newname) ; }
+    
     virtual ~RooBCPSin2bgDecay();
     
     virtual Double_t coefficient(Int_t basisIndex) const ;
@@ -59,7 +100,7 @@ public:
     virtual Double_t coefAnalyticalIntegral(Int_t coef, Int_t code) const ;
     
     Int_t getGenerator(const RooArgSet& directVars, 
-		     RooArgSet &generateVars) const;
+		     RooArgSet &generateVars, Bool_t staticInitOK=kTRUE) const;
     void initGenerator(Int_t code) ;
     void generateEvent(Int_t code) ;
     
@@ -67,10 +108,13 @@ private:
 
     void calcInternals(Double_t& dil, Double_t& dw, Double_t& off) const ;
     void chooseBase(DecayType type, RooAbsReal& tau, RooAbsReal& dm) ;
+    
+    Double_t absLambdaP() const;
 
 protected:
     
     RooRealProxy _absLambda ;
+    RooRealProxy _absLambdaPrime ;
     RooRealProxy _argLambdaPlus ;
     RooRealProxy _argLambdaMinus ;
     RooRealProxy _avgMistag ;
@@ -80,13 +124,14 @@ protected:
     RooRealProxy _t ;
     RooRealProxy _tau ;
     RooRealProxy _dm ;
-    RooCategoryProxy _tag ;
+    RooCategoryProxy _tagFlav ;
     RooCategoryProxy _mixState ;
     Double_t _genFlavFrac ;
     Double_t _genMixFrac ;
     Double_t _genFlavFracMix ;
     Double_t _genFlavFracUnmix ;
-    Bool_t   _offsetImp;
+    Bool_t   _offsetImp ;
+    Bool_t   _primeImp ;
 
     DecayType _type ;
     Int_t _basisExp ;

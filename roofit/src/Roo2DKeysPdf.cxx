@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: BaBar detector at the SLAC PEP-II B-factory
  * Package: RooFitModels
- *    File: $Id: Roo2DKeysPdf.cc,v 1.3 2001/09/08 02:29:49 bevan Exp $
+ *    File: $Id: Roo2DKeysPdf.cc,v 1.10 2002/04/04 00:17:59 verkerke Exp $
  * Authors:
  *   AB, Adrian Bevan, Liverpool University, bevan@slac.stanford.edu
  *
@@ -178,7 +178,7 @@ Int_t Roo2DKeysPdf::loadDataSet(RooDataSet& data, TString options)
   _yMean  = y1/y0;
   _ySigma = sqrt(y_2/_nEvents-_yMean*_yMean);
 
-  _n=Double_t(1)/(_2pi*_nEvents*_xSigma*_ySigma);
+  _n = Double_t(1)/(_2pi*_nEvents*_xSigma*_ySigma);
 
   //calculate the PDF
   return calculateBandWidth(_BandWidthType);
@@ -328,7 +328,8 @@ Double_t Roo2DKeysPdf::evaluateFull(Double_t thisX, Double_t thisY) const
  	 +   lowBoundaryCorrection(thisX, _hx[j], x.min(), _x[j]);
       zy += highBoundaryCorrection(thisY, _hy[j], y.max(), _y[j])
  	 +   lowBoundaryCorrection(thisY, _hy[j], y.min(), _y[j]);
-      f += _n * zy * zx;
+      f += zy * zx;
+      //      f += _n * zy * zx; // ooops this is a normalisation factor :(
     }
   }
   else
@@ -341,7 +342,8 @@ Double_t Roo2DKeysPdf::evaluateFull(Double_t thisX, Double_t thisY) const
 
       if(_hx[j] != 0.0) zx = exp(-0.5*rx2*rx2)/_hx[j];
       if(_hy[j] != 0.0) zy = exp(-0.5*ry2*ry2)/_hy[j];
-      f += _n * zy * zx;
+      f += zy * zx;
+      //      f += _n * zy * zx; // ooops this is a normalisation factor  :(
     }
   }
   return f;
@@ -481,7 +483,7 @@ void Roo2DKeysPdf::writeNTupleToFile(char * outputFile, const char * name) const
   RooAbsReal & xArg = (RooAbsReal&)x.arg();
   RooAbsReal & yArg = (RooAbsReal&)y.arg();
 
-  Double_t theX, theY, hx, hy;
+  Double_t theX, theY, hx/*, hy*/;
   TString label = name;
   label += " the source data for 2D Keys PDF";
   TTree * _theTree =  new TTree(name, label);
