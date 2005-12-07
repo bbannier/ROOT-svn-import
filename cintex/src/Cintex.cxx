@@ -1,4 +1,4 @@
-// @(#)root/cintex:$Name:$:$Id:$
+// @(#)root/cintex:$Name:  $:$Id: Cintex.cxx,v 1.4 2005/11/17 14:12:33 roiser Exp $
 // Author: Pere Mato 2005
 
 // Copyright CERN, CH-1211 Geneva 23, 2004-2005, All rights reserved.
@@ -19,7 +19,9 @@
 #include "CINTClassBuilder.h"
 #include "CINTFunctionBuilder.h"
 #include "CINTTypedefBuilder.h"
+#ifndef G__CINT
 #include "ROOTClassEnhancer.h"
+#endif
 #include <iostream>
 
 using namespace ROOT::Reflex;
@@ -120,10 +122,14 @@ namespace ROOT {
   
   void Callback::operator () ( const Type& t ) {
     if ( t.IsClass() || t.IsStruct() ) {
+#ifndef G__CINT
       ROOTClassEnhancer enhancer(t);
       enhancer.Setup();
+#endif
       CINTClassBuilder::Get(t).Setup();
+#ifndef G__CINT
       enhancer.CreateInfo();
+#endif
     }
     else if ( t.IsTypedef() ) {
       CINTTypedefBuilder::Setup(t);
