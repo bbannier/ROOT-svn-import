@@ -1252,11 +1252,10 @@ void G__va_arg_put(G__va_arg_buf *pbuf,G__param *libp,int n)
     }
 #elif defined(__sparc) || defined(__sparc__) || defined(__SUNPRO_C)
     /* nothing */
+
 #elif (defined(__PPC__)||defined(__ppc__))&&(defined(_AIX)||defined(__APPLE__))
     /* nothing */
 #elif (defined(__PPC__)||defined(__ppc__))&&(defined(__linux)||defined(__linux__))
-    /* nothing */
-#elif defined(__x86_64__) && defined(__linux)
     /* nothing */
 #else
     /* nothing */
@@ -1275,6 +1274,7 @@ void G__va_arg_put(G__va_arg_buf *pbuf,G__param *libp,int n)
     j += objsize;
     mod = j%G__va_arg_align_size;
     if(mod) j = j-mod+G__va_arg_align_size;
+
 #elif (defined(__PPC__)||defined(__ppc__))&&(defined(_AIX)||defined(__APPLE__))
     //j =  G__va_align_ppc(j, objsize) + G__va_rounded_size_ppc(objsize);
 #ifdef G__VAARG_PASS_BY_REFERENCE
@@ -1283,6 +1283,7 @@ void G__va_arg_put(G__va_arg_buf *pbuf,G__param *libp,int n)
     j += objsize;
     mod = j%G__va_arg_align_size;
     if(mod) j = j-mod+G__va_arg_align_size;
+
 #elif (defined(__PPC__)||defined(__ppc__))&&(defined(__linux)||defined(__linux__))
 #ifdef G__VAARG_PASS_BY_REFERENCE
     if(objsize>G__VAARG_PASS_BY_REFERENCE) objsize=G__VAARG_PASS_BY_REFERENCE;
@@ -1290,13 +1291,7 @@ void G__va_arg_put(G__va_arg_buf *pbuf,G__param *libp,int n)
     j += objsize;
     mod = j%G__va_arg_align_size;
     if(mod) j = j-mod+G__va_arg_align_size;
-#elif defined(__x86_64__) && defined(__linux)
-#ifdef G__VAARG_PASS_BY_REFERENCE
-    if(objsize>G__VAARG_PASS_BY_REFERENCE) objsize=G__VAARG_PASS_BY_REFERENCE;
-#endif
-    j += objsize;
-    mod = j%G__va_arg_align_size;
-    if(mod) j = j-mod+G__va_arg_align_size;
+
 #else
 #ifdef G__VAARG_PASS_BY_REFERENCE
     if(objsize>G__VAARG_PASS_BY_REFERENCE) objsize=G__VAARG_PASS_BY_REFERENCE;

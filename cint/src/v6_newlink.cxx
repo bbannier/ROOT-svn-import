@@ -912,10 +912,7 @@ int G__cleardictfile(int flag)
     G__fprinterr(G__serr,"!!!\n");
   }
 #ifdef G__GENWINDEF
-  if(G__WINDEF) {
-    /* unlink(G__WINDEF); */
-    free(G__WINDEF);
-  }
+  if(G__WINDEF) free(G__WINDEF);
 #endif
   if(G__CPPLINK_H) free(G__CPPLINK_H);
   if(G__CPPLINK_C) free(G__CPPLINK_C);
@@ -1755,12 +1752,7 @@ void G__set_globalcomp(char *mode,char *linkfilename,char *dllid)
     strcpy(G__CPPLINK_C,buf);
 
 #ifdef G__GENWINDEF
-    if (G__PROJNAME[0])
-      sprintf(buf,"%s.def",G__PROJNAME);
-    else if (G__DLLID[0])
-      sprintf(buf,"%s.def",G__DLLID);
-    else 
-      sprintf(buf,"%s.def","G__lib");
+    sprintf(buf,"%s.def",G__PROJNAME);
     G__WINDEF = (char*)malloc(strlen(buf)+1);
     strcpy(G__WINDEF,buf);
     G__write_windef_header();
@@ -1876,7 +1868,6 @@ void G__gen_cppheader(char *headerfilein)
   switch(G__globalcomp) {
   case G__CPPLINK: /* C++ link */
   case G__CLINK:   /* C link */
-  case R__CPPLINK: /* C++ link (reflex) */
     break;
   default: 
     return;
@@ -1898,8 +1889,6 @@ void G__gen_cppheader(char *headerfilein)
         switch(G__globalcomp) {
         case G__CPPLINK: /* C++ link */
           strcpy(hdrpost,G__getmakeinfo1("CPPHDRPOST"));
-          break;
-        case R__CPPLINK:
           break;
         case G__CLINK: /* C link */
           strcpy(hdrpost,G__getmakeinfo1("CHDRPOST"));
@@ -1957,8 +1946,6 @@ void G__gen_cppheader(char *headerfilein)
         fprintf(fp,"  G__add_compiledheader(\"%s\");\n",headerfile);
         fclose(fp);
         break;
-      case R__CPPLINK:
-        break;
       }
     /* } */
 #ifdef G__ROOT
@@ -1984,8 +1971,6 @@ void G__gen_cppheader(char *headerfilein)
       G__gen_headermessage(fp,G__CLINK_H);
       G__clink_header(fp);
       fclose(fp);
-      break;
-    case R__CPPLINK:
       break;
     }
   }
@@ -2796,10 +2781,6 @@ void G__cppif_genconstructor(FILE *fp, FILE * /* hfp */, int tagnum, int ifn, G_
           int i;
           for(i=0;i<100;i++)        
             fprintf(fp,",G__va_arg_bufobj.x.i[%d]",i);
-#elif defined(__x86_64__) && defined(__linux)
-          int i;
-          for(i=0;i<100;i++)
-            fprintf(fp,",G__va_arg_bufobj.x.i[%d]",i);
 #else
           fprintf(fp,",G__va_arg_bufobj");
 #endif
@@ -2815,19 +2796,16 @@ void G__cppif_genconstructor(FILE *fp, FILE * /* hfp */, int tagnum, int ifn, G_
   else {
     if(0==m) {
       if(0==(G__is_operator_newdelete&G__NOT_USING_2ARG_NEW)) {
-        fprintf(fp,  "   if(G__getaryconstruct())\n");
-        fprintf(fp,  "     if(G__PVOID==G__getgvp())\n");
+        fprintf(fp,"   if(G__getaryconstruct())\n");
+        fprintf(fp,"     if(G__PVOID==G__getgvp())\n");
         if(isprotecteddtor) {
           fprintf(fp,"       {p=0;G__genericerror(\"Error: Array construction with private/protected destructor is illegal\");}\n");
         }
         else {
           fprintf(fp,"       p=new %s[G__getaryconstruct()];\n" ,buf);
         }
-        fprintf(fp,  "     else {\n");
-        //???FIX ME: This is wrong, we do not construct a real array
-        //???FIX ME: with an array cookie here, and we do have placement
-        //???FIX ME: new available, so we should.
-        fprintf(fp,  "       for(int i=0;i<G__getaryconstruct();i++)\n");
+        fprintf(fp,"     else {\n");
+        fprintf(fp,"       for(int i=0;i<G__getaryconstruct();i++)\n");
         if(G__is_operator_newdelete&G__DUMMYARG_NEWDELETE 
              && 0==(G__struct.funcs[tagnum]&G__HAS_OPERATORNEW2ARG)
            )
@@ -2835,9 +2813,9 @@ void G__cppif_genconstructor(FILE *fp, FILE * /* hfp */, int tagnum, int ifn, G_
                   ,G__NEWID,buf);
         else
           fprintf(fp,"         p=new((void*)(G__getgvp()+sizeof(%s)*i)) " ,buf);
-        fprintf(fp,  "%s;\n",buf);
-        fprintf(fp,  "       p=(%s*)G__getgvp();\n",buf);
-        fprintf(fp,  "     }\n");
+        fprintf(fp,"%s;\n",buf);
+        fprintf(fp,"       p=(%s*)G__getgvp();\n",buf);
+        fprintf(fp,"     }\n");
         if(G__is_operator_newdelete&G__DUMMYARG_NEWDELETE 
              && 0==(G__struct.funcs[tagnum]&G__HAS_OPERATORNEW2ARG)
            )
@@ -2848,34 +2826,18 @@ void G__cppif_genconstructor(FILE *fp, FILE * /* hfp */, int tagnum, int ifn, G_
       }
       else {
         if(isprotecteddtor) {
-          fprintf(fp,   "   if(G__getaryconstruct()) {p=0;G__genericerror(\"Error: Array construction with private/protected destructor is illegal\");}\n");
+          fprintf(fp,"   if(G__getaryconstruct()) {p=0;G__genericerror(\"Error: Array construction with private/protected destructor is illegal\");}\n");
         }
         else {
-          fprintf(fp,   "   if(G__getaryconstruct()) {\n");
-          fprintf(fp,   "     if(G__PVOID==G__getgvp()) {\n");
-          fprintf(fp,   "       p=new %s[G__getaryconstruct()];\n" ,buf);
-          fprintf(fp,   "     } else {\n");
-          if ((G__is_operator_newdelete & G__DUMMYARG_NEWDELETE) && !(G__struct.funcs[tagnum] & G__HAS_OPERATORNEW1ARG)) {
-            fprintf(fp, "       p=::new((G__%s_tag*)G__getgvp()) %s[G__getaryconstruct()];\n", G__NEWID, buf);
-          } else {
-            //???FIX ME: We are not honoring the placement request here,
-            //???FIX ME: so we should print an error message, but this
-            //???FIX ME: interacts with the operator new in TObject, so
-            //???FIX ME: it is not really that easy.
-            fprintf(fp, "       p=new %s[G__getaryconstruct()];\n", buf);
-          }
-          fprintf(fp,   "     }\n");
-          fprintf(fp,   "   }\n");
+          fprintf(fp ,"   if(G__getaryconstruct()) p=new %s[G__getaryconstruct()];\n" ,buf);
         }
-        if(G__is_operator_newdelete&G__DUMMYARG_NEWDELETE && 0==(G__struct.funcs[tagnum]&G__HAS_OPERATORNEW1ARG))
-          fprintf(fp,   "   else p=::new((G__%s_tag*)G__getgvp()) %s;\n", G__NEWID, buf);
+        if(G__is_operator_newdelete&G__DUMMYARG_NEWDELETE 
+             && 0==(G__struct.funcs[tagnum]&G__HAS_OPERATORNEW1ARG)
+           )
+          fprintf(fp,"   else p=::new((G__%s_tag*)G__getgvp()) %s;\n" 
+                  ,G__NEWID,buf);
         else
-          //???FIX ME: Should test G__PVOID==G__getgvp() here and
-          //???FIX ME: print an error if we are refusing to honor
-          //???FIX ME: a placement new, but this interacts with the
-          //???FIX ME: operator new in TObject, so it is not really
-          //???FIX ME: that easy.
-          fprintf(fp,   "   else p=new %s;\n", buf);}
+          fprintf(fp,"   else                    p=new %s;\n" ,buf);}
     }
     else {
       if(0==(G__is_operator_newdelete&G__NOT_USING_2ARG_NEW)) {
@@ -2912,10 +2874,6 @@ void G__cppif_genconstructor(FILE *fp, FILE * /* hfp */, int tagnum, int ifn, G_
 #elif (defined(__PPC__)||defined(__ppc__))&&(defined(_AIX)||defined(__APPLE__))
         int i;
         for(i=0;i<100;i++)        
-          fprintf(fp,",G__va_arg_bufobj.x.i[%d]",i);
-#elif defined(__x86_64__) && defined(__linux)
-        int i;
-        for(i=0;i<100;i++)
           fprintf(fp,",G__va_arg_bufobj.x.i[%d]",i);
 #else
         fprintf(fp,",G__va_arg_bufobj");
@@ -3788,10 +3746,6 @@ void G__cppif_genfunc(FILE *fp, FILE * /* hfp */, int tagnum, int ifn, G__ifunc_
         int i;
         for(i=0;i<100;i++)        
           fprintf(fp,",G__va_arg_bufobj.x.i[%d]",i);
-#elif defined(__x86_64__) && defined(__linux)
-        int i;
-        for(i=0;i<100;i++)
-          fprintf(fp,",G__va_arg_bufobj.x.i[%d]",i);
 #else
         fprintf(fp,",G__va_arg_bufobj");
 #endif
@@ -3850,10 +3804,6 @@ void G__cppif_genfunc(FILE *fp, FILE * /* hfp */, int tagnum, int ifn, G__ifunc_
 #elif (defined(__PPC__)||defined(__ppc__))&&(defined(_AIX)||defined(__APPLE__))
         int i;
         for(i=0;i<100;i++)        
-          fprintf(fp,",G__va_arg_bufobj.x.i[%d]",i);
-#elif defined(__x86_64__) && defined(__linux)
-        int i;
-        for(i=0;i<100;i++)
           fprintf(fp,",G__va_arg_bufobj.x.i[%d]",i);
 #else
       fprintf(fp,",G__va_arg_bufobj");
@@ -8710,9 +8660,7 @@ void G__gen_extra_include() {
        add the files at the beginning of the dictionary header file
        (Specifically, the extra include files have to be include 
        before any forward declarations!) */
-
-    if (!G__CPPLINK_H) return;
-
+    
     tempfile = (char*) malloc(strlen(G__CPPLINK_H)+6);
     sprintf(tempfile,"%s.temp", G__CPPLINK_H);
     rename(G__CPPLINK_H,tempfile);

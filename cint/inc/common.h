@@ -66,6 +66,7 @@
 #include "memtest.h"
 #endif
 
+
 /**************************************************************************
 * On line file loading
 *
@@ -440,9 +441,6 @@
 #define G__MEMSETINT          (long)0x7fff0051
 #define G__JMPIFVIRTUALOBJ    (long)0x7fff0052
 #define G__VIRTUALADDSTROS    (long)0x7fff0053
-
-#define G__ROOTOBJALLOCBEGIN  (long)0x7fff0054
-#define G__ROOTOBJALLOCEND    (long)0x7fff0055
 
 #define G__PAUSE              (long)0x7fff00fe
 

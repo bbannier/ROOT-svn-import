@@ -308,7 +308,6 @@ extern "C" int G__bc_exec_try_bytecode(int start,
 ***********************************************************************/
 extern "C" int G__bc_exec_throw_bytecode(G__value* pval) {
   throw G__bc_exception(*pval);
-  return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////
