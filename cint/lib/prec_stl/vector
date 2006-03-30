@@ -289,6 +289,14 @@ class vector {
   typedef std::__normal_iterator<T*, vector_type> iterator;
   typedef std::__normal_iterator<T*, vector_type> const_iterator;
 
+#elif (defined(G__INTEL_COMPILER))
+
+  typedef T* iterator;
+  typedef const T* const_iterator;
+
+  typedef reverse_iterator<iterator>         reverse_iterator;
+  typedef reverse_iterator<const_iterator>   const_reverse_iterator;
+
 #else
   typedef T* iterator;
   typedef const T* const_iterator;
@@ -383,6 +391,8 @@ class vector {
 #endif
   size_type size(void) const ;
   size_type max_size(void) const ;
+  void resize(size_type sz) ;
+  void resize(size_type sz, T c) ;
   size_type capacity(void) const ;
   bool empty(void) const ;
   T& operator[](size_type n) ;

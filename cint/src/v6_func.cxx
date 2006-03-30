@@ -1187,6 +1187,9 @@ G__value G__getfunction_libp(char *item,char *funcname
     G__exec_memberfunc=1;
     G__memberfunc_tagnum = G__tagnum;
     break;
+  default:
+     G__hash(funcname,hash,i);
+     break;
   }
   
 #ifdef G__DUMPFILE
@@ -1390,7 +1393,7 @@ G__value G__getfunction_libp(char *item,char *funcname
             {
               char itemtmp[G__LONGLINE];
               sprintf(itemtmp,"%s::%s",G__struct.name[G__tagnum],funcname);
-              G__display_proto(G__serr,itemtmp);
+              G__display_proto_pretty(G__serr,itemtmp,1);
             }
           }
           G__exec_memberfunc=store_exec_memberfunc;
@@ -2760,7 +2763,7 @@ G__value G__getfunction(char *item,int *known3,int memfunc_flag)
             {
               char itemtmp[G__LONGLINE];
               sprintf(itemtmp,"%s::%s",G__struct.name[G__tagnum],funcname);
-              G__display_proto(G__serr,itemtmp);
+              G__display_proto_pretty(G__serr,itemtmp,1);
             }
           }
           G__exec_memberfunc=store_exec_memberfunc;
@@ -2772,7 +2775,6 @@ G__value G__getfunction(char *item,int *known3,int memfunc_flag)
         if(G__store_struct_offset!=store_struct_offset) 
           G__gen_addstros(store_struct_offset-G__store_struct_offset);
         G__store_struct_offset = store_struct_offset;
-        G__tagnum = store_tagnum;
         G__def_tagnum = store_def_tagnum;
         G__tagdefining = store_tagdefining;
         if(fpara.paran && 'u'==fpara.para[0].type&&
@@ -2780,10 +2782,14 @@ G__value G__getfunction(char *item,int *known3,int memfunc_flag)
             G__TRYIMPLICITCONSTRUCTOR==memfunc_flag)
            ) {
           /* in case of copy constructor not found */
+          G__tagnum = store_tagnum;
           return(fpara.para[0]);
         }
         else {
-          return(G__null);
+          result3 = G__null;
+          result3.tagnum = G__tagnum;
+          G__tagnum = store_tagnum;
+          return(result3);
         }
       }
       /* ELSE next level overloaded function resolution */

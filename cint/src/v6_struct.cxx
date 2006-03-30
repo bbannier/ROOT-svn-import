@@ -380,6 +380,9 @@ void G__set_class_autoloading_table(char *classname,char *libname)
 
    char *p = 0;
    if((p=strchr(classname,'<'))) {
+      // If the class is a template instantiation we need
+      // to also register the template itself so that the
+      // properly recognize it.
       char *buf = new char[strlen(classname)+1];
       strcpy(buf,classname);
       buf[p-classname] = '\0';
@@ -866,6 +869,7 @@ int G__search_tagname(const char *tagname,int type)
     G__struct.memfunc[i]->staticalloc[0] = 0; 
     G__struct.memfunc[i]->busy[0] = 0; 
     G__struct.memfunc[i]->isvirtual[0] = 0;
+    G__struct.memfunc[i]->globalcomp[0] = G__NOLINK;
 #endif
 
     G__struct.memfunc[i]->comment[0].filenum = -1;

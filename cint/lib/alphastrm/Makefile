@@ -1,17 +1,15 @@
 #
 # lib/snstream/Makefile
 #
-#CP         = copy
-#MV	   = move
 CP         = cp
 MV	   = mv
 
 CINTSYSDIR = ../..
 
-SRCCPPIFC     = $(CINTSYSDIR)/src/vc7strm.cxx
-SRCCPPIFH     = $(CINTSYSDIR)/src/vc7strm.h
-CPPIFC     = vc7strm.cxx
-CPPIFH     = vc7strm.h
+SRCCPPIFC     = $(CINTSYSDIR)/src/alphastrm.cxx
+SRCCPPIFH     = $(CINTSYSDIR)/src/alphastrm.h
+CPPIFC     = alphastrm.cxx
+CPPIFH     = alphastrm.h
 
 CPPHEADER  = iostrm.h fstrm.h sstrm.h linkdef.h
 
@@ -19,9 +17,9 @@ CPPHEADER  = iostrm.h fstrm.h sstrm.h linkdef.h
 
 
 $(SRCCPPIFC) : $(CPPIFC)
-	cint ../snstream/length.cxx 255 $(CPPIFC) $(CPPIFH)
-#	$(MV) $(CPPIFC) $(SRCCPPIFC)		
-#	$(MV) $(CPPIFH) $(SRCCPPIFH)		
+#	cint ../snstream/length.cxx 255 $(CPPIFC) $(CPPIFH)
+	$(MV) $(CPPIFC) $(SRCCPPIFC)		
+	$(MV) $(CPPIFH) $(SRCCPPIFH)		
 
 
 $(CPPIFC) : $(CPPHEADER)
