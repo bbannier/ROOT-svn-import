@@ -7,15 +7,10 @@
  * Description:
  *  Extended Run Time Type Identification API
  ************************************************************************
- * Copyright(c) 1995~1999  Masaharu Goto (MXJ02154@niftyserve.or.jp)
+ * Copyright(c) 1995~1999  Masaharu Goto 
  *
- * Permission to use, copy, modify and distribute this software and its 
- * documentation for any purpose is hereby granted without fee,
- * provided that the above copyright notice appear in all copies and
- * that both that copyright notice and this permission notice appear
- * in supporting documentation.  The author makes no
- * representations about the suitability of this software for any
- * purpose.  It is provided "as is" without express or implied warranty.
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 
@@ -24,16 +19,29 @@
 
 #include "Api.h"
 
+namespace Cint {
+
 /*********************************************************************
 * class G__MethodArgInfo
 *
 * 
 *********************************************************************/
-class G__MethodArgInfo {
+class 
+#ifndef __CINT__
+G__EXPORT
+#endif
+G__MethodArgInfo {
  public:
   ~G__MethodArgInfo() {}
   void Init(class G__MethodInfo &a);
-  G__MethodArgInfo(class G__MethodInfo &a) : type() { Init(a); } 
+  G__MethodArgInfo(class G__MethodInfo &a)
+    : argn(0), belongingmethod(NULL), type() { Init(a); } 
+  G__MethodArgInfo(const G__MethodArgInfo& mai)
+    : argn(mai.argn), belongingmethod(mai.belongingmethod), type(mai.type) 
+      { } 
+  G__MethodArgInfo& operator=(const G__MethodArgInfo& mai) {
+    argn=mai.argn; belongingmethod=mai.belongingmethod; 
+    type=mai.type; return *this;}
 
   const char *Name();
   G__TypeInfo* Type() { return(&type); }
@@ -49,8 +57,11 @@ class G__MethodArgInfo {
   G__TypeInfo type;
 
  public:
-  G__MethodArgInfo() {} 
+  G__MethodArgInfo(): argn(0), belongingmethod(NULL), type() {} 
 
 };
 
+} // namespace Cint
+
+using namespace Cint;
 #endif

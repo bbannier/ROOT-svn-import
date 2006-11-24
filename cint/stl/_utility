@@ -1,5 +1,15 @@
-#ifndef G__UTILITY_DLL
+/* -*- C++ -*- */
+/*************************************************************************
+ * Copyright(c) 1995~2005  Masaharu Goto (cint@pcroot.cern.ch)
+ *
+ * For the licensing terms see the file COPYING
+ *
+ ************************************************************************/
+#if !defined(G__UTILITY_DLL) && !defined(G__NOCINTDLL)
 #pragma include_noerr <utility.dll>
+#endif
+#if !defined(G__UTILITY_DLL) && !defined(G__NOCINTDLL)
+#pragma include_noerr <pair.dll>
 #endif
 
 #ifdef __MAKECINT__

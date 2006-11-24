@@ -9,13 +9,8 @@
  ************************************************************************
  * Copyright(c) 2004~2004  Masaharu Goto 
  *
- * Permission to use, copy, modify and distribute this software and its 
- * documentation for any purpose is hereby granted without fee,
- * provided that the above copyright notice appear in all copies and
- * that both that copyright notice and this permission notice appear
- * in supporting documentation.  The author makes no
- * representations about the suitability of this software for any
- * purpose.  It is provided "as is" without express or implied warranty.
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 #include "bc_exec.h"
@@ -35,7 +30,7 @@ extern "C" int G__bc_exec_virtualbase_bytecode(G__value *result7
 
   // TODO, below is a dead copy of virtual_bytecode which may not work
 
-  int vtagnum = (int)funcname; // tagnum of given pointer
+  long vtagnum = (long)funcname; // tagnum of given pointer
   int vtblindex = hash&0xffff; // virtual function table index
   int vbasetagnum = hash/0x10000; // vbasetagnum
   int voffset=G__struct.virtual_offset[vtagnum]; // offset for true tagnum info
@@ -100,7 +95,7 @@ extern "C" int G__bc_exec_virtual_bytecode(G__value *result7
 			,int hash              // vtblindex,basetagnum
 			) {
 
-  int vtagnum = (int)funcname; // tagnum of given pointer
+  long vtagnum = (long)funcname; // tagnum of given pointer
   int vtblindex = hash&0xffff; // virtual function table index
   int vbasetagnum = hash/0x10000; // vbasetagnum
   int voffset=G__struct.virtual_offset[vtagnum]; // offset for true tagnum info
@@ -308,6 +303,7 @@ extern "C" int G__bc_exec_try_bytecode(int start,
 ***********************************************************************/
 extern "C" int G__bc_exec_throw_bytecode(G__value* pval) {
   throw G__bc_exception(*pval);
+  return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////

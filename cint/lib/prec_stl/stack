@@ -1,3 +1,10 @@
+/* -*- C++ -*- */
+/*************************************************************************
+ * Copyright(c) 1995~2005  Masaharu Goto (cint@pcroot.cern.ch)
+ *
+ * For the licensing terms see the file COPYING
+ *
+ ************************************************************************/
 // lib/prec_stl/stack
 
 #pragma ifndef PREC_STL_STACK
@@ -5,12 +12,17 @@
 #pragma link off global PREC_STL_STACK;
 #pragma link C++ nestedtypedef;
 #pragma link C++ nestedclass;
+#if defined(G__HP_aCC) || defined(G__SUNPRO_CC)
+#pragma mask_newdelete 0x1c;
+#else
+#pragma mask_newdelete 0x10;
+#endif
 
 // Imported from ANSI/ISO C++ 1997/Nov draft 
 // Got some ideas from Scott Snyder, Fermi-lab
 // Modified by Masaharu Goto
 
-#include <deque>
+#include <_deque>
 
 template <class T, class Container = deque<T> >
 class stack { 

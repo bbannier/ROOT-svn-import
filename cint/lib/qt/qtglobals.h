@@ -1,3 +1,10 @@
+/* -*- C++ -*- */
+/*************************************************************************
+ * Copyright(c) 1995~2005  Masaharu Goto (cint@pcroot.cern.ch)
+ *
+ * For the licensing terms see the file COPYING
+ *
+ ************************************************************************/
 
 #ifdef __CINT__
 //#pragma link off all globals;
@@ -28,5 +35,5 @@
 #pragma link off global Tbl_vScrollBar;
 #pragma link off global Tbl_autoScrollBars;
 #pragma link off global objectDict;
-
+#pragma link off global black;
 #endif

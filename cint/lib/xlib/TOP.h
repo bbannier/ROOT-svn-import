@@ -1,3 +1,10 @@
+/* -*- C++ -*- */
+/*************************************************************************
+ * Copyright(c) 1995~2005  Masaharu Goto (cint@pcroot.cern.ch)
+ *
+ * For the licensing terms see the file COPYING
+ *
+ ************************************************************************/
 /***********************************************************************
 * lib/xlib/TOP.h
 *  header file to link xlib and cint.
@@ -32,5 +39,17 @@
 #ifdef __MAKECINT__
 #include "x11const.h"
 #include "x11mfunc.h"
+
+#pragma link off class _XPrivate;
+#pragma link off class _XrmHashBucketRec;
+#pragma link off class _XOM;
+#pragma link off class _XOC;
+#pragma link off class _XIM;
+#pragma link off class _XIC;
+#pragma link off class _XRegion;
+//#pragma link off function gettimeofday; /* RH7.0 warning */
+//#pragma link off function XStringToContext;
+//#pragma link off function XUniqueContext;
+
 #endif
 

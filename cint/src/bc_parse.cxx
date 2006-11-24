@@ -9,13 +9,8 @@
  ************************************************************************
  * Copyright(c) 2004~2005  Masaharu Goto 
  *
- * Permission to use, copy, modify and distribute this software and its 
- * documentation for any purpose is hereby granted without fee,
- * provided that the above copyright notice appear in all copies and
- * that both that copyright notice and this permission notice appear
- * in supporting documentation.  The author makes no
- * representations about the suitability of this software for any
- * purpose.  It is provided "as is" without express or implied warranty.
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 #include "bc_parse.h"
@@ -483,6 +478,8 @@ int G__blockscope::compile_operator(string& token,int c) {
 // operator(), 2nd level
 // func    ();     -> expr
 // macro   ()      -> 
+//         (expr);      -> expr
+//         (cast)expr;  -> expr
 //          ^
 ////////////////////////////////////////////////////////////////////////////
 /***********************************************************************
@@ -812,8 +809,10 @@ int G__blockscope::compile_parenthesis(string& token,int c) {
     c = compile_operator(token,c);  // c==';'
   }
   else {
-    // func    ();     -> expr
-    // macro   ()      -> 
+    // macro   ()           -> macro
+    // func    ();          -> expr
+    //         (expr);      -> expr
+    //         (cast)expr;  -> expr
     //          ^
     c = compile_operator_PARENTHESIS(token,c);  // c==';'
   }
@@ -1658,7 +1657,7 @@ int G__blockscope::call_ctor(G__TypeReader& type,struct G__param *libp
 /***********************************************************************
  * G__blockscope::call_func
  ***********************************************************************/
-int G__blockscope::call_func(G__ClassInfo& cls
+G__value G__blockscope::call_func(G__ClassInfo& cls
 			     ,const string& fname,struct G__param *libp
 			     ,int /*memfuncflag*/,int isarray
 			     ,G__ClassInfo::MatchMode mode
@@ -1683,7 +1682,7 @@ int G__blockscope::call_func(G__ClassInfo& cls
       }
       G__fprinterr(G__serr,")' is private or protected");
       G__genericerror((char*)NULL);
-      return(0);
+      return(G__null);
     }
     struct G__ifunc_table *ifunc = (struct G__ifunc_table*)m.Handle();
     int ifn = m.Index();
@@ -1719,9 +1718,10 @@ int G__blockscope::call_func(G__ClassInfo& cls
 	}
       }
     }
-    return(1);
+    G__value result = m.Type()->Value();
+    return(result);
   }
-  return(0);
+  return(G__null);
 }
 
 /***********************************************************************

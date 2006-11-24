@@ -1,14 +1,10 @@
-
-#ifndef G__FUNCTIONAL_DLL
+/* -*- C++ -*- */
+/*************************************************************************
+ * Copyright(c) 1995~2005  Masaharu Goto (cint@pcroot.cern.ch)
+ *
+ * For the licensing terms see the file COPYING
+ *
+ ************************************************************************/
 namespace std {
-#pragma include_noerr <functional.dll>
+#include <_functional>
 }
-#endif
-
-#ifdef __MAKECINT__
-#include <prec_stl/functional>
-#else
-namespace std {
-#include <function.h>
-}
-#endif

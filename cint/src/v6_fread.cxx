@@ -7,26 +7,28 @@
  * Description:
  *  Utility to read source file
  ************************************************************************
- * Copyright(c) 1995~1999  Masaharu Goto (MXJ02154@niftyserve.or.jp)
+ * Copyright(c) 1995~2003  Masaharu Goto 
  *
- * Permission to use, copy, modify and distribute this software and its 
- * documentation for any purpose is hereby granted without fee,
- * provided that the above copyright notice appear in all copies and
- * that both that copyright notice and this permission notice appear
- * in supporting documentation.  The author makes no
- * representations about the suitability of this software for any
- * purpose.  It is provided "as is" without express or implied warranty.
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 #include "common.h"
+
+extern "C" {
+
+#define G__storeOrigPos                                          \
+   int store_linenum = G__ifile.line_number
+
+#define G__eofOrigError                                          \
+
 
 
 #ifdef G__MULTIBYTE
 /***********************************************************************
 * G__CodingSystem()
 ***********************************************************************/
-int G__CodingSystem(c)
-int c;
+int G__CodingSystem(int c)
 {
   c &= 0x7f;
   switch(G__lang) {
@@ -43,19 +45,17 @@ int c;
   case G__SJIS:
     if(c<=0x1f || (0x60<=c && c<=0x7c)) return(1);
     else                                return(0);
-  case G__ONEBYTE:
+  case G__ONEBYTE: 
     return(0);
   }
   return(1);
 }
 #endif
 
-#ifndef G__OLDIMPLEMENTATION608
 /***********************************************************************
 * G__isstoragekeyword()
 ***********************************************************************/
-static int G__isstoragekeyword(buf)
-char *buf;
+static int G__isstoragekeyword(char *buf)
 {
   if(!buf) return(0);
   if(strcmp(buf,"const")==0 ||
@@ -63,13 +63,23 @@ char *buf;
      strcmp(buf,"signed")==0 ||
      strcmp(buf,"int")==0 ||
      strcmp(buf,"long")==0 ||
-     strcmp(buf,"short")==0) {
+     strcmp(buf,"short")==0 
+#ifndef G__OLDIMPLEMENTATION1855
+     || strcmp(buf,"char")==0
+#endif
+#ifndef G__OLDIMPLEMENTATION1859
+     || strcmp(buf,"double")==0
+     || strcmp(buf,"float")==0
+#endif
+     || strcmp(buf,"volatile")==0 
+     || strcmp(buf,"register")==0 
+     || (G__iscpp && strcmp(buf,"typename")==0)
+     ) {
     return(1);
   }
   else {
     return(0);  }
 }
-#endif
 
 /***********************************************************************
 * G__fgetname_template(string,endmark)
@@ -96,17 +106,15 @@ char *buf;
 *    ----------------^        return(';');
 *
 ***********************************************************************/
-int G__fgetname_template(string,endmark)
-char *string,*endmark;
+int G__fgetname_template(char *string,char *endmark)
 {
   short i=0,l;
   int c,prev;
   short single_quote=0,double_quote=0,flag=0,spaceflag,ignoreflag;
   int nest=0;
-#ifndef G__OLDIMPLEMENTATION608
   int tmpltnest=0;
   char *pp = string;
-#endif
+  int pflag = 0;
   
   spaceflag=0;
 
@@ -117,10 +125,10 @@ char *string,*endmark;
     if((single_quote==0)&&(double_quote==0)&&nest==0) {
       l=0;
       while((prev=endmark[l++])!='\0') {
-	if(c==prev) {
-	  flag=1;
-	  ignoreflag=1;
-	}
+        if(c==prev) {
+          flag=1;
+          ignoreflag=1;
+        }
       }
     }
 
@@ -133,170 +141,174 @@ char *string,*endmark;
     case '\r':
     case '\f':
       if((single_quote==0)&&(double_quote==0)) {
-#ifndef G__OLDIMPLEMENTATION608
-	string[i] = '\0';  /* temporarily close the string */
-	if(tmpltnest) {
-	  if(G__isstoragekeyword(pp)) {
-	    pp=string+i+1;
-	    c=' ';
-	    break;
-	  }
-	}
-#endif
-#ifndef G__OLDIMPLEMENTATION1223
-	if(strlen(pp)<8 && strncmp(pp,"typename",8)==0 && pp!=string) {
-	  i -= 8;
-	}
-#endif
-	ignoreflag=1;
-	if(spaceflag!=0&&0==nest) flag=1;
+        string[i] = '\0';  /* temporarily close the string */
+        if(tmpltnest) {
+          if(G__isstoragekeyword(pp)) {
+            if(G__iscpp && strcmp("typename",pp)==0) {
+              i -= 8;
+              c=' ';
+              ignoreflag = 1;
+            }
+            else {
+              pp=string+i+1;
+              c=' ';
+            }
+            break;
+          }
+          else if('*'==string[i-1]) {
+            pflag = 1;
+          }
+        }
+        if(strlen(pp)<8 && strncmp(pp,"typename",8)==0 && pp!=string) {
+          i -= 8;
+        }
+        ignoreflag=1;
+        if(spaceflag!=0&&0==nest) flag=1;
       }
       break;
     case '"':
       if(single_quote==0) {
-	spaceflag=1;
-	double_quote ^= 1;
+        spaceflag=1;
+        double_quote ^= 1;
       }
       break;
     case '\'':
       if(double_quote==0) {
-	spaceflag=1;
-	single_quote ^= 1;
+        spaceflag=1;
+        single_quote ^= 1;
       }
       break;
 
     case '<':
       if((single_quote==0)&&(double_quote==0)&&
-	 strncmp(string,"operator",8)!=0) {
-#ifndef G__OLDIMPLEMENTATION811
-	int lnest=0;
-#endif
-	++nest;
-#ifndef G__OLDIMPLEMENTATION608
-	string[i] = '\0';
-#ifndef G__OLDIMPLEMENTATION677
+         strncmp(pp,"operator",8)!=0
+         ) {
+        int lnest=0;
+        ++nest;
+        string[i] = '\0';
         pp = string+i;
-#ifndef G__OLDIMPLEMENTATION811
         while(pp>string && (pp[-1]!='<' || lnest) 
-	      && pp[-1]!=',' && pp[-1]!=' ') {
-	  switch(pp[-1]) {
-	  case '>': ++lnest; break;
-	  case '<': --lnest; break;
-	  }
-	  --pp;
-	}
-#else
-        while(pp>string && pp[-1]!='<' && pp[-1]!=',' && pp[-1]!=' ') --pp;
-#endif
+              && pp[-1]!=',' && pp[-1]!=' ') {
+          switch(pp[-1]) {
+          case '>': ++lnest; break;
+          case '<': --lnest; break;
+          }
+          --pp;
+        }
         if(G__defined_templateclass(pp)) ++tmpltnest;
-#else
-	if(G__defined_templateclass(string)) ++tmpltnest;
-#endif
-	pp = string+i+1;
-#endif
+        pp = string+i+1;
       }
       spaceflag=1;
       break;
 
     case '(':
-      if((single_quote==0)&&(double_quote==0)) ++nest;
+      if((single_quote==0)&&(double_quote==0)) {
+        pp = string+i+1;
+        ++nest;
+      }
       spaceflag=1;
       break;
 
     case '>':
       if((single_quote==0)&&(double_quote==0)&&
-	 strncmp(string,"operator",8)!=0) {
-	--nest;
-#ifndef G__OLDIMPLEMENTATION608
-	if(tmpltnest) --tmpltnest;
-#endif
-	if(nest<0) {
-	  string[i]='\0';
-	  return(c);
-	}
-#ifndef G__OLDIMPLEMENTATION556
-	else if(i && '>'==string[i-1]) {
-	  /* A<A<int> > */
-	  string[i++]=' ';
-	}
-#endif
+         strncmp(string,"operator",8)!=0) {
+        --nest;
+        if(tmpltnest) --tmpltnest;
+        if(nest<0) {
+          string[i]='\0';
+          return(c);
+        }
+        else if(i && '>'==string[i-1]) {
+          /* A<A<int> > */
+          string[i++]=' ';
+        }
+        else if(i>2 && isspace(string[i-1]) && '>'!=string[i-2]) {
+          --i;
+        }
       }
       spaceflag=1;
       break;
     case ')':
       if((single_quote==0)&&(double_quote==0)) {
-	--nest;
-	if(nest<0) {
-	  string[i]='\0';
-	  return(c);
-	}
+        --nest;
+        if(nest<0) {
+          string[i]='\0';
+          return(c);
+        }
       }
       spaceflag=1;
       break;
     case '/':
       if((single_quote==0)&&(double_quote==0)) {
-	/* comment */
-	string[i++] = c ;
-	
-	c=G__fgetc();
-	switch(c) {
-	case '*':
-	  G__skip_comment();
-	  --i;
-	  ignoreflag=1;
-	  break;
-	case '/':
-	  G__fignoreline();
-	  --i;
-	  ignoreflag=1;
-	  break;
-	default:
-	  fseek(G__ifile.fp,-1,SEEK_CUR);
-	  if(G__dispsource) G__disp_mask=1;
-	  spaceflag=1;
-	  ignoreflag=1;
-	  break;
-	}
+        /* comment */
+        string[i++] = c ;
+        
+        c=G__fgetc();
+        switch(c) {
+        case '*':
+          G__skip_comment();
+          --i;
+          ignoreflag=1;
+          break;
+        case '/':
+          G__fignoreline();
+          --i;
+          ignoreflag=1;
+          break;
+        default:
+          fseek(G__ifile.fp,-1,SEEK_CUR);
+          if(G__dispsource) G__disp_mask=1;
+          spaceflag=1;
+          ignoreflag=1;
+          break;
+        }
       }
       
       break;
       
     case '#':
       if(single_quote==0&&double_quote==0&&(i==0||string[i-1]!='$')) {
-	G__pp_command();
-	ignoreflag=1;
+        G__pp_command();
+        ignoreflag=1;
 #ifdef G__TEMPLATECLASS
-	c=' ';
+        c=' ';
 #endif
       }
       break;
 
     case EOF:
       G__unexpectedEOF("G__fgetname():2");
-#ifndef G__OLDIMPLEMENTATION789
       string[i] = '\0';
-#endif
       return(c);
 
-#ifndef G__OLDIMPLEMENTATION608
+    case '*':
+    case '&':
+      if(i>0 && ' '==string[i-1] && nest && single_quote==0&&double_quote==0) 
+        --i;
+      break;
+
     case ',':
       pp = string+i+1;
-#endif
 
     default:
       spaceflag=1;
 #ifdef G__MULTIBYTE
       if(G__IsDBCSLeadByte(c) && !ignoreflag) {
-	string[i++]=c;
-	c=G__fgetc() ;
-	G__CheckDBCS2ndByte(c);
+        string[i++]=c;
+        c=G__fgetc() ;
+        G__CheckDBCS2ndByte(c);
       }
 #endif
       break;
     }
     
     if(ignoreflag==0) {
+      if(pflag && (isalpha(c) || '_'==c)) {
+        string[i++] = ' ' ;
+      }
+      pflag = 0;
       string[i++] = c ;
+      G__CHECK(G__SECURE_BUFFER_SIZE,i>=G__LONGLINE,return(EOF));
     }
     
   } while(flag==0) ;
@@ -307,16 +319,14 @@ char *string,*endmark;
     flag=0;
     while((prev=endmark[l++])!='\0') {
       if(c==prev) {
-	flag=1;
+        flag=1;
       }
     }
     if(!flag) {
       if('<'==c) {
-#ifndef G__OLDIMPLEMENTATION493
-	if(strncmp(string,"operator",8)==0) string[i++]=c;
-#endif
-	flag=ignoreflag=0;
-	goto backtoreadtemplate;
+        if(strncmp(string,"operator",8)==0) string[i++]=c;
+        flag=ignoreflag=0;
+        goto backtoreadtemplate;
       }
       fseek(G__ifile.fp,-1,SEEK_CUR);
       if(G__dispsource) G__disp_mask=1;
@@ -359,16 +369,13 @@ char *string,*endmark;
 *     'func(new xxx);'
 *
 ***********************************************************************/
-int G__fgetstream_newtemplate(string,endmark)
-char *string,*endmark;
+int G__fgetstream_newtemplate(char *string,char *endmark)
 {
   short i=0,l;
   int c,prev;
   int nest=0,single_quote=0,double_quote=0,flag=0,ignoreflag;
   int commentflag=0;
-#ifndef G__OLDIMPLEMENTATION608
   char *pp = string;
-#endif
   short inew=0;
 
   do {
@@ -378,10 +385,10 @@ char *string,*endmark;
     if((nest<=0)&&(single_quote==0)&&(double_quote==0)) {
       l=0;
       while((prev=endmark[l++])!='\0') {
-	if(c==prev) {
-	  flag=1;
-	  ignoreflag=1;
-	}
+        if(c==prev) {
+          flag=1;
+          ignoreflag=1;
+        }
       }
     }
     
@@ -391,139 +398,143 @@ char *string,*endmark;
     case '\n':
     case '\r':
     case '\t':
-#ifndef G__OLDIMPLEMENTATION608
       string[i] = '\0';
       if(G__isstoragekeyword(pp)) {
-	pp=string+i+1;
-	commentflag=0;
-	c=' ';
-	break;
+        pp=string+i+1;
+        commentflag=0;
+        c=' ';
+        break;
       }
-#endif
       commentflag=0;
       if((single_quote==0)&&(double_quote==0)) {
-	c=' ';
-	switch(i-inew) {
-	case 3:
-	  if(strncmp(string+inew,"new",3)!=0)
-	    ignoreflag=1;
-	  break;
-	default:
-	  inew=i;
-	  ignoreflag=1;
-	  break;
-	}
+        c=' ';
+        switch(i-inew) {
+        case 3:
+          if(strncmp(string+inew,"new",3)!=0)
+            ignoreflag=1;
+          break;
+        default:
+          inew=i;
+          ignoreflag=1;
+          break;
+        }
       }
       break;
     case ',':
-#ifndef G__OLDIMPLEMENTATION1114
       /* may be following line is needed. 1999/5/31 */
       /* if(i>2 && ' '==string[i-1] && isalnum(string[i-2])) --i; */
-#endif
-#ifndef G__OLDIMPLEMENTATION608
       pp = string+i+1;
-#endif
     case '=':
       if((single_quote==0)&&(double_quote==0)) {
-	inew=i+1;
+        inew=i+1;
       }
       break;
     case '<':
-#ifndef G__OLDIMPLEMENTATION608
       if((single_quote==0)&&(double_quote==0)) {
-	pp = string+i+1;
+        string[i]=0;
+        if(G__defined_templateclass(pp)) ++nest;
+        inew=i+1;
+        pp = string+i+1;
       }
-#endif
+      break;
     case '{':
     case '(':
     case '[':
       if((single_quote==0)&&(double_quote==0)) {
-	++nest;
-	inew=i+1;
+        ++nest;
+        inew=i+1;
+#ifdef G__OLDIMPLEMENTATION1520_YET_BUG
+        pp = string+i+1; /* This creates a side effect with stl/demo/testall */
+#endif
       }
       break;
     case '>':
       if(0==nest||(i&&'-'==string[i-1])) break;
-#ifndef G__OLDIMPLEMENTATION556
-      else if(nest && i && '>'==string[i-1]) string[i++]=' ';
-#endif
+      else if(nest && i && '>'==string[i-1]
+              && 0==double_quote && 0==single_quote
+              ) string[i++]=' ';
     case '}':
     case ')':
     case ']':
       if((single_quote==0)&&(double_quote==0)) {
-#ifndef G__OLDIMPLEMENTATION1114
-	/* may be following line is needed. 1999/5/31 */
-	/* if(i>2 && ' '==string[i-1] && isalnum(string[i-2])) --i; */
-#endif
-	nest--;
-#ifndef G__OLDIMPLEMENTATION994
-	inew=i+1;
-#endif
+        /* may be following line is needed. 1999/5/31 */
+        /* if(i>2 && ' '==string[i-1] && isalnum(string[i-2])) --i; */
+        nest--;
+        inew=i+1;
       }
       break;
     case '"':
       if(single_quote==0) {
-	double_quote ^= 1;
+        double_quote ^= 1;
       }
       break;
     case '\'':
       if(double_quote==0) {
-	single_quote ^= 1;
+        single_quote ^= 1;
       }
       break;
       
     case '\\':
       if(ignoreflag==0) {
-	string[i++] = c ;
-	c=G__fgetc() ;
+        string[i++] = c ;
+        c=G__fgetc() ;
       }
       break;
       
     case '/':
       if(0==double_quote && 0==single_quote && i>0 && string[i-1]=='/' &&
-	 commentflag) {
-	i--;
-	G__fignoreline();
-	ignoreflag=1;
+         commentflag) {
+        i--;
+        G__fignoreline();
+        ignoreflag=1;
       }
       else {
-	commentflag=1;
+        commentflag=1;
       }
+      break;
+
+    case '&':
+      if(i>0 && ' '==string[i-1] && nest && single_quote==0&&double_quote==0) 
+        --i;
       break;
       
     case '*':
       /* comment */
-      if(0==double_quote && 0==single_quote && i>0 && string[i-1]=='/' &&
-	 commentflag) {
-	G__skip_comment();
-	--i;
-	ignoreflag=1;
+      if(0==double_quote && 0==single_quote) {
+        if(i>0 && string[i-1]=='/' && commentflag) {
+          G__skip_comment();
+          --i;
+          ignoreflag=1;
+        }
+        else if(i>2 && isspace(string[i-1]) && 
+                (isalnum(string[i-2])||'_'==string[i-2])
+                ) {
+          --i;
+        }
       }
       break;
 
     case '#':
       if(single_quote==0&&double_quote==0&&(i==0||string[i-1]!='$')) {
-	G__pp_command();
-	ignoreflag=1;
+        G__pp_command();
+        ignoreflag=1;
 #ifdef G__TEMPLATECLASS
-	c=' ';
+        c=' ';
 #endif
       }
       break;
 
     case EOF:
-      G__unexpectedEOF("G__fgetstream_new():2");
-#ifndef G__OLDIMPLEMENTATION789
+      G__unexpectedEOF("G__fgetstream_newtemplate():2");
       string[i] = '\0';
-#endif
       return(c);
 
 #ifdef G__MULTIBYTE
     default:
       if(G__IsDBCSLeadByte(c) && !ignoreflag) {
-	string[i++]=c;
-	c=G__fgetc() ;
-	G__CheckDBCS2ndByte(c);
+        string[i++]=c;
+        c=G__fgetc() ;
+        G__CheckDBCS2ndByte(c);
       }
       break;
 #endif
@@ -531,6 +542,7 @@ char *string,*endmark;
     
     if(ignoreflag==0) {
       string[i++] = c ;
+      G__CHECK(G__SECURE_BUFFER_SIZE,i>=G__LONGLINE,return(EOF));
     }
     
   } while(flag==0) ;
@@ -563,16 +575,14 @@ char *string,*endmark;
 *      -----^    *string="abc"; return(')');
 *
 ***********************************************************************/
-int G__fgetstream_template(string,endmark)
-char *string,*endmark;
+int G__fgetstream_template(char *string,char *endmark)
 {
   short i=0,l;
   int c,prev;
   short nest=0,single_quote=0,double_quote=0,flag=0,ignoreflag;
   int commentflag=0;
-#ifndef G__OLDIMPLEMENTATION608
   char *pp = string;
-#endif
+  int pflag = 0;
   
   
   do {
@@ -582,10 +592,10 @@ char *string,*endmark;
     if((nest==0)&&(single_quote==0)&&(double_quote==0)) {
       l=0;
       while((prev=endmark[l++])!='\0') {
-	if(c==prev) {
-	  flag=1;
-	  ignoreflag=1;
-	}
+        if(c==prev) {
+          flag=1;
+          ignoreflag=1;
+        }
       }
     }
     
@@ -597,52 +607,61 @@ char *string,*endmark;
     case '\t':
       commentflag=0;
       if((single_quote==0)&&(double_quote==0)) {
-#ifndef G__OLDIMPLEMENTATION608
-	string[i] = '\0';
-	if(G__isstoragekeyword(pp)) {
-	  c=' ';
-	  pp=string+i+1;
-	  break;
-	}
-#endif
-	ignoreflag=1;
+        string[i] = '\0';
+        if(G__isstoragekeyword(pp)) {
+          if(G__iscpp && strcmp("typename",pp)==0) {
+            i -= 8;
+            c=' ';
+            ignoreflag = 1;
+          }
+          else {
+            pp=string+i+1;
+            c=' ';
+          }
+          break;
+        }
+        else if(i&&'*'==string[i-1]) {
+          pflag = 1;
+        }
+#define G__OLDIMPLEMENTATION1894
+        ignoreflag=1;
       }
       break;
     case '<':
-#ifndef G__OLDIMPLEMENTATION608
       if((single_quote==0)&&(double_quote==0)) {
-	pp = string+i+1;
+#ifdef G__OLDIMPLEMENTATION1721_YET
+        string[i]=0;
+        if(G__defined_templateclass(pp)) ++nest;
+#endif
+        pp = string+i+1;
       }
+#ifdef G__OLDIMPLEMENTATION1721_YET
+      break;
 #endif
     case '{':
     case '(':
     case '[':
       if((single_quote==0)&&(double_quote==0)) {
-	nest++;
+        pp = string+i+1;
+        nest++;
       }
       break;
     case '>':
-#ifndef G__OLDIMPLEMENTATION814
       if(i&&'-'==string[i-1]) break; /* need to test for >> ??? */
-#endif
     case '}':
     case ')':
     case ']':
       if((single_quote==0)&&(double_quote==0)) {
-#ifndef G__OLDIMPLEMENTATION1114
-	if(i>2 && ' '==string[i-1] && isalnum(string[i-2])) --i;
-#endif
-	nest--;
-	if(nest<0) {
-	  flag=1;
-	  ignoreflag=1;
-	}
-#ifndef G__OLDIMPLEMENTATION556
-	else if('>'==c && i && '>'==string[i-1]) {
-	  /* A<A<int> > */
-	  string[i++]=' ';
-	}
-#endif
+        if(i>2 && ' '==string[i-1] && isalnum(string[i-2])) --i;
+        nest--;
+        if(nest<0) {
+          flag=1;
+          ignoreflag=1;
+        }
+        else if('>'==c && i && '>'==string[i-1]) {
+          /* A<A<int> > */
+          string[i++]=' ';
+        }
       }
       break;
     case '"':
@@ -654,72 +673,95 @@ char *string,*endmark;
       
     case '\\':
       if(ignoreflag==0) {
-	string[i++] = c ;
-	c=G__fgetc() ;
+        string[i++] = c ;
+        c=G__fgetc() ;
       }
       break;
       
     case '/':
       if(0==double_quote && 0==single_quote && i>0 && string[i-1]=='/' &&
-	 commentflag) {
-	G__fignoreline();
-	--i;
-	ignoreflag=1;
+         commentflag) {
+        G__fignoreline();
+        --i;
+        ignoreflag=1;
       }
       else {
-	commentflag=1;
+        commentflag=1;
       }
+      break;
+
+    case '&':
+      if(i>0 && ' '==string[i-1] && nest && single_quote==0&&double_quote==0) 
+        --i;
       break;
       
     case '*':
       /* comment */
-      if(0==double_quote && 0==single_quote && i>0 && string[i-1]=='/' &&
-	 commentflag) {
-	G__skip_comment();
-	--i;
-	ignoreflag=1;
+#ifndef G__OLDIMPLEMENTATION1864
+      if(0==double_quote && 0==single_quote && i>0) {
+        if(string[i-1]=='/' && commentflag) {
+          G__skip_comment();
+          --i;
+          ignoreflag=1;
+        }
+        else 
+          if(i>2 && 
+             isspace(string[i-1]) && 
+             (isalnum(string[i-2])||'_'==string[i-2])
+             ) {
+          --i;
+        }
       }
+
+#else
+      if(0==double_quote && 0==single_quote && i>0 && string[i-1]=='/' &&
+         commentflag) {
+        G__skip_comment();
+        --i;
+        ignoreflag=1;
+      }
+#endif
       break;
 
     case '#':
       if(single_quote==0&&double_quote==0&&(i==0||string[i-1]!='$')) {
-	G__pp_command();
-	ignoreflag=1;
+        G__pp_command();
+        ignoreflag=1;
 #ifdef G__TEMPLATECLASS
-	c=' ';
+        c=' ';
 #endif
       }
       break;
 
     case EOF:
       G__unexpectedEOF("G__fgetstream_template():2");
-#ifndef G__OLDIMPLEMENTATION789
       string[i] = '\0';
-#endif
       return(c);
       /* break; */
 
-#ifndef G__OLDIMPLEMENTATION608
+
     case ',':
-      pp = string+i+1;
-#endif
-#ifndef G__OLDIMPLEMENTATION1114
       if(i>2 && ' '==string[i-1] && isalnum(string[i-2])) --i;
-#endif
+      pp = string+i+1;
 
 #ifdef G__MULTIBYTE
     default:
       if(G__IsDBCSLeadByte(c) && !ignoreflag) {
-	string[i++]=c;
-	c=G__fgetc() ;
-	G__CheckDBCS2ndByte(c);
+        string[i++]=c;
+        c=G__fgetc() ;
+        G__CheckDBCS2ndByte(c);
       }
       break;
 #endif
     }
     
     if(ignoreflag==0) {
+      if(pflag && (isalpha(c) || '_'==c)) {
+        string[i++] = ' ' ;
+      }
+      pflag = 0;
       string[i++] = c ;
+      G__CHECK(G__SECURE_BUFFER_SIZE,i>=G__LONGLINE,return(EOF));
     }
     
   } while(flag==0) ;
@@ -749,17 +791,13 @@ char *string,*endmark;
 *                 -----------------^       *string="abcdefg*hijklmn"
 *
 ***********************************************************************/
-int G__getstream_template(source,isrc,string,endmark)
-char *source;
-int *isrc;
-char *string,*endmark;
+int G__getstream_template(char *source,int *isrc,char *string,char *endmark)
 {
   short i=0,l;
   int c,prev;
   short nest=0,single_quote=0,double_quote=0,flag=0,ignoreflag;
-#ifndef G__OLDIMPLEMENTATION608
   char *pp = string;
-#endif
+  int pflag = 0;
   
 
   do {
@@ -769,10 +807,10 @@ char *string,*endmark;
     if((nest==0)&&(single_quote==0)&&(double_quote==0)) {
       l=0;
       while((prev=endmark[l++])!='\0') {
-	if(c==prev) {
-	  flag=1;
-	  ignoreflag=1;
-	}
+        if(c==prev) {
+          flag=1;
+          ignoreflag=1;
+        }
       }
     }
     
@@ -784,40 +822,33 @@ char *string,*endmark;
       if(double_quote==0) single_quote ^= 1;
       break;
     case '<':
-#ifndef G__OLDIMPLEMENTATION608
       if((single_quote==0)&&(double_quote==0)) {
-	pp = string+i+1;
+        pp = string+i+1;
       }
-#endif
     case '{':
     case '(':
     case '[':
       if((single_quote==0)&&(double_quote==0)) {
-	nest++;
+        pp = string+i+1;
+        nest++;
       }
       break;
     case '>':
-#ifndef G__OLDIMPLEMENTATION814
       if(i&&'-'==string[i-1]) break;
-#endif
     case '}':
     case ')':
     case ']':
       if((single_quote==0)&&(double_quote==0)) {
-#ifndef G__OLDIMPLEMENTATION1114
-	if(i>2 && ' '==string[i-1] && isalnum(string[i-2])) --i;
-#endif
-	nest--;
-	if(nest<0) {
-	  flag=1;
-	  ignoreflag=1;
-	}
-#ifndef G__OLDIMPLEMENTATION556
-	else if('>'==c && i && '>'==string[i-1]) {
-	  /* A<A<int> > */
-	  string[i++]=' ';
-	}
-#endif
+        if(i>2 && ' '==string[i-1] && isalnum(string[i-2])) --i;
+        nest--;
+        if(nest<0) {
+          flag=1;
+          ignoreflag=1;
+        }
+        else if('>'==c && i && '>'==string[i-1]) {
+          /* A<A<int> > */
+          string[i++]=' ';
+        }
       }
       break;
     case ' ':
@@ -826,15 +857,23 @@ char *string,*endmark;
     case '\r':
     case '\t':
       if((single_quote==0)&&(double_quote==0)) {
-#ifndef G__OLDIMPLEMENTATION608
-	string[i] = '\0';
-	if(G__isstoragekeyword(pp)) {
-	  c=' ';
-	  pp=string+i+1;
-	  break;
-	}
-#endif
-	ignoreflag=1;
+        string[i] = '\0';
+        if(G__isstoragekeyword(pp)) {
+          if(G__iscpp && strcmp("typename",pp)==0) {
+            i -= 8;
+            c=' ';
+            ignoreflag = 1;
+          }
+          else {
+            pp=string+i+1;
+            c=' ';
+          }
+          break;
+        }
+        else if('*'==string[i-1]) {
+          pflag = 1;
+        }
+        ignoreflag=1;
       }
       break;
     case '\0':
@@ -845,31 +884,33 @@ char *string,*endmark;
       break;
     case EOF:
       G__unexpectedEOF("G__getstream()");
-#ifndef G__OLDIMPLEMENTATION789
       string[i] = '\0';
-#endif
       break;
 
-#ifndef G__OLDIMPLEMENTATION608
+
     case ',':
-      pp = string+i+1;
-#endif
-#ifndef G__OLDIMPLEMENTATION1114
       if(i>2 && ' '==string[i-1] && isalnum(string[i-2])) --i;
-#endif
+      pp = string+i+1;
 
 #ifdef G__MULTIBYTE
     default:
       if(G__IsDBCSLeadByte(c) && !ignoreflag) {
-	string[i++]=c;
-	c=G__fgetc() ;
-	G__CheckDBCS2ndByte(c);
+        string[i++]=c;
+        c=G__fgetc() ;
+        G__CheckDBCS2ndByte(c);
       }
       break;
 #endif
     }
     
-    if(ignoreflag==0) string[i++] = c ;
+    if(ignoreflag==0) {
+      if(pflag && (isalpha(c) || '_'==c)) {
+        string[i++] = ' ' ;
+      }
+      pflag = 0;
+      string[i++] = c ;
+      G__CHECK(G__SECURE_BUFFER_SIZE,i>=G__LONGLINE,return(EOF));
+    }
     
   } while(flag==0) ;
   
@@ -918,18 +959,18 @@ int G__fgetspace()
       c=G__fgetc();
       switch(c) {
       case '*':
-	G__skip_comment();
-	break;
+        G__skip_comment();
+        break;
       case '/':
-	G__fignoreline();
-	break;
+        G__fignoreline();
+        break;
       default:
-	fseek(G__ifile.fp,-1,SEEK_CUR);
-	if(c=='\n' /* || c=='\r' */ ) --G__ifile.line_number;
-	if(G__dispsource) G__disp_mask=1;
-	c='/';
-	flag=1;
-	break;
+        fseek(G__ifile.fp,-1,SEEK_CUR);
+        if(c=='\n' /* || c=='\r' */ ) --G__ifile.line_number;
+        if(G__dispsource) G__disp_mask=1;
+        c='/';
+        flag=1;
+        break;
       }
       break;
 
@@ -958,9 +999,7 @@ int G__fgetspace()
 * G__fgetvarname(string,endmark)
 *
 ***********************************************************************/
-int G__fgetvarname(string,endmark)
-char *string;
-char *endmark;
+int G__fgetvarname(char *string,char *endmark)
 {
   short i=0,l;
   int c,prev;
@@ -969,9 +1008,7 @@ char *endmark;
   int tmpltflag=0;
   int notmpltflag=0;
 #endif
-#ifndef G__OLDIMPLEMENtATION1056
   char* pp = string;
-#endif
   
   do {
     ignoreflag=0;
@@ -980,10 +1017,10 @@ char *endmark;
     if((nest==0)&&(single_quote==0)&&(double_quote==0)) {
       l=0;
       while((prev=endmark[l++])!='\0') {
-	if(c==prev) {
-	  flag=1;
-	  ignoreflag=1;
-	}
+        if(c==prev) {
+          flag=1;
+          ignoreflag=1;
+        }
       }
     }
     
@@ -994,7 +1031,6 @@ char *endmark;
     case '\r':
     case '\f':
       if((single_quote==0)&&(double_quote==0)) {
-#ifndef G__OLDIMPLEMENtATION1056
         string[i] = '\0';
         if (tmpltflag && G__isstoragekeyword (pp)) {
           c = ' ';
@@ -1002,148 +1038,131 @@ char *endmark;
           break;
         }
         ignoreflag = 1;
-#else
-#ifndef G__OLDIMPLEMENtATION1005
-	if(0==tmpltflag||0==nest) ignoreflag=1;
-#else
-	ignoreflag=1;
-#endif
-#endif
-	if(nest==0&&spaceflag!=0) {
-	  flag=1;
-	}
+        if(nest==0&&spaceflag!=0) {
+          flag=1;
+        }
       }
       break;
     case '"':
       if(nest==0&&single_quote==0) {
-	spaceflag=1;
-	double_quote ^= 1;
+        spaceflag=1;
+        double_quote ^= 1;
       }
       break;
     case '\'':
       if(nest==0&&double_quote==0) {
-	spaceflag=1;
-	single_quote ^= 1;
+        spaceflag=1;
+        single_quote ^= 1;
       }
       break;
 #ifdef G__TEMPLATEMEMFUNC
     case '<':
-#ifndef G__OLDIMPLEMENtATION1056
       if((single_quote==0)&&(double_quote==0)) {
         pp = string + i + 1;
       }
-#endif
       if(notmpltflag || (8==i && strncmp("operator",string,8)==0) 
-	 || (9==i && (strncmp("&operator",string,9)==0||
-		      strncmp("*operator",string,9)==0))
-	 ) {
-	notmpltflag=1;
-	break;
+         || (9==i && (strncmp("&operator",string,9)==0||
+                      strncmp("*operator",string,9)==0))
+         ) {
+        notmpltflag=1;
+        break;
       }
       else {
-	tmpltflag=1;
+        tmpltflag=1;
       }
 #endif
     case '{':
     case '(':
     case '[':
       if((single_quote==0)&&(double_quote==0)) {
-	nest++;
+        nest++;
       }
       break;
 #ifdef G__TEMPLATEMEMFUNC
     case '>':
       if(!tmpltflag) break;
-#ifndef G__OLDIMPLEMENTATION556
       else if(nest && i && '>'==string[i-1]) string[i++]=' ';
-#endif
 #endif
     case '}':
     case ')':
     case ']':
       if((single_quote==0)&&(double_quote==0)) {
-	nest--;
-	if(nest<0) {
-	  flag=1;
-	  ignoreflag=1;
-	}
+        nest--;
+        if(nest<0) {
+          flag=1;
+          ignoreflag=1;
+        }
       }
       break;
     case '/':
       if((single_quote==0)&&(double_quote==0)) {
-	/* comment */
-	string[i++] = c ;
-	
-	c=G__fgetc();
-	switch(c) {
-	case '*':
-	  G__skip_comment();
-	  --i;
-	  ignoreflag=1;
-	  break;
-	case '/':
-	  G__fignoreline();
-	  --i;
-	  ignoreflag=1;
-	  break;
-	case ' ':
-	case '\t':
-	case '\n':
-	case '\r':
-	case '\f':
-	  if((single_quote==0)&&(double_quote==0)) {
-	    ignoreflag=1;
-	    if(nest==0&&spaceflag!=0) {
-	      flag=1;
-	    }
-	  }
-	  break;
-	case EOF:
-	  G__unexpectedEOF("G__fgetvarname():1");
-#ifndef G__OLDIMPLEMENTATION789
-	  string[i] = '\0';
-#endif
-	  return(c);
-	default:
-	  fseek(G__ifile.fp,-1,SEEK_CUR);
-	  if(G__dispsource) G__disp_mask=1;
-	  spaceflag=1;
-	  ignoreflag=1;
-	  break;
-	}
+        /* comment */
+        string[i++] = c ;
+        
+        c=G__fgetc();
+        switch(c) {
+        case '*':
+          G__skip_comment();
+          --i;
+          ignoreflag=1;
+          break;
+        case '/':
+          G__fignoreline();
+          --i;
+          ignoreflag=1;
+          break;
+        case ' ':
+        case '\t':
+        case '\n':
+        case '\r':
+        case '\f':
+          if((single_quote==0)&&(double_quote==0)) {
+            ignoreflag=1;
+            if(nest==0&&spaceflag!=0) {
+              flag=1;
+            }
+          }
+          break;
+        case EOF:
+          G__unexpectedEOF("G__fgetvarname():1");
+          string[i] = '\0';
+          return(c);
+        default:
+          fseek(G__ifile.fp,-1,SEEK_CUR);
+          if(G__dispsource) G__disp_mask=1;
+          spaceflag=1;
+          ignoreflag=1;
+          break;
+        }
       }
       break;
 
     case '#':
       if(single_quote==0&&double_quote==0&&(i==0||string[i-1]!='$')) {
-	G__pp_command();
-	ignoreflag=1;
+        G__pp_command();
+        ignoreflag=1;
 #ifdef G__TEMPLATECLASS
-	c=' ';
+        c=' ';
 #endif
       }
       break;
 
     case EOF:
       G__unexpectedEOF("G__fgetvarname():2");
-#ifndef G__OLDIMPLEMENTATION789
       string[i] = '\0';
-#endif
       return(c);
 
-#ifndef G__OLDIMPLEMENTATION1089
     case ',':
       pp = string + i + 1;
       /* fall through... */
-#endif
 
     default:
       spaceflag=1;
 #ifdef G__MULTIBYTE
       if(G__IsDBCSLeadByte(c) && !ignoreflag) {
-	string[i++]=c;
-	c=G__fgetc() ;
-	G__CheckDBCS2ndByte(c);
+        string[i++]=c;
+        c=G__fgetc() ;
+        G__CheckDBCS2ndByte(c);
       }
 #endif
       break;
@@ -1151,6 +1170,7 @@ char *endmark;
     
     if(ignoreflag==0) {
       string[i++] = c ;
+      G__CHECK(G__SECURE_BUFFER_SIZE,i>=G__LONGLINE,return(EOF));
     }
     
   } while(flag==0) ;
@@ -1186,8 +1206,7 @@ char *endmark;
 *    ----------------^        return(';');
 *
 ***********************************************************************/
-int G__fgetname(string,endmark)
-char *string,*endmark;
+int G__fgetname(char *string,char *endmark)
 {
   short i=0,l;
   int c,prev;
@@ -1202,10 +1221,10 @@ char *string,*endmark;
     if((single_quote==0)&&(double_quote==0)) {
       l=0;
       while((prev=endmark[l++])!='\0') {
-	if(c==prev) {
-	  flag=1;
-	  ignoreflag=1;
-	}
+        if(c==prev) {
+          flag=1;
+          ignoreflag=1;
+        }
       }
     }
     
@@ -1216,79 +1235,77 @@ char *string,*endmark;
     case '\r':
     case '\f':
       if((single_quote==0)&&(double_quote==0)) {
-	ignoreflag=1;
-	if(spaceflag!=0) flag=1;
+        ignoreflag=1;
+        if(spaceflag!=0) flag=1;
       }
       break;
     case '"':
       if(single_quote==0) {
-	spaceflag=1;
-	double_quote ^= 1;
+        spaceflag=1;
+        double_quote ^= 1;
       }
       break;
     case '\'':
       if(double_quote==0) {
-	spaceflag=1;
-	single_quote ^= 1;
+        spaceflag=1;
+        single_quote ^= 1;
       }
       break;
       /*
-	case '\0':
-	flag=1;
-	ignoreflag=1;
-	break;
-	*/
+        case '\0':
+        flag=1;
+        ignoreflag=1;
+        break;
+        */
     case '/':
       if((single_quote==0)&&(double_quote==0)) {
-	/* comment */
-	string[i++] = c ;
-	
-	c=G__fgetc();
-	switch(c) {
-	case '*':
-	  G__skip_comment();
-	  --i;
-	  ignoreflag=1;
-	  break;
-	case '/':
-	  G__fignoreline();
-	  --i;
-	  ignoreflag=1;
-	  break;
-	default:
-	  fseek(G__ifile.fp,-1,SEEK_CUR);
-	  if(G__dispsource) G__disp_mask=1;
-	  spaceflag=1;
-	  ignoreflag=1;
-	  break;
-	}
+        /* comment */
+        string[i++] = c ;
+        
+        c=G__fgetc();
+        switch(c) {
+        case '*':
+          G__skip_comment();
+          --i;
+          ignoreflag=1;
+          break;
+        case '/':
+          G__fignoreline();
+          --i;
+          ignoreflag=1;
+          break;
+        default:
+          fseek(G__ifile.fp,-1,SEEK_CUR);
+          if(G__dispsource) G__disp_mask=1;
+          spaceflag=1;
+          ignoreflag=1;
+          break;
+        }
       }
       
       break;
       
     case '#':
       if(single_quote==0&&double_quote==0&&(i==0||string[i-1]!='$')) {
-	G__pp_command();
-	ignoreflag=1;
+        G__pp_command();
+        ignoreflag=1;
 #ifdef G__TEMPLATECLASS
-	c=' ';
+        c=' ';
 #endif
       }
       break;
 
     case EOF:
       G__unexpectedEOF("G__fgetname():2");
-#ifndef G__OLDIMPLEMENTATION789
       string[i] = '\0';
-#endif
       return(c);
     default:
       spaceflag=1;
 #ifdef G__MULTIBYTE
       if(G__IsDBCSLeadByte(c) && !ignoreflag) {
-	string[i++]=c;
-	c=G__fgetc() ;
-	G__CheckDBCS2ndByte(c);
+        string[i++]=c;
+        c=G__fgetc() ;
+        G__CheckDBCS2ndByte(c);
       }
 #endif
       break;
@@ -1296,6 +1313,7 @@ char *string,*endmark;
     
     if(ignoreflag==0) {
       string[i++] = c ;
+      G__CHECK(G__SECURE_BUFFER_SIZE,i>=G__LONGLINE,return(EOF));
     }
     
   } while(flag==0) ;
@@ -1304,32 +1322,51 @@ char *string,*endmark;
   
   return(c);
 }
+
 /***********************************************************************
-* G__fdumpstream(string,endmark)
+* G__getname(source,isrc,string,endmark)
+*
+*
 * char *string       : string until the endmark appears
 * char *endmark      : specify endmark characters
+*
+*   read one non-space char string upto next space char or endmark
+*  char.
+*
+* 1) skip space char until non space char appears
+* 2) Store non-space char to char *string. If space char is surrounded by
+*   quotation, it is stored.
+* 3) if space char or one of endmark char which is not surrounded by
+*   quotation appears, stop reading and return the last char.
+*
+*
+*   '     azAZ09*&^%/     '
+*    ----------------^        return(' ');
+*
+* if ";" is given as end mark
+*   '     azAZ09*&^%/;  '
+*    ----------------^        return(';');
+*
 ***********************************************************************/
-int G__fdumpstream(string,endmark)
-char *string,*endmark;
+int G__getname(char *source,int *isrc,char *string,char *endmark)
 {
   short i=0,l;
   int c,prev;
-  short nest=0,single_quote=0,double_quote=0,flag=0,ignoreflag;
-#ifndef G__OLDIMPLEMENTATION439
-  int commentflag=0;
-#endif
+  short single_quote=0,double_quote=0,flag=0,spaceflag,ignoreflag;
   
+  spaceflag=0;
+
   do {
     ignoreflag=0;
-    c=G__fgetc() ;
+    c = source[(*isrc)++] ;
     
-    if((nest==0)&&(single_quote==0)&&(double_quote==0)) {
+    if((single_quote==0)&&(double_quote==0)) {
       l=0;
       while((prev=endmark[l++])!='\0') {
-	if(c==prev) {
-	  flag=1;
-	  ignoreflag=1;
-	}
+        if(c==prev) {
+          flag=1;
+          ignoreflag=1;
+        }
       }
     }
     
@@ -1339,114 +1376,276 @@ char *string,*endmark;
     case '\n':
     case '\r':
     case '\f':
-#ifndef G__OLDIMPLEMENTATION439
-      commentflag=0;
-#endif
       if((single_quote==0)&&(double_quote==0)) {
-	c=' ';
-	if(i>0 && isspace(string[i-1])) ignoreflag=1;
+        ignoreflag=1;
+        if(spaceflag!=0) flag=1;
       }
       break;
-	 
+    case '"':
+      if(single_quote==0) {
+        spaceflag=1;
+        double_quote ^= 1;
+      }
+      break;
+    case '\'':
+      if(double_quote==0) {
+        spaceflag=1;
+        single_quote ^= 1;
+      }
+      break;
+      /*
+        case '\0':
+        flag=1;
+        ignoreflag=1;
+        break;
+        */
+#ifdef G__NEVER
+    case '/':
+      if((single_quote==0)&&(double_quote==0)) {
+        /* comment */
+        string[i++] = c ;
+        
+        c = source[(*isrc)++] ;
+        switch(c) {
+        case '*':
+          G__skip_comment();
+          --i;
+          ignoreflag=1;
+          break;
+        case '/':
+          G__fignoreline();
+          --i;
+          ignoreflag=1;
+          break;
+        default:
+          fseek(G__ifile.fp,-1,SEEK_CUR);
+          if(G__dispsource) G__disp_mask=1;
+          spaceflag=1;
+          ignoreflag=1;
+          break;
+        }
+      }
+      
+      break;
+      
+    case '#':
+      if(single_quote==0&&double_quote==0&&(i==0||string[i-1]!='$')) {
+        G__pp_command();
+        ignoreflag=1;
+#ifdef G__TEMPLATECLASS
+        c=' ';
+#endif
+      }
+      break;
+#endif
+
+    case EOF:
+      G__unexpectedEOF("G__fgetname():2");
+      string[i] = '\0';
+      return(c);
+    default:
+      spaceflag=1;
+#ifdef G__MULTIBYTE
+      if(G__IsDBCSLeadByte(c) && !ignoreflag) {
+        string[i++]=c;
+        c = source[(*isrc)++] ;
+        G__CheckDBCS2ndByte(c);
+      }
+#endif
+      break;
+    }
+    
+    if(ignoreflag==0) {
+      string[i++] = c ;
+      G__CHECK(G__SECURE_BUFFER_SIZE,i>=G__LONGLINE,return(EOF));
+    }
+    
+  } while(flag==0) ;
+  
+  string[i]='\0';
+  
+  return(c);
+}
+
+/***********************************************************************
+ *
+ ***********************************************************************/
+int G__getfullpath(char *string,char *pbegin,int i)
+
+{
+  int tagnum= -1,typenum;
+  string[i] = '\0';
+  if(0==pbegin[0]) return(i);
+  typenum = G__defined_typename(pbegin);
+  if(-1==typenum) tagnum = G__defined_tagname(pbegin,1);
+  if((-1!=typenum && -1!=G__newtype.parent_tagnum[typenum]) ||
+     (-1!=tagnum  && -1!=G__struct.parent_tagnum[tagnum])) {
+    strcpy(pbegin,G__type2string(0,tagnum,typenum,0,0));
+    i = strlen(string);
+  }
+  return(i);
+}
+
+/***********************************************************************
+* G__fdumpstream(string,endmark)
+* char *string       : string until the endmark appears
+* char *endmark      : specify endmark characters
+*
+*  This function is used only for reading pointer to function arguments.
+*    type (*)(....)  type(*p2f)(....)
+***********************************************************************/
+int G__fdumpstream(char *string,char *endmark)
+{
+  short i=0,l;
+  int c,prev;
+  short nest=0,single_quote=0,double_quote=0,flag=0,ignoreflag;
+  int commentflag=0;
+  char *pbegin = string;
+  int tmpltnest=0;
+  
+  do {
+    ignoreflag=0;
+    c=G__fgetc() ;
+    
+    if((nest==0)&&(single_quote==0)&&(double_quote==0)) {
+      l=0;
+      while((prev=endmark[l++])!='\0') {
+        if(c==prev) {
+          flag=1;
+          ignoreflag=1;
+        }
+      }
+    }
+    
+    switch(c) {
+    case ' ':
+    case '\t':
+    case '\n':
+    case '\r':
+    case '\f':
+      commentflag=0;
+      if((single_quote==0)&&(double_quote==0)) {
+        c=' ';
+        if(i>0 && isspace(string[i-1])) {
+          ignoreflag=1;
+        }
+        else {
+          i = G__getfullpath(string,pbegin,i);
+        }
+        if(tmpltnest==0) pbegin = string+i+1-ignoreflag;
+      }
+      break;
+
+    case '<':
+      if((single_quote==0)&&(double_quote==0)) {
+        string[i]=0;
+        if(G__defined_templateclass(pbegin)) ++tmpltnest;
+      }
+      break;
+    case '>':
+      if((single_quote==0)&&(double_quote==0)) {
+        if(tmpltnest) --tmpltnest;
+      }
+      break;
+         
     case '{':
     case '(':
     case '[':
       if((single_quote==0)&&(double_quote==0)) {
-	nest++;
+        nest++;
+        pbegin = string+i+1;
       }
       break;
     case '}':
     case ')':
     case ']':
       if((single_quote==0)&&(double_quote==0)) {
-	nest--;
-	if(nest<0) {
-	  flag=1;
-	  ignoreflag=1;
-	}
+        nest--;
+        if(nest<0) {
+          flag=1;
+          ignoreflag=1;
+        }
+        i = G__getfullpath(string,pbegin,i);
+        pbegin = string+i+1-ignoreflag;
       }
       break;
     case '"':
       if(single_quote==0) {
-	double_quote ^= 1;
+        double_quote ^= 1;
       }
       break;
     case '\'':
       if(double_quote==0) {
-	single_quote ^= 1;
+        single_quote ^= 1;
       }
       break;
       
     case '\\':
       if(ignoreflag==0) {
-	string[i++] = c ;
-	c=G__fgetc() ;
+        string[i++] = c ;
+        c=G__fgetc() ;
       }
       break;
       
       /*
-	case '\0':
-	flag=1;
-	ignoreflag=1;
-	break;
-	*/
+        case '\0':
+        flag=1;
+        ignoreflag=1;
+        break;
+        */
 
       
     case '/':
-#ifndef G__OLDIMPLEMENTATION439
       if(0==double_quote && 0==single_quote && i>0 && string[i-1]=='/' &&
-	 commentflag) {
-#else
-      if(0==double_quote && 0==single_quote && i>0 && string[i-1]=='/') {
-#endif
-	G__fignoreline();
-	--i;
-	ignoreflag=1;
+         commentflag) {
+        G__fignoreline();
+        --i;
+        ignoreflag=1;
       }
-#ifndef G__OLDIMPLEMENTATION439
       else {
-	commentflag=1;
+        commentflag=1;
       }
-#endif
       break;
       
     case '*':
       /* comment */
-#ifndef G__OLDIMPLEMENTATION439
       if(0==double_quote && 0==single_quote && i>0 && string[i-1]=='/' &&
-	 commentflag) {
-#else
-      if(0==double_quote && 0==single_quote && i>0 && string[i-1]=='/') {
-#endif
-	G__skip_comment();
-	--i;
-	ignoreflag=1;
+         commentflag) {
+        G__skip_comment();
+        --i;
+        ignoreflag=1;
       }
+      if(ignoreflag==0) i = G__getfullpath(string,pbegin,i);
+      pbegin = string+i+1-ignoreflag;
+      break;
+
+    case '&':
+    case ',':
+      i = G__getfullpath(string,pbegin,i);
+      pbegin = string+i+1;
       break;
 
     case '#':
       if(single_quote==0&&double_quote==0&&(i==0||string[i-1]!='$')) {
-	G__pp_command();
-	ignoreflag=1;
+        G__pp_command();
+        ignoreflag=1;
 #ifdef G__TEMPLATECLASS
-	c=' ';
+        c=' ';
 #endif
       }
       break;
 
     case EOF:
       G__unexpectedEOF("G__fdumpstream():2");
-#ifndef G__OLDIMPLEMENTATION789
       string[i] = '\0';
-#endif
       return(c);
 
 #ifdef G__MULTIBYTE
     default:
       if(G__IsDBCSLeadByte(c) && !ignoreflag) {
-	string[i++]=c;
-	c=G__fgetc() ;
-	G__CheckDBCS2ndByte(c);
+        string[i++]=c;
+        c=G__fgetc() ;
+        G__CheckDBCS2ndByte(c);
       }
       break;
 #endif
@@ -1454,6 +1653,7 @@ char *string,*endmark;
     
     if(ignoreflag==0) {
       string[i++] = c ;
+      G__CHECK(G__SECURE_BUFFER_SIZE,i>=G__LONGLINE,return(EOF));
     }
     
   } while(flag==0) ;
@@ -1489,15 +1689,12 @@ char *string,*endmark;
 *      -----^    *string="abc"; return(')');
 *
 ***********************************************************************/
-int G__fgetstream(string,endmark)
-char *string,*endmark;
+int G__fgetstream(char *string,char *endmark)
 {
   short i=0,l;
   int c,prev;
   short nest=0,single_quote=0,double_quote=0,flag=0,ignoreflag;
-#ifndef G__OLDIMPLEMENTATION439
   int commentflag=0;
-#endif
   
   
   do {
@@ -1507,10 +1704,11 @@ char *string,*endmark;
     if((nest==0)&&(single_quote==0)&&(double_quote==0)) {
       l=0;
       while((prev=endmark[l++])!='\0') {
-	if(c==prev) {
-	  flag=1;
-	  ignoreflag=1;
-	}
+        if(c==prev) {
+          flag=1;
+          ignoreflag=1;
+          break;
+        }
       }
     }
     
@@ -1520,116 +1718,104 @@ char *string,*endmark;
     case '\r':
     case '\t':
     case ' ':
-#ifndef G__OLDIMPLEMENTATION439
       commentflag=0;
-#endif
       if((single_quote==0)&&(double_quote==0)) {
-	ignoreflag=1;
+        ignoreflag=1;
       }
       break;
     case '{':
     case '(':
     case '[':
       if((single_quote==0)&&(double_quote==0)) {
-	nest++;
+        nest++;
       }
       break;
     case '}':
     case ')':
     case ']':
       if((single_quote==0)&&(double_quote==0)) {
-	nest--;
-	if(nest<0) {
-	  flag=1;
-	  ignoreflag=1;
-	}
+        nest--;
+        if(nest<0) {
+          flag=1;
+          ignoreflag=1;
+        }
       }
       break;
     case '"':
       if(single_quote==0) {
-	double_quote ^= 1;
+        double_quote ^= 1;
       }
       break;
     case '\'':
       if(double_quote==0) {
-	single_quote ^= 1;
+        single_quote ^= 1;
       }
       break;
       
     case '\\':
       if(ignoreflag==0) {
-	string[i++] = c ;
-	c=G__fgetc() ;
+        string[i++] = c ;
+        c=G__fgetc() ;
       }
       break;
       
       /*
-	case '\0':
-	flag=1;
-	ignoreflag=1;
-	break;
-	*/
+        case '\0':
+        flag=1;
+        ignoreflag=1;
+        break;
+        */
 
       
     case '/':
-#ifndef G__OLDIMPLEMENTATION439
       if(0==double_quote && 0==single_quote && i>0 && string[i-1]=='/' &&
-	 commentflag) {
-#else
-      if(0==double_quote && 0==single_quote && i>0 && string[i-1]=='/') {
-#endif
-	G__fignoreline();
-	--i;
-	ignoreflag=1;
+         commentflag) {
+        G__fignoreline();
+        --i;
+        ignoreflag=1;
+        if (strchr (endmark, '\n') != 0) {
+          c = '\n';
+          flag = 1;
+        }
       }
-#ifndef G__OLDIMPLEMENTATION439
       else {
-	commentflag=1;
+        commentflag=1;
       }
-#endif
       break;
       
     case '*':
       /* comment */
-#ifndef G__OLDIMPLEMENTATION439
       if(0==double_quote && 0==single_quote && i>0 && string[i-1]=='/' &&
-	 commentflag) {
-#else
-      if(0==double_quote && 0==single_quote && i>0 && string[i-1]=='/') {
-#endif
-	G__skip_comment();
-	--i;
-	ignoreflag=1;
+         commentflag) {
+        G__skip_comment();
+        --i;
+        ignoreflag=1;
       }
       break;
 
     case '#':
       if(single_quote==0&&double_quote==0&&
-#ifndef G__OLDIMPLEMENTATION498
-	 0==flag &&
-#endif
-	 (i==0||string[i-1]!='$')) {
-	G__pp_command();
-	ignoreflag=1;
+         0==flag &&
+         (i==0||string[i-1]!='$')) {
+        G__pp_command();
+        ignoreflag=1;
 #ifdef G__TEMPLATECLASS
-	c=' ';
+        c=' ';
 #endif
       }
       break;
 
     case EOF:
       G__unexpectedEOF("G__fgetstream():2");
-#ifndef G__OLDIMPLEMENTATION789
       string[i] = '\0';
-#endif
       return(c);
 
 #ifdef G__MULTIBYTE
     default:
       if(G__IsDBCSLeadByte(c) && !ignoreflag) {
-	string[i++]=c;
-	c=G__fgetc() ;
-	G__CheckDBCS2ndByte(c);
+        string[i++]=c;
+        c=G__fgetc() ;
+        G__CheckDBCS2ndByte(c);
       }
       break;
 #endif
@@ -1637,6 +1823,7 @@ char *string,*endmark;
     
     if(ignoreflag==0) {
       string[i++] = c ;
+      G__CHECK(G__SECURE_BUFFER_SIZE,i>=G__LONGLINE,return(EOF));
     }
     
   } while(flag==0) ;
@@ -1670,13 +1857,11 @@ char *string,*endmark;
 *      -----^                   return(')');
 *
 ***********************************************************************/
-int G__fignorestream(endmark)
-char *endmark;
+int G__fignorestream(char *endmark)
 {
   short l;
   int c,prev;
   short nest=0,single_quote=0,double_quote=0,flag=0;
-  
   
   do {
     c=G__fgetc() ;
@@ -1685,9 +1870,9 @@ char *endmark;
     if((nest==0)&&(single_quote==0)&&(double_quote==0)) {
       l=0;
       while((prev=endmark[l++])!='\0') {
-	if(c==prev) {
-	  flag=1;
-	}
+        if(c==prev) {
+          flag=1;
+        }
       }
     }
     
@@ -1696,27 +1881,27 @@ char *endmark;
     case '(':
     case '[':
       if((single_quote==0)&&(double_quote==0)) {
-	nest++;
+        nest++;
       }
       break;
     case '}':
     case ')':
     case ']':
       if((single_quote==0)&&(double_quote==0)) {
-	nest--;
-	if(nest<0) {
-	  flag=1;
-	}
+        nest--;
+        if(nest<0) {
+          flag=1;
+        }
       }
       break;
     case '"':
       if(single_quote==0) {
-	double_quote ^= 1;
+        double_quote ^= 1;
       }
       break;
     case '\'':
       if(double_quote==0) {
-	single_quote ^= 1;
+        single_quote ^= 1;
       }
       break;
       
@@ -1726,24 +1911,24 @@ char *endmark;
       
     case '/':
       if((single_quote==0)&&(double_quote==0)) {
-	/* comment */
-	
-	c=G__fgetc();
-	switch(c) {
-	case '*':
-	  G__skip_comment();
-	  break;
-	case '/':
-	  G__fignoreline();
-	  break;
-	default:
-	  fseek(G__ifile.fp,-1,SEEK_CUR);
-	  if(c=='\n' /* || c=='\r' */) --G__ifile.line_number;
-	  if(G__dispsource) G__disp_mask=1;
-	  c='/';
-	  /* flag=1; BUG BUG, WHY */
-	  break;
-	}
+        /* comment */
+        
+        c=G__fgetc();
+        switch(c) {
+        case '*':
+          G__skip_comment();
+          break;
+        case '/':
+          G__fignoreline();
+          break;
+        default:
+          fseek(G__ifile.fp,-1,SEEK_CUR);
+          if(c=='\n' /* || c=='\r' */) --G__ifile.line_number;
+          if(G__dispsource) G__disp_mask=1;
+          c='/';
+          /* flag=1; BUG BUG, WHY */
+          break;
+        }
       }
       break;
       
@@ -1756,8 +1941,8 @@ char *endmark;
 #ifdef G__MULTIBYTE
     default:
       if(G__IsDBCSLeadByte(c)) {
-	c=G__fgetc() ;
-	G__CheckDBCS2ndByte(c);
+        c=G__fgetc() ;
+        G__CheckDBCS2ndByte(c);
       }
       break;
 #endif
@@ -1767,6 +1952,130 @@ char *endmark;
   
   return(c);
 }
+
+/***********************************************************************
+* G__ignorestream(source,isrc,endmark)
+*
+*
+* char *endmark      : specify endmark characters
+*
+*  skip source file until specified endmark char appears.
+* This function is identical to G__fgetstream() except it does not
+* return char *string;
+*
+* 1) read source file.
+* 2) When one of endmark char appears or parenthesis nesting of
+*   parenthesis gets negative , like '())' , stop reading and 
+*   return the last char.
+*
+*  *endmark=";"
+*     '  ab cd e f g;hijklm '
+*      -------------^           return(';');
+*
+*  *endmark=";"
+*     ' abc );'
+*      -----^                   return(')');
+*
+***********************************************************************/
+int G__ignorestream(char *source,int *isrc,char *endmark)
+{
+  short l;
+  int c,prev;
+  short nest=0,single_quote=0,double_quote=0,flag=0;
+  
+  
+  do {
+    c = source[(*isrc)++] ;
+    
+    
+    if((nest==0)&&(single_quote==0)&&(double_quote==0)) {
+      l=0;
+      while((prev=endmark[l++])!='\0') {
+        if(c==prev) {
+          flag=1;
+        }
+      }
+    }
+    
+    switch(c) {
+    case '{':
+    case '(':
+    case '[':
+      if((single_quote==0)&&(double_quote==0)) {
+        nest++;
+      }
+      break;
+    case '}':
+    case ')':
+    case ']':
+      if((single_quote==0)&&(double_quote==0)) {
+        nest--;
+        if(nest<0) {
+          flag=1;
+        }
+      }
+      break;
+    case '"':
+      if(single_quote==0) {
+        double_quote ^= 1;
+      }
+      break;
+    case '\'':
+      if(double_quote==0) {
+        single_quote ^= 1;
+      }
+      break;
+      
+    case '\\':
+      if(flag==0) c = source[(*isrc)++] ;
+      break;
+      
+#ifdef G__NEVER
+    case '/':
+      if((single_quote==0)&&(double_quote==0)) {
+        /* comment */
+        
+        c = source[(*isrc)++] ;
+        switch(c) {
+        case '*':
+          G__skip_comment();
+          break;
+        case '/':
+          G__fignoreline();
+          break;
+        default:
+          fseek(G__ifile.fp,-1,SEEK_CUR);
+          if(c=='\n' /* || c=='\r' */) --G__ifile.line_number;
+          if(G__dispsource) G__disp_mask=1;
+          c='/';
+          /* flag=1; BUG BUG, WHY */
+          break;
+        }
+      }
+      break;
+#endif
+      
+    /* need to handle preprocessor statements */
+      
+    case EOF:
+      G__unexpectedEOF("G__fignorestream():3");
+      return(c);
+
+#ifdef G__MULTIBYTE
+    default:
+      if(G__IsDBCSLeadByte(c)) {
+        c = source[(*isrc)++] ;
+        G__CheckDBCS2ndByte(c);
+      }
+      break;
+#endif
+    }
+    
+  } while(flag==0) ;
+  
+  return(c);
+}
+
 
 /***********************************************************************
 * G__fgetstream_new(string,endmark)
@@ -1799,15 +2108,12 @@ char *endmark;
 *     'func(new xxx);'
 *
 ***********************************************************************/
-int G__fgetstream_new(string,endmark)
-char *string,*endmark;
+int G__fgetstream_new(char *string,char *endmark)
 {
   short i=0,l;
   int c,prev;
   int nest=0,single_quote=0,double_quote=0,flag=0,ignoreflag;
-#ifndef G__OLDIMPLEMENTATION439
   int commentflag=0;
-#endif
 
   short inew=0;
 
@@ -1818,10 +2124,10 @@ char *string,*endmark;
     if((nest<=0)&&(single_quote==0)&&(double_quote==0)) {
       l=0;
       while((prev=endmark[l++])!='\0') {
-	if(c==prev) {
-	  flag=1;
-	  ignoreflag=1;
-	}
+        if(c==prev) {
+          flag=1;
+          ignoreflag=1;
+        }
       }
     }
     
@@ -1831,120 +2137,111 @@ char *string,*endmark;
     case '\r':
     case '\t':
     case ' ':
-#ifndef G__OLDIMPLEMENTATION439
       commentflag=0;
-#endif
       if((single_quote==0)&&(double_quote==0)) {
-	c=' ';
-	switch(i-inew) {
-	case 3:
-	  if(strncmp(string+inew,"new",3)!=0)
-	    ignoreflag=1;
-	  break;
-	default:
-	  inew=i;
-	  ignoreflag=1;
-	  break;
-	}
+        c=' ';
+        switch(i-inew) {
+        case 3:
+          if(strncmp(string+inew,"new",3)!=0)
+            ignoreflag=1;
+          break;
+#ifndef G__PHLIPPE33
+        case 5:
+          /* keep the space after const */
+          if(strncmp(string+inew,"const",5)!=0)
+            ignoreflag=1;
+          break;
+#endif
+        default:
+          inew=i;
+          ignoreflag=1;
+          break;
+        }
       }
       break;
     case ',':
     case '=':
       if((single_quote==0)&&(double_quote==0)) {
-	inew=i+1;
+        inew=i+1;
       }
       break;
     case '{':
     case '(':
     case '[':
       if((single_quote==0)&&(double_quote==0)) {
-	++nest;
-	inew=i+1;
+        ++nest;
+        inew=i+1;
       }
       break;
     case '}':
     case ')':
     case ']':
       if((single_quote==0)&&(double_quote==0)) {
-	nest--;
-#ifndef G__OLDIMPLEMENTATION994
-	inew=i+1;
-#endif
+        nest--;
+        inew=i+1;
       }
       break;
     case '"':
       if(single_quote==0) {
-	double_quote ^= 1;
+        double_quote ^= 1;
       }
       break;
     case '\'':
       if(double_quote==0) {
-	single_quote ^= 1;
+        single_quote ^= 1;
       }
       break;
       
     case '\\':
       if(ignoreflag==0) {
-	string[i++] = c ;
-	c=G__fgetc() ;
+        string[i++] = c ;
+        c=G__fgetc() ;
       }
       break;
       
     case '/':
-#ifndef G__OLDIMPLEMENTATION439
       if(0==double_quote && 0==single_quote && i>0 && string[i-1]=='/' &&
-	 commentflag) {
-#else
-      if(0==double_quote && 0==single_quote && i>0 && string[i-1]=='/') {
-#endif
-	i--;
-	G__fignoreline();
-	ignoreflag=1;
+         commentflag) {
+        i--;
+        G__fignoreline();
+        ignoreflag=1;
       }
-#ifndef G__OLDIMPLEMENTATION439
       else {
-	commentflag=1;
+        commentflag=1;
       }
-#endif
       break;
       
     case '*':
       /* comment */
-#ifndef G__OLDIMPLEMENTATION439
       if(0==double_quote && 0==single_quote && i>0 && string[i-1]=='/' &&
-	 commentflag) {
-#else
-      if(0==double_quote && 0==single_quote && i>0 && string[i-1]=='/') {
-#endif
-	G__skip_comment();
-	--i;
-	ignoreflag=1;
+         commentflag) {
+        G__skip_comment();
+        --i;
+        ignoreflag=1;
       }
       break;
 
     case '#':
       if(single_quote==0&&double_quote==0&&(i==0||string[i-1]!='$')) {
-	G__pp_command();
-	ignoreflag=1;
+        G__pp_command();
+        ignoreflag=1;
 #ifdef G__TEMPLATECLASS
-	c=' ';
+        c=' ';
 #endif
       }
       break;
 
     case EOF:
       G__unexpectedEOF("G__fgetstream_new():2");
-#ifndef G__OLDIMPLEMENTATION789
       string[i] = '\0';
-#endif
       return(c);
 
 #ifdef G__MULTIBYTE
     default:
       if(G__IsDBCSLeadByte(c) && !ignoreflag) {
-	string[i++]=c;
-	c=G__fgetc() ;
-	G__CheckDBCS2ndByte(c);
+        string[i++]=c;
+        c=G__fgetc() ;
+        G__CheckDBCS2ndByte(c);
       }
       break;
 #endif
@@ -1952,6 +2249,7 @@ char *string,*endmark;
     
     if(ignoreflag==0) {
       string[i++] = c ;
+      G__CHECK(G__SECURE_BUFFER_SIZE,i>=G__LONGLINE,return(EOF));
     }
     
   } while(flag==0) ;
@@ -1961,7 +2259,6 @@ char *string,*endmark;
   return(c);
 }
 
-#ifndef G__OLDIMPLEMENTATION1061
 /***********************************************************************
 * G__fgetstream_spaces(string,endmark)
 *
@@ -1983,8 +2280,7 @@ char *string,*endmark;
 *      -----^    *string="abc"; return(')');
 *
 ***********************************************************************/
-int G__fgetstream_spaces(string,endmark)
-char *string,*endmark;
+int G__fgetstream_spaces(char *string,char *endmark)
 {
   short i=0,l;
   int c,prev;
@@ -1999,10 +2295,10 @@ char *string,*endmark;
     if((nest<=0)&&(single_quote==0)&&(double_quote==0)) {
       l=0;
       while((prev=endmark[l++])!='\0') {
-	if(c==prev) {
-	  flag=1;
-	  ignoreflag=1;
-	}
+        if(c==prev) {
+          flag=1;
+          ignoreflag=1;
+        }
       }
     }
     
@@ -2014,7 +2310,7 @@ char *string,*endmark;
     case ' ':
       commentflag=0;
       if((single_quote==0)&&(double_quote==0)) {
-	c=' ';
+        c=' ';
         if (last_was_space || i == 0)
           ignoreflag=1;
       }
@@ -2023,62 +2319,62 @@ char *string,*endmark;
     case '(':
     case '[':
       if((single_quote==0)&&(double_quote==0)) {
-	++nest;
+        ++nest;
       }
       break;
     case '}':
     case ')':
     case ']':
       if((single_quote==0)&&(double_quote==0)) {
-	nest--;
+        nest--;
       }
       break;
     case '"':
       if(single_quote==0) {
-	double_quote ^= 1;
+        double_quote ^= 1;
       }
       break;
     case '\'':
       if(double_quote==0) {
-	single_quote ^= 1;
+        single_quote ^= 1;
       }
       break;
       
     case '\\':
       if(ignoreflag==0) {
-	string[i++] = c ;
-	c=G__fgetc() ;
+        string[i++] = c ;
+        c=G__fgetc() ;
       }
       break;
       
     case '/':
       if(0==double_quote && 0==single_quote && i>0 && string[i-1]=='/' &&
-	 commentflag) {
-	i--;
-	G__fignoreline();
-	ignoreflag=1;
+         commentflag) {
+        i--;
+        G__fignoreline();
+        ignoreflag=1;
       }
       else {
-	commentflag=1;
+        commentflag=1;
       }
       break;
       
     case '*':
       /* comment */
       if(0==double_quote && 0==single_quote && i>0 && string[i-1]=='/' &&
-	 commentflag) {
-	G__skip_comment();
-	--i;
-	ignoreflag=1;
+         commentflag) {
+        G__skip_comment();
+        --i;
+        ignoreflag=1;
       }
       break;
 
     case '#':
       if(single_quote==0&&double_quote==0&&(i==0||string[i-1]!='$')) {
-	G__pp_command();
-	ignoreflag=1;
+        G__pp_command();
+        ignoreflag=1;
 #ifdef G__TEMPLATECLASS
-	c=' ';
+        c=' ';
 #endif
       }
       break;
@@ -2091,9 +2387,9 @@ char *string,*endmark;
 #ifdef G__MULTIBYTE
     default:
       if(G__IsDBCSLeadByte(c) && !ignoreflag) {
-	string[i++]=c;
-	c=G__fgetc() ;
-	G__CheckDBCS2ndByte(c);
+        string[i++]=c;
+        c=G__fgetc() ;
+        G__CheckDBCS2ndByte(c);
       }
       break;
 #endif
@@ -2101,6 +2397,7 @@ char *string,*endmark;
     
     if(ignoreflag==0) {
       string[i++] = c ;
+      G__CHECK(G__SECURE_BUFFER_SIZE,i>=G__LONGLINE,return(EOF));
     }
 
     last_was_space = (c == ' ');
@@ -2114,7 +2411,6 @@ char *string,*endmark;
   
   return(c);
 }
-#endif
 
 /***********************************************************************
 * G__getstream(source,isrc,string,endmark)
@@ -2142,10 +2438,7 @@ char *string,*endmark;
 *                 -----------------^       *string="abcdefg*hijklmn"
 *
 ***********************************************************************/
-int G__getstream(source,isrc,string,endmark)
-char *source;
-int *isrc;
-char *string,*endmark;
+int G__getstream(char *source,int *isrc,char *string,char *endmark)
 {
   short i=0,l;
   int c,prev;
@@ -2160,40 +2453,40 @@ char *string,*endmark;
     if((nest==0)&&(single_quote==0)&&(double_quote==0)) {
       l=0;
       while((prev=endmark[l++])!='\0') {
-	if(c==prev) {
-	  flag=1;
-	  ignoreflag=1;
-	}
+        if(c==prev) {
+          flag=1;
+          ignoreflag=1;
+        }
       }
     }
     
     switch(c) {
     case '"':
       if(single_quote==0) {
-	double_quote ^= 1;
+        double_quote ^= 1;
       }
       break;
     case '\'':
       if(double_quote==0) {
-	single_quote ^= 1;
+        single_quote ^= 1;
       }
       break;
     case '{':
     case '(':
     case '[':
       if((single_quote==0)&&(double_quote==0)) {
-	nest++;
+        nest++;
       }
       break;
     case '}':
     case ')':
     case ']':
       if((single_quote==0)&&(double_quote==0)) {
-	nest--;
-	if(nest<0) {
-	  flag=1;
-	  ignoreflag=1;
-	}
+        nest--;
+        if(nest<0) {
+          flag=1;
+          ignoreflag=1;
+        }
       }
       break;
     case '\f':
@@ -2202,7 +2495,7 @@ char *string,*endmark;
     case '\t':
     case ' ':
       if((single_quote==0)&&(double_quote==0)) {
-	ignoreflag=1;
+        ignoreflag=1;
       }
       break;
     case '\0':
@@ -2213,17 +2506,15 @@ char *string,*endmark;
       break;
     case EOF:
       G__unexpectedEOF("G__getstream()");
-#ifndef G__OLDIMPLEMENTATION789
       string[i] = '\0';
-#endif
       break;
 
 #ifdef G__MULTIBYTE
     default:
       if(G__IsDBCSLeadByte(c) && !ignoreflag) {
-	string[i++]=c;
-	c=G__fgetc() ;
-	G__CheckDBCS2ndByte(c);
+        string[i++]=c;
+        c=G__fgetc() ;
+        G__CheckDBCS2ndByte(c);
       }
       break;
 #endif
@@ -2231,6 +2522,7 @@ char *string,*endmark;
     
     if(ignoreflag==0) {
       string[i++] = c ;
+      G__CHECK(G__SECURE_BUFFER_SIZE,i>=G__LONGLINE,{string[i]='\0';return(EOF);});
     }
     
   } while(flag==0) ;
@@ -2263,7 +2555,7 @@ char *string,*endmark;
 void G__fignoreline()
 {
   int c;
-  while((c=G__fgetc())!='\n' && c!='\r') {
+  while((c=G__fgetc())!='\n' && c!='\r' && c!=EOF) {
 #ifdef G__MULTIBYTE
     if(G__IsDBCSLeadByte(c)) {
       c=G__fgetc();
@@ -2276,9 +2568,7 @@ void G__fignoreline()
 #else /* MULTIBYTE */
     if(c=='\\') {
       c=G__fgetc();
-#ifndef G__OLDIMPLEMENTATION454
       if('\r'==c||'\n'==c) c=G__fgetc();
-#endif
     }
 #endif /* MULTIBYTE */
   }
@@ -2290,18 +2580,15 @@ void G__fignoreline()
 *    'as aljaf alijflijaf lisflif\n'
 *     ----------------------------^
 ***********************************************************************/
-int G__fgetline(string)
-char *string;
+int G__fgetline(char *string)
 {
   int c;
   int i=0;
-  while((c=G__fgetc())!='\n' && c!='\r') {
+  while((c=G__fgetc())!='\n' && c!='\r' && c!=EOF) {
     string[i]=c;
     if(c=='\\') {
       c=G__fgetc();
-#ifndef G__OLDIMPLEMENTATION454
       if('\r'==c||'\n'==c) c=G__fgetc();
-#endif
       string[i]=c;
     }
     ++i;
@@ -2310,7 +2597,6 @@ char *string;
   return(c);
 }
 
-#ifdef G__FONS_COMMENT
 /***********************************************************************
 * G__fsetcomment()
 *
@@ -2319,40 +2605,27 @@ char *string;
 *         ^ ------------V-------------->
 *
 ***********************************************************************/
-void G__fsetcomment(pcomment)
-struct G__comment_info *pcomment;
+void G__fsetcomment(G__comment_info *pcomment)
 {
   int c;
   fpos_t pos;
 
-#ifndef G__OLDIMPLEMENTATION469
   if(pcomment->filenum>=0 || pcomment->p.com) return;
-#else
-  if(pcomment->p.pos || pcomment->p.com) return;
-#endif
 
   fgetpos(G__ifile.fp,&pos);
 
-  while(isspace(c=fgetc(G__ifile.fp)) && '\n'!=c && '\r'!=c) ;
+  while((isspace(c=fgetc(G__ifile.fp)) || ';'==c) && '\n'!=c && '\r'!=c) ;
   if('/'==c) {
     c=fgetc(G__ifile.fp);
-#ifndef G__OLDIMPLEMENTATION849
     if('/'==c || '*'==c) {
-#else
-    if('/'==c) {
-#endif
       while(isspace(c=fgetc(G__ifile.fp))) {
-	if('\n'==c || '\r'==c) {
-	  fsetpos(G__ifile.fp,&pos);
-	  return;
-	}
+        if('\n'==c || '\r'==c) {
+          fsetpos(G__ifile.fp,&pos);
+          return;
+        }
       }
-#ifndef G__OLDIMPLEMENTATION1100
       if(G__ifile.fp==G__mfp) pcomment->filenum = G__MAXFILE;
       else                    pcomment->filenum = G__ifile.filenum;
-#else
-      pcomment->filenum = G__ifile.filenum;
-#endif
       fseek(G__ifile.fp,-1,SEEK_CUR);
       fgetpos(G__ifile.fp,&pcomment->p.pos);
     }
@@ -2360,7 +2633,15 @@ struct G__comment_info *pcomment;
   fsetpos(G__ifile.fp,&pos);
   return;
 }
-#endif
+
+/***********************************************************************
+* G__eolcallback()
+***********************************************************************/
+
+void G__set_eolcallback(void *eolcallback)
+{
+  G__eolcallback = (G__eolcallback_t)eolcallback;
+}
 
 /***********************************************************************
 * G__fgetc()
@@ -2377,9 +2658,7 @@ int G__fgetc()
 {
   int c;
 
-#ifndef G__OLDIMPLEMENTATION941
  try_again:
-#endif
 
   c=fgetc(G__ifile.fp);
   
@@ -2391,20 +2670,21 @@ int G__fgetc()
        0==G__disp_mask&& 
        G__srcfile[G__ifile.filenum].breakpoint &&
        G__srcfile[G__ifile.filenum].maxline>G__ifile.line_number &&
-       G__TESTBREAK&(G__srcfile[G__ifile.filenum].breakpoint[G__ifile.line_number]|=(!G__no_exec))) {
+       G__TESTBREAK&(G__srcfile[G__ifile.filenum].breakpoint[G__ifile.line_number]|=(!G__no_exec))
+       && !G__cintv6
+       ) {
       G__BREAKfgetc();
     }
     G__eof_count=0;
     if(G__dispsource) G__DISPNfgetc();
+    if(G__eolcallback) (*G__eolcallback)(G__ifile.name,G__ifile.line_number);
     break;
   case EOF:
     G__EOFfgetc();
     break;
-#ifndef G__OLDIMPLEMENTATION941
   case '\0':
     if(G__maybe_finish_macro()) goto try_again;
     /* otherwise, fail through to the default case */
-#endif
   default:
     if(G__dispsource) G__DISPfgetc(c);
     break;
@@ -2413,7 +2693,10 @@ int G__fgetc()
   return( c ) ;
 }
 
+#ifndef G__OLDIMPLEMENTATION1649
+#endif
 
+} /* extern "C" */
 
 /*
  * Local Variables:

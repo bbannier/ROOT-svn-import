@@ -7,19 +7,15 @@
  * Description:
  *  Cint parser global variables.
  ************************************************************************
- * Copyright(c) 1995~1999  Masaharu Goto (MXJ02154@niftyserve.or.jp)
+ * Copyright(c) 1995~1999  Masaharu Goto 
  *
- * Permission to use, copy, modify and distribute this software and its 
- * documentation for any purpose is hereby granted without fee,
- * provided that the above copyright notice appear in all copies and
- * that both that copyright notice and this permission notice appear
- * in supporting documentation.  The author makes no
- * representations about the suitability of this software for any
- * purpose.  It is provided "as is" without express or implied warranty.
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 #include "common.h"
 
+extern "C" {
 
 /***********************************************************************
 * EH_env and err_env are only variable name which isn't escaped by 'G__' 
@@ -52,36 +48,33 @@ int G__typepdecl; /* to be commented */
 /********************************************************
 * whole function bytecode compilation flag
 *********************************************************/
-#ifndef G__OLDIMPLEMENTATION599
 int G__asm_cond_cp = -1; /* avoid wrong bytecode optimization */
-#endif
 
 #ifdef G__ASM_WHOLEFUNC
 int G__asm_wholefunction;
 #endif
 
-#ifndef G__OLDIMPLEMENTATION517
 int G__asm_wholefunc_default_cp;
-#endif
 
 #ifdef G__ASM_IFUNC
 
 long *G__asm_inst; /* p-code instruction buffer */
+int G__asm_instsize;
 G__value *G__asm_stack; /* data stack and constant buffer */
 char *G__asm_name;
 
 long G__asm_inst_g[G__MAXINST]; /* p-code instruction buffer */
 G__value G__asm_stack_g[G__MAXSTACK]; /* data stack */
 char G__asm_name_g[G__ASM_FUNCNAMEBUF]; /* buffer to store function names 
-				         * which is called within the 
-					 * compiled loop */
+                                         * which is called within the 
+                                         * compiled loop */
 int G__asm_name_p=0; /* pointer to the function name buffer */
 
 #else /* G__ASM_IFUNC */
 long G__asm_inst[G__MAXINST]; /* p-code instruction buffer */
 G__value G__asm_stack[G__MAXSTACK]; /* data stack */
 char G__asm_name[G__LONGLINE*2]; /* buffer to store function names which 
-				* is called within the compiled loop */
+                                * is called within the compiled loop */
 int G__asm_name_p=0; /* pointer to the function name buffer */
 #endif /* G__ASM_IFUNC */
 
@@ -92,20 +85,18 @@ int G__asm_dt=G__MAXSTACK-1;   /* compile time stack pointer */
 /* Global variables to bring compilation data */
 int G__asm_index;              /* variable index */
 struct G__param *G__asm_param; /* pointer of parameter buffer to 
-				* bring function parameter */
+                                * bring function parameter */
 
 /* Loop compiler flags */
 int G__asm_loopcompile; /* loop compilation mode. default on(4). 
-			   * This is set to 0 by -O0 */
-#ifndef G__OLDIMPLEMENTATION1155
+                           * This is set to 0 by -O0 */
 int G__asm_loopcompile_mode; 
-#endif
 int G__asm_exec=0; /* p-code execution flag */
 int G__asm_noverflow=0; /* When this is set to 1, compilation starts. 
-			 * If any error found, reset */
+                         * If any error found, reset */
 
 int G__asm_dbg=0; /* p-code debugging flag, only valid when compiled with
-		   * G__ASM_DBG */
+                   * G__ASM_DBG */
 #ifdef G__ASM_DBG
 char *G__LOOPCOMPILEABORT="LOOP COMPILE ABORTED";
 #endif
@@ -172,11 +163,7 @@ char *G__macro="tmpfile";
 struct G__Deffuncmacro G__deffuncmacro;
 char G__macros[G__LONGLINE];
 char G__ppopt[G__ONELINE];
-#ifndef G__OLDIMPLEMENTATION928
 char *G__allincludepath=(char*)NULL;
-#else
-char G__allincludepath[G__LONGLINE];
-#endif
 char *G__undeflist="";
 
 /**************************************************************************
@@ -209,9 +196,7 @@ int G__argn;
 **************************************************************************/
 struct G__var_array  G__global ;
 struct G__var_array *G__p_local;
-#ifndef G__OLDIMPLEMENTATION686
 struct G__inheritance G__globalusingnamespace;
-#endif
 
 /**************************************************************************
 * structure for struct,union tag information
@@ -257,6 +242,8 @@ void (*G__atpause)();
 * pointer to function which is evaluated in G__genericerror()
 **************************************************************************/
 void (*G__aterror)();
+
+} /* extern "C" */
 
 /*
  * Local Variables:

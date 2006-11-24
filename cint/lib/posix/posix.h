@@ -7,15 +7,10 @@
  * Description:
  *  Create POSIX related function interface
  ************************************************************************
- * Copyright(c) 1995~1999  Masaharu Goto (MXJ02154@niftyserve.or.jp)
+ * Copyright(c) 1995~2002  Masaharu Goto (MXJ02154@niftyserve.or.jp)
  *
- * Permission to use, copy, modify and distribute this software and its 
- * documentation for non-commercial purpose is hereby granted without fee,
- * provided that the above copyright notice appear in all copies and
- * that both that copyright notice and this permission notice appear
- * in supporting documentation.  The author makes no
- * representations about the suitability of this software for any
- * purpose.  It is provided "as is" without express or implied warranty.
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 /* Please read README file in this directory */
@@ -39,7 +34,9 @@ typedef struct __dirstream DIR;
 struct dirent {
   long d_ino;                /* inode number */
   /* off_t d_off; */         /* offset to this dirent */
+#if !defined(__CYGWIN__) && !defined(G__CYGWIN)
   unsigned short d_reclen;   /* length of record */
+#endif
   /* char d_namelen; */      /* length of d_name */
   char d_name[NAME_MAX+1];   /* file name */
 };
@@ -92,14 +89,49 @@ extern int fcntl(int fd,int cmd,long arg);
 extern int umask(int mask);
 extern DIR* opendir(char *name);
 extern int telldir(DIR* dir);
+extern int fileno(FILE * stream);
 #endif /* __MAKECINT__ */
 
 extern struct dirent *readdir(DIR *dir);
+
+#if defined(G__KCC) || defined(__KCC)
+extern void seekdir(DIR* dir,off_t loc);
+
+#elif defined(G__alpha) || defined(__alpha)
+
+extern int seekdir(DIR *, long);
+
+#elif (defined(G__SGI) || defined(__sgi)) && !(defined(G__GNUC)||defined(__GNUC__))
+extern void seekdir( DIR *, off_t );
+
+#elif defined(G__AIX) || defined(_AIX)
+#ifdef _NO_PROTO
+extern	void seekdir();
+#else /* _NO_PROTO */
+extern void seekdir(DIR *, long);
+#endif  
+
+#elif defined(__CYGWIN__) || defined(G__CYGWIN)
+extern void seekdir (DIR*, off_t);
+
+#else
 extern void seekdir(DIR* dir,long loc);
+#endif
 #if !defined(G__SUN) && !defined(__sun)
 extern void rewinddir(DIR *dir);
 #endif
+
+#if defined(G__AIX) || defined(_AIX)
+#ifdef _NO_PROTO
+extern	int closedir();
+#else /* _NO_PROTO */
+extern  int closedir(DIR *);
+#endif
+
+#else /* defined(G__AIX) */
 extern int closedir(DIR *dirp);
+#endif
+
 
 /********************************************************************
  * sys/stat.h , unistd.h
@@ -142,8 +174,13 @@ int uname(struct utsname *buf);
  * unistd.h
  ********************************************************************/
 extern int close(int fd);
+#if (defined(G__alpha) || defined(__alpha)) && !defined(G__GNUC)
+extern int     read();
+extern int     write();
+#else
 extern ssize_t read(int fd,void *buf, size_t nbytes);
 extern ssize_t write(int fd,const void *buf, size_t n);
+#endif
 
 extern int dup(int oldfd);
 extern int dup2(int oldfd,int newfd);
@@ -151,6 +188,9 @@ extern int dup2(int oldfd,int newfd);
 extern int pipe(int filedes[2]);
 extern unsigned int alarm(unsigned int seconds);
 extern unsigned int sleep(unsigned int seconds);
+#if defined(G__LINUX)
+extern void usleep(unsigned long usec); /* BSD */
+#endif
 extern int pause(void);
 
 extern int chown(const char *path,uid_t owner,gid_t group);
@@ -160,10 +200,21 @@ extern char *getcwd(char *buf,size_t size);
 
 extern long int sysconf(int name);
 
-#if defined(__SUNPRO_C) || defined(G__SUNPRO_C)
+#if defined(G__GLIBC) && defined(G__GLIBC_MINOR)
+#define G__GLIBC_ (G__GLIBC*100+G__GLIBC_MINOR)
+#elif defined(__GLIBC__) && defined(__GLIBC_MINOR__)
+#define G__GLIBC_ (__GLIBC__*100+__GLIBC_MINOR__)
+#endif
+
+/* note: making everyting enclosed by #ifdef __MAKECINT__ can be a
+ * good solution. Why I didn't do that at the first place??? */
+#ifdef __MAKECINT__
+#if defined(__SUNPRO_C) || defined(G__SUNPRO_C) \
+   || (defined(G__GLIBC_) && (G__GLIBC_>=202))
 extern int putenv(char *string);
 #else
 extern int putenv(const char *string);
+#endif
 #endif
 
 extern pid_t getpid(void);
@@ -177,7 +228,9 @@ extern gid_t getgid(void);
 extern gid_t getegid(void);
 extern int setuid(uid_t uid);
 
+#if !(defined(G__APPLE) || defined(__APPLE__) || defined(G__QNX))
 extern char *cuserid(char *string);
+#endif
 extern char *getlogin(void);
 extern char *ctermid(char *s);
 extern char *ttyname(int desc);
@@ -195,17 +248,40 @@ extern time_t time(time_t *t);
 int S_ISLNK(mode_t m);
 int S_ISSOCK(mode_t m); 
 #endif
+#if (defined(G__APPLE) || defined(__APPLE__)) && ! defined (_GID_T)
+extern int fchown(int fd,int owner,int group);
+#else
 extern int fchown(int fd,uid_t owner,gid_t group);
+#endif
+
+#if !defined(G__QNX)
 extern int fchdir(int fd);
-#ifndef G__SUN
+#endif
+
+#if !(defined(G__APPLE) || defined(__APPLE__))
+#if !(defined(G__CYGWIN) || defined(__CYGWIN__))
 extern char *get_current_dir_name(void);
+#endif
 extern pid_t getpgid(pid_t pid);
 #endif
 extern char *getwd(char *buf);
-#if !defined(G__SUN) && !defined(__sun)
-extern int setpgrp(void);
+
+#if (defined(G__APPLE) || defined(__APPLE__))
+#if __DARWIN_UNIX03
+extern pid_t setpgrp(void);
 #else
+extern int setpgrp(pid_t _pid,pid_t _pgrp);
+#endif
+#elif defined(G__SUN) || defined(__sun)
 extern long setpgrp(void);
+#elif defined(G__FBSD)||defined(__FreeBSD__)||defined(G__OBSD)||defined(__OpenBSD__)||((defined(G__alpha)||defined(__alpha))&&defined(G__GNUC))||((defined(G__alpha)||defined(__alpha))&&defined(G__GNUC))
+extern int setpgrp(pid_t _pid, pid_t _pgrp);
+#elif defined(G__KCC) || defined(__KCC)
+extern pid_t setpgrp(void);
+#elif (defined(G__SGI) || defined(__sgi)) && !(defined(G__GNUC)||defined(__GNUC__))
+extern pid_t setpgrp(void);
+#else
+extern int setpgrp(void);
 #endif
 extern int symlink(const char *oldpath,const char *newpath);
 extern pid_t vfork(void);

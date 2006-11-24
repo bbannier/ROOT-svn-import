@@ -1,3 +1,10 @@
+/* -*- C++ -*- */
+/*************************************************************************
+ * Copyright(c) 1995~2005  Masaharu Goto (cint@pcroot.cern.ch)
+ *
+ * For the licensing terms see the file COPYING
+ *
+ ************************************************************************/
 /**************************************************************************
 * complex
 *
@@ -8,6 +15,7 @@
 #define G__COMPLEX
 
 #include <iostream.h>
+#include <math.h>
 
 template<class scalar>
 class complex {

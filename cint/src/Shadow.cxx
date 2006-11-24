@@ -1,4 +1,11 @@
-//$Id: Shadow.cxx,v 1.7 2006/01/10 23:39:37 axel Exp $
+/* -*- C++ -*- */
+/*************************************************************************
+ * Copyright(c) 1995~2005  Masaharu Goto (cint@pcroot.cern.ch)
+ *
+ * For the licensing terms see the file COPYING
+ *
+ ************************************************************************/
+//$Id: Shadow.cxx,v 1.13 2006/11/09 13:59:20 axel Exp $
 
 #include "Api.h"
 #include <ostream>
@@ -6,10 +13,10 @@
 #include <list>
 
 const int kMaxLen   =   1024;
-bool G__ShadowMaker::fgVetoShadow = false;
+bool Cint::G__ShadowMaker::fgVetoShadow = false;
 
-G__ShadowMaker::G__ShadowMaker(std::ostream& out, const char* nsprefix, 
-   bool(*needShadowClass)(G__ClassInfo &cl) /*=G__ShadowMaker::NeedShadowClass*/,
+Cint::G__ShadowMaker::G__ShadowMaker(std::ostream& out, const char* nsprefix, 
+   bool(*needShadowClass)(G__ClassInfo &cl) /*=Cint::G__ShadowMaker::NeedShadowClass*/,
    bool(*needTypedefShadow)(G__ClassInfo &cl) /*=0*/):
    fOut(out), fNSPrefix(nsprefix), fNeedTypedefShadow(needTypedefShadow) {
 
@@ -48,12 +55,12 @@ G__ShadowMaker::G__ShadowMaker(std::ostream& out, const char* nsprefix,
 }
 
 //______________________________________________________________________________
-void G__ShadowMaker::VetoShadow(bool veto /*=true*/) { 
+void Cint::G__ShadowMaker::VetoShadow(bool veto /*=true*/) { 
    fgVetoShadow = veto; 
 }
 
 //______________________________________________________________________________
-bool G__ShadowMaker::NeedShadowClass(G__ClassInfo& cl)
+bool Cint::G__ShadowMaker::NeedShadowClass(G__ClassInfo& cl)
 {
    // Return whether cl needs a shadow class.
 
@@ -67,7 +74,7 @@ bool G__ShadowMaker::NeedShadowClass(G__ClassInfo& cl)
 }
 
 //______________________________________________________________________________
-int G__ShadowMaker::WriteNamespaceHeader(G__ClassInfo &cl)
+int Cint::G__ShadowMaker::WriteNamespaceHeader(G__ClassInfo &cl)
 {
   // Write all the necessary opening part of the namespace and
   // return the number of closing brackets needed
@@ -91,7 +98,7 @@ int G__ShadowMaker::WriteNamespaceHeader(G__ClassInfo &cl)
 }
 
 //______________________________________________________________________________
-void G__ShadowMaker::GetFullyQualifiedName(G__ClassInfo &cl, std::string &fullyQualifiedName)
+void Cint::G__ShadowMaker::GetFullyQualifiedName(G__ClassInfo &cl, std::string &fullyQualifiedName)
 {
    GetFullyQualifiedName(cl.Fullname(),fullyQualifiedName);
    const char *qual = fullyQualifiedName.c_str();
@@ -112,7 +119,7 @@ void G__ShadowMaker::GetFullyQualifiedName(G__ClassInfo &cl, std::string &fullyQ
 }
 
 //______________________________________________________________________________
-void G__ShadowMaker::GetFullyQualifiedName(G__TypeInfo &type, std::string &fullyQualifiedName)
+void Cint::G__ShadowMaker::GetFullyQualifiedName(G__TypeInfo &type, std::string &fullyQualifiedName)
 {
 
    const char *s = type.TmpltName();
@@ -166,7 +173,7 @@ void G__ShadowMaker::GetFullyQualifiedName(G__TypeInfo &type, std::string &fully
 }
 
 //______________________________________________________________________________
-void G__ShadowMaker::GetFullyQualifiedName(const char *originalName, std::string &fullyQualifiedName)
+void Cint::G__ShadowMaker::GetFullyQualifiedName(const char *originalName, std::string &fullyQualifiedName)
 {
    //fprintf(stderr,"qualifying %s\n",originalName);
    std::string subQualifiedName = "";
@@ -272,7 +279,7 @@ void G__ShadowMaker::GetFullyQualifiedName(const char *originalName, std::string
 }
 
 //______________________________________________________________________________
-bool G__ShadowMaker::IsSTLCont(const char *type)
+bool Cint::G__ShadowMaker::IsSTLCont(const char *type)
 {
    // Just checking whether it contains one of
    // "any","vector","list","deque","map","multimap","set","multiset"
@@ -297,7 +304,7 @@ bool G__ShadowMaker::IsSTLCont(const char *type)
 }
 
 //______________________________________________________________________________
-bool G__ShadowMaker::IsStdPair(G__ClassInfo &cl)
+bool Cint::G__ShadowMaker::IsStdPair(G__ClassInfo &cl)
 {
    // Is this an std pair
 
@@ -306,7 +313,7 @@ bool G__ShadowMaker::IsStdPair(G__ClassInfo &cl)
 }
 
 //______________________________________________________________________________
-void G__ShadowMaker::GetFullShadowNameRecurse(G__ClassInfo &cl, std::string &fullname)
+void Cint::G__ShadowMaker::GetFullShadowNameRecurse(G__ClassInfo &cl, std::string &fullname)
 {
 
    if (fullname.empty()) {
@@ -336,7 +343,7 @@ void G__ShadowMaker::GetFullShadowNameRecurse(G__ClassInfo &cl, std::string &ful
 }
 
 //______________________________________________________________________________
-void G__ShadowMaker::GetFullShadowName(G__ClassInfo &cl, std::string &fullname)
+void Cint::G__ShadowMaker::GetFullShadowName(G__ClassInfo &cl, std::string &fullname)
 {
    GetFullShadowNameRecurse(cl, fullname);
    size_t len=fullname.length();
@@ -345,7 +352,7 @@ void G__ShadowMaker::GetFullShadowName(G__ClassInfo &cl, std::string &fullname)
 }
 
 //______________________________________________________________________________
-std::string G__ShadowMaker::GetNonConstTypeName(G__DataMemberInfo &m, bool fullyQualified /*= false*/)
+std::string Cint::G__ShadowMaker::GetNonConstTypeName(G__DataMemberInfo &m, bool fullyQualified /*= false*/)
 {
    // Return the type of the data member, without ANY const keyword
 
@@ -387,7 +394,7 @@ std::string G__ShadowMaker::GetNonConstTypeName(G__DataMemberInfo &m, bool fully
 }
 
 //______________________________________________________________________________
-void G__ShadowMaker::WriteShadowClass(G__ClassInfo &cl, int level /*=0*/)
+void Cint::G__ShadowMaker::WriteShadowClass(G__ClassInfo &cl, int level /*=0*/)
 {
    // This function writes or make available a class named fNSPrefix::Shadow::ClassName
    // for which all data member are the same as the one in the class but are
@@ -490,9 +497,10 @@ void G__ShadowMaker::WriteShadowClass(G__ClassInfo &cl, int level /*=0*/)
 
             std::string typenameOriginal;
             if (tdContained.Fullname()) {
-               typenameOriginal=tdContained.Fullname();
+               typenameOriginal=tdContained.TrueName();
                // don't generate dummy typedefs for template default params
-               if (typedefedTypename.find('<')!=std::string::npos)
+               if (!typedefedTypename.empty()
+                   && typedefedTypename[typedefedTypename.length()-1]=='>')
                  continue;
                // Cint doesn't put the FQI as the template arg's type,
                // so they end up in the shadow namespace, as in
@@ -505,24 +513,39 @@ void G__ShadowMaker::WriteShadowClass(G__ClassInfo &cl, int level /*=0*/)
                while (posTemplArg != std::string::npos) {
                   std::string arg = typenameOriginal.substr(posTemplArg+1);
                   size_t posArgEnd = arg.find_first_of("<,>");
-                  if (posArgEnd != std::string::npos) arg.erase(posArgEnd);
-                  else { 
+                  char endChar=0;
+                  if (posArgEnd != std::string::npos) {
+                     endChar = arg[posArgEnd];
+                     arg.erase(posArgEnd);
+                  } else { 
                      printf("WARNING: error extracting template aruments for %s!", 
                         typenameOriginal.c_str());
                      break;
                   }
+                  std::string::size_type posRef=std::string::npos;
+                  while ((posRef = arg.find_first_of(" *&"))!=std::string::npos)
+                     arg.erase(posRef, 1);
                   // if the type is not defined (i.e. it's fundamental)
                   // and if we don't have a real shadoew for it, use the
                   // global scope's type.
                   int tagname = G__defined_tagname(arg.c_str(), 1);
-                  if (tagname != -1) // FIXME! && fCacheNeedShadow[tagname] != 1)
-                     // need space before "::" to prevent "<:"
-                     typenameOriginal.insert(posTemplArg+1, " ::");
-
+                  if (tagname != -1) {
+                     G__ClassInfo ciArg(tagname);
+                     if (endChar == '<' 
+                         || fCacheNeedShadow[tagname] != 1 
+                         && ((ciArg.Property() & G__BIT_ISCLASS)
+                             || (ciArg.Property() & G__BIT_ISSTRUCT))) {
+                        // replace "pair" by "std::pair"
+                        if (arg == "pair") arg.insert(0, "std::");
+                        // we don't have a (full) shadow for this guy
+                        // need space before "::" to prevent "<:"
+                        typenameOriginal.insert(posTemplArg+1, " ::");
+                     }
+                  }
                   posTemplArg = typenameOriginal.find_first_of("<,", posTemplArg+1);
                }
 
-               if (IsSTLCont(tdContained.Fullname())) 
+               if (IsSTLCont(tdContained.Fullname()) || IsStdPair(tdContained)) 
                   nsprefixOriginal="::std::";
             }
 
@@ -548,8 +571,8 @@ void G__ShadowMaker::WriteShadowClass(G__ClassInfo &cl, int level /*=0*/)
          // fprintf(stderr,"%s::%s has property 0x%x\n",cl.Fullname(),methods.Name(),methods.Property());
          if (methods.Property() &
              (G__BIT_ISVIRTUALBASE|G__BIT_ISVIRTUAL|G__BIT_ISPUREVIRTUAL)) {
-            fOut << indent << "         // To force the creation of a virtual table." << std::endl
-                << indent << "         virtual ~" << classname << "() {};" << std::endl;
+            fOut << indent << "         // To force the creation of a virtual table, throw just in case." << std::endl
+                << indent << "         virtual ~" << classname << "() throw() {};" << std::endl;
             break;
          }
       }
@@ -558,7 +581,6 @@ void G__ShadowMaker::WriteShadowClass(G__ClassInfo &cl, int level /*=0*/)
          // Write data members
          G__DataMemberInfo d(cl);
          while (d.Next()) {
-
             // fprintf(stderr,"%s %s %ld\n",d.Type()->Name(),d.Name(),d.Property());
 
             if ((d.Type()->Property() & G__BIT_ISCONSTANT) 
@@ -586,33 +608,41 @@ void G__ShadowMaker::WriteShadowClass(G__ClassInfo &cl, int level /*=0*/)
                   if (!strcmp(d.Type()->Name(),"time_t"))
                      type_name = "time_t";
                   // for p2memfunc, take original type instead of Cint's para-type
-                  if (type_name == "G__p2memfunc")
-                     type_name = d.Type()->Name();
+                  if (d.Type()->Type()=='a' && d.Type()->Name())
+                     if (d.Type()->TrueName() 
+                        && !strcmp(d.Type()->TrueName(),"G__p2memfunc")) {
+                        fOut << indent << "         " 
+                             << "void (" << cl.Name() << "::*" << d.Name() << ")()";
+                        type_name="";
+                     }
+                     else
+                        type_name = d.Type()->Name();
+                  if (!type_name.empty()) {
+                     // Replace 'long long' and 'unsigned long long' by 'Long64_t' and 'ULong64_t'
+                     const char* ulonglong_s = "unsigned long long";
+                     const char* longlong_s  = ulonglong_s+9;
+                     const unsigned int ulonglong_len = 18;
+                     const unsigned int longlong_len  = 9;
 
-                  // Replace 'long long' and 'unsigned long long' by 'Long64_t' and 'ULong64_t'
-                  const char* ulonglong_s = "unsigned long long";
-                  const char* longlong_s  = ulonglong_s+9;
-                  const unsigned int ulonglong_len = 18;
-                  const unsigned int longlong_len  = 9;
+                     int pos = 0;
+                     while( (pos = type_name.find(ulonglong_s,pos) ) >=0 ) {
+                        type_name.replace(pos, ulonglong_len, "G__uint64");
+                     }
+                     pos = 0;
+                     while( (pos = type_name.find(longlong_s,pos) ) >=0 ) {
+                        type_name.replace(pos, longlong_len, "G__int64");
+                     }         
 
-                  int pos = 0;
-                  while( (pos = type_name.find(ulonglong_s,pos) ) >=0 ) {
-                     type_name.replace(pos, ulonglong_len, "G__uint64");
+                     if (type_name[type_name.length()-1]=='&') {
+                        type_name[type_name.length()-1]='*';
+                     }
+                     // if type is contained in cl, remove sope (so it points to nested shadow)
+                     if (!strncmp(type_name.c_str(), fullname.c_str(), fullname.length()) 
+                        && type_name[fullname.length()]==':')
+                        type_name.erase(0, fullname.length()+2);
+
+                     fOut << indent << "         " << type_name << " " << d.Name();
                   }
-                  pos = 0;
-                  while( (pos = type_name.find(longlong_s,pos) ) >=0 ) {
-                     type_name.replace(pos, longlong_len, "G__int64");
-                  }         
-
-                  if (type_name[type_name.length()-1]=='&') {
-                     type_name[type_name.length()-1]='*';
-                  }
-                  // if type is contained in cl, remove sope (so it points to nested shadow)
-                  if (!strncmp(type_name.c_str(), fullname.c_str(), fullname.length()) 
-                     && type_name[fullname.length()]==':')
-                     type_name.erase(0, fullname.length()+2);
-
-                  fOut << indent << "         " << type_name << " " << d.Name();
                }
             }
 
@@ -634,7 +664,7 @@ void G__ShadowMaker::WriteShadowClass(G__ClassInfo &cl, int level /*=0*/)
 }
 
 
-void G__ShadowMaker::WriteAllShadowClasses() {
+void Cint::G__ShadowMaker::WriteAllShadowClasses() {
    if (fgVetoShadow) return;
 
    fOut << "// START OF SHADOWS" << std::endl << std::endl;

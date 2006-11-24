@@ -1,3 +1,13 @@
+/* -*- C++ -*- */
+
+/************************************************************************
+ *
+ * Copyright(c) 1995~2006  Masaharu Goto (cint@pcroot.cern.ch)
+ *
+ * For the licensing terms see the file COPYING
+ *
+ ************************************************************************/
+
 /**
  **  Copyright (c) 1994-1995 Modena Software Inc.,
  **
@@ -2488,11 +2498,14 @@ operator+ (const basic_string<charT>& lhs, charT rhs)
     return tmp;
 }
 
+
 template <class charT>
 ostream&
 operator<< (ostream& o, const basic_string<charT>& s) 
 {
+#ifndef __CINT__
     typedef  basic_string<charT>::baggage_type  baggage_type;
+#endif
     for (size_t count = 0; count < s.length(); ++count)
 #ifdef __CINT__
         basic_string<charT>::baggage_type::char_out (o, *(s.data()+count));
@@ -2506,7 +2519,9 @@ template <class charT>
 istream&
 operator>> (istream& i, basic_string<charT>& s) 
 {
+#ifndef __CINT__
     typedef  basic_string<charT>::baggage_type  baggage_type; 
+#endif
     s.remove();
     while (true)
     {
@@ -2555,5 +2570,18 @@ template basic_string<char>;
 typedef  basic_string<char>     cstring;
 typedef  basic_string<char>     string;
 //typedef  basic_string<wchar_t>  wstring;
+
+#ifdef __CINT__
+ostream& operator<< (ostream& o, const basic_string<char>& s) {
+  o << s.c_str() ;
+  return o;
+}
+istream& operator>> (istream& o, basic_string<char>& s) {
+  char buf[1000];
+  o >> buf;
+  s = buf;
+  return o;
+}
+#endif
 
 #endif

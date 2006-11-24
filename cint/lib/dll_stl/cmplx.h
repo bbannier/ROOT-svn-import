@@ -1,5 +1,14 @@
+/* -*- C++ -*- */
+/*************************************************************************
+ * Copyright(c) 1995~2005  Masaharu Goto (cint@pcroot.cern.ch)
+ *
+ * For the licensing terms see the file COPYING
+ *
+ ************************************************************************/
 // lib/dll_stl/cmplx.h
 
+#include <cstdlib>
+#include <iostream>
 #include <complex>
 
 #ifndef __hpux
@@ -18,6 +27,7 @@ using namespace std;
 #pragma link C++ class complex<unsigned int> ;
 #pragma link C++ class complex<long> ;
 #pragma link C++ class complex<unsigned long> ;
+#pragma link C++ class complex<float> ;
 #pragma link C++ class complex<double> ;
 
 #ifdef G__NATIVELONGLONG
@@ -26,6 +36,15 @@ using namespace std;
 #pragma link C++ class complex<long double> ;
 #endif
 
+#ifdef __CINT__
+double abs(const complex<double>& a);
+//long abs(const complex<long>& a);
+
+#ifdef G__NATIVELONGLONG
+long double abs(const complex<long double>& a);
+//long long abs(const complex<long long>& a);
+#endif
+#endif
 
 
 #endif

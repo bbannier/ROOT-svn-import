@@ -7,21 +7,16 @@
  * Description:
  *  Show error message 
  ************************************************************************
- * Copyright(c) 1995~1999  Masaharu Goto (MXJ02154@niftyserve.or.jp)
+ * Copyright(c) 1995~2003  Masaharu Goto 
  *
- * Permission to use, copy, modify and distribute this software and its 
- * documentation for any purpose is hereby granted without fee,
- * provided that the above copyright notice appear in all copies and
- * that both that copyright notice and this permission notice appear
- * in supporting documentation.  The author makes no
- * representations about the suitability of this software for any
- * purpose.  It is provided "as is" without express or implied warranty.
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 #include "common.h"
 
+extern "C" {
 
-#ifndef G__OLDIMPLEMENTATION1103
 int G__const_noerror=0;
 /******************************************************************
 * G__const_setnoerror()
@@ -37,19 +32,24 @@ int G__const_resetnoerror() {
   G__const_noerror = 0;
   return(G__const_noerror);
 }
-#endif
+
+/******************************************************************
+* G__const_whatnoerror()
+******************************************************************/
+int G__const_whatnoerror() {
+  return(G__const_noerror);
+}
 
 /******************************************************************
 * G__nosupport()
 *
 *  print out error message for unsupported capability.
 ******************************************************************/
-void G__nosupport(name)
+void G__nosupport(char *name)
 /* struct G__input_file *fin; */
-char *name;
 {
 
-  fprintf(G__serr, "Limitation: %s is not supported", name);
+  G__fprinterr(G__serr, "Limitation: %s is not supported", name);
   G__printlinenum();
   G__CHECK(G__SECURE_EXIT_AT_ERROR,1,G__return=G__RETURN_EXIT1);
 }
@@ -64,7 +64,7 @@ char *name;
 ******************************************************************/
 void G__error_clear()
 {
-	G__error_flag=0;
+        G__error_flag=0;
 }
 #endif
 
@@ -74,10 +74,9 @@ void G__error_clear()
 * G__malloc_error(varname)
 *
 ******************************************************************/
-void G__malloc_error(varname)
-char *varname;
+void G__malloc_error(char *varname)
 {
-  fprintf(G__serr,"Internal Error: malloc failed for %s", varname);
+  G__fprinterr(G__serr,"Internal Error: malloc failed for %s", varname);
   G__printlinenum();
   G__CHECK(G__SECURE_EXIT_AT_ERROR,1,G__return=G__RETURN_EXIT1);
 #ifdef G__SECURITY
@@ -91,21 +90,17 @@ char *varname;
 *
 *
 ******************************************************************/
-void G__arrayindexerror(ig15 ,var ,item,p_inc)
-int ig15;
-struct G__var_array *var;
-char *item;
-int p_inc;
+void G__arrayindexerror(int ig15 ,G__var_array *var ,char *item,int p_inc)
 {
   int ig25;
   
-  fprintf(G__serr,"Error: Array index out of range %s -> [%d] " ,item,p_inc);
-  fprintf(G__serr," valid upto %s",var->varnamebuf[ig15]);
+  G__fprinterr(G__serr,"Error: Array index out of range %s -> [%d] " ,item,p_inc);
+  G__fprinterr(G__serr," valid upto %s",var->varnamebuf[ig15]);
   if(var->varlabel[ig15][1]!=0)
-    fprintf(G__serr,"[%d]",(var->varlabel[ig15][1]+1)/var->varlabel[ig15][0]-1);
+    G__fprinterr(G__serr,"[%d]",(var->varlabel[ig15][1]+1)/var->varlabel[ig15][0]-1);
   ig25=2;
   while(ig25<var->paran[ig15]+1) {
-    fprintf(G__serr,"[%d]",var->varlabel[ig15][ig25]-1);
+    G__fprinterr(G__serr,"[%d]",var->varlabel[ig15][ig25]-1);
     ig25++;
   }
   G__printlinenum();
@@ -121,11 +116,9 @@ int p_inc;
 /**************************************************************************
 * G__asm_execerr()
 **************************************************************************/
-int G__asm_execerr(message,num)
-char *message;
-int num;
+int G__asm_execerr(char *message,int num)
 {
-  fprintf(G__serr,"Loop Compile Internal Error: %s %d ",message,num);
+  G__fprinterr(G__serr,"Loop Compile Internal Error: %s %d ",message,num);
   G__genericerror((char*)NULL);
   G__asm_exec=0;
   return(0);
@@ -135,18 +128,16 @@ int num;
 /**************************************************************************
 * G__assign_error()
 **************************************************************************/
-int G__assign_error(item,pbuf)
-char *item;
-G__value *pbuf;
+int G__assign_error(char *item,G__value *pbuf)
 {
   if(0==G__prerun) {
     if(pbuf->type) {
-      fprintf(G__serr,"Error: Incorrect assignment to %s, wrong type '%s'"
-	      ,item ,G__type2string(pbuf->type ,pbuf->tagnum ,pbuf->typenum
-				    ,pbuf->obj.reftype.reftype,0));
+      G__fprinterr(G__serr,"Error: Incorrect assignment to %s, wrong type '%s'"
+              ,item ,G__type2string(pbuf->type ,pbuf->tagnum ,pbuf->typenum
+                                    ,pbuf->obj.reftype.reftype,0));
     }
     else {
-      fprintf(G__serr,"Error: Incorrect assignment to %s ",item);
+      G__fprinterr(G__serr,"Error: Incorrect assignment to %s ",item);
     }
     G__genericerror((char*)NULL);
   }
@@ -159,10 +150,9 @@ G__value *pbuf;
 /**************************************************************************
 * G__reference_error()
 **************************************************************************/
-int G__reference_error(item)
-char *item;
+int G__reference_error(char *item)
 {
-  fprintf(G__serr,"Error: Incorrect referencing of %s ",item);
+  G__fprinterr(G__serr,"Error: Incorrect referencing of %s ",item);
   G__genericerror((char*)NULL);
 #ifdef G__SECURITY
   G__security_error = G__RECOVERABLE;
@@ -175,9 +165,7 @@ char *item;
 /**************************************************************************
 * G__splitmessage()
 **************************************************************************/
-char* G__findrpos(s1,s2)
-char* s1;
-char* s2;
+char* G__findrpos(char *s1,char *s2)
 {
   char c;
   int nest=0, double_quote=0, single_quote=0;
@@ -210,8 +198,7 @@ char* s2;
 /**************************************************************************
 * G__splitmessage()
 **************************************************************************/
-int G__splitmessage(item) 
-char *item;
+int G__splitmessage(char *item) 
 {
   int stat=0;
   char *dot;
@@ -243,12 +230,12 @@ char *item;
     stat = 1;
     result = G__getexpr(buf);
     if(result.type) {
-      fprintf(G__serr
-	 ,"Error: Failed to evaluate class member '%s' (%s)",p,item[0]=='$'?item+1:item);
+      G__fprinterr(G__serr,
+         "Error: Failed to evaluate class member '%s' (%s)\n",p,item[0]=='$'?item+1:item);
     }
     else {
-      fprintf(G__serr
-	 ,"Error: Failed to evaluate %s",item[0]=='$'?item+1:item);
+      G__fprinterr(G__serr,
+         "Error: Failed to evaluate %s\n",item[0]=='$'?item+1:item);
     }
   }
   free((void*)buf);
@@ -259,36 +246,54 @@ char *item;
 /**************************************************************************
 * G__warnundefined()
 **************************************************************************/
-int G__warnundefined(item)
-char *item;
+int G__warnundefined(char *item)
 {
-#ifndef G__OLDIMPLEMENtATION997
   if(G__prerun&&G__static_alloc&&G__func_now>=0) return(0);
-#endif
+  if(G__no_exec_compile && 0==G__asm_noverflow) return(0);
   if(G__in_pause) return(0);
-  if(G__ASM_FUNC_COMPILE&G__asm_wholefunction) {
+  if(
+     !G__cintv6 &&
+     G__ASM_FUNC_COMPILE&G__asm_wholefunction) {
     G__CHECK(G__SECURE_PAUSE,1,G__pause());
     G__CHECK(G__SECURE_EXIT_AT_ERROR,1,G__return=G__RETURN_EXIT1);
   }
   else {
-#ifndef G__OLDIMPLEMENTATION1103
     if(0==G__const_noerror
 #ifndef G__OLDIMPELMENTATION1174
        && !G__splitmessage(item)
 #endif
        ) {
-#endif
-#ifdef G__ROOT
-      fprintf(G__serr
-	      ,"Error: No symbol %s in current scope ",item[0]=='$'?item+1:item);
-#else
-      fprintf(G__serr
-	      ,"Error: No symbol %s in current scope ",item);
-#endif
-#ifndef G__OLDIMPLEMENTATION1103
+      char *p = strchr(item,'(');
+      if(p) {
+        char tmp[G__ONELINE];
+        strcpy(tmp,item);
+        p = G__strrstr(tmp,"::");
+        if(p) {
+          *p = 0; p+=2;
+          G__fprinterr(G__serr,
+                       "Error: Function %s is not defined in %s ",p,tmp);
+        }
+        else {
+          G__fprinterr(G__serr,
+                       "Error: Function %s is not defined in current scope "
+                       ,item[0]=='$'?item+1:item);
+        }
+      }
+      else {
+        char tmp[G__ONELINE];
+        strcpy(tmp,item);
+        if(p) {
+          *p = 0; p+=2;
+          G__fprinterr(G__serr,
+                       "Error: Symbol %s is not defined in %s ",p,tmp);
+        }
+        else {
+          G__fprinterr(G__serr,
+                       "Error: Symbol %s is not defined in current scope ",item[0]=='$'?item+1:item);
+        }
+      }
+      G__genericerror((char*)NULL);
     }
-#endif
-    G__genericerror((char*)NULL);
   }
 #ifdef G__SECURITY
   G__security_error = G__RECOVERABLE;
@@ -299,33 +304,28 @@ char *item;
 /**************************************************************************
 * G__unexpectedEOF()
 **************************************************************************/
-int G__unexpectedEOF(message)
-char *message;
+int G__unexpectedEOF(char *message)
 {
   G__eof=2;
-  fprintf(G__serr,"Error: Unexpected EOF %s",message);
-#ifndef G__OLDIMPLEMENTATION1086
+  G__fprinterr(G__serr,"Error: Unexpected EOF %s",message);
   G__genericerror((char*)NULL);
-#else
-  G__printlinenum();
-#endif
   if(0==G__cpp) 
-    fprintf(G__serr,"Advice: You may need to use +P or -p option\n");
+    G__fprinterr(G__serr,"Advice: You may need to use +P or -p option\n");
   G__CHECK(G__SECURE_EXIT_AT_ERROR,1,G__return=G__RETURN_EXIT1);
 #ifdef G__SECURITY
   G__security_error = G__RECOVERABLE;
 #endif
-  if(G__steptrace||G__stepover) while(0==G__pause()) ;
+  if(G__NOLINK!=G__globalcomp && (G__steptrace||G__stepover)) 
+    while(0==G__pause()) ;
   return(0);
 }
 
 /**************************************************************************
 * G__shl_load_error()
 **************************************************************************/
-int G__shl_load_error(shlname,message)
-char *shlname,*message;
+int G__shl_load_error(char *shlname,char *message)
 {
-  fprintf(G__serr,"%s: Dynamic link library %s can not load\n",message,shlname);
+  G__fprinterr(G__serr,"%s: Failed to load Dynamic link library %s\n",message,shlname);
   G__CHECK(G__SECURE_EXIT_AT_ERROR,1,G__return=G__RETURN_EXIT1);
 #ifdef G__SECURITY
   G__security_error = G__RECOVERABLE;
@@ -336,10 +336,9 @@ char *shlname,*message;
 /**************************************************************************
 * G__getvariable_error()
 **************************************************************************/
-int G__getvariable_error(item)
-char *item;
+int G__getvariable_error(char *item)
 {
-  fprintf(G__serr ,"Error: G__getvariable: expression %s",item);
+  G__fprinterr(G__serr,"Error: G__getvariable: expression %s",item);
   G__printlinenum();
   G__CHECK(G__SECURE_EXIT_AT_ERROR,1,G__return=G__RETURN_EXIT1);
 #ifdef G__SECURITY
@@ -351,10 +350,9 @@ char *item;
 /**************************************************************************
 * G__referenceytypeerror()
 **************************************************************************/
-int G__referencetypeerror(new_name)
-char *new_name;
+int G__referencetypeerror(char *new_name)
 {
-  fprintf(G__serr,"Error: Can't take address for reference type %s",new_name);
+  G__fprinterr(G__serr,"Error: Can't take address for reference type %s",new_name);
   G__printlinenum();
   G__CHECK(G__SECURE_EXIT_AT_ERROR,1,G__return=G__RETURN_EXIT1);
 #ifdef G__SECURITY
@@ -367,10 +365,9 @@ char *new_name;
 /**************************************************************************
 * G__err_pointer2pointer(item);
 **************************************************************************/
-int G__err_pointer2pointer(item)
-char *item;
+int G__err_pointer2pointer(char *item)
 {
-  fprintf(G__serr,"Limitation: Pointer to pointer %s not supported",item);
+  G__fprinterr(G__serr,"Limitation: Pointer to pointer %s not supported",item);
   G__printlinenum();
   G__CHECK(G__SECURE_EXIT_AT_ERROR,1,G__return=G__RETURN_EXIT1);
 #ifdef G__SECURITY
@@ -382,10 +379,9 @@ char *item;
 /**************************************************************************
 * G__syntaxerror()
 **************************************************************************/
-int G__syntaxerror(expr)
-char *expr;
+int G__syntaxerror(char *expr)
 {
-  fprintf(G__serr,"Syntax Error: %s",expr);
+  G__fprinterr(G__serr,"Syntax Error: %s",expr);
   G__genericerror((char*)NULL);
 #ifdef G__SECURITY
   G__security_error = G__RECOVERABLE;
@@ -396,10 +392,9 @@ char *expr;
 /**************************************************************************
 * G__assignmenterror()
 **************************************************************************/
-int G__assignmenterror(item)
-char *item;
+int G__assignmenterror(char *item)
 {
-  fprintf(G__serr,"Error: trying to assign to %s",item);
+  G__fprinterr(G__serr,"Error: trying to assign to %s",item);
   G__printlinenum();
   G__CHECK(G__SECURE_EXIT_AT_ERROR,1,G__return=G__RETURN_EXIT1);
 #ifdef G__SECURITY
@@ -411,11 +406,10 @@ char *item;
 /**************************************************************************
 * G__parenthesiserror()
 **************************************************************************/
-int G__parenthesiserror(expression,funcname)
-char *expression,*funcname;
+int G__parenthesiserror(char *expression,char *funcname)
 {
-  fprintf(G__serr,"Syntax error: %s: Parenthesis or quotation unmatch %s"
-	  ,funcname ,expression);
+  G__fprinterr(G__serr,"Syntax error: %s: Parenthesis or quotation unmatch %s"
+          ,funcname ,expression);
   G__printlinenum();
   G__CHECK(G__SECURE_EXIT_AT_ERROR,1,G__return=G__RETURN_EXIT1);
 #ifdef G__SECURITY
@@ -429,7 +423,7 @@ char *expression,*funcname;
 **************************************************************************/
 int G__commenterror()
 {
-  fprintf(G__serr, "Syntax error: Unexpected '/' Comment?");
+  G__fprinterr(G__serr, "Syntax error: Unexpected '/' Comment?");
   G__printlinenum();
   G__CHECK(G__SECURE_EXIT_AT_ERROR,1,G__return=G__RETURN_EXIT1);
 #ifdef G__SECURITY
@@ -441,11 +435,12 @@ int G__commenterror()
 /**************************************************************************
 * G__changeconsterror()
 **************************************************************************/
-int G__changeconsterror(item,categ)
-char *item,*categ;
+int G__changeconsterror(char *item,char *categ)
 {
-  fprintf(G__serr,"Warning: Re-initialization %s %s",categ,item);
-  G__printlinenum();
+  if(G__dispmsg>=G__DISPWARN) {
+    G__fprinterr(G__serr,"Warning: Re-initialization %s %s",categ,item);
+    G__printlinenum();
+  }
   if(0==G__prerun) {
     G__CHECK(G__SECURE_EXIT_AT_ERROR,1,G__return=G__RETURN_EXIT1);
 #ifdef G__SECURITY
@@ -460,19 +455,16 @@ char *item,*categ;
 **************************************************************************/
 int G__printlinenum()
 {
-#ifndef G__OLDIMPLEMENTATION1196
-  fprintf(G__serr," FILE:%s LINE:%d\n" 
-	  ,G__stripfilename(G__ifile.name),G__ifile.line_number);
-#else
-#ifndef G__OLDIMPLEMENTATION1171
-  char *p;
-  p = strstr(G__ifile.name,"./");
-  if(!p) p = G__ifile.name;
-  fprintf(G__serr," FILE:%s LINE:%d\n" ,p,G__ifile.line_number);
-#else
-  fprintf(G__serr," FILE:%s LINE:%d\n" ,G__ifile.name,G__ifile.line_number);
+  char* format=" FILE:%s LINE:%d\n";
+#ifdef VISUAL_CPLUSPLUS
+  // make error msg Visual Studio compatible
+  format=" %s(%d)\n";
+#elif defined(G__ROOT)
+  // make error msg GCC compatible
+  format=" %s:%d:\n";
 #endif
-#endif
+  G__fprinterr(G__serr, format
+          ,G__stripfilename(G__ifile.name),G__ifile.line_number);
   return(0);
 }
 
@@ -488,25 +480,18 @@ int G__get_security_error()
 /**************************************************************************
 * G__genericerror()
 **************************************************************************/
-int G__genericerror(message)
-char *message;
+int G__genericerror(const char *message)
 {
-#ifndef G__OLDIMPLEMENTATION1164
   if(G__xrefflag) return(1);
-#endif
 
-  if(G__ASM_FUNC_NOP==G__asm_wholefunction) {
-#ifndef G__OLDIMPLEMENTATION1103
+  if(
+     G__cintv6 ||
+     G__ASM_FUNC_NOP==G__asm_wholefunction) {
     if(0==G__const_noerror) {
-#endif
-      if(message) fprintf(G__serr,"%s",message);
+      if(message) G__fprinterr(G__serr,"%s",message);
       G__printlinenum();
-#ifndef G__OLDIMPLEMENTATION1198
       G__storelasterror();
-#endif
-#ifndef G__OLDIMPLEMENTATION1103
     }
-#endif
   }
 
   G__CHECK(G__SECURE_PAUSE,1,G__pause());
@@ -515,14 +500,17 @@ char *message;
   G__security_error = G__RECOVERABLE;
 #endif
 
-#ifndef G__OLDIMPLEMENTATION875
   if(G__aterror) {
     int store_return=G__return;
     G__return=G__RETURN_NON;
     G__p2f_void_void((void*)G__aterror);
     G__return=store_return;
   }
-#endif
+
+  if(G__cintv6) {
+    if(G__cintv6&G__BC_COMPILEERROR) G__bc_throw_compile_error();
+    if(G__cintv6&G__BC_RUNTIMEERROR) G__bc_throw_runtime_error();
+  }
 
   return(0);
 }
@@ -532,9 +520,7 @@ char *message;
 * G__friendignore
 *
 **************************************************************************/
-int G__friendignore(piout,pspaceflag,mparen)
-int *piout,*pspaceflag;
-int mparen;
+int G__friendignore(int *piout,int *pspaceflag,int mparen)
 {
 #ifdef G__FRIEND
   int friendtagnum,envtagnum;
@@ -602,18 +588,18 @@ int mparen;
     if(-1!=envtagnum) {
       friendtag = G__struct.friendtag[friendtagnum];
       if(friendtag) {
-	while(friendtag->next) friendtag=friendtag->next;
-	friendtag->next
-	  =(struct G__friendtag*)malloc(sizeof(struct G__friendtag));
-	friendtag->next->next=(struct G__friendtag*)NULL;
-	friendtag->next->tagnum=envtagnum;
+        while(friendtag->next) friendtag=friendtag->next;
+        friendtag->next
+          =(struct G__friendtag*)malloc(sizeof(struct G__friendtag));
+        friendtag->next->next=(struct G__friendtag*)NULL;
+        friendtag->next->tagnum=envtagnum;
       }
       else {
-	G__struct.friendtag[friendtagnum]
-	  =(struct G__friendtag*)malloc(sizeof(struct G__friendtag));
-	friendtag = G__struct.friendtag[friendtagnum];
-	friendtag->next=(struct G__friendtag*)NULL;
-	friendtag->tagnum=envtagnum;
+        G__struct.friendtag[friendtagnum]
+          =(struct G__friendtag*)malloc(sizeof(struct G__friendtag));
+        friendtag = G__struct.friendtag[friendtagnum];
+        friendtag->next=(struct G__friendtag*)NULL;
+        friendtag->tagnum=envtagnum;
       }
     }
 #else
@@ -670,9 +656,7 @@ int mparen;
 * G__externignore
 *
 **************************************************************************/
-int G__externignore(piout,pspaceflag,mparen)
-int *piout,*pspaceflag;
-int mparen;
+int G__externignore(int *piout,int *pspaceflag,int mparen)
 {
   int flag=0;
   int c;
@@ -682,16 +666,27 @@ int mparen;
   c = G__fgetspace();
   if('"'==c) {
     /* extern "C" {  } */
-    c=G__fignorestream("\"");
+    char fname[G__MAXFILENAME];
+    int flag=0;
+    c = G__fgetstream(fname,"\"");
+    store_iscpp=G__iscpp;
+    /* if('{'==c) G__iscpp=0; */
+    if(0==strcmp(fname,"C")) {
+      G__iscpp=0;
+    }
+    else {
+      G__loadfile(fname);
+      G__SetShlHandle(fname);
+      flag=1;
+    }
     *pspaceflag = -1;
     *piout=0;
     c=G__fgetspace();
-    store_iscpp=G__iscpp;
-    if('{'==c) G__iscpp=0;
     fseek(G__ifile.fp,-1,SEEK_CUR);
     if(G__dispsource) G__disp_mask=1;
     G__exec_statement();
     G__iscpp=store_iscpp;
+    if(flag) G__ResetShlHandle();
     return(0);
   }
   else {
@@ -713,21 +708,15 @@ int mparen;
 *
 *  separated from G__exec_statement()
 **************************************************************************/
-int G__handleEOF(statement,mparen,single_quote,double_quote)
-char *statement;
-int mparen,single_quote,double_quote;
+int G__handleEOF(char *statement,int mparen,int single_quote,int double_quote)
 {
   G__eof=1;
   if((mparen!=0)||(single_quote!=0)||(double_quote!=0)){
     G__unexpectedEOF("G__exec_statement()");
   }
-#ifndef G__OLDIMPLEMENTATION632
   if(strcmp(statement,"")!=0 && strcmp(statement,"#endif")!=0 &&
      statement[0]!=0x1a) {
-#else
-  if(strcmp(statement,"")!=0 && strcmp(statement,"#endif")) {
-#endif
-    fprintf(G__serr,"Report: Unrecognized string '%s' ignored",statement);
+    G__fprinterr(G__serr,"Report: Unrecognized string '%s' ignored",statement);
     G__printlinenum();
   }
   return(0);
@@ -738,17 +727,12 @@ int mparen,single_quote,double_quote;
 * G__check_drange()
 * check for double
 ******************************************************************/
-int G__check_drange(p,low,up,d,result7,funcname)
-int p;
-double low;
-double up;
-double d;
-G__value *result7;
-char *funcname;
+int G__check_drange(int p,double low,double up,double d
+                    ,G__value *result7,char *funcname)
 {
   if(d<low||up<d) { 
-    fprintf(G__serr,"Error: %s param[%d]=%g up:%g low:%g out of range"
-	    ,funcname,p,d,up,low); 
+    G__fprinterr(G__serr,"Error: %s param[%d]=%g up:%g low:%g out of range"
+            ,funcname,p,d,up,low); 
     G__genericerror((char*)NULL); 
     *result7=G__null; 
     return(1); 
@@ -762,22 +746,11 @@ char *funcname;
 * G__check_lrange()
 * check for long
 ******************************************************************/
-int G__check_lrange(p,low,up,l,result7,funcname)
-int p;
-long low;
-long up;
-long l;
-G__value *result7;
-char *funcname;
+int G__check_lrange(int p,long low,long up,long l,G__value *result7,char *funcname)
 {
   if(l<low||up<l) { 
-#ifndef G__FONS31
-    fprintf(G__serr,"Error: %s param[%d]=%ld up:%ld low:%ld out of range"
-	    ,funcname,p,l,up,low); 
-#else
-    fprintf(G__serr,"Error: %s param[%d]=%d up:%d low:%d out of range"
-	    ,funcname,p,l,up,low); 
-#endif
+    G__fprinterr(G__serr,"Error: %s param[%d]=%ld up:%ld low:%ld out of range"
+            ,funcname,p,l,up,low); 
     G__genericerror((char*)NULL); 
     *result7=G__null; 
     return(1); 
@@ -791,16 +764,10 @@ char *funcname;
 * G__check_type()
 * check for NULL pointer
 ******************************************************************/
-int G__check_type(p,t1,t2,para,result7,funcname)
-int p;
-int t1;
-int t2;
-G__value *para;
-G__value *result7;
-char *funcname;
+int G__check_type(int p,int t1,int t2,G__value *para,G__value *result7,char *funcname)
 {
   if(para->type!=t1 && para->type!=t2) {
-    fprintf(G__serr,"Error: %s param[%d] type mismatch",funcname,p); 
+    G__fprinterr(G__serr,"Error: %s param[%d] type mismatch",funcname,p); 
     G__genericerror((char*)NULL); 
     *result7=G__null; 
     return(1);
@@ -812,45 +779,28 @@ char *funcname;
 * G__check_nonull()
 * check for NULL pointer
 ******************************************************************/
-int G__check_nonull(p
-#ifndef G__OLDIMPLEMENTATION575
-		    ,t,para
-#else
-		    ,l
-#endif
-		    ,result7,funcname)
-int p;
-#ifndef G__OLDIMPLEMENTATION575
-int t;
-G__value *para;
-#else
-long l;
-#endif
-G__value *result7;
-char *funcname;
+int G__check_nonull(int p
+                    ,int t,G__value *para
+                    ,G__value *result7,char *funcname)
 {
-#ifndef G__OLDIMPLEMENTATION575
   long l;
   l = G__int(*para);
-#endif
   if(0==l) { 
-    fprintf(G__serr,"Error: %s param[%d]=%ld must not be 0",funcname,p,l); 
+    G__fprinterr(G__serr,"Error: %s param[%d]=%ld must not be 0",funcname,p,l); 
     G__genericerror((char*)NULL); 
     *result7=G__null; 
     return(1); 
   } 
-#ifndef G__OLDIMPLEMENTATION575
   else if(t!=para->type) {
     if('Y'!=t){
-      fprintf(G__serr,"Error: %s parameter mismatch param[%d] %c %c"
-	      ,funcname,p,t,para->type); 
+      G__fprinterr(G__serr,"Error: %s parameter mismatch param[%d] %c %c"
+              ,funcname,p,t,para->type); 
       G__genericerror((char*)NULL); 
       *result7=G__null; 
       return(1); 
     }
     return(0);
   }
-#endif
   else {
     return(0);
   }
@@ -863,13 +813,14 @@ char *funcname;
 * G__printerror()
 *
 **************************************************************************/
-void G__printerror(funcname,ipara,paran)
-char *funcname;
-int ipara,paran;
+void G__printerror(char *funcname,int ipara,int paran)
 {
-  fprintf(G__serr,"Warning: %s() expects %d parameters, %d parameters given"
-	  ,funcname,ipara,paran);
-  G__printlinenum();
+  if(G__dispmsg>=G__DISPWARN) {
+    G__fprinterr(G__serr
+                 ,"Warning: %s() expects %d parameters, %d parameters given"
+                 ,funcname,ipara,paran);
+    G__printlinenum();
+  }
   G__CHECK(G__SECURE_EXIT_AT_ERROR,1,G__return=G__RETURN_EXIT1);
 #ifdef G__SECURITY
   G__security_error = G__RECOVERABLE;
@@ -892,14 +843,10 @@ int G__pounderror()
   if(p) *p='\0';
   p = strchr(buf,'\r');
   if(p) *p='\0';
-  fprintf(G__serr,"#error %s\n",buf);
+  G__fprinterr(G__serr,"#error %s\n",buf);
   G__CHECK(G__SECURE_EXIT_AT_ERROR,1,G__return=G__RETURN_EXIT1);
 #ifdef G__SECURITY
-#ifndef G__OLDIMPLEMENTATION1199
   G__security_error = G__RECOVERABLE;
-#else
-  G__security_error = G__DANGEROUS;
-#endif
 #endif
   return(0);
 }
@@ -908,14 +855,14 @@ int G__pounderror()
 * G__missingsemicolumn()
 *
 **************************************************************************/
-int G__missingsemicolumn(item)
-char *item;
+int G__missingsemicolumn(char *item)
 {
-  fprintf(G__serr ,"Syntax Error: %s Maybe missing ';'",item);
+  G__fprinterr(G__serr,"Syntax Error: %s Maybe missing ';'",item);
   G__genericerror((char*)NULL);
   return(0);
 }
 
+} /* extern "C" */
 
 /*
  * Local Variables:

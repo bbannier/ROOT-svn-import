@@ -9,6 +9,8 @@
  ************************************************************************
  * Copyright(c) 2001-2002   Masaharu Goto (MXJ02154@niftyserve.or.jp)
  *
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 #ifndef G__IOSTREAM_H
@@ -165,6 +167,12 @@ extern "C" void G__redirectcin(const char* filename) {
 *********************************************************************/
 #define G__MANIP_SUPPORT
 
+extern "C" {
+  typedef struct {
+    private:
+     int __fill[6];
+  } mbstate_t;
+}
 typedef long streampos ;
 typedef long streamoff ;
 
@@ -468,9 +476,9 @@ struct char_traits {
     typedef charT                     char_type;
     typedef INT_T                     int_type;
 #ifdef __CINT__
-    //typedef mbstate_t                 state_type;
-    //typedef fpos<state_type>         pos_type;
-    //typedef wstreamoff               off_type;
+    typedef mbstate_t                 state_type;
+    typedef fpos<state_type>         pos_type;
+    typedef wstreamoff               off_type;
 #endif 
     static void assign (char_type& c1, const char_type& c2)   ;
     static char_type to_char_type(const int_type& c);
@@ -485,14 +493,14 @@ struct char_traits {
     static const char_type* find (const char_type* s,int n,const char_type& a);
     static char_type  *copy(char_type *dst,const char_type *src, size_t n);
     static char_type* move (char_type* s1, const char_type* s2, size_t n);
-    static char_type* assign (char_type* s, size_t n, const char_type& a);
+    static char_type* assign (char_type* s, size_t n, const char_type a);
 };
 
 struct char_traits<char> {
     typedef char                      char_type;
     typedef int                       int_type;
     
-#ifndef __CINT__
+#ifdef __CINT__
     typedef streamoff                 off_type; 
     typedef streampos                 pos_type;
     typedef mbstate_t                 state_type;
@@ -510,7 +518,7 @@ struct char_traits<char> {
     static size_t            length(const char_type *s);
     static char_type  *copy(char_type *dst,const char_type *src, size_t n);
     static char_type * move (char_type* s1, const char_type* s2, size_t n);
-    static char_type* assign (char_type* s, size_t n, const char_type& a);
+    static char_type* assign (char_type* s, size_t n, const char_type a);
 };
 
 //typedef basic_istream<char> >                   istream;
@@ -523,9 +531,29 @@ extern ostream cout ;
 extern ostream cerr ;
 extern ostream clog ;
 
-//ios&		dec(ios&) ; 
-//ios&		hex(ios&) ;
-//ios&		oct(ios&) ; 
+#ifndef G__OLDIMPLEMENTATION1938
+ios_base&	dec(ios_base&) ; 
+ios_base&	hex(ios_base&) ;
+ios_base&	oct(ios_base&) ; 
+ios_base&       fixed(ios_base&);
+ios_base&       scientific(ios_base&);
+ios_base&       right(ios_base&);
+ios_base&       left(ios_base&);
+ios_base&       internal(ios_base&);
+ios_base&       nouppercase(ios_base&);
+ios_base&       uppercase(ios_base&);
+ios_base&       noskipws(ios_base&);
+ios_base&       skipws(ios_base&);
+ios_base&       noshowpos(ios_base&);
+ios_base&       showpos(ios_base&);
+ios_base&       noshowpoint(ios_base&);
+ios_base&       showpoint(ios_base&);
+ios_base&       noshowbase(ios_base&);
+ios_base&       showbase(ios_base&);
+ios_base&       noboolalpha(ios_base&);
+ios_base&       boolalpha(ios_base&);
+#endif
+
 istream&	ws(istream&) ;
 
 ostream&	endl(ostream& i) ;
@@ -564,5 +592,23 @@ istream& operator>> ( istream&, char* );
 istream& operator>> ( istream&, void*& );
 
 #endif // __CINT__
+
+#ifndef __CINT__
+namespace std {
+template<class _Elem,
+  class _Traits,
+  class T> inline
+  basic_istream<_Elem, _Traits>& 
+#ifndef __QNX__
+  __cdecl 
+#endif
+  operator>>(basic_istream<_Elem, _Traits>& _Istr, T& _Ch)
+  {	// extract a signed char
+    return (_Istr >> _Ch);
+  }
+}
+
+#endif
+
 
 #endif // G__IOSTREAM_H

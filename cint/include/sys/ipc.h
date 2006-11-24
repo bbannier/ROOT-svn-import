@@ -1,3 +1,10 @@
+/* -*- C++ -*- */
+/*************************************************************************
+ * Copyright(c) 1995~2005  Masaharu Goto (cint@pcroot.cern.ch)
+ *
+ * For the licensing terms see the file COPYING
+ *
+ ************************************************************************/
 /****************************************************************
 * sys/ipc.h
 *****************************************************************/
@@ -11,9 +18,9 @@
 #endif
 
 #ifndef __MAKECINT__
-#ifndef G__IPCDLL_H /* G__IPCDLL_H is defined in pthread.dll */
+#pragma ifndef G__IPCDLL_H /* G__IPCDLL_H is defined in pthread.dll */
 #pragma message Note: ipc.dll is not found. Do 'sh setup' in $CINTSYSDIR/lib/ipc directory if you use UNIX.
-#endif
+#pragma endif
 #endif
 
 #endif

@@ -7,18 +7,15 @@
  * Description:
  *  Cint parser global variables.
  ************************************************************************
- * Copyright(c) 1995~1999  Masaharu Goto (MXJ02154@niftyserve.or.jp)
+ * Copyright(c) 1995~1999  Masaharu Goto 
  *
- * Permission to use, copy, modify and distribute this software and its 
- * documentation for any purpose is hereby granted without fee,
- * provided that the above copyright notice appear in all copies and
- * that both that copyright notice and this permission notice appear
- * in supporting documentation.  The author makes no
- * representations about the suitability of this software for any
- * purpose.  It is provided "as is" without express or implied warranty.
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 #include "common.h"
+
+extern "C" {
 
 /**************************************************************************
 *  flags
@@ -89,9 +86,7 @@ int G__def_struct_member;
 #ifdef G__FRIEND
 int G__friendtagnum;
 #endif
-#ifndef G__OLDIMPLEMENTATION440
 int G__tmplt_def_tagnum;
-#endif
 int G__def_tagnum;
 int G__tagdefining;
 int G__tagnum ; /* -1 */
@@ -100,9 +95,7 @@ short G__iscpp ;
 short G__cpplock ;
 short G__clock ;
 short G__constvar ;
-#ifndef G__OLDIMPLEMENTATION1250
 short G__isexplicit ;
-#endif
 short G__unsigned ;
 short G__ansiheader ;
 G__value G__ansipara;
@@ -118,11 +111,6 @@ int G__decl;
 G__SIGNEDCHAR_T G__isconst;
 #endif
 
-#ifdef G__OLDIMPLEMENTATION435
-char *G__conststring[G__MAXSTRING];
-int   G__conststringhash[G__MAXSTRING];
-short G__allstring;
-#endif
 
 char G__nam[G__MAXFILENAME];
 char G__assertion[G__ONELINE];
@@ -171,8 +159,8 @@ int G__fixedscope;
 int G__isfuncreturnp2f;
 
 int G__virtual;
-struct G__ifunc_table *G__ifunc_exist();
-struct G__ifunc_table *G__ifunc_ambiguous();
+struct G__ifunc_table *G__ifunc_exist(G__ifunc_table *ifunc_now,int allifunc,G__ifunc_table *ifunc,int *piexist,int mask);
+struct G__ifunc_table *G__ifunc_ambiguous(G__ifunc_table *ifunc_now,int allifunc,G__ifunc_table *ifunc,int *piexist,int derivedtagnum);
 
 /* #define G__OLDIMPLEMENTATION78 */
 
@@ -222,17 +210,11 @@ struct G__includepath *G__getipathentry() { return &G__ipathentry; }
 *********************************************************************/
 #ifdef G__AUTOCOMPILE
 FILE *G__fpautocc;
-#ifndef G__OLDIMPLEMENTATION486
 char G__autocc_c[G__MAXNAME];
 char G__autocc_h[G__MAXNAME];
 char G__autocc_sl[G__MAXNAME];
 char G__autocc_mak[G__MAXNAME];
 int G__autoccfilenum = -1;
-#else
-char *G__autocc_c="G__autocc.c";
-char *G__autocc_h="G__autocc.h";
-char *G__autocc_sl="G__autocc.sl";
-#endif
 int G__compilemode;
 #endif
 
@@ -283,23 +265,17 @@ FILE *G__serr;
 FILE *G__sout;
 FILE *G__sin;
 
-#ifndef G__OLDIMPLEMENTATION713
 FILE *G__intp_serr;
 FILE *G__intp_sout;
 FILE *G__intp_sin;
-#endif
 
-#ifndef G__OLDIMPLEMENTATION411
 FILE *G__fpundeftype;
-#endif
 
-#ifdef G__FONS_COMMENT
 /**************************************************************************
 * Class/struct comment title enhancement
 **************************************************************************/
 int G__fons_comment;
 char *G__setcomment;
-#endif
 
 int G__precomp_private;
 
@@ -328,13 +304,7 @@ int G__is_operator_newdelete ;
 * $xxx user specific scope object
 **************************************************************************/
 #ifdef G__ANSI
-#if !defined(G__OLDIMPLEMENTATION481)
 G__value (*G__GetSpecialObject)(char *name,void** pptr,void** ppdict);
-#elif !defined(G__OLDIMPLEMENTATION455)
-G__value (*G__GetSpecialObject)(char *name,void* ptr);
-#else
-G__value (*G__GetSpecialObject)(char *name);
-#endif
 #else
 G__value (*G__GetSpecialObject)();
 #endif
@@ -344,6 +314,8 @@ G__value (*G__GetSpecialObject)();
 **************************************************************************/
 #if defined(G__NONANSI)
 char *G__psep = "/";
+#elif defined(G__CYGWIN)
+const char *G__psep = "/";
 #elif defined(G__WIN32)
 const char *G__psep = "\\";
 #elif defined(__MWERKS__)
@@ -352,12 +324,10 @@ const char *G__psep = ":";
 const char *G__psep = "/";
 #endif
 
-#ifndef G__OLDIMPLEMENTATION451
 /**************************************************************************
 * add user defined pragma statement
 **************************************************************************/
 struct G__AppPragma *G__paddpragma;
-#endif
 
 #ifdef G__MULTIBYTE
 /**************************************************************************
@@ -366,57 +336,42 @@ struct G__AppPragma *G__paddpragma;
 short G__lang = G__UNKNOWNCODING;
 #endif
 
-#ifndef G__OLDIMPLEMENTATION563
 /**************************************************************************
 * A flag no notify cint ready status to embedding program
 * This flag is set by cint internal only, and read by G__getcintready() API
 **************************************************************************/
 int G__cintready=0;
-#endif
 
-#ifndef G__OLDIMPLEMENTATION630
 /**************************************************************************
 * interactive return for undefined symbol and G__pause
 **************************************************************************/
 int G__interactive_undefined=0;
-#endif
 
-#ifndef G__OLDIMPLEMENTATION734
 /**************************************************************************
 * STL Allocator workaround data
 **************************************************************************/
 char G__Allocator[G__ONELINE] = "Allocator";
-#endif
 
-#ifndef G__OLDIMPLEMENTATION754
 /**************************************************************************
 * Exception object buffer
 **************************************************************************/
 G__value G__exceptionbuffer;
-#endif
 
-#ifndef G__OLDIMPLEMENTATION782
 /**************************************************************************
 * Exception object buffer
 **************************************************************************/
 int G__ispragmainclude=0;
-#endif
 
-#ifndef G__OLDIMPLEMENTATION1097
 /**************************************************************************
 * automatic variable on/off
 **************************************************************************/
 int G__automaticvar=1;
-#endif
 
-#ifndef G__OLDIMPLEMENTATION1164
 /**************************************************************************
 * Local variable , bytecode compiler workaround
 **************************************************************************/
 int G__xrefflag=0;
-#endif
 
-#ifndef G__OLDIMPLEMENTATION1273
 /**************************************************************************
 * Local variable , bytecode compiler workaround
 **************************************************************************/
@@ -425,19 +380,67 @@ int G__do_smart_unload=1;
 #else
 int G__do_smart_unload=1;
 #endif
-#endif
 
-#ifndef G__OLDIMPLEMENTATION1278
 #ifdef G__ROOT
 int G__autoload_stdheader = 0;
 #else
 int G__autoload_stdheader = 1;
 #endif
+
+int G__ignore_stdnamespace = 1;
+
+int G__decl_obj=0;
+
+struct G__ConstStringList* G__SystemIncludeDir=0;
+
+int G__command_eval=0 ;
+
+#ifdef G__MULTITHREADLIBCINT
+int G__multithreadlibcint = 1;
+#else
+int G__multithreadlibcint = 0;
 #endif
 
-#ifndef G__OLDIMPLEMENTATION1285
-int G__ignore_stdnamespace = 1;
-#endif
+void (*G__emergencycallback)();
+
+int G__asm_clear_mask = 0;
+
+int G__boolflag;
+
+int G__init=0;
+
+int G__last_error = 0;
+
+int G__dispmsg = G__DISPALL;
+
+int G__default_link = 1;
+
+/* 1713 */
+int G__gettingspecial = 0;
+
+int G__gcomplevellimit=1000;
+
+int G__catchexception=1;
+
+int G__eval_localstatic=0;
+
+int G__loadingDLL=0;
+
+
+int G__mask_error=0;
+
+G__eolcallback_t G__eolcallback;
+
+int G__throwingexception=0;
+
+int G__do_setmemfuncenv = 0;
+
+int G__scopelevel=0;
+int G__cintv6 = 0;
+
+struct G__input_file G__lasterrorpos;
+
+} /* extern "C" */
 
 /*
  * Local Variables:

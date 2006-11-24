@@ -5,9 +5,11 @@
  * header file iostrm.h
  ************************************************************************
  * Description:
- *  Stub file for making iostream library
+ *  Stub file for making iostream library for g++ 3.00
  ************************************************************************
- * Copyright(c) 2001       Masaharu Goto (MXJ02154@niftyserve.or.jp)
+ * Copyright(c) 2001-2002   Masaharu Goto (MXJ02154@niftyserve.or.jp)
+ *
+ * For the licensing terms see the file COPYING
  *
  ************************************************************************/
 
@@ -75,20 +77,133 @@ inline istream& operator>> ( istream& ist, long double & p)
 inline istream& operator>> ( istream& ist, void*& p) 
   {return(ist.operator>>(p));}
 
+#ifndef G__OLDIMPLEMENTATION1635
+#include <fstream>
+/********************************************************************
+ * static variables for iostream redirection
+ ********************************************************************/
+static ostream::__streambuf_type *G__store_cout;
+static ostream::__streambuf_type *G__store_cerr;
+static istream::__streambuf_type *G__store_cin;
+static ofstream  *G__redirected_cout;
+static ofstream  *G__redirected_cerr;
+static ifstream  *G__redirected_cin;
+/********************************************************************
+ * G__redirectcout
+ ********************************************************************/
+extern "C" void G__unredirectcout() {
+  if(G__store_cout) {
+    cout.rdbuf(G__store_cout);
+    G__store_cout = 0;
+  }
+  if(G__redirected_cout) {
+    delete G__redirected_cout;
+    G__redirected_cout = 0;
+  }
+}
+/********************************************************************
+ * G__redirectcout
+ ********************************************************************/
+extern "C" void G__redirectcout(const char* filename) {
+  G__unredirectcout();
+  G__redirected_cout = new ofstream(filename,ios_base::app);
+  G__store_cout = cout.rdbuf(G__redirected_cout->rdbuf()) ;
+}
+/********************************************************************
+ * G__redirectcerr
+ ********************************************************************/
+extern "C" void G__unredirectcerr() {
+  if(G__store_cerr) {
+    cerr.rdbuf(G__store_cerr);
+    G__store_cerr = 0;
+  }
+  if(G__redirected_cerr) {
+    delete G__redirected_cerr;
+    G__redirected_cerr = 0;
+  }
+}
+/********************************************************************
+ * G__redirectcerr
+ ********************************************************************/
+extern "C" void G__redirectcerr(const char* filename) {
+  G__unredirectcerr();
+  G__redirected_cerr = new ofstream(filename,ios_base::app);
+  G__store_cerr = cerr.rdbuf(G__redirected_cerr->rdbuf()) ;
+}
+/********************************************************************
+ * G__redirectcin
+ ********************************************************************/
+extern "C" void G__unredirectcin() {
+  if(G__store_cin) {
+    cin.rdbuf(G__store_cin);
+    G__store_cin = 0;
+  }
+  if(G__redirected_cin) {
+    delete G__redirected_cin;
+    G__redirected_cin = 0;
+  }
+}
+/********************************************************************
+ * G__redirectcin
+ ********************************************************************/
+extern "C" void G__redirectcin(const char* filename) {
+  G__unredirectcin();
+  G__redirected_cin = new ifstream(filename,ios_base::in);
+  G__store_cin = cin.rdbuf(G__redirected_cin->rdbuf()) ;
+}
+#endif /* 1635 */
+
 #else // __CINT__
 
 #include <cstdio>
 
 /********************************************************************
+* streampos
+*********************************************************************/
+extern "C" {
+  typedef struct {
+    private:
+     int __fill[6];
+  } mbstate_t;
+}
+
+#ifdef G__THIS_DOES_NOT_WORK_WITH_CYGWIN_GCC3
+class wstreampos { };
+#endif
+class streamoff { };
+
+
+typedef long long streampos ;
+typedef long long streamoff ;
+
+typedef long long    SZ_T;       
+typedef SZ_T         streamsize;
+
+template<typename _StateT>
+class fpos {
+ public:
+  fpos();
+  fpos(const fpos&);
+  fpos(long long);
+  operator streamoff() const;
+  fpos operator+(streamoff a);
+  fpos operator-(streamoff a);
+  bool operator==(const fpos& a);
+  bool operator!=(const fpos& a);
+  //FIXME: operator+= and operator-= are missing
+  //bool operator>(const fpos& a);
+  //friend bool operator<(const fpos& a,const fpos& b);
+  //friend bool operator>(const fpos& a,const fpos& b);
+  //friend bool operator<=(const fpos& a,const fpos& b);
+  //friend bool operator<=(const fpos& a,const fpos& b);
+};
+
+typedef fpos<mbstate_t> 		streampos;
+
+/********************************************************************
 * macro G__MANIP_SUPPORT must be defined to enable true manipulator
 *********************************************************************/
 #define G__MANIP_SUPPORT
-
-typedef long streampos ;
-typedef long streamoff ;
-
-typedef long         SZ_T;       
-typedef SZ_T         streamsize;
 
 class ios_base {
   public:
@@ -192,6 +307,7 @@ class ios_base {
 #if (G__GNUC>=3)
   private:
     ios_base(const ios_base& x); 
+    ios_base& operator=(const ios_base& x);
 #endif
 };
 
@@ -199,9 +315,9 @@ template<class charT, class traits>
 class basic_ios : public ios_base { 
   public:
 #if !(G__GNUC>=3)
-    typedef basic_ios<charT, traits>           ios_type;
-    typedef basic_streambuf<charT, traits>     streambuf_type; 
-    typedef basic_ostream<charT, traits>       ostream_type;
+    typedef basic_ios<charT,traits >           ios_type;
+    typedef basic_streambuf<charT,traits >     streambuf_type; 
+    typedef basic_ostream<charT,traits >       ostream_type;
 #endif
     typedef traits::char_type      char_type;
     typedef traits                 traits_type;
@@ -281,6 +397,7 @@ class basic_streambuf {
 #if (G__GNUC>=3)
   private:
     basic_streambuf(const basic_streambuf& x);
+    basic_streambuf& operator=(const basic_streambuf& x);
 #endif
 };
 
@@ -348,9 +465,9 @@ class basic_istream : virtual public basic_ios<charT, traits> {
     pos_type tellg();
     __istream_type& seekg(pos_type pos);
     int sync();
-#ifndef __CINT__
+//#ifndef __CINT__
     __istream_type& seekg(off_type, ios_base::seekdir);
-#endif
+//#endif
     __istream_type& putback(char_type c);
     __istream_type& unget();
     streamsize gcount() const;
@@ -435,11 +552,9 @@ template<class charT>
 struct char_traits {
     typedef charT                     char_type;
     typedef INT_T                     int_type;
-#ifdef __CINT__
-    //typedef mbstate_t                 state_type;
-    //typedef fpos<state_type>         pos_type;
-    //typedef wstreamoff               off_type;
-#endif 
+    typedef mbstate_t                 state_type;
+    typedef fpos<state_type>         pos_type;
+    typedef wstreamoff               off_type;
     static void assign (char_type& c1, const char_type& c2)   ;
     static char_type to_char_type(const int_type& c);
     static int_type to_int_type(const char_type& c);
@@ -453,14 +568,14 @@ struct char_traits {
     static const char_type* find (const char_type* s,int n,const char_type& a);
     static char_type  *copy(char_type *dst,const char_type *src, size_t n);
     static char_type* move (char_type* s1, const char_type* s2, size_t n);
-    static char_type* assign (char_type* s, size_t n, const char_type& a);
+    static char_type* assign (char_type* s, size_t n, const char_type a);
 };
 
 struct char_traits<char> {
     typedef char                      char_type;
     typedef int                       int_type;
     
-#ifndef __CINT__
+#ifdef __CINT__
     typedef streamoff                 off_type; 
     typedef streampos                 pos_type;
     typedef mbstate_t                 state_type;
@@ -478,7 +593,7 @@ struct char_traits<char> {
     static size_t            length(const char_type *s);
     static char_type  *copy(char_type *dst,const char_type *src, size_t n);
     static char_type * move (char_type* s1, const char_type* s2, size_t n);
-    static char_type* assign (char_type* s, size_t n, const char_type& a);
+    static char_type* assign (char_type* s, size_t n, const char_type a);
 };
 
 //typedef basic_istream<char> >                   istream;
@@ -486,14 +601,36 @@ typedef basic_istream<char, char_traits<char> >   istream;
 //typedef basic_ostream<char>                     ostream;
 typedef basic_ostream<char, char_traits<char> >   ostream;
 
+typedef basic_streambuf<char,char_traits<char> > streambuf;
+
 extern istream cin ;
 extern ostream cout ;
 extern ostream cerr ;
 extern ostream clog ;
 
-//ios&		dec(ios&) ; 
-//ios&		hex(ios&) ;
-//ios&		oct(ios&) ; 
+#ifndef G__OLDIMPLEMENTATION1938
+ios_base&	dec(ios_base&) ; 
+ios_base&	hex(ios_base&) ;
+ios_base&	oct(ios_base&) ; 
+ios_base&       fixed(ios_base&);
+ios_base&       scientific(ios_base&);
+ios_base&       right(ios_base&);
+ios_base&       left(ios_base&);
+ios_base&       internal(ios_base&);
+ios_base&       nouppercase(ios_base&);
+ios_base&       uppercase(ios_base&);
+ios_base&       noskipws(ios_base&);
+ios_base&       skipws(ios_base&);
+ios_base&       noshowpos(ios_base&);
+ios_base&       showpos(ios_base&);
+ios_base&       noshowpoint(ios_base&);
+ios_base&       showpoint(ios_base&);
+ios_base&       noshowbase(ios_base&);
+ios_base&       showbase(ios_base&);
+ios_base&       noboolalpha(ios_base&);
+ios_base&       boolalpha(ios_base&);
+#endif
+
 istream&	ws(istream&) ;
 
 ostream&	endl(ostream& i) ;
@@ -512,8 +649,9 @@ ostream& operator<< ( ostream&, long );
 ostream& operator<< ( ostream&, unsigned long);
 ostream& operator<< ( ostream&, float );
 ostream& operator<< ( ostream&, double );
-ostream& operator<< ( ostream&, long double );
+//ostream& operator<< ( ostream&, long double );
 ostream& operator<< ( ostream&, bool );
+//ostream& operator<< (ostream&,const streampos&);
 
 istream& operator>> ( istream&, char& );
 istream& operator>> ( istream&, unsigned char& );
@@ -525,7 +663,7 @@ istream& operator>> ( istream&, long& );
 istream& operator>> ( istream&, unsigned long& );
 istream& operator>> ( istream&, float& );
 istream& operator>> ( istream&, double& );
-istream& operator>> ( istream&, long double& );
+//istream& operator>> ( istream&, long double& );
 istream& operator>> ( istream&, bool& );
 istream& operator>> ( istream&, char* );
 istream& operator>> ( istream&, void*& );

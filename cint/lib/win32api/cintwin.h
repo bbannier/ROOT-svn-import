@@ -1,3 +1,10 @@
+/* -*- C++ -*- */
+/*************************************************************************
+ * Copyright(c) 1995~2005  Masaharu Goto (cint@pcroot.cern.ch)
+ *
+ * For the licensing terms see the file COPYING
+ *
+ ************************************************************************/
 /***********************************************************************
 * cintwin.h
 *   Embedding Win32 API to CINT
@@ -13,7 +20,7 @@
 #endif
 
 /* windows header */
-#if defined(__MAKECINT__) && defined(G__BORLAND)
+#if defined(__MAKECINT__) && (defined(G__BORLAND)||defined(G__VISUAL))
 #undef MIDL_PASS
 #endif
 #include <windows.h>

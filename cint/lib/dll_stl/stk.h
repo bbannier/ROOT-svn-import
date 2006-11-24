@@ -1,3 +1,10 @@
+/* -*- C++ -*- */
+/*************************************************************************
+ * Copyright(c) 1995~2005  Masaharu Goto (cint@pcroot.cern.ch)
+ *
+ * For the licensing terms see the file COPYING
+ *
+ ************************************************************************/
 // lib/dll_stl/stk.h
 
 #include <deque>
@@ -26,7 +33,7 @@ using namespace std;
 #pragma link C++ class stack<double>;
 #pragma link C++ class stack<void*>;
 #pragma link C++ class stack<char*>;
-#ifdef G__STRING_DLL
+#if defined(G__STRING_DLL) || defined(G__ROOT)
 #pragma link C++ class stack<string>;
 #endif
 

@@ -1,7 +1,15 @@
+/* -*- C++ -*- */
+/*************************************************************************
+ * Copyright(c) 1995~2005  Masaharu Goto (cint@pcroot.cern.ch)
+ *
+ * For the licensing terms see the file COPYING
+ *
+ ************************************************************************/
 // lib/dll_stl/clim.h
 
 #include <cstddef>
 #include <climits>
+#include <limits>
 #ifndef __hpux
 using namespace std;
 #endif

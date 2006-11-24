@@ -8,15 +8,10 @@
  *  Create standard include files at cint installation
  ************************************************************************
  * Author                  Masaharu Goto
- * Copyright(c) 1995~1999  Masaharu Goto (MXJ02154@niftyserve.or.jp)
+ * Copyright(c) 1995~1999  Masaharu Goto (cint@pcroot.cern.ch)
  *
- * Permission to use, copy, modify and distribute this software and its 
- * documentation for non-commercial purpose is hereby granted without fee,
- * provided that the above copyright notice appear in all copies and
- * that both that copyright notice and this permission notice appear
- * in supporting documentation.  The author makes no
- * representations about the suitability of this software for any
- * purpose.  It is provided "as is" without express or implied warranty.
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 #include <stdio.h>
 #include <limits.h>
@@ -32,7 +27,7 @@
 #include <locale.h>
 #include <stddef.h>
 #include <signal.h>
-#include "../G__ci.h"
+#include "G__ci.h"
 
 #ifdef G__NEWSOS4
 #include <ctype.h>
@@ -54,13 +49,13 @@ char *dir="";
 *******************************************************************/
 int check_pointersize()
 {
-  fprintf(stdout,"sizeof(long)=%d , sizeof(void*)=%d\n"
-	  ,sizeof(long),sizeof(void*));
+  fprintf(stdout,"sizeof(long)=%ld , sizeof(void*)=%ld\n"
+	  ,(long)sizeof(long),(long)sizeof(void*));
   if(sizeof(long)<sizeof(void*)) {
     fprintf(stderr,"\n");
     fprintf(stderr,"CINT INSTALLATION FATAL ERROR :\n");
-    fprintf(stderr,"        sizeof(long)=%d < sizeof(void*)=%d\n"
-	    ,sizeof(long),sizeof(void*));
+    fprintf(stderr,"        sizeof(long)=%ld < sizeof(void*)=%ld\n"
+	    ,(long)sizeof(long),(long)sizeof(void*));
     fprintf(stderr,"  SORRY, CAN NOT INSTALL CINT.\n");
     fprintf(stderr,"Size of long must be greater or equal to size of void*\n\n");
     exit(EXIT_FAILURE);
@@ -96,7 +91,7 @@ char *iden;
   else if(sizeof(type)==sizeof(unsigned long)*2) {                      \
     fprintf(fp,"typedef struct %s {\n",ctype);                          \
     fprintf(fp,"  unsigned long l,u;\n");                               \
-    fprintf(fp,"  %s(unsigned long i){l=i;u=0;}\n",ctype);              \
+    fprintf(fp,"  %s(unsigned long i=0){l=i;u=0;}\n",ctype);            \
     fprintf(fp,"  void operator=(unsigned long i){l=i;u=0;}\n");        \
     fprintf(fp,"} %s;\n",ctype);                                        \
     fprintf(fp,"#pragma link off class %s;\n",ctype);                   \
@@ -104,7 +99,7 @@ char *iden;
   }                                                                     \
   else {                                                                \
     fprintf(fp,"typedef struct %s {\n",ctype);                          \
-    fprintf(fp,"  char dmy[%d];\n",sizeof(type));                       \
+    fprintf(fp,"  char dmy[%ld];\n",(long)sizeof(type));                \
     fprintf(fp,"} %s;\n",ctype);                                        \
     fprintf(fp,"#pragma link off class %s;\n",ctype);                   \
     fprintf(fp,"#pragma link off typedef %s;\n",ctype);                 \
@@ -122,7 +117,7 @@ char *iden;
   else if(sizeof(type)==sizeof(long)*2) {                               \
     fprintf(fp,"typedef struct %s {\n",ctype);                          \
     fprintf(fp,"  long l,u;\n");                                        \
-    fprintf(fp,"  %s(long i){l=i;u=0;}\n",ctype);                       \
+    fprintf(fp,"  %s(long i=0){l=i;u=0;}\n",ctype);                     \
     fprintf(fp,"  void operator=(long i){l=i;u=0;}\n");                 \
     fprintf(fp,"} %s;\n",ctype);                                        \
     fprintf(fp,"#pragma link off class %s;\n",ctype);                   \
@@ -130,7 +125,7 @@ char *iden;
   }                                                                     \
   else {                                                                \
     fprintf(fp,"typedef struct %s {\n",ctype);                          \
-    fprintf(fp,"  char dmy[%d];\n",sizeof(type));                       \
+    fprintf(fp,"  char dmy[%ld];\n",(long)sizeof(type));                \
     fprintf(fp,"} %s;\n",ctype);                                        \
     fprintf(fp,"#pragma link off class %s;\n",ctype);                   \
     fprintf(fp,"#pragma link off typedef %s;\n",ctype);                 \
@@ -148,7 +143,7 @@ char *iden;
   else if(sizeof(type)==sizeof(unsigned long)*2) {                      \
     fprintf(fp,"typedef struct %s {\n",ctype);                          \
     fprintf(fp,"  unsigned long l,u;\n");                               \
-    fprintf(fp,"  %s(unsigned long i){l=i;u=0;}\n",ctype);              \
+    fprintf(fp,"  %s(unsigned long i=0){l=i;u=0;}\n",ctype);            \
     fprintf(fp,"  void operator=(unsigned long i){l=i;u=0;}\n");        \
     fprintf(fp,"} %s;\n",ctype);                                        \
     fprintf(fp,"#pragma link off class %s;\n",ctype);                   \
@@ -156,7 +151,7 @@ char *iden;
   }                                                                     \
   else {                                                                \
     fprintf(fp,"typedef struct %s {\n",ctype);                          \
-    fprintf(fp,"  char dmy[%d];\n",sizeof(type));                       \
+    fprintf(fp,"  char dmy[%ld];\n",(long)sizeof(type));                \
     fprintf(fp,"} %s;\n",ctype);                                        \
     fprintf(fp,"#pragma link off class %s;\n",ctype);                   \
     fprintf(fp,"#pragma link off typedef %s;\n",ctype);                 \
@@ -174,7 +169,7 @@ char *iden;
   else if(sizeof(type)==sizeof(long)*2) {                               \
     fprintf(fp,"typedef struct %s {\n",ctype);                          \
     fprintf(fp,"  long l,u;\n");                                        \
-    fprintf(fp,"  %s(long i){l=i;u=0;}\n",ctype);                       \
+    fprintf(fp,"  %s(long i=0){l=i;u=0;}\n",ctype);                     \
     fprintf(fp,"  void operator=(long i){l=i;u=0;}\n");                 \
     fprintf(fp,"} %s;\n",ctype);                                        \
     fprintf(fp,"#pragma link off class %s;\n",ctype);                   \
@@ -182,7 +177,7 @@ char *iden;
   }                                                                     \
   else {                                                                \
     fprintf(fp,"typedef struct %s {\n",ctype);                          \
-    fprintf(fp,"  char dmy[%d];\n",sizeof(type));                       \
+    fprintf(fp,"  char dmy[%ld];\n",(long)sizeof(type));                \
     fprintf(fp,"} %s;\n",ctype);                                        \
     fprintf(fp,"#pragma link off class %s;\n",ctype);                   \
     fprintf(fp,"#pragma link off typedef %s;\n",ctype);                 \
@@ -207,7 +202,8 @@ int gen_stdio()
 #endif
 
   INT_TYPEDEF_PREFER_LONG(fp,fpos_t,"fpos_t");
-  UINT_TYPEDEF_PREFER_INT(fp,size_t,"size_t");
+/* see v6_init.cxx, G__platformMacro
+  UINT_TYPEDEF_PREFER_INT(fp,size_t,"size_t"); */
   fprintf(fp,"#define \t_IOFBF (%d)\n",_IOFBF);
   fprintf(fp,"#define \t_IOLBF (%d)\n",_IOLBF);
   fprintf(fp,"#define \t_IONBF (%d)\n",_IONBF);
@@ -272,10 +268,10 @@ int gen_limits()
   fprintf(fp,"#define \tSCHAR_MIN (%d)\n",SCHAR_MIN);
   fprintf(fp,"#define \tSHRT_MAX (%d)\n",SHRT_MAX);
   fprintf(fp,"#define \tSHRT_MIN (%d)\n",SHRT_MIN);
-  fprintf(fp,"#define \tUCHAR_MAX (%d)\n",UCHAR_MAX);
-  fprintf(fp,"const unsigned int  \tUINT_MAX =(%u);\n",UINT_MAX);
-  fprintf(fp,"const unsigned long \tULONG_MAX =(%lu);\n",ULONG_MAX);
-  fprintf(fp,"#define \tUSHRT_MAX (%u)\n",USHRT_MAX);
+  fprintf(fp,"#define \tUCHAR_MAX (%dU)\n",UCHAR_MAX);
+  fprintf(fp,"const unsigned int  \tUINT_MAX =(%uU);\n",UINT_MAX);
+  fprintf(fp,"const unsigned long \tULONG_MAX =(%luU);\n",ULONG_MAX);
+  fprintf(fp,"#define \tUSHRT_MAX (%uU)\n",USHRT_MAX);
 
   fprintf(fp,"#endif\n");
   fclose(fp);
@@ -316,7 +312,7 @@ int gen_time()
 #endif
 
 #ifdef CLK_TCK
-  fprintf(fp,"#define \tCLK_TCK (%d)\n",CLK_TCK);
+  fprintf(fp,"#define \tCLK_TCK (%ld)\n",(long)CLK_TCK);
 #endif
 
   fprintf(fp,"#endif\n");
@@ -450,10 +446,11 @@ int gen_stdlib()
   fprintf(fp,"   long int rem;\n");
   fprintf(fp,"} ldiv_t;\n");
 #endif
-  UINT_TYPEDEF_PREFER_INT(fp,size_t,"size_t");
+/* see v6_init.cxx, G__platformMacro
+  UINT_TYPEDEF_PREFER_INT(fp,size_t,"size_t"); */
   fprintf(fp,"#define \tEXIT_FAILURE (%d)\n",EXIT_FAILURE);
   fprintf(fp,"#define \tEXIT_SUCCESS (%d)\n",EXIT_SUCCESS);
-  fprintf(fp,"#define \tMB_CUR_MAX (%d)\n",MB_CUR_MAX);
+  fprintf(fp,"#define \tMB_CUR_MAX (%ld)\n",(long)MB_CUR_MAX);
   fprintf(fp,"#define \tMB_LEN_MAX (%d)\n",MB_LEN_MAX);
 #ifndef G__NONANSI
 #ifndef G__SUNOS4
@@ -539,8 +536,17 @@ int gen_stddef()
 
   /* NULL */
   /* offsetof(); */
+#ifdef __GNUC__
+  fprintf(fp,"#if (G__GNUC==2)\n");
+  INT_TYPEDEF_PREFER_INT(fp,ptrdiff_t,"ptrdiff_t");
+  fprintf(fp,"#else\n");
   INT_TYPEDEF_PREFER_LONG(fp,ptrdiff_t,"ptrdiff_t");
-  UINT_TYPEDEF_PREFER_INT(fp,size_t,"size_t");
+  fprintf(fp,"#endif\n");
+#else
+  INT_TYPEDEF_PREFER_LONG(fp,ptrdiff_t,"ptrdiff_t");
+#endif
+/* see v6_init.cxx, G__platformMacro
+  UINT_TYPEDEF_PREFER_INT(fp,size_t,"size_t"); */
 
 #ifndef G__NONANSI
   UINT_TYPEDEF_PREFER_INT(fp,wchar_t,"wchar_t");

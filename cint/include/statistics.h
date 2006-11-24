@@ -1,3 +1,10 @@
+/* -*- C++ -*- */
+/*************************************************************************
+ * Copyright(c) 1995~2005  Masaharu Goto (cint@pcroot.cern.ch)
+ *
+ * For the licensing terms see the file COPYING
+ *
+ ************************************************************************/
 /*************************************************************************
 * statistics.h
 *
@@ -12,7 +19,7 @@
 #ifndef G__STATISTICSSL
 
 #ifdef G__SHAREDLIB
-#pragma include_noerr <statistics.dl>
+#pragma include_noerr <statistics.dll>
 # ifndef G__STATISTICSSL
 #include <statistics.c>
 # endif

@@ -8,15 +8,10 @@
  *  Extended Run Time Type Identification API
  ************************************************************************
  * Author                  Masaharu Goto 
- * Copyright(c) 1995~1999  Masaharu Goto (MXJ02154@niftyserve.or.jp)
+ * Copyright(c) 1995~1999  Masaharu Goto 
  *
- * Permission to use, copy, modify and distribute this software and its 
- * documentation for any purpose is hereby granted without fee,
- * provided that the above copyright notice appear in all copies and
- * that both that copyright notice and this permission notice appear
- * in supporting documentation.  The author makes no
- * representations about the suitability of this software for any
- * purpose.  It is provided "as is" without express or implied warranty.
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 #include "Api.h"
@@ -27,7 +22,7 @@
 * 
 *********************************************************************/
 ///////////////////////////////////////////////////////////////////////////
-void G__TypedefInfo::Init() 
+void Cint::G__TypedefInfo::Init() 
 {
   type = 0;
   typenum = -1;
@@ -35,8 +30,9 @@ void G__TypedefInfo::Init()
   isconst = 0;
 }
 ///////////////////////////////////////////////////////////////////////////
-void G__TypedefInfo::Init(const char *typenamein)
+void Cint::G__TypedefInfo::Init(const char *typenamein)
 {
+  char store_var_type = G__var_type;
   typenum = G__defined_typename(typenamein);
   if(-1!=typenum&&typenum<G__newtype.alltype) {
     tagnum = G__newtype.tagnum[typenum];
@@ -50,9 +46,10 @@ void G__TypedefInfo::Init(const char *typenamein)
     typenum= -1;
     isconst= 0;
   }
+  G__var_type = store_var_type;
 }
 ///////////////////////////////////////////////////////////////////////////
-void G__TypedefInfo::Init(int typenumin)
+void Cint::G__TypedefInfo::Init(int typenumin)
 {
   typenum = typenumin;
   if(-1!=typenum&&typenum<G__newtype.alltype) {
@@ -69,14 +66,14 @@ void G__TypedefInfo::Init(int typenumin)
   }
 }
 ///////////////////////////////////////////////////////////////////////////
-void G__TypedefInfo::SetGlobalcomp(int globalcomp)
+void Cint::G__TypedefInfo::SetGlobalcomp(int globalcomp)
 {
   if(IsValid()) {
     G__newtype.globalcomp[typenum] = globalcomp;
   }
 }
 ///////////////////////////////////////////////////////////////////////////
-int G__TypedefInfo::IsValid()
+int Cint::G__TypedefInfo::IsValid()
 {
   if(-1!=typenum&&typenum<G__newtype.alltype) {
     return(1);
@@ -86,7 +83,7 @@ int G__TypedefInfo::IsValid()
   }
 }
 ///////////////////////////////////////////////////////////////////////////
-int G__TypedefInfo::SetFilePos(const char *fname)
+int Cint::G__TypedefInfo::SetFilePos(const char *fname)
 {
   struct G__dictposition* dict=G__get_dictpos((char*)fname);
   if(!dict) return(0);
@@ -94,13 +91,13 @@ int G__TypedefInfo::SetFilePos(const char *fname)
   return(1);
 }
 ///////////////////////////////////////////////////////////////////////////
-int G__TypedefInfo::Next()
+int Cint::G__TypedefInfo::Next()
 {
   Init((int)typenum+1);
   return(IsValid());
 }
 ///////////////////////////////////////////////////////////////////////////
-const char* G__TypedefInfo::Title()
+const char* Cint::G__TypedefInfo::Title()
 {
   static char buf[G__INFO_TITLELEN];
   buf[0]='\0';
@@ -113,7 +110,7 @@ const char* G__TypedefInfo::Title()
   }
 }
 ///////////////////////////////////////////////////////////////////////////
-G__ClassInfo G__TypedefInfo::EnclosingClassOfTypedef()
+G__ClassInfo Cint::G__TypedefInfo::EnclosingClassOfTypedef()
 {
   if(IsValid()) {
     G__ClassInfo enclosingclass(G__newtype.parent_tagnum[typenum]);
@@ -125,7 +122,7 @@ G__ClassInfo G__TypedefInfo::EnclosingClassOfTypedef()
   }
 }
 ///////////////////////////////////////////////////////////////////////////
-const char* G__TypedefInfo::FileName() {
+const char* Cint::G__TypedefInfo::FileName() {
 #ifdef G__TYPEDEFFPOS
   if(IsValid()) {
     return(G__srcfile[G__newtype.filenum[typenum]].filename);
@@ -134,13 +131,13 @@ const char* G__TypedefInfo::FileName() {
     return((char*)NULL);
   }
 #else
-  fprintf(G__serr,"Warning: G__TypedefInfo::FIleName() not supported in this configuration. define G__TYPEDEFFPOS macro in platform dependency file and recompile cint");
+  G__fprinterr("Warning: Cint::G__TypedefInfo::FIleName() not supported in this configuration. define G__TYPEDEFFPOS macro in platform dependency file and recompile cint");
   G__printlinenum();
   return((char*)NULL);
 #endif
 }
 ///////////////////////////////////////////////////////////////////////////
-int G__TypedefInfo::LineNumber() {
+int Cint::G__TypedefInfo::LineNumber() {
 #ifdef G__TYPEDEFFPOS
   if(IsValid()) {
     return(G__newtype.linenum[typenum]);
@@ -149,7 +146,7 @@ int G__TypedefInfo::LineNumber() {
     return(-1);
   }
 #else
-  fprintf(G__serr,"Warning: G__TypedefInfo::LineNumber() not supported in this configuration. define G__TYPEDEFFPOS macro in platform dependency file and recompile cint");
+  G__fprinterr("Warning: Cint::G__TypedefInfo::LineNumber() not supported in this configuration. define G__TYPEDEFFPOS macro in platform dependency file and recompile cint");
   G__printlinenum();
   return(-1);
 #endif

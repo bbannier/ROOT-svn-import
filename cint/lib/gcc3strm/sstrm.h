@@ -9,6 +9,8 @@
  ************************************************************************
  * Copyright(c) 1999       Masaharu Goto (MXJ02154@niftyserve.or.jp)
  *
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 #ifndef G__SSTREAM_H
@@ -20,6 +22,10 @@
 using namespace std;
 
 #else // __CINT__
+
+#if !(G__GNUC>=3)
+#error This header must be processed with a Cint compiled with gcc3.x
+#endif
 
 #include <string>
 //#include <memory>
@@ -39,7 +45,7 @@ class basic_stringbuf : public basic_streambuf<charT, traits>
   
   typedef basic_ios<charT, traits>                 ios_type;
 #ifdef __CINT__
-#if !(G__GNUC>=3)
+#if 0 && !(G__GNUC>=3)
   typedef string  string_type;
 #else
   typedef string  __string_type;
@@ -76,6 +82,10 @@ class basic_stringbuf : public basic_streambuf<charT, traits>
 
   virtual basic_streambuf<charT,traits>* setbuf(char_type* s, streamsize n);
   virtual streamsize xsputn(const char_type *s, streamsize n);
+#if (G__GNUC>=3)
+ private:
+  basic_stringbuf& operator=(const basic_stringbuf& x);
+#endif
 };
 
 
@@ -92,7 +102,7 @@ class basic_istringstream : public basic_istream<charT, traits>
   typedef basic_stringbuf<charT, traits, Allocator>       sb_type;
   typedef basic_ios<charT, traits>                        ios_type;
 #ifdef __CINT__
-#if !(G__GNUC>=3)
+#if 0 && !(G__GNUC>=3)
   typedef string         string_type;
 #else
   typedef string         __string_type;

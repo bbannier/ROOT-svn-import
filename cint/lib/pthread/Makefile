@@ -5,9 +5,13 @@
 # Copying $CINTSYSDIR/MAKEINFO #############################
 
 ############################################################
-# platform/linux2.0RH5.2
-#  Platform dependent information for LINUX 2.0 RedHatH5.2 or later
-#  Redhat-5.2
+# platform/macos_gcc3_v3_v6
+#  Platform dependent information for g++ with mininum config
+#  By Alessandro Pistocchi
+#  It seems like this setup is the absolute minimum. I believe
+#  we can explore much more with MacOSX. Probably, you can get
+#  as much as Linux_xxx. Contribution will be greatly appreciated.
+#  Cint ver6 features turned on
 ############################################################
 
 # Tools
@@ -15,30 +19,31 @@ RM	    = rm -f
 CP	    = cp
 AR	    = ar
 AROPT       = clq
-KRCC        = gcc -traditional
-CC          = gcc -Wall
-CPP         = g++ -Wall -fguiding-decls
+KRCC        = cc
+CC          = gcc
+CPP         = g++
 LD          = g++
 CPREP       = gcc -E -C
 CPPPREP     = g++ -E -C
 
 # Compiler and linker option
-CCDLLOPT    = -fPIC
-LDDLLOPT    = -shared
+CCDLLOPT    = -fno-common
+LDDLLOPT    = -bundle -flat_namespace -undefined suppress
 OPTIMIZE    = -O
-LDOPT       = -lm -L/usr/lib/termcap -ltermcap -lbsd -ldl -rdynamic
-SYSMACRO    = -DG__REGEXP -DG__SHAREDLIB -DG__OSFDLL -DG__ANSI
-OTHMACRO    = -DG__P2FCAST -DG__REDIRECTIO -DG__DETECT_NEWDEL -DG__POSIX -DG__STD_EXCEPTION 
+LDOPT       = -lm -ldl -lcurses 
+SYSMACRO    = -DG__SHAREDLIB -DG__OSFDLL -DG__ANSI -DG__ERRORCALLBACK -DG__MACOSX__ -DG__SIGNEDCHAR -DG__LONGBUF -DG__NEWSTDHEADER -DG__CINT_VER6 -DG__NATIVELONGLONG
+OTHMACRO   = -DG__APPLE -DG__P2FCAST -DG__NOPOWEROPR -DG__EXCEPTIONWRAPPER -DG__STD_EXCEPTION 
 SYSIPATH    =
 
 # libraries
 MAINO	    = $(CINTSYSDIR)/main/G__cppmain.o
 CINTLIB     = $(CINTSYSDIR)/src/G__ci.a
-READLINEA   = /usr/lib/libreadline.a
+READLINEA   = $(CINTSYSDIR)/readline/libreadline.a
 APIO	    = Api.o Class.o BaseCls.o Type.o DataMbr.o Method.o MethodAr.o CallFunc.o Typedf.o Apiif.o Token.o
 RANLIB	    = /usr/bin/ranlib
-STDLIBS     = libstrm.o stdstrct.o
-PLATFORM    =
+STDLIBS     = gcc3strm.o stdstrct.o
+PLATFORM    =  
+CINT_V6     = bc_autoobj.o bc_cfunc.o bc_inst.o bc_parse.o bc_reader.o bc_type.o bc_exec.o bc_vtbl.o bc_eh.o bc_debug.o bc_assign.o
 
 # source code postfix
 CSRCPOST    = .c
@@ -46,10 +51,19 @@ CHDRPOST    = .h
 CPPSRCPOST  = .C
 CPPHDRPOST  = .h
 OBJPOST     = .o
-DLLPOST     = .dl
+DLLPOST     = .so
+ 
 
 
 
+##########################################################
+# Control default behavior of cint command line input
+##########################################################
+#INPUTMODE = C++
+#INPUTMODE = root
+INPUTMODE = cint
+#INPUTMODELOCK = on
+INPUTMODELOCK = off
 
 # End of $CINTSYSDIR/MAKEINFO ##############################
 
@@ -57,7 +71,7 @@ DLLPOST     = .dl
 IPATH      = $(SYSIPATH) 
 MACRO      = $(SYSMACRO)\
 		-D_POSIX_C_SOURCE=199506L 
-CINTSYSDIR = /home/gotom/src/cint
+CINTSYSDIR = /Users/gotom/src/cint
 CINTIPATH  = -I$(CINTSYSDIR)
 OBJECT     = pthread.dll
 OPTION     = $(CCDLLOPT)
@@ -117,7 +131,7 @@ $(CPPIFO) : $(CPPIFC)
 
 # Create C++ Interface routine ###########################
 $(CPPIFC) : $(CPPHEADER) $(CPPSTUB) $(CINTSYSDIR)/cint
-	cint  -w1 -zpthread -n$(CPPIFC) $(DLLSPEC) -D__MAKECINT__ -DG__MAKECINT  -c-1 -A $(IPATH) $(MACRO) $(CINTOPT) $(CPPHEADERCINT)
+	$(CINTSYSDIR)/cint  -w1 -zpthread -n$(CPPIFC) $(DLLSPEC) -D__MAKECINT__ -DG__MAKECINT  -c-1 -A $(IPATH) $(MACRO) $(CINTOPT) $(CPPHEADERCINT)
 
 
 # Clean up #################################################

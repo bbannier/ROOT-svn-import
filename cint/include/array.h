@@ -1,3 +1,10 @@
+/* -*- C++ -*- */
+/*************************************************************************
+ * Copyright(c) 1995~2005  Masaharu Goto (cint@pcroot.cern.ch)
+ *
+ * For the licensing terms see the file COPYING
+ *
+ ************************************************************************/
 /**************************************************************************
 * array.h
 *
@@ -18,7 +25,7 @@
 
 #ifndef G__ARRAYSL
 # ifdef G__SHAREDLIB
-#pragma include_noerr <array.dl>  
+#pragma include_noerr <array.dll>  
 #  ifndef G__ARRAYSL
 #include <array.c>  
 #  endif
@@ -32,7 +39,7 @@
 
 #ifndef G__CARRAYSL
 # ifdef G__SHAREDLIB
-#pragma include_noerr <carray.dl>
+#pragma include_noerr <carray.dll>
 #  ifndef G__CARRAYSL
 #include <carray.c>
 #  endif
@@ -44,5 +51,10 @@
 #include <carray.h>
 #include <graphbuf.h>
 #include <arrayiostream.h>
+
+const double PI=3.141592;
+const complex j(0.0,1.0);
+
+#include <matrixstream.h>
 
 #endif

@@ -1,3 +1,10 @@
+/* -*- C++ -*- */
+/*************************************************************************
+ * Copyright(c) 1995~2005  Masaharu Goto (cint@pcroot.cern.ch)
+ *
+ * For the licensing terms see the file COPYING
+ *
+ ************************************************************************/
 /***********************************************************************
 * lib/gl/TOP.h
 *  header file to link openGL and cint.
@@ -15,7 +22,8 @@
 #pragma preprocessor on
 #endif
 
-#include "GL.h"
+/* C preprocessor is used for GL.h before Cint reads it */
+#include "cintGL.h"
 
 #ifdef __MAKECINT__
 #pragma preprocessor off
@@ -27,10 +35,53 @@
  * undefined symbols
  *********************************************************************/
 #ifdef __MAKECINT__
+/* Following pragmas are needed to eliminate errors compiling dictionary.
+ * They are needed to fix the mismatch between header and actual library. */
+#pragma link off class GLUquadric;
+#pragma link off class GLUnurbs;
+#pragma link off class GLUtesselator;
+#pragma link off class xmesa_context;
+#pragma link off class xmesa_visual;
+#pragma link off class xmesa_buffer;
 #pragma link off function gluBuild3DMipmapLevels;
 #pragma link off function gluBuild3DMipmaps;
 #pragma link off function gluBuild2DMipmapLevels;
 #pragma link off function gluBuild1DMipmapLevels;
+#pragma link off function XMesaMakeCurrent2;
+
+// Mandrake8.0 specific
+#pragma link off function XMesaGetString;
+#pragma link off function XMesaCreateVisual;
+#pragma link off function XMesaUnbindContext;
+#pragma link off function XMesaGetCurrentReadBuffer;
+#pragma link off function  XMesaSwapBuffers;
+#pragma link off function  XMesaDestroyContext;
+#pragma link off function  XMesaGetBackBuffer;
+#pragma link off function  glXGetCurrentDrawableEXT;
+#pragma link off function  XMesaCreatePixmapBuffer;
+#pragma link off function  XMesaGetDepthBuffer;
+#pragma link off function   XMesaGarbageCollect;
+#pragma link off function   XMesaDestroyBuffer;
+#pragma link off function    XMesaCreateWindowBuffer;
+#pragma link off function    XMesaGetCurrentBuffer;
+#pragma link off function    XMesaCreateContext;
+#pragma link off function    XMesaFlush;
+#pragma link off function     XMesaCopySubBuffer;
+#pragma link off function     XMesaDestroyVisual;
+#pragma link off function     XMesaSetFXmode;
+#pragma link off function     XMesaGetCurrentContext;
+#pragma link off function     XMesaDitherColor;
+#pragma link off function     XMesaFindBuffer ;
+#pragma link off function     XMesaMakeCurrent ;
+
+#ifdef G__WIN32
+#pragma link off function  auxInitWindowW;
+#pragma link off function  auxRGBImageLoadW;
+#pragma link off function  auxDIBImageLoadW;
+#pragma link off function  auxDrawStrW;
+//#pragma link off global    auxRGBMap;
+#endif
+
 #endif
 
 
@@ -38,6 +89,8 @@
  * define macros
  *********************************************************************/
 #ifdef __MAKECINT__
+/* Because preprocessor is used to process those header files,
+ * macros must be defined here again for Cint. */
 
 /* gl.h */
 #define GL_VERSION_1_1   1
@@ -1042,6 +1095,7 @@
 #define GLUT_BITMAP_HELVETICA_10	((void*)6)
 #define GLUT_BITMAP_HELVETICA_12	((void*)7)
 #define GLUT_BITMAP_HELVETICA_18	((void*)8)
+#if 0
 #define GLUT_STROKE_ROMAN		(&glutStrokeRoman)
 #define GLUT_STROKE_MONO_ROMAN		(&glutStrokeMonoRoman)
 #define GLUT_BITMAP_9_BY_15		(&glutBitmap9By15)
@@ -1051,6 +1105,7 @@
 #define GLUT_BITMAP_HELVETICA_10	(&glutBitmapHelvetica10)
 #define GLUT_BITMAP_HELVETICA_12	(&glutBitmapHelvetica12)
 #define GLUT_BITMAP_HELVETICA_18	(&glutBitmapHelvetica18)
+#endif
 #define GLUT_WINDOW_X			100
 #define GLUT_WINDOW_Y			101
 #define GLUT_WINDOW_WIDTH		102

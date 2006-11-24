@@ -7,15 +7,10 @@
  * Description:
  *  ANSI C library function interface routine
  ************************************************************************
- * Copyright(c) 1995~1999  Masaharu Goto (MXJ02154@niftyserve.or.jp)
+ * Copyright(c) 1995~2003  Masaharu Goto 
  *
- * Permission to use, copy, modify and distribute this software and its 
- * documentation for any purpose is hereby granted without fee,
- * provided that the above copyright notice appear in all copies and
- * that both that copyright notice and this permission notice appear
- * in supporting documentation.  The author makes no
- * representations about the suitability of this software for any
- * purpose.  It is provided "as is" without express or implied warranty.
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 
@@ -29,15 +24,10 @@
 #include <signal.h>
 #include <assert.h>
 #include <time.h>
-#ifndef G__OLDIMPLEMENTATION467
 #include <locale.h>
-#endif
 
 /* POSIX.1 */
 #include <fcntl.h>
-#ifndef G__WIN32
-#include <unistd.h>
-#endif
 
 /* POSIX.2 */
 
@@ -49,6 +39,10 @@ int getopt();
 /* #include "G__ci.h" */
 /* #include "G__header.h" */
 /* extern int G__no_exec_compile; */
+
+#ifndef G__WIN32
+#include <unistd.h>
+#endif
 
 
 #if defined(G__ANSI) || defined(G__ANSIHEADER)
@@ -65,6 +59,10 @@ int memcmp();
 /* if not MetroWerks compiler on Mac or Alpha OSF or NewsOS */
 int memcmp();
 void* memcpy();
+#endif
+#if !defined(G__NOMATHLIB) && !defined(floor) \
+   && defined(G__FUNCPOINTER) && (_MSC_VER == 1400)
+   static double G__floor_MSVC8(double f) {return floor(f);}
 #endif
 
 /*************************************************
@@ -90,12 +88,10 @@ G__COMPLETIONLIST G__completionlist[] = {
 	{"acos",(void (*)())acos},
 #endif
 #endif
-#ifndef G__OLDIMPLEMENTATION467
 #if defined(asctime) || !defined(G__FUNCPOINTER)
 	{"asctime",NULL},
 #else
 	{"asctime",(void (*)())asctime},
-#endif
 #endif
 #ifndef G__NOMATHLIB
 #if defined(asin) || !defined(G__FUNCPOINTER)
@@ -229,7 +225,11 @@ G__COMPLETIONLIST G__completionlist[] = {
 #if defined(floor) || !defined(G__FUNCPOINTER)
 	{"floor",NULL},
 #else
+#if _MSC_VER == 1400
+	{"floor",(void (*)())G__floor_MSVC8},
+#else
 	{"floor",(void (*)())floor},
+#endif /* MSVC 1400 */
 #endif
 #if defined(fmod) || !defined(G__FUNCPOINTER)
 	{"fmod",NULL},
@@ -307,17 +307,11 @@ G__COMPLETIONLIST G__completionlist[] = {
 #else
 	{"getenv",(void (*)())getenv},
 #endif
-#if defined(gets) || !defined(G__FUNCPOINTER) || !defined(G__OLDIMPLEMENTATION808)
 	{"gets",NULL},
-#else
-	{"gets",(void (*)())gets},
-#endif
-#ifndef G__OLDIMPLEMENTATION467
 #if defined(gmtime) || !defined(G__FUNCPOINTER)
 	{"gmtime",NULL},
 #else
 	{"gmtime",(void (*)())gmtime},
-#endif
 #endif
 #if defined(isalnum) || !defined(G__FUNCPOINTER)
 	{"isalnum",NULL},
@@ -393,7 +387,6 @@ G__COMPLETIONLIST G__completionlist[] = {
 	{"ldiv",(void (*)())ldiv},
 #endif
 #endif
-#ifndef G__OLDIMPLEMENTATION467
 #if defined(localeconv) || !defined(G__FUNCPOINTER)
 	{"localeconv",NULL},
 #else
@@ -403,7 +396,6 @@ G__COMPLETIONLIST G__completionlist[] = {
 	{"localtime",NULL},
 #else
 	{"localtime",(void (*)())localtime},
-#endif
 #endif
 #ifndef G__NOMATHLIB
 #if defined(log) || !defined(G__FUNCPOINTER)
@@ -462,12 +454,10 @@ G__COMPLETIONLIST G__completionlist[] = {
 #else
 	{"memset",(void (*)())memset},
 #endif
-#ifndef G__OLDIMPLEMENTATION467
 #if defined(mktime) || !defined(G__FUNCPOINTER)
 	{"mktime",NULL},
 #else
 	{"mktime",(void (*)())mktime},
-#endif
 #endif
 #if defined(modf) || !defined(G__FUNCPOINTER)
 	{"modf",NULL},
@@ -536,12 +526,10 @@ G__COMPLETIONLIST G__completionlist[] = {
 #else
 	{"setbuf",(void (*)())setbuf},
 #endif
-#ifndef G__OLDIMPLEMENTATION467
 #if defined(setlocale) || !defined(G__FUNCPOINTER)
 	{"setlocale",NULL},
 #else
 	{"setlocale",(void (*)())setlocale},
-#endif
 #endif
 #if defined(setvbuf) || !defined(G__FUNCPOINTER)
 	{"setvbuf",NULL},
@@ -605,12 +593,10 @@ G__COMPLETIONLIST G__completionlist[] = {
 #else
 	{"strerror",(void (*)())strerror},
 #endif
-#ifndef G__OLDIMPLEMENTATION467
 #if defined(strftime) || !defined(G__FUNCPOINTER)
 	{"strftime",NULL},
 #else
 	{"strftime",(void (*)())strftime},
-#endif
 #endif
 #if defined(strlen) || !defined(G__FUNCPOINTER)
 	{"strlen",NULL},
@@ -707,7 +693,11 @@ G__COMPLETIONLIST G__completionlist[] = {
 #if defined(tmpnam) || !defined(G__FUNCPOINTER)
 	{"tmpnam",NULL},
 #else
+#if ((__GNUC__>=3)||(__GNUC__>=2)&&(__GNUC_MINOR__>=96))&&(defined(__linux)||defined(__linux__))
+	{"tmpnam",NULL},
+#else
 	{"tmpnam",(void (*)())tmpnam},
+#endif
 #endif
 #if defined(tolower) || !defined(G__FUNCPOINTER)
 	{"tolower",NULL},
@@ -796,13 +786,12 @@ G__COMPLETIONLIST G__completionlist[] = {
 	{"G__tracemode",NULL},
 	{"G__gettracemode",NULL},
 	{"G__debugmode",NULL},
+	{"G__setbreakpoint",NULL},
 	{"G__stepmode",NULL},
 	{"G__getstepmode",NULL},
-#ifndef G__OLDIMPLEMENTATION1142
 	{"G__optimizemode",NULL},
 	{"G__getoptimizemode",NULL},
-#endif
-	{"G__breakline",NULL},
+	/* {"G__breakline",NULL}, */
 	{"G__split",NULL},
 	{"G__readline",NULL},
 	{"G__cmparray",NULL},
@@ -836,7 +825,12 @@ G__COMPLETIONLIST G__completionlist[] = {
 	{"G__optimizemode",NULL},
 	{"G__getoptimizemode",NULL},
 	{"G__clearerror",NULL},
-
+	{"G__calc",NULL},
+	{"G__exec_text",NULL},
+	{"G__exec_tempfile",NULL},
+#ifndef G__OLDIMPLEMENTATION1546
+	{"G__load_text",NULL},
+#endif
 	{(char *)NULL,NULL }
 };
 
@@ -865,6 +859,9 @@ char *funcname;
 struct G__param *libp;
 int hash;
 {
+#ifdef G__NO_STDLIBS
+  return(0);
+#endif
   G__CHECK(G__SECURE_STANDARDLIB,1,return(0));
 
   /******************************************************************
@@ -1014,15 +1011,9 @@ int hash;
       G__letint(result7,'C',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
     G__CHECKLRANGE(1,0,SHRT_MAX);
     G__CHECKNONULL(2,'E');
-#else
-    G__CHECKNONULL(0);
-    G__CHECKLRANGE(1,0,SHRT_MAX);
-    G__CHECKNONULL(2);
-#endif
     G__letint(result7,'C',(long)fgets((char *)G__int(libp->para[0]),(int)G__int(libp->para[1]),(FILE *)G__int(libp->para[2])));
     return(1);
   }
@@ -1077,15 +1068,11 @@ int hash;
       G__letdouble(result7,'d',(double)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     if(0.0==G__double(libp->para[1])) {
       G__genericerror("Error: fmod() divided by zero");
       *result7=G__null;
       return(1);
     }
-#else
-    G__CHECKNONULL(1);
-#endif
     G__letdouble(result7,'d',(double)fmod(G__double(libp->para[0]),G__double(libp->para[1])));
     return(1);
   }
@@ -1234,11 +1221,7 @@ int hash;
       G__letdouble(result7,'d',(double)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
-#else
-    G__CHECKNONULL(0);
-#endif
     G__letdouble(result7,'d',(double)atof((char *)G__int(libp->para[0])));
     return(1);
   }
@@ -1255,11 +1238,7 @@ int hash;
       G__letint(result7,'i',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
-#else
-    G__CHECKNONULL(0);
-#endif
     G__letint(result7,'i',(long)atoi((char *)G__int(libp->para[0])));
     return(1);
   }
@@ -1276,11 +1255,7 @@ int hash;
       G__letint(result7,'l',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
-#else
-    G__CHECKNONULL(0);
-#endif
     G__letint(result7,'l',(long)atol((char *)G__int(libp->para[0])));
     return(1);
   }
@@ -1302,11 +1277,7 @@ int hash;
       G__letint(result7,'i',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'E');
-#else
-    G__CHECKNONULL(0);
-#endif
     G__letint(result7,'i',(long)fflush((FILE *)G__int(libp->para[0])));
     return(1);
   }
@@ -1323,11 +1294,7 @@ int hash;
       G__letint(result7,'i',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'E');
-#else
-    G__CHECKNONULL(0);
-#endif
     G__letint(result7,'i',(long)fgetc((FILE *)G__int(libp->para[0])));
     return(1);
   }
@@ -1353,7 +1320,6 @@ int hash;
   ******************************************************************/
 
 
-#ifndef G__OLDIMPLEMENTATION467
   if((hash==742)&&(strcmp(funcname,"asctime")==0)) {
 #ifndef G__MASKERROR
     if(1!=libp->paran) { 
@@ -1366,15 +1332,10 @@ int hash;
       G__letdouble(result7,'C',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'U'); /* not checking struct tag */
-#else
-    G__CHECKNONULL(0);
-#endif
     G__letint(result7,'C',(long)asctime((struct tm*)G__int(libp->para[0])));
     return(1);
   }
-#endif
 
   if((hash==622)&&(strcmp(funcname,"calloc")==0)) {
 #ifndef G__MASKERROR
@@ -1388,13 +1349,8 @@ int hash;
       G__letint(result7,'Y',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKLRANGE(0,0,INT_MAX);
     G__CHECKLRANGE(1,0,INT_MAX);
-#else
-    G__CHECKNONULL(0);
-    G__CHECKNONULL(1);
-#endif
     G__letint(result7,'Y',(long)calloc((size_t)G__int(libp->para[0]),(size_t)G__int(libp->para[1])));
     return(1);
   }
@@ -1446,11 +1402,7 @@ int hash;
       G__letint(result7,'C',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'Y'); /* not checking type */
-#else
-    G__CHECKNONULL(0);
-#endif
     G__letint(result7,'C',(long)ctime((time_t *)G__int(libp->para[0])));
     return(1);
   }
@@ -1511,11 +1463,7 @@ int hash;
       G__letint(result7,'i',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'E');
-#else
-    G__CHECKNONULL(0);
-#endif
     G__letint(result7,'i',(long)feof((FILE *)G__int(libp->para[0])));
     return(1);
   }
@@ -1532,11 +1480,7 @@ int hash;
       G__letint(result7,'i',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'E');
-#else
-    G__CHECKNONULL(0);
-#endif
     G__letint(result7,'i',(long)ferror((FILE *)G__int(libp->para[0])));
     return(1);
   }
@@ -1553,13 +1497,8 @@ int hash;
       G__letint(result7,'i',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'E');
     G__CHECKNONULL(1,'Y');
-#else
-    G__CHECKNONULL(0);
-    G__CHECKNONULL(1);
-#endif
     G__letint(result7,'i',(long)fgetpos((FILE *)G__int(libp->para[0]),(fpos_t *)G__int(libp->para[1])));
     return(1);
   }
@@ -1576,11 +1515,7 @@ int hash;
       G__letint(result7,'i',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(1,'E');
-#else
-    G__CHECKNONULL(1);
-#endif
     G__letint(result7,'i',(long)fputc((int)G__int(libp->para[0]),(FILE *)G__int(libp->para[1])));
     return(1);
   }
@@ -1597,13 +1532,8 @@ int hash;
       G__letint(result7,'i',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
     G__CHECKNONULL(1,'E');
-#else
-    G__CHECKNONULL(0);
-    G__CHECKNONULL(1);
-#endif
     G__letint(result7,'i',(long)fputs((char *)G__int(libp->para[0]),(FILE *)G__int(libp->para[1])));
     return(1);
   }
@@ -1620,13 +1550,8 @@ int hash;
       G__letint(result7,'h',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'Y');
     G__CHECKNONULL(3,'E');
-#else
-    G__CHECKNONULL(0);
-    G__CHECKNONULL(3);
-#endif
     G__letint(result7,'h',(long)fread((void *)G__int(libp->para[0]),(size_t)G__int(libp->para[1]),(size_t)G__int(libp->para[2]),(FILE *)G__int(libp->para[3])));
     return(1);
   }
@@ -1644,11 +1569,7 @@ int hash;
       *result7=G__null;
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     /* G__CHECKNONULL(0,'Y'); */ /* no check, ANSI defined this as no effect */
-#else
-    G__CHECKNONULL(0);
-#endif
 #ifdef G__SECURITY
     if(G__security&G__SECURE_GARBAGECOLLECTION) {
       G__del_alloctable((void*)G__int(libp->para[0]));
@@ -1671,15 +1592,9 @@ int hash;
       G__letint(result7,'E',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
     G__CHECKNONULL(1,'C');
     G__CHECKNONULL(2,'E');
-#else
-    G__CHECKNONULL(0);
-    G__CHECKNONULL(1);
-    G__CHECKNONULL(2);
-#endif
     G__letint(result7,'E',(long)freopen((char *)G__int(libp->para[0]),(char *)G__int(libp->para[1]),(FILE *)G__int(libp->para[2])));
     return(1);
   }
@@ -1696,11 +1611,7 @@ int hash;
       G__letdouble(result7,'d',(double)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(1,'I');
-#else
-    G__CHECKNONULL(1);
-#endif
     G__letdouble(result7,'d',(double)frexp(G__double(libp->para[0]),(int *)G__int(libp->para[1])));
     return(1);
   }
@@ -1717,11 +1628,7 @@ int hash;
       G__letint(result7,'i',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'E');
-#else
-    G__CHECKNONULL(0);
-#endif
     G__letint(result7,'i',(long)fseek((FILE *)G__int(libp->para[0]),(long)G__int(libp->para[1]),(int)G__int(libp->para[2])));
     return(1);
   }
@@ -1738,13 +1645,8 @@ int hash;
       G__letint(result7,'i',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'E');
     G__CHECKNONULL(1,'Y'); /* not checking type */
-#else
-    G__CHECKNONULL(0);
-    G__CHECKNONULL(1);
-#endif
     G__letint(result7,'i',(long)fsetpos((FILE *)G__int(libp->para[0]),(fpos_t *)G__int(libp->para[1])));
     return(1);
   }
@@ -1761,11 +1663,7 @@ int hash;
       G__letint(result7,'l',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'E');
-#else
-    G__CHECKNONULL(0);
-#endif
     G__letint(result7,'l',(long)ftell((FILE *)G__int(libp->para[0])));
     return(1);
   }
@@ -1782,13 +1680,8 @@ int hash;
       G__letint(result7,'h',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'Y');
     G__CHECKNONULL(3,'E');
-#else
-    G__CHECKNONULL(0);
-    G__CHECKNONULL(3);
-#endif
     G__letint(result7,'h',(long)fwrite((void *)G__int(libp->para[0]),(size_t)G__int(libp->para[1]),(size_t)G__int(libp->para[2]),(FILE *)G__int(libp->para[3])));
     return(1);
   }
@@ -1805,11 +1698,7 @@ int hash;
       G__letint(result7,'i',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'E');
-#else
-    G__CHECKNONULL(0);
-#endif
     G__letint(result7,'i',(long)getc((FILE *)G__int(libp->para[0])));
     return(1);
   }
@@ -1826,11 +1715,7 @@ int hash;
       G__letint(result7,'i',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION713
     G__letint(result7,'i',(long)fgetc(G__intp_sin));
-#else
-    G__letint(result7,'i',(long)fgetc(G__sin));
-#endif
     return(1);
   }
 
@@ -1846,11 +1731,7 @@ int hash;
       G__letint(result7,'C',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
-#else
-    G__CHECKNONULL(0);
-#endif
     G__letint(result7,'C',(long)getenv((char *)G__int(libp->para[0])));
     return(1);
   }
@@ -1867,20 +1748,11 @@ int hash;
       G__letint(result7,'C',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
-#else
-    G__CHECKNONULL(0);
-#endif
-#ifndef G__OLDIMPLEMENTATION808
     G__letint(result7,'C',(long)fgets((char *)G__int(libp->para[0]),G__ONELINE,G__intp_sin));
-#else
-    G__letint(result7,'C',(long)gets((char *)G__int(libp->para[0])));
-#endif
     return(1);
   }
 
-#ifndef G__OLDIMPLEMENTATION467
   if((hash==643)&&(strcmp(funcname,"gmtime")==0)) {
 #ifndef G__MASKERROR
     if(1!=libp->paran) {
@@ -1894,16 +1766,11 @@ int hash;
       result7->tagnum = G__defined_tagname("tm",0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'Y'); /* not checking type */
-#else
-    G__CHECKNONULL(0);
-#endif
     G__letint(result7,'U',(long)gmtime((time_t *)G__int(libp->para[0])));
     result7->tagnum = G__defined_tagname("tm",0);
     return(1);
   }
-#endif
 
   if((hash==761)&&(strcmp(funcname,"isalnum")==0)) {
 #ifndef G__MASKERROR
@@ -2125,7 +1992,6 @@ int hash;
   }
 #endif
 
-#ifndef G__OLDIMPLEMENTATION467
   if((hash==1062)&&(strcmp(funcname,"localeconv")==0)) {
 #ifndef G__MASKERROR
     if(0!=libp->paran) {
@@ -2157,14 +2023,11 @@ int hash;
       result7->tagnum = G__defined_tagname("tm",0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'Y'); /* not checking type */
-#endif
     G__letint(result7,'U',(long)localtime((time_t*)G__int(libp->para[0])));
     result7->tagnum = G__defined_tagname("tm",0);
     return(1);
   }
-#endif
 
 
   if((hash==632)&&(strcmp(funcname,"malloc")==0)) {
@@ -2181,9 +2044,7 @@ int hash;
       G__letint(result7,'Y',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKLRANGE(0,0,INT_MAX);
-#endif
     G__letint(result7,'Y',(long)malloc((size_t)G__int(libp->para[0])));
 #ifdef G__SECURITY
     if(G__security&G__SECURE_GARBAGECOLLECTION) {
@@ -2205,9 +2066,7 @@ int hash;
       G__letint(result7,'i',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
-#endif
     G__letint(result7,'i',(long)mblen((char *)G__int(libp->para[0]),(size_t)G__int(libp->para[1])));
     return(1);
   }
@@ -2224,10 +2083,8 @@ int hash;
       G__letint(result7,'h',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'Y'); /* not checking type */
     G__CHECKNONULL(1,'C');
-#endif
     G__letint(result7,'h',(long)mbstowcs((wchar_t *)G__int(libp->para[0]),(char *)G__int(libp->para[1]),(size_t)G__int(libp->para[2])));
     return(1);
   }
@@ -2244,10 +2101,8 @@ int hash;
       G__letint(result7,'i',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'Y');
     G__CHECKNONULL(1,'C');
-#endif
     G__letint(result7,'i',(long)mbtowc((wchar_t *)G__int(libp->para[0]),(char *)G__int(libp->para[1]),(size_t)G__int(libp->para[2])));
     return(1);
   }
@@ -2264,9 +2119,7 @@ int hash;
       G__letint(result7,'Y',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'Y');
-#endif
     G__letint(result7,'Y',(long)memchr((void *)G__int(libp->para[0]),(int)G__int(libp->para[1]),(size_t)G__int(libp->para[2])));
     return(1);
   }
@@ -2283,10 +2136,8 @@ int hash;
       G__letint(result7,'i',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'Y');
     G__CHECKNONULL(1,'Y');
-#endif
     G__letint(result7,'i',(long)memcmp((void *)G__int(libp->para[0]),(void *)G__int(libp->para[1]),(size_t)G__int(libp->para[2])));
     return(1);
   }
@@ -2303,12 +2154,8 @@ int hash;
       G__letint(result7,'Y',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'Y');
     G__CHECKNONULL(1,'Y');
-#else
-    G__CHECKNONULL(0);
-#endif
     G__letint(result7,'Y',(long)memcpy((void *)G__int(libp->para[0]),(void *)G__int(libp->para[1]),(size_t)G__int(libp->para[2])));
     return(1);
   }
@@ -2325,12 +2172,8 @@ int hash;
       G__letint(result7,'Y',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'Y');
     G__CHECKNONULL(1,'Y');
-#else
-    G__CHECKNONULL(0);
-#endif
     G__letint(result7,'Y',(long)memmove((void *)G__int(libp->para[0]),(void *)G__int(libp->para[1]),(size_t)G__int(libp->para[2])));
     return(1);
   }
@@ -2347,16 +2190,11 @@ int hash;
       G__letint(result7,'Y',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'Y');
-#else
-    G__CHECKNONULL(0);
-#endif
     G__letint(result7,'Y',(long)memset((void *)G__int(libp->para[0]),(int)G__int(libp->para[1]),(size_t)G__int(libp->para[2])));
     return(1);
   }
 
-#ifndef G__OLDIMPLEMENTATION467
   if((hash==647)&&(strcmp(funcname,"mktime")==0)) {
 #ifndef G__MASKERROR
     if(1!=libp->paran) {
@@ -2373,11 +2211,7 @@ int hash;
       result7->ref = 0;
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'U'); /* not checking struct tag */
-#else
-    G__CHECKNONULL(0);
-#endif
     G__letint(result7,'l',(long)mktime((struct tm *)G__int(libp->para[0])));
 
     result7->typenum = G__defined_typename("time_t");
@@ -2386,7 +2220,6 @@ int hash;
     result7->ref = 0;
     return(1);
   }
-#endif
 
   if((hash==422)&&(strcmp(funcname,"modf")==0)) {
 #ifndef G__MASKERROR
@@ -2434,9 +2267,7 @@ int hash;
       G__letint(result7,'i',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(1,'E');
-#endif
     G__letint(result7,'i',(long)putc((int)G__int(libp->para[0]),(FILE *)G__int(libp->para[1])));
     return(1);
   }
@@ -2453,12 +2284,8 @@ int hash;
       G__letint(result7,'i',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION713
     G__letint(result7,'i'
 	      ,(long)fputc((int)G__int(libp->para[0]),G__intp_sout));
-#else
-    G__letint(result7,'i',(long)fputc((int)G__int(libp->para[0]),G__sout));
-#endif
     return(1);
   }
 
@@ -2474,16 +2301,10 @@ int hash;
       G__letint(result7,'i',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
-#endif
-#ifndef G__OLDIMPLEMENTATION713
     G__letint(result7,'i',(long)fputs((char *)G__int(libp->para[0])
 				      ,(FILE *)G__intp_sout));
     fputc('\n',(FILE*)G__intp_sout);
-#else
-    G__letint(result7,'i',(long)puts((char *)G__int(libp->para[0])));
-#endif
     return(1);
   }
 
@@ -2531,9 +2352,7 @@ int hash;
       G__letint(result7,'Y',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'Y');
-#endif
     G__letint(result7,'Y',(long)realloc((void *)G__int(libp->para[0]),(size_t)G__int(libp->para[1])));
     return(1);
   }
@@ -2550,9 +2369,7 @@ int hash;
       G__letint(result7,'i',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
-#endif
     G__letint(result7,'i',(long)remove((char *)G__int(libp->para[0])));
     return(1);
   }
@@ -2569,10 +2386,8 @@ int hash;
       G__letint(result7,'i',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
     G__CHECKNONULL(1,'C');
-#endif
     G__letint(result7,'i',(long)rename((char *)G__int(libp->para[0]),(char *)G__int(libp->para[1])));
     return(1);
   }
@@ -2589,9 +2404,7 @@ int hash;
       *result7=G__null;
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'E');
-#endif
     rewind((FILE *)G__int(libp->para[0]));
     *result7=G__null;
     return(1);
@@ -2609,16 +2422,13 @@ int hash;
       *result7=G__null;
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'E');
     G__CHECKNONULL(0,'C');
-#endif
     setbuf((FILE *)G__int(libp->para[0]),(char *)G__int(libp->para[1]));
     *result7=G__null;
     return(1);
   }
 
-#ifndef G__OLDIMPLEMENTATION467
   if((hash==956)&&(strcmp(funcname,"setlocale")==0)) {
 #ifndef G__MASKERROR
     if(2!=libp->paran) {
@@ -2631,15 +2441,10 @@ int hash;
       *result7=G__null;
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(1,'C');
-#else
-    G__CHECKNONULL(1);
-#endif
     G__letint(result7,'C',(long)setlocale((int)G__int(libp->para[0]),(char*)G__int(libp->para[1])));
     return(1);
   }
-#endif
 
   if((hash==767)&&(strcmp(funcname,"setvbuf")==0)) {
 #ifndef G__MASKERROR
@@ -2653,10 +2458,8 @@ int hash;
       G__letint(result7,'i',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'E');
     G__CHECKNONULL(1,'C');
-#endif
     G__letint(result7,'i',(long)setvbuf((FILE *)G__int(libp->para[0]),(char *)G__int(libp->para[1]),(int)G__int(libp->para[2]),(size_t)G__int(libp->para[3])));
     return(1);
   }
@@ -2690,11 +2493,14 @@ int hash;
       G__letint(result7,'C',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
     G__CHECKNONULL(1,'C');
-#endif
-    G__letint(result7,'C',(long)strcat((char *)G__int(libp->para[0]),(char *)G__int(libp->para[1])));
+    {
+       char *dst = (char*)G__int(libp->para[0]);
+       char *src = (char*)G__int(libp->para[1]);
+       char* res = strcat(dst,src);
+       G__letint(result7,'C',(long)res);
+    }
     return(1);
   }
 
@@ -2710,9 +2516,7 @@ int hash;
       G__letint(result7,'C',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
-#endif
     G__letint(result7,'C',(long)strchr((char *)G__int(libp->para[0]),(int)G__int(libp->para[1])));
     return(1);
   }
@@ -2729,10 +2533,8 @@ int hash;
       G__letint(result7,'i',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
     G__CHECKNONULL(1,'C');
-#endif
     G__letint(result7,'i',(long)strcmp((char *)G__int(libp->para[0]),(char *)G__int(libp->para[1])));
     return(1);
   }
@@ -2749,10 +2551,8 @@ int hash;
       G__letint(result7,'i',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
     G__CHECKNONULL(1,'C');
-#endif
     G__letint(result7,'i',(long)strcoll((char *)G__int(libp->para[0]),(char *)G__int(libp->para[1])));
     return(1);
   }
@@ -2769,10 +2569,8 @@ int hash;
       G__letint(result7,'C',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
     G__CHECKNONULL(1,'C');
-#endif
     G__letint(result7,'C',(long)strcpy((char *)G__int(libp->para[0]),(char *)G__int(libp->para[1])));
     return(1);
   }
@@ -2789,10 +2587,8 @@ int hash;
       G__letint(result7,'h',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
     G__CHECKNONULL(1,'C');
-#endif
     G__letint(result7,'h',(long)strcspn((char *)G__int(libp->para[0]),(char *)G__int(libp->para[1])));
     return(1);
   }
@@ -2813,7 +2609,6 @@ int hash;
     return(1);
   }
 
-#ifndef G__OLDIMPLEMENTATION467
   if((hash==878)&&(strcmp(funcname,"strftime")==0)) {
 #ifndef G__MASKERROR
     if(4!=libp->paran) {
@@ -2829,15 +2624,9 @@ int hash;
       result7->type = G__newtype.type[result7->typenum];
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
     G__CHECKNONULL(2,'C');
     G__CHECKNONULL(3,'U'); /* not checking struct tag */
-#else
-    G__CHECKNONULL(0);
-    G__CHECKNONULL(2);
-    G__CHECKNONULL(3);
-#endif
     G__letint(result7,'l',(long)strftime((char*)G__int(libp->para[0])
 					 ,(size_t)G__int(libp->para[1])
 					 ,(char*)G__int(libp->para[2])
@@ -2847,7 +2636,6 @@ int hash;
     result7->type = G__newtype.type[result7->typenum];
     return(1);
   }
-#endif
 
   if((hash==664)&&(strcmp(funcname,"strlen")==0)) {
 #ifndef G__MASKERROR
@@ -2861,9 +2649,7 @@ int hash;
       G__letint(result7,'h',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
-#endif
     G__letint(result7,'h',(long)strlen((char *)G__int(libp->para[0])));
     return(1);
   }
@@ -2880,10 +2666,8 @@ int hash;
       G__letint(result7,'C',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
     G__CHECKNONULL(1,'C');
-#endif
     G__letint(result7,'C',(long)strncat((char *)G__int(libp->para[0]),(char *)G__int(libp->para[1]),(size_t)G__int(libp->para[2])));
     return(1);
   }
@@ -2900,10 +2684,8 @@ int hash;
       G__letint(result7,'i',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
     G__CHECKNONULL(1,'C');
-#endif
     G__letint(result7,'i',(long)strncmp((char *)G__int(libp->para[0]),(char *)G__int(libp->para[1]),(size_t)G__int(libp->para[2])));
     return(1);
   }
@@ -2920,10 +2702,8 @@ int hash;
       G__letint(result7,'C',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
     G__CHECKNONULL(1,'C');
-#endif
     G__letint(result7,'C',(long)strncpy((char *)G__int(libp->para[0]),(char *)G__int(libp->para[1]),(size_t)G__int(libp->para[2])));
     return(1);
   }
@@ -2940,10 +2720,8 @@ int hash;
       G__letint(result7,'C',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
     G__CHECKNONULL(1,'C');
-#endif
     G__letint(result7,'C',(long)strpbrk((char *)G__int(libp->para[0]),(char *)G__int(libp->para[1])));
     return(1);
   }
@@ -2960,9 +2738,7 @@ int hash;
       G__letint(result7,'C',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
-#endif
     G__letint(result7,'C',(long)strrchr((char *)G__int(libp->para[0]),(int)G__int(libp->para[1])));
     return(1);
   }
@@ -2979,10 +2755,8 @@ int hash;
       G__letint(result7,'h',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
     G__CHECKNONULL(1,'C');
-#endif
     G__letint(result7,'h',(long)strspn((char *)G__int(libp->para[0]),(char *)G__int(libp->para[1])));
     return(1);
   }
@@ -2999,10 +2773,8 @@ int hash;
       G__letint(result7,'C',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
     G__CHECKNONULL(1,'C');
-#endif
     G__letint(result7,'C',(long)strstr((char *)G__int(libp->para[0]),(char *)G__int(libp->para[1])));
     return(1);
   }
@@ -3019,10 +2791,8 @@ int hash;
       G__letdouble(result7,'d',(double)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
     G__CHECKTYPE(1,'C','i');
-#endif
     G__letdouble(result7,'d',(double)strtod((char *)G__int(libp->para[0]),(char **)G__int(libp->para[1])));
     return(1);
   }
@@ -3039,10 +2809,8 @@ int hash;
       G__letint(result7,'C',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKTYPE(0,'C','i');
     G__CHECKNONULL(1,'C');
-#endif
     G__letint(result7,'C',(long)strtok((char *)G__int(libp->para[0]),(char *)G__int(libp->para[1])));
     return(1);
   }
@@ -3059,11 +2827,9 @@ int hash;
       G__letint(result7,'l',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
     G__CHECKTYPE(1,'C','i');
     G__CHECKLRANGE(2,0,36);
-#endif
     G__letint(result7,'l',(long)strtol((char *)G__int(libp->para[0]),(char **)G__int(libp->para[1]),(int)G__int(libp->para[2])));
     return(1);
   }
@@ -3080,11 +2846,9 @@ int hash;
       G__letint(result7,'k',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
     G__CHECKTYPE(1,'C','i');
     G__CHECKLRANGE(2,0,36);
-#endif
     G__letint(result7,'k',(long)strtoul((char *)G__int(libp->para[0]),(char **)G__int(libp->para[1]),(int)G__int(libp->para[2])));
     return(1);
   }
@@ -3101,10 +2865,8 @@ int hash;
       G__letint(result7,'h',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
     G__CHECKNONULL(1,'C');
-#endif
     G__letint(result7,'h',(long)strxfrm((char *)G__int(libp->para[0]),(char *)G__int(libp->para[1]),(size_t)G__int(libp->para[2])));
     return(1);
   }
@@ -3121,9 +2883,7 @@ int hash;
       G__letint(result7,'i',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKTYPE(0,'C','i');
-#endif
     G__letint(result7,'i',(long)system((char *)G__int(libp->para[0])));
     return(1);
   }
@@ -3140,9 +2900,7 @@ int hash;
       G__letint(result7,'l',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     /* G__CHECKNONULL(0,'Y'); */ /* tp can be null due to ANSI */
-#endif
     G__letint(result7,'l',(long)time((time_t *)G__int(libp->para[0])));
     return(1);
   }
@@ -3175,10 +2933,22 @@ int hash;
       G__letint(result7,'C',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKTYPE(0,'C','i');
+#if ((__GNUC__>=3)||(__GNUC__>=2)&&(__GNUC_MINOR__>=96))&&(defined(__linux)||defined(__linux__))
+    {
+      char *p = (char*)G__int(libp->para[0]);
+      if(p) {
+#ifdef P_tmpdir
+	sprintf(p,"%s/XXXXXX",P_tmpdir);
+#else
+	sprintf(p,"/tmp/XXXXXX");
 #endif
+      }
+      G__letint(result7,'C',(long)mkstemp(p));
+    }
+#else
     G__letint(result7,'C',(long)tmpnam((char *)G__int(libp->para[0])));
+#endif
     return(1);
   }
 
@@ -3226,9 +2996,7 @@ int hash;
       G__letint(result7,'i',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(1,'E');
-#endif
     G__letint(result7,'i',(long)ungetc((int)G__int(libp->para[0]),(FILE *)G__int(libp->para[1])));
     return(1);
   }
@@ -3245,10 +3013,8 @@ int hash;
       G__letint(result7,'h',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
     G__CHECKNONULL(1,'Y'); /* not checking type */
-#endif
     G__letint(result7,'h',(long)wcstombs((char *)G__int(libp->para[0]),(wchar_t *)G__int(libp->para[1]),(size_t)G__int(libp->para[2])));
     return(1);
   }
@@ -3265,9 +3031,7 @@ int hash;
       G__letint(result7,'i',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
-#endif
     G__letint(result7,'i',(long)wctomb((char *)G__int(libp->para[0]),(wchar_t)G__int(libp->para[1])));
     return(1);
   }
@@ -3293,12 +3057,8 @@ int hash;
       G__letint(result7,'E',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'C');
     G__CHECKNONULL(1,'C');
-#else
-    G__CHECKNONULL(0);
-#endif
     G__letint(result7,'E',(long)fopen((char *)G__int(libp->para[0]),(char *)G__int(libp->para[1])));
 #ifdef G__SECURITY
     if(G__security&G__SECURE_GARBAGECOLLECTION) {
@@ -3320,11 +3080,7 @@ int hash;
       G__letint(result7,'i',(long)0);
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'E');
-#else
-    G__CHECKNONULL(0);
-#endif
 #ifdef G__SECURITY
     if(G__security&G__SECURE_GARBAGECOLLECTION) {
       G__del_alloctable((void*)G__int(libp->para[0]));
@@ -3346,11 +3102,7 @@ int hash;
       *result7=G__null;
       return(1);
     }
-#ifndef G__OLDIMPLEMENTATION575
     G__CHECKNONULL(0,'E');
-#else
-    G__CHECKNONULL(0);
-#endif
     clearerr((FILE *)G__int(libp->para[0]));
     *result7=G__null;
     return(1);
@@ -3385,9 +3137,7 @@ void G__list_sut(fp) FILE *fp; {
    fprintf(fp,"   double acos(double arg);\n");
    fprintf(fp,"   double asin(double arg);\n");
 #endif /* G__NOMATHLIB */
-#ifndef G__OLDIMPLEMENTATION467
    fprintf(fp,"   char* asctime(struct tm* timestruct);\n");
-#endif
 #ifndef G__NOMATHLIB
    fprintf(fp,"   double atan(double arg);\n");
    fprintf(fp,"   double atan2(double num,double den);\n");
@@ -3438,9 +3188,7 @@ void G__list_sut(fp) FILE *fp; {
    fprintf(fp,"   int getchar();\n");
    fprintf(fp,"   char *getenv(char *variable);\n");
    fprintf(fp,"   char *gets(char *buffer);\n");
-#ifndef G__OLDIMPLEMENTATION467
    fprintf(fp,"   struct tm* gmtime(time_t *caltime);\n");
-#endif
    fprintf(fp,"   int isalnum(int c);\n");
    fprintf(fp,"   int isalpha(int c);\n");
    fprintf(fp,"   int iscntrl(int c);\n");
@@ -3459,10 +3207,8 @@ void G__list_sut(fp) FILE *fp; {
 #if !defined(G__NONANSI) && !defined(G__SUNOS4)
    fprintf(fp,"   ldiv_t ldiv(long numerator,long denominator);\n");
 #endif
-#ifndef G__OLDIMPLEMENTATION467
    fprintf(fp,"   struct lconv* localeconv();\n");
    fprintf(fp,"   struct tm* localtime(time_t* timeptr);\n");
-#endif
 #ifndef G__NOMATHLIB
    fprintf(fp,"   double log(double z);\n");
    fprintf(fp,"   double log10(double z);\n");
@@ -3476,9 +3222,7 @@ void G__list_sut(fp) FILE *fp; {
    fprintf(fp,"   void *memcpy(void *region1,void *region2,size_t n);\n");
    fprintf(fp,"   void *memmove(void *region1,void *region2,size_t count);\n");
    fprintf(fp,"   void *memset(void *buffer,int character,size_t n);\n");
-#ifndef G__OLDIMPLEMENTATION467
    fprintf(fp,"   time_t mktime(struct tm *timeptr);\n");
-#endif
 #ifndef G__NOMATHLIB
    fprintf(fp,"   double modf(double real,double *ip);\n");
 #endif /* G__NOMATHLIB */
@@ -3494,9 +3238,7 @@ void G__list_sut(fp) FILE *fp; {
    fprintf(fp,"   int rename(char *old,char *new);\n");
    fprintf(fp,"   void rewind(FILE *fp);\n");
    fprintf(fp,"   void setbuf(FILE *fp,char *buffer);\n");
-#ifndef G__OLDIMPLEMENTATION467
    fprintf(fp,"   char* setlocale(int position,char *locale);\n");
-#endif
    fprintf(fp,"   int setvbuf(FILE *fp,char *buffer,int mode,size_t size);\n");
 #ifndef G__NOMATHLIB
    fprintf(fp,"   double sin(double radian);\n");
@@ -3511,9 +3253,7 @@ void G__list_sut(fp) FILE *fp; {
    fprintf(fp,"   char *strcpy(char *string1,char *string2);\n");
    fprintf(fp,"   size_t strcspn(char *string1,char *string2);\n");
    fprintf(fp,"   char *strerror(int error);\n");
-#ifndef G__OLDIMPLEMENTATION467
    fprintf(fp,"   size_t strftime(char *string,size_t maximum,char *format,struct tm*brokentime);\n");
-#endif
    fprintf(fp,"   size_t strlen(char *string);\n");
    fprintf(fp,"   char *strncat(char *string1,char *string2,size_t n);\n");
    fprintf(fp,"   int strncmp(char *string1,char *string2,size_t n);\n");
@@ -3554,15 +3294,20 @@ void G__list_sut(fp) FILE *fp; {
    fprintf(fp,"   char *G__input(char prompt[]);\n");
    fprintf(fp,"   int G__pause();\n");
    fprintf(fp,"   int G__tracemode(int on_off);\n");
-   fprintf(fp,"   int G__breakline(int line);\n");
+   /* fprintf(fp,"   int G__breakline(int line);\n"); */
+   fprintf(fp,"   int G__setbreakpoint(char* line,char* file);\n");
    fprintf(fp,"   int G__stepmode(int on_off);\n");
-   fprintf(fp,"   [anytype] G__calc(char *expression);\n");
-   fprintf(fp,"   [anytype] G__exec_tempfile(char *file);\n");
-   fprintf(fp,"   int G__loadfile(char *file);\n");
-   fprintf(fp,"   int G__unloadfile(char *file);\n");
-   fprintf(fp,"   int G__reloadfile(char *file);\n");
-   fprintf(fp,"   int G__loadsystemfile(char* sysdllname);\n");
-   fprintf(fp,"   void G__add_ipath(char *pathname);\n");
+   fprintf(fp,"   [anytype] G__calc(const char *expression);\n");
+   fprintf(fp,"   [anytype] G__exec_text(const char *unnamedmacro);\n");
+   fprintf(fp,"   [anytype] G__exec_tempfile(const char *file);\n");
+#ifndef G__OLDIMPLEMENTATION1546
+   fprintf(fp,"   char* G__load_text(const char *namedmacro);\n");
+#endif
+   fprintf(fp,"   int G__loadfile(const char *file);\n");
+   fprintf(fp,"   int G__unloadfile(const char *file);\n");
+   fprintf(fp,"   int G__reloadfile(const char *file);\n");
+   fprintf(fp,"   int G__loadsystemfile(const char* sysdllname);\n");
+   fprintf(fp,"   void G__add_ipath(const char *pathname);\n");
    fprintf(fp,"   int G__split(char *line,char *string,int argc,char *argv[]);\n");
    fprintf(fp,"   int G__readline(FILE *fp,char *line,char *argbuf,int *argn,char *arg[]);\n");
    fprintf(fp,"   int G__cmparray(short array1[],short array2[],int num,short mask);\n");
@@ -3601,6 +3346,7 @@ void G__list_sut(fp) FILE *fp; {
    fprintf(fp,"   int G__optimizemode(int optlevel);\n");
    fprintf(fp,"   int G__getoptimizemode();\n");
    fprintf(fp,"   void G__clearerror();\n");
+   fprintf(fp,"   int G__defined(const char* type_name);\n");
 }
 
 

@@ -1,13 +1,21 @@
+/* -*- C++ -*- */
+/*************************************************************************
+ * Copyright(c) 1995~2005  Masaharu Goto (cint@pcroot.cern.ch)
+ *
+ * For the licensing terms see the file COPYING
+ *
+ ************************************************************************/
 /********************************************************
 * stdstrct.c
 ********************************************************/
 #include "stdstrct.h"
+
 void G__c_reset_tagtableG__stdstrct();
 void G__set_c_environmentG__stdstrct() {
   G__add_compiledheader("stdstr.h");
   G__c_reset_tagtableG__stdstrct();
 }
-int G__c_dllrevG__stdstrct() { return(51111); }
+int G__c_dllrevG__stdstrct() { return(30051515); }
 
 /* Setting up global function */
 
@@ -111,7 +119,7 @@ void G__c_setup_memvarG__stdstrct() {
 /*********************************************************
 * Global variable information setup for each class
 *********************************************************/
-void G__c_setup_globalG__stdstrct() {
+static void G__cpp_setup_global0() {
 
    /* Setting up global variables */
    G__resetplocal();
@@ -120,15 +128,22 @@ void G__c_setup_globalG__stdstrct() {
 
    G__resetglobalenv();
 }
+void G__c_setup_globalG__stdstrct() {
+  G__cpp_setup_global0();
+}
 
 /*********************************************************
 * Global function information setup for each class
 *********************************************************/
-void G__c_setup_funcG__stdstrct() {
+static void G__cpp_setup_func0() {
    G__lastifuncposition();
 
 
    G__resetifuncposition();
+}
+
+void G__c_setup_funcG__stdstrct() {
+  G__cpp_setup_func0();
 }
 
 /*********************************************************
@@ -148,6 +163,7 @@ void G__c_reset_tagtableG__stdstrct() {
   G__G__stdstrctLN_dAldiv_t.tagnum = -1 ;
 }
 
+
 void G__c_setup_tagtableG__stdstrct() {
 
    /* Setting up class,struct,union tag entry */
@@ -156,8 +172,9 @@ void G__c_setup_tagtableG__stdstrct() {
    G__tagtable_setup(G__get_linked_tagnum(&G__G__stdstrctLN_dAdiv_t),sizeof(div_t),-2,0,(char*)NULL,G__setup_memvardAdiv_t,NULL);
    G__tagtable_setup(G__get_linked_tagnum(&G__G__stdstrctLN_dAldiv_t),sizeof(ldiv_t),-2,0,(char*)NULL,G__setup_memvardAldiv_t,NULL);
 }
-void G__c_setupG__stdstrct() {
-  G__check_setup_version(51111,"G__c_setupG__stdstrct()");
+
+extern "C" void G__c_setupG__stdstrct() {
+  G__check_setup_version(30051515,"G__c_setupG__stdstrct()");
   G__set_c_environmentG__stdstrct();
   G__c_setup_tagtableG__stdstrct();
 

@@ -7,27 +7,38 @@
  * Description:
  *  Support 'long double' 
  ************************************************************************
- * Copyright(c) 1995~1999  Masaharu Goto (MXJ02154@niftyserve.or.jp)
+ * Copyright(c) 1995~2004  Masaharu Goto (cint@pcroot.cern.ch)
  *
- * Permission to use, copy, modify and distribute this software and its 
- * documentation for non-commercial purpose is hereby granted without fee,
- * provided that the above copyright notice appear in all copies and
- * that both that copyright notice and this permission notice appear
- * in supporting documentation.  The author makes no
- * representations about the suitability of this software for any
- * purpose.  It is provided "as is" without express or implied warranty.
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 #ifndef G__LONGDOUBLE_H
 #define G__LONGDOUBLE_H
 
+#include "longlong.h"
+
+//#if !defined(__hpux) && !defined(G__HPUX)
+
 #ifndef IOS
 #define IOS
 #endif
 
+#if (defined(__GNUC__)&&(__GNUC__>=3)) || (defined(_MSC_VER)&&(_MSC_VER>=1300))
+#ifndef G__NEWSTDHEADER
+#define G__NEWSTDHEADER
+#endif
+#endif
+
 #ifdef IOS
+#ifdef G__NEWSTDHEADER
+#include <iostream>
+#else
 #include <iostream.h>
-//using namespace std;
+#endif
+#if !defined(__hpux) && !(defined(_MSC_VER) && (_MSC_VER<1200))
+using namespace std;
+#endif
 #endif
 
 /**************************************************************************
@@ -50,6 +61,20 @@ typedef long double G__double92;
 #elif defined(__linux__)
 
 typedef long double G__double92;
+
+/**************************************************************************
+* HP-UX
+**************************************************************************/
+#elif defined(__hpux) || defined(G__HPUX)
+
+typedef double G__double92;
+
+/**************************************************************************
+* D.Cussol : Alpha TRU64
+**************************************************************************/
+#elif defined(__alpha) || defined(G__ALPHA) || defined(R__ALPHA)
+				
+typedef double G__double92;	
 
 /**************************************************************************
 * OTHER
@@ -79,6 +104,17 @@ class G__longdouble {
   G__longdouble(double l) { dat = (G__double92)l; }
 #endif
   G__longdouble(const G__longdouble& x) { dat=x.dat; }
+  //G__longdouble(long l=0) { dat = (G__double92)l; }
+  G__longdouble(const G__longlong& x) { dat=x.dat; }
+#ifndef G__OLDIMPLEMENTATION2007
+#if defined(_MSC_VER)&&(_MSC_VER<1310)
+  G__longdouble(const G__ulonglong& x) { dat=(G__int64)x.dat; }
+#else
+  G__longdouble(const G__ulonglong& x) { dat=x.dat; }
+#endif
+#else
+  G__longdouble(const G__ulonglong& x) { dat=x.dat; }
+#endif
   ~G__longdouble() {  }
 
   // conversion operator
@@ -86,12 +122,12 @@ class G__longdouble {
 
   // unary operators
   G__longdouble& operator++() { ++dat; return(*this); }
-  G__longdouble operator++(int dmy) { G__longdouble c(dat++); return(c); }
+  G__longdouble operator++(int) { G__longdouble c(dat++); return(c); }
   G__longdouble& operator--() { --dat; return(*this); }
-  G__longdouble operator--(int dmy) { G__longdouble c(dat--); return(c); }
+  G__longdouble operator--(int) { G__longdouble c(dat--); return(c); }
 
   // assignment operators
-  G__longdouble& operator=(const double x) {dat=(G__double92)x;return(*this);}
+  G__longdouble& operator=(double x) {dat=(G__double92)x;return(*this);}
   G__longdouble& operator=(const G__longdouble& x) {dat=x.dat;return(*this); }
   G__longdouble& operator+=(const G__longdouble& x) {dat+=x.dat; return(*this); }
   G__longdouble& operator-=(const G__longdouble& x) {dat-=x.dat; return(*this); }
@@ -116,7 +152,7 @@ class G__longdouble {
   friend istream& operator>>(istream& ist,G__longdouble& a);
 #endif
 
- private: 
+  //private: 
 #ifndef __CINT__
   G__double92 dat;
 #endif
@@ -170,20 +206,33 @@ inline istream& operator>>(istream& ist,G__longdouble& a) {
 }
 #endif
 
-
-#ifdef __MAKECINT__
-/*
-#undef G__REGEXP
-#undef G__SHAREDLIB
-#undef G__OSFDLL
-#pragma eval G__deleteglobal("G__REGEXP");
-#pragma eval G__deleteglobal("G__SHAREDLIB");
-#pragma eval G__deleteglobal("G__OSFDLL");
-#pragma link off global G__REGEXP;
-#pragma link off global G__SHAREDLIB;
-#pragma link off global G__OSFDLL;
-*/
+#ifndef G__OLDIMPLEMENTATION1913
+void G__printformatld(char* out,const char* fmt,void *p) {
+  //long double*pld = (long double*)p;
+  G__double92 *pld = (G__double92*)p;
+  sprintf(out,fmt,*pld);
+}
 #endif
 
+inline int G__ateval(const G__longdouble& a) {
+#ifdef IOS
+  cout << "(long double)" << a.dat << endl;
+#else
+  fprintf(stdout,"(long double)%g\n",a.dat);
+#endif
+  return(1);
+}
 
-#endif /* G__LONGLONG_H */
+#ifdef __MAKECINT__
+#ifndef G__LONGLONGTMP
+#define G__LONGLONGTMP
+#pragma link off global G__LONGLONGTMP;
+#endif
+#ifdef G__OLDIMPLEMENTATION1912
+#pragma link C++ function G__ateval;
+#endif
+#endif
+
+//#endif
+
+#endif /* G__LONGDBL_H */

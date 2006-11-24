@@ -7,18 +7,15 @@
  * Description:
  *  Signal handling function
  ************************************************************************
- * Copyright(c) 1995~1999  Masaharu Goto (MXJ02154@niftyserve.or.jp)
+ * Copyright(c) 1995~1999  Masaharu Goto 
  *
- * Permission to use, copy, modify and distribute this software and its 
- * documentation for any purpose is hereby granted without fee,
- * provided that the above copyright notice appear in all copies and
- * that both that copyright notice and this permission notice appear
- * in supporting documentation.  The author makes no
- * representations about the suitability of this software for any
- * purpose.  It is provided "as is" without express or implied warranty.
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 #include "common.h"
+
+extern "C" {
 
 extern int G__browsing; /* used in disp.c and intrpt.c */
 
@@ -64,7 +61,7 @@ int signame;
     G__genericerror("Bus error");
     signal(SIGBUS,G__error_handle);
     break;
-#endif	
+#endif        
   default:
     G__genericerror("Error: Unknown");
     break;
@@ -87,12 +84,7 @@ int signame;
 /******************************************************************
 * G__breakkey()
 ******************************************************************/
-#ifdef _AIX
 void G__breakkey(int signame)
-#else
-void G__breakkey(signame)
-int signame;
-#endif
 {
   /*********************************************************
    * stop browsing 
@@ -111,7 +103,7 @@ int signame;
    * immediate pause in prerun
    *********************************************************/
   if(G__prerun) {
-    fprintf(G__serr,"\n!!! Pause at prerun\n");
+    G__fprinterr(G__serr,"\n!!! Pause at prerun. signal(%d)\n",signame);
     G__step--;
     G__setdebugcond();
     G__pause();
@@ -120,15 +112,15 @@ int signame;
    * immediate pause if called twice
    *********************************************************/
   else if(G__step>1) {
-    fprintf(G__serr,"\n!!! Break in the middle of compiled statement\n");
+    G__fprinterr(G__serr,"\n!!! Break in the middle of compiled statement. signal(%d)\n",signame);
     G__pause();
     if(G__return>G__RETURN_NORMAL) {
-      fprintf(G__serr, "!!! Sorry, continue until compiled code finishes\n");
-      fprintf(G__serr, "!!! Use qqq for immediate termination\n");
+      G__fprinterr(G__serr, "!!! Sorry, continue until compiled code finishes\n");
+      G__fprinterr(G__serr, "!!! Use qqq for immediate termination\n");
     }
   }
   else if(G__asm_exec) {
-    fprintf(G__serr, "\n!!! Middle of loop compilation run\n");
+    G__fprinterr(G__serr, "\n!!! Middle of loop compilation run. signal(%d)\n",signame);
   }
   signal(SIGINT,G__breakkey);
 }
@@ -137,18 +129,16 @@ int signame;
 /******************************************************************
 * G__killproc()
 ******************************************************************/
-void G__killproc(signame)
-int signame;
+void G__killproc(int signame)
 {
-  fprintf(G__sout,"\n!!! Process killed by interrupt\n");
+  fprintf(G__sout,"\n!!! Process killed by interrupt. signal(%d)\n",signame);
   G__exit(EXIT_FAILURE);
 }
 
 /******************************************************************
 * G__errorprompt()
 ******************************************************************/
-int G__errorprompt(nameoferror)
-char *nameoferror;
+int G__errorprompt(char *nameoferror)
 {
 
 #ifdef G__EH_SIGNAL
@@ -172,9 +162,9 @@ char *nameoferror;
 
 
 #ifdef SIGALRM
-  fprintf(G__serr
-	  ,"Press return or process will be terminated in %dsec by timeout\n"
-	  ,G__TIMEOUT);
+  G__fprinterr(G__serr,
+          "Press return or process will be terminated in %dsec by timeout\n"
+          ,G__TIMEOUT);
   signal(SIGALRM,G__timeout);
   alarm(G__TIMEOUT);
 #endif
@@ -183,7 +173,7 @@ char *nameoferror;
 
 #ifdef SIGALRM
   alarm(0);
-  fprintf(G__serr,"Time out cancelled\n");
+  G__fprinterr(G__serr,"Time out cancelled\n");
 #endif
 
   while(G__return<G__RETURN_EXIT1) {
@@ -200,10 +190,9 @@ char *nameoferror;
 /******************************************************************
 * G__timeout()
 ******************************************************************/
-void G__timeout(signame)
-int signame;
+void G__timeout(int signame)
 {
-  fprintf(G__serr,"\nError time out. Exit program.\n");
+  G__fprinterr(G__serr,"\nsignal(%d) Error time out. Exit program.\n",signame);
 
   G__close_inputfiles();
   exit(EXIT_FAILURE);
@@ -212,13 +201,9 @@ int signame;
 /******************************************************************
 * G__floatexception()
 ******************************************************************/
-#ifdef _AIX
-void G__floatexception(int idum)
-#else
-void G__floatexception(signame)
-int signame;
-#endif
+void G__floatexception(int signame)
 {
+  G__fprinterr(G__serr,"signal(%d) ",signame); 
   signal(SIGFPE,G__floatexception);
   G__errorprompt("Error: Floating point exception");
 }
@@ -226,13 +211,9 @@ int signame;
 /******************************************************************
 * G__segmentviolation()
 ******************************************************************/
-#ifdef _AIX
-void G__segmentviolation(int idum)
-#else
-void G__segmentviolation(signame)
-int signame;
-#endif
+void G__segmentviolation(int signame)
 {
+  G__fprinterr(G__serr,"signal(%d) ",signame); 
   signal(SIGSEGV,G__segmentviolation);
   G__errorprompt("Error: Segmentation violation");
 }
@@ -240,33 +221,35 @@ int signame;
 /******************************************************************
 * G__outofmemory()
 ******************************************************************/
-#ifdef _AIX
-void G__outofmemory(int idum)
-#else
-void G__outofmemory(signame)
-int signame;
-#endif
+void G__outofmemory(int signame)
 {
+  G__fprinterr(G__serr,"signal(%d) ",signame); 
 #ifdef SIGEMT
-	signal(SIGEMT,G__outofmemory);
+  signal(SIGEMT,G__outofmemory);
 #endif
-	G__errorprompt("Error: Out of memory");
+  G__errorprompt("Error: Out of memory");
 }
 
 /******************************************************************
 * G__buserror()
 ******************************************************************/
-#ifdef _AIX
-void G__buserror(int idum)
-#else
-void G__buserror(signame)
-int signame;
-#endif
+void G__buserror(int signame)
 {
+  G__fprinterr(G__serr,"signal(%d) ",signame); 
 #ifdef SIGBUS
   signal(SIGBUS,G__buserror);
 #endif
   G__errorprompt("Error: Bus error");
+}
+
+/******************************************************************
+* G__errorexit()
+******************************************************************/
+void G__errorexit(int signame)
+{
+  G__fprinterr(G__serr,"Error: caught signal(%d)\n",signame); 
+  signal(signame,SIG_DFL);
+  exit(EXIT_FAILURE);
 }
 
 
@@ -279,8 +262,7 @@ int signame;
 /******************************************************************
 * G__call_interrupt()
 ******************************************************************/
-int G__call_interruptfunc(func)
-char *func;
+int G__call_interruptfunc(char *func)
 {
 #ifdef G__ASM
   G__ALLOC_ASMENV;
@@ -303,11 +285,12 @@ char *func;
 /******************************************************************
 * G__fsigabrt()
 ******************************************************************/
-void G__fsigabrt()
+void G__fsigabrt(int)
 {
   char temp[G__ONELINE];
-  signal(SIGABRT,(void (*)())SIG_DFL);
+  signal(SIGABRT,SIG_DFL);
   if(G__SIGABRT) {
+#define G__OLDIMPLEMENTATION1945
     sprintf(temp,"%s()",G__SIGABRT);
     G__SIGABRT = NULL;
     G__call_interruptfunc(temp);
@@ -317,7 +300,7 @@ void G__fsigabrt()
 /******************************************************************
 * G__fsigfpe()
 ******************************************************************/
-void G__fsigfpe()
+void G__fsigfpe(int)
 {
   char temp[G__ONELINE];
   signal(SIGFPE,G__floatexception);
@@ -331,10 +314,10 @@ void G__fsigfpe()
 /******************************************************************
 * G__fsigill()
 ******************************************************************/
-void G__fsigill()
+void G__fsigill(int)
 {
   char temp[G__ONELINE];
-  signal(SIGILL,(void (*)())SIG_DFL);
+  signal(SIGILL,SIG_DFL);
   if(G__SIGILL) {
     sprintf(temp,"%s()",G__SIGILL);
     G__SIGILL = NULL;
@@ -345,7 +328,7 @@ void G__fsigill()
 /******************************************************************
 * G__fsigint()
 ******************************************************************/
-void G__fsigint()
+void G__fsigint(int)
 {
   char temp[G__ONELINE];
   signal(SIGINT,G__breakkey);
@@ -359,7 +342,7 @@ void G__fsigint()
 /******************************************************************
 * G__fsigsegv()
 ******************************************************************/
-void G__fsigsegv()
+void G__fsigsegv(int)
 {
   char temp[G__ONELINE];
   signal(SIGSEGV,G__segmentviolation);
@@ -373,10 +356,10 @@ void G__fsigsegv()
 /******************************************************************
 * G__fsigterm()
 ******************************************************************/
-void G__fsigterm()
+void G__fsigterm(int)
 {
   char temp[G__ONELINE];
-  signal(SIGTERM,(void (*)())SIG_DFL);
+  signal(SIGTERM,SIG_DFL);
   if(G__SIGTERM) {
     sprintf(temp,"%s()",G__SIGTERM);
     G__SIGTERM = NULL;
@@ -388,10 +371,10 @@ void G__fsigterm()
 /******************************************************************
 * G__fsighup()
 ******************************************************************/
-void G__fsighup()
+void G__fsighup(int)
 {
   char temp[G__ONELINE];
-  signal(SIGHUP,(void (*)())SIG_DFL);
+  signal(SIGHUP,SIG_DFL);
   if(G__SIGHUP) {
     sprintf(temp,"%s()",G__SIGHUP);
     G__SIGHUP = NULL;
@@ -404,10 +387,10 @@ void G__fsighup()
 /******************************************************************
 * G__fsigquit()
 ******************************************************************/
-void G__fsigquit()
+void G__fsigquit(int)
 {
   char temp[G__ONELINE];
-  signal(SIGQUIT,(void (*)())SIG_DFL);
+  signal(SIGQUIT,SIG_DFL);
   if(G__SIGQUIT) {
     sprintf(temp,"%s()",G__SIGQUIT);
     G__SIGQUIT = NULL;
@@ -420,10 +403,10 @@ void G__fsigquit()
 /******************************************************************
 * G__fsigtstp()
 ******************************************************************/
-void G__fsigtstp()
+void G__fsigtstp(int)
 {
   char temp[G__ONELINE];
-  signal(SIGTSTP,(void (*)())SIG_DFL);
+  signal(SIGTSTP,SIG_DFL);
   if(G__SIGTSTP) {
     sprintf(temp,"%s()",G__SIGTSTP);
     G__SIGTSTP = NULL;
@@ -436,10 +419,10 @@ void G__fsigtstp()
 /******************************************************************
 * G__fsigttin()
 ******************************************************************/
-void G__fsigttin()
+void G__fsigttin(int)
 {
   char temp[G__ONELINE];
-  signal(SIGTTIN,(void (*)())SIG_DFL);
+  signal(SIGTTIN,SIG_DFL);
   if(G__SIGTTIN) {
     sprintf(temp,"%s()",G__SIGTTIN);
     G__SIGTTIN = NULL;
@@ -452,10 +435,10 @@ void G__fsigttin()
 /******************************************************************
 * G__fsigttou()
 ******************************************************************/
-void G__fsigttou()
+void G__fsigttou(int)
 {
   char temp[G__ONELINE];
-  signal(SIGTTOU,(void (*)())SIG_DFL);
+  signal(SIGTTOU,SIG_DFL);
   if(G__SIGTTOU) {
     sprintf(temp,"%s()",G__SIGTTOU);
     G__SIGTTOU = NULL;
@@ -468,10 +451,10 @@ void G__fsigttou()
 /******************************************************************
 * G__fsigalrm()
 ******************************************************************/
-void G__fsigalrm()
+void G__fsigalrm(int)
 {
   char temp[G__ONELINE];
-  signal(SIGALRM,(void (*)())SIG_DFL);
+  signal(SIGALRM,SIG_DFL);
   if(G__SIGALRM) {
     sprintf(temp,"%s()",G__SIGALRM);
     G__SIGALRM = NULL;
@@ -484,10 +467,10 @@ void G__fsigalrm()
 /******************************************************************
 * G__fsigusr1()
 ******************************************************************/
-void G__fsigusr1()
+void G__fsigusr1(int)
 {
   char temp[G__ONELINE];
-  signal(SIGUSR1,(void (*)())SIG_DFL);
+  signal(SIGUSR1,SIG_DFL);
   if(G__SIGUSR1) {
     sprintf(temp,"%s()",G__SIGUSR1);
     G__SIGUSR1 = NULL;
@@ -500,10 +483,10 @@ void G__fsigusr1()
 /******************************************************************
 * G__fsigusr2()
 ******************************************************************/
-void G__fsigusr2()
+void G__fsigusr2(int)
 {
   char temp[G__ONELINE];
-  signal(SIGUSR2,(void (*)())SIG_DFL);
+  signal(SIGUSR2,SIG_DFL);
   if(G__SIGUSR2) {
     sprintf(temp,"%s()",G__SIGUSR2);
     G__SIGUSR2 = NULL;
@@ -513,6 +496,8 @@ void G__fsigusr2()
 #endif
 
 #endif /* G__SIGNAL */
+
+} /* extern "C" */
 
 /*
  * Local Variables:

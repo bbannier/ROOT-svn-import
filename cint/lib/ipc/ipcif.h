@@ -7,15 +7,10 @@
  * Description:
  *  Create Inter Process Communication API
  ************************************************************************
- * Copyright(c) 1995~1999  Masaharu Goto (MXJ02154@niftyserve.or.jp)
+ * Copyright(c) 1995~2002  Masaharu Goto (MXJ02154@niftyserve.or.jp)
  *
- * Permission to use, copy, modify and distribute this software and its 
- * documentation for non-commercial purpose is hereby granted without fee,
- * provided that the above copyright notice appear in all copies and
- * that both that copyright notice and this permission notice appear
- * in supporting documentation.  The author makes no
- * representations about the suitability of this software for any
- * purpose.  It is provided "as is" without express or implied warranty.
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 /* Please read README file in this directory */
@@ -33,12 +28,43 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <sys/sem.h>
+#if defined(G__APPLE) || defined(__APPLE__)
+/* union semun is defined by including <sys/sem.h> */
+#elif defined(__GNU_LIBRARY__) && !defined(_SEM_SEMUN_UNDEFINED)
+/* union semun is defined by including <sys/sem.h> */
+#else
+/* according to X/OPEN we have to define it ourselves */
+#if !defined(__FreeBSD__) && !defined(__KCC) && !defined(__sgi)
+union semun {
+  int val;                    /* value for SETVAL */
+  struct semid_ds *buf;       /* buffer for IPC_STAT, IPC_SET */
+  unsigned short int *array;  /* array for GETALL, SETALL */
+  struct seminfo *__buf;      /* buffer for IPC_INFO */
+};
+#endif
+#endif 
+
+/* sys/msg.h does not exist on macosx */
+#if defined(G__APPLE) || defined(__APPLE__)
+#else
 #include <sys/msg.h>
+#endif
 
 #else /* __MAKECINT__ */
 
 #include <time.h>
 #include <sys/types.h>
+
+struct ipc_parm;
+struct ipc_perm;
+struct shmid_ds;
+struct semid_ds;
+struct msqid_ds;
+
+union semun;
+
+struct sembuf;
+struct msgbuf; /* does not exist in RH7.0 */
 
 /**************************************************************************
  * convert a pathname and a project id to a System V IPC Key
@@ -164,17 +190,21 @@ int semop(int semid,struct sembuf *sops,unsigned int nsops);
  **************************************************************************/
 struct msgbuf {
   long mtype;
-  char mtext[80];
+  char mtext[80];  /* This is dummy */
 };
 
 struct msqid_ds;
 
+#if !(defined(G__APPLE) || defined(__APPLE__))
 int msgget(key_t key,int msgflg);
 int *msgsnd(int msgid,struct msgbuf *msgp,int msgsz,int msgflg);
 int msgrcv(int msgid,struct msgbuf *msgp,int msgsz,long msgtyp,int msgflg);
 int msgctl(int msgid, int cmd,struct msqid_ds *buf);
+#endif
 
 
+#pragma link off struct msgbuf;
 #endif /* __MAKECINT__ */
 
 #endif /* G__IPC_H */
+

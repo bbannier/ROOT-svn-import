@@ -9,13 +9,8 @@
  ************************************************************************
  * Copyright(c) 2004~2004  Masaharu Goto 
  *
- * Permission to use, copy, modify and distribute this software and its 
- * documentation for any purpose is hereby granted without fee,
- * provided that the above copyright notice appear in all copies and
- * that both that copyright notice and this permission notice appear
- * in supporting documentation.  The author makes no
- * representations about the suitability of this software for any
- * purpose.  It is provided "as is" without express or implied warranty.
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 #include "bc_inst.h"
@@ -783,7 +778,7 @@ void G__bc_inst::DELETEFREE(int isarray) {
 /**************************************************************************
 * SWAP
 **************************************************************************/
-void G__bc_inst::SWAP(int /* isarray */) {
+void G__bc_inst::SWAP() {
 #ifdef G__ASM_DBG
   if(G__asm_dbg) G__fprinterr(G__serr,"%3x: SWAP\n",G__asm_cp);
 #endif

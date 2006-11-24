@@ -1,16 +1,33 @@
-#ifndef G__BOOL_H
-#define G__BOOL_H
+/* -*- C++ -*- */
+/*************************************************************************
+ * Copyright(c) 1995~2005  Masaharu Goto (cint@pcroot.cern.ch)
+ *
+ * For the licensing terms see the file COPYING
+ *
+ ************************************************************************/
+#pragma ifndef G__BOOL_H
+#pragma define G__BOOL_H
 
-#undef FALSE
-#undef TRUE
+#pragma ifdef G__OLDIMPLEMENTATION1604
+/* This header file may not be needed any more */
+
+//#undef FALSE
+//#undef TRUE
 #undef true
 #undef false
-enum bool { FALSE = 0, false = 0, TRUE = 1, true = 1 };
-//typedef int bool;
-//const bool true=1;
-//const bool TRUE=1;
-//const bool false=0;
-//const bool FALSE=0;
-
+#ifndef G__OLDIMPLEMENTATION1604
+// bool as fundamental type
+const bool false=0,true=1;
+#else
+enum bool { false = 0, true = 1 };
 #endif
+bool bool() { return false; }
+
+// This is not needed due to fix 1584
+//#pragma link off class bool;
+//#pragma link off function bool;
+
+#pragma endif
+
+#pragma endif
 

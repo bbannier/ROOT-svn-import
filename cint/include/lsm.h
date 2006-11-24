@@ -1,3 +1,10 @@
+/* -*- C++ -*- */
+/*************************************************************************
+ * Copyright(c) 1995~2005  Masaharu Goto (cint@pcroot.cern.ch)
+ *
+ * For the licensing terms see the file COPYING
+ *
+ ************************************************************************/
 /*************************************************************************
 * lsm.h
 *
@@ -10,7 +17,7 @@
 
 #ifndef G__LSMSL 
 # ifdef G__SHAREDLIB
-#include <lsm.dl>
+#include <lsm.dll>
 # else
 #include <lsm.c>
 # endif

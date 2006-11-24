@@ -8,15 +8,10 @@
  *  Extended Run Time Type Identification API
  ************************************************************************
  * Author                  Masaharu Goto 
- * Copyright(c) 1995~1999  Masaharu Goto (MXJ02154@niftyserve.or.jp)
+ * Copyright(c) 1995~1999  Masaharu Goto 
  *
- * Permission to use, copy, modify and distribute this software and its 
- * documentation for any purpose is hereby granted without fee,
- * provided that the above copyright notice appear in all copies and
- * that both that copyright notice and this permission notice appear
- * in supporting documentation. The author makes no
- * representations about the suitability of this software for any
- * purpose.  It is provided "as is" without express or implied warranty.
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 #include "Api.h"
@@ -28,7 +23,7 @@
 * 
 *********************************************************************/
 ///////////////////////////////////////////////////////////////////////////
-void G__MethodArgInfo::Init(class G__MethodInfo &a)
+void Cint::G__MethodArgInfo::Init(class G__MethodInfo &a)
 {
   if(a.IsValid()) {
     belongingmethod = &a;
@@ -39,7 +34,7 @@ void G__MethodArgInfo::Init(class G__MethodInfo &a)
   }
 }
 ///////////////////////////////////////////////////////////////////////////
-const char* G__MethodArgInfo::Name()
+const char* Cint::G__MethodArgInfo::Name()
 {
   if(IsValid()) {
     struct G__ifunc_table *ifunc;
@@ -52,7 +47,7 @@ const char* G__MethodArgInfo::Name()
   }
 }
 ///////////////////////////////////////////////////////////////////////////
-long G__MethodArgInfo::Property()
+long Cint::G__MethodArgInfo::Property()
 {
   if(IsValid()) {
     struct G__ifunc_table *ifunc;
@@ -64,12 +59,10 @@ long G__MethodArgInfo::Property()
       property|=G__BIT_ISDEFAULT;
     if(ifunc->para_reftype[belongingmethod->index][argn]) 
       property|=G__BIT_ISREFERENCE;
-#ifndef G__OLDIMPLEMENTATION401
     if(ifunc->para_isconst[belongingmethod->index][argn]&G__CONSTVAR) 
       property|=G__BIT_ISCONSTANT;
     if(ifunc->para_isconst[belongingmethod->index][argn]&G__PCONSTVAR) 
       property|=G__BIT_ISPCONSTANT;
-#endif
     return(property);
   }
   else {
@@ -77,7 +70,7 @@ long G__MethodArgInfo::Property()
   }
 }
 ///////////////////////////////////////////////////////////////////////////
-char* G__MethodArgInfo::DefaultValue()
+char* Cint::G__MethodArgInfo::DefaultValue()
 {
   if(IsValid()) {
     struct G__ifunc_table *ifunc;
@@ -90,7 +83,7 @@ char* G__MethodArgInfo::DefaultValue()
   }
 }
 ///////////////////////////////////////////////////////////////////////////
-int G__MethodArgInfo::IsValid()
+int Cint::G__MethodArgInfo::IsValid()
 {
   if(belongingmethod && belongingmethod->IsValid()) {
     if(0<=argn&&argn<belongingmethod->NArg()) {
@@ -105,7 +98,7 @@ int G__MethodArgInfo::IsValid()
   }
 }
 ///////////////////////////////////////////////////////////////////////////
-int G__MethodArgInfo::Next()
+int Cint::G__MethodArgInfo::Next()
 {
   ++argn;
   if(IsValid()) {
@@ -115,12 +108,8 @@ int G__MethodArgInfo::Next()
     type.tagnum=ifunc->para_p_tagtable[belongingmethod->index][argn];
     type.typenum =ifunc->para_p_typetable[belongingmethod->index][argn];
     type.reftype = ifunc->para_reftype[belongingmethod->index][argn];
-#ifndef G__OLDIMPLEMENTATION1227
     type.class_property=0;
-#endif
-#ifndef G__OLDIMPLEMENTATION401
     type.isconst = ifunc->para_isconst[belongingmethod->index][argn];
-#endif
     return(1);
   }
   else {

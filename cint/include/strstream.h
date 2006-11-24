@@ -1,11 +1,18 @@
+/* -*- C++ -*- */
+/*************************************************************************
+ * Copyright(c) 1995~2005  Masaharu Goto (cint@pcroot.cern.ch)
+ *
+ * For the licensing terms see the file COPYING
+ *
+ ************************************************************************/
 /*********************************************************************
 * strstream.h
 *
 *********************************************************************/
 
-#ifndef G__STRSTREAM_H
+#pragma if !defined(G__STRSTREAM_H) && !defined(G__SSTREAM_H)
 
-#pragma setstream
+#include <iostream.h>
 
 #ifndef G__STRSTREAM_H
 #define G__STRSTREAM_H
@@ -204,7 +211,7 @@ istrstream& istrstream::operator >>(double& d)
 * NOT COMPLETE
 *********************************************************************/
 class iostrstream : public istrstream , public ostrstream {
-	iostrstream(char *p,int bufsize) 
+	iostrstream(char *p,int bufsize)
 		: istrstream(p,bufsize) , ostrstream(p,bufsize) { }
 };
 
@@ -220,4 +227,4 @@ typedef istrstream istringstream;
 
 #endif
 
-#endif
+#pragma endif

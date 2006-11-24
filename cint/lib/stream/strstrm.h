@@ -9,6 +9,8 @@
  ************************************************************************
  * Copyright(c) 1991~1999,  Masaharu Goto (MXJ02154@niftyserve.or.jp)
  *
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 #ifndef G__STRSTREAM_H
@@ -16,10 +18,14 @@
 
 #ifndef __CINT__
 
+#ifdef G__NEWSTDHEADER
+#include <sstream>
+#else
 #ifndef _WINDOWS
 #include <strstream.h>
 #else
 #include <strstrea.h>
+#endif
 #endif
 
 #else

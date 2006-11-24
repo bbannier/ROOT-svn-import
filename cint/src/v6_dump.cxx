@@ -7,25 +7,20 @@
  * Description:
  *  Readline dump
  ************************************************************************
- * Copyright(c) 1995~1999  Masaharu Goto (MXJ02154@niftyserve.or.jp)
+ * Copyright(c) 1995~2003  Masaharu Goto 
  *
- * Permission to use, copy, modify and distribute this software and its 
- * documentation for any purpose is hereby granted without fee,
- * provided that the above copyright notice appear in all copies and
- * that both that copyright notice and this permission notice appear
- * in supporting documentation.  The author makes no
- * representations about the suitability of this software for any
- * purpose.  It is provided "as is" without express or implied warranty.
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 #include "common.h"
 
+extern "C" {
+
 /****************************************************************
 * G__pushdumpinput(fp,exflag)
 ****************************************************************/
-int G__pushdumpinput(fp,exflag)
-FILE *fp;
-int exflag;
+int G__pushdumpinput(FILE *fp,int exflag)
 {
   int i;
   for(i=5;i>0;i--) {
@@ -64,8 +59,7 @@ int G__popdumpinput()
 *
 *  Write readline string to a dump file.
 ****************************************************************/
-int G__dumpinput(line)
-char *line;
+int G__dumpinput(char *line)
 {
   if(G__dumpreadline[0]!=NULL) {
     fprintf(G__dumpreadline[0],"%s\n",line);
@@ -78,14 +72,13 @@ char *line;
 *
 *  Read readline string from a dump file.
 ****************************************************************/
-char *G__xdumpinput(prompt)
-char *prompt;
+char *G__xdumpinput(char *prompt)
 {
-  static char line[G__ONELINE];
+  static char line[G__LONGLINE];
   char *null_fgets;
   int i;
   if(G__dumpreadline[0]!=NULL) {
-    null_fgets=fgets(line,G__ONELINE-1,G__dumpreadline[0]);
+    null_fgets=fgets(line,G__LONGLINE-1,G__dumpreadline[0]);
     if(null_fgets==NULL) {
       fclose(G__dumpreadline[0]);
       fprintf(G__sout,"End of readline dumpfile. ");
@@ -93,7 +86,7 @@ char *prompt;
       sprintf(line,"P"); 
       return(line);
     }
-    for(i=0;i<G__ONELINE-1;i++) {
+    for(i=0;i<G__LONGLINE-1;i++) {
       if(line[i]=='\n'||line[i]=='\r') line[i]='\0';
     }
     fprintf(G__sout,"%s%s\n",prompt,line);
@@ -101,6 +94,7 @@ char *prompt;
   return(line);
 }
 
+} /* extern "C" */
 
 /*
  * Local Variables:

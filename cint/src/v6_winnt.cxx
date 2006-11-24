@@ -7,25 +7,17 @@
  * Description:
  *  Windows-NT missing library. Needed only for Win32 environment
  ************************************************************************
- * Copyright(c) 1995~1999  Masaharu Goto (MXJ02154@niftyserve.or.jp)
+ * Copyright(c) 1995~1999  Masaharu Goto 
  *
- * Permission to use, copy, modify and distribute this software and its 
- * documentation for any purpose is hereby granted without fee,
- * provided that the above copyright notice appear in all copies and
- * that both that copyright notice and this permission notice appear
- * in supporting documentation.  The author makes no
- * representations about the suitability of this software for any
- * purpose.  It is provided "as is" without express or implied warranty.
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 /* #include "common.h" */
 
 #include <stdio.h>
 
-#ifndef G__OLDIMPLEMENTATION463
-extern FILE *G__serr;
-#endif
-
+extern "C" {
 
 /***********************************************************************
 * getopt();
@@ -34,10 +26,7 @@ extern FILE *G__serr;
 int optind=1;
 char *optarg;
 
-int getopt(argc, argv,optlist)
-int argc;
-char **argv;
-char *optlist;
+int getopt(int argc, char **argv,char *optlist)
 {
   int optkey;
   char *p;
@@ -46,29 +35,29 @@ char *optlist;
       optkey = argv[optind][1] ;
       p = optlist;
       while(*p) {
-	if( (*p) == optkey ) {
-	  ++p;
-	  if(':'==(*p)) { /* option with argument */
-	    if(argv[optind][2]) { /* -aARGUMENT */
-	      optarg=argv[optind]+2;
-	      optind+=1;
-	      return(argv[optind-1][1]);
-	    }
-	    else { /* -a ARGUMENT */
-	      optarg=argv[optind+1];
-	      optind+=2;
-	      return(argv[optind-2][1]);
-	    }
-	  }
-	  else { /* option without argument */
-	    ++optind;
-	    optarg=(char*)NULL;
-	    return(argv[optind-1][1]);
-	  }
-	}
-	++p;
+        if( (*p) == optkey ) {
+          ++p;
+          if(':'==(*p)) { /* option with argument */
+            if(argv[optind][2]) { /* -aARGUMENT */
+              optarg=argv[optind]+2;
+              optind+=1;
+              return(argv[optind-1][1]);
+            }
+            else { /* -a ARGUMENT */
+              optarg=argv[optind+1];
+              optind+=2;
+              return(argv[optind-2][1]);
+            }
+          }
+          else { /* option without argument */
+            ++optind;
+            optarg=(char*)NULL;
+            return(argv[optind-1][1]);
+          }
+        }
+        ++p;
       }
-      fprintf(G__serr,"Error: Unknown option %s\n",argv[optind]);
+      fprintf(stderr,"Error: Unknown option %s\n",argv[optind]);
       ++optind;
       return(0);
     }
@@ -85,8 +74,9 @@ char *optlist;
 * alarm()
 *
 ***********************************************************************/
-void alarm(iwait)
-int iwait;
+void alarm(int /* iwait */ )
 {
   ;
 }
+
+} /* extern "C" */

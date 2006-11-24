@@ -23,13 +23,8 @@
  ************************************************************************
  * Copyright(c) 2004~2005  Masaharu Goto 
  *
- * Permission to use, copy, modify and distribute this software and its 
- * documentation for any purpose is hereby granted without fee,
- * provided that the above copyright notice appear in all copies and
- * that both that copyright notice and this permission notice appear
- * in supporting documentation.  The author makes no
- * representations about the suitability of this software for any
- * purpose.  It is provided "as is" without express or implied warranty.
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 #include <deque>
@@ -239,7 +234,7 @@ G__value G__blockscope_expr::pointer_operator(const string& item,int& i) {
   else {
     // error
   }
-  return G__value();
+  return G__null;
 }
 ////////////////////////////////////////////////////////////////////
 G__value G__blockscope_expr::index_operator(const string& item,int& i) {
@@ -387,7 +382,7 @@ G__value G__blockscope_expr::fcall_operator(const string& /* item */,int& /* i *
   //   G__getexpr(expr)
   //   G__getexpr(expr)
   //   LD_FUNC function paran
-   return G__value();
+   return G__null;
 }
 
 ////////////////////////////////////////////////////////////////////

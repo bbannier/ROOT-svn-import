@@ -1,3 +1,10 @@
+/* -*- C++ -*- */
+/*************************************************************************
+ * Copyright(c) 1995~2005  Masaharu Goto (cint@pcroot.cern.ch)
+ *
+ * For the licensing terms see the file COPYING
+ *
+ ************************************************************************/
 /*********************************************************************
 * typeinfo.h
 *
@@ -66,6 +73,9 @@ class type_info {
   long typenum;   // typedefs
   long reftype;   // pointing level and reference types
   long size;      // size of the object
+#ifndef G__OLDIMPLEMENTATION1895
+  long isconst;   // constness
+#endif
 
  public: // original enhancement
   type_info() { }
@@ -99,8 +109,17 @@ bool type_info::before(const type_info& a) const
 const char* type_info::name() const
 {
   static char namestring[100];
-  printf("%d %d %d %d\n",type,tagnum,typenum,reftype);
+  //printf("%d %d %d %d\n",type,tagnum,typenum,reftype);
+#ifndef G__OLDIMPLEMENTATION1895
+#ifdef G__GNUC
+  char *cptr = G__type2string(type,tagnum,typenum,reftype,isconst);
+  sprintf(namestring,"%d%s",strlen(cptr),cptr);
+#else
+  strcpy(namestring,G__type2string(type,tagnum,typenum,reftype,isconst));
+#endif
+#else
   strcpy(namestring,G__type2string(type,tagnum,typenum,reftype));
+#endif
   return(namestring);
 }
 
@@ -111,6 +130,9 @@ type_info::type_info(const type_info& a)
   typenum = a.typenum;
   reftype = a.reftype;
   size = a.size;
+#ifndef G__OLDIMPLEMENTATION1895
+  isconst = a.isconst;
+#endif
 }
 
 type_info& type_info::operator=(const type_info& a)
@@ -120,6 +142,9 @@ type_info& type_info::operator=(const type_info& a)
   typenum = a.typenum;
   reftype = a.reftype;
   size = a.size;
+#ifndef G__OLDIMPLEMENTATION1895
+  isconst = a.isconst;
+#endif
   return(*this);
 }
 
@@ -131,6 +156,9 @@ type_info::type_info()
   type = 0;
   tagnum = typenum = -1;
   reftype = 0;
+#ifndef G__OLDIMPLEMENTATION1895
+  isconst = 0;
+#endif
 }
 
 

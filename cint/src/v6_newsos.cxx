@@ -6,15 +6,10 @@
  * Description:
  *  Missing ANSI-C function for NewsOS
  ************************************************************************
- * Copyright(c) 1995~1999  Masaharu Goto (MXJ02154@niftyserve.or.jp)
+ * Copyright(c) 1995~1999  Masaharu Goto 
  *
- * Permission to use, copy, modify and distribute this software and its 
- * documentation for any purpose is hereby granted without fee,
- * provided that the above copyright notice appear in all copies and
- * that both that copyright notice and this permission notice appear
- * in supporting documentation.  The author makes no
- * representations about the suitability of this software for any
- * purpose.  It is provided "as is" without express or implied warranty.
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 #if defined(G__NONANSI) || defined(G__NEWSOS6) || defined(G__NEWSOS4)
@@ -32,9 +27,9 @@
 #include <setjmp.h>
 #include "newsos.h"
 
-#ifndef G__OLDIMPLEMENTATION463
+extern "C" {
+
 extern FILE *G__serr;
-#endif
 
 /************************************************************************
 * ANSI library implemented
@@ -44,8 +39,8 @@ FILE *fp;
 fpos_t *position;
 {
         if(fp) 
-	  fseek(fp,*position,SEEK_SET);
-	return(0);
+          fseek(fp,*position,SEEK_SET);
+        return(0);
 }
 
 
@@ -54,8 +49,8 @@ FILE *fp;
 fpos_t *position;
 {
         if(fp)
-	  *position = ftell(fp);
-	return(0);
+          *position = ftell(fp);
+        return(0);
 }
 
 /************************************************************************
@@ -64,51 +59,41 @@ fpos_t *position;
 G__newsos_nosupport(funcname)
 char *funcname;
 {
-	fprintf(G__serr
-		,"Limitation: %s() not supported for NewsOS\n",funcname);
-}	
+        G__fprinterr(G__serr,
+                "Limitation: %s() not supported for NewsOS\n",funcname);
+}        
 
 /************************************************************************
 * Unsupported dummy function
 ************************************************************************/
-#if 0
-void *memmove(region1,region2,count)
-void *region1,*region2;
-size_t count;
-{
-	void *result;
-	G__newsos_nosupport("memmove");
-	return(result);
-}
-#endif
 
 
 int raise(signal)
 int signal;
 {
-	int result;
+        int result;
 #ifdef G__NEVER
-	G__newss_nosupport("raise");
+        G__newss_nosupport("raise");
 #else
-	switch(signal) {
-	case SIGINT: G__fsigint(); break;
-	case SIGILL: G__fsigill(); break;
-	case SIGFPE: G__fsigfpe(); break;
-	case SIGABRT: G__fsigabrt(); break;
-	case SIGSEGV: G__fsigsegv(); break;
-	case SIGTERM: G__fsigterm(); break;
-	default: break;
-	}
+        switch(signal) {
+        case SIGINT: G__fsigint(); break;
+        case SIGILL: G__fsigill(); break;
+        case SIGFPE: G__fsigfpe(); break;
+        case SIGABRT: G__fsigabrt(); break;
+        case SIGSEGV: G__fsigsegv(); break;
+        case SIGTERM: G__fsigterm(); break;
+        default: break;
+        }
 #endif
-	return(result);
+        return(result);
 }
 
 char *strerror(error)
 int error;
 {
-	char *result;
-	G__newsos_nosupport("strerror");
-	return(result);
+        char *result;
+        G__newsos_nosupport("strerror");
+        return(result);
 }
 
 double difftime(newtime,oldtime)
@@ -118,29 +103,20 @@ time_t newtime,oldtime;
 int newtime,oldtime;
 #endif
 {
-	double result;
-	G__newsos_nosupport("difftime");
-	return(result);
+        double result;
+        G__newsos_nosupport("difftime");
+        return(result);
 }
 
-#if 0
-int labs(n)
-long n;
-{
-	int result;
-	G__newsos_nosupport("labs");
-	return(result);
-}
-#endif
 
 unsigned long strtoul(sqrt,tailptr,base)
 char *sqrt;
 char **tailptr;
 int base;
 {
-	unsigned long result;
-	G__newsos_nosupport("strtoul");
-	return(result);
+        unsigned long result;
+        G__newsos_nosupport("strtoul");
+        return(result);
 }
 
 #ifdef G__NEWSOS4
@@ -148,9 +124,9 @@ int base;
 * NewsOS 4.x specifix dummy functions
 *********************************************************************/
 unsigned long clock() {
-	unsigned long result;
-	G__newsos_nosupport("clock");
-	return(result);
+        unsigned long result;
+        G__newsos_nosupport("clock");
+        return(result);
 }
 
 int setvbuf(fp,buffer,mode,size)
@@ -159,9 +135,9 @@ char *buffer;
 int mode;
 unsigned int size;
 {
-	int result;
-	G__newsos_nosupport("setvbuf");
-	return(result);
+        int result;
+        G__newsos_nosupport("setvbuf");
+        return(result);
 }
 
 unsigned int strxfrm(string1,string2,n)
@@ -169,11 +145,13 @@ char *string1;
 char *string2;
 unsigned int n;
 {
-	unsigned int result;
-	G__newsos_nosupport("strxfrm");
-	return(result);
+        unsigned int result;
+        G__newsos_nosupport("strxfrm");
+        return(result);
 }
 #endif
+
+} /* extern "C" */
 
 #else
 

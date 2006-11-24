@@ -7,15 +7,10 @@
  * Description:
  *  Extended Run Time Type Identification API
  ************************************************************************
- * Copyright(c) 1995~1999  Masaharu Goto (MXJ02154@niftyserve.or.jp)
+ * Copyright(c) 1995~1999  Masaharu Goto 
  *
- * Permission to use, copy, modify and distribute this software and its 
- * documentation for any purpose is hereby granted without fee,
- * provided that the above copyright notice appear in all copies and
- * that both that copyright notice and this permission notice appear
- * in supporting documentation.  The author makes no
- * representations about the suitability of this software for any
- * purpose.  It is provided "as is" without express or implied warranty.
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 
@@ -24,6 +19,8 @@
 
 
 #include "Api.h"
+
+namespace Cint {
 
 class G__ClassInfo;
 class G__MethodInfo;
@@ -34,7 +31,11 @@ class G__MethodInfo;
 * Outcome of discussion between Nenad Buncic of CERN. 15 Mar 1997
 * 
 *********************************************************************/
-class G__TokenInfo {
+class 
+#ifndef __CINT__
+G__EXPORT
+#endif
+G__TokenInfo {
  public:
   enum G__TokenType { t_invalid                                   // p_invalid
                     , t_class , t_typedef, t_fundamental , t_enum    // p_type
@@ -44,16 +45,20 @@ class G__TokenInfo {
   enum G__TokenProperty {p_invalid , p_type , p_data, p_func};
 
   ~G__TokenInfo() {}
-  G__TokenInfo() { Init(); }
+  G__TokenInfo() :
+    tokentype(t_invalid), tokenproperty(p_invalid), methodscope(),
+    bytecode(NULL), localvar(NULL), glob(), nextscope(), tinfo() { Init(); }
+  G__TokenInfo(const G__TokenInfo& tki);
+  G__TokenInfo& operator=(const G__TokenInfo& tki);
   void Init();
 
   // MakeLocalTable has to be used when entering to a new function
   G__MethodInfo MakeLocalTable(G__ClassInfo& tag_scope
-                              ,char* fname,char* paramtype);
+                              ,const char* fname,const char* paramtype);
 
   // Query has to be used to get information for each token
   int Query(G__ClassInfo& tag_scope,G__MethodInfo& func_scope
-	                 ,char* preopr,char* name, char* postopr);
+	    ,const char* preopr,const char* name,const char* postopr);
 
   // Following functions have to be called after Query 
   enum G__TokenType GetTokenType() { return(tokentype); }
@@ -70,14 +75,18 @@ class G__TokenInfo {
   G__ClassInfo nextscope;
   G__TypeInfo tinfo;
 
-  int SearchTypeName(char* name,char* postopr);
-  int SearchLocalVariable(char* name,G__MethodInfo& func_scope,char* postopr);
-  int SearchDataMember(char* name,G__ClassInfo& tag_scope,char* postopr);
-  int SearchGlobalVariable(char* name,char* postopr);
-  int SearchMemberFunction(char* name,G__ClassInfo& tag_scope);
-  int SearchGlobalFunction(char* name);
-  void GetNextscope(char* name,G__ClassInfo& tag_scope);
+  int SearchTypeName(const char* name,const char* postopr);
+  int SearchLocalVariable(const char* name,G__MethodInfo& func_scope
+			  ,const char* postopr);
+  int SearchDataMember(const char* name,G__ClassInfo& tag_scope
+		       ,const char* postopr);
+  int SearchGlobalVariable(const char* name,const char* postopr);
+  int SearchMemberFunction(const char* name,G__ClassInfo& tag_scope);
+  int SearchGlobalFunction(const char* name);
+  void GetNextscope(const char* name,G__ClassInfo& tag_scope);
 };
+
+} // namespace Cint
 
 /*********************************************************************
 * memo
@@ -116,4 +125,5 @@ class G__TokenInfo {
 * 
 *********************************************************************/
 
+using namespace Cint;
 #endif

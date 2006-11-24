@@ -1,3 +1,10 @@
+/* -*- C++ -*- */
+/*************************************************************************
+ * Copyright(c) 1995~2005  Masaharu Goto (cint@pcroot.cern.ch)
+ *
+ * For the licensing terms see the file COPYING
+ *
+ ************************************************************************/
 /**************************************************************************
 * darray.h
 *
@@ -18,26 +25,26 @@
 int G__arraysize = 100;
 
 class array  {
-	int malloced;
-      public:
-	double *dat;         // pointer to data array
-	int n;               // number of data
+  int malloced;
+ public:
+  double *dat;         // pointer to data array
+  int n;               // number of data
 
-	array(double start,double stop,int ndat);
-	array(double x);
-	array(array& X);
-	array(void);
-	array(array& X,int offset,int ndat);
-	array(double *p,int ndat,int isnew=0);
-	~array(); 
+  array(double start,double stop,int ndat);
+  array(double x);
+  array(array& X);
+  array(void);
+  array(array& X,int offset,int ndat);
+  array(double *p,int ndat,int isnew=0);
+  ~array(); 
 
-	array& operator =(array& a);
+  array& operator =(array& a);
 
-	array operator()(int from,int to);
-	double& operator[](int index);
+  array operator()(int from,int to);
+  double& operator[](int index);
 
-	int resize(int size);
-	int getsize() { return(n); }
+  int resize(int size);
+  int getsize() { return(n); }
 } ;
 
 
@@ -46,9 +53,9 @@ class array  {
 ***********************************************/
 array::~array()
 {
-	if(malloced) {
-		delete[] dat;
-	}
+  if(malloced) {
+    delete[] dat;
+  }
 }
 
 /***********************************************
@@ -56,18 +63,18 @@ array::~array()
 ***********************************************/
 array::array(array& X)
 {
-	int i;
-	if(X.malloced) {
-		dat = new double[X.n];
-		memcpy(dat,X.dat,X.n*sizeof(double));
-		n = X.n;
-		malloced=1;
-	}
-	else {
-		dat=X.dat;
-		n = X.n;
-		malloced=0;
-	}
+  int i;
+  if(X.malloced) {
+    dat = new double[X.n];
+    memcpy(dat,X.dat,X.n*sizeof(double));
+    n = X.n;
+    malloced=1;
+  }
+  else {
+    dat=X.dat;
+    n = X.n;
+    malloced=0;
+  }
 }
 
 /***********************************************
@@ -75,14 +82,14 @@ array::array(array& X)
 ***********************************************/
 array::array(double x)
 {
-	if(G__arraysize==0) {
-		cerr << "Error: Size of array 0\n";
-		return;
-	}
-	dat = new double[G__arraysize];
-	G__ary_assign(dat,x,x,G__arraysize);
-	n=G__arraysize;
-	malloced=1;
+  if(G__arraysize==0) {
+    cerr << "Error: Size of array 0\n";
+    return;
+  }
+  dat = new double[G__arraysize];
+  G__ary_assign(dat,x,x,G__arraysize);
+  n=G__arraysize;
+  malloced=1;
 }
 
 
@@ -91,12 +98,12 @@ array::array(double x)
 ***********************************************/
 array::array(double start,double stop,int ndat)
 {
-	double res;
-	G__arraysize=ndat;
-	dat = new double[G__arraysize];
-	G__ary_assign(dat,start,stop,G__arraysize);
-	n = G__arraysize;
-	malloced=1;
+  double res;
+  G__arraysize=ndat;
+  dat = new double[G__arraysize];
+  G__ary_assign(dat,start,stop,G__arraysize);
+  n = G__arraysize;
+  malloced=1;
 }
 
 /***********************************************
@@ -104,13 +111,13 @@ array::array(double start,double stop,int ndat)
 ***********************************************/
 array::array(void)
 {
-	if(G__arraysize==0) {
-		cerr << "Error: Size of array 0\n";
-		return;
-	}
-	dat = new double[G__arraysize];
-	n=G__arraysize;
-	malloced=1;
+  if(G__arraysize==0) {
+    cerr << "Error: Size of array 0\n";
+    return;
+  }
+  dat = new double[G__arraysize];
+  n=G__arraysize;
+  malloced=1;
 }
 
 /***********************************************
@@ -118,18 +125,18 @@ array::array(void)
 ***********************************************/
 array::array(double *p,int ndat,int isnew)
 {
-	G__arraysize=ndat;
-	if(isnew==0) {
-		dat = p;
-		n = G__arraysize;
-		malloced=0;
-	}
-	else {
-		dat = new double[ndat];
-		memcpy(dat,p,ndat*sizeof(double));
-		n=G__arraysize;
-		malloced=1;
-	}
+  G__arraysize=ndat;
+  if(isnew==0) {
+    dat = p;
+    n = G__arraysize;
+    malloced=0;
+  }
+  else {
+    dat = new double[ndat];
+    memcpy(dat,p,ndat*sizeof(double));
+    n=G__arraysize;
+    malloced=1;
+  }
 }
 
 
@@ -138,17 +145,17 @@ array::array(double *p,int ndat,int isnew)
 ***********************************************/
 array::array(array& X,int offset,int ndat)
 {
-	int i;
-	dat = new double[ndat];
-	if(offset+ndat>X.n) {
-		memcpy(dat,X.dat+offset,(X.n-offset)*sizeof(double));
-		for(i=X.n-offset;i<ndat;i++) dat[i] = 0.0;
-	}
-	else {
-		memcpy(dat,X.dat+offset,ndat*sizeof(double));
-	}
-	n = ndat;
-	malloced=1;
+  int i;
+  dat = new double[ndat];
+  if(offset+ndat>X.n) {
+    memcpy(dat,X.dat+offset,(X.n-offset)*sizeof(double));
+    for(i=X.n-offset;i<ndat;i++) dat[i] = 0.0;
+  }
+  else {
+    memcpy(dat,X.dat+offset,ndat*sizeof(double));
+  }
+  n = ndat;
+  malloced=1;
 }
 
 /***********************************************
@@ -182,17 +189,17 @@ int array::resize(int size)
 **********************************************************/
 array& array::operator =(array& a)
 {
-	int i;
-	if(malloced && a.malloced) {
-		if(a.n<n) memcpy(dat,a.dat,a.n*sizeof(double));
-		else      memcpy(dat,a.dat,n*sizeof(double));
-	}
-	else {
-		array c=array(a.dat,a.n,1);
-		if(c.n<n) memcpy(dat,c.dat,c.n*sizeof(double));
-		else      memcpy(dat,c.dat,n*sizeof(double));
-	}
-	return(*this);
+  int i;
+  if(malloced && a.malloced) {
+    if(a.n<n) memcpy(dat,a.dat,a.n*sizeof(double));
+    else      memcpy(dat,a.dat,n*sizeof(double));
+  }
+  else {
+    array c=array(a.dat,a.n,1);
+    if(c.n<n) memcpy(dat,c.dat,c.n*sizeof(double));
+    else      memcpy(dat,c.dat,n*sizeof(double));
+  }
+  return(*this);
 }
 
 /**********************************************************
@@ -200,15 +207,15 @@ array& array::operator =(array& a)
 **********************************************************/
 array array::operator()(int from,int to)
 {
-	if(from<0 || n<=to) {
-		fprintf(stderr,"Error: array index out of range %(d,%d),%d\n"
-			,from,to,n);
-		return(*this);
-	}
-	else {
-		array c=array(dat+from,to-from+1,0);
-		return(c);
-	}
+  if(from<0 || n<=to) {
+    fprintf(stderr,"Error: array index out of range %(d,%d),%d\n"
+	    ,from,to,n);
+    return(*this);
+  }
+  else {
+    array c=array(dat+from,to-from+1,0);
+    return(c);
+  }
 }
 
 /**********************************************************
@@ -216,12 +223,12 @@ array array::operator()(int from,int to)
 **********************************************************/
 double& array::operator[](int index)
 {
-	if(index<0||n<=index) {
-		fprintf(stderr,"Error: array index out of range %d/%d\n"
-			,index,n);
-		return(dat[0]);
-	}
-	return(dat[index]);
+  if(index<0||n<=index) {
+    fprintf(stderr,"Error: array index out of range %d/%d\n"
+	    ,index,n);
+    return(dat[0]);
+  }
+  return(dat[index]);
 }
 
 
@@ -230,11 +237,11 @@ double& array::operator[](int index)
 ***********************************************/
 array operator +(array& a,array& b)
 {
-	array c=array(0.0 , 0.0 , a.n);
-	int i;
-	G__ary_plus(c.dat,a.dat,b.dat,a.n);
-	c.n=a.n;
-	return(c);
+  array c=array(0.0 , 0.0 , a.n);
+  int i;
+  G__ary_plus(c.dat,a.dat,b.dat,a.n);
+  c.n=a.n;
+  return(c);
 }
 
 /***********************************************
@@ -242,11 +249,11 @@ array operator +(array& a,array& b)
 ***********************************************/
 array operator -(array& a,array& b)
 {
-	array c=array(0.0 , 0.0 , a.n);
-	int i;
-	G__ary_minus(c.dat,a.dat,b.dat,a.n);
-	c.n=a.n;
-	return(c);
+  array c=array(0.0 , 0.0 , a.n);
+  int i;
+  G__ary_minus(c.dat,a.dat,b.dat,a.n);
+  c.n=a.n;
+  return(c);
 }
 
 /***********************************************
@@ -254,12 +261,12 @@ array operator -(array& a,array& b)
 ***********************************************/
 array operator -(array& a)
 {
-	array c=array(0.0 , 0.0 , a.n);
-	array b=array(0.0 , 0.0 , a.n);
-	int i;
-	G__ary_minus(c.dat,b.dat,a.dat,a.n);
-	c.n=a.n;
-	return(c);
+  array c=array(0.0 , 0.0 , a.n);
+  array b=array(0.0 , 0.0 , a.n);
+  int i;
+  G__ary_minus(c.dat,b.dat,a.dat,a.n);
+  c.n=a.n;
+  return(c);
 }
 
 /***********************************************
@@ -267,11 +274,11 @@ array operator -(array& a)
 ***********************************************/
 array operator *(array& a,array& b)
 {
-	array c=array(0.0 , 0.0 , a.n);
-	int i;
-	G__ary_multiply(c.dat,a.dat,b.dat,a.n);
-	c.n=a.n;
-	return(c);
+  array c=array(0.0 , 0.0 , a.n);
+  int i;
+  G__ary_multiply(c.dat,a.dat,b.dat,a.n);
+  c.n=a.n;
+  return(c);
 }
 
 /***********************************************
@@ -279,11 +286,11 @@ array operator *(array& a,array& b)
 ***********************************************/
 array operator /(array& a,array& b)
 {
-	array c=array(0.0 , 0.0 , a.n);
-	int i;
-	G__ary_divide(c.dat,a.dat,b.dat,a.n);
-	c.n=a.n;
-	return(c);
+  array c=array(0.0 , 0.0 , a.n);
+  int i;
+  G__ary_divide(c.dat,a.dat,b.dat,a.n);
+  c.n=a.n;
+  return(c);
 }
 
 /***********************************************
@@ -291,11 +298,11 @@ array operator /(array& a,array& b)
 ***********************************************/
 array operator @(array& a,array& b)
 {
-	array c=array(0.0 , 0.0 , a.n);
-	int i;
-	G__ary_power(c.dat,a.dat,b.dat,a.n);
-	c.n=a.n;
-	return(c);
+  array c=array(0.0 , 0.0 , a.n);
+  int i;
+  G__ary_power(c.dat,a.dat,b.dat,a.n);
+  c.n=a.n;
+  return(c);
 }
 
 /***********************************************
@@ -303,11 +310,11 @@ array operator @(array& a,array& b)
 ***********************************************/
 array operator <<(array& a,int shift)
 {
-	array c=array(0.0 , 0.0 , a.n);
-	int i;
-	for(i=0;i<a.n-shift;i++) {c.dat[i] = a.dat[i+shift] ;}
-	c.n=a.n;
-	return(c);
+  array c=array(0.0 , 0.0 , a.n);
+  int i;
+  for(i=0;i<a.n-shift;i++) {c.dat[i] = a.dat[i+shift] ;}
+  c.n=a.n;
+  return(c);
 }
 
 /***********************************************
@@ -315,11 +322,11 @@ array operator <<(array& a,int shift)
 ***********************************************/
 array operator >>(array& a,int shift)
 {
-	array c=array(0.0 , 0.0 , a.n);
-	int i;
-	for(i=0;i<a.n-shift;i++) {c.dat[i+shift] = a.dat[i] ;}
-	c.n=a.n;
-	return(c);
+  array c=array(0.0 , 0.0 , a.n);
+  int i;
+  for(i=0;i<a.n-shift;i++) {c.dat[i+shift] = a.dat[i] ;}
+  c.n=a.n;
+  return(c);
 }
 
 
@@ -332,11 +339,11 @@ array operator >>(array& a,int shift)
 ***********************************************/
 array exp(array& a)
 {
-	array c=array(0.0 , 0.0 , a.n);
-	int i;
-	G__ary_exp(c.dat,a.dat,a.n);
-	c.n=a.n;
-	return(c);
+  array c=array(0.0 , 0.0 , a.n);
+  int i;
+  G__ary_exp(c.dat,a.dat,a.n);
+  c.n=a.n;
+  return(c);
 }
 
 /***********************************************
@@ -344,11 +351,11 @@ array exp(array& a)
 ***********************************************/
 array log(array& a)
 {
-	array c=array(0.0 , 0.0 , a.n);
-	int i;
-	G__ary_log(c.dat,a.dat,a.n);
-	c.n=a.n;
-	return(c);
+  array c=array(0.0 , 0.0 , a.n);
+  int i;
+  G__ary_log(c.dat,a.dat,a.n);
+  c.n=a.n;
+  return(c);
 }
 
 /***********************************************
@@ -356,11 +363,11 @@ array log(array& a)
 ***********************************************/
 array log10(array& a)
 {
-	array c=array(0.0 , 0.0 , a.n);
-	int i;
-	G__ary_log10(c.dat,a.dat,a.n);
-	c.n=a.n;
-	return(c);
+  array c=array(0.0 , 0.0 , a.n);
+  int i;
+  G__ary_log10(c.dat,a.dat,a.n);
+  c.n=a.n;
+  return(c);
 }
 
 /***********************************************
@@ -368,11 +375,11 @@ array log10(array& a)
 ***********************************************/
 array sinc(array& a)
 {
-	array c=array(0.0 , 0.0 , a.n);
-	int i;
-	G__ary_sinc(c.dat,a.dat,a.n);
-	c.n=a.n;
-	return(c);
+  array c=array(0.0 , 0.0 , a.n);
+  int i;
+  G__ary_sinc(c.dat,a.dat,a.n);
+  c.n=a.n;
+  return(c);
 }
 
 /***********************************************
@@ -380,11 +387,11 @@ array sinc(array& a)
 ***********************************************/
 array sin(array& a)
 {
-	array c=array(0.0 , 0.0 , a.n);
-	int i;
-	G__ary_sin(c.dat,a.dat,a.n);
-	c.n=a.n;
-	return(c);
+  array c=array(0.0 , 0.0 , a.n);
+  int i;
+  G__ary_sin(c.dat,a.dat,a.n);
+  c.n=a.n;
+  return(c);
 }
 
 /***********************************************
@@ -392,11 +399,11 @@ array sin(array& a)
 ***********************************************/
 array cos(array& a)
 {
-	array c=array(0.0 , 0.0 , a.n);
-	int i;
-	G__ary_cos(c.dat,a.dat,a.n);
-	c.n=a.n;
-	return(c);
+  array c=array(0.0 , 0.0 , a.n);
+  int i;
+  G__ary_cos(c.dat,a.dat,a.n);
+  c.n=a.n;
+  return(c);
 }
 
 /***********************************************
@@ -404,11 +411,11 @@ array cos(array& a)
 ***********************************************/
 array tan(array& a)
 {
-	array c=array(0.0 , 0.0 , a.n);
-	int i;
-	G__ary_tan(c.dat,a.dat,a.n);
-	c.n=a.n;
-	return(c);
+  array c=array(0.0 , 0.0 , a.n);
+  int i;
+  G__ary_tan(c.dat,a.dat,a.n);
+  c.n=a.n;
+  return(c);
 }
 
 /***********************************************
@@ -416,11 +423,11 @@ array tan(array& a)
 ***********************************************/
 array sinh(array& a)
 {
-	array c=array(0.0 , 0.0 , a.n);
-	int i;
-	G__ary_sinh(c.dat,a.dat,a.n);
-	c.n=a.n;
-	return(c);
+  array c=array(0.0 , 0.0 , a.n);
+  int i;
+  G__ary_sinh(c.dat,a.dat,a.n);
+  c.n=a.n;
+  return(c);
 }
 
 /***********************************************
@@ -428,11 +435,11 @@ array sinh(array& a)
 ***********************************************/
 array cosh(array& a)
 {
-	array c=array(0.0 , 0.0 , a.n);
-	int i;
-	G__ary_cosh(c.dat,a.dat,a.n);
-	c.n=a.n;
-	return(c);
+  array c=array(0.0 , 0.0 , a.n);
+  int i;
+  G__ary_cosh(c.dat,a.dat,a.n);
+  c.n=a.n;
+  return(c);
 }
 
 /***********************************************
@@ -440,11 +447,11 @@ array cosh(array& a)
 ***********************************************/
 array tanh(array& a)
 {
-	array c=array(0.0 , 0.0 , a.n);
-	int i;
-	G__ary_tanh(c.dat,a.dat,a.n);
-	c.n=a.n;
-	return(c);
+  array c=array(0.0 , 0.0 , a.n);
+  int i;
+  G__ary_tanh(c.dat,a.dat,a.n);
+  c.n=a.n;
+  return(c);
 }
 
 /***********************************************
@@ -452,11 +459,11 @@ array tanh(array& a)
 ***********************************************/
 array asin(array& a)
 {
-	array c=array(0.0 , 0.0 , a.n);
-	int i;
-	G__ary_asin(c.dat,a.dat,a.n);
-	c.n=a.n;
-	return(c);
+  array c=array(0.0 , 0.0 , a.n);
+  int i;
+  G__ary_asin(c.dat,a.dat,a.n);
+  c.n=a.n;
+  return(c);
 }
 
 /***********************************************
@@ -464,11 +471,11 @@ array asin(array& a)
 ***********************************************/
 array acos(array& a)
 {
-	array c=array(0.0 , 0.0 , a.n);
-	int i;
-	G__ary_acos(c.dat,a.dat,a.n);
-	c.n=a.n;
-	return(c);
+  array c=array(0.0 , 0.0 , a.n);
+  int i;
+  G__ary_acos(c.dat,a.dat,a.n);
+  c.n=a.n;
+  return(c);
 }
 
 /***********************************************
@@ -476,11 +483,11 @@ array acos(array& a)
 ***********************************************/
 array atan(array& a)
 {
-	array c=array(0.0 , 0.0 , a.n);
-	int i;
-	G__ary_atan(c.dat,a.dat,a.n);
-	c.n=a.n;
-	return(c);
+  array c=array(0.0 , 0.0 , a.n);
+  int i;
+  G__ary_atan(c.dat,a.dat,a.n);
+  c.n=a.n;
+  return(c);
 }
 
 /***********************************************
@@ -488,11 +495,11 @@ array atan(array& a)
  ***********************************************/
 array abs(array& a)
 {
-	array c=array(0.0 , 0.0 , a.n);
-	int i;
-	G__ary_fabs(c.dat,a.dat,a.n);
-	c.n=a.n;
-	return(c);
+  array c=array(0.0 , 0.0 , a.n);
+  int i;
+  G__ary_fabs(c.dat,a.dat,a.n);
+  c.n=a.n;
+  return(c);
 }
 
 /***********************************************
@@ -500,11 +507,11 @@ array abs(array& a)
  ***********************************************/
 array fabs(array& a)
 {
-	array c=array(0.0 , 0.0 , a.n);
-	int i;
-	G__ary_fabs(c.dat,a.dat,a.n);
-	c.n=a.n;
-	return(c);
+  array c=array(0.0 , 0.0 , a.n);
+  int i;
+  G__ary_fabs(c.dat,a.dat,a.n);
+  c.n=a.n;
+  return(c);
 }
 
 /***********************************************
@@ -512,11 +519,11 @@ array fabs(array& a)
  ***********************************************/
 array sqrt(array& a)
 {
-	array c=array(0.0 , 0.0 , a.n);
-	int i;
-	G__ary_sqrt(c.dat,a.dat,a.n);
-	c.n=a.n;
-	return(c);
+  array c=array(0.0 , 0.0 , a.n);
+  int i;
+  G__ary_sqrt(c.dat,a.dat,a.n);
+  c.n=a.n;
+  return(c);
 }
 
 /***********************************************
@@ -524,11 +531,11 @@ array sqrt(array& a)
  ***********************************************/
 array rect(array& a)
 {
-	array c=array(0.0 , 0.0 , a.n);
-	int i;
-	G__ary_rect(c.dat,a.dat,a.n);
-	c.n=a.n;
-	return(c);
+  array c=array(0.0 , 0.0 , a.n);
+  int i;
+  G__ary_rect(c.dat,a.dat,a.n);
+  c.n=a.n;
+  return(c);
 }
 
 /***********************************************
@@ -536,23 +543,23 @@ array rect(array& a)
  ***********************************************/
 array square(array& a)
 {
-	array c=array(0.0 , 0.0 , a.n);
-	int i;
-	G__ary_square(c.dat,a.dat,a.n);
-	c.n=a.n;
-	return(c);
+  array c=array(0.0 , 0.0 , a.n);
+  int i;
+  G__ary_square(c.dat,a.dat,a.n);
+  c.n=a.n;
+  return(c);
 }
 
- /***********************************************
+/***********************************************
   * rand
   ***********************************************/
 array rand(array& a)
 {
-	array c=array(0.0 , 0.0 , a.n);
-	int i;
-	G__ary_rand(c.dat,a.dat,a.n);
-	c.n=a.n;
-	return(c);
+  array c=array(0.0 , 0.0 , a.n);
+  int i;
+  G__ary_rand(c.dat,a.dat,a.n);
+  c.n=a.n;
+  return(c);
 }
 
 
@@ -561,11 +568,11 @@ array rand(array& a)
  ***********************************************/
 array conv(array& a,array& b)
 {
-	array c=array(0.0 , 0.0 , a.n);
-	int i;
-	G__ary_conv(c.dat,a.dat,a.n,b.dat,b.n);
-	c.n=a.n;
-	return(c);
+  array c=array(0.0 , 0.0 , a.n);
+  int i;
+  G__ary_conv(c.dat,a.dat,a.n,b.dat,b.n);
+  c.n=a.n;
+  return(c);
 }
 
 /***********************************************
@@ -573,11 +580,11 @@ array conv(array& a,array& b)
  ***********************************************/
 array integ(array& a,array& b) // a : x , b : y
 {
-	array c=array(0.0 , 0.0 , a.n);
-	int i;
-	G__ary_integ(c.dat,a.dat,b.dat,a.n);
-	c.n=a.n;
-	return(c);
+  array c=array(0.0 , 0.0 , a.n);
+  int i;
+  G__ary_integ(c.dat,a.dat,b.dat,a.n);
+  c.n=a.n;
+  return(c);
 }
 
 /***********************************************
@@ -585,11 +592,11 @@ array integ(array& a,array& b) // a : x , b : y
  ***********************************************/
 array diff(array& a,array& b) // a : x , b : y
 {
-	array c=array(0.0 , 0.0 , a.n);
-	int i;
-	G__ary_diff(c.dat,a.dat,b.dat,a.n);
-	c.n=a.n;
-	return(c);
+  array c=array(0.0 , 0.0 , a.n);
+  int i;
+  G__ary_diff(c.dat,a.dat,b.dat,a.n);
+  c.n=a.n;
+  return(c);
 }
 
 /***********************************************
@@ -597,11 +604,11 @@ array diff(array& a,array& b) // a : x , b : y
  ***********************************************/
 array max(array& a,array& b) // a : x , b : y
 {
-	array c=array(0.0 , 0.0 , a.n);
-	int i;
-	G__ary_max(c.dat,a.dat,b.dat,a.n);
-	c.n=a.n;
-	return(c);
+  array c=array(0.0 , 0.0 , a.n);
+  int i;
+  G__ary_max(c.dat,a.dat,b.dat,a.n);
+  c.n=a.n;
+  return(c);
 }
 
 /***********************************************
@@ -609,16 +616,67 @@ array max(array& a,array& b) // a : x , b : y
  ***********************************************/
 array min(array& a,array& b) // a : x , b : y
 {
-	array c=array(0.0 , 0.0 , a.n);
-	int i;
-	G__ary_min(c.dat,a.dat,b.dat,a.n);
-	c.n=a.n;
-	return(c);
+  array c=array(0.0 , 0.0 , a.n);
+  int i;
+  G__ary_min(c.dat,a.dat,b.dat,a.n);
+  c.n=a.n;
+  return(c);
 }
 
+/***********************************************
+* pow
+***********************************************/
+array pow(array& a,array& b)
+{
+  array c=array(0.0 , 0.0 , a.n);
+  int i;
+  G__ary_power(c.dat,a.dat,b.dat,a.n);
+  c.n=a.n;
+  return(c);
+}
+
+/***********************************************
+* FIT filter
+***********************************************/
+array fir(array& in,array& filter) 
+{
+  // convolution is done in conv(). This function
+  // simply does energy normalization 
+  array out(0.0,0.0,in.getsize());
+  int i,j,k;
+  array fil=array(0.0,0.0 ,filter.n);
+  double sum=0;
+  k=fil.n;
+  for(i=0;i<k;i++) sum += filter.dat[i];
+  fil = filter/sum;
+  out=conv(in,fil);
+  return(out);
+}
+
+//////////////////////////////////////////////////////////
 
 #ifndef G__ARRAY_H
 #include <array.h>
 #endif
 
+#ifdef __CINT__
+int G__ateval(const array& x) {
+  int n = x.getsize();
+  cout << "(array " << &x << ")" ;
+#ifdef G__DISPALL
+  for(int i=0;i<n-1;i++) cout << x[i] << ",";
+#else
+  if(n>20) {
+    for(int i=0;i<10;i++) cout << x[i] << ",";
+    cout << ",,,";
+    for(int i=n-10;i<n-1;i++) cout << x[i] << ",";
+  }
+  else for(int i=0;i<n-1;i++) cout << x[i] << ",";
 #endif
+  cout << x[n-1] << endl;
+  return(1); 
+}
+#endif
+
+#endif
+

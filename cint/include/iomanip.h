@@ -8,15 +8,10 @@
  *  CINT IOMANIP header file
  ************************************************************************
  * Author                  Masaharu Goto 
- * Copyright(c) 1995~1999  Masaharu Goto (MXJ02154@niftyserve.or.jp)
+ * Copyright(c) 1995~1999  Masaharu Goto (cint@pcroot.cern.ch)
  *
- * Permission to use, copy, modify and distribute this software and its 
- * documentation for any purpose is hereby granted without fee,
- * provided that the above copyright notice appear in all copies and
- * that both that copyright notice and this permission notice appear
- * in supporting documentation.  The author makes no
- * representations about the suitability of this software for any
- * purpose.  It is provided "as is" without express or implied warranty.
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 #ifndef G__IOMANIP_H
@@ -128,15 +123,27 @@ class setbase {
   setbase(int in) {i=in;}
 } ;
 ostream& operator<<(ostream& ostr,setbase& i) {
+#pragma ifndef G__TMPLTIOS
  if(8==i.i)       ostr.flags(ios::oct);
  else if(10==i.i) ostr.flags(ios::dec);
  else if(16==i.i) ostr.flags(ios::hex);
+#pragma else
+ if(8==i.i)       ostr.flags(ios_base::oct);
+ else if(10==i.i) ostr.flags(ios_base::dec);
+ else if(16==i.i) ostr.flags(ios_base::hex);
+#pragma endif
  return(ostr);
 }
 istream& operator>>(istream& istr,setbase& i) {
+#pragma ifndef G__TMPLTIOS
  if(8==i.i)       istr.flags(ios::oct);
  else if(10==i.i) istr.flags(ios::dec);
  else if(16==i.i) istr.flags(ios::hex);
+#pragma else
+ if(8==i.i)       istr.flags(ios_base::oct);
+ else if(10==i.i) istr.flags(ios_base::dec);
+ else if(16==i.i) istr.flags(ios_base::hex);
+#pragma endif
  return(istr);
 }
 

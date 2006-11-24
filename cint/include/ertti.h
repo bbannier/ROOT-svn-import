@@ -1,3 +1,10 @@
+/* -*- C++ -*- */
+/*************************************************************************
+ * Copyright(c) 1995~2005  Masaharu Goto (cint@pcroot.cern.ch)
+ *
+ * For the licensing terms see the file COPYING
+ *
+ ************************************************************************/
 /************************************************************************
 * Extensive Run Time Type Identification class
 *
@@ -16,6 +23,8 @@
 #ifndef G__API_H
 #pragma setertti
 #endif
+
+using namespace Cint;
 
 /************************************************************************
 * translation between ANSI/ISO RTTI type_info and ERTTI G__ClassInfo

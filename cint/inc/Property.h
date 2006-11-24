@@ -7,15 +7,10 @@
  * Description:
  *  Extended Run Time Type Identification API
  ************************************************************************
- * Copyright(c) 1995~1999  Masaharu Goto (MXJ02154@niftyserve.or.jp)
+ * Copyright(c) 1995~1999  Masaharu Goto 
  *
- * Permission to use, copy, modify and distribute this software and its 
- * documentation for any purpose is hereby granted without fee,
- * provided that the above copyright notice appear in all copies and
- * that both that copyright notice and this permission notice appear
- * in supporting documentation.  The author makes no
- * representations about the suitability of this software for any
- * purpose.  It is provided "as is" without express or implied warranty.
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 #ifndef G__PROPERTY_H
@@ -49,6 +44,7 @@
 #define G__BIT_ISCONSTANT        0x00100000
 #define G__BIT_ISVIRTUALBASE     0x00200000
 #define G__BIT_ISPCONSTANT       0x00400000
+#define G__BIT_ISMETHCONSTANT    0x10000000 // method is const
 
 #define G__BIT_ISGLOBALVAR       0x00800000
 #define G__BIT_ISLOCALVAR        0x01000000
@@ -57,7 +53,6 @@
 
 
 
-#ifndef G__OLDIMPLEMENTATION644
 
 /* ECF enhancement  ClassProperty() */
 
@@ -67,6 +62,7 @@
 #define G__CLS_HASIMPLICITCTOR   0x00000020
 #define G__CLS_HASCTOR           0x00000030
 #define G__CLS_HASDEFAULTCTOR    0x00000040
+#define G__CLS_HASASSIGNOPR      0x00000080
 
 #define G__CLS_HASEXPLICITDTOR   0x00000100
 #define G__CLS_HASIMPLICITDTOR   0x00000200
@@ -75,6 +71,5 @@
 #define G__CLS_HASVIRTUAL        0x00001000
 #define G__CLS_ISABSTRACT        0x00002000
 
-#endif /* ON644 */
 
 #endif /* G__PROPERTY_H */

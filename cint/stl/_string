@@ -1,10 +1,16 @@
+/* -*- C++ -*- */
+/*************************************************************************
+ * Copyright(c) 1995~2005  Masaharu Goto (cint@pcroot.cern.ch)
+ *
+ * For the licensing terms see the file COPYING
+ *
+ ************************************************************************/
 // string
 
 #ifndef G__STRING
 #define G__STRING
 
-
-#ifndef G__STRING_DLL
+#if !defined(G__STRING_DLL) && !defined(G__NOCINTDLL)
 #pragma include_noerr <string.dll>
 #endif
 
@@ -56,7 +62,7 @@ std::istream& operator>>(std::istream& ist,std::string& x) {
 #pragma endif // G__STRING_DLL
 
 int G__ateval(const std::string& x) {
-  std::cout << "(string 0x" << &x << ")\"" << x << "\"" << std::endl;
+  std::cout << "(string " << &x << ")\"" << x << "\"" << std::endl;
   return(1);
 }
 

@@ -1,3 +1,10 @@
+/* -*- C++ -*- */
+/*************************************************************************
+ * Copyright(c) 1995~2005  Masaharu Goto (cint@pcroot.cern.ch)
+ *
+ * For the licensing terms see the file COPYING
+ *
+ ************************************************************************/
 /*****************************************************************************
 * ReadFile.C
 *****************************************************************************/
@@ -19,7 +26,7 @@ ReadFile::ReadFile(const char *filename)
     openflag=1;
   }
   else {
-    fprintf(stderr,"ReadFile: %s can not open\n",filename);
+    fprintf(stderr,"ReadFile: can not open %s\n",filename);
   }
 }
 
@@ -56,6 +63,14 @@ void ReadFile::setseparator(const char *separatorin)
   strcpy(separator,separatorin); 
   lenseparator = strlen(separator);
 }
+
+#ifndef G__OLDIMPLEMENTATION1960
+void ReadFile::setdelimitor(const char *delimitorin)
+{
+  strcpy(delimitor,delimitorin); 
+  lendelimitor = strlen(delimitor);
+}
+#endif
 
 void ReadFile::setendofline(const char *endoflinein)
 {
@@ -176,7 +191,11 @@ void ReadFile::separatearg(void)
     while(isseparator((c = *p)) && c) ++p;
     if(c) {
       argv[++argc] = p;
+#ifndef G__OLDIMPLEMENTATION1960
+      while(!isseparator((c = *p)) && !isdelimitor(c) && c) ++p;
+#else
       while(!isseparator((c = *p)) && c) ++p;
+#endif
       *p = '\0';
       ++p;
     }
@@ -207,6 +226,21 @@ int ReadFile::isseparator(int c)
   }
   return(0);
 }
+
+#ifndef G__OLDIMPLEMENTATION1960
+/*****************************************************************************
+* isdelimitor()
+*****************************************************************************/
+int ReadFile::isdelimitor(int c)
+{
+  int i;
+  for(i=0;i<lendelimitor;i++) {
+    if(c==delimitor[i]) return(1);
+  }
+  return(0);
+}
+
+#endif
 
 /*****************************************************************************
 * disp()

@@ -7,7 +7,9 @@
  * Description:
  *  Stub file for making ANSI/ISO C++ standard structs
  ************************************************************************
- * Copyright(c) 2001~2001,   Masaharu Goto (MXJ02154@niftyserve.or.jp)
+ * Copyright(c) 2001~2002,   Masaharu Goto (MXJ02154@niftyserve.or.jp)
+ *
+ * For the licensing terms see the file COPYING
  *
  ************************************************************************/
 
@@ -23,14 +25,18 @@
 #include <time.h>
 #include <locale.h>
 #endif
+#if (defined(__sgi) && !defined(__GNUC__) && !defined(__KCC)) || (defined(__alpha) && !defined(__GNUC__))
+#include <math.h>
+#else
 #include <cmath>
-#ifndef __hpux
-using namespace std;
+#endif
+#ifdef __hpux
+namespace std {} using namespace std;
 #endif
 
 #ifdef __MAKECINT__
 
-long  abs  (long);
+//long  abs  (long);
 //ldiv_t div(long, long);
 
 float abs  (float);
@@ -49,7 +55,7 @@ float frexp(float, int*);
 float ldexp(float, int);
 float log  (float);
 float log10(float);
-float modf (float, float*);
+//float modf (float, float*);
 float pow  (float, float);
 float pow  (float, int);
 float sin  (float);
@@ -61,6 +67,7 @@ float tanh (float);
 double abs(double);            // fabs()
 double pow(double, int);
 
+#if !defined(G__SUN) && !defined(G__AIX)
 long double abs  (long double);
 long double acos (long double);
 long double asin (long double);
@@ -77,7 +84,7 @@ long double frexp(long double, int*);
 long double ldexp(long double, int);
 long double log  (long double);
 long double log10(long double);
-long double modf (long double, long double*);
+//long double modf (long double, long double*);
 long double pow  (long double, long double);
 long double pow  (long double, int);
 long double sin  (long double);
@@ -85,6 +92,7 @@ long double sinh (long double);
 long double sqrt (long double);
 long double tan  (long double);
 long double tanh (long double);
+#endif
 
 #endif
 

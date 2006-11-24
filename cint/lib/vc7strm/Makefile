@@ -1,8 +1,10 @@
 #
 # lib/snstream/Makefile
 #
-CP         = copy
-MV	   = move
+#CP         = copy
+#MV	   = move
+CP         = cp
+MV	   = mv
 
 CINTSYSDIR = ../..
 
@@ -18,8 +20,8 @@ CPPHEADER  = iostrm.h fstrm.h sstrm.h linkdef.h
 
 $(SRCCPPIFC) : $(CPPIFC)
 	cint ../snstream/length.cxx 255 $(CPPIFC) $(CPPIFH)
-	$(MV) $(CPPIFC) $(SRCCPPIFC)		
-	$(MV) $(CPPIFH) $(SRCCPPIFH)		
+#	$(MV) $(CPPIFC) $(SRCCPPIFC)		
+#	$(MV) $(CPPIFH) $(SRCCPPIFH)		
 
 
 $(CPPIFC) : $(CPPHEADER)

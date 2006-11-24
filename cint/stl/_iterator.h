@@ -1,3 +1,13 @@
+/* -*- C++ -*- */
+
+/************************************************************************
+ *
+ * Copyright(c) 1995~2006  Masaharu Goto (cint@pcroot.cern.ch)
+ *
+ * For the licensing terms see the file COPYING
+ *
+ ************************************************************************/
+
 /*
  *
  * Copyright (c) 1994
@@ -66,6 +76,7 @@ inline random_access_iterator_tag iterator_category(const T*) {
     return random_access_iterator_tag();
 }
 
+
 template <class T, class Distance> 
 inline T* value_type(const input_iterator<T, Distance>&) {
     return (T*)(0); 
@@ -113,6 +124,7 @@ distance_type(const random_access_iterator<T, Distance>&) {
 
 template <class T>
 inline ptrdiff_t* distance_type(const T*) { return (ptrdiff_t*)(0); }
+
 
 template <class Container>
 class back_insert_iterator : public output_iterator {
@@ -441,6 +453,214 @@ inline T* value_type(const _Bidit<T, Distance>&) {
 template <class T, class Distance> 
 inline T* value_type(const _Randit<T, Distance>&) {
     return (T*)(0);
+}
+#endif
+
+#if (G__GNUC>=3)
+
+#if (G__GNUC_VER>=3001) 
+
+// vector ///////////////////////////////////////////////////////////////
+template <class T> 
+inline random_access_iterator_tag iterator_category(const vector<T>::iterator&)
+  {return random_access_iterator_tag();}
+
+template <class T> 
+inline T* value_type(const vector<T>::iterator&) {return (T*)(0);}
+
+template <class T, class Distance> 
+inline Distance* 
+distance_type(const vector<T>::iterator&) {return (Distance*)(0);}
+
+// list ///////////////////////////////////////////////////////////////
+template <class T> 
+inline bidirectional_iterator_tag iterator_category(const list<T>::iterator&)
+  {return bidirectional_iterator_tag();}
+
+template <class T> 
+inline T* value_type(const list<T>::iterator&) {return (T*)(0);}
+
+template <class T, class Distance> 
+inline Distance* 
+distance_type(const list<T>::iterator&) {return (Distance*)(0);}
+
+// deque ///////////////////////////////////////////////////////////////
+template <class T> 
+inline random_access_iterator_tag iterator_category(const deque<T>::iterator&)
+  {return random_access_iterator_tag();}
+
+template <class T> 
+inline T* value_type(const deque<T>::iterator&) {return (T*)(0);}
+
+template <class T,class Distance>
+inline Distance* 
+distance_type(const deque<T>::iterator&) {return (Distance*)(0);}
+
+// map ///////////////////////////////////////////////////////////////
+template <class Key,class T> 
+inline bidirectional_iterator_tag iterator_category(const map<Key,T>::iterator&)
+  {return bidirectional_iterator_tag();}
+
+template <class Key,class T> 
+inline T* value_type(const map<Key,T>::iterator&) {return (T*)(0);}
+
+template <class Key,class T,class Distance> 
+inline Distance* 
+distance_type(const map<Key,T>::iterator&) {return (Distance*)(0);}
+
+// set ///////////////////////////////////////////////////////////////
+template <class T> 
+inline bidirectional_iterator_tag iterator_category(const set<T>::iterator&)
+  {return bidirectional_iterator_tag();}
+
+template <class T> 
+inline T* value_type(const set<T>::iterator&) {return (T*)(0);}
+
+template <class T,class Distance> 
+inline Distance* 
+distance_type(const set<T>::iterator&) {return (Distance*)(0);}
+
+#endif // (GNUC_VER>=3001)
+
+// This iterator adapter is 'normal' in the sense that it does not
+// change the semantics of any of the operators of its itererator
+// parameter.  Its primary purpose is to convert an iterator that is
+// not a class, e.g. a pointer, into an iterator that is a class.
+// The _Container parameter exists solely so that different containers
+// using this template can instantiate different types, even if the
+// _Iterator parameter is the same.
+template<typename _Iterator, typename _Container>
+class __normal_iterator
+  : public iterator<iterator_traits<_Iterator>::iterator_category,
+                    iterator_traits<_Iterator>::value_type,
+                    iterator_traits<_Iterator>::difference_type,
+                    iterator_traits<_Iterator>::pointer,
+                    iterator_traits<_Iterator>::reference>
+{
+
+protected:
+  _Iterator _M_current;
+
+public:
+  typedef __normal_iterator<_Iterator, _Container> normal_iterator_type;
+  typedef iterator_traits<_Iterator>  			__traits_type;
+  typedef typename __traits_type::iterator_category 	iterator_category;
+  typedef typename __traits_type::value_type 		value_type;
+  typedef typename __traits_type::difference_type 	difference_type;
+  typedef typename __traits_type::pointer          	pointer;
+  typedef typename __traits_type::reference 		reference;
+
+  __normal_iterator() : _M_current(_Iterator()) { }
+
+  explicit __normal_iterator(const _Iterator& __i) : _M_current(__i) { }
+
+  // Allow iterator to const_iterator conversion
+  template<typename _Iter>
+  inline __normal_iterator(const __normal_iterator<_Iter, _Container>& __i)
+    : _M_current(__i.base()) { }
+
+  // Forward iterator requirements
+  reference
+  operator*() const { return *_M_current; }
+
+  pointer
+  operator->() const { return _M_current; }
+
+  normal_iterator_type&
+  operator++() { ++_M_current; return *this; }
+
+  normal_iterator_type
+  operator++(int) { return __normal_iterator(_M_current++); }
+
+  // Bidirectional iterator requirements
+  normal_iterator_type&
+  operator--() { --_M_current; return *this; }
+
+  normal_iterator_type
+  operator--(int) { return __normal_iterator(_M_current--); }
+
+  // Random access iterator requirements
+  reference
+  operator[](const difference_type& __n) const
+  { return _M_current[__n]; }
+
+  normal_iterator_type&
+  operator+=(const difference_type& __n)
+  { _M_current += __n; return *this; }
+
+  normal_iterator_type
+  operator+(const difference_type& __n) const
+  { return __normal_iterator(_M_current + __n); }
+
+  normal_iterator_type&
+  operator-=(const difference_type& __n)
+  { _M_current -= __n; return *this; }
+
+  normal_iterator_type
+  operator-(const difference_type& __n) const
+  { return __normal_iterator(_M_current - __n); }
+
+  difference_type
+  operator-(const normal_iterator_type& __i) const
+  { return _M_current - __i._M_current; }
+
+  const _Iterator& 
+  base() const { return _M_current; }
+};
+
+// forward iterator requirements
+
+template<typename _IteratorL, typename _IteratorR, typename _Container>
+inline bool
+operator==(const __normal_iterator<_IteratorL, _Container>& __lhs,
+	   const __normal_iterator<_IteratorR, _Container>& __rhs)
+{ return __lhs.base() == __rhs.base(); }
+
+template<typename _IteratorL, typename _IteratorR, typename _Container>
+inline bool
+operator!=(const __normal_iterator<_IteratorL, _Container>& __lhs,
+	   const __normal_iterator<_IteratorR, _Container>& __rhs)
+{ return !(__lhs == __rhs); }
+
+// random access iterator requirements
+
+template<typename _IteratorL, typename _IteratorR, typename _Container>
+inline bool 
+operator<(const __normal_iterator<_IteratorL, _Container>& __lhs,
+	  const __normal_iterator<_IteratorR, _Container>& __rhs)
+{ return __lhs.base() < __rhs.base(); }
+
+template<typename _IteratorL, typename _IteratorR, typename _Container>
+inline bool
+operator>(const __normal_iterator<_IteratorL, _Container>& __lhs,
+	  const __normal_iterator<_IteratorR, _Container>& __rhs)
+{ return __rhs < __lhs; }
+
+template<typename _IteratorL, typename _IteratorR, typename _Container>
+inline bool
+operator<=(const __normal_iterator<_IteratorL, _Container>& __lhs,
+	   const __normal_iterator<_IteratorR, _Container>& __rhs)
+{ return !(__rhs < __lhs); }
+
+template<typename _IteratorL, typename _IteratorR, typename _Container>
+inline bool
+operator>=(const __normal_iterator<_IteratorL, _Container>& __lhs,
+	   const __normal_iterator<_IteratorR, _Container>& __rhs)
+{ return !(__lhs < __rhs); }
+
+template<typename _Iterator, typename _Container>
+inline __normal_iterator<_Iterator, _Container>
+operator+(__normal_iterator<_Iterator, _Container>::difference_type __n,
+          const __normal_iterator<_Iterator, _Container>& __i)
+{ return __normal_iterator<_Iterator, _Container>(__i.base() + __n); }
+
+template <class T, class Container> 
+inline random_access_iterator_tag iterator_category(const __normal_iterator<T, Container>&) {
+    return random_access_iterator_tag();
+}
+template <class T, class Container> 
+inline T* value_type(const __normal_iterator<T, Container>&) {
+    return (T*)(0); 
 }
 #endif
 

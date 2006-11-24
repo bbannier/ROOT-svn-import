@@ -8,15 +8,10 @@
  *  Extended Run Time Type Identification API
  ************************************************************************
  * Author                  Masaharu Goto 
- * Copyright(c) 1995~1998  Masaharu Goto (MXJ02154@niftyserve.or.jp)
+ * Copyright(c) 1995~1998  Masaharu Goto 
  *
- * Permission to use, copy, modify and distribute this software and its 
- * documentation for any purpose is hereby granted without fee,
- * provided that the above copyright notice appear in all copies and
- * that both that copyright notice and this permission notice appear
- * in supporting documentation.  The author makes no
- * representations about the suitability of this software for any
- * purpose.  It is provided "as is" without express or implied warranty.
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 
@@ -32,7 +27,7 @@
 *********************************************************************/
 
 ///////////////////////////////////////////////////////////////////////////
-void G__TokenInfo::Init() 
+void Cint::G__TokenInfo::Init() 
 {
   // reset status of the object 
   tokentype= t_invalid;
@@ -44,10 +39,45 @@ void G__TokenInfo::Init()
   bytecode=(struct G__bytecodefunc*)NULL;
   localvar=(struct G__var_array*)NULL;
 }
+
+///////////////////////////////////////////////////////////////////////////
+Cint::G__TokenInfo::G__TokenInfo(const G__TokenInfo& tki) :
+  tokentype(tki.tokentype), 
+  tokenproperty(tki.tokenproperty), 
+  methodscope(tki.methodscope),
+  bytecode(tki.bytecode),
+  localvar(tki.localvar),
+  glob(tki.glob),
+  nextscope(tki.nextscope),
+  tinfo(tki.tinfo)
+{
+  // Copy constructor
+}
+
+///////////////////////////////////////////////////////////////////////////
+G__TokenInfo& Cint::G__TokenInfo::operator=(const G__TokenInfo& tki)
+{
+
+  // Assignment operator
+
+  if(this!=&tki) {
+    tokentype=tki.tokentype; 
+    tokenproperty=tki.tokenproperty; 
+    methodscope=tki.methodscope;
+    bytecode=tki.bytecode;
+    localvar=tki.localvar;
+    glob=tki.glob;
+    nextscope=tki.nextscope;
+    tinfo=tki.tinfo;
+  }
+  return *this;
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // MakeLocalTable has to be used when entering to a new function
-G__MethodInfo G__TokenInfo::MakeLocalTable(G__ClassInfo& tag_scope
-                                           ,char* fname,char* paramtype) 
+G__MethodInfo Cint::G__TokenInfo::MakeLocalTable(G__ClassInfo& tag_scope
+                                           ,const char* fname
+					   ,const char* paramtype) 
 {
   long dmy;
 
@@ -78,9 +108,10 @@ G__MethodInfo G__TokenInfo::MakeLocalTable(G__ClassInfo& tag_scope
 }
 ///////////////////////////////////////////////////////////////////////////
 // Query has to be used to get information for each token
-int G__TokenInfo::Query(G__ClassInfo& tag_scope
+int Cint::G__TokenInfo::Query(G__ClassInfo& tag_scope
 			,G__MethodInfo& func_scope
-			,char* /* preopr*/ ,char* name, char* postopr)
+			,const char* /* preopr */ ,const char* name
+			,const char* postopr)
 {
   nextscope.Init(); // initialize nesting scope information
   // search token matches in following order
@@ -101,7 +132,7 @@ int G__TokenInfo::Query(G__ClassInfo& tag_scope
 ///////////////////////////////////////////////////////////////////////////
 // Private member functions
 ///////////////////////////////////////////////////////////////////////////
-int G__TokenInfo::SearchTypeName(char* name,char* postopr)
+int Cint::G__TokenInfo::SearchTypeName(const char* name,const char* postopr)
 {
   tinfo.Init(name);
   if(tinfo.IsValid()) {
@@ -121,12 +152,12 @@ int G__TokenInfo::SearchTypeName(char* name,char* postopr)
   }
 }
 ///////////////////////////////////////////////////////////////////////////
-int G__TokenInfo::SearchLocalVariable(char* name,G__MethodInfo& func_scope
-				     ,char* postopr)
+int Cint::G__TokenInfo::SearchLocalVariable(const char* name,G__MethodInfo& func_scope
+				     ,const char* postopr)
 {
   if(localvar && func_scope.IsValid()) {
     if(&func_scope != &methodscope) {
-      fprintf(G__serr,"Warning: G__TokenInfo::SearchLocalVariable() func scope changed without G__TokenInfo::MakeLocalTable()\n");
+      G__fprinterr(G__serr,"Warning: Cint::G__TokenInfo::SearchLocalVariable() func scope changed without Cint::G__TokenInfo::MakeLocalTable()\n");
       return(0);
     }
     struct G__var_array *var;
@@ -152,8 +183,8 @@ int G__TokenInfo::SearchLocalVariable(char* name,G__MethodInfo& func_scope
   return(0);
 }
 ///////////////////////////////////////////////////////////////////////////
-int G__TokenInfo::SearchDataMember(char* name,G__ClassInfo& tag_scope
-				  ,char* postopr)
+int Cint::G__TokenInfo::SearchDataMember(const char* name,G__ClassInfo& tag_scope
+				  ,const char* postopr)
 {
   if(tag_scope.IsValid() && tag_scope.HasDataMember(name)) {
     tokenproperty = p_data;
@@ -170,7 +201,7 @@ int G__TokenInfo::SearchDataMember(char* name,G__ClassInfo& tag_scope
 }
 
 ///////////////////////////////////////////////////////////////////////////
-int G__TokenInfo::SearchGlobalVariable(char* name,char* postopr)
+int Cint::G__TokenInfo::SearchGlobalVariable(const char* name,const char* postopr)
 {
   if(glob.HasDataMember(name)) {
     tokenproperty = p_data;
@@ -186,7 +217,7 @@ int G__TokenInfo::SearchGlobalVariable(char* name,char* postopr)
   }
 }
 ///////////////////////////////////////////////////////////////////////////
-int G__TokenInfo::SearchMemberFunction(char* name,G__ClassInfo& tag_scope)
+int Cint::G__TokenInfo::SearchMemberFunction(const char* name,G__ClassInfo& tag_scope)
 {
   if(tag_scope.IsValid() && tag_scope.HasMethod(name)) {
     tokenproperty = p_func;
@@ -198,7 +229,7 @@ int G__TokenInfo::SearchMemberFunction(char* name,G__ClassInfo& tag_scope)
   }
 }
 ///////////////////////////////////////////////////////////////////////////
-int G__TokenInfo::SearchGlobalFunction(char* name)
+int Cint::G__TokenInfo::SearchGlobalFunction(const char* name)
 {
   if(glob.HasMethod(name)) {
     tokenproperty = p_func;
@@ -211,7 +242,7 @@ int G__TokenInfo::SearchGlobalFunction(char* name)
 }
 ///////////////////////////////////////////////////////////////////////////
 // set nextscope for scope stacking
-void G__TokenInfo::GetNextscope(char* name,G__ClassInfo& tag_scope)
+void Cint::G__TokenInfo::GetNextscope(const char* name,G__ClassInfo& tag_scope)
 {
   G__DataMemberInfo dt(tag_scope);
   // iterate on variable table

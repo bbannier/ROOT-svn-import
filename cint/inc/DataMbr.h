@@ -7,15 +7,10 @@
  * Description:
  *  Extended Run Time Type Identification API
  ************************************************************************
- * Copyright(c) 1995~1998  Masaharu Goto (MXJ02154@niftyserve.or.jp)
+ * Copyright(c) 1995~1998  Masaharu Goto 
  *
- * Permission to use, copy, modify and distribute this software and its
- * documentation for any purpose is hereby granted without fee,
- * provided that the above copyright notice appear in all copies and
- * that both that copyright notice and this permission notice appear
- * in supporting documentation.  The author makes no
- * representations about the suitability of this software for any
- * purpose.  It is provided "as is" without express or implied warranty.
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 
@@ -24,25 +19,44 @@
 
 #include "Api.h"
 
+namespace Cint {
+
 /*********************************************************************
 * class G__DataMemberInfo
 *
 *
 *********************************************************************/
-class G__DataMemberInfo {
+class 
+#ifndef __CINT__
+G__EXPORT
+#endif
+G__DataMemberInfo {
  public:
   ~G__DataMemberInfo() {}
-  G__DataMemberInfo() : type() { Init(); }
-  G__DataMemberInfo(class G__ClassInfo &a) : type() { Init(a); }
+  G__DataMemberInfo(): handle(0), index(0), belongingclass(NULL), type() 
+    { Init(); }
+  G__DataMemberInfo(const G__DataMemberInfo& dmi): 
+    handle(dmi.handle), index(dmi.index), belongingclass(dmi.belongingclass), 
+    type(dmi.type) {}
+  G__DataMemberInfo(class G__ClassInfo &a): handle(0), index(0), belongingclass(NULL), type()  
+    { Init(a); }
+  G__DataMemberInfo& operator=(const G__DataMemberInfo& dmi) {
+    handle=dmi.handle; index=dmi.index; belongingclass=dmi.belongingclass;
+    type=dmi.type; return *this;}
+
+
   void Init();
   void Init(class G__ClassInfo &a);
   void Init(long handlinin,long indexin,G__ClassInfo *belongingclassin);
 
+  long Handle() { return(handle); }
+  int Index() { return ((int)index); }
   const char *Name() ;
   const char *Title() ;
   G__TypeInfo* Type() { return(&type); }
   long Property();
   long Offset() ;
+  int Bitfield();
   int ArrayDim() ;
   int MaxIndex(int dim) ;
   G__ClassInfo* MemberOf() { return(belongingclass); }
@@ -50,11 +64,10 @@ class G__DataMemberInfo {
   int IsValid();
   int SetFilePos(const char* fname);
   int Next();
+  int Prev();
 
-#ifdef G__ROOTSPECIAL
   enum error_code { VALID, NOT_INT, NOT_DEF, IS_PRIVATE, UNKNOWN };
   const char *ValidArrayIndex(int *errnum = 0, char **errstr = 0);
-#endif
 
   const char *FileName();
   int LineNumber();
@@ -66,4 +79,7 @@ class G__DataMemberInfo {
   G__TypeInfo type;
 };
 
+}
+
+using namespace Cint;
 #endif

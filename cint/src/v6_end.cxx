@@ -7,25 +7,21 @@
  * Description:
  *  Cleanup function
  ************************************************************************
- * Copyright(c) 1995~1999  Masaharu Goto (MXJ02154@niftyserve.or.jp)
+ * Copyright(c) 1995~2001  Masaharu Goto 
  *
- * Permission to use, copy, modify and distribute this software and its 
- * documentation for any purpose is hereby granted without fee,
- * provided that the above copyright notice appear in all copies and
- * that both that copyright notice and this permission notice appear
- * in supporting documentation.  The author makes no
- * representations about the suitability of this software for any
- * purpose.  It is provided "as is" without express or implied warranty.
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 #include "common.h"
+
+extern "C" {
 
 /***********************************************************************
 * G__free_preprocessfilekey()
 *
 ***********************************************************************/
-void G__free_preprocessfilekey(pkey)
-struct G__Preprocessfilekey *pkey;
+void G__free_preprocessfilekey(G__Preprocessfilekey *pkey)
 {
   if(pkey->next) {
     G__free_preprocessfilekey(pkey->next);
@@ -51,13 +47,13 @@ void G__scratch_all()
 {
   struct G__var_array *local;
 
-#ifndef G__OLDIMPLEMENTATION1035
   G__LockCriticalSection();
-#endif
 
-#ifndef G__OLDIMPLEMENTATION563
+  G__lasterrorpos.line_number = 0;
+  G__lasterrorpos.filenum = -1;
+  
+
   G__cintready=0; /* reset ready flag for embedded use */
-#endif
 
 #ifdef G__MEMTEST
   fprintf(G__memhist,"G__scratch_all() start\n");
@@ -79,16 +75,25 @@ void G__scratch_all()
    * clear interpriveve global variables
    *******************************************/
 #ifdef G__MEMTEST
+  fprintf(G__memhist,"Freeing temp object %d\n",G__templevel);
+#endif
+  if(G__p_tempbuf) {
+    if(G__templevel>0) G__templevel = 0;
+    G__free_tempobject();
+  }
+
+  /*******************************************
+   * clear interpriveve global variables
+   *******************************************/
+#ifdef G__MEMTEST
   fprintf(G__memhist,"Freeing global variables\n");
 #endif
   G__destroy(&G__global,G__GLOBAL_VAR);
 
-#ifndef G__OLDIMPLEMENTATION754
   /*******************************************
    * free exception handling buffer
    *******************************************/
   G__free_exceptionbuffer();
-#endif
 
 #ifdef G__SECURITY
   /*******************************************
@@ -170,7 +175,7 @@ void G__scratch_all()
   if(G__mfp) {
 #ifdef G__MEMTEST
     fprintf(G__memhist,"Ignore this error:");
-    fprintf(G__serr,"Ignore this error:");
+    G__fprinterr(G__serr,"Ignore this error:");
 #endif
     G__closemfp();
     G__mfp=NULL;
@@ -223,34 +228,37 @@ void G__scratch_all()
   G__freetemplatefunc(&G__definedtemplatefunc);
 #endif
 
-#ifndef G__OLDIMPLEMENTATION451
   /* delete user defined pragma statements */
   G__freepragma(G__paddpragma);
   G__paddpragma=(struct G__AppPragma*)NULL;
-#endif
 
-#ifndef G__OLDIMPLEMENTATION928
   if(G__allincludepath) {
     free(G__allincludepath);
     G__allincludepath=(char*)NULL;
   }
-#endif
+
+  G__DeleteConstStringList(G__SystemIncludeDir);
+  G__SystemIncludeDir = (struct G__ConstStringList*)NULL;
+
+  /* This implementation is premature in a sense that macro can not be 
+   * rewound to file position */
+  G__init_replacesymbol();
 
   /*************************************************************
    * Initialize cint body global variables
    *************************************************************/
+  G__init = 0;
   G__init_globals();
 
   G__reset_setup_funcs();
 
+  G__clear_errordictpos();
 
 #ifdef G__MEMTEST
   G__memresult();
 #endif
 
-#ifndef G__OLDIMPLEMENTATION1035
   G__UnlockCriticalSection();
-#endif
 }
 
 
@@ -259,13 +267,10 @@ void G__scratch_all()
 * G__free_friendtag()
 *
 ***********************************************************************/
-void G__free_friendtag(friendtag)
-struct G__friendtag *friendtag;
+void G__free_friendtag(G__friendtag *friendtag)
 {
   if(friendtag 
-#ifndef G__OLDIMPLEMENTATION1295
      && friendtag!=friendtag->next
-#endif
      ) {
     G__free_friendtag(friendtag->next);
     free((void*)friendtag);
@@ -281,10 +286,10 @@ struct G__friendtag *friendtag;
 *   G__scratch_all()
 *
 ***********************************************************************/
-int G__free_ifunc_table(ifunc)
-struct G__ifunc_table *ifunc;
+int G__free_ifunc_table(G__ifunc_table *ifunc)
 {
   int i,j;
+  int flag;
   if(ifunc->next) {
     G__free_ifunc_table(ifunc->next);
     free((void*)ifunc->next);
@@ -295,29 +300,40 @@ struct G__ifunc_table *ifunc;
 #ifdef G__MEMTEST
     fprintf(G__memhist,"func %s\n",ifunc->funcname[i]);
 #endif
+      flag = 0;
+    if(ifunc->funcname[i]) {
+      free((void*)ifunc->funcname[i]);
+      ifunc->funcname[i] = (char*)NULL;
+      flag = 1;
+    }
 #ifdef G__ASM_WHOLEFUNC
-    if(ifunc->pentry[i]->bytecode) {
+    if(
+       flag &&
+       ifunc->pentry[i] && 
+       ifunc->pentry[i]->bytecode) {
       G__free_bytecode(ifunc->pentry[i]->bytecode);
       ifunc->pentry[i]->bytecode = (struct G__bytecodefunc*)NULL;
     }
 #endif
 #ifdef G__FRIEND
-    G__free_friendtag(ifunc->friendtag[i]);
+    if(flag) G__free_friendtag(ifunc->friendtag[i]);
 #endif
-    for(j=ifunc->para_nu[i]-1;j>=0;j--) {
-      if(ifunc->para_name[i][j]) {
-	free((void*)ifunc->para_name[i][j]);
-	ifunc->para_name[i][j]=(char*)NULL;
-      }
-      if(ifunc->para_def[i][j]) {
-	free((void*)ifunc->para_def[i][j]);
-	ifunc->para_def[i][j]=(char*)NULL;
-      }
-      if(ifunc->para_default[i][j] &&
-	 (&G__default_parameter)!=ifunc->para_default[i][j] &&
-	 (G__value*)(-1)!=ifunc->para_default[i][j]) {
-	free((void*)ifunc->para_default[i][j]);
-	ifunc->para_default[i][j]=(G__value*)NULL;
+    if(flag) {
+      for(j=ifunc->para_nu[i]-1;j>=0;j--) {
+        if(ifunc->para_name[i][j]) {
+          free((void*)ifunc->para_name[i][j]);
+          ifunc->para_name[i][j]=(char*)NULL;
+        }
+        if(ifunc->para_def[i][j]) {
+          free((void*)ifunc->para_def[i][j]);
+          ifunc->para_def[i][j]=(char*)NULL;
+        }
+        if(ifunc->para_default[i][j] &&
+           (&G__default_parameter)!=ifunc->para_default[i][j] &&
+           (G__value*)(-1)!=ifunc->para_default[i][j]) {
+          free((void*)ifunc->para_default[i][j]);
+          ifunc->para_default[i][j]=(G__value*)NULL;
+        }
       }
     }
   }
@@ -332,8 +348,7 @@ struct G__ifunc_table *ifunc;
 *
 *
 ***********************************************************************/
-int G__free_member_table(mem)
-struct G__var_array *mem;
+int G__free_member_table(G__var_array *mem)
 {
   if(mem->next) {
     G__free_member_table(mem->next);
@@ -352,8 +367,7 @@ struct G__var_array *mem;
 *   G__scratch_all()
 *
 ***********************************************************************/
-int G__free_ipath(ipath)
-struct G__includepath *ipath;
+int G__free_ipath(G__includepath *ipath)
 {
   if(ipath->next) {
     G__free_ipath(ipath->next);
@@ -374,13 +388,13 @@ struct G__includepath *ipath;
 * void G__destroy(var,isglobal)
 ***********************************************************************/
 /* destroy local variable and free memory*/
-void G__destroy(var,isglobal)
-struct G__var_array *var;
-int isglobal;
+void G__destroy(G__var_array *var,int isglobal)
 {
   int itemp=0,itemp1=0;
   
+#ifdef G__OLDIMPLEMENTATION1802
   char temp[G__ONELINE];
+#endif
   int store_tagnum;
   long store_struct_offset; /* used to be int */
   int store_return;
@@ -389,25 +403,37 @@ int isglobal;
   int cpplink;
   int i,size;
   long address;
+
+#ifndef G__OLDIMPLEMENTATION2038
+  /* This part is not needed in G__destroy_upto.  enclosing_scope and
+   * inner_scope members are assigned only as local variable table for
+   * bytecode function  in which case  G__destroy() is always used to
+   * deallocate the table */
+  var->enclosing_scope = (struct G__var_array*)NULL;
+  if(var->inner_scope) {
+    i=0;
+    while(var->inner_scope[i]) {
+      G__destroy(var->inner_scope[i],isglobal);
+      free((void*)var->inner_scope[i]);
+      ++i;
+    }
+  }
+#endif
   
   /*******************************************
    * If there are any sub var array list,
    * destroy it too.
    *******************************************/
   if(var->next) {
-#ifndef G__OLDIMPLEMENTATION1081
     if(var->allvar==G__MEMDEPTH) {
-#endif
       G__destroy(var->next,isglobal);
       free((void*)var->next);
       var->next=NULL;
-#ifndef G__OLDIMPLEMENTATION1081
     }
     else {
       fprintf(stderr,"!!!Fatal Error: Interpreter memory overwritten by illegal access.!!!\n");
       fprintf(stderr,"!!!Terminate session!!!\n");
     }
-#endif
   }
   
   for(itemp=var->allvar-1;itemp>=remain;itemp--) {
@@ -420,10 +446,10 @@ int isglobal;
      *****************************************/
 #ifdef G__ASM_WHOLEFUNC
     if(((var->statictype[itemp]!=G__LOCALSTATIC||G__GLOBAL_VAR==isglobal) && 
-	var->statictype[itemp]!=G__COMPILEDGLOBAL &&
-	G__BYTECODELOCAL_VAR!=isglobal)) {
+        var->statictype[itemp]!=G__COMPILEDGLOBAL &&
+        G__BYTECODELOCAL_VAR!=isglobal)) {
        /* (G__BYTECODELOCAL_VAR==isglobal &&
-	var->statictype[itemp]==G__LOCALSTATIC)) { */
+        var->statictype[itemp]==G__LOCALSTATIC)) { */
 #else
     if((var->statictype[itemp]!=G__LOCALSTATIC||isglobal) && 
        var->statictype[itemp]!=G__COMPILEDGLOBAL) {
@@ -434,80 +460,93 @@ int isglobal;
        * If C++ class, destructor has to be called
        ****************************************************/
       if(var->type[itemp]=='u' && 0==G__ansiheader && 0==G__prerun) {
-	
-	store_struct_offset = G__store_struct_offset;
-	G__store_struct_offset = var->p[itemp]; /* duplication */
-	
-	store_tagnum = G__tagnum;
-	G__tagnum = var->p_tagtable[itemp];
-	
-	store_return=G__return;
-	G__return=G__RETURN_NON;
-	
-	sprintf(temp,"~%s()",G__struct.name[G__tagnum]);
-	if(G__dispsource) {
-#ifndef G__FONS31
-	  fprintf(G__serr
-		  ,"\n!!!Calling destructor 0x%lx.%s for %s ary%d:link%d"
-		  ,G__store_struct_offset ,temp ,var->varnamebuf[itemp]
-		  ,var->varlabel[itemp][1],G__struct.iscpplink[G__tagnum]);
-#else
-	  fprintf(G__serr,"\n!!!Calling destructor 0x%x.%s for %s ary%d:link%d"
-		  ,G__store_struct_offset ,temp ,var->varnamebuf[itemp]
-		  ,var->varlabel[itemp][1],G__struct.iscpplink[G__tagnum]);
+#ifndef G__OLDIMPLEMENTATION1802
+        char vv[G__BUFLEN];
+        char *temp=vv;
 #endif
-	}
-	
-	
-	store_prerun = G__prerun;
-	G__prerun=0;
-	/********************************************************
-	 * destruction of array 
-	 ********************************************************/
-	if(G__CPPLINK==G__struct.iscpplink[G__tagnum]) {
-	  G__store_struct_offset = var->p[itemp];
-	  if((i=var->varlabel[itemp][1])>0) G__cpp_aryconstruct=i+1;
-	  G__getfunction(temp,&itemp1,G__TRYDESTRUCTOR); 
-	  G__cpp_aryconstruct=0;
-	  cpplink=1;
-	}
-	else {
-	  size=G__struct.size[G__tagnum];
-	  for(i=var->varlabel[itemp][1];i>=0;--i) {
-	    G__store_struct_offset = var->p[itemp]+size*i;
-	    if(G__dispsource) {
-#ifndef G__FONS31
-	      fprintf(G__serr,"\n0x%lx.%s",G__store_struct_offset,temp);
-#else
-	      fprintf(G__serr,"\n0x%x.%s",G__store_struct_offset,temp);
+        
+        store_struct_offset = G__store_struct_offset;
+        G__store_struct_offset = var->p[itemp]; /* duplication */
+        
+        store_tagnum = G__tagnum;
+        G__tagnum = var->p_tagtable[itemp];
+        
+        store_return=G__return;
+        G__return=G__RETURN_NON;
+
+#ifndef G__OLDIMPLEMENTATION1802
+        if(strlen(G__struct.name[G__tagnum])>G__BUFLEN-5)
+          temp = (char*)malloc(strlen(G__struct.name[G__tagnum])+5);
 #endif
-	    }
-	    G__getfunction(temp,&itemp1,G__TRYDESTRUCTOR); 
-	    if(0==itemp1) break;
-	  }
-	}
-	G__prerun = store_prerun;
-	
-	G__store_struct_offset = store_struct_offset;
-	G__tagnum = store_tagnum;
-	G__return=store_return;
+        
+        sprintf(temp,"~%s()",G__struct.name[G__tagnum]);
+        if(G__dispsource) {
+          G__fprinterr(G__serr,"\n!!!Calling destructor 0x%lx.%s for %s ary%d:link%d"
+                  ,G__store_struct_offset ,temp ,var->varnamebuf[itemp]
+                  ,var->varlabel[itemp][1],G__struct.iscpplink[G__tagnum]);
+        }
+        
+        
+        store_prerun = G__prerun;
+        G__prerun=0;
+        /********************************************************
+         * destruction of array 
+         ********************************************************/
+        if(G__CPPLINK==G__struct.iscpplink[G__tagnum]) {
+          if(G__AUTOARYDISCRETEOBJ==var->statictype[itemp]) {
+            long store_globalvarpointer = G__globalvarpointer;
+            size=G__struct.size[G__tagnum];
+            for(i=var->varlabel[itemp][1];i>=0;--i) {
+              G__store_struct_offset = var->p[itemp]+size*i;
+              G__globalvarpointer = G__store_struct_offset;
+              G__getfunction(temp,&itemp1,G__TRYDESTRUCTOR);
+              if(0==itemp1) break;
+            }
+            G__globalvarpointer = store_globalvarpointer;
+            free((void*)var->p[itemp]);
+          }
+          else {
+            G__store_struct_offset = var->p[itemp];
+            if((i=var->varlabel[itemp][1])>0) G__cpp_aryconstruct=i+1;
+            G__getfunction(temp,&itemp1,G__TRYDESTRUCTOR); 
+            G__cpp_aryconstruct=0;
+          }
+          cpplink=1;
+        }
+        else {
+          size=G__struct.size[G__tagnum];
+          for(i=var->varlabel[itemp][1];i>=0;--i) {
+            G__store_struct_offset = var->p[itemp]+size*i;
+            if(G__dispsource) {
+              G__fprinterr(G__serr,"\n0x%lx.%s",G__store_struct_offset,temp);
+            }
+            G__getfunction(temp,&itemp1,G__TRYDESTRUCTOR); 
+            if(0==itemp1) break;
+          }
+        }
+#ifndef G__OLDIMPLEMENTATION1802
+        if(vv!=temp) free((void*)temp);
+#endif
+        G__prerun = store_prerun;
+        
+        G__store_struct_offset = store_struct_offset;
+        G__tagnum = store_tagnum;
+        G__return=store_return;
       } /*  end of type=='u' */
 
 #ifdef G__SECURITY
       else if(G__security&G__SECURE_GARBAGECOLLECTION && 
-#ifndef G__OLDIMPLEMENTATION545
-	      (!G__no_exec_compile) &&
-#endif
-	      isupper(var->type[itemp]) && var->p[itemp]) {
-	i=var->varlabel[itemp][1]+1;
-	do {
-	  --i;
-	  address = var->p[itemp] + G__LONGALLOC*i;
-	  if(*((long*)address)) {
-	    G__del_refcount((void*)(*((long*)address))
-			    ,(void**)address);
-	  }
-	} while(i);
+              (!G__no_exec_compile) &&
+              isupper(var->type[itemp]) && var->p[itemp]) {
+        i=var->varlabel[itemp][1]+1;
+        do {
+          --i;
+          address = var->p[itemp] + G__LONGALLOC*i;
+          if(*((long*)address)) {
+            G__del_refcount((void*)(*((long*)address))
+                            ,(void**)address);
+          }
+        } while(i);
       }
 #endif
 
@@ -515,23 +554,18 @@ int isglobal;
       fprintf(G__memhist,"Free(%s)\n",var->varnamebuf[itemp]);
 #endif
       /* ??? Scott Snyder fixed as var->p[itemp]>0x10000 ??? */
-      if(G__NOLINK==cpplink && var->p[itemp]) free((void*)var->p[itemp]);
+      if(G__NOLINK==cpplink && var->p[itemp] 
+         && -1!=var->p[itemp]
+         ) free((void*)var->p[itemp]);
       
     } /* end of statictype==LOCALSTATIC or COMPILEDGLOBAL */
     
 #ifdef G__DEBUG
     else if(G__memhist) {
-#ifndef G__FONS31
       fprintf(G__memhist
-	      ,"0x%lx (%s) not freed localstatic or compiledglobal FILE:%s LINE:%d\n"
-	      ,var->p[itemp],var->varnamebuf[itemp]
-	      ,G__ifile.name,G__ifile.line_number);
-#else
-      fprintf(G__memhist
-	      ,"0x%x (%s) not freed localstatic or compiledglobal FILE:%s LINE:%d\n"
-	      ,var->p[itemp],var->varnamebuf[itemp]
-	      ,G__ifile.name,G__ifile.line_number);
-#endif
+              ,"0x%lx (%s) not freed localstatic or compiledglobal FILE:%s LINE:%d\n"
+              ,var->p[itemp],var->varnamebuf[itemp]
+              ,G__ifile.name,G__ifile.line_number);
     } 
 #endif
     
@@ -540,6 +574,11 @@ int isglobal;
     for(itemp1=0;itemp1<G__MAXVARDIM;itemp1++) {
       var->varlabel[itemp][itemp1]=0;
     }
+    if(var->varnamebuf[itemp]) {
+      free((void*)var->varnamebuf[itemp]);
+      var->varnamebuf[itemp] = (char*)NULL;
+    }
+
   }
   
   var->allvar = remain;
@@ -550,19 +589,13 @@ int isglobal;
 /******************************************************************
 * G__exit()
 ******************************************************************/
-void G__exit(rtn)
-int rtn;
+void G__exit(int rtn)
 {
-	G__scratch_all();
+        G__scratch_all();
 
-#ifndef G__OLDIMPLEMENTATION463
-	fflush(G__sout);
-	fflush(G__serr);
-#else
-	fflush(stdout);
-	fflush(stderr);
-#endif
-	exit(rtn);
+        fflush(G__sout);
+        fflush(G__serr);
+        exit(rtn);
 }
 
 
@@ -575,7 +608,7 @@ int rtn;
 int G__call_atexit()
 {
   char temp[G__ONELINE];
-  if(G__breaksignal) fprintf(G__serr,"!!! atexit() call\n");
+  if(G__breaksignal) G__fprinterr(G__serr,"!!! atexit() call\n");
   G__ASSERT(G__atexit);
   sprintf(temp,"%s()",G__atexit);
   G__atexit=NULL;
@@ -601,26 +634,26 @@ int G__close_inputfiles()
 #endif
   for(iarg=0;iarg<G__nfile;iarg++) {
     if(G__srcfile[iarg].dictpos) {
+      if(G__srcfile[iarg].dictpos->ptype &&
+         G__srcfile[iarg].dictpos->ptype!=(char*)G__PVOID) {
+        free((void*)G__srcfile[iarg].dictpos->ptype);
+      }
       free((void*)G__srcfile[iarg].dictpos);
       G__srcfile[iarg].dictpos=(struct G__dictposition*)NULL;
     }
-#ifndef G__OLDIMPLEMENTATION1273
     if(G__srcfile[iarg].hasonlyfunc) {
       free((void*)G__srcfile[iarg].hasonlyfunc);
       G__srcfile[iarg].hasonlyfunc=(struct G__dictposition*)NULL;
     }
-#endif
     if(G__srcfile[iarg].fp) { 
       fclose(G__srcfile[iarg].fp);
-#ifndef G__PHILIPPE0
       if(G__srcfile[iarg].prepname) {
-	int j;
-	for(j=iarg+1;j<G__nfile;j++) {
-	  if(G__srcfile[j].fp==G__srcfile[iarg].fp) 
-	    G__srcfile[j].fp=(FILE*)NULL;
-	}
+        int j;
+        for(j=iarg+1;j<G__nfile;j++) {
+          if(G__srcfile[j].fp==G__srcfile[iarg].fp) 
+            G__srcfile[j].fp=(FILE*)NULL;
+        }
       }
-#endif
       G__srcfile[iarg].fp=(FILE*)NULL;
     }
     if(G__srcfile[iarg].breakpoint) {
@@ -629,11 +662,19 @@ int G__close_inputfiles()
       G__srcfile[iarg].maxline=0;
     }
     if(G__srcfile[iarg].prepname) {
-      remove(G__srcfile[iarg].prepname);
+      if('('!=G__srcfile[iarg].prepname[0]) remove(G__srcfile[iarg].prepname);
       free((void*)G__srcfile[iarg].prepname);
       G__srcfile[iarg].prepname=(char*)NULL;
     }
     if(G__srcfile[iarg].filename) {
+#ifndef G__OLDIMPLEMENTATION1546
+      int len = strlen(G__srcfile[iarg].filename);
+      if(len>(int)strlen(G__NAMEDMACROEXT2) && 
+         strcmp(G__srcfile[iarg].filename+len-strlen(G__NAMEDMACROEXT2),
+                G__NAMEDMACROEXT2)==0) {
+        remove(G__srcfile[iarg].filename);
+      }
+#endif
       free((void*)G__srcfile[iarg].filename);
       G__srcfile[iarg].filename=(char*)NULL;
     }
@@ -658,7 +699,6 @@ int G__close_inputfiles()
     fclose(G__serr);
     G__serr=G__stderr;
   }
-#ifndef G__OLDIMPLEMENTATION463
   if(G__sout!=G__stdout && G__sout) {
     fclose(G__sout);
     G__sout=G__stdout;
@@ -667,7 +707,6 @@ int G__close_inputfiles()
     fclose(G__sin);
     G__sin=G__stdin;
   }
-#endif
   return(0);
 }
 
@@ -682,10 +721,11 @@ int G__interpretexit()
 {
   if(G__atexit) G__call_atexit();
   G__scratch_all();
-  if(G__breaksignal) fprintf(G__serr,"\nEND OF EXECUTION\n");
+  if(G__breaksignal) G__fprinterr(G__serr,"\nEND OF EXECUTION\n");
   return(0);
 }
 
+} /* extern "C" */
 
 /*
  * Local Variables:

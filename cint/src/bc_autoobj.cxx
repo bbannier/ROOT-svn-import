@@ -9,13 +9,8 @@
  ************************************************************************
  * Copyright(c) 2004~2004  Masaharu Goto 
  *
- * Permission to use, copy, modify and distribute this software and its 
- * documentation for any purpose is hereby granted without fee,
- * provided that the above copyright notice appear in all copies and
- * that both that copyright notice and this permission notice appear
- * in supporting documentation.  The author makes no
- * representations about the suitability of this software for any
- * purpose.  It is provided "as is" without express or implied warranty.
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 #include "bc_autoobj.h"
@@ -53,7 +48,7 @@ void G__autoobject::disp(void) const {
  *************************************************************************/
 /////////////////////////////////////////////////////////////////////////
 void G__autoobjectstack::disp(int scopelevel) const {
-  fprintf(G__serr,"autostack=%d scope=%d ",m_ctnr.size(),scopelevel);
+   fprintf(G__serr,"autostack=%d scope=%d ",(int)m_ctnr.size(),scopelevel);
   list<G__autoobject*>::const_iterator i;
   for(i=m_ctnr.begin();i!=m_ctnr.end();++i) {
     (*i)->disp();

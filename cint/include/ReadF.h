@@ -1,3 +1,10 @@
+/* -*- C++ -*- */
+/*************************************************************************
+ * Copyright(c) 1995~2005  Masaharu Goto (cint@pcroot.cern.ch)
+ *
+ * For the licensing terms see the file COPYING
+ *
+ ************************************************************************/
 /*****************************************************************************
 * ReadFile.h
 *
@@ -19,9 +26,9 @@
 #endif
 
 
-#define MAX_LINE_LENGTH  500
-#define MAX_TOKEN        100
-#define MAX_SEPARATOR    20
+#define MAX_LINE_LENGTH  8048
+#define MAX_TOKEN        1024
+#define MAX_SEPARATOR    32
 #define MAX_ENDOFLINE    10
 
 class ReadFile {
@@ -34,12 +41,20 @@ class ReadFile {
   ReadFile(FILE *fpin);
   ~ReadFile();
 
+  void parse(const char* s) {
+    strcpy(buf,s);
+    separatearg();
+  }
+
   int read();
   int readword();
 #ifdef G__NEVER
   int regex(char *pattern,char *string=(char*)NULL);
 #endif
   void setseparator(const char *separatorin); 
+#ifndef G__OLDIMPLEMENTATION1960
+  void setdelimitor(const char *delimitorin); 
+#endif
   void setendofline(const char *endoflinein); 
 
   int isvalid() { if(fp) return(1); else return(0); }
@@ -54,12 +69,19 @@ class ReadFile {
 
   char separator[MAX_SEPARATOR];
   int lenseparator;
+#ifndef G__OLDIMPLEMENTATION1960
+  char delimitor[MAX_SEPARATOR];
+  int lendelimitor;
+#endif
   char endofline[MAX_ENDOFLINE];
   int lenendofline;
 
   void separatearg(void);
   void initialize();
   int isseparator(int c);
+#ifndef G__OLDIMPLEMENTATION1960
+  int isdelimitor(int c);
+#endif
   int isendofline(int c);
 };
 

@@ -10,15 +10,10 @@
  * causes problem when running an automation script. This tool provides 
  * stable mean of running batch script.
  ************************************************************************
- * Copyright(c) 2003~2003  Masaharu Goto (MXJ02154@niftyserve.or.jp)
+ * Copyright(c) 2003~2003  Masaharu Goto 
  *
- * Permission to use, copy, modify and distribute this software and its 
- * documentation for any purpose is hereby granted without fee,
- * provided that the above copyright notice appear in all copies and
- * that both that copyright notice and this permission notice appear
- * in supporting documentation.  The author makes no
- * representations about the suitability of this software for any
- * purpose.  It is provided "as is" without express or implied warranty.
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 #include <stdio.h>
@@ -33,15 +28,21 @@
 #endif
 
 /****************************************************************
+*
+****************************************************************/
+#define G__MAXFILENAME  1024
+#define G__LONGLINE     1024
+#define G__MAXLINE      1024
+#define G__MAXARG       256
+#define G__MAXNAME      1024
+
+/****************************************************************
 * G__split(original,stringbuf,argc,argv)
 * split arguments separated by space char.
 * CAUTION: input string will be modified. If you want to keep
 *         the original string, you should copy it to another string.
 ****************************************************************/
-int G__split(line,string,argc,argv)
-char *string,*line;
-char *argv[];
-int *argc;
+int G__split(char* line,char* string,int *argc,char* argv[])
 {
   int lenstring;
   int i=0;
@@ -107,11 +108,7 @@ int *argc;
 /****************************************************************
 * G__readline(fp,line,argbuf,argn,arg)
 ****************************************************************/
-int G__readline(fp,line,argbuf,argn,arg)
-FILE *fp;
-int *argn;
-char *line,*argbuf;
-char *arg[];
+int G__readline(FILE* fp,char* line,char* argbuf,int* argn,char* arg[])
 {
   /* int i; */
   char *null_fgets;
@@ -130,14 +127,6 @@ char *arg[];
   else                 return(1);
 }
 
-
-/****************************************************************
-****************************************************************/
-#define G__MAXFILENAME  512
-#define G__LONGLINE     512
-#define G__MAXLINE      512
-#define G__MAXARG       100
-#define G__MAXNAME      100
 
 /****************************************************************
 * G__batch()

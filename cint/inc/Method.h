@@ -7,15 +7,10 @@
  * Description:
  *  Extended Run Time Type Identification API
  ************************************************************************
- * Copyright(c) 1995~1999  Masaharu Goto (MXJ02154@niftyserve.or.jp)
+ * Copyright(c) 1995~2005  Masaharu Goto 
  *
- * Permission to use, copy, modify and distribute this software and its 
- * documentation for any purpose is hereby granted without fee,
- * provided that the above copyright notice appear in all copies and
- * that both that copyright notice and this permission notice appear
- * in supporting documentation.  The author makes no
- * representations about the suitability of this software for any
- * purpose.  It is provided "as is" without express or implied warranty.
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 
@@ -24,35 +19,52 @@
 
 #include "Api.h"
 
+namespace Cint {
+
 /*********************************************************************
 * class G__MethodInfo
 *
 * 
 *********************************************************************/
-class G__MethodInfo {
+class 
+#ifndef __CINT__
+G__EXPORT
+#endif
+G__MethodInfo {
   friend class G__MethodArgInfo;
  public:
   ~G__MethodInfo() {}
-  G__MethodInfo() : type() { Init(); }
-  G__MethodInfo(G__ClassInfo &a) : type() { Init(a); } 
+  G__MethodInfo() 
+    : handle(0), index(0), usingIndex(0), belongingclass(NULL), type() 
+    { Init(); }
+  G__MethodInfo(G__ClassInfo &a)
+    : handle(0), index(0), usingIndex(0), belongingclass(NULL), type() 
+    { Init(a); } 
+  G__MethodInfo(const G__MethodInfo& mi)
+    : handle(mi.handle), index(mi.index), usingIndex(mi.usingIndex), 
+    belongingclass(mi.belongingclass), type(mi.type) {}
+  G__MethodInfo& operator=(const G__MethodInfo& mi) {
+    handle=mi.handle; index=mi.index; usingIndex=mi.usingIndex; 
+    belongingclass=mi.belongingclass; type=mi.type; return *this;}
+
   void Init();
   void Init(G__ClassInfo &a);
   void Init(long handlein,long indexin,G__ClassInfo *belongingclassin);
-#ifndef G__OLDIMPLEMENTATION644
   void Init(G__ClassInfo *belongingclassin,long funcpage,long indexin);
-#endif
 
   const char *Name() ;
 #ifndef __MAKECINT__
   int Hash() ;
   struct G__ifunc_table* ifunc();
-  int Index() { return ((int)index); }
 #endif
+  long Handle() { return(handle); }
+  int Index() { return ((int)index); }
   const char *Title() ;
   G__TypeInfo* Type() { return(&type); }
   long Property();
   int NArg();
   int NDefaultArg();
+  int HasVarArgs();
   G__InterfaceMethod InterfaceMethod();
 #ifdef G__ASM_WHOLEFUNC
   struct G__bytecodefunc *GetBytecode();
@@ -62,7 +74,6 @@ class G__MethodInfo {
   void* PointerToFunc();
 #endif
   G__ClassInfo* MemberOf() { return(belongingclass); }
-#ifndef G__OLDIMPLEMENTATION1020
   struct G__friendtag* GetFriendInfo() { 
     if(IsValid()) {
       struct G__ifunc_table *ifunc=(struct G__ifunc_table*)handle;
@@ -70,7 +81,6 @@ class G__MethodInfo {
     }
     else return 0;
   }
-#endif
   void SetGlobalcomp(int globalcomp);
   int IsValid();
   int SetFilePos(const char* fname);
@@ -80,19 +90,29 @@ class G__MethodInfo {
   int LineNumber();
   int Size();
   int IsBusy();
-#ifndef G__OLDIMPLEMENTATION644
-   FILE* FilePointer();
-   long FilePosition();
-#endif
+  FILE* FilePointer();
+  long FilePosition();
+  char* GetPrototype();
+  char* GetMangledName();
+
+  int LoadDLLDirect(const char* filename,const char* funcname);
+
+  void SetVtblIndex(int vtblindex);
+  void SetIsVirtual(int isvirtual);
+  void SetVtblBasetagnum(int basetagnum);
 
  protected:
   long handle;
   long index;
+#ifndef G__OLDIMPLEMENTATION2194
+  long usingIndex;
+#endif
   G__ClassInfo* belongingclass;
   G__TypeInfo type;
 };
 
-extern "C" int G__SetGlobalcomp(char *funcname,char *param,int globalcomp);
+} // namespace Cint
 
+using namespace Cint;
 #endif
 

@@ -1,3 +1,10 @@
+/* -*- C++ -*- */
+/*************************************************************************
+ * Copyright(c) 1995~2005  Masaharu Goto (cint@pcroot.cern.ch)
+ *
+ * For the licensing terms see the file COPYING
+ *
+ ************************************************************************/
 /********************************************************************
 * ifdef.cxx
 *
@@ -62,7 +69,7 @@ extern "C" {
 char *G__calc(char*);
 char *G__getexpr(char*);
 char *G__getandor(char*);
-#ifndef __hpux
+#if !defined(__hpux) && !defined(__APPLE__) 
 char getopt(int argc,char **argv,char *optlist);
 #endif
 extern int optind;
@@ -309,7 +316,11 @@ char G__tmp[2];
 int main(int argc,char *argv[])
 {
   FILE *fp;
+#ifndef G__OLDIMPLEMENTATION1616
+  int G__c;
+#else
   char G__c;
+#endif
   char G__optdef[200];
   
   G__tmp[0]='\0';
@@ -882,10 +893,16 @@ int G__splitawk(char* string,int* argc,char* argv[MAXARG])
   int n_eof=1;
   int single_quote=0,double_quote=0,back_slash=0;
   
-  while((string[i]!='\n')&&(string[i]!=EOF)&&(i<MAXLINE-1)) i++;
+  while((string[i]!='\n')&&
+#ifdef G__OLDIMPLEMENTATION1616
+	(string[i]!=EOF)&&
+#endif
+	(i<MAXLINE-1)) i++;
   string[i]='\0';
   lenstring=i;
+#ifdef G__OLDIMPLEMENTATION1616
   if(string[i]==EOF) n_eof=0;
+#endif
   
   *argc=0;
   for(i=0;i<lenstring;i++) {

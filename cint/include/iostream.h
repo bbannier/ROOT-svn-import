@@ -7,15 +7,10 @@
  * Description:
  *  CINT iostream header file
  ************************************************************************
- * Copyright(c) 1995~1999  Masaharu Goto (MXJ02154@niftyserve.or.jp)
+ * Copyright(c) 1995~1999  Masaharu Goto 
  *
- * Permission to use, copy, modify and distribute this software and its 
- * documentation for any purpose is hereby granted without fee,
- * provided that the above copyright notice appear in all copies and
- * that both that copyright notice and this permission notice appear
- * in supporting documentation.  The author makes no
- * representations about the suitability of this software for any
- * purpose.  It is provided "as is" without express or implied warranty.
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 #ifndef G__IOSTREAM_H
@@ -25,20 +20,29 @@
 *********************************************************************/
 #pragma setstream
 #pragma ifdef G__IOSTREAM_H
+
+#pragma ifdef G__TMPLTIOS
+typedef ios_base ios;
+#pragma else // G__TMPLTIOS
+typedef ios ios_base;
+#pragma endif // G__TMPLTIOS
+
 #pragma ifndef G__KCC
-#pragma ifndef G__TMPLTIOS
 #pragma include <iosenum.h>
-#pragma endif
+
 #pragma ifndef G__SSTREAM_H
 typedef ostrstream ostringstream;
 typedef istrstream istringstream;
-//typedef strstream stringstream;
-#pragma else
+//typedef strstream stringstream;  // problem, 
+#pragma else // G__SSTREAM_H
 typedef ostringstream ostrstream;
 typedef istringstream istrstream;
-#pragma endif
-#pragma endif
-#pragma endif
+typedef stringstream strstream;
+#pragma endif // G__SSTREAM_H
+
+#pragma endif // G__KCC
+
+#pragma endif // G__IOSTREAM_H
 
 #include <bool.h>
 
@@ -463,6 +467,8 @@ class G__CINT_WS { int dmy; } WS;
 class G__CINT_HEX { int dmy; } hex;
 class G__CINT_DEC { int dmy; } dec;
 class G__CINT_OCT { int dmy; } oct;
+class G__CINT_SCIENTIFIC { int dmy; } scientific;
+class G__CINT_FIXED { int dmy; } fixed;
 class G__CINT_NOSUPPORT { int dmy; } ;
 
 #ifndef G__STD_IOSTREAM

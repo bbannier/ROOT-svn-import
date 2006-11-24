@@ -8,15 +8,10 @@
  *  Extended Run Time Type Identification API
  ************************************************************************
  * Author                  Masaharu Goto
- * Copyright(c) 1995~1999  Masaharu Goto (MXJ02154@niftyserve.or.jp)
+ * Copyright(c) 1995~2004  Masaharu Goto 
  *
- * Permission to use, copy, modify and distribute this software and its
- * documentation for any purpose is hereby granted without fee,
- * provided that the above copyright notice appear in all copies and
- * that both that copyright notice and this permission notice appear
- * in supporting documentation.  The author makes no
- * representations about the suitability of this software for any
- * purpose.  It is provided "as is" without express or implied warranty.
+ * For the licensing terms see the file COPYING
+ *
  ************************************************************************/
 
 
@@ -29,14 +24,14 @@
 *
 *********************************************************************/
 ///////////////////////////////////////////////////////////////////////////
-void G__DataMemberInfo::Init()
+void Cint::G__DataMemberInfo::Init()
 {
   belongingclass = (G__ClassInfo*)NULL;
   handle = (long)(&G__global);
   index = -1;
 }
 ///////////////////////////////////////////////////////////////////////////
-void G__DataMemberInfo::Init(class G__ClassInfo &a)
+void Cint::G__DataMemberInfo::Init(class G__ClassInfo &a)
 {
   if(a.IsValid()) {
     belongingclass = &a;
@@ -51,16 +46,14 @@ void G__DataMemberInfo::Init(class G__ClassInfo &a)
   }
 }
 ///////////////////////////////////////////////////////////////////////////
-void G__DataMemberInfo::Init(long handlein,long indexin
+void Cint::G__DataMemberInfo::Init(long handlein,long indexin
 	,G__ClassInfo *belongingclassin)
 {
   if(handlein) {
     handle = handlein;
     index = indexin;
     if(
-#ifndef G__OLDIMPLEMENTATION1163
        belongingclassin &&
-#endif
        belongingclassin->IsValid()) {
       belongingclass = belongingclassin;
     }
@@ -75,12 +68,8 @@ void G__DataMemberInfo::Init(long handlein,long indexin
     type.tagnum=var->p_tagtable[index];
     type.typenum=var->p_typetable[index];
     type.reftype=var->reftype[index];
-#ifndef G__OLDIMPLEMENTATION1227
     type.class_property=0;
-#endif
-#ifndef G__OLDIMPLEMENTATION401
     type.isconst=var->constvar[index];
-#endif
   }
   else {
     handle=handlein;
@@ -88,7 +77,7 @@ void G__DataMemberInfo::Init(long handlein,long indexin
   }
 }
 ///////////////////////////////////////////////////////////////////////////
-const char* G__DataMemberInfo::Name()
+const char* Cint::G__DataMemberInfo::Name()
 {
   if(IsValid()) {
     struct G__var_array *var;
@@ -100,18 +89,14 @@ const char* G__DataMemberInfo::Name()
   }
 }
 ///////////////////////////////////////////////////////////////////////////
-const char* G__DataMemberInfo::Title()
+const char* Cint::G__DataMemberInfo::Title()
 {
   static char buf[G__INFO_TITLELEN];
   buf[0]='\0';
   if(IsValid()) {
     struct G__var_array *var;
     var = (struct G__var_array*)handle;
-#ifndef G__FONS75
     G__getcomment(buf,&var->comment[index],var->tagnum);
-#else
-    G__getcomment(buf,&var->comment[index],var->p_tagtable[index]);
-#endif
     return(buf);
   }
   else {
@@ -119,7 +104,7 @@ const char* G__DataMemberInfo::Title()
   }
 }
 ///////////////////////////////////////////////////////////////////////////
-long G__DataMemberInfo::Property()
+long Cint::G__DataMemberInfo::Property()
 {
   if(IsValid()) {
     long property=0;
@@ -136,6 +121,33 @@ long G__DataMemberInfo::Property()
     if(var->constvar[index]&G__CONSTVAR) property|=G__BIT_ISCONSTANT;
     if(var->constvar[index]&G__PCONSTVAR) property|=G__BIT_ISPCONSTANT;
     if(var->paran[index]) property|=G__BIT_ISARRAY;
+#ifndef G__OLDIMPLEMENTATION1673
+    if(-1!=var->p_typetable[index]) property|=G__BIT_ISTYPEDEF;
+    if(-1==var->p_tagtable[index]) property|=G__BIT_ISFUNDAMENTAL;
+    else {
+      if(strcmp(G__struct.name[var->p_tagtable[index]],"G__longlong")==0 ||
+	 strcmp(G__struct.name[var->p_tagtable[index]],"G__ulonglong")==0 ||
+	 strcmp(G__struct.name[var->p_tagtable[index]],"G__longdouble")==0) {
+	property |= G__BIT_ISFUNDAMENTAL;
+	if(-1!=var->p_typetable[index] && 
+	   (strcmp(G__newtype.name[var->p_typetable[index]],"long long")==0 ||
+	    strcmp(G__newtype.name[var->p_typetable[index]],"unsigned long long")==0 ||
+	    strcmp(G__newtype.name[var->p_typetable[index]],"long double")==0)) {
+	  property &= (~G__BIT_ISTYPEDEF);
+	}
+      }
+      else {
+	switch(G__struct.type[var->p_tagtable[index]]) {
+	case 'c': property|=G__BIT_ISCLASS; break;
+	case 's': property|=G__BIT_ISSTRUCT; break;
+	case 'u': property|=G__BIT_ISUNION; break;
+	case 'e': property|=G__BIT_ISENUM; break;
+	case 'n': property|=G__BIT_ISNAMESPACE; break;
+	default:  break;
+	}
+      }
+    }
+#endif
     return(property);
   }
   else {
@@ -143,7 +155,7 @@ long G__DataMemberInfo::Property()
   }
 }
 ///////////////////////////////////////////////////////////////////////////
-long G__DataMemberInfo::Offset()
+long Cint::G__DataMemberInfo::Offset()
 {
   if(IsValid()) {
     struct G__var_array *var;
@@ -155,7 +167,19 @@ long G__DataMemberInfo::Offset()
   }
 }
 ///////////////////////////////////////////////////////////////////////////
-int G__DataMemberInfo::ArrayDim()
+int Cint::G__DataMemberInfo::Bitfield() 
+{
+  if(IsValid()) {
+    struct G__var_array *var;
+    var = (struct G__var_array*)handle;
+    return(var->bitfield[index]);
+  }
+  else {
+    return(-1);
+  }
+}
+///////////////////////////////////////////////////////////////////////////
+int Cint::G__DataMemberInfo::ArrayDim()
 {
   if(IsValid()) {
     struct G__var_array *var;
@@ -167,7 +191,7 @@ int G__DataMemberInfo::ArrayDim()
   }
 }
 ///////////////////////////////////////////////////////////////////////////
-int G__DataMemberInfo::MaxIndex(int dim)
+int Cint::G__DataMemberInfo::MaxIndex(int dim)
 {
   if(IsValid()) {
     struct G__var_array *var;
@@ -189,7 +213,7 @@ int G__DataMemberInfo::MaxIndex(int dim)
   }
 }
 ///////////////////////////////////////////////////////////////////////////
-void G__DataMemberInfo::SetGlobalcomp(int globalcomp)
+void Cint::G__DataMemberInfo::SetGlobalcomp(int globalcomp)
 {
   if(IsValid()) {
     struct G__var_array *var;
@@ -200,7 +224,7 @@ void G__DataMemberInfo::SetGlobalcomp(int globalcomp)
   }
 }
 ///////////////////////////////////////////////////////////////////////////
-int G__DataMemberInfo::IsValid()
+int Cint::G__DataMemberInfo::IsValid()
 {
   if(handle) {
     struct G__var_array *var;
@@ -210,7 +234,7 @@ int G__DataMemberInfo::IsValid()
   return(0);
 }
 ///////////////////////////////////////////////////////////////////////////
-int G__DataMemberInfo::SetFilePos(const char* fname)
+int Cint::G__DataMemberInfo::SetFilePos(const char* fname)
 {
   struct G__dictposition* dict=G__get_dictpos((char*)fname);
   if(!dict) return(0);
@@ -220,21 +244,17 @@ int G__DataMemberInfo::SetFilePos(const char* fname)
   return(1);
 }
 ///////////////////////////////////////////////////////////////////////////
-int G__DataMemberInfo::Next()
+int Cint::G__DataMemberInfo::Next()
 {
   if(handle) {
     struct G__var_array *var;
     var = (struct G__var_array*)handle;
     ++index;
     if(var->allvar<=index) {
-#ifndef G__FONS75
       int t = var->tagnum;
-#endif
       var=var->next;
       if(var) {
-#ifndef G__FONS75
 	var->tagnum=t;
-#endif
 	index=0;
 	handle=(long)var;
       }
@@ -248,12 +268,8 @@ int G__DataMemberInfo::Next()
       type.tagnum=var->p_tagtable[index];
       type.typenum=var->p_typetable[index];
       type.reftype=var->reftype[index];
-#ifndef G__OLDIMPLEMENTATION1227
       type.class_property=0;
-#endif
-#ifndef G__OLDIMPLEMENTATION401
       type.isconst=var->constvar[index];
-#endif
       return(1);
     }
     else {
@@ -265,7 +281,63 @@ int G__DataMemberInfo::Next()
   }
 }
 ///////////////////////////////////////////////////////////////////////////
-const char* G__DataMemberInfo::FileName() {
+#include <vector>
+namespace std { }
+using namespace std;
+int Cint::G__DataMemberInfo::Prev()
+{
+  struct G__var_array *var;
+  static vector<void*> prevbuf;
+  static int prevbufindex;
+  if(handle) {
+    if(-1==index) {
+      var = (struct G__var_array*)handle;
+      prevbuf.clear();
+      while(var) {
+	prevbuf.push_back((void*)var);
+	var = var->next;
+      } 
+      prevbufindex = prevbuf.size()-1;
+      handle = (long)prevbuf[prevbufindex];
+      var = (struct G__var_array*)handle;
+      index = var->allvar-1;
+    }
+    else {
+      var = (struct G__var_array*)handle;
+      --index;
+      if(index<0) { 
+	if(prevbufindex>0) {
+	  int t = var->tagnum;
+	  handle = (long)prevbuf[--prevbufindex];
+	  var = (struct G__var_array*)handle;
+	  index = var->allvar-1;
+	  var->tagnum=t;
+	}
+	else {
+	  handle=0;
+	  index = -1;
+	}
+      }
+    }
+    if(IsValid()) {
+      type.type = var->type[index];
+      type.tagnum=var->p_tagtable[index];
+      type.typenum=var->p_typetable[index];
+      type.reftype=var->reftype[index];
+      type.class_property=0;
+      type.isconst=var->constvar[index];
+      return(1);
+    }
+    else {
+      return(0);
+    }
+  }
+  else {
+    return(0);
+  }
+}
+///////////////////////////////////////////////////////////////////////////
+const char* Cint::G__DataMemberInfo::FileName() {
 #ifdef G__VARIABLEFPOS
   if(IsValid()) {
     struct G__var_array *var;
@@ -281,13 +353,13 @@ const char* G__DataMemberInfo::FileName() {
     return((char*)NULL);
   }
 #else
-  fprintf(G__serr,"Warning: G__DataMemberInfo::Filename() not supported in this configuration. define G__VARIABLEFPOS macro in platform dependency file and recompile cint");
+  G__fprinterr("Warning: Cint::G__DataMemberInfo::Filename() not supported in this configuration. define G__VARIABLEFPOS macro in platform dependency file and recompile cint");
   G__printlinenum();
   return((char*)NULL);
 #endif
 }
 ///////////////////////////////////////////////////////////////////////////
-int G__DataMemberInfo::LineNumber() {
+int Cint::G__DataMemberInfo::LineNumber() {
 #ifdef G__VARIABLEFPOS
   if(IsValid()) {
     struct G__var_array *var;
@@ -303,14 +375,13 @@ int G__DataMemberInfo::LineNumber() {
     return(-1);
   }
 #else
-  fprintf(G__serr,"Warning: G__DataMemberInfo::LineNumber() not supported in this configuration. define G__VARIABLEFPOS macro in platform dependency file and recompile cint");
+  G__fprinterr("Warning: Cint::G__DataMemberInfo::LineNumber() not supported in this configuration. define G__VARIABLEFPOS macro in platform dependency file and recompile cint");
   G__printlinenum();
   return(-1);
 #endif
 }
 
 ///////////////////////////////////////////////////////////////////////////
-#ifdef G__ROOTSPECIAL
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -347,6 +418,27 @@ static int IsInt(G__DataMemberInfo &member) {
   }
 }
 
+//
+// Recurse through all the bases classes to find a 
+// data member.
+//
+static G__DataMemberInfo GetDataMemberFromAllParents(G__ClassInfo & cl, const char* varname) {
+  G__DataMemberInfo index;
+
+  G__BaseClassInfo b( cl );
+  while (b.Next()) {
+    index = GetDataMemberFromAll(b, varname);
+    if ( index.IsValid() ) {
+      return index;
+    }
+    index = GetDataMemberFromAllParents( b, varname );
+    if ( index.IsValid() ) {
+      return index;
+    }
+  }
+  return G__DataMemberInfo();
+}
+
 ///////////////////////////////////////////////////////////////////////////
 
 // ValidArrayIndex return a static string (so use it or copy it immediatly, do not
@@ -354,15 +446,15 @@ static int IsInt(G__DataMemberInfo &member) {
 // array data member.
 // In case of error, or if the size is not specified, GrabIndex returns 0.
 // If errnum is not null, *errnum updated with the error number:
-//   G__DataMemberInfo::G__VALID     : valid array index
-//   G__DataMemberInfo::G__NOT_INT   : array index is not an int
-//   G__DataMemberInfo::G__NOT_DEF   : index not defined before array 
+//   Cint::G__DataMemberInfo::G__VALID     : valid array index
+//   Cint::G__DataMemberInfo::G__NOT_INT   : array index is not an int
+//   Cint::G__DataMemberInfo::G__NOT_DEF   : index not defined before array 
 //                                          (this IS an error for streaming to disk)
-//   G__DataMemberInfo::G__IS_PRIVATE: index exist in a parent class but is private
-//   G__DataMemberInfo::G__UNKNOWN   : index is not known
+//   Cint::G__DataMemberInfo::G__IS_PRIVATE: index exist in a parent class but is private
+//   Cint::G__DataMemberInfo::G__UNKNOWN   : index is not known
 // If errstr is not null, *errstr is updated with the address of a static
 //   string containing the part of the index with is invalid.
-const char* G__DataMemberInfo::ValidArrayIndex(int *errnum, char **errstr) {
+const char* Cint::G__DataMemberInfo::ValidArrayIndex(int *errnum, char **errstr) {
   const char* title;
   //long dummy;
 
@@ -417,9 +509,9 @@ const char* G__DataMemberInfo::ValidArrayIndex(int *errnum, char **errstr) {
     } else { // current token is not a digit
       // first let's see if it is a data member:
       int found = 0;
-      G__DataMemberInfo index = GetDataMemberFromAll(*belongingclass, current );
-      if ( index.IsValid() ) {
-	if ( IsInt(index) ) {
+      G__DataMemberInfo index1 = GetDataMemberFromAll(*belongingclass, current );
+      if ( index1.IsValid() ) {
+	if ( IsInt(index1) ) {
 	  found = 1;
 	  // Let's see if it has already been wrote down in the
 	  // Streamer.
@@ -452,31 +544,27 @@ const char* G__DataMemberInfo::ValidArrayIndex(int *errnum, char **errstr) {
       } else {
 	// There is no variable by this name in this class, let see
 	// the base classes!:
-
-	G__BaseClassInfo b( *belongingclass);
-	while (b.Next() && !found) {
-	  index = GetDataMemberFromAll(b, current);
-	  if ( index.IsValid() ) {
-	    if ( IsInt(index) ) {
-	      found = 1;
-	    } else {
-	      // We found a data member but it is the wrong type
-	      //NOTE: *** Need to print an error;
-	      //fprintf(stderr,"*** Datamember %s::%s: size of array (%s) is not int \n",
-	      //	member.MemberOf()->Name(), member.Name(), current);
-	      if (errnum) *errnum = NOT_INT;
-	      if (errstr) *errstr = current;
-	      return 0;
-	    }
-	    if ( found && (index.Property() & G__BIT_ISPRIVATE) ) {
-	      //NOTE: *** Need to print an error;
-	      //fprintf(stderr,"*** Datamember %s::%s: size of array (%s) is a private member of %s \n",
-	      if (errstr) *errstr = current;
-	      if (errnum) *errnum = IS_PRIVATE;
-	      return 0;
-	    }
+	index1 = GetDataMemberFromAllParents( *belongingclass, current );
+	if ( index1.IsValid() ) {
+	  if ( IsInt(index1) ) {
+	    found = 1;
+	  } else {
+	    // We found a data member but it is the wrong type
+	    //NOTE: *** Need to print an error;
+	    //fprintf(stderr,"*** Datamember %s::%s: size of array (%s) is not int \n",
+	    //	member.MemberOf()->Name(), member.Name(), current);
+	    if (errnum) *errnum = NOT_INT;
+	    if (errstr) *errstr = current;
+	    return 0;
 	  }
-	} // end of while (b.Next() && !found)
+	  if ( found && (index1.Property() & G__BIT_ISPRIVATE) ) {
+	    //NOTE: *** Need to print an error;
+	    //fprintf(stderr,"*** Datamember %s::%s: size of array (%s) is a private member of %s \n",
+	    if (errstr) *errstr = current;
+	    if (errnum) *errnum = IS_PRIVATE;
+	    return 0;
+	  }
+	}
 	if (!found) {
 	  //NOTE: *** Need to print an error;
 	  //fprintf(stderr,"*** Datamember %s::%s: size of array (%s) is not known \n",
@@ -497,7 +585,7 @@ const char* G__DataMemberInfo::ValidArrayIndex(int *errnum, char **errstr) {
 
 ///////////////////////////////////////////////////////////////////////////
 
-#endif // G__ROOTSPECIAL
 		
 ///////////////////////////////////////////////////////////////////////////
+
 

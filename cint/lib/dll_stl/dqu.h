@@ -1,3 +1,10 @@
+/* -*- C++ -*- */
+/*************************************************************************
+ * Copyright(c) 1995~2005  Masaharu Goto (cint@pcroot.cern.ch)
+ *
+ * For the licensing terms see the file COPYING
+ *
+ ************************************************************************/
 // lib/dll_stl/dqu.h
 
 #include <deque>
@@ -22,10 +29,11 @@ using namespace std;
 
 #pragma link C++ class deque<int>;
 #pragma link C++ class deque<long>;
+#pragma link C++ class deque<float>;
 #pragma link C++ class deque<double>;
 #pragma link C++ class deque<void*>;
 #pragma link C++ class deque<char*>;
-#ifdef G__STRING_DLL
+#if defined(G__STRING_DLL) || defined(G__ROOT)
 //#pragma link C++ class deque<string>; // maybe too complex for compiler
 #endif
 
