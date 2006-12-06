@@ -1,6 +1,6 @@
 RELNOTE.txt 
 
-cint 5.16.16/6.1.16  release note
+cint 5.16.17/6.1.17  release note
 
  - CINT mailing list 
     Cint mailing list 'cint@root.cern.ch' is started. Send request to 
@@ -740,4 +740,14 @@ Recent changes ************************************************************
 * - Move C++ API into namespace Cint
 * - added build support for linux x86_64
 * - See CVS Change log for other updates (http://root.cern.ch/root/ChangeLog-cint.phtml)
+*
+* 5.16.17 December 12, 2006
+* 6.1.17 December 12, 2006
+* - Some previously publicly visibly types are now private. Please let us know if this 
+*   causes problems for you!
+* - G__MethodInfo::Get/SetUserParam() added
+* - extend G__ClassInfo::AddMethod
+* - the relevant platform macros are now known to CINT, except when interpreting where the 
+*   compiler macros (e.g. __GNUC__) are hidden
+* - Fix prec_stl for solarisgcc, cygwin (posix)
 *

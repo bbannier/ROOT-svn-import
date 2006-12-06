@@ -23,6 +23,10 @@
 #include <fcntl.h>
 #include <time.h>
 
+#ifdef __CYGWIN__
+#include <cygwin/version.h>
+#endif /* __CYGWIN__ */
+
 #ifdef __MAKECINT__
 /********************************************************************
  * types necessary for unistd.h
@@ -32,11 +36,16 @@ typedef struct __dirstream DIR;
 
 #define NAME_MAX 128
 struct dirent {
+
+#ifndef __CYGWIN__
   long d_ino;                /* inode number */
-  /* off_t d_off; */         /* offset to this dirent */
-#if !defined(__CYGWIN__) && !defined(G__CYGWIN)
   unsigned short d_reclen;   /* length of record */
-#endif
+#elif (CYGWIN_VERSION_API_MAJOR > 0) \
+  || (CYGWIN_VERSION_API_MINOR < 147) || (CYGWIN_VERSION_API_MINOR > 152)
+  long d_ino;                /* inode number */
+#endif /* cygwin crap for d_ino*/
+
+  /* off_t d_off; */         /* offset to this dirent */
   /* char d_namelen; */      /* length of d_name */
   char d_name[NAME_MAX+1];   /* file name */
 };

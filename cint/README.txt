@@ -1,4 +1,4 @@
-cint 5.16.16 / 6.1.16         ( CINT is pronounced "C-int" )
+cint 5.16.17 / 6.1.17         ( CINT is pronounced "C-int" )
      | |  |
      | |  +- Patch level (changed almost weekly at each release)
      | +- Minor version  (changed at DLL binary incompatibility)
