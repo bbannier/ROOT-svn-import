@@ -12,7 +12,8 @@
 #
 ###########################################################################
 
-APIHEADER = Api.h \
+APIHEADER = $(add-prefix ../inc/, \
+          Api.h \
 	  Class.h \
 	  BaseCls.h \
 	  Type.h \
@@ -20,7 +21,7 @@ APIHEADER = Api.h \
 	  Method.h \
 	  MethodAr.h \
 	  CallFunc.h \
-	  Typedf.h 
+	  Typedf.h )
 
 Apiif.cxx : $(APIHEADER) ../cint
-	cint -nApiif.cxx -NG__API -Z0 -D__MAKECINT__ -c-1 -I.. Api.h
+	../cint -nApiif.cxx -NG__API -Z0 -D__MAKECINT__ -c-1 -I../inc Api.h

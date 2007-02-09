@@ -42,7 +42,12 @@ class ReadFile {
   ~ReadFile();
 
   void parse(const char* s) {
-    strcpy(buf,s);
+    if (!s) return;
+    int len = strlen(s);
+    if (len > MAX_LINE_LENGTH - 1)
+       len = MAX_LINE_LENGTH - 1;
+    strncpy(buf,s,len);
+    buf[len] = 0;
     separatearg();
   }
 

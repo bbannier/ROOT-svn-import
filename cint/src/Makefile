@@ -58,7 +58,7 @@ OBJECTS = 	$(addsuffix $(G__CFG_OBJEXT), \
 		v6_global1 v6_global2 v6_ifunc v6_inherit v6_init \
 		v6_input v6_intrpt v6_loadfile v6_macro v6_malloc \
 		v6_memtest v6_new v6_newlink v6_oldlink v6_opr \
-		v6_parse v6_pause v6_pcode v6_pragma v6_quote \
+		v6_parse v6_pause v6_pcode v6_pragma v6_quote v6_random \
 		v6_scrupto v6_shl v6_sizeof v6_struct v6_stub \
 		v6_tmplt v6_typedef v6_val2a v6_value v6_var \
 		$(STDSTRCTO) longif3 \

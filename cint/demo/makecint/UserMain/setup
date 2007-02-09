@@ -1,5 +1,6 @@
-makecint -mk Makefile -m -I$CINTSYSDIR -o UserMain -H UserMain.h -C++ UserMain.cxx
-make -f Makefile
-UserMain
-make -f Makefile clean
+which cint.exe > /dev/null 2>&1 && EXEEXT=.exe
+makecint -mk Makefile -m -I`echo $CINTSYSDIR|sed 's,\\\,/,g'`/inc -o UserMain$EXEEXT -H UserMain.h -C++ UserMain.cxx
+make
+./UserMain
+make clean
 rm Makefile

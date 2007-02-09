@@ -248,7 +248,11 @@ void ci(ELanguage lang, const char *sname, const char *dfile,
   run(com);
 
   // run compiled program
-  sprintf(com, "%s > compiled", exename);
+#if defined(G__WIN32)
+  sprintf(com, ".\\%s > compiled", exename);
+#else
+  sprintf(com, "./%s > compiled", exename);
+#endif
   run(com);
 #ifdef DEBUG2
   run(exename);
@@ -841,6 +845,7 @@ int main(int argc,char** argv) {
   ci(kLangCXX,"t1280.cxx",difffile);
   ci(kLangCXX,"t1281.cxx",difffile);
   ci(kLangCXX,"t1282.cxx",difffile);
+  ci(kLangCXX,"t1283.cxx",difffile);
 
 #endif // NEWTEST
 

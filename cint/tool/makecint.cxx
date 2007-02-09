@@ -594,6 +594,12 @@ void G__outputmakefile(int argc,char **argv)
       << "CXXSTUBCINT = " << G__CXXSTUB << std::endl
       << std::endl;
 
+#if defined(G__CYGWIN) || defined(_MSC_VER) || \
+  defined(__BORLANDC__) || defined(__BCPLUSPLUS__) || defined(G__BORLANDCC5)
+  out << "SETUPOBJ    = " << "G__main" << G__CFG_OBJEXT << std::endl;
+#else
+  out << "SETUPOBJ    = " << "G__setup" << G__CFG_OBJEXT << std::endl;
+#endif
   /***************************************************************************
    * Link Object
    ***************************************************************************/
@@ -608,33 +614,31 @@ void G__outputmakefile(int argc,char **argv)
   else if(G__ismain) {
 #ifdef _AIX
 TODO!
-  cout << "$(OBJECT) : $(CINTLIB) $(READLINEA) $(DLFCN) G__setup.o $(COFILES) $(CXXOFILES) $(CIFO) $(CXXIFO)";
- out << "\t$(LD) $(IPATH) $(MACRO) $(CCOPT) -o $(OBJECT) $(CIFO) $(CXXIFO) $(COFILES) $(CXXOFILES) G__setup.o $(READLINEA) $(DLFCN) $(LIBS)" 
+  cout << "$(OBJECT) : $(CINTLIB) $(READLINEA) $(DLFCN) $(SETUPOBJ) $(COFILES) $(CXXOFILES) $(CIFO) $(CXXIFO)";
+ out << "\t$(LD) $(IPATH) $(MACRO) $(CCOPT) -o $(OBJECT) $(CIFO) $(CXXIFO) $(COFILES) $(CXXOFILES) $(SETUPOBJ) $(READLINEA) $(DLFCN) $(LIBS)" 
      << std::endl;
 #else
-  out << "$(OBJECT) : $(CINTLIB) $(READLINEA) G__setup" << G__CFG_OBJEXT 
+  out << "$(OBJECT) : $(CINTLIB) $(READLINEA) $(SETUPOBJ)"
       << " $(COFILES) $(CXXOFILES) $(CIFO) $(CXXIFO)" << std::endl
       << "\t$(LD) " << G__CFG_LDFLAGS << " $(CCOPT) " 
-      << G__CFG_LDOUT << "$(OBJECT) $(CIFO) $(CXXIFO) $(COFILES) $(CXXOFILES) G__setup" 
-      << G__CFG_OBJEXT <<" $(READLINEA) $(LIBS)" << std::endl;
+      << G__CFG_LDOUT << "$(OBJECT) $(CIFO) $(CXXIFO) $(COFILES) $(CXXOFILES) $(SETUPOBJ) $(READLINEA) $(LIBS)" << std::endl;
 #endif
   }
   else {
 #ifdef _AIX
     TODO!
-    out << "$(OBJECT) : $(MAINO) $(CINTLIB) $(READLINEA) $(DLFCN) G__setup.o $(COFILES) $(CXXOFILES) $(CIFO) $(CXXIFO) \n";
+    out << "$(OBJECT) : $(MAINO) $(CINTLIB) $(READLINEA) $(DLFCN) $(SETUPOBJ) $(COFILES) $(CXXOFILES) $(CIFO) $(CXXIFO) \n";
     out << "\trm -f shr.o $(OBJECT).nm $(OBJECT).exp\n";
-    out << "\t$(NM) $(MAINO) $(CIFO) $(CXXIFO) $(COFILES) $(CXXOFILES) G__setup.o $(READLINEA) $(DLFCN) $(LIBS) $(NMOPT)\n";
+    out << "\t$(NM) $(MAINO) $(CIFO) $(CXXIFO) $(COFILES) $(CXXOFILES) $(SETUPOBJ) $(READLINEA) $(DLFCN) $(LIBS) $(NMOPT)\n";
     out << "\trm -f shr.o\n";
     out << "\techo \"#!\" > $(OBJECT).exp ; cat $(OBJECT).nm >> $(OBJECT).exp\n";
     out << "\trm -f $(OBJECT).nm\n";
-    out << "\t$(LD) -bE:$(OBJECT).exp -bM:SRE  $(IPATH) $(MACRO) $(CCOPT) -o $(OBJECT) $(MAINO) $(CIFO) $(CXXIFO) $(COFILES) $(CXXOFILES) G__setup.o $(READLINEA) $(DLFCN) $(LIBS)\n";
+    out << "\t$(LD) -bE:$(OBJECT).exp -bM:SRE  $(IPATH) $(MACRO) $(CCOPT) -o $(OBJECT) $(MAINO) $(CIFO) $(CXXIFO) $(COFILES) $(CXXOFILES) $(SETUPOBJ) $(READLINEA) $(DLFCN) $(LIBS)\n";
 #else
-    out << "$(OBJECT) : $(MAINO) $(CINTLIB) $(READLINEA) G__setup" << G__CFG_OBJEXT 
+    out << "$(OBJECT) : $(MAINO) $(CINTLIB) $(READLINEA) $(SETUPOBJ) "
         << " $(COFILES) $(CXXOFILES) $(CIFO) $(CXXIFO)" << std::endl
         << "\t$(LD) $(CCOPT) " << G__CFG_LDFLAGS << " " 
-        << G__CFG_LDOUT << "$(OBJECT) $(MAINO) $(CIFO) $(CXXIFO) $(COFILES) $(CXXOFILES) G__setup" 
-        << G__CFG_OBJEXT << " $(READLINEA) $(LIBS)" << std::endl;
+        << G__CFG_LDOUT << "$(OBJECT) $(MAINO) $(CIFO) $(CXXIFO) $(COFILES) $(CXXOFILES) $(SETUPOBJ) $(READLINEA) $(LIBS)" << std::endl;
 #endif
   }
   out << std::endl;
@@ -649,22 +653,19 @@ TODO!
    * Compile Initialization routine
    ***************************************************************************/
   if(! (G__flags & G__isDLL)) {
-     /*
-#if (G__CYGWIN)
-    out << "\n");
-    out << "# Compile main function  #################################\n");
-    out << "G__main.o : G__main.cxx\n");
-    out << "\t$(CXX) $(LINKSPEC) $(CINTIPATH) -o G__main.o -c G__main.cxx\n");
+#if defined(G__CYGWIN) || defined(_MSC_VER) || \
+  defined(__BORLANDC__) || defined(__BCPLUSPLUS__) || defined(G__BORLANDCC5)
+     out << std::endl;
+     out << "# Compile main function  #################################" << std::endl;
+     out << "$(SETUPOBJ): G__main.cxx" << std::endl;
+     out << "\t$(CXX) $(LINKSPEC) $(CINTIPATH) -o $(SETUPOBJ) -c G__main.cxx" << std::endl;
 #else
-     */
     out << "# Compile dictionary setup routine #######################" << std::endl;
-    out << "G__setup" << G__CFG_OBJEXT << " : $(CINTSYSDIRU)/main/G__setup.c $(CINTSYSDIRU)/G__ci.h" << std::endl
+    out << "$(SETUPOBJ): $(CINTSYSDIRU)/main/G__setup.c $(CINTSYSDIRU)/inc/G__ci.h" << std::endl
         << "\t$(CC) $(LINKSPEC) $(CINTIPATH) $(CMACRO) $(CFLAGS) " 
-        << G__CFG_COUT << "G__setup" << G__CFG_OBJEXT << " " 
+        << G__CFG_COUT << "$(SETUPOBJ) " 
         << G__CFG_COMP << " $(CINTSYSDIRW)/main/G__setup.c" << std::endl;
-    /*
 #endif
-    */
   }
   out << std::endl;
     
@@ -719,9 +720,9 @@ TODO!
   }
   else {
 #ifdef _AIX
-    out << "\t$(RM) $(OBJECT) $(OBJECT).exp $(OBJECT).nm shr.o core $(CIFO) $(CIFC) $(CIFH) $(CXXIFO) $(CXXIFC) $(CXXIFH) $(COFILES) $(CXXOFILES) G__setup.o" << std::endl;
+    out << "\t$(RM) $(OBJECT) $(OBJECT).exp $(OBJECT).nm shr.o core $(CIFO) $(CIFC) $(CIFH) $(CXXIFO) $(CXXIFC) $(CXXIFH) $(COFILES) $(CXXOFILES) $(SETUPOBJ)" << std::endl;
 #else
-    out << "\t$(RM) $(OBJECT) core $(CIFO) $(CIFC) $(CIFH) $(CXXIFO) $(CXXIFC) $(CXXIFH) $(RMCOFILES) $(RMCXXOFILES) G__main" << G__CFG_OBJEXT 
+    out << "\t$(RM) $(OBJECT) core $(CIFO) $(CIFC) $(CIFH) $(CXXIFO) $(CXXIFC) $(CXXIFH) $(RMCOFILES) $(RMCXXOFILES) G__main" << G__CFG_OBJEXT
         << " G__setup" << G__CFG_OBJEXT << std::endl;
 #endif
   }
@@ -737,7 +738,8 @@ TODO!
 
 }
 
-#if (G__CYGWIN) && 0
+#if defined(G__CYGWIN) || defined(_MSC_VER) || \
+  defined(__BORLANDC__) || defined(__BCPLUSPLUS__) || defined(G__BORLANDCC5)
 /******************************************************************
 * G__outputmain()
 ******************************************************************/
@@ -808,7 +810,8 @@ int G__makecint(int argc, char **argv)
     std::cerr << "!!!makecint aborted!!!  makecint -? for help\n" << std::endl;
     exit(EXIT_FAILURE);
   }
-#if (G__CYGWIN) && 0
+#if defined(G__CYGWIN) || defined(_MSC_VER) || \
+  defined(__BORLANDC__) || defined(__BCPLUSPLUS__) || defined(G__BORLANDCC5)
   if(!(G__flags & G__isDLL)) G__outputmain();
 #endif
   G__outputmakefile(argc,argv);

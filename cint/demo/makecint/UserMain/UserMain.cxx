@@ -8,7 +8,7 @@
 // UserMain.cxx
 
 #include <stdio.h>
-#include <G__ci.h>
+#include "G__ci.h"
 #include "UserMain.h"   /* host.h can be an empty file */
 
 //////////////////////////////////////////////////////////////////////

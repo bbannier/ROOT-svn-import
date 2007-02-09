@@ -20,10 +20,10 @@
 #define G__CINT_VER6  1
 #endif
 
-#define G__CINTVERSION_V6      60010017
-#define G__CINTVERSIONSTR_V6  "6.1.17, December 12, 2006"
-#define G__CINTVERSION_V5      50160017
-#define G__CINTVERSIONSTR_V5  "5.16.17, December 12, 2006"
+#define G__CINTVERSION_V6      60010018
+#define G__CINTVERSIONSTR_V6  "6.1.18, February 9, 2007"
+#define G__CINTVERSION_V5      50160018
+#define G__CINTVERSIONSTR_V5  "5.16.18, February 9, 2007"
 
 #define G__ALWAYS
 /* #define G__NEVER */
@@ -1522,7 +1522,8 @@ typedef struct {
 #define G__VAARG_INC_COPY_N 8
 /* #define G__VAARG_PASS_BY_REFERENCE 8 */
 
-#elif defined(__sparc) || defined(__sparc__) || defined(__SUNPRO_C)
+#elif defined(__sparc) || defined(__sparc__) || defined(__SUNPRO_C) || \
+      defined(__SUNPRO_CC)
 /**********************************************
  * Sun Sparc architecture
  * Alignment is similar to Intel, but class/struct
@@ -1890,6 +1891,7 @@ extern G__EXPORT char *G__fulltagname(int tagnum,int mask_dollar);
 extern G__EXPORT void G__loadlonglong(int* ptag,int* ptype,int which);
 extern G__EXPORT int G__isanybase(int basetagnum,int derivedtagnum,long pobject);
 extern G__EXPORT int G__pop_tempobject(void);
+extern G__EXPORT int G__pop_tempobject_nodel(void);
 extern G__EXPORT char* G__stripfilename(char* filename);
 
 extern G__EXPORT int G__sizeof (G__value *object);
