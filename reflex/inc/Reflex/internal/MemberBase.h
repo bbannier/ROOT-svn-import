@@ -1,4 +1,4 @@
-// @(#)root/reflex:$Name:  $:$Id: MemberBase.h,v 1.4 2006/10/30 12:51:33 roiser Exp $
+// @(#)root/reflex:$Name:  $:$Id: MemberBase.h,v 1.5 2006/11/06 09:13:32 roiser Exp $
 // Author: Stefan Roiser 2004
 
 // Copyright CERN, CH-1211 Geneva 23, 2004-2006, All rights reserved.
@@ -287,6 +287,13 @@ namespace ROOT {
 
          /** return pointer to member type */
          Type TypeOf() const;
+
+
+         /** 
+          * UpdateFunctionParameterNames updates the names of parameters
+          * @param  parameters new list of ';' separated parameter names, must not specify default values
+          */
+         virtual void UpdateFunctionParameterNames(const char* parameters);
 
       protected:
 
@@ -761,6 +768,11 @@ inline ROOT::Reflex::Type ROOT::Reflex::MemberBase::TypeOf() const {
 //-------------------------------------------------------------------------------
    return fType;
 }
+
+
+//-------------------------------------------------------------------------------
+inline void ROOT::Reflex::MemberBase::UpdateFunctionParameterNames(const char* parameters) {}
+//-------------------------------------------------------------------------------
 
 
 

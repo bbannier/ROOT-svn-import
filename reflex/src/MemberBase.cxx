@@ -1,4 +1,4 @@
-// @(#)root/reflex:$Name:  $:$Id: MemberBase.cxx,v 1.15 2006/08/15 15:22:52 roiser Exp $
+// @(#)root/reflex:$Name:  $:$Id: MemberBase.cxx,v 1.16 2006/10/30 12:51:33 roiser Exp $
 // Author: Stefan Roiser 2004
 
 // Copyright CERN, CH-1211 Geneva 23, 2004-2006, All rights reserved.
@@ -149,6 +149,3 @@ void ROOT::Reflex::MemberBase::GenerateDict( DictionaryGenerator & /* generator 
 //-------------------------------------------------------------------------------
 // Generate Dictionary information about itself.
 }
-
-   
-

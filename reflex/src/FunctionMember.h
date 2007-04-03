@@ -1,4 +1,4 @@
-// @(#)root/reflex:$Name:  $:$Id: FunctionMember.h,v 1.8 2006/08/15 15:22:52 roiser Exp $
+// @(#)root/reflex:$Name:  $:$Id: FunctionMember.h,v 1.9 2006/08/28 16:03:54 roiser Exp $
 // Author: Stefan Roiser 2004
 
 // Copyright CERN, CH-1211 Geneva 23, 2004-2006, All rights reserved.
@@ -103,6 +103,13 @@ namespace ROOT {
 
          /** return the pointer to the stub function */
          StubFunction Stubfunction() const;
+
+
+         /** 
+          * UpdateFunctionParameterNames updates the names of parameters
+          * @param  parameters new list of ';' separated parameter names, must not specify default values
+          */
+         virtual void UpdateFunctionParameterNames(const char* parameters);
 
       private:
 

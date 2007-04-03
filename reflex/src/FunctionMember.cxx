@@ -1,4 +1,4 @@
-// @(#)root/reflex:$Name:  $:$Id: FunctionMember.cxx,v 1.10 2006/08/03 16:49:21 roiser Exp $
+// @(#)root/reflex:$Name:  $:$Id: FunctionMember.cxx,v 1.11 2006/08/15 15:22:52 roiser Exp $
 // Author: Stefan Roiser 2004
 
 // Copyright CERN, CH-1211 Geneva 23, 2004-2006, All rights reserved.
@@ -40,30 +40,7 @@ ROOT::Reflex::FunctionMember::FunctionMember( const char *  nam,
      fParameterDefaults( std::vector<std::string>()),
      fReqParameters( 0 )
 {
-   // Obtain the names and default values of the function parameters
-   // The "real" number of parameters is obtained from the function type
-   size_t numDefaultParams = 0;
-   size_t type_npar = typ.FunctionParameterSize();
-   std::vector<std::string> params;
-   if ( parameters ) Tools::StringSplit(params, parameters, ";");
-   size_t npar = std::min(type_npar,params.size());
-   for ( size_t i = 0; i < npar ; ++i ) {
-      size_t pos = params[i].find( "=" );
-      fParameterNames.push_back(params[i].substr(0,pos));
-      if ( pos != std::string::npos ) {
-         fParameterDefaults.push_back(params[i].substr(pos+1));
-         ++numDefaultParams;
-      }
-      else {
-         fParameterDefaults.push_back("");
-      }
-   }
-   // padding with blanks
-   for ( size_t i = npar; i < type_npar; ++i ) {
-      fParameterNames.push_back("");
-      fParameterDefaults.push_back("");
-   }
-   fReqParameters = type_npar - numDefaultParams;
+   UpdateFunctionParameterNames(parameters);
 }
 
 
@@ -468,4 +445,43 @@ void ROOT::Reflex::FunctionMember::GenerateDict( DictionaryGenerator & generator
    }
 }
 
+//-------------------------------------------------------------------------------
+void ROOT::Reflex::FunctionMember::UpdateFunctionParameterNames(const char* parameters)
+//-------------------------------------------------------------------------------
+{
+   // Obtain the names and default values of the function parameters
+   // The "real" number of parameters is obtained from the function type
+
+   fParameterNames.clear();
+   bool hadDefaultValues = !fParameterDefaults.empty();
+   size_t numDefaultParams = 0;
+   size_t type_npar = MemberBase::TypeOf().FunctionParameterSize();
+   std::vector<std::string> params;
+   if ( parameters ) Tools::StringSplit(params, parameters, ";");
+   size_t npar = std::min(type_npar,params.size());
+   for ( size_t i = 0; i < npar ; ++i ) {
+      size_t pos = params[i].find( "=" );
+      fParameterNames.push_back(params[i].substr(0,pos));
+      if ( pos != std::string::npos ) {
+         if (hadDefaultValues)
+            throw RuntimeError("Attempt to redefine default values of parameters!");
+         else {
+            fParameterDefaults.push_back(params[i].substr(pos+1));
+            ++numDefaultParams;
+         }
+      }
+      else if (!hadDefaultValues){
+         fParameterDefaults.push_back("");
+      }
+   }
+   // padding with blanks
+   for ( size_t i = npar; i < type_npar; ++i ) {
+      fParameterNames.push_back("");
+      if (!hadDefaultValues)
+         fParameterDefaults.push_back("");
+   }
+
+   if (!hadDefaultValues)
+      fReqParameters = type_npar - numDefaultParams;
+}
 
