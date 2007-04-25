@@ -1,4 +1,4 @@
-// @(#)root/reflex:$Name: merge_reflex $:$Id: test_Reflex_simple2.cxx,v 1.37 2006/12/01 16:08:19 roiser Exp $
+// @(#)root/reflex:$Name:  $:$Id: test_Reflex_simple2.cxx,v 1.37.4.1 2007/04/25 11:01:29 axel Exp $
 // Author: Stefan Roiser 2004
 
 // CppUnit include file
@@ -230,6 +230,10 @@ public:
   void unloadLibrary();
   void shutdown() { Reflex::Shutdown(); }
   void tearDown() {}
+
+private:
+  void testReferenceArgs_T(const std::string& Tname);
+  void testReferenceDataMembers_T(const std::string& Tname);
 
 private:
   void testReferenceArgs_T(const std::string& Tname);
@@ -844,6 +848,100 @@ void ReflexSimple2Test::testFreeFunctions() {
 
   o.Destruct();
 
+}
+
+void ReflexSimple2Test::testReferenceArgs() {
+   testReferenceArgs_T("int");
+   testReferenceArgs_T("ClassO<int>");
+   testReferenceArgs_T("int*");
+   testReferenceArgs_T("ClassO<int*>*");
+}
+
+void ReflexSimple2Test::testReferenceArgs_T(const std::string& Tname) {
+   std::string className("ClassO<");
+   className += Tname;
+   char lastChar = Tname[Tname.length() - 1];
+   if ( lastChar == '>') className += ' ';
+   bool nameIsPointer = lastChar == '*';
+
+   std::string cTname;
+   if (nameIsPointer) {
+      cTname = Tname + " const";
+   } else {
+      cTname = "const ";
+      cTname += Tname;
+   }
+
+   className += ">";
+   cout << "Testing for " << Tname << "..." << endl;
+
+   Type c = Type::ByName(className);
+   CPPUNIT_ASSERT(c);
+   Member m;
+
+   cout << "Need to pass QUALIFIED or TypeOf().Name() will be wrong: " << endl
+        << "  default is to strip modifiers (like ref): to be fixed" << endl
+        << "  default is to strip modifiers in all levels, even for func args: to be fixed" << endl;
+
+   ENTITY_HANDLING modName = QUALIFIED; // should work with "0", too!
+
+   m = c.MemberByName("P");
+   CPPUNIT_ASSERT(m);
+   CPPUNIT_ASSERT_EQUAL(std::string("void (") + Tname + "*)", m.TypeOf().Name(modName));
+   CPPUNIT_ASSERT_EQUAL(std::string("void (") + Tname + "*)", m.TypeOf().Name(QUALIFIED));
+   m = c.MemberByName("R");
+   CPPUNIT_ASSERT(m);
+   CPPUNIT_ASSERT_EQUAL(std::string("void (") + Tname + "&)", m.TypeOf().Name(modName));
+   CPPUNIT_ASSERT_EQUAL(std::string("void (") + Tname + "&)", m.TypeOf().Name(QUALIFIED));
+   m = c.MemberByName("cP");
+   CPPUNIT_ASSERT(m);
+   CPPUNIT_ASSERT_EQUAL(std::string("void (") + cTname + "*)", m.TypeOf().Name(modName));
+   CPPUNIT_ASSERT_EQUAL(std::string("void (") + cTname + "*)", m.TypeOf().Name(QUALIFIED));
+   m = c.MemberByName("cR");
+   CPPUNIT_ASSERT(m);
+   CPPUNIT_ASSERT_EQUAL(std::string("void (") + cTname + "&)", m.TypeOf().Name(modName));
+   CPPUNIT_ASSERT_EQUAL(std::string("void (") + cTname + "&)", m.TypeOf().Name(QUALIFIED));
+   m = c.MemberByName("cPc");
+   CPPUNIT_ASSERT(m);
+   CPPUNIT_ASSERT_EQUAL(std::string("void (") + cTname + "* const)", m.TypeOf().Name(modName));
+   CPPUNIT_ASSERT_EQUAL(std::string("void (") + cTname + "* const)", m.TypeOf().Name(QUALIFIED));
+
+   cout << "Testing for " << Tname << ": done." << endl << endl;
+}
+
+void ReflexSimple2Test::testReferenceDataMembers() {
+   testReferenceDataMembers_T("int");
+   testReferenceDataMembers_T("ClassO<int>");
+   testReferenceDataMembers_T("int*");
+   testReferenceDataMembers_T("ClassO<int*>*");
+}
+
+void ReflexSimple2Test::testReferenceDataMembers_T(const std::string& Tname) {
+   std::string className("ClassO<");
+   className += Tname;
+   if (Tname[Tname.length() - 1] == '>') className += ' ';
+   className += ">";
+   cout << "Testing for " << Tname << "..." << endl;
+
+   Type c = Type::ByName(className);
+   CPPUNIT_ASSERT(c);
+   Member m;
+
+   // data
+   m = c.MemberByName("_p");
+   CPPUNIT_ASSERT(m);
+   CPPUNIT_ASSERT_EQUAL(Tname + "*", m.TypeOf().Name(QUALIFIED));
+   m = c.MemberByName("_pp");
+   CPPUNIT_ASSERT(m);
+   CPPUNIT_ASSERT_EQUAL(Tname + "**", m.TypeOf().Name(QUALIFIED));
+   m = c.MemberByName("_cpp");
+   CPPUNIT_ASSERT(m);
+   if (Tname[Tname.length() - 1] == '*')
+      CPPUNIT_ASSERT_EQUAL(Tname + " const**", m.TypeOf().Name(QUALIFIED));
+   else
+      CPPUNIT_ASSERT_EQUAL(std::string("const ") + Tname + "**", m.TypeOf().Name(QUALIFIED));
+
+   cout << "Testing for " << Tname << ": done." << endl << endl;
 }
 
 void ReflexSimple2Test::testReferenceArgs() {

@@ -1,4 +1,4 @@
-// @(#)root/reflex:$Name:  $:$Id: PluginFactoryMap.cxx,v 1.3 2006/12/02 09:07:04 brun Exp $
+// @(#)root/reflex:$Name: merge_reflex $:$Id: PluginFactoryMap.cxx,v 1.4 2007/04/03 08:25:40 axel Exp $
 // Author: Pere Mato 2006
 
 // Copyright CERN, CH-1211 Geneva 23, 2004-2006, All rights reserved.
@@ -8,6 +8,10 @@
 // permissions notice appear in all copies and derivatives.
 //
 // This software is provided "as is" without express or implied warranty.
+
+#ifndef REFLEX_BUILD
+#define REFLEX_BUILD
+#endif
 
 #ifndef REFLEX_BUILD
 #define REFLEX_BUILD
