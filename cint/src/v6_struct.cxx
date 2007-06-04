@@ -91,10 +91,10 @@ int G__using_namespace()
         struct G__inheritance *base=G__struct.baseclass[envtagnum];
         pbasen = &base->basen;
         if(*pbasen<G__MAXBASE) {
-          base->basetagnum[*pbasen]=basetagnum;
-          base->baseoffset[*pbasen]=0;
-          base->baseaccess[*pbasen]=G__PUBLIC;
-          base->property[*pbasen]=0;
+          base->herit[*pbasen]->basetagnum=basetagnum;
+          base->herit[*pbasen]->baseoffset=0;
+          base->herit[*pbasen]->baseaccess=G__PUBLIC;
+          base->herit[*pbasen]->property=0;
           ++(*pbasen);
         }
         else {
@@ -114,7 +114,7 @@ int G__using_namespace()
        found = 0;
        for(j=0; j<G__globalusingnamespace.basen; ++j) {
           struct G__inheritance *base = &G__globalusingnamespace;
-          if ( base->basetagnum[j] == basetagnum ) {
+          if ( base->herit[j]->basetagnum == basetagnum ) {
              found = 1;
              break;
           }
@@ -123,9 +123,9 @@ int G__using_namespace()
           if(G__globalusingnamespace.basen<G__MAXBASE) {
              struct G__inheritance *base = &G__globalusingnamespace;
              int* pbasen = &base->basen;
-             base->basetagnum[*pbasen]=basetagnum;
-             base->baseoffset[*pbasen]=0;
-             base->baseaccess[*pbasen]=G__PUBLIC;
+             base->herit[*pbasen]->basetagnum=basetagnum;
+             base->herit[*pbasen]->baseoffset=0;
+             base->herit[*pbasen]->baseaccess=G__PUBLIC;
              ++(*pbasen);
           }
           else {
@@ -455,6 +455,7 @@ int G__class_autoloading(int tagnum)
 *          = 1   if not found try to instantiate template class
 *                no error messages if template is not found
 *          = 2   if not found just return without trying template
+*          = 3   like 2, and no autoloading
 *
 * CAUTION:
 *  If template class with constant argument is given to this function,
@@ -573,7 +574,7 @@ int G__defined_tagname(const char *tagname,int noerror)
      if(len==G__struct.hash[i]&&strcmp(atom_tagname,G__struct.name[i])==0) {
         if ((char*)NULL==p&&-1==G__struct.parent_tagnum[i]||
             env_tagnum==G__struct.parent_tagnum[i]) {
-           G__class_autoloading(i);
+           if (noerror < 3) G__class_autoloading(i);
            return(i);
         }
 
@@ -607,7 +608,7 @@ int G__defined_tagname(const char *tagname,int noerror)
   }
 
   if (candidateTag != -1) {
-     G__class_autoloading(candidateTag);
+     if (noerror < 3) G__class_autoloading(candidateTag);
      return(candidateTag);
   }
 
@@ -650,7 +651,7 @@ int G__defined_tagname(const char *tagname,int noerror)
       int store_tagnum=G__tagnum;
       int store_cpp=G__cpp;
       int store_globalcomp = G__globalcomp;
-      struct G__ifunc_table *store_ifunc = G__p_ifunc;
+      struct G__ifunc_table_internal *store_ifunc = G__p_ifunc;
       G__cpp=0;
       G__globalvarpointer=G__PVOID;
       G__tagdefining = -1;
@@ -680,7 +681,7 @@ int G__defined_tagname(const char *tagname,int noerror)
   if(-1!=i) {
     i=G__newtype.tagnum[i];
     if(-1!=i) {
-      G__class_autoloading(i);
+      if (noerror < 3) G__class_autoloading(i);
       return(i);
     }
   }
@@ -704,6 +705,9 @@ int G__defined_tagname(const char *tagname,int noerror)
 * Description:
 *   Scan tagname table and return tagnum. If not match, create
 *  new tag type.
+* if type > 0xff, create new G__struct entry if not found;
+* autoload if !isupper(type&0xff). type==0xff means ptr but type==0
+* (see v6_newlink.cxx:G__parse_parameter_link)
 *
 ******************************************************************/
 int G__search_tagname(const char *tagname,int type)
@@ -727,11 +731,15 @@ int G__search_tagname(const char *tagname,int type)
   }
   /* int parent_tagnum; */
   int envtagnum= -1;
-  int isstructdecl = isupper(type);
+  int isstructdecl = type > 0xff;
+  type &= 0xff;
+  bool isPointer = (type == 0xff) || isupper(type);
+  if (type == 0xff) type = 0;
   type = tolower(type);
 
-  /* Search for old tagname */
-  i = G__defined_tagname(tagname,2);
+  // Search for old tagname
+  // Only auto-load struct if not ref / ptr
+  i = G__defined_tagname(tagname, isPointer ? 3 : 2);
 
 #ifndef G__OLDIMPLEMENTATION1823
   if(strlen(tagname)>G__BUFLEN*2-10) {
@@ -846,9 +854,10 @@ int G__search_tagname(const char *tagname,int type)
     /***********************************************************
      * Allocate and initialize member function table list
      ***********************************************************/
-    G__struct.memfunc[i] = (struct G__ifunc_table *)malloc(sizeof(struct G__ifunc_table));
+    G__struct.memfunc[i] = (struct G__ifunc_table_internal *)malloc(sizeof(struct G__ifunc_table_internal));
+    memset(G__struct.memfunc[i],0,sizeof(struct G__ifunc_table_internal));
     G__struct.memfunc[i]->allifunc = 0;
-    G__struct.memfunc[i]->next = (struct G__ifunc_table *)NULL;
+    G__struct.memfunc[i]->next = (struct G__ifunc_table_internal *)NULL;
     G__struct.memfunc[i]->page = 0;
 #ifdef G__NEWINHERIT
     G__struct.memfunc[i]->tagnum = i;
@@ -890,7 +899,7 @@ int G__search_tagname(const char *tagname,int type)
     G__struct.memfunc[i]->comment[0].filenum = -1;
 
     {
-       struct G__ifunc_table *store_ifunc;
+       struct G__ifunc_table_internal *store_ifunc;
        store_ifunc = G__p_ifunc;
        G__p_ifunc = G__struct.memfunc[i];
        G__memfunc_next();
@@ -902,7 +911,7 @@ int G__search_tagname(const char *tagname,int type)
      * Allocate and initialize class inheritance table
      ***********************************************************/
     G__struct.baseclass[i] = (struct G__inheritance *)malloc(sizeof(struct G__inheritance));
-    G__struct.baseclass[i]->basen=0;
+    memset(G__struct.baseclass[i],0,sizeof(struct G__inheritance));
 
     /***********************************************************
      * Initialize iden information for virtual function
@@ -1273,7 +1282,7 @@ void G__define_struct(char type)
   case '{':
   case ':':
   case ';':
-    G__tagnum = G__search_tagname(tagname, toupper(type));
+    G__tagnum = G__search_tagname(tagname, type + 0x100); // 0x100: define struct if not found
     break;
   default:
     G__tagnum = G__search_tagname(tagname, type);
@@ -1463,19 +1472,19 @@ void G__define_struct(char type)
       pbasen = &baseclass->basen;
 
       // Enter parsed information into base class information table.
-      baseclass->property[*pbasen] = G__ISDIRECTINHERIT + isvirtualbase;
+      baseclass->herit[*pbasen]->property = G__ISDIRECTINHERIT + isvirtualbase;
       // Note: We are requiring the base class to exist here, we get an error message if it does not.
-      baseclass->basetagnum[*pbasen] = G__defined_tagname(basename, 0);
+      baseclass->herit[*pbasen]->basetagnum = G__defined_tagname(basename, 0);
       if (
         (G__struct.size[lstore_tagnum] == 1) &&
         (G__struct.memvar[lstore_tagnum]->allvar == 0) &&
         (G__struct.baseclass[lstore_tagnum]->basen == 0)
       ) {
-        baseclass->baseoffset[*pbasen] = 0;
+        baseclass->herit[*pbasen]->baseoffset = 0;
       } else {
-        baseclass->baseoffset[*pbasen] = G__struct.size[lstore_tagnum];
+        baseclass->herit[*pbasen]->baseoffset = G__struct.size[lstore_tagnum];
       }
-      baseclass->baseaccess[*pbasen] = baseaccess;
+      baseclass->herit[*pbasen]->baseaccess = baseaccess;
       G__tagnum = lstore_tagnum;
       G__def_tagnum = lstore_def_tagnum;
       G__tagdefining = lstore_tagdefining;
@@ -1483,9 +1492,9 @@ void G__define_struct(char type)
       // Virtual base classes for interpretation to be implemented
       // and the two limitation messages above should be deleted.
       if (
-        (G__struct.size[baseclass->basetagnum[*pbasen]] == 1) &&
-        (G__struct.memvar[baseclass->basetagnum[*pbasen]]->allvar == 0) &&
-        (G__struct.baseclass[baseclass->basetagnum[*pbasen]]->basen == 0)
+        (G__struct.size[baseclass->herit[*pbasen]->basetagnum] == 1) &&
+        (G__struct.memvar[baseclass->herit[*pbasen]->basetagnum]->allvar == 0) &&
+        (G__struct.baseclass[baseclass->herit[*pbasen]->basetagnum]->basen == 0)
       ) {
         if (isvirtualbase) {
           G__struct.size[G__tagnum] += G__DOUBLEALLOC;
@@ -1494,14 +1503,14 @@ void G__define_struct(char type)
         }
       } else {
         if (isvirtualbase) {
-          G__struct.size[G__tagnum] += (G__struct.size[baseclass->basetagnum[*pbasen]] + G__DOUBLEALLOC);
+          G__struct.size[G__tagnum] += (G__struct.size[baseclass->herit[*pbasen]->basetagnum] + G__DOUBLEALLOC);
         } else {
-          G__struct.size[G__tagnum] += G__struct.size[baseclass->basetagnum[*pbasen]];
+          G__struct.size[G__tagnum] += G__struct.size[baseclass->herit[*pbasen]->basetagnum];
         }
       }
 
       // Inherit base class info, variable member, function member.
-      G__inheritclass(G__tagnum, baseclass->basetagnum[*pbasen], baseaccess);
+      G__inheritclass(G__tagnum, baseclass->herit[*pbasen]->basetagnum, baseaccess);
 
       // ++(*pbasen);
     }
@@ -1533,18 +1542,18 @@ void G__define_struct(char type)
     int lastdirect = 0;
     int ivb;
     for (ivb = 0; ivb < baseclass->basen; ++ivb) {
-      struct G__ifunc_table* itab;
+      struct G__ifunc_table_internal* itab;
 
-      if (baseclass->property[ivb] & G__ISDIRECTINHERIT) {
+      if (baseclass->herit[ivb]->property & G__ISDIRECTINHERIT) {
         lastdirect = ivb;
       }
 
 #ifndef G__OLDIMPLEMENTATION2037
       // Insure the loading of the memfunc.
-      G__incsetup_memfunc(baseclass->basetagnum[ivb]);
+      G__incsetup_memfunc(baseclass->herit[ivb]->basetagnum);
 #endif
 
-      itab = G__struct.memfunc[baseclass->basetagnum[ivb]];
+      itab = G__struct.memfunc[baseclass->herit[ivb]->basetagnum];
       while (itab) {
         int ifunc;
         for (ifunc = 0; ifunc < itab->allifunc; ++ifunc) {
@@ -1558,7 +1567,7 @@ void G__define_struct(char type)
             int b2;
             int found_flag = 0;
 
-            if (baseclass->property[ivb] & G__ISVIRTUALBASE) {
+            if (baseclass->herit[ivb]->property & G__ISVIRTUALBASE) {
               firstb = 0;
               lastb = baseclass->basen;
             } else {
@@ -1567,14 +1576,14 @@ void G__define_struct(char type)
             }
 
             for (b2 = firstb; b2 < lastb; ++b2) {
-              struct G__ifunc_table* found_tab;
+              struct G__ifunc_table_internal* found_tab;
               int found_ndx;
               int basetag;
               if (b2 == ivb) {
                 continue;
               }
-              basetag = baseclass->basetagnum[b2];
-              if (G__isanybase(baseclass->basetagnum[ivb], basetag, G__STATICRESOLUTION) < 0) {
+              basetag = baseclass->herit[b2]->basetagnum;
+              if (G__isanybase(baseclass->herit[ivb]->basetagnum, basetag, G__STATICRESOLUTION) < 0) {
                 continue;
               }
               found_tab = G__ifunc_exist(itab, ifunc, G__struct.memfunc[basetag], &found_ndx, 0xffff);
@@ -1728,16 +1737,23 @@ void G__define_struct(char type)
           /* this is still questionable, inherit0.c */
           struct G__var_array *v=G__struct.memvar[G__tagnum];
           if('c'==v->type[0]) {
-            if(isupper(v->type[0])) {
-              G__struct.size[G__tagnum] = G__LONGALLOC*(v->varlabel[0][1]+1);
+            if (isupper(v->type[0])) {
+              int num_of_elements = v->varlabel[0][1] /* num of elements */;
+              if (!num_of_elements) {
+                num_of_elements = 1;
+              }
+              G__struct.size[G__tagnum] = num_of_elements * G__LONGALLOC;
             }
             else {
               G__value buf;
               buf.type = v->type[0];
               buf.tagnum = v->p_tagtable[0];
               buf.typenum = v->p_typetable[0];
-              G__struct.size[G__tagnum]
-                =G__sizeof(&buf)*(v->varlabel[0][1]+1);
+              int num_of_elements = v->varlabel[0][1] /* num of elements */;
+              if (!num_of_elements) {
+                num_of_elements = 1;
+              }
+              G__struct.size[G__tagnum] = num_of_elements * G__sizeof(&buf);
             }
           }
         } else
@@ -1835,12 +1851,13 @@ void G__define_struct(char type)
 /******************************************************************
  * G__callfunc0()
  ******************************************************************/
-int G__callfunc0(G__value *result, G__ifunc_table *ifunc, int ifn
+int G__callfunc0(G__value *result, G__ifunc_table *iref, int ifn
                  ,G__param *libp,void *p,int funcmatch)
 {
   int stat=0;
   long store_struct_offset;
   int store_asm_exec;
+  G__ifunc_table_internal* ifunc = G__get_ifunc_internal(iref);
 
   if(!ifunc->hash[ifn] || !ifunc->pentry[ifn]) {
     /* The function is not defined or masked */
@@ -1902,7 +1919,7 @@ int G__calldtor(void *p,int tagnum,int isheap)
 {
   int stat;
   G__value result;
-  struct G__ifunc_table *ifunc;
+  struct G__ifunc_table_internal *ifunc;
   struct G__param para;
   int ifn=0;
   long store_gvp;
@@ -1927,7 +1944,7 @@ int G__calldtor(void *p,int tagnum,int isheap)
   para.paran=0;
   para.parameter[0][0]=0;
   para.para[0] = G__null;
-  stat = G__callfunc0(&result,ifunc,ifn,&para,p,G__TRYDESTRUCTOR);
+  stat = G__callfunc0(&result,G__get_ifunc_ref(ifunc),ifn,&para,p,G__TRYDESTRUCTOR);
 
   G__setgvp(store_gvp);
 

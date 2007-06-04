@@ -496,14 +496,14 @@ void G__outputmakefile(int argc,char **argv)
    * Print out variables
    ***************************************************************************/
   out << "# Set variables ############################################" << std::endl
-      << "CXX        = " << G__CFG_CXX << std::endl
-      << "CC         = " << G__CFG_CC << std::endl
-      << "LD         = " << G__CFG_LD << std::endl
-      << "CINT       = $(shell which cint" << G__CFG_EXEEXT << ")" << std::endl
-      << "CINTSYSDIRU = $(dir $(CINT))" << std::endl
-      << "CINTSYSDIRW= $(shell " << G__CFG_MANGLEPATHS << " $(CINTSYSDIRU) )" << std::endl
-      << "CINTLIB    = $(CINTSYSDIRU)/libcint" << G__CFG_SOEXT << std::endl
-      << "IPATH      = " << G__IPATH << " ";
+      << "CXX         := " << G__CFG_CXX << std::endl
+      << "CC          := " << G__CFG_CC << std::endl
+      << "LD          := " << G__CFG_LD << std::endl
+      << "CINT        := $(shell which cint" << G__CFG_EXEEXT << ")" << std::endl
+      << "CINTSYSDIRU := $(dir $(CINT))" << std::endl
+      << "CINTSYSDIRW := $(shell " << G__CFG_MANGLEPATHS << " $(CINTSYSDIRU) )" << std::endl
+      << "CINTLIB     := $(CINTSYSDIRU)/libcint" << G__CFG_SOEXT << std::endl
+      << "IPATH       := " << G__IPATH << " ";
   if (strcmp("",G__CFG_REFLEXINCDIR)) {
      out << G__CFG_INCP << "$(shell " 
          << G__CFG_MANGLEPATHS << " " <<  G__CFG_REFLEXINCDIR << ") ";
@@ -514,16 +514,16 @@ void G__outputmakefile(int argc,char **argv)
   }
   out << std::endl;
 
-  out << "CMACRO      = " << G__CFG_CMACROS << " " << G__MACRO << std::endl
-      << "CXXMACRO      = " << G__CFG_CXXMACROS << " " << G__MACRO << std::endl
-      << "CFLAGS     = " << G__CFG_CFLAGS << " "
+  out << "CMACRO      := " << G__CFG_CMACROS << " " << G__MACRO << std::endl
+      << "CXXMACRO    := " << G__CFG_CXXMACROS << " " << G__MACRO << std::endl
+      << "CFLAGS      := " << G__CFG_CFLAGS << " "
       << G__COMPFLAGS << " " << cintexCompFlags << std::endl
-      << "CXXFLAGS   = " << G__CFG_CXXFLAGS << " " 
+      << "CXXFLAGS    := " << G__CFG_CXXFLAGS << " " 
       << G__COMPFLAGS << " " << cintexCompFlags << std::endl;
-  out << "CINTIPATH  = "<< G__CFG_INCP << "$(CINTSYSDIRW)/inc" << std::endl
-      << "OBJECT     = " << G__object << std::endl
+  out << "CINTIPATH   := "<< G__CFG_INCP << "$(CINTSYSDIRW)/inc" << std::endl
+      << "OBJECT      := " << G__object << std::endl
 
-      << "LINKSPEC   = ";
+      << "LINKSPEC    := ";
   if(!G__CHDR.empty()) out << " -DG__CLINK_ON";
   if(!G__CXXHDR.empty()) out << " -DG__CXXLINK_ON";
   out << std::endl << std::endl;
@@ -531,28 +531,28 @@ void G__outputmakefile(int argc,char **argv)
   out << "# Set File names ###########################################" << std::endl;
 
   if(!G__CHDR.empty()) {
-    out << "CIFC       = G__c_" << G__DLLID << ".c" << std::endl
-        << "CIFH       = G__c_" << G__DLLID << ".h" << std::endl
-        << "CIFO       = G__c_" << G__DLLID << G__CFG_OBJEXT << std::endl;
+    out << "CIFC        := G__c_" << G__DLLID << ".c" << std::endl
+        << "CIFH        := G__c_" << G__DLLID << ".h" << std::endl
+        << "CIFO        := G__c_" << G__DLLID << G__CFG_OBJEXT << std::endl;
   }
   else {
-    out << "CIFC       =" << std::endl
-        << "CIFH       =" << std::endl
-        << "CIFO       =" << std::endl;
+    out << "CIFC        :=" << std::endl
+        << "CIFH        :=" << std::endl
+        << "CIFO        :=" << std::endl;
   }
   if(!G__CXXHDR.empty()) {
-    out << "CXXIFC     = G__cpp_" << G__DLLID << ".cxx" << std::endl
-        << "CXXIFH     = G__cpp_" << G__DLLID << ".h" << std::endl
-        << "CXXIFO     = G__cpp_" << G__DLLID << G__CFG_OBJEXT << std::endl;
+    out << "CXXIFC      := G__cpp_" << G__DLLID << ".cxx" << std::endl
+        << "CXXIFH      := G__cpp_" << G__DLLID << ".h" << std::endl
+        << "CXXIFO      := G__cpp_" << G__DLLID << G__CFG_OBJEXT << std::endl;
   }
   else {
-    out << "CXXIFC       =" << std::endl
-        << "CXXIFH       =" << std::endl
-        << "CXXIFO       =" << std::endl;
+    out << "CXXIFC      :=" << std::endl
+        << "CXXIFH      :=" << std::endl
+        << "CXXIFO      :=" << std::endl;
   }
   out << std::endl;
 
-  out << "LIBS       = ";
+  out << "LIBS        := ";
   if (G__flags & G__genReflexCode) 
     out << G__CFG_LIBP << "$(shell " << G__CFG_MANGLEPATHS << " "
         << G__CFG_REFLEXLIBDIR << ") " 
@@ -564,42 +564,59 @@ void G__outputmakefile(int argc,char **argv)
       << G__CFG_DEFAULTLIBS << " " << G__LIB << " " << std::endl
       << std::endl;
 
-  out << "CINTOPT    = " << G__CIOPT << std::endl
-      << "COFILES    = " << G__SourceFile::GetAllObjects(G__C_MODE) 
+  out << "CINTOPT     := " << G__CIOPT << std::endl
+      << "COFILES     := " << G__SourceFile::GetAllObjects(G__C_MODE) 
       << std::endl << std::endl;
 
   std::string without_cintopts(G__CHDR);
   G__remove_cintopts(without_cintopts);
-  out << "CHEADER    = " << without_cintopts << std::endl
-      << "CHEADERCINT  = " << G__CHDR << std::endl;
+  out << "CHEADER     := " << without_cintopts << std::endl
+      << "CHEADERCINT := " << G__CHDR << std::endl;
 
   without_cintopts=G__CSTUB;
   G__remove_cintopts(without_cintopts);
-  out << "CSTUB      = " << without_cintopts << std::endl
-      << "CSTUBCINT  = " << G__CSTUB << std::endl
+  out << "CSTUB       := " << without_cintopts << std::endl
+      << "CSTUBCINT   := " << G__CSTUB << std::endl
       << std::endl;
 
-  out << "CXXOFILES  = " << G__SourceFile::GetAllObjects(G__CXX_MODE) 
+  out << "CXXOFILES   := " << G__SourceFile::GetAllObjects(G__CXX_MODE) 
       << std::endl << std::endl;
 
   without_cintopts=G__CXXHDR;
   G__remove_cintopts(without_cintopts);
-  out << "CXXHEADER  = " << without_cintopts << std::endl
-      << "CXXHEADERCINT  = " << G__CXXHDR << std::endl
+  out << "CXXHEADER   := " << without_cintopts << std::endl
+      << "CXXHEADERCINT := " << G__CXXHDR << std::endl
       << std::endl;
 
   without_cintopts=G__CXXSTUB;
   G__remove_cintopts(without_cintopts);
-  out << "CXXSTUB    = " << without_cintopts << std::endl
-      << "CXXSTUBCINT = " << G__CXXSTUB << std::endl
+  out << "CXXSTUB     := " << without_cintopts << std::endl
+      << "CXXSTUBCINT := " << G__CXXSTUB << std::endl
       << std::endl;
 
 #if defined(G__CYGWIN) || defined(_MSC_VER) || \
   defined(__BORLANDC__) || defined(__BCPLUSPLUS__) || defined(G__BORLANDCC5)
-  out << "SETUPOBJ    = " << "G__main" << G__CFG_OBJEXT << std::endl;
+  out << "SETUPOBJ    := " << "G__main" << G__CFG_OBJEXT << std::endl;
 #else
-  out << "SETUPOBJ    = " << "G__setup" << G__CFG_OBJEXT << std::endl;
+  out << "SETUPOBJ    := " << "G__setup" << G__CFG_OBJEXT << std::endl;
 #endif
+
+#if !defined(G__CFG_EXPLLINK)
+#define G__CFG_EXPLLINK 0
+#endif
+  if (!G__CFG_EXPLLINK || !strlen(G__CFG_EXPLLINK)) {
+    // if the libs are not linked against readline then the executable needs to
+    out << "READLINEA   := " 
+#ifdef G__CFG_READLINELIB
+        << G__CFG_READLINELIB << " "
+#endif
+#ifdef G__CFG_CURSESLIB
+        << G__CFG_CURSESLIB
+#endif
+        << std::endl;
+  }
+
+
   /***************************************************************************
    * Link Object
    ***************************************************************************/

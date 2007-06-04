@@ -992,7 +992,7 @@ struct G__Definetemplatefunc *G__defined_templatememfunc(char *name)
       G__def_tagnum = store_def_tagnum;
       G__tagdefining = store_tagdefining;
       if(!result) {
-        struct G__ifunc_table *ifunc=G__struct.memfunc[tagnum];
+        struct G__ifunc_table_internal *ifunc=G__struct.memfunc[tagnum];
         int ifn;
         int len=strlen(p);
         p[len++]='<';
@@ -1069,7 +1069,7 @@ struct G__Definetemplatefunc *G__defined_templatefunc(char *name)
         if(baseclass) {
           /* look for using directive scope resolution */
           for(temp=0;temp<baseclass->basen;temp++) {
-            if(baseclass->basetagnum[temp]==deftmplt->parent_tagnum) {
+            if(baseclass->herit[temp]->basetagnum==deftmplt->parent_tagnum) {
               return(deftmplt);
             }
           }
@@ -1083,7 +1083,7 @@ struct G__Definetemplatefunc *G__defined_templatefunc(char *name)
             return(deftmplt);
           if(G__struct.baseclass[env_parent_tagnum]) {
             for(temp=0;temp<G__struct.baseclass[env_parent_tagnum]->basen;temp++) {
-              if(G__struct.baseclass[env_parent_tagnum]->basetagnum[temp]==deftmplt->parent_tagnum) {
+              if(G__struct.baseclass[env_parent_tagnum]->herit[temp]->basetagnum==deftmplt->parent_tagnum) {
                 return(deftmplt);
               }
             }
@@ -1091,7 +1091,7 @@ struct G__Definetemplatefunc *G__defined_templatefunc(char *name)
         }
         /* look in global scope (handle for using declaration info */
         for(temp=0;temp<G__globalusingnamespace.basen;temp++) {
-          if(G__globalusingnamespace.basetagnum[temp]==deftmplt->parent_tagnum) {
+          if(G__globalusingnamespace.herit[temp]->basetagnum==deftmplt->parent_tagnum) {
             return(deftmplt);
           }
         }
@@ -1165,7 +1165,7 @@ struct G__Definedtemplateclass *G__defined_templateclass(char *name)
         if(baseclass && !candidate) {
           /* look for using directive scope resolution */
           for(temp=0;temp<baseclass->basen;temp++) {
-            if(baseclass->basetagnum[temp]==deftmplt->parent_tagnum) {
+            if(baseclass->herit[temp]->basetagnum==deftmplt->parent_tagnum) {
               candidate = deftmplt;
             }
           }
@@ -1179,7 +1179,7 @@ struct G__Definedtemplateclass *G__defined_templateclass(char *name)
           }
           if(G__struct.baseclass[env_parent_tagnum]) {
             for(temp=0;temp<G__struct.baseclass[env_parent_tagnum]->basen;temp++) {
-              if(G__struct.baseclass[env_parent_tagnum]->basetagnum[temp]==deftmplt->parent_tagnum) {
+              if(G__struct.baseclass[env_parent_tagnum]->herit[temp]->basetagnum==deftmplt->parent_tagnum) {
                 candidate = deftmplt;
                 break;
               }
@@ -1189,7 +1189,7 @@ struct G__Definedtemplateclass *G__defined_templateclass(char *name)
         }
         /* look in global scope (handle for using declaration info */
         if (!candidate) for(temp=0;temp<G__globalusingnamespace.basen;temp++) {
-          if(G__globalusingnamespace.basetagnum[temp]==deftmplt->parent_tagnum) {
+          if(G__globalusingnamespace.herit[temp]->basetagnum==deftmplt->parent_tagnum) {
              candidate = deftmplt;
           }
         }
@@ -2067,7 +2067,7 @@ int G__instantiate_templateclass(char *tagnamein, int noerror)
         if (baseclass) {
           /* look for using directive scope resolution */
           for (temp = 0; temp < baseclass->basen; temp++) {
-            if (baseclass->basetagnum[temp] == deftmpclass->parent_tagnum) {
+            if (baseclass->herit[temp]->basetagnum == deftmpclass->parent_tagnum) {
               goto exit_loop;
             }
           }
@@ -2080,7 +2080,7 @@ int G__instantiate_templateclass(char *tagnamein, int noerror)
           }
           if (G__struct.baseclass[env_parent_tagnum]) {
             for (temp = 0; temp < G__struct.baseclass[env_parent_tagnum]->basen; temp++) {
-              if (G__struct.baseclass[env_parent_tagnum]->basetagnum[temp] == deftmpclass->parent_tagnum) {
+              if (G__struct.baseclass[env_parent_tagnum]->herit[temp]->basetagnum == deftmpclass->parent_tagnum) {
                 goto exit_loop;
               }
             }
@@ -2088,7 +2088,7 @@ int G__instantiate_templateclass(char *tagnamein, int noerror)
         }
         /* look in global scope (handle using declaration) */
         for (temp = 0; temp < G__globalusingnamespace.basen; temp++) {
-          if (G__globalusingnamespace.basetagnum[temp] == deftmpclass->parent_tagnum) {
+          if (G__globalusingnamespace.herit[temp]->basetagnum == deftmpclass->parent_tagnum) {
             goto exit_loop;
           }
         }
@@ -2312,7 +2312,7 @@ void G__replacetemplate(char *templatename,char *tagname,G__Charlist *callpara
   int store_asm_wholefunction;
   int store_reftype;
   int isnew=0;
-  struct G__ifunc_table *store_ifunc;
+  struct G__ifunc_table_internal *store_ifunc;
   int slash=0;
   fpos_t out_pos,in_pos;
   fpos_t const_pos;
@@ -2925,7 +2925,7 @@ int G__matchtemplatefunc(G__Definetemplatefunc *deftmpfunc
       while(0==bmatch && bn<basen) {
         int nest=0;
         cnt=0;
-        if(bn>=0) basetagnum = G__struct.baseclass[tagnum]->basetagnum[bn];
+        if(bn>=0) basetagnum = G__struct.baseclass[tagnum]->herit[bn]->basetagnum;
         ++bn;
         bmatch=1;
         strcpy(paratype,G__fulltagname(basetagnum,0));
@@ -3096,7 +3096,7 @@ int G__templatefunc(G__value *result,char *funcname,G__param *libp
   struct G__Definetemplatefunc *deftmpfunc;
   struct G__Charlist call_para;
   int store_exec_memberfunc;
-  struct G__ifunc_table *ifunc;
+  struct G__ifunc_table_internal *ifunc;
   char *pexplicitarg;
   int env_tagnum=G__get_envtagnum();
   struct G__inheritance *baseclass;
@@ -3140,13 +3140,13 @@ int G__templatefunc(G__value *result,char *funcname,G__param *libp
         if(baseclass) {
           int temp;
           for(temp=0;temp<baseclass->basen;temp++) {
-            if(baseclass->basetagnum[temp]==deftmpfunc->parent_tagnum) {
+            if(baseclass->herit[temp]->basetagnum==deftmpfunc->parent_tagnum) {
               goto match_found;
             }
           }
           /* look in global scope (handle for using declaration info */
           for(temp=0;temp<G__globalusingnamespace.basen;temp++) {
-            if(G__globalusingnamespace.basetagnum[temp]==deftmpfunc->parent_tagnum) {
+            if(G__globalusingnamespace.herit[temp]->basetagnum==deftmpfunc->parent_tagnum) {
               goto match_found;
             }
           }

@@ -5,12 +5,13 @@
  * For the licensing terms see the file COPYING
  *
  ************************************************************************/
-//$Id: rflx_gensrc.h,v 1.8 2006/07/26 13:00:35 axel Exp $
+//$Id: rflx_gensrc.h,v 1.9 2007/03/15 17:59:30 axel Exp $
 
 #ifndef RFLX_GENSRC_H
 #define RFLX_GENSRC_H 1
 
 #include "Api.h"
+#include "Shadow.h"
 #include <sstream>
 #include <string>
 #include <vector>

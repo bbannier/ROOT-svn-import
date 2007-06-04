@@ -20,10 +20,10 @@
 #define G__CINT_VER6  1
 #endif
 
-#define G__CINTVERSION_V6      60010018
-#define G__CINTVERSIONSTR_V6  "6.1.18, February 9, 2007"
-#define G__CINTVERSION_V5      50160018
-#define G__CINTVERSIONSTR_V5  "5.16.18, February 9, 2007"
+#define G__CINTVERSION_V6      60010019
+#define G__CINTVERSIONSTR_V6  "6.1.19, March 16, 2007"
+#define G__CINTVERSION_V5      50160019
+#define G__CINTVERSIONSTR_V5  "5.16.19, March 16, 2007"
 
 #define G__ALWAYS
 /* #define G__NEVER */
@@ -1708,6 +1708,7 @@ extern G__EXPORT long G__gettempbufpointer G__P((void));
 extern G__EXPORT void G__setsizep2memfunc G__P((int sizep2memfunc));
 extern G__EXPORT int G__getsizep2memfunc G__P((void));
 extern G__EXPORT int G__get_linked_tagnum G__P((G__linked_taginfo *p));
+extern G__EXPORT int G__get_linked_tagnum_fwd G__P((G__linked_taginfo *p));
 extern G__EXPORT int G__tagtable_setup G__P((int tagnum,int size,int cpplink,int isabstract,G__CONST char *comment,G__incsetup setup_memvar,G__incsetup setup_memfunc));
 extern G__EXPORT int G__search_tagname G__P((G__CONST char *tagname,int type));
 extern G__EXPORT int G__search_typename G__P((G__CONST char *typenamein,int typein,int tagnum,int reftype));
@@ -1898,6 +1899,7 @@ extern G__EXPORT int G__sizeof (G__value *object);
 #ifdef _WIN32
 extern G__EXPORT FILE *FOpenAndSleep(const char *filename, const char *mode);
 #endif
+extern G__EXPORT struct G__ifunc_table_internal *G__get_ifunc_internal(struct G__ifunc_table* iref);
 
 #else /* G__MULTITHREADLIBCINT */
 
