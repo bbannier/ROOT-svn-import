@@ -302,6 +302,11 @@ int G__blockscope::compile_core(int openBrace) {
 G__value G__blockscope::compile_expression(string& expr) {
   char *buf = new char[expr.size()+1];
   strcpy(buf,expr.c_str());
+  if(expr.size()>G__LONGLINE) {
+    G__fprinterr(G__serr,"Limitation: Expression is too long %d>%d %s "
+	         ,expr.size(),G__LONGLINE,buf);
+    G__genericerror((char*)NULL);
+  }
   G__blockscope *store_scope = G__currentscope;
   int store_var_type = G__var_type;
   G__var_type = 'p';
@@ -345,6 +350,11 @@ int G__blockscope::getstaticvalue(string& expr) {
   int store_no_exec_compile = G__no_exec_compile;
   char *buf = new char[expr.size()+1];
   strcpy(buf,expr.c_str());
+  if(expr.size()>G__LONGLINE) {
+    G__fprinterr(G__serr,"Limitation: Expression is too long %d>%d %s "
+	         ,expr.size(),G__LONGLINE,buf);
+    G__genericerror((char*)NULL);
+  }
   G__asm_noverflow = 0;
   G__no_exec_compile = 0;
   int result = G__int(G__getexpr(buf)); // legacy
@@ -1925,7 +1935,7 @@ int G__blockscope::initscalarary(G__TypeReader& /*type*/, struct G__var_array* v
     num_of_elements = 0;
   }
   // Load the address of the first element of the array as a pointer.
-  int num_of_dimensions = var->paran[ig15];
+  const short num_of_dimensions = var->paran[ig15];
   for (int j = 0; j < num_of_dimensions; ++j) {
     m_bc_inst.LD(0);
   }
@@ -2542,6 +2552,11 @@ int G__blockscope::compile_preprocessor(string& token,int c) {
 int G__blockscope::Istypename(const string& name) {
   char *buf = new char[name.size()+1];
   strcpy(buf,name.c_str());
+  if(name.size()>G__MAXNAME) {
+    G__fprinterr(G__serr,"Limitation: Symbol name is too long %d>%d %s "
+	         ,name.size(),G__MAXNAME,buf);
+    G__genericerror((char*)NULL);
+  }
   int result=G__istypename(buf); // legacy
   delete buf;
  return(result);

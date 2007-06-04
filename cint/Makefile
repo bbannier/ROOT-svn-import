@@ -19,6 +19,7 @@ MAINO	      = main/G__cppmain$(G__CFG_OBJEXT)
 CINTLIB       = libcint$(G__CFG_SOEXT)
 CINTLIBSTATIC = libcint$(G__CFG_LIBEXT)
 CONFIGCINTH   = inc/configcint.h
+export CINTSYSDIR:=$(shell $(G__CFG_MANGLEPATHS) $(PWD))
 
 # don't build qt.cintdll gl.cintdll by default
 ALLDLLS = dll_stl.cintdll stdstrct.cintdll
@@ -33,16 +34,17 @@ endif
 # Generate ios enum value specific to the platform
 ##############################################################
 include/iosenum.h : cint$(G__CFG_EXEEXT) include/stdio.h makecint$(G__CFG_EXEEXT) include/iosenum.cxx
-	@(if test -r include/iosenum.h; \
+	@(if test -r $@; \
 	then \
-		touch include/iosenum.h; \
+		touch $@; \
 	else \
-		(echo Generating iosenum.h. This might take a while...; \
-		cd include;$(G__CFG_RM) stdfunc$(G__CFG_SOEXT); cd ..\
+		(echo Generating $@. This might take a while...; \
+		$(G__CFG_RM) include/stdfunc$(G__CFG_SOEXT);\
 		unset VS_UNICODE_OUTPUT; \
 		LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:. \
 		DYLD_LIBRARY_PATH=$$DYLD_LIBRARY_PATH:. \
-		./cint$(G__CFG_EXEEXT) $(G__CFG_INCP)inc iosenum.cxx); \
+		./cint$(G__CFG_EXEEXT) $(G__CFG_INCP)inc iosenum.cxx;\
+		mv -f iosenum.h $@); \
 	fi)
 	@echo > done
 

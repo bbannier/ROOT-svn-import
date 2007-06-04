@@ -1548,7 +1548,7 @@ static void G__create_input_tmpfile(G__input_file& ftemp) {
    ftemp.fp = fopen(ftemp.name, "w+bTD"); // write and read (but write first), binary, temp, and delete when closed
 #else
    ftemp.fp = tmpfile();
-   strcmp(ftemp.name, "(tmpfile)");
+   strcpy(ftemp.name, "(tmpfile)");
 #endif
 }
 
@@ -1586,7 +1586,8 @@ int G__process_cmd(char *line,char *prompt,int *more,int *err
   static char tname[L_tmpnam+10];
   char sname[L_tmpnam+10];
 #endif
-  static struct G__input_file ftemp;
+  struct G__input_file ftemp;
+  ftemp.fp = 0;
 
   /* struct G__ifunc_table *ifunc; */
 

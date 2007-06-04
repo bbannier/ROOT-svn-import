@@ -1491,10 +1491,11 @@ G__value G__getfunction_libp(char *item,char *funcname
         G__asm_inst[G__asm_cp+2]=hash;
         G__asm_inst[G__asm_cp+3]=libp->paran;
         G__asm_inst[G__asm_cp+4]=(long)G__compiled_func;
+        G__asm_inst[G__asm_cp+5]=0; // cos() doesn't have "this->"
         if(G__asm_name_p+strlen(funcname)+1<G__ASM_FUNCNAMEBUF) {
           strcpy(G__asm_name+G__asm_name_p,funcname);
           G__asm_name_p += strlen(funcname)+1;
-          G__inc_cp_asm(5,0);
+          G__inc_cp_asm(6,0);
         }
         else {
           G__abortbytecode();
@@ -1550,10 +1551,11 @@ G__value G__getfunction_libp(char *item,char *funcname
         G__asm_inst[G__asm_cp+2]=hash;
         G__asm_inst[G__asm_cp+3]=libp->paran;
         G__asm_inst[G__asm_cp+4]=(long)G__library_func;
+        G__asm_inst[G__asm_cp+5]=0;
         if(G__asm_name_p+strlen(funcname)+1<G__ASM_FUNCNAMEBUF) {
           strcpy(G__asm_name+G__asm_name_p,funcname);
           G__asm_name_p += strlen(funcname)+1;
-          G__inc_cp_asm(5,0);
+          G__inc_cp_asm(6,0);
         }
         else {
           G__abortbytecode();
@@ -2262,7 +2264,16 @@ G__value G__getfunction(char *item,int *known3,int memfunc_flag)
   }
 
   if(castflag==1&&0==funcname[0] /* &&overflowflag */) {
-    result3=G__getexpr(result7);
+#ifndef G__OLDIMPLEMENTATION
+    if(fpara.paran==1 && strcmp(fpara.parameter[0],"@")==0) {
+      result3=fpara.para[0];
+    }
+    else {
+      result3=G__getexpr(result7); 
+    }
+#else
+    result3=G__getexpr(result7); /* THIS CAN BE DUPLICATED EVALUATION */
+#endif
     *known3 = 1;
     return(result3);
   }
@@ -2870,10 +2881,11 @@ G__value G__getfunction(char *item,int *known3,int memfunc_flag)
         G__asm_inst[G__asm_cp+2]=hash;
         G__asm_inst[G__asm_cp+3]=fpara.paran;
         G__asm_inst[G__asm_cp+4]=(long)G__compiled_func;
+        G__asm_inst[G__asm_cp+5]=0;
         if(G__asm_name_p+strlen(funcname)+1<G__ASM_FUNCNAMEBUF) {
           strcpy(G__asm_name+G__asm_name_p,funcname);
           G__asm_name_p += strlen(funcname)+1;
-          G__inc_cp_asm(5,0);
+          G__inc_cp_asm(6,0);
         }
         else {
           G__abortbytecode();
@@ -2929,10 +2941,11 @@ G__value G__getfunction(char *item,int *known3,int memfunc_flag)
         G__asm_inst[G__asm_cp+2]=hash;
         G__asm_inst[G__asm_cp+3]=fpara.paran;
         G__asm_inst[G__asm_cp+4]=(long)G__library_func;
+        G__asm_inst[G__asm_cp+5]=0;
         if(G__asm_name_p+strlen(funcname)+1<G__ASM_FUNCNAMEBUF) {
           strcpy(G__asm_name+G__asm_name_p,funcname);
           G__asm_name_p += strlen(funcname)+1;
-          G__inc_cp_asm(5,0);
+          G__inc_cp_asm(6,0);
         }
         else {
           G__abortbytecode();
@@ -3476,10 +3489,11 @@ int G__special_func(G__value *result7,char *funcname,G__param *libp,int hash)
       G__asm_inst[G__asm_cp+2]=hash;
       G__asm_inst[G__asm_cp+3]=1;
       G__asm_inst[G__asm_cp+4]=(long)G__special_func;
+      G__asm_inst[G__asm_cp+5]=0;
       if(G__asm_name_p+strlen(funcname)+1<G__ASM_FUNCNAMEBUF) {
         strcpy(G__asm_name+G__asm_name_p,funcname);
         G__asm_name_p += strlen(funcname)+1;
-        G__inc_cp_asm(5,0);
+        G__inc_cp_asm(6,0);
       }
       else {
         G__abortbytecode();

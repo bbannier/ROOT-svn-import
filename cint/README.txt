@@ -1,11 +1,11 @@
-cint 5.16.19 / 6.1.19         ( CINT is pronounced "C-int" )
+cint 5.16.20 / 6.1.20         ( CINT is pronounced "C-int" )
      | |  |
      | |  +- Patch level (changed almost weekly at each release)
      | +- Minor version  (changed at DLL binary incompatibility)
      +- Major version    (major architecture change)
 
  Author                 Masaharu Goto
- Copyright(c) 1995~2005 Masaharu Goto (gotom@hanno.jp)
+ Copyright(c) 1995~2007 Masaharu Goto (gotom@hanno.jp)
  Mailing list           cint@root.cern.ch
 
 

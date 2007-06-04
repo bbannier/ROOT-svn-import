@@ -908,6 +908,10 @@ struct G__funcentry {
              * (void*)NULL if no function body */
   int  line_number; /* -1 if no function body or compiled function */
   short filenum;    /* -1 if compiled function, otherwise interpreted func */
+
+   // Object Pointer Adjustement to call the stub function (entry) 
+   long ptradjust;
+
 #ifdef G__ASM_FUNC
   int size; /* size (number of lines) of function */
 #endif
@@ -954,7 +958,8 @@ struct G__paramfunc {
 };
 struct G__params {
 #ifdef __cplusplus  
-   ~G__params() { delete fparams; }
+   G__params() { fparams = 0; }
+   ~G__params() { free((void*)fparams); }
    struct G__paramfunc* operator[](int idx) {
       if (!fparams) {
          fparams = (struct G__paramfunc*)malloc(sizeof(struct G__paramfunc));
@@ -1141,7 +1146,7 @@ struct G__herit {
 };
 struct G__herits {
 #ifdef __cplusplus
-   ~G__herits() { delete fherits; }
+   ~G__herits() { free((void*)fherits); }
    struct G__herit* operator[](int idx) {
       if (!fherits) {
          fherits = (struct G__herit*)malloc(sizeof(struct G__herit));
@@ -1273,8 +1278,12 @@ struct G__tagtable {
 
   struct G__comment_info comment[G__MAXSTRUCT];
 
-  G__incsetup incsetup_memvar[G__MAXSTRUCT];
-  G__incsetup incsetup_memfunc[G__MAXSTRUCT];
+#ifdef __cplusplus
+
+   std::list<G__incsetup> *incsetup_memvar[G__MAXSTRUCT];
+   std::list<G__incsetup> *incsetup_memfunc[G__MAXSTRUCT];
+   
+#endif
 
   char rootflag[G__MAXSTRUCT];
   struct G__RootSpecial *rootspecial[G__MAXSTRUCT];

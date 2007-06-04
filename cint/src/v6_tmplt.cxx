@@ -14,6 +14,7 @@
  ************************************************************************/
 
 #include "common.h"
+#include <string>
 
 extern "C" {
 
@@ -462,25 +463,23 @@ struct G__Templatearg *G__read_formal_templatearg()
 **************************************************************************/
 struct G__Templatearg *G__read_specializationarg(char *source)
 {
-  struct G__Templatearg *targ=NULL;
-  struct G__Templatearg *p=NULL;
+  struct G__Templatearg *targ=0;
+  struct G__Templatearg *p=0;
   char type[G__MAXNAME];
-  /* int c; */
+  bool done = false;
   int i,j,nest;
-  int stat=1;
   int isrc=0;
   int len;
 
   do {
 
     /* allocate entry of template argument list */
-    if(stat) {
+    if(!p) {
       p = (struct G__Templatearg *)malloc(sizeof(struct G__Templatearg));
       p->next = (struct G__Templatearg *)NULL;
       p->default_parameter=(char*)NULL;
       /* store entry of the template argument list */
       targ = p;
-      stat=0;
     }
     else {
       p->next = (struct G__Templatearg *)malloc(sizeof(struct G__Templatearg));
@@ -493,16 +492,16 @@ struct G__Templatearg *G__read_specializationarg(char *source)
     /*  templatename<T*,E,int> ...
      *                ^                            */
     /* We need to insure to get the real arguments and nothing else! */
-    if(strncmp (source, "const ", strlen("const ")) == 0) {
+    if(strncmp (source+isrc, "const ", strlen("const ")) == 0) {
       p->type |= G__TMPLT_CONSTARG;
-      isrc = strlen("const ");
+      isrc += strlen("const ");
     }
     len = strlen(source);
     for(i=isrc,j=0,nest=0;i<len;++i) {
       switch(source[i]) {
       case '<': ++nest; break;
-      case '>': --nest; if (nest<0) { i=len; continue; } break;
-      case ',': if (nest==0) { i=len; continue; } break;
+      case '>': --nest; if (nest<0) { i=len; done = true; continue; } break;
+      case ',': if (nest==0) { isrc = i+1; i=len; continue; } break;
       }
       type[j++] = source[i];
     }
@@ -543,11 +542,7 @@ struct G__Templatearg *G__read_specializationarg(char *source)
 
     /*  template<T*,E,int> ...
      *              ^                  */
-#ifndef G__OLDIMPLEMENTATION2180
-  } while (0) ;
-#else
-  } while(','==c) ;
-#endif
+  } while (!done) ;
 
   /*  template<T*,E,int> ...
    *                   ^                  */
@@ -622,6 +617,8 @@ static void G__modify_callpara(G__Templatearg *spec_arg
   }
 }
 
+extern int G__const_noerror;
+
 /**************************************************************************
 * G__resolve_specialization(deftmpclass,pcall_para)
 *
@@ -632,19 +629,42 @@ static struct G__Definedtemplateclass *G__resolve_specialization(char *arg
 {
   struct G__Definedtemplateclass *spec = deftmpclass->specialization;
   struct G__Templatearg *call_arg = G__read_specializationarg(arg);
+  struct G__Templatearg *def_para;
   struct G__Templatearg *pcall_arg ;
   struct G__Templatearg *spec_arg;
   int match;
   struct G__Definedtemplateclass *bestmatch = deftmpclass;
   int best = 0;
+  std::string buf(0,0);
+  buf.reserve(1024);
 
   while(spec->next) {
     match = 0;
     spec_arg = spec->spec_arg;
     pcall_arg = call_arg;
+    def_para = deftmpclass->def_para;
     while(spec_arg && pcall_arg) {
-      if(spec_arg->type==pcall_arg->type) match+=10;
-      else {
+      if(spec_arg->type==pcall_arg->type) {
+        match+=10;
+        if ((def_para->type & 0xff) != G__TMPLT_CLASSARG) {
+           // Values must match.
+           buf = "(";
+           buf += spec_arg->string;
+           buf += ") != (";
+           buf += pcall_arg->string;
+           buf += ")";
+           int old = G__const_noerror;
+           G__const_noerror = 1;
+           if ( G__bool(G__getexpr( (char*)buf.c_str() ) ) ) {
+              if (G__security_error) {
+                 G__security_error = 0;
+              } else {
+                 match = 0;
+              }
+           }
+           G__const_noerror = old;
+        }
+      } else {
         int spec_p = spec_arg->type & G__TMPLT_POINTERARGMASK;
         int call_p = call_arg->type & G__TMPLT_POINTERARGMASK;
         int spec_r = spec_arg->type & G__TMPLT_REFERENCEARG;
@@ -669,6 +689,7 @@ static struct G__Definedtemplateclass *G__resolve_specialization(char *arg
       }
       spec_arg = spec_arg->next;
       pcall_arg = pcall_arg->next;
+      def_para = def_para->next;
     }
     if(match>best) {
       bestmatch = spec;
@@ -1521,7 +1542,8 @@ void G__declare_template()
     }
     */
   }
- /* template<...> X() in class context could be a ctor. */
+  // template<...> X() in class context could be a ctor.
+  // template<...> X::X() outside class handled below
   else if (c == '(' && G__def_struct_member && G__tagdefining >= 0 &&
            strcmp (temp, G__struct.name[G__tagdefining]) == 0)
   {
@@ -1532,11 +1554,28 @@ void G__declare_template()
   else if(isspace(c) && strcmp(temp,"operator")==0) {
     temp[8] = ' ';
     c=G__fgetname_template(temp+9,"(");
-  }
-  else { /* if('<'==c) */
-    /* template<..> inline|const type A<T,S>::f() { ... }
-     * template<..> inline|const type f(T a,S b) { ... }
-     *                               ^              */
+  } 
+  else if (c == '(' && strstr(temp,"::")) {
+     // template<..> inline A::A(T a,S b) { ... }
+     //                          ^
+     std::string classname(temp);
+     size_t posLastScope = std::string::npos;
+     
+     for (size_t posScope = classname.find("::"); 
+          posScope != std::string::npos; 
+          posScope = classname.find("::", posScope + 2))
+        posLastScope = posScope;
+     std::string funcname(classname.substr(posLastScope + 2));
+     if (classname.compare(posLastScope - funcname.length(), funcname.length(), funcname) != 0) {
+        G__fprinterr(G__serr,"Error: expected templated constructor, got a templated function with a return type containing a '(': %s\n", temp);
+        // try to ignore it...
+     } else {
+        // do nothing, just like for the in-class case.
+     } // c'tor?
+  } else { /* if('<'==c) */
+    // template<..> inline|const type A<T,S>::f() { ... }
+    // template<..> inline|const type  f(T a,S b) { ... }
+    //                               ^
     do {
       c=G__fgetname_template(temp,"(<&*");
       if(strcmp(temp,"operator")==0) {
@@ -3313,6 +3352,12 @@ int G__createtemplatefunc(char *funcname,G__Templatearg *targ
   /**************************************************************
   * Parse template function parameter information
   **************************************************************/
+
+  int store_def_tagnum = G__def_tagnum;
+  int store_tagdefining = G__tagdefining;
+  G__def_tagnum = deftmpfunc->parent_tagnum; // for A::f(B) where B is A::B
+  G__tagdefining = G__def_tagnum;
+
   /*  template<class T,class E> type func(T a,E b,int a) {
    *                                      ^   */
   deftmpfunc->func_para.paran = tmp = 0;
@@ -3549,6 +3594,9 @@ int G__createtemplatefunc(char *funcname,G__Templatearg *targ
     ++tmp;
     deftmpfunc->func_para.paran = tmp;
   }
+
+   G__def_tagnum = store_def_tagnum;
+   G__tagdefining = store_tagdefining;
 
   /*Hack by Scott Snyder: try not to gag on forward decl of template memfunc*/
   {

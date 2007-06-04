@@ -14,6 +14,7 @@
  ************************************************************************/
 
 #include "common.h"
+#include "bc_exec.h"
 
 extern "C" {
 
@@ -98,7 +99,7 @@ void G__arrayindexerror(int varid, G__var_array* var, char* name, int index)
   if (num_of_elements) {
     G__fprinterr(G__serr, "[%d]", (num_of_elements / stride) - 1);
   }
-  const int num_of_dimensions = var->paran[varid];
+  const short num_of_dimensions = var->paran[varid];
   for (int j = 2; j <= num_of_dimensions; ++j) {
     G__fprinterr(G__serr, "[%d]", var->varlabel[varid][j] - 1);
   }
