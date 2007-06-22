@@ -393,9 +393,11 @@ void Sample::print(int i)
    cout << " *Sample::print(i)* Error : Dimension less than " << i << endl;
  }
  else {
+   int oldprecision = cout.precision(4);
    cout << " " << the_names[i-1] << " : N = " << the_n;
    cout << " Sum = " << the_sum[i-1] << " Mean = " << the_mean[i-1];
    cout << " Var = " << the_var[i-1] << " Sigma = " << the_sigma[i-1] << endl;
+   cout.precision(oldprecision);
  }
 }
 

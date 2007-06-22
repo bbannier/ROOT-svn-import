@@ -35,7 +35,7 @@ EXPORTS=(ARCH CC CFLAGS CMACROS COMP CPP COUT COUTEXE INCP CXX CXXFLAGS CXXMACRO
     LD LDFLAGS LDOUT LIBP LIBL SOFLAGS SOOUT OBJEXT EXEEXT \
     SOEXT LIBEXT IMPLIBEXT DEBUG DEFAULTLIBS CINTEXINCDIR CINTEXLIBDIR REFLEXINCDIR \
     REFLEXLIBDIR MANGLEPATHS STREAMDIR PLATFORMO EXPLLINK \
-    BUILDREADLINE READLINELIB CURSESLIB EXP_READLINELIB EXP_CURSESLIB RM MV PREFIX \
+    READLINELIB CURSESLIB EXP_READLINELIB EXP_CURSESLIB RM MV PREFIX \
     INPUTMODE INPUTMODELOCK AR EXTRACTSYMBOLS MAKEIMPLIB )
 unset ${EXPORTS[*]}
 
@@ -93,7 +93,6 @@ function config_GCC_defaults {
 	STREAMDIR=stream
     fi
 
-    BUILDREADLINE=1
     INPUTMODE=cint
     INPUTMODELOCK=off
 }
@@ -235,7 +234,6 @@ function config_msvc7 {
     MV="mv -f"
     INPUTMODE=cint
     INPUTMODELOCK=off
-    BUILDREADLINE=
 
     AR="lib /OUT:"
 }
@@ -412,9 +410,8 @@ function processflag_cintex_libdir {
     CINTEXLIBDIR=$1
 }
 
-function processflag_readlinelib {
+function processflag_readline {
     READLINELIB=$1
-    BUILDREADLINE=
 }
 
 # process options
@@ -500,11 +497,10 @@ if [ "$REFLEXLIBDIR" != "" -a "$CINTEXLIBDIR" = "" ]; then
 	echo Setting cintex-incdir=$REFLEXLIBDIR
 fi
 
-if [ "$READLINELIB" = "" -a "$BUILDREADLINE" != "" ]; then
+if [ "$READLINELIB" = "" ]; then
     for d in $EXTRA_LIB_DIR /usr/local/lib /usr/lib /sw/lib; do 
         if [ -f ${d}/libreadline$LIBEXT ]; then
             READLINELIB=$d/libreadline$LIBEXT
-            BUILDREADLINE=
             break
         fi
     done
@@ -512,11 +508,7 @@ if [ "$READLINELIB" = "" -a "$BUILDREADLINE" != "" ]; then
          EXP_READLINELIB=$READLINELIB
     fi
 fi
-# want readline?
-if [ "$BUILDREADLINE" != "" ]; then
-    READLINELIB=readline/libreadline$LIBEXT
-fi    
-if [ "$READLINELIB" != "" -o "$BUILDREADLINE" != "" ]; then
+if [ "$READLINELIB" != "" ]; then
     CXXFLAGS="$CXXFLAGS -DG__GNUREADLINE"
     echo "Using $READLINELIB"
 

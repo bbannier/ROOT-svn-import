@@ -18,6 +18,7 @@
 
 
 #include "common.h"
+#include "v6_value.h"
 #include "dllrev.h"
 #include "Api.h"
 #include <stack>
@@ -144,6 +145,7 @@ static int G__privateaccess = 0;
 
       struct G__ifunc_table_internal *G__incset_p_ifunc;
       int G__incset_tagnum;
+
       int G__incset_func_now;
       int G__incset_func_page;
       struct G__var_array *G__incset_p_local;
@@ -4053,16 +4055,11 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
 *           NOT NULL Method Found. Method's ifunc table pointer
 **************************************************************************/
 
-G__ifunc_table_internal* G__method_inbase(int ifn, G__ifunc_table_internal *ifunc)
+int G__method_inbase(int ifn, G__ifunc_table_internal *ifunc)
 {
 
    // tagnum's Base Classes structure
    G__inheritance* cbases = G__struct.baseclass[ifunc->tagnum];
-
-   // if Method 'ifn' exists in any Base Class -> base not null
-   G__ifunc_table_internal* found = 0;
-
-  int base=0;
 
    // If there are still base classes
    if (cbases){
@@ -4077,18 +4074,36 @@ G__ifunc_table_internal* G__method_inbase(int ifn, G__ifunc_table_internal *ifun
         G__ifunc_table_internal * ifunct = G__struct.memfunc[basetagnum];
 
         // Continue if there are still ifuncs and the method 'ifn' is not found yet
-        while(ifunct&&!found){
+        if (ifunct){
+
+           int base=-1;
 
            // Does the Method 'ifn' (in ifunc) exist in the current ifunct?
-           found = G__ifunc_exist(ifunc, ifn, ifunct, &base, 0xffff);
+           ifunct = G__ifunc_exist(ifunc, ifn, ifunct, &base, 0xffff);
 
-           // Next ifunct
-           ifunct=ifunct->next;
+	   //If the number of default parameters numbers is different between the base and the derived
+	   //class we generete the stub
+	   if (base!=-1 && ifunct){
+	     int derived_def_n = -1;
+	     
+	     // Counting derived class default parameters
+	     for(int i = ifunc->para_nu[ifn] - 1; i >= 0; --i)
+	       if (ifunc->param[ifn][i]->def)
+		 derived_def_n = i;
+               else break;
+	    
+	     //Counting base class default parameters
+	     if (derived_def_n != -1
+                 && !ifunct->param[base][derived_def_n]->def)
+	       return 0;
+
+             return 1;
+	   }
         }
      }
    }
 
-   return found;
+   return 0;
 }
 
 /**************************************************************************
@@ -4439,7 +4454,7 @@ int G__cppif_returntype(FILE *fp, int ifn, G__ifunc_table_internal *ifunc, char 
         }
         break;
       default:
-        sprintf(endoffunc, ";\n%s   result7->ref = (long) (&obj);\n%s   result7->obj.i = (long) (obj);\n%s}", indent, indent, indent);
+        sprintf(endoffunc, ";\n%s   result7->ref = (long) (&obj);\n%s   G__letint(result7, result7->type, (long)obj);\n%s}", indent, indent, indent);
         break;
     }
     return 0;
@@ -6547,11 +6562,11 @@ void G__cpplink_func(FILE *fp)
 char G__incsetup_exist(std::list<G__incsetup> *incsetuplist, G__incsetup incsetup)
 {
 
+   if(incsetuplist->empty()) return 0;
    std::list<G__incsetup>::iterator iter;
-   if(incsetuplist->size())
-      for (iter=incsetuplist->begin(); iter != incsetuplist->end(); ++iter)
-         if (*iter==incsetup)
-            return 1;
+   for (iter=incsetuplist->begin(); iter != incsetuplist->end(); ++iter)
+      if (*iter==incsetup)
+         return 1;
 
    return 0;
 }
@@ -6573,7 +6588,6 @@ int G__tagtable_setup(int tagnum,int size,int cpplink,int isabstract,const char 
   char buf[G__ONELINE];
 #endif
 
-  // DIEGO
   if (G__struct.incsetup_memvar[tagnum]==0)
      G__struct.incsetup_memvar[tagnum] = new std::list<G__incsetup>();
   
@@ -6631,9 +6645,9 @@ int G__tagtable_setup(int tagnum,int size,int cpplink,int isabstract,const char 
          if (setup_memvar&&!found)
             G__struct.incsetup_memvar[tagnum]->push_back(setup_memvar);
      }
-     else
-         G__struct.incsetup_memvar[tagnum]->clear();
-
+     //  else
+     // G__struct.incsetup_memvar[tagnum]->clear();
+   
   if(
 #ifndef G__OLDIMPLEMENTATION2027
      1==G__struct.memfunc[tagnum]->allifunc
@@ -6652,9 +6666,7 @@ int G__tagtable_setup(int tagnum,int size,int cpplink,int isabstract,const char 
      found = G__incsetup_exist(G__struct.incsetup_memfunc[tagnum], setup_memfunc);
      if (setup_memfunc&&!found)
         G__struct.incsetup_memfunc[tagnum]->push_back(setup_memfunc);
-     else
-        G__struct.incsetup_memfunc[tagnum]->clear();
-        }
+  }
   /* add template names */
 #ifndef G__OLDIMPLEMENTATION1823
   if(strlen(G__struct.name[tagnum])>G__BUFLEN-10) {
@@ -7011,10 +7023,7 @@ int G__memfunc_setup(const char *funcname,int hash,G__InterfaceMethod funcp
      if (cbases){
 
         // Ifunc Method's index in the base class
-        int base = 0;
-
-        // if Method 'ifn' exists in any Base Class -> base not null
-        G__ifunc_table_internal* found = 0;
+        int base = -1;
 
         // Stub function pointer
         void * basefuncp = 0;
@@ -7023,7 +7032,7 @@ int G__memfunc_setup(const char *funcname,int hash,G__InterfaceMethod funcp
         for (int idx=0; (idx < cbases->basen)&&(!basefuncp); ++idx){
 
            // Current tagnum
-           int basetagnum=cbases->herit[idx]->basetagnum;
+           int basetagnum = cbases->herit[idx]->basetagnum;
 
            // Warning: Global G__p_ifunc is modified in G__incsetup_memfunc
            // We save and later we restore the G__p_ifunc's value
@@ -7039,10 +7048,10 @@ int G__memfunc_setup(const char *funcname,int hash,G__InterfaceMethod funcp
            G__ifunc_table_internal* ifunct = G__struct.memfunc[basetagnum];
 
            // Look for the method in the base class
-           found = G__ifunc_exist(G__p_ifunc, G__func_now, ifunct, &base, 0xffff); 
+           G__ifunc_table_internal* found = G__ifunc_exist(G__p_ifunc, G__func_now, ifunct, &base, 0xffff); 
 
            // Method found
-           if(found){
+           if((base!=-1)&&found){
 
               // Method's stub pointer
               basefuncp = found->entry[base].p;
@@ -8697,11 +8706,9 @@ void G__incsetup_memvar(int tagnum)
   int store_static_alloc = G__static_alloc;
   int store_constvar = G__constvar;
 
-  // DIEGO 
-  if (G__struct.incsetup_memvar[tagnum]==0)
-     G__struct.incsetup_memvar[tagnum] = new std::list<G__incsetup>();
+  if (G__struct.incsetup_memvar[tagnum]==0) return;
   
-  if(G__struct.incsetup_memvar[tagnum]->size()) {
+  if(!G__struct.incsetup_memvar[tagnum]->empty()) {
     store_asm_exec = G__asm_exec;
     G__asm_exec=0;
     store_var_type = G__var_type;
@@ -8725,18 +8732,16 @@ void G__incsetup_memvar(int tagnum)
 
        // G__setup_memvarXXX execution
        std::list<G__incsetup>::iterator iter;
-       if(G__struct.incsetup_memvar[tagnum]->size())
-          for (iter=G__struct.incsetup_memvar[tagnum]->begin(); iter != G__struct.incsetup_memvar[tagnum]->end(); iter ++)
-        (*iter)();
+       for (iter=G__struct.incsetup_memvar[tagnum]->begin(); iter != G__struct.incsetup_memvar[tagnum]->end(); iter ++)
+          (*iter)();
     }
     
 #else
  
     // G__setup_memvarXXX execution
     std::list<G__incsetup>::iterator iter;
-       if(G__struct.incsetup_memvar[tagnum]->size())
-          for (iter=G__struct.incsetup_memvar[tagnum]->begin(); iter != G__struct.incsetup_memvar[tagnum]->end(); iter ++)
-             (*iter)();
+    for (iter=G__struct.incsetup_memvar[tagnum]->begin(); iter != G__struct.incsetup_memvar[tagnum]->end(); iter ++)
+       (*iter)();
 #endif
        // The G__setup_memvarXXX functions have been executed. We don't need the pointers anymore. We clean the list
        G__struct.incsetup_memvar[tagnum]->clear();
@@ -8765,11 +8770,9 @@ void G__incsetup_memfunc(int tagnum)
   char store_var_type;
   int store_asm_exec;
 
-   // DIEGO 
-   if (G__struct.incsetup_memfunc[tagnum]==0)
-     G__struct.incsetup_memfunc[tagnum] = new std::list<G__incsetup>();
+  if (G__struct.incsetup_memfunc[tagnum]==0) return;
 
-  if(G__struct.incsetup_memfunc[tagnum]->size()) {
+  if(!G__struct.incsetup_memfunc[tagnum]->empty()) {
     store_asm_exec = G__asm_exec;
     G__asm_exec=0;
     store_var_type = G__var_type;
@@ -8795,18 +8798,15 @@ void G__incsetup_memfunc(int tagnum)
 
         // G__setup_memfuncXXX execution
        std::list<G__incsetup>::iterator iter;
-       if(G__struct.incsetup_memfunc[tagnum]->size())
-          for (iter=G__struct.incsetup_memfunc[tagnum]->begin(); iter != G__struct.incsetup_memfunc[tagnum]->end(); iter ++)
-        (*iter)();
+       for (iter=G__struct.incsetup_memfunc[tagnum]->begin(); iter != G__struct.incsetup_memfunc[tagnum]->end(); iter ++)
+          (*iter)();
     }
 
 #else
      // G__setup_memfuncXXX execution
     std::list<G__incsetup>::iterator iter;
-    if(G__struct.incsetup_memfunc[tagnum]->size()){
-       for (iter=G__struct.incsetup_memfunc[tagnum]->begin(); iter != G__struct.incsetup_memfunc[tagnum]->end(); iter ++)
-          (*iter)();
-    }
+    for (iter=G__struct.incsetup_memfunc[tagnum]->begin(); iter != G__struct.incsetup_memfunc[tagnum]->end(); iter ++)
+       (*iter)();
  
 #endif
     // The G__setup_memfuncXXX functions have been executed. We don't need the pointers anymore. We clean the list
@@ -9243,233 +9243,32 @@ int G__get_no_exec_compile()
 #endif /* G__WILDCARD */
 
 /* #ifndef G__OLDIMPLEMENTATION1167 */
-/**************************************************************************
-* G__Charref()
-**************************************************************************/
-char* G__Charref(G__value *buf)
+
+} // extern "C"
+template <typename T>
+inline T* G__refT(G__value* buf)
 {
-  if('c'==buf->type && buf->ref)
-    return((char*)buf->ref);
-  else if('d'==buf->type || 'f'==buf->type)
-    buf->obj.ch = (char)buf->obj.d;
-  else
-    buf->obj.ch = (char)buf->obj.i;
-  return(&buf->obj.ch);
+   if (buf->type == G__gettypechar<T>() && buf->ref)
+      return (T*)buf->ref;
+   G__setvalue(buf, G__convertT<T>(buf));
+   return &G__value_ref<T>(*buf);
 }
 
-/**************************************************************************
-* G__Shortref()
-**************************************************************************/
-short* G__Shortref(G__value *buf)
-{
-  if('s'==buf->type && buf->ref)
-    return((short*)buf->ref);
-  else if('d'==buf->type || 'f'==buf->type)
-    buf->obj.sh = (short)buf->obj.d;
-  else
-    buf->obj.sh = (short)buf->obj.i;
-  return(&buf->obj.sh);
-}
-
-/**************************************************************************
-* G__Intref()
-**************************************************************************/
-int* G__Intref(G__value *buf)
-{
-  if('i'==buf->type && buf->ref)
-    return((int*)buf->ref);
-  else if('d'==buf->type || 'f'==buf->type)
-    buf->obj.in = (int)buf->obj.d;
-  else
-    buf->obj.in = (int)buf->obj.i;
-  return(&buf->obj.in);
-}
-
-/**************************************************************************
-* G__Longref()
-**************************************************************************/
-long* G__Longref(G__value *buf)
-{
-  if('l'==buf->type && buf->ref)
-    return((long*)buf->ref);
-  else if('d'==buf->type || 'f'==buf->type)
-    buf->obj.i = (long)buf->obj.d;
-  /* else
-    buf->obj.i = (long)buf->obj.i; */
-  return(&buf->obj.i);
-}
-
-/**************************************************************************
-* G__UCharref()
-**************************************************************************/
-unsigned char* G__UCharref(G__value *buf)
-{
-  if('b'==buf->type && buf->ref)
-    return((unsigned char*)buf->ref);
-  else if('d'==buf->type || 'f'==buf->type)
-    buf->obj.uch = (unsigned char)buf->obj.d;
-  else
-    buf->obj.uch = (unsigned char)buf->obj.i;
-  return(&buf->obj.uch);
-}
-
-/**************************************************************************
-* G__Boolref()
-**************************************************************************/
-unsigned char* G__Boolref(G__value *buf)
-{
-#ifdef G__BOOL4BYTE
-  if('g'==buf->type && buf->ref)
-    return((unsigned char*)buf->ref);
-  else if('d'==buf->type || 'f'==buf->type)
-    buf->obj.i = (int)buf->obj.d;
-  else
-    buf->obj.i = (int)buf->obj.i;
-  return((unsigned char*)&buf->obj.i);
-#else
-  if('g'==buf->type && buf->ref)
-    return((unsigned char*)buf->ref);
-  else if('d'==buf->type || 'f'==buf->type)
-    buf->obj.uch = (unsigned char)buf->obj.d;
-  else
-    buf->obj.uch = (unsigned char)buf->obj.i;
-  return(&buf->obj.uch);
-#endif
-}
-
-/**************************************************************************
-* G__UShortref()
-**************************************************************************/
-unsigned short* G__UShortref(G__value *buf)
-{
-  if('r'==buf->type && buf->ref)
-    return((unsigned short*)buf->ref);
-  else if('d'==buf->type || 'f'==buf->type)
-    buf->obj.ush = (unsigned short)buf->obj.d;
-  else
-    buf->obj.ush = (unsigned short)buf->obj.i;
-  return(&buf->obj.ush);
-}
-
-/**************************************************************************
-* G__UIntref()
-**************************************************************************/
-unsigned int* G__UIntref(G__value *buf)
-{
-  if('h'==buf->type && buf->ref)
-    return((unsigned int*)buf->ref);
-  else if('d'==buf->type || 'f'==buf->type)
-    buf->obj.uin = (unsigned int)buf->obj.d;
-  /* else
-    buf->obj.uin = (unsigned int)buf->obj.i; */
-  return(&buf->obj.uin);
-}
-
-/**************************************************************************
-* G__ULongref()
-**************************************************************************/
-unsigned long* G__ULongref(G__value *buf)
-{
-  if('k'==buf->type && buf->ref)
-    return((unsigned long*)buf->ref);
-  else if('d'==buf->type || 'f'==buf->type)
-    buf->obj.ulo = (unsigned long)buf->obj.d;
-  /* else
-    buf->obj.ulo = (unsigned long)buf->obj.i; */
-  return(&buf->obj.ulo);
-}
-
-/**************************************************************************
-* G__Floatref()
-**************************************************************************/
-float* G__Floatref(G__value *buf)
-{
-  if('f'==buf->type && buf->ref) {
-    return((float*)buf->ref);
-  }
-  else if('d'==buf->type || 'f'==buf->type)
-    buf->obj.fl = (float)buf->obj.d;
-  else
-    buf->obj.fl = (float)buf->obj.i;
-  return(&buf->obj.fl);
-}
-
-/**************************************************************************
-* G__Doubleref()
-**************************************************************************/
-double* G__Doubleref(G__value *buf)
-{
-  if('d'==buf->type && buf->ref)
-    return((double*)buf->ref);
-  else if('d'==buf->type || 'f'==buf->type)
-    return(&buf->obj.d);
-  else
-    buf->obj.d = (double)buf->obj.i;
-  return(&buf->obj.d);
-}
-/* #endif   ON1167 */
-
-/**************************************************************************
-* G__Longlongref()
-**************************************************************************/
-G__int64* G__Longlongref(G__value *buf)
-{
-  if('n'==buf->type && buf->ref)
-    return((G__int64*)buf->ref);
-  else if('m'==buf->type && buf->ref)
-    buf->obj.ll = (G__int64)buf->obj.ull;
-  else if('d'==buf->type || 'f'==buf->type)
-    buf->obj.ll = (G__int64)buf->obj.d;
-  else if('n'==buf->type)
-    buf->obj.ll = (G__int64)buf->obj.ll;
-  else if('m'==buf->type)
-    buf->obj.ll = (G__int64)buf->obj.ull;
-  else
-    buf->obj.ll = (G__int64)buf->obj.i;
-  return(&buf->obj.ll);
-}
-/**************************************************************************
-* G__ULonglongref()
-**************************************************************************/
-G__uint64* G__ULonglongref(G__value *buf)
-{
-  if('m'==buf->type && buf->ref)
-    return((G__uint64*)buf->ref);
-  else if('n'==buf->type && buf->ref)
-    buf->obj.ull = (G__uint64)buf->obj.ll;
-  else if('d'==buf->type || 'f'==buf->type)
-    buf->obj.ull = (G__uint64)buf->obj.d;
-  else if('n'==buf->type)
-    buf->obj.ull = (G__int64)buf->obj.ll;
-  else if('m'==buf->type)
-    buf->obj.ull = (G__int64)buf->obj.ull;
-  else
-    buf->obj.ull = (G__uint64)buf->obj.i;
-  return(&buf->obj.ull);
-}
-/**************************************************************************
-* G__Longdoubleref()
-**************************************************************************/
-long double* G__Longdoubleref(G__value *buf)
-{
-  if('q'==buf->type && buf->ref)
-    return((long double*)buf->ref);
-  else if('n'==buf->type)
-    buf->obj.ld = (long double)buf->obj.ll;
-  else if('m'==buf->type) {
-#ifdef G__WIN32
-    buf->obj.ld = (long double)buf->obj.ll;
-#else
-    buf->obj.ld = (long double)buf->obj.ull;
-#endif
-  }
-  else if('d'==buf->type || 'f'==buf->type)
-    buf->obj.ld = (long double)buf->obj.d;
-  else
-    buf->obj.ld = (long double)buf->obj.i;
-  return(&buf->obj.ld);
-}
-
+extern "C" {
+char* G__Charref(G__value *buf) {return G__refT<char>(buf);}
+short* G__Shortref(G__value *buf) {return G__refT<short>(buf);}
+int* G__Intref(G__value *buf) {return G__refT<int>(buf);}
+long* G__Longref(G__value *buf) {return G__refT<long>(buf);}
+unsigned char* G__UCharref(G__value *buf) {return G__refT<unsigned char>(buf);}
+unsigned char* G__Boolref(G__value *buf) {return (unsigned char*)G__refT<bool>(buf);}
+unsigned short* G__UShortref(G__value *buf) {return G__refT<unsigned short>(buf);}
+unsigned int* G__UIntref(G__value *buf) {return G__refT<unsigned int>(buf);}
+unsigned long* G__ULongref(G__value *buf) {return G__refT<unsigned long>(buf);}
+float* G__Floatref(G__value *buf) {return G__refT<float>(buf);}
+double* G__Doubleref(G__value *buf) {return G__refT<double>(buf);}
+G__int64* G__Longlongref(G__value *buf) {return G__refT<G__int64>(buf);}
+G__uint64* G__ULonglongref(G__value *buf) {return G__refT<G__uint64>(buf);}
+long double* G__Longdoubleref(G__value *buf) {return G__refT<long double>(buf);}
 
 
 /**************************************************************************

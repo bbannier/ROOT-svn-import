@@ -201,13 +201,24 @@ int diff(const char *title,const char *f1,const char *f2,const char *out
   if(fp)  fclose(fp);
 }
 
+int ediff(const char *title, const char *macro, const char *dfile, const char *compiled = "compiled") {
+
+  FILE *fp = fopen(dfile,"a");
+  fprintf(fp,"%s %s\n",title,macro);
+  fclose(fp);
+
+  char com[4000]; 
+  sprintf(com,"\\diff --old-group-format=\"%s %s:%%c'\\012'%%<\" --new-group-format=\"%s interpreted:%%c'\\012'%%>\" --unchanged-line-format=\"\" --old-line-format=\" %%3dn: %%L\" --new-line-format=\" %%3dn: %%L\" %s interpreted>> %s", title, compiled, title, compiled, dfile);
+  return run(com);
+
+}
 
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
 // compare compiled and interpreted result
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
-void ci(ELanguage lang, const char *sname, const char *dfile, 
+int ci(ELanguage lang, const char *sname, const char *dfile, 
         const char *cflags="", const char *exsname="", const char *cintopt="") {
   if(debug && strcmp(debug,sname)) return;
 
@@ -277,14 +288,18 @@ void ci(ELanguage lang, const char *sname, const char *dfile,
   sprintf(com, "cint %s -Dinterp %s %s %s %s > interpreted", cintoption, cintopt, cflags, exsname, sname);
   run(com);
 
-  diff(sname,"compiled","interpreted",dfile,cflags,"c","i");
-
+  //diff(sname,"compiled","interpreted",dfile,cflags,"c","i");
+  //sprintf(com,"\\diff --old-group-format=\"%s compiled:%%c'\\012'%%<\" --new-group-format=\"%s interpreted:%%c'\\012'%%>\" --unchanged-line-format=\"\" --old-line-format=\" %%3dn: %%L\" --new-line-format=\" %%3dn: %%L\" compiled interpreted>> %s", sname, sname, dfile);
+  //int ret = run(com);
+  int ret = ediff(sname,cflags,dfile);
+  
   //for(int i=0;i<100000;i++) ; // wait for a while
-
+  //\diff  --line-format=' %3dn: %L' --old-group-format="t1134.cxx interpreted:%c'\012'%<" --new-group-format="t1134.cxx compiled:%c'\012'%>" --unchanged-group-format=""  interpreted compiled
 #ifndef DEBUG
   rm("compiled");
   rm("interpreted");
 #endif
+  return ret;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -292,7 +307,7 @@ void ci(ELanguage lang, const char *sname, const char *dfile,
 // compare compiled and interpreted result
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
-void io(const char *sname,const char* old ,const char *dfile
+int io(const char *sname,const char* old ,const char *dfile
 	,const char *macro=""){
 
   if(debug && strcmp(debug,sname)) return;
@@ -304,9 +319,11 @@ void io(const char *sname,const char* old ,const char *dfile
   sprintf(com,"cint %s %s %s > interpreted",cintoption,macro,sname);
   run(com);
 
-  diff(sname,old,"interpreted",dfile,"","o","i");
+  int ret = ediff(sname,"",dfile,old);
+  //diff(sname,old,"interpreted",dfile,"","o","i");
 
   rm("interpreted");
+  return ret;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -343,7 +360,7 @@ void mkc(ELanguage lang,const char *sname,const char *dfile
 // make sure that dictionary can be compiled and program runs
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
-void mkco(ELanguage lang,const char *sname,const char *hname
+int mkco(ELanguage lang,const char *sname,const char *hname
 	  ,const char *old
 	  ,const char *dfile,const char *macro="",const char *src=""
 	  ,const char *cintopt=""){
@@ -370,11 +387,12 @@ void mkco(ELanguage lang,const char *sname,const char *hname
 
   char imacro[500];
   sprintf(imacro,"%s -Dmakecint",macro);
-  io(sname,old,dfile,imacro);
+  int ret = io(sname,old,dfile,imacro);
 
 #ifndef DEBUG
   run("make -f Makefile clean");
 #endif
+  return ret;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -382,11 +400,11 @@ void mkco(ELanguage lang,const char *sname,const char *hname
 // make sure that dictionary can be compiled and program runs
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
-void mkci(ELanguage lang,const char *sname,const char *hname
+int mkci(ELanguage lang,const char *sname,const char *hname
 	  ,const char *dfile,const char *macro="",const char *src=""
 	  ,const char *cintopt=""){
 
-  if(debug && strcmp(debug,sname)) return;
+  if(debug && strcmp(debug,sname)) return 0;
 
   printf("%s\n",sname);
 
@@ -408,11 +426,12 @@ void mkci(ELanguage lang,const char *sname,const char *hname
 
   char imacro[500];
   sprintf(imacro,"%s -Dmakecint",macro);
-  ci(lang,sname,dfile,imacro,"",cintopt);
+  int ret = ci(lang,sname,dfile,imacro,"",cintopt);
 
 #ifndef DEBUG
   run("make -f Makefile clean");
 #endif
+  return ret;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -420,12 +439,12 @@ void mkci(ELanguage lang,const char *sname,const char *hname
 // make sure that dictionary can be compiled and program runs
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
-void mkciN(ELanguage lang,const char *sname
+int mkciN(ELanguage lang,const char *sname
 	   ,const char *hname1,const char *dfile
 	   ,const char *macro=""
 	   ,const char *hname2="",const char *hname3=""){
 
-  if(debug && strcmp(debug,sname)) return;
+  if(debug && strcmp(debug,sname)) return 0;
 
   printf("%s\n",sname);
 
@@ -457,7 +476,7 @@ void mkciN(ELanguage lang,const char *sname
 
   char imacro[500];
   sprintf(imacro,"%s -Dmakecint2",macro);
-  ci(lang,sname,dfile,imacro);
+  int ret = ci(lang,sname,dfile,imacro);
 
 #ifndef DEBUG
   run("make -f Makefile1 clean");
@@ -471,6 +490,8 @@ void mkciN(ELanguage lang,const char *sname
     rm("Makefile3");
   }
 #endif
+
+  return ret;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -512,6 +533,7 @@ int main(int argc,char** argv) {
 
   //signal(SIGINT,stopthis);
 
+  int ret = 0;
   int i;
   for(i=1;i<argc;i++) {
     if(strcmp("-d",argv[i])==0 && !strstr(argv[i+1],".cxx")) 
@@ -539,9 +561,9 @@ int main(int argc,char** argv) {
   int cpp[] = {0, 1, 2, 3, 4, 5, 6, 8, -1};
   testn(kLangCXX,"cpp",cpp,".cxx",difffile);
 
-  ci(kLangCXX,"refassign.cxx",difffile);
-  ci(kLangCXX,"ostream.cxx",difffile);    // cout << pointer
-  ci(kLangCXX,"setw0.cxx",difffile);      // VC++6.0 setbase()
+  ret += ci(kLangCXX,"refassign.cxx",difffile);
+  ret += ci(kLangCXX,"ostream.cxx",difffile);    // cout << pointer
+  ret += ci(kLangCXX,"setw0.cxx",difffile);      // VC++6.0 setbase()
 
   int inherit[] = { 0, 1, 2, -1 };
   testn(kLangCXX,"inherit",inherit,".cxx",difffile);
@@ -552,22 +574,22 @@ int main(int argc,char** argv) {
   int oprovld[] = { 0, 2, -1 };
   testn(kLangCXX,"oprovld",oprovld,".cxx",difffile);
 
-  ci(kLangCXX,"constary.cxx",difffile);
-  ci(kLangCXX,"const.cxx",difffile);
-  ci(kLangCXX,"scope0.cxx",difffile);
-  ci(kLangCXX,"idxscope0.cxx",difffile);
-  ci(kLangCXX,"access0.cxx",difffile);
-  ci(kLangCXX,"staticmem0.cxx",difffile);
-  ci(kLangCXX,"staticmem1.cxx",difffile);
-  ci(kLangCXX,"staticary.cxx",difffile);
-  ci(kLangCXX,"minexam.cxx",difffile);
-  ci(kLangCXX,"btmplt.cxx",difffile);
+  ret += ci(kLangCXX,"constary.cxx",difffile);
+  ret += ci(kLangCXX,"const.cxx",difffile);
+  ret += ci(kLangCXX,"scope0.cxx",difffile);
+  ret += ci(kLangCXX,"idxscope0.cxx",difffile);
+  ret += ci(kLangCXX,"access0.cxx",difffile);
+  ret += ci(kLangCXX,"staticmem0.cxx",difffile);
+  ret += ci(kLangCXX,"staticmem1.cxx",difffile);
+  ret += ci(kLangCXX,"staticary.cxx",difffile);
+  ret += ci(kLangCXX,"minexam.cxx",difffile);
+  ret += ci(kLangCXX,"btmplt.cxx",difffile);
 
   int loopcompile[] = { 1, 2, 3, 4, 5, -1 };
   testn(kLangCXX,"loopcompile",loopcompile,".cxx",difffile);
 
-  ci(kLangCXX,"mfstatic.cxx",difffile);
-  ci(kLangCXX,"new0.cxx",difffile);
+  ret += ci(kLangCXX,"mfstatic.cxx",difffile);
+  ret += ci(kLangCXX,"new0.cxx",difffile);
 
 #if defined(G__MSC_VER)&&(G__MSC_VER<=1200)
   int template[] = { 0, 1, 2, 4, 6, -1 };
@@ -575,277 +597,277 @@ int main(int argc,char** argv) {
   int template[] = { 0, 1, 2, 4, 5, 6, -1 };
 #endif
   testn(kLangCXX,"template",template,".cxx",difffile);
-  io("template3.cxx","template3.old",difffile);
+  ret += io("template3.cxx","template3.old",difffile);
 
-  ci(kLangCXX,"minherit0.cxx",difffile);
-  ci(kLangCXX,"enumscope.cxx",difffile);
-  ci(kLangCXX,"baseconv0.cxx",difffile);
-  ci(kLangCXX,"friend0.cxx",difffile);
-  ci(kLangCXX,"anonunion.cxx",difffile);
-  ci(kLangCXX,"init1.cxx",difffile);
-  ci(kLangCXX,"init2.cxx",difffile);
-  ci(kLangCXX,"include.cxx",difffile);
-  ci(kLangCXX,"eh1.cxx",difffile);
-  ci(kLangCXX,"ifs.cxx",difffile);
-  ci(kLangCXX,"bitfield.cxx",difffile);
-  ci(kLangCXX,"cout1.cxx",difffile);
-  ci(kLangCXX,"longlong.cxx",difffile);
-  ci(kLangCXX,"explicitdtor.cxx",difffile);//fails due to base class dtor
+  ret += ci(kLangCXX,"minherit0.cxx",difffile);
+  ret += ci(kLangCXX,"enumscope.cxx",difffile);
+  ret += ci(kLangCXX,"baseconv0.cxx",difffile);
+  ret += ci(kLangCXX,"friend0.cxx",difffile);
+  ret += ci(kLangCXX,"anonunion.cxx",difffile);
+  ret += ci(kLangCXX,"init1.cxx",difffile);
+  ret += ci(kLangCXX,"init2.cxx",difffile);
+  ret += ci(kLangCXX,"include.cxx",difffile);
+  ret += ci(kLangCXX,"eh1.cxx",difffile);
+  ret += ci(kLangCXX,"ifs.cxx",difffile);
+  ret += ci(kLangCXX,"bitfield.cxx",difffile);
+  ret += ci(kLangCXX,"cout1.cxx",difffile);
+  ret += ci(kLangCXX,"longlong.cxx",difffile);
+  ret += ci(kLangCXX,"explicitdtor.cxx",difffile);//fails due to base class dtor
 
   int nick[] = { 3, 4, -1 };
   testn(kLangCXX,"nick",nick,".cxx",difffile);
 
-  ci(kLangCXX,"nick4.cxx",difffile,"-DDEST");
+  ret += ci(kLangCXX,"nick4.cxx",difffile,"-DDEST");
 
   int telea[] = { 0,1,2,3,5,6,7, -1 };
   testn(kLangCXX,"telea",telea,".cxx",difffile);
 
-  ci(kLangCXX,"fwdtmplt.cxx",difffile);
-  ci(kLangCXX,"VPersonTest.cxx",difffile);
-  ci(kLangCXX,"convopr0.cxx",difffile);
-  ci(kLangCXX,"nstmplt1.cxx",difffile);
-  ci(kLangCXX,"aoki0.cxx",difffile);
-  ci(kLangCXX,"borg1.cxx",difffile);
-  ci(kLangCXX,"borg2.cxx",difffile);
-  ci(kLangCXX,"bruce1.cxx",difffile);
-  ci(kLangCXX,"fons3.cxx",difffile);
-  ci(kLangCXX,"Test0.cxx",difffile,"","MyString.cxx");
-  ci(kLangCXX,"Test1.cxx",difffile,"","Complex.cxx MyString.cxx");
-  ci(kLangCXX,"delete0.cxx",difffile);
-  ci(kLangCXX,"pb19.cxx",difffile);
+  ret += ci(kLangCXX,"fwdtmplt.cxx",difffile);
+  ret += ci(kLangCXX,"VPersonTest.cxx",difffile);
+  ret += ci(kLangCXX,"convopr0.cxx",difffile);
+  ret += ci(kLangCXX,"nstmplt1.cxx",difffile);
+  ret += ci(kLangCXX,"aoki0.cxx",difffile);
+  ret += ci(kLangCXX,"borg1.cxx",difffile);
+  ret += ci(kLangCXX,"borg2.cxx",difffile);
+  ret += ci(kLangCXX,"bruce1.cxx",difffile);
+  ret += ci(kLangCXX,"fons3.cxx",difffile);
+  ret += ci(kLangCXX,"Test0.cxx",difffile,"","MyString.cxx");
+  ret += ci(kLangCXX,"Test1.cxx",difffile,"","Complex.cxx MyString.cxx");
+  ret += ci(kLangCXX,"delete0.cxx",difffile);
+  ret += ci(kLangCXX,"pb19.cxx",difffile);
 
 #ifdef AUTOCC
-  ci(kLangCXX,"autocc.cxx",difffile);
+  ret += ci(kLangCXX,"autocc.cxx",difffile);
   system("rm G__*");
 #endif
 
-  ci(kLangCXX,"maincmplx.cxx",difffile,"","complex1.cxx");
-  ci(kLangCXX,"funcmacro.cxx",difffile); 
+  ret += ci(kLangCXX,"maincmplx.cxx",difffile,"","complex1.cxx");
+  ret += ci(kLangCXX,"funcmacro.cxx",difffile); 
 
-  ci(kLangCXX,"template.cxx",difffile); 
-  mkci(kLangCXX,"template.cxx","template.h",difffile);
+  ret += ci(kLangCXX,"template.cxx",difffile); 
+  ret += mkci(kLangCXX,"template.cxx","template.h",difffile);
 
-  ci(kLangCXX,"vbase.cxx",difffile); 
-  mkci(kLangCXX,"vbase.cxx","vbase.h",difffile);
+  ret += ci(kLangCXX,"vbase.cxx",difffile); 
+  ret += mkci(kLangCXX,"vbase.cxx","vbase.h",difffile);
 
-  ci(kLangCXX,"vbase1.cxx",difffile); 
-  mkci(kLangCXX,"vbase1.cxx","vbase1.h",difffile);
+  ret += ci(kLangCXX,"vbase1.cxx",difffile); 
+  ret += mkci(kLangCXX,"vbase1.cxx","vbase1.h",difffile);
 
   //
   //
   //
 
-  ci(kLangCXX,"t215.cxx",difffile); 
+  ret += ci(kLangCXX,"t215.cxx",difffile); 
 
-  ci(kLangCXX,"t358.cxx",difffile); 
+  ret += ci(kLangCXX,"t358.cxx",difffile); 
 
 
 
-  ci(kLangCXX,"t488.cxx",difffile); 
-  ci(kLangCXX,"t516.cxx",difffile); 
+  ret += ci(kLangCXX,"t488.cxx",difffile); 
+  ret += ci(kLangCXX,"t516.cxx",difffile); 
 
-  ci(kLangCXX,"t603.cxx",difffile);
-  ci(kLangCXX,"t627.cxx",difffile);
-  mkci(kLangCXX,"t627.cxx","t627.h",difffile);
-  ci(kLangCXX,"t630.cxx",difffile);
-  ci(kLangCXX,"t633.cxx",difffile);
-  mkci(kLangCXX,"t633.cxx","t633.h",difffile);
-  ci(kLangCXX,"t634.cxx",difffile);
+  ret += ci(kLangCXX,"t603.cxx",difffile);
+  ret += ci(kLangCXX,"t627.cxx",difffile);
+  ret += mkci(kLangCXX,"t627.cxx","t627.h",difffile);
+  ret += ci(kLangCXX,"t630.cxx",difffile);
+  ret += ci(kLangCXX,"t633.cxx",difffile);
+  ret += mkci(kLangCXX,"t633.cxx","t633.h",difffile);
+  ret += ci(kLangCXX,"t634.cxx",difffile);
 
-  ci(kLangCXX,"t674.cxx",difffile,"-DINTERPRET"); 
+  ret += ci(kLangCXX,"t674.cxx",difffile,"-DINTERPRET"); 
 
 #if !defined(G__WIN32) && !defined(G__CYGWIN) && !defined(G__APPLE)
-  ci(kLangCXX,"t676.cxx",difffile); //recursive call stack too deep for Visual C++
+  ret += ci(kLangCXX,"t676.cxx",difffile); //recursive call stack too deep for Visual C++
 #endif
-  mkci(kLangCXX,"t694.cxx","t694.h",difffile);
-  ci(kLangCXX,"t694.cxx",difffile,"-DINTERPRET"); //fails due to default param
-  ci(kLangCXX,"t695.cxx",difffile); //fails due to tmplt specialization
-  mkci(kLangCXX,"t705.cxx","t705.h",difffile);
-  ci(kLangCXX,"t705.cxx",difffile,"-DINTERPRET");
-  ci(kLangCXX,"t714.cxx",difffile);
-  io("t733.cxx","t733.old",difffile);
+  ret += mkci(kLangCXX,"t694.cxx","t694.h",difffile);
+  ret += ci(kLangCXX,"t694.cxx",difffile,"-DINTERPRET"); //fails due to default param
+  ret += ci(kLangCXX,"t695.cxx",difffile); //fails due to tmplt specialization
+  ret += mkci(kLangCXX,"t705.cxx","t705.h",difffile);
+  ret += ci(kLangCXX,"t705.cxx",difffile,"-DINTERPRET");
+  ret += ci(kLangCXX,"t714.cxx",difffile);
+  ret += io("t733.cxx","t733.old",difffile);
 #if !defined(G__WIN32) || defined(FORCEWIN32)
   //NOT WORKING: in debug mode on WINDOWS! 
-  ci(kLangCXX,"t749.cxx",difffile);
+  ret += ci(kLangCXX,"t749.cxx",difffile);
 #endif
-  ci(kLangCXX,"t751.cxx",difffile);
-  ci(kLangCXX,"t764.cxx",difffile);
-  ci(kLangCXX,"t767.cxx",difffile);
-  ci(kLangCXX,"t776.cxx",difffile);
-  ci(kLangCXX,"t777.cxx",difffile);
-  ci(kLangCXX,"t784.cxx",difffile);
-  ci(kLangCXX,"t825.cxx",difffile);
-  ci(kLangCXX,"t910.cxx",difffile);
-  ci(kLangCXX,"t916.cxx",difffile);
+  ret += ci(kLangCXX,"t751.cxx",difffile);
+  ret += ci(kLangCXX,"t764.cxx",difffile);
+  ret += ci(kLangCXX,"t767.cxx",difffile);
+  ret += ci(kLangCXX,"t776.cxx",difffile);
+  ret += ci(kLangCXX,"t777.cxx",difffile);
+  ret += ci(kLangCXX,"t784.cxx",difffile);
+  ret += ci(kLangCXX,"t825.cxx",difffile);
+  ret += ci(kLangCXX,"t910.cxx",difffile);
+  ret += ci(kLangCXX,"t916.cxx",difffile);
 #if !defined(G__VISUAL) || defined(FORCEWIN32)
-  io("t927.cxx","t927.old",difffile);
+  ret += io("t927.cxx","t927.old",difffile);
 #endif
 #if !defined(G__WIN32) || defined(FORCEWIN32)
-  mkciN(kLangCXX,"t928.cxx","t928.h",difffile,"","t928a.h","t928b.h");
+  ret += mkciN(kLangCXX,"t928.cxx","t928.h",difffile,"","t928a.h","t928b.h");
 #endif
-  ci(kLangCXX,"t930.cxx",difffile);
-  ci(kLangCXX,"t938.cxx",difffile);
-  ci(kLangCXX,"t958.cxx",difffile);
-  ci(kLangCXX,"t959.cxx",difffile);
-  mkci(kLangCXX,"t961.cxx","t961.h",difffile); //mkc(kLangCXX,"t961.h",difffile);
+  ret += ci(kLangCXX,"t930.cxx",difffile);
+  ret += ci(kLangCXX,"t938.cxx",difffile);
+  ret += ci(kLangCXX,"t958.cxx",difffile);
+  ret += ci(kLangCXX,"t959.cxx",difffile);
+  ret += mkci(kLangCXX,"t961.cxx","t961.h",difffile); //mkc(kLangCXX,"t961.h",difffile);
                                             //Borland C++5.5 has a problem
                                             //with reverse_iterator::reference
-  ci(kLangCXX,"t963.cxx",difffile);
+  ret += ci(kLangCXX,"t963.cxx",difffile);
 #ifdef G__P2F
-  mkci(kLangCXX,"t966.cxx","t966.h",difffile);
+  ret += mkci(kLangCXX,"t966.cxx","t966.h",difffile);
 #endif
-  mkci(kLangCXX,"t968.cxx","t968.h",difffile); // problem with BC++5.5 & VC++6.0
-  mkci(kLangCXX,"t970.cxx","t970.h",difffile);
-  mkciN(kLangCXX,"t972.cxx","t972a.h",difffile,"","t972b.h");
+  ret += mkci(kLangCXX,"t968.cxx","t968.h",difffile); // problem with BC++5.5 & VC++6.0
+  ret += mkci(kLangCXX,"t970.cxx","t970.h",difffile);
+  ret += mkciN(kLangCXX,"t972.cxx","t972a.h",difffile,"","t972b.h");
 
 #if !defined(G__WIN32) || defined(FORCEWIN32)
-  mkci(kLangCXX,"t980.cxx","t980.h",difffile);
+  ret += mkci(kLangCXX,"t980.cxx","t980.h",difffile);
 #endif
 #if !defined(G__WIN32) || defined(FORCEWIN32)
-  ci(kLangCXX,"t986.cxx",difffile,"-DTEST");
+  ret += ci(kLangCXX,"t986.cxx",difffile,"-DTEST");
 #endif
-  mkci(kLangCXX,"t987.cxx","t987.h",difffile);
-  mkciN(kLangCXX,"t991.cxx","t991a.h",difffile,"","t991b.h","t991c.h");
-  mkci(kLangCXX,"t992.cxx","t992.h",difffile);  // problem gcc3.2
-  mkci(kLangCXX,"maptest.cxx","maptest.h",difffile); // problem icc
-  mkci(kLangC,"t993.c","t993.h",difffile); 
-  mkci(kLangCXX,"t995.cxx","t995.h",difffile); 
-  mkci(kLangCXX,"t996.cxx","t996.h",difffile); 
-  ci(kLangCXX,"t998.cxx",difffile); 
-  mkci(kLangCXX,"t1002.cxx","t1002.h",difffile); 
-  ci(kLangCXX,"t1004.cxx",difffile); 
-  ci(kLangCXX,"t1011.cxx",difffile); 
-  mkci(kLangCXX,"t1011.cxx","t1011.h",difffile); 
-  ci(kLangCXX,"t1015.cxx",difffile); 
-  ci(kLangCXX,"t1016.cxx",difffile); 
-  mkci(kLangCXX,"t1016.cxx","t1016.h",difffile); 
-  ci(kLangCXX,"t1023.cxx",difffile); 
-  ci(kLangCXX,"t1024.cxx",difffile); 
-  mkci(kLangCXX,"t1024.cxx","t1024.h",difffile); 
+  ret += mkci(kLangCXX,"t987.cxx","t987.h",difffile);
+  ret += mkciN(kLangCXX,"t991.cxx","t991a.h",difffile,"","t991b.h","t991c.h");
+  ret += mkci(kLangCXX,"t992.cxx","t992.h",difffile);  // problem gcc3.2
+  ret += mkci(kLangCXX,"maptest.cxx","maptest.h",difffile); // problem icc
+  ret += mkci(kLangC,"t993.c","t993.h",difffile); 
+  ret += mkci(kLangCXX,"t995.cxx","t995.h",difffile); 
+  ret += mkci(kLangCXX,"t996.cxx","t996.h",difffile); 
+  ret += ci(kLangCXX,"t998.cxx",difffile); 
+  ret += mkci(kLangCXX,"t1002.cxx","t1002.h",difffile); 
+  ret += ci(kLangCXX,"t1004.cxx",difffile); 
+  ret += ci(kLangCXX,"t1011.cxx",difffile); 
+  ret += mkci(kLangCXX,"t1011.cxx","t1011.h",difffile); 
+  ret += ci(kLangCXX,"t1015.cxx",difffile); 
+  ret += ci(kLangCXX,"t1016.cxx",difffile); 
+  ret += mkci(kLangCXX,"t1016.cxx","t1016.h",difffile); 
+  ret += ci(kLangCXX,"t1023.cxx",difffile); 
+  ret += ci(kLangCXX,"t1024.cxx",difffile); 
+  ret += mkci(kLangCXX,"t1024.cxx","t1024.h",difffile); 
 #if !defined(G__WIN32) || defined(FORCEWIN32)
-  mkci(kLangCXX,"t1025.cxx","t1025.h",difffile); 
+  ret += mkci(kLangCXX,"t1025.cxx","t1025.h",difffile); 
 #endif
-  ci(kLangCXX,"t1026.cxx",difffile); // problem with BC++5.5
-  mkci(kLangCXX,"t1026.cxx","t1026.h",difffile); 
-  io("t1027.cxx","t1027.old",difffile);
+  ret += ci(kLangCXX,"t1026.cxx",difffile); // problem with BC++5.5
+  ret += mkci(kLangCXX,"t1026.cxx","t1026.h",difffile); 
+  ret += io("t1027.cxx","t1027.old",difffile);
   //ci(kLangCXX,"t1027.cxx",difffile); // problem with BC++5.5
   //mkci(kLangCXX,"t1027.cxx","t1027.h",difffile); 
-  ci(kLangCXX,"t1032.cxx",difffile); 
-  ci(kLangCXX,"t1032.cxx",difffile); 
+  ret += ci(kLangCXX,"t1032.cxx",difffile); 
+  ret += ci(kLangCXX,"t1032.cxx",difffile); 
 #if !defined(G__WIN32) || defined(FORCEWIN32)
-  io("t1034.cxx","t1034.old",difffile); // sizeof(long double)==12
+  ret += io("t1034.cxx","t1034.old",difffile); // sizeof(long double)==12
 #endif
-  ci(kLangCXX,"t1035.cxx",difffile);  
-  mkci(kLangCXX,"t1035.cxx","t1035.h",difffile); 
-  ci(kLangCXX,"t1036.cxx",difffile);  
-  mkci(kLangCXX,"t1040.cxx","t1040.h",difffile); // gcc3.2 has problem 
-  io("t1042.cxx","t1042.old",difffile);
+  ret += ci(kLangCXX,"t1035.cxx",difffile);  
+  ret += mkci(kLangCXX,"t1035.cxx","t1035.h",difffile); 
+  ret += ci(kLangCXX,"t1036.cxx",difffile);  
+  ret += mkci(kLangCXX,"t1040.cxx","t1040.h",difffile); // gcc3.2 has problem 
+  ret += io("t1042.cxx","t1042.old",difffile);
 
 #if !defined(G__WIN32) || defined(FORCEWIN32)
-  ci(kLangCXX,"t1046.cxx",difffile); 
-  mkci(kLangCXX,"t1046.cxx","t1046.h",difffile); 
+  ret += ci(kLangCXX,"t1046.cxx",difffile); 
+  ret += mkci(kLangCXX,"t1046.cxx","t1046.h",difffile); 
 #endif
-  ci(kLangCXX,"t1047.cxx",difffile); 
-  mkci(kLangCXX,"t1047.cxx","t1047.h",difffile); 
-  ci(kLangCXX,"t1048.cxx",difffile); 
-  ci(kLangCXX,"t1157.cxx",difffile); 
-  ci(kLangCXX,"t1158.cxx",difffile); 
-  ci(kLangCXX,"t1160.cxx",difffile); 
-  ci(kLangCXX,"aryinit0.cxx",difffile); 
-  ci(kLangCXX,"aryinit1.cxx",difffile); 
-  ci(kLangCXX,"t1164.cxx",difffile); 
-  ci(kLangCXX,"t1165.cxx",difffile); 
-  ci(kLangCXX,"t1178.cxx",difffile); 
-  mkci(kLangCXX,"t1187.cxx","t1187.h",difffile); 
-  ci(kLangCXX,"t1192.cxx",difffile);  
-  mkci(kLangCXX,"t1193.cxx","t1193.h",difffile); 
-  ci(kLangCXX,"t1203.cxx",difffile);  
-  ci(kLangCXX,"t1205.cxx",difffile);  
-  mkci(kLangCXX,"t1205.cxx","t1205.h",difffile); 
-  ci(kLangCXX,"t1213.cxx",difffile);  
-  ci(kLangCXX,"t1214.cxx",difffile);  
-  ci(kLangCXX,"t1215.cxx",difffile);  
-  mkci(kLangCXX,"t1215.cxx","t1215.h",difffile); 
-  ci(kLangCXX,"t1221.cxx",difffile);  
-  ci(kLangCXX,"t1222.cxx",difffile);  
-  ci(kLangCXX,"t1223.cxx",difffile);  
-  ci(kLangCXX,"t1224.cxx",difffile);  
-  io("t1228.cxx","t1228.old",difffile);
+  ret += ci(kLangCXX,"t1047.cxx",difffile); 
+  ret += mkci(kLangCXX,"t1047.cxx","t1047.h",difffile); 
+  ret += ci(kLangCXX,"t1048.cxx",difffile); 
+  ret += ci(kLangCXX,"t1157.cxx",difffile); 
+  ret += ci(kLangCXX,"t1158.cxx",difffile); 
+  ret += ci(kLangCXX,"t1160.cxx",difffile); 
+  ret += ci(kLangCXX,"aryinit0.cxx",difffile); 
+  ret += ci(kLangCXX,"aryinit1.cxx",difffile); 
+  ret += ci(kLangCXX,"t1164.cxx",difffile); 
+  ret += ci(kLangCXX,"t1165.cxx",difffile); 
+  ret += ci(kLangCXX,"t1178.cxx",difffile); 
+  ret += mkci(kLangCXX,"t1187.cxx","t1187.h",difffile); 
+  ret += ci(kLangCXX,"t1192.cxx",difffile);  
+  ret += mkci(kLangCXX,"t1193.cxx","t1193.h",difffile); 
+  ret += ci(kLangCXX,"t1203.cxx",difffile);  
+  ret += ci(kLangCXX,"t1205.cxx",difffile);  
+  ret += mkci(kLangCXX,"t1205.cxx","t1205.h",difffile); 
+  ret += ci(kLangCXX,"t1213.cxx",difffile);  
+  ret += ci(kLangCXX,"t1214.cxx",difffile);  
+  ret += ci(kLangCXX,"t1215.cxx",difffile);  
+  ret += mkci(kLangCXX,"t1215.cxx","t1215.h",difffile); 
+  ret += ci(kLangCXX,"t1221.cxx",difffile);  
+  ret += ci(kLangCXX,"t1222.cxx",difffile);  
+  ret += ci(kLangCXX,"t1223.cxx",difffile);  
+  ret += ci(kLangCXX,"t1224.cxx",difffile);  
+  ret += io("t1228.cxx","t1228.old",difffile);
 
-  mkci(kLangCXX,"t1048.cxx","t1048.h",difffile,"-I.. -I../src");
-  ci(kLangCXX,"t1049.cxx",difffile); 
-  ci(kLangCXX,"t1054.cxx",difffile); 
-  ci(kLangCXX,"t1055.cxx",difffile); 
-  mkci(kLangCXX,"t1061.cxx","t1061.h",difffile);
+  ret += mkci(kLangCXX,"t1048.cxx","t1048.h",difffile,"-I.. -I../src");
+  ret += ci(kLangCXX,"t1049.cxx",difffile); 
+  ret += ci(kLangCXX,"t1054.cxx",difffile); 
+  ret += ci(kLangCXX,"t1055.cxx",difffile); 
+  ret += mkci(kLangCXX,"t1061.cxx","t1061.h",difffile);
 #if !defined(G__WIN32) || defined(FORCEWIN32)
-  mkci(kLangCXX,"t1062.cxx","t1062.h",difffile); 
+  ret += mkci(kLangCXX,"t1062.cxx","t1062.h",difffile); 
 #endif
-  ci(kLangCXX,"t1067.cxx",difffile); 
-  mkci(kLangCXX,"t1067.cxx","t1067.h",difffile); 
-  ci(kLangCXX,"t1068.cxx",difffile); 
-  mkci(kLangCXX,"t1068.cxx","t1068.h",difffile); 
-  ci(kLangCXX,"t1079.cxx",difffile);
-  mkci(kLangCXX,"t1079.cxx","t1079.h",difffile); 
-  ci(kLangCXX,"t1084.cxx",difffile);
-  ci(kLangCXX,"t1085.cxx",difffile);
-  ci(kLangCXX,"t1086.cxx",difffile);
-  ci(kLangCXX,"t1088.cxx",difffile);
-  ci(kLangCXX,"t1094.cxx",difffile);
-  ci(kLangCXX,"t1101.cxx",difffile); 
-  mkci(kLangCXX,"t1115.cxx","t1115.h",difffile); 
-  ci(kLangCXX,"t1124.cxx",difffile); 
-  ci(kLangCXX,"t1125.cxx",difffile); 
-  ci(kLangCXX,"t1126.cxx",difffile); 
+  ret += ci(kLangCXX,"t1067.cxx",difffile); 
+  ret += mkci(kLangCXX,"t1067.cxx","t1067.h",difffile); 
+  ret += ci(kLangCXX,"t1068.cxx",difffile); 
+  ret += mkci(kLangCXX,"t1068.cxx","t1068.h",difffile); 
+  ret += ci(kLangCXX,"t1079.cxx",difffile);
+  ret += mkci(kLangCXX,"t1079.cxx","t1079.h",difffile); 
+  ret += ci(kLangCXX,"t1084.cxx",difffile);
+  ret += ci(kLangCXX,"t1085.cxx",difffile);
+  ret += ci(kLangCXX,"t1086.cxx",difffile);
+  ret += ci(kLangCXX,"t1088.cxx",difffile);
+  ret += ci(kLangCXX,"t1094.cxx",difffile);
+  ret += ci(kLangCXX,"t1101.cxx",difffile); 
+  ret += mkci(kLangCXX,"t1115.cxx","t1115.h",difffile); 
+  ret += ci(kLangCXX,"t1124.cxx",difffile); 
+  ret += ci(kLangCXX,"t1125.cxx",difffile); 
+  ret += ci(kLangCXX,"t1126.cxx",difffile); 
 
 #if !defined(G__APPLE)
   // This not work on macos because of var_arg
-  ci(kLangCXX,"t1127.cxx",difffile); 
-  mkci(kLangCXX,"t1127.cxx","t1127.h",difffile);  // 
+  ret += ci(kLangCXX,"t1127.cxx",difffile); 
+  ret += mkci(kLangCXX,"t1127.cxx","t1127.h",difffile);  // 
 #endif
 
-  ci(kLangCXX,"t1128.cxx",difffile);  // looks to me gcc3.2 has a bug
-  ci(kLangCXX,"t1129.cxx",difffile);  // g++3.2 fails
-  ci(kLangCXX,"t1134.cxx",difffile);  
-  ci(kLangCXX,"t1136.cxx",difffile);  
-  ci(kLangCXX,"t1140.cxx",difffile);  
+  ret += ci(kLangCXX,"t1128.cxx",difffile);  // looks to me gcc3.2 has a bug
+  ret += ci(kLangCXX,"t1129.cxx",difffile);  // g++3.2 fails
+  ret += ci(kLangCXX,"t1134.cxx",difffile);  
+  ret += ci(kLangCXX,"t1136.cxx",difffile);  
+  ret += ci(kLangCXX,"t1140.cxx",difffile);  
 
-  ci(kLangCXX,"t1144.cxx",difffile);  
-  ci(kLangCXX,"t1144.cxx",difffile,"","","-Y0");  
-  ci(kLangCXX,"t1144.cxx",difffile,"","","-Y1");  
+  ret += ci(kLangCXX,"t1144.cxx",difffile);  
+  ret += ci(kLangCXX,"t1144.cxx",difffile,"","","-Y0");  
+  ret += ci(kLangCXX,"t1144.cxx",difffile,"","","-Y1");  
 
-  ci(kLangCXX,"t1148.cxx",difffile);  
+  ret += ci(kLangCXX,"t1148.cxx",difffile);  
 
-  mkciN(kLangCXX,"t1247.cxx","t1247.h",difffile,"","t1247a.h");
-  mkci(kLangCXX,"t1276.cxx","t1276.h",difffile); 
+  ret += mkciN(kLangCXX,"t1247.cxx","t1247.h",difffile,"","t1247a.h");
+  ret += mkci(kLangCXX,"t1276.cxx","t1276.h",difffile); 
 
-  mkci(kLangCXX,"t1277.cxx","t1277.h",difffile); // works only with gcc2.96
+  ret += mkci(kLangCXX,"t1277.cxx","t1277.h",difffile); // works only with gcc2.96
 
 #define PROBLEM
 #if defined(PROBLEM) && (!defined(G__WIN32) || defined(FORCEWIN32))
-  mkci(kLangCXX,"t674.cxx","t674.h",difffile); // Problem with VC++6.0
+  ret += mkci(kLangCXX,"t674.cxx","t674.h",difffile); // Problem with VC++6.0
 
-  ci(kLangCXX,"t648.cxx",difffile); // long long has problem with BC++5.5
+  ret += ci(kLangCXX,"t648.cxx",difffile); // long long has problem with BC++5.5
                                  // also with VC++6.0 bug different
 
-  mkci(kLangCXX,"t977.cxx","t977.h",difffile); // VC++ problem is known
+  ret += mkci(kLangCXX,"t977.cxx","t977.h",difffile); // VC++ problem is known
 
-  ci(kLangCXX,"t980.cxx",difffile); // problem with BC++5.5
+  ret += ci(kLangCXX,"t980.cxx",difffile); // problem with BC++5.5
 
 #if (G__GNUC==2)
-  mkci(kLangCXX,"t1030.cxx","t1030.h",difffile); // works only with gcc2.96
-  mkci(kLangCXX,"t1031.cxx","t1031.h",difffile); // works only with gcc2.96
+  ret += mkci(kLangCXX,"t1030.cxx","t1030.h",difffile); // works only with gcc2.96
+  ret += mkci(kLangCXX,"t1031.cxx","t1031.h",difffile); // works only with gcc2.96
   //mkci(kLangCXX,"t1030.cxx","t1030.h",difffile,"","","-Y0"); 
   //mkci(kLangCXX,"t1031.cxx","t1031.h",difffile,"","","-Y0"); 
 #endif
 
 #endif
 
-  ci(kLangCXX,"t1278.cxx",difffile);
-  ci(kLangCXX,"t1279.cxx",difffile);
-  ci(kLangCXX,"t1280.cxx",difffile);
-  ci(kLangCXX,"t1281.cxx",difffile);
-  ci(kLangCXX,"t1282.cxx",difffile);
-  ci(kLangCXX,"t1283.cxx",difffile);
+  ret += ci(kLangCXX,"t1278.cxx",difffile);
+  ret += ci(kLangCXX,"t1279.cxx",difffile);
+  ret += ci(kLangCXX,"t1280.cxx",difffile);
+  ret += ci(kLangCXX,"t1281.cxx",difffile);
+  ret += ci(kLangCXX,"t1282.cxx",difffile);
+  ret += ci(kLangCXX,"t1283.cxx",difffile);
 
 #endif // NEWTEST
 
@@ -858,6 +880,8 @@ int main(int argc,char** argv) {
 #ifndef DEBUG
   rm("Makefile");
 #endif
+  
+  return (ret>0);
 }
 //////////////////////////////////////////////////////////////////////
 

@@ -33,13 +33,13 @@ void test0() {
 
 void test1() {
   ULong64_t aa;
-  aa = 1<<31;         // ULong64_t aa = (ULong64_t)(-1) = 0xffffffffffffffff
+  aa = (ULong64_t)(-(1<<30 - 1));
   printf("%llu ",aa);
   aa = aa<<1;
   printf("%llu ",aa);
   aa = aa*2;
   printf("%llu ",aa);
-  aa = aa/(1<<31);   // (ULong64_t)aa/(0x00000000ffffffff)
+  aa = aa/((Long64_t)(-(1u<<30 - 1)));
   printf("%llu\n",aa);
 }
 
@@ -51,13 +51,13 @@ void test2() {
   printf("%llu ",aa);
   aa = aa*2;
   printf("%llu ",aa);
-  aa = aa/(1<<31);
+  aa = aa/((Long64_t)(1u<<31));
   printf("%llu\n",aa);
 }
 
 void test3() {
   Long64_t aa;
-  aa = 1<<31;
+  aa = (int)(1u<<31);
   printf("%lld ",aa);
   aa = aa<<1;
   printf("%lld ",aa);

@@ -103,15 +103,6 @@ main/G__setup$(G__CFG_OBJEXT) : main/G__setup.c inc/G__ci.h
 	$(G__CFG_MV) G__setup$(G__CFG_OBJEXT) main/G__setup$(G__CFG_OBJEXT)
 
 ##############################################################
-# Compile GNU readline library. This is done only when 
-# BUILDREADLINE is set
-##############################################################
-ifneq ($(G__CFG_BUILDREADLINE),)
-$(G__CFG_READLINELIB) : readline/*.c readline/*.h
-	(cd readline ; make)
-endif
-
-##############################################################
 # Compile cint interpreter core library
 ##############################################################
 $(CINTLIB) : inc/G__ci.h $(wildcard src/*.c src/*.cxx *.h src/*.h) $(G__CFG_READLINELIB) $(CONFIGCINTH)
@@ -211,9 +202,6 @@ clean :
 		include/stdio.h makecint$(G__CFG_EXEEXT) \
 		include/iosenum.h
 	$(MAKE) -C src clean
-ifneq ($(G__CFG_BUILDREADLINE),)
-	$(MAKE) -C readline clean
-endif
 
 cleanbin :
 	[ $OBJEXT ] && $(G__CFG_RM) main/*$(G__CFG_OBJEXT) src/*$(G__CFG_OBJEXT) 
