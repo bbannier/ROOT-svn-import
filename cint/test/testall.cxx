@@ -208,7 +208,7 @@ int ediff(const char *title, const char *macro, const char *dfile, const char *c
   fclose(fp);
 
   char com[4000]; 
-  sprintf(com,"\\diff --old-group-format=\"%s %s:%%c'\\012'%%<\" --new-group-format=\"%s interpreted:%%c'\\012'%%>\" --unchanged-line-format=\"\" --old-line-format=\" %%3dn: %%L\" --new-line-format=\" %%3dn: %%L\" %s interpreted>> %s", title, compiled, title, compiled, dfile);
+  sprintf(com,"diff --strip-trailing-cr --old-group-format=\"%s %s:%%c'\\012'%%<\" --new-group-format=\"%s interpreted:%%c'\\012'%%>\" --unchanged-line-format=\"\" --old-line-format=\" %%3dn: %%L\" --new-line-format=\" %%3dn: %%L\" %s interpreted>> %s", title, compiled, title, compiled, dfile);
   return run(com);
 
 }
@@ -288,13 +288,8 @@ int ci(ELanguage lang, const char *sname, const char *dfile,
   sprintf(com, "cint %s -Dinterp %s %s %s %s > interpreted", cintoption, cintopt, cflags, exsname, sname);
   run(com);
 
-  //diff(sname,"compiled","interpreted",dfile,cflags,"c","i");
-  //sprintf(com,"\\diff --old-group-format=\"%s compiled:%%c'\\012'%%<\" --new-group-format=\"%s interpreted:%%c'\\012'%%>\" --unchanged-line-format=\"\" --old-line-format=\" %%3dn: %%L\" --new-line-format=\" %%3dn: %%L\" compiled interpreted>> %s", sname, sname, dfile);
-  //int ret = run(com);
   int ret = ediff(sname,cflags,dfile);
   
-  //for(int i=0;i<100000;i++) ; // wait for a while
-  //\diff  --line-format=' %3dn: %L' --old-group-format="t1134.cxx interpreted:%c'\012'%<" --new-group-format="t1134.cxx compiled:%c'\012'%>" --unchanged-group-format=""  interpreted compiled
 #ifndef DEBUG
   rm("compiled");
   rm("interpreted");
