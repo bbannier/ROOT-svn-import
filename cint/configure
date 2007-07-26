@@ -11,8 +11,8 @@
 
 [ "x$1" != "x__have_the_proper_shell@" ] && ( \
 uname -a | grep -i sunos > /dev/null \
-  && (bash $0 __have_the_proper_shell@ "$*") \
-  || (sh $0 __have_the_proper_shell@ "$*") \
+  && (bash $0 __have_the_proper_shell@ "$@") \
+  || (sh $0 __have_the_proper_shell@ "$@" ) \
 )
 
 [ "x$1" != "x__have_the_proper_shell@" ] && exit

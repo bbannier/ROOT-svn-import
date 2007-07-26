@@ -71,6 +71,13 @@ OBJECTS = 	$(addsuffix $(G__CFG_OBJEXT), \
 	  $(G__CFG_SOOUT)$(notdir $@) \
 	  ../main/G__setup$(G__CFG_OBJEXT) $(OBJECTS) \
 	  $(G__CFG_EXP_READLINELIB) $(G__CFG_EXP_CURSESLIB) $(G__CFG_DEFAULTLIBS)
+ifneq ($(G__CFG_ARCH),$(subst msvc,,$(G__CFG_ARCH)))
+	@if [ -f $(notdir $@).manifest ]; then \
+	  mt 1>/dev/null 2>&1 && \
+	  echo Embedding $(notdir $@).manifest && \
+	  mt -nologo -manifest $(notdir $@).manifest -outputresource:$(notdir $@)\;2; \
+	fi
+endif
 ifneq ($(G__CFG_MAKEIMPLIB),)
 	$(subst @imp@,../$(notdir $(@:$(G__CFG_SOEXT)=$(G__CFG_IMPLIBEXT))),\
 	  $(subst @so@,$(PWD)/$(notdir $@),$(G__CFG_MAKEIMPLIB)))
