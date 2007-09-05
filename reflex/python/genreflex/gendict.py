@@ -27,6 +27,7 @@ class genDictionary(object) :
     self.vtables    = {}
     self.hfile      = os.path.normpath(hfile).replace(os.sep,'/')
     self.pool       = opts.get('pool',False)
+    self.interpreter= opts.get('interpreter',False)
     self.quiet      = opts.get('quiet',False)
     self.resolvettd = opts.get('resolvettd',True)
     self.xref       = {}
@@ -42,6 +43,7 @@ class genDictionary(object) :
     self.errors     = 0
     self.warnings   = 0
     self.comments           = opts.get('comments', False)
+    self.iocomments     = opts.get('iocomments', False)
     self.no_membertypedefs  = opts.get('no_membertypedefs', False)
     self.generated_shadow_classes = []
     self.selectionname      = 'ROOT::Reflex::Selection'
@@ -88,7 +90,7 @@ class genDictionary(object) :
 #----------------------------------------------------------------------------------
   def findSpecialNamespace(self):
     for ns in self.namespaces:
-      if ns['name'].find('.') != -1:
+      if 'name' not in ns or ns['name'].find('.') != -1:
         self.unnamedNamespaces.append(ns['id'])
       elif ns['name'] == '::' :
         self.globalNamespaceID = ns['id']
@@ -296,6 +298,14 @@ class genDictionary(object) :
         # this check fixes a bug in gccxml 0.6.0_patch3 which sometimes generates incomplete definitions 
         # of classes (without members). Every version after 0.6.0_patch3 is tested and fixes this bug
         if not c.has_key('members') : continue
+
+        # Filter any non-public data members for minimal interpreter dict
+        if self.interpreter:
+          cxref = self.xref[c['id']]
+          # assumes that the default is "public"
+          if cxref.has_key('attrs') and 'access' in cxref['attrs'] :
+            continue
+
         match = self.selector.matchclass( self.genTypeName(c['id']), self.files[c['file']]['name'])
         if match[0] and not match[1] :
           c['extra'] = match[0]
@@ -361,7 +371,7 @@ class genDictionary(object) :
         funcname = self.genTypeName(f['id'])
         if self.selector.selfunction( funcname ) and not self.selector.excfunction( funcname ) :
           selec.append(f)
-        if 'extra' in f and f['extra'].get('autoselect') and f not in selec:
+        elif 'extra' in f and f['extra'].get('autoselect') and f not in selec:
           selec.append(f)
     return selec
 #----------------------------------------------------------------------------------
@@ -370,10 +380,17 @@ class genDictionary(object) :
     self.selector = sel  # remember the selector
     if self.selector :
       for e in self.enums :
+        # Filter any non-public data members for minimal interpreter dict
+        if self.interpreter:
+          exref = self.xref[e['id']]
+          # assumes that the default is "public"
+          if exref.has_key('attrs') and 'access' in exref['attrs'] :
+            continue
+
         ename = self.genTypeName(e['id'])
         if self.selector.selenum( ename ) and not self.selector.excenum( ename ) :
           selec.append(e)
-        if 'extra' in e and e['extra'].get('autoselect') and e not in selec:
+        elif 'extra' in e and e['extra'].get('autoselect') and e not in selec:
           selec.append(e)
     return selec
 #---------------------------------------------------------------------------------
@@ -385,7 +402,7 @@ class genDictionary(object) :
         varname = self.genTypeName(v['id'])
         if self.selector.selvariable( varname ) and not self.selector.excvariable( varname ) :
           selec.append(v)
-        if 'extra' in v and v['extra'].get('autoselect') and v not in selec:
+        elif 'extra' in v and v['extra'].get('autoselect') and v not in selec:
           selec.append(v)
     return selec
 #----------------------------------------------------------------------------------
@@ -500,7 +517,7 @@ class genDictionary(object) :
     args  = self.xref[id]['subelems']
     if 'name' in attrs :
        if attrs['name'] in self.ignoremeth : return 0
-    #----Filter any method and operator for POOL -----
+    #----Filter any method and operator for minimal POOL dict -----
     if self.pool :
       if elem in ('OperatorMethod','Converter') : return 0
       elif elem in ('Method',) :
@@ -509,8 +526,11 @@ class genDictionary(object) :
         if len(args) > 1 : return 0
         elif len(args) == 1 :
           if self.genTypeName(args[0]['type']) != 'const '+self.genTypeName(attrs['context'])+'&' : return 0
+    #----Filter any non-public data members for minimal interpreter dict -----
+    if self.interpreter and elem in ('Field') and 'access' in attrs : # assumes that the default is "public"
+      return 0
     #----Filter any non public method
-    if 'access' in attrs :  # assumes that the default is "public"
+    if attrs.get('access') in ('protected', 'private') : 
       if elem in ('Constructor','Destructor','Method','OperatorMethod','Converter') : return 0
     #----Filter any copy constructor with a private copy constructor in any base
     if elem == 'Constructor' and len(args) == 1 and 'name' in args[0] and args[0]['name'] == '_ctor_arg' :
@@ -527,6 +547,7 @@ class genDictionary(object) :
   def tmplclasses(self, local):
     result = []
     for c in self.classes :
+      if not 'name' in c: continue
       name = c['name']
       if name.find('<') == -1 : continue
       temp = name[name.find('<')+1:name.rfind('>')]
@@ -643,7 +664,7 @@ class genDictionary(object) :
 
   def genClassDict(self, attrs):
     members, bases = [], []
-    cl  = attrs['name']
+    cl  = attrs.get('name')
     clf = '::' + attrs['fullname']
     cls = attrs['fullname']
     clt = string.translate(str(clf), self.transtable)
@@ -694,7 +715,8 @@ class genDictionary(object) :
     return sc, ss
 #----------------------------------------------------------------------------------
   def checkAccessibleType( self, type ):
-    while type['elem'] in ('PointerType','Typedef') : type = self.xref[type['attrs']['type']]
+    while type['elem'] in ('PointerType','Typedef','ArrayType') :
+      type = self.xref[type['attrs']['type']]
     attrs = type['attrs']
     if 'access' in attrs and attrs['access'] in ('private','protected') : return attrs['id']
     if 'context' in attrs and self.checkAccessibleType(self.xref[attrs['context']]) : return attrs['id']
@@ -713,11 +735,17 @@ class genDictionary(object) :
     return 0
 #----------------------------------------------------------------------------------
   def genClassShadow(self, attrs, inner = 0 ) :
+    if not inner :
+      if attrs['id'] in self.generated_shadow_classes : return ''
+      else : self.generated_shadow_classes.append(attrs['id'])
     inner_shadows = {}
     bases = self.getBases( attrs['id'] )
-    cls = self.genTypeName(attrs['id'],const=True,colon=True)
-    clt = string.translate(str(cls), self.transtable)
-    if self.isUnnamedType(cls) and inner : clt = ''
+    if inner and attrs.has_key('demangled') and self.isUnnamedType(attrs['demangled']) :
+      cls = attrs['demangled']
+      clt = ''
+    else:
+      cls = self.genTypeName(attrs['id'],const=True,colon=True)
+      clt = string.translate(str(cls), self.transtable)
     xtyp = self.xref[attrs['id']]
     typ = xtyp['elem'].lower()
     indent = inner * 2 * ' '
@@ -734,6 +762,7 @@ class genDictionary(object) :
 	  bname = self.genTypeName(b['type'],colon=True)
 	  if self.xref[b['type']]['attrs'].get('access') in ('private','protected'):
             bname = string.translate(str(bname),self.transtable)
+            if not inner: c = self.genClassShadow(self.xref[b['type']]['attrs']) + c
           c += indent + '%s %s' % ( acc , bname )
           if b is not bases[-1] : c += ', ' 
         c += indent + ' {\n' + indent +'  public:\n'
@@ -747,7 +776,7 @@ class genDictionary(object) :
         member = self.xref[m]
         if member['elem'] in ('Class','Struct','Union','Enumeration') \
            and member['attrs'].get('access') in ('private','protected') \
-           and not self.isUnnamedType(member['attrs'].get('name')):
+           and not self.isUnnamedType(member['attrs'].get('demangled')):
           cmem = self.genTypeName(member['attrs']['id'],const=True,colon=True)
           if cmem != cls and cmem not in inner_shadows :
             inner_shadows[cmem] = string.translate(str(cmem), self.transtable)
@@ -756,19 +785,35 @@ class genDictionary(object) :
         member = self.xref[m]
         if member['elem'] in ('Field',) :
           a = member['attrs']
+          axref = self.xref[a['type']]
           t = self.genTypeName(a['type'],colon=True,const=True)
+          arraytype = ""
+          if t[-1] == ']' : arraytype = t[t.find('['):]
+
+          fundtype = axref
+          while fundtype['elem'] in ('ArrayType', 'Typedef'):
+            fundtype = self.xref[fundtype['attrs']['type']]
+          mTypeElem = fundtype['elem']
+
+          #---- Check if pointer of reference - exact type irrelevant
+          if mTypeElem == 'PointerType' :
+            c += indent + '  void* %s;\n' % (a['name'] + arraytype)
+            continue
+          elif mTypeElem ==  'ReferenceType' :
+            c += indent + '  int& %s;\n' % (a['name'] + arraytype)
+            continue
+
           #---- Check if a type and a member with the same name exist in the same scope
-          mTypeElem = self.xref[a['type']]['elem']
           if mTypeElem in ('Class','Struct'):
-            mTypeName = self.xref[a['type']]['attrs']['name']
-            mTypeId = a['type']
-            for el in self.xref[self.xref[a['type']]['attrs']['context']]['attrs'].get('members').split():
+            mTypeName = fundtype['attrs'].get('name')
+            mTypeId = fundtype['attrs']['id']
+            for el in self.xref[fundtype['attrs']['context']]['attrs'].get('members').split():
               if self.xref[el]['attrs'].get('name') == mTypeName and mTypeId != el :
                 t = mTypeElem.lower() + ' ' + t[2:]
                 break
           #---- Check for non public types------------------------
-          noPublicType = self.checkAccessibleType(self.xref[a['type']])
-          if ( noPublicType and not self.isUnnamedType(self.xref[a['type']]['attrs'].get('name'))):
+          noPublicType = self.checkAccessibleType(axref)
+          if ( noPublicType and not self.isUnnamedType(axref['attrs'].get('demangled'))):
             noPubTypeAttrs = self.xref[noPublicType]['attrs']
             cmem = self.genTypeName(noPubTypeAttrs['id'],const=True,colon=True)
             if cmem != cls and cmem not in inner_shadows :
@@ -780,11 +825,11 @@ class genDictionary(object) :
           for ikey in ikeys :      
             if   t.find(ikey) == 0      : t = t.replace(ikey, inner_shadows[ikey])     # change current class by shadow name 
             elif t.find(ikey[2:]) != -1 : t = t.replace(ikey[2:], inner_shadows[ikey]) # idem without leading ::
-          mType = self.xref[a.get('type')]
-          if mType and self.isUnnamedType(mType['attrs'].get('name')) :
+          mType = axref
+          if mType and self.isUnnamedType(mType['attrs'].get('demangled')) :
             t = self.genClassShadow(mType['attrs'], inner+1)[:-2]
           fPPos = self.funPtrPos(t)
-          if t[-1] == ']'         : c += indent + '  %s %s;\n' % ( t[:t.find('[')], a['name']+t[t.find('['):] )
+          if t[-1] == ']'         : c += indent + '  %s %s;\n' % ( t[:t.find('[')], a['name'] + arraytype )
           elif fPPos              : c += indent + '  %s;\n'    % ( t[:fPPos] + a['name'] + t[fPPos:] )
           else                    : c += indent + '  %s %s;\n' % ( t, a['name'] )
       c += indent + '};\n'
@@ -792,6 +837,8 @@ class genDictionary(object) :
 #----------------------------------------------------------------------------------
   def genTypedefBuild(self, attrs, childs) :
     if self.no_membertypedefs : return ''
+    # access selection doesn't work with gccxml0.6 - typedefs don't have it
+    if self.interpreter and 'access' in attrs : return ''
     s = ''
     s += '  .AddTypedef(%s, "%s::%s")' % ( self.genTypeID(attrs['type']), self.genTypeName(attrs['context']), attrs['name']) 
     return s  
@@ -807,7 +854,8 @@ class genDictionary(object) :
       s += '  .AddEnum("%s", "%s", &typeid(ROOT::Reflex::UnnamedEnum), %s)' % (name[name.rfind('::')+3:], values, mod) 
     else :
       if attrs.get('access') in ('protected','private'):
-        s += '  .AddEnum("%s", "%s", &typeid(ROOT::Reflex::UnknownType), %s)' % (name, values, mod)        
+        if not self.interpreter:
+          s += '  .AddEnum("%s", "%s", &typeid(ROOT::Reflex::UnknownType), %s)' % (name, values, mod)        
       else:
         s += '  .AddEnum("%s", "%s", &typeid(%s), %s)' % (name, values, name, mod)
     return s 
@@ -823,6 +871,11 @@ class genDictionary(object) :
     return s
 #----------------------------------------------------------------------------------
   def genTypeName(self, id, enum=False, const=False, colon=False, alltempl=False) :
+    elem  = self.xref[id]['elem']
+    attrs = self.xref[id]['attrs']
+    if self.isUnnamedType(attrs.get('demangled')) :
+      if colon : return '__'+attrs['demangled']
+      else : return attrs['demangled']
     if id[-1] in ['c','v'] :
       nid = id[:-1]
       cvdict = {'c':'const','v':'volatile'}
@@ -836,11 +889,10 @@ class genDictionary(object) :
         else     : return cvdict[id[-1]] + ' ' + self.genTypeName(nid, enum, False, colon)
     # "const" vetoeing must not recurse
     const = False
-    elem  = self.xref[id]['elem']
-    attrs = self.xref[id]['attrs']
     s = self.genScopeName(attrs, enum, const, colon)
     if elem == 'Namespace' :
-      if attrs['name'] != '::' : s += attrs['name']
+      if 'name' not in attrs : s += '@anonymous@namespace@'
+      elif attrs['name'] != '::' : s += attrs['name']
     elif elem == 'PointerType' :
       t = self.genTypeName(attrs['type'],enum, const, colon)
       if   t[-1] == ')' or t[-7:] == ') const' or t[-10:] == ') volatile' : s += t.replace('::*)','::**)').replace('::)','::*)').replace('(*)', '(**)').replace('()','(*)')
@@ -967,11 +1019,13 @@ class genDictionary(object) :
           c += 'EnumTypeBuilder("' + sc + attrs['name'] + '");\n'
         else :
          name = ''
-         if 'context' in attrs :
-           ns = self.genTypeName(attrs['context'])
-           if ns : name += ns + '::'
-         if 'name' in attrs :
-           name += attrs['name']
+         if 'name' not in attrs and 'demangled' in attrs : name = attrs.get('demangled')
+         else:
+           if 'context' in attrs :
+             ns = self.genTypeName(attrs['context'])
+             if ns : name += ns + '::'
+           if 'name' in attrs :
+             name += attrs['name']
          name = normalizeClass(name,False)
          c += 'TypeBuilder("'+name+'");\n'
     return c 
@@ -1141,7 +1195,9 @@ class genDictionary(object) :
     return c
 #----------------------------------------------------------------------------------    
   def genCommentProperty(self, attrs):
-    if not self.comments or 'file' not in attrs or ('artificial' in attrs and attrs['artificial'] == '1') : return '' 
+    if not (self.comments or self.iocomments) \
+       or 'file' not in attrs \
+       or ('artificial' in attrs and attrs['artificial'] == '1') : return '' 
     fd = self.files[attrs['file']]
     # open and read the header file if not yet done
     if 'filelines' not in fd :
@@ -1152,8 +1208,14 @@ class genDictionary(object) :
       except :
         return ''
     line = fd['filelines'][int(attrs['line'])-1]
-    if line.find('//') == -1 : return ''
-    return '\n  .AddProperty("comment","%s")' %  (line[line.index('//')+2:-1]).replace('"','\\"')
+    poscomment = line.find('//')
+    if poscomment == -1 : return ''
+    if not self.comments and self.iocomments:
+      if line[poscomment+2] != '!' \
+         and line[poscomment+2] != '[' \
+         and line[poscomment+2:poscomment+4] != '->' \
+         and line[poscomment+2:poscomment+4] != '||': return ''
+    return '\n  .AddProperty("comment","%s")' %  (line[poscomment+2:-1]).replace('"','\\"')
 #----------------------------------------------------------------------------------
   def genArgument(self, attrs):
     c = self.genTypeName(attrs['type'], enum=True, const=False)
@@ -1168,11 +1230,12 @@ class genDictionary(object) :
     return c
 #----------------------------------------------------------------------------------
   def genModifier(self, attrs, xattrs ):
-    if 'access' not in attrs            : mod = 'PUBLIC'
+    if   attrs.get('access') == 'public' or 'access' not in attrs : mod = 'PUBLIC'
     elif attrs['access'] == 'private'   : mod = 'PRIVATE'
     elif attrs['access'] == 'protected' : mod = 'PROTECTED'
     else                                : mod = 'NONE'
     if 'virtual' in attrs : mod += ' | VIRTUAL'
+    if 'pure_virtual' in attrs : mod += ' | ABSTRACT'
     if 'static'  in attrs : mod += ' | STATIC'
     # Extra modifiers
     xtrans = ''
@@ -1192,7 +1255,7 @@ class genDictionary(object) :
 #----------------------------------------------------------------------------------
   def genMCOBuild(self, type, name, attrs, args):
     id       = attrs['id']
-    if self.isUnnamedType(self.xref[attrs['context']]['attrs'].get('name')) or \
+    if self.isUnnamedType(self.xref[attrs['context']]['attrs'].get('demangled')) or \
        self.checkAccessibleType(self.xref[attrs['context']]) : return ''
     if type == 'constructor' : returns  = 'void'
     else                     : returns  = self.genTypeName(attrs['returns'])
@@ -1317,7 +1380,9 @@ class genDictionary(object) :
     return self.genMCODecl( 'constructor', '', attrs, args )
 #----------------------------------------------------------------------------------
   def genConstructorBuild(self, attrs, args):
-    return self.genMCOBuild( 'constructor', attrs['name'], attrs, args )
+    name = attrs.get('name')
+    if not name : name = self.xref[attrs['context']]['attrs']['demangled'].split('::')[-1]
+    return self.genMCOBuild( 'constructor', name, attrs, args )
 #----------------------------------------------------------------------------------
   def genConstructorDef(self, attrs, args):
     cl  = self.genTypeName(attrs['context'], colon=True)
@@ -1349,7 +1414,7 @@ class genDictionary(object) :
     return 'static void* destructor%s(void * o, const std::vector<void*>&, void *) {\n  ((::%s*)o)->~%s(); return 0;\n}' % ( attrs['id'], cl, attrs['name'] )
 #----------------------------------------------------------------------------------
   def genDestructorBuild(self, attrs, childs):
-    if self.isUnnamedType(self.xref[attrs['context']]['attrs'].get('name')) or \
+    if self.isUnnamedType(self.xref[attrs['context']]['attrs'].get('demangled')) or \
        self.checkAccessibleType(self.xref[attrs['context']]) : return ''
     mod = self.genModifier(attrs,None)
     id       = attrs['id']
@@ -1399,7 +1464,7 @@ class genDictionary(object) :
     return '  .AddBase(%s, BaseOffset< %s, %s >::Get(), %s)' %  (self.genTypeID(b['type']), clf, self.genTypeName(b['type'],colon=True), mod)
 #----------------------------------------------------------------------------------
   def enhanceClass(self, attrs):
-    if self.isUnnamedType(attrs['name']) or self.checkAccessibleType(self.xref[attrs['id']]) : return
+    if self.isUnnamedType(attrs.get('demangled')) or self.checkAccessibleType(self.xref[attrs['id']]) : return
     # Default constructor
     if 'members' in attrs : members = attrs['members'].split()
     else                  : members = []
@@ -1421,8 +1486,10 @@ class genDictionary(object) :
           new_attrs['artificial'] = 'true'
           self.xref[id] = {'elem':'Constructor', 'attrs':new_attrs,'subelems':[] }
           attrs['members'] += u' ' + id
-        elif len(args) == 0 and 'abstract' not in attrs and \
-             'access' not in self.xref[m]['attrs'] and not self.isDestructorNonPublic(attrs['id']):
+        if (len(args) == 0  or 'default' in args[0] ) \
+               and 'abstract' not in attrs \
+               and self.xref[m]['attrs'].get('access') == 'public' \
+               and not self.isDestructorNonPublic(attrs['id']):
           # NewDel functions extra function
           id = u'_x%d' % self.x_id.next()
           new_attrs = { 'id':id, 'context':attrs['id'], 'artificial':'true' }

@@ -1,4 +1,4 @@
-// @(#)root/reflex:$Name:  $:$Id: test_Reflex_simple1.cxx,v 1.17 2007/04/16 13:19:07 axel Exp $
+// @(#)root/reflex:$Name: merge_reflex $:$Id: test_Reflex_simple1.cxx,v 1.16.6.1 2007/04/16 13:21:42 axel Exp $
 // Author: Stefan Roiser 2004
 
 // CppUnit include file
@@ -127,20 +127,20 @@ void ReflexSimple1Test::testMembers() {
   CPPUNIT_ASSERT(o.Address());
 
   CPPUNIT_ASSERT_EQUAL(1, int(t.DataMemberSize()));
-  CPPUNIT_ASSERT_EQUAL(31, int(t.FunctionMemberSize()));
-  CPPUNIT_ASSERT_EQUAL(32, int(t.MemberSize()));
+  CPPUNIT_ASSERT_EQUAL(32, int(t.FunctionMemberSize()));
+  CPPUNIT_ASSERT_EQUAL(33, int(t.MemberSize()));
 
   t.UpdateMembers();
 
   CPPUNIT_ASSERT_EQUAL(1, int(t.DataMemberSize()));
-  CPPUNIT_ASSERT_EQUAL(31, int(t.FunctionMemberSize()));
-  CPPUNIT_ASSERT_EQUAL(32, int(t.MemberSize()));
+  CPPUNIT_ASSERT_EQUAL(32, int(t.FunctionMemberSize()));
+  CPPUNIT_ASSERT_EQUAL(33, int(t.MemberSize()));
 
   m = t.DataMemberAt(0);
   CPPUNIT_ASSERT(m);
   CPPUNIT_ASSERT_EQUAL(std::string("fPropertyListImpl"), m.Name());
   CPPUNIT_ASSERT_EQUAL(std::string("ROOT::Reflex::PropertyList::fPropertyListImpl"), m.Name(SCOPED));
-  CPPUNIT_ASSERT_EQUAL(0, int(Object_Cast<void*>(m.Get(o))));
+  CPPUNIT_ASSERT_EQUAL((void*)0, Object_Cast<void*>(m.Get(o)));
 
   m = t.FunctionMemberAt(0);
   CPPUNIT_ASSERT(m);

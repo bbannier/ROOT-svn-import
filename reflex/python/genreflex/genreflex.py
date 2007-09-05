@@ -24,7 +24,7 @@ class genreflex:
     self.opts            = {}
     self.gccxmlpath      = None
     self.gccxmlopt       = ''
-    self.gccxmlvers      = '0.6.0_patch3'
+    self.gccxmlvers      = '0.7.0_20070615'
     self.selector        = None
     self.gccxml          = ''
     self.quiet           = False
@@ -68,8 +68,10 @@ class genreflex:
          Output file name. If an existing directory is specified instead of a file,
          then a filename will be build using the name of the input file and will
          be placed in the given directory. <headerfile>_rflx.cpp \n
-      --pool
+      --pool, --dataonly
          Generate minimal dictionary required for POOL persistency\n
+      --interpreteronly
+         Generate minimal dictionary required for interpreter\n
       --deep
          Generate dictionary for all dependend classes\n
       --split  (OBSOLETE)
@@ -78,6 +80,8 @@ class genreflex:
          Generate Reflex dictionaries.\n
       --comments
          Add end-of-line comments in data and functions members as a property called "comment" \n
+      --iocomments
+         Add end-of-line comments in data and functions members as a property called "comment", but only for comments relevant for ROOT I/O \n
       --no_membertypedefs
          Disable the definition of class member typedefs \n
       --no_templatetypedefs
@@ -118,8 +122,8 @@ class genreflex:
     #----Process options--------------------------------
     try:
       opts, args = getopt.getopt(options, 'ho:s:c:I:U:D:PC', \
-      ['help','debug=', 'output=','selection_file=','pool','deep','gccxmlpath=',
-       'capabilities=','rootmap=','rootmap-lib=','comments','no_membertypedefs',
+      ['help','debug=', 'output=','selection_file=','pool','dataonly','interpreteronly','deep','gccxmlpath=',
+       'capabilities=','rootmap=','rootmap-lib=','comments','iocomments','no_membertypedefs',
        'fail_on_warnings', 'quiet', 'gccxmlopt=', 'reflex', 'split','no_templatetypedefs'])
     except getopt.GetoptError, e:
       print "--->> genreflex: ERROR:",e
@@ -129,6 +133,7 @@ class genreflex:
     self.gccxmlpath = None
     self.cppopt = ''
     self.pool   = 0
+    self.interpreter = 0
     for o, a in opts:
       if o in ('-h', '--help'):
         self.help()
@@ -142,6 +147,10 @@ class genreflex:
         self.select = a
       if o in ('--pool',):
         self.opts['pool'] = True
+      if o in ('--dataonly',):
+        self.opts['pool'] = True
+      if o in ('--interpreteronly',):
+        self.opts['interpreter'] = True
       if o in ('--deep',):
         self.deep = True
       if o in ('--split',):
@@ -150,6 +159,8 @@ class genreflex:
         print '--->> genreflex: WARNING: --reflex option is obsolete'
       if o in ('--comments',):
         self.opts['comments'] = True
+      if o in ('--iocomments',):
+        self.opts['iocomments'] = True
       if o in ('--no_membertypedefs',):
         self.opts['no_membertypedefs'] = True
       if o in ('--fail_on_warnings',):

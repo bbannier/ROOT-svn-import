@@ -12,22 +12,33 @@ REFLEXDIRS   := $(REFLEXDIR)/src
 REFLEXDIRI   := $(REFLEXDIR)/inc
 
 ##### libReflex #####
+REFLEXL      := $(MODDIRI)/LinkDef.h
+REFLEXDS     := $(MODDIRS)/G__Reflex.cxx
+REFLEXDO     := $(REFLEXDS:.cxx=.o)
+REFLEXDH     := $(REFLEXDS:.cxx=.h)
+
 REFLEXAH     := $(wildcard $(MODDIRI)/Reflex/*.h)
 REFLEXBH     := $(wildcard $(MODDIRI)/Reflex/Builder/*.h)
 REFLEXIH     := $(wildcard $(MODDIRI)/Reflex/internal/*.h)
 REFLEXH      := $(REFLEXAH) $(REFLEXBH) $(REFLEXIH)
-REFLEXS      := $(wildcard $(MODDIRS)/*.cxx)
+REFLEXAPIH   := $(filter-out $(MODDIRI)/Reflex/Builder/ReflexBuilder.h,\
+	        $(filter-out $(MODDIRI)/Reflex/Reflex.h,\
+	        $(filter-out $(MODDIRI)/Reflex/SharedLibrary.h,\
+	        $(filter-out $(MODDIRI)/Reflex/DictionaryGenerator.h,\
+		$(REFLEXAH) $(REFLEXBH)))))
+REFLEXS      := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
 REFLEXO      := $(REFLEXS:.cxx=.o)
 
-REFLEXDEP    := $(REFLEXO:.o=.d)
+REFLEXDEP    := $(REFLEXO:.o=.d) $(REFLEXDO:.o=.d)
 
 REFLEXLIB    := $(LPATH)/libReflex.$(SOEXT)
-REFLEXMAP    := $(REFLEXLIB:.$(SOEXT)=.rootmap)
+REFLEXDICTLIB:= $(LPATH)/libReflexDict.$(SOEXT)
+REFLEXDICTMAP:= $(REFLEXDICTLIB:.$(SOEXT)=.rootmap)
 
 # used in the main Makefile
 ALLHDRS      += $(patsubst $(MODDIRI)/Reflex/%.h,include/Reflex/%.h,$(REFLEXH))
-ALLLIBS      += $(REFLEXLIB)
-#ALLMAPS      += $(REFLEXMAP)
+ALLLIBS      += $(REFLEXLIB) $(REFLEXDICTLIB)
+ALLMAPS      += $(REFLEXDICTMAP)
 
 # include all dependency files
 INCLUDEFILES += $(REFLEXDEP)
@@ -45,30 +56,14 @@ ifneq ($(BUILDPYTHON),no)
 RFLX_GRFLXPYC := $(subst .py,.pyc,$(RFLX_GRFLXPY))
 endif
 
-ifeq ($(PLATFORM),win32)
-RFLX_LIBDIR = %~d0%~p0\..\lib
-else
-RFLX_LIBDIR = `dirname $$0`/../lib
-endif
+RFLX_LIBDIR = $(LIBDIR)
 
 ifeq ($(PLATFORM),win32)
-RFLX_GENREFLEX = bin/genreflex.bat
-RFLX_GNRFLX_L1 = "@echo off"
-RFLX_GNRFLX_L2 = "python  $(RFLX_LIBDIR)\python\genreflex\genreflex.py %*"
-RFLX_GENRFLXRC = bin/genreflex-rootcint.bat
-RFLX_GRFLXRC_L1 = "@echo off"
-RFLX_GRFLXRC_L2 = "python $(RFLX_LIBDIR)\python\genreflex\genreflex-rootcint.py %*"
 # test suite
 RFLX_CPPUNITI   = "$(shell cygpath -w '$(CPPUNIT)/include')"
 RFLX_CPPUNITLL  = "$(shell cygpath -w '$(CPPUNIT)/lib/cppunit.lib')"
 RFLX_REFLEXLL   = lib/libReflex.lib
 else
-RFLX_GENREFLEX = bin/genreflex
-RFLX_GNRFLX_L1 = "\#!/bin/sh"
-RFLX_GNRFLX_L2 = 'python $(RFLX_LIBDIR)/python/genreflex/genreflex.py "$$@"'
-RFLX_GENRFLXRC = bin/genreflex-rootcint
-RFLX_GRFLXRC_L1 = "\#!/bin/sh"
-RFLX_GRFLXRC_L2 = 'python $(RFLX_LIBDIR)/python/genreflex/genreflex-rootcint.py "$$@"'
 # test suite
 RFLX_CPPUNITI   = $(CPPUNIT)/include
 RFLX_CPPUNITLL  = -L$(CPPUNIT)/lib -lcppunit
@@ -83,8 +78,6 @@ endif
 ifeq ($(PLATFORM),solaris)
 RFLX_REFLEXLL   += -ldemangle
 endif
-
-RFLX_GENREFLEX_CMD = python ../../lib/python/genreflex/genreflex.py
 
 RFLX_TESTD      = $(REFLEXDIR)/test
 RFLX_TESTLIBD1  = $(RFLX_TESTD)/testDict1
@@ -107,9 +100,11 @@ RFLX_GENMAPS   = $(REFLEXDIRS)/genmap/genmap.cxx
 RFLX_GENMAPO   = $(RFLX_GENMAPS:.cxx=.o)
 RFLX_GENMAPX   = bin/genmap$(EXEEXT)
 
-ALLEXECS += $(RFLX_GENREFLEX) $(RFLX_GENRFLXRC) $(RFLX_GENMAPX)
+ALLEXECS += $(RFLX_GENMAPX)
 
 ##### local rules #####
+POSTBIN += $(RFLX_GRFLXPYC) $(RFLX_GRFLXPY)
+
 include/Reflex/%.h: $(REFLEXDIRI)/Reflex/%.h
 		@(if [ ! -d "include/Reflex" ]; then          \
 		   mkdir -p include/Reflex;                   \
@@ -124,7 +119,7 @@ include/Reflex/%.h: $(REFLEXDIRI)/Reflex/%.h
 
 .PRECIOUS: $(RFLX_GRFLXPY)
 
-$(RFLX_GCCXMLPATHPY):
+$(RFLX_GCCXMLPATHPY): config/Makefile.config
 		@(if [ ! -d "lib/python/genreflex" ]; then \
 		  mkdir -p lib/python/genreflex; fi )
 		@echo "gccxmlpath = '$(GCCXML)'" > $(RFLX_GCCXMLPATHPY);
@@ -137,36 +132,31 @@ $(RFLX_GRFLXDD)/%.py: $(RFLX_GRFLXSD)/%.py $(RFLX_GCCXMLPATHPY)
 $(RFLX_GRFLXDD)/%.pyc: $(RFLX_GRFLXDD)/%.py
 		@python -c 'import py_compile; py_compile.compile( "$<" )'
 
-$(RFLX_GENREFLEX): $(RFLX_GRFLXPYC)
-		@echo $(RFLX_GNRFLX_L1) > $(RFLX_GENREFLEX)
-		@echo $(RFLX_GNRFLX_L2) >> $(RFLX_GENREFLEX)
-ifneq ($(PLATFORM),win32)
-		@chmod a+x $(RFLX_GENREFLEX)
-endif
-
-$(RFLX_GENRFLXRC) : $(RFLX_GRFLXPYC)
-		@echo $(RFLX_GRFLXRC_L1) > $(RFLX_GENRFLXRC)
-		@echo $(RFLX_GRFLXRC_L2) >> $(RFLX_GENRFLXRC)
-ifneq ($(PLATFORM),win32)
-		@chmod a+x $(RFLX_GENRFLXRC)
-endif
-
 $(RFLX_GENMAPO) : $(RFLX_GENMAPS)
 	$(CXX) $(OPT) $(CXXFLAGS) -Iinclude -I$(REFLEXDIRS)/genmap -c $< $(CXXOUT)$@
 
 $(RFLX_GENMAPX) : $(RFLX_GENMAPO) $(REFLEXLIB)
 	$(LD) $(LDFLAGS) -o $@ $(RFLX_GENMAPO) $(RFLX_REFLEXLL)
 
-$(REFLEXLIB): $(RFLX_GENREFLEX) $(RFLX_GENRFLXRC) $(REFLEXO) $(ORDER_) $(MAINLIBS)
+$(REFLEXLIB): $(REFLEXO) $(ORDER_) $(MAINLIBS)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)"      \
 		"$(SOFLAGS)" libReflex.$(SOEXT) $@ "$(REFLEXO)" \
 		"$(REFLEXLIBEXTRA)"
 
-$(REFLEXMAP):   $(RLIBMAP) $(MAKEFILEDEP) $(REFLEXL)
-		$(RLIBMAP) -o $(REFLEXMAP) -l $(REFLEXLIB) \
-		   -d $(REFLEXLIBDEPM) -c $(REFLEXL)
+$(REFLEXDICTLIB): $(REFLEXDO) $(ORDER_) $(MAINLIBS) $(REFLEXLIB)
+		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)"      \
+		"$(SOFLAGS)" libReflexDict.$(SOEXT) $@ "$(REFLEXDO)" \
+		"$(REFLEXDICTLIBEXTRA)"
 
-all-reflex:     $(REFLEXLIB) $(REFLEXMAP)
+$(REFLEXDS): $(REFLEXAPIH) $(REFLEXL) $(ROOTCINTTMPEXE)
+		@echo "Generating dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -c -p -Ireflex/inc $(REFLEXAPIH) $(REFLEXL)
+
+$(REFLEXDICTMAP): $(RLIBMAP) $(MAKEFILEDEP) $(REFLEXL)
+		$(RLIBMAP) -o $(REFLEXDICTMAP) -l $(REFLEXDICTLIB) \
+		   -d $(REFLEXDICTLIBDEPM) -c $(REFLEXL)
+
+all-reflex:     $(REFLEXLIB) $(REFLEXDICTLIB) $(REFLEXDICTMAP) $(RFLX_GRFLXPYC) $(RFLX_GRFLXPY)
 
 clean-genreflex:
 		@rm -f bin/genreflex*
@@ -177,12 +167,12 @@ clean-check-reflex:
 
 clean-reflex: clean-genreflex clean-check-reflex
 		@rm -f $(RFLX_GENMAPX)
-		@rm -f $(REFLEXO)
+		@rm -f $(REFLEXO) $(REFLEXDO)
 
 clean::         clean-reflex
 
 distclean-reflex: clean-reflex
-		@rm -f $(REFLEXDEP) $(REFLEXLIB) $(REFLEXMAP)
+		@rm -f $(REFLEXDEP) $(REFLEXLIB) $(REFLEXDICTLIB) $(REFLEXDICTMAP)
 		@rm -rf include/Reflex lib/python
 
 distclean::     distclean-reflex
@@ -213,10 +203,10 @@ lib/libtest_%Rflx.$(SOEXT) : $(RFLX_TESTD)/%_rflx.o
 		$(CXX) $(OPT) $(CXXFLAGS) -c $< $(CXXOUT)$@
 
 $(RFLX_TESTLIBS1) : $(REFLEXDIRI)/Reflex/Reflex.h $(RFLX_TESTLIBD1)/selection.xml
-		cd $(RFLX_TESTD); $(RFLX_GENREFLEX_CMD) testDict1/Reflex.h -s testDict1/selection.xml -I../../include
+		cd $(RFLX_TESTD); ../../bin/genreflex testDict1/Reflex.h -s testDict1/selection.xml -I../../include
 
 $(RFLX_TESTLIBS2) : $(RFLX_TESTLIBD2)/Class2Dict.h $(RFLX_TESTLIBD2)/selection.xml $(wildcard $(RFLX_TESTLIBD2)/*.h)
-		cd $(RFLX_TESTD); $(RFLX_GENREFLEX_CMD) testDict2/Class2Dict.h -s testDict2/selection.xml -I../../include
+		cd $(RFLX_TESTD); ../../bin/genreflex testDict2/Class2Dict.h -s testDict2/selection.xml -I../../include --iocomments
 
 $(RFLX_UNITTESTO) : $(RFLX_TESTD)/test_Reflex%.o : $(RFLX_TESTD)/test_Reflex%.cxx
 		$(CXX) $(OPT) $(CXXFLAGS) -I$(RFLX_CPPUNITI) -Ireflex -c $< $(CXXOUT)$@
@@ -224,3 +214,5 @@ $(RFLX_UNITTESTO) : $(RFLX_TESTD)/test_Reflex%.o : $(RFLX_TESTD)/test_Reflex%.cx
 $(RFLX_UNITTESTX) : $(RFLX_TESTD)/test_Reflex% : $(RFLX_TESTD)/test_Reflex%.o
 		$(LD) $(LDFLAGS) -o $@ $< $(RFLX_CPPUNITLL) $(RFLX_REFLEXLL)
 
+$(REFLEXO):      PCHCXXFLAGS =
+$(RFLX_GENMAPO): PCHCXXFLAGS =

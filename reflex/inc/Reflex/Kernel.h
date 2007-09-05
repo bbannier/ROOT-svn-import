@@ -1,4 +1,4 @@
-// @(#)root/reflex:$Name: merge_reflex $:$Id: Kernel.h,v 1.26 2006/12/07 09:34:15 roiser Exp $
+// @(#)root/reflex:$Name: merge_reflex $:$Id: Kernel.h,v 1.26.4.1 2007/04/25 11:01:29 axel Exp $
 // Author: Stefan Roiser 2004
 
 // Copyright CERN, CH-1211 Geneva 23, 2004-2006, All rights reserved.
@@ -16,46 +16,46 @@
 // taken from http://www.nedprod.com/programs/gccvisibility.html
 // Shared library support
 
-#if __GNUC__ >= 4
-  #define GCC_HASCLASSVISIBILITY
+#if __GNUC__ >= 4 && !defined(__CINT__)
+#  define GCC_HASCLASSVISIBILITY
 #endif
 
 #ifdef WIN32
-  #define RFLX_IMPORT __declspec(dllimport)
-  #define RFLX_EXPORT __declspec(dllexport)
-  #define RFLX_DLLLOCAL
-  #define RFLX_DLLPUBLIC
+#  define RFLX_IMPORT __declspec(dllimport)
+#  define RFLX_EXPORT __declspec(dllexport)
+#  define RFLX_DLLLOCAL
+#  define RFLX_DLLPUBLIC
 #else
-  #ifdef GCC_HASCLASSVISIBILITY
-    #define RFLX_EXPORT __attribute__((visibility("default")))
-    #define RFLX_DLLLOCAL __attribute__((visibility("hidden")))
-    #define RFLX_DLLPUBLIC __attribute__((visibility("default")))
-  #else
-    #define RFLX_EXPORT
-    #define RFLX_DLLLOCAL
-    #define RFLX_DLLPUBLIC
-  #endif
-  #define RFLX_IMPORT
+#  ifdef GCC_HASCLASSVISIBILITY
+#    define RFLX_EXPORT __attribute__((visibility("default")))
+#    define RFLX_DLLLOCAL __attribute__((visibility("hidden")))
+#    define RFLX_DLLPUBLIC __attribute__((visibility("default")))
+#  else
+#    define RFLX_EXPORT
+#    define RFLX_DLLLOCAL
+#    define RFLX_DLLPUBLIC
+#  endif
+#  define RFLX_IMPORT
 #endif
 
 // Define RFLX_API for DLL builds
 #ifdef REFLEX_DLL
-  #ifdef REFLEX_BUILD
-    #define RFLX_API RFLX_EXPORT
-  #else
-    #define RFLX_API  RFLX_IMPORT
-  #endif // REFLEX_BUILD
+#  ifdef REFLEX_BUILD
+#    define RFLX_API RFLX_EXPORT
+#  else
+#    define RFLX_API  RFLX_IMPORT
+#  endif // REFLEX_BUILD
 #else
-  #define RFLX_API
+#  define RFLX_API
 #endif // REFLEX_DLL
 
 // Throwable classes must always be visible on GCC in all binaries
 #ifdef WIN32
-  #define RFLX_EXCEPTIONAPI(api) api
+#  define RFLX_EXCEPTIONAPI(api) api
 #elif defined(GCC_HASCLASSVISIBILITY)
-  #define RFLX_EXCEPTIONAPI(api) RFLX_EXPORT
+#  define RFLX_EXCEPTIONAPI(api) RFLX_EXPORT
 #else
-  #define RFLX_EXCEPTIONAPI(api)
+#  define RFLX_EXCEPTIONAPI(api)
 #endif
 // end macros for symbol selection
 
@@ -94,14 +94,6 @@
 // some compilers define the macros below in limits
 #include <limits>
 
-// Large integer definition depends of the platform
-#if defined(_WIN32) && !defined(__CINT__)
-typedef __int64 longlong;
-typedef unsigned __int64 ulonglong;
-#elif defined(__linux) || defined(sun) || defined(__APPLE__) || (defined(__CYGWIN__)&&defined(__GNUC__)) || defined(_AIX) || (defined(__alpha)&&!defined(__linux)) || defined(__sgi) || defined(__FreeBSD__)
-typedef long long int longlong; /* */
-typedef unsigned long long int /**/ ulonglong;
-#endif
 #ifndef LONGLONG_MAX
 #define LONGLONG_MAX 0x7FFFFFFFFFFFFFFFLL
 #endif
@@ -124,6 +116,15 @@ typedef unsigned long long int /**/ ulonglong;
 
 namespace ROOT {
    namespace Reflex {
+
+      // Large integer definition depends of the platform
+#if defined(_WIN32) && !defined(__CINT__)
+      typedef __int64 longlong;
+      typedef unsigned __int64 ulonglong;
+#else
+      typedef long long int longlong; /* */
+      typedef unsigned long long int /**/ ulonglong;
+#endif
 
       // forward declarations
       class Any;
@@ -221,7 +222,7 @@ namespace ROOT {
       // FM = FUNCTIONMEMBER
       // TY = TYPE
       // ME = MEMBER
-      //                              BA  CL  DM  FM  TY  ME
+      //                                BA  CL  DM  FM  TY  ME
       enum ENTITY_DESCRIPTION {
          PUBLIC          = (1<<0),  //  X       X   X       X
          PROTECTED       = (1<<1),  //  X       X   X       X
@@ -241,7 +242,7 @@ namespace ROOT {
          CONST           = (1<<15), //          X       X   X
          VOLATILE        = (1<<16), //          X       X   X
          REFERENCE       = (1<<17), //          X           X
-         ABSTRACT        = (1<<18), //      X           X
+         ABSTRACT        = (1<<18), //      X       X   X
          VIRTUAL         = (1<<19), //  X   X           X
          TRANSIENT       = (1<<20), //          X           X
          ARTIFICIAL      = (1<<21), //  X   X   X   X   X   X
