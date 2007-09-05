@@ -1,4 +1,4 @@
-// @(#)root/reflex:$Name:  $:$Id: TypeBase.cxx,v 1.29 2006/11/24 13:21:14 roiser Exp $
+// @(#)root/reflex:$Name: merge_reflex $:$Id: TypeBase.cxx,v 1.30 2006/11/30 11:37:15 roiser Exp $
 // Author: Stefan Roiser 2004
 
 // Copyright CERN, CH-1211 Geneva 23, 2004-2006, All rights reserved.
@@ -99,7 +99,6 @@ ROOT::Reflex::TypeBase::operator ROOT::Reflex::Scope () const {
    switch ( fTypeType ) {
    case CLASS:
    case STRUCT:
-   case TYPETEMPLATEINSTANCE:
    case UNION:
    case ENUM:
       return (dynamic_cast<const ScopeBase*>(this))->ThisScope();
@@ -490,12 +489,6 @@ std::string ROOT::Reflex::TypeBase::TypeTypeAsString() const {
       break;
    case TYPEDEF:
       return "TYPEDEF";
-      break;
-   case TYPETEMPLATEINSTANCE:
-      return "TYPETEMPLATEINSTANCE";
-      break;
-   case MEMBERTEMPLATEINSTANCE:
-      return "MEMBERTEMPLATEINSTANCE";
       break;
    case UNRESOLVED:
       return "UNRESOLVED";

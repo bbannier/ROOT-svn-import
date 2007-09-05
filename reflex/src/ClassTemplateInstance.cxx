@@ -1,4 +1,4 @@
-// @(#)root/reflex:$Name:  $:$Id: ClassTemplateInstance.cxx,v 1.11 2006/10/30 12:51:33 roiser Exp $
+// @(#)root/reflex:$Name: merge_reflex $:$Id: ClassTemplateInstance.cxx,v 1.12 2006/11/30 11:37:15 roiser Exp $
 // Author: Stefan Roiser 2004
 
 // Copyright CERN, CH-1211 Geneva 23, 2004-2006, All rights reserved.
@@ -33,8 +33,7 @@ ClassTemplateInstance( const char * typ,
    : Class( typ, 
             size, 
             ti, 
-            modifiers,
-            TYPETEMPLATEINSTANCE ),
+            modifiers ),
      TemplateInstance( Tools::GetTemplateArguments( typ )),
      fTemplateFamily( TypeTemplate()) {
 //-------------------------------------------------------------------------------

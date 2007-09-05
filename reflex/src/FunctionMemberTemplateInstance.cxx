@@ -1,4 +1,4 @@
-// @(#)root/reflex:$Name:  $:$Id: FunctionMemberTemplateInstance.cxx,v 1.13 2006/10/30 12:51:33 roiser Exp $
+// @(#)root/reflex:$Name: merge_reflex $:$Id: FunctionMemberTemplateInstance.cxx,v 1.14 2006/11/01 11:25:35 roiser Exp $
 // Author: Stefan Roiser 2004
 
 // Copyright CERN, CH-1211 Geneva 23, 2004-2006, All rights reserved.
@@ -37,8 +37,7 @@ FunctionMemberTemplateInstance( const char * nam,
                      stubFP,
                      stubCtx,
                      params,
-                     modifiers,
-                     MEMBERTEMPLATEINSTANCE ),
+                     modifiers ),
      TemplateInstance( Tools::GetTemplateArguments( nam )),
      fTemplateFamily( MemberTemplate()) {
 //-------------------------------------------------------------------------------

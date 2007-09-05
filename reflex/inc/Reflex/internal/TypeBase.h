@@ -1,4 +1,4 @@
-// @(#)root/reflex:$Name:  $:$Id: TypeBase.h,v 1.8 2006/11/24 13:21:14 roiser Exp $
+// @(#)root/reflex:$Name: merge_reflex $:$Id: TypeBase.h,v 1.9 2006/11/30 11:37:15 roiser Exp $
 // Author: Stefan Roiser 2004
 
 // Copyright CERN, CH-1211 Geneva 23, 2004-2006, All rights reserved.
@@ -934,7 +934,6 @@ inline bool ROOT::Reflex::TypeBase::IsArray() const {
 inline bool ROOT::Reflex::TypeBase::IsClass() const {
 //-------------------------------------------------------------------------------
    return ( fTypeType == CLASS || 
-            fTypeType == TYPETEMPLATEINSTANCE || 
             fTypeType == STRUCT );
 }
 
@@ -991,8 +990,7 @@ inline bool ROOT::Reflex::TypeBase::IsPointerToMember() const {
 //-------------------------------------------------------------------------------
 inline bool ROOT::Reflex::TypeBase::IsTemplateInstance() const {
 //-------------------------------------------------------------------------------
-   return ( fTypeType == TYPETEMPLATEINSTANCE || 
-            fTypeType == MEMBERTEMPLATEINSTANCE );
+   return ( TemplateFamily() != Dummy::TypeTemplate() );
 }
 
 

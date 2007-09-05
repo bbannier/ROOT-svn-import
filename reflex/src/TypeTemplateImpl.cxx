@@ -1,4 +1,4 @@
-// @(#)root/reflex:$Name:  $:$Id: TypeTemplateImpl.cxx,v 1.14 2006/08/28 16:03:54 roiser Exp $
+// @(#)root/reflex:$Name: merge_reflex $:$Id: TypeTemplateImpl.cxx,v 1.15 2006/10/31 15:14:01 roiser Exp $
 // Author: Stefan Roiser 2004
 
 // Copyright CERN, CH-1211 Geneva 23, 2004-2006, All rights reserved.

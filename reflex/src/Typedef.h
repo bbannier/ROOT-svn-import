@@ -1,4 +1,4 @@
-// @(#)root/reflex:$Name:  $:$Id: Typedef.h,v 1.17 2006/11/24 13:21:14 roiser Exp $
+// @(#)root/reflex:$Name: merge_reflex $:$Id: Typedef.h,v 1.18 2006/11/30 11:37:15 roiser Exp $
 // Author: Stefan Roiser 2004
 
 // Copyright CERN, CH-1211 Geneva 23, 2004-2006, All rights reserved.
@@ -995,7 +995,6 @@ inline bool ROOT::Reflex::Typedef::ForwardStruct() const {
    case TYPEDEF:
    case CLASS:
    case STRUCT:
-   case TYPETEMPLATEINSTANCE:
       return true;
    default:
       return false;
@@ -1008,8 +1007,6 @@ inline bool ROOT::Reflex::Typedef::ForwardTemplate() const {
 //-------------------------------------------------------------------------------
    switch ( fTypedefType.TypeType()) {
    case TYPEDEF:
-   case TYPETEMPLATEINSTANCE:
-   case MEMBERTEMPLATEINSTANCE:
       return true;
    default:
       return false;

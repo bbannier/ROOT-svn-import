@@ -1,4 +1,4 @@
-// @(#)root/reflex:$Name: merge_reflex $:$Id: Kernel.h,v 1.26.4.1 2007/04/25 11:01:29 axel Exp $
+// @(#)root/reflex:$Name:  $:$Id: Kernel.h,v 1.26.4.2 2007/09/05 08:36:01 axel Exp $
 // Author: Stefan Roiser 2004
 
 // Copyright CERN, CH-1211 Geneva 23, 2004-2006, All rights reserved.
@@ -288,8 +288,6 @@ namespace ROOT {
          POINTERTOMEMBER,
          TYPEDEF,
          UNION,
-         TYPETEMPLATEINSTANCE,
-         MEMBERTEMPLATEINSTANCE,
          NAMESPACE,
          DATAMEMBER,
          FUNCTIONMEMBER,

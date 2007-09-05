@@ -1,4 +1,4 @@
-// @(#)root/reflex:$Name:  $:$Id: ScopeBase.cxx,v 1.32 2006/10/30 12:51:33 roiser Exp $
+// @(#)root/reflex:$Name: merge_reflex $:$Id: ScopeBase.cxx,v 1.33 2006/11/30 11:37:15 roiser Exp $
 // Author: Stefan Roiser 2004
 
 // Copyright CERN, CH-1211 Geneva 23, 2004-2006, All rights reserved.
@@ -156,7 +156,6 @@ ROOT::Reflex::ScopeBase::operator ROOT::Reflex::Type () const {
    switch ( fScopeType ) {
    case CLASS:
    case STRUCT:
-   case TYPETEMPLATEINSTANCE:
    case UNION:
    case ENUM:
       return (dynamic_cast<const TypeBase*>(this))->ThisType();
@@ -256,6 +255,13 @@ void ROOT::Reflex::ScopeBase::HideName() const {
 //-------------------------------------------------------------------------------
 // Append the string " @HIDDEN@" to a scope name.
    fScopeName->HideName();
+}
+
+
+//-------------------------------------------------------------------------------
+inline bool ROOT::Reflex::ScopeBase::IsTemplateInstance() const {
+//-------------------------------------------------------------------------------
+   return ( TemplateFamily() != Dummy::TypeTemplate() );
 }
 
 
@@ -470,9 +476,6 @@ std::string ROOT::Reflex::ScopeBase::ScopeTypeAsString() const {
       break;
    case STRUCT:
       return "STRUCT";
-      break;
-   case TYPETEMPLATEINSTANCE:
-      return "TYPETEMPLATEINSTANCE";
       break;
    case NAMESPACE:
       return "NAMESPACE";

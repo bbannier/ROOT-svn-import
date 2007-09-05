@@ -1,4 +1,4 @@
-// @(#)root/reflex:$Name:  $:$Id: MemberBase.h,v 1.5 2006/11/06 09:13:32 roiser Exp $
+// @(#)root/reflex:$Name: merge_reflex $:$Id: MemberBase.h,v 1.5.4.1 2007/04/03 16:40:10 axel Exp $
 // Author: Stefan Roiser 2004
 
 // Copyright CERN, CH-1211 Geneva 23, 2004-2006, All rights reserved.
@@ -558,7 +558,7 @@ inline bool ROOT::Reflex::MemberBase::IsStatic() const {
 //-------------------------------------------------------------------------------
 inline bool ROOT::Reflex::MemberBase::IsTemplateInstance() const {
 //-------------------------------------------------------------------------------
-   return ( fMemberType == MEMBERTEMPLATEINSTANCE );
+   return ( TemplateFamily() != Dummy::MemberTemplate() );
 }
 
 
