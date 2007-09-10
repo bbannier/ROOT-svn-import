@@ -5,13 +5,14 @@
  * For the licensing terms see the file COPYING
  *
  ************************************************************************/
-//$Id: rflx_gendict.cxx,v 1.5 2006/07/26 13:00:35 axel Exp $
+//$Id: rflx_gendict.cxx,v 1.6 2007/07/31 01:47:27 russo Exp $
 
 #include "rflx_gendict.h"
 #include "rflx_gensrc.h"
 //#include "Reflex/Reflex.h"
 
 #include "G__ci.h"
+#include "common.h"
 #include "global.h"
 
 #include <iostream>

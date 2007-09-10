@@ -16,7 +16,7 @@
 
 #include <stdio.h>
 #include <math.h>
-#include <iostream.h>
+#include <iostream>
 
 class Complex {
  public:
@@ -41,9 +41,17 @@ class Complex {
   double re,im;
 };
 
-// #ifndef __MAKECINT__
-ostream& operator<<(ostream& ios,Complex& a);
-// #endif
+Complex operator +(Complex const & a,Complex const & b);
+Complex operator -(Complex const & a,Complex const & b);
+Complex operator *(Complex const & a,Complex const & b);
+Complex operator /(Complex const & a,Complex const & b);
+Complex exp(Complex& a);
+double fabs(Complex& a);
+double real(Complex& a);
+double imag(Complex& a);
+
+using namespace std;
+std::ostream& operator<<(std::ostream& ios,Complex& a);
 
 // Added for test
 const int cf1(const int a);

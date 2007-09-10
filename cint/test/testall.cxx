@@ -208,7 +208,7 @@ int ediff(const char *title, const char *macro, const char *dfile, const char *c
   fclose(fp);
 
   char com[4000]; 
-  sprintf(com,"diff --strip-trailing-cr --old-group-format=\"%s %s:%%c'\\012'%%<\" --new-group-format=\"%s interpreted:%%c'\\012'%%>\" --unchanged-line-format=\"\" --old-line-format=\" %%3dn: %%L\" --new-line-format=\" %%3dn: %%L\" %s interpreted>> %s", title, compiled, title, compiled, dfile);
+  sprintf(com,"diff --old-group-format=\"%s %s:%%c'\\012'%%<\" --new-group-format=\"%s interpreted:%%c'\\012'%%>\" --unchanged-line-format=\"\" --old-line-format=\" %%3dn: %%L\" --new-line-format=\" %%3dn: %%L\" %s interpreted>> %s", title, compiled, title, compiled, dfile);
   return run(com);
 
 }

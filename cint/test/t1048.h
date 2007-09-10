@@ -87,7 +87,7 @@ class FunctionObject {
 #ifdef __CINT__
       result=G__calc(temp);
 #else
-      result=G__int(G__calc(temp));
+      result=G__double(G__calc(temp));
 #endif
       break;
     case G__BYTECODEFUNC: // calling bytecode function

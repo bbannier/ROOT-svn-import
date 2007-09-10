@@ -226,7 +226,7 @@ int main(void)
 #endif
 
 #if !defined(G__MSC_VER) && !defined(_MSC_VER)
-  system("clear");
+  //system("clear");
 #endif
 
   /* printf("\x01b[2J"); */                /* clear screan */

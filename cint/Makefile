@@ -43,7 +43,7 @@ include/iosenum.h : cint$(G__CFG_EXEEXT) include/stdio.h makecint$(G__CFG_EXEEXT
 		unset VS_UNICODE_OUTPUT; \
 		LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:. \
 		DYLD_LIBRARY_PATH=$$DYLD_LIBRARY_PATH:. \
-		./cint$(G__CFG_EXEEXT) $(G__CFG_INCP)inc iosenum.cxx;\
+		./cint$(G__CFG_EXEEXT) $(G__CFG_INCP)inc include/iosenum.cxx;\
 		mv -f iosenum.h $@); \
 	fi)
 	@echo > done

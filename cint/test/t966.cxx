@@ -7,7 +7,7 @@
  ************************************************************************/
 
 
-#ifdef __CINT__
+#if defined(interp) && defined(makecint)
 #pragma include "test.dll"
 #else
 #include "t966.h"

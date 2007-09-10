@@ -21,9 +21,9 @@
 #endif
 
 #define G__CINTVERSION_V6      60010024
-#define G__CINTVERSIONSTR_V6  "6.1.24, July 26, 2007"
+#define G__CINTVERSIONSTR_V6  "6.1.25, Sept 10, 2007"
 #define G__CINTVERSION_V5      50160024
-#define G__CINTVERSIONSTR_V5  "5.16.24, July 26, 2007"
+#define G__CINTVERSIONSTR_V5  "5.16.25, Sept 10, 2007"
 
 #define G__ALWAYS
 /* #define G__NEVER */
@@ -1554,6 +1554,13 @@ typedef struct {
 #define G__VAARG_INC_COPY_N 4
 #define G__VAARG_PASS_BY_REFERENCE 8
 
+#elif (defined(__mips)&&defined(linux))
+/**********************************************
+* MIPS, Linux
+**********************************************/
+# define G__VAARG_INC_COPY_N 4
+# define G__VAARG_PASS_BY_REFERENCE 8
+
 #else
 /**********************************************
  * Other platforms,
@@ -1871,7 +1878,7 @@ extern G__EXPORT int G__const_whatnoerror G__P((void));
 extern G__EXPORT int G__close_inputfiles G__P((void));
 /* earlier in this file: G__p2f2funcname */
 extern G__EXPORT void G__scratch_globals_upto G__P((struct G__dictposition *dictpos));
-extern G__EXPORT void G__scratch_upto G__P((struct G__dictposition *dictpos));
+extern G__EXPORT int G__scratch_upto G__P((struct G__dictposition *dictpos));
 /* earlier in this file: G__settemplevel */
 extern G__EXPORT void G__store_dictposition G__P((struct G__dictposition* dictpos));
 extern G__EXPORT int G__printf (char* fmt,...);

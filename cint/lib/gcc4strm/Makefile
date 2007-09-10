@@ -1,15 +1,15 @@
 #
-# lib/snstream/Makefile
+# lib/gcc4strm/Makefile
 #
 CP         = cp
 MV	   = mv
 
 CINTSYSDIR = ../..
 
-SRCCPPIFC     = $(CINTSYSDIR)/src/gcc3strm.cxx
-SRCCPPIFH     = $(CINTSYSDIR)/src/gcc3strm.h
-CPPIFC     = gcc3strm.cxx
-CPPIFH     = gcc3strm.h
+SRCCPPIFC     = $(CINTSYSDIR)/src/gcc4strm.cxx
+SRCCPPIFH     = $(CINTSYSDIR)/src/gcc4strm.h
+CPPIFC     = gcc4strm.cxx
+CPPIFH     = gcc4strm.h
 
 CPPHEADER  = iostrm.h fstrm.h sstrm.h linkdef.h
 
