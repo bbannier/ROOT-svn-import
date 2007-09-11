@@ -1,4 +1,4 @@
-// @(#)root/reflex:$Name:  $:$Id: ClassBuilder.cxx,v 1.17 2006/11/02 09:01:19 roiser Exp $
+// @(#)root/reflex:$Name:  $:$Id: ClassBuilder.cxx,v 1.18 2006/11/09 13:51:10 roiser Exp $
 // Author: Stefan Roiser 2004
 
 // Copyright CERN, CH-1211 Geneva 23, 2004-2006, All rights reserved.
@@ -139,6 +139,13 @@ ROOT::Reflex::ClassBuilder::AddEnum( const char * nam,
   }
 */
 
+//-------------------------------------------------------------------------------
+ROOT::Reflex::ClassBuilder & 
+ROOT::Reflex::ClassBuilder::SetSizeOf(size_t size) {
+//-------------------------------------------------------------------------------
+   fClassBuilderImpl.SetSizeOf(size);
+   return *this;
+}
 
 //-------------------------------------------------------------------------------
 ROOT::Reflex::Type ROOT::Reflex::ClassBuilder::ToType() {
@@ -306,6 +313,12 @@ void ROOT::Reflex::ClassBuilderImpl::AddProperty( const char * key,
    else               fClass->Properties().AddProperty(key, value); 
 }
 
+//-------------------------------------------------------------------------------
+void ROOT::Reflex::ClassBuilderImpl::SetSizeOf( size_t size) {
+//-------------------------------------------------------------------------------
+// Set the size of the class (internal).
+   fClass->SetSize(size);
+}
 
 //-------------------------------------------------------------------------------
 ROOT::Reflex::Type ROOT::Reflex::ClassBuilderImpl::ToType() {

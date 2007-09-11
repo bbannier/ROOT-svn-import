@@ -1,4 +1,4 @@
-// @(#)root/reflex:$Name:  $:$Id: ClassBuilder.h,v 1.11 2006/09/14 14:39:12 roiser Exp $
+// @(#)root/reflex:$Name:  $:$Id: ClassBuilder.h,v 1.12 2006/11/02 09:01:19 roiser Exp $
 // Author: Stefan Roiser 2004
 
 // Copyright CERN, CH-1211 Geneva 23, 2004-2006, All rights reserved.
@@ -118,6 +118,12 @@ namespace ROOT {
          void  AddProperty( const char * key, 
                             const char * value );
 
+
+         /** SetSizeOf will set the SizeOf property for this class.
+          * It currently ignore all actual content.
+          * @size Size of the class
+          */
+         void SetSizeOf(size_t size);
 
          /*
           * ToType will return the currently produced Type (class)
@@ -242,6 +248,11 @@ namespace ROOT {
             ClassBuilder & AddProperty( const char * key, 
                                         P value );
 
+         /** SetSizeOf will set the SizeOf property for this class.
+          * It currently ignore all actual content.
+          * @size Size of the class
+          */
+         ClassBuilder & SetSizeOf(size_t size);
 
          /*
           * ToType will return the currently produced Type (class)
@@ -363,6 +374,12 @@ namespace ROOT {
             ClassBuilderT & AddProperty( const char * key, 
                                          P value );
 
+
+         /** SetSizeOf will set the SizeOf property for this class.
+          * It currently ignore all actual content.
+          * @size Size of the class
+          */
+         ClassBuilderT & SetSizeOf(size_t size);
 
          /*
           * ToType will return the currently produced Type (class)
@@ -674,10 +691,20 @@ ROOT::Reflex::ClassBuilderT<C>::AddProperty( const char * key,
 
 
 //-------------------------------------------------------------------------------
+template < class C > 
+inline ROOT::Reflex::ClassBuilderT<C> & 
+ROOT::Reflex::ClassBuilderT<C>::SetSizeOf(size_t size) {
+//-------------------------------------------------------------------------------
+   fClassBuilderImpl.SetSizeOf(size);
+   return *this;
+}
+
+//-------------------------------------------------------------------------------
 template < class C > inline ROOT::Reflex::Type 
 ROOT::Reflex::ClassBuilderT<C>::ToType() {
 //-------------------------------------------------------------------------------
    return fClassBuilderImpl.ToType();
 }
+
 
 #endif // ROOT_Reflex_ClassBuilder
