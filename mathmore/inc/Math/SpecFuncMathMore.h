@@ -1,4 +1,4 @@
-// @(#)root/mathmore:$Id$
+// @(#)root/mathmore:$Name:  $:$Id$
 // Authors: L. Moneta, A. Zsenei   08/2005 
 
 // Authors: Andras Zsenei & Lorenzo Moneta   06/2005 
@@ -61,7 +61,7 @@ namespace Math {
 
   
   Computes the generalized Laguerre polynomials for 
-  \f$ n \geq 0, m \gt -1 \f$. 
+  \f$ n \geq 0, m > -1 \f$. 
   They are defined in terms of the confluent hypergeometric function. 
   For integer values of m they can be defined in terms of the Laguerre polynomials \f$L_n(x)\f$: 
 

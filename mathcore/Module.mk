@@ -51,6 +51,7 @@ MATHCOREDH1  :=  $(MODDIRI)/Math/Vector3D.h \
                  $(MODDIRI)/Math/DistFuncMathCore.h \
                  $(MODDIRI)/Math/IParamFunction.h \
                  $(MODDIRI)/Math/IFunction.h \
+                 $(MODDIRI)/Math/Minimizer.h \
                  $(MODDIRI)/Math/VectorUtil_Cint.h
 
 
