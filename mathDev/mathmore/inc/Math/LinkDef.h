@@ -1,4 +1,4 @@
-// @(#)root/mathmore:$Id$
+// @(#)root/mathmore:$Name:  $:$Id$
 // Authors: L. Moneta, A. Zsenei   08/2005 
 
 
@@ -63,6 +63,11 @@
 #pragma link C++ class ROOT::Math::Random<ROOT::Math::GSLRngGFSR4>+;
 
 #pragma link C++ class ROOT::Math::KelvinFunctions+;
+
+#pragma link C++ class ROOT::Math::GSLMinimizer+;
+#pragma link C++ class ROOT::Math::GSLNLSMinimizer+;
+#pragma link C++ class ROOT::Math::GSLSimAnMinimizer+;
+#pragma link C++ class ROOT::Math::LSResidualFunc+;
 
 
 

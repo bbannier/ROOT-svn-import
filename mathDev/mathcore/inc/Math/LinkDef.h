@@ -1,4 +1,4 @@
-// @(#)root/mathcore:$Id$
+// @(#)root/mathcore:$Name:  $:$Id$
 
 
 #ifdef __CINT__
@@ -12,6 +12,8 @@
 
 #pragma link C++ namespace ROOT;
 #pragma link C++ namespace ROOT::Math;
+
+#pragma link C++ class ROOT::Math::Minimizer+;
 
 
 #include "LinkDef_Func.h" 
