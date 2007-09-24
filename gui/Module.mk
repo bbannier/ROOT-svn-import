@@ -26,6 +26,31 @@ GUIDS        := $(GUIDS1) $(GUIDS2) $(GUIDS3)
 GUIDO        := $(GUIDO1) $(GUIDO2) $(GUIDO3)
 GUIDH        := $(GUIDS:.cxx=.h)
 
+#LF
+GUITMPDS1    := $(MODDIRS)/G__Gui1Tmp.cxx
+GUITMPDO1    := $(GUITMPDS1:.cxx=.o)
+GUITMPDH1    := $(GUITMPDS1:.cxx=.h)
+GUITMP2DS1   := $(MODDIRS)/G__Gui1Tmp2.cxx
+GUITMP2DO1   := $(GUITMP2DS1:.cxx=.o)
+GUITMP2DH1   := $(GUITMP2DS1:.cxx=.h)
+
+#LF
+GUITMPDS2    := $(MODDIRS)/G__Gui2Tmp.cxx
+GUITMPDO2    := $(GUITMPDS2:.cxx=.o)
+GUITMPDH2    := $(GUITMPDS2:.cxx=.h)
+GUITMP2DS2   := $(MODDIRS)/G__Gui2Tmp2.cxx
+GUITMP2DO2   := $(GUITMP2DS2:.cxx=.o)
+GUITMP2DH2   := $(GUITMP2DS2:.cxx=.h)
+
+#LF
+GUITMPDS3    := $(MODDIRS)/G__Gui3Tmp.cxx
+GUITMPDO3    := $(GUITMPDS3:.cxx=.o)
+GUITMPDH3    := $(GUITMPDS3:.cxx=.h)
+GUITMP2DS3   := $(MODDIRS)/G__Gui3Tmp2.cxx
+GUITMP2DO3   := $(GUITMP2DS3:.cxx=.o)
+GUITMP2DH3   := $(GUITMP2DS3:.cxx=.h)
+
+
 GUIH1        := TGObject.h TGClient.h TGWindow.h TGPicture.h TGDimension.h \
                 TGFrame.h TGLayout.h TGString.h TGWidget.h TGIcon.h TGLabel.h \
                 TGButton.h TGTextBuffer.h TGTextEntry.h TGMsgBox.h TGMenu.h \
@@ -57,10 +82,23 @@ GUIH         := $(GUIH1) $(GUIH2) $(GUIH3) $(GUIH4)
 GUIS         := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
 GUIO         := $(GUIS:.cxx=.o)
 
+#LF
+GUITMPDS       := $(GUITMPDS1) $(GUITMPDS2) $(GUITMPDS3)
+GUITMPDO       := $(GUITMPDO1) $(GUITMPDO2) $(GUITMPDO3)
+GUITMP2DS      := $(GUITMP2DS1) $(GUITMP2DS2) $(GUITMP2DS3)
+GUITMP2DO      := $(GUITMP2DO1) $(GUITMP2DO2) $(GUITMP2DO3)
+
 GUIDEP       := $(GUIO:.o=.d) $(GUIDO:.o=.d)
 
+#LF
+GUITMPDEP   := $(GUITMPDO:.o=.d)
+
+#LF
 GUILIB       := $(LPATH)/libGui.$(SOEXT)
-GUIMAP       := $(GUILIB:.$(SOEXT)=.rootmap)
+GUIDICTLIB   := $(LPATH)/libGuiDict.$(SOEXT)
+GUIMAP      := $(GUILIB:.$(SOEXT)=.rootmap)
+GUIDICTMAP   := $(GUIDICTLIB:.$(SOEXT)=.rootmap)
+GUINM        := $(GUILIB:.$(SOEXT)=.nm)
 
 # used in the main Makefile
 ALLHDRS     += $(patsubst $(MODDIRI)/%.h,include/%.h,$(GUIH))
@@ -74,20 +112,71 @@ INCLUDEFILES += $(GUIDEP)
 include/%.h:    $(GUIDIRI)/%.h
 		cp $< $@
 
-$(GUILIB):      $(GUIO) $(GUIDO) $(ORDER_) $(MAINLIBS) $(GUILIBDEP)
+#LF
+$(GUILIB):      $(GUIO) $(GUITMPDO) $(GUITMP2DO) $(GUIDO) $(ORDER_) $(MAINLIBS) $(GUILIBDEP)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
-		   "$(SOFLAGS)" libGui.$(SOEXT) $@ "$(GUIO) $(GUIDO)" \
-		   "$(GUILIBEXTRA)"
+		"$(SOFLAGS)" libGui.$(SOEXT) $@ "$(GUIO) $(GUITMPDO) $(GUITMP2DO) $(GUIDO)"\
+		"$(GUILIBEXTRA)"
+#LF
+#$(GUIDICTLIB):  $(GUIDO) $(ORDER_) $(MAINLIBS) $(GUIDICTLIBDEP) $(GUITMP2DO)
+#		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
+#		"$(SOFLAGS)" libGuiDict.$(SOEXT) $@ "$(GUIDO) $(GUITMP2DO)"\
+#		"$(GUIDICTLIBEXTRA)"
 
-$(GUIDS1):      $(GUIH1) $(GUIL1) $(ROOTCINTTMPEXE)
-		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -c $(GUIH1) $(GUIL1)
-$(GUIDS2):      $(GUIH2) $(GUIL2) $(ROOTCINTTMPEXE)
-		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -c $(GUIH2) $(GUIL2)
-$(GUIDS3):      $(GUIH3) $(GUIL3) $(ROOTCINTTMPEXE)
-		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -c $(GUIH3) $(GUIL3)
+#LF
+$(GUITMPDS1):   $(GUIH1) $(GUIL1) $(ROOTCINTTMPEXE)
+		@echo "Generating first dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -. 1 -c $(GUIH1) $(GUIL1)
+#LF
+$(GUITMP2DS1):  $(GUIH1) $(GUIL1) $(ROOTCINTTMPEXE)
+		@echo "Generating second dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -. 2 -c $(GUIH1) $(GUIL1)
+#LF
+$(GUIDS1):      $(GUIH1) $(GUIL1) $(ROOTCINTTMPEXE) $(GUINM)
+		@echo "Generating third dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -L $(ROOTSYS)/$(GUINM) -. 3 -c $(GUIH1) $(GUIL1)
+
+#LF
+$(GUITMPDS2):   $(GUIH2) $(GUIL2) $(ROOTCINTTMPEXE)
+		@echo "Generating first dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -. 1 -c $(GUIH2) $(GUIL2)
+#LF
+$(GUITMP2DS2):  $(GUIH2) $(GUIL2) $(ROOTCINTTMPEXE)
+		@echo "Generating second dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -. 2 -c $(GUIH2) $(GUIL2)
+#LF
+$(GUIDS2):     $(GUIH2) $(GUIL2) $(ROOTCINTTMPEXE) $(GUINM)
+		@echo "Generating third dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -L $(ROOTSYS)/$(GUINM) -. 3 -c $(GUIH2) $(GUIL2)
+
+#LF
+$(GUITMPDS3):   $(GUIH3) $(GUIL3) $(ROOTCINTTMPEXE)
+		@echo "Generating first dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -. 1 -c $(GUIH3) $(GUIL3)
+#LF
+$(GUITMP2DS3):  $(GUIH3) $(ROOTCINTTMPEXE)
+		@echo "Generating second dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -. 2 -c $(GUIH3) $(GUIL3)
+#LF
+$(GUIDS3):     $(GUIH3) $(GUIL3) $(ROOTCINTTMPEXE) $(GUINM)
+		@echo "Generating third dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -L $(ROOTSYS)/$(GUINM) -. 3 -c $(GUIH3) $(GUIL3)
+
+#LF
+#$(GUIDICTMAP):  $(RLIBMAP) $(MAKEFILEDEP) $(GUIL)
+#		$(RLIBMAP) -o $(GUIDICTMAP) -l $(GUIDICTLIB) \
+#		-d $(GUILIB) $(GUILIBDEPM) -c $(GUIL)
+
+#LF
+$(GUINM):      $(GUIO) $(GUITMPDO) $(GUITMP2DO) 
+		@echo "Generating symbols file $@..."
+		nm -g -p --defined-only $(GUITMPDO1) | awk '{printf("%s\n", $$3)'} > $(GUINM)
+		nm -g -p --defined-only $(GUITMPDO2) | awk '{printf("%s\n", $$3)'} >> $(GUINM)
+		nm -g -p --defined-only $(GUITMPDO3) | awk '{printf("%s\n", $$3)'} >> $(GUINM)
+		nm -g -p --defined-only $(GUITMP2DO1) | awk '{printf("%s\n", $$3)'} >> $(GUINM)
+		nm -g -p --defined-only $(GUITMP2DO2) | awk '{printf("%s\n", $$3)'} >> $(GUINM)
+		nm -g -p --defined-only $(GUITMP2DO3) | awk '{printf("%s\n", $$3)'} >> $(GUINM)
+		nm -g -p --defined-only $(GUIO) | awk '{printf("%s\n", $$3)'} >> $(GUINM)
 
 $(GUIMAP):      $(RLIBMAP) $(MAKEFILEDEP) $(GUIL)
 		$(RLIBMAP) -o $(GUIMAP) -l $(GUILIB) \
@@ -98,7 +187,12 @@ all-gui:        $(GUILIB) $(GUIMAP)
 clean-gui:
 		@rm -f $(GUIO) $(GUIDO)
 
-clean::         clean-gui
+clean::         clean-gui clean-pds-gui
+
+#LF
+clean-pds-gui:	
+		rm -f $(GUITMPDS) $(GUITMPDO) $(GUITMPDH) \
+		$(GUITMPDEP) $(GUITMP2DS) $(GUITMP2DO) $(GUITMP2DH) $(GUINM)
 
 distclean-gui:  clean-gui
 		@rm -f $(GUIDEP) $(GUIDS) $(GUIDH) $(GUILIB) $(GUIMAP)
