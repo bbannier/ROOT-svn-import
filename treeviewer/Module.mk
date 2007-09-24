@@ -34,10 +34,25 @@ TREEVIEWERS  := $(patsubst %,$(MODDIRS)/%,$(TREEVIEWERS))
 
 TREEVIEWERO  := $(TREEVIEWERS:.cxx=.o)
 
+
+#LF
+TREEVIEWERTMPDS    := $(MODDIRS)/G__TreeViewerTmp.cxx
+TREEVIEWERTMPDO    := $(TREEVIEWERTMPDS:.cxx=.o)
+TREEVIEWERTMPDH    := $(TREEVIEWERTMPDS:.cxx=.h)
+TREEVIEWERTMP2DS   := $(MODDIRS)/G__TreeViewerTmp2.cxx
+TREEVIEWERTMP2DO   := $(TREEVIEWERTMP2DS:.cxx=.o)
+TREEVIEWERTMP2DH   := $(TREEVIEWERTMP2DS:.cxx=.h)
+
 TREEVIEWERDEP := $(TREEVIEWERO:.o=.d) $(TREEVIEWERDO:.o=.d)
+
+#LF
+TREEVIEWERTMPDEP  := $(TREEVIEWERTMPDO:.o=.d)
 
 TREEVIEWERLIB := $(LPATH)/libTreeViewer.$(SOEXT)
 TREEVIEWERMAP := $(TREEVIEWERLIB:.$(SOEXT)=.rootmap)
+
+#LF
+TREEVIEWERNM       := $(TREEVIEWERLIB:.$(SOEXT)=.nm)
 
 # used in the main Makefile
 ALLHDRS       += $(patsubst $(MODDIRI)/%.h,include/%.h,$(TREEVIEWERH))
@@ -51,16 +66,35 @@ INCLUDEFILES += $(TREEVIEWERDEP)
 include/%.h:    $(TREEVIEWERDIRI)/%.h
 		cp $< $@
 
-$(TREEVIEWERLIB): $(TREEVIEWERO) $(TREEVIEWERDO) $(ORDER_) $(MAINLIBS) \
-                  $(TREEVIEWERLIBDEP)
+#LF
+$(TREEVIEWERLIB):   $(TREEVIEWERO) $(TREEVIEWERTMPDO) $(TREEVIEWERTMP2DO) $(TREEVIEWERDO) $(ORDER_) \
+			$(MAINLIBS) $(TREEVIEWERLIBDEP)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
-		   "$(SOFLAGS)" libTreeViewer.$(SOEXT) $@ \
-		   "$(TREEVIEWERO) $(TREEVIEWERDO)" \
+		   "$(SOFLAGS)" libTreeViewer.$(SOEXT) $@ "$(TREEVIEWERO) \
+			$(TREEVIEWERTMPDO) $(TREEVIEWERTMP2DO) $(TREEVIEWERDO)" \
 		   "$(TREEVIEWERLIBEXTRA)"
 
-$(TREEVIEWERDS): $(TREEVIEWERH) $(TREEVIEWERL) $(ROOTCINTTMPEXE)
-		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -c $(TREEVIEWERH) $(TREEVIEWERL)
+#LF
+$(TREEVIEWERTMPDS):   $(TREEVIEWERH) $(TREEVIEWERL) $(ROOTCINTTMPEXE)
+		@echo "Generating first dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -. 1 -c $(TREEVIEWERH) $(TREEVIEWERL)
+
+#LF
+$(TREEVIEWERTMP2DS):  $(TREEVIEWERH) $(TREEVIEWERL) $(ROOTCINTTMPEXE)
+		@echo "Generating second dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -. 2 -c $(TREEVIEWERH) $(TREEVIEWERL)
+
+#LF
+$(TREEVIEWERDS):    $(TREEVIEWERH) $(TREEVIEWERL) $(ROOTCINTTMPEXE) $(TREEVIEWERNM)
+		@echo "Generating third dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -L $(ROOTSYS)/$(TREEVIEWERNM) -. 3 -c $(TREEVIEWERH) $(TREEVIEWERL)
+
+#LF
+$(TREEVIEWERNM):      $(TREEVIEWERO) $(TREEVIEWERTMPDO) $(TREEVIEWERTMP2DO) 
+		@echo "Generating symbols file $@..."
+		nm -g -p --defined-only $(TREEVIEWERTMPDO) | awk '{printf("%s\n", $$3)'} > $(TREEVIEWERNM)
+		nm -g -p --defined-only $(TREEVIEWERTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(TREEVIEWERNM)
+		nm -g -p --defined-only $(TREEVIEWERO) | awk '{printf("%s\n", $$3)'} >> $(TREEVIEWERNM)
 
 $(TREEVIEWERMAP): $(RLIBMAP) $(MAKEFILEDEP) $(TREEVIEWERL)
 		$(RLIBMAP) -o $(TREEVIEWERMAP) -l $(TREEVIEWERLIB) \
@@ -71,7 +105,12 @@ all-treeviewer: $(TREEVIEWERLIB) $(TREEVIEWERMAP)
 clean-treeviewer:
 		@rm -f $(TREEVIEWERO) $(TREEVIEWERDO)
 
-clean::         clean-treeviewer
+clean::         clean-treeviewer clean-pds-treeviewer
+
+#LF
+clean-pds-treeviewer:	
+		rm -f $(TREEVIEWERTMPDS) $(TREEVIEWERTMPDO) $(TREEVIEWERTMPDH) \
+		$(TREEVIEWERTMPDEP) $(TREEVIEWERTMP2DS) $(TREEVIEWERTMP2DO) $(TREEVIEWERTMP2DH) $(TREEVIEWERNM)
 
 distclean-treeviewer: clean-treeviewer
 		@rm -f $(TREEVIEWERDEP) $(TREEVIEWERDS) $(TREEVIEWERDH) \
