@@ -1,0 +1,3 @@
+@prefix@/lib/root/lib[a-z]*Dict.so*
+@prefix@/lib/root/@version@/lib[a-z]*Dict.so*
+@prefix@/lib/root/@version@/cint
