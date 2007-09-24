@@ -1,4 +1,4 @@
-// @(#)root/mathmore:$Id: GSLIntegrator.cxx 19826 2007-09-19 19:56:11Z rdm $
+// @(#)root/mathmore:$Id$
 // Author: L. Moneta Tue Dec 19 15:41:39 2006
 
 /**********************************************************************

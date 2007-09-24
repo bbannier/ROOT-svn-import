@@ -1,4 +1,4 @@
-// @(#)root/mathmore:$Id: inc/Math/GSLMultiFit.h,v 1.0 2006/01/01 12:00:00 moneta Exp $
+// @(#)root/mathmore:$Id$
 // Author: L. Moneta Wed Dec 20 17:26:06 2006
 
 /**********************************************************************
