@@ -17,6 +17,14 @@ GLDS         := $(MODDIRS)/G__GL.cxx
 GLDO         := $(GLDS:.cxx=.o)
 GLDH         := $(GLDS:.cxx=.h)
 
+#LF
+GLTMPDS    := $(MODDIRS)/G__GLTmp.cxx
+GLTMPDO    := $(GLTMPDS:.cxx=.o)
+GLTMPDH    := $(GLTMPDS:.cxx=.h)
+GLTMP2DS    := $(MODDIRS)/G__GLTmp2.cxx
+GLTMP2DO    := $(GLTMP2DS:.cxx=.o)
+GLTMP2DH    := $(GLTMP2DS:.cxx=.h)
+
 GLH          := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 GLS          := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
 GLS1         := $(wildcard $(MODDIRS)/*.c)
@@ -48,8 +56,18 @@ GLO1         := $(GLS1:.c=.o)
 
 GLDEP        := $(GLO:.o=.d) $(GLDO:.o=.d) $(GLO1:.o=.d)
 
+#LF
+GLTMPDEP   := $(GLTMPDO:.o=.d)
+
 GLLIB        := $(LPATH)/libRGL.$(SOEXT)
+
+#LF
 GLMAP        := $(GLLIB:.$(SOEXT)=.rootmap)
+GLDICTLIB  := $(LPATH)/libRGLDict.$(SOEXT)
+GLDICTMAP  := $(GLDICTLIB:.$(SOEXT)=.rootmap)
+
+#LF
+GLNM       := $(GLLIB:.$(SOEXT)=.nm)
 
 # used in the main Makefile
 ALLHDRS      += $(patsubst $(MODDIRI)/%.h,include/%.h,$(GLH))
@@ -63,25 +81,54 @@ INCLUDEFILES += $(GLDEP)
 include/%.h:    $(GLDIRI)/%.h
 		cp $< $@
 
-$(GLLIB):       $(GLO) $(GLO1) $(GLDO) $(ORDER_) $(MAINLIBS) $(GLLIBDEP)
+#LF
+$(GLLIB):     $(GLO) $(GLO1) $(GLTMPDO) $(GLTMP2DO) $(GLDO) $(ORDER_) $(MAINLIBS) $(GLLIBDEP)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
-		   "$(SOFLAGS)" libRGL.$(SOEXT) $@ "$(GLO) $(GLO1) $(GLDO)" \
-		   "$(GLLIBEXTRA) $(GLLIBS)"
+		"$(SOFLAGS)" libRGL.$(SOEXT) $@ "$(GLO) $(GLO1) $(GLTMPDO) $(GLTMP2DO) $(GLDO)" \
+		"$(GLLIBEXTRA) $(GLLIBS)"
 
-$(GLDS):	$(GLH2) $(GLL) $(ROOTCINTTMPEXE)
-		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -c $(GLH2) $(GLL)
+#LF
+#$(GLDICTLIB): $(GLDO) $(ORDER_) $(MAINLIBS) $(GLDICTLIBDEP)
+#		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
+#		"$(SOFLAGS)" libRGLDict.$(SOEXT) $@ "$(GLDO) $(GLTMP2DO)"\
+#		"$(GLDICTLIBEXTRA) $(GLLIBS)"
 
-$(GLMAP):       $(RLIBMAP) $(MAKEFILEDEP) $(GLL)
+#LF
+$(GLTMPDS):   $(GLH2) $(GLL) $(ROOTCINTTMPEXE)
+		@echo "Generating first dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -. 1 -c $(GLH2) $(GLL)
+
+#LF
+$(GLTMP2DS):  $(GLH2) $(GLL) $(ROOTCINTTMPEXE)
+		@echo "Generating second dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -. 2 -c $(GLH2) $(GLL)
+
+#LF
+$(GLDS):      $(GLH2) $(GLL) $(ROOTCINTTMPEXE) $(GLNM)
+		@echo "Generating third dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -L $(ROOTSYS)/$(GLNM) -. 3 -c $(GLH2) $(GLL)
+#LF
+$(GLMAP): $(RLIBMAP) $(MAKEFILEDEP) $(GLL)
 		$(RLIBMAP) -o $(GLMAP) -l $(GLLIB) \
-		   -d $(GLLIBDEPM) -c $(GLL)
+		-d $(GLLIBDEPM) -c $(GLL)
+#LF
+$(GLNM):      $(GLO) $(GLTMPDO) $(GLTMP2DO)
+		@echo "Generating symbols file $@..."
+		nm -g -p --defined-only $(GLTMPDO) | awk '{printf("%s\n", $$3)'} > $(GLNM)
+		nm -g -p --defined-only $(GLTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(GLNM)
+		nm -g -p --defined-only $(GLO) | awk '{printf("%s\n", $$3)'} >> $(GLNM)
 
 all-gl:         $(GLLIB) $(GLMAP)
 
 clean-gl:
 		@rm -f $(GLO) $(GLO1) $(GLDO)
 
-clean::         clean-gl
+clean::         clean-gl clean-pds-gl
+
+#LF
+clean-pds-gl:	
+		rm -f $(GLTMPDS) $(GLTMPDO) $(GLTMPDH) \
+		$(GLTMPDEP) $(GLTMP2DS) $(GLTMP2DO) $(GLTMP2DH) $(GLNM)
 
 distclean-gl:   clean-gl
 		@rm -f $(GLDEP) $(GLLIB) $(GLDS) $(GLDH) $(GLMAP)
