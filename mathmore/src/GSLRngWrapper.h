@@ -1,4 +1,4 @@
-// @(#)root/mathmore:$Id: GSLRngWrapper.cxx 19826 2007-09-19 19:56:11Z rdm $
+// @(#)root/mathmore:$Id$
 // Author: L. Moneta Fri Aug 24 17:20:45 2007
 
 /**********************************************************************
