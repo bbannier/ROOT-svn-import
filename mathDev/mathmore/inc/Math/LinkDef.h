@@ -1,4 +1,4 @@
-// @(#)root/mathmore:$Name:  $:$Id$
+// @(#)root/mathmore:$Id$
 // Authors: L. Moneta, A. Zsenei   08/2005 
 
 
