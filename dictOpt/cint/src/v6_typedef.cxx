@@ -789,8 +789,19 @@ void G__define_type()
     G__newtype.comment[typenum].filenum = -1;
     G__newtype.nindex[typenum]=nindex;
 #ifdef G__TYPEDEFFPOS
-    G__newtype.filenum[typenum] = G__ifile.filenum;
-    G__newtype.linenum[typenum] = G__ifile.line_number;
+    // LF 21/05/07
+    // G__ifile.filenum at this moment might point to a temporal file
+    // but later on a real file will be registered with this number
+    // and will create confusion. If this is a temporal file just
+    // ignore its number
+    if( !strlen(G__ifile.name)>3 || strncmp("(tmp", G__ifile.name, 4) ) {
+       G__newtype.filenum[typenum] = G__ifile.filenum;
+       G__newtype.linenum[typenum] = G__ifile.line_number;
+    }
+    else {
+       G__newtype.filenum[typenum] = -1;
+       G__newtype.linenum[typenum] = -1;
+    }
 #endif
     if(nindex) {
       G__newtype.index[typenum]
@@ -1102,6 +1113,140 @@ int G__defined_typename(const char *type_name)
 
   if(
      len>0 && 
+     temp[len-1]=='*') {
+    temp[--len]='\0';
+    ispointer = 'A' - 'a';
+  }
+
+  for(i=0;i<G__newtype.alltype;i++) {
+    if(len==G__newtype.hash[i] && strcmp(G__newtype.name[i],temp)==0) {
+      thisflag=0;
+      /* global scope */
+      if(-1==G__newtype.parent_tagnum[i]
+#if !defined(G__OLDIMPLEMTATION2100)
+         && (!p || (temp2==p || strcmp("std",temp2)==0))
+#elif !defined(G__OLDIMPLEMTATION1890)
+         && (!p || temp2==p)
+#endif
+         )
+        thisflag=0x1;
+      /* enclosing tag scope */
+      if(G__isenclosingclass(G__newtype.parent_tagnum[i],env_tagnum))
+        thisflag=0x2;
+      /* template definition enclosing class scope */
+      if(G__isenclosingclass(G__newtype.parent_tagnum[i],G__tmplt_def_tagnum))
+        thisflag=0x4;
+      /* baseclass tag scope */
+      if(-1!=G__isanybase(G__newtype.parent_tagnum[i],env_tagnum
+                          ,G__STATICRESOLUTION))
+        thisflag=0x8;
+      /* template definition base class scope */
+      if(-1!=G__isanybase(G__newtype.parent_tagnum[i],G__tmplt_def_tagnum
+                          ,G__STATICRESOLUTION))
+        thisflag=0x10;
+      if(thisflag == 0 &&
+         G__isenclosingclassbase(G__newtype.parent_tagnum[i],env_tagnum))
+        thisflag = 0x02;
+      if(thisflag == 0 &&
+         G__isenclosingclassbase(G__newtype.parent_tagnum[i],
+                                 G__tmplt_def_tagnum))
+        thisflag = 0x04;
+      /* exact template definition scope */
+      if(0<=G__tmplt_def_tagnum &&
+         G__tmplt_def_tagnum==G__newtype.parent_tagnum[i])
+        thisflag=0x20;
+      /* exact tag scope */
+      if(0<=env_tagnum && env_tagnum==G__newtype.parent_tagnum[i])
+        thisflag=0x40;
+
+      if(thisflag && thisflag>=matchflag) {
+        matchflag = thisflag;
+        typenum = i;
+        /* This must be a bad manner. Somebody needs to reset G__var_type
+         * especially when typein is 0. */
+        G__var_type=G__newtype.type[i] + ispointer ;
+      }
+    }
+  }
+#ifndef G__OLDIMPLEMENTATION1823
+  if(temp!=buf) free((void*)temp);
+  if(temp2!=buf2) free((void*)temp2);
+#endif
+  return(typenum);
+
+}
+
+/******************************************************************
+* G__defined_typename(type_name)
+*
+* Search already defined typedef names, -1 is returned if not found
+* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+* Note that this modify G__var_type, you may need to reset it after
+* calling this function
+* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+*
+* LF: 17-07-07
+* Has to be changed to avoid code replication
+******************************************************************/
+int G__defined_typename2(const char *type_name, int noerror)
+{
+  int i;
+  int len;
+  char ispointer=0;
+#ifndef G__OLDIMPLEMENTATION1823
+  char buf[G__BUFLEN];
+  char buf2[G__BUFLEN];
+  char *temp=buf;
+  char *temp2=buf2;
+#else
+  char temp[G__LONGLINE];
+  char temp2[G__LONGLINE];
+#endif
+  char *p;
+  int env_tagnum;
+  int typenum = -1;
+  unsigned long matchflag=0;
+  unsigned long thisflag=0;
+  char *par;
+
+#ifndef G__OLDIMPLEMENTATION1823
+  if(strlen(type_name)>G__BUFLEN-10) {
+    temp2=(char*)malloc(strlen(type_name)+10);
+    temp=(char*)malloc(strlen(type_name)+10);
+  }
+#endif
+  strcpy(temp2,type_name);
+
+  /* find 'xxx::yyy' */
+  p = G__find_last_scope_operator (temp2);
+
+
+  /* abandon scope operator if 'zzz (xxx::yyy)www' */
+  par = strchr(temp2,'(');
+  if(par && p && par<p) p=(char*)NULL;
+
+  if(p) {
+    strcpy(temp,p+2);
+    *p='\0';
+    if(temp2==p) env_tagnum = -1; /* global scope */
+#ifndef G__STD_NAMESPACE /* ON745 */
+    else if (strcmp (temp2, "std") == 0
+             && G__ignore_stdnamespace
+             ) env_tagnum = -1;
+#endif
+    else         env_tagnum = G__defined_tagname(temp2,noerror);
+  }
+  else {
+    strcpy(temp,temp2);
+    env_tagnum = G__get_envtagnum();
+  }
+
+  len=strlen(temp);
+
+  if(
+#ifndef G__OLDIMPLEMENTATION1863
+     len>0 && 
+#endif
      temp[len-1]=='*') {
     temp[--len]='\0';
     ispointer = 'A' - 'a';

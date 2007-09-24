@@ -128,6 +128,10 @@ G__ClassInfo {
 			  ,MatchMode mode=ConversionMatch
                           ,InheritanceMode imode=WithInheritance
                           );
+  G__MethodInfo GetMethod(const char *fname,const char *arg,long* poffset
+			  ,MatchMode mode
+                          ,InheritanceMode
+                          ,int noerror);
   G__MethodInfo GetDefaultConstructor();
   G__MethodInfo GetCopyConstructor();
   G__MethodInfo GetDestructor();
