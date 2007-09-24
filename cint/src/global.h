@@ -20,6 +20,7 @@
 
 #ifndef __CINT__
 #ifdef __cplusplus
+
 extern "C" {
 #endif
 #endif
@@ -204,6 +205,8 @@ extern struct G__inheritance G__globalusingnamespace;
 extern struct G__tagtable G__struct;
 extern struct G__typedef  G__newtype;
 
+// LF 03-07-07
+extern const char *G__libname;
 
 /**************************************************************************
 * structure for input file
@@ -312,6 +315,9 @@ extern short G__unsigned ;
 extern short G__ansiheader ;
 extern G__value G__ansipara;
 extern short G__enumdef;
+
+// LF 10-07-07
+extern short G__dicttype;
 
 extern char G__tagname[G__MAXNAME];
 extern long G__store_struct_offset; /* used to be int */
