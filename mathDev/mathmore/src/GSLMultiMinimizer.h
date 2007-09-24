@@ -1,4 +1,4 @@
-// @(#)root/mathmore:$Id: inc/Math/GSLMultiMinimizer.h,v 1.0 2006/01/01 12:00:00 moneta Exp $
+// @(#)root/mathmore:$Id$
 // Author: L. Moneta Tue Dec 19 14:09:15 2006
 
 /**********************************************************************
