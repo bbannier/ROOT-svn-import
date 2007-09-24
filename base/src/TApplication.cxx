@@ -181,6 +181,43 @@ TApplication::TApplication(const char *appClassName,
       InitializeGraphics();
    }
 
+   // LF: 30-05-07
+   // Move this from TRint to fullfil the dependancy when registering TDictionary
+   // Load some frequently used includes
+   Int_t includes = gEnv->GetValue("Rint.Includes",1);
+   // When the interactive ROOT starts, it can automatically load some frequently
+   // used includes. However, this introduces several overheads
+   //   -A long list of cint and system files must be kept open during the session
+   //   -The initialisation takes more time (noticeable when using gdb or valgrind)
+   //   -Memory overhead of about 5 Mbytes (1/3 of the ROOT executable) when including <vector>
+   // In $ROOTSYS/etc/system.rootrc, you can set the variable Rint.Includes to 0
+   //  to disable the loading of these includes at startup.
+   // You can set the variable to 1 (default) to load only <iostream>, <string> and <RTypesCint.h>
+   // You can set it to 2 to load in addition <vector> and <pair>
+   // We strongly recommend setting the variable to 2 if your scripts include <vector>
+   // and you execute your scripts multiple times.
+   if (includes > 0) {
+      ProcessLine("#include <iostream>", kTRUE);
+      ProcessLine("#include <_string>", kTRUE); // for std::string iostream.
+      ProcessLine("#include <RtypesCint.h>", kTRUE);// Allow the usage of ClassDef and ClassImp in interpreted macros
+      if (includes > 1) {
+         ProcessLine("#include <vector>", kTRUE);  // Needed because std::vector and std::pair are
+         ProcessLine("#include <pair>", kTRUE);    // used within the core ROOT dictionaries
+                                                   // and CINT will not be able to properly unload these files
+      }
+   }
+
+   // LF: 30-05-07
+   // We have a problem when parsing default parameters
+   // check: 
+   // TH1::GetMaximun(Double_t maxval = FLT_MAX) const
+   // 
+   // The issue is that FLT_MAX is a define in a .h
+   // therefore, cint has no idea about it.
+   // Hack our way through by reading such file...
+   // how many of them should we read?
+   ProcessLine(".L $ROOTSYS/cint/include/float.h", kTRUE);
+
    // Make sure all registered dictionaries have been initialized
    // and that all types have been loaded
    gInterpreter->InitializeDictionaries();
