@@ -1568,7 +1568,39 @@ int TSystem::Load(const char *module, const char *entry, Bool_t system)
          gLibraryVersion[gLibraryVersionIdx] = 0;
       }
       gLibraryVersionIdx--;
+  
       delete [] path;
+   }
+
+   // LF 19-07-07
+   // We need to load the dictionary at the same moment we load the library,
+   // otherwise we will deal with some unexpected behavior ...
+   
+   // first let's check that this is not a dictionary
+   idx = moduleBasename.Index("Dict.", strlen("Dict."));
+   if (idx == kNPOS) {
+      // this is not a dictionary..
+      TString moduleDictBasename = moduleBasename;
+      
+      idx = moduleDictBasename.Index(".", strlen("."));
+      moduleDictBasename.Replace(idx, 1, "Dict.", strlen("Dict."));
+      
+      TString dictfilename = DirName(module);
+      dictfilename += "/";
+      dictfilename += moduleDictBasename;
+      
+      // Before loading it we chack that the file actually exists
+      FileStat_t tmpstat;
+      if(!GetPathInfo(dictfilename.Data(), tmpstat)){
+         int retdict = gInterpreter->Load(dictfilename.Data(), system);
+      
+         // What can we do with retdict?
+         // It's not mandatory to have a dictionary...
+         if (retdict < 0){
+            if (gDebug > 0)
+               Info("Load", "Error loading dict. library %s, status %d", dictfilename.Data(), retdict); 
+         }
+      }
    }
 
    recCall--;
