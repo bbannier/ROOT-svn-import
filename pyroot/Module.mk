@@ -17,14 +17,28 @@ PYROOTDS     := $(MODDIRS)/G__PyROOT.cxx
 PYROOTDO     := $(PYROOTDS:.cxx=.o)
 PYROOTDH     := $(PYROOTDS:.cxx=.h)
 
+#LF
+PYROOTTMPDS    := $(MODDIRS)/G__PyROOTTmp.cxx
+PYROOTTMPDO    := $(PYROOTTMPDS:.cxx=.o)
+PYROOTTMPDH    := $(PYROOTTMPDS:.cxx=.h)
+PYROOTTMP2DS   := $(MODDIRS)/G__PyROOTTmp2.cxx
+PYROOTTMP2DO   := $(PYROOTTMP2DS:.cxx=.o)
+PYROOTTMP2DH   := $(PYROOTTMP2DS:.cxx=.h)
+
 PYROOTH      := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 PYROOTS      := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
 PYROOTO      := $(PYROOTS:.cxx=.o)
 
 PYROOTDEP    := $(PYROOTO:.o=.d) $(PYROOTDO:.o=.d)
 
+#LF
+PYROOTTMPDEP  := $(PYROOTTMPDO:.o=.d)
+
 PYROOTLIB    := $(LPATH)/libPyROOT.$(SOEXT)
 PYROOTMAP    := $(PYROOTLIB:.$(SOEXT)=.rootmap)
+
+#LF
+PYROOTNM       := $(PYROOTLIB:.$(SOEXT)=.nm)
 
 ROOTPYS      := $(wildcard $(MODDIR)/*.py)
 ifeq ($(PLATFORM),win32)
@@ -52,18 +66,36 @@ include/%.h:    $(PYROOTDIRI)/%.h
 %.pyc: %.py;    python -c 'import py_compile; py_compile.compile( "$<" )'
 %.pyo: %.py;    python -O -c 'import py_compile; py_compile.compile( "$<" )'
 
-$(PYROOTLIB):   $(PYROOTO) $(PYROOTDO) $(ROOTPY) $(ROOTPYC) $(ROOTPYO) \
-                $(ROOTLIBSDEP)
+#LF
+$(PYROOTLIB):   $(PYROOTO) $(PYROOTTMPDO) $(PYROOTTMP2DO) $(PYROOTDO) \
+		$(ROOTPY) $(ROOTPYC) $(ROOTPYO) $(ROOTLIBSDEP)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
-		  "$(SOFLAGS)" libPyROOT.$(SOEXT) $@ \
-		  "$(PYROOTO) $(PYROOTDO)" \
+		   "$(SOFLAGS)" libPyROOT.$(SOEXT) $@ "$(PYROOTO) $(PYROOTTMPDO) $(PYROOTTMP2DO) $(PYROOTDO)" \
 		  "$(ROOTULIBS) $(RPATH) $(ROOTLIBS) \
 		   $(PYTHONLIBDIR) $(PYTHONLIB) \
 		   $(OSTHREADLIBDIR) $(OSTHREADLIB)" "$(PYTHONLIBFLAGS)"
 
-$(PYROOTDS):    $(PYROOTH) $(PYROOTL) $(ROOTCINTTMPEXE)
-		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -c $(PYROOTH) $(PYROOTL)
+#LF
+$(PYROOTTMPDS):   $(PYROOTH) $(PYROOTL) $(ROOTCINTTMPEXE)
+		@echo "Generating first dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -. 1 -c $(PYROOTH) $(PYROOTL)
+
+#LF
+$(PYROOTTMP2DS):  $(PYROOTH) $(PYROOTL) $(ROOTCINTTMPEXE)
+		@echo "Generating second dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -. 2 -c $(PYROOTH) $(PYROOTL)
+
+#LF
+$(PYROOTDS):    $(PYROOTH) $(PYROOTL) $(ROOTCINTTMPEXE) $(PYROOTNM)
+		@echo "Generating third dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -L $(ROOTSYS)/$(PYROOTNM) -. 3 -c $(PYROOTH) $(PYROOTL)
+
+#LF
+$(PYROOTNM):      $(PYROOTO) $(PYROOTTMPDO) $(PYROOTTMP2DO) 
+		@echo "Generating symbols file $@..."
+		nm -g -p --defined-only $(PYROOTTMPDO) | awk '{printf("%s\n", $$3)'} > $(PYROOTNM)
+		nm -g -p --defined-only $(PYROOTTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(PYROOTNM)
+		nm -g -p --defined-only $(PYROOTO) | awk '{printf("%s\n", $$3)'} >> $(PYROOTNM)
 
 $(PYROOTMAP):   $(RLIBMAP) $(MAKEFILEDEP) $(PYROOTL)
 		$(RLIBMAP) -o $(PYROOTMAP) -l $(PYROOTLIB) \
@@ -74,7 +106,12 @@ all-pyroot:     $(PYROOTLIB) $(PYROOTMAP)
 clean-pyroot:
 		@rm -f $(PYROOTO) $(PYROOTDO)
 
-clean::         clean-pyroot
+clean::         clean-pyroot clean-pds-pyroot
+
+#LF
+clean-pds-pyroot:	
+		rm -f $(PYROOTTMPDS) $(PYROOTTMPDO) $(PYROOTTMPDH) \
+		$(PYROOTTMPDEP) $(PYROOTTMP2DS) $(PYROOTTMP2DO) $(PYROOTTMP2DH) $(PYROOTNM)
 
 distclean-pyroot: clean-pyroot
 		@rm -f $(PYROOTDEP) $(PYROOTDS) $(PYROOTDH) $(PYROOTLIB) \
