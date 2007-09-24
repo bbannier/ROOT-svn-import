@@ -1,4 +1,4 @@
-// @(#)root/mathcore:$Id: inc/Math/FitMethodFunction.h,v 1.0 2006/01/01 12:00:00 moneta Exp $
+// @(#)root/mathcore:$Id$
 // Author: L. Moneta Thu Aug 16 15:40:28 2007
 
 /**********************************************************************

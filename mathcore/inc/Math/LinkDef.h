@@ -1,4 +1,4 @@
-// @(#)root/mathcore:$Name:  $:$Id$
+// @(#)root/mathcore:$Id$
 
 
 #ifdef __CINT__

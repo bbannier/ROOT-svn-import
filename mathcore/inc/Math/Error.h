@@ -1,4 +1,4 @@
-// @(#)root/minuit2:$Id: MnPrint.h,v 1.5 2007/02/13 15:42:34 moneta Exp $
+// @(#)root/mathcore:$Id$
 // Authors: L. Moneta
 
 /**********************************************************************

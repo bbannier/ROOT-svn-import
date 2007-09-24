@@ -1,4 +1,4 @@
-// @(#)root/mathcore:$Id: Minimizer.h,v 1.0 2006/01/01 12:00:00 moneta Exp $
+// @(#)root/mathcore:$Id$
 // Author: L. Moneta Fri Sep 22 15:06:47 2006
 
 /**********************************************************************

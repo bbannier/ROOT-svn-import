@@ -31,6 +31,8 @@
 #include "gsl/gsl_multimin.h"
 #include "GSLMultiMinFunctionWrapper.h"
 
+#include "Math/Error.h"
+
 #include "Math/IFunction.h"
 
 #include <cassert> 
@@ -71,7 +73,13 @@ public:
          fType = gsl_multimin_fdfminimizer_vector_bfgs; 
          break; 
       case ROOT::Math::kVectorBFGS2 : 
+#if defined GSL_VERSION >= 1009 
+         // bfgs2 is available only for v>= 1.9 
          fType = gsl_multimin_fdfminimizer_vector_bfgs2; 
+#else 
+         MATH_INFO_MSG("minimizer BFSG2 does not exist with this GSL version , use BFGS");
+         fType = gsl_multimin_fdfminimizer_vector_bfgs;
+#endif 
          break; 
       case ROOT::Math::kSteepestDescent:
          fType = gsl_multimin_fdfminimizer_steepest_descent; 

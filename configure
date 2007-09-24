@@ -3693,6 +3693,7 @@ if test ! "x$enable_mathmore" = "xno"; then
 	    gslinc=$found_hdr
 	    gslincdir=$found_dir
 	    gslflags=-I$gslincdir
+	    gslversion=$gsl_version
 	fi
     fi
 
@@ -3761,6 +3762,7 @@ if test ! "x$enable_mathmore" = "xno"; then
 	        gslflags=`gsl-config --cflags`
 	        gsllibs=`gsl-config --libs`
 		gsllibdir=""
+                gslversion=$gsl_version
             fi
         else
 	    enable_mathmore="no"
@@ -4308,6 +4310,7 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@gslflags@|$gslflags|"                \
     -e "s|@gsllibdir@|$gsllibdir|"              \
     -e "s|@gsllibs@|$gsllibs|"                  \
+    -e "s|@gslversion@|$gslversion|"            \
     -e "s|@builtinzlib@|$enable_builtin_zlib|"  \
     -e "s|@zlibincdir@|$zlibincdir|"            \
     -e "s|@zliblib@|$zliblib|"                  \
