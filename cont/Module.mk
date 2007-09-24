@@ -17,11 +17,27 @@ CONTDS       := $(MODDIRS)/G__Cont.cxx
 CONTDO       := $(CONTDS:.cxx=.o)
 CONTDH       := $(CONTDS:.cxx=.h)
 
+#LF
+CONTTMPDS    := $(MODDIRS)/G__ContTmp.cxx
+CONTTMPDO    := $(CONTTMPDS:.cxx=.o)
+CONTTMPDH    := $(CONTTMPDS:.cxx=.h)
+CONTTMP2DS    := $(MODDIRS)/G__ContTmp2.cxx
+CONTTMP2DO    := $(CONTTMP2DS:.cxx=.o)
+CONTTMP2DH    := $(CONTTMP2DS:.cxx=.h)
+
 CONTH        := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 CONTS        := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
 CONTO        := $(CONTS:.cxx=.o)
 
 CONTDEP      := $(CONTO:.o=.d) $(CONTDO:.o=.d)
+
+#LF
+CONTTMPDEP   := $(CONTTMPDO:.o=.d)
+
+#LF
+CONTLIB      := $(MODDIRS)/libCont.$(SOEXT)
+#CONTDICTLIB  := $(MODDIRS)/libContDict.o
+CONTNM       := $(CONTLIB:.$(SOEXT)=.nm)
 
 # used in the main Makefile
 ALLHDRS     += $(patsubst $(MODDIRI)/%.h,include/%.h,$(CONTH))
@@ -33,9 +49,26 @@ INCLUDEFILES += $(CONTDEP)
 include/%.h:    $(CONTDIRI)/%.h
 		cp $< $@
 
-$(CONTDS):      $(CONTH) $(CONTL) $(ROOTCINTTMPEXE)
+#LF
+$(CONTTMPDS):   $(CONTH) $(CONTL) $(ROOTCINTTMPEXE)
+		@echo "Generating first dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -. 1 -c $(CONTH) $(CONTL)
+
+#LF
+$(CONTTMP2DS):  $(CONTH) $(CONTL) $(ROOTCINTTMPEXE)
+		@echo "Generating second dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -. 2 -c $(CONTH) $(CONTL)
+
+$(CONTDS):      $(CONTH) $(CONTL) $(ROOTCINTTMPEXE) $(CONTNM)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -c $(CONTH) $(CONTL)
+		$(ROOTCINTTMP) -f $@ -L $(ROOTSYS)/$(CONTNM) -. 3 -c $(CONTH) $(CONTL)
+
+#LF
+$(CONTNM):      $(CONTO) $(CONTTMPDO) $(CONTTMP2DO)
+		@echo "Generating symbols file $@..."
+		nm -g -p --defined-only $(CONTTMPDO) | awk '{printf("%s\n", $$3)'} > $(CONTNM)
+		nm -g -p --defined-only $(CONTTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(CONTNM)
+		nm -g -p --defined-only $(CONTO) | awk '{printf("%s\n", $$3)'} >> $(CONTNM)
 
 all-cont:       $(CONTO) $(CONTDO)
 
