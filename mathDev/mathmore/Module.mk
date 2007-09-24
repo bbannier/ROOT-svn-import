@@ -100,5 +100,5 @@ distclean-mathmore: clean-mathmore
 distclean::     distclean-mathmore
 
 ##### extra rules ######
-$(MATHMOREO): CXXFLAGS += $(GSLFLAGS)
-$(MATHMOREDO): CXXFLAGS += $(GSLFLAGS)
+$(MATHMOREO): CXXFLAGS += $(GSLFLAGS) -DGSL_VERSION=$(GSLVERSION) -DUSE_ROOT_ERROR
+$(MATHMOREDO): CXXFLAGS += $(GSLFLAGS) -DGSL_VERSION=$(GSLVERSION) -DUSE_ROOT_ERROR
