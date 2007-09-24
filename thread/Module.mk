@@ -51,10 +51,24 @@ endif
 
 THREADO      := $(THREADS:.cxx=.o)
 
+#LF
+THREADTMPDS    := $(MODDIRS)/G__THREADTmp.cxx
+THREADTMPDO    := $(THREADTMPDS:.cxx=.o)
+THREADTMPDH    := $(THREADTMPDS:.cxx=.h)
+THREADTMP2DS   := $(MODDIRS)/G__THREADTmp2.cxx
+THREADTMP2DO   := $(THREADTMP2DS:.cxx=.o)
+THREADTMP2DH   := $(THREADTMP2DS:.cxx=.h)
+
 THREADDEP    := $(THREADO:.o=.d) $(THREADDO:.o=.d)
+
+#LF
+THREADTMPDEP  := $(THREADTMPDO:.o=.d)
 
 THREADLIB    := $(LPATH)/libThread.$(SOEXT)
 THREADMAP    := $(THREADLIB:.$(SOEXT)=.rootmap)
+
+#LF
+THREADNM       := $(THREADLIB:.$(SOEXT)=.nm)
 
 # used in the main Makefile
 ALLHDRS      += $(patsubst $(MODDIRI)/%.h,include/%.h,$(THREADH) $(THREADH_EXT))
@@ -77,14 +91,33 @@ INCLUDEFILES += $(THREADDEP)
 include/%.h:    $(THREADDIRI)/%.h
 		cp $< $@
 
-$(THREADLIB):   $(THREADO) $(THREADDO) $(ORDER_) $(MAINLIBS) $(THREADLIBDEP)
+#LF
+$(THREADLIB):   $(THREADO) $(THREADTMPDO) $(THREADTMP2DO) $(THREADDO) $(ORDER_) $(MAINLIBS) $(THREADLIBDEP)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
-		   "$(SOFLAGS)" libThread.$(SOEXT) $@ "$(THREADO) $(THREADDO)" \
+		   "$(SOFLAGS)" libThread.$(SOEXT) $@ "$(THREADO) $(THREADTMPDO) $(THREADTMP2DO) $(THREADDO)" \
 		   "$(THREADLIBEXTRA) $(OSTHREADLIBDIR) $(OSTHREADLIB)"
 
-$(THREADDS):    $(THREADH) $(THREADL) $(ROOTCINTTMPEXE)
-		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -c $(THREADH) $(THREADL)
+#LF
+$(THREADTMPDS):   $(THREADH) $(THREADL) $(ROOTCINTTMPEXE)
+		@echo "Generating first dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -. 1 -c $(THREADH) $(THREADL)
+
+#LF
+$(THREADTMP2DS):  $(THREADH) $(THREADL) $(ROOTCINTTMPEXE)
+		@echo "Generating second dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -. 2 -c $(THREADH) $(THREADL)
+
+#LF
+$(THREADDS):    $(THREADH) $(THREADL) $(ROOTCINTTMPEXE) $(THREADNM)
+		@echo "Generating third dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -L $(ROOTSYS)/$(THREADNM) -. 3 -c $(THREADH) $(THREADL)
+
+#LF
+$(THREADNM):      $(THREADO) $(THREADTMPDO) $(THREADTMP2DO) 
+		@echo "Generating symbols file $@..."
+		nm -g -p --defined-only $(THREADTMPDO) | awk '{printf("%s\n", $$3)'} > $(THREADNM)
+		nm -g -p --defined-only $(THREADTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(THREADNM)
+		nm -g -p --defined-only $(THREADO) | awk '{printf("%s\n", $$3)'} >> $(THREADNM)
 
 $(THREADMAP):   $(RLIBMAP) $(MAKEFILEDEP) $(THREADL)
 		$(RLIBMAP) -o $(THREADMAP) -l $(THREADLIB) \
@@ -95,7 +128,12 @@ all-thread:     $(THREADLIB) $(THREADMAP)
 clean-thread:
 		@rm -f $(THREADO) $(THREADDO)
 
-clean::         clean-thread
+clean::         clean-thread clean-pds-thread
+
+#LF
+clean-pds-thread:	
+		rm -f $(THREADTMPDS) $(THREADTMPDO) $(THREADTMPDH) \
+		$(THREADTMPDEP) $(THREADTMP2DS) $(THREADTMP2DO) $(THREADTMP2DH) $(THREADNM)
 
 distclean-thread: clean-thread
 		@rm -f $(THREADDEP) $(THREADDS) $(THREADDH) $(THREADLIB) $(THREADMAP)

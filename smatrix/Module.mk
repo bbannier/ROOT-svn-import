@@ -35,10 +35,32 @@ SMATRIXH    := $(SMATRIXH1) $(SMATRIXH2)
 SMATRIXS    := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
 SMATRIXO    := $(SMATRIXS:.cxx=.o)
 
+#LF
+SMATRIXTMPDS    := $(MODDIRS)/G__SmatrixTmp.cxx
+SMATRIXTMPDO    := $(SMATRIXTMPDS:.cxx=.o)
+SMATRIXTMPDH    := $(SMATRIXTMPDS:.cxx=.h)
+SMATRIXTMP2DS   := $(MODDIRS)/G__SmatrixTmp2.cxx
+SMATRIXTMP2DO   := $(SMATRIXTMP2DS:.cxx=.o)
+SMATRIXTMP2DH   := $(SMATRIXTMP2DS:.cxx=.h)
+
+#LF
+SMATRIXTMPDS32    := $(MODDIRS)/G__Smatrix32Tmp.cxx
+SMATRIXTMPDO32    := $(SMATRIXTMPDS32:.cxx=.o)
+SMATRIXTMPDH32    := $(SMATRIXTMPDS32:.cxx=.h)
+SMATRIXTMP2DS32   := $(MODDIRS)/G__Smatrix32Tmp2.cxx
+SMATRIXTMP2DO32   := $(SMATRIXTMP2DS32:.cxx=.o)
+SMATRIXTMP2DH32   := $(SMATRIXTMP2DS32:.cxx=.h)
+
 SMATRIXDEP  := $(SMATRIXO:.o=.d)  $(SMATRIXDO:.o=.d)
+
+#LF
+SMATRIXTMPDEP  := $(SMATRIXTMPDO:.o=.d)
 
 SMATRIXLIB  := $(LPATH)/libSmatrix.$(SOEXT)
 SMATRIXMAP  := $(SMATRIXLIB:.$(SOEXT)=.rootmap)
+
+#LF
+SMATRIXNM       := $(SMATRIXLIB:.$(SOEXT)=.nm)
 
 # used in the main Makefile
 ALLHDRS      += $(patsubst $(MODDIRI)/Math/%.h,include/Math/%.h,$(SMATRIXH1))
@@ -62,22 +84,58 @@ include/Math/%.icc: $(SMATRIXDIRI)/%.icc
 		fi)
 		cp $< $@
 
-$(SMATRIXLIB): $(SMATRIXO) $(SMATRIXDO) $(SMATRIXDO32) $(ORDER_) $(MAINLIBS)
-		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)"  \
-		   "$(SOFLAGS)" libSmatrix.$(SOEXT) $@     \
-		   "$(SMATRIXO) $(SMATRIXDO) $(SMATRIXDO32)"             \
+#LF
+$(SMATRIXLIB):   $(SMATRIXO) $(SMATRIXTMPDO) $(SMATRIXTMP2DO) $(SMATRIXDO) \
+		$(SMATRIXTMPDO32) $(SMATRIXTMP2DO32) $(SMATRIXDO32) $(ORDER_) $(MAINLIBS) $(SMATRIXLIBDEP)
+		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
+		   "$(SOFLAGS)" libSmatrix.$(SOEXT) $@ "$(SMATRIXO) \
+			$(SMATRIXTMPDO) $(SMATRIXTMP2DO) $(SMATRIXDO) \
+			$(SMATRIXTMPDO32) $(SMATRIXTMP2DO32) $(SMATRIXDO32)" \
 		   "$(SMATRIXLIBEXTRA)"
 
-$(SMATRIXDS):  $(SMATRIXDH1) $(SMATRIXL) $(SMATRIXLINC) $(ROOTCINTTMPEXE)
-		@echo "Generating dictionary $@..."
-		@echo "for files $(SMATRIXDH1)"
-		$(ROOTCINTTMP) -f $@ -c $(SMATRIXDH1) $(SMATRIXL)
-#		python reflex/python/genreflex/genreflex.py $(SMATRIXDIRS)/Dict.h -I$(SMATRIXDIRI) --selection_file=$(SMATRIXDIRS)/Selection.xml -o $(SMATRIXDIRS)/G__Smatrix.cxx
+#LF
+$(SMATRIXTMPDS):   $(SMATRIXDH1) $(SMATRIXL) $(SMATRIXLINC) $(ROOTCINTTMPEXE)
+		@echo "Generating first dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -. 1 -c $(SMATRIXDH1) $(SMATRIXL)
 
-$(SMATRIXDS32): $(SMATRIXDH1) $(SMATRIXL32) $(SMATRIXLINC) $(ROOTCINTTMPEXE)
-		@echo "Generating dictionary $@..."
-		@echo "for files $(SMATRIXDH1)"
-		$(ROOTCINTTMP) -f $@ -c $(SMATRIXDH1) $(SMATRIXL32)
+#LF
+$(SMATRIXTMP2DS):  $(SMATRIXDH1) $(SMATRIXL) $(SMATRIXLINC) $(ROOTCINTTMPEXE)
+		@echo "Generating second dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -. 2 -c $(SMATRIXDH1) $(SMATRIXL)
+
+#LF
+$(SMATRIXDS):    $(SMATRIXDH1) $(SMATRIXL) $(SMATRIXLINC) $(ROOTCINTTMPEXE) $(SMATRIXNM)
+		@echo "Generating third dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -L $(ROOTSYS)/$(SMATRIXNM) -. 3 -c $(SMATRIXDH1) $(SMATRIXL)
+
+
+#LF
+$(SMATRIXTMPDS32):   $(SMATRIXDH1) $(SMATRIXL32) $(SMATRIXLINC) $(ROOTCINTTMPEXE)
+		@echo "Generating first dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -. 1 -c $(SMATRIXDH1) $(SMATRIXL32)
+
+#LF
+$(SMATRIXTMP2DS32):  $(SMATRIXDH1) $(SMATRIXL32) $(SMATRIXLINC) $(ROOTCINTTMPEXE)
+		@echo "Generating second dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -. 2 -c $(SMATRIXDH1) $(SMATRIXL32)
+
+#LF
+$(SMATRIXDS32):    $(SMATRIXDH1) $(SMATRIXL32) $(SMATRIXLINC) $(ROOTCINTTMPEXE) $(SMATRIXNM)
+		@echo "Generating third dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -L $(ROOTSYS)/$(SMATRIXNM) -. 3 -c $(SMATRIXDH1) $(SMATRIXL32)
+
+#LF
+$(SMATRIXDICTMAP): $(RLIBMAP) $(MAKEFILEDEP) $(SMATRIXL)
+		$(RLIBMAP) -o $(SMATRIXDICTMAP) -l $(SMATRIXDICTLIB) \
+		-d $(SMATRIXLIB) $(SMATRIXLIBDEPM) -c $(SMATRIXL)
+#LF
+$(SMATRIXNM):      $(SMATRIXO) $(SMATRIXTMPDO) $(SMATRIXTMP2DO) $(SMATRIXTMPDO32) $(SMATRIXTMP2DO32)
+		@echo "Generating symbols file $@..."
+		nm -g -p --defined-only $(SMATRIXTMPDO) | awk '{printf("%s\n", $$3)'} > $(SMATRIXNM)
+		nm -g -p --defined-only $(SMATRIXTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(SMATRIXNM)
+		nm -g -p --defined-only $(SMATRIXTMPDO32) | awk '{printf("%s\n", $$3)'} >> $(SMATRIXNM)
+		nm -g -p --defined-only $(SMATRIXTMP2DO32) | awk '{printf("%s\n", $$3)'} >> $(SMATRIXNM)
+		nm -g -p --defined-only $(SMATRIXO) | awk '{printf("%s\n", $$3)'} >> $(SMATRIXNM)
 
 $(SMATRIXMAP):  $(RLIBMAP) $(MAKEFILEDEP) $(SMATRIXL) $(SMATRIXLINC)
 		$(RLIBMAP) -o $(SMATRIXMAP) -l $(SMATRIXLIB) \
@@ -95,7 +153,12 @@ all-smatrix:   $(SMATRIXLIB) $(SMATRIXMAP)
 clean-smatrix:
 		@rm -f $(SMATRIXO) $(SMATRIXDO)
 
-clean::         clean-smatrix
+clean::         clean-smatrix clean-pds-smatrix
+
+#LF
+clean-pds-smatrix:	
+		rm -f $(SMATRIXTMPDS) $(SMATRIXTMPDO) $(SMATRIXTMPDH) \
+		$(SMATRIXTMPDEP) $(SMATRIXTMP2DS) $(SMATRIXTMP2DO) $(SMATRIXTMP2DH) $(SMATRIXNM)
 
 distclean-smatrix: clean-smatrix
 		@rm -f $(SMATRIXDEP) $(SMATRIXDS) $(SMATRIXDH) $(SMATRIXLIB) $(SMATRIXMAP)
