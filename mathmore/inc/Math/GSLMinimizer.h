@@ -1,4 +1,4 @@
-// @(#)root/fit:$Id: inc/Fit/Minuit2Minimizer.h,v 1.0 2006/01/01 12:00:00 moneta Exp $
+// @(#)root/mathmore:$Id: Integrator.h 19826 2007-09-19 19:56:11Z rdm $
 // Author: L. Moneta Wed Oct 18 11:48:00 2006
 
  /**********************************************************************

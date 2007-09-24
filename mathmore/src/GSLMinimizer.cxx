@@ -1,4 +1,4 @@
-// @(#)root/mathcore:$Name:  $:$Id: src/GSLMinimizer.cxx,v 1.0 2006/01/01 12:00:00 moneta Exp $
+// @(#)root/mathmore:$Id: GSLIntegrator.cxx 19826 2007-09-19 19:56:11Z rdm $
 // Author: L. Moneta Tue Dec 19 15:41:39 2006
 
 /**********************************************************************

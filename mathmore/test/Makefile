@@ -119,8 +119,11 @@ $(RANDOM):  	$(RANDOMOBJ)
 		$(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) $(OutPutOpt)$@
 		@echo "$@ done"
 
+testRandomDist.$(ObjSuf):       UnuRanDist.h
+
+
 $(RANDOMDIST):  $(RANDOMDISTOBJ)
-		$(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) $(OutPutOpt)$@
+		$(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) -lUnuran $(OutPutOpt)$@
 		@echo "$@ done"
 
 $(SPECFUNC):  	$(SPECFUNCOBJ)
