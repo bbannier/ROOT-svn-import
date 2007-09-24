@@ -1,4 +1,4 @@
-// @(#)root/mathcore:$Id: src/GSLNLSMinimizer.cxx,v 1.0 2006/01/01 12:00:00 moneta Exp $
+// @(#)root/mathmore:$Id: src/GSLNLSMinimizer.cxx,v 1.0 2006/01/01 12:00:00 moneta Exp $
 // Author: L. Moneta Wed Dec 20 17:16:32 2006
 
 /**********************************************************************

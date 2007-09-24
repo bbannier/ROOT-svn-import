@@ -1,4 +1,4 @@
-// @(#)root/mathcore:$Name:  $:$Id: src/GSLSimAnnealing.cxx,v 1.0 2006/01/01 12:00:00 moneta Exp $
+// @(#)root/mathmore:$Id: src/GSLSimAnnealing.cxx,v 1.0 2006/01/01 12:00:00 moneta Exp $
 // Author: L. Moneta Thu Jan 25 11:13:48 2007
 
 /**********************************************************************
