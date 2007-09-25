@@ -1,6 +1,9 @@
+// @(#)root/mathmore:$Id$
+// Author: Magdalena Slawinska  08/2007
+
  /**********************************************************************
   *                                                                    *
-  * Copyright (c) 2004 ROOT Foundation,  CERN/PH-SFT                   *
+  * Copyright (c) 2007 ROOT Foundation,  CERN/PH-SFT                   *
   *                                                                    *
   * This library is free software; you can redistribute it and/or      *
   * modify it under the terms of the GNU General Public License        *
@@ -41,7 +44,7 @@ namespace ROOT {
 namespace Math {
 
 
-
+   
   class GSLMCIntegrationWorkspace { 
 
     public :
@@ -49,8 +52,6 @@ namespace Math {
 
     virtual ~GSLMCIntegrationWorkspace() { }
 
-
-    virtual void * GetWS() = 0; 
 
   };
 

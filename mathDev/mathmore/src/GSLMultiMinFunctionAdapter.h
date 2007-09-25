@@ -1,5 +1,5 @@
-// @(#)root/mathmore:$Name:  $:$Id$
-// Authors: L. Moneta, A. Zsenei   08/2005 
+// @(#)root/mathmore:$Id$
+// Authors: L. Moneta, 12/2006 
 
  /**********************************************************************
   *                                                                    *
@@ -40,30 +40,6 @@ namespace ROOT {
 namespace Math {
 
 
-  /**
-     Class for adapting any multi-dimension C++ functor class to C function pointers used by 
-     GSL MonteCarlo integration algorithms. 
-     The templated C++ function class must implement: 
-
-    <em> double operator( const double *  x)</em>
-
-    This class defines static methods with will be used to fill the 
-    \a gsl_monte_function  used by GSL. 
-    See for examples the 
-    <A HREF="http://www.gnu.org/software/gsl/manual/html_node/Monte-Carlo-Interface.html">GSL online manual</A>
-  */ 
- typedef double ( * GSLMonteFuncPointer ) ( double *, size_t, void *);    
-
-  template<class UserFunc> 
-  struct  GSLMonteFunctionAdapter {
-    
-    static double F( const double * x, size_t, void * p) { 
-      
-      UserFunc * function = reinterpret_cast< UserFunc *> (p);
-      return (*function)( x ); 
-    }
-
-  };
 
 
   /**
@@ -80,6 +56,9 @@ namespace Math {
     \a gsl_multimin_function_fdf structs used by GSL. 
     See for examples the 
     <A HREF="http://www.gnu.org/software/gsl/manual/html_node/Providing-a-function-to-minimize.html#Providing-a-function-to-minimize">GSL online manual</A>
+
+   @ingroup MultiMin
+
   */ 
      
 

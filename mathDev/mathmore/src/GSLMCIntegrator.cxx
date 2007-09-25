@@ -8,8 +8,8 @@
 #include "Math/IFunction.h"
 #include <vector>
 
-#include "GSLMultiFunctionWrapper.h"
-#include "Math/GSLMultiMinFunctionAdapter.h"
+#include "GSLMonteFunctionWrapper.h"
+
 #include "Math/GSLMCIntegrator.h"
 #include "GSLMCIntegrationWorkspace.h"
 #include "GSLRngWrapper.h"

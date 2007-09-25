@@ -1,5 +1,5 @@
-// @(#)root/mathmore:$Name:  $:$Id: GSLFunctionWrapper.h,v 1.3 2005/09/19 13:06:53 brun Exp $
-// Authors: L. Moneta, A. Zsenei   08/2005 
+// @(#)root/mathmore:$Id$
+// Authors: L. Moneta, 08/2007
 
  /**********************************************************************
   *                                                                    *
@@ -22,19 +22,19 @@
   *                                                                    *
   **********************************************************************/
 
-// Header file for class GSLMultiFunctionWrapper
+// Header file for class GSLMonteFunctionWrapper
 // 
 // Created by: moneta  at Sat Nov 13 14:54:41 2004
 // 
 // Last update: Sat Nov 13 14:54:41 2004
 // 
-#ifndef ROOT_Math_GSLMultiFunctionWrapper
-#define ROOT_Math_GSLMultiFunctionWrapper
+#ifndef ROOT_Math_GSLMonteFunctionWrapper
+#define ROOT_Math_GSLMonteFunctionWrapper
 
 #include "gsl/gsl_monte.h"
 #include "gsl/gsl_multimin.h"
 
-#include "Math/GSLMultiMinFunctionAdapter.h"
+#include "GSLMonteFunctionAdapter.h"
 
 
 #include <cassert>
@@ -50,6 +50,8 @@ namespace Math {
 /**
    wrapper to a multi-dim function withtout  derivatives for Monte Carlo multi-dimensional 
    integration algorithm
+
+   @ingroup MCIntegration
 */
 
 class GSLMonteFunctionWrapper { 
@@ -95,4 +97,4 @@ public:
 } // namespace Math
 } // namespace ROOT
 
-#endif /* ROOT_Math_GSLMultiFunctionWrapper */
+#endif /* ROOT_Math_GSLMonteFunctionWrapper */
