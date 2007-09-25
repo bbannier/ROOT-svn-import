@@ -153,6 +153,8 @@ namespace Math {
          
          
       void SetFunction(const IMultiGenFunction &f); 
+   
+      typedef double ( * GSLMonteFuncPointer ) ( double *, size_t, void *);    
       
       void SetFunction( GSLMonteFuncPointer f, void * p = 0); 
       
