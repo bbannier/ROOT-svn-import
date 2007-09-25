@@ -69,6 +69,8 @@
 #pragma link C++ class ROOT::Math::GSLSimAnMinimizer+;
 #pragma link C++ class ROOT::Math::LSResidualFunc+;
 
+#pragma link C++ class ROOT::Math::GSLMCIntegrator+;
+
 
 
 #endif //__CINT__
