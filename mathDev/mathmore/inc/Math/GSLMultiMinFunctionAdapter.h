@@ -1,4 +1,4 @@
-// @(#)root/mathmore:$Name:  $:$Id$
+// @(#)root/mathmore:$Name:  $:$Id: GSLMultiMinFunctionAdapter.h,v 1.1 2005/09/18 17:33:47 brun Exp $
 // Authors: L. Moneta, A. Zsenei   08/2005 
 
  /**********************************************************************
@@ -57,7 +57,7 @@ namespace Math {
   template<class UserFunc> 
   struct  GSLMonteFunctionAdapter {
     
-    static double F( const double * x, size_t, void * p) { 
+    static double F( double * x, size_t, void * p) { 
       
       UserFunc * function = reinterpret_cast< UserFunc *> (p);
       return (*function)( x ); 
