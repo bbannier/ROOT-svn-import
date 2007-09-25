@@ -1,7 +1,29 @@
+// @(#)root/mathmore:$Id$
+// Author: Magdalena Slawinska 08/2007
+
+/**********************************************************************
+ *                                                                    *
+ * Copyright (c) 2007 ROOT Foundation,  CERN/PH-SFT                   *
+ *                                                                    *
+ * This library is free software; you can redistribute it and/or      *
+ * modify it under the terms of the GNU General Public License        *
+ * as published by the Free Software Foundation; either version 2     *
+ * of the License, or (at your option) any later version.             *
+ *                                                                    *
+ * This library is distributed in the hope that it will be useful,    *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of     *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU   *
+ * General Public License for more details.                           *
+ *                                                                    *
+ * You should have received a copy of the GNU General Public License  *
+ * along with this library (see file COPYING); if not, write          *
+ * to the Free Software Foundation, Inc., 59 Temple Place, Suite      *
+ * 330, Boston, MA 02111-1307 USA, or contact the author.             *
+ *                                                                    *
+ **********************************************************************/
 //
 // Header file for class GSLMCIntegrator
 // 
-// Author: Magdalena Slawinska
 //
 
 #ifndef ROOT_Math_GSLIntegrator
@@ -11,20 +33,31 @@
 #include "Math/MCIntegrationTypes.h"
 #endif
 
+#ifndef ROOT_Math_IFunctionfwd
 #include "Math/IFunctionfwd.h"
+#endif
+
+#ifndef ROOT_Math_IFunction
 #include "Math/IFunction.h"
-#include <vector>
-//#include "Math/IntegratorMultiDim.h"
-#include "Math/GSLMultiMinFunctionAdapter.h"
+#endif
 
+
+#ifndef ROOT_Math_MCIntegrationTypes
 #include "Math/MCIntegrationTypes.h"
-#include "Math/MCParameters.h"
+#endif
 
+
+#ifndef ROOT_Math_MCParameters
+#include "Math/MCParameters.h"
+#endif
+
+#include <vector>
 
 #include <iostream>
+
 /**
 
-@defgroup Integration Numerical Monte Carlo Integration
+@defgroup MCIntegration Numerical Monte Carlo Integration
 
 */
 
@@ -48,8 +81,9 @@ namespace Math {
     
     <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_16.html#SEC248">GSL Manual</A>.
     
-    @ingroup Integration
-    */
+    @ingroup MCIntegration
+
+   */
    
    
    class GSLMCIntegrator {
@@ -264,4 +298,4 @@ namespace Math {
 } // namespace ROOT
 
 
-#endif /* ROOT_Math_GSLIntegrator */
+#endif /* ROOT_Math_GSLMCIntegrator */

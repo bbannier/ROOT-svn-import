@@ -1,7 +1,9 @@
+// @(#)root/mathmore:$Id$
+// Author: Magdalena Slawinska  08/2007
 
  /**********************************************************************
   *                                                                    *
-  * Copyright (c) 2004 ROOT Foundation,  CERN/PH-SFT                   *
+  * Copyright (c) 2007 ROOT Foundation,  CERN/PH-SFT                   *
   *                                                                    *
   * This library is free software; you can redistribute it and/or      *
   * modify it under the terms of the GNU General Public License        *
@@ -22,7 +24,6 @@
 
 // Header file for class MCIntegrationTypes
 // 
-// Author: Magdalena Slawinska
 
 #ifndef ROOT_Math_MCIntegrationTypes
 #define ROOT_Math_MCIntegrationTypes
@@ -42,7 +43,7 @@ namespace Math {
 	 <li>MISER
 	 <li>VEGAS
 	 </ul>
-	 @ingroup Integration
+	 @ingroup MCIntegration
     */
 
     // type of integration
