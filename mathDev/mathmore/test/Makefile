@@ -30,8 +30,8 @@ endif
 CXXFLAGS += -DHAVE_ROOTLIBS
 
 #--- gsl libraries
-CXXFLAGS += `gsl-config --cflags`
-EXTRALIBS += `gsl-config --libs`
+#CXXFLAGS += `gsl-config --cflags`
+#EXTRALIBS += `gsl-config --libs`
 #---
 
 CHEBYSHEVOBJ      = testChebyshev.$(ObjSuf)
@@ -89,7 +89,7 @@ OBJS          = $(CHEBYSHEVOBJ) $(DERIVATIONOBJ) $(INTEGRATIONOBJ) $(INTEGRATION
                   $(MINIMIZATION1DOBJ) $(INTERPOLATIONOBJ)  $(RANDOMOBJ) \
 	          $(SPECFUNCOBJ) $(STATFUNCOBJ) $(TESTFUNCTOROBJ)
 
-PROGRAMS      = $(CHEBYSHEV)  $(DERIVATION) $(INTEGRATION) $(INTEGRATIONMDOBJ) $(ROOTFINDER) \
+PROGRAMS      = $(CHEBYSHEV)  $(DERIVATION) $(INTEGRATION) $(INTEGRATIONMD) $(ROOTFINDER) \
                   $(MINIMIZATION1D) $(INTERPOLATION) $(RANDOM)  \
 	          $(SPECFUNC) $(STATFUNC) $(TESTFUNCTOR)
 		  

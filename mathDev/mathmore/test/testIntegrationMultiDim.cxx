@@ -102,7 +102,7 @@ double integral_num(unsigned int dim, double* a, double* b, double* p)
   std::cout.precision(12);
   std::cout << "result:  \t";
   std::cout << ig1.Result() << "\t" << "error: \t" << ig1.Error() << std::endl;
-  std::cout << "Number of function evaluations: " << ig1.Eval() << std::endl;
+  std::cout << "Number of function evaluations: " << ig1.NEval() << std::endl;
   std::cout << "Time using IntegratorMultiDim: \t" << timer.RealTime() << std::endl; 
   std::cout << "------------------------------------" << std::endl;
   return timer.RealTime();
@@ -130,6 +130,7 @@ double integral_MC(unsigned int dim, double* a, double* b, double* p)
   ig1.SetType(ROOT::Math::MCIntegration::VEGAS);
   //ig1.SetMode(ROOT::Math::MCIntegration::IMPORTANCE_ONLY);
   ig1.SetFunction(funptr);
+
   /*
   VegasParameters param;
   param.iterations = 2; 
@@ -234,7 +235,7 @@ void performance()
    legend->AddEntry(h1,"Cubature","f");
    legend->AddEntry(h2,"MC Vegas","f");
    legend->Draw();
-   for (int i=1; i<=size; i++)
+   for (unsigned int i=1; i<=size; i++)
      std::cout << i << " " << num_performance->GetBinContent(i) << "\t" << Vegas_performance->GetBinContent(i)<<std::endl;
 }
 
