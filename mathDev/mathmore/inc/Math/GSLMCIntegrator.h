@@ -175,7 +175,7 @@ namespace Math {
       double Integral(double* a, double* b);
     
       
-      double Integral(GSLMonteFuncPointer f, void * p, double* a, double* b);
+      //double Integral(GSLMonteFuncPointer f, void * p, double* a, double* b);
   
       /**
          return the type of the integration used
