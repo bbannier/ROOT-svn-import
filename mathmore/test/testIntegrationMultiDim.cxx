@@ -193,8 +193,8 @@ void performance()
   //dimensionality
   unsigned int Nmax = 9;
   unsigned int size = Nmax-1; 
-  TH1D *num_performance = new TH1D("cubature", "", size, 2, Nmax);
-  TH1D *Vegas_performance = new TH1D("montecarlo", "", size, 2, Nmax);
+  TH1D *num_performance = new TH1D("cubature", "", size, 1.5, Nmax+.5);
+  TH1D *Vegas_performance = new TH1D("montecarlo", "", size, 1.5, Nmax+.5);
 
    num_performance->SetBinContent(1, 0.0);
    Vegas_performance->SetBinContent(1,0.0);
