@@ -116,31 +116,27 @@ namespace Math {
 
 
   /**
-   \if later
 
-  Cumulative distribution function of the \f$\chi^2\f$ distribution 
+  Complement of the cumulative distribution function of the \f$\chi^2\f$ distribution 
   with \f$r\f$ degrees of freedom (upper tail).
 
   \f[ D_{r}(x) = \int_{x}^{+\infty} \frac{1}{\Gamma(r/2) 2^{r/2}} x'^{r/2-1} e^{-x'/2} dx' \f]
 
   For detailed description see 
   <A HREF="http://mathworld.wolfram.com/Chi-SquaredDistribution.html">
-  Mathworld</A>. 
-  
+  Mathworld</A>. It is implemented using the incomplete gamma function, ROOT::Math::inc_gamma_c, 
+  from <A HREF="http://www.netlib.org/cephes">Cephes</A>
+    
   @ingroup StatFunc
 
-
-   \endif
   */
 
-  //double chisquared_prob(double x, double r);
-
+  double chisquared_cdf_c(double x, double r, double x0 = 0);
 
 
 
   /**
 
-   \if later
   Cumulative distribution function of the \f$\chi^2\f$ distribution 
   with \f$r\f$ degrees of freedom (lower tail).
 
@@ -148,16 +144,14 @@ namespace Math {
 
   For detailed description see 
   <A HREF="http://mathworld.wolfram.com/Chi-SquaredDistribution.html">
-  Mathworld</A>. The implementation used is that of 
-  <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC303">GSL</A>.
+  Mathworld</A>.   It is implemented using the incomplete gamma function, ROOT::Math::inc_gamma_c, 
+  from <A HREF="http://www.netlib.org/cephes">Cephes</A>
   
   @ingroup StatFunc
-  
-  \endif
+
   */
 
-  // double chisquared_quant(double x, double r);
-
+  double chisquared_cdf(double x, double r, double x0 = 0);
 
 
 
@@ -514,7 +508,12 @@ namespace Math {
    inline double cauchy_quant(double x, double b, double x0 = 0) {
       return cauchy_cdf  (x,b,x0);
    }
-
+   inline double chisquared_prob(double x, double r, double x0 = 0) {
+      return chisquared_cdf_c(x, r, x0); 
+   }
+   inline double chisquared_quant(double x, double r, double x0 = 0) {
+      return chisquared_cdf  (x, r, x0); 
+   }
    inline double exponential_prob(double x, double lambda, double x0 = 0) { 
       return exponential_cdf_c(x, lambda, x0 );
    }

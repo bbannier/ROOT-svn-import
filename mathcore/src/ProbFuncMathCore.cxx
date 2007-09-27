@@ -47,23 +47,21 @@ namespace Math {
       
    }
    
-   /**
    
-    double chisquared_cdf_c(double x, double r) {
-       
-       return gsl_cdf_chisq_Q(x, r);
-       
-    }
-    
-    
-    
-    double chisquared_cdf(double x, double r) {
-       
-       return gsl_cdf_chisq_P(x, r);
-       
-    }
-    */
    
+   double chisquared_cdf_c(double x, double r, double x0) {
+      
+      return ROOT::Math::inc_gamma_c ( 0.5 * r , 0.5* (x-x0) );
+      
+   }
+
+   double chisquared_cdf(double x, double r, double x0) {
+       
+      return ROOT::Math::inc_gamma ( 0.5 * r , 0.5* (x-x0) );
+       
+   }
+   
+      
    
    double exponential_cdf_c(double x, double lambda, double x0) {
       

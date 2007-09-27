@@ -2,9 +2,7 @@
 // IntegratorMultiDim
 //
 #include "Math/IFunction.h"
-#include "Math/Integrator.h"
 #include "Math/IntegratorMultiDim.h"
-#include "Math/WrappedParamFunction.h"
 
 #include <cmath>
 
