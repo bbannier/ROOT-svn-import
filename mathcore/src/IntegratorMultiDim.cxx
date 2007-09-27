@@ -11,7 +11,7 @@ namespace Math {
 
 
 
-IntegratorMultiDim::IntegratorMultiDim(unsigned int dim, double absTol, double relTol, size_t size):
+IntegratorMultiDim::IntegratorMultiDim(unsigned int dim, double absTol, double relTol, unsigned int size):
    fdim(dim), 
    fAbsTol(absTol),
    fRelTol(relTol),
@@ -22,7 +22,7 @@ IntegratorMultiDim::IntegratorMultiDim(unsigned int dim, double absTol, double r
    fFun = 0; 
 }
 
-IntegratorMultiDim::IntegratorMultiDim( const IMultiGenFunction &f, unsigned int dim, double absTol, double relTol, size_t size):
+IntegratorMultiDim::IntegratorMultiDim( const IMultiGenFunction &f, unsigned int dim, double absTol, double relTol, unsigned int size):
    fdim(dim), 
    fAbsTol(absTol),
    fRelTol(relTol),
@@ -303,7 +303,8 @@ L140:
          ifail = 1;
    }
    //..and accuracy appropriare
-   if (relerr < eps && ifncls >= minpts) ifail = 0;
+   //! if (relerr < eps && ifncls >= minpts) ifail = 0;
+   if (relerr < eps* aresult && abserr < eps && ifncls >= minpts) ifail = 0;
    if (ifail == 3) {
      ldv = kTRUE;
       isbrgn  = irgnst;
