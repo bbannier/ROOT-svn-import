@@ -63,6 +63,8 @@ double IntegratorMultiDim::Integral(unsigned int dim, double* xmin, double * xma
   
    //to be changed later
    unsigned int n=dim;
+   bool kFALSE = false;
+   bool kTRUE = true;
 
    unsigned int minpts = 0;
    unsigned int maxpts = fSize;//specified maximal number of function evaluations
@@ -72,7 +74,7 @@ double IntegratorMultiDim::Integral(unsigned int dim, double* xmin, double * xma
    unsigned int nfnevl; //nr of function evaluations
    double relerr; //an estimation of the relative accuracy of the result
 
-   bool fgAbsValue=kFALSE;//for now; maybe later new class member as in TF1..
+   bool fgAbsValue=0;//for now; maybe later new class member as in TF1..
 
    double ctr[15], wth[15], wthl[15], z[15];
 
@@ -126,7 +128,7 @@ double IntegratorMultiDim::Integral(unsigned int dim, double* xmin, double * xma
    unsigned int ifncls = 0;
    bool  ldv   = kFALSE;
    unsigned int irgnst = 2*n+3;
-   unsigned int  irlcls = Int_t(twondm) +2*n*(n+1)+1;//minimal number of nodes in n dim
+   unsigned int  irlcls = (unsigned int)(twondm) +2*n*(n+1)+1;//minimal number of nodes in n dim
    unsigned int isbrgn = irgnst;
    unsigned int isbrgs = irgnst;
 
@@ -150,7 +152,7 @@ double IntegratorMultiDim::Integral(unsigned int dim, double* xmin, double * xma
    double rgncmp=0, rgnval, rgnerr;
 
    unsigned int j1, k, l, m, idvaxn=0, idvax0=0, isbtmp, isbtpp;
-
+ 
    //InitArgs(z,fParams);
 
 L20:
@@ -279,7 +281,7 @@ L140:
       wk[isbtmp-1] = wth[j];
    }
    if (ldv) {//divison along chosen coordinate
-      ldv = kFALSE;
+     ldv = kFALSE;
       ctr[idvax0-1] += 2*wth[idvax0-1];
       isbrgs += irgnst;//updating the number of nodes/regions(?)
       isbrgn  = isbrgs;
@@ -305,11 +307,11 @@ L140:
    //..and accuracy appropriare
    if (relerr < eps && ifncls >= minpts) ifail = 0;
    if (ifail == 3) {
-      ldv = kTRUE;
+     ldv = kTRUE;
       isbrgn  = irgnst;
       abserr -= wk[isbrgn-1];
       result -= wk[isbrgn-2];
-      idvax0  = Int_t(wk[isbrgn-3]);
+      idvax0  = (unsigned int)(wk[isbrgn-3]);
       for (j=0;j<n;j++) {
          isbtmp = isbrgn-2*j-4;
          ctr[j] = wk[isbtmp];
