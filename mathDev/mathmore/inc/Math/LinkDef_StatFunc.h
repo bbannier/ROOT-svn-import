@@ -6,8 +6,6 @@
 #ifdef __CINT__
 
 
-#pragma link C++ function ROOT::Math::chisquared_cdf_c( double , double, double);
-#pragma link C++ function ROOT::Math::chisquared_cdf( double , double, double);
 #pragma link C++ function ROOT::Math::fdistribution_cdf_c( double , double, double, double);
 #pragma link C++ function ROOT::Math::fdistribution_cdf( double , double, double, double);
 #pragma link C++ function ROOT::Math::gamma_cdf_c( double , double, double, double);

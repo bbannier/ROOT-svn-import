@@ -13,24 +13,6 @@ namespace Math {
   
 
 
-
-
-
-  double chisquared_cdf_c(double x, double r, double x0) {
-
-    return gsl_cdf_chisq_Q(x-x0, r);
-
-  }
-
-
-
-  double chisquared_cdf(double x, double r, double x0) {
-
-    return gsl_cdf_chisq_P(x-x0, r);
-
-  }
-
-
   
   double fdistribution_cdf_c(double x, double n, double m, double x0) {
 

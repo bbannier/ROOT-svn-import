@@ -92,49 +92,6 @@ namespace Math {
 
   /**
 
-  Complement of the cumulative distribution function of the \f$\chi^2\f$ distribution 
-  with \f$r\f$ degrees of freedom (upper tail).
-
-  \f[ D_{r}(x) = \int_{x}^{+\infty} \frac{1}{\Gamma(r/2) 2^{r/2}} x'^{r/2-1} e^{-x'/2} dx' \f]
-
-  For detailed description see 
-  <A HREF="http://mathworld.wolfram.com/Chi-SquaredDistribution.html">
-  Mathworld</A>. The implementation used is that of 
-  <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC303">GSL</A>.
-  
-  @ingroup StatFunc
-
-  */
-
-  double chisquared_cdf_c(double x, double r, double x0 = 0);
-
-
-
-
-  /**
-
-  Cumulative distribution function of the \f$\chi^2\f$ distribution 
-  with \f$r\f$ degrees of freedom (lower tail).
-
-  \f[ D_{r}(x) = \int_{-\infty}^{x} \frac{1}{\Gamma(r/2) 2^{r/2}} x'^{r/2-1} e^{-x'/2} dx' \f]
-
-  For detailed description see 
-  <A HREF="http://mathworld.wolfram.com/Chi-SquaredDistribution.html">
-  Mathworld</A>. The implementation used is that of 
-  <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC303">GSL</A>.
-  
-  @ingroup StatFunc
-
-  */
-
-  double chisquared_cdf(double x, double r, double x0 = 0);
-
-
-
-
-
-  /**
-
   Complement of the cumulative distribution function of the F-distribution 
   (upper tail).
 
@@ -306,12 +263,6 @@ namespace Math {
 
    /** @name Backward compatible functions */ 
    // this I will maintain since is commonly used in physics
-   inline double chisquared_prob(double x, double r, double x0 = 0) {
-      return chisquared_cdf_c(x, r, x0); 
-   }
-   inline double chisquared_quant(double x, double r, double x0 = 0) {
-      return chisquared_cdf  (x, r, x0); 
-   }
    
    inline double fdistribution_prob(double x, double n, double m, double x0 = 0) {
       return fdistribution_cdf_c  (x, n, m, x0); 
