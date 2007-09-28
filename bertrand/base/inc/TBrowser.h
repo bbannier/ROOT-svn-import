@@ -105,6 +105,15 @@ public:
    void          SetDrawOption(Option_t *option="") { fImp->SetDrawOption(option); }
    Option_t     *GetDrawOption() const { return  fImp->GetDrawOption(); }
 
+   Long_t        ExecPlugin(const char *name = 0, const char *fname = 0, 
+                            const char *cmd = 0, Int_t pos = 1, Int_t subpos = -1) {
+                    return fImp->ExecPlugin(name, fname, cmd, pos, subpos); 
+                 }
+   void          StartEmbedding(Int_t pos, Int_t subpos) {
+                    fImp->StartEmbedding(pos, subpos); 
+                 }
+   void          StopEmbedding(const char *name = "") { fImp->StopEmbedding(name); }
+
    ClassDef(TBrowser,0)  //ROOT Object Browser
 };
 
