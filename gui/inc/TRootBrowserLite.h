@@ -10,12 +10,12 @@
  *************************************************************************/
 
 
-#ifndef ROOT_TRootBrowser
-#define ROOT_TRootBrowser
+#ifndef ROOT_TRootBrowserLite
+#define ROOT_TRootBrowserLite
 
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
-// TRootBrowser                                                         //
+// TRootBrowserLite                                                         //
 //                                                                      //
 // This class creates a ROOT object browser (looking like Windows       //
 // Explorer). The widgets used are the new native ROOT GUI widgets.     //
@@ -49,7 +49,7 @@ class TGFileContainer;
 class TGComboBox;
 class TGTextEdit;
 
-class TRootBrowser : public TGMainFrame, public TBrowserImp {
+class TRootBrowserLite : public TGMainFrame, public TBrowserImp {
 
 friend class TRootIconBox;
 
@@ -121,9 +121,9 @@ protected:
    TGTextEdit          *fTextEdit;          // contents of browsed text file
 
 public:
-   TRootBrowser(TBrowser *b = 0, const char *title = "ROOT Browser", UInt_t width = 800, UInt_t height = 500);
-   TRootBrowser(TBrowser *b, const char *title, Int_t x, Int_t y, UInt_t width, UInt_t height);
-   virtual ~TRootBrowser();
+   TRootBrowserLite(TBrowser *b = 0, const char *title = "ROOT Browser", UInt_t width = 800, UInt_t height = 500);
+   TRootBrowserLite(TBrowser *b, const char *title, Int_t x, Int_t y, UInt_t width, UInt_t height);
+   virtual ~TRootBrowserLite();
 
    virtual void Add(TObject *obj, const char *name = 0, Int_t check = -1);
    virtual void AddToBox(TObject *obj, const char *name);
@@ -165,7 +165,10 @@ public:
    void     ExecMacro();
    void     InterruptMacro();
 
-   ClassDef(TRootBrowser,0)  //ROOT native GUI version of browser
+   static TBrowserImp *NewBrowser(TBrowser *b = 0, const char *title = "ROOT Browser", UInt_t width = 800, UInt_t height = 500, Option_t *opt="");
+   static TBrowserImp *NewBrowser(TBrowser *b, const char *title, Int_t x, Int_t y, UInt_t width, UInt_t height, Option_t *opt="");
+
+   ClassDef(TRootBrowserLite,0)  //ROOT native GUI version of browser
 };
 
 #endif
