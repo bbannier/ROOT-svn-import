@@ -21,11 +21,12 @@
 #include "TRootGuiFactory.h"
 #include "TRootApplication.h"
 #include "TRootCanvas.h"
-#include "TRootBrowser.h"
+#include "TRootBrowserLite.h"
 #include "TRootContextMenu.h"
 #include "TRootControlBar.h"
 #include "TROOT.h"
 #include "TPluginManager.h"
+#include "TEnv.h"
 
 ClassImp(TRootGuiFactory)
 
@@ -74,13 +75,17 @@ TBrowserImp *TRootGuiFactory::CreateBrowserImp(TBrowser *b, const char *title,
 {
    // Create a ROOT native GUI version of TBrowserImp
 
-   TPluginHandler *ph = gROOT->GetPluginManager()->FindHandler("TBrowserImp");
-
+   TString browserVersion(gEnv->GetValue("Browser.Name", "TRootBrowserLite"));
+   TPluginHandler *ph = gROOT->GetPluginManager()->FindHandler("TBrowserImp", 
+                                                               browserVersion);
+   TString browserOptions(gEnv->GetValue("Browser.Options", "FECI"));
+   browserOptions.ToUpper();
    if (ph && ph->LoadPlugin() != -1) {
-      TBrowserImp *imp = (TBrowserImp *)ph->ExecPlugin(4, b, title, width, height);
+      TBrowserImp *imp = (TBrowserImp *)ph->ExecPlugin(5, b, title, width, 
+         height, browserOptions.Data());
       if (imp) return imp;
    }
-   return new TRootBrowser(b, title, width, height);
+   return new TRootBrowserLite(b, title, width, height);
 }
 
 //______________________________________________________________________________
@@ -89,13 +94,17 @@ TBrowserImp *TRootGuiFactory::CreateBrowserImp(TBrowser *b, const char *title,
 {
    // Create a ROOT native GUI version of TBrowserImp
 
-   TPluginHandler *ph = gROOT->GetPluginManager()->FindHandler("TBrowserImp");
-
+   TString browserVersion(gEnv->GetValue("Browser.Name", "TRootBrowserLite"));
+   TPluginHandler *ph = gROOT->GetPluginManager()->FindHandler("TBrowserImp", 
+                                                               browserVersion);
+   TString browserOptions(gEnv->GetValue("Browser.Options", "FECI"));
+   browserOptions.ToUpper();
    if (ph && ph->LoadPlugin() != -1) {
-      TBrowserImp *imp = (TBrowserImp *)ph->ExecPlugin(6, b, title, x, y, width, height);
+      TBrowserImp *imp = (TBrowserImp *)ph->ExecPlugin(7, b, title, x, y, width, 
+         height, browserOptions.Data());
       if (imp) return imp;
    }
-   return new TRootBrowser(b, title, x, y, width, height);
+   return new TRootBrowserLite(b, title, x, y, width, height);
 }
 
 //______________________________________________________________________________
