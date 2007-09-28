@@ -39,9 +39,9 @@ class IntegratorMultiDim {
    public:
    // constructors
    explicit 
-   IntegratorMultiDim(unsigned int dim, double absTol = 1.E-6, double relTol = 1E-6, size_t size = 100000);
+   IntegratorMultiDim(unsigned int dim, double absTol = 1.E-6, double relTol = 1E-6, unsigned int size = 100000);
 
-   IntegratorMultiDim(const IMultiGenFunction &f, unsigned int dim, double absTol = 1.E-9, double relTol = 1E-6, size_t size = 100000);
+   IntegratorMultiDim(const IMultiGenFunction &f, unsigned int dim, double absTol = 1.E-9, double relTol = 1E-6, unsigned int size = 100000);
 
 
    virtual ~IntegratorMultiDim() {}
@@ -80,7 +80,7 @@ class IntegratorMultiDim {
 
    double fAbsTol;
    double fRelTol;
-   size_t fSize;
+   unsigned int fSize;
 
    double fResult;
    double fError;
