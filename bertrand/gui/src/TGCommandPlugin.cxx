@@ -24,6 +24,7 @@ ClassImp(TGCommandPlugin)
 TGCommandPlugin::TGCommandPlugin(const TGWindow *p, UInt_t w, UInt_t h) :
       TGMainFrame(p, w, h)
 {
+   // TGCommandPlugin Constructor.
 
    SetCleanup(kDeepCleanup);
    fHf = new TGHorizontalFrame(this, 100, 20);
