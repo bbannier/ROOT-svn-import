@@ -129,9 +129,9 @@ void TGCommandPlugin::HandleCommand()
       CheckRemote(string);
       fCommand->Clear();
    }
-
 }
 
+//______________________________________________________________________________
 Bool_t TGCommandPlugin::HandleTimer(TTimer *t)
 {
    // Handle timer event.
