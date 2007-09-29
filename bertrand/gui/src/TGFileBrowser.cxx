@@ -69,6 +69,8 @@ ClassImp(TGFileBrowser)
 TGFileBrowser::TGFileBrowser(const TGWindow *p, TBrowser* b, UInt_t w, UInt_t h)
    : TGMainFrame(p, w, h), TBrowserImp(b), fNewBrowser(0)
 {
+   // TGFileBrowser constructor.
+
    if (p && p != gClient->GetDefaultRoot())
       fNewBrowser = (TRootBrowser *)p->GetMainFrame();
    if (fNewBrowser)
@@ -81,6 +83,8 @@ TGFileBrowser::TGFileBrowser(const TGWindow *p, TBrowser* b, UInt_t w, UInt_t h)
 //______________________________________________________________________________
 void TGFileBrowser::CreateBrowser()
 {
+   // Create the actual file browser.
+
    fCachedPic  = 0;
    SetCleanup(kDeepCleanup);
 
@@ -387,6 +391,7 @@ void TGFileBrowser::GetFilePictures(const TGPicture **pic, Int_t file_type,
 //______________________________________________________________________________
 void TGFileBrowser::RecursiveRemove(TObject *obj)
 {
+   // Recursively remove object.
 
    TGListTreeItem *itm = 0, *item = 0;
    if (obj->InheritsFrom("TFile")) {
@@ -413,6 +418,7 @@ void TGFileBrowser::RecursiveRemove(TObject *obj)
 //______________________________________________________________________________
 void TGFileBrowser::Refresh(Bool_t /*force*/)
 {
+   // Refresh content of the list tree.
 
    TCursorSwitcher cursorSwitcher(this, fListTree);
    static UInt_t prev = 0;
@@ -435,6 +441,8 @@ void TGFileBrowser::Refresh(Bool_t /*force*/)
 //______________________________________________________________________________
 void TGFileBrowser::AddFSDirectory(const char* /*entry*/, const char* path)
 {
+   // Add file system directory in the list tree.
+
    if (path == 0 && fRootDir == 0) {
       fRootDir = fListTree->AddItem(0, rootdir);
    } else {
@@ -530,6 +538,7 @@ void TGFileBrowser::Chdir(TGListTreeItem *item)
 //______________________________________________________________________________
 void TGFileBrowser::CheckRemote(TGListTreeItem *item)
 {
+   // Check if the current list tree item points to a remote object.
 
    TObject *obj = (TObject *) item->GetUserData();
    if (obj) {
@@ -615,6 +624,7 @@ void TGFileBrowser::CheckRemote(TGListTreeItem *item)
 //______________________________________________________________________________
 void TGFileBrowser::Clicked(TGListTreeItem *item, Int_t btn, Int_t x, Int_t y)
 {
+   // Process mouse clicks in TGListTree.
 
    char path[1024];
    Long64_t size = 0;
@@ -787,7 +797,6 @@ void TGFileBrowser::DoubleClicked(TGListTreeItem *item, Int_t /*btn*/)
             }
          }
          if (ext.EndsWith(".root")) {
-            TCursorSwitcher cursorSwitcher(this, fListTree);
             gApplication->SetBit(TApplication::kProcessRemotely);
             gApplication->ProcessLine("((TApplicationServer *)gApplication)->BrowseFile(0);");
          }
@@ -946,7 +955,8 @@ Long_t TGFileBrowser::XXExecuteDefaultAction(TObject *obj)
 //______________________________________________________________________________
 char *TGFileBrowser::FormatFileInfo(const char *fname, Long64_t size, Long_t modtime)
 {
-
+   // Format file information to be displayed in the tooltip. 
+   
    Long64_t fsize, bsize;
    TString infos = fname;
    infos += "\n";
@@ -1042,6 +1052,7 @@ void TGFileBrowser::GetObjPicture(const TGPicture **pic, TObject *obj)
 //______________________________________________________________________________
 void TGFileBrowser::GotoDir(const char *path)
 {
+   // Go to the directory "path" and open all the parent list tree items.
 
    TGListTreeItem *item, *itm;
    char *token;
