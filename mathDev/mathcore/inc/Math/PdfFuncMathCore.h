@@ -48,16 +48,22 @@ namespace Math {
 
 
 
-  /** @name Probability Density Functions (PDF) from MathCore
+  /** @defgroup PdfFunc Probability Density Functions (PDF) from MathCore      
+   *   @ingroup StatFunc
    *  Probability density functions of various statistical distributions 
    *  (continuous and discrete).
    *  The probability density function returns the probability that 
    *  the variate has the value x. 
    *  In statistics the PDF is also called the frequency function.
    *  
-   *  Additional PDF's are provided in the \ref MathMore library
    * 
    */
+
+   /** @name Probability Density Functions from MathCore 
+   *   Additional PDF's are provided in the MathMore library
+   *   (see PDF functions from MathMore)   
+   */ 
+
   //@{
 
   /**
@@ -70,7 +76,7 @@ namespace Math {
   <A HREF="http://mathworld.wolfram.com/BinomialDistribution.html">
   Mathworld</A>. 
   
-  @ingroup StatFunc
+  @ingroup PdfFunc
 
   */
 
@@ -88,7 +94,7 @@ namespace Math {
   \f[ p(x) = \frac{1}{\pi} \frac{\frac{1}{2} \Gamma}{x^2 + (\frac{1}{2} \Gamma)^2} \f]
 
   
-  @ingroup StatFunc
+  @ingroup PdfFunc
 
   */
 
@@ -110,7 +116,7 @@ namespace Math {
   Mathworld</A>. It is also related to the #breitwigner_pdf which 
   will call the same implementation.
   
-  @ingroup StatFunc
+  @ingroup PdfFunc
 
   */
 
@@ -130,7 +136,7 @@ namespace Math {
   <A HREF="http://mathworld.wolfram.com/Chi-SquaredDistribution.html">
   Mathworld</A>. 
   
-  @ingroup StatFunc
+  @ingroup PdfFunc
 
   */
 
@@ -150,7 +156,7 @@ namespace Math {
   Mathworld</A>. 
 
   
-  @ingroup StatFunc
+  @ingroup PdfFunc
 
   */
 
@@ -169,7 +175,7 @@ namespace Math {
   <A HREF="http://mathworld.wolfram.com/F-Distribution.html">
   Mathworld</A>. 
   
-  @ingroup StatFunc
+  @ingroup PdfFunc
 
   */
 
@@ -189,7 +195,7 @@ namespace Math {
   <A HREF="http://mathworld.wolfram.com/GammaDistribution.html">
   Mathworld</A>. 
   
-  @ingroup StatFunc
+  @ingroup PdfFunc
 
   */
 
@@ -209,7 +215,7 @@ namespace Math {
   Mathworld</A>. It can also be evaluated using #normal_pdf which will 
   call the same implementation. 
 
-  @ingroup StatFunc
+  @ingroup PdfFunc
  
   */
 
@@ -230,7 +236,7 @@ namespace Math {
   Mathworld</A>. 
 
   
-  @ingroup StatFunc
+  @ingroup PdfFunc
 
   */
 
@@ -250,7 +256,7 @@ namespace Math {
   Mathworld</A>. It can also be evaluated using #gaussian_pdf which will call the same 
   implementation. 
 
-  @ingroup StatFunc
+  @ingroup PdfFunc
  
   */
 
@@ -269,7 +275,7 @@ namespace Math {
   <A HREF="http://mathworld.wolfram.com/PoissonDistribution.html">
   Mathworld</A>. 
   
-  @ingroup StatFunc
+  @ingroup PdfFunc
 
   */
 
@@ -288,7 +294,7 @@ namespace Math {
   <A HREF="http://mathworld.wolfram.com/Studentst-Distribution.html">
   Mathworld</A>. 
   
-  @ingroup StatFunc
+  @ingroup PdfFunc
 
   */
 
@@ -307,7 +313,7 @@ namespace Math {
   <A HREF="http://mathworld.wolfram.com/UniformDistribution.html">
   Mathworld</A>. 
   
-  @ingroup StatFunc
+  @ingroup PdfFunc
 
   */
 

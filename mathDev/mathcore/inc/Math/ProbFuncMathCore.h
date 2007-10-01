@@ -8,7 +8,10 @@ namespace ROOT {
 namespace Math {
 
 
-  /** @name Cumulative Distribution Functions (CDF) from MathCore
+  /** @defgroup ProbFunc Cumulative Distribution Functions (CDF) 
+
+       @ingroup StatFunc
+
    *  Cumulative distribution functions of various distributions.
    *  The functions with the extension <em>_cdf</em> calculate the
    *  lower tail integral of the probability density function
@@ -31,13 +34,17 @@ namespace Math {
    * their usage is deprecated.
    *
    *
-   *   Additional CDF's are provided in the \ref MathMore library
-   *
    */
+
+   /** @name Cumulative Distribution Functions from MathCore 
+   *   Additional CDF's are provided in the MathMore library
+   *   (see CDF functions from MathMore)   
+   */ 
+
   //@{
 
 
-
+  
 
 
   /**
@@ -49,7 +56,7 @@ namespace Math {
   \f[ D(x) = \int_{x}^{+\infty} \frac{1}{\pi} \frac{\frac{1}{2} \Gamma}{x'^2 + (\frac{1}{2} \Gamma)^2} dx' \f]
 
   
-  @ingroup StatFunc
+  @ingroup ProbFunc
 
   */
   double breitwigner_cdf_c(double x, double gamma, double x0 = 0);
@@ -64,7 +71,7 @@ namespace Math {
   \f[ D(x) = \int_{-\infty}^{x} \frac{1}{\pi} \frac{b}{x'^2 + (\frac{1}{2} \Gamma)^2} dx' \f]
  
   
-  @ingroup StatFunc
+  @ingroup ProbFunc
 
   */
   double breitwigner_cdf(double x, double gamma, double x0 = 0);
@@ -84,7 +91,7 @@ namespace Math {
   <A HREF="http://mathworld.wolfram.com/CauchyDistribution.html">
   Mathworld</A>. 
   
-  @ingroup StatFunc
+  @ingroup ProbFunc
 
   */
   double cauchy_cdf_c(double x, double b, double x0 = 0);
@@ -106,7 +113,7 @@ namespace Math {
   Mathworld</A>. 
 
   
-  @ingroup StatFunc
+  @ingroup ProbFunc
 
   */
   double cauchy_cdf(double x, double b, double x0 = 0);
@@ -126,7 +133,7 @@ namespace Math {
   Mathworld</A>. It is implemented using the incomplete gamma function, ROOT::Math::inc_gamma_c, 
   from <A HREF="http://www.netlib.org/cephes">Cephes</A>
     
-  @ingroup StatFunc
+  @ingroup ProbFunc
 
   */
 
@@ -146,7 +153,7 @@ namespace Math {
   Mathworld</A>.   It is implemented using the incomplete gamma function, ROOT::Math::inc_gamma_c, 
   from <A HREF="http://www.netlib.org/cephes">Cephes</A>
   
-  @ingroup StatFunc
+  @ingroup ProbFunc
 
   */
 
@@ -165,7 +172,7 @@ namespace Math {
   <A HREF="http://mathworld.wolfram.com/ExponentialDistribution.html">
   Mathworld</A>. 
   
-  @ingroup StatFunc
+  @ingroup ProbFunc
 
   */
 
@@ -184,7 +191,7 @@ namespace Math {
   <A HREF="http://mathworld.wolfram.com/ExponentialDistribution.html">
   Mathworld</A>. 
   
-  @ingroup StatFunc
+  @ingroup ProbFunc
 
   */
 
@@ -206,7 +213,7 @@ namespace Math {
   Mathworld</A>. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC304">GSL</A>.
   
-  @ingroup StatFunc
+  @ingroup ProbFunc
   \endif
 
   */
@@ -228,7 +235,7 @@ namespace Math {
   Mathworld</A>. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC304">GSL</A>.
   
-  @ingroup StatFunc
+  @ingroup ProbFunc
 
   \endif
   */
@@ -251,7 +258,7 @@ namespace Math {
   Mathworld</A>. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC300">GSL</A>.
   
-  @ingroup StatFunc
+  @ingroup ProbFunc
 
   \endif
   */
@@ -274,7 +281,7 @@ namespace Math {
   Mathworld</A>. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC300">GSL</A>.
   
-  @ingroup StatFunc
+  @ingroup ProbFunc
 
   \endif
   */
@@ -295,7 +302,7 @@ namespace Math {
   Mathworld</A>. It can also be evaluated using #normal_cdf_c which will 
   call the same implementation. 
 
-  @ingroup StatFunc
+  @ingroup ProbFunc
 
   */
 
@@ -315,7 +322,7 @@ namespace Math {
   Mathworld</A>. It can also be evaluated using #normal_quant which will 
   call the same implementation. 
 
-  @ingroup StatFunc
+  @ingroup ProbFunc
  
   */
 
@@ -334,7 +341,7 @@ namespace Math {
   <A HREF="http://mathworld.wolfram.com/LogNormalDistribution.html">
   Mathworld</A>. 
   
-  @ingroup StatFunc
+  @ingroup ProbFunc
 
   */
 
@@ -354,7 +361,7 @@ namespace Math {
   <A HREF="http://mathworld.wolfram.com/LogNormalDistribution.html">
   Mathworld</A>. 
   
-  @ingroup StatFunc
+  @ingroup ProbFunc
 
   */
 
@@ -375,7 +382,7 @@ namespace Math {
   Mathworld</A>. It can also be evaluated using #gaussian_prob which will 
   call the same implementation. 
 
-  @ingroup StatFunc
+  @ingroup ProbFunc
 
   */
 
@@ -395,7 +402,7 @@ namespace Math {
   Mathworld</A>. It can also be evaluated using #gaussian_quant which will 
   call the same implementation. 
 
-  @ingroup StatFunc
+  @ingroup ProbFunc
  
   */
 
@@ -416,7 +423,7 @@ namespace Math {
   <A HREF="http://mathworld.wolfram.com/Studentst-Distribution.html">
   Mathworld</A>. 
   
-  @ingroup StatFunc
+  @ingroup ProbFunc
 
    \endif
   */
@@ -438,7 +445,7 @@ namespace Math {
   Mathworld</A>. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC305">GSL</A>.
   
-  @ingroup StatFunc
+  @ingroup ProbFunc
 
     \endif
   */
@@ -459,7 +466,7 @@ namespace Math {
   <A HREF="http://mathworld.wolfram.com/UniformDistribution.html">
   Mathworld</A>. 
   
-  @ingroup StatFunc
+  @ingroup ProbFunc
 
   */
 
@@ -479,7 +486,7 @@ namespace Math {
   <A HREF="http://mathworld.wolfram.com/UniformDistribution.html">
   Mathworld</A>. 
   
-  @ingroup StatFunc
+  @ingroup ProbFunc
 
   */
 
@@ -491,7 +498,8 @@ namespace Math {
 
 
   //@}
-   /** @name Backward compatible functions */ 
+
+   /** @name Backward compatible MathCore CDF functions */ 
 
 
    inline double breitwigner_prob(double x, double gamma, double x0 = 0) {

@@ -45,9 +45,28 @@
 #include <iosfwd>
 
 
+
+
 //doxygen tag
+
 /**
-   @defgroup SMatrixGroup Matrix and Vector classes
+   @defgroup SMatrixGroup SMatrix 
+
+   \ref SMatrix  for high performance vector and matrix computations.
+   Classes representing Matrices and Vectors of arbitrary type and dimension and related functions.  
+   For a detailed description and usage examples see: 
+   <ul>
+    <li>\ref SVectorDoc
+    <li>\ref SMatrixDoc
+    <li>\ref MatVecFunctions
+   </ul>
+  
+*/
+
+/**
+   @defgroup SMatrixSVector Matrix and Vector classes
+   
+   @ingroup SMatrixGroup
 
    Classes representing Matrices and Vectors of arbitrary type and dimension. 
    For a detailed description and usage examples see: 
@@ -84,7 +103,7 @@ struct SMatrixIdentity { };
     D1 = number of rows and D2 = number of columns.
     See \ref SMatrixDoc.
     
-    @ingroup SMatrix
+    @ingroup SMatrixSVector
 
     @authors T. Glebe, L. Moneta and J. Palacios
 */

@@ -54,7 +54,7 @@ N1687=04-0127, September 10, 2004</A>
 namespace ROOT {
 namespace Math {
 
-   /** @name MathMore Special Functions */
+   /** @name Special Functions from MathMore */
 
 
   /**

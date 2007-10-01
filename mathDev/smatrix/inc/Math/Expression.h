@@ -31,7 +31,8 @@
 // ********************************************************************
 
 /**
-   @defgroup Expression SMatrix Expression Template Classes
+   @defgroup Expression Expression Template Classes
+   @ingroup SMatrixGroup
  */
 
 //==============================================================================

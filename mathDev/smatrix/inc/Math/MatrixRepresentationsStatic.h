@@ -8,6 +8,7 @@
 
 /** 
     @defgroup MatRep SMatrix Storage Representation 
+    @ingroup SMatrixGroup
  
     @author Juan Palacios
     @date   2006-01-15
