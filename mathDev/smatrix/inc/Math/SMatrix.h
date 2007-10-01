@@ -47,7 +47,7 @@
 
 //doxygen tag
 /**
-   @defgroup SMatrix Matrix and Vector classes
+   @defgroup SMatrixGroup Matrix and Vector classes
 
    Classes representing Matrices and Vectors of arbitrary type and dimension. 
    For a detailed description and usage examples see: 
@@ -543,24 +543,24 @@ public:
    */
    T Trace() const; 
 
+#ifndef UNSUPPORTED_TEMPLATE_EXPRESSION
    /**
       return the upper Triangular block of the matrices (including the diagonal) as
       a vector of sizes N = D1 * (D1 + 1)/2.
       It works only for square matrices with D1==D2, otherwise it will produce a compile error
    */
-#ifndef UNSUPPORTED_TEMPLATE_EXPRESSION
    SVector<T, D1 * (D2 +1)/2> UpperBlock() const;
 #else
    template<class SubVector>
    SubVector UpperBlock() const;
 #endif
 
+#ifndef UNSUPPORTED_TEMPLATE_EXPRESSION
    /**
       return the lower Triangular block of the matrices (including the diagonal) as
       a vector of sizes N = D1 * (D1 + 1)/2.
       It works only for square matrices with D1==D2, otherwise it will produce a compile error
    */
-#ifndef UNSUPPORTED_TEMPLATE_EXPRESSION
    SVector<T, D1 * (D2 +1)/2> LowerBlock() const;
 #else
    template<class SubVector>

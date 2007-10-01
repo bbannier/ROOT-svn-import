@@ -51,7 +51,6 @@
 #include "Math/MCParameters.h"
 #endif
 
-#include <vector>
 
 #include <iostream>
 
@@ -95,24 +94,26 @@ namespace Math {
       
       /** Default constructor of GSL MCIntegrator 
       
+      @param dim dimension of the function
       @param absTol desired absolute Error
       @param relTol desired relative Error
-      @param size maximum number of sub-intervals
+      @param class maximum number of function calls
       */
       
-      GSLMCIntegrator(size_t dim, double absTol = 1.E-6, double relTol = 1E-4, size_t calls = 500000);
+      GSLMCIntegrator(unsigned int dim, double absTol = 1.E-6, double relTol = 1E-4, unsigned int calls = 500000);
             
       
       /** constructor of GSL MCIntegrator. Plain MC is set as default integration type (??)
          
-         @param type type of integration. The possible types are defined in the Integration::Type enumeration
-         @param absTol desired absolute Error
-         @param relTol desired relative Error
-         @param size maximum number of sub-intervals
-         */
+      @param dim dimension of the function
+      @param type type of integration. The possible types are defined in the Integration::Type enumeration
+      @param absTol desired absolute Error
+      @param relTol desired relative Error
+      @param calls maximum number of function calls
+      */
       
       
-      GSLMCIntegrator(size_t dim, MCIntegration::Type type, double absTol = 1.E-6, double relTol = 1E-4, size_t calls = 500000);
+      GSLMCIntegrator(unsigned int dim, MCIntegration::Type type, double absTol = 1.E-6, double relTol = 1E-4, unsigned int calls = 500000);
       
       
       /**
@@ -126,7 +127,7 @@ namespace Math {
        
        */
       /*
-      GSLMCIntegrator(const MCIntegration::Type type, const Integration::GKRule rule, double absTol = 1.E-9, double relTol = 1E-6, size_t size = 1000, gsl_rng* r );
+      GSLMCIntegrator(const MCIntegration::Type type, const Integration::GKRule rule, double absTol = 1.E-9, double relTol = 1E-6, unsigned int size = 1000, gsl_rng* r );
       */
       
       virtual ~GSLMCIntegrator();
@@ -154,7 +155,7 @@ namespace Math {
          
       void SetFunction(const IMultiGenFunction &f); 
    
-      typedef double ( * GSLMonteFuncPointer ) ( double *, size_t, void *);    
+      typedef double ( * GSLMonteFuncPointer ) ( double *, unsigned int, void *);    
       
       void SetFunction( GSLMonteFuncPointer f, void * p = 0); 
       
@@ -277,8 +278,8 @@ namespace Math {
 
       double fAbsTol;
       double fRelTol;
-      size_t fDim;
-      size_t fCalls;
+      unsigned int fDim;
+      unsigned int fCalls;
       
       // cache Error, Result and Status of integration
       

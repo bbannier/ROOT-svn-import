@@ -32,7 +32,7 @@ namespace ROOT {
 namespace Math {
 
 
-  /** @name Cumulative Distribution Functions (CDF)
+  /** @name Cumulative Distribution Functions (CDF) from MathMore
    *  Cumulative distribution functions of various distributions.
    *  The functions with the extension <em>_cdf</em> calculate the
    *  lower tail integral of the probability density function
@@ -56,8 +56,7 @@ namespace Math {
    *
    * The implementation used is that of 
    * <A HREF="http://www.gnu.org/software/gsl/manual/html_node/Random-Number-Distributions.html">GSL</A>.
-   * Additional CDF are provided in the 
-   *  <A HREF="../../MathCore/html/group__StatFunc.html">MathCore</A> library. 
+   * Additional CDF are provided in the \ref MathCore  library.  
    * 
    */
   //@{
