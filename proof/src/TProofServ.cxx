@@ -733,10 +733,6 @@ TDSetElement *TProofServ::GetNextPacket(Long64_t totalEntries)
    TMessage req(kPROOF_GETPACKET);
    Double_t cputime = fCompute.CpuTime();
    Double_t realtime = fCompute.RealTime();
-   req << fLatency.RealTime() << realtime << cputime
-       << bytesRead << totalEntries;
-   if (fPlayer)
-       req << fPlayer->GetEventsProcessed();
 
    // Apply inflate factor, if needed
    PDB(kLoop, 2)
@@ -745,10 +741,21 @@ TDSetElement *TProofServ::GetNextPacket(Long64_t totalEntries)
                             fInflateFactor, realtime, cputime, totalEntries);
    if (fInflateFactor > 1000) {
       UInt_t sleeptime = (UInt_t) (cputime * (fInflateFactor - 1000)) ;
-      PDB(kLoop, 2)
-         Info("GetNextPacket","sleeping %d millisec", sleeptime);
+      Int_t i = 0;
+      for (i = kSigBus ; i <= kSigUser2 ; i++)
+          gSystem->IgnoreSignal((ESignals)i, kTRUE);
       gSystem->Sleep(sleeptime);
+      for (i = kSigBus ; i <= kSigUser2 ; i++)
+          gSystem->IgnoreSignal((ESignals)i, kFALSE);
+      realtime += sleeptime / 1000.;
+      PDB(kLoop, 2)
+         Info("GetNextPacket","slept %d millisec", sleeptime);
    }
+
+   req << fLatency.RealTime() << realtime << cputime
+       << bytesRead << totalEntries;
+   if (fPlayer)
+       req << fPlayer->GetEventsProcessed();
 
    fLatency.Start();
    Int_t rc = fSocket->Send(req);

@@ -1040,24 +1040,21 @@ Bool_t TXProofServ::HandleInput(const void *in)
 
    } else if (acod == kXPD_inflate) {
 
-      // Inflate factor
-      Int_t factor = hin->fInt2;
+      // Set inflate factor
+      fInflateFactor = (hin->fInt2 >= 1000) ? hin->fInt2 : fInflateFactor;
+      // Notify
+      Info("HandleInput", "kXPD_inflate: inflate factor set to %f",
+           (Float_t) fInflateFactor / 1000.);
 
-      if (IsMaster()) {
-         // The factor is the priority to be propagated
-         fGroupPriority = factor;
-         if (fProof)
-            fProof->BroadcastGroupPriority(fGroup, fGroupPriority);
-         // Notify
-         Info("HandleInput", "kXPD_inflate: group %s priority set to %f",
-              fGroup.Data(), (Float_t) fGroupPriority / 100.);
-      } else {
-         // Set inflate factor
-         fInflateFactor = (factor >= 1000) ? factor : fInflateFactor;
-         // Notify
-         Info("HandleInput", "kXPD_inflate: inflate factor set to %f",
-              (Float_t) fInflateFactor / 1000.);
-      }
+   } else if (acod == kXPD_priority) {
+
+      // The factor is the priority to be propagated
+      fGroupPriority = hin->fInt2;
+      if (fProof)
+         fProof->BroadcastGroupPriority(fGroup, fGroupPriority);
+      // Notify
+      Info("HandleInput", "kXPD_priority: group %s priority set to %f",
+           fGroup.Data(), (Float_t) fGroupPriority / 100.);
 
    } else {
       // Standard socket input
