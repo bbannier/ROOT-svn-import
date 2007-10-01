@@ -69,15 +69,15 @@ namespace Math {
 
 
   For detailed description see 
-  <A HREF="">
-  Mathworld</A>. The implementation used is that of 
+  <A HREF="http://mathworld.wolfram.com/LaguerrePolynomial.html">Mathworld</A>. 
+  The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/html_node/Laguerre-Functions.html">GSL</A>.
 
   This function is an extension of C++0x, also consistent in GSL, 
   Abramowitz and Stegun 1972 and MatheMathica that uses non-integer values for m.
   C++0x calls for 'int m', more restrictive than necessary.
   The definition for was incorrect in 'n1687.pdf', but fixed in
-  <A HREF="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2005/n1836.pdf">,
+  <A HREF="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2005/n1836.pdf">n1836.pdf</A>,
   the most recent draft as of 2007-07-01
 
 

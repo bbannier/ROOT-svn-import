@@ -51,7 +51,7 @@ namespace Math {
     See for examples the 
     <A HREF="http://www.gnu.org/software/gsl/manual/html_node/Monte-Carlo-Interface.html">GSL online manual</A>
 
-    @ingrup MCIntegration
+    @ingroup MCIntegration
   */ 
  typedef double ( * GSLMonteFuncPointer ) ( double *, size_t, void *);    
 

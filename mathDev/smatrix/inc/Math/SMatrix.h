@@ -56,6 +56,7 @@
    Classes representing Matrices and Vectors of arbitrary type and dimension and related functions.  
    For a detailed description and usage examples see: 
    <ul>
+    <li>\ref SMatrix home page
     <li>\ref SVectorDoc
     <li>\ref SMatrixDoc
     <li>\ref MatVecFunctions
@@ -562,24 +563,25 @@ public:
    */
    T Trace() const; 
 
-#ifndef UNSUPPORTED_TEMPLATE_EXPRESSION
+
    /**
       return the upper Triangular block of the matrices (including the diagonal) as
       a vector of sizes N = D1 * (D1 + 1)/2.
       It works only for square matrices with D1==D2, otherwise it will produce a compile error
    */
+#ifndef UNSUPPORTED_TEMPLATE_EXPRESSION
    SVector<T, D1 * (D2 +1)/2> UpperBlock() const;
 #else
    template<class SubVector>
    SubVector UpperBlock() const;
 #endif
 
-#ifndef UNSUPPORTED_TEMPLATE_EXPRESSION
    /**
       return the lower Triangular block of the matrices (including the diagonal) as
       a vector of sizes N = D1 * (D1 + 1)/2.
       It works only for square matrices with D1==D2, otherwise it will produce a compile error
    */
+#ifndef UNSUPPORTED_TEMPLATE_EXPRESSION
    SVector<T, D1 * (D2 +1)/2> LowerBlock() const;
 #else
    template<class SubVector>

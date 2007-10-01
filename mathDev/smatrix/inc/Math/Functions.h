@@ -44,7 +44,7 @@
    These functions apply for any type T, such as a scalar, a vector or a matrix. 
  */
 /**
-   @defgroup VectFunction SMatrix Vector Template Functions 
+   @defgroup VectFunction Vector Template Functions 
    @ingroup SMatrixGroup
 
    These functions apply to SVector types (and also to Vector expressions) and can 

@@ -33,8 +33,8 @@
 
 /**
    @defgroup NumAlgo Numerical Algorithms
-   Numerical Algorithm mainly from the \ref MathMore and implemented using the GSL library
-   @ingroup NumAlgo
+   Numerical Algorithm mainly from the \ref MathMore and implemented using the 
+   <A HREF="http://www.gnu.org/software/gsl/manual/html_node/">GSL</A> library
  */
 
 
