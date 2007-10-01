@@ -13,7 +13,7 @@
 /**
 
 Probability density functions, cumulative distribution functions 
-and their inverses for various statistical distributions (continuous and discrete).
+and their inverses (quantiles) for various statistical distributions (continuous and discrete).
 Whenever possible the conventions followed are those of the
 CRC Concise Encyclopedia of Mathematics, Second Edition
 (or <A HREF="http://mathworld.wolfram.com/">Mathworld</A>).
@@ -48,15 +48,14 @@ namespace Math {
 
 
 
-  /** @name Probability Density Functions (PDF)
+  /** @name Probability Density Functions (PDF) from MathCore
    *  Probability density functions of various statistical distributions 
    *  (continuous and discrete).
    *  The probability density function returns the probability that 
    *  the variate has the value x. 
    *  In statistics the PDF is also called the frequency function.
    *  
-   *  Additional PDF's are provided in the 
-   *  <A HREF="../../MathMore/html/group__StatFunc.html">MathMore</A> library. 
+   *  Additional PDF's are provided in the \ref MathMore library
    * 
    */
   //@{

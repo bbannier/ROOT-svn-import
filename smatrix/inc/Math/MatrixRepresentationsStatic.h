@@ -7,7 +7,7 @@
 // Include files
 
 /** 
-    @defgroup MatRep Matrix Storage Representation 
+    @defgroup MatRep SMatrix Storage Representation 
  
     @author Juan Palacios
     @date   2006-01-15

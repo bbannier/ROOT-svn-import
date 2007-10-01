@@ -57,7 +57,7 @@ cumulative distributions and all inverses cumulative distributions
 namespace ROOT {
 namespace Math {
 
-  /** @name Probability Density Functions (PDF)
+  /** @name Probability Density Functions (PDF) from MathMore
    *  Probability density functions of various distributions (continuous and discrete).
    *  The probability density function returns the probability that 
    *  the variate has the value x. 
@@ -65,8 +65,7 @@ namespace Math {
    * 
    *  The PDF's in MathMore are implemented using 
    *  <A HREF="http://www.gnu.org/software/gsl/manual/html_node/Random-Number-Distributions.html">GSL</A>.  
-   *   Additional PDF's are provided in the 
-   *  <A HREF="../../MathCore/html/group__StatFunc.html">MathCore</A> library. 
+   *   Additional PDF's are provided in the \ref MathCore library. 
    *   
    */
 

@@ -32,7 +32,7 @@
 
 //doxygen tag
 /**
-   @defgroup MatrixFunctions Matrix Functions
+   @defgroup MatrixFunctions SMatrix Template Functions operating on Matrices
 
    These function apply to matrices (and also Matrix expression) and can return a 
    matrix expression of a particular defined type, like in the matrix multiplication or 
