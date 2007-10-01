@@ -36,7 +36,7 @@ namespace Math {
 
 
 
-  /** @name Quantile Functions from MathMore
+  /** @defgroup QuantFunc Quantile Functions 
    *  Inverse functions of the cumulative distribution functions 
    *  and the inverse of the complement of the cumulative distribution functions 
    *  for various distributions.
@@ -63,7 +63,11 @@ namespace Math {
    * their usage is deprecated.
    */
 
-   
+   /** @name Quantile Functions from MathMore 
+   * The implementation used is that of 
+   * <A HREF="http://www.gnu.org/software/gsl/manual/html_node/Random-Number-Distributions.html">GSL</A>.
+   */ 
+
   //@{
 
 
@@ -82,7 +86,7 @@ namespace Math {
   #cauchy_quantile_c. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC294">GSL</A>.
   
-  @ingroup StatFunc
+  @ingroup QuantFunc
 
   */
 
@@ -102,7 +106,7 @@ namespace Math {
   #cauchy_quantile. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC294">GSL</A>.
   
-  @ingroup StatFunc
+  @ingroup QuantFunc
 
   */
 
@@ -121,7 +125,7 @@ namespace Math {
   Mathworld</A>. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC294">GSL</A>.
   
-  @ingroup StatFunc
+  @ingroup QuantFunc
 
   */
 
@@ -140,7 +144,7 @@ namespace Math {
   Mathworld</A>. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC294">GSL</A>.
   
-  @ingroup StatFunc
+  @ingroup QuantFunc
 
   */
 
@@ -158,7 +162,7 @@ namespace Math {
   Mathworld</A>. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC303">GSL</A>.
 
-  @ingroup StatFunc
+  @ingroup QuantFunc
 
   */
 
@@ -176,7 +180,7 @@ namespace Math {
   Mathworld</A>. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC303">GSL</A>.
 
-  @ingroup StatFunc
+  @ingroup QuantFunc
 
   */
 
@@ -194,7 +198,7 @@ namespace Math {
   Mathworld</A>. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC291">GSL</A>.
   
-  @ingroup StatFunc
+  @ingroup QuantFunc
 
   */
 
@@ -212,7 +216,7 @@ namespace Math {
   Mathworld</A>. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC291">GSL</A>.
   
-  @ingroup StatFunc
+  @ingroup QuantFunc
 
   */
 
@@ -229,7 +233,7 @@ namespace Math {
   Mathworld</A>. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC291">GSL</A>.
   
-  @ingroup StatFunc
+  @ingroup QuantFunc
 
   */
    double fdistribution_quantile(double z, double n, double m);  
@@ -243,7 +247,7 @@ namespace Math {
   Mathworld</A>. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC300">GSL</A>.
   
-  @ingroup StatFunc
+  @ingroup QuantFunc
   */
 
    double fdistribution_quantile_c(double z, double n, double m);  
@@ -258,7 +262,7 @@ namespace Math {
   Mathworld</A>. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC300">GSL</A>.
   
-  @ingroup StatFunc
+  @ingroup QuantFunc
 
   */
 
@@ -276,7 +280,7 @@ namespace Math {
   Mathworld</A>. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC300">GSL</A>.
   
-  @ingroup StatFunc
+  @ingroup QuantFunc
 
   */
 
@@ -295,7 +299,7 @@ namespace Math {
   call the same implementation. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC288">GSL</A>.
 
-  @ingroup StatFunc
+  @ingroup QuantFunc
 
   */
 
@@ -314,7 +318,7 @@ namespace Math {
   call the same implementation. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC288">GSL</A>.
 
-  @ingroup StatFunc
+  @ingroup QuantFunc
 
   */
 
@@ -332,7 +336,7 @@ namespace Math {
   Mathworld</A>. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC302">GSL</A>.
   
-  @ingroup StatFunc
+  @ingroup QuantFunc
 
   */
 
@@ -350,7 +354,7 @@ namespace Math {
   Mathworld</A>. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC302">GSL</A>.
   
-  @ingroup StatFunc
+  @ingroup QuantFunc
 
   */
 
@@ -369,7 +373,7 @@ namespace Math {
   call the same implementation. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC288">GSL</A>.
 
-  @ingroup StatFunc
+  @ingroup QuantFunc
 
   */
 
@@ -388,7 +392,7 @@ namespace Math {
   call the same implementation. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC288">GSL</A>.
 
-  @ingroup StatFunc
+  @ingroup QuantFunc
 
   */
 
@@ -406,7 +410,7 @@ namespace Math {
   Mathworld</A>. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC305">GSL</A>.
   
-  @ingroup StatFunc
+  @ingroup QuantFunc
 
   */
 
@@ -424,7 +428,7 @@ namespace Math {
   Mathworld</A>. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC305">GSL</A>.
   
-  @ingroup StatFunc
+  @ingroup QuantFunc
 
   */
 
@@ -442,7 +446,7 @@ namespace Math {
   Mathworld</A>. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC301">GSL</A>.
   
-  @ingroup StatFunc
+  @ingroup QuantFunc
 
   */
 
@@ -460,7 +464,7 @@ namespace Math {
   Mathworld</A>. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC301">GSL</A>.
   
-  @ingroup StatFunc
+  @ingroup QuantFunc
 
   */
 
@@ -473,7 +477,7 @@ namespace Math {
   function of the upper tail of the beta distribution
   (#beta_cdf_c). 
   
-  @ingroup StatFunc
+  @ingroup QuantFunc
 
   */
   double beta_quantile(double x, double a, double b);
@@ -484,7 +488,7 @@ namespace Math {
   function of the lower tail of the beta distribution
   (#beta_cdf). 
 
-  @ingroup StatFunc
+  @ingroup QuantFunc
 
   */
   double beta_quantile_c(double x, double a, double b);

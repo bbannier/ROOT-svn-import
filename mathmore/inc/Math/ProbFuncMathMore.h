@@ -32,7 +32,9 @@ namespace ROOT {
 namespace Math {
 
 
-  /** @name Cumulative Distribution Functions (CDF) from MathMore
+  /** @defgroup  ProbFunc Cumulative Distribution Functions (CDF) 
+
+      @ingroup StatFunc
    *  Cumulative distribution functions of various distributions.
    *  The functions with the extension <em>_cdf</em> calculate the
    *  lower tail integral of the probability density function
@@ -54,11 +56,18 @@ namespace Math {
    * These names are currently kept for backward compatibility, but 
    * their usage is deprecated.
    *
-   * The implementation used is that of 
-   * <A HREF="http://www.gnu.org/software/gsl/manual/html_node/Random-Number-Distributions.html">GSL</A>.
-   * Additional CDF are provided in the \ref MathCore  library.  
    * 
    */
+
+
+
+   /** @name Cumulative Distribution Functions from MathMore 
+   * The implementation used is that of 
+   * <A HREF="http://www.gnu.org/software/gsl/manual/html_node/Random-Number-Distributions.html">GSL</A>.
+   *   Additional CDF's are provided in the MathCore library
+   *   (see CDF functions from MathMore)   
+   */ 
+
   //@{
 
 
@@ -67,7 +76,7 @@ namespace Math {
   Complement of the cumulative distribution function of the beta distribution. 
   Upper tail of the integral of the #beta_pdf
   
-  @ingroup StatFunc
+  @ingroup ProbFunc
 
   */
 
@@ -80,7 +89,7 @@ namespace Math {
   Cumulative distribution function of the beta distribution 
   Upper tail of the integral of the #beta_pdf
   
-  @ingroup StatFunc
+  @ingroup ProbFunc
 
   */
 
@@ -101,7 +110,7 @@ namespace Math {
   Mathworld</A>. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC304">GSL</A>.
   
-  @ingroup StatFunc
+  @ingroup ProbFunc
 
   */
 
@@ -122,7 +131,7 @@ namespace Math {
   Mathworld</A>. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC304">GSL</A>.
   
-  @ingroup StatFunc
+  @ingroup ProbFunc
 
   */
 
@@ -143,7 +152,7 @@ namespace Math {
   Mathworld</A>. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC300">GSL</A>.
   
-  @ingroup StatFunc
+  @ingroup ProbFunc
 
   */
 
@@ -164,7 +173,7 @@ namespace Math {
   Mathworld</A>. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC300">GSL</A>.
   
-  @ingroup StatFunc
+  @ingroup ProbFunc
 
   */
 
@@ -184,7 +193,7 @@ namespace Math {
   Mathworld</A>. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC305">GSL</A>.
   
-  @ingroup StatFunc
+  @ingroup ProbFunc
 
   */
 
@@ -205,7 +214,7 @@ namespace Math {
   Mathworld</A>. The implementation used is that of 
   <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_19.html#SEC305">GSL</A>.
   
-  @ingroup StatFunc
+  @ingroup ProbFunc
 
   */
 
@@ -218,7 +227,7 @@ namespace Math {
   Complement of the cumulative distribution function of the Poisson distribution. 
   Upper tail of the integral of the #poisson_pdf
   
-  @ingroup StatFunc
+  @ingroup ProbFunc
 
   */
 
@@ -229,7 +238,7 @@ namespace Math {
   Cumulative distribution function of the Poisson distribution 
   Lower tail of the integral of the #poisson_pdf
   
-  @ingroup StatFunc
+  @ingroup ProbFunc
 
   */
 
@@ -240,7 +249,7 @@ namespace Math {
   Complement of the cumulative distribution function of the Binomial distribution. 
   Upper tail of the integral of the #binomial_pdf
   
-  @ingroup StatFunc
+  @ingroup ProbFunc
 
   */
 
@@ -251,7 +260,7 @@ namespace Math {
   Cumulative distribution function of the Binomial distribution 
   Lower tail of the integral of the #binomial_pdf
   
-  @ingroup StatFunc
+  @ingroup ProbFunc
 
   */
 
@@ -260,7 +269,7 @@ namespace Math {
 
   //@}
 
-   /** @name Backward compatible functions */ 
+   /** @name Backward compatible MathMore CDF functions */ 
    // this I will maintain since is commonly used in physics
    
    inline double fdistribution_prob(double x, double n, double m, double x0 = 0) {

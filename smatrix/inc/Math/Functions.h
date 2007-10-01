@@ -38,12 +38,14 @@
 #endif
 
 /**
-   @defgroup TempFunction SMatrix Template Functions 
+   @defgroup TempFunction Generic Template Functions 
+   @ingroup SMatrixGroup
 
    These functions apply for any type T, such as a scalar, a vector or a matrix. 
  */
 /**
-   @defgroup VectFunction SMatrix Template Functions operation on Vectors
+   @defgroup VectFunction SMatrix Vector Template Functions 
+   @ingroup SMatrixGroup
 
    These functions apply to SVector types (and also to Vector expressions) and can 
    return a vector expression or 

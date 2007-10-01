@@ -23,7 +23,7 @@ namespace ROOT {
 
 /**
 
-@defgroup Minuit Minuit Math Library
+@defgroup Minuit Minuit2 Minimization Library
 
 */
 

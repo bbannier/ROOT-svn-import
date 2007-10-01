@@ -48,7 +48,9 @@
 
 /**
    @defgroup MultiMin Multi-dimensional Minimization
+   @ingorup NumAlgo
  */
+
 
 
 namespace ROOT { 

@@ -37,6 +37,7 @@ namespace ROOT {
 namespace Math {
 
 
+   /** @name Special Functions from MathCore */
 
 
    /**
@@ -163,7 +164,7 @@ namespace Math {
   
    Calculates the normalized (regularized) incomplete beta function.
 
-   \f[ B(x, a, b ) =  \frac{ \int_{0}^{x} u^{a-1} (1-u)^{b-1} du } { B(a,b) \f] 
+   \f[ B(x, a, b ) =  \frac{ \int_{0}^{x} u^{a-1} (1-u)^{b-1} du } { B(a,b) } \f] 
 
    for 0<=x<=1,  a>0,  and b>0. For detailed description see 
    <A HREF="http://mathworld.wolfram.com/RegularizedBetaFunction.html">

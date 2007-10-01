@@ -44,7 +44,7 @@
 
 //doxygen tag
 /**
-   @defgroup GenVector 3D and 4D Vectors
+   @defgroup GenVector GenVector: generic 2D, 3D and 4D Vectors and Transformations
  */
 
 
