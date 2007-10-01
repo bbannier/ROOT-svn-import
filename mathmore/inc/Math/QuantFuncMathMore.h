@@ -37,6 +37,8 @@ namespace Math {
 
 
   /** @defgroup QuantFunc Quantile Functions 
+   *  @ingroup StatFunc 
+   *
    *  Inverse functions of the cumulative distribution functions 
    *  and the inverse of the complement of the cumulative distribution functions 
    *  for various distributions.

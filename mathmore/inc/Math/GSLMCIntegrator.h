@@ -98,7 +98,7 @@ namespace Math {
       @param dim dimension of the function
       @param absTol desired absolute Error
       @param relTol desired relative Error
-      @param class maximum number of function calls
+      @param calls maximum number of function calls
       */
       
       GSLMCIntegrator(unsigned int dim, double absTol = 1.E-6, double relTol = 1E-4, unsigned int calls = 500000);
@@ -117,22 +117,22 @@ namespace Math {
       GSLMCIntegrator(unsigned int dim, MCIntegration::Type type, double absTol = 1.E-6, double relTol = 1E-4, unsigned int calls = 500000);
       
       
-      /**
-         generic constructor for GSL Integrator
+//       /**
+//          generic constructor for GSL Integrator
        
-       @param type type of integration. The possible types are defined in the Integration::Type enumeration
-       @param absTol desired absolute Error
-       @param relTol desired relative Error
-       @param dim function dimensionality
-       @param calls number of function evaluations
+//        @param type type of integration. The possible types are defined in the Integration::Type enumeration
+//        @param absTol desired absolute Error
+//        @param relTol desired relative Error
+//        @param dim function dimensionality
+//        @param calls number of function evaluations
        
-       */
-      /*
-      GSLMCIntegrator(const MCIntegration::Type type, const Integration::GKRule rule, double absTol = 1.E-9, double relTol = 1E-6, unsigned int size = 1000, gsl_rng* r );
-      */
-      
+//        */
+//       /*
+//       GSLMCIntegrator(const MCIntegration::Type type, const Integration::GKRule rule, double absTol = 1.E-9, double relTol = 1E-6, unsigned int size = 1000, gsl_rng* r );
+//       */
+
+      /** destructor */ 
       virtual ~GSLMCIntegrator();
-      //~GSLIntegrator();
       
       // disable copy ctrs
       /*
