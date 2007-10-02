@@ -10077,17 +10077,8 @@ int G__memfunc_setup(const char *funcname,int hash
     G__func_now = 0;
     dtorflag=1;
   }
-  G__savestring(&G__p_ifunc->funcname[G__func_now],(char*)funcname);
-  G__p_ifunc->hash[G__func_now] = hash;
-
-  /**************************************************
-   * We want to have a direct pointer to the function
-   * modified by Leo 23/02/2007
-   * and we start that value with 0... later we have
-   * to register a proper ptr
-   **************************************************/
-  //printf("G__memfunc_setup funcptr== 0 funcname:%s\n", funcname);
-  G__p_ifunc->funcptr[G__func_now] = 0;
+  //G__savestring(&G__p_ifunc->funcname[G__func_now],(char*)funcname);
+  //G__p_ifunc->hash[G__func_now] = hash;
 
 #ifdef G__TRUEP2F
   G__p_ifunc->isvirtual[G__func_now] = isvirtual&0x01;
@@ -10161,6 +10152,8 @@ int G__memfunc_setup2(const char *funcname,int hash,const char *mangled_name
   }
   G__func_now=G__p_ifunc->allifunc;
 
+  // LF 02-10-07
+  // Do this only in setup_impl()
   if('~'==funcname[0] && 0==G__struct.memfunc[G__p_ifunc->tagnum]->hash[0]) {
     store_func_now = G__func_now;
     store_p_ifunc = G__p_ifunc;
@@ -10168,22 +10161,13 @@ int G__memfunc_setup2(const char *funcname,int hash,const char *mangled_name
     G__func_now = 0;
     dtorflag=1;
   }
-  G__savestring(&G__p_ifunc->funcname[G__func_now],(char*)funcname);
-  G__p_ifunc->hash[G__func_now] = hash;
+  //G__savestring(&G__p_ifunc->funcname[G__func_now],(char*)funcname);
+  //G__p_ifunc->hash[G__func_now] = hash;
 
   // LF 06-07-07
   // Keep the mangled name in addition to everything else
   if(mangled_name)  
      G__savestring(&G__p_ifunc->mangled_name[G__func_now],(char*)mangled_name);
-
- /**************************************************
-   * We want to have a direct pointer to the function
-   * modified by Leo 23/02/2007
-   * and we start that value with 0... later we have
-   * to register a proper ptr
-   **************************************************/
-  //printf("G__memfunc_setup funcptr== 0 funcname:%s\n", funcname);
-  G__p_ifunc->funcptr[G__func_now] = 0;
 
 // LF 06-08-07
 // new virtual flags
@@ -10197,10 +10181,14 @@ int G__memfunc_setup2(const char *funcname,int hash,const char *mangled_name
   G__p_ifunc->ispurevirtual[G__func_now] = 0;
 #endif // G__TRUEP2F
 
+  // LF 02-10-07
+  // Do this only in setup_impl()
+  
   if(dtorflag) {
     G__func_now = store_func_now;
     G__p_ifunc = store_p_ifunc;
   }
+  
 
   return G__memfunc_setup_imp(funcname, hash, funcp, type, tagnum, typenum, reftype, para_nu, ansi, 
                    accessin, isconst, paras, comment
