@@ -85,7 +85,10 @@ void TGCommandPlugin::CheckRemote(const char * /*str*/)
    // Check if actual ROOT session is a remote one or a local one.
 
    Pixel_t pxl;
-   TString sPrompt = ((TRint*)gROOT->GetApplication())->GetPrompt();
+   TApplication *app = gROOT->GetApplication();
+   if (!app->InheritsFrom("TRint"))
+      return;
+   TString sPrompt = ((TRint*)app)->GetPrompt();
    Int_t end = sPrompt.Index(":root [", 0);
    if (end > 0 && end != kNPOS) {
       // remote session
@@ -111,8 +114,11 @@ void TGCommandPlugin::HandleCommand()
    const char *string = fCommandBuf->GetString();
    if (strlen(string) > 1) {
       // form temporary file path
+      TString sPrompt = "root []";
       TString pathtmp = Form("%s/ride.%d.log", gSystem->TempDirectory(), fPid);
-      TString sPrompt = ((TRint*)gROOT->GetApplication())->GetPrompt();
+      TApplication *app = gROOT->GetApplication();
+      if (app->InheritsFrom("TRint"))
+         sPrompt = ((TRint*)gROOT->GetApplication())->GetPrompt();
       FILE *lunout = fopen(pathtmp.Data(), "a+t");
       if (lunout) {
          fputs(Form("%s%s\n",sPrompt.Data(), string), lunout);
@@ -122,7 +128,8 @@ void TGCommandPlugin::HandleCommand()
       gApplication->SetBit(TApplication::kProcessRemotely);
       gROOT->ProcessLine(string);
       fComboCmd->InsertEntry(string, 0, -1);
-      Gl_histadd((char *)string);
+      if (app->InheritsFrom("TRint"))
+         Gl_histadd((char *)string);
       gSystem->RedirectOutput(0);
       fStatus->LoadFile(pathtmp.Data());
       fStatus->ShowBottom();
