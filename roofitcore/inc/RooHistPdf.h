@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: RooFit                                                           *
  * Package: RooFitCore                                                       *
- *    File: $Id: RooHistPdf.h,v 1.2 2007/05/11 10:42:36 verkerke Exp $
+ *    File: $Id$
  * Authors:                                                                  *
  *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu       *
  *   DK, David Kirkby,    UC Irvine,         dkirkby@uci.edu                 *
@@ -32,6 +32,12 @@ public:
   RooHistPdf(const RooHistPdf& other, const char* name=0);
   virtual TObject* clone(const char* newname) const { return new RooHistPdf(*this,newname); }
   inline virtual ~RooHistPdf() { }
+
+  RooDataHist& dataHist()  { return *_dataHist ; }
+  const RooDataHist& dataHist() const { return *_dataHist ; }
+  
+  void setInterpolationOrder(Int_t order) { _intOrder = order ; }
+  Int_t getInterpolationOrder() const { return _intOrder ; }
 
   Int_t getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVars, const char* rangeName=0) const ;
   Double_t analyticalIntegral(Int_t code, const char* rangeName=0) const ;
