@@ -94,37 +94,37 @@ namespace Math {
    }
    
    
-   /**
-   double fdistribution_cdf_c(double x, double n, double m) {
+   
+//    double fdistribution_cdf_c(double x, double n, double m) {
       
-      return gsl_cdf_fdist_Q(x, n, m);
+//       return gsl_cdf_fdist_Q(x, n, m);
       
-   }
+//    }
     
     
     
-    double fdistribution_cdf(double x, double n, double m) {
+//     double fdistribution_cdf(double x, double n, double m) {
        
-       return gsl_cdf_fdist_P(x, n, m);
+//        return gsl_cdf_fdist_P(x, n, m);
        
-    }
+//     }
     
     
     
-    double gamma_cdf_c(double x, double alpha, double theta) {
+//     double gamma_cdf_c(double x, double alpha, double theta) {
        
-       return gsl_cdf_gamma_Q(x, alpha, theta);
+//        return gsl_cdf_gamma_Q(x, alpha, theta);
        
-    }
+//     }
     
     
     
-    double gamma_cdf(double x, double alpha, double theta) {
+//     double gamma_cdf(double x, double alpha, double theta) {
        
-       return gsl_cdf_gamma_P(x, alpha, theta);
+//        return gsl_cdf_gamma_P(x, alpha, theta);
        
-    }
-    */
+//     }
+    
    
    
    
