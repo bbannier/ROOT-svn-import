@@ -8478,28 +8478,33 @@ void G__cpplink_memfunc(FILE *fp)
               fprintf(fp, ", (void*) NULL");
 
             int virtflag = 0;
-            if(ifunc->isvirtual[j]){
-               // LF 06-08-07
-               // Trying to optimize the virtual function execution.
-               // We are going to print ifunc page for a method that has been inherithed
-               int page_base = ifunc->page_base;
-               if(!page_base) {
+            if(G__dicttype==0) {
+               virtflag = ifunc->isvirtual[j] + ifunc->ispurevirtual[j]*2;
+            }
+            else {
+              if(ifunc->isvirtual[j]){
+                // LF 06-08-07
+                // Trying to optimize the virtual function execution.
+                // We are going to print ifunc page for a method that has been inherithed
+                int page_base = ifunc->page_base;
+                if(!page_base) {
                   int page_base = G__method_inbase2(j, ifunc);
 
                   if(!page_base){
                      ifunc->page_base = ifunc->page+1;
                      page_base = ifunc->page_base;
                   }
-               }
-               // LF 09-08-07
-               // The last steps were useful to set up the page_base,
-               // now let's try to solve the ambiguity problem
-               int page_base_amb = G__ifunc_exist_base(j, ifunc);
-               if(page_base_amb==-1)
+                }
+                // LF 09-08-07
+                // The last steps were useful to set up the page_base,
+                // now let's try to solve the ambiguity problem
+                int page_base_amb = G__ifunc_exist_base(j, ifunc);
+                if(page_base_amb==-1)
                   page_base = page_base * (-1);
 
-               // put "ispurevirtual" in the less significant bit and shift the rest to the left
-               virtflag = 2*page_base + ifunc->ispurevirtual[j];
+                // put "ispurevirtual" in the less significant bit and shift the rest to the left
+                virtflag = 2*page_base + ifunc->ispurevirtual[j];
+              }
             }
 
             fprintf(fp, ", %d", virtflag);
