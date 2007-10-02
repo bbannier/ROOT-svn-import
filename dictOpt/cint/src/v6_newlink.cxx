@@ -8575,7 +8575,7 @@ void G__cpplink_memfunc(FILE *fp)
                  strncmp(G__struct.name[ifunc->tagnum],"multimap", strlen("multimap"))!=0 &&
                  strncmp(G__struct.name[ifunc->tagnum],"complex", strlen("complex"))!=0 
                  )) {
-             
+              
              /****************************************************************
               * setup default constructor
               ****************************************************************/
@@ -9749,12 +9749,13 @@ int G__tag_memfunc_setup(int tagnum)
   return(0);
 }
 
-/**************************************************************************
-* G__memfunc_setup()
-*
-* Used in G__cpplink.C
-**************************************************************************/
-int G__memfunc_setup(const char *funcname,int hash
+/**
+ * G__memfunc_setup_imp()
+ * Common part for G__memfunc_setup and G__memfunc_setup2
+ * Since isvirtual calculation iss different for both of them,
+ * the code is incompatible now
+ */
+int G__memfunc_setup_imp(const char *funcname,int hash
                      ,G__InterfaceMethod funcp
                      ,int type,int tagnum,int typenum,int reftype
                      ,int para_nu,int ansi,int accessin,int isconst
@@ -9770,28 +9771,6 @@ int G__memfunc_setup(const char *funcname,int hash
   struct G__ifunc_table_internal *store_p_ifunc = 0;
   int dtorflag=0;
    
-  if (G__p_ifunc->allifunc == G__MAXIFUNC) {
-    G__p_ifunc->next=(struct G__ifunc_table_internal *)malloc(sizeof(struct G__ifunc_table_internal));
-    memset(G__p_ifunc->next,0,sizeof(struct G__ifunc_table_internal));
-    G__p_ifunc->next->allifunc=0;
-    G__p_ifunc->next->next=(struct G__ifunc_table_internal *)NULL;
-    G__p_ifunc->next->page = G__p_ifunc->page+1;
-    G__p_ifunc->next->tagnum = G__p_ifunc->tagnum;
-    G__p_ifunc = G__p_ifunc->next;
-    {
-      int ix;
-      for(ix=0;ix<G__MAXIFUNC;ix++) {
-        G__p_ifunc->funcname[ix] = (char*)NULL;
-        G__p_ifunc->userparam[ix] = 0;
-      }
-    }
-     
-    //G__fprinterr(G__serr, "Attempt to add function %s failed - ifunc_table overflow!\n",
-    //     funcname);
-    // return 0;
-  }
-  G__func_now=G__p_ifunc->allifunc;
-
   if('~'==funcname[0] && 0==G__struct.memfunc[G__p_ifunc->tagnum]->hash[0]) {
     store_func_now = G__func_now;
     store_p_ifunc = G__p_ifunc;
@@ -9847,26 +9826,6 @@ int G__memfunc_setup(const char *funcname,int hash
   G__p_ifunc->globalcomp[G__func_now] = G__NOLINK;
   G__p_ifunc->isexplicit[G__func_now] = (ansi&4)/4;
   G__p_ifunc->staticalloc[G__func_now] = (ansi&2)/2;
-
-// LF 06-08-07
-// new virtual flags
-#ifdef G__TRUEP2F
-  G__p_ifunc->ispurevirtual[G__func_now] = isvirtual&0x01;
-  isvirtual = isvirtual/2;
-  G__p_ifunc->page_base = isvirtual;
-  G__p_ifunc->isvirtual[G__func_now] = (isvirtual?0x01:0x00);
-#else // G__TRUEP2F
-  G__p_ifunc->isvirtual[G__func_now] = 0;
-  G__p_ifunc->ispurevirtual[G__func_now] = 0;
-#endif // G__TRUEP2F
-
-//#ifdef G__TRUEP2F
-//  G__p_ifunc->isvirtual[G__func_now] = isvirtual&0x01;
-//  G__p_ifunc->ispurevirtual[G__func_now] = (isvirtual&0x02)/2;
-//#else
-//  G__p_ifunc->isvirtual[G__func_now] = 0;
-//  G__p_ifunc->ispurevirtual[G__func_now] = 0;
-//#endif
 
   G__p_ifunc->param[G__func_now][0]->name=(char*)NULL;
   /* parse parameter setup information */
@@ -10057,27 +10016,96 @@ int G__memfunc_setup(const char *funcname,int hash
 #endif // G__OLDIMPLEMENTATION1702
 
 
-  // LF 03/04/07: In addition to having the destructor as the first method,
-  //              we want to have it by declaration order. This will allow
-  //              us to follow the ABI rules and recreate the virtual table.
-  // Note: For this reason most of the code must be replicated when we
-  //       have a destructor (and the hash of the first destructor has
-  //       to be zero... that's why if we pass it here it will put it in the
-  //       good order)
-  //   if(dtorflag) {
-  //      return G__memfunc_setup(funcname, hash, funcp , type, tagnum,
-  //                              typenum, reftype, para_nu, ansi,
-  //                              accessin, isconst, paras, comment
-  // #ifdef G__TRUEP2F
-  //                              ,truep2f
-  //                              ,isvirtual
-  // #endif
-  //                             );
-  //   }
-
 #endif // G__SMALLOBJECT
    //if (G__p_ifunc->param[0][para_nu-1]) return (1);
    return(0);
+}
+
+
+/**************************************************************************
+* G__memfunc_setup()
+*
+* Used in G__cpplink.C
+**************************************************************************/
+int G__memfunc_setup(const char *funcname,int hash
+                     ,G__InterfaceMethod funcp
+                     ,int type,int tagnum,int typenum,int reftype
+                     ,int para_nu,int ansi,int accessin,int isconst
+                     ,const char *paras, const char *comment
+#ifdef G__TRUEP2F
+                     ,void *truep2f
+                     ,int isvirtual
+#endif // G__TRUEP2F
+                     )
+{
+#ifndef G__SMALLOBJECT
+  int store_func_now = -1;
+  struct G__ifunc_table_internal *store_p_ifunc = 0;
+  int dtorflag=0;
+   
+  if (G__p_ifunc->allifunc == G__MAXIFUNC) {
+    G__p_ifunc->next=(struct G__ifunc_table_internal *)malloc(sizeof(struct G__ifunc_table_internal));
+    memset(G__p_ifunc->next,0,sizeof(struct G__ifunc_table_internal));
+    G__p_ifunc->next->allifunc=0;
+    G__p_ifunc->next->next=(struct G__ifunc_table_internal *)NULL;
+    G__p_ifunc->next->page = G__p_ifunc->page+1;
+    G__p_ifunc->next->tagnum = G__p_ifunc->tagnum;
+    G__p_ifunc = G__p_ifunc->next;
+    {
+      int ix;
+      for(ix=0;ix<G__MAXIFUNC;ix++) {
+        G__p_ifunc->funcname[ix] = (char*)NULL;
+        G__p_ifunc->userparam[ix] = 0;
+      }
+    }
+     
+    //G__fprinterr(G__serr, "Attempt to add function %s failed - ifunc_table overflow!\n",
+    //     funcname);
+    // return 0;
+  }
+  G__func_now=G__p_ifunc->allifunc;
+
+  if('~'==funcname[0] && 0==G__struct.memfunc[G__p_ifunc->tagnum]->hash[0]) {
+    store_func_now = G__func_now;
+    store_p_ifunc = G__p_ifunc;
+    G__p_ifunc = G__struct.memfunc[G__p_ifunc->tagnum];
+    G__func_now = 0;
+    dtorflag=1;
+  }
+  G__savestring(&G__p_ifunc->funcname[G__func_now],(char*)funcname);
+  G__p_ifunc->hash[G__func_now] = hash;
+
+  /**************************************************
+   * We want to have a direct pointer to the function
+   * modified by Leo 23/02/2007
+   * and we start that value with 0... later we have
+   * to register a proper ptr
+   **************************************************/
+  //printf("G__memfunc_setup funcptr== 0 funcname:%s\n", funcname);
+  G__p_ifunc->funcptr[G__func_now] = 0;
+
+#ifdef G__TRUEP2F
+  G__p_ifunc->isvirtual[G__func_now] = isvirtual&0x01;
+  G__p_ifunc->ispurevirtual[G__func_now] = (isvirtual&0x02)/2;
+#else
+  G__p_ifunc->isvirtual[G__func_now] = 0;
+  G__p_ifunc->ispurevirtual[G__func_now] = 0;
+#endif
+
+  if(dtorflag) {
+    G__func_now = store_func_now;
+    G__p_ifunc = store_p_ifunc;
+  }
+
+  return G__memfunc_setup_imp(funcname, hash, funcp, type, tagnum, typenum, reftype, para_nu, ansi, 
+                   accessin, isconst, paras, comment
+#ifdef G__TRUEP2F
+                  ,truep2f
+                  ,isvirtual
+#endif
+                 );
+
+#endif
 }
 
 
@@ -10107,19 +10135,36 @@ int G__memfunc_setup2(const char *funcname,int hash,const char *mangled_name
 
 #ifndef G__SMALLOBJECT
   if (G__p_ifunc->allifunc == G__MAXIFUNC) {
-     G__fprinterr(G__serr, "Attempt to add function %s failed - ifunc_table overflow!\n",
-         funcname);
-     return 0;
+    G__p_ifunc->next=(struct G__ifunc_table_internal *)malloc(sizeof(struct G__ifunc_table_internal));
+    memset(G__p_ifunc->next,0,sizeof(struct G__ifunc_table_internal));
+    G__p_ifunc->next->allifunc=0;
+    G__p_ifunc->next->next=(struct G__ifunc_table_internal *)NULL;
+    G__p_ifunc->next->page = G__p_ifunc->page+1;
+    G__p_ifunc->next->tagnum = G__p_ifunc->tagnum;
+    G__p_ifunc = G__p_ifunc->next;
+    {
+      int ix;
+      for(ix=0;ix<G__MAXIFUNC;ix++) {
+        G__p_ifunc->funcname[ix] = (char*)NULL;
+        G__p_ifunc->userparam[ix] = 0;
+      }
+    }
+     
+    //G__fprinterr(G__serr, "Attempt to add function %s failed - ifunc_table overflow!\n",
+    //     funcname);
+    // return 0;
   }
   G__func_now=G__p_ifunc->allifunc;
 
-#ifndef G__OLDIMPLEMENTATION2027
   if('~'==funcname[0] && 0==G__struct.memfunc[G__p_ifunc->tagnum]->hash[0]) {
+    store_func_now = G__func_now;
+    store_p_ifunc = G__p_ifunc;
     G__p_ifunc = G__struct.memfunc[G__p_ifunc->tagnum];
     G__func_now = 0;
     dtorflag=1;
   }
-#endif
+  G__savestring(&G__p_ifunc->funcname[G__func_now],(char*)funcname);
+  G__p_ifunc->hash[G__func_now] = hash;
 
   // LF 06-07-07
   // Keep the mangled name in addition to everything else
@@ -10135,14 +10180,24 @@ int G__memfunc_setup2(const char *funcname,int hash,const char *mangled_name
   //printf("G__memfunc_setup funcptr== 0 funcname:%s\n", funcname);
   G__p_ifunc->funcptr[G__func_now] = 0;
 
-#ifndef G__OLDIMPLEMENTATION2027
+// LF 06-08-07
+// new virtual flags
+#ifdef G__TRUEP2F
+  G__p_ifunc->ispurevirtual[G__func_now] = isvirtual&0x01;
+  isvirtual = isvirtual/2;
+  G__p_ifunc->page_base = isvirtual;
+  G__p_ifunc->isvirtual[G__func_now] = (isvirtual?0x01:0x00);
+#else // G__TRUEP2F
+  G__p_ifunc->isvirtual[G__func_now] = 0;
+  G__p_ifunc->ispurevirtual[G__func_now] = 0;
+#endif // G__TRUEP2F
+
   if(dtorflag) {
     G__func_now = store_func_now;
     G__p_ifunc = store_p_ifunc;
   }
-#endif /* 2027 */
 
-  return G__memfunc_setup(funcname, hash, funcp, type, tagnum, typenum, reftype, para_nu, ansi, 
+  return G__memfunc_setup_imp(funcname, hash, funcp, type, tagnum, typenum, reftype, para_nu, ansi, 
                    accessin, isconst, paras, comment
 #ifdef G__TRUEP2F
                   ,truep2f
