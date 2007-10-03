@@ -2257,22 +2257,27 @@ Int_t TProof::CollectInputFrom(TSocket *s)
 
             fIdle = kFALSE;
 
-            TString selec;
-            Int_t dsz = -1;
-            Long64_t first = -1, nent = -1;
-            (*mess) >> selec >> dsz >> first >> nent;
+            // The signal is used on masters by XrdProofdProtocol to catch
+            // the start of processing; on clients it allows to update the
+            // progress dialog
+            if (!IsMaster()) {
+               TString selec;
+               Int_t dsz = -1;
+               Long64_t first = -1, nent = -1;
+               (*mess) >> selec >> dsz >> first >> nent;
 
-            // Start or reset the progress dialog
-            if (fProgressDialog && !TestBit(kUsingSessionGui)) {
-               if (!fProgressDialogStarted) {
-                  fProgressDialog->ExecPlugin(5, this,
-                                              selec.Data(), dsz, first, nent);
-                  fProgressDialogStarted = kTRUE;
-               } else {
-                  ResetProgressDialog(selec, dsz, first, nent);
+               // Start or reset the progress dialog
+               if (fProgressDialog && !TestBit(kUsingSessionGui)) {
+                  if (!fProgressDialogStarted) {
+                     fProgressDialog->ExecPlugin(5, this,
+                                                 selec.Data(), dsz, first, nent);
+                     fProgressDialogStarted = kTRUE;
+                  } else {
+                     ResetProgressDialog(selec, dsz, first, nent);
+                  }
                }
+               ResetBit(kUsingSessionGui);
             }
-            ResetBit(kUsingSessionGui);
          }
          break;
 
