@@ -64,6 +64,9 @@ endif
 
 # Xrootd includes
 NETXINCEXTRA := $(XROOTDDIRI:%=-I%)
+ifneq ($(EXTRA_XRDFLAGS),)
+NETXINCEXTRA += -Iproofd/inc
+endif
 
 # Xrootd client libs
 ifeq ($(PLATFORM),win32)
@@ -127,8 +130,8 @@ distclean::     distclean-netx
 
 ##### extra rules ######
 $(NETXO) $(NETXTMPDO) $(NETXTMP2DO) $(NETXDO): $(XROOTDETAG)
-$(NETXO) $(NETXTMPDO) $(NETXTMP2DO) $(NETXDO): CXXFLAGS += $(NETXINCEXTRA)
+$(NETXO) $(NETXTMPDO) $(NETXTMP2DO) $(NETXDO): CXXFLAGS += $(NETXINCEXTRA) $(EXTRA_XRDFLAGS)
 ifeq ($(PLATFORM),win32)
-$(NETXO) $(NETXTMPDO) $(NETXTMP2DO) $(NETXDO): CXXFLAGS += -DNOGDI
+$(NETXO) $(NETXTMPDO) $(NETXTMP2DO) $(NETXDO): CXXFLAGS += -DNOGDI $(EXTRA_XRDFLAGS)
 endif
 
