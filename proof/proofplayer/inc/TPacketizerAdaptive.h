@@ -106,6 +106,7 @@ public:
    virtual ~TPacketizerAdaptive();
 
    Long64_t      GetEntriesProcessed(TSlave *sl) const;
+   Long64_t      GetTotalEntries() const { return fTotalEntries; }
    Int_t         CalculatePacketSize(TObject *slstat);
    TDSetElement *GetNextPacket(TSlave *sl, TMessage *r);
 

@@ -90,6 +90,7 @@ public:
 
    TDSetElement *GetNextPacket(TSlave *sl, TMessage *r);
    Long64_t      GetEntriesProcessed(TSlave *sl) const;
+   Long64_t      GetTotalEntries() const { return fTotalEntries; }
 
    ClassDef(TPacketizer,0)  //Generate work packets for parallel processing
 };
