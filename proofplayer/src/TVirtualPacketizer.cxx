@@ -160,6 +160,16 @@ Long64_t TVirtualPacketizer::GetEntriesProcessed(TSlave *) const
 }
 
 //______________________________________________________________________________
+Long64_t TVirtualPacketizer::GetTotalEntries() const
+{
+   // Get total #entries to be processed.
+   // In case of TPacketizerProgressive - it's the estimated value.
+
+   AbstractMethod("GetEntriesProcessed");
+   return 0;
+}
+
+//______________________________________________________________________________
 TDSetElement *TVirtualPacketizer::GetNextPacket(TSlave *, TMessage *)
 {
    // Get next packet.
