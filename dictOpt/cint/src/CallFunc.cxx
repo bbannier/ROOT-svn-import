@@ -435,7 +435,7 @@ G__value Cint::G__CallFunc::Execute(void *pobject)
 
   G__CurrentCall(G__NOP, 0, 0);
   // Restore  object address
-  //G__store_struct_offset = store_struct_offset;
+  G__store_struct_offset = store_struct_offset;
   if(0==ret) {
     /* error */
   }
