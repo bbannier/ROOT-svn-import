@@ -141,14 +141,16 @@ TRint::TRint(const char *appClassName, Int_t *argc, char **argv, void *options,
 
    gBenchmark = new TBenchmark();
 
-   if (!noLogo && !NoLogoOpt())
-      PrintLogo();
+   if (!noLogo && !NoLogoOpt()) {
+      Bool_t lite = (Bool_t) gEnv->GetValue("Rint.WelcomeLite", 0);
+      PrintLogo(lite);
+   }
 
    // LF: 30-05-07
    // Move this to TApplication to fullfil the dependancy when registering TDictionary
    /*
    // Load some frequently used includes
-   Int_t includes = gEnv->GetValue("Rint.Includes",1);
+   Int_t includes = gEnv->GetValue("Rint.Includes", 1);
    // When the interactive ROOT starts, it can automatically load some frequently
    // used includes. However, this introduces several overheads
    //   -A long list of cint and system files must be kept open during the session
@@ -183,7 +185,7 @@ TRint::TRint(const char *appClassName, Int_t *argc, char **argv, void *options,
    if (logon) {
       char *mac = gSystem->Which(TROOT::GetMacroPath(), logon, kReadPermission);
       if (mac)
-         ProcessLine(Form(".L %s",logon),kTRUE);
+         ProcessLine(Form(".L %s",logon), kTRUE);
       delete [] mac;
    }
 
@@ -205,11 +207,7 @@ TRint::TRint(const char *appClassName, Int_t *argc, char **argv, void *options,
 
    // Goto into raw terminal input mode
    char defhist[kMAXPATHLEN];
-#ifndef R__VMS
    sprintf(defhist, "%s/.root_hist", gSystem->HomeDirectory());
-#else
-   sprintf(defhist, "%s.root_hist", gSystem->HomeDirectory());
-#endif
    logon = gEnv->GetValue("Rint.History", defhist);
    int hist_size = gEnv->GetValue("Rint.HistorySize", 500);
    int hist_save = gEnv->GetValue("Rint.HistorySave", 400);
@@ -376,59 +374,40 @@ void TRint::Run(Bool_t retrn)
 }
 
 //______________________________________________________________________________
-void TRint::PrintLogo()
+void TRint::PrintLogo(Bool_t lite)
 {
    // Print the ROOT logo on standard output.
 
-   Int_t iday,imonth,iyear;
-   static const char *months[] = {"January","February","March","April","May",
-                                  "June","July","August","September","October",
-                                  "November","December"};
    const char *root_version = gROOT->GetVersion();
-   Int_t idatqq = gROOT->GetVersionDate();
-   iday   = idatqq%100;
-   imonth = (idatqq/100)%100;
-   iyear  = (idatqq/10000);
-   char *version_date = Form("%d %s %4d",iday,months[imonth-1],iyear);
-   idatqq = gROOT->GetBuiltDate();
-   iday   = idatqq%100;
-   imonth = (idatqq/100)%100;
-   iyear  = (idatqq/10000);
-   char *built_date = Form("%d %s %4d",iday,months[imonth-1],iyear);
 
+   if (!lite) {
+      static const char *months[] = {"January","February","March","April","May",
+                                     "June","July","August","September","October",
+                                     "November","December"};
+      Int_t idatqq = gROOT->GetVersionDate();
+      Int_t iday   = idatqq%100;
+      Int_t imonth = (idatqq/100)%100;
+      Int_t iyear  = (idatqq/10000);
+      char *version_date = Form("%d %s %4d",iday,months[imonth-1],iyear);
 
-   Printf("  *******************************************");
-   Printf("  *                                         *");
-   Printf("  *        W E L C O M E  to  R O O T       *");
-   Printf("  *                                         *");
-   Printf("  *   Version%10s %17s   *", root_version, version_date);
-// Printf("  *            Development version          *");
-   Printf("  *                                         *");
-   Printf("  *  You are welcome to visit our Web site  *");
-   Printf("  *          http://root.cern.ch            *");
-   Printf("  *                                         *");
-   Printf("  *******************************************");
-
-   if (strstr(gVirtualX->GetName(), "TTF")) {
-      Int_t major, minor, patch;
-      //TTF::Version(major, minor, patch);
-      // avoid dependency on libGraf and hard code, will not change too often
-      major = 2; minor = 1; patch = 9;
-      Printf("\nFreeType Engine v%d.%d.%d used to render TrueType fonts.",
-             major, minor, patch);
+      Printf("  *******************************************");
+      Printf("  *                                         *");
+      Printf("  *        W E L C O M E  to  R O O T       *");
+      Printf("  *                                         *");
+      Printf("  *   Version%10s %17s   *", root_version, version_date);
+      Printf("  *                                         *");
+      Printf("  *  You are welcome to visit our Web site  *");
+      Printf("  *          http://root.cern.ch            *");
+      Printf("  *                                         *");
+      Printf("  *******************************************\n");
    }
-#if defined (_REENTRANT) || defined (WIN32)
-   else
-      printf("\n");
-   Printf("Compiled on %s for %s with thread support.", built_date,
-          gSystem->GetBuildArch());
-#else
-   else
-      printf("\n");
-   Printf("Compiled on %s for %s.", built_date, gSystem->GetBuildArch());
-#endif
 
-   gInterpreter->PrintIntro();
+   Printf("ROOT %s (%s@%d, %s on %s)", root_version, gROOT->GetSvnBranch(),
+          gROOT->GetSvnRevision(), gROOT->GetSvnDate(),
+          gSystem->GetBuildArch());
+
+   if (!lite)
+      gInterpreter->PrintIntro();
 
 #ifdef R__UNIX
    // Popdown X logo, only if started with -splash option
