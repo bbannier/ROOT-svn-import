@@ -4,6 +4,7 @@
 
 #include <cmath>
 #include "Math/ProbFuncMathMore.h"
+#include "Math/SpecFuncMathCore.h"
 #include "gsl/gsl_cdf.h"
 
 
@@ -16,23 +17,22 @@ namespace Math {
   
   double fdistribution_cdf_c(double x, double n, double m, double x0) {
 
-    return gsl_cdf_fdist_Q(x-x0, n, m);
-
+    return ROOT::Math::inc_beta(m/(m + n*(x-x0)), .5*m, .5*n);
+  
   }
 
 
+   double fdistribution_cdf(double x, double n, double m, double x0) {
 
-  double fdistribution_cdf(double x, double n, double m, double x0) {
-
-    return gsl_cdf_fdist_P(x-x0, n, m);
-
+    return ROOT::Math::inc_beta(n*(x-x0)/(m + n*(x-x0)), .5*n, .5*m);
   }
 
 
 
   double gamma_cdf_c(double x, double alpha, double theta, double x0) {
 
-    return gsl_cdf_gamma_Q(x-x0, alpha, theta);
+    //return gsl_cdf_gamma_Q(x-x0, alpha, theta);
+    return 1. - ROOT::Math::inc_gamma(alpha, (x-x0)/theta);
 
   }
 
@@ -40,8 +40,8 @@ namespace Math {
 
   double gamma_cdf(double x, double alpha, double theta, double x0) {
 
-    return gsl_cdf_gamma_P(x-x0, alpha, theta);
-
+    //return gsl_cdf_gamma_P(x-x0, alpha, theta);
+    return ROOT::Math::inc_gamma(alpha, (x-x0)/theta);
   }
 
 
