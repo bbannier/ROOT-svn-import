@@ -263,6 +263,7 @@ bool XrdProofPhyConn::GetAccessToSrv()
 
       // Now we can start the reader thread in the physical connection, if needed
       fPhyConn->StartReader();
+      fPhyConn->SetTTL(DLBD_TTL);// = DLBD_TTL;
       fPhyConn->fServerType = kSTBaseXrootd;
       break;
 

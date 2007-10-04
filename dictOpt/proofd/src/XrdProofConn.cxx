@@ -19,17 +19,6 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#ifdef OLDXRDOUC
-#  include "XrdSysToOuc.h"
-#  include "XrdOuc/XrdOucError.hh"
-#  include "XrdOuc/XrdOucPlugin.hh"
-#  include "XrdOuc/XrdOucPthread.hh"
-#else
-#  include "XrdSys/XrdSysError.hh"
-#  include "XrdSys/XrdSysPlugin.hh"
-#  include "XrdSys/XrdSysPthread.hh"
-#endif
-
 #include "XrdProofConn.h"
 #include "XProofProtocol.h"
 
@@ -43,6 +32,9 @@
 #include "XrdClient/XrdClientUrlInfo.hh"
 #include "XrdNet/XrdNetDNS.hh"
 #include "XrdOuc/XrdOucErrInfo.hh"
+#include "XrdOuc/XrdOucError.hh"
+#include "XrdOuc/XrdOucPlugin.hh"
+#include "XrdOuc/XrdOucPthread.hh"
 #include "XrdOuc/XrdOucString.hh"
 #include "XrdSec/XrdSecInterface.hh"
 
@@ -88,7 +80,7 @@ XrdClientConnectionMgr *XrdProofConn::fgConnMgr = 0;
 int XrdProofConn::fgMaxTry = 5;
 int XrdProofConn::fgTimeWait = 2;  // seconds
 
-XrdSysPlugin *XrdProofConn::fgSecPlugin = 0;       // Sec library plugin
+XrdOucPlugin *XrdProofConn::fgSecPlugin = 0;       // Sec library plugin
 void         *XrdProofConn::fgSecGetProtocol = 0;  // Sec protocol getter
 
 #ifndef SafeDelete
@@ -393,8 +385,8 @@ XrdClientMessage *XrdProofConn::SendRecv(XPClientRequest *req, const void *reqDa
    // If (*answData != 0) the program assumes that the caller has allocated
    // enough bytes to contain the reply.
    if (!fMutex)
-      fMutex = new XrdSysRecMutex();
-   XrdSysMutexHelper l(*fMutex);
+      fMutex = new XrdOucRecMutex();
+   XrdOucMutexHelper l(*fMutex);
 
    XrdClientMessage *xmsg = 0;
 
@@ -715,6 +707,7 @@ bool XrdProofConn::GetAccessToSrv()
 
       // Now we can start the reader thread in the physical connection, if needed
       fPhyConn->StartReader();
+      fPhyConn->SetTTL(DLBD_TTL);// = DLBD_TTL;
       fPhyConn->fServerType = kSTBaseXrootd;
       break;
 
@@ -1117,10 +1110,10 @@ XrdSecProtocol *XrdProofConn::Authenticate(char *plist, int plsiz)
 
       // We need to load the protocol getter the first time we are here
       if (!fgSecGetProtocol) {
-         static XrdSysError err(0, "XrdProofConn_");
+         static XrdOucError err(0, "XrdProofConn_");
          // Initialize the security library plugin, if needed
          if (!fgSecPlugin)
-            fgSecPlugin = new XrdSysPlugin(&err, "libXrdSec.so");
+            fgSecPlugin = new XrdOucPlugin(&err, "libXrdSec.so");
 
          // Get the client protocol getter
          if (!(fgSecGetProtocol = fgSecPlugin->getPlugin("XrdSecGetProtocol"))) {

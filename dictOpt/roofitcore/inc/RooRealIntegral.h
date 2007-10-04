@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: RooFit                                                           *
  * Package: RooFitCore                                                       *
- *    File: $Id: RooRealIntegral.h,v 1.44 2007/05/11 09:11:30 verkerke Exp $
+ *    File: $Id: RooRealIntegral.rdl,v 1.43 2005/06/20 15:44:56 wverkerke Exp $
  * Authors:                                                                  *
  *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu       *
  *   DK, David Kirkby,    UC Irvine,         dkirkby@uci.edu                 *
@@ -21,7 +21,6 @@
 #include "RooAbsPdf.h"
 #include "RooRealProxy.h"
 #include "RooSetProxy.h"
-#include "RooListProxy.h"
 
 class RooArgSet ;
 class TH1F ;
@@ -34,7 +33,7 @@ class RooRealIntegral : public RooAbsReal {
 public:
 
   // Constructors, assignment etc
-  RooRealIntegral() ;
+  inline RooRealIntegral() : _valid(kFALSE),_numIntEngine(0),_numIntegrand(0) { }
   RooRealIntegral(const char *name, const char *title, const RooAbsReal& function, const RooArgSet& depList,
 		  const RooArgSet* funcNormSet=0, const RooNumIntConfig* config=0, const char* rangeName=0) ;
   RooRealIntegral(const RooRealIntegral& other, const char* name=0);
@@ -80,14 +79,14 @@ protected:
   RooRealProxy       _function ; // must after set proxies
   RooArgSet*      _funcNormSet ;
 
-  mutable RooArgSet       _saveInt ; //! do not persist
-  mutable RooArgSet       _saveSum ; //! do not persist 
-
   RooNumIntConfig* _iconfig ;
-
-  mutable RooListProxy _sumCat ; //! do not persist  
-  TIterator* _sumCatIter ; //!
   
+  void prepareACleanFunc() const ;
+  void restoreACleanFunc() const ;
+  mutable RooArgSet _funcBranchList ;
+  mutable RooArgSet _funcACleanBranchList ;
+  TIterator*        _funcACleanBranchIter ; //!
+
   Int_t _mode ;
   OperMode _operMode ;
 

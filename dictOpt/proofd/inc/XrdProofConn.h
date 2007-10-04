@@ -45,9 +45,9 @@
 class XrdClientConnectionMgr;
 class XrdClientMessage;
 class XrdClientPhyConnection;
-class XrdSysRecMutex;
+class XrdOucRecMutex;
 class XrdSecProtocol;
-class XrdSysPlugin;
+class XrdOucPlugin;
 
 class XrdProofConn  : public XrdClientAbsUnsolMsgHandler {
 
@@ -80,7 +80,7 @@ private:
 
    XrdOucString        fLoginBuffer;   // Buffer to be sent over at login
 
-   XrdSysRecMutex     *fMutex;         // Lock SendRecv actions
+   XrdOucRecMutex     *fMutex;         // Lock SendRecv actions
 
    XrdClientPhyConnection *fPhyConn;   // underlying physical connection
 
@@ -95,7 +95,7 @@ private:
    static int          fgMaxTry; //max number of connection attempts
    static int          fgTimeWait; //Wait time between an attempt and the other
 
-   static XrdSysPlugin *fgSecPlugin;       // Sec library plugin
+   static XrdOucPlugin *fgSecPlugin;       // Sec library plugin
    static void         *fgSecGetProtocol;  // Sec protocol getter
 
    XrdSecProtocol     *Authenticate(char *plist, int lsiz);

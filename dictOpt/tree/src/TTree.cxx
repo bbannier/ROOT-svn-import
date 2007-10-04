@@ -2077,14 +2077,8 @@ Bool_t TTree::CheckBranchAddressType(TBranch* branch, TClass* ptrClass, EDataTyp
          expectedType = (EDataType) gROOT->GetType(l->GetTypeName())->GetType();
       }
    }
-   if (expectedType == kFloat16_t) {
-      expectedType = kFloat_t;
-   }
    if (expectedType == kDouble32_t) {
       expectedType = kDouble_t;
-   }
-   if (datatype == kFloat16_t) {
-      datatype = kFloat_t;
    }
    if (datatype == kDouble32_t) {
       datatype = kDouble_t;
@@ -3527,7 +3521,7 @@ TBranch* TTree::GetBranch(const char* name)
 {
    // -- Return pointer to the branch with the given name in this tree or its friends.
 
-   if (name == 0) return 0;
+   if (name == 0 || name[0] == '0') return 0;
 
    // We already have been visited while recursively
    // looking through the friends tree, let's return.
@@ -4061,7 +4055,7 @@ TLeaf* TTree::GetLeaf(const char* aname)
    //
    //  aname may be of the form branchname/leafname
 
-   if (aname == 0) return 0;
+   if (aname == 0 || aname[0] == '0') return 0;
 
    // We already have been visited while recursively looking
    // through the friends tree, let return

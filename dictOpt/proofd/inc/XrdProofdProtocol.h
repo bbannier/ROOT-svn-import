@@ -22,17 +22,9 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#ifdef OLDXRDOUC
-#  include "XrdSysToOuc.h"
-#  include "XrdOuc/XrdOucError.hh"
-#  include "XrdOuc/XrdOucPthread.hh"
-#  include "XrdOuc/XrdOucSemWait.hh"
-#else
-#  include "XrdSys/XrdSysError.hh"
-#  include "XrdSys/XrdSysPthread.hh"
-#  include "XrdSys/XrdSysSemWait.hh"
-#endif
-
+#include "XrdOuc/XrdOucError.hh"
+#include "XrdOuc/XrdOucPthread.hh"
+#include "XrdOuc/XrdOucSemWait.hh"
 #include "XrdOuc/XrdOucStream.hh"
 #include "XrdOuc/XrdOucString.hh"
 #include "XrdSec/XrdSecInterface.hh"
@@ -65,7 +57,7 @@ class XrdROOT;
 class XrdBuffer;
 class XrdClientMessage;
 class XrdLink;
-class XrdSysError;
+class XrdOucError;
 class XrdOucTrace;
 class XrdProofdClient;
 class XrdProofdPInfo;
@@ -161,20 +153,20 @@ public:
    //
    XPClientRequest               fRequest;  // handle client requests
    XrdProofdResponse             fResponse; // Response to incoming request
-   XrdSysRecMutex                fMutex;    // Local mutex
+   XrdOucRecMutex                fMutex;    // Local mutex
 
    //
    // Static area: general protocol managing section
    //
-   static XrdSysRecMutex         fgXPDMutex;  // Mutex for static area
+   static XrdOucRecMutex         fgXPDMutex;  // Mutex for static area
    static int                    fgCount;
    static XrdObjectQ<XrdProofdProtocol> fgProtStack;
    static XrdBuffManager        *fgBPool;     // Buffer manager
    static int                    fgMaxBuffsz;    // Maximum buffer size we can have
    static XrdSecService         *fgCIA;       // Authentication Server
    static XrdScheduler          *fgSched;     // System scheduler
-   static XrdSysError            fgEDest;     // Error message handler
-   static XrdSysLogger           fgMainLogger; // Error logger
+   static XrdOucError            fgEDest;     // Error message handler
+   static XrdOucLogger           fgMainLogger; // Error logger
 
    //
    // Static area: protocol configuration section
@@ -189,7 +181,7 @@ public:
    static char                  *fgPoolURL;    // Local pool URL
    static char                  *fgNamespace;  // Local pool namespace
    //
-   static XrdSysSemWait          fgForkSem;   // To serialize fork requests
+   static XrdOucSemWait          fgForkSem;   // To serialize fork requests
    //
    static std::list<XrdOucString *> fgMastersAllowed;  // list of master (domains) allowed
    static std::list<XrdProofdPriority *> fgPriorities;  // list of {users, priority change}
@@ -237,7 +229,7 @@ public:
    static int    Config(const char *fn);
    static char  *FilterSecConfig(const char *cfn, int &nd);
    static int    GetWorkers(XrdOucString &workers, XrdProofServProxy *);
-   static XrdProofSched *LoadScheduler(const char *cfn, XrdSysError *edest);
+   static XrdProofSched *LoadScheduler(const char *cfn, XrdOucError *edest);
    static XrdSecService *LoadSecurity(const char *seclib, const char *cfn);
    static int    LogTerminatedProc(int pid);
    static int    ResolveKeywords(XrdOucString &s, XrdProofdClient *pcl);

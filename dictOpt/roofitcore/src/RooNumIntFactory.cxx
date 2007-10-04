@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: RooFit                                                           *
  * Package: RooFitCore                                                       *
- * @(#)root/roofitcore:$Name:  $:$Id$
+ * @(#)root/roofitcore:$Id$
  * Authors:                                                                  *
  *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu       *
  *   DK, David Kirkby,    UC Irvine,         dkirkby@uci.edu                 *
@@ -84,7 +84,9 @@ Bool_t RooNumIntFactory::storeProtoIntegrator(RooAbsIntegrator* proto, const Roo
   }
 
   // Add to factory 
-  _map[name.Data()] = make_pair<RooAbsIntegrator*,std::string>(proto,depName) ;
+  _integratorList.Add(proto) ;
+  _nameList.Add(new TNamed(name,name)) ;
+  _depList.Add(new TNamed(depName,depName)) ;
 
   // Add default config to master config
   RooNumIntConfig::defaultConfig().addConfigSection(proto,defConfig) ;
@@ -93,26 +95,24 @@ Bool_t RooNumIntFactory::storeProtoIntegrator(RooAbsIntegrator* proto, const Roo
 }
 
 
-
 const RooAbsIntegrator* RooNumIntFactory::getProtoIntegrator(const char* name) 
 {
-  if (_map.count(name)==0) {
-    return 0 ;
-  } 
-  
-  return _map[name].first ;
+  TObject* theNameObj = _nameList.FindObject(name) ;
+  if (!theNameObj) return 0 ;
+  Int_t index = _nameList.IndexOf(theNameObj) ;
+  if (index<0) return 0 ;
+  return (RooAbsIntegrator*) _integratorList.At(index) ;
 }
 
 
 const char* RooNumIntFactory::getDepIntegratorName(const char* name) 
 {
-  if (_map.count(name)==0) {
-    return 0 ;
-  }
-
-  return _map[name].second.c_str() ;
+  TObject* theNameObj = _nameList.FindObject(name) ;
+  if (!theNameObj) return 0 ;
+  Int_t index = _nameList.IndexOf(theNameObj) ;
+  if (index<0) return 0 ;
+  return  _depList.At(index)->GetName() ;
 }
-
 
 RooAbsIntegrator* RooNumIntFactory::createIntegrator(RooAbsFunc& func, const RooNumIntConfig& config, Int_t ndimPreset) 
 {

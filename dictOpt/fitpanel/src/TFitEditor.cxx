@@ -920,10 +920,6 @@ void TFitEditor::SetCanvas(TCanvas *newcan)
    if (!newcan || (fCanvas == newcan)) return;
 
    fCanvas = newcan;
-   fParentPad = fCanvas->GetSelectedPad();
-   if (!fParentPad) fParentPad = fCanvas;
-   newcan->Connect("Selected(TVirtualPad*,TObject*,Int_t)", "TFitEditor",
-                   this, "SetFitObject(TVirtualPad *, TObject *, Int_t)");
    ConnectToCanvas();
 }
 
@@ -946,10 +942,8 @@ void TFitEditor::Hide()
    if (fgFitDialog) {
       fgFitDialog->UnmapWindow();
    }
-   if (fParentPad) {
-      fParentPad->Disconnect("RangeAxisChanged()");
-      DoReset();
-   }
+   fParentPad->Disconnect("RangeAxisChanged()");
+   DoReset();
    fCanvas = 0;
    fParentPad = 0;
    fFitObject = 0;

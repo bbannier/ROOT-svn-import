@@ -17,14 +17,6 @@ REFLEXDS     := $(MODDIRS)/G__Reflex.cxx
 REFLEXDO     := $(REFLEXDS:.cxx=.o)
 REFLEXDH     := $(REFLEXDS:.cxx=.h)
 
-#LF
-REFLEXTMPDS    := $(MODDIRS)/G__ReflexTmp.cxx
-REFLEXTMPDO    := $(REFLEXTMPDS:.cxx=.o)
-REFLEXTMPDH    := $(REFLEXTMPDS:.cxx=.h)
-REFLEXTMP2DS   := $(MODDIRS)/G__ReflexTmp2.cxx
-REFLEXTMP2DO   := $(REFLEXTMP2DS:.cxx=.o)
-REFLEXTMP2DH   := $(REFLEXTMP2DS:.cxx=.h)
-
 REFLEXAH     := $(wildcard $(MODDIRI)/Reflex/*.h)
 REFLEXBH     := $(wildcard $(MODDIRI)/Reflex/Builder/*.h)
 REFLEXIH     := $(wildcard $(MODDIRI)/Reflex/internal/*.h)
@@ -39,9 +31,6 @@ REFLEXO      := $(REFLEXS:.cxx=.o)
 
 REFLEXDEP    := $(REFLEXO:.o=.d) $(REFLEXDO:.o=.d)
 
-#LF
-REFLEXTMPDEP  := $(REFLEXTMPDO:.o=.d)
-
 REFLEXLIB    := $(LPATH)/libReflex.$(SOEXT)
 REFLEXDICTLIB:= $(LPATH)/libReflexDict.$(SOEXT)
 REFLEXDICTMAP:= $(REFLEXDICTLIB:.$(SOEXT)=.rootmap)
@@ -50,9 +39,6 @@ REFLEXDICTMAP:= $(REFLEXDICTLIB:.$(SOEXT)=.rootmap)
 ALLHDRS      += $(patsubst $(MODDIRI)/Reflex/%.h,include/Reflex/%.h,$(REFLEXH))
 ALLLIBS      += $(REFLEXLIB) $(REFLEXDICTLIB)
 ALLMAPS      += $(REFLEXDICTMAP)
-
-#LF
-REFLEXNM       := $(REFLEXLIB:.$(SOEXT)=.nm)
 
 # include all dependency files
 INCLUDEFILES += $(REFLEXDEP)
@@ -152,40 +138,19 @@ $(RFLX_GENMAPO) : $(RFLX_GENMAPS)
 $(RFLX_GENMAPX) : $(RFLX_GENMAPO) $(REFLEXLIB)
 	$(LD) $(LDFLAGS) -o $@ $(RFLX_GENMAPO) $(RFLX_REFLEXLL)
 
-
-#LF
-$(REFLEXLIB): $(REFLEXO) $(REFLEXTMPDO) $(ORDER_) $(MAINLIBS)
+$(REFLEXLIB): $(REFLEXO) $(ORDER_) $(MAINLIBS)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)"      \
-		"$(SOFLAGS)" libReflex.$(SOEXT) $@ "$(REFLEXO) $(REFLEXTMPDO)" \
+		"$(SOFLAGS)" libReflex.$(SOEXT) $@ "$(REFLEXO)" \
 		"$(REFLEXLIBEXTRA)"
 
-#LF
-$(REFLEXDICTLIB): $(REFLEXDO) $(REFLEXTMP2DO) $(ORDER_) $(MAINLIBS) $(REFLEXLIB)
+$(REFLEXDICTLIB): $(REFLEXDO) $(ORDER_) $(MAINLIBS) $(REFLEXLIB)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)"      \
-		"$(SOFLAGS)" libReflexDict.$(SOEXT) $@ "$(REFLEXDO) $(REFLEXTMP2DO)" \
+		"$(SOFLAGS)" libReflexDict.$(SOEXT) $@ "$(REFLEXDO)" \
 		"$(REFLEXDICTLIBEXTRA)"
 
-#LF
-$(REFLEXTMPDS):   $(REFLEXH) $(REFLEX) $(ROOTCINTTMPEXE)
-		@echo "Generating first dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -. 1 -c -p -Ireflex/inc $(REFLEXAPIH) $(REFLEXL)
-
-#LF
-$(REFLEXTMP2DS):  $(REFLEXH) $(REFLEXL) $(ROOTCINTTMPEXE)
-		@echo "Generating second dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -. 2 -c -p -Ireflex/inc $(REFLEXAPIH) $(REFLEXL)
-
-#LF
-$(REFLEXDS):    $(REFLEXH) $(REFLEXL) $(ROOTCINTTMPEXE) $(REFLEXNM)
-		@echo "Generating third dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -L $(ROOTSYS)/$(REFLEXNM) -. 3 -c -p -Ireflex/inc $(REFLEXAPIH) $(REFLEXL)
-
-#LF
-$(REFLEXNM):      $(REFLEXO) $(REFLEXTMPDO) $(REFLEXTMP2DO) 
-		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(REFLEXTMPDO) | awk '{printf("%s\n", $$3)'} > $(REFLEXNM)
-		nm -g -p --defined-only $(REFLEXTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(REFLEXNM)
-		nm -g -p --defined-only $(REFLEXO) | awk '{printf("%s\n", $$3)'} >> $(REFLEXNM)
+$(REFLEXDS): $(REFLEXAPIH) $(REFLEXL) $(ROOTCINTTMPEXE)
+		@echo "Generating dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -c -p -Ireflex/inc $(REFLEXAPIH) $(REFLEXL)
 
 $(REFLEXDICTMAP): $(RLIBMAP) $(MAKEFILEDEP) $(REFLEXL)
 		$(RLIBMAP) -o $(REFLEXDICTMAP) -l $(REFLEXDICTLIB) \
@@ -204,12 +169,7 @@ clean-reflex: clean-genreflex clean-check-reflex
 		@rm -f $(RFLX_GENMAPX)
 		@rm -f $(REFLEXO) $(REFLEXDO)
 
-clean::         clean-reflex clean-pds-reflex
-
-#LF
-clean-pds-reflex:	
-		rm -f $(REFLEXTMPDS) $(REFLEXTMPDO) $(REFLEXTMPDH) \
-		$(REFLEXTMPDEP) $(REFLEXTMP2DS) $(REFLEXTMP2DO) $(REFLEXTMP2DH) $(REFLEXNM)
+clean::         clean-reflex
 
 distclean-reflex: clean-reflex
 		@rm -f $(REFLEXDEP) $(REFLEXLIB) $(REFLEXDICTLIB) $(REFLEXDICTMAP)

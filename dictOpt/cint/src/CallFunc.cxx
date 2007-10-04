@@ -398,41 +398,24 @@ G__value Cint::G__CallFunc::Execute(void *pobject)
   store_struct_offset = G__store_struct_offset;
 
   // This-pointer in case of non left-most multiple inheritance
-  G__store_struct_offset = (long)pobject;
+  G__store_struct_offset = (long)pobject + method.GetThisPointerOffset();
 
   SetFuncType();
 
   // Call function
   long index = method.Index();
   G__CurrentCall(G__SETMEMFUNCENV, method.ifunc(), &index);
-
-  // LF: 11/05/07
-  // Dont call the function through the dictionaries. First
-  // check if it was registered (and call it)
-  struct G__ifunc_table_internal *ifunc = G__get_ifunc_internal(method.ifunc());
-  int ifn = method.Index();
-
-  if(G__get_funcptr(ifunc, ifn)) {
-     if ((method.MemberOf())->Tagnum() > -1)
-        G__tagnum = (method.MemberOf())->Tagnum();
-     ret = G__stub_method_calling(&result, &para, ifunc, ifn);
-   }
-  else {
-     G__store_struct_offset += (long) method.GetThisPointerOffset();
 #ifdef G__ASM_WHOLEFUNC
-     if(pfunc) {
-        if(pfunc == G__DLL_direct_globalfunc) 
-           ret = (*pfunc)(&result,(char*)method.ifunc(),&para,method.Index());
-        else 
-           ret = (*pfunc)(&result,(char*)bytecode,&para,0);
-     }
+  if(pfunc) {
+    if(pfunc == G__DLL_direct_globalfunc) 
+       ret = (*pfunc)(&result,(char*)method.ifunc(),&para,method.Index());
+    else 
+      ret = (*pfunc)(&result,(char*)bytecode,&para,0);
+  }
 #else
-     if(pfunc) ret = (*pfunc)(&result,(char*)NULL,&para,0);
+  if(pfunc) ret = (*pfunc)(&result,(char*)NULL,&para,0);
 #endif
-     else ret = ExecInterpretedFunc(&result);
-     G__store_struct_offset -= (long) method.GetThisPointerOffset();
-        }
-
+  else ret = ExecInterpretedFunc(&result);
   G__CurrentCall(G__NOP, 0, 0);
   // Restore  object address
   G__store_struct_offset = store_struct_offset;
@@ -482,62 +465,3 @@ void Cint::G__CallFunc::SetFuncType() {
   }
 }
 
-
-
-///////////////////////////////////////////////////////////////////////////
-int Cint::G__CallFunc::SetFuncPtr(void *ptr)
-{
-   if(method.IsValid()) {
-      G__LockCriticalSection();
-      struct G__ifunc_table_internal *ifunc = G__get_ifunc_internal(method.ifunc());
-      int ifn = method.Index();
-
-      // Only if the pointer has not been already registered
-      //if(ifunc->funcptr[ifn] == 0)
-      
-      // LF 26/04/07
-      // Allow pointer overwriting to be able to handle
-      // correctly the in-charge (deleting) destructors
-      ifunc->funcptr[ifn] = ptr;
-      G__UnlockCriticalSection();
-
-      return 0;
-   }
-   return -1;
-}
-
-
-// LF 24-04-07
-///////////////////////////////////////////////////////////////////////////
-G__MethodInfo Cint::G__CallFunc::GetFunc(const char* fname,const char* arg
-                                         ,long* poffset
-                                         ,MatchMode mode, int noerror)
-{
-  struct G__ifunc_table_internal *ifunc;
-  char *funcname;
-  char *param;
-  long index;
-
-  G__fprinterr(G__serr,"Warning: Cint::G__CallFunc::GetFunc() LF: deprecated \n");
-
-  /* Search for method */
-  ifunc = &G__ifunc;
-  funcname = (char*)fname;
-  param = (char*)arg;
-  int convmode = Cint::G__ClassInfo::ExactMatch; 
-  switch(mode) {
-  case ExactMatch:              convmode=0; break;
-  case ConversionMatch:         convmode=1; break;
-  default:                      convmode=0; break;
-  }  
-  G__ifunc_table* iref = G__get_methodhandle3(funcname,param,ifunc,&index,poffset
-                                             ,convmode
-                                             ,1
-                                             ,noerror
-                                             ,0);
-
-  /* Initialize method object */
-  G__MethodInfo method;
-  method.Init((long)iref,index,(G__ClassInfo*)NULL);
-  return(method);
-}

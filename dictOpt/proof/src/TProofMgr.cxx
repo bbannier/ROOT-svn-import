@@ -303,11 +303,10 @@ TList *TProofMgr::GetListOfManagers()
    // Update the list with new entries
    if (gROOT->GetListOfProofs()) {
       TIter nxp(gROOT->GetListOfProofs());
-      TObject *o = 0;
-      while ((o = nxp())) {
-         if (o->InheritsFrom("TProofMgr") && !fgListOfManagers.FindObject(o))
-            fgListOfManagers.Add(o);
-      }
+      TProofMgr *p = 0;
+      while ((p = dynamic_cast<TProofMgr *> (nxp())))
+         if (!fgListOfManagers.FindObject(p))
+            fgListOfManagers.Add(p);
    }
 
    // Get rid of invalid entries and notify

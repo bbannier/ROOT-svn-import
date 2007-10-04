@@ -259,26 +259,7 @@ G__InterfaceMethod Cint::G__MethodInfo::InterfaceMethod()
        -1==ifunc->pentry[index]->size /* this means compiled class */
        ) {
       G__UnlockCriticalSection();
-
-      // LF 25-05-07
-      // We have a problem here (are we ever going to stop having them ;))
-      // I discovered the first time I removed the stubs from dictionaries.
-      // The thing is that if we get here it has to be a compiled class
-      // but if we are using the new algorithm then the InterfaceMethod
-      // is 0 (because we used our registered method in funcptr)
-      // so now we have to see how to deal with that situation in
-      // TCint::GetInterfaceMethodWithPrototype
-      //
-      // This happens only in Qt (TQObject) 
-      // static TMethod *GetMethod(TClass *cl, const char *method, const char *params)
-      // and I have seen that the address is not really used
-      // they only want to know if the method can be executed...
-      // this is extreamly shady but for the moment just pass the funcptr
-      // if the interface method is zero
-      if((G__InterfaceMethod)ifunc->pentry[index]->p)
-         return((G__InterfaceMethod)ifunc->pentry[index]->p);
-      else 
-         return((G__InterfaceMethod)ifunc->funcptr);
+      return((G__InterfaceMethod)ifunc->pentry[index]->p);
     }
     else {
       G__UnlockCriticalSection();

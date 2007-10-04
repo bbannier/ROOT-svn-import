@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: RooFit                                                           *
  * Package: RooFitCore                                                       *
- *    File: $Id: RooAbsCategory.h,v 1.38 2007/05/11 09:11:30 verkerke Exp $
+ *    File: $Id: RooAbsCategory.rdl,v 1.37 2005/12/08 13:19:54 wverkerke Exp $
  * Authors:                                                                  *
  *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu       *
  *   DK, David Kirkby,    UC Irvine,         dkirkby@uci.edu                 *
@@ -91,9 +91,7 @@ protected:
   TObjArray  _types ;         // Array of allowed values
   TIterator* _typeIter ;      //!
 
-  Bool_t _treeVar ;           //! do not persist
-
-  ClassDef(RooAbsCategory,1) // Abstract discrete variable
+  ClassDef(RooAbsCategory,1) // Abstract index variable
 };
 
 #endif

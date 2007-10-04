@@ -1703,12 +1703,6 @@ static void G__templatemaptypename(char *string)
   else if(strcmp(string,"unsignedshort*")==0||
           strcmp(string,"unsignedshortint*")==0)
     strcpy(string,"unsigned short*");
-  else if (strcmp(string,"Float16_t")==0||
-           strcmp(string,"Float16_t*")==0) 
-    { 
-       /* nothing to do, we want to keep those as is */
-
-    }
   else if (strcmp(string,"Double32_t")==0||
            strcmp(string,"Double32_t*")==0) 
     { 

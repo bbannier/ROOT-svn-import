@@ -1457,23 +1457,10 @@ G__value G__getfunction_libp(char* item, char* funcname, G__param* libp, int* kn
             G__asm_inst[G__asm_cp+3] = libp->paran;
             G__asm_inst[G__asm_cp+4] = (long)G__compiled_func;
             G__asm_inst[G__asm_cp+5] = 0; // cos() doesn't have "this->"
-
-            // LF: 30-05-07
-            // The byte code compiler expects the address of the stubs
-            // functions but those addresses dont exist anymore 
-            // so there is no "fast" way to make such calls.
-            // The idea for fixing it is to change all stub addresses
-            // by ifunc pointers, so we add a new parameter to the
-            // stack (rem this may have unexpected and
-            // completely dissapointing consequences but I dont
-            // see any other choice).
-            G__asm_inst[G__asm_cp+6]=(long)G__p_ifunc;
-            if(!G__p_ifunc) printf ("Serious trouble func 1505\n");
-
-            if(G__asm_name_p+strlen(funcname)+1<G__ASM_FUNCNAMEBUF) {
-               strcpy(G__asm_name+G__asm_name_p,funcname);
-               G__asm_name_p += strlen(funcname)+1;
-               G__inc_cp_asm(7,0); // LF 30-05-07 add 1
+            if (G__asm_name_p + strlen(funcname) + 1 < G__ASM_FUNCNAMEBUF) {
+               strcpy(G__asm_name + G__asm_name_p, funcname);
+               G__asm_name_p += strlen(funcname) + 1;
+               G__inc_cp_asm(6, 0);
             }
             else {
                G__abortbytecode();
@@ -1523,16 +1510,10 @@ G__value G__getfunction_libp(char* item, char* funcname, G__param* libp, int* kn
             G__asm_inst[G__asm_cp+3] = libp->paran;
             G__asm_inst[G__asm_cp+4] = (long)G__library_func;
             G__asm_inst[G__asm_cp+5] = 0;
-
-            // LF: 30-05-07
-            G__asm_inst[G__asm_cp+6]=(long)G__p_ifunc;    
-            if(!G__p_ifunc) printf ("Serious trouble func 1569\n");
-            
             if (G__asm_name_p + strlen(funcname) + 1 < G__ASM_FUNCNAMEBUF) {
                strcpy(G__asm_name + G__asm_name_p, funcname);
                G__asm_name_p += strlen(funcname) + 1;
-               
-               G__inc_cp_asm(7,0); //LF 05-06-07 add 1
+               G__inc_cp_asm(6, 0);
             }
             else {
                G__abortbytecode();
@@ -2799,15 +2780,10 @@ G__value G__getfunction(char* item, int* known3, int memfunc_flag)
             G__asm_inst[G__asm_cp+3] = fpara.paran;
             G__asm_inst[G__asm_cp+4] = (long)G__compiled_func;
             G__asm_inst[G__asm_cp+5] = 0;
-            
-            // LF: 30-05-07
-            G__asm_inst[G__asm_cp+6]=(long)G__p_ifunc;    
-            if(!G__p_ifunc) printf ("Serious trouble func 2903\n");
-
             if (G__asm_name_p + strlen(funcname) + 1 < G__ASM_FUNCNAMEBUF) {
                strcpy(G__asm_name + G__asm_name_p, funcname);
                G__asm_name_p += strlen(funcname) + 1;
-               G__inc_cp_asm(7,0); //LF 05-06-07 add 1+1
+               G__inc_cp_asm(6, 0);
             }
             else {
                G__abortbytecode();
@@ -2864,15 +2840,10 @@ G__value G__getfunction(char* item, int* known3, int memfunc_flag)
             G__asm_inst[G__asm_cp+3] = fpara.paran;
             G__asm_inst[G__asm_cp+4] = (long)G__library_func;
             G__asm_inst[G__asm_cp+5] = 0;
-            
-            // LF: 30-05-07
-            G__asm_inst[G__asm_cp+6]=(long)G__p_ifunc;
-            if(!G__p_ifunc) printf ("Serious trouble func 2967\n");
-
             if (G__asm_name_p + strlen(funcname) + 1 < G__ASM_FUNCNAMEBUF) {
                strcpy(G__asm_name + G__asm_name_p, funcname);
                G__asm_name_p += strlen(funcname) + 1;
-               G__inc_cp_asm(7,0); // LF 05-06-07 add 1+1
+               G__inc_cp_asm(6, 0);
             }
             else {
                G__abortbytecode();
@@ -3414,15 +3385,10 @@ int G__special_func(G__value* result7, char* funcname, G__param* libp, int hash)
          G__asm_inst[G__asm_cp+4] = (long) G__special_func;
          G__asm_inst[G__asm_cp+5] = 0;
          G__asm_stack[G__asm_dt] = x;
-
-         // LF: 30-05-07
-         G__asm_inst[G__asm_cp+6]=(long)G__p_ifunc;
-         if(!G__p_ifunc) printf ("Serious trouble func 3519\n");
-
          if ((G__asm_name_p + strlen(funcname) + 1) < G__ASM_FUNCNAMEBUF) {
             strcpy(G__asm_name + G__asm_name_p, funcname);
             G__asm_name_p += strlen(funcname) + 1;
-            G__inc_cp_asm(7,0); // LF 05-06-07 add 1+1
+            G__inc_cp_asm(6, 1);
          }
          else {
             G__abortbytecode();

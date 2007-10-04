@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: RooFit                                                           *
  * Package: RooFitCore                                                       *
- * @(#)root/roofitcore:$Name:  $:$Id$
+ * @(#)root/roofitcore:$Id$
  * Authors:                                                                  *
  *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu       *
  *   DK, David Kirkby,    UC Irvine,         dkirkby@uci.edu                 *
@@ -40,9 +40,6 @@
 #include "RooCmdConfig.h"
 #include "RooRealVar.h"
 #include "RooGlobalFunc.h"
-#include <string>
-#include <sstream>
-using namespace std ;
 
 #if (__GNUC__==3&&__GNUC_MINOR__==2&&__GNUC_PATCHLEVEL__==3)
 char* operator+( streampos&, char* );
@@ -303,11 +300,15 @@ RooAbsCollection &RooAbsCollection::operator=(const RooAbsCollection& other) {
 
   RooAbsArg *elem, *theirs ;
   RooLinkedListIter iter = _list.iterator() ;
-  while((elem=(RooAbsArg*)iter.Next())) {
+  Int_t index(getSize());
+  while(--index >= 0) {
+    elem= (RooAbsArg*)_list.At(index);
     theirs= other.find(elem->GetName());
     if(!theirs) continue;
+
     theirs->syncCache() ;
     elem->copyCache(theirs) ;
+
   }
   return *this;
 }
@@ -690,15 +691,6 @@ RooAbsArg *RooAbsCollection::find(const char *name) const
   // is returned if no object with the given name is found
 
   return (RooAbsArg*) _list.find(name);
-}
-
-
-string RooAbsCollection::contentsString() const 
-{
-  string retVal ;
-  ostringstream ostr(retVal) ;
-  printToStream(ostr,InLine,"") ;
-  return retVal ;
 }
 
 

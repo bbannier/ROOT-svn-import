@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: RooFit                                                           *
  * Package: RooFitCore                                                       *
- * @(#)root/roofitcore:$Name:  $:$Id$
+ * @(#)root/roofitcore:$Id$
  * Authors:                                                                  *
  *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu       *
  *   DK, David Kirkby,    UC Irvine,         dkirkby@uci.edu                 *
@@ -45,15 +45,13 @@ ClassImp(RooAbsGoodnessOfFit)
 ;
 
 RooAbsGoodnessOfFit::RooAbsGoodnessOfFit(const char *name, const char *title, RooAbsPdf& pdf, RooAbsData& data,
-					 const RooArgSet& projDeps, const char* rangeName, const char* addCoefRangeName, 
-					 Int_t nCPU, Bool_t verbose, Bool_t splitCutRange) : 
+					 const RooArgSet& projDeps, const char* rangeName, Int_t nCPU, Bool_t verbose, Bool_t splitCutRange) : 
   RooAbsReal(name,title),
   _paramSet("paramSet","Set of parameters",this),
   _pdf(&pdf),
   _data(&data),
   _projDeps((RooArgSet*)projDeps.Clone()),
   _rangeName(rangeName),
-  _addCoefRangeName(addCoefRangeName),
   _splitRange(splitCutRange),
   _simCount(1),
   _verbose(verbose),
@@ -195,9 +193,9 @@ Bool_t RooAbsGoodnessOfFit::initialize()
   if (_init) return kFALSE ;
 
   if (_gofOpMode==MPMaster) {
-    initMPMode(_pdf,_data,_projDeps,_rangeName,_addCoefRangeName) ;
+    initMPMode(_pdf,_data,_projDeps,_rangeName) ;
   } else if (_gofOpMode==SimMaster) {
-    initSimMode((RooSimultaneous*)_pdf,_data,_projDeps,_rangeName,_addCoefRangeName) ;
+    initSimMode((RooSimultaneous*)_pdf,_data,_projDeps,_rangeName) ;
   }
   _init = kTRUE ;
   return kFALSE ;
@@ -242,18 +240,18 @@ void RooAbsGoodnessOfFit::printCompactTreeHook(ostream& os, const char* indent)
 }
 
 
-void RooAbsGoodnessOfFit::constOptimizeTestStatistic(ConstOpCode opcode) 
+void RooAbsGoodnessOfFit::constOptimize(ConstOpCode opcode) 
 {
   Int_t i ;
   initialize() ;
   if (_gofOpMode==SimMaster) {
     // Forward to slaves    
     for (i=0 ; i<_nGof ; i++) {
-      if (_gofArray[i]) _gofArray[i]->constOptimizeTestStatistic(opcode) ;
+      if (_gofArray[i]) _gofArray[i]->constOptimize(opcode) ;
     }
   } else if (_gofOpMode==MPMaster) {
     for (i=0 ; i<_nCPU ; i++) {
-      _mpfeArray[i]->constOptimizeTestStatistic(opcode) ;
+      _mpfeArray[i]->constOptimize(opcode) ;
     }
   }
 }
@@ -274,14 +272,14 @@ void RooAbsGoodnessOfFit::setMPSet(Int_t setNum, Int_t numSets)
 }
 
 
-void RooAbsGoodnessOfFit::initMPMode(RooAbsPdf* pdf, RooAbsData* data, const RooArgSet* projDeps, const char* rangeName, const char* addCoefRangeName)
+void RooAbsGoodnessOfFit::initMPMode(RooAbsPdf* pdf, RooAbsData* data, const RooArgSet* projDeps, const char* rangeName)
 {
   Int_t i ;
   _mpfeArray = new pRooRealMPFE[_nCPU] ;
 
   // Create proto-goodness-of-fit 
   //cout << "initMPMode -- creating prototype gof" << endl ;
-  RooAbsGoodnessOfFit* gof = create(GetName(),GetTitle(),*pdf,*data,*projDeps,rangeName,addCoefRangeName) ;
+  RooAbsGoodnessOfFit* gof = create(GetName(),GetTitle(),*pdf,*data,*projDeps,rangeName) ;
 
   for (i=0 ; i<_nCPU ; i++) {
 
@@ -302,7 +300,7 @@ void RooAbsGoodnessOfFit::initMPMode(RooAbsPdf* pdf, RooAbsData* data, const Roo
 }
 
 
-void RooAbsGoodnessOfFit::initSimMode(RooSimultaneous* simpdf, RooAbsData* data, const RooArgSet* projDeps, const char* rangeName, const char* addCoefRangeName)
+void RooAbsGoodnessOfFit::initSimMode(RooSimultaneous* simpdf, RooAbsData* data, const RooArgSet* projDeps, const char* rangeName)
 {
   RooAbsCategoryLValue& simCat = (RooAbsCategoryLValue&) simpdf->indexCat() ;
 
@@ -350,9 +348,9 @@ void RooAbsGoodnessOfFit::initSimMode(RooSimultaneous* simpdf, RooAbsData* data,
 	if (_verbose) {
 	  cout << "calling create with range " << Form("%s_%s",rangeName,type->GetName()) << endl ;
 	}
-	_gofArray[n] = create(type->GetName(),type->GetName(),*pdf,*dset,*projDeps,Form("%s_%s",rangeName,type->GetName()),addCoefRangeName,_nCPU,_verbose,_splitRange) ;
+	_gofArray[n] = create(type->GetName(),type->GetName(),*pdf,*dset,*projDeps,Form("%s_%s",rangeName,type->GetName()),_nCPU,_verbose,_splitRange) ;
       } else {
-	_gofArray[n] = create(type->GetName(),type->GetName(),*pdf,*dset,*projDeps,rangeName,addCoefRangeName,_nCPU,_verbose,_splitRange) ;
+	_gofArray[n] = create(type->GetName(),type->GetName(),*pdf,*dset,*projDeps,rangeName,_nCPU,_verbose,_splitRange) ;
       }
       _gofArray[n]->setSimCount(_nGof) ;
       

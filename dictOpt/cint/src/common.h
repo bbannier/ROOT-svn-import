@@ -1042,13 +1042,6 @@ struct G__ifunc_table_internal {
   char *funcname[G__MAXIFUNC];
   int  hash[G__MAXIFUNC];
 
-  /**************************************************
-   * We want to have a direct pointer to the function
-   * modified by Leo 23/02/2007
-   **************************************************/
-  void *funcptr[G__MAXIFUNC];
-  char *mangled_name[G__MAXIFUNC];
-
   struct G__funcentry entry[G__MAXIFUNC],*pentry[G__MAXIFUNC];
 
   /* type of return value */
@@ -1076,12 +1069,7 @@ struct G__ifunc_table_internal {
   short busy[G__MAXIFUNC];
 
   struct G__ifunc_table_internal *next;
-  int page;
-
-  // LF 06-08-07
-  // an additional 'page' indicating the index
-  // of the function in the base class
-  int page_base;
+  short page;
 
   G__SIGNEDCHAR_T access[G__MAXIFUNC];  /* private, protected, public */
   char staticalloc[G__MAXIFUNC];
