@@ -551,6 +551,7 @@ void G__make_ifunctable(char* funcheader)
    /* set funcname to G__p_ifunc */
    G__func_now = G__p_ifunc->allifunc;
    G__func_page = G__p_ifunc->page;
+   //G__func_page=G__p_ifunc->page_base; //LF 09-08-07
    func_now = G__func_now;
    if ('~' == funcheader[0] && 0 == ifunc->hash[0]) {
       G__p_ifunc = ifunc;
@@ -1042,6 +1043,9 @@ void G__make_ifunctable(char* funcheader)
                ifunc_last->page = store_ifunc_tmp->page;
                store_ifunc_tmp->page = tmp.page;
    
+               ifunc_last->page_base = store_ifunc_tmp->page_base;  // LF 09-08-07
+               store_ifunc_tmp->page_base = tmp.page_base;          // LF 09-08-07
+
                // fix pentry
                if (ifunc_last->pentry[0] == &store_ifunc_tmp->entry[0])
                   ifunc_last->pentry[0] = &ifunc_last->entry[0];
@@ -1489,6 +1493,7 @@ void G__make_ifunctable(char* funcheader)
             }
          }
          G__func_page = ifunc->page;
+         //G__func_page=ifunc->page_base; //LF 09-08-07
          G__func_now = iexist;
          G__p_ifunc = ifunc;
       } /* of if(ifunc) */
@@ -1514,6 +1519,7 @@ void G__make_ifunctable(char* funcheader)
             G__p_ifunc->next->allifunc = 0;
             G__p_ifunc->next->next = (struct G__ifunc_table_internal *)NULL;
             G__p_ifunc->next->page = G__p_ifunc->page + 1;
+            G__p_ifunc->next->page_base = 0; //LF 09-08-07
             {
                //int i,j;
                //for (i = 0; i < G__MAXIFUNC; i++) {
@@ -1621,6 +1627,11 @@ void G__make_ifunctable(char* funcheader)
       }
    }
 #endif
+
+   // LF 09-08-07
+   G__p_ifunc->page_base = G__method_inbase2(func_now, G__p_ifunc);
+   if(!G__p_ifunc->page_base)
+      G__p_ifunc->page_base = G__p_ifunc->page+1;
 
    /* finishing up */
    G__no_exec = 0;
@@ -3419,6 +3430,22 @@ void G__rate_parameter_match(G__param* libp, G__ifunc_table_internal* p_ifunc, i
             }
             if (ifunc2 && -1 != ifn2)
                funclist->p_rate[i] = G__USRCONVMATCH;
+            else {
+              // LF: 24/04/07
+              // There is a particular case which should be handled in a
+              // especial way...
+              // va_list : take a look at TObject::DoError to see an axample,
+              // this built-in type is seen in gcc as a "char *" and it's seen
+              // in cint as a user defined structure so the matching
+              // wont work... the only thing I see as feasible for the moment
+              // is to hard code this case here... and say that when comparing
+              // a parameter -> va_list == char *
+              // Big note: as everything else donde for the stubs removal we
+              // need a few ifdef's (we dont know how it works for different
+              // compilers)
+              if( param_type=='C' && strcmp(G__struct.name[formal_tagnum], "va_list")==0 )
+                funclist->p_rate[i] = G__USRCONVMATCH;
+            }
          }
       }
 
@@ -4281,7 +4308,8 @@ void G__display_ambiguous(int scopetagnum, char* funcname, G__param* libp, G__fu
 * If match found, expand template, parse as pre-run
 ***********************************************************************/
 //______________________________________________________________________________
-struct G__funclist* G__add_templatefunc(char* funcnamein, G__param* libp, int hash, G__funclist* funclist, G__ifunc_table_internal* p_ifunc, int isrecursive)
+struct G__funclist* G__add_templatefunc(char* funcnamein, G__param* libp, int hash, G__funclist* funclist, G__ifunc_table_internal* p_ifunc, int isrecursive
+                                        ,int withInheritance)
 {
    // -- FIXME: Describe this function!
    struct G__Definetemplatefunc *deftmpfunc;
@@ -4372,7 +4400,7 @@ struct G__funclist* G__add_templatefunc(char* funcnamein, G__param* libp, int ha
 
          if (-1 != deftmpfunc->parent_tagnum &&
                env_tagnum != deftmpfunc->parent_tagnum) {
-            if (baseclass) {
+            if (baseclass && withInheritance) {
                int temp;
                for (temp = 0;temp < baseclass->basen;temp++) {
                   if (baseclass->herit[temp]->basetagnum == deftmpfunc->parent_tagnum) {
@@ -4609,7 +4637,7 @@ struct G__ifunc_table_internal* G__overload_match(char* funcname, G__param* libp
    if (!match)
    {
       funclist =  G__add_templatefunc(funcname, libp, hash, funclist
-                                      , store_ifunc, isrecursive);
+                                      , store_ifunc, isrecursive,1); //LF 1 is the old behaviour
    }
 
    if (!match && (G__TRYUNARYOPR == memfunc_flag || G__TRYBINARYOPR == memfunc_flag))
@@ -5011,16 +5039,26 @@ int G__interpret_func(G__value* result7, char* funcname, G__param* libp, int has
       }
       return 1;
    }
+   
+   // LF 24-05-07
+   // We had a check in ifunc to verify that this function had a pointer
+   // to the stub. In the new algorith this pointer may be null in case
+   // we dont create the stub. Now it has to check that that and that 
+   // the function has not been register yet
    // Error if body not defined.
    if (
       //
 #ifdef G__ASM_WHOLEFUNC
       !p_ifunc->pentry[ifn]->p &&
+      !p_ifunc->funcptr[ifn] &&
+      !p_ifunc->mangled_name[ifn] &&
       !p_ifunc->ispurevirtual[ifn] &&
       (G__asm_wholefunction  == G__ASM_FUNC_NOP) &&
       p_ifunc->hash[ifn]
 #else
       !p_ifunc->pentry[ifn]->p &&
+      !p_ifunc->funcptr[ifn] &&
+      !p_ifunc->mangled_name[ifn] &&
       !p_ifunc->ispurevirtual[ifn]
 #endif
       //
@@ -5172,7 +5210,11 @@ int G__interpret_func(G__value* result7, char* funcname, G__param* libp, int has
             if (p_ifunc && p_ifunc->pentry[ifn]) {
                G__asm_inst[G__asm_cp+5] = p_ifunc->pentry[ifn]->ptradjust;
             }
-            G__inc_cp_asm(6, 0);
+            
+            G__asm_inst[G__asm_cp+6]=(long)p_ifunc; // LF 30-05-07
+            if(!p_ifunc) printf ("Serious trouble ifunc 5274\n");
+            
+            G__inc_cp_asm(7, 0);
          }
          else {
             // --
@@ -5199,7 +5241,11 @@ int G__interpret_func(G__value* result7, char* funcname, G__param* libp, int has
             if (p_ifunc && p_ifunc->pentry[ifn]) {
                G__asm_inst[G__asm_cp+5] = p_ifunc->pentry[ifn]->ptradjust;
             }
-            G__inc_cp_asm(6, 0);
+           
+            G__asm_inst[G__asm_cp+6]=(long)p_ifunc; // LF 30-05-07
+            if(!p_ifunc) printf ("Serious trouble ifunc 5274\n");
+
+            G__inc_cp_asm(7, 0);
          }
       }
       else {
@@ -5329,7 +5375,7 @@ int G__interpret_func(G__value* result7, char* funcname, G__param* libp, int has
             memcpy((void*)xbase, (void*)ybase, sizeof(int)*nybase);
          }
          if (ifunc) {
-            if (!ifunc->pentry[iexist]->p) {
+            if (!ifunc->pentry[iexist]->p && !G__get_funcptr(p_ifunc, ifn) ) { // LF 12-09-07
                G__fprinterr(G__serr, "Error: virtual %s() header found but not defined", funcname);
                G__genericerror(0);
                G__exec_memberfunc = store_exec_memberfunc;
@@ -6687,6 +6733,161 @@ struct G__ifunc_table_internal* G__get_ifunchandle(char* funcname, G__param* lib
    return(p_ifunc);
 }
 
+//
+// LF 31-07-07
+//
+// code replication fixme
+//
+struct G__ifunc_table_internal *G__get_ifunchandle2(char *funcname,G__param *libp
+                                          ,int hash,G__ifunc_table_internal *p_ifunc
+                                          ,long *pifn
+                                          ,int access,int funcmatch,int isconst)
+{
+  int ifn=0;
+  int ipara=0;
+  int itemp=0;
+
+  if(-1!=p_ifunc->tagnum) G__incsetup_memfunc(p_ifunc->tagnum);
+
+  /*******************************************************
+   * while interpreted function list exists
+   *******************************************************/
+  while(p_ifunc) {
+    while((ipara==0)&&(ifn<p_ifunc->allifunc)) {
+      /* if hash (sum of funcname char) matchs */
+      if(hash==p_ifunc->hash[ifn]&&strcmp(funcname,p_ifunc->funcname[ifn])==0 
+         && (p_ifunc->access[ifn]&access)) {
+        /**************************************************
+         * for overloading of function and operator
+         **************************************************/
+        /**************************************************
+         * check if parameter type matchs
+         **************************************************/
+        /* set(reset) match flag ipara temporarily */
+        itemp=0;
+        ipara=1;
+        
+        if(p_ifunc->ansi[ifn]==0) break; /* K&R C style header */
+        /* main() no overloading */
+        if(G__HASH_MAIN==hash && strcmp(funcname,"main")==0) break; 
+        
+        // LF 31-07-07
+        // constness was not checked before
+        if( (p_ifunc->isconst[ifn] & G__CONSTFUNC) !=  isconst) {
+           ++ifn;
+           continue;
+        }
+
+        /* if more actual parameter than formal parameter, unmatch */
+        if(p_ifunc->para_nu[ifn]<libp->paran) {
+          ipara=0;
+          itemp=p_ifunc->para_nu[ifn]; /* end of this parameter */
+          ++ifn; /* next function */
+        }
+        else {
+          /* scan each parameter */
+          while(itemp<p_ifunc->para_nu[ifn]) {
+            if((G__value*)NULL==p_ifunc->param[ifn][itemp]->pdefault && 
+               itemp>=libp->paran
+               ) {
+              ipara = 0;
+            }
+            else if (p_ifunc->param[ifn][itemp]->pdefault && itemp>=libp->paran) {
+              ipara = 2; /* I'm not sure what this is, Fons. */
+            }
+            else {   
+              ipara=G__param_match(p_ifunc->param[ifn][itemp]->type
+                                   ,p_ifunc->param[ifn][itemp]->p_tagtable
+                                   ,p_ifunc->param[ifn][itemp]->pdefault
+                                   ,libp->para[itemp].type
+                                   ,libp->para[itemp].tagnum
+                                   ,&(libp->para[itemp])
+                                   ,libp->parameter[itemp]
+                                   ,funcmatch
+                                   ,p_ifunc->para_nu[ifn]-itemp-1
+                                   ,p_ifunc->param[ifn][itemp]->reftype
+                                   ,p_ifunc->param[ifn][itemp]->isconst
+                                   /* ,p_ifunc->isexplicit[ifn] */
+                                   );
+            }
+            switch(ipara) {
+            case 2: /* default parameter */
+#ifdef G__ASM_DBG
+              if(G__asm_dbg) {
+                G__fprinterr(G__serr," default%d %c tagnum%d %p : %c tagnum%d %d\n"
+                        ,itemp
+                        ,p_ifunc->param[ifn][itemp]->type
+                        ,p_ifunc->param[ifn][itemp]->p_tagtable
+                        ,p_ifunc->param[ifn][itemp]->pdefault
+                        ,libp->para[itemp].type
+                        ,libp->para[itemp].tagnum
+                        ,funcmatch);
+              }
+#endif
+              itemp=p_ifunc->para_nu[ifn]; /* end of this parameter */
+              break;
+            case 1: /* match this one, next parameter */
+#ifdef G__ASM_DBG
+              if(G__asm_dbg) {
+                G__fprinterr(G__serr," match%d %c tagnum%d %p : %c tagnum%d %d\n"
+                        ,itemp
+                        ,p_ifunc->param[ifn][itemp]->type
+                        ,p_ifunc->param[ifn][itemp]->p_tagtable
+                        ,p_ifunc->param[ifn][itemp]->pdefault
+                        ,libp->para[itemp].type
+                        ,libp->para[itemp].tagnum
+                        ,funcmatch);
+              }
+#endif
+              if(G__EXACT!=funcmatch)
+                G__warn_refpromotion(p_ifunc,ifn,itemp,libp);
+              ++itemp; /* next function parameter */
+              break;
+            case 0: /* unmatch, next function */
+#ifdef G__ASM_DBG
+              if(G__asm_dbg) {
+                G__fprinterr(G__serr," unmatch%d %c tagnum%d %p : %c tagnum%d %d\n"
+                        ,itemp
+                        ,p_ifunc->param[ifn][itemp]->type
+                        ,p_ifunc->param[ifn][itemp]->p_tagtable
+                        ,p_ifunc->param[ifn][itemp]->pdefault
+                        ,libp->para[itemp].type
+                        ,libp->para[itemp].tagnum
+                        ,funcmatch);
+              }
+#endif
+              itemp=p_ifunc->para_nu[ifn]; 
+              /* exit from while loop */
+              break;
+            }
+            
+          } /* end of while(itemp<p_ifunc->para_nu[ifn]) */
+          if(ipara==0) { /* parameter doesn't match */
+            ++ifn; /* next function */
+          }
+        }
+      }
+      else {  /* funcname doesn't match */
+        ++ifn;
+      }
+    }  /* end of while((ipara==0))&&(ifn<p_ifunc->allifunc)) */
+    /******************************************************************
+     * next page of interpreted function list
+     *******************************************************************/
+    if(ifn>=p_ifunc->allifunc) {
+      p_ifunc=p_ifunc->next;
+      ifn=0;
+    }
+    else {
+      break; /* get out from while(p_ifunc) loop */
+    }
+  } /* end of while(p_ifunc) */
+
+
+  *pifn = ifn;
+  return(p_ifunc);
+}
+
 //______________________________________________________________________________
 struct G__ifunc_table_internal* G__get_ifunchandle_base(char* funcname, G__param* libp, int hash, G__ifunc_table_internal* p_ifunc, long* pifn, long* poffset, int access, int funcmatch, int withInheritance)
 {
@@ -6726,6 +6927,53 @@ struct G__ifunc_table_internal* G__get_ifunchandle_base(char* funcname, G__param
    return(ifunc);
 }
 
+
+// LF 31-07-07
+// 
+// More code replication... fix me
+// 
+struct G__ifunc_table_internal *G__get_ifunchandle_base2(char *funcname,G__param *libp
+                                               ,int hash,G__ifunc_table_internal *p_ifunc
+                                               ,long *pifn
+                                               ,long *poffset
+                                               ,int access,int funcmatch
+                                               ,int withInheritance
+                                               ,int isconst)
+{
+  int tagnum;
+  struct G__ifunc_table_internal *ifunc;
+  int basen=0;
+  struct G__inheritance *baseclass;
+
+  /* Search for function */
+  *poffset = 0;
+  ifunc=G__get_ifunchandle2(funcname,libp,hash,p_ifunc,pifn,access,funcmatch,isconst);
+  if(ifunc || !withInheritance) return(ifunc);
+
+  /* Search for base class function if member function */
+  tagnum = p_ifunc->tagnum;
+  if(-1!=tagnum) {
+    baseclass = G__struct.baseclass[tagnum];
+    while(basen<baseclass->basen) {
+      if(baseclass->herit[basen]->baseaccess&G__PUBLIC) {
+#ifdef G__VIRTUALBASE
+        /* Can not handle virtual base class member function for ERTTI
+         * because pointer to the object is not given  */
+#endif
+        *poffset = baseclass->herit[basen]->baseoffset;
+        p_ifunc = G__struct.memfunc[baseclass->herit[basen]->basetagnum];
+        ifunc=G__get_ifunchandle2(funcname,libp,hash,p_ifunc,pifn
+                                 ,access,funcmatch,isconst);
+        if(ifunc) return(ifunc);
+      }
+      ++basen;
+    }
+  }
+
+  /* Not found , ifunc=NULL */
+  return(ifunc);
+}
+
 //______________________________________________________________________________
 void G__argtype2param(char* argtype, G__param* libp)
 {
@@ -6747,8 +6995,59 @@ void G__argtype2param(char* argtype, G__param* libp)
             char* end = start + strlen(start) - 1;
             while (isspace(*end) && end != start) --end;
          }
-         libp->para[libp->paran] = G__string2type(start);
-         ++libp->paran;
+         G__value buf = G__string2type(start);
+
+         // LF 20/04/07
+         // This means the argument is "..."
+         // How do we handle that properly?
+         if (buf.type != -1) {
+            libp->para[libp->paran] = buf;
+            ++libp->paran;
+         }
+      }
+   }
+   while (',' == c);
+}
+
+/**************************************************************************
+* G__argtype2param2()
+*
+* LF: 17/07/07 
+* Exactly the same as 'G__argtype2param'
+**************************************************************************/
+void G__argtype2param2(char *argtype,G__param *libp,int noerror,int& error)
+{
+   // -- FIXME: Describe this function!
+   char typenam[G__MAXNAME*2];
+   int p = 0;
+   int c;
+   char *endmark = ",);";
+
+   libp->paran = 0;
+   libp->para[0] = G__null;
+
+   do {
+      c = G__getstream_template(argtype, &p, typenam, endmark);
+      if (typenam[0]) {
+         char* start = typenam;
+         while (isspace(*start)) ++start;
+         if (*start) {
+            char* end = start + strlen(start) - 1;
+            while (isspace(*end) && end != start) --end;
+         }
+         G__value buf = G__string2type2(start, noerror);
+
+         // LF 17-07-07
+         if (buf.type==0 && buf.typenum==-1)
+            error = 1;
+
+         // LF 20/04/07
+         // This means the argument is "..."
+         // How do we handle that properly?
+         if (buf.type != -1) {
+            libp->para[libp->paran] = buf;
+            ++libp->paran;
+         }
       }
    }
    while (',' == c);
@@ -6816,7 +7115,7 @@ struct G__ifunc_table* G__get_methodhandle(char* funcname, char* argtype, G__ifu
       if (ifunc) return G__get_ifunc_ref(ifunc);
 
       /* if no exact match, try to instantiate template function */
-      funclist = G__add_templatefunc(funcname, &para, hash, funclist, p_ifunc, 0);
+      funclist = G__add_templatefunc(funcname, &para, hash, funclist, p_ifunc, 0, withInheritance);
       if (funclist && funclist->rate == G__EXACTMATCH) {
          ifunc = funclist->ifunc;
          *pifn = funclist->ifn;
@@ -6894,9 +7193,9 @@ struct G__ifunc_table* G__get_methodhandle2(char* funcname, G__param* libp, G__i
                                       , withInheritance
                                      );
       if (ifunc) return G__get_ifunc_ref(ifunc);
-
+    
       /* if no exact match, try to instantiate template function */
-      funclist = G__add_templatefunc(funcname, libp, hash, funclist, p_ifunc, 0);
+      funclist = G__add_templatefunc(funcname, libp, hash, funclist, p_ifunc, 0, withInheritance);
       if (funclist && funclist->rate == G__EXACTMATCH) {
          ifunc = funclist->ifunc;
          *pifn = funclist->ifn;
@@ -6917,6 +7216,197 @@ struct G__ifunc_table* G__get_methodhandle2(char* funcname, G__param* libp, G__i
 
    return G__get_ifunc_ref(ifunc);
 }
+
+/**************************************************************************
+* G__get_methodhandle3
+*
+* LF: 17/07/07
+* Exactly the same as 'G__get_methodhandle' except that we pass a 
+* noerror code to G__argtype2param2
+* this code replication could be avoided but for the moment I prefer
+* keep things clear
+**************************************************************************/
+struct G__ifunc_table *G__get_methodhandle3(char *funcname,char *argtype
+                                           ,G__ifunc_table_internal *p_ifunc
+                                           ,long *pifn,long *poffset
+                                           ,int withConversion
+                                           ,int withInheritance
+                                           ,int noerror
+                                           ,int isconst)
+{
+  struct G__ifunc_table_internal *ifunc;
+  //struct G__ifunc_table_internal *p_ifunc = G__get_ifunc_internal(p_iref);
+  struct G__param para;
+  int hash;
+  int temp;
+  struct G__funclist *funclist = (struct G__funclist*)NULL;
+  int match;
+
+  int store_def_tagnum = G__def_tagnum;
+  int store_tagdefining = G__tagdefining;
+  G__def_tagnum = p_ifunc->tagnum;
+  G__tagdefining = p_ifunc->tagnum;
+  
+  // LF 17-07-07
+  int error = 0;
+  G__argtype2param2(argtype,&para, noerror, error);
+  
+  G__def_tagnum = store_def_tagnum;
+  G__tagdefining = store_tagdefining;
+  G__hash(funcname,hash,temp);
+
+  if(error)
+     return 0;
+
+ if(withConversion) {
+   int tagnum = p_ifunc->tagnum;
+   int ifn = (int)(*pifn);
+
+   if(-1!=tagnum) G__incsetup_memfunc(tagnum);
+
+   ifunc = G__overload_match(funcname,&para,hash,p_ifunc,G__TRYNORMAL
+                             ,G__PUBLIC_PROTECTED_PRIVATE,&ifn,0
+                             ,(withConversion&0x2)?1:0) ;
+   *poffset = 0;
+   *pifn = ifn;
+   if(ifunc || !withInheritance) return G__get_ifunc_ref(ifunc);
+   if(-1!=tagnum) {
+     int basen=0;
+     struct G__inheritance *baseclass = G__struct.baseclass[tagnum];
+     while(basen<baseclass->basen) {
+       if(baseclass->herit[basen]->baseaccess&G__PUBLIC) {
+         G__incsetup_memfunc(baseclass->herit[basen]->basetagnum);
+         *poffset = baseclass->herit[basen]->baseoffset;
+         p_ifunc = G__struct.memfunc[baseclass->herit[basen]->basetagnum];
+         ifunc = G__overload_match(funcname,&para,hash,p_ifunc,G__TRYNORMAL
+                                   ,G__PUBLIC_PROTECTED_PRIVATE,&ifn,0,0) ;
+         *pifn = ifn;
+         if(ifunc) return G__get_ifunc_ref(ifunc);
+       }
+       ++basen;
+     }
+   }
+ }
+ else {
+   /* first, search for exact match */
+   ifunc=G__get_ifunchandle_base2(funcname,&para,hash,p_ifunc,pifn,poffset
+                                 ,G__PUBLIC_PROTECTED_PRIVATE,G__EXACT
+                                 ,withInheritance
+                                 ,isconst);
+   if(ifunc) return G__get_ifunc_ref(ifunc);
+   
+   /* if no exact match, try to instantiate template function */
+   funclist = G__add_templatefunc(funcname,&para,hash,funclist,p_ifunc,0,withInheritance);
+   if(funclist && funclist->rate==G__EXACTMATCH) {
+     ifunc = funclist->ifunc;
+     *pifn = funclist->ifn;
+     G__funclist_delete(funclist);
+     return G__get_ifunc_ref(ifunc);
+   }
+   G__funclist_delete(funclist);
+   
+   for(match=G__EXACT;match<=G__STDCONV;match++) {
+     ifunc=G__get_ifunchandle_base(funcname,&para,hash,p_ifunc,pifn,poffset
+                                   ,G__PUBLIC_PROTECTED_PRIVATE
+                                   ,match
+                                   ,withInheritance
+                                   );
+     if(ifunc) return G__get_ifunc_ref(ifunc);
+   }
+ }
+ 
+  return G__get_ifunc_ref(ifunc);
+}
+
+
+// LF 03-08-07
+// more code replicatopn FIXME
+//
+//
+struct G__ifunc_table_internal *G__get_methodhandle4(char *funcname
+                                           ,struct G__param* libp
+                                           ,G__ifunc_table_internal *p_ifunc
+                                           ,long *pifn,long *poffset
+                                           ,int withConversion
+                                           ,int withInheritance
+                                           ,int noerror
+                                           ,int isconst)
+{
+  struct G__ifunc_table_internal *ifunc;
+  //struct G__ifunc_table_internal *p_ifunc = G__get_ifunc_internal(p_iref);
+  int hash;
+  int temp;
+  struct G__funclist *funclist = (struct G__funclist*)NULL;
+  int match;
+
+  int store_def_tagnum = G__def_tagnum;
+  int store_tagdefining = G__tagdefining;
+  G__def_tagnum = p_ifunc->tagnum;
+  G__tagdefining = p_ifunc->tagnum;
+  G__def_tagnum = store_def_tagnum;
+  G__tagdefining = store_tagdefining;
+  G__hash(funcname,hash,temp);
+
+
+ if(withConversion) {
+   int tagnum = p_ifunc->tagnum;
+   int ifn = (int)(*pifn);
+
+   if(-1!=tagnum) G__incsetup_memfunc(tagnum);
+
+   ifunc = G__overload_match(funcname,libp,hash,p_ifunc,G__TRYNORMAL
+                             ,G__PUBLIC_PROTECTED_PRIVATE,&ifn,1,0) ;
+   *poffset = 0;
+   *pifn = ifn;
+   if(ifunc || !withInheritance) return ifunc;
+   if(-1!=tagnum) {
+     int basen=0;
+     struct G__inheritance *baseclass = G__struct.baseclass[tagnum];
+     while(basen<baseclass->basen) {
+       if(baseclass->herit[basen]->baseaccess&G__PUBLIC) {
+         G__incsetup_memfunc(baseclass->herit[basen]->basetagnum);
+         *poffset = baseclass->herit[basen]->baseoffset;
+         p_ifunc = G__struct.memfunc[baseclass->herit[basen]->basetagnum];
+         ifunc = G__overload_match(funcname,libp,hash,p_ifunc,G__TRYNORMAL
+                                   ,G__PUBLIC_PROTECTED_PRIVATE,&ifn,1,0) ;
+         *pifn = ifn;
+         if(ifunc) return ifunc;
+       }
+       ++basen;
+     }
+   }
+ }
+ else {
+   /* first, search for exact match */
+   ifunc=G__get_ifunchandle_base2(funcname,libp,hash,p_ifunc,pifn,poffset
+                                 ,G__PUBLIC_PROTECTED_PRIVATE,G__EXACT
+                                 ,withInheritance,isconst
+                                 );
+   if(ifunc) return ifunc;
+   
+   /* if no exact match, try to instantiate template function */
+   funclist = G__add_templatefunc(funcname,libp,hash,funclist,p_ifunc,1,withInheritance);
+   if(funclist && funclist->rate==G__EXACTMATCH) {
+     ifunc = funclist->ifunc;
+     *pifn = funclist->ifn;
+     G__funclist_delete(funclist);
+     return ifunc;
+   }
+   G__funclist_delete(funclist);
+   
+   for(match=G__EXACT;match<=G__STDCONV;match++) {
+     ifunc=G__get_ifunchandle_base2(funcname,libp,hash,p_ifunc,pifn,poffset
+                                   ,G__PUBLIC_PROTECTED_PRIVATE
+                                   ,match
+                                   ,withInheritance,isconst
+                                   );
+     if(ifunc) return ifunc;
+   }
+ }
+ 
+  return ifunc;
+}
+
 
 //______________________________________________________________________________
 namespace {
