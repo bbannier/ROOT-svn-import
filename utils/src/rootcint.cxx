@@ -1280,65 +1280,6 @@ bool NeedDestructor(G__ClassInfo& cl)
 }
 
 //______________________________________________________________________________
-bool IsTemplateFloat16(G__ClassInfo &cl)
-{
-   // Return true if any of the argument is or contains a Float16.
-   if (!cl.IsTmplt()) return false;
-
-   static G__TypeInfo ti;
-   char arg[2048], *current, *next;
-
-   strcpy(arg, cl.Name());
-   // arg is now is the name of class template instantiation.
-   // We first need to find the start of the list of its template arguments
-   // then we have a comma separated list of type names.  We want to return
-   // the 'count+1'-th element in the list.
-   int len = strlen(arg);
-   int nesting = 0;
-   current = 0;
-   next = &(arg[0]);
-   for (int c = 0; c<len; c++) {
-      switch (arg[c]) {
-      case '<':
-         if (nesting==0) {
-            arg[c]=0;
-            current = next;
-            next = &(arg[c+1]);
-         }
-         nesting++;
-         break;
-      case '>':
-         nesting--;
-         if (nesting==0) {
-            arg[c]=0;
-            current = next;
-            next = &(arg[c+1]);
-            if (current) {
-               if (strcmp(current,"Float16_t")==0) return true;
-               G__ClassInfo subcl(current);
-               if (IsTemplateFloat16(subcl)) return true;
-            }
-         }
-         break;
-      case ',':
-         if (nesting==1) {
-            arg[c]=0;
-            current = next;
-            next = &(arg[c+1]);
-            if (current) {
-               if (strcmp(current,"Float16_t")==0) return true;
-               G__ClassInfo subcl(current);
-               if (IsTemplateFloat16(subcl)) return true;
-            }
-         }
-         break;
-      }
-   }
-
-   return false;
-}
-
-//______________________________________________________________________________
 bool IsTemplateDouble32(G__ClassInfo &cl)
 {
    // Return true if any of the argument is or contains a double32.
@@ -1396,7 +1337,6 @@ bool IsTemplateDouble32(G__ClassInfo &cl)
 
    return false;
 }
-
 
 //______________________________________________________________________________
 int IsSTLContainer(G__DataMemberInfo &m)
@@ -2578,7 +2518,7 @@ void WriteClassInit(G__ClassInfo &cl)
    (*dictSrcOut) << "      return &instance;"  << std::endl
                  << "   }" << std::endl;
 
-   if (!stl && !IsTemplateDouble32(cl) && !IsTemplateFloat16(cl)) {
+   if (!stl && !IsTemplateDouble32(cl)) {
       // The GenerateInitInstance for STL are not unique and should not be externally accessible
       (*dictSrcOut) << "   TGenericClassInfo *GenerateInitInstance(const " << csymbol.c_str() << "*)" << std::endl
                     << "   {\n      return GenerateInitInstanceLocal((" <<  csymbol.c_str() << "*)0);\n   }"
@@ -2912,10 +2852,6 @@ void WriteStreamer(G__ClassInfo &cl)
          //  - members with an ! as first character in the title (comment) field
          //  - the member G__virtualinfo inserted by the CINT RTTI system
 
-         //special case for Float16_t
-         int isFloat16=0;
-         if (strstr(m.Type()->Name(),"Float16_t")) isFloat16=1;
-
          //special case for Double32_t
          int isDouble32=0;
          if (strstr(m.Type()->Name(),"Double32_t")) isDouble32=1;
@@ -2957,10 +2893,7 @@ void WriteStreamer(G__ClassInfo &cl)
                         (*dictSrcOut) << "      delete [] " << m.Name() << ";" << std::endl
                             << "      " << GetNonConstMemberName(m) << " = new "
                             << ShortTypeName(m.Type()->Name()) << "[" << indexvar << "];" << std::endl;
-                        if (isFloat16) {
-                           (*dictSrcOut) << "      R__b.ReadFastArrayFloat16(" <<  GetNonConstMemberName(m)
-                               << "," << indexvar << ");" << std::endl;
-                        } else if (isDouble32) {
+                        if (isDouble32) {
                            (*dictSrcOut) << "      R__b.ReadFastArrayDouble32(" <<  GetNonConstMemberName(m)
                                << "," << indexvar << ");" << std::endl;
                         } else {
@@ -2968,10 +2901,7 @@ void WriteStreamer(G__ClassInfo &cl)
                                << "," << indexvar << ");" << std::endl;
                         }
                      } else {
-                        if (isFloat16) {
-                           (*dictSrcOut) << "      R__b.WriteFastArrayFloat16("
-                               << m.Name() << "," << indexvar << ");" << std::endl;
-                        } else if (isDouble32) {
+                        if (isDouble32) {
                            (*dictSrcOut) << "      R__b.WriteFastArrayDouble32("
                                << m.Name() << "," << indexvar << ");" << std::endl;
                         } else {
@@ -2986,10 +2916,7 @@ void WriteStreamer(G__ClassInfo &cl)
                         if ((m.Type())->Property() & G__BIT_ISENUM)
                            (*dictSrcOut) << "      R__b.ReadStaticArray((Int_t*)" << m.Name() << ");" << std::endl;
                         else
-                           if (isFloat16) {
-                              (*dictSrcOut) << "      R__b.ReadStaticArrayFloat16((" << m.Type()->TrueName()
-                                  << "*)" << m.Name() << ");" << std::endl;
-                           } else if (isDouble32) {
+                           if (isDouble32) {
                               (*dictSrcOut) << "      R__b.ReadStaticArrayDouble32((" << m.Type()->TrueName()
                                   << "*)" << m.Name() << ");" << std::endl;
                            } else {
@@ -3000,9 +2927,7 @@ void WriteStreamer(G__ClassInfo &cl)
                         if ((m.Type())->Property() & G__BIT_ISENUM)
                            (*dictSrcOut) << "      R__b.ReadStaticArray((Int_t*)" << m.Name() << ");" << std::endl;
                         else
-                           if (isFloat16) {
-                              (*dictSrcOut) << "      R__b.ReadStaticArrayFloat16(" << m.Name() << ");" << std::endl;
-                           } else if (isDouble32) {
+                           if (isDouble32) {
                               (*dictSrcOut) << "      R__b.ReadStaticArrayDouble32(" << m.Name() << ");" << std::endl;
                            } else {
                               (*dictSrcOut) << "      R__b.ReadStaticArray((" << m.Type()->TrueName()
@@ -3018,10 +2943,7 @@ void WriteStreamer(G__ClassInfo &cl)
                            (*dictSrcOut) << "      R__b.WriteArray((Int_t*)" << m.Name() << ", "
                                << s << ");" << std::endl;
                         else
-                           if (isFloat16) {
-                              (*dictSrcOut) << "      R__b.WriteArrayFloat16((" << m.Type()->TrueName()
-                                  << "*)" << m.Name() << ", " << s << ");" << std::endl;
-                           } else if (isDouble32) {
+                           if (isDouble32) {
                               (*dictSrcOut) << "      R__b.WriteArrayDouble32((" << m.Type()->TrueName()
                                   << "*)" << m.Name() << ", " << s << ");" << std::endl;
                            } else {
@@ -3032,9 +2954,7 @@ void WriteStreamer(G__ClassInfo &cl)
                         if ((m.Type())->Property() & G__BIT_ISENUM)
                            (*dictSrcOut) << "      R__b.WriteArray((Int_t*)" << m.Name() << ", " << s << ");" << std::endl;
                         else
-                           if (isFloat16) {
-                              (*dictSrcOut) << "      R__b.WriteArrayFloat16(" << m.Name() << ", " << s << ");" << std::endl;
-                           } else if (isDouble32) {
+                           if (isDouble32) {
                               (*dictSrcOut) << "      R__b.WriteArrayDouble32(" << m.Name() << ", " << s << ");" << std::endl;
                            } else {
                               (*dictSrcOut) << "      R__b.WriteArray(" << m.Name() << ", " << s << ");" << std::endl;
@@ -3047,13 +2967,7 @@ void WriteStreamer(G__ClassInfo &cl)
                   else
                      (*dictSrcOut) << "      R__b << (Int_t)" << m.Name() << ";" << std::endl;
                } else {
-                  if (isFloat16) {
-                     if (i == 0)
-                        (*dictSrcOut) << "      {float R_Dummy; R__b >> R_Dummy; " << GetNonConstMemberName(m)
-                            << "=Float16_t(R_Dummy);}" << std::endl;
-                     else
-                        (*dictSrcOut) << "      R__b << float(" << GetNonConstMemberName(m) << ");" << std::endl;
-                  } else if (isDouble32) {
+                  if (isDouble32) {
                      if (i == 0)
                         (*dictSrcOut) << "      {float R_Dummy; R__b >> R_Dummy; " << GetNonConstMemberName(m)
                             << "=Double32_t(R_Dummy);}" << std::endl;
@@ -4203,8 +4117,6 @@ int main(int argc, char **argv)
    string dictpathname;
    string libfilename;
    const char *env_dict_type=getenv("ROOTDICTTYPE");
-   const char *libname;
-   int dicttype = 0; // LF 09-07-07 -- 0 for dict, 1 for ShowMembers
 
    if (env_dict_type)
       if (!strcmp(env_dict_type, "cint"))
@@ -4278,6 +4190,7 @@ int main(int argc, char **argv)
          break;
       }
    }
+
 
    if (!strcmp(argv[ic], "-f")) {
       force = 1;
@@ -4408,32 +4321,6 @@ int main(int argc, char **argv)
 
    argvv[0] = argv[0];
    argcc = 1;
-
-   // LF 03-07-07
-   // We need the library path in the dictionary generation
-   // the easiest way is to get it as a parameter
-   if (!strcmp(argv[ic], "-L")) {
-      ++ic;
-      argvv[argcc++] = "-L";
-      argvv[argcc++] = argv[ic]; 
-      ++ic;
-   }
-
-   // LF 09-07-07
-   // We want to separate the generation of the dictionary
-   // source.
-   // We need one that will be the real dictionary and
-   // another one with all the ShowMembers stuff.
-   //
-   // If we see the parameter -S then we want the ShowMembers
-   // rubbish, if not, we only want the dict (without showmembers)
-   if (!strcmp(argv[ic], "-.")) {
-      ++ic;
-      argvv[argcc++] = "-.";
-      dicttype = atoi(argv[ic]);
-      argvv[argcc++] = argv[ic]; 
-      ++ic;
-   }
 
    if (!strcmp(argv[ic], "-c")) {
       icc++;
@@ -4633,7 +4520,6 @@ int main(int argc, char **argv)
       GenerateLinkdef(&argcc, argvv, iv);
       argvv[argcc++] = autold;
    }
-   
    G__ShadowMaker::VetoShadow(); // we create them ourselves
    G__setothermain(2);
    G__set_ioctortype_handler( (int (*)(const char*))AddConstructorType );
@@ -4784,232 +4670,221 @@ int main(int argc, char **argv)
       (*dictSrcOut) << std::endl;
    }
 
-   // LF 26-07-07
-   // dont generate the showmembers if we only want 
-   // all the memfunc_setup stuff
-   if(dicttype==0 || dicttype==1) {   
 
+   //
+   // We will loop over all the classes several times.
+   // In order we will call
+   //
+   //     WriteShadowClass
+   //     WriteClassInit (code to create the TGenericClassInfo)
+   //     check for constructor and operator input
+   //     WriteClassFunctions (declared in ClassDef)
+   //     WriteClassCode (Streamer,ShowMembers,Auxiliary functions)
+   //
 
-      //
-      // We will loop over all the classes several times.
-      // In order we will call
-      //
-      //     WriteShadowClass
-      //     WriteClassInit (code to create the TGenericClassInfo)
-      //     check for constructor and operator input
-      //     WriteClassFunctions (declared in ClassDef)
-      //     WriteClassCode (Streamer,ShowMembers,Auxiliary functions)
-      //
+   //
+   // Loop over all classes and write the Shadow class if needed
+   //
 
-      //
-      // Loop over all classes and write the Shadow class if needed
-      //
-
-      // Open LinkDef file for reading, so that we can process classes
-      // in order of appearence in this file (STK)
-      FILE *fpld = 0;
-      if (!il) {
-         // Open auto-generated file
-         fpld = fopen(autold, "r");
-      } else {
-         // Open file specified on command line
-         const char* filename=Which(argv[il]);
-         if (!filename) {
-            Error(0, "%s: cannot open file %s\n", argv[0], argv[il]);
-            CleanupOnExit(1);
-            return 1;
-         }
-         fpld = fopen(filename, "r");
-      }
-      if (!fpld) {
-         Error(0, "%s: cannot open file %s\n", argv[0], il ? argv[il] : autold);
+   // Open LinkDef file for reading, so that we can process classes
+   // in order of appearence in this file (STK)
+   FILE *fpld = 0;
+   if (!il) {
+      // Open auto-generated file
+      fpld = fopen(autold, "r");
+   } else {
+      // Open file specified on command line
+      const char* filename=Which(argv[il]);
+      if (!filename) {
+         Error(0, "%s: cannot open file %s\n", argv[0], argv[il]);
          CleanupOnExit(1);
          return 1;
       }
+      fpld = fopen(filename, "r");
+   }
+   if (!fpld) {
+      Error(0, "%s: cannot open file %s\n", argv[0], il ? argv[il] : autold);
+      CleanupOnExit(1);
+      return 1;
+   }
 
-      // Read LinkDef file and process the #pragma link C++ ioctortype
-      char consline[256];
-      while (fgets(consline, 256, fpld)) {
-         bool constype = false;
-         if ((strcmp(strtok(consline, " "), "#pragma") == 0) &&
-             (strcmp(strtok(0, " "), "link") == 0) &&
-             (strcmp(strtok(0, " "), "C++") == 0) &&
-             (strcmp(strtok(0, " " ), "ioctortype") == 0)) {
+   // Read LinkDef file and process the #pragma link C++ ioctortype
+   char consline[256];
+   while (fgets(consline, 256, fpld)) {
+      bool constype = false;
+      if ((strcmp(strtok(consline, " "), "#pragma") == 0) &&
+          (strcmp(strtok(0, " "), "link") == 0) &&
+          (strcmp(strtok(0, " "), "C++") == 0) &&
+          (strcmp(strtok(0, " " ), "ioctortype") == 0)) {
 
-            constype = true;
-         }
-
-         if (constype) {
-
-            char *request = strtok(0, "-!+;");
-            // just in case remove trailing space and tab
-            while (*request == ' ') request++;
-            int len = strlen(request)-1;
-            while (request[len]==' ' || request[len]=='\t') request[len--] = '\0';
-            request = Compress(request); //no space between tmpl arguments allowed
-            AddConstructorType(request);
-
-         }
-      }
-      rewind(fpld);
-      AddConstructorType("TRootIOCtor");
-      AddConstructorType("");
-
-      const char* shadowNSName="ROOT";
-      if (dict_type != kDictTypeCint)
-         shadowNSName = "ROOT::Reflex";
-      G__ShadowMaker myShadowMaker((*dictSrcOut), shadowNSName, NeedShadowClass,
-                                   dict_type==kDictTypeCint ? NeedTypedefShadowClass : 0);
-      shadowMaker = &myShadowMaker;
-
-      G__ShadowMaker::VetoShadow(false);
-      shadowMaker->WriteAllShadowClasses();
-
-      //
-      // Loop over all classes and create Streamer() & Showmembers() methods
-      //
-
-      G__ClassInfo cl;
-      cl.Init();
-      while (cl.Next()) {
-         if (cl.Linkage() == G__CPPLINK && !cl.IsLoaded()) {
-            Error(0,"A dictionary has been requested for %s but there is no declaration!\n",cl.Name());
-            continue;
-         }
-         if ((cl.Property() & (G__BIT_ISCLASS|G__BIT_ISSTRUCT)) && cl.Linkage() == G__CPPLINK) {
-
-            // Write Code for initialization object (except for STL containers)
-            if ( TClassEdit::IsSTLCont(cl.Name()) ) {
-               RStl::inst().GenerateTClassFor( cl.Name() );
-            } else {
-               WriteClassInit(cl);
-            }
-         } else if (((cl.Property() & (G__BIT_ISNAMESPACE)) && cl.Linkage() == G__CPPLINK)) {
-            WriteNamespaceInit(cl);
-         }
+         constype = true;
       }
 
-      cl.Init();
-      bool has_input_error = false;
-      while (cl.Next()) {
-         if ((cl.Property() & (G__BIT_ISCLASS|G__BIT_ISSTRUCT)) && cl.Linkage() == G__CPPLINK) {
-            if (!cl.IsLoaded()) {
-               continue;
-            }
-            if (cl.HasMethod("Streamer")) {
-               if (!(cl.RootFlag() & G__NOINPUTOPERATOR)) {
-                  // We do not write out the input operator anymore, it is a template
-#if defined R__CONCRETE_INPUT_OPERATOR
-                  WriteInputOperator(cl);
-#endif
-               } else {
-                  int version = GetClassVersion(cl);
-                  if (version!=0) {
-                     // Only Check for input operator is the object is I/O has
-                     // been requested.
-                     has_input_error |= CheckInputOperator(cl);
-                  }
-               }
-            }
-            bool res = CheckConstructor(cl);
-            if (!res) {
-               // has_input_error = true;
-            }
-            has_input_error |= !CheckClassDef(cl);
+      if (constype) {
+
+         char *request = strtok(0, "-!+;");
+         // just in case remove trailing space and tab
+         while (*request == ' ') request++;
+         int len = strlen(request)-1;
+         while (request[len]==' ' || request[len]=='\t') request[len--] = '\0';
+         request = Compress(request); //no space between tmpl arguments allowed
+         AddConstructorType(request);
+
+      }
+   }
+   rewind(fpld);
+   AddConstructorType("TRootIOCtor");
+   AddConstructorType("");
+
+   const char* shadowNSName="ROOT";
+   if (dict_type != kDictTypeCint)
+      shadowNSName = "ROOT::Reflex";
+   G__ShadowMaker myShadowMaker((*dictSrcOut), shadowNSName, NeedShadowClass,
+      dict_type==kDictTypeCint ? NeedTypedefShadowClass : 0);
+   shadowMaker = &myShadowMaker;
+
+   G__ShadowMaker::VetoShadow(false);
+   shadowMaker->WriteAllShadowClasses();
+
+   //
+   // Loop over all classes and create Streamer() & Showmembers() methods
+   //
+
+   G__ClassInfo cl;
+   cl.Init();
+   while (cl.Next()) {
+      if (cl.Linkage() == G__CPPLINK && !cl.IsLoaded()) {
+         Error(0,"A dictionary has been requested for %s but there is no declaration!\n",cl.Name());
+         continue;
+      }
+      if ((cl.Property() & (G__BIT_ISCLASS|G__BIT_ISSTRUCT)) && cl.Linkage() == G__CPPLINK) {
+
+         // Write Code for initialization object (except for STL containers)
+         if ( TClassEdit::IsSTLCont(cl.Name()) ) {
+            RStl::inst().GenerateTClassFor( cl.Name() );
+         } else {
+            WriteClassInit(cl);
          }
+      } else if (((cl.Property() & (G__BIT_ISNAMESPACE)) && cl.Linkage() == G__CPPLINK)) {
+         WriteNamespaceInit(cl);
       }
+   }
 
-      if (has_input_error) {
-         // Be a little bit makefile friendly and remove the dictionary in case of error.
-         // We could add an option -k to keep the file even in case of error.
-         CleanupOnExit(1);
-         exit(1);
-      }
-
-      //
-      // Write all TBuffer &operator>>(...), Class_Name(), Dictionary(), etc.
-      // first to allow template specialisation to occur before template
-      // instantiation (STK)
-      //
-      cl.Init();
-      while (cl.Next()) {
+   cl.Init();
+   bool has_input_error = false;
+   while (cl.Next()) {
+      if ((cl.Property() & (G__BIT_ISCLASS|G__BIT_ISSTRUCT)) && cl.Linkage() == G__CPPLINK) {
          if (!cl.IsLoaded()) {
             continue;
          }
-         if ((cl.Property() & (G__BIT_ISCLASS|G__BIT_ISSTRUCT)) && cl.Linkage() == G__CPPLINK) {
-            // Write Code for Class_Name() and static variable
-            if (cl.HasMethod("Class_Name")) {
-               WriteClassFunctions(cl, cl.IsTmplt());
+         if (cl.HasMethod("Streamer")) {
+            if (!(cl.RootFlag() & G__NOINPUTOPERATOR)) {
+               // We do not write out the input operator anymore, it is a template
+#if defined R__CONCRETE_INPUT_OPERATOR
+               WriteInputOperator(cl);
+#endif
+            } else {
+               int version = GetClassVersion(cl);
+               if (version!=0) {
+                  // Only Check for input operator is the object is I/O has
+                  // been requested.
+                  has_input_error |= CheckInputOperator(cl);
+               }
             }
          }
+         bool res = CheckConstructor(cl);
+         if (!res) {
+            // has_input_error = true;
+         }
+         has_input_error |= !CheckClassDef(cl);
+      }
+   }
+
+   if (has_input_error) {
+      // Be a little bit makefile friendly and remove the dictionary in case of error.
+      // We could add an option -k to keep the file even in case of error.
+      CleanupOnExit(1);
+      exit(1);
+   }
+
+   //
+   // Write all TBuffer &operator>>(...), Class_Name(), Dictionary(), etc.
+   // first to allow template specialisation to occur before template
+   // instantiation (STK)
+   //
+   cl.Init();
+   while (cl.Next()) {
+      if (!cl.IsLoaded()) {
+         continue;
+      }
+      if ((cl.Property() & (G__BIT_ISCLASS|G__BIT_ISSTRUCT)) && cl.Linkage() == G__CPPLINK) {
+         // Write Code for Class_Name() and static variable
+         if (cl.HasMethod("Class_Name")) {
+            WriteClassFunctions(cl, cl.IsTmplt());
+         }
+      }
+   }
+
+   // Keep track of classes processed by reading Linkdef file.
+   // When all classes in LinkDef are done, loop over all classes known
+   // to CINT output the ones that were not in the LinkDef. This can happen
+   // in case "#pragma link C++ defined_in" is used.
+   //const int kMaxClasses = 2000;
+   //char *clProcessed[kMaxClasses];
+   vector<string> clProcessed;
+   int   ncls = 0;
+
+   // Read LinkDef file and process valid entries (STK)
+   char line[256];
+   char cline[256];
+   char nline[256];
+   while (fgets(line, 256, fpld)) {
+
+      bool skip = true;
+      bool force = false;
+      strcpy(cline,line);
+      strcpy(nline,line);
+      int len = strlen(line);
+
+      // Check if the line contains a "#pragma link C++ class" specification,
+      // if so, process the class (STK)
+      if ((strcmp(strtok(line, " "), "#pragma") == 0) &&
+          (strcmp(strtok(0, " "), "link") == 0) &&
+          (strcmp(strtok(0, " "), "C++") == 0) &&
+          (strcmp(strtok(0, " " ), "class") == 0)) {
+
+         skip = false;
+         force = false;
+
+      } else if ((strcmp(strtok(cline, " "), "#pragma") == 0) &&
+                 (strcmp(strtok(0, " "), "create") == 0) &&
+                 (strcmp(strtok(0, " "), "TClass") == 0)) {
+
+         skip = false;
+         force = true;
+
+      } else if ((strcmp(strtok(nline, " "), "#pragma") == 0) &&
+          (strcmp(strtok(0, " "), "link") == 0) &&
+          (strcmp(strtok(0, " "), "C++") == 0) &&
+          (strcmp(strtok(0, " " ), "namespace") == 0)) {
+
+         skip = false;
+         force = false;
+
       }
 
-      // LF 09-07-07
-      // dont generate the showmembers if we only want 
-      // all the memfunc_setup stuff
-      //if(dicttype!=0 && dicttype!=1)
-      //   return 0;
+      if (!skip) {
 
-      // Keep track of classes processed by reading Linkdef file.
-      // When all classes in LinkDef are done, loop over all classes known
-      // to CINT output the ones that were not in the LinkDef. This can happen
-      // in case "#pragma link C++ defined_in" is used.
-      //const int kMaxClasses = 2000;
-      //char *clProcessed[kMaxClasses];
-      vector<string> clProcessed;
-      int   ncls = 0;
+         // Create G__ClassInfo object for this class and process. Be
+         // careful with the hardcoded string of trailing options in case
+         // these change (STK)
 
-      // Read LinkDef file and process valid entries (STK)
-      char line[256];
-      char cline[256];
-      char nline[256];
-      while (fgets(line, 256, fpld)) {
-
-         bool skip = true;
-         bool force = false;
-         strcpy(cline,line);
-         strcpy(nline,line);
-         int len = strlen(line);
-
-         // Check if the line contains a "#pragma link C++ class" specification,
-         // if so, process the class (STK)
-         if ((strcmp(strtok(line, " "), "#pragma") == 0) &&
-             (strcmp(strtok(0, " "), "link") == 0) &&
-             (strcmp(strtok(0, " "), "C++") == 0) &&
-             (strcmp(strtok(0, " " ), "class") == 0)) {
-
-            skip = false;
-            force = false;
-
-         } else if ((strcmp(strtok(cline, " "), "#pragma") == 0) &&
-                    (strcmp(strtok(0, " "), "create") == 0) &&
-                    (strcmp(strtok(0, " "), "TClass") == 0)) {
-
-            skip = false;
-            force = true;
-
-         } else if ((strcmp(strtok(nline, " "), "#pragma") == 0) &&
-                    (strcmp(strtok(0, " "), "link") == 0) &&
-                    (strcmp(strtok(0, " "), "C++") == 0) &&
-                    (strcmp(strtok(0, " " ), "namespace") == 0)) {
-
-            skip = false;
-            force = false;
-
-         }
-
-         if (!skip) {
-
-            // Create G__ClassInfo object for this class and process. Be
-            // careful with the hardcoded string of trailing options in case
-            // these change (STK)
-
-            int extraRootflag = 0;
-            if (force && len>2) {
-               char *endreq = line+len-2;
-               bool ending = false;
-               while (!ending) {
-                  switch ( (*endreq) ) {
+         int extraRootflag = 0;
+         if (force && len>2) {
+            char *endreq = line+len-2;
+            bool ending = false;
+            while (!ending) {
+               switch ( (*endreq) ) {
                   case ';': break;
                   case '+': extraRootflag |= G__USEBYTECOUNT; break;
                   case '!': extraRootflag |= G__NOINPUTOPERATOR; break;
@@ -5018,79 +4893,38 @@ int main(int argc, char **argv)
                   case '\t': break;
                   default:
                      ending = true;
-                  }
-                  --endreq;
                }
-               if ( extraRootflag & (G__USEBYTECOUNT | G__NOSTREAMER) ) {
-                  Warning(line,"option + mutual exclusive with -, + prevails\n");
-                  extraRootflag &= ~G__NOSTREAMER;
-               }
+               --endreq;
             }
-
-            char *request = strtok(0, "-!+;");
-            // just in case remove trailing space and tab
-            while (*request == ' ') request++;
-            int len = strlen(request)-1;
-            while (request[len]==' ' || request[len]=='\t') request[len--] = '\0';
-            request = Compress(request); //no space between tmpl arguments allowed
-            G__ClassInfo cl(request);
-
-            string fullname;
-            if (cl.IsValid())
-               fullname = cl.Fullname();
-            else {
-               fullname = request;
+            if ( extraRootflag & (G__USEBYTECOUNT | G__NOSTREAMER) ) {
+               Warning(line,"option + mutual exclusive with -, + prevails\n");
+               extraRootflag &= ~G__NOSTREAMER;
             }
-            // In order to upgrade the pragma create TClass we would need a new function in
-            // CINT's G__ClassInfo.
-            // if (force && extraRootflag) cl.SetRootFlag(extraRootflag);
-//          fprintf(stderr,"DEBUG: request==%s processed==%s rootflag==%d\n",request,fullname.c_str(),extraRootflag);
-            delete [] request;
-
-            // Avoid requesting the creation of a class infrastructure twice.
-            // This could happen if one of the request link C++ class XXX is actually a typedef.
-            int nxt = 0;
-            for (i = 0; i < ncls; i++) {
-               if ( clProcessed[i] == fullname ) {
-                  nxt++;
-                  break;
-               }
-            }
-            if (nxt) continue;
-
-            clProcessed.push_back( fullname );
-            ncls++;
-
-            if (force) {
-               if ((cl.Property() & (G__BIT_ISCLASS|G__BIT_ISSTRUCT)) && cl.Linkage() != G__CPPLINK) {
-                  if (NeedShadowClass(cl)) {
-                     (*dictSrcOut) << "namespace ROOT {" << std::endl
-                                   << "   namespace Shadow {" << std::endl;
-                     shadowMaker->WriteShadowClass(cl);
-                     (*dictSrcOut) << "   } // Of namespace ROOT::Shadow" << std::endl
-                                   << "} // Of namespace ROOT" << std::endl << std::endl;
-                  }
-                  if (G__ShadowMaker::IsSTLCont(cl.Name()) == 0 ) {
-                     WriteClassInit(cl);
-                  }
-               }
-            }
-            WriteClassCode(cl, force);
          }
-      }
 
-      // Loop over all classes and create Streamer() & ShowMembers() methods
-      // for classes not in clProcessed list (exported via
-      // "#pragma link C++ defined_in")
-      cl.Init();
+         char *request = strtok(0, "-!+;");
+         // just in case remove trailing space and tab
+         while (*request == ' ') request++;
+         int len = strlen(request)-1;
+         while (request[len]==' ' || request[len]=='\t') request[len--] = '\0';
+         request = Compress(request); //no space between tmpl arguments allowed
+         G__ClassInfo cl(request);
 
-      while (cl.Next()) {
+         string fullname;
+         if (cl.IsValid())
+            fullname = cl.Fullname();
+         else {
+            fullname = request;
+         }
+         // In order to upgrade the pragma create TClass we would need a new function in
+         // CINT's G__ClassInfo.
+         // if (force && extraRootflag) cl.SetRootFlag(extraRootflag);
+//          fprintf(stderr,"DEBUG: request==%s processed==%s rootflag==%d\n",request,fullname.c_str(),extraRootflag);
+         delete [] request;
+
+         // Avoid requesting the creation of a class infrastructure twice.
+         // This could happen if one of the request link C++ class XXX is actually a typedef.
          int nxt = 0;
-         // skip utility class defined in ClassImp
-         if (!strncmp(cl.Fullname(), "R__Init", 7) ||
-             strstr(cl.Fullname(), "::R__Init"))
-            continue;
-         string fullname( cl.Fullname() );
          for (i = 0; i < ncls; i++) {
             if ( clProcessed[i] == fullname ) {
                nxt++;
@@ -5099,18 +4933,57 @@ int main(int argc, char **argv)
          }
          if (nxt) continue;
 
-         WriteClassCode(cl);
+         clProcessed.push_back( fullname );
+         ncls++;
+
+         if (force) {
+            if ((cl.Property() & (G__BIT_ISCLASS|G__BIT_ISSTRUCT)) && cl.Linkage() != G__CPPLINK) {
+               if (NeedShadowClass(cl)) {
+                  (*dictSrcOut) << "namespace ROOT {" << std::endl
+                      << "   namespace Shadow {" << std::endl;
+                  shadowMaker->WriteShadowClass(cl);
+                  (*dictSrcOut) << "   } // Of namespace ROOT::Shadow" << std::endl
+                      << "} // Of namespace ROOT" << std::endl << std::endl;
+               }
+               if (G__ShadowMaker::IsSTLCont(cl.Name()) == 0 ) {
+                  WriteClassInit(cl);
+               }
+            }
+         }
+         WriteClassCode(cl, force);
       }
+   }
 
-      //RStl::inst().WriteStreamer(fp); //replaced by new Markus code
-      RStl::inst().WriteClassInit(0);
+   // Loop over all classes and create Streamer() & ShowMembers() methods
+   // for classes not in clProcessed list (exported via
+   // "#pragma link C++ defined_in")
+   cl.Init();
 
-      fclose(fpld);
+   while (cl.Next()) {
+      int nxt = 0;
+      // skip utility class defined in ClassImp
+      if (!strncmp(cl.Fullname(), "R__Init", 7) ||
+           strstr(cl.Fullname(), "::R__Init"))
+         continue;
+      string fullname( cl.Fullname() );
+      for (i = 0; i < ncls; i++) {
+         if ( clProcessed[i] == fullname ) {
+            nxt++;
+            break;
+         }
+      }
+      if (nxt) continue;
 
-      if (!il) remove(autold);
-      if (use_preprocessor) remove(bundlename.c_str());
-   
-   } // LF 
+      WriteClassCode(cl);
+   }
+
+   //RStl::inst().WriteStreamer(fp); //replaced by new Markus code
+   RStl::inst().WriteClassInit(0);
+
+   fclose(fpld);
+
+   if (!il) remove(autold);
+   if (use_preprocessor) remove(bundlename.c_str());
 
    // Append CINT dictionary to file containing Streamers and ShowMembers
    if (ifl) {

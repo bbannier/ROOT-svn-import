@@ -559,7 +559,7 @@ namespace {
       // a type.
 
       const char *excludelist [] = {"Char_t","Short_t","Int_t","Long_t","Float_t",
-                                    "Int_t","Double_t","Double32_t","Float16_t",
+                                    "Int_t","Double_t","Double32_t",
                                     "UChar_t","UShort_t","UInt_t","ULong_t","UInt_t",
                                     "Long64_t","ULong64_t","Bool_t"};
 
@@ -646,7 +646,7 @@ string TClassEdit::ResolveTypedef(const char *tname, bool resolveAll)
             char keep = input[i];
             string temp( input, prev,i-prev );
 
-            if ( (resolveAll&&(temp!="Double32_t")&&(temp!="Float16_t")) || ShouldReplace(temp.c_str())) {
+            if ( (resolveAll&&(temp!="Double32_t")) || ShouldReplace(temp.c_str())) {
                answ << ResolveTypedef( temp.c_str(), resolveAll);
             } else {
                answ << temp;
@@ -657,7 +657,7 @@ string TClassEdit::ResolveTypedef(const char *tname, bool resolveAll)
       }
    }
    const char *last = &(input.c_str()[prev]);
-   if ((resolveAll&&(strcmp(last,"Double32_t")!=0)&&(strcmp(last,"Float16_t")!=0)) || ShouldReplace(last)) {
+   if ((resolveAll&&(strcmp(last,"Double32_t")!=0)) || ShouldReplace(last)) {
       answ << ResolveTypedef( last, resolveAll);
    } else {
       answ << last;

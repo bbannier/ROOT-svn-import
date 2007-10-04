@@ -86,7 +86,7 @@
 // first write operation. These options are:
 //     SetUseSuffixes() - suffix usage in column names (default - on)
 //     SetArrayLimit()  - defines maximum array size, which can
-//                        has column for each element (default 21)
+//                        has column for each element (default 20)
 //     SetTablesType()  - table type name in MySQL database (default "InnoDB")
 //     SetUseIndexes()  - usage of indexes in database (default kIndexesBasic)
 // Normally these functions should be called immidiately after TSQLFile constructor.
@@ -196,7 +196,7 @@
 
 ClassImp(TSQLFile);
 
-const char* mysql_BasicTypes[21] = {
+const char* mysql_BasicTypes[20] = {
 "VARCHAR(255)",     // kBase     =  0,  used for text
 "TINYINT UNSIGNED", // kChar     =  1,
 "SMALLINT",         // kShort   =  2,
@@ -216,7 +216,6 @@ const char* mysql_BasicTypes[21] = {
 "BIGINT",           // kLong64   = 16,
 "BIGINT UNSIGNED",  // kULong64 = 17,
 "BOOL",             // kBool    = 18,
-"DOUBLE",           // kFloat16 = 19,
 ""
 };
 
@@ -236,7 +235,7 @@ const char* mysql_OtherTypes[13] = {
 "InnoDB"            // default tables types, used only for MySQL tables
 };
 
-const char* oracle_BasicTypes[21] = {
+const char* oracle_BasicTypes[20] = {
 "VARCHAR(255)",     // kBase     =  0,  used for text
 "INT",              // kChar     =  1,
 "INT",              // kShort   =  2,
@@ -256,7 +255,6 @@ const char* oracle_BasicTypes[21] = {
 "INT",              // kLong64   = 16,
 "INT",              // kULong64 = 17,
 "INT",              // kBool    = 18,
-"FLOAT",            // kFloat16 = 19,
 ""
 };
 
@@ -284,7 +282,7 @@ TSQLFile::TSQLFile() :
    fSQLClassInfos(0),
    fUseSuffixes(kTRUE),
    fSQLIOversion(1),
-   fArrayLimit(21),
+   fArrayLimit(20),
    fCanChangeConfig(kFALSE),
    fTablesType(),
    fUseTransactions(0),
@@ -308,7 +306,7 @@ TSQLFile::TSQLFile(const char* dbname, Option_t* option, const char* user, const
    fSQLClassInfos(0),
    fUseSuffixes(kTRUE),
    fSQLIOversion(1),
-   fArrayLimit(21),
+   fArrayLimit(20),
    fCanChangeConfig(kFALSE),
    fTablesType(),
    fUseTransactions(0),
@@ -356,7 +354,7 @@ TSQLFile::TSQLFile(const char* dbname, Option_t* option, const char* user, const
       fOtherTypes = oracle_OtherTypes;
    }
 
-   fArrayLimit = 21;
+   fArrayLimit = 20;
    fTablesType = SQLDefaultTableType();
    fUseIndexes = 1;
    fUseTransactions = kTransactionsAuto;
@@ -545,7 +543,7 @@ void TSQLFile::SetArrayLimit(Int_t limit)
    // This is usefull to prevent tables with very big number of columns
    // If limit==0, all arrays will be stored in raw format
    // If limit<0, all array values will be stored in column form
-   // Default value is 21
+   // Default value is 20
 
    if (!fCanChangeConfig)
       Error("SetArrayLimit", "Configurations already cannot be changed");

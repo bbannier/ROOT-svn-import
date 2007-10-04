@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: RooFit                                                           *
  * Package: RooFitCore                                                       *
- * @(#)root/roofitcore:$Name:  $:$Id$
+ * @(#)root/roofitcore:$Id$
  * Authors:                                                                  *
  *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu       *
  *   DK, David Kirkby,    UC Irvine,         dkirkby@uci.edu                 *
@@ -72,7 +72,7 @@ Double_t RooEfficiency::evaluate() const
     effFuncVal = 0.0 ;
   }
 
-  if (_cat.label() == _sigCatName) {
+  if (_cat == _sigCatName) {
     // Accept case
     return effFuncVal ;
   } else {

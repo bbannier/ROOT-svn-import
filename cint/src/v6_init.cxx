@@ -481,7 +481,6 @@ int G__getopt(int argc, char** argv, char* optlist)
 
 //______________________________________________________________________________
 extern int G__quiet;
-const char *G__libname;
 
 //______________________________________________________________________________
 int G__main(int argc, char** argv)
@@ -492,8 +491,6 @@ int G__main(int argc, char** argv)
    char* forceassignment = 0;
    int xfileflag = 0;
    char sourcefile[G__MAXFILENAME];
-   //int dicttype = 0; // LF 09-07-07 -- 0 for dict, 1 for ShowMembers
-
    /*************************************************************
     * C/C++ interpreter option related variables
     *************************************************************/
@@ -637,8 +634,7 @@ int G__main(int argc, char** argv)
    /*************************************************************
     * Get command options
     *************************************************************/
-   // LF add '.' and 'L'
-   while ((c = getopt(argc, argv, ".:a:b:c:d:ef:gij:kl:mn:pq:rstu:vw:x:y:z:AB:CD:EF:G:H:I:J:L:KM:N:O:P:QRSTU:VW:X:Y:Z:-:@+:")) != EOF) {
+   while ((c = getopt(argc, argv, "a:b:c:d:ef:gij:kl:mn:pq:rstu:vw:x:y:z:AB:CD:EF:G:H:I:J:KM:N:O:P:QRSTU:VW:X:Y:Z:-:@+:")) != EOF) {
       switch (c) {
 #ifndef G__OLDIMPLEMENTATION2226
          case '+':
@@ -659,19 +655,6 @@ int G__main(int argc, char** argv)
             break;
          case 'j':
             G__multithreadlibcint = atoi(optarg);
-            break;
-         // LF 03-07-07 new option to include the library name
-         case 'L':
-            G__libname = optarg;
-            break;
-         case '.':
-            // LF 09-07-07 new option to separate the dictionaries
-            // If G__dicttype==0 write everything (like in the old times)
-            // If G__dicttype==1 the write the ShowMembers
-            // If G__dicttype==2 write only the pointer to inline functions      
-            // If G__dicttype==3 write all the memfunc_setup rubbish
-            // do we still need to fill up teh structures and all that?
-            G__dicttype = atoi(optarg);
             break;
          case 'm':
             G__lang = G__ONEBYTE;
@@ -930,7 +913,6 @@ int G__main(int argc, char** argv)
             if (!dllid) {
                dllid = "";
             }
-            //if(G__dicttype ==) // LF
             G__set_globalcomp(optarg, linkfilename, dllid);
             break;
          case 's': /* step into mode */
@@ -1117,7 +1099,6 @@ int G__main(int argc, char** argv)
 #endif
 #endif
    if (G__globalcomp < G__NOLINK) {
-      //if(!G__dicttype) // LF
       G__gen_cppheader(0);
    }
    /*************************************************************
@@ -1181,7 +1162,6 @@ int G__main(int argc, char** argv)
       }
 
       if (G__NOLINK > G__globalcomp) {
-         //if(!G__dicttype) // LF
          G__gen_cppheader(sourcefile);
       }
 
@@ -1214,17 +1194,12 @@ int G__main(int argc, char** argv)
    if (G__security_error) {
       G__fprinterr(G__serr, "Warning: Error occurred during reading source files\n");
    }
-
-   if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3) // LF
-      G__gen_extra_include();
-
+   G__gen_extra_include();
    if (G__globalcomp == G__CPPLINK) {
       // -- C++ header.
       if (G__steptrace || G__stepover) {
          while (!G__pause());
       }
-      
-      if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3) // LF
       G__gen_cpplink();
 #if !defined(G__ROOT) && !defined(G__D0)
       G__scratch_all();
@@ -1242,8 +1217,7 @@ int G__main(int argc, char** argv)
       if (G__steptrace || G__stepover) {
          while (!G__pause());
       }
-      if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3) // LF
-         G__gen_clink();
+      G__gen_clink();
 #if !defined(G__ROOT) && !defined(G__D0)
       G__scratch_all();
 #endif
@@ -1257,9 +1231,7 @@ int G__main(int argc, char** argv)
    }
 #ifdef G__ROOT
    else if (G__globalcomp == R__CPPLINK) {
-      if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3) // LF
-         rflx_gendict(linkfilename, sourcefile);
-      
+      rflx_gendict(linkfilename, sourcefile);
       return EXIT_SUCCESS;
    }
 #endif

@@ -26,12 +26,7 @@
 #include <unistd.h>
 #include <sys/uio.h>
 
-#ifdef OLDXRDOUC
-#  include "XrdSysToOuc.h"
-#  include "XrdOuc/XrdOucPthread.hh"
-#else
-#  include "XrdSys/XrdSysPthread.hh"
-#endif
+#include "XrdOuc/XrdOucPthread.hh"
 #include "XrdOuc/XrdOucString.hh"
 #include "XProofProtocol.h"
 
@@ -83,7 +78,7 @@ class XrdProofdResponse
    void                  SetTrsid();
 
    // To protect from concurrent use
-   XrdSysRecMutex       fMutex;
+   XrdOucRecMutex       fMutex;
 
  private:
 

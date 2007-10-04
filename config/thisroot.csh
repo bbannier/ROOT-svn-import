@@ -38,12 +38,6 @@ else
    setenv LIBPATH $ROOTSYS/lib
 endif
 
-if ($?PYTHONPATH) then
-   setenv PYTHONPATH $ROOTSYS/lib:$PYTHONPATH
-else
-   setenv PYTHONPATH $ROOTSYS/lib
-endif
-
 if ($?MANPATH) then
    setenv MANPATH $ROOTSYS/man:$MANPATH
 else

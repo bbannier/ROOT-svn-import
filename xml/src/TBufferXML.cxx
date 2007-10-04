@@ -1479,27 +1479,11 @@ void TBufferXML::WriteObject(const void *actualObjStart, const TClass *actualCla
 }
 
 //______________________________________________________________________________
-void TBufferXML::ReadFloat16 (Float_t *f, TStreamerElement * /*ele*/)
-{
-   // read a Float16_t from the buffer
-   BeforeIOoperation();
-   XmlReadBasic(*f);
-}
-
-//______________________________________________________________________________
 void TBufferXML::ReadDouble32 (Double_t *d, TStreamerElement * /*ele*/)
 {
    // read a Double32_t from the buffer
    BeforeIOoperation();
    XmlReadBasic(*d);
-}
-
-//______________________________________________________________________________
-void TBufferXML::WriteFloat16 (Float_t *f, TStreamerElement * /*ele*/)
-{
-   // write a Float16_t to the buffer
-   BeforeIOoperation();
-   XmlWriteBasic(*f);
 }
 
 //______________________________________________________________________________
@@ -1612,14 +1596,6 @@ Int_t TBufferXML::ReadArray(Double_t  *&d)
    // Read array of Double_t from buffer
 
    TBufferXML_ReadArray(Double_t,d);
-}
-
-//______________________________________________________________________________
-Int_t TBufferXML::ReadArrayFloat16(Float_t  *&f, TStreamerElement * /*ele*/)
-{
-   // Read array of Float16_t from buffer
-
-   TBufferXML_ReadArray(Float_t,f);
 }
 
 //______________________________________________________________________________
@@ -1747,14 +1723,6 @@ Int_t TBufferXML::ReadStaticArray(Double_t  *d)
    // Read array of Double_t from buffer
 
    TBufferXML_ReadStaticArray(d);
-}
-
-//______________________________________________________________________________
-Int_t TBufferXML::ReadStaticArrayFloat16(Float_t  *f, TStreamerElement * /*ele*/)
-{
-   // Read array of Float16_t from buffer
-
-   TBufferXML_ReadStaticArray(f);
 }
 
 //______________________________________________________________________________
@@ -1917,14 +1885,6 @@ void TBufferXML::ReadFastArray(Double_t  *d, Int_t n)
    // read array of Double_t from buffer
 
    TBufferXML_ReadFastArray(d);
-}
-
-//______________________________________________________________________________
-void TBufferXML::ReadFastArrayFloat16(Float_t  *f, Int_t n, TStreamerElement * /*ele*/)
-{
-   // read array of Float16_t from buffer
-
-   TBufferXML_ReadFastArray(f);
 }
 
 //______________________________________________________________________________
@@ -2096,14 +2056,6 @@ void TBufferXML::WriteArray(const Double_t  *d, Int_t n)
 }
 
 //______________________________________________________________________________
-void TBufferXML::WriteArrayFloat16(const Float_t  *f, Int_t n, TStreamerElement * /*ele*/)
-{
-   // Write array of Float16_t to buffer
-
-   TBufferXML_WriteArray(f);
-}
-
-//______________________________________________________________________________
 void TBufferXML::WriteArrayDouble32(const Double_t  *d, Int_t n, TStreamerElement * /*ele*/)
 {
    // Write array of Double32_t to buffer
@@ -2271,14 +2223,6 @@ void TBufferXML::WriteFastArray(const Double_t  *d, Int_t n)
    // Write array of Double_t to buffer
 
    TBufferXML_WriteFastArray(d);
-}
-
-//______________________________________________________________________________
-void TBufferXML::WriteFastArrayFloat16(const Float_t  *f, Int_t n, TStreamerElement * /*ele*/)
-{
-   // Write array of Float16_t to buffer
-
-   TBufferXML_WriteFastArray(f);
 }
 
 //______________________________________________________________________________

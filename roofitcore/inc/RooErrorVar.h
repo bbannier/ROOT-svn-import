@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: RooFit                                                           *
  * Package: RooFitCore                                                       *
- *    File: $Id: RooErrorVar.h,v 1.16 2007/05/11 09:11:30 verkerke Exp $
+ *    File: $Id: RooErrorVar.rdl,v 1.15 2005/12/08 13:19:55 wverkerke Exp $
  * Authors:                                                                  *
  *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu       *
  *   DK, David Kirkby,    UC Irvine,         dkirkby@uci.edu                 *
@@ -71,7 +71,6 @@ public:
   inline void removeRange(const char* name=0) { getBinning(name).setRange(-RooNumber::infinity,RooNumber::infinity) ; }
 
   using RooAbsRealLValue::operator= ;
-  using RooAbsRealLValue::setVal ;
 
 protected:
 

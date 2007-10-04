@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: RooFit                                                           *
  * Package: RooFitCore                                                       *
- * @(#)root/roofitcore:$Name:  $:$Id$
+ * @(#)root/roofitcore:$Id$
  * Authors:                                                                  *
  *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu       *
  *   DK, David Kirkby,    UC Irvine,         dkirkby@uci.edu                 *
@@ -73,7 +73,7 @@ RooAbsRealLValue::~RooAbsRealLValue()
 
 
 
-Bool_t RooAbsRealLValue::inRange(Double_t value, const char* rangeName, Double_t* clippedValPtr) const
+Bool_t RooAbsRealLValue::inRange(Double_t value, Double_t* clippedValPtr) const
 {
   // Return kTRUE if the input value is within our fit range. Otherwise, return
   // kFALSE and write a clipped value into clippedValPtr if it is non-zero.
@@ -83,21 +83,21 @@ Bool_t RooAbsRealLValue::inRange(Double_t value, const char* rangeName, Double_t
   Bool_t inRange(kTRUE) ;
 
   // test this value against our upper fit limit
-  if(hasMax() && value > (getMax(rangeName)+1e-6)) {
+  if(hasMax() && value > (getMax()+1e-6)) {
     if (clippedValPtr) {
       cout << "RooAbsRealLValue::inFitRange(" << GetName() << "): value " << value
-	   << " rounded down to max limit " << getMax(rangeName) << endl ;
+	   << " rounded down to max limit " << getMax() << endl ;
     }
-    clippedValue = getMax(rangeName);
+    clippedValue = getMax();
     inRange = kFALSE ;
   }
   // test this value against our lower fit limit
-  if(hasMin() && value < getMin(rangeName)-1e-6) {
+  if(hasMin() && value < getMin()-1e-6) {
     if (clippedValPtr) {
       cout << "RooAbsRealLValue::inFitRange(" << GetName() << "): value " << value
-	   << " rounded up to min limit " << getMin(rangeName) << endl;
+	   << " rounded up to min limit " << getMin() << endl;
     }
-    clippedValue = getMin(rangeName);
+    clippedValue = getMin();
     inRange = kFALSE ;
   } 
 
@@ -110,7 +110,7 @@ Bool_t RooAbsRealLValue::inRange(Double_t value, const char* rangeName, Double_t
 Bool_t RooAbsRealLValue::isValidReal(Double_t value, Bool_t verbose) const 
 {
   // Check if given value is valid
-  if (!inRange(value,0)) {
+  if (!inRange(value)) {
     if (verbose)
       cout << "RooRealVar::isValid(" << GetName() << "): value " << value
            << " out of range (" << getMin() << " - " << getMax() << ")" << endl ;
@@ -138,7 +138,7 @@ RooAbsArg& RooAbsRealLValue::operator=(Double_t newValue)
 
   Double_t clipValue ;
   // Clip 
-  inRange(newValue,0,&clipValue) ;
+  inRange(newValue,&clipValue) ;
   setVal(clipValue) ;
 
   return *this ;

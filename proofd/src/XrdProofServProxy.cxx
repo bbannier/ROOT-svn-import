@@ -40,7 +40,7 @@ XrdProofServProxy::XrdProofServProxy()
 {
    // Constructor
 
-   fMutex = new XrdSysRecMutex;
+   fMutex = new XrdOucRecMutex;
    fLink = 0;
    fParent = 0;
    fPingSem = 0;
@@ -103,7 +103,7 @@ void XrdProofServProxy::ClearWorkers()
 {
    // Decrease worker counters and clean-up the list
 
-   XrdSysMutexHelper mhp(fMutex);
+   XrdOucMutexHelper mhp(fMutex);
 
    // Decrease worker counters
    std::list<XrdProofWorker *>::iterator i;
@@ -117,7 +117,7 @@ void XrdProofServProxy::ClearWorkers()
 void XrdProofServProxy::Reset()
 {
    // Reset this instance
-   XrdSysMutexHelper mhp(fMutex);
+   XrdOucMutexHelper mhp(fMutex);
 
    fLink = 0;
    fParent = 0;
@@ -156,7 +156,7 @@ XrdClientID *XrdProofServProxy::GetClientID(int cid)
    // Get instance corresponding to cid
    //
 
-   XrdSysMutexHelper mhp(fMutex);
+   XrdOucMutexHelper mhp(fMutex);
 
    XrdClientID *csid = 0;
    TRACE(ACT,"XrdProofServProxy::GetClientID: cid: "<<cid<<
@@ -197,7 +197,7 @@ int XrdProofServProxy::GetFreeID()
    // Get next free client ID. If none is found, increase the vector size
    // and get the first new one
 
-   XrdSysMutexHelper mhp(fMutex);
+   XrdOucMutexHelper mhp(fMutex);
 
    int ic = 0;
    // Search for free places in the existing vector
@@ -222,7 +222,7 @@ int XrdProofServProxy::GetNClients()
 {
    // Get number of attached clients.
 
-   XrdSysMutexHelper mhp(fMutex);
+   XrdOucMutexHelper mhp(fMutex);
 
    int nc = 0;
    // Search for free places in the existing vector
@@ -242,7 +242,7 @@ const char *XrdProofServProxy::StatusAsString() const
 
    const char *sst[] = { "idle", "running", "shutting-down", "unknown" };
 
-   XrdSysMutexHelper mhp(fMutex);
+   XrdOucMutexHelper mhp(fMutex);
 
    // Check status range
    int ist = fStatus;
@@ -450,7 +450,7 @@ int XrdProofServProxy::SetInflate(int inflate, bool sendover)
    // If 'sendover' is TRUE the factor is communicated to proofserv,
    // otherwise is just stored.
 
-   XrdSysMutexHelper mhp(fMutex);
+   XrdOucMutexHelper mhp(fMutex);
    fInflate = inflate;
 
    if (sendover) {
@@ -477,7 +477,7 @@ void XrdProofServProxy::SetSrv(int pid)
 {
    // Set the server PID. Also find the scheduling policy
 
-   XrdSysMutexHelper mhp(fMutex);
+   XrdOucMutexHelper mhp(fMutex);
 
    // The PID
    fSrvID = pid;

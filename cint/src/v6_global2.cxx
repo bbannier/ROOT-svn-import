@@ -43,10 +43,6 @@ int G__ismain;           /* is there a main function */
 int G__globalcomp;       /* make compiled func's global table */
 int G__store_globalcomp;
 long G__globalvarpointer = G__PVOID; /* make compiled func's global table */
-
-// LF 10-07-07
-short G__dicttype = 0;
-
 #ifdef __cplusplus
 struct G__filetable G__srcfile[G__MAXFILE];
 #endif

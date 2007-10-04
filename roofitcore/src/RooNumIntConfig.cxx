@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: RooFit                                                           *
  * Package: RooFitCore                                                       *
- * @(#)root/roofitcore:$Name:  $:$Id$
+ * @(#)root/roofitcore:$Id$
  * Authors:                                                                  *
  *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu       *
  *   DK, David Kirkby,    UC Irvine,         dkirkby@uci.edu                 *
@@ -41,8 +41,6 @@ RooNumIntConfig& RooNumIntConfig::defaultConfig()
   if (_default==0) {
     _default = new RooNumIntConfig ;    
     RooNumIntFactory::instance() ;
-    //_default->method1D().setLabel("RooAdaptiveGaussKronrodIntegrator1D") ;
-    _default->method1D().setLabel("RooIntegrator1D") ;
   }
   return *_default ;
 }

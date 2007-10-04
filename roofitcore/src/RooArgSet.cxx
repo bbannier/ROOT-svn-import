@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: RooFit                                                           *
  * Package: RooFitCore                                                       *
- * @(#)root/roofitcore:$Name:  $:$Id$
+ * @(#)root/roofitcore:$Id$
  * Authors:                                                                  *
  *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu       *
  *   DK, David Kirkby,    UC Irvine,         dkirkby@uci.edu                 *
@@ -62,42 +62,20 @@ char* operator+( streampos&, char* );
 ClassImp(RooArgSet)
   ;
 
-char* RooArgSet::_poolBegin = 0 ;
-char* RooArgSet::_poolCur = 0 ;
-char* RooArgSet::_poolEnd = 0 ;
-
-
-void* RooArgSet::operator new (size_t bytes)
+std::map<const RooArgSet*,int>& RooArgSet::allocCount() 
 {
-  if (!_poolBegin || _poolCur >= _poolEnd) {
-
-    if (_poolBegin!=0) {
-      cout << "RooArgSet::operator new(), starting new 1MB memory pool" << endl ;
-    }
-
-    _poolBegin = (char*)malloc(1048576) ;
-    _poolCur = _poolBegin ;
-    _poolEnd = _poolBegin+(1048576) ;
+  static std::map<const RooArgSet*,int>* theMap = 0 ;
+  if (!theMap) {
+    theMap = new std::map<const RooArgSet*,int> ;
   }
-
-  char* ptr = _poolCur ;
-  _poolCur += bytes ;
-
-
-  return ptr ;
-
+  return *theMap ;
 }
-
-void RooArgSet::operator delete (void * /*ptr*/)
-{
-  // Memory is owned by pool we need to do nothing to release it
-}
-
 
 RooArgSet::RooArgSet() :
   RooAbsCollection()
 {
   // Default constructor
+  allocationCounter()++ ;
 }
 
 RooArgSet::RooArgSet(const RooArgList& list) :
@@ -107,6 +85,7 @@ RooArgSet::RooArgSet(const RooArgList& list) :
   // objects with the same name, only the first is store in the set.
   // Warning messages will be printed for dropped items.
 
+  allocationCounter()++ ;
   add(list,kTRUE) ; // verbose to catch duplicate errors
 }
 
@@ -115,6 +94,7 @@ RooArgSet::RooArgSet(const char *name) :
   RooAbsCollection(name)
 {
   // Empty set constructor
+  allocationCounter()++ ;
 }
 
 RooArgSet::RooArgSet(const RooAbsArg& var1,
@@ -123,6 +103,7 @@ RooArgSet::RooArgSet(const RooAbsArg& var1,
 {
   // Constructor for set containing 1 initial object
 
+  allocationCounter()++ ;
   add(var1);
 }
 
@@ -132,6 +113,7 @@ RooArgSet::RooArgSet(const RooAbsArg& var1, const RooAbsArg& var2,
 {
   // Constructor for set containing 2 initial objects
 
+  allocationCounter()++ ;
   add(var1); add(var2);
 }
 
@@ -142,6 +124,7 @@ RooArgSet::RooArgSet(const RooAbsArg& var1, const RooAbsArg& var2,
 {
   // Constructor for set containing 3 initial objects
 
+  allocationCounter()++ ;
   add(var1); add(var2); add(var3);
 }
 
@@ -152,6 +135,7 @@ RooArgSet::RooArgSet(const RooAbsArg& var1, const RooAbsArg& var2,
 {
   // Constructor for set containing 4 initial objects
 
+  allocationCounter()++ ;
   add(var1); add(var2); add(var3); add(var4);
 }
 
@@ -163,6 +147,7 @@ RooArgSet::RooArgSet(const RooAbsArg& var1,
 {
   // Constructor for set containing 5 initial objects
 
+  allocationCounter()++ ;
   add(var1); add(var2); add(var3); add(var4); add(var5);
 }
 
@@ -174,6 +159,7 @@ RooArgSet::RooArgSet(const RooAbsArg& var1, const RooAbsArg& var2,
 {
   // Constructor for set containing 6 initial objects
 
+  allocationCounter()++ ;
   add(var1); add(var2); add(var3); add(var4); add(var5); add(var6);
 }
 
@@ -186,6 +172,7 @@ RooArgSet::RooArgSet(const RooAbsArg& var1, const RooAbsArg& var2,
 {
   // Constructor for set containing 7 initial objects
 
+  allocationCounter()++ ;
   add(var1); add(var2); add(var3); add(var4); add(var5); add(var6); add(var7) ;
 }
 
@@ -198,6 +185,7 @@ RooArgSet::RooArgSet(const RooAbsArg& var1, const RooAbsArg& var2,
 {
   // Constructor for set containing 8 initial objects
 
+  allocationCounter()++ ;
   add(var1); add(var2); add(var3); add(var4); add(var5); add(var6); add(var7) ;add(var8) ;
 }
 
@@ -211,6 +199,7 @@ RooArgSet::RooArgSet(const RooAbsArg& var1, const RooAbsArg& var2,
 {
   // Constructor for set containing 9 initial objects
 
+  allocationCounter()++ ;
   add(var1); add(var2); add(var3); add(var4); add(var5); add(var6); add(var7); add(var8); add(var9);
 }
 
@@ -223,6 +212,7 @@ RooArgSet::RooArgSet(const TCollection& tcoll, const char* name) :
   // do not inherit from RooAbsArg will be skipped. A warning message
   // will be printed for every skipped item.
 
+  allocationCounter()++ ;
   TIterator* iter = tcoll.MakeIterator() ;
   TObject* obj ;
   while((obj=iter->Next())) {
@@ -244,6 +234,7 @@ RooArgSet::RooArgSet(const RooArgSet& other, const char *name)
   // Copy constructor. Note that a copy of a set is always non-owning,
   // even the source set is owning. To create an owning copy of
   // a set (owning or not), use the snaphot() method.
+  allocationCounter()++ ;
 }
 
 
@@ -314,7 +305,8 @@ Bool_t RooArgSet::checkForDup(const RooAbsArg& var, Bool_t silent) const
       if (!silent)
 	// print a warning if this variable is not the same one we
 	// already have
-	cout << "RooArgSet::checkForDup: ERROR argument with name " << var.GetName() << " is already in this set" << endl;
+	cout << ClassName() << "::" << GetName() << "::checkForDup: cannot add second copy of argument \""
+	     << var.GetName() << "\"" << endl;
     }
     // don't add duplicates
     return kTRUE;
@@ -762,5 +754,18 @@ Bool_t RooArgSet::readFromStream(istream& is, Bool_t compact, const char* flagRe
   return retVal ;
 }
 
+
+void RooArgSet::printAllocationList(Bool_t recycledOnly) 
+{
+  cout << "RooArgSet allocation counters" << endl ;
+
+  map<const RooArgSet*,int>::iterator iter = allocCount().begin() ;
+  for (; iter!=allocCount().end() ; ++iter) {
+    if (!recycledOnly || iter->second>1) {
+      cout << iter->first << " " << iter->second << endl ;
+    }
+  }
+  
+}
 
 

@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: RooFit                                                           *
  * Package: RooFitCore                                                       *
- * @(#)root/roofitcore:$Name:  $:$Id$
+ * @(#)root/roofitcore:$Id$
  * Authors:                                                                  *
  *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu       *
  *   DK, David Kirkby,    UC Irvine,         dkirkby@uci.edu                 *
@@ -27,7 +27,6 @@
 #include "RooFit.h"
 
 #include "TClass.h"
-#include "RooMsgService.h"
 #include "Riostream.h"
 #include "TObjString.h"
 #include "TH1.h"
@@ -46,15 +45,6 @@
 ClassImp(RooRealIntegral) 
 ;
 
-
-RooRealIntegral::RooRealIntegral() : 
-  _valid(kFALSE),
-  _numIntEngine(0),
-  _numIntegrand(0)
-{
-}
-
-
 RooRealIntegral::RooRealIntegral(const char *name, const char *title, 
 				 const RooAbsReal& function, const RooArgSet& depList,
 				 const RooArgSet* funcNormSet, const RooNumIntConfig* config,
@@ -71,8 +61,7 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
   _function("function","Function to be integrated",this,
 	    const_cast<RooAbsReal&>(function),kFALSE,kFALSE), 
   _iconfig((RooNumIntConfig*)config),
-  _sumCat("!sumCat","SuperCategory for summation",this,kFALSE,kFALSE),
-  _sumCatIter(0),
+  _funcACleanBranchIter(_funcACleanBranchList.createIterator()),
   _mode(0),
   _operMode(Hybrid), 
   _restartNumIntEngine(kFALSE),
@@ -103,10 +92,8 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
   //   G) Split numeric list in integration list and summation list   
   //
 
-  oocxcoutI(&function,"Integration") << "RooRealIntegral::ctor(" << GetName() << ") Constructing integral of function " 
-				     << function.GetName() << " over observables" << depList << " with normalization " 
-				     << (funcNormSet?*funcNormSet:RooArgSet()) << " with range identifier " 
-				     << (rangeName?rangeName:"<none>") << endl ;
+
+  //cout << "RooRealIntegral::ctor(" << GetName() << ") rangeName = " << (rangeName?rangeName:"<none>") << endl ;
 
   // Use objects integrator configuration if none is specified
   if (!_iconfig) _iconfig = (RooNumIntConfig*) function.getIntegratorConfig() ;
@@ -153,10 +140,6 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
     }
   }
 
-  if (_facList.getSize()>0) {
-    oocxcoutI(&function,"Integration") << function.GetName() << ": Factorizing obserables are " << _facList << endl ;
-  }
-    
 
   // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
   // * B) Check if list of dependents can be re-expressed in       *
@@ -237,11 +220,6 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
     }
   }
   delete depIter ;
-  
-  if (anIntOKDepList.getSize()>0) {
-    oocxcoutI(&function,"Integration") << function.GetName() << ": Observables that function forcibly requires to be integrated internally " << anIntOKDepList << endl ;
-  }
-
 
   // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
   // * D) Make list of servers that can be integrated analytically *
@@ -252,7 +230,7 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
   while((arg=(RooAbsArg*)sIter->Next())) {
 
     // Dependent or parameter?
-    if (!arg->dependsOnValue(intDepList)) {
+    if (!arg->dependsOn(intDepList)) {
 
       addServer(*arg,kTRUE,kFALSE) ;
 
@@ -267,11 +245,13 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
       TIterator* lIter = argLeafServers.createIterator() ;
       RooAbsArg* leaf ;
       while((leaf=(RooAbsArg*)lIter->Next())) {
-	if (depList.find(leaf->GetName()) && isValueServer(*leaf)) {
-	  oocxcoutD(&function,"Integration") << function.GetName() << ": Adding observable " << leaf->GetName() << " of server " << arg->GetName() << " as shape dependent" << endl ;
+	if (depList.find(leaf->GetName())) {
+// 	  cout << "RRI::ctor(" << GetName() << ") adding dependent component '" << leaf->GetName() 
+// 	       << " of server server '" << arg->GetName() << "' as shape dependent " << endl ;
 	  addServer(*leaf,kFALSE,kTRUE) ;
-	} else if (isShapeServer(*leaf)) {
-	  oocxcoutD(&function,"Integration") << function.GetName() << ": Adding parameter " << leaf->GetName() << " of server " << arg->GetName() << " as value dependent" << endl ;
+	} else {
+// 	  cout << "RRI::ctor(" << GetName() << ") adding dependent component '" << leaf->GetName() 
+// 	       << " of server server '" << arg->GetName() << "' as value dependent " << endl ;
 	  addServer(*leaf,kTRUE,kFALSE) ;
 	}	
       }
@@ -314,7 +294,6 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
     // Add server to list of dependents that are OK for analytical integration
     if (depOK) {
       anIntOKDepList.add(*arg,kTRUE) ;      
-      oocxcoutI(&function,"Integration") << function.GetName() << ": Observable " << arg->GetName() << " is suitable for analytical integration (if supported by p.d.f)" << endl ;
     }
   }
   // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -327,10 +306,6 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
   // Avoid confusion -- if mode is zero no analytical integral is defined regardless of contents of _anaListx
   if (_mode==0) {
     _anaList.removeAll() ;
-  }
-
-  if (_mode!=0) {
-    oocxcoutI(&function,"Integration") << function.GetName() << ": Function integrated observables " << _anaList << " internally with code " << _mode << endl ;
   }
 
 
@@ -419,17 +394,6 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
   }
   delete numIter ;
 
-  if (_anaList.getSize()>0) {
-    oocxcoutI(&function,"Integration") << function.GetName() << ": Observables " << _anaList << " are analytically integrated with code " << _mode << endl ;
-  }
-  if (_intList.getSize()>0) {
-    oocxcoutI(&function,"Integration") << function.GetName() << ": Observables " << _intList << " are numerically integrated" << endl ;
-  }
-  if (_sumList.getSize()>0) {
-    oocxcoutI(&function,"Integration") << function.GetName() << ": Observables " << _sumList << " are numerically summed" << endl ;
-  }
-  
-
   // Determine operating mode
   if (numIntDepList.getSize()>0) {
     // Numerical and optional Analytical integration
@@ -444,18 +408,6 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
 
   // Determine auto-dirty status  
   autoSelectDirtyMode() ;
-
-  // Create value caches for _intList and _sumList
-  _intList.snapshot(_saveInt) ;
-  _sumList.snapshot(_saveSum) ;
-
-  
-  if (_sumList.getSize()>0) {
-    RooSuperCategory *sumCat = new RooSuperCategory(Form("%s_sumCat",GetName()),"sumCat",_sumList) ;
-    _sumCatIter = sumCat->typeIterator() ;    
-    _sumCat.addOwned(*sumCat) ;
-  }
-
 }
 
 
@@ -542,7 +494,7 @@ Bool_t RooRealIntegral::initNumIntegrator() const
 
   // All done if there are no arguments to integrate numerically
   if(0 == _intList.getSize()) return kTRUE;
-  
+
   // Bind the appropriate analytic integral (specified by _mode) of our RooRealVar object to
   // those of its arguments that will be integrated out numerically.
   if(_mode != 0) {
@@ -564,16 +516,8 @@ Bool_t RooRealIntegral::initNumIntegrator() const
     return kFALSE;
   }
 
-  cxcoutI("Integration") << "RooRealIntegral::initNumIntegrator(" << GetName() << ") instantiated numeric integator of type " 
-			 << _numIntEngine->IsA()->GetName() << " to evaluate numeric integral of observables " << _intList << endl ;
-
-  if (_intList.getSize()>1) {
-    cxcoutW("Integration") << "RooRealIntegral::initNumIntegrator(" << GetName() << ") evaluation requires " << _intList.getSize() << "-D numeric integration step. Evaluation may be slow, sufficient numeric precision for fitting & minimization is not guaranteed" << endl ;
-  }
-
   _restartNumIntEngine = kFALSE ;
   return kTRUE;
-
 }
 
 
@@ -590,8 +534,7 @@ RooRealIntegral::RooRealIntegral(const RooRealIntegral& other, const char* name)
   _jacListIter(_jacList.createIterator()),
   _function("function",this,other._function), 
   _iconfig(other._iconfig),
-  _sumCat("!sumCat",this,other._sumCat),
-  _sumCatIter(0),
+  _funcACleanBranchIter(_funcACleanBranchList.createIterator()),
   _mode(other._mode),
   _operMode(other._operMode), 
   _restartNumIntEngine(kFALSE),
@@ -610,10 +553,6 @@ RooRealIntegral::RooRealIntegral(const RooRealIntegral& other, const char* name)
    _facList.add(*argClone) ;
    addServer(*argClone,kFALSE,kTRUE) ;
  }
-
- other._intList.snapshot(_saveInt) ;
- other._sumList.snapshot(_saveSum) ;
-
 }
 
 
@@ -623,9 +562,9 @@ RooRealIntegral::~RooRealIntegral()
   if (_numIntEngine) delete _numIntEngine ;
   if (_numIntegrand) delete _numIntegrand ;
   if (_funcNormSet) delete _funcNormSet ;
+  delete _funcACleanBranchIter ;
   delete _facListIter ;
   delete _jacListIter ;
-  if (_sumCatIter)  delete _sumCatIter ;
 }
 
 
@@ -633,13 +572,13 @@ RooRealIntegral::~RooRealIntegral()
 Double_t RooRealIntegral::evaluate() const 
 {  
   Double_t retVal(0) ;
-  switch (_operMode) {    
+  switch (_operMode) {
     
   case Hybrid: 
     {      
       // Find any function dependents that are AClean 
       // and switch them temporarily to ADirty
-      setACleanADirty(kTRUE) ;
+      prepareACleanFunc() ;
 
       // try to initialize our numerical integration engine
       if(!(_valid= initNumIntegrator())) {
@@ -649,17 +588,19 @@ Double_t RooRealIntegral::evaluate() const
       }
 
       // Save current integral dependent values 
-      _saveInt = _intList ;
-      _saveSum = _sumList ;
+      RooArgSet *saveInt = (RooArgSet*) _intList.snapshot() ;
+      RooArgSet *saveSum = (RooArgSet*) _sumList.snapshot() ;
       
       // Evaluate sum/integral
       retVal = sum() / jacobianProduct() ;
       
       // Restore integral dependent values
-      _intList=_saveInt ;
-      _sumList=_saveSum ;
+      _intList=*saveInt ;
+      _sumList=*saveSum ;
+      delete saveInt ;
+      delete saveSum ;
 
-      setACleanADirty(kFALSE) ;
+      restoreACleanFunc() ;
       break ;
     }
   case Analytic:
@@ -680,35 +621,24 @@ Double_t RooRealIntegral::evaluate() const
       break ;
     }
   }
+
   
 
   // Multiply answer with integration ranges of factorized variables
-  if (_facList.getSize()>0) {
-    RooAbsArg *arg ;
-    _facListIter->Reset() ;
-    while((arg=(RooAbsArg*)_facListIter->Next())) {
-      // Multiply by fit range for 'real' dependents
-      if (arg->IsA()->InheritsFrom(RooAbsRealLValue::Class())) {
-	RooAbsRealLValue* argLV = (RooAbsRealLValue*)arg ;
-	retVal *= (argLV->getMax() - argLV->getMin()) ;
-      }
-      // Multiply by number of states for category dependents
-      if (arg->IsA()->InheritsFrom(RooAbsCategoryLValue::Class())) {
-	RooAbsCategoryLValue* argLV = (RooAbsCategoryLValue*)arg ;
-	retVal *= argLV->numTypes() ;
-      }    
-    } 
-  }
-
-
-  if (dologD("ChangeTracking")) {
-    cxcoutD("ChangeTracking") << "RooRealIntegral::evaluate() anaInt = " << _anaList << " numInt = " << _intList << _sumList << " mode = " ;
-    switch(_mode) {
-    case Hybrid: cout << "Hybrid" << endl ; break ;
-    case Analytic: cout << "Analytic" << endl ; break ;
-    case PassThrough: cout << "PassThrough" << endl ; break ;
+  RooAbsArg *arg ;
+  _facListIter->Reset() ;
+  while((arg=(RooAbsArg*)_facListIter->Next())) {
+    // Multiply by fit range for 'real' dependents
+    if (arg->IsA()->InheritsFrom(RooAbsRealLValue::Class())) {
+      RooAbsRealLValue* argLV = (RooAbsRealLValue*)arg ;
+      retVal *= (argLV->getMax() - argLV->getMin()) ;
     }
-  }
+    // Multiply by number of states for category dependents
+    if (arg->IsA()->InheritsFrom(RooAbsCategoryLValue::Class())) {
+      RooAbsCategoryLValue* argLV = (RooAbsCategoryLValue*)arg ;
+      retVal *= argLV->numTypes() ;
+    }    
+  } 
 
   if (RooAbsPdf::_verboseEval>0) {
     cout << "RooRealIntegral::evaluate(" << GetName() << ") raw*fact = " << retVal << endl ;
@@ -717,17 +647,47 @@ Double_t RooRealIntegral::evaluate() const
 }
 
 
+void RooRealIntegral::prepareACleanFunc() const
+{
+  // Make function branch list, if not cached
+  if (_funcBranchList.getSize()==0) {
+    _function.arg().branchNodeServerList(&_funcBranchList) ;
+  }
+
+  // Clear previous list contents
+  _funcACleanBranchList.removeAll() ;
+  _funcACleanBranchList.add(_funcBranchList) ;
+
+  // Remove non-AClean branches from list 
+  _funcACleanBranchIter->Reset() ;
+  RooAbsArg* arg ;
+  while((arg=(RooAbsArg*)_funcACleanBranchIter->Next())) {
+    if (arg->operMode()!=RooAbsArg::AClean) {
+      _funcACleanBranchList.remove(*arg) ;
+    } else {
+      arg->setOperMode(RooAbsArg::ADirty, kFALSE) ;
+    }
+  }
+}
+
+
+
+void RooRealIntegral::restoreACleanFunc() const
+{
+  // Restore formerly AClean branches to their AClean state
+  _funcACleanBranchIter->Reset() ;
+  RooAbsArg* arg ;
+  while((arg=(RooAbsArg*)_funcACleanBranchIter->Next())) {
+    arg->setOperMode(RooAbsArg::AClean) ;
+  }
+}
+
 
 Double_t RooRealIntegral::jacobianProduct() const 
 {
   // Return product of jacobian terms originating from analytical integration
-
-  if (_jacList.getSize()==0) {
-    return 1 ;
-  }
-
-
   Double_t jacProd(1) ;
+
   _jacListIter->Reset() ;
   RooAbsRealLValue* arg ;
   while ((arg=(RooAbsRealLValue*)_jacListIter->Next())) {
@@ -746,19 +706,17 @@ Double_t RooRealIntegral::sum() const
     // Add integrals for all permutations of categories summed over
     Double_t total(0) ;
 
-//     RooSuperCategory sumCat("sumCat","sumCat",_sumList) ;
-//     TIterator* sumIter = sumCat.typeIterator() ;
-    _sumCatIter->Reset() ;
+    RooSuperCategory sumCat("sumCat","sumCat",_sumList) ;
+    TIterator* sumIter = sumCat.typeIterator() ;
     RooCatType* type ;
-    RooSuperCategory* sumCat = (RooSuperCategory*) _sumCat.first() ;
-    while((type=(RooCatType*)_sumCatIter->Next())) {
-      sumCat->setIndex(type->getVal()) ;
-      if (!_rangeName || sumCat->inRange(RooNameReg::str(_rangeName))) {
+    while((type=(RooCatType*)sumIter->Next())) {
+      sumCat.setIndex(type->getVal()) ;
+      if (!_rangeName || sumCat.inRange(RooNameReg::str(_rangeName))) {
 	total += integrate() / jacobianProduct() ;
       }
     }
 
-//     delete sumIter ;
+    delete sumIter ;
     return total ;
 
   } else {
@@ -794,16 +752,11 @@ Double_t RooRealIntegral::integrate() const
 Bool_t RooRealIntegral::redirectServersHook(const RooAbsCollection& /*newServerList*/, 
 					    Bool_t /*mustReplaceAll*/, Bool_t /*nameChange*/, Bool_t /*isRecursive*/) 
 {
+  _funcBranchList.removeAll() ;
 
   _restartNumIntEngine = kTRUE ;
 
   autoSelectDirtyMode() ;
-
-  // Update contents value caches for _intList and _sumList
-  _saveInt.removeAll() ;
-  _saveSum.removeAll() ;
-  _intList.snapshot(_saveInt) ;
-  _sumList.snapshot(_saveSum) ;
 
   return kFALSE ;
 }

@@ -1066,7 +1066,6 @@ extern G__value G__null;
 * struct forward declaration; real ones are in common.h
 **************************************************************************/
 struct G__ifunc_table;
-struct G__ifunc_table_internal;
 struct G__var_array;
 struct G__dictposition;
 struct G__comment_info;
@@ -1080,7 +1079,6 @@ struct G__funcentry_VMS;
 struct G__ifunc_table_VMS;
 #endif
 struct G__ifunc_table;
-struct G__ifunc_table_internal;
 struct G__inheritance;
 struct G__var_array;
 struct G__tagtable;
@@ -1451,19 +1449,6 @@ struct G__ifunc_table *G__get_methodhandle2 G__P((char *funcname
                                            ,long *pifn,long *poffset
                                            ,int withConversion
                                            ,int withInheritance));
-struct G__ifunc_table *G__get_methodhandle3 G__P((char *funcname,char *argtype
-                                           ,struct G__ifunc_table_internal *p_ifunc
-                                           ,long *pifn,long *poffset
-                                           ,int withConversion
-                                           ,int withInheritance
-                                           ,int noerror,int isconst));
-struct G__ifunc_table_internal *G__get_methodhandle4 G__P((char *funcname
-                                           ,struct G__param* libp
-                                           ,struct G__ifunc_table_internal *p_ifunc
-                                           ,long *pifn,long *poffset
-                                           ,int withConversion
-                                           ,int withInheritance
-                                           ,int noerror,int isconst));
 struct G__var_array *G__searchvariable G__P((char *varname,int varhash
                                        ,struct G__var_array *varlocal
                                        ,struct G__var_array *varglobal
@@ -1633,7 +1618,6 @@ extern G__EXPORT int G__optimizemode G__P((int optimizemode));
 extern G__EXPORT int G__getoptimizemode G__P((void));
 G__value G__string2type_body G__P((G__CONST char *typenamin,int noerror));
 G__value G__string2type G__P((G__CONST char *typenamin));
-G__value G__string2type2 G__P((G__CONST char *typenamin, int noerror));
 extern G__EXPORT void* G__findsym G__P((G__CONST char *fname));
 
 extern G__EXPORT int G__IsInMacro G__P((void));
@@ -1736,7 +1720,6 @@ extern G__EXPORT int G__tagtable_setup G__P((int tagnum,int size,int cpplink,int
 extern G__EXPORT int G__search_tagname G__P((G__CONST char *tagname,int type));
 extern G__EXPORT int G__search_typename G__P((G__CONST char *typenamein,int typein,int tagnum,int reftype));
 extern G__EXPORT int G__defined_typename G__P((G__CONST char* typenamein));
-extern G__EXPORT int G__defined_typename2 G__P((G__CONST char* typenamein, int noerror));
 extern G__EXPORT int G__tag_memvar_setup G__P((int tagnum));
 extern G__EXPORT int G__memvar_setup G__P((void *p,int type,int reftype,int constvar,int tagnum,int typenum,int statictype,int access,G__CONST char *expr,int definemacro,G__CONST char *comment));
 extern G__EXPORT int G__tag_memvar_reset G__P((void));
@@ -1750,21 +1733,9 @@ extern G__EXPORT int G__memfunc_setup G__P((G__CONST char *funcname,int hash,G__
 ,int tagnum,int typenum,int reftype,int para_nu,int ansi,int access,int isconst,G__CONST char *paras,G__CONST char *comment));
 #endif /* G__TRUEP2F */
 
-#ifdef G__TRUEP2F
-extern G__EXPORT int G__memfunc_setup2 G__P((G__CONST char *funcname,int hash,G__CONST char *mangled_name,G__InterfaceMethod funcp,int type
-,int tagnum,int typenum,int reftype,int para_nu,int ansi,int access,int isconst,G__CONST char *paras,G__CONST char *comment,void* tp2f,int isvirtual));
-#else /* G__TRUEP2F */
-extern G__EXPORT int G__memfunc_setup2 G__P((G__CONST char *funcname,int hash,G__CONST char *mangled_name,G__InterfaceMethod funcp,int type
-,int tagnum,int typenum,int reftype,int para_nu,int ansi,int access,int isconst,G__CONST char *paras,G__CONST char *comment));
-#endif /* G__TRUEP2F */
-
 extern G__EXPORT int G__memfunc_next G__P((void));
 extern G__EXPORT int G__memfunc_para_setup G__P((int ifn,int type,int tagnum,int typenum,int reftype,G__value *para_default,char *para_def,char *para_name));
 extern G__EXPORT int G__tag_memfunc_reset G__P((void));
-extern G__EXPORT int G__memfunc_register G__P((G__CONST char* classname));
-extern G__EXPORT int G__memfunc_register2 G__P((G__CONST char* classname, G__CONST char* libname));
-extern G__EXPORT int G__memfunc_register_callback G__P((void (*callback)(G__CONST char* libname, G__CONST char* classname)));
-extern G__EXPORT char *G__get_libname  G__P((G__CONST char* classname));
 extern G__EXPORT void G__letint G__P((G__value *buf,int type,long value));
 extern G__EXPORT void G__letdouble G__P((G__value *buf,int type,double value));
 extern G__EXPORT void G__store_tempobject G__P((G__value reg));
@@ -1826,14 +1797,6 @@ extern G__EXPORT void G__addpragma G__P((char* comname,void (*p2f) G__P((char*))
 extern G__EXPORT void G__add_setup_func G__P((G__CONST char *libname, G__incsetup func));
 extern G__EXPORT void G__remove_setup_func G__P((G__CONST char *libname));
 extern G__EXPORT void G__setgvp G__P((long gvp));
-
-// LF
-extern G__EXPORT struct G__ifunc_table_internal* G__ifunc_page_base G__P((char *funcname,int hash,int page_base, struct G__ifunc_table_internal *ifunc, int allifunc));
-   extern G__EXPORT int G__method_inbase2 G__P((int ifn, struct G__ifunc_table_internal *ifunc));
-
-extern G__EXPORT void* G__get_funcptr G__P((struct G__ifunc_table_internal *ifunc, int ifn));
-extern G__EXPORT int   G__stub_method_calling G__P((G__value *result7, struct G__param *libp, 
-                                                   struct G__ifunc_table_internal *ifunc, int ifn));
 extern G__EXPORT void G__set_stdio_handle G__P((FILE* sout,FILE* serr,FILE* sin));
 extern G__EXPORT void G__setautoconsole G__P((int autoconsole));
 extern G__EXPORT int G__AllocConsole G__P((void));
@@ -1932,15 +1895,6 @@ extern G__EXPORT int G__usermemfunc_setup(char *funcname,int hash,int (*funcp)()
                          ,void *truep2f,int isvirtual
 #endif
                          ,void *userparam);
-
-extern G__EXPORT int G__usermemfunc_setup2(char *funcname,int hash,char *mangled_name,int (*funcp)(),int type,
-                         int tagnum,int typenum,int reftype,
-                         int para_nu,int ansi,int accessin,int isconst,
-                         char *paras, char *comment
-#ifdef G__TRUEP2F
-                         ,void *truep2f,int isvirtual
-#endif
-                         ,void *userparam);
 extern G__EXPORT char *G__fulltagname(int tagnum,int mask_dollar);
 extern G__EXPORT void G__loadlonglong(int* ptag,int* ptype,int which);
 extern G__EXPORT int G__isanybase(int basetagnum,int derivedtagnum,long pobject);
@@ -1983,10 +1937,10 @@ static int (*G__tag_memvar_reset) G__P((void));
 static int (*G__tag_memfunc_setup) G__P((int tagnum));
 
 #ifdef G__TRUEP2F
-static int (*G__memfunc_setup) G__P((G__CONST char *funcname,int hash,G__CONST char *mangled_name,G__InterfaceMethod funcp,int type
+static int (*G__memfunc_setup) G__P((G__CONST char *funcname,int hash,G__InterfaceMethod funcp,int type
 ,int tagnum,int typenum,int reftype,int para_nu,int ansi,int access,int isconst,G__CONST char *paras,G__CONST char *comment,void* tp2f,int isvirtual));
 #else /* G__TRUEP2F */
-static int (*G__memfunc_setup) G__P((G__CONST char *funcname,int hash,G__CONST char *mangled_name,G__InterfaceMethod funcp,int type
+static int (*G__memfunc_setup) G__P((G__CONST char *funcname,int hash,G__InterfaceMethod funcp,int type
 ,int tagnum,int typenum,int reftype,int para_nu,int ansi,int access,int isconst,G__CONST char *paras,G__CONST char *comment));
 #endif /* G__TRUEP2F */
 

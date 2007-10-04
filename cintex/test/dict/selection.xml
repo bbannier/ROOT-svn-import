@@ -68,8 +68,6 @@
 
   <function pattern="*theFunction*" />
   <class name="MarcoCl::MyClass" />
-  <class name="TrackingRecHit" />
-  <class name="InvalidTrackingRecHit" />
 
   <exclusion>
     <class name="A::B::C::MyClass::InnerClass"/>

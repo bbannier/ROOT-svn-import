@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: RooFit                                                           *
  * Package: RooFitCore                                                       *
- * @(#)root/roofitcore:$Name:  $:$Id$
+ * @(#)root/roofitcore:$Id$
  * Authors:                                                                  *
  *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu       *
  *   DK, David Kirkby,    UC Irvine,         dkirkby@uci.edu                 *
@@ -56,7 +56,7 @@ RooSimultaneous::RooSimultaneous(const char *name, const char *title,
 				 RooAbsCategoryLValue& indexCat) : 
   RooAbsPdf(name,title), 
   _plotCoefNormSet("plotCoefNormSet","plotCoefNormSet",this,kFALSE,kFALSE),
-  _partIntMgr(this,10),
+  _normListMgr(10),
   _indexCat("indexCat","Index category",this,indexCat),
   _numPdf(0),
   _anyCanExtend(kFALSE),
@@ -76,7 +76,7 @@ RooSimultaneous::RooSimultaneous(const char *name, const char *title,
 				 const RooArgList& pdfList, RooAbsCategoryLValue& indexCat) :
   RooAbsPdf(name,title), 
   _plotCoefNormSet("plotCoefNormSet","plotCoefNormSet",this,kFALSE,kFALSE),
-  _partIntMgr(this,10),
+  _normListMgr(10),
   _indexCat("indexCat","Index category",this,indexCat),
   _numPdf(0),
   _anyCanExtend(kFALSE),
@@ -116,7 +116,7 @@ RooSimultaneous::RooSimultaneous(const char *name, const char *title,
 RooSimultaneous::RooSimultaneous(const RooSimultaneous& other, const char* name) : 
   RooAbsPdf(other,name),
   _plotCoefNormSet("plotCoefNormSet",this,other._plotCoefNormSet),
-  _partIntMgr(other._partIntMgr,this),
+  _normListMgr(other._normListMgr),
   _indexCat("indexCat",this,other._indexCat), 
   _numPdf(other._numPdf),
   _anyCanExtend(other._anyCanExtend),
@@ -197,13 +197,13 @@ Double_t RooSimultaneous::evaluate() const
   // the value of the PDF associated with the current index category state
 
   // Retrieve the proxy by index name
-  RooRealProxy* proxy = (RooRealProxy*) _pdfProxyList.FindObject(_indexCat.label()) ;
+  RooRealProxy* proxy = (RooRealProxy*) _pdfProxyList.FindObject((const char*) _indexCat) ;
   
   assert(proxy!=0) ;
 
 
   // Return the selected PDF value, normalized by the number of index states
-  return ((RooAbsPdf*)(proxy->absArg()))->getVal(_normSet) ; 
+  return ((RooAbsPdf*)(proxy->absArg()))->getVal(_normMgr.lastNormSet()) ; 
 }
 
 
@@ -230,7 +230,7 @@ Double_t RooSimultaneous::expectedEvents(const RooArgSet* nset) const
   } else {
 
     // Retrieve the proxy by index name
-    RooRealProxy* proxy = (RooRealProxy*) _pdfProxyList.FindObject(_indexCat.label()) ;
+    RooRealProxy* proxy = (RooRealProxy*) _pdfProxyList.FindObject((const char*) _indexCat) ;
     
     assert(proxy!=0) ;
     
@@ -253,24 +253,24 @@ Int_t RooSimultaneous::getAnalyticalIntegralWN(RooArgSet& allVars, RooArgSet& an
   Int_t code ;
 
   // Check if this configuration was created before
-  CacheElem* cache = (CacheElem*) _partIntMgr.getObj(normSet,&analVars,0,RooNameReg::ptr(rangeName)) ;
-  if (cache) {
-    code = _partIntMgr.lastIndex() ;
+  RooArgList* normList = _normListMgr.getNormList(this,normSet,&analVars,0,RooNameReg::ptr(rangeName)) ;
+  if (normList) {
+    code = _normListMgr.lastIndex() ;
     return code+1 ;
   }
-  cache = new CacheElem ;
 
   // Create the partial integral set for this request
   TIterator* iter = _pdfProxyList.MakeIterator() ;
+  normList = new RooArgList("normList") ;
   RooRealProxy* proxy ;
   while((proxy=(RooRealProxy*)iter->Next())) {
     RooAbsReal* pdfInt = proxy->arg().createIntegral(analVars,normSet,0,rangeName) ;
-    cache->_partIntList.addOwned(*pdfInt) ;
+    normList->addOwned(*pdfInt) ;
   }
   delete iter ;
 
   // Store the partial integral list and return the assigned code ;
-  code = _partIntMgr.setObj(normSet,&analVars,cache,RooNameReg::ptr(rangeName)) ;
+  code = _normListMgr.setNormList(this,normSet,&analVars,normList,RooNameReg::ptr(rangeName)) ;
   
   return code+1 ;
 }
@@ -286,14 +286,33 @@ Double_t RooSimultaneous::analyticalIntegralWN(Int_t code, const RooArgSet* norm
   }
 
   // Partial integration scenarios, rangeName already encoded in 'code'
-  CacheElem* cache = (CacheElem*) _partIntMgr.getObjByIndex(code-1) ;
+  RooArgList* normIntList = _normListMgr.getNormListByIndex(code-1) ;
 
-  RooRealProxy* proxy = (RooRealProxy*) _pdfProxyList.FindObject(_indexCat.label()) ;
+  RooRealProxy* proxy = (RooRealProxy*) _pdfProxyList.FindObject((const char*) _indexCat) ;
   Int_t idx = _pdfProxyList.IndexOf(proxy) ;
-  return ((RooAbsReal*)cache->_partIntList.at(idx))->getVal(normSet) ;
+  return ((RooAbsReal*)normIntList->at(idx))->getVal(normSet) ;
 }
 
 
+
+
+
+Bool_t RooSimultaneous::redirectServersHook(const RooAbsCollection& newServerList, Bool_t mustReplaceAll, Bool_t nameChange, Bool_t /*isRecursive*/) 
+{
+  Bool_t ret(kFALSE) ;  
+
+  Int_t i ;
+  for (i=0 ; i<_normListMgr.cacheSize() ; i++) {
+    RooArgList* nlist = _normListMgr.getNormListByIndex(i) ;
+    TIterator* iter = nlist->createIterator() ;
+    RooAbsArg* arg ;
+    while((arg=(RooAbsArg*)iter->Next())) {
+      ret |= arg->recursiveRedirectServers(newServerList,mustReplaceAll,nameChange) ;
+    }
+    delete iter ;
+  }
+  return ret ;
+}
 
 
 

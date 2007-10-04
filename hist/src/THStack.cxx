@@ -586,7 +586,7 @@ void THStack::Paint(Option_t *option)
          i++;
          padsav->cd(i);
          h = (TH1*)lnk->GetObject();
-         h->Draw(lnk->GetOption());
+         h->Paint(lnk->GetOption());
          lnk = (TObjOptLink*)lnk->Next();
       }
       padsav->cd();

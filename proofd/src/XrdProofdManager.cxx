@@ -75,7 +75,7 @@ XrdProofdManager::~XrdProofdManager()
 }
 
 //__________________________________________________________________________
-int XrdProofdManager::Config(const char *fn, XrdSysError *e)
+int XrdProofdManager::Config(const char *fn, XrdOucError *e)
 {
    // Config or re-config this instance using the information in file 'fn'
    // return 0 on success, -1 on error
@@ -119,7 +119,7 @@ int XrdProofdManager::Config(const char *fn, XrdSysError *e)
    fCfgFile.fMtime = st.st_mtime;
 
    // This part must be modified in atomic way
-   XrdSysMutexHelper mhp(fMutex);
+   XrdOucMutexHelper mhp(fMutex);
 
    // Effective user
    XrdProofUI ui;
@@ -458,7 +458,7 @@ std::list<XrdProofWorker *> *XrdProofdManager::GetActiveWorkers()
    // Return the list of workers after having made sure that the info is
    // up-to-date
 
-   XrdSysMutexHelper mhp(fMutex);
+   XrdOucMutexHelper mhp(fMutex);
 
    if (fResourceType == kRTStatic && fPROOFcfg.fName.length() > 0) {
       // Check if there were any changes in the config file

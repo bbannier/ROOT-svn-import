@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: RooFit                                                           *
  * Package: RooFitCore                                                       *
- * @(#)root/roofitcore:$Name:  $:$Id$
+ * @(#)root/roofitcore:$Id$
  * Authors:                                                                  *
  *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu       *
  *   DK, David Kirkby,    UC Irvine,         dkirkby@uci.edu                 *
@@ -119,23 +119,11 @@ Double_t RooRealVar::getVal(const RooArgSet*) const
 void RooRealVar::setVal(Double_t value) {
   // Set current value
   Double_t clipValue ;
-  inRange(value,0,&clipValue) ;
+  inRange(value,&clipValue) ;
 
   setValueDirty() ;
   _value = clipValue;
 }
-
-
-void RooRealVar::setVal(Double_t value, const char* rangeName) 
-{
-  // Set current value
-  Double_t clipValue ;
-  inRange(value,rangeName,&clipValue) ;
-
-  setValueDirty() ;
-  _value = clipValue;
-}
-
 
 RooErrorVar* RooRealVar::errorVar() const 
 {
@@ -248,7 +236,7 @@ void RooRealVar::setMin(const char* name, Double_t value)
   // Clip current value in window if it fell out
   if (!name) {
     Double_t clipValue ;
-    if (!inRange(_value,0,&clipValue)) {
+    if (!inRange(_value,&clipValue)) {
       setVal(clipValue) ;
     }
   }
@@ -273,7 +261,7 @@ void RooRealVar::setMax(const char* name, Double_t value)
   // Clip current value in window if it fell out
   if (!name) {
     Double_t clipValue ;
-    if (!inRange(_value,0,&clipValue)) {
+    if (!inRange(_value,&clipValue)) {
       setVal(clipValue) ;
     }
   }

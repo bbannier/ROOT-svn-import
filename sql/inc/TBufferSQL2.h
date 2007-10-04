@@ -168,8 +168,6 @@ public:
 
    virtual void     WriteObject(const TObject *obj);
 
-   virtual void     ReadFloat16 (Float_t *f, TStreamerElement *ele=0);
-   virtual void     WriteFloat16(Float_t *f, TStreamerElement *ele=0);
    virtual void     ReadDouble32 (Double_t *d, TStreamerElement *ele=0);
    virtual void     WriteDouble32(Double_t *d, TStreamerElement *ele=0);
 
@@ -186,7 +184,6 @@ public:
    virtual Int_t    ReadArray(ULong64_t *&l);
    virtual Int_t    ReadArray(Float_t   *&f);
    virtual Int_t    ReadArray(Double_t  *&d);
-   virtual Int_t    ReadArrayFloat16(Float_t  *&f, TStreamerElement *ele=0);
    virtual Int_t    ReadArrayDouble32(Double_t  *&d, TStreamerElement *ele=0);
 
    virtual Int_t    ReadStaticArray(Bool_t    *b);
@@ -202,7 +199,6 @@ public:
    virtual Int_t    ReadStaticArray(ULong64_t *l);
    virtual Int_t    ReadStaticArray(Float_t   *f);
    virtual Int_t    ReadStaticArray(Double_t  *d);
-   virtual Int_t    ReadStaticArrayFloat16(Float_t  *f, TStreamerElement *ele=0);
    virtual Int_t    ReadStaticArrayDouble32(Double_t  *d, TStreamerElement *ele=0);
 
    virtual void     ReadFastArray(Bool_t    *b, Int_t n);
@@ -218,7 +214,6 @@ public:
    virtual void     ReadFastArray(ULong64_t *l, Int_t n);
    virtual void     ReadFastArray(Float_t   *f, Int_t n);
    virtual void     ReadFastArray(Double_t  *d, Int_t n);
-   virtual void     ReadFastArrayFloat16(Float_t  *f, Int_t n, TStreamerElement *ele=0);
    virtual void     ReadFastArrayDouble32(Double_t  *d, Int_t n, TStreamerElement *ele=0);
 
    virtual void     WriteArray(const Bool_t    *b, Int_t n);
@@ -234,7 +229,6 @@ public:
    virtual void     WriteArray(const ULong64_t *l, Int_t n);
    virtual void     WriteArray(const Float_t   *f, Int_t n);
    virtual void     WriteArray(const Double_t  *d, Int_t n);
-   virtual void     WriteArrayFloat16(const Float_t  *f, Int_t n, TStreamerElement *ele=0);
    virtual void     WriteArrayDouble32(const Double_t  *d, Int_t n, TStreamerElement *ele=0);
    virtual void     ReadFastArray(void  *start , const TClass *cl, Int_t n=1, TMemberStreamer *s=0);
    virtual void     ReadFastArray(void **startp, const TClass *cl, Int_t n=1, Bool_t isPreAlloc=kFALSE, TMemberStreamer *s=0);
@@ -252,7 +246,6 @@ public:
    virtual void     WriteFastArray(const ULong64_t *l, Int_t n);
    virtual void     WriteFastArray(const Float_t   *f, Int_t n);
    virtual void     WriteFastArray(const Double_t  *d, Int_t n);
-   virtual void     WriteFastArrayFloat16(const Float_t  *f, Int_t n, TStreamerElement *ele=0);
    virtual void     WriteFastArrayDouble32(const Double_t  *d, Int_t n, TStreamerElement *ele=0);
    virtual void     WriteFastArray(void  *start,  const TClass *cl, Int_t n=1, TMemberStreamer *s=0);
    virtual Int_t    WriteFastArray(void **startp, const TClass *cl, Int_t n=1, Bool_t isPreAlloc=kFALSE, TMemberStreamer *s=0);

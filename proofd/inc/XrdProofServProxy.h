@@ -23,16 +23,9 @@
 #include <map>
 #include <vector>
 
-#ifdef OLDXRDOUC
-#  include "XrdSysToOuc.h"
-#  include "XrdOuc/XrdOucPthread.hh"
-#  include "XrdOuc/XrdOucSemWait.hh"
-#else
-#  include "XrdSys/XrdSysPthread.hh"
-#  include "XrdSys/XrdSysSemWait.hh"
-#endif
-
 #include "Xrd/XrdLink.hh"
+#include "XrdOuc/XrdOucPthread.hh"
+#include "XrdOuc/XrdOucSemWait.hh"
 
 #include "XrdProofdResponse.h"
 
@@ -110,7 +103,6 @@ public:
 class XrdProofGroup;
 class XrdProofWorker;
 class XrdNet;
-class XrdSysSemWait;
 
 class XrdProofServProxy
 {
@@ -121,85 +113,85 @@ public:
    XrdProofServProxy();
    ~XrdProofServProxy();
 
-   inline const char  *Alias() const { XrdSysMutexHelper mhp(fMutex); return fAlias; }
-   inline const char  *Client() const { XrdSysMutexHelper mhp(fMutex); return fClient; }
-   inline const char  *Fileout() const { XrdSysMutexHelper mhp(fMutex); return fFileout; }
-   inline float        FracEff() const { XrdSysMutexHelper mhp(fMutex); return fFracEff; }
-   inline XrdProofGroup *Group() const { XrdSysMutexHelper mhp(fMutex); return fGroup; }
-   inline short int    ID() const { XrdSysMutexHelper mhp(fMutex); return fID; }
+   inline const char  *Alias() const { XrdOucMutexHelper mhp(fMutex); return fAlias; }
+   inline const char  *Client() const { XrdOucMutexHelper mhp(fMutex); return fClient; }
+   inline const char  *Fileout() const { XrdOucMutexHelper mhp(fMutex); return fFileout; }
+   inline float        FracEff() const { XrdOucMutexHelper mhp(fMutex); return fFracEff; }
+   inline XrdProofGroup *Group() const { XrdOucMutexHelper mhp(fMutex); return fGroup; }
+   inline short int    ID() const { XrdOucMutexHelper mhp(fMutex); return fID; }
    inline bool         IsParent(XrdProofdProtocol *p) const
-                                 { XrdSysMutexHelper mhp(fMutex); return (fParent && fParent->fP == p); }
-   inline XrdLink     *Link() const { XrdSysMutexHelper mhp(fMutex); return fLink; }
-   inline bool         Match(short int id) const { XrdSysMutexHelper mhp(fMutex); return (id == fID); }
-   inline XrdSysMutex *Mutex() { return fMutex; }
+                                 { XrdOucMutexHelper mhp(fMutex); return (fParent && fParent->fP == p); }
+   inline XrdLink     *Link() const { XrdOucMutexHelper mhp(fMutex); return fLink; }
+   inline bool         Match(short int id) const { XrdOucMutexHelper mhp(fMutex); return (id == fID); }
+   inline XrdOucMutex *Mutex() { return fMutex; }
    inline XrdProofdResponse *ProofSrv() const
-                      { XrdSysMutexHelper mhp(fMutex); return (XrdProofdResponse *)&fProofSrv;}
-   inline XrdSysSemWait *PingSem() const { XrdSysMutexHelper mhp(fMutex); return fPingSem; }
-   inline const char  *Ordinal() const { XrdSysMutexHelper mhp(fMutex); return (const char *)fOrdinal; }
-   inline XrdSrvBuffer *QueryNum() const { XrdSysMutexHelper mhp(fMutex); return fQueryNum; }
-   inline XrdSrvBuffer *Requirements() const { XrdSysMutexHelper mhp(fMutex); return fRequirements; }
-   inline XrdROOT     *ROOT() const { XrdSysMutexHelper mhp(fMutex); return fROOT; }
-   inline int          SrvID() const { XrdSysMutexHelper mhp(fMutex); return fSrvID; }
-   inline int          SrvType() const { XrdSysMutexHelper mhp(fMutex); return fSrvType; }
-   inline void         SetFracEff(float ef) { XrdSysMutexHelper mhp(fMutex); fFracEff = ef; }
-   inline void         SetGroup(XrdProofGroup *g) { XrdSysMutexHelper mhp(fMutex); fGroup = g; }
-   inline void         SetID(short int id) { XrdSysMutexHelper mhp(fMutex); fID = id;}
-   inline void         SetLink(XrdLink *lnk) { XrdSysMutexHelper mhp(fMutex); fLink = lnk;}
-   inline void         SetParent(XrdClientID *cid) { XrdSysMutexHelper mhp(fMutex); fParent = cid; }
-   inline void         SetProtVer(int pv) { XrdSysMutexHelper mhp(fMutex); fProtVer = pv; }
-   inline void         SetQueryNum(XrdSrvBuffer *qn) { XrdSysMutexHelper mhp(fMutex); fQueryNum = qn; }
+                      { XrdOucMutexHelper mhp(fMutex); return (XrdProofdResponse *)&fProofSrv;}
+   inline XrdOucSemWait *PingSem() const { XrdOucMutexHelper mhp(fMutex); return fPingSem; }
+   inline const char  *Ordinal() const { XrdOucMutexHelper mhp(fMutex); return (const char *)fOrdinal; }
+   inline XrdSrvBuffer *QueryNum() const { XrdOucMutexHelper mhp(fMutex); return fQueryNum; }
+   inline XrdSrvBuffer *Requirements() const { XrdOucMutexHelper mhp(fMutex); return fRequirements; }
+   inline XrdROOT     *ROOT() const { XrdOucMutexHelper mhp(fMutex); return fROOT; }
+   inline int          SrvID() const { XrdOucMutexHelper mhp(fMutex); return fSrvID; }
+   inline int          SrvType() const { XrdOucMutexHelper mhp(fMutex); return fSrvType; }
+   inline void         SetFracEff(float ef) { XrdOucMutexHelper mhp(fMutex); fFracEff = ef; }
+   inline void         SetGroup(XrdProofGroup *g) { XrdOucMutexHelper mhp(fMutex); fGroup = g; }
+   inline void         SetID(short int id) { XrdOucMutexHelper mhp(fMutex); fID = id;}
+   inline void         SetLink(XrdLink *lnk) { XrdOucMutexHelper mhp(fMutex); fLink = lnk;}
+   inline void         SetParent(XrdClientID *cid) { XrdOucMutexHelper mhp(fMutex); fParent = cid; }
+   inline void         SetProtVer(int pv) { XrdOucMutexHelper mhp(fMutex); fProtVer = pv; }
+   inline void         SetQueryNum(XrdSrvBuffer *qn) { XrdOucMutexHelper mhp(fMutex); fQueryNum = qn; }
    inline void         SetRequirements(XrdSrvBuffer *rq)
-                          { XrdSysMutexHelper mhp(fMutex); fRequirements = rq; }
-   inline void         SetROOT(XrdROOT *r) { XrdSysMutexHelper mhp(fMutex); fROOT = r; }
-   inline void         SetSrvType(int id) { XrdSysMutexHelper mhp(fMutex); fSrvType = id; }
-   inline void         SetStartMsg(XrdSrvBuffer *sm) { XrdSysMutexHelper mhp(fMutex); fStartMsg = sm; }
-   inline void         SetStatus(int st) { XrdSysMutexHelper mhp(fMutex); fStatus = st; }
-   inline void         SetShutdown(bool sd = 1) { XrdSysMutexHelper mhp(fMutex); fIsShutdown = sd; }
-   inline void         SetValid(bool valid = 1) { XrdSysMutexHelper mhp(fMutex); fIsValid = valid; }
-   inline XrdSrvBuffer *StartMsg() const { XrdSysMutexHelper mhp(fMutex); return fStartMsg; }
-   inline int          Status() const { XrdSysMutexHelper mhp(fMutex); return fStatus;}
-   inline const char  *Tag() const { XrdSysMutexHelper mhp(fMutex); return fTag; }
-   inline const char  *UserEnvs() const { XrdSysMutexHelper mhp(fMutex); return fUserEnvs; }
+                          { XrdOucMutexHelper mhp(fMutex); fRequirements = rq; }
+   inline void         SetROOT(XrdROOT *r) { XrdOucMutexHelper mhp(fMutex); fROOT = r; }
+   inline void         SetSrvType(int id) { XrdOucMutexHelper mhp(fMutex); fSrvType = id; }
+   inline void         SetStartMsg(XrdSrvBuffer *sm) { XrdOucMutexHelper mhp(fMutex); fStartMsg = sm; }
+   inline void         SetStatus(int st) { XrdOucMutexHelper mhp(fMutex); fStatus = st; }
+   inline void         SetShutdown(bool sd = 1) { XrdOucMutexHelper mhp(fMutex); fIsShutdown = sd; }
+   inline void         SetValid(bool valid = 1) { XrdOucMutexHelper mhp(fMutex); fIsValid = valid; }
+   inline XrdSrvBuffer *StartMsg() const { XrdOucMutexHelper mhp(fMutex); return fStartMsg; }
+   inline int          Status() const { XrdOucMutexHelper mhp(fMutex); return fStatus;}
+   inline const char  *Tag() const { XrdOucMutexHelper mhp(fMutex); return fTag; }
+   inline const char  *UserEnvs() const { XrdOucMutexHelper mhp(fMutex); return fUserEnvs; }
 
    void                CreatePingSem()
-                       { XrdSysMutexHelper mhp(fMutex); fPingSem = new XrdSysSemWait(0);}
+                       { XrdOucMutexHelper mhp(fMutex); fPingSem = new XrdOucSemWait(0);}
    void                DeletePingSem()
-                       { XrdSysMutexHelper mhp(fMutex); if (fPingSem) delete fPingSem; fPingSem = 0;}
+                       { XrdOucMutexHelper mhp(fMutex); if (fPingSem) delete fPingSem; fPingSem = 0;}
 
    void                DeleteQueryNum()
-                       { XrdSysMutexHelper mhp(fMutex); if (fQueryNum) delete fQueryNum; fQueryNum = 0;}
+                       { XrdOucMutexHelper mhp(fMutex); if (fQueryNum) delete fQueryNum; fQueryNum = 0;}
    void                DeleteStartMsg()
-                       { XrdSysMutexHelper mhp(fMutex); if (fStartMsg) delete fStartMsg; fStartMsg = 0;}
+                       { XrdOucMutexHelper mhp(fMutex); if (fStartMsg) delete fStartMsg; fStartMsg = 0;}
 
    XrdClientID        *GetClientID(int cid);
    int                 GetFreeID();
    int                 GetNClients();
 
-   inline XrdClientID        *Parent() const { XrdSysMutexHelper mhp(fMutex); return fParent; }
+   inline XrdClientID        *Parent() const { XrdOucMutexHelper mhp(fMutex); return fParent; }
    inline std::vector<XrdClientID *> *Clients() const
-                      { XrdSysMutexHelper mhp(fMutex); return (std::vector<XrdClientID *> *)&fClients; }
+                      { XrdOucMutexHelper mhp(fMutex); return (std::vector<XrdClientID *> *)&fClients; }
    inline std::list<XrdProofWorker *> *Workers() const
-                      { XrdSysMutexHelper mhp(fMutex); return (std::list<XrdProofWorker *> *)&fWorkers; }
+                      { XrdOucMutexHelper mhp(fMutex); return (std::list<XrdProofWorker *> *)&fWorkers; }
 
-   int                 GetNWorkers() { XrdSysMutexHelper mhp(fMutex); return (int) fWorkers.size(); }
-   void                AddWorker(XrdProofWorker *w) { XrdSysMutexHelper mhp(fMutex); fWorkers.push_back(w); }
-   void                RemoveWorker(XrdProofWorker *w) { XrdSysMutexHelper mhp(fMutex); fWorkers.remove(w); }
+   int                 GetNWorkers() { XrdOucMutexHelper mhp(fMutex); return (int) fWorkers.size(); }
+   void                AddWorker(XrdProofWorker *w) { XrdOucMutexHelper mhp(fMutex); fWorkers.push_back(w); }
+   void                RemoveWorker(XrdProofWorker *w) { XrdOucMutexHelper mhp(fMutex); fWorkers.remove(w); }
 
    void                SetAlias(const char *a, int l = 0)
-                          { XrdSysMutexHelper mhp(fMutex); SetCharValue(&fAlias, a, l); }
+                          { XrdOucMutexHelper mhp(fMutex); SetCharValue(&fAlias, a, l); }
    void                SetClient(const char *c, int l = 0)
-                          { XrdSysMutexHelper mhp(fMutex); SetCharValue(&fClient, c, l); }
+                          { XrdOucMutexHelper mhp(fMutex); SetCharValue(&fClient, c, l); }
    void                SetFileout(const char *f, int l = 0)
-                          { XrdSysMutexHelper mhp(fMutex); SetCharValue(&fFileout, f, l); }
+                          { XrdOucMutexHelper mhp(fMutex); SetCharValue(&fFileout, f, l); }
    void                SetOrdinal(const char *o, int l = 0)
-                          { XrdSysMutexHelper mhp(fMutex); SetCharValue(&fOrdinal, o, l); }
+                          { XrdOucMutexHelper mhp(fMutex); SetCharValue(&fOrdinal, o, l); }
    void                SetTag(const char *t, int l = 0)
-                          { XrdSysMutexHelper mhp(fMutex); SetCharValue(&fTag, t, l); }
+                          { XrdOucMutexHelper mhp(fMutex); SetCharValue(&fTag, t, l); }
    void                SetUserEnvs(const char *t, int l = 0)
-                          { XrdSysMutexHelper mhp(fMutex); SetCharValue(&fUserEnvs, t, l); }
+                          { XrdOucMutexHelper mhp(fMutex); SetCharValue(&fUserEnvs, t, l); }
 
-   bool                IsShutdown() const { XrdSysMutexHelper mhp(fMutex); return fIsShutdown; }
-   bool                IsValid() const { XrdSysMutexHelper mhp(fMutex); return fIsValid; }
+   bool                IsShutdown() const { XrdOucMutexHelper mhp(fMutex); return fIsShutdown; }
+   bool                IsValid() const { XrdOucMutexHelper mhp(fMutex); return fIsValid; }
    const char         *StatusAsString() const;
 
    int                 ChangeProcessPriority(int deltap);
@@ -215,7 +207,7 @@ public:
 
  private:
 
-   XrdSysRecMutex           *fMutex;
+   XrdOucRecMutex           *fMutex;
    XrdLink                  *fLink;      // Link to proofsrv
    XrdProofdResponse         fProofSrv;  // Utility to talk to proofsrv
 
@@ -223,7 +215,7 @@ public:
    std::vector<XrdClientID *> fClients;  // Attached clients stream ids
    std::list<XrdProofWorker *> fWorkers; // Workers assigned to the session
 
-   XrdSysSemWait            *fPingSem;   // To sychronize ping requests
+   XrdOucSemWait            *fPingSem;   // To sychronize ping requests
 
    XrdSrvBuffer             *fQueryNum;  // Msg with sequential number of currebt query
    XrdSrvBuffer             *fStartMsg;  // Msg with start processing info

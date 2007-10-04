@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: RooFit                                                           *
  * Package: RooFitCore                                                       *
- * @(#)root/roofitcore:$Name:  $:$Id$
+ * @(#)root/roofitcore:$Id$
  * Authors:                                                                  *
  *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu       *
  *   DK, David Kirkby,    UC Irvine,         dkirkby@uci.edu                 *
@@ -552,10 +552,10 @@ Bool_t RooMinuit::synchronize(Bool_t verbose)
   if (_optConst) {
     if (constStatChange) {
       cout << "RooMinuit::synchronize: set of constant parameters changed, rerunning const optimizer" << endl ;
-      _func->constOptimizeTestStatistic(RooAbsArg::ConfigChange) ;
+      _func->constOptimize(RooAbsArg::ConfigChange) ;
     } else if (constValChange) {
       cout << "RooMinuit::synchronize: constant parameter values changed, rerunning const optimizer" << endl ;
-      _func->constOptimizeTestStatistic(RooAbsArg::ValueChange) ;
+      _func->constOptimize(RooAbsArg::ValueChange) ;
     }
   }
 
@@ -568,11 +568,11 @@ void RooMinuit::optimizeConst(Bool_t flag)
 {
   if (_optConst && !flag){ 
     if (_printLevel>-1) cout << "RooMinuit::optimizeConst: deactivating const optimization" << endl ;
-    _func->constOptimizeTestStatistic(RooAbsArg::DeActivate) ;
+    _func->constOptimize(RooAbsArg::DeActivate) ;
     _optConst = flag ;
   } else if (!_optConst && flag) {
     if (_printLevel>-1) cout << "RooMinuit::optimizeConst: activating const optimization" << endl ;
-    _func->constOptimizeTestStatistic(RooAbsArg::Activate) ;
+    _func->constOptimize(RooAbsArg::Activate) ;
     _optConst = flag ;
   } else if (_optConst && flag) {
     if (_printLevel>-1) cout << "RooMinuit::optimizeConst: const optimization already active" << endl ;

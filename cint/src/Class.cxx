@@ -636,47 +636,6 @@ G__MethodInfo Cint::G__ClassInfo::GetMethod(const char* fname,const char* arg
   method.Init((long)iref,index,this);
   return(method);
 }
-
-///////////////////////////////////////////////////////////////////////////
-// LF 17-07-07 overload it to pass a no-error flag
-G__MethodInfo Cint::G__ClassInfo::GetMethod(const char* fname,const char* arg
-				      ,long* poffset
-				      ,MatchMode mode
-				      ,InheritanceMode imode
-				      ,int noerror
-                                      )
-{
-  struct G__ifunc_table_internal *ifunc;
-  char *funcname;
-  char *param;
-  long index;
-
-  G__fprinterr(G__serr,"Warning: Cint::G__ClassInfo::GetMethod() LF: deprecated \n");
-
-  /* Search for method */
-  if(-1==tagnum) ifunc = &G__ifunc;
-  else           ifunc = G__struct.memfunc[tagnum];
-  funcname = (char*)fname;
-  param = (char*)arg;
-  int convmode;
-  switch(mode) {
-  case ExactMatch:              convmode=0; break;
-  case ConversionMatch:         convmode=1; break;
-  case ConversionMatchBytecode: convmode=2; break;
-  default:                      convmode=0; break;
-  }
-  G__ifunc_table* iref = G__get_methodhandle3(funcname,param,ifunc,&index,poffset
-			      ,convmode
-			      ,(imode==WithInheritance)?1:0
-                              ,noerror,0
-			      );
-
-  /* Initialize method object */
-  G__MethodInfo method;
-  method.Init((long)iref,index,this);
-  return(method);
-}
-
 ///////////////////////////////////////////////////////////////////////////
 G__MethodInfo Cint::G__ClassInfo::GetMethod(const char* fname,struct G__param* libp
 				      ,long* poffset
