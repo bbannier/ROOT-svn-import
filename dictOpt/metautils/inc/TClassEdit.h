@@ -1,4 +1,4 @@
-// @(#)root/base:$Id$
+// @(#)root/base:$Name:  $:$Id$
 // Author: Victor Perev   10/04/2003
 //         Philippe Canal 05/2004
 

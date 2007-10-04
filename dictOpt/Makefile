@@ -47,7 +47,7 @@ include $(MAKEFILEDEP)
 
 ##### Modules to build #####
 
-MODULES       = build cint metautils pcre utils base cont meta io net math \
+MODULES       = build cint metautils pcre io utils base cont meta net math \
                 zip clib matrix newdelete hist tree freetype graf gpad \
                 g3d gui minuit histpainter treeplayer ged treeviewer physics \
                 postscript rint thread html eg geom geompainter vmc fumili \
@@ -233,7 +233,7 @@ CINT7LIBS    := -lCint7 -lReflex
 NEWLIBS      := -lNew
 ROOTLIBS     := -lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad \
                 -lTree -lMatrix
-BOOTLIBS     := -lCore -lCint
+BOOTLIBS     := -lCore -lCint -lRIO -lDictIO
 ifneq ($(ROOTDICTTYPE),cint)
 ROOTLIBS     += -lCintex -lReflex
 BOOTLIBS     += -lCintex -lReflex
@@ -248,7 +248,7 @@ ROOTLIBS     := $(LPATH)/libCore.lib $(LPATH)/libCint.lib \
                 $(LPATH)/libHist.lib $(LPATH)/libGraf.lib \
                 $(LPATH)/libGraf3d.lib $(LPATH)/libGpad.lib \
                 $(LPATH)/libTree.lib $(LPATH)/libMatrix.lib
-BOOTLIBS     := $(LPATH)/libCore.lib $(LPATH)/libCint.lib
+BOOTLIBS     := $(LPATH)/libCore.lib $(LPATH)/libCint.lib $(LPATH)/libRIO.lib $(LPATH)/libDictIO.lib
 ifneq ($(ROOTDICTTYPE),cint)
 ROOTLIBS     += $(LPATH)/libCintex.lib $(LPATH)/libReflex.lib
 BOOTLIBS     += $(LPATH)/libCintex.lib $(LPATH)/libReflex.lib
@@ -259,7 +259,7 @@ endif
 # ROOTLIBSDEP is intended to match the content of ROOTLIBS
 ROOTLIBSDEP   = $(ORDER_) $(CORELIB) $(CINTLIB) $(IOLIB) $(NETLIB) $(HISTLIB) \
                 $(GRAFLIB) $(G3DLIB) $(GPADLIB) $(TREELIB) $(MATRIXLIB)
-BOOTLIBSDEP   = $(ORDER_) $(CORELIB) $(CINTLIB)
+BOOTLIBSDEP   = $(ORDER_) $(CORELIB) $(CINTLIB) $(IOLIB) $(DICTIOLIB)
 ifneq ($(ROOTDICTTYPE),cint)
 ROOTLIBSDEP  += $(CINTEXLIB) $(REFLEXLIB)
 BOOTLIBSDEP  += $(CINTEXLIB) $(REFLEXLIB)

@@ -1,4 +1,4 @@
-// @(#)root/utils:$Id$
+// @(#)root/utils:$Name:  $:$Id$
 // Author: Fons Rademakers   13/07/96
 
 /*************************************************************************
@@ -164,7 +164,10 @@
 #endif
 #include "RConfig.h"
 #include "Shadow.h"
+
 #include <iostream>
+
+
 
 #ifdef fgets // in G__ci.h
 #  undef fgets
@@ -323,9 +326,6 @@ const char *help =
 
 namespace std {}
 using namespace std;
-
-//#include <fstream>
-//#include <strstream>
 
 #include "TClassEdit.h"
 using namespace TClassEdit;
@@ -2398,6 +2398,7 @@ void WriteClassFunctions(G__ClassInfo &cl, int /*tmplt*/ = 0)
    }
 }
 
+
 //______________________________________________________________________________
 void WriteClassInit(G__ClassInfo &cl)
 {
@@ -4179,6 +4180,64 @@ void CleanupOnExit(int code) {
 
 }
 
+static string dict_source_name;
+
+int G__dict_setup(const char* dictname){
+   
+   if (strcmp(dict_source_name.c_str(),"G__Base1.cxx")&&strcmp(dict_source_name.c_str(),"G__Base2.cxx")&&strcmp(dict_source_name.c_str(),"G__Base3.cxx")&&strcmp(dict_source_name.c_str(),"G__Cont.cxx")&&strcmp(dict_source_name.c_str(),"G__Meta.cxx")&&strcmp(dict_source_name.c_str(),"G__IO.cxx")&&strcmp(dict_source_name.c_str(),"G__Unix.cxx")&&strcmp(dict_source_name.c_str(),"G__Clib.cxx")&&strcmp(dict_source_name.c_str(),"G__MetaUtils.cxx")&&strcmp(dict_source_name.c_str(),"G__Math.cxx")&&strcmp(dict_source_name.c_str(),"G__DictIO.cxx")&&strcmp(dict_source_name.c_str(),"G__TreePlayer.cxx")&&strcmp(dict_source_name.c_str(),"G__Tree.cxx")&&strcmp(dict_source_name.c_str(),"G__Rint.cxx")&&strcmp(dict_source_name.c_str(),"G__ProofPlayer.cxx")){
+   //TDictionaryManager *dict_gen = new TDictionaryManager(filename.c_str());
+   //gInterpreter->ProcessLine(command.c_str());
+      // Don't generate the dictionary while generating the dictionary -
+      // G__main called by libCore should just initialize CINT
+#ifdef ROOTBUILD
+      if ((G__loadfile("lib/libCore.so") == -1)||(G__loadfile("lib/libRIO.so") == -1)||(G__loadfile("lib/libDictIO.so") == -1))
+#endif
+      {
+         std::string libpath;
+#ifdef ROOTLIBDIR
+         libpath = ROOTLIBDIR;
+#endif
+         if (!libpath.length())
+            libpath = getenv("ROOTSYS");
+         G__loadfile((libpath + "/lib/libCore.so").c_str());
+         G__loadfile((libpath + "/lib/libRIO.so").c_str());
+         G__loadfile((libpath + "/lib/libDictIO.so").c_str());
+      }
+
+      /* Library Name */
+      std::string fileName = dictname;
+
+      // Remove G__
+      fileName = fileName.erase(0,3);
+
+      fileName = "lib" + fileName + ".dict.root";
+
+      strcpy(G__rootdictname,fileName.c_str());
+
+   }
+
+}
+
+
+extern "C" int G__loadCore(const char*, const char*){
+
+   if (strcmp(dict_source_name.c_str(),"G__Base1.cxx")&&strcmp(dict_source_name.c_str(),"G__Base2.cxx")&&strcmp(dict_source_name.c_str(),"G__Base3.cxx")&&strcmp(dict_source_name.c_str(),"G__Cont.cxx")&&strcmp(dict_source_name.c_str(),"G__Meta.cxx")&&strcmp(dict_source_name.c_str(),"G__IO.cxx")&&strcmp(dict_source_name.c_str(),"G__Unix.cxx")&&strcmp(dict_source_name.c_str(),"G__Clib.cxx")&&strcmp(dict_source_name.c_str(),"G__MetaUtils.cxx")&&strcmp(dict_source_name.c_str(),"G__Math.cxx")&&strcmp(dict_source_name.c_str(),"G__DictIO.cxx")&&strcmp(dict_source_name.c_str(),"G__TreePlayer.cxx")&&strcmp(dict_source_name.c_str(),"G__Tree.cxx")&&strcmp(dict_source_name.c_str(),"G__Rint.cxx")&&strcmp(dict_source_name.c_str(),"G__ProofPlayer.cxx")){
+
+   static char alreadyLoaded = 0;
+   
+   if(!alreadyLoaded){
+      int storeGlobalComp = G__getglobalcomp();
+      G__setglobalcomp(G__NOLINK);
+      alreadyLoaded = 1;
+      G__loadfile("lib/libCore.so");
+      G__loadfile("lib/libRIO.so");
+      G__loadfile("lib/libDictIO.so");
+      G__setglobalcomp(storeGlobalComp);
+   }
+  
+ }
+   return 0;
+}
 
 //______________________________________________________________________________
 int main(int argc, char **argv)
@@ -4186,6 +4245,19 @@ int main(int argc, char **argv)
 #ifdef __MWERKS__
    argc = ccommand(&argv);
 #endif
+
+//#ifdef ROOTBUILD
+   //G__RegisterScriptCompiler(0);
+   G__set_ignoreinclude((G__IgnoreInclude)*G__loadCore);
+   /* DIEGO */
+    G__set_funcmember_root_writer(0);
+    G__set_datamember_root_writer(0);
+    G__set_funcmember_root_reader(0);
+    G__set_datamember_root_reader(0);
+    G__set_dictionary_root_setup(G__dict_setup);
+   // keep: G__InitUpdateClassInfo(&TCint_UpdateClassInfo);
+    //G__InitGetSpecialObject(0);
+//#endif
 
    if (argc < 2) {
       fprintf(stderr,
@@ -4195,7 +4267,7 @@ int main(int argc, char **argv)
       return 1;
    }
 
-   char dictname[512];
+   char dictname[G__MAXFILENAME];
    int i, j, ic, ifl, force;
    int icc = 0;
    int use_preprocessor = 0;
@@ -4382,8 +4454,8 @@ int main(int argc, char **argv)
    for (i = 0; i < 16; i++)
       path[i][0] = 0;
 
-#ifndef ROOTINCDIR
-# ifndef ROOTBUILD
+#ifndef ROOTBUILD
+# ifndef ROOTINCDIR
    if (getenv("ROOTSYS")) {
 #  ifdef __MWERKS__
       sprintf(path[0], "-I%s:include", getenv("ROOTSYS"));
@@ -4397,12 +4469,12 @@ int main(int argc, char **argv)
       return 1;
    }
 # else
-   //sprintf(path[0], "-Ibase/inc");
-   //sprintf(path[1], "-Icont/inc");
-   sprintf(path[0], "-Iinclude");
+   sprintf(path[0], "-I%s", ROOTINCDIR);
 # endif
 #else
-   sprintf(path[0], "-I%s", ROOTINCDIR);
+   sprintf(path[0], "-Ibase/inc");
+   sprintf(path[1], "-Icont/inc");
+   sprintf(path[2], "-Iinclude");
 #endif
 
    argvv[0] = argv[0];
@@ -4602,6 +4674,9 @@ int main(int argc, char **argv)
       return 1;
    }
 
+   /* DIEGO */ 
+   dict_source_name = dictname;
+
    if (!il) {
       GenerateLinkdef(&argcc, argvv, iv);
       argvv[argcc++] = autold;
@@ -4708,6 +4783,7 @@ int main(int argc, char **argv)
    } else
       dictSrcOut = &std::cout;
 
+
    time_t t = time(0);
    (*dictSrcOut) << "//"  << std::endl
        << "// File generated by " << argv[0] << " at " << ctime(&t) << std::endl
@@ -4721,6 +4797,7 @@ int main(int argc, char **argv)
        << "#define protected public" << std::endl
        << "#endif" << std::endl 
        << std::endl;
+
 #ifndef R__SOLARIS
    (*dictSrcOut) << "// Since CINT ignores the std namespace, we need to do so in this file." << std::endl
        << "namespace std {} using namespace std;" << std::endl << std::endl;
@@ -4755,7 +4832,6 @@ int main(int argc, char **argv)
       }
       (*dictSrcOut) << std::endl;
    }
-
 
    //
    // We will loop over all the classes several times.
@@ -4850,6 +4926,11 @@ int main(int argc, char **argv)
             RStl::inst().GenerateTClassFor( cl.Name() );
          } else {
             WriteClassInit(cl);
+/* DIEGO */
+#ifndef ROOTBUILD
+            //  WriteClassInit(cl,dict_gen);
+#endif
+/* DIEGO */
          }
       } else if (((cl.Property() & (G__BIT_ISNAMESPACE)) && cl.Linkage() == G__CPPLINK)) {
          WriteNamespaceInit(cl);
@@ -5032,6 +5113,7 @@ int main(int argc, char **argv)
                       << "} // Of namespace ROOT" << std::endl << std::endl;
                }
                if (G__ShadowMaker::IsSTLCont(cl.Name()) == 0 ) {
+
                   WriteClassInit(cl);
                }
             }
@@ -5062,6 +5144,16 @@ int main(int argc, char **argv)
 
       WriteClassCode(cl);
    }
+
+  /* DIEGO */ 
+   int storeGlobalComp = G__getglobalcomp();
+   G__setglobalcomp(G__NOLINK);
+   G__setglobalcomp(G__NOLINK);
+   if (G__dictionary_file_writer)
+      G__dictionary_file_writer(G__rootdictname);
+   G__setglobalcomp(storeGlobalComp);
+   G__setglobalcomp(storeGlobalComp);
+  /* DIEGO */
 
    //RStl::inst().WriteStreamer(fp); //replaced by new Markus code
    RStl::inst().WriteClassInit(0);

@@ -1980,7 +1980,7 @@ int G__loadfile(const char *filenamein)
     }
     G__srcfile[fentry].fp=(FILE*)NULL;
     {
-#if !defined(ROOTBUILD)
+#if !defined(DIEGOS_TEST) || !defined(ROOTBUILD)
       int allsl = G__shl_load(G__ifile.name);
 #else
       int allsl = -1; // don't load any shared libs

@@ -1661,6 +1661,16 @@ G__value G__string2type_body(const char *typenamin,int noerror)
 
   strcpy(typenam,typenamin);
 
+  // LF 20/04/07
+  // We need G__get_methodhandle to be able to find functions that
+  // have an ellipsis as the declared parameter. But that thing
+  // is not declared as a type in CINT so I'm just hacking my
+  // way through until I learn enough to do it in a proper way.
+  if(strncmp(typenam,"...",3)==0) {
+     result.type = -1;
+     return result;
+  }
+
   if(strncmp(typenam,"volatile ",9)==0) {
     strcpy(temp,typenam+9);
     strcpy(typenam,temp);
@@ -1850,7 +1860,7 @@ G__value G__string2type_body(const char *typenamin,int noerror)
   }
 
   if(0==result.type) {
-    result.typenum=G__defined_typename(typenam);
+    result.typenum=G__defined_typename2(typenam, noerror);
     if(result.typenum != -1) {
       result.tagnum=G__newtype.tagnum[result.typenum];
       result.type=G__newtype.type[result.typenum];
@@ -1904,6 +1914,19 @@ G__value G__string2type(const char *typenamin)
 {
   int store_var_type = G__var_type;
   G__value buf = G__string2type_body(typenamin,0);
+  G__var_type = store_var_type;
+  return(buf);
+}
+
+/******************************************************************
+* G__string2type
+*
+* LF: 17-07-07
+******************************************************************/
+G__value G__string2type2(const char *typenamin, int noerror)
+{
+  int store_var_type = G__var_type;
+  G__value buf = G__string2type_body(typenamin,noerror);
   G__var_type = store_var_type;
   return(buf);
 }

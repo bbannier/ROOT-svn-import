@@ -306,6 +306,10 @@ void G__cpplink_func(FILE *pfp);
 void G__incsetup_memvar(int tagnum);
 void G__incsetup_memfunc(int tagnum);
 
+// LF 04-07-07
+// v6_symbols.cxx
+void   G__register_class(const char *libname, const char *clstr);
+void*  G__get_address(const char* mangled_name);
 
 int G__separate_parameter(char *original,int *pos,char *param);
 int G__parse_parameter_link(char *paras);
@@ -434,7 +438,7 @@ void G__freetemplatememfunc(struct G__Definedtemplatememfunc *memfunctmplt);
 char *G__gettemplatearg(int n,struct G__Templatearg *def_para);
 void G__freetemplatearg(struct G__Templatearg *def_para);
 void G__freetemplatefunc(struct G__Definetemplatefunc *deftmpfunc);
-struct G__funclist* G__add_templatefunc(char *funcnamein,struct G__param *libp,int hash,struct G__funclist *funclist,struct G__ifunc_table_internal *p_ifunc,int isrecursive);
+struct G__funclist* G__add_templatefunc(char *funcnamein,struct G__param *libp,int hash,struct G__funclist *funclist,struct G__ifunc_table_internal *p_ifunc,int isrecursive,int withInheritance);
 struct G__funclist* G__funclist_add(struct G__funclist *last,struct G__ifunc_table_internal *ifunc,int ifn,int rate);
 void G__funclist_delete(struct G__funclist *body);
 int G__templatefunc(G__value *result,char *funcname,struct G__param *libp,int hash,int funcmatch);

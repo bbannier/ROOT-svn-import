@@ -20,6 +20,7 @@
 
 #ifndef __CINT__
 #ifdef __cplusplus
+
 extern "C" {
 #endif
 #endif
@@ -193,7 +194,7 @@ extern int G__argn;
 * structure for global and local variables
 *
 **************************************************************************/
-extern struct G__var_array G__global ;
+extern struct G__var_array G__global;
 extern struct G__var_array *G__p_local;
 extern struct G__inheritance G__globalusingnamespace;
 
@@ -204,6 +205,8 @@ extern struct G__inheritance G__globalusingnamespace;
 extern struct G__tagtable G__struct;
 extern struct G__typedef  G__newtype;
 
+// LF 03-07-07
+extern const char *G__libname;
 
 /**************************************************************************
 * structure for input file
@@ -236,7 +239,6 @@ extern char G__gotolabel[G__MAXNAME];
 * allocation of array by new operator ?
 **************************************************************************/
 extern struct G__newarylist G__newarray;
-
 
 
 /**************************************************************************
@@ -275,6 +277,8 @@ extern struct G__filetable G__srcfile[G__MAXFILE];
 #endif
 extern int G__nfile;
 
+/* DIEGO */
+   extern char G__rootdictname[G__MAXFILENAME];
 extern int G__nobreak;
 extern char G__breakline[G__MAXNAME];
 extern char G__breakfile[G__MAXFILENAME];
@@ -312,6 +316,9 @@ extern short G__unsigned ;
 extern short G__ansiheader ;
 extern G__value G__ansipara;
 extern short G__enumdef;
+
+// LF 10-07-07
+extern short G__dicttype;
 
 extern char G__tagname[G__MAXNAME];
 extern long G__store_struct_offset; /* used to be int */
