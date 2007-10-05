@@ -50,13 +50,17 @@
 #include "TXNetFile.h"
 #include "TROOT.h"
 #include "TVirtualMonitoring.h"
-#include "TMutex.h"
 #include "TFileStager.h"
 
 #include <XrdClient/XrdClient.hh>
 #include <XrdClient/XrdClientConst.hh>
 #include <XrdClient/XrdClientEnv.hh>
 #include <XProtocol/XProtocol.hh>
+#ifdef OLDXRDOUC
+#  include "XrdOuc/XrdOucPthread.hh"
+#else
+#  include "XrdSys/XrdSysPthread.hh"
+#endif
 
 ClassImp(TXNetFile);
 
@@ -119,7 +123,7 @@ TXNetFile::TXNetFile(const char *url, Option_t *option, const char* ftitle,
    urlnoanchor.SetAnchor("");
 
    // Init mutex used in the asynchronous open machinery
-   fInitMtx = new TMutex(kTRUE);
+   fInitMtx = new XrdSysRecMutex();
 
    // Create an instance
    CreateXClient(urlnoanchor.GetUrl(), option, netopt, parallelopen);
@@ -180,15 +184,12 @@ void TXNetFile::CreateXClient(const char *url, Option_t *option, Int_t netopt,
    if (GetOnlyStaged()) {
       static TFileStager* fFileStager = 0;
       // check if the file is staged before opening it
-      if (!fFileStager) {
+      if (!fFileStager)
          fFileStager = TFileStager::Open(url);
-         if (fFileStager) {
-            if (!(fFileStager->IsStaged(url))) {
-               ::Warning("TXNetFile","<%s> is not staged - StageOnly flag is set!",url);
-               delete fFileStager;
-               fFileStager=0;
-               goto zombie;
-            }
+      if (fFileStager) {
+         if (!(fFileStager->IsStaged(url))) {
+            ::Warning("TXNetFile","<%s> is not staged - StageOnly flag is set!",url);
+            goto zombie;
          }
       }
    }
@@ -676,7 +677,7 @@ void TXNetFile::Init(Bool_t create)
 
    if (fClient) {
       // A mutex serializes this very delicate section
-      R__LOCKGUARD(fInitMtx);
+      XrdSysMutexHelper m(fInitMtx);
 
       // To safely perform the Init() we must make sure that
       // the file is successfully open; this call may block
