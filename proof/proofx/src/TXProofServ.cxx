@@ -786,6 +786,8 @@ Int_t TXProofServ::Setup()
    // Send "ROOTversion|ArchCompiler" flag
    if (fProtocol > 12) {
       TString vac = gROOT->GetVersion();
+      if (gROOT->GetSvnRevision() > 0)
+         vac += Form(":r%d", gROOT->GetSvnRevision());
       TString rtag = gEnv->GetValue("ProofServ.RootVersionTag", "");
       if (rtag.Length() > 0)
          vac += Form("-%s", rtag.Data());
