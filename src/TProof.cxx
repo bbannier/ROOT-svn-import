@@ -2532,6 +2532,7 @@ Int_t TProof::CollectInputFrom(TSocket *s)
                vac.Tokenize(archcomp, from, "|");
             if ((sl = FindSlave(s))) {
                sl->SetArchCompiler(archcomp);
+               vers.ReplaceAll(":","|");
                sl->SetROOTVersion(vers);
             }
          }
@@ -2687,7 +2688,7 @@ void TProof::Print(Option_t *option) const
       Printf("Port number:              %d", GetPort());
       Printf("User:                     %s", GetUser());
       if (gROOT->GetSvnRevision() > 0)
-         Printf("ROOT version:             %s:r%d", gROOT->GetVersion(), gROOT->GetSvnRevision());
+         Printf("ROOT version|rev:         %s|r%d", gROOT->GetVersion(), gROOT->GetSvnRevision());
       else
          Printf("ROOT version:             %s", gROOT->GetVersion());
       Printf("Architecture-Compiler:    %s-%s", gSystem->GetBuildArch(),
@@ -2728,10 +2729,10 @@ void TProof::Print(Option_t *option) const
       }
       TString ver(gROOT->GetVersion());
       if (gROOT->GetSvnRevision() > 0)
-         ver += Form(":r%d", gROOT->GetSvnRevision());
+         ver += Form("|r%d", gROOT->GetSvnRevision());
       if (gSystem->Getenv("ROOTVERSIONTAG"))
-         ver += Form("-%s", gSystem->Getenv("ROOTVERSIONTAG"));
-      Printf("ROOT version:               %s", ver.Data());
+         ver += Form("|%s", gSystem->Getenv("ROOTVERSIONTAG"));
+      Printf("ROOT version|rev|tag:       %s", ver.Data());
       Printf("Architecture-Compiler:      %s-%s", gSystem->GetBuildArch(),
                                                   gSystem->GetBuildCompilerVersion());
       Printf("Protocol version:           %d", GetClientProtocol());
