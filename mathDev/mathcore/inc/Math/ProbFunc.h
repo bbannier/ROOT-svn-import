@@ -37,7 +37,6 @@
 // #include "Math/ProbFuncMathMore.h"
 // #endif
 
-
-#endif
+// #endif
 
 #endif  // ROOT_Math_ProbFunc
