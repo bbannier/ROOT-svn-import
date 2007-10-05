@@ -58,6 +58,7 @@
 #include "TEntryList.h"
 #include "TException.h"
 #include "TFile.h"
+#include "TFileMerger.h"
 #include "THashList.h"
 #include "TInterpreter.h"
 #include "TKey.h"
@@ -79,6 +80,7 @@
 #include "compiledata.h"
 #include "TProofResourcesStatic.h"
 #include "TProofNodeInfo.h"
+#include "TProofFile.h"
 #include "TFileInfo.h"
 #include "TMutex.h"
 #include "TClass.h"
@@ -369,6 +371,7 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
    fRealTime        = 0.0;
    fCpuTime         = 0.0;
    fProof           = 0;
+   fProofFileMerger = 0;
    fPlayer          = 0;
    fSocket          = 0;
    fEnabledPackages = new TList;
@@ -3038,18 +3041,19 @@ void TProofServ::HandleProcess(TMessage *mess)
    // Get entry list information, if any (support started with fProtocol == 15)
    if ((mess->BufferSize() > mess->Length()) && fProtocol > 14)
       (*mess) >> enl;
+   Bool_t hasNoData = (dset->TestBit(TDSet::kEmpty)) ? kTRUE : kFALSE;
 
    // Priority to the entry list
    TObject *elist = (enl) ? (TObject *)enl : (TObject *)evl;
    if (enl && evl)
       // Cannot spcify both at the same time
       SafeDelete(evl);
-   if (elist)
+   if ((!hasNoData) && elist)
       dset->SetEntryList(elist);
 
    if (IsTopMaster()) {
 
-      if (dset->GetListOfElements()->GetSize() == 0) {
+      if ((!hasNoData) && dset->GetListOfElements()->GetSize() == 0) {
          // The received message included an empty dataset, with only the name
          // defined: assume that a dataset, stored on the PROOF master by that
          // name, should be processed.
@@ -3236,6 +3240,7 @@ void TProofServ::HandleProcess(TMessage *mess)
                   mbuf.Reset();
                   Int_t type = (Int_t) ((ns >= olsz) ? 2 : 1);
                   mbuf << type;
+
                   mbuf.WriteObject(o);
                   totsz += mbuf.Length();
                   SendAsynMessage(Form("%s: sending obj %d/%d (%d bytes)",fPrefix.Data(),
@@ -3336,6 +3341,12 @@ void TProofServ::HandleProcess(TMessage *mess)
                ns++;
                mbuf.Reset();
                mbuf << (Int_t) ((ns >= olsz) ? 2 : 1);
+               // Special treatment for files
+               if(o->IsA() == TProofFile::Class()) {
+                  ((TProofFile *)o)->SetWorkerOrdinal(fOrdinal.Data());
+                  if (!strcmp(((TProofFile *)o)->GetDir(),"")) 
+                     ((TProofFile *)o)->SetDir(fSessionDir.Data());
+               }
                mbuf.WriteObject(o);
                fSocket->Send(mbuf);
             }
@@ -5091,6 +5102,18 @@ void TProofServ::FlushLogFile()
    // while preserving the possibility to have them in case of problems.
 
    lseek(fLogFileDes, lseek(fileno(stdout), (off_t)0, SEEK_END), SEEK_SET);
+}
+
+//______________________________________________________________________________
+TFileMerger *TProofServ::GetProofFileMerger(Bool_t isLocal)
+{
+   // Get an instance of the file merger; invoked by TProofFile.
+   // The instance is create if not existing
+
+   if (!fProofFileMerger)
+      fProofFileMerger = new TFileMerger(isLocal);
+
+   return fProofFileMerger;
 }
 
 //______________________________________________________________________________
