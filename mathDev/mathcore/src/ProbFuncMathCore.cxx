@@ -18,9 +18,8 @@ namespace Math {
 
 
   double beta_cdf_c(double x, double a, double b) {
-
-    return 1. - ROOT::Math::inc_beta(x, a, b);
-
+     // use the fact that I(x,a,b) = 1. - I(1-x,b,a)
+     return ROOT::Math::inc_beta(1-x, b, a);
   }
 
 
