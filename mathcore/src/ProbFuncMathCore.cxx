@@ -125,7 +125,7 @@ namespace Math {
 
    double gamma_cdf_c(double x, double alpha, double theta, double x0) {
 
-      return 1. - ROOT::Math::inc_gamma(alpha, (x-x0)/theta);
+      return ROOT::Math::inc_gamma_c(alpha, (x-x0)/theta);
 
    }
 
