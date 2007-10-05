@@ -2191,7 +2191,7 @@ Int_t TProofServ::Setup()
          vac += Form(":r%d", gROOT->GetSvnRevision());
       TString rtag = gEnv->GetValue("ProofServ.RootVersionTag", "");
       if (rtag.Length() > 0)
-         vac += Form("-%s", rtag.Data());
+         vac += Form(":%s", rtag.Data());
       vac += Form("|%s-%s",gSystem->GetBuildArch(), gSystem->GetBuildCompilerVersion());
       TMessage m(kPROOF_VERSARCHCOMP);
       m << vac;
