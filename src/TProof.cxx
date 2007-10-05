@@ -2660,7 +2660,10 @@ void TProof::Print(Option_t *option) const
                                              IsValid() ? "valid" : "invalid");
       Printf("Port number:              %d", GetPort());
       Printf("User:                     %s", GetUser());
-      Printf("ROOT version:             %s", gROOT->GetVersion());
+      if (gROOT->GetSvnRevision() > 0)
+         Printf("ROOT version:             %s:r%d", gROOT->GetVersion(), gROOT->GetSvnRevision());
+      else
+         Printf("ROOT version:             %s", gROOT->GetVersion());
       Printf("Architecture-Compiler:    %s-%s", gSystem->GetBuildArch(),
                                                 gSystem->GetBuildCompilerVersion());
       TSlave *sl = (TSlave *)fActiveSlaves->First();
@@ -2697,11 +2700,12 @@ void TProof::Print(Option_t *option) const
       } else {
          Printf("User:                       %s", GetUser());
       }
+      TString ver(gROOT->GetVersion());
+      if (gROOT->GetSvnRevision() > 0)
+         ver += Form(":r%d", gROOT->GetSvnRevision());
       if (gSystem->Getenv("ROOTVERSIONTAG"))
-         Printf("ROOT version:               %s-%s", gROOT->GetVersion(),
-                                                     gSystem->Getenv("ROOTVERSIONTAG"));
-      else
-         Printf("ROOT version:               %s", gROOT->GetVersion());
+         ver += Form("-%s", gSystem->Getenv("ROOTVERSIONTAG"));
+      Printf("ROOT version:               %s", ver.Data());
       Printf("Architecture-Compiler:      %s-%s", gSystem->GetBuildArch(),
                                                   gSystem->GetBuildCompilerVersion());
       Printf("Protocol version:           %d", GetClientProtocol());
@@ -4345,16 +4349,44 @@ Int_t TProof::BuildPackageOnClient(const TString &package)
 
          // read version from file proofvers.txt, and if current version is
          // not the same do a "BUILD.sh clean"
+         Bool_t savever = kFALSE;
+         Int_t rev = -1;
+         TString v;
          FILE *f = fopen("PROOF-INF/proofvers.txt", "r");
          if (f) {
-            TString v;
+            TString r;
             v.Gets(f);
+            r.Gets(f);
+            rev = (!r.IsNull() && r.IsDigit()) ? r.Atoi() : -1;
             fclose(f);
-            if (v != gROOT->GetVersion()) {
-               if (gSystem->Exec("PROOF-INF/BUILD.sh clean")) {
-                  Error("BuildPackageOnClient", "cleaning package %s on the client failed", package.Data());
-                  status = -1;
+         }
+         if (!f || v != gROOT->GetVersion() ||
+            (gROOT->GetSvnRevision() > 0 && rev != gROOT->GetSvnRevision())) {
+            savever = kTRUE;
+            Info("BuildPackageOnCLient",
+                 "%s: version change (current: %s:%d, build: %s:%d): cleaning ... ",
+                 package.Data(), gROOT->GetVersion(), gROOT->GetSvnRevision(), v.Data(), rev);
+            // Hard cleanup: go up the dir tree
+            gSystem->ChangeDirectory(fPackageDir);
+            // remove package directory
+            gSystem->Exec(Form("%s %s", kRM, pdir.Data()));
+            // find gunzip...
+            char *gunzip = gSystem->Which(gSystem->Getenv("PATH"), kGUNZIP, kExecutePermission);
+            if (gunzip) {
+               TString par = Form("%s.par", pdir.Data()); 
+               // untar package
+               TString cmd(Form(kUNTAR3, gunzip, par.Data()));
+               status = gSystem->Exec(cmd);
+               if ((status = gSystem->Exec(cmd))) {
+                  Error("BuildPackageOnCLient", "failure executing: %s", cmd.Data());
+               } else {
+                  // Go down to the package directory
+                  gSystem->ChangeDirectory(pdir);
                }
+               delete [] gunzip;
+            } else {
+               Error("BuildPackageOnCLient", "%s not found", kGUNZIP);
+               status = -1;
             }
          }
 
@@ -4363,10 +4395,13 @@ Int_t TProof::BuildPackageOnClient(const TString &package)
             status = -1;
          }
 
-         f = fopen("PROOF-INF/proofvers.txt", "w");
-         if (f) {
-            fputs(gROOT->GetVersion(), f);
-            fclose(f);
+         if (savever && !status) {
+            f = fopen("PROOF-INF/proofvers.txt", "w");
+            if (f) {
+               fputs(gROOT->GetVersion(), f);
+               fputs(Form("\n%d",gROOT->GetSvnRevision()), f);
+               fclose(f);
+            }
          }
       } else {
          PDB(kPackage, 1)
