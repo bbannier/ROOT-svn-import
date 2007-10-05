@@ -31,8 +31,7 @@ namespace Math {
 
   double gamma_cdf_c(double x, double alpha, double theta, double x0) {
 
-    //return gsl_cdf_gamma_Q(x-x0, alpha, theta);
-    return 1. - ROOT::Math::inc_gamma(alpha, (x-x0)/theta);
+     return 1. - ROOT::Math::inc_gamma(alpha, (x-x0)/theta);
 
   }
 
@@ -40,8 +39,7 @@ namespace Math {
 
   double gamma_cdf(double x, double alpha, double theta, double x0) {
 
-    //return gsl_cdf_gamma_P(x-x0, alpha, theta);
-    return ROOT::Math::inc_gamma(alpha, (x-x0)/theta);
+      return ROOT::Math::inc_gamma(alpha, (x-x0)/theta);
   }
 
 
@@ -50,7 +48,9 @@ namespace Math {
 
   double tdistribution_cdf_c(double x, double r, double x0) {
 
-    return gsl_cdf_tdist_Q(x-x0, r);
+    double p = x-x0;
+    double sign = (p>0) ? 1. : -1;
+    return .5 - .5*ROOT::Math::inc_beta(p*p/(r + p*p), .5, .5*r)*sign;
 
   }
 
@@ -58,21 +58,23 @@ namespace Math {
 
   double tdistribution_cdf(double x, double r, double x0) {
 
-    return gsl_cdf_tdist_P(x-x0, r);
+    double p = x-x0;
+    double sign = (p>0) ? 1. : -1;
+    return  .5 + .5*ROOT::Math::inc_beta(p*p/(r + p*p), .5, .5*r)*sign;
 
   }
 
 
   double beta_cdf_c(double x, double a, double b) {
 
-    return gsl_cdf_beta_Q(x, a, b);
+    return 1. - ROOT::Math::inc_beta(x, a, b);
 
   }
 
 
   double beta_cdf(double x, double a, double b ) {
 
-    return gsl_cdf_beta_P(x, a, b);
+    return ROOT::Math::inc_beta(x, a, b);
 
   }
 
