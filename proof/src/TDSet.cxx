@@ -99,13 +99,13 @@ TDSetElement::TDSetElement(const char *file, const char *objname, const char *di
    // Create a TDSet element.
 
    if (first < 0) {
-      Warning("TDSetElement", "first must be >= 0, %d is not allowed - setting to 0", first);
+      Warning("TDSetElement", "first must be >= 0, %lld is not allowed - setting to 0", first);
       fFirst = 0;
    } else {
       fFirst = first;
    }
    if (num < -1) {
-      Warning("TDSetElement", "num must be >= -1, %d is not allowed - setting to -1", num);
+      Warning("TDSetElement", "num must be >= -1, %lld is not allowed - setting to -1", num);
       fNum   = -1;
    } else {
       fNum   = num;

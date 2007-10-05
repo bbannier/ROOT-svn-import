@@ -54,6 +54,7 @@ class TDSetElement;
 class TMessage;
 class TTimer;
 class TMutex;
+class TFileMerger;
 
 // Hook to external function setting up authentication related stuff
 // for old versions.
@@ -137,6 +138,8 @@ private:
    Int_t         OldAuthSetup(TString &wconf);
    Int_t         GetPriority();
 
+   TFileMerger  *fProofFileMerger;
+
    // Query handlers
    void          AddLogFile(TProofQueryResult *pq);
    Int_t         CleanupQueriesDir();
@@ -186,6 +189,7 @@ public:
    virtual Int_t  CreateServer();
 
    TProof        *GetProof()      const { return fProof; }
+   TFileMerger   *GetProofFileMerger(Bool_t isLocal = kFALSE);
    const char    *GetService()    const { return fService; }
    const char    *GetConfDir()    const { return fConfDir; }
    const char    *GetConfFile()   const { return fConfFile; }

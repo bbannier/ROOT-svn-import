@@ -24,6 +24,7 @@
 #include "TSocket.h"
 #include "TProofServ.h"
 #include "TProof.h"
+#include "TProofFile.h"
 #include "TProofSuperMaster.h"
 #include "TSlave.h"
 #include "TClass.h"
@@ -36,6 +37,7 @@
 #include "TString.h"
 #include "TSystem.h"
 #include "TFile.h"
+#include "TFileMerger.h"
 #include "TProofDebug.h"
 #include "TTimer.h"
 #include "TMap.h"
@@ -1136,6 +1138,7 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
 
    // Parse option
    Bool_t sync = (fProof->GetQueryMode(option) == TProof::kSync);
+   Bool_t noData = kFALSE;
 
    TDSet *set = dset;
    if (fProof->IsMaster()) {
@@ -1172,35 +1175,67 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
       PDB(kPacketizer,1) Info("Process","Create Proxy TDSet");
       set = new TDSetProxy( dset->GetType(), dset->GetObjName(),
                             dset->GetDirectory() );
+
       TString packetizer;
-      if (TProof::GetParameter(fInput, "PROOF_Packetizer", packetizer) != 0)
-         // Using standard packetizer TPacketizerAdaptive
-         packetizer = "TPacketizerAdaptive";
-      else
-         Info("Process", "using Alternate Packetizer: %s", packetizer.Data());
-
-      // Get linked to the related class
-      TClass *cl = TClass::GetClass(packetizer);
-      if (cl == 0) {
-         Error("Process", "class '%s' not found", packetizer.Data());
-         fExitStatus = kAborted;
-         return -1;
-      }
-
-      // Init the constructor
       TMethodCall callEnv;
-      callEnv.InitWithPrototype(cl, cl->GetName(),"TDSet*,TList*,Long64_t,Long64_t,TList*");
-      if (!callEnv.IsValid()) {
-         Error("Process", "cannot find correct constructor for '%s'", cl->GetName());
-         fExitStatus = kAborted;
-         return -1;
+      TClass *cl;
+      noData = dset->TestBit(TDSet::kEmpty) ? kTRUE : kFALSE;
+
+      if (noData) {
+         set->SetBit(TDSet::kEmpty);
+         if (TProof::GetParameter(fInput, "PROOF_Packetizer", packetizer) != 0)
+            packetizer = "TPacketizerUnit";
+         else
+            Info("Process", "using alternate packetizer: %s", packetizer.Data());
+
+         // Get linked to the related class
+         cl = TClass::GetClass(packetizer);
+         if (cl == 0) {
+            Error("Process", "class '%s' not found", packetizer.Data());
+            fExitStatus = kAborted;
+            return -1;
+         }
+
+         // Init the constructor
+         callEnv.InitWithPrototype(cl, cl->GetName(),"TList*,Long64_t,TList*");
+         if (!callEnv.IsValid()) {
+            Error("Process", "cannot find correct constructor for '%s'", cl->GetName());
+            fExitStatus = kAborted;
+            return -1;
+         }
+         callEnv.ResetParam();
+         callEnv.SetParam((Long_t) fProof->GetListOfActiveSlaves());
+         callEnv.SetParam((Long64_t) nentries);
+         callEnv.SetParam((Long_t) fInput);
+      } else {
+         if (TProof::GetParameter(fInput, "PROOF_Packetizer", packetizer) != 0)
+            // Using standard packetizer TAdaptivePacketizer
+            packetizer = "TPacketizerAdaptive";
+         else
+            Info("Process", "using alternate packetizer: %s", packetizer.Data());
+
+         // Get linked to the related class
+         cl = TClass::GetClass(packetizer);
+         if (cl == 0) {
+            Error("Process", "class '%s' not found", packetizer.Data());
+            fExitStatus = kAborted;
+            return -1;
+         }
+
+         // Init the constructor
+         callEnv.InitWithPrototype(cl, cl->GetName(),"TDSet*,TList*,Long64_t,Long64_t,TList*");
+         if (!callEnv.IsValid()) {
+            Error("Process", "cannot find correct constructor for '%s'", cl->GetName());
+            fExitStatus = kAborted;
+            return -1;
+         }
+         callEnv.ResetParam();
+         callEnv.SetParam((Long_t) dset);
+         callEnv.SetParam((Long_t) fProof->GetListOfActiveSlaves());
+         callEnv.SetParam((Long64_t) first);
+         callEnv.SetParam((Long64_t) nentries);
+         callEnv.SetParam((Long_t) fInput);
       }
-      callEnv.ResetParam();
-      callEnv.SetParam((Long_t) dset);
-      callEnv.SetParam((Long_t) fProof->GetListOfActiveSlaves());
-      callEnv.SetParam((Long64_t) first);
-      callEnv.SetParam((Long64_t) nentries);
-      callEnv.SetParam((Long_t) fInput);
 
       // Get an instance of the packetizer
       Long_t ret = 0;
@@ -1342,6 +1377,39 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
 }
 
 //______________________________________________________________________________
+Bool_t  TProofPlayerRemote::MergeOutputFiles()
+{
+   // Merge output in files
+
+   if (fMergeFiles) {
+      TFileMerger *filemerger = gProofServ->GetProofFileMerger();
+      if (!filemerger) {
+         Error("MergeOutputFiles", "file merger is null in gProofServ! Protocol error?");
+         return kFALSE;
+      }
+
+      Bool_t result = filemerger->Merge();
+      if (!result) {
+         Error("MergeOutputFiles", "cannot merge the output files");
+         return kFALSE;
+      }
+
+      TList *fileList = filemerger->GetMergeList();
+      if (fileList) {
+         TIter next(fileList);
+         TObjString *url = 0;
+         while((url = (TObjString*)next())) {
+            gSystem->Unlink(url->GetString());
+         }
+      }
+      filemerger->Reset();
+   }
+   // Done
+   return kTRUE;
+}
+
+
+//______________________________________________________________________________
 Long64_t TProofPlayerRemote::Finalize(Bool_t force, Bool_t sync)
 {
    // Finalize a query.
@@ -1364,6 +1432,10 @@ Long64_t TProofPlayerRemote::Finalize(Bool_t force, Bool_t sync)
    Long64_t rv = 0;
    if (fProof->IsMaster()) {
       TPerfStats::Stop();
+
+      // Merge the output files created on workers, if any
+      MergeOutputFiles();
+
       fOutput->SetOwner();
       SafeDelete(fSelector);
    } else {
@@ -1733,6 +1805,12 @@ Int_t TProofPlayerRemote::AddOutputObject(TObject *obj)
       return 1;
    }
 
+   // Check if we need to merge files
+   TProofFile* proofFile = dynamic_cast<TProofFile*>(obj);
+   if (proofFile) {
+      if (!strcmp(proofFile->GetMode(),"CENTRAL"))
+         fMergeFiles = kTRUE;
+   }
    // For other objects we just run the incorporation procedure
    Incorporate(obj, fOutput, merged);
 

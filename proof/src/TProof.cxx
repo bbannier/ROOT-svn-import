@@ -57,6 +57,7 @@
 #include "TObjString.h"
 #include "TParameter.h"
 #include "TProof.h"
+#include "TProofFile.h"
 #include "TProofNodeInfo.h"
 #include "TVirtualProofPlayer.h"
 #include "TProofServ.h"
@@ -2037,10 +2038,35 @@ Int_t TProof::CollectInputFrom(TSocket *s)
             } else if (type > 0) {
                // Read object
                TObject *obj = mess->ReadObject(TObject::Class());
+               if ((obj->IsA() == TProofFile::Class()) && IsMaster()) {
+                  TProofFile *pf = (TProofFile *)obj;
+                  TList *slaveList = GetListOfSlaveInfos();
+                  TIter next(slaveList);
+                  TSlaveInfo *info = 0;
+
+                  TString pfx  = gEnv->GetValue("ProofServ.Localroot","");
+                  while((info = (TSlaveInfo *)next())) {
+                     if (!strcmp(info->GetOrdinal(), pf->GetWorkerOrdinal())) {
+                        TString dirPath = pf->GetDir();
+                        if (pfx && strcmp(pfx.Data(),""))
+                           dirPath.Remove(0,pfx.Length());
+                        pf->SetDir(Form("root://%s/%s",info->GetName(),dirPath.Data()));
+                        break;
+                     }
+                  }
+
+                  if (!(pf->fMasterHostName.IsNull())) {
+                     TString sessionPath = Form("%s", gProofServ->GetSessionDir());
+                     if (pfx && strcmp(pfx.Data(),""))
+                        sessionPath.Remove(0,pfx.Length());
+                     pf->SetMasterHostName(Form("root://%s/%s",gSystem->HostName(),sessionPath.Data()));
+                  }
+               }
                // Add or merge it
                if ((fPlayer->AddOutputObject(obj) == 1))
                   // Remove the object if it has been merged
                   SafeDelete(obj);
+
                if (type > 1 && !IsMaster()) {
                   TQueryResult *pq = fPlayer->GetCurrentQuery();
                   pq->SetOutputList(fPlayer->GetOutputList(), kFALSE);
@@ -2848,6 +2874,48 @@ Long64_t TProof::Process(const char *dsetname, const char *selector,
    delete dset;
    return retval;
 }
+
+//______________________________________________________________________________
+Long64_t TProof::Process(const char *selector, Long64_t nentries,
+                         Option_t *option)
+{
+   // Process an empty data set using the specified selector (.C) file.
+   // The return value is -1 in case of error and TSelector::GetStatus() in
+   // in case of success.
+
+   if (!IsValid()) return -1;
+
+   // Resolve query mode
+   fSync = (GetQueryMode(option) == kSync);
+
+   if (fSync && !IsIdle()) {
+      Info("Process","not idle, cannot submit synchronous query");
+      return -1;
+   }
+
+   // deactivate the default application interrupt handler
+   // ctrl-c's will be forwarded to PROOF to stop the processing
+   TSignalHandler *sh = 0;
+   if (fSync) {
+      if (gApplication)
+         sh = gSystem->RemoveSignalHandler(gApplication->GetSignalHandler());
+   }
+
+   TDSet *dset = new TDSet;
+   dset->SetBit(TDSet::kEmpty);
+
+   Long64_t rv = fPlayer->Process(dset, selector, option, nentries);
+
+   if (fSync) {
+      // reactivate the default application interrupt handler
+      if (sh)
+         gSystem->AddSignalHandler(sh);
+   }
+
+   return rv;
+
+}
+
 
 //______________________________________________________________________________
 Int_t TProof::GetQueryReference(Int_t qry, TString &ref)

@@ -44,6 +44,7 @@
 #pragma link C++ class TProofNodeInfo;
 #pragma link C++ class TProofResources;
 #pragma link C++ class TProofResourcesStatic;
+#pragma link C++ class TProofFile;
 
 // For backward compatibility with old client / masters
 #pragma link C++ class std::pair<TDSetElement*, TString>;
