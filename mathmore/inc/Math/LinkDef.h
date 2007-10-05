@@ -18,7 +18,6 @@
 
 #include "LinkDef_SpecFunc.h" 
 #include "LinkDef_StatFunc.h" 
-#include "LinkDef_Func.h" 
 
 
 #include "LinkDef_RootFinding.h"
