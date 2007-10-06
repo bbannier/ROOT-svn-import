@@ -6680,7 +6680,7 @@ int XrdProofdProtocol::UpdatePriorities(bool forceupdate)
       return 0;
    }
 
-   XrdOucMutexHelper mtxh(&fgXPDMutex);
+   XrdSysMutexHelper mtxh(&fgXPDMutex);
 
    // Read priorities
    if (fgGroupsMgr.ReadPriorities() != 0) {
@@ -6693,7 +6693,7 @@ int XrdProofdProtocol::UpdatePriorities(bool forceupdate)
    if (fgSchedOpt == kXPD_sched_central) {
       // Communicate them to the sessions
       std::list<XrdProofServProxy *>::iterator asvi, ssvi;
-      XrdOucMutexHelper mhp(fgMgr.Mutex());
+      XrdSysMutexHelper mhp(fgMgr.Mutex());
       for (asvi = fgMgr.GetActiveSessions()->begin();
            asvi != fgMgr.GetActiveSessions()->end(); asvi++) {
             TRACE(SCHED,"UpdatePriorities: server type: "<<(*asvi)->SrvType());
