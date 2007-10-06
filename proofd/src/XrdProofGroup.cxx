@@ -485,7 +485,7 @@ int XrdProofGroupMgr::ReadPriorities()
    }
 
    // This part must be modified in atomic way
-   XrdOucMutexHelper mhp(fMutex);
+   XrdSysMutexHelper mhp(fMutex);
 
    // Read now the directives
    char lin[2048];
