@@ -60,8 +60,6 @@ ALLMAPS     += $(DICTIOMAP)
 # include all dependency files
 INCLUDEFILES += $(METAUTILSDEP) $(DICTIODEP)
 
-
-
 ##### local rules #####
 include/%.h:    $(METAUTILSDIRI)/%.h
 		cp $< $@
@@ -84,8 +82,6 @@ $(DICTIOMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(DICTIOL)
 		$(RLIBMAP) -o $(DICTIOMAP) -l $(DICTIOLIB) \
 		   -d $(DICTIOLIBDEPM) -c $(DICTIOL)
 
-
-
 all-metautils:  $(METAUTILSO) $(METAUTILSDO) $(DICTIOLIB) $(DICTIOMAP) 
 
 clean-metautils:
@@ -94,7 +90,7 @@ clean-metautils:
 clean::         clean-metautils
 
 distclean-metautils: clean-metautils
-		@rm -f $(METAUTILSDEP) $(METAUTILSDS) $(METAUTILSDH) $(DICTIODEP) $(DICTIOO) $(DICTIODS) $(DICTIODH) $(DICTIOLIB) $(DICTIOMAP) 
+		@rm -f $(METAUTILSDEP) $(METAUTILSDS) $(METAUTILSDH) $(DICTIODEP) $(DICTIOO) $(DICTIODS) $(DICTIODH) $(DICTIOLIB) $(DICTIOMAP)
 
 distclean::     distclean-metautils
 

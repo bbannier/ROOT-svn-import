@@ -47,7 +47,7 @@ include $(MAKEFILEDEP)
 
 ##### Modules to build #####
 
-MODULES       = build cint metautils pcre io utils base cont meta net math \
+MODULES       = build cint metautils pcre utils base cont meta io net math \
                 zip clib matrix newdelete hist tree freetype graf gpad \
                 g3d gui minuit histpainter treeplayer ged treeviewer physics \
                 postscript rint thread html eg geom geompainter vmc fumili \
@@ -64,13 +64,13 @@ else
 ifeq ($(ARCH),win32gcc)
 MODULES      += unix x11 x11ttf x3d rootx
 SYSTEML       = $(UNIXL)
-SYSTEMO       = $(UNIXO)
-SYSTEMDO      = $(UNIXDO)
+SYSTEMO       = $(UNIXO) $(UNIXTMPDO)
+SYSTEMDO      = $(UNIXDO) $(UNIXTMP2DO)
 else
 MODULES      += unix x11 x11ttf x3d rootx
 SYSTEML       = $(UNIXL)
-SYSTEMO       = $(UNIXO)
-SYSTEMDO      = $(UNIXDO)
+SYSTEMO       = $(UNIXO) $(UNIXTMPDO)
+SYSTEMDO      = $(UNIXDO) $(UNIXTMP2DO)
 endif
 endif
 ifeq ($(BUILDGL),yes)
@@ -231,7 +231,8 @@ RPATH        := -L$(LPATH)
 CINTLIBS     := -lCint
 CINT7LIBS    := -lCint7 -lReflex
 NEWLIBS      := -lNew
-ROOTLIBS     := -lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad \
+ROOTLIBS     := -lCore -lCint -lRIO -lNet -lHist \
+                -lGraf -lGraf3d -lGpad\
                 -lTree -lMatrix
 BOOTLIBS     := -lCore -lCint -lRIO -lDictIO
 ifneq ($(ROOTDICTTYPE),cint)
@@ -349,12 +350,6 @@ F77LIBS      := $(LIBFRTBEGIN) $(F77LIBS)
 endif
 endif
 
-##### Store SVN revision number #####
-
-ifeq ($(shell which svn 2>&1 | sed -ne "s@.*/svn@svn@p"),svn)
-SVNREV  := $(shell build/unix/svninfo.sh)
-endif
-
 ##### Utilities #####
 
 ROOTCINTTMP   = $(ROOTCINTTMPEXE) $(addprefix -,$(ROOTDICTTYPE))
@@ -388,14 +383,19 @@ COREL         = $(BASEL1) $(BASEL2) $(BASEL3) $(CONTL) $(METAL) \
                 $(SYSTEML) $(CLIBL) $(METAUTILSL) $(MATHL)
 COREO         = $(BASEO) $(CONTO) $(METAO) $(SYSTEMO) $(ZIPO) $(CLIBO) \
                 $(METAUTILSO) $(MATHO)
-COREDO        = $(BASEDO) $(CONTDO) $(METADO) $(SYSTEMDO) $(CLIBDO) \
-                $(METAUTILSDO) $(MATHDO)
+COREDO        = $(BASEDO) $(BASETMPDO) $(BASETMP2DO) $(CONTDO) $(CONTTMPDO) $(CONTTMP2DO) \
+		$(METADO) $(METATMPDO) $(METATMP2DO) $(SYSTEMDO) $(CLIBDO) \
+                $(METAUTILSDO) $(MATHDO) $(MATHTMPDO) $(MATHTMP2DO)
 
 CORELIB      := $(LPATH)/libCore.$(SOEXT)
 COREMAP      := $(CORELIB:.$(SOEXT)=.rootmap)
 ifneq ($(BUILTINZLIB),yes)
 CORELIBEXTRA += $(ZLIBCLILIB)
 endif
+
+#LF
+#COREDICTLIB      := $(LPATH)/libCoreDict.$(SOEXT)
+#COREDICTMAP      := $(COREDICTLIB:.$(SOEXT)=.rootmap)
 
 ##### In case shared libs need to resolve all symbols (e.g.: aix, win32) #####
 
@@ -563,6 +563,7 @@ build/dummy.d: config Makefile $(ALLHDRS) $(RMKDEP) $(BINDEXP) $(PCHDEP)
 	   touch $@; \
 	fi)
 
+#LF
 $(CORELIB): $(COREO) $(COREDO) $(CINTLIB) $(PCREDEP) $(CORELIBDEP)
 ifneq ($(ARCH),alphacxx6)
 	@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
@@ -574,8 +575,24 @@ else
 	   "$(CORELIBEXTRA) $(PCRELDFLAGS) $(PCRELIB) $(CRYPTLIBS)"
 endif
 
+#LF
+#$(COREDICTLIB): $(COREDO) $(CINTLIB) $(PCREDEP) $(COREDICTLIBDEP)
+#ifneq ($(ARCH),alphacxx6)
+#	@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
+#	   "$(SOFLAGS)" libCoreDict.$(SOEXT) $@ "$(COREDO)" \
+#	   "$(COREDICTLIBEXTRA) $(PCRELDFLAGS) $(PCRELIB) $(CRYPTLIBS)"
+#else
+#	@$(MAKELIB) $(PLATFORM) $(LD) "$(CORELDFLAGS)" \
+#	   "$(SOFLAGS)" libCoreDict.$(SOEXT) $@ "$(COREDO)" \
+#	   "$(COREDICTLIBEXTRA) $(PCRELDFLAGS) $(PCRELIB) $(CRYPTLIBS)"
+#endif
+
 $(COREMAP): $(RLIBMAP) $(MAKEFILEDEP) $(COREL)
 	$(RLIBMAP) -o $(COREMAP) -l $(CORELIB) -d $(CORELIBDEPM) -c $(COREL)
+
+#LF
+#$(COREDICTMAP): $(RLIBMAP) $(MAKEFILEDEP) $(COREL)
+#	$(RLIBMAP) -o $(COREDICTMAP) -l $(COREDICTLIB) -d $(CORELIB) $(CORELIBDEPM) -c $(COREL)
 
 map::   $(ALLMAPS)
 
@@ -714,7 +731,7 @@ endif
 
 distclean:: clean
 	-@mv -f include/RConfigure.h include/RConfigure.h-
-	@rm -f include/*.h $(ROOTMAP) $(CORELIB) $(COREMAP)
+	@rm -f include/*.h $(ROOTMAP) $(CORELIB) $(COREDICTLIB) $(COREMAP) $(COREDICTMAP)
 	-@mv -f include/RConfigure.h- include/RConfigure.h
 	@rm -f bin/*.dll bin/*.exp bin/*.lib bin/*.pdb \
                lib/*.def lib/*.exp lib/*.lib lib/*.dll.a \
@@ -786,13 +803,10 @@ install: all
 	   inode1=`ls -id $(DESTDIR)$(BINDIR) | awk '{ print $$1 }'`; \
 	fi; \
 	inode2=`ls -id $$PWD/bin | awk '{ print $$1 }'`; \
-	if ([ -d $(DESTDIR)$(BINDIR) ] && [ "x$$inode1" = "x$$inode2" ]); then \
+	if ([ -d $(DESTDIR)$(BINDIR) ] && [ "x$$inode1" = "x$$inode2" ]) || \
+	    [ "$(USECONFIG)" = "FALSE" ]; then \
 	   echo "Everything already installed..."; \
 	else \
-           if [ "$(USECONFIG)" = "FALSE" ] && [ -z "$(ROOTSYS)" ]; then \
-              echo "ROOTSYS not set, set it to a destination directory"; \
-              exit 1; \
-           fi; \
 	   echo "Installing binaries in $(DESTDIR)$(BINDIR)"; \
 	   $(INSTALLDIR)                        $(DESTDIR)$(BINDIR); \
 	   $(INSTALLDATA) bin/*                 $(DESTDIR)$(BINDIR); \
@@ -821,7 +835,6 @@ install: all
 	   $(INSTALLDATA) cint/lib              $(DESTDIR)$(CINTINCDIR); \
 	   $(INSTALLDATA) cint/stl              $(DESTDIR)$(CINTINCDIR); \
 	   find $(DESTDIR)$(CINTINCDIR) -name CVS -exec rm -rf {} \; >/dev/null 2>&1; \
-	   find $(DESTDIR)$(CINTINCDIR) -name .svn -exec rm -rf {} \; >/dev/null 2>&1; \
 	   echo "Installing icons in $(DESTDIR)$(ICONPATH)"; \
 	   $(INSTALLDIR)                        $(DESTDIR)$(ICONPATH); \
 	   $(INSTALLDATA) icons/*.xpm           $(DESTDIR)$(ICONPATH); \
@@ -831,39 +844,32 @@ install: all
 	   $(INSTALLDIR)                        $(DESTDIR)$(TTFFONTDIR); \
 	   $(INSTALLDATA) fonts/*               $(DESTDIR)$(TTFFONTDIR); \
 	   find $(DESTDIR)$(TTFFONTDIR) -name CVS -exec rm -rf {} \; >/dev/null 2>&1; \
-	   find $(DESTDIR)$(TTFFONTDIR) -name .svn -exec rm -rf {} \; >/dev/null 2>&1; \
 	   echo "Installing misc docs in $(DESTDIR)$(DOCDIR)"; \
 	   $(INSTALLDIR)                        $(DESTDIR)$(DOCDIR); \
 	   $(INSTALLDATA) LICENSE               $(DESTDIR)$(DOCDIR); \
 	   $(INSTALLDATA) README/*              $(DESTDIR)$(DOCDIR); \
 	   find $(DESTDIR)$(DOCDIR) -name CVS -exec rm -rf {} \; >/dev/null 2>&1; \
-	   find $(DESTDIR)$(DOCDIR) -name .svn -exec rm -rf {} \; >/dev/null 2>&1; \
 	   echo "Installing tutorials in $(DESTDIR)$(TUTDIR)"; \
 	   $(INSTALLDIR)                        $(DESTDIR)$(TUTDIR); \
 	   $(INSTALLDATA) tutorials/*           $(DESTDIR)$(TUTDIR); \
 	   find $(DESTDIR)$(TUTDIR) -name CVS -exec rm -rf {} \; >/dev/null 2>&1; \
-	   find $(DESTDIR)$(TUTDIR) -name .svn -exec rm -rf {} \; >/dev/null 2>&1; \
 	   echo "Installing tests in $(DESTDIR)$(TESTDIR)"; \
 	   $(INSTALLDIR)                        $(DESTDIR)$(TESTDIR); \
 	   $(INSTALLDATA) test/*                $(DESTDIR)$(TESTDIR); \
 	   find $(DESTDIR)$(TESTDIR) -name CVS -exec rm -rf {} \; >/dev/null 2>&1; \
-	   find $(DESTDIR)$(TESTDIR) -name .svn -exec rm -rf {} \; >/dev/null 2>&1; \
 	   echo "Installing macros in $(DESTDIR)$(MACRODIR)"; \
 	   $(INSTALLDIR)                        $(DESTDIR)$(MACRODIR); \
 	   $(INSTALLDATA) macros/*              $(DESTDIR)$(MACRODIR); \
 	   find $(DESTDIR)$(MACRODIR) -name CVS -exec rm -rf {} \; >/dev/null 2>&1; \
-	   find $(DESTDIR)$(MACRODIR) -name .svn -exec rm -rf {} \; >/dev/null 2>&1; \
 	   echo "Installing man(1) pages in $(DESTDIR)$(MANDIR)"; \
 	   $(INSTALLDIR)                        $(DESTDIR)$(MANDIR); \
 	   $(INSTALLDATA) man/man1/*            $(DESTDIR)$(MANDIR); \
 	   find $(DESTDIR)$(MANDIR) -name CVS -exec rm -rf {} \; >/dev/null 2>&1; \
-	   find $(DESTDIR)$(MANDIR) -name .svn -exec rm -rf {} \; >/dev/null 2>&1; \
 	   echo "Installing config files in $(DESTDIR)$(ETCDIR)"; \
 	   rm -f                                $(DESTDIR)$(ETCDIR)/system.rootmap; \
 	   $(INSTALLDIR)                        $(DESTDIR)$(ETCDIR); \
 	   $(INSTALLDATA) etc/*                 $(DESTDIR)$(ETCDIR); \
 	   find $(DESTDIR)$(ETCDIR) -name CVS -exec rm -rf {} \; >/dev/null 2>&1; \
-	   find $(DESTDIR)$(ETCDIR) -name .svn -exec rm -rf {} \; >/dev/null 2>&1; \
 	   echo "Installing Autoconf macro in $(DESTDIR)$(ACLOCALDIR)"; \
 	   $(INSTALLDIR)                        $(DESTDIR)$(ACLOCALDIR); \
 	   $(INSTALLDATA) build/misc/root.m4    $(DESTDIR)$(ACLOCALDIR); \
@@ -873,7 +879,6 @@ install: all
 	   echo "Installing GDML conversion scripts in $(DESTDIR)$(LIBDIR)"; \
 	   $(INSTALLDATA) gdml/*.py               $(DESTDIR)$(LIBDIR); \
 	   find $(DESTDIR)$(DATADIR) -name CVS -exec rm -rf {} \; >/dev/null 2>&1; \
-	   find $(DESTDIR)$(DATADIR) -name .svn -exec rm -rf {} \; >/dev/null 2>&1; \
 	fi
 
 uninstall:
@@ -981,7 +986,6 @@ uninstall:
 
 showbuild:
 	@echo "ROOTSYS            = $(ROOTSYS)"
-	@echo "SVNREV             = $(SVNREV)"
 	@echo "PLATFORM           = $(PLATFORM)"
 	@echo "OPT                = $(OPT)"
 	@echo ""

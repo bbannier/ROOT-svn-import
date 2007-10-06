@@ -4248,7 +4248,7 @@ int main(int argc, char **argv)
 
 //#ifdef ROOTBUILD
    //G__RegisterScriptCompiler(0);
-   G__set_ignoreinclude((G__IgnoreInclude)*G__loadCore);
+   
    /* DIEGO */
     G__set_funcmember_root_writer(0);
     G__set_datamember_root_writer(0);
@@ -4275,6 +4275,7 @@ int main(int argc, char **argv)
    string dictpathname;
    string libfilename;
    const char *env_dict_type=getenv("ROOTDICTTYPE");
+   int dicttype = 0; // LF 09-07-07 -- 0 for dict, 1 for ShowMembers
 
    if (env_dict_type)
       if (!strcmp(env_dict_type, "cint"))
@@ -4480,6 +4481,36 @@ int main(int argc, char **argv)
    argvv[0] = argv[0];
    argcc = 1;
 
+   // LF 03-07-07
+   // We need the library path in the dictionary generation
+   // the easiest way is to get it as a parameter
+   if (!strcmp(argv[ic], "-L")) {
+      ++ic;
+      argvv[argcc++] = "-L";
+      argvv[argcc++] = argv[ic]; 
+      ++ic;
+   }
+ 
+   // LF 09-07-07
+   // We want to separate the generation of the dictionary
+   // source.
+   // We need one that will be the real dictionary and
+   // another one with all the ShowMembers stuff.
+   //
+   // If we see the parameter -S then we want the ShowMembers
+   // rubbish, if not, we only want the dict (without showmembers)
+   if (!strcmp(argv[ic], "-.")) {
+      ++ic;
+      argvv[argcc++] = "-.";
+      dicttype = atoi(argv[ic]);
+      argvv[argcc++] = argv[ic]; 
+      ++ic;
+   }
+   
+   // We only generate root files for the dictionaries of type 1 and 3, for that we need to load the core libs as libCore libRIO libDICIO 
+   if (dicttype == 0 || dicttype == 3)
+      G__set_ignoreinclude((G__IgnoreInclude)*G__loadCore);
+   
    if (!strcmp(argv[ic], "-c")) {
       icc++;
       if (ifl) {
@@ -4493,7 +4524,7 @@ int main(int argc, char **argv)
          s = strrchr(dictname,'.');
          argvv[argcc] = (char *)calloc(strlen(dictname), 1);
          strncpy(argvv[argcc], dictname, s-dictname); argcc++;
-
+         
          while (ic < argc && (*argv[ic] == '-' || *argv[ic] == '+')) {
             if (strcmp("+P", argv[ic]) == 0 ||
                 strcmp("+V", argv[ic]) == 0 ||
@@ -4503,7 +4534,7 @@ int main(int argc, char **argv)
             }
             argvv[argcc++] = argv[ic++];
          }
-
+         
          for (i = 0; path[i][0]; i++)
             argvv[argcc++] = path[i];
 
@@ -4833,6 +4864,12 @@ int main(int argc, char **argv)
       (*dictSrcOut) << std::endl;
    }
 
+   
+   // LF 26-07-07
+   // dont generate the showmembers if we only want 
+   // all the memfunc_setup stuff
+   if(dicttype==0 || dicttype==1) {   
+
    //
    // We will loop over all the classes several times.
    // In order we will call
@@ -4926,11 +4963,6 @@ int main(int argc, char **argv)
             RStl::inst().GenerateTClassFor( cl.Name() );
          } else {
             WriteClassInit(cl);
-/* DIEGO */
-#ifndef ROOTBUILD
-            //  WriteClassInit(cl,dict_gen);
-#endif
-/* DIEGO */
          }
       } else if (((cl.Property() & (G__BIT_ISNAMESPACE)) && cl.Linkage() == G__CPPLINK)) {
          WriteNamespaceInit(cl);
@@ -5145,7 +5177,16 @@ int main(int argc, char **argv)
       WriteClassCode(cl);
    }
 
-  /* DIEGO */ 
+   RStl::inst().WriteClassInit(0);
+
+   fclose(fpld);
+  
+   if (!il) remove(autold);
+   if (use_preprocessor) remove(bundlename.c_str());
+   
+   } // LF
+
+   /* DIEGO */ 
    int storeGlobalComp = G__getglobalcomp();
    G__setglobalcomp(G__NOLINK);
    G__setglobalcomp(G__NOLINK);
@@ -5153,15 +5194,7 @@ int main(int argc, char **argv)
       G__dictionary_file_writer(G__rootdictname);
    G__setglobalcomp(storeGlobalComp);
    G__setglobalcomp(storeGlobalComp);
-  /* DIEGO */
-
-   //RStl::inst().WriteStreamer(fp); //replaced by new Markus code
-   RStl::inst().WriteClassInit(0);
-
-   fclose(fpld);
-
-   if (!il) remove(autold);
-   if (use_preprocessor) remove(bundlename.c_str());
+   /* DIEGO */
 
    // Append CINT dictionary to file containing Streamers and ShowMembers
    if (ifl) {
