@@ -8126,7 +8126,7 @@ void G__make_default_ifunc(G__ifunc_table_internal *ifunc_copy)
          ifunc = ifunc->next;
       } /* end while(ifunc) */
 
-      if (ifunc->next == 0
+      if (ifunc && ifunc->next == 0
           // dummy
 #ifndef G__OLDIMPLEMENTATON1656
           && G__NOLINK == G__struct.iscpplink[i]
