@@ -56,6 +56,8 @@
 #pragma link C++ function ROOT::Math::breitwigner_cdf( double , double, double);
 #pragma link C++ function ROOT::Math::cauchy_cdf_c( double , double, double);
 #pragma link C++ function ROOT::Math::cauchy_cdf( double , double, double);
+#pragma link C++ function ROOT::Math::chisquared_cdf_c( double , double, double);
+#pragma link C++ function ROOT::Math::chisquared_cdf( double , double, double);
 #pragma link C++ function ROOT::Math::exponential_cdf_c( double , double, double);
 #pragma link C++ function ROOT::Math::exponential_cdf( double , double, double);
 #pragma link C++ function ROOT::Math::gaussian_cdf_c( double , double, double);
@@ -66,6 +68,13 @@
 #pragma link C++ function ROOT::Math::normal_cdf( double , double, double);
 #pragma link C++ function ROOT::Math::uniform_cdf_c( double , double, double, double);
 #pragma link C++ function ROOT::Math::uniform_cdf( double , double, double, double);
+
+#pragma link C++ function ROOT::Math::fdistribution_cdf_c( double , double, double, double);
+#pragma link C++ function ROOT::Math::fdistribution_cdf( double , double, double, double);
+#pragma link C++ function ROOT::Math::gamma_cdf_c( double , double, double, double);
+#pragma link C++ function ROOT::Math::gamma_cdf( double , double, double, double);
+#pragma link C++ function ROOT::Math::tdistribution_cdf_c( double , double, double);
+#pragma link C++ function ROOT::Math::tdistribution_cdf( double , double, double);
 
 
 #endif
