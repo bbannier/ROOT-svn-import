@@ -16,16 +16,14 @@
 #define G__DICTIONARY
 #include "G__ci.h"
 extern "C" {
-extern G__DLLEXPORT int G__cpp_dllrevG__API();
-extern G__DLLEXPORT void G__set_cpp_environmentG__API();
-extern G__DLLEXPORT void G__cpp_setup_tagtableG__API();
-extern G__DLLEXPORT void G__cpp_setup_inheritanceG__API();
-extern G__DLLEXPORT void G__cpp_setup_typetableG__API();
-extern G__DLLEXPORT void G__cpp_setup_memvarG__API();
-extern G__DLLEXPORT void G__cpp_setup_globalG__API();
-extern G__DLLEXPORT void G__cpp_setup_memfuncG__API();
-extern G__DLLEXPORT void G__cpp_setup_funcG__API();
-extern G__DLLEXPORT void G__cpp_setupG__API();
+extern void G__cpp_setup_tagtableG__API();
+extern void G__cpp_setup_inheritanceG__API();
+extern void G__cpp_setup_typetableG__API();
+extern void G__cpp_setup_memvarG__API();
+extern void G__cpp_setup_globalG__API();
+extern void G__cpp_setup_memfuncG__API();
+extern void G__cpp_setup_funcG__API();
+extern void G__set_cpp_environmentG__API();
 }
 
 
@@ -35,12 +33,39 @@ extern G__DLLEXPORT void G__cpp_setupG__API();
 #ifndef G__MEMFUNCBODY
 #endif
 
-extern G__linked_taginfo G__G__APILN_string;
-extern G__linked_taginfo G__G__APILN_basic_ostreamlEcharcOchar_traitslEchargRsPgR;
+extern G__linked_taginfo G__G__APILN_fpos_t;
+extern G__linked_taginfo G__G__APILN_G__StoreEnv;
+extern G__linked_taginfo G__G__APILN_G__p2p;
+extern G__linked_taginfo G__G__APILN_G__DUMMY_FOR_CINT7;
 extern G__linked_taginfo G__G__APILN_G__value;
+extern G__linked_taginfo G__G__APILN_G__valuecLcL14;
+extern G__linked_taginfo G__G__APILN_G__ifunc_table;
+extern G__linked_taginfo G__G__APILN_G__var_array;
+extern G__linked_taginfo G__G__APILN_G__dictposition;
+extern G__linked_taginfo G__G__APILN_G__comment_info;
 extern G__linked_taginfo G__G__APILN_G__friendtag;
 extern G__linked_taginfo G__G__APILN_G__bytecodefunc;
+extern G__linked_taginfo G__G__APILN_G__funcentry;
+extern G__linked_taginfo G__G__APILN_G__inheritance;
+extern G__linked_taginfo G__G__APILN_G__tagtable;
+extern G__linked_taginfo G__G__APILN_G__input_file;
+extern G__linked_taginfo G__G__APILN_G__tempobject_list;
+extern G__linked_taginfo G__G__APILN_G__va_list_para;
+extern G__linked_taginfo G__G__APILN_G__dictpositioncLcLG__ConstStringList;
+extern G__linked_taginfo G__G__APILN_G__dictpositioncLcLG__includepath;
+extern G__linked_taginfo G__G__APILN_G__dictpositioncLcLG__Preprocessfilekey;
+extern G__linked_taginfo G__G__APILN_G__dictpositioncLcLG__Deffuncmacro;
+extern G__linked_taginfo G__G__APILN_G__dictpositioncLcLG__Definedtemplateclass;
+extern G__linked_taginfo G__G__APILN_G__dictpositioncLcLG__Definetemplatefunc;
+extern G__linked_taginfo G__G__APILN_G__comment_infocLcL33;
+extern G__linked_taginfo G__G__APILN_G__RootSpecial;
 extern G__linked_taginfo G__G__APILN_G__param;
+extern G__linked_taginfo G__G__APILN_G__linked_taginfo;
+extern G__linked_taginfo G__G__APILN_G__COMPLETIONLIST;
+extern G__linked_taginfo G__G__APILN_G__IntList;
+extern G__linked_taginfo G__G__APILN_G__Definedtemplatememfunc;
+extern G__linked_taginfo G__G__APILN_G__Templatearg;
+extern G__linked_taginfo G__G__APILN_G__Definedtemplateclass;
 extern G__linked_taginfo G__G__APILN_Cint;
 extern G__linked_taginfo G__G__APILN_CintcLcLG__MethodInfo;
 extern G__linked_taginfo G__G__APILN_CintcLcLG__DataMemberInfo;
@@ -62,6 +87,8 @@ extern G__linked_taginfo G__G__APILN_CintcLcLG__TokenInfocLcLG__TokenType;
 extern G__linked_taginfo G__G__APILN_CintcLcLG__TokenInfocLcLG__TokenProperty;
 extern G__linked_taginfo G__G__APILN_CintcLcLG__SourceFileInfo;
 extern G__linked_taginfo G__G__APILN_CintcLcLG__IncludePathInfo;
+extern G__linked_taginfo G__G__APILN_basic_ostreamlEcharcOchar_traitslEchargRsPgR;
+extern G__linked_taginfo G__G__APILN_string;
 extern G__linked_taginfo G__G__APILN_CintcLcLG__ShadowMaker;
 
 /* STUB derived class for protected member access */
