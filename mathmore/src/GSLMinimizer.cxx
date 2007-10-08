@@ -34,8 +34,10 @@
 
 #include <iostream>
 #include <cmath>
+
 #include <algorithm>
 #include <functional>
+#include <ctype.h>   // need to use c version of tolower defined here
 
 namespace ROOT { 
 
@@ -65,7 +67,7 @@ GSLMinimizer::GSLMinimizer( const char *  type) :
 {
    // Constructor implementation from a string 
    std::string algoname(type);
-   std::transform(algoname.begin(), algoname.end(), algoname.begin(), (int(*)(int)) std::tolower ); 
+   std::transform(algoname.begin(), algoname.end(), algoname.begin(), (int(*)(int)) tolower ); 
 
    ROOT::Math::EGSLMinimizerType algo =  kConjugateFR;   // default value 
    if (algoname == "conjugatepr") algo = kConjugatePR; 
