@@ -33,6 +33,7 @@
 #include <algobase.h>
 #include <heap.h>
 #include <tempbuf.h>
+#pragma setertti
 
 template <class T>
 inline T __median(T a, T b, T c) {
@@ -531,14 +532,12 @@ OutputIterator rotate_copy(ForwardIterator first, ForwardIterator middle,
     return copy(first, middle, copy(middle, last, result));
 }
 
-unsigned long __long_random(unsigned long);
-
 template <class RandomAccessIterator, class Distance>
 void __random_shuffle(RandomAccessIterator first, RandomAccessIterator last,
 		      Distance*) {
     if (first == last) return;
     for (RandomAccessIterator i = first + 1; i != last; i++)
-	iter_swap(i, first + Distance(__long_random((i - first) + 1)));
+	iter_swap(i, first + Distance(Cint::G__long_random((i - first) + 1)));
 }
 
 template <class RandomAccessIterator>

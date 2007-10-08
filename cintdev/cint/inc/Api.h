@@ -23,12 +23,14 @@
 
 #define G__API
 #include "G__ci.h"
+/*
 #ifdef __MAKECINT__
 #pragma link off all classes;
 #pragma link off all functions;
 #pragma link off all globals;
 #pragma link off all typedefs;
 #endif
+*/
 
 #define G__INFO_BUFLEN 50
 /* #define G__INFO_TITLELEN 256 */
@@ -196,6 +198,7 @@ using namespace Cint;
 #pragma link off class $G__linked_taginfo;
 #pragma link off class G__includepath;
 #pragma link C++ namespace Cint;
+#pragma link C++ nestedclasses;
 #pragma link off namespace Cint::Internal;
 #endif
 
