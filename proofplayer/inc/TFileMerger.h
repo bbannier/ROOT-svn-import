@@ -60,7 +60,7 @@ protected:
    TList	 *fMergeList;       // list of the files need to be merged 
 
 public:
-   TFileMerger(Bool_t isLocal = kFALSE);
+   TFileMerger(Bool_t isLocal = kTRUE);
    virtual ~TFileMerger();
 
    const char *GetOutputFileName() const { return fOutputFilename; }
