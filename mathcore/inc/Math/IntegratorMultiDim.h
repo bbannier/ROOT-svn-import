@@ -18,7 +18,7 @@
 #include "Math/IFunctionfwd.h"
 #endif
 
-
+#include "Math/VirtualIntegrator.h"
 
 namespace ROOT {
 namespace Math {
@@ -35,7 +35,7 @@ namespace Math {
   
  */
 
-class IntegratorMultiDim {
+class IntegratorMultiDim : public VirtualIntegrator{
    public:
    // constructors
    explicit 
@@ -60,7 +60,7 @@ class IntegratorMultiDim {
    double Integral(const IMultiGenFunction &f, unsigned int dim, double* xmin, double * xmax);
 
    void SetFunction(const IMultiGenFunction &f);
- 
+   using VirtualIntegrator::SetFunction;
    /// return result of integration 
    double Result() const { return fResult; }
 
