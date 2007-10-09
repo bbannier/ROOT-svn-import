@@ -80,6 +80,8 @@ public:
 
    Long64_t Merge(TCollection* list);
 
+   void     Print(Option_t *option="") const;
+
    void SetOutputDir(const char* outputdir) { fOutputDir = outputdir; }
 
    ClassDef(TProofFile,1) 

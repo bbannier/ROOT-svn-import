@@ -42,7 +42,7 @@ TProofFile::TProofFile():TNamed()
    fMerged = kFALSE;
    fLocation = "REMOTE";
    fMode = "CENTRAL";
-   fMasterHostName = "";
+   fMasterHostName = ".";
 }
 
 //________________________________________________________________________________
@@ -53,7 +53,7 @@ TProofFile::TProofFile(const char* path, const char* location, const char* mode)
 
    fMerged = kFALSE;
 
-   TUrl u(path);
+   TUrl u(path, kTRUE);
    // File name
    fFileName = u.GetFile();
    // Unique file name
@@ -63,12 +63,16 @@ TProofFile::TProofFile(const char* path, const char* location, const char* mode)
    Int_t pos = fDir.Index(fFileName);
    if (pos != kNPOS)
       fDir.Remove(pos);
+   if (fDir == "file:")
+      fDir = "";
    // Location
    fLocation = location;
    fLocation.ToUpper();
    // Mode
    fMode = mode;
    fMode.ToUpper(); 
+   // Default 
+   fMasterHostName = ".";
 }
 
 //______________________________________________________________________________
@@ -340,4 +344,23 @@ Long64_t TProofFile::Merge(TCollection* list)
 
    // Done
    return 0;
+}
+
+//______________________________________________________________________________
+void TProofFile::Print(Option_t *) const
+{
+   // Dump the class content
+
+   Info("Print","-------------- %s : start ------------", GetName());
+   Info("Print"," dir:              %s", fDir.Data());
+   Info("Print"," file name:        %s", fFileName.Data());
+   Info("Print"," location:         %s", fLocation.Data());
+   Info("Print"," mode:             %s", fMode.Data());
+   Info("Print"," output dir:       %s", fOutputDir.Data());
+   Info("Print"," output file name: %s", fOutputFileName.Data());
+   Info("Print"," ordinal:          %s", fWorkerOrdinal.Data());
+   Info("Print"," master:           %s", fMasterHostName.Data());
+   Info("Print","-------------- %s : done -------------", GetName());
+
+   return;
 }
