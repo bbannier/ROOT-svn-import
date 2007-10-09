@@ -2040,6 +2040,8 @@ Int_t TProof::CollectInputFrom(TSocket *s)
                TObject *obj = mess->ReadObject(TObject::Class());
                if ((obj->IsA() == TProofFile::Class()) && IsMaster()) {
                   TProofFile *pf = (TProofFile *)obj;
+                  if (gDebug > 0)
+                     pf->Print();
                   TList *slaveList = GetListOfSlaveInfos();
                   TIter next(slaveList);
                   TSlaveInfo *info = 0;
