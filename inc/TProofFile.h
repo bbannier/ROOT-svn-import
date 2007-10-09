@@ -44,14 +44,12 @@ private:
    TString	  fFileName1;
    TString	  fLocation;
    TString	  fMode;
-   TString	  fOutputDir;
    TString	  fOutputFileName;
    TString	  fWorkerOrdinal;
    Bool_t	  fMerged;
 
    TString	  fMasterHostName;
 
-   const char* GetOutputDir() const { return fOutputDir; }
    const char* GetMasterHostName() const { return fMasterHostName; }
 
    TString GetTmpName(const char* name);
@@ -72,7 +70,7 @@ public:
    const char* GetFileName( Bool_t tmpName = kTRUE ) const { return (tmpName) ? fFileName1 : fFileName; }
    const char* GetLocation() const { return fLocation; }
    const char* GetMode() const { return fMode; }
-   const char* GetOutputFileName();
+   const char* GetOutputFileName() const { return fOutputFileName; }
    const char* GetWorkerOrdinal() const { return fWorkerOrdinal; }
 
 
@@ -82,7 +80,7 @@ public:
 
    void     Print(Option_t *option="") const;
 
-   void SetOutputDir(const char* outputdir) { fOutputDir = outputdir; }
+   void SetOutputFileName(const char *name);
 
    ClassDef(TProofFile,1) 
 

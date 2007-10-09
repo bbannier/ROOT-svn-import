@@ -35,14 +35,9 @@ TProofFile::TProofFile():TNamed()
 {
    // Default ctor
 
-   fDir = "";
-   fFileName = "";
-   fFileName1 = "";
-   fOutputDir = "";
    fMerged = kFALSE;
    fLocation = "REMOTE";
    fMode = "CENTRAL";
-   fMasterHostName = ".";
 }
 
 //________________________________________________________________________________
@@ -66,30 +61,29 @@ TProofFile::TProofFile(const char* path, const char* location, const char* mode)
    if (fDir == "file:")
       fDir = "";
    // Location
-   fLocation = location;
-   fLocation.ToUpper();
-   // Mode
-   fMode = mode;
-   fMode.ToUpper(); 
-   // Default 
-   fMasterHostName = ".";
-}
-
-//______________________________________________________________________________
-const char* TProofFile::GetOutputFileName()
-{
-   // Return the outfile name
-
-   if (fOutputFileName.IsNull()) {
-      if(!fOutputDir.IsNull()) {
-         fOutputFileName = Form("%s/%s", fOutputDir.Data(), fFileName.Data());
-      } else if (!fMasterHostName.IsNull()) {
-         fOutputFileName = Form("%s/%s", fMasterHostName.Data(), fFileName.Data());
+   fLocation = "REMOTE";
+   if (location && strlen(location) > 0) {
+      fLocation = location;
+      if (fLocation.CompareTo("LOCAL", TString::kIgnoreCase) &&
+          fLocation.CompareTo("REMOTE", TString::kIgnoreCase)) {
+         Warning("TProofFile","unknown location %s: ignore (use: \"REMOTE\")", location);
+         fLocation = "REMOTE";
       }
+      fLocation.ToUpper();
    }
-
-   // Done
-   return fOutputFileName;
+   // Mode
+   fMode = "CENTRAL";
+   if (mode && strlen(mode) > 0) {
+      fMode = mode;
+      if (fMode.CompareTo("CENTRAL", TString::kIgnoreCase) &&
+          fMode.CompareTo("SEQUENTIAL", TString::kIgnoreCase)) {
+         Warning("TProofFile","unknown mode %s: ignore (use: \"CENTRAL\")", mode);
+         fMode = "CENTRAL";
+      }
+      fMode.ToUpper();
+   }
+   // Default 
+   fOutputFileName = fFileName;
 }
 
 //______________________________________________________________________________
@@ -119,6 +113,18 @@ void TProofFile::SetFileName(const char* name)
    fFileName1 = GetTmpName(name);
 }
 
+//______________________________________________________________________________
+void TProofFile::SetOutputFileName(const char *name)
+{
+   // Set the name of the output file; in the form of an Url.
+
+   if (name && strlen(name) > 0) {
+      fOutputFileName = name;
+   } else {
+      fOutputFileName = fFileName;
+   }
+}
+
 
 //______________________________________________________________________________
 TFile* TProofFile::OpenFile(const char* opt)
@@ -146,8 +152,7 @@ Long64_t TProofFile::Merge(TCollection* list)
       return 0; 
 
    TString fileLoc;
-   TString outputFileLoc = (fOutputDir.IsNull()) ? fFileName
-                         : Form("%s/%s", fOutputDir.Data(), fFileName.Data());
+   TString outputFileLoc = fOutputFileName;
 
    if (fMode == "SEQUENTIAL") {
       TFileMerger* merger = new TFileMerger;
@@ -190,9 +195,8 @@ Long64_t TProofFile::Merge(TCollection* list)
             gSystem->Unlink(fileLoc);
          }
       } else if (fLocation == "REMOTE") {
-         TString outputFileLoc2 = (fOutputDir.IsNull()) ? GetTmpName(fFileName)
-                                : Form("%s/%s", fOutputDir.Data(), GetTmpName(fFileName).Data());
 
+         TString outputFileLoc2 = GetTmpName(fOutputFileName);
          TString tmpOutputLoc = (outputFileLoc.BeginsWith("root://")) ? GetTmpName(fFileName) : "";
          TList* fileList = new TList;
 
@@ -356,10 +360,8 @@ void TProofFile::Print(Option_t *) const
    Info("Print"," file name:        %s", fFileName.Data());
    Info("Print"," location:         %s", fLocation.Data());
    Info("Print"," mode:             %s", fMode.Data());
-   Info("Print"," output dir:       %s", fOutputDir.Data());
    Info("Print"," output file name: %s", fOutputFileName.Data());
    Info("Print"," ordinal:          %s", fWorkerOrdinal.Data());
-   Info("Print"," master:           %s", fMasterHostName.Data());
    Info("Print","-------------- %s : done -------------", GetName());
 
    return;
