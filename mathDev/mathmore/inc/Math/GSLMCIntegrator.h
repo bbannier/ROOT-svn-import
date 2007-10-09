@@ -26,8 +26,8 @@
 // 
 //
 
-#ifndef ROOT_Math_GSLIntegrator
-#define ROOT_Math_GSLIntegrator
+#ifndef ROOT_Math_GSLMCIntegrator
+#define ROOT_Math_GSLMCIntegrator
 
 #ifndef ROOT_Math_MCIntegrationTypes
 #include "Math/MCIntegrationTypes.h"

@@ -31,23 +31,33 @@
 #ifndef ROOT_Math_GSLIntegrator
 #define ROOT_Math_GSLIntegrator
 
+
+// #ifndef ROOT_Math_VirtualIntegrator
+// #include "Math/VirtualIntegrator.h"
+// #endif
+
+#ifndef ROOT_Math_IntegrationTypes
+#include "Math/IntegrationTypes.h"
+#endif
+
+#ifndef ROOT_Math_IFunctionfwd
 #include "Math/IFunctionfwd.h"
-#include "Math/IFunction.h"
+#endif
+
+
+
+
+#ifndef ROOT_Math_GSLFunctionAdapter
+#include "Math/GSLFunctionAdapter.h"
+#endif
 
 #include <vector>
 
-#include "Math/Integrator.h"
-
-#include "GSLFunctionWrapper.h"
-
-
-
-#include "Math/GSLFunctionAdapter.h"
 
 /**
 
 @defgroup Integration Numerical Integration
-
+@ingroup NumAlgo 
 */
 
 
@@ -84,14 +94,14 @@ namespace Math {
     ADAPTIVE with a lower Gauss-Kronrod rule.
     
     For detailed description on GSL integration algorithms see the
-    <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_16.html#SEC248">GSL Manual</A>.
+    <A HREF="http://www.gnu.org/software/gsl/manual/html_node/Numerical-Integration.html">GSL Manual</A>.
     
     
     @ingroup Integration
     */
    
    
-   class GSLIntegrator {
+   class GSLIntegrator /* : public VirtualIntegrator */ {
       
    public:
       
@@ -160,7 +170,8 @@ namespace Math {
           */
          
          
-      void SetFunction(const IGenFunction &f); 
+      void SetFunction(const IGenFunction &f, bool copyFunc = false); 
+
       
       void SetFunction( GSLFuncPointer f, void * p = 0); 
       
@@ -184,17 +195,21 @@ namespace Math {
       double Integral(const IGenFunction & f);
    
       /**
-	evaluate the Cauchy principal value of the integral of  a previously set function over the defined interval (a,b) with a singularity at c 
-
+	evaluate the Cauchy principal value of the integral of  a previously defined function f over 
+        the defined interval (a,b) with a singularity at c 
+        @param a lower interval value
+        @param b lower interval value
+        @param c singular value of f
         */   
       double IntegralCauchy(double a, double b, double c);
 
       /**
-	evaluate the Cauchy principal value of the integral of  a function f over the defined interval (a,b) with a singularity at c 
-@param a lower interval value
-@param b lower interval value
-@param c singular value of f
-@param f integration function. The function type must implement the mathlib::IGenFunction interface
+	evaluate the Cauchy principal value of the integral of  a function f over the defined interval (a,b) 
+        with a singularity at c 
+        @param f integration function. The function type must implement the mathlib::IGenFunction interface
+        @param a lower interval value
+        @param b lower interval value
+        @param c singular value of f
       */
       double IntegralCauchy(const IGenFunction & f, double a, double b, double c);
       
@@ -357,8 +372,8 @@ namespace Math {
       
       // GSLIntegrationAlgorithm * fAlgorithm;
       
+      GSLFunctionWrapper  *     fFunction;
       GSLIntegrationWorkspace * fWorkspace;
-      GSLFunctionWrapper  fFunction;
      
    };
    
