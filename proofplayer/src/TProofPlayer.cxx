@@ -1143,45 +1143,16 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
    TDSet *set = dset;
    if (fProof->IsMaster()) {
 
-      // Lookup - resolve the end-point urls to optmize the distribution.
-      // The lookup was previously called in the packetizer's constructor.
-      TList *listOfMissingFiles = dset->Lookup(kTRUE);
-      if (!(dset->GetListOfElements()) ||
-          !(dset->GetListOfElements()->GetSize())) {
-         gProofServ->SendAsynMessage("Process: No files from the data set were found - Aborting");
-         Error("Process", "No files from the data set were found - Aborting");
-         fExitStatus = kAborted;
-         if (listOfMissingFiles) {
-            listOfMissingFiles->SetOwner();
-            delete listOfMissingFiles;
-         }
-         return -1;
-      } else if (listOfMissingFiles) {
-         TIter missingFiles(listOfMissingFiles);
-         TDSetElement *elem;
-         while ((elem = (TDSetElement*) missingFiles.Next()))
-            gProofServ->SendAsynMessage(Form("File not found: %s - skipping!",
-                                             elem->GetName()));
-         listOfMissingFiles->SetName("MissingFiles");
-         AddOutputObject(listOfMissingFiles);
-         TStatus *tmpStatus = (TStatus *)GetOutput("PROOF_Status");
-         if (!tmpStatus) {
-            tmpStatus = new TStatus();
-            AddOutputObject(tmpStatus);
-         }
-         tmpStatus->Add("Some files were missing; check 'missingFiles' list");
-      }
-
       PDB(kPacketizer,1) Info("Process","Create Proxy TDSet");
       set = new TDSetProxy( dset->GetType(), dset->GetObjName(),
                             dset->GetDirectory() );
-
       TString packetizer;
       TMethodCall callEnv;
       TClass *cl;
       noData = dset->TestBit(TDSet::kEmpty) ? kTRUE : kFALSE;
 
       if (noData) {
+
          set->SetBit(TDSet::kEmpty);
          if (TProof::GetParameter(fInput, "PROOF_Packetizer", packetizer) != 0)
             packetizer = "TPacketizerUnit";
@@ -1207,7 +1178,38 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
          callEnv.SetParam((Long_t) fProof->GetListOfActiveSlaves());
          callEnv.SetParam((Long64_t) nentries);
          callEnv.SetParam((Long_t) fInput);
+
       } else {
+
+         // Lookup - resolve the end-point urls to optmize the distribution.
+         // The lookup was previously called in the packetizer's constructor.
+         TList *listOfMissingFiles = dset->Lookup(kTRUE);
+         if (!(dset->GetListOfElements()) ||
+             !(dset->GetListOfElements()->GetSize())) {
+            gProofServ->SendAsynMessage("Process: No files from the data set were found - Aborting");
+            Error("Process", "No files from the data set were found - Aborting");
+            fExitStatus = kAborted;
+            if (listOfMissingFiles) {
+               listOfMissingFiles->SetOwner();
+               delete listOfMissingFiles;
+            }
+            return -1;
+         } else if (listOfMissingFiles) {
+            TIter missingFiles(listOfMissingFiles);
+            TDSetElement *elem;
+            while ((elem = (TDSetElement*) missingFiles.Next()))
+               gProofServ->SendAsynMessage(Form("File not found: %s - skipping!",
+                                                elem->GetName()));
+            listOfMissingFiles->SetName("MissingFiles");
+            AddOutputObject(listOfMissingFiles);
+            TStatus *tmpStatus = (TStatus *)GetOutput("PROOF_Status");
+            if (!tmpStatus) {
+               tmpStatus = new TStatus();
+               AddOutputObject(tmpStatus);
+            }
+            tmpStatus->Add("Some files were missing; check 'missingFiles' list");
+         }
+
          if (TProof::GetParameter(fInput, "PROOF_Packetizer", packetizer) != 0)
             // Using standard packetizer TAdaptivePacketizer
             packetizer = "TPacketizerAdaptive";
