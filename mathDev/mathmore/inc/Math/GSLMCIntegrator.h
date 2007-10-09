@@ -51,6 +51,9 @@
 #include "Math/MCParameters.h"
 #endif
 
+#ifndef ROOT_Math_VirtualIntegrator
+#include "Math/VirtualIntegrator.h"
+#endif
 
 #include <iostream>
 
@@ -86,7 +89,7 @@ namespace Math {
    */
    
    
-   class GSLMCIntegrator {
+   class GSLMCIntegrator : public VirtualIntegrator{
       
    public:
                   
@@ -155,7 +158,8 @@ namespace Math {
          
          
       void SetFunction(const IMultiGenFunction &f); 
-   
+      using VirtualIntegrator::SetFunction;
+
       typedef double ( * GSLMonteFuncPointer ) ( double *, size_t, void *);    
       
       void SetFunction( GSLMonteFuncPointer f, void * p = 0); 
