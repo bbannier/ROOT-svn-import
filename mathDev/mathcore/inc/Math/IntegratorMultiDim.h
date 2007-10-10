@@ -39,9 +39,10 @@ class IntegratorMultiDim : public VirtualIntegrator{
    public:
    // constructors
    explicit 
-   IntegratorMultiDim(unsigned int dim, double absTol = 1.E-6, double relTol = 1E-6, unsigned int size = 100000);
+   IntegratorMultiDim(double absTol = 1.E-6, double relTol = 1E-6, unsigned int size = 100000);
 
-   IntegratorMultiDim(const IMultiGenFunction &f, unsigned int dim, double absTol = 1.E-9, double relTol = 1E-6, unsigned int size = 100000);
+   explicit
+   IntegratorMultiDim(const IMultiGenFunction &f, double absTol = 1.E-9, double relTol = 1E-6, unsigned int size = 100000);
 
 
    virtual ~IntegratorMultiDim() {}
@@ -54,10 +55,10 @@ class IntegratorMultiDim : public VirtualIntegrator{
    /**
       evaluate the integral with the previously given function between xmin[] and xmax[]  
    */
-   double Integral(unsigned int dim, double* xmin, double * xmax);
+   double Integral(double* xmin, double * xmax);
 
    /// evaluate the integral passing a new function
-   double Integral(const IMultiGenFunction &f, unsigned int dim, double* xmin, double * xmax);
+   double Integral(const IMultiGenFunction &f, double* xmin, double * xmax);
 
    void SetFunction(const IMultiGenFunction &f);
    using VirtualIntegrator::SetFunction;
@@ -76,7 +77,7 @@ class IntegratorMultiDim : public VirtualIntegrator{
 
  private:
 
-   unsigned int fdim; // dimentionality of integrand
+   unsigned int fDim; // dimentionality of integrand
 
    double fAbsTol;
    double fRelTol;
