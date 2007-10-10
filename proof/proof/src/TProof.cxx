@@ -2038,30 +2038,31 @@ Int_t TProof::CollectInputFrom(TSocket *s)
             } else if (type > 0) {
                // Read object
                TObject *obj = mess->ReadObject(TObject::Class());
-               if ((obj->IsA() == TProofFile::Class()) && IsMaster()) {
+               if ((obj->IsA() == TProofFile::Class())) {
                   TProofFile *pf = (TProofFile *)obj;
-                  if (gDebug > 0)
-                     pf->Print();
-                  TList *slaveList = GetListOfSlaveInfos();
-                  TIter next(slaveList);
-                  TSlaveInfo *info = 0;
-
-                  TString pfx  = gEnv->GetValue("ProofServ.Localroot","");
-                  while((info = (TSlaveInfo *)next())) {
-                     if (!strcmp(info->GetOrdinal(), pf->GetWorkerOrdinal())) {
-                        TString dirPath = pf->GetDir();
-                        if (pfx && strcmp(pfx.Data(),""))
-                           dirPath.Remove(0,pfx.Length());
-                        pf->SetDir(Form("root://%s/%s",info->GetName(),dirPath.Data()));
-                        break;
+                  if (IsMaster()) {
+                     // Fill the output file name, if not done by the client
+                     if (pf->fOutputFileName.IsNull()) {
+                        TString of(Form("root://%s", gSystem->HostName()));
+                        if (gSystem->Getenv("XRDPORT")) {
+                           TString sp(gSystem->Getenv("XRDPORT"));
+                           if (sp.IsDigit())
+                              of += Form(":%s", sp.Data());
+                        }
+                        TString sessionPath(gProofServ->GetSessionDir());
+                        // Take into account a prefix, if any
+                        TString pfx  = gEnv->GetValue("ProofServ.Localroot","");
+                        if (!pfx.IsNull())
+                           sessionPath.Remove(0, pfx.Length());
+                        of += Form("/%s/%s", sessionPath.Data(), pf->fFileName.Data());
+                        pf->SetOutputFileName(of);
                      }
-                  }
-
-                  if (!(pf->fMasterHostName.IsNull())) {
-                     TString sessionPath = Form("%s", gProofServ->GetSessionDir());
-                     if (pfx && strcmp(pfx.Data(),""))
-                        sessionPath.Remove(0,pfx.Length());
-                     pf->SetMasterHostName(Form("root://%s/%s",gSystem->HostName(),sessionPath.Data()));
+                     // Notify, if required
+                     if (gDebug > 0)
+                        pf->Print();
+                  } else {
+                     // On clients notify the output path
+                     Printf("Output file: %s", pf->GetOutputFileName());
                   }
                }
                // Add or merge it

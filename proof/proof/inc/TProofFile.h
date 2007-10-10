@@ -30,6 +30,7 @@ class TProofFile;
 class TString;
 class TList;
 class TFile;
+class TFileMerger;
 
 class TProofFile : public TNamed {
 
@@ -46,18 +47,18 @@ private:
    TString	  fMode;
    TString	  fOutputFileName;
    TString	  fWorkerOrdinal;
+   Bool_t	  fIsLocal;     // kTRUE if the file is in the sandbox
    Bool_t	  fMerged;
-
-   TString	  fMasterHostName;
-
-   const char* GetMasterHostName() const { return fMasterHostName; }
 
    TString GetTmpName(const char* name);
 
    void SetFileName(const char* name);
    void SetDir(const char* dir) { fDir = dir; }
    void SetWorkerOrdinal(const char* ordinal) { fWorkerOrdinal = ordinal; }
-   void SetMasterHostName(const char* name) { fMasterHostName = name; }
+
+   void AddFile(TFileMerger *merger, const char *path);
+   void NotifyError(const char *errmsg);
+   void Unlink(const char *path);
 
 protected:
 
