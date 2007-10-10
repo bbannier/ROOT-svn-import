@@ -32,9 +32,9 @@
 #define ROOT_Math_GSLIntegrator
 
 
-// #ifndef ROOT_Math_VirtualIntegrator
-// #include "Math/VirtualIntegrator.h"
-// #endif
+#ifndef ROOT_Math_VirtualIntegrator
+#include "Math/VirtualIntegrator.h"
+#endif
 
 #ifndef ROOT_Math_IntegrationTypes
 #include "Math/IntegrationTypes.h"
@@ -101,7 +101,7 @@ namespace Math {
     */
    
    
-   class GSLIntegrator /* : public VirtualIntegrator */ {
+   class GSLIntegrator : public VirtualIntegrator  {
       
    public:
       
