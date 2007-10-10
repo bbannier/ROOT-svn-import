@@ -58,7 +58,6 @@
 #include "TEntryList.h"
 #include "TException.h"
 #include "TFile.h"
-#include "TFileMerger.h"
 #include "THashList.h"
 #include "TInterpreter.h"
 #include "TKey.h"
@@ -80,7 +79,6 @@
 #include "compiledata.h"
 #include "TProofResourcesStatic.h"
 #include "TProofNodeInfo.h"
-#include "TProofFile.h"
 #include "TFileInfo.h"
 #include "TMutex.h"
 #include "TClass.h"
@@ -371,7 +369,6 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
    fRealTime        = 0.0;
    fCpuTime         = 0.0;
    fProof           = 0;
-   fProofFileMerger = 0;
    fPlayer          = 0;
    fSocket          = 0;
    fEnabledPackages = new TList;
@@ -3341,12 +3338,6 @@ void TProofServ::HandleProcess(TMessage *mess)
                ns++;
                mbuf.Reset();
                mbuf << (Int_t) ((ns >= olsz) ? 2 : 1);
-               // Special treatment for files
-               if(o->IsA() == TProofFile::Class()) {
-                  ((TProofFile *)o)->SetWorkerOrdinal(fOrdinal.Data());
-                  if (!strcmp(((TProofFile *)o)->GetDir(),"")) 
-                     ((TProofFile *)o)->SetDir(fSessionDir.Data());
-               }
                mbuf.WriteObject(o);
                fSocket->Send(mbuf);
             }
@@ -5102,18 +5093,6 @@ void TProofServ::FlushLogFile()
    // while preserving the possibility to have them in case of problems.
 
    lseek(fLogFileDes, lseek(fileno(stdout), (off_t)0, SEEK_END), SEEK_SET);
-}
-
-//______________________________________________________________________________
-TFileMerger *TProofServ::GetProofFileMerger(Bool_t isLocal)
-{
-   // Get an instance of the file merger; invoked by TProofFile.
-   // The instance is create if not existing
-
-   if (!fProofFileMerger)
-      fProofFileMerger = new TFileMerger(isLocal);
-
-   return fProofFileMerger;
 }
 
 //______________________________________________________________________________
