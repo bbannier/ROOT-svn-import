@@ -17,9 +17,9 @@
 #include "TRoot.h"
 #include "TPLuginManager.h"
 #else
-#include "Math/GSLINtegrator.h"
+#include "Math/GSLIntegrator.h"
 #include "Math/IntegratorMultiDim.h"
-#include "Math/GSLMCintegrator.h"
+#include "Math/GSLMCIntegrator.h"
 #endif
 
 #include <cassert>
