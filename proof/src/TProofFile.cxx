@@ -18,7 +18,6 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include "TProofFile.h"
-#include <TProofServ.h>
 #include <TEnv.h>
 #include <TFileMerger.h>
 #include <TFile.h>
@@ -26,21 +25,13 @@
 #include <TObjArray.h>
 #include <TObject.h>
 #include <TObjString.h>
+#include <TProofServ.h>
 #include <TSystem.h>
 #include <TUUID.h>
 
 ClassImp(TProofFile)
 
-//______________________________________________________________________________
-TProofFile::TProofFile():TNamed()
-{
-   // Default ctor
-
-   fIsLocal = kTRUE;
-   fMerged = kFALSE;
-   fLocation = "REMOTE";
-   fMode = "CENTRAL";
-}
+TFileMerger *TProofFile::fgMerger = 0; // Instance of the file merger for mode "CENTRAL"
 
 //________________________________________________________________________________
 TProofFile::TProofFile(const char* path, const char* location, const char* mode)
@@ -77,7 +68,8 @@ TProofFile::TProofFile(const char* path, const char* location, const char* mode)
       fDir += Form("/%s", dirPath.Data());
    }
    // Notify
-   Info("TProofFile", "dir: %s", fDir.Data());
+   if (gDebug > 1)
+      Info("TProofFile", "dir: %s", fDir.Data());
 
    // Location
    fLocation = "REMOTE";
@@ -328,19 +320,19 @@ Long64_t TProofFile::Merge(TCollection* list)
 
       // Get the file merger instance
       Bool_t isLocal = (fLocation == "REMOTE") ? kFALSE : kTRUE;
-      TFileMerger *filemerger = gProofServ->GetProofFileMerger(isLocal);
-      if (!filemerger) {
+      TFileMerger *merger = GetFileMerger(isLocal);
+      if (!merger) {
          Error("Merge", "could not instantiate the file merger");
          return -1;
       }
 
       if (!fMerged) {
 
-         filemerger->OutputFile(outputFileLoc);
+         merger->OutputFile(outputFileLoc);
          Unlink(outputFileLoc);
 
          fileLoc = Form("%s/%s", fDir.Data(), GetFileName());
-         AddFile(filemerger, fileLoc);
+         AddFile(merger, fileLoc);
 
          fMerged = kTRUE;
       }
@@ -352,7 +344,7 @@ Long64_t TProofFile::Merge(TCollection* list)
 
       while((pFile = (TProofFile*)next())) {
          fileLoc = Form("%s/%s", pFile->GetDir(), pFile->GetFileName());
-         AddFile(filemerger, fileLoc);
+         AddFile(merger, fileLoc);
       }
 
       // end fMode = "CENTRAL"
@@ -424,4 +416,14 @@ void TProofFile::Unlink(const char *path)
                              " error from TSystem::Unlink(%s)", path));
       }
    }
+}
+
+//______________________________________________________________________________
+TFileMerger *TProofFile::GetFileMerger(Bool_t local)
+{
+   // Get instance of the file merger to be used in "CENTRAL" mode
+
+   if (!fgMerger)
+      fgMerger = new TFileMerger(local);
+   return fgMerger;
 }
