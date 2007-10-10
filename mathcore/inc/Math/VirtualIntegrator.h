@@ -43,14 +43,14 @@ public:
    virtual ~VirtualIntegrator() {}
 
    //1-dim integration
-   virtual double Integrate(double, double) {
+   virtual double Integral(double, double) {
       MATH_ERROR_MSG("cannot call VirtualIntegrator::Integrate");
       return 0;
    }
 
 
    //multi-dim integration
-   virtual double Integrate(unsigned int , const double*, const double*) { 
+   virtual double Integral(const double*, const double*) { 
       MATH_ERROR_MSG("cannot call VirtualIntegrator::Integrate");
       return 0;
    }

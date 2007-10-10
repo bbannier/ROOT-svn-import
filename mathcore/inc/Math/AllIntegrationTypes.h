@@ -23,18 +23,23 @@ namespace Math {
 
 
 
-  namespace Integration {
 
   
     // type of integration
+  namespace IntegrationOneDim {
 
     //for 1-dim integration
-    enum OneDimType{ADAPTIVE, ADAPTIVESINGULAR, NONADAPTIVE};
+     enum Type {ADAPTIVE, ADAPTIVESINGULAR, NONADAPTIVE};
+
+  }
 
     //for multi-dim integration
-    enum MultiDimType{ADAPTIVE, MONTECARLOVEGAS, MONTECARLOMISER, MONTECARLOPLAIN};
+  namespace IntegrationMultiDim {
 
-  }    // end namespace AllIntegration
+    //for 1-dim integration
+     enum Type {ADAPTIVE, MONTECARLOVEGAS, MONTECARLOMISER, MONTECARLOPLAIN};
+
+  }  
 
 
 } // namespace Math
