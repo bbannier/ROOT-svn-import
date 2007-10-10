@@ -873,6 +873,18 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
    // Finalize
 
    if (fExitStatus != kAborted) {
+
+      TIter nxo(GetOutputList());
+      TObject *o = 0;
+      while ((o = nxo())) {
+         // Special treatment for files
+         if (o->IsA() == TProofFile::Class()) {
+            ((TProofFile *)o)->SetWorkerOrdinal(gProofServ->GetOrdinal());
+            if (!strcmp(((TProofFile *)o)->GetDir(),"")) 
+               ((TProofFile *)o)->SetDir(gProofServ->GetSessionDir());
+         }
+      }
+
       if (fSelStatus->IsOk()) {
          if (version == 0) {
             PDB(kLoop,1) Info("Process","Call Terminate()");
@@ -1384,7 +1396,7 @@ Bool_t  TProofPlayerRemote::MergeOutputFiles()
    // Merge output in files
 
    if (fMergeFiles) {
-      TFileMerger *filemerger = gProofServ->GetProofFileMerger();
+      TFileMerger *filemerger = TProofFile::GetFileMerger();
       if (!filemerger) {
          Error("MergeOutputFiles", "file merger is null in gProofServ! Protocol error?");
          return kFALSE;
