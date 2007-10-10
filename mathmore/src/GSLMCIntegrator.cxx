@@ -29,10 +29,10 @@ namespace Math {
 // constructors
       
            
-GSLMCIntegrator::GSLMCIntegrator(unsigned int dim, double absTol, double relTol, unsigned int calls):
+GSLMCIntegrator::GSLMCIntegrator(double absTol, double relTol, unsigned int calls):
    fAbsTol(absTol),
    fRelTol(relTol),
-   fDim(dim),
+   fDim(0),
    fCalls(calls),
    //fr(r),
    fWorkspace(0),
@@ -48,11 +48,11 @@ GSLMCIntegrator::GSLMCIntegrator(unsigned int dim, double absTol, double relTol,
         
           
       
-GSLMCIntegrator::GSLMCIntegrator(unsigned int dim, MCIntegration::Type type, double absTol, double relTol, unsigned int calls):
+GSLMCIntegrator::GSLMCIntegrator(MCIntegration::Type type, double absTol, double relTol, unsigned int calls):
    fType(type),
    fAbsTol(absTol),
    fRelTol(relTol),
-   fDim(dim),
+   fDim(0),
    //fr(r),
    fCalls(calls),
    fWorkspace(0),
@@ -100,14 +100,16 @@ void GSLMCIntegrator::SetFunction(const IMultiGenFunction &f)
    // method to set the a generic integration function
    if(fFunction == 0) fFunction = new  GSLMonteFunctionWrapper();
    fFunction->SetFunction(f);
+   fDim = f.NDim();
 } 
       
-void GSLMCIntegrator::SetFunction( GSLMonteFuncPointer f, void * p )
+void GSLMCIntegrator::SetFunction( GSLMonteFuncPointer f,  unsigned int dim, void * p  )
 {
    // method to set the a generic integration function
    if(fFunction == 0) fFunction = new  GSLMonteFunctionWrapper();
    fFunction->SetFuncPointer( f );
    fFunction->SetParams ( p );
+   fDim = dim;
 }
 
 
@@ -157,10 +159,10 @@ double GSLMCIntegrator::Integral(double* a, double* b)
 }
 
      
-double GSLMCIntegrator::Integral(const GSLMonteFuncPointer & f, double* a, double* b)
+double GSLMCIntegrator::Integral(const GSLMonteFuncPointer & f, unsigned int dim, double* a, double* b, void * p )
 {
    // evaluate the Integral for a function f over the defined interval (a[],b[])
-   SetFunction(f,(void*)0);
+   SetFunction(f,dim,p);
    return Integral(a,b);
 }
 

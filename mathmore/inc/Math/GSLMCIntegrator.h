@@ -104,7 +104,8 @@ namespace Math {
       @param calls maximum number of function calls
       */
       
-      GSLMCIntegrator(unsigned int dim, double absTol = 1.E-6, double relTol = 1E-4, unsigned int calls = 500000);
+      explicit
+      GSLMCIntegrator(double absTol = 1.E-6, double relTol = 1E-4, unsigned int calls = 500000);
             
       
       /** constructor of GSL MCIntegrator. Plain MC is set as default integration type (??)
@@ -116,8 +117,8 @@ namespace Math {
       @param calls maximum number of function calls
       */
       
-      
-      GSLMCIntegrator(unsigned int dim, MCIntegration::Type type, double absTol = 1.E-6, double relTol = 1E-4, unsigned int calls = 500000);
+      explicit 
+      GSLMCIntegrator(MCIntegration::Type type, double absTol = 1.E-6, double relTol = 1E-4, unsigned int calls = 500000);
       
       
 //       /**
@@ -162,7 +163,7 @@ namespace Math {
 
       typedef double ( * GSLMonteFuncPointer ) ( double *, size_t, void *);    
       
-      void SetFunction( GSLMonteFuncPointer f, void * p = 0); 
+      void SetFunction( GSLMonteFuncPointer f, unsigned int dim, void * p = 0 ); 
       
       // methods using GSLMonteFuncPointer
       
@@ -173,7 +174,7 @@ namespace Math {
        @param b upper value of the integration interval
        */
       
-      double Integral(const GSLMonteFuncPointer & f, double* a, double* b);
+      double Integral(const GSLMonteFuncPointer & f, unsigned int dim, double* a, double* b, void * p = 0);
       
       // to be added later    
       //double Integral(const GSLMonteFuncPointer & f);
