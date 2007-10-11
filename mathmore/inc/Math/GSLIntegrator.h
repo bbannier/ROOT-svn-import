@@ -354,6 +354,7 @@ namespace Math {
          
       // internal method to check validity of GSL function pointer
       bool CheckFunction(); 
+
       
    private:
          

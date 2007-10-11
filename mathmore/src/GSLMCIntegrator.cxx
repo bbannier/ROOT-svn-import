@@ -100,7 +100,7 @@ void GSLMCIntegrator::SetFunction(const IMultiGenFunction &f)
    // method to set the a generic integration function
    if(fFunction == 0) fFunction = new  GSLMonteFunctionWrapper();
    fFunction->SetFunction(f);
-   fDim = f.NDim();
+   DoSetType(fType, f.NDim() );
 } 
       
 void GSLMCIntegrator::SetFunction( GSLMonteFuncPointer f,  unsigned int dim, void * p  )
@@ -109,7 +109,7 @@ void GSLMCIntegrator::SetFunction( GSLMonteFuncPointer f,  unsigned int dim, voi
    if(fFunction == 0) fFunction = new  GSLMonteFunctionWrapper();
    fFunction->SetFuncPointer( f );
    fFunction->SetParams ( p );
-   fDim = dim;
+   DoSetType(fType,dim);
 }
 
 
@@ -208,23 +208,38 @@ void GSLMCIntegrator::SetGenerator(GSLRngWrapper* r){ this->fRng = r; }
       
 void GSLMCIntegrator::SetType (MCIntegration::Type type)
 {
-   //    set integration type
-   if(type ==  ROOT::Math::MCIntegration::VEGAS)
-   {
       fType=type;
+}
+
+void GSLMCIntegrator::DoSetType (MCIntegration::Type type, unsigned int ndim  )
+{
+   //    set integration type 
+
+   if (!fWorkspace) { 
+// to be fixed - need to have ws giving me the type
+//       if (fDim == ndim && type == fType) 
+//          return; // can use previously existing ws
+      delete fWorkspace; 
+   }
+   fType = type;
+   fDim =  ndim;
+
+   if(fType ==  ROOT::Math::MCIntegration::VEGAS)
+   {
+      
       fWorkspace = new GSLVegasIntegrationWorkspace(fDim);
 	  
    }
 
-   else if (type ==  ROOT::Math::MCIntegration::MISER) 
+   else if (fType ==  ROOT::Math::MCIntegration::MISER) 
    {
-      fType=type;
+
       fWorkspace = new GSLMiserIntegrationWorkspace(fDim);
    }
-   else if (type ==  ROOT::Math::MCIntegration::PLAIN)   
+   else if (fType ==  ROOT::Math::MCIntegration::PLAIN)   
    {
-      fType=type;
-      fWorkspace =new GSLPlainIntegrationWorkspace(fDim);
+
+      fWorkspace = new GSLPlainIntegrationWorkspace(fDim);
    }
    else 
    {

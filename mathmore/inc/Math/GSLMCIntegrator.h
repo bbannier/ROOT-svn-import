@@ -273,6 +273,10 @@ namespace Math {
          
       // internal method to check validity of GSL function pointer
       bool CheckFunction(); 
+
+      // set internally the type of integration method
+      void DoSetType(MCIntegration::Type type, unsigned int dim );
+
       
    private:
       //type of intergation method   
