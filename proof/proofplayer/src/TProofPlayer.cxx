@@ -18,6 +18,7 @@
 #include "TProofDraw.h"
 #include "TProofPlayer.h"
 #include "THashList.h"
+#include "TEnv.h"
 #include "TEventIter.h"
 #include "TVirtualPacketizer.h"
 #include "TSelector.h"
@@ -1820,11 +1821,36 @@ Int_t TProofPlayerRemote::AddOutputObject(TObject *obj)
    }
 
    // Check if we need to merge files
-   TProofFile* proofFile = dynamic_cast<TProofFile*>(obj);
-   if (proofFile) {
-      if (!strcmp(proofFile->GetMode(),"CENTRAL"))
+   TProofFile *pf = dynamic_cast<TProofFile*>(obj);
+   if (pf) {
+      if (!strcmp(pf->GetMode(),"CENTRAL"))
          fMergeFiles = kTRUE;
+      if (!IsClient()) {
+         // Fill the output file name, if not done by the client
+         if (strlen(pf->GetOutputFileName()) <= 0) {
+            TString of(Form("root://%s", gSystem->HostName()));
+            if (gSystem->Getenv("XRDPORT")) {
+               TString sp(gSystem->Getenv("XRDPORT"));
+               if (sp.IsDigit())
+                  of += Form(":%s", sp.Data());
+            }
+            TString sessionPath(gProofServ->GetSessionDir());
+            // Take into account a prefix, if any
+            TString pfx  = gEnv->GetValue("ProofServ.Localroot","");
+            if (!pfx.IsNull())
+               sessionPath.Remove(0, pfx.Length());
+            of += Form("/%s/%s", sessionPath.Data(), pf->GetFileName());
+            pf->SetOutputFileName(of);
+         }
+         // Notify, if required
+         if (gDebug > 0)
+            pf->Print();
+      } else {
+         // On clients notify the output path
+         Printf("Output file: %s", pf->GetOutputFileName());
+      }
    }
+
    // For other objects we just run the incorporation procedure
    Incorporate(obj, fOutput, merged);
 
