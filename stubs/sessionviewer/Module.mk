@@ -1,0 +1,105 @@
+# Module.mk for sessionviewer module
+# Copyright (c) 2007 Rene Brun and Fons Rademakers
+#
+# Author: Fons Rademakers, 17/03/2007
+
+MODDIR       := sessionviewer
+MODDIRS      := $(MODDIR)/src
+MODDIRI      := $(MODDIR)/inc
+
+SESSIONVIEWERDIR  := $(MODDIR)
+SESSIONVIEWERDIRS := $(SESSIONVIEWERDIR)/src
+SESSIONVIEWERDIRI := $(SESSIONVIEWERDIR)/inc
+
+##### libSessionViewer #####
+SESSIONVIEWERL  := $(MODDIRI)/LinkDef.h
+SESSIONVIEWERDS := $(MODDIRS)/G__SessionViewer.cxx
+SESSIONVIEWERDO := $(SESSIONVIEWERDS:.cxx=.o)
+SESSIONVIEWERDH := $(SESSIONVIEWERDS:.cxx=.h)
+
+#LF
+SESSIONVIEWERTMPDS    := $(MODDIRS)/G__SessionViewerTmp.cxx
+SESSIONVIEWERTMPDO    := $(SESSIONVIEWERTMPDS:.cxx=.o)
+SESSIONVIEWERTMPDH    := $(SESSIONVIEWERTMPDS:.cxx=.h)
+SESSIONVIEWERTMP2DS   := $(MODDIRS)/G__SessionViewerTmp2.cxx
+SESSIONVIEWERTMP2DO   := $(SESSIONVIEWERTMP2DS:.cxx=.o)
+SESSIONVIEWERTMP2DH   := $(SESSIONVIEWERTMP2DS:.cxx=.h)
+
+SESSIONVIEWERH  := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
+SESSIONVIEWERS  := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
+SESSIONVIEWERO  := $(SESSIONVIEWERS:.cxx=.o)
+
+SESSIONVIEWERDEP := $(SESSIONVIEWERO:.o=.d) $(SESSIONVIEWERDO:.o=.d)
+
+#LF
+SESSIONVIEWERTMPDEP  := $(SESSIONVIEWERTMPDO:.o=.d)
+
+SESSIONVIEWERLIB := $(LPATH)/libSessionViewer.$(SOEXT)
+SESSIONVIEWERMAP := $(SESSIONVIEWERLIB:.$(SOEXT)=.rootmap)
+
+#LF
+SESSIONVIEWERNM       := $(SESSIONVIEWERLIB:.$(SOEXT)=.nm)
+
+# used in the main Makefile
+ALLHDRS       += $(patsubst $(MODDIRI)/%.h,include/%.h,$(SESSIONVIEWERH))
+ALLLIBS       += $(SESSIONVIEWERLIB)
+ALLMAPS       += $(SESSIONVIEWERMAP)
+
+# include all dependency files
+INCLUDEFILES += $(SESSIONVIEWERDEP)
+
+##### local rules #####
+include/%.h:    $(SESSIONVIEWERDIRI)/%.h
+		cp $< $@
+
+#LF
+$(SESSIONVIEWERLIB):   $(SESSIONVIEWERO) $(SESSIONVIEWERTMPDO) $(SESSIONVIEWERTMP2DO) $(SESSIONVIEWERDO) \
+			$(ORDER_) $(MAINLIBS) $(SESSIONVIEWERLIBDEP)
+		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
+		   "$(SOFLAGS)" libSessionViewer.$(SOEXT) $@ "$(SESSIONVIEWERO) \
+		$(SESSIONVIEWERTMPDO) $(SESSIONVIEWERTMP2DO) $(SESSIONVIEWERDO)" \
+		   "$(SESSIONVIEWERLIBEXTRA)"
+
+#LF
+$(SESSIONVIEWERTMPDS):   $(SESSIONVIEWERH) $(SESSIONVIEWERL) $(ROOTCINTTMPEXE)
+		@echo "Generating first dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -. 1 -c $(SESSIONVIEWERH) $(SESSIONVIEWERL)
+
+#LF
+$(SESSIONVIEWERTMP2DS):  $(SESSIONVIEWERH) $(SESSIONVIEWERL) $(ROOTCINTTMPEXE)
+		@echo "Generating second dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -. 2 -c $(SESSIONVIEWERH) $(SESSIONVIEWERL)
+
+#LF
+$(SESSIONVIEWERDS):    $(SESSIONVIEWERH) $(SESSIONVIEWERL) $(ROOTCINTTMPEXE) $(SESSIONVIEWERNM)
+		@echo "Generating third dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -L $(ROOTSYS)/$(SESSIONVIEWERNM) -. 3 -c $(SESSIONVIEWERH) $(SESSIONVIEWERL)
+
+#LF
+$(SESSIONVIEWERNM):      $(SESSIONVIEWERO) $(SESSIONVIEWERTMPDO) $(SESSIONVIEWERTMP2DO) 
+		@echo "Generating symbols file $@..."
+		nm -g -p --defined-only $(SESSIONVIEWERTMPDO) | awk '{printf("%s\n", $$3)'} > $(SESSIONVIEWERNM)
+		nm -g -p --defined-only $(SESSIONVIEWERTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(SESSIONVIEWERNM)
+		nm -g -p --defined-only $(SESSIONVIEWERO) | awk '{printf("%s\n", $$3)'} >> $(SESSIONVIEWERNM)
+
+$(SESSIONVIEWERMAP): $(RLIBMAP) $(MAKEFILEDEP) $(SESSIONVIEWERL)
+		$(RLIBMAP) -o $(SESSIONVIEWERMAP) -l $(SESSIONVIEWERLIB) \
+		   -d $(SESSIONVIEWERLIBDEPM) -c $(SESSIONVIEWERL)
+
+all-sessionviewer: $(SESSIONVIEWERLIB) $(SESSIONVIEWERMAP)
+
+clean-sessionviewer:
+		@rm -f $(SESSIONVIEWERO) $(SESSIONVIEWERDO)
+
+clean::         clean-sessionviewer clean-pds-sessionviewer
+
+#LF
+clean-pds-sessionviewer:	
+		rm -f $(SESSIONVIEWERTMPDS) $(SESSIONVIEWERTMPDO) $(SESSIONVIEWERTMPDH) \
+		$(SESSIONVIEWERTMPDEP) $(SESSIONVIEWERTMP2DS) $(SESSIONVIEWERTMP2DO) $(SESSIONVIEWERTMP2DH) $(SESSIONVIEWERNM)
+
+distclean-sessionviewer: clean-sessionviewer
+		@rm -f $(SESSIONVIEWERDEP) $(SESSIONVIEWERDS) \
+		   $(SESSIONVIEWERDH) $(SESSIONVIEWERLIB) $(SESSIONVIEWERMAP)
+
+distclean::     distclean-sessionviewer
