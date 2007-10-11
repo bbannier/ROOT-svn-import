@@ -57,7 +57,6 @@
 #include "TObjString.h"
 #include "TParameter.h"
 #include "TProof.h"
-#include "TProofFile.h"
 #include "TProofNodeInfo.h"
 #include "TVirtualProofPlayer.h"
 #include "TProofServ.h"
@@ -2038,33 +2037,6 @@ Int_t TProof::CollectInputFrom(TSocket *s)
             } else if (type > 0) {
                // Read object
                TObject *obj = mess->ReadObject(TObject::Class());
-               if ((obj->IsA() == TProofFile::Class())) {
-                  TProofFile *pf = (TProofFile *)obj;
-                  if (IsMaster()) {
-                     // Fill the output file name, if not done by the client
-                     if (pf->fOutputFileName.IsNull()) {
-                        TString of(Form("root://%s", gSystem->HostName()));
-                        if (gSystem->Getenv("XRDPORT")) {
-                           TString sp(gSystem->Getenv("XRDPORT"));
-                           if (sp.IsDigit())
-                              of += Form(":%s", sp.Data());
-                        }
-                        TString sessionPath(gProofServ->GetSessionDir());
-                        // Take into account a prefix, if any
-                        TString pfx  = gEnv->GetValue("ProofServ.Localroot","");
-                        if (!pfx.IsNull())
-                           sessionPath.Remove(0, pfx.Length());
-                        of += Form("/%s/%s", sessionPath.Data(), pf->fFileName.Data());
-                        pf->SetOutputFileName(of);
-                     }
-                     // Notify, if required
-                     if (gDebug > 0)
-                        pf->Print();
-                  } else {
-                     // On clients notify the output path
-                     Printf("Output file: %s", pf->GetOutputFileName());
-                  }
-               }
                // Add or merge it
                if ((fPlayer->AddOutputObject(obj) == 1))
                   // Remove the object if it has been merged
