@@ -339,6 +339,9 @@ void G__incsetup_memvar(int tagnum);
 void G__incsetup_memfunc(int tagnum);
 #endif
 
+// LF
+void G__cppif_change_globalcomp();
+
 /**************************************************************************
 * G__check_setup_version()
 *
@@ -1868,9 +1871,9 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
       // Destructor? Method's Name == ~ClassName?
       if (ifunc->funcname[ifn][0]=='~'){
 
-         printf("-------------------------------------------------- \n");
-         printf("This method looks like a destructor: %s, %p \n", ifunc->funcname[ifn], G__getstructoffset());
-         printf("-------------------------------------------------- \n");
+         //printf("-------------------------------------------------- \n");
+         //printf("This method looks like a destructor: %s, %p \n", ifunc->funcname[ifn], G__getstructoffset());
+         //printf("-------------------------------------------------- \n");
 
          long gvp = G__getgvp();
          long soff = G__getstructoffset();
@@ -2276,20 +2279,20 @@ int G__call_cppfunc(G__value *result7,G__param *libp,G__ifunc_table_internal *if
        // This is a tmp object which must be allocated
        // llok for "%s   pobj = new %s(xobj);\n"
 
-       printf(" *** This looks like a temp obj. function*** \n");
-       printf(" * funcname: %s \n", ifunc->funcname[ifn]);
-       if(ifunc->tagnum>=0)
-          printf(" * class: %s \n", G__struct.name[ifunc->tagnum]);
-       printf(" *** *** \n");
+       //printf(" *** This looks like a temp obj. function*** \n");
+       //printf(" * funcname: %s \n", ifunc->funcname[ifn]);
+       //if(ifunc->tagnum>=0)
+       //   printf(" * class: %s \n", G__struct.name[ifunc->tagnum]);
+       //printf(" *** *** \n");
     }
     else if ('u'==ifunc->type[ifn] && -1!=result7->tagnum && ifunc->reftype[ifn]) {
        // This is a const tmp object
        // look for "%s   const %s* pobj;\n"
-       printf(" *** This looks like a _const_ temp obj. function*** \n");
-       printf(" * funcname: %s \n", ifunc->funcname[ifn]);
-       if(ifunc->tagnum>=0)
-          printf(" * class: %s \n", G__struct.name[ifunc->tagnum]);
-       printf(" *** *** \n");
+       //printf(" *** This looks like a _const_ temp obj. function*** \n");
+       //printf(" * funcname: %s \n", ifunc->funcname[ifn]);
+       //if(ifunc->tagnum>=0)
+       //   printf(" * class: %s \n", G__struct.name[ifunc->tagnum]);
+       //printf(" *** *** \n");
     }
 
 
@@ -2588,6 +2591,11 @@ void G__gen_cpplink()
   if (!G__suppress_methods) {
      if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3) // LF
        G__cppif_memfunc(fp,hfp);
+
+     // LF 09-10-07
+     // The stubs are not printed and the internal status is not changed
+     if(G__dicttype==3)
+        G__cppif_change_globalcomp();
   }
 
   if(G__dicttype==0 || G__dicttype==3) // LF
@@ -4168,6 +4176,73 @@ int G__isnonpublicnew(int tagnum)
   return(0);
 }
 
+
+/**************************************************************************
+* LF 09-10-07
+* We need this silly method just to change the value of a field that
+* was changed in the stub generation (but since we got rid of the
+* stubs... the state isn't changed)
+*
+*
+**************************************************************************/
+void G__cppif_change_globalcomp()
+{
+#ifndef G__SMALLOBJECT
+  int i,j;
+  struct G__ifunc_table_internal *ifunc;
+
+  for(i=0;i<G__struct.alltag;i++) {
+    if(
+       (G__CPPLINK==G__struct.globalcomp[i]||
+        G__CLINK==G__struct.globalcomp[i]
+        || G__ONLYMETHODLINK==G__struct.globalcomp[i]
+        ) &&
+       (-1==(int)G__struct.parent_tagnum[i]
+        || G__nestedclass
+        )
+       &&
+       -1!=G__struct.line_number[i]&&G__struct.hash[i]&&
+       '$'!=G__struct.name[i][0] && 'e'!=G__struct.type[i]) {
+      ifunc = G__struct.memfunc[i];
+
+      while(ifunc) {
+        for(j=0;j<ifunc->allifunc;j++) {
+          if(G__PUBLIC==ifunc->access[j]
+             || (G__PROTECTED==ifunc->access[j] &&
+                 (G__PROTECTEDACCESS&G__struct.protectedaccess[i]))
+             || (G__PRIVATEACCESS&G__struct.protectedaccess[i])
+             ) {
+            if(G__ONLYMETHODLINK==G__struct.globalcomp[i]&&
+               G__METHODLINK!=ifunc->globalcomp[j]) continue;
+            if(0==ifunc->hash[j]) continue;
+
+            /* Promote link-off typedef to link-on if used in function */
+            // LF 09-10-07
+            // This is just wrong... wrong
+            // A functions that 'just' prints a value should change its internal settings...
+            // As a result this fields have to be change by hand at a non-specified part of
+            // file when this method is not called...
+            // 
+            // look at the function G__cppif_returntype: This was changed there in the old scheme
+            //
+            // Can we really change it here?
+            if ((ifunc->p_typetable[j] != -1) && 
+                (G__newtype.globalcomp[ifunc->p_typetable[j]] == G__NOLINK) && 
+                (G__newtype.iscpplink[ifunc->p_typetable[j]] == G__NOLINK)) {
+               G__newtype.globalcomp[ifunc->p_typetable[j]] = G__globalcomp;
+            }           
+          }
+        }
+        ifunc=ifunc->next;
+      } /* while(ifunc) */
+      //if(G__struct.type[i] == 'n')
+      //    fprintf(fp,"\n} \n",G__fulltagname(i,0));
+      
+    } /* if(globalcomp) */
+  } /* for(i) */
+#endif // G__SMALLOBJECT
+}
+
 /**************************************************************************
 * G__cppif_memfunc() working
 *
@@ -4221,7 +4296,27 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                G__METHODLINK!=ifunc->globalcomp[j]) continue;
             if(0==ifunc->hash[j]) continue;
 #ifndef G__OLDIMPLEMENTATION1656
-            if(ifunc->pentry[j]->size<0) continue; /* already precompiled */
+            // LF 08-10-07
+            // Dont try to evaluate this condition in case we have the new scheme...
+            // the automatic methods are created with size<0 by default so it
+            // mmesses it up
+            if (G__dicttype==0 ||
+                 !( 
+                    strncmp(G__fulltagname(i,0),"string", strlen("string"))!=0 &&
+                    strncmp(G__fulltagname(i,0),"vector", strlen("vector"))!=0 &&
+                    strncmp(G__fulltagname(i,0),"list", strlen("list"))!=0 &&
+                    strncmp(G__fulltagname(i,0),"deque", strlen("deque"))!=0 &&
+                    strncmp(G__fulltagname(i,0),"set", strlen("set"))!=0 &&
+                    strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))!=0 &&
+                    strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))!=0 &&
+                    strncmp(G__fulltagname(i,0),"map", strlen("map"))!=0 &&
+                    strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))!=0 &&
+                    strncmp(G__fulltagname(i,0),"complex", strlen("complex"))!=0 )){
+               if (ifunc->pentry[j]->size < 0) {
+                  // already precompiled, skip it
+                  continue;
+               }
+            }
 #endif
             if(strcmp(ifunc->funcname[j],G__struct.name[i])==0) {
               /* constructor need special handling */
@@ -4446,17 +4541,17 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
            //         strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0 )
            //          && !ifunc->isvirtual[j]) )
            if(((
-              strncmp(G__struct.name[ifunc->tagnum],"string", strlen("string"))==0 ||
-              strncmp(G__struct.name[ifunc->tagnum],"vector", strlen("vector"))==0 ||
-              strncmp(G__struct.name[ifunc->tagnum],"list", strlen("list"))==0 ||
-              strncmp(G__struct.name[ifunc->tagnum],"deque", strlen("deque"))==0 ||
-              strncmp(G__struct.name[ifunc->tagnum],"set", strlen("set"))==0 ||
-              strncmp(G__struct.name[ifunc->tagnum],"multiset", strlen("multiset"))==0 || 
-              strncmp(G__struct.name[ifunc->tagnum],"allocator", strlen("allocator"))==0 ||
-              strncmp(G__struct.name[ifunc->tagnum],"map", strlen("map"))==0 ||
-              strncmp(G__struct.name[ifunc->tagnum],"multimap", strlen("multimap"))==0 ||
-              strncmp(G__struct.name[ifunc->tagnum],"complex", strlen("complex"))==0 
-                 ) 
+                  strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
+                  strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
+                  strncmp(G__fulltagname(i,0),"list", strlen("list"))==0 ||
+                  strncmp(G__fulltagname(i,0),"deque", strlen("deque"))==0 ||
+                  strncmp(G__fulltagname(i,0),"set", strlen("set"))==0 ||
+                  strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))==0 || 
+                  strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))==0 ||
+                  strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
+                  strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
+                   strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0)
+                 
               && (G__dicttype==3)) || G__dicttype==0) //LF
               G__cppif_gendefault(fp,hfp,i,j,ifunc
                                   ,isconstructor
@@ -6491,6 +6586,11 @@ int G__cppif_returntype(FILE *fp, int ifn, G__ifunc_table_internal *ifunc, char 
   isconst = ifunc->isconst[ifn];
 
   /* Promote link-off typedef to link-on if used in function */
+  // LF 09-10-07
+  // This is just wrong... wrong!
+  // A functions that 'just' prints a value should NOT change its internal settings...
+  // As a result this fields have to be change by hand at a non-specified part of
+  // file when this method is not called...
   if ((typenum != -1) && (G__newtype.globalcomp[typenum] == G__NOLINK) && (G__newtype.iscpplink[typenum] == G__NOLINK)) {
     G__newtype.globalcomp[typenum] = G__globalcomp;
   }
@@ -7423,7 +7523,7 @@ void G__cpplink_typetable(FILE *fp, FILE *hfp)
 
   fprintf(fp,"\n   /* Setting up typedef entry */\n");
   for(i=0;i<G__newtype.alltype;i++) {
-    if(G__NOLINK>G__newtype.globalcomp[i]) {
+     if(G__NOLINK>G__newtype.globalcomp[i]) {
       if(!(G__newtype.parent_tagnum[i] == -1 ||
            (G__nestedtypedef &&
             (G__struct.globalcomp[G__newtype.parent_tagnum[i]]<G__NOLINK
@@ -7876,6 +7976,9 @@ void G__make_default_ifunc(G__ifunc_table_internal *ifunc_copy)
 #endif
 
 #ifndef G__OLDIMPLEMENTATION1656
+               // LF 08-10-07
+               // Here we haven't introduced the default functions...
+               // should we skip it or not?
                if (ifunc->pentry[j]->size < 0) {
                   // already precompiled, skip it
                   continue;
@@ -7967,7 +8070,7 @@ void G__make_default_ifunc(G__ifunc_table_internal *ifunc_copy)
          ifunc = ifunc->next;
       } /* end while(ifunc) */
 
-      if (ifunc->next == 0
+      if ( ifunc && ifunc->next == 0
           // dummy
 #ifndef G__OLDIMPLEMENTATON1656
           && G__NOLINK == G__struct.iscpplink[i]
@@ -8163,16 +8266,16 @@ void G__cpplink_memfunc(FILE *fp)
 
       // LF
       if( G__dicttype==3 &&
-          strncmp(G__struct.name[ifunc->tagnum],"string", strlen("string"))!=0 &&
-          strncmp(G__struct.name[ifunc->tagnum],"vector", strlen("vector"))!=0 &&
-          strncmp(G__struct.name[ifunc->tagnum],"list", strlen("list"))!=0 &&
-          strncmp(G__struct.name[ifunc->tagnum],"deque", strlen("deque"))!=0 &&
-          strncmp(G__struct.name[ifunc->tagnum],"set", strlen("set"))!=0 &&
-          strncmp(G__struct.name[ifunc->tagnum],"multiset", strlen("multiset"))!=0 &&
-          strncmp(G__struct.name[ifunc->tagnum],"allocator", strlen("allocator"))!=0 &&
-          strncmp(G__struct.name[ifunc->tagnum],"map", strlen("map"))!=0 &&
-          strncmp(G__struct.name[ifunc->tagnum],"multimap", strlen("multimap"))!=0 &&
-          strncmp(G__struct.name[ifunc->tagnum],"complex", strlen("complex"))!=0 
+          strncmp(G__fulltagname(i,0),"string", strlen("string"))!=0 &&
+          strncmp(G__fulltagname(i,0),"vector", strlen("vector"))!=0 &&
+          strncmp(G__fulltagname(i,0),"list", strlen("list"))!=0 &&
+          strncmp(G__fulltagname(i,0),"deque", strlen("deque"))!=0 &&
+          strncmp(G__fulltagname(i,0),"set", strlen("set"))!=0 &&
+          strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))!=0 &&
+          strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))!=0 &&
+          strncmp(G__fulltagname(i,0),"map", strlen("map"))!=0 &&
+          strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))!=0 &&
+          strncmp(G__fulltagname(i,0),"complex", strlen("complex"))!=0
          )
          G__make_default_ifunc(ifunc);
 
@@ -8210,25 +8313,43 @@ void G__cpplink_memfunc(FILE *fp)
             }
 
 #ifndef G__OLDIMPLEMENTATION1656
-            if (ifunc->pentry[j]->size < 0) {
-              // already precompiled, skip it
-              continue;
+            // LF 08-10-07
+            // Dont try to evaluate this condition in case we have the new scheme...
+            // the automatic methods are created with size<0 by default so it
+            // mmesses it up
+            if (G__dicttype==0 ||
+                 !( 
+                    strncmp(G__fulltagname(i,0),"string", strlen("string"))!=0 &&
+                    strncmp(G__fulltagname(i,0),"vector", strlen("vector"))!=0 &&
+                    strncmp(G__fulltagname(i,0),"list", strlen("list"))!=0 &&
+                    strncmp(G__fulltagname(i,0),"deque", strlen("deque"))!=0 &&
+                    strncmp(G__fulltagname(i,0),"set", strlen("set"))!=0 &&
+                    strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))!=0 &&
+                    strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))!=0 &&
+                    strncmp(G__fulltagname(i,0),"map", strlen("map"))!=0 &&
+                    strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))!=0 &&
+                    strncmp(G__fulltagname(i,0),"complex", strlen("complex"))!=0)){
+               if (ifunc->pentry[j]->size < 0) {
+                  // already precompiled, skip it
+                  continue;
+               }
             }
 #endif
 
             // Check for constructor, destructor, or operator=.
             // LF 
             if ( (G__dicttype==0 ||
-                 !( strncmp(G__struct.name[ifunc->tagnum],"string", strlen("string"))!=0 &&
-                   strncmp(G__struct.name[ifunc->tagnum],"vector", strlen("vector"))!=0 &&
-                   strncmp(G__struct.name[ifunc->tagnum],"list", strlen("list"))!=0 &&
-                   strncmp(G__struct.name[ifunc->tagnum],"deque", strlen("deque"))!=0 &&
-                   strncmp(G__struct.name[ifunc->tagnum],"set", strlen("set"))!=0 &&
-                   strncmp(G__struct.name[ifunc->tagnum],"multiset", strlen("multiset"))!=0 &&
-                   strncmp(G__struct.name[ifunc->tagnum],"allocator", strlen("allocator"))!=0 &&
-                   strncmp(G__struct.name[ifunc->tagnum],"map", strlen("map"))!=0 &&
-                   strncmp(G__struct.name[ifunc->tagnum],"multimap", strlen("multimap"))!=0 &&
-                   strncmp(G__struct.name[ifunc->tagnum],"complex", strlen("complex"))!=0 
+                 !( 
+                    strncmp(G__fulltagname(i,0),"string", strlen("string"))!=0 &&
+                    strncmp(G__fulltagname(i,0),"vector", strlen("vector"))!=0 &&
+                    strncmp(G__fulltagname(i,0),"list", strlen("list"))!=0 &&
+                    strncmp(G__fulltagname(i,0),"deque", strlen("deque"))!=0 &&
+                    strncmp(G__fulltagname(i,0),"set", strlen("set"))!=0 &&
+                    strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))!=0 &&
+                    strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))!=0 &&
+                    strncmp(G__fulltagname(i,0),"map", strlen("map"))!=0 &&
+                    strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))!=0 &&
+                    strncmp(G__fulltagname(i,0),"complex", strlen("complex"))!=0
                     ))
                  && !strcmp(ifunc->funcname[j], G__struct.name[i])) {
               // We have a constructor.
@@ -8248,16 +8369,17 @@ void G__cpplink_memfunc(FILE *fp)
               //   ifunc_constructor = ifunc;
 
             } else if ((G__dicttype==0 ||
-                        !( strncmp(G__struct.name[ifunc->tagnum],"string", strlen("string"))!=0 &&
-                          strncmp(G__struct.name[ifunc->tagnum],"vector", strlen("vector"))!=0 &&
-                          strncmp(G__struct.name[ifunc->tagnum],"list", strlen("list"))!=0 &&
-                          strncmp(G__struct.name[ifunc->tagnum],"deque", strlen("deque"))!=0 &&
-                          strncmp(G__struct.name[ifunc->tagnum],"set", strlen("set"))!=0 &&
-                          strncmp(G__struct.name[ifunc->tagnum],"multiset", strlen("multiset"))!=0 &&
-                          strncmp(G__struct.name[ifunc->tagnum],"allocator", strlen("allocator"))!=0 &&
-                          strncmp(G__struct.name[ifunc->tagnum],"map", strlen("map"))!=0 &&
-                          strncmp(G__struct.name[ifunc->tagnum],"multimap", strlen("multimap"))!=0 &&
-                          strncmp(G__struct.name[ifunc->tagnum],"complex", strlen("complex"))!=0 
+                        !( 
+                           strncmp(G__fulltagname(i,0),"string", strlen("string"))!=0 &&
+                           strncmp(G__fulltagname(i,0),"vector", strlen("vector"))!=0 &&
+                           strncmp(G__fulltagname(i,0),"list", strlen("list"))!=0 &&
+                           strncmp(G__fulltagname(i,0),"deque", strlen("deque"))!=0 &&
+                           strncmp(G__fulltagname(i,0),"set", strlen("set"))!=0 &&
+                           strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))!=0 &&
+                           strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))!=0 &&
+                           strncmp(G__fulltagname(i,0),"map", strlen("map"))!=0 &&
+                           strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))!=0 &&
+                           strncmp(G__fulltagname(i,0),"complex", strlen("complex"))!=0
                            ))
                        && ifunc->funcname[j][0] == '~') { // LF
               // We have a destructor.
@@ -8280,16 +8402,17 @@ void G__cpplink_memfunc(FILE *fp)
 #ifdef G__DEFAULTASSIGNOPR
             // LF
             else if ( (G__dicttype==0 ||
-                        !( strncmp(G__struct.name[ifunc->tagnum],"string", strlen("string"))!=0 &&
-                          strncmp(G__struct.name[ifunc->tagnum],"vector", strlen("vector"))!=0 &&
-                          strncmp(G__struct.name[ifunc->tagnum],"list", strlen("list"))!=0 &&
-                          strncmp(G__struct.name[ifunc->tagnum],"deque", strlen("deque"))!=0 &&
-                          strncmp(G__struct.name[ifunc->tagnum],"set", strlen("set"))!=0 &&
-                          strncmp(G__struct.name[ifunc->tagnum],"multiset", strlen("multiset"))!=0 &&
-                          strncmp(G__struct.name[ifunc->tagnum],"allocator", strlen("allocator"))!=0 &&
-                          strncmp(G__struct.name[ifunc->tagnum],"map", strlen("map"))!=0 &&
-                          strncmp(G__struct.name[ifunc->tagnum],"multimap", strlen("multimap"))!=0 &&
-                          strncmp(G__struct.name[ifunc->tagnum],"complex", strlen("complex"))!=0 
+                        !( 
+                           strncmp(G__fulltagname(i,0),"string", strlen("string"))!=0 &&
+                           strncmp(G__fulltagname(i,0),"vector", strlen("vector"))!=0 &&
+                           strncmp(G__fulltagname(i,0),"list", strlen("list"))!=0 &&
+                           strncmp(G__fulltagname(i,0),"deque", strlen("deque"))!=0 &&
+                           strncmp(G__fulltagname(i,0),"set", strlen("set"))!=0 &&
+                           strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))!=0 &&
+                           strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))!=0 &&
+                           strncmp(G__fulltagname(i,0),"map", strlen("map"))!=0 &&
+                           strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))!=0 &&
+                           strncmp(G__fulltagname(i,0),"complex", strlen("complex"))!=0
                            ))
                       && !strcmp(ifunc->funcname[j], "operator=") 
                       && ('u' == ifunc->param[j][0]->type) 
@@ -8300,7 +8423,7 @@ void G__cpplink_memfunc(FILE *fp)
             }
 #endif
 
-            
+
             /****************************************************************
              * setup normal function
              ****************************************************************/
@@ -8568,18 +8691,33 @@ void G__cpplink_memfunc(FILE *fp)
           }
 
           // LF
-          if (G__dicttype==0 ||
-              !( strncmp(G__struct.name[ifunc->tagnum],"string", strlen("string"))!=0 &&
-                 strncmp(G__struct.name[ifunc->tagnum],"vector", strlen("vector"))!=0 &&
-                 strncmp(G__struct.name[ifunc->tagnum],"list", strlen("list"))!=0 &&
-                 strncmp(G__struct.name[ifunc->tagnum],"deque", strlen("deque"))!=0 &&
-                 strncmp(G__struct.name[ifunc->tagnum],"set", strlen("set"))!=0 &&
-                 strncmp(G__struct.name[ifunc->tagnum],"multiset", strlen("multiset"))!=0 &&
-                 strncmp(G__struct.name[ifunc->tagnum],"allocator", strlen("allocator"))!=0 &&
-                 strncmp(G__struct.name[ifunc->tagnum],"map", strlen("map"))!=0 &&
-                 strncmp(G__struct.name[ifunc->tagnum],"multimap", strlen("multimap"))!=0 &&
-                 strncmp(G__struct.name[ifunc->tagnum],"complex", strlen("complex"))!=0 
-                 )) {
+          if ((
+             (  strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
+                strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
+                strncmp(G__fulltagname(i,0),"list", strlen("list"))==0 ||
+                strncmp(G__fulltagname(i,0),"deque", strlen("deque"))==0 ||
+                strncmp(G__fulltagname(i,0),"set", strlen("set"))==0 ||
+                strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))==0 || 
+                strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))==0 ||
+                strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
+                strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
+                strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0 )
+             && (G__dicttype==3)) || G__dicttype==0)
+
+/*
+G__dicttype==0 ||
+              !( 
+                 strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
+                     strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
+                     strncmp(G__fulltagname(i,0),"list", strlen("list"))==0 ||
+                     strncmp(G__fulltagname(i,0),"deque", strlen("deque"))==0 ||
+                     strncmp(G__fulltagname(i,0),"set", strlen("set"))==0 ||
+                     strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))==0 || 
+                     strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))==0 ||
+                     strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
+                     strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
+                     strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0 ) 
+                     )*/ {
               
              /****************************************************************
               * setup default constructor

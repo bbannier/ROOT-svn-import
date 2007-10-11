@@ -1577,6 +1577,7 @@ int TSystem::Load(const char *module, const char *entry, Bool_t system)
    // otherwise we will deal with some unexpected behavior ...
    
    // first let's check that this is not a dictionary
+   /*
    idx = moduleBasename.Index("Dict.", strlen("Dict."));
    if (idx == kNPOS) {
       // this is not a dictionary..
@@ -1602,6 +1603,7 @@ int TSystem::Load(const char *module, const char *entry, Bool_t system)
          }
       }
    }
+   */
 
    recCall--;
 
