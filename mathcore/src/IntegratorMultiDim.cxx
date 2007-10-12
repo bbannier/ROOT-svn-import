@@ -50,7 +50,7 @@ void IntegratorMultiDim::SetRelTolerance(double relTol){ this->fRelTol = relTol;
 void IntegratorMultiDim::SetAbsTolerance(double absTol){ this->fAbsTol = absTol; }
 
 
-double IntegratorMultiDim::Integral(double* xmin, double * xmax)
+double IntegratorMultiDim::Integral(const double* xmin, const double * xmax)
 {
    // References:
    //
@@ -332,7 +332,7 @@ L140:
 
 
   
-double IntegratorMultiDim::Integral(const IMultiGenFunction &f, double* xmin, double * xmax)
+double IntegratorMultiDim::Integral(const IMultiGenFunction &f, const double* xmin, const double * xmax)
 {
   fFun = &f;
   return Integral(xmin, xmax);

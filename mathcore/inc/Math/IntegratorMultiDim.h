@@ -55,10 +55,12 @@ class IntegratorMultiDim : public VirtualIntegrator{
    /**
       evaluate the integral with the previously given function between xmin[] and xmax[]  
    */
-   double Integral(double* xmin, double * xmax);
+   double Integral(const double* xmin, const double * xmax);
+
+   using VirtualIntegrator::Integral;
 
    /// evaluate the integral passing a new function
-   double Integral(const IMultiGenFunction &f, double* xmin, double * xmax);
+   double Integral(const IMultiGenFunction &f, const double* xmin, const double * xmax);
 
    void SetFunction(const IMultiGenFunction &f);
    using VirtualIntegrator::SetFunction;

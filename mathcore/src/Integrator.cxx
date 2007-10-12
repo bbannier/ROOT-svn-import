@@ -12,13 +12,15 @@
 #include "Math/Integrator.h"
 
 #include "Math/VirtualIntegrator.h"
+#include "Math/IntegratorMultiDim.h"
 
+
+#define MATH_PLUGIN_MANAGER
 #ifdef MATH_PLUGIN_MANAGER
 #include "TRoot.h"
 #include "TPLuginManager.h"
 #else
 #include "Math/GSLIntegrator.h"
-#include "Math/IntegratorMultiDim.h"
 #include "Math/GSLMCIntegrator.h"
 #endif
 
@@ -41,8 +43,15 @@ VirtualIntegrator * CreateOneDimIntegrator(IntegrationOneDim::Type type , double
          return 0; 
       }
 
-      
-      ig = reinterpret_cast<ROOT::Math::VirtualIntegrator *>( h->ExecPlugin(4,type, absTol, relTol, size ) ); 
+      std::string typeName = "ADAPTIVE";
+      if (type == IntegrationOneDim::ADAPTIVESINGULAR) 
+         typeName = "ADAPTIVESINGULAR";
+      if (type == IntegrationOneDim::NONADAPTIVE) 
+         typeName = "NONADAPTIVE";
+
+            
+
+      ig = reinterpret_cast<ROOT::Math::VirtualIntegrator *>( h->ExecPlugin(4,typeName.c_str(), absTol, relTol, size ) ); 
       assert(ig != 0);
 
 #ifdef DEBUG
@@ -60,21 +69,31 @@ VirtualIntegrator * CreateMultiDimIntegrator(IntegrationMultiDim::Type type , do
    VirtualIntegrator * ig = 0; 
    
 #ifdef MATH_PLUGIN_MANAGER  
-   if (type = IntegrationMultiDim::ADAPTIVE)
-      std::string igTypeName = "GenzMultiDimIntegrator";
-   else 
-      std::string igTypeName = "GSLMCIntegrator";
+
+   if (type == IntegrationMultiDim::ADAPTIVE) { 
+      // no need of PM for adaptive method (is in mathcore)
+      return new IntegratorMultiDim(absTol, relTol, ncall);
+   }
+
+
 
    TPluginHandler *h; 
    //gDebug = 3; 
-   if ((h = gROOT->GetPluginManager()->FindHandler("ROOT::Math::VirtualIntegrator", igtypeName.c_str()))) {
+   if ((h = gROOT->GetPluginManager()->FindHandler("ROOT::Math::VirtualIntegrator", "GSLMCIntegrator"))) {
       if (h->LoadPlugin() == -1) {
          MATH_ERROR_MSG("Error loading multidim integrator"); 
          return 0; 
       }
 
+
+      std::string typeName = "VEGAS";
+      if (type == IntegrationMultiDim::MISER) 
+         typeName = "MISER";
+      if (type == IntegrationMultiDim::PLAIN) 
+         typeName = "PLAIN";
+
       
-      ig = reinterpret_cast<ROOT::Math::VirtualIntegrator *>( h->ExecPlugin(4,type, absTol, relTol, ncall ) ); 
+      ig = reinterpret_cast<ROOT::Math::VirtualIntegrator *>( h->ExecPlugin(4,typeName.c_str(), absTol, relTol, ncall ) ); 
       assert(ig != 0);
 
 #ifdef DEBUG
@@ -82,11 +101,12 @@ VirtualIntegrator * CreateMultiDimIntegrator(IntegrationMultiDim::Type type , do
 #endif
    }
 #else 
-   if (type = IntegrationMultiDim::ADAPTIVE)
+   if (type == IntegrationMultiDim::ADAPTIVE)
       ig = new IntegratorMultiDim(absTol, relTol, ncall);
-   else 
+   else {
       // do later 
       //ig =  new GSLMCIntegrator(type, absTol, relTol, ncall);
+   }
 #endif
    return ig;  
 }

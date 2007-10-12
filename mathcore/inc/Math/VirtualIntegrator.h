@@ -44,23 +44,31 @@ public:
 
    //1-dim integration
    virtual double Integral(double, double) {
-      MATH_ERROR_MSG("cannot call VirtualIntegrator::Integrate");
+      MATH_ERROR_MSG("cannot call VirtualIntegrator::Integral(double,double)");
       return 0;
    }
 
 
    //multi-dim integration
    virtual double Integral(const double*, const double*) { 
-      MATH_ERROR_MSG("cannot call VirtualIntegrator::Integrate");
+      MATH_ERROR_MSG("cannot call VirtualIntegrator::Integral(double*,double*)");
       return 0;
    }
 
 
    //setting a 1-dim function
-   virtual void SetFunction(const IGenFunction &) {}
+   virtual void SetFunction(const IGenFunction &, bool =  false) {}
    
    //setting a multi-dim function
    virtual void SetFunction(const IMultiGenFunction &) {}
+
+//    virtual void SetType(IntegratorOneDim::Type) {}
+
+//    virtual void SetType(IntegratorMultiDim::Type) {}
+
+//    virtual void SetRelTolerance(double ) = 0; 
+
+//    virtual void SetAbsTolerance(double ) = 0; 
    
 };
 

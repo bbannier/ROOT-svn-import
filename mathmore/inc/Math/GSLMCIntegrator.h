@@ -95,22 +95,10 @@ namespace Math {
                   
       // constructors
       
+                  
       
-      /** Default constructor of GSL MCIntegrator 
-      
-      @param dim dimension of the function
-      @param absTol desired absolute Error
-      @param relTol desired relative Error
-      @param calls maximum number of function calls
-      */
-      
-      explicit
-      GSLMCIntegrator(double absTol = 1.E-6, double relTol = 1E-4, unsigned int calls = 500000);
-            
-      
-      /** constructor of GSL MCIntegrator. Plain MC is set as default integration type (??)
+      /** constructor of GSL MCIntegrator. VEGAS MC is set as default integration type 
          
-      @param dim dimension of the function
       @param type type of integration. The possible types are defined in the Integration::Type enumeration
       @param absTol desired absolute Error
       @param relTol desired relative Error
@@ -118,34 +106,33 @@ namespace Math {
       */
       
       explicit 
-      GSLMCIntegrator(MCIntegration::Type type, double absTol = 1.E-6, double relTol = 1E-4, unsigned int calls = 500000);
+      GSLMCIntegrator(MCIntegration::Type type = MCIntegration::VEGAS, double absTol = 1.E-6, double relTol = 1E-4, unsigned int calls = 500000);
+
+      /** constructor of GSL MCIntegrator. VEGAS MC is set as default integration type 
+         
+      @param type type of integration using a char * (required by plug-in manager) 
+      @param absTol desired absolute Error
+      @param relTol desired relative Error
+      @param calls maximum number of function calls
+      */
+      
+      explicit 
+      GSLMCIntegrator(const char *  type, double absTol, double relTol, unsigned int calls);
       
       
-//       /**
-//          generic constructor for GSL Integrator
-       
-//        @param type type of integration. The possible types are defined in the Integration::Type enumeration
-//        @param absTol desired absolute Error
-//        @param relTol desired relative Error
-//        @param dim function dimensionality
-//        @param calls number of function evaluations
-       
-//        */
-//       /*
-//       GSLMCIntegrator(const MCIntegration::Type type, const Integration::GKRule rule, double absTol = 1.E-9, double relTol = 1E-6, unsigned int size = 1000, gsl_rng* r );
-//       */
 
       /** destructor */ 
       virtual ~GSLMCIntegrator();
       
       // disable copy ctrs
-      /*
-   private:
+      
+private:
          
       GSLMCIntegrator(const GSLMCIntegrator &);
+
       GSLMCIntegrator & operator=(const GSLMCIntegrator &);
-      */
-   public:
+      
+public:
          
          
          // template methods for generic functors
@@ -179,7 +166,9 @@ namespace Math {
       // to be added later    
       //double Integral(const GSLMonteFuncPointer & f);
         
-      double Integral(double* a, double* b);
+      double Integral(const double* a, const double* b);
+
+      using VirtualIntegrator::Integral;
     
       
       //double Integral(GSLMonteFuncPointer f, void * p, double* a, double* b);
@@ -275,7 +264,7 @@ namespace Math {
       bool CheckFunction(); 
 
       // set internally the type of integration method
-      void DoSetType(MCIntegration::Type type, unsigned int dim );
+      void DoInitialize( );
 
       
    private:
