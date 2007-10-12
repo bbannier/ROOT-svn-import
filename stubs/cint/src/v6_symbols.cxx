@@ -191,17 +191,27 @@ public:
             string classname = string(demangled, start, icolon);
             string protoname = demangled.substr(icolon+2, ind - (icolon+2));
 
-            // ** constructors
-            if ( classname == protoname)
-            {
-               fIsConst = true;
 
+            // 11-10-07
+            // Get rid of the "<>" part in something like TParameter<float>::TParameter()
+            string::size_type itri = classname.find("<");
+
+            string classname_notemp;
+            if(itri != string::npos){
+               classname_notemp = classname.substr(0, itri);
+            }
+            else
+               classname_notemp = classname;
+
+            // ** constructors
+            if ( classname_notemp == protoname) {
+               fIsConst = true;
                // if this not the constructor in charge then just continue
-               string mang(classname);
-               mang += "C1";
+               //string mang(classname_notemp);
+               //mang += "C1";
                
                //TString sub = fMangled->SubString(mang);
-               if(!strstr(fMangled.c_str(), mang.c_str())) {
+               if(!(strstr(fMangled.c_str(), classname_notemp.c_str()) && strstr(fMangled.c_str(), "C1")  )) {
                   //if (sub.IsNull()) {
                   // This is not the constructor in-charge... ignore it
                   return;
@@ -211,18 +221,17 @@ public:
 
             // ** destructors
             string dest("~");
-            dest += classname;
-            if ( dest == protoname)
-            {
+            dest += classname_notemp;
+            if ( dest == protoname){
                fIsDest = true;
                // if this not the constructor in charge then just continue
-               string mang0(classname);
-               string mang1(classname);
-               mang0 += "D0";
-               mang1 += "D1";
+               //string mang0(classname);
+               //string mang1(classname);
+               //mang0 += "D0";
+               //mang1 += "D1";
                
                //if (!(fMangled->SubString(mang0)).IsNull()) {
-               if(strstr(fMangled.c_str(), mang0.c_str())) {
+               if(strstr(fMangled.c_str(), classname_notemp.c_str()) && strstr(fMangled.c_str(), "D0")) {
                // This is the deleting constructor
                   fIsDestInCDel = true;
 
@@ -232,7 +241,7 @@ public:
                   return;
                }
                //else if(!(fMangled->SubString(mang1)).IsNull()){
-               else if( strstr(fMangled.c_str(), mang1.c_str()) ){
+               else if( strstr(fMangled.c_str(), classname_notemp.c_str()) && strstr(fMangled.c_str(), "D1") ){
                   // This is the in-charge (non deleting) constructor
                   fIsDestInC = true;
                   
@@ -1337,7 +1346,37 @@ void G__register_class(const char *libname, const char *clstr)
       }
       else
          finalclass = classstr;
+
+
+      // LF 12-10-07
+      // CInt doesn't believe that a constructor can be different from the name of
+      // the class. So when we have things like:
+      //
+      // TParameter<double>::TParameter() 
+      //
+      // CInt will just think it's 
+      // 
+      // TParameter<double>::TParameter<double>()
+      // 
+      // Changint his in CInt would probably requiere more changes than changing the
+      // real name to what Cint expects.
       
+      // 11-10-07
+      // Get rid of the "<>" part in something like TParameter<float>::TParameter()
+      if(symbol->fIsConst){
+         string::size_type itri = finalclass.find("<");
+      
+         if(itri != string::npos){
+            methodstr = finalclass;
+         }
+      }
+      else if(symbol->fIsDest){
+         string::size_type itri = finalclass.find("<");
+      
+         if(itri != string::npos){
+            methodstr = "~" + finalclass;
+         }
+      }
 
       // LF 31-07-07
       // I forgot something else....
