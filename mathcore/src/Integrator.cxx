@@ -17,8 +17,8 @@
 
 #define MATH_PLUGIN_MANAGER
 #ifdef MATH_PLUGIN_MANAGER
-#include "TRoot.h"
-#include "TPLuginManager.h"
+#include "TROOT.h"
+#include "TPluginManager.h"
 #else
 #include "Math/GSLIntegrator.h"
 #include "Math/GSLMCIntegrator.h"
