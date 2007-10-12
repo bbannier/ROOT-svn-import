@@ -1643,7 +1643,7 @@ extern G__EXPORT void G__SetCriticalSectionEnv G__P((void));
 /**************************************************************************/
    typedef int (*G__dictionary_root_setup) G__P((G__CONST char *dictname));
 
-   typedef int (*G__funcmember_root_writer) G__P((G__CONST char *funcname, char type, char reftype, char structtype,int para_nu,int access,int ansi,int isconst,G__CONST char *paras,G__CONST char *comment,int isvirtual, G__CONST char* classname, G__CONST char* symbol));
+   typedef int (*G__funcmember_root_writer) G__P((G__CONST char *funcname, int hash, char type, int p_tagtable, int p_typetable, char reftype, char structtype, int para_nu, int access, int ansi, int isconst, G__CONST char *paras, G__CONST char *comment, int isvirtual, G__CONST char* classname, G__CONST char* symbol, G__CONST char* tagname, G__CONST char* nametype));
 
    typedef int (*G__datamember_root_writer) G__P((G__CONST char *membername, void *p, char type, char reftype, char structtype, char enumvar, int constvar, int statictype, int accesing,G__CONST char *expr, int definemacro,G__CONST char *comment, G__CONST char* classname, G__CONST char* typedefname));
 
@@ -1853,6 +1853,9 @@ extern G__EXPORT int   G__stub_method_calling G__P((G__value *result7, struct G_
 
 /* DIEGO */
 /* Setters */
+
+   extern G__EXPORT char *G__fulltypename(int typenum);
+   extern G__EXPORT char *G__mark_linked_tagnum(int tagnum);
    extern G__EXPORT void G__set_dictionary_root_setup  G__P((G__dictionary_root_setup dictionary_initializer));
    extern G__EXPORT void G__set_funcmember_root_writer G__P((G__funcmember_root_writer funcmember_writer));
    extern G__EXPORT void G__set_datamember_root_writer G__P((G__datamember_root_writer datamember_writer));
@@ -2077,6 +2080,8 @@ static void (*G__set_asm_noverflow) G__P((int novfl));
 static int (*G__get_no_exec) G__P((void));
 
 /* DIEGO */
+   static char* (*G__fulltypename) G__P(int typenum);
+   static char* (*G__mark_linked_tagnum) G__P(int tagnum);
    static void (*G__set_dictionary_root_setup)  G__P((G__dictionary_root_setup dictionary_initializer));
    static void (*G__set_funcmember_root_writer) G__P((G__funcmember_root_writer funcmember_writer));
    static void (*G__set_datamember_root_writer) G__P((G__datamember_root_writer datamember_writer));
@@ -2264,16 +2269,19 @@ G__EXPORT void G__SetCppCintApiPointers(
                 void* a95,
                 void* a96,
                 void* a97,
-                ,void* a140
-                ,void* a141
-                ,void* a142
-                ,void* a143
-                ,void* a144
-                ,void* a145
-                ,void* a146
-                ,void* a147
-                ,void* a148
-                ,void* a149
+                void* a140,
+                void* a141,
+                void* a142,
+                void* a143,
+                void* a144,
+                void* a145,
+                void* a146,
+                void* a147,
+                void* a148,
+                void* a149,
+                void* a150,
+                void* a151,
+                void* a152,
                 void* a100,
                 void* a101,
                 void* a102,
@@ -2437,7 +2445,9 @@ G__EXPORT void G__SetCppCintApiPointers(
   G__dictionary_initializer = (G__funcmember_root_setup) a147; 
   G__set_dictionary_root_setup  = (void (*) G__P((G__datamember_root_setup dictionary_initializer))) a148;
   G__set_dictionary_writer = (void (*) G__P((G__dictionary_writer dictionary_writer))) a149;
-  G__getglobalcomp = (int (*) G__P(()) ) a150
+  G__getglobalcomp = (int (*) G__P(()) ) a150;
+  G__mark_linked_tagnum = (char* (*) G__P((int tagnum))) a151;
+  G__fulltypename = (char* (*) G__P(int typenum)) a152;
   /* DIEGO */
     
   G__search_typename2 = (int (*) G__P((G__CONST char *typenamein,int typein,int tagnum,int reftype,int parent_tagnum)) ) a100;

@@ -12,6 +12,7 @@
 #include "TDictionaryManager.h"
 
 #include "TDataMemberInfo.h"
+#include "TFunctionMemberInfo.h"
 
 #include "G__ci.h"
 #include "TClassInfo.h"
@@ -152,21 +153,25 @@ TFile* TDictionaryManager::GetDictionaryFile(const char* filename, const char* m
    TFile* openFile = (TFile*) TDictionaryManager::fFilesCache.FindObject(filename);
    if(!openFile){ // No, It doesn't
       
-      // We open the file through a CINT call. Why? LibCore.so is not linked against LibRIO.so so we cannot do TFile Open() directly
-      openFile  = new TFile(filename,mode);
-
       // If the list has already 10 elements then the last recently used is removed.
       if (TDictionaryManager::fFilesCache.GetEntries() >= 10){
 
          //((TDirectory*) TDictionaryManager::fFilesCache.Last())->Close();
          TDictionaryManager::fFilesCache.RemoveLast();
       }
-   }     
-   else // Remove the file from the original current position for adding it later in the first place (Most recent used policy)
-      TDictionaryManager::fFilesCache.Remove(openFile);
+      
+      // Current file is the most recently used then It will be the first one in the Cache List.
+      TDictionaryManager::fFilesCache.AddFirst(openFile);
 
-   // Current file is the most recently used then It will be the first one in the Cache List.
-   TDictionaryManager::fFilesCache.AddFirst(openFile);
+       // We open the file through a CINT call. Why? LibCore.so is not linked against LibRIO.so so we cannot do TFile Open() directly
+      openFile  = new TFile(filename,mode);
+
+   }     
+   else{ // Remove the file from the original current position for adding it later in the first place (Most recent used policy)
+      TDictionaryManager::fFilesCache.Remove(openFile);
+      // Current file is the most recently used then It will be the first one in the Cache List.
+      TDictionaryManager::fFilesCache.AddFirst(openFile);
+   }
 
    return openFile; 
 
@@ -235,7 +240,8 @@ Int_t TDictionaryManager::AddType(TCintTypeInfo newType){
 }
 
 //______________________________________________________________________________
-int TDictionaryManager::AddDataMember(const char* membername, void* p, Char_t type, Char_t reftype, Char_t structtype, Char_t enumvar, Int_t constvar, Int_t statictype, Int_t accessin,const char *expr, Int_t definemacro,const char *comment, const char* classname, const char* typedefname){
+int TDictionaryManager::AddDataMember(const char* membername,  void* p, Char_t type, Char_t reftype, Char_t structtype, Char_t enumvar, Int_t constvar, Int_t statictype, Int_t accessin,const char *expr, Int_t definemacro,const char *comment, const char* classname, const char* typedefname){
+
 
    // Add one Data Member (Attribute) to a class
    
@@ -270,17 +276,18 @@ int TDictionaryManager::AddDataMember(const char* membername, void* p, Char_t ty
 
   
 //______________________________________________________________________________
-int TDictionaryManager::AddFunctionMember(const char *funcname, Char_t type, Char_t reftype, Char_t structtype, Int_t para_nu, Int_t access, Int_t ansi, Int_t isconst,const char *paras, const char *comment, Int_t isvirtual, const char* classname, const char* symbol){
+int TDictionaryManager::AddFunctionMember(const char *funcname, Int_t hash,  Char_t type, Int_t p_tagtable, Int_t p_typetable, Char_t reftype, Char_t structtype, Int_t para_nu, Int_t access, Int_t ansi, Int_t isconst,const char *paras, const char *comment, Int_t isvirtual, const char* classname, const char *symbol, const char* tagname, const char* nametype){
 
    /* TEMPORARY  RANDOM SYMBOL GENERATION*/
-   TRandom gen;
-   char funcSym[41];
-   for (int i; i < 40; i++)
-      funcSym[i] = (char) (gen.Integer(100000)%128);
+   // TRandom gen;
+//    char funcSym[41];
+//    for (int i; i < 40; i++)
+//       funcSym[i] = (char) (gen.Integer(100000)%128);
          
-   funcSym[40] = '\0';
+//    funcSym[40] = '\0';
    /* TEMPORARY */
-
+   Int_t p_tagtable_index;
+   Int_t p_typetable_index;
 
    // Add one Member Function (Method) to a class
 
@@ -298,9 +305,21 @@ int TDictionaryManager::AddFunctionMember(const char *funcname, Char_t type, Cha
       TDictionaryManager::fCurrentDict->fClassList.Add(classInfo);
 
    }
+
+    // Creates the CINT type information
+   if (p_tagtable != -1){
+      TCintTypeInfo tagnameType(tagname,'c',-1);      
+      p_tagtable_index = TDictionaryManager::fCurrentDict->AddType(tagnameType);
+   }
+
+   if (p_typetable != -1){
+      TCintTypeInfo typeNameType(nametype,(char) -1, -1);
+      p_typetable_index = TDictionaryManager::fCurrentDict->AddType(typeNameType);
+   }
+
       
    // Add The Function Member to the proper class
-   classInfo->AddFunctionMember(funcname, type,reftype,para_nu,access,ansi,isconst,paras,comment,isvirtual,type_index,(const char*) funcSym); 
+   classInfo->AddFunctionMember(funcname, hash, type, p_tagtable, p_typetable, reftype, para_nu,access,ansi,isconst,paras,comment,isvirtual,type_index, (const char*) symbol, p_tagtable_index, p_typetable_index); 
 
    return 0;
 }
@@ -320,6 +339,51 @@ const char* TDictionaryManager::GetDictName(){
 
 //______________________________________________________________________________
 Int_t  TDictionaryManager::FunctionMembersReader(const char* rootdictname, const char* sourcefile, const char* classname){
+
+   // Reads the function members (Methods) of a class from the ROOT file
+   // Call CINT functions to initialize its structures: 
+
+   // Open the Dictionary File through CINT
+   TDirectory* readFile = TDictionaryManager::fCurrentDict->GetDictionaryFile(rootdictname, "open");
+   // Reads CINT type ifnormation
+    TObjArray *typesList; 
+    readFile->GetObject("TypesList",typesList);
+
+    // Reads the information of the class
+    TClassInfo* readClass;
+    readFile->GetObject(classname,readClass);
+  
+    // Reads Data Members of the class 
+    THashList *functionMembers = readClass->GetFunctionMembers();
+
+    G__linked_taginfo classLink = { classname, 99, -1 };
+    G__get_linked_tagnum(&classLink);
+    int tagnum = G__defined_tagname(classname,99);
+
+    // Iteration through data members 
+    TIter functionMemberIter(functionMembers);
+    TFunctionMemberInfo* currentFunctionMember;
+
+    while (currentFunctionMember = (TFunctionMemberInfo *) functionMemberIter.Next()){
+
+       int tagnum = -1;
+       if (currentFunctionMember->GetTagTable()!=-1){
+          TCintTypeInfo* typeInfo = (TCintTypeInfo*) typesList->At(currentFunctionMember->GetTagTableIndex());
+          G__linked_taginfo classLink = { typeInfo->GetName(), 99, -1 };
+          tagnum = G__get_linked_tagnum(&classLink);
+       }
+         
+       int typenum = -1;
+       if (currentFunctionMember->GetTypeTable()!=-1){
+          TCintTypeInfo* typeInfo = (TCintTypeInfo*) typesList->At(currentFunctionMember->GetTypeTableIndex());
+          typenum = G__defined_typename(G__fulltypename(currentFunctionMember->GetTypeTable()));
+       }
+
+       //(const char*) currentFunctionMember->GetParameters().Data()
+            
+       G__memfunc_setup2(currentFunctionMember->GetName(),currentFunctionMember->GetCintHash(),currentFunctionMember->GetSymbol(),(G__InterfaceMethod) NULL, currentFunctionMember->GetType(), tagnum, typenum, currentFunctionMember->GetRefType(),currentFunctionMember->GetParametersNumber(), currentFunctionMember->GetAnsi(), currentFunctionMember->GetAccess(), currentFunctionMember->GetIsConst(),(const char*) currentFunctionMember->GetParameters().Data(), (const char*) currentFunctionMember->GetComment().Data(), (void*) NULL, currentFunctionMember->GetIsVirtual());
+
+    }
 
    return 0;
 
@@ -352,7 +416,7 @@ Int_t  TDictionaryManager::DataMembersReader(const char* rootdictname, const cha
 
    // Initialize the entry of the class in the G__struct
    G__linked_taginfo classLink = { classname, 99, -1 };
-   G__tag_memvar_setup(G__get_linked_tagnum(&classLink));
+   G__get_linked_tagnum(&classLink);
 
    // Iteration through data members 
    TIter dataMemberIter(dataMembers);

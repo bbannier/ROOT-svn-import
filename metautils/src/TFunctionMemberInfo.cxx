@@ -23,13 +23,16 @@
 
 
 //______________________________________________________________________________
-TFunctionMemberInfo::TFunctionMemberInfo(const char *funcname, Char_t type, Char_t reftype, Char_t para_nu, Char_t access, Char_t ansi, Char_t isconst,const char *paras, const char *comment, Int_t isvirtual, Int_t typeindex, const char* symbol){
+TFunctionMemberInfo::TFunctionMemberInfo(const char *funcname, int hash, Char_t type, Int_t p_tagtable, Int_t p_typetable, Char_t reftype, Char_t para_nu, Char_t access, Int_t ansi, Char_t isconst,const char *paras, const char *comment, Int_t isvirtual, Int_t typeindex, const char* symbol, Int_t p_tagtable_index, Int_t p_typetable_index){
 
    fSymbol = symbol;
    fName = funcname;
+   fHash = hash;
    fType = type;
    fReftype = reftype;
    fParaNum = para_nu;
+   fP_tagtable = p_tagtable;
+   fP_typetable = p_typetable;
    fAccess = access;
    fAnsi = ansi;
    fIsConst = isconst;
@@ -37,6 +40,8 @@ TFunctionMemberInfo::TFunctionMemberInfo(const char *funcname, Char_t type, Char
    fTitle = comment;
    fIsVirtual = isvirtual;
    fFullTypeName = typeindex;
+   fTagtable_index = p_tagtable_index;
+   fTypetable_index = p_typetable_index;   
 
 }
 
@@ -70,6 +75,34 @@ Char_t TFunctionMemberInfo::GetRefType(){
 }
 
 //______________________________________________________________________________
+const TString& TFunctionMemberInfo::GetParameters() const{
+
+   return fParameters;   
+
+}
+
+//______________________________________________________________________________
+Int_t TFunctionMemberInfo::GetParametersNumber() const{
+
+   return fParaNum;
+ 
+}
+
+//______________________________________________________________________________
+Int_t TFunctionMemberInfo::GetTagTable(){
+
+   return fP_tagtable;
+
+}
+
+//______________________________________________________________________________
+Int_t TFunctionMemberInfo::GetTypeTable(){
+
+   return fP_typetable;
+
+}
+
+//______________________________________________________________________________
 Char_t TFunctionMemberInfo::GetConst(){
 
    return fParaNum;
@@ -77,7 +110,7 @@ Char_t TFunctionMemberInfo::GetConst(){
 }
 
 //______________________________________________________________________________
-Char_t TFunctionMemberInfo::GetStaticType(){
+Int_t TFunctionMemberInfo::GetAnsi(){
 
    return fAnsi;
 
@@ -113,10 +146,10 @@ const char *TFunctionMemberInfo::GetSymbol() const{
 }
 
 //______________________________________________________________________________
-const char *TFunctionMemberInfo::GetParameters() const{
+Int_t TFunctionMemberInfo::GetCintHash() const{
 
-   return fParameters.Data();   
-
+   return fHash;
+ 
 }
 
 //______________________________________________________________________________
@@ -127,3 +160,19 @@ ULong_t TFunctionMemberInfo::Hash() const{
    return fName.Hash();
 
 }
+
+//______________________________________________________________________________
+Int_t  TFunctionMemberInfo::GetTagTableIndex() const{
+
+   return fTagtable_index;
+
+}
+
+//______________________________________________________________________________
+Int_t  TFunctionMemberInfo::GetTypeTableIndex() const{
+
+   return fTypetable_index;
+
+}
+
+
