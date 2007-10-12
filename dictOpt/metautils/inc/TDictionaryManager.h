@@ -79,7 +79,7 @@ public:
    Int_t AddType(TCintTypeInfo newType); // Add type to the Cint Types Information
 
    // Static Function Called by a CallBack Pattern (aka Hook) from CINT for adding a new Function Member to a class
-   static Int_t AddFunctionMember(const char *funcname, Char_t type, Char_t reftype, Char_t structtype, Int_t para_nu, Int_t access, Int_t ansi, Int_t isconst,const char *paras, const char *comment, Int_t isvirtual, const char* classname, const char* symbol);
+   static Int_t AddFunctionMember(const char *funcname, Int_t hash, Char_t type, Int_t p_tagtable, Int_t p_typetable, Char_t reftype, Char_t structtype, Int_t para_nu, Int_t access, Int_t ansi, Int_t isconst,const char *paras, const char *comment, Int_t isvirtual, const char* classname, const char* symbol, const char* tagname, const char* nametype);
 
    // Static Function Called by a CallBack Pattern (aka Hook) from CINT for adding a new  Member to a class
    static Int_t AddDataMember(const char* membername,  void* p, Char_t type, Char_t reftype, Char_t structtype, Char_t enumvar, Int_t constvar, Int_t statictype, Int_t accessin,const char *expr, Int_t definemacro,const char *comment, const char* classname, const char* typedefname);

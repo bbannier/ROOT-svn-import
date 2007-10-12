@@ -66,7 +66,7 @@ class TClassInfo : public TObject{
    THashList* GetFunctionMembers();
 
    // Add a new Function Member (Method) to the class
-   void AddFunctionMember(const char *funcname, Int_t type, Int_t reftype, Int_t para_nu, Int_t access, Int_t ansi, Int_t isconst,const char *paras, const char *comment, Int_t isvirtual, Int_t classindex, const char* symbol);
+   void AddFunctionMember(const char *funcname, Int_t hash, Int_t type, Int_t p_tagtable, Int_t p_typetable ,Int_t reftype, Int_t para_nu, Int_t access, Int_t ansi, Int_t isconst,const char *paras, const char *comment, Int_t isvirtual, Int_t classindex, const char* symbol, Int_t p_tagtable_index, Int_t p_typetable_index);
 
    // Add a new Data Member (Attribute) to the class
    void AddDataMember(const char* membername, void* p,Int_t type, Int_t reftype, Int_t constvar, Int_t statictype, Int_t accessin,const char *expr, Int_t definemacro,const char *comment, Int_t classindex);

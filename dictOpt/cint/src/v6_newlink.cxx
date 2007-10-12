@@ -310,7 +310,7 @@ int G__isnonpublicnew(int tagnum);
 void  G__if_ary_union_reset(int ifn,struct G__ifunc_table *ifunc);
 static int G__isprotecteddestructoronelevel(int tagnum);
 void  G__if_ary_union(FILE *fp,int ifn,struct G__ifunc_table *ifunc);
-char *G__mark_linked_tagnum(int tagnum);
+//char *G__mark_linked_tagnum(int tagnum);
 static int G__isprivateconstructorifunc(int tagnum,int iscopy);
 static int G__isprivateconstructorvar(int tagnum,int iscopy);
 static int G__isprivatedestructorifunc(int tagnum);
@@ -7691,27 +7691,28 @@ void G__cpplink_memvar(FILE *fp)
          }
       count=0;
       fgetpos(fp,&pos);
-         
-      if(strcmp(G__DLLID,"G__Base1")&&strcmp(G__DLLID,"G__Base2")&&strcmp(G__DLLID,"G__Base3")&&strcmp(G__DLLID,"G__Cont")&&strcmp(G__DLLID,"G__Meta")&&strcmp(G__DLLID,"G__IO")&&strcmp(G__DLLID,"G__Unix")&&strcmp(G__DLLID,"G__Clib")&&strcmp(G__DLLID,"G__MetaUtils")&&strcmp(G__DLLID,"G__Math")&&strcmp(G__DLLID,"G__DictIO")&&strcmp(G__DLLID,"G__Tree")&&strcmp(G__DLLID,"G__TreePlayer")&&strcmp(G__DLLID,"G__Rint")&&strcmp(G__DLLID,"G__ProofPlayer"))
-              fprintf(fp, "#ifdef  G__SOURCE_BASED_DICT \n");
 
-         //
-         //  Write out call to member variable setup
-         //  initialization to the dictionary file.
-         //
-         fprintf(fp, "   G__tag_memvar_setup(G__get_linked_tagnum(&%s));\n", G__mark_linked_tagnum(i));
-         //
-         //  We need a fake this pointer, except for namespace and unnamed struct members.
-         //
-         if ((G__struct.type[i] == 'n') || !G__struct.name[i][0]) {
-            fprintf(fp, "   {\n");
-         }
-         else {
-            fprintf(fp, "   { %s *p; p=(%s*)0x1000; if (p) { }\n", G__type2string('u', i, -1, 0, 0), G__type2string('u', i, -1, 0, 0));
-         }
-         //
-         //  Loop over all the data members and write setup info to the file.
-         //
+      //
+      //  Write out call to member variable setup
+      //  initialization to the dictionary file.
+      //
+      fprintf(fp, "   G__tag_memvar_setup(G__get_linked_tagnum(&%s));\n", G__mark_linked_tagnum(i));
+      //   
+     
+      if(strcmp(G__DLLID,"G__Base1")&&strcmp(G__DLLID,"G__Base2")&&strcmp(G__DLLID,"G__Base3")&&strcmp(G__DLLID,"G__Cont")&&strcmp(G__DLLID,"G__Meta")&&strcmp(G__DLLID,"G__IO")&&strcmp(G__DLLID,"G__Unix")&&strcmp(G__DLLID,"G__Clib")&&strcmp(G__DLLID,"G__MetaUtils")&&strcmp(G__DLLID,"G__Math")&&strcmp(G__DLLID,"G__DictIO")&&strcmp(G__DLLID,"G__Tree")&&strcmp(G__DLLID,"G__TreePlayer")&&strcmp(G__DLLID,"G__Rint")&&strcmp(G__DLLID,"G__ProofPlayer"))
+              fprintf(fp, "#ifdef  G__SOURCE_BASED_DICT \n");     
+
+      //  We need a fake this pointer, except for namespace and unnamed struct members.
+      //
+      if ((G__struct.type[i] == 'n') || !G__struct.name[i][0]) {
+         fprintf(fp, "   {\n");
+      }
+      else {
+         fprintf(fp, "   { %s *p; p=(%s*)0x1000; if (p) { }\n", G__type2string('u', i, -1, 0, 0), G__type2string('u', i, -1, 0, 0));
+      }
+      //
+      //  Loop over all the data members and write setup info to the file.
+      //
          struct G__var_array* var = G__struct.memvar[i];
          while (var) {
             // -- Loop over all variable pages.
@@ -7880,7 +7881,8 @@ void G__cpplink_memvar(FILE *fp)
                   //  Parameter #11
                   G__getcommentstring(commentbuf, i, &var->comment[j]);
                   fprintf(fp, ",%s);\n", commentbuf);
-      /* DIEGO */
+            
+            /* DIEGO */
             /* ROOT File Dictionary Filling */
             if (G__datamember_writer){
 
@@ -8345,12 +8347,12 @@ void G__cpplink_memfunc(FILE *fp)
                   /* Parameter #3 */
       fprintf(fp,"   /* %s */\n",G__type2string('u',i,-1,0,0));
 
-      /* DIEGO */
-      if(strcmp(G__DLLID,"G__Base1")&&strcmp(G__DLLID,"G__Base2")&&strcmp(G__DLLID,"G__Base3")&&strcmp(G__DLLID,"G__Cont")&&strcmp(G__DLLID,"G__Meta")&&strcmp(G__DLLID,"G__IO")&&strcmp(G__DLLID,"G__Unix")&&strcmp(G__DLLID,"G__Clib")&&strcmp(G__DLLID,"G__MetaUtils")&&strcmp(G__DLLID,"G__Math")&&strcmp(G__DLLID,"G__DictIO")&&strcmp(G__DLLID,"G__Tree")&&strcmp(G__DLLID,"G__TreePlayer")&&strcmp(G__DLLID,"G__Rint")&&strcmp(G__DLLID,"G__ProofPlayer"))
-         fprintf(fp, "#ifndef G__SOURCE_BASED_DICT \n");
-
       fprintf(fp,"   G__tag_memfunc_setup(G__get_linked_tagnum(&%s));\n"
               ,G__mark_linked_tagnum(i));
+
+      /* DIEGO */
+      if(strcmp(G__DLLID,"G__Base1")&&strcmp(G__DLLID,"G__Base2")&&strcmp(G__DLLID,"G__Base3")&&strcmp(G__DLLID,"G__Cont")&&strcmp(G__DLLID,"G__Meta")&&strcmp(G__DLLID,"G__IO")&&strcmp(G__DLLID,"G__Unix")&&strcmp(G__DLLID,"G__Clib")&&strcmp(G__DLLID,"G__MetaUtils")&&strcmp(G__DLLID,"G__Math")&&strcmp(G__DLLID,"G__DictIO")&&strcmp(G__DLLID,"G__Tree")&&strcmp(G__DLLID,"G__TreePlayer")&&strcmp(G__DLLID,"G__Rint")&&strcmp(G__DLLID,"G__ProofPlayer"))
+         fprintf(fp, "#ifdef G__SOURCE_BASED_DICT \n");    
 
       if(0==G__struct.name[i][0]) {
         fprintf(fp,"}\n");
@@ -8484,8 +8486,10 @@ void G__cpplink_memfunc(FILE *fp)
             else
                fprintf(fp,"   G__memfunc_setup2(");
 
+            // Parameter #1 (function name) and #2 (hash number)
             fprintf(fp,"\"%s\",%d,",ifunc->funcname[j],ifunc->hash[j]);
             
+            // Parameter #3
             //LF 04-07-07 print the mangled name after the funcname and hash
             if(G__dicttype!=0) {
                if(ifunc->mangled_name[j])
@@ -8494,8 +8498,8 @@ void G__cpplink_memfunc(FILE *fp)
                   fprintf(fp,"0,");
             }
 
-
             // LF 24-05-07
+            // Parameter #4
             // Dont try to use the stubs functions since we just removed them
             if(G__PUBLIC==ifunc->access[j]
                || (((G__PROTECTED==ifunc->access[j] &&
@@ -8507,7 +8511,7 @@ void G__cpplink_memfunc(FILE *fp)
                //  Virtual method found in the base classes(we have an overridden virtual method)so it
                //  has not stub function in its dictionary
                if ((ifunc->isvirtual[j])&&(G__method_inbase(j, ifunc)))
-                  // Null Stub Pointer
+                  // Null Stub Pointer 
                   fprintf(fp, "(G__InterfaceMethod) NULL," );
                else {
                   // If the method isn't virtual or it belongs to a base class. 
@@ -8540,46 +8544,66 @@ void G__cpplink_memfunc(FILE *fp)
               fprintf(fp, "(G__InterfaceMethod) NULL, ");
             }
 
+            // Parameter #5
             fprintf(fp, "%d, ", ifunc->type[j]);
 
+             
+            // Parameter #6
+            int p_tagtable = -1;
             if (-1 != ifunc->p_tagtable[j]) {
-              if(ifunc->p_tagtable[j]) //LF 25-07-07 fix problem with default functions
+              if(ifunc->p_tagtable[j]){ //LF 25-07-07 fix problem with default functions
                 fprintf(fp, "G__get_linked_tagnum(&%s), ", G__mark_linked_tagnum(ifunc->p_tagtable[j]));
-              else
+                p_tagtable = ifunc->p_tagtable[j];
+              }
+              else{
                 fprintf(fp, "G__get_linked_tagnum(&%s), ", G__mark_linked_tagnum(i));                 
+                p_tagtable = i;
+              }
             }
             else
               fprintf(fp, "-1, ");
-
-            if (-1 != ifunc->p_typetable[j])
+           
+           
+            // Parameter #7
+            int p_typetable = -1;
+            if (-1 != ifunc->p_typetable[j]){
               fprintf(fp, "G__defined_typename(\"%s\"), ", G__fulltypename(ifunc->p_typetable[j]));
+              p_typetable = ifunc->p_typetable[j];
+            }
             else
               fprintf(fp, "-1, ");
 
             fprintf(fp, "%d, ", ifunc->reftype[j]);
 
+            // Parameter #8
             // K&R style if para_nu==-1, force it to 0
             if (0 > ifunc->para_nu[j]) fprintf(fp, "0, ");
             else                       fprintf(fp, "%d, ", ifunc->para_nu[j]);
 
+            // Parameter #9
+            int ansivalue = 0;
             if (2 == ifunc->ansi[j])
-              fprintf(fp, "%d, ", 8 + ifunc->staticalloc[j]*2 + ifunc->isexplicit[j]*4);
+               ansivalue = 8 + ifunc->staticalloc[j]*2 + ifunc->isexplicit[j]*4;
             else
-              fprintf(fp, "%d, ", ifunc->ansi[j] + ifunc->staticalloc[j]*2 + ifunc->isexplicit[j]*4);
+               ansivalue = ifunc->ansi[j] + ifunc->staticalloc[j]*2 + ifunc->isexplicit[j]*4;
 
+            fprintf(fp, "%d, ", ansivalue);
+
+            // Parameter #10 
             fprintf(fp, "%d, ", ifunc->access[j]);
+            // Parameter #11
             fprintf(fp, "%d, ", ifunc->isconst[j]);
 
-            /* Parameter #12 */
+            // Parameter #12
             // newline to avoid lines more than 256 char for CMZ
-            if (ifunc->para_nu[j] > 1) index_str += sprintf(para_str + index_str, "\n");
-            index_str += sprintf(para_str + index_str, "\"");
+            //if (ifunc->para_nu[j] > 1) index_str += sprintf(para_str + index_str, "\n");
+            //index_str += sprintf(para_str + index_str, "\"");
             
             
             /****************************************************************
              * function parameter
              ****************************************************************/
-            
+ 
             for (k = 0; k < ifunc->para_nu[j]; k++) {
               // newline to avoid lines more than 256 char for CMZ 
                if (G__CPPLINK == G__globalcomp && k && 0 == (k%2)) index_str += sprintf(para_str + index_str, "\"\n\"");
@@ -8613,21 +8637,17 @@ void G__cpplink_memfunc(FILE *fp)
                  index_str += sprintf(para_str + index_str, "-");
               if (k != ifunc->para_nu[j] - 1) index_str += sprintf(para_str + index_str, " ");
             }
-            index_str += sprintf(para_str + index_str, "\"");
-            fprintf(fp, "%s", para_str);
+            //index_str += sprintf(para_str + index_str, "\"");
+            if (ifunc->para_nu[j] > 1)
+               fprintf(fp, "\n\"%s\"", para_str);
+            else
+               fprintf(fp, "\"%s\"", para_str);
 
             /* Parameter #13 */
             G__getcommentstring(buf, i, &ifunc->comment[j]);
             fprintf(fp, ", %s", buf);
 
-             /* DIEGO */
-            /* ROOT File Dictionary Filling */
-            if (G__funcmember_writer)
-               G__funcmember_writer((const char*) ifunc->funcname[j], ifunc->type[j], ifunc->reftype[j], G__struct.type[ifunc->tagnum], ifunc->para_nu[j],ifunc->access[j], 0, ifunc->isconst[j] , (const char*) para_str , buf ,ifunc->isvirtual[j],(const char*) G__fulltagname(ifunc->tagnum, 1), (const char*) 0);
-
-            index_str = 0;
-            bzero(para_str,G__LARGEBUF);
-            
+           
             /* Parameter #14 */
 #ifdef G__TRUEP2F
             if (
@@ -8691,12 +8711,29 @@ void G__cpplink_memfunc(FILE *fp)
                }
             }
             fprintf(fp, ", %d", virtflag);
+             /* DIEGO */
+            /* ROOT File Dictionary Filling */
+            char tagname[255] = "\0";
+            char nametype[255] = "\0";
+            
+            if (p_tagtable != -1)
+               strcpy(tagname,G__fulltagname(p_tagtable,1));
+
+            if (p_typetable != -1)
+               strcpy(nametype,G__fulltypename(p_typetable));
+                  
+            if (G__funcmember_writer)
+               G__funcmember_writer((const char*) ifunc->funcname[j], ifunc->hash[j], ifunc->type[j], p_tagtable, p_typetable, ifunc->reftype[j], G__struct.type[ifunc->tagnum], ifunc->para_nu[j], ifunc->access[j], ansivalue, ifunc->isconst[j] , (const char*) para_str,(const char*) buf ,virtflag,(const char*) G__fulltagname(ifunc->tagnum, 1), (const char*) ifunc->mangled_name[j], (const char*) tagname, (const char*) nametype);
+            
+            index_str = 0;
+            bzero(para_str,G__LARGEBUF);
+            
 #else // 1289_YET  || !1993
             fprintf(fp, ", (void*) NULL, %d", virtflag);
             /* DIEGO */
             /* ROOT File Dictionary Filling */
-            if (G__funcmember_writer)
-               G__funcmember_writer(funcname, (int) 'i', 0, G__struct.type[i], 0,G__PUBLIC, 1, 0 ,  "", (char*) NULL ,0,(const char*) G__fulltagname(ifunc->tagnum, 1), (const char*) 0);
+            // if (G__funcmember_writer)
+            //  G__funcmember_writer(funcname, (int) 'i', 0, G__struct.type[i], 0,G__PUBLIC, 1, 0 ,  "", (char*) NULL ,0,(const char*) G__fulltagname(ifunc->tagnum, 1), (const char*) 0);
 
 #endif // 1289_YET
 
@@ -8785,17 +8822,19 @@ void G__cpplink_memfunc(FILE *fp)
                 else
                    fprintf(fp, "   G__memfunc_setup2(");
             
+                // Parameter #1 function name
                 fprintf(fp, "\"%s\", %d, ", funcname, hash);
                 //LF 21-06-07 dont do it for the stats
                 //fprintf(fp, "(G__InterfaceMethod) NULL, ");
                 //LF 04-07-07 print the mangled name after the funcname and hash
+                //Parameter #2 mangled symbol of the method in case of stubs removal
                 if(G__dicttype!=0)
                    fprintf(fp,"0," /*ifunc_constructor->mangled_name[j]*/);
                 //fprintf(fp, "%s, ", G__map_cpp_funcname(i, funcname, j, page));
 
                 //DIEGO We dont generate the assignment operator
             
-                // LF 06-07-07
+                // LF 06-07-07x
                 // we need this again
                 //if(((  strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
                 //       strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
@@ -8829,7 +8868,7 @@ void G__cpplink_memfunc(FILE *fp)
                 /* DIEGO */
                 /* ROOT File Dictionary Filling */
                 if (G__funcmember_writer)
-                   G__funcmember_writer(funcname, (int) 'i', 0, G__struct.type[i], 0,G__PUBLIC, 1, 0 ,  "", (char*) NULL ,0,(const char*) G__fulltagname(ifunc->tagnum, 1), (const char*) 0);
+                   G__funcmember_writer(funcname, hash, (int) 'i',  i, -1, 0, G__struct.type[i], 0, G__PUBLIC, 1, 0 ,  "", (char*) NULL ,0,(const char*) G__fulltagname(ifunc->tagnum, 1), (const char*) 0, (const char*) "\0", (const char*) "\0");
 
                 ++j;
                 if (j == G__MAXIFUNC) {
@@ -8959,7 +8998,7 @@ void G__cpplink_memfunc(FILE *fp)
                 /* DIEGO */
             /* ROOT File Dictionary Filling */
             if (G__funcmember_writer)
-               G__funcmember_writer(funcname,(int) ('y'), 0, 0, 0, dtoraccess, 1, 0, "" , (char*) NULL ,virtualdtorflag,(const char*) G__fulltagname(ifunc->tagnum, 1), (const char*) 0);
+               G__funcmember_writer(funcname, hash, (int) ('y'), -1, -1, 0, 0, 0, dtoraccess, 1, 0, "" , (char*) NULL ,virtualdtorflag,(const char*) G__fulltagname(ifunc->tagnum, 1), (const char*) 0, (const char*) "\0", (const char*) "\0");
 
                 // LF 
                 if (0 == isdestructor) 
@@ -9029,7 +9068,7 @@ void G__cpplink_memfunc(FILE *fp)
              /* DIEGO */
           /* ROOT File Dictionary Filling */
           if (G__funcmember_writer)
-             G__funcmember_writer(funcname,(int) ('u'), 0, G__struct.type[i], 0, dtoraccess, 1, 0, "" , (char*) NULL ,virtualdtorflag,(const char*) G__fulltagname(ifunc->tagnum, 1), (const char*) 0);
+             G__funcmember_writer(funcname, hash, (int) ('u'), i, -1, 0, G__struct.type[i], 0, dtoraccess, 1, 0, "" , (char*) NULL ,virtualdtorflag,(const char*) G__fulltagname(ifunc->tagnum, 1), (const char*) 0, (const char*) "\0", (const char*) "\0");
 
 
           }
@@ -9042,7 +9081,12 @@ void G__cpplink_memfunc(FILE *fp)
     if(strcmp(G__DLLID,"G__Base1")&&strcmp(G__DLLID,"G__Base2")&&strcmp(G__DLLID,"G__Base3")&&strcmp(G__DLLID,"G__Cont")&&strcmp(G__DLLID,"G__Meta")&&strcmp(G__DLLID,"G__IO")&&strcmp(G__DLLID,"G__Unix")&&strcmp(G__DLLID,"G__Clib")&&strcmp(G__DLLID,"G__MetaUtils")&&strcmp(G__DLLID,"G__Math")&&strcmp(G__DLLID,"G__DictIO")&&strcmp(G__DLLID,"G__Tree")&&strcmp(G__DLLID,"G__TreePlayer")&&strcmp(G__DLLID,"G__Rint")&&strcmp(G__DLLID,"G__ProofPlayer")){
       /* DIEGO */
          fprintf(fp,"#else\n"); 
-         fprintf(fp,"G__funcmember_reader(\"\",\"\",\"XXX\");\n");
+         
+         if (G__get_dictionary_name)
+            fprintf(fp,"G__funcmember_reader(\"%s/%s\",\"\",\"%s\");\n", getenv("ROOTSYS"),G__rootdictname,G__map_cpp_name(G__fulltagname(i,0)));
+         else
+            fprintf(fp,"G__funcmember_reader(\"\",\"\",\"XXX\");\n");  
+            
          fprintf(fp,"#endif\n");
       /* DIEGO */
       }
@@ -9873,7 +9917,6 @@ int G__tag_memvar_reset()
   G__def_struct_member = incsetup_stack->G__incset_def_struct_member ;
   G__tagdefining = incsetup_stack->G__incset_tagdefining ;
   G__def_tagnum = incsetup_stack->G__incset_def_tagnum;
-
   G__globalvarpointer = incsetup_stack->G__incset_globalvarpointer ;
   G__var_type = incsetup_stack->G__incset_var_type ;
   G__tagnum = incsetup_stack->G__incset_tagnum ;
@@ -10365,7 +10408,7 @@ int G__memfunc_setup2(const char *funcname,int hash,const char *mangled_name
     //     funcname);
     // return 0;
   }
-  G__func_now=G__p_ifunc->allifunc;
+  G__func_now = G__p_ifunc->allifunc;
 
   // LF 02-10-07
   // Do this only in setup_impl()
@@ -10397,13 +10440,11 @@ int G__memfunc_setup2(const char *funcname,int hash,const char *mangled_name
 #endif // G__TRUEP2F
 
   // LF 02-10-07
-  // Do this only in setup_impl()
-  
+  // Do this only in setup_impl()  
   if(dtorflag) {
     G__func_now = store_func_now;
     G__p_ifunc = store_p_ifunc;
   }
-  
 
   return G__memfunc_setup_imp(funcname, hash, funcp, type, tagnum, typenum, reftype, para_nu, ansi, 
                    accessin, isconst, paras, comment
@@ -10414,6 +10455,7 @@ int G__memfunc_setup2(const char *funcname,int hash,const char *mangled_name
                  );
 
 #endif
+
 }
 
 
@@ -11999,8 +12041,10 @@ void G__incsetup_memfunc(int tagnum)
   int store_asm_exec;
 
   // DIEGO 
-  if (G__struct.incsetup_memfunc[tagnum]==0)
+  if (G__struct.incsetup_memfunc[tagnum]==0){
      G__struct.incsetup_memfunc[tagnum] = new std::list<G__incsetup>();
+     return;
+  }
 
   if(!G__struct.incsetup_memfunc[tagnum]->empty()) {
     store_asm_exec = G__asm_exec;

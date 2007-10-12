@@ -68,9 +68,9 @@ THashList* TClassInfo::GetFunctionMembers(){
 
 
 //______________________________________________________________________________
-void TClassInfo::AddFunctionMember(const char *funcname, Int_t type, Int_t reftype, Int_t para_nu, Int_t access, Int_t ansi, Int_t isconst,const char *paras, const char *comment, Int_t isvirtual, Int_t classindex, const char* symbol){
+void TClassInfo::AddFunctionMember(const char *funcname, Int_t hash, Int_t type, Int_t p_tagtable, Int_t p_typetable, Int_t reftype, Int_t para_nu, Int_t access, Int_t ansi, Int_t isconst,const char *paras, const char *comment, Int_t isvirtual, Int_t classindex, const char* symbol, Int_t p_tagtable_index, Int_t p_typetable_index){
 
-   TFunctionMemberInfo *newFuncMember = new TFunctionMemberInfo(funcname,type,reftype,para_nu,access,ansi,isconst,paras,comment,isvirtual,classindex,symbol);
+   TFunctionMemberInfo *newFuncMember = new TFunctionMemberInfo(funcname, hash, type, p_tagtable, p_typetable, reftype,para_nu,access,ansi,isconst,paras,comment,isvirtual,classindex,symbol, p_tagtable_index, p_typetable_index );
  
    fFunctionMembers.Add((TObject *)newFuncMember);
   
