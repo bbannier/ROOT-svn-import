@@ -147,6 +147,16 @@ namespace Math {
       
       GSLIntegrator(const Integration::Type type, const Integration::GKRule rule, double absTol = 1.E-9, double relTol = 1E-6, size_t size = 1000);
       
+
+      /** constructor of GSL Integrator. In the case of Adaptive integration the Gauss-Krond rule of 31 points is used
+          This is used by the plug-in manager (need a char * instead of enumerations)
+         
+         @param type type of integration. The possible types are defined in the Integration::Type enumeration
+         @param absTol desired absolute Error
+         @param relTol desired relative Error
+         @param size maximum number of sub-intervals
+         */            
+      GSLIntegrator(const char *  type, double absTol, double relTol, size_t size );
       
       virtual ~GSLIntegrator();
       //~GSLIntegrator();
@@ -171,6 +181,7 @@ namespace Math {
          
          
       void SetFunction(const IGenFunction &f, bool copyFunc = false); 
+      using VirtualIntegrator::SetFunction;
 
       
       void SetFunction( GSLFuncPointer f, void * p = 0); 
@@ -245,6 +256,7 @@ namespace Math {
        */
       
       double Integral(double a, double b);
+      using VirtualIntegrator::Integral;
       
       /**
          evaluate the Integral over the infinite interval (-inf,+inf) using the function previously set with GSLIntegrator::SetFunction method.

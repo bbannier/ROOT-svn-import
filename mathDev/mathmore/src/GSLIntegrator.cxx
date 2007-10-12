@@ -94,9 +94,38 @@ GSLIntegrator::GSLIntegrator(const Integration::Type type , double absTol, doubl
    fFunction(0),
    fWorkspace(0)
 {
+
    // constructor with default rule (gauss31) passing the type
    // allocate workspace (only if not adaptive algorithm)
    if (type !=  Integration::NONADAPTIVE)
+      fWorkspace = new GSLIntegrationWorkspace( fSize);
+   
+}
+
+GSLIntegrator::GSLIntegrator(const char * type , double absTol, double relTol, size_t size) :
+   fRule(Integration::GAUSS31),
+   fAbsTol(absTol),
+   fRelTol(relTol),
+   fSize(size),
+   fMaxIntervals(size),
+   fFunction(0),
+   fWorkspace(0)
+{
+   //std::cout << type << std::endl; 
+
+   std::string typeName(type); 
+   if (typeName == "NONADAPTIVE")
+      fType =  Integration::ADAPTIVE;
+   else if (typeName == "ADAPTIVESINGULAR")
+      fType =  Integration::ADAPTIVESINGULAR;
+   else 
+      fType =  Integration::ADAPTIVE;  // default
+
+
+
+   // constructor with default rule (gauss31) passing the type
+   // allocate workspace (only if not adaptive algorithm)
+   if (fType !=  Integration::NONADAPTIVE)
       fWorkspace = new GSLIntegrationWorkspace( fSize);
    
 }
@@ -109,9 +138,8 @@ GSLIntegrator::~GSLIntegrator()
    if (fWorkspace) delete fWorkspace;
 }
 
-GSLIntegrator::GSLIntegrator(const GSLIntegrator &) /*: 
-   VirtualIntegrator()
-                                                    */
+GSLIntegrator::GSLIntegrator(const GSLIntegrator &)  : 
+   VirtualIntegrator()                                                    
 {
    // dummy copy ctr
 }

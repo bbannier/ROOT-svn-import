@@ -37,7 +37,7 @@ namespace Math {
   namespace IntegrationMultiDim {
 
     //for 1-dim integration
-     enum Type {ADAPTIVE, MONTECARLOVEGAS, MONTECARLOMISER, MONTECARLOPLAIN};
+     enum Type {ADAPTIVE, VEGAS, MISER, PLAIN};
 
   }  
 
