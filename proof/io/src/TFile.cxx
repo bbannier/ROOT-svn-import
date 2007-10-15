@@ -3083,21 +3083,18 @@ TFile::EFileType TFile::GetType(const char *name, Option_t *option, TString *pre
       TUrl url(name);
       //
       // Check whether we should try to optimize for local files
-      Bool_t forceRemote = gEnv->GetValue("TFile.ForceRemote", 0);
+      Bool_t forceRemote = gEnv->GetValue("Path.ForceRemote", 0);
+      forceRemote = (forceRemote) ? kTRUE : gEnv->GetValue("TFile.ForceRemote", 0);
       TString opts = url.GetOptions();
       if (opts.Contains("remote=1"))
          forceRemote = kTRUE;
       else if (opts.Contains("remote=0"))
          forceRemote = kFALSE;
       if (!forceRemote) {
-         TInetAddress a(gSystem->GetHostByName(url.GetHost()));
-         TInetAddress b(gSystem->GetHostByName(gSystem->HostName()));
-         if (!strcmp(a.GetHostName(), b.GetHostName()) ||
-             !strcmp(a.GetHostAddress(), b.GetHostAddress())) {
-            Bool_t read = kFALSE;
-            TString opt = option;
-            opt.ToUpper();
-            if (opt == "" || opt == "READ") read = kTRUE;
+         // Generic locality test
+         localFile = gSystem->IsPathLocal(name);
+         if (localFile) {
+            // Loacl path including the prefix
             const char *fname = url.GetFileAndOptions();
             TString lfname;
             if (fname[0] == '/') {
@@ -3110,21 +3107,19 @@ TFile::EFileType TFile::GetType(const char *name, Option_t *option, TString *pre
             } else {
                lfname = Form("%s/%s", gSystem->HomeDirectory(), fname);
             }
+            // If option "READ" test existence and access
+            TString opt = option;
+            Bool_t read = (opt.IsNull() ||
+                          !opt.CompareTo("READ",TString::kIgnoreCase)) ? kTRUE : kFALSE;
             if (read) {
                char *fn;
                if ((fn = gSystem->ExpandPathName(TUrl(lfname).GetFile()))) {
                   if (gSystem->AccessPathName(fn, kReadPermission))
-                     read = kFALSE;
+                     localFile = kFALSE;
                   delete [] fn;
                }
             }
-            Bool_t sameUser = kFALSE;
-            UserGroup_t *u = gSystem->GetUserInfo();
-            if (u && !strcmp(u->fUser, url.GetUser()))
-               sameUser = kTRUE;
-            delete u;
-            if (read || sameUser)
-               localFile = kTRUE;
+            // Return full local path if requested (and if the case)
             if (localFile && prefix)
                *prefix = lfname;
          }
