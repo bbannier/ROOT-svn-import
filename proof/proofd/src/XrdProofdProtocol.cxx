@@ -99,6 +99,7 @@ char                 *XrdProofdProtocol::fgSecLib   = 0;
 //
 char                 *XrdProofdProtocol::fgPoolURL = 0;
 char                 *XrdProofdProtocol::fgNamespace = strdup("/proofpool");
+XrdOucString          XrdProofdProtocol::fgLocalroot;
 //
 XrdSysSemWait         XrdProofdProtocol::fgForkSem;   // To serialize fork requests
 //
@@ -1126,6 +1127,10 @@ int XrdProofdProtocol::Config(const char *cfn)
             SafeFree(fgSecLib);
             fgSecLib = strdup(val);
          }
+      } else if (!(strncmp("oss.localroot", var, 13))) {
+         if ((val = Config.GetToken()) && val[0]) {
+            fgLocalroot = val;
+         }
       } else if (!(strncmp("xpd.", var, 4)) && var[4]) {
          var += 4;
          // Get the value
@@ -1419,7 +1424,11 @@ int XrdProofdProtocol::Reconfig()
    char mess[512];
    char *val = 0;
    while ((var = Config.GetMyFirstWord())) {
-      if (!(strncmp("xpd.", var, 4)) && var[4]) {
+      if (!(strncmp("oss.localroot", var, 13))) {
+         if ((val = Config.GetToken()) && val[0]) {
+            fgLocalroot = val;
+         }
+      } else if (!(strncmp("xpd.", var, 4)) && var[4]) {
          var += 4;
          // Get the value
          val = Config.GetToken();
@@ -3642,6 +3651,12 @@ int XrdProofdProtocol::SetProofServEnv(int psid, int loglevel, const char *cfg)
    // Port
    fprintf(frc,"# XrdProofdProtocol listening port\n");
    fprintf(frc, "ProofServ.XpdPort: %d\n", fgMgr.Port());
+
+   // Local root prefix
+   if (fgLocalroot.length() > 0) {
+      fprintf(frc,"# Prefix to be prepended to local paths\n");
+      fprintf(frc, "Path.Localroot: %s\n", fgLocalroot.c_str());
+   }
 
    // The session working dir depends on the role
    fprintf(frc,"# The session working dir\n");
