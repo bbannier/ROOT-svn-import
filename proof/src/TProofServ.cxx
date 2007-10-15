@@ -470,7 +470,7 @@ Int_t TProofServ::CreateServer()
    // Set the default prefix in the form '<role>-<ordinal>' (it was already done
    // in the constructor, but for standard PROOF the ordinal number is only set in
    // Setup(), so we need to do it again here)
-   TString pfx = (IsMaster() ? "master-" : "worker-");
+   TString pfx = (IsMaster() ? "Mst-" : "Wrk-");
    pfx += GetOrdinal();
    TProofServLogHandler::SetDefaultPrefix(pfx);
 
@@ -3857,9 +3857,8 @@ Int_t TProofServ::HandleCache(TMessage *mess)
    Bool_t fromglobal = kFALSE;
 
    // Notification message
-   TString noth = Form("worker-%s", fOrdinal.Data());
-   if (IsMaster())
-      noth.ReplaceAll("worker", "master");
+   TString noth = (IsMaster()) ? Form("Mst-%s", fOrdinal.Data())
+                               : Form("Wrk-%s", fOrdinal.Data());
 
    TString package, pdir, ocwd;
    (*mess) >> type;
@@ -4735,15 +4734,15 @@ void TProofServ::ErrorHandler(Int_t level, Bool_t abort, const char *location,
    if (!location || strlen(location) == 0 ||
        (level >= kPrint && level < kInfo) ||
        (level >= kBreak && level < kSysError)) {
-      fprintf(stderr, "%s:%d %s %s: %s\n", (gProofServ ? gProofServ->GetPrefix() : "proof"),
-                      gSystem->GetPid(), st(11,8).Data(), type, msg);
+      fprintf(stderr, "%s %5d %s | %s: %s\n", st(11,8).Data(), gSystem->GetPid(),
+                     (gProofServ ? gProofServ->GetPrefix() : "proof"), type, msg);
       buf.Form("%s:%s:%s:%s", (gProofServ ? gProofServ->GetUser() : "unknown"),
                               (gProofServ ? gProofServ->GetPrefix() : "proof"),
                               type, msg);
    } else {
-      fprintf(stderr, "%s:%d %s %s in <%s>: %s\n",
+      fprintf(stderr, "%s %5d %s | %s in <%s>: %s\n", st(11,8).Data(), gSystem->GetPid(),
                       (gProofServ ? gProofServ->GetPrefix() : "proof"),
-                      gSystem->GetPid(), st(11,8).Data(), type, location, msg);
+                      type, location, msg);
       buf.Form("%s:%s:%s:<%s>:%s", (gProofServ ? gProofServ->GetUser() : "unknown"),
                                    (gProofServ ? gProofServ->GetPrefix() : "proof"),
                                    type, location, msg);
@@ -5079,8 +5078,10 @@ Int_t TProofServ::SendAsynMessage(const char *msg, Bool_t lf)
    // Returns the return value from TSocket::Send(TMessage &) .
    static TMessage m(kPROOF_MESSAGE);
 
-   // To leave a track in the output file
+   // To leave a track in the output file ...
    Info("SendAsynMessage","%s", (msg ? msg : "(null)"));
+   // ... avoiding double notification to the client
+   FlushLogFile();
 
    if (fSocket && msg) {
       m.Reset(kPROOF_MESSAGE);
