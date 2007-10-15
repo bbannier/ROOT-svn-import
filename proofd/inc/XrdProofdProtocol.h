@@ -189,6 +189,7 @@ public:
    // 
    static char                  *fgPoolURL;    // Local pool URL
    static char                  *fgNamespace;  // Local pool namespace
+   static XrdOucString           fgLocalroot;  // Local root prefix (directive oss.localroot)
    //
    static XrdSysSemWait          fgForkSem;   // To serialize fork requests
    //
