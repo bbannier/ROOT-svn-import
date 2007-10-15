@@ -414,7 +414,7 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
    GetOptions(argc, argv);
 
    // Default prefix in the form '<role>-<ordinal>'
-   fPrefix = (IsMaster() ? "master-" : "worker-");
+   fPrefix = (IsMaster() ? "Mst-" : "Wrk-");
    if (fOrdinal != "-1")
       fPrefix += fOrdinal;
    TProofServLogHandler::SetDefaultPrefix(fPrefix);
@@ -4728,18 +4728,22 @@ void TProofServ::ErrorHandler(Int_t level, Bool_t abort, const char *location,
 
    TString buf;
 
+   // Time stamp
+   TTimeStamp ts;
+   TString st(ts.AsString("lc"),19);
+
    if (!location || strlen(location) == 0 ||
        (level >= kPrint && level < kInfo) ||
        (level >= kBreak && level < kSysError)) {
-      fprintf(stderr, "%s on %s: %s\n", type,
-                     (gProofServ ? gProofServ->GetPrefix() : "proof"), msg);
+      fprintf(stderr, "%s:%d %s %s: %s\n", (gProofServ ? gProofServ->GetPrefix() : "proof"),
+                      gSystem->GetPid(), st(11,8).Data(), type, msg);
       buf.Form("%s:%s:%s:%s", (gProofServ ? gProofServ->GetUser() : "unknown"),
                               (gProofServ ? gProofServ->GetPrefix() : "proof"),
                               type, msg);
    } else {
-      fprintf(stderr, "%s in <%s> on %s: %s\n",
-                      type, location,
-                      (gProofServ ? gProofServ->GetPrefix() : "proof"), msg);
+      fprintf(stderr, "%s:%d %s %s in <%s>: %s\n",
+                      (gProofServ ? gProofServ->GetPrefix() : "proof"),
+                      gSystem->GetPid(), st(11,8).Data(), type, location, msg);
       buf.Form("%s:%s:%s:<%s>:%s", (gProofServ ? gProofServ->GetUser() : "unknown"),
                                    (gProofServ ? gProofServ->GetPrefix() : "proof"),
                                    type, location, msg);
@@ -5074,6 +5078,9 @@ Int_t TProofServ::SendAsynMessage(const char *msg, Bool_t lf)
    // 'lf' being kTRUE (default) or kFALSE.
    // Returns the return value from TSocket::Send(TMessage &) .
    static TMessage m(kPROOF_MESSAGE);
+
+   // To leave a track in the output file
+   Info("SendAsynMessage","%s", (msg ? msg : "(null)"));
 
    if (fSocket && msg) {
       m.Reset(kPROOF_MESSAGE);
