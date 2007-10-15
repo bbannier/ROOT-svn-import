@@ -182,26 +182,68 @@ public:
       while(start != string::npos) {
          if ((end == string::npos) || (end > ind))
             end = ind;
+         
+         int ncolon=0;
+         string::size_type cstart = start;
+         string::size_type cidx = start;
+         while((cidx != string::npos) && (cidx < ind)){
+            cidx = demangled.find("::", cstart);
 
-         string::size_type icolon = demangled.find("::", start);
+            if((cidx != string::npos) && (cidx < ind)){
+               ++ncolon;
+               cstart = cidx+2;
+            }
+         }
+         
+         // if(ncolon>1)
+         //   cout << "demanstr: " << demanstr << " ncolon: " << ncolon << endl;
+
+         // LF 15-10-07
+         // Be careful with namespaces...
+         // things like TBits::TReference::~TReference()
+         // will confuse our naive algorithm... instead of just looking
+         // for '::', look for the last pair of '::'
+         string::size_type icolon = string::npos;
+         string::size_type istart = start;
+         for (int i=0;i<ncolon;i++){
+            if(icolon != string::npos)
+               start = istart;
+
+            icolon = demangled.find("::", istart);
+            istart = icolon+2;
+         }
+         //string::size_type icolon = demangled.find("::", start);
+         
          if (icolon != string::npos && icolon < ind){
             // Now hash the class name also
             // (it will make things easier when we try to register
             // symbols by class)
-            string classname = string(demangled, start, icolon);
+            //string classname = string(demangled, start, icolon);
+            string classname = demangled.substr(0, icolon);
+            string classname_noname = demangled.substr(start, icolon-start);
             string protoname = demangled.substr(icolon+2, ind - (icolon+2));
 
-            // ** constructors
-            if ( classname == protoname)
-            {
-               fIsConst = true;
 
+            // 11-10-07
+            // Get rid of the "<>" part in something like TParameter<float>::TParameter()
+            string::size_type itri = classname.find("<");
+
+            string classname_notemp;
+            if(itri != string::npos){
+               classname_notemp = classname_noname.substr(0, itri);
+            }
+            else
+               classname_notemp = classname_noname;
+
+            // ** constructors
+            if ( classname_notemp == protoname) {
+               fIsConst = true;
                // if this not the constructor in charge then just continue
-               string mang(classname);
-               mang += "C1";
+               //string mang(classname_notemp);
+               //mang += "C1";
                
                //TString sub = fMangled->SubString(mang);
-               if(!strstr(fMangled.c_str(), mang.c_str())) {
+               if(!(strstr(fMangled.c_str(), classname_notemp.c_str()) && strstr(fMangled.c_str(), "C1")  )) {
                   //if (sub.IsNull()) {
                   // This is not the constructor in-charge... ignore it
                   return;
@@ -211,18 +253,17 @@ public:
 
             // ** destructors
             string dest("~");
-            dest += classname;
-            if ( dest == protoname)
-            {
+            dest += classname_notemp;
+            if ( dest == protoname){
                fIsDest = true;
                // if this not the constructor in charge then just continue
-               string mang0(classname);
-               string mang1(classname);
-               mang0 += "D0";
-               mang1 += "D1";
+               //string mang0(classname);
+               //string mang1(classname);
+               //mang0 += "D0";
+               //mang1 += "D1";
                
                //if (!(fMangled->SubString(mang0)).IsNull()) {
-               if(strstr(fMangled.c_str(), mang0.c_str())) {
+               if(strstr(fMangled.c_str(), classname_notemp.c_str()) && strstr(fMangled.c_str(), "D0")) {
                // This is the deleting constructor
                   fIsDestInCDel = true;
 
@@ -232,7 +273,7 @@ public:
                   return;
                }
                //else if(!(fMangled->SubString(mang1)).IsNull()){
-               else if( strstr(fMangled.c_str(), mang1.c_str()) ){
+               else if( strstr(fMangled.c_str(), classname_notemp.c_str()) && strstr(fMangled.c_str(), "D1") ){
                   // This is the in-charge (non deleting) constructor
                   fIsDestInC = true;
                   
@@ -929,6 +970,42 @@ void G__register_class(const char *libname, const char *clstr)
    if(clstr)
       classname = clstr;
 
+   //int ncolon=0;
+   //string::size_type ind=classname.length();
+   //string::size_type cstart = 0;
+   //string::size_type cidx = 0;
+   //while((cidx != string::npos) && (cidx < ind)){
+   //   cidx = classname.find("::", cstart);
+   //   
+   //   if((cidx != string::npos) && (cidx < ind)){
+   //      ++ncolon;
+   //      cstart = cidx+2;
+   //   }
+   //}
+   
+   //if(ncolon>1)
+   //   cout << "G__register_class found name space: " << classname << endl;
+   
+   // LF 15-10-07
+   // Be careful with namespaces...
+   // things like TBits::TReference::~TReference()
+   // will confuse our naive algorithm... instead of just looking
+   // for '::', look for the last pair of '::'
+   
+   //if(ncolon>0){
+   //   string::size_type icolon = string::npos;
+   //   string::size_type start = 0;
+   //   string::size_type istart = 0;
+   //   for (int i=0;i<ncolon;i++){
+   //      if(icolon != string::npos)
+   //         start = istart;
+   //      
+   //      icolon = classname.find("::", istart);
+   //      istart = icolon+2;
+   //   }
+   //   classname = classname.substr(0, ind - (icolon+2));
+   //}
+   
    unsigned int  classhash = hash(classname.c_str(), classname.size());
    int nreg = 0;
    std::list<TSymbol*> *demangled = 0;
@@ -1102,6 +1179,7 @@ void G__register_class(const char *libname, const char *clstr)
          deman = 0;
       }
       string classstr = "";
+      string classstr_noname = "";
       string protostr = "";
 
       // 16/04/2007
@@ -1112,12 +1190,48 @@ void G__register_class(const char *libname, const char *clstr)
       // parsing section should be rewritten following a set of rules
       // instead of the piñata paradigm
 
-      string::size_type icolon = sig.find("::");
+      int ncolon=0;
+      string::size_type start = 0;
+      string::size_type cstart = start;
+      string::size_type cidx = start;
+      string::size_type ind=sig.find("(");
+
+      if(sig.find("operator()")!=string::npos)
+         ind=sig.find("(", ind+1);
+
+      while((cidx != string::npos) && (cidx < ind)){
+         cidx = sig.find("::", cstart);
+         
+         if((cidx != string::npos) && (cidx < ind)){
+            ++ncolon;
+            cstart = cidx+2;
+         }
+      }
+      
+      // LF 15-10-07
+      // Be careful with namespaces...
+      // things like TBits::TReference::~TReference()
+      // will confuse our naive algorithm... instead of just looking
+      // for '::', look for the last pair of '::'
+      string::size_type icolon = string::npos;
+      string::size_type istart = start;
+      for (int i=0;i<ncolon;i++){
+         if(icolon != string::npos)
+            start = istart;
+         
+         icolon = sig.find("::", istart);
+         istart = icolon+2;
+      }
+      //string::size_type icolon = sig.find("::");
+      
       if (!isFreeFunc && (icolon != string::npos)) {
          // Dont split it with tokenize because the parameters can have things
          // like std::annoying
-         classstr = string(sig, 0, icolon);
+         classstr = sig.substr(0, icolon);
+         classstr_noname = sig.substr(start, icolon-start);
          protostr = sig.substr(icolon+2, sig.size() - (icolon+2));
+         //classstr = string(sig, 0, icolon);
+         //protostr = sig.substr(icolon+2, sig.size() - (icolon+2));
 
          if (gDebug > 0) {
             cerr << "classstr : " << classstr << endl;
@@ -1164,10 +1278,10 @@ void G__register_class(const char *libname, const char *clstr)
       // LF: 09-05-07
       // for the moment ignore non-members overloaded operators... we will deal with them
       // later
-      if(!clstr && protostr.find("operator")!=string::npos){
-         ++list_iter;
-         continue;
-      }
+      //if(!clstr && protostr.find("operator")!=string::npos){
+      //   ++list_iter;
+      //   continue;
+      //}
 
       // LF: 10/05/07
       // this is small hack (yes... again). Let's ignore all the functions
@@ -1182,6 +1296,9 @@ void G__register_class(const char *libname, const char *clstr)
       string signature = "";
       string::size_type open  = protostr.find('(');
       string::size_type close = protostr.rfind(')');
+
+      if(protostr.find("operator()")!=string::npos)
+         open=protostr.find("(", open+1);
 
       // The name of the method is the proto until the first (
       string methodstr(protostr, 0, open);
@@ -1337,7 +1454,37 @@ void G__register_class(const char *libname, const char *clstr)
       }
       else
          finalclass = classstr;
+
+
+      // LF 12-10-07
+      // CInt doesn't believe that a constructor can be different from the name of
+      // the class. So when we have things like:
+      //
+      // TParameter<double>::TParameter() 
+      //
+      // CInt will just think it's 
+      // 
+      // TParameter<double>::TParameter<double>()
+      // 
+      // Changint his in CInt would probably requiere more changes than changing the
+      // real name to what Cint expects.
       
+      // 11-10-07
+      // Get rid of the "<>" part in something like TParameter<float>::TParameter()
+      if(symbol->fIsConst){
+         string::size_type itri = finalclass.find("<");
+      
+         if(itri != string::npos){
+            methodstr = finalclass;
+         }
+      }
+      else if(symbol->fIsDest){
+         string::size_type itri = finalclass.find("<");
+      
+         if(itri != string::npos){
+            methodstr = "~" + finalclass;
+         }
+      }
 
       // LF 31-07-07
       // I forgot something else....
