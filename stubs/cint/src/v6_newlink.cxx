@@ -4377,9 +4377,18 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
 
               // print it only for operator()
               if(/*G__dicttype==0 ||*/
-                 ((strcmp(ifunc->funcname[j],"operator()")==0 || 
-                  strcmp(ifunc->funcname[j],"operator const char*")==0 || 
-                  //strncmp(ifunc->funcname[j],"operator new", strlen("operator new"))==0 ||
+                 ((
+                    // LF 15-10-07
+                    // Generate the stubs for those function needing a temp object..
+                    // Is this condition correct and/or sufficient?
+                    ((ifunc->reftype[j] != G__PARAREFERENCE) &&
+                     (ifunc->type[j] == 'u') &&
+                     (G__struct.type[ifunc->p_tagtable[j]] == 'c' || 
+                      G__struct.type[ifunc->p_tagtable[j]] == 's' || 
+                      G__struct.type[ifunc->p_tagtable[j]] == 'u')) ||
+
+                    //strcmp(ifunc->funcname[j],"operator()")==0 || 
+                    //strcmp(ifunc->funcname[j],"operator const char*")==0 || 
                   strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
                   strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
                   strncmp(G__fulltagname(i,0),"list", strlen("list"))==0 ||
@@ -8467,10 +8476,19 @@ void G__cpplink_memfunc(FILE *fp)
                   // Normal Stub Pointer
                   //fprintf(fp, "%s, ", G__map_cpp_funcname(i, ifunc->funcname[j], j, ifunc->page));
 
-                  if((!strcmp(ifunc->funcname[j],"operator()") ||
-                     !strcmp(ifunc->funcname[j],"operator const char*") ||
-                     //!strncmp(ifunc->funcname[j],"operator new", strlen("operator new")) ||
-                     (
+                  if(
+                     // LF 15-10-07
+                     // Generate the stubs for those function needing a temp object..
+                     // Is this condition correct and/or sufficient?
+                     ((
+                        ((ifunc->reftype[j] != G__PARAREFERENCE) &&
+                         (ifunc->type[j] == 'u') &&
+                         (G__struct.type[ifunc->p_tagtable[j]] == 'c' || 
+                          G__struct.type[ifunc->p_tagtable[j]] == 's' || 
+                          G__struct.type[ifunc->p_tagtable[j]] == 'u')) ||
+
+                     //(!strcmp(ifunc->funcname[j],"operator()") ||
+                     //!strcmp(ifunc->funcname[j],"operator const char*") ||
                      strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
                      strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
                      strncmp(G__fulltagname(i,0),"list", strlen("list"))==0 ||
