@@ -1689,8 +1689,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
       result7->ref = (long) pobject;
      // Object's Type
      result7->type = 'u';
-     // Objetc's Class Code
-     result7->typenum = ifunc->tagnum;     
+     
    }
    else{// Not Constructor
       char * finalclass = 0;
