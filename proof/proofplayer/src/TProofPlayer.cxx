@@ -1836,7 +1836,7 @@ Int_t TProofPlayerRemote::AddOutputObject(TObject *obj)
             }
             TString sessionPath(gProofServ->GetSessionDir());
             // Take into account a prefix, if any
-            TString pfx  = gEnv->GetValue("ProofServ.Localroot","");
+            TString pfx  = gEnv->GetValue("Path.Localroot","");
             if (!pfx.IsNull())
                sessionPath.Remove(0, pfx.Length());
             of += Form("/%s/%s", sessionPath.Data(), pf->GetFileName());

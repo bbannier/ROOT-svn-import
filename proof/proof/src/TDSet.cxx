@@ -330,9 +330,9 @@ Long64_t TDSetElement::GetEntries(Bool_t isTree)
    Double_t start = 0;
    if (gPerfStats != 0) start = TTimeStamp();
 
-   // Take into acoount possible prefixes
+   // Take into account possible prefixes
    TFile::EFileType typ = TFile::kDefault;
-   TString fname = gEnv->GetValue("ProofServ.Localroot","");
+   TString fname = gEnv->GetValue("Path.Localroot","");
    if (!fname.IsNull())
       typ = TFile::GetType(GetName(), "", &fname);
    if (typ != TFile::kLocal)
@@ -1018,7 +1018,7 @@ Long64_t TDSet::GetEntries(Bool_t isTree, const char *filename, const char *path
 
    // Take into acoount possible prefixes
    TFile::EFileType typ = TFile::kDefault;
-   TString fname = gEnv->GetValue("ProofServ.Localroot","");
+   TString fname = gEnv->GetValue("Path.Localroot","");
    if (!fname.IsNull())
       typ = TFile::GetType(filename, "", &fname);
    if (typ != TFile::kLocal)
