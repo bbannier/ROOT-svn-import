@@ -1216,8 +1216,8 @@ int G__main(int argc, char** argv)
    }
 
    if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3){ // LF
-      // G__init_process_cmd(); 
-//       MapDependantTypes();
+      G__init_process_cmd(); 
+      MapDependantTypes();
       G__gen_extra_include();
 
    }
