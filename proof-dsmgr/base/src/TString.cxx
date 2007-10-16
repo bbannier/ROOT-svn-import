@@ -1781,7 +1781,7 @@ TObjArray *TString::Tokenize(const TString &delim) const
    for (it = splitIndex.begin(); it != (std::list<Int_t>::const_iterator) splitIndex.end(); it++) {
 #endif
       Int_t stop = *it;
-      if (stop - 1 >= start + 1) {
+      if (stop - 1 >= start) {
          TString tok = (*this)(start+1, stop-start-1);
          TObjString *objstr = new TObjString(tok);
          arr->Add(objstr);

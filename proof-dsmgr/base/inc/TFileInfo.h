@@ -50,7 +50,8 @@ class TFileInfoMeta;
 class TFileInfo : public TNamed {
 
 private:
-   TUrl            *fCurrentUrl;     //! current URL to access the file, points to URL in the fUrlList or 0, if the list end is reached
+   TUrl            *fCurrentUrl;     //! current URL to access the file, points to URL
+                                     //  in the fUrlList or 0, if the list end is reached
    TList           *fUrlList;        // list of file URLs
    Long64_t         fSize;           // file size
    TUUID           *fUUID;           //-> uuid of the referenced file
@@ -75,6 +76,7 @@ public:
    TUrl           *NextUrl();
    TUrl           *GetCurrentUrl() const;
    TUrl           *GetFirstUrl() const { return (TUrl*)fUrlList->First(); }
+   Int_t           GetNUrls() const    { return fUrlList->GetEntries(); }
 
    Long64_t        GetSize() const         { return fSize; }
    TUUID          *GetUUID() const         { return fUUID; }
@@ -86,7 +88,7 @@ public:
 
    TUrl           *FindByUrl(const char *url);
 
-   Bool_t          AddUrl(const char *url);
+   Bool_t          AddUrl(const char *url, Bool_t infront = kFALSE);
    Bool_t          RemoveUrl(const char *url);
    Bool_t          AddMetaData(TObject *meta);
    Bool_t          RemoveMetaData(const char *meta = 0);

@@ -37,7 +37,7 @@ ClassImp(TFileCollection)
 TFileCollection::TFileCollection(const char *name, const char *title,
                                  const char *textfile)
    : TNamed(name, title), fList(0), fMetaDataList(0),
-     fTotalSize(0), fStagedPercentage(0)
+     fTotalSize(0), fNFiles(0), fNStagedFiles(0), fNCorruptFiles(0)
 {
    // TFileCollection constructor. Specify a name and title describing
    // the list. If textfile is specified the file is opened and a
@@ -66,13 +66,17 @@ void TFileCollection::Add(TFileInfo *info)
 {
    // Add TFileInfo to the collection.
 
-   fList->Add(info);
+   if (fList)
+     fList->Add(info);
 }
 
 //______________________________________________________________________________
 void TFileCollection::AddFromFile(const char *textfile)
 {
    // Add all file names contained in the specified text file.
+
+   if (!fList)
+     return;
 
    if (textfile && *textfile) {
       ifstream f;
@@ -98,6 +102,9 @@ void TFileCollection::AddFromDirectory(const char *dir)
    // can include wildcards after the last slash, causing all matching files
    // in that directory to be added. If dir is the full path of a file, only
    // one element is added.
+
+   if (!fList)
+     return;
 
    if (!dir || !*dir) {
       Error("AddFromDirectory", "input dir undefined");
@@ -154,6 +161,9 @@ TFileCollection *TFileCollection::GetStagedSubset()
 {
    // Creates a subset of the files that have the kStaged & !kCorrupted bit set.
 
+   if (!fList)
+     return 0;
+
    TFileCollection *subset = new TFileCollection(GetName(), GetTitle());
 
    TIter iter(fList);
@@ -175,15 +185,15 @@ void TFileCollection::Update()
    // (e.g. fTotalSize). Also updates the meta data information by summarizing
    // the meta data of the contained objects.
 
+   if (!fList)
+     return;
+
    fTotalSize = 0;
-   fStagedPercentage = 0;
-
-   if (fList->GetEntries() == 0)
-      return;
-
+   fNStagedFiles = 0;
+   fNCorruptFiles = 0;
    fMetaDataList->Clear();
 
-   Long64_t stagedFiles = 0;
+   fNFiles = fList->GetEntries();
 
    TIter iter(fList);
    TFileInfo *fileInfo = 0;
@@ -192,7 +202,7 @@ void TFileCollection::Update()
          fTotalSize += fileInfo->GetSize();
 
       if (fileInfo->TestBit(TFileInfo::kStaged) && !fileInfo->TestBit(TFileInfo::kCorrupted)) {
-         stagedFiles++;
+         fNStagedFiles++;
 
          if (fileInfo->GetMetaDataList()) {
             TIter metaDataIter(fileInfo->GetMetaDataList());
@@ -223,9 +233,9 @@ void TFileCollection::Update()
             }
          }
       }
+      if (fileInfo->TestBit(TFileInfo::kCorrupted))
+         fNCorruptFiles++;
    }
-
-   fStagedPercentage = 100.0 * stagedFiles / fList->GetEntries();
 }
 
 //______________________________________________________________________________
@@ -235,8 +245,8 @@ void TFileCollection::Print(Option_t *option) const
    // If option contains "M": prints meta data entries,
    // if option contains "F": prints all the files in the collection.
 
-   Printf("TFileCollection %s - %s contains: %d files with a size of %lld bytes, %.1f %% staged",
-          GetName(), GetTitle(), fList->GetEntries(), fTotalSize, fStagedPercentage);
+   Printf("TFileCollection %s - %s contains: %lld files with a size of %lld bytes, %.1f %% staged",
+          GetName(), GetTitle(), fNFiles, fTotalSize, GetStagedPercentage());
 
    if (TString(option).Contains("M", TString::kIgnoreCase)) {
       Printf("The files contain the following trees:");
@@ -251,7 +261,7 @@ void TFileCollection::Print(Option_t *option) const
       }
    }
 
-   if (TString(option).Contains("F", TString::kIgnoreCase)) {
+   if (fList && TString(option).Contains("F", TString::kIgnoreCase)) {
       Printf("The collection contains the following files:");
       fList->Print();
    }
@@ -261,6 +271,9 @@ void TFileCollection::Print(Option_t *option) const
 void TFileCollection::SetAnchor(const char *anchor) const
 {
    // Calls TUrl::SetAnchor() for all URLs contained in all TFileInfos.
+
+   if (!fList)
+     return;
 
    TIter iter(fList);
    TFileInfo *fileInfo = 0;
@@ -326,26 +339,9 @@ void TFileCollection::Sort()
 {
    // Sort the collection.
 
+   if (!fList)
+     return;
+
    fList->Sort();
 }
 
-//______________________________________________________________________________
-Float_t TFileCollection::GetCorruptedPercentage() const
-{
-   // Returns the percentage of files with the kCorrupted bit set,
-   // calculated on-the-fly because it is not supposed to be used often.
-
-   if (fList->GetEntries() == 0)
-      return -1;
-
-   Long64_t count = 0;
-
-   TIter iter(fList);
-   TFileInfo *fileInfo = 0;
-   while ((fileInfo = dynamic_cast<TFileInfo*>(iter.Next()))) {
-      if (fileInfo->TestBit(TFileInfo::kCorrupted))
-         count++;
-   }
-
-   return 100.0 * count / fList->GetEntries();
-}

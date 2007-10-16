@@ -111,9 +111,11 @@ TUrl *TFileInfo::FindByUrl(const char *url)
 }
 
 //______________________________________________________________________________
-Bool_t TFileInfo::AddUrl(const char *url)
+Bool_t TFileInfo::AddUrl(const char *url, Bool_t infront)
 {
-   // Add a new URL. Returns kTRUE if successful, kFALSE otherwise.
+   // Add a new URL. If 'infront' is TRUE the new url is pushed at the beginning
+   // of the list; otherwise is pushed back.
+   // Returns kTRUE if successful, kFALSE otherwise.
 
    if (FindByUrl(url))
       return kFALSE;
@@ -128,7 +130,10 @@ Bool_t TFileInfo::AddUrl(const char *url)
    if (fUrlList->GetSize() == 0)
       fCurrentUrl = newurl;
 
-   fUrlList->Add(newurl);
+   if (infront)
+      fUrlList->AddFirst(newurl);
+   else
+      fUrlList->Add(newurl);
    return kTRUE;
 }
 
