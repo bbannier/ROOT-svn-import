@@ -4387,7 +4387,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                       G__struct.type[ifunc->p_tagtable[j]] == 'u')) ||
 
                     //strcmp(ifunc->funcname[j],"operator()")==0 || 
-                    //strcmp(ifunc->funcname[j],"operator const char*")==0 || 
+                  strcmp(ifunc->funcname[j],"operator const char*")==0 || 
                   strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
                   strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
                   strncmp(G__fulltagname(i,0),"list", strlen("list"))==0 ||
@@ -8487,7 +8487,7 @@ void G__cpplink_memfunc(FILE *fp)
                           G__struct.type[ifunc->p_tagtable[j]] == 'u')) ||
 
                      //(!strcmp(ifunc->funcname[j],"operator()") ||
-                     //!strcmp(ifunc->funcname[j],"operator const char*") ||
+                     !strcmp(ifunc->funcname[j],"operator const char*") ||
                      strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
                      strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
                      strncmp(G__fulltagname(i,0),"list", strlen("list"))==0 ||
