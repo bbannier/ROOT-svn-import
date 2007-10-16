@@ -1209,6 +1209,14 @@ void G__register_class(const char *libname, const char *clstr)
       if(sig.find("operator()")!=string::npos)
          ind=sig.find("(", ind+1);
 
+      // Another ugly hack... rewrite this to handle things like:
+      // (anonymous namespace)::CreateIntRefConverter(long)
+      // or
+      // PyROOT::(anonymous namespace)::PriorityCmp(PyROOT::PyCallable*, PyROOT::PyCallable*)
+      if((ind==0) || sig[ind-1]==':')
+         ind=sig.find("(", ind+1);
+
+
       while((cidx != string::npos) && (cidx < ind)){
          cidx = sig.find("::", cstart);
          
@@ -1507,17 +1515,29 @@ void G__register_class(const char *libname, const char *clstr)
       if(pos_par != string::npos)
          isconst=1;
 
+      // LF 16-15-07
+      // Another ugly hack
+      // deal with annoying things that don't even look like a function
+      /*
+        void (*std::for_each<__gnu_cxx::__normal_iterator<PyROOT::(anonymous namespace)::PyError_t*, std::vector<PyROOT::(anonymous namespace)::PyError_t, std::allocator<PyROOT::(anonymous namespace)::PyError_t> > >, void (*)(PyROOT::(anonymous namespace)::PyError_t&)>(__gnu_cxx::__normal_iterator<PyROOT::(anonymous namespace)::PyError_t*, std::vector<PyROOT::(anonymous namespace)::PyError_t, std::allocator<PyROOT::(anonymous namespace)::PyError_t> > >, __gnu_cxx::__normal_iterator<PyROOT::(anonymous namespace)::PyError_t*, std::vector<PyROOT::(anonymous namespace)::PyError_t, std::allocator<PyROOT::(anonymous namespace)::PyError_t> > >, void (*)(PyROOT::(anonymous namespace)::PyError_t&)))(PyROOT::(anonymous namespace)::PyError_t&)
+      */
+      if(sig.find("PyError_t")!=string::npos) {
+         ++list_iter;
+         continue;
+      }
+      
       //if(!symbol->fFunc){
       //   if (gDebug > 0)
       //      cerr << "xxx The address is 0. the method wont be registered" << endl << endl;
       //}
-      if( RegisterPointer(finalclass.c_str(), methodstr.c_str(), 
+      if( RegisterPointer(classname.c_str(), /*finalclass.c_str(),*/ methodstr.c_str(), 
                           newsignature.c_str(), symbol->fFunc, symbol->fMangled.c_str(),
                           isconst) == -1){
          // yahoo.... we can finally call our register method
          if (gDebug > 0) {
             cerr << "xxx Couldnt register the method: " << methodstr << endl;
             cerr << "xxx from the class    : " << finalclass << endl;
+            cerr << "xxx classname    : " << classname << endl;
             cerr << "xxx with the signature: " << newsignature << endl;
             cerr << "xxx with the address : " << symbol->fFunc << endl << endl ;
          }
