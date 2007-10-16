@@ -6239,40 +6239,40 @@ int G__method_inbase(int ifn, G__ifunc_table_internal *ifunc)
    // If there are still base classes
    if (cbases){
      // Go through the base tagnums (tagnum = index in G__struct structure)
-     for (int idx=0; idx < cbases->basen; ++idx){
-        // Current tagnum
-        int basetagnum=cbases->herit[idx]->basetagnum;
+      for (int idx=0; idx < cbases->basen; ++idx){
+         // Current tagnum
+         int basetagnum=cbases->herit[idx]->basetagnum;
 
-        // Current tagnum's ifunc table
-        G__ifunc_table_internal * ifunct = G__struct.memfunc[basetagnum];
+         // Current tagnum's ifunc table
+         G__ifunc_table_internal * ifunct = G__struct.memfunc[basetagnum];
 
-        // Continue if there are still ifuncs and the method 'ifn' is not found yet
-        if (ifunct){
-           int base=-1;
+         // Continue if there are still ifuncs and the method 'ifn' is not found yet
+         if (ifunct){
+            int base=-1;
 
-           // Does the Method 'ifn' (in ifunc) exist in the current ifunct?
-           ifunct = G__ifunc_exist(ifunc, ifn, ifunct, &base, 0xffff);
+            // Does the Method 'ifn' (in ifunc) exist in the current ifunct?
+            ifunct = G__ifunc_exist(ifunc, ifn, ifunct, &base, 0xffff);
 
-	   //If the number of default parameters numbers is different between the base and the derived
-	   //class we generete the stub
-	   if (base!=-1 && ifunct){
-	     int derived_def_n = -1;
+            //If the number of default parameters numbers is different between the base and the derived
+            //class we generete the stub
+            if (base!=-1 && ifunct){
+               int derived_def_n = -1;
 	     
-	     // Counting derived class default parameters
-	     for(int i = ifunc->para_nu[ifn] - 1; i >= 0; --i)
-	       if (ifunc->param[ifn][i]->def)
-		 derived_def_n = i;
-               else break;
+               // Counting derived class default parameters
+               for(int i = ifunc->para_nu[ifn] - 1; i >= 0; --i)
+                  if (ifunc->param[ifn][i]->def)
+                     derived_def_n = i;
+                  else break;
 	    
-	     //Counting base class default parameters
-	     if (derived_def_n != -1
-                 && !ifunct->param[base][derived_def_n]->def)
-	       return 0;
+               //Counting base class default parameters
+               if (derived_def_n != -1
+                   && !ifunct->param[base][derived_def_n]->def)
+                  return 0;
 
-             return ifunct->page+1;
-	   }
-        }
-     }
+               return ifunct->page+1;
+            }
+         }
+      }
    }
    return 0;
 }
