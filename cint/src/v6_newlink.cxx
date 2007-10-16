@@ -4242,6 +4242,100 @@ void G__cppif_change_globalcomp()
 #endif // G__SMALLOBJECT
 }
 
+
+void G__cppif_geninline(FILE *fp, FILE *hfp, struct G__ifunc_table_internal *ifunc, int i,int j)
+{
+   // LF 29-05-06
+   // Rem we have to deal with inlined functions.
+   // And saddly CInt doesnt care about them.
+   // Axel said that we would be able to find out
+   // what symbols were in a library before generating the
+   // wrappers (he said that a dictionary will be divided in
+   // two parts).
+   // As an inmediate solution, force every single member function
+   // to be inlined by declaring a pointer to it
+
+   // Output the function name.
+   // Assume vistual functions wont be inlined...
+   if ( (
+           ifunc->pentry[j]->line_number > 0
+           //|| strncmp(ifunc->funcname[j],"operator", strlen("operator"))==0
+           )
+        && strncmp(G__fulltagname(i,0),"ROOT", strlen("ROOT"))!=0
+        //&& strncmp(ifunc->funcname[j],"operator new", strlen("operator new"))!=0  //stubs were created for this
+        && !ifunc->isvirtual[j]
+        //&& ifunc->ansi[j]!=2 
+        //&& strncmp(G__fulltagname(i,0),"TMVA", strlen("TMVA"))!=0
+        //)
+        //
+                     
+      ) {
+                    
+      // LF
+      if(G__dicttype==2) {
+         // LF 21-06-07
+         // Dont print them for the stats
+         int hash;
+         int idx;
+         G__hash(G__fulltagname(i,0),hash,idx);
+
+         // Static functions are not casted as member-functions
+         // but as normal functions
+         if(ifunc->staticalloc[j] 
+            || G__struct.type[i] == 'n'
+            || strcmp(ifunc->funcname[j], "operator new")==0 /*operator new must be treated as a static function*/
+            || strcmp(ifunc->funcname[j], "operator new[]")==0) {
+            fprintf(fp, "%s ", G__type2string(ifunc->type[j], ifunc->p_tagtable[j], 
+                                              ifunc->p_typetable[j], ifunc->reftype[j],
+                                              ifunc->isconst[j]));
+            fprintf(fp," (*fmptr_%s)(", G__map_cpp_funcname(ifunc->tagnum, ifunc->funcname[j], j, ifunc->page));
+                 
+         }
+         else {
+            fprintf(fp, "%s ", G__type2string(ifunc->type[j], ifunc->p_tagtable[j], 
+                                              ifunc->p_typetable[j], ifunc->reftype[j],
+                                              ifunc->isconst[j]));
+            fprintf(fp," (%s::*fmptr_%s)(", G__fulltagname(i,0), G__map_cpp_funcname(ifunc->tagnum, ifunc->funcname[j], j, ifunc->page));
+         }                 
+         // print the params
+         int paran = ifunc->para_nu[j];
+         int parai = 0;
+         for (parai = 0; parai < paran; ++parai) {
+            fprintf(fp, " %s", G__type2string(ifunc->param[j][parai]->type, 
+                                              ifunc->param[j][parai]->p_tagtable, 
+                                              ifunc->param[j][parai]->p_typetable, 
+                                              ifunc->param[j][parai]->reftype,
+                                              ifunc->param[j][parai]->isconst));
+            if (ifunc->param[j][parai]->name) {
+               char *p = strchr(ifunc->param[j][parai]->name, '[');
+               if (p) {
+                  fprintf(fp, " [1]%s",p + 2);
+               }
+            }
+
+            if(parai < paran-1)
+               fprintf(fp, ",");
+         }
+                    
+         if (ifunc->ansi[j]==2)
+            fprintf(fp,", ... ");
+
+         // print the rest of the assign
+         if(ifunc->isconst[j] & G__CONSTFUNC)
+            fprintf(fp,") %s", "const");
+         //else if(ifunc->isconst[j]==1 && strncmp(ifunc->funcname[j],"DeclFileName", strlen("DeclFileName"))!=0)
+         //   fprintf(fp,") %s", "const throw()");
+         else
+            fprintf(fp,") ");
+
+         fprintf(fp," = &%s::%s; \n", G__fulltagname(i,0), ifunc->funcname[j]);
+      }
+   }
+}
+
+
+
+
 /**************************************************************************
 * G__cppif_memfunc() working
 *
@@ -4338,6 +4432,10 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                           && (G__dicttype==3)) || G__dicttype==0 ) {
                      G__cppif_genconstructor(fp,hfp,i,j,ifunc);
                   }
+                 
+                 // LF 16-10-07
+                 // Generate the inline trick for constructors too. See TNamed::TNamed
+                 G__cppif_geninline(fp, hfp, ifunc, i, j);
               }
               ++isconstructor;
               if(ifunc->para_nu[j]>=1&&
@@ -4402,92 +4500,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                     G__cppif_genfunc(fp,hfp,i,j,ifunc);
               }
               else {
-                 // LF 29-05-06
-                 // Rem we have to deal with inlined functions.
-                 // And saddly CInt doesnt care about them.
-                 // Axel said that we would be able to find out
-                 // what symbols were in a library before generating the
-                 // wrappers (he said that a dictionary will be divided in
-                 // two parts).
-                 // As an inmediate solution, force every single member function
-                 // to be inlined by declaring a pointer to it
-
-                 // Output the function name.
-                 // Assume vistual functions wont be inlined...
-                 if ( (
-                         ifunc->pentry[j]->line_number > 0
-                         //|| strncmp(ifunc->funcname[j],"operator", strlen("operator"))==0
-                         )
-                      && strncmp(G__fulltagname(i,0),"ROOT", strlen("ROOT"))!=0
-                      //&& strncmp(ifunc->funcname[j],"operator new", strlen("operator new"))!=0  //stubs were created for this
-                      && !ifunc->isvirtual[j]
-                      //&& ifunc->ansi[j]!=2 
-                      //&& strncmp(G__fulltagname(i,0),"TMVA", strlen("TMVA"))!=0
-                      //)
-                      //
-                     
-                    ) {
-                    
-                    // LF
-                    if(G__dicttype==2) {
-                       // LF 21-06-07
-                       // Dont print them for the stats
-                       int hash;
-                       int idx;
-                       G__hash(G__fulltagname(i,0),hash,idx);
-
-                       // Static functions are not casted as member-functions
-                       // but as normal functions
-                       if(ifunc->staticalloc[j] 
-                          || G__struct.type[i] == 'n'
-                          || strcmp(ifunc->funcname[j], "operator new")==0 /*operator new must be treated as a static function*/
-                          || strcmp(ifunc->funcname[j], "operator new[]")==0) {
-                          fprintf(fp, "%s ", G__type2string(ifunc->type[j], ifunc->p_tagtable[j], 
-                                                            ifunc->p_typetable[j], ifunc->reftype[j],
-                                                            ifunc->isconst[j]));
-                          fprintf(fp," (*fmptr_%s)(", G__map_cpp_funcname(ifunc->tagnum, ifunc->funcname[j], j, ifunc->page));
-                 
-                       }
-                       else {
-                          fprintf(fp, "%s ", G__type2string(ifunc->type[j], ifunc->p_tagtable[j], 
-                                                            ifunc->p_typetable[j], ifunc->reftype[j],
-                                                            ifunc->isconst[j]));
-                          fprintf(fp," (%s::*fmptr_%s)(", G__fulltagname(i,0), G__map_cpp_funcname(ifunc->tagnum, ifunc->funcname[j], j, ifunc->page));
-                       }                 
-                       // print the params
-                       int paran = ifunc->para_nu[j];
-                       int parai = 0;
-                       for (parai = 0; parai < paran; ++parai) {
-                          fprintf(fp, " %s", G__type2string(ifunc->param[j][parai]->type, 
-                                                            ifunc->param[j][parai]->p_tagtable, 
-                                                            ifunc->param[j][parai]->p_typetable, 
-                                                            ifunc->param[j][parai]->reftype,
-                                                            ifunc->param[j][parai]->isconst));
-                          if (ifunc->param[j][parai]->name) {
-                             char *p = strchr(ifunc->param[j][parai]->name, '[');
-                             if (p) {
-                                fprintf(fp, " [1]%s",p + 2);
-                             }
-                          }
-
-                          if(parai < paran-1)
-                             fprintf(fp, ",");
-                       }
-                    
-                       if (ifunc->ansi[j]==2)
-                          fprintf(fp,", ... ");
-
-                       // print the rest of the assign
-                       if(ifunc->isconst[j] & G__CONSTFUNC)
-                          fprintf(fp,") %s", "const");
-                       //else if(ifunc->isconst[j]==1 && strncmp(ifunc->funcname[j],"DeclFileName", strlen("DeclFileName"))!=0)
-                       //   fprintf(fp,") %s", "const throw()");
-                       else
-                          fprintf(fp,") ");
-
-                       fprintf(fp," = &%s::%s; \n", G__fulltagname(i,0), ifunc->funcname[j]);
-                    }
-                 }
+                 G__cppif_geninline(fp, hfp, ifunc, i, j);
               } // inlined functions
             }   
           } /* if PUBLIC */
