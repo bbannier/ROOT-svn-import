@@ -2415,7 +2415,7 @@ void G__gen_clink()
   FILE *hfp;
 
   G__ctordtor_initialize();
-
+  
   fp = fopen(G__CLINK_C,"a");
   if(!fp) G__fileerror(G__CLINK_C);
   fprintf(fp,"  G__c_reset_tagtable%s();\n",G__DLLID);

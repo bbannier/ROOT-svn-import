@@ -491,6 +491,9 @@ G__get_cache()
 //______________________________________________________________________________
 void MapDependantTypes()
 {
+    int more = 0;
+    char prompt[G__ONELINE];
+
    // There is problem with types ( well many :) ).
    // We can declare something like "FILE *fp" in our
    // normal ROOT classes but when gcc creates the symbols
@@ -498,27 +501,27 @@ void MapDependantTypes()
    // This mapping is completely dependant of the compiler
    // so we have to be very careful about it.
    //ProcessLine("typedef FILE _IO_FILE", 0);
-   G__process_cmd ("typedef FILE _IO_FILE", "", 0, 0, 0);
+   G__process_cmd ("typedef FILE _IO_FILE", prompt, &more,0, 0);
 
    // gui/inc/WidgetMessageTypes.h
    // All the enums could be treated as ints
    //ProcessLine("typedef int EWidgetMessageTypes", 0);
-   G__process_cmd ("typedef int EWidgetMessageTypes", "", 0, 0, 0);
+   G__process_cmd ("typedef int EWidgetMessageTypes", prompt, &more,0, 0);
 
    //ProcessLine("typedef void* istream", 0);
-   G__process_cmd ("typedef void* istream", "", 0, 0, 0);
+   G__process_cmd ("typedef void* istream", prompt, &more,0, 0);
 
    //ProcessLine("typedef void* istream&", 0);
-   G__process_cmd ("typedef void* istream&", "", 0, 0, 0);
+   G__process_cmd ("typedef void* istream&", prompt, &more,0, 0);
 
    //ProcessLine("typedef void* std::istream&", 0);
-   G__process_cmd ("typedef void* std::istream&", "", 0, 0, 0);
+   G__process_cmd ("typedef void* std::istream&", prompt, &more,0, 0);
 
    //ProcessLine("typedef int __false_type", 0);
-   G__process_cmd ("typedef int __false_type", "", 0, 0, 0);
+   G__process_cmd ("typedef int __false_type", prompt, &more,0, 0);
 
    //ProcessLine("typedef int __true_type", 0);
-   G__process_cmd ("typedef int __true_type", "", 0, 0, 0);
+   G__process_cmd ("typedef int __true_type", prompt, &more,0, 0);
 
 
 }
@@ -526,40 +529,47 @@ void MapDependantTypes()
 //______________________________________________________________________________
 void MapDependantTypesX()
 {
+   int more = 0;
+   char prompt[G__ONELINE];
+
    // Like MapDependantTypes but for the class TGX11
 
    //ProcessLine("typedef struct _XDisplay   { } Display;", 0);
-   G__process_cmd("typedef struct _XDisplay  { } Display;", "", 0, 0, 0);
+   G__process_cmd("typedef struct _XDisplay  { } Display;", prompt, &more,0, 0);
    
    //ProcessLine("typedef struct _XGC        { } *GC;", 0);
-   G__process_cmd("typedef struct _XGC       { } *GC;", "", 0, 0, 0);
+   G__process_cmd("typedef struct _XGC       { } *GC;", prompt, &more,0, 0);
 
    //ProcessLine("typedef struct _XEvent     { } XEvent", 0);
-   G__process_cmd("typedef struct _XEvent    { } XEvent", "", 0, 0, 0);
+   G__process_cmd("typedef struct _XEvent    { } XEvent", prompt, &more,0, 0);
 
    //ProcessLine("typedef struct _XImage     { } Image", 0);
-   G__process_cmd("typedef struct _XImage    { } Image", "", 0, 0, 0);
+   G__process_cmd("typedef struct _XImage    { } Image", prompt, &more,0, 0);
 
    //ProcessLine("typedef struct             { } XFontStruct;", 0);
-   G__process_cmd("typedef struct            { } XFontStruct;", "", 0, 0, 0);
+   G__process_cmd("typedef struct            { } XFontStruct;", prompt, &more,0, 0);
 
    //ProcessLine("typedef struct FT_Bitmap_  { } FT_Bitmap", 0);
-   G__process_cmd("typedef struct FT_Bitmap_ { } FT_Bitmap", "", 0, 0, 0);
+   G__process_cmd("typedef struct FT_Bitmap_ { } FT_Bitmap", prompt, &more,0, 0);
 }
 
 //______________________________________________________________________________
 void MapDependantTypesTree()
 {
+
+   int more = 0;
+   char prompt[G__ONELINE];
+
    // dependant type in libTree.so
    
    // LF 07/05/2007
    // This class doesnt have a classdef so I dont know yet how to handle it
    //ProcessLine("typedef struct {} TTree::TFriendLock", 0);
    //ProcessLine("typedef struct {} TFriendLock", 0);
-   G__process_cmd("typedef struct {} TFriendLock", "", 0, 0, 0);
+   G__process_cmd("typedef struct {} TFriendLock", prompt, &more,0, 0);
 
    //ProcessLine("typedef ifstream basic_ifstream<char, std::char_traits<char>>", 0);
-   G__process_cmd("typedef ifstream basic_ifstream<char, std::char_traits<char>>", "", 0, 0, 0);
+   G__process_cmd("typedef ifstream basic_ifstream<char, std::char_traits<char>>", prompt, &more,0, 0);
 }
 
 //______________________________________________________________________________
@@ -1057,7 +1067,7 @@ void G__register_class(const char *libname, const char *clstr)
    char *basec, *bname;
    basec = strdup(libname);
    bname = basename(basec);
-   
+
    if(strcmp(bname, "libGX11.so")==0) {
       MapDependantTypesX();
    }
