@@ -85,6 +85,13 @@
 #include "TSQLServer.h"
 #include "TSQLResult.h"
 #include "TSQLRow.h"
+#include "TPRegexp.h"
+#include "TParameter.h"
+#include "TMap.h"
+
+#include "TFileCollection.h"
+#include "TLockFile.h"
+#include "TProofDataSetManager.h"
 
 // global proofserv handle
 TProofServ *gProofServ = 0;
@@ -385,7 +392,6 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
    fPackageLock     = 0;
    fCacheLock       = 0;
    fQueryLock       = 0;
-   fDataSetLock     = 0;
 
    fSeqNum          = 0;
    fDrawQueries     = 0;
@@ -402,6 +408,8 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
    fShutdownTimerMtx = 0;
 
    fInflateFactor   = 1000;
+
+   fDataSetManager  = 0; // Initialized in Setup()
 
    gProofDebugLevel = gEnv->GetValue("Proof.DebugLevel",0);
    fLogLevel = gProofDebugLevel;
@@ -617,7 +625,6 @@ TProofServ::~TProofServ()
    SafeDelete(fPackageLock);
    SafeDelete(fCacheLock);
    SafeDelete(fQueryLock);
-   SafeDelete(fDataSetLock);
    SafeDelete(fGlobalPackageDirList);
    close(fLogFileDes);
 }
@@ -2016,101 +2023,6 @@ Int_t TProofServ::Setup()
       }
    }
 
-   // goto to the main PROOF working directory
-   char *workdir = gSystem->ExpandPathName(fWorkDir.Data());
-   fWorkDir = workdir;
-   delete [] workdir;
-
-   // deny write access for group and world
-   gSystem->Umask(022);
-
-   // Set $HOME and $PATH. The HOME directory was already set to the
-   // user's home directory by proofd.
-   gSystem->Setenv("HOME", gSystem->HomeDirectory());
-
-#ifdef R__UNIX
-   TString bindir;
-# ifdef ROOTBINDIR
-   bindir = ROOTBINDIR;
-# else
-   bindir = gSystem->Getenv("ROOTSYS");
-   if (!bindir.IsNull()) bindir += "/bin";
-# endif
-# ifdef COMPILER
-   TString compiler = COMPILER;
-   compiler.Remove(0, compiler.Index("is ") + 3);
-   compiler = gSystem->DirName(compiler);
-   if (!bindir.IsNull()) bindir += ":";
-   bindir += compiler;
-#endif
-   if (!bindir.IsNull()) bindir += ":";
-   bindir += "/bin:/usr/bin:/usr/local/bin";
-   // Add bindir to PATH
-   TString path(gSystem->Getenv("PATH"));
-   if (!path.IsNull()) path.Insert(0, ":");
-   path.Insert(0, bindir);
-   gSystem->Setenv("PATH", path);
-#endif
-   if (gSystem->AccessPathName(fWorkDir)) {
-      gSystem->mkdir(fWorkDir, kTRUE);
-      if (!gSystem->ChangeDirectory(fWorkDir)) {
-         SysError("Setup", "can not change to PROOF directory %s",
-                  fWorkDir.Data());
-      }
-   } else {
-      if (!gSystem->ChangeDirectory(fWorkDir)) {
-         gSystem->Unlink(fWorkDir);
-         gSystem->mkdir(fWorkDir, kTRUE);
-         if (!gSystem->ChangeDirectory(fWorkDir)) {
-            SysError("Setup", "can not change to PROOF directory %s",
-                     fWorkDir.Data());
-         }
-      }
-   }
-
-   // check and make sure "cache" directory exists
-   fCacheDir = fWorkDir;
-   fCacheDir += TString("/") + kPROOF_CacheDir;
-   if (gSystem->AccessPathName(fCacheDir))
-      gSystem->MakeDirectory(fCacheDir);
-
-   fCacheLock =
-      new TProofLockPath(Form("%s%s", kPROOF_CacheLockFile, fUser.Data()));
-
-   // check and make sure "packages" directory exists
-   fPackageDir = fWorkDir;
-   fPackageDir += TString("/") + kPROOF_PackDir;
-   if (gSystem->AccessPathName(fPackageDir))
-      gSystem->MakeDirectory(fPackageDir);
-
-   fPackageLock =
-      new TProofLockPath(Form("%s%s", kPROOF_PackageLockFile, fUser.Data()));
-
-   // List of directories where to look for global packages
-   TString globpack = gEnv->GetValue("Proof.GlobalPackageDirs","");
-   if (globpack.Length() > 0) {
-      Int_t ng = 0;
-      Int_t from = 0;
-      TString ldir;
-      while (globpack.Tokenize(ldir, from, ":")) {
-         if (gSystem->AccessPathName(ldir, kReadPermission)) {
-            Warning("Setup", "directory for global packages %s does not"
-                             " exist or is not readable", ldir.Data());
-         } else {
-            // Add to the list, key will be "G<ng>", i.e. "G0", "G1", ...
-            TString key = Form("G%d", ng++);
-            if (!fGlobalPackageDirList) {
-               fGlobalPackageDirList = new THashList();
-               fGlobalPackageDirList->SetOwner();
-            }
-            fGlobalPackageDirList->Add(new TNamed(key,ldir));
-            Info("Setup", "directory for global packages %s added to the list",
-                          ldir.Data());
-            FlushLogFile();
-         }
-      }
-   }
-
    // host first name
    TString host = gSystem->HostName();
    if (host.Index(".") != kNPOS)
@@ -2138,10 +2050,145 @@ Int_t TProofServ::Setup()
       }
    }
 
+   // Common setup
+   Int_t rc = SetupCommon();
+   if (!rc) {
+      Error("Setup", "common setup failed");
+      return -1;
+   }
+
+   // Incoming OOB should generate a SIGURG
+   fSocket->SetOption(kProcessGroup, gSystem->GetPid());
+
+   // Send messages off immediately to reduce latency
+   fSocket->SetOption(kNoDelay, 1);
+
+   // Check every two hours if client is still alive
+   fSocket->SetOption(kKeepAlive, 1);
+
+   // Install SigPipe handler to handle kKeepAlive failure
+   gSystem->AddSignalHandler(new TProofServSigPipeHandler(this));
+
+   if (gProofDebugLevel > 0)
+      Info("Setup", "successfully completed");
+
+   // Done
+   return 0;
+}
+
+//______________________________________________________________________________
+Int_t TProofServ::SetupCommon()
+{
+   // Common part (between TProofServ and TXProofServ) of the setup phase.
+   // Return 0 on success, -1 on error
+
+   // goto to the main PROOF working directory
+   char *workdir = gSystem->ExpandPathName(fWorkDir.Data());
+   fWorkDir = workdir;
+   delete [] workdir;
+   if (gProofDebugLevel > 0)
+      Info("SetupCommon", "working directory set to %s", fWorkDir.Data());
+
+   // deny write access for group and world
+   gSystem->Umask(022);
+
+#ifdef R__UNIX
+   TString bindir;
+# ifdef ROOTBINDIR
+   bindir = ROOTBINDIR;
+# else
+   bindir = gSystem->Getenv("ROOTSYS");
+   if (!bindir.IsNull()) bindir += "/bin";
+# endif
+# ifdef COMPILER
+   TString compiler = COMPILER;
+   compiler.Remove(0, compiler.Index("is ") + 3);
+   compiler = gSystem->DirName(compiler);
+   if (!bindir.IsNull()) bindir += ":";
+   bindir += compiler;
+#endif
+   if (!bindir.IsNull()) bindir += ":";
+   bindir += "/bin:/usr/bin:/usr/local/bin";
+   // Add bindir to PATH
+   TString path(gSystem->Getenv("PATH"));
+   if (!path.IsNull()) path.Insert(0, ":");
+   path.Insert(0, bindir);
+   gSystem->Setenv("PATH", path);
+#endif
+
+   if (gSystem->AccessPathName(fWorkDir)) {
+      gSystem->mkdir(fWorkDir, kTRUE);
+      if (!gSystem->ChangeDirectory(fWorkDir)) {
+         Error("SetupCommon", "can not change to PROOF directory %s",
+               fWorkDir.Data());
+         return -1;
+      }
+   } else {
+      if (!gSystem->ChangeDirectory(fWorkDir)) {
+         gSystem->Unlink(fWorkDir);
+         gSystem->mkdir(fWorkDir, kTRUE);
+         if (!gSystem->ChangeDirectory(fWorkDir)) {
+            Error("SetupCommon", "can not change to PROOF directory %s",
+                     fWorkDir.Data());
+            return -1;
+         }
+      }
+   }
+
+   // check and make sure "cache" directory exists
+   fCacheDir = fWorkDir;
+   fCacheDir += TString("/") + kPROOF_CacheDir;
+   if (gSystem->AccessPathName(fCacheDir))
+      gSystem->MakeDirectory(fCacheDir);
+   if (gProofDebugLevel > 0)
+      Info("SetupCommon", "cache directory set to %s", fCacheDir.Data());
+   fCacheLock =
+      new TProofLockPath(Form("%s%s",kPROOF_CacheLockFile,fUser.Data()));
+
+   // check and make sure "packages" directory exists
+   fPackageDir = fWorkDir;
+   fPackageDir += TString("/") + kPROOF_PackDir;
+   if (gSystem->AccessPathName(fPackageDir))
+      gSystem->MakeDirectory(fPackageDir);
+   if (gProofDebugLevel > 0)
+      Info("SetupCommon", "package directory set to %s", fPackageDir.Data());
+   fPackageLock =
+      new TProofLockPath(Form("%s%s",kPROOF_PackageLockFile,fUser.Data()));
+
+   // List of directories where to look for global packages
+   TString globpack = gEnv->GetValue("Proof.GlobalPackageDirs","");
+   if (globpack.Length() > 0) {
+      Int_t ng = 0;
+      Int_t from = 0;
+      TString ldir;
+      while (globpack.Tokenize(ldir, from, ":")) {
+         if (gSystem->AccessPathName(ldir, kReadPermission)) {
+            Warning("SetupCommon", "directory for global packages %s does not"
+                             " exist or is not readable", ldir.Data());
+         } else {
+            // Add to the list, key will be "G<ng>", i.e. "G0", "G1", ...
+            TString key = Form("G%d", ng++);
+            if (!fGlobalPackageDirList) {
+               fGlobalPackageDirList = new THashList();
+               fGlobalPackageDirList->SetOwner();
+            }
+            fGlobalPackageDirList->Add(new TNamed(key,ldir));
+            Info("SetupCommon", "directory for global packages %s added to the list",
+                          ldir.Data());
+            FlushLogFile();
+         }
+      }
+   }
+
    // On masters, check and make sure that "queries" and "datasets"
    // directories exist
    if (IsMaster()) {
-      // 'queries'
+
+      // Create 'queries' locker instance and lock it
+      fQueryLock = new TProofLockPath(Form("%s%s-%s",
+                       kPROOF_QueryLockFile,fSessionTag.Data(),fUser.Data()));
+
+      // Make sure that the 'queries' dir exist
       fQueryDir = fWorkDir;
       fQueryDir += TString("/") + kPROOF_QueryDir;
       if (gSystem->AccessPathName(fQueryDir))
@@ -2149,10 +2196,8 @@ Int_t TProofServ::Setup()
       fQueryDir += TString("/session-") + fSessionTag;
       if (gSystem->AccessPathName(fQueryDir))
          gSystem->MakeDirectory(fQueryDir);
-
-      // Create 'queries' locker instance and lock it
-      fQueryLock = new TProofLockPath(Form("%s%s-%s",
-                       kPROOF_QueryLockFile,fSessionTag.Data(),fUser.Data()));
+      if (gProofDebugLevel > 0)
+         Info("SetupCommon", "queries dir is %s", fQueryDir.Data());
       fQueryLock->Lock();
 
       // 'datasets'
@@ -2164,9 +2209,7 @@ Int_t TProofServ::Setup()
             gSystem->MakeDirectory(fDataSetDir);
       }
       if (gProofDebugLevel > 0)
-         Info("Setup", "dataset dir is %s", fDataSetDir.Data());
-      fDataSetLock =
-         new TProofLockPath(Form("%s%s", kPROOF_DataSetLockFile,fUser.Data()));
+         Info("SetupCommon", "dataset dir is %s", fDataSetDir.Data());
 
       // Send session tag, if a recent client
       if (fProtocol > 6) {
@@ -2178,8 +2221,14 @@ Int_t TProofServ::Setup()
 
    // Set group and get the group priority
    fGroup = gEnv->GetValue("ProofServ.ProofGroup", "");
-   if (IsMaster())
+   if (IsMaster()) {
+      // Group priority
       fGroupPriority = GetPriority();
+      // Dataset manager instance
+      fDataSetManager =
+         new TProofDataSetManager(gEnv->GetValue("ProofServ.DataSetRoot", ""),
+                                  fGroup, fUser, kTRUE);
+   }
 
    // Send "ROOTversion|ArchCompiler" flag
    if (fProtocol > 12) {
@@ -2195,18 +2244,7 @@ Int_t TProofServ::Setup()
       fSocket->Send(m);
    }
 
-   // Incoming OOB should generate a SIGURG
-   fSocket->SetOption(kProcessGroup, gSystem->GetPid());
-
-   // Send messages off immediately to reduce latency
-   fSocket->SetOption(kNoDelay, 1);
-
-   // Check every two hours if client is still alive
-   fSocket->SetOption(kKeepAlive, 1);
-
-   // Install SigPipe handler to handle kKeepAlive failure
-   gSystem->AddSignalHandler(new TProofServSigPipeHandler(this));
-
+   // Set user vars in TProof
    TString all_vars(gSystem->Getenv("PROOF_ALLVARS"));
    TString name;
    Int_t from = 0;
@@ -2216,6 +2254,9 @@ Int_t TProofServ::Setup()
          TProof::AddEnvVar(name, value);
       }
    }
+
+   if (gProofDebugLevel > 0)
+      Info("SetupCommon", "successfully completed");
 
    // Done
    return 0;
@@ -3054,24 +3095,24 @@ void TProofServ::HandleProcess(TMessage *mess)
          // The received message included an empty dataset, with only the name
          // defined: assume that a dataset, stored on the PROOF master by that
          // name, should be processed.
-         TList *files = GetDataSet(dset->GetName());
-         if (!files) {
+         TFileCollection* dataset = fDataSetManager->GetDataSet(dset->GetName());
+         if (!dataset) {
             SendAsynMessage(Form("HandleProcess on %s: no such dataset: %s",
                                  fPrefix.Data(), dset->GetName()));
             Error("HandleProcess", "No such dataset on the master: %s",
                   dset->GetName());
             return;
          }
-         files->SetOwner();
+         TSeqCollection* files = dataset->GetList();
          if (!dset->Add(files)) {
             SendAsynMessage(Form("HandleProcess on %s: error retrieving"
                                  " dataset: %s", fPrefix.Data(), dset->GetName()));
             Error("HandleProcess", "Error retrieving dataset %s",
                   dset->GetName());
-            delete files;
+            delete dataset;
             return;
          }
-         delete files;
+         delete dataset;
       }
 
       TProofQueryResult *pq = 0;
@@ -4374,204 +4415,12 @@ Int_t TProofServ::HandleDataSets(TMessage *mess)
 {
    // Handle here all dataset requests
 
-   PDB(kGlobal, 1)
-      Info("HandleDataSets", "Enter");
-   TList *previousDataSet = 0; //used when appending datasets
-   TString dataSetName; // used in most cases
-   Int_t type = 0;
-   (*mess) >> type;
-   switch (type) {
-      case TProof::kCheckDataSetName:
-         //
-         // Check whether this dataset exist
-         // Communication Summary
-         //   Client                              Master
-         //     |------------>DataSetName----------->|
-         //     |<-------kMESS_OK/kMESS_NOTOK<-------| (Name OK/file exists)
-         {
-            TString fileListName;
-            (*mess) >> fileListName;
-            char *fileListPath =
-               Form("%s/%s.root", fDataSetDir.Data(), fileListName.Data());
+   if (fDataSetManager)
+      return fDataSetManager->HandleRequest(mess, fSocket);
 
-            // Lock the directory
-            // TProofLockPathGuard dslguard(fDataSetLock);
-
-            if (gSystem->AccessPathName(fileListPath, kFileExists) == kFALSE) {
-               //Dataset name does exist
-               fSocket->Send(kMESS_NOTOK);
-            } else {
-               fSocket->Send("", kMESS_OK);
-            }
-         }
-         break;
-      case TProof::kAppendDataSet:
-         {
-            (*mess) >> dataSetName;
-            previousDataSet = GetDataSet(dataSetName.Data());
-         }
-         // NO break => continuing with kCreateDataSet
-      case TProof::kCreateDataSet:
-         // list size must be above 0
-         {
-            if (type == TProof::kCreateDataSet) {
-               // if not kAppendDataSet
-               (*mess) >> dataSetName;
-            }
-            char *fileListPath =
-               Form("%s/%s.root", fDataSetDir.Data(), dataSetName.Data());
-
-            // We would overwrite a dataset if it existed by this name
-            TList *fileList =
-               (TList *) (mess->ReadObject(TList::Class()));
-            // if we started with kAppendDataSet
-            if (previousDataSet) {
-               TIter nextOldFile(previousDataSet);
-               while (TFileInfo *obj = (TFileInfo*)nextOldFile())
-                  fileList->Add(obj);
-               delete previousDataSet;
-            }
-
-            // (re)create file and save dataset in its current status
-            if (fileList->GetSize() > 0) {
-               // We will save a sorted list
-               fileList->Sort();
-               // Removing repeated files (also when it's a new dataset name!
-               TList *newFileList = new TList();
-               TIter nextFile(fileList);
-               TFileInfo *prevFile = (TFileInfo*)nextFile();
-               newFileList->Add(prevFile);
-               while (TFileInfo *obj = (TFileInfo*)nextFile())
-                  if (prevFile->Compare(obj)) {
-                     newFileList->Add(obj);
-                     prevFile = obj;
-                  }
-               if (gSystem->AccessPathName(gSystem->DirName(fileListPath))) {
-                  //the public dir or it's subdir does not exist
-                  TString dirname = gSystem->DirName(fileListPath);
-                  if (gSystem->mkdir(dirname, kTRUE))
-                     Error("HandleDataSets",
-                           "Error creating a datasets subdirectory: %s",
-                           dirname.Data());
-               }
-               TFile *f = TFile::Open(fileListPath, "RECREATE");
-               if (f) {
-                  f->cd();
-                  newFileList->Write("fileList", TObject::kSingleKey);
-                  f->Close();
-                  //TODO should depend on what Write returns
-                  fSocket->Send(kMESS_OK);
-               } else {
-                  fSocket->Send(kMESS_NOTOK);
-                  Error("HandleDataSets",
-                        "can't open dataset file for writing");
-               }
-               delete f;
-               delete newFileList;
-               fileList->SetOwner();
-               delete fileList;
-            } else {
-               fSocket->Send(kMESS_NOTOK);
-               Printf("Can not save an empty list.");
-            } // if (fileList->GetSize() > 0)
-         }
-         break;
-      case TProof::kGetDataSets:
-         {
-            TString dir;
-            (*mess) >> dir;
-            TString dataSetDirPath;
-            void *dataSetDir;
-            if (dir.Length())
-               if (strstr(dir, "public") == dir)
-                  // list user own public datasets
-                  dataSetDirPath = fDataSetDir + "/public/";
-               else {
-                  char *userName = (char *)malloc(strlen(dir));
-                  strcpy(userName, dir.Data() + 1); //dir starts with '~'
-                  strtok(userName, "/");
-                  dataSetDirPath = fWorkDir + "/../" + userName + "/" +
-                                     kPROOF_DataSetDir + "/public/";
-               }
-            else
-               dataSetDirPath = fDataSetDir;
-            if ((dataSetDir = gSystem->OpenDirectory(dataSetDirPath))) {
-               TRegexp rg(".*.root"); //check that it is a root file
-               TList *fileList = new TList();
-               const char *ent;
-               while ((ent = gSystem->GetDirEntry(dataSetDir))) {
-                  if (TString(ent).Index(rg) != kNPOS)
-                     //Matching dir entry
-                     fileList->Add(new TObjString(TString(ent, strlen(ent) - 5)));
-               }
-               fileList->Sort();
-               fSocket->SendObject(fileList, kMESS_OBJECT);
-               fileList->SetOwner();
-               delete fileList;
-            } else {
-               Printf("Can not open the dataset directory.");
-               fSocket->Send(kMESS_NOTOK);
-            }
-         }
-         break;
-      case TProof::kGetDataSet:
-         {
-            TString name;
-            (*mess) >> name;
-            if (TList *fileList = GetDataSet(name.Data())) {
-               fSocket->SendObject(fileList, kMESS_OK);
-               delete fileList;
-            } else                   // no such dataset
-               fSocket->Send(kMESS_NOTOK);
-         }
-         break;
-      case TProof::kRemoveDataSet:
-         {
-            TString name;
-            (*mess) >> name;
-
-            const char *fileListPath = Form("%s/%s.root",fDataSetDir.Data(),name.Data());
-
-            // Lock the directory
-            TProofLockPathGuard dslguard(fDataSetLock);
-
-            if (gSystem->AccessPathName(fileListPath, kFileExists) == kFALSE) {
-               if (gSystem->Unlink(fileListPath)) {
-                  Printf("Error removing dataset %s", name.Data());
-                  fSocket->Send(kMESS_NOTOK);
-               } else
-                  fSocket->Send(kMESS_OK);
-            } else {
-               Printf("The dataset does not exist");
-               fSocket->Send(kMESS_NOTOK);
-            }
-         }
-         break;
-      case TProof::kVerifyDataSet:
-         {
-            TString name;
-            (*mess) >> name;
-            if (TList *fileList = GetDataSet(name.Data())) {
-               TList *missingFileList = new TList();
-               TIter next(fileList);
-               TFileInfo *fileInfo;
-               while ((fileInfo = (TFileInfo *)next())) {
-                  if (gSystem->AccessPathName(fileInfo->GetFirstUrl()->GetUrl(),
-                                              kFileExists) != kFALSE)
-                     missingFileList->Add(fileInfo);
-               }
-               fSocket->SendObject(missingFileList, kMESS_OK);
-            } else
-               fSocket->Send(kMESS_NOTOK); //dataset does not exist
-         }
-         break;
-      default:
-         Error("HandleDataSets", "unknown type %d", type);
-         break;
-   }
-
-   // We are done
-   return 0;
+   // Errotr condition
+   Error("HandleDataSets", "data manager instance undefined! - Protocol error?");
+   return -1;
 }
 
 //______________________________________________________________________________
@@ -4616,39 +4465,19 @@ TProofServ::EQueryAction TProofServ::GetWorkers(TList *workers,
    // We are done
    return kQueryOK;
 }
-
+#if 0
 //______________________________________________________________________________
-R__HIDDEN TList *TProofServ::GetDataSet(const char *name)
+R__HIDDEN TFileCollection *TProofServ::GetDataSet(const char *uri)
 {
    // Utility function used in various methods for user dataset upload.
 
-   TString fileListPath;
-   if (strchr(name, '~') == name) {
-      char *nameCopy = new char[strlen(name)];
-      strcpy(nameCopy, name + 1);
-      char *userName = strtok(nameCopy, "/");
-      if (strcmp(strtok(0, "/"), "public"))
-         return 0;
-      fileListPath = fWorkDir + "/../" + userName + "/"
-                     + kPROOF_DataSetDir + "/public/";
-      delete[] nameCopy;
-   } else if (strchr(name, '/') && strstr(name, "public") != name) {
-      Printf("Dataset name should be of form [[~user/]public/]dataset");
+   TString dsUser, dsGroup, dsName;
+   if (ParseDataSetUri(uri, &dsGroup, &dsUser, &dsName) == kFALSE)
       return 0;
-   } else
-      fileListPath = fDataSetDir + "/" + name + ".root";
-   TList *fileList = 0;
-   if (gSystem->AccessPathName(fileListPath.Data(), kFileExists) == kFALSE) {
-      TFile *f = TFile::Open(fileListPath);
-      f->cd();
-      fileList = (TList *) f->Get("fileList");
-      f->Close();
-      delete f;
-      if (strchr(name, '~') == name)  // not when allocated with Form
-         delete[] fileListPath;
-   }
-   return fileList;
+
+   return fDataSetManager->GetDataSet(dsGroup, dsUser, dsName);
 }
+#endif
 
 //______________________________________________________________________________
 void TProofServ::ErrorHandler(Int_t level, Bool_t abort, const char *location,

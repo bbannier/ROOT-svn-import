@@ -107,7 +107,7 @@ TXNetSystem::TXNetSystem(const char *url, Bool_t owner) : TNetSystem(owner)
 }
 
 //_____________________________________________________________________________
-XrdClientAdmin *TXNetSystem::Connect(const char *url)
+XrdClientAdmin *TXNetSystem::Connect(const char *url, Bool_t disconnect)
 {
    // Init a connection to the server.
    // Returns a pointer to the appropriate instance of XrdClientAdmin or 0
@@ -122,6 +122,13 @@ XrdClientAdmin *TXNetSystem::Connect(const char *url)
    if (!cadm) {
       Error("Connect","fatal error: new object creation failed.");
       return cadm;
+   }
+
+   if (disconnect && cadm->GetClientConn())
+   {
+      //Printf("Disconnecting...");
+      //cadm->GetClientConn()->Disconnect(false);
+      //Printf("Disconnected.");
    }
 
    // Try to connect to the server
@@ -465,16 +472,41 @@ int TXNetSystem::Unlink(const char *path)
    return -1;    // not implemented for rootd
 }
 
+void TXNetSystem::DisableBlocking()
+{
+  //temporary, this has to go to TXNetSystem
+  EnvPutInt(NAME_FIRSTCONNECTMAXCNT, 1);
+}
+
 //_____________________________________________________________________________
 Bool_t TXNetSystem::IsOnline(const char *path)
 {
    // Check if the file defined by 'path' is ready to be used
 
-   TXNetSystemConnectGuard cg(this, path);
+   /*TString endPointUrl;
+   if (Locate(path, endPointUrl))
+   {
+      Error("IsOnline", "Locate %s failed", path);
+      return kFALSE;
+      }*/
+
+   //return kTRUE;
+
+   //Printf("endpoint: %s", endPointUrl.Data());
+
+   // prevent endless reconnection attemps if server is down
+   Int_t maxCnt = EnvGetLong(NAME_FIRSTCONNECTMAXCNT);
+   EnvPutInt(NAME_FIRSTCONNECTMAXCNT, 1);
+   //EnvPutInt(NAME_CONNECTTIMEOUT, 5);
+   TXNetSystemConnectGuard cg(this, path, true);
+   // set values back
+   //EnvPutInt(NAME_FIRSTCONNECTMAXCNT, maxCnt);
    if (cg.IsValid()) {
       vecBool vb;
       vecString vs;
-      XrdOucString pathname = TUrl(path).GetFileAndOptions();
+      TUrl url(path);
+      url.SetAnchor("");
+      XrdOucString pathname = url.GetFileAndOptions();
       pathname.replace("\n","\r");
       vs.Push_back(pathname);
       if (gDebug > 1 )
@@ -492,11 +524,14 @@ Bool_t TXNetSystem::IsOnline(const char *path)
                return kFALSE;
          }
          case kXR_error:
-            Error("IsOnline","Error %d : %s", cg.ClientAdmin()->LastServerError()->errnum,
+            if (gDebug > 0)
+              Error("IsOnline","Error %d : %s", cg.ClientAdmin()->LastServerError()->errnum,
                              cg.ClientAdmin()->LastServerError()->errmsg);
             return kFALSE;
          default:
-            return kTRUE;
+	    if (gDebug > 0)
+              Error("IsOnline", "Unidentified response: %d. Check XProtocol.hh", cg.ClientAdmin()->LastServerResp()->status);
+            return kFALSE;
       }
    }
    return kFALSE;
@@ -509,7 +544,9 @@ Bool_t TXNetSystem::Prepare(const char *path, UChar_t option, UChar_t priority)
 
    TXNetSystemConnectGuard cg(this, path);
    if (cg.IsValid()) {
-      XrdOucString pathname = TUrl(path).GetFileAndOptions();
+      TUrl url(path);
+      url.SetAnchor("");
+      XrdOucString pathname = url.GetFileAndOptions();
       vecString vs;
       vs.Push_back(pathname);
       cg.ClientAdmin()->Prepare(vs, (kXR_char)option, (kXR_char)priority);
@@ -557,6 +594,7 @@ Int_t TXNetSystem::Prepare(TCollection *paths,
          }
          u.SetUrl(pn);
          // The path
+         u.SetAnchor("");
          path = u.GetFileAndOptions();
          path.ReplaceAll("\n","\r");
          npaths++;
@@ -623,7 +661,7 @@ Int_t TXNetSystem::Locate(const char *path, TString &eurl)
          XrdClientUrlInfo ui;
          TString edir = TUrl(path).GetFile();
 
-         if (cg.ClientAdmin()->Locate((kXR_char *)edir.Data(), ui)) {
+         if (cg.ClientAdmin()->Locate((kXR_char *)edir.Data(), ui, kTRUE)) {
             TUrl u(path);
             u.SetHost(ui.Host.c_str());
             u.SetPort(ui.Port);
@@ -644,21 +682,36 @@ Int_t TXNetSystem::Locate(const char *path, TString &eurl)
 // Guard methods
 //
 //_____________________________________________________________________________
-TXNetSystemConnectGuard::TXNetSystemConnectGuard(TXNetSystem *xn, const char *url)
+TXNetSystemConnectGuard::TXNetSystemConnectGuard(TXNetSystem *xn, const char *url, Bool_t disconnect)
                         : fClientAdmin(0)
 {
    // Construct a guard object
 
     if (xn)
+    {
        // Connect
-       fClientAdmin = (url && strlen(url) > 0) ? xn->Connect(url)
-                                               : xn->Connect(xn->fUrl);
+       fClientAdmin = (url && strlen(url) > 0) ? xn->Connect(url, disconnect)
+          : xn->Connect(xn->fUrl, disconnect);
+       /*if (fClientAdmin)
+       {
+          XrdClientUrlInfo* urlInfo = fClientAdmin->GetClientConn()->GetLBSUrl();
+          if (urlInfo)
+             Printf("%s", urlInfo->GetUrl().c_str());
+             }*/
+    }
 }
 
 //_____________________________________________________________________________
 TXNetSystemConnectGuard::~TXNetSystemConnectGuard()
 {
    // Destructor: close the connection
+
+/*   if (fClientAdmin)
+   {
+      XrdClientUrlInfo* urlInfo = fClientAdmin->GetClientConn()->GetLBSUrl();
+      if (urlInfo)
+         Printf("%s", urlInfo->GetUrl().c_str());
+         }*/
 
    fClientAdmin = 0;
 }
@@ -669,6 +722,12 @@ void TXNetSystemConnectGuard::NotifyLastError()
    // Print message about last occured error
 
    if (fClientAdmin)
+   {
       if (fClientAdmin->GetClientConn())
-         Printf("Srv err: %s", fClientAdmin->GetClientConn()->LastServerError.errmsg);
+         Printf("Srv err: %s (code %d)", fClientAdmin->GetClientConn()->LastServerError.errmsg, fClientAdmin->GetClientConn()->LastServerError.errnum);
+
+      if (fClientAdmin->LastServerResp()) 
+         Printf("lastserveresponse: %d", fClientAdmin->LastServerResp()->status);
+   }
+
 }
