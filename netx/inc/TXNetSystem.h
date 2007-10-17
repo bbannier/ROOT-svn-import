@@ -64,7 +64,7 @@ private:
    static Bool_t   fgInitDone;    // Avoid initializing more than once
    static Bool_t   fgRootdBC;     // Control rootd backward compatibility
 
-   XrdClientAdmin *Connect(const char *url); // Connect to server
+   XrdClientAdmin *Connect(const char *url, Bool_t disconnect = kFALSE); // Connect to server
    void           *GetDirPtr() const { return fDirp; }
    void            InitXrdClient();
 
@@ -82,6 +82,8 @@ public:
    virtual Int_t       MakeDirectory(const char* dir);
    virtual void       *OpenDirectory(const char* dir);
    virtual int         Unlink(const char *path);
+   void DisableBlocking();
+
 
    // TXNetSystem specific
    Bool_t              GetPathsInfo(const char *paths, UChar_t *info);
@@ -102,7 +104,7 @@ private:
    XrdClientAdmin *fClientAdmin;  // Handle to the client admin object
 
 public:
-   TXNetSystemConnectGuard(TXNetSystem *xn, const char *url);
+   TXNetSystemConnectGuard(TXNetSystem *xn, const char *url, Bool_t disconnect = kFALSE);
    ~TXNetSystemConnectGuard();
 
    bool IsValid() const { return ((fClientAdmin) ? 1 : 0); } 

@@ -3658,6 +3658,15 @@ int XrdProofdProtocol::SetProofServEnv(int psid, int loglevel, const char *cfg)
       fprintf(frc, "Path.Localroot: %s\n", fgLocalroot.c_str());
    }
 
+   // Data pool entry-point URL
+   if (fgPoolURL) {
+      XrdOucString purl(fgPoolURL);
+      if (!purl.endswith("/"))
+         purl += "/";
+      fprintf(frc,"# URL for the data pool entry-point\n");
+      fprintf(frc, "ProofServ.PoolUrl: %s\n", purl.c_str());
+   }
+
    // The session working dir depends on the role
    fprintf(frc,"# The session working dir\n");
    fprintf(frc,"ProofServ.SessionDir: %s\n", swrkdir.c_str());
@@ -3705,6 +3714,12 @@ int XrdProofdProtocol::SetProofServEnv(int psid, int loglevel, const char *cfg)
          fprintf(frc,"# Global root for datasets\n");
          fprintf(frc,"ProofServ.DataSetRoot: %s\n", fgMgr.DataSetDir());
       }
+   }
+
+   //  Path to file with group information
+   if (fgGroupsMgr.GetCfgFile()) {
+      fprintf(frc,"# File with group information\n");
+      fprintf(frc, "ProofServ.GroupFile: %s\n", fgGroupsMgr.GetCfgFile());
    }
 
    // Work dir

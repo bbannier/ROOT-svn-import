@@ -54,6 +54,8 @@ class TDSetElement;
 class TMessage;
 class TTimer;
 class TMutex;
+class TFileCollection;
+class TProofDataSetManager;
 
 // Hook to external function setting up authentication related stuff
 // for old versions.
@@ -87,7 +89,6 @@ private:
    TProofLockPath *fPackageLock;    //package dir locker
    TProofLockPath *fCacheLock;      //cache dir locker
    TProofLockPath *fQueryLock;      //query dir locker
-   TProofLockPath *fDataSetLock;    //dataset dir locker
    TString       fArchivePath;      //default archive path
    TSocket      *fSocket;           //socket connection to client
    TProof       *fProof;            //PROOF talking to slave servers
@@ -128,6 +129,8 @@ private:
 
    Int_t         fInflateFactor;    // Factor in 1/1000 to inflate the CPU time
 
+   TProofDataSetManager* fDataSetManager; // dataset manager
+
    static Int_t  fgMaxQueries;      //Max number of queries fully kept
 
    void          RedirectOutput();
@@ -141,8 +144,6 @@ private:
    void          AddLogFile(TProofQueryResult *pq);
    Int_t         CleanupQueriesDir();
    void          FinalizeQuery(TProofQueryResult *pq);
-   TList        *GetDataSet(const char *name);
-
    TProofQueryResult *MakeQueryResult(Long64_t nentries, const char *opt,
                                       TList *inl, Long64_t first, TDSet *dset,
                                       const char *selec, TObject *elist);
@@ -170,6 +171,7 @@ protected:
 
    virtual void  HandleSocketInputDuringProcess();
    virtual Int_t Setup();
+   virtual Int_t SetupCommon();
 
    virtual void  MakePlayer();
    virtual void  DeletePlayer();

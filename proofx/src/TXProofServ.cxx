@@ -42,7 +42,6 @@
 #include "TProofDebug.h"
 #include "TProof.h"
 #include "TProofPlayer.h"
-#include "TProofQueryResult.h"
 #include "TRegexp.h"
 #include "TClass.h"
 #include "TROOT.h"
@@ -51,7 +50,6 @@
 #include "TXSocketHandler.h"
 #include "TXUnixSocket.h"
 #include "compiledata.h"
-#include "TProofResourcesStatic.h"
 #include "TProofNodeInfo.h"
 #include "XProofProtocol.h"
 
@@ -613,105 +611,6 @@ Int_t TXProofServ::Setup()
          fConfFile = cf;
    }
    fWorkDir = gEnv->GetValue("ProofServ.Sandbox", kPROOF_WorkDir);
-
-   // goto to the main PROOF working directory
-   char *workdir = gSystem->ExpandPathName(fWorkDir.Data());
-   fWorkDir = workdir;
-   delete [] workdir;
-   if (gProofDebugLevel > 0)
-      Info("Setup", "working directory set to %s", fWorkDir.Data());
-
-   // deny write access for group and world
-   gSystem->Umask(022);
-
-#ifdef R__UNIX
-   TString bindir;
-# ifdef ROOTBINDIR
-   bindir = ROOTBINDIR;
-# else
-   bindir = gSystem->Getenv("ROOTSYS");
-   if (!bindir.IsNull()) bindir += "/bin";
-# endif
-# ifdef COMPILER
-   TString compiler = COMPILER;
-   compiler.Remove(0, compiler.Index("is ") + 3);
-   compiler = gSystem->DirName(compiler);
-   if (!bindir.IsNull()) bindir += ":";
-   bindir += compiler;
-#endif
-   if (!bindir.IsNull()) bindir += ":";
-   bindir += "/bin:/usr/bin:/usr/local/bin";
-   // Add bindir to PATH
-   TString path(gSystem->Getenv("PATH"));
-   if (!path.IsNull()) path.Insert(0, ":");
-   path.Insert(0, bindir);
-   gSystem->Setenv("PATH", path);
-#endif
-
-   if (gSystem->AccessPathName(fWorkDir)) {
-      gSystem->mkdir(fWorkDir, kTRUE);
-      if (!gSystem->ChangeDirectory(fWorkDir)) {
-         Error("Setup", "can not change to PROOF directory %s",
-               fWorkDir.Data());
-         return -1;
-      }
-   } else {
-      if (!gSystem->ChangeDirectory(fWorkDir)) {
-         gSystem->Unlink(fWorkDir);
-         gSystem->mkdir(fWorkDir, kTRUE);
-         if (!gSystem->ChangeDirectory(fWorkDir)) {
-            Error("Setup", "can not change to PROOF directory %s",
-                     fWorkDir.Data());
-            return -1;
-         }
-      }
-   }
-
-   // check and make sure "cache" directory exists
-   fCacheDir = fWorkDir;
-   fCacheDir += TString("/") + kPROOF_CacheDir;
-   if (gSystem->AccessPathName(fCacheDir))
-      gSystem->MakeDirectory(fCacheDir);
-   if (gProofDebugLevel > 0)
-      Info("Setup", "cache directory set to %s", fCacheDir.Data());
-   fCacheLock =
-      new TProofLockPath(Form("%s%s",kPROOF_CacheLockFile,fUser.Data()));
-
-   // check and make sure "packages" directory exists
-   fPackageDir = fWorkDir;
-   fPackageDir += TString("/") + kPROOF_PackDir;
-   if (gSystem->AccessPathName(fPackageDir))
-      gSystem->MakeDirectory(fPackageDir);
-   if (gProofDebugLevel > 0)
-      Info("Setup", "package directory set to %s", fPackageDir.Data());
-   fPackageLock =
-      new TProofLockPath(Form("%s%s",kPROOF_PackageLockFile,fUser.Data()));
-
-   // List of directories where to look for global packages
-   TString globpack = gEnv->GetValue("Proof.GlobalPackageDirs","");
-   if (globpack.Length() > 0) {
-      Int_t ng = 0;
-      Int_t from = 0;
-      TString ldir;
-      while (globpack.Tokenize(ldir, from, ":")) {
-         if (gSystem->AccessPathName(ldir, kReadPermission)) {
-            Warning("Setup", "directory for global packages %s does not"
-                             " exist or is not readable", ldir.Data());
-         } else {
-            // Add to the list, key will be "G<ng>", i.e. "G0", "G1", ...
-            TString key = Form("G%d", ng++);
-            if (!fGlobalPackageDirList) {
-               fGlobalPackageDirList = new THashList();
-               fGlobalPackageDirList->SetOwner();
-            }
-            fGlobalPackageDirList->Add(new TNamed(key,ldir));
-            Info("Setup", "directory for global packages %s added to the list",
-                          ldir.Data());
-            FlushLogFile();
-         }
-      }
-   }
-
    // Get Session tag
    if ((fSessionTag = gEnv->GetValue("ProofServ.SessionTag", "-1")) == "-1") {
       Error("Setup", "Session tag missing");
@@ -739,62 +638,11 @@ Int_t TXProofServ::Setup()
    if (gProofDebugLevel > 0)
       Info("Setup", "session dir is %s", fSessionDir.Data());
 
-   // On masters, check and make sure that "queries" and "datasets"
-   // directories exist
-   if (IsMaster()) {
-
-      // Create 'queries' locker instance and lock it
-      fQueryLock = new TProofLockPath(Form("%s%s-%s",
-                       kPROOF_QueryLockFile,fSessionTag.Data(),fUser.Data()));
-
-      // Make sure that the 'queries' dir exist
-      fQueryDir = fWorkDir;
-      fQueryDir += TString("/") + kPROOF_QueryDir;
-      if (gSystem->AccessPathName(fQueryDir))
-         gSystem->MakeDirectory(fQueryDir);
-      fQueryDir += TString("/session-") + fSessionTag;
-      if (gSystem->AccessPathName(fQueryDir))
-         gSystem->MakeDirectory(fQueryDir);
-      if (gProofDebugLevel > 0)
-         Info("Setup", "queries dir is %s", fQueryDir.Data());
-      fQueryLock->Lock();
-
-      // 'datasets'
-      if ((fDataSetDir = gEnv->GetValue("ProofServ.DataSetDir", "-1")) == "-1") {
-         // Use default path in the sandbox
-         fDataSetDir = fWorkDir;
-         fDataSetDir += TString("/") + kPROOF_DataSetDir;
-         if (gSystem->AccessPathName(fDataSetDir))
-            gSystem->MakeDirectory(fDataSetDir);
-      }
-      if (gProofDebugLevel > 0)
-         Info("Setup", "dataset dir is %s", fDataSetDir.Data());
-      fDataSetLock =
-         new TProofLockPath(Form("%s%s", kPROOF_DataSetLockFile,fUser.Data()));
-
-      // Send session tag to client
-      TMessage m(kPROOF_SESSIONTAG);
-      m << fSessionTag;
-      fSocket->Send(m);
-   }
-
-   // Set group and get the group priority
-   fGroup = gEnv->GetValue("ProofServ.ProofGroup", "");
-   if (IsMaster())
-      fGroupPriority = GetPriority();
-
-   // Send "ROOTversion|ArchCompiler" flag
-   if (fProtocol > 12) {
-      TString vac = gROOT->GetVersion();
-      if (gROOT->GetSvnRevision() > 0)
-         vac += Form(":r%d", gROOT->GetSvnRevision());
-      TString rtag = gEnv->GetValue("ProofServ.RootVersionTag", "");
-      if (rtag.Length() > 0)
-         vac += Form(":%s", rtag.Data());
-      vac += Form("|%s-%s",gSystem->GetBuildArch(), gSystem->GetBuildCompilerVersion());
-      TMessage m(kPROOF_VERSARCHCOMP);
-      m << vac;
-      fSocket->Send(m);
+   // Common setup
+   Int_t rc = SetupCommon();
+   if (!rc) {
+      Error("Setup", "common setup failed");
+      return -1;
    }
 
    // Send packages off immediately to reduce latency
@@ -811,17 +659,6 @@ Int_t TXProofServ::Setup()
 
    // Install seg violation handler
    gSystem->AddSignalHandler(new TXProofServSegViolationHandler(this));
-
-   // Set user vars in TProof
-   TString all_vars(gSystem->Getenv("PROOF_ALLVARS"));
-   TString name;
-   Int_t from = 0;
-   while (all_vars.Tokenize(name, from, ",")) {
-      if (!name.IsNull()) {
-         TString value = gSystem->Getenv(name);
-         TProof::AddEnvVar(name, value);
-      }
-   }
 
    if (gProofDebugLevel > 0)
       Info("Setup", "successfully completed");

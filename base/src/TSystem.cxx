@@ -1059,6 +1059,66 @@ Bool_t TSystem::AccessPathName(const char *, EAccessMode)
 }
 
 //______________________________________________________________________________
+Bool_t TSystem::AccessPathName(FileStat_t st, EAccessMode mode)
+{
+   // Returns FALSE if one can access a file using the specified access mode.
+   // The information is taken from 'st' previously obtained via GetPathInfo.
+   // Attention, bizarre convention of return value!!
+
+   if (st.fIno <= 0)
+      // The file does not exist
+      return kTRUE;
+
+   // Properties
+   Bool_t hasx = kTRUE, hasw = kTRUE, hasr = kTRUE;
+
+   // Required properties
+   Bool_t x = (mode & 0x7 & kExecutePermission) ? kTRUE : kFALSE;
+   Bool_t w = (mode & 0x7 & kWritePermission)   ? kTRUE : kFALSE;
+   Bool_t r = (mode & 0x7 & kReadPermission)    ? kTRUE : kFALSE;
+
+   // Ownership
+   Bool_t o = (GetUid() == st.fUid && GetGid() == st.fGid) ? kTRUE : kFALSE;
+   Bool_t g = (GetGid() == st.fGid)                        ? kTRUE : kFALSE;
+
+   // Check execution
+   if (x) {
+      hasx = kFALSE;
+      if (o)
+         hasx = (st.fMode & kS_IRWXU & kS_IXUSR) ? kTRUE : kFALSE;
+      else if (g)
+         hasx = (st.fMode & kS_IRWXU & kS_IXGRP) ? kTRUE : kFALSE;
+      else
+         hasx = (st.fMode & kS_IRWXU & kS_IXOTH) ? kTRUE : kFALSE;
+   }
+
+   // Check write
+   if (w) {
+      hasw = kFALSE;
+      if (o)
+         hasw = (st.fMode & kS_IRWXU & kS_IWUSR) ? kTRUE : kFALSE;
+      else if (g)
+         hasw = (st.fMode & kS_IRWXU & kS_IWGRP) ? kTRUE : kFALSE;
+      else
+         hasw = (st.fMode & kS_IRWXU & kS_IWOTH) ? kTRUE : kFALSE;
+   }
+
+   // Check read
+   if (r) {
+      hasr = kFALSE;
+      if (o)
+         hasr = (st.fMode & kS_IRWXU & kS_IRUSR) ? kTRUE : kFALSE;
+      else if (g)
+         hasr = (st.fMode & kS_IRWXU & kS_IRGRP) ? kTRUE : kFALSE;
+      else
+         hasr = (st.fMode & kS_IRWXU & kS_IROTH) ? kTRUE : kFALSE;
+   }
+
+   // Done
+   return ((hasx && hasw && hasr) ? kFALSE : kTRUE);
+}
+
+//______________________________________________________________________________
 Bool_t TSystem::IsPathLocal(const char *path)
 {
    // Returns TRUE if the url in 'path' points to the local file system.
