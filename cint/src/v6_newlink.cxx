@@ -4435,7 +4435,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                  
                  // LF 16-10-07
                  // Generate the inline trick for constructors too. See TNamed::TNamed
-                 G__cppif_geninline(fp, hfp, ifunc, i, j);
+                 //G__cppif_geninline(fp, hfp, ifunc, i, j);
               }
               ++isconstructor;
               if(ifunc->para_nu[j]>=1&&
