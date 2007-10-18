@@ -76,9 +76,9 @@ $(SQLDS):    $(SQLH) $(SQLL) $(ROOTCINTTMPEXE) $(SQLNM)
 #LF
 $(SQLNM):      $(SQLO) $(SQLTMPDO) $(SQLTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(SQLTMPDO) | awk '{printf("%s\n", $$3)'} > $(SQLNM)
-		nm -g -p --defined-only $(SQLTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(SQLNM)
-		nm -g -p --defined-only $(SQLO) | awk '{printf("%s\n", $$3)'} >> $(SQLNM)
+		nm -p --defined-only $(SQLTMPDO) | awk '{printf("%s\n", $$3)'} > $(SQLNM)
+		nm -p --defined-only $(SQLTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(SQLNM)
+		nm -p --defined-only $(SQLO) | awk '{printf("%s\n", $$3)'} >> $(SQLNM)
 
 $(SQLMAP):      $(RLIBMAP) $(MAKEFILEDEP) $(SQLL)
 		$(RLIBMAP) -o $(SQLMAP) -l $(SQLLIB) \

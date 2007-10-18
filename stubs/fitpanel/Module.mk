@@ -80,9 +80,9 @@ $(FITPANELDICTMAP): $(RLIBMAP) $(MAKEFILEDEP) $(FITPANELL)
 #LF
 $(FITPANELNM):      $(FITPANELO) $(FITPANELTMPDO) $(FITPANELTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(FITPANELTMPDO) | awk '{printf("%s\n", $$3)'} > $(FITPANELNM)
-		nm -g -p --defined-only $(FITPANELTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(FITPANELNM)
-		nm -g -p --defined-only $(FITPANELO) | awk '{printf("%s\n", $$3)'} >> $(FITPANELNM)
+		nm -p --defined-only $(FITPANELTMPDO) | awk '{printf("%s\n", $$3)'} > $(FITPANELNM)
+		nm -p --defined-only $(FITPANELTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(FITPANELNM)
+		nm -p --defined-only $(FITPANELO) | awk '{printf("%s\n", $$3)'} >> $(FITPANELNM)
 
 $(FITPANELMAP): $(RLIBMAP) $(MAKEFILEDEP) $(FITPANELL)
 		$(RLIBMAP) -o $(FITPANELMAP) -l $(FITPANELLIB) \

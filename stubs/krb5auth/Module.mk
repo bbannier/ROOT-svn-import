@@ -80,9 +80,9 @@ $(KRB5AUTHDS):    $(KRB5AUTHH1) $(KRB5AUTHL) $(ROOTCINTTMPEXE) $(KRB5AUTHNM)
 #LF
 $(KRB5AUTHNM):      $(KRB5AUTHO) $(KRB5AUTHTMPDO) $(KRB5AUTHTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(KRB5AUTHTMPDO) | awk '{printf("%s\n", $$3)'} > $(KRB5AUTHNM)
-		nm -g -p --defined-only $(KRB5AUTHTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(KRB5AUTHNM)
-		nm -g -p --defined-only $(KRB5AUTHO) | awk '{printf("%s\n", $$3)'} >> $(KRB5AUTHNM)
+		nm -p --defined-only $(KRB5AUTHTMPDO) | awk '{printf("%s\n", $$3)'} > $(KRB5AUTHNM)
+		nm -p --defined-only $(KRB5AUTHTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(KRB5AUTHNM)
+		nm -p --defined-only $(KRB5AUTHO) | awk '{printf("%s\n", $$3)'} >> $(KRB5AUTHNM)
 
 $(KRB5AUTHMAP): $(RLIBMAP) $(MAKEFILEDEP) $(KRB5AUTHL)
 		$(RLIBMAP) -o $(KRB5AUTHMAP) -l $(KRB5AUTHLIB) \

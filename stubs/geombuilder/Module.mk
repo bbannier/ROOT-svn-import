@@ -85,9 +85,9 @@ $(GEOMBUILDERDS):    $(GEOMBUILDERH) $(GEOMBUILDERL) $(ROOTCINTTMPEXE) $(GEOMBUI
 #LF
 $(GEOMBUILDERNM):      $(GEOMBUILDERO) $(GEOMBUILDERTMPDO) $(GEOMBUILDERTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(GEOMBUILDERTMPDO) | awk '{printf("%s\n", $$3)'} > $(GEOMBUILDERNM)
-		nm -g -p --defined-only $(GEOMBUILDERTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(GEOMBUILDERNM)
-		nm -g -p --defined-only $(GEOMBUILDERO) | awk '{printf("%s\n", $$3)'} >> $(GEOMBUILDERNM)
+		nm -p --defined-only $(GEOMBUILDERTMPDO) | awk '{printf("%s\n", $$3)'} > $(GEOMBUILDERNM)
+		nm -p --defined-only $(GEOMBUILDERTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(GEOMBUILDERNM)
+		nm -p --defined-only $(GEOMBUILDERO) | awk '{printf("%s\n", $$3)'} >> $(GEOMBUILDERNM)
 
 $(GEOMBUILDERMAP): $(RLIBMAP) $(MAKEFILEDEP) $(GEOMBUILDERL)
 		$(RLIBMAP) -o $(GEOMBUILDERMAP) -l $(GEOMBUILDERLIB) \

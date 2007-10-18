@@ -80,9 +80,9 @@ $(SPECTRUMDICTMAP): $(RLIBMAP) $(MAKEFILEDEP) $(SPECTRUML)
 #LF
 $(SPECTRUMNM):      $(SPECTRUMO) $(SPECTRUMTMPDO) $(SPECTRUMTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(SPECTRUMTMPDO) | awk '{printf("%s\n", $$3)'} > $(SPECTRUMNM)
-		nm -g -p --defined-only $(SPECTRUMTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(SPECTRUMNM)
-		nm -g -p --defined-only $(SPECTRUMO) | awk '{printf("%s\n", $$3)'} >> $(SPECTRUMNM)
+		nm -p --defined-only $(SPECTRUMTMPDO) | awk '{printf("%s\n", $$3)'} > $(SPECTRUMNM)
+		nm -p --defined-only $(SPECTRUMTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(SPECTRUMNM)
+		nm -p --defined-only $(SPECTRUMO) | awk '{printf("%s\n", $$3)'} >> $(SPECTRUMNM)
 
 $(SPECTRUMMAP): $(RLIBMAP) $(MAKEFILEDEP) $(SPECTRUML)
 		$(RLIBMAP) -o $(SPECTRUMMAP) -l $(SPECTRUMLIB) \

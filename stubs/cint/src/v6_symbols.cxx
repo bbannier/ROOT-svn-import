@@ -950,7 +950,9 @@ int RegisterPointer(const char *classname, const char *method, const char *proto
    ifunc = G__get_ifunc_internal(iref);
    // set pointer to interface method and arguments
    //ifunc->funcptr[index] = ptr;
-   G__savestring(&ifunc->mangled_name[index],(char*)mangled_name);
+   // Don't do it if the name has already been written
+   if(!ifunc->mangled_name[index])
+      G__savestring(&ifunc->mangled_name[index],(char*)mangled_name);
 
    return 0;
 }
@@ -1514,6 +1516,16 @@ void G__register_class(const char *libname, const char *clstr)
       string::size_type pos_par  = sig.find_first_of("const", lpar);
       if(pos_par != string::npos)
          isconst=1;
+
+      // LF 18-10-07
+      // How can we deal with things like:
+      // 
+      // TClass::GetClass(char const*, bool)::full_string_name
+      // TClass::GetClass(char const*, bool)::__PRETTY_FUNCTION__
+      if(sig.find_first_of("::", lpar)!=string::npos){
+         ++list_iter;
+         continue;
+      }
 
       // LF 16-15-07
       // Another ugly hack

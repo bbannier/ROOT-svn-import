@@ -110,9 +110,9 @@ $(PROOFPLAYERDS):    $(PROOFPLAYERH) $(PROOFPLAYERL) $(ROOTCINTTMPEXE) $(PROOFPL
 #LF
 $(PROOFPLAYERNM):      $(PROOFPLAYERO) $(PROOFPLAYERTMPDO) $(PROOFPLAYERTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(PROOFPLAYERTMPDO) | awk '{printf("%s\n", $$3)'} > $(PROOFPLAYERNM)
-		nm -g -p --defined-only $(PROOFPLAYERTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(PROOFPLAYERNM)
-		nm -g -p --defined-only $(PROOFPLAYERO) | awk '{printf("%s\n", $$3)'} >> $(PROOFPLAYERNM)
+		nm -p --defined-only $(PROOFPLAYERTMPDO) | awk '{printf("%s\n", $$3)'} > $(PROOFPLAYERNM)
+		nm -p --defined-only $(PROOFPLAYERTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(PROOFPLAYERNM)
+		nm -p --defined-only $(PROOFPLAYERO) | awk '{printf("%s\n", $$3)'} >> $(PROOFPLAYERNM)
 
 $(PROOFPLAYERMAP): $(RLIBMAP) $(MAKEFILEDEP) $(PROOFPLAYERL)
 		$(RLIBMAP) -o $(PROOFPLAYERMAP) -l $(PROOFPLAYERLIB) \
@@ -143,9 +143,9 @@ $(PROOFDRAWDS):    $(PROOFDRAWH) $(PROOFDRAWL) $(ROOTCINTTMPEXE) $(PROOFDRAWNM)
 #LF
 $(PROOFDRAWNM):      $(PROOFDRAWO) $(PROOFDRAWTMPDO) $(PROOFDRAWTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(PROOFDRAWTMPDO) | awk '{printf("%s\n", $$3)'} > $(PROOFDRAWNM)
-		nm -g -p --defined-only $(PROOFDRAWTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(PROOFDRAWNM)
-		nm -g -p --defined-only $(PROOFDRAWO) | awk '{printf("%s\n", $$3)'} >> $(PROOFDRAWNM)
+		nm -p --defined-only $(PROOFDRAWTMPDO) | awk '{printf("%s\n", $$3)'} > $(PROOFDRAWNM)
+		nm -p --defined-only $(PROOFDRAWTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(PROOFDRAWNM)
+		nm -p --defined-only $(PROOFDRAWO) | awk '{printf("%s\n", $$3)'} >> $(PROOFDRAWNM)
 
 $(PROOFDRAWMAP): $(RLIBMAP) $(MAKEFILEDEP) $(PROOFDRAWL)
 		$(RLIBMAP) -o $(PROOFDRAWMAP) -l $(PROOFDRAWLIB) \

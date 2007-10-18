@@ -104,9 +104,9 @@ $(NETXDS):    $(NETXH1) $(NETXL) $(ROOTCINTTMPEXE) $(XROOTDETAG) $(NETXNM)
 #LF
 $(NETXNM):      $(NETXO) $(NETXTMPDO) $(NETXTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(NETXTMPDO) | awk '{printf("%s\n", $$3)'} > $(NETXNM)
-		nm -g -p --defined-only $(NETXTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(NETXNM)
-		nm -g -p --defined-only $(NETXO) | awk '{printf("%s\n", $$3)'} >> $(NETXNM)
+		nm -p --defined-only $(NETXTMPDO) | awk '{printf("%s\n", $$3)'} > $(NETXNM)
+		nm -p --defined-only $(NETXTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(NETXNM)
+		nm -p --defined-only $(NETXO) | awk '{printf("%s\n", $$3)'} >> $(NETXNM)
 
 $(NETXMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(NETXL)
 		$(RLIBMAP) -o $(NETXMAP) -l $(NETXLIB) -d $(NETXLIBDEPM) -c $(NETXL)

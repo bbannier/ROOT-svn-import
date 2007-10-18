@@ -78,9 +78,9 @@ $(X3DDS):    $(X3DH1) $(X3DL) $(ROOTCINTTMPEXE) $(X3DNM)
 #LF
 $(X3DNM):      $(X3DO) $(X3DTMPDO) $(X3DTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(X3DTMPDO) | awk '{printf("%s\n", $$3)'} > $(X3DNM)
-		nm -g -p --defined-only $(X3DTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(X3DNM)
-		nm -g -p --defined-only $(X3DO) | awk '{printf("%s\n", $$3)'} >> $(X3DNM)
+		nm -p --defined-only $(X3DTMPDO) | awk '{printf("%s\n", $$3)'} > $(X3DNM)
+		nm -p --defined-only $(X3DTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(X3DNM)
+		nm -p --defined-only $(X3DO) | awk '{printf("%s\n", $$3)'} >> $(X3DNM)
 
 $(X3DMAP):      $(RLIBMAP) $(MAKEFILEDEP) $(X3DL)
 		$(RLIBMAP) -o $(X3DMAP) -l $(X3DLIB) \

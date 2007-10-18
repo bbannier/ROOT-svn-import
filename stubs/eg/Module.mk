@@ -77,9 +77,9 @@ $(EGDS):    $(EGH1) $(EGL) $(ROOTCINTTMPEXE) $(EGNM)
 #LF
 $(EGNM):      $(EGO) $(EGTMPDO) $(EGTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(EGTMPDO) | awk '{printf("%s\n", $$3)'} > $(EGNM)
-		nm -g -p --defined-only $(EGTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(EGNM)
-		nm -g -p --defined-only $(EGO) | awk '{printf("%s\n", $$3)'} >> $(EGNM)
+		nm -p --defined-only $(EGTMPDO) | awk '{printf("%s\n", $$3)'} > $(EGNM)
+		nm -p --defined-only $(EGTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(EGNM)
+		nm -p --defined-only $(EGO) | awk '{printf("%s\n", $$3)'} >> $(EGNM)
 
 $(EGMAP):       $(RLIBMAP) $(MAKEFILEDEP) $(EGL)
 		$(RLIBMAP) -o $(EGMAP) -l $(EGLIB) \

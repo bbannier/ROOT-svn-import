@@ -76,9 +76,9 @@ $(FFTWDS):    $(FFTWH) $(FFTWL) $(ROOTCINTTMPEXE) $(FFTWNM)
 #LF
 $(FFTWNM):      $(FFTWO) $(FFTWTMPDO) $(FFTWTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(FFTWTMPDO) | awk '{printf("%s\n", $$3)'} > $(FFTWNM)
-		nm -g -p --defined-only $(FFTWTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(FFTWNM)
-		nm -g -p --defined-only $(FFTWO) | awk '{printf("%s\n", $$3)'} >> $(FFTWNM)
+		nm -p --defined-only $(FFTWTMPDO) | awk '{printf("%s\n", $$3)'} > $(FFTWNM)
+		nm -p --defined-only $(FFTWTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(FFTWNM)
+		nm -p --defined-only $(FFTWO) | awk '{printf("%s\n", $$3)'} >> $(FFTWNM)
 
 $(FFTWMAP):       $(RLIBMAP) $(MAKEFILEDEP) $(FFTWL)
 		$(RLIBMAP) -o $(FFTWMAP) -l $(FFTWLIB) \

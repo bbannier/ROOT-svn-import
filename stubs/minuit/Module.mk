@@ -90,9 +90,9 @@ $(MINUITMAP): $(RLIBMAP) $(MAKEFILEDEP) $(MINUITL)
 #LF
 $(MINUITNM):      $(MINUITO) $(MINUITTMPDO) $(MINUITTMP2DO)
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(MINUITTMPDO) | awk '{printf("%s\n", $$3)'} > $(MINUITNM)
-		nm -g -p --defined-only $(MINUITTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(MINUITNM)
-		nm -g -p --defined-only $(MINUITO) | awk '{printf("%s\n", $$3)'} >> $(MINUITNM)
+		nm -p --defined-only $(MINUITTMPDO) | awk '{printf("%s\n", $$3)'} > $(MINUITNM)
+		nm -p --defined-only $(MINUITTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(MINUITNM)
+		nm -p --defined-only $(MINUITO) | awk '{printf("%s\n", $$3)'} >> $(MINUITNM)
 
 all-minuit:     $(MINUITLIB) $(MINUITMAP)
 

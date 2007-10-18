@@ -130,9 +130,9 @@ $(GEOMDS2):    $(GEOMH2) $(GEOML2) $(ROOTCINTTMPEXE) $(GEOMNM)
 #LF
 $(GEOMNM):      $(GEOMO) $(GEOMTMPDO) $(GEOMTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(GEOMTMPDO) | awk '{printf("%s\n", $$3)'} > $(GEOMNM)
-		nm -g -p --defined-only $(GEOMTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(GEOMNM)
-		nm -g -p --defined-only $(GEOMO) | awk '{printf("%s\n", $$3)'} >> $(GEOMNM)
+		nm -p --defined-only $(GEOMTMPDO) | awk '{printf("%s\n", $$3)'} > $(GEOMNM)
+		nm -p --defined-only $(GEOMTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(GEOMNM)
+		nm -p --defined-only $(GEOMO) | awk '{printf("%s\n", $$3)'} >> $(GEOMNM)
 
 $(GEOMMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(GEOML1) $(GEOML2)
 		$(RLIBMAP) -o $(GEOMMAP) -l $(GEOMLIB) \

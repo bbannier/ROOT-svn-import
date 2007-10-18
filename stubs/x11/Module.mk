@@ -92,9 +92,9 @@ $(X11MAP):      $(RLIBMAP) $(MAKEFILEDEP) $(X11L)
 #LF
 $(X11NM):      $(X11O) $(X11TMPDO) $(X11TMP2DO)
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(X11TMPDO) | awk '{printf("%s\n", $$3)'} > $(X11NM)
-		nm -g -p --defined-only $(X11TMP2DO) | awk '{printf("%s\n", $$3)'} >> $(X11NM)
-		nm -g -p --defined-only $(X11O) | awk '{printf("%s\n", $$3)'} >> $(X11NM)
+		nm -p --defined-only $(X11TMPDO) | awk '{printf("%s\n", $$3)'} > $(X11NM)
+		nm -p --defined-only $(X11TMP2DO) | awk '{printf("%s\n", $$3)'} >> $(X11NM)
+		nm -p --defined-only $(X11O) | awk '{printf("%s\n", $$3)'} >> $(X11NM)
 
 all-x11:        $(X11LIB) $(X11MAP)
 

@@ -76,9 +76,9 @@ $(PGSQLDS):    $(PGSQLH) $(PGSQLL) $(ROOTCINTTMPEXE) $(PGSQLNM)
 #LF
 $(PGSQLNM):      $(PGSQLO) $(PGSQLTMPDO) $(PGSQLTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(PGSQLTMPDO) | awk '{printf("%s\n", $$3)'} > $(PGSQLNM)
-		nm -g -p --defined-only $(PGSQLTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(PGSQLNM)
-		nm -g -p --defined-only $(PGSQLO) | awk '{printf("%s\n", $$3)'} >> $(PGSQLNM)
+		nm -p --defined-only $(PGSQLTMPDO) | awk '{printf("%s\n", $$3)'} > $(PGSQLNM)
+		nm -p --defined-only $(PGSQLTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(PGSQLNM)
+		nm -p --defined-only $(PGSQLO) | awk '{printf("%s\n", $$3)'} >> $(PGSQLNM)
 
 $(PGSQLMAP):    $(RLIBMAP) $(MAKEFILEDEP) $(PGSQLL)
 		$(RLIBMAP) -o $(PGSQLMAP) -l $(PGSQLLIB) \

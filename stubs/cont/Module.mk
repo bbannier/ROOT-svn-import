@@ -66,9 +66,9 @@ $(CONTDS):      $(CONTH) $(CONTL) $(ROOTCINTTMPEXE) $(CONTNM)
 #LF
 $(CONTNM):      $(CONTO) $(CONTTMPDO) $(CONTTMP2DO)
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(CONTTMPDO) | awk '{printf("%s\n", $$3)'} > $(CONTNM)
-		nm -g -p --defined-only $(CONTTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(CONTNM)
-		nm -g -p --defined-only $(CONTO) | awk '{printf("%s\n", $$3)'} >> $(CONTNM)
+		nm -p --defined-only $(CONTTMPDO) | awk '{printf("%s\n", $$3)'} > $(CONTNM)
+		nm -p --defined-only $(CONTTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(CONTNM)
+		nm -p --defined-only $(CONTO) | awk '{printf("%s\n", $$3)'} >> $(CONTNM)
 
 all-cont:       $(CONTO) $(CONTDO)
 

@@ -291,9 +291,9 @@ $(ASIMAGEMAP): $(RLIBMAP) $(MAKEFILEDEP) $(ASIMAGEL)
 #LF
 $(ASIMAGENM):      $(ASIMAGEO) $(ASIMAGETMPDO) $(ASIMAGETMP2DO)
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(ASIMAGETMPDO) | awk '{printf("%s\n", $$3)'} > $(ASIMAGENM)
-		nm -g -p --defined-only $(ASIMAGETMP2DO) | awk '{printf("%s\n", $$3)'} >> $(ASIMAGENM)
-		nm -g -p --defined-only $(ASIMAGEO) | awk '{printf("%s\n", $$3)'} > $(ASIMAGENM)
+		nm -p --defined-only $(ASIMAGETMPDO) | awk '{printf("%s\n", $$3)'} > $(ASIMAGENM)
+		nm -p --defined-only $(ASIMAGETMP2DO) | awk '{printf("%s\n", $$3)'} >> $(ASIMAGENM)
+		nm -p --defined-only $(ASIMAGEO) | awk '{printf("%s\n", $$3)'} > $(ASIMAGENM)
 
 ##### libASImageGui #####
 
@@ -335,9 +335,9 @@ $(ASIMAGEGUIMAP): $(RLIBMAP) $(MAKEFILEDEP) $(ASIMAGEGUIL)
 #LF
 $(ASIMAGEGUINM):      $(ASIMAGEGUIO) $(ASIMAGEGUITMPDO) $(ASIMAGEGUITMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(ASIMAGEGUITMPDO) | awk '{printf("%s\n", $$3)'} > $(ASIMAGEGUINM)
-		nm -g -p --defined-only $(ASIMAGEGUITMP2DO) | awk '{printf("%s\n", $$3)'} >> $(ASIMAGEGUINM)
-		nm -g -p --defined-only $(ASIMAGEGUIO) | awk '{printf("%s\n", $$3)'} >> $(ASIMAGEGUINM)
+		nm -p --defined-only $(ASIMAGEGUITMPDO) | awk '{printf("%s\n", $$3)'} > $(ASIMAGEGUINM)
+		nm -p --defined-only $(ASIMAGEGUITMP2DO) | awk '{printf("%s\n", $$3)'} >> $(ASIMAGEGUINM)
+		nm -p --defined-only $(ASIMAGEGUIO) | awk '{printf("%s\n", $$3)'} >> $(ASIMAGEGUINM)
 
 ##### libASPluginGS #####
 
@@ -379,9 +379,9 @@ $(ASIMAGEGSMAP): $(RLIBMAP) $(MAKEFILEDEP) $(ASIMAGEGSL)
 #LF
 $(ASIMAGEGSNM):      $(ASIMAGEGSO) $(ASIMAGEGSTMPDO) $(ASIMAGEGSTMP2DO)
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(ASIMAGEGSTMPDO) | awk '{printf("%s\n", $$3)'} > $(ASIMAGEGSNM)
-		nm -g -p --defined-only $(ASIMAGEGSTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(ASIMAGEGSNM)
-		nm -g -p --defined-only $(ASIMAGEGSO) | awk '{printf("%s\n", $$3)'} >> $(ASIMAGEGSNM)
+		nm -p --defined-only $(ASIMAGEGSTMPDO) | awk '{printf("%s\n", $$3)'} > $(ASIMAGEGSNM)
+		nm -p --defined-only $(ASIMAGEGSTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(ASIMAGEGSNM)
+		nm -p --defined-only $(ASIMAGEGSO) | awk '{printf("%s\n", $$3)'} >> $(ASIMAGEGSNM)
 
 all-asimage:    $(ASIMAGELIB) $(ASIMAGEGUILIB) $(ASIMAGEGSLIB) \
 		$(ASIMAGEMAP) $(ASIMAGEGUIMAP) $(ASIMAGEGSMAP)

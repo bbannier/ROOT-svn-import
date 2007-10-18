@@ -67,8 +67,8 @@ $(UNIXDS):     $(UNIXH) $(UNIXL) $(ROOTCINTTMPEXE) $(UNIXNM)
 #LF
 $(UNIXNM):      $(UNIXO) $(UNIXTMP2DO)
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(UNIXTMP2DO) | awk '{printf("%s\n", $$3)'} > $(UNIXNM)
-		nm -g -p --defined-only $(UNIXO) | awk '{printf("%s\n", $$3)'} >> $(UNIXNM)
+		nm -p --defined-only $(UNIXTMP2DO) | awk '{printf("%s\n", $$3)'} > $(UNIXNM)
+		nm -p --defined-only $(UNIXO) | awk '{printf("%s\n", $$3)'} >> $(UNIXNM)
 
 all-unix:       $(UNIXO) $(UNIXDO)
 

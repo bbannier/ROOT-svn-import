@@ -76,9 +76,9 @@ $(XMLDS):    $(XMLH) $(XMLL) $(ROOTCINTTMPEXE) $(XMLNM)
 #LF
 $(XMLNM):      $(XMLO) $(XMLTMPDO) $(XMLTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(XMLTMPDO) | awk '{printf("%s\n", $$3)'} > $(XMLNM)
-		nm -g -p --defined-only $(XMLTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(XMLNM)
-		nm -g -p --defined-only $(XMLO) | awk '{printf("%s\n", $$3)'} >> $(XMLNM)
+		nm -p --defined-only $(XMLTMPDO) | awk '{printf("%s\n", $$3)'} > $(XMLNM)
+		nm -p --defined-only $(XMLTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(XMLNM)
+		nm -p --defined-only $(XMLO) | awk '{printf("%s\n", $$3)'} >> $(XMLNM)
 
 $(XMLMAP):      $(RLIBMAP) $(MAKEFILEDEP) $(XMLL)
 		$(RLIBMAP) -o $(XMLMAP) -l $(XMLLIB) \

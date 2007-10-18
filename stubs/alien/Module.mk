@@ -80,9 +80,9 @@ $(ALIENDICTMAP): $(RLIBMAP) $(MAKEFILEDEP) $(ALIENL)
 #LF
 $(ALIENNM):      $(ALIENO) $(ALIENTMPDO) $(ALIENTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(ALIENTMPDO) | awk '{printf("%s\n", $$3)'} > $(ALIENNM)
-		nm -g -p --defined-only $(ALIENTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(ALIENNM)
-		nm -g -p --defined-only $(ALIENO) | awk '{printf("%s\n", $$3)'} >> $(ALIENNM)
+		nm -p --defined-only $(ALIENTMPDO) | awk '{printf("%s\n", $$3)'} > $(ALIENNM)
+		nm -p --defined-only $(ALIENTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(ALIENNM)
+		nm -p --defined-only $(ALIENO) | awk '{printf("%s\n", $$3)'} >> $(ALIENNM)
 
 #LF
 $(ALIENMAP):   $(RLIBMAP) $(MAKEFILEDEP) $(ALIENL)

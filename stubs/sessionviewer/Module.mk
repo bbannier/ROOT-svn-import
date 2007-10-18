@@ -78,9 +78,9 @@ $(SESSIONVIEWERDS):    $(SESSIONVIEWERH) $(SESSIONVIEWERL) $(ROOTCINTTMPEXE) $(S
 #LF
 $(SESSIONVIEWERNM):      $(SESSIONVIEWERO) $(SESSIONVIEWERTMPDO) $(SESSIONVIEWERTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(SESSIONVIEWERTMPDO) | awk '{printf("%s\n", $$3)'} > $(SESSIONVIEWERNM)
-		nm -g -p --defined-only $(SESSIONVIEWERTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(SESSIONVIEWERNM)
-		nm -g -p --defined-only $(SESSIONVIEWERO) | awk '{printf("%s\n", $$3)'} >> $(SESSIONVIEWERNM)
+		nm -p --defined-only $(SESSIONVIEWERTMPDO) | awk '{printf("%s\n", $$3)'} > $(SESSIONVIEWERNM)
+		nm -p --defined-only $(SESSIONVIEWERTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(SESSIONVIEWERNM)
+		nm -p --defined-only $(SESSIONVIEWERO) | awk '{printf("%s\n", $$3)'} >> $(SESSIONVIEWERNM)
 
 $(SESSIONVIEWERMAP): $(RLIBMAP) $(MAKEFILEDEP) $(SESSIONVIEWERL)
 		$(RLIBMAP) -o $(SESSIONVIEWERMAP) -l $(SESSIONVIEWERLIB) \

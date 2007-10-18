@@ -170,13 +170,13 @@ $(GUIDS3):     $(GUIH3) $(GUIL3) $(ROOTCINTTMPEXE) $(GUINM)
 #LF
 $(GUINM):      $(GUIO) $(GUITMPDO) $(GUITMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(GUITMPDO1) | awk '{printf("%s\n", $$3)'} > $(GUINM)
-		nm -g -p --defined-only $(GUITMPDO2) | awk '{printf("%s\n", $$3)'} >> $(GUINM)
-		nm -g -p --defined-only $(GUITMPDO3) | awk '{printf("%s\n", $$3)'} >> $(GUINM)
-		nm -g -p --defined-only $(GUITMP2DO1) | awk '{printf("%s\n", $$3)'} >> $(GUINM)
-		nm -g -p --defined-only $(GUITMP2DO2) | awk '{printf("%s\n", $$3)'} >> $(GUINM)
-		nm -g -p --defined-only $(GUITMP2DO3) | awk '{printf("%s\n", $$3)'} >> $(GUINM)
-		nm -g -p --defined-only $(GUIO) | awk '{printf("%s\n", $$3)'} >> $(GUINM)
+		nm -p --defined-only $(GUITMPDO1) | awk '{printf("%s\n", $$3)'} > $(GUINM)
+		nm -p --defined-only $(GUITMPDO2) | awk '{printf("%s\n", $$3)'} >> $(GUINM)
+		nm -p --defined-only $(GUITMPDO3) | awk '{printf("%s\n", $$3)'} >> $(GUINM)
+		nm -p --defined-only $(GUITMP2DO1) | awk '{printf("%s\n", $$3)'} >> $(GUINM)
+		nm -p --defined-only $(GUITMP2DO2) | awk '{printf("%s\n", $$3)'} >> $(GUINM)
+		nm -p --defined-only $(GUITMP2DO3) | awk '{printf("%s\n", $$3)'} >> $(GUINM)
+		nm -p --defined-only $(GUIO) | awk '{printf("%s\n", $$3)'} >> $(GUINM)
 
 $(GUIMAP):      $(RLIBMAP) $(MAKEFILEDEP) $(GUIL)
 		$(RLIBMAP) -o $(GUIMAP) -l $(GUILIB) \

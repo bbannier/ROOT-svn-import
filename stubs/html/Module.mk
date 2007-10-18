@@ -80,9 +80,9 @@ $(HTMLDICTMAP): $(RLIBMAP) $(MAKEFILEDEP) $(HTMLL)
 #LF
 $(HTMLNM):      $(HTMLO) $(HTMLTMPDO) $(HTMLTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(HTMLTMPDO) | awk '{printf("%s\n", $$3)'} > $(HTMLNM)
-		nm -g -p --defined-only $(HTMLTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(HTMLNM)
-		nm -g -p --defined-only $(HTMLO) | awk '{printf("%s\n", $$3)'} >> $(HTMLNM)
+		nm -p --defined-only $(HTMLTMPDO) | awk '{printf("%s\n", $$3)'} > $(HTMLNM)
+		nm -p --defined-only $(HTMLTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(HTMLNM)
+		nm -p --defined-only $(HTMLO) | awk '{printf("%s\n", $$3)'} >> $(HTMLNM)
 
 $(HTMLMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(HTMLL)
 		$(RLIBMAP) -o $(HTMLMAP) -l $(HTMLLIB) \

@@ -90,9 +90,9 @@ $(RINTMAP): $(RLIBMAP) $(MAKEFILEDEP) $(RINTL)
 #LF
 $(RINTNM):      $(RINTO) $(RINTTMPDO) $(RINTTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(RINTTMPDO) | awk '{printf("%s\n", $$3)'} > $(RINTNM)
-		nm -g -p --defined-only $(RINTTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(RINTNM)
-		nm -g -p --defined-only $(RINTO) | awk '{printf("%s\n", $$3)'} >> $(RINTNM)
+		nm -p --defined-only $(RINTTMPDO) | awk '{printf("%s\n", $$3)'} > $(RINTNM)
+		nm -p --defined-only $(RINTTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(RINTNM)
+		nm -p --defined-only $(RINTO) | awk '{printf("%s\n", $$3)'} >> $(RINTNM)
 
 all-rint:       $(RINTLIB) $(RINTMAP)
 

@@ -93,9 +93,9 @@ $(HISTMAP): $(RLIBMAP) $(MAKEFILEDEP) $(HISTL)
 #LF
 $(HISTNM):      $(HISTTMPDO) $(HISTTMP2DO) $(HISTO)
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(HISTTMPDO) | awk '{printf("%s\n", $$3)'} > $(HISTNM)
-		nm -g -p --defined-only $(HISTTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(HISTNM)
-		nm -g -p --defined-only $(HISTO) | awk '{printf("%s\n", $$3)'} >> $(HISTNM)
+		nm -p --defined-only $(HISTTMPDO) | awk '{printf("%s\n", $$3)'} > $(HISTNM)
+		nm -p --defined-only $(HISTTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(HISTNM)
+		nm -p --defined-only $(HISTO) | awk '{printf("%s\n", $$3)'} >> $(HISTNM)
 
 #LF
 all-hist:       $(HISTLIB) $(HISTMAP)

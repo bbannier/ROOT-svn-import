@@ -92,9 +92,9 @@ $(TREEVIEWERDS):    $(TREEVIEWERH) $(TREEVIEWERL) $(ROOTCINTTMPEXE) $(TREEVIEWER
 #LF
 $(TREEVIEWERNM):      $(TREEVIEWERO) $(TREEVIEWERTMPDO) $(TREEVIEWERTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(TREEVIEWERTMPDO) | awk '{printf("%s\n", $$3)'} > $(TREEVIEWERNM)
-		nm -g -p --defined-only $(TREEVIEWERTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(TREEVIEWERNM)
-		nm -g -p --defined-only $(TREEVIEWERO) | awk '{printf("%s\n", $$3)'} >> $(TREEVIEWERNM)
+		nm -p --defined-only $(TREEVIEWERTMPDO) | awk '{printf("%s\n", $$3)'} > $(TREEVIEWERNM)
+		nm -p --defined-only $(TREEVIEWERTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(TREEVIEWERNM)
+		nm -p --defined-only $(TREEVIEWERO) | awk '{printf("%s\n", $$3)'} >> $(TREEVIEWERNM)
 
 $(TREEVIEWERMAP): $(RLIBMAP) $(MAKEFILEDEP) $(TREEVIEWERL)
 		$(RLIBMAP) -o $(TREEVIEWERMAP) -l $(TREEVIEWERLIB) \

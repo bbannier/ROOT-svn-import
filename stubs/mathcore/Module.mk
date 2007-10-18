@@ -183,11 +183,11 @@ $(MATHCOREMAP): $(RLIBMAP) $(MAKEFILEDEP) $(MATHCOREL) $(MATHCORELINC) $(MATHCOR
 #LF
 $(MATHCORENM):      $(MATHCOREO) $(MATHCORETMPDO) $(MATHCORETMPDO32) $(MATHCORETMP2DO) $(MATHCORETMP2DO32)
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(MATHCORETMPDO) | awk '{printf("%s\n", $$3)'} > $(MATHCORENM)
-		nm -g -p --defined-only $(MATHCORETMPDO32) | awk '{printf("%s\n", $$3)'} >> $(MATHCORENM)
-		nm -g -p --defined-only $(MATHCORETMP2DO) | awk '{printf("%s\n", $$3)'} >> $(MATHCORENM)
-		nm -g -p --defined-only $(MATHCORETMP2DO32) | awk '{printf("%s\n", $$3)'} >> $(MATHCORENM)
-		nm -g -p --defined-only $(MATHCOREO) | awk '{printf("%s\n", $$3)'} >> $(MATHCORENM)
+		nm -p --defined-only $(MATHCORETMPDO) | awk '{printf("%s\n", $$3)'} > $(MATHCORENM)
+		nm -p --defined-only $(MATHCORETMPDO32) | awk '{printf("%s\n", $$3)'} >> $(MATHCORENM)
+		nm -p --defined-only $(MATHCORETMP2DO) | awk '{printf("%s\n", $$3)'} >> $(MATHCORENM)
+		nm -p --defined-only $(MATHCORETMP2DO32) | awk '{printf("%s\n", $$3)'} >> $(MATHCORENM)
+		nm -p --defined-only $(MATHCOREO) | awk '{printf("%s\n", $$3)'} >> $(MATHCORENM)
 
 all-mathcore:   $(MATHCORELIB) $(MATHCOREMAP)
 

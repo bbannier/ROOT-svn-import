@@ -76,9 +76,9 @@ $(SPECTRUMPAINTERDS):    $(SPECTRUMPAINTERH) $(SPECTRUMPAINTERL) $(ROOTCINTTMPEX
 #LF
 $(SPECTRUMPAINTERNM):      $(SPECTRUMPAINTERO) $(SPECTRUMPAINTERTMPDO) $(SPECTRUMPAINTERTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(SPECTRUMPAINTERTMPDO) | awk '{printf("%s\n", $$3)'} > $(SPECTRUMPAINTERNM)
-		nm -g -p --defined-only $(SPECTRUMPAINTERTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(SPECTRUMPAINTERNM)
-		nm -g -p --defined-only $(SPECTRUMPAINTERO) | awk '{printf("%s\n", $$3)'} >> $(SPECTRUMPAINTERNM)
+		nm -p --defined-only $(SPECTRUMPAINTERTMPDO) | awk '{printf("%s\n", $$3)'} > $(SPECTRUMPAINTERNM)
+		nm -p --defined-only $(SPECTRUMPAINTERTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(SPECTRUMPAINTERNM)
+		nm -p --defined-only $(SPECTRUMPAINTERO) | awk '{printf("%s\n", $$3)'} >> $(SPECTRUMPAINTERNM)
 
 $(SPECTRUMPAINTERMAP): $(RLIBMAP) $(MAKEFILEDEP) $(SPECTRUMPAINTERL)
 		$(RLIBMAP) -o $(SPECTRUMPAINTERMAP) -l $(SPECTRUMPAINTERLIB) \

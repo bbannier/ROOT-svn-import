@@ -80,9 +80,9 @@ $(SPLOTDICTMAP): $(RLIBMAP) $(MAKEFILEDEP) $(SPLOTL)
 #LF
 $(SPLOTNM):      $(SPLOTO) $(SPLOTTMPDO) $(SPLOTTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(SPLOTTMPDO) | awk '{printf("%s\n", $$3)'} > $(SPLOTNM)
-		nm -g -p --defined-only $(SPLOTTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(SPLOTNM)
-		nm -g -p --defined-only $(SPLOTO) | awk '{printf("%s\n", $$3)'} >> $(SPLOTNM)
+		nm -p --defined-only $(SPLOTTMPDO) | awk '{printf("%s\n", $$3)'} > $(SPLOTNM)
+		nm -p --defined-only $(SPLOTTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(SPLOTNM)
+		nm -p --defined-only $(SPLOTO) | awk '{printf("%s\n", $$3)'} >> $(SPLOTNM)
 
 $(SPLOTMAP):    $(RLIBMAP) $(MAKEFILEDEP) $(SPLOTL)
 		$(RLIBMAP) -o $(SPLOTMAP) -l $(SPLOTLIB) \

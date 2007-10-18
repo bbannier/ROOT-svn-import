@@ -95,9 +95,9 @@ $(G3DMAP): $(RLIBMAP) $(MAKEFILEDEP) $(G3DL)
 #LF
 $(G3DNM):      $(G3DO) $(G3DTMPDO) $(G3DTMP2DO)
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(G3DTMPDO) | awk '{printf("%s\n", $$3)'} > $(G3DNM)
-		nm -g -p --defined-only $(G3DTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(G3DNM)
-		nm -g -p --defined-only $(G3DO) | awk '{printf("%s\n", $$3)'} >> $(G3DNM)
+		nm -p --defined-only $(G3DTMPDO) | awk '{printf("%s\n", $$3)'} > $(G3DNM)
+		nm -p --defined-only $(G3DTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(G3DNM)
+		nm -p --defined-only $(G3DO) | awk '{printf("%s\n", $$3)'} >> $(G3DNM)
 
 all-g3d:        $(G3DLIB) $(G3DMAP)
 

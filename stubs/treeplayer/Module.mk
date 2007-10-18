@@ -88,9 +88,9 @@ $(TREEPLAYERMAP): $(RLIBMAP) $(MAKEFILEDEP) $(TREEPLAYERL)
 #LF
 $(TREEPLAYERNM):      $(TREEPLAYERO) $(TREEPLAYERTMPDO) $(TREEPLAYERTMP2DO)
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(TREEPLAYERTMPDO) | awk '{printf("%s\n", $$3)'} > $(TREEPLAYERNM)
-		nm -g -p --defined-only $(TREEPLAYERTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(TREEPLAYERNM)
-		nm -g -p --defined-only $(TREEPLAYERO) | awk '{printf("%s\n", $$3)'} >> $(TREEPLAYERNM)
+		nm -p --defined-only $(TREEPLAYERTMPDO) | awk '{printf("%s\n", $$3)'} > $(TREEPLAYERNM)
+		nm -p --defined-only $(TREEPLAYERTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(TREEPLAYERNM)
+		nm -p --defined-only $(TREEPLAYERO) | awk '{printf("%s\n", $$3)'} >> $(TREEPLAYERNM)
 
 all-treeplayer: $(TREEPLAYERLIB) $(TREEPLAYERMAP)
 

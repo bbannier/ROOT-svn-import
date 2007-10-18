@@ -76,9 +76,9 @@ $(XMLPARSERDS):    $(XMLPARSERH) $(XMLPARSERL) $(ROOTCINTTMPEXE) $(XMLPARSERNM)
 #LF
 $(XMLPARSERNM):      $(XMLPARSERO) $(XMLPARSERTMPDO) $(XMLPARSERTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(XMLPARSERTMPDO) | awk '{printf("%s\n", $$3)'} > $(XMLPARSERNM)
-		nm -g -p --defined-only $(XMLPARSERTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(XMLPARSERNM)
-		nm -g -p --defined-only $(XMLPARSERO) | awk '{printf("%s\n", $$3)'} >> $(XMLPARSERNM)
+		nm -p --defined-only $(XMLPARSERTMPDO) | awk '{printf("%s\n", $$3)'} > $(XMLPARSERNM)
+		nm -p --defined-only $(XMLPARSERTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(XMLPARSERNM)
+		nm -p --defined-only $(XMLPARSERO) | awk '{printf("%s\n", $$3)'} >> $(XMLPARSERNM)
 
 $(XMLPARSERMAP): $(RLIBMAP) $(MAKEFILEDEP) $(XMLPARSERL)
 		$(RLIBMAP) -o $(XMLPARSERMAP) -l $(XMLPARSERLIB) \

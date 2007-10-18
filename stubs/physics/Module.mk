@@ -76,9 +76,9 @@ $(PHYSICSDS):    $(PHYSICSH) $(PHYSICSL) $(ROOTCINTTMPEXE) $(PHYSICSNM)
 #LF
 $(PHYSICSNM):      $(PHYSICSO) $(PHYSICSTMPDO) $(PHYSICSTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(PHYSICSTMPDO) | awk '{printf("%s\n", $$3)'} > $(PHYSICSNM)
-		nm -g -p --defined-only $(PHYSICSTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(PHYSICSNM)
-		nm -g -p --defined-only $(PHYSICSO) | awk '{printf("%s\n", $$3)'} >> $(PHYSICSNM)
+		nm -p --defined-only $(PHYSICSTMPDO) | awk '{printf("%s\n", $$3)'} > $(PHYSICSNM)
+		nm -p --defined-only $(PHYSICSTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(PHYSICSNM)
+		nm -p --defined-only $(PHYSICSO) | awk '{printf("%s\n", $$3)'} >> $(PHYSICSNM)
 
 $(PHYSICSMAP):  $(RLIBMAP) $(MAKEFILEDEP) $(PHYSICSL)
 		$(RLIBMAP) -o $(PHYSICSMAP) -l $(PHYSICSLIB) \

@@ -76,9 +76,9 @@ $(GUIHTMLDS):    $(GUIHTMLH) $(GUIHTMLL) $(ROOTCINTTMPEXE) $(GUIHTMLNM)
 #LF
 $(GUIHTMLNM):      $(GUIHTMLO) $(GUIHTMLTMPDO) $(GUIHTMLTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(GUIHTMLTMPDO) | awk '{printf("%s\n", $$3)'} > $(GUIHTMLNM)
-		nm -g -p --defined-only $(GUIHTMLTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(GUIHTMLNM)
-		nm -g -p --defined-only $(GUIHTMLO) | awk '{printf("%s\n", $$3)'} >> $(GUIHTMLNM)
+		nm -p --defined-only $(GUIHTMLTMPDO) | awk '{printf("%s\n", $$3)'} > $(GUIHTMLNM)
+		nm -p --defined-only $(GUIHTMLTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(GUIHTMLNM)
+		nm -p --defined-only $(GUIHTMLO) | awk '{printf("%s\n", $$3)'} >> $(GUIHTMLNM)
 
 $(GUIHTMLMAP):  $(RLIBMAP) $(MAKEFILEDEP) $(GUIHTMLL)
 		$(RLIBMAP) -o $(GUIHTMLMAP) -l $(GUIHTMLLIB) \

@@ -114,9 +114,9 @@ $(PROOFXDS):    $(PROOFXH) $(PROOFXL) $(ROOTCINTTMPEXE) $(XROOTDETAG) $(PROOFXNM
 #LF
 $(PROOFXNM):      $(PROOFXO) $(PROOFXTMPDO) $(PROOFXTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(PROOFXTMPDO) | awk '{printf("%s\n", $$3)'} > $(PROOFXNM)
-		nm -g -p --defined-only $(PROOFXTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(PROOFXNM)
-		nm -g -p --defined-only $(PROOFXO) | awk '{printf("%s\n", $$3)'} >> $(PROOFXNM)
+		nm -p --defined-only $(PROOFXTMPDO) | awk '{printf("%s\n", $$3)'} > $(PROOFXNM)
+		nm -p --defined-only $(PROOFXTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(PROOFXNM)
+		nm -p --defined-only $(PROOFXO) | awk '{printf("%s\n", $$3)'} >> $(PROOFXNM)
 
 $(PROOFXMAP):   $(RLIBMAP) $(MAKEFILEDEP) $(PROOFXL)
 		$(RLIBMAP) -o $(PROOFXMAP) -l $(PROOFXLIB) \
