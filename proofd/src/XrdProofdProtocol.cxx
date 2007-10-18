@@ -6157,7 +6157,7 @@ char *XrdProofdProtocol::ReadBufferLocal(const char *file, kXR_int64 ofs, int &l
    fst = (fst < 0) ? 0 : ((fst >= ltot) ? ltot - 1 : fst);
    // End at ...
    kXR_int64 end = fst + len;
-   off_t lst = (end >= ltot) ? ltot : ((end > fst) ? end  : fst);
+   off_t lst = (end >= ltot) ? ltot : ((end > fst) ? end  : ltot);
    TRACEI(DBG, "ReadBufferLocal: file size: "<<ltot<<
                ", read from: "<<fst<<" to "<<lst);
 
