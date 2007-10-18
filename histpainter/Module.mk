@@ -79,9 +79,9 @@ $(HISTPAINTERDS):    $(HISTPAINTERH1) $(HISTPAINTERL) $(ROOTCINTTMPEXE) $(HISTPA
 #LF
 $(HISTPAINTERNM):      $(HISTPAINTERO) $(HISTPAINTERTMPDO) $(HISTPAINTERTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(HISTPAINTERTMPDO) | awk '{printf("%s\n", $$3)'} > $(HISTPAINTERNM)
-		nm -g -p --defined-only $(HISTPAINTERTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(HISTPAINTERNM)
-		nm -g -p --defined-only $(HISTPAINTERO) | awk '{printf("%s\n", $$3)'} >> $(HISTPAINTERNM)
+		nm -p --defined-only $(HISTPAINTERTMPDO) | awk '{printf("%s\n", $$3)'} > $(HISTPAINTERNM)
+		nm -p --defined-only $(HISTPAINTERTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(HISTPAINTERNM)
+		nm -p --defined-only $(HISTPAINTERO) | awk '{printf("%s\n", $$3)'} >> $(HISTPAINTERNM)
 
 $(HISTPAINTERMAP): $(RLIBMAP) $(MAKEFILEDEP) $(HISTPAINTERL)
 		$(RLIBMAP) -o $(HISTPAINTERMAP) -l $(HISTPAINTERLIB) \

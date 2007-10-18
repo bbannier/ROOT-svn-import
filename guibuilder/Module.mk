@@ -80,9 +80,9 @@ $(GUIBLDDICTMAP): $(RLIBMAP) $(MAKEFILEDEP) $(GUIBLDL)
 #LF
 $(GUIBLDNM):      $(GUIBLDO) $(GUIBLDTMPDO) $(GUIBLDTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(GUIBLDTMPDO) | awk '{printf("%s\n", $$3)'} > $(GUIBLDNM)
-		nm -g -p --defined-only $(GUIBLDTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(GUIBLDNM)
-		nm -g -p --defined-only $(GUIBLDO) | awk '{printf("%s\n", $$3)'} >> $(GUIBLDNM)
+		nm -p --defined-only $(GUIBLDTMPDO) | awk '{printf("%s\n", $$3)'} > $(GUIBLDNM)
+		nm -p --defined-only $(GUIBLDTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(GUIBLDNM)
+		nm -p --defined-only $(GUIBLDO) | awk '{printf("%s\n", $$3)'} >> $(GUIBLDNM)
 
 $(GUIBLDMAP):   $(RLIBMAP) $(MAKEFILEDEP) $(GUIBLDL)
 		$(RLIBMAP) -o $(GUIBLDMAP) -l $(GUIBLDLIB) \

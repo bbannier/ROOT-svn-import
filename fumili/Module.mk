@@ -80,9 +80,9 @@ $(FUMILIDICTMAP): $(RLIBMAP) $(MAKEFILEDEP) $(FUMILIL)
 #LF
 $(FUMILINM):      $(FUMILIO) $(FUMILITMPDO) $(FUMILITMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(FUMILITMPDO) | awk '{printf("%s\n", $$3)'} > $(FUMILINM)
-		nm -g -p --defined-only $(FUMILITMP2DO) | awk '{printf("%s\n", $$3)'} >> $(FUMILINM)
-		nm -g -p --defined-only $(FUMILIO) | awk '{printf("%s\n", $$3)'} >> $(FUMILINM)
+		nm -p --defined-only $(FUMILITMPDO) | awk '{printf("%s\n", $$3)'} > $(FUMILINM)
+		nm -p --defined-only $(FUMILITMP2DO) | awk '{printf("%s\n", $$3)'} >> $(FUMILINM)
+		nm -p --defined-only $(FUMILIO) | awk '{printf("%s\n", $$3)'} >> $(FUMILINM)
 
 $(FUMILIMAP):   $(RLIBMAP) $(MAKEFILEDEP) $(FUMILIL)
 		$(RLIBMAP) -o $(FUMILIMAP) -l $(FUMILILIB) \

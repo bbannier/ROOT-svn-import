@@ -90,9 +90,9 @@ $(GPADDS):      $(GPADH) $(GPADL) $(ROOTCINTTMPEXE) $(GPADNM)
 #LF
 $(GPADNM):      $(GPADO) $(GPADTMPDO) $(GPADTMP2DO)
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(GPADTMPDO) | awk '{printf("%s\n", $$3)'} > $(GPADNM)
-		nm -g -p --defined-only $(GPADTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(GPADNM)
-		nm -g -p --defined-only $(GPADO) | awk '{printf("%s\n", $$3)'} >> $(GPADNM)
+		nm -p --defined-only $(GPADTMPDO) | awk '{printf("%s\n", $$3)'} > $(GPADNM)
+		nm -p --defined-only $(GPADTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(GPADNM)
+		nm -p --defined-only $(GPADO) | awk '{printf("%s\n", $$3)'} >> $(GPADNM)
 
 $(GPADMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(GPADL)
 		$(RLIBMAP) -o $(GPADMAP) -l $(GPADLIB) \

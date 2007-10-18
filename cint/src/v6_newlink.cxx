@@ -339,6 +339,11 @@ void G__incsetup_memvar(int tagnum);
 void G__incsetup_memfunc(int tagnum);
 #endif
 
+int G__isprivatectordtorassgn(int tagnum, G__ifunc_table_internal *ifunc, int ifn);
+static int G__isprivatedestructorifunc(int tagnum);
+int G__isprivatedestructor(int tagnum);
+int G__isprivateassignopr(int tagnum);
+
 // LF
 void G__cppif_change_globalcomp();
 
@@ -4261,7 +4266,7 @@ void G__cppif_geninline(FILE *fp, FILE *hfp, struct G__ifunc_table_internal *ifu
            ifunc->pentry[j]->line_number > 0
            //|| strncmp(ifunc->funcname[j],"operator", strlen("operator"))==0
            )
-        && strncmp(G__fulltagname(i,0),"ROOT", strlen("ROOT"))!=0
+        //&& strncmp(G__fulltagname(i,0),"ROOT", strlen("ROOT"))!=0
         //&& strncmp(ifunc->funcname[j],"operator new", strlen("operator new"))!=0  //stubs were created for this
         && !ifunc->isvirtual[j]
         //&& ifunc->ansi[j]!=2 
@@ -4333,8 +4338,304 @@ void G__cppif_geninline(FILE *fp, FILE *hfp, struct G__ifunc_table_internal *ifu
    }
 }
 
+/**************************************************************************
+ * G__make_default_ifunc()
+ *
+ * LF 25-07-07
+ *
+ * Create the deafult cons, dests, etc as ifunc entries before writing
+ * them to the file 
+ **************************************************************************/
+void G__make_default_ifunc(G__ifunc_table_internal *ifunc_copy)
+{
+   struct G__ifunc_table_internal *ifunc = ifunc_copy;
+   struct G__ifunc_table_internal *ifunc_destructor=0;
+   char funcname[G__MAXNAME*6];
+   int hash;
+   int j=0,k=0;
+   int i = ifunc->tagnum;
+   int isnonpublicnew;
+   int isconstructor,iscopyconstructor,isdestructor,isassignmentoperator;
+   int virtualdtorflag;
+   int dtoraccess=G__PUBLIC;
+
+   dtoraccess=G__PUBLIC;
+   
+   struct G__ifunc_table_internal *store_p_ifunc = G__p_ifunc;
+
+   if((G__CPPLINK==G__struct.globalcomp[i]
+       || G__ONLYMETHODLINK==G__struct.globalcomp[i]
+         )&&
+      (-1==(int)G__struct.parent_tagnum[i]
+       || G__nestedclass
+         )
+      && -1!=G__struct.line_number[i]&&
+      (G__struct.hash[i] || 0==G__struct.name[i][0])
+      &&
+      '$'!=G__struct.name[i][0] && 'e'!=G__struct.type[i]) {
+      
+      ifunc_destructor = G__struct.memfunc[i];
+      isconstructor=0;
+      iscopyconstructor=0;
+      isdestructor=0;
+      /* isvirtualdestructor=0; */
+      isassignmentoperator=0;
+      isnonpublicnew=G__isnonpublicnew(i);
+      virtualdtorflag=0;
+
+      while (ifunc) {
+         for (j = 0; j < ifunc->allifunc; ++j) {
+            if ((ifunc->access[j] == G__PUBLIC) || G__precomp_private 
+                || G__isprivatectordtorassgn(i, ifunc, j) 
+                || ((ifunc->access[j] == G__PROTECTED) && (G__struct.protectedaccess[i] & G__PROTECTEDACCESS)) 
+                || (G__struct.protectedaccess[i] & G__PRIVATEACCESS)) {
+               // public
+
+               if ((G__struct.globalcomp[i] == G__ONLYMETHODLINK) && (ifunc->globalcomp[j] != G__METHODLINK)) {
+                  // not marked for link, skip it.
+                  continue;
+               }
+
+#ifndef G__OLDIMPLEMENTATION2039
+               if (!ifunc->hash[j]) {
+                  // no hash, skip it
+                  continue;
+               }
+#endif
+
+#ifndef G__OLDIMPLEMENTATION1656
+               // LF 08-10-07
+               // Here we haven't introduced the default functions...
+               // should we skip it or not?
+               if (ifunc->pentry[j]->size < 0) {
+                  // already precompiled, skip it
+                  continue;
+               }
+#endif
+
+               // Check for constructor, destructor, or operator=.
+               if (!strcmp(ifunc->funcname[j], G__struct.name[i])) {
+                  // We have a constructor.
+                  if (G__struct.isabstract[i]) {
+                     continue;
+                  }
+                  if (isnonpublicnew) {
+                     continue;
+                  }
+                  ++isconstructor;
+
+                  if ((ifunc->para_nu[j] >= 1) && (ifunc->param[j][0]->type == 'u') && (i == ifunc->param[j][0]->p_tagtable) && (ifunc->param[j][0]->reftype == G__PARAREFERENCE) && ((ifunc->para_nu[j] == 1) || ifunc->param[j][1]->pdefault)) {
+                     ++iscopyconstructor;
+                     //ifunc_copyconstructor = ifunc;
+                  }
+                  //else
+                  //   ifunc_constructor = ifunc;
+
+               } else if (ifunc->funcname[j][0] == '~') {
+                  // We have a destructor.
+                  /* if(ifunc->isvirtual[j]) isvirtualdestructor=1; */
+                  dtoraccess = ifunc->access[j];
+                  virtualdtorflag = ifunc->isvirtual[j] + (ifunc->ispurevirtual[j] * 2);
+                  if (G__PUBLIC != ifunc->access[j]) {
+                     ++isdestructor;
+                  }
+                  else
+                     ifunc_destructor = ifunc;
+
+                  if ((G__PROTECTED == ifunc->access[j]) && G__struct.protectedaccess[i] && !G__precomp_private) {
+                     G__fprinterr(G__serr, "Limitation: can not generate dictionary for protected destructor for %s\n", G__fulltagname(i, 1));
+                     continue;
+                  }
+                  continue;
+               }
+
+#ifdef G__DEFAULTASSIGNOPR
+               else if (!strcmp(ifunc->funcname[j], "operator=") 
+                        && ('u' == ifunc->param[j][0]->type) 
+                        && (i == ifunc->param[j][0]->p_tagtable)) {
+                  // We have an operator=.
+                  ++isassignmentoperator;
+                  //ifunc_assignmentoperator = ifunc;
+               }
+#endif
+
+            } // end of if access public && not pure virtual func
+            else { // in case of protected,private or pure virtual func
+               // protected, private, pure virtual
+               if (!strcmp(ifunc->funcname[j], G__struct.name[i])) {
+                  ++isconstructor;
+                  if ('u' == ifunc->param[j][0]->type && i == ifunc->param[j][0]->p_tagtable && G__PARAREFERENCE == ifunc->param[j][0]->reftype && (1 == ifunc->para_nu[j] || ifunc->param[j][1]->pdefault)) {
+                     // copy constructor
+                     ++iscopyconstructor;
+                     //ifunc_copyconstructor = ifunc;
+                  }
+                  //else
+                  //   ifunc_constructor = ifunc;
+               } else if ('~' == ifunc->funcname[j][0]) {
+                  // destructor
+                  ++isdestructor;
+                  ifunc_destructor = ifunc;
+               } else if (!strcmp(ifunc->funcname[j], "operator new")) {
+                  ++isconstructor;
+                  ++iscopyconstructor;
+               } else if (!strcmp(ifunc->funcname[j], "operator delete")) {
+                  // destructor
+                  ++isdestructor;
+               }
+#ifdef G__DEFAULTASSIGNOPR
+               else if (!strcmp(ifunc->funcname[j], "operator=") && 'u' == ifunc->param[j][0]->type && i == ifunc->param[j][0]->p_tagtable) {
+                  // operator=
+                  ++isassignmentoperator;
+                  //ifunc_assignmentoperator = ifunc;
+               }
+#endif
+            } // end of if access not public 
+         }
+
+         if(ifunc->next == 0)
+            break;
+
+         ifunc = ifunc->next;
+      } /* end while(ifunc) */
+
+      if ( ifunc && ifunc->next == 0
+          // dummy
+#ifndef G__OLDIMPLEMENTATON1656
+          && G__NOLINK == G__struct.iscpplink[i]
+#endif
+#ifndef G__OLDIMPLEMENTATON1730
+          && G__ONLYMETHODLINK != G__struct.globalcomp[i]
+#endif
+         ) {
+
+         G__p_ifunc = ifunc;
+
+         /****************************************************************
+          * setup default constructor
+          ****************************************************************/
+         if (0 == isconstructor) isconstructor = G__isprivateconstructor(i, 0);
+         if ('n' == G__struct.type[i]) isconstructor = 1;
+         if (0 == isconstructor && 0 == G__struct.isabstract[i] && 0 == isnonpublicnew) {
+            // putting automatic default constructor in the ifunc table
+            sprintf(funcname, "%s", G__struct.name[i]);
+            G__hash(funcname, hash, k);
+
+#ifdef G__TRUEP2F
+            G__memfunc_setup(funcname, hash, (G__InterfaceMethod) NULL
+                             ,(int) ('i') , 0
+                             ,-1,0,0,1,G__PUBLIC,0
+                             , "", (char*) NULL, (void*) NULL, 0);
+#else
+            G__memfunc_setup(funcname, hash, (G__InterfaceMethod) NULL
+                             ,(int) ('i') , 0
+                             ,-1,0,0,1,G__PUBLIC,0
+                             , "", (char*) NULL);
+#endif
+         } /* if(isconstructor) */
+
+         /****************************************************************
+          * setup copy constructor
+          ****************************************************************/
+         if (0 == iscopyconstructor) iscopyconstructor = G__isprivateconstructor(i, 1);
+         if ('n' == G__struct.type[i]) iscopyconstructor = 1;
+         if (0 == iscopyconstructor && 0 == G__struct.isabstract[i] && 0 == isnonpublicnew) {
+            // putting automatic copy constructor
+            sprintf(funcname, "%s", G__struct.name[i]);
+            G__hash(funcname, hash, k);
+
+            char paras[G__MAXNAME*6];
+            sprintf(paras, "u '%s' - 11 - -",  G__fulltagname(i, 0));
+
+#ifdef G__TRUEP2F
+            G__memfunc_setup(funcname, hash, (G__InterfaceMethod) NULL
+                             ,(int) ('i') ,0
+                             ,-1,0,1,1,G__PUBLIC,0
+                             , paras, (char*) NULL, (void*) NULL, 0);
+#else
+            G__memfunc_setup(funcname, hash, (G__InterfaceMethod) NULL
+                             ,(int) ('i') ,0
+                             ,-1,0,1,1,G__PUBLIC,0
+                             , paras, (char*) NULL);
+#endif
+         } /* if(iscopyconstructor) */
 
 
+         /****************************************************************
+          * setup destructor
+          ****************************************************************/
+         if (0 == isdestructor) isdestructor = G__isprivatedestructor(i);
+         if ('n' == G__struct.type[i]) isdestructor = 1;
+         if (ifunc_destructor && 'n' != G__struct.type[i]) {
+            // putting automatic destructor
+            sprintf(funcname, "~%s", G__struct.name[i]);
+            G__hash(funcname, hash, k);
+
+// LF 25-07-07
+// the ifunc field has already been created for the destructor... lets just fill it up
+            /* set entry pointer */
+            //ifunc_destructor->pentry[j] = &ifunc_destructor->entry[j];
+            //ifunc_destructor->entry[j].p=(void*) NULL;
+
+            if(!(*ifunc_destructor->funcname[j]))
+               G__savestring(&ifunc_destructor->funcname[j],(char*)funcname);
+
+            if(!ifunc_destructor->hash[j])
+               ifunc_destructor->hash[j] = hash;
+            ifunc_destructor->type[j] = (int) ('y');
+            ifunc_destructor->p_tagtable[j] = -1;
+            ifunc_destructor->p_typetable[j] = -1;
+            ifunc_destructor->reftype[j] = 0;
+            ifunc_destructor->para_nu[j] = 0;
+            ifunc_destructor->ansi[j] = 1;
+            ifunc_destructor->access[j] = dtoraccess;
+            ifunc_destructor->isconst[j] = 0;
+
+//#ifdef G__TRUEP2F
+//            G__memfunc_setup(funcname, hash, (G__InterfaceMethod) NULL
+//                             ,(int) ('y'),-1,-1,0,0,1,dtoraccess,0
+//                             , "", (char*) NULL, (void*) NULL, virtualdtorflag);
+//#else
+//            G__memfunc_setup(funcname, hash, (G__InterfaceMethod) NULL
+//                             ,(int) ('y'),-1,-1,0,0,1,dtoraccess,0
+//                             , "", (char*) NULL);
+//#endif
+
+         } /* if(isdestructor) */
+
+
+#ifdef G__DEFAULTASSIGNOPR
+         /****************************************************************
+          * setup assignment operator
+          ****************************************************************/
+
+         if (0 == isassignmentoperator) isassignmentoperator = G__isprivateassignopr(i);
+         if ('n' == G__struct.type[i]) isassignmentoperator = 1;
+         if (0 == isassignmentoperator) {
+            // putting automatic assignment operator
+            sprintf(funcname, "operator=");
+            G__hash(funcname, hash, k);
+
+            char paras[G__MAXNAME*6];
+            sprintf(paras, "u '%s' - 11 - -",  G__fulltagname(i, 0));
+
+#ifdef G__TRUEP2F
+            G__memfunc_setup(funcname, hash, (G__InterfaceMethod) NULL
+                             ,(int) ('u'),0
+                             ,-1,1,1,1,G__PUBLIC,0
+                             , paras, (char*) NULL, (void*) NULL, 0);
+#else
+            G__memfunc_setup(funcname, hash, (G__InterfaceMethod) NULL
+                             ,(int) ('u'),0
+                             ,-1,1,1,1,G__PUBLIC,0
+                             , paras, (char*) NULL);
+#endif
+         } /* if(isassignmentoperator) */
+
+#endif // G__DEFAULTASSIGNOPR
+      } /* end of ifunc->next */
+   }/* end if(globalcomp) */
+   G__p_ifunc = store_p_ifunc;
+}
 
 /**************************************************************************
 * G__cppif_memfunc() working
@@ -4371,6 +4672,27 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
       isdestructor=0;
       isassignmentoperator=0;
       isnonpublicnew=G__isnonpublicnew(i);
+
+      // LF
+      if( G__dicttype==3 &&
+          strncmp(G__fulltagname(i,0),"string", strlen("string"))!=0 &&
+          strncmp(G__fulltagname(i,0),"vector", strlen("vector"))!=0 &&
+          strncmp(G__fulltagname(i,0),"list", strlen("list"))!=0 &&
+          strncmp(G__fulltagname(i,0),"deque", strlen("deque"))!=0 &&
+          strncmp(G__fulltagname(i,0),"set", strlen("set"))!=0 &&
+          strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))!=0 &&
+          strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))!=0 &&
+          strncmp(G__fulltagname(i,0),"map", strlen("map"))!=0 &&
+          strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))!=0 &&
+          strncmp(G__fulltagname(i,0),"complex", strlen("complex"))!=0
+         )
+         G__make_default_ifunc(ifunc);
+
+      // LF 03-07-07
+      // Trigger the symbol registering to have them at hand
+      // Do it here when we have the library and the class
+      if(G__dicttype == 3)
+         G__register_class(G__libname, G__type2string('u',i,-1,0,0));
 
       /* member function interface */
       fprintf(fp,"\n/* %s */\n",G__fulltagname(i,0));
@@ -4419,18 +4741,19 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                  // For the stats dont generate the cons
                  // DIEGO No Constructor Stub
                  if(  /*  ||*/
-                         ((strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
-                           strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
-                           strncmp(G__fulltagname(i,0),"list", strlen("list"))==0 ||
-                           strncmp(G__fulltagname(i,0),"deque", strlen("deque"))==0 ||
-                           strncmp(G__fulltagname(i,0),"set", strlen("set"))==0 ||
-                           strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))==0 || 
-                           strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))==0 ||
-                           strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
-                           strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
-                           strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0 )
-                          && (G__dicttype==3)) || G__dicttype==0 ) {
-                     G__cppif_genconstructor(fp,hfp,i,j,ifunc);
+                    ((!ifunc->mangled_name[j] || /*if there is no symbol*/
+                      strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
+                      strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
+                      strncmp(G__fulltagname(i,0),"list", strlen("list"))==0 ||
+                      strncmp(G__fulltagname(i,0),"deque", strlen("deque"))==0 ||
+                      strncmp(G__fulltagname(i,0),"set", strlen("set"))==0 ||
+                      strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))==0 || 
+                      strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))==0 ||
+                      strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
+                      strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
+                      strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0 )
+                     && !ifunc->ispurevirtual[j] && (G__dicttype==3)) || G__dicttype==0 ) {
+                    G__cppif_genconstructor(fp,hfp,i,j,ifunc);
                   }
                  
                  // LF 16-10-07
@@ -4448,8 +4771,30 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
             }
             else if('~'==ifunc->funcname[j][0]) {
                /* destructor is created in gendefault later */
-               if(G__PUBLIC==ifunc->access[j]) isdestructor = -1;
-               else ++isdestructor;
+               if(G__PUBLIC==ifunc->access[j]){
+                  if(G__dicttype==3 && !ifunc->ispurevirtual[j] && !ifunc->mangled_name[j] /*if there no is a symbol*/){
+                     if(
+                        !(strcmp(ifunc->funcname[j],"operator const char*")==0 || 
+                          strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
+                          strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
+                          strncmp(G__fulltagname(i,0),"list", strlen("list"))==0 ||
+                          strncmp(G__fulltagname(i,0),"deque", strlen("deque"))==0 ||
+                          strncmp(G__fulltagname(i,0),"set", strlen("set"))==0 ||
+                          strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))==0 || 
+                          strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))==0 ||
+                          strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
+                          strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
+                          strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0))
+                        G__cppif_gendefault(fp,hfp,i,j,ifunc,1,1,isdestructor,1,1);
+                  }
+                  else if(G__dicttype==3 && ifunc->mangled_name[j] /*if there no is a symbol*/)
+                     ++isdestructor;
+                  else if(G__dicttype!=3)
+                     isdestructor = -1;
+               }
+               else{
+                  ++isdestructor;
+               }        
                continue;
             }
             else if('\0'==ifunc->funcname[j][0] && j==0) {
@@ -4485,18 +4830,28 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                       G__struct.type[ifunc->p_tagtable[j]] == 'u')) ||
 
                     //strcmp(ifunc->funcname[j],"operator()")==0 || 
-                  strcmp(ifunc->funcname[j],"operator const char*")==0 || 
-                  strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
-                  strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
-                  strncmp(G__fulltagname(i,0),"list", strlen("list"))==0 ||
-                  strncmp(G__fulltagname(i,0),"deque", strlen("deque"))==0 ||
-                  strncmp(G__fulltagname(i,0),"set", strlen("set"))==0 ||
-                  strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))==0 || 
-                  strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))==0 ||
-                  strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
-                  strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
-                   strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0)
-                  && (G__dicttype==3)) || G__dicttype==0) {
+                    !ifunc->mangled_name[j] || /*if there is no symbol*/
+                    strcmp(ifunc->funcname[j],"operator const char*")==0 || 
+                    strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
+                    strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
+                    strncmp(G__fulltagname(i,0),"list", strlen("list"))==0 ||
+                    strncmp(G__fulltagname(i,0),"deque", strlen("deque"))==0 ||
+                    strncmp(G__fulltagname(i,0),"set", strlen("set"))==0 ||
+                    strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))==0 || 
+                    strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))==0 ||
+                    strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
+                    strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
+                    strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0)
+                  && !ifunc->ispurevirtual[j] && (G__dicttype==3)) || G__dicttype==0) {
+                 if(strcmp(ifunc->funcname[j],"operator=")==0
+                    && 'u'==ifunc->param[j][0]->type
+                    && i==ifunc->param[j][0]->p_tagtable
+                    ){
+                    G__cppif_gendefault(fp,hfp,i,j,ifunc,1,1,1,0,1);
+                 }
+                 //else if('~'==ifunc->funcname[j][0])
+                 //   G__cppif_gendefault(fp,hfp,i,j,ifunc,1,1,0,1,1);
+                 else
                     G__cppif_genfunc(fp,hfp,i,j,ifunc);
               }
               else {
@@ -4580,6 +4935,13 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                                   ,isdestructor
                                   ,isassignmentoperator
                                   ,isnonpublicnew);
+           //else if((isdestructor<=0) && (G__dicttype==3))
+           //   G__cppif_gendefault(fp,hfp,i,j,ifunc
+           //                       ,1
+           //                       ,1
+           //                       ,isdestructor
+           //                       ,1
+           //                       ,1);
         }
         ifunc=ifunc->next;
       } /* while(ifunc) */
@@ -6326,7 +6688,7 @@ void G__cppif_genfunc(FILE *fp, FILE * /* hfp */, int tagnum, int ifn, G__ifunc_
 
   // If the virtual method 'ifn' (in ifunc) exists in any Base Clase then we have
   // an overridden virtual method,so the stub function for it is not generated
-   if ((ifunc->isvirtual[ifn])&&(G__method_inbase(ifn, ifunc)))
+   if ((G__dicttype!=3) && (ifunc->isvirtual[ifn]) && (G__method_inbase(ifn, ifunc)))
       return;
 
 #ifndef G__SMALLOBJECT
@@ -7934,298 +8296,6 @@ int G__isprivatectordtorassgn(int tagnum, G__ifunc_table_internal *ifunc, int if
 }
 
 /**************************************************************************
- * G__make_default_ifunc()
- *
- * LF 25-07-07
- *
- * Create the deafult cons, dests, etc as ifunc entries before writing
- * them to the file 
- **************************************************************************/
-void G__make_default_ifunc(G__ifunc_table_internal *ifunc_copy)
-{
-   struct G__ifunc_table_internal *ifunc = ifunc_copy;
-   struct G__ifunc_table_internal *ifunc_destructor=0;
-   char funcname[G__MAXNAME*6];
-   int hash;
-   int j=0,k=0;
-   int i = ifunc->tagnum;
-   int isnonpublicnew;
-   int isconstructor,iscopyconstructor,isdestructor,isassignmentoperator;
-   int virtualdtorflag;
-   int dtoraccess=G__PUBLIC;
-
-   dtoraccess=G__PUBLIC;
-   
-   struct G__ifunc_table_internal *store_p_ifunc = G__p_ifunc;
-
-   if((G__CPPLINK==G__struct.globalcomp[i]
-       || G__ONLYMETHODLINK==G__struct.globalcomp[i]
-         )&&
-      (-1==(int)G__struct.parent_tagnum[i]
-       || G__nestedclass
-         )
-      && -1!=G__struct.line_number[i]&&
-      (G__struct.hash[i] || 0==G__struct.name[i][0])
-      &&
-      '$'!=G__struct.name[i][0] && 'e'!=G__struct.type[i]) {
-      isconstructor=0;
-      iscopyconstructor=0;
-      isdestructor=0;
-      /* isvirtualdestructor=0; */
-      isassignmentoperator=0;
-      isnonpublicnew=G__isnonpublicnew(i);
-      virtualdtorflag=0;
-
-      while (ifunc) {
-         for (j = 0; j < ifunc->allifunc; ++j) {
-            if ((ifunc->access[j] == G__PUBLIC) || G__precomp_private 
-                || G__isprivatectordtorassgn(i, ifunc, j) 
-                || ((ifunc->access[j] == G__PROTECTED) && (G__struct.protectedaccess[i] & G__PROTECTEDACCESS)) 
-                || (G__struct.protectedaccess[i] & G__PRIVATEACCESS)) {
-               // public
-
-               if ((G__struct.globalcomp[i] == G__ONLYMETHODLINK) && (ifunc->globalcomp[j] != G__METHODLINK)) {
-                  // not marked for link, skip it.
-                  continue;
-               }
-
-#ifndef G__OLDIMPLEMENTATION2039
-               if (!ifunc->hash[j]) {
-                  // no hash, skip it
-                  continue;
-               }
-#endif
-
-#ifndef G__OLDIMPLEMENTATION1656
-               // LF 08-10-07
-               // Here we haven't introduced the default functions...
-               // should we skip it or not?
-               if (ifunc->pentry[j]->size < 0) {
-                  // already precompiled, skip it
-                  continue;
-               }
-#endif
-
-               // Check for constructor, destructor, or operator=.
-               if (!strcmp(ifunc->funcname[j], G__struct.name[i])) {
-                  // We have a constructor.
-                  if (G__struct.isabstract[i]) {
-                     continue;
-                  }
-                  if (isnonpublicnew) {
-                     continue;
-                  }
-                  ++isconstructor;
-
-                  if ((ifunc->para_nu[j] >= 1) && (ifunc->param[j][0]->type == 'u') && (i == ifunc->param[j][0]->p_tagtable) && (ifunc->param[j][0]->reftype == G__PARAREFERENCE) && ((ifunc->para_nu[j] == 1) || ifunc->param[j][1]->pdefault)) {
-                     ++iscopyconstructor;
-                     //ifunc_copyconstructor = ifunc;
-                  }
-                  //else
-                  //   ifunc_constructor = ifunc;
-
-               } else if (ifunc->funcname[j][0] == '~') {
-                  // We have a destructor.
-                  /* if(ifunc->isvirtual[j]) isvirtualdestructor=1; */
-                  dtoraccess = ifunc->access[j];
-                  virtualdtorflag = ifunc->isvirtual[j] + (ifunc->ispurevirtual[j] * 2);
-                  if (G__PUBLIC != ifunc->access[j]) {
-                     ++isdestructor;
-                  }
-                  else
-                     ifunc_destructor = ifunc;
-
-                  if ((G__PROTECTED == ifunc->access[j]) && G__struct.protectedaccess[i] && !G__precomp_private) {
-                     G__fprinterr(G__serr, "Limitation: can not generate dictionary for protected destructor for %s\n", G__fulltagname(i, 1));
-                     continue;
-                  }
-                  continue;
-               }
-
-#ifdef G__DEFAULTASSIGNOPR
-               else if (!strcmp(ifunc->funcname[j], "operator=") 
-                        && ('u' == ifunc->param[j][0]->type) 
-                        && (i == ifunc->param[j][0]->p_tagtable)) {
-                  // We have an operator=.
-                  ++isassignmentoperator;
-                  //ifunc_assignmentoperator = ifunc;
-               }
-#endif
-
-            } // end of if access public && not pure virtual func
-            else { // in case of protected,private or pure virtual func
-               // protected, private, pure virtual
-               if (!strcmp(ifunc->funcname[j], G__struct.name[i])) {
-                  ++isconstructor;
-                  if ('u' == ifunc->param[j][0]->type && i == ifunc->param[j][0]->p_tagtable && G__PARAREFERENCE == ifunc->param[j][0]->reftype && (1 == ifunc->para_nu[j] || ifunc->param[j][1]->pdefault)) {
-                     // copy constructor
-                     ++iscopyconstructor;
-                     //ifunc_copyconstructor = ifunc;
-                  }
-                  //else
-                  //   ifunc_constructor = ifunc;
-               } else if ('~' == ifunc->funcname[j][0]) {
-                  // destructor
-                  ++isdestructor;
-                  ifunc_destructor = ifunc;
-               } else if (!strcmp(ifunc->funcname[j], "operator new")) {
-                  ++isconstructor;
-                  ++iscopyconstructor;
-               } else if (!strcmp(ifunc->funcname[j], "operator delete")) {
-                  // destructor
-                  ++isdestructor;
-               }
-#ifdef G__DEFAULTASSIGNOPR
-               else if (!strcmp(ifunc->funcname[j], "operator=") && 'u' == ifunc->param[j][0]->type && i == ifunc->param[j][0]->p_tagtable) {
-                  // operator=
-                  ++isassignmentoperator;
-                  //ifunc_assignmentoperator = ifunc;
-               }
-#endif
-            } // end of if access not public 
-         }
-
-         if(ifunc->next == 0)
-            break;
-
-         ifunc = ifunc->next;
-      } /* end while(ifunc) */
-
-      if ( ifunc && ifunc->next == 0
-          // dummy
-#ifndef G__OLDIMPLEMENTATON1656
-          && G__NOLINK == G__struct.iscpplink[i]
-#endif
-#ifndef G__OLDIMPLEMENTATON1730
-          && G__ONLYMETHODLINK != G__struct.globalcomp[i]
-#endif
-         ) {
-
-         G__p_ifunc = ifunc;
-
-         /****************************************************************
-          * setup default constructor
-          ****************************************************************/
-         if (0 == isconstructor) isconstructor = G__isprivateconstructor(i, 0);
-         if ('n' == G__struct.type[i]) isconstructor = 1;
-         if (0 == isconstructor && 0 == G__struct.isabstract[i] && 0 == isnonpublicnew) {
-            // putting automatic default constructor in the ifunc table
-            sprintf(funcname, "%s", G__struct.name[i]);
-            G__hash(funcname, hash, k);
-
-#ifdef G__TRUEP2F
-            G__memfunc_setup(funcname, hash, (G__InterfaceMethod) NULL
-                             ,(int) ('i') , 0
-                             ,-1,0,0,1,G__PUBLIC,0
-                             , "", (char*) NULL, (void*) NULL, 0);
-#else
-            G__memfunc_setup(funcname, hash, (G__InterfaceMethod) NULL
-                             ,(int) ('i') , 0
-                             ,-1,0,0,1,G__PUBLIC,0
-                             , "", (char*) NULL);
-#endif
-         } /* if(isconstructor) */
-
-         /****************************************************************
-          * setup copy constructor
-          ****************************************************************/
-         if (0 == iscopyconstructor) iscopyconstructor = G__isprivateconstructor(i, 1);
-         if ('n' == G__struct.type[i]) iscopyconstructor = 1;
-         if (0 == iscopyconstructor && 0 == G__struct.isabstract[i] && 0 == isnonpublicnew) {
-            // putting automatic copy constructor
-            sprintf(funcname, "%s", G__struct.name[i]);
-            G__hash(funcname, hash, k);
-
-            char paras[G__MAXNAME*6];
-            sprintf(paras, "u '%s' - 11 - -",  G__fulltagname(i, 0));
-
-#ifdef G__TRUEP2F
-            G__memfunc_setup(funcname, hash, (G__InterfaceMethod) NULL
-                             ,(int) ('i') ,0
-                             ,-1,0,1,1,G__PUBLIC,0
-                             , paras, (char*) NULL, (void*) NULL, 0);
-#else
-            G__memfunc_setup(funcname, hash, (G__InterfaceMethod) NULL
-                             ,(int) ('i') ,0
-                             ,-1,0,1,1,G__PUBLIC,0
-                             , paras, (char*) NULL);
-#endif
-         } /* if(iscopyconstructor) */
-
-
-         /****************************************************************
-          * setup destructor
-          ****************************************************************/
-         if (0 == isdestructor) isdestructor = G__isprivatedestructor(i);
-         if ('n' == G__struct.type[i]) isdestructor = 1;
-         if (ifunc_destructor && 'n' != G__struct.type[i]) {
-            // putting automatic destructor
-            sprintf(funcname, "~%s", G__struct.name[i]);
-            G__hash(funcname, hash, k);
-
-// LF 25-07-07
-// the ifunc field has already been created for the destructor... lets just fill it up
-            /* set entry pointer */
-            //ifunc_destructor->pentry[j] = &ifunc_destructor->entry[j];
-            //ifunc_destructor->entry[j].p=(void*) NULL;
-
-            ifunc_destructor->type[j] = (int) ('y');
-            ifunc_destructor->p_tagtable[j] = -1;
-            ifunc_destructor->p_typetable[j] = -1;
-            ifunc_destructor->reftype[j] = 0;
-            ifunc_destructor->para_nu[j] = 0;
-            ifunc_destructor->ansi[j] = 1;
-            ifunc_destructor->access[j] = dtoraccess;
-            ifunc_destructor->isconst[j] = 0;
-
-//#ifdef G__TRUEP2F
-//            G__memfunc_setup(funcname, hash, (G__InterfaceMethod) NULL
-//                             ,(int) ('y'),-1,-1,0,0,1,dtoraccess,0
-//                             , "", (char*) NULL, (void*) NULL, virtualdtorflag);
-//#else
-//            G__memfunc_setup(funcname, hash, (G__InterfaceMethod) NULL
-//                             ,(int) ('y'),-1,-1,0,0,1,dtoraccess,0
-//                             , "", (char*) NULL);
-//#endif
-
-         } /* if(isdestructor) */
-
-
-#ifdef G__DEFAULTASSIGNOPR
-         /****************************************************************
-          * setup assignment operator
-          ****************************************************************/
-
-         if (0 == isassignmentoperator) isassignmentoperator = G__isprivateassignopr(i);
-         if ('n' == G__struct.type[i]) isassignmentoperator = 1;
-         if (0 == isassignmentoperator) {
-            // putting automatic assignment operator
-            sprintf(funcname, "operator=");
-            G__hash(funcname, hash, k);
-
-            char paras[G__MAXNAME*6];
-            sprintf(paras, "u '%s' - 11 - -",  G__fulltagname(i, 0));
-
-#ifdef G__TRUEP2F
-            G__memfunc_setup(funcname, hash, (G__InterfaceMethod) NULL
-                             ,(int) ('u'),0
-                             ,-1,1,1,1,G__PUBLIC,0
-                             , paras, (char*) NULL, (void*) NULL, 0);
-#else
-            G__memfunc_setup(funcname, hash, (G__InterfaceMethod) NULL
-                             ,(int) ('u'),0
-                             ,-1,1,1,1,G__PUBLIC,0
-                             , paras, (char*) NULL);
-#endif
-         } /* if(isassignmentoperator) */
-
-#endif // G__DEFAULTASSIGNOPR
-      } /* end of ifunc->next */
-   }/* end if(globalcomp) */
-   G__p_ifunc = store_p_ifunc;
-}
-
-/**************************************************************************
  * G__cpplink_memfunc()
  *
  **************************************************************************/
@@ -8284,27 +8354,35 @@ void G__cpplink_memfunc(FILE *fp)
       else
         fprintf(fp,"static void G__setup_memfunc%s(void) {\n"
                 ,G__map_cpp_name(G__fulltagname(i,0)));
+      
+      // LF 17-10-07
+      // Move this block to G__cppif_memfunc.
+      // We will try to register the symbols before
+      // creating the stubs... like that we have the "plan b"
+      // mechanism where a stub is created when we don't find the
+      // symbol for the function
+      // i.e: for inline constructors
 
       // LF
-      if( G__dicttype==3 &&
-          strncmp(G__fulltagname(i,0),"string", strlen("string"))!=0 &&
-          strncmp(G__fulltagname(i,0),"vector", strlen("vector"))!=0 &&
-          strncmp(G__fulltagname(i,0),"list", strlen("list"))!=0 &&
-          strncmp(G__fulltagname(i,0),"deque", strlen("deque"))!=0 &&
-          strncmp(G__fulltagname(i,0),"set", strlen("set"))!=0 &&
-          strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))!=0 &&
-          strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))!=0 &&
-          strncmp(G__fulltagname(i,0),"map", strlen("map"))!=0 &&
-          strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))!=0 &&
-          strncmp(G__fulltagname(i,0),"complex", strlen("complex"))!=0
-         )
-         G__make_default_ifunc(ifunc);
+      //if( G__dicttype==3 &&
+      //    strncmp(G__fulltagname(i,0),"string", strlen("string"))!=0 &&
+      //    strncmp(G__fulltagname(i,0),"vector", strlen("vector"))!=0 &&
+      //    strncmp(G__fulltagname(i,0),"list", strlen("list"))!=0 &&
+      //    strncmp(G__fulltagname(i,0),"deque", strlen("deque"))!=0 &&
+      //    strncmp(G__fulltagname(i,0),"set", strlen("set"))!=0 &&
+      //    strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))!=0 &&
+      //    strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))!=0 &&
+      //    strncmp(G__fulltagname(i,0),"map", strlen("map"))!=0 &&
+      //    strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))!=0 &&
+      //    strncmp(G__fulltagname(i,0),"complex", strlen("complex"))!=0
+      //   )
+      //   G__make_default_ifunc(ifunc);
 
       // LF 03-07-07
       // Trigger the symbol registering to have them at hand
       // Do it here when we have the library and the class
-      if(G__dicttype == 3)
-         G__register_class(G__libname, G__type2string('u',i,-1,0,0));
+      //if(G__dicttype == 3)
+      //   G__register_class(G__libname, G__type2string('u',i,-1,0,0));
 
       /* link member function information */
       fprintf(fp,"   /* %s */\n",G__type2string('u',i,-1,0,0));
@@ -8479,7 +8557,7 @@ void G__cpplink_memfunc(FILE *fp)
                // If the method is virtual. Is it overridden? -> Does it exist in the base classes? 
                //  Virtual method found in the base classes(we have an overridden virtual method)so it
                //  has not stub function in its dictionary
-               if ((ifunc->isvirtual[j])&&(G__method_inbase(j, ifunc)))
+               if ((G__dicttype!=3) && (ifunc->isvirtual[j]) && (G__method_inbase(j, ifunc)))
                   // Null Stub Pointer
                   fprintf(fp, "(G__InterfaceMethod) NULL," );
                else {
@@ -8499,21 +8577,34 @@ void G__cpplink_memfunc(FILE *fp)
                           G__struct.type[ifunc->p_tagtable[j]] == 's' || 
                           G__struct.type[ifunc->p_tagtable[j]] == 'u')) ||
 
-                     //(!strcmp(ifunc->funcname[j],"operator()") ||
-                     !strcmp(ifunc->funcname[j],"operator const char*") ||
-                     strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
-                     strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
-                     strncmp(G__fulltagname(i,0),"list", strlen("list"))==0 ||
-                     strncmp(G__fulltagname(i,0),"deque", strlen("deque"))==0 ||
-                     strncmp(G__fulltagname(i,0),"set", strlen("set"))==0 ||
-                     strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))==0 || 
-                     strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))==0 ||
-                     strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
-                     strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
-                     strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0 )
-                     && (G__dicttype==3)) || G__dicttype==0
-                     /* && !ifunc->isvirtual[j]*/)
-                     fprintf(fp, "%s, ", G__map_cpp_funcname(i, ifunc->funcname[j], j, ifunc->page));
+                        //(!strcmp(ifunc->funcname[j],"operator()") ||
+                        !ifunc->mangled_name[j] || /*if there is no symbol*/
+                        !strcmp(ifunc->funcname[j],"operator const char*") ||
+                        strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
+                        strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
+                        strncmp(G__fulltagname(i,0),"list", strlen("list"))==0 ||
+                        strncmp(G__fulltagname(i,0),"deque", strlen("deque"))==0 ||
+                        strncmp(G__fulltagname(i,0),"set", strlen("set"))==0 ||
+                        strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))==0 || 
+                        strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))==0 ||
+                        strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
+                        strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
+                        strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0 )
+                      && !ifunc->ispurevirtual[j] && (G__dicttype==3)) || G__dicttype==0
+                     /* && !ifunc->isvirtual[j]*/){
+
+                     if(strcmp(ifunc->funcname[j],G__struct.name[i])==0) {
+                        /* constructor need special handling */
+                        if(0==G__struct.isabstract[i]&&0==isnonpublicnew)
+                        {
+                           fprintf(fp, "%s, ", G__map_cpp_funcname(i, ifunc->funcname[j], j, ifunc->page));
+                        }
+                        else
+                           fprintf(fp, "(G__InterfaceMethod) NULL, ");
+                     }
+                     else
+                        fprintf(fp, "%s, ", G__map_cpp_funcname(i, ifunc->funcname[j], j, ifunc->page));
+                  }
                   else
                      fprintf(fp, "(G__InterfaceMethod) NULL, ");
                }

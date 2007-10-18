@@ -183,9 +183,9 @@ $(REFLEXDS):    $(REFLEXH) $(REFLEXL) $(ROOTCINTTMPEXE) $(REFLEXNM)
 #LF
 $(REFLEXNM):      $(REFLEXO) $(REFLEXTMPDO) $(REFLEXTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(REFLEXTMPDO) | awk '{printf("%s\n", $$3)'} > $(REFLEXNM)
-		nm -g -p --defined-only $(REFLEXTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(REFLEXNM)
-		nm -g -p --defined-only $(REFLEXO) | awk '{printf("%s\n", $$3)'} >> $(REFLEXNM)
+		nm -p --defined-only $(REFLEXTMPDO) | awk '{printf("%s\n", $$3)'} > $(REFLEXNM)
+		nm -p --defined-only $(REFLEXTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(REFLEXNM)
+		nm -p --defined-only $(REFLEXO) | awk '{printf("%s\n", $$3)'} >> $(REFLEXNM)
 
 $(REFLEXDICTMAP): $(RLIBMAP) $(MAKEFILEDEP) $(REFLEXL)
 		$(RLIBMAP) -o $(REFLEXDICTMAP) -l $(REFLEXDICTLIB) \

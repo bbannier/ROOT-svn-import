@@ -88,9 +88,9 @@ $(MATRIXDICTMAP): $(RLIBMAP) $(MAKEFILEDEP) $(MATRIXL)
 #LF
 $(MATRIXNM):      $(MATRIXO) $(MATRIXTMPDO) $(MATRIXTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(MATRIXTMPDO) | awk '{printf("%s\n", $$3)'} > $(MATRIXNM)
-		nm -g -p --defined-only $(MATRIXTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(MATRIXNM)
-		nm -g -p --defined-only $(MATRIXO) | awk '{printf("%s\n", $$3)'} >> $(MATRIXNM)
+		nm -p --defined-only $(MATRIXTMPDO) | awk '{printf("%s\n", $$3)'} > $(MATRIXNM)
+		nm -p --defined-only $(MATRIXTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(MATRIXNM)
+		nm -p --defined-only $(MATRIXO) | awk '{printf("%s\n", $$3)'} >> $(MATRIXNM)
 
 #LF
 $(MATRIXMAP):   $(RLIBMAP) $(MAKEFILEDEP) $(MATRIXL)

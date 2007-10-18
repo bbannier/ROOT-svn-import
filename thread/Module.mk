@@ -115,9 +115,9 @@ $(THREADDS):    $(THREADH) $(THREADL) $(ROOTCINTTMPEXE) $(THREADNM)
 #LF
 $(THREADNM):      $(THREADO) $(THREADTMPDO) $(THREADTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(THREADTMPDO) | awk '{printf("%s\n", $$3)'} > $(THREADNM)
-		nm -g -p --defined-only $(THREADTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(THREADNM)
-		nm -g -p --defined-only $(THREADO) | awk '{printf("%s\n", $$3)'} >> $(THREADNM)
+		nm -p --defined-only $(THREADTMPDO) | awk '{printf("%s\n", $$3)'} > $(THREADNM)
+		nm -p --defined-only $(THREADTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(THREADNM)
+		nm -p --defined-only $(THREADO) | awk '{printf("%s\n", $$3)'} >> $(THREADNM)
 
 $(THREADMAP):   $(RLIBMAP) $(MAKEFILEDEP) $(THREADL)
 		$(RLIBMAP) -o $(THREADMAP) -l $(THREADLIB) \

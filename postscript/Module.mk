@@ -77,9 +77,9 @@ $(POSTSCRIPTDS):    $(POSTSCRIPTH) $(POSTSCRIPTL) $(ROOTCINTTMPEXE) $(POSTSCRIPT
 #LF
 $(POSTSCRIPTNM):      $(POSTSCRIPTO) $(POSTSCRIPTTMPDO) $(POSTSCRIPTTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(POSTSCRIPTTMPDO) | awk '{printf("%s\n", $$3)'} > $(POSTSCRIPTNM)
-		nm -g -p --defined-only $(POSTSCRIPTTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(POSTSCRIPTNM)
-		nm -g -p --defined-only $(POSTSCRIPTO) | awk '{printf("%s\n", $$3)'} >> $(POSTSCRIPTNM)
+		nm -p --defined-only $(POSTSCRIPTTMPDO) | awk '{printf("%s\n", $$3)'} > $(POSTSCRIPTNM)
+		nm -p --defined-only $(POSTSCRIPTTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(POSTSCRIPTNM)
+		nm -p --defined-only $(POSTSCRIPTO) | awk '{printf("%s\n", $$3)'} >> $(POSTSCRIPTNM)
 
 $(POSTSCRIPTMAP): $(RLIBMAP) $(MAKEFILEDEP) $(POSTSCRIPTL)
 		$(RLIBMAP) -o $(POSTSCRIPTMAP) -l $(POSTSCRIPTLIB) \

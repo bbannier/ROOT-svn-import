@@ -118,10 +118,10 @@ $(TREEMAP):  $(RLIBMAP) $(MAKEFILEDEP) $(TREEL)
 #LF
 $(TREENM):      $(TREEO) $(TREETMPDO) $(TREETMP2DO) #$(TREETMP2DO2) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(TREETMPDO) | awk '{printf("%s\n", $$3)'} > $(TREENM)
-		nm -g -p --defined-only $(TREETMP2DO) | awk '{printf("%s\n", $$3)'} >> $(TREENM)
-		#nm -g -p --defined-only $(TREETMPDO2) | awk '{printf("%s\n", $$3)'} >> $(TREENM)
-		nm -g -p --defined-only $(TREEO) | awk '{printf("%s\n", $$3)'} >> $(TREENM)
+		nm -p --defined-only $(TREETMPDO) | awk '{printf("%s\n", $$3)'} > $(TREENM)
+		nm -p --defined-only $(TREETMP2DO) | awk '{printf("%s\n", $$3)'} >> $(TREENM)
+		#nm -p --defined-only $(TREETMPDO2) | awk '{printf("%s\n", $$3)'} >> $(TREENM)
+		nm -p --defined-only $(TREEO) | awk '{printf("%s\n", $$3)'} >> $(TREENM)
 
 all-tree:       $(TREELIB) $(TREEMAP)
 

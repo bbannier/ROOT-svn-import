@@ -76,9 +76,9 @@ $(LDAPDS):    $(LDAPH) $(LDAPL) $(ROOTCINTTMPEXE) $(LDAPNM)
 #LF
 $(LDAPNM):      $(LDAPO) $(LDAPTMPDO) $(LDAPTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(LDAPTMPDO) | awk '{printf("%s\n", $$3)'} > $(LDAPNM)
-		nm -g -p --defined-only $(LDAPTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(LDAPNM)
-		nm -g -p --defined-only $(LDAPO) | awk '{printf("%s\n", $$3)'} >> $(LDAPNM)
+		nm -p --defined-only $(LDAPTMPDO) | awk '{printf("%s\n", $$3)'} > $(LDAPNM)
+		nm -p --defined-only $(LDAPTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(LDAPNM)
+		nm -p --defined-only $(LDAPO) | awk '{printf("%s\n", $$3)'} >> $(LDAPNM)
 
 $(LDAPMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(LDAPL)
 		$(RLIBMAP) -o $(LDAPMAP) -l $(LDAPLIB) \

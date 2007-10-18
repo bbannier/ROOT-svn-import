@@ -65,9 +65,9 @@ $(METADS):     $(METAH) $(METAL) $(ROOTCINTTMPEXE) $(METANM)
 #LF
 $(METANM):      $(METAO) $(METATMPDO) $(METATMP2DO)
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(METATMPDO) | awk '{printf("%s\n", $$3)'} > $(METANM)
-		nm -g -p --defined-only $(METATMP2DO) | awk '{printf("%s\n", $$3)'} >> $(METANM)
-		nm -g -p --defined-only $(METAO) | awk '{printf("%s\n", $$3)'} >> $(METANM)
+		nm -p --defined-only $(METATMPDO) | awk '{printf("%s\n", $$3)'} > $(METANM)
+		nm -p --defined-only $(METATMP2DO) | awk '{printf("%s\n", $$3)'} >> $(METANM)
+		nm -p --defined-only $(METAO) | awk '{printf("%s\n", $$3)'} >> $(METANM)
 
 all-meta:       $(METAO) $(METADO)
 

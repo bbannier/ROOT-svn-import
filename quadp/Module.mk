@@ -80,9 +80,9 @@ $(QUADPDICTMAP): $(RLIBMAP) $(MAKEFILEDEP) $(QUADPL)
 #LF
 $(QUADPNM):      $(QUADPO) $(QUADPTMPDO) $(QUADPTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(QUADPTMPDO) | awk '{printf("%s\n", $$3)'} > $(QUADPNM)
-		nm -g -p --defined-only $(QUADPTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(QUADPNM)
-		nm -g -p --defined-only $(QUADPO) | awk '{printf("%s\n", $$3)'} >> $(QUADPNM)
+		nm -p --defined-only $(QUADPTMPDO) | awk '{printf("%s\n", $$3)'} > $(QUADPNM)
+		nm -p --defined-only $(QUADPTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(QUADPNM)
+		nm -p --defined-only $(QUADPO) | awk '{printf("%s\n", $$3)'} >> $(QUADPNM)
 
 $(QUADPMAP):    $(RLIBMAP) $(MAKEFILEDEP) $(QUADPL)
 		$(RLIBMAP) -o $(QUADPMAP) -l $(QUADPLIB) \

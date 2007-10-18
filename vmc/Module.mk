@@ -81,9 +81,9 @@ $(VMCDICTMAP): $(RLIBMAP) $(MAKEFILEDEP) $(VMCL)
 #LF
 $(VMCNM):      $(VMCO) $(VMCTMPDO) $(VMCTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(VMCTMPDO) | awk '{printf("%s\n", $$3)'} > $(VMCNM)
-		nm -g -p --defined-only $(VMCTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(VMCNM)
-		nm -g -p --defined-only $(VMCO) | awk '{printf("%s\n", $$3)'} >> $(VMCNM)
+		nm -p --defined-only $(VMCTMPDO) | awk '{printf("%s\n", $$3)'} > $(VMCNM)
+		nm -p --defined-only $(VMCTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(VMCNM)
+		nm -p --defined-only $(VMCO) | awk '{printf("%s\n", $$3)'} >> $(VMCNM)
 
 $(VMCMAP):      $(RLIBMAP) $(MAKEFILEDEP) $(VMCL)
 		$(RLIBMAP) -o $(VMCMAP) -l $(VMCLIB) \

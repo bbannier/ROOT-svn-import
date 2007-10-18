@@ -91,9 +91,9 @@ $(NETMAP): $(RLIBMAP) $(MAKEFILEDEP) $(NETL)
 #LF
 $(NETNM):      $(NETO) $(NETTMPDO) $(NETTMP2DO)
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(NETTMPDO) | awk '{printf("%s\n", $$3)'} >> $(NETNM)
-		nm -g -p --defined-only $(NETTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(NETNM)
-		nm -g -p --defined-only $(NETO) | awk '{printf("%s\n", $$3)'} >> $(NETNM)
+		nm -p --defined-only $(NETTMPDO) | awk '{printf("%s\n", $$3)'} >> $(NETNM)
+		nm -p --defined-only $(NETTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(NETNM)
+		nm -p --defined-only $(NETO) | awk '{printf("%s\n", $$3)'} >> $(NETNM)
 
 all-net:        $(NETLIB) $(NETMAP)
 

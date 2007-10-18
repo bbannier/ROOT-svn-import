@@ -186,13 +186,13 @@ $(BASEDS3):     $(BASEH3) $(BASEL3) $(ROOTCINTTMPEXE) $(BASENM)
 #LF
 $(BASENM):      $(BASEO) $(BASETMPDO1) $(BASETMPDO2) $(BASETMPDO3) $(BASETMP2DO1) $(BASETMP2DO2) $(BASETMP2DO3) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(BASETMPDO1) | awk '{printf("%s\n", $$3)'} > $(BASENM)
-		nm -g -p --defined-only $(BASETMPDO2) | awk '{printf("%s\n", $$3)'} >> $(BASENM)
-		nm -g -p --defined-only $(BASETMPDO3) | awk '{printf("%s\n", $$3)'} >> $(BASENM)
-		nm -g -p --defined-only $(BASETMP2DO1) | awk '{printf("%s\n", $$3)'} >> $(BASENM)
-		nm -g -p --defined-only $(BASETMP2DO2) | awk '{printf("%s\n", $$3)'} >> $(BASENM)
-		nm -g -p --defined-only $(BASETMP2DO3) | awk '{printf("%s\n", $$3)'} >> $(BASENM)
-		nm -g -p --defined-only $(BASEO) | awk '{printf("%s\n", $$3)'} >> $(BASENM)
+		nm -p --defined-only $(BASETMPDO1) | awk '{printf("%s\n", $$3)'} > $(BASENM)
+		nm -p --defined-only $(BASETMPDO2) | awk '{printf("%s\n", $$3)'} >> $(BASENM)
+		nm -p --defined-only $(BASETMPDO3) | awk '{printf("%s\n", $$3)'} >> $(BASENM)
+		nm -p --defined-only $(BASETMP2DO1) | awk '{printf("%s\n", $$3)'} >> $(BASENM)
+		nm -p --defined-only $(BASETMP2DO2) | awk '{printf("%s\n", $$3)'} >> $(BASENM)
+		nm -p --defined-only $(BASETMP2DO3) | awk '{printf("%s\n", $$3)'} >> $(BASENM)
+		nm -p --defined-only $(BASEO) | awk '{printf("%s\n", $$3)'} >> $(BASENM)
 
 # pre-requisites intentionally not specified... should be called only
 # on demand after deleting the file

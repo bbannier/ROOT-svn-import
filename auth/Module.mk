@@ -143,9 +143,9 @@ $(RAUTHDS):    $(RAUTHH) $(RAUTHL) $(ROOTCINTTMPEXE) $(RAUTHNM)
 #LF
 $(RAUTHNM):      $(RAUTHO) $(RAUTHTMPDO) $(RAUTHTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(RAUTHTMPDO) | awk '{printf("%s\n", $$3)'} > $(RAUTHNM)
-		nm -g -p --defined-only $(RAUTHTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(RAUTHNM)
-		nm -g -p --defined-only $(RAUTHO) | awk '{printf("%s\n", $$3)'} >> $(RAUTHNM)
+		nm -p --defined-only $(RAUTHTMPDO) | awk '{printf("%s\n", $$3)'} > $(RAUTHNM)
+		nm -p --defined-only $(RAUTHTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(RAUTHNM)
+		nm -p --defined-only $(RAUTHO) | awk '{printf("%s\n", $$3)'} >> $(RAUTHNM)
 
 $(RAUTHMAP):    $(RLIBMAP) $(MAKEFILEDEP) $(RAUTHL)
 		$(RLIBMAP) -o $(RAUTHMAP) -l $(RAUTHLIB) \
@@ -180,9 +180,9 @@ $(AFSAUTHDICTMAP): $(RLIBMAP) $(MAKEFILEDEP) $(AFSAUTHL)
 #LF
 $(AFSAUTHNM):      $(AFSAUTHO) $(AFSAUTHTMPDO) $(AFSAUTHTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(AFSAUTHTMPDO) | awk '{printf("%s\n", $$3)'} > $(AFSAUTHNM)
-		nm -g -p --defined-only $(AFSAUTHTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(AFSAUTHNM)
-		nm -g -p --defined-only $(AFSAUTHO) | awk '{printf("%s\n", $$3)'} >> $(AFSAUTHNM)
+		nm -p --defined-only $(AFSAUTHTMPDO) | awk '{printf("%s\n", $$3)'} > $(AFSAUTHNM)
+		nm -p --defined-only $(AFSAUTHTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(AFSAUTHNM)
+		nm -p --defined-only $(AFSAUTHO) | awk '{printf("%s\n", $$3)'} >> $(AFSAUTHNM)
 
 $(AFSAUTHMAP):  $(RLIBMAP) $(MAKEFILEDEP) $(AFSAUTHL)
 		$(RLIBMAP) -o $(AFSAUTHMAP) -l $(AFSAUTHLIB) \

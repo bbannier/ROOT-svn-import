@@ -90,9 +90,9 @@ $(IOMAP): $(RLIBMAP) $(MAKEFILEDEP) $(IOL)
 #LF
 $(IONM):      $(IOO) $(IOTMPDO) $(IOTMP2DO)
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(IOTMPDO) | awk '{printf("%s\n", $$3)'} > $(IONM)
-		nm -g -p --defined-only $(IOTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(IONM)
-		nm -g -p --defined-only $(IOO) | awk '{printf("%s\n", $$3)'} >> $(IONM)
+		nm -p --defined-only $(IOTMPDO) | awk '{printf("%s\n", $$3)'} > $(IONM)
+		nm -p --defined-only $(IOTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(IONM)
+		nm -p --defined-only $(IOO) | awk '{printf("%s\n", $$3)'} >> $(IONM)
 
 all-io:         $(IOLIB) $(IOMAP)
 

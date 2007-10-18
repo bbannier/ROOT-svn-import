@@ -121,11 +121,11 @@ $(GRAFMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(GRAFL1) $(GRAFL2)
 #LF
 $(GRAFNM):      $(GRAFO) $(GRAFTMPDO) $(GRAFTMP2DO)
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(GRAFTMPDO1) | awk '{printf("%s\n", $$3)'} > $(GRAFNM)
-		nm -g -p --defined-only $(GRAFTMPDO2) | awk '{printf("%s\n", $$3)'} >> $(GRAFNM)
-		nm -g -p --defined-only $(GRAFTMP2DO1) | awk '{printf("%s\n", $$3)'} >> $(GRAFNM)
-		nm -g -p --defined-only $(GRAFTMP2DO2) | awk '{printf("%s\n", $$3)'} >> $(GRAFNM)
-		nm -g -p --defined-only $(GRAFO) | awk '{printf("%s\n", $$3)'} >> $(GRAFNM)
+		nm -p --defined-only $(GRAFTMPDO1) | awk '{printf("%s\n", $$3)'} > $(GRAFNM)
+		nm -p --defined-only $(GRAFTMPDO2) | awk '{printf("%s\n", $$3)'} >> $(GRAFNM)
+		nm -p --defined-only $(GRAFTMP2DO1) | awk '{printf("%s\n", $$3)'} >> $(GRAFNM)
+		nm -p --defined-only $(GRAFTMP2DO2) | awk '{printf("%s\n", $$3)'} >> $(GRAFNM)
+		nm -p --defined-only $(GRAFO) | awk '{printf("%s\n", $$3)'} >> $(GRAFNM)
 
 all-graf:       $(GRAFLIB) $(GRAFMAP)
 

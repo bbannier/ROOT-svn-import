@@ -83,9 +83,9 @@ $(GEOMPAINTERDICTMAP): $(RLIBMAP) $(MAKEFILEDEP) $(GEOMPAINTERL)
 #LF
 $(GEOMPAINTERNM):      $(GEOMPAINTERO) $(GEOMPAINTERTMPDO) $(GEOMPAINTERTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(GEOMPAINTERTMPDO) | awk '{printf("%s\n", $$3)'} > $(GEOMPAINTERNM)
-		nm -g -p --defined-only $(GEOMPAINTERTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(GEOMPAINTERNM)
-		nm -g -p --defined-only $(GEOMPAINTERO) | awk '{printf("%s\n", $$3)'} >> $(GEOMPAINTERNM)
+		nm -p --defined-only $(GEOMPAINTERTMPDO) | awk '{printf("%s\n", $$3)'} > $(GEOMPAINTERNM)
+		nm -p --defined-only $(GEOMPAINTERTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(GEOMPAINTERNM)
+		nm -p --defined-only $(GEOMPAINTERO) | awk '{printf("%s\n", $$3)'} >> $(GEOMPAINTERNM)
 
 
 $(GEOMPAINTERMAP): $(RLIBMAP) $(MAKEFILEDEP) $(GEOMPAINTERL)

@@ -114,9 +114,9 @@ $(GLMAP): $(RLIBMAP) $(MAKEFILEDEP) $(GLL)
 #LF
 $(GLNM):      $(GLO) $(GLTMPDO) $(GLTMP2DO)
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(GLTMPDO) | awk '{printf("%s\n", $$3)'} > $(GLNM)
-		nm -g -p --defined-only $(GLTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(GLNM)
-		nm -g -p --defined-only $(GLO) | awk '{printf("%s\n", $$3)'} >> $(GLNM)
+		nm -p --defined-only $(GLTMPDO) | awk '{printf("%s\n", $$3)'} > $(GLNM)
+		nm -p --defined-only $(GLTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(GLNM)
+		nm -p --defined-only $(GLO) | awk '{printf("%s\n", $$3)'} >> $(GLNM)
 
 all-gl:         $(GLLIB) $(GLMAP)
 

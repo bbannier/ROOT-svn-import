@@ -79,9 +79,9 @@ $(FOAMDICTMAP): $(RLIBMAP) $(MAKEFILEDEP) $(FOAML)
 #LF
 $(FOAMNM):      $(FOAMO) $(FOAMTMPDO) $(FOAMTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(FOAMTMPDO) | awk '{printf("%s\n", $$3)'} > $(FOAMNM)
-		nm -g -p --defined-only $(FOAMTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(FOAMNM)
-		nm -g -p --defined-only $(FOAMO) | awk '{printf("%s\n", $$3)'} >> $(FOAMNM)
+		nm -p --defined-only $(FOAMTMPDO) | awk '{printf("%s\n", $$3)'} > $(FOAMNM)
+		nm -p --defined-only $(FOAMTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(FOAMNM)
+		nm -p --defined-only $(FOAMO) | awk '{printf("%s\n", $$3)'} >> $(FOAMNM)
 
 $(FOAMMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(FOAML)
 		$(RLIBMAP) -o $(FOAMMAP) -l $(FOAMLIB) \

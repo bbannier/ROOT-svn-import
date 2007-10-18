@@ -93,9 +93,9 @@ $(PYROOTDS):    $(PYROOTH) $(PYROOTL) $(ROOTCINTTMPEXE) $(PYROOTNM)
 #LF
 $(PYROOTNM):      $(PYROOTO) $(PYROOTTMPDO) $(PYROOTTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(PYROOTTMPDO) | awk '{printf("%s\n", $$3)'} > $(PYROOTNM)
-		nm -g -p --defined-only $(PYROOTTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(PYROOTNM)
-		nm -g -p --defined-only $(PYROOTO) | awk '{printf("%s\n", $$3)'} >> $(PYROOTNM)
+		nm -p --defined-only $(PYROOTTMPDO) | awk '{printf("%s\n", $$3)'} > $(PYROOTNM)
+		nm -p --defined-only $(PYROOTTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(PYROOTNM)
+		nm -p --defined-only $(PYROOTO) | awk '{printf("%s\n", $$3)'} >> $(PYROOTNM)
 
 $(PYROOTMAP):   $(RLIBMAP) $(MAKEFILEDEP) $(PYROOTL)
 		$(RLIBMAP) -o $(PYROOTMAP) -l $(PYROOTLIB) \

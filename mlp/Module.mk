@@ -76,9 +76,9 @@ $(MLPDS):    $(MLPH) $(MLPL) $(ROOTCINTTMPEXE) $(MLPNM)
 #LF
 $(MLPNM):      $(MLPO) $(MLPTMPDO) $(MLPTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(MLPTMPDO) | awk '{printf("%s\n", $$3)'} > $(MLPNM)
-		nm -g -p --defined-only $(MLPTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(MLPNM)
-		nm -g -p --defined-only $(MLPO) | awk '{printf("%s\n", $$3)'} >> $(MLPNM)
+		nm -p --defined-only $(MLPTMPDO) | awk '{printf("%s\n", $$3)'} > $(MLPNM)
+		nm -p --defined-only $(MLPTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(MLPNM)
+		nm -p --defined-only $(MLPO) | awk '{printf("%s\n", $$3)'} >> $(MLPNM)
 
 $(MLPMAP):      $(RLIBMAP) $(MAKEFILEDEP) $(MLPL)
 		$(RLIBMAP) -o $(MLPMAP) -l $(MLPLIB) -d $(MLPLIBDEPM) -c $(MLPL)

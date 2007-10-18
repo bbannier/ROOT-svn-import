@@ -99,9 +99,9 @@ $(MATHDS):      $(MATHH) $(MATHL) $(ROOTCINTTMPEXE) $(MATHNM)
 #LF
 $(MATHNM):      $(MATHO) $(MATHTMPDO) $(MATHTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(MATHTMPDO) | awk '{printf("%s\n", $$3)'} > $(MATHNM)
-		nm -g -p --defined-only $(MATHTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(MATHNM)
-		nm -g -p --defined-only $(MATHO) | awk '{printf("%s\n", $$3)'} >> $(MATHNM)
+		nm -p --defined-only $(MATHTMPDO) | awk '{printf("%s\n", $$3)'} > $(MATHNM)
+		nm -p --defined-only $(MATHTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(MATHNM)
+		nm -p --defined-only $(MATHO) | awk '{printf("%s\n", $$3)'} >> $(MATHNM)
 
 #all-math:       $(MATHLIB) $(MATHMAP)
 all-math:       $(MATHO) $(MATHTMPDO) $(MATHTMP2DO) $(MATHDO)

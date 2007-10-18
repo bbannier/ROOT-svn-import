@@ -80,9 +80,9 @@ $(PROOFDICTMAP): $(RLIBMAP) $(MAKEFILEDEP) $(PROOFL)
 #LF
 $(PROOFNM):      $(PROOFO) $(PROOFTMPDO) $(PROOFTMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(PROOFTMPDO) | awk '{printf("%s\n", $$3)'} > $(PROOFNM)
-		nm -g -p --defined-only $(PROOFTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(PROOFNM)
-		nm -g -p --defined-only $(PROOFO) | awk '{printf("%s\n", $$3)'} >> $(PROOFNM)
+		nm -p --defined-only $(PROOFTMPDO) | awk '{printf("%s\n", $$3)'} > $(PROOFNM)
+		nm -p --defined-only $(PROOFTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(PROOFNM)
+		nm -p --defined-only $(PROOFO) | awk '{printf("%s\n", $$3)'} >> $(PROOFNM)
 
 $(PROOFMAP):    $(RLIBMAP) $(MAKEFILEDEP) $(PROOFL)
 		$(RLIBMAP) -o $(PROOFMAP) -l $(PROOFLIB) \

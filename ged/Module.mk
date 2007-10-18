@@ -89,9 +89,9 @@ $(GEDMAP): $(RLIBMAP) $(MAKEFILEDEP) $(GEDL)
 #LF
 $(GEDNM):      $(GEDO) $(GEDTMPDO) $(GEDTMP2DO)
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(GEDTMPDO) | awk '{printf("%s\n", $$3)'} > $(GEDNM)
-		nm -g -p --defined-only $(GEDTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(GEDNM)
-		nm -g -p --defined-only $(GEDO) | awk '{printf("%s\n", $$3)'} >> $(GEDNM)
+		nm -p --defined-only $(GEDTMPDO) | awk '{printf("%s\n", $$3)'} > $(GEDNM)
+		nm -p --defined-only $(GEDTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(GEDNM)
+		nm -p --defined-only $(GEDO) | awk '{printf("%s\n", $$3)'} >> $(GEDNM)
 
 all-ged:        $(GEDLIB) $(GEDMAP)
 

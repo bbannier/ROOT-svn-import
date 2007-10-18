@@ -131,11 +131,11 @@ $(SMATRIXDICTMAP): $(RLIBMAP) $(MAKEFILEDEP) $(SMATRIXL)
 #LF
 $(SMATRIXNM):      $(SMATRIXO) $(SMATRIXTMPDO) $(SMATRIXTMP2DO) $(SMATRIXTMPDO32) $(SMATRIXTMP2DO32)
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(SMATRIXTMPDO) | awk '{printf("%s\n", $$3)'} > $(SMATRIXNM)
-		nm -g -p --defined-only $(SMATRIXTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(SMATRIXNM)
-		nm -g -p --defined-only $(SMATRIXTMPDO32) | awk '{printf("%s\n", $$3)'} >> $(SMATRIXNM)
-		nm -g -p --defined-only $(SMATRIXTMP2DO32) | awk '{printf("%s\n", $$3)'} >> $(SMATRIXNM)
-		nm -g -p --defined-only $(SMATRIXO) | awk '{printf("%s\n", $$3)'} >> $(SMATRIXNM)
+		nm -p --defined-only $(SMATRIXTMPDO) | awk '{printf("%s\n", $$3)'} > $(SMATRIXNM)
+		nm -p --defined-only $(SMATRIXTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(SMATRIXNM)
+		nm -p --defined-only $(SMATRIXTMPDO32) | awk '{printf("%s\n", $$3)'} >> $(SMATRIXNM)
+		nm -p --defined-only $(SMATRIXTMP2DO32) | awk '{printf("%s\n", $$3)'} >> $(SMATRIXNM)
+		nm -p --defined-only $(SMATRIXO) | awk '{printf("%s\n", $$3)'} >> $(SMATRIXNM)
 
 $(SMATRIXMAP):  $(RLIBMAP) $(MAKEFILEDEP) $(SMATRIXL) $(SMATRIXLINC)
 		$(RLIBMAP) -o $(SMATRIXMAP) -l $(SMATRIXLIB) \

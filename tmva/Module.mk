@@ -81,9 +81,9 @@ $(TMVADS):    $(TMVAH_CINT) $(TMVAL) $(ROOTCINTTMPEXE) $(TMVANM)
 #LF
 $(TMVANM):      $(TMVAO) $(TMVATMPDO) $(TMVATMP2DO) 
 		@echo "Generating symbols file $@..."
-		nm -g -p --defined-only $(TMVATMPDO) | awk '{printf("%s\n", $$3)'} > $(TMVANM)
-		nm -g -p --defined-only $(TMVATMP2DO) | awk '{printf("%s\n", $$3)'} >> $(TMVANM)
-		nm -g -p --defined-only $(TMVAO) | awk '{printf("%s\n", $$3)'} >> $(TMVANM)
+		nm -p --defined-only $(TMVATMPDO) | awk '{printf("%s\n", $$3)'} > $(TMVANM)
+		nm -p --defined-only $(TMVATMP2DO) | awk '{printf("%s\n", $$3)'} >> $(TMVANM)
+		nm -p --defined-only $(TMVAO) | awk '{printf("%s\n", $$3)'} >> $(TMVANM)
 
 $(TMVAMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(TMVAL)
 		$(RLIBMAP) -o $(TMVAMAP) -l $(TMVALIB) \
