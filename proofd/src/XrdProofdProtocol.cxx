@@ -6076,6 +6076,7 @@ int XrdProofdProtocol::ReadBuffer()
 
    // Check if local
    bool local = 0;
+   int blen = dlen;
    XrdClientUrlInfo ui(file);
    if (ui.Host.length() > 0) {
       // Fully qualified name
@@ -6085,6 +6086,7 @@ int XrdProofdProtocol::ReadBuffer()
                  !strcmp(fgMgr.Host(),fqn))) {
          memcpy(file, ui.File.c_str(), ui.File.length());
          file[ui.File.length()] = 0;
+         blen = ui.File.length();
          local = 1;
          TRACEI(DBG, "ReadBuffer: file is LOCAL");
       }
@@ -6093,15 +6095,47 @@ int XrdProofdProtocol::ReadBuffer()
 
    // Get the buffer
    int lout = len;
-   char *buf = (local) ? ReadBufferLocal(file, ofs, lout)
-                       : ReadBufferRemote(file, ofs, lout);
+   char *buf = 0;
+   int grep = ntohl(fRequest.readbuf.int1);
+   if (local) {
+      if (grep == 1) {
+         // 'grep' operation: len is the length of the 'pattern' to be grepped
+         char *pattern = new char[len + 1];
+         int j = blen - len;
+         int i = 0;
+         while (j < blen)
+            pattern[i++] = file[j++];
+         pattern[i] = 0;
+         file[blen - len] = 0;
+         // Grep local file
+         lout = blen; // initial length
+         buf = ReadBufferLocal(file, pattern, lout);
+      } else {
+         // Read portion of local file
+         buf = ReadBufferLocal(file, ofs, lout);
+      }
+   } else {
+      // Read portion of remote file
+      buf = ReadBufferRemote(file, ofs, lout, grep);
+   }
+
    if (!buf) {
-      emsg = "ReadBuffer: could not read buffer from ";
-      emsg += (local) ? "local file " : "remote file ";
-      emsg += file;
-      TRACEP(XERR, emsg);
-      fResponse.Send(kXR_InvalidRequest, emsg.c_str());
-      return rc;
+      if (local && grep == 1) {
+         if (TRACING(DBG)) {
+            emsg = "ReadBuffer: nothing found by 'grep' in ";
+            emsg += file;
+            TRACEP(DBG, emsg);
+            fResponse.Send(kXR_InvalidRequest, emsg.c_str());
+            return rc;
+         }
+      } else {
+         emsg = "ReadBuffer: could not read buffer from ";
+         emsg += (local) ? "local file " : "remote file ";
+         emsg += file;
+         TRACEP(XERR, emsg);
+         fResponse.Send(kXR_InvalidRequest, emsg.c_str());
+         return rc;
+      }
    }
 
    // Send back to user
@@ -6207,8 +6241,85 @@ char *XrdProofdProtocol::ReadBufferLocal(const char *file, kXR_int64 ofs, int &l
 }
 
 //______________________________________________________________________________
+char *XrdProofdProtocol::ReadBufferLocal(const char *file,
+                                         const char *pat, int &len)
+{
+   // Grep lines matching 'pat' form 'file'; the returned buffer (length in 'len')
+   // must be freed by the caller.
+   // Returns 0 in case of error.
+
+   XrdOucString emsg;
+   TRACEI(ACT, "ReadBufferLocal: file: "<<file<<", pat: "<<pat<<", len: "<<len);
+
+   // Check input
+   if (!file || strlen(file) <= 0) {
+      TRACEI(XERR, "ReadBufferLocal: file path undefined!");
+      return (char *)0;
+   }
+
+   // command
+   char *cmd = new char[len + 20];
+   sprintf(cmd,"grep \"%s\" %s", pat, file);
+   TRACEI(ACT, "ReadBufferLocal: cmd: "<<cmd);
+
+   FILE *fp = popen(cmd, "r");
+   if (!fp) {
+      emsg = "ReadBufferLocal: problems executing ";
+      emsg += cmd;
+      TRACEI(XERR, emsg);
+      return (char *)0;
+   }
+
+   // Read line by line
+   len = 0;
+   char *buf = 0;
+   char line[2048];
+   int bufsiz = 0, left = 0, lines = 0;
+   while (fgets(line, sizeof(line), fp)) {
+      lines++;
+      int llen = strlen(line);
+      // (Re-)allocate the buffer
+      if (!buf || (llen > left)) {
+         int dsiz = 100 * ((int) ((len + llen) / lines) + 1);
+         dsiz = (dsiz > llen) ? dsiz : llen;
+         bufsiz += dsiz;
+         buf = (char *)realloc(buf, bufsiz + 1);
+         left += dsiz;
+      }
+      if (!buf) {
+         emsg = "ReadBufferLocal: could not allocate enough memory on the heap: errno: ";
+         emsg += (int)errno;
+         XPDERR(emsg);
+         pclose(fp);
+         return (char *)0;
+      }
+      // Add line to the buffer
+      memcpy(buf+len, line, llen);
+      len += llen;
+      if (TRACING(HDBG))
+         fprintf(stderr, "line: %s", line);
+   }
+
+   // Check the result and terminate the buffer
+   if (buf) {
+      if (len > 0) {
+         buf[len] = 0;
+      } else {
+         free(buf);
+         buf = 0;
+      }
+   }
+
+   // Close file
+   pclose(fp);
+
+   // Done
+   return buf;
+}
+
+//______________________________________________________________________________
 char *XrdProofdProtocol::ReadBufferRemote(const char *url,
-                                          kXR_int64 ofs, int &len)
+                                          kXR_int64 ofs, int &len, int grep)
 {
    // Send a read buffer request of length 'len' at offset 'ofs' for remote file
    // defined by 'url'; the returned buffer must be freed by the caller.
@@ -6244,6 +6355,7 @@ char *XrdProofdProtocol::ReadBufferRemote(const char *url,
       reqhdr.header.requestid = kXP_readbuf;
       reqhdr.readbuf.ofs = ofs;
       reqhdr.readbuf.len = len;
+      reqhdr.readbuf.int1 = grep;
       reqhdr.header.dlen = strlen(url);
       const void *btmp = (const void *) url;
       void **vout = (void **)&buf;

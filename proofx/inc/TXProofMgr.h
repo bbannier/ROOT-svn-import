@@ -65,6 +65,7 @@ public:
    void        ShowROOTVersions();
    TList      *QuerySessions(Option_t *opt = "S");
    TObjString *ReadBuffer(const char *file, Long64_t ofs, Int_t len);
+   TObjString *ReadBuffer(const char *file, const char *pattern);
    Int_t       Reset(const char *usr = 0);
    void        SetROOTVersion(const char *tag);
    void        ShowWorkers();

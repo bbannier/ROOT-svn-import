@@ -116,7 +116,8 @@ public:
    int           Process2();
    int           ReadBuffer();
    char         *ReadBufferLocal(const char *file, kXR_int64 ofs, int &len);
-   char         *ReadBufferRemote(const char *file, kXR_int64 ofs, int &len);
+   char         *ReadBufferLocal(const char *file, const char *pat, int &len);
+   char         *ReadBufferRemote(const char *file, kXR_int64 ofs, int &len, int grep);
    void          Reset();
    int           SendData(XrdProofdResponse *resp, kXR_int32 sid = -1, XrdSrvBuffer **buf = 0);
    int           SendDataN(XrdProofServProxy *xps, XrdSrvBuffer **buf = 0);
