@@ -6514,8 +6514,8 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
       if ((fileCount = fileList->GetList()->GetSize()) == 0) {
          Printf("No files were copied. The dataset will not be saved");
       } else {
-         if (RegisterDataSet(dataSetName, fileList,
-                     appendToDataSet ? kMergeIfExists : kOverwriteIfExists) <= 0) {
+         TString opt = (appendToDataSet) ? "" : "O";
+         if (!RegisterDataSet(dataSetName, fileList, opt)) {
             Error("UploadDataSet", "Error while saving dataset!");
             fileCount = kError;
          }
@@ -6632,19 +6632,14 @@ Int_t TProof::UploadDataSetFromFile(const char *dataset, const char *file,
 }
 
 //______________________________________________________________________________
-Int_t TProof::RegisterDataSet(const char *dataSetName,
-                              TFileCollection *dataSet,
-                              Int_t opt, const char* optStr)
+Bool_t TProof::RegisterDataSet(const char *dataSetName,
+                               TFileCollection *dataSet, const char* optStr)
 {
    // Register the 'dataSet' on the cluster under the current
    // user, group and the given 'dataSetName'.
-   // 'opt' stands for one option of ERegisterOpt
-   // and defines the behaviour in case 'dataSetName' already exists on the cluster:
-   // kFail (default) ... terminate with error
-   // kOverwrite      ... overwrite old dataset, i.e. its files are marked for deletion
-   // kMerge          ... merge the existing set with the new one
-   
-   // return code: fileCount //GEBGEB elaborate
+   // Fails if a dataset named 'dataSetName' already exists, unless 'optStr'
+   // contains 'O', in which case the old dataset is overwritten.
+   // Returns kTRUE on success.
 
    // Communication Summary
    //   Client                              Master
@@ -6655,9 +6650,10 @@ Int_t TProof::RegisterDataSet(const char *dataSetName,
    //  (*) - optional
 
    // Check TFileInfo compatibility
-   if (fProtocol < 15) {
-      Info("RegisterDataSet", "functionality not available: the server does not have dataset support");
-      return kError;
+   if (fProtocol < 17) {
+      Info("RegisterDataSet",
+           "functionality not available: the server does not have dataset support");
+      return kFALSE;
    }
 
    TSocket *master;
@@ -6665,77 +6661,25 @@ Int_t TProof::RegisterDataSet(const char *dataSetName,
       master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
    else {
       Error("RegisterDataSet", "No connection to the master!");
-      return kError;
+      return kFALSE;
    }
 
-   Bool_t exists = kFALSE; // flag that indicates if the given dataSetName is already used
-   Int_t fileCount = 0; // return value
-
-   // check if the given dataSetName is already used in current usr/grp context
-   TMessage *retMess;
-
-   TMessage nameMess(kPROOF_DATASETS);
-   nameMess << Int_t(kCheckDataSetName);
-   nameMess << TString(dataSetName);
-   Broadcast(nameMess);
-   master->Recv(retMess);
-   Collect(); //after each call to HandleDataSets
-   if (retMess->What() == kMESS_NOTOK) {
-      exists = kTRUE;
-      if (gDebug > 2)
-         Info("RegisterDataSet", "DataSet %s already exists", dataSetName);
-	 }
-   else if (retMess->What() == kMESS_OK) { 
-      exists = kFALSE; // redundant but explicative
-      if (gDebug > 2)
-         Info("RegisterDataSet", "DataSet %s already exists", dataSetName);
-   } else {
-      Error("RegisterDataSet", "unrecognized message type: %d!",
-            retMess->What());
-      return kError;
-   }
-   retMess->Reset();
-   
    TMessage mess(kPROOF_DATASETS);
-   if ( exists ) {
-      if (opt == kMergeIfExists) {
-         if (gDebug > 2)
-            Info("RegisterDataSet", "Sending kMergeDataSet");
-         mess << Int_t(kMergeDataSet);
-      }
-		 if (opt == kOverwriteIfExists) {
-                    if (gDebug > 2)
-                       Info("RegisterDataSet", "Sending kRegisterDataSet");
-                    mess << Int_t(kRegisterDataSet);
-		 }
-		 if (opt == kFailIfExists) {
-                    if (gDebug > 2)
-                       Info("RegisterDataSet", "returning kFail because of kFailIfExists option");
-                    
-                    
-                    delete retMess;
-                    return kFail;
-		 } 
-		 
-                 
-   } else {
-      mess << Int_t(kRegisterDataSet);
-   }
-   
-
+   mess << Int_t(kRegisterDataSet);
    mess << TString(dataSetName);
    mess << TString(optStr);
    mess.WriteObject(dataSet);
    Broadcast(mess);
-   
-   //Reusing the retMess.
+
+   Bool_t result = kTRUE;
+   TMessage *retMess = 0;
    if (master->Recv(retMess) <= 0) {
       Error("RegisterDataSet", "No response from the master");
-      fileCount = -1;
+      return kFALSE;
    } else {
       if (retMess->What() == kMESS_NOTOK) {
-			 Printf("Dataset was not saved.");
-			 fileCount = -1;
+         Printf("Dataset was not saved.");
+         result = kFALSE;
       } else if (retMess->What() != kMESS_OK) {
          Error("RegisterDataSet",
                "Unexpected message type: %d", retMess->What());
@@ -6745,7 +6689,7 @@ Int_t TProof::RegisterDataSet(const char *dataSetName,
    }
 
    Collect();
-   return fileCount;
+   return result;
 }
 
 //______________________________________________________________________________
@@ -6778,9 +6722,9 @@ TMap *TProof::GetDataSets(const char *uri, const char* optStr)
    if (retMess->What() == kMESS_OK) {
       dataSetMap = (TMap*)(retMess->ReadObject(TMap::Class()));
       if (!dataSetMap)
-         Error("GetDataSets", "Error receiving datasets");
+         Error("GetDataSets", "error receiving datasets");
    } else
-      Printf("Error receiving datasets");
+      Error("GetDataSets", "error receiving datasets");
 
    Collect();
    delete retMess;
@@ -6803,7 +6747,7 @@ void TProof::ShowDataSets(const char *uri, const char* optStr)
    if (fActiveSlaves->GetSize())
       master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
    else {
-      Error("GetDataSets", "No connection to the master!");
+      Error("ShowDataSets", "No connection to the master!");
       return;
    }
 
@@ -6817,7 +6761,7 @@ void TProof::ShowDataSets(const char *uri, const char* optStr)
    master->Recv(retMess);
 
    if (retMess->What() != kMESS_OK)
-      Printf("Error receiving datasets");
+      Error("ShowDataSets", "error receiving datasets");
 
    Collect();
    delete retMess;

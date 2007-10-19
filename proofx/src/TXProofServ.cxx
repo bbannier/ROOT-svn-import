@@ -639,8 +639,7 @@ Int_t TXProofServ::Setup()
       Info("Setup", "session dir is %s", fSessionDir.Data());
 
    // Common setup
-   Int_t rc = SetupCommon();
-   if (!rc) {
+   if (SetupCommon() != 0) {
       Error("Setup", "common setup failed");
       return -1;
    }

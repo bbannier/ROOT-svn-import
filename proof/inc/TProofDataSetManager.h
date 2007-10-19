@@ -43,6 +43,7 @@ private:
    TString fCommonUser;   // user that stores the COMMON datasets
    TString fCommonGroup;  // group that stores the COMMON datasets
 
+   Bool_t  fCheckQuota;
    TMap    fGroupQuota;   // group quotas (read from config file)
 
    TMap    fGroupUsed;    // <group> --> <used bytes> (TParameter)
@@ -107,7 +108,7 @@ public:
    Int_t    GetNOpenedFiles() { return fNOpenedFiles; }
    Int_t    GetNDisapparedFiles() { return fNDisappearedFiles; }
 
-   Int_t    HandleRequest(TMessage *msg, TSocket *sock);
+   Int_t    HandleRequest(TMessage *msg, TSocket *sock, FILE *flog);
 
    ClassDef(TProofDataSetManager, 0)
 };
