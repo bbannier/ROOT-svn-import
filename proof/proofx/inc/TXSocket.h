@@ -137,7 +137,7 @@ private:
    static void         DumpReadySock(); // Dump content of the ready-socket list
 
 public:
-   // Should be the same as in proofd/src/XrdProofdProtocol.cxx (local definitions)
+   // Should be the same as in proofd/inc/XProofProtocol.h (local definitions)
    enum ECoordMsgType { kQuerySessions = 1000,
                         kSessionTag, kSessionAlias, kGetWorkers, kQueryWorkers,
                         kCleanupSessions,
@@ -145,7 +145,7 @@ public:
                         kReadBuffer,
                         kQueryROOTVersions,
                         kROOTVersion,
-                        kGroupProperties };
+                        kGroupProperties};
    // Should be the same as in proofd/src/XrdProofdProtocol::Urgent
    enum EUrgentMsgType { kStopProcess = 2000 };
 
@@ -190,8 +190,8 @@ public:
    Int_t               SendRaw(const void *buf, Int_t len,
                                ESendRecvOptions opt = kDontBlock);
 
-   TObjString         *SendCoordinator(Int_t kind,
-                                       const char *msg = 0, Int_t int2 = 0, Long64_t l64 = 0);
+   TObjString         *SendCoordinator(Int_t kind, const char *msg = 0, Int_t int2 = 0,
+                                       Long64_t l64 = 0, Int_t int3 = 0, const char *opt = 0);
 
 
    // Recv interfaces

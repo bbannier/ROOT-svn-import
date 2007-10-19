@@ -510,7 +510,42 @@ TObjString *TXProofMgr::ReadBuffer(const char *fin, Long64_t ofs, Int_t len)
    }
 
    // Send the request
-   return fSocket->SendCoordinator(TXSocket::kReadBuffer, fin, len, ofs);
+   return fSocket->SendCoordinator(TXSocket::kReadBuffer, fin, len, ofs, 0);
+}
+
+//______________________________________________________________________________
+TObjString *TXProofMgr::ReadBuffer(const char *fin, const char *pattern)
+{
+   // Read, via the coordinator, lines containing 'pattern' in 'file'.
+   // Returns a TObjString with the content or 0, in case of failure
+
+   // Nothing to do if not in contact with proofserv
+   if (!IsValid()) {
+      Warning("ReadBuffer","invalid TXProofMgr - do nothing");
+      return (TObjString *)0;
+   }
+
+   // Prepare the buffer
+   Int_t i = 0;
+   Int_t spc = 0;
+   Int_t plen = strlen(pattern);
+   for ( ; i < plen; i++)
+      // Count special chars
+      if (pattern[i] == '"' || pattern[i] == '\\') spc++;
+
+   Int_t len = strlen(fin) + plen + spc;
+   char *buf = new char[len + 1];
+   memcpy(buf, fin, strlen(fin));
+   Int_t j = strlen(fin);
+   for (i = 0; i < plen; i++) {
+      if (pattern[i] == '"' || pattern[i] == '\\')
+         buf[j++] = '\\';
+      buf[j++] = pattern[i];
+   }
+   buf[len] = 0;
+
+   // Send the request
+   return fSocket->SendCoordinator(TXSocket::kReadBuffer, buf, plen + spc, 0, 1);
 }
 
 //______________________________________________________________________________
