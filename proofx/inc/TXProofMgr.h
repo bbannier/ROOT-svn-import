@@ -60,7 +60,8 @@ public:
 
    TProof     *AttachSession(Int_t id, Bool_t gui = kFALSE);
    void        DetachSession(Int_t, Option_t * = "");
-   TProofLog  *GetSessionLogs(Int_t ridx = 0, const char *stag = 0);
+   TProofLog  *GetSessionLogs(Int_t ridx = 0, const char *stag = 0,
+                              const char *pattern = 0);
    Bool_t      MatchUrl(const char *url);
    void        ShowROOTVersions();
    TList      *QuerySessions(Option_t *opt = "S");

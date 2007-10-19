@@ -6098,7 +6098,7 @@ int XrdProofdProtocol::ReadBuffer()
    char *buf = 0;
    int grep = ntohl(fRequest.readbuf.int1);
    if (local) {
-      if (grep == 1) {
+      if (grep > 0) {
          // 'grep' operation: len is the length of the 'pattern' to be grepped
          char *pattern = new char[len + 1];
          int j = blen - len;
@@ -6109,7 +6109,7 @@ int XrdProofdProtocol::ReadBuffer()
          file[blen - len] = 0;
          // Grep local file
          lout = blen; // initial length
-         buf = ReadBufferLocal(file, pattern, lout);
+         buf = ReadBufferLocal(file, pattern, lout, grep);
       } else {
          // Read portion of local file
          buf = ReadBufferLocal(file, ofs, lout);
@@ -6120,7 +6120,7 @@ int XrdProofdProtocol::ReadBuffer()
    }
 
    if (!buf) {
-      if (local && grep == 1) {
+      if (local && grep > 0) {
          if (TRACING(DBG)) {
             emsg = "ReadBuffer: nothing found by 'grep' in ";
             emsg += file;
@@ -6242,7 +6242,7 @@ char *XrdProofdProtocol::ReadBufferLocal(const char *file, kXR_int64 ofs, int &l
 
 //______________________________________________________________________________
 char *XrdProofdProtocol::ReadBufferLocal(const char *file,
-                                         const char *pat, int &len)
+                                         const char *pat, int &len, int opt)
 {
    // Grep lines matching 'pat' form 'file'; the returned buffer (length in 'len')
    // must be freed by the caller.
@@ -6259,7 +6259,16 @@ char *XrdProofdProtocol::ReadBufferLocal(const char *file,
 
    // command
    char *cmd = new char[len + 20];
-   sprintf(cmd,"grep \"%s\" %s", pat, file);
+   if (opt == 1) {
+      sprintf(cmd,"grep \"%s\" %s", pat, file);
+   } else if (opt == 2) {
+      sprintf(cmd,"grep -v \"%s\" %s", pat, file);
+   } else {
+      emsg = "ReadBufferLocal: unknown option: ";
+      emsg += opt;
+      TRACEI(XERR, emsg);
+      return (char *)0;
+   }
    TRACEI(ACT, "ReadBufferLocal: cmd: "<<cmd);
 
    FILE *fp = popen(cmd, "r");
