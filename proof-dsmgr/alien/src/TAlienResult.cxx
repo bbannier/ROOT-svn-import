@@ -28,7 +28,6 @@
 #include "TUrl.h"
 #include "TFileInfo.h"
 #include "TEntryList.h"
-#include "TFileCollection.h"
 
 ClassImp(TAlienResult)
 
@@ -171,7 +170,8 @@ TFileCollection *TAlienResult::GetFileInfoList() const
 {
    // Return a file info list.
 
-   TFileCollection *fileCollection = new TFileCollection(GetName(), GetTitle());
+   TList *newfileinfolist = new TList();
+   newfileinfolist->SetOwner(kTRUE);
 
    for (Int_t i = 0; i < GetSize(); i++) {
 
@@ -202,9 +202,9 @@ TFileCollection *TAlienResult::GetFileInfoList() const
       }
       Info("GetFileInfoList", "Adding Url %s with Msd %s\n", turl.Data(),
            msd);
-      fileCollection->Add(new TFileInfo(turl, size, uuid, md5));
+      newfileinfolist->Add(new TFileInfo(turl, size, uuid, md5));
    }
-   return fileCollection;
+   return newfileinfolist;
 }
 
 //______________________________________________________________________________
