@@ -624,10 +624,8 @@ public:
                                      const char *file,
                                      const char *dest = 0,
                                      Int_t opt = kAskUser);
-   Int_t       RegisterDataSet(const char *name,
-                               TFileCollection *dataset,
-                               Int_t opt = kFailIfExists,
-			       const char* optStr = "");
+   Bool_t       RegisterDataSet(const char *name,
+                                TFileCollection *dataset, const char* optStr = "");
    TMap        *GetDataSets(const char *uri = 0, const char* optStr = "");
    void        ShowDataSets(const char *uri = 0, const char* optStr = "");
 

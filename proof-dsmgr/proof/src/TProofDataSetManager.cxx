@@ -44,6 +44,7 @@
 #include "TParameter.h"
 #include "TSocket.h"
 #include "TProof.h"
+#include "TProofServ.h"
 
 
 // Dataset lock file
@@ -60,8 +61,8 @@ TProofDataSetManager::TProofDataSetManager(const char *dataSetDir,
                                            const char *group,
                                            const char *user, Bool_t silent)
                      : fSilent(silent), fDataSetDir(dataSetDir), fGroup(group),
-                       fUser(user), fRedirUrl(),
-                       fCommonUser(), fCommonGroup(), fGroupQuota(), fGroupUsed(),
+                       fUser(user), fRedirUrl(), fCommonUser(), fCommonGroup(),
+                       fCheckQuota(kFALSE), fGroupQuota(), fGroupUsed(),
                        fUserUsed(), fNTouchedFiles(0), fNOpenedFiles(0),
                        fNDisappearedFiles(0), fMTimeGroupConfig(-1)
 {
@@ -118,7 +119,7 @@ Bool_t TProofDataSetManager::ReadGroupConfig(const char *cf)
          Error("ReadGroupConfig", "could not stat %s", cf);
          return kFALSE;
       }
-      if (gSystem->AccessPathName(st, kReadPermission)) {
+      if (!gSystem->TestPermissions(st, kReadPermission)) {
          Error("ReadGroupConfig", "cannot read %s", cf);
          return kFALSE;
       }
@@ -195,6 +196,8 @@ Bool_t TProofDataSetManager::ReadGroupConfig(const char *cf)
             TString swt;
             if (!line.Tokenize(swt, from, " ")) // No token
                continue;
+            if (!swt.CompareTo("on", TString::kIgnoreCase))
+               fCheckQuota = kTRUE;
          } else if (type == "commonuser") {
             // Read global common user
             TString comusr;
@@ -271,7 +274,7 @@ TFileCollection *TProofDataSetManager::GetDataSet(const char *group,
       retrievedChecksum = TMD5::FileChecksum(path);
       if (!retrievedChecksum) {
          if (!fSilent)
-            Error(__FUNCTION__, "Could not get checksum of %s", path.Data());
+            Error("GetDataSet", "Could not get checksum of %s", path.Data());
          return 0;
       }
    }
@@ -279,7 +282,7 @@ TFileCollection *TProofDataSetManager::GetDataSet(const char *group,
    TFile *f = TFile::Open(path.Data());
    if (!f) {
       if (!fSilent)
-         Error(__FUNCTION__, "Could not open file %s", path.Data());
+         Error("GetDataSet", "Could not open file %s", path.Data());
       if (retrievedChecksum)
          delete retrievedChecksum;
       return 0;
@@ -1006,7 +1009,7 @@ void TProofDataSetManager::UpdateUsedSpace()
 }
 
 //______________________________________________________________________________
-Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock)
+Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *flog)
 {
    // Handle here all requests about datasets.
    // The socket 'sock' is used, when the case requires, to reply to teh client.
@@ -1020,7 +1023,6 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock)
       return -1;
    }
 
-   TFileCollection *previousDataSet = 0; //used when appending datasets
    TString dsUser, dsGroup, dsName;
    TString uri; // used in most cases
    TString opt;
@@ -1034,8 +1036,7 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock)
          //   Client                              Master
          //     |------------>DataSetName----------->|
          //     |<-------kMESS_OK/kMESS_NOTOK<-------| (Name OK/file exists)
-         {  TString uri;
-            (*mess) >> uri;
+         {  (*mess) >> uri;
 
             if (ParseDataSetUri(uri, &dsGroup, &dsUser, &dsName) == kFALSE) {
                sock->Send(kMESS_NOTOK);
@@ -1050,29 +1051,14 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock)
             }
          }
          break;
-      case TProof::kMergeDataSet:
-         {  (*mess) >> uri;
-            (*mess) >> opt;
-            if (ParseDataSetUri(uri, &dsGroup, &dsUser, &dsName, 0, kTRUE) == kFALSE) {
-               sock->Send(kMESS_NOTOK);
-               break;
-            }
-            previousDataSet = GetDataSet(dsGroup, dsUser, dsName);
-         }
-         // NO break => continuing with kRegisterDataSet
       case TProof::kRegisterDataSet:
          // list size must be above 0
-         {  if (!previousDataSet) {
-               if (type == TProof::kRegisterDataSet) {
-                  // if not kAppendDataSet
-                  (*mess) >> uri;
-                  (*mess) >> opt;
-               }
+         {  (*mess) >> uri;
+            (*mess) >> opt;
 
-               if (ParseDataSetUri(uri, 0, 0, &dsName, 0, kTRUE) == kFALSE) {
-                  sock->Send(kMESS_NOTOK);
-                  break;
-               }
+            if (ParseDataSetUri(uri, 0, 0, &dsName, 0, kTRUE) == kFALSE) {
+               sock->Send(kMESS_NOTOK);
+               break;
             }
 
             // check if list is empty
@@ -1084,12 +1070,15 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock)
                break;
             }
 
-            // if we started with kMergeDataSet
-            if (previousDataSet) {
-               TIter nextOldFile(previousDataSet->GetList());
-               while (TFileInfo *obj = (TFileInfo*)nextOldFile())
-                  dataSet->GetList()->Add(obj);
-               delete previousDataSet;
+            // Check option
+            if (!opt.Contains("O", TString::kIgnoreCase)) {
+               // Fail if it exists already
+               if (ExistsDataSet(fGroup, fUser, dsName)) {
+                  //Dataset name does exist
+                  sock->Send(kMESS_NOTOK);
+                  delete dataSet;
+                  break;
+               }
             }
 
             // We will save a sorted list
@@ -1118,20 +1107,24 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock)
 
             // update accumulated information
             dataSet->Update();
-            dataSet->SetName(uri);
+            dataSet->SetName(dsName);
 
-            // now check the quota
-            UpdateUsedSpace();
-            Long64_t used = GetGroupUsed(fGroup) + dataSet->GetTotalSize();
+            // TODO Reset staged and corrupted bits
 
-            Info("HandleRequest", "the group %s uses %lld + %lld for the new dataset."
-                                  " Quota is %lld", fGroup.Data(),
-                                  GetGroupUsed(fGroup), dataSet->GetTotalSize(),
-                                  GetGroupQuota(fGroup));
-            if (used >= GetGroupQuota(fGroup)) {
-               Error("HandleRequest", "quota exceeded");
-               sock->Send(kMESS_NOTOK);
-               break;
+            if (fCheckQuota) {
+               // now check the quota
+               UpdateUsedSpace();
+               Long64_t used = GetGroupUsed(fGroup) + dataSet->GetTotalSize();
+
+               Info("HandleRequest", "the group %s uses %lld + %lld for the new dataset."
+                                    " Quota is %lld", fGroup.Data(),
+                                    GetGroupUsed(fGroup), dataSet->GetTotalSize(),
+                                    GetGroupQuota(fGroup));
+               if (used >= GetGroupQuota(fGroup)) {
+                  Error("HandleRequest", "quota exceeded");
+                  sock->Send(kMESS_NOTOK);
+                  break;
+               }
             }
 
             Bool_t success = WriteDataSet(fGroup, fUser, dsName, dataSet);
@@ -1226,11 +1219,45 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock)
                break;
             }
 
-            Printf("Returning datasets for user %s in group %s", dsUser.Data(), dsGroup.Data());
+            TMap *datasets = GetDataSets(dsGroup, dsUser);
+            TMap *returnMap = new TMap;
 
-            TMap *map = GetDataSets(dsGroup, dsUser);
-            sock->SendObject(map, kMESS_OK);
-            delete map;
+            TIter iter(datasets);
+            TObjString* group = 0;
+            while ((group = dynamic_cast<TObjString*> (iter.Next()))) {
+               TMap* userMap = dynamic_cast<TMap*> (datasets->GetValue(group->String()));
+               if (userMap) {
+                  TIter iter2(userMap);
+                  TObjString* user = 0;
+                  while ((user = dynamic_cast<TObjString*> (iter2.Next()))) {
+                     TMap* datasetMap = dynamic_cast<TMap*> (userMap->GetValue(user->String()));
+                     if (datasetMap) {
+                        TIter iter3(datasetMap);
+                        TObjString* dsName = 0;
+                        while ((dsName = dynamic_cast<TObjString*> (iter3.Next()))) {
+                           TFileCollection* dataset =
+                              dynamic_cast<TFileCollection*> (datasetMap->GetValue(dsName->String()));
+                           if (!dataset)
+                              continue;
+
+                           TString dsNameFormatted;
+                           dsNameFormatted.Form("/%s/%s/%s", group->String().Data(),
+                                                user->String().Data(), dsName->String().Data());
+                           returnMap->Add(new TObjString(dsNameFormatted), dataset);
+                        }
+                        datasetMap->Delete(); // only Delete not DeleteAll, TFileCollection* is
+                                              // deleted later in returnMap->DeleteAll()
+                     }
+                  }
+                  userMap->DeleteAll();
+               }
+            }
+            datasets->DeleteAll();
+            delete datasets;
+            datasets = 0;
+
+            sock->SendObject(returnMap, kMESS_OK);
+            returnMap->DeleteAll();
          }
          break;
       case TProof::kGetDataSet:
@@ -1279,7 +1306,10 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock)
 
             Bool_t fOldSilent = fSilent;
             fSilent = kFALSE;
-            Int_t result = ScanDataSet(fGroup, fUser, dsName, "reopen");
+            Int_t result = 0;
+            {  TProofServLogHandlerGuard hg(flog, sock);
+               result = ScanDataSet(fGroup, fUser, dsName, "reopen");
+            }
             fSilent = fOldSilent;
 
             if (result > 0)
@@ -1344,6 +1374,7 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock)
          }
          break;
       default:
+         sock->Send(kMESS_NOTOK);
          Error("HandleRequest", "unknown type %d", type);
          break;
    }
@@ -1360,7 +1391,7 @@ Bool_t TProofDataSetManager::ParseDataSetUri(const char *uri,
 {
    // Parses a DataSetUri having 
    //    the syntax [/dsGroup/dsUser/]dsName[/dsTree]         (if wildcards is kFALSE)
-   //    the syntax [/[dsGroup]/[dsUser]/][dsName[/dsTree]]   (if wildcards is kTRUE)
+   //    the syntax [/dsGroup|*/dsUser|*/][dsName[/dsTree]]   (if wildcards is kTRUE)
    // Fills only the parameters that are non-zero.
    // If onlyCurrent is set, the function fails if a group and user is given that
    // is different from the current user.
@@ -1369,7 +1400,11 @@ Bool_t TProofDataSetManager::ParseDataSetUri(const char *uri,
    // Returns kTRUE in case of success.
 
    TString uriStr(uri);
-   TString group, user, ds, tree;
+   TString ds, tree;
+
+   // set default
+   TString group(fGroup);
+   TString user(fUser);
 
    if (uriStr.Contains("/")) {
 
@@ -1398,11 +1433,6 @@ Bool_t TProofDataSetManager::ParseDataSetUri(const char *uri,
             Error("ParseDataSetUri", "only datasets from your group/user allowed");
             return kFALSE;
          }
-
-      } else {
-         // set default
-         group = fGroup;
-         user = fUser;
       }
 
       // parse dsname, if any

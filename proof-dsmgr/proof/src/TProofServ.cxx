@@ -921,8 +921,12 @@ void TProofServ::HandleSocketInput()
             sscanf(str, "%d %u", &fLogLevel, &mask);
             gProofDebugLevel = fLogLevel;
             gProofDebugMask  = (TProofDebug::EProofDebugMask) mask;
-            if (IsMaster())
+            if (IsMaster()) {
                fProof->SetLogLevel(fLogLevel, mask);
+               Bool_t silent = (gProofDebugLevel <= 0) ? kTRUE : kFALSE;
+               if (fDataSetManager)
+                  fDataSetManager->SetSilent(silent);
+            }
          }
          break;
 
@@ -1237,7 +1241,12 @@ void TProofServ::HandleSocketInput()
 
       case kPROOF_DATASETS:
          {
-            HandleDataSets(mess);
+            if (fDataSetManager)
+               fDataSetManager->HandleRequest(mess, fSocket, fLogFile);
+            else
+               Error("HandleProcess",
+                     "data manager instance undefined! - Protocol error?");
+
             SendLogFile();
          }
          break;
@@ -1418,7 +1427,11 @@ void TProofServ::HandleSocketInputDuringProcess()
 
       case kPROOF_DATASETS:
          {
-            HandleDataSets(mess);
+            if (fDataSetManager)
+               fDataSetManager->HandleRequest(mess, fSocket, fLogFile);
+            else
+               Error("HandleProcess",
+                     "data manager instance undefined! - Protocol error?");
             SendLogFile();
          }
          break;
@@ -2051,8 +2064,7 @@ Int_t TProofServ::Setup()
    }
 
    // Common setup
-   Int_t rc = SetupCommon();
-   if (!rc) {
+   if (SetupCommon() != 0) {
       Error("Setup", "common setup failed");
       return -1;
    }
@@ -2225,9 +2237,14 @@ Int_t TProofServ::SetupCommon()
       // Group priority
       fGroupPriority = GetPriority();
       // Dataset manager instance
-      fDataSetManager =
-         new TProofDataSetManager(gEnv->GetValue("ProofServ.DataSetRoot", ""),
-                                  fGroup, fUser, kTRUE);
+      TString dsetdir = gEnv->GetValue("ProofServ.DataSetRoot", "");
+      if (!dsetdir.IsNull()) {
+         Bool_t silent = (gProofDebugLevel <= 0) ? kTRUE : kFALSE;
+         fDataSetManager =
+            new TProofDataSetManager(dsetdir, fGroup, fUser, silent);
+      } else {
+         Warning("SetupCommon", "dataset dir is not specified: manager not initialized");
+      }
    }
 
    // Send "ROOTversion|ArchCompiler" flag
@@ -3095,24 +3112,30 @@ void TProofServ::HandleProcess(TMessage *mess)
          // The received message included an empty dataset, with only the name
          // defined: assume that a dataset, stored on the PROOF master by that
          // name, should be processed.
-         TFileCollection* dataset = fDataSetManager->GetDataSet(dset->GetName());
-         if (!dataset) {
-            SendAsynMessage(Form("HandleProcess on %s: no such dataset: %s",
-                                 fPrefix.Data(), dset->GetName()));
-            Error("HandleProcess", "No such dataset on the master: %s",
-                  dset->GetName());
-            return;
-         }
-         TSeqCollection* files = dataset->GetList();
-         if (!dset->Add(files)) {
-            SendAsynMessage(Form("HandleProcess on %s: error retrieving"
-                                 " dataset: %s", fPrefix.Data(), dset->GetName()));
-            Error("HandleProcess", "Error retrieving dataset %s",
-                  dset->GetName());
+         if (fDataSetManager) {
+            TFileCollection* dataset = fDataSetManager->GetDataSet(dset->GetName());
+            if (!dataset) {
+               SendAsynMessage(Form("HandleProcess on %s: no such dataset: %s",
+                                    fPrefix.Data(), dset->GetName()));
+               Error("HandleProcess", "no such dataset on the master: %s",
+                     dset->GetName());
+               return;
+            }
+            TSeqCollection* files = dataset->GetList();
+            if (!dset->Add(files)) {
+               SendAsynMessage(Form("HandleProcess on %s: error retrieving"
+                                    " dataset: %s", fPrefix.Data(), dset->GetName()));
+               Error("HandleProcess", "error retrieving dataset %s",
+                     dset->GetName());
+               delete dataset;
+               return;
+            }
             delete dataset;
+         } else {
+            SendAsynMessage(Form("HandleProcess on %s: no dataset manager!", fPrefix.Data()));
+            Error("HandleProcess", "no dataset manager: cannot proceed");
             return;
          }
-         delete dataset;
       }
 
       TProofQueryResult *pq = 0;
@@ -4411,19 +4434,6 @@ void TProofServ::HandleWorkerLists(TMessage *mess)
 }
 
 //______________________________________________________________________________
-Int_t TProofServ::HandleDataSets(TMessage *mess)
-{
-   // Handle here all dataset requests
-
-   if (fDataSetManager)
-      return fDataSetManager->HandleRequest(mess, fSocket);
-
-   // Errotr condition
-   Error("HandleDataSets", "data manager instance undefined! - Protocol error?");
-   return -1;
-}
-
-//______________________________________________________________________________
 TProofServ::EQueryAction TProofServ::GetWorkers(TList *workers,
                                                 Int_t & /* prioritychange */)
 {
@@ -4465,19 +4475,6 @@ TProofServ::EQueryAction TProofServ::GetWorkers(TList *workers,
    // We are done
    return kQueryOK;
 }
-#if 0
-//______________________________________________________________________________
-R__HIDDEN TFileCollection *TProofServ::GetDataSet(const char *uri)
-{
-   // Utility function used in various methods for user dataset upload.
-
-   TString dsUser, dsGroup, dsName;
-   if (ParseDataSetUri(uri, &dsGroup, &dsUser, &dsName) == kFALSE)
-      return 0;
-
-   return fDataSetManager->GetDataSet(dsGroup, dsUser, dsName);
-}
-#endif
 
 //______________________________________________________________________________
 void TProofServ::ErrorHandler(Int_t level, Bool_t abort, const char *location,
