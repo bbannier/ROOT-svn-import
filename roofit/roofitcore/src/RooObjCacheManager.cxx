@@ -149,10 +149,15 @@ void RooObjCacheManager::printCompactTreeHook(std::ostream& os, const char *inde
 
 void RooObjCacheManager::findConstantNodes(const RooArgSet& obs, RooArgSet& cacheList, RooLinkedList& processedNodes) 
 {
+  // Cache contents cannot be const optimized if it is erased on a server redirect.
+  if (_clearOnRedirect) {
+    return ;
+  }
+  
   for (Int_t i=0 ; i<_size ; i++) {
-    if (_object[i]) {
-      _object[i]->findConstantNodes(obs,cacheList, processedNodes) ;
-    }
+      if (_object[i]) {
+	_object[i]->findConstantNodes(obs,cacheList, processedNodes) ;
+      }
   }    
 }
 
