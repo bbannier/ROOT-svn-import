@@ -97,7 +97,16 @@ protected:
   class CacheElem : public RooAbsCacheElement {
   public:
     virtual ~CacheElem() {} ;
-    RooArgList containedArgs(Action) { RooArgList l(_coefVarList) ; l.add(_normList) ; return l ; }
+
+    RooArgList containedArgs(Action a) { 
+      if (a==FindConstantNodes) {
+	return RooArgList() ; 
+	}
+      RooArgList l(_coefVarList) ; 
+      l.add(_normList) ; 
+      return l ; 
+    }
+
     RooArgList _coefVarList ;
     RooArgList _normList ;
   } ;

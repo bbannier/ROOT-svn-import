@@ -348,7 +348,7 @@ void RooAbsOptGoodnessOfFit::optimizeConstantTerms(Bool_t activate)
     // Find all nodes that depend exclusively on constant parameters
     RooArgSet cacheableNodes ;
     _pdfClone->findConstantNodes(*_dataClone->get(),cacheableNodes) ;
-    
+
     // Cache constant nodes with dataset 
     _dataClone->cacheArgs(cacheableNodes,_normSet) ;  
     
