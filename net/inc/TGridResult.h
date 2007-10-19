@@ -28,7 +28,6 @@
 #endif
 
 class TEntryList;
-class TFileCollection;
 
 class TGridResult : public TList {
 
@@ -48,7 +47,7 @@ public:
       { MayNotUse("GetKey"); return 0; }
    virtual Bool_t      SetKey(UInt_t, const char*, const char*)
       { MayNotUse("SetKey"); return 0; }
-   virtual TFileCollection *GetFileInfoList() const
+   virtual TList *GetFileInfoList() const
       { MayNotUse("GetFileInfoList"); return 0; }
 
    ClassDef(TGridResult,1)  // ABC defining interface to GRID result set
