@@ -836,10 +836,11 @@ G__get_funcptr(G__ifunc_table_internal *ifunc, int ifn)
 // logic required before it (virtual table handling and stuff)
 // "para" is the parameters (like libp) and param are the 
 // formal parameters (like ifunc->param) 
-int G__stub_method_asm(void* vaddress, int gtagnum, int reftype, void* this_ptr, G__param* rpara, G__params *fpara, G__value *result7)
+int G__stub_method_asm(void* vaddress, int gtagnum, int reftype, void* this_ptr, 
+                       G__param* rpara, G__params *fpara, int ansi, G__value *result7)
 {
    int paran = rpara->paran;
-            
+         
    //for (int counter=0; counter<paran; counter++) {
    for (int k=paran-1; k>=0; k--) {    
       void *paramref = 0;
@@ -848,7 +849,7 @@ int G__stub_method_asm(void* vaddress, int gtagnum, int reftype, void* this_ptr,
       G__value param = rpara->para[k];
       G__paramfunc *formal_param = fpara->operator[](k);
 
-      if( formal_param->reftype && param.ref) {
+      if( (ansi!=2 && formal_param->reftype && param.ref) || (ansi==2 && param.ref)) {
          isref = 1;
          paramref = (void *) param.ref;
       }
@@ -862,9 +863,17 @@ int G__stub_method_asm(void* vaddress, int gtagnum, int reftype, void* this_ptr,
       // Pushing Parameter
       // By Value or By Reference?
       if (!isref){// By Value
+         char para_type = formal_param->type;
+
+         // If we have more parameters than the declarations allows
+         // (variadic function) then take the type of the actual parameter
+         // ... forget to check the declaration (will be null)
+         if(ansi==2)
+            para_type = param.type;
+         
 
          // Parameter's type? Push is different for each type
-         switch(formal_param->type){
+         switch(para_type){
 
          case 'd' : // Double = Double Word
             if((param.type=='d')||(param.type=='q')){
@@ -1003,7 +1012,7 @@ int G__stub_method_asm(void* vaddress, int gtagnum, int reftype, void* this_ptr,
          break;
 
          default:
-            printf("Type %c not known yet (method)\n", formal_param->type);
+            printf("Type %c not known yet (method)\n", para_type);
          }
       }
       else{
@@ -1517,11 +1526,19 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
                }
             }
 
+            char para_type = formal_param->type;
+
+            // If we have more parameters than the declarations allows
+            // (variadic function) then take the type of the actual parameter
+            // ... forget to check the declaration (will be null)
+            if(ifunc->ansi[ifn]==2)
+               para_type = param.type;
+
             if( formal_param->reftype && param.ref) {
                isref = 1;
                paramref = (void *) param.ref;
             }
-               
+            
             // This means the parameter is a pointer
             if(isupper(param.type) || isupper(formal_param->type)){
               isref = 1;
@@ -1533,7 +1550,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
             if (!isref){// By Value
 
                // Parameter's type? Push is different for each type
-               switch(formal_param->type){
+               switch(para_type){
 
                case 'd' : // Double = Double Word
                   if((param.type=='d')||(param.type=='q')){
@@ -1671,7 +1688,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
                break;
 
                default:
-                  printf("Type %c not known yet (method)\n", formal_param->type);
+                  printf("Type %c not known yet (method)\n", para_type);
                }
             }
             else{
@@ -2153,7 +2170,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
 
          // LF 08-08-07
          // Now let's call our lower level asm function
-         G__stub_method_asm(vaddress, gtagnum, ifunc->reftype[ifn], this_ptr, &rpara, &ifunc->param[ifn], result7);
+         G__stub_method_asm(vaddress, gtagnum, ifunc->reftype[ifn], this_ptr, &rpara, &ifunc->param[ifn], ifunc->ansi[ifn], result7);
       }
    }    
 
