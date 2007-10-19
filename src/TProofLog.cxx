@@ -58,8 +58,8 @@ TProofLogElem *TProofLog::Add(const char *ord, const char *url)
 }
 
 //________________________________________________________________________
-Int_t TProofLog::Retrieve(const char *ord,
-                          TProofLog::ERetrieveOpt opt, const char *fname)
+Int_t TProofLog::Retrieve(const char *ord, TProofLog::ERetrieveOpt opt,
+                          const char *fname, const char *pattern)
 {
    // Retrieve the content of the log file associated with worker 'ord'.
    // If 'ord' is "*" (default), all the workers are retrieved. If 'all'
@@ -67,7 +67,16 @@ Int_t TProofLog::Retrieve(const char *ord,
    // fgMaxTransferSize (about 1000 lines) per file is read, starting from
    // the end (i.e. the last ~1000 lines).
    // The received buffer is added to the file fname, if the latter is defined.
+   // If opt == TProofLog::kGrep only the lines containing 'pattern' are
+   // retrieved: these are obtained runnign the grep command remotely, so
+   // 'pattern' should follow the usual 'grep' rules.
    // Return 0 on success, -1 in case of any error.
+
+   // Validate inputs
+   if (opt == TProofLog::kGrep && (!pattern || strlen(pattern) <= 0)) {
+      Error("Retrieve", "option 'Grep' requires a pattern");
+      return -1;
+   }
 
    Int_t nel = (ord[0] == '*') ? fElem->GetSize() : 1;
    // Iterate over the elements
@@ -76,7 +85,7 @@ Int_t TProofLog::Retrieve(const char *ord,
    Int_t nd = 0, nb = 0;
    while ((ple = (TProofLogElem *) nxe())) {
       if (ord[0] == '*' || !strcmp(ord, ple->GetName())) {
-         if (ple->Retrieve(opt) != 0) {
+         if (ple->Retrieve(opt, pattern) != 0) {
             nb++;
          } else {
             nd++;
@@ -307,12 +316,15 @@ void TProofLogElem::SetMaxTransferSize(Long64_t maxsz)
 }
 
 //________________________________________________________________________
-Int_t TProofLogElem::Retrieve(TProofLog::ERetrieveOpt opt)
+Int_t TProofLogElem::Retrieve(TProofLog::ERetrieveOpt opt, const char *pattern)
 {
    // Retrieve the content of the associated file. The approximate number
    // of lines to be retrieved is given by 'lines', with the convention that
    // 0 means 'all', a positive number means the first 'lines' and a negative
    // number means the last '-lines'. Default is -1000.
+   // If opt == TProofLog::kGrep only the lines containing 'pattern' are
+   // retrieved: these are obtained runnign the grep command remotely, so
+   // 'pattern' should follow the usual 'grep' rules.
    // Return 0 on success, -1 in case of any error.
 
    // Make sure we have a reference manager
@@ -330,6 +342,12 @@ Int_t TProofLogElem::Retrieve(TProofLog::ERetrieveOpt opt)
       // Read leading part
       fFrom = 0;
       fTo = fgMaxTransferSize;
+   } else if (opt == TProofLog::kGrep) {
+      // Retrieve lines containing 'pattern', which must be defined
+      if (!pattern || strlen(pattern) <= 0) {
+         Error("Retrieve", "option 'Grep' requires a pattern");
+         return -1;
+      }
    } else {
       // Read trailing part
       fFrom = -fgMaxTransferSize;
@@ -344,8 +362,13 @@ Int_t TProofLogElem::Retrieve(TProofLog::ERetrieveOpt opt)
    Long64_t len = (fTo > fFrom) ? fTo - fFrom : -1;
 
    // Readout the buffer
-   TObjString *os = fLogger->fMgr ?
-                    fLogger->fMgr->ReadBuffer(GetTitle(), fFrom, len) : 0;
+   TObjString *os = 0;
+   if (fLogger->fMgr) {
+      if (opt == TProofLog::kGrep)
+         os = fLogger->fMgr->ReadBuffer(GetTitle(), pattern);
+      else
+         os = fLogger->fMgr->ReadBuffer(GetTitle(), fFrom, len);
+   }
    if (os) {
       // Loop over lines
       TString ln;

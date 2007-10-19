@@ -79,8 +79,10 @@ public:
    virtual Bool_t      MatchUrl(const char *url);
    virtual void        ShowROOTVersions() { }
    virtual TList      *QuerySessions(Option_t *opt = "S");
-   virtual TObjString *ReadBuffer(const char * = 0, Long64_t = 0,
-                             Int_t = 0) { return (TObjString *)0; }
+   virtual TObjString *ReadBuffer(const char *, Long64_t, Int_t)
+                                        { return (TObjString *)0; }
+   virtual TObjString *ReadBuffer(const char *, const char *)
+                                        { return (TObjString *)0; }
    virtual Int_t       Reset(const char *usr = 0);
    virtual void        ShowWorkers();
    virtual void        SetAlias(const char *alias="") { TNamed::SetTitle(alias); }
