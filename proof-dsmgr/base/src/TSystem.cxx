@@ -1059,15 +1059,14 @@ Bool_t TSystem::AccessPathName(const char *, EAccessMode)
 }
 
 //______________________________________________________________________________
-Bool_t TSystem::AccessPathName(FileStat_t st, EAccessMode mode)
+Bool_t TSystem::TestPermissions(FileStat_t st, EAccessMode mode)
 {
-   // Returns FALSE if one can access a file using the specified access mode.
+   // Returns TRUE if one can access a file using the specified access mode.
    // The information is taken from 'st' previously obtained via GetPathInfo.
-   // Attention, bizarre convention of return value!!
 
    if (st.fIno <= 0)
       // The file does not exist
-      return kTRUE;
+      return kFALSE;
 
    // Properties
    Bool_t hasx = kTRUE, hasw = kTRUE, hasr = kTRUE;
@@ -1087,9 +1086,9 @@ Bool_t TSystem::AccessPathName(FileStat_t st, EAccessMode mode)
       if (o)
          hasx = (st.fMode & kS_IRWXU & kS_IXUSR) ? kTRUE : kFALSE;
       else if (g)
-         hasx = (st.fMode & kS_IRWXU & kS_IXGRP) ? kTRUE : kFALSE;
+         hasx = (st.fMode & kS_IRWXG & kS_IXGRP) ? kTRUE : kFALSE;
       else
-         hasx = (st.fMode & kS_IRWXU & kS_IXOTH) ? kTRUE : kFALSE;
+         hasx = (st.fMode & kS_IRWXO & kS_IXOTH) ? kTRUE : kFALSE;
    }
 
    // Check write
@@ -1098,9 +1097,9 @@ Bool_t TSystem::AccessPathName(FileStat_t st, EAccessMode mode)
       if (o)
          hasw = (st.fMode & kS_IRWXU & kS_IWUSR) ? kTRUE : kFALSE;
       else if (g)
-         hasw = (st.fMode & kS_IRWXU & kS_IWGRP) ? kTRUE : kFALSE;
+         hasw = (st.fMode & kS_IRWXG & kS_IWGRP) ? kTRUE : kFALSE;
       else
-         hasw = (st.fMode & kS_IRWXU & kS_IWOTH) ? kTRUE : kFALSE;
+         hasw = (st.fMode & kS_IRWXO & kS_IWOTH) ? kTRUE : kFALSE;
    }
 
    // Check read
@@ -1109,13 +1108,13 @@ Bool_t TSystem::AccessPathName(FileStat_t st, EAccessMode mode)
       if (o)
          hasr = (st.fMode & kS_IRWXU & kS_IRUSR) ? kTRUE : kFALSE;
       else if (g)
-         hasr = (st.fMode & kS_IRWXU & kS_IRGRP) ? kTRUE : kFALSE;
+         hasr = (st.fMode & kS_IRWXG & kS_IRGRP) ? kTRUE : kFALSE;
       else
-         hasr = (st.fMode & kS_IRWXU & kS_IROTH) ? kTRUE : kFALSE;
+         hasr = (st.fMode & kS_IRWXO & kS_IROTH) ? kTRUE : kFALSE;
    }
 
    // Done
-   return ((hasx && hasw && hasr) ? kFALSE : kTRUE);
+   return ((hasx && hasw && hasr) ? kTRUE : kFALSE);
 }
 
 //______________________________________________________________________________
