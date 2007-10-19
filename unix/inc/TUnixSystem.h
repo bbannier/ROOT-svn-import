@@ -143,8 +143,6 @@ public:
    Bool_t            ExpandPathName(TString &patbuf);
    char             *ExpandPathName(const char *path);
    Bool_t            AccessPathName(const char *path, EAccessMode mode = kFileExists);
-   Bool_t            AccessPathName(FileStat_t st, EAccessMode mode = kFileExists)
-                                        { return TSystem::AccessPathName(st, mode); }
    int               CopyFile(const char *from, const char *to, Bool_t overwrite = kFALSE);
    int               Rename(const char *from, const char *to);
    int               Link(const char *from, const char *to);
