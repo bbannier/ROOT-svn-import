@@ -98,10 +98,7 @@ protected:
   public:
     virtual ~CacheElem() {} ;
 
-    RooArgList containedArgs(Action a) { 
-      if (a==FindConstantNodes) {
-	return RooArgList() ; 
-	}
+    RooArgList containedArgs(Action) { 
       RooArgList l(_coefVarList) ; 
       l.add(_normList) ; 
       return l ; 
