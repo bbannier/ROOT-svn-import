@@ -6096,20 +6096,26 @@ int XrdProofdProtocol::ReadBuffer()
    // Get the buffer
    int lout = len;
    char *buf = 0;
+   char *filen = 0;
+   char *pattern = 0;
    int grep = ntohl(fRequest.readbuf.int1);
+   if (grep > 0) {
+      // 'grep' operation: len is the length of the 'pattern' to be grepped
+      pattern = new char[len + 1];
+      int j = blen - len;
+      int i = 0;
+      while (j < blen)
+         pattern[i++] = file[j++];
+      pattern[i] = 0;
+      filen = strdup(file);
+      filen[blen - len] = 0;
+      TRACEI(DBG, "ReadBuffer: grep operation "<<grep<<", pattern:"<<pattern);
+   }
    if (local) {
       if (grep > 0) {
-         // 'grep' operation: len is the length of the 'pattern' to be grepped
-         char *pattern = new char[len + 1];
-         int j = blen - len;
-         int i = 0;
-         while (j < blen)
-            pattern[i++] = file[j++];
-         pattern[i] = 0;
-         file[blen - len] = 0;
          // Grep local file
          lout = blen; // initial length
-         buf = ReadBufferLocal(file, pattern, lout, grep);
+         buf = ReadBufferLocal(filen, pattern, lout, grep);
       } else {
          // Read portion of local file
          buf = ReadBufferLocal(file, ofs, lout);
@@ -6120,14 +6126,16 @@ int XrdProofdProtocol::ReadBuffer()
    }
 
    if (!buf) {
-      if (local && grep > 0) {
+      if (grep > 0) {
          if (TRACING(DBG)) {
             emsg = "ReadBuffer: nothing found by 'grep' in ";
-            emsg += file;
+            emsg += filen;
+            emsg += ", pattern: ";
+            emsg += pattern;
             TRACEP(DBG, emsg);
-            fResponse.Send(kXR_InvalidRequest, emsg.c_str());
-            return rc;
          }
+         fResponse.Send();
+         return rc;
       } else {
          emsg = "ReadBuffer: could not read buffer from ";
          emsg += (local) ? "local file " : "remote file ";
@@ -6143,6 +6151,9 @@ int XrdProofdProtocol::ReadBuffer()
 
    // Cleanup
    SafeFree(buf);
+   SafeFree(file);
+   SafeFree(filen);
+   SafeFree(pattern);
 
    // Done
    return rc;
@@ -6335,7 +6346,7 @@ char *XrdProofdProtocol::ReadBufferRemote(const char *url,
    // Returns 0 in case of error.
 
    TRACEI(ACT, "ReadBufferRemote: url: "<<(url ? url : "undef")<<
-                                       ", ofs: "<<ofs<<", len: "<<len);
+               ", ofs: "<<ofs<<", len: "<<len<<", grep: "<<grep);
 
    // Check input
    if (!url || strlen(url) <= 0) {

@@ -53,8 +53,9 @@
 // Version index: start from 1001 (0x3E9) to distinguish from 'proofd'
 // To be increment when non-backward compatible changes are introduced
 //  1001 (0x3E9) -> 1002 (0x3EA) : support for flexible env setting
-#define XPROOFD_VERSBIN 0x000003EA
-#define XPROOFD_VERSION "0.2"
+//  1002 (0x3EA) -> 1003 (0x3EB) : many new features
+#define XPROOFD_VERSBIN 0x000003EB
+#define XPROOFD_VERSION "0.3"
 
 #define XPD_LOGGEDIN       1
 #define XPD_NEED_AUTH      2
