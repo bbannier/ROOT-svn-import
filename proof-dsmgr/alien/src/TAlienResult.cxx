@@ -166,7 +166,7 @@ Bool_t TAlienResult::SetKey(UInt_t i, const char *key, const char *value)
 }
 
 //______________________________________________________________________________
-TFileCollection *TAlienResult::GetFileInfoList() const
+TList *TAlienResult::GetFileInfoList() const
 {
    // Return a file info list.
 
