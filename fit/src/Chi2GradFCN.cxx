@@ -67,7 +67,6 @@ void Chi2GradFCN:: Gradient(const double * p, double * g ) const {
    const BinData & data = fData; 
    unsigned int n = data.Size();
 
-   double chi2 = 0;
    //int nRejected = 0; 
    // set values of parameters 
    func.SetParameters(p); 
@@ -96,7 +95,7 @@ void Chi2GradFCN:: Gradient(const double * p, double * g ) const {
 #endif
 
       // loop on the parameters
-      for (int ipar = 0; ipar < npar ; ++ipar) { 
+      for (unsigned int ipar = 0; ipar < npar ; ++ipar) { 
 
          // avoid singularity in the function (infinity and nan ) in the chi2 sum 
          // eventually add possibility of excluding some points (like singularity) 

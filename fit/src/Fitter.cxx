@@ -23,7 +23,7 @@
 
 #include "Math/IParamFunction.h" 
 
-#include "Fit/WrappedParamFunction.h"
+#include "Math/WrappedParamFunction.h"
 
 namespace ROOT { 
 
