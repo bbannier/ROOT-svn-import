@@ -212,7 +212,7 @@ TXSocket::TXSocket(const char *url, Char_t m, Int_t psid, Char_t capver,
       fHost = fConn->fHost.c_str();
       fPort = fConn->fPort;
       if (m == 'C')
-         fRemoteProtocol = fConn->fRemoteProtocol;
+         fXrdProofdVersion = fConn->fRemoteProtocol;
 
       // Also in the base class
       fUrl = fConn->fUrl.GetUrl().c_str();
@@ -1454,8 +1454,8 @@ Int_t TXSocket::Recv(TMessage *&mess)
 }
 
 //______________________________________________________________________________
-TObjString *TXSocket::SendCoordinator(Int_t kind,
-                                      const char *msg, Int_t int2, Long64_t l64)
+TObjString *TXSocket::SendCoordinator(Int_t kind, const char *msg, Int_t int2,
+                                      Long64_t l64, Int_t int3, const char *)
 {
    // Send message to intermediate coordinator.
    // If any output is due, this is returned as an obj string to be
@@ -1509,6 +1509,12 @@ TObjString *TXSocket::SendCoordinator(Int_t kind,
          reqhdr.header.requestid = kXP_readbuf;
          reqhdr.readbuf.ofs = l64;
          reqhdr.readbuf.len = int2;
+         if (int3 > 0 && fXrdProofdVersion < 1003) {
+            Info("SendCoordinator", "kReadBuffer: old server (ver %d < 1003):"
+                 " grep functionality not supported", fXrdProofdVersion);
+            return sout;
+         }
+         reqhdr.readbuf.int1 = int3;
          if (!msg || strlen(msg) <= 0) {
             Info("SendCoordinator", "kReadBuffer: file path undefined");
             return sout;
