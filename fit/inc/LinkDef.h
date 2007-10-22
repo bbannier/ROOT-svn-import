@@ -1,4 +1,4 @@
-// @(#)root/minuit2:$Id$
+// @(#)root/minuit2:$Id: LinkDef.h,v 1.3 2005/12/09 09:49:00 moneta Exp $
 // Author: L. Moneta    10/2005  
 
 /**********************************************************************
@@ -14,21 +14,19 @@
 #pragma link off all classes;
 #pragma link off all functions;
 
-//#pragma link C++ global gMinuit;
-#pragma link C++ global gMinuit2;
-#pragma link C++ global gFumili2;
 
-#pragma link C++ class TFitterMinuit;
-#pragma link C++ class TFitterFumili;
-#pragma link C++ class TFcnAdapter;
+//#pragma link C++ class ROOT::Fit::BinPoint;
+#pragma link C++ class ROOT::Fit::Chi2FCN;
+#pragma link C++ class ROOT::Fit::DataRange;
+#pragma link C++ class ROOT::Fit::DataOptions;
+//#pragma link C++ class ROOT::Fit::DataVector<ROOT::Fit::BinPoint>;
+#pragma link C++ class ROOT::Fit::MinimizerFactory;
 
-//#pragma link C++ namespace ROOT::Minuit2;
 
-#pragma link C++ class ROOT::Minuit2::FCNBase;
-#pragma link C++ class ROOT::Minuit2::FCNGradientBase;
-#pragma link C++ class ROOT::Minuit2::FumiliFCNBase;
+#pragma link C++ class ROOT::Math::WrappedTF1;
+#pragma link C++ class ROOT::Math::WrappedMultiTF1;
 
-#pragma link C++ class ROOT::Minuit2::Minuit2Minimizer;
+#pragma link C++ namespace ROOT::Fit;
 
 
 #endif

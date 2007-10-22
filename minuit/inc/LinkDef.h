@@ -20,4 +20,6 @@
 #pragma link C++ class TFitter+;
 #pragma link C++ class TLinearFitter+;
 
+#pragma link C++ class TMinuitMinimizer+;
+
 #endif
