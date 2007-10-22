@@ -1567,7 +1567,12 @@ Int_t TFile::Recover()
    if (fWritable) {
       Long64_t max_file_size = Long64_t(kStartBigFile);
       if (max_file_size < fEND) max_file_size = fEND+1000000000;
-      new TFree(fFree,fEND,max_file_size);
+      TFree *last = (TFree*)fFree->Last();
+      if (last) {
+         last->AddFree(fFree,fEND,max_file_size);
+      } else {
+         new TFree(fFree,fEND,max_file_size);
+      }
       if (nrecov) Write();
    }
    return nrecov;
@@ -3093,7 +3098,7 @@ TFile::EFileType TFile::GetType(const char *name, Option_t *option, TString *pre
             TString opt = option;
             opt.ToUpper();
             if (opt == "" || opt == "READ") read = kTRUE;
-            const char *fname = url.GetFile();
+            const char *fname = url.GetFileAndOptions();
             TString lfname;
             if (fname[0] == '/') {
                if (prefix)
@@ -3107,7 +3112,7 @@ TFile::EFileType TFile::GetType(const char *name, Option_t *option, TString *pre
             }
             if (read) {
                char *fn;
-               if ((fn = gSystem->ExpandPathName(lfname.Data()))) {
+               if ((fn = gSystem->ExpandPathName(TUrl(lfname).GetFile()))) {
                   if (gSystem->AccessPathName(fn, kReadPermission))
                      read = kFALSE;
                   delete [] fn;
@@ -3120,7 +3125,7 @@ TFile::EFileType TFile::GetType(const char *name, Option_t *option, TString *pre
             delete u;
             if (read || sameUser)
                localFile = kTRUE;
-            if (localFile)
+            if (localFile && prefix)
                *prefix = lfname;
          }
       }

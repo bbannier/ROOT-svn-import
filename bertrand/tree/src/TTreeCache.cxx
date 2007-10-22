@@ -48,6 +48,9 @@
 #include "TBranch.h"
 #include "TEventList.h"
 #include "TObjString.h"
+#include "TRegexp.h"
+#include "TLeaf.h"
+#include "TFriendElement.h"
 
 Int_t TTreeCache::fgLearnEntries = 100;
 
@@ -67,7 +70,8 @@ TTreeCache::TTreeCache() : TFileCacheRead(),
    fBrNames(0),
    fOwner(0),
    fTree(0),
-   fIsLearning(kTRUE)
+   fIsLearning(kTRUE),
+   fIsManual(kFALSE)
 {
    // Default Constructor.
 }
@@ -86,13 +90,14 @@ TTreeCache::TTreeCache(TTree *tree, Int_t buffersize) : TFileCacheRead(tree->Get
    fBrNames(new TList),
    fOwner(tree),
    fTree(0),
-   fIsLearning(kTRUE)
+   fIsLearning(kTRUE),
+   fIsManual(kFALSE)
 {
    // Constructor.
 
    fEntryNext = fEntryMin + fgLearnEntries;
    Int_t nleaves = tree->GetListOfLeaves()->GetEntries();
-   fBranches = new TBranch*[nleaves+10]; //add a margin just in case in a TChain?
+   fBranches = new TObjArray(nleaves);
 }
 
 //______________________________________________________________________________
@@ -100,12 +105,12 @@ TTreeCache::~TTreeCache()
 {
    // destructor. (in general called by the TFile destructor
 
-   delete [] fBranches;
+   delete fBranches;
    if (fBrNames) {fBrNames->Delete(); delete fBrNames; fBrNames=0;}
 }
 
 //_____________________________________________________________________________
-void TTreeCache::AddBranch(TBranch *b)
+void TTreeCache::AddBranch(TBranch *b, Bool_t subbranches /*= kFALSE*/)
 {
    //add a branch to the list of branches to be stored in the cache
    //this function is called by TBranch::GetBasket
@@ -115,18 +120,113 @@ void TTreeCache::AddBranch(TBranch *b)
    // Reject branch that are not from the cached tree.
    if (!b || fOwner->GetTree() != b->GetTree()) return;
 
+   Int_t nb = 0;
+
    //Is branch already in the cache?
    Bool_t isNew = kTRUE;
    for (int i=0;i<fNbranches;i++) {
-      if (fBranches[i] == b) {isNew = kFALSE; break;}
+      if (fBranches->UncheckedAt(i) == b) {isNew = kFALSE; break;}
    }
    if (isNew) {
       fTree = b->GetTree();
-      fBranches[fNbranches] = b;
+      fBranches->AddAtAndExpand(b, fNbranches);
       fBrNames->Add(new TObjString(b->GetName()));
       fZipBytes += b->GetZipBytes();
       fNbranches++;
+      nb++;
       if (gDebug > 0) printf("Entry: %lld, registering branch: %s\n",b->GetTree()->GetReadEntry(),b->GetName());
+   }
+   
+   // process subbranches
+   if (subbranches) {
+      TObjArray *lb = b->GetListOfBranches();
+      Int_t nb = lb->GetEntriesFast();
+      for (Int_t j = 0; j < nb; j++) {
+         TBranch* branch = (TBranch*) lb->UncheckedAt(j);
+         if (!branch) continue;
+         AddBranch(branch, subbranches);
+      }
+   }
+}
+
+
+//_____________________________________________________________________________
+void TTreeCache::AddBranch(const char *bname, Bool_t subbranches /*= kFALSE*/)
+{
+   // Add a branch to the list of branches to be stored in the cache
+   // this is to be used by user (thats why we pass the name of the branch).
+   // It works in exactly the same way as TTree::SetBranchStatus so you
+   // probably want to look over ther for details about the use of bname
+   // with regular expresions.
+   // The branches are taken with respect to the Owner of this TTreeCache
+   // (i.e. the original Tree)
+   
+   TBranch *branch, *bcount;
+   TLeaf *leaf, *leafcount;
+
+   Int_t i;
+   Int_t nleaves = (fOwner->GetListOfLeaves())->GetEntriesFast();
+   TRegexp re(bname,kTRUE);
+   Int_t nb = 0;
+
+   // first pass, loop on all branches
+   // for leafcount branches activate/deactivate in function of status
+   for (i=0;i<nleaves;i++)  {
+      leaf = (TLeaf*)(fOwner->GetListOfLeaves())->UncheckedAt(i);
+      branch = (TBranch*)leaf->GetBranch();
+      TString s = branch->GetName();
+      if (strcmp(bname,"*")) { //Regexp gives wrong result for [] in name
+         TString longname; 
+         longname.Form("%s.%s",fOwner->GetName(),branch->GetName());
+         if (strcmp(bname,branch->GetName()) 
+             && longname != bname
+             && s.Index(re) == kNPOS) continue;
+      }
+      nb++;
+      AddBranch(branch, subbranches);
+      leafcount = leaf->GetLeafCount();
+      if (leafcount) {
+         bcount = leafcount->GetBranch();
+         AddBranch(bcount, subbranches);
+      }
+   }
+   if (nb==0 && strchr(bname,'*')==0) {
+      branch = fOwner->GetBranch(bname);
+      if (branch) {
+         AddBranch(branch, subbranches);
+         ++nb;
+      }
+   }
+
+   //search in list of friends
+   UInt_t foundInFriend = 0;
+   if (fOwner->GetListOfFriends()) {
+      TIter nextf(fOwner->GetListOfFriends());
+      TFriendElement *fe;
+      TString name;
+      while ((fe = (TFriendElement*)nextf())) {
+         TTree *t = fe->GetTree();
+         if (t==0) continue;
+
+         // If the alias is present replace it with the real name.
+         char *subbranch = (char*)strstr(bname,fe->GetName());
+         if (subbranch!=bname) subbranch = 0;
+         if (subbranch) {
+            subbranch += strlen(fe->GetName());
+            if ( *subbranch != '.' ) subbranch = 0;
+            else subbranch ++;
+         }
+         if (subbranch) {
+            name.Form("%s.%s",t->GetName(),subbranch);
+         } else {
+            name = bname;
+         }
+         AddBranch(name, subbranches);
+      }
+   }
+   if (!nb && !foundInFriend) {
+      if (gDebug > 0) printf("AddBranch: unknown branch -> %s \n", bname);
+      return;
    }
 }
 
@@ -136,9 +236,13 @@ Bool_t TTreeCache::FillBuffer()
    // Fill the cache buffer with the branches in the cache.
 
    if (fNbranches <= 0) return kFALSE;
-   TTree *tree = fBranches[0]->GetTree();
+   TTree *tree = ((TBranch*)fBranches->UncheckedAt(0))->GetTree();
    Long64_t entry = tree->GetReadEntry();
-   if (entry < fEntryNext) return kFALSE;
+   
+   if (!fIsManual && entry < fEntryNext) return kFALSE;
+   
+   // Triggered by the user, not the learning phase
+   if (entry == -1)  entry=0;
 
    // Estimate number of entries that can fit in the cache compare it
    // to the original value of fBufferSize not to the real one
@@ -169,7 +273,7 @@ Bool_t TTreeCache::FillBuffer()
    Bool_t mustBreak = kFALSE;
    for (Int_t i=0;i<fNbranches;i++) {
       if (mustBreak) break;
-      TBranch *b = fBranches[i];
+      TBranch *b = (TBranch*)fBranches->UncheckedAt(i);
       Int_t nb = b->GetMaxBaskets();
       Int_t *lbaskets   = b->GetBasketBytes();
       Long64_t *entries = b->GetBasketEntry();
@@ -193,7 +297,7 @@ Bool_t TTreeCache::FillBuffer()
          //it may happen that the evaluation of fEntryNext is bad, hence this protection
          if (fNtot > 2*fBufferSizeMin) {TFileCacheRead::Prefetch(0,0);mustBreak = kTRUE; break;}
       }
-      if (gDebug > 0) printf("Entry: %lld, registering baskets branch %s, fEntryNext=%lld, fNseek=%d, fNtot=%d\n",entry,fBranches[i]->GetName(),fEntryNext,fNseek,fNtot);
+      if (gDebug > 0) printf("Entry: %lld, registering baskets branch %s, fEntryNext=%lld, fNseek=%d, fNtot=%d\n",entry,((TBranch*)fBranches->UncheckedAt(i))->GetName(),fEntryNext,fNseek,fNtot);
    }
    fIsLearning = kFALSE;
    if (mustBreak) return kFALSE;
@@ -250,7 +354,7 @@ TTree *TTreeCache::GetTree() const
 {
    //return Tree in the cache
    if (fNbranches <= 0) return 0;
-   return fBranches[0]->GetTree();
+   return ((TBranch*)(fBranches->UncheckedAt(0)))->GetTree();
 }
 
 //_____________________________________________________________________________
@@ -296,11 +400,17 @@ void TTreeCache::SetEntryRange(Long64_t emin, Long64_t emax)
    // this information helps to optimize the number of baskets to read
    // when prefetching the branch buffers.
 
+   // This is called by TTreePlayer::Process in an automatic way...
+   // don't do it if the user has specified the branches.
+   if(fIsManual)
+      return;
+   
    fEntryMin  = emin;
    fEntryMax  = emax;
    fEntryNext  = fEntryMin + fgLearnEntries;
    if (gDebug > 0) printf("SetEntryRange: fEntryMin=%lld, fEntryMax=%lld, fEntryNext=%lld\n",fEntryMin,fEntryMax,fEntryNext);
    fIsLearning = kTRUE;
+   fIsManual = kFALSE;
    fNbranches  = 0;
    fZipBytes   = 0;
    if (fBrNames) fBrNames->Delete();
@@ -315,6 +425,34 @@ void TTreeCache::SetLearnEntries(Int_t n)
 
    if (n < 1) n = 1;
    fgLearnEntries = n;
+}
+
+//_____________________________________________________________________________
+void TTreeCache::StartLearningPhase()
+{
+   // The name should be enough to explain the method.
+   // The only additional comments is that the cache is cleaned before
+   // the new learning phase.
+   
+   fIsLearning = kTRUE;
+   fIsManual = kFALSE;
+   fNbranches  = 0;
+   fZipBytes   = 0;
+   if (fBrNames) fBrNames->Delete();
+}
+
+//_____________________________________________________________________________
+void TTreeCache::StopLearningPhase()
+{
+   // This is the counterpart of StartLearningPhase() and can be used to stop
+   // the learning phase. It's useful when the user knows exactly what branches
+   // he is going to use.
+   // For the moment it's just a call to FillBuffer() since that method
+   // will create the buffer lists from the specified branches.
+   
+   fIsLearning = kFALSE;
+   fIsManual = kTRUE;
+   FillBuffer();
 }
 
 //_____________________________________________________________________________
@@ -334,7 +472,7 @@ void TTreeCache::UpdateBranches(TTree *tree)
    while ((os = (TObjString*)next())) {
       TBranch *b = fTree->GetBranch(os->GetName());
       if (!b) continue;
-      fBranches[fNbranches] = b;
+      fBranches->AddAt(b, fNbranches);
       fZipBytes   += b->GetZipBytes();
       fNbranches++;
    }

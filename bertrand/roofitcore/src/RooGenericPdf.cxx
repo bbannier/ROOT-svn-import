@@ -82,7 +82,7 @@ RooGenericPdf::~RooGenericPdf()
 Double_t RooGenericPdf::evaluate() const
 {
   // Calculate current value of this object
-  return _formula.eval(_normMgr.lastNormSet()) ;
+  return _formula.eval(_normSet) ;
 }
 
 

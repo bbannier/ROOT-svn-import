@@ -24,6 +24,9 @@
 #ifndef ROOT_TFileCacheRead
 #include "TFileCacheRead.h"
 #endif
+#ifndef ROOT_TObjArray
+#include "TObjArray.h"
+#endif
 
 class TTree;
 class TBranch;
@@ -39,11 +42,12 @@ protected:
    Int_t           fNReadOk;     //Number of blocks read and found in the cache
    Int_t           fNReadMiss;   //Number of blocks read and not found in the chache
    Int_t           fNReadPref;   //Number of blocks that were prefetched
-   TBranch       **fBranches;    //! [fNbranches] List of branches to be stored in the cache
+   TObjArray      *fBranches;    //! List of branches to be stored in the cache
    TList          *fBrNames;     //! list of branch names in the cache
    TTree          *fOwner;       //! pointer to the owner Tree/chain
    TTree          *fTree;        //! pointer to the current Tree
    Bool_t          fIsLearning;  //! true if cache is in learning mode
+   Bool_t          fIsManual;    //! true if cache is StopLearningPhase was used
    static  Int_t fgLearnEntries; //Number of entries used for learning mode
 
 private:
@@ -54,7 +58,8 @@ public:
    TTreeCache();
    TTreeCache(TTree *tree, Int_t buffersize=0);
    virtual ~TTreeCache();
-   void                AddBranch(TBranch *b);
+   void                AddBranch(TBranch *b, Bool_t subbranches = kFALSE);
+   void                AddBranch(const char *branch, Bool_t subbranches = kFALSE);
    Double_t            GetEfficiency();
    Double_t            GetEfficiencyRel();
    static Int_t        GetLearnEntries();
@@ -65,9 +70,11 @@ public:
    virtual Int_t       ReadBuffer(char *buf, Long64_t pos, Int_t len);
    void                SetEntryRange(Long64_t emin,   Long64_t emax);
    static void         SetLearnEntries(Int_t n = 100);
+   void                StartLearningPhase();
+   void                StopLearningPhase();
    void                UpdateBranches(TTree *tree);
 
-   ClassDef(TTreeCache,1)  //Specialization of TFileCacheRead for a TTree
+   ClassDef(TTreeCache,2)  //Specialization of TFileCacheRead for a TTree
 };
 
 #endif

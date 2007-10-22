@@ -159,7 +159,7 @@ void RooErrorVar::setMin(const char* name, Double_t value)
   // Clip current value in window if it fell out
   if (!name) {
     Double_t clipValue ;
-    if (!inRange(_value,&clipValue)) {
+    if (!inRange(_value,0,&clipValue)) {
       setVal(clipValue) ;
     }
   }
@@ -184,7 +184,7 @@ void RooErrorVar::setMax(const char* name, Double_t value)
   // Clip current value in window if it fell out
   if (!name) {
     Double_t clipValue ;
-    if (!inRange(_value,&clipValue)) {
+    if (!inRange(_value,0,&clipValue)) {
       setVal(clipValue) ;
     }
   }

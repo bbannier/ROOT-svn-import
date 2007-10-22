@@ -110,10 +110,12 @@ $(CINTDLLS): CINTCXXFLAGS += $(CINTDLLINCDIRS)
 ##### all cintdlls end on .dll
 ifneq ($(SOEXT),dll)
 CINTDLLSOEXTCMD = mv $(@:.dll=.$(SOEXT)) $@
-ifeq ($(PLATFORM),maxosx)
+ifeq ($(PLATFORM),macosx)
 ifeq ($(subst $(MACOSX_MINOR),,456789),456789)
 # MACOSX_MINOR < 4
-  CINTDLLSOEXTCMD += ;mv $(@:.dll=.so) $@;rm -f $(@:.dll=.so)
+  CINTDLLSOEXTCMD += ;mv $(@:.dll=.so) $@
+else
+  CINTDLLSOEXTCMD += ;rm -f $(@:.dll=.so)
 endif
 endif # macosx
 endif # need to mv to .dll
@@ -196,13 +198,6 @@ $(patsubst lib/lib%Dict.$(SOEXT),$(CINTDIRDLLSTL)/rootcint_%.o,$(CINTDICTDLLS)):
 
 $(CINTDICTDLLS): lib/lib%Dict.$(SOEXT): $(CINTDIRDLLSTL)/rootcint_%.o $(ORDER_) $(MAINLIBS)
 	@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" "$(SOFLAGS)" $(notdir $@) $@ $(filter-out $(MAINLIBS),$^)
-ifeq ($(PLATFORM),maxosx)
-ifeq ($(subst $(MACOSX_MINOR),,456789),456789)
-	rm -f $@
-else
-	mv -f $@ $(basename $@).so
-endif
-endif
 ##### dictionaries - END
 
 ##### clean
@@ -228,6 +223,9 @@ distclean-cintdlls: clean-cintdlls
 	  metautils/src/stlLoader_$${cintdll}.*; done)
 	@rm -f $(ALLCINTDLLS) \
 	  $(CINTDIRL)/posix/G__c_posix.* $(CINTDIRL)/posix/mktypes$(EXEEXT)
+ifeq ($(PLATFORM),macosx)
+	@rm -f  $(CINTDIRSTL)/*.so
+endif
 
 distclean:: distclean-cintdlls
 
