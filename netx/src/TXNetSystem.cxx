@@ -451,10 +451,6 @@ Bool_t TXNetSystem::IsOnline(const char *path)
 {
    // Check if the file defined by 'path' is ready to be used
 
-   // For local instances just check if the file exists
-   if (fIsLocal)
-      return gSystem->AccessPathName(path) ? kFALSE : kTRUE;
-
    TXNetSystemConnectGuard cg(this, path);
    if (cg.IsValid()) {
       vecBool vb;
@@ -492,10 +488,6 @@ Bool_t TXNetSystem::Prepare(const char *path, UChar_t option, UChar_t priority)
 {
    // Issue a prepare request for file defined by 'path'
 
-   // For local instances nothing to do
-   if (fIsLocal)
-      return kTRUE;
-
    TXNetSystemConnectGuard cg(this, path);
    if (cg.IsValid()) {
       XrdOucString pathname = TUrl(path).GetFileAndOptions();
@@ -529,10 +521,6 @@ Int_t TXNetSystem::Prepare(TCollection *paths,
       Warning("Prepare", "input list is empty!");
       return -1;
    }
-
-   // For local instances nothing to do
-   if (fIsLocal)
-      return paths->GetSize();
 
    Int_t npaths = 0;
 
@@ -590,12 +578,6 @@ Bool_t TXNetSystem::GetPathsInfo(const char *paths, UChar_t *info)
       return kFALSE;
    }
 
-   // For local instances nothing to do
-   if (fIsLocal) {
-      Warning("GetPathsInfo","local instance: not implemented");
-      return kTRUE;
-   }
-
    TXNetSystemConnectGuard cg(this, "");
    if (cg.IsValid()) {
       cg.ClientAdmin()->SysStatX(paths, info);
@@ -618,15 +600,6 @@ Int_t TXNetSystem::Locate(const char *path, TString &eurl)
    // Get end-point url of a file. Info is returned in eurl.
    // The function returns 0 in case of success and 1 if the file could
    // not be stat'ed.
-
-   // For local instances just check if the file exists
-   if (fIsLocal) {
-      if (gSystem->AccessPathName(path))
-         return 1;
-      // Fill output with the input path for consistency
-      eurl = path;
-      return 0;
-   }
 
    if (fIsXRootd) {
       TXNetSystemConnectGuard cg(this, path);
