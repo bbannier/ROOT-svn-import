@@ -605,14 +605,23 @@ const char* RooCmdConfig::decodeStringOnTheFly(const char* callerID, const char*
 					 const RooCmdArg& arg2, const RooCmdArg& arg3, const RooCmdArg& arg4,
 					 const RooCmdArg& arg5, const RooCmdArg& arg6, const RooCmdArg& arg7,
 					 const RooCmdArg& arg8, const RooCmdArg& arg9) 
-{
+{  
+  static string retBuf = "" ;
+
   RooCmdConfig pc(callerID) ;
   pc.allowUndefined() ;
   pc.defineString("theString",cmdArgName,strIdx,defVal) ;
   pc.process(arg1) ;  pc.process(arg2) ;  pc.process(arg3) ;
   pc.process(arg4) ;  pc.process(arg5) ;  pc.process(arg6) ;
   pc.process(arg7) ;  pc.process(arg8) ;  pc.process(arg9) ;
-  return pc.getString("theString",0,kTRUE) ;
+  const char* ret =  pc.getString("theString",0,kTRUE) ;
+
+  if (ret) {
+    retBuf = ret ;
+  } else {
+    retBuf.clear() ;
+  }
+  return retBuf.c_str() ;
 }
 
 

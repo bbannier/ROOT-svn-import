@@ -67,10 +67,12 @@ static void GetRange(const char *comments, Double_t &xmin, Double_t &xmax, Doubl
    //  [-10,100];
    //  [-pi,pi], [-pi/2,pi/4],[-2pi,2*pi]
    //  [-10,100,16]
+   //  [0,0,8]
    // if nbits is not specified, or nbits <2 or nbits>32 it is set to 32
+   // if (xmin==0 and xmax==0 and nbits <=16) the double word will be converted
+   // to a float and its mantissa truncated to nbits significative bits.
    //
-   // Currently the range specifier is used only to stream a Double32_t type
-   // see TBuffer::WriteDouble32
+   //  see comments in TBufferFile::WriteDouble32.
 
    const Double_t kPi =3.14159265358979323846 ;
    factor = xmin = xmax = 0;
@@ -136,6 +138,7 @@ static void GetRange(const char *comments, Double_t &xmin, Double_t &xmax, Doubl
    if (nbits < 32)  bigint = 1<<nbits;
    else             bigint = 0xffffffff;
    if (xmin < xmax) factor = bigint/(xmax-xmin);
+   if (xmin >= xmax && nbits <15) xmin = nbits+0.1;
 }
 
 ClassImp(TStreamerElement)
@@ -182,9 +185,13 @@ TStreamerElement::TStreamerElement(const char *name, const char *title, Int_t of
    fXmin        = 0;
    fXmax        = 0;
    for (Int_t i=0;i<5;i++) fMaxIndex[i] = 0;
+   if (fTypeName == "Float16_t" || fTypeName == "Float16_t*") {
+      GetRange(title,fXmin,fXmax,fFactor);
+      if (fFactor > 0 || fXmin > 0) SetBit(kHasRange);
+   }
    if (fTypeName == "Double32_t" || fTypeName == "Double32_t*") {
       GetRange(title,fXmin,fXmax,fFactor);
-      if (fFactor > 0) SetBit(kHasRange);
+      if (fFactor > 0 || fXmin > 0) SetBit(kHasRange);
    }
 }
 

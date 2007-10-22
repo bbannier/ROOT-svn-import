@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: RooFit                                                           *
  * Package: RooFitCore                                                       *
- *    File: $Id: RooLinkedListIter.rdl,v 1.10 2005/04/18 21:44:48 wverkerke Exp $
+ *    File: $Id: RooLinkedListIter.h,v 1.11 2007/05/11 09:11:30 verkerke Exp $
  * Authors:                                                                  *
  *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu       *
  *   DK, David Kirkby,    UC Irvine,         dkirkby@uci.edu                 *
@@ -23,6 +23,10 @@
 
 class RooLinkedListIter : public TIterator {
 public:
+
+  RooLinkedListIter() {} ;
+
+
   RooLinkedListIter(const RooLinkedList* list, Bool_t forward) : 
     TIterator(), _forward(forward), _list(list)
   {
@@ -72,7 +76,7 @@ protected:
   const RooLinkedListElem* _ptr ;  //! Current link element
   const RooLinkedList* _list ;     //! Collection iterated over
 
-  ClassDef(RooLinkedListIter,0) // Iterator for RooLinkedList container class
+  ClassDef(RooLinkedListIter,1) // Iterator for RooLinkedList container class
 } ;
 
 

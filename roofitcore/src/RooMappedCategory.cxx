@@ -123,7 +123,7 @@ RooCatType
 RooMappedCategory::evaluate() const
 {
   // Calculate the current value of the object
-  const char* inKey = _inputCat ;
+  const char* inKey = _inputCat.label() ;
 
   // Scan array of regexps
   for (int i=0 ; i<_mapArray.GetEntries() ; i++) {

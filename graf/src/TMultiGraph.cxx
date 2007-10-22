@@ -27,24 +27,28 @@ ClassImp(TMultiGraph)
 
 
 //______________________________________________________________________________
-//
-//   A TMultiGraph is a collection of TGraph (or derived) objects
-//   Use TMultiGraph::Add to add a new graph to the list.
-//   The TMultiGraph owns the objects in the list.
-//   Drawing options are the same as for TGraph
-//   Example;
-//     TGraph *gr1 = new TGraph(...
-//     TGraphErrors *gr2 = new TGraphErrors(...
-//     TMultiGraph *mg = new TMultiGraph();
-//     mg->Add(gr1,"lp");
-//     mg->Add(gr2,"cp");
-//     mg->Draw("a");
-//
-//  The drawing option for each TGraph may be specified as an optional
-//  second argument of the Add function.
-//  If a draw option is specified, it will be used to draw the graph,
-//  otherwise the graph will be drawn with the option specified in
-//  TMultiGraph::Draw
+/* Begin_Html
+<center><h2>TMultiGraph class</h2></center>
+A TMultiGraph is a collection of TGraph (or derived) objects
+Use <tt>TMultiGraph::Add</tt> to add a new graph to the list.
+The TMultiGraph owns the objects in the list.
+Drawing options are the same as for TGraph.
+<p>
+Example:
+<pre>	
+     TGraph *gr1 = new TGraph(...
+     TGraphErrors *gr2 = new TGraphErrors(...
+     TMultiGraph *mg = new TMultiGraph();
+     mg->Add(gr1,"lp");
+     mg->Add(gr2,"cp");
+     mg->Draw("a");
+</pre>
+The drawing option for each TGraph may be specified as an optional
+second argument of the Add function.
+If a draw option is specified, it will be used to draw the graph,
+otherwise the graph will be drawn with the option specified in
+<tt>TMultiGraph::Draw</tt>.
+End_Html */
 
 
 //______________________________________________________________________________
@@ -1000,7 +1004,6 @@ void TMultiGraph::Paint(Option_t *option)
    Int_t i;
    for (i=0;i<nch;i++) chopt[i] = toupper(option[i]);
    chopt[nch] = 0;
-   Double_t *x, *y;
    TGraph *g;
 
    l = strstr(chopt,"A");
@@ -1043,20 +1046,7 @@ void TMultiGraph::Paint(Option_t *option)
          uxmin   = gPad->PadtoX(rwxmin);
          uxmax   = gPad->PadtoX(rwxmax);
       } else {
-         rwxmin = 1e100;
-         rwxmax = -rwxmin;
-         rwymin = rwxmin;
-         rwymax = -rwymin;
          while ((g = (TGraph*) next())) {
-            Int_t npoints = g->GetN();
-            x = g->GetX();
-            y = g->GetY();
-            for (i=0;i<npoints;i++) {
-               if (x[i] < rwxmin) rwxmin = x[i];
-               if (x[i] > rwxmax) rwxmax = x[i];
-               if (y[i] > rwymax) rwymax = y[i];
-               if (y[i] < rwymin) rwymin = y[i];
-            }
             g->ComputeRange(rwxmin, rwymin, rwxmax, rwymax);
             if (g->GetN() > npt) npt = g->GetN();
          }
@@ -1204,13 +1194,11 @@ void TMultiGraph::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
 
       while (lnk) {
          g = lnk->GetObject();
-         g->SavePrimitive(out,"multigraph");
+         g->SavePrimitive(out, Form("multigraph%s",lnk->GetOption()));
          lnk = (TObjOptLink*)lnk->Next();
-
       }
    }
-   out<<"   multigraph->Draw("
-      <<quote<<option<<quote<<");"<<endl;
+   out<<"   multigraph->Draw(" <<quote<<option<<quote<<");"<<endl;
 
    TAxis *xaxis = GetXaxis();
    TAxis *yaxis = GetYaxis();

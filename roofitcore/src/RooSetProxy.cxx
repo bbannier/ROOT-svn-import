@@ -37,6 +37,15 @@ ClassImp(RooSetProxy)
 ;
 
 
+void* RooSetProxy::operator new (size_t bytes)
+{
+  return malloc(bytes) ;
+}
+
+void RooSetProxy::operator delete (void */*ptr*/)
+{
+}
+
 RooSetProxy::RooSetProxy(const char* name, const char* /*desc*/, RooAbsArg* owner, 
 			 Bool_t defValueServer, Bool_t defShapeServer) :
   RooArgSet(name), _owner(owner), 
@@ -89,7 +98,6 @@ Bool_t RooSetProxy::addOwned(RooAbsArg& var, Bool_t silent)
 
 RooAbsArg* RooSetProxy::addClone(const RooAbsArg& var, Bool_t silent) 
 {
-  cout << "RooSetProxy::addClone(" << var.GetName() << ")" << endl ;
   RooAbsArg* ret=RooArgSet::addClone(var,silent) ;
   if (ret) {
     _owner->addServer((RooAbsArg&)var,_defValueServer,_defShapeServer) ;
