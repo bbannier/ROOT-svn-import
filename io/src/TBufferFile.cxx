@@ -429,7 +429,7 @@ void TBufferFile::WriteFloat16(Float_t *f, TStreamerElement *ele)
    //  [-10,100,16]
    //  [0,0,8]
    // if nbits is not specified, or nbits <2 or nbits>16 it is set to 16
-   // if (xmin==0 and xmax==0 and nbits <=16) the float word will have
+   // if (xmin==0 and xmax==0 and nbits <=14) the float word will have
    // its mantissa truncated to nbits significative bits.
    //
    // IMPORTANT NOTE
@@ -482,9 +482,10 @@ void TBufferFile::WriteFloat16(Float_t *f, TStreamerElement *ele)
       };
       xx = f[0];
       UChar_t  theExp = (UChar_t)(0x000000ff & ((ix<<1)>>24));
-      UShort_t theMan = ((1<<(nbits+1))-1) & (ix>>(23-nbits-1)) + 1;
-      theMan = (theMan) >> 1;
-      if (theMan & 1<<nbits) theMan = (1<<nbits) - 1;
+      UShort_t theMan = ((1<<(nbits+1))-1) & (ix>>(23-nbits-1));
+      theMan++;
+      theMan = theMan>>1;
+      if (theMan&1<<nbits) theMan = (1<<nbits) - 1;
       if (xx < 0) theMan |= 1<<(nbits+1);
       *this << theExp;
       *this << theMan;
@@ -578,9 +579,10 @@ void TBufferFile::WriteDouble32(Double_t *d, TStreamerElement *ele)
          };
          xx = (Float_t)d[0];
          UChar_t  theExp = (UChar_t)(0x000000ff & ((ix<<1)>>24));
-         UShort_t theMan = ((1<<(nbits+1))-1) & (ix>>(23-nbits-1)) + 1;
-         theMan = (theMan)>>1;
-         if (theMan & 1<<nbits) theMan = (1<<nbits) - 1;
+         UShort_t theMan = ((1<<(nbits+1))-1) & (ix>>(23-nbits-1)) ;
+         theMan++;
+         theMan = theMan>>1;
+         if (theMan&1<<nbits) theMan = (1<<nbits)-1 ;
          if (xx < 0) theMan |= 1<<(nbits+1);
          *this << theExp;
          *this << theMan;
@@ -1957,9 +1959,10 @@ void TBufferFile::WriteFastArrayFloat16(const Float_t *f, Int_t n, TStreamerElem
       for (i = 0; i < n; i++) {
          xx = f[i];
          UChar_t  theExp = (UChar_t)(0x000000ff & ((ix<<1)>>24));
-         UShort_t theMan = ((1<<(nbits+1))-1) & (ix>>(23-nbits-1)) + 1;
-         theMan = (theMan)>>1;
-         if (theMan & 1<<nbits) theMan = (1<<nbits) - 1;
+         UShort_t theMan = ((1<<(nbits+1))-1) & (ix>>(23-nbits-1));
+         theMan++;
+         theMan = theMan>>1;
+         if (theMan&1<<nbits) theMan = (1<<nbits) - 1;
          if (xx < 0) theMan |= 1<<(nbits+1);
          *this << theExp;
          *this << theMan;
@@ -1994,7 +1997,7 @@ void TBufferFile::WriteFastArrayDouble32(const Double_t *d, Int_t n, TStreamerEl
    } else {
       Int_t nbits = 0;
       //number of bits stored in fXmin (see TStreamerElement::GetRange)
-      if (ele) nbits = (UInt_t)ele->GetXmin();
+      if (ele) nbits = (Int_t)ele->GetXmin();
       Int_t i;
       if (!nbits) {
          //if no range and no bits specified, we convert from double to float
@@ -2013,9 +2016,10 @@ void TBufferFile::WriteFastArrayDouble32(const Double_t *d, Int_t n, TStreamerEl
          for (i = 0; i < n; i++) {
             xx = (Float_t)d[i];
             UChar_t  theExp = (UChar_t)(0x000000ff & ((ix<<1)>>24));
-            UShort_t theMan = ((1<<(nbits+1))-1) & (ix>>(23-nbits-1)) + 1;
-            theMan = (theMan)>>1;
-            if(theMan & 1<<nbits) theMan = (1<<nbits) - 1;
+            UShort_t theMan = ((1<<(nbits+1))-1) & (ix>>(23-nbits-1));
+            theMan++;
+            theMan = theMan>>1;
+            if(theMan&1<<nbits) theMan = (1<<nbits) - 1;
             if (xx < 0) theMan |= 1<<(nbits+1);
             *this << theExp;
             *this << theMan;
