@@ -849,7 +849,17 @@ int G__stub_method_asm(void* vaddress, int gtagnum, int reftype, void* this_ptr,
       G__value param = rpara->para[k];
       G__paramfunc *formal_param = fpara->operator[](k);
 
-      if( (ansi!=2 && formal_param->reftype && param.ref) || (ansi==2 && param.ref)) {
+      //if( (ansi!=2 && formal_param->reftype && param.obj.reftype.reftype==G__PARAREFERENCE) || (ansi==2 && param.obj.reftype.reftype==G__PARAREFERENCE)) {
+      //   isref = 1;
+      //   paramref = (void *) param.ref;
+      //}
+      
+      if(ansi!=2 && formal_param->reftype!=G__PARANORMAL){
+         isref = 1;
+         paramref = (void *) param.ref;
+      }
+
+      if(ansi==2 && param.type!='i' && param.type!='d' && param.type!='f' &&  param.ref){
          isref = 1;
          paramref = (void *) param.ref;
       }
@@ -1035,6 +1045,9 @@ int G__stub_method_asm(void* vaddress, int gtagnum, int reftype, void* this_ptr,
    if (reftype == G__PARAREFERENCE || isupper(type))
       isref = 1;
 
+   // Can be changed later to G__PARAREFERENCE
+   //result7->obj.reftype.reftype = G__PARANORMAL;
+
    // By Value or By Reference?
    if (!isref){// By Value
 
@@ -1208,7 +1221,7 @@ int G__stub_method_asm(void* vaddress, int gtagnum, int reftype, void* this_ptr,
       long res=0;
       __asm__ __volatile__("call %1" : "=a" (res): "g" (vaddress));
       result7->obj.i = (long)res;
-      
+
       if(!isupper(type)) {
          result7->ref = result7->obj.i;
          result7->obj.reftype.reftype = G__PARAREFERENCE;
