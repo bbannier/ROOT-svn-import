@@ -1,0 +1,216 @@
+// @(#)root/hist:$Name:  $Id$
+// Author: L. Moneta Thu Aug 31 10:40:20 2006
+
+/**********************************************************************
+ *                                                                    *
+ * Copyright (c) 2006  LCG ROOT Math Team, CERN/PH-SFT                *
+ *                                                                    *
+ *                                                                    *
+ **********************************************************************/
+
+// Implementation file for class TH1Interface
+
+#include "THFitInterface.h"
+
+#include "Fit/DataVector.h"
+//#include "Fit/BinPoint.h"
+
+//#define DEBUG
+#ifdef DEBUG
+#include <iostream> 
+#endif
+
+#include <cassert> 
+
+#include "TH1.h"
+#include "TF1.h"
+#include "TError.h"
+
+namespace ROOT { 
+
+   namespace Fit { 
+
+
+bool IsPointOutOfRange(const TF1 * func, const double * x) { 
+   // function to check if a point is outside range
+   if (func ==0) return false; 
+   return !func->IsInside(x);       
+}
+
+void FillData(BinData & dv, const TH1 * hfit, TF1 * func) 
+{
+   // Function to fill the binned Fit data structure from a TH1 
+   // The dimension of the data is the same of the histogram dimension
+   // The funciton pointer is need in case of integral is used and to reject points 
+   // rejected in the function
+
+   // the TF1 pointer cannot be constant since EvalPar and InitArgs are not const methods
+   
+   // get fit option 
+   const DataOptions & fitOpt = dv.Opt();
+
+   
+   assert(hfit != 0); 
+   
+   //std::cout << "creating Fit Data from histogram " << hfit->GetName() << std::endl; 
+
+   int hxfirst = hfit->GetXaxis()->GetFirst();
+   int hxlast  = hfit->GetXaxis()->GetLast();
+
+   int hyfirst = hfit->GetYaxis()->GetFirst();
+   int hylast  = hfit->GetYaxis()->GetLast();
+
+   int hzfirst = hfit->GetZaxis()->GetFirst();
+   int hzlast  = hfit->GetZaxis()->GetLast();
+
+   // function by default has same range (use that one if requested otherwise use data one)
+
+   
+   //  get the range (add the function range ??)
+   // to check if inclusion/excluion at end/point
+   const DataRange & range = dv.Range(); 
+   if (range.Size(0) != 0) { 
+      double xlow   = range(0).first; 
+      double xhigh  = range(0).second; 
+      hxfirst =  hfit->GetXaxis()->FindBin(xlow);
+      hxlast  =  hfit->GetYaxis()->FindBin(xhigh);
+      if (range.Size(0) > 1  ) 
+         Warning("ROOT::Fit::TH1Interface","support only one range interval for X coordinate"); 
+   }
+
+   if (range.Size(1) != 0) { 
+      double ylow   = range(1).first; 
+      double yhigh  = range(1).second; 
+      hyfirst =  hfit->GetYaxis()->FindBin(ylow);
+      hylast  =  hfit->GetYaxis()->FindBin(yhigh);
+      if (range.Size(0) > 1  ) 
+         Warning("ROOT::Fit::TH1Interface","support only one range interval for Y coordinate"); 
+   }
+
+   if (range.Size(2) != 0) { 
+      double zlow   = range(2).first; 
+      double zhigh  = range(2).second; 
+      hzfirst =  hfit->GetXaxis()->FindBin(zlow);
+      hzlast  =  hfit->GetYaxis()->FindBin(zhigh);
+      if (range.Size(0) > 1  ) 
+         Warning("ROOT::Fit::TH1Interface","support only one range interval for Z coordinate"); 
+   }
+
+
+   TAxis *xaxis  = hfit->GetXaxis();
+   TAxis *yaxis  = hfit->GetYaxis();
+   TAxis *zaxis  = hfit->GetZaxis();
+   
+   
+   int n = (hxlast-hxfirst+1)*(hylast-hyfirst+1)*(hzlast-hzfirst+1); 
+   
+#ifdef DEBUG
+   std::cout << "TH1Interface: ifirst = " << hxfirst << " ilast =  " << hxlast 
+             << " total bins  " << hxlast-hxfirst+1  
+             << std::endl; 
+#endif
+   
+   // reserve n for more efficient usage
+   //dv.Data().reserve(n);
+   
+   int ndim =  hfit->GetDimension();
+   assert( ndim > 0 );
+   //typedef  BinPoint::CoordData CoordData; 
+   //CoordData x = CoordData( hfit->GetDimension() );
+   dv.Initialize(n,ndim); 
+   std::vector<double> x(ndim); 
+
+   int binx = 0; 
+   int biny = 0; 
+   int binz = 0; 
+   
+   for ( binx = hxfirst; binx <= hxlast; ++binx) {
+      if (fitOpt.fIntegral) {
+         x[0] = xaxis->GetBinLowEdge(binx);       
+      }
+      else
+         x[0] = xaxis->GetBinCenter(binx);
+      
+
+      // need to evaluate function to know about rejected points
+      // hugly but no other solutions
+      if (func != 0) { 
+         func->RejectPoint(false);
+         func->InitArgs( &x[0],0 ); 
+         func->EvalPar( &x[0],0 ); 
+         if (func->RejectedPoint() ) continue; 
+      }
+
+      if ( ndim > 1 ) { 
+         for ( biny = hyfirst; biny <= hylast; ++biny) {
+            if (fitOpt.fIntegral) 
+               x[1] = yaxis->GetBinLowEdge(biny);
+            else
+               x[1] = yaxis->GetBinCenter(biny);
+            
+            if ( ndim >  2 ) { 
+               for ( binz = hzfirst; binz <= hzlast; ++binz) {
+                  if (fitOpt.fIntegral) 
+                     x[2] = zaxis->GetBinLowEdge(binz);
+                  else
+                     x[2] = zaxis->GetBinCenter(binz);
+                  if (fitOpt.fUseRange && IsPointOutOfRange(func,&x.front()) ) continue;
+                  double error =  hfit->GetBinError(binx, biny, binz); 
+                  if (fitOpt.fError1) error = 1;
+                  if (error > 0.) 
+                     //dv.Add(BinPoint(  x,  hfit->GetBinContent(binx, biny, binz), error ) );
+                     dv.Add(   &x.front(),  hfit->GetBinContent(binx, biny, binz), error  );
+               }  // end loop on z bins
+            }
+            else if (ndim == 2) { 
+               // for dim == 2
+               if (fitOpt.fUseRange && IsPointOutOfRange(func,&x.front()) ) continue;
+               double error =  hfit->GetBinError(binx, biny); 
+               if (fitOpt.fError1) error = 1;
+               if (error > 0.) 
+                  //dv.Add(BinPoint( x,  hfit->GetBinContent(binx, biny), error ) );
+                     dv.Add( &x.front(), hfit->GetBinContent(binx, biny), error  );
+            }   
+            
+         }  // end loop on y bins
+         
+      }
+      else if (ndim == 1) { 
+#ifdef DEBUG
+         std::cout << " add point " << x[0] << "  " << hfit->GetBinContent(binx) << std::endl;
+#endif
+         // for 1D 
+         if (fitOpt.fUseRange && IsPointOutOfRange(func,&x.front()) ) continue;
+         double error =  hfit->GetBinError(binx); 
+         if (fitOpt.fError1) error = 1;
+         if (error > 0.) 
+            //dv.Add(BinPoint( x,  hfit->GetBinContent(binx), error ) );
+            dv.Add( &x.front(),  hfit->GetBinContent(binx), error  );
+      }
+      
+   }   // end 1D loop 
+   
+   // in case of integral store additional point with upper x values 
+   if (fitOpt.fIntegral) { 
+      x[0] = xaxis->GetBinLowEdge(hxlast) +  xaxis->GetBinWidth(hxlast); 
+      if (ndim > 1) { 
+         x[1] = yaxis->GetBinLowEdge(hylast) +  yaxis->GetBinWidth(hylast); 
+      }
+      if (ndim > 2) { 
+         x[2] = zaxis->GetBinLowEdge(hzlast) +  zaxis->GetBinWidth(hzlast); 
+      }
+      //dv.Add(BinPoint( x, 0, 1.) ); // use dummy y= 0  &  err =1  for this extra point needed for integral
+      dv.Add( &x.front() , 0, 1. ); // use dummy y= 0  &  err =1  for this extra point needed for integral
+   }
+   
+#ifdef DEBUG
+   std::cout << "TChi2FitData: Hist FitData size is " << dv.Size() << std::endl;
+#endif
+   
+}
+
+
+   } // end namespace Fit
+
+} // end namespace ROOT
+
