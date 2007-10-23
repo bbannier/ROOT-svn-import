@@ -51,8 +51,9 @@ extern "C" int G__LD_IFUNC_optimize(struct G__ifunc_table_internal* ifunc,int if
     if(!ifunc) printf ("Serious trouble inst 48\n");
 
     G__asm_inst[pc+7] = G__JMP;
-    G__asm_inst[pc+8] = pc+10;
-    G__asm_inst[pc+9] = G__NOP;
+    G__asm_inst[pc+8] = pc+9;
+    //G__asm_inst[pc+8] = pc+10;
+    //G__asm_inst[pc+9] = G__NOP;
 
     return(1);
   }
@@ -73,8 +74,8 @@ extern "C" int G__LD_IFUNC_optimize(struct G__ifunc_table_internal* ifunc,int if
     if(!ifunc) printf ("Serious trouble inst 48\n");
 
     G__asm_inst[pc+7] = G__JMP;
-    G__asm_inst[pc+8] = pc+10;
-    G__asm_inst[pc+9] = G__NOP;
+    G__asm_inst[pc+8] = pc+9;
+    //G__asm_inst[pc+9] = G__NOP;
 
     return(1);
   }
@@ -771,7 +772,8 @@ void G__bc_inst::LD_IFUNC(struct G__ifunc_table *iref,int ifn,int hash
     G__asm_inst[G__asm_cp+5]=(long)funcmatch;
     G__asm_inst[G__asm_cp+6]=(long)memfunc_flag;
     G__asm_inst[G__asm_cp+7]=(long)ifn;
-    inc_cp_asm(8,0);
+    G__asm_inst[G__asm_cp+7]=(long)G__NOP; // LF... Empty field needed in bc_exec_asm.h
+    inc_cp_asm(9,0);
   }
 }
 

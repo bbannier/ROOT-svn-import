@@ -5263,7 +5263,9 @@ int G__interpret_func(G__value* result7, char* funcname, G__param* libp, int has
          G__asm_inst[G__asm_cp+5] = (long) funcmatch;
          G__asm_inst[G__asm_cp+6] = (long) memfunc_flag;
          G__asm_inst[G__asm_cp+7] = (long) ifn;
-         G__inc_cp_asm(8, 0);
+         G__asm_inst[G__asm_cp+8] = (long) G__NOP; // LF... Empty field needed in bc_exec_asm.h
+         
+         G__inc_cp_asm(9, 0);
       }
       if (G__store_struct_offset && (G__store_struct_offset != store_inherit_offset)) {
          // --
