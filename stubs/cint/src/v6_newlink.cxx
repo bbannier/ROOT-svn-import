@@ -1276,11 +1276,11 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
    void *vaddress = G__get_funcptr(ifunc, ifn);
 
    // Getting the class's name
-   int gtagnum = G__tagnum;
+   int gtagnum = ifunc->tagnum;
    //static char buf[G__LONGLINE];
 
    if(gtagnum < 0)
-      gtagnum = ifunc->tagnum;
+      gtagnum = G__tagnum;
 
    //if(gtagnum < 0)
    //   gtagnum = ifunc->p_tagtable[ifn];
