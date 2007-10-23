@@ -72,6 +72,7 @@ protected:
    TGHorizontalFrame *fToolbarFrame;               // Toolbar frame
    TGMenuBar         *fMenuBar;                    // Main (owned) menu bar
    TGPopupMenu       *fMenuFile;                   // "File" popup menu
+   TGPopupMenu       *fMenuExecPlugin;             // "Exec Plugin" popup menu
    TGCompositeFrame  *fActMenuBar;                 // Actual (active) menu bar
    TBrowserImp       *fActBrowser;                 // Actual (active) browser imp
    TList              fBrowsers;                   // List of (sub)browsers
