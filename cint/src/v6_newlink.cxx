@@ -1799,7 +1799,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
          }
 
          // Axel said isbaseclass is not necessary
-         if (tagnum>=0 && G__isbaseclass(tagnum, gtagnum) /*tagnum!=gtagnum*/) {
+         if (tagnum>=0 && (G__isbaseclass(tagnum, gtagnum) || G__isbaseclass(gtagnum, tagnum))  /*tagnum!=gtagnum*/) {
             struct G__ifunc_table_internal *new_ifunc;
             long poffset;
             long pifn = ifn;
