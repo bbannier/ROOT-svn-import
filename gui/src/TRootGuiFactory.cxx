@@ -71,7 +71,8 @@ TCanvasImp *TRootGuiFactory::CreateCanvasImp(TCanvas *c, const char *title,
 
 //______________________________________________________________________________
 TBrowserImp *TRootGuiFactory::CreateBrowserImp(TBrowser *b, const char *title,
-                                               UInt_t width, UInt_t height)
+                                               UInt_t width, UInt_t height, 
+                                               Option_t *opt)
 {
    // Create a ROOT native GUI version of TBrowserImp
 
@@ -79,6 +80,8 @@ TBrowserImp *TRootGuiFactory::CreateBrowserImp(TBrowser *b, const char *title,
    TPluginHandler *ph = gROOT->GetPluginManager()->FindHandler("TBrowserImp", 
                                                                browserVersion);
    TString browserOptions(gEnv->GetValue("Browser.Options", "FECI"));
+   if (opt && strlen(opt))
+      browserOptions = opt;
    browserOptions.ToUpper();
    if (ph && ph->LoadPlugin() != -1) {
       TBrowserImp *imp = (TBrowserImp *)ph->ExecPlugin(5, b, title, width, 
@@ -90,7 +93,8 @@ TBrowserImp *TRootGuiFactory::CreateBrowserImp(TBrowser *b, const char *title,
 
 //______________________________________________________________________________
 TBrowserImp *TRootGuiFactory::CreateBrowserImp(TBrowser *b, const char *title,
-                                  Int_t x, Int_t y, UInt_t width, UInt_t height)
+                                               Int_t x, Int_t y, UInt_t width, 
+                                               UInt_t height, Option_t *opt)
 {
    // Create a ROOT native GUI version of TBrowserImp
 
@@ -98,6 +102,8 @@ TBrowserImp *TRootGuiFactory::CreateBrowserImp(TBrowser *b, const char *title,
    TPluginHandler *ph = gROOT->GetPluginManager()->FindHandler("TBrowserImp", 
                                                                browserVersion);
    TString browserOptions(gEnv->GetValue("Browser.Options", "FECI"));
+   if (opt && strlen(opt))
+      browserOptions = opt;
    browserOptions.ToUpper();
    if (ph && ph->LoadPlugin() != -1) {
       TBrowserImp *imp = (TBrowserImp *)ph->ExecPlugin(7, b, title, x, y, width, 
