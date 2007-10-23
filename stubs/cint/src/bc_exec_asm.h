@@ -639,7 +639,7 @@ int G__exec_asm(int start, int stack, G__value* presult, long localmem)
               dtorfreeoffset = G__call_cppfunc(result, &fpara, ifunc, 0); // Bet on ifn=0
             
             G__asm_exec=1;
-#else
+#else // G__EXCEPTIONWRAPPER
             if(pfunc){
               G__store_struct_offset += G__asm_inst[pc+5];
               dtorfreeoffset = (*pfunc)(result,funcname,&fpara,G__asm_inst[pc+2]);
@@ -647,7 +647,7 @@ int G__exec_asm(int start, int stack, G__value* presult, long localmem)
             }
             else
               dtorfreeoffset = G__call_cppfunc(result, &fpara, ifunc, 0); // Bet on ifn=0
-#endif
+#endif // G__EXCEPTIONWRAPPER
 
             // restore previous G__store_struct_offset
             //G__store_struct_offset -= G__asm_inst[pc+5];
@@ -1373,6 +1373,7 @@ int G__exec_asm(int start, int stack, G__value* presult, long localmem)
             * 5 funcmatch
             * 6 memfunc_flag
             * 7 index
+            * 8 empty field.. -1 by default (LF 23-10-07)
             * stack
             * sp-paran+1      <- sp-paran+1
             * sp-2
@@ -1407,8 +1408,9 @@ int G__exec_asm(int start, int stack, G__value* presult, long localmem)
                // LF 06-05-07
                G__asm_inst[pc+6] = (long)ifunc;
                G__asm_inst[pc+7] = G__JMP;
-               G__asm_inst[pc+8] = pc+10;
-               G__asm_inst[pc+9] = G__NOP;
+               G__asm_inst[pc+8] = pc+9;
+               //G__asm_inst[pc+8] = pc+9;
+               //G__asm_inst[pc+9] = G__NOP;
                goto ld_func;
             }
 #endif
@@ -1432,7 +1434,7 @@ int G__exec_asm(int start, int stack, G__value* presult, long localmem)
             G__memberfunc_tagnum = store_memberfunc_tagnum;
             G__memberfunc_struct_offset = store_memberfunc_struct_offset;
             G__exec_memberfunc = store_exec_memberfunc;
-            pc += 8;
+            pc += 9; // LF add 1 to include empty field
             if (funcnamebuf[0] != '~') {
                ++sp;
             }

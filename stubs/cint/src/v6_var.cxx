@@ -1950,10 +1950,12 @@ void G__letstruct(G__value* result, int linear_index, G__var_array* var, int ig1
                         }
                         G__asm_cp = store_cp + 7;
                      }
-                     else if (G__LD_IFUNC == G__asm_inst[G__asm_cp-8]) {
-                        for (x = 0;x < 8;x++)
-                           G__asm_inst[store_cp+x] = G__asm_inst[G__asm_cp-8+x];
-                        G__asm_cp = store_cp + 8;
+                     // LF 23-10-12
+                     // We added one more field... should it be until 9?
+                     else if (G__LD_IFUNC == G__asm_inst[G__asm_cp-9]) {
+                        for (x = 0;x < 9;x++)
+                           G__asm_inst[store_cp+x] = G__asm_inst[G__asm_cp-9+x];
+                        G__asm_cp = store_cp + 9;
                      }
                   }
                   else if (!ig2 && 'U' == result->type) {

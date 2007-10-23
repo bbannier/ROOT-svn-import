@@ -849,11 +849,26 @@ int G__stub_method_asm(void* vaddress, int gtagnum, int reftype, void* this_ptr,
       G__value param = rpara->para[k];
       G__paramfunc *formal_param = fpara->operator[](k);
 
+      //if(formal_param->reftype && param.ref) {
       //if( (ansi!=2 && formal_param->reftype && param.obj.reftype.reftype==G__PARAREFERENCE) || (ansi==2 && param.obj.reftype.reftype==G__PARAREFERENCE)) {
       //   isref = 1;
       //   paramref = (void *) param.ref;
       //}
       
+      /*
+      if(ansi!=2 && formal_param->reftype!=G__PARANORMAL){
+      if( (ansi!=2 && formal_param->reftype && param.ref) || (ansi==2 && param.ref)) {
+         isref = 1;
+         paramref = (void *) param.ref;
+      }
+
+      if( formal_param->reftype && param.ref){
+         isref = 1;
+         paramref = (void *) param.ref;
+      }
+
+      */
+
       if(ansi!=2 && formal_param->reftype!=G__PARANORMAL){
          isref = 1;
          paramref = (void *) param.ref;
@@ -863,7 +878,7 @@ int G__stub_method_asm(void* vaddress, int gtagnum, int reftype, void* this_ptr,
          isref = 1;
          paramref = (void *) param.ref;
       }
-               
+  
       // This means the parameter is a pointer
       if(isupper(param.type) || isupper(formal_param->type)){
          isref = 1;
@@ -873,14 +888,13 @@ int G__stub_method_asm(void* vaddress, int gtagnum, int reftype, void* this_ptr,
       // Pushing Parameter
       // By Value or By Reference?
       if (!isref){// By Value
-         char para_type = formal_param->type;
+         unsigned char para_type = formal_param->type;
 
          // If we have more parameters than the declarations allows
          // (variadic function) then take the type of the actual parameter
          // ... forget to check the declaration (will be null)
          if(ansi==2)
             para_type = param.type;
-         
 
          // Parameter's type? Push is different for each type
          switch(para_type){
