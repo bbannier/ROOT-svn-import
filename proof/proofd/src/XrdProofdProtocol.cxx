@@ -6266,24 +6266,36 @@ char *XrdProofdProtocol::ReadBufferLocal(const char *file,
       return (char *)0;
    }
 
-   // command
-   char *cmd = new char[len + 20];
-   if (opt == 1) {
-      sprintf(cmd,"grep \"%s\" %s", pat, file);
-   } else if (opt == 2) {
-      sprintf(cmd,"grep -v \"%s\" %s", pat, file);
-   } else {
-      emsg = "ReadBufferLocal: unknown option: ";
-      emsg += opt;
+   // Size of the output
+   struct stat st;
+   if (stat(file, &st) != 0) {
+      emsg = "ReadBufferLocal: could not get size of file with stat: errno: ";
+      emsg += (int)errno;
       TRACEI(XERR, emsg);
       return (char *)0;
    }
-   TRACEI(ACT, "ReadBufferLocal: cmd: "<<cmd);
+   off_t ltot = st.st_size;
 
-   FILE *fp = popen(cmd, "r");
+   // Open the file in read mode
+   FILE *fp = fopen(file, "r");
    if (!fp) {
-      emsg = "ReadBufferLocal: problems executing ";
-      emsg += cmd;
+      emsg = "ReadBufferLocal: could not open ";
+      emsg += file;
+      TRACEI(XERR, emsg);
+      return (char *)0;
+   }
+
+   // Check pattern
+   bool keepall = (pat && strlen(pat) > 0) ? 0 : 1; 
+
+   // Fill option
+   bool keep = 1;
+   if (opt == 2) {
+      // '-v' functionality
+      keep = 0;
+   } else if (opt != 1 ) {
+      emsg = "ReadBufferLocal: unknown option: ";
+      emsg += opt;
       TRACEI(XERR, emsg);
       return (char *)0;
    }
@@ -6293,9 +6305,16 @@ char *XrdProofdProtocol::ReadBufferLocal(const char *file,
    char *buf = 0;
    char line[2048];
    int bufsiz = 0, left = 0, lines = 0;
-   while (fgets(line, sizeof(line), fp)) {
-      lines++;
+   while ((ltot > 0) && fgets(line, sizeof(line), fp)) {
       int llen = strlen(line);
+      ltot -= llen;
+      // Filter out
+      bool haspattern = (strstr(line, pat)) ? 1 : 0;
+      if (!keepall && ((keep && !haspattern) || (!keep && haspattern)))
+         // Skip
+         continue;
+      // Good line
+      lines++;
       // (Re-)allocate the buffer
       if (!buf || (llen > left)) {
          int dsiz = 100 * ((int) ((len + llen) / lines) + 1);
@@ -6308,7 +6327,7 @@ char *XrdProofdProtocol::ReadBufferLocal(const char *file,
          emsg = "ReadBufferLocal: could not allocate enough memory on the heap: errno: ";
          emsg += (int)errno;
          XPDERR(emsg);
-         pclose(fp);
+         fclose(fp);
          return (char *)0;
       }
       // Add line to the buffer
@@ -6329,7 +6348,7 @@ char *XrdProofdProtocol::ReadBufferLocal(const char *file,
    }
 
    // Close file
-   pclose(fp);
+   fclose(fp);
 
    // Done
    return buf;

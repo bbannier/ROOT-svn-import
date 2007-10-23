@@ -429,7 +429,7 @@ TProofLog *TXProofMgr::GetSessionLogs(Int_t isess,
    //              so -1 and 1 are equivalent.
    //      stag    specifies the unique tag of the wanted session
    // If 'stag' is specified 'isess' is ignored.
-   // If 'pattern' is specified only the lines containing it are retieved
+   // If 'pattern' is specified only the lines containing it are retrieved
    // (remote grep functionality); to filter out a pattern 'pat' use
    // pattern = "-v pat".
    // Returns a TProofLog object (to be deleted by the caller) on success,
@@ -543,25 +543,18 @@ TObjString *TXProofMgr::ReadBuffer(const char *fin, const char *pattern)
 
    // Prepare the buffer
    Int_t i = k;
-   Int_t spc = 0;
    Int_t plen = strlen(pattern);
-   for ( ; i < plen; i++)
-      // Count special chars
-      if (pattern[i] == '"' || pattern[i] == '\\') spc++;
 
-   Int_t len = strlen(fin) + plen + spc - k;
+   Int_t len = strlen(fin) + plen - k;
    char *buf = new char[len + 1];
    memcpy(buf, fin, strlen(fin));
    Int_t j = strlen(fin);
-   for (i = k; i < plen; i++) {
-      if (pattern[i] == '"' || pattern[i] == '\\')
-         buf[j++] = '\\';
+   for (i = k; i < plen; i++)
       buf[j++] = pattern[i];
-   }
    buf[len] = 0;
 
    // Send the request
-   return fSocket->SendCoordinator(TXSocket::kReadBuffer, buf, plen + spc - k, 0, opt);
+   return fSocket->SendCoordinator(TXSocket::kReadBuffer, buf, plen - k, 0, opt);
 }
 
 //______________________________________________________________________________
