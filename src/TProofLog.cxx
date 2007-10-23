@@ -68,8 +68,8 @@ Int_t TProofLog::Retrieve(const char *ord, TProofLog::ERetrieveOpt opt,
    // the end (i.e. the last ~1000 lines).
    // The received buffer is added to the file fname, if the latter is defined.
    // If opt == TProofLog::kGrep only the lines containing 'pattern' are
-   // retrieved: these are obtained runnign the grep command remotely, so
-   // 'pattern' should follow the usual 'grep' rules.
+   // retrieved (remote grep functionality); to filter out a pattern 'pat' use
+   // pattern = "-v pat".
    // Return 0 on success, -1 in case of any error.
 
    // Validate inputs
@@ -323,8 +323,8 @@ Int_t TProofLogElem::Retrieve(TProofLog::ERetrieveOpt opt, const char *pattern)
    // 0 means 'all', a positive number means the first 'lines' and a negative
    // number means the last '-lines'. Default is -1000.
    // If opt == TProofLog::kGrep only the lines containing 'pattern' are
-   // retrieved: these are obtained runnign the grep command remotely, so
-   // 'pattern' should follow the usual 'grep' rules.
+   // retrieved (remote grep functionality); to filter out a pattern 'pat' use
+   // pattern = "-v pat".
    // Return 0 on success, -1 in case of any error.
 
    // Make sure we have a reference manager
