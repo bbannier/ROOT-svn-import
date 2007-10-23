@@ -22,6 +22,7 @@
 
 #include "TRootBrowser.h"
 #include "TGFileBrowser.h"
+#include "TGInputDialog.h"
 
 #include "Getline.h"
 
@@ -47,7 +48,8 @@ enum ENewBrowserMessages {
    kClone,
    kNewEditor,
    kNewCanvas,
-   kExecPlugin,
+   kExecPluginMacro,
+   kExecPluginCmd,
    kCloseTab,
    kCloseWindow,
    kQuitRoot
@@ -116,7 +118,11 @@ void TRootBrowser::CreateBrowser(const char *name)
    fMenuFile->AddSeparator();
    fMenuFile->AddEntry("New &Editor          Ctrl+E", kNewEditor);
    fMenuFile->AddEntry("New &Canvas       Ctrl+C", kNewCanvas);
-   fMenuFile->AddEntry("Exec &Plugin...      Ctrl+P", kExecPlugin);
+   fMenuFile->AddSeparator();
+   fMenuExecPlugin = new TGPopupMenu(fClient->GetRoot());
+   fMenuExecPlugin->AddEntry("&Macro...", kExecPluginMacro);
+   fMenuExecPlugin->AddEntry("&Command...", kExecPluginCmd);
+   fMenuFile->AddPopup("Execute &Plugin...", fMenuExecPlugin);
    fMenuFile->AddSeparator();
    fMenuFile->AddEntry("Close &Tab           Ctrl+T", kCloseTab);
    fMenuFile->AddEntry("Close &Window   Ctrl+W", kCloseWindow);
@@ -222,6 +228,7 @@ TRootBrowser::~TRootBrowser()
    delete fLH5;
    delete fLH6;
    delete fLH7;
+   delete fMenuExecPlugin;
    delete fMenuFile;
    delete fMenuBar;
    delete fMenuFrame;
@@ -460,9 +467,6 @@ Bool_t TRootBrowser::HandleKey(Event_t *event)
             case kKey_N:
                fMenuFile->Activated(kClone);
                return kTRUE;
-            case kKey_P:
-               fMenuFile->Activated(kExecPlugin);
-               return kTRUE;
             case kKey_T:
                fMenuFile->Activated(kCloseTab);
                return kTRUE;
@@ -528,7 +532,7 @@ void TRootBrowser::HandleMenu(Int_t id)
       case kNewCanvas:
          ExecPlugin("", "", "new TCanvas()", 1);
          break;
-      case kExecPlugin:
+      case kExecPluginMacro:
          {
             static TString dir(".");
             TGFileInfo fi;
@@ -539,6 +543,18 @@ void TRootBrowser::HandleMenu(Int_t id)
             dir = fi.fIniDir;
             if (fi.fFilename) {
                ExecPlugin(0, fi.fFilename, 0, kRight);
+            }
+         }
+         break;
+      case kExecPluginCmd:
+         {
+            char command[1024];
+            strcpy(command, "new TGLSAViewer(gClient->GetRoot(), 0);");
+            new TGInputDialog(gClient->GetRoot(), this,
+                              "Enter plugin command line:",
+                              command, command);
+            if (strcmp(command, "")) {
+               ExecPlugin("User", 0, command, kRight);
             }
          }
          break;
