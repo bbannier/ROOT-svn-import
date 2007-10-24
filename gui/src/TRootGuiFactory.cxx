@@ -83,6 +83,8 @@ TBrowserImp *TRootGuiFactory::CreateBrowserImp(TBrowser *b, const char *title,
    if (opt && strlen(opt))
       browserOptions = opt;
    browserOptions.ToUpper();
+   if (browserOptions.Contains("LITE"))
+      return new TRootBrowserLite(b, title, width, height);
    if (ph && ph->LoadPlugin() != -1) {
       TBrowserImp *imp = (TBrowserImp *)ph->ExecPlugin(5, b, title, width, 
          height, browserOptions.Data());
@@ -105,6 +107,8 @@ TBrowserImp *TRootGuiFactory::CreateBrowserImp(TBrowser *b, const char *title,
    if (opt && strlen(opt))
       browserOptions = opt;
    browserOptions.ToUpper();
+   if (browserOptions.Contains("LITE"))
+      return new TRootBrowserLite(b, title, width, height);
    if (ph && ph->LoadPlugin() != -1) {
       TBrowserImp *imp = (TBrowserImp *)ph->ExecPlugin(7, b, title, x, y, width, 
          height, browserOptions.Data());
