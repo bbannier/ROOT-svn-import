@@ -62,6 +62,7 @@ TRootBrowser::TRootBrowser(TBrowser *b, const char *name, UInt_t width,
 {
    // Create browser with a specified width and height.
 
+   fActBrowser = 0;
    CreateBrowser(name);
    Resize(width, height);
    if (initshow) {
@@ -79,6 +80,7 @@ TRootBrowser::TRootBrowser(TBrowser *b, const char *name, Int_t x, Int_t y,
 {
    // Create browser with a specified width and height and at position x, y.
 
+   fActBrowser = 0;
    CreateBrowser(name);
    MoveResize(x, y, width, height);
    SetWMPosition(x, y);
