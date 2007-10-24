@@ -1038,8 +1038,19 @@ int G__stub_method_asm(void* vaddress, int gtagnum, int reftype, void* this_ptr,
 
          case 'n' : // Long Long
          {
-            G__int64 valuen = G__Longlong(param);
-            __asm__ __volatile__("push %0" :: "A" (valuen));
+            //G__int64 valuen = G__Longlong(param);
+            //__asm__ __volatile__("push %0" :: "A" (valuen));
+            G__int64 fparam = (G__int64) G__Longlong(param);
+
+            // Parameter Pointer
+            //int *paddr = (int *) &param.obj.d;
+            int *paddr = (int *) &fparam;
+
+            /* Highest Word */
+            __asm__ __volatile__("push %0" :: "g" (*(paddr+1)));
+            /* Lowest Word */
+            __asm__ __volatile__("push %0" :: "g" (*paddr));
+
          }
          break;
 
