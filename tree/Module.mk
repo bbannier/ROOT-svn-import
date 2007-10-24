@@ -33,18 +33,18 @@ TREEDO2      := $(TREEDS2:.cxx=.o)
 TREEDH2      := TTree.h
 
 #LF
-TREETMPDS2    := $(MODDIRS)/ManualTree2Tmp.cxx
-TREETMPDO2    := $(TREETMPDS2:.cxx=.o)
-TREETMPDH2    := TTree.h
-TREETMP2DS2    := $(MODDIRS)/ManualTree2Tmp2.cxx
-TREETMP2DO2    := $(TREETMP2DS2:.cxx=.o)
-TREETMP2DH2    := TTree.h
+#TREETMPDS2    := $(MODDIRS)/ManualTree2Tmp.cxx
+#TREETMPDO2    := $(TREETMPDS2:.cxx=.o)
+#TREETMPDH2    := TTree.h
+#TREETMP2DS2    := $(MODDIRS)/ManualTree2Tmp2.cxx
+#TREETMP2DO2    := $(TREETMP2DS2:.cxx=.o)
+#TREETMP2DH2    := TTree.h
 
 TREEH        := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 TREES        := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
 TREEO        := $(TREES:.cxx=.o)
 
-TREEO        := $(filter-out $(MODDIRS)/ManualTree%,$(TREEO))
+#TREEO        := $(filter-out $(MODDIRS)/ManualTree%,$(TREEO))
 
 TREEDEP      := $(TREEO:.o=.d) $(TREEDO:.o=.d)
 
@@ -97,18 +97,22 @@ $(TREEDS):      $(TREEH) $(TREEL) $(ROOTCINTTMPEXE) $(TREENM)
 
 # pre-requisites intentionally not specified... should be called only
 # on demand after deleting the file
+$(TREEDS2):
+		@echo "Generating dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -c $(TREEDH2) $(TREEL2)
+
 #LF
-$(TREETMPDS2):  #$(TREEDH2) $(TREEL2) $(ROOTCINTTMPEXE)
-		@echo "Generating first dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -. 1 -c $(TREEDH2) $(TREEL2)
+#$(TREETMPDS2):  #$(TREEDH2) $(TREEL2) $(ROOTCINTTMPEXE)
+#		@echo "Generating first dictionary $@..."
+#		$(ROOTCINTTMP) -f $@ -. 1 -c $(TREEDH2) $(TREEL2)
 #LF
-$(TREETMP2DS2): #$(TREEDH2) $(TREEL2) $(ROOTCINTTMPEXE)
-		@echo "Generating second dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -. 2 -c $(TREEDH2) $(TREEL2)
+#$(TREETMP2DS2): #$(TREEDH2) $(TREEL2) $(ROOTCINTTMPEXE)
+#		@echo "Generating second dictionary $@..."
+#		$(ROOTCINTTMP) -f $@ -. 2 -c $(TREEDH2) $(TREEL2)
 #LF
-$(TREEDS2):     #$(TREEDH2) $(TREEL2) $(ROOTCINTTMPEXE) $(TREENM)
-		@echo "Generating third dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -L $(ROOTSYS)/$(TREENM) -. 3 -c $(TREEDH2) $(TREEL2)
+#$(TREEDS2):     #$(TREEDH2) $(TREEL2) $(ROOTCINTTMPEXE) $(TREENM)
+#		@echo "Generating third dictionary $@..."
+#		$(ROOTCINTTMP) -f $@ -L $(ROOTSYS)/$(TREENM) -. 3 -c $(TREEDH2) $(TREEL2)
 
 #LF
 $(TREEMAP):  $(RLIBMAP) $(MAKEFILEDEP) $(TREEL)

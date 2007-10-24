@@ -7298,14 +7298,17 @@ struct G__ifunc_table *G__get_methodhandle3(char *funcname,char *argtype
    if(ifunc) return G__get_ifunc_ref(ifunc);
    
    /* if no exact match, try to instantiate template function */
-   funclist = G__add_templatefunc(funcname,&para,hash,funclist,p_ifunc,0,withInheritance);
-   if(funclist && funclist->rate==G__EXACTMATCH) {
-     ifunc = funclist->ifunc;
-     *pifn = funclist->ifn;
-     G__funclist_delete(funclist);
-     return G__get_ifunc_ref(ifunc);
-   }
-   G__funclist_delete(funclist);
+
+   // LF 24-10-07 Don't try this when registering symbols...
+   // the match should be exact.. shouldnt it?
+   //funclist = G__add_templatefunc(funcname,&para,hash,funclist,p_ifunc,0,withInheritance);
+   //if(funclist && funclist->rate==G__EXACTMATCH) {
+   //  ifunc = funclist->ifunc;
+   //  *pifn = funclist->ifn;
+   //  G__funclist_delete(funclist);
+   //  return G__get_ifunc_ref(ifunc);
+   //}
+   //G__funclist_delete(funclist);
    
    for(match=G__EXACT;match<=G__STDCONV;match++) {
      ifunc=G__get_ifunchandle_base(funcname,&para,hash,p_ifunc,pifn,poffset
@@ -7387,14 +7390,17 @@ struct G__ifunc_table_internal *G__get_methodhandle4(char *funcname
    if(ifunc) return ifunc;
    
    /* if no exact match, try to instantiate template function */
-   funclist = G__add_templatefunc(funcname,libp,hash,funclist,p_ifunc,1,withInheritance);
-   if(funclist && funclist->rate==G__EXACTMATCH) {
-     ifunc = funclist->ifunc;
-     *pifn = funclist->ifn;
-     G__funclist_delete(funclist);
-     return ifunc;
-   }
-   G__funclist_delete(funclist);
+   
+   // LF 24-10-07 Don't try this when registering symbols...
+   // the match should be exact.. shouldnt it?
+   //funclist = G__add_templatefunc(funcname,libp,hash,funclist,p_ifunc,1,withInheritance);
+   //if(funclist && funclist->rate==G__EXACTMATCH) {
+   //  ifunc = funclist->ifunc;
+   //  *pifn = funclist->ifn;
+   //  G__funclist_delete(funclist);
+   //  return ifunc;
+   //}
+   //G__funclist_delete(funclist);
    
    for(match=G__EXACT;match<=G__STDCONV;match++) {
      ifunc=G__get_ifunchandle_base2(funcname,libp,hash,p_ifunc,pifn,poffset
