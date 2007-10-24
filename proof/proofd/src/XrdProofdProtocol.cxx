@@ -6333,6 +6333,7 @@ char *XrdProofdProtocol::ReadBufferLocal(const char *file,
       // Add line to the buffer
       memcpy(buf+len, line, llen);
       len += llen;
+      left -= llen;
       if (TRACING(HDBG))
          fprintf(stderr, "line: %s", line);
    }
