@@ -747,6 +747,33 @@ int G__ifunc_exist_base(int ifn, G__ifunc_table_internal *ifunc)
    return ifunc_res->page_base;
 }
 
+// LF 23-10-07
+//
+// This is here just for compatibility reasons...
+// When we have an old dicionary, the page_base field will be -1.. in that case we need to do a full search
+struct G__ifunc_table_internal* G__ifunc_page_old_dict(char *funcname,int hash, G__ifunc_table_internal *ifunc, int allifunc)
+{
+  // Look for a function with this name and special index in the given ifunc 
+  // (and its bases)
+  G__ifunc_table_internal* ifunc_res=0;
+  int i;
+  while(ifunc) {
+    for(i=0;i<ifunc->allifunc;i++) {
+       if((ifunc->hash[allifunc]==hash && 
+          ifunc->page_base==-1 &&
+          strcmp(ifunc->funcname[allifunc], funcname) == 0)
+          || (ifunc->funcname[allifunc][0]=='~' && funcname[0]=='~') ) {
+          
+          ifunc_res=ifunc;
+          return(ifunc);
+       }
+    }
+    ifunc=ifunc->next;
+  }
+  
+  return 0;
+}
+
 // LF 06-08-07
 //
 // 
@@ -780,6 +807,14 @@ struct G__ifunc_table_internal * G__ifunc_page_base(char *funcname,int hash,int 
 {
    G__ifunc_table_internal *ifunc_res = G__ifunc_page(funcname,hash,page_base,ifunc,allifunc);
    
+   if(ifunc_res)
+      return ifunc_res;
+
+   // LF 23-10-07
+   // This is here for compatibility reasons... and is only needed when we are mixing new dicitionaries
+   // (in ROOT, for example)... with old dictionaries (like in roottest/root/io/multipleInherit)
+   // where the base clase has the new scheme and the derived classes are in old dictionaries 
+   ifunc_res = G__ifunc_page_old_dict(funcname,hash,ifunc,allifunc);
    if(ifunc_res)
       return ifunc_res;
 
@@ -1811,11 +1846,14 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
             //new_ifunc = G__ifunc_exist(ifunc,ifn,new_ifunc,&iexist,0xffff);
             //new_ifunc = G__get_methodhandle4(ifunc->funcname[ifn], &fpara, new_ifunc, &pifn, &poffset, 1, 1, 0, 0);
                
+               // LF 23-10-12
+            // We need a way to know that we need with an old dictionary
+            if(ifunc)
             new_ifunc = G__ifunc_page_base(ifunc->funcname[ifn], ifunc->hash[ifn], ifunc->page_base, new_ifunc, ifn);
 
             // LF 08-08-07
             // in case of collisions do the whole matching
-            if(new_ifunc->page_base<0){
+            if(new_ifunc->page_base<0 ){
 
                G__paramfunc *parfunc = ifunc->param[ifn].fparams;
                struct G__param fpara;
@@ -10386,9 +10424,13 @@ int G__memfunc_setup(const char *funcname,int hash
 #ifdef G__TRUEP2F
   G__p_ifunc->isvirtual[G__func_now] = isvirtual&0x01;
   G__p_ifunc->ispurevirtual[G__func_now] = (isvirtual&0x02)/2;
+
+  G__p_ifunc->page_base = -1; // LF indicates this is function called with the old memfunc
 #else
   G__p_ifunc->isvirtual[G__func_now] = 0;
   G__p_ifunc->ispurevirtual[G__func_now] = 0;
+
+  G__p_ifunc->page_base = -1; // LF indicates this is function called with the old memfunc
 #endif
 
   if(dtorflag) {
