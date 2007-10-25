@@ -1944,9 +1944,7 @@ void XrdProofdProtocol::Recycle(XrdLink *, int, const char *)
                      // Send a terminate signal to the proofserv
                      if (LogTerminatedProc(psrv->TerminateProofServ()) != 0)
                         // Try hard kill
-                        if (LogTerminatedProc(KillProofServ(psrv->SrvID(), 1)) != 0) {
-                           TRACEI(XERR, "Recycle: problems terminating proofsrv");
-                        }
+                        LogTerminatedProc(KillProofServ(psrv->SrvID(), 1));
 
                      // Reset instance
                      psrv->Reset();
@@ -3113,9 +3111,7 @@ int XrdProofdProtocol::Destroy()
 
             // Send a terminate signal to the proofserv
             if (LogTerminatedProc(xps->TerminateProofServ()) != 0)
-               if (LogTerminatedProc(KillProofServ(xps->SrvID(), 1)) != 0) {
-                  TRACEI(XERR, "Destroy: problems terminating request to proofsrv");
-               }
+               LogTerminatedProc(KillProofServ(xps->SrvID(), 1));
 
             // Reset instance
             xps->Reset();
@@ -4972,12 +4968,7 @@ int XrdProofdProtocol::Admin()
                      *pid = s->SrvID();
                      TRACEI(HDBG, "Admin: CleanupSessions: terminating " << *pid);
                      if (s->TerminateProofServ() != 0) {
-                        if (KillProofServ(*pid, 0) != 0) {
-                           XrdOucString msg = "Admin: CleanupSessions: WARNING: process ";
-                           msg += *pid;
-                           msg += " could not be signalled for termination";
-                           TRACEI(XERR, msg.c_str());
-                        } else
+                        if (KillProofServ(*pid, 0) == 0)
                            signalledpid.push_back(pid);
                      } else
                         signalledpid.push_back(pid);
@@ -5771,8 +5762,19 @@ int XrdProofdProtocol::CleanupProofServ(bool all, const char *usr)
          fclose(ffn);
          // If this is a good candidate, kill it
          if (!xname && !xpid && !xppid && !xuid) {
-            if (KillProofServ(pid, 1) == 0)
-               nk++;
+
+            bool muok = 1;
+            if (fgMultiUser && !all) {
+               // We need to check the user name: we may be the owner of somebody
+               // else process
+               muok = 0;
+               XrdProofServProxy *srv = fgMgr.GetActiveSession(pid);
+               if (srv && !strcmp(usr, srv->Client()))
+                  muok = 1;
+            }
+            if (muok)
+               if (KillProofServ(pid, 1) == 0)
+                  nk++;
          }
       }
    }
@@ -5842,8 +5844,18 @@ int XrdProofdProtocol::CleanupProofServ(bool all, const char *usr)
 
          // If this is a good candidate, kill it
          if (!xname && !xppid && !xuid) {
-            if (KillProofServ(psi.pr_pid, 1) == 0)
-               nk++;
+            bool muok = 1;
+            if (fgMultiUser && !all) {
+               // We need to check the user name: we may be the owner of somebody
+               // else process
+               muok = 0;
+               XrdProofServProxy *srv = fgMgr.GetActiveSession(psi.pr_pid);
+               if (srv && !strcmp(usr, srv->Client()))
+                  muok = 1;
+            }
+            if (muok)
+               if (KillProofServ(psi.pr_pid, 1) == 0)
+                  nk++;
          }
       }
    }
@@ -5881,10 +5893,21 @@ int XrdProofdProtocol::CleanupProofServ(bool all, const char *usr)
                   }
                }
             }
-            if (!xppid)
-               // Good candidate to be shot
-               if (KillProofServ(pl[np].kp_proc.p_pid, 1))
-                  nk++;
+            if (!xppid) {
+               bool muok = 1;
+               if (fgMultiUser && !all) {
+                  // We need to check the user name: we may be the owner of somebody
+                  // else process
+                  muok = 0;
+                  XrdProofServProxy *srv = fgMgr.GetActiveSession(pl[np].kp_proc.p_pid);
+                  if (srv && !strcmp(usr, srv->Client()))
+                     muok = 1;
+               }
+               if (muok)
+                  // Good candidate to be shot
+                  if (KillProofServ(pl[np].kp_proc.p_pid, 1))
+                     nk++;
+            }
          }
       }
    }
@@ -5939,9 +5962,19 @@ int XrdProofdProtocol::CleanupProofServ(bool all, const char *usr)
          if (busr)
             from += strlen(cusr);
          int pid = (int) XrdProofdAux::GetLong(&line[from]);
-         // Kill it
-         if (KillProofServ(pid, 1) == 0)
-            nk++;
+         bool muok = 1;
+         if (fgMultiUser && !all) {
+            // We need to check the user name: we may be the owner of somebody
+            // else process
+            muok = 0;
+            XrdProofServProxy *srv = fgMgr.GetActiveSession(pid);
+            if (srv && !strcmp(usr, srv->Client()))
+               muok = 1;
+         }
+         if (muok)
+            // Kill it
+            if (KillProofServ(pid, 1) == 0)
+               nk++;
       }
       pclose(fp);
    } else {
@@ -6020,17 +6053,13 @@ int XrdProofdProtocol::KillProofServ(int pid, bool forcekill)
             }
          // Add to the list of termination attempts
          if (signalled) {
-            TRACE(DBG, "KillProofServ: "<<pid<<" signalled");
+            // Avoid after notification after this point: it may create dead-locks
             if (fPClient) {
                // Record this session in the sandbox as old session
                XrdOucString tag = "-";
                tag += pid;
-               if (fPClient->GuessTag(tag) == 0) {
-                  if (fPClient->MvOldSession(tag.c_str()) == -1)
-                     TRACE(XERR, "KillProofServ: problems recording session as old in sandbox");
-               } else {
-                     TRACE(DBG, "KillProofServ: problems guessing tag");
-               }
+               if (fPClient->GuessTag(tag, 1, 0) == 0)
+                  fPClient->MvOldSession(tag.c_str(), 0);
             }
          } else {
             TRACE(DBG, "KillProofServ: process ID "<<pid<<" not found in the process table");
