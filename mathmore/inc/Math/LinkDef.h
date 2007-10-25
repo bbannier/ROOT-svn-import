@@ -65,6 +65,9 @@
 
 #pragma link C++ class ROOT::Math::GSLMinimizer+;
 #pragma link C++ class ROOT::Math::GSLSimAnMinimizer+;
+#pragma link C++ class ROOT::Math::GSLSimAnFunc+;
+#pragma link C++ class ROOT::Math::GSLSimAnParams+;
+#pragma link C++ class ROOT::Math::GSLSimAnnealing+;
 
 #ifndef _WIN32  // exclude for same problem of virtual inheritance
 #pragma link C++ class ROOT::Math::GSLNLSMinimizer;
