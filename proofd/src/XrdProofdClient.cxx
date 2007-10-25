@@ -434,6 +434,7 @@ int XrdProofdClient::GuessTag(XrdOucString &tag, int ridx)
 
       // Search the tag in the dirs
       std::list<XrdOucString *> staglst;
+      staglst.clear();
       int rc = GetSessionDirs(3, &staglst, &tag);
       if (rc < 0) {
          TRACE(XERR, "GuessTag: cannot scan dir "<<Workdir());
@@ -441,7 +442,7 @@ int XrdProofdClient::GuessTag(XrdOucString &tag, int ridx)
       }
       found = (rc == 1) ? 1 : 0;
 
-      if (!found) {
+      if (!found && staglst.size() > 0) {
          // Take last one, if required
          if (last) {
             tag = staglst.front()->c_str();
