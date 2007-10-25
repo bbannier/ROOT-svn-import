@@ -89,7 +89,7 @@ ClassImpQ(TPad)
 //  of the original histogram is changed !!
 //
 //  The convention used in ROOT is that a Draw operation only adds
-//  a reference to the object. The effective drawing is performed when
+//  a reference to the object. The effective drawing is performed
 //  the canvas receives a signal to be painted.
 //  This signal is generally sent when typing carriage return in the
 //  command input or when a graphical operation has been performed on one
@@ -2914,12 +2914,7 @@ void TPad::PaintModified()
    cd();
    if (IsModified() || IsTransparent()) {
       if ((fFillStyle < 3026) && (fFillStyle > 3000)) {
-         Int_t px1 = XtoPixel(fX1);
-         Int_t px2 = XtoPixel(fX2);
-         Int_t py1 = YtoPixel(fY1);
-         Int_t py2 = YtoPixel(fY2);
-         gVirtualX->SetFillColor(10);
-         gVirtualX->DrawBox(px1,py1,px2,py2,TVirtualX::kFilled);
+         if (!gPad->IsBatch()) gVirtualX->ClearWindow();
       }
       PaintBorder(GetFillColor(), kTRUE);
    }
