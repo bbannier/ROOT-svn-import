@@ -122,10 +122,6 @@ XrdProofConn::XrdProofConn(const char *url, char m, int psid, char capver,
                     " connection" << " to server "<<URLTAG);
    }
 
-   // Garbage-collect the obsolete physical connections, if any
-   if (fgConnMgr)
-      fgConnMgr->GarbageCollect();
-
    return;
 }
 
@@ -156,9 +152,6 @@ bool XrdProofConn::Init(const char *url)
 
    // Init connection manager (only once)
    if (!fgConnMgr) {
-      // We do not want the garbage collector thread: we will garbage collect
-      // after each new (logical) connection
-      EnvPutInt(NAME_STARTGARBAGECOLLECTORTHREAD, 0);
       if (!(fgConnMgr = new XrdClientConnectionMgr())) {
          TRACE(REQ,"XrdProofConn::Init: error initializing connection manager");
          return 0;
@@ -318,13 +311,9 @@ int XrdProofConn::Connect()
 }
 
 //_____________________________________________________________________________
-void XrdProofConn::Close(const char *opt)
+void XrdProofConn::Close(const char *)
 {
-   // Close connection. Available options are (case insensitive)
-   //   'P'   force closing of the underlying physical connection
-   //   'S'   shutdown remote session, is any
-   // A session ID can be given using #...# signature, e.g. "#1#".
-   // Default is opt = "".
+   // Close connection.
 
    // Cleanup mutex
    SafeDelete(fMutex);
@@ -333,15 +322,9 @@ void XrdProofConn::Close(const char *opt)
    if (!fConnected)
       return;
 
-   // Parse options
-   bool hard = (opt) ? (strchr(opt,'P') || strchr(opt,'p')) : 0;
-
    // Close connection
-   if (fgConnMgr) {
-      fgConnMgr->Disconnect(GetLogConnID(), hard);
-      if (hard)
-         fgConnMgr->GarbageCollect();
-   }
+   if (fgConnMgr)
+      fgConnMgr->Disconnect(GetLogConnID(), 0);
 
    // Flag this action
    fConnected = 0;

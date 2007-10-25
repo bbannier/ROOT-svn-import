@@ -464,17 +464,6 @@ Bool_t TXNetSystem::IsOnline(const char *path)
 {
    // Check if the file defined by 'path' is ready to be used
 
-   /*TString endPointUrl;
-   if (Locate(path, endPointUrl))
-   {
-      Error("IsOnline", "Locate %s failed", path);
-      return kFALSE;
-      }*/
-
-   //return kTRUE;
-
-   //Printf("endpoint: %s", endPointUrl.Data());
-
    // prevent endless reconnection attemps if server is down
    Int_t maxCnt = EnvGetLong(NAME_FIRSTCONNECTMAXCNT);
    EnvPutInt(NAME_FIRSTCONNECTMAXCNT, 1);

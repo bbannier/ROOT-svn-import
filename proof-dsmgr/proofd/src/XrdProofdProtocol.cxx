@@ -1944,9 +1944,7 @@ void XrdProofdProtocol::Recycle(XrdLink *, int, const char *)
                      // Send a terminate signal to the proofserv
                      if (LogTerminatedProc(psrv->TerminateProofServ()) != 0)
                         // Try hard kill
-                        if (LogTerminatedProc(KillProofServ(psrv->SrvID(), 1)) != 0) {
-                           TRACEI(XERR, "Recycle: problems terminating proofsrv");
-                        }
+                        LogTerminatedProc(KillProofServ(psrv->SrvID(), 1));
 
                      // Reset instance
                      psrv->Reset();
@@ -3113,9 +3111,7 @@ int XrdProofdProtocol::Destroy()
 
             // Send a terminate signal to the proofserv
             if (LogTerminatedProc(xps->TerminateProofServ()) != 0)
-               if (LogTerminatedProc(KillProofServ(xps->SrvID(), 1)) != 0) {
-                  TRACEI(XERR, "Destroy: problems terminating request to proofsrv");
-               }
+               LogTerminatedProc(KillProofServ(xps->SrvID(), 1));
 
             // Reset instance
             xps->Reset();
@@ -4987,12 +4983,7 @@ int XrdProofdProtocol::Admin()
                      *pid = s->SrvID();
                      TRACEI(HDBG, "Admin: CleanupSessions: terminating " << *pid);
                      if (s->TerminateProofServ() != 0) {
-                        if (KillProofServ(*pid, 0) != 0) {
-                           XrdOucString msg = "Admin: CleanupSessions: WARNING: process ";
-                           msg += *pid;
-                           msg += " could not be signalled for termination";
-                           TRACEI(XERR, msg.c_str());
-                        } else
+                        if (KillProofServ(*pid, 0) == 0)
                            signalledpid.push_back(pid);
                      } else
                         signalledpid.push_back(pid);
@@ -5786,8 +5777,19 @@ int XrdProofdProtocol::CleanupProofServ(bool all, const char *usr)
          fclose(ffn);
          // If this is a good candidate, kill it
          if (!xname && !xpid && !xppid && !xuid) {
-            if (KillProofServ(pid, 1) == 0)
-               nk++;
+
+            bool muok = 1;
+            if (fgMultiUser && !all) {
+               // We need to check the user name: we may be the owner of somebody
+               // else process
+               muok = 0;
+               XrdProofServProxy *srv = fgMgr.GetActiveSession(pid);
+               if (srv && !strcmp(usr, srv->Client()))
+                  muok = 1;
+            }
+            if (muok)
+               if (KillProofServ(pid, 1) == 0)
+                  nk++;
          }
       }
    }
@@ -5857,8 +5859,18 @@ int XrdProofdProtocol::CleanupProofServ(bool all, const char *usr)
 
          // If this is a good candidate, kill it
          if (!xname && !xppid && !xuid) {
-            if (KillProofServ(psi.pr_pid, 1) == 0)
-               nk++;
+            bool muok = 1;
+            if (fgMultiUser && !all) {
+               // We need to check the user name: we may be the owner of somebody
+               // else process
+               muok = 0;
+               XrdProofServProxy *srv = fgMgr.GetActiveSession(psi.pr_pid);
+               if (srv && !strcmp(usr, srv->Client()))
+                  muok = 1;
+            }
+            if (muok)
+               if (KillProofServ(psi.pr_pid, 1) == 0)
+                  nk++;
          }
       }
    }
@@ -5896,10 +5908,21 @@ int XrdProofdProtocol::CleanupProofServ(bool all, const char *usr)
                   }
                }
             }
-            if (!xppid)
-               // Good candidate to be shot
-               if (KillProofServ(pl[np].kp_proc.p_pid, 1))
-                  nk++;
+            if (!xppid) {
+               bool muok = 1;
+               if (fgMultiUser && !all) {
+                  // We need to check the user name: we may be the owner of somebody
+                  // else process
+                  muok = 0;
+                  XrdProofServProxy *srv = fgMgr.GetActiveSession(pl[np].kp_proc.p_pid);
+                  if (srv && !strcmp(usr, srv->Client()))
+                     muok = 1;
+               }
+               if (muok)
+                  // Good candidate to be shot
+                  if (KillProofServ(pl[np].kp_proc.p_pid, 1))
+                     nk++;
+            }
          }
       }
    }
@@ -5954,9 +5977,19 @@ int XrdProofdProtocol::CleanupProofServ(bool all, const char *usr)
          if (busr)
             from += strlen(cusr);
          int pid = (int) XrdProofdAux::GetLong(&line[from]);
-         // Kill it
-         if (KillProofServ(pid, 1) == 0)
-            nk++;
+         bool muok = 1;
+         if (fgMultiUser && !all) {
+            // We need to check the user name: we may be the owner of somebody
+            // else process
+            muok = 0;
+            XrdProofServProxy *srv = fgMgr.GetActiveSession(pid);
+            if (srv && !strcmp(usr, srv->Client()))
+               muok = 1;
+         }
+         if (muok)
+            // Kill it
+            if (KillProofServ(pid, 1) == 0)
+               nk++;
       }
       pclose(fp);
    } else {
@@ -6035,17 +6068,13 @@ int XrdProofdProtocol::KillProofServ(int pid, bool forcekill)
             }
          // Add to the list of termination attempts
          if (signalled) {
-            TRACE(DBG, "KillProofServ: "<<pid<<" signalled");
+            // Avoid after notification after this point: it may create dead-locks
             if (fPClient) {
                // Record this session in the sandbox as old session
                XrdOucString tag = "-";
                tag += pid;
-               if (fPClient->GuessTag(tag) == 0) {
-                  if (fPClient->MvOldSession(tag.c_str()) == -1)
-                     TRACE(XERR, "KillProofServ: problems recording session as old in sandbox");
-               } else {
-                     TRACE(DBG, "KillProofServ: problems guessing tag");
-               }
+               if (fPClient->GuessTag(tag, 1, 0) == 0)
+                  fPClient->MvOldSession(tag.c_str(), 0);
             }
          } else {
             TRACE(DBG, "KillProofServ: process ID "<<pid<<" not found in the process table");
@@ -6281,24 +6310,36 @@ char *XrdProofdProtocol::ReadBufferLocal(const char *file,
       return (char *)0;
    }
 
-   // command
-   char *cmd = new char[len + 20];
-   if (opt == 1) {
-      sprintf(cmd,"grep \"%s\" %s", pat, file);
-   } else if (opt == 2) {
-      sprintf(cmd,"grep -v \"%s\" %s", pat, file);
-   } else {
-      emsg = "ReadBufferLocal: unknown option: ";
-      emsg += opt;
+   // Size of the output
+   struct stat st;
+   if (stat(file, &st) != 0) {
+      emsg = "ReadBufferLocal: could not get size of file with stat: errno: ";
+      emsg += (int)errno;
       TRACEI(XERR, emsg);
       return (char *)0;
    }
-   TRACEI(ACT, "ReadBufferLocal: cmd: "<<cmd);
+   off_t ltot = st.st_size;
 
-   FILE *fp = popen(cmd, "r");
+   // Open the file in read mode
+   FILE *fp = fopen(file, "r");
    if (!fp) {
-      emsg = "ReadBufferLocal: problems executing ";
-      emsg += cmd;
+      emsg = "ReadBufferLocal: could not open ";
+      emsg += file;
+      TRACEI(XERR, emsg);
+      return (char *)0;
+   }
+
+   // Check pattern
+   bool keepall = (pat && strlen(pat) > 0) ? 0 : 1; 
+
+   // Fill option
+   bool keep = 1;
+   if (opt == 2) {
+      // '-v' functionality
+      keep = 0;
+   } else if (opt != 1 ) {
+      emsg = "ReadBufferLocal: unknown option: ";
+      emsg += opt;
       TRACEI(XERR, emsg);
       return (char *)0;
    }
@@ -6308,9 +6349,16 @@ char *XrdProofdProtocol::ReadBufferLocal(const char *file,
    char *buf = 0;
    char line[2048];
    int bufsiz = 0, left = 0, lines = 0;
-   while (fgets(line, sizeof(line), fp)) {
-      lines++;
+   while ((ltot > 0) && fgets(line, sizeof(line), fp)) {
       int llen = strlen(line);
+      ltot -= llen;
+      // Filter out
+      bool haspattern = (strstr(line, pat)) ? 1 : 0;
+      if (!keepall && ((keep && !haspattern) || (!keep && haspattern)))
+         // Skip
+         continue;
+      // Good line
+      lines++;
       // (Re-)allocate the buffer
       if (!buf || (llen > left)) {
          int dsiz = 100 * ((int) ((len + llen) / lines) + 1);
@@ -6323,12 +6371,13 @@ char *XrdProofdProtocol::ReadBufferLocal(const char *file,
          emsg = "ReadBufferLocal: could not allocate enough memory on the heap: errno: ";
          emsg += (int)errno;
          XPDERR(emsg);
-         pclose(fp);
+         fclose(fp);
          return (char *)0;
       }
       // Add line to the buffer
       memcpy(buf+len, line, llen);
       len += llen;
+      left -= llen;
       if (TRACING(HDBG))
          fprintf(stderr, "line: %s", line);
    }
@@ -6344,7 +6393,7 @@ char *XrdProofdProtocol::ReadBufferLocal(const char *file,
    }
 
    // Close file
-   pclose(fp);
+   fclose(fp);
 
    // Done
    return buf;
