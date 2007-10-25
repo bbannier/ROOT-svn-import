@@ -2686,30 +2686,30 @@ void G__gen_cpplink()
   // Member Function Interface Method Ej: G__G__Hist_95_0_2()
   // Stub Functions
   if (!G__suppress_methods) {
-     if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3) // LF
+     if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3 || G__dicttype==4) // LF
        G__cppif_memfunc(fp,hfp);
 
      // LF 09-10-07
      // The stubs are not printed and the internal status is not changed
-     if(G__dicttype==3)
+     if(G__dicttype==3 || G__dicttype==4)
         G__cppif_change_globalcomp();
   }
 
-  if(G__dicttype==0 || G__dicttype==3) // LF
+  if(G__dicttype==0 || G__dicttype==3 || G__dicttype==4) // LF
     G__cppif_func(fp,hfp);
 
   if (!G__suppress_methods) {
-    if(G__dicttype==0 || G__dicttype==3) // LF     
+    if(G__dicttype==0 || G__dicttype==3 || G__dicttype==4) // LF     
       G__cppstub_memfunc(fp);
   }
 
-  if(G__dicttype==0 || G__dicttype==3) // LF
+  if(G__dicttype==0 || G__dicttype==3 || G__dicttype==4) // LF
     G__cppstub_func(fp);
 
   fprintf(hfp,"#endif\n\n");
 
   // LF
-  if(G__dicttype==0 || G__dicttype==3) {
+  if(G__dicttype==0 || G__dicttype==3 || G__dicttype==4) {
      G__cppif_p2memfunc(fp);
 
 #ifdef G__VIRTUALBASE
@@ -2932,7 +2932,7 @@ void G__cpplink_header(FILE *fp)
     fprintf(fp,"#undef G__MULTITHREADLIBCINTCPP\n");
 
   // LF 10-07-07
-  if(G__dicttype==0 || G__dicttype==3) {
+  if(G__dicttype==0 || G__dicttype==3 || G__dicttype==4) {
 
      fprintf(fp,"extern \"C\" {\n");
 
@@ -3667,7 +3667,7 @@ void G__set_globalcomp(char *mode,char *linkfilename,char *dllid)
     // if G__dixttype==0 we want to generate the ShowMembers only
     // but there is some kind of probles with globals and we still
     // need to execetu this function
-    if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3){
+    if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3 || G__dicttype==4){
        fp = fopen(G__CPPLINK_C,"w");
        if(!fp) G__fileerror(G__CPPLINK_C);
        fprintf(fp,"/********************************************************\n");
@@ -3709,7 +3709,7 @@ void G__set_globalcomp(char *mode,char *linkfilename,char *dllid)
 #endif
 
     // LF 10-07-07
-    if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3){
+    if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3 || G__dicttype==4){
        fp = fopen(G__CLINK_C,"w");
        if(!fp) G__fileerror(G__CLINK_C);
        fprintf(fp,"/********************************************************\n");
@@ -3746,7 +3746,7 @@ void G__set_globalcomp(char *mode,char *linkfilename,char *dllid)
 #endif
 
     // LF 10-07-07
-    if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3){
+    if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3 || G__dicttype==4){
        fp = fopen(G__CPPLINK_C,"w");
        if(!fp) G__fileerror(G__CPPLINK_C);
        fprintf(fp,"/********************************************************\n");
@@ -3891,7 +3891,7 @@ void G__gen_cppheader(char *headerfilein)
         fclose(fp);
 
         // LF 10-07-07
-        if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3) {
+        if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3 || G__dicttype==4) {
            fp = fopen(G__CPPLINK_C,"a");
            if(!fp) G__fileerror(G__CPPLINK_C);
            fprintf(fp,"  G__add_compiledheader(\"%s\");\n",headerfile);
@@ -3905,7 +3905,7 @@ void G__gen_cppheader(char *headerfilein)
         fclose(fp);
 
         // LF 10-07-07
-        if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3) {
+        if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3 || G__dicttype==4) {
            fp = fopen(G__CLINK_C,"a");
            if(!fp) G__fileerror(G__CLINK_C);
            fprintf(fp,"  G__add_compiledheader(\"%s\");\n",headerfile);
@@ -4370,7 +4370,7 @@ void G__cppif_geninline(FILE *fp, FILE *hfp, struct G__ifunc_table_internal *ifu
       ) {
                     
       // LF
-      if(G__dicttype==2) {
+      if(G__dicttype==2 || G__dicttype==4) {
          // LF 21-06-07
          // Dont print them for the stats
          int hash;
@@ -4767,7 +4767,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
       isnonpublicnew=G__isnonpublicnew(i);
 
       // LF
-      if( G__dicttype==3 &&
+      if( (G__dicttype==3 || G__dicttype==4) &&
           strncmp(G__fulltagname(i,0),"string", strlen("string"))!=0 &&
           strncmp(G__fulltagname(i,0),"vector", strlen("vector"))!=0 &&
           strncmp(G__fulltagname(i,0),"list", strlen("list"))!=0 &&
@@ -4784,7 +4784,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
       // LF 03-07-07
       // Trigger the symbol registering to have them at hand
       // Do it here when we have the library and the class
-      if(G__dicttype == 3)
+      if(G__dicttype == 3 || G__dicttype==4)
          G__register_class(G__libname, G__type2string('u',i,-1,0,0));
 
       /* member function interface */
@@ -4845,7 +4845,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                       strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
                       strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
                       strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0 )
-                     && !ifunc->ispurevirtual[j] && (G__dicttype==3)) || G__dicttype==0 ) {
+                     && !ifunc->ispurevirtual[j] && (G__dicttype==3 || G__dicttype==4)) || G__dicttype==0 ) {
                     G__cppif_genconstructor(fp,hfp,i,j,ifunc);
                   }
                  
@@ -4865,7 +4865,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
             else if('~'==ifunc->funcname[j][0]) {
                /* destructor is created in gendefault later */
                if(G__PUBLIC==ifunc->access[j]){
-                  if(G__dicttype==3 && !ifunc->ispurevirtual[j] && !ifunc->mangled_name[j] /*if there no is a symbol*/){
+                  if((G__dicttype==3 || G__dicttype==4) && !ifunc->ispurevirtual[j] && !ifunc->mangled_name[j] /*if there no is a symbol*/){
                      if(
                         !(strcmp(ifunc->funcname[j],"operator const char*")==0 || 
                           strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
@@ -4880,7 +4880,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                           strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0))
                         G__cppif_gendefault(fp,hfp,i,j,ifunc,1,1,isdestructor,1,1);
                   }
-                  else if(G__dicttype==3 && ifunc->mangled_name[j] /*if there no is a symbol*/)
+                  else if((G__dicttype==3 || G__dicttype==4) && ifunc->mangled_name[j] /*if there no is a symbol*/)
                      ++isdestructor;
                   else if(G__dicttype!=3)
                      isdestructor = -1;
@@ -4935,7 +4935,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                     strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
                     strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
                     strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0)
-                  && !ifunc->ispurevirtual[j] && (G__dicttype==3)) || G__dicttype==0) {
+                  && !ifunc->ispurevirtual[j] && (G__dicttype==3 || G__dicttype==4)) || G__dicttype==0) {
                  if(strcmp(ifunc->funcname[j],"operator=")==0
                     && 'u'==ifunc->param[j][0]->type
                     && i==ifunc->param[j][0]->p_tagtable
@@ -5021,7 +5021,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                   strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
                    strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0)
                  
-              && (G__dicttype==3)) || G__dicttype==0) //LF
+              && (G__dicttype==3 || G__dicttype==4)) || G__dicttype==0) //LF
               G__cppif_gendefault(fp,hfp,i,j,ifunc
                                   ,isconstructor
                                   ,iscopyconstructor
@@ -6781,7 +6781,7 @@ void G__cppif_genfunc(FILE *fp, FILE * /* hfp */, int tagnum, int ifn, G__ifunc_
 
   // If the virtual method 'ifn' (in ifunc) exists in any Base Clase then we have
   // an overridden virtual method,so the stub function for it is not generated
-   if ((G__dicttype!=3) && (ifunc->isvirtual[ifn]) && (G__method_inbase(ifn, ifunc)))
+   if ((G__dicttype!=3 && G__dicttype!=4) && (ifunc->isvirtual[ifn]) && (G__method_inbase(ifn, ifunc)))
       return;
 
 #ifndef G__SMALLOBJECT
@@ -8650,7 +8650,7 @@ void G__cpplink_memfunc(FILE *fp)
                // If the method is virtual. Is it overridden? -> Does it exist in the base classes? 
                //  Virtual method found in the base classes(we have an overridden virtual method)so it
                //  has not stub function in its dictionary
-               if ((G__dicttype!=3) && (ifunc->isvirtual[j]) && (G__method_inbase(j, ifunc)))
+               if ((G__dicttype!=3 && G__dicttype!=4) && (ifunc->isvirtual[j]) && (G__method_inbase(j, ifunc)))
                   // Null Stub Pointer
                   fprintf(fp, "(G__InterfaceMethod) NULL," );
                else {
@@ -8683,7 +8683,7 @@ void G__cpplink_memfunc(FILE *fp)
                         strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
                         strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
                         strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0 )
-                      && !ifunc->ispurevirtual[j] && (G__dicttype==3)) || G__dicttype==0
+                      && !ifunc->ispurevirtual[j] && (G__dicttype==3 || G__dicttype==4)) || G__dicttype==0
                      /* && !ifunc->isvirtual[j]*/){
 
                      if(strcmp(ifunc->funcname[j],G__struct.name[i])==0) {
@@ -8916,7 +8916,7 @@ void G__cpplink_memfunc(FILE *fp)
                 strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
                 strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
                 strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0 )
-             && (G__dicttype==3)) || G__dicttype==0)
+             && (G__dicttype==3 || G__dicttype==4)) || G__dicttype==0)
 
 /*
 G__dicttype==0 ||
@@ -9517,7 +9517,7 @@ void G__cpplink_func(FILE *fp)
   // LF 30-07-07
   // Trigger the symbol registering to have them at hand
   // Do it here when we have the library and the class
-  if(G__dicttype == 3)
+  if(G__dicttype == 3 || G__dicttype==4)
      G__register_class(G__libname, 0);
 
   fprintf(fp,"\n/*********************************************************\n");

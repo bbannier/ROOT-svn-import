@@ -1215,7 +1215,7 @@ int G__main(int argc, char** argv)
       G__fprinterr(G__serr, "Warning: Error occurred during reading source files\n");
    }
 
-   if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3){ // LF
+   if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3 || G__dicttype==4){ // LF
       G__init_process_cmd(); 
       MapDependantTypes();
       G__gen_extra_include();
@@ -1228,7 +1228,7 @@ int G__main(int argc, char** argv)
          while (!G__pause());
       }
       
-      if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3) // LF
+      if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3 || G__dicttype==4) // LF
       G__gen_cpplink();
 #if !defined(G__ROOT) && !defined(G__D0)
       G__scratch_all();
@@ -1246,7 +1246,7 @@ int G__main(int argc, char** argv)
       if (G__steptrace || G__stepover) {
          while (!G__pause());
       }
-      if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3){ // LF
+      if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3 || G__dicttype==4){ // LF
          G__gen_clink();
       }
 #if !defined(G__ROOT) && !defined(G__D0)
@@ -1262,7 +1262,7 @@ int G__main(int argc, char** argv)
    }
 #ifdef G__ROOT
    else if (G__globalcomp == R__CPPLINK) {
-      if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3) // LF
+      if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3 || G__dicttype==4) // LF
          rflx_gendict(linkfilename, sourcefile);
       
       return EXIT_SUCCESS;

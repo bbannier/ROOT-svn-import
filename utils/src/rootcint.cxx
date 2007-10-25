@@ -4787,7 +4787,7 @@ int main(int argc, char **argv)
    // LF 26-07-07
    // dont generate the showmembers if we only want 
    // all the memfunc_setup stuff
-   if(dicttype==0 || dicttype==1) {   
+   if(dicttype==0 || dicttype==1 || dicttype==4) {   
 
 
       //
