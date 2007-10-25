@@ -31,6 +31,7 @@
 #include "XrdProofdManager.h"
 #include "XrdProofdPlatform.h"
 #include "XrdProofdResponse.h"
+#include "XrdProofServProxy.h"
 #include "XrdProofWorker.h"
 
 #define XPD_DEF_PORT 1093
@@ -450,6 +451,26 @@ void XrdProofdManager::CreateDefaultPROOFcfg()
 
    // We are done
    return;
+}
+
+//__________________________________________________________________________
+XrdProofServProxy *XrdProofdManager::GetActiveSession(int pid)
+{
+   // Return active session with process ID pid, if any.
+
+   XrdSysMutexHelper mhp(fMutex);
+
+   XrdProofServProxy *srv = 0;
+
+   std::list<XrdProofServProxy *>::iterator svi;
+   for (svi = fActiveSessions.begin(); svi != fActiveSessions.end(); svi++) {
+      if ((*svi)->IsValid() && ((*svi)->SrvID() == pid)) {
+         srv = *svi;
+         return srv;
+      }
+   }
+   // Done
+   return srv;
 }
 
 //__________________________________________________________________________
