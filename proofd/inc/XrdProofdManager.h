@@ -62,6 +62,7 @@ class XrdProofdManager {
                                                          return &fActiveSessions; }
    void              AddActiveSession(XrdProofServProxy *p) { XrdSysMutexHelper mhp(&fMutex);
                                                               fActiveSessions.push_back(p); }
+   XrdProofServProxy *GetActiveSession(int pid);
    void              RemoveActiveSession(XrdProofServProxy *p) { XrdSysMutexHelper mhp(&fMutex);
                                                                  fActiveSessions.remove(p); }
 
