@@ -4409,6 +4409,14 @@ int main(int argc, char **argv)
    argvv[0] = argv[0];
    argcc = 1;
 
+   // LF 26-10-07
+   // We want to ignore the "-o" "--object-files" 
+   // coming from the new, wrapper-less scheme
+   if (!strcmp(argv[ic], "-o") || !strcmp(argv[ic], "--object-files") || !strcmp(argv[ic], "-object-files")) {
+      ++ic;
+      ++ic;
+   }
+
    // LF 03-07-07
    // We need the library path in the dictionary generation
    // the easiest way is to get it as a parameter
