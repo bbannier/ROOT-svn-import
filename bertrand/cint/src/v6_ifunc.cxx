@@ -671,10 +671,22 @@ void G__make_ifunctable(char* funcheader)
                int oprtagnum = G__defined_tagname(oprtype, 2);
                if (oprtagnum > -1) {
                   const char* posEndType = oprtype;
+                  bool isTemplate = (strchr(G__struct.name[oprtagnum], '<'));
                   while (isalnum(*posEndType)
-                         || posEndType[0] == ':' && posEndType[1] == ':'
-                         || *posEndType == '_')
+                         || posEndType[0] == ':' && posEndType[1] == ':' && (++posEndType)
+                         || *posEndType == '_') {
                      ++posEndType;
+                     if (isTemplate && *posEndType == '<') {
+                        // also include "<T>" in type name
+                        ++posEndType;
+                        int templLevel = 1;
+                        while (templLevel && *posEndType) {
+                           if (*posEndType == '<') ++templLevel;
+                           else if (*posEndType == '>') --templLevel;
+                           ++posEndType;
+                        }
+                     }
+                  }
                   char* ptrrefbuf = 0;
                   if (*posEndType) {
                      ptrrefbuf = new char[strlen(posEndType) + 1];
