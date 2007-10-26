@@ -81,7 +81,12 @@ public:
    /**
       clone the function
     */
-   WrapperRooPdf * Clone() const { 
+#ifndef _WIN32
+   WrapperRooPdf 
+#else
+     ROOT::Math::IMultiGenFunction
+#endif  
+     * Clone() const { 
       // copy the pdf funciton pointer
       return new WrapperRooPdf(fPdf, *fX, fNorm);
    }
@@ -166,7 +171,9 @@ private:
       RooRealVar* var = 0;
       while( ( var = dynamic_cast<RooRealVar*>(itr->Next() ) ) ) {
          assert(var != 0);
+#ifndef _WIN32
          var->setDirtyInhibit(true);
+#endif
          var->setVal(*x++);
       }
       // debug

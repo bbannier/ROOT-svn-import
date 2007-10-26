@@ -55,12 +55,12 @@ Chi2GradFCN & Chi2GradFCN::operator = (const Chi2GradFCN & rhs)  {
    return *this;
 }
 
-Chi2GradFCN * Chi2GradFCN::Clone() const  {
+ROOT::Math::IMultiGenFunction * Chi2GradFCN::Clone() const  {
    Chi2GradFCN * fcn =  new Chi2GradFCN(fData,fFunc); 
    return fcn; 
 }
 
-void Chi2GradFCN:: Gradient(const double * p, double * g ) const { 
+void Chi2GradFCN::Gradient(const double * p, double * g ) const { 
    // implement derivative of the Chi2
 
    IGradModelFunction & func = fFunc; 

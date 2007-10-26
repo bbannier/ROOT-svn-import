@@ -29,8 +29,10 @@
 #ifndef ROOT_Fit_FitUtil
 #include "Fit/FitUtil.h"
 #endif
-//#define PARALLEL
-#ifdef PARALLEL
+
+//#define ROOT_FIT_PARALLEL
+
+#ifdef ROOT_FIT_PARALLEL
 #ifndef ROOT_Fit_FitUtilParallel
 #include "Fit/FitUtilParallel.h"
 #endif
@@ -118,7 +120,7 @@ private:
     */
    double DoEval (const double * x) const { 
       fNCalls++;
-#ifdef PARALLEL
+#ifdef ROOT_FIT_PARALLEL
       return FitUtilParallel::EvaluateChi2(fFunc, fData, x, fNEffPoints); 
 #else 
       return FitUtil::EvaluateChi2(fFunc, fData, x, fNEffPoints); 

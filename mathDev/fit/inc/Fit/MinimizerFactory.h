@@ -13,6 +13,7 @@
 #ifndef ROOT_Fit_MinimizerFactory
 #define ROOT_Fit_MinimizerFactory
 
+#include <string>
 
 
 namespace ROOT { 
