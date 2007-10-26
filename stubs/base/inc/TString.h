@@ -280,7 +280,7 @@ public:
    TSubString    operator()(TPRegexp &re);               // Match the Perl compatible Regular Expression
    TSubString    operator()(TPRegexp &re, Ssiz_t start);
    TSubString    SubString(const char *pat, Ssiz_t start = 0,
-                           ECaseCompare cmp = kExact);
+                           ECaseCompare cmp = TString::kExact);
    char          operator[](Ssiz_t i) const;
    char          operator()(Ssiz_t i) const;
    TSubString    operator()(Ssiz_t start, Ssiz_t len) const;
@@ -289,7 +289,7 @@ public:
    TSubString    operator()(TPRegexp &re) const;        // Match the Perl compatible Regular Expression
    TSubString    operator()(TPRegexp &re, Ssiz_t start) const;
    TSubString    SubString(const char *pat, Ssiz_t start = 0,
-                           ECaseCompare cmp = kExact) const;
+                           ECaseCompare cmp = TString::kExact) const;
 
    // Non-static member functions
    TString     &Append(const char *cs);
@@ -300,29 +300,29 @@ public:
    Int_t        Atoi() const;
    Long64_t     Atoll() const;
    Double_t     Atof() const;
-   Bool_t       BeginsWith(const char *s,      ECaseCompare cmp = kExact) const;
-   Bool_t       BeginsWith(const TString &pat, ECaseCompare cmp = kExact) const;
+   Bool_t       BeginsWith(const char *s,      ECaseCompare cmp = TString::kExact) const;
+   Bool_t       BeginsWith(const TString &pat, ECaseCompare cmp = TString::kExact) const;
    Ssiz_t       Capacity() const         { return Pref()->Capacity(); }
    Ssiz_t       Capacity(Ssiz_t n);
    TString     &Chop();
-   int          CompareTo(const char *cs,    ECaseCompare cmp = kExact) const;
-   int          CompareTo(const TString &st, ECaseCompare cmp = kExact) const;
-   Bool_t       Contains(const char *pat,    ECaseCompare cmp = kExact) const;
-   Bool_t       Contains(const TString &pat, ECaseCompare cmp = kExact) const;
+   int          CompareTo(const char *cs,    ECaseCompare cmp = TString::kExact) const;
+   int          CompareTo(const TString &st, ECaseCompare cmp = TString::kExact) const;
+   Bool_t       Contains(const char *pat,    ECaseCompare cmp = TString::kExact) const;
+   Bool_t       Contains(const TString &pat, ECaseCompare cmp = TString::kExact) const;
    Bool_t       Contains(const TRegexp &pat) const;
    Bool_t       Contains(TPRegexp &pat) const;
    Int_t        CountChar(Int_t c) const;
    TString      Copy() const;
    const char  *Data() const                 { return fData; }
-   Bool_t       EndsWith(const char *pat,    ECaseCompare cmp = kExact) const;
+   Bool_t       EndsWith(const char *pat,    ECaseCompare cmp = TString::kExact) const;
    Ssiz_t       First(char c) const          { return Pref()->First(c); }
    Ssiz_t       First(const char *cs) const  { return Pref()->First(cs); }
    void         Form(const char *fmt, ...);
-   UInt_t       Hash(ECaseCompare cmp = kExact) const;
+   UInt_t       Hash(ECaseCompare cmp = TString::kExact) const;
    Ssiz_t       Index(const char *pat, Ssiz_t i = 0,
-                      ECaseCompare cmp = kExact) const;
+                      ECaseCompare cmp = TString::kExact) const;
    Ssiz_t       Index(const TString &s, Ssiz_t i = 0,
-                      ECaseCompare cmp = kExact) const;
+                      ECaseCompare cmp = TString::kExact) const;
    Ssiz_t       Index(const char *pat, Ssiz_t patlen, Ssiz_t i,
                       ECaseCompare cmp) const;
    Ssiz_t       Index(const TString &s, Ssiz_t patlen, Ssiz_t i,
