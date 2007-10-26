@@ -4922,6 +4922,11 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                       G__struct.type[ifunc->p_tagtable[j]] == 's' || 
                       G__struct.type[ifunc->p_tagtable[j]] == 'u')) ||
 
+                    // LF 26-10-07
+                    // Generate the stubs for those function needing a pointer to a reference (see TCLonesArray "virtual TObject*&	operator[](Int_t idx)")
+                    // Is this condition correct and/or sufficient?
+                    ((ifunc->reftype[j] == G__PARAREFERENCE) && strcmp(ifunc->funcname[j],"operator=")!=0) ||
+
                     //strcmp(ifunc->funcname[j],"operator()")==0 || 
                     !ifunc->mangled_name[j] || /*if there is no symbol*/
                     strcmp(ifunc->funcname[j],"operator const char*")==0 || 
@@ -8669,6 +8674,11 @@ void G__cpplink_memfunc(FILE *fp)
                          (G__struct.type[ifunc->p_tagtable[j]] == 'c' || 
                           G__struct.type[ifunc->p_tagtable[j]] == 's' || 
                           G__struct.type[ifunc->p_tagtable[j]] == 'u')) ||
+
+                        // LF 26-10-07
+                        // Generate the stubs for those function needing a pointer to a reference (see TCLonesArray "virtual TObject*&	operator[](Int_t idx)")
+                        // Is this condition correct and/or sufficient?
+                        ((ifunc->reftype[j] == G__PARAREFERENCE) && strcmp(ifunc->funcname[j],"operator=")!=0) ||
 
                         //(!strcmp(ifunc->funcname[j],"operator()") ||
                         !ifunc->mangled_name[j] || /*if there is no symbol*/
