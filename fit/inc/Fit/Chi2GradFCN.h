@@ -78,7 +78,8 @@ private:
 
 public: 
 
-   Chi2GradFCN * Clone() const; 
+   // no support for covariant return type on Windows
+   ROOT::Math::IMultiGenFunction * Clone() const; 
 
    unsigned int NDim() const { return fNDim; }
 

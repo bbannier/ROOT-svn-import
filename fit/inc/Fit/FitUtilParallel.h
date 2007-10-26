@@ -10,6 +10,14 @@
 
 // Header file for class FitUtil
 
+#ifdef _WIN32  // no support for parallel fits on Win32 
+#ifdef ROOT_FIT_PARALLEL
+#undef ROOT_FIT_PARALLEL
+#endif
+#endif
+
+#ifdef ROOT_FIT_PARALLEL
+
 #ifndef ROOT_Fit_FitUtilParallel
 #define ROOT_Fit_FitUtilParallel
 
@@ -54,3 +62,4 @@ namespace FitUtilParallel {
 
 
 #endif /* ROOT_Fit_FitUtil */
+#endif /* ROOT_FIT_PARALLEL */

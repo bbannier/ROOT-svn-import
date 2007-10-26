@@ -12,21 +12,17 @@ include $(ROOTSYS)/test/Makefile.arch
 
 #------------------------------------------------------------------------------
 
+
+
+ifeq ($(PLATFORM),win32)
+EXTRALIBS= "$(ROOTSYS)/lib/libFit.lib" "$(ROOTSYS)/lib/libMathCore.lib" 
+ROOFITLIBS= "$(ROOTSYS)/lib/libMinuit.lib" "$(ROOTSYS)/lib/libThread.lib" "$(ROOTSYS)/lib/libRooFit.lib" "$(ROOTSYS)/lib/libRooFitCore.lib" "$(ROOTSYS)/lib/libHtml.lib"
+else
+EXTRALIBS=  -lFit -lMathCore  
+ROOFITLIBS= -lMinuit  -lThread -lRooFit -lRooFitCore -lHtml
 CXXFLAGS += -g
+endif
 
-
-# ifeq ($(PLATFORM),win32)
-# EXTRALIBS        = "$(ROOTSYS)/lib/libMathMore.lib" "$(ROOTSYS)/lib/libMathCore.lib" $(GSLLIBS)
-# else
-# EXTRALIBS        = -lunuran
-# endif
-
-#UNURANBASE=/Users/moneta/mathlibs/Unuran
-#CXXFLAGS+=  -I$(UNURANBASE)/include 
-#EXTRALIBS+=  $(UNURANBASE)/lib/libunuran.a 
-EXTRALIBS +=  -lFit -lMathCore  
-
-#endif
 
 TESTFITOBJ      = testFit.$(ObjSuf)
 TESTFITSRC      = testFit.$(SrcSuf)
@@ -67,7 +63,7 @@ $(TESTFIT): $(TESTFITOBJ)
 		@echo "$@ done"
 
 $(TESTPERF): $(TESTPERFOBJ)
-		$(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) -lMinuit  -lThread -lRooFit -lRooFitCore -lHtml $(OutPutOpt)$@
+		$(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) $(ROOFITLIBS) $(OutPutOpt)$@
 		@echo "$@ done"
 
 $(TESTMINIM): $(TESTMINIMOBJ)
@@ -75,7 +71,7 @@ $(TESTMINIM): $(TESTMINIMOBJ)
 		@echo "$@ done"
 
 $(TESTROOFIT): $(TESTROOFITOBJ)
-		$(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) -lMinuit  -lThread -lRooFit -lRooFitCore -lHtml $(OutPutOpt)$@
+		$(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) $(ROOFITLIBS) $(OutPutOpt)$@
 		@echo "$@ done"
 
 

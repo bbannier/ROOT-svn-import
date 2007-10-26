@@ -18,6 +18,7 @@
 #include "Math/GSLSimAnnealing.h"
 #include "Math/GSLRndmEngines.h"
 #include "Math/SMatrix.h"
+#include "Math/Math.h"
 #include "TH1.h"
 #include "TGraph.h"
 #include "TCanvas.h"

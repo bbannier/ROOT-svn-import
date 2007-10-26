@@ -32,7 +32,6 @@
 #endif
 
 #include <algorithm>
-#include <string>
 
 //#define DEBUG
 #ifdef DEBUG

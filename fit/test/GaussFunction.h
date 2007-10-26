@@ -32,7 +32,7 @@ public:
    void SetParameters(const double * p) { std::copy(p,p+kNPar,fParams); /* fLogAmp = std::log( p[0] ); */ }
 
 
-   GaussFunction * Clone() const { return new GaussFunction(amp(), mean(), sigma() ); }
+   ROOT::Math::IMultiGenFunction * Clone() const { return new GaussFunction(amp(), mean(), sigma() ); }
 
 
    // implementing this is much faster

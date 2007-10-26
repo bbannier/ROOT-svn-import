@@ -8,6 +8,7 @@
 #include "Math/IFunction.h"
 #include "Math/Util.h"
 #include <cmath>
+#include <cassert>
 
 #include <string>
 #include <iostream>

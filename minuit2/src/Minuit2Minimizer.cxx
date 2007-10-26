@@ -33,6 +33,9 @@
 
 #include <cassert> 
 #include <iostream> 
+#include <algorithm>
+#include <functional>
+
 
 namespace ROOT { 
 
@@ -64,7 +67,8 @@ Minuit2Minimizer::Minuit2Minimizer(const char *  type ) :
    SetTolerance(0.001);
    // select type from the string
    std::string algoname(type);
-   std::transform(algoname.begin(), algoname.end(), algoname.begin(), (int(*)(int)) std::tolower ); 
+   // tolower() is not an  std function (Windows)
+   std::transform(algoname.begin(), algoname.end(), algoname.begin(), (int(*)(int)) tolower ); 
 
    EMinimizerType algoType = kMigrad; 
    if (algoname == "simplex")   algoType = kSimplex; 

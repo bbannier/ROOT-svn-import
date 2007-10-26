@@ -10,6 +10,8 @@
 
 // Implementation file for class FitUtil
 
+#ifdef ROOT_FIT_PARALLEL
+
 #include "Fit/FitUtilParallel.h"
 
 #include "Fit/DataVector.h"
@@ -182,3 +184,4 @@ double EvaluateChi2(IModelFunction & func, const BinData & data, const double * 
 
 } // end namespace ROOT
 
+#endif

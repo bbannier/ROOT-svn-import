@@ -16,7 +16,9 @@
 #include "TMinuit.h"
 
 #include <iostream>
-#include <cassert> 
+#include <cassert>
+#include <algorithm>
+#include <functional>
 
 // namespace ROOT { 
 
@@ -45,7 +47,7 @@ TMinuitMinimizer::TMinuitMinimizer(const char *  type ) :
 
    // select type from the string
    std::string algoname(type);
-   std::transform(algoname.begin(), algoname.end(), algoname.begin(), (int(*)(int)) std::tolower ); 
+   std::transform(algoname.begin(), algoname.end(), algoname.begin(), (int(*)(int)) tolower ); 
 
    ROOT::Minuit::EMinimizerType algoType = ROOT::Minuit::kMigrad; 
    if (algoname == "simplex")   algoType = ROOT::Minuit::kSimplex; 
