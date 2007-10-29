@@ -75,6 +75,8 @@ class XrdProofdManager {
    const char       *WorkDir() const { return fWorkDir.c_str(); }
    const char       *DataSetDir() const { return fDataSetDir.c_str(); }
 
+   bool              IsSuperMst() const { return fSuperMst; }
+
    // This part may evolve in the future due to better understanding of
    // how resource brokering will work; for the time being we just move in
    // here the functionality we have now
@@ -88,6 +90,7 @@ class XrdProofdManager {
    XrdSysRecMutex    fMutex;        // Atomize this instance
 
    XrdProofdFile     fCfgFile;      // Configuration file
+   bool              fSuperMst;     // true if this node is a SuperMst
 
    int               fSrvType;      // Master, Submaster, Worker or any
    XrdOucString      fEffectiveUser;  // Effective user

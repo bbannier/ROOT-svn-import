@@ -60,6 +60,7 @@ XrdProofdManager::XrdProofdManager()
    fWorkers.clear();
    fNumLocalWrks = XrdProofdAux::GetNumCPUs();
    fEDest = 0;
+   fSuperMst = 0;
 }
 
 //__________________________________________________________________________
@@ -176,6 +177,10 @@ int XrdProofdManager::Config(const char *fn, XrdSysError *e)
                      } else {
                         // Config file
                         fPROOFcfg.fName = val;
+                        if (fPROOFcfg.fName.beginswith("sm:")) {
+                           fPROOFcfg.fName.replace("sm:","");
+                           fSuperMst = 1;
+                        }
                         XrdProofdAux::Expand(fPROOFcfg.fName);
                         // Make sure it exists and can be read
                         if (access(fPROOFcfg.fName.c_str(), R_OK)) {
@@ -183,6 +188,7 @@ int XrdProofdManager::Config(const char *fn, XrdSysError *e)
                                           fPROOFcfg.fName.c_str());
                            fPROOFcfg.fName = "";
                            fPROOFcfg.fMtime = 0;
+                           fSuperMst = 0;
                         }
                      }
                   }
@@ -210,12 +216,16 @@ int XrdProofdManager::Config(const char *fn, XrdSysError *e)
                      fDataSetDir = tval;
                   } else if (!strcmp("role",var)) {
                      // Role this server
-                     if (tval == "master")
+                     if (tval == "supermaster") {
                         fSrvType = kXPD_TopMaster;
-                     else if (tval == "submaster")
+                        fSuperMst = 1;
+                     } else if (tval == "master") {
+                        fSrvType = kXPD_TopMaster;
+                     } else if (tval == "submaster") {
                         fSrvType = kXPD_MasterServer;
-                     else if (tval == "worker")
+                     } else if (tval == "worker") {
                         fSrvType = kXPD_WorkerServer;
+                     }
                   }
                }
             }
@@ -230,11 +240,6 @@ int XrdProofdManager::Config(const char *fn, XrdSysError *e)
          }
       }
    }
-
-   // Image
-   if (fImage.length() <= 0)
-      // Use the local host name
-      fImage = fHost;
 
    // Work directory, if specified
    if (fWorkDir.length() > 0) {
@@ -358,8 +363,17 @@ XrdClientMessage *XrdProofdManager::Send(const char *url, int type,
       return xrsp;
 
    // Open the connection
-   XrdOucString buf = "session-cleanup-from-";
-   buf += fHost;
+   XrdOucString buf = fHost;
+   switch (type) {
+      case kROOTVersion:
+         buf += "|ROOTVersion";
+         break;
+      case kCleanupSessions:
+         buf += "|CleanupSessions";
+         break;
+      default:
+         break;
+   }
    buf += "|ord:000";
    char m = 'A'; // log as admin
    XrdProofConn *conn = new XrdProofConn(url, m, -1, -1, 0, buf.c_str());
@@ -403,9 +417,6 @@ XrdClientMessage *XrdProofdManager::Send(const char *url, int type,
          r->Send(kXR_attn, kXPD_srvmsg, (char *) cmsg.c_str(), cmsg.length());
       }
 
-      // Close physically the connection
-      conn->Close("S");
-
       // Delete it
       SafeDelete(conn);
 
@@ -432,7 +443,7 @@ void XrdProofdManager::CreateDefaultPROOFcfg()
 
    // Create a default master line
    XrdOucString mm("master ",128);
-   mm += fImage; mm += " image="; mm += fImage;
+   mm += fHost;
    fWorkers.push_back(new XrdProofWorker(mm.c_str()));
    TRACE(DBG, "CreateDefaultPROOFcfg: added line: " << mm);
 
@@ -534,7 +545,7 @@ int XrdProofdManager::ReadPROOFcfg()
 
    // Create a default master line
    XrdOucString mm("master ",128);
-   mm += fImage; mm += " image="; mm += fImage;
+   mm += fHost;
    fWorkers.push_back(new XrdProofWorker(mm.c_str()));
 
    // Read now the directives
@@ -567,10 +578,6 @@ int XrdProofdManager::ReadPROOFcfg()
             // Replace the default line (the first with what found in the file)
             XrdProofWorker *fw = fWorkers.front();
             fw->Reset(lin);
-            // If the image was not specified use the default
-            if (fw->fImage == "" ||
-                fw->fHost.beginswith(fw->fImage))
-               fw->fImage = fImage;
          }
          SafeDelete(pw);
      } else {

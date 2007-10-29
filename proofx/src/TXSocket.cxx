@@ -211,8 +211,10 @@ TXSocket::TXSocket(const char *url, Char_t m, Int_t psid, Char_t capver,
       fUser = fConn->fUser.c_str();
       fHost = fConn->fHost.c_str();
       fPort = fConn->fPort;
-      if (m == 'C')
+      if (m == 'C') {
          fXrdProofdVersion = fConn->fRemoteProtocol;
+         fRemoteProtocol = fConn->fRemoteProtocol;
+      }
 
       // Also in the base class
       fUrl = fConn->fUrl.GetUrl().c_str();
@@ -1111,7 +1113,7 @@ Int_t TXSocket::PickUpReady()
 
    // User can choose whether to wait forever or for a fixed amount of time
    if (!fDontTimeout) {
-      static Int_t timeout = gEnv->GetValue("XProof.ReadTimeout", 60) * 1000;
+      static Int_t timeout = gEnv->GetValue("XProof.ReadTimeout", 300) * 1000;
       static Int_t dt = 2000;
       Int_t to = timeout;
       while (to) {

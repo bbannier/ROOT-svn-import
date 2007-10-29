@@ -137,6 +137,11 @@ Bool_t TProofResourcesStatic::ReadConfigFile(const char *confDir,
 
    Bool_t status = kTRUE;
 
+   // Skip prefix (e.g. "sm:") if any
+   const char *p = (const char *) strstr(fileName,":");
+   if (p)
+      fileName = p+1;
+
    // Use file specified by the cluster administrator, if any
    const char *cf = gSystem->Getenv("ROOTPROOFCONF");
    if (cf && !(gSystem->AccessPathName(cf, kReadPermission))) {
@@ -331,11 +336,7 @@ void TProofResourcesStatic::SetOption(TProofNodeInfo *nodeinfo,
    } else if (option == "config") {
       nodeinfo->fConfig = value;
    } else if (option == "msd") {
-      if (nodeinfo->fNodeType == TProofNodeInfo::GetNodeType("submaster")) {
-         nodeinfo->fMsd = value;
-      } else {
-         ::Error("SetOption","msd only valid for submasters [ignored]");
-      }
+      nodeinfo->fMsd = value;
    } else if (option == "port") {
       nodeinfo->fPort = value.Atoi();
    } else {
