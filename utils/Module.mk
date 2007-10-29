@@ -20,6 +20,8 @@ ROOTCINTDEP  := $(ROOTCINTO:.o=.d) $(ROOTCINTTMPO:.o=.d)
 ROOTCINTTMPEXE:= $(MODDIRS)/rootcint_tmp$(EXEEXT)
 ROOTCINTEXE  := bin/rootcint$(EXEEXT)
 
+#DICTGENERATOR := utils/src/rootcint_tmp
+
 ##### rlibmap #####
 RLIBMAPS     := $(MODDIRS)/rlibmap.cxx
 RLIBMAPO     := $(RLIBMAPS:.cxx=.o)

@@ -52,6 +52,7 @@ options="                    \
    enable_mathmore           \
    enable_monalisa           \
    enable_mysql              \
+   enable_stubs              \
    enable_odbc               \
    enable_opengl             \
    enable_oracle             \
@@ -102,6 +103,7 @@ enable_rpath=no
 enable_ruby=no
 enable_shadowpw=
 enable_soversion=no
+enable_stubs=yes         # Complete Dictionaries by default
 enable_table=no
 enable_thread=yes        # cannot be disabled (not in above options list)
 enable_unuran=no
@@ -894,6 +896,7 @@ enable/disable options, prefix with either --enable- or --disable-
   soversion          Set version number in sonames (recommended)
   srp                SRP support, requires SRP source tree
   ssl                SSL encryption support, requires openssl
+  stubs              Rootcint generates dictionaries whith or whitout stub functions (if architecture supports it)
   table              Build libTable contrib library
   unuran             UNURAN - package for generating non-uniform random numbers
   winrtdebug         Link against the Windows debug runtime library
@@ -1663,6 +1666,17 @@ if test ! "x$enable_mysql" = "xno"; then
 fi
 check_explicit "$enable_mysql" "$enable_mysql_explicit" \
      "Explicitly required MySQL dependencies not fulfilled"
+
+######################################################################
+#
+### echo %%% Check for Stub removal support
+#
+
+if test "x$enable_stubs" = "xyes"; then
+    enable_stubs="yes"
+else
+    enable_stubs="no"
+fi
 
 ######################################################################
 #
@@ -4326,6 +4340,7 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@buildgdml@|$enable_gdml|"            \
     -e "s|@buildmonalisa@|$enable_monalisa|"    \
     -e "s|@enable_pch@|$enable_pch|"            \
+    -e "s|@enable_stubs@|$enable_stubs|"        \
     -e "s|@buildtable@|$enable_table|"          \
     -e "s|@enable_thread@|$enable_thread|"      \
     -e "s|@etcdir@|$etcdir|"                    \

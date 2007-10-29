@@ -50,6 +50,15 @@ while true ; do
         esac
 done
 
+# User Needs Help. 
+if [ $HELP ] ; then rootcint -h >&2 ; exit 1 ; fi
+
+# Removing old dictionaries if there is any
+if [ -e $FILENAME -o -e ${FILENAME%.*}.h -o ${FILENAME%.*}"Tmp"* ]; 
+then 
+    rm ${FILENAME%.*}*; 
+fi
+
 # We make up the new list of arguments for generating temporary dictionaries
 ROOTCINTARGS=${ARGS/$OBJS/} 
 ROOTCINTARGS=${ROOTCINTARGS/--object-files/} 
@@ -64,12 +73,9 @@ ROOTCINTARGS=${ROOTCINTARGS/$FILENAME/}
 # We remove one score from the mode option name
 MODE=${MODE/--/-}
 
-# User Needs Help. 
-if [ $HELP ] ; then rootcint -h >&2 ; exit 1 ; fi
-
 # Temporary dictionaries generation
-rootcint $MODE -cint ${FILENAME%.*}"Tmp1".cxx -. 1 $ROOTCINTARGS
-rootcint $MODE -cint ${FILENAME%.*}"Tmp2".cxx -. 2 $ROOTCINTARGS
+utils/src/rootcint_tmp $MODE -cint ${FILENAME%.*}"Tmp1".cxx -. 1 $ROOTCINTARGS
+utils/src/rootcint_tmp $MODE -cint ${FILENAME%.*}"Tmp2".cxx -. 2 $ROOTCINTARGS
 
 # Temporary dictionaries compilation
 g++  -pipe -m32 -Wall -W -Woverloaded-virtual -fPIC -Iinclude  -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -o ${FILENAME%.*}"Tmp1".o -c ${FILENAME%.*}"Tmp1".cxx
@@ -85,10 +91,10 @@ rm ${FILENAME%.*}"Tmp1".*
 rm ${FILENAME%.*}"Tmp2".*
 
 # Final Dictionary Generation
-rootcint -cint $FILENAME -L ${FILENAME%.*}".nm"  -. 4 $ROOTCINTARGS
+utils/src/rootcint_tmp -cint $FILENAME -L ${FILENAME%.*}".nm"  -. 4 $ROOTCINTARGS
 
 # We don't need the symbols file anymore
-echo rm ${FILENAME%.*}.nm
+rm ${FILENAME%.*}.nm
 
 
 
