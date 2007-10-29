@@ -375,6 +375,7 @@ RECONFIGURE   = build/unix/reconfigure.sh
 ifeq ($(PLATFORM),win32)
 MAKELIB       = build/win/makelib.sh
 MAKECOMPDATA  = build/win/compiledata.sh
+ROOTCINTNEW =   utils/usr/rootcint_tmp
 endif
 
 ##### Compiler directives and run-control file #####
