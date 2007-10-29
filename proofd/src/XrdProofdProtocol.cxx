@@ -6470,13 +6470,13 @@ char *XrdProofdProtocol::ReadBufferRemote(const char *url, const char *file,
                ", len: "<<len<<", grep: "<<grep);
 
    // Check input
-   if (!url || strlen(url) <= 0) {
-      TRACEI(XERR, "ReadBufferRemote: url undefined!");
-      return (char *)0;
-   }
    if (!file || strlen(file) <= 0) {
       TRACEI(XERR, "ReadBufferRemote: file undefined!");
       return (char *)0;
+   }
+   if (!url || strlen(url) <= 0) {
+      // Use file as url
+      url = file;
    }
 
    // We try only once
