@@ -3583,6 +3583,7 @@ int XrdProofdProtocol::SetProofServEnv(int psid, int loglevel, const char *cfg)
    sprintf(stag,"%s-%d-%d",host.c_str(),(int)time(0),getpid());
 
    // Session dir
+   XrdOucString topstag = stag;
    XrdOucString sessiondir = udir;
    if (fSrvType == kXPD_TopMaster) {
       sessiondir += "/session-";
@@ -3591,6 +3592,8 @@ int XrdProofdProtocol::SetProofServEnv(int psid, int loglevel, const char *cfg)
    } else {
       sessiondir += "/";
       sessiondir += xps->Tag();
+      topstag = xps->Tag();
+      topstag.replace("session-","");
    }
    MTRACE(DBG, "xpd:child: ", "SetProofServEnv: session dir "<<sessiondir);
    // Make sure the directory exists ...
@@ -3705,9 +3708,15 @@ int XrdProofdProtocol::SetProofServEnv(int psid, int loglevel, const char *cfg)
    fprintf(frc,"# Users sandbox\n");
    fprintf(frc, "ProofServ.Sandbox: %s\n", udir.c_str());
 
+   // Image
+   if (strlen(fgMgr.Image()) > 0) {
+      fprintf(frc,"# Server image\n");
+      fprintf(frc, "ProofServ.Image: %s\n", fgMgr.Image());
+   }
+
    // Session tag
    fprintf(frc,"# Session tag\n");
-   fprintf(frc, "ProofServ.SessionTag: %s\n", stag);
+   fprintf(frc, "ProofServ.SessionTag: %s\n", topstag.c_str());
 
    // Whether user specific config files are enabled
    if (fgWorkerUsrCfg) {
@@ -3738,9 +3747,13 @@ int XrdProofdProtocol::SetProofServEnv(int psid, int loglevel, const char *cfg)
    fprintf(frc, "ProofServ.ClientVersion: %d\n", fPClient->Version());
 
    // Config file
+   fprintf(frc,"# Config file\n");
    if (cfg && strlen(cfg) > 0) {
-      fprintf(frc,"# Config file\n");
+      // User defined
       fprintf(frc, "ProofServ.ProofConfFile: %s\n", cfg);
+   } else {
+      if (fgMgr.IsSuperMst())
+         fprintf(frc, "ProofServ.ProofConfFile: sm:\n");
    }
 
    // Additional rootrcs (xpd.putrc directive)
@@ -3965,6 +3978,9 @@ int XrdProofdProtocol::Create()
 
    // Extract session tag
    XrdOucString tag(buf,len);
+
+   TRACEI(DBG, "Create: received buf: "<<tag);
+
    tag.erase(tag.find('|'));
    xps->SetTag(tag.c_str());
    TRACEI(DBG, "Create: tag: "<<tag);
@@ -4141,41 +4157,62 @@ int XrdProofdProtocol::Create()
    // Read status-of-setup from pipe
    XrdOucString emsg;
    int setupOK = 0;
-   if (read(fp[0], &setupOK, sizeof(setupOK)) == sizeof(setupOK)) {
-   // now we wait for the callback to be (successfully) established
-
-      if (setupOK > 0) {
-         // Receive path of the log file
-         int lfout = setupOK;
-         char *buf = new char[lfout + 1];
-         int n, nr = 0;
-         for (n = 0; n < lfout; n += nr) {
-            while ((nr = read(fp[0], buf + n, lfout - n)) == -1 && errno == EINTR)
-               errno = 0;   // probably a SIGCLD that was caught
-            if (nr == 0)
-               break;          // EOF
-            if (nr < 0) {
-               // Failure
-               setupOK= -1;
-               emsg += ": failure receiving logfile path";
-               break;
-            }
-         }
+   struct pollfd fds_r;
+   fds_r.fd = fp[0];
+   fds_r.events = POLLIN;
+   int pollRet = 0;
+   // We wait for 60 secs max (30 x 2000 millisecs): this is enough to
+   // cover possible delays due to heavy load
+   int ntry = 30;
+   while (pollRet == 0 && ntry--) {
+      while ((pollRet = poll(&fds_r, 1, 2000)) < 0 &&
+             (errno == EINTR)) { }
+      if (pollRet == 0)
+         TRACE(FORK,"Create: "
+                    "receiving status-of-setup from pipe: waiting 2 s ...");
+   }
+   if (pollRet > 0) {
+      if (read(fp[0], &setupOK, sizeof(setupOK)) == sizeof(setupOK)) {
+         // now we wait for the callback to be (successfully) established
          if (setupOK > 0) {
-            buf[lfout] = 0;
-            xps->SetFileout(buf);
-            // Set also the session tag
-            XrdOucString stag(buf);
-            stag.erase(stag.rfind('/'));
-            stag.erase(0, stag.find("session-") + strlen("session-"));
-            xps->SetTag(stag.c_str());
+            // Receive path of the log file
+            int lfout = setupOK;
+            char *buf = new char[lfout + 1];
+            int n, nr = 0;
+            for (n = 0; n < lfout; n += nr) {
+               while ((nr = read(fp[0], buf + n, lfout - n)) == -1 && errno == EINTR)
+                  errno = 0;   // probably a SIGCLD that was caught
+               if (nr == 0)
+                  break;          // EOF
+               if (nr < 0) {
+                  // Failure
+                  setupOK= -1;
+                  emsg += ": failure receiving logfile path";
+                  break;
+               }
+            }
+            if (setupOK > 0) {
+               buf[lfout] = 0;
+               xps->SetFileout(buf);
+               // Set also the session tag
+               XrdOucString stag(buf);
+               stag.erase(stag.rfind('/'));
+               stag.erase(0, stag.find("session-") + strlen("session-"));
+               xps->SetTag(stag.c_str());
+            }
+            delete[] buf;
+         } else {
+            emsg += ": proofserv startup failed";
          }
-         delete[] buf;
       } else {
-         emsg += ": proofserv startup failed";
+         emsg += ": problems receiving status-of-setup after forking";
       }
    } else {
-      emsg += ": problems receiving status-of-setup after forking";
+      if (pollRet == 0) {
+         emsg += ": timed-out receiving status-of-setup from pipe";
+      } else {
+         emsg += ": failed to receive status-of-setup from pipe";
+      }
    }
 
    // Cleanup
@@ -4756,19 +4793,22 @@ int XrdProofdProtocol::Admin()
       int ridx = ntohl(fRequest.proof.int2);
 
       // Find out for which session is this request
-      char *stag = 0;
+      XrdOucString stag, master;
       int len = fRequest.header.dlen;
       if (len > 0) {
-         char *buf = fArgp->buff;
-         if (buf[0] != '*') {
-            stag = new char[len+1];
-            memcpy(stag, buf, len);
-            stag[len] = 0;
+         stag.assign(fArgp->buff,0,len-1);
+         int im = stag.find("|master:");
+         if (im != STR_NPOS) {
+            master.assign(stag, im+strlen("|master:"));
+            TRACEP(DBG,"Admin: master: "<<master);
+            stag.erase(im);
          }
+         if (stag.beginswith('*'))
+            stag = "";
       }
 
-      XrdOucString tag = (!stag && ridx >= 0) ? "last" : stag;
-      if (!stag && fPClient->GuessTag(tag, ridx) != 0) {
+      XrdOucString tag = (stag == "" && ridx >= 0) ? "last" : stag;
+      if (stag == "" && fPClient->GuessTag(tag, ridx) != 0) {
          TRACEP(XERR, "Admin: query sess logs: session tag not found");
          fResponse.Send(kXR_InvalidRequest,"Admin: query log: session tag not found");
          return rc;
@@ -4777,11 +4817,12 @@ int XrdProofdProtocol::Admin()
       // Return message
       XrdOucString rmsg;
 
-      // The session tag first
-      rmsg += tag; rmsg += "|";
-
-      // The pool URL second
-      rmsg += fgPoolURL; rmsg += "|";
+      if (master.length() <= 0) {
+         // The session tag first
+         rmsg += tag; rmsg += "|";
+         // The pool URL second
+         rmsg += fgPoolURL; rmsg += "|";
+      }
 
       // Locate the local log file
       XrdOucString sdir(fPClient->Workdir());
@@ -4797,17 +4838,19 @@ int XrdProofdProtocol::Admin()
          fResponse.Send(kXR_InvalidRequest, msg.c_str());
          return rc;
       }
-      // Scan the directory
-      bool found = 0;
-      struct dirent *ent = 0;
-      while ((ent = (struct dirent *)readdir(dir))) {
-         if (!strncmp(ent->d_name, "master-", 7) &&
-              strstr(ent->d_name, ".log")) {
-            rmsg += "|0 proof://"; rmsg += fgMgr.Host(); rmsg += ':';
-            rmsg += fgMgr.Port(); rmsg += '/';
-            rmsg += sdir; rmsg += '/'; rmsg += ent->d_name;
-            found = 1;
-            break;
+      // Scan the directory to add the top master (only if top master)
+      if (master.length() <= 0) {
+         bool found = 0;
+         struct dirent *ent = 0;
+         while ((ent = (struct dirent *)readdir(dir))) {
+            if (!strncmp(ent->d_name, "master-", 7) &&
+               strstr(ent->d_name, ".log")) {
+               rmsg += "|0 proof://"; rmsg += fgMgr.Host(); rmsg += ':';
+               rmsg += fgMgr.Port(); rmsg += '/';
+               rmsg += sdir; rmsg += '/'; rmsg += ent->d_name;
+               found = 1;
+               break;
+            }
          }
       }
       // Close dir
@@ -4837,9 +4880,26 @@ int XrdProofdProtocol::Admin()
                      *pp = 0;
                      pp++;
                      // Record now
-                     rmsg += "|"; rmsg += po;
-                     rmsg += " "; rmsg += ln; rmsg += '/';
+                     rmsg += "|"; rmsg += po; rmsg += " ";
+                     if (master.length() > 0) {
+                        rmsg += master;
+                        rmsg += ",";
+                     }
+                     rmsg += ln; rmsg += '/';
                      rmsg += pp;
+                     // If the line is for a submaster, we have to get the info
+                     // about its workers
+                     bool ismst = (strstr(pp, "master-")) ? 1 : 0;
+                     if (ismst) {
+                        XrdOucString msg(stag);
+                        msg += "|master:";
+                        msg += ln;
+                        char *bmst = ReadLogPaths((const char *)&ln[0], msg.c_str(), ridx);
+                        if (bmst) {
+                           rmsg += bmst;
+                           free(bmst);
+                        }
+                     }
                   }
                }
             }
@@ -6082,12 +6142,25 @@ int XrdProofdProtocol::ReadBuffer()
    XrdOucString emsg;
 
    // Find out the file name
+   char *url = 0;
    char *file = 0;
    int dlen = fRequest.header.dlen;
    if (dlen > 0 && fArgp->buff) {
-      file = new char[dlen+1];
-      memcpy(file, fArgp->buff, dlen);
-      file[dlen] = 0;
+      int flen = dlen;
+      int ulen = 0;
+      int offs = 0;
+      char *p = (char *) strstr(fArgp->buff, ",");
+      if (p) {
+         ulen = (int) (p - fArgp->buff);
+         url = new char[ulen+1];
+         memcpy(url, fArgp->buff, ulen);
+         url[ulen] = 0;
+         offs = ulen + 1;
+         flen -= offs;
+      }
+      file = new char[flen+1];
+      memcpy(file, fArgp->buff+offs, flen);
+      file[flen] = 0;
    } else {
       emsg = "ReadBuffer: file name not not found";
       TRACEP(XERR, emsg);
@@ -6149,7 +6222,7 @@ int XrdProofdProtocol::ReadBuffer()
       }
    } else {
       // Read portion of remote file
-      buf = ReadBufferRemote(file, ofs, lout, grep);
+      buf = ReadBufferRemote(url, file, ofs, lout, grep);
    }
 
    if (!buf) {
@@ -6385,7 +6458,7 @@ char *XrdProofdProtocol::ReadBufferLocal(const char *file,
 }
 
 //______________________________________________________________________________
-char *XrdProofdProtocol::ReadBufferRemote(const char *url,
+char *XrdProofdProtocol::ReadBufferRemote(const char *url, const char *file,
                                           kXR_int64 ofs, int &len, int grep)
 {
    // Send a read buffer request of length 'len' at offset 'ofs' for remote file
@@ -6393,11 +6466,16 @@ char *XrdProofdProtocol::ReadBufferRemote(const char *url,
    // Returns 0 in case of error.
 
    TRACEI(ACT, "ReadBufferRemote: url: "<<(url ? url : "undef")<<
-               ", ofs: "<<ofs<<", len: "<<len<<", grep: "<<grep);
+               ", file: "<<(file ? file : "undef")<<", ofs: "<<ofs<<
+               ", len: "<<len<<", grep: "<<grep);
 
    // Check input
    if (!url || strlen(url) <= 0) {
       TRACEI(XERR, "ReadBufferRemote: url undefined!");
+      return (char *)0;
+   }
+   if (!file || strlen(file) <= 0) {
+      TRACEI(XERR, "ReadBufferRemote: file undefined!");
       return (char *)0;
    }
 
@@ -6423,8 +6501,8 @@ char *XrdProofdProtocol::ReadBufferRemote(const char *url,
       reqhdr.readbuf.ofs = ofs;
       reqhdr.readbuf.len = len;
       reqhdr.readbuf.int1 = grep;
-      reqhdr.header.dlen = strlen(url);
-      const void *btmp = (const void *) url;
+      reqhdr.header.dlen = strlen(file);
+      const void *btmp = (const void *) file;
       void **vout = (void **)&buf;
       // Send over
       XrdClientMessage *xrsp =
@@ -6440,8 +6518,74 @@ char *XrdProofdProtocol::ReadBufferRemote(const char *url,
       // Clean the message
       SafeDelete(xrsp);
 
-      // Close physically the connection
-      conn->Close("S");
+      // Delete it
+      SafeDelete(conn);
+   }
+
+   // Restore original retry parameters
+   XrdProofConn::SetRetryParam(maxtry_save, timewait_save);
+
+   // Done
+   return buf;
+}
+
+//______________________________________________________________________________
+char *XrdProofdProtocol::ReadLogPaths(const char *url, const char *stag, int isess)
+{
+   // Get log paths from next tier; used in multi-master setups
+   // Returns 0 in case of error.
+
+   TRACEI(ACT, "ReadLogPaths: url: "<<(url ? url : "undef")<<
+               ", stag: "<<(stag ? stag : "undef")<<", isess: "<<isess);
+
+   // Check input
+   if (!url || strlen(url) <= 0) {
+      TRACEI(XERR, "ReadLogPaths: url undefined!");
+      return (char *)0;
+   }
+
+   // We try only once
+   int maxtry_save = -1;
+   int timewait_save = -1;
+   XrdProofConn::GetRetryParam(maxtry_save, timewait_save);
+   XrdProofConn::SetRetryParam(1, 1);
+
+   // Open the connection
+   XrdOucString msg = "read log paths request from ";
+   msg += fgMgr.Host();
+   char m = 'A'; // log as admin
+   XrdProofConn *conn = new XrdProofConn(url, m, -1, -1, 0, msg.c_str());
+
+   char *buf = 0;
+   if (conn && conn->IsValid()) {
+      // Prepare request
+      XPClientRequest reqhdr;
+      memset(&reqhdr, 0, sizeof(reqhdr));
+      conn->SetSID(reqhdr.header.streamid);
+      reqhdr.header.requestid = kXP_admin;
+      reqhdr.proof.int1 = kQueryLogPaths;
+      reqhdr.proof.int2 = isess;
+      reqhdr.proof.sid = -1;
+      reqhdr.header.dlen = strlen(stag);
+      const void *btmp = (const void *) stag;
+      void **vout = (void **)&buf;
+      // Send over
+      XrdClientMessage *xrsp =
+         conn->SendReq(&reqhdr, btmp, vout, "XrdProofdProtocol::ReadLogPaths");
+
+      // If positive answer
+      if (xrsp && buf && (xrsp->DataLen() > 0)) {
+         int len = xrsp->DataLen();
+         buf = (char *) realloc((void *)buf, len+1);
+         if (buf)
+            buf[len] = 0;
+      } else {
+         SafeFree(buf);
+      }
+
+      // Clean the message
+      SafeDelete(xrsp);
+
       // Delete it
       SafeDelete(conn);
    }
