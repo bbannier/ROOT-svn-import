@@ -13,6 +13,9 @@ HELP=
 # Mode (-cint or -reflex or -gccxml)
 MODE=
 
+# optional
+CXXFLAGS=
+
 # Usage Message
 USAGE="Usage: rootcint [-v][-v0-4] [-cint|-reflex|-gccxml] [-l] [-f] [out.cxx] [-o] \"file1.o file2.o...\" [-c] file1.h[+][-][!] file2.h[+][-][!]...[LinkDef.h] 
 Only one verbose flag is authorized (one of -v, -v0, -v1, -v2, -v3, -v4) 
@@ -20,7 +23,7 @@ and must be before the -f flags
 For more extensive help type: utils/src/rootcint_tmp -h"
 
 # Getopt call
-TEMP=`getopt -a -o vlf:o:c:hL --long cint,reflex,gccxml,v0,v1,v2,v3,v4,object-files: \
+TEMP=`getopt -a -o vlf:o:c:hLI: --long cint,reflex,gccxml,v0,v1,v2,v3,v4,object-files,cxx: \
      -n 'rootcint' -- "$@"`
 
 # Wrong usage
@@ -41,23 +44,17 @@ while true ; do
                 -l) shift ;;
                 -f) FILENAME=$2; shift 2 ;;
                 -o|--object-files) OBJS=$2; ARGOBJS=$1; shift 2;;
-                -c) shift 2;;
+                -c) shift 1; break;;
                 -.) shift 2;;
                 -h) HELP=1; shift 1;;
                 -L) shift 2;;
+                -I) shift 2;;
                 --) shift ; break ;;
+                --cxx) CXXFLAGS=$2; shift 2 ;;
                 *) echo "Internal error!" ;; #exit 1 ;;
+                #*) shift 1;;
         esac
 done
-
-# User Needs Help. 
-if [ $HELP ] ; then rootcint -h >&2 ; exit 1 ; fi
-
-# Removing old dictionaries if there is any
-if [ -e $FILENAME -o -e ${FILENAME%.*}.h -o ${FILENAME%.*}"Tmp"* ]; 
-then 
-    rm ${FILENAME%.*}*; 
-fi
 
 # We make up the new list of arguments for generating temporary dictionaries
 ROOTCINTARGS=${ARGS/$OBJS/} 
@@ -69,21 +66,45 @@ ROOTCINTARGS=${ROOTCINTARGS/-reflex/}
 ROOTCINTARGS=${ROOTCINTARGS/-gccxml/}
 ROOTCINTARGS=${ROOTCINTARGS/-I./}
 ROOTCINTARGS=${ROOTCINTARGS/$FILENAME/}
+ROOTCINTARGS=${ROOTCINTARGS/--cxx/}
+ROOTCINTARGS=${ROOTCINTARGS/$CXXFLAGS/}
 
 # We remove one score from the mode option name
 MODE=${MODE/--/-}
 
+# User Needs Help.
+echo  CXXFLAGS: $CXXFLAGS
+if [ -z "$CXXFLAGS" ] ; then 
+    CXXFLAGS="-pipe -m32 -Wall -W -Woverloaded-virtual -fPIC -Iinclude"
+fi
+
+#
+#DIR=`pwd`
+echo actual dir: `pwd`
+
 # Temporary dictionaries generation
+echo utils/src/rootcint_tmp $MODE -cint ${FILENAME%.*}"Tmp1".cxx -. 1 $ROOTCINTARGS
 utils/src/rootcint_tmp $MODE -cint ${FILENAME%.*}"Tmp1".cxx -. 1 $ROOTCINTARGS
+
+echo utils/src/rootcint_tmp $MODE -cint ${FILENAME%.*}"Tmp2".cxx -. 2 $ROOTCINTARGS
 utils/src/rootcint_tmp $MODE -cint ${FILENAME%.*}"Tmp2".cxx -. 2 $ROOTCINTARGS
 
 # Temporary dictionaries compilation
-g++  -pipe -m32 -Wall -W -Woverloaded-virtual -fPIC -Iinclude  -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -o ${FILENAME%.*}"Tmp1".o -c ${FILENAME%.*}"Tmp1".cxx
-g++  -pipe -m32 -Wall -W -Woverloaded-virtual -fPIC -Iinclude  -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -o ${FILENAME%.*}"Tmp2".o -c ${FILENAME%.*}"Tmp2".cxx
+
+echo g++ $CXXFLAGS -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -o ${FILENAME%.*}"Tmp1".o -c ${FILENAME%.*}"Tmp1".cxx
+g++ $CXXFLAGS -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -o ${FILENAME%.*}"Tmp1".o -c ${FILENAME%.*}"Tmp1".cxx
+
+echo g++ $CXXFLAGS -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -o ${FILENAME%.*}"Tmp2".o -c ${FILENAME%.*}"Tmp2".cxx
+g++ $CXXFLAGS -Iinclude -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -o ${FILENAME%.*}"Tmp2".o -c ${FILENAME%.*}"Tmp2".cxx
 
 # Symbols extraction
+echo nm -g -p --defined-only ${FILENAME%.*}"Tmp1".o | awk '{printf("%s\n", $3)}' > ${FILENAME%.*}.nm
 nm -g -p --defined-only ${FILENAME%.*}"Tmp1".o | awk '{printf("%s\n", $3)}' > ${FILENAME%.*}.nm
+
+echo nm -g -p --defined-only ${FILENAME%.*}"Tmp2".o | awk '{printf("%s\n", $3)}' >> ${FILENAME%.*}.nm
 nm -g -p --defined-only ${FILENAME%.*}"Tmp2".o | awk '{printf("%s\n", $3)}' >> ${FILENAME%.*}.nm
+
+echo nm -g -p --defined-only $OBJS | awk '{printf("%s\n", $3)}' >> ${FILENAME%.*}.nm
 nm -g -p --defined-only $OBJS | awk '{printf("%s\n", $3)}' >> ${FILENAME%.*}.nm
 
 # We don't need the temporaries anymore
