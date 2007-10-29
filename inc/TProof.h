@@ -469,6 +469,7 @@ private:
    Int_t    Collect(const TSlave *sl, Long_t timeout = -1);
    Int_t    Collect(TMonitor *mon, Long_t timeout = -1);
    Int_t    CollectInputFrom(TSocket *s);
+   void     SetMonitor(TMonitor *mon = 0, Bool_t on = kTRUE);
 
    void     FindUniqueSlaves();
    TSlave  *FindSlave(TSocket *s) const;

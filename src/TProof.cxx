@@ -279,11 +279,6 @@ TProof::TProof(const char *masterurl, const char *conffile, const char *confdir,
    // Default query mode
    fQueryMode = kSync;
 
-   if (!conffile || strlen(conffile) == 0)
-      conffile = kPROOF_ConfFile;
-   if (!confdir  || strlen(confdir) == 0)
-      confdir = kPROOF_ConfDir;
-
    Init(masterurl, conffile, confdir, loglevel, alias);
 
    // If called by a manager, make sure it stays in last position
@@ -438,12 +433,20 @@ Int_t TProof::Init(const char *masterurl, const char *conffile,
       fMaster = gSystem->GetHostByName(gSystem->HostName()).GetHostName();
    else
       fMaster = gSystem->GetHostByName(fUrl.GetHost()).GetHostName();
-   fConfDir        = confdir;
-   fConfFile       = conffile;
+   fMasterServ     = (fMaster == "__master__") ? kTRUE : kFALSE;
+   if (IsMaster()) {
+      // Fill default conf file and conf dir
+      if (!conffile || strlen(conffile) == 0)
+         fConfFile = kPROOF_ConfFile;
+      if (!confdir  || strlen(confdir) == 0)
+         fConfDir  = kPROOF_ConfDir;
+   } else {
+      fConfDir     = confdir;
+      fConfFile    = conffile;
+   }
    fWorkDir        = gSystem->WorkingDirectory();
    fLogLevel       = loglevel;
    fProtocol       = kPROOF_Protocol;
-   fMasterServ     = (fMaster == "__master__") ? kTRUE : kFALSE;
    fSendGroupView  = kTRUE;
    fImage          = fMasterServ ? "" : "<local>";
    fIntHandler     = 0;
@@ -677,6 +680,9 @@ Bool_t TProof::StartSlaves(Bool_t parallel, Bool_t attach)
          return kFALSE;
       }
       fImage = gProofServ->GetImage();
+      if (fImage.IsNull())
+         fImage = Form("%s:%s", TUrl(gSystem->HostName()).GetHostFQDN(),
+                                gProofServ->GetWorkDir());
 
       // Get all workers
       UInt_t nSlaves = workerList->GetSize();
@@ -1523,6 +1529,21 @@ void TProof::Activate(TList *slaves)
 }
 
 //______________________________________________________________________________
+void TProof::SetMonitor(TMonitor *mon, Bool_t on)
+{
+   // Activate (on == TRUE) or deactivate (on == FALSE) all sockets
+   // monitored by 'mon'.
+
+   TMonitor *m = (mon) ? mon : fCurrentMonitor;
+   if (m) {
+      if (on)
+         m->ActivateAll();
+      else
+         m->DeActivateAll();
+   }
+}
+
+//______________________________________________________________________________
 Int_t TProof::BroadcastGroupPriority(const char *grp, Int_t priority, TList *workers)
 {
    // Broadcast the group priority to all workers in the specified list. Returns
@@ -1973,13 +1994,30 @@ Int_t TProof::CollectInputFrom(TSocket *s)
          break;
 
       case kPROOF_GETSTATS:
-         sl = FindSlave(s);
-         (*mess) >> sl->fBytesRead >> sl->fRealTime >> sl->fCpuTime
-                 >> sl->fWorkDir >> sl->fProofWorkDir;
-         fBytesRead += sl->fBytesRead;
-         fRealTime  += sl->fRealTime;
-         fCpuTime   += sl->fCpuTime;
-         rc = 1;
+         {
+            sl = FindSlave(s);
+            (*mess) >> sl->fBytesRead >> sl->fRealTime >> sl->fCpuTime
+                  >> sl->fWorkDir >> sl->fProofWorkDir;
+            TString img;
+            if ((mess->BufferSize() > mess->Length()))
+               (*mess) >> img;
+            // Set image
+            if (img.IsNull()) {
+               if (sl->fImage.IsNull())
+                  sl->fImage = Form("%s:%s", TUrl(sl->fName).GetHostFQDN(),
+                                             sl->fProofWorkDir.Data());
+            } else {
+               sl->fImage = img;
+            }
+            PDB(kGlobal,2)
+               Info("CollectInputFrom",
+                        "kPROOF_GETSTATS:%s image: %s", sl->GetOrdinal(), sl->GetImage());
+
+            fBytesRead += sl->fBytesRead;
+            fRealTime  += sl->fRealTime;
+            fCpuTime   += sl->fCpuTime;
+            rc = 1;
+         }
          break;
 
       case kPROOF_GETPARALLEL:
@@ -2367,7 +2405,7 @@ Int_t TProof::CollectInputFrom(TSocket *s)
                (*mess) >> total >> processed >> bytesread
                        >> initTime >> procTime
                        >> evtrti >> mbrti;
-               fPlayer->Progress(total, processed, bytesread,
+               fPlayer->Progress(sl, total, processed, bytesread,
                                  initTime, procTime, evtrti, mbrti);
 
             } else {
@@ -2431,7 +2469,8 @@ Int_t TProof::CollectInputFrom(TSocket *s)
 
       case kPROOF_VALIDATE_DSET:
          {
-            PDB(kGlobal,2) Info("CollectInputFrom","kPROOF_VALIDATE_DSET: enter");
+            PDB(kGlobal,2)
+               Info("CollectInputFrom","kPROOF_VALIDATE_DSET: enter");
             TDSet* dset = 0;
             (*mess) >> dset;
             if (!fDSet)
@@ -2686,7 +2725,7 @@ void TProof::Print(Option_t *option) const
    } else {
       const_cast<TProof*>(this)->AskStatistics();
       if (IsParallel())
-         Printf("*** Master server %s (parallel mode, %d slaves):",
+         Printf("*** Master server %s (parallel mode, %d workers):",
                 gProofServ->GetOrdinal(), GetParallel());
       else
          Printf("*** Master server %s (sequential mode):",
@@ -3772,16 +3811,16 @@ Int_t TProof::SendFile(const char *file, Int_t opt, const char *rfile, TSlave *w
          continue;
       // The value of 'size' is used as flag remotely, so we need to
       // reset it to 0 if we are not going to send the file
-      size = sendto ? size : 0;
+      Long64_t siz = sendto ? size : 0;
 
       PDB(kPackage,2)
-         if (size > 0) {
+         if (siz > 0) {
             if (!nsl)
                Info("SendFile", "sending file %s to:", file);
             printf("   slave = %s:%s\n", sl->GetName(), sl->GetOrdinal());
          }
 
-      sprintf(buf, "%s %d %lld %d", fnam, bin, size, fw);
+      sprintf(buf, "%s %d %lld %d", fnam, bin, siz, fw);
       if (sl->GetSocket()->Send(buf, kPROOF_SENDFILE) == -1) {
          MarkBad(sl);
          continue;
@@ -4003,20 +4042,26 @@ Int_t TProof::GoParallel(Int_t nodes, Bool_t attach, Bool_t random)
             slavenodes = 0;
          } else {
             Collect(sl);
-            sl->SetStatus(TSlave::kActive);
-            fActiveSlaves->Add(sl);
-            fInactiveSlaves->Remove(sl);
-            fActiveMonitor->Add(sl->GetSocket());
-            if (sl->GetParallel() > 0) {
-               slavenodes = sl->GetParallel();
+            if (sl->IsValid()) {
+               sl->SetStatus(TSlave::kActive);
+               fActiveSlaves->Add(sl);
+               fInactiveSlaves->Remove(sl);
+               fActiveMonitor->Add(sl->GetSocket());
+               if (sl->GetParallel() > 0) {
+                  slavenodes = sl->GetParallel();
+               } else {
+                  slavenodes = 0;
+               }
             } else {
+               MarkBad(sl);
                slavenodes = 0;
             }
          }
       }
       // Remove from the list
       wlst->Remove(sl);
-      cnt += slavenodes;
+//      cnt += slavenodes;
+      cnt += 1;
    }
 
    // Cleanup list
@@ -5499,7 +5544,8 @@ void TProof::ValidateDSet(TDSet *dset)
       }
    }
 
-   PDB(kGlobal,1) Info("ValidateDSet","Calling Collect");
+   PDB(kGlobal,1)
+     Info("ValidateDSet","Calling Collect");
    Collect(&usedslaves);
    SetDSet(0);
 }
