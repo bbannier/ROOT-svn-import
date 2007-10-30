@@ -72,6 +72,7 @@ private:
    Float_t        fCumProcTime;   // sum of proc time of all packets so far
    Float_t        fBaseLocalPreference;   // indicates how much more likely
    // the nodes will be to open their local files (1 means indifferent)
+   Bool_t          fForceLocal;   // if 1 - eliminate the remote processing
 
    TPacketizerAdaptive();
    TPacketizerAdaptive(const TPacketizerAdaptive&);    // no implementation, will generate
