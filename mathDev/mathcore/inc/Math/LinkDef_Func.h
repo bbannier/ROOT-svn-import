@@ -16,6 +16,8 @@
 #pragma link C++ typedef ROOT::Math::IMultiGradFunction;
 
 
+#ifdef OLD
+
 #pragma link C++ class ROOT::Math::IBaseFunction<ROOT::Math::MultiDim>+;
 #pragma link C++ class ROOT::Math::IGradientFunction<ROOT::Math::MultiDim>+;
 
@@ -29,6 +31,26 @@
 #pragma link C++ class ROOT::Math::IGradientFunction<ROOT::Math::OneDim>+;
 #pragma link C++ class ROOT::Math::IParametricGradFunction<ROOT::Math::OneDim>+;
 #endif
+#endif
+
+#pragma link C++ class ROOT::Math::IBaseFunctionOneDim+;
+#pragma link C++ class ROOT::Math::IGradientOneDim+;
+#pragma link C++ class ROOT::Math::IGradientFunctionOneDim+;
+#pragma link C++ class ROOT::Math::IBaseParam+;
+
+#pragma link C++ class ROOT::Math::IParametricFunctionOneDim+;
+#pragma link C++ class ROOT::Math::IParametricGradFunctionOneDim+;
+
+#pragma link C++ class ROOT::Math::IBaseFunctionMultiDim+;
+#pragma link C++ class ROOT::Math::IGradientMultiDim+;
+#pragma link C++ class ROOT::Math::IGradientFunctionMultiDim+;
+#pragma link C++ class ROOT::Math::IParametricFunctionMultiDim+;
+#pragma link C++ class ROOT::Math::IParametricGradFunctionMultiDim+;
+
+#pragma link C++ class ROOT::Math::Functor<ROOT::Math::IBaseFunctionMultiDim>+;
+#pragma link C++ class ROOT::Math::Functor<ROOT::Math::IGradientFunctionMultiDim>+;
+#pragma link C++ class ROOT::Math::Functor1D<ROOT::Math::IBaseFunctionOneDim>+;
+#pragma link C++ class ROOT::Math::Functor1D<ROOT::Math::IGradientFunctionOneDim>+;
 
 
 
