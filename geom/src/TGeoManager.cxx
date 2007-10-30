@@ -443,6 +443,7 @@
 #include "TVirtualGeoTrack.h"
 #include "TQObject.h"
 #include "TMath.h"
+#include "TEnv.h"
 
 // statics and globals
 
@@ -942,7 +943,8 @@ void TGeoManager::Browse(TBrowser *b)
    if (fMasterVolume) b->Add(fMasterVolume, "Master Volume", fMasterVolume->IsVisible());
    if (fTopVolume) b->Add(fTopVolume, "Top Volume", fTopVolume->IsVisible());
    if (fTopNode)   b->Add(fTopNode);
-   TQObject::Connect("TRootBrowser", "Checked(TObject*,Bool_t)", 
+   TString browserImp(gEnv->GetValue("Browser.Name", "TRootBrowserLite"));
+   TQObject::Connect(browserImp.Data(), "Checked(TObject*,Bool_t)", 
                      "TGeoManager", this, "SetVisibility(TObject*,Bool_t)");
 }
 
@@ -3430,12 +3432,17 @@ TGeoManager *TGeoManager::Import(const char *filename, const char *name, Option_
    } else {   
       // import from a root file
       TFile *old = gFile;
+      Bool_t modified_cachedir = kFALSE;
+      TString cachedir = TFile::GetCacheFileDir();
       // in case a web file is specified, use the cacheread option to cache
       // this file in the local directory
-      TFile::SetCacheFileDir(".");
       TFile *f = 0;
-      if (strstr(filename,"http://")) f = TFile::Open(filename,"CACHEREAD");
-      else                            f = TFile::Open(filename);
+      if (strstr(filename,"http://")) {
+         TFile::SetCacheFileDir(".");   
+         modified_cachedir = kTRUE;   
+         f = TFile::Open(filename,"CACHEREAD");
+      } else                            
+         f = TFile::Open(filename);
       if (!f || f->IsZombie()) {
          if (old) old->cd();
          printf("Error in <TGeoManager::Import>: Cannot open file\n");
@@ -3453,6 +3460,7 @@ TGeoManager *TGeoManager::Import(const char *filename, const char *name, Option_
          }
       }
       if (old) old->cd();
+      if (modified_cachedir) TFile::SetCacheFileDir(cachedir.Data());
       delete f;
    }
    if (!gGeoManager) return 0;

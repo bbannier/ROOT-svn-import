@@ -47,12 +47,18 @@
 #endif
 
 // ---- Tracing utils ----------------------------------------------------------
-#include "XrdOuc/XrdOucError.hh"
-#include "XrdOuc/XrdOucLogger.hh"
+#ifdef OLDXRDOUC
+#  include "XrdSysToOuc.h"
+#  include "XrdOuc/XrdOucError.hh"
+#  include "XrdOuc/XrdOucLogger.hh"
+#else
+#  include "XrdSys/XrdSysError.hh"
+#  include "XrdSys/XrdSysLogger.hh"
+#endif
 #include "XrdProofdTrace.h"
 XrdOucTrace *XrdProofdTrace = 0;
-static XrdOucLogger eLogger;
-static XrdOucError eDest(0, "Proofx");
+static XrdSysLogger eLogger;
+static XrdSysError eDest(0, "Proofx");
 
 #ifdef WIN32
 ULong64_t TSocket::fgBytesSent;
@@ -483,6 +489,29 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
             // Handle this input in this thread to avoid queuing on the
             // main thread
             XHandleIn_t hin = {acod, inflate, 0, 0};
+            if (fHandler)
+               fHandler->HandleInput((const void *)&hin);
+            else
+               Error("ProcessUnsolicitedMsg","handler undefined");
+         }
+         break;
+      case kXPD_priority:
+         //
+         // Broadcast group priority
+         {
+            kXR_int32 priority = -1;
+            if (len > 0) {
+               memcpy(&priority, pdata, sizeof(kXR_int32));
+               priority = net2host(priority);
+               if (gDebug > 1)
+                  Info("ProcessUnsolicitedMsg","kXPD_priority: priority: %d", priority);
+               // Update pointer to data
+               pdata = (void *)((char *)pdata + sizeof(kXR_int32));
+               len -= sizeof(kXR_int32);
+            }
+            // Handle this input in this thread to avoid queuing on the
+            // main thread
+            XHandleIn_t hin = {acod, priority, 0, 0};
             if (fHandler)
                fHandler->HandleInput((const void *)&hin);
             else

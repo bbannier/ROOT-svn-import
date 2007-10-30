@@ -20,9 +20,7 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#ifdef R__HAVE_CONFIG
 #include "RConfigure.h"
-#endif
 #include "TApplication.h"
 #include "TSlave.h"
 #include "TProof.h"
@@ -161,7 +159,7 @@ void TSlave::Init(const char *host, Int_t port, Int_t stype)
       fSocket->Send(m);
    } else {
       Info("Init","** NOT ** Sending kPROOF_SETENV RemoteProtocol : %d",
-         fSocket->GetRemoteProtocol());   
+         fSocket->GetRemoteProtocol());
    }
 
    char buf[512];
@@ -346,7 +344,7 @@ void TSlave::Print(Option_t *) const
    Printf("*** Slave %s  (%s)", fOrdinal.Data(), sst[st]);
    Printf("    Host name:               %s", GetName());
    Printf("    Port number:             %d", GetPort());
-   Printf("    ROOT version:            %s", GetROOTVersion());
+   Printf("    ROOT version|rev|tag:    %s", GetROOTVersion());
    Printf("    Architecture-Compiler:   %s", GetArchCompiler());
    if (fSocket) {
       if (strlen(GetGroup()) > 0) {

@@ -29,9 +29,7 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#ifdef R__HAVE_CONFIG
 #include "RConfigure.h"
-#endif
 
 #include "TGClient.h"
 #include "TROOT.h"
@@ -109,7 +107,7 @@ TGClient::TGClient(const char *dpyName)
 
    // Open the connection to the display
    if ((fXfd = gVirtualX->OpenDisplay(dpyName)) < 0) {
-      Error("TGClient", "can't open display \"%s\", switching to batch mode...",
+      Error("TGClient", "can't open display \"%s\", switching to batch mode...\n In case you run from a remote ssh session, reconnect with ssh -Y",
             gVirtualX->DisplayName(dpyName));
       MakeZombie();
       return;

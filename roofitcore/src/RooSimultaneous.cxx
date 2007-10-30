@@ -56,7 +56,8 @@ RooSimultaneous::RooSimultaneous(const char *name, const char *title,
 				 RooAbsCategoryLValue& indexCat) : 
   RooAbsPdf(name,title), 
   _plotCoefNormSet("plotCoefNormSet","plotCoefNormSet",this,kFALSE,kFALSE),
-  _normListMgr(10),
+  _plotCoefNormRange(0),
+  _partIntMgr(this,10),
   _indexCat("indexCat","Index category",this,indexCat),
   _numPdf(0),
   _anyCanExtend(kFALSE),
@@ -76,7 +77,8 @@ RooSimultaneous::RooSimultaneous(const char *name, const char *title,
 				 const RooArgList& pdfList, RooAbsCategoryLValue& indexCat) :
   RooAbsPdf(name,title), 
   _plotCoefNormSet("plotCoefNormSet","plotCoefNormSet",this,kFALSE,kFALSE),
-  _normListMgr(10),
+  _plotCoefNormRange(0),
+  _partIntMgr(this,10),
   _indexCat("indexCat","Index category",this,indexCat),
   _numPdf(0),
   _anyCanExtend(kFALSE),
@@ -116,7 +118,8 @@ RooSimultaneous::RooSimultaneous(const char *name, const char *title,
 RooSimultaneous::RooSimultaneous(const RooSimultaneous& other, const char* name) : 
   RooAbsPdf(other,name),
   _plotCoefNormSet("plotCoefNormSet",this,other._plotCoefNormSet),
-  _normListMgr(other._normListMgr),
+  _plotCoefNormRange(other._plotCoefNormRange),
+  _partIntMgr(other._partIntMgr,this),
   _indexCat("indexCat",this,other._indexCat), 
   _numPdf(other._numPdf),
   _anyCanExtend(other._anyCanExtend),
@@ -197,13 +200,13 @@ Double_t RooSimultaneous::evaluate() const
   // the value of the PDF associated with the current index category state
 
   // Retrieve the proxy by index name
-  RooRealProxy* proxy = (RooRealProxy*) _pdfProxyList.FindObject((const char*) _indexCat) ;
+  RooRealProxy* proxy = (RooRealProxy*) _pdfProxyList.FindObject(_indexCat.label()) ;
   
   assert(proxy!=0) ;
 
 
   // Return the selected PDF value, normalized by the number of index states
-  return ((RooAbsPdf*)(proxy->absArg()))->getVal(_normMgr.lastNormSet()) ; 
+  return ((RooAbsPdf*)(proxy->absArg()))->getVal(_normSet) ; 
 }
 
 
@@ -230,7 +233,7 @@ Double_t RooSimultaneous::expectedEvents(const RooArgSet* nset) const
   } else {
 
     // Retrieve the proxy by index name
-    RooRealProxy* proxy = (RooRealProxy*) _pdfProxyList.FindObject((const char*) _indexCat) ;
+    RooRealProxy* proxy = (RooRealProxy*) _pdfProxyList.FindObject(_indexCat.label()) ;
     
     assert(proxy!=0) ;
     
@@ -253,24 +256,24 @@ Int_t RooSimultaneous::getAnalyticalIntegralWN(RooArgSet& allVars, RooArgSet& an
   Int_t code ;
 
   // Check if this configuration was created before
-  RooArgList* normList = _normListMgr.getNormList(this,normSet,&analVars,0,RooNameReg::ptr(rangeName)) ;
-  if (normList) {
-    code = _normListMgr.lastIndex() ;
+  CacheElem* cache = (CacheElem*) _partIntMgr.getObj(normSet,&analVars,0,RooNameReg::ptr(rangeName)) ;
+  if (cache) {
+    code = _partIntMgr.lastIndex() ;
     return code+1 ;
   }
+  cache = new CacheElem ;
 
   // Create the partial integral set for this request
   TIterator* iter = _pdfProxyList.MakeIterator() ;
-  normList = new RooArgList("normList") ;
   RooRealProxy* proxy ;
   while((proxy=(RooRealProxy*)iter->Next())) {
     RooAbsReal* pdfInt = proxy->arg().createIntegral(analVars,normSet,0,rangeName) ;
-    normList->addOwned(*pdfInt) ;
+    cache->_partIntList.addOwned(*pdfInt) ;
   }
   delete iter ;
 
   // Store the partial integral list and return the assigned code ;
-  code = _normListMgr.setNormList(this,normSet,&analVars,normList,RooNameReg::ptr(rangeName)) ;
+  code = _partIntMgr.setObj(normSet,&analVars,cache,RooNameReg::ptr(rangeName)) ;
   
   return code+1 ;
 }
@@ -286,33 +289,14 @@ Double_t RooSimultaneous::analyticalIntegralWN(Int_t code, const RooArgSet* norm
   }
 
   // Partial integration scenarios, rangeName already encoded in 'code'
-  RooArgList* normIntList = _normListMgr.getNormListByIndex(code-1) ;
+  CacheElem* cache = (CacheElem*) _partIntMgr.getObjByIndex(code-1) ;
 
-  RooRealProxy* proxy = (RooRealProxy*) _pdfProxyList.FindObject((const char*) _indexCat) ;
+  RooRealProxy* proxy = (RooRealProxy*) _pdfProxyList.FindObject(_indexCat.label()) ;
   Int_t idx = _pdfProxyList.IndexOf(proxy) ;
-  return ((RooAbsReal*)normIntList->at(idx))->getVal(normSet) ;
+  return ((RooAbsReal*)cache->_partIntList.at(idx))->getVal(normSet) ;
 }
 
 
-
-
-
-Bool_t RooSimultaneous::redirectServersHook(const RooAbsCollection& newServerList, Bool_t mustReplaceAll, Bool_t nameChange, Bool_t /*isRecursive*/) 
-{
-  Bool_t ret(kFALSE) ;  
-
-  Int_t i ;
-  for (i=0 ; i<_normListMgr.cacheSize() ; i++) {
-    RooArgList* nlist = _normListMgr.getNormListByIndex(i) ;
-    TIterator* iter = nlist->createIterator() ;
-    RooAbsArg* arg ;
-    while((arg=(RooAbsArg*)iter->Next())) {
-      ret |= arg->recursiveRedirectServers(newServerList,mustReplaceAll,nameChange) ;
-    }
-    delete iter ;
-  }
-  return ret ;
-}
 
 
 
@@ -440,7 +424,7 @@ RooPlot* RooSimultaneous::plotOn(RooPlot *frame, RooLinkedList& cmdList) const
       projIndex = kTRUE ;
     }
   } 
-  
+
   // Calculate relative weight fractions of components
   Roo1DTable* wTable = projData->table(_indexCat.arg()) ;
 
@@ -455,9 +439,9 @@ RooPlot* RooSimultaneous::plotOn(RooPlot *frame, RooLinkedList& cmdList) const
 
     const RooAbsData* projDataTmp(projData) ;
     if (projData) {
-      // Make list of categories columns to exclude from projection data
+      // Make list of categories columns to exclude from projection data      
       RooArgSet* indexCatComps = _indexCat.arg().getObservables(frame->getNormVars());
-      
+
       // Make cut string to exclude rows from projection data
       TString cutString ;
       TIterator* compIter =  indexCatComps->createIterator() ;    
@@ -486,7 +470,7 @@ RooPlot* RooSimultaneous::plotOn(RooPlot *frame, RooLinkedList& cmdList) const
 //     RooPlot* retFrame =  getPdf(_indexCat.arg().getLabel())->plotOn(frame,drawOptions,
 // 					   scaleFactor*wTable->getFrac(_indexCat.arg().getLabel()),
 // 					   stype,projDataTmp,projSet) ;
-    
+
     // Override normalization and projection dataset
     RooLinkedList cmdList2(cmdList) ;
     RooCmdArg tmp1 = RooFit::Normalization(scaleFactor*wTable->getFrac(_indexCat.arg().getLabel()),stype) ;

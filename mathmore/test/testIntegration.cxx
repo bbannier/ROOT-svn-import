@@ -1,5 +1,4 @@
 #include "Math/Polynomial.h"
-#include "Math/Integrator.h"
 #include "Math/Functor.h"
 #include <iostream>
 
@@ -9,7 +8,15 @@
 #include "TF1.h"
 #endif
 
+#include "TError.h"
 
+#include "Math/GSLIntegrator.h"
+// temp before having new Integrator class 
+namespace ROOT { 
+   namespace Math { 
+      typedef GSLIntegrator Integrator; 
+   }
+}
 
 double exactIntegral ( const std::vector<double> & par, double a, double b) { 
 
@@ -27,6 +34,7 @@ double exactIntegral ( const std::vector<double> & par, double a, double b) {
 }
 
 double singularFunction(double x) { 
+   return 1./x;
    if (x >= 0) 
       return 1./sqrt(x);
    else 
@@ -36,6 +44,8 @@ double singularFunction(double x) {
 
 void testIntegration() {
 
+
+  gErrorIgnoreLevel = 5000;
 
   ROOT::Math::Polynomial * f = new ROOT::Math::Polynomial(2);
 
@@ -51,7 +61,11 @@ void testIntegration() {
   std::cout << "Exact value " << exactresult << std::endl << std::endl; 
 
 
-  ROOT::Math::Integrator ig(func, 0.001, 0.01, 100 );
+  //ROOT::Math::Integrator ig(func, 0.001, 0.01, 100 );
+  ROOT::Math::GSLIntegrator ig(0.001, 0.01, 100 );
+  ig.SetFunction(func);
+
+
   double value = ig.Integral( 0, 3); 
   // or ig.Integral(*f, 0, 10); if new function 
 
@@ -64,7 +78,8 @@ void testIntegration() {
 
   
   // integrate again ADAPTIve, with different rule 
-  ROOT::Math::Integrator ig2(func, ROOT::Math::Integration::ADAPTIVE, ROOT::Math::Integration::GAUSS61, 0.001, 0.01, 100 );
+  ROOT::Math::GSLIntegrator ig2(ROOT::Math::Integration::ADAPTIVE, ROOT::Math::Integration::GAUSS61, 0.001, 0.01, 100 );
+  ig2.SetFunction(func);
   value = ig2.Integral(0, 3); 
   // or ig2.Integral(*f, 0, 10); if different function
 
@@ -105,6 +120,12 @@ void testIntegration() {
   else 
      std::cout << "Result:[-1,1]      " << r2 << " +/- " << ig.Error() << std::endl; 
 
+
+  std::vector<double> sp2(2); 
+  sp2[0] = -1.; sp2[1] = -0.5; 
+  double r3 = ig.Integral(sp2); 
+  std::cout << "Result on [-1,-0.5] = " << r3 << std::endl;
+
  
 }
 
@@ -121,13 +142,13 @@ void  testIntegPerf(){
   f1.SetParameters(p);
   
   TStopwatch timer; 
-  int n = 1000000; 
+  int n = 100000; 
   double x1 = 0; double x2 = 10; 
   double dx = (x2-x1)/double(n); 
   double a = -1;
 
   timer.Start(); 
-  ROOT::Math::Integrator ig(f1);
+  ROOT::Math::Integrator ig; ig.SetFunction(f1);
   double s1 = 0; 
   for (int i = 0; i < n; ++i) { 
      double x = x1 + dx*i; 
@@ -140,7 +161,7 @@ void  testIntegPerf(){
   timer.Start(); 
   s1 = 0; 
   for (int i = 0; i < n; ++i) { 
-     ROOT::Math::Integrator ig2(f1);
+     ROOT::Math::Integrator ig2; ig2.SetFunction(f1);
      double x = x1 + dx*i; 
      s1+= ig2.Integral(a,x);
   }

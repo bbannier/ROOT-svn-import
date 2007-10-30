@@ -41,6 +41,8 @@ RooNumIntConfig& RooNumIntConfig::defaultConfig()
   if (_default==0) {
     _default = new RooNumIntConfig ;    
     RooNumIntFactory::instance() ;
+    //_default->method1D().setLabel("RooAdaptiveGaussKronrodIntegrator1D") ;
+    _default->method1D().setLabel("RooIntegrator1D") ;
   }
   return *_default ;
 }

@@ -167,6 +167,11 @@ void XrdProofdClient::CountSession(int n, bool worker)
       fWorkerProofServ += n;
    else
       fMasterProofServ += n;
+
+   TRACE(SCHED, "XrdProofdClient::CountSession:"<<fClientID<<
+                " {n,worker}: {"<<n<<","<<worker<<"} "<<
+                " fWorker: "<<fWorkerProofServ<<
+                ", fMaster: "<<fMasterProofServ);
 }
 
 //__________________________________________________________________________
@@ -187,7 +192,7 @@ int XrdProofdClient::GetClientID(XrdProofdProtocol *p)
    // Get next free client ID. If none is found, increase the vector size
    // and get the first new one
 
-   XrdOucMutexHelper mh(fMutex);
+   XrdSysMutexHelper mh(fMutex);
 
    int ic = 0;
    // Search for free places in the existing vector
@@ -212,7 +217,7 @@ int XrdProofdClient::GetClientID(XrdProofdProtocol *p)
 }
 
 //__________________________________________________________________________
-int XrdProofdClient::CreateUNIXSock(XrdOucError *edest, char *tmpdir)
+int XrdProofdClient::CreateUNIXSock(XrdSysError *edest, char *tmpdir)
 {
    // Create UNIX socket for internal connections
 

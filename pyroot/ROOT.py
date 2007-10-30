@@ -244,12 +244,10 @@ if not __builtins__.has_key( '__IPYTHON__' ):
 
 
 ### call EndOfLineAction after each interactive command (to update display etc.)
+_orig_dhook = sys.displayhook
 def _displayhook( v ):
    _root.gInterpreter.EndOfLineAction()
    return _orig_dhook( v )
-
-_orig_dhook = sys.displayhook
-sys.displayhook = _displayhook
 
 
 ### helper to prevent GUIs from starving
@@ -281,8 +279,9 @@ class ModuleFacade( object ):
             self.__dict__[ '_master' ] = master
 
          def __getattr__( self, name ):
-           if name != 'SetBatch':
+           if name != 'SetBatch' and self._master.__dict__[ 'gROOT' ] != self._gROOT:
               self._master._ModuleFacade__finalSetup()
+              del self._master.__class__._ModuleFacade__finalSetup
               self._master.__dict__[ 'gROOT' ] = self._gROOT
            return getattr( self._gROOT, name )
 
@@ -298,12 +297,6 @@ class ModuleFacade( object ):
       del self.__class__.__setattr1
 
    def __setattr1( self, name, value ):      # "start-up" setattr
-    # switch to running gettattr/setattr
-      self.__class__.__getattr__ = self.__class__.__getattr2
-      del self.__class__.__getattr2
-      self.__class__.__setattr__ = self.__class__.__setattr2
-      del self.__class__.__setattr2
-
     # create application, thread etc.
       self.__finalSetup()
       del self.__class__.__finalSetup
@@ -337,12 +330,6 @@ class ModuleFacade( object ):
     # special case, to allow "from ROOT import gROOT" w/o starting GUI thread
       if name == '__path__':
          raise AttributeError( name )
-
-    # switch to running gettattr/setattr
-      self.__class__.__getattr__ = self.__class__.__getattr2
-      del self.__class__.__getattr2
-      self.__class__.__setattr__ = self.__class__.__setattr2
-      del self.__class__.__setattr2
 
     # create application, thread etc.
       self.__finalSetup()
@@ -386,6 +373,12 @@ class ModuleFacade( object ):
       raise AttributeError( name )
 
    def __finalSetup( self ):
+    # switch to running gettattr/setattr
+      self.__class__.__getattr__ = self.__class__.__getattr2
+      del self.__class__.__getattr2
+      self.__class__.__setattr__ = self.__class__.__setattr2
+      del self.__class__.__setattr2
+
     # normally, you'll want a ROOT application; don't init any further if
     # one pre-exists from some C++ code somewhere
       c = _root.MakeRootClass( 'PyROOT::TPyROOTApplication' )
@@ -416,6 +409,9 @@ class ModuleFacade( object ):
       for name in std.stlclasses:
          setattr( _root, name, getattr( std, name ) )
 
+    # set the display hook
+      sys.displayhook = _displayhook
+
 
 sys.modules[ __name__ ] = ModuleFacade( sys.modules[ __name__ ] )
 del ModuleFacade
@@ -439,7 +435,12 @@ def cleanup():
  # shutdown GUI thread, as appropriate
    if hasattr( facade, 'thread' ):
       facade.keeppolling = 0
-      facade.thread.join( 3. )                         # arbitrary
+
+    # if not shutdown from GUI (often the case), wait for it
+      import threading
+      if threading.currentThread() != facade.thread:
+         facade.thread.join( 3. )                      # arbitrary
+      del threading
 
  # destroy facade
    del sys.modules[ __name__ ], facade

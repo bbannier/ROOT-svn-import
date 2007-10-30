@@ -104,9 +104,10 @@ class TVirtualMutex;
 // 12 -> 13: exchange version/architecture/compiler info
 // 13 -> 14: new proofserv environment setting
 // 14 -> 15: add support for entry lists; new version of TFileInfo
+// 15 -> 16: add support for generic non-data based processing
 
 // PROOF magic constants
-const Int_t       kPROOF_Protocol        = 15;            // protocol version number
+const Int_t       kPROOF_Protocol        = 16;            // protocol version number
 const Int_t       kPROOF_Port            = 1093;          // IANA registered PROOF port
 const char* const kPROOF_ConfFile        = "proof.conf";  // default config file
 const char* const kPROOF_ConfDir         = "/usr/local/root";  // default config dir
@@ -233,7 +234,7 @@ class TProof : public TNamed, public TQObject {
 
 friend class TPacketizer;
 friend class TPacketizerDev;
-friend class TAdaptivePacketizer;
+friend class TPacketizerAdaptive;
 friend class TProofServ;
 friend class TProofInputHandler;
 friend class TProofInterruptHandler;
@@ -542,6 +543,8 @@ public:
    Long64_t    Process(const char *dsetname, const char *selector,
                        Option_t *option = "", Long64_t nentries = -1,
                        Long64_t firstentry = 0, TObject *enl = 0);
+   Long64_t    Process(const char *selector, Long64_t nentries,
+                       Option_t *option = "");
    Long64_t    DrawSelect(TDSet *dset, const char *varexp,
                           const char *selection = "",
                           Option_t *option = "", Long64_t nentries = -1,

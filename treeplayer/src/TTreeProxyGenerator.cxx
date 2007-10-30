@@ -255,7 +255,7 @@ namespace ROOT {
    {
       // Return true if we should create a nested class representing this class
 
-      return cl->TestBit(TClass::kIsEmulation);
+      return cl!=0 && cl->TestBit(TClass::kIsEmulation);
    }
 
    TBranchProxyClassDescriptor*
@@ -655,6 +655,7 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
             case TVirtualStreamerInfo::kLong:    { proxyTypeName = "T" + middle + "LongProxy"; break; }
             case TVirtualStreamerInfo::kLong64:  { proxyTypeName = "T" + middle + "Long64Proxy"; break; }
             case TVirtualStreamerInfo::kFloat:   { proxyTypeName = "T" + middle + "FloatProxy"; break; }
+            case TVirtualStreamerInfo::kFloat16: { proxyTypeName = "T" + middle + "Float16Proxy"; break; }
             case TVirtualStreamerInfo::kDouble:  { proxyTypeName = "T" + middle + "DoubleProxy"; break; }
             case TVirtualStreamerInfo::kDouble32:{ proxyTypeName = "T" + middle + "Double32Proxy"; break; }
             case TVirtualStreamerInfo::kUChar:   { proxyTypeName = "T" + middle + "UCharProxy"; break; }
@@ -674,6 +675,7 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
             case TVirtualStreamerInfo::kOffsetL + TVirtualStreamerInfo::kLong:    { proxyTypeName = GetArrayType(element,"Long",container ); break; }
             case TVirtualStreamerInfo::kOffsetL + TVirtualStreamerInfo::kLong64:  { proxyTypeName = GetArrayType(element,"Long64",container ); break; }
             case TVirtualStreamerInfo::kOffsetL + TVirtualStreamerInfo::kFloat:   { proxyTypeName = GetArrayType(element,"Float",container ); break; }
+            case TVirtualStreamerInfo::kOffsetL + TVirtualStreamerInfo::kFloat16: { proxyTypeName = GetArrayType(element,"Float16",container ); break; }
             case TVirtualStreamerInfo::kOffsetL + TVirtualStreamerInfo::kDouble:  { proxyTypeName = GetArrayType(element,"Double",container ); break; }
             case TVirtualStreamerInfo::kOffsetL + TVirtualStreamerInfo::kDouble32:{ proxyTypeName = GetArrayType(element,"Double32",container ); break; }
             case TVirtualStreamerInfo::kOffsetL + TVirtualStreamerInfo::kUChar:   { proxyTypeName = GetArrayType(element,"UChar",container ); break; }
@@ -691,6 +693,7 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
             case TVirtualStreamerInfo::kOffsetP + TVirtualStreamerInfo::kLong:    { proxyTypeName = GetArrayType(element,"Long",container ); break; }
             case TVirtualStreamerInfo::kOffsetP + TVirtualStreamerInfo::kLong64:  { proxyTypeName = GetArrayType(element,"Long64",container ); break; }
             case TVirtualStreamerInfo::kOffsetP + TVirtualStreamerInfo::kFloat:   { proxyTypeName = GetArrayType(element,"Float",container ); break; }
+            case TVirtualStreamerInfo::kOffsetP + TVirtualStreamerInfo::kFloat16: { proxyTypeName = GetArrayType(element,"Float16",container ); break; }
             case TVirtualStreamerInfo::kOffsetP + TVirtualStreamerInfo::kDouble:  { proxyTypeName = GetArrayType(element,"Double",container ); break; }
             case TVirtualStreamerInfo::kOffsetP + TVirtualStreamerInfo::kDouble32:{ proxyTypeName = GetArrayType(element,"Double32",container ); break; }
             case TVirtualStreamerInfo::kOffsetP + TVirtualStreamerInfo::kUChar:   { proxyTypeName = GetArrayType(element,"UChar",container ); break; }
@@ -1150,13 +1153,15 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
                isclones = TBranchProxyClassDescriptor::kSTL;
                cl = cl->GetCollectionProxy()->GetValueClass();
             }
-            if (NeedToEmulate(cl,0) || branchname[strlen(branchname)-1] == '.' || branch->GetSplitLevel()) {
-               TBranchElement *be = dynamic_cast<TBranchElement*>(branch);
-               TVirtualStreamerInfo *info = (be && !isclones) ? be->GetInfo() : cl->GetStreamerInfo(); // the 2nd hand need to be fixed
-               desc = new TBranchProxyClassDescriptor(cl->GetName(), info, branchname,
-                                                      isclones, branch->GetSplitLevel());
-            } else {
-               type = Form("TObjProxy<%s >",cl->GetName());
+            if (cl) {
+               if (NeedToEmulate(cl,0) || branchname[strlen(branchname)-1] == '.' || branch->GetSplitLevel()) {
+                  TBranchElement *be = dynamic_cast<TBranchElement*>(branch);
+                  TVirtualStreamerInfo *info = (be && !isclones) ? be->GetInfo() : cl->GetStreamerInfo(); // the 2nd hand need to be fixed
+                  desc = new TBranchProxyClassDescriptor(cl->GetName(), info, branchname,
+                     isclones, branch->GetSplitLevel());
+               } else {
+                  type = Form("TObjProxy<%s >",cl->GetName());
+               }
             }
          }
 
@@ -1275,6 +1280,7 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
          case TVirtualStreamerInfo::kLong:    { type = "T" + middle + "LongProxy"; break; }
          case TVirtualStreamerInfo::kLong64:  { type = "T" + middle + "Long64Proxy"; break; }
          case TVirtualStreamerInfo::kFloat:   { type = "T" + middle + "FloatProxy"; break; }
+         case TVirtualStreamerInfo::kFloat16: { type = "T" + middle + "Float16Proxy"; break; }
          case TVirtualStreamerInfo::kDouble:  { type = "T" + middle + "DoubleProxy"; break; }
          case TVirtualStreamerInfo::kDouble32:{ type = "T" + middle + "Double32Proxy"; break; }
          case TVirtualStreamerInfo::kUChar:   { type = "T" + middle + "UCharProxy"; break; }
@@ -1294,6 +1300,7 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
          case TVirtualStreamerInfo::kOffsetL + TVirtualStreamerInfo::kLong:    { type = GetArrayType(element,"Long",container ); break; }
          case TVirtualStreamerInfo::kOffsetL + TVirtualStreamerInfo::kLong64:  { type = GetArrayType(element,"Long64",container ); break; }
          case TVirtualStreamerInfo::kOffsetL + TVirtualStreamerInfo::kFloat:   { type = GetArrayType(element,"Float",container ); break; }
+         case TVirtualStreamerInfo::kOffsetL + TVirtualStreamerInfo::kFloat16: { type = GetArrayType(element,"Float16",container ); break; }
          case TVirtualStreamerInfo::kOffsetL + TVirtualStreamerInfo::kDouble:  { type = GetArrayType(element,"Double",container ); break; }
          case TVirtualStreamerInfo::kOffsetL + TVirtualStreamerInfo::kDouble32:{ type = GetArrayType(element,"Double32",container ); break; }
          case TVirtualStreamerInfo::kOffsetL + TVirtualStreamerInfo::kUChar:   { type = GetArrayType(element,"UChar",container ); break; }
@@ -1311,6 +1318,7 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
          case TVirtualStreamerInfo::kOffsetP + TVirtualStreamerInfo::kLong:    { type = GetArrayType(element,"Long",container ); break; }
          case TVirtualStreamerInfo::kOffsetP + TVirtualStreamerInfo::kLong64:  { type = GetArrayType(element,"Long64",container ); break; }
          case TVirtualStreamerInfo::kOffsetP + TVirtualStreamerInfo::kFloat:   { type = GetArrayType(element,"Float",container ); break; }
+         case TVirtualStreamerInfo::kOffsetP + TVirtualStreamerInfo::kFloat16: { type = GetArrayType(element,"Float16",container ); break; }
          case TVirtualStreamerInfo::kOffsetP + TVirtualStreamerInfo::kDouble:  { type = GetArrayType(element,"Double",container ); break; }
          case TVirtualStreamerInfo::kOffsetP + TVirtualStreamerInfo::kDouble32:{ type = GetArrayType(element,"Double32",container ); break; }
          case TVirtualStreamerInfo::kOffsetP + TVirtualStreamerInfo::kUChar:   { type = GetArrayType(element,"UChar",container ); break; }

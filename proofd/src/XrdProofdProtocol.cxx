@@ -21,18 +21,27 @@
 
 #include "XrdProofdPlatform.h"
 
+#ifdef OLDXRDOUC
+#  include "XrdOuc/XrdOucError.hh"
+#  include "XrdOuc/XrdOucLogger.hh"
+#  include "XrdOuc/XrdOucPlugin.hh"
+#  include "XrdOuc/XrdOucTimer.hh"
+#  define XPD_LOG_01 OUC_LOG_01
+#else
+#  include "XrdSys/XrdSysError.hh"
+#  include "XrdSys/XrdSysLogger.hh"
+#  include "XrdSys/XrdSysPlugin.hh"
+#  include "XrdSys/XrdSysTimer.hh"
+#  define XPD_LOG_01 SYS_LOG_01
+#endif
+
 #include "XrdVersion.hh"
 #include "XrdClient/XrdClientMessage.hh"
 #include "XrdClient/XrdClientUrlInfo.hh"
 #include "XrdSys/XrdSysPriv.hh"
 #include "XrdOuc/XrdOucErrInfo.hh"
-#include "XrdOuc/XrdOucError.hh"
-#include "XrdOuc/XrdOucLogger.hh"
-#include "XrdOuc/XrdOucPlugin.hh"
-#include "XrdOuc/XrdOucPthread.hh"
 #include "XrdOuc/XrdOucReqID.hh"
 #include "XrdOuc/XrdOucString.hh"
-#include "XrdOuc/XrdOucTimer.hh"
 #include "XrdSut/XrdSutAux.hh"
 #include "XrdNet/XrdNet.hh"
 #include "XrdNet/XrdNetDNS.hh"
@@ -49,9 +58,7 @@
 #include "XrdProofWorker.h"
 #include "XrdROOT.h"
 
-#ifdef R__HAVE_CONFIG
 #include "RConfigure.h"
-#endif
 
 // Tracing utils
 #include "XrdProofdTrace.h"
@@ -60,15 +67,15 @@ static const char    *gTraceID = " ";
 
 // Static variables
 static XrdOucReqID   *XrdProofdReqID = 0;
-XrdOucRecMutex        gSysPrivMutex;
+XrdSysRecMutex        gSysPrivMutex;
 
 // Loggers: we need two to avoid deadlocks
-static XrdOucLogger   gMainLogger;
+static XrdSysLogger   gMainLogger;
 
 //
 // Static area: general protocol managing section
 int                   XrdProofdProtocol::fgCount    = 0;
-XrdOucRecMutex        XrdProofdProtocol::fgXPDMutex;
+XrdSysRecMutex        XrdProofdProtocol::fgXPDMutex;
 XrdObjectQ<XrdProofdProtocol>
                       XrdProofdProtocol::fgProtStack("ProtStack",
                                                      "xproofd protocol anchor");
@@ -76,8 +83,8 @@ XrdBuffManager       *XrdProofdProtocol::fgBPool    = 0;
 int                   XrdProofdProtocol::fgMaxBuffsz= 0;
 XrdSecService        *XrdProofdProtocol::fgCIA      = 0;
 XrdScheduler         *XrdProofdProtocol::fgSched    = 0;
-XrdOucError           XrdProofdProtocol::fgEDest(0, "xpd");
-XrdOucLogger          XrdProofdProtocol::fgMainLogger;
+XrdSysError           XrdProofdProtocol::fgEDest(0, "xpd");
+XrdSysLogger          XrdProofdProtocol::fgMainLogger;
 
 //
 // Static area: protocol configuration section
@@ -91,7 +98,7 @@ char                 *XrdProofdProtocol::fgSecLib   = 0;
 char                 *XrdProofdProtocol::fgPoolURL = 0;
 char                 *XrdProofdProtocol::fgNamespace = strdup("/proofpool");
 //
-XrdOucSemWait         XrdProofdProtocol::fgForkSem;   // To serialize fork requests
+XrdSysSemWait         XrdProofdProtocol::fgForkSem;   // To serialize fork requests
 //
 std::list<XrdOucString *> XrdProofdProtocol::fgMastersAllowed;
 std::list<XrdProofdPriority *> XrdProofdProtocol::fgPriorities;
@@ -124,6 +131,8 @@ XrdProofSched        *XrdProofdProtocol::fgProofSched = 0;
 //
 float                 XrdProofdProtocol::fgOverallInflate = 1.; // Overall inflate factor
 int                   XrdProofdProtocol::fgSchedOpt = kXPD_sched_off; // Worker Sched option
+int                   XrdProofdProtocol::fgPriorityMax = 20; // Max session priority [1,40]
+int                   XrdProofdProtocol::fgPriorityMin = 1;  // Min session priority [1,40]
 //
 // Static area: client section
 std::list<XrdProofdClient *> XrdProofdProtocol::fgProofdClients;  // keeps track of all users
@@ -167,7 +176,7 @@ typedef struct {
 } hs_response_t;
 
 // Security handle
-typedef XrdSecService *(*XrdSecServLoader_t)(XrdOucLogger *, const char *cfn);
+typedef XrdSecService *(*XrdSecServLoader_t)(XrdSysLogger *, const char *cfn);
 
 #if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
 
@@ -303,13 +312,15 @@ void *XrdProofdCron(void *p)
 
    while(1) {
       // Wait a while
-      XrdOucTimer::Wait(freq*1000);
+      XrdSysTimer::Wait(freq*1000);
       // Do something here
       TRACE(REQ, "XrdProofdCron: running periodical checks");
       // Trim the list of processes asked for termination
       XrdProofdProtocol::TrimTerminatedProcesses();
       // Check if there was any change in the configuration
       XrdProofdProtocol::Reconfig();
+      // Broadcast updated priorities to the active sessions
+      XrdProofdProtocol::UpdatePriorities();
    }
 
    // Should never come here
@@ -317,7 +328,7 @@ void *XrdProofdCron(void *p)
 }
 
 //_____________________________________________________________________________
-XrdProofSched *XrdProofdProtocol::LoadScheduler(const char *cfn, XrdOucError *edest)
+XrdProofSched *XrdProofdProtocol::LoadScheduler(const char *cfn, XrdSysError *edest)
 {
    // Load PROOF scheduler
 
@@ -356,7 +367,7 @@ XrdProofSched *XrdProofdProtocol::LoadScheduler(const char *cfn, XrdOucError *ed
       }
    }
 
-   // If undefined or static init a static instance
+   // If undefined or default init a default instance
    if (name == "default" || !(name.length() > 0 && lib.length() > 0)) {
       if ((name.length() <= 0 && lib.length() > 0) ||
           (name.length() > 0 && lib.length() <= 0)) {
@@ -373,7 +384,7 @@ XrdProofSched *XrdProofdProtocol::LoadScheduler(const char *cfn, XrdOucError *ed
       // Load the required plugin
       if (lib.beginswith("~") || lib.beginswith("$"))
          XrdProofdAux::Expand(lib);
-      XrdOucPlugin *h = new XrdOucPlugin(edest, lib.c_str());
+      XrdSysPlugin *h = new XrdSysPlugin(edest, lib.c_str());
       if (!h)
          return (XrdProofSched *)0;
       // Get the scheduler object creator
@@ -930,7 +941,8 @@ int XrdProofdProtocol::Configure(char *parms, XrdProtocol_Config *pi)
    // Scheduling option
    if (fgGroupsMgr.Num() > 1 && fgSchedOpt != kXPD_sched_off) {
       mp = "Configure: worker sched based on: ";
-      mp += (fgSchedOpt == kXPD_sched_fraction) ? "fractions" : "priorities";
+      mp += (fgSchedOpt == kXPD_sched_central) ? "central" : "local";
+      mp += " priorities";
       fgEDest.Say(0, mp.c_str());
    }
 
@@ -953,7 +965,7 @@ int XrdProofdProtocol::Configure(char *parms, XrdProtocol_Config *pi)
    // Start cron thread, if required
    if (fgCron == 1) {
       pthread_t tid;
-      if (XrdOucThread::Run(&tid, XrdProofdCron, (void *)&fgCronFrequency, 0,
+      if (XrdSysThread::Run(&tid, XrdProofdCron, (void *)&fgCronFrequency, 0,
                                     "Proof cron thread") != 0) {
          fgEDest.Say(0, "Proofd : Configure: could not start cron thread");
          return 0;
@@ -1029,7 +1041,8 @@ int XrdProofdProtocol::TraceConfig(const char *cfn)
             //   dbg            trace details about actions         [off]
             //   hdbg           trace more details about actions    [off]
             //   err            trace errors                        [on]
-            //   inflt          trace details about inflate factors [off]
+            //   sched          trace details about scheduling      [off]
+            //   admin          trace admin requests                [on]*
             //   all            trace everything
             //
             // Defaults are shown in brackets; '*' shows the default when the '-d'
@@ -1060,8 +1073,10 @@ int XrdProofdProtocol::TraceConfig(const char *cfn)
                   TRACESET(HDBG, on);
                } else if (!strcmp(val,"err")) {
                   TRACESET(XERR, on);
-               } else if (!strcmp(val,"inflt")) {
-                  TRACESET(INFLT, on);
+               } else if (!strcmp(val,"sched")) {
+                  TRACESET(SCHED, on);
+               } else if (!strcmp(val,"admin")) {
+                  TRACESET(ADMIN, on);
                } else if (!strcmp(val,"all")) {
                   // Everything
                   XrdProofdTrace->What = (on) ? TRACE_ALL : 0;
@@ -1273,17 +1288,35 @@ int XrdProofdProtocol::Config(const char *cfn)
                            float of = 1.;
                            sscanf(o.c_str(), "%f", &of);
                            fgOverallInflate = (of >= 1.) ? of : fgOverallInflate;
+                        } else if (o.beginswith("min:")) {
+                           // The overall inflating factor
+                           o.replace("min:","");
+                           int p = 1;
+                           sscanf(o.c_str(), "%d", &p);
+                           fgPriorityMin = (p >= 1 && p <= 40) ? p : fgPriorityMin;
+                        } else if (o.beginswith("max:")) {
+                           // The overall inflating factor
+                           o.replace("max:","");
+                           int p = 20;
+                           sscanf(o.c_str(), "%d", &p);
+                           fgPriorityMax = (p >= 1 && p <= 40) ? p : fgPriorityMax;
                         } else {
-                           if (o == "fraction")
-                              fgSchedOpt = kXPD_sched_fraction;
-                           else if (o == "priority")
-                              fgSchedOpt = kXPD_sched_priority;
+                           if (o == "central")
+                              fgSchedOpt = kXPD_sched_central;
+                           else if (o == "local")
+                              fgSchedOpt = kXPD_sched_local;
                         }
                         // Next
                         val = Config.GetToken();
                      }
                      // New reference
                      nmSchedOpt = nm;
+                  }
+                  // Make sure that min is <= max
+                  if (fgPriorityMin > fgPriorityMax) {
+                     TRACE(XERR, "Config: inconsistent value for fgPriorityMin (> fgPriorityMax) ["<<
+                                 fgPriorityMin << ", "<<fgPriorityMax<<"] - correcting");
+                     fgPriorityMin = fgPriorityMax;
                   }
                }
             }
@@ -1332,7 +1365,7 @@ int XrdProofdProtocol::Reconfig()
       return 0;
    }
 
-   XrdOucMutexHelper mtxh(&fgXPDMutex);
+   XrdSysMutexHelper mtxh(&fgXPDMutex);
 
    // Reconfigure tracing
    TraceConfig(fgCfgFile.fName.c_str());
@@ -1696,7 +1729,7 @@ int XrdProofdProtocol::Process(XrdLink *)
    fRequest.header.dlen      = ntohl(fRequest.header.dlen);
 
    // The stream ID for the reply
-   { XrdOucMutexHelper mh(fResponse.fMutex);
+   { XrdSysMutexHelper mh(fResponse.fMutex);
       fResponse.Set(fRequest.header.streamid);
       fResponse.Set(fLink);
    }
@@ -1844,7 +1877,7 @@ void XrdProofdProtocol::Recycle(XrdLink *, int, const char *)
 
          // If top master ...
          if (fSrvType == kXPD_TopMaster) {
-            XrdOucMutexHelper mtxh(pmgr->Mutex());
+            XrdSysMutexHelper mtxh(pmgr->Mutex());
             // Loop over servers sessions associated to this client and update
             // their attached client vectors
             if (pmgr->ProofServs()->size() > 0) {
@@ -1886,7 +1919,7 @@ void XrdProofdProtocol::Recycle(XrdLink *, int, const char *)
          } else {
 
             // We cannot continue if the top master went away: we cleanup the session
-            XrdOucMutexHelper mtxh(pmgr->Mutex());
+            XrdSysMutexHelper mtxh(pmgr->Mutex());
             if (pmgr->ProofServs()->size() > 0) {
                XrdProofServProxy *psrv = 0;
                int is = 0;
@@ -1897,7 +1930,7 @@ void XrdProofdProtocol::Recycle(XrdLink *, int, const char *)
                      TRACEI(HDBG, "Recycle: found: " << psrv << " (t:"<<psrv->SrvType() <<
                                   ",nc:"<<psrv->Clients()->size()<<")");
 
-                     XrdOucMutexHelper xpmh(psrv->Mutex());
+                     XrdSysMutexHelper xpmh(psrv->Mutex());
 
                      // Send a terminate signal to the proofserv
                      if (LogTerminatedProc(psrv->TerminateProofServ()) != 0)
@@ -1919,7 +1952,7 @@ void XrdProofdProtocol::Recycle(XrdLink *, int, const char *)
          // of proxy servers and to notify the attached clients.
          // Loop over servers sessions associated to this client and locate
          // the one corresponding to this proofserv instance
-         XrdOucMutexHelper mtxh(pmgr->Mutex());
+         XrdSysMutexHelper mtxh(pmgr->Mutex());
          if (pmgr->ProofServs()->size() > 0) {
             XrdProofServProxy *psrv = 0;
             int is = 0;
@@ -1929,7 +1962,7 @@ void XrdProofdProtocol::Recycle(XrdLink *, int, const char *)
                TRACEI(HDBG, "Recycle: found: " << psrv << " (v:" << psrv->IsValid() <<
                             ",t:"<<psrv->SrvType() << ",nc:"<<psrv->Clients()->size()<<")");
 
-                  XrdOucMutexHelper xpmh(psrv->Mutex());
+                  XrdSysMutexHelper xpmh(psrv->Mutex());
 
                   // Tell other attached clients, if any, that this session is gone
                   if (psrv->Clients()->size() > 0) {
@@ -2077,7 +2110,7 @@ int XrdProofdClient::GetFreeServID()
 
    TRACE(ACT,"GetFreeServID: enter");
 
-   XrdOucMutexHelper mh(fMutex);
+   XrdSysMutexHelper mh(fMutex);
 
    TRACE(DBG,"GetFreeServID: size = "<<fProofServs.size()<<
               "; capacity = "<<fProofServs.capacity());
@@ -2113,7 +2146,7 @@ void XrdProofdClient::EraseServer(int psid)
 
    TRACE(ACT,"EraseServer: enter: psid: " << psid);
 
-   XrdOucMutexHelper mh(fMutex);
+   XrdSysMutexHelper mh(fMutex);
 
    XrdProofServProxy *xps = 0;
    std::vector<XrdProofServProxy *>::iterator ip;
@@ -2475,7 +2508,7 @@ int XrdProofdProtocol::MapClient(bool all)
    XrdProofdClient *pmgr = 0;
    TRACEI(DBG,"MapClient: # of clients: "<<fgProofdClients.size());
    // This part may be not thread safe
-   {  XrdOucMutexHelper mtxh(&fgXPDMutex);
+   {  XrdSysMutexHelper mtxh(&fgXPDMutex);
       if (fgProofdClients.size() > 0) {
          std::list<XrdProofdClient *>::iterator i;
          for (i = fgProofdClients.begin(); i != fgProofdClients.end(); ++i) {
@@ -2564,7 +2597,7 @@ int XrdProofdProtocol::MapClient(bool all)
       }
 
       // This part may be not thread safe
-      {  XrdOucMutexHelper mtxh(&fgXPDMutex);
+      {  XrdSysMutexHelper mtxh(&fgXPDMutex);
 
          // Make sure that no zombie proofserv is around
          CleanupProofServ(0, fClientID);
@@ -2693,7 +2726,7 @@ int XrdProofdProtocol::MapClient(bool all)
 
    // Document this login
    if (!(fStatus & XPD_NEED_AUTH))
-      fgEDest.Log(OUC_LOG_01, ":MapClient", fLink->ID, "login");
+      fgEDest.Log(XPD_LOG_01, ":MapClient", fLink->ID, "login");
 
    return rc;
 }
@@ -2800,9 +2833,9 @@ int XrdProofdProtocol::Auth()
       fStatus &= ~XPD_NEED_AUTH;
       fClient = &fAuthProt->Entity;
       if (fClient->name)
-         fgEDest.Log(OUC_LOG_01, ":Auth", fLink->ID, msg, fClient->name);
+         fgEDest.Log(XPD_LOG_01, ":Auth", fLink->ID, msg, fClient->name);
       else
-         fgEDest.Log(OUC_LOG_01, ":Auth", fLink->ID, msg, " nobody");
+         fgEDest.Log(XPD_LOG_01, ":Auth", fLink->ID, msg, " nobody");
       return rc;
    }
 
@@ -2974,7 +3007,7 @@ int XrdProofdProtocol::Detach()
 
    int psid = -1, rc = 1;
 
-   XrdOucMutexHelper mh(fMutex);
+   XrdSysMutexHelper mh(fMutex);
 
    // Unmarshall the data
    psid = ntohl(fRequest.proof.sid);
@@ -2991,7 +3024,7 @@ int XrdProofdProtocol::Detach()
    TRACEP(DBG, "Detach: xps: "<<xps<<", status: "<< xps->Status()<<
                ", # clients: "<< xps->Clients()->size());
 
-   XrdOucMutexHelper xpmh(xps->Mutex());
+   XrdSysMutexHelper xpmh(xps->Mutex());
 
    // Remove this from the list of clients
    std::vector<XrdClientID *>::iterator i;
@@ -3018,7 +3051,7 @@ int XrdProofdProtocol::Destroy()
 
    int psid = -1, rc = 1;
 
-   XrdOucMutexHelper mh(fPClient->Mutex());
+   XrdSysMutexHelper mh(fPClient->Mutex());
 
    // Unmarshall the data
    psid = ntohl(fRequest.proof.sid);
@@ -3045,7 +3078,7 @@ int XrdProofdProtocol::Destroy()
 
          TRACEI(DBG, "Destroy: xps: "<<xps<<", status: "<< xps->Status()<<", pid: "<<xps->SrvID());
 
-         {  XrdOucMutexHelper xpmh(xps->Mutex());
+         {  XrdSysMutexHelper xpmh(xps->Mutex());
 
             if (xps->SrvType() == kXPD_TopMaster) {
                // Tell other attached clients, if any, that this session is gone
@@ -3892,7 +3925,7 @@ int XrdProofdProtocol::Create()
    int psid = -1, rc = 1;
 
    TRACEI(REQ, "Create: enter");
-   XrdOucMutexHelper mh(fPClient->Mutex());
+   XrdSysMutexHelper mh(fPClient->Mutex());
 
    // Allocate next free server ID and fill in the basic stuff
    psid = fPClient->GetFreeServID();
@@ -4287,7 +4320,8 @@ int XrdProofdProtocol::Create()
       }
       if (nmmx > -1) {
          // Changing child process priority for this user
-         if (xps->ChangeProcessPriority(dp) != 0) {
+         int newp = xps->GetDefaultProcessPriority() + dp;
+         if (xps->SetProcessPriority(newp) != 0) {
             TRACEI(XERR, "Create: problems changing child process priority");
          } else {
             TRACEI(DBG, "Create: priority of the child process changed by "
@@ -4398,7 +4432,7 @@ int XrdProofdProtocol::SendDataN(XrdProofServProxy *xps,
          if ((csid = xps->Clients()->at(ic)) && csid->fP) {
             XrdProofdResponse& resp = csid->fP->fResponse;
             int rs = 0;
-            {  XrdOucMutexHelper mhp(resp.fMutex);
+            {  XrdSysMutexHelper mhp(resp.fMutex);
                unsigned short sid;
                resp.GetSID(sid);
                TRACEI(HDBG, "SendDataN: INTERNAL: this sid: "<<sid<<
@@ -4431,7 +4465,7 @@ int XrdProofdProtocol::SendMsg()
                                   "client", "undefined"};
    int rc = 1;
 
-   XrdOucMutexHelper mh(fResponse.fMutex);
+   XrdSysMutexHelper mh(fResponse.fMutex);
 
    // Unmarshall the data
    int psid = ntohl(fRequest.sendrcv.sid);
@@ -4457,22 +4491,22 @@ int XrdProofdProtocol::SendMsg()
    if (external) {
 
       if (opt & kXPD_process) {
-         TRACEP(DBG, "SendMsg: INT: setting proofserv in 'running' state");
+         TRACEP(DBG, "SendMsg: EXT: setting proofserv in 'running' state");
          xps->SetStatus(kXPD_running);
          // Update global list of active sessions
          fgMgr.AddActiveSession(xps);
          // Update counters in client instance
          fPClient->CountSession(1, (xps->SrvType() == kXPD_WorkerServer));
          // Notify
-         TRACE(INFLT, fPClient->ID()<<": kXPD_process: act w: "<<
+         TRACE(SCHED, fPClient->ID()<<": kXPD_process: act w: "<<
                       fPClient->WorkerProofServ() <<": act m: "<<
                       fPClient->MasterProofServ())
          // Update group info, if any
-         XrdOucMutexHelper mtxh(&fgXPDMutex);
+         XrdSysMutexHelper mtxh(&fgXPDMutex);
          if (fPClient->Group())
             fPClient->Group()->Count((const char *) fPClient->ID());
-         // Recalculate the inflate factors
-         SetInflateFactors();
+         // Updated priorities to the active sessions
+         UpdatePriorities(1);
       }
 
       // Send to proofsrv our client ID
@@ -4504,17 +4538,18 @@ int XrdProofdProtocol::SendMsg()
          // Update counters in client instance
          fPClient->CountSession(-1, (xps->SrvType() == kXPD_WorkerServer));
          // Notify
-         TRACE(INFLT, fPClient->ID()<<": kXPD_setidle: act w: "<<
+         TRACE(SCHED, fPClient->ID()<<": kXPD_setidle: act w: "<<
                       fPClient->WorkerProofServ()<<": act m: "<<
                       fPClient->MasterProofServ())
          // Update group info, if any
-         XrdOucMutexHelper mtxh(&fgXPDMutex);
+         XrdSysMutexHelper mtxh(&fgXPDMutex);
          if (fPClient->Group()) {
             if (!(fPClient->WorkerProofServ()+fPClient->MasterProofServ()))
                fPClient->Group()->Count((const char *) fPClient->ID(), -1);
          }
-         // Recalculate the inflate factors
-         SetInflateFactors();
+         // Updated priorities to the active sessions
+         UpdatePriorities(1);
+
       } else if (opt & kXPD_querynum) {
          TRACEI(DBG, "SendMsg: INT: got message with query number");
          // Save query num message for later clients
@@ -4525,8 +4560,6 @@ int XrdProofdProtocol::SendMsg()
          // Save start processing message for later clients
          xps->DeleteStartMsg();
          saveStartMsg = 1;
-         // Update counters in client instance
-         fPClient->CountSession(1, (xps->SrvType() == kXPD_WorkerServer));
       } else if (opt & kXPD_logmsg) {
          // We broadcast log messages only not idle to catch the
          // result from processing
@@ -4562,7 +4595,7 @@ int XrdProofdProtocol::SendMsg()
          //
          // The message is strictly for the client requiring it
          int rs = 0;
-         {  XrdOucMutexHelper mhp(csid->fP->fResponse.fMutex);
+         {  XrdSysMutexHelper mhp(csid->fP->fResponse.fMutex);
             unsigned short sid;
             csid->fP->fResponse.GetSID(sid);
             TRACEP(DBG, "SendMsg: INT: this sid: "<<sid<<
@@ -4853,10 +4886,10 @@ int XrdProofdProtocol::Admin()
                      break;
                   }
                }
-               TRACEI(DBG, "Admin: CleanupSessions: superuser, cleaning usr: "<< usr);
+               TRACEI(ADMIN, "Admin: CleanupSessions: superuser, cleaning usr: "<< usr);
             }
          } else {
-            TRACEI(DBG, "Admin: CleanupSessions: superuser, all sessions cleaned");
+            TRACEI(ADMIN, "Admin: CleanupSessions: superuser, all sessions cleaned");
          }
       } else {
          // Define the user name for later transactions (their executed under
@@ -4869,7 +4902,7 @@ int XrdProofdProtocol::Admin()
 
       // We cannot continue if we do not have anything to clean
       if (!clntfound) {
-         TRACEI(DBG, "Admin: specified client has no sessions - do nothing");
+         TRACEI(ADMIN, "Admin: client '"<<usr<<"' has no sessions - do nothing");
       }
 
       if (clntfound) {
@@ -4894,7 +4927,7 @@ int XrdProofdProtocol::Admin()
             if ((c = *i)) {
 
                // This part may be not thread safe
-               XrdOucMutexHelper mh(c->Mutex());
+               XrdSysMutexHelper mh(c->Mutex());
 
                // Notify the attached clients that we are going to cleanup
                XrdOucString msg = "Admin: CleanupSessions: cleaning up client: requested by: ";
@@ -4994,7 +5027,9 @@ int XrdProofdProtocol::Admin()
       // Save tag
       if (len > 0 && msg) {
          xps->SetTag(msg, len);
-         TRACEI(DBG, "Admin: session tag set to: "<<xps->Tag());
+         if (TRACING(ADMIN)) {
+            TRACEI(DBG, "Admin: session tag set to: "<<xps->Tag());
+         }
       }
 
       // Acknowledge user
@@ -5021,7 +5056,9 @@ int XrdProofdProtocol::Admin()
       // Save tag
       if (len > 0 && msg) {
          xps->SetAlias(msg, len);
-         TRACEP(DBG, "Admin: session alias set to: "<<xps->Alias());
+         if (TRACING(ADMIN)) {
+            TRACEP(DBG, "Admin: session alias set to: "<<xps->Alias());
+         }
       }
 
       // Acknowledge user
@@ -5038,11 +5075,14 @@ int XrdProofdProtocol::Admin()
          return rc;
       }
 
+      XrdSysMutexHelper mtxh(&fgXPDMutex);
+
       // User's group
       int   len = fRequest.header.dlen;
       char *grp = new char[len+1];
       memcpy(grp, fArgp->buff, len);
       grp[len] = 0;
+      TRACEP(ADMIN, "Admin: request to change priority for group '"<< grp<<"'");
 
       // Make sure is the current one of the user
       XrdProofGroup *g = xps->Group();
@@ -5055,14 +5095,21 @@ int XrdProofdProtocol::Admin()
 
       // Set the priority
       int priority = ntohl(fRequest.proof.int2);
-      g->SetPriority(priority);
+      g->SetPriority((float)priority);
 
       // Make sure scheduling is ON
-      fgSchedOpt = kXPD_sched_priority;
-      fgOverallInflate = 1.05;
+      fgSchedOpt = kXPD_sched_central;
+
+      // Set the new nice values to worker sessions
+      if (SetNiceValues(2) != 0) {
+         TRACE(XERR,"Admin: problems setting the new nice values ");
+         fResponse.Send(kXR_InvalidRequest,
+                      "Admin: problems setting the new nice values ");
+         return rc;
+      }
 
       // Notify
-      TRACEP(DBG, "Admin: priority for group '"<< grp<<"' has been set to "<<priority);
+      TRACEP(ADMIN, "Admin: priority for group '"<< grp<<"' has been set to "<<priority);
 
       // Acknowledge user
       fResponse.Send();
@@ -5158,7 +5205,7 @@ int XrdProofdProtocol::Admin()
          // Isolate the tag
          tag.erase(0,tag.find(' ') + 1);
       }
-      TRACEP(DBG, "Admin: ROOTVersion: version tag: "<< tag);
+      TRACEP(ADMIN, "Admin: ROOTVersion: version tag: "<< tag);
 
       // If the action is requested for a user different from us we
       // must be 'superuser'
@@ -5230,20 +5277,24 @@ int XrdProofdProtocol::Admin()
          }
       }
 
-      // Notify
-      TRACEP(DBG, "Admin: default changed to "<<tag<<" for {client, group} = {"<<
-                  usr<<", "<<grp<<"} ("<<c<<")");
-
-      // forward down the tree, if not leaf
-      if (fgMgr.SrvType() != kXPD_WorkerServer) {
-         XrdOucString buf("u:");
-         buf += c->ID();
-         buf += " ";
-         buf += tag;
-         fgMgr.Broadcast(type, buf.c_str(), &fResponse);
+      // If not found we may have been requested to set the default version
+      if (!ok && tag == "default") {
+         c->SetROOT(*fgROOT.begin());
+         ok = 1;
       }
 
       if (ok) {
+         // Notify
+         TRACEP(ADMIN, "Admin: default changed to "<<c->ROOT()->Tag()<<
+                       " for {client, group} = {"<<usr<<", "<<grp<<"} ("<<c<<")");
+         // Forward down the tree, if not leaf
+         if (fgMgr.SrvType() != kXPD_WorkerServer) {
+            XrdOucString buf("u:");
+            buf += c->ID();
+            buf += " ";
+            buf += tag;
+            fgMgr.Broadcast(type, buf.c_str(), &fResponse);
+         }
          // Acknowledge user
          fResponse.Send();
       } else {
@@ -5896,7 +5947,7 @@ int XrdProofdProtocol::LogTerminatedProc(int pid)
    // returns 0 on success, -1 in case pid <= 0 .
 
    if (pid > 0) {
-      XrdOucMutexHelper mtxh(&fgXPDMutex);
+      XrdSysMutexHelper mtxh(&fgXPDMutex);
       fgTerminatedProcess.push_back(new XrdProofdPInfo(pid, "proofserv"));
       TRACE(DBG, "LogTerminatedProc: process ID "<<pid<<
                  " signalled and pushed back");
@@ -5918,7 +5969,7 @@ int XrdProofdProtocol::KillProofServ(int pid, bool forcekill)
 
    if (pid > 0) {
       // We need the right privileges to do this
-      XrdOucMutexHelper mtxh(&gSysPrivMutex);
+      XrdSysMutexHelper mtxh(&gSysPrivMutex);
       XrdSysPrivGuard pGuard((uid_t)0, (gid_t)0);
       if (XpdBadPGuard(pGuard, fUI.fUid) && fgChangeOwn) {
          XrdOucString msg = "KillProofServ: could not get privileges";
@@ -6209,7 +6260,7 @@ char *XrdProofdProtocol::ReadBufferRemote(const char *url,
 //__________________________________________________________________________
 static int GetGroupsInfo(const char *, XrdProofGroup *g, void *s)
 {
-   // Check if user 'u' is memmebr of group 'grp'
+   // Fill the global group structure
 
    XpdGroupGlobal_t *glo = (XpdGroupGlobal_t *)s;
 
@@ -6248,7 +6299,7 @@ static int SetGroupFracEff(const char *, XrdProofGroup *g, void *s)
       XpdGroupGlobal_t *glo = eff->glo;
       if (g->Active() > 0) {
          if (eff->opt == 0) {
-            float ef = g->Priority() / (float)(glo->prmin);
+            float ef = g->Priority() / glo->prmin;
             g->SetFracEff(ef);
          } else if (eff->opt == 1) {
             if (g->Fraction() < 0) {
@@ -6286,35 +6337,14 @@ int XrdProofdProtocol::SetGroupEffectiveFractions()
    // has the same priority so that the system scheduler should do the job.
 
    // Scheduling option
-   bool opri = (fgSchedOpt == kXPD_sched_priority) ? 1 : 0;
+   bool opri = (fgSchedOpt != kXPD_sched_off) ? 1 : 0;
 
    // Loop over groupd
-   XpdGroupGlobal_t glo = {-1, -1, 0, 0.};
+   XpdGroupGlobal_t glo = {-1., -1., 0, 0.};
    fgGroupsMgr.Apply(GetGroupsInfo, &glo);
 
    XpdGroupEff_t eff = {0, &glo, 0.5, 1.};
    if (opri) {
-      // In the priority scheme we need to enter effective fractions
-      // proportional to the priority; they will get normalized later on.
-      if (glo.prmin == glo.prmax) {
-         // If everybody has the same priority, apply the
-         // overall factor (if any) and leave the job to the system scheduler
-         if (fgOverallInflate >= 1.01) {
-            XrdOucMutexHelper mhp(fgMgr.Mutex());
-            // Apply the factor to all the active sessions and return
-            std::list<XrdProofServProxy *>::iterator svi;
-            for (svi = fgMgr.GetActiveSessions()->begin();
-                 svi != fgMgr.GetActiveSessions()->end(); svi++) {
-               if ((*svi)->IsValid() && ((*svi)->Status() == kXPD_running)) {
-                  int inflate = (int) (fgOverallInflate * 1000);
-                  if ((*svi)->SetInflate(inflate,1) != 0)
-                     TRACE(XERR, "SetGroupEffectiveFractions: problems setting inflate");
-               }
-            }
-         }
-         return 1;
-      }
-
       // Set effective fractions
       fgGroupsMgr.ResetIter();
       eff.opt = 0;
@@ -6346,7 +6376,7 @@ int XrdProofdProtocol::SetInflateFactors()
    // Recalculate inflate factors taking into account all active users
    // and their priorities. Return 0 on success, -1 otherwise.
 
-   TRACE(INFLT,"---------------- SetInflateFactors ---------------------------");
+   TRACE(SCHED,"---------------- SetInflateFactors ---------------------------");
 
    if (fgGroupsMgr.Num() <= 1 || fgSchedOpt == kXPD_sched_off)
       // Nothing to do
@@ -6364,42 +6394,36 @@ int XrdProofdProtocol::SetInflateFactors()
       return 0;
    }
 
-   TRACE(INFLT,"enter: "<< fgGroupsMgr.Num()<<" groups, " <<
+   TRACE(SCHED,"enter: "<< fgGroupsMgr.Num()<<" groups, " <<
                            nact<<" active sessions");
 
-   XrdOucMutexHelper mtxh(&fgXPDMutex);
+   XrdSysMutexHelper mtxh(&fgXPDMutex);
 
    // Determine which groups are active and their effective fractions
    int rc = 0;
    if ((rc = SetGroupEffectiveFractions()) != 0) {
-      if (rc == 1) {
-         // If everybody has the same priority and no overall factor is applied
-         // leave the job to the system scheduler
-         TRACE(INFLT,"SetInflateFactors: every session has the same priority: no action ");
-         return 0;
-      } else {
-         // Failure
-         TRACE(XERR,"SetInflateFactors: failure from SetGroupEffectiveFractions");
-         return -1;
-      }
+      // Failure
+      TRACE(XERR,"SetInflateFactors: failure from SetGroupEffectiveFractions");
+      return -1;
    }
 
    // Now create a list of active sessions sorted by decreasing effective fraction
-   TRACE(INFLT,"--> creating a list of active sessions sorted by decreasing effective fraction ");
+   TRACE(SCHED,"--> creating a list of active sessions sorted by decreasing effective fraction ");
    float tf = 0.;
    std::list<XrdProofServProxy *>::iterator asvi, ssvi;
    std::list<XrdProofServProxy *> sorted;
-   XrdOucMutexHelper mhp(fgMgr.Mutex());
+   XrdSysMutexHelper mhp(fgMgr.Mutex());
    for (asvi = fgMgr.GetActiveSessions()->begin();
         asvi != fgMgr.GetActiveSessions()->end(); asvi++) {
       if ((*asvi)->IsValid() && ((*asvi)->Status() == kXPD_running)) {
          XrdProofdClient *c = (*asvi)->Parent()->fP->fPClient;
          XrdProofGroup *g = c->Group();
-         TRACE(INFLT,"SetInflateFactors: group: "<<  g<<", client: "<<(*asvi)->Client());
+         TRACE(SCHED,"SetInflateFactors: group: "<<  g<<", client: "<<(*asvi)->Client());
          if (g && g->Active() > 0) {
-            TRACE(INFLT,"SetInflateFactors: FracEff: "<< g->FracEff()<<" Active: "<<g->Active());
             float ef = g->FracEff() / g->Active();
             int nsrv = c->WorkerProofServ() + c->MasterProofServ();
+            TRACE(SCHED,"SetInflateFactors: FracEff: "<< g->FracEff()<<", Active: "<<g->Active()<<
+                        ", nsrv: "<<nsrv);
             if (nsrv > 0) {
                ef /= nsrv;
                (*asvi)->SetFracEff(ef);
@@ -6436,7 +6460,7 @@ int XrdProofdProtocol::SetInflateFactors()
 
    // Notify
    int i = 0;
-   if (TRACING(INFLT) && TRACING(HDBG)) {
+   if (TRACING(SCHED) && TRACING(HDBG)) {
       for (ssvi = sorted.begin() ; ssvi != sorted.end(); ssvi++)
          XPDPRT("SetInflateFactors: "<< i++ <<" eff: "<< (*ssvi)->FracEff());
    }
@@ -6444,7 +6468,7 @@ int XrdProofdProtocol::SetInflateFactors()
    // Number of processors on this machine
    int ncpu = XrdProofdAux::GetNumCPUs();
 
-   TRACE(INFLT,"--> calculating alpha factors");
+   TRACE(SCHED,"--> calculating alpha factors (tf: "<<tf<<")");
    // Calculate alphas now
    float T = 0.;
    float *aa = new float[sorted.size()];
@@ -6455,12 +6479,12 @@ int XrdProofdProtocol::SetInflateFactors()
       --ssvi;
       // Normalized factor
       float f = (*ssvi)->FracEff() / tf;
-      TRACE(INFLT, "    --> entry: "<< i<<" norm frac:"<< f);
+      TRACE(SCHED, "    --> entry: "<< i<<" norm frac:"<< f);
       // The lowest priority gives the overall normalization
       if (i == nn) {
          aa[i] = (1. - f * (nn + 1)) / f ;
          T = (nn + 1 + aa[i]);
-         TRACE(INFLT, "    --> aa["<<i<<"]: "<<aa[i]<<", T: "<<T);
+         TRACE(SCHED, "    --> aa["<<i<<"]: "<<aa[i]<<", T: "<<T);
       } else {
          float fr = f * T - 1.;
          float ar = 0;
@@ -6469,7 +6493,7 @@ int XrdProofdProtocol::SetInflateFactors()
             ar += (aa[j+1] - aa[j]) / (j+1);
          }
          aa[i] = aa[i+1] - (i+1) * (fr - ar);
-         TRACE(INFLT, "    --> aa["<<i<<"]: "<<aa[i]<<", fr: "<<fr<<", ar: "<<ar);
+         TRACE(SCHED, "    --> aa["<<i<<"]: "<<aa[i]<<", fr: "<<fr<<", ar: "<<ar);
       }
 
       // Round Robin scheduling to have time control
@@ -6477,14 +6501,227 @@ int XrdProofdProtocol::SetInflateFactors()
 
       // Inflate factor (taking into account the number of CPU's)
       int infl = (int)((1. + aa[i] /ncpu) * 1000 * fgOverallInflate);
-      TRACE(INFLT, "    --> inflate factor for client "<<
+      TRACE(SCHED, "    --> inflate factor for client "<<
             (*ssvi)->Client()<<" is "<<infl<<"( aa["<<i<<"]: "<<aa[i]<<")");
       (*ssvi)->SetInflate(infl, 1);
       // Go to next
       i--;
    }
-   TRACE(INFLT,"------------ End of SetInflateFactors ------------------------");
+   TRACE(SCHED,"------------ End of SetInflateFactors ------------------------");
 
    // Done
    return 0;
 }
+
+//______________________________________________________________________________
+int XrdProofdProtocol::SetNiceValues(int opt)
+{
+   // Recalculate nice values taking into account all active users
+   // and their priorities.
+   // The type of sessions considered depend on 'opt':
+   //    0          all active sessions
+   //    1          master sessions
+   //    2          worker sessions
+   // Return 0 on success, -1 otherwise.
+
+   TRACE(SCHED,"---------------- SetNiceValues ("<<opt<<") ---------------------------");
+
+   if (fgGroupsMgr.Num() <= 1 || fgSchedOpt == kXPD_sched_off)
+      // Nothing to do
+      return 0;
+
+   // At least two active session
+   int nact = fgMgr.GetActiveSessions()->size();
+   TRACE(SCHED,"enter: "<< fgGroupsMgr.Num()<<" groups, " << nact<<" active sessions");
+   if (nact <= 1) {
+      // Restore default values
+      if (nact == 1) {
+         XrdProofServProxy *srv = fgMgr.GetActiveSessions()->front();
+         srv->SetProcessPriority();
+      }
+      // Nothing else to do
+      TRACE(SCHED,"------------ End of SetNiceValues ------------------------");
+      return 0;
+   }
+
+   XrdSysMutexHelper mtxh(&fgXPDMutex);
+
+   // Determine which groups are active and their effective fractions
+   int rc = 0;
+   if ((rc = SetGroupEffectiveFractions()) != 0) {
+      // Failure
+      TRACE(XERR,"SetNiceValues: failure from SetGroupEffectiveFractions");
+      TRACE(SCHED,"------------ End of SetNiceValues ------------------------");
+      return -1;
+   }
+
+   // Now create a list of active sessions sorted by decreasing effective fraction
+   TRACE(SCHED,"--> creating a list of active sessions sorted by decreasing effective fraction ");
+   float tf = 0.;
+   std::list<XrdProofServProxy *>::iterator asvi, ssvi;
+   std::list<XrdProofServProxy *> sorted;
+   XrdSysMutexHelper mhp(fgMgr.Mutex());
+   for (asvi = fgMgr.GetActiveSessions()->begin();
+        asvi != fgMgr.GetActiveSessions()->end(); asvi++) {
+      bool act = (opt == 0) || (opt == 1 && !((*asvi)->SrvType() == kXPD_WorkerServer))
+                            || (opt == 2 &&  ((*asvi)->SrvType() == kXPD_WorkerServer));
+            TRACE(SCHED,"UpdatePriorities: server type: "<<(*asvi)->SrvType()<<" act:"<<act);
+      if ((*asvi)->IsValid() && ((*asvi)->Status() == kXPD_running) && act) {
+         XrdProofdClient *c = (*asvi)->Parent()->fP->fPClient;
+         XrdProofGroup *g = c->Group();
+         TRACE(SCHED,"SetNiceValues: group: "<<  g<<", client: "<<(*asvi)->Client());
+         if (g && g->Active() > 0) {
+            float ef = g->FracEff() / g->Active();
+            int nsrv = c->WorkerProofServ() + c->MasterProofServ();
+            TRACE(SCHED,"SetNiceValues: FracEff: "<< g->FracEff()<<", Active: "<<g->Active()<<
+                        ", nsrv: "<<nsrv);
+            if (nsrv > 0) {
+               ef /= nsrv;
+               (*asvi)->SetFracEff(ef);
+               tf += ef;
+               bool pushed = 0;
+               for (ssvi = sorted.begin() ; ssvi != sorted.end(); ssvi++) {
+                   if (ef >= (*ssvi)->FracEff()) {
+                      sorted.insert(ssvi, (*asvi));
+                      pushed = 1;
+                      break;
+                   }
+               }
+               if (!pushed)
+                  sorted.push_back((*asvi));
+            } else {
+               TRACE(XERR,"SetNiceValues: "<<(*asvi)->Client()<<" ("<<c->ID()<<
+                          "): no srv sessions for active client !!!"
+                          " ===> Protocol error");
+            }
+         } else {
+            if (g) {
+               TRACE(XERR,"SetNiceValues: "<<(*asvi)->Client()<<
+                          ": inactive group for active session !!!"
+                          " ===> Protocol error");
+               g->Print();
+            } else {
+               TRACE(XERR,"SetNiceValues: "<<(*asvi)->Client()<<
+                          ": undefined group for active session !!!"
+                          " ===> Protocol error");
+            }
+         }
+      }
+   }
+
+   // Notify
+   int i = 0;
+   if (TRACING(SCHED) && TRACING(HDBG)) {
+      for (ssvi = sorted.begin() ; ssvi != sorted.end(); ssvi++)
+         XPDPRT("SetNiceValues: "<< i++ <<" eff: "<< (*ssvi)->FracEff());
+   }
+
+   TRACE(SCHED,"SetNiceValues: calculating nice values");
+
+   // The first has the max priority
+   ssvi = sorted.begin();
+   float xmax = (*ssvi)->FracEff();
+   if (xmax <= 0.) {
+      TRACE(XERR,"SetNiceValues: negative or null max effective fraction: "<<xmax);
+      return -1;
+   }
+   // This is for Unix
+   int nice = 20 - fgPriorityMax;
+   (*ssvi)->SetProcessPriority(nice);
+   // The others have priorities rescaled wrt their effective fractions
+   ssvi++;
+   while (ssvi != sorted.end()) {
+      if ((*ssvi)->IsValid() && ((*ssvi)->Status() == kXPD_running)) {
+         int xpri = (int) ((*ssvi)->FracEff() / xmax * (fgPriorityMax - fgPriorityMin))
+                                                     + fgPriorityMin;
+         nice = 20 - xpri;
+         TRACE(SCHED, "    --> nice value for client "<< (*ssvi)->Client()<<" is "<<nice);
+         (*ssvi)->SetProcessPriority(nice);
+      }
+      ssvi++;
+   }
+   TRACE(SCHED,"------------ End of SetNiceValues ------------------------");
+
+   // Done
+   return 0;
+}
+
+//______________________________________________________________________________
+int XrdProofdProtocol::UpdatePriorities(bool forceupdate)
+{
+   // Update the priorities of the active sessions.
+   // The priorities are taken from the priority file. The file is read only
+   // if it has changed since the last check.
+   // The action depends on the type of scheduling: in case of 'local' scheduling
+   // the priorities of all sessions are updated; in case of 'central' scheduling
+   // the master priority is updated and the values for the workers are broadcast.
+
+   TRACE(SCHED,"---------------- UpdatePriorities ---------------------------");
+
+   if (fgGroupsMgr.Num() <= 1 || fgSchedOpt == kXPD_sched_off)
+      // Nothing to do
+      return 0;
+
+   // At least two active session
+   int nact = fgMgr.GetActiveSessions()->size();
+
+   TRACE(SCHED, "UpdatePriorities: enter: "<< fgGroupsMgr.Num()<<
+                " groups, " << nact<<" active sessions");
+   if (nact <= 1) {
+      // Restore default values
+      if (nact == 1) {
+         XrdProofServProxy *srv = fgMgr.GetActiveSessions()->front();
+         srv->SetProcessPriority();
+      }
+      // Nothing else to do
+      TRACE(SCHED,"------------ End of UpdatePriorities ------------------------");
+      return 0;
+   }
+
+   XrdSysMutexHelper mtxh(&fgXPDMutex);
+
+   // Read priorities
+   if (fgGroupsMgr.ReadPriorities() != 0) {
+      TRACE(SCHED, "UpdatePriorities: no new priority information"
+                   " (or problems reading the file)")
+      if (!forceupdate)
+         return 0;
+   }
+
+   if (fgSchedOpt == kXPD_sched_central) {
+      // Communicate them to the sessions
+      std::list<XrdProofServProxy *>::iterator asvi, ssvi;
+      XrdSysMutexHelper mhp(fgMgr.Mutex());
+      for (asvi = fgMgr.GetActiveSessions()->begin();
+           asvi != fgMgr.GetActiveSessions()->end(); asvi++) {
+            TRACE(SCHED,"UpdatePriorities: server type: "<<(*asvi)->SrvType());
+         if ((*asvi)->IsValid() && ((*asvi)->Status() == kXPD_running) &&
+             !((*asvi)->SrvType() == kXPD_WorkerServer)) {
+            XrdProofdClient *c = (*asvi)->Parent()->fP->fPClient;
+            XrdProofGroup *g = c->Group();
+            TRACE(SCHED,"UpdatePriorities: group: "<<  g<<", client: "<<(*asvi)->Client());
+            if (g && g->Active() > 0) {
+               TRACE(SCHED,"UpdatePriorities: Priority: "<< g->Priority()<<" Active: "<<g->Active());
+               int prio = (int) (g->Priority() * 100);
+               (*asvi)->BroadcastPriority(prio);
+            }
+         }
+      }
+      // Reset the nice values of the master sessions
+      if (SetNiceValues() != 0) {
+         TRACE(XERR,"UpdatePriorities: problems setting the new nice values ");
+         return -1;
+      }
+   } else {
+      // Just set the new nice values to all sessions
+      if (SetNiceValues() != 0) {
+         TRACE(XERR,"UpdatePriorities: problems setting the new nice values ");
+         return -1;
+      }
+   }
+   TRACE(SCHED,"------------ End of BroadcastPriorities ------------------------");
+
+   // Done
+   return 0;
+}
+
