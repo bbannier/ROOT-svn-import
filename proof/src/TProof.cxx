@@ -911,9 +911,10 @@ Bool_t TProof::StartSlaves(Bool_t parallel, Bool_t attach)
                // Set interrupt PROOF handler from now on
                fIntHandler = new TProofInterruptHandler(this);
 
-               Collect(slave);
+               // Give-up after 5 minutes
+               Int_t rc = Collect(slave, 300);
                Int_t slStatus = slave->GetStatus();
-               if (slStatus == -99 || slStatus == -98) {
+               if (slStatus == -99 || slStatus == -98 || rc == 0) {
                   fSlaves->Remove(slave);
                   fAllMonitor->Remove(slave->GetSocket());
                   if (slStatus == -99)

@@ -1226,3 +1226,15 @@ void XrdProofConn::SetInterrupt()
    if (fPhyConn)
       fPhyConn->SetInterrupt();
 }
+
+//_____________________________________________________________________________
+bool XrdProofConn::IsValid() const
+{
+   // Test validity of this connection
+
+   if (fConnected)
+      if (fPhyConn && fPhyConn->IsValid())
+         return 1;
+   // Invalid
+   return 0;
+}

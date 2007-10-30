@@ -300,12 +300,6 @@ int XrdProofdManager::Broadcast(int type, const char *msg, XrdProofdResponse *r)
 
    TRACE(ACT, "Broadcast: enter: type: "<<type);
 
-   // We try only once
-   int maxtry_save = -1;
-   int timewait_save = -1;
-   XrdProofConn::GetRetryParam(maxtry_save, timewait_save);
-   XrdProofConn::SetRetryParam(1, 1);
-
    // Loop over worker nodes
    std::list<XrdProofWorker *>::iterator iw = fWorkers.begin();
    XrdProofWorker *w = 0;
@@ -341,11 +335,46 @@ int XrdProofdManager::Broadcast(int type, const char *msg, XrdProofdResponse *r)
       iw++;
    }
 
+   // Done
+   return rc;
+}
+
+//__________________________________________________________________________
+XrdProofConn *XrdProofdManager::GetProofConn(const char *url)
+{
+   // Get a XrdProofConn for url; create a new one if not available
+
+   XrdProofConn *p = 0;
+   if (fProofConnHash.Num() > 0) {
+      if ((p = fProofConnHash.Find(url)) && !(p->IsValid())) {
+         // We found an invalid connection: do not use it
+         delete p;
+         fProofConnHash.Del(url);
+         p = 0;
+      }
+   }
+
+   // If not found create a new one
+   XrdOucString buf = " Manager connection from ";
+   buf += fHost;
+   buf += "|ord:000";
+   char m = 'A'; // log as admin
+
+   // We try only once
+   int maxtry_save = -1;
+   int timewait_save = -1;
+   XrdProofConn::GetRetryParam(maxtry_save, timewait_save);
+   XrdProofConn::SetRetryParam(1, 1);
+
+   if ((p = new XrdProofConn(url, m, -1, -1, 0, buf.c_str()))) 
+      // Cache it
+      fProofConnHash.Rep(url, p, 0, Hash_keepdata);
+
    // Restore original retry parameters
    XrdProofConn::SetRetryParam(maxtry_save, timewait_save);
 
    // Done
-   return rc;
+   return p;
 }
 
 //__________________________________________________________________________
@@ -362,21 +391,8 @@ XrdClientMessage *XrdProofdManager::Send(const char *url, int type,
    if (!url || strlen(url) <= 0)
       return xrsp;
 
-   // Open the connection
-   XrdOucString buf = fHost;
-   switch (type) {
-      case kROOTVersion:
-         buf += "|ROOTVersion";
-         break;
-      case kCleanupSessions:
-         buf += "|CleanupSessions";
-         break;
-      default:
-         break;
-   }
-   buf += "|ord:000";
-   char m = 'A'; // log as admin
-   XrdProofConn *conn = new XrdProofConn(url, m, -1, -1, 0, buf.c_str());
+   // Get a connection to the server
+   XrdProofConn *conn = GetProofConn(url);
 
    bool ok = 1;
    if (conn && conn->IsValid()) {
@@ -416,9 +432,6 @@ XrdClientMessage *XrdProofdManager::Send(const char *url, int type,
          cmsg += conn->GetLastErr();
          r->Send(kXR_attn, kXPD_srvmsg, (char *) cmsg.c_str(), cmsg.length());
       }
-
-      // Delete it
-      SafeDelete(conn);
 
    } else {
       TRACE(XERR,"Send: could not open connection to "<<url);
