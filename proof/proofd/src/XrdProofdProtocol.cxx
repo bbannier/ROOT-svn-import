@@ -1108,7 +1108,7 @@ int XrdProofdProtocol::Config(const char *cfn)
    XrdOucStream Config(&fgEDest, getenv("XRDINSTANCE"));
    char *var;
    int cfgFD, NoGo = 0;
-   int nmTmp = -1, nmInternalWait = -1, nmMaxOldLogs = -1,
+   int nmTmp = -1, nmInternalWait = -1, nmMaxOldLogs = -1, nmMastersAllowed = -1,
        nmPoolUrl = -1, nmNamespace = -1, nmSuperUsers = -1, nmSchedOpt = -1;
 
    // Open and attach the config file
@@ -1268,6 +1268,11 @@ int XrdProofdProtocol::Config(const char *cfn)
                   int maxoldlogs = XPC_DEFMAXOLDLOGS;
                   XPDSETINT(nm, nmMaxOldLogs, maxoldlogs, tval);
                   XrdProofdClient::SetMaxOldLogs(maxoldlogs);
+               } else if (!strcmp("allow",var)) {
+                  // Masters allowed to connect
+                  if (XPDCOND(nm,nmMastersAllowed)) {
+                     fgMastersAllowed.push_back(new XrdOucString(tval));
+                  }
                } else if (!strcmp("poolurl",var)) {
                   // Local pool entry point
                   XPDSETSTRING(nm, nmPoolUrl, fgPoolURL, tval);
@@ -1384,7 +1389,7 @@ int XrdProofdProtocol::Reconfig()
    XrdOucStream Config(&fgEDest, getenv("XRDINSTANCE"));
    char *var;
    int cfgFD;
-   int nmTmp = -1, nmInternalWait = -1, nmMaxOldLogs = -1,
+   int nmTmp = -1, nmInternalWait = -1, nmMaxOldLogs = -1, nmMastersAllowed = -1,
        nmPoolUrl = -1, nmNamespace = -1, nmSuperUsers = -1;
 
    // Open and attach the config file
@@ -1568,8 +1573,9 @@ int XrdProofdProtocol::Reconfig()
                   XrdProofdClient::SetMaxOldLogs(maxoldlogs);
                } else if (!strcmp("allow",var)) {
                   // Masters allowed to connect
-                  if (nm == -1 || nm > 0)
+                  if (XPDCOND(nm,nmMastersAllowed)) {
                      fgMastersAllowed.push_back(new XrdOucString(tval));
+                  }
                } else if (!strcmp("poolurl",var)) {
                   // Local pool entry point
                   XPDADOPTSTRING(nm, nmPoolUrl, fgPoolURL, tval);
@@ -1942,7 +1948,7 @@ void XrdProofdProtocol::Recycle(XrdLink *, int, const char *)
                      XrdSysMutexHelper xpmh(psrv->Mutex());
 
                      // Send a terminate signal to the proofserv
-                     if (LogTerminatedProc(psrv->TerminateProofServ()) != 0)
+                     if (LogTerminatedProc(psrv->TerminateProofServ()) < 0)
                         // Try hard kill
                         LogTerminatedProc(KillProofServ(psrv->SrvID(), 1));
 
@@ -3110,7 +3116,7 @@ int XrdProofdProtocol::Destroy()
             }
 
             // Send a terminate signal to the proofserv
-            if (LogTerminatedProc(xps->TerminateProofServ()) != 0)
+            if (LogTerminatedProc(xps->TerminateProofServ()) < 0)
                LogTerminatedProc(KillProofServ(xps->SrvID(), 1));
 
             // Reset instance
@@ -4793,22 +4799,47 @@ int XrdProofdProtocol::Admin()
       int ridx = ntohl(fRequest.proof.int2);
 
       // Find out for which session is this request
-      XrdOucString stag, master;
+      XrdOucString stag, master, user, buf;
       int len = fRequest.header.dlen;
       if (len > 0) {
-         stag.assign(fArgp->buff,0,len-1);
-         int im = stag.find("|master:");
+         buf.assign(fArgp->buff,0,len-1);
+         int im = buf.find("|master:");
+         int iu = buf.find("|user:");
+         stag = buf;
+         stag.erase(stag.find("|"));
          if (im != STR_NPOS) {
-            master.assign(stag, im+strlen("|master:"));
+            master.assign(buf, im + strlen("|master:"));
+            master.erase(master.find("|"));
             TRACEP(DBG,"Admin: master: "<<master);
-            stag.erase(im);
+         }
+         if (iu != STR_NPOS) {
+            user.assign(buf, iu + strlen("|user:"));
+            user.erase(user.find("|"));
+            TRACEP(DBG,"Admin: user: "<<user);
          }
          if (stag.beginswith('*'))
             stag = "";
       }
 
+      XrdProofdClient *client = (user.length() > 0) ? 0 : fPClient;
+      if (!client) {
+         // Find the client instance
+         std::list<XrdProofdClient *>::iterator i;
+         for (i = fgProofdClients.begin(); i != fgProofdClients.end(); ++i) {
+            if ((client = *i) && client->Match(user.c_str(),0)) {
+               break;
+            }
+            client = 0;
+         }
+      }
+      if (!client) {
+         TRACEP(XERR, "Admin: query sess logs: client for '"<<user<<"' not found");
+         fResponse.Send(kXR_InvalidRequest,"Admin: query log: client not found");
+         return rc;
+      }
+
       XrdOucString tag = (stag == "" && ridx >= 0) ? "last" : stag;
-      if (stag == "" && fPClient->GuessTag(tag, ridx) != 0) {
+      if (stag == "" && client->GuessTag(tag, ridx) != 0) {
          TRACEP(XERR, "Admin: query sess logs: session tag not found");
          fResponse.Send(kXR_InvalidRequest,"Admin: query log: session tag not found");
          return rc;
@@ -4825,7 +4856,7 @@ int XrdProofdProtocol::Admin()
       }
 
       // Locate the local log file
-      XrdOucString sdir(fPClient->Workdir());
+      XrdOucString sdir(client->Workdir());
       sdir += "/session-";
       sdir += tag;
 
@@ -4894,6 +4925,8 @@ int XrdProofdProtocol::Admin()
                         XrdOucString msg(stag);
                         msg += "|master:";
                         msg += ln;
+                        msg += "|user:";
+                        msg += XrdClientUrlInfo(ln).User;
                         char *bmst = ReadLogPaths((const char *)&ln[0], msg.c_str(), ridx);
                         if (bmst) {
                            rmsg += bmst;
@@ -5027,7 +5060,7 @@ int XrdProofdProtocol::Admin()
                      int *pid = new int;
                      *pid = s->SrvID();
                      TRACEI(HDBG, "Admin: CleanupSessions: terminating " << *pid);
-                     if (s->TerminateProofServ() != 0) {
+                     if (s->TerminateProofServ() < 0) {
                         if (KillProofServ(*pid, 0) == 0)
                            signalledpid.push_back(pid);
                      } else
@@ -6251,9 +6284,9 @@ int XrdProofdProtocol::ReadBuffer()
 
    // Cleanup
    SafeFree(buf);
-   SafeFree(file);
+   SafeDelArray(file);
    SafeFree(filen);
-   SafeFree(pattern);
+   SafeDelArray(pattern);
 
    // Done
    return rc;
@@ -6479,17 +6512,11 @@ char *XrdProofdProtocol::ReadBufferRemote(const char *url, const char *file,
       url = file;
    }
 
-   // We try only once
-   int maxtry_save = -1;
-   int timewait_save = -1;
-   XrdProofConn::GetRetryParam(maxtry_save, timewait_save);
-   XrdProofConn::SetRetryParam(1, 1);
-
-   // Open the connection
-   XrdOucString msg = "readbuffer request from ";
-   msg += fgMgr.Host();
-   char m = 'A'; // log as admin
-   XrdProofConn *conn = new XrdProofConn(url, m, -1, -1, 0, msg.c_str());
+   // We log in as the effective user to minimize the number of connections to the
+   // other servers
+   XrdClientUrlInfo u(url);
+   u.User = fgMgr.EffectiveUser();
+   XrdProofConn *conn = fgMgr.GetProofConn(u.GetUrl().c_str());
 
    char *buf = 0;
    if (conn && conn->IsValid()) {
@@ -6517,26 +6544,20 @@ char *XrdProofdProtocol::ReadBufferRemote(const char *url, const char *file,
 
       // Clean the message
       SafeDelete(xrsp);
-
-      // Delete it
-      SafeDelete(conn);
    }
-
-   // Restore original retry parameters
-   XrdProofConn::SetRetryParam(maxtry_save, timewait_save);
 
    // Done
    return buf;
 }
 
 //______________________________________________________________________________
-char *XrdProofdProtocol::ReadLogPaths(const char *url, const char *stag, int isess)
+char *XrdProofdProtocol::ReadLogPaths(const char *url, const char *msg, int isess)
 {
    // Get log paths from next tier; used in multi-master setups
    // Returns 0 in case of error.
 
    TRACEI(ACT, "ReadLogPaths: url: "<<(url ? url : "undef")<<
-               ", stag: "<<(stag ? stag : "undef")<<", isess: "<<isess);
+               ", msg: "<<(msg ? msg : "undef")<<", isess: "<<isess);
 
    // Check input
    if (!url || strlen(url) <= 0) {
@@ -6544,17 +6565,11 @@ char *XrdProofdProtocol::ReadLogPaths(const char *url, const char *stag, int ise
       return (char *)0;
    }
 
-   // We try only once
-   int maxtry_save = -1;
-   int timewait_save = -1;
-   XrdProofConn::GetRetryParam(maxtry_save, timewait_save);
-   XrdProofConn::SetRetryParam(1, 1);
-
-   // Open the connection
-   XrdOucString msg = "read log paths request from ";
-   msg += fgMgr.Host();
-   char m = 'A'; // log as admin
-   XrdProofConn *conn = new XrdProofConn(url, m, -1, -1, 0, msg.c_str());
+   // We log in as the effective user to minimize the number of connections to the
+   // other servers
+   XrdClientUrlInfo u(url);
+   u.User = fgMgr.EffectiveUser();
+   XrdProofConn *conn = fgMgr.GetProofConn(u.GetUrl().c_str());
 
    char *buf = 0;
    if (conn && conn->IsValid()) {
@@ -6566,8 +6581,8 @@ char *XrdProofdProtocol::ReadLogPaths(const char *url, const char *stag, int ise
       reqhdr.proof.int1 = kQueryLogPaths;
       reqhdr.proof.int2 = isess;
       reqhdr.proof.sid = -1;
-      reqhdr.header.dlen = strlen(stag);
-      const void *btmp = (const void *) stag;
+      reqhdr.header.dlen = strlen(msg);
+      const void *btmp = (const void *) msg;
       void **vout = (void **)&buf;
       // Send over
       XrdClientMessage *xrsp =
@@ -6585,13 +6600,7 @@ char *XrdProofdProtocol::ReadLogPaths(const char *url, const char *stag, int ise
 
       // Clean the message
       SafeDelete(xrsp);
-
-      // Delete it
-      SafeDelete(conn);
    }
-
-   // Restore original retry parameters
-   XrdProofConn::SetRetryParam(maxtry_save, timewait_save);
 
    // Done
    return buf;

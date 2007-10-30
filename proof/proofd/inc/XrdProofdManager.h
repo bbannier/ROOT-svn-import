@@ -35,6 +35,8 @@
 #  include "XrdSys/XrdSysPthread.hh"
 #endif
 #include "XrdProofdAux.h"
+#include "XrdProofConn.h"
+#include "XrdOuc/XrdOucHash.hh"
 #include "XrdOuc/XrdOucString.hh"
 
 class XrdClientMessage;
@@ -65,6 +67,8 @@ class XrdProofdManager {
    XrdProofServProxy *GetActiveSession(int pid);
    void              RemoveActiveSession(XrdProofServProxy *p) { XrdSysMutexHelper mhp(&fMutex);
                                                                  fActiveSessions.remove(p); }
+   // Connections to other xrootd running XrdProofdProtocols
+   XrdProofConn     *GetProofConn(const char *url);
 
    // Node properties
    int               SrvType() const { return fSrvType; }
@@ -108,6 +112,8 @@ class XrdProofdManager {
    std::list<XrdProofServProxy *> fActiveSessions; // List of active sessions (non-idle)
 
    XrdSysError      *fEDest;        // Error message handler
+
+   XrdOucHash<XrdProofConn> fProofConnHash; // Available connections
 
    void              CreateDefaultPROOFcfg();
    int               ReadPROOFcfg();
