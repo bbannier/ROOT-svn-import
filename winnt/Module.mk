@@ -34,9 +34,9 @@ INCLUDEFILES += $(WINNTDEP)
 include/%.h:    $(WINNTDIRI)/%.h
 		cp $< $@
 
-$(WINNTDS):     $(WINNTH1) $(WINNTL) $(ROOTCINTTMPEXE)
+$(WINNTDS):     $(WINNTH1) $(WINNTL) $(WINNTO) $(ROOTCINTNEW)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -c $(WINNTH1) $(WINNTL)
+		$(ROOTCINTNEW) -f $@ -o "$(WINNTO)" -c $(WINNTH1) $(WINNTL)
 
 all-winnt:      $(WINNTO) $(WINNTDO)
 

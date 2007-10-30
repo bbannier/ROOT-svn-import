@@ -4409,6 +4409,14 @@ int main(int argc, char **argv)
    argvv[0] = argv[0];
    argcc = 1;
 
+   // LF 29-10-07
+   // We want to ignore the "--cxx"
+   // coming from the new, wrapper-less scheme... (this should be temporal, find a better way to do it)
+   if (!strcmp(argv[ic], "--cxx")) {
+      ++ic;
+      ++ic;
+   }
+
    // LF 26-10-07
    // We want to ignore the "-o" "--object-files" 
    // coming from the new, wrapper-less scheme

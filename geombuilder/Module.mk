@@ -28,24 +28,10 @@ GEOMBUILDERH     := $(patsubst %,$(MODDIRI)/%,$(GEOMBUILDERH))
 GEOMBUILDERS     := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
 GEOMBUILDERO     := $(GEOMBUILDERS:.cxx=.o)
 
-#LF
-GEOMBUILDERTMPDS    := $(MODDIRS)/G__GeomBuilderTmp.cxx
-GEOMBUILDERTMPDO    := $(GEOMBUILDERTMPDS:.cxx=.o)
-GEOMBUILDERTMPDH    := $(GEOMBUILDERTMPDS:.cxx=.h)
-GEOMBUILDERTMP2DS   := $(MODDIRS)/G__GeomBuilderTmp2.cxx
-GEOMBUILDERTMP2DO   := $(GEOMBUILDERTMP2DS:.cxx=.o)
-GEOMBUILDERTMP2DH   := $(GEOMBUILDERTMP2DS:.cxx=.h)
-
 GEOMBUILDERDEP   := $(GEOMBUILDERO:.o=.d) $(GEOMBUILDERDO:.o=.d)
-
-#LF
-GEOMBUILDERTMPDEP  := $(GEOMBUILDERTMPDO:.o=.d)
 
 GEOMBUILDERLIB   := $(LPATH)/libGeomBuilder.$(SOEXT)
 GEOMBUILDERMAP   := $(GEOMBUILDERLIB:.$(SOEXT)=.rootmap)
-
-#LF
-GEOMBUILDERNM       := $(GEOMBUILDERLIB:.$(SOEXT)=.nm)
 
 # used in the main Makefile
 ALLHDRS          += $(patsubst $(MODDIRI)/%.h,include/%.h,$(GEOMBUILDERH))
@@ -59,35 +45,16 @@ INCLUDEFILES     += $(GEOMBUILDERDEP)
 include/%.h:    $(GEOMBUILDERDIRI)/%.h
 		cp $< $@
 
-#LF
-$(GEOMBUILDERLIB):   $(GEOMBUILDERO) $(GEOMBUILDERTMPDO) $(GEOMBUILDERTMP2DO) $(GEOMBUILDERDO) \
-			$(ORDER_) $(MAINLIBS) $(GEOMBUILDERLIBDEP)
+$(GEOMBUILDERLIB): $(GEOMBUILDERO) $(GEOMBUILDERDO) $(ORDER_) $(MAINLIBS) \
+                   $(GEOMBUILDERLIBDEP)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
-		   "$(SOFLAGS)" libGeomBuilder.$(SOEXT) $@ "$(GEOMBUILDERO) \
-			$(GEOMBUILDERTMPDO) $(GEOMBUILDERTMP2DO) $(GEOMBUILDERDO)" \
+		   "$(SOFLAGS)" libGeomBuilder.$(SOEXT) $@ \
+		   "$(GEOMBUILDERO) $(GEOMBUILDERDO)" \
 		   "$(GEOMBUILDERLIBEXTRA)"
 
-#LF
-$(GEOMBUILDERTMPDS):   $(GEOMBUILDERH) $(GEOMBUILDERL) $(ROOTCINTTMPEXE)
-		@echo "Generating first dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -. 1 -c $(GEOMBUILDERH) $(GEOMBUILDERL)
-
-#LF
-$(GEOMBUILDERTMP2DS):  $(GEOMBUILDERH) $(GEOMBUILDERL) $(ROOTCINTTMPEXE)
-		@echo "Generating second dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -. 2 -c $(GEOMBUILDERH) $(GEOMBUILDERL)
-
-#LF
-$(GEOMBUILDERDS):    $(GEOMBUILDERH) $(GEOMBUILDERL) $(ROOTCINTTMPEXE) $(GEOMBUILDERNM)
-		@echo "Generating third dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -L $(ROOTSYS)/$(GEOMBUILDERNM) -. 3 -c $(GEOMBUILDERH) $(GEOMBUILDERL)
-
-#LF
-$(GEOMBUILDERNM):      $(GEOMBUILDERO) $(GEOMBUILDERTMPDO) $(GEOMBUILDERTMP2DO) 
-		@echo "Generating symbols file $@..."
-		nm -p --defined-only $(GEOMBUILDERTMPDO) | awk '{printf("%s\n", $$3)'} > $(GEOMBUILDERNM)
-		nm -p --defined-only $(GEOMBUILDERTMP2DO) | awk '{printf("%s\n", $$3)'} >> $(GEOMBUILDERNM)
-		nm -p --defined-only $(GEOMBUILDERO) | awk '{printf("%s\n", $$3)'} >> $(GEOMBUILDERNM)
+$(GEOMBUILDERDS): $(GEOMBUILDERH) $(GEOMBUILDERL) $(GEOMBUILDERO) $(ROOTCINTNEW)
+		@echo "Generating dictionary $@..."
+		$(ROOTCINTNEW) -f $@ -o "$(GEOMBUILDERO)" -c $(GEOMBUILDERH) $(GEOMBUILDERL)
 
 $(GEOMBUILDERMAP): $(RLIBMAP) $(MAKEFILEDEP) $(GEOMBUILDERL)
 		$(RLIBMAP) -o $(GEOMBUILDERMAP) -l $(GEOMBUILDERLIB) \
@@ -98,12 +65,7 @@ all-geombuilder: $(GEOMBUILDERLIB) $(GEOMBUILDERMAP)
 clean-geombuilder:
 		@rm -f $(GEOMBUILDERO) $(GEOMBUILDERDO)
 
-clean::         clean-geombuilder clean-pds-geombuilder
-
-#LF
-clean-pds-geombuilder:	
-		rm -f $(GEOMBUILDERTMPDS) $(GEOMBUILDERTMPDO) $(GEOMBUILDERTMPDH) \
-		$(GEOMBUILDERTMPDEP) $(GEOMBUILDERTMP2DS) $(GEOMBUILDERTMP2DO) $(GEOMBUILDERTMP2DH) $(GEOMBUILDERNM)
+clean::         clean-geombuilder
 
 distclean-geombuilder: clean-geombuilder
 		@rm -f $(GEOMBUILDERDEP) $(GEOMBUILDERDS) $(GEOMBUILDERDH) \

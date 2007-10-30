@@ -35,9 +35,9 @@ INCLUDEFILES += $(CLIBDEP)
 include/%.h:    $(CLIBDIRI)/%.h
 		cp $< $@
 
-$(CLIBDS):      $(CLIBDIRI)/Getline.h $(CLIBL) $(ROOTCINTTMPEXE)
+$(CLIBDS):      $(CLIBDIRI)/Getline.h $(CLIBL) $(CLIBO) $(ROOTCINTNEW)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -c $(CLIBDIRI)/Getline.h $(CLIBL)
+		$(ROOTCINTNEW) -f $@ -o "$(CLIBO)" -c $(CLIBDIRI)/Getline.h $(CLIBL)
 
 all-clib:       $(CLIBO) $(CLIBDO)
 
