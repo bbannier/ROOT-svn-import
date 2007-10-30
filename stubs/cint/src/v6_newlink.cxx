@@ -4944,6 +4944,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                  if(strcmp(ifunc->funcname[j],"operator=")==0
                     && 'u'==ifunc->param[j][0]->type
                     && i==ifunc->param[j][0]->p_tagtable
+                    && G__dicttype!=0
                     ){
                     G__cppif_gendefault(fp,hfp,i,j,ifunc,1,1,1,0,1);
                  }
