@@ -414,6 +414,15 @@ Int_t TXProofMgr::Reset(const char *usr)
 
    fSocket->SendCoordinator(TXSocket::kCleanupSessions, usr);
 
+   // The server may still be doing something: wait a bit before submitting
+   // anything else
+   Int_t n = 2;
+   while (n--) {
+      if (gDebug > 0)
+         Info("Reset","waiting %d sec ...", n+1);
+      gSystem->Sleep(1000);
+   }
+
    return 0;
 }
 
