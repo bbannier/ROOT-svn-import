@@ -77,9 +77,7 @@ ROOFITCOREH3   := RooRandomizeParamMCSModule.h RooRangeBinning.h RooRealAnalytic
                   RooTObjWrap.h RooTrace.h RooTreeData.h RooUniformBinning.h \
                   RooSimultaneous.h RooRealSumPdf.h RooResolutionModel.h \
                   RooProdPdf.h RooMCStudy.h RooSimPdfBuilder.h RooTruthModel.h RooMsgService.h \
-                  RooProjectedPdf.h RooWorkspace.h RooProfileLL.h RooAbsCachedPdf.h RooAbsSelfCachedPdf.h \
-                  RooHistPdf.h RooCachedPdf.h RooFFTConvPdf.h RooDataHistSliceIter.h RooCacheManager.h \
-                  RooAbsCache.h RooAbsCacheElement.h RooObjCacheManager.h
+                  RooProjectedPdf.h RooWorkspace.h RooProfileLL.h
 
 ROOFITCOREH1   := $(patsubst %,$(MODDIRI)/%,$(ROOFITCOREH1))
 ROOFITCOREH2   := $(patsubst %,$(MODDIRI)/%,$(ROOFITCOREH2))
@@ -110,17 +108,17 @@ $(ROOFITCORELIB): $(ROOFITCOREO) $(ROOFITCOREDO) $(ORDER_) $(MAINLIBS) $(ROOFITC
 		   "$(SOFLAGS)" libRooFitCore.$(SOEXT) $@ "$(ROOFITCOREO) $(ROOFITCOREDO)" \
 		   "$(ROOFITCORELIBEXTRA)"
 
-$(ROOFITCOREDS1): $(ROOFITCOREH1) $(ROOFITCOREL1) $(ROOTCINTTMPEXE)
+$(ROOFITCOREDS1): $(ROOFITCOREH1) $(ROOFITCOREL1) $(ROOFITCOREO) $(ROOTCINTNEW)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -c $(ROOFITCOREH1) $(ROOFITCOREL1)
+		$(ROOTCINTNEW) -f $@ -o "$(ROOFITCOREO)" -c $(ROOFITCOREH1) $(ROOFITCOREL1)
 
-$(ROOFITCOREDS2): $(ROOFITCOREH2) $(ROOFITCOREL2) $(ROOTCINTTMPEXE)
+$(ROOFITCOREDS2): $(ROOFITCOREH2) $(ROOFITCOREL2) $(ROOFITCOREO) $(ROOTCINTNEW)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -c $(ROOFITCOREH2) $(ROOFITCOREL2)
+		$(ROOTCINTNEW) -f $@ -o "$(ROOFITCOREO)" -c $(ROOFITCOREH2) $(ROOFITCOREL2)
 
-$(ROOFITCOREDS3): $(ROOFITCOREH3) $(ROOFITCOREL3) $(ROOTCINTTMPEXE)
+$(ROOFITCOREDS3): $(ROOFITCOREH3) $(ROOFITCOREL3) $(ROOFITCOREO) $(ROOTCINTNEW)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -c $(ROOFITCOREH3) $(ROOFITCOREL3)
+		$(ROOTCINTNEW) -f $@ -o "$(ROOFITCOREO)" -c $(ROOFITCOREH3) $(ROOFITCOREL3)
 
 $(ROOFITCOREMAP): $(RLIBMAP) $(MAKEFILEDEP) $(ROOFITCOREL)
 		$(RLIBMAP) -o $(ROOFITCOREMAP) -l $(ROOFITCORELIB) \

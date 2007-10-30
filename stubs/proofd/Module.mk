@@ -70,7 +70,7 @@ distclean-proofd: clean-proofd
 distclean::     distclean-proofd
 
 ##### extra rules ######
-$(XPCONNO): CXXFLAGS += $(XPDINCEXTRA) $(EXTRA_XRDFLAGS)
+$(XPCONNO): CXXFLAGS += $(XPDINCEXTRA)
 
 else
 
