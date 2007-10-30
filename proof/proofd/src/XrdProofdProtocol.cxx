@@ -2102,10 +2102,11 @@ int XrdProofdProtocol::GetWorkers(XrdOucString &lw, XrdProofServProxy *xps)
    std::list<XrdProofWorker *>::iterator iw;
    for (iw = wrks.begin(); iw != wrks.end() ; iw++) {
       XrdProofWorker *w = *iw;
+      // Add separator if not the first
+      if (lw.length() > 0)
+         lw += '&';
       // Add export version of the info
       lw += w->Export();
-      // Add separator
-      lw += '&';
       // Count
       xps->AddWorker(w);
       w->fProofServs.push_back(xps);
