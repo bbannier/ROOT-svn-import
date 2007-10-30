@@ -419,6 +419,21 @@ TPacketizerAdaptive::TPacketizerAdaptive(TDSet *dset, TList *slaves,
          fgMaxSlaveCnt =  si.fCpus;
    }
 
+   // if forceLocal parameter is set to 1 then eliminate the cross-worker
+   // processing;
+   // This minimizes the network usage on the PROOF cluser at the expense of
+   // longer jobs processing times.
+   // To process successfully the session must have workers with all the data!
+   fForceLocal = kFALSE;
+   Long_t forceLocal = 0;
+   if (TProof::GetParameter(input, "PROOF_ForceLocal", forceLocal) == 0) {
+      if (forceLocal == 1)
+         fForceLocal = kTRUE;
+      else
+         Info("Process",
+            "The only accepted value of PROOF_ForceLocal parameter is 1 !");
+   }
+
    // Below we provide a possibility to change the way packet size is
    // calculated or define the packet time directly.
    // fPacketAsAFraction can be interpreted as follows:
@@ -1198,8 +1213,12 @@ TDSetElement *TPacketizerAdaptive::GetNextPacket(TSlave *sl, TMessage *r)
          // local file node exists and has more events to process.
          fUnAllocated->Sort();
          TFileNode* firstNonLocalNode = (TFileNode*)fUnAllocated->First();
-         Bool_t nonLocalNodePossible =
-            firstNonLocalNode?(firstNonLocalNode->GetExtSlaveCnt() < fgMaxSlaveCnt):0;
+         Bool_t nonLocalNodePossible;
+         if (fForceLocal)
+            nonLocalNodePossible = 0;
+         else
+            nonLocalNodePossible = firstNonLocalNode?
+               (firstNonLocalNode->GetExtSlaveCnt() < fgMaxSlaveCnt):0;
          openLocal = !nonLocalNodePossible;
          Float_t slaveRate = slstat->GetAvgRate();
          if ( nonLocalNodePossible ) {
@@ -1246,12 +1265,12 @@ TDSetElement *TPacketizerAdaptive::GetNextPacket(TSlave *sl, TMessage *r)
       }
 
       // try to find an unused filenode first
-      if(file == 0) {
+      if(file == 0 && !fForceLocal) {
          file = GetNextUnAlloc();
       }
 
       // then look at the active filenodes
-      if(file == 0) {
+      if(file == 0 && !fForceLocal) {
          file = GetNextActive();
       }
 
