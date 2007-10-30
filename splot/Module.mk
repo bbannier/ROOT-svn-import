@@ -45,7 +45,7 @@ $(SPLOTLIB):    $(SPLOTO) $(SPLOTDO) $(ORDER_) $(MAINLIBS) $(SPLOTLIBDEP)
 
 $(SPLOTDS):     $(SPLOTH) $(SPLOTL) $(SPLOTO) $(ROOTCINTNEW)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTNEW) -o "$(SPLOTO)" -f $@ -c $(SPLOTH) $(SPLOTL)
+		$(ROOTCINTNEW) -f $@ -o "$(SPLOTO)" -c $(SPLOTH) $(SPLOTL)
 
 $(SPLOTMAP):    $(RLIBMAP) $(MAKEFILEDEP) $(SPLOTL)
 		$(RLIBMAP) -o $(SPLOTMAP) -l $(SPLOTLIB) \
