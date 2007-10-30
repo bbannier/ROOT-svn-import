@@ -753,32 +753,28 @@ TProofServ::EQueryAction TXProofServ::GetWorkers(TList *workers,
    // followed by the information about the workers; the tokens for each node
    // are separated by '&'
    if (os) {
-      TObjArray *oa = TString(os->GetName()).Tokenize(TString("&"));
-      if (oa) {
-         TIter nxos(oa);
-         // The master, first
-         TObjString *to = (TObjString *) nxos();
-         TProofNodeInfo *master = new TProofNodeInfo(to->GetName());
-         if (!master) {
-            Error("GetWorkers", "no appropriate master line got from coordinator");
-            SafeDelete(oa);
-            SafeDelete(os);
-            return kQueryStop;
-         } else {
-            // Set image if not yet done and available
-            if (fImage.IsNull() && strlen(master->GetImage()) > 0)
-               fImage = master->GetImage();
-            SafeDelete(master);
+      TString fl(os->GetName());
+      TString tok;
+      Ssiz_t from = 0;
+      if (fl.Tokenize(tok, from, "&")) {
+         if (!tok.IsNull()) {
+            TProofNodeInfo *master = new TProofNodeInfo(tok);
+            if (!master) {
+               Error("GetWorkers", "no appropriate master line got from coordinator");
+               return kQueryStop;
+            } else {
+               // Set image if not yet done and available
+               if (fImage.IsNull() && strlen(master->GetImage()) > 0)
+                  fImage = master->GetImage();
+               SafeDelete(master);
+            }
+            // Now the workers
+            while (fl.Tokenize(tok, from, "&")) {
+               if (!tok.IsNull())
+                  workers->Add(new TProofNodeInfo(tok));
+            }
          }
-         // Now the workers
-         while ((to = (TObjString *) nxos()))
-            workers->Add(new TProofNodeInfo(to->GetName()));
-
-         // Cleanup
-         SafeDelete(oa);
       }
-      // Cleanup
-      SafeDelete(os);
    }
 
    // We are done
