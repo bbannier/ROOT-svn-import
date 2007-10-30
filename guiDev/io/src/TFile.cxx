@@ -1567,7 +1567,12 @@ Int_t TFile::Recover()
    if (fWritable) {
       Long64_t max_file_size = Long64_t(kStartBigFile);
       if (max_file_size < fEND) max_file_size = fEND+1000000000;
-      new TFree(fFree,fEND,max_file_size);
+      TFree *last = (TFree*)fFree->Last();
+      if (last) {
+         last->AddFree(fFree,fEND,max_file_size);
+      } else {
+         new TFree(fFree,fEND,max_file_size);
+      }
       if (nrecov) Write();
    }
    return nrecov;
@@ -3053,9 +3058,12 @@ Bool_t TFileOpenHandle::Matches(const char *url)
 }
 
 //______________________________________________________________________________
-TFile::EFileType TFile::GetType(const char *name, Option_t *option)
+TFile::EFileType TFile::GetType(const char *name, Option_t *option, TString *prefix)
 {
    // Resolve the file type as a function of the protocol field in 'name'
+   // If defined, the string 'prefix' is added when testing the locality of
+   // a 'name' with network-like structure (i.e. root://host//path); if the file
+   // is local, on return 'prefix' will contain the actual local path of the file.
 
    EFileType type = kDefault;
 
@@ -3071,7 +3079,6 @@ TFile::EFileType TFile::GetType(const char *name, Option_t *option)
       //        readonly mode and the current user has read access;
       //    ii) the specified user is equal to the current user then open local
       //        TFile.
-      const char *lfname = 0;
       Bool_t localFile = kFALSE;
       TUrl url(name);
       //
@@ -3085,19 +3092,27 @@ TFile::EFileType TFile::GetType(const char *name, Option_t *option)
       if (!forceRemote) {
          TInetAddress a(gSystem->GetHostByName(url.GetHost()));
          TInetAddress b(gSystem->GetHostByName(gSystem->HostName()));
-         if (!strcmp(a.GetHostName(), b.GetHostName())) {
+         if (!strcmp(a.GetHostName(), b.GetHostName()) ||
+             !strcmp(a.GetHostAddress(), b.GetHostAddress())) {
             Bool_t read = kFALSE;
             TString opt = option;
             opt.ToUpper();
             if (opt == "" || opt == "READ") read = kTRUE;
-            const char *fname = url.GetFile();
-            if (fname[0] == '/' || fname[0] == '~' || fname[0] == '$')
+            const char *fname = url.GetFileAndOptions();
+            TString lfname;
+            if (fname[0] == '/') {
+               if (prefix)
+                  lfname = Form("%s%s", prefix->Data(), fname);
+               else
+                  lfname = fname;
+            } else if (fname[0] == '~' || fname[0] == '$') {
                lfname = fname;
-            else
+            } else {
                lfname = Form("%s/%s", gSystem->HomeDirectory(), fname);
+            }
             if (read) {
                char *fn;
-               if ((fn = gSystem->ExpandPathName(lfname))) {
+               if ((fn = gSystem->ExpandPathName(TUrl(lfname).GetFile()))) {
                   if (gSystem->AccessPathName(fn, kReadPermission))
                      read = kFALSE;
                   delete [] fn;
@@ -3110,6 +3125,8 @@ TFile::EFileType TFile::GetType(const char *name, Option_t *option)
             delete u;
             if (read || sameUser)
                localFile = kTRUE;
+            if (localFile && prefix)
+               *prefix = lfname;
          }
       }
       //
@@ -3362,4 +3379,27 @@ copyout:
    watch.Reset();
 
    return success;
+}
+
+//______________________________________________________________________________
+Bool_t TFile::ReadBufferAsync(Long64_t, Int_t)
+{
+   // Not supported for regular (local) files.
+   // See TFile specializations for real implementations.
+
+   return kTRUE;
+}
+
+//______________________________________________________________________________
+Int_t TFile::GetBytesToPrefetch() const
+{
+   // Max number of bytes to prefetch. By default this is 75% of the
+   // read cache size. But specific TFile implementations may need to change it
+
+   TFileCacheRead *cr = 0;
+   if ((cr = GetCacheRead())) {
+      Int_t bytes = cr->GetBufferSize() / 4 * 3;
+      return ((bytes < 0) ? 0 : bytes);
+   }
+   return 0;
 }

@@ -27,7 +27,7 @@
 //                                                                      //
 // TVirtualPacketizer includes common parts of PROOF packetizers.       //
 // Look in subclasses for details.                                      //
-// The default packetizer is TAdaptivePacketizer.                       //
+// The default packetizer is TPacketizerAdaptive.                       //
 // To use an alternative one, for instance - the TPacketizer, call:     //
 // proof->SetParameter("PROOF_Packetizer", "TPacketizer");              //
 //                                                                      //
@@ -49,7 +49,7 @@ class TNtupleD;
 class TVirtualPacketizer : public TObject {
 
 friend class TPacketizer;
-friend class TAdaptivePacketizer;
+friend class TPacketizerAdaptive;
 friend class TPacketizerProgressive;
 friend class TPacketizerUnit;
 
@@ -91,6 +91,7 @@ public:
    Bool_t                  IsValid() const { return fValid; }
    Long64_t                GetEntriesProcessed() const { return fProcessed; }
    virtual Long64_t        GetEntriesProcessed(TSlave *sl) const;
+   Long64_t                GetTotalEntries() const { return fTotalEntries; }
    virtual TDSetElement   *GetNextPacket(TSlave *sl, TMessage *r);
    virtual void            SetInitTime();
    virtual void            StopProcess(Bool_t abort);

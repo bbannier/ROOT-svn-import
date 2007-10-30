@@ -32,7 +32,7 @@ class TStreamerElement;
 class TStreamerBasicType;
 class TVirtualCollectionProxy;
 class TClassStreamer;
-class ROOT::TCollectionProxyInfo;
+namespace ROOT { class TCollectionProxyInfo; }
 
 class TVirtualStreamerInfo : public TNamed {
 
@@ -41,7 +41,7 @@ protected:
    static  Bool_t    fgOptimize;         //True if optimization on
    static  Bool_t    fgStreamMemberWise; //True if the collections are to be stream "member-wise" (when possible).
    static TVirtualStreamerInfo  *fgInfoFactory;
-   
+
    TVirtualStreamerInfo(const TVirtualStreamerInfo& info);
    TVirtualStreamerInfo& operator=(const TVirtualStreamerInfo&);
 
@@ -50,8 +50,8 @@ public:
    //status bits
    enum { kCannotOptimize        = BIT(12),
           kIgnoreTObjectStreamer = BIT(13),  // eventhough BIT(13) is taken up by TObject (to preserverse forward compatibility)
-          kRecovered             = BIT(14), 
-          kNeedCheck             = BIT(15) 
+          kRecovered             = BIT(14),
+          kNeedCheck             = BIT(15)
    };
 
    enum EReadWrite {
@@ -59,7 +59,7 @@ public:
       kChar     =  1,  kShort   =  2,  kInt     =  3,  kLong    =  4,  kFloat    = 5,
       kDouble   =  8,  kDouble32=  9,
       kUChar    = 11,  kUShort  = 12,  kUInt    = 13,  kULong   = 14,  kBits     = 15,
-      kLong64   = 16,  kULong64 = 17,  kBool    = 18,
+      kLong64   = 16,  kULong64 = 17,  kBool    = 18,  kFloat16 = 19,
       kObject   = 61,  kAny     = 62,  kObjectp = 63,  kObjectP = 64,  kTString  = 65,
       kTObject  = 66,  kTNamed  = 67,  kAnyp    = 68,  kAnyP    = 69,  kAnyPnoVT = 70,
       kSTLp     = 71,
@@ -129,7 +129,7 @@ public:
    static  Bool_t      SetStreamMemberWise(Bool_t enable = kTRUE);
    virtual void        TagFile(TFile *fFile) = 0;
    virtual void        Update(const TClass *oldClass, TClass *newClass) = 0;
-   
+
    static TStreamerBasicType *GetElementCounter(const char *countName, TClass *cl);
 
    static Bool_t       CanOptimize();
@@ -138,7 +138,7 @@ public:
    static Bool_t       CanDelete();
    static void         SetCanDelete(Bool_t opt=kTRUE);
    static void         SetFactory(TVirtualStreamerInfo *factory);
-   
+
    virtual TVirtualCollectionProxy *GenEmulatedProxy(const char* class_name) = 0;
    virtual TClassStreamer *GenEmulatedClassStreamer(const char* class_name) = 0;
    virtual TVirtualCollectionProxy *GenExplicitProxy( const ::ROOT::TCollectionProxyInfo &info, TClass *cl ) = 0;

@@ -22,9 +22,17 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#include "XrdOuc/XrdOucError.hh"
-#include "XrdOuc/XrdOucPthread.hh"
-#include "XrdOuc/XrdOucSemWait.hh"
+#ifdef OLDXRDOUC
+#  include "XrdSysToOuc.h"
+#  include "XrdOuc/XrdOucError.hh"
+#  include "XrdOuc/XrdOucPthread.hh"
+#  include "XrdOuc/XrdOucSemWait.hh"
+#else
+#  include "XrdSys/XrdSysError.hh"
+#  include "XrdSys/XrdSysPthread.hh"
+#  include "XrdSys/XrdSysSemWait.hh"
+#endif
+
 #include "XrdOuc/XrdOucStream.hh"
 #include "XrdOuc/XrdOucString.hh"
 #include "XrdSec/XrdSecInterface.hh"
@@ -57,7 +65,7 @@ class XrdROOT;
 class XrdBuffer;
 class XrdClientMessage;
 class XrdLink;
-class XrdOucError;
+class XrdSysError;
 class XrdOucTrace;
 class XrdProofdClient;
 class XrdProofdPInfo;
@@ -88,6 +96,7 @@ public:
    static int    Reconfig();
    static int    TraceConfig(const char *cfn);
    static int    TrimTerminatedProcesses();
+   static int    UpdatePriorities(bool forceupdate = 0);
 
  private:
 
@@ -153,20 +162,20 @@ public:
    //
    XPClientRequest               fRequest;  // handle client requests
    XrdProofdResponse             fResponse; // Response to incoming request
-   XrdOucRecMutex                fMutex;    // Local mutex
+   XrdSysRecMutex                fMutex;    // Local mutex
 
    //
    // Static area: general protocol managing section
    //
-   static XrdOucRecMutex         fgXPDMutex;  // Mutex for static area
+   static XrdSysRecMutex         fgXPDMutex;  // Mutex for static area
    static int                    fgCount;
    static XrdObjectQ<XrdProofdProtocol> fgProtStack;
    static XrdBuffManager        *fgBPool;     // Buffer manager
    static int                    fgMaxBuffsz;    // Maximum buffer size we can have
    static XrdSecService         *fgCIA;       // Authentication Server
    static XrdScheduler          *fgSched;     // System scheduler
-   static XrdOucError            fgEDest;     // Error message handler
-   static XrdOucLogger           fgMainLogger; // Error logger
+   static XrdSysError            fgEDest;     // Error message handler
+   static XrdSysLogger           fgMainLogger; // Error logger
 
    //
    // Static area: protocol configuration section
@@ -181,7 +190,7 @@ public:
    static char                  *fgPoolURL;    // Local pool URL
    static char                  *fgNamespace;  // Local pool namespace
    //
-   static XrdOucSemWait          fgForkSem;   // To serialize fork requests
+   static XrdSysSemWait          fgForkSem;   // To serialize fork requests
    //
    static std::list<XrdOucString *> fgMastersAllowed;  // list of master (domains) allowed
    static std::list<XrdProofdPriority *> fgPriorities;  // list of {users, priority change}
@@ -215,6 +224,8 @@ public:
    // Worker level scheduling control
    static float                  fgOverallInflate; // Overall inflate factor
    static int                    fgSchedOpt;  // Worker sched option
+   static int                    fgPriorityMax;  // Max session priority [1,40], [20]
+   static int                    fgPriorityMin;  // Min session priority [1,40], [1]
    //
    // Static area: client section
    //
@@ -224,17 +235,19 @@ public:
    //
    // Static area: methods
    //
+   static int    BroadcastPriorities();
    static bool   CheckMaster(const char *m);
    static int    CheckUser(const char *usr, XrdProofUI &ui, XrdOucString &e);
    static int    Config(const char *fn);
    static char  *FilterSecConfig(const char *cfn, int &nd);
    static int    GetWorkers(XrdOucString &workers, XrdProofServProxy *);
-   static XrdProofSched *LoadScheduler(const char *cfn, XrdOucError *edest);
+   static XrdProofSched *LoadScheduler(const char *cfn, XrdSysError *edest);
    static XrdSecService *LoadSecurity(const char *seclib, const char *cfn);
    static int    LogTerminatedProc(int pid);
    static int    ResolveKeywords(XrdOucString &s, XrdProofdClient *pcl);
    static int    SetGroupEffectiveFractions();
    static int    SetInflateFactors();
+   static int    SetNiceValues(int opt = 0);
    static int    SetProofServEnv(XrdROOT *r);
    static int    SaveAFSkey(XrdSecCredentials *c, const char *fn);
    static int    VerifyProcessByID(int pid, const char *pname = 0);

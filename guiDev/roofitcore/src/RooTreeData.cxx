@@ -798,6 +798,7 @@ RooAbsArg* RooTreeData::addColumn(RooAbsArg& newVar)
     return 0 ;
   }
   RooAbsArg* newVarClone = newVarCloneList->find(newVar.GetName()) ;
+
   newVarClone->recursiveRedirectServers(_vars,kFALSE) ;
 
   // Attach value place holder to this tree
@@ -1484,7 +1485,6 @@ Roo1DTable* RooTreeData::table(const RooAbsCategory& cat, const char* cuts, cons
   //
   // The option string is currently not used
 
-
   // First see if var is in data set 
   RooAbsCategory* tableVar = (RooAbsCategory*) _vars.find(cat.GetName()) ;
   RooArgSet *tableSet = 0;
@@ -1522,11 +1522,12 @@ Roo1DTable* RooTreeData::table(const RooAbsCategory& cat, const char* cuts, cons
   if (cuts && strlen(cuts)) {
     cutVar = new RooFormulaVar("cutVar",cuts,_vars) ;
   }
-  
+
   // Dump contents   
   Int_t nevent= (Int_t)_tree->GetEntries();
   for(Int_t i=0; i < nevent; ++i) {
     Int_t entryNumber=_tree->GetEntryNumber(i);
+
     if (entryNumber<0) break;
     get(entryNumber);
 
@@ -1863,6 +1864,53 @@ void RooTreeData::printToStream(ostream& os, PrintOption opt, TString indent) co
   }
 }
 
+
+void RooTreeData::optimizeReadingWithCaching(RooAbsArg& arg, const RooArgSet& cacheList)
+{
+  RooArgSet pruneSet ;
+
+  // Add unused observables in this dataset to pruneSet
+  pruneSet.add(*get()) ;
+  RooArgSet* usedObs = arg.getObservables(*this) ;
+  pruneSet.remove(*usedObs,kTRUE,kTRUE) ;
+  delete usedObs ;
+
+  // Add observables exclusively used to calculate cached observables to pruneSet
+  TIterator* vIter = get()->createIterator() ;
+  RooAbsArg *var ;
+  while ((var=(RooAbsArg*) vIter->Next())) {
+    if (allClientsCached(var,cacheList)) {
+      pruneSet.add(*var) ;
+    }
+  }
+  delete vIter ;
+
+  if (pruneSet.getSize()!=0) {
+    // Deactivate tree branches here
+    cxcoutI("Optimization") << "RooTreeData::optimizeReadingForTestStatistic(" << GetName() << "): Observables " << pruneSet
+			    << " in dataset are either not used at all, orserving exclusively p.d.f nodes that are now cached, disabling reading of these observables for TTree" << endl ;
+    setArgStatus(pruneSet,kFALSE) ;
+  }
+  
+}
+
+Bool_t RooTreeData::allClientsCached(RooAbsArg* var, const RooArgSet& cacheList)
+{
+  Bool_t ret(kTRUE), anyClient(kFALSE) ;
+
+  TIterator* cIter = var->valueClientIterator() ;    
+  RooAbsArg* client ;
+  while ((client=(RooAbsArg*) cIter->Next())) {
+    anyClient = kTRUE ;
+    if (!cacheList.find(client->GetName())) {
+      // If client is not cached recurse
+      ret &= allClientsCached(client,cacheList) ;
+    }
+  }
+  delete cIter ;
+
+  return anyClient?ret:kFALSE ;
+}
 
 
 

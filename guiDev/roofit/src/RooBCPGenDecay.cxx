@@ -131,7 +131,7 @@ Double_t RooBCPGenDecay::coefficient(Int_t basisIndex) const
 
 
 
-Int_t RooBCPGenDecay::getCoefAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVars, const char* rangeName) const 
+Int_t RooBCPGenDecay::getCoefAnalyticalIntegral(Int_t /*code*/, RooArgSet& allVars, RooArgSet& analVars, const char* rangeName) const 
 {
   if (rangeName) return 0 ;
   if (matchArgs(allVars,analVars,_tag)) return 1 ;

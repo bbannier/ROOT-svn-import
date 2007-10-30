@@ -384,7 +384,7 @@ void TKey::Browse(TBrowser *b)
          if (tobj->InheritsFrom(TCollection::Class()))
             tobj->Delete();   // delete also collection elements
          delete tobj;
-         tobj = 0;
+         obj = 0;
       }
    } 
 
@@ -427,7 +427,7 @@ void TKey::Create(Int_t nbytes, TFile* externFile)
    fDatime.Set();
    fSeekKey  = bestfree->GetFirst();
 //*-*----------------- Case Add at the end of the file
-   if (fSeekKey == f->GetEND()) {
+   if (fSeekKey >= f->GetEND()) {
       f->SetEND(fSeekKey+nsize);
       bestfree->SetFirst(fSeekKey+nsize);
       fLeft   = -1;
