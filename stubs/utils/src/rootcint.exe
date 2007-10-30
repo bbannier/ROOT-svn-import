@@ -41,7 +41,7 @@ while true ; do
                 -l) shift ;;
                 -f) FILENAME=$2; shift 2 ;;
                 -o|--object-files) OBJS=$2; ARGOBJS=$1; shift 2;;
-                -c) shift 2;;
+                -c) shift 1; break;;
                 -.) shift 2;;
                 -h) HELP=1; shift 1;;
                 -L) shift 2;;
@@ -55,7 +55,7 @@ done
 if [ $HELP ] ; then rootcint -h >&2 ; exit 1 ; fi
 
 # Removing old dictionaries if there is any
-if [ -e $FILENAME -o -e ${FILENAME%.*}.h -o ${FILENAME%.*}"Tmp"* ]; 
+if [ -e $FILENAME -o -e ${FILENAME%.*}.h -o -e ${FILENAME%.*}"Tmp1".cxx -o -e ${FILENAME%.*}"Tmp2".cxx  ]; 
 then 
     rm ${FILENAME%.*}*; 
 fi
@@ -85,8 +85,8 @@ utils/src/rootcint_tmp $MODE -cint ${FILENAME%.*}"Tmp1".cxx -. 1 $ROOTCINTARGS
 utils/src/rootcint_tmp $MODE -cint ${FILENAME%.*}"Tmp2".cxx -. 2 $ROOTCINTARGS
 
 # Temporary dictionaries compilation
-g++ $CXXFLAGS -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -o ${FILENAME%.*}"Tmp1".o -c ${FILENAME%.*}"Tmp1".cxx
-g++ $CXXFLAGS -Iinclude -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -o ${FILENAME%.*}"Tmp2".o -c ${FILENAME%.*}"Tmp2".cxx
+g++ $CXXFLAGS -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -I. -o ${FILENAME%.*}"Tmp1".o -c ${FILENAME%.*}"Tmp1".cxx
+g++ $CXXFLAGS -Iinclude -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -I. -o ${FILENAME%.*}"Tmp2".o -c ${FILENAME%.*}"Tmp2".cxx
 
 # Symbols extraction
 nm -g -p --defined-only ${FILENAME%.*}"Tmp1".o | awk '{printf("%s\n", $3)}' > ${FILENAME%.*}.nm
