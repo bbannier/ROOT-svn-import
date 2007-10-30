@@ -4946,6 +4946,8 @@ int XrdProofdProtocol::Admin()
 
    } else if (type == kCleanupSessions) {
 
+      XrdOucString cmsg;
+
       // Target client (default us)
       XrdProofdClient *tgtclnt = fPClient;
 
@@ -5010,10 +5012,12 @@ int XrdProofdProtocol::Admin()
          TRACEI(ADMIN, "Admin: client '"<<usr<<"' has no sessions - do nothing");
       }
 
+      // The clients to cleaned
+      std::list<XrdProofdClient *> *clnts;
+      std::list<XrdProofdClient *>::iterator i;
+      XrdProofdClient *c = 0;
       if (clntfound) {
 
-         // The clients to cleaned
-         std::list<XrdProofdClient *> *clnts;
          if (all) {
             // The full list
             clnts = &fgProofdClients;
@@ -5026,8 +5030,7 @@ int XrdProofdProtocol::Admin()
          std::list<int *> signalledpid;
 
          // Loop over them
-         XrdProofdClient *c = 0;
-         std::list<XrdProofdClient *>::iterator i;
+         c = 0;
          for (i = clnts->begin(); i != clnts->end(); ++i) {
             if ((c = *i)) {
 
@@ -5052,6 +5055,10 @@ int XrdProofdProtocol::Admin()
                   }
                }
 
+               // Asynchronous notification to requester
+               cmsg = "Reset: signalling active sessions for termination";
+               fResponse.Send(kXR_attn, kXPD_srvmsg, (char *) cmsg.c_str(), cmsg.length());
+
                // Loop over client sessions and terminated them
                int is = 0;
                XrdProofServProxy *s = 0;
@@ -5072,6 +5079,10 @@ int XrdProofdProtocol::Admin()
                }
             }
          }
+
+         // Asynchronous notification to requester
+         cmsg = "Reset: verifying termination status";
+         fResponse.Send(kXR_attn, kXPD_srvmsg, (char *) cmsg.c_str(), cmsg.length());
 
          // Now we give sometime to sessions to terminate (10 sec).
          // We check the status every second
@@ -5094,11 +5105,43 @@ int XrdProofdProtocol::Admin()
          }
       }
 
+      // Lock the interested client mutexes (no action is allowed while
+      // doing this
+      c = 0;
+      for (i = clnts->begin(); i != clnts->end(); ++i)
+          if ((c = *i))
+             c->Mutex()->Lock();
+
+      // Asynchronous notification to requester
+      cmsg = "Reset: terminating the remaining sessions";
+      fResponse.Send(kXR_attn, kXPD_srvmsg, (char *) cmsg.c_str(), cmsg.length());
+
       // Now we cleanup what left (any zombies or super resistent processes)
       CleanupProofServ(all, usr);
 
       // Cleanup all possible sessions around
-      fgMgr.Broadcast(type, usr, &fResponse);
+      // (forward down the tree only if not leaf)
+      if (fgMgr.SrvType() != kXPD_WorkerServer) {
+
+         // Asynchronous notification to requester
+         cmsg = "Reset: forwarding the reset request to next tier(s)";
+         fResponse.Send(kXR_attn, kXPD_srvmsg, (char *) cmsg.c_str(), cmsg.length());
+
+         fgMgr.Broadcast(type, usr, &fResponse);
+
+         // Asynchronous notification to requester
+         cmsg = "Reset: wait 1 second(s) for completion";
+         fResponse.Send(kXR_attn, kXPD_srvmsg, (char *) cmsg.c_str(), cmsg.length());
+
+         // At least 1 seconds to complete
+         sleep(1);
+      }
+
+      // Unlock the locked client mutexes
+      c = 0;
+      for (i = clnts->begin(); i != clnts->end(); ++i)
+          if ((c = *i))
+             c->Mutex()->UnLock();
 
       // Cleanup usr
       SafeDelArray(usr);
