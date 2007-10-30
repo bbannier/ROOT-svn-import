@@ -397,7 +397,17 @@ void TProofLogElem::Display(Int_t from, Int_t to)
 
    Int_t nls = (fMacro->GetListOfLines()) ?
                 fMacro->GetListOfLines()->GetSize() : 0;
-   const char *role = (strstr(GetTitle(), "worker-")) ? "worker" : "master";
+   const char *role = 0;
+   if (strstr(GetTitle(), "worker-")) {
+      role = "worker";
+   } else {
+      if (strchr(GetName(), '.')) {
+         role = "submaster";
+      } else {
+         role = "master";
+      }
+   }
+
    // Starting line
    Int_t i = 0;
    Int_t ie = (to > -1 && to < nls) ? to : nls;
@@ -413,7 +423,16 @@ void TProofLogElem::Display(Int_t from, Int_t to)
    // Write header
    Prt(Form("// --------- Start of element log -----------------\n"));
    Prt(Form("// Ordinal: %s (role: %s)\n", GetName(), role));
-   Prt(Form("// Path: %s \n", GetTitle()));
+   // Separate out the submaster path, if any
+   TString path(GetTitle());
+   Int_t ic = path.Index(",");
+   if (ic != kNPOS) {
+      TString subm(path);
+      path.Remove(0, ic+1);
+      subm.Remove(ic);
+      Prt(Form("// Submaster: %s \n", subm.Data()));
+   }
+   Prt(Form("// Path: %s \n", path.Data()));
    Prt(Form("// # of retrieved lines: %d ", nls));
    if (i > 0 || ie < nls)
       Prt(Form("(displaying lines: %d -> %d)\n", i+1, ie));
