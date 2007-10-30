@@ -19,7 +19,6 @@ ROOTCINTTMPO := $(ROOTCINTS:.cxx=_tmp.o)
 ROOTCINTDEP  := $(ROOTCINTO:.o=.d) $(ROOTCINTTMPO:.o=.d) 
 ROOTCINTTMPEXE:= $(MODDIRS)/rootcint_tmp$(EXEEXT)
 ROOTCINTEXE  := bin/rootcint$(EXEEXT)
-ROOTCINTNEW  := bin/rootcint.exe
 
 #DICTGENERATOR := utils/src/rootcint_tmp
 
