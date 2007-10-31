@@ -18,7 +18,7 @@
 // use PM 
 #include "Math/Minimizer.h"
 #include "TPluginManager.h"
-#include "TRoot.h"
+#include "TROOT.h"
 
 #else 
 // all the minimizer implementation classes 

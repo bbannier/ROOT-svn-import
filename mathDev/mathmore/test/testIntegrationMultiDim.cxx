@@ -23,12 +23,12 @@
 #include "TStopwatch.h"
 #endif
 #include <cmath>
+#include <iostream>
 
 #include "Math/Integrator.h"
 #include "Math/Functor.h"
 #include "Math/IFunction.h"
 #include "Math/WrappedParamFunction.h"
-#include <iostream>
 #include "Math/IntegratorMultiDim.h"
 #include "Math/IFunctionfwd.h"
 #include "Math/GSLMCIntegrator.h"
@@ -45,7 +45,7 @@
 //#include "TLegend.h"
 
 
-#define n 3 //default dimensionality
+const int n = 3; //default dimensionality
 
 Double_t Sum( const double* x, const double *p)
 {
