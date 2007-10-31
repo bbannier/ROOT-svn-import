@@ -218,8 +218,10 @@ Bool_t TVirtualPacketizer::HandleTimer(TTimer *)
       // Prepare progress info
       TTime tnow = gSystem->Now();
       Float_t now = (Float_t) (Long_t(tnow) - fStartTime) / (Double_t)1000.;
+      Long64_t estent = fProcessed;
+      Long64_t estmb = fBytesRead;
       Double_t evts = (Double_t) fProcessed;
-      Double_t mbs = (fBytesRead > 0) ? fBytesRead / TMath::Power(2.,20.) : 0.; //�--> MB
+      Double_t mbs = (fBytesRead > 0) ? fBytesRead / TMath::Power(2.,20.) : 0.; //--> MB
 
       // Times and counters
       Float_t evtrti = -1., mbrti = -1.;
@@ -237,6 +239,10 @@ Bool_t TVirtualPacketizer::HandleTimer(TTimer *)
          fTimeUpdt = now - fProcTime;
          // Update proc time
          fProcTime = now - fInitTime;
+         // Estimated number of processed events
+         GetEstEntriesProcessed(fProcTime, estent, estmb);
+         evts = (Double_t) estent;
+         mbs = (Double_t) estmb;
          // Good entry
          fCircProg->Fill((Double_t)fProcTime, evts, mbs);
          // Instantaneous rates (at least 5 reports)
@@ -254,7 +260,7 @@ Bool_t TVirtualPacketizer::HandleTimer(TTimer *)
       }
 
       // Fill the message now
-      m << fTotalEntries << fProcessed << fBytesRead << fInitTime << fProcTime
+      m << fTotalEntries << estent << estmb << fInitTime << fProcTime
         << evtrti << mbrti;
 
 
