@@ -1320,3 +1320,56 @@ TDSetElement *TPacketizerAdaptive::GetNextPacket(TSlave *sl, TMessage *r)
 
    return slstat->fCurElem;
 }
+
+//______________________________________________________________________________
+Int_t TPacketizerAdaptive::GetEstEntriesProcessed(Float_t t,
+                                                  Long64_t &ent, Long64_t &bytes)
+{
+   // Get estimation for the number of processed entries and bytes read at time t,
+   // based on the numbers already processed and the latests worker measured speeds.
+   // Only the estimation for the entries is currently implemented.
+   // This is needed to smooth the instantaneous rate plot.
+
+   // Default value
+   ent = fProcessed;
+   bytes = fBytesRead;
+
+   // Loop over the workers
+   if (fSlaveStats && fSlaveStats->GetSize() > 0) {
+      ent = 0;
+      TIter nxw(fSlaveStats);
+      TObject *key;
+      while ((key = nxw()) != 0) {
+         TSlaveStat *slstat = (TSlaveStat *) fSlaveStats->GetValue(key);
+         if (slstat) {
+            // Those surely processed
+            Long64_t e = slstat->fProcessed;
+            // Time elapsed since last update
+            Float_t dt = (t > slstat->fProcTime) ? t - slstat->fProcTime : 0;
+            // Add estimated entries processed since last update
+            Float_t rate = slstat->GetAvgRate();
+            // Add estimated entries processed since last update
+            e += (Long64_t) (dt * rate);
+            // Add to the total
+            ent += e;
+            // Notify
+            PDB(kPacketizer,3)
+               Info("GetEstEntriesProcessed","%s: e:%lld rate:%f dt:%f e:%lld ent:%lld",
+                                          slstat->fSlave->GetOrdinal(),
+                                          slstat->fProcessed, rate, dt, e);
+         }
+      }
+   }
+   // Notify
+   PDB(kPacketizer,2)
+      Info("GetEstEntriesProcessed",
+           "estimated entries: %lld, bytes read: %lld", ent, bytes);
+
+   // Check values
+   ent = (ent > 0) ? ent : fProcessed;
+   ent = (ent <= fTotalEntries) ? ent : fTotalEntries;
+   bytes = (bytes > 0) ? bytes : fBytesRead;
+
+   // Done
+   return 0;
+}
