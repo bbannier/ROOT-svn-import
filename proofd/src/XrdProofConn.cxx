@@ -158,6 +158,10 @@ bool XrdProofConn::Init(const char *url)
       }
    }
 
+   // Init mutex
+   if (!fMutex)
+      fMutex = new XrdSysRecMutex();
+
    // Parse Url
    fUrl.TakeUrl(XrdOucString(url));
    fUser = fUrl.User.c_str();
@@ -375,8 +379,6 @@ XrdClientMessage *XrdProofConn::SendRecv(XPClientRequest *req, const void *reqDa
    // the buffer is internally allocated and must be freed by the caller.
    // If (*answData != 0) the program assumes that the caller has allocated
    // enough bytes to contain the reply.
-   if (!fMutex)
-      fMutex = new XrdSysRecMutex();
    XrdSysMutexHelper l(*fMutex);
 
    XrdClientMessage *xmsg = 0;

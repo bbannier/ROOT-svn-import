@@ -5014,18 +5014,17 @@ int XrdProofdProtocol::Admin()
 
       // The clients to cleaned
       std::list<XrdProofdClient *> *clnts;
+      if (all) {
+         // The full list
+         clnts = &fgProofdClients;
+      } else {
+         clnts = new std::list<XrdProofdClient *>;
+         clnts->push_back(tgtclnt);
+      }
+
       std::list<XrdProofdClient *>::iterator i;
       XrdProofdClient *c = 0;
       if (clntfound) {
-
-         if (all) {
-            // The full list
-            clnts = &fgProofdClients;
-         } else {
-            clnts = new std::list<XrdProofdClient *>;
-            clnts->push_back(tgtclnt);
-         }
-
          // List of process IDs asked to terminate
          std::list<int *> signalledpid;
 
@@ -5107,10 +5106,11 @@ int XrdProofdProtocol::Admin()
 
       // Lock the interested client mutexes (no action is allowed while
       // doing this
-      c = 0;
-      for (i = clnts->begin(); i != clnts->end(); ++i)
-          if ((c = *i))
-             c->Mutex()->Lock();
+      if (clnts) {
+         for (i = clnts->begin(); i != clnts->end(); ++i)
+            if ((c = *i))
+               c->Mutex()->Lock();
+      }
 
       // Asynchronous notification to requester
       cmsg = "Reset: terminating the remaining sessions";
@@ -5138,10 +5138,11 @@ int XrdProofdProtocol::Admin()
       }
 
       // Unlock the locked client mutexes
-      c = 0;
-      for (i = clnts->begin(); i != clnts->end(); ++i)
-          if ((c = *i))
-             c->Mutex()->UnLock();
+      if (clnts) {
+         for (i = clnts->begin(); i != clnts->end(); ++i)
+            if ((c = *i))
+               c->Mutex()->UnLock();
+      }
 
       // Cleanup usr
       SafeDelArray(usr);
