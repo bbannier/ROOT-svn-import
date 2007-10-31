@@ -83,8 +83,6 @@ protected:
   RooRealVar* _convVar ;         //! Convolution variable
 
   RooArgSet* parseIntegrationRequest(const RooArgSet& intSet, Int_t& coefCode, RooArgSet* analVars=0) const ;
-  virtual Bool_t syncNormalizationPreHook(RooAbsReal* norm,const RooArgSet* nset) const ;
-  virtual void syncNormalizationPostHook(RooAbsReal* norm,const RooArgSet* nset) const ;
 
   const RooRealVar* convVar() const ;  //  Convolution variable 
 
