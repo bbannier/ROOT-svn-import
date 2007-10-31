@@ -56,8 +56,6 @@ protected:
   friend class RooAddModel ;
   RooRealProxy x ;                   // Dependent/convolution variable
 
-  virtual Bool_t syncNormalizationPreHook(RooAbsReal* norm,const RooArgSet* nset) const ;
-
   virtual Bool_t redirectServersHook(const RooAbsCollection& newServerList, Bool_t mustReplaceAll, Bool_t nameChange, Bool_t isRecursive) ;
   virtual void changeBasis(RooFormulaVar* basis) ;
   Bool_t traceEvalHook(Double_t value) const ;

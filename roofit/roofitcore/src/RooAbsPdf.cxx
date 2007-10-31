@@ -354,15 +354,6 @@ const RooAbsReal* RooAbsPdf::getNormObj(const RooArgSet* nset, const RooArgSet* 
 }
 
 
-Bool_t RooAbsPdf::syncNormalizationPreHook(RooAbsReal*,const RooArgSet*) const 
-{ 
-  return kFALSE ; 
-} 
-
-void RooAbsPdf::syncNormalizationPostHook(RooAbsReal*,const RooArgSet*) const 
-{
-} 
-
 
 Bool_t RooAbsPdf::syncNormalization(const RooArgSet* nset, Bool_t adjustProxies) const
 {
@@ -373,12 +364,9 @@ Bool_t RooAbsPdf::syncNormalization(const RooArgSet* nset, Bool_t adjustProxies)
   // and a new integral is constructed for use with 'nset'
   // Elements in 'nset' can be discrete and real, but must be lvalues
   //
-  // By default, only actual dependents of the PDF listed in 'nset'
-  // are integration. This behaviour can be modified in subclasses
-  // by overloading the syncNormalizationPreHook() function. 
-  // 
   // For functions that declare to be self-normalized by overloading the
   // selfNormalized() function, a unit normalization is always constructed
+
   
   _normSet = (RooArgSet*) nset ;
 
@@ -402,16 +390,7 @@ Bool_t RooAbsPdf::syncNormalization(const RooArgSet* nset, Bool_t adjustProxies)
     ((RooAbsPdf*) this)->setProxyNormSet(nset) ;
   }
   
-  // Allow optional post-processing
-  Bool_t fullNorm = syncNormalizationPreHook(_norm,nset) ;
-
-  RooArgSet* depList ;
-  if (fullNorm) {
-    depList = ((RooArgSet*)nset) ;
-  } else {
-    depList = getObservables(nset) ;
-  }
-
+  RooArgSet* depList = getObservables(nset) ;
 
   if (_verboseEval>0) {
     if (!selfNormalized()) {
@@ -438,10 +417,7 @@ Bool_t RooAbsPdf::syncNormalization(const RooArgSet* nset, Bool_t adjustProxies)
   cache = new CacheElem(*_norm) ;
   _normMgr.setObj(nset,cache) ;
 
-  // Allow optional post-processing
-  syncNormalizationPostHook(_norm,nset) ;
- 
-  if (!fullNorm) delete depList ;
+  delete depList ;
   return kTRUE ;
 }
 

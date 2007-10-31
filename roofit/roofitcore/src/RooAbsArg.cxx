@@ -1264,7 +1264,10 @@ void RooAbsArg::optimizeCacheMode(const RooArgSet& observables, RooArgSet& optim
       cxcoutW("Integration") << "RooAbsArg::optimizeCacheMode(" << GetName() << ") integral depends on value of one or more observables and will be evaluated for every event" << endl ;
     }
     optimizedNodes.add(*this) ;
-    setOperMode(ADirty) ;
+    if (operMode()==AClean) {
+    } else {
+      setOperMode(ADirty) ;
+    }
   }
   // Process any RooAbsArgs contained in any of the caches of this object
   for (Int_t i=0 ;i<numCaches() ; i++) {
@@ -1333,6 +1336,7 @@ Bool_t RooAbsArg::findConstantNodes(const RooArgSet& observables, RooArgSet& cac
 
       // Add to cache list
       cxcoutD("Optimization") << "RooAbsArg::findConstantNodes(" << GetName() << ") adding self to list of constant nodes" << endl ;
+
       cacheList.add(*this) ;
     } 
 

@@ -324,8 +324,3 @@ void RooResolutionModel::printToStream(ostream& os, PrintOption opt, TString ind
   }
 }
 
-
-Bool_t RooResolutionModel::syncNormalizationPreHook(RooAbsReal*,const RooArgSet*) const 
-{ 
-  return (_basisCode!=0) ; 
-} 
