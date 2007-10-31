@@ -1068,7 +1068,8 @@ fi
 #
 ### echo %%% Some clean up
 #
-trapcmd="rm -f Makefile.tmp RConfigure.tmp root-config.tmp rootrc.tmp \
+trapcmd="rm -f Makefile.tmp RConfigure.tmp RConfigure-out.tmp \
+         root-config.tmp rootrc.tmp \
          rootauthrc.tmp rootdaemonrc.tmp memprobe.tmp rootd.tmp \
          proofd.tmp rootd.xinetd.tmp proofd.xinetd.tmp conftest.mk \
          conftest.c conftest xrootd.tmp olbd.tmp"
@@ -1564,6 +1565,13 @@ if test ! "x$enable_opengl" = "xno" && test ! "$platform" = "win32" ; then
 	"$opengllibdir" $opengllibdirs
     opengllib=$found_lib
     opengllibdir=$found_dir
+
+    # Mac OS X 10.5.0 problem
+    if test "x$platform" = "xmacosx"; then
+       if [ `sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2` = 5 ]; then
+          opengllib="-dylib_file /usr/X11R6/lib/libGL.dylib:/usr/X11R6/lib/libGL.dylib"
+       fi
+    fi
 
     check_library "libGLU libMesaGLU" "$enable_shared" \
 	"$keep" $opengllibdirs
@@ -2635,46 +2643,32 @@ check_explicit "$enable_ldap" "$enable_ldap_explicit" \
 #
 if test ! "x$enable_python" = "xno" ; then
     # Check for Python include and library
-    pythonhdrdirs="\
-        $PYTHONDIR/include \
-        /Library/Frameworks/Python.framework/Versions/Current/include \
-        /System/Library/Frameworks/Python.framework/Versions/Current/include \
-        /usr/local/include /usr/include"
-    if test "x$platform" = xwin32 ; then
-	pythonhdrdirs="$pythonhdrdirs \
-        /cygdrive/c/Python25/include /cygdrive/c/Python24/include \
-        /cygdrive/c/Python23/include /cygdrive/c/Python22/include"
+    mypython=`$cwhich python 2> /dev/null`
+    if test ! "x$mypython" = "x" && test -x "$mypython" ; then
+       pythonvers=`python -c 'import sys; print sys.version[:3]'`
+       pythonsysincdir=`python -c 'import sys;print sys.prefix + "/include/python" + sys.version[:3]'`
+       pythonsyslibdir=`python -c 'import sys; print sys.prefix + "/lib/python" + sys.version[:3]'`
+       pythonsyslibdir2=
+       if test "x$platform" = "xmacosx"; then
+          pythonsyslibdir2=`python -c 'import sys; print sys.prefix'`
+       fi
     fi
-    check_header "python/Python.h python2.5/Python.h python2.4/Python.h \
-                  python2.3/Python.h python2.2/Python.h Python.h" \
-                  "$pythonincdir" $pythonhdrdirs
+    check_header "Python.h" "$pythonincdir" $PYTHONDIR $PYTHONDIR/include \
+       $PYTHONDIR/include/python $pythonsysincdir
     pythoninc=$found_hdr
-    if test ! "x$pythoninc" = "x"; then
-       pythonincdir=`dirname $found_dir/$found_hdr`
-    fi
+    pythonincdir=$found_dir
     if test "x$platform" = "xwin32"; then
+       pythonvers=`python -c 'import sys; print sys.version[:3].replace(".","")' | tr -d '\r'`
        if test ! "x$pythonincdir" = "x" ; then
           pythonincdir=`cygpath -m $pythonincdir`
        fi
     fi
 
-    pythonlibdirs="\
-        $PYTHONDIR/lib $PYTHONDIR/libs \
-        /Library/Frameworks/Python.framework/Versions/Current \
-        /System/Library/Frameworks/Python.framework/Versions/Current \
-        /usr/local/lib /usr/lib \
-        /usr/local/lib/python2.2/config /usr/lib/python2.2/config \
-        /usr/local/lib/python2.4/config /usr/lib/python2.4/config"
-
-    if test "x$platform" = xwin32 ; then
-	pythonlibdirs="$pythonlibdirs \
-        /cygdrive/c/Python25/libs /cygdrive/c/Python24/libs \
-        /cygdrive/c/Python23/libs /cygdrive/c/Python22/libs"
-    fi
-    check_library "libpython libpython2.5 libpython2.4 libpython2.3 libpython2.2 \
-                   python25 python24 python23 \
-                   Python" \
-        "$enable_shared" "$pythonlibdir" $pythonlibdirs
+    check_library "python${pythonvers} libpython${pythonvers} \
+                   libpython python Python" \
+        "$enable_shared" "$pythonlibdir" $PYTHONDIR/libs $PYTHONDIR/lib \
+        $PYTHONDIR $pythonsyslibdir $pythonsyslibdir/config \
+        $pythonsyslibdir2
     pythonlib=$found_lib
     pythonlibdir=$found_dir
 
@@ -2822,7 +2816,7 @@ xrdcomm=""
 
 # If we are required to use an external XROOTD distribution
 # we just define the pointers
-extraxrdflags="-DOLDXRDOUC"
+extraxrdflags=""
 if test ! "x$xrootddir" = "x"; then
 
    # We do not need to build, just the paths for includes and libs
@@ -3713,6 +3707,7 @@ if test ! "x$enable_mathmore" = "xno"; then
 	    gslinc=$found_hdr
 	    gslincdir=$found_dir
 	    gslflags=-I$gslincdir
+	    gslversion=$gsl_version
 	fi
     fi
 
@@ -3728,8 +3723,8 @@ if test ! "x$enable_mathmore" = "xno"; then
 	    gsllibdir=$found_dir
 	    # in case of shared libs (gsllibdir is not empty) need gslcblas
 	    # assume libgslcblas is in same dir as libgsl
-	    if test ! "x$gsllibdir" = "x"; then
-		check_library "libgslcblas gslcblas" "$enable_shared" "$gsllibdir0" \
+	    #if test ! "x$gsllibdir" = "x"; then
+		check_library "libgslcblas gslcblasML gslcblas cblas" "$enable_shared" "$gsllibdir0" \
 		    $GSL $GSL/lib $GSL/.libs /usr/local/lib /usr/lib /opt/gsl/lib \
 		    $finkdir/lib
 		if test ! "x$found_lib" = "x"; then
@@ -3739,7 +3734,7 @@ if test ! "x$enable_mathmore" = "xno"; then
 		    #cblas not found
 		    gsllibs=""
 		fi
-	    fi
+	    #fi
 	fi
     fi
     #
@@ -3781,6 +3776,7 @@ if test ! "x$enable_mathmore" = "xno"; then
 	        gslflags=`gsl-config --cflags`
 	        gsllibs=`gsl-config --libs`
 		gsllibdir=""
+                gslversion=$gsl_version
             fi
         else
 	    enable_mathmore="no"
@@ -4328,6 +4324,7 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@gslflags@|$gslflags|"                \
     -e "s|@gsllibdir@|$gsllibdir|"              \
     -e "s|@gsllibs@|$gsllibs|"                  \
+    -e "s|@gslversion@|$gslversion|"            \
     -e "s|@builtinzlib@|$enable_builtin_zlib|"  \
     -e "s|@zlibincdir@|$zlibincdir|"            \
     -e "s|@zliblib@|$zliblib|"                  \
@@ -4523,14 +4520,26 @@ sed \
     -e "s|@hasmathmore@|$hasmathmore|"     \
     -e "s|@haspthread@|$haspthread|"       \
     -e "s|@hasxft@|$hasxft|"               \
-    < RConfigure.tmp > $CONFIGUREOUT
+    < RConfigure.tmp > RConfigure-out.tmp
 rm -f RConfigure.tmp
 
 if test ! "x$enable_ruby" = "xno"; then
-   echo "" >> $CONFIGUREOUT
+   echo "" >> RConfigure-out.tmp
    ruby -rrbconfig -e 'puts Config::CONFIG["ruby_version"]' | \
    sed 's/^\([0-9]\)\.\([0-9]\)/#define R__RUBY_MAJOR \1@#define R__RUBY_MINOR \2/' | \
-   tr '@' '\n' >> $CONFIGUREOUT
+   tr '@' '\n' >> RConfigure-out.tmp
+fi
+
+# only update $CONFIGUREOUT when different
+if test -f $CONFIGUREOUT; then
+   diff RConfigure-out.tmp $CONFIGUREOUT > /dev/null; status=$?;
+   if [ "$status" -ne "0" ]; then
+      mv -f RConfigure-out.tmp $CONFIGUREOUT
+   else
+      rm -f RConfigure-out.tmp
+   fi
+else
+   mv -f RConfigure-out.tmp $CONFIGUREOUT
 fi
 
 result "done"
@@ -4572,6 +4581,7 @@ sed -e "s|@architecture@|$arch|"           \
     -e "s|@configargs@|$configargs|"       \
     -e "s|@dicttype@|$dicttype|"           \
     -e "s|@zliblib@|$zliblib|"             \
+    -e "s|@pythonvers@|$pythonvers|"       \
    < root-config.tmp > $RCONFOUT
 rm -f root-config.tmp
 chmod 755 $RCONFOUT

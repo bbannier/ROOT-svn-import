@@ -45,7 +45,7 @@ $(ORACLELIB):   $(ORACLEO) $(ORACLEDO) $(ORDER_) $(MAINLIBS) $(ORACLELIBDEP)
 
 $(ORACLEDS):    $(ORACLEH) $(ORACLEL) $(ORACLEO) $(ROOTCINTNEW)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTNEW) -f $@ -o "$(ORACLEO)" -c $(ORACLEH) $(ORACLEL)
+		$(ROOTCINTNEW) -f $@ --cxx "$(CXXFLAGS)" -o "$(ORACLEO)" -c $(ORACLEH) $(ORACLEL)
 
 $(ORACLEMAP):   $(RLIBMAP) $(MAKEFILEDEP) $(ORACLEL)
 		$(RLIBMAP) -o $(ORACLEMAP) -l $(ORACLELIB) \

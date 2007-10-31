@@ -39,7 +39,8 @@ class RooAbsPdf : public RooAbsReal {
 public:
 
   // Constructors, assignment etc
-  RooAbsPdf(const char *name=0, const char *title=0) ;
+  RooAbsPdf() ;
+  RooAbsPdf(const char *name, const char *title=0) ;
   RooAbsPdf(const char *name, const char *title, Double_t minVal, Double_t maxVal) ;
   // RooAbsPdf(const RooAbsPdf& other, const char* name=0);
   virtual ~RooAbsPdf();
@@ -224,11 +225,17 @@ protected:
   public:
     CacheElem(RooAbsReal& norm) : _norm(&norm) {} ;
     void operModeHook(RooAbsArg::OperMode) {} ;
-    virtual ~CacheElem() { delete _norm ; } ; 
+    virtual ~CacheElem() ; 
     virtual RooArgList containedArgs(Action) { return RooArgList(*_norm) ; }
     RooAbsReal* _norm ;
   } ;
-  mutable RooObjCacheManager _normMgr ; //! The cache manager
+  mutable RooObjCacheManager _normMgr ; // The cache manager
+  
+  virtual Bool_t redirectServersHook(const RooAbsCollection&, Bool_t, Bool_t, Bool_t) { 
+    _norm = 0 ;
+    return kFALSE ; 
+  } ;
+
   
   mutable Int_t _errorCount ;        // Number of errors remaining to print
   mutable Int_t _traceCount ;        // Number of traces remaining to print

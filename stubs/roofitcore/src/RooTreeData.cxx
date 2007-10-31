@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: RooFit                                                           *
  * Package: RooFitCore                                                       *
- * @(#)root/roofitcore:$Name:  $:$Id$
+ * @(#)root/roofitcore:$Id$
  * Authors:                                                                  *
  *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu       *
  *   DK, David Kirkby,    UC Irvine,         dkirkby@uci.edu                 *
@@ -798,6 +798,7 @@ RooAbsArg* RooTreeData::addColumn(RooAbsArg& newVar)
     return 0 ;
   }
   RooAbsArg* newVarClone = newVarCloneList->find(newVar.GetName()) ;
+
   newVarClone->recursiveRedirectServers(_vars,kFALSE) ;
 
   // Attach value place holder to this tree
@@ -1484,7 +1485,6 @@ Roo1DTable* RooTreeData::table(const RooAbsCategory& cat, const char* cuts, cons
   //
   // The option string is currently not used
 
-
   // First see if var is in data set 
   RooAbsCategory* tableVar = (RooAbsCategory*) _vars.find(cat.GetName()) ;
   RooArgSet *tableSet = 0;
@@ -1522,11 +1522,12 @@ Roo1DTable* RooTreeData::table(const RooAbsCategory& cat, const char* cuts, cons
   if (cuts && strlen(cuts)) {
     cutVar = new RooFormulaVar("cutVar",cuts,_vars) ;
   }
-  
+
   // Dump contents   
   Int_t nevent= (Int_t)_tree->GetEntries();
   for(Int_t i=0; i < nevent; ++i) {
     Int_t entryNumber=_tree->GetEntryNumber(i);
+
     if (entryNumber<0) break;
     get(entryNumber);
 

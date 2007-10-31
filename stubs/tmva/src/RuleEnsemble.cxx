@@ -846,6 +846,7 @@ void TMVA::RuleEnsemble::RuleStatistics()
 void TMVA::RuleEnsemble::PrintRuleGen() const
 {
    // print rule generation info
+   if (!DoRules()) return;
    fLogger << kINFO << "-------------------RULE ENSEMBLE SUMMARY------------------------"  << Endl;
    const MethodRuleFit *mrf = GetMethodRuleFit();
    if (mrf) fLogger << kINFO << "Tree training method               : " << (mrf->UseBoost() ? "AdaBoost":"Random") << Endl;
@@ -885,7 +886,7 @@ void TMVA::RuleEnsemble::Print() const
    if (isDebug) {
       fLogger << kDEBUG << "Variable importance:" << Endl;
       for (UInt_t iv = 0; iv<fVarImportance.size(); iv++) {
-         fLogger << kDEBUG << setw(maxL) << GetMethodBase()->GetInputExp(iv) //(*(fRuleFit->GetInputVars()))[iv]
+         fLogger << kDEBUG << setw(maxL) << GetMethodBase()->GetInputExp(iv) 
                  << resetiosflags(ios::right) 
                  << " : " << Form(" %3.3f",fVarImportance[iv]) << Endl;
       }

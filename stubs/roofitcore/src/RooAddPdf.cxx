@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: RooFit                                                           *
  * Package: RooFitCore                                                       *
- * @(#)root/roofitcore:$Name:  $:$Id$
+ * @(#)root/roofitcore:$Id$
  * Authors:                                                                  *
  *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu       *
  *   DK, David Kirkby,    UC Irvine,         dkirkby@uci.edu                 *
@@ -57,6 +57,20 @@
 ClassImp(RooAddPdf)
 ;
 
+RooAddPdf::RooAddPdf() :
+  _refCoefNorm("!refCoefNorm","Reference coefficient normalization set",this,kFALSE,kFALSE),
+  _refCoefRangeName(0),
+  _codeReg(10),
+  _snormList(0)
+{
+  _pdfIter   = _pdfList.createIterator() ;
+  _coefIter  = _coefList.createIterator() ;
+
+  _coefCache = new Double_t[10] ;
+  _coefErrCount = _errorCount ;
+}
+
+
 RooAddPdf::RooAddPdf(const char *name, const char *title) :
   RooAbsPdf(name,title), 
   _refCoefNorm("!refCoefNorm","Reference coefficient normalization set",this,kFALSE,kFALSE),
@@ -66,6 +80,7 @@ RooAddPdf::RooAddPdf(const char *name, const char *title) :
   _codeReg(10),
   _pdfList("pdfs","List of PDFs",this),
   _coefList("coefficients","List of coefficients",this),
+  _snormList(0),
   _haveLastCoef(kFALSE),
   _allExtendable(kFALSE)
 {
@@ -700,14 +715,12 @@ Int_t RooAddPdf::getAnalyticalIntegralWN(RooArgSet& allVars, RooArgSet& analVars
   delete[] subCode ;
   delete avIter ;
 
-  cout << "RooAddPDF::getAIWN code = " << masterCode << endl ;
   return masterCode ;
 }
 
 
 Double_t RooAddPdf::analyticalIntegralWN(Int_t code, const RooArgSet* normSet, const char* rangeName) const 
 {
-  cout << "RooAddPdf::analyticalIntegralWN code = " << code << endl ;
   // Return analytical integral defined by given scenario code
 
   // WVE needs adaptation to handle new rangeName feature
