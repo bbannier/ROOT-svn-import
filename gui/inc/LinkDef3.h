@@ -83,4 +83,17 @@
 #pragma link C++ class TBrowserPlugin;
 #pragma link C++ class TRootBrowser;
 
+#pragma link C++ class TGTableCell;
+#pragma link C++ class TGTableHeader;
+#pragma link C++ class TGTable;
+#pragma link C++ class TTableRange;
+#pragma link C++ class TGTableFrame;
+#pragma link C++ class TGSimpleTable;
+#pragma link C++ class TGTreeTable;
+#pragma link C++ class TGTableHeaderFrame;
+
+#pragma link C++ class TVirtualTableInterface;
+#pragma link C++ class TGSimpleTableInterface;
+#pragma link C++ class TTreeTableInterface;
+
 #endif
