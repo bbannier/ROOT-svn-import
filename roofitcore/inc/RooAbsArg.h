@@ -36,6 +36,7 @@ class RooAbsProxy ;
 class RooArgProxy ;
 class RooSetProxy ;
 class RooListProxy ;
+//class RooSimCloneTool ;
 
 class RooAbsArg : public TNamed, public RooPrintable {
 public:
@@ -182,6 +183,8 @@ public:
   // constant term optimization
   virtual void constOptimizeTestStatistic(ConstOpCode opcode) ;
 
+  void graphVizTree(const char* fileName) ;
+  void graphVizTree(ostream& os) ;
 
   void printCompactTree(const char* indent="",const char* fileName=0, const char* namePat=0, RooAbsArg* client=0) ;
   void printCompactTree(ostream& os, const char* indent="", const char* namePat=0, RooAbsArg* client=0) ;
@@ -212,12 +215,15 @@ public:
   inline OperMode operMode() const { return _operMode ; }
   void setOperMode(OperMode mode, Bool_t recurseADirty=kTRUE) ; 
 	
-protected:
+  protected:
+
+  void graphVizAddConnections(set<pair<RooAbsArg*,RooAbsArg*> >&) ;
 
   friend class RooExtendPdf ;
   friend class RooRealIntegral ;
   friend class RooAbsReal ;
   friend class RooProjectedPdf ;
+  //friend class RooSimCloneTool ;
 
   virtual void operModeHook() {} ;
 

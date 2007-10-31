@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: RooFit                                                           *
  * Package: RooFitCore                                                       *
- * @(#)root/roofitcore:$Name:  $:$Id$
+ * @(#)root/roofitcore:$Id$
  * Authors:                                                                  *
  *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu       *
  *   DK, David Kirkby,    UC Irvine,         dkirkby@uci.edu                 *
@@ -616,7 +616,11 @@ const char* RooCmdConfig::decodeStringOnTheFly(const char* callerID, const char*
   pc.process(arg7) ;  pc.process(arg8) ;  pc.process(arg9) ;
   const char* ret =  pc.getString("theString",0,kTRUE) ;
 
-  retBuf = ret ;
+  if (ret) {
+    retBuf = ret ;
+  } else {
+    retBuf.clear() ;
+  }
   return retBuf.c_str() ;
 }
 

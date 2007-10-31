@@ -6,7 +6,8 @@ echo ""
 echo "Generating README/ChangeLog from CVS logs..."
 echo ""
 
-$CVS2CL -f README/ChangeLog -W 10 -P -S --no-wrap
+# Generate ChangeLog from version v5-12-00 till now
+$SVN2CL -i -f README/ChangeLog -r HEAD:15807
 
 rm -f README/ChangeLog.bak
 

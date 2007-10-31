@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: RooFit                                                           *
  * Package: RooFitCore                                                       *
- * @(#)root/roofitcore:$Name:  $:$Id$
+ * @(#)root/roofitcore:$Id$
  * Authors:                                                                  *
  *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu       *
  *   DK, David Kirkby,    UC Irvine,         dkirkby@uci.edu                 *
@@ -29,6 +29,7 @@
 #include "RooFit.h"
 #include <vector>
 #include "RooObjCacheManager.h"
+#include "RooMsgService.h"
 
 ClassImp(RooObjCacheManager)
    ;
@@ -53,6 +54,7 @@ RooObjCacheManager::~RooObjCacheManager()
 {
   if (_optCacheObservables) {
     delete _optCacheObservables ;
+    _optCacheObservables=0 ;
   }
 }
 
@@ -91,11 +93,19 @@ void RooObjCacheManager::operModeHook()
 
 void RooObjCacheManager::optimizeCacheMode(const RooArgSet& obs, RooArgSet& optNodes, RooLinkedList& processedNodes) 
 {
+  oocxcoutD(_owner,"Caching") << "RooObjCacheManager::optimizeCacheMode(owner=" << _owner->GetName() << ") obs = " << obs << endl ;
+
   _optCacheModeSeen = kTRUE ;
-  if (_optCacheObservables) {
-    delete _optCacheObservables ;
+  RooArgSet* oldObs = 0 ;
+  if (_optCacheObservables) {    
+    oldObs = _optCacheObservables ; 
   }
   _optCacheObservables = (RooArgSet*) obs.snapshot() ;
+  
+  if (oldObs) {
+    //cout << "deleting old _optCacheObservables" << endl ;
+    delete oldObs ;
+  }
 
   for (Int_t i=0 ; i<_size ; i++) {
     if (_object[i]) {
@@ -108,8 +118,11 @@ void RooObjCacheManager::optimizeCacheMode(const RooArgSet& obs, RooArgSet& optN
 
 void RooObjCacheManager::insertObjectHook(RooAbsCacheElement& obj) 
 {
+  //cout << "RooObjCacheManager::insertObjectHook(owner = " << _owner->GetName() << ")" << endl ;
+
   // If value caching mode optimization has happened, process it now on object being inserted
   if (_optCacheModeSeen) {
+    //cout << "performing posterior optimization with _optCacheObservables = " << *_optCacheObservables << endl ;
     RooLinkedList l ;
     RooArgSet s ;
     obj.optimizeCacheMode(*_optCacheObservables,s,l) ;

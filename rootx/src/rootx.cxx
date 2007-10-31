@@ -15,9 +15,7 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#ifdef R__HAVE_CONFIG
 #include "RConfigure.h"
-#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -331,6 +329,7 @@ int main(int argc, char **argv)
       }
       if (!strcmp(argv[i], "-b"))      batch   = true;
       if (!strcmp(argv[i], "-l"))      gNoLogo = true;
+      if (!strcmp(argv[i], "-ll"))     gNoLogo = true;
       if (!strcmp(argv[i], "-a"))      about   = true;
       if (!strcmp(argv[i], "-config")) gNoLogo = true;
    }
@@ -345,6 +344,8 @@ int main(int argc, char **argv)
       SetDisplay();
       if (!getenv("DISPLAY")) {
          fprintf(stderr, "%s: can't figure out DISPLAY, set it manually\n", argv[0]);
+         fprintf(stderr, "In case you run a remote ssh session, restart your ssh session with:\n");
+         fprintf(stderr, "=========>  ssh -Y\n");
          return 1;
       }
       if (about) {

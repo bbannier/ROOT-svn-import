@@ -59,17 +59,17 @@
 
 
 //______________________________________________________________________________
-//   The histogram painter class
-//   ===========================
-//
-//  Histograms are drawn via the THistPainter class. Each histogram has
-//  a pointer to its own painter (to be usable in a multithreaded program).
-//  When the canvas has to be redrawn, the Paint function of the objects
-//  in the pad is called. In case of histograms, TH1::Paint invokes directly
-//  THistPainter::Paint.
-//
-//    See THistPainter::Paint for the list of drawing options
-//    and examples.
+/* Begin_Html
+<center><h2>The histogram painter class</h2></center>
+
+Histograms are drawn via the THistPainter class. Each histogram has
+a pointer to its own painter (to be usable in a multithreaded program).
+When the canvas has to be redrawn, the Paint function of the objects
+in the pad is called. In case of histograms, TH1::Paint invokes directly
+THistPainter::Paint.
+<p>
+See THistPainter::Paint for the list of drawing options and examples.
+End_Html */
 
 TH1 *gCurrentHist = 0;
 
@@ -103,6 +103,7 @@ static TString gStringKurtosisY;
 static TString gStringKurtosisZ;
 
 ClassImp(THistPainter)
+
 
 //______________________________________________________________________________
 THistPainter::THistPainter()
@@ -145,6 +146,7 @@ THistPainter::THistPainter()
    gStringKurtosisY = gEnv->GetValue("Hist.Stats.KurtosisY", "Kurtosis y");
    gStringKurtosisZ = gEnv->GetValue("Hist.Stats.KurtosisZ", "Kurtosis z");
 }
+
 
 //______________________________________________________________________________
 THistPainter::~THistPainter()
@@ -318,6 +320,7 @@ FUNCTIONS:
    return curdist;
 }
 
+
 //______________________________________________________________________________
 void THistPainter::DrawPanel()
 {
@@ -334,6 +337,7 @@ void THistPainter::DrawPanel()
    editor->Show();
    gROOT->ProcessLine(Form("((TCanvas*)0x%x)->Selected((TVirtualPad*)0x%x,(TObject*)0x%x,1)",gPad->GetCanvas(),gPad,fH));
 }
+
 
 //______________________________________________________________________________
 void THistPainter::ExecuteEvent(Int_t event, Int_t px, Int_t py)
@@ -448,6 +452,7 @@ void THistPainter::ExecuteEvent(Int_t event, Int_t px, Int_t py)
    }
 }
 
+
 //______________________________________________________________________________
 void THistPainter::FitPanel()
 {
@@ -464,6 +469,7 @@ void THistPainter::FitPanel()
    if (!TClass::GetClass("TFitEditor")) gSystem->Load("libFitPanel");
    gROOT->ProcessLine(Form("TFitEditor::Open((TVirtualPad*)0x%x,(TObject*)0x%x)",gPad,fH));
 }
+
 
 //______________________________________________________________________________
 TList *THistPainter::GetContourList(Double_t contour) const
@@ -483,6 +489,7 @@ TList *THistPainter::GetContourList(Double_t contour) const
 
    return fGraphPainter->GetContourList(contour);
 }
+
 
 //______________________________________________________________________________
 char *THistPainter::GetObjectInfo(Int_t px, Int_t py) const
@@ -562,6 +569,7 @@ char *THistPainter::GetObjectInfo(Int_t px, Int_t py) const
    return info;
 }
 
+
 //______________________________________________________________________________
 Bool_t THistPainter::IsInside(Int_t ix, Int_t iy)
 {
@@ -579,6 +587,7 @@ Bool_t THistPainter::IsInside(Int_t ix, Int_t iy)
    return kTRUE;
 }
 
+
 //______________________________________________________________________________
 Bool_t THistPainter::IsInside(Double_t x, Double_t y)
 {
@@ -593,6 +602,7 @@ Bool_t THistPainter::IsInside(Double_t x, Double_t y)
    }
    return kTRUE;
 }
+
 
 //______________________________________________________________________________
 Int_t THistPainter::MakeChopt(Option_t *choptin)
@@ -828,7 +838,12 @@ Int_t THistPainter::MakeChopt(Option_t *choptin)
          if (strstr(chopt,"E2"))  Hoption.Error = 12;
          if (strstr(chopt,"E3"))  Hoption.Error = 13;
          if (strstr(chopt,"E4"))  Hoption.Error = 14;
-         if (strstr(chopt,"X0") && Hoption.Error == 1)  Hoption.Error += 20;
+         if (strstr(chopt,"E5"))  Hoption.Error = 15;
+         if (strstr(chopt,"E6"))  Hoption.Error = 16;
+         if (strstr(chopt,"X0")) {
+            if (Hoption.Error == 1)  Hoption.Error += 20;
+            Hoption.Error += 10;
+         }
       } else {
          if (Hoption.Error == 0) {
             Hoption.Error = 100;
@@ -839,7 +854,6 @@ Int_t THistPainter::MakeChopt(Option_t *choptin)
             Hoption.Error = 0;
          }
       }
-      if (strstr(chopt,"X0"))  Hoption.Error += 10;
    }
 
    if (strstr(chopt,"9"))  Hoption.HighRes = 1;
@@ -876,6 +890,7 @@ Int_t THistPainter::MakeChopt(Option_t *choptin)
    }
    return 1;
 }
+
 
 //______________________________________________________________________________
 Int_t THistPainter::MakeCuts(char *choptin)
@@ -922,6 +937,7 @@ Int_t THistPainter::MakeCuts(char *choptin)
    for (i=0;i<=nch;i++) left[i] = ' ';
    return fNcuts;
 }
+
 
 //______________________________________________________________________________
 void THistPainter::Paint(Option_t *option)
@@ -1006,11 +1022,13 @@ void THistPainter::Paint(Option_t *option)
    //    "B"      : Bar chart option
    //    "C"      : Draw a smooth Curve througth the histogram bins
    //    "E"      : Draw error bars
-   //    "E0"     : Draw error bars including bins with o contents
+   //    "E0"     : Draw error bars. Markers are drawn for bins with 0 contents
    //    "E1"     : Draw error bars with perpendicular lines at the edges
    //    "E2"     : Draw error bars with rectangles
    //    "E3"     : Draw a fill area througth the end points of the vertical error bars
    //    "E4"     : Draw a smoothed filled area through the end points of the error bars
+   //    "E5"     : Like E3 but ignore the bins with 0 contents
+   //    "E6"     : Like E4 but ignore the bins with 0 contents
    //    "X0"     : When used with one of the "E" option, it suppress the error
    //               bar along X as gStyle->SetErrorX(0) would do.
    //    "L"      : Draw a line througth the bin contents
@@ -1361,7 +1379,6 @@ void THistPainter::Paint(Option_t *option)
    //End_Html
    //
    //
-   //
    //  The LEGO options
    //  ================
    //    In a lego plot the cell contents are drawn as 3-d boxes, with
@@ -1486,6 +1503,152 @@ void THistPainter::Paint(Option_t *option)
    //   By default a 3-d scatter plot is drawn
    //   If option "BOX" is specified, a 3-D box with a volume proportional
    //   to the cell content is drawn.
+   //
+   // Drawing using OpenGL
+   // ====================
+   //
+   // The class TGLHistPainter allows to paint data set using the OpenGL 3D
+   // graphics library. The plotting options start with GL keyword.
+   //
+   //   General information: plot types and supported options
+   //   =====================================================
+   //
+   //   The following types of plots are provided:
+   //
+   //   * Lego:
+   //      The supported options are:
+   //         "GLLEGO"  : Draw a lego plot.
+   //         "GLLEGO2" : Bins with color levels.
+   //         "GLLEGO3" : Cylindrical bars.
+   //
+   //   Lego painter in cartesian supports logarithmic scales for X, Y, Z.
+   //   In polar only Z axis can be logarithmic, in cylindrical only Y.
+   //
+   //   * Surfaces: (TF2 and TH2 with "GLSURF" options)
+   //      The supported options are:
+   //         "GLSURF"  : Draw a surface.
+   //         "GLSURF1" : Surface with color levels
+   //         "GLSURF2" : The same as "GLSURF1" but without polygon outlines.
+   //         "GLSURF3" : Color level projection on top of plot (works only
+   //                     in cartesian coordinate system).
+   //         "GLSURF4" : Same as "GLSURF" but without polygon outlines.
+   //
+   //   The surface painting in cartesian coordinates supports logarithmic
+   //   scales along X, Y, Z axis.
+   //   In polar coordinates only the Z axis can be logarithmic, in cylindrical
+   //   coordinates only the Y axis.
+   //
+   //   Additional options to SURF and LEGO - Coordinate systems:
+   //      " "   : Default, cartesian coordinates system.
+   //      "POL" : Polar coordinates system.
+   //      "CYL" : Cylindrical coordinates system.
+   //      "SPH" : Spherical coordinates system.
+   //
+   //   TH3 as boxes (spheres)
+   //   ======================
+   //      The supported options are:
+   //         "GLBOX" : TH3 as a set of boxes, size of box is proportional to
+   //                   bin content.
+   //         "GLBOX1": the same as "glbox", but spheres are drawn instead of
+   //                   boxes.
+   //
+   //   TH3 as iso-surface(s)
+   //   =====================
+   //      The supported option is:
+   //         "GLISO" : TH3 is drawn using iso-surfaces.
+   //
+   //   TF3 (implicit function)
+   //   =======================
+   //      The supported option is:
+   //         "GLTF3" : Draw a TF3.
+   //
+   //   Parametric surfaces
+   //   ===================
+   //      $ROOTSYS/tutorials/gl/glparametric.C</tt> shows how to create
+   //      parametric equations and visualize the surface.
+   //
+   //   Interaction with the plots
+   //   ==========================
+   //
+   //   All the interactions are implemented via standard methods
+   //   DistancetoPrimitive and ExecuteEvent. That's why all the interactions
+   //   with the OpenGL plots are possible only when the mouse cursor is in the
+   //   plot's area (the plot's area is the part of a the pad occupied by
+   //   gl-produced picture). If the mouse cursor is not above gl-picture,
+   //   the standard pad interaction is performed.
+   //
+   //   Selectable parts
+   //   ================
+   //      Different parts of the plot can be selected:
+   //         xoz, yoz, xoy back planes:
+   //            When such a plane selected, it's highlighted in green if the
+   //            dynamic slicing by this plane is supported, and it's
+   //            highlighted in red, if the dynamic slicing is not supported.
+   //         The plot itself:
+   //            On surfaces, the selected surface is outlined in red. (TF3 and
+   //            ISO are not outlined). On lego plots, the selected bin is
+   //            highlihted. The bin number and content are displayed in pad's
+   //            status bar. In box plots, the box or sphere is highlighted and
+   //            the bin info is displayed in pad's status bar.
+   //
+   //   Rotation and zooming
+   //   ====================
+   //      Rotation:
+   //         When the plot is selected, it can be rotated by pressing and
+   //         holding the left mouse button and move the cursor.
+   //      Zoom/Unzoom:
+   //         Mouse wheel or 'j', 'J', 'k', 'K' keys.
+   //
+   //   Panning
+   //   =======
+   //      The selected plot can be moved in a pad's area by pressing and
+   //      holding the left mouse button and the shift key.
+   //
+   //   Box cut
+   //   =======
+   //      Surface, iso, box, TF3 and parametric painters support box cut by
+   //      pressing the 'c' or 'C' key when the mouse cursor is in a plot's
+   //      area. That will display a transparent box, cutting away part of the
+   //      surface (or boxes) in order to show internal part of plot. This box
+   //      can be moved inside the plot's area (the full size of the box is
+   //      equal to the plot's surrounding box) by selecting one of the box
+   //      cut axes and pressing the left mouse button to move it.
+   //
+   //   Plot specific interactions (dynamic slicing etc.)
+   //   =================================================
+   //      Currently, all gl-plots support some form of slicing. When back plane
+   //      is selected (and if it's highlighted in green) you can press and hold
+   //      left mouse button and shift key and move this back plane inside
+   //      plot's area, creating the slice. During this "slicing" plot becomes
+   //      semi-transparent. To remove all slices (and projected curves for
+   //      surfaces) double click with left mouse button in a plot's area.
+   //
+   //   Surface with option "GLSURF"
+   //   ============================
+   //      The surface profile is displayed on the slicing plane.
+   //      The profile projection is drawn on the back plane
+   //      by pressing 'p' or 'P' key.
+   //
+   //   TF3
+   //   ===
+   //      The contour plot is drawn on the slicing plane. For TF3 the color
+   //      scheme can be changed by pressing 's' or 'S'.
+   //
+   //   Box
+   //   ===
+   //      The contour plot corresponding to slice plane position is drawn in
+   //      real time.
+   //
+   //   Iso
+   //   ===
+   //      Slicing is similar to "GLBOX" option.
+   //
+   //   Parametric plot
+   //   ===============
+   //      No slicing. Additional keys: 's' or 'S' to change color scheme -
+   //      about 20 color schemes supported ('s' for "scheme"); 'l' or 'L' to
+   //      increase number of polygons ('l' for "level" of details), 'w' or 'W'
+   //      to show outlines ('w' for "wireframe").
 
    if (fH->GetBuffer()) fH->BufferEmpty(-1);
 
@@ -1656,6 +1819,7 @@ paintstat:
 
 }
 
+
 //______________________________________________________________________________
 void THistPainter::PaintArrows(Option_t *)
 {
@@ -1751,6 +1915,7 @@ void THistPainter::PaintArrows(Option_t *)
    fH->SetLineWidth(widthsav);
    fH->TAttLine::Modify();
 }
+
 
 //______________________________________________________________________________
 void THistPainter::PaintAxis(Bool_t drawGridOnly)
@@ -2042,6 +2207,7 @@ void THistPainter::PaintBar(Option_t *)
    }
 }
 
+
 //______________________________________________________________________________
 void THistPainter::PaintBarH(Option_t *)
 {
@@ -2134,6 +2300,7 @@ void THistPainter::PaintBarH(Option_t *)
    fXaxis = xaxis;
    fYaxis = yaxis;
 }
+
 
 //______________________________________________________________________________
 void THistPainter::PaintBoxes(Option_t *)
@@ -2344,6 +2511,7 @@ void THistPainter::PaintBoxes(Option_t *)
    fH->TAttFill::Modify();
 }
 
+
 //______________________________________________________________________________
 void THistPainter::PaintColorLevels(Option_t *)
 {
@@ -2473,6 +2641,7 @@ void THistPainter::PaintColorLevels(Option_t *)
    fH->TAttFill::Modify();
 
 }
+
 
 //______________________________________________________________________________
 void THistPainter::PaintContour(Option_t *option)
@@ -2853,6 +3022,7 @@ theEND:
    delete [] levels;
 }
 
+
 //______________________________________________________________________________
 Int_t THistPainter::PaintContourLine(Double_t elev1, Int_t icont1, Double_t x1, Double_t y1,
                             Double_t elev2, Int_t icont2, Double_t x2, Double_t y2,
@@ -2909,6 +3079,7 @@ Int_t THistPainter::PaintContourLine(Double_t elev1, Int_t icont1, Double_t x1, 
    return icount;
 }
 
+
 //______________________________________________________________________________
 void THistPainter::PaintErrors(Option_t *)
 {
@@ -2925,6 +3096,8 @@ void THistPainter::PaintErrors(Option_t *)
    //           error bars.
    //       '4' A smoothed filled area is drawn through the end points of the
    //           vertical error bars.
+   //       '5' Like option '3' but the empty bins are ignored.
+   //       '6' Like option '4' but the empty bins are ignored.
    //       '0' Turn off the symbols clipping.
    //
    //      'X0' When used with one of the "E" option, it suppress the error
@@ -2957,11 +3130,11 @@ void THistPainter::PaintErrors(Option_t *)
    Int_t if1 = 0;
    Int_t if2 = 0;
    Int_t drawmarker, errormarker;
-   Int_t option0, option1, option2, option3, option4, optionE, optionEX0;
+   Int_t option0, option1, option2, option3, option4, optionE, optionEX0, optionI0;
 
    Double_t *xline = 0;
    Double_t *yline = 0;
-   option0 = option1 = option2 = option3 = option4 = optionE = optionEX0 = 0;
+   option0 = option1 = option2 = option3 = option4 = optionE = optionEX0 = optionI0 = 0;
    if (Int_t(Hoption.Error/10) == 2) {optionEX0 = 1; Hoption.Error -= 10;}
    if (Hoption.Error == 31) {optionEX0 = 1; Hoption.Error = 1;}
    if (Hoption.Error == 10) option0 = 1;
@@ -2969,6 +3142,8 @@ void THistPainter::PaintErrors(Option_t *)
    if (Hoption.Error == 12) option2 = 1;
    if (Hoption.Error == 13) option3 = 1;
    if (Hoption.Error == 14) {option4 = 1; option3 = 1;}
+   if (Hoption.Error == 15) {optionI0 = 1; option3 = 1;}
+   if (Hoption.Error == 16) {optionI0 = 1; option4 = 1; option3 = 1;}
    if (option2+option3 == 0) optionE = 1;
    if (Hoption.Error == 0) optionE = 0;
    if (fXaxis->GetXbins()->fN) fixbin = 0;
@@ -3056,8 +3231,10 @@ void THistPainter::PaintErrors(Option_t *)
          if (xp > xmax) break;
       }
       yp = factor*fH->GetBinContent(k);
-      if (fixbin) ex1 = xerror*Hparam.xbinsize;
-      else {
+      if (optionI0 && yp==0) goto L30;
+      if (fixbin) {
+         ex1 = xerror*Hparam.xbinsize;
+      } else {
          delta = fH->GetBinWidth(k);
          ex1 = xerror*delta;
       }
@@ -3197,6 +3374,7 @@ L30:
       delete [] yline;
    }
 }
+
 
 //______________________________________________________________________________
 void THistPainter::Paint2DErrors(Option_t *)
@@ -3351,6 +3529,7 @@ void THistPainter::Paint2DErrors(Option_t *)
    delete fLego; fLego = 0;
 }
 
+
 //______________________________________________________________________________
 void THistPainter::PaintFrame()
 {
@@ -3368,6 +3547,7 @@ void THistPainter::PaintFrame()
    }
    gPad->PaintPadFrame(Hparam.xmin,Hparam.ymin,Hparam.xmax,Hparam.ymax);
 }
+
 
 //______________________________________________________________________________
 void THistPainter::PaintFunction(Option_t *)
@@ -3403,6 +3583,7 @@ void THistPainter::PaintFunction(Option_t *)
       padsave->cd();
    }
 }
+
 
 //______________________________________________________________________________
 void THistPainter::PaintHist(Option_t *)
@@ -3594,6 +3775,7 @@ void THistPainter::PaintHist(Option_t *)
    htype=oldhtype;
 }
 
+
 //______________________________________________________________________________
 void THistPainter::PaintH3(Option_t *option)
 {
@@ -3657,6 +3839,7 @@ void THistPainter::PaintH3(Option_t *option)
 
 }
 
+
 //______________________________________________________________________________
 Int_t THistPainter::PaintInit()
 {
@@ -3685,7 +3868,11 @@ Int_t THistPainter::PaintInit()
    //       if log scale in X, replace xmin,max by the log
    if (Hoption.Logx) {
       if (Hparam.xlowedge <=0 ) {
-         Hparam.xlowedge = 0.1*Hparam.xbinsize;
+         if (Hoption.Same) {
+            Hparam.xlowedge = TMath::Power(10, gPad->GetUxmin());
+         } else {
+            Hparam.xlowedge = 0.1*Hparam.xbinsize;
+         }
          Hparam.xmin  = Hparam.xlowedge;
       }
       if (Hparam.xmin <=0 || Hparam.xmax <=0) {
@@ -3852,6 +4039,7 @@ Int_t THistPainter::PaintInit()
    Hparam.ymax = ymax;
    return 1;
 }
+
 
 //______________________________________________________________________________
 Int_t THistPainter::PaintInitH()
@@ -4363,6 +4551,7 @@ void THistPainter::PaintLego(Option_t *)
    delete fLego; fLego = 0;
 }
 
+
 //______________________________________________________________________________
 void THistPainter::PaintLegoAxis(TGaxis *axis, Double_t ang)
 {
@@ -4543,6 +4732,7 @@ void THistPainter::PaintLegoAxis(TGaxis *axis, Double_t ang)
    fH->SetLineStyle(1);
 }
 
+
 //______________________________________________________________________________
 void THistPainter::PaintPalette()
 {
@@ -4576,6 +4766,7 @@ void THistPainter::PaintPalette()
       palette->Paint();
    }
 }
+
 
 //______________________________________________________________________________
 void THistPainter::PaintScatterPlot(Option_t *option)
@@ -4701,6 +4892,7 @@ void THistPainter::PaintScatterPlot(Option_t *option)
    if (Hoption.Zscale) PaintPalette();
 }
 
+
 //______________________________________________________________________________
 void THistPainter::PaintSpecialObjects(const TObject *obj, Option_t *option)
 {
@@ -4739,6 +4931,7 @@ void THistPainter::PaintSpecialObjects(const TObject *obj, Option_t *option)
 
    TH1::AddDirectory(status);
 }
+
 
 //______________________________________________________________________________
 void THistPainter::PaintStat(Int_t dostat, TF1 *fit)
@@ -4995,6 +5188,7 @@ void THistPainter::PaintStat(Int_t dostat, TF1 *fit)
    stats->Paint();
 }
 
+
 //______________________________________________________________________________
 void THistPainter::PaintStat2(Int_t dostat, TF1 *fit)
 {
@@ -5220,6 +5414,7 @@ void THistPainter::PaintStat2(Int_t dostat, TF1 *fit)
    if (!done) fFunctions->Add(stats);
    stats->Paint();
 }
+
 
 //______________________________________________________________________________
 void THistPainter::PaintStat3(Int_t dostat, TF1 *fit)
@@ -5474,6 +5669,7 @@ void THistPainter::PaintStat3(Int_t dostat, TF1 *fit)
    if (!done) fFunctions->Add(stats);
    stats->Paint();
 }
+
 
 //______________________________________________________________________________
 void THistPainter::PaintSurface(Option_t *)
@@ -5807,6 +6003,7 @@ void THistPainter::PaintTriangles(Option_t *option)
    delete fLego; fLego = 0;
 }
 
+
 //______________________________________________________________________________
 void THistPainter::DefineColorLevels(Int_t ndivz)
 {
@@ -6139,6 +6336,7 @@ void THistPainter::PaintTitle()
 
 }
 
+
 //______________________________________________________________________________
 void THistPainter::ProcessMessage(const char *mess, const TObject *obj)
 {
@@ -6156,6 +6354,7 @@ void THistPainter::ProcessMessage(const char *mess, const TObject *obj)
       TPainter3dAlgorithms::SetF3ClippingBoxOn(xclip,yclip,zclip);
    }
 }
+
 
 //______________________________________________________________________________
 Int_t THistPainter::ProjectAitoff2xy(Double_t l, Double_t b, Double_t &Al, Double_t &Ab)
@@ -6188,6 +6387,7 @@ Int_t THistPainter::ProjectAitoff2xy(Double_t l, Double_t b, Double_t &Al, Doubl
    return 0;
 }
 
+
 //______________________________________________________________________________
 Int_t THistPainter::ProjectMercator2xy(Double_t l, Double_t b, Double_t &Al, Double_t &Ab)
 {
@@ -6208,6 +6408,7 @@ Int_t THistPainter::ProjectMercator2xy(Double_t l, Double_t b, Double_t &Al, Dou
    return 0;
 }
 
+
 //______________________________________________________________________________
 Int_t THistPainter::ProjectSinusoidal2xy(Double_t l, Double_t b, Double_t &Al, Double_t &Ab)
 {
@@ -6219,6 +6420,7 @@ Int_t THistPainter::ProjectSinusoidal2xy(Double_t l, Double_t b, Double_t &Al, D
    return 0;
 }
 
+
 //______________________________________________________________________________
 Int_t THistPainter::ProjectParabolic2xy(Double_t l, Double_t b, Double_t &Al, Double_t &Ab)
 {
@@ -6229,6 +6431,7 @@ Int_t THistPainter::ProjectParabolic2xy(Double_t l, Double_t b, Double_t &Al, Do
    Ab = 180*TMath::Sin(b*TMath::DegToRad()/3);
    return 0;
 }
+
 
 //______________________________________________________________________________
 void THistPainter::RecalculateRange()
@@ -6340,6 +6543,7 @@ void THistPainter::RecalculateRange()
    gPad->RangeAxis(xmin, ymin, xmax, ymax);
 }
 
+
 //______________________________________________________________________________
 void THistPainter::SetHistogram(TH1 *h)
 {
@@ -6352,6 +6556,7 @@ void THistPainter::SetHistogram(TH1 *h)
    fZaxis = h->GetZaxis();
    fFunctions = fH->GetListOfFunctions();
 }
+
 
 //______________________________________________________________________________
 Int_t THistPainter::TableInit()
@@ -6526,6 +6731,7 @@ LZMIN:
    return 1;
 }
 
+
 //______________________________________________________________________________
 const char * THistPainter::GetBestFormat(Double_t v, Double_t e, const char *f)
 {
@@ -6575,6 +6781,7 @@ const char * THistPainter::GetBestFormat(Double_t v, Double_t e, const char *f)
    return ef;
 }
 
+
 //______________________________________________________________________________
 void THistPainter::SetShowProjection(const char *option,Int_t nbins)
 {
@@ -6600,6 +6807,7 @@ void THistPainter::SetShowProjection(const char *option,Int_t nbins)
    gPad->SetName(Form("%x_c_projection_%d",fH,fShowProjection));
    gPad->SetGrid();
 }
+
 
 //______________________________________________________________________________
 void THistPainter::ShowProjectionX(Int_t /*px*/, Int_t py)
@@ -6655,6 +6863,7 @@ void THistPainter::ShowProjectionX(Int_t /*px*/, Int_t py)
    padsav->cd();
 }
 
+
 //______________________________________________________________________________
 void THistPainter::ShowProjectionY(Int_t px, Int_t /*py*/)
 {
@@ -6708,6 +6917,7 @@ void THistPainter::ShowProjectionY(Int_t px, Int_t /*py*/)
    c->Update();
    padsav->cd();
 }
+
 
 //______________________________________________________________________________
 void THistPainter::ShowProjection3(Int_t px, Int_t py)

@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: RooFit                                                           *
  * Package: RooFitCore                                                       *
- * @(#)root/roofitcore:$Name:  $:$Id$
+ * @(#)root/roofitcore:$Id$
  * Authors:                                                                  *
  *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu       *
  *   DK, David Kirkby,    UC Irvine,         dkirkby@uci.edu                 *
@@ -206,7 +206,6 @@ RooPlot* RooAbsRealLValue::frame(const RooLinkedList& cmdList) const {
   if (pc.hasProcessed("Range")) {
     xmin = pc.getDouble("min") ;
     xmax = pc.getDouble("max") ;
-    cout << "Found Range" << xmin << " " << xmax << endl ;
     if (xmin==xmax) {
       xmin = getMin() ;
       xmax = getMax() ;

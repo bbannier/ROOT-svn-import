@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: RooFit                                                           *
  * Package: RooFitCore                                                       *
- * @(#)root/roofitcore:$Name:  $:$Id$
+ * @(#)root/roofitcore:$Id$
  * Authors:                                                                  *
  *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu       *
  *   DK, David Kirkby,    UC Irvine,         dkirkby@uci.edu                 *
@@ -78,6 +78,8 @@ RooMultiCategory::~RooMultiCategory()
 void RooMultiCategory::updateIndexList()
 {
   // Update the list of super-category states 
+
+  // WVE broken if used with derived categories!
 
   clearTypes() ;
 

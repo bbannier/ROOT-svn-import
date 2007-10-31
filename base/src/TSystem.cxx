@@ -2713,7 +2713,7 @@ int TSystem::CompileMacro(const char *filename, Option_t * opt,
       ofstream libmapfile;
       if (produceRootmap) {
          libmapfile.open(libmapfilename.Data());
-         libmapfile << "Library." << libname.Data() << ": ";
+         libmapfile << "Library." << libname.Data() << ": " << libname.Data();
       }
 
       while ( liblist >> libtoload ) {

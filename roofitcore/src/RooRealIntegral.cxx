@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: RooFit                                                           *
  * Package: RooFitCore                                                       *
- * @(#)root/roofitcore:$Name:  $:$Id$
+ * @(#)root/roofitcore:$Id$
  * Authors:                                                                  *
  *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu       *
  *   DK, David Kirkby,    UC Irvine,         dkirkby@uci.edu                 *
@@ -270,7 +270,7 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
 	if (depList.find(leaf->GetName()) && isValueServer(*leaf)) {
 	  oocxcoutD(&function,"Integration") << function.GetName() << ": Adding observable " << leaf->GetName() << " of server " << arg->GetName() << " as shape dependent" << endl ;
 	  addServer(*leaf,kFALSE,kTRUE) ;
-	} else if (isShapeServer(*leaf)) {
+	} else if (!depList.find(leaf->GetName())) {
 	  oocxcoutD(&function,"Integration") << function.GetName() << ": Adding parameter " << leaf->GetName() << " of server " << arg->GetName() << " as value dependent" << endl ;
 	  addServer(*leaf,kTRUE,kFALSE) ;
 	}	

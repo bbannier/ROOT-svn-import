@@ -963,6 +963,8 @@ static G__value G__exec_switch()
          //  continues, gotos, or reaches the
          //  end of the block.
          //
+         // Tell the parser to handle case clauses.
+         G__switch = 1;
          // Tell the parser to go until the end of the switch block.
          int brace_level = 1;
          // Call the parser.
@@ -970,6 +972,8 @@ static G__value G__exec_switch()
          //fprintf(stderr, "G__exec_switch: just before running case block: G__asm_noverflow: %d G__no_exec_compile: %d\n", G__asm_noverflow, G__no_exec_compile);
          result = G__exec_statement(&brace_level);
          //fprintf(stderr, "G__exec_switch: Case block parse has returned.\n");
+         // Restore state.
+         G__switch = 0;
          //
          //  Check if user requested an immediate return.
          //
@@ -1147,7 +1151,7 @@ static G__value G__exec_switch_case(char* casepara)
          //
 #ifdef G__ASM_DBG
          if (G__asm_dbg) {
-            G__fprinterr(G__serr, "%3x,%3x: JMP (for case, end of case, jump into next case block, assigned later)  %s:%d\n", G__asm_cp, G__asm_dt, __FILE__, __LINE__);
+            G__fprinterr(G__serr, "%3x,%3x: JMP (for case, end of case, jump into next case block body, intentional fallthrough, assigned later)  %s:%d\n", G__asm_cp, G__asm_dt, __FILE__, __LINE__);
          }
 #endif // G__ASM_DBG
          G__asm_inst[G__asm_cp] = G__JMP;
@@ -1160,7 +1164,7 @@ static G__value G__exec_switch_case(char* casepara)
          G__asm_inst[G__prevcase] = G__asm_cp;
 #ifdef G__ASM_DBG
          if (G__asm_dbg) {
-            G__fprinterr(G__serr, "   %3x: CNDJMP %x assigned (for case expression not equal)  %s:%d\n", G__prevcase - 1, G__asm_cp, __FILE__, __LINE__);
+            G__fprinterr(G__serr, "   %3x: CNDJMP %x assigned (for case expression not equal, jump to next case test)  %s:%d\n", G__prevcase - 1, G__asm_cp, __FILE__, __LINE__);
          }
 #endif // G__ASM_DBG
          // --
@@ -1170,7 +1174,7 @@ static G__value G__exec_switch_case(char* casepara)
       //
 #ifdef G__ASM_DBG
       if (G__asm_dbg) {
-         G__fprinterr(G__serr, "%3x,%3x: PUSHCPY (for case)  %s:%d\n", G__asm_cp, G__asm_dt, __FILE__, __LINE__);
+         G__fprinterr(G__serr, "%3x,%3x: PUSHCPY (for case, copy selector value for test against case expression)  %s:%d\n", G__asm_cp, G__asm_dt, __FILE__, __LINE__);
       }
 #endif // G__ASM_DBG
       G__asm_inst[G__asm_cp] = G__PUSHCPY;
@@ -1197,7 +1201,7 @@ static G__value G__exec_switch_case(char* casepara)
       //
 #ifdef G__ASM_DBG
       if (G__asm_dbg) {
-         G__fprinterr(G__serr, "%3x,%3x: OP2_OPTIMIZED == (for case)  %s:%d\n", G__asm_cp, G__asm_dt, __FILE__, __LINE__);
+         G__fprinterr(G__serr, "%3x,%3x: OP2_OPTIMIZED == (for case, test selector against case expression)  %s:%d\n", G__asm_cp, G__asm_dt, __FILE__, __LINE__);
       }
 #endif // G__ASM_DBG
       G__asm_inst[G__asm_cp] = G__OP2_OPTIMIZED;
@@ -1208,7 +1212,7 @@ static G__value G__exec_switch_case(char* casepara)
       //
 #ifdef G__ASM_DBG
       if (G__asm_dbg) {
-         G__fprinterr(G__serr, "%3x,%3x: CNDJMP (for case, assigned later)  %s:%d\n", G__asm_cp, G__asm_dt, __FILE__, __LINE__);
+         G__fprinterr(G__serr, "%3x,%3x: CNDJMP (for case, jump to next case test if no match with selector value, assigned later)  %s:%d\n", G__asm_cp, G__asm_dt, __FILE__, __LINE__);
       }
 #endif // G__ASM_DBG
       G__asm_inst[G__asm_cp] = G__CNDJMP;
@@ -1224,7 +1228,7 @@ static G__value G__exec_switch_case(char* casepara)
          G__asm_inst[jmp1] = G__asm_cp;
 #ifdef G__ASM_DBG
          if (G__asm_dbg) {
-            G__fprinterr(G__serr, "   %3x: JMP %x assigned (for case, jump into this case block)  %s:%d\n", jmp1 - 1, G__asm_cp, __FILE__, __LINE__);
+            G__fprinterr(G__serr, "   %3x: JMP %x assigned (for case, jump into this case block body on intentional fallthrough)  %s:%d\n", jmp1 - 1, G__asm_cp, __FILE__, __LINE__);
          }
 #endif // G__ASM_DBG
          // --
@@ -1925,7 +1929,8 @@ static G__value G__exec_do()
    //
    //  Start bytecode generation, if enabled.
    //
-   int asm_start_pc = 0;
+   // Rember the position of the beginning of the body for the jump at the end.
+   int asm_start_pc = G__asm_cp;
    if (G__asm_loopcompile) {
       // -- We are generating bytecode for loops.
       //
@@ -1935,15 +1940,15 @@ static G__value G__exec_do()
          // -- If bytecode generation is turned off, turn it on.
 #ifdef G__ASM_DBG
          if (G__asm_dbg) {
-            G__fprinterr(G__serr, "\nLoop compile start (for do).");
+            G__fprinterr(G__serr, "\nLoop compile start (for do).  Erasing old bytecode and resetting pc.");
             G__printlinenum();
          }
 #endif // G__ASM_DBG
          G__asm_noverflow = 1;
          G__clear_asm();
+         // Rember the position of the beginning of the body for the jump at the end.
+         asm_start_pc = G__asm_cp;
       }
-      // Rember the position of the beginning of the body for the jump at the end.
-      asm_start_pc = G__asm_cp;
       // Clear the data stack.
       G__asm_clear();
    }
@@ -2736,16 +2741,21 @@ static G__value G__exec_loop(char* forinit, char* condition, int naction, char**
    //
 #ifdef G__ASM
    if (G__asm_loopcompile) {
+      // -- We are generating bytecode for loops.
+      //
+      // Reset and initialize the bytecode generation environment.
+      //
       if (!G__asm_noverflow) {
+         // -- If bytecode generation is turned off, turn it on.
+#ifdef G__ASM_DBG
+         if (G__asm_dbg) {
+            G__fprinterr(G__serr, "\nLoop compile start (for a for or while).  Erasing old bytecode and resetting pc.");
+            G__printlinenum();
+         }
+#endif // G__ASM_DBG
          G__asm_noverflow = 1;
          G__clear_asm();
       }
-#ifdef G__ASM_DBG
-      if (G__asm_dbg) {
-         G__fprinterr(G__serr, "\nLoop compile start. (for for or while)");
-         G__printlinenum();
-      }
-#endif // G__ASM_DBG
    }
 #endif // G__ASM
    //
@@ -3097,6 +3107,9 @@ static G__value G__exec_loop(char* forinit, char* condition, int naction, char**
                G__asm_optimize(&asm_start_pc);
                //fprintf(stderr, "\nG__exec_loop: End bytecode optimize.\n");
             }
+            // FIXME: Are we ignoring bytecode generation errors from G__asm_optimize here?
+            // Reenable bytecode generation.
+            G__asm_noverflow = 1;
             if (G__asm_dbg) {
                G__fprinterr(G__serr, "\nBytecode loop compilation successful. (for for or while)");
                G__printlinenum();
@@ -3116,7 +3129,11 @@ static G__value G__exec_loop(char* forinit, char* condition, int naction, char**
             if (!G__no_exec_compile) {
                //fprintf(stderr, "G__exec_loop: Beginning to execute bytecode.\n", G__no_exec_compile);
                // Note: Bytecode generation must be off here, or we will overwrite the generated code!
+               // Disable bytecode generation.
+               G__asm_noverflow = 0;
                /*int status =*/ G__exec_asm(asm_start_pc, 0, &result, 0);
+               // Reenable bytecode generation.
+               G__asm_noverflow = 1;
                if (G__return != G__RETURN_NON) {
                   // -- User requested that we return immediately.
                   // If no bytecode errors, restore bytecode generation

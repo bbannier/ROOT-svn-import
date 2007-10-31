@@ -17,9 +17,7 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#ifdef R__HAVE_CONFIG
 #include "RConfigure.h"
-#endif
 #include "RConfig.h"
 #include "TUnixSystem.h"
 #include "TROOT.h"
@@ -967,7 +965,7 @@ void TUnixSystem::DispatchSignals(ESignals sig)
       break;
    case kSigChild:
       CheckChilds();
-      return;
+      break;
    case kSigBus:
    case kSigSegmentationViolation:
    case kSigIllegalInstruction:
