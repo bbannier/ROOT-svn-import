@@ -47,10 +47,11 @@
 #pragma link C++ class ROOT::Math::IParametricFunctionMultiDim+;
 #pragma link C++ class ROOT::Math::IParametricGradFunctionMultiDim+;
 
-#pragma link C++ class ROOT::Math::Functor<ROOT::Math::IBaseFunctionMultiDim>+;
-#pragma link C++ class ROOT::Math::Functor<ROOT::Math::IGradientFunctionMultiDim>+;
-#pragma link C++ class ROOT::Math::Functor1D<ROOT::Math::IBaseFunctionOneDim>+;
-#pragma link C++ class ROOT::Math::Functor1D<ROOT::Math::IGradientFunctionOneDim>+;
+
+// #pragma link C++ class ROOT::Math::Functor<ROOT::Math::IBaseFunctionMultiDim>+;
+// #pragma link C++ class ROOT::Math::Functor<ROOT::Math::IGradientFunctionMultiDim>+;
+// #pragma link C++ class ROOT::Math::Functor1D<ROOT::Math::IBaseFunctionOneDim>+;
+// #pragma link C++ class ROOT::Math::Functor1D<ROOT::Math::IGradientFunctionOneDim>+;
 
 
 
