@@ -4072,7 +4072,9 @@ int XrdProofdProtocol::Create()
 
       int setupOK = 0;
 
-      MTRACE(FORK, "xpd: ", "child process");
+      XrdOucString pmsg = "child process ";
+      pmsg += getpid();
+      MTRACE(FORK, "xpd: ", pmsg.c_str());
 
       // We set to the user environment
       if (SetUserEnvironment() != 0) {
@@ -4146,7 +4148,7 @@ int XrdProofdProtocol::Create()
       exit(1);
    }
 
-   TRACEP(FORK,"Parent process");
+   TRACEP(FORK,"Parent process: child is "<<pid);
 
    // Wakeup colleagues
    fgForkSem.Post();
@@ -5055,8 +5057,10 @@ int XrdProofdProtocol::Admin()
                }
 
                // Asynchronous notification to requester
-               cmsg = "Reset: signalling active sessions for termination";
-               fResponse.Send(kXR_attn, kXPD_srvmsg, (char *) cmsg.c_str(), cmsg.length());
+               if (fgMgr.SrvType() != kXPD_WorkerServer) {
+                  cmsg = "Reset: signalling active sessions for termination";
+                  fResponse.Send(kXR_attn, kXPD_srvmsg, (char *) cmsg.c_str(), cmsg.length());
+               }
 
                // Loop over client sessions and terminated them
                int is = 0;
@@ -5080,8 +5084,10 @@ int XrdProofdProtocol::Admin()
          }
 
          // Asynchronous notification to requester
-         cmsg = "Reset: verifying termination status";
-         fResponse.Send(kXR_attn, kXPD_srvmsg, (char *) cmsg.c_str(), cmsg.length());
+         if (fgMgr.SrvType() != kXPD_WorkerServer) {
+            cmsg = "Reset: verifying termination status";
+            fResponse.Send(kXR_attn, kXPD_srvmsg, (char *) cmsg.c_str(), cmsg.length());
+         }
 
          // Now we give sometime to sessions to terminate (10 sec).
          // We check the status every second
@@ -5113,8 +5119,10 @@ int XrdProofdProtocol::Admin()
       }
 
       // Asynchronous notification to requester
-      cmsg = "Reset: terminating the remaining sessions";
-      fResponse.Send(kXR_attn, kXPD_srvmsg, (char *) cmsg.c_str(), cmsg.length());
+      if (fgMgr.SrvType() != kXPD_WorkerServer) {
+         cmsg = "Reset: terminating the remaining sessions";
+         fResponse.Send(kXR_attn, kXPD_srvmsg, (char *) cmsg.c_str(), cmsg.length());
+      }
 
       // Now we cleanup what left (any zombies or super resistent processes)
       CleanupProofServ(all, usr);
@@ -5130,11 +5138,11 @@ int XrdProofdProtocol::Admin()
          fgMgr.Broadcast(type, usr, &fResponse);
 
          // Asynchronous notification to requester
-         cmsg = "Reset: wait 1 second(s) for completion";
+         cmsg = "Reset: wait 2 seconds for completion";
          fResponse.Send(kXR_attn, kXPD_srvmsg, (char *) cmsg.c_str(), cmsg.length());
 
-         // At least 1 seconds to complete
-         sleep(1);
+         // At least 2 seconds to complete
+         sleep(2);
       }
 
       // Unlock the locked client mutexes
