@@ -47,7 +47,10 @@ GUIH3        := TRootGuiFactory.h TRootApplication.h TRootCanvas.h \
                 TGMdiDecorFrame.h TGMdiMenu.h TVirtualDragManager.h \
                 TGuiBuilder.h TGRedirectOutputGuard.h TGPasswdDialog.h \
                 TGTextEditor.h TGSpeedo.h TGDNDManager.h TGCommandPlugin.h \
-                TGFileBrowser.h TRootBrowser.h
+                TGFileBrowser.h TRootBrowser.h TGTable.h \
+                TGSimpleTable.h TVirtualTableInterface.h \
+                TGSimpleTableInterface.h TGTableCell.h TGTableHeader.h \
+              		TGTableContainer.h TTreeTableInterface.h TGTreeTable.h
 
 GUIH4        := HelpText.h
 GUIH1        := $(patsubst %,$(MODDIRI)/%,$(GUIH1))
