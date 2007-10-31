@@ -4170,15 +4170,16 @@ int XrdProofdProtocol::Create()
    fds_r.fd = fp[0];
    fds_r.events = POLLIN;
    int pollRet = 0;
-   // We wait for 60 secs max (30 x 2000 millisecs): this is enough to
-   // cover possible delays due to heavy load
-   int ntry = 30;
+   // We wait for 14 secs max (7 x 2000 millisecs): this is enough to
+   // cover possible delays due to heavy load; the client will anyhow
+   // retry a few times
+   int ntry = 7;
    while (pollRet == 0 && ntry--) {
       while ((pollRet = poll(&fds_r, 1, 2000)) < 0 &&
              (errno == EINTR)) { }
       if (pollRet == 0)
          TRACE(FORK,"Create: "
-                    "receiving status-of-setup from pipe: waiting 2 s ...");
+                    "receiving status-of-setup from pipe: waiting 2 s ..."<<pid);
    }
    if (pollRet > 0) {
       if (read(fp[0], &setupOK, sizeof(setupOK)) == sizeof(setupOK)) {

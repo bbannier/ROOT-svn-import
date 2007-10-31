@@ -104,6 +104,7 @@ private:
 
    // Whether to timeout or not
    Bool_t              fDontTimeout;   // If true wait forever for incoming messages
+   Bool_t              fRDInterrupt;   // To interrupt waiting for messages
 
    // Version of the remote XrdProofdProtocol
    Int_t               fXrdProofdVersion;
@@ -213,7 +214,8 @@ public:
    void                SendUrgent(Int_t type, Int_t int1, Int_t int2);
 
    // Interrupt the low level socket
-   void                SetInterrupt() { if (fConn) fConn->SetInterrupt(); }
+   void                SetInterrupt() { fRDInterrupt = kTRUE;
+                                        if (fConn) fConn->SetInterrupt(); }
 
    // Flush the asynchronous queue
    Int_t               Flush();
