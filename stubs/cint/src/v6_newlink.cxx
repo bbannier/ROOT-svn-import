@@ -1137,7 +1137,7 @@ int G__stub_method_asm(void* vaddress, int gtagnum, int reftype, void* this_ptr,
             //__asm__ __volatile__("pop" : "=r" (paddr+1) :: eax);
             /* Lowest Word */
             //__asm__ __volatile__("pop" : "=r" (paddr)   :: ebx);
-            __asm__ __volatile__("call %1" : "=t" (result7->obj.d) : "g" (vaddress));
+            __asm__ __volatile__("call *%1" : "=t" (result7->obj.d) : "g" (vaddress));
          }
          else{
             int osize;
@@ -1164,7 +1164,7 @@ int G__stub_method_asm(void* vaddress, int gtagnum, int reftype, void* this_ptr,
             //__asm__ __volatile__("pop" : "=r" (*(paddr+1)):: eax, ebx));
             /* Lowest Word */
             //__asm__ __volatile__("pop" : "=r" (*(paddr)):: eax, ebx));
-            __asm__ __volatile__("call %1" : "=t" (result7->obj.d) : "g" (vaddress));
+            __asm__ __volatile__("call *%1" : "=t" (result7->obj.d) : "g" (vaddress));
 
          }
 
@@ -1172,73 +1172,73 @@ int G__stub_method_asm(void* vaddress, int gtagnum, int reftype, void* this_ptr,
 
       case 'i' : // Integer = Single Word
       {
-         __asm__ __volatile__("call %1" : "=r" (result7->obj.i) : "g" (vaddress));
+         __asm__ __volatile__("call *%1" : "=r" (result7->obj.i) : "g" (vaddress));
       }
       break;
 
       case 'c' : // Char
       {
-         __asm__ __volatile__("call %1" : "=a" (result7->obj.ch) : "g" (vaddress));
+         __asm__ __volatile__("call *%1" : "=a" (result7->obj.ch) : "g" (vaddress));
       }
       break;
 
       case 's' : // Short
       {
-         __asm__ __volatile__("call %1" : "=a" (result7->obj.sh): "g" (vaddress));
+         __asm__ __volatile__("call *%1" : "=a" (result7->obj.sh): "g" (vaddress));
       }
       break;
 
       case 'r' : // Unsigned Short
       {
-         __asm__ __volatile__("call %1" : "=a" (result7->obj.ush): "g" (vaddress));
+         __asm__ __volatile__("call *%1" : "=a" (result7->obj.ush): "g" (vaddress));
       }
       break;
 
       case 'h' : // Unsigned Int
       {
-         __asm__ __volatile__("call %1" : "=a" (result7->obj.uin): "g" (vaddress));
+         __asm__ __volatile__("call *%1" : "=a" (result7->obj.uin): "g" (vaddress));
       }
       break;
 
       case 'l' : // Long
       {
-         __asm__ __volatile__("call %1" : "=a" (result7->obj.i): "g" (vaddress));
+         __asm__ __volatile__("call *%1" : "=a" (result7->obj.i): "g" (vaddress));
       }
       break;
 
       case 'k' || 'b': // Unsigned Long
       {
-         __asm__ __volatile__("call %1" : "=a" (result7->obj.ulo): "g" (vaddress));                  
+         __asm__ __volatile__("call *%1" : "=a" (result7->obj.ulo): "g" (vaddress));                  
       }
       break;
 
       case 'f' : // Float
       {
-         __asm__ __volatile__("call %1" : "=a" (result7->obj.fl): "g" (vaddress));
+         __asm__ __volatile__("call *%1" : "=a" (result7->obj.fl): "g" (vaddress));
       }
       break;
 
       case 'n' : // Long Long
       {
-         __asm__ __volatile__("call %1" : "=A" (result7->obj.ll): "g" (vaddress));
+         __asm__ __volatile__("call *%1" : "=A" (result7->obj.ll): "g" (vaddress));
       }
       break;
 
       case 'm' : // unsigned Long Long
       {
-         __asm__ __volatile__("call %1" : "=A" (result7->obj.ull): "g" (vaddress));
+         __asm__ __volatile__("call *%1" : "=A" (result7->obj.ull): "g" (vaddress));
       }
       break;
 
       case 'q' : // 
       {
-         __asm__ __volatile__("call %1" : "=t" (result7->obj.ld): "g" (vaddress));
+         __asm__ __volatile__("call *%1" : "=t" (result7->obj.ld): "g" (vaddress));
       }
       break;
 
       case 'g' : // bool 
       {
-         __asm__ __volatile__("call %1" : "=a" (result7->obj.i): "g" (vaddress));
+         __asm__ __volatile__("call *%1" : "=a" (result7->obj.i): "g" (vaddress));
       }
       break;
 
@@ -1247,7 +1247,7 @@ int G__stub_method_asm(void* vaddress, int gtagnum, int reftype, void* this_ptr,
          //__asm__ __volatile__("call %1" : "=a" (result7->obj.i): "g" (vaddress));
          //result7->ref=result7->obj.i;
          long res=0;
-         __asm__ __volatile__("call %1" : "=a" (res): "g" (vaddress));
+         __asm__ __volatile__("call *%1" : "=a" (res): "g" (vaddress));
          result7->obj.i = (long)res;
          result7->ref = result7->obj.i;
          result7->obj.reftype.reftype = G__PARANORMAL;
@@ -1256,7 +1256,7 @@ int G__stub_method_asm(void* vaddress, int gtagnum, int reftype, void* this_ptr,
 
       case 'y' : // treat it as void function (what is 'y' ???)
       {
-         __asm__ __volatile__("call %0" :: "g" (vaddress));
+         __asm__ __volatile__("call *%0" :: "g" (vaddress));
 
          // if this a void function the return type must be 0
          // why isnt it 'y'?
@@ -1279,7 +1279,7 @@ int G__stub_method_asm(void* vaddress, int gtagnum, int reftype, void* this_ptr,
    else{
       //int parama = *paramref;
       long res=0;
-      __asm__ __volatile__("call %1" : "=a" (res): "g" (vaddress));
+      __asm__ __volatile__("call *%1" : "=a" (res): "g" (vaddress));
       result7->obj.i = (long)res;
 
       if(!isupper(type)) {
@@ -1421,7 +1421,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
                // Size Parameter for the new operator
                __asm__ __volatile__("push %0" :: "r" (((long) osize)*n)); 
                // overridden new operator call. Return allocated memory in pobject
-               __asm__ __volatile__("call %1" : "=r" (pobject) : "g" (G__get_funcptr(new_oper, pifn)));
+               __asm__ __volatile__("call *%1" : "=r" (pobject) : "g" (G__get_funcptr(new_oper, pifn)));
 
             }
        
@@ -1454,7 +1454,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
                // Size Parameter for the new operator
                __asm__ __volatile__("push %0" :: "r" ((long) osize)); 
                // new operator call. Allocated memory in pobject
-               __asm__ __volatile__("call %1" : "=r" (pobject) : "g" (G__get_funcptr(new_oper, pifn)));
+               __asm__ __volatile__("call *%1" : "=r" (pobject) : "g" (G__get_funcptr(new_oper, pifn)));
 
             }
          }
@@ -1483,7 +1483,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
                // Size Parameter for the new operator
                __asm__ __volatile__("push %0" :: "r" ((long) osize)); 
                // new operator call. Allocated memory in pobject
-               __asm__ __volatile__("call %1" : "=r" (pobject) : "g" (G__get_funcptr(new_oper, pifn)));
+               __asm__ __volatile__("call *%1" : "=r" (pobject) : "g" (G__get_funcptr(new_oper, pifn)));
 
             }
 
@@ -1513,7 +1513,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
                // Size Parameter for the new operator
                __asm__ __volatile__("push %0" :: "r" ((long) osize)); 
                // new operator call. Allocated memory in pobject
-               __asm__ __volatile__("call %1" : "=r" (pobject) : "g" (G__get_funcptr(new_oper, pifn)));
+               __asm__ __volatile__("call *%1" : "=r" (pobject) : "g" (G__get_funcptr(new_oper, pifn)));
 
             }
            
@@ -1773,7 +1773,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
          // Pushing This Pointer
          __asm__ __volatile__("push %0" :: "g" ((void*)((long)pobject + (idx*osize))) : "eax");
          // Jumping. Ale Hop!
-         __asm__ __volatile__("call %0" :: "r" (vaddress) : "eax");
+         __asm__ __volatile__("call *%0" :: "r" (vaddress) : "eax");
 
       }
 
@@ -2002,7 +2002,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
                   // Pushing This Pointer
                   __asm__ __volatile__("push %0" :: "g" ((void*)((long)soff + (idx*osize))) : "eax");
                   // Jumping. Ale Hop!
-                  __asm__ __volatile__("call %0" :: "r" (vaddress) : "eax");
+                  __asm__ __volatile__("call *%0" :: "r" (vaddress) : "eax");
                }
 
                // Single Constructor has only a parameter. The size of the object
@@ -2027,7 +2027,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
                   // Size Parameter for the delete operator
                   __asm__ __volatile__("push %0" :: "g" ((long) soff)); 
                   // overridden delete operator call.
-                  __asm__ __volatile__("call %0" :: "g" ((long) G__get_funcptr(des_oper, pifn)));
+                  __asm__ __volatile__("call *%0" :: "g" ((long) G__get_funcptr(des_oper, pifn)));
 
                }
        
@@ -2043,7 +2043,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
                   // Pushing This Pointer
                   __asm__ __volatile__("push %0" :: "g" (soff + (i*osize)));
                   // Jumping
-                  __asm__ __volatile__("call %0" :: "g" (vaddress));
+                  __asm__ __volatile__("call *%0" :: "g" (vaddress));
                }
                G__setgvp(gvp);
 
@@ -2088,7 +2088,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
                // Pushing This Pointer
                __asm__ __volatile__("push %0" :: "g" ((long)soff) : "eax");
                // Jumping. Ale Hop!
-               __asm__ __volatile__("call %0" :: "r" (vaddress) : "eax");
+               __asm__ __volatile__("call *%0" :: "r" (vaddress) : "eax");
 
 
                // Single dest. has only a parameter. The size of the object
@@ -2126,7 +2126,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
                  // Size Parameter for the delete operator
                   __asm__ __volatile__("push %0" :: "g" ((long) soff)); 
                   // overridden delete operator call.
-                  __asm__ __volatile__("call %0" :: "g" ((long) G__get_funcptr(des_oper, pifn)));
+                  __asm__ __volatile__("call *%0" :: "g" ((long) G__get_funcptr(des_oper, pifn)));
                }
 
             } else { // We already have a valid space for the object
@@ -2136,7 +2136,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
                // Pushing This Pointer
                __asm__ __volatile__("push %0" :: "g" ((long) soff));
                // Jumping
-               __asm__ __volatile__("call %0" :: "g" (vaddress));
+               __asm__ __volatile__("call *%0" :: "g" (vaddress));
 
                G__setgvp(gvp);
 
