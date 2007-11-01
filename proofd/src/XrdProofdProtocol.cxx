@@ -5218,6 +5218,8 @@ int XrdProofdProtocol::Admin()
       fResponse.Send();
 
    } else if (type == kGroupProperties) {
+
+      XrdSysMutexHelper mh(fPClient->Mutex());
       //
       // Specific info about a session
       XrdProofServProxy *xps = 0;
@@ -5227,8 +5229,6 @@ int XrdProofdProtocol::Admin()
          fResponse.Send(kXR_InvalidRequest,"Admin: session ID not found");
          return rc;
       }
-
-      XrdSysMutexHelper mtxh(&fgXPDMutex);
 
       // User's group
       int   len = fRequest.header.dlen;
