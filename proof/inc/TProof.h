@@ -460,7 +460,7 @@ private:
    Int_t    Broadcast(const char *mess, Int_t kind = kMESS_STRING, ESlaves list = kActive);
    Int_t    Broadcast(Int_t kind, TList *slaves) { return Broadcast(0, kind, slaves); }
    Int_t    Broadcast(Int_t kind, ESlaves list = kActive) { return Broadcast(0, kind, list); }
-   Int_t    BroadcastGroupPriority(const char *grp, Int_t priority, ESlaves list = kActive);
+   Int_t    BroadcastGroupPriority(const char *grp, Int_t priority, ESlaves list = kAllUnique);
    Int_t    BroadcastGroupPriority(const char *grp, Int_t priority, TList *workers);
    Int_t    BroadcastObject(const TObject *obj, Int_t kind, TList *slaves);
    Int_t    BroadcastObject(const TObject *obj, Int_t kind = kMESS_OBJECT, ESlaves list = kActive);
