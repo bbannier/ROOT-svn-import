@@ -64,8 +64,11 @@ public:
 
    void            Update();
    void            Sort();
-   void            SetAnchor(const char *anchor) const;
+   void            SetAnchor(const char *anchor);
    void            Print(Option_t *option = "") const;
+
+   void            SetBitAll(UInt_t f);
+   void            ResetBitAll(UInt_t f);
 
    Long64_t        GetTotalSize() const           { return fTotalSize; }
    Long64_t        GetNFiles() const              { return fNFiles; }
@@ -79,6 +82,7 @@ public:
    const char     *GetDefaultTreeName() const;
    Long64_t        GetTotalEntries(const char *tree) const;
    TFileInfoMeta  *GetMetaData(const char *meta = 0) const;
+   void            RemoveMetaData(const char *meta = 0);
 
    TFileCollection *GetStagedSubset();
 

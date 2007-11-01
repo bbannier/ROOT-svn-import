@@ -268,7 +268,7 @@ void TFileCollection::Print(Option_t *option) const
 }
 
 //______________________________________________________________________________
-void TFileCollection::SetAnchor(const char *anchor) const
+void TFileCollection::SetAnchor(const char *anchor)
 {
    // Calls TUrl::SetAnchor() for all URLs contained in all TFileInfos.
 
@@ -284,6 +284,34 @@ void TFileCollection::SetAnchor(const char *anchor) const
          url->SetAnchor(anchor);
       fileInfo->ResetUrl();
    }
+}
+
+//______________________________________________________________________________
+void TFileCollection::SetBitAll(UInt_t f)
+{
+   // Set the bit for all TFileInfos
+
+   if (!fList)
+     return;
+
+   TIter iter(fList);
+   TFileInfo *fileInfo = 0;
+   while ((fileInfo = dynamic_cast<TFileInfo*>(iter.Next())))
+      fileInfo->SetBit(f);
+}
+
+//______________________________________________________________________________
+void TFileCollection::ResetBitAll(UInt_t f)
+{
+   // Reset the bit for all TFileInfos
+
+   if (!fList)
+     return;
+
+   TIter iter(fList);
+   TFileInfo *fileInfo = 0;
+   while ((fileInfo = dynamic_cast<TFileInfo*>(iter.Next())))
+      fileInfo->ResetBit(f);
 }
 
 //______________________________________________________________________________
@@ -332,6 +360,29 @@ TFileInfoMeta *TFileCollection::GetMetaData(const char *meta) const
       return 0;
 
    return dynamic_cast<TFileInfoMeta*>(fMetaDataList->FindObject(meta));
+}
+
+//______________________________________________________________________________
+void TFileCollection::RemoveMetaData(const char *meta)
+{
+   // Removes the indicated meta data object in all TFileInfos and this object
+   // If no name is given all metadata is removed
+
+   if (fList) {
+      TIter iter(fList);
+      TFileInfo *fileInfo = 0;
+      while ((fileInfo = dynamic_cast<TFileInfo*>(iter.Next())))
+         fileInfo->RemoveMetaData(meta);
+   }
+
+   if (meta) {
+      TObject* obj = fMetaDataList->FindObject("meta");
+      if (obj) {
+         fMetaDataList->Remove(obj);
+         delete obj;
+      }
+   } else
+      fMetaDataList->Clear();
 }
 
 //______________________________________________________________________________
