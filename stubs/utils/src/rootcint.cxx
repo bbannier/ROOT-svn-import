@@ -4426,9 +4426,9 @@ int main(int argc, char **argv)
    // LF 03-07-07
    // We need the library path in the dictionary generation
    // the easiest way is to get it as a parameter
-   if (!strcmp(argv[ic], "-L")) {
+   if (!strcmp(argv[ic], "--symbols-file")) {
       ++ic;
-      argvv[argcc++] = "-L";
+      argvv[argcc++] = "--symbols-file";
       argvv[argcc++] = argv[ic]; 
       ++ic;
    }

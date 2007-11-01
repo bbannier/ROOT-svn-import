@@ -20,7 +20,7 @@ and must be before the -f flags
 For more extensive help type: utils/src/rootcint_tmp -h"
 
 # Getopt call
-TEMP=`getopt -a -o vlf:o:c:hLI: --long cint,reflex,gccxml,v0,v1,v2,v3,v4,object-files:,cxx: \
+TEMP=`getopt -a -o vlf:o:c:hI: --long cint,reflex,gccxml,v0,v1,v2,v3,v4,object-files:symbols-file \
      -n 'rootcint' -- "$@"`
 
 # Wrong usage
@@ -44,9 +44,8 @@ while true ; do
                 -c) shift 1; break;;
                 -.) shift 2;;
                 -h) HELP=1; shift 1;;
-                -L) shift 2;;
+                --symbols-file) shift 2;;
                 --) shift ; break ;;
-                --cxx) CXXFLAGS=$2; shift 2 ;;
                 *) echo "Internal error!" ;; #exit 1 ;;
         esac
 done
@@ -73,10 +72,6 @@ ROOTCINTARGS=${ROOTCINTARGS/$FILENAME/}
 ROOTCINTARGS=${ROOTCINTARGS/--cxx/}
 ROOTCINTARGS=${ROOTCINTARGS/$CXXFLAGS/}
 
-if [ -z "$CXXFLAGS" ] ; then 
-    CXXFLAGS="-pipe -m32 -Wall -W -Woverloaded-virtual -fPIC -Iinclude"
-fi
-
 # We remove one score from the mode option name
 MODE=${MODE/--/-}
 
@@ -85,8 +80,8 @@ utils/src/rootcint_tmp $MODE -cint ${FILENAME%.*}"Tmp1".cxx -. 1 $ROOTCINTARGS
 utils/src/rootcint_tmp $MODE -cint ${FILENAME%.*}"Tmp2".cxx -. 2 $ROOTCINTARGS
 
 # Temporary dictionaries compilation
-g++ $CXXFLAGS -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -I. -o ${FILENAME%.*}"Tmp1".o -c ${FILENAME%.*}"Tmp1".cxx
-g++ $CXXFLAGS -Iinclude -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -I. -o ${FILENAME%.*}"Tmp2".o -c ${FILENAME%.*}"Tmp2".cxx
+g++ $(CXXFLAGS) -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -I. -o ${FILENAME%.*}"Tmp1".o -c ${FILENAME%.*}"Tmp1".cxx
+g++ $(CXXFLAGS) -Iinclude -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -I. -o ${FILENAME%.*}"Tmp2".o -c ${FILENAME%.*}"Tmp2".cxx
 
 # Symbols extraction
 nm -g -p --defined-only ${FILENAME%.*}"Tmp1".o | awk '{printf("%s\n", $3)}' > ${FILENAME%.*}.nm
@@ -98,7 +93,7 @@ rm ${FILENAME%.*}"Tmp1".*
 rm ${FILENAME%.*}"Tmp2".*
 
 # Final Dictionary Generation
-utils/src/rootcint_tmp -cint $FILENAME -L ${FILENAME%.*}".nm"  -. 4 $ROOTCINTARGS
+utils/src/rootcint_tmp -cint $FILENAME --symbols-file ${FILENAME%.*}".nm"  -. 4 $ROOTCINTARGS
 
 # We don't need the symbols file anymore
 rm ${FILENAME%.*}.nm
