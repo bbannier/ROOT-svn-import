@@ -44,9 +44,9 @@ $(EGLIB):       $(EGO) $(EGDO) $(ORDER_) $(MAINLIBS) $(EGLIBDEP)
 		   "$(SOFLAGS)" libEG.$(SOEXT) $@ "$(EGO) $(EGDO)" \
 		   "$(EGLIBEXTRA)"
 
-$(EGDS):        $(EGH1) $(EGL) $(EGO) $(ROOTCINTNEW)
+$(EGDS):        $(EGH1) $(EGL) $(EGO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTNEW) -f $@ -o "$(EGO)" -c $(EGH1) $(EGL)
+		$(ROOTCINTTMPEXE) -f $@ -o "$(EGO)" -c $(EGH1) $(EGL)
 
 $(EGMAP):       $(RLIBMAP) $(MAKEFILEDEP) $(EGL)
 		$(RLIBMAP) -o $(EGMAP) -l $(EGLIB) \

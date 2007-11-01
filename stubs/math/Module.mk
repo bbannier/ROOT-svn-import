@@ -52,9 +52,9 @@ $(MATHLIB):     $(MATHO) $(MATHDO) $(ORDER_) $(MAINLIBS)
 		   "$(SOFLAGS)" libRMath.$(SOEXT) $@ "$(MATHO) $(MATHDO)" \
 		   "$(MATHLIBEXTRA)"
 
-$(MATHDS):      $(MATHH) $(MATHL) $(MATHO) $(ROOTCINTNEW)
+$(MATHDS):      $(MATHH) $(MATHL) $(MATHO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTNEW) -f $@ -o "$(MATHO)" -c $(MATHH) $(MATHL)
+		$(ROOTCINTTMPEXE) -f $@ -o "$(MATHO)" -c $(MATHH) $(MATHL)
 
 $(MATHMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(MATHL)
 		$(RLIBMAP) -o $(MATHMAP) -l $(MATHLIB) \

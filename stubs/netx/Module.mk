@@ -72,9 +72,9 @@ $(NETXLIB):     $(NETXO) $(NETXDO) $(ORDER_) $(MAINLIBS) $(NETXLIBDEP) \
 		   "$(SOFLAGS)" libNetx.$(SOEXT) $@ "$(NETXO) $(NETXDO)" \
 		   "$(NETXLIBEXTRA)"
 
-$(NETXDS):      $(NETXH1) $(NETXL) $(NETXO) $(ROOTCINTNEW) $(XROOTDETAG)
+$(NETXDS):      $(NETXH1) $(NETXL) $(NETXO) $(ROOTCINTTMPEXE) $(XROOTDETAG)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTNEW) -f $@ --cxx "$(CXXFLAGS)" -o "$(NETXO)" -c $(NETXINCEXTRA) $(NETXH) $(NETXL)
+		$(ROOTCINTTMPEXE) -f $@ --cxx "$(CXXFLAGS)" -o "$(NETXO)" -c $(NETXINCEXTRA) $(NETXH) $(NETXL)
 
 $(NETXMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(NETXL)
 		$(RLIBMAP) -o $(NETXMAP) -l $(NETXLIB) -d $(NETXLIBDEPM) -c $(NETXL)

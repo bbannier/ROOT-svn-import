@@ -45,7 +45,7 @@ $(HISTLIB):     $(HISTO) $(HISTDO) $(ORDER_) $(MAINLIBS) $(HISTLIBDEP)
 
 $(HISTDS):      $(HISTH) $(HISTL) $(HISTO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTNEW) -f $@ -o "$(HISTO)" -c $(HISTH) $(HISTL)
+		$(ROOTCINTTMPEXE) -f $@ -o "$(HISTO)" -c $(HISTH) $(HISTL)
 
 $(HISTMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(HISTL)
 		$(RLIBMAP) -o $(HISTMAP) -l $(HISTLIB) \

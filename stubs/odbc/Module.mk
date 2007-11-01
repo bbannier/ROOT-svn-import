@@ -43,9 +43,9 @@ $(ODBCLIB):     $(ODBCO) $(ODBCDO) $(ORDER_) $(MAINLIBS) $(ODBCLIBDEP)
 		   "$(SOFLAGS)" libRODBC.$(SOEXT) $@ "$(ODBCO) $(ODBCDO)" \
 		   "$(ODBCLIBEXTRA) $(ODBCLIBDIR) $(ODBCCLILIB)"
 
-$(ODBCDS):     $(ODBCH) $(ODBCL) $(ODBCO) $(ROOTCINTNEW)
+$(ODBCDS):     $(ODBCH) $(ODBCL) $(ODBCO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTNEW) -f $@ -o "$(ODBCO)" -c $(ODBCINCDIR:%=-I%) $(ODBCH) $(ODBCL)
+		$(ROOTCINTTMPEXE) -f $@ -o "$(ODBCO)" -c $(ODBCINCDIR:%=-I%) $(ODBCH) $(ODBCL)
 
 $(ODBCMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(ODBCL)
 		$(RLIBMAP) -o $(ODBCMAP) -l $(ODBCLIB) \

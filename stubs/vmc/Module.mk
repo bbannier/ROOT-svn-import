@@ -44,9 +44,9 @@ $(VMCLIB):      $(VMCO) $(VMCDO) $(ORDER_) $(MAINLIBS) $(VMCLIBDEP)
 		   "$(SOFLAGS)" libVMC.$(SOEXT) $@ "$(VMCO) $(VMCDO)" \
 		   "$(VMCLIBEXTRA)"
 
-$(VMCDS):       $(VMCH1) $(VMCL) $(VMCO) $(ROOTCINTNEW)
+$(VMCDS):       $(VMCH1) $(VMCL) $(VMCO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTNEW) -f $@ -o "$(VMCO)" -c $(VMCH1) $(VMCL)
+		$(ROOTCINTTMPEXE) -f $@ -o "$(VMCO)" -c $(VMCH1) $(VMCL)
 
 $(VMCMAP):      $(RLIBMAP) $(MAKEFILEDEP) $(VMCL)
 		$(RLIBMAP) -o $(VMCMAP) -l $(VMCLIB) \

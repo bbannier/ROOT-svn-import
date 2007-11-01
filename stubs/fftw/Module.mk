@@ -43,9 +43,9 @@ $(FFTWLIB):     $(FFTWO) $(FFTWDO) $(ORDER_) $(MAINLIBS) $(FFTWLIBDEP)
 		   "$(SOFLAGS)" libFFTW.$(SOEXT) $@ "$(FFTWO) $(FFTWDO)" \
 		   "$(FFTWLIBEXTRA) $(FFTW3LIBDIR) $(FFTW3LIB)"
 
-$(FFTWDS):      $(FFTWH) $(FFTWL) $(FFTWO) $(ROOTCINTNEW)
+$(FFTWDS):      $(FFTWH) $(FFTWL) $(FFTWO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTNEW) -f $@ -o "$(FFTWO)" -c $(FFTWH) $(FFTWL)
+		$(ROOTCINTTMPEXE) -f $@ -o "$(FFTWO)" -c $(FFTWH) $(FFTWL)
 
 $(FFTWMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(FFTWL)
 		$(RLIBMAP) -o $(FFTWMAP) -l $(FFTWLIB) \

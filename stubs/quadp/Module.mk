@@ -43,9 +43,9 @@ $(QUADPLIB):    $(QUADPO) $(QUADPDO) $(ORDER_) $(MAINLIBS) $(QUADPLIBDEP)
 		   "$(SOFLAGS)" libQuadp.$(SOEXT) $@ "$(QUADPO) $(QUADPDO)" \
 		   "$(QUADPLIBEXTRA)"
 
-$(QUADPDS):     $(QUADPH) $(QUADPL) $(QUADPO) $(ROOTCINTNEW)
+$(QUADPDS):     $(QUADPH) $(QUADPL) $(QUADPO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTNEW) -f $@ -o "$(QUADPO)" -c $(QUADPH) $(QUADPL)
+		$(ROOTCINTTMPEXE) -f $@ -o "$(QUADPO)" -c $(QUADPH) $(QUADPL)
 
 $(QUADPMAP):    $(RLIBMAP) $(MAKEFILEDEP) $(QUADPL)
 		$(RLIBMAP) -o $(QUADPMAP) -l $(QUADPLIB) \

@@ -43,9 +43,9 @@ $(FOAMLIB):     $(FOAMO) $(FOAMDO) $(ORDER_) $(MAINLIBS) $(FOAMLIBDEP)
 		   "$(SOFLAGS)" libFoam.$(SOEXT) $@ "$(FOAMO) $(FOAMDO)" \
 		   "$(FOAMLIBEXTRA)"
 
-$(FOAMDS):      $(FOAMH) $(FOAML) $(FOAMO) $(ROOTCINTNEW)
+$(FOAMDS):      $(FOAMH) $(FOAML) $(FOAMO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTNEW) -f $@ -o "$(FOAMO)" -c $(FOAMH) $(FOAML)
+		$(ROOTCINTTMPEXE) -f $@ -o "$(FOAMO)" -c $(FOAMH) $(FOAML)
 
 $(FOAMMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(FOAML)
 		$(RLIBMAP) -o $(FOAMMAP) -l $(FOAMLIB) \

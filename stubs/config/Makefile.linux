@@ -43,21 +43,16 @@ XLIBS         = $(XPMLIBDIR) $(XPMLIB) $(X11LIBDIR) -lXext -lX11
 CILIBS        = -lm -ldl -rdynamic
 CRYPTLIBS     = -lcrypt
 
-# Dictioanary Generator By default
-ROOTCINTNEW=utils/src/rootcint_tmp	
-COMPVERSION:=$(shell $(CXX) -dumpversion 2>&1)
-
 # Stub Functions Generation
-ifeq ($(ENABLESTUBS),no) 
-	ifeq ($(ARCH),linux)
-
-		ifeq ($(COMPVERSION),3.2.3)
-				ROOTCINTNEW=utils/src/rootcint.exe
-		endif	
-		ifeq ($(COMPVERSION),3.4.6)
-				ROOTCINTNEW=utils/src/rootcint.exe
-		endif
-	endif
+GCC_MAJOR     := $(shell $(CXX) -dumpversion 2>&1 | cut -d'.' -f1)
+GCC_MINOR     := $(shell $(CXX) -dumpversion 2>&1 | cut -d'.' -f2)
+ifeq ($(ENABLESTUBS),no)
+ ifeq ($(GCC_MAJOR),3)
+ # allow 3.2, 3.3, and 3.4:
+  ifneq ($(findstring $(GCC_MINOR),2 3 4),)
+   ROOTCINTTMPEXE = CXXFLAGS=$(CXXFLAGS) utils/src/rootcint.sh
+  endif
+ endif
 endif
 
 # Fortran:
