@@ -27,6 +27,9 @@
 // virtual inheritance gives problem when making dictionary on Windows 
 #pragma link C++ class ROOT::Math::ParamFunction+;
 #pragma link C++ class ROOT::Math::Polynomial+;
+#else 
+#pragma link C++ class ROOT::Math::ParamFunction-;
+#pragma link C++ class ROOT::Math::Polynomial-;
 #endif
 
 #pragma link C++ class ROOT::Math::Chebyshev+;

@@ -99,8 +99,9 @@ public:
     
    double operator() ( double x, const double * p ); 
 
+#ifndef __CINT__
    using ParamFunction::operator();
-
+#endif
 
 
 

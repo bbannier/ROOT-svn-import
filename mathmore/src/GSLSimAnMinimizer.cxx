@@ -97,7 +97,7 @@ void GSLSimAnMinimizer::SetFunction(const Minimizer::IObjFunction & func) {
    // keep pointers to the chi2 function
    fObjFunc = &func; 
    fDim = func.NDim();
- }
+}
 
 void GSLSimAnMinimizer::SetFunction(const Minimizer::IGradObjFunction & /* func */) { 
    // set the function to minimizer (need to clone ??)

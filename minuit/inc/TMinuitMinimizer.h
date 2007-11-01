@@ -126,7 +126,7 @@ public:
    virtual unsigned int NFree() const { return fNFree; }  
 
    /// minimizer provides error and error matrix
-   virtual bool providesError() const { return true; } 
+   virtual bool ProvidesError() const { return true; } 
 
    /// return errors at the minimum 
    virtual const double * Errors() const { return  &fErrors.front(); }
