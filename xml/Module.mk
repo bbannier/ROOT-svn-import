@@ -43,9 +43,9 @@ $(XMLLIB):      $(XMLO) $(XMLDO) $(ORDER_) $(MAINLIBS) $(XMLLIBDEP)
 		   "$(SOFLAGS)" libXMLIO.$(SOEXT) $@ "$(XMLO) $(XMLDO)" \
 		   "$(XMLLIBEXTRA)"
 
-$(XMLDS):       $(XMLH) $(XMLL) $(XMLO) $(ROOTCINTNEW)
+$(XMLDS):       $(XMLH) $(XMLL) $(XMLO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTNEW) -f $@ -o "$(XMLO)" -c $(XMLH) $(XMLL)
+		$(ROOTCINTTMPEXE) -f $@ -o "$(XMLO)" -c $(XMLH) $(XMLL)
 
 $(XMLMAP):      $(RLIBMAP) $(MAKEFILEDEP) $(XMLL)
 		$(RLIBMAP) -o $(XMLMAP) -l $(XMLLIB) \

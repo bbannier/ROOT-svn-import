@@ -43,9 +43,9 @@ $(GDMLLIB):     $(GDMLO) $(GDMLDO) $(ORDER_) $(MAINLIBS) $(GDMLLIBDEP)
 		   "$(SOFLAGS)" libGdml.$(SOEXT) $@ "$(GDMLO) $(GDMLDO)" \
 		   "$(GDMLLIBEXTRA)"
 
-$(GDMLDS):      $(GDMLH) $(GDMLL) $(GDMLO) $(ROOTCINTNEW)
+$(GDMLDS):      $(GDMLH) $(GDMLL) $(GDMLO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTNEW) -f $@ -o "$(GDMLO)" -c $(GDMLH) $(GDMLL)
+		$(ROOTCINTTMPEXE) -f $@ -o "$(GDMLO)" -c $(GDMLH) $(GDMLL)
 
 $(GDMLMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(GDMLL)
 		$(RLIBMAP) -o $(GDMLMAP) -l $(GDMLLIB) \

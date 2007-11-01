@@ -50,15 +50,15 @@ $(TREELIB):     $(TREEO) $(TREEDO) $(ORDER_) $(MAINLIBS) $(TREELIBDEP)
 		   "$(SOFLAGS)" libTree.$(SOEXT) $@ "$(TREEO) $(TREEDO)" \
 		   "$(TREELIBEXTRA)"
 
-$(TREEDS):      $(TREEH) $(TREEL) $(TREEO) $(ROOTCINTNEW)
+$(TREEDS):      $(TREEH) $(TREEL) $(TREEO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTNEW) -f $@ -o "$(TREEO)" -c $(TREEH) $(TREEL)
+		$(ROOTCINTTMPEXE) -f $@ -o "$(TREEO)" -c $(TREEH) $(TREEL)
 
 # pre-requisites intentionally not specified... should be called only
 # on demand after deleting the file
 $(TREEDS2):
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTNEW) -f $@ -o "$(TREEO)" -c $(TREEDH2) $(TREEL2)
+		$(ROOTCINTTMPEXE) -f $@ -o "$(TREEO)" -c $(TREEDH2) $(TREEL2)
 
 $(TREEMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(TREEL)
 		$(RLIBMAP) -o $(TREEMAP) -l $(TREELIB) \

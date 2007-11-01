@@ -33,9 +33,9 @@ INCLUDEFILES += $(CONTDEP)
 include/%.h:    $(CONTDIRI)/%.h
 		cp $< $@
 
-$(CONTDS):      $(CONTH) $(CONTL) $(CONTO) $(ROOTCINTNEW)
+$(CONTDS):      $(CONTH) $(CONTL) $(CONTO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTNEW) -f $@ -o "$(CONTO)" -c $(CONTH) $(CONTL)
+		$(ROOTCINTTMPEXE) -f $@ -o "$(CONTO)" -c $(CONTH) $(CONTL)
 
 all-cont:       $(CONTO) $(CONTDO)
 

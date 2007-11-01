@@ -43,9 +43,9 @@ $(MLPLIB):      $(MLPO) $(MLPDO) $(ORDER_) $(MAINLIBS) $(MLPLIBDEP)
 		   "$(SOFLAGS)" libMLP.$(SOEXT) $@ "$(MLPO) $(MLPDO)" \
 		   "$(MLPLIBEXTRA)"
 
-$(MLPDS):       $(MLPH) $(MLPL) $(MLPO) $(ROOTCINTNEW)
+$(MLPDS):       $(MLPH) $(MLPL) $(MLPO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTNEW) -f $@ -o "$(MLPO)" -c $(MLPH) $(MLPL)
+		$(ROOTCINTTMPEXE) -f $@ -o "$(MLPO)" -c $(MLPH) $(MLPL)
 
 $(MLPMAP):      $(RLIBMAP) $(MAKEFILEDEP) $(MLPL)
 		$(RLIBMAP) -o $(MLPMAP) -l $(MLPLIB) -d $(MLPLIBDEPM) -c $(MLPL)

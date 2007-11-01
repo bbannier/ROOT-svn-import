@@ -43,9 +43,9 @@ $(IOLIB):       $(IOO) $(IODO) $(ORDER_) $(MAINLIBS)
 		   "$(SOFLAGS)" libRIO.$(SOEXT) $@ "$(IOO) $(IODO)" \
 		   "$(IOLIBEXTRA)"
 
-$(IODS):        $(IOH) $(IOL) $(IOO) $(ROOTCINTNEW)
+$(IODS):        $(IOH) $(IOL) $(IOO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTNEW) -f $@ -o "$(IOO)" -c $(IOH) $(IOL)
+		$(ROOTCINTTMPEXE) -f $@ -o "$(IOO)" -c $(IOH) $(IOL)
 
 $(IOMAP):       $(RLIBMAP) $(MAKEFILEDEP) $(IOL)
 		$(RLIBMAP) -o $(IOMAP) -l $(IOLIB) -d $(IOLIBDEPM) -c $(IOL)

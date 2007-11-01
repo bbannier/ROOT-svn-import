@@ -55,12 +55,12 @@ $(GRAFLIB):     $(GRAFO) $(GRAFDO) $(FREETYPEDEP) $(ORDER_) $(MAINLIBS) $(GRAFLI
 		   "$(GRAFO) $(GRAFDO)" \
 		   "$(FREETYPELDFLAGS) $(FREETYPELIB) $(GRAFLIBEXTRA)"
 
-$(GRAFDS1):     $(GRAFHD) $(GRAFL1) $(GRAFO) $(ROOTCINTNEW)
+$(GRAFDS1):     $(GRAFHD) $(GRAFL1) $(GRAFO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTNEW) -f $@ -o "$(GRAFO)" -c $(GRAFHD) $(GRAFL1)
-$(GRAFDS2):     $(GRAFH) $(GRAFL2) $(GRAFO) $(ROOTCINTNEW)
+		$(ROOTCINTTMPEXE) -f $@ -o "$(GRAFO)" -c $(GRAFHD) $(GRAFL1)
+$(GRAFDS2):     $(GRAFH) $(GRAFL2) $(GRAFO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTNEW) -f $@ --cxx "$(CXXFLAGS)" -o "$(GRAFO)" -c $(FREETYPEINC) $(GRAFH) $(GRAFL2)
+		$(ROOTCINTTMPEXE) -f $@ --cxx "$(CXXFLAGS)" -o "$(GRAFO)" -c $(FREETYPEINC) $(GRAFH) $(GRAFL2)
 
 $(GRAFMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(GRAFL1) $(GRAFL2)
 		$(RLIBMAP) -o $(GRAFMAP) -l $(GRAFLIB) \

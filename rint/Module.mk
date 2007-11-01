@@ -43,9 +43,9 @@ $(RINTLIB):     $(RINTO) $(RINTDO) $(ORDER_) $(MAINLIBS)
 		   "$(SOFLAGS)" libRint.$(SOEXT) $@ "$(RINTO) $(RINTDO)" \
 		   "$(RINTLIBEXTRA)"
 
-$(RINTDS):      $(RINTH) $(RINTL) $(RINTO) $(ROOTCINTNEW)
+$(RINTDS):      $(RINTH) $(RINTL) $(RINTO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTNEW) -f $@ -o "$(RINTO)" -c $(RINTH) $(RINTL)
+		$(ROOTCINTTMPEXE) -f $@ -o "$(RINTO)" -c $(RINTH) $(RINTL)
 
 $(RINTMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(RINTL)
 		$(RLIBMAP) -o $(RINTMAP) -l $(RINTLIB) \

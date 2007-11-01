@@ -43,9 +43,9 @@ $(GPADLIB):     $(GPADO) $(GPADDO) $(ORDER_) $(MAINLIBS) $(GPADLIBDEP)
 		   "$(SOFLAGS)" libGpad.$(SOEXT) $@ "$(GPADO) $(GPADDO)" \
 		   "$(GPADLIBEXTRA)"
 
-$(GPADDS):      $(GPADH) $(GPADL) $(GPADO) $(ROOTCINTNEW)
+$(GPADDS):      $(GPADH) $(GPADL) $(GPADO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTNEW) -f $@ -o "$(GPADO)" -c $(GPADH) $(GPADL)
+		$(ROOTCINTTMPEXE) -f $@ -o "$(GPADO)" -c $(GPADH) $(GPADL)
 
 $(GPADMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(GPADL)
 		$(RLIBMAP) -o $(GPADMAP) -l $(GPADLIB) \
