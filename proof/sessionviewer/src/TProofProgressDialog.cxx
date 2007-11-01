@@ -507,9 +507,17 @@ void TProofProgressDialog::Progress(Long64_t total, Long64_t processed,
       sprintf(buf, "%.1f evts/sec (%.1f MBs/sec)", fAvgRate, fAvgMBRate);
       fRate->SetText(buf);
       // Fill rate graph
-      if (evtrti > 0.) {
-         fRatePoints->Fill(procTime, evtrti, mbrti);
-         fRatePlot->SetState(kButtonUp);
+      Bool_t useAvg = gEnv->GetValue("Proof.RatePlotUseAvg", 0);
+      if (useAvg) {
+         if (fAvgRate > 0.) {
+            fRatePoints->Fill(procTime, fAvgRate, fAvgMBRate);
+            fRatePlot->SetState(kButtonUp);
+         }
+      } else {
+         if (evtrti > 0.) {
+            fRatePoints->Fill(procTime, evtrti, mbrti);
+            fRatePlot->SetState(kButtonUp);
+         }
       }
 
       if (fProof) {

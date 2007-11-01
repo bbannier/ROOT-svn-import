@@ -1334,7 +1334,15 @@ Int_t TPacketizerAdaptive::GetEstEntriesProcessed(Float_t t,
    ent = fProcessed;
    bytes = fBytesRead;
 
+   // Parse option from the env
+   TString estopt(gEnv->GetValue("Proof.RateEstimation",""));
+   if (estopt.IsNull() || (estopt != "average" && estopt != "current"))
+      // Do not use estimation
+      return 0;
+   Bool_t current = (estopt == "current") ? kTRUE : kFALSE;
+
    // Loop over the workers
+   Float_t trate = 0.;
    if (fSlaveStats && fSlaveStats->GetSize() > 0) {
       ent = 0;
       TIter nxw(fSlaveStats);
@@ -1347,14 +1355,16 @@ Int_t TPacketizerAdaptive::GetEstEntriesProcessed(Float_t t,
             // Time elapsed since last update
             Float_t dt = (t > slstat->fProcTime) ? t - slstat->fProcTime : 0;
             // Add estimated entries processed since last update
-            Float_t rate = slstat->GetAvgRate();
+            Float_t rate = (current && slstat->GetCurRate() > 0) ? slstat->GetCurRate()
+                                                                 : slstat->GetAvgRate();
+            trate += rate;
             // Add estimated entries processed since last update
             e += (Long64_t) (dt * rate);
             // Add to the total
             ent += e;
             // Notify
             PDB(kPacketizer,3)
-               Info("GetEstEntriesProcessed","%s: e:%lld rate:%f dt:%f e:%lld ent:%lld",
+               Info("GetEstEntriesProcessed","%s: e:%lld rate:%f dt:%f e:%lld",
                                           slstat->fSlave->GetOrdinal(),
                                           slstat->fProcessed, rate, dt, e);
          }
@@ -1363,7 +1373,7 @@ Int_t TPacketizerAdaptive::GetEstEntriesProcessed(Float_t t,
    // Notify
    PDB(kPacketizer,2)
       Info("GetEstEntriesProcessed",
-           "estimated entries: %lld, bytes read: %lld", ent, bytes);
+           "estimated entries: %lld, bytes read: %lld rate: %f", ent, bytes, trate);
 
    // Check values
    ent = (ent > 0) ? ent : fProcessed;
