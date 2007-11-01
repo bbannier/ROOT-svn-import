@@ -171,7 +171,7 @@ Bool_t TProofDataSetManager::ReadGroupConfig(const char *cf)
             if (!line.Tokenize(sdq, from, " ")) // No token
                continue;
             if (sdq.IsDigit()) {
-               Long64_t quota = (Long64_t)(1024 * 1024 * 1024 * sdq.Atoi());
+               Long64_t quota = (Long64_t) 1024 * 1024 * 1024 * sdq.Atoi();
                fGroupQuota.Add(new TObjString(grp),
                                new TParameter<Long64_t> ("group quota", quota));
             }
@@ -267,6 +267,12 @@ TFileCollection *TProofDataSetManager::GetDataSet(const char *group,
    TLockFile lock(fgDataSetLockFile, fgLockFileTimeLimit);
 
    TString path(GetDataSetPath(group, user, dsName));
+
+   if (gSystem->AccessPathName(path) != kFALSE) {
+      if (!fSilent)
+         Error("GetDataSet", "File %s does not exist", path.Data());
+      return 0;
+   }
 
    TMD5 *retrievedChecksum = 0;
    if (checksum) {
@@ -603,7 +609,8 @@ Int_t  TProofDataSetManager::ScanDataSet(TFileCollection *dataset, const char *o
       TString& str = (dynamic_cast<TObjString*> (match->First()))->String();
       TString number = str(str.Index("=")+1, str.Length());
       maxFiles = number.Atoi();
-      Info(__FUNCTION__, "Processing a maximum of %d files", maxFiles);
+      if (!fSilent)
+         Info(__FUNCTION__, "Processing a maximum of %d files", maxFiles);
       delete match;
       match = 0;
    }
@@ -700,7 +707,7 @@ Int_t  TProofDataSetManager::ScanDataSet(TFileCollection *dataset, const char *o
    }
 
    // loop over now staged files
-   if (!fSilent)
+   if (!fSilent && newStagedFiles.GetEntries() > 0)
       Info(__FUNCTION__, "Opening %d files that appear to be newly staged.",
                          newStagedFiles.GetEntries());
 
@@ -718,9 +725,9 @@ Int_t  TProofDataSetManager::ScanDataSet(TFileCollection *dataset, const char *o
 
       TUrl *url = fileInfo->GetCurrentUrl();
 
-      Long64_t newSize = -1;
+      TFile *file = 0;
 
-      // to determine the size we have to open the file without the anchor 
+      // to determine the size we have to open the file without the anchor
       // (otherwise we get the size of the contained file - in case of a zip archive)
       Bool_t zipFile = kFALSE;
       if (strlen(url->GetAnchor()) > 0) {
@@ -729,44 +736,40 @@ Int_t  TProofDataSetManager::ScanDataSet(TFileCollection *dataset, const char *o
          urlNoAnchor.SetAnchor("");
          urlNoAnchor.SetOptions("filetype=raw");
 
-         TFile *file = TFile::Open(urlNoAnchor.GetUrl());
+         file = TFile::Open(urlNoAnchor.GetUrl());
+      } else
+         file = TFile::Open(url->GetUrl());
 
-         if (file->GetSize() > 0)
-            newSize = file->GetSize();
-
-         file->Close();
-         delete file;
-      }
-
-      TFile *file = TFile::Open(url->GetUrl());
-
-      if (!file) {
-         // if the file could be opened before, but fails now it is corrupt...
-         if (zipFile) {
-            if (!fSilent)
-               Info(__FUNCTION__, "Marking %s as corrupt", url->GetUrl());
-            fileInfo->SetBit(TFileInfo::kStaged);
-            fileInfo->SetBit(TFileInfo::kCorrupted);
-            changed = kTRUE;
-         }
+      if (!file)
          continue;
-      }
 
-      // update the information in the file info
-      fileInfo->SetBit(TFileInfo::kStaged);
       changed = kTRUE;
+
+      fileInfo->SetBit(TFileInfo::kStaged);
+
+      // add url of the disk server in front of the list
       TUrl urlDiskServer(*url);
       urlDiskServer.SetHost(file->GetEndpointUrl()->GetHost());
-
-      // Add url in front of the list
       fileInfo->AddUrl(urlDiskServer.GetUrl(), kTRUE);
-      Info(__FUNCTION__, "Added URL %s", urlDiskServer.GetUrl());
+      if (!fSilent)
+        Info(__FUNCTION__, "Added URL %s", urlDiskServer.GetUrl());
 
-      if (newSize <= 0 && file->GetSize() > 0)
-         newSize = file->GetSize();
+      if (file->GetSize() > 0)
+          fileInfo->SetSize(file->GetSize());
 
-      if (newSize > 0)
-         fileInfo->SetSize(newSize);
+      if (zipFile) {
+         file->Close();
+         delete file;
+
+         file = TFile::Open(url->GetUrl());
+         if (!file) {
+            // if the file could be opened before, but fails now it is corrupt...
+            if (!fSilent)
+               Info(__FUNCTION__, "Marking %s as corrupt", url->GetUrl());
+            fileInfo->SetBit(TFileInfo::kCorrupted);
+            continue;
+         }
+      }
 
       // loop over all entries and create/update corresponding metadata
       // this code only used the objects in the basedir, should be extended to cover directories also
@@ -1105,22 +1108,31 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
             uniqueFileList->SetOwner(kFALSE);
             delete uniqueFileList;
 
+            // enforce certain settings
+            dataSet->SetName(dsName);
+            dataSet->ResetBitAll(TFileInfo::kStaged);
+            dataSet->ResetBitAll(TFileInfo::kCorrupted);
+            dataSet->RemoveMetaData();
+
             // update accumulated information
             dataSet->Update();
-            dataSet->SetName(dsName);
-
-            // TODO Reset staged and corrupted bits
 
             if (fCheckQuota) {
+               if (dataSet->GetTotalSize() <= 0) {
+                  Error("HandleRequest", "Datasets without size information are not accepted");
+                  sock->Send(kMESS_NOTOK);
+                  break;
+               }
                // now check the quota
                UpdateUsedSpace();
                Long64_t used = GetGroupUsed(fGroup) + dataSet->GetTotalSize();
 
-               Info("HandleRequest", "the group %s uses %lld + %lld for the new dataset."
-                                    " Quota is %lld", fGroup.Data(),
-                                    GetGroupUsed(fGroup), dataSet->GetTotalSize(),
-                                    GetGroupQuota(fGroup));
-               if (used >= GetGroupQuota(fGroup)) {
+               Info("HandleRequest", "Your group %s uses %.1f GB + %.1f GB for the new dataset. "
+                                    "The available quota is %.1f GB", fGroup.Data(),
+                                    (Float_t) GetGroupUsed(fGroup)    / 1073741824,
+                                    (Float_t) dataSet->GetTotalSize() / 1073741824,
+                                    (Float_t) GetGroupQuota(fGroup)   / 1073741824);
+               if (used > GetGroupQuota(fGroup)) {
                   Error("HandleRequest", "quota exceeded");
                   sock->Send(kMESS_NOTOK);
                   break;
@@ -1190,7 +1202,9 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
                               TFileInfoMeta* meta = dataset->GetMetaData(dataset->GetDefaultTreeName());
                               if (meta)
                                  treeInfo += Form("|%8lld", meta->GetEntries());
-                           }
+                           } else
+                              treeInfo = "        N/A";
+
                            treeInfo.Resize(21);
                            Printf("%s|%7lld|%s|%5d GB| %3d %%", dsNameFormatted.Data(),
                                   dataset->GetNFiles(), treeInfo.Data(),
@@ -1263,7 +1277,7 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
       case TProof::kGetDataSet:
          {  (*mess) >> uri;
             (*mess) >> opt;
-            if (ParseDataSetUri(uri, &dsGroup, &dsUser, &dsName, 0, kTRUE) == kFALSE) {
+            if (ParseDataSetUri(uri, &dsGroup, &dsUser, &dsName) == kFALSE) {
                sock->Send(kMESS_NOTOK);
                break;
             }
@@ -1302,8 +1316,6 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
                break;
             }
 
-            // TODO this can take several minutes, how disable wait?
-
             Bool_t fOldSilent = fSilent;
             fSilent = kFALSE;
             Int_t result = 0;
@@ -1313,7 +1325,7 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
             fSilent = fOldSilent;
 
             if (result > 0)
-               Printf("%d files 'new'; %d files touched; %d files disappared",
+               Printf("%d files 'new'; %d files touched; %d files disappeared",
                       GetNOpenedFiles(), GetNTouchedFiles(), GetNDisapparedFiles());
 
             sock->Send((result > 0) ? kMESS_OK : kMESS_NOTOK);
@@ -1414,10 +1426,7 @@ Bool_t TProofDataSetManager::ParseDataSetUri(const char *uri,
       // parse group/user
       if (uriStr.Length() > 0 && uriStr[0] == '/') {
          // Skip first token
-         if (!(uriStr.Tokenize(tok, from, "/"))) {
-            Error("ParseDataSetUri", "problem extracting the first empty token");
-            return kFALSE;
-         }
+         from = 1;
          // starts with group and user
          if (!(uriStr.Tokenize(group, from, "/"))) {
             Error("ParseDataSetUri", "group undefined");
