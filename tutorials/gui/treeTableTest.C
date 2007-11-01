@@ -66,7 +66,7 @@ TableTest::TableTest(const TGWindow *p, UInt_t ntrows, UInt_t ntcols,
    
    // Open root file for the tree
 //    fFile = new TFile("$ROOTSYS/tutorials/hsimple.root");
-   fFile = new TFile("$ROOTSYS/tutorials/staff.root");
+   fFile = new TFile("$ROOTSYS/tutorials/gui/staff.root");
 
 
    if (!fFile || fFile->IsZombie()) {
