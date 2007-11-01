@@ -170,8 +170,7 @@ protected:
 
    virtual void  HandleSocketInputDuringProcess();
    virtual Int_t Setup();
-   virtual Int_t SetupCommon();
-
+   Int_t         SetupCommon();
    virtual void  MakePlayer();
    virtual void  DeletePlayer();
 
@@ -217,6 +216,7 @@ public:
 
    virtual EQueryAction GetWorkers(TList *workers, Int_t &prioritychange);
 
+   virtual void   HandleSignalException(Int_t sig);
    virtual void   HandleSocketInput();
    virtual void   HandleUrgentData();
    virtual void   HandleSigPipe();

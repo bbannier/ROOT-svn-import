@@ -586,10 +586,10 @@ Int_t TProofServ::CreateServer()
       }
 
       // make instance of TProof
-      fProof = reinterpret_cast<TProof*>(h->ExecPlugin(4, master.Data(),
+      fProof = reinterpret_cast<TProof*>(h->ExecPlugin(5, master.Data(),
                                                           fConfFile.Data(),
                                                           GetConfDir(),
-                                                          fLogLevel));
+                                                          fLogLevel, 0));
       if (!fProof || !fProof->IsValid()) {
          Error("CreateServer", "plugin for TProof could not be executed");
          delete fProof;
@@ -1089,8 +1089,12 @@ void TProofServ::HandleSocketInput()
             // copy file to cache if not a PAR file
             if (size > 0 && strncmp(fPackageDir, name, fPackageDir.Length()))
                CopyToCache(name, 0);
-            if (IsMaster() && fw == 1)
-               fProof->SendFile(name, bin);
+            if (IsMaster() && fw == 1) {
+               Int_t opt = TProof::kForward;
+               if (bin)
+                  opt |= TProof::kBinary;
+               fProof->SendFile(name, opt);
+            }
          }
          break;
 
@@ -1200,7 +1204,8 @@ void TProofServ::HandleSocketInput()
          break;
       case kPROOF_VALIDATE_DSET:
          {
-            PDB(kGlobal, 1) Info("HandleSocketInput:kPROOF_VALIDATE_DSET", "Enter");
+            PDB(kGlobal, 1)
+               Info("HandleSocketInput:kPROOF_VALIDATE_DSET", "Enter");
 
             TDSet* dset = 0;
             (*mess) >> dset;
@@ -1212,7 +1217,8 @@ void TProofServ::HandleSocketInput()
             answ << dset;
             fSocket->Send(answ);
             delete dset;
-            PDB(kGlobal, 1) Info("HandleSocketInput:kPROOF_VALIDATE_DSET", "Done");
+            PDB(kGlobal, 1)
+               Info("HandleSocketInput:kPROOF_VALIDATE_DSET", "Done");
             SendLogFile();
          }
          break;
@@ -1853,6 +1859,7 @@ void TProofServ::SendStatistics()
    TString workdir = gSystem->WorkingDirectory();  // expect TString on other side
    mess << bytesread << fRealTime << fCpuTime << workdir;
    if (fProtocol >= 4) mess << TString(gProofServ->GetWorkDir());
+   mess << TString(gProofServ->GetImage());
    fSocket->Send(mess);
 }
 
@@ -2021,6 +2028,10 @@ Int_t TProofServ::Setup()
       }
    }
 
+   // Set $HOME and $PATH. The HOME directory was already set to the
+   // user's home directory by proofd.
+   gSystem->Setenv("HOME", gSystem->HomeDirectory());
+
    // Add user name in case of non default workdir
    if (fWorkDir.BeginsWith("/") &&
       !fWorkDir.BeginsWith(gSystem->HomeDirectory())) {
@@ -2032,6 +2043,13 @@ Int_t TProofServ::Setup()
          delete u;
       }
    }
+
+   // Goto to the main PROOF working directory
+   char *workdir = gSystem->ExpandPathName(fWorkDir.Data());
+   fWorkDir = workdir;
+   delete [] workdir;
+   if (gProofDebugLevel > 0)
+      Info("Setup", "working directory set to %s", fWorkDir.Data());
 
    // host first name
    TString host = gSystem->HostName();
@@ -2050,16 +2068,6 @@ Int_t TProofServ::Setup()
       fSessionDir += "/slave-";
    fSessionDir += fSessionTag;
 
-   if (gSystem->AccessPathName(fSessionDir)) {
-      gSystem->MakeDirectory(fSessionDir);
-      if (!gSystem->ChangeDirectory(fSessionDir)) {
-         SysError("Setup", "can not change to working directory %s",
-                  fSessionDir.Data());
-      } else {
-         gSystem->Setenv("PROOF_SANDBOX", fSessionDir);
-      }
-   }
-
    // Common setup
    if (SetupCommon() != 0) {
       Error("Setup", "common setup failed");
@@ -2068,18 +2076,6 @@ Int_t TProofServ::Setup()
 
    // Incoming OOB should generate a SIGURG
    fSocket->SetOption(kProcessGroup, gSystem->GetPid());
-
-   // Send messages off immediately to reduce latency
-   fSocket->SetOption(kNoDelay, 1);
-
-   // Check every two hours if client is still alive
-   fSocket->SetOption(kKeepAlive, 1);
-
-   // Install SigPipe handler to handle kKeepAlive failure
-   gSystem->AddSignalHandler(new TProofServSigPipeHandler(this));
-
-   if (gProofDebugLevel > 0)
-      Info("Setup", "successfully completed");
 
    // Done
    return 0;
@@ -2090,13 +2086,6 @@ Int_t TProofServ::SetupCommon()
 {
    // Common part (between TProofServ and TXProofServ) of the setup phase.
    // Return 0 on success, -1 on error
-
-   // goto to the main PROOF working directory
-   char *workdir = gSystem->ExpandPathName(fWorkDir.Data());
-   fWorkDir = workdir;
-   delete [] workdir;
-   if (gProofDebugLevel > 0)
-      Info("SetupCommon", "working directory set to %s", fWorkDir.Data());
 
    // deny write access for group and world
    gSystem->Umask(022);
@@ -2152,7 +2141,8 @@ Int_t TProofServ::SetupCommon()
    if (gProofDebugLevel > 0)
       Info("SetupCommon", "cache directory set to %s", fCacheDir.Data());
    fCacheLock =
-      new TProofLockPath(Form("%s%s",kPROOF_CacheLockFile,fUser.Data()));
+      new TProofLockPath(Form("%s%s",kPROOF_CacheLockFile,
+                         TString(fCacheDir).ReplaceAll("/","%").Data()));
 
    // check and make sure "packages" directory exists
    fPackageDir = fWorkDir;
@@ -2162,7 +2152,8 @@ Int_t TProofServ::SetupCommon()
    if (gProofDebugLevel > 0)
       Info("SetupCommon", "package directory set to %s", fPackageDir.Data());
    fPackageLock =
-      new TProofLockPath(Form("%s%s",kPROOF_PackageLockFile,fUser.Data()));
+      new TProofLockPath(Form("%s%s",kPROOF_PackageLockFile,
+                         TString(fPackageDir).ReplaceAll("/","%").Data()));
 
    // List of directories where to look for global packages
    TString globpack = gEnv->GetValue("Proof.GlobalPackageDirs","");
@@ -2189,13 +2180,23 @@ Int_t TProofServ::SetupCommon()
       }
    }
 
+   // Check the session dir
+   if (fSessionDir != gSystem->WorkingDirectory()) {
+      if (gSystem->AccessPathName(fSessionDir))
+         gSystem->MakeDirectory(fSessionDir);
+      if (!gSystem->ChangeDirectory(fSessionDir)) {
+         Error("SetupCommon", "can not change to working directory %s",
+                              fSessionDir.Data());
+         return -1;
+      }
+   }
+   gSystem->Setenv("PROOF_SANDBOX", fSessionDir);
+   if (gProofDebugLevel > 0)
+      Info("SetupCommon", "session dir is %s", fSessionDir.Data());
+
    // On masters, check and make sure that "queries" and "datasets"
    // directories exist
    if (IsMaster()) {
-
-      // Create 'queries' locker instance and lock it
-      fQueryLock = new TProofLockPath(Form("%s%s-%s",
-                       kPROOF_QueryLockFile,fSessionTag.Data(),fUser.Data()));
 
       // Make sure that the 'queries' dir exist
       fQueryDir = fWorkDir;
@@ -2207,6 +2208,11 @@ Int_t TProofServ::SetupCommon()
          gSystem->MakeDirectory(fQueryDir);
       if (gProofDebugLevel > 0)
          Info("SetupCommon", "queries dir is %s", fQueryDir.Data());
+
+      // Create 'queries' locker instance and lock it
+      fQueryLock = new TProofLockPath(Form("%s%s-%s",
+                       kPROOF_QueryLockFile,fSessionTag.Data(),
+                       TString(fQueryDir).ReplaceAll("/","%").Data()));
       fQueryLock->Lock();
 
       // 'datasets'
@@ -2220,13 +2226,14 @@ Int_t TProofServ::SetupCommon()
       if (gProofDebugLevel > 0)
          Info("SetupCommon", "dataset dir is %s", fDataSetDir.Data());
 
-      // Send session tag, if a recent client
-      if (fProtocol > 6) {
-         TMessage m(kPROOF_SESSIONTAG);
-         m << fSessionTag;
-         fSocket->Send(m);
-      }
+      // Send session tag to client
+      TMessage m(kPROOF_SESSIONTAG);
+      m << fSessionTag;
+      fSocket->Send(m);
    }
+
+   // Server image
+   fImage = gEnv->GetValue("ProofServ.Image", "");
 
    // Set group and get the group priority
    fGroup = gEnv->GetValue("ProofServ.ProofGroup", "");
@@ -2257,6 +2264,12 @@ Int_t TProofServ::SetupCommon()
       m << vac;
       fSocket->Send(m);
    }
+
+   // Send packages off immediately to reduce latency
+   fSocket->SetOption(kNoDelay, 1);
+
+   // Check every two hours if client is still alive
+   fSocket->SetOption(kKeepAlive, 1);
 
    // Set user vars in TProof
    TString all_vars(gSystem->Getenv("PROOF_ALLVARS"));
@@ -4452,17 +4465,28 @@ TProofServ::EQueryAction TProofServ::GetWorkers(TList *workers,
 
    // Get the master
    TProofNodeInfo *master = resources->GetMaster();
-   if (master)
-      fImage = master->GetImage();
-   if (!master || (fImage.Length() == 0)) {
+   if (!master) {
       PDB(kAll,1)
          Info("GetWorkers",
               "no appropriate master line found in %s", fConfFile.Data());
       return kQueryStop;
+   } else {
+      // Set image if not yet done and available
+      if (fImage.IsNull() && strlen(master->GetImage()) > 0)
+         fImage = master->GetImage();
    }
 
-   // Fill worker list
-   if (resources->GetWorkers()) {
+   // Fill submaster or worker list
+   if (resources->GetSubmasters() && resources->GetSubmasters()->GetSize() > 0) {
+      PDB(kAll,1)
+         resources->GetSubmasters()->Print();
+      TProofNodeInfo *ni = 0;
+      TIter nw(resources->GetSubmasters());
+      while ((ni = (TProofNodeInfo *) nw()))
+         workers->Add(new TProofNodeInfo(*ni));
+   } else if (resources->GetWorkers() && resources->GetWorkers()->GetSize() > 0) {
+      PDB(kAll,1)
+         resources->GetWorkers()->Print();
       TProofNodeInfo *ni = 0;
       TIter nw(resources->GetWorkers());
       while ((ni = (TProofNodeInfo *) nw()))
@@ -4924,6 +4948,14 @@ void TProofServ::FlushLogFile()
    // while preserving the possibility to have them in case of problems.
 
    lseek(fLogFileDes, lseek(fileno(stdout), (off_t)0, SEEK_END), SEEK_SET);
+}
+
+//______________________________________________________________________________
+void TProofServ::HandleSignalException(Int_t sig)
+{
+   // Exception handler: we do not try to recover here, just exit.
+
+   gSystem->Exit(sig);
 }
 
 //______________________________________________________________________________

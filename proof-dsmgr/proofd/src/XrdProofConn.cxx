@@ -158,6 +158,9 @@ bool XrdProofConn::Init(const char *url)
       }
    }
 
+   // Mutex
+   fMutex = new XrdSysRecMutex();
+
    // Parse Url
    fUrl.TakeUrl(XrdOucString(url));
    fUser = fUrl.User.c_str();
@@ -375,9 +378,6 @@ XrdClientMessage *XrdProofConn::SendRecv(XPClientRequest *req, const void *reqDa
    // the buffer is internally allocated and must be freed by the caller.
    // If (*answData != 0) the program assumes that the caller has allocated
    // enough bytes to contain the reply.
-   if (!fMutex)
-      fMutex = new XrdSysRecMutex();
-   XrdSysMutexHelper l(*fMutex);
 
    XrdClientMessage *xmsg = 0;
 
@@ -489,6 +489,8 @@ XrdClientMessage *XrdProofConn::SendReq(XPClientRequest *req, const void *reqDat
 
    int retry = 0;
    bool resp = 0, abortcmd = 0;
+
+   XrdSysMutexHelper l(*fMutex);
 
    // We need the unmarshalled request for retries
    XPClientRequest reqsave;
@@ -1225,4 +1227,16 @@ void XrdProofConn::SetInterrupt()
 
    if (fPhyConn)
       fPhyConn->SetInterrupt();
+}
+
+//_____________________________________________________________________________
+bool XrdProofConn::IsValid() const
+{
+   // Test validity of this connection
+
+   if (fConnected)
+      if (fPhyConn && fPhyConn->IsValid())
+         return 1;
+   // Invalid
+   return 0;
 }

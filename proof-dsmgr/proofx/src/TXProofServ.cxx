@@ -608,6 +608,7 @@ Int_t TXProofServ::Setup()
          fConfFile = cf;
    }
    fWorkDir = gEnv->GetValue("ProofServ.Sandbox", kPROOF_WorkDir);
+
    // Get Session tag
    if ((fSessionTag = gEnv->GetValue("ProofServ.SessionTag", "-1")) == "-1") {
       Error("Setup", "Session tag missing");
@@ -622,30 +623,18 @@ Int_t TXProofServ::Setup()
       return -1;
    }
 
-   if (fSessionDir != gSystem->WorkingDirectory()) {
-      if (gSystem->AccessPathName(fSessionDir))
-         gSystem->MakeDirectory(fSessionDir);
-      if (!gSystem->ChangeDirectory(fSessionDir)) {
-         Error("Setup", "can not change to working directory %s",
-                        fSessionDir.Data());
-         return -1;
-      }
-   }
-   gSystem->Setenv("PROOF_SANDBOX", fSessionDir);
+   // Goto to the main PROOF working directory
+   char *workdir = gSystem->ExpandPathName(fWorkDir.Data());
+   fWorkDir = workdir;
+   delete [] workdir;
    if (gProofDebugLevel > 0)
-      Info("Setup", "session dir is %s", fSessionDir.Data());
+      Info("Setup", "working directory set to %s", fWorkDir.Data());
 
    // Common setup
    if (SetupCommon() != 0) {
       Error("Setup", "common setup failed");
       return -1;
    }
-
-   // Send packages off immediately to reduce latency
-   fSocket->SetOption(kNoDelay, 1);
-
-   // Check every two hours if client is still alive
-   fSocket->SetOption(kKeepAlive, 1);
 
    // Install SigPipe handler to handle kKeepAlive failure
    gSystem->AddSignalHandler(new TXProofServSigPipeHandler(this));
@@ -765,32 +754,28 @@ TProofServ::EQueryAction TXProofServ::GetWorkers(TList *workers,
    // followed by the information about the workers; the tokens for each node
    // are separated by '&'
    if (os) {
-      TObjArray *oa = TString(os->GetName()).Tokenize(TString("&"));
-      if (oa) {
-         TIter nxos(oa);
-         // The master, first
-         TObjString *to = (TObjString *) nxos();
-         TProofNodeInfo *master = new TProofNodeInfo(to->GetName());
-         // Image
-         fImage = master->GetImage();
-         if (fImage.Length() <= 0) {
-            Error("GetWorkers", "no appropriate master line got from coordinator");
-            SafeDelete(oa);
-            SafeDelete(os);
-            SafeDelete(master);
-            return kQueryStop;
+      TString fl(os->GetName());
+      TString tok;
+      Ssiz_t from = 0;
+      if (fl.Tokenize(tok, from, "&")) {
+         if (!tok.IsNull()) {
+            TProofNodeInfo *master = new TProofNodeInfo(tok);
+            if (!master) {
+               Error("GetWorkers", "no appropriate master line got from coordinator");
+               return kQueryStop;
+            } else {
+               // Set image if not yet done and available
+               if (fImage.IsNull() && strlen(master->GetImage()) > 0)
+                  fImage = master->GetImage();
+               SafeDelete(master);
+            }
+            // Now the workers
+            while (fl.Tokenize(tok, from, "&")) {
+               if (!tok.IsNull())
+                  workers->Add(new TProofNodeInfo(tok));
+            }
          }
-
-         // Now the workers
-         while ((to = (TObjString *) nxos()))
-            workers->Add(new TProofNodeInfo(to->GetName()));
-
-         // Cleanup
-         SafeDelete(oa);
-         SafeDelete(master);
       }
-      // Cleanup
-      SafeDelete(os);
    }
 
    // We are done
@@ -931,6 +916,10 @@ void TXProofServ::Terminate(Int_t status)
 
    // Notify
    Info("Terminate", "starting session termination operations ...");
+
+   // Deactivate current monitor, if any
+   if (fProof)
+      fProof->SetMonitor(0, kFALSE);
 
    // Cleanup session directory
    if (status == 0) {

@@ -176,6 +176,11 @@ Gui.IconPath:                $(HOME)/icons:@iconpath@:.
 Gui.MimeTypeFile:            $(HOME)/.root.mimes
 # If above does not exists defaults to this:
 #Gui.MimeTypeFile:            @etcdir@/root.mimes
+Browser.Name:                TRootBrowserLite
+# Browser Options (plugins)
+# F: File browser E: Text Editor H: HTML browser 
+# C: Canvas I: I/O redirection P: Proof G: GL viewer
+Browser.Options:             FECI
 # Can be either small, big, list, details
 Browser.IconStyle:           small
 # Can be either name, type, size, date
@@ -407,7 +412,7 @@ Url.Special:         file: rfio: hpss: castor: gfal: dcache:
 # PROOF XRD client variables
 # Debug level (<=0 : none, 1 : low, 2 : medium, 3 : high)
 XProof.Debug:  0
-# Socket read timeout [in secs: default 10 secs]
+# Socket read timeout [in secs: default 300 secs]
 # XProof.ReadTimeout: 10
 
 # The following env vars are handled by TXNetFile and related classes
