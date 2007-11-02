@@ -4522,7 +4522,13 @@ int XrdProofdProtocol::SendMsg()
    static const char *crecv[4] = {"master proofserv", "top master",
                                   "client", "undefined"};
    int rc = 1;
+   if (!fPClient) {
+      TRACEP(XERR, "SendMsg: client undefined!!! ");
+      fResponse.Send(kXR_InvalidRequest,"SendMsg: client undefined!!! ");
+      return rc;
+   }
 
+   XrdSysMutexHelper mhc(fPClient->Mutex());
    XrdSysMutexHelper mh(fResponse.fMutex);
 
    // Unmarshall the data
@@ -5086,7 +5092,7 @@ int XrdProofdProtocol::Admin()
 
          // Asynchronous notification to requester
          if (fgMgr.SrvType() != kXPD_WorkerServer) {
-            cmsg = "Reset: verifying termination status";
+            cmsg = "Reset: verifying termination status (may take up to 10 seconds)";
             fResponse.Send(kXR_attn, kXPD_srvmsg, (char *) cmsg.c_str(), cmsg.length());
          }
 

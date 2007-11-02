@@ -1674,6 +1674,17 @@ void TXSocket::InitEnvs()
    // No automatic proofd backward-compatibility
    EnvPutInt(NAME_KEEPSOCKOPENIFNOTXRD, 0);
 
+   // Dynamic forwarding (SOCKS4)
+   TString socks4Host = gEnv->GetValue("XNet.SOCKS4Host","");
+   Int_t socks4Port = gEnv->GetValue("XNet.SOCKS4Port",-1);
+   if (socks4Port > 0) {
+      if (socks4Host.IsNull())
+         // Default
+         socks4Host = "127.0.0.1";
+      EnvPutString(NAME_SOCKS4HOST, socks4Host.Data());
+      EnvPutInt(NAME_SOCKS4PORT, socks4Port);
+   }
+
    // For password-based authentication
    TString autolog = gEnv->GetValue("XSec.Pwd.AutoLogin","1");
    if (autolog.Length() > 0)
