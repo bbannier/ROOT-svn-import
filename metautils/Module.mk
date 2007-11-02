@@ -37,7 +37,7 @@ include/%.h:    $(METAUTILSDIRI)/%.h
 # $(METAUTILSDS): $(METAUTILSH) $(METAUTILSL) utils/src/rootcint_tmp$(EXEEXT)
 $(METAUTILSDS): $(METAUTILSH) $(METAUTILSL) $(METAUTILSO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMPEXE) -f $@ -o "$(METAUTILSO)" -c -DG__API $(METAUTILSH) $(METAUTILSL)
+		$(ROOTCINTTMP) -f $@ -o "$(METAUTILSO)" -c -DG__API $(METAUTILSH) $(METAUTILSL)
 
 all-metautils:  $(METAUTILSO) $(METAUTILSDO)
 

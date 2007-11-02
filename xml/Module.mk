@@ -45,7 +45,7 @@ $(XMLLIB):      $(XMLO) $(XMLDO) $(ORDER_) $(MAINLIBS) $(XMLLIBDEP)
 
 $(XMLDS):       $(XMLH) $(XMLL) $(XMLO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMPEXE) -f $@ -o "$(XMLO)" -c $(XMLH) $(XMLL)
+		$(ROOTCINTTMP) -f $@ -o "$(XMLO)" -c $(XMLH) $(XMLL)
 
 $(XMLMAP):      $(RLIBMAP) $(MAKEFILEDEP) $(XMLL)
 		$(RLIBMAP) -o $(XMLMAP) -l $(XMLLIB) \

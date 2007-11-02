@@ -45,7 +45,7 @@ $(HTMLLIB):     $(HTMLO) $(HTMLDO) $(ORDER_) $(MAINLIBS) $(HTMLLIBDEP)
 
 $(HTMLDS):      $(HTMLH) $(HTMLL) $(HTMLO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMPEXE) -f $@ -o "$(HTMLO)" -c $(HTMLH) $(HTMLL)
+		$(ROOTCINTTMP) -f $@ -o "$(HTMLO)" -c $(HTMLH) $(HTMLL)
 
 $(HTMLMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(HTMLL)
 		$(RLIBMAP) -o $(HTMLMAP) -l $(HTMLLIB) \

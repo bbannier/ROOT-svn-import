@@ -73,18 +73,18 @@ base/src/TSystem.d base/src/TSystem.o: $(COMPILEDATA)
 
 $(BASEDS1):     $(BASEH1) $(BASEL1) $(BASEO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMPEXE) -f $@ -o "$(BASEO)" -c $(BASEH1) $(BASEL1)
+		$(ROOTCINTTMP) -f $@ -o "$(BASEO)" -c $(BASEH1) $(BASEL1)
 $(BASEDS2):     $(BASEH1) $(BASEL2) $(BASEO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMPEXE) -f $@ -o "$(BASEO)" -c $(BASEH1) $(BASEL2)
+		$(ROOTCINTTMP) -f $@ -o "$(BASEO)" -c $(BASEH1) $(BASEL2)
 $(BASEDS3):     $(BASEH3) $(BASEL3) $(BASEO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMPEXE) -f $@ -o "$(BASEO)" -c $(BASEH3) $(BASEL3)
+		$(ROOTCINTTMP) -f $@ -o "$(BASEO)" -c $(BASEH3) $(BASEL3)
 # pre-requisites intentionally not specified... should be called only
 # on demand after deleting the file
 $(BASEDS4):
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMPEXE) -f $@ -o "$(BASEO)" -c $(BASEH4) $(BASEL4)
+		$(ROOTCINTTMP) -f $@ -o "$(BASEO)" -c $(BASEH4) $(BASEL4)
 		@echo "You need to manually fix the generated file as follow:"
 		@echo "1. In ManualBase4Body.h, modify the name of the 2 functions to match the name of the CINT wrapper functions in ManualBase4.cxx"
 		@echo "2. Replace the implementation of both functions by #include \"ManualBase4Body.h\" "

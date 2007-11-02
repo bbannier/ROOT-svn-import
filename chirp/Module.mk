@@ -44,7 +44,7 @@ $(CHIRPLIB):    $(CHIRPO) $(CHIRPDO) $(ORDER_) $(MAINLIBS)
 
 $(CHIRPDS):     $(CHIRPH) $(CHIRPL) $(CHIRPO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMPEXE) -f $@ -o "$(CHIRPO)" -c $(CHIRPH) $(CHIRPL)
+		$(ROOTCINTTMP) -f $@ -o "$(CHIRPO)" -c $(CHIRPH) $(CHIRPL)
 
 $(CHIRPMAP):    $(RLIBMAP) $(MAKEFILEDEP) $(CHIRPL)
 		$(RLIBMAP) -o $(CHIRPMAP) -l $(CHIRPLIB) \

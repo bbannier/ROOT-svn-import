@@ -70,7 +70,7 @@ $(GLLIB):       $(GLO) $(GLO1) $(GLDO) $(ORDER_) $(MAINLIBS) $(GLLIBDEP)
 
 $(GLDS):	$(GLH2) $(GLL) $(GLO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMPEXE) -f $@ -o "$(GLO)" -c $(GLH2) $(GLL)
+		$(ROOTCINTTMP) -f $@ -o "$(GLO)" -c $(GLH2) $(GLL)
 
 $(GLMAP):       $(RLIBMAP) $(MAKEFILEDEP) $(GLL)
 		$(RLIBMAP) -o $(GLMAP) -l $(GLLIB) \

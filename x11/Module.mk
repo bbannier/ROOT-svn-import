@@ -47,7 +47,7 @@ $(X11LIB):      $(X11O) $(X11DO) $(ORDER_) $(MAINLIBS)
 
 $(X11DS):       $(X11H1) $(X11L) $(X11O) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMPEXE) -f $@ -o "$(X11O)" -c $(X11H1) $(X11L)
+		$(ROOTCINTTMP) -f $@ -o "$(X11O)" -c $(X11H1) $(X11L)
 
 $(X11MAP):      $(RLIBMAP) $(MAKEFILEDEP) $(X11L)
 		$(RLIBMAP) -o $(X11MAP) -l $(X11LIB) \

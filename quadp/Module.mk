@@ -45,7 +45,7 @@ $(QUADPLIB):    $(QUADPO) $(QUADPDO) $(ORDER_) $(MAINLIBS) $(QUADPLIBDEP)
 
 $(QUADPDS):     $(QUADPH) $(QUADPL) $(QUADPO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMPEXE) -f $@ -o "$(QUADPO)" -c $(QUADPH) $(QUADPL)
+		$(ROOTCINTTMP) -f $@ -o "$(QUADPO)" -c $(QUADPH) $(QUADPL)
 
 $(QUADPMAP):    $(RLIBMAP) $(MAKEFILEDEP) $(QUADPL)
 		$(RLIBMAP) -o $(QUADPMAP) -l $(QUADPLIB) \

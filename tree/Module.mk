@@ -52,13 +52,13 @@ $(TREELIB):     $(TREEO) $(TREEDO) $(ORDER_) $(MAINLIBS) $(TREELIBDEP)
 
 $(TREEDS):      $(TREEH) $(TREEL) $(TREEO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMPEXE) -f $@ -o "$(TREEO)" -c $(TREEH) $(TREEL)
+		$(ROOTCINTTMP) -f $@ -o "$(TREEO)" -c $(TREEH) $(TREEL)
 
 # pre-requisites intentionally not specified... should be called only
 # on demand after deleting the file
 $(TREEDS2):
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMPEXE) -f $@ -o "$(TREEO)" -c $(TREEDH2) $(TREEL2)
+		$(ROOTCINTTMP) -f $@ -o "$(TREEO)" -c $(TREEDH2) $(TREEL2)
 
 $(TREEMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(TREEL)
 		$(RLIBMAP) -o $(TREEMAP) -l $(TREELIB) \

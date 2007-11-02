@@ -45,7 +45,7 @@ $(IOLIB):       $(IOO) $(IODO) $(ORDER_) $(MAINLIBS)
 
 $(IODS):        $(IOH) $(IOL) $(IOO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMPEXE) -f $@ -o "$(IOO)" -c $(IOH) $(IOL)
+		$(ROOTCINTTMP) -f $@ -o "$(IOO)" -c $(IOH) $(IOL)
 
 $(IOMAP):       $(RLIBMAP) $(MAKEFILEDEP) $(IOL)
 		$(RLIBMAP) -o $(IOMAP) -l $(IOLIB) -d $(IOLIBDEPM) -c $(IOL)

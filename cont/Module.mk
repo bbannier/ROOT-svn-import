@@ -35,7 +35,7 @@ include/%.h:    $(CONTDIRI)/%.h
 
 $(CONTDS):      $(CONTH) $(CONTL) $(CONTO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMPEXE) -f $@ -o "$(CONTO)" -c $(CONTH) $(CONTL)
+		$(ROOTCINTTMP) -f $@ -o "$(CONTO)" -c $(CONTH) $(CONTL)
 
 all-cont:       $(CONTO) $(CONTDO)
 

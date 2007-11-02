@@ -45,7 +45,7 @@ $(ODBCLIB):     $(ODBCO) $(ODBCDO) $(ORDER_) $(MAINLIBS) $(ODBCLIBDEP)
 
 $(ODBCDS):     $(ODBCH) $(ODBCL) $(ODBCO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMPEXE) -f $@ -o "$(ODBCO)" -c $(ODBCINCDIR:%=-I%) $(ODBCH) $(ODBCL)
+		$(ROOTCINTTMP) -f $@ -o "$(ODBCO)" -c $(ODBCINCDIR:%=-I%) $(ODBCH) $(ODBCL)
 
 $(ODBCMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(ODBCL)
 		$(RLIBMAP) -o $(ODBCMAP) -l $(ODBCLIB) \

@@ -45,7 +45,7 @@ $(GEDLIB):      $(GEDO) $(GEDDO) $(ORDER_) $(MAINLIBS) $(GEDLIBDEP)
 
 $(GEDDS):       $(GEDH) $(GEDL) $(GEDO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMPEXE) -f $@ -o "$(GEDO)" -c $(GEDH) $(GEDL)
+		$(ROOTCINTTMP) -f $@ -o "$(GEDO)" -c $(GEDH) $(GEDL)
 
 $(GEDMAP):      $(RLIBMAP) $(MAKEFILEDEP) $(GEDL)
 		$(RLIBMAP) -o $(GEDMAP) -l $(GEDLIB) \

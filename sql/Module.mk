@@ -45,7 +45,7 @@ $(SQLLIB):      $(SQLO) $(SQLDO) $(ORDER_) $(MAINLIBS) $(SQLLIBDEP)
 
 $(SQLDS):       $(SQLH) $(SQLL) $(SQLO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMPEXE) -f $@ -o "$(SQLO)" -c $(SQLH) $(SQLL)
+		$(ROOTCINTTMP) -f $@ -o "$(SQLO)" -c $(SQLH) $(SQLL)
 
 $(SQLMAP):      $(RLIBMAP) $(MAKEFILEDEP) $(SQLL)
 		$(RLIBMAP) -o $(SQLMAP) -l $(SQLLIB) \

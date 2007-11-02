@@ -45,7 +45,7 @@ $(GDMLLIB):     $(GDMLO) $(GDMLDO) $(ORDER_) $(MAINLIBS) $(GDMLLIBDEP)
 
 $(GDMLDS):      $(GDMLH) $(GDMLL) $(GDMLO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMPEXE) -f $@ -o "$(GDMLO)" -c $(GDMLH) $(GDMLL)
+		$(ROOTCINTTMP) -f $@ -o "$(GDMLO)" -c $(GDMLH) $(GDMLL)
 
 $(GDMLMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(GDMLL)
 		$(RLIBMAP) -o $(GDMLMAP) -l $(GDMLLIB) \

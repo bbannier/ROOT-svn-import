@@ -83,7 +83,7 @@ $(GQTLIB):      $(GQTO) $(GQTDO) $(GQTMOCO) $(ORDER_) $(MAINLIBS) $(GQTLIBDEP)
 
 $(GQTDS):       $(GQTH1) $(GQTL) $(GQTO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMPEXE) -f $@ -o "$(GQTO)" -c $(GQTH1) $(GQTL)
+		$(ROOTCINTTMP) -f $@ -o "$(GQTO)" -c $(GQTH1) $(GQTL)
 
 $(GQTMAP):      $(RLIBMAP) $(MAKEFILEDEP) $(GQTL)
 		$(RLIBMAP) -o $(GQTMAP) -l $(GQTLIB) \
