@@ -1680,10 +1680,11 @@ check_explicit "$enable_mysql" "$enable_mysql_explicit" \
 ### echo %%% Check for Stub removal support
 #
 
-if test "x$enable_stubs" = "xyes"; then
-    enable_stubs="yes"
-else
+if test "x$enable_stubs" = "xno"; then
     enable_stubs="no"
+    cp -f utils/src/rootcint.sh bin/
+else
+    enable_stubs="yes"
 fi
 
 ######################################################################
