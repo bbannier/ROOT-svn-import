@@ -20,7 +20,7 @@ and must be before the -f flags
 For more extensive help type: utils/src/rootcint_tmp -h"
 
 # Getopt call
-TEMP=`getopt -a -o vlf:o:c:hI: --long cint,reflex,gccxml,v0,v1,v2,v3,v4,object-files:symbols-file \
+TEMP=`getopt -a -o vlf:o:c:hI: --long cint,reflex,gccxml,v0,v1,v2,v3,v4,object-files:symbols-file: \
      -n 'rootcint' -- "$@"`
 
 # Wrong usage
@@ -76,12 +76,12 @@ ROOTCINTARGS=${ROOTCINTARGS/$CXXFLAGS/}
 MODE=${MODE/--/-}
 
 # Temporary dictionaries generation
-utils/src/rootcint_tmp $MODE -cint ${FILENAME%.*}"Tmp1".cxx -. 1 $ROOTCINTARGS
-utils/src/rootcint_tmp $MODE -cint ${FILENAME%.*}"Tmp2".cxx -. 2 $ROOTCINTARGS
+utils/src/rootcint_tmp $MODE ${FILENAME%.*}"Tmp1".cxx -. 1 $ROOTCINTARGS
+utils/src/rootcint_tmp $MODE ${FILENAME%.*}"Tmp2".cxx -. 2 $ROOTCINTARGS
 
 # Temporary dictionaries compilation
-g++ $(CXXFLAGS) -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -I. -o ${FILENAME%.*}"Tmp1".o -c ${FILENAME%.*}"Tmp1".cxx
-g++ $(CXXFLAGS) -Iinclude -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -I. -o ${FILENAME%.*}"Tmp2".o -c ${FILENAME%.*}"Tmp2".cxx
+g++ $CXXFLAGS -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -I. -o ${FILENAME%.*}"Tmp1".o -c ${FILENAME%.*}"Tmp1".cxx
+g++ $CXXFLAGS -Iinclude -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -I. -o ${FILENAME%.*}"Tmp2".o -c ${FILENAME%.*}"Tmp2".cxx
 
 # Symbols extraction
 nm -g -p --defined-only ${FILENAME%.*}"Tmp1".o | awk '{printf("%s\n", $3)}' > ${FILENAME%.*}.nm
