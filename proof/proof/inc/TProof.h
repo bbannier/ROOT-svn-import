@@ -410,6 +410,8 @@ protected:
    TList          *fAvailablePackages; //list of available packages
    TList          *fEnabledPackages;   //list of enabled packages
 
+   Int_t           fCollectTimeout; // Timeout for (some) collect actions
+
    TString         fDataPoolUrl;    // default data pool entry point URL
    TProofMgr::EServType fServType;  // type of server: proofd, XrdProofd
    TProofMgr      *fManager;        // manager to which this session belongs (if any)

@@ -508,7 +508,8 @@ Bool_t TXSlave::HandleError(const void *)
 {
    // Handle error on the input socket
 
-   Info("HandleError", "%p: got called ... fProof: %p", this, fProof);
+   Info("HandleError", "%p:%s:%s got called ... fProof: %p",
+                       this, fName.Data(), fOrdinal.Data(), fProof);
 
    // Interrupt underlying socket operations
    if (fSocket)

@@ -540,10 +540,13 @@ void TXProofServ::HandleTermination()
    // If master server, propagate interrupt to slaves
    // (shutdown interrupt send internally).
    if (IsMaster()) {
+
       // If not idle, try first to stop processing
       if (!fIdle) {
          // Remove pending requests
          fWaitingQueries->Delete();
+         // Interrupt the current monitor
+         fProof->InterruptCurrentMonitor();
          // Do not wait for ever, but al least 20 seconds
          Long_t timeout = gEnv->GetValue("Proof.ShutdownTimeout", 60);
          timeout = (timeout > 20) ? timeout : 20;
