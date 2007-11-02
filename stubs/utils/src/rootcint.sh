@@ -12,6 +12,8 @@ ARGOBJS=
 HELP=
 # Mode (-cint or -reflex or -gccxml)
 MODE=
+# CXXFLAGS (from root-config if unset)
+CXXFLAGS=${CXXFLAGS:-`root-config --cflags`}
 
 # Usage Message
 USAGE="Usage: rootcint [-v][-v0-4] [-cint|-reflex|-gccxml] [-l] [-f] [out.cxx] [-o] \"file1.o file2.o...\" [-c] file1.h[+][-][!] file2.h[+][-][!]...[LinkDef.h] 
@@ -49,6 +51,10 @@ while true ; do
                 *) echo "Internal error!" ;; #exit 1 ;;
         esac
 done
+
+if [ "x${FILENAME}" = "x" ]; then
+    HELP=1;
+fi
 
 # User Needs Help. 
 if [ $HELP ] ; then rootcint -h >&2 ; exit 1 ; fi
