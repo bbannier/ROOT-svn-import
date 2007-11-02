@@ -4428,7 +4428,7 @@ int main(int argc, char **argv)
    // the easiest way is to get it as a parameter
    if (!strcmp(argv[ic], "--symbols-file")) {
       ++ic;
-      argvv[argcc++] = "--symbols-file";
+      argvv[argcc++] = "-L";
       argvv[argcc++] = argv[ic]; 
       ++ic;
    }
