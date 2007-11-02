@@ -45,7 +45,7 @@ $(ALIENLIB):    $(ALIENO) $(ALIENDO) $(ORDER_) $(MAINLIBS) $(ALIENLIBDEP)
 
 $(ALIENDS):     $(ALIENH) $(ALIENL) $(ALIENO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMPEXE) -f $@ -o "$(ALIENO)" -c $(ALIENH) $(ALIENL)
+		$(ROOTCINTTMP) -f $@ -o "$(ALIENO)" -c $(ALIENH) $(ALIENL)
 
 $(ALIENMAP):    $(RLIBMAP) $(MAKEFILEDEP) $(ALIENL)
 		$(RLIBMAP) -o $(ALIENMAP) -l $(ALIENLIB) \

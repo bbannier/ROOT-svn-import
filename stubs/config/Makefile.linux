@@ -50,7 +50,7 @@ ifeq ($(ENABLESTUBS),no)
  ifeq ($(GCC_MAJOR),3)
  # allow 3.2, 3.3, and 3.4:
   ifneq ($(findstring $(GCC_MINOR),2 3 4),)
-   ROOTCINTTMPEXE = CXXFLAGS=$(CXXFLAGS) utils/src/rootcint.sh
+   ROOTCINTTMP = export CXXFLAGS="$(CXXFLAGS)"; utils/src/rootcint.sh -$(ROOTDICTTYPE)
   endif
  endif
 endif

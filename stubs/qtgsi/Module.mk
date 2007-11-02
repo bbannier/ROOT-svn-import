@@ -58,7 +58,7 @@ $(QTGSILIB):    $(QTGSIO) $(QTGSIDO) $(QTGSIMOCO) $(ORDER_) $(MAINLIBS) $(QTGSIL
 
 $(QTGSIDS):     $(QTGSIH) $(QTGSIL) $(QTGSIO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMPEXE) -f $@ -o "$(QTGSIO)" -c $(QTGSIH) $(QTGSIL)
+		$(ROOTCINTTMP) -f $@ -o "$(QTGSIO)" -c $(QTGSIH) $(QTGSIL)
 
 $(QTGSIMAP):    $(RLIBMAP) $(MAKEFILEDEP) $(QTGSIL)
 		$(RLIBMAP) -o $(QTGSIMAP) -l $(QTGSILIB) \

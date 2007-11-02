@@ -50,7 +50,7 @@ $(G3DLIB):      $(G3DO) $(G3DDO) $(ORDER_) $(MAINLIBS) $(G3DLIBDEP)
 
 $(G3DDS):       $(G3DH1) $(G3DL) $(G3DO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMPEXE) -f $@ -o "$(G3DO)" -c $(G3DH1) $(G3DL)
+		$(ROOTCINTTMP) -f $@ -o "$(G3DO)" -c $(G3DH1) $(G3DL)
 
 $(G3DMAP):      $(RLIBMAP) $(MAKEFILEDEP) $(G3DL)
 		$(RLIBMAP) -o $(G3DMAP) -l $(G3DLIB) \

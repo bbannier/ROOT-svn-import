@@ -358,7 +358,7 @@ endif
 
 ##### Utilities #####
 
-ROOTCINTTMP   = $(ROOTCINTTMPEXE) $(addprefix -,$(ROOTDICTTYPE))
+ROOTCINTTMP  ?= $(ROOTCINTTMPEXE) -$(ROOTDICTTYPE)
 MAKEDEP       = $(RMKDEP)
 MAKELIB       = build/unix/makelib.sh $(MKLIBOPTIONS)
 MAKEDIST      = build/unix/makedist.sh
@@ -375,7 +375,6 @@ RECONFIGURE   = build/unix/reconfigure.sh
 ifeq ($(PLATFORM),win32)
 MAKELIB       = build/win/makelib.sh
 MAKECOMPDATA  = build/win/compiledata.sh
-ROOTCINTNEW =   utils/src/rootcint_tmp
 endif
 
 ##### Compiler directives and run-control file #####
