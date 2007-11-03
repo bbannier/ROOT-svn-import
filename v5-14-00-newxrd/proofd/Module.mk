@@ -70,7 +70,7 @@ distclean-proofd: clean-proofd
 distclean::     distclean-proofd
 
 ##### extra rules ######
-$(XPCONNO): CXXFLAGS += $(XPDINCEXTRA)
+$(XPCONNO): CXXFLAGS += $(XPDINCEXTRA) $(EXTRA_XRDFLAGS)
 
 else
 
@@ -111,9 +111,8 @@ endif
 ifeq ($(BUILDXRD),yes)
 XPDINCEXTRA    := $(XROOTDDIRI:%=-I%)
 XPDINCEXTRA    += $(PROOFDDIRI:%=-I%)
-XPDLIBEXTRA    += $(XROOTDDIRL)/libXrdClient.a $(XROOTDDIRL)/libXrdOuc.a \
-                  $(XROOTDDIRL)/libXrdNet.a $(XROOTDDIRL)/libXrdSys.a \
-                  $(XROOTDDIRL)/libXrdSut.a
+XPDLIBEXTRA    += -L$(XROOTDDIRL) -lXrdOuc -lXrdNet -lXrdSys \
+                  -L$(XROOTDDIRP) -lXrdClient -lXrdSut
 endif
 
 # used in the main Makefile
@@ -161,13 +160,13 @@ $(PROOFDEXEO): CXXFLAGS += $(AUTHFLAGS)
 $(XPDO): $(XRDPLUGINS)
 ifneq ($(ICC_GE_9),)
 # remove when xrootd has moved from strstream.h -> sstream.
-$(XPDO): CXXFLAGS += -Wno-deprecated $(XPDINCEXTRA)
+$(XPDO): CXXFLAGS += -Wno-deprecated $(XPDINCEXTRA) $(EXTRA_XRDFLAGS)
 else
 ifneq ($(GCC_MAJOR),2)
 # remove when xrootd has moved from strstream.h -> sstream.
-$(XPDO): CXXFLAGS += -Wno-deprecated $(XPDINCEXTRA)
+$(XPDO): CXXFLAGS += -Wno-deprecated $(XPDINCEXTRA) $(EXTRA_XRDFLAGS)
 else
-$(XPDO): CXXFLAGS += $(XPDINCEXTRA)
+$(XPDO): CXXFLAGS += $(XPDINCEXTRA) $(EXTRA_XRDFLAGS)
 endif
 endif
 

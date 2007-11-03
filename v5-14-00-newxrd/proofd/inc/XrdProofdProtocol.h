@@ -21,10 +21,17 @@
 // XrdProtocol implementation to coordinate 'proofserv' applications.   //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
+#ifdef OLDXRDOUC
+#  include "XrdSysToOuc.h"
+#  include "XrdOuc/XrdOucPthread.hh"
+#  include "XrdOuc/XrdOucError.hh"
+#  include "XrdOuc/XrdOucSemWait.hh"
+#else
+#  include "XrdSys/XrdSysPthread.hh"
+#  include "XrdSys/XrdSysError.hh"
+#  include "XrdSys/XrdSysSemWait.hh"
+#endif
 
-#include "XrdOuc/XrdOucError.hh"
-#include "XrdOuc/XrdOucPthread.hh"
-#include "XrdOuc/XrdOucSemWait.hh"
 #include "XrdOuc/XrdOucStream.hh"
 #include "XrdOuc/XrdOucString.hh"
 #include "XrdSec/XrdSecInterface.hh"
@@ -70,7 +77,7 @@ public:
 class XrdBuffer;
 class XrdClientMessage;
 class XrdLink;
-class XrdOucError;
+class XrdSysError;
 class XrdOucTrace;
 class XrdProofClient;
 class XrdProofdPInfo;
@@ -167,19 +174,19 @@ public:
    //
    XPClientRequest               fRequest; // handle client requests
    XrdProofdResponse             fResponse; // Response to incoming request
-   XrdOucRecMutex                fMutex; // Local mutex
+   XrdSysRecMutex                fMutex; // Local mutex
 
    //
    // Static area: general protocol managing section
    //
-   static XrdOucRecMutex         fgXPDMutex;  // Mutex for static area
+   static XrdSysRecMutex         fgXPDMutex;  // Mutex for static area
    static int                    fgCount;
    static XrdObjectQ<XrdProofdProtocol> fgProtStack;
    static XrdBuffManager        *fgBPool;     // Buffer manager
    static int                    fgMaxBuffsz;    // Maximum buffer size we can have
    static XrdSecService         *fgCIA;       // Authentication Server
    static XrdScheduler          *fgSched;     // System scheduler
-   static XrdOucError            fgEDest;     // Error message handler
+   static XrdSysError            fgEDest;     // Error message handler
 
    //
    // Static area: protocol configuration section
@@ -200,7 +207,7 @@ public:
    //
    static char                  *fgPrgmSrv;  // PROOF server application
    static kXR_int16              fgSrvProtVers;  // Protocol version run by PROOF server
-   static XrdOucSemWait          fgForkSem;   // To serialize fork requests
+   static XrdSysSemWait          fgForkSem;   // To serialize fork requests
    //
    static EResourceType          fgResourceType; // resource type
    static int                    fgMaxSessions; // max number of sessions per client
@@ -284,7 +291,7 @@ class XrdProofClient {
                               { return (const char *)fClientID; }
    bool                    Match(const char *id)
                               { return (id ? !strcmp(id, fClientID) : 0); }
-   inline XrdOucRecMutex  *Mutex() const { return (XrdOucRecMutex *)&fMutex; }
+   inline XrdSysRecMutex  *Mutex() const { return (XrdSysRecMutex *)&fMutex; }
    inline unsigned short   RefSid() const { return fRefSid; }
    inline short            Version() const { return fClientVers; }
    inline const char      *Workdir() const
@@ -304,7 +311,7 @@ class XrdProofClient {
                               { if (fWorkdir) free(fWorkdir);
                                 fWorkdir = (wrk) ? strdup(wrk) : 0; }
 
-   int                     CreateUNIXSock(XrdOucError *edest, char *tmpdir);
+   int                     CreateUNIXSock(XrdSysError *edest, char *tmpdir);
    XrdNet                 *UNIXSock() const { return fUNIXSock; }
    char                   *UNIXSockPath() const { return fUNIXSockPath; }
    void                    SaveUNIXPath(); // Save path in the sandbox
@@ -312,7 +319,7 @@ class XrdProofClient {
 
  private:
 
-   XrdOucRecMutex          fMutex; // Local mutex
+   XrdSysRecMutex          fMutex; // Local mutex
 
    char                   *fClientID;   // String identifying this client
    short int               fClientVers; // PROOF version run by client

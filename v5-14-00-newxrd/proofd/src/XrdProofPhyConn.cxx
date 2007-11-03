@@ -185,7 +185,11 @@ int XrdProofPhyConn::Connect()
    char *ctype[2] = {"UNIX", "TCP"};
 
    // Create physical connection
+#ifdef OLDXRCPHYCONN
    fPhyConn = new XrdClientPhyConnection(this);
+#else
+   fPhyConn = new XrdClientPhyConnection(this, 0);
+#endif
 
    // Connect
    bool isUnix = (fTcp) ? 0 : 1;
@@ -255,7 +259,7 @@ bool XrdProofPhyConn::GetAccessToSrv()
 
    // Now we are connected and we ask for the kind of the server
    { XrdClientPhyConnLocker pcl(fPhyConn);
-   fServerType = DoHandShake();
+      fServerType = DoHandShake();
    }
 
    switch (fServerType) {
@@ -265,7 +269,7 @@ bool XrdProofPhyConn::GetAccessToSrv()
 
       // Now we can start the reader thread in the physical connection, if needed
       fPhyConn->StartReader();
-      fPhyConn->SetTTL(DLBD_TTL);// = DLBD_TTL;
+//      fPhyConn->SetTTL(DLBD_TTL);// = DLBD_TTL;
       fPhyConn->fServerType = kSTBaseXrootd;
       break;
 

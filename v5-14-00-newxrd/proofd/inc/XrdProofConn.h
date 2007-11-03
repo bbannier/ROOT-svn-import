@@ -24,6 +24,10 @@
 
 #define DFLT_CONNECTMAXTRY           10
 
+#ifdef OLDXRDOUC
+#  include "XrdSysToOuc.h"
+#endif
+
 #ifndef ROOT_XProofProtocol
 #include "XProofProtocol.h"
 #endif
@@ -45,7 +49,7 @@
 class XrdClientConnectionMgr;
 class XrdClientMessage;
 class XrdClientPhyConnection;
-class XrdOucRecMutex;
+class XrdSysRecMutex;
 class XrdSecProtocol;
 
 class XrdProofConn  : public XrdClientAbsUnsolMsgHandler {
@@ -79,7 +83,7 @@ private:
 
    XrdOucString        fLoginBuffer;   // Buffer to be sent over at login
 
-   XrdOucRecMutex     *fMutex;         // Lock SendRecv actions
+   XrdSysRecMutex     *fMutex;         // Lock SendRecv actions
 
    XrdClientPhyConnection *fPhyConn;   // underlying physical connection
 
