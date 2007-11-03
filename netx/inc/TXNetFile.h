@@ -54,9 +54,13 @@
 #include "TUrl.h"
 #endif
 
+#ifdef OLDXRDOUC
+#  include "XrdSysToOuc.h"
+#endif
+
 class TSocket;
 class XrdClient;
-class XrdOucRecMutex;
+class XrdSysRecMutex;
 
 class TXNetFile : public TNetFile {
 
@@ -72,7 +76,7 @@ private:
    static Bool_t  fgInitDone;    // Avoid initializing more than once
    static Bool_t  fgRootdBC;     // Control rootd backward compatibility
 
-   XrdOucRecMutex *fInitMtx;     // Protects fInitDone, serializes the
+   XrdSysRecMutex *fInitMtx;     // Protects fInitDone, serializes the
                                  // attempts to Init() for this object only
 
    // Methods

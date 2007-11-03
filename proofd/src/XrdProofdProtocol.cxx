@@ -82,17 +82,26 @@
 #include <unistd.h>
 #include <sys/poll.h>
 
+#ifdef OLDXRDOUC
+#  include "XrdSysToOuc.h"
+#  include "XrdOuc/XrdOucError.hh"
+#  include "XrdOuc/XrdOucLogger.hh"
+#  include "XrdOuc/XrdOucTimer.hh"
+#  define XPD_LOG_01 OUC_LOG_01
+#else
+#  include "XrdSys/XrdSysError.hh"
+#  include "XrdSys/XrdSysLogger.hh"
+#  include "XrdSys/XrdSysTimer.hh"
+#  define XPD_LOG_01 SYS_LOG_01
+#endif
+
 #include "XrdVersion.hh"
 #include "XrdClient/XrdClientMessage.hh"
 #include "XrdClient/XrdClientUrlInfo.hh"
 #include "XrdSys/XrdSysPriv.hh"
 #include "XrdOuc/XrdOucErrInfo.hh"
-#include "XrdOuc/XrdOucError.hh"
-#include "XrdOuc/XrdOucLogger.hh"
-#include "XrdOuc/XrdOucPthread.hh"
 #include "XrdOuc/XrdOucReqID.hh"
 #include "XrdOuc/XrdOucString.hh"
-#include "XrdOuc/XrdOucTimer.hh"
 #include "XrdNet/XrdNet.hh"
 #include "XrdNet/XrdNetDNS.hh"
 #include "XrdNet/XrdNetPeer.hh"
@@ -115,16 +124,16 @@ static const char    *gTraceID = " ";
 
 // Static variables
 static XrdOucReqID   *XrdProofdReqID = 0;
-XrdOucRecMutex        gSysPrivMutex;
+XrdSysRecMutex        gSysPrivMutex;
 
 // Loggers: we need two to avoid deadlocks
-static XrdOucLogger   gMainLogger;
-static XrdOucLogger   gForkLogger;
+static XrdSysLogger   gMainLogger;
+static XrdSysLogger   gForkLogger;
 
 //
 // Static area: general protocol managing section
 int                   XrdProofdProtocol::fgCount    = 0;
-XrdOucRecMutex        XrdProofdProtocol::fgXPDMutex;
+XrdSysRecMutex        XrdProofdProtocol::fgXPDMutex;
 XrdObjectQ<XrdProofdProtocol>
                       XrdProofdProtocol::fgProtStack("ProtStack",
                                                      "xproofd protocol anchor");
@@ -132,7 +141,7 @@ XrdBuffManager       *XrdProofdProtocol::fgBPool    = 0;
 int                   XrdProofdProtocol::fgMaxBuffsz= 0;
 XrdSecService        *XrdProofdProtocol::fgCIA      = 0;
 XrdScheduler         *XrdProofdProtocol::fgSched    = 0;
-XrdOucError           XrdProofdProtocol::fgEDest(0, "Proofd");
+XrdSysError           XrdProofdProtocol::fgEDest(0, "Proofd");
 
 //
 // Static area: protocol configuration section
@@ -152,7 +161,7 @@ char                 *XrdProofdProtocol::fgNamespace = strdup("/proofpool");
 //
 char                 *XrdProofdProtocol::fgPrgmSrv  = 0;
 kXR_int16             XrdProofdProtocol::fgSrvProtVers = -1;
-XrdOucSemWait         XrdProofdProtocol::fgForkSem;   // To serialize fork requests
+XrdSysSemWait         XrdProofdProtocol::fgForkSem;   // To serialize fork requests
 //
 EResourceType         XrdProofdProtocol::fgResourceType = kRTStatic;
 int                   XrdProofdProtocol::fgMaxSessions = -1;
@@ -252,7 +261,7 @@ enum EAdminMsgType {
 };
 
 // Security handle
-typedef XrdSecService *(*XrdSecServLoader_t)(XrdOucLogger *, const char *cfn);
+typedef XrdSecService *(*XrdSecServLoader_t)(XrdSysLogger *, const char *cfn);
 
 #if !(defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__APPLE__)) && \
     !defined(__sun)
@@ -549,7 +558,7 @@ void *XrdProofdCron(void *p)
 
    while(1) {
       // Wait a while
-      XrdOucTimer::Wait(freq*1000);
+      XrdSysTimer::Wait(freq*1000);
       // Do something here
       TRACE(REQ, "XrdProofdCron: running periodical checks");
       // Trim the list of processes asked for termination
@@ -1535,7 +1544,7 @@ int XrdProofdProtocol::Configure(char *parms, XrdProtocol_Config *pi)
 
    // Schedule protocol object cleanup
    fgProtStack.Set(pi->Sched, XrdProofdTrace, TRACE_MEM);
-   fgProtStack.Set(pi->ConnOptn, pi->ConnLife);
+   fgProtStack.Set((pi->ConnMax/3 ? pi->ConnMax/3 : 30), 60*60);
 
    // Initialize the request ID generation object
    XrdProofdReqID = new XrdOucReqID((int)fgPort, pi->myName,
@@ -1544,7 +1553,7 @@ int XrdProofdProtocol::Configure(char *parms, XrdProtocol_Config *pi)
    // Start cron thread, if required
    if (fgCron == 1) {
       pthread_t tid;
-      if (XrdOucThread::Run(&tid, XrdProofdCron, (void *)&fgCronFrequency, 0,
+      if (XrdSysThread::Run(&tid, XrdProofdCron, (void *)&fgCronFrequency, 0,
                                     "Proof cron thread") != 0) {
          fgEDest.Say(0, "Configure: could not start cron thread");
          return 0;
@@ -1870,7 +1879,7 @@ int XrdProofdProtocol::Process(XrdLink *)
    fRequest.header.dlen      = ntohl(fRequest.header.dlen);
 
    // The stream ID for the reply
-   { XrdOucMutexHelper mh(fResponse.fMutex);
+   { XrdSysMutexHelper mh(fResponse.fMutex);
       fResponse.Set(fRequest.header.streamid);
    }
    unsigned short sid;
@@ -2001,7 +2010,7 @@ void XrdProofdProtocol::Recycle(XrdLink *, int, const char *)
    XrdProofClient *pmgr = 0;
 
    // This part may be not thread safe
-   {  XrdOucMutexHelper mtxh(&fgXPDMutex);
+   {  XrdSysMutexHelper mtxh(&fgXPDMutex);
       if (fgProofClients.size() > 0) {
          std::list<XrdProofClient *>::iterator i;
          for (i = fgProofClients.begin(); i != fgProofClients.end(); ++i) {
@@ -2082,7 +2091,7 @@ void XrdProofdProtocol::Recycle(XrdLink *, int, const char *)
                      TRACEP(HDBG, "Recycle: found: " << psrv << " (t:"<<psrv->SrvType() <<
                                   ",nc:"<<psrv->Clients()->size()<<")");
 
-                     XrdOucMutexHelper xpmh(psrv->Mutex());
+                     XrdSysMutexHelper xpmh(psrv->Mutex());
 
                      // Send a terminate signal to the proofserv
                      if (TerminateProofServ(psrv) != 0)
@@ -2111,7 +2120,7 @@ void XrdProofdProtocol::Recycle(XrdLink *, int, const char *)
                TRACEP(HDBG, "Recycle: found: " << psrv << " (v:" << psrv->IsValid() <<
                             ",t:"<<psrv->SrvType() << ",nc:"<<psrv->Clients()->size()<<")");
 
-                  XrdOucMutexHelper xpmh(psrv->Mutex());
+                  XrdSysMutexHelper xpmh(psrv->Mutex());
 
                   // Tell other attached clients, if any, that this session is gone
                   if (psrv->Clients()->size() > 0) {
@@ -2453,7 +2462,7 @@ int XrdProofClient::GetFreeServID()
 
    TRACE(ACT,"GetFreeServID: enter");
 
-   XrdOucMutexHelper mh(fMutex);
+   XrdSysMutexHelper mh(fMutex);
 
    TRACE(DBG,"GetFreeServID: size = "<<fProofServs.size()<<
               "; capacity = "<<fProofServs.capacity());
@@ -2489,7 +2498,7 @@ void XrdProofClient::EraseServer(int psid)
 
    TRACE(ACT,"EraseServer: enter: psid: " << psid);
 
-   XrdOucMutexHelper mh(fMutex);
+   XrdSysMutexHelper mh(fMutex);
 
    XrdProofServProxy *xps = 0;
    std::vector<XrdProofServProxy *>::iterator ip;
@@ -2740,7 +2749,7 @@ int XrdProofdProtocol::MapClient(bool all)
    XrdProofClient *pmgr = 0;
    TRACEP(DBG,"MapClient: # of clients: "<<fgProofClients.size());
    // This part may be not thread safe
-   {  XrdOucMutexHelper mtxh(&fgXPDMutex);
+   {  XrdSysMutexHelper mtxh(&fgXPDMutex);
       if (fgProofClients.size() > 0) {
          std::list<XrdProofClient *>::iterator i;
          for (i = fgProofClients.begin(); i != fgProofClients.end(); ++i) {
@@ -2845,7 +2854,7 @@ int XrdProofdProtocol::MapClient(bool all)
       }
 
       // This part may be not thread safe
-      {  XrdOucMutexHelper mtxh(&fgXPDMutex);
+      {  XrdSysMutexHelper mtxh(&fgXPDMutex);
 
          // Make sure that no zombie proofserv is around
          CleanupProofServ(0, fClientID);
@@ -2957,7 +2966,7 @@ int XrdProofdProtocol::MapClient(bool all)
 
    // Document this login
    if (!(fStatus & XPD_NEED_AUTH))
-      fgEDest.Log(OUC_LOG_01, ":MapClient", fLink->ID, "login");
+      fgEDest.Log(XPD_LOG_01, ":MapClient", fLink->ID, "login");
 
    return rc;
 }
@@ -3002,9 +3011,9 @@ int XrdProofdProtocol::Auth()
       fStatus &= ~XPD_NEED_AUTH;
       fClient = &fAuthProt->Entity;
       if (fClient->name)
-         fgEDest.Log(OUC_LOG_01, ":Auth", fLink->ID, msg, fClient->name);
+         fgEDest.Log(XPD_LOG_01, ":Auth", fLink->ID, msg, fClient->name);
       else
-         fgEDest.Log(OUC_LOG_01, ":Auth", fLink->ID, msg, " nobody");
+         fgEDest.Log(XPD_LOG_01, ":Auth", fLink->ID, msg, " nobody");
       return rc;
    }
 
@@ -3174,7 +3183,7 @@ int XrdProofdProtocol::Detach()
 
    int psid = -1, rc = 1;
 
-   XrdOucMutexHelper mh(fMutex);
+   XrdSysMutexHelper mh(fMutex);
 
    // Unmarshall the data
    psid = ntohl(fRequest.proof.sid);
@@ -3191,7 +3200,7 @@ int XrdProofdProtocol::Detach()
    TRACEP(DBG, "Detach: xps: "<<xps<<", status: "<< xps->Status()<<
                ", # clients: "<< xps->Clients()->size());
 
-   XrdOucMutexHelper xpmh(xps->Mutex());
+   XrdSysMutexHelper xpmh(xps->Mutex());
 
    // Remove this from the list of clients
    std::vector<XrdClientID *>::iterator i;
@@ -3218,7 +3227,7 @@ int XrdProofdProtocol::Destroy()
 
    int psid = -1, rc = 1;
 
-   XrdOucMutexHelper mh(fPClient->Mutex());
+   XrdSysMutexHelper mh(fPClient->Mutex());
 
    // Unmarshall the data
    psid = ntohl(fRequest.proof.sid);
@@ -3245,7 +3254,7 @@ int XrdProofdProtocol::Destroy()
 
          TRACEP(DBG, "Destroy: xps: "<<xps<<", status: "<< xps->Status()<<", pid: "<<xps->SrvID());
 
-         {  XrdOucMutexHelper xpmh(xps->Mutex());
+         {  XrdSysMutexHelper xpmh(xps->Mutex());
 
             if (xps->SrvType() == kXPD_TopMaster) {
                // Tell other attached clients, if any, that this session is gone
@@ -3563,7 +3572,7 @@ int XrdProofdProtocol::Create()
    int psid = -1, rc = 1;
 
    TRACEP(REQ, "Create: enter");
-   XrdOucMutexHelper mh(fPClient->Mutex());
+   XrdSysMutexHelper mh(fPClient->Mutex());
 
    // Allocate next free server ID and fill in the basic stuff
    psid = fPClient->GetFreeServID();
@@ -4027,7 +4036,7 @@ int XrdProofdProtocol::SendDataN(XrdProofServProxy *xps,
          if ((csid = xps->Clients()->at(ic)) && csid->fP) {
             XrdProofdResponse& resp = csid->fP->fResponse;
             int rs = 0;
-            {  XrdOucMutexHelper mhp(resp.fMutex);
+            {  XrdSysMutexHelper mhp(resp.fMutex);
                unsigned short sid;
                resp.GetSID(sid);
                TRACEP(HDBG, "SendDataN: INTERNAL: this sid: "<<sid<<
@@ -4062,7 +4071,7 @@ int XrdProofdProtocol::SendMsg()
 
    int rc = 1;
 
-   XrdOucMutexHelper mh(fResponse.fMutex);
+   XrdSysMutexHelper mh(fResponse.fMutex);
 
    // Unmarshall the data
    int psid = ntohl(fRequest.sendrcv.sid);
@@ -4156,7 +4165,7 @@ int XrdProofdProtocol::SendMsg()
          //
          // The message is strictly for the client requiring it
          int rs = 0;
-         {  XrdOucMutexHelper mhp(csid->fP->fResponse.fMutex);
+         {  XrdSysMutexHelper mhp(csid->fP->fResponse.fMutex);
             unsigned short sid;
             csid->fP->fResponse.GetSID(sid);
             TRACEP(DBG, "SendMsg: INT: this sid: "<<sid<<
@@ -4480,7 +4489,7 @@ int XrdProofdProtocol::Admin()
             if ((c = *i)) {
 
                // This part may be not thread safe
-               XrdOucMutexHelper mh(c->Mutex());
+               XrdSysMutexHelper mh(c->Mutex());
 
                // Notify the attached clients that we are going to cleanup
                XrdOucString msg = "Admin: CleanupSessions: cleaning up client: requested by: ";
@@ -5459,7 +5468,7 @@ int XrdProofdProtocol::KillProofServ(int pid, bool forcekill, bool add)
 
    if (pid > -1) {
       // We need the right privileges to do this
-      XrdOucMutexHelper mtxh(&gSysPrivMutex);
+      XrdSysMutexHelper mtxh(&gSysPrivMutex);
       XrdSysPrivGuard pGuard((uid_t)0, (gid_t)0);
       if (pGuard.Valid()) {
          bool signalled = 1;
@@ -5489,7 +5498,7 @@ int XrdProofdProtocol::KillProofServ(int pid, bool forcekill, bool add)
          if (signalled) {
             if (add) {
                // This part may be not thread safe
-               XrdOucMutexHelper mtxh(&fgXPDMutex);
+               XrdSysMutexHelper mtxh(&fgXPDMutex);
                fgTerminatedProcess.push_back(new XrdProofdPInfo(pid, "proofserv"));
                TRACEP(DBG, "KillProofServ: process ID "<<pid<<" signalled and pushed back");
             } else {
@@ -5578,7 +5587,7 @@ int XrdProofdProtocol::TerminateProofServ(XrdProofServProxy *xps, bool add)
       if (add) {
          // Add to the list of termination attempts
          // This part may be not thread safe
-         XrdOucMutexHelper mtxh(&fgXPDMutex);
+         XrdSysMutexHelper mtxh(&fgXPDMutex);
          fgTerminatedProcess.push_back(new XrdProofdPInfo(pid, "proofserv"));
          TRACEP(DBG, "TerminateProofServ: "<<pid<<" pushed back");
       }
@@ -6266,7 +6275,7 @@ int XrdProofClient::GetClientID(XrdProofdProtocol *p)
    // Get next free client ID. If none is found, increase the vector size
    // and get the first new one
 
-   XrdOucMutexHelper mh(fMutex);
+   XrdSysMutexHelper mh(fMutex);
 
    int ic = 0;
    // Search for free places in the existing vector
@@ -6291,7 +6300,7 @@ int XrdProofClient::GetClientID(XrdProofdProtocol *p)
 }
 
 //__________________________________________________________________________
-int XrdProofClient::CreateUNIXSock(XrdOucError *edest, char *tmpdir)
+int XrdProofClient::CreateUNIXSock(XrdSysError *edest, char *tmpdir)
 {
    // Create UNIX socket for internal connections
 
