@@ -221,18 +221,23 @@ Bool_t TProofServLogHandler::Notify()
       while (fgets(line, sizeof(line), fFile)) {
          if ((plf = strchr(line, '\n')))
             *plf = 0;
-         // Send the message one level up
-         m.Reset(kPROOF_MESSAGE);
+         // Create log string
+         TString log;
          if (fPfx.Length() > 0) {
             // Prepend prefix specific to this instance
-            m << TString(Form("%s: %s", fPfx.Data(), line));
+            log = Form("%s: %s", fPfx.Data(), line);
          } else if (fgPfx.Length() > 0) {
             // Prepend default prefix
-            m << TString(Form("%s: %s", fgPfx.Data(), line));
+            log = Form("%s: %s", fgPfx.Data(), line);
          } else {
             // Nothing to prepend
-            m << TString(line);
+            log = line;
          }
+         // Keep track in the log file
+         Printf("%s", log.Data());
+         // Send the message one level up
+         m.Reset(kPROOF_MESSAGE);
+         m << log;
          fSocket->Send(m);
       }
    }
@@ -3220,16 +3225,16 @@ void TProofServ::HandleProcess(TMessage *mess)
          if (dset->IsA() == TDSetProxy::Class())
             ((TDSetProxy*)dset)->SetProofServ(this);
 
+         // Add the unique query tag as TNamed object to the input list
+         // so that it is available in TSelectors for monitoring
+         input->Add(new TNamed("PROOF_QueryTag",Form("%s:%s",pq->GetTitle(),pq->GetName())));
+
          // Set input
          TIter next(input);
          for (TObject *o; (o = next()); ) {
             PDB(kGlobal, 2) Info("HandleProcess", "adding: %s", o->GetName());
             fPlayer->AddInput(o);
          }
-
-         // Add the unique query tag as TNamed object to the input list
-         // so that it is available in TSelectors for monitoring
-         fPlayer->AddInput(new TNamed("PROOF_QueryTag",Form("%s:%s",pq->GetTitle(),pq->GetName())));
 
          // Process
          PDB(kGlobal, 1) Info("HandleProcess", "calling %s::Process()", fPlayer->IsA()->GetName());

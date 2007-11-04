@@ -340,7 +340,7 @@ void TList::Clear(Option_t *option)
       fFirst = fFirst->Next();
       fSize--;
       // delete only heap objects marked OK to clear
-      if (!nodel && tlk->GetObject() && tlk->GetObject()->IsOnHeap()) {
+      if (IsOwner() && !nodel && tlk->GetObject() && tlk->GetObject()->IsOnHeap()) {
          if (tlk->GetObject()->TestBit(kCanDelete)) {
             if(tlk->GetObject()->TestBit(kNotDeleted)) {
                TCollection::GarbageCollect(tlk->GetObject());
