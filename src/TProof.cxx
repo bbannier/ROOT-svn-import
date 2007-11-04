@@ -1599,7 +1599,7 @@ Int_t TProof::Broadcast(const TMessage &mess, TList *slaves)
 
    if (!IsValid()) return -1;
 
-   if (slaves->GetSize() == 0) return 0;
+   if (!slaves || slaves->GetSize() == 0) return 0;
 
    int   nsent = 0;
    TIter next(slaves);
