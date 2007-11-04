@@ -1045,13 +1045,15 @@ Int_t TXSocket::SendRaw(const void *buffer, Int_t length, ESendRecvOptions opt)
       // ok
       return nsent;
    } else {
-      // Print error mag, if any
+      // Print error message, if any
       if (fConn->GetLastErr())
          Printf("%s: %s", fHost.Data(), fConn->GetLastErr());
+      else
+         Printf("%s: error occured but no message from server", fHost.Data());
    }
 
    // Failure notification (avoid using the handler: we may be exiting)
-   Error("SendRaw", "problems sending data to server");
+   Error("SendRaw", "%s: problems sending data to server", fHost.Data());
 
    return -1;
 }
