@@ -1651,7 +1651,10 @@ void TXSocket::InitEnvs()
    if (denyCO.Length() > 0)
       EnvPutString(NAME_CONNECTDOMAINDENY_RE, denyCO.Data());
 
-   // Connect Timeout
+   // Max number of retries on first connect and related timeout
+   XrdProofConn::SetRetryParam(-1, -1);
+   Int_t maxRetries = gEnv->GetValue("XProof.FirstConnectMaxCnt",5);
+   EnvPutInt(NAME_FIRSTCONNECTMAXCNT, maxRetries);
    Int_t connTO = gEnv->GetValue("XProof.ConnectTimeout", 2);
    EnvPutInt(NAME_CONNECTTIMEOUT, connTO);
 
@@ -1668,10 +1671,6 @@ void TXSocket::InitEnvs()
    Int_t garbCollTh = gEnv->GetValue("XProof.StartGarbageCollectorThread",
                                       DFLT_STARTGARBAGECOLLECTORTHREAD);
    EnvPutInt(NAME_STARTGARBAGECOLLECTORTHREAD, garbCollTh);
-
-   // Max number of retries on first connect
-   Int_t maxRetries = gEnv->GetValue("XProof.FirstConnectMaxCnt",5);
-   EnvPutInt(NAME_FIRSTCONNECTMAXCNT, maxRetries);
 
    // No automatic proofd backward-compatibility
    EnvPutInt(NAME_KEEPSOCKOPENIFNOTXRD, 0);
