@@ -9,14 +9,6 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-//////////////////////////////////////////////////////////////////////////
-//                                                                      //
-// TSVG                                                                 //
-//                                                                      //
-// Graphics interface to SVG.                                           //
-//                                                                      //
-//////////////////////////////////////////////////////////////////////////
-
 #ifdef WIN32
 #pragma optimize("",off)
 #endif
@@ -39,31 +31,37 @@
 
 ClassImp(TSVG)
 
+
 //______________________________________________________________________________
-//Begin_Html
-/*
-<a href="http://www.w3.org/Graphics/SVG/Overview.htm8"><b>SVG</b></a> is a
-language for describing two-dimensional graphics in XML. <b>SVG</b> allows for
-three types of graphic objects: vector graphic shapes, images and text.
-Graphical objects can be grouped, styled, transformed and composed into
-previously rendered objects. The feature set includes nested transformations,
-clipping paths, alpha masks, filter effects and template objects. <b>SVG</b>
-drawings can be interactive and dynamic. Animations can be defined and
-triggered either declaratively or via scripting.
+/*Begin_Html
+<center><h2>TSVG: Graphics interface to SVG</h2></center>
+<a href="http://www.w3.org/Graphics/SVG/Overview.htm8"><b>SVG</b></a> 
+(Scalable Vector Graphics) is a language for describing two-dimensional
+graphics in XML. <b>SVG</b> allows high quality vector graphics in
+HTML pages.
 <p>
-The way to access <b>SVG</b> in <b>ROOT</b> (in my private version only) is the
-following:
+To print a ROOT canvas "c1" into an <b>SVG</b> file simply do:
 <PRE>
-   <A HREF="html/TSVG.html">TSVG</A> mysvg(&quot;myfile.svg&quot;)
-   object-&gt;Draw();
-   mysvg.Close();
+   c1->Print("c1.svg");
 </PRE>
-The result is the ASCII file <tt>myfile.svg</tt>, it is best viewed with
-Internet Explorer and you need the
+The result is the ASCII file <tt>c1.svg</tt>.
+<p>
+It can be open direclty using a web browser or included in a html document
+the following way:
+<pre>
+&lt;embed width="95%" height="500" src="c1.svg" /&gt;>
+</pre>
+It is best viewed with Internet Explorer and you need the
 <a href="http://www.adobe.com/svg/viewer/install/main.html">Adobe <b>SVG</b>
-Viewer</a>. To zoom using the Adobe <b>SVG</b> Viewer, position the mouse over
-the area you want to zoom and click the right button. To define the zoom area,
-use Control+drag to mark the boundaries of the zoom area. To pan, use Alt+drag.
+Viewer</a>.
+<p>
+To zoom using the Adobe <b>SVG</b> Viewer, position the mouse over
+the area you want to zoom and click the right button.
+<p>
+To define the zoom area,
+use Control+drag to mark the boundaries of the zoom area.
+<p>
+To pan, use Alt+drag.
 By clicking with the right mouse button on the <b>SVG</b> graphics you will get
 a pop-up menu giving other ways to interact with the image.
 <p>
@@ -71,8 +69,8 @@ a pop-up menu giving other ways to interact with the image.
 transfer over the network. Compressed <b>SVG</b> files should be created using
 <tt>gzip</tt> on a normal ASCII <b>SVG</b> file and should then be renamed
 using the file extension <tt>.svgz</tt>.
-*/
-//End_Html
+End_Html */
+
 
 //______________________________________________________________________________
 TSVG::TSVG() : TVirtualPS()
@@ -83,6 +81,7 @@ TSVG::TSVG() : TVirtualPS()
    fType   = 0;
    gVirtualPS = this;
 }
+
 
 //______________________________________________________________________________
 TSVG::TSVG(const char *fname, Int_t wtype) : TVirtualPS(fname, wtype)
@@ -98,6 +97,7 @@ TSVG::TSVG(const char *fname, Int_t wtype) : TVirtualPS(fname, wtype)
    fStream = 0;
    Open(fname, wtype);
 }
+
 
 //______________________________________________________________________________
 void TSVG::Open(const char *fname, Int_t wtype)
@@ -147,6 +147,7 @@ void TSVG::Open(const char *fname, Int_t wtype)
    NewPage();
 }
 
+
 //______________________________________________________________________________
 TSVG::~TSVG()
 {
@@ -154,6 +155,7 @@ TSVG::~TSVG()
 
    Close();
 }
+
 
 //______________________________________________________________________________
 void TSVG::Close(Option_t *)
@@ -169,6 +171,7 @@ void TSVG::Close(Option_t *)
 
    gVirtualPS = 0;
 }
+
 
 //______________________________________________________________________________
 void TSVG::On()
@@ -186,6 +189,7 @@ void TSVG::On()
    gVirtualPS = this;
 }
 
+
 //______________________________________________________________________________
 void TSVG::Off()
 {
@@ -193,6 +197,7 @@ void TSVG::Off()
 
    gVirtualPS = 0;
 }
+
 
 //______________________________________________________________________________
 void TSVG::DrawBox(Double_t x1, Double_t y1, Double_t x2, Double_t  y2)
@@ -266,6 +271,7 @@ void TSVG::DrawBox(Double_t x1, Double_t y1, Double_t x2, Double_t  y2)
       PrintFast(2,"/>");
    }
 }
+
 
 //______________________________________________________________________________
 void TSVG::DrawFrame(Double_t xl, Double_t yl, Double_t xt, Double_t  yt,
@@ -412,6 +418,7 @@ void TSVG::DrawFrame(Double_t xl, Double_t yl, Double_t xt, Double_t  yt,
    PrintFast(2,"/>");
 }
 
+
 //______________________________________________________________________________
 void TSVG::DrawPolyLine(Int_t nn, TPoints *xy)
 {
@@ -496,6 +503,7 @@ void TSVG::DrawPolyLine(Int_t nn, TPoints *xy)
 ///     PrintFast(2," f");
    }
 }
+
 
 //______________________________________________________________________________
 void TSVG::DrawPolyLineNDC(Int_t nn, TPoints *xy)
@@ -582,6 +590,7 @@ void TSVG::DrawPolyLineNDC(Int_t nn, TPoints *xy)
    }
 }
 
+
 //______________________________________________________________________________
 void TSVG::DrawPolyMarker(Int_t n, Float_t *xw, Float_t *yw)
 {
@@ -591,7 +600,7 @@ void TSVG::DrawPolyMarker(Int_t n, Float_t *xw, Float_t *yw)
 
    if (ms >= 6 && ms <= 19) ms = 20;
    if (ms == 4) ms = 24;
-   
+
    // Define the marker size
    Double_t msize = 0.23*fMarkerSize*TMath::Max(fXsize,fYsize)/20;
    if (ms == 6) msize *= 0.2;
@@ -627,94 +636,94 @@ void TSVG::DrawPolyMarker(Int_t n, Float_t *xw, Float_t *yw)
       // Dot (.)
       if (ms == 1) {
          PrintStr("<line x1=\"");
-         WriteInteger(int(ix-1),0); 
+         WriteInteger(int(ix-1),0);
          PrintStr("\" y1=\"");
          WriteInteger(int(iy),0);
          PrintStr("\" x2=\"");
-         WriteInteger(int(ix),0);  
-         PrintStr("\" y2=\""); 
+         WriteInteger(int(ix),0);
+         PrintStr("\" y2=\"");
          WriteInteger(int(iy),0);
-         PrintStr("\"/>");      
+         PrintStr("\"/>");
       // Plus (+)
       } else if (ms == 2) {
          PrintStr("<line x1=\"");
-         WriteReal(ix-m2); 
+         WriteReal(ix-m2);
          PrintStr("\" y1=\"");
          WriteReal(iy);
          PrintStr("\" x2=\"");
-         WriteReal(ix+m2); 
-         PrintStr("\" y2=\""); 
+         WriteReal(ix+m2);
+         PrintStr("\" y2=\"");
          WriteReal(iy);
          PrintStr("\"/>");
- 
+
          PrintStr("<line x1=\"");
-         WriteReal(ix);    
+         WriteReal(ix);
          PrintStr("\" y1=\"");
          WriteReal(iy-m2);
          PrintStr("\" x2=\"");
-         WriteReal(ix);    
+         WriteReal(ix);
          PrintStr("\" y2=\"");
          WriteReal(iy+m2);
          PrintStr("\"/>");
       // X shape (X)
       } else if (ms == 5) {
          PrintStr("<line x1=\"");
-         WriteReal(ix-m2); 
+         WriteReal(ix-m2);
          PrintStr("\" y1=\"");
          WriteReal(iy-m2);
          PrintStr("\" x2=\"");
-         WriteReal(ix+m2); 
+         WriteReal(ix+m2);
          PrintStr("\" y2=\"");
          WriteReal(iy+m2);
          PrintStr("\"/>");
- 
+
          PrintStr("<line x1=\"");
-         WriteReal(ix-m2); 
+         WriteReal(ix-m2);
          PrintStr("\" y1=\"");
          WriteReal(iy+m2);
          PrintStr("\" x2=\"");
-         WriteReal(ix+m2); 
+         WriteReal(ix+m2);
          PrintStr("\" y2=\"");
          WriteReal(iy-m2);
          PrintStr("\"/>");
       // Asterisk shape (*)
       } else if (ms == 3 || ms == 31) {
          PrintStr("<line x1=\"");
-         WriteReal(ix-m2); 
+         WriteReal(ix-m2);
          PrintStr("\" y1=\"");
          WriteReal(iy);
          PrintStr("\" x2=\"");
-         WriteReal(ix+m2); 
-         PrintStr("\" y2=\""); 
+         WriteReal(ix+m2);
+         PrintStr("\" y2=\"");
          WriteReal(iy);
          PrintStr("\"/>");
 
          PrintStr("<line x1=\"");
-         WriteReal(ix);    
+         WriteReal(ix);
          PrintStr("\" y1=\"");
          WriteReal(iy-m2);
          PrintStr("\" x2=\"");
-         WriteReal(ix);    
-         PrintStr("\" y2=\"");
-         WriteReal(iy+m2);
-         PrintStr("\"/>");
- 
-         PrintStr("<line x1=\"");
-         WriteReal(ix-m2); 
-         PrintStr("\" y1=\"");
-         WriteReal(iy-m2);
-         PrintStr("\" x2=\"");
-         WriteReal(ix+m2); 
+         WriteReal(ix);
          PrintStr("\" y2=\"");
          WriteReal(iy+m2);
          PrintStr("\"/>");
 
          PrintStr("<line x1=\"");
-         WriteReal(ix-m2); 
+         WriteReal(ix-m2);
+         PrintStr("\" y1=\"");
+         WriteReal(iy-m2);
+         PrintStr("\" x2=\"");
+         WriteReal(ix+m2);
+         PrintStr("\" y2=\"");
+         WriteReal(iy+m2);
+         PrintStr("\"/>");
+
+         PrintStr("<line x1=\"");
+         WriteReal(ix-m2);
          PrintStr("\" y1=\"");
          WriteReal(iy+m2);
          PrintStr("\" x2=\"");
-         WriteReal(ix+m2); 
+         WriteReal(ix+m2);
          PrintStr("\" y2=\"");
          WriteReal(iy-m2);
          PrintStr("\"/>");
@@ -731,7 +740,7 @@ void TSVG::DrawPolyMarker(Int_t n, Float_t *xw, Float_t *yw)
       // Square
       } else if (ms == 25 || ms == 21) {
          PrintStr("<rect x=\"");
-         WriteReal(ix-m2); 
+         WriteReal(ix-m2);
          PrintStr("\" y=\"");
          WriteReal(iy-m2);
          PrintStr("\" width=\"");
@@ -793,12 +802,12 @@ void TSVG::DrawPolyMarker(Int_t n, Float_t *xw, Float_t *yw)
          PrintStr("\"/>");
       } else {
          PrintStr("<line x1=\"");
-         WriteInteger(int(ix-1),0); 
+         WriteInteger(int(ix-1),0);
          PrintStr("\" y1=\"");
          WriteInteger(int(iy),0);
          PrintStr("\" x2=\"");
-         WriteInteger(int(ix),0);  
-         PrintStr("\" y2=\""); 
+         WriteInteger(int(ix),0);
+         PrintStr("\" y2=\"");
          WriteInteger(int(iy),0);
          PrintStr("\"/>");
       }
@@ -806,6 +815,7 @@ void TSVG::DrawPolyMarker(Int_t n, Float_t *xw, Float_t *yw)
    PrintStr("@");
    PrintStr("</g>");
 }
+
 
 //______________________________________________________________________________
 void TSVG::DrawPolyMarker(Int_t n, Double_t *xw, Double_t *yw)
@@ -816,7 +826,7 @@ void TSVG::DrawPolyMarker(Int_t n, Double_t *xw, Double_t *yw)
 
    if (ms >= 6 && ms <= 19) ms = 20;
    if (ms == 4) ms = 24;
-   
+
    // Define the marker size
    Double_t msize = 0.23*fMarkerSize*TMath::Max(fXsize,fYsize)/20;
    if (ms == 6) msize *= 0.2;
@@ -852,94 +862,94 @@ void TSVG::DrawPolyMarker(Int_t n, Double_t *xw, Double_t *yw)
       // Dot (.)
       if (ms == 1) {
          PrintStr("<line x1=\"");
-         WriteInteger(int(ix-1),0); 
+         WriteInteger(int(ix-1),0);
          PrintStr("\" y1=\"");
          WriteInteger(int(iy),0);
          PrintStr("\" x2=\"");
-         WriteInteger(int(ix),0);  
-         PrintStr("\" y2=\""); 
+         WriteInteger(int(ix),0);
+         PrintStr("\" y2=\"");
          WriteInteger(int(iy),0);
-         PrintStr("\"/>");      
+         PrintStr("\"/>");
       // Plus (+)
       } else if (ms == 2) {
          PrintStr("<line x1=\"");
-         WriteReal(ix-m2); 
+         WriteReal(ix-m2);
          PrintStr("\" y1=\"");
          WriteReal(iy);
          PrintStr("\" x2=\"");
-         WriteReal(ix+m2); 
-         PrintStr("\" y2=\""); 
+         WriteReal(ix+m2);
+         PrintStr("\" y2=\"");
          WriteReal(iy);
          PrintStr("\"/>");
 
          PrintStr("<line x1=\"");
-         WriteReal(ix);    
+         WriteReal(ix);
          PrintStr("\" y1=\"");
          WriteReal(iy-m2);
          PrintStr("\" x2=\"");
-         WriteReal(ix);    
+         WriteReal(ix);
          PrintStr("\" y2=\"");
          WriteReal(iy+m2);
          PrintStr("\"/>");
       // X shape (X)
       } else if (ms == 5) {
          PrintStr("<line x1=\"");
-         WriteReal(ix-m2); 
+         WriteReal(ix-m2);
          PrintStr("\" y1=\"");
          WriteReal(iy-m2);
          PrintStr("\" x2=\"");
-         WriteReal(ix+m2); 
+         WriteReal(ix+m2);
          PrintStr("\" y2=\"");
          WriteReal(iy+m2);
          PrintStr("\"/>");
 
          PrintStr("<line x1=\"");
-         WriteReal(ix-m2); 
+         WriteReal(ix-m2);
          PrintStr("\" y1=\"");
          WriteReal(iy+m2);
          PrintStr("\" x2=\"");
-         WriteReal(ix+m2); 
+         WriteReal(ix+m2);
          PrintStr("\" y2=\"");
          WriteReal(iy-m2);
          PrintStr("\"/>");
       // Asterisk shape (*)
       } else if (ms == 3 || ms == 31) {
          PrintStr("<line x1=\"");
-         WriteReal(ix-m2); 
+         WriteReal(ix-m2);
          PrintStr("\" y1=\"");
          WriteReal(iy);
          PrintStr("\" x2=\"");
-         WriteReal(ix+m2); 
-         PrintStr("\" y2=\""); 
+         WriteReal(ix+m2);
+         PrintStr("\" y2=\"");
          WriteReal(iy);
          PrintStr("\"/>");
 
          PrintStr("<line x1=\"");
-         WriteReal(ix);    
+         WriteReal(ix);
          PrintStr("\" y1=\"");
          WriteReal(iy-m2);
          PrintStr("\" x2=\"");
-         WriteReal(ix);    
+         WriteReal(ix);
          PrintStr("\" y2=\"");
          WriteReal(iy+m2);
          PrintStr("\"/>");
 
          PrintStr("<line x1=\"");
-         WriteReal(ix-m2); 
+         WriteReal(ix-m2);
          PrintStr("\" y1=\"");
          WriteReal(iy-m2);
          PrintStr("\" x2=\"");
-         WriteReal(ix+m2); 
+         WriteReal(ix+m2);
          PrintStr("\" y2=\"");
          WriteReal(iy+m2);
          PrintStr("\"/>");
 
          PrintStr("<line x1=\"");
-         WriteReal(ix-m2); 
+         WriteReal(ix-m2);
          PrintStr("\" y1=\"");
          WriteReal(iy+m2);
          PrintStr("\" x2=\"");
-         WriteReal(ix+m2); 
+         WriteReal(ix+m2);
          PrintStr("\" y2=\"");
          WriteReal(iy-m2);
          PrintStr("\"/>");
@@ -955,7 +965,7 @@ void TSVG::DrawPolyMarker(Int_t n, Double_t *xw, Double_t *yw)
       // Square
       } else if (ms == 25 || ms == 21) {
          PrintStr("<rect x=\"");
-         WriteReal(ix-m2); 
+         WriteReal(ix-m2);
          PrintStr("\" y=\"");
          WriteReal(iy-m2);
          PrintStr("\" width=\"");
@@ -1016,12 +1026,12 @@ void TSVG::DrawPolyMarker(Int_t n, Double_t *xw, Double_t *yw)
          PrintStr("\"/>");
       } else {
          PrintStr("<line x1=\"");
-         WriteInteger(int(ix-1),0); 
+         WriteInteger(int(ix-1),0);
          PrintStr("\" y1=\"");
          WriteInteger(int(iy),0);
          PrintStr("\" x2=\"");
-         WriteInteger(int(ix),0);  
-         PrintStr("\" y2=\""); 
+         WriteInteger(int(ix),0);
+         PrintStr("\" y2=\"");
          WriteInteger(int(iy),0);
          PrintStr("\"/>");
       }
@@ -1029,6 +1039,7 @@ void TSVG::DrawPolyMarker(Int_t n, Double_t *xw, Double_t *yw)
    PrintStr("@");
    PrintStr("</g>");
 }
+
 
 //______________________________________________________________________________
 void TSVG::DrawPS(Int_t nn, Double_t *xw, Double_t *yw)
@@ -1144,6 +1155,7 @@ void TSVG::DrawPS(Int_t nn, Double_t *xw, Double_t *yw)
    }
 }
 
+
 //______________________________________________________________________________
 void TSVG::Initialize()
 {
@@ -1178,6 +1190,7 @@ void TSVG::Initialize()
 
 }
 
+
 //______________________________________________________________________________
 void TSVG::MovePS(Int_t ix, Int_t iy)
 {
@@ -1199,6 +1212,7 @@ void TSVG::MovePS(Int_t ix, Int_t iy)
       WriteInteger(iy, 0);
    }
 }
+
 
 //______________________________________________________________________________
 void TSVG::NewPage()
@@ -1228,6 +1242,7 @@ void TSVG::NewPage()
       fBoundingBox  = kTRUE;
    }
 }
+
 
 //______________________________________________________________________________
 void TSVG::Range(Float_t xsize, Float_t ysize)
@@ -1282,6 +1297,7 @@ void TSVG::Range(Float_t xsize, Float_t ysize)
    fRange = kTRUE;
 }
 
+
 //______________________________________________________________________________
 void TSVG::SetFillColor( Color_t cindex )
 {
@@ -1291,6 +1307,7 @@ void TSVG::SetFillColor( Color_t cindex )
    if (gStyle->GetFillColor() <= 0) cindex = 0;
 }
 
+
 //______________________________________________________________________________
 void TSVG::SetLineColor( Color_t cindex )
 {
@@ -1298,6 +1315,7 @@ void TSVG::SetLineColor( Color_t cindex )
 
    fLineColor = cindex;
 }
+
 
 //______________________________________________________________________________
 void TSVG::SetLineStyle(Style_t linestyle)
@@ -1312,6 +1330,7 @@ void TSVG::SetLineStyle(Style_t linestyle)
    fLineStyle = linestyle;
 }
 
+
 //______________________________________________________________________________
 void TSVG::SetLineWidth(Width_t linewidth)
 {
@@ -1320,6 +1339,7 @@ void TSVG::SetLineWidth(Width_t linewidth)
    fLineWidth = linewidth;
 }
 
+
 //______________________________________________________________________________
 void TSVG::SetMarkerColor( Color_t cindex )
 {
@@ -1327,6 +1347,7 @@ void TSVG::SetMarkerColor( Color_t cindex )
 
    fMarkerColor = cindex;
 }
+
 
 //______________________________________________________________________________
 void TSVG::SetColor(Int_t color)
@@ -1341,6 +1362,7 @@ void TSVG::SetColor(Int_t color)
       SetColor(1., 1., 1.);
    }
 }
+
 
 //______________________________________________________________________________
 void TSVG::SetColor(Float_t r, Float_t g, Float_t b)
@@ -1364,6 +1386,7 @@ void TSVG::SetColor(Float_t r, Float_t g, Float_t b)
    }
 }
 
+
 //______________________________________________________________________________
 void TSVG::SetTextColor( Color_t cindex )
 {
@@ -1371,6 +1394,7 @@ void TSVG::SetTextColor( Color_t cindex )
 
    fTextColor = cindex;
 }
+
 
 //______________________________________________________________________________
 void TSVG::Text(Double_t xx, Double_t yy, const char *chars)
@@ -1382,22 +1406,22 @@ void TSVG::Text(Double_t xx, Double_t yy, const char *chars)
    // chars: text to be drawn
 
    static const char *fontFamily[] = {
-   "Times", "Times", "Times",
+   "Times"    , "Times"    , "Times",
    "Helvetica", "Helvetica", "Helvetica", "Helvetica",
-   "Courier", "Courier", "Courier", "Courier",
-   "Symbol","Times", "ZapfDingbats"};
+   "Courier"  , "Courier"  , "Courier"  , "Courier",
+   "Times"    ,"Times"     , "ZapfDingbats"};
 
    static const char *fontWeight[] = {
    "normal", "bold", "bold",
    "normal", "normal", "bold", "bold",
    "normal", "normal", "bold", "bold",
-   "normal","normal", "normal"};
+   "normal", "normal", "normal"};
 
    static const char *fontStyle[] = {
-   "italic", "normal", "italic",
+   "italic", "normal" , "italic",
    "normal", "oblique", "normal", "oblique",
    "normal", "oblique", "normal", "oblique",
-   "normal","normal", "normal"};
+   "normal", "normal" , "normal"};
 
    Int_t ix    = XtoSVG(xx);
    Int_t iy    = YtoSVG(yy);
@@ -1464,10 +1488,64 @@ void TSVG::Text(Double_t xx, Double_t yy, const char *chars)
    }
    PrintFast(2,"\">");
    PrintStr("@");
-   if (font == 12 && chars[0] >= '\xA3' && chars[0] <= '\xF2') {
-      char str[8];
-      sprintf(str,"&#x%2.2x;", chars[0] & 255);
-      PrintStr(str);
+   if (font == 12) {
+      Int_t ichar = chars[0]+848;
+      Int_t ic    = ichar;
+
+      // Math Symbols
+      if (ic == 755) ichar = 8804;
+      if (ic == 759) ichar = 9827;
+      if (ic == 760) ichar = 9830;
+      if (ic == 761) ichar = 9829;
+      if (ic == 762) ichar = 9824;
+      if (ic == 766) ichar = 8594;
+      if (ic == 776) ichar =  247;
+      if (ic == 757) ichar = 8734;
+      if (ic == 758) ichar =  402;
+      if (ic == 771) ichar = 8805;
+      if (ic == 774) ichar = 8706;
+      if (ic == 775) ichar = 8226;
+      if (ic == 779) ichar = 8776;
+      if (ic == 805) ichar = 8719;
+      if (ic == 821) ichar = 8721;
+      if (ic == 834) ichar = 8747;
+
+      // Greek characters
+      if (ic == 918) ichar = 934;
+      if (ic == 919) ichar = 915;
+      if (ic == 920) ichar = 919;
+      if (ic == 923) ichar = 922;
+      if (ic == 924) ichar = 923;
+      if (ic == 925) ichar = 924;
+      if (ic == 926) ichar = 925;
+      if (ic == 929) ichar = 920;
+      if (ic == 930) ichar = 929;
+      if (ic == 936) ichar = 926;
+      if (ic == 915) ichar = 935;
+      if (ic == 937) ichar = 936;
+      if (ic == 935) ichar = 937;
+      if (ic == 938) ichar = 918;
+      if (ic == 951) ichar = 947;
+      if (ic == 798) ichar = 949;
+      if (ic == 970) ichar = 950;
+      if (ic == 952) ichar = 951;
+      if (ic == 961) ichar = 952;
+      if (ic == 955) ichar = 954;
+      if (ic == 956) ichar = 955;
+      if (ic == 957) ichar = 956;
+      if (ic == 958) ichar = 957;
+      if (ic == 968) ichar = 958;
+      if (ic == 934) ichar = 962;
+      if (ic == 962) ichar = 961;
+      if (ic == 966) ichar = 969;
+      if (ic == 950) ichar = 966;
+      if (ic == 947) ichar = 967;
+      if (ic == 969) ichar = 968;
+      if (ic == 967) ichar = 969;
+      if (ic == 954) ichar = 966;
+      if (ic == 922) ichar = 952;
+      if (ic == 753) ichar = 965;
+      PrintStr(Form("&#%4.4d;",ichar));
    } else {
       Int_t len=strlen(chars);
       for (Int_t i=0; i<len;i++) {
@@ -1493,6 +1571,7 @@ void TSVG::Text(Double_t xx, Double_t yy, const char *chars)
    }
 }
 
+
 //______________________________________________________________________________
 void TSVG::TextNDC(Double_t u, Double_t v, const char *chars)
 {
@@ -1503,6 +1582,7 @@ void TSVG::TextNDC(Double_t u, Double_t v, const char *chars)
    Text(x, y, chars);
 }
 
+
 //______________________________________________________________________________
 Int_t TSVG::UtoSVG(Double_t u)
 {
@@ -1511,6 +1591,7 @@ Int_t TSVG::UtoSVG(Double_t u)
    Double_t cm = fXsize*(gPad->GetAbsXlowNDC() + u*gPad->GetAbsWNDC());
    return Int_t(0.5 + 72*cm/2.54);
 }
+
 
 //______________________________________________________________________________
 Int_t TSVG::VtoSVG(Double_t v)
@@ -1521,6 +1602,7 @@ Int_t TSVG::VtoSVG(Double_t v)
    return Int_t(0.5 + 72*cm/2.54);
 }
 
+
 //______________________________________________________________________________
 Int_t TSVG::XtoSVG(Double_t x)
 {
@@ -1529,6 +1611,7 @@ Int_t TSVG::XtoSVG(Double_t x)
    Double_t u = (x - gPad->GetX1())/(gPad->GetX2() - gPad->GetX1());
    return  UtoSVG(u);
 }
+
 
 //______________________________________________________________________________
 Int_t TSVG::YtoSVG(Double_t y)
@@ -1539,6 +1622,7 @@ Int_t TSVG::YtoSVG(Double_t y)
    return  fYsizeSVG-VtoSVG(v);
 }
 
+
 //______________________________________________________________________________
 void TSVG::CellArrayBegin(Int_t, Int_t, Double_t, Double_t, Double_t,
                           Double_t)
@@ -1547,6 +1631,7 @@ void TSVG::CellArrayBegin(Int_t, Int_t, Double_t, Double_t, Double_t,
    Warning("TSVG::CellArrayBegin", "not yet implemented");
 }
 
+
 //______________________________________________________________________________
 void TSVG::CellArrayFill(Int_t, Int_t, Int_t)
 {
@@ -1554,12 +1639,14 @@ void TSVG::CellArrayFill(Int_t, Int_t, Int_t)
    Warning("TSVG::CellArrayFill", "not yet implemented");
 }
 
+
 //______________________________________________________________________________
 void TSVG::CellArrayEnd()
 {
    // End the Cell Array painting
    Warning("TSVG::CellArrayEnd", "not yet implemented");
 }
+
 
 //______________________________________________________________________________
 void TSVG::DrawPS(Int_t, Float_t *, Float_t *)

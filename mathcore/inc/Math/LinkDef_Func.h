@@ -16,22 +16,6 @@
 #pragma link C++ typedef ROOT::Math::IMultiGradFunction;
 
 
-#ifdef OLD
-
-#pragma link C++ class ROOT::Math::IBaseFunction<ROOT::Math::MultiDim>+;
-#pragma link C++ class ROOT::Math::IGradientFunction<ROOT::Math::MultiDim>+;
-
-#pragma link C++ class ROOT::Math::IParametricFunction<ROOT::Math::OneDim>+;
-#pragma link C++ class ROOT::Math::IParametricFunction<ROOT::Math::MultiDim>+;
-#pragma link C++ class ROOT::Math::IParametricGradFunction<ROOT::Math::MultiDim>+;
-
-// some problem in CINT with template specialized class 
-#ifdef LATER
-#pragma link C++ class ROOT::Math::IBaseFunction<ROOT::Math::OneDim>+;
-#pragma link C++ class ROOT::Math::IGradientFunction<ROOT::Math::OneDim>+;
-#pragma link C++ class ROOT::Math::IParametricGradFunction<ROOT::Math::OneDim>+;
-#endif
-#endif
 
 #pragma link C++ class ROOT::Math::IBaseFunctionOneDim+;
 #pragma link C++ class ROOT::Math::IGradientOneDim+;

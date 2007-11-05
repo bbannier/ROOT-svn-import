@@ -604,7 +604,7 @@ Int_t TXNetSystem::Locate(const char *path, TString &eurl)
          XrdClientUrlInfo ui;
          TString edir = TUrl(path).GetFile();
 
-         if (cg.ClientAdmin()->Locate((kXR_char *)edir.Data(), ui)) {
+         if (cg.ClientAdmin()->Locate((kXR_char *)edir.Data(), ui, kTRUE)) {
             TUrl u(path);
             u.SetHost(ui.Host.c_str());
             u.SetPort(ui.Port);

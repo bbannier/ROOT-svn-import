@@ -17,6 +17,8 @@
 #pragma link C++ class ROOT::Math::IntegratorMultiDim+;
 #pragma link C++ class ROOT::Math::Integrator+;
 #pragma link C++ class ROOT::Math::VirtualIntegrator+;
+#pragma link C++ class ROOT::Math::VirtualIntegratorOneDim+;
+#pragma link C++ class ROOT::Math::VirtualIntegratorMultiDim+;
 
 
 

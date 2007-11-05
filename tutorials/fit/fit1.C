@@ -41,6 +41,7 @@ void fit1() {
    // Now fit histogram h1f with the function sqroot
    //
    h1f->SetFillColor(45);
+   sqroot->SetParameters(100,4,1,200);
    h1f->Fit("sqroot");
 
    // We now annotate the picture by creating a PaveText object

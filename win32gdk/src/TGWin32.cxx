@@ -1564,7 +1564,7 @@ void TGWin32::ClearWindow()
       GdiFlush();
    } else {
       SetColor(gGCpxmp, 0);
-      gdk_win32_draw_rectangle(gCws->drawing, gGCpxmp, 0,
+      gdk_win32_draw_rectangle(gCws->drawing, gGCpxmp, 1,
                          0, 0, gCws->width, gCws->height);
       SetColor(gGCpxmp, 1);
    }
@@ -4097,6 +4097,10 @@ Int_t TGWin32::WriteGIF(char *name)
       //GIFquantize(...);
       Error("WriteGIF",
             "can not create GIF of image containing more than 256 colors");
+      delete[]R;
+      delete[]G;
+      delete[]B;
+      return 0;
    }
 
    maxcol = 0;
