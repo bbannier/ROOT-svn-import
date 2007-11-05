@@ -82,14 +82,14 @@ ClassImpQ(TPad)
 //  member function of the object classes.
 //  It is important to realize that the pad is a linked list of references
 //  to the original object.
-//  For example, in case of an histogram, the histogram.Draw() operation
+//  For example, in case of a histogram, the histogram.Draw() operation
 //  only stores a reference to the histogram object and not a graphical
 //  representation of this histogram.
 //  When the mouse is used to change (say the bin content), the bin content
 //  of the original histogram is changed !!
 //
 //  The convention used in ROOT is that a Draw operation only adds
-//  a reference to the object. The effective drawing is performed when
+//  a reference to the object. The effective drawing is performed
 //  when the canvas receives a signal to be painted.
 //  This signal is generally sent when typing carriage return in the
 //  command input or when a graphical operation has been performed on one
@@ -2914,12 +2914,7 @@ void TPad::PaintModified()
    cd();
    if (IsModified() || IsTransparent()) {
       if ((fFillStyle < 3026) && (fFillStyle > 3000)) {
-         Int_t px1 = XtoPixel(fX1);
-         Int_t px2 = XtoPixel(fX2);
-         Int_t py1 = YtoPixel(fY1);
-         Int_t py2 = YtoPixel(fY2);
-         gVirtualX->SetFillColor(10);
-         gVirtualX->DrawBox(px1,py1,px2,py2,TVirtualX::kFilled);
+         if (!gPad->IsBatch()) gVirtualX->ClearWindow();
       }
       PaintBorder(GetFillColor(), kTRUE);
    }

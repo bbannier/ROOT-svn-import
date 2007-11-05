@@ -20,10 +20,7 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#ifdef R__HAVE_CONFIG
 #include "RConfigure.h"
-#endif
-
 #include "RConfig.h"
 #include "Riostream.h"
 
@@ -743,10 +740,10 @@ TDSetElement *TProofServ::GetNextPacket(Long64_t totalEntries)
       UInt_t sleeptime = (UInt_t) (cputime * (fInflateFactor - 1000)) ;
       Int_t i = 0;
       for (i = kSigBus ; i <= kSigUser2 ; i++)
-          gSystem->IgnoreSignal((ESignals)i, kTRUE);
+         gSystem->IgnoreSignal((ESignals)i, kTRUE);
       gSystem->Sleep(sleeptime);
       for (i = kSigBus ; i <= kSigUser2 ; i++)
-          gSystem->IgnoreSignal((ESignals)i, kFALSE);
+         gSystem->IgnoreSignal((ESignals)i, kFALSE);
       realtime += sleeptime / 1000.;
       PDB(kLoop, 2)
          Info("GetNextPacket","slept %d millisec", sleeptime);
@@ -3101,7 +3098,7 @@ void TProofServ::HandleProcess(TMessage *mess)
          fSocket->Send(m);
       }
 
-      // Nothing more to do if we are not idle  
+      // Nothing more to do if we are not idle
       if (!fIdle) {
          // Notify submission
          Info("HandleProcess",
@@ -3930,7 +3927,7 @@ Int_t TProofServ::HandleCache(TMessage *mess)
          break;
       case TProof::kBuildPackage:
          (*mess) >> package;
- 
+
          // always follows BuildPackage so no need to check for PROOF-INF
          pdir = fPackageDir + "/" + package;
 
@@ -4017,7 +4014,7 @@ Int_t TProofServ::HandleCache(TMessage *mess)
                      char *gunzip = gSystem->Which(gSystem->Getenv("PATH"), kGUNZIP,
                                                    kExecutePermission);
                      if (gunzip) {
-                        TString par = Form("%s.par", pdir.Data()); 
+                        TString par = Form("%s.par", pdir.Data());
                         // untar package
                         TString cmd(Form(kUNTAR3, gunzip, par.Data()));
                         status = gSystem->Exec(cmd);

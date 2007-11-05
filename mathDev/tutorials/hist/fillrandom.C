@@ -43,7 +43,7 @@ void fillrandom() {
    pad2->GetFrame()->SetBorderSize(5);
    h1f = new TH1F("h1f","Test random numbers",200,0,10);
    h1f->SetFillColor(45);
-   h1f->FillRandom("sqroot",10000);
+   h1f->FillRandom("sqroot",100000);
    h1f->Draw();
    c1->Update();
    //
