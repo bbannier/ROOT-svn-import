@@ -43,14 +43,30 @@ public:
    // destructor: no operation
    virtual ~VirtualIntegrator() {}
 
-
+   /**
+      set the desired relative Error
+   */
    virtual void SetRelTolerance(double ) = 0; 
 
+   /**
+      set the desired absolute Error
+   */
    virtual void SetAbsTolerance(double ) = 0; 
 
+   /**
+      return  the Result of the last Integral calculation
+   */
    virtual double Result() const = 0; 
 
+   /**
+      return the estimate of the absolute Error of the last Integral calculation
+   */
    virtual double Error() const = 0; 
+   
+   /**
+      return the Error Status of the last Integral calculation
+   */
+   virtual int Status() const = 0;
 
 }; 
 

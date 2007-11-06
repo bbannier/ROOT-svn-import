@@ -325,7 +325,7 @@ public:
    /**
       return the Error Status of the last Integral calculation
    */
-   int Status() const;
+   int Status() const { return fIntegrator == 0 ? -1 : fIntegrator->Status(); }
 
 
    // setter for control Parameters  (getters are not needed so far )

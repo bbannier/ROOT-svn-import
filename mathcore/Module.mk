@@ -26,11 +26,11 @@ MATHCOREDO   := $(MATHCOREDS:.cxx=.o)
 MATHCOREDO32 := $(MATHCOREDS32:.cxx=.o)
 MATHCOREDH   := $(MATHCOREDS:.cxx=.h)
 
-MATHCOREDH1  :=  $(MODDIRI)/Math/Vector3D.h \
+MATHCOREDH1  :=  $(MODDIRI)/Math/Vector2D.h \
+                 $(MODDIRI)/Math/Point2D.h \
+                 $(MODDIRI)/Math/Vector3D.h \
                  $(MODDIRI)/Math/Point3D.h \
                  $(MODDIRI)/Math/Vector4D.h \
-                 $(MODDIRI)/Math/Vector2D.h \
-                 $(MODDIRI)/Math/Point2D.h \
                  $(MODDIRI)/Math/Rotation3D.h \
                  $(MODDIRI)/Math/RotationZYX.h \
                  $(MODDIRI)/Math/RotationX.h \
