@@ -69,7 +69,7 @@ double AdaptiveIntegratorMultiDim::Integral(const double* xmin, const double * x
    unsigned int maxpts = fSize;//specified maximal number of function evaluations
    double eps = fRelTol; //specified relative accuracy
    //output parameters
-   int ifail; //report status
+   fStatus = 0; //report status
    unsigned int nfnevl; //nr of function evaluations
    double relerr; //an estimation of the relative accuracy of the result
 
@@ -117,7 +117,7 @@ double AdaptiveIntegratorMultiDim::Integral(const double* xmin, const double * x
 
    double result = 0;
    double abserr = 0;
-   ifail  = 3;
+   fStatus  = 3;
    nfnevl = 0;
    relerr = 0;
    if (n < 2 || n > 15) return 0;
@@ -240,7 +240,7 @@ L90: //sum over end nodes ~gray codes
    aresult = std::abs(result);
    //if (result > 0 && aresult< 1e-100) {
    //   delete [] wk;
-   //   ifail = 0;  //function is probably symmetric ==> integral is null: not an error
+   //   fStatus = 0;  //function is probably symmetric ==> integral is null: not an error
    //   return result;
    //}
 
@@ -291,22 +291,22 @@ L160: //to divide or not
    if (aresult != 0)  relerr = abserr/aresult;
 
 
-   if (relerr < 1e-1 && aresult < 1e-20) ifail = 0;
-   if (relerr < 1e-3 && aresult < 1e-10) ifail = 0;
-   if (relerr < 1e-5 && aresult < 1e-5)  ifail = 0;
-   if (isbrgs+irgnst > iwk) ifail = 2;
+   if (relerr < 1e-1 && aresult < 1e-20) fStatus = 0;
+   if (relerr < 1e-3 && aresult < 1e-10) fStatus = 0;
+   if (relerr < 1e-5 && aresult < 1e-5)  fStatus = 0;
+   if (isbrgs+irgnst > iwk) fStatus = 2;
    if (ifncls+2*irlcls > maxpts) {
       if (sum1==0 && sum2==0 && sum3==0 && sum4==0 && sum5==0){
-         ifail = 0;
+         fStatus = 0;
          result = 0;
       }
       else
-         ifail = 1;
+         fStatus = 1;
    }
    //..and accuracy appropriare
-   //! if (relerr < eps && ifncls >= minpts) ifail = 0;
-   if (relerr < eps* aresult && abserr < eps && ifncls >= minpts) ifail = 0;
-   if (ifail == 3) {
+   //! if (relerr < eps && ifncls >= minpts) fStatus = 0;
+   if (relerr < eps* aresult && abserr < eps && ifncls >= minpts) fStatus = 0;
+   if (fStatus == 3) {
       ldv = kTRUE;
       isbrgn  = irgnst;
       abserr -= wk[isbrgn-1];

@@ -73,6 +73,8 @@ public:
    // return integration error 
    double Error() const { return fError; } 
 
+   int Status() const { return fStatus; }
+
    // return number of function evaluations in calculating the integral 
    unsigned int NEval() const { return fNEval; }
  
@@ -91,6 +93,7 @@ public:
    double fResult;
    double fError;
    unsigned int  fNEval;
+   int fStatus;   // status of algorithm (error if not zero)
 
    const IMultiGenFunction* fFun;
 

@@ -151,6 +151,9 @@ public:
    /// return integration error 
    double Error() const { return fIntegrator == 0 ? 0 : fIntegrator->Error(); } 
 
+   ///  return the Error Status of the last Integral calculation
+   int Status() const { return fIntegrator == 0 ? -1 : fIntegrator->Status(); }
+
    // return number of function evaluations in calculating the integral 
    //unsigned int NEval() const { return fNEval; }
  

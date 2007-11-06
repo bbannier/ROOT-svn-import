@@ -25,7 +25,6 @@
 #include "Math/Util.h"
 #endif
 
-#include <vector>
 
 #include <cassert> 
 
