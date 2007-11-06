@@ -68,6 +68,9 @@ bool XrdProofPhyConn::Init(const char *url)
 {
    // Initialization
 
+   // Mutex
+   fMutex = new XrdSysRecMutex();
+
    // Save url
    fUrl.TakeUrl(XrdOucString(url));
 
@@ -176,7 +179,7 @@ bool XrdProofPhyConn::Init(const char *url)
 int XrdProofPhyConn::Connect()
 {
    // Connect to remote server
-   char *ctype[2] = {"UNIX", "TCP"};
+   const char *ctype[2] = {"UNIX", "TCP"};
 
    // Create physical connection
 #ifdef OLDXRCPHYCONN
@@ -263,7 +266,6 @@ bool XrdProofPhyConn::GetAccessToSrv()
 
       // Now we can start the reader thread in the physical connection, if needed
       fPhyConn->StartReader();
-      fPhyConn->SetTTL(DLBD_TTL);// = DLBD_TTL;
       fPhyConn->fServerType = kSTBaseXrootd;
       break;
 

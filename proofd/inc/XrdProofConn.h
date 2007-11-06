@@ -24,6 +24,10 @@
 
 #define DFLT_CONNECTMAXTRY           10
 
+#ifdef OLDXRDOUC
+#  include "XrdSysToOuc.h"
+#endif
+
 #ifndef ROOT_XProofProtocol
 #include "XProofProtocol.h"
 #endif
@@ -45,9 +49,9 @@
 class XrdClientConnectionMgr;
 class XrdClientMessage;
 class XrdClientPhyConnection;
-class XrdOucRecMutex;
+class XrdSysRecMutex;
 class XrdSecProtocol;
-class XrdOucPlugin;
+class XrdSysPlugin;
 
 class XrdProofConn  : public XrdClientAbsUnsolMsgHandler {
 
@@ -80,7 +84,7 @@ private:
 
    XrdOucString        fLoginBuffer;   // Buffer to be sent over at login
 
-   XrdOucRecMutex     *fMutex;         // Lock SendRecv actions
+   XrdSysRecMutex     *fMutex;         // Lock SendRecv actions
 
    XrdClientPhyConnection *fPhyConn;   // underlying physical connection
 
@@ -95,7 +99,7 @@ private:
    static int          fgMaxTry; //max number of connection attempts
    static int          fgTimeWait; //Wait time between an attempt and the other
 
-   static XrdOucPlugin *fgSecPlugin;       // Sec library plugin
+   static XrdSysPlugin *fgSecPlugin;       // Sec library plugin
    static void         *fgSecGetProtocol;  // Sec protocol getter
 
    XrdSecProtocol     *Authenticate(char *plist, int lsiz);
@@ -130,7 +134,7 @@ public:
    const char         *GetUrl() { return (const char *) fUrl.GetUrl().c_str(); }
    const char         *GetLastErr() { return fLastErrMsg.c_str(); }
 
-   bool                IsValid() const { return fConnected; }
+   bool                IsValid() const;
 
    // Send, Recv interfaces
    virtual int         ReadRaw(void *buf, int len);

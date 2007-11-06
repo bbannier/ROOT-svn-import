@@ -186,6 +186,11 @@ void TXNetSystem::InitXrdClient()
    // Init vars with default debug level -1, so we do not get warnings
    TXNetFile::SetEnv();
 
+#ifndef OLDXRDOUC
+   // Use optimized connections
+   XrdClientAdmin::SetAdminConn();
+#endif
+
    // Only once
    fgInitDone = kTRUE;
 
@@ -512,6 +517,11 @@ Int_t TXNetSystem::Prepare(TCollection *paths,
    // with GetPathsInfo.
    // Return the number of paths found or -1 if any error occured.
 
+   if (!paths) {
+      Warning("Prepare", "input list is empty!");
+      return -1;
+   }
+
    Int_t npaths = 0;
 
    TXNetSystemConnectGuard cg(this, "");
@@ -599,7 +609,7 @@ Int_t TXNetSystem::Locate(const char *path, TString &eurl)
          XrdClientUrlInfo ui;
          TString edir = TUrl(path).GetFile();
 
-         if (cg.ClientAdmin()->Locate((kXR_char *)edir.Data(), ui)) {
+         if (cg.ClientAdmin()->Locate((kXR_char *)edir.Data(), ui, kTRUE)) {
             TUrl u(path);
             u.SetHost(ui.Host.c_str());
             u.SetPort(ui.Port);

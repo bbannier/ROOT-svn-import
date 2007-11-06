@@ -1,17 +1,24 @@
-void SavePerfInfo(const Char_t *filename) {
-   // Save PROOF timing information from TPerfStats to file 'filename' 
+#include <iostream>
+#include "TFile.h"
+#include "TIterator.h"
+#include "TRegexp.h"
+
+
+void SavePerfInfo(const Char_t *filename)
+{
+   // Save PROOF timing information from TPerfStats to file 'filename'
 
    if (!gProof) {
       cout << "PROOF must be run to save output performance information" << endl;
       return;
    }
-   
+
    TFile f(filename, "UPDATE");
    if (f.IsZombie()) {
       cout << "Could not open file " << filename << " for writing" << endl;
    } else {
       f.cd();
-      
+
       TIter NextObject(gProof->GetOutputList());
       TObject* obj = 0;
       while (obj = NextObject()) {
@@ -32,5 +39,4 @@ void SavePerfInfo(const Char_t *filename) {
 
       f.Close();
    }
-
 }

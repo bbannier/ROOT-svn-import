@@ -27,6 +27,9 @@
 #ifndef ROOT_TArrayL64
 #include "TArrayL64.h"
 #endif
+#ifndef ROOT_TArrayF
+#include "TArrayF.h"
+#endif
 #ifndef ROOT_TList
 #include "TList.h"
 #endif
@@ -141,6 +144,11 @@ public:
    void      Progress(Long64_t total, Long64_t processed, Long64_t bytesread,
                       Float_t initTime, Float_t procTime,
                       Float_t evtrti, Float_t mbrti); // *SIGNAL*
+   void      Progress(TSlave *, Long64_t total, Long64_t processed, Long64_t bytesread,
+                      Float_t initTime, Float_t procTime,
+                      Float_t evtrti, Float_t mbrti)
+                { Progress(total, processed, bytesread, initTime, procTime,
+                           evtrti, mbrti); } // *SIGNAL*
    void      Feedback(TList *objs); // *SIGNAL*
 
    TDrawFeedback *CreateDrawFeedback(TProof *p);
@@ -205,8 +213,10 @@ private:
    TList              *fFeedbackLists; // intermediate results
    TVirtualPacketizer *fPacketizer;    // transform TDSet into packets for slaves
    TDSet              *fDSet;          //!tdset for current processing
+   Bool_t              fMergeFiles;    // is True when merging output files centrally is needed
 
    TList              *MergeFeedback();
+   Bool_t              MergeOutputFiles();
 
 protected:
    virtual Bool_t  HandleTimer(TTimer *timer);
@@ -217,9 +227,9 @@ protected:
 
 public:
    TProofPlayerRemote(TProof *proof = 0) : fProof(proof), fOutputLists(0), fFeedback(0),
-                                           fFeedbackLists(0), fPacketizer(0) {}
+                                           fFeedbackLists(0), fPacketizer(0),
+                                           fMergeFiles(kFALSE) {}
    virtual ~TProofPlayerRemote();   // Owns the fOutput list
-
    Long64_t       Process(TDSet *set, const char *selector,
                           Option_t *option = "", Long64_t nentries = -1,
                           Long64_t firstentry = 0);
@@ -242,6 +252,11 @@ public:
    void           Progress(Long64_t total, Long64_t processed, Long64_t bytesread,
                            Float_t initTime, Float_t procTime,
                            Float_t evtrti, Float_t mbrti); // *SIGNAL*
+   void           Progress(TSlave *, Long64_t total, Long64_t processed, Long64_t bytesread,
+                           Float_t initTime, Float_t procTime,
+                           Float_t evtrti, Float_t mbrti)
+                      { Progress(total, processed, bytesread, initTime, procTime,
+                           evtrti, mbrti); } // *SIGNAL*
    void           Feedback(TList *objs); // *SIGNAL*
    TDSetElement  *GetNextPacket(TSlave *slave, TMessage *r);
 
@@ -283,6 +298,11 @@ class TProofPlayerSuperMaster : public TProofPlayerRemote {
 private:
    TArrayL64 fSlaveProgress;
    TArrayL64 fSlaveTotals;
+   TArrayL64 fSlaveBytesRead;
+   TArrayF   fSlaveInitTime;
+   TArrayF   fSlaveProcTime;
+   TArrayF   fSlaveEvtRti;
+   TArrayF   fSlaveMBRti;
    TList     fSlaves;
    Bool_t    fReturnFeedback;
 
@@ -306,6 +326,9 @@ public:
                     { TProofPlayerRemote::Progress(total, processed, bytesread,
                                                    initTime, procTime, evtrti, mbrti); }
    void  Progress(TSlave *sl, Long64_t total, Long64_t processed);
+   void  Progress(TSlave *sl, Long64_t total, Long64_t processed, Long64_t bytesread,
+                  Float_t initTime, Float_t procTime,
+                  Float_t evtrti, Float_t mbrti);
 
    ClassDef(TProofPlayerSuperMaster,0)  // PROOF player running on super master
 };

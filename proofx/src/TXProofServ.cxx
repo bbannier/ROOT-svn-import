@@ -18,10 +18,7 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#ifdef R__HAVE_CONFIG
 #include "RConfigure.h"
-#endif
-
 #include "RConfig.h"
 #include "Riostream.h"
 
@@ -543,10 +540,13 @@ void TXProofServ::HandleTermination()
    // If master server, propagate interrupt to slaves
    // (shutdown interrupt send internally).
    if (IsMaster()) {
+
       // If not idle, try first to stop processing
       if (!fIdle) {
          // Remove pending requests
          fWaitingQueries->Delete();
+         // Interrupt the current monitor
+         fProof->InterruptCurrentMonitor();
          // Do not wait for ever, but al least 20 seconds
          Long_t timeout = gEnv->GetValue("Proof.ShutdownTimeout", 60);
          timeout = (timeout > 20) ? timeout : 20;
@@ -614,104 +614,6 @@ Int_t TXProofServ::Setup()
    }
    fWorkDir = gEnv->GetValue("ProofServ.Sandbox", kPROOF_WorkDir);
 
-   // goto to the main PROOF working directory
-   char *workdir = gSystem->ExpandPathName(fWorkDir.Data());
-   fWorkDir = workdir;
-   delete [] workdir;
-   if (gProofDebugLevel > 0)
-      Info("Setup", "working directory set to %s", fWorkDir.Data());
-
-   // deny write access for group and world
-   gSystem->Umask(022);
-
-#ifdef R__UNIX
-   TString bindir;
-# ifdef ROOTBINDIR
-   bindir = ROOTBINDIR;
-# else
-   bindir = gSystem->Getenv("ROOTSYS");
-   if (!bindir.IsNull()) bindir += "/bin";
-# endif
-# ifdef COMPILER
-   TString compiler = COMPILER;
-   compiler.Remove(0, compiler.Index("is ") + 3);
-   compiler = gSystem->DirName(compiler);
-   if (!bindir.IsNull()) bindir += ":";
-   bindir += compiler;
-#endif
-   if (!bindir.IsNull()) bindir += ":";
-   bindir += "/bin:/usr/bin:/usr/local/bin";
-   // Add bindir to PATH
-   TString path(gSystem->Getenv("PATH"));
-   if (!path.IsNull()) path.Insert(0, ":");
-   path.Insert(0, bindir);
-   gSystem->Setenv("PATH", path);
-#endif
-
-   if (gSystem->AccessPathName(fWorkDir)) {
-      gSystem->mkdir(fWorkDir, kTRUE);
-      if (!gSystem->ChangeDirectory(fWorkDir)) {
-         Error("Setup", "can not change to PROOF directory %s",
-               fWorkDir.Data());
-         return -1;
-      }
-   } else {
-      if (!gSystem->ChangeDirectory(fWorkDir)) {
-         gSystem->Unlink(fWorkDir);
-         gSystem->mkdir(fWorkDir, kTRUE);
-         if (!gSystem->ChangeDirectory(fWorkDir)) {
-            Error("Setup", "can not change to PROOF directory %s",
-                     fWorkDir.Data());
-            return -1;
-         }
-      }
-   }
-
-   // check and make sure "cache" directory exists
-   fCacheDir = fWorkDir;
-   fCacheDir += TString("/") + kPROOF_CacheDir;
-   if (gSystem->AccessPathName(fCacheDir))
-      gSystem->MakeDirectory(fCacheDir);
-   if (gProofDebugLevel > 0)
-      Info("Setup", "cache directory set to %s", fCacheDir.Data());
-   fCacheLock =
-      new TProofLockPath(Form("%s%s",kPROOF_CacheLockFile,fUser.Data()));
-
-   // check and make sure "packages" directory exists
-   fPackageDir = fWorkDir;
-   fPackageDir += TString("/") + kPROOF_PackDir;
-   if (gSystem->AccessPathName(fPackageDir))
-      gSystem->MakeDirectory(fPackageDir);
-   if (gProofDebugLevel > 0)
-      Info("Setup", "package directory set to %s", fPackageDir.Data());
-   fPackageLock =
-      new TProofLockPath(Form("%s%s",kPROOF_PackageLockFile,fUser.Data()));
-
-   // List of directories where to look for global packages
-   TString globpack = gEnv->GetValue("Proof.GlobalPackageDirs","");
-   if (globpack.Length() > 0) {
-      Int_t ng = 0;
-      Int_t from = 0;
-      TString ldir;
-      while (globpack.Tokenize(ldir, from, ":")) {
-         if (gSystem->AccessPathName(ldir, kReadPermission)) {
-            Warning("Setup", "directory for global packages %s does not"
-                             " exist or is not readable", ldir.Data());
-         } else {
-            // Add to the list, key will be "G<ng>", i.e. "G0", "G1", ...
-            TString key = Form("G%d", ng++);
-            if (!fGlobalPackageDirList) {
-               fGlobalPackageDirList = new THashList();
-               fGlobalPackageDirList->SetOwner();
-            }
-            fGlobalPackageDirList->Add(new TNamed(key,ldir));
-            Info("Setup", "directory for global packages %s added to the list",
-                          ldir.Data());
-            FlushLogFile();
-         }
-      }
-   }
-
    // Get Session tag
    if ((fSessionTag = gEnv->GetValue("ProofServ.SessionTag", "-1")) == "-1") {
       Error("Setup", "Session tag missing");
@@ -726,80 +628,18 @@ Int_t TXProofServ::Setup()
       return -1;
    }
 
-   if (fSessionDir != gSystem->WorkingDirectory()) {
-      if (gSystem->AccessPathName(fSessionDir))
-         gSystem->MakeDirectory(fSessionDir);
-      if (!gSystem->ChangeDirectory(fSessionDir)) {
-         Error("Setup", "can not change to working directory %s",
-                        fSessionDir.Data());
-         return -1;
-      }
-   }
-   gSystem->Setenv("PROOF_SANDBOX", fSessionDir);
+   // Goto to the main PROOF working directory
+   char *workdir = gSystem->ExpandPathName(fWorkDir.Data());
+   fWorkDir = workdir;
+   delete [] workdir;
    if (gProofDebugLevel > 0)
-      Info("Setup", "session dir is %s", fSessionDir.Data());
+      Info("Setup", "working directory set to %s", fWorkDir.Data());
 
-   // On masters, check and make sure that "queries" and "datasets"
-   // directories exist
-   if (IsMaster()) {
-
-      // Create 'queries' locker instance and lock it
-      fQueryLock = new TProofLockPath(Form("%s%s-%s",
-                       kPROOF_QueryLockFile,fSessionTag.Data(),fUser.Data()));
-
-      // Make sure that the 'queries' dir exist
-      fQueryDir = fWorkDir;
-      fQueryDir += TString("/") + kPROOF_QueryDir;
-      if (gSystem->AccessPathName(fQueryDir))
-         gSystem->MakeDirectory(fQueryDir);
-      fQueryDir += TString("/session-") + fSessionTag;
-      if (gSystem->AccessPathName(fQueryDir))
-         gSystem->MakeDirectory(fQueryDir);
-      if (gProofDebugLevel > 0)
-         Info("Setup", "queries dir is %s", fQueryDir.Data());
-      fQueryLock->Lock();
-
-      // 'datasets'
-      if ((fDataSetDir = gEnv->GetValue("ProofServ.DataSetDir", "-1")) == "-1") {
-         // Use default path in the sandbox
-         fDataSetDir = fWorkDir;
-         fDataSetDir += TString("/") + kPROOF_DataSetDir;
-         if (gSystem->AccessPathName(fDataSetDir))
-            gSystem->MakeDirectory(fDataSetDir);
-      }
-      if (gProofDebugLevel > 0)
-         Info("Setup", "dataset dir is %s", fDataSetDir.Data());
-      fDataSetLock =
-         new TProofLockPath(Form("%s%s", kPROOF_DataSetLockFile,fUser.Data()));
-
-      // Send session tag to client
-      TMessage m(kPROOF_SESSIONTAG);
-      m << fSessionTag;
-      fSocket->Send(m);
+   // Common setup
+   if (SetupCommon() != 0) {
+      Error("Setup", "common setup failed");
+      return -1;
    }
-
-   // Set group and get the group priority
-   fGroup = gEnv->GetValue("ProofServ.ProofGroup", "");
-   if (IsMaster())
-      fGroupPriority = GetPriority();
-
-   // Send "ROOTversion|ArchCompiler" flag
-   if (fProtocol > 12) {
-      TString vac = gROOT->GetVersion();
-      TString rtag = gEnv->GetValue("ProofServ.RootVersionTag", "");
-      if (rtag.Length() > 0)
-         vac += Form("-%s", rtag.Data());
-      vac += Form("|%s-%s",gSystem->GetBuildArch(), gSystem->GetBuildCompilerVersion());
-      TMessage m(kPROOF_VERSARCHCOMP);
-      m << vac;
-      fSocket->Send(m);
-   }
-
-   // Send packages off immediately to reduce latency
-   fSocket->SetOption(kNoDelay, 1);
-
-   // Check every two hours if client is still alive
-   fSocket->SetOption(kKeepAlive, 1);
 
    // Install SigPipe handler to handle kKeepAlive failure
    gSystem->AddSignalHandler(new TXProofServSigPipeHandler(this));
@@ -809,20 +649,6 @@ Int_t TXProofServ::Setup()
 
    // Install seg violation handler
    gSystem->AddSignalHandler(new TXProofServSegViolationHandler(this));
-
-   // Set user vars in TProof
-   TString all_vars(gSystem->Getenv("PROOF_ALLVARS"));
-   TString name;
-   Int_t from = 0;
-   while (all_vars.Tokenize(name, from, ",")) {
-      if (!name.IsNull()) {
-         TString value = gSystem->Getenv(name);
-         TProof::AddEnvVar(name, value);
-      }
-   }
-
-   if (gProofDebugLevel > 0)
-      Info("Setup", "successfully completed");
 
    // Done
    return 0;
@@ -903,11 +729,12 @@ void TXProofServ::SendLogFile(Int_t status, Int_t start, Int_t end)
 }
 
 //______________________________________________________________________________
-TProofServ::EQueryAction TXProofServ::GetWorkers(TList *workers,
+TProofServ::EQueryAction TXProofServ::GetWorkers(TList *wantWorkers,
+                                                 TList *workers,
                                                  Int_t & /* prioritychange */)
 {
    // Get list of workers to be used from now on.
-   // The list must be provide by the caller.
+   // 'workers' - the list must be provide by the caller.
 
    // Needs a list where to store the info
    if (!workers) {
@@ -918,44 +745,49 @@ TProofServ::EQueryAction TXProofServ::GetWorkers(TList *workers,
    // If user config files are enabled, check them first
    if (gEnv->GetValue("ProofServ.UseUserCfg", 0) != 0) {
       Int_t pc = 1;
-      TProofServ::EQueryAction rc = TProofServ::GetWorkers(workers, pc);
+      TProofServ::EQueryAction rc =
+         TProofServ::GetWorkers(wantWorkers, workers, pc);
       if (rc == kQueryOK)
          return rc;
    }
 
+   //TODO:Prepare the wantWorkers list
+   const char *wantWorkersStr = 0;
+   if (wantWorkers)
+     wantWorkersStr = "job";
+   else
+     wantWorkersStr = "All";
+
    // Send request to the coordinator
-   TObjString *os = ((TXSocket *)fSocket)->SendCoordinator(TXSocket::kGetWorkers);
+   TObjString *os = ((TXSocket *)fSocket)
+      ->SendCoordinator(TXSocket::kGetWorkers, wantWorkersStr);
 
    // The reply contains some information about the master (image, workdir)
    // followed by the information about the workers; the tokens for each node
    // are separated by '&'
    if (os) {
-      TObjArray *oa = TString(os->GetName()).Tokenize(TString("&"));
-      if (oa) {
-         TIter nxos(oa);
-         // The master, first
-         TObjString *to = (TObjString *) nxos();
-         TProofNodeInfo *master = new TProofNodeInfo(to->GetName());
-         // Image
-         fImage = master->GetImage();
-         if (fImage.Length() <= 0) {
-            Error("GetWorkers", "no appropriate master line got from coordinator");
-            SafeDelete(oa);
-            SafeDelete(os);
-            SafeDelete(master);
-            return kQueryStop;
+      TString fl(os->GetName());
+      TString tok;
+      Ssiz_t from = 0;
+      if (fl.Tokenize(tok, from, "&")) {
+         if (!tok.IsNull()) {
+            TProofNodeInfo *master = new TProofNodeInfo(tok);
+            if (!master) {
+               Error("GetWorkers", "no appropriate master line got from coordinator");
+               return kQueryStop;
+            } else {
+               // Set image if not yet done and available
+               if (fImage.IsNull() && strlen(master->GetImage()) > 0)
+                  fImage = master->GetImage();
+               SafeDelete(master);
+            }
+            // Now the workers
+            while (fl.Tokenize(tok, from, "&")) {
+               if (!tok.IsNull())
+                  workers->Add(new TProofNodeInfo(tok));
+            }
          }
-
-         // Now the workers
-         while ((to = (TObjString *) nxos()))
-            workers->Add(new TProofNodeInfo(to->GetName()));
-
-         // Cleanup
-         SafeDelete(oa);
-         SafeDelete(master);
       }
-      // Cleanup
-      SafeDelete(os);
    }
 
    // We are done
@@ -1040,24 +872,21 @@ Bool_t TXProofServ::HandleInput(const void *in)
 
    } else if (acod == kXPD_inflate) {
 
-      // Inflate factor
-      Int_t factor = hin->fInt2;
+      // Set inflate factor
+      fInflateFactor = (hin->fInt2 >= 1000) ? hin->fInt2 : fInflateFactor;
+      // Notify
+      Info("HandleInput", "kXPD_inflate: inflate factor set to %f",
+           (Float_t) fInflateFactor / 1000.);
 
-      if (IsMaster()) {
-         // The factor is the priority to be propagated
-         fGroupPriority = factor;
-         if (fProof)
-            fProof->BroadcastGroupPriority(fGroup, fGroupPriority);
-         // Notify
-         Info("HandleInput", "kXPD_inflate: group %s priority set to %f",
-              fGroup.Data(), (Float_t) fGroupPriority / 100.);
-      } else {
-         // Set inflate factor
-         fInflateFactor = (factor >= 1000) ? factor : fInflateFactor;
-         // Notify
-         Info("HandleInput", "kXPD_inflate: inflate factor set to %f",
-              (Float_t) fInflateFactor / 1000.);
-      }
+   } else if (acod == kXPD_priority) {
+
+      // The factor is the priority to be propagated
+      fGroupPriority = hin->fInt2;
+      if (fProof)
+         fProof->BroadcastGroupPriority(fGroup, fGroupPriority);
+      // Notify
+      Info("HandleInput", "kXPD_priority: group %s priority set to %f",
+           fGroup.Data(), (Float_t) fGroupPriority / 100.);
 
    } else {
       // Standard socket input
@@ -1099,6 +928,10 @@ void TXProofServ::Terminate(Int_t status)
 
    // Notify
    Info("Terminate", "starting session termination operations ...");
+
+   // Deactivate current monitor, if any
+   if (fProof)
+      fProof->SetMonitor(0, kFALSE);
 
    // Cleanup session directory
    if (status == 0) {

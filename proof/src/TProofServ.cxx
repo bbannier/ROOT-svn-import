@@ -20,10 +20,7 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#ifdef R__HAVE_CONFIG
 #include "RConfigure.h"
-#endif
-
 #include "RConfig.h"
 #include "Riostream.h"
 
@@ -224,18 +221,23 @@ Bool_t TProofServLogHandler::Notify()
       while (fgets(line, sizeof(line), fFile)) {
          if ((plf = strchr(line, '\n')))
             *plf = 0;
-         // Send the message one level up
-         m.Reset(kPROOF_MESSAGE);
+         // Create log string
+         TString log;
          if (fPfx.Length() > 0) {
             // Prepend prefix specific to this instance
-            m << TString(Form("%s: %s", fPfx.Data(), line));
+            log = Form("%s: %s", fPfx.Data(), line);
          } else if (fgPfx.Length() > 0) {
             // Prepend default prefix
-            m << TString(Form("%s: %s", fgPfx.Data(), line));
+            log = Form("%s: %s", fgPfx.Data(), line);
          } else {
             // Nothing to prepend
-            m << TString(line);
+            log = line;
          }
+         // Keep track in the log file
+         Printf("%s", log.Data());
+         // Send the message one level up
+         m.Reset(kPROOF_MESSAGE);
+         m << log;
          fSocket->Send(m);
       }
    }
@@ -414,7 +416,7 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
    GetOptions(argc, argv);
 
    // Default prefix in the form '<role>-<ordinal>'
-   fPrefix = (IsMaster() ? "master-" : "worker-");
+   fPrefix = (IsMaster() ? "Mst-" : "Wrk-");
    if (fOrdinal != "-1")
       fPrefix += fOrdinal;
    TProofServLogHandler::SetDefaultPrefix(fPrefix);
@@ -470,7 +472,7 @@ Int_t TProofServ::CreateServer()
    // Set the default prefix in the form '<role>-<ordinal>' (it was already done
    // in the constructor, but for standard PROOF the ordinal number is only set in
    // Setup(), so we need to do it again here)
-   TString pfx = (IsMaster() ? "master-" : "worker-");
+   TString pfx = (IsMaster() ? "Mst-" : "Wrk-");
    pfx += GetOrdinal();
    TProofServLogHandler::SetDefaultPrefix(pfx);
 
@@ -581,10 +583,10 @@ Int_t TProofServ::CreateServer()
       }
 
       // make instance of TProof
-      fProof = reinterpret_cast<TProof*>(h->ExecPlugin(4, master.Data(),
+      fProof = reinterpret_cast<TProof*>(h->ExecPlugin(5, master.Data(),
                                                           fConfFile.Data(),
                                                           GetConfDir(),
-                                                          fLogLevel));
+                                                          fLogLevel, 0));
       if (!fProof || !fProof->IsValid()) {
          Error("CreateServer", "plugin for TProof could not be executed");
          delete fProof;
@@ -733,10 +735,6 @@ TDSetElement *TProofServ::GetNextPacket(Long64_t totalEntries)
    TMessage req(kPROOF_GETPACKET);
    Double_t cputime = fCompute.CpuTime();
    Double_t realtime = fCompute.RealTime();
-   req << fLatency.RealTime() << realtime << cputime
-       << bytesRead << totalEntries;
-   if (fPlayer)
-       req << fPlayer->GetEventsProcessed();
 
    // Apply inflate factor, if needed
    PDB(kLoop, 2)
@@ -745,10 +743,21 @@ TDSetElement *TProofServ::GetNextPacket(Long64_t totalEntries)
                             fInflateFactor, realtime, cputime, totalEntries);
    if (fInflateFactor > 1000) {
       UInt_t sleeptime = (UInt_t) (cputime * (fInflateFactor - 1000)) ;
-      PDB(kLoop, 2)
-         Info("GetNextPacket","sleeping %d millisec", sleeptime);
+      Int_t i = 0;
+      for (i = kSigBus ; i <= kSigUser2 ; i++)
+         gSystem->IgnoreSignal((ESignals)i, kTRUE);
       gSystem->Sleep(sleeptime);
+      for (i = kSigBus ; i <= kSigUser2 ; i++)
+         gSystem->IgnoreSignal((ESignals)i, kFALSE);
+      realtime += sleeptime / 1000.;
+      PDB(kLoop, 2)
+         Info("GetNextPacket","slept %d millisec", sleeptime);
    }
+
+   req << fLatency.RealTime() << realtime << cputime
+       << bytesRead << totalEntries;
+   if (fPlayer)
+       req << fPlayer->GetEventsProcessed();
 
    fLatency.Start();
    Int_t rc = fSocket->Send(req);
@@ -1074,8 +1083,12 @@ void TProofServ::HandleSocketInput()
             // copy file to cache if not a PAR file
             if (size > 0 && strncmp(fPackageDir, name, fPackageDir.Length()))
                CopyToCache(name, 0);
-            if (IsMaster() && fw == 1)
-               fProof->SendFile(name, bin);
+            if (IsMaster() && fw == 1) {
+               Int_t opt = TProof::kForward;
+               if (bin)
+                  opt |= TProof::kBinary;
+               fProof->SendFile(name, opt);
+            }
          }
          break;
 
@@ -1185,7 +1198,8 @@ void TProofServ::HandleSocketInput()
          break;
       case kPROOF_VALIDATE_DSET:
          {
-            PDB(kGlobal, 1) Info("HandleSocketInput:kPROOF_VALIDATE_DSET", "Enter");
+            PDB(kGlobal, 1)
+               Info("HandleSocketInput:kPROOF_VALIDATE_DSET", "Enter");
 
             TDSet* dset = 0;
             (*mess) >> dset;
@@ -1197,7 +1211,8 @@ void TProofServ::HandleSocketInput()
             answ << dset;
             fSocket->Send(answ);
             delete dset;
-            PDB(kGlobal, 1) Info("HandleSocketInput:kPROOF_VALIDATE_DSET", "Done");
+            PDB(kGlobal, 1)
+               Info("HandleSocketInput:kPROOF_VALIDATE_DSET", "Done");
             SendLogFile();
          }
          break;
@@ -1829,6 +1844,7 @@ void TProofServ::SendStatistics()
    TString workdir = gSystem->WorkingDirectory();  // expect TString on other side
    mess << bytesread << fRealTime << fCpuTime << workdir;
    if (fProtocol >= 4) mess << TString(gProofServ->GetWorkDir());
+   mess << TString(gProofServ->GetImage());
    fSocket->Send(mess);
 }
 
@@ -1997,6 +2013,10 @@ Int_t TProofServ::Setup()
       }
    }
 
+   // Set $HOME and $PATH. The HOME directory was already set to the
+   // user's home directory by proofd.
+   gSystem->Setenv("HOME", gSystem->HomeDirectory());
+
    // Add user name in case of non default workdir
    if (fWorkDir.BeginsWith("/") &&
       !fWorkDir.BeginsWith(gSystem->HomeDirectory())) {
@@ -2009,17 +2029,51 @@ Int_t TProofServ::Setup()
       }
    }
 
-   // goto to the main PROOF working directory
+   // Goto to the main PROOF working directory
    char *workdir = gSystem->ExpandPathName(fWorkDir.Data());
    fWorkDir = workdir;
    delete [] workdir;
+   if (gProofDebugLevel > 0)
+      Info("Setup", "working directory set to %s", fWorkDir.Data());
+
+   // host first name
+   TString host = gSystem->HostName();
+   if (host.Index(".") != kNPOS)
+      host.Remove(host.Index("."));
+
+   // Session tag
+   fSessionTag = Form("%s-%s-%d-%d", fOrdinal.Data(), host.Data(),
+                      TTimeStamp().GetSec(),gSystem->GetPid());
+
+   // create session directory and make it the working directory
+   fSessionDir = fWorkDir;
+   if (IsMaster())
+      fSessionDir += "/master-";
+   else
+      fSessionDir += "/slave-";
+   fSessionDir += fSessionTag;
+
+   // Common setup
+   if (SetupCommon() != 0) {
+      Error("Setup", "common setup failed");
+      return -1;
+   }
+
+   // Incoming OOB should generate a SIGURG
+   fSocket->SetOption(kProcessGroup, gSystem->GetPid());
+
+   // Done
+   return 0;
+}
+
+//______________________________________________________________________________
+Int_t TProofServ::SetupCommon()
+{
+   // Common part (between TProofServ and TXProofServ) of the setup phase.
+   // Return 0 on success, -1 on error
 
    // deny write access for group and world
    gSystem->Umask(022);
-
-   // Set $HOME and $PATH. The HOME directory was already set to the
-   // user's home directory by proofd.
-   gSystem->Setenv("HOME", gSystem->HomeDirectory());
 
 #ifdef R__UNIX
    TString bindir;
@@ -2044,19 +2098,22 @@ Int_t TProofServ::Setup()
    path.Insert(0, bindir);
    gSystem->Setenv("PATH", path);
 #endif
+
    if (gSystem->AccessPathName(fWorkDir)) {
       gSystem->mkdir(fWorkDir, kTRUE);
       if (!gSystem->ChangeDirectory(fWorkDir)) {
-         SysError("Setup", "can not change to PROOF directory %s",
-                  fWorkDir.Data());
+         Error("SetupCommon", "can not change to PROOF directory %s",
+               fWorkDir.Data());
+         return -1;
       }
    } else {
       if (!gSystem->ChangeDirectory(fWorkDir)) {
          gSystem->Unlink(fWorkDir);
          gSystem->mkdir(fWorkDir, kTRUE);
          if (!gSystem->ChangeDirectory(fWorkDir)) {
-            SysError("Setup", "can not change to PROOF directory %s",
+            Error("SetupCommon", "can not change to PROOF directory %s",
                      fWorkDir.Data());
+            return -1;
          }
       }
    }
@@ -2066,18 +2123,22 @@ Int_t TProofServ::Setup()
    fCacheDir += TString("/") + kPROOF_CacheDir;
    if (gSystem->AccessPathName(fCacheDir))
       gSystem->MakeDirectory(fCacheDir);
-
+   if (gProofDebugLevel > 0)
+      Info("SetupCommon", "cache directory set to %s", fCacheDir.Data());
    fCacheLock =
-      new TProofLockPath(Form("%s%s", kPROOF_CacheLockFile, fUser.Data()));
+      new TProofLockPath(Form("%s%s",kPROOF_CacheLockFile,
+                         TString(fCacheDir).ReplaceAll("/","%").Data()));
 
    // check and make sure "packages" directory exists
    fPackageDir = fWorkDir;
    fPackageDir += TString("/") + kPROOF_PackDir;
    if (gSystem->AccessPathName(fPackageDir))
       gSystem->MakeDirectory(fPackageDir);
-
+   if (gProofDebugLevel > 0)
+      Info("SetupCommon", "package directory set to %s", fPackageDir.Data());
    fPackageLock =
-      new TProofLockPath(Form("%s%s", kPROOF_PackageLockFile, fUser.Data()));
+      new TProofLockPath(Form("%s%s",kPROOF_PackageLockFile,
+                         TString(fPackageDir).ReplaceAll("/","%").Data()));
 
    // List of directories where to look for global packages
    TString globpack = gEnv->GetValue("Proof.GlobalPackageDirs","");
@@ -2087,7 +2148,7 @@ Int_t TProofServ::Setup()
       TString ldir;
       while (globpack.Tokenize(ldir, from, ":")) {
          if (gSystem->AccessPathName(ldir, kReadPermission)) {
-            Warning("Setup", "directory for global packages %s does not"
+            Warning("SetupCommon", "directory for global packages %s does not"
                              " exist or is not readable", ldir.Data());
          } else {
             // Add to the list, key will be "G<ng>", i.e. "G0", "G1", ...
@@ -2097,44 +2158,32 @@ Int_t TProofServ::Setup()
                fGlobalPackageDirList->SetOwner();
             }
             fGlobalPackageDirList->Add(new TNamed(key,ldir));
-            Info("Setup", "directory for global packages %s added to the list",
+            Info("SetupCommon", "directory for global packages %s added to the list",
                           ldir.Data());
             FlushLogFile();
          }
       }
    }
 
-   // host first name
-   TString host = gSystem->HostName();
-   if (host.Index(".") != kNPOS)
-      host.Remove(host.Index("."));
-
-   // Session tag
-   fSessionTag = Form("%s-%s-%d-%d", fOrdinal.Data(), host.Data(),
-                      TTimeStamp().GetSec(),gSystem->GetPid());
-
-   // create session directory and make it the working directory
-   fSessionDir = fWorkDir;
-   if (IsMaster())
-      fSessionDir += "/master-";
-   else
-      fSessionDir += "/slave-";
-   fSessionDir += fSessionTag;
-
-   if (gSystem->AccessPathName(fSessionDir)) {
-      gSystem->MakeDirectory(fSessionDir);
+   // Check the session dir
+   if (fSessionDir != gSystem->WorkingDirectory()) {
+      if (gSystem->AccessPathName(fSessionDir))
+         gSystem->MakeDirectory(fSessionDir);
       if (!gSystem->ChangeDirectory(fSessionDir)) {
-         SysError("Setup", "can not change to working directory %s",
-                  fSessionDir.Data());
-      } else {
-         gSystem->Setenv("PROOF_SANDBOX", fSessionDir);
+         Error("SetupCommon", "can not change to working directory %s",
+                              fSessionDir.Data());
+         return -1;
       }
    }
+   gSystem->Setenv("PROOF_SANDBOX", fSessionDir);
+   if (gProofDebugLevel > 0)
+      Info("SetupCommon", "session dir is %s", fSessionDir.Data());
 
    // On masters, check and make sure that "queries" and "datasets"
    // directories exist
    if (IsMaster()) {
-      // 'queries'
+
+      // Make sure that the 'queries' dir exist
       fQueryDir = fWorkDir;
       fQueryDir += TString("/") + kPROOF_QueryDir;
       if (gSystem->AccessPathName(fQueryDir))
@@ -2142,10 +2191,13 @@ Int_t TProofServ::Setup()
       fQueryDir += TString("/session-") + fSessionTag;
       if (gSystem->AccessPathName(fQueryDir))
          gSystem->MakeDirectory(fQueryDir);
+      if (gProofDebugLevel > 0)
+         Info("SetupCommon", "queries dir is %s", fQueryDir.Data());
 
       // Create 'queries' locker instance and lock it
       fQueryLock = new TProofLockPath(Form("%s%s-%s",
-                       kPROOF_QueryLockFile,fSessionTag.Data(),fUser.Data()));
+                       kPROOF_QueryLockFile,fSessionTag.Data(),
+                       TString(fQueryDir).ReplaceAll("/","%").Data()));
       fQueryLock->Lock();
 
       // 'datasets'
@@ -2157,17 +2209,19 @@ Int_t TProofServ::Setup()
             gSystem->MakeDirectory(fDataSetDir);
       }
       if (gProofDebugLevel > 0)
-         Info("Setup", "dataset dir is %s", fDataSetDir.Data());
+         Info("SetupCommon", "dataset dir is %s", fDataSetDir.Data());
       fDataSetLock =
-         new TProofLockPath(Form("%s%s", kPROOF_DataSetLockFile,fUser.Data()));
+         new TProofLockPath(Form("%s%s", kPROOF_DataSetLockFile,
+                            TString(fDataSetDir).ReplaceAll("/","%").Data()));
 
-      // Send session tag, if a recent client
-      if (fProtocol > 6) {
-         TMessage m(kPROOF_SESSIONTAG);
-         m << fSessionTag;
-         fSocket->Send(m);
-      }
+      // Send session tag to client
+      TMessage m(kPROOF_SESSIONTAG);
+      m << fSessionTag;
+      fSocket->Send(m);
    }
+
+   // Server image
+   fImage = gEnv->GetValue("ProofServ.Image", "");
 
    // Set group and get the group priority
    fGroup = gEnv->GetValue("ProofServ.ProofGroup", "");
@@ -2177,27 +2231,24 @@ Int_t TProofServ::Setup()
    // Send "ROOTversion|ArchCompiler" flag
    if (fProtocol > 12) {
       TString vac = gROOT->GetVersion();
+      if (gROOT->GetSvnRevision() > 0)
+         vac += Form(":r%d", gROOT->GetSvnRevision());
       TString rtag = gEnv->GetValue("ProofServ.RootVersionTag", "");
       if (rtag.Length() > 0)
-         vac += Form("-%s", rtag.Data());
+         vac += Form(":%s", rtag.Data());
       vac += Form("|%s-%s",gSystem->GetBuildArch(), gSystem->GetBuildCompilerVersion());
       TMessage m(kPROOF_VERSARCHCOMP);
       m << vac;
       fSocket->Send(m);
    }
 
-   // Incoming OOB should generate a SIGURG
-   fSocket->SetOption(kProcessGroup, gSystem->GetPid());
-
-   // Send messages off immediately to reduce latency
+   // Send packages off immediately to reduce latency
    fSocket->SetOption(kNoDelay, 1);
 
    // Check every two hours if client is still alive
    fSocket->SetOption(kKeepAlive, 1);
 
-   // Install SigPipe handler to handle kKeepAlive failure
-   gSystem->AddSignalHandler(new TProofServSigPipeHandler(this));
-
+   // Set user vars in TProof
    TString all_vars(gSystem->Getenv("PROOF_ALLVARS"));
    TString name;
    Int_t from = 0;
@@ -2207,6 +2258,9 @@ Int_t TProofServ::Setup()
          TProof::AddEnvVar(name, value);
       }
    }
+
+   if (gProofDebugLevel > 0)
+      Info("SetupCommon", "successfully completed");
 
    // Done
    return 0;
@@ -3029,18 +3083,19 @@ void TProofServ::HandleProcess(TMessage *mess)
    // Get entry list information, if any (support started with fProtocol == 15)
    if ((mess->BufferSize() > mess->Length()) && fProtocol > 14)
       (*mess) >> enl;
+   Bool_t hasNoData = (dset->TestBit(TDSet::kEmpty)) ? kTRUE : kFALSE;
 
    // Priority to the entry list
    TObject *elist = (enl) ? (TObject *)enl : (TObject *)evl;
    if (enl && evl)
       // Cannot spcify both at the same time
       SafeDelete(evl);
-   if (elist)
+   if ((!hasNoData) && elist)
       dset->SetEntryList(elist);
 
    if (IsTopMaster()) {
 
-      if (dset->GetListOfElements()->GetSize() == 0) {
+      if ((!hasNoData) && dset->GetListOfElements()->GetSize() == 0) {
          // The received message included an empty dataset, with only the name
          // defined: assume that a dataset, stored on the PROOF master by that
          // name, should be processed.
@@ -3091,7 +3146,7 @@ void TProofServ::HandleProcess(TMessage *mess)
          fSocket->Send(m);
       }
 
-      // Nothing more to do if we are not idle  
+      // Nothing more to do if we are not idle
       if (!fIdle) {
          // Notify submission
          Info("HandleProcess",
@@ -3170,16 +3225,16 @@ void TProofServ::HandleProcess(TMessage *mess)
          if (dset->IsA() == TDSetProxy::Class())
             ((TDSetProxy*)dset)->SetProofServ(this);
 
+         // Add the unique query tag as TNamed object to the input list
+         // so that it is available in TSelectors for monitoring
+         input->Add(new TNamed("PROOF_QueryTag",Form("%s:%s",pq->GetTitle(),pq->GetName())));
+
          // Set input
          TIter next(input);
          for (TObject *o; (o = next()); ) {
             PDB(kGlobal, 2) Info("HandleProcess", "adding: %s", o->GetName());
             fPlayer->AddInput(o);
          }
-
-         // Add the unique query tag as TNamed object to the input list
-         // so that it is available in TSelectors for monitoring
-         fPlayer->AddInput(new TNamed("PROOF_QueryTag",Form("%s:%s",pq->GetTitle(),pq->GetName())));
 
          // Process
          PDB(kGlobal, 1) Info("HandleProcess", "calling %s::Process()", fPlayer->IsA()->GetName());
@@ -3227,6 +3282,7 @@ void TProofServ::HandleProcess(TMessage *mess)
                   mbuf.Reset();
                   Int_t type = (Int_t) ((ns >= olsz) ? 2 : 1);
                   mbuf << type;
+
                   mbuf.WriteObject(o);
                   totsz += mbuf.Length();
                   SendAsynMessage(Form("%s: sending obj %d/%d (%d bytes)",fPrefix.Data(),
@@ -3694,6 +3750,7 @@ void TProofServ::HandleCheckFile(TMessage *mess)
       TString packnam = filenam;
       packnam.Remove(packnam.Length() - 4);  // strip off ".par"
       // compare md5's to check if transmission was ok
+      fPackageLock->Lock();
       TMD5 *md5local = TMD5::FileChecksum(fPackageDir + "/" + filenam);
       if (md5local && md5 == (*md5local)) {
          if ((opt & TProof::kRemoveOld)) {
@@ -3756,6 +3813,9 @@ void TProofServ::HandleCheckFile(TMessage *mess)
          // forward to workers
          fPackageLock->Unlock();
          fProof->UploadPackage(fPackageDir + "/" + filenam, (TProof::EUploadPackageOpt)opt);
+      } else {
+         // Unlock in all cases
+         fPackageLock->Unlock();
       }
       delete md5local;
    } else if (filenam.BeginsWith("+")) {
@@ -3766,9 +3826,9 @@ void TProofServ::HandleCheckFile(TMessage *mess)
       TString md5f = fPackageDir + "/" + packnam + "/PROOF-INF/md5.txt";
       fPackageLock->Lock();
       TMD5 *md5local = TMD5::ReadChecksum(md5f);
+      fPackageLock->Unlock();
       if (md5local && md5 == (*md5local)) {
          // package already on server, unlock directory
-         fPackageLock->Unlock();
          fSocket->Send(kPROOF_CHECKFILE);
          PDB(kPackage, 1)
             Info("HandleCheckFile",
@@ -3842,9 +3902,8 @@ Int_t TProofServ::HandleCache(TMessage *mess)
    Bool_t fromglobal = kFALSE;
 
    // Notification message
-   TString noth = Form("worker-%s", fOrdinal.Data());
-   if (IsMaster())
-      noth.ReplaceAll("worker", "master");
+   TString noth = (IsMaster()) ? Form("Mst-%s", fOrdinal.Data())
+                               : Form("Wrk-%s", fOrdinal.Data());
 
    TString package, pdir, ocwd;
    (*mess) >> type;
@@ -3915,7 +3974,7 @@ Int_t TProofServ::HandleCache(TMessage *mess)
          break;
       case TProof::kBuildPackage:
          (*mess) >> package;
- 
+
          // always follows BuildPackage so no need to check for PROOF-INF
          pdir = fPackageDir + "/" + package;
 
@@ -3975,40 +4034,49 @@ Int_t TProofServ::HandleCache(TMessage *mess)
 
                // read version from file proofvers.txt, and if current version is
                // not the same do a "BUILD.sh clean"
+               Bool_t savever = kFALSE;
+               TString v;
+               Int_t rev = -1;
                FILE *f = fopen("PROOF-INF/proofvers.txt", "r");
                if (f) {
-                  TString v;
+                  TString r;
                   v.Gets(f);
+                  r.Gets(f);
+                  rev = (!r.IsNull() && r.IsDigit()) ? r.Atoi() : -1;
                   fclose(f);
-                  if (v != gROOT->GetVersion()) {
-                     if (!fromglobal) {
-                        SendAsynMessage(Form("%s: %s: version change (current: %s, build: %s): cleaning ... ",
-                                             noth.Data(), package.Data(), gROOT->GetVersion(), v.Data()));
-                        // Hard cleanup: go up the dir tree
-                        gSystem->ChangeDirectory(fPackageDir);
-                        // remove package directory
-                        gSystem->Exec(Form("%s %s", kRM, pdir.Data()));
-                        // find gunzip...
-                        char *gunzip = gSystem->Which(gSystem->Getenv("PATH"), kGUNZIP,
-                                                      kExecutePermission);
-                        if (gunzip) {
-                           TString par = Form("%s.par", pdir.Data()); 
-                           // untar package
-                           TString cmd(Form(kUNTAR3, gunzip, par.Data()));
-                           status = gSystem->Exec(cmd);
-                           if (status)
-                              Error("HandleCache", "kBuildPackage: failure executing: %s", cmd.Data());
-                           else
-                              // Go down to the package directory
-                              gSystem->ChangeDirectory(pdir);
-                           delete [] gunzip;
-                        } else
-                           Error("HandleCache", "kBuildPackage: %s not found", kGUNZIP);
-                     } else {
-                        SendAsynMessage(Form("%s: %s: ROOT version inconsistency (current: %s, build: %s):"
-                                             " global package: cannot re-build!!! ",
-                                             noth.Data(), package.Data(), gROOT->GetVersion(), v.Data()));
-                     }
+               }
+               if (!f || v != gROOT->GetVersion() ||
+                  (gROOT->GetSvnRevision() > 0 && rev != gROOT->GetSvnRevision())) {
+                  if (!fromglobal) {
+                     savever = kTRUE;
+                     SendAsynMessage(Form("%s: %s: version change (current: %s:%d,"
+                                          " build: %s:%d): cleaning ... ",
+                                          noth.Data(), package.Data(), gROOT->GetVersion(),
+                                          gROOT->GetSvnRevision(), v.Data(), rev));
+                     // Hard cleanup: go up the dir tree
+                     gSystem->ChangeDirectory(fPackageDir);
+                     // remove package directory
+                     gSystem->Exec(Form("%s %s", kRM, pdir.Data()));
+                     // find gunzip...
+                     char *gunzip = gSystem->Which(gSystem->Getenv("PATH"), kGUNZIP,
+                                                   kExecutePermission);
+                     if (gunzip) {
+                        TString par = Form("%s.par", pdir.Data());
+                        // untar package
+                        TString cmd(Form(kUNTAR3, gunzip, par.Data()));
+                        status = gSystem->Exec(cmd);
+                        if (status)
+                           Error("HandleCache", "kBuildPackage: failure executing: %s", cmd.Data());
+                        else
+                           // Go down to the package directory
+                           gSystem->ChangeDirectory(pdir);
+                        delete [] gunzip;
+                     } else
+                        Error("HandleCache", "kBuildPackage: %s not found", kGUNZIP);
+                  } else {
+                     SendAsynMessage(Form("%s: %s: ROOT version inconsistency (current: %s, build: %s):"
+                                          " global package: cannot re-build!!! ",
+                                          noth.Data(), package.Data(), gROOT->GetVersion(), v.Data()));
                   }
                }
 
@@ -4027,10 +4095,13 @@ Int_t TProofServ::HandleCache(TMessage *mess)
                   }
 
                   // write version file
-                  f = fopen("PROOF-INF/proofvers.txt", "w");
-                  if (f) {
-                     fputs(gROOT->GetVersion(), f);
-                     fclose(f);
+                  if (savever) {
+                     f = fopen("PROOF-INF/proofvers.txt", "w");
+                     if (f) {
+                        fputs(gROOT->GetVersion(), f);
+                        fputs(Form("\n%d",gROOT->GetSvnRevision()), f);
+                        fclose(f);
+                     }
                   }
                }
             }
@@ -4549,7 +4620,8 @@ Int_t TProofServ::HandleDataSets(TMessage *mess)
 }
 
 //______________________________________________________________________________
-TProofServ::EQueryAction TProofServ::GetWorkers(TList *workers,
+TProofServ::EQueryAction TProofServ::GetWorkers(TList * /*wantedWrks*/,
+                                                TList *workers,
                                                 Int_t & /* prioritychange */)
 {
    // Get list of workers to be used from now on.
@@ -4570,17 +4642,28 @@ TProofServ::EQueryAction TProofServ::GetWorkers(TList *workers,
 
    // Get the master
    TProofNodeInfo *master = resources->GetMaster();
-   if (master)
-      fImage = master->GetImage();
-   if (!master || (fImage.Length() == 0)) {
+   if (!master) {
       PDB(kAll,1)
          Info("GetWorkers",
               "no appropriate master line found in %s", fConfFile.Data());
       return kQueryStop;
+   } else {
+      // Set image if not yet done and available
+      if (fImage.IsNull() && strlen(master->GetImage()) > 0)
+         fImage = master->GetImage();
    }
 
-   // Fill worker list
-   if (resources->GetWorkers()) {
+   // Fill submaster or worker list
+   if (resources->GetSubmasters() && resources->GetSubmasters()->GetSize() > 0) {
+      PDB(kAll,1)
+         resources->GetSubmasters()->Print();
+      TProofNodeInfo *ni = 0;
+      TIter nw(resources->GetSubmasters());
+      while ((ni = (TProofNodeInfo *) nw()))
+         workers->Add(new TProofNodeInfo(*ni));
+   } else if (resources->GetWorkers() && resources->GetWorkers()->GetSize() > 0) {
+      PDB(kAll,1)
+         resources->GetWorkers()->Print();
       TProofNodeInfo *ni = 0;
       TIter nw(resources->GetWorkers());
       while ((ni = (TProofNodeInfo *) nw()))
@@ -4701,18 +4784,22 @@ void TProofServ::ErrorHandler(Int_t level, Bool_t abort, const char *location,
 
    TString buf;
 
+   // Time stamp
+   TTimeStamp ts;
+   TString st(ts.AsString("lc"),19);
+
    if (!location || strlen(location) == 0 ||
        (level >= kPrint && level < kInfo) ||
        (level >= kBreak && level < kSysError)) {
-      fprintf(stderr, "%s on %s: %s\n", type,
-                     (gProofServ ? gProofServ->GetPrefix() : "proof"), msg);
+      fprintf(stderr, "%s %5d %s | %s: %s\n", st(11,8).Data(), gSystem->GetPid(),
+                     (gProofServ ? gProofServ->GetPrefix() : "proof"), type, msg);
       buf.Form("%s:%s:%s:%s", (gProofServ ? gProofServ->GetUser() : "unknown"),
                               (gProofServ ? gProofServ->GetPrefix() : "proof"),
                               type, msg);
    } else {
-      fprintf(stderr, "%s in <%s> on %s: %s\n",
-                      type, location,
-                      (gProofServ ? gProofServ->GetPrefix() : "proof"), msg);
+      fprintf(stderr, "%s %5d %s | %s in <%s>: %s\n", st(11,8).Data(), gSystem->GetPid(),
+                      (gProofServ ? gProofServ->GetPrefix() : "proof"),
+                      type, location, msg);
       buf.Form("%s:%s:%s:<%s>:%s", (gProofServ ? gProofServ->GetUser() : "unknown"),
                                    (gProofServ ? gProofServ->GetPrefix() : "proof"),
                                    type, location, msg);
@@ -4772,31 +4859,71 @@ Int_t TProofServ::CopyFromCache(const char *macro)
    if (dot != kNPOS) {
       binname.Replace(dot,1,"_");
       binname += ".";
-      void *dirp = gSystem->OpenDirectory(fCacheDir);
-      if (dirp) {
-         const char *e = 0;
-         while ((e = gSystem->GetDirEntry(dirp))) {
-            if (!strncmp(e, binname.Data(), binname.Length())) {
-               Bool_t docp = kTRUE;
-               FileStat_t stlocal, stcache;
-               TString fncache = Form("%s/%s", fCacheDir.Data(), e);
-               if (!gSystem->GetPathInfo(fncache, stcache)) {
-                  Int_t rc = gSystem->GetPathInfo(e, stlocal);
-                  if (rc == 0 && (stlocal.fMtime >= stcache.fMtime))
-                     docp = kFALSE;
-                  // Copy the file, if needed
-                  if (docp) {
-                     gSystem->Exec(Form("%s %s", kRM, e));
-                     PDB(kGlobal,2)
-                        Info("CopyFromCache",
-                             "retrieving %s from cache", fncache.Data());
-                     gSystem->Exec(Form("%s %s %s", kCP, fncache.Data(), e));
-                  }
+   } else {
+      PDB(kGlobal,2)
+         Info("CopyFromCache",
+              "non-standard name structure: %s ('.' missing)", name.Data());
+      // Done
+      fCacheLock->Unlock();
+      return 0;
+   }
+
+   // Binary version file name
+   TString vername(Form(".%s", name.Data()));
+   Int_t dotv = vername.Last('.');
+   if (dotv != kNPOS)
+      vername.Remove(dotv);
+   vername += ".binversion";
+
+   // Check binary version
+   TString v;
+   Int_t rev = -1;
+   FILE *f = fopen(Form("%s/%s", fCacheDir.Data(), vername.Data()), "r");
+   if (f) {
+      TString r;
+      v.Gets(f);
+      r.Gets(f);
+      rev = (!r.IsNull() && r.IsDigit()) ? r.Atoi() : -1;
+      fclose(f);
+   }
+
+   if (!f || v != gROOT->GetVersion() ||
+      (gROOT->GetSvnRevision() > 0 && rev != gROOT->GetSvnRevision())) {
+      // Remove all existing binaries
+      binname += "*";
+      gSystem->Exec(Form("%s %s/%s", kRM, fCacheDir.Data(), binname.Data()));
+      // ... and the binary version file
+      gSystem->Exec(Form("%s %s/%s", kRM, fCacheDir.Data(), vername.Data()));
+      // Done
+      fCacheLock->Unlock();
+      return 0;
+   }
+
+   // Retrieve existing binaries, if any
+   void *dirp = gSystem->OpenDirectory(fCacheDir);
+   if (dirp) {
+      const char *e = 0;
+      while ((e = gSystem->GetDirEntry(dirp))) {
+         if (!strncmp(e, binname.Data(), binname.Length())) {
+            TString fncache = Form("%s/%s", fCacheDir.Data(), e);
+            Bool_t docp = kTRUE;
+            FileStat_t stlocal, stcache;
+            if (!gSystem->GetPathInfo(fncache, stcache)) {
+               Int_t rc = gSystem->GetPathInfo(e, stlocal);
+               if (rc == 0 && (stlocal.fMtime >= stcache.fMtime))
+                  docp = kFALSE;
+               // Copy the file, if needed
+               if (docp) {
+                  gSystem->Exec(Form("%s %s", kRM, e));
+                  PDB(kGlobal,2)
+                     Info("CopyFromCache",
+                          "retrieving %s from cache", fncache.Data());
+                  gSystem->Exec(Form("%s %s %s", kCP, fncache.Data(), e));
                }
             }
          }
-         gSystem->FreeDirectory(dirp);
       }
+      gSystem->FreeDirectory(dirp);
    }
 
    // End of atomicity
@@ -4837,6 +4964,14 @@ Int_t TProofServ::CopyToCache(const char *macro, Int_t opt)
    if (dot != kNPOS)
       binname.Replace(dot,1,"_");
 
+   // Create version file name template
+   TString vername(Form(".%s", name.Data()));
+   dot = vername.Last('.');
+   if (dot != kNPOS)
+      vername.Remove(dot);
+   vername += ".binversion";
+   Bool_t savever = kFALSE;
+
    // Atomic action
    fCacheLock->Lock();
 
@@ -4851,6 +4986,7 @@ Int_t TProofServ::CopyToCache(const char *macro, Int_t opt)
       if (dot != kNPOS) {
          binname += ".*";
          gSystem->Exec(Form("%s %s/%s", kRM, fCacheDir.Data(), binname.Data()));
+         gSystem->Exec(Form("%s %s/%s", kRM, fCacheDir.Data(), vername.Data()));
       }
    } else if (opt == 1) {
       // If needed, copy to the cache any existing binary related to 'name'.
@@ -4874,11 +5010,21 @@ Int_t TProofServ::CopyToCache(const char *macro, Int_t opt)
                         PDB(kGlobal,2)
                            Info("CopyFromCache","caching %s ...", e);
                         gSystem->Exec(Form("%s %s %s", kCP, e, fncache.Data()));
+                        savever = kTRUE;
                      }
                   }
                }
             }
             gSystem->FreeDirectory(dirp);
+         }
+         // Save binary version if requested
+         if (savever) {
+            FILE *f = fopen(Form("%s/%s", fCacheDir.Data(), vername.Data()), "w");
+            if (f) {
+               fputs(gROOT->GetVersion(), f);
+               fputs(Form("\n%d",gROOT->GetSvnRevision()), f);
+               fclose(f);
+            }
          }
       }
    }
@@ -4989,6 +5135,11 @@ Int_t TProofServ::SendAsynMessage(const char *msg, Bool_t lf)
    // Returns the return value from TSocket::Send(TMessage &) .
    static TMessage m(kPROOF_MESSAGE);
 
+   // To leave a track in the output file ...
+   Info("SendAsynMessage","%s", (msg ? msg : "(null)"));
+   // ... avoiding double notification to the client
+   FlushLogFile();
+
    if (fSocket && msg) {
       m.Reset(kPROOF_MESSAGE);
       m << TString(msg) << lf;
@@ -5010,6 +5161,14 @@ void TProofServ::FlushLogFile()
 }
 
 //______________________________________________________________________________
+void TProofServ::HandleSignalException(Int_t sig)
+{
+   // Exception handler: we do not try to recover here, just exit.
+
+   gSystem->Exit(sig);
+}
+
+//______________________________________________________________________________
 Int_t TProofLockPath::Lock()
 {
    // Locks the directory. Waits if lock is hold by an other process.
@@ -5027,6 +5186,8 @@ Int_t TProofLockPath::Lock()
       return -1;
    }
 
+   PDB(kPackage, 2)
+      Info("Lock", "%d: locking file %s ...", gSystem->GetPid(), pname);
    // lock the file
 #if !defined(R__WIN32) && !defined(R__WINGCC)
    if (lockf(fLockId, F_LOCK, (off_t) 1) == -1) {
@@ -5038,7 +5199,7 @@ Int_t TProofLockPath::Lock()
 #endif
 
    PDB(kPackage, 2)
-      Info("Lock", "file %s locked", pname);
+      Info("Lock", "%d: file %s locked", gSystem->GetPid(), pname);
 
    return 0;
 }
@@ -5052,6 +5213,8 @@ Int_t TProofLockPath::Unlock()
    if (!IsLocked())
       return 0;
 
+   PDB(kPackage, 2)
+      Info("Lock", "%d: unlocking file %s ...", gSystem->GetPid(), GetName());
    // unlock the file
    lseek(fLockId, 0, SEEK_SET);
 #if !defined(R__WIN32) && !defined(R__WINGCC)
@@ -5064,7 +5227,7 @@ Int_t TProofLockPath::Unlock()
 #endif
 
    PDB(kPackage, 2)
-      Info("Unlock", "file %s unlocked", GetName());
+      Info("Unlock", "%d: file %s unlocked", gSystem->GetPid(), GetName());
 
    close(fLockId);
    fLockId = -1;

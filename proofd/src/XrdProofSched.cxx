@@ -24,7 +24,7 @@
 //    XrdProofSched *XrdgetProofSched(const char *cfg,                  //
 //                                    XrdProofdManager *mgr,            //
 //                                    XrdProofGroupMgr *grpmgr,         //
-//                                    XrdOucError *edest);              //
+//                                    XrdSysError *edest);              //
 // }                                                                    //
 // Here 'cfg' is the xrootd config file where directives to configure   //
 // the scheduler are specified, 'mgr' is the instance of the cluster    //
@@ -43,10 +43,16 @@
 #include "XrdProofdManager.h"
 #include "XrdProofWorker.h"
 #include "XrdProofServProxy.h"
+#include "XrdProofGroup.h"
 
-#include "XrdOuc/XrdOucError.hh"
 #include "XrdOuc/XrdOucString.hh"
 #include "XrdOuc/XrdOucStream.hh"
+#ifdef OLDXRDOUC
+#  include "XrdSysToOuc.h"
+#  include "XrdOuc/XrdOucError.hh"
+#else
+#  include "XrdSys/XrdSysError.hh"
+#endif
 
 // Tracing
 #include "XrdProofdTrace.h"
@@ -60,7 +66,7 @@ extern XrdOucTrace *XrdProofdTrace;
 // extern "C" {
 // //______________________________________________________________________________
 // XrdProofSched *XrdgetProofSched(const char *cfg, XrdProofdManager *mgr,
-//                                 XrdProofGroupMgr *grpmgr, XrdOucError *edest)
+//                                 XrdProofGroupMgr *grpmgr, XrdSysError *edest)
 // {
 //   // This scheduler is meant to live in a shared library. The interface below is
 //   // used by the server to obtain a copy of the scheduler object.
@@ -86,7 +92,7 @@ static bool XpdWrkComp(XrdProofWorker *&lhs, XrdProofWorker *&rhs)
 //______________________________________________________________________________
 XrdProofSched::XrdProofSched(const char *name,
                              XrdProofdManager *mgr, XrdProofGroupMgr *grpmgr,
-                             const char *cfn, XrdOucError *e)
+                             const char *cfn, XrdSysError *e)
 {
    // Constructor
 
@@ -220,7 +226,7 @@ int XrdProofSched::Config(const char *cfg)
 }
 
 //______________________________________________________________________________
-int XrdProofSched::GetNumWorkers(XrdProofServProxy */*xps*/)
+int XrdProofSched::GetNumWorkers(XrdProofServProxy *xps)
 {
    // Calculate the number of workers to be used given the state of the cluster
 
@@ -236,7 +242,20 @@ int XrdProofSched::GetNumWorkers(XrdProofServProxy */*xps*/)
          nFreeCPUs++;
    }
 
-   int nWrks = (int)(nFreeCPUs * fNodesFraction) + fMinForQuery;
+   float priority = 1;
+   if (xps->Group()) {
+      std::list<XrdProofServProxy *> *sessions = fMgr->GetActiveSessions();
+      std::list<XrdProofServProxy *>::iterator sesIter;
+      float summedPriority = 0;
+      for (sesIter = sessions->begin(); sesIter != sessions->end(); ++sesIter) {
+         if ((*sesIter)->Group())
+            summedPriority += (*sesIter)->Group()->Priority();
+      }
+      if (summedPriority > 0)
+         priority = (xps->Group()->Priority() * sessions->size()) / summedPriority;
+
+   }
+   int nWrks = (int)(nFreeCPUs * fNodesFraction * priority) + fMinForQuery;
    nWrks = (nWrks >= (int) wrks->size()) ? wrks->size() - 1 : nWrks;
    TRACE(DBG,"GetNumWorkers: "<< nFreeCPUs<<" : "<< nWrks);
 
@@ -245,6 +264,7 @@ int XrdProofSched::GetNumWorkers(XrdProofServProxy */*xps*/)
 
 //__________________________________________________________________________
 int XrdProofSched::GetWorkers(XrdProofServProxy *xps,
+                              std::list<XrdProofWorker *> *wantWrks,
                               std::list<XrdProofWorker *> *wrks)
 {
    // Get a list of workers that can be used by session 'xps'.
@@ -268,12 +288,13 @@ int XrdProofSched::GetWorkers(XrdProofServProxy *xps,
    // The master first (stats are updated in XrdProofdProtocol::GetWorkers)
    wrks->push_back(mst);
 
-   if (fWorkerSel == kSSOLoadBased) {
+   if (fWorkerSel == kSSOLoadBased && wantWrks) {
       // Dynamic scheduling: the scheduler will determine the #workers
       // to be used based on the current load and assign the least loaded ones
 
       // Sort the workers by the load
       XrdProofWorker::Sort(acws, XpdWrkComp);
+      //TODO: what happens to the master that is also on this list.
 
       // Get the advised number
       int nw = GetNumWorkers(xps);
@@ -288,7 +309,6 @@ int XrdProofSched::GetWorkers(XrdProofServProxy *xps,
       // Done
       return 0;
    }
-
    if (fWorkerMax > 0 && fWorkerMax < (int) acws->size()) {
 
       // Now the workers

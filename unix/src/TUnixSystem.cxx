@@ -17,9 +17,7 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#ifdef R__HAVE_CONFIG
 #include "RConfigure.h"
-#endif
 #include "RConfig.h"
 #include "TUnixSystem.h"
 #include "TROOT.h"
@@ -967,25 +965,18 @@ void TUnixSystem::DispatchSignals(ESignals sig)
       break;
    case kSigChild:
       CheckChilds();
-      return;
+      break;
    case kSigBus:
    case kSigSegmentationViolation:
    case kSigIllegalInstruction:
    case kSigFloatingException:
       Break("TUnixSystem::DispatchSignals", UnixSigname(sig));
       StackTrace();
-      if (TROOT::Initialized()) {
-         if (gException) {
-            if (gApplication && gApplication->InheritsFrom("TRint")) {
-               Getlinem(kCleanUp, 0);
-               Getlinem(kInit, "Root > ");
-            }
-            gInterpreter->RewindDictionary();
-            gInterpreter->ClearFileBusy();
-         }
-         Throw(sig);
+      if (gApplication) {
+         gApplication->HandleSignalException(sig);
+      } else {
+         Exit(sig);
       }
-      Exit(sig);
       break;
    case kSigSystem:
    case kSigPipe:

@@ -21,12 +21,11 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#ifdef R__HAVE_CONFIG
+#include "Getline.h"
 #include "RConfigure.h"
-#endif
-
 #include "Riostream.h"
 #include "TApplication.h"
+#include "TException.h"
 #include "TGuiFactory.h"
 #include "TVirtualX.h"
 #include "TROOT.h"
@@ -420,6 +419,27 @@ void TApplication::GetOptions(Int_t *argc, char **argv)
    }
 
    *argc = j;
+}
+
+//______________________________________________________________________________
+void TApplication::HandleSignalException(Int_t sig)
+{
+   // Default signal exception handler: after the stacktrace tries to jump
+   // back to the exception point. Specific TApplication implementations may
+   // want something different here.
+
+   if (TROOT::Initialized()) {
+      if (gException) {
+         if (InheritsFrom("TRint")) {
+            Getlinem(kCleanUp, 0);
+            Getlinem(kInit, "Root > ");
+         }
+         gInterpreter->RewindDictionary();
+         gInterpreter->ClearFileBusy();
+      }
+      Throw(sig);
+   }
+   gSystem->Exit(sig);
 }
 
 //______________________________________________________________________________

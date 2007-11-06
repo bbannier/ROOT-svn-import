@@ -25,7 +25,12 @@
 #include <list>
 #include <vector>
 
-#include "XrdOuc/XrdOucPthread.hh"
+#ifdef OLDXRDOUC
+#  include "XrdSysToOuc.h"
+#  include "XrdOuc/XrdOucPthread.hh"
+#else
+#  include "XrdSys/XrdSysPthread.hh"
+#endif
 #include "XrdOuc/XrdOucString.hh"
 
 #include "XrdProofdAux.h"
@@ -54,7 +59,7 @@ class XrdProofdClient {
                               { return (const char *)fClientID; }
    inline bool             IsValid() const { return fIsValid; }
    bool                    Match(const char *id, const char *grp = 0);
-   inline XrdOucRecMutex  *Mutex() const { return (XrdOucRecMutex *)&fMutex; }
+   inline XrdSysRecMutex  *Mutex() const { return (XrdSysRecMutex *)&fMutex; }
    inline unsigned short   RefSid() const { return fRefSid; }
    inline XrdROOT         *ROOT() const { return fROOT; }
    inline short            Version() const { return fClientVers; }
@@ -79,7 +84,7 @@ class XrdProofdClient {
    void                    SetValid(bool valid = 1) { fIsValid = valid; }
    void                    SetWorkdir(const char *wrk) { fUI.fWorkDir = wrk; }
 
-   int                     CreateUNIXSock(XrdOucError *edest, char *tmpdir);
+   int                     CreateUNIXSock(XrdSysError *edest, char *tmpdir);
    XrdNet                 *UNIXSock() const { return fUNIXSock; }
    char                   *UNIXSockPath() const { return fUNIXSockPath; }
    void                    SaveUNIXPath(); // Save path in the sandbox
@@ -88,14 +93,14 @@ class XrdProofdClient {
    int                     AddNewSession(const char *tag);
    int                     GetSessionDirs(int opt, std::list<XrdOucString *> *sdirs,
                                           XrdOucString *tag = 0);
-   int                     GuessTag(XrdOucString &tag, int ridx = 1);
-   int                     MvOldSession(const char *tag);
+   int                     GuessTag(XrdOucString &tag, int ridx = 1, bool notify = 1);
+   int                     MvOldSession(const char *tag, bool notify = 1);
 
    static void             SetMaxOldLogs(int mx) { fgMaxOldLogs = mx; }
 
  private:
 
-   XrdOucRecMutex          fMutex; // Local mutex
+   XrdSysRecMutex          fMutex; // Local mutex
 
    bool                    fIsValid; // TRUE if the instance is complete
 

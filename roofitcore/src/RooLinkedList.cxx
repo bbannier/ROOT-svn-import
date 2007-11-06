@@ -119,9 +119,11 @@ RooLinkedList::~RooLinkedList()
   Clear() ;
   if (_htableName) {
     delete _htableName ;
+    _htableName=0 ;
   }
   if (_htableLink) {
     delete _htableLink ;
+    _htableLink=0 ;
   }
 }
 

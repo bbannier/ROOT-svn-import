@@ -18,7 +18,6 @@
 
 #include "LinkDef_SpecFunc.h" 
 #include "LinkDef_StatFunc.h" 
-#include "LinkDef_Func.h" 
 
 
 #include "LinkDef_RootFinding.h"
@@ -42,7 +41,7 @@
 
 
 #pragma link C++ namespace ROOT::Math::Integration;
-#pragma link C++ class ROOT::Math::Integrator+;
+#pragma link C++ class ROOT::Math::GSLIntegrator+;
 
 #pragma link C++ namespace ROOT::Math::Minim1D;
 #pragma link C++ class ROOT::Math::Minimizer1D+;
@@ -63,6 +62,16 @@
 #pragma link C++ class ROOT::Math::Random<ROOT::Math::GSLRngGFSR4>+;
 
 #pragma link C++ class ROOT::Math::KelvinFunctions+;
+
+#pragma link C++ class ROOT::Math::GSLMinimizer+;
+#pragma link C++ class ROOT::Math::GSLSimAnMinimizer+;
+
+#ifndef _WIN32  // exclude for same problem of virtual inheritance
+#pragma link C++ class ROOT::Math::GSLNLSMinimizer;
+#pragma link C++ class ROOT::Math::LSResidualFunc+;
+#endif
+
+#pragma link C++ class ROOT::Math::GSLMCIntegrator+;
 
 
 

@@ -19,6 +19,17 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
+#ifdef OLDXRDOUC
+#  include "XrdSysToOuc.h"
+#  include "XrdOuc/XrdOucError.hh"
+#  include "XrdOuc/XrdOucPlugin.hh"
+#  include "XrdOuc/XrdOucPthread.hh"
+#else
+#  include "XrdSys/XrdSysError.hh"
+#  include "XrdSys/XrdSysPlugin.hh"
+#  include "XrdSys/XrdSysPthread.hh"
+#endif
+
 #include "XrdProofConn.h"
 #include "XProofProtocol.h"
 
@@ -32,9 +43,6 @@
 #include "XrdClient/XrdClientUrlInfo.hh"
 #include "XrdNet/XrdNetDNS.hh"
 #include "XrdOuc/XrdOucErrInfo.hh"
-#include "XrdOuc/XrdOucError.hh"
-#include "XrdOuc/XrdOucPlugin.hh"
-#include "XrdOuc/XrdOucPthread.hh"
 #include "XrdOuc/XrdOucString.hh"
 #include "XrdSec/XrdSecInterface.hh"
 
@@ -80,7 +88,7 @@ XrdClientConnectionMgr *XrdProofConn::fgConnMgr = 0;
 int XrdProofConn::fgMaxTry = 5;
 int XrdProofConn::fgTimeWait = 2;  // seconds
 
-XrdOucPlugin *XrdProofConn::fgSecPlugin = 0;       // Sec library plugin
+XrdSysPlugin *XrdProofConn::fgSecPlugin = 0;       // Sec library plugin
 void         *XrdProofConn::fgSecGetProtocol = 0;  // Sec protocol getter
 
 #ifndef SafeDelete
@@ -114,10 +122,6 @@ XrdProofConn::XrdProofConn(const char *url, char m, int psid, char capver,
                     " connection" << " to server "<<URLTAG);
    }
 
-   // Garbage-collect the obsolete physical connections, if any
-   if (fgConnMgr)
-      fgConnMgr->GarbageCollect();
-
    return;
 }
 
@@ -148,14 +152,14 @@ bool XrdProofConn::Init(const char *url)
 
    // Init connection manager (only once)
    if (!fgConnMgr) {
-      // We do not want the garbage collector thread: we will garbage collect
-      // after each new (logical) connection
-      EnvPutInt(NAME_STARTGARBAGECOLLECTORTHREAD, 0);
       if (!(fgConnMgr = new XrdClientConnectionMgr())) {
          TRACE(REQ,"XrdProofConn::Init: error initializing connection manager");
          return 0;
       }
    }
+
+   // Mutex
+   fMutex = new XrdSysRecMutex();
 
    // Parse Url
    fUrl.TakeUrl(XrdOucString(url));
@@ -310,13 +314,9 @@ int XrdProofConn::Connect()
 }
 
 //_____________________________________________________________________________
-void XrdProofConn::Close(const char *opt)
+void XrdProofConn::Close(const char *)
 {
-   // Close connection. Available options are (case insensitive)
-   //   'P'   force closing of the underlying physical connection
-   //   'S'   shutdown remote session, is any
-   // A session ID can be given using #...# signature, e.g. "#1#".
-   // Default is opt = "".
+   // Close connection.
 
    // Cleanup mutex
    SafeDelete(fMutex);
@@ -325,15 +325,9 @@ void XrdProofConn::Close(const char *opt)
    if (!fConnected)
       return;
 
-   // Parse options
-   bool hard = (opt) ? (strchr(opt,'P') || strchr(opt,'p')) : 0;
-
    // Close connection
-   if (fgConnMgr) {
-      fgConnMgr->Disconnect(GetLogConnID(), hard);
-      if (hard)
-         fgConnMgr->GarbageCollect();
-   }
+   if (fgConnMgr)
+      fgConnMgr->Disconnect(GetLogConnID(), 0);
 
    // Flag this action
    fConnected = 0;
@@ -384,9 +378,6 @@ XrdClientMessage *XrdProofConn::SendRecv(XPClientRequest *req, const void *reqDa
    // the buffer is internally allocated and must be freed by the caller.
    // If (*answData != 0) the program assumes that the caller has allocated
    // enough bytes to contain the reply.
-   if (!fMutex)
-      fMutex = new XrdOucRecMutex();
-   XrdOucMutexHelper l(*fMutex);
 
    XrdClientMessage *xmsg = 0;
 
@@ -498,6 +489,8 @@ XrdClientMessage *XrdProofConn::SendReq(XPClientRequest *req, const void *reqDat
 
    int retry = 0;
    bool resp = 0, abortcmd = 0;
+
+   XrdSysMutexHelper l(*fMutex);
 
    // We need the unmarshalled request for retries
    XPClientRequest reqsave;
@@ -707,7 +700,6 @@ bool XrdProofConn::GetAccessToSrv()
 
       // Now we can start the reader thread in the physical connection, if needed
       fPhyConn->StartReader();
-      fPhyConn->SetTTL(DLBD_TTL);// = DLBD_TTL;
       fPhyConn->fServerType = kSTBaseXrootd;
       break;
 
@@ -1110,10 +1102,10 @@ XrdSecProtocol *XrdProofConn::Authenticate(char *plist, int plsiz)
 
       // We need to load the protocol getter the first time we are here
       if (!fgSecGetProtocol) {
-         static XrdOucError err(0, "XrdProofConn_");
+         static XrdSysError err(0, "XrdProofConn_");
          // Initialize the security library plugin, if needed
          if (!fgSecPlugin)
-            fgSecPlugin = new XrdOucPlugin(&err, "libXrdSec.so");
+            fgSecPlugin = new XrdSysPlugin(&err, "libXrdSec.so");
 
          // Get the client protocol getter
          if (!(fgSecGetProtocol = fgSecPlugin->getPlugin("XrdSecGetProtocol"))) {
@@ -1235,4 +1227,16 @@ void XrdProofConn::SetInterrupt()
 
    if (fPhyConn)
       fPhyConn->SetInterrupt();
+}
+
+//_____________________________________________________________________________
+bool XrdProofConn::IsValid() const
+{
+   // Test validity of this connection
+
+   if (fConnected)
+      if (fPhyConn && fPhyConn->IsValid())
+         return 1;
+   // Invalid
+   return 0;
 }

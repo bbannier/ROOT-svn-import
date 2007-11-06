@@ -46,6 +46,7 @@
 #include "TCut.h"
 #include "TError.h"
 #include "TEntryList.h"
+#include "TEnv.h"
 #include "TEventList.h"
 #include "TFile.h"
 #include "TFileInfo.h"
@@ -98,13 +99,13 @@ TDSetElement::TDSetElement(const char *file, const char *objname, const char *di
    // Create a TDSet element.
 
    if (first < 0) {
-      Warning("TDSetElement", "first must be >= 0, %d is not allowed - setting to 0", first);
+      Warning("TDSetElement", "first must be >= 0, %lld is not allowed - setting to 0", first);
       fFirst = 0;
    } else {
       fFirst = first;
    }
    if (num < -1) {
-      Warning("TDSetElement", "num must be >= -1, %d is not allowed - setting to -1", num);
+      Warning("TDSetElement", "num must be >= -1, %lld is not allowed - setting to -1", num);
       fNum   = -1;
    } else {
       fNum   = num;
@@ -329,7 +330,14 @@ Long64_t TDSetElement::GetEntries(Bool_t isTree)
    Double_t start = 0;
    if (gPerfStats != 0) start = TTimeStamp();
 
-   TFile *file = TFile::Open(GetName());
+   // Take into account possible prefixes
+   TFile::EFileType typ = TFile::kDefault;
+   TString fname = gEnv->GetValue("Path.Localroot","");
+   if (!fname.IsNull())
+      typ = TFile::GetType(GetName(), "", &fname);
+   if (typ != TFile::kLocal)
+      fname = GetName();
+   TFile *file = TFile::Open(fname);
 
    if (gPerfStats != 0) {
       gPerfStats->FileOpenEvent(file, GetName(), double(TTimeStamp())-start);
@@ -340,8 +348,13 @@ Long64_t TDSetElement::GetEntries(Bool_t isTree)
       return -1;
    }
 
-   // Record end-point Url and mark as looked-up
-   fName = ((TUrl *)file->GetEndpointUrl())->GetUrl();
+   // Record end-point Url and mark as looked-up; be careful to change
+   // nothing in the file name, otherwise some cross-checks may fail
+   TUrl *eu = (TUrl *) file->GetEndpointUrl();
+   if (strlen(eu->GetProtocol()) > 0 && strcmp(eu->GetProtocol(), "file"))
+      fName = eu->GetUrl();
+   else
+      fName = eu->GetFileAndOptions();
    SetBit(kHasBeenLookedUp);
 
    TDirectory *dirsave = gDirectory;
@@ -413,16 +426,18 @@ Long64_t TDSetElement::GetEntries(Bool_t isTree)
 }
 
 //______________________________________________________________________________
-void TDSetElement::Lookup(Bool_t force)
+Int_t TDSetElement::Lookup(Bool_t force)
 {
    // Resolve end-point URL for this element
+   // Return 0 on success and -1 otherwise
    static Int_t xNetPluginOK = -1;
    static TString xNotRedir;
    static TFileStager *xStager = 0;
+   Int_t retVal = 0;
 
    // Check if required
    if (!force && HasBeenLookedUp())
-      return;
+      return retVal;
 
    // Open the file as raw to avoid the (slow) initialization
    TUrl url(GetName());
@@ -463,8 +478,10 @@ void TDSetElement::Lookup(Bool_t force)
    if (doit) {
       if (!xStager || !xStager->Matches(name)) {
          SafeDelete(xStager);
-         if (!(xStager = TFileStager::Open(name)))
+         if (!(xStager = TFileStager::Open(name))) {
             Error("Lookup", "TFileStager instance cannot be instantiated");
+            retVal = -1;
+         }
       }
       if (xStager && xStager->Locate(name.Data(), name) == 0) {
          // Get the effective end-point Url
@@ -477,11 +494,13 @@ void TDSetElement::Lookup(Bool_t force)
       } else {
          // Failure
          Error("Lookup", "couldn't lookup %s\n", name.Data());
+         retVal = -1;
       }
    }
 
    // Mark has looked-up
    SetBit(kHasBeenLookedUp);
+   return retVal;
 }
 
 //______________________________________________________________________________
@@ -1002,7 +1021,14 @@ Long64_t TDSet::GetEntries(Bool_t isTree, const char *filename, const char *path
    Double_t start = 0;
    if (gPerfStats != 0) start = TTimeStamp();
 
-   TFile *file = TFile::Open(filename);
+   // Take into acoount possible prefixes
+   TFile::EFileType typ = TFile::kDefault;
+   TString fname = gEnv->GetValue("Path.Localroot","");
+   if (!fname.IsNull())
+      typ = TFile::GetType(filename, "", &fname);
+   if (typ != TFile::kLocal)
+      fname = filename;
+   TFile *file = TFile::Open(fname);
 
    if (gPerfStats != 0) {
       gPerfStats->FileOpenEvent(file, filename, double(TTimeStamp())-start);
@@ -1171,15 +1197,16 @@ Bool_t TDSet::ElementsValid() const
 }
 
 //______________________________________________________________________________
-Int_t TDSet::Remove(TDSetElement *elem)
+Int_t TDSet::Remove(TDSetElement *elem, Bool_t deleteElem)
 {
    // Remove TDSetElement 'elem' from the list.
    // Return 0 on success, -1 if the element is not in the list
 
-   if (!elem || !(GetListOfElements()->Remove(elem)))
+   if (!elem || !(((THashList *)(GetListOfElements()))->Remove(elem)))
       return -1;
 
-   SafeDelete(elem);
+   if (deleteElem)
+      SafeDelete(elem);
    return 0;
 }
 
@@ -1196,12 +1223,13 @@ void TDSet::Validate()
 }
 
 //______________________________________________________________________________
-void TDSet::Lookup()
+TList *TDSet::Lookup(Bool_t removeMissing)
 {
    // Resolve the end-point URL for the current elements of this data set
-   // If an entry- or event- list has been given, assign the relevant portions
-   // to each element; this also allows to look-up only for the elements which
-   // have something to be processed, so it is better to do it before Lookup()
+   // If the removeMissing option is set to kTRUE, remove the TDSetElements
+   // that can not be located. 
+   // The method returns the list of removed TDSetElements (if any) or NULL.
+   // The list of removed elements must be later deleted.
 
    // If an entry- or event- list has been given, assign the relevant portions
    // to each element; this allows to look-up only for the elements which have
@@ -1209,6 +1237,7 @@ void TDSet::Lookup()
    // operations.
    SplitEntryList();
 
+   TList *listOfMissingFiles = 0;
    TString msg("Looking up for exact location of files");
    UInt_t n = 0;
    UInt_t ng = 0;
@@ -1220,7 +1249,14 @@ void TDSet::Lookup()
       if (elem->GetNum() != 0) { // -1 means "all entries"
          ng++;
          if (!elem->GetValid())
-            elem->Lookup();
+            if (elem->Lookup())
+               if (removeMissing) {
+                  if (Remove(elem, kFALSE))
+                     Error("Lookup", "Error removing a missing file");
+                  if (!listOfMissingFiles)
+                     listOfMissingFiles = new TList;
+                  listOfMissingFiles->Add(elem);
+               }
       }
       n++;
       // Notify the client
@@ -1233,6 +1269,7 @@ void TDSet::Lookup()
       msg = Form("Files with entries to be processed: %d (out of %d)\n", ng, tot);
       gProofServ->SendAsynMessage(msg);
    }
+   return listOfMissingFiles;
 }
 
 //______________________________________________________________________________
@@ -1261,7 +1298,7 @@ void TDSet::Validate(TDSet* dset)
       if (!elem->GetValid()) continue;
       TString dir_file_obj = elem->GetDirectory();
       dir_file_obj += "_";
-      dir_file_obj += elem->GetFileName();
+      dir_file_obj += TUrl(elem->GetFileName()).GetFileAndOptions();
       dir_file_obj += "_";
       dir_file_obj += elem->GetObjName();
       TPair *p = dynamic_cast<TPair*>(bestElements.FindObject(dir_file_obj));
@@ -1285,7 +1322,7 @@ void TDSet::Validate(TDSet* dset)
       if (!elem->GetValid()) {
          TString dir_file_obj = elem->GetDirectory();
          dir_file_obj += "_";
-         dir_file_obj += elem->GetFileName();
+         dir_file_obj += TUrl(elem->GetFileName()).GetFileAndOptions();
          dir_file_obj += "_";
          dir_file_obj += elem->GetObjName();
          if (TPair *p = dynamic_cast<TPair*>(bestElements.FindObject(dir_file_obj))) {

@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: RooFit                                                           *
  * Package: RooFitCore                                                       *
- *    File: $Id: RooSuperCategory.rdl,v 1.16 2005/12/08 13:19:57 wverkerke Exp $
+ *    File: $Id: RooSuperCategory.h,v 1.17 2007/05/11 09:11:30 verkerke Exp $
  * Authors:                                                                  *
  *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu       *
  *   DK, David Kirkby,    UC Irvine,         dkirkby@uci.edu                 *
@@ -26,7 +26,7 @@ class TObject ;
 class RooSuperCategory : public RooAbsCategoryLValue {
 public:
   // Constructors etc.
-  inline RooSuperCategory() : _catIter(0) { }
+  inline RooSuperCategory() { _catIter = _catSet.createIterator() ; }
   RooSuperCategory(const char *name, const char *title, const RooArgSet& inputCatList);
   RooSuperCategory(const RooSuperCategory& other, const char *name=0) ;
   virtual TObject* clone(const char* newname) const { return new RooSuperCategory(*this,newname); }
@@ -55,7 +55,7 @@ protected:
   TString currentLabel() const ;
 
   RooSetProxy _catSet ; // Set of input category
-  TIterator* _catIter ; // Iterator over set of input categories
+  TIterator* _catIter ; //! Iterator over set of input categories
   
   virtual RooCatType evaluate() const ; 
 

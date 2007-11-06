@@ -56,7 +56,8 @@ public:
    void          DisableTimeout();
    void          EnableTimeout();
 
-   EQueryAction  GetWorkers(TList *workers, Int_t &prioritychange);
+   EQueryAction  GetWorkers(TList *wantWorkers, TList *workers,
+                            Int_t &prioritychange);
 
    Bool_t        HandleError(const void *in = 0); // Error Handler
    Bool_t        HandleInput(const void *in = 0); // Input handler

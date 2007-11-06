@@ -68,7 +68,7 @@ void RooRealBinding::loadValues(const Double_t xvector[]) const {
     if (_clipInvalid && !_vars[index]->isValidReal(xvector[index])) {
       _xvecValid = kFALSE ;
     } else {
-      _vars[index]->setVal(xvector[index]);
+      _vars[index]->setVal(xvector[index],RooNameReg::instance().constStr(_rangeName));
     }
   }
 }  

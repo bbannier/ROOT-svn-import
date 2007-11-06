@@ -251,7 +251,7 @@ Double_t RooNonCPEigenDecay::coefficient( Int_t basisIndex ) const
 }
 
 // advertise analytical integration
-Int_t RooNonCPEigenDecay::getCoefAnalyticalIntegral( RooArgSet& allVars, 
+Int_t RooNonCPEigenDecay::getCoefAnalyticalIntegral( Int_t /*code*/, RooArgSet& allVars, 
 						     RooArgSet& analVars, const char* rangeName ) const 
 {
   if (rangeName) return 0 ;
