@@ -48,6 +48,7 @@
 #pragma link C++ class ROOT::Math::VirtualIntegrator+;
 #pragma link C++ class ROOT::Math::VirtualIntegratorOneDim+;
 #pragma link C++ class ROOT::Math::VirtualIntegratorMultiDim+;
+#pragma link C++ class ROOT::Math::AdaptiveIntegratorMultiDim+;
 
 
 #include "LinkDef_Func.h" 

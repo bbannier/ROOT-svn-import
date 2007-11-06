@@ -52,12 +52,13 @@ MATHCOREDH1  :=  $(MODDIRI)/Math/Vector2D.h \
                  $(MODDIRI)/Math/DistFuncMathCore.h \
                  $(MODDIRI)/Math/IParamFunction.h \
                  $(MODDIRI)/Math/IFunction.h \
-                 $(MODDIRI)/Math/Functor.h \
                  $(MODDIRI)/Math/Minimizer.h \
                  $(MODDIRI)/Math/Integrator.h \
                  $(MODDIRI)/Math/VirtualIntegrator.h \
                  $(MODDIRI)/Math/AllIntegrationTypes.h \
+                 $(MODDIRI)/Math/AdaptiveIntegratorMultiDim.h \
                  $(MODDIRI)/Math/IntegratorMultiDim.h 
+#                 $(MODDIRI)/Math/Functor.h \
 
 
 MATHCOREDH132:=  $(MODDIRI)/Math/Vector2D.h \
