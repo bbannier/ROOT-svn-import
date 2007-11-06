@@ -43,13 +43,15 @@ namespace Math {
 template<class ParentFunctor, class Func >
 class FunctorHandler : public ParentFunctor::Impl { 
 
-   typedef typename ParentFunctor::Impl BaseFunc; 
+   typedef typename ParentFunctor::Impl ImplFunc; 
+   typedef typename ImplFunc::BaseFunc BaseFunc; 
    //typedef typename ParentFunctor::Dim Dim; 
 
 public: 
 
    // constructor for 1d functions 
    FunctorHandler(const Func & fun) : fDim(1), fFunc(fun) {}
+
 
    // constructor for multi-dimensional functions w/0 NDim()
    FunctorHandler(unsigned int dim, const Func & fun ) :
@@ -58,7 +60,9 @@ public:
    {}
 
    // clone of the function handler (use copy-ctor) 
-   BaseFunc * Clone() const { return new FunctorHandler(*this); }
+   BaseFunc * Clone() const { 
+     return new FunctorHandler(*this); 
+   }
 
    // constructor for multi-dimensional functions
    unsigned int NDim() const { 
@@ -101,7 +105,8 @@ private :
 template<class ParentFunctor, class Func, class GradFunc = Func >
 class FunctorGradHandler : public ParentFunctor::Impl { 
 
-   typedef typename ParentFunctor::Impl BaseFunc; 
+   typedef typename ParentFunctor::Impl ImplFunc; 
+   typedef typename ImplFunc::BaseFunc BaseFunc; 
    //typedef typename ParentFunctor::Dim Dim; 
 
 public: 
@@ -167,8 +172,9 @@ template <class ParentFunctor, typename PointerToObj,
           typename PointerToMemFn>
 class MemFunHandler : public ParentFunctor::Impl
 {
-   typedef typename ParentFunctor::Impl BaseFunc;
    //typedef typename ParentFunctor::Dim Dim; 
+   typedef typename ParentFunctor::Impl ImplFunc; 
+   typedef typename ImplFunc::BaseFunc BaseFunc; 
    
 public:
    
@@ -218,7 +224,8 @@ template <class ParentFunctor, typename PointerToObj,
           typename PointerToMemFn, typename PointerToGradMemFn>
 class MemGradFunHandler : public ParentFunctor::Impl
 {
-   typedef typename ParentFunctor::Impl BaseFunc;
+   typedef typename ParentFunctor::Impl ImplFunc; 
+   typedef typename ImplFunc::BaseFunc BaseFunc; 
    //typedef typename ParentFunctor::Dim Dim; 
 
 public:
