@@ -60,7 +60,7 @@ public:
       The number of Parameters is n+1. 
    */
 
-   Polynomial(unsigned int n); 
+   Polynomial(unsigned int n = 0); 
 
    /**
       Construct a Polynomial of degree  1 : a*x + b

@@ -28,10 +28,13 @@
 #include "Math/VirtualIntegrator.h"
 #endif
 
+#ifndef __CINT__
+
 #ifndef ROOT_Math_WrappedFunction
 #include "Math/WrappedFunction.h"
 #endif
 
+#endif
 
 namespace ROOT {
 namespace Math {

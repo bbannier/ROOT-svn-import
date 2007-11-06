@@ -26,10 +26,6 @@
 #include "Math/VirtualIntegrator.h"
 #endif
 
-#ifndef ROOT_Math_WrappedFunction
-#include "Math/WrappedFunction.h"
-#endif
-
 
 
 
@@ -107,7 +103,7 @@ public:
     
     /** Constructor of one dimensional Integrator passing a function interface
 
-       @param f      integration function (1D interface)
+       @param f      integration function (1D interface). It is copied inside
        @param type   integration type (adaptive, non-adaptive, etc..)
        @param absTol desired absolute Error
        @param relTol desired relative Error
@@ -117,7 +113,7 @@ public:
    explicit 
    IntegratorOneDim(const IGenFunction &f, IntegrationOneDim::Type type = IntegrationOneDim::ADAPTIVE, double absTol = 1.E-9, double relTol = 1E-6, unsigned int size = 1000, int rule = 3) { 
       fIntegrator = CreateIntegrator(type, absTol, relTol, size, rule); 
-       SetFunction(f);
+      SetFunction(f,true);
    }
 
     /** Template Constructor of one dimensional Integrator passing a generic function object
@@ -159,21 +155,18 @@ public:
       @param f integration function. The function type must implement the assigment operator, <em>  double  operator() (  double  x ) </em>
 
    */
-   template<class Function>
-   void SetFunction(Function f) { 
-      ROOT::Math::WrappedFunction<Function> wf(f); 
-      // need to copy the wrapper function, the instance created here will be deleted after SetFunction()
-      if (fIntegrator) fIntegrator->SetFunction(wf, true);
-   }
 
+   template<class Function>
+inline void SetFunction(Function f); 
 
    /** 
        set one dimensional function for 1D integration
     */
    //template<>
-   //void SetFunction<const ROOT::Math::IGenFunction &> (const IGenFunction &f) { 
-   void SetFunction  (const IGenFunction &f) { 
-      if (fIntegrator) fIntegrator->SetFunction(f);
+   //void SetFunction<const ROOT::Math::IGenFunction &> (const IGenFunction &f) 
+
+void SetFunction  (const IGenFunction &f, bool copy = false) { 
+  if (fIntegrator) fIntegrator->SetFunction(f,copy);
    }
    
 
@@ -186,9 +179,10 @@ public:
        @param b upper value of the integration interval
     */
 
+
    template<class Function> 
    double Integral(Function f, double a, double b) { 
-      SetFunction(f); 
+     SetFunction(f); 
       return Integral(a,b);
    }
 
@@ -200,7 +194,7 @@ public:
        @param b upper value of the integration interval
     */
    double Integral(const IGenFunction & f, double a, double b) { 
-      SetFunction(f); 
+     SetFunction(f,false); 
       return Integral(a,b);
    }
 
@@ -211,7 +205,7 @@ public:
       @param f integration function. The function type must implement the mathlib::IGenFunction interface
    */
    double Integral(const IGenFunction & f) { 
-      SetFunction(f); 
+     SetFunction(f,false); 
       return Integral(); 
    }
 
@@ -222,7 +216,7 @@ public:
 
    */
    double IntegralUp(const IGenFunction & f, double a ) { 
-      SetFunction(f); 
+     SetFunction(f,false); 
       return IntegralUp(a); 
    }
 
@@ -232,7 +226,7 @@ public:
       @param b upper value of the integration interval
    */
    double IntegralLow(const IGenFunction & f, double b ) { 
-      SetFunction(f); 
+     SetFunction(f,false); 
       return IntegralLow(b); 
    }
 
@@ -243,7 +237,7 @@ public:
 
    */
    double Integral(const IGenFunction & f, const std::vector<double> & pts ) { 
-      SetFunction(f); 
+     SetFunction(f,false); 
       return Integral(pts); 
    }
 
@@ -252,7 +246,7 @@ public:
 
    */
    double IntegralCauchy(const IGenFunction & f, double a, double b, double c) { 
-      SetFunction(f); 
+     SetFunction(f,false); 
       return IntegralCauchy(a,b,c); 
    }
 
@@ -363,6 +357,25 @@ private:
 
 } // namespace Math
 } // namespace ROOT
+
+
+#ifndef __CINT__
+
+
+#ifndef ROOT_Math_WrappedFunction
+#include "Math/WrappedFunction.h"
+#endif
+
+template<class Function>
+void ROOT::Math::IntegratorOneDim::SetFunction(Function f) {
+  ROOT::Math::WrappedFunction<Function> wf(f); 
+  // need to copy the wrapper function, the instance created here will be deleted after SetFunction()
+  if (fIntegrator) fIntegrator->SetFunction(wf, true);
+}
+
+
+#endif
+
 
 
 #endif /* ROOT_Math_Integrator */
