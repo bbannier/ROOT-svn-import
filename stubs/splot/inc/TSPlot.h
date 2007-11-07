@@ -7,7 +7,7 @@
  *                                                                    *
  **********************************************************************/
 
-#ifndef ROOT_TSPLot
+#ifndef ROOT_TSPlot
 #define ROOT_TSPlot
 
 #include "TObjArray.h"
