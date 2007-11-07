@@ -619,7 +619,6 @@ int G__ifunc_exist_base(int ifn, G__ifunc_table_internal *ifunc)
 
    G__inheritance* cbases = 0;
 
-   int res;
    G__ifunc_table_internal *ifunc_res = G__struct.memfunc[ifunc->tagnum];
 
    if (ifunc_res){
@@ -2395,7 +2394,7 @@ int G__call_cppfunc(G__value *result7,G__param *libp,G__ifunc_table_internal *if
 
 
     /* Method's Virtual Address */
-    void *vaddress = ifunc->funcptr[ifn];
+    //void *vaddress = ifunc->funcptr[ifn];
 
     // 1 Parameter && Registered Method in ifunc && Neither static method nor function
     // (G__tagnum > -1) is not needed because G__tagnum can be -1 when we have free
@@ -4341,7 +4340,7 @@ void G__cppif_change_globalcomp()
 }
 
 
-void G__cppif_geninline(FILE *fp, FILE *hfp, struct G__ifunc_table_internal *ifunc, int i,int j)
+void G__cppif_geninline(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,int j)
 {
    // LF 29-05-06
    // Rem we have to deal with inlined functions.
@@ -4354,21 +4353,11 @@ void G__cppif_geninline(FILE *fp, FILE *hfp, struct G__ifunc_table_internal *ifu
    // to be inlined by declaring a pointer to it
 
    // Output the function name.
-   // Assume vistual functions wont be inlined...
-   if ( (
-           ifunc->pentry[j]->line_number > 0
-           //|| strncmp(ifunc->funcname[j],"operator", strlen("operator"))==0
-           )
-        //&& strncmp(G__fulltagname(i,0),"ROOT", strlen("ROOT"))!=0
-        //&& strncmp(ifunc->funcname[j],"operator new", strlen("operator new"))!=0  //stubs were created for this
-        && !ifunc->isvirtual[j]
-        //&& ifunc->ansi[j]!=2 
-        //&& strncmp(G__fulltagname(i,0),"TMVA", strlen("TMVA"))!=0
-        //)
-        //
-                     
-      ) {
-                    
+
+   // LF 06-11-12
+   // Since we are now registering the symbols for the second dictionary too...
+   // We can try to inline all the functions without symbol
+   if ( !ifunc->mangled_name[j] ) {
       // LF
       if(G__dicttype==2 || G__dicttype==4) {
          // LF 21-06-07
@@ -4418,13 +4407,15 @@ void G__cppif_geninline(FILE *fp, FILE *hfp, struct G__ifunc_table_internal *ifu
          if (ifunc->ansi[j]==2)
             fprintf(fp,", ... ");
 
+         fprintf(fp,") ");
+
          // print the rest of the assign
          if(ifunc->isconst[j] & G__CONSTFUNC)
-            fprintf(fp,") %s", "const");
-         //else if(ifunc->isconst[j]==1 && strncmp(ifunc->funcname[j],"DeclFileName", strlen("DeclFileName"))!=0)
-         //   fprintf(fp,") %s", "const throw()");
+            fprintf(fp," %s", "const");
+         if(ifunc->isconst[j] & G__FUNCTHROW)
+            fprintf(fp," %s", "throw()");
          else
-            fprintf(fp,") ");
+            
 
          fprintf(fp," = &%s::%s; \n", G__fulltagname(i,0), ifunc->funcname[j]);
       }
@@ -4767,7 +4758,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
       isnonpublicnew=G__isnonpublicnew(i);
 
       // LF
-      if( (G__dicttype==3 || G__dicttype==4) &&
+      if( (G__dicttype == 2 || G__dicttype==3 || G__dicttype==4) &&
           strncmp(G__fulltagname(i,0),"string", strlen("string"))!=0 &&
           strncmp(G__fulltagname(i,0),"vector", strlen("vector"))!=0 &&
           strncmp(G__fulltagname(i,0),"list", strlen("list"))!=0 &&
@@ -4784,7 +4775,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
       // LF 03-07-07
       // Trigger the symbol registering to have them at hand
       // Do it here when we have the library and the class
-      if(G__dicttype == 3 || G__dicttype==4)
+      if(G__dicttype == 2 || G__dicttype == 3 || G__dicttype==4)
          G__register_class(G__libname, G__type2string('u',i,-1,0,0));
 
       /* member function interface */
@@ -4851,7 +4842,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                  
                  // LF 16-10-07
                  // Generate the inline trick for constructors too. See TNamed::TNamed
-                 //G__cppif_geninline(fp, hfp, ifunc, i, j);
+                 //G__cppif_geninline(fp, ifunc, i, j);
               }
               ++isconstructor;
               if(ifunc->para_nu[j]>=1&&
@@ -4877,12 +4868,14 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                           strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))==0 ||
                           strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
                           strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
-                          strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0))
+                          strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0)){
                         G__cppif_gendefault(fp,hfp,i,j,ifunc,1,1,isdestructor,1,1);
+                        ++isdestructor; // don't try to create it later on
+                     }
                   }
                   else if((G__dicttype==3 || G__dicttype==4) && ifunc->mangled_name[j] /*if there no is a symbol*/)
                      ++isdestructor;
-                  else if(G__dicttype!=3)
+                  else if(G__dicttype!=3 && G__dicttype!=4)
                      isdestructor = -1;
                }
                else{
@@ -4904,14 +4897,72 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                 ++isassignmentoperator;
               }
 #endif
+              // LF 06-11-07
+              // Try to rewrite the condition now that the symbols are available
+              // also for the second dictionary
+
+              // If there is no symbol and this is the second dictionary
+              // generate the inline code
+              if(!ifunc->mangled_name[j] && !ifunc->ispurevirtual[j] && G__dicttype==2){
+                 // The inline of an operator== must be generated
+                 // in a different way as one of a normal function
+                 if(strcmp(ifunc->funcname[j],"operator=")==0
+                    && 'u'==ifunc->param[j][0]->type
+                    && i==ifunc->param[j][0]->p_tagtable){
+                    G__cppif_gendefault(fp,hfp,i,j,ifunc,1,1,1,0,1);
+                 }   
+                 else{  // generate inline for normal function
+                    if ( !(strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
+                           strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
+                           strncmp(G__fulltagname(i,0),"list", strlen("list"))==0 ||
+                           strncmp(G__fulltagname(i,0),"deque", strlen("deque"))==0 ||
+                           strncmp(G__fulltagname(i,0),"set", strlen("set"))==0 ||
+                           strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))==0 || 
+                           strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))==0 ||
+                           strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
+                           strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
+                           strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0) )
+                       G__cppif_geninline(fp, ifunc, i, j);
+                 }
+              }
+              else if(!ifunc->mangled_name[j] && !ifunc->ispurevirtual[j] && G__dicttype==3){
+                 // Now we have no symbol but we are in the third or fourth
+                 // dictionary... which means that the second one already tried to create it...
+                 // If that's the case we have no other choice but to generate the stub
+                 if(strcmp(ifunc->funcname[j],"operator=")==0
+                    && 'u'==ifunc->param[j][0]->type
+                    && i==ifunc->param[j][0]->p_tagtable){
+                    G__cppif_gendefault(fp,hfp,i,j,ifunc,1,1,1,0,1);
+                 }   
+                 else                 
+                    G__cppif_genfunc(fp,hfp,i,j,ifunc);
+              }
+              else if(!ifunc->mangled_name[j] && !ifunc->ispurevirtual[j] && G__dicttype==4){
+                 
+                 // The inline of an operator== must be generated
+                 // in a different way as one of a normal function
+                 if(strcmp(ifunc->funcname[j],"operator=")==0
+                    && 'u'==ifunc->param[j][0]->type
+                    && i==ifunc->param[j][0]->p_tagtable){
+                    G__cppif_gendefault(fp,hfp,i,j,ifunc,1,1,1,0,1);
+                 }
+                 else{  // generate stub for normal function
+                    G__cppif_genfunc(fp,hfp,i,j,ifunc);
+                 }
+              }
+              else if(G__dicttype==0){
+                 // This is the old case...
+                 // just do what we did before
+                 G__cppif_genfunc(fp,hfp,i,j,ifunc);
+              }
+
+
+              /*
               // LF 24-05-07
               // dont generate the stubs for the functions
-              // remember that we still need stubs for constructors,
-              // destructors and non-member operator (but they are
-              // handled in a different way)
 
               // print it only for operator()
-              if(/*G__dicttype==0 ||*/
+              if(
                  ((
                     // LF 15-10-07
                     // Generate the stubs for those function needing a temp object..
@@ -4925,10 +4976,10 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                     // LF 26-10-07
                     // Generate the stubs for those function needing a pointer to a reference (see TCLonesArray "virtual TObject*&	operator[](Int_t idx)")
                     // Is this condition correct and/or sufficient?
-                    ((ifunc->reftype[j] == G__PARAREFERENCE) && strcmp(ifunc->funcname[j],"operator=")!=0) ||
+                    ((ifunc->reftype[j] == G__PARAREFERENCE) && strcmp(ifunc->funcname[j],"operator=")!=0 && !ifunc->mangled_name[j]) ||
 
                     //strcmp(ifunc->funcname[j],"operator()")==0 || 
-                    !ifunc->mangled_name[j] || /*if there is no symbol*/
+                    !ifunc->mangled_name[j] || //if there is no symbol
                     strcmp(ifunc->funcname[j],"operator const char*")==0 || 
                     strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
                     strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
@@ -4940,22 +4991,40 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                     strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
                     strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
                     strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0)
-                  && !ifunc->ispurevirtual[j] && (G__dicttype==3 || G__dicttype==4)) || G__dicttype==0) {
+                  && !ifunc->ispurevirtual[j] && (G__dicttype==2 || G__dicttype==3 || G__dicttype==4)) || G__dicttype==0) {
                  if(strcmp(ifunc->funcname[j],"operator=")==0
                     && 'u'==ifunc->param[j][0]->type
                     && i==ifunc->param[j][0]->p_tagtable
                     && G__dicttype!=0
+                    && !ifunc->mangled_name[j]
+                    &&      
+                    !(
+                       strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
+                       strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
+                       strncmp(G__fulltagname(i,0),"list", strlen("list"))==0 ||
+                       strncmp(G__fulltagname(i,0),"deque", strlen("deque"))==0 ||
+                       strncmp(G__fulltagname(i,0),"set", strlen("set"))==0 ||
+                       strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))==0 || 
+                       strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))==0 ||
+                       strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
+                       strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
+                       strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0)
                     ){
-                    G__cppif_gendefault(fp,hfp,i,j,ifunc,1,1,1,0,1);
+                       G__cppif_gendefault(fp,hfp,i,j,ifunc,1,1,1,0,1);
                  }
                  //else if('~'==ifunc->funcname[j][0])
                  //   G__cppif_gendefault(fp,hfp,i,j,ifunc,1,1,0,1,1);
-                 else
+                 else if(G__dicttype!=2)
                     G__cppif_genfunc(fp,hfp,i,j,ifunc);
               }
               else {
-                 G__cppif_geninline(fp, hfp, ifunc, i, j);
+                 G__cppif_geninline(fp, ifunc, i, j);
               } // inlined functions
+        */
+                                                                                                           
+
+
+
             }   
           } /* if PUBLIC */
           else { /* if PROTECTED or PRIVATE */
@@ -5015,7 +5084,10 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
            //         strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
            //         strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0 )
            //          && !ifunc->isvirtual[j]) )
-           if(((
+           if(  G__dicttype==0 ||
+                (( G__dicttype==2 || G__dicttype==3 || G__dicttype==4)
+                   && 
+                   !(
                   strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
                   strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
                   strncmp(G__fulltagname(i,0),"list", strlen("list"))==0 ||
@@ -5025,15 +5097,27 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                   strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))==0 ||
                   strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
                   strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
-                   strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0)
+                  strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0)) ||
+               ((
+                  strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
+                  strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
+                  strncmp(G__fulltagname(i,0),"list", strlen("list"))==0 ||
+                  strncmp(G__fulltagname(i,0),"deque", strlen("deque"))==0 ||
+                  strncmp(G__fulltagname(i,0),"set", strlen("set"))==0 ||
+                  strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))==0 || 
+                  strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))==0 ||
+                  strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
+                  strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
+                  strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0)
                  
-              && (G__dicttype==3 || G__dicttype==4)) || G__dicttype==0) //LF
+              && (G__dicttype==3 || G__dicttype==4)) ){ //LF rem to create inlines for default functions
               G__cppif_gendefault(fp,hfp,i,j,ifunc
                                   ,isconstructor
                                   ,iscopyconstructor
                                   ,isdestructor
                                   ,isassignmentoperator
                                   ,isnonpublicnew);
+           }
            //else if((isdestructor<=0) && (G__dicttype==3))
            //   G__cppif_gendefault(fp,hfp,i,j,ifunc
            //                       ,1
@@ -6342,6 +6426,27 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
 
   if (!isconstructor && !G__struct.isabstract[tagnum] && !isnonpublicnew) {
 
+    if(G__dicttype==2 || G__dicttype==4  && 
+                   !(
+                  strncmp(G__fulltagname(tagnum,0),"string", strlen("string"))==0 ||
+                  strncmp(G__fulltagname(tagnum,0),"vector", strlen("vector"))==0 ||
+                  strncmp(G__fulltagname(tagnum,0),"list", strlen("list"))==0 ||
+                  strncmp(G__fulltagname(tagnum,0),"deque", strlen("deque"))==0 ||
+                  strncmp(G__fulltagname(tagnum,0),"set", strlen("set"))==0 ||
+                  strncmp(G__fulltagname(tagnum,0),"multiset", strlen("multiset"))==0 || 
+                  strncmp(G__fulltagname(tagnum,0),"allocator", strlen("allocator"))==0 ||
+                  strncmp(G__fulltagname(tagnum,0),"map", strlen("map"))==0 ||
+                  strncmp(G__fulltagname(tagnum,0),"multimap", strlen("multimap"))==0 ||
+                  strncmp(G__fulltagname(tagnum,0),"complex", strlen("complex"))==0)){
+      // LF 01-11-07
+      // Force the outlining of functions even if the weren't declared
+      // (CInt will try to declare them later on anyways)
+       
+      // I don't know how to get the pointer to a constructor so the only thing
+      // I can think of to use the default constructor is to create an object
+      fprintf(fp,"%s G__cons_%s;\n", G__fulltagname(tagnum, 0),  G__map_cpp_funcname(tagnum, funcname, ifn, page));
+    }
+    else{
     char buf[G__LONGLINE];
     strcpy(buf, G__fulltagname(tagnum, 1));
 
@@ -6450,6 +6555,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
       ifn = 0;
       ++page;
     }
+    }
   } /* if (isconstructor) */
 
   /*********************************************************************
@@ -6462,6 +6568,54 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
 
   if (!iscopyconstructor && !G__struct.isabstract[tagnum] && !isnonpublicnew) {
 
+    if(G__dicttype==2 || G__dicttype==4 && 
+                   !(
+                  strncmp(G__fulltagname(tagnum,0),"string", strlen("string"))==0 ||
+                  strncmp(G__fulltagname(tagnum,0),"vector", strlen("vector"))==0 ||
+                  strncmp(G__fulltagname(tagnum,0),"list", strlen("list"))==0 ||
+                  strncmp(G__fulltagname(tagnum,0),"deque", strlen("deque"))==0 ||
+                  strncmp(G__fulltagname(tagnum,0),"set", strlen("set"))==0 ||
+                  strncmp(G__fulltagname(tagnum,0),"multiset", strlen("multiset"))==0 || 
+                  strncmp(G__fulltagname(tagnum,0),"allocator", strlen("allocator"))==0 ||
+                  strncmp(G__fulltagname(tagnum,0),"map", strlen("map"))==0 ||
+                  strncmp(G__fulltagname(tagnum,0),"multimap", strlen("multimap"))==0 ||
+                  strncmp(G__fulltagname(tagnum,0),"complex", strlen("complex"))==0)){
+      // LF 01-11-07
+      // Force the outlining of functions even if the weren't declared
+      // (CInt will try to declare them later on anyways)
+    
+      // if we didn't force the outlining for the default constructor
+      // we have to do it here because we need the object created there
+      // to be able to use a copy constructor
+       int isconstdefined = 1;
+       if ( !(!isconstructor && !G__struct.isabstract[tagnum] && !isnonpublicnew) ) {
+          // I don't know how to get the pointer to a constructor so the only thing
+          // I can think of to use the default constructor is to create an object
+         
+          // index in the ifunc
+          long pifn; 
+          long poffset;
+
+          // Single Constructor has only a parameter. The size of the object
+          G__param para_new;
+          para_new.paran = 1;
+          para_new.para[0].typenum = 0;
+          para_new.para[0].type = 104;
+          para_new.para[0].tagnum = 0;
+
+          // We look for the "new operator" ifunc in the current class and in its bases
+          G__ifunc_table_internal * new_oper = G__get_methodhandle4(G__struct.name[tagnum], &para_new, G__struct.memfunc[tagnum], &pifn, &poffset, 0, 1,0,0);
+          
+          if(!new_oper)
+             isconstdefined = 0;
+          else
+             fprintf(fp,"%s G__cons_%s;\n", G__fulltagname(tagnum, 0),  G__map_cpp_funcname(tagnum, funcname, ifn, page));
+       }
+
+       if(isconstdefined)
+       fprintf(fp,"%s G__copycons_%s(G__cons_%s);\n", G__fulltagname(tagnum, 0), G__map_cpp_funcname(tagnum, funcname, ifn, page), G__map_cpp_funcname(tagnum, funcname, ifn, page) );
+    }
+    else{
     sprintf(funcname, "%s", G__struct.name[tagnum]);
 
     fprintf(fp,     "// automatic copy constructor\n");
@@ -6498,6 +6652,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
       ifn = 0;
       ++page;
     }
+    }
   }
 
 
@@ -6523,12 +6678,52 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
          //strncmp(G__fulltagname(tagnum,0),"complex", strlen("complex"))==0 )
   //     /*&& !ifunc->isvirtual[j]*/) ) {
   
-     if (0 >= isdestructor) {
+     if (0 >= isdestructor && G__dicttype==0) {
         isdestructor = G__isprivatedestructor(tagnum);
      }
 
      if ((0 >= isdestructor) && (G__struct.type[tagnum] != 'n')) {
 
+          // index in the ifunc
+          //long pifn; 
+          //long poffset;
+
+          // Single Constructor has only a parameter. The size of the object
+          //G__param para_des;
+          //para_des.paran = 1;
+          //para_des.para[0].typenum = 0;
+          //para_des.para[0].type = 'Y';
+          //para_des.para[0].tagnum = 0;
+
+          // We look for the "new operator" ifunc in the current class and in its bases
+          //G__ifunc_table_internal * des_oper = G__get_methodhandle4(G__struct.name[tagnum], &para_des, G__struct.memfunc[tagnum], &pifn, &poffset, 0, 1,0,0);
+          
+          int isdestdefined = 1;
+          if(!G__struct.memfunc[tagnum]->mangled_name[0])
+             isdestdefined = 0;
+
+          if((G__dicttype==2 || G__dicttype==4)){
+/*             && (G__dicttype==2 || G__dicttype==4) && 
+                   !(
+                  strncmp(G__fulltagname(tagnum,0),"string", strlen("string"))==0 ||
+                  strncmp(G__fulltagname(tagnum,0),"vector", strlen("vector"))==0 ||
+                  strncmp(G__fulltagname(tagnum,0),"list", strlen("list"))==0 ||
+                  strncmp(G__fulltagname(tagnum,0),"deque", strlen("deque"))==0 ||
+                  strncmp(G__fulltagname(tagnum,0),"set", strlen("set"))==0 ||
+                  strncmp(G__fulltagname(tagnum,0),"multiset", strlen("multiset"))==0 || 
+                  strncmp(G__fulltagname(tagnum,0),"allocator", strlen("allocator"))==0 ||
+                  strncmp(G__fulltagname(tagnum,0),"map", strlen("map"))==0 ||
+                  strncmp(G__fulltagname(tagnum,0),"multimap", strlen("multimap"))==0 ||
+                  strncmp(G__fulltagname(tagnum,0),"complex", strlen("complex"))==0){
+*/             
+       // LF 01-11-07
+       // Force the outlining of functions even if the weren't declared
+       // (CInt will try to declare them later on anyways)
+    
+
+          }
+     
+    else{
         char buf[G__LONGLINE];
         strcpy(buf, G__fulltagname(tagnum, 1));
 
@@ -6611,6 +6806,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
            ifn = 0;
            ++page;
         }
+    }
      }
      //}
      //else {
@@ -6636,6 +6832,30 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
   }
 
   if (!isassignmentoperator) {
+    if(G__dicttype==2 || G__dicttype==4 && 
+                   !(
+                  strncmp(G__fulltagname(tagnum,0),"string", strlen("string"))==0 ||
+                  strncmp(G__fulltagname(tagnum,0),"vector", strlen("vector"))==0 ||
+                  strncmp(G__fulltagname(tagnum,0),"list", strlen("list"))==0 ||
+                  strncmp(G__fulltagname(tagnum,0),"deque", strlen("deque"))==0 ||
+                  strncmp(G__fulltagname(tagnum,0),"set", strlen("set"))==0 ||
+                  strncmp(G__fulltagname(tagnum,0),"multiset", strlen("multiset"))==0 || 
+                  strncmp(G__fulltagname(tagnum,0),"allocator", strlen("allocator"))==0 ||
+                  strncmp(G__fulltagname(tagnum,0),"map", strlen("map"))==0 ||
+                  strncmp(G__fulltagname(tagnum,0),"multimap", strlen("multimap"))==0 ||
+                  strncmp(G__fulltagname(tagnum,0),"complex", strlen("complex"))==0) /*&&
+       !((ifunc->reftype[ifn] != G__PARAREFERENCE) &&
+                         (ifunc->type[ifn] == 'u') &&
+                         (G__struct.type[ifunc->p_tagtable[ifn]] == 'c' || 
+                          G__struct.type[ifunc->p_tagtable[ifn]] == 's' || 
+                          G__struct.type[ifunc->p_tagtable[ifn]] == 'u')) */){
+       // LF 01-11-07
+       // Force the outlining of functions even if the weren't declared
+       // (CInt will try to declare them later on anyways)
+       sprintf(funcname, "operator=");
+       fprintf(fp,"%s& (%s::*G__assignop_%s)(const %s&) = &%s::operator=;\n", G__fulltagname(tagnum, 0), G__fulltagname(tagnum, 0), G__map_cpp_funcname(tagnum, funcname, ifn, page), G__fulltagname(tagnum, 0), G__fulltagname(tagnum, 0) );
+    }
+    else{
     sprintf(funcname, "operator=");
     fprintf(fp,   "// automatic assignment operator\n");
 
@@ -6666,6 +6886,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
     if (ifn == G__MAXIFUNC) {
       ifn = 0;
       ++page;
+    }
     }
   }
 #endif
@@ -8675,6 +8896,34 @@ void G__cpplink_memfunc(FILE *fp)
                   // Normal Stub Pointer
                   //fprintf(fp, "%s, ", G__map_cpp_funcname(i, ifunc->funcname[j], j, ifunc->page));
 
+                  // LF 06-11-12
+                  // Second attempt...
+                  // Since the second dictionary registered the symbols and now we should had registered
+                  // those plus the one in the objects; we dont have to assume anything...
+                  // If the mangled name is not there the stub MUST have been created
+                  
+                  // Why do we have to put the isabstract here?
+                  // it doesnt seem to be necesary in the original code
+                  if(!ifunc->mangled_name[j] && !ifunc->ispurevirtual[j]){
+                     if(strcmp(ifunc->funcname[j],G__struct.name[i])==0) {
+                        // constructor need special handling
+                        if(0==G__struct.isabstract[i]&&0==isnonpublicnew) {
+                           fprintf(fp, "%s, ", G__map_cpp_funcname(i, ifunc->funcname[j], j, ifunc->page));
+                        }       
+                        else    
+                           fprintf(fp, "(G__InterfaceMethod) NULL, ");
+                     }  
+                     else
+                        fprintf(fp, "%s, ", G__map_cpp_funcname(i, ifunc->funcname[j], j, ifunc->page));
+                  }
+                  else
+                     fprintf(fp, "(G__InterfaceMethod) NULL, ");
+               }
+            }
+            else
+               fprintf(fp, "(G__InterfaceMethod) NULL, ");
+
+                  /*
                   if(
                      // LF 15-10-07
                      // Generate the stubs for those function needing a temp object..
@@ -8689,10 +8938,10 @@ void G__cpplink_memfunc(FILE *fp)
                         // LF 26-10-07
                         // Generate the stubs for those function needing a pointer to a reference (see TCLonesArray "virtual TObject*&	operator[](Int_t idx)")
                         // Is this condition correct and/or sufficient?
-                        ((ifunc->reftype[j] == G__PARAREFERENCE) && strcmp(ifunc->funcname[j],"operator=")!=0) ||
+                        ((ifunc->reftype[j] == G__PARAREFERENCE) && strcmp(ifunc->funcname[j],"operator=")!=0 && !ifunc->mangled_name[j]) ||
 
                         //(!strcmp(ifunc->funcname[j],"operator()") ||
-                        !ifunc->mangled_name[j] || /*if there is no symbol*/
+                        !ifunc->mangled_name[j] || //if there is no symbol
                         !strcmp(ifunc->funcname[j],"operator const char*") ||
                         strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
                         strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
@@ -8705,10 +8954,10 @@ void G__cpplink_memfunc(FILE *fp)
                         strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
                         strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0 )
                       && !ifunc->ispurevirtual[j] && (G__dicttype==3 || G__dicttype==4)) || G__dicttype==0
-                     /* && !ifunc->isvirtual[j]*/){
+                     ){
 
                      if(strcmp(ifunc->funcname[j],G__struct.name[i])==0) {
-                        /* constructor need special handling */
+                        // constructor need special handling
                         if(0==G__struct.isabstract[i]&&0==isnonpublicnew)
                         {
                            fprintf(fp, "%s, ", G__map_cpp_funcname(i, ifunc->funcname[j], j, ifunc->page));
@@ -8722,11 +8971,11 @@ void G__cpplink_memfunc(FILE *fp)
                   else
                      fprintf(fp, "(G__InterfaceMethod) NULL, ");
                }
-            }
+               }
             else {
               fprintf(fp, "(G__InterfaceMethod) NULL, ");
             }
-
+                  */
             fprintf(fp, "%d, ", ifunc->type[j]);
 
             if (-1 != ifunc->p_tagtable[j]) {

@@ -285,7 +285,7 @@ $(CINTDIRS)/v6_loadfile_tmp.o: CINTCXXFLAGS += -UR__HAVE_CONFIG -DROOTBUILD
 $(CINTDIRS)/v6_loadfile_tmp.cxx: $(CINTDIRS)/v6_loadfile.cxx
 	cp -f $< $@
 
-$(CINTDIRS)/v6_newlink.o:  OPT = $(NOOPT)
+#$(CINTDIRS)/v6_newlink.o:  OPT = $(NOOPT)
 
 ##### configcint.h
 ifeq ($(CPPPREP),)
