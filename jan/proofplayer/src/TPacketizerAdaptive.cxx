@@ -705,6 +705,11 @@ TPacketizerAdaptive::~TPacketizerAdaptive()
 {
    // Destructor.
 
+   // In case of per-job scheduling, activate back all the assigned workers
+   // after a job is processed.
+   if (fLoadBasedSched)
+       gProofServ->GetProof()->SetParallel(99999);
+
    if (fSlaveStats) {
       fSlaveStats->DeleteValues();
    }
