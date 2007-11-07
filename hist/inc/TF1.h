@@ -204,6 +204,7 @@ public:
    virtual Double_t Eval(Double_t x, Double_t y=0, Double_t z=0, Double_t t=0) const;
    virtual Double_t EvalPar(const Double_t *x, const Double_t *params=0);
    // for using TF1 as a callable object (functor)
+   virtual Double_t operator()(Double_t x, Double_t y=0, Double_t z = 0, Double_t t = 0) const { return Eval(x,y,z,t); }
    virtual Double_t operator()(const Double_t *x, const Double_t *params=0) { return EvalPar(x,params); }
    virtual void     ExecuteEvent(Int_t event, Int_t px, Int_t py);
    virtual void     FixParameter(Int_t ipar, Double_t value);

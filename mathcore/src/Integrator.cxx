@@ -44,7 +44,7 @@ namespace Math {
    //gDebug = 3; 
    if ((h = gROOT->GetPluginManager()->FindHandler("ROOT::Math::VirtualIntegrator", "GSLIntegrator"))) {
       if (h->LoadPlugin() == -1) {
-         MATH_ERROR_MSG("Error loading one dimensional GSL integrator"); 
+         MATH_ERROR_MSG("IntegratorOneDim::CreateIntegrator","Error loading one dimensional GSL integrator"); 
          return 0; 
       }
 
@@ -88,7 +88,7 @@ VirtualIntegratorMultiDim * IntegratorMultiDim::CreateIntegrator(IntegrationMult
    //gDebug = 3; 
    if ((h = gROOT->GetPluginManager()->FindHandler("ROOT::Math::VirtualIntegrator", "GSLMCIntegrator"))) {
       if (h->LoadPlugin() == -1) {
-         MATH_ERROR_MSG("Error loading multidim integrator"); 
+         MATH_ERROR_MSG("IntegratorMultiDim::CreateIntegrator","Error loading multidim integrator"); 
          return 0; 
       }
 

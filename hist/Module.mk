@@ -18,6 +18,8 @@ HISTDO       := $(HISTDS:.cxx=.o)
 HISTDH       := $(HISTDS:.cxx=.h)
 
 HISTH        := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
+HISTH2       := mathcore/inc/Math/WrappedFunction.h 
+#                mathcore/inc/Math/WrappedParamFunction.h 
 HISTS        := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
 HISTO        := $(HISTS:.cxx=.o)
 
@@ -27,7 +29,7 @@ HISTLIB      := $(LPATH)/libHist.$(SOEXT)
 HISTMAP      := $(HISTLIB:.$(SOEXT)=.rootmap)
 
 # used in the main Makefile
-ALLHDRS     += $(patsubst $(MODDIRI)/%.h,include/%.h,$(HISTH))
+ALLHDRS     += $(patsubst $(MODDIRI)/%.h,include/%.h,$(HISTH),$(HISTH2))
 ALLLIBS     += $(HISTLIB)
 ALLMAPS     += $(HISTMAP)
 
@@ -43,9 +45,9 @@ $(HISTLIB):     $(HISTO) $(HISTDO) $(ORDER_) $(MAINLIBS) $(HISTLIBDEP)
 		   "$(SOFLAGS)" libHist.$(SOEXT) $@ "$(HISTO) $(HISTDO)" \
 		   "$(HISTLIBEXTRA)"
 
-$(HISTDS):      $(HISTH) $(HISTL) $(ROOTCINTTMPEXE)
+$(HISTDS):      $(HISTH) $(HISTH2) $(HISTL) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -c $(HISTH) $(HISTL)
+		$(ROOTCINTTMP) -f $@ -c $(HISTH) $(HISTH2) $(HISTL)
 
 $(HISTMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(HISTL)
 		$(RLIBMAP) -o $(HISTMAP) -l $(HISTLIB) \
