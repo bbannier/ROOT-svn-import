@@ -5167,9 +5167,16 @@ int main(int argc, char **argv)
          // make name of dict include file "aapDict.cxx" -> "aapDict.h"
          int  nl = 0;
          char inclf[kMaxLen];
+         
+         // LF 07-11-07
+         // Include the temporaries here to get one file with everything
+         char inclfTmp1[kMaxLen];
+         char inclfTmp2[kMaxLen];
          char *s = strrchr(dictname, '.');
          if (s) *s = 0;
          sprintf(inclf, "%s.h", dictname);
+         sprintf(inclfTmp1, "%sTmp1.cxx", dictname);
+         sprintf(inclfTmp2, "%sTmp2.cxx", dictname);
          if (s) *s = '.';
 
          // during copy put dict include on top and remove later reference
@@ -5177,6 +5184,8 @@ int main(int argc, char **argv)
             if (!strncmp(line, "#include", 8) && strstr(line, inclf))
                continue;
             fprintf(fpd, "%s", line);
+            
+
             // 'linesToSkip' is because we want to put it after #defined private/protected
             if (++nl == linesToSkip && icc) {
                switch (dict_type) {
@@ -5193,6 +5202,19 @@ int main(int argc, char **argv)
                } else {
                   fprintf(fpd, "#include \"%s\"\n", inclf);
                }
+
+               // LF 07-11-07
+               // Put the includes to temporary files when generating the third dictionary
+               if(dicttype==3){
+                 if (longheadername && dictpathname.length() ) {
+                   fprintf(fpd, "#include \"%s/%s\"\n", dictpathname.c_str(), inclfTmp1);
+                   fprintf(fpd, "#include \"%s/%s\"\n", dictpathname.c_str(), inclfTmp2);
+                 } else {
+                   fprintf(fpd, "#include \"%s\"\n", inclfTmp1);
+                   fprintf(fpd, "#include \"%s\"\n", inclfTmp2);
+                 }
+               }
+
                if (gNeedCollectionProxy) {
                   fprintf(fpd, "\n#include \"TCollectionProxyInfo.h\"");
                }

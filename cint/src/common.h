@@ -253,6 +253,7 @@ G__value G__default_parameter;
 #define G__PCONSTCONSTVAR 5
 #define G__CONSTFUNC      8
 #define G__STATICCONST 0x10
+#define G__FUNCTHROW       0x16
 
 /**************************************************************************
 * Class charasteristics

@@ -1146,6 +1146,14 @@ void G__make_ifunctable(char* funcheader)
             )) {
          G__fsetcomment(&G__struct.comment[G__tagdefining]);
       }
+
+      if (0 == strncmp(paraname, "const", 5))
+         G__p_ifunc->isconst[func_now] |= G__CONSTFUNC;
+
+      // LF 07-11-07
+      // "throwness" is needed to declare the prototypes
+      if (0 == strncmp(paraname, "throw", 5) || strncmp(paraname, "const throw", 11) == 0)
+        G__p_ifunc->isconst[func_now] |= G__FUNCTHROW;
    }
    else if (
       strncmp(paraname, "=", 1) == 0 ||
@@ -1196,6 +1204,11 @@ void G__make_ifunctable(char* funcheader)
       }
       if (0 == strncmp(paraname, "const", 5))
          G__p_ifunc->isconst[func_now] |= G__CONSTFUNC;
+
+      // LF 07-11-07
+      // "throwness" is needed to declare the prototypes
+      if (0 == strncmp(paraname, "throw", 5) || strncmp(paraname, "const throw", 11) == 0)
+        G__p_ifunc->isconst[func_now] |= G__FUNCTHROW;
    }
    else if (strcmp(paraname, "const") == 0 ||
             strcmp(paraname, "const ") == 0

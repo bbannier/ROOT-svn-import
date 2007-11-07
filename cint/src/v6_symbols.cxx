@@ -292,6 +292,42 @@ public:
             //fHash = demangled.Hash();
             //this->SetName(demangled.Data());
 
+            // LF 05-11-07
+            // We can get something like:
+            // ROOT::Math::SVector<double, 2u>
+            // When we have actually declared
+            // ROOT::Math::SVector<double,2>
+            // in ROOT... so the hashes wont match..
+            // try to convert the former in the latter.
+            
+            string::size_type pos_smaller  = classname.find_first_of("<", 0);
+            string::size_type pos_greater  = classname.find_last_of(">", classname.size()-1);
+
+            string::size_type index=0;
+            while(index < classname.size()){
+               if(classname[index]==' ' && 
+                  (index>0 && !isalpha(classname[index-1])) && 
+                  (index<classname.size()-1 && !isalpha(classname[index+1])) ){
+                  classname.erase(index,1);
+                  pos_greater  = classname.find_last_of(">", classname.size()-1);
+               }
+               else if( (pos_smaller != string::npos) &&
+                   (pos_greater != string::npos) &&
+                   index>pos_smaller && index<pos_greater ) {
+                  // How is the isinteger(char) when using the stl?
+                  if( (classname[index]=='0' || classname[index]=='1' || classname[index]=='2' || classname[index]=='3' || classname[index]=='4' ||
+                       classname[index]=='5' || classname[index]=='6' || classname[index]=='7' || classname[index]=='8' || classname[index]=='9')
+                      && classname[index+1]=='u'){
+                     classname.erase(index+1,1);
+                     pos_greater  = classname.find_last_of(">", classname.size()-1);
+                  }
+                  else
+                     index++;
+               }
+               else
+                  index++;
+            }
+            
             fClassHash = hash(classname.c_str(), classname.size());
             return;
          }
@@ -922,6 +958,16 @@ int RegisterPointer(const char *classname, const char *method, const char *proto
    ifunc = 0;
 
    if(strcmp(classname, "")!=0) {
+      // LF 05-11-07
+      // Be careful!!!!
+      // G__defined_tagname can change the value of classname... why??? 
+      // so something like:
+      // "ROOT::Math::SMatrix<double,2,2,ROOT::Math::MatRepStd<double,2,2>>"
+      // can be translated to something like 
+      // "ROOT::Math::SMatrix<double,2,2,ROOT::Math::MatRepStd<double,2,2> >"
+      // Which might look the same but can give unexpected results (imagine 
+      // you truncate the '>' in the second case... )
+      // this is very ugly...
       tagnum = G__defined_tagname(classname, 2);
       ifunc = G__struct.memfunc[tagnum];
    }
@@ -981,6 +1027,43 @@ void G__register_class(const char *libname, const char *clstr)
    string classname;
    if(clstr)
       classname = clstr;
+
+   
+   // Take out spaces from template declarations
+   string::size_type p_smaller  = classname.find_first_of("<", 0);
+   string::size_type p_greater  = classname.find_last_of(">", classname.size()-1);
+
+   if( (p_smaller != string::npos) &&
+       (p_greater != string::npos)){
+
+      // ** Pre-process a token
+      string::size_type index=0;
+      while(index < classname.size()){
+         if( index>p_smaller && index<p_greater ) {
+            if(classname[index]==' ' &&
+               (index>0 && !isalpha(classname[index-1])) && 
+               (index<classname.size()-1 && !isalpha(classname[index+1]))){
+               classname.erase(index,1);
+               p_greater  = classname.find_last_of(">", classname.size()-1);
+            }
+            // How is the isinteger(char) when using the stl?
+            else if( (classname[index]=='0' || classname[index]=='1' || classname[index]=='2' || classname[index]=='3' || classname[index]=='4' ||
+                 classname[index]=='5' || classname[index]=='6' || classname[index]=='7' || classname[index]=='8' || classname[index]=='9')
+                && classname[index+1]=='u'){
+               classname.erase(index+1,1);
+               p_greater  = classname.find_last_of(">", classname.size()-1);
+            }
+            else
+               index++;
+         }
+         else
+            index++;
+      }
+      // ** Pre-process a token
+   }
+
+
+
 
    //int ncolon=0;
    //string::size_type ind=classname.length();
@@ -1378,13 +1461,68 @@ void G__register_class(const char *libname, const char *clstr)
 
          if(pos == string::npos && lpos != pos)
             pos = signature.size();
-         
+         else{
+            // LF 05-11-07
+            // We can have something like:
+            // Were one of the parameters includes a comma. I would think it's only possible
+            // when we have templates and an option is to ignore a comma if it's between "<>"...
+            // ROOT::Math::SVector<double, 2u>::operator=(ROOT::Math::SVector<double, 2u> const&)
+            string::size_type pos_sm  = signature.find_first_of("<", lpos);
+            if(pos_sm != string::npos && pos_sm < pos){
+               string::size_type pos_gr  = signature.find_first_of(">", pos_sm);
+               if(pos_gr != string::npos && pos < pos_gr && pos > pos_sm)
+                  pos =  signature.find_first_of(delim, pos_gr); 
+            }
+            
+            if(pos == string::npos && lpos != pos)
+               pos = signature.size();
+         }
+
          int k = 0;
          while (pos != string::npos || lpos != string::npos) {
             // new token
             string paramtoken = signature.substr(lpos, pos - lpos);
             string newparam;
 		
+            // LF 05-11-07
+            // We can get something like:
+            // ROOT::Math::SVector<double, 2u>
+            // When we have actually declared
+            // ROOT::Math::SVector<double,2>
+            // in ROOT... so the hashes wont match..
+            // try to convert the former in the latter.
+            
+            string::size_type pos_s  = paramtoken.find_first_of("<", 0);
+            string::size_type pos_g  = paramtoken.find_last_of(">", paramtoken.size()-1);
+
+            if( (pos_s != string::npos) &&
+                (pos_g != string::npos)){
+
+               // ** Pre-process a token
+               string::size_type index=0;
+               while(index < paramtoken.size()){
+                  if( index>pos_s && index<pos_g ) {
+                     if(paramtoken[index]==' ' &&
+                        (index>0 && !isalpha(paramtoken[index-1])) && 
+                        (index<paramtoken.size()-1 && !isalpha(paramtoken[index+1]))){
+                        paramtoken.erase(index,1);
+                        pos_g  = paramtoken.find_last_of(">", paramtoken.size()-1);
+                     }
+                     // How is the isinteger(char) when using the stl?
+                     else if( (paramtoken[index]=='0' || paramtoken[index]=='1' || paramtoken[index]=='2' || paramtoken[index]=='3' || paramtoken[index]=='4' ||
+                          paramtoken[index]=='5' || paramtoken[index]=='6' || paramtoken[index]=='7' || paramtoken[index]=='8' || paramtoken[index]=='9')
+                         && paramtoken[index+1]=='u'){
+                        pos_g  = paramtoken.find_last_of(">", paramtoken.size()-1);
+                        paramtoken.erase(index+1,1);                  
+                     }
+                     else
+                        index++;
+                  }
+                  else
+                     index++;
+               }
+               // ** Pre-process a token
+            }
 
            if (!paramtoken.empty() && paramtoken.find("const")!=string::npos ) {
               string delim_param(" ");
@@ -1396,6 +1534,20 @@ void G__register_class(const char *libname, const char *clstr)
               string::size_type pos_param  = paramtoken.find_first_of(delim_param, lpos_param);
               if(pos_param == string::npos && lpos_param != pos_param)
                  pos_param = paramtoken.size();
+
+              // Paramtoken could be something like "TParameter<long long>"
+              // in that case the tokenizing by space is wrong!!!
+              string::size_type pos_smaller  = paramtoken.find_first_of("<", lpos_param);
+              
+              // If we find a "<" between the start and the space,
+              // then we look for a ">" after the space
+              if(pos_smaller != string::npos && pos_smaller < pos_param){
+                 string::size_type pos_greater  = paramtoken.find_last_of(">", paramtoken.size()-1);
+                 if(pos_greater != string::npos /*&& pos_greater > pos_param*/)
+                    pos_param = pos_greater+1;
+                 else
+                    cerr << "Error parsing method: " << methodstr << " signature:" << signature << endl;
+              }
 
               int l = 0;
               while (pos_param != string::npos || lpos_param != string::npos) {
@@ -1542,7 +1694,9 @@ void G__register_class(const char *libname, const char *clstr)
       //   if (gDebug > 0)
       //      cerr << "xxx The address is 0. the method wont be registered" << endl << endl;
       //}
-      if( RegisterPointer(classname.c_str(), /*finalclass.c_str(),*/ methodstr.c_str(), 
+      char *tmpstr = new char[classname.size()+56]; // it could be changed by RegisterPointer and the size can be bigger
+      strcpy(tmpstr, classname.c_str());
+      if( RegisterPointer(tmpstr, /*finalclass.c_str(),*/ methodstr.c_str(), 
                           newsignature.c_str(), symbol->fFunc, symbol->fMangled.c_str(),
                           isconst) == -1){
          // yahoo.... we can finally call our register method
@@ -1564,6 +1718,7 @@ void G__register_class(const char *libname, const char *clstr)
          }
          nreg++;
       }
+      delete tmpstr;
 
       //std::list<TSymbol*>::iterator old_iter = list_iter;
       ++list_iter;
