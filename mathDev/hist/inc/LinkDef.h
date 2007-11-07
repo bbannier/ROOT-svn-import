@@ -184,4 +184,8 @@
 #pragma link C++ function R__H(Int_t);
 #pragma link C++ function R__H(const char*);
 
+#pragma link C++ class ROOT::Math::WrappedFunction<TF1 &>;
+#pragma link C++ class ROOT::Math::WrappedMultiFunction<TF1 &>;
+//#pragma link C++ class ROOT::Math::WrappedParamFunction<TF1 &>;
+
 #endif

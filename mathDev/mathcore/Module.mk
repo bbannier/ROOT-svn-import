@@ -133,4 +133,7 @@ distclean::     distclean-mathcore
 test-mathcore:	all-mathcore
 		@cd $(MATHCOREDIR)/test; make
 
+##### extra rules ######
+$(MATHCOREO): CXXFLAGS += -DUSE_ROOT_ERROR
+$(MATHCOREDO): CXXFLAGS += -DUSE_ROOT_ERROR
 

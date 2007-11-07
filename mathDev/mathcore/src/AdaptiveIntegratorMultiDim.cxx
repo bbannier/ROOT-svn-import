@@ -3,6 +3,7 @@
 //
 #include "Math/IFunction.h"
 #include "Math/AdaptiveIntegratorMultiDim.h"
+#include "Math/Error.h"
 
 #include <cmath>
 
@@ -120,7 +121,11 @@ double AdaptiveIntegratorMultiDim::Integral(const double* xmin, const double * x
    fStatus  = 3;
    nfnevl = 0;
    relerr = 0;
-   if (n < 2 || n > 15) return 0;
+   // does not work for 1D functions
+   if (n < 2 || n > 15) { 
+      MATH_WARN_MSGVAL("AdaptiveIntegratorMultiDim::Integral","Wrong function dimension",n); 
+      return 0;
+   }
 
    double twondm = std::pow(2.0,static_cast<int>(n));
    //unsigned int minpts = Int_t(twondm)+ 2*n*(n+1)+1;
