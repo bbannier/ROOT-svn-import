@@ -2,10 +2,6 @@
 
 # Dictionary Filename
 FILENAME=
-# Can be used to produce a list of libraries needed by the header files being parsed
-PREFIX=
-# Options -c and -p
-CPOPTIONS=
 # Arguments
 ARGS=$*
 # List of object files
@@ -45,15 +41,14 @@ while true ; do
                 --reflex) MODE=$1; shift ;;
                 --gccxml) MODE=$1; shift ;;
                 -l) shift ;;
-                -p) CPOPTIONS="$CPOPTIONS -p"; shift ;;
+                -p) shift ;;
                 -f) FILENAME=$2; shift 2 ;;
                 -o|--object-files) OBJS=$2; ARGOBJS=$1; shift 2;;
-                -c) CPOPTIONS="$CPOPTIONS -c"; shift 1;;
-                -I) shift; break;;
+                -c) shift 1; break;;
                 -.) shift 2;;
                 -h) HELP=1; shift 1;;
                 --symbols-file) shift 2;;
-                --lib-list-prefix) PREFIX=$2; shift 2;;
+                --lib-list-prefix) shift 2;;
                 --) shift ; break ;;
                 *) echo "Internal error!" ;; #exit 1 ;;
         esac
@@ -83,24 +78,16 @@ ROOTCINTARGS=${ROOTCINTARGS/-gccxml/}
 ROOTCINTARGS=${ROOTCINTARGS/-I./}
 ROOTCINTARGS=${ROOTCINTARGS/$FILENAME/}
 ROOTCINTARGS=${ROOTCINTARGS/--cxx/}
-ROOTCINTARGS=${ROOTCINTARGS/--lib-list-prefix=/}
-ROOTCINTARGS=${ROOTCINTARGS/$PREFIX/}
-ROOTCINTARGS=${ROOTCINTARGS/-p/}
-ROOTCINTARGS=${ROOTCINTARGS/-c/}
+ROOTCINTARGS=${ROOTCINTARGS/$CXXFLAGS/}
 
 # We remove one score from the mode option name
 MODE=${MODE/--/-}
 
-if [ -n $PREFIX ]
-then
-    ARGS="--lib-list-prefix=$PREFIX -f"
-fi
-
-
 # Temporary dictionaries generation
-
-rootcint $MODE $ARGS ${FILENAME%.*}"Tmp1".cxx $CPOPTIONS -.1 $ROOTCINTARGS
-rootcint $MODE $ARGS ${FILENAME%.*}"Tmp2".cxx $CPOPTIONS -.2 $ROOTCINTARGS
+echo utils/src/rootcint_tmp $MODE ${FILENAME%.*}"Tmp1".cxx -. 1 $ROOTCINTARGS
+echo utils/src/rootcint_tmp $MODE ${FILENAME%.*}"Tmp2".cxx -. 2 $ROOTCINTARGS
+utils/src/rootcint_tmp $MODE ${FILENAME%.*}"Tmp1".cxx -. 1 $ROOTCINTARGS
+utils/src/rootcint_tmp $MODE ${FILENAME%.*}"Tmp2".cxx -. 2 $ROOTCINTARGS
 
 # Temporary dictionaries compilation
 g++ $CXXFLAGS -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -I. -o ${FILENAME%.*}"Tmp1".o -c ${FILENAME%.*}"Tmp1".cxx
@@ -112,11 +99,11 @@ nm -g -p --defined-only ${FILENAME%.*}"Tmp2".o | awk '{printf("%s\n", $3)}' >> $
 nm -g -p --defined-only $OBJS | awk '{printf("%s\n", $3)}' >> ${FILENAME%.*}.nm
 
 # We don't need the temporaries anymore
-#rm ${FILENAME%.*}"Tmp1".*
-#rm ${FILENAME%.*}"Tmp2".*
+rm ${FILENAME%.*}"Tmp1".*
+rm ${FILENAME%.*}"Tmp2".*
 
 # Final Dictionary Generation
-rootcint $MODE $ARGS $FILENAME $CPOPTIONS -.4 -L${FILENAME%.*}".nm" $ROOTCINTARGS
+utils/src/rootcint_tmp -cint $FILENAME --symbols-file ${FILENAME%.*}".nm"  -. 4 $ROOTCINTARGS
 
 # We don't need the symbols file anymore
 rm ${FILENAME%.*}.nm

@@ -2684,7 +2684,7 @@ int TSystem::CompileMacro(const char *filename, Option_t * opt,
    // ======= Generate the rootcint command line
    TString rcint;
 #ifdef G__NOSTUBS
-   rcint = "rootcint.sh --lib-list-prefix=";
+   rcint = "rootcintNoStubs.sh --lib-list-prefix=";
 #else
    rcint = "rootcint --lib-list-prefix=";
 #endif
