@@ -54,12 +54,26 @@ typedef int Py_ssize_t;
 #  define PY_SSIZE_T_MAX INT_MAX
 #  define PY_SSIZE_T_MIN INT_MIN
 # endif
+#define ssizeobjargproc intobjargproc
+#define lenfunc         inquiry
+#define ssizeargfunc    intargfunc
 #else
 # ifdef R__MACOSX
 #  define PY_SSIZE_T_FORMAT "%uzd"
 # else
 #  define PY_SSIZE_T_FORMAT "%zd"
 # endif
+#endif
+
+// the following should quiet Solaris
+#ifdef Py_False
+#undef Py_False
+#define Py_False ( (PyObject*)(void*)&_Py_ZeroStruct )
+#endif
+
+#ifdef Py_True
+#undef Py_True
+#define Py_True ( (PyObject*)(void*)&_Py_TrueStruct )
 #endif
 
 #endif // !PYROOT_PYROOT_H
