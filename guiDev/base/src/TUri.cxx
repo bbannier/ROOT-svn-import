@@ -938,11 +938,11 @@ void TUri::Normalise()
    }
    // percent-encoding normalisation (6.2.2.2) for
    // userinfo, host (reg-name), path, query, fragment
-   fUserinfo = PctDecodeUnreserved(fUserinfo);
-   fHost = PctDecodeUnreserved(fHost);
-   fPath = PctDecodeUnreserved(fPath);
-   fQuery = PctDecodeUnreserved(fQuery);
-   fFragment = PctDecodeUnreserved(fFragment);
+   fUserinfo = PctNormalise(PctDecodeUnreserved(fUserinfo));
+   fHost = PctNormalise(PctDecodeUnreserved(fHost));
+   fPath = PctNormalise(PctDecodeUnreserved(fPath));
+   fQuery = PctNormalise(PctDecodeUnreserved(fQuery));
+   fFragment = PctNormalise(PctDecodeUnreserved(fFragment));
 
    // path segment normalisation (6.2.2.3)
    if (fHasPath)
@@ -959,20 +959,59 @@ TString const TUri::PctDecodeUnreserved(const TString &source)
    Int_t i = 0;
    while (i < source.Length()) {
       if (source[i] == '%') {
+         if (source.Length() < i+2) {
+            // abort if out of bounds
+            return sink;
+         }
          // two hex digits follow -> decode to ASCII
          // upper nibble, bits 4-7
          char c1 = tolower(source[i + 1]) - '0';
          if (c1 > 9) // a-f
-            c1 -= 30;
+            c1 -= 39;
          // lower nibble, bits 0-3
          char c0 = tolower(source[i + 2]) - '0';
          if (c0 > 9) // a-f
-            c0 -= 30;
+            c0 -= 39;
          char decoded = c1 << 4 | c0;
-         if (TPRegexp(kURI_unreserved).Match(decoded) > 0)
+         if (TPRegexp(kURI_unreserved).Match(decoded) > 0) {
+            // we have an unreserved character -> store decoded version
             sink = sink + decoded;
-         else
-            sink = sink + source(i, 3);
+         } else {
+            // this is a reserved character
+            TString pct = source(i,3);
+            pct.ToUpper();
+            sink = sink + pct;
+         }
+         // advance 2 characters
+         i += 2;
+      } else {
+         // regular character -> copy
+         sink = sink + source[i];
+      }
+      i++;
+   }
+   return sink;
+}
+
+//______________________________________________________________________________
+TString const TUri::PctNormalise(const TString &source)
+{
+   // Normalise the percent-encoded parts of the string
+   // i.e. uppercase the hexadecimal digits
+   // %[:alpha:][:alpha:] -> %[:ALPHA:][:ALPHA:]
+
+   TString sink = "";
+   Int_t i = 0;
+   while (i < source.Length()) {
+      if (source[i] == '%') {
+         if (source.Length() < i+2) {
+            // abort if out of bounds
+            return sink;
+         }
+         TString pct = source(i,3);
+         // uppercase the pct part
+         pct.ToUpper();
+         sink = sink + pct;
          // advance 2 characters
          i += 2;
       } else {
@@ -994,15 +1033,19 @@ TString const TUri::PctDecode(const TString &source)
    Int_t i = 0;
    while (i < source.Length()) {
       if (source[i] == '%') {
+         if (source.Length() < i+2) {
+            // abort if out of bounds
+            return sink;
+         }
          // two hex digits follow -> decode to ASCII
          // upper nibble, bits 4-7
          char c1 = tolower(source[i + 1]) - '0';
          if (c1 > 9) // a-f
-            c1 -= 30;
+            c1 -= 39;
          // lower nibble, bits 0-3
          char c0 = tolower(source[i + 2]) - '0';
          if (c0 > 9) // a-f
-            c0 -= 30;
+            c0 -= 39;
          sink = sink + (char)(c1 << 4 | c0);
          // advance 2 characters
          i += 2;
