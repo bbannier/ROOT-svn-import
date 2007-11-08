@@ -125,6 +125,10 @@ TXNetFile::TXNetFile(const char *url, Option_t *option, const char* ftitle,
               gROOT->GetVersion());
    }
 
+   if (IsRaw()) {
+      EnvPutInt(NAME_READAHEADSIZE, 0);
+   }
+
    // Remove anchors from the URL!
    urlnoanchor.SetAnchor("");
 
@@ -602,8 +606,6 @@ Bool_t TXNetFile::ReadBufferAsync(Long64_t offs, Int_t bufferLength)
    return result;
 }
 
-
-
 //______________________________________________________________________________
 Bool_t TXNetFile::ReadBuffers(char *buf,  Long64_t *pos, Int_t *len, Int_t nbuf)
 {
@@ -1068,6 +1070,17 @@ void TXNetFile::SetEnv()
    // (We override XrdClient default)
    fgRootdBC = gEnv->GetValue("XNet.RootdFallback", 1);
    EnvPutInt(NAME_KEEPSOCKOPENIFNOTXRD, fgRootdBC);
+
+   // Dynamic forwarding (SOCKS4)
+   TString socks4Host = gEnv->GetValue("XNet.SOCKS4Host","");
+   Int_t socks4Port = gEnv->GetValue("XNet.SOCKS4Port",-1);
+   if (socks4Port > 0) {
+      if (socks4Host.IsNull())
+         // Default
+         socks4Host = "127.0.0.1";
+      EnvPutString(NAME_SOCKS4HOST, socks4Host.Data());
+      EnvPutInt(NAME_SOCKS4PORT, socks4Port);
+   }
 
    // For password-based authentication
    TString autolog = gEnv->GetValue("XSec.Pwd.AutoLogin","1");
