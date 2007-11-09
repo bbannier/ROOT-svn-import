@@ -18,7 +18,7 @@ ifeq ($(PLATFORM),win32)
 EXTRALIBS= "$(ROOTSYS)/lib/libFit.lib" "$(ROOTSYS)/lib/libMathCore.lib" 
 ROOFITLIBS= "$(ROOTSYS)/lib/libMinuit.lib" "$(ROOTSYS)/lib/libThread.lib" "$(ROOTSYS)/lib/libRooFit.lib" "$(ROOTSYS)/lib/libRooFitCore.lib" "$(ROOTSYS)/lib/libHtml.lib"
 else
-EXTRALIBS=  -lFit -lMathCore  
+EXTRALIBS=  -lFit -lMathCore  -lMathMore
 ROOFITLIBS= -lMinuit  -lThread -lRooFit -lRooFitCore -lHtml
 CXXFLAGS += -g
 endif
