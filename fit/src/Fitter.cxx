@@ -13,7 +13,7 @@
 
 #include "Fit/Fitter.h"
 #include "Fit/Chi2FCN.h"
-#include "Fit/Chi2GradFCN.h"
+//#include "Fit/Chi2GradFCN.h"
 #include "Fit/LogLikelihoodFCN.h"
 #include "Math/Minimizer.h"
 #include "Fit/BinPoint.h"
@@ -101,22 +101,26 @@ bool Fitter::DoLeastSquareFit(const BinData & data) {
 
    // check if fFunc provides gradient
    IGradModelFunction * gradFun = dynamic_cast<IGradModelFunction *>(fFunc); 
+   typedef IModelFunction::BaseFunc BaseFunc; 
    if (gradFun == 0) { 
       // do minimzation without using the gradient
-      Chi2FCN chi2(data,*fFunc); 
+      Chi2FCN<BaseFunc> chi2(data,*fFunc); 
 
 //       double xxx[3] = {5.11,-1.485,1.846}; 
 //       std::cout << " chi2(x) " << chi2(xxx) << std::endl; 
 //       double xxx2[3] = {2,2,2}; 
 //       std::cout << " chi2(2,2,2) " << chi2(xxx2) << std::endl; 
 
-      return DoMinimization<Chi2FCN::BaseObjFunction> (*minimizer, chi2, data.Size()); 
+      return DoMinimization<BaseFunc> (*minimizer, chi2, data.Size()); 
    } 
+#ifdef LATER
    else { 
       // use gradient 
-      Chi2GradFCN chi2(data,*gradFun); 
-      return DoMinimization<Chi2GradFCN::BaseObjFunction> (*minimizer, chi2, data.Size()); 
+      typedef IGradModelFunction::BaseGradFunc BaseGradFunc; 
+      Chi2FCN<BaseGradFunc> chi2(data,*gradFun); 
+      return DoMinimization<BaseGradFunc> (*minimizer, chi2, data.Size()); 
    }
+#endif
    return false; 
 }
 
@@ -171,11 +175,6 @@ bool Fitter::DoLikelihoodFit(const UnBinData & data) {
    if (gradFun == 0) { 
       // do minimzation without using the gradient
       LogLikelihoodFCN logl(data,*fFunc); 
-
-//       double xxx[3] = {5.11,-1.485,1.846}; 
-//       std::cout << " chi2(x) " << chi2(xxx) << std::endl; 
-//       double xxx2[3] = {2,2,2}; 
-//       std::cout << " chi2(2,2,2) " << chi2(xxx2) << std::endl; 
 
       return DoMinimization<LogLikelihoodFCN::BaseObjFunction> (*minimizer, logl, data.Size()); 
    } 

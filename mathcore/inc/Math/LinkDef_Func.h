@@ -9,12 +9,19 @@
  **********************************************************************/
 #ifdef __CINT__
 
+// define header gurad symbols to avoid CINT re-including the file 
+#pragma link C++ global ROOT_Math_SpecFuncMathCore;
+#pragma link C++ global ROOT_Math_PdfFuncMathCore;
+#pragma link C++ global ROOT_Math_ProbFuncMathCore;
+
+// special functions
 #pragma link C++ function ROOT::Math::erf( double );
 #pragma link C++ function ROOT::Math::erfc( double );
 #pragma link C++ function ROOT::Math::tgamma( double );
 #pragma link C++ function ROOT::Math::lgamma( double );
 #pragma link C++ function ROOT::Math::beta( double , double);
 
+// statistical functions : pdf
 #pragma link C++ function ROOT::Math::binomial_pdf( unsigned int , double, unsigned int);
 #pragma link C++ function ROOT::Math::breitwigner_pdf( double , double, double);
 #pragma link C++ function ROOT::Math::cauchy_pdf( double , double, double);
@@ -29,6 +36,7 @@
 #pragma link C++ function ROOT::Math::tdistribution_pdf( double , double, double);
 #pragma link C++ function ROOT::Math::uniform_pdf( double , double, double, double);
 
+// statistical functions : cdf
 #pragma link C++ function ROOT::Math::breitwigner_cdf_c( double , double, double);
 #pragma link C++ function ROOT::Math::breitwigner_cdf( double , double, double);
 #pragma link C++ function ROOT::Math::cauchy_cdf_c( double , double, double);

@@ -25,12 +25,16 @@
 #include <iostream> 
 #endif
 
+//todo: 
 
+//  need to implement integral option
 
 namespace ROOT { 
 
    namespace Fit { 
 
+
+// for chi2 functions
 
 double FitUtil::EvaluateChi2(IModelFunction & func, const BinData & data, const double * p, unsigned int & nPoints) {  
    // evaluate the chi2 given a  function reference  , the data and returns the value and also in nPoints 
@@ -82,6 +86,7 @@ double FitUtil::EvaluateChi2(IModelFunction & func, const BinData & data, const 
 
 }
 
+
 double FitUtil::EvaluateChi2Residual(IModelFunction & func, const BinData & data, const double * p, unsigned int i) {  
    // evaluate the chi2 contribution (residual term) 
 
@@ -96,7 +101,89 @@ double FitUtil::EvaluateChi2Residual(IModelFunction & func, const BinData & data
    else 
       return 0; 
 }
+
+void FitUtil::EvaluateChi2Gradient(IModelFunction & f, const BinData & data, const double * p, double * grad, unsigned int & nPoints) { 
+   IGradModelFunction * fg = dynamic_cast<IGradModelFunction *>( &f); 
+   assert (fg != 0); // must be called by a grad function
+
+   IGradModelFunction & func = *fg; 
+   unsigned int n = data.Size();
+
+   //int nRejected = 0; 
+   // set values of parameters 
+   func.SetParameters(p); 
+   unsigned int npar = func.NPar(); 
+//   assert (npar == NDim() );  // npar MUST be  Chi2 dimension
+   std::vector<double> gradFunc( npar ); 
+   // set all vector values to zero
+   std::vector<double> g( npar); 
+   //for (int i = 0; i < npar; ++i) grad[i] = 0; 
+
+   for (unsigned int i = 0; i < n; ++ i) { 
+//       const BinPoint & point = data[i]; 
+//       const std::vector<double> & x = point.Coords(); 
+//       double y = point.Value();
+//       double invError = point.InvError();
+      const double * x = data.Coords(i);
+      double y = data.Value(i);
+      double invError = data.InvError(i); 
+      double fval = func ( x ); 
+      func.ParameterGradient(  x , &gradFunc[0] );  
+
+#ifdef DEBUG      
+      std::cout << x[0] << "  " << y << "  " << 1./invError << " params : "; 
+      for (int ipar = 0; ipar < npar; ++ipar) 
+         std::cout << p[ipar] << "\t";
+      std::cout << "\tfval = " << fval << std::endl; 
+#endif
+
+      // loop on the parameters
+      for (unsigned int ipar = 0; ipar < npar ; ++ipar) { 
+
+         // avoid singularity in the function (infinity and nan ) in the chi2 sum 
+         // eventually add possibility of excluding some points (like singularity) 
+         if (  (fval > - std::numeric_limits<double>::max() && fval < std::numeric_limits<double>::max() ) && 
+               (gradFunc[ipar] > - std::numeric_limits<double>::max() && 
+                gradFunc[ipar] < std::numeric_limits<double>::max() ) )
+               { 
+                  // calculate derivative point contribution
+                  double tmp = - 2.0 * ( y -fval )* invError * invError * gradFunc[ipar];  	  
+                  g[ipar] += tmp;
+               }
+//          else 
+//             nRejected++; 
       
+      }
+
+   }
+
+//    // reset the number of fitting data points
+//    if (nRejected != 0)  nPoints = n - nRejected;
+//    if (nPoints != fNPoints)
+//       std::cout << "Warning : Number of points differes between Chi2 evaluation and derivatives " << std::endl; 
+
+   // copy result 
+   std::copy(g.begin(), g.end(), grad);
+
+}
+
+
+      
+
+// utility function used by the likelihoods 
+
+inline double EvalLogF(double fval) { 
+   // evaluate the log with a protections against negative argument to the log 
+   // smooth linear extrapolation below function values smaller than  epsilon
+   // (better than a simple cut-off)
+   const static double epsilon = 2.*std::numeric_limits<double>::min();
+   if(fval<= epsilon) 
+      return fval/epsilon + std::log(epsilon) - 1; 
+   else      
+      return std::log(fval);
+}
+
+// for LogLikelihood functions
 
 double FitUtil::EvaluatePdf(IModelFunction & func, const UnBinData & data, const double * p, unsigned int i) {  
    // evaluate the pdf contribution to the logl
@@ -104,14 +191,10 @@ double FitUtil::EvaluatePdf(IModelFunction & func, const UnBinData & data, const
    func.SetParameters(p);
    const double * x = data.Coords(i);
    double fval = func ( x ); 
-   if (fval  >  std::numeric_limits<double>::min() ) 
-      return  std::log( fval); 
-   else // for too small values of fval 
-      return std::log(  std::numeric_limits<double>::min() ); // log(min) 
+   return EvalLogF(fval);
 }
 
 double FitUtil::EvaluateLogL(IModelFunction & func, const UnBinData & data, const double * p, unsigned int &nPoints) {  
-
    // evaluate the LogLikelihood 
 
    unsigned int n = data.Size();
@@ -125,10 +208,10 @@ double FitUtil::EvaluateLogL(IModelFunction & func, const UnBinData & data, cons
    func.SetParameters(p); 
    for (unsigned int i = 0; i < n; ++ i) { 
       const double * x = data.Coords(i);
-   double fval = func ( x ); 
+      double fval = func ( x ); 
 
 #ifdef DEBUG      
-   std::cout << "x [ " << data.PointSize() << " ] = "; 
+      std::cout << "x [ " << data.PointSize() << " ] = "; 
       for (unsigned int j = 0; j < data.PointSize(); ++j)
          std::cout << x[j] << "\t"; 
       std::cout << "\tpar = [ " << func.NPar() << " ] =  "; 
@@ -137,11 +220,7 @@ double FitUtil::EvaluateLogL(IModelFunction & func, const UnBinData & data, cons
       std::cout << "\tfval = " << fval << std::endl; 
 #endif
 
-      // take care of  too small values in the pdf which results in infinities
-      if (fval  >  std::numeric_limits<double>::min() ) 
-         logl -=  std::log( fval); 
-      else // for too small values of fval 
-         logl -= std::log(  std::numeric_limits<double>::min() ); // log(min) 
+      logl -= EvalLogF( fval); 
 
       
    }
@@ -156,10 +235,63 @@ double FitUtil::EvaluateLogL(IModelFunction & func, const UnBinData & data, cons
    return logl;
 }
 
+
+// for binned log likelihood functions      
+
+double FitUtil::EvaluatePoissonBinPdf(IModelFunction & func, const BinData & data, const double * p, unsigned int i) {  
+   // evaluate the pdf contribution to the logl
+
+   func.SetParameters(p);
+   const double * x = data.Coords(i);
+   double y = data.Value(i);
+   double fval = func ( x ); 
+
+   // remove constant term depending on N
+   return  fval - y * EvalLogF( fval);  
+
+}
+
+double FitUtil::EvaluatePoissonLogL(IModelFunction & func, const BinData & data, const double * p, unsigned int &nPoints) {  
+   // evaluate the Poisson Log Likelihood
+   unsigned int n = data.Size();
+
+   
+   double loglike = 0;
+   int nRejected = 0; 
+   func.SetParameters(p); 
+   for (unsigned int i = 0; i < n; ++ i) { 
+      const double * x = data.Coords(i);
+      double y = data.Value(i);
+      // need to implement integral option
+      double fval = func ( x );   
+
+#ifdef DEBUG      
+      std::cout << "x [ " << data.PointSize() << " ] = "; 
+      for (unsigned int j = 0; j < data.PointSize(); ++j)
+         std::cout << x[j] << "\t"; 
+      std::cout << "\tpar = [ " << func.NPar() << " ] =  "; 
+      for (int ipar = 0; ipar < func.NPar(); ++ipar) 
+         std::cout << p[ipar] << "\t";
+      std::cout << "\tfval = " << fval << std::endl; 
+#endif
+
+   loglike +=  fval - y * EvalLogF( fval);  
       
+      
+   }
+   
+   // reset the number of fitting data points
+   if (nRejected != 0)  nPoints = n - nRejected;
 
+#ifdef DEBUG
+   std::cout << "Logl = " << logl << " np = " << nPoints << std::endl;
+#endif
+   
+   return loglike;  
+}
 
-   } // end namespace Fit
+   
+}
 
 } // end namespace ROOT
 

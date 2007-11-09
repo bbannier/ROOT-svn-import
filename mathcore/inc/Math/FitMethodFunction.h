@@ -30,18 +30,18 @@ namespace ROOT {
 
    @ingroup  CppFunctions
 */ 
-class FitMethodFunction : public ROOT::Math::IMultiGenFunction {
+template<class FunctionType>
+class BasicFitMethodFunction : public FunctionType {
 
 public:
 
-   typedef  ROOT::Math::IMultiGenFunction BaseFunction; 
+   typedef  typename FunctionType::BaseFunc BaseFunction; 
    
-
 
    /** 
       Virtual Destructor (no operations)
    */ 
-   virtual ~FitMethodFunction ()  {}  
+   virtual ~BasicFitMethodFunction ()  {}  
 
    /**
       method returning the data i-th contribution to the fit objective function
@@ -64,6 +64,11 @@ private:
 
 
 }; 
+
+      // define the normal and gradient function
+      typedef BasicFitMethodFunction<ROOT::Math::IMultiGenFunction>  FitMethodFunction;      
+      typedef BasicFitMethodFunction<ROOT::Math::IMultiGradFunction> FitMethodGradFunction;
+
 
    } // end namespace Math
 

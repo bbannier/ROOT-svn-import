@@ -82,10 +82,10 @@ public:
    ParameterSettings & ParSettings(unsigned int i) { return fSettings[i]; }
 
    ///  get the vector of parameter settings  (const method)
-   const std::vector<ParameterSettings> & ParamsSettings() const { return fSettings; }
+   const std::vector<ROOT::Fit::ParameterSettings> & ParamsSettings() const { return fSettings; }
 
    ///  get the vector of parameter settings  (non-const method)
-   std::vector<ParameterSettings> & ParamsSettings() { return fSettings; }
+   std::vector<ROOT::Fit::ParameterSettings> & ParamsSettings() { return fSettings; }
 
 
 
@@ -118,7 +118,7 @@ protected:
 private: 
 
 
-   std::vector<ParameterSettings> fSettings; 
+   std::vector<ROOT::Fit::ParameterSettings> fSettings; 
 
    std::string fMinimizerType;  // minimizer type (MINUIT, MINUIT2, etc..)
    std::string fMinimAlgoType;  // algorithm type (MIGRAD, SIMPLEX, etc..)

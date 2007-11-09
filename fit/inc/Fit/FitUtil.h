@@ -35,7 +35,7 @@ namespace ROOT {
 namespace FitUtil {
 
    typedef  ROOT::Math::IParamMultiFunction IModelFunction;
-
+   typedef  ROOT::Math::IParamMultiGradFunction IGradModelFunction;
 
    /** 
        evaluate the Chi2 given a model function and the data at the point x. 
@@ -44,10 +44,22 @@ namespace FitUtil {
    double EvaluateChi2(IModelFunction & func, const BinData & data, const double * x, unsigned int & nPoints);  
 
    /** 
+       evaluate the Chi2 gradient given a model function and the data at the point x. 
+       return also nPoints as the effective number of used points in the Chi2 evaluation
+   */ 
+   void EvaluateChi2Gradient(IModelFunction & func, const BinData & data, const double * x, double * grad, unsigned int & nPoints);  
+
+   /** 
        evaluate the LogL given a model function and the data at the point x. 
        return also nPoints as the effective number of used points in the LogL evaluation
    */ 
    double EvaluateLogL(IModelFunction & func, const UnBinData & data, const double * x, unsigned int & nPoints);  
+
+   /** 
+       evaluate the Poisson LogL given a model function and the data at the point x. 
+       return also nPoints as the effective number of used points in the LogL evaluation
+   */ 
+   double EvaluatePoissonLogL(IModelFunction & func, const BinData & data, const double * x, unsigned int & nPoints);  
 
    /** 
        Parallel evaluate the Chi2 given a model function and the data at the point x. 
@@ -63,8 +75,15 @@ namespace FitUtil {
    /** 
        evaluate the pdf contribution to the LogL given a model function and the BinPoint data 
    */ 
-   double EvaluatePdf(IModelFunction & func, const UnBinData & data, const double * x, unsigned int ipoint);  
+   double EvaluatePdf(IModelFunction & func, const UnBinData & data, const double * x, unsigned int ipoint); 
+
+   /** 
+       evaluate the pdf contribution to the Poisson LogL given a model function and the BinPoint data 
+   */ 
+   double EvaluatePoissonBinPdf(IModelFunction & func, const BinData & data, const double * x, unsigned int ipoint);  
    
+
+
 
 
 } // end namespace FitUtil 

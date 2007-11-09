@@ -17,6 +17,9 @@
 #include "Math/IFunction.h"
 #endif
 
+#ifndef ROOT_Fit_Chi2FCN
+#include "Fit/Chi2FCN.h"
+#endif
 
 #ifndef ROOT_Fit_DataVectorfwd
 #include "Fit/DataVectorfwd.h"
@@ -43,11 +46,17 @@ namespace ROOT {
 
    @ingroup FitMethodFunction
 */ 
-class Chi2GradFCN :  public ROOT::Math::IMultiGradFunction {
-
+class Chi2GradFCN :  public ROOT::Math::IMultiGradFunction, 
+                     public ROOT::Fit::Chi2FCN {
+         
 public: 
+         
 
-   typedef  ROOT::Math::IMultiGradFunction BaseObjFunction; 
+     
+   typedef  ROOT::Math::IMultiGradFunction BaseGradFunction; 
+
+   typedef  ROOT::Fit::Chi2FCN::BaseFunction     BaseFunction; 
+   typedef  ROOT::Fit::Chi2FCN::BaseObjFunction  BaseObjFunction; 
 
    typedef  ROOT::Math::IParamMultiFunction IModelFunction;
    typedef  ROOT::Math::IParamMultiGradFunction IGradModelFunction;
@@ -61,7 +70,7 @@ public:
    /** 
       Destructor (no operations)
    */ 
-   ~Chi2GradFCN () {} 
+   virtual ~Chi2GradFCN () {} 
 
 private:
    // usually copying is non trivial, so we make this unaccessible
@@ -79,11 +88,10 @@ private:
 public: 
 
    // no support for covariant return type on Windows
-   ROOT::Math::IMultiGenFunction * Clone() const; 
+   BaseFunction * Clone() const; 
 
-   unsigned int NDim() const { return fNDim; }
-
-   using BaseObjFunction::operator();
+   //using BaseObjFunction::operator();
+   using Chi2FCN::NDim; 
 
    void Gradient(const double * p, double * g ) const; 
 
@@ -91,7 +99,10 @@ private:
 
 
    double DoEval (const double * x) const { 
-      return FitUtil::EvaluateChi2( fFunc, fData, x, fNPoints); 
+      unsigned int n = 0; 
+      double chi2 =  FitUtil::EvaluateChi2( fFunc, Data(), x, n); 
+      SetNFitPoints(n); 
+      return chi2; 
    } 
 
    double  DoDerivative(const double * x, unsigned int icoord ) const { 
@@ -99,12 +110,10 @@ private:
       return fGrad[icoord]; 
    }
 
+   // data members 
 
-   const BinData & fData; 
    mutable IGradModelFunction & fFunc; 
 
-   mutable unsigned int fNPoints; 
-   mutable unsigned int fNDim; 
    mutable std::vector<double> fGrad; 
 
 

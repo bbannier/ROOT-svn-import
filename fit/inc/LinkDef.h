@@ -16,11 +16,21 @@
 
 
 //#pragma link C++ class ROOT::Fit::BinPoint;
-#pragma link C++ class ROOT::Fit::Chi2FCN;
 #pragma link C++ class ROOT::Fit::DataRange;
 #pragma link C++ class ROOT::Fit::DataOptions;
 //#pragma link C++ class ROOT::Fit::DataVector<ROOT::Fit::BinPoint>;
 #pragma link C++ class ROOT::Fit::MinimizerFactory;
+#pragma link C++ class ROOT::Fit::Fitter;
+#pragma link C++ class ROOT::Fit::FitConfig+;
+#pragma link C++ class ROOT::Fit::BinData+;
+#pragma link C++ class ROOT::Fit::UnBinData+;
+#pragma link C++ class ROOT::Fit::FitResult+;
+#pragma link C++ class ROOT::Fit::ParameterSettings+;
+
+#pragma link C++ class ROOT::Fit::Chi2FCN<ROOT::Math::IMultiGenFunction>-;
+//#pragma link C++ class ROOT::Fit::Chi2GradFCN-;
+#pragma link C++ class ROOT::Fit::LogLikelihoodFCN;
+#pragma link C++ class ROOT::Fit::PoissonLikelihoodFCN;
 
 
 #pragma link C++ class ROOT::Math::WrappedTF1;
