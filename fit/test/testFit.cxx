@@ -10,6 +10,7 @@
 #include "Fit/Fitter.h"
 
 #include "Math/WrappedMultiTF1.h"
+#include "Math/Polynomial.h"
 
 #include <string>
 #include <iostream>
@@ -64,6 +65,58 @@ int testHisto1DFit() {
    ROOT::Math::WrappedMultiTF1 f(*func); 
    double p[3] = {100,0,3.}; 
    f.SetParameters(p); 
+
+   // create the fitter 
+   std::cout << "Fit parameter 2  " << f.Parameters()[2] << std::endl;
+
+   ROOT::Fit::Fitter fitter; 
+   bool ret = fitter.Fit(d, f);
+   if (ret)  
+      fitter.Result().Print(std::cout); 
+   else {
+      std::cout << " Fit Failed " << std::endl;
+      return -1; 
+   }
+   return 0;
+}
+
+int testHisto1DGradFit() { 
+
+
+
+   std::string fname("pol2");
+   TF1 * func = (TF1*)gROOT->GetFunction(fname.c_str());
+   func->SetParameter(0,1.);
+   func->SetParameter(1,2.);
+   func->SetParameter(2,3.0);
+
+   TRandom3 rndm;
+
+   // fill an histogram 
+   TH1D * h2 = new TH1D("h2","h2",30,-5.,5.);
+//      h1->FillRandom(fname.c_str(),100);
+   for (int i = 0; i <1000; ++i) 
+      h2->Fill( func->GetRandom() );
+
+   h2->Print();
+   //h1->Draw();
+
+//    gSystem->Load("libMinuit2");
+//    gSystem->Load("libFit");
+
+
+   // ROOT::Fit::DataVector<ROOT::Fit::BinPoint> dv; 
+   
+   ROOT::Fit::BinData d; 
+   ROOT::Fit::FillData(d,h2,func);
+
+
+   printData(d);
+
+   // create the function
+   ROOT::Math::Polynomial f(100,0,3); 
+   // double p[3] = {100,0,3.}; 
+//    f.SetParameters(p); 
 
    // create the fitter 
    std::cout << "Fit parameter 2  " << f.Parameters()[2] << std::endl;
@@ -135,6 +188,7 @@ int main() {
 
    int iret = 0; 
    iret |= testFit( testHisto1DFit, "Histogram1D Fit");
+   iret |= testFit( testHisto1DGradFit, "Histogram1D Gradient Fit");
    iret |= testFit( testUnBin1DFit, "Unbin 1D Fit");
    return iret; 
 }
