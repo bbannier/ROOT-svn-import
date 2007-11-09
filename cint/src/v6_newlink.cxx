@@ -4836,7 +4836,11 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                }
             }
 #endif
-            if(strcmp(ifunc->funcname[j],G__struct.name[i])==0 && !(!ifunc->mangled_name[j] && ifunc->funcptr[j]==(void*)-1) ) {
+            if(strcmp(ifunc->funcname[j],G__struct.name[i])==0 && 
+               (!(!ifunc->mangled_name[j] && ifunc->funcptr[j]==(void*)-1) ||
+                (!ifunc->mangled_name[j] && G__dicttype!=2 )
+               )
+              ) {
               /* constructor needs special handling */
               if(0==G__struct.isabstract[i]&&0==isnonpublicnew)
               {
