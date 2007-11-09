@@ -5134,10 +5134,10 @@ Int_t TProofServ::SendAsynMessage(const char *msg, Bool_t lf)
    // Returns the return value from TSocket::Send(TMessage &) .
    static TMessage m(kPROOF_MESSAGE);
 
-   // To leave a track in the output file ...
-   Info("SendAsynMessage","%s", (msg ? msg : "(null)"));
-   // ... avoiding double notification to the client
-   FlushLogFile();
+   // To leave a track in the output file ... if requested
+   // (clients will be notified twice)
+   PDB(kAsyn,1)
+      Info("SendAsynMessage","%s", (msg ? msg : "(null)"));
 
    if (fSocket && msg) {
       m.Reset(kPROOF_MESSAGE);
@@ -5160,7 +5160,7 @@ void TProofServ::FlushLogFile()
 }
 
 //______________________________________________________________________________
-void TProofServ::HandleSignalException(Int_t sig)
+void TProofServ::HandleException(Int_t sig)
 {
    // Exception handler: we do not try to recover here, just exit.
 
