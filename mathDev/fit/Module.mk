@@ -17,8 +17,8 @@ FITDS    := $(MODDIRS)/G__Fit.cxx
 FITDO    := $(FITDS:.cxx=.o)
 FITDH    := $(FITDS:.cxx=.h)
 
-FITAH    := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
-FITAH    := $(filter-out $(MODDIRI)/Fit/LinkDef%,$(wildcard $(MODDIRI)/Fit/*.h))
+#FITAH    := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
+FITAH    := $(filter-out $(MODDIRI)/Fit/Chi2Grad%,$(wildcard $(MODDIRI)/Fit/*.h))
 FITBH    := $(MODDIR)/../mathmore/inc/Math/WrappedTF1.h \
 	    $(MODDIR)/../mathmore/inc/Math/WrappedMultiTF1.h  
 # FITBH    := $(MODDIRI)/Fit/BinPoint.h \
