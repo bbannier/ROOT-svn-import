@@ -4407,50 +4407,10 @@ int main(int argc, char **argv)
    argvv[0] = argv[0];
    argcc = 1;
 
-   // LF 29-10-07
-   // We want to ignore the "--cxx"
-   // coming from the new, wrapper-less scheme... (this should be temporal, find a better way to do it)
-   if (!strcmp(argv[ic], "--cxx")) {
-      ++ic;
-      ++ic;
-   }
-
-   // LF 26-10-07
-   // We want to ignore the "-o" "--object-files" 
-   // coming from the new, wrapper-less scheme
-   if (!strcmp(argv[ic], "-o") || !strcmp(argv[ic], "--object-files") || !strcmp(argv[ic], "-object-files")) {
-      ++ic;
-      ++ic;
-   }
-
-   // LF 03-07-07
-   // We need the library path in the dictionary generation
-   // the easiest way is to get it as a parameter
-   if (!strcmp(argv[ic], "--symbols-file")) {
-      ++ic;
-      argvv[argcc++] = "-L";
-      argvv[argcc++] = argv[ic]; 
-      ++ic;
-   }
-
-   // LF 09-07-07
-   // We want to separate the generation of the dictionary
-   // source.
-   // We need one that will be the real dictionary and
-   // another one with all the ShowMembers stuff.
-   //
-   // If we see the parameter -S then we want the ShowMembers
-   // rubbish, if not, we only want the dict (without showmembers)
-   if (!strcmp(argv[ic], "-.")) {
-      ++ic;
-      argvv[argcc++] = "-.";
-      dicttype = atoi(argv[ic]);
-      argvv[argcc++] = argv[ic]; 
-      ++ic;
-   }
 
    if (!strcmp(argv[ic], "-c")) {
       icc++;
+
       if (ifl) {
          char *s;
          ic++;
@@ -4464,6 +4424,52 @@ int main(int argc, char **argv)
          strncpy(argvv[argcc], dictname, s-dictname); argcc++;
 
          while (ic < argc && (*argv[ic] == '-' || *argv[ic] == '+')) {
+            printf("ic:%d , icc:%d \n", ic, icc);
+
+            
+            // LF 29-10-07
+            // We want to ignore the "--cxx"
+            // coming from the new, wrapper-less scheme... (this should be temporal, find a better way to do it)
+            if (!strcmp(argv[ic], "--cxx")) {
+               ++ic;
+               ++ic;
+            }
+
+            // LF 26-10-07
+            // We want to ignore the "-o" "--object-files" 
+            // coming from the new, wrapper-less scheme
+            if (!strcmp(argv[ic], "-o") || !strcmp(argv[ic], "--object-files") || !strcmp(argv[ic], "-object-files")) {
+               ++ic;
+               ++ic;
+            }
+
+
+            // LF 09-07-07
+            // We want to separate the generation of the dictionary
+            // source.
+            // We need one that will be the real dictionary and
+            // another one with all the ShowMembers stuff.
+            //
+            // If we see the parameter -S then we want the ShowMembers
+            // rubbish, if not, we only want the dict (without showmembers)
+            if (!strcmp(argv[ic], "-.")) {
+               ++ic;
+               argvv[argcc++] = "-.";
+               dicttype = atoi(argv[ic]);
+               argvv[argcc++] = argv[ic]; 
+               ++ic;
+            }
+
+            // LF 03-07-07
+            // We need the library path in the dictionary generation
+            // the easiest way is to get it as a parameter
+            if (!strcmp(argv[ic], "-L") ||  !strcmp(argv[ic], "--symbols-file")) {
+               ++ic;
+               argvv[argcc++] = "-L";
+               argvv[argcc++] = argv[ic]; 
+               ++ic;
+            }
+
             if (strcmp("+P", argv[ic]) == 0 ||
                 strcmp("+V", argv[ic]) == 0 ||
                 strcmp("+STUB", argv[ic]) == 0) {
@@ -4580,6 +4586,56 @@ int main(int argc, char **argv)
          return 1;
       }
    }
+   else{
+      
+      //if (!strcmp(argv[ic], "-p")) {
+      //   ++ic;
+      //}
+
+      // LF 29-10-07
+      // We want to ignore the "--cxx"
+      // coming from the new, wrapper-less scheme... (this should be temporal, find a better way to do it)
+      if (!strcmp(argv[ic], "--cxx")) {
+         ++ic;
+         ++ic;
+      }
+
+      // LF 26-10-07
+      // We want to ignore the "-o" "--object-files" 
+      // coming from the new, wrapper-less scheme
+      if (!strcmp(argv[ic], "-o") || !strcmp(argv[ic], "--object-files") || !strcmp(argv[ic], "-object-files")) {
+         ++ic;
+         ++ic;
+      }
+
+
+      // LF 09-07-07
+      // We want to separate the generation of the dictionary
+      // source.
+      // We need one that will be the real dictionary and
+      // another one with all the ShowMembers stuff.
+      //
+      // If we see the parameter -S then we want the ShowMembers
+      // rubbish, if not, we only want the dict (without showmembers)
+      if (!strcmp(argv[ic], "-.")) {
+         ++ic;
+         argvv[argcc++] = "-.";
+         dicttype = atoi(argv[ic]);
+         argvv[argcc++] = argv[ic]; 
+         ++ic;
+      }
+
+      // LF 03-07-07
+      // We need the library path in the dictionary generation
+      // the easiest way is to get it as a parameter
+      if (!strcmp(argv[ic], "-L") ||  !strcmp(argv[ic], "--symbols-file")) {
+         ++ic;
+         argvv[argcc++] = "-L";
+         argvv[argcc++] = argv[ic]; 
+         ++ic;
+      }
+   }
+
 
    iv = 0;
    il = 0;
