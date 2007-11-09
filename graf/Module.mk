@@ -60,7 +60,7 @@ $(GRAFDS1):     $(GRAFHD) $(GRAFL1) $(GRAFO) $(ROOTCINTTMPEXE)
 		$(ROOTCINTTMP) -f $@ -o "$(GRAFO)" -c $(GRAFHD) $(GRAFL1)
 $(GRAFDS2):     $(GRAFH) $(GRAFL2) $(GRAFO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMPEXE) -f $@ --cxx "$(CXXFLAGS)" -o "$(GRAFO)" -c $(FREETYPEINC) $(GRAFH) $(GRAFL2)
+		$(ROOTCINTTMP) -f $@ -o "$(GRAFO)" -c $(FREETYPEINC) $(GRAFH) $(GRAFL2)
 
 $(GRAFMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(GRAFL1) $(GRAFL2)
 		$(RLIBMAP) -o $(GRAFMAP) -l $(GRAFLIB) \
