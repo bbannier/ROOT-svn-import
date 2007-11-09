@@ -4672,6 +4672,11 @@ void G__make_default_ifunc(G__ifunc_table_internal *ifunc_copy)
 
             if(!(*ifunc_destructor->funcname[j]))
                G__savestring(&ifunc_destructor->funcname[j],(char*)funcname);
+            //else if(strcmp(ifunc_destructor->funcname[j], "~")==0){
+            //   free(ifunc_destructor->funcname[j]);
+            //   G__savestring(&ifunc_destructor->funcname[j],(char*)funcname);
+            //}
+            // How can we deal with something like "~ TDestructor()" (with the space)
 
             if(!ifunc_destructor->hash[j])
                ifunc_destructor->hash[j] = hash;
@@ -4929,57 +4934,75 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
               
               // If they werent generated automatically...
               if(!(ifunc->funcptr[j]==(void*)-1)){
-                 if(!ifunc->mangled_name[j] && !ifunc->ispurevirtual[j] && G__dicttype==2){
-                    // The inline of an operator== must be generated
-                    // in a different way as one of a normal function
-                    //if(strcmp(ifunc->funcname[j],"operator=")==0
-                    //   && 'u'==ifunc->param[j][0]->type
-                    //   && i==ifunc->param[j][0]->p_tagtable){
-                    //   G__cppif_gendefault(fp,hfp,i,j,ifunc,1,1,1,0,1);
-                    //}   
-                    //else{  // generate inline for normal function
-                    if ( !(strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
-                           strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
-                           strncmp(G__fulltagname(i,0),"list", strlen("list"))==0 ||
-                           strncmp(G__fulltagname(i,0),"deque", strlen("deque"))==0 ||
-                           strncmp(G__fulltagname(i,0),"set", strlen("set"))==0 ||
-                           strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))==0 || 
-                           strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))==0 ||
-                           strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
-                           strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
-                           strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0) )
-                       G__cppif_geninline(fp, ifunc, i, j);
-                    //}
-                 }
-                 else if(!ifunc->mangled_name[j] && !ifunc->ispurevirtual[j] && G__dicttype==3){
-                    // Now we have no symbol but we are in the third or fourth
-                    // dictionary... which means that the second one already tried to create it...
-                    // If that's the case we have no other choice but to generate the stub
-                    //if(strcmp(ifunc->funcname[j],"operator=")==0
-                    //   && 'u'==ifunc->param[j][0]->type
-                    //   && i==ifunc->param[j][0]->p_tagtable){
-                    //   G__cppif_gendefault(fp,hfp,i,j,ifunc,1,1,1,0,1);
-                    //}   
-                    //else                 
-                    G__cppif_genfunc(fp,hfp,i,j,ifunc);
-                 }
-                 else if(!ifunc->mangled_name[j] && !ifunc->ispurevirtual[j] && G__dicttype==4){
+                 if(!ifunc->mangled_name[j] ||
+                    // LF 15-10-07
+                    // Generate the stubs for those function needing a temp object..
+                    // Is this condition correct and/or sufficient?
+                    ((ifunc->reftype[j] != G__PARAREFERENCE) &&
+                     (ifunc->type[j] == 'u') &&
+                     (G__struct.type[ifunc->p_tagtable[j]] == 'c' || 
+                      G__struct.type[ifunc->p_tagtable[j]] == 's' || 
+                      G__struct.type[ifunc->p_tagtable[j]] == 'u')) ||
+
+                    // LF 26-10-07
+                    // Generate the stubs for those function needing a pointer to a reference (see TCLonesArray "virtual TObject*&	operator[](Int_t idx)")
+                    // Is this condition correct and/or sufficient?
+                    ((ifunc->reftype[j] == G__PARAREFERENCE) && strcmp(ifunc->funcname[j],"operator=")!=0 && !ifunc->mangled_name[j])
+                    ){
+
+
+                    if(!ifunc->ispurevirtual[j] && G__dicttype==2){
+                       // The inline of an operator== must be generated
+                       // in a different way as one of a normal function
+                       //if(strcmp(ifunc->funcname[j],"operator=")==0
+                       //   && 'u'==ifunc->param[j][0]->type
+                       //   && i==ifunc->param[j][0]->p_tagtable){
+                       //   G__cppif_gendefault(fp,hfp,i,j,ifunc,1,1,1,0,1);
+                       //}   
+                       //else{  // generate inline for normal function
+                       if ( !(strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
+                              strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
+                              strncmp(G__fulltagname(i,0),"list", strlen("list"))==0 ||
+                              strncmp(G__fulltagname(i,0),"deque", strlen("deque"))==0 ||
+                              strncmp(G__fulltagname(i,0),"set", strlen("set"))==0 ||
+                              strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))==0 || 
+                              strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))==0 ||
+                              strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
+                              strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
+                              strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0) )
+                          G__cppif_geninline(fp, ifunc, i, j);
+                       //}
+                    }
+                    else if(!ifunc->ispurevirtual[j] && G__dicttype==3){
+                       // Now we have no symbol but we are in the third or fourth
+                       // dictionary... which means that the second one already tried to create it...
+                       // If that's the case we have no other choice but to generate the stub
+                       //if(strcmp(ifunc->funcname[j],"operator=")==0
+                       //   && 'u'==ifunc->param[j][0]->type
+                       //   && i==ifunc->param[j][0]->p_tagtable){
+                       //   G__cppif_gendefault(fp,hfp,i,j,ifunc,1,1,1,0,1);
+                       //}   
+                       //else                 
+                       G__cppif_genfunc(fp,hfp,i,j,ifunc);
+                    }
+                    else if(!ifunc->ispurevirtual[j] && G__dicttype==4){
                  
-                    // The inline of an operator== must be generated
-                    // in a different way as one of a normal function
-                    //if(strcmp(ifunc->funcname[j],"operator=")==0
-                    //   && 'u'==ifunc->param[j][0]->type
-                    //   && i==ifunc->param[j][0]->p_tagtable){
-                    //   G__cppif_gendefault(fp,hfp,i,j,ifunc,1,1,1,0,1);
-                    //}
-                    //else{  // generate stub for normal function
-                    G__cppif_genfunc(fp,hfp,i,j,ifunc);
-                    //}
-                 }
-                 else if(G__dicttype==0){
-                    // This is the old case...
-                    // just do what we did before
-                    G__cppif_genfunc(fp,hfp,i,j,ifunc);
+                       // The inline of an operator== must be generated
+                       // in a different way as one of a normal function
+                       //if(strcmp(ifunc->funcname[j],"operator=")==0
+                       //   && 'u'==ifunc->param[j][0]->type
+                       //   && i==ifunc->param[j][0]->p_tagtable){
+                       //   G__cppif_gendefault(fp,hfp,i,j,ifunc,1,1,1,0,1);
+                       //}
+                       //else{  // generate stub for normal function
+                       G__cppif_genfunc(fp,hfp,i,j,ifunc);
+                       //}
+                    }
+                    else if(G__dicttype==0){
+                       // This is the old case...
+                       // just do what we did before
+                       G__cppif_genfunc(fp,hfp,i,j,ifunc);
+                    }
                  }
               }
 
@@ -5172,6 +5195,12 @@ void G__cppif_func(FILE *fp, FILE *hfp)
   int j;
   struct G__ifunc_table_internal *ifunc;
 
+  // LF 30-07-07
+  // Trigger the symbol registering to have them at hand
+  // Do it here when we have the library and the class
+  if(G__dicttype == 3 || G__dicttype==4)
+     G__register_class(G__libname, 0);
+
   fprintf(fp,"\n/* Setting up global function */\n");
   ifunc = &G__ifunc;
 
@@ -5186,15 +5215,27 @@ void G__cppif_func(FILE *fp, FILE *hfp)
          // Generate the stubs only for operators
          // (when talking about global functions)
          // LF 11-07-07
-         if( G__dicttype==0 ||((G__dicttype==3 || G__dicttype==4) && (!ifunc->mangled_name[j] || ((ifunc->reftype[j] != G__PARAREFERENCE) &&
-                     (ifunc->type[j] == 'u') &&
-                     (G__struct.type[ifunc->p_tagtable[j]] == 'c' || 
-                      G__struct.type[ifunc->p_tagtable[j]] == 's' || 
-                      G__struct.type[ifunc->p_tagtable[j]] == 'u')))))
-            G__cppif_genfunc(fp,hfp,-1,j,ifunc);
-         else
-            if (!ifunc->mangled_name[j])
-               G__cppif_geninline(fp, ifunc, -1, j);
+        if(  G__dicttype==0 ||
+             ((G__dicttype==3 || G__dicttype==4) && 
+              // The stubs where generated for functions needing temporal objects too... use them
+              ( !ifunc->mangled_name[j] ||
+                ((ifunc->reftype[j] != G__PARAREFERENCE) &&
+                 (ifunc->type[j] == 'u') &&
+                 (G__struct.type[ifunc->p_tagtable[j]] == 'c' || 
+                  G__struct.type[ifunc->p_tagtable[j]] == 's' || 
+                  G__struct.type[ifunc->p_tagtable[j]] == 'u')) ||
+              
+                // LF 26-10-07
+                // Generate the stubs for those function needing a pointer to a reference (see TCLonesArray "virtual TObject*&	operator[](Int_t idx)")
+                // Is this condition correct and/or sufficient?
+                ((ifunc->reftype[j] == G__PARAREFERENCE) && strcmp(ifunc->funcname[j],"operator=")!=0 && !ifunc->mangled_name[j])
+               )
+             ) 
+           ) 
+           G__cppif_genfunc(fp,hfp,-1,j,ifunc);
+        else
+           if (!ifunc->mangled_name[j])
+              G__cppif_geninline(fp, ifunc, -1, j);
                    
       } /* if(access) */
     } /* for(j) */
@@ -9004,7 +9045,22 @@ void G__cpplink_memfunc(FILE *fp)
                   
                   // Why do we have to put the isabstract here?
                   // it doesnt seem to be necesary in the original code
-                  if(!ifunc->mangled_name[j] && !ifunc->ispurevirtual[j]){
+                  if( !ifunc->ispurevirtual[j] && 
+                      (!ifunc->mangled_name[j] || 
+                      
+                      // The stubs where generated for functions needing temporal objects too... use them
+                      ((ifunc->reftype[j] != G__PARAREFERENCE) &&
+                       (ifunc->type[j] == 'u') &&
+                       (G__struct.type[ifunc->p_tagtable[j]] == 'c' || 
+                        G__struct.type[ifunc->p_tagtable[j]] == 's' || 
+                        G__struct.type[ifunc->p_tagtable[j]] == 'u')) ||
+
+                      // LF 26-10-07
+                      // Generate the stubs for those function needing a pointer to a reference (see TCLonesArray "virtual TObject*&	operator[](Int_t idx)")
+                      // Is this condition correct and/or sufficient?
+                       ((ifunc->reftype[j] == G__PARAREFERENCE) && strcmp(ifunc->funcname[j],"operator=")!=0 && !ifunc->mangled_name[j])
+                      )
+                     ){
                      if(strcmp(ifunc->funcname[j],G__struct.name[i])==0) {
                         // constructor need special handling
                         if(0==G__struct.isabstract[i]&&0==isnonpublicnew) {
@@ -9887,8 +9943,9 @@ void G__cpplink_func(FILE *fp)
   // LF 30-07-07
   // Trigger the symbol registering to have them at hand
   // Do it here when we have the library and the class
-  if(G__dicttype == 3 || G__dicttype==4)
-     G__register_class(G__libname, 0);
+  //if(G__dicttype == 3 || G__dicttype==4)
+  //   G__register_class(G__libname, 0);
+  // ** This is moved before the stub generation
 
   fprintf(fp,"\n/*********************************************************\n");
   fprintf(fp,"* Global function information setup for each class\n");
@@ -9951,8 +10008,23 @@ void G__cpplink_func(FILE *fp)
         // Remember we only have stubs for global operator...
         // for the rest just point to null
         /* function name and return type */        
-        if( G__dicttype==0 ||
-            strncmp(ifunc->funcname[j], "operator", strlen("operator"))==0 )
+        if(  G__dicttype==0 ||
+             ((G__dicttype==3 || G__dicttype==4) && 
+              // The stubs where generated for functions needing temporal objects too... use them
+              ( !ifunc->mangled_name[j] ||
+                ((ifunc->reftype[j] != G__PARAREFERENCE) &&
+                 (ifunc->type[j] == 'u') &&
+                 (G__struct.type[ifunc->p_tagtable[j]] == 'c' || 
+                  G__struct.type[ifunc->p_tagtable[j]] == 's' || 
+                  G__struct.type[ifunc->p_tagtable[j]] == 'u')) ||
+              
+                // LF 26-10-07
+                // Generate the stubs for those function needing a pointer to a reference (see TCLonesArray "virtual TObject*&	operator[](Int_t idx)")
+                // Is this condition correct and/or sufficient?
+                ((ifunc->reftype[j] == G__PARAREFERENCE) && strcmp(ifunc->funcname[j],"operator=")!=0 && !ifunc->mangled_name[j])
+               )
+             ) 
+           ) 
            fprintf(fp,"%s, ",G__map_cpp_funcname(-1
                                                  ,ifunc->funcname[j]
                                                  ,j,ifunc->page));
