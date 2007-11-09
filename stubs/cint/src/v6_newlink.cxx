@@ -5186,10 +5186,16 @@ void G__cppif_func(FILE *fp, FILE *hfp)
          // Generate the stubs only for operators
          // (when talking about global functions)
          // LF 11-07-07
-         if( G__dicttype==0 || 
-             strncmp(ifunc->funcname[j], "operator", strlen("operator"))==0 )
+         if( G__dicttype==0 ||((G__dicttype==3 || G__dicttype==4) && (!ifunc->mangled_name[j] || ((ifunc->reftype[j] != G__PARAREFERENCE) &&
+                     (ifunc->type[j] == 'u') &&
+                     (G__struct.type[ifunc->p_tagtable[j]] == 'c' || 
+                      G__struct.type[ifunc->p_tagtable[j]] == 's' || 
+                      G__struct.type[ifunc->p_tagtable[j]] == 'u')))))
             G__cppif_genfunc(fp,hfp,-1,j,ifunc);
-
+         else
+            if (!ifunc->mangled_name[j])
+               G__cppif_geninline(fp, ifunc, -1, j);
+                   
       } /* if(access) */
     } /* for(j) */
     ifunc=ifunc->next;
