@@ -1861,12 +1861,12 @@ Int_t TProof::Collect(TMonitor *mon, Long_t timeout)
          TIter nxs(al);
          TSocket *xs = 0;
          while ((xs = (TSocket *)nxs())) {
-           TSlave *wrk = FindSlave(xs);
-           if (wrk)
-              Info("Collect","   %s", wrk->GetName());
-           else
-              Info("Collect","   %p: %s:%d", xs, xs->GetInetAddress().GetHostName(),
-                                                 xs->GetInetAddress().GetPort());
+            TSlave *wrk = FindSlave(xs);
+            if (wrk)
+               Info("Collect","   %s", wrk->GetName());
+            else
+               Info("Collect","   %p: %s:%d", xs, xs->GetInetAddress().GetHostName(),
+                                                  xs->GetInetAddress().GetPort());
          }
       }
       mon->DeActivateAll();
@@ -1999,6 +1999,8 @@ Int_t TProof::CollectInputFrom(TSocket *s)
          {
             Int_t size;
             (*mess) >> size;
+            PDB(kGlobal,2)
+               Info("CollectInputFrom","kPROOF_LOGFILE: size: %d", size);
             RecvLogFile(s, size);
          }
          break;
@@ -5570,7 +5572,7 @@ void TProof::ValidateDSet(TDSet *dset)
    }
 
    PDB(kGlobal,1)
-     Info("ValidateDSet","Calling Collect");
+      Info("ValidateDSet","Calling Collect");
    Collect(&usedslaves);
    SetDSet(0);
 }
@@ -5633,6 +5635,20 @@ void TProof::SetParameter(const char *par, const char *value)
       delete item;
    }
    il->Add(new TNamed(par, value));
+}
+
+//______________________________________________________________________________
+void TProof::SetParameter(const char *par, Int_t value)
+{
+   // Set an input list parameter.
+
+   TList *il = fPlayer->GetInputList();
+   TObject *item = il->FindObject(par);
+   if (item) {
+      il->Remove(item);
+      delete item;
+   }
+   il->Add(new TParameter<Int_t>(par, value));
 }
 
 //______________________________________________________________________________
@@ -7415,6 +7431,24 @@ Int_t TProof::GetParameter(TCollection *c, const char *par, TString &value)
    }
    return -1;
 
+}
+
+//______________________________________________________________________________
+Int_t TProof::GetParameter(TCollection *c, const char *par, Int_t &value)
+{
+   // Get the value from the specified parameter from the specified collection.
+   // Returns -1 in case of error (i.e. list is 0, parameter does not exist
+   // or value type does not match), 0 otherwise.
+
+   TObject *obj = c->FindObject(par);
+   if (obj) {
+      TParameter<Int_t> *par = dynamic_cast<TParameter<Int_t>*>(obj);
+      if (par) {
+         value = par->GetVal();
+         return 0;
+      }
+   }
+   return -1;
 }
 
 //______________________________________________________________________________
