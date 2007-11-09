@@ -132,11 +132,15 @@ Bool_t TTimer::CheckTimer(const TTime &now)
                            (ULong_t) (0.05 * (ULong_t)fTime));
    xnow += now;
 
+//   Info("CheckTimer"," fAbsTime: %ld xnow:%ld", (ULong_t)fAbsTime, (ULong_t)xnow);
+
    if (fAbsTime <= xnow) {
+//   Info("CheckTimer","timedout");
       fTimeout = kTRUE;
       Notify();
       return kTRUE;
    }
+//   Info("CheckTimer","not timedout (%d)", (fAbsTime <= xnow) ? 1 : 0);
    return kFALSE;
 }
 
@@ -145,6 +149,8 @@ Bool_t TTimer::Notify()
 {
    // Notify when timer times out. The timer is always reset. To stop
    // the timer call TurnOff().
+
+//   Info("Notify"," fObject: %p", fObject);
 
    Timeout();       // emit Timeout() signal
    if (fObject) fObject->HandleTimer(this);

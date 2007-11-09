@@ -455,6 +455,23 @@ void TApplication::HandleIdleTimer()
 }
 
 //______________________________________________________________________________
+void TApplication::HandleException(Int_t sig)
+{
+   // Handle exceptions (kSigBus, kSigSegmentationViolation,
+   // kSigIllegalInstruction and kSigFloatingException) trapped in TSystem.
+   // Specific TApplication implementations may want something different here.
+
+   if (TROOT::Initialized()) {
+      if (gException) {
+         gInterpreter->RewindDictionary();
+         gInterpreter->ClearFileBusy();
+      }
+      Throw(sig);
+   }
+   gSystem->Exit(sig);
+}
+
+//______________________________________________________________________________
 void TApplication::Help(const char *line)
 {
    // Print help on interpreter.

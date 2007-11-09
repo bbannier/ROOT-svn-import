@@ -972,11 +972,10 @@ void TUnixSystem::DispatchSignals(ESignals sig)
    case kSigFloatingException:
       Break("TUnixSystem::DispatchSignals", UnixSigname(sig));
       StackTrace();
-      if (gApplication) {
-         gApplication->HandleSignalException(sig);
-      } else {
+      if (gApplication)
+         gApplication->HandleException(sig);
+      else
          Exit(sig);
-      }
       break;
    case kSigSystem:
    case kSigPipe:
@@ -2558,6 +2557,7 @@ Bool_t TUnixSystem::DispatchTimers(Bool_t mode)
    Bool_t  timedout = kFALSE;
 
    while ((t = (TTimer *) it.Next())) {
+//      Info("DispatchTimers","checking: %p", t);
       // NB: the timer resolution is added in TTimer::CheckTimer()
       Long_t now = UnixNow();
       if (mode && t->IsSync()) {
