@@ -1483,7 +1483,7 @@ Long64_t TProofPlayerRemote::Finalize(Bool_t force, Bool_t sync)
                output->Add(obj);
          }
 
-         PDB(kLoop,1) Info("Process","Call Terminate()");
+         PDB(kLoop,1) Info("Finalize","Call Terminate()");
          fOutput->Clear("nodelete");
          fSelector->Terminate();
 
