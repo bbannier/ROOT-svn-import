@@ -771,6 +771,10 @@ Int_t  TProofDataSetManager::ScanDataSet(TFileCollection *dataset, const char *o
          }
       }
 
+      // disable warnings when reading a tree without loading the corresponding library
+      Int_t oldLevel = gErrorIgnoreLevel;
+      gErrorIgnoreLevel = kError+1;
+
       // loop over all entries and create/update corresponding metadata
       // this code only used the objects in the basedir, should be extended to cover directories also
       // It only processes TTrees
@@ -801,6 +805,9 @@ Int_t  TProofDataSetManager::ScanDataSet(TFileCollection *dataset, const char *o
                metaData->SetEntries(tree->GetEntries());
          }
       }
+
+      // set back old warning level
+      gErrorIgnoreLevel = oldLevel;
 
       file->Close();
       delete file;
