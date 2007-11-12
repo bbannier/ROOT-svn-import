@@ -15,6 +15,7 @@
 
 #include "common.h"
 #include <list>
+#include <string>
 
 extern std::list<G__DLLINIT>* G__initpermanentsl;
 
@@ -1122,6 +1123,31 @@ int G__main(int argc, char** argv)
       //if(!G__dicttype) // LF
       G__gen_cppheader(0);
    }
+
+   /*
+   fp = fopen(G__globalcomp,"a");
+   if(!fp) G__fileerror(G__globalcomp);
+   std::string headerb(basename(dllid));
+   std::string::size_type idx = headerb.find("Tmp", 0);
+   int l;
+   if(idx != std::string::npos){
+      l = idx;
+      headerb[l] = '\0';   
+   }
+   else{
+      idx = headerb.find(".", 0);
+      if(idx != std::string::npos){
+         l = idx;
+         headerb[l] = '\0';   
+      }
+   }
+   // LF 12-11-07
+   // put protection against multiple includes of dictionaries' .h
+   fprintf(G__globalcomp,"#ifndef G__includes_dict_%s\n", headerb.c_str());
+   fprintf(G__globalcomp,"#define G__includes_dict_%s\n", headerb.c_str());
+   fclose(G__globalcomp);
+   */
+
    /*************************************************************
     * prerun, read whole ifuncs to allocate global variables and
     * make ifunc table.
@@ -1200,6 +1226,13 @@ int G__main(int argc, char** argv)
          return(EXIT_SUCCESS);
       }
    }
+   /*
+   fp = fopen(G__globalcomp,"a");
+   if(!fp) G__fileerror(G__globalcomp);
+   fprintf(tmpf,"#endif\n");
+   fclose(G__globalcomp);
+   */
+
    if (icom) {
       int more = 0;
       G__redirect_on();
