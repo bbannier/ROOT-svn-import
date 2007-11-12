@@ -180,10 +180,14 @@ void stressGraphics(Int_t verbose = 0)
 
    // Check if $ROOTSYS/tutorials/hsimple.root exists
    gErrorIgnoreLevel = 9999;
-   gFile = new TFile("$ROOTSYS/tutorials/hsimple.root");
+   gFile = new TFile("$(ROOTSYS)/tutorials/hsimple.root");
    if (gFile->IsZombie()) {
-      printf("File $ROOTSYS/tutorials/hsimple.root does not exist. Run tutorial hsimple.C first\n");
-      return;
+      delete gFile;
+      gFile = new TFile("hsimple.root");
+      if (gFile->IsZombie()) {
+         printf("File $(ROOTSYS)/tutorials/hsimple.root does not exist. Run tutorial hsimple.C first\n");
+         return;
+      }
    }
    gErrorIgnoreLevel = 0;
    
@@ -310,10 +314,8 @@ void StatusPrint(Int_t id, const TString &title, Int_t res, Int_t ref, Int_t err
 {
    // Print test program number and its title
 
-   Char_t number[4];
-   sprintf(number,"%2d",id);
    if (!gOptionR) {
-      TString header = TString("Test ")+number+" : "+title;
+      TString header = TString("Test ")+Form("%2d",id)+" : "+title;
       const Int_t nch = header.Length();
       if (TMath::Abs(res-ref)<=err) {
          for (Int_t i = nch; i < 67; i++) header += '.';
@@ -458,11 +460,9 @@ void tmarker_draw(Double_t x, Double_t y, Int_t mt, Double_t d)
 {
    // Auxiliary function used by "tmarker"
 
-   char val[3];
-   sprintf(val,"%d",mt);
    double dy=d/3;
    TMarker *m  = new TMarker(x+0.1, y, mt);
-   TText   *t  = new TText(x-0.1, y, val);
+   TText   *t  = new TText(x-0.1, y, Form("%d",mt));
    TLine   *l1 = new TLine(0,y,1,y);
    TLine   *l2 = new TLine(0,y+dy,1,y+dy);
    TLine   *l3 = new TLine(0,y-dy,1,y-dy);
@@ -572,9 +572,7 @@ void patterns_box(Int_t pat, Double_t x1, Double_t y1, Double_t x2, Double_t  y2
    TLatex l;
    l.SetTextAlign(22);
    l.SetTextSize(h);
-   char s[32];
-   sprintf(s,"%d",pat);
-   l.DrawLatex((x1+x2)/2, (y1+y2)/2, s);
+   l.DrawLatex((x1+x2)/2, (y1+y2)/2, Form("%d",pat));
 }
 
 
@@ -1586,6 +1584,12 @@ void earth()
    TH2F *h4 = new TH2F("h4","Parabolic", 50, -180, 180, 50, -90.5, 90.5);
    ifstream in;
    in.open("../tutorials/graphics/earth.dat");
+   if (!in) {
+      in.clear();
+      in.open("earth.dat");
+   }
+   if (!in)
+      printf("Cannot find earth.dat!\n");
    Float_t x,y;
    while (1) {
      in >> x >> y;
@@ -1866,21 +1870,21 @@ void timage()
    
    TCanvas *C = StartTest(800,800);
 
-   TImage *img = TImage::Open("../tutorials/image/rose512.jpg");
+   TImage *img = TImage::Open("$(ROOTSYS)/tutorials/image/rose512.jpg");
    if (!img) {
       printf("Could not create an image... exit\n");
       return;
    }
-   TImage *i1 = TImage::Open("../tutorials/image/rose512.jpg");
+   TImage *i1 = TImage::Open("$(ROOTSYS)/tutorials/image/rose512.jpg");
    i1->SetConstRatio(kFALSE);
    i1->Flip(90);
-   TImage *i2 = TImage::Open("../tutorials/image/rose512.jpg");
+   TImage *i2 = TImage::Open("$(ROOTSYS)/tutorials/image/rose512.jpg");
    i2->SetConstRatio(kFALSE);
    i2->Flip(180);
-   TImage *i3 = TImage::Open("../tutorials/image/rose512.jpg");
+   TImage *i3 = TImage::Open("$(ROOTSYS)/tutorials/image/rose512.jpg");
    i3->SetConstRatio(kFALSE);
    i3->Flip(270);
-   TImage *i4 = TImage::Open("../tutorials/image/rose512.jpg");
+   TImage *i4 = TImage::Open("$(ROOTSYS)/tutorials/image/rose512.jpg");
    i4->SetConstRatio(kFALSE);
    i4->Mirror(kTRUE);
    float d = 0.40;
