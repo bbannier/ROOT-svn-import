@@ -1,4 +1,4 @@
-// @(#)root/gui:$Id$
+// @(#)root/gui:$Id: TRootBrowser.h 20523 2007-10-29 07:12:22Z ganis $
 // Author: Bertrand Bellenot   26/09/2007
 
 /*************************************************************************
@@ -130,6 +130,7 @@ public:
    virtual Long_t    ExecPlugin(const char *name = 0, const char *fname = 0, 
                                 const char *cmd = 0, Int_t pos = kRight, 
                                 Int_t subpos = -1);
+   virtual void      SetStatusText(const char *txt, Int_t col);
    virtual Bool_t    HandleKey(Event_t *event);
 
    // overridden from TGMainFrame

@@ -87,7 +87,7 @@ F77LIBS       =
 endif
 endif
 else
-F77           = g77
+F77          := g77
 F77LIBS       =
 endif
 F77FLAGS      = -m64
@@ -99,8 +99,10 @@ ifeq ($(MACOSX_CPU),powerpc)
 F77LIBS += -L$(FINK_DIR)/lib -lg2c
 endif
 
+ifneq ($(F77),)
 ifeq ($(shell find $(FINK_DIR)/bin -name $(F77)),)
 BUILDHBOOK   := no
+endif
 endif
 
 # Override default in Makefile.config
@@ -109,7 +111,7 @@ INSTALLDATA  := /bin/cp -pPR
 
 # Extras
 ifeq ($(NEEDFINK),yes)
-FINK_CXXFLAGS = $(shell [ -d $(FINK_DIR)/include ] && echo -I$(FINK_DIR)/include)
-FINK_CFLAGS   = $(shell [ -d $(FINK_DIR)/include ] && echo -I$(FINK_DIR)/include)
-FINK_LDFLAGS  = $(shell [ -d $(FINK_DIR)/lib ] && echo -L$(FINK_DIR)/lib)
+FINK_CXXFLAGS := $(shell [ -d $(FINK_DIR)/include ] && echo -I$(FINK_DIR)/include)
+FINK_CFLAGS   := $(shell [ -d $(FINK_DIR)/include ] && echo -I$(FINK_DIR)/include)
+FINK_LDFLAGS  := $(shell [ -d $(FINK_DIR)/lib ] && echo -L$(FINK_DIR)/lib)
 endif

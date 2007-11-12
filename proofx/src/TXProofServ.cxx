@@ -538,10 +538,13 @@ void TXProofServ::HandleTermination()
    // If master server, propagate interrupt to slaves
    // (shutdown interrupt send internally).
    if (IsMaster()) {
+
       // If not idle, try first to stop processing
       if (!fIdle) {
          // Remove pending requests
          fWaitingQueries->Delete();
+         // Interrupt the current monitor
+         fProof->InterruptCurrentMonitor();
          // Do not wait for ever, but al least 20 seconds
          Long_t timeout = gEnv->GetValue("Proof.ShutdownTimeout", 60);
          timeout = (timeout > 20) ? timeout : 20;
@@ -946,6 +949,11 @@ void TXProofServ::Terminate(Int_t status)
       // Unlock the query dir owned by this session
       if (fQueryLock)
          fQueryLock->Unlock();
+   } else {
+      // Try to stop processing if any
+      if (!fIdle && fPlayer)
+         fPlayer->StopProcess(kTRUE,1);
+      gSystem->Sleep(2000);
    }
 
    // Remove input and signal handlers to avoid spurious "signals"
@@ -961,8 +969,11 @@ void TXProofServ::Terminate(Int_t status)
    // eventually exit the loop.
    TXSocket::PostPipe((TXSocket *)fSocket);
 
+   // Try commenting this out
+#if 0
    // Avoid communicating back anything to the coordinator (it is gone)
    ((TXSocket *)fSocket)->SetSessionID(-1);
+#endif
 
    // Notify
    Printf("Terminate: termination operations ended: quitting!");

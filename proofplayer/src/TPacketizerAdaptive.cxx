@@ -1334,12 +1334,11 @@ Int_t TPacketizerAdaptive::GetEstEntriesProcessed(Float_t t,
    ent = fProcessed;
    bytes = fBytesRead;
 
-   // Parse option from the env
-   TString estopt(gEnv->GetValue("Proof.RateEstimation",""));
-   if (estopt.IsNull() || (estopt != "average" && estopt != "current"))
+   // Parse option
+   if (fUseEstOpt == kEstOff)
       // Do not use estimation
       return 0;
-   Bool_t current = (estopt == "current") ? kTRUE : kFALSE;
+   Bool_t current = (fUseEstOpt == kEstCurrent) ? kTRUE : kFALSE;
 
    // Loop over the workers
    Float_t trate = 0.;

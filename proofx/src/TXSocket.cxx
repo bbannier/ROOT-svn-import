@@ -1045,13 +1045,15 @@ Int_t TXSocket::SendRaw(const void *buffer, Int_t length, ESendRecvOptions opt)
       // ok
       return nsent;
    } else {
-      // Print error mag, if any
+      // Print error message, if any
       if (fConn->GetLastErr())
          Printf("%s: %s", fHost.Data(), fConn->GetLastErr());
+      else
+         Printf("%s: error occured but no message from server", fHost.Data());
    }
 
    // Failure notification (avoid using the handler: we may be exiting)
-   Error("SendRaw", "problems sending data to server");
+   Error("SendRaw", "%s: problems sending data to server", fHost.Data());
 
    return -1;
 }
@@ -1649,7 +1651,10 @@ void TXSocket::InitEnvs()
    if (denyCO.Length() > 0)
       EnvPutString(NAME_CONNECTDOMAINDENY_RE, denyCO.Data());
 
-   // Connect Timeout
+   // Max number of retries on first connect and related timeout
+   XrdProofConn::SetRetryParam(-1, -1);
+   Int_t maxRetries = gEnv->GetValue("XProof.FirstConnectMaxCnt",5);
+   EnvPutInt(NAME_FIRSTCONNECTMAXCNT, maxRetries);
    Int_t connTO = gEnv->GetValue("XProof.ConnectTimeout", 2);
    EnvPutInt(NAME_CONNECTTIMEOUT, connTO);
 
@@ -1667,12 +1672,19 @@ void TXSocket::InitEnvs()
                                       DFLT_STARTGARBAGECOLLECTORTHREAD);
    EnvPutInt(NAME_STARTGARBAGECOLLECTORTHREAD, garbCollTh);
 
-   // Max number of retries on first connect
-   Int_t maxRetries = gEnv->GetValue("XProof.FirstConnectMaxCnt",5);
-   EnvPutInt(NAME_FIRSTCONNECTMAXCNT, maxRetries);
-
    // No automatic proofd backward-compatibility
    EnvPutInt(NAME_KEEPSOCKOPENIFNOTXRD, 0);
+
+   // Dynamic forwarding (SOCKS4)
+   TString socks4Host = gEnv->GetValue("XNet.SOCKS4Host","");
+   Int_t socks4Port = gEnv->GetValue("XNet.SOCKS4Port",-1);
+   if (socks4Port > 0) {
+      if (socks4Host.IsNull())
+         // Default
+         socks4Host = "127.0.0.1";
+      EnvPutString(NAME_SOCKS4HOST, socks4Host.Data());
+      EnvPutInt(NAME_SOCKS4PORT, socks4Port);
+   }
 
    // For password-based authentication
    TString autolog = gEnv->GetValue("XSec.Pwd.AutoLogin","1");

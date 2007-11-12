@@ -426,6 +426,8 @@ protected:
    TList          *fAvailablePackages; //list of available packages
    TList          *fEnabledPackages;   //list of enabled packages
 
+   Int_t           fCollectTimeout; // Timeout for (some) collect actions
+
    TString         fDataPoolUrl;    // default data pool entry point URL
    TProofMgr::EServType fServType;  // type of server: proofd, XrdProofd
    TProofMgr      *fManager;        // manager to which this session belongs (if any)
@@ -674,6 +676,7 @@ public:
 
    //-- input list parameter handling
    void        SetParameter(const char *par, const char *value);
+   void        SetParameter(const char *par, Int_t value);
    void        SetParameter(const char *par, Long_t value);
    void        SetParameter(const char *par, Long64_t value);
    void        SetParameter(const char *par, Double_t value);
@@ -768,6 +771,7 @@ public:
 
    // Input/output list utilities
    static Int_t         GetParameter(TCollection *c, const char *par, TString &value);
+   static Int_t         GetParameter(TCollection *c, const char *par, Int_t &value);
    static Int_t         GetParameter(TCollection *c, const char *par, Long_t &value);
    static Int_t         GetParameter(TCollection *c, const char *par, Long64_t &value);
    static Int_t         GetParameter(TCollection *c, const char *par, Double_t &value);

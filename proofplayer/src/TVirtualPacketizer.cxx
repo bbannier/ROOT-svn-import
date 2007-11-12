@@ -32,6 +32,7 @@
 
 
 #include "TVirtualPacketizer.h"
+#include "TEnv.h"
 #include "TFile.h"
 #include "TTree.h"
 #include "TKey.h"
@@ -89,6 +90,19 @@ TVirtualPacketizer::TVirtualPacketizer(TList *input)
    fProgress = new TTimer;
    fProgress->SetObject(this);
    fProgress->Start(period, kFALSE);
+
+   // Whether to send estimated values for the progress info
+   TString estopt; 
+   TProof::GetParameter(input, "PROOF_RateEstimation", estopt);
+   if (estopt.IsNull()) {
+      // Parse option from the env
+      estopt = gEnv->GetValue("Proof.RateEstimation", "");
+   }
+   fUseEstOpt = kEstOff;
+   if (estopt == "current")
+      fUseEstOpt = kEstCurrent;
+   else if (estopt == "average")
+      fUseEstOpt = kEstAverage;
 }
 
 //______________________________________________________________________________
@@ -220,8 +234,6 @@ Bool_t TVirtualPacketizer::HandleTimer(TTimer *)
       Float_t now = (Float_t) (Long_t(tnow) - fStartTime) / (Double_t)1000.;
       Long64_t estent = fProcessed;
       Long64_t estmb = fBytesRead;
-      Double_t evts = (Double_t) fProcessed;
-      Double_t mbs = (fBytesRead > 0) ? fBytesRead / TMath::Power(2.,20.) : 0.; //--> MB
 
       // Times and counters
       Float_t evtrti = -1., mbrti = -1.;
@@ -241,8 +253,8 @@ Bool_t TVirtualPacketizer::HandleTimer(TTimer *)
          fProcTime = now - fInitTime;
          // Estimated number of processed events
          GetEstEntriesProcessed(fProcTime, estent, estmb);
-         evts = (Double_t) estent;
-         mbs = (Double_t) estmb;
+         Double_t evts = (Double_t) estent;
+         Double_t mbs = (estmb > 0) ?  estmb / TMath::Power(2.,20.) : 0.; //--> MB
          // Good entry
          fCircProg->Fill((Double_t)fProcTime, evts, mbs);
          // Instantaneous rates (at least 5 reports)

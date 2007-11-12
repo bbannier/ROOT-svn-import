@@ -131,7 +131,10 @@ private:
 
    TProofDataSetManager* fDataSetManager; // dataset manager
 
-   static Int_t  fgMaxQueries;      //Max number of queries fully kept
+   // Quotas (-1 to disable)
+   Int_t         fMaxQueries;       //Max number of queries fully kept
+   Long64_t      fMaxBoxSize;       //Max size of the sandbox
+   Long64_t      fHWMBoxSize;       //High-Water-Mark on the sandbox size
 
    void          RedirectOutput();
    Int_t         CatMotd();
@@ -142,6 +145,7 @@ private:
 
    // Query handlers
    void          AddLogFile(TProofQueryResult *pq);
+   Int_t         ApplyMaxQueries();
    Int_t         CleanupQueriesDir();
    void          FinalizeQuery(TProofQueryResult *pq);
    TProofQueryResult *MakeQueryResult(Long64_t nentries, const char *opt,
@@ -216,7 +220,7 @@ public:
 
    virtual EQueryAction GetWorkers(TList *workers, Int_t &prioritychange);
 
-   virtual void   HandleSignalException(Int_t sig);
+   virtual void   HandleException(Int_t sig);
    virtual void   HandleSocketInput();
    virtual void   HandleUrgentData();
    virtual void   HandleSigPipe();
