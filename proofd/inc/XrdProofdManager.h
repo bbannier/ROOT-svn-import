@@ -109,6 +109,8 @@ class XrdProofdManager {
    int               fResourceType; // resource type
    XrdProofdFile     fPROOFcfg;     // PROOF static configuration
 
+   int               fRequestTO;    // Timeout on broadcast request
+
    std::list<XrdProofWorker *> fWorkers;  // List of possible workers
    std::list<XrdProofWorker *> fNodes;   // List of worker unique nodes
 

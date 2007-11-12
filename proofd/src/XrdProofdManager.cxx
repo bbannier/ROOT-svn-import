@@ -22,6 +22,8 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
+#include "XrdClient/XrdClientConst.hh"
+#include "XrdClient/XrdClientEnv.hh"
 #include "XrdClient/XrdClientMessage.hh"
 #include "XrdClient/XrdClientUrlInfo.hh"
 #include "XrdNet/XrdNetDNS.hh"
@@ -60,6 +62,7 @@ XrdProofdManager::XrdProofdManager()
    fNumLocalWrks = XrdProofdAux::GetNumCPUs();
    fEDest = 0;
    fSuperMst = 0;
+   fRequestTO = 30;
 }
 
 //__________________________________________________________________________
@@ -194,7 +197,12 @@ int XrdProofdManager::Config(const char *fn, XrdSysError *e)
                   }
                }
 
-            } else {
+            } else if (!strcmp("adminreqto",var)) {
+               // Timeout on requested broadcasted to workers; there are 4 attempts,
+               // so the real timeout is 4 x fRequestTO
+               int to = strtol(val, 0, 10);
+               fRequestTO = (to > 0) ? to : fRequestTO;
+           } else {
 
                // Save 'val' first
                XrdOucString tval = val;
@@ -344,6 +352,8 @@ XrdProofConn *XrdProofdManager::GetProofConn(const char *url)
 {
    // Get a XrdProofConn for url; create a new one if not available
 
+   XrdSysMutexHelper mhp(&fMutex);
+
    XrdProofConn *p = 0;
    if (fProofConnHash.Num() > 0) {
       if ((p = fProofConnHash.Find(url)) && !(p->IsValid())) {
@@ -365,6 +375,9 @@ XrdProofConn *XrdProofdManager::GetProofConn(const char *url)
    int timewait_save = -1;
    XrdProofConn::GetRetryParam(maxtry_save, timewait_save);
    XrdProofConn::SetRetryParam(1, 1);
+
+   // Request Timeout
+   EnvPutInt(NAME_REQUESTTIMEOUT, fRequestTO);
 
    if ((p = new XrdProofConn(url, m, -1, -1, 0, buf.c_str()))) 
       // Cache it
@@ -393,6 +406,14 @@ XrdClientMessage *XrdProofdManager::Send(const char *url, int type,
 
    // Get a connection to the server
    XrdProofConn *conn = GetProofConn(url);
+
+   XrdSysMutexHelper mhp(&fMutex);
+
+   // For requests we try 4 times
+   int maxtry_save = -1;
+   int timewait_save = -1;
+   XrdProofConn::GetRetryParam(maxtry_save, timewait_save);
+   XrdProofConn::SetRetryParam(4, timewait_save);
 
    bool ok = 1;
    if (conn && conn->IsValid()) {
@@ -441,6 +462,9 @@ XrdClientMessage *XrdProofdManager::Send(const char *url, int type,
          r->Send(kXR_attn, kXPD_srvmsg, (char *) cmsg.c_str(), cmsg.length());
       }
    }
+
+   // Restore original retry parameters
+   XrdProofConn::SetRetryParam(maxtry_save, timewait_save);
 
    // Done
    return xrsp;
