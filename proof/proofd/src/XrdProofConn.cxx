@@ -492,6 +492,8 @@ XrdClientMessage *XrdProofConn::SendReq(XPClientRequest *req, const void *reqDat
 
    XrdSysMutexHelper l(*fMutex);
 
+   int maxTry = (fgMaxTry > -1) ? fgMaxTry : kXR_maxReqRetry;
+
    // We need the unmarshalled request for retries
    XPClientRequest reqsave;
    memcpy(&reqsave, req, sizeof(XPClientRequest));
@@ -532,7 +534,7 @@ XrdClientMessage *XrdProofConn::SendReq(XPClientRequest *req, const void *reqDat
          if (!resp)
             abortcmd = CheckErrorStatus(answMex, retry, CmdName);
 
-         if (retry > kXR_maxReqRetry) {
+         if (retry > maxTry) {
             TRACE(REQ,"XrdProofConn::SendReq: max number of retries reached - Abort");
             abortcmd = 1;
          }
