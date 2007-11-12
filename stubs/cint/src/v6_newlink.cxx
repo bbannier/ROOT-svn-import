@@ -3675,7 +3675,7 @@ void G__set_globalcomp(char *mode,char *linkfilename,char *dllid)
        fprintf(fp,"*          FROM HEADER FILES LISTED IN G__setup_cpp_environmentXXX().\n");
        fprintf(fp,"*          CHANGE THOSE HEADER FILES AND REGENERATE THIS FILE.\n");
        fprintf(fp,"********************************************************/\n");
-       fprintf(fp,"#include \"%s\"\n",G__CPPLINK_H);
+       fprintf(fp,"#include \"%s\" //newlink 3678 \n",G__CPPLINK_H);
 
        fprintf(fp,"\n");
        fprintf(fp,"#ifdef G__MEMTEST\n");
@@ -3714,7 +3714,7 @@ void G__set_globalcomp(char *mode,char *linkfilename,char *dllid)
        fprintf(fp,"/********************************************************\n");
        fprintf(fp,"* %s\n",G__CLINK_C);
        fprintf(fp,"********************************************************/\n");
-       fprintf(fp,"#include \"%s\"\n",G__CLINK_H);
+       fprintf(fp,"#include \"%s\" //newlink 3717 \n",G__CLINK_H);
 
        if(G__dicttype!=2)
           fprintf(fp,"void G__c_reset_tagtable%s();\n",G__DLLID);
@@ -3754,7 +3754,7 @@ void G__set_globalcomp(char *mode,char *linkfilename,char *dllid)
        fprintf(fp,"*          FROM HEADER FILES LISTED IN G__setup_cpp_environmentXXX().\n");
        fprintf(fp,"*          CHANGE THOSE HEADER FILES AND REGENERATE THIS FILE.\n");
        fprintf(fp,"********************************************************/\n");
-       fprintf(fp,"#include \"%s\"\n",G__CPPLINK_H);
+       fprintf(fp,"#include \"%s\" //newlink 3757 \n",G__CPPLINK_H);
 
        fprintf(fp,"\n");
        fclose(fp);
@@ -3886,7 +3886,7 @@ void G__gen_cppheader(char *headerfilein)
       case G__CPPLINK:
         fp = fopen(G__CPPLINK_H,"a");
         if(!fp) G__fileerror(G__CPPLINK_H);
-        fprintf(fp,"#include \"%s\"\n",headerfile);
+        fprintf(fp,"#include \"%s\" //newlink 3889 \n",headerfile);
         fclose(fp);
 
         // LF 10-07-07
@@ -3900,7 +3900,7 @@ void G__gen_cppheader(char *headerfilein)
       case G__CLINK:
         fp = fopen(G__CLINK_H,"a");
         if(!fp) G__fileerror(G__CLINK_H);
-        fprintf(fp,"#include \"%s\"\n",headerfile);
+        fprintf(fp,"#include \"%s\" //newlink 3903 \n",headerfile);
         fclose(fp);
 
         // LF 10-07-07
@@ -3914,7 +3914,7 @@ void G__gen_cppheader(char *headerfilein)
       case R__CPPLINK:
         fp = fopen(G__CPPLINK_H,"a");
         if(!fp) G__fileerror(G__CPPLINK_H);
-        fprintf(fp,"#include \"%s\"\n",headerfile);
+        fprintf(fp,"#include \"%s\" //newlink 3917 \n",headerfile);
         fclose(fp);
         break;
       }
@@ -13150,7 +13150,7 @@ void G__gen_extra_include() {
     /* Add the extra include ad the beginning of the files */
     fprintf(fp,"\n/* Includes added by #pragma extra_include */\n");
     for(i=0; i< G__extra_inc_n; i++) {
-      fprintf(fp,"#include \"%s\"\n",G__extra_include[i]);
+      fprintf(fp,"#include \"%s\" //newlink 13153 \n",G__extra_include[i]);
     }
 
     /* Copy rest of the header file */
@@ -13170,7 +13170,7 @@ void G__gen_extra_include() {
 
     fprintf(fp,"\n/* Includes added by #pragma extra_include */\n");
     for(i=0; i< G__extra_inc_n; i++) {
-      fprintf(fp,"#include \"%s\"\n",G__extra_include[i]);
+      fprintf(fp,"#include \"%s\" //newlink 13173 \n",G__extra_include[i]);
     }
     fprintf(fp,"\n");
     fclose(fp);
