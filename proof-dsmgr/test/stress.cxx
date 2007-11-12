@@ -189,12 +189,12 @@ void stress(Int_t nevent, Int_t style = 1,
       FILE *fp = gSystem->OpenPipe("uname -a", "r");
       char line[60];
       fgets(line,60,fp); line[59] = 0;
-      printf("*  %s\n",line);
+      printf("*  SYS: %s\n",line);
       gSystem->ClosePipe(fp);
    } else {
       const char *os = gSystem->Getenv("OS");
-      if (!os) printf("*  Windows 95\n");
-      else     printf("*  %s %s \n",os,gSystem->Getenv("PROCESSOR_IDENTIFIER"));
+      if (!os) printf("*  SYS: Windows 95\n");
+      else     printf("*  SYS: %s %s \n",os,gSystem->Getenv("PROCESSOR_IDENTIFIER"));
    }
 
    printf("******************************************************************\n");
@@ -784,10 +784,13 @@ void stress8(Int_t nevent)
       Bool_t UNIX = strcmp(gSystem->GetName(), "Unix") == 0;
       Int_t st1 = gSystem->Load("$(ROOTSYS)/test/libEvent");
       if (st1 == -1) {
-         printf("===>stress8 will try to build the libEvent library\n");
-         if (UNIX) gSystem->Exec("(cd $ROOTSYS/test; make Event)");
-         else      gSystem->Exec("(cd %ROOTSYS%\\test && nmake libEvent.dll)");
-         st1 = gSystem->Load("$(ROOTSYS)/test/libEvent");
+         st1 = gSystem->Load("test/libEvent");
+         if (st1 == -1) {
+            printf("===>stress8 will try to build the libEvent library\n");
+            if (UNIX) gSystem->Exec("(cd $ROOTSYS/test; make Event)");
+            else      gSystem->Exec("(cd %ROOTSYS%\\test && nmake libEvent.dll)");
+            st1 = gSystem->Load("$(ROOTSYS)/test/libEvent");
+         }
       }
    }
 

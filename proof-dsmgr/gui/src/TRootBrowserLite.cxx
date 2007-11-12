@@ -1215,8 +1215,6 @@ void TRootBrowserLite::CreateBrowser(const char *name)
    SetEditDisabled(kEditDisable);
 
    gVirtualX->SetDNDAware(fId, fDNDTypeList);
-   //SetDNDTarget(kTRUE);
-   AddInput(kPointerMotionMask);
    MapSubwindows();
    SetDefaults();
    Resize();
@@ -3020,6 +3018,18 @@ void TRootBrowserLite::ShowMacroButtons(Bool_t show)
          bt2->Connect("Pressed()", "TRootBrowserLite", this, "InterruptMacro()");
          connected = kTRUE;
       }
+   }
+}
+
+//______________________________________________________________________________
+void TRootBrowserLite::SetStatusText(const char *txt, Int_t col) 
+{
+   // Set text in column col in status bar.
+
+   ShowStatusBar(kTRUE);
+   TGStatusBar* status = GetStatusBar();
+   if (status!=0) {
+      status->SetText(txt, col);
    }
 }
 

@@ -1,4 +1,4 @@
-// @(#)root/gui:$Id: TRootBrowser.cxx 20516 2007-10-26 16:17:33Z rdm $
+// @(#)root/gui:$Id: TRootBrowser.cxx 20547 2007-10-30 13:46:58Z ganis $
 // Author: Bertrand Bellenot   26/09/2007
 
 /*************************************************************************
@@ -244,7 +244,7 @@ void TRootBrowser::CreateBrowser(const char *name)
 
    // status bar
    fStatusBar = new TGStatusBar(this, 400, 20);
-   Int_t parts[] = { 80, 20 };
+   Int_t parts[] = { 26, 74 };
    fStatusBar->SetParts(parts, 2);
    AddFrame(fStatusBar, fLH6);
 
@@ -653,7 +653,7 @@ void TRootBrowser::InitPlugins(Option_t *opt)
 
    // File Browser plugin
    if (strchr(opt, 'F')) {
-      cmd.Form("new TGFileBrowser(gClient->GetRoot(), (TBrowser *)0x%lx, 200, 500)", fBrowser);
+      cmd.Form("new TGFileBrowser(gClient->GetRoot(), (TBrowser *)0x%lx, 200, 500);", fBrowser);
       ExecPlugin("Files", 0, cmd.Data(), 0);
       ++fNbInitPlugins;
    }
@@ -662,7 +662,7 @@ void TRootBrowser::InitPlugins(Option_t *opt)
 
    // Editor plugin...
    if (strchr(opt, 'E')) {
-      cmd.Form("new TGTextEditor((const char *)0, gClient->GetRoot())");
+      cmd.Form("new TGTextEditor((const char *)0, gClient->GetRoot());");
       ExecPlugin("Editor 1", 0, cmd.Data(), 1);
       ++fNbInitPlugins;
    }
@@ -671,7 +671,7 @@ void TRootBrowser::InitPlugins(Option_t *opt)
    if (strchr(opt, 'H')) {
       if (gSystem->Load("libGuiHtml") >= 0) {
          cmd.Form("new TGHtmlBrowser(\"http://root.cern.ch/root/html/ClassIndex.html\", \
-                  gClient->GetRoot())");
+                  gClient->GetRoot());");
          ExecPlugin("HTML", 0, cmd.Data(), 1);
          ++fNbInitPlugins;
       }
@@ -679,14 +679,14 @@ void TRootBrowser::InitPlugins(Option_t *opt)
 
    // Canvas plugin...
    if (strchr(opt, 'C')) {
-      cmd.Form("new TCanvas()");
+      cmd.Form("new TCanvas();");
       ExecPlugin("c1", 0, cmd.Data(), 1);
       ++fNbInitPlugins;
    }
 
    // GLViewer plugin...
    if (strchr(opt, 'G')) {
-      cmd.Form("new TGLSAViewer(gClient->GetRoot(), 0)");
+      cmd.Form("new TGLSAViewer(gClient->GetRoot(), 0);");
       ExecPlugin("OpenGL", 0, cmd.Data(), 1);
       ++fNbInitPlugins;
    }
@@ -702,7 +702,7 @@ void TRootBrowser::InitPlugins(Option_t *opt)
 
    // Command plugin...
    if (strchr(opt, 'I')) {
-      cmd.Form("new TGCommandPlugin(gClient->GetRoot(), 700, 300)");
+      cmd.Form("new TGCommandPlugin(gClient->GetRoot(), 700, 300);");
       ExecPlugin("Command", 0, cmd.Data(), 2);
       ++fNbInitPlugins;
    }
@@ -775,6 +775,8 @@ void TRootBrowser::RemoveTab(Int_t pos, Int_t subpos)
          edit = fTabBottom;
          break;
    }
+   if (!edit->GetTabTab(subpos))
+      return;
    const char *tabName = edit->GetTabTab(subpos)->GetString();
    TObject *obj = 0;
    if ((obj = fPlugins.FindObject(tabName))) {
@@ -797,6 +799,7 @@ void TRootBrowser::RemoveTab(Int_t pos, Int_t subpos)
    }
    fNbTab[pos]--;
    edit->RemoveTab(subpos);
+   SwitchMenus(edit->GetTabContainer(edit->GetCurrent()));
 }
 
 //______________________________________________________________________________
@@ -832,6 +835,14 @@ void TRootBrowser::SetTabTitle(const char *title, Int_t pos, Int_t subpos)
       if ((p = (TBrowserPlugin *)fPlugins.FindObject(title)))
          p->SetName(title);
    }
+}
+
+//______________________________________________________________________________
+void TRootBrowser::SetStatusText(const char* txt, Int_t col) 
+{
+   // Set text in culumn col in status bar.
+
+   fStatusBar->SetText(txt, col);
 }
 
 //______________________________________________________________________________
@@ -917,6 +928,8 @@ void TRootBrowser::SwitchMenus(TGCompositeFrame  *from)
    // Move the menu from original frame to our TGMenuFrame, or display the 
    // menu associated to the current tab.
 
+   if (from == 0)
+      return;
    TGFrameElement *fe = (TGFrameElement *)from->GetList()->First();
    if (!fe) {
       if (fActMenuBar != fMenuBar)
