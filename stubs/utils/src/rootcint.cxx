@@ -4294,6 +4294,7 @@ int main(int argc, char **argv)
       force = 0;
    }
 
+   string header("");
    if (strstr(argv[ic],".C")  || strstr(argv[ic],".cpp") ||
        strstr(argv[ic],".cp") || strstr(argv[ic],".cxx") ||
        strstr(argv[ic],".cc") || strstr(argv[ic],".c++")) {
@@ -4305,7 +4306,8 @@ int main(int argc, char **argv)
             return 1;
          }
       }
-      string header( argv[ic] );
+      //string header( argv[ic] );
+      header = argv[ic];
       int loc = strrchr(argv[ic],'.') - argv[ic];
       header[loc+1] = 'h';
       header[loc+2] = '\0';
@@ -4424,9 +4426,6 @@ int main(int argc, char **argv)
          strncpy(argvv[argcc], dictname, s-dictname); argcc++;
 
          while (ic < argc && (*argv[ic] == '-' || *argv[ic] == '+')) {
-            printf("ic:%d , icc:%d \n", ic, icc);
-
-            
             // LF 29-10-07
             // We want to ignore the "--cxx"
             // coming from the new, wrapper-less scheme... (this should be temporal, find a better way to do it)
@@ -4653,6 +4652,28 @@ int main(int argc, char **argv)
                  argv[0], bundlename.c_str());
          use_preprocessor = 0;
       } else {
+                  
+         //string headerb(basename(header.c_str()));
+         //string::size_type idx = headerb.find("Tmp", 0);
+         
+         //int l;
+         //if(idx != string::npos){
+         //   l = idx;
+         //   headerb[l] = '\0';   
+         //}
+         //else{
+         //   idx = headerb.find(".", 0);
+         //   if(idx != string::npos){
+         //      l = idx;
+         //      headerb[l] = '\0';   
+         //   }
+         //}
+
+         // LF 12-11-07
+         // put protection against multiple includes of dictionaries' .h
+         //fprintf(bundle,"#ifndef G__includes_dict_%s\n", headerb.c_str());
+         //fprintf(bundle,"#define G__includes_dict_%s\n", headerb.c_str());
+
          fprintf(bundle,"#include \"TObject.h\"\n");
          fprintf(bundle,"#include \"TMemberInspector.h\"\n");
       }
@@ -4681,7 +4702,7 @@ int main(int argc, char **argv)
       }
       if (use_preprocessor && *argv[i] != '-' && *argv[i] != '+') {
          StrcpyArgWithEsc(esc_arg, argv[i]);
-         fprintf(bundle,"#include \"%s\"\n", esc_arg);
+         fprintf(bundle,"#include \"%s\" //rootcint 4684\n", esc_arg);
          includedFilesForBundle.push_back(argv[i]);
          if (!insertedBundle) {
             argvv[argcc++] = (char*)bundlename.c_str();
@@ -4693,6 +4714,7 @@ int main(int argc, char **argv)
       }
    }
    if (use_preprocessor) {
+      //fprintf(bundle,"#endif\n");
       fclose(bundle);
    }
 
@@ -4831,7 +4853,7 @@ int main(int argc, char **argv)
        << "// Do NOT change. Changes will be lost next time file is generated" << std::endl
        << "//" << std::endl << std::endl
 
-       << "#include \"RConfig.h\"" << std::endl
+       << "#include \"RConfig.h\" //rootcint 4834" << std::endl
        << "#if !defined(R__ACCESS_IN_SYMBOL)" << std::endl
        << "//Break the privacy of classes -- Disabled for the moment" << std::endl
        << "#define private public" << std::endl
