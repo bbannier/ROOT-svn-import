@@ -45,10 +45,13 @@ double FitUtil::EvaluateChi2(IModelFunction & func, const BinData & data, const 
 
 #ifdef DEBUG
    std::cout << "\n\nFit data size = " << n << std::endl;
+   std::cout << "evaluate chi2 using function " << &func << "  " << p << std::endl; 
 #endif
 
    double chi2 = 0;
    int nRejected = 0; 
+   
+
    func.SetParameters(p); 
    for (unsigned int i = 0; i < n; ++ i) { 
       const double * x = data.Coords(i);
@@ -103,11 +106,15 @@ double FitUtil::EvaluateChi2Residual(IModelFunction & func, const BinData & data
 }
 
 void FitUtil::EvaluateChi2Gradient(IModelFunction & f, const BinData & data, const double * p, double * grad, unsigned int & nPoints) { 
+
    IGradModelFunction * fg = dynamic_cast<IGradModelFunction *>( &f); 
    assert (fg != 0); // must be called by a grad function
 
    IGradModelFunction & func = *fg; 
    unsigned int n = data.Size();
+
+   std::cout << "\n\nFit data size = " << n << std::endl;
+   std::cout << "evaluate chi2 using function gradient " << &func << "  " << p << std::endl; 
 
    //int nRejected = 0; 
    // set values of parameters 
@@ -219,9 +226,11 @@ double FitUtil::EvaluateLogL(IModelFunction & func, const UnBinData & data, cons
          std::cout << p[ipar] << "\t";
       std::cout << "\tfval = " << fval << std::endl; 
 #endif
-
-      logl -= EvalLogF( fval); 
-
+      if (fval < 0) { 
+         nRejected++; // reject points with negative pdf (cannot exist)
+      }
+      else 
+         logl -= EvalLogF( fval); 
       
    }
    
@@ -235,6 +244,34 @@ double FitUtil::EvaluateLogL(IModelFunction & func, const UnBinData & data, cons
    return logl;
 }
 
+void FitUtil::EvaluateLogLGradient(IModelFunction & f, const UnBinData & data, const double * p, double * grad, unsigned int & ) { 
+   // evaluate the gradient of the log likelihood function
+
+   IGradModelFunction * fg = dynamic_cast<IGradModelFunction *>( &f); 
+   assert (fg != 0); // must be called by a grad function
+   IGradModelFunction & func = *fg; 
+
+   unsigned int n = data.Size();
+   //int nRejected = 0; 
+   func.SetParameters(p); 
+   unsigned int npar = func.NPar(); 
+   std::vector<double> gradFunc( npar ); 
+   std::vector<double> g( npar); 
+
+   for (unsigned int i = 0; i < n; ++ i) { 
+      const double * x = data.Coords(i);
+      double fval = func ( x ); 
+      if (fval > 0) { 
+         func.ParameterGradient( x, &gradFunc[0] );
+         for (unsigned int kpar = 0; kpar < npar; ++ kpar) { 
+            g[kpar] -= 1./fval * gradFunc[ kpar ]; 
+         }
+            
+      }
+    // copy result 
+   std::copy(g.begin(), g.end(), grad);
+   }
+}
 
 // for binned log likelihood functions      
 
@@ -290,6 +327,35 @@ double FitUtil::EvaluatePoissonLogL(IModelFunction & func, const BinData & data,
    return loglike;  
 }
 
+void FitUtil::EvaluatePoissonLogLGradient(IModelFunction & f, const BinData & data, const double * p, double * grad ) { 
+   // evaluate the gradient of the log likelihood function
+
+   IGradModelFunction * fg = dynamic_cast<IGradModelFunction *>( &f); 
+   assert (fg != 0); // must be called by a grad function
+   IGradModelFunction & func = *fg; 
+
+   unsigned int n = data.Size();
+
+   func.SetParameters(p); 
+   unsigned int npar = func.NPar(); 
+   std::vector<double> gradFunc( npar ); 
+   std::vector<double> g( npar); 
+
+   for (unsigned int i = 0; i < n; ++ i) { 
+      const double * x = data.Coords(i);
+      double y = data.Value(i);
+      double fval = func ( x ); 
+      if (fval > 0) { 
+         func.ParameterGradient( x, &gradFunc[0] );
+         for (unsigned int kpar = 0; kpar < npar; ++ kpar) { 
+            // df/dp * (1.  - y/f )
+            g[kpar] += gradFunc[ kpar ] * ( 1. - y/fval ); 
+         }            
+      }
+    // copy result 
+   std::copy(g.begin(), g.end(), grad);
+   }
+}
    
 }
 

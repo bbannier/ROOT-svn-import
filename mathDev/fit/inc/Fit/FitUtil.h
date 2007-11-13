@@ -56,10 +56,22 @@ namespace FitUtil {
    double EvaluateLogL(IModelFunction & func, const UnBinData & data, const double * x, unsigned int & nPoints);  
 
    /** 
+       evaluate the LogL gradient given a model function and the data at the point x. 
+       return also nPoints as the effective number of used points in the LogL evaluation
+   */ 
+   void EvaluateLogLGradient(IModelFunction & func, const UnBinData & data, const double * x, double * grad, unsigned int & nPoints);  
+
+   /** 
        evaluate the Poisson LogL given a model function and the data at the point x. 
        return also nPoints as the effective number of used points in the LogL evaluation
    */ 
    double EvaluatePoissonLogL(IModelFunction & func, const BinData & data, const double * x, unsigned int & nPoints);  
+
+   /** 
+       evaluate the Poisson LogL given a model function and the data at the point x. 
+       return also nPoints as the effective number of used points in the LogL evaluation
+   */ 
+   void EvaluatePoissonLogLGradient(IModelFunction & func, const BinData & data, const double * x, double * grad);  
 
    /** 
        Parallel evaluate the Chi2 given a model function and the data at the point x. 

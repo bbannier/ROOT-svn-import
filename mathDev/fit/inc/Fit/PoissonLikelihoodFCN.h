@@ -17,23 +17,24 @@
 #include "Math/FitMethodFunction.h"
 #endif
 
-#ifndef ROOT_Math_IParamFunctionfwd
-#include "Math/IParamFunctionfwd.h"
+#ifndef ROOT_Math_IParamFunction
+#include "Math/IParamFunction.h"
 #endif
 
-#ifndef ROOT_Fit_DataVectorfwd
-#include "Fit/DataVectorfwd.h"
+#ifndef ROOT_Fit_DataVector
+#include "Fit/DataVector.h"
 #endif
 
 #ifndef ROOT_Fit_FitUtil
 #include "Fit/FitUtil.h"
 #endif
+
 //#define PARALLEL
-#ifdef PARALLEL
-#ifndef ROOT_Fit_FitUtilParallel
-#include "Fit/FitUtilParallel.h"
-#endif
-#endif
+// #ifdef PARALLEL
+// #ifndef ROOT_Fit_FitUtilParallel
+// #include "Fit/FitUtilParallel.h"
+// #endif
+// #endif
 
 namespace ROOT { 
 
@@ -43,15 +44,18 @@ namespace ROOT {
 /** 
    class evaluating the log likelihood  
    for binned Poisson likelihood fits 
+   it is template to distinguish gradient and non-gradient case
 
    @ingroup  FitMethodFunc   
-*/ 
-class PoissonLikelihoodFCN : public ROOT::Math::FitMethodFunction  {
+*/
+template<class FunType>  
+class PoissonLikelihoodFCN : public ROOT::Math::BasicFitMethodFunction<FunType>  {
 
 public: 
 
 
-   typedef  ROOT::Math::FitMethodFunction BaseObjFunction; 
+   typedef  ROOT::Math::BasicFitMethodFunction<FunType> BaseObjFunction; 
+   typedef typename  BaseObjFunction::BaseFunction BaseFunction; 
 
    typedef  ROOT::Math::IParamMultiFunction IModelFunction;
 
@@ -59,7 +63,16 @@ public:
    /** 
       Constructor from unbin data set and model function (pdf)
    */ 
-   PoissonLikelihoodFCN (const BinData & data, IModelFunction & func);  
+   PoissonLikelihoodFCN (const BinData & data, IModelFunction & func) : 
+   fData(data), 
+   fFunc(func), 
+   fNDim(func.NPar() ), 
+   fNPoints(data.Size()),      
+   fNEffPoints(0),
+   fNCalls(0),
+   fGrad ( std::vector<double> ( func.NPar() ) )
+   { }
+ 
 
    /** 
       Destructor (no operations)
@@ -72,20 +85,18 @@ private:
    /** 
       Copy constructor
    */ 
-   PoissonLikelihoodFCN(const PoissonLikelihoodFCN &); 
+   PoissonLikelihoodFCN(const PoissonLikelihoodFCN &) {} 
 
    /** 
       Assignment operator
    */ 
-   PoissonLikelihoodFCN & operator = (const PoissonLikelihoodFCN & rhs); 
+   PoissonLikelihoodFCN & operator = (const PoissonLikelihoodFCN & rhs) { return *this; }
 
 public: 
 
-   PoissonLikelihoodFCN * Clone() const; 
+   PoissonLikelihoodFCN * Clone() const { return new  PoissonLikelihoodFCN(fData,fFunc); }
 
    unsigned int NDim() const { return fNDim; }
-
-   using BaseObjFunction::operator();
 
    // count number of function calls
    unsigned int NCalls() const { return fNCalls; } 
@@ -103,6 +114,11 @@ public:
       return FitUtil::EvaluatePoissonBinPdf(fFunc, fData, x, i); 
    }
 
+   /// evaluate gradient 
+   virtual void Gradient(const double *x, double *g) const { 
+      // evaluate the chi2 gradient
+      FitUtil::EvaluatePoissonLogLGradient(fFunc, fData, x, g );
+   }
 
 
 protected: 
@@ -115,12 +131,15 @@ private:
     */
    double DoEval (const double * x) const { 
       fNCalls++;
-#ifdef PARALLEL
-//      return FitUtilParallel::EvaluateLogL(fFunc, fData, x, fNEffPoints); 
-#else 
       return FitUtil::EvaluatePoissonLogL(fFunc, fData, x, fNEffPoints); 
-#endif
    } 
+
+   // for derivatives 
+   virtual double  DoDerivative(const double * x, unsigned int icoord ) const { 
+      Gradient(x, &fGrad[0]); 
+      return fGrad[icoord]; 
+   }
+
  
       //data member
 
@@ -132,6 +151,7 @@ private:
    mutable unsigned int fNEffPoints;  // number of effective points used in the fit 
    mutable unsigned int fNCalls;
 
+   mutable std::vector<double> fGrad; // for derivatives
 
 }; 
 
