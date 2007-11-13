@@ -918,6 +918,12 @@ int G__stub_method_asm(void* vaddress, int gtagnum, int reftype, void* this_ptr,
          isref = 1;
          paramref = (void *)(param.obj.i);
       }
+
+      // This means the parameter is a pointer
+      if(formal_param->type=='u'){
+         //isref = 1;
+         paramref = (void *)(param.obj.i);
+      }
                
       // Pushing Parameter
       // By Value or By Reference?
