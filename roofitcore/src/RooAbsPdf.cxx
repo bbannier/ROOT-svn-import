@@ -231,7 +231,7 @@ Double_t RooAbsPdf::getVal(const RooArgSet* nset) const
     // Evaluate denominator
     Double_t normVal(_norm->getVal()) ;
 
-    cxcoutD("ChangeTracking") << "RooAbsPdf::getVal(" << GetName() << ") normalization integral is " << (_norm?_norm->GetName():"none") << endl ;
+    cxcoutD(ChangeTracking) << "RooAbsPdf::getVal(" << GetName() << ") normalization integral is " << (_norm?_norm->GetName():"none") << endl ;
 
     Double_t normError(kFALSE) ;
     if (normVal==0.) normError=kTRUE ;
@@ -244,7 +244,7 @@ Double_t RooAbsPdf::getVal(const RooArgSet* nset) const
     if (_verboseEval>1) cout << IsA()->GetName() << "::getVal(" << GetName() 
 			     << "): value = " << _value << " (normalized)" << endl ;
 
-    cxcoutD("ChangeTracking") << "RooAbsPdf::getVal(" << GetName() << ") recalculating, new value = " << rawVal << "/" << normVal << " = " << _value << endl ;
+    cxcoutD(ChangeTracking) << "RooAbsPdf::getVal(" << GetName() << ") recalculating, new value = " << rawVal << "/" << normVal << " = " << _value << endl ;
 
     clearValueDirty() ; //setValueDirty(kFALSE) ;
     clearShapeDirty() ; //setShapeDirty(kFALSE) ;    
@@ -1013,15 +1013,15 @@ RooDataSet *RooAbsPdf::generate(const RooArgSet& whatVars, const RooCmdArg& arg1
 
   if (extended) {
     nEvents = RooRandom::randomGenerator()->Poisson(nEvents==0?expectedEvents(&whatVars):nEvents) ;
-    cxcoutI("Generation") << " Extended mode active, number of events generated (" << nEvents << ") is Poisson fluctuation on " 
+    cxcoutI(Generation) << " Extended mode active, number of events generated (" << nEvents << ") is Poisson fluctuation on " 
 			  << GetName() << "::expectedEvents() = " << expectedEvents(&whatVars)<< endl ;
   } else if (nEvents==0) {
-    cxcoutI("Generation") << "No number of events specified , number of events generated is " 
+    cxcoutI(Generation) << "No number of events specified , number of events generated is " 
 			  << GetName() << "::expectedEvents() = " << expectedEvents(&whatVars)<< endl ;
   }
 
   if (extended && protoData && !randProto) {
-    cxcoutW("Generation") << "WARNING Using generator option Extended() (Poisson distribution of #events) together "
+    cxcoutI(Generation) << "WARNING Using generator option Extended() (Poisson distribution of #events) together "
 			  << "with a prototype dataset implies incomplete sampling or oversampling of proto data. " 
 			  << "Set randomize flag in ProtoData() option to randomize prototype dataset order and thus "
 			  << "to randomize the set of over/undersampled prototype events for each generation cycle." << endl ;

@@ -22,50 +22,51 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <map>
 #include "RooCmdArg.h"
 class RooAbsArg ;
 
-
 // Shortcut definitions 
-#define coutD(a) RooMsgService::instance().log(this,RooMsgService::DEBUG,a) 
-#define coutI(a) RooMsgService::instance().log(this,RooMsgService::INFO,a) 
-#define coutW(a) RooMsgService::instance().log(this,RooMsgService::WARNING,a) 
-#define coutE(a) RooMsgService::instance().log(this,RooMsgService::ERROR,a) 
-#define coutF(a) RooMsgService::instance().log(this,RooMsgService::FATAL,a) 
+#define coutI(a) RooMsgService::instance().log(this,RooMsgService::INFO,RooMsgService::a) 
+#define coutW(a) RooMsgService::instance().log(this,RooMsgService::WARNING,RooMsgService::a) 
+#define coutE(a) RooMsgService::instance().log(this,RooMsgService::ERROR,RooMsgService::a) 
+#define coutF(a) RooMsgService::instance().log(this,RooMsgService::FATAL,RooMsgService::a) 
 
-#define oocoutD(o,a) RooMsgService::instance().log(o,RooMsgService::DEBUG,a) 
-#define oocoutI(o,a) RooMsgService::instance().log(o,RooMsgService::INFO,a) 
-#define oocoutW(o,a) RooMsgService::instance().log(o,RooMsgService::WARNING,a) 
-#define oocoutE(o,a) RooMsgService::instance().log(o,RooMsgService::ERROR,a) 
-#define oocoutF(o,a) RooMsgService::instance().log(o,RooMsgService::FATAL,a) 
+#define oocoutI(o,a) RooMsgService::instance().log(o,RooMsgService::INFO,RooMsgService::a) 
+#define oocoutW(o,a) RooMsgService::instance().log(o,RooMsgService::WARNING,RooMsgService::a) 
+#define oocoutE(o,a) RooMsgService::instance().log(o,RooMsgService::ERROR,RooMsgService::a) 
+#define oocoutF(o,a) RooMsgService::instance().log(o,RooMsgService::FATAL,RooMsgService::a) 
 
-#define dologD(a) (RooMsgService::instance().isActive(this,a,RooMsgService::DEBUG))
-#define dologI(a) (RooMsgService::instance().isActive(this,a,RooMsgService::INFO))
-#define dologW(a) (RooMsgService::instance().isActive(this,a,RooMsgService::WARNING))
-#define dologE(a) (RooMsgService::instance().isActive(this,a,RooMsgService::ERROR))
-#define dologF(a) (RooMsgService::instance().isActive(this,a,RooMsgService::FATAL))
+#define ANYDEBUG (RooMsgService::_debugCount>0)
+
+#define dologD(a) (ANYDEBUG && RooMsgService::instance().isActive(this,RooMsgService::a,RooMsgService::DEBUG))
+#define dologI(a) (RooMsgService::instance().isActive(this,RooMsgService::a,RooMsgService::INFO))
+#define dologW(a) (RooMsgService::instance().isActive(this,RooMsgService::a,RooMsgService::WARNING))
+#define dologE(a) (RooMsgService::instance().isActive(this,RooMsgService::a,RooMsgService::ERROR))
+#define dologF(a) (RooMsgService::instance().isActive(this,RooMsgService::a,RooMsgService::FATAL))
 
 // Shortcuts definitions with conditional execution of print expression -- USE WITH CAUTION 
-#define cxcoutD(a) if (RooMsgService::anyDebug() && RooMsgService::instance().isActive(this,a,RooMsgService::DEBUG)) RooMsgService::instance().log(this,RooMsgService::DEBUG,a) 
-#define ccxcoutD(a) if (RooMsgService::anyDebug() && RooMsgService::instance().isActive(this,a,RooMsgService::DEBUG)) RooMsgService::instance().log(this,RooMsgService::DEBUG,a,kTRUE) 
-#define oocxcoutD(o,a) if (RooMsgService::anyDebug() && RooMsgService::instance().isActive(o,a,RooMsgService::DEBUG)) RooMsgService::instance().log(o,RooMsgService::DEBUG,a) 
-#define ooccxcoutD(o,a) if (RooMsgService::anyDebug() && RooMsgService::instance().isActive(o,a,RooMsgService::DEBUG)) RooMsgService::instance().log(o,RooMsgService::DEBUG,a,kTRUE) 
-#define cxcoutI(a) if (RooMsgService::instance().isActive(this,a,RooMsgService::INFO)) RooMsgService::instance().log(this,RooMsgService::INFO,a) 
-#define ccxcoutI(a) if (RooMsgService::instance().isActive(this,a,RooMsgService::INFO)) RooMsgService::instance().log(this,RooMsgService::INFO,a,kTRUE) 
-#define oocxcoutI(o,a) if (RooMsgService::instance().isActive(o,a,RooMsgService::INFO)) RooMsgService::instance().log(o,RooMsgService::INFO,a) 
-#define ooccxcoutI(o,a) if (RooMsgService::instance().isActive(o,a,RooMsgService::INFO)) RooMsgService::instance().log(o,RooMsgService::INFO,a,kTRUE) 
-#define cxcoutW(a) if (RooMsgService::instance().isActive(this,a,RooMsgService::WARNING)) RooMsgService::instance().log(this,RooMsgService::WARNING,a) 
-#define ccxcoutW(a) if (RooMsgService::instance().isActive(this,a,RooMsgService::WARNING)) RooMsgService::instance().log(this,RooMsgService::WARNING,a,kTRUE) 
-#define oocxcoutW(o,a) if (RooMsgService::instance().isActive(o,a,RooMsgService::WARNING)) RooMsgService::instance().log(o,RooMsgService::WARNING,a) 
-#define ooccxcoutW(o,a) if (RooMsgService::instance().isActive(o,a,RooMsgService::WARNING)) RooMsgService::instance().log(o,RooMsgService::WARNING,a,kTRUE) 
-#define cxcoutE(a) if (RooMsgService::instance().isActive(this,a,RooMsgService::ERROR)) RooMsgService::instance().log(this,RooMsgService::ERROR,a) 
-#define ccxcoutE(a) if (RooMsgService::instance().isActive(this,a,RooMsgService::ERROR)) RooMsgService::instance().log(this,RooMsgService::ERROR,a,kTRUE) 
-#define oocxcoutE(o,a) if (RooMsgService::instance().isActive(o,a,RooMsgService::ERROR)) RooMsgService::instance().log(to,RooMsgService::ERROR,a) 
-#define ooccxcoutE(o,a) if (RooMsgService::instance().isActive(o,a,RooMsgService::ERROR)) RooMsgService::instance().log(o,RooMsgService::ERROR,a,kTRUE) 
-#define cxcoutF(a) if (RooMsgService::instance().isActive(this,a,RooMsgService::FATAL)) RooMsgService::instance().log(this,RooMsgService::FATAL,a) 
-#define ccxcoutF(a) if (RooMsgService::instance().isActive(this,a,RooMsgService::FATAL)) RooMsgService::instance().log(this,RooMsgService::FATAL,a,kTRUE) 
-#define oocxcoutF(o,a) if (RooMsgService::instance().isActive(o,a,RooMsgService::FATAL)) RooMsgService::instance().log(o,RooMsgService::FATAL,a) 
-#define ooccxcoutF(o,a) if (RooMsgService::instance().isActive(o,a,RooMsgService::FATAL)) RooMsgService::instance().log(o,RooMsgService::FATAL,a,kTRUE) 
+
+#define cxcoutD(a) if (ANYDEBUG && RooMsgService::instance().isActive(this,RooMsgService::a,RooMsgService::DEBUG)) RooMsgService::instance().log(this,RooMsgService::DEBUG,RooMsgService::a) 
+#define ccxcoutD(a) if (ANYDEBUG && RooMsgService::instance().isActive(this,RooMsgService::a,RooMsgService::DEBUG)) RooMsgService::instance().log(this,RooMsgService::DEBUG,RooMsgService::a,kTRUE) 
+#define oocxcoutD(o,a) if (ANYDEBUG && RooMsgService::instance().isActive(o,RooMsgService::a,RooMsgService::DEBUG)) RooMsgService::instance().log(o,RooMsgService::DEBUG,RooMsgService::a) 
+#define ooccxcoutD(o,a) if (ANYDEBUG && RooMsgService::instance().isActive(o,RooMsgService::a,RooMsgService::DEBUG)) RooMsgService::instance().log(o,RooMsgService::DEBUG,RooMsgService::a,kTRUE) 
+#define cxcoutI(a) if (RooMsgService::instance().isActive(this,RooMsgService::a,RooMsgService::INFO)) RooMsgService::instance().log(this,RooMsgService::INFO,RooMsgService::a) 
+#define ccxcoutI(a) if (RooMsgService::instance().isActive(this,RooMsgService::a,RooMsgService::INFO)) RooMsgService::instance().log(this,RooMsgService::INFO,RooMsgService::a,kTRUE) 
+#define oocxcoutI(o,a) if (RooMsgService::instance().isActive(o,RooMsgService::a,RooMsgService::INFO)) RooMsgService::instance().log(o,RooMsgService::INFO,RooMsgService::a) 
+#define ooccxcoutI(o,a) if (RooMsgService::instance().isActive(o,RooMsgService::a,RooMsgService::INFO)) RooMsgService::instance().log(o,RooMsgService::INFO,RooMsgService::a,kTRUE) 
+#define cxcoutW(a) if (RooMsgService::instance().isActive(this,RooMsgService::a,RooMsgService::WARNING)) RooMsgService::instance().log(this,RooMsgService::WARNING,RooMsgService::a) 
+#define ccxcoutW(a) if (RooMsgService::instance().isActive(this,RooMsgService::a,RooMsgService::WARNING)) RooMsgService::instance().log(this,RooMsgService::WARNING,RooMsgService::a,kTRUE) 
+#define oocxcoutW(o,a) if (RooMsgService::instance().isActive(o,RooMsgService::a,RooMsgService::WARNING)) RooMsgService::instance().log(o,RooMsgService::WARNING,RooMsgService::a) 
+#define ooccxcoutW(o,a) if (RooMsgService::instance().isActive(o,RooMsgService::a,RooMsgService::WARNING)) RooMsgService::instance().log(o,RooMsgService::WARNING,RooMsgService::a,kTRUE) 
+#define cxcoutE(a) if (RooMsgService::instance().isActive(this,RooMsgService::a,RooMsgService::ERROR)) RooMsgService::instance().log(this,RooMsgService::ERROR,RooMsgService::a) 
+#define ccxcoutE(a) if (RooMsgService::instance().isActive(this,RooMsgService::a,RooMsgService::ERROR)) RooMsgService::instance().log(this,RooMsgService::ERROR,RooMsgService::a,kTRUE) 
+#define oocxcoutE(o,a) if (RooMsgService::instance().isActive(o,RooMsgService::a,RooMsgService::ERROR)) RooMsgService::instance().log(to,RooMsgService::ERROR,RooMsgService::a) 
+#define ooccxcoutE(o,a) if (RooMsgService::instance().isActive(o,RooMsgService::a,RooMsgService::ERROR)) RooMsgService::instance().log(o,RooMsgService::ERROR,RooMsgService::a,kTRUE) 
+#define cxcoutF(a) if (RooMsgService::instance().isActive(this,RooMsgService::a,RooMsgService::FATAL)) RooMsgService::instance().log(this,RooMsgService::FATAL,RooMsgService::a) 
+#define ccxcoutF(a) if (RooMsgService::instance().isActive(this,RooMsgService::a,RooMsgService::FATAL)) RooMsgService::instance().log(this,RooMsgService::FATAL,RooMsgService::a,kTRUE) 
+#define oocxcoutF(o,a) if (RooMsgService::instance().isActive(o,RooMsgService::a,RooMsgService::FATAL)) RooMsgService::instance().log(o,RooMsgService::FATAL,RooMsgService::a) 
+#define ooccxcoutF(o,a) if (RooMsgService::instance().isActive(o,RooMsgService::a,RooMsgService::FATAL)) RooMsgService::instance().log(o,RooMsgService::FATAL,RooMsgService::a,kTRUE) 
 
 class RooMsgService : public TObject {
 public:
@@ -73,6 +74,7 @@ public:
   virtual ~RooMsgService() ;
 
   enum MsgLevel { DEBUG=0, INFO=1, WARNING=2, ERROR=3, FATAL=4 } ;
+  enum MsgTopic { Generation=1, Minimization=2, Plotting=4, Fitting=8, Integration=16, ChangeTracking=32, Eval=64, Caching=128, Optimization=256, Workspace=512, InputArguments=1024 } ;
 
   // Access to instance
   static RooMsgService& instance() ;
@@ -89,22 +91,27 @@ public:
   void Print(Option_t *options= 0) const ;
 
   // Back end -- Send message or check if particular logging configuration is active
-  ostream& log(const RooAbsArg* self, MsgLevel level, const char* facility, Bool_t forceSkipPrefix=kFALSE) ;
-  ostream& log(const TObject* self, MsgLevel level, const char* facility, Bool_t forceSkipPrefix=kFALSE) ;
-  Bool_t isActive(const RooAbsArg* self, const char* facility, MsgLevel level) ;
-  Bool_t isActive(const TObject* self, const char* facility, MsgLevel level) ;
+  ostream& log(const RooAbsArg* self, MsgLevel level, MsgTopic facility, Bool_t forceSkipPrefix=kFALSE) ;
+  ostream& log(const TObject* self, MsgLevel level, MsgTopic facility, Bool_t forceSkipPrefix=kFALSE) ;
+  Bool_t isActive(const RooAbsArg* self, MsgTopic facility, MsgLevel level) ;
+  Bool_t isActive(const TObject* self, MsgTopic facility, MsgLevel level) ;
+
+  static Int_t _debugCount ;
+  std::map<int,std::string> _levelNames ;
+  std::map<int,std::string> _topicNames ;
 
 protected:
 
-  Int_t activeStream(const RooAbsArg* self, const char* facility, MsgLevel level) ;
-  Int_t activeStream(const TObject* self, const char* facility, MsgLevel level) ;
+  Int_t activeStream(const RooAbsArg* self, MsgTopic facility, MsgLevel level) ;
+  Int_t activeStream(const TObject* self, MsgTopic facility, MsgLevel level) ;
 
   struct StreamConfig {
 
     Bool_t active ;
+    Bool_t universal ;
 
     MsgLevel minLevel ;
-    std::string topic ;
+    Int_t    topic ;
     std::string objectName ;
     std::string className ;
     std::string baseClassName ;
@@ -114,8 +121,8 @@ protected:
 
     ostream* os ;
 
-    Bool_t match(MsgLevel level, const char* facility, const RooAbsArg* obj) ;
-    Bool_t match(MsgLevel level, const char* facility, const TObject* obj) ;
+    Bool_t match(MsgLevel level, MsgTopic facility, const RooAbsArg* obj) ;
+    Bool_t match(MsgLevel level, MsgTopic facility, const TObject* obj) ;
 
   } ;
 
@@ -130,10 +137,15 @@ protected:
 
   static RooMsgService* _instance ;
   
-  Int_t _debugCount ;
-
   ClassDef(RooMsgService,0) // RooFit Message Service Singleton class
 };
+
+
+#ifdef INST_MSG_SERVICE 
+RooMsgService* gMsgService = 0 ;
+#else
+extern RooMsgService* gMsgService ;
+#endif 
 
 
 #endif

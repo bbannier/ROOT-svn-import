@@ -456,7 +456,7 @@ RooAddModel::CacheElem* RooAddModel::getProjCache(const RooArgSet* nset, const R
 void RooAddModel::updateCoefficients(CacheElem& cache, const RooArgSet* nset) const 
 {
 
-  // cxcoutD("ChangeTracking") << "RooAddModel::updateCoefficients(" << GetName() << ") update coefficients" << endl ;
+  // cxcoutD(ChangeTracking) << "RooAddModel::updateCoefficients(" << GetName() << ") update coefficients" << endl ;
   
   Int_t i ;
 
@@ -495,11 +495,11 @@ void RooAddModel::updateCoefficients(CacheElem& cache, const RooArgSet* nset) co
       Double_t lastCoef(1) ;
       for (i=0 ; i<_coefList.getSize() ; i++) {
 	_coefCache[i] = ((RooAbsPdf*)_coefList.at(i))->getVal(nset) ;
- 	cxcoutD("ChangeTracking") << "SYNC: orig coef[" << i << "] = " << _coefCache[i] << endl ;
+ 	cxcoutD(ChangeTracking) << "SYNC: orig coef[" << i << "] = " << _coefCache[i] << endl ;
 	lastCoef -= _coefCache[i] ;
       }			
       _coefCache[_coefList.getSize()] = lastCoef ;
-      cxcoutD("ChangeTracking") << "SYNC: orig coef[" << _coefList.getSize() << "] = " << _coefCache[_coefList.getSize()] << endl ;
+      cxcoutD(ChangeTracking) << "SYNC: orig coef[" << _coefList.getSize() << "] = " << _coefCache[_coefList.getSize()] << endl ;
       
       
       // Warn about coefficient degeneration
@@ -533,7 +533,7 @@ void RooAddModel::updateCoefficients(CacheElem& cache, const RooArgSet* nset) co
     RooAbsReal* r1 = ((RooAbsReal*)cache._refRangeProjList.at(i)) ;
     RooAbsReal* r2 = ((RooAbsReal*)cache._rangeProjList.at(i)) ;
     
-    if (dologD("CoefCache")) {
+    if (dologD(Eval)) {
       cout << "pp = " << pp->GetName() << endl ;
       cout << "sn = " << sn->GetName() << endl ;
       cout << "r1 = " << r1->GetName() << endl ;
@@ -585,7 +585,7 @@ Double_t RooAddModel::evaluate() const
       // Double_t pdfNorm = pdf->getNorm(nset) ;
       if (pdf->isSelectedComp()) {
 	value += pdfVal*_coefCache[i]/snormVal ;
- 	cxcoutD("Eval") << "RooAddModel::evaluate(" << GetName() << ")  value += [" 
+ 	cxcoutD(Eval) << "RooAddModel::evaluate(" << GetName() << ")  value += [" 
  			<< pdf->GetName() << "] " << pdfVal << " * " << _coefCache[i] << " / " << snormVal << endl ;
       }
     }
@@ -731,7 +731,7 @@ Double_t RooAddModel::analyticalIntegralWN(Int_t code, const RooArgSet* normSet,
       snormVal = nset ? ((RooAbsReal*)pcache->_suppNormList.at(i))->getVal() : 1.0 ;
       Double_t intVal = pdfInt->getVal(nset) ;
       value += intVal*_coefCache[i]/snormVal ;
-      cxcoutD("Eval") << "RooAddModel::evaluate(" << GetName() << ")  value += [" 
+      cxcoutD(Eval) << "RooAddModel::evaluate(" << GetName() << ")  value += [" 
 		      << pdfInt->GetName() << "] " << intVal << " * " << _coefCache[i] << " / " << snormVal << endl ;
     }
     i++ ;
