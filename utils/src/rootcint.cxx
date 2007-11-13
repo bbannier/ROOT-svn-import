@@ -4432,6 +4432,7 @@ int main(int argc, char **argv)
             if (!strcmp(argv[ic], "--cxx")) {
                ++ic;
                ++ic;
+               continue;
             }
 
             // LF 26-10-07
@@ -4440,8 +4441,8 @@ int main(int argc, char **argv)
             if (!strcmp(argv[ic], "-o") || !strcmp(argv[ic], "--object-files") || !strcmp(argv[ic], "-object-files")) {
                ++ic;
                ++ic;
+               continue;
             }
-
 
             // LF 09-07-07
             // We want to separate the generation of the dictionary
@@ -4457,6 +4458,7 @@ int main(int argc, char **argv)
                dicttype = atoi(argv[ic]);
                argvv[argcc++] = argv[ic]; 
                ++ic;
+               continue;
             }
 
             // LF 03-07-07
@@ -4467,6 +4469,7 @@ int main(int argc, char **argv)
                argvv[argcc++] = "-L";
                argvv[argcc++] = argv[ic]; 
                ++ic;
+               continue;
             }
 
             if (strcmp("+P", argv[ic]) == 0 ||
