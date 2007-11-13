@@ -310,10 +310,10 @@ Double_t RooAbsAnaConvPdf::evaluate() const
     if (coef!=0.) {
       Double_t c = conv->getVal(0) ;
       Double_t r = coef ;
-      cxcoutD("Eval") << "RooAbsAnaConvPdf::evaluate(" << GetName() << ") val += coef*conv [" << index-1 << "/" << _convSet.getSize() << "] coef = " << r << " conv = " << c << endl ;
+      cxcoutD(Eval) << "RooAbsAnaConvPdf::evaluate(" << GetName() << ") val += coef*conv [" << index-1 << "/" << _convSet.getSize() << "] coef = " << r << " conv = " << c << endl ;
       result += conv->getVal(0)*coef ;
     } else {
-      cxcoutD("Eval") << "RooAbsAnaConvPdf::evaluate(" << GetName() << ") [" << index-1 << "/" << _convSet.getSize() << "] coef = 0" << endl ;
+      cxcoutD(Eval) << "RooAbsAnaConvPdf::evaluate(" << GetName() << ") [" << index-1 << "/" << _convSet.getSize() << "] coef = 0" << endl ;
     }
   }
   
@@ -481,7 +481,7 @@ Double_t RooAbsAnaConvPdf::analyticalIntegralWN(Int_t code, const RooArgSet* nor
       //cout << "coefInt[" << index << "] = " << coef << " " ; intCoefSet->Print("1") ; 
       if (coef!=0) {
 	integral += coef*(rangeName ? conv->getNormObj(0,intConvSet,RooNameReg::ptr(rangeName))->getVal() :  conv->getNorm(intConvSet) ) ;       
-	cxcoutD("Eval") << "RooAbsAnaConv::aiWN(" << GetName() << ") [" << index-1 << "] integral += " << conv->getNorm(intConvSet) << endl ;
+	cxcoutD(Eval) << "RooAbsAnaConv::aiWN(" << GetName() << ") [" << index-1 << "] integral += " << conv->getNorm(intConvSet) << endl ;
       }
 
     }

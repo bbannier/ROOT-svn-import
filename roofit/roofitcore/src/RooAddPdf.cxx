@@ -465,7 +465,7 @@ RooAddPdf::CacheElem* RooAddPdf::getProjCache(const RooArgSet* nset, const RooAr
 void RooAddPdf::updateCoefficients(CacheElem& cache, const RooArgSet* nset) const 
 {
 
-  // cxcoutD("ChangeTracking") << "RooAddPdf::updateCoefficients(" << GetName() << ") update coefficients" << endl ;
+  // cxcoutD(ChangeTracking) << "RooAddPdf::updateCoefficients(" << GetName() << ") update coefficients" << endl ;
   
   Int_t i ;
 
@@ -504,11 +504,11 @@ void RooAddPdf::updateCoefficients(CacheElem& cache, const RooArgSet* nset) cons
       Double_t lastCoef(1) ;
       for (i=0 ; i<_coefList.getSize() ; i++) {
 	_coefCache[i] = ((RooAbsPdf*)_coefList.at(i))->getVal(nset) ;
- 	cxcoutD("ChangeTracking") << "SYNC: orig coef[" << i << "] = " << _coefCache[i] << endl ;
+ 	cxcoutD(ChangeTracking) << "SYNC: orig coef[" << i << "] = " << _coefCache[i] << endl ;
 	lastCoef -= _coefCache[i] ;
       }			
       _coefCache[_coefList.getSize()] = lastCoef ;
-      cxcoutD("ChangeTracking") << "SYNC: orig coef[" << _coefList.getSize() << "] = " << _coefCache[_coefList.getSize()] << endl ;
+      cxcoutD(ChangeTracking) << "SYNC: orig coef[" << _coefList.getSize() << "] = " << _coefCache[_coefList.getSize()] << endl ;
       
       
       // Warn about coefficient degeneration
@@ -542,7 +542,7 @@ void RooAddPdf::updateCoefficients(CacheElem& cache, const RooArgSet* nset) cons
     RooAbsReal* r1 = ((RooAbsReal*)cache._refRangeProjList.at(i)) ;
     RooAbsReal* r2 = ((RooAbsReal*)cache._rangeProjList.at(i)) ;
     
-    if (dologD("CoefCache")) {
+    if (dologD(Eval)) {
       cout << "pp = " << pp->GetName() << endl ;
       cout << "sn = " << sn->GetName() << endl ;
       cout << "r1 = " << r1->GetName() << endl ;
@@ -594,7 +594,7 @@ Double_t RooAddPdf::evaluate() const
       // Double_t pdfNorm = pdf->getNorm(nset) ;
       if (pdf->isSelectedComp()) {
 	value += pdfVal*_coefCache[i]/snormVal ;
-// 	cxcoutD("Eval") << "RooAddPdf::evaluate(" << GetName() << ")  value += [" 
+// 	cxcoutD(Eval) << "RooAddPdf::evaluate(" << GetName() << ")  value += [" 
 // 			<< pdf->GetName() << "] " << pdfVal << " [N= " << pdfNorm << "] * " << _coefCache[i] << " / " << snormVal << endl ;
       }
     }

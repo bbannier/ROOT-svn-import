@@ -98,7 +98,7 @@ void RooObjCacheManager::operModeHook()
 
 void RooObjCacheManager::optimizeCacheMode(const RooArgSet& obs, RooArgSet& optNodes, RooLinkedList& processedNodes) 
 {
-  oocxcoutD(_owner,"Caching") << "RooObjCacheManager::optimizeCacheMode(owner=" << _owner->GetName() << ") obs = " << obs << endl ;
+  oocxcoutD(_owner,Caching) << "RooObjCacheManager::optimizeCacheMode(owner=" << _owner->GetName() << ") obs = " << obs << endl ;
 
   _optCacheModeSeen = kTRUE ;
 

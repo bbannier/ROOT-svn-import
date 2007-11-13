@@ -172,7 +172,7 @@ Double_t RooAbsReal::traceEval(const RooArgSet* /*nset*/) const
 {
   // Calculate current value of object, with error tracing wrapper
   Double_t value = evaluate() ;
-  cxcoutD("ChangeTracking") << "RooAbsReal::getVal(" << GetName() << ") operMode = " << _operMode << " recalculated, new value = " << value << endl ;
+  cxcoutD(ChangeTracking) << "RooAbsReal::getVal(" << GetName() << ") operMode = " << _operMode << " recalculated, new value = " << value << endl ;
   
   //Standard tracing code goes here
   if (!isValidReal(value)) {
@@ -1047,7 +1047,7 @@ RooPlot* RooAbsReal::plotOn(RooPlot* frame, RooLinkedList& argList) const
   
   RooArgSet projectedVars ;
   if (sliceSet) {
-    coutD("Plotting") << "RooAbsReal::plotOn(" << GetName() << ") Preprocessing: have slice " << *sliceSet << endl ;
+    cxcoutD(Plotting) << "RooAbsReal::plotOn(" << GetName() << ") Preprocessing: have slice " << *sliceSet << endl ;
 
     makeProjectionSet(frame->getPlotVar(),frame->getNormVars(),projectedVars,kTRUE) ;
     
@@ -1065,15 +1065,15 @@ RooPlot* RooAbsReal::plotOn(RooPlot* frame, RooLinkedList& argList) const
     }
     delete iter ;
   } else if (projSet) {
-    coutD("Plotting") << "RooAbsReal::plotOn(" << GetName() << ") Preprocessing: have projSet " << *projSet << endl ;
+    cxcoutD(Plotting) << "RooAbsReal::plotOn(" << GetName() << ") Preprocessing: have projSet " << *projSet << endl ;
     makeProjectionSet(frame->getPlotVar(),projSet,projectedVars,kFALSE) ;
   } else {
-    coutD("Plotting") << "RooAbsReal::plotOn(" << GetName() << ") Preprocessing: have neither sliceSet nor projSet " << endl ;
+    cxcoutD(Plotting) << "RooAbsReal::plotOn(" << GetName() << ") Preprocessing: have neither sliceSet nor projSet " << endl ;
     makeProjectionSet(frame->getPlotVar(),frame->getNormVars(),projectedVars,kTRUE) ;
   }
   o.projSet = &projectedVars ;
 
-  coutD("Plotting") << "RooAbsReal::plotOn(" << GetName() << ") Preprocessing: projectedVars = " << projectedVars << endl ;
+  cxcoutD(Plotting) << "RooAbsReal::plotOn(" << GetName() << ") Preprocessing: projectedVars = " << projectedVars << endl ;
 
 
   RooPlot* ret ;
@@ -1127,33 +1127,33 @@ RooPlot* RooAbsReal::plotOn(RooPlot *frame, PlotOpt o) const
   // ProjDataVars is either all projData observables, or the user indicated subset of it
   RooArgSet projDataVars ;
   if (o.projData) {
-    coutD("Plotting") << "RooAbsReal::plotOn(" << GetName() << ") have ProjData with observables = " << *o.projData->get() << endl ;
+    cxcoutD(Plotting) << "RooAbsReal::plotOn(" << GetName() << ") have ProjData with observables = " << *o.projData->get() << endl ;
     if (o.projDataSet) {
       RooArgSet* tmp = (RooArgSet*) o.projData->get()->selectCommon(*o.projDataSet) ;
       projDataVars.add(*tmp) ;
-      coutD("Plotting") << "RooAbsReal::plotOn(" << GetName() << ") have ProjDataSet = " << *o.projDataSet << " will only use this subset of projData" << endl ;
+      cxcoutD(Plotting) << "RooAbsReal::plotOn(" << GetName() << ") have ProjDataSet = " << *o.projDataSet << " will only use this subset of projData" << endl ;
       delete tmp ;
     } else {
-      coutD("Plotting") << "RooAbsReal::plotOn(" << GetName() << ") using full ProjData" << endl ;
+      cxcoutD(Plotting) << "RooAbsReal::plotOn(" << GetName() << ") using full ProjData" << endl ;
       projDataVars.add(*o.projData->get()) ;
     }
   }
 
-  coutD("Plotting") << "RooAbsReal::plotOn(" << GetName() << ") ProjDataVars = " << projDataVars << endl ;
+  cxcoutD(Plotting) << "RooAbsReal::plotOn(" << GetName() << ") ProjDataVars = " << projDataVars << endl ;
 
   // Make list of variables to be projected
   RooArgSet projectedVars ;
   RooArgSet sliceSet ;
   if (o.projSet) {
-    coutD("Plotting") << "RooAbsReal::plotOn(" << GetName() << ") have input projSet = " << *o.projSet << endl ;
+    cxcoutD(Plotting) << "RooAbsReal::plotOn(" << GetName() << ") have input projSet = " << *o.projSet << endl ;
     makeProjectionSet(frame->getPlotVar(),o.projSet,projectedVars,kFALSE) ;
-    coutD("Plotting") << "RooAbsReal::plotOn(" << GetName() << ") calculated projectedVars = " << *o.projSet << endl ;
+    cxcoutD(Plotting) << "RooAbsReal::plotOn(" << GetName() << ") calculated projectedVars = " << *o.projSet << endl ;
 
     // Print list of non-projected variables
     if (frame->getNormVars()) {
       RooArgSet *sliceSetTmp = getObservables(*frame->getNormVars()) ;
 
-      coutD("Plotting") << "RooAbsReal::plotOn(" << GetName() << ") frame->getNormVars() that are also observables = " << *sliceSetTmp << endl ;
+      cxcoutD(Plotting) << "RooAbsReal::plotOn(" << GetName() << ") frame->getNormVars() that are also observables = " << *sliceSetTmp << endl ;
 
       sliceSetTmp->remove(projectedVars,kTRUE,kTRUE) ;
       sliceSetTmp->remove(*frame->getPlotVar(),kTRUE,kTRUE) ;
@@ -1176,7 +1176,7 @@ RooPlot* RooAbsReal::plotOn(RooPlot *frame, PlotOpt o) const
     makeProjectionSet(frame->getPlotVar(),frame->getNormVars(),projectedVars,kTRUE) ;
   }
 
-  coutD("Plotting") << "RooAbsReal::plotOn(" << GetName() << ") projectedVars = " << projectedVars << " sliceSet = " << sliceSet << endl ;
+  cxcoutD(Plotting) << "RooAbsReal::plotOn(" << GetName() << ") projectedVars = " << projectedVars << " sliceSet = " << sliceSet << endl ;
 
 
   RooArgSet* projDataNeededVars = 0 ;
@@ -1716,7 +1716,7 @@ void RooAbsReal::makeProjectionSet(const RooAbsArg* plotVar, const RooArgSet* al
   // may contain variables that we do not depend on. If 'silent' is cleared,
   // warnings about inconsistent input parameters will be printed.
 
-  cxcoutD("Plotting") << "RooAbsReal::makeProjectionSet(" << GetName() << ") plotVar = " << plotVar->GetName() << " allVars = " << (allVars?(*allVars):RooArgSet()) << endl ;
+  cxcoutD(Plotting) << "RooAbsReal::makeProjectionSet(" << GetName() << ") plotVar = " << plotVar->GetName() << " allVars = " << (allVars?(*allVars):RooArgSet()) << endl ;
 
   projectedVars.removeAll() ;
   if (!allVars) return ;
@@ -1736,7 +1736,7 @@ void RooAbsReal::makeProjectionSet(const RooAbsArg* plotVar, const RooArgSet* al
     while((ps=(RooAbsArg*)psIter->Next())) {
       RooAbsArg* tmp = projectedVars.find(ps->GetName()) ;
       if (tmp) {
-	coutD("Plotting") << "RooAbsReal::makeProjectionSet(" << GetName() << ") removing " << tmp->GetName() 
+	cxcoutD(Plotting) << "RooAbsReal::makeProjectionSet(" << GetName() << ") removing " << tmp->GetName() 
 			  << " from projection set because it a server of " << plotVar->GetName() << endl ;
 	projectedVars.remove(*tmp) ;
       }
@@ -1758,7 +1758,7 @@ void RooAbsReal::makeProjectionSet(const RooAbsArg* plotVar, const RooArgSet* al
     if (!dependsOnValue(*arg)) {
       projectedVars.remove(*arg,kTRUE) ;
 
-      coutD("Plotting") << "RooAbsReal::plotOn(" << GetName() 
+      cxcoutD(Plotting) << "RooAbsReal::plotOn(" << GetName() 
 			<< ") function doesn't depend on projection variable " 
 			<< arg->GetName() << ", ignoring" << endl ;
     }

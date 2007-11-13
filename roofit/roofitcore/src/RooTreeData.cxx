@@ -646,7 +646,7 @@ Bool_t RooTreeData::changeObservableName(const char* from, const char* to)
 
   // Check that we found it
   if (!var) {
-    coutE("Dataset") << "RooTreeData::changeObservableName(" << GetName() << " no observable " << from << " in this dataset" << endl ;
+    coutE(InputArguments) << "RooTreeData::changeObservableName(" << GetName() << " no observable " << from << " in this dataset" << endl ;
     return kTRUE ;
   }
 
@@ -1887,7 +1887,7 @@ void RooTreeData::optimizeReadingWithCaching(RooAbsArg& arg, const RooArgSet& ca
 
   if (pruneSet.getSize()!=0) {
     // Deactivate tree branches here
-    cxcoutI("Optimization") << "RooTreeData::optimizeReadingForTestStatistic(" << GetName() << "): Observables " << pruneSet
+    cxcoutI(Optimization) << "RooTreeData::optimizeReadingForTestStatistic(" << GetName() << "): Observables " << pruneSet
 			    << " in dataset are either not used at all, orserving exclusively p.d.f nodes that are now cached, disabling reading of these observables for TTree" << endl ;
     setArgStatus(pruneSet,kFALSE) ;
   }
