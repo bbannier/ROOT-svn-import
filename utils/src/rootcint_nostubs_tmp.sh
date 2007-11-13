@@ -79,6 +79,7 @@ ROOTCINTARGS=${ROOTCINTARGS/-I./}
 ROOTCINTARGS=${ROOTCINTARGS/$FILENAME/}
 ROOTCINTARGS=${ROOTCINTARGS/--cxx/}
 ROOTCINTARGS=${ROOTCINTARGS/$CXXFLAGS/}
+ROOTCINTARGS=${ROOTCINTARGS/-c/}
 
 # We remove one score from the mode option name
 MODE=${MODE/--/-}
@@ -86,8 +87,8 @@ MODE=${MODE/--/-}
 # Temporary dictionaries generation
 # Generate the first dictionary.. i.e the one with the shadow classes
 echo -++- Generating the first dictionary: ${FILENAME%.*}"Tmp1".cxx
-echo utils/src/rootcint_tmp $MODE ${FILENAME%.*}"Tmp1".cxx -. 1 $ROOTCINTARGS
-utils/src/rootcint_tmp $MODE ${FILENAME%.*}"Tmp1".cxx -. 1 $ROOTCINTARGS
+echo utils/src/rootcint_tmp $MODE ${FILENAME%.*}"Tmp1".cxx -c -. 1 $ROOTCINTARGS
+utils/src/rootcint_tmp $MODE ${FILENAME%.*}"Tmp1".cxx -c -. 1 $ROOTCINTARGS
 
 # Temporary dictionaries compilation
 echo -++- Compiling the first dictionary: ${FILENAME%.*}"Tmp1".cxx
@@ -109,8 +110,8 @@ nm -g -p --defined-only ${FILENAME%.*}"Tmp1".o | awk '{printf("%s\n", $3)}' >> $
 # Generate the second dictionary passing it the symbols of the .o files plus
 # those of the first dictionary
 echo -++- Generating the second dictionary: ${FILENAME%.*}"Tmp2".cxx
-echo utils/src/rootcint_tmp $MODE ${FILENAME%.*}"Tmp2".cxx --symbols-file ${FILENAME%.*}".nm" -. 2 $ROOTCINTARGS
-utils/src/rootcint_tmp $MODE ${FILENAME%.*}"Tmp2".cxx --symbols-file ${FILENAME%.*}".nm" -. 2 $ROOTCINTARGS
+echo utils/src/rootcint_tmp $MODE ${FILENAME%.*}"Tmp2".cxx -c --symbols-file ${FILENAME%.*}".nm" -. 2 $ROOTCINTARGS
+utils/src/rootcint_tmp $MODE ${FILENAME%.*}"Tmp2".cxx -c --symbols-file ${FILENAME%.*}".nm"  -. 2 $ROOTCINTARGS
 
 # Compile the second dictionary (should have only inline functions)
 echo -++- Compiling the second dictionary: ${FILENAME%.*}"Tmp2".cxx
@@ -124,8 +125,8 @@ nm -g -p --defined-only ${FILENAME%.*}"Tmp2".o | awk '{printf("%s\n", $3)}' >> $
 
 # Final Dictionary Generation
 echo -++- Generating the real dictionary: ${FILENAME}
-echo utils/src/rootcint_tmp $MODE $FILENAME --symbols-file ${FILENAME%.*}".nm"  -. 3 $ROOTCINTARGS
-utils/src/rootcint_tmp $MODE $FILENAME --symbols-file ${FILENAME%.*}".nm"  -. 3 $ROOTCINTARGS
+echo utils/src/rootcint_tmp $MODE $FILENAME -c --symbols-file ${FILENAME%.*}".nm" -. 3 $ROOTCINTARGS
+utils/src/rootcint_tmp $MODE $FILENAME -c --symbols-file ${FILENAME%.*}".nm" -. 3 $ROOTCINTARGS
 
 # We don't need the temporaries anymore (Now we do)
 #rm ${FILENAME%.*}"Tmp1".*
