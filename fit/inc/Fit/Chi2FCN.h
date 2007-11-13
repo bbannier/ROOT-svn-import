@@ -17,17 +17,10 @@
 #include "Math/FitMethodFunction.h"
 #endif
 
-#ifndef ROOT_Math_IParamFunctionfwd
-#include "Math/IParamFunctionfwd.h"
-#endif
-
 #ifndef ROOT_Math_IParamFunction
 #include "Math/IParamFunction.h"
 #endif
 
-#ifndef ROOT_Fit_DataVectorfwd
-#include "Fit/DataVectorfwd.h"
-#endif
 
 #ifndef ROOT_Fit_DataVector
 #include "Fit/DataVector.h"
@@ -84,8 +77,7 @@ public:
    fNEffPoints(0),
    fNCalls(0), 
    fGrad ( std::vector<double> ( func.NPar() ) )
-   {
-   }
+   { }
 
    /** 
       Destructor (no operations)
@@ -137,9 +129,10 @@ public:
       return FitUtil::EvaluateChi2Residual(fFunc, fData, x, i); 
    }
 
-   void Gradient(const double *x, double *g) const { 
+   // need to be virtual to be instantited
+   virtual void Gradient(const double *x, double *g) const { 
       // evaluate the chi2 gradient
-      // FitUtil::EvaluateChi2Gradient(fFunc, fData, x, g, fNEffPoints);
+      FitUtil::EvaluateChi2Gradient(fFunc, fData, x, g, fNEffPoints);
    }
 
 protected: 
@@ -155,17 +148,18 @@ private:
    /**
       Evaluation of the  function (required by interface)
     */
-   double DoEval (const double * x) const { 
+   virtual double DoEval (const double * x) const { 
       fNCalls++;
 #ifdef ROOT_FIT_PARALLEL
       return FitUtilParallel::EvaluateChi2(fFunc, fData, x, fNEffPoints); 
 #else 
+
       return FitUtil::EvaluateChi2(fFunc, fData, x, fNEffPoints); 
 #endif
    } 
 
    // for derivatives 
-   double  DoDerivative(const double * x, unsigned int icoord ) const { 
+   virtual double  DoDerivative(const double * x, unsigned int icoord ) const { 
       Gradient(x, &fGrad[0]); 
       return fGrad[icoord]; 
    }

@@ -13,7 +13,7 @@
 
 #include "Fit/Fitter.h"
 #include "Fit/Chi2FCN.h"
-//#include "Fit/Chi2GradFCN.h"
+#include "Fit/PoissonLikelihoodFCN.h"
 #include "Fit/LogLikelihoodFCN.h"
 #include "Math/Minimizer.h"
 #include "Fit/BinPoint.h"
@@ -73,13 +73,16 @@ void Fitter::SetFunction(const IModelFunction & func)
 
 void Fitter::SetFunction(const IModel1DFunction & func) 
 { 
-   std::cout << "set a grad function" << std::endl; 
+   std::cout << "set a 1d function" << std::endl; 
    //  set the fit model function from 1D func (clone the given one and keep a copy ) 
    // need to wrap the 1D func in a multim func
    std::auto_ptr<IModel1DFunction> fPtr( dynamic_cast<IModel1DFunction *> ( func.Clone() ) );
    assert (fPtr.get() != 0); 
    fFunc = new ROOT::Math::WrappedParamFunction<std::auto_ptr<IModel1DFunction> > 
       (fPtr, 1, fPtr->Parameters(), fPtr->Parameters() + fPtr->NPar() ); 
+
+   // creates the parameter  settings 
+   fConfig.SetParameterSettings(*fFunc); 
 }
 
 
@@ -101,31 +104,24 @@ bool Fitter::DoLeastSquareFit(const BinData & data) {
 
    // check if fFunc provides gradient
    IGradModelFunction * gradFun = dynamic_cast<IGradModelFunction *>(fFunc); 
-   typedef IModelFunction::BaseFunc BaseFunc; 
    if (gradFun == 0) { 
       // do minimzation without using the gradient
       Chi2FCN<BaseFunc> chi2(data,*fFunc); 
-
-//       double xxx[3] = {5.11,-1.485,1.846}; 
-//       std::cout << " chi2(x) " << chi2(xxx) << std::endl; 
-//       double xxx2[3] = {2,2,2}; 
-//       std::cout << " chi2(2,2,2) " << chi2(xxx2) << std::endl; 
-
       return DoMinimization<BaseFunc> (*minimizer, chi2, data.Size()); 
    } 
-#ifdef LATER
    else { 
       // use gradient 
-      typedef IGradModelFunction::BaseGradFunc BaseGradFunc; 
       Chi2FCN<BaseGradFunc> chi2(data,*gradFun); 
       return DoMinimization<BaseGradFunc> (*minimizer, chi2, data.Size()); 
    }
-#endif
    return false; 
 }
 
 template<class ObjFunc> 
 bool Fitter::DoMinimization(ROOT::Math::Minimizer & minimizer, const ObjFunc & objFunc, unsigned int dataSize) { 
+
+   // assert that params settings have been set correctly
+   assert( fConfig.ParamsSettings().size() == objFunc.NDim() );
 
    minimizer.SetFunction(objFunc);
    minimizer.SetVariables(fConfig.ParamsSettings().begin(), fConfig.ParamsSettings().end() ); 
@@ -149,7 +145,28 @@ bool Fitter::DoMinimization(ROOT::Math::Minimizer & minimizer, const ObjFunc & o
 bool Fitter::DoLikelihoodFit(const BinData & data) { 
 
    // perform a likelihood fit on a set of binned data 
-   return true;
+
+   // create Minimizer  
+   std::auto_ptr<ROOT::Math::Minimizer> minimizer = std::auto_ptr<ROOT::Math::Minimizer> ( fConfig.CreateMinimizer() );
+   if (minimizer.get() == 0) return false; 
+   if (fFunc == 0) return false; 
+
+   // logl fit (error is 0.5)
+   minimizer->SetErrorUp(0.5);
+
+   // check if fFunc provides gradient
+   IGradModelFunction * gradFun = dynamic_cast<IGradModelFunction *>(fFunc); 
+   if (gradFun == 0) { 
+      // do minimzation without using the gradient
+      PoissonLikelihoodFCN<BaseFunc> logl(data,*fFunc); 
+      return DoMinimization<BaseFunc> (*minimizer, logl, data.Size()); 
+   } 
+   else { 
+      // use gradient 
+      PoissonLikelihoodFCN<BaseGradFunc> logl(data,*gradFun); 
+      return DoMinimization<BaseGradFunc> (*minimizer, logl, data.Size()); 
+   }
+   return false; 
 }
 
 bool Fitter::DoLikelihoodFit(const UnBinData & data) { 
@@ -174,14 +191,13 @@ bool Fitter::DoLikelihoodFit(const UnBinData & data) {
    IGradModelFunction * gradFun = dynamic_cast<IGradModelFunction *>(fFunc); 
    if (gradFun == 0) { 
       // do minimzation without using the gradient
-      LogLikelihoodFCN logl(data,*fFunc); 
-
-      return DoMinimization<LogLikelihoodFCN::BaseObjFunction> (*minimizer, logl, data.Size()); 
+      LogLikelihoodFCN<BaseFunc> logl(data,*fFunc); 
+      return DoMinimization<BaseFunc> (*minimizer, logl, data.Size()); 
    } 
    else { 
 //       // use gradient 
-//       Chi2GradFCN chi2(data,*gradFun); 
-//       return DoMinimization<Chi2GradFCN::BaseObjFunction> (*minimizer, chi2, data.Size()); 
+      LogLikelihoodFCN<BaseGradFunc> logl(data,*gradFun); 
+      return DoMinimization<BaseGradFunc> (*minimizer, logl, data.Size()); 
    }
    return false; 
 }

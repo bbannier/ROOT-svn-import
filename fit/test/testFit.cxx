@@ -1,5 +1,7 @@
 #include "TH1.h"
+#include "TH2.h"
 #include "TF1.h"
+#include "TF2.h"
 #include "TSystem.h"
 #include "TRandom3.h"
 #include "TROOT.h"
@@ -10,6 +12,8 @@
 #include "Fit/Fitter.h"
 
 #include "Math/WrappedMultiTF1.h"
+#include "Math/WrappedParamFunction.h"
+#include "Math/WrappedTF1.h"
 #include "Math/Polynomial.h"
 
 #include <string>
@@ -67,20 +71,84 @@ int testHisto1DFit() {
    f.SetParameters(p); 
 
    // create the fitter 
-   std::cout << "Fit parameter 2  " << f.Parameters()[2] << std::endl;
 
    ROOT::Fit::Fitter fitter; 
+
    bool ret = fitter.Fit(d, f);
    if (ret)  
       fitter.Result().Print(std::cout); 
    else {
-      std::cout << " Fit Failed " << std::endl;
+      std::cout << "Chi2 Fit Failed " << std::endl;
       return -1; 
    }
+
+   // test using binned likelihood 
+   ret = fitter.LikelihoodFit(d, f);
+   if (ret)  
+      fitter.Result().Print(std::cout); 
+   else {
+      std::cout << "Binned Likelihood Fit Failed " << std::endl;
+      return -1; 
+   }
+
+
    return 0;
 }
 
-int testHisto1DGradFit() { 
+
+class Func1D : public ROOT::Math::IParamFunction { 
+public:
+   void SetParameters(const double *p) { std::copy(p,p+NPar(),fp);}
+   const double * Parameters() const { return fp; }
+   Func1D * Clone() const { 
+      Func1D * f =  new Func1D(); 
+      f->SetParameters(fp);
+      return f;
+   };
+   unsigned int NPar() const { return 3; }
+private:
+   double DoEval( double x) const { 
+      return fp[0]*x*x + fp[1]*x + fp[2]; 
+   }
+   double fp[3];
+   
+};
+
+// gradient 2D function
+class GradFunc2D : public ROOT::Math::IParamMultiGradFunction { 
+public:
+   void SetParameters(const double *p) { std::copy(p,p+NPar(),fp);}
+   const double * Parameters() const { return fp; }
+   GradFunc2D * Clone() const { 
+      GradFunc2D * f =  new GradFunc2D(); 
+      f->SetParameters(fp);
+      return f;
+   };
+   unsigned int NDim() const { return 2; }
+   unsigned int NPar() const { return 5; }
+private:
+   double DoEval( const double *x) const { 
+      return fp[0]*x[0]*x[0] + fp[1]*x[0] + fp[2]*x[1]*x[1] + fp[3]*x[1] + fp[4]; 
+   }
+   void DoParameterGradient( const double * x, double * grad) const { 
+      grad[0] = x[0]*x[0]; 
+      grad[1] = x[0];
+      grad[2] = x[1]*x[1]; 
+      grad[3] = x[1];
+      grad[4] = 0; 
+   }
+   double DoDerivative(const double *x, unsigned int icoord = 0) const { 
+      assert(icoord <= 1); 
+      if (icoord == 0) 
+         return 2. * fp[0] * x[0] + fp[1];
+      else 
+         return 2. * fp[2] * x[1] + fp[3];
+   }
+   double fp[5];
+   
+};
+
+int testHisto1DPolFit() { 
 
 
 
@@ -98,15 +166,7 @@ int testHisto1DGradFit() {
    for (int i = 0; i <1000; ++i) 
       h2->Fill( func->GetRandom() );
 
-   h2->Print();
-   //h1->Draw();
-
-//    gSystem->Load("libMinuit2");
-//    gSystem->Load("libFit");
-
-
-   // ROOT::Fit::DataVector<ROOT::Fit::BinPoint> dv; 
-   
+   // fill fit data
    ROOT::Fit::BinData d; 
    ROOT::Fit::FillData(d,h2,func);
 
@@ -114,9 +174,13 @@ int testHisto1DGradFit() {
    printData(d);
 
    // create the function
-   ROOT::Math::Polynomial f(100,0,3); 
-   // double p[3] = {100,0,3.}; 
-//    f.SetParameters(p); 
+   //ROOT::Math::Polynomial f(100,0,3); 
+   Func1D f; 
+
+   //ROOT::Math::WrappedTF1 f(*func); 
+   double p[3] = {100,0,3.}; 
+   f.SetParameters(p); 
+
 
    // create the fitter 
    std::cout << "Fit parameter 2  " << f.Parameters()[2] << std::endl;
@@ -131,6 +195,77 @@ int testHisto1DGradFit() {
    }
    return 0; 
 }
+
+int testHisto2DFit() { 
+   // fit using a 2d parabola (test also gradient)
+
+
+   std::string fname("pol2");
+   TF2 * func = new TF2("f2d",ROOT::Math::ParamFunctor(GradFunc2D() ), -5.,5.,-5,5,5);
+   double p0[5] = { 1.,2.,0.5,1.,3. }; 
+   func->SetParameters(p0);
+   assert(func->GetNpar() == 5); 
+
+   TRandom3 rndm;
+
+   // fill an histogram 
+   TH2D * h2 = new TH2D("h2d","h2d",30,-5.,5.,30,-5.,5.);
+//      h1->FillRandom(fname.c_str(),100);
+   for (int i = 0; i <1000; ++i) {
+      double x,y = 0;
+      func->GetRandom2(x,y);
+      h2->Fill(x,y);
+   }
+   // fill fit data
+   ROOT::Fit::BinData d; 
+   ROOT::Fit::FillData(d,h2,func);
+
+
+   //printData(d);
+
+   // create the function
+   GradFunc2D f; 
+
+   double p[5] = { 2.,1.,1,2.,100. }; 
+   f.SetParameters(p); 
+
+
+   // create the fitter 
+
+   ROOT::Fit::Fitter fitter; 
+   bool ret = fitter.Fit(d, f);
+   if (ret)  
+      fitter.Result().Print(std::cout); 
+   else {
+      std::cout << " Fit Failed " << std::endl;
+      return -1; 
+   }
+
+   // test without gradient
+   std::cout <<"\ntest result without using gradient" << std::endl;
+   ROOT::Math::WrappedParamFunction<GradFunc2D *> f2(&f,2,5,p);
+   ret = fitter.Fit(d, f2);
+   if (ret)  
+      fitter.Result().Print(std::cout); 
+   else {
+      std::cout << " Fit Failed " << std::endl;
+      return -1; 
+   }
+
+   // test binned likelihood gradient
+   std::cout <<"\ntest result using gradient and binned likelihood" << std::endl;
+   ret = fitter.LikelihoodFit(d, f);
+   f.SetParameters(p); 
+   if (ret)  
+      fitter.Result().Print(std::cout); 
+   else {
+      std::cout << " Fit Failed " << std::endl;
+      return -1; 
+   }
+
+   return 0; 
+}
+
 
 int testUnBin1DFit() { 
 
@@ -188,7 +323,8 @@ int main() {
 
    int iret = 0; 
    iret |= testFit( testHisto1DFit, "Histogram1D Fit");
-   iret |= testFit( testHisto1DGradFit, "Histogram1D Gradient Fit");
+   iret |= testFit( testHisto1DPolFit, "Histogram1D Polynomial Fit");
+   iret |= testFit( testHisto2DFit, "Histogram2D Gradient Fit");
    iret |= testFit( testUnBin1DFit, "Unbin 1D Fit");
    return iret; 
 }

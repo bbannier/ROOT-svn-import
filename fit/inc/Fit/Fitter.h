@@ -55,8 +55,14 @@ class Fitter {
 public: 
 
    typedef ROOT::Math::IParamMultiFunction       IModelFunction; 
-   typedef  ROOT::Math::IParamMultiGradFunction  IGradModelFunction;
+   typedef ROOT::Math::IParamMultiGradFunction   IGradModelFunction;
    typedef ROOT::Math::IParamFunction            IModel1DFunction; 
+
+//    typedef IModelFunction::BaseFunc BaseFunc; 
+//    typedef IGradModelFunction::BaseGradFunc BaseGradFunc; 
+   typedef ROOT::Math::IMultiGenFunction BaseFunc; 
+   typedef ROOT::Math::IMultiGradFunction BaseGradFunc; 
+
 
    /** 
       Default constructor
@@ -88,7 +94,7 @@ private:
 public: 
 
    /** 
-       fit a binned data set using any  generic model  function
+       fit a data set using any  generic model  function
        Pre-requisite on the function: 
    */ 
    template < class Data , class Function> 
@@ -112,11 +118,27 @@ public:
    } 
 
    /**
-      binned likelihood fit 
+      Likelihood fit 
     */
-   bool LikelihoodBinFit(const BinData & data) { 
+   template <class Data> 
+   bool LikelihoodFit(const Data & data) { 
       return DoLikelihoodFit(data);
    }
+
+   /** 
+       fit a data set using any  generic model  function
+       Pre-requisite on the function: 
+   */ 
+   template < class Data , class Function> 
+   bool LikelihoodFit( const Data & data, const Function & func) { 
+      SetFunction(func);
+      return DoLikelihoodFit(data);
+   }
+
+   /**
+      do a linear fit on a set of bin-data
+    */
+   bool LinearFit(const BinData & data) { return DoLinearFit(data); }
 
    /** 
        Set the fitted function (model function) from a parametric function interface
