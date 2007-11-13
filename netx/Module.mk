@@ -74,7 +74,7 @@ $(NETXLIB):     $(NETXO) $(NETXDO) $(ORDER_) $(MAINLIBS) $(NETXLIBDEP) \
 
 $(NETXDS):      $(NETXH1) $(NETXL) $(NETXO) $(ROOTCINTTMPEXE) $(XROOTDETAG)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMPEXE) -f $@ --cxx "$(CXXFLAGS)" -o "$(NETXO)" -c $(NETXINCEXTRA) $(NETXH) $(NETXL)
+		$(ROOTCINTTMPEXE) -f $@ -o "$(NETXO)" -c $(NETXINCEXTRA) $(NETXH) $(NETXL)
 
 $(NETXMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(NETXL)
 		$(RLIBMAP) -o $(NETXMAP) -l $(NETXLIB) -d $(NETXLIBDEPM) -c $(NETXL)
