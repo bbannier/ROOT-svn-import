@@ -15,6 +15,7 @@
 
 #ifdef _WIN32
 #define _USE_MATH_DEFINES 
+#define HAVE_NO_LOG1P
 #endif
 
 #include <cmath>
@@ -51,9 +52,18 @@ inline double Pi() { return M_PI; }
 */
 
 /// log(1+x) with error cancelatio when x is small
-inline double log1p( double x) { return ::log1p(x); }      
+inline double log1p( double x) { 
+#ifndef HAVE_NO_LOG1P
+   return ::log1p(x); 
+#else 
+   // if log1p is not in c math library
+  volatile double y;
+  y = 1 + x;
+  return std::log(y) - ((y-1)-x)/y ;  /* cancels errors with IEEE arithmetic */
+#endif
+}      
 /// exp(x) -1 with error cancellation when x is small
-inline double expm1( double x) { return ::expm1(x); }      
+//inline double expm1( double x) { return ::expm1(x); }      
       
    } // end namespace Math
 
