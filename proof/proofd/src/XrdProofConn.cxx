@@ -515,7 +515,7 @@ XrdClientMessage *XrdProofConn::SendReq(XPClientRequest *req, const void *reqDat
       retry++;
       if (!answMex || answMex->IsError()) {
          TRACE(REQ,"XrdProofConn::SendReq: communication error detected with "<<URLTAG);
-         if (retry > kXR_maxReqRetry) {
+         if (retry > maxTry) {
             TRACE(REQ,"XrdProofConn::SendReq: max number of retries reached - Abort");
             abortcmd = 1;
          } else {
