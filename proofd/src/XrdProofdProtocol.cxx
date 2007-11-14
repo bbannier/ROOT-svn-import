@@ -2724,7 +2724,7 @@ int XrdProofdProtocol::MapClient(bool all)
             // Make sure that it worked out
             struct stat st;
             if ((stat(pmgr->UNIXSockPath(), &st) != 0) || 
-                st.st_uid != fUI.fUid || st.st_gid != fUI.fGid) {
+                (int) st.st_uid != fUI.fUid || (int) st.st_gid != fUI.fGid) {
                TRACEI(XERR, "MapClient: problems setting user ownership"
                             " on UNIX socket");
                return -1;
@@ -4772,6 +4772,8 @@ int XrdProofdProtocol::Admin()
 
    int rc = 1;
 
+   XrdSysMutexHelper mhc(fPClient->Mutex());
+
    // Unmarshall the data
    //
    int psid = ntohl(fRequest.proof.sid);
@@ -5137,12 +5139,13 @@ int XrdProofdProtocol::Admin()
 
       // Asynchronous notification to requester
       if (fgMgr.SrvType() != kXPD_WorkerServer) {
-         cmsg = "Reset: terminating the remaining sessions";
+         cmsg = "Reset: terminating the remaining sessions ... (5 sec)";
          fResponse.Send(kXR_attn, kXPD_srvmsg, (char *) cmsg.c_str(), cmsg.length());
       }
 
       // Now we cleanup what left (any zombies or super resistent processes)
       CleanupProofServ(all, usr);
+      sleep(5);
 
       // Cleanup all possible sessions around
       // (forward down the tree only if not leaf)
@@ -5171,6 +5174,117 @@ int XrdProofdProtocol::Admin()
 
       // Cleanup usr
       SafeDelArray(usr);
+
+      // Acknowledge user
+      fResponse.Send();
+
+   } else if (type == kSendMsgToUser) {
+
+      // Target client (default us)
+      XrdProofdClient *tgtclnt = fPClient;
+      XrdProofdClient *c = 0;
+      std::list<XrdProofdClient *>::iterator i;
+
+      // Extract the user name, if any
+      int len = fRequest.header.dlen;
+      if (len <= 0) {
+         // No message: protocol error?
+         TRACEP(XERR, "Admin: kSendMsgToUser: no message");
+         fResponse.Send(kXR_InvalidRequest,"Admin: kSendMsgToUser: no message");
+         return rc;
+      }
+
+      XrdOucString cmsg((const char *)fArgp->buff, len);
+      XrdOucString usr;
+      if (cmsg.beginswith("u:")) {
+         // Extract user
+         int isp = cmsg.find(' ');
+         if (isp != STR_NPOS) {
+            usr.assign(cmsg, 2, isp-1);
+            cmsg.erase(0, isp+1);
+         }
+         if (usr.length() > 0) {
+            TRACEP(DBG, "Admin: kSendMsgToUser: request for user: '"<<usr<<"'");
+            // Find the client instance
+            bool clntfound = 0;
+            for (i = fgProofdClients.begin(); i != fgProofdClients.end(); ++i) {
+               if ((c = *i) && c->Match(usr.c_str())) {
+                  tgtclnt = c;
+                  clntfound = 1;
+                  break;
+               }
+            }
+            if (!clntfound) {
+               // No message: protocol error?
+               TRACEP(XERR, "Admin: kSendMsgToUser: target client not found");
+               fResponse.Send(kXR_InvalidRequest,
+                              "Admin: kSendMsgToUser: target client not found");
+               return rc;
+            }
+         }
+      }
+      // Recheck message length
+      if (cmsg.length() <= 0) {
+         // No message: protocol error?
+         TRACEP(XERR, "Admin: kSendMsgToUser: no message after user specification");
+         fResponse.Send(kXR_InvalidRequest,
+                        "Admin: kSendMsgToUser: no message after user specification");
+         return rc;
+      }
+
+      // Check if allowed
+      bool all = 0;
+      if (!fSuperUser) {
+         if (usr.length() > 0) {
+            if (tgtclnt != fPClient) {
+               TRACEP(XERR, "Admin: kSendMsgToUser: not allowed to send messages to usr '"<<usr<<"'");
+               fResponse.Send(kXR_InvalidRequest,
+                           "Admin: kSendMsgToUser: not allowed to send messages to specified usr");
+               return rc;
+            }
+         } else {
+            TRACEP(XERR, "Admin: kSendMsgToUser: not allowed to send messages to connected users");
+            fResponse.Send(kXR_InvalidRequest,
+                           "Admin: kSendMsgToUser: not allowed to send messages to connected users");
+            return rc;
+         }
+      } else {
+         if (usr.length() <= 0)
+            all = 1;
+      }
+
+      // The clients to notified
+      std::list<XrdProofdClient *> *clnts;
+      if (all) {
+         // The full list
+         clnts = &fgProofdClients;
+      } else {
+         clnts = new std::list<XrdProofdClient *>;
+         clnts->push_back(tgtclnt);
+      }
+
+      // Loop over them
+      c = 0;
+      for (i = clnts->begin(); i != clnts->end(); ++i) {
+         if ((c = *i)) {
+
+            // This part may be not thread safe
+            XrdSysMutexHelper mh(c->Mutex());
+
+            // Notify the attached clients
+            int ic = 0;
+            XrdProofdProtocol *p = 0;
+            for (ic = 0; ic < (int) c->Clients()->size(); ic++) {
+               if ((p = c->Clients()->at(ic)) && p->fTopClient) {
+                  unsigned short sid;
+                  p->fResponse.GetSID(sid);
+                  p->fResponse.Set(c->RefSid());
+                  p->fResponse.Send(kXR_attn, kXPD_srvmsg, (char *) cmsg.c_str(), cmsg.length());
+                  p->fResponse.Set(sid);
+               }
+            }
+         }
+      }
 
       // Acknowledge user
       fResponse.Send();

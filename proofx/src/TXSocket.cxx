@@ -1509,6 +1509,7 @@ TObjString *TXSocket::SendCoordinator(Int_t kind, const char *msg, Int_t int2,
          break;
       case kQueryLogPaths:
          vout = (void **)&bout;
+      case kSendMsgToUser:
       case kGroupProperties:
       case kSessionTag:
       case kSessionAlias:
