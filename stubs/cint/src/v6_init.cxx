@@ -1196,7 +1196,7 @@ int G__main(int argc, char** argv)
       if (G__NOLINK > G__globalcomp) {
          if (!includes_printed && !G__isfilebundled) {
             linkfilename_h = linkfilename;
-            std::string::size_type in = linkfilename_h.find_last_of(".");
+            std::string::size_type in = linkfilename_h.rfind(".");
             if(in != std::string::npos){
                int l = in;
                linkfilename_h[l+1] = 'h';
@@ -1204,14 +1204,14 @@ int G__main(int argc, char** argv)
             }
 
             std::string headerb(basename(dllid));
-            std::string::size_type idx = headerb.find_last_of("Tmp");
+            std::string::size_type idx = headerb.rfind("Tmp");
             int l;
             if(idx != std::string::npos){
                l = idx;
-               headerb[l-2] = '\0';   
+               headerb[l] = '\0';   
             }
             else{
-               idx = headerb.find_last_of(".");
+               idx = headerb.rfind(".");
                if(idx != std::string::npos){
                   l = idx;
                   headerb[l] = '\0';   
