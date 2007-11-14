@@ -97,7 +97,8 @@ private:
 
 public: 
 
-   LogLikelihoodFCN * Clone() const { return  new LogLikelihoodFCN(fData,fFunc); }
+   /// clone the function (need to return Base for Windows)
+   BaseFunction * Clone() const { return  new LogLikelihoodFCN(fData,fFunc); }
 
    unsigned int NDim() const { return fNDim; }
 
