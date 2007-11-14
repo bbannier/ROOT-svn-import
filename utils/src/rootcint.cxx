@@ -4660,15 +4660,15 @@ int main(int argc, char **argv)
          
 #ifndef ROOTBUILD
          string headerb(basename(header.c_str()));
-         string::size_type idx = headerb.find_last_of("Tmp");
+         string::size_type idx = headerb.rfind("Tmp");
          
          int l;
          if(idx != string::npos){
             l = idx;
-            headerb[l-2] = '\0';   
+            headerb[l] = '\0';   
          }
          else{
-            idx = headerb.find_last_of(".");
+            idx = headerb.rfind(".");
             if(idx != string::npos){
                l = idx;
                headerb[l] = '\0';   

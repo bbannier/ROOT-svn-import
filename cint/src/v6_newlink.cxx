@@ -4417,10 +4417,10 @@ void G__cppif_geninline(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,i
 
          // print the rest of the assign
          if(ifunc->isconst[j] & G__CONSTFUNC)
-            fprintf(fp," %s", "const");
+            fprintf(fp," %s", " const ");
          if(ifunc->isconst[j] & G__FUNCTHROW)
-            fprintf(fp," %s", "throw()");
-         else
+            fprintf(fp," %s", " throw() ");
+         //else
             
 
          fprintf(fp," = &%s::%s; \n", G__fulltagname(i,0), ifunc->funcname[j]);
