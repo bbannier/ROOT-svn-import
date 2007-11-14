@@ -272,6 +272,7 @@ extern int G__ismain;           /* is there a main function */
 extern int G__globalcomp;       /* make compiled func's global table */
 extern int G__store_globalcomp;
 extern long G__globalvarpointer; /* make compiled func's global table */
+extern int G__isfilebundled;       /* indicate if we have a bundle file in rootcint */
 
 #ifdef __cplusplus
 extern struct G__filetable G__srcfile[G__MAXFILE];

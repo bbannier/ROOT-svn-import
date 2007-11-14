@@ -395,6 +395,12 @@ void G__setglobalcomp(int globalcomp)
 }
 
 //______________________________________________________________________________
+void G__setisfilebundled(int isfilebundled)
+{
+   G__isfilebundled = isfilebundled;
+}
+
+//______________________________________________________________________________
 G__parse_hook_t* G__set_afterparse_hook(G__parse_hook_t* hook)
 {
    G__parse_hook_t* old = G__afterparse_hook;
@@ -1120,44 +1126,11 @@ int G__main(int argc, char** argv)
 #endif
 #endif
    
+   int includes_printed = 0;
    std::string linkfilename_h;
    if (G__globalcomp < G__NOLINK) {
       //if(!G__dicttype) // LF
       G__gen_cppheader(0);
-
-
-      linkfilename_h = linkfilename;
-      std::string::size_type in = linkfilename_h.find(".", 0);
-      if(in != std::string::npos){
-         int l = in;
-         linkfilename_h[l+1] = 'h';
-         linkfilename_h[l+2] = '\0';   
-      }
-
-      std::string headerb(basename(dllid));
-      std::string::size_type idx = headerb.find("Tmp", 0);
-      int l;
-      if(idx != std::string::npos){
-         l = idx;
-         headerb[l] = '\0';   
-      }
-      else{
-         idx = headerb.find(".", 0);
-         if(idx != std::string::npos){
-            l = idx;
-            headerb[l] = '\0';   
-         }
-      }
-
-      // LF 12-11-07
-      // put protection against multiple includes of dictionaries' .h
-      FILE *fp = fopen(linkfilename_h.c_str(),"a");
-      //if(!fp) G__fileerror(G__CPPLINK_H);
-      if(fp){
-         fprintf(fp,"#ifndef G__includes_dict_%s\n", headerb.c_str());
-         fprintf(fp,"#define G__includes_dict_%s\n", headerb.c_str());
-         fclose(fp);
-      }
    }
    
    /*************************************************************
@@ -1221,6 +1194,42 @@ int G__main(int argc, char** argv)
       }
 
       if (G__NOLINK > G__globalcomp) {
+         if (!includes_printed && !G__isfilebundled) {
+            linkfilename_h = linkfilename;
+            std::string::size_type in = linkfilename_h.find_last_of(".");
+            if(in != std::string::npos){
+               int l = in;
+               linkfilename_h[l+1] = 'h';
+               linkfilename_h[l+2] = '\0';   
+            }
+
+            std::string headerb(basename(dllid));
+            std::string::size_type idx = headerb.find_last_of("Tmp");
+            int l;
+            if(idx != std::string::npos){
+               l = idx;
+               headerb[l-2] = '\0';   
+            }
+            else{
+               idx = headerb.find_last_of(".");
+               if(idx != std::string::npos){
+                  l = idx;
+                  headerb[l] = '\0';   
+               }
+            } 
+
+            // LF 12-11-07
+            // put protection against multiple includes of dictionaries' .h
+            FILE *fp = fopen(linkfilename_h.c_str(),"a");
+            //if(!fp) G__fileerror(G__CPPLINK_H);
+            if(fp){
+               fprintf(fp,"#ifndef G__includes_dict_%s //init 1223\n", headerb.c_str());
+               fprintf(fp,"#define G__includes_dict_%s //init 1224 //%s\n", headerb.c_str(), sourcefile);
+               fclose(fp);
+            }
+            includes_printed = 1;
+         }
+
          //if(!G__dicttype) // LF
          G__gen_cppheader(sourcefile);
       }
@@ -1238,7 +1247,7 @@ int G__main(int argc, char** argv)
          return(EXIT_SUCCESS);
       }
    }
-   if (G__globalcomp < G__NOLINK) {
+   if (G__globalcomp < G__NOLINK && includes_printed && !G__isfilebundled) {
       FILE *fp = fopen(linkfilename_h.c_str(),"a");
       //if(!fp) G__fileerror(G__CPPLINK_H);
       if(fp){

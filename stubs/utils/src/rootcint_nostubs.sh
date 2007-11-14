@@ -109,8 +109,8 @@ g++ $CXXFLAGS -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -I. -o ${FILENAME
 nm -g -p --defined-only $OBJS | awk '{printf("%s\n", $3)}' >> ${FILENAME%.*}.nm
 nm -g -p --defined-only ${FILENAME%.*}"Tmp1".o | awk '{printf("%s\n", $3)}' > ${FILENAME%.*}.nm
 
-echo rootcint $MODE $ARGS ${FILENAME%.*}"Tmp2".cxx $COPTION  -. 2 $ROOTCINTARGS
-rootcint $MODE $ARGS ${FILENAME%.*}"Tmp2".cxx $COPTION -. 2 -L${FILENAME%.*}".nm"  $ROOTCINTARGS
+echo rootcint $MODE $ARGS ${FILENAME%.*}"Tmp2".cxx $COPTION -. 2 --symbols-file ${FILENAME%.*}".nm" $ROOTCINTARGS
+rootcint $MODE $ARGS ${FILENAME%.*}"Tmp2".cxx $COPTION -. 2 --symbols-file ${FILENAME%.*}".nm" $ROOTCINTARGS
 
 # Temporary Dictionar 2 compilation
 g++ $CXXFLAGS -Iinclude -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -I. -o ${FILENAME%.*}"Tmp2".o -c ${FILENAME%.*}"Tmp2".cxx
@@ -123,8 +123,8 @@ nm -g -p --defined-only ${FILENAME%.*}"Tmp2".o | awk '{printf("%s\n", $3)}' >> $
 #rm ${FILENAME%.*}"Tmp2".*
 
 # Final Dictionary Generation
-echo rootcint $MODE $ARGS $FILENAME $COPTION $POPTION -. 3 -L${FILENAME%.*}".nm" $ROOTCINTARGS
-rootcint $MODE $ARGS $FILENAME $COPTION $POPTION -. 3 -L${FILENAME%.*}".nm" $ROOTCINTARGS
+echo rootcint $MODE $ARGS $FILENAME $COPTION $POPTION -. 3 --symbols-file ${FILENAME%.*}".nm" $ROOTCINTARGS
+rootcint $MODE $ARGS $FILENAME $COPTION $POPTION -. 3 --symbols-file ${FILENAME%.*}".nm" $ROOTCINTARGS
 # We don't need the symbols file anymore
 #rm ${FILENAME%.*}.nm
 
