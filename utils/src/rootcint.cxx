@@ -184,6 +184,7 @@ extern "C" {
    int   G__main(int argc, char **argv);
    void  G__exit(int rtn);
    struct G__includepath *G__getipathentry();
+   void  G__setisfilebundled(int isfilebundled);
 }
 const char *ShortTypeName(const char *typeDesc);
 
@@ -4203,6 +4204,7 @@ int main(int argc, char **argv)
    const char *env_dict_type=getenv("ROOTDICTTYPE");
    const char *libname;
    int dicttype = 0; // LF 09-07-07 -- 0 for dict, 1 for ShowMembers
+   G__setisfilebundled(0);
 
    if (env_dict_type)
       if (!strcmp(env_dict_type, "cint"))
@@ -4655,30 +4657,31 @@ int main(int argc, char **argv)
                  argv[0], bundlename.c_str());
          use_preprocessor = 0;
       } else {
-                  
-         //string headerb(basename(header.c_str()));
-         //string::size_type idx = headerb.find("Tmp", 0);
          
-         //int l;
-         //if(idx != string::npos){
-         //   l = idx;
-         //   headerb[l] = '\0';   
-         //}
-         //else{
-         //   idx = headerb.find(".", 0);
-         //   if(idx != string::npos){
-         //      l = idx;
-         //      headerb[l] = '\0';   
-         //   }
-         //}
+#ifndef ROOTBUILD
+         string headerb(basename(header.c_str()));
+         string::size_type idx = headerb.find_last_of("Tmp");
+         
+         int l;
+         if(idx != string::npos){
+            l = idx;
+            headerb[l-2] = '\0';   
+         }
+         else{
+            idx = headerb.find_last_of(".");
+            if(idx != string::npos){
+               l = idx;
+               headerb[l] = '\0';   
+            }
+         }
 
          // LF 12-11-07
          // put protection against multiple includes of dictionaries' .h
-         //fprintf(bundle,"#ifndef G__includes_dict_%s\n", headerb.c_str());
-         //fprintf(bundle,"#define G__includes_dict_%s\n", headerb.c_str());
-
-         fprintf(bundle,"#include \"TObject.h\"\n");
-         fprintf(bundle,"#include \"TMemberInspector.h\"\n");
+         fprintf(bundle,"#ifndef G__includes_dict_%s //rootcint 4678\n", headerb.c_str());
+         fprintf(bundle,"#define G__includes_dict_%s //rootcint 4679\n", headerb.c_str());
+#endif
+         fprintf(bundle,"#include \"TObject.h\" //rootcint 4681\n");
+         fprintf(bundle,"#include \"TMemberInspector.h\" //rootcint 4682\n");
       }
    }
    for (i = ic; i < argc; i++) {
@@ -4717,7 +4720,9 @@ int main(int argc, char **argv)
       }
    }
    if (use_preprocessor) {
-      //fprintf(bundle,"#endif\n");
+#ifndef ROOTBUILD
+      fprintf(bundle,"#endif\n");
+#endif
       fclose(bundle);
    }
 
@@ -4748,6 +4753,8 @@ int main(int argc, char **argv)
       argvv[argcc++] = autold;
    }
    
+   if(insertedBundle) G__setisfilebundled(1);
+
    G__ShadowMaker::VetoShadow(); // we create them ourselves
    G__setothermain(2);
    G__set_ioctortype_handler( (int (*)(const char*))AddConstructorType );
