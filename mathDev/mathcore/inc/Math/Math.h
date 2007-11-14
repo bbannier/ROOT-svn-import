@@ -45,6 +45,15 @@ namespace ROOT {
     Mathematical constants 
 */ 
 inline double Pi() { return M_PI; } 
+
+/** 
+    declarations for functions which are not implemented by some compilers
+*/
+
+/// log(1+x) with error cancelatio when x is small
+inline double log1p( double x) { return ::log1p(x); }      
+/// exp(x) -1 with error cancellation when x is small
+inline double expm1( double x) { return ::expm1(x); }      
       
    } // end namespace Math
 

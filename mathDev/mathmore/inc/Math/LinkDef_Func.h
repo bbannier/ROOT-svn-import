@@ -34,8 +34,6 @@
 #pragma link C++ function ROOT::Math::sph_neumann(unsigned,double);
 
 // statistical functions: pdf of mathmore
-#pragma link C++ function ROOT::Math::beta_pdf( double , double, double);
-#pragma link C++ function ROOT::Math::landau_pdf( double , double, double);
 
 // quantiles: inverses of cdf
 #pragma link C++ function ROOT::Math::breitwigner_quantile_c(double,double);

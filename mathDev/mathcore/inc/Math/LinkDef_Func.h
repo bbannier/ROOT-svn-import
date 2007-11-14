@@ -14,7 +14,7 @@
 #pragma link C++ global ROOT_Math_PdfFuncMathCore;
 #pragma link C++ global ROOT_Math_ProbFuncMathCore;
 
-// special functions
+// special functionses
 #pragma link C++ function ROOT::Math::erf( double );
 #pragma link C++ function ROOT::Math::erfc( double );
 #pragma link C++ function ROOT::Math::tgamma( double );
@@ -22,6 +22,7 @@
 #pragma link C++ function ROOT::Math::beta( double , double);
 
 // statistical functions : pdf
+#pragma link C++ function ROOT::Math::beta_pdf( double , double, double);
 #pragma link C++ function ROOT::Math::binomial_pdf( unsigned int , double, unsigned int);
 #pragma link C++ function ROOT::Math::breitwigner_pdf( double , double, double);
 #pragma link C++ function ROOT::Math::cauchy_pdf( double , double, double);
@@ -30,6 +31,7 @@
 #pragma link C++ function ROOT::Math::fdistribution_pdf( double , double, double, double);
 #pragma link C++ function ROOT::Math::gamma_pdf( double , double, double, double);
 #pragma link C++ function ROOT::Math::gaussian_pdf( double , double, double);
+#pragma link C++ function ROOT::Math::landau_pdf( double , double, double);
 #pragma link C++ function ROOT::Math::lognormal_pdf( double , double, double, double);
 #pragma link C++ function ROOT::Math::normal_pdf( double , double, double);
 #pragma link C++ function ROOT::Math::poisson_pdf( unsigned int , double);
@@ -54,12 +56,16 @@
 #pragma link C++ function ROOT::Math::uniform_cdf_c( double , double, double, double);
 #pragma link C++ function ROOT::Math::uniform_cdf( double , double, double, double);
 
+#pragma link C++ function ROOT::Math::beta_cdf_c( double , double, double);
+#pragma link C++ function ROOT::Math::beta_cdf( double , double, double);
 #pragma link C++ function ROOT::Math::fdistribution_cdf_c( double , double, double, double);
 #pragma link C++ function ROOT::Math::fdistribution_cdf( double , double, double, double);
 #pragma link C++ function ROOT::Math::gamma_cdf_c( double , double, double, double);
 #pragma link C++ function ROOT::Math::gamma_cdf( double , double, double, double);
 #pragma link C++ function ROOT::Math::tdistribution_cdf_c( double , double, double);
 #pragma link C++ function ROOT::Math::tdistribution_cdf( double , double, double);
+#pragma link C++ function ROOT::Math::landau_cdf_c( double , double, double);
+#pragma link C++ function ROOT::Math::landau_cdf( double , double, double);
 
 
 #endif
