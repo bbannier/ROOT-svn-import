@@ -2715,10 +2715,20 @@ int XrdProofdProtocol::MapClient(bool all)
          }
 
          // Set ownership of the socket file to the client
-         if (fgChangeOwn && chown(pmgr->UNIXSockPath(), fUI.fUid, fUI.fGid) == -1) {
-            TRACEI(XERR, "MapClient: cannot set user ownership"
-                               " on UNIX socket (errno: "<<errno<<")");
-            return -1;
+         if (fgChangeOwn) {
+            if (chown(pmgr->UNIXSockPath(), fUI.fUid, fUI.fGid) == -1) {
+               TRACEI(XERR, "MapClient: cannot set user ownership"
+                            " on UNIX socket (errno: "<<errno<<")");
+               return -1;
+            }
+            // Make sure that it worked out
+            struct stat st;
+            if ((stat(pmgr->UNIXSockPath(), &st) != 0) || 
+                st.st_uid != fUI.fUid || st.st_gid != fUI.fGid) {
+               TRACEI(XERR, "MapClient: problems setting user ownership"
+                            " on UNIX socket");
+               return -1;
+            }
          }
 
       } else {
