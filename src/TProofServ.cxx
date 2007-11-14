@@ -2858,7 +2858,6 @@ R__HIDDEN Int_t TProofServ::ApplyMaxQueries()
          }
       }
    }
-   fKeptQueries = nqkept;
 
    // Cleanup
    delete sl;
@@ -3506,7 +3505,6 @@ void TProofServ::HandleProcess(TMessage *mess)
                   fQueries->Add(pqr);
                // Remove from the fQueries list
                fQueries->Remove(pq);
-               SafeDelete(pq);
             }
          }
 
