@@ -94,7 +94,8 @@ private:
 
 public: 
 
-   PoissonLikelihoodFCN * Clone() const { return new  PoissonLikelihoodFCN(fData,fFunc); }
+   /// clone the function (need to return Base for Windows)
+   BaseFunction * Clone() const { return new  PoissonLikelihoodFCN(fData,fFunc); }
 
    unsigned int NDim() const { return fNDim; }
 

@@ -27,13 +27,14 @@
 #pragma link C++ class ROOT::Fit::FitResult+;
 #pragma link C++ class ROOT::Fit::ParameterSettings+;
 
+#ifndef _WIN32
 #pragma link C++ class ROOT::Fit::Chi2FCN<ROOT::Math::IBaseFunctionMultiDim>-;
 #pragma link C++ class ROOT::Fit::Chi2FCN<ROOT::Math::IGradientFunctionMultiDim>-;
 #pragma link C++ class ROOT::Fit::LogLikelihoodFCN<ROOT::Math::IBaseFunctionMultiDim>-;
 #pragma link C++ class ROOT::Fit::LogLikelihoodFCN<ROOT::Math::IGradientFunctionMultiDim>-;
 #pragma link C++ class ROOT::Fit::PoissonLikelihoodFCN<ROOT::Math::IBaseFunctionMultiDim>-;
 #pragma link C++ class ROOT::Fit::PoissonLikelihoodFCN<ROOT::Math::IGradientFunctionMultiDim>-;
-
+#endif
 
 
 #pragma link C++ class ROOT::Math::WrappedTF1;
