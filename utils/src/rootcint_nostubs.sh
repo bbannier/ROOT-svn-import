@@ -27,7 +27,7 @@ and must be before the -f flags
 For more extensive help type: utils/src/rootcint -h"
 
 # Getopt call
-TEMP=`getopt -a -o vlf:o:c:hI:p: --long cint,reflex,gccxml,v0,v1,v2,v3,v4,object-files:,symbols-file:,lib-list-prefix: \
+TEMP=`getopt -a -o vlf:o:c:hI:p: --long cint,reflex,gccxml,v0,v1,v2,v3,v4,object-files:,symbols-file:,lib-list-prefix:,I. \
      -n 'rootcint' -- "$@"`
 
 # Wrong usage
@@ -50,11 +50,12 @@ while true ; do
                 -f) FILENAME=$2; shift 2 ;;
                 -o|--object-files) OBJS=$2; ARGOBJS=$1; shift 2;;
                 -c) COPTION="-c"; shift;;
-                -I) shift; break;;
+                -I) shift 2; break;;
                 -.) shift 2;;
                 -h) HELP=1; shift 1;;
                 --symbols-file) shift 2;;
                 --lib-list-prefix) PREFIX=$2; shift 2;;
+                -I.) shift; break;;
                 --) shift ; break ;;
                 *) echo "Internal error!" ;; #exit 1 ;;
         esac
@@ -92,15 +93,14 @@ ROOTCINTARGS=${ROOTCINTARGS/-c/}
 # We remove one score from the mode option name
 MODE=${MODE/--/-}
 
-if [ -n $PREFIX ]
-then
-    ARGS="--lib-list-prefix=$PREFIX -f"
+if [ "$PREFIX" != "" ]; then
+    PREFIX="--lib-list-prefix=$PREFIX"
 fi
 
 
 # Temporary dictionaries generation
-echo rootcint $MODE $ARGS ${FILENAME%.*}"Tmp1".cxx $COPTION $POPTION -. 1 $ROOTCINTARGS
-rootcint $MODE $ARGS ${FILENAME%.*}"Tmp1".cxx $COPTION $POPTION -. 1 $ROOTCINTARGS
+echo rootcint $MODE $PREFIX -f ${FILENAME%.*}"Tmp1".cxx $COPTION $POPTION -. 1 $ROOTCINTARGS
+rootcint $MODE $PREFIX -f ${FILENAME%.*}"Tmp1".cxx $COPTION $POPTION -. 1 $ROOTCINTARGS
 
 # Temporary dictionaries compilation
 g++ $CXXFLAGS -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -I. -o ${FILENAME%.*}"Tmp1".o -c ${FILENAME%.*}"Tmp1".cxx
@@ -109,8 +109,8 @@ g++ $CXXFLAGS -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -I. -o ${FILENAME
 nm -g -p --defined-only $OBJS | awk '{printf("%s\n", $3)}' >> ${FILENAME%.*}.nm
 nm -g -p --defined-only ${FILENAME%.*}"Tmp1".o | awk '{printf("%s\n", $3)}' > ${FILENAME%.*}.nm
 
-echo rootcint $MODE $ARGS ${FILENAME%.*}"Tmp2".cxx $COPTION -. 2 --symbols-file ${FILENAME%.*}".nm" $ROOTCINTARGS
-rootcint $MODE $ARGS ${FILENAME%.*}"Tmp2".cxx $COPTION -. 2 --symbols-file ${FILENAME%.*}".nm" $ROOTCINTARGS
+echo rootcint $MODE $PREFIX -f ${FILENAME%.*}"Tmp2".cxx $COPTION -. 2 --symbols-file ${FILENAME%.*}".nm" $ROOTCINTARGS
+rootcint $MODE $PREFIX -f ${FILENAME%.*}"Tmp2".cxx $COPTION -. 2 --symbols-file ${FILENAME%.*}".nm" $ROOTCINTARGS
 
 # Temporary Dictionar 2 compilation
 g++ $CXXFLAGS -Iinclude -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -I. -o ${FILENAME%.*}"Tmp2".o -c ${FILENAME%.*}"Tmp2".cxx
@@ -123,8 +123,10 @@ nm -g -p --defined-only ${FILENAME%.*}"Tmp2".o | awk '{printf("%s\n", $3)}' >> $
 #rm ${FILENAME%.*}"Tmp2".*
 
 # Final Dictionary Generation
-echo rootcint $MODE $ARGS $FILENAME $COPTION $POPTION -. 3 --symbols-file ${FILENAME%.*}".nm" $ROOTCINTARGS
-rootcint $MODE $ARGS $FILENAME $COPTION $POPTION -. 3 --symbols-file ${FILENAME%.*}".nm" $ROOTCINTARGS
+
+echo rootcint $MODE $PREFIX -f $FILENAME $COPTION $POPTION -. 3 --symbols-file ${FILENAME%.*}".nm" $ROOTCINTARGS
+rootcint $MODE $PREFIX -f $FILENAME $COPTION $POPTION -. 3 --symbols-file ${FILENAME%.*}".nm" $ROOTCINTARGS
+
 # We don't need the symbols file anymore
 #rm ${FILENAME%.*}.nm
 
