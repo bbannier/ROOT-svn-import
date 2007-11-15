@@ -67,7 +67,6 @@ static const char    *gTraceID = " ";
 
 // Static variables
 static XrdOucReqID   *XrdProofdReqID = 0;
-XrdSysRecMutex        gSysPrivMutex;
 
 // Loggers: we need two to avoid deadlocks
 static XrdSysLogger   gMainLogger;
@@ -5105,7 +5104,7 @@ int XrdProofdProtocol::Admin()
          // Asynchronous notification to requester
          if (fgMgr.SrvType() != kXPD_WorkerServer) {
             cmsg = "Reset: verifying termination status (may take up to 10 seconds)";
-            fResponse.Send(kXR_attn, kXPD_srvmsg, (char *) cmsg.c_str(), cmsg.length());
+            fResponse.Send(kXR_attn, kXPD_srvmsg, 0, (char *) cmsg.c_str(), cmsg.length());
          }
 
          // Now we give sometime to sessions to terminate (10 sec).
@@ -5139,30 +5138,28 @@ int XrdProofdProtocol::Admin()
 
       // Asynchronous notification to requester
       if (fgMgr.SrvType() != kXPD_WorkerServer) {
-         cmsg = "Reset: terminating the remaining sessions ... (5 sec)";
-         fResponse.Send(kXR_attn, kXPD_srvmsg, (char *) cmsg.c_str(), cmsg.length());
+         cmsg = "Reset: terminating the remaining sessions ...";
+         fResponse.Send(kXR_attn, kXPD_srvmsg, 0, (char *) cmsg.c_str(), cmsg.length());
       }
 
       // Now we cleanup what left (any zombies or super resistent processes)
-      CleanupProofServ(all, usr);
-      sleep(5);
+      int ncln = CleanupProofServ(all, usr);
+      if (ncln > 0) {
+         // Asynchronous notification to requester
+         cmsg = "Reset: wait 5 seconds for completion ...";
+         fResponse.Send(kXR_attn, kXPD_srvmsg, 0, (char *) cmsg.c_str(), cmsg.length());
+         sleep(5);
+      }
 
       // Cleanup all possible sessions around
       // (forward down the tree only if not leaf)
       if (fgMgr.SrvType() != kXPD_WorkerServer) {
 
          // Asynchronous notification to requester
-         cmsg = "Reset: forwarding the reset request to next tier(s)";
-         fResponse.Send(kXR_attn, kXPD_srvmsg, (char *) cmsg.c_str(), cmsg.length());
+         cmsg = "Reset: forwarding the reset request to next tier(s) ";
+         fResponse.Send(kXR_attn, kXPD_srvmsg, 0, (char *) cmsg.c_str(), cmsg.length());
 
-         fgMgr.Broadcast(type, usr, &fResponse);
-
-         // Asynchronous notification to requester
-         cmsg = "Reset: wait 2 seconds for completion";
-         fResponse.Send(kXR_attn, kXPD_srvmsg, (char *) cmsg.c_str(), cmsg.length());
-
-         // At least 2 seconds to complete
-         sleep(2);
+         fgMgr.Broadcast(type, usr, &fResponse, 1);
       }
 
       // Unlock the locked client mutexes
@@ -6294,7 +6291,6 @@ int XrdProofdProtocol::KillProofServ(int pid, bool forcekill)
 
    if (pid > 0) {
       // We need the right privileges to do this
-      XrdSysMutexHelper mtxh(&gSysPrivMutex);
       XrdSysPrivGuard pGuard((uid_t)0, (gid_t)0);
       if (XpdBadPGuard(pGuard, fUI.fUid) && fgChangeOwn) {
          XrdOucString msg = "KillProofServ: could not get privileges";
