@@ -1177,7 +1177,7 @@ int G__stub_method_asm(void* vaddress, int gtagnum, int reftype, void* this_ptr,
 
       case 'i' : // Integer = Single Word
       {
-         __asm__ __volatile__("call *%1" : "=r" (result7->obj.i) : "g" (vaddress));
+         __asm__ __volatile__("call *%1" : "=a" (result7->obj.i) : "g" (vaddress));
       }
       break;
 

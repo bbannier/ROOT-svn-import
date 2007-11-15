@@ -35,6 +35,8 @@
 #  include "XrdSys/XrdSysPthread.hh"
 #endif
 #include "XrdProofdAux.h"
+#include "XrdProofConn.h"
+#include "XrdOuc/XrdOucHash.hh"
 #include "XrdOuc/XrdOucString.hh"
 
 class XrdClientMessage;
@@ -54,6 +56,8 @@ class XrdProofdManager {
 
    // List of available workers (on master only)
    std::list<XrdProofWorker *> *GetActiveWorkers();
+   // List of unique nodes (on master only)
+   std::list<XrdProofWorker *> *GetNodes();
    // Type of resource from which the info is taken
    int               ResourceType() const { return fResourceType; }
 
@@ -62,8 +66,11 @@ class XrdProofdManager {
                                                          return &fActiveSessions; }
    void              AddActiveSession(XrdProofServProxy *p) { XrdSysMutexHelper mhp(&fMutex);
                                                               fActiveSessions.push_back(p); }
+   XrdProofServProxy *GetActiveSession(int pid);
    void              RemoveActiveSession(XrdProofServProxy *p) { XrdSysMutexHelper mhp(&fMutex);
                                                                  fActiveSessions.remove(p); }
+   // Connections to other xrootd running XrdProofdProtocols
+   XrdProofConn     *GetProofConn(const char *url);
 
    // Node properties
    int               SrvType() const { return fSrvType; }
@@ -73,6 +80,8 @@ class XrdProofdManager {
    const char       *Image() const { return fImage.c_str(); }
    const char       *WorkDir() const { return fWorkDir.c_str(); }
    const char       *DataSetDir() const { return fDataSetDir.c_str(); }
+
+   bool              IsSuperMst() const { return fSuperMst; }
 
    // This part may evolve in the future due to better understanding of
    // how resource brokering will work; for the time being we just move in
@@ -87,6 +96,7 @@ class XrdProofdManager {
    XrdSysRecMutex    fMutex;        // Atomize this instance
 
    XrdProofdFile     fCfgFile;      // Configuration file
+   bool              fSuperMst;     // true if this node is a SuperMst
 
    int               fSrvType;      // Master, Submaster, Worker or any
    XrdOucString      fEffectiveUser;  // Effective user
@@ -99,11 +109,14 @@ class XrdProofdManager {
    int               fResourceType; // resource type
    XrdProofdFile     fPROOFcfg;     // PROOF static configuration
 
-   std::list<XrdProofWorker *> fWorkers;  // vector of possible workers
+   std::list<XrdProofWorker *> fWorkers;  // List of possible workers
+   std::list<XrdProofWorker *> fNodes;   // List of worker unique nodes
 
    std::list<XrdProofServProxy *> fActiveSessions; // List of active sessions (non-idle)
 
    XrdSysError      *fEDest;        // Error message handler
+
+   XrdOucHash<XrdProofConn> fProofConnHash; // Available connections
 
    void              CreateDefaultPROOFcfg();
    int               ReadPROOFcfg();
