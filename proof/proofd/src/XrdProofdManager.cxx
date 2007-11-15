@@ -300,7 +300,8 @@ int XrdProofdManager::Config(const char *fn, XrdSysError *e)
 }
 
 //__________________________________________________________________________
-int XrdProofdManager::Broadcast(int type, const char *msg, XrdProofdResponse *r)
+int XrdProofdManager::Broadcast(int type, const char *msg,
+                                XrdProofdResponse *r, bool notify)
 {
    // Broadcast request to known potential sub-nodes.
    // Return 0 on success, -1 on error
@@ -332,7 +333,7 @@ int XrdProofdManager::Broadcast(int type, const char *msg, XrdProofdResponse *r)
                                             : (kXR_int32) kXPD_WorkerServer;
             TRACE(HDBG,"Broadcast: sending request to "<<u);
             // Send request
-            if (!(xrsp = Send(u.c_str(), type, msg, srvtype, r))) {
+            if (!(xrsp = Send(u.c_str(), type, msg, srvtype, r, notify))) {
                TRACE(XERR,"Broadcast: problems sending request to "<<u);
             }
             // Cleanup answer
@@ -393,7 +394,7 @@ XrdProofConn *XrdProofdManager::GetProofConn(const char *url)
 //__________________________________________________________________________
 XrdClientMessage *XrdProofdManager::Send(const char *url, int type,
                                          const char *msg, int srvtype,
-                                         XrdProofdResponse *r)
+                                         XrdProofdResponse *r, bool notify)
 {
    // Broadcast request to known potential sub-nodes.
    // Return 0 on success, -1 on error
@@ -417,6 +418,7 @@ XrdClientMessage *XrdProofdManager::Send(const char *url, int type,
 
    bool ok = 1;
    if (conn && conn->IsValid()) {
+      XrdOucString notifymsg("Send: ");
       // Prepare request
       XPClientRequest reqhdr;
       const void *buf = 0;
@@ -427,10 +429,18 @@ XrdClientMessage *XrdProofdManager::Send(const char *url, int type,
       reqhdr.proof.int1 = type;
       switch (type) {
          case kROOTVersion:
+            notifymsg += "change-of-ROOT version request to ";
+            notifymsg += url;
+            notifymsg += " msg: ";
+            notifymsg += msg;
             reqhdr.header.dlen = (msg) ? strlen(msg) : 0;
             buf = (msg) ? (const void *)msg : buf;
             break;
          case kCleanupSessions:
+            notifymsg += "cleanup request to ";
+            notifymsg += url;
+            notifymsg += " for user: ";
+            notifymsg += msg;
             reqhdr.proof.int2 = (kXR_int32) srvtype;
             reqhdr.proof.sid = -1;
             reqhdr.header.dlen = (msg) ? strlen(msg) : 0;
@@ -441,6 +451,10 @@ XrdClientMessage *XrdProofdManager::Send(const char *url, int type,
             TRACE(XERR,"Send: invalid request type "<<type);
             break;
       }
+
+      // Notify the client that we are sending the request
+      if (r && notify)
+         r->Send(kXR_attn, kXPD_srvmsg, 0, (char *) notifymsg.c_str(), notifymsg.length());
 
       // Send over
       if (ok)

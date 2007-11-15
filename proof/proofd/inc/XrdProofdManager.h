@@ -86,9 +86,9 @@ class XrdProofdManager {
    // This part may evolve in the future due to better understanding of
    // how resource brokering will work; for the time being we just move in
    // here the functionality we have now
-   int               Broadcast(int type, const char *msg, XrdProofdResponse *r);
+   int               Broadcast(int type, const char *msg, XrdProofdResponse *r, bool notify = 0);
    XrdClientMessage *Send(const char *url, int type,
-                          const char *msg, int srvtype, XrdProofdResponse *r);
+                          const char *msg, int srvtype, XrdProofdResponse *r, bool notify = 0);
 
    const char       *PROOFcfg() const { return fPROOFcfg.fName.c_str(); }
 
