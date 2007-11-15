@@ -399,7 +399,7 @@ RSA.KeyType:  1
 # Control the usage of asynchronous reading capabilities eventually
 # supported by the underlying TFile implementation. Default is yes.
 # Disable by default (temporary change)
-TFile.AsyncReading:     no
+# TFile.AsyncReading:     no
 
 # Special cases for the TUrl parser, where the special cases are parsed
 # in a protocol + file part, like rfio:host:/path/file.root,
@@ -486,9 +486,7 @@ XNet.ReadAheadSize: 500000
 #                         size. It is not preallocated.
 #                         TFile/TXNetFile can anyway make it grow
 #                         automatically when needed.
-# XNet.ReadCacheSize: 10000000
-# Temporary change
-XNet.ReadCacheSize: 0
+XNet.ReadCacheSize: 10000000
 
 # XNet.FirstConnectMaxCnt
 #                       - Number of connect retries to the first host

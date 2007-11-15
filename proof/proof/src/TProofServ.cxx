@@ -335,7 +335,7 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
 
    // Read session specific rootrc file
    if (!gSystem->AccessPathName("session.rootrc", kReadPermission))
-      gEnv->ReadFile("session.rootrc", kEnvGlobal);
+      gEnv->ReadFile("session.rootrc", kEnvChange);
 
    // Wait (loop) to allow debugger to connect
    Bool_t test = (*argc >= 4 && !strcmp(argv[3], "test")) ? kTRUE : kFALSE;
