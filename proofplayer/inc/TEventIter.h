@@ -127,11 +127,11 @@ public:
 class TEventIterTree : public TEventIter {
 
 private:
-   TString     fTreeName;    // name of the tree object to iterate over
-   TTree      *fTree;        // tree we are iterating over
-   TTreeCache *fTreeCache;   // instance of the tree cache for the tree
-
-   TList      *fFileTrees;  // Files && Trees currently open
+   TString     fTreeName;     // name of the tree object to iterate over
+   TTree      *fTree;         // tree we are iterating over
+   TTreeCache *fTreeCache;    // instance of the tree cache for the tree
+   Bool_t      fUseTreeCache; // Control usage of the tree cache
+   TList      *fFileTrees;    // Files && Trees currently open
 
    // Auxilliary class to keep track open files and loaded trees
    class TFileTree : public TNamed {

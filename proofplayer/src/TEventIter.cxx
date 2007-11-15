@@ -407,6 +407,7 @@ TEventIterTree::TEventIterTree(TDSet *dset, TSelector *sel, Long64_t first, Long
    fTreeCache = 0;
    fFileTrees = new TList;
    fFileTrees->SetOwner();
+   fUseTreeCache = gEnv->GetValue("ProofPlayer.UseTreeCache", 1);
 }
 
 //______________________________________________________________________________
@@ -435,13 +436,15 @@ TTree* TEventIterTree::GetTrees(TDSetElement *elem)
 
    if (main && main != fTree) {
       // Set the file cache
-      TFile *curfile = main->GetCurrentFile();
-      if (!fTreeCache) {
-         main->SetCacheSize();
-         fTreeCache = (TTreeCache *)curfile->GetCacheRead();
-      } else {
-         curfile->SetCacheRead(fTreeCache);
-         fTreeCache->UpdateBranches(main, kTRUE);
+      if (fUseTreeCache) {
+         TFile *curfile = main->GetCurrentFile();
+         if (!fTreeCache) {
+            main->SetCacheSize();
+            fTreeCache = (TTreeCache *)curfile->GetCacheRead();
+         } else {
+            curfile->SetCacheRead(fTreeCache);
+            fTreeCache->UpdateBranches(main, kTRUE);
+         }
       }
       // Also the friends
       TList *friends = elem->GetListOfFriends();
