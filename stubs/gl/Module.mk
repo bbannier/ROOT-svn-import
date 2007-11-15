@@ -66,7 +66,7 @@ include/%.h:    $(GLDIRI)/%.h
 $(GLLIB):       $(GLO) $(GLO1) $(GLDO) $(ORDER_) $(MAINLIBS) $(GLLIBDEP)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
 		   "$(SOFLAGS)" libRGL.$(SOEXT) $@ "$(GLO) $(GLO1) $(GLDO)" \
-		   "$(GLLIBEXTRA) $(GLLIBS)"
+		   "$(GLLIBEXTRA) $(FTGLLIBDIR) $(FTGLLIBS) $(GLLIBS)"
 
 $(GLDS):	$(GLH2) $(GLL) $(GLO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
@@ -101,5 +101,5 @@ $(GLDIRS)/gl2ps.o: CFLAGS += $(OPENGLINCDIR:%=-I%)
 gl/src/TGLText.o: \
                 $(FREETYPEDEP)
 gl/src/TGLText.o: \
-                CXXFLAGS += $(FREETYPEINC)
+                CXXFLAGS += $(FREETYPEINC) $(FTGLINCDIR:%=-I%)
 

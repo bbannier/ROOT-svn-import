@@ -410,6 +410,8 @@ protected:
    TList          *fAvailablePackages; //list of available packages
    TList          *fEnabledPackages;   //list of enabled packages
 
+   Int_t           fCollectTimeout; // Timeout for (some) collect actions
+
    TString         fDataPoolUrl;    // default data pool entry point URL
    TProofMgr::EServType fServType;  // type of server: proofd, XrdProofd
    TProofMgr      *fManager;        // manager to which this session belongs (if any)
@@ -460,7 +462,7 @@ private:
    Int_t    Broadcast(const char *mess, Int_t kind = kMESS_STRING, ESlaves list = kActive);
    Int_t    Broadcast(Int_t kind, TList *slaves) { return Broadcast(0, kind, slaves); }
    Int_t    Broadcast(Int_t kind, ESlaves list = kActive) { return Broadcast(0, kind, list); }
-   Int_t    BroadcastGroupPriority(const char *grp, Int_t priority, ESlaves list = kActive);
+   Int_t    BroadcastGroupPriority(const char *grp, Int_t priority, ESlaves list = kAllUnique);
    Int_t    BroadcastGroupPriority(const char *grp, Int_t priority, TList *workers);
    Int_t    BroadcastObject(const TObject *obj, Int_t kind, TList *slaves);
    Int_t    BroadcastObject(const TObject *obj, Int_t kind = kMESS_OBJECT, ESlaves list = kActive);
@@ -469,6 +471,7 @@ private:
    Int_t    Collect(const TSlave *sl, Long_t timeout = -1);
    Int_t    Collect(TMonitor *mon, Long_t timeout = -1);
    Int_t    CollectInputFrom(TSocket *s);
+   void     SetMonitor(TMonitor *mon = 0, Bool_t on = kTRUE);
 
    void     FindUniqueSlaves();
    TSlave  *FindSlave(TSocket *s) const;
@@ -651,6 +654,7 @@ public:
 
    //-- input list parameter handling
    void        SetParameter(const char *par, const char *value);
+   void        SetParameter(const char *par, Int_t value);
    void        SetParameter(const char *par, Long_t value);
    void        SetParameter(const char *par, Long64_t value);
    void        SetParameter(const char *par, Double_t value);
@@ -745,6 +749,7 @@ public:
 
    // Input/output list utilities
    static Int_t         GetParameter(TCollection *c, const char *par, TString &value);
+   static Int_t         GetParameter(TCollection *c, const char *par, Int_t &value);
    static Int_t         GetParameter(TCollection *c, const char *par, Long_t &value);
    static Int_t         GetParameter(TCollection *c, const char *par, Long64_t &value);
    static Int_t         GetParameter(TCollection *c, const char *par, Double_t &value);

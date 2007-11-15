@@ -73,8 +73,11 @@ SYSTEMO       = $(UNIXO) $(UNIXTMPDO)
 SYSTEMDO      = $(UNIXDO) $(UNIXTMP2DO)
 endif
 endif
+ifeq ($(BUILDFTGL),yes)
+MODULES      += ftgl
+endif
 ifeq ($(BUILDGL),yes)
-MODULES      += ftgl gl
+MODULES      += gl
 endif
 ifeq ($(BUILDMYSQL),yes)
 MODULES      += mysql
@@ -1092,3 +1095,11 @@ showbuild:
 	@echo "The list of modules to be built:"
 	@echo "--------------------------------"
 	@echo "$(MODULES)"
+
+showit:
+	@echo "Modules:$(word 1, $(MODULES))"
+	@$(foreach m, $(filter-out $(word 1, $(MODULES)), $(MODULES)), \
+	  echo -e "\t$(m)" ;) 
+	@echo "Libraries:$(word 1, $(ALLLIBS))"
+	@$(foreach l, $(filter-out $(word 1, $(ALLLIBS)), $(ALLLIBS)), \
+	  echo -e "\t$(l)" ;) 

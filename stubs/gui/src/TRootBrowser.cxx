@@ -287,6 +287,8 @@ TRootBrowser::~TRootBrowser()
    delete fMenuFile;
    delete fMenuBar;
    delete fMenuFrame;
+   delete fPreMenuFrame;
+   delete fTopMenuFrame;
    delete fToolbarFrame;
    delete fVSplitter;
    delete fHSplitter;
@@ -352,12 +354,16 @@ void TRootBrowser::CloseWindow()
    TGFrameElement *el;
    Int_t i;
    Disconnect(fMenuFile, "Activated(Int_t)", this, "HandleMenu(Int_t)");
+   Disconnect(fTabRight, "Selected(Int_t)", this, "DoTab(Int_t)");
+   fActBrowser = 0;
    for (i=0;i<fTabLeft->GetNumberOfTabs();i++) {
       el = (TGFrameElement *)fTabLeft->GetTabContainer(i)->GetList()->First();
       if (el && el->fFrame) {
          el->fFrame->SetFrameElement(0);
-         if (el->fFrame->InheritsFrom("TGMainFrame"))
+         if (el->fFrame->InheritsFrom("TGMainFrame")) {
             ((TGMainFrame *)el->fFrame)->CloseWindow();
+            gSystem->ProcessEvents();
+         }
          else
             delete el->fFrame;
          el->fFrame = 0;
@@ -373,8 +379,13 @@ void TRootBrowser::CloseWindow()
       el = (TGFrameElement *)fTabRight->GetTabContainer(i)->GetList()->First();
       if (el && el->fFrame) {
          el->fFrame->SetFrameElement(0);
-         if (el->fFrame->InheritsFrom("TGMainFrame"))
+         if (el->fFrame->InheritsFrom("TGMainFrame")) {
+            Bool_t sleep = (el->fFrame->InheritsFrom("TRootCanvas")) ? kTRUE : kFALSE;
             ((TGMainFrame *)el->fFrame)->CloseWindow();
+            if (sleep)
+               gSystem->Sleep(150);
+            gSystem->ProcessEvents();
+         }
          else
             delete el->fFrame;
          el->fFrame = 0;
@@ -390,8 +401,10 @@ void TRootBrowser::CloseWindow()
       el = (TGFrameElement *)fTabBottom->GetTabContainer(i)->GetList()->First();
       if (el && el->fFrame) {
          el->fFrame->SetFrameElement(0);
-         if (el->fFrame->InheritsFrom("TGMainFrame"))
+         if (el->fFrame->InheritsFrom("TGMainFrame")) {
             ((TGMainFrame *)el->fFrame)->CloseWindow();
+            gSystem->ProcessEvents();
+         }
          else
             delete el->fFrame;
          el->fFrame = 0;
@@ -403,7 +416,6 @@ void TRootBrowser::CloseWindow()
          delete el;
       }
    }
-   fActBrowser = 0;
    DeleteWindow();
 }
 
@@ -775,6 +787,8 @@ void TRootBrowser::RemoveTab(Int_t pos, Int_t subpos)
          edit = fTabBottom;
          break;
    }
+   if (!edit->GetTabTab(subpos))
+      return;
    const char *tabName = edit->GetTabTab(subpos)->GetString();
    TObject *obj = 0;
    if ((obj = fPlugins.FindObject(tabName))) {
@@ -783,8 +797,13 @@ void TRootBrowser::RemoveTab(Int_t pos, Int_t subpos)
    TGFrameElement *el = (TGFrameElement *)edit->GetTabContainer(subpos)->GetList()->First();
    if (el && el->fFrame) {
       el->fFrame->SetFrameElement(0);
-      if (el->fFrame->InheritsFrom("TGMainFrame"))
+      if (el->fFrame->InheritsFrom("TGMainFrame")) {
+         Bool_t sleep = (el->fFrame->InheritsFrom("TRootCanvas")) ? kTRUE : kFALSE;
          ((TGMainFrame *)el->fFrame)->CloseWindow();
+         if (sleep)
+            gSystem->Sleep(150);
+         gSystem->ProcessEvents();
+      }
       else
          delete el->fFrame;
       el->fFrame = 0;
@@ -797,6 +816,7 @@ void TRootBrowser::RemoveTab(Int_t pos, Int_t subpos)
    }
    fNbTab[pos]--;
    edit->RemoveTab(subpos);
+   SwitchMenus(edit->GetTabContainer(edit->GetCurrent()));
 }
 
 //______________________________________________________________________________
@@ -925,6 +945,8 @@ void TRootBrowser::SwitchMenus(TGCompositeFrame  *from)
    // Move the menu from original frame to our TGMenuFrame, or display the 
    // menu associated to the current tab.
 
+   if (from == 0)
+      return;
    TGFrameElement *fe = (TGFrameElement *)from->GetList()->First();
    if (!fe) {
       if (fActMenuBar != fMenuBar)

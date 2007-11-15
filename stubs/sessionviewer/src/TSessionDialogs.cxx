@@ -49,19 +49,20 @@ ClassImp(TNewChainDlg)
 ClassImp(TNewQueryDlg)
 
 /* not yet used
-static const char *partypes[] = {
+static const char *gParTypes[] = {
    "Par files",  "*.par",
    "All files",  "*",
     0,            0
 };
 */
-static const char *datasettypes[] = {
+
+static const char *gDatasetTypes[] = {
    "ROOT files",    "*.root",
    "All files",     "*",
    0,               0
 };
 
-static const char *filetypes[] = {
+static const char *gFileTypes[] = {
    "C files",       "*.[C|c]*",
    "ROOT files",    "*.root",
    "All files",     "*",
@@ -587,7 +588,7 @@ void TNewQueryDlg::OnBrowseSelector()
    // Open file browser to choose selector macro.
 
    TGFileInfo fi;
-   fi.fFileTypes = filetypes;
+   fi.fFileTypes = gFileTypes;
    new TGFileDialog(fClient->GetRoot(), this, kFDOpen, &fi);
    if (!fi.fFilename) return;
    fTxtSelector->SetText(gSystem->UnixPathName(fi.fFilename));
@@ -1140,8 +1141,8 @@ void TUploadDataSetDlg::BrowseFiles()
    // in the list view of dataset files.
 
    TGFileInfo fi;
-   fi.fFileTypes = datasettypes;
-   fi.fFilename  = "*.root";
+   fi.fFileTypes = gDatasetTypes;
+   fi.fFilename  = strdup("*.root");
    new TGFileDialog(fClient->GetRoot(), this, kFDOpen, &fi);
    if (fi.fMultipleSelection && fi.fFileNamesList) {
       AddFiles(fi.fFileNamesList);

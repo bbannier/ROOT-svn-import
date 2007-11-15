@@ -31,9 +31,8 @@
 #include "XrdProofdManager.h"
 #include "XrdProofdPlatform.h"
 #include "XrdProofdResponse.h"
+#include "XrdProofServProxy.h"
 #include "XrdProofWorker.h"
-
-#define XPD_DEF_PORT 1093
 
 // Tracing utilities
 #include "XrdProofdTrace.h"
@@ -57,8 +56,10 @@ XrdProofdManager::XrdProofdManager()
    fPROOFcfg.fName = "";
    fPROOFcfg.fMtime = 0;
    fWorkers.clear();
+   fNodes.clear();
    fNumLocalWrks = XrdProofdAux::GetNumCPUs();
    fEDest = 0;
+   fSuperMst = 0;
 }
 
 //__________________________________________________________________________
@@ -72,6 +73,7 @@ XrdProofdManager::~XrdProofdManager()
       delete *w;
       w = fWorkers.erase(w);
    }
+   // The nodes list points to the same object, no cleanup is needed
 }
 
 //__________________________________________________________________________
@@ -175,6 +177,10 @@ int XrdProofdManager::Config(const char *fn, XrdSysError *e)
                      } else {
                         // Config file
                         fPROOFcfg.fName = val;
+                        if (fPROOFcfg.fName.beginswith("sm:")) {
+                           fPROOFcfg.fName.replace("sm:","");
+                           fSuperMst = 1;
+                        }
                         XrdProofdAux::Expand(fPROOFcfg.fName);
                         // Make sure it exists and can be read
                         if (access(fPROOFcfg.fName.c_str(), R_OK)) {
@@ -182,6 +188,7 @@ int XrdProofdManager::Config(const char *fn, XrdSysError *e)
                                           fPROOFcfg.fName.c_str());
                            fPROOFcfg.fName = "";
                            fPROOFcfg.fMtime = 0;
+                           fSuperMst = 0;
                         }
                      }
                   }
@@ -209,12 +216,16 @@ int XrdProofdManager::Config(const char *fn, XrdSysError *e)
                      fDataSetDir = tval;
                   } else if (!strcmp("role",var)) {
                      // Role this server
-                     if (tval == "master")
+                     if (tval == "supermaster") {
                         fSrvType = kXPD_TopMaster;
-                     else if (tval == "submaster")
+                        fSuperMst = 1;
+                     } else if (tval == "master") {
+                        fSrvType = kXPD_TopMaster;
+                     } else if (tval == "submaster") {
                         fSrvType = kXPD_MasterServer;
-                     else if (tval == "worker")
+                     } else if (tval == "worker") {
                         fSrvType = kXPD_WorkerServer;
+                     }
                   }
                }
             }
@@ -229,11 +240,6 @@ int XrdProofdManager::Config(const char *fn, XrdSysError *e)
          }
       }
    }
-
-   // Image
-   if (fImage.length() <= 0)
-      // Use the local host name
-      fImage = fHost;
 
    // Work directory, if specified
    if (fWorkDir.length() > 0) {
@@ -294,17 +300,11 @@ int XrdProofdManager::Broadcast(int type, const char *msg, XrdProofdResponse *r)
 
    TRACE(ACT, "Broadcast: enter: type: "<<type);
 
-   // We try only once
-   int maxtry_save = -1;
-   int timewait_save = -1;
-   XrdProofConn::GetRetryParam(maxtry_save, timewait_save);
-   XrdProofConn::SetRetryParam(1, 1);
-
-   // Loop over worker nodes
-   std::list<XrdProofWorker *>::iterator iw = fWorkers.begin();
+   // Loop over unique nodes
+   std::list<XrdProofWorker *>::iterator iw = fNodes.begin();
    XrdProofWorker *w = 0;
    XrdClientMessage *xrsp = 0;
-   while (iw != fWorkers.end()) {
+   while (iw != fNodes.end()) {
       if ((w = *iw) && w->fType != 'M') {
          // Do not send it to ourselves
          bool us = (((w->fHost.find("localhost") != STR_NPOS ||
@@ -335,11 +335,46 @@ int XrdProofdManager::Broadcast(int type, const char *msg, XrdProofdResponse *r)
       iw++;
    }
 
+   // Done
+   return rc;
+}
+
+//__________________________________________________________________________
+XrdProofConn *XrdProofdManager::GetProofConn(const char *url)
+{
+   // Get a XrdProofConn for url; create a new one if not available
+
+   XrdProofConn *p = 0;
+   if (fProofConnHash.Num() > 0) {
+      if ((p = fProofConnHash.Find(url)) && !(p->IsValid())) {
+         // We found an invalid connection: do not use it
+         delete p;
+         fProofConnHash.Del(url);
+         p = 0;
+      }
+   }
+
+   // If not found create a new one
+   XrdOucString buf = " Manager connection from ";
+   buf += fHost;
+   buf += "|ord:000";
+   char m = 'A'; // log as admin
+
+   // We try only once
+   int maxtry_save = -1;
+   int timewait_save = -1;
+   XrdProofConn::GetRetryParam(maxtry_save, timewait_save);
+   XrdProofConn::SetRetryParam(1, 1);
+
+   if ((p = new XrdProofConn(url, m, -1, -1, 0, buf.c_str()))) 
+      // Cache it
+      fProofConnHash.Rep(url, p, 0, Hash_keepdata);
+
    // Restore original retry parameters
    XrdProofConn::SetRetryParam(maxtry_save, timewait_save);
 
    // Done
-   return rc;
+   return p;
 }
 
 //__________________________________________________________________________
@@ -356,12 +391,8 @@ XrdClientMessage *XrdProofdManager::Send(const char *url, int type,
    if (!url || strlen(url) <= 0)
       return xrsp;
 
-   // Open the connection
-   XrdOucString buf = "session-cleanup-from-";
-   buf += fHost;
-   buf += "|ord:000";
-   char m = 'A'; // log as admin
-   XrdProofConn *conn = new XrdProofConn(url, m, -1, -1, 0, buf.c_str());
+   // Get a connection to the server
+   XrdProofConn *conn = GetProofConn(url);
 
    bool ok = 1;
    if (conn && conn->IsValid()) {
@@ -402,12 +433,6 @@ XrdClientMessage *XrdProofdManager::Send(const char *url, int type,
          r->Send(kXR_attn, kXPD_srvmsg, (char *) cmsg.c_str(), cmsg.length());
       }
 
-      // Close physically the connection
-      conn->Close("S");
-
-      // Delete it
-      SafeDelete(conn);
-
    } else {
       TRACE(XERR,"Send: could not open connection to "<<url);
       if (r) {
@@ -431,25 +456,47 @@ void XrdProofdManager::CreateDefaultPROOFcfg()
 
    // Create a default master line
    XrdOucString mm("master ",128);
-   mm += fImage; mm += " image="; mm += fImage;
+   mm += fHost;
    fWorkers.push_back(new XrdProofWorker(mm.c_str()));
    TRACE(DBG, "CreateDefaultPROOFcfg: added line: " << mm);
 
    // Create 'localhost' lines for each worker
    int nwrk = fNumLocalWrks;
    if (nwrk > 0) {
+      mm = "worker localhost port=";
+      mm += fPort;
       while (nwrk--) {
-         mm = "worker localhost port=";
-         mm += fPort;
          fWorkers.push_back(new XrdProofWorker(mm.c_str()));
          TRACE(DBG, "CreateDefaultPROOFcfg: added line: " << mm);
       }
+      // One line for the nodes
+      fNodes.push_back(new XrdProofWorker(mm.c_str()));
    }
 
    XPDPRT("CreateDefaultPROOFcfg: done: "<<fWorkers.size()-1<<" workers");
 
    // We are done
    return;
+}
+
+//__________________________________________________________________________
+XrdProofServProxy *XrdProofdManager::GetActiveSession(int pid)
+{
+   // Return active session with process ID pid, if any.
+
+   XrdSysMutexHelper mhp(fMutex);
+
+   XrdProofServProxy *srv = 0;
+
+   std::list<XrdProofServProxy *>::iterator svi;
+   for (svi = fActiveSessions.begin(); svi != fActiveSessions.end(); svi++) {
+      if ((*svi)->IsValid() && ((*svi)->SrvID() == pid)) {
+         srv = *svi;
+         return srv;
+      }
+   }
+   // Done
+   return srv;
 }
 
 //__________________________________________________________________________
@@ -470,6 +517,26 @@ std::list<XrdProofWorker *> *XrdProofdManager::GetActiveWorkers()
    XPDPRT( "GetActiveWorkers: returning list with "<<fWorkers.size()<<" entries");
 
    return &fWorkers;
+}
+
+//__________________________________________________________________________
+std::list<XrdProofWorker *> *XrdProofdManager::GetNodes()
+{
+   // Return the list of unique nodes after having made sure that the info is
+   // up-to-date
+
+   XrdSysMutexHelper mhp(fMutex);
+
+   if (fResourceType == kRTStatic && fPROOFcfg.fName.length() > 0) {
+      // Check if there were any changes in the config file
+      if (ReadPROOFcfg() != 0) {
+         TRACE(XERR, "GetNodes: unable to read the configuration file");
+         return (std::list<XrdProofWorker *> *)0;
+      }
+   }
+   XPDPRT( "GetNodes: returning list with "<<fNodes.size()<<" entries");
+
+   return &fNodes;
 }
 
 //__________________________________________________________________________
@@ -502,6 +569,8 @@ int XrdProofdManager::ReadPROOFcfg()
       delete *w;
       w = fWorkers.erase(w);
    }
+   // Cleanup the nodes list
+   fNodes.clear();
 
    // Save the modification time
    fPROOFcfg.fMtime = st.st_mtime;
@@ -513,7 +582,7 @@ int XrdProofdManager::ReadPROOFcfg()
 
    // Create a default master line
    XrdOucString mm("master ",128);
-   mm += fImage; mm += " image="; mm += fImage;
+   mm += fHost;
    fWorkers.push_back(new XrdProofWorker(mm.c_str()));
 
    // Read now the directives
@@ -546,10 +615,6 @@ int XrdProofdManager::ReadPROOFcfg()
             // Replace the default line (the first with what found in the file)
             XrdProofWorker *fw = fWorkers.front();
             fw->Reset(lin);
-            // If the image was not specified use the default
-            if (fw->fImage == "" ||
-                fw->fHost.beginswith(fw->fImage))
-               fw->fImage = fImage;
          }
          SafeDelete(pw);
      } else {
@@ -561,6 +626,25 @@ int XrdProofdManager::ReadPROOFcfg()
 
    // Close files
    fclose(fin);
+
+   // Build the list of unique nodes (skip the master line);
+   if (fWorkers.size() > 0) {
+      w = fWorkers.begin();
+      w++;
+      for ( ; w != fWorkers.end(); w++) {
+         bool add = 1;
+         std::list<XrdProofWorker *>::iterator n;
+         for (n = fNodes.begin() ; n != fNodes.end(); n++) {
+            if ((*n)->Matches(*w)) {
+               add = 0;
+               break;
+            }
+         }
+         if (add)
+            fNodes.push_back(*w);
+      }
+   }
+   TRACE(DBG, "ReadPROOFcfg: found " << fNodes.size() <<" unique nodes");
 
    // We are done
    return ((nw == 0) ? -1 : 0);
