@@ -71,6 +71,11 @@ ifeq ($(shell $(ROOTCONFIG) --has-mathcore),yes)
 STRESSVECO   = stressVector.$(ObjSuf)
 STRESSVECS   = stressVector.$(SrcSuf)
 STRESSVEC    = stressVector$(ExeSuf)
+
+STRESSMATHO   = stressMathCore.$(ObjSuf)
+STRESSMATHS   = stressMathCore.$(SrcSuf)
+STRESSMATH    = stressMathCore$(ExeSuf)
+
 endif
 
 VLAZYO        = vlazy.$(ObjSuf)
@@ -150,7 +155,7 @@ OBJS          = $(EVENTO) $(MAINEVENTO) $(HWORLDO) $(HSIMPLEO) $(MINEXAMO) \
                 $(HELLOO) $(ACLOCKO) $(STRESSO) $(TBENCHO) $(BENCHO) \
                 $(STRESSSHAPESO) $(TCOLLBMO) $(STRESSGEOMETRYO) $(STRESSLO) \
                 $(STRESSGO) $(STRESSSPO) $(TESTBITSO) \
-                $(CTORTUREO) $(QPRANDOMO) $(THREADO) $(STRESSVECO) \
+                $(CTORTUREO) $(QPRANDOMO) $(THREADO) $(STRESSVECO) $(STRESSMATHO) \
                 $(STRESSFITO) $(STRESSHEPIXO) $(STRESSENTRYLISTO)
 
 PROGRAMS      = $(EVENT) $(HWORLD) $(HSIMPLE) $(MINEXAM) $(TSTRING) \
@@ -158,7 +163,7 @@ PROGRAMS      = $(EVENT) $(HWORLD) $(HSIMPLE) $(MINEXAM) $(TSTRING) \
                 $(HELLOSO) $(ACLOCKSO) $(STRESS) $(TBENCHSO) $(BENCH) \
                 $(STRESSSHAPES) $(STRESSGEOMETRY) $(STRESSL) $(STRESSG) \
                 $(TESTBITS) $(CTORTURE) $(QPRANDOM) $(THREADS) $(STRESSSP) \
-                $(STRESSVEC) $(STRESSFIT) $(STRESSHEPIX) $(STRESSENTRYLIST)
+                $(STRESSVEC) $(STRESSFIT) $(STRESSHEPIX) $(STRESSENTRYLIST) $(STRESSMATH)
 
 OBJS         += $(GUITESTO) $(GUIVIEWERO) $(TETRISO)
 PROGRAMS     += $(GUITEST) $(GUIVIEWER) $(TETRISSO)
@@ -282,6 +287,15 @@ ifeq ($(PLATFORM),win32)
 		$(MT_EXE)
 else
 		$(LD) $(LDFLAGS) $^ $(LIBS) -lMathCore $(OutPutOpt)$@
+endif
+		@echo "$@ done"
+
+$(STRESSMATH):   $(STRESSMATHO)
+ifeq ($(PLATFORM),win32)
+		$(LD) $(LDFLAGS) $^ $(LIBS) ../lib/libMathCore.lib ../lib/libMathMore.lib $(OutPutOpt)$@
+		$(MT_EXE)
+else
+		$(LD) $(LDFLAGS) $^ $(LIBS) -lMathCore -lMathMore $(OutPutOpt)$@
 endif
 		@echo "$@ done"
 
