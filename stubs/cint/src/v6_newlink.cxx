@@ -4372,22 +4372,37 @@ void G__cppif_geninline(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,i
          int idx;
          G__hash(G__fulltagname(i,0),hash,idx);
 
+         // Print the return type
+                  
+         // we need to convert A::operator T() to A::operator ::T, or
+         // the context will be the one of tagnum, i.e. A::T instead of ::T
+         if (tolower(ifunc->type[j]) == 'u'
+             && !strncmp(ifunc->funcname[j], "operator ", 8)
+             && (isalpha(ifunc->funcname[j][9]) || ifunc->funcname[j][9] == '_')) {
+            if (!strncmp(ifunc->funcname[j] + 9, "const ", 6))
+               fprintf(fp, "const ::%s ", ifunc->funcname[j] + 15);
+            else
+               fprintf(fp, "::%s ", ifunc->funcname[j] + 9);
+         } else
+            fprintf(fp, "%s ", G__type2string(ifunc->type[j], ifunc->p_tagtable[j], 
+                                              ifunc->p_typetable[j], ifunc->reftype[j],
+                                              ifunc->isconst[j]));
+         
          // Static functions are not casted as member-functions
          // but as normal functions
          if(ifunc->staticalloc[j] 
             || G__struct.type[i] == 'n'
             || strcmp(ifunc->funcname[j], "operator new")==0 /*operator new must be treated as a static function*/
             || strcmp(ifunc->funcname[j], "operator new[]")==0) {
-            fprintf(fp, "%s ", G__type2string(ifunc->type[j], ifunc->p_tagtable[j], 
-                                              ifunc->p_typetable[j], ifunc->reftype[j],
-                                              ifunc->isconst[j]));
+            
             fprintf(fp," (*fmptr_%s)(", G__map_cpp_funcname(ifunc->tagnum, ifunc->funcname[j], j, ifunc->page));
                  
          }
          else {
-            fprintf(fp, "%s ", G__type2string(ifunc->type[j], ifunc->p_tagtable[j], 
-                                              ifunc->p_typetable[j], ifunc->reftype[j],
-                                              ifunc->isconst[j]));
+            //fprintf(fp, "%s ", G__type2string(ifunc->type[j], ifunc->p_tagtable[j], 
+            //                                  ifunc->p_typetable[j], ifunc->reftype[j],
+            //                                  ifunc->isconst[j]));
+
             fprintf(fp," (%s::*fmptr_%s)(", G__fulltagname(i,0), G__map_cpp_funcname(ifunc->tagnum, ifunc->funcname[j], j, ifunc->page));
          }                 
          // print the params
@@ -4423,7 +4438,17 @@ void G__cppif_geninline(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,i
          //else
             
 
-         fprintf(fp," = &%s::%s; \n", G__fulltagname(i,0), ifunc->funcname[j]);
+       // we need to convert A::operator T() to A::operator ::T, or
+       // the context will be the one of tagnum, i.e. A::T instead of ::T
+       if (tolower(ifunc->type[j]) == 'u'
+           && !strncmp(ifunc->funcname[j], "operator ", 8)
+           && (isalpha(ifunc->funcname[j][9]) || ifunc->funcname[j][9] == '_')) {
+          if (!strncmp(ifunc->funcname[j] + 9, "const ", 6))
+             fprintf(fp, " = &%s::operator const ::%s;\n", G__fulltagname(i,0), ifunc->funcname[j] + 15);
+          else
+             fprintf(fp, " = &%s::operator ::%s;\n", G__fulltagname(i,0), ifunc->funcname[j] + 9);
+       } else
+          fprintf(fp," = &%s::%s; \n", G__fulltagname(i,0), ifunc->funcname[j]);
       }
    }
 }
