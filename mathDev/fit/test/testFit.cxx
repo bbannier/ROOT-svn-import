@@ -198,7 +198,7 @@ class Func1D : public ROOT::Math::IParamFunction {
 public:
    void SetParameters(const double *p) { std::copy(p,p+NPar(),fp);}
    const double * Parameters() const { return fp; }
-   Func1D * Clone() const { 
+   ROOT::Math::IGenFunction * Clone() const { 
       Func1D * f =  new Func1D(); 
       f->SetParameters(fp);
       return f;
@@ -217,7 +217,7 @@ class GradFunc2D : public ROOT::Math::IParamMultiGradFunction {
 public:
    void SetParameters(const double *p) { std::copy(p,p+NPar(),fp);}
    const double * Parameters() const { return fp; }
-   GradFunc2D * Clone() const { 
+   ROOT::Math::IMultiGenFunction * Clone() const { 
       GradFunc2D * f =  new GradFunc2D(); 
       f->SetParameters(fp);
       return f;

@@ -129,7 +129,7 @@ public:
       non-const iterator access 
    */ 
    iterator begin() { return fData.begin(); }
-   iterator end()   { return fData.begin()+fData.size(); }
+   iterator end()   { return fData.end(); }
 
    /**
       access to the point
