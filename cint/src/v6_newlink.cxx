@@ -7110,8 +7110,15 @@ int G__method_inbase(int ifn, G__ifunc_table_internal *ifunc)
 // LF 06-08-08
 // Changed to return the page instead of just not null
 // (since 0 means not found then the index starts at 1)
+// 16-11-07
+// -1 now means than it was found in two or more parents...
+// the association can not be done here... we have to
+// do it at runtime
 int G__method_inbase2(int ifn, G__ifunc_table_internal *ifunc)
 {
+   int page_base = 0; // the result... 0 if not found (the index otehrwise)
+   int found = 0;
+
    // tagnum's Base Classes structure
    G__inheritance* cbases = G__struct.baseclass[ifunc->tagnum];
 
@@ -7122,28 +7129,38 @@ int G__method_inbase2(int ifn, G__ifunc_table_internal *ifunc)
         // Current tagnum
         int basetagnum=cbases->herit[idx]->basetagnum;
 
-        // Current tagnum's ifunc table
-        G__ifunc_table_internal * ifunct = G__struct.memfunc[basetagnum];
+        // Do it only for its parents
+        if(cbases->herit[idx]->property&G__ISDIRECTINHERIT) {
+           // Current tagnum's ifunc table
+           G__ifunc_table_internal * ifunct = G__struct.memfunc[basetagnum];
 
-        // Continue if there are still ifuncs and the method 'ifn' is not found yet
-        if (ifunct){
-           int base=-1;
+           // Continue if there are still ifuncs and the method 'ifn' is not found yet
+           if (ifunct){
+              int base=-1;
 
-           // Does the Method 'ifn' (in ifunc) exist in the current ifunct?
-           ifunct = G__ifunc_exist(ifunc, ifn, ifunct, &base, 0xffff);
+              // Does the Method 'ifn' (in ifunc) exist in the current ifunct?
+              ifunct = G__ifunc_exist(ifunc, ifn, ifunct, &base, 0xffff);
 
-	   //If the number of default parameters numbers is different between the base and the derived
-	   //class we generete the stub
-	   if (base!=-1 && ifunct){
-              if(ifunct->page_base==0) 
-                 ifunct->page_base = ifunct->page+1;
+              //If the number of default parameters numbers is different between the base and the derived
+              //class we generete the stub
+              if (base!=-1 && ifunct){
+                 if(ifunct->page_base==0) 
+                    ifunct->page_base = ifunct->page+1;
 
-              return ifunct->page_base;
+                 page_base = ifunct->page_base;
+                 ++found;
+              }
            }
         }
      }
    }
-   return 0;
+   
+   if(!found)
+      return 0; // not found
+   else if (found==1)
+      return page_base; // found in one parent
+
+   return -1; // found in multiple parents
 }
 
 /**************************************************************************
@@ -9259,7 +9276,7 @@ void G__cpplink_memfunc(FILE *fp)
                 if(!page_base) {
                   int page_base = G__method_inbase2(j, ifunc);
 
-                  if(!page_base){
+                  if(page_base==0){
                      ifunc->page_base = ifunc->page+1;
                      page_base = ifunc->page_base;
                   }
@@ -9268,8 +9285,9 @@ void G__cpplink_memfunc(FILE *fp)
                 // The last steps were useful to set up the page_base,
                 // now let's try to solve the ambiguity problem
                 int page_base_amb = G__ifunc_exist_base(j, ifunc);
-                if(page_base_amb==-1)
-                  page_base = page_base * (-1);
+                if(page_base==-1 || page_base_amb==-1)
+                   if(page_base>-1)
+                   page_base = page_base * (-1);
 
                 // put "ispurevirtual" in the less significant bit and shift the rest to the left
                 virtflag = 2*page_base + ifunc->ispurevirtual[j];
