@@ -2,13 +2,17 @@
 #include "TH2.h"
 #include "TF1.h"
 #include "TF2.h"
+#include "TGraphErrors.h"
+#include "TGraph2D.h"
 #include "TSystem.h"
 #include "TRandom3.h"
 #include "TROOT.h"
+#include "TVirtualFitter.h"
 
 #include "Fit/DataVector.h"
 //#include "Fit/BinPoint.h"
 #include "THFitInterface.h"
+#include "TGraphFitInterface.h"
 #include "Fit/Fitter.h"
 
 #include "Math/WrappedMultiTF1.h"
@@ -81,15 +85,109 @@ int testHisto1DFit() {
       std::cout << "Chi2 Fit Failed " << std::endl;
       return -1; 
    }
+   // compare with TH1::Fit
+   TVirtualFitter::SetDefaultFitter("Minuit2"); 
+   std::cout << "\n******************************\n\t TH1::Fit Result \n" << std::endl; 
+   func->SetParameters(p);   
+   h1->Fit(func);
 
    // test using binned likelihood 
+   std::cout << "\n\nTest Binned Likelihood Fit" << std::endl; 
+
    ret = fitter.LikelihoodFit(d, f);
+   f.SetParameters(p); 
    if (ret)  
       fitter.Result().Print(std::cout); 
    else {
       std::cout << "Binned Likelihood Fit Failed " << std::endl;
       return -1; 
    }
+   // compare with TH1::Fit
+   std::cout << "\n******************************\n\t TH1::Fit Result \n" << std::endl; 
+   func->SetParameters(p);   
+   h1->Fit(func,"L");
+   std::cout << "Equivalent Chi2 from TF1::Fit " << func->GetChisquare() << std::endl;
+
+   std::cout << "\n\nTest Chi2 Fit using integral option" << std::endl; 
+
+   // need to re-create data
+   ROOT::Fit::DataOptions opt; 
+   opt.fIntegral = true; 
+   ROOT::Fit::BinData d2(opt); 
+   ROOT::Fit::FillData(d2,h1,func); 
+
+   f.SetParameters(p); 
+   ret = fitter.Fit(d2, f);
+   if (ret)  
+      fitter.Result().Print(std::cout); 
+   else {
+      std::cout << "Integral Chi2 Fit Failed " << std::endl;
+      return -1; 
+   }
+   // compare with TH1::Fit
+   std::cout << "\n******************************\n\t TH1::Fit Result \n" << std::endl; 
+   func->SetParameters(p);   
+   h1->Fit(func,"I");
+
+   f.SetParameters(p); 
+   ret = fitter.LikelihoodFit(d2, f);
+   if (ret)  
+      fitter.Result().Print(std::cout); 
+   else {
+      std::cout << "Integral Likelihood Fit Failed " << std::endl;
+      return -1; 
+   }
+   // compare with TH1::Fit
+   std::cout << "\n******************************\n\t TH1::Fit Result \n" << std::endl; 
+   func->SetParameters(p);   
+   h1->Fit(func,"IL");
+   std::cout << "Equivalent Chi2 from TF1::Fit " << func->GetChisquare() << std::endl;
+
+
+
+   
+   // redo chi2fit
+   std::cout << "\n\nRedo Chi2 Hist Fit" << std::endl; 
+   f.SetParameters(p);   
+   ret = fitter.Fit(d, f);
+   if (ret)  
+      fitter.Result().Print(std::cout); 
+   else {
+      std::cout << "Chi2 Fit Failed " << std::endl;
+      return -1; 
+   }
+
+   // test grapherrors fit 
+   std::cout << "\n\nTest Same Fit from a TGraphErrors" << std::endl; 
+   TGraphErrors gr(h1); 
+   ROOT::Fit::BinData dg; 
+   ROOT::Fit::FillData(dg,&gr,func);
+
+   f.SetParameters(p);   
+   ret = fitter.Fit(dg, f);
+   if (ret)  
+      fitter.Result().Print(std::cout); 
+   else {
+      std::cout << "Chi2 Graph Errors Fit Failed " << std::endl;
+      return -1; 
+   }
+
+   // test graph fit (errors are 1) do a re-normalization
+   std::cout << "\n\nTest Same Fit from a TGraph" << std::endl; 
+   fitter.Config().SetNormErrors(true);
+   TGraph gr2(h1); 
+   ROOT::Fit::BinData dg2; 
+   ROOT::Fit::FillData(dg2,&gr2,func);
+
+   f.SetParameters(p);   
+   ret = fitter.Fit(dg2, f);
+   if (ret)  
+      fitter.Result().Print(std::cout); 
+   else {
+      std::cout << "Chi2 Graph Fit Failed " << std::endl;
+      return -1; 
+   }
+
 
 
    return 0;
@@ -135,7 +233,7 @@ private:
       grad[1] = x[0];
       grad[2] = x[1]*x[1]; 
       grad[3] = x[1];
-      grad[4] = 0; 
+      grad[4] = 1; 
    }
    double DoDerivative(const double *x, unsigned int icoord = 0) const { 
       assert(icoord <= 1); 
@@ -197,6 +295,7 @@ int testHisto1DPolFit() {
 }
 
 int testHisto2DFit() { 
+
    // fit using a 2d parabola (test also gradient)
 
 
@@ -237,7 +336,7 @@ int testHisto2DFit() {
    if (ret)  
       fitter.Result().Print(std::cout); 
    else {
-      std::cout << " Fit Failed " << std::endl;
+      std::cout << "Gradient Fit Failed " << std::endl;
       return -1; 
    }
 
@@ -248,20 +347,53 @@ int testHisto2DFit() {
    if (ret)  
       fitter.Result().Print(std::cout); 
    else {
-      std::cout << " Fit Failed " << std::endl;
+      std::cout << " Chi2 Fit Failed " << std::endl;
       return -1; 
    }
 
    // test binned likelihood gradient
    std::cout <<"\ntest result using gradient and binned likelihood" << std::endl;
-   ret = fitter.LikelihoodFit(d, f);
    f.SetParameters(p); 
+   ret = fitter.LikelihoodFit(d, f);
    if (ret)  
       fitter.Result().Print(std::cout); 
    else {
-      std::cout << " Fit Failed " << std::endl;
+      std::cout << "Gradient Bin Likelihood  Fit Failed " << std::endl;
       return -1; 
    }
+
+   // test fitting using TGraph2D
+   TGraph2D g2(h2);
+
+   std::cout <<"\ntest using TGraph2D" << std::endl;
+   ROOT::Fit::BinData d2; 
+   ROOT::Fit::FillData(d2,&g2,func);
+   //g2.Dump();
+   std::cout << "data size from graph " << d2.Size() <<  std::endl; 
+
+   f2.SetParameters(p); 
+   ret = fitter.Fit(d2, f2);
+   if (ret)  
+      fitter.Result().Print(std::cout); 
+   else {
+      std::cout << " TGraph2D Fit Failed " << std::endl;
+      return -1; 
+   }
+   // compare with TGraph2D::Fit
+   std::cout << "\n******************************\n\t TGraph::Fit Result \n" << std::endl; 
+   func->SetParameters(p);   
+   g2.Fit(func);
+
+   std::cout <<"\ntest using TGraph2D and gradient function" << std::endl;
+   f.SetParameters(p); 
+   ret = fitter.Fit(d2, f);
+   if (ret)  
+      fitter.Result().Print(std::cout); 
+   else {
+      std::cout << " TGraph2D Grad Fit Failed " << std::endl;
+      return -1; 
+   }
+
 
    return 0; 
 }

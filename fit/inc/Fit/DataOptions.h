@@ -35,6 +35,7 @@ struct DataOptions {
       fUseRange(false)
    {}
 
+
    bool fIntegral; 
    bool fUseEmpty; 
    bool fError1; 

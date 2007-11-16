@@ -141,6 +141,7 @@ public:
       access to options
     */
    const DataOptions & Opt() const { return fOptions; }
+   DataOptions & Opt() { return fOptions; }
 
    /**
       access to range
@@ -301,8 +302,11 @@ public :
 
    /**
       return number of contained points 
+      in case of integral option size is npoints -1 
     */ 
-   unsigned int Size() const { return fNPoints; }
+   unsigned int Size() const { 
+      return (Opt().fIntegral) ? fNPoints-1 : fNPoints; 
+   }
 
 
 private: 

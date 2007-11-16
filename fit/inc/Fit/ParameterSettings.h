@@ -35,7 +35,7 @@ public:
       Default constructor
    */ 
    ParameterSettings () :  
-    fValue(0.), fStepSize(0.), fFix(false), 
+    fValue(0.), fStepSize(0.1), fFix(false), 
     fLowerLimit(0.), fUpperLimit(0.), fHasLowerLimit(false), fHasUpperLimit(false), 
     fName("") 
    {}
@@ -58,7 +58,7 @@ public:
 
    ///constructor for fixed Parameter
    ParameterSettings(const std::string &  name, double val) : 
-    fValue(val), fStepSize(0.), fFix(true), 
+    fValue(val), fStepSize(0), fFix(true), 
     fLowerLimit(0.), fUpperLimit(0.), fHasLowerLimit(false), fHasUpperLimit(false), 
     fName(name)  
    {}

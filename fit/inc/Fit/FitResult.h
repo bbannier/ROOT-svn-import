@@ -13,6 +13,9 @@
 #ifndef ROOT_Fit_FitResult
 #define ROOT_Fit_FitResult
 
+#ifndef ROOT_Fit_IFunctionfwd
+#include "Math/IFunctionfwd.h"
+#endif
 #ifndef ROOT_Fit_IParamFunctionfwd
 #include "Math/IParamFunctionfwd.h"
 #endif
@@ -47,7 +50,7 @@ public:
    /**
       Construct from a Minimizer instance 
     */
-   FitResult(const ROOT::Math::Minimizer & min, const IModelFunction & f, unsigned int dataSize, bool isValid, bool chi2fit = true);
+   FitResult(const ROOT::Math::Minimizer & min, const IModelFunction & f, bool isValid, unsigned int sizeOfData = 0, const ROOT::Math::IMultiGenFunction * chi2func = 0);
 
    /** 
       Destructor (no operations)
@@ -73,6 +76,11 @@ public:
 
 public: 
 
+   ///normalize errors using chi2/ndf for chi2 fits
+   void NormalizeErrors();
+
+   /// flag tp chek if errors are normalized
+   bool NormalizedErrors() { return fNormalized; }
 
    /// True if fit successful, otherwise false.
    bool IsValid() const { return fValid; }
@@ -137,6 +145,7 @@ protected:
 private: 
 
    bool fValid; 
+   bool fNormalized;
    double fVal; 
    double fEdm; 
    double fChi2;
