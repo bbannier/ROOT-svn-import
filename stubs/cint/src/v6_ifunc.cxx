@@ -1655,7 +1655,7 @@ void G__make_ifunctable(char* funcheader)
 
    // LF 09-08-07
    G__p_ifunc->page_base = G__method_inbase2(func_now, G__p_ifunc);
-   if(!G__p_ifunc->page_base)
+   if(G__p_ifunc->page_base==0)
      G__p_ifunc->page_base = G__p_ifunc->page+1;
 
    /* finishing up */
