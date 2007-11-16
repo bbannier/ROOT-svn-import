@@ -136,6 +136,15 @@ public:
    }
 
    /**
+      fit using the given FCN function. Give also initial parameter values and data size to get  Ndf
+    */
+   bool FitFCN(const ROOT::Math::IMultiGenFunction & fcn, const double * params, unsigned int dataSize ); 
+   /**
+      fit using the given gradient FCN function. Give also initial parameter values and data size to get  Ndf
+    */
+   bool FitFCN(const ROOT::Math::IMultiGradFunction & fcn, const double * params, unsigned int dataSize ); 
+
+   /**
       do a linear fit on a set of bin-data
     */
    bool LinearFit(const BinData & data) { return DoLinearFit(data); }
@@ -178,7 +187,7 @@ protected:
 
    /// do minimization
    template<class ObjFunc> 
-   bool DoMinimization(ROOT::Math::Minimizer & min, const ObjFunc & f, unsigned int dataSize ); 
+   bool DoMinimization(ROOT::Math::Minimizer & min, const ObjFunc & f, unsigned int dataSize, const ROOT::Math::IMultiGenFunction * chifunc = 0); 
 
 private: 
 

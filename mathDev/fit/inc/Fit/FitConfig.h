@@ -57,24 +57,6 @@ public:
    */ 
    ~FitConfig ();    
 
-private:
-   // usually copying is non trivial, so we make this unaccessible
-
-   /** 
-      Copy constructor
-   */ 
-   FitConfig(const FitConfig &) {} 
-
-   /** 
-      Assignment operator
-   */ 
-   FitConfig & operator = (const FitConfig & rhs)  {
-      if (this == &rhs) return *this;  // time saving self-test
-      return *this;
-   }
-
-public: 
-
    ///  get the parameter settings for the i-th parameter (const method)
    const ParameterSettings & ParSettings(unsigned int i) const { return fSettings[i]; }
 
@@ -88,9 +70,11 @@ public:
    std::vector<ROOT::Fit::ParameterSettings> & ParamsSettings() { return fSettings; }
 
 
+   /// set the parameter settings from number of params and optionally a vector of values (otherwise are set to zero)
+   void SetParamsSettings(unsigned int npar, const double * params = 0); 
 
    /// set the parameter settings from a function
-   void SetParameterSettings(const ROOT::Math::IParamMultiFunction & func); 
+   void SetParamsSettings(const ROOT::Math::IParamMultiFunction & func); 
 
    /// create a new minimizer according to chosen configuration
    ROOT::Math::Minimizer * CreateMinimizer(); 
@@ -111,12 +95,17 @@ public:
 
    const std::string & MinimizerType() { return fMinimizerType; } 
 
+   /// flag to check if errors needs to be normalized according to chi2/ndf 
+   bool NormalizeErrors(){ return fNormErrors; } 
+
+   void SetNormErrors(bool on) { fNormErrors= on; }
 
 protected: 
 
 
 private: 
 
+   bool fNormErrors; 
 
    std::vector<ROOT::Fit::ParameterSettings> fSettings; 
 

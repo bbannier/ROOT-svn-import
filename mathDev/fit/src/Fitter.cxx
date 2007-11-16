@@ -68,7 +68,7 @@ void Fitter::SetFunction(const IModelFunction & func)
 //       std::cout << "Func params " << fFunc->Parameters()[i] << std::endl; 
    
    // creates the parameter  settings 
-   fConfig.SetParameterSettings(*fFunc); 
+   fConfig.SetParamsSettings(*fFunc); 
 }
 
 void Fitter::SetFunction(const IModel1DFunction & func) 
@@ -82,7 +82,29 @@ void Fitter::SetFunction(const IModel1DFunction & func)
       (fPtr, 1, fPtr->Parameters(), fPtr->Parameters() + fPtr->NPar() ); 
 
    // creates the parameter  settings 
-   fConfig.SetParameterSettings(*fFunc); 
+   fConfig.SetParamsSettings(*fFunc); 
+}
+
+      bool Fitter::FitFCN(const BaseFunc & fcn, const double * params, unsigned int dataSize) { 
+   // fit a user provided FCN function
+   // create fit parameter settings
+   unsigned int npar  = fcn.NDim(); 
+   if (params != 0 || fConfig.ParamsSettings().size() != npar) fConfig.SetParamsSettings(npar, params);
+   // create Minimizer  
+   std::auto_ptr<ROOT::Math::Minimizer> minimizer = std::auto_ptr<ROOT::Math::Minimizer> ( fConfig.CreateMinimizer() );
+   if (minimizer.get() == 0) return false; 
+
+   return DoMinimization<BaseFunc> (*minimizer, fcn, dataSize); 
+}
+      bool Fitter::FitFCN(const BaseGradFunc & fcn, const double * params, unsigned int dataSize) { 
+   // fit a user provided FCN gradient function
+   unsigned int npar  = fcn.NDim(); 
+   if (params != 0 || fConfig.ParamsSettings().size() != npar) fConfig.SetParamsSettings(npar, params);
+   // create Minimizer  (need to be done afterwards)
+   std::auto_ptr<ROOT::Math::Minimizer> minimizer = std::auto_ptr<ROOT::Math::Minimizer> ( fConfig.CreateMinimizer() );
+   if (minimizer.get() == 0) return false; 
+   // create fit configuration if null 
+   return DoMinimization<BaseFunc> (*minimizer, fcn, dataSize); 
 }
 
 
@@ -118,7 +140,7 @@ bool Fitter::DoLeastSquareFit(const BinData & data) {
 }
 
 template<class ObjFunc> 
-bool Fitter::DoMinimization(ROOT::Math::Minimizer & minimizer, const ObjFunc & objFunc, unsigned int dataSize) { 
+bool Fitter::DoMinimization(ROOT::Math::Minimizer & minimizer, const ObjFunc & objFunc, unsigned int dataSize, const ROOT::Math::IMultiGenFunction * chi2func) { 
 
    // assert that params settings have been set correctly
    assert( fConfig.ParamsSettings().size() == objFunc.NDim() );
@@ -136,7 +158,8 @@ bool Fitter::DoMinimization(ROOT::Math::Minimizer & minimizer, const ObjFunc & o
 //    return false; 
 
    bool ret = minimizer.Minimize(); 
-   fResult = FitResult(minimizer,*fFunc,dataSize, ret );
+   fResult = FitResult(minimizer,*fFunc, ret, dataSize, chi2func );
+   if (fConfig.NormalizeErrors() ) fResult.NormalizeErrors(); 
    return ret; 
 }
 
@@ -154,17 +177,20 @@ bool Fitter::DoLikelihoodFit(const BinData & data) {
    // logl fit (error is 0.5)
    minimizer->SetErrorUp(0.5);
 
+   // create a chi2 function to be used for the equivalent chi-square
+   Chi2FCN<BaseFunc> chi2(data,*fFunc); 
+
    // check if fFunc provides gradient
    IGradModelFunction * gradFun = dynamic_cast<IGradModelFunction *>(fFunc); 
    if (gradFun == 0) { 
       // do minimzation without using the gradient
       PoissonLikelihoodFCN<BaseFunc> logl(data,*fFunc); 
-      return DoMinimization<BaseFunc> (*minimizer, logl, data.Size()); 
+      return DoMinimization<BaseFunc> (*minimizer, logl, data.Size(), &chi2); 
    } 
    else { 
       // use gradient 
       PoissonLikelihoodFCN<BaseGradFunc> logl(data,*gradFun); 
-      return DoMinimization<BaseGradFunc> (*minimizer, logl, data.Size()); 
+      return DoMinimization<BaseGradFunc> (*minimizer, logl, data.Size(), &chi2); 
    }
    return false; 
 }
@@ -202,7 +228,7 @@ bool Fitter::DoLikelihoodFit(const UnBinData & data) {
    return false; 
 }
 
-bool Fitter::DoLinearFit(const BinData & data) { 
+      bool Fitter::DoLinearFit(const BinData & /* data */) { 
 
    // perform a linear fit on a set of binned data 
    return true; 

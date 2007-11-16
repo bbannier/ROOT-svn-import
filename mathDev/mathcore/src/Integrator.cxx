@@ -16,6 +16,10 @@
 #include "Math/AdaptiveIntegratorMultiDim.h"
 
 
+#include "Math/OneDimFunctionAdapter.h"
+
+
+
 
 #ifndef MATH_NO_PLUGIN_MANAGER
 #include "TROOT.h"
@@ -31,6 +35,18 @@
 namespace ROOT {
 namespace Math {
 
+void IntegratorOneDim::SetFunction(const IMultiGenFunction &f, unsigned int icoord , const double * x ) { 
+   // set function from a multi-dim function 
+   // pass also x in case of multi-dim function express the other dimensions (which are fixed) 
+   unsigned int ndim = f.NDim(); 
+   assert (icoord < ndim); 
+   ROOT::Math::OneDimMultiFunctionAdapter<> adapter(f,ndim,icoord);
+   // case I pass a vector x which is needed (for example to compute I(y) = Integral( f(x,y) dx) ) need to setCX
+   if (x != 0) adapter.SetX(x, x+ ndim);
+   SetFunction(adapter,true); // need to copy this object
+}
+
+// methods to create integrators 
 
    VirtualIntegratorOneDim * IntegratorOneDim::CreateIntegrator(IntegrationOneDim::Type type , double absTol, double relTol, unsigned int size, int rule) { 
    // create the concrete class for one-dimensional integration. Use the plug-in manager if needed 

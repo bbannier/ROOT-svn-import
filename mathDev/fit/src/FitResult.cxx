@@ -17,6 +17,7 @@
 #include "Math/IParamFunction.h"
 
 #include <cassert>
+#include <cmath>
 
 namespace ROOT { 
 
@@ -28,8 +29,9 @@ FitResult::FitResult()
    // Default constructor implementation.
 }
 
-FitResult::FitResult(const ROOT::Math::Minimizer & min, const IModelFunction & func, unsigned int sizeOfData, bool isValid, bool chi2fit ) : 
+FitResult::FitResult(const ROOT::Math::Minimizer & min, const IModelFunction & func, bool isValid,  unsigned int sizeOfData, const  ROOT::Math::IMultiGenFunction * chi2func ) : 
    fValid(isValid),
+   fNormalized(false),
    fVal (min.MinValue()),  
    fEdm (min.Edm()),  
    fNCalls(min.NCalls()),
@@ -38,15 +40,18 @@ FitResult::FitResult(const ROOT::Math::Minimizer & min, const IModelFunction & f
 {
    // Constructor from a minimizer, fill the data
 
-   fNdf = sizeOfData - min.NFree(); 
+   if (sizeOfData > 0) fNdf = sizeOfData - min.NFree(); 
 
    if (min.Errors() != 0) 
       fErrors = std::vector<double>(min.Errors(), min.Errors() + min.NDim() ) ; 
 
-   if (chi2fit) 
+   if (chi2func == 0) 
       fChi2 = fVal;
-   else 
-      fChi2 = 0; // to be done - must compulte chi2 equivalent
+   else { 
+      // compute chi2 equivalent
+      fChi2 = (*chi2func)(&fParams[0]); 
+   }
+
       
 //    // fill error matrix
    // cov matrix rank 
@@ -64,6 +69,19 @@ FitResult::FitResult(const ROOT::Math::Minimizer & min, const IModelFunction & f
                               
 }
 
+void FitResult::NormalizeErrors() { 
+   // normalize errors and covariance matrix according to chi2 value
+   if (fNdf == 0 || fChi2 <= 0) return; 
+   double s2 = fChi2/fNdf; 
+   double s = std::sqrt(fChi2/fNdf); 
+   for (unsigned int i = 0; i < fErrors.size() ; ++i) 
+      fErrors[i] *= s; 
+   for (unsigned int i = 0; i < fCovMatrix.size() ; ++i) 
+      fCovMatrix[i] *= s2; 
+
+   fNormalized = true; 
+} 
+
 int FitResult::Index(const std::string & name) const { 
    // find index for given parameter name
    unsigned int npar = fParams.size(); 
@@ -79,6 +97,8 @@ void FitResult::Print(std::ostream & os) const {
    os << "            FitResult                   \n\n";
    unsigned int npar = fParams.size(); 
    os << "Chi2/Likelihood  =\t" << fVal << std::endl;
+   if (fVal != fChi2) 
+   os << "Chi2             =\t" << fChi2<< std::endl;
    os << "NDf              =\t" << fNdf << std::endl; 
    os << "Edm              =\t" << fEdm << std::endl; 
    os << "NCalls           =\t" << fNCalls << std::endl; 

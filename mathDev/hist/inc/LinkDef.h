@@ -186,6 +186,10 @@
 
 #pragma link C++ class ROOT::Math::WrappedFunction<TF1 &>;
 #pragma link C++ class ROOT::Math::WrappedMultiFunction<TF1 &>;
-//#pragma link C++ class ROOT::Math::WrappedParamFunction<TF1 &>;
+
+#pragma link C++ namespace ROOT::Fit; 
+#pragma link C++ function ROOT::Fit::FillData(ROOT::Fit::BinData &, const TH1 *, TF1 * );
+#pragma link C++ function ROOT::Fit::FillData(ROOT::Fit::BinData &, const TGraph2D *, TF1 * );
+
 
 #endif
