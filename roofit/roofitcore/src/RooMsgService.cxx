@@ -48,6 +48,7 @@
 #include "RooCmdArg.h"
 #include "RooCmdConfig.h"
 #include "RooGlobalFunc.h"
+#include "RooSentinel.h"
 
 #include <iostream>
 #include <iomanip>
@@ -60,6 +61,15 @@ ClassImp(RooMsgService)
 
 RooMsgService* RooMsgService::_instance = 0 ;
 Int_t RooMsgService::_debugCount = 0 ;
+
+void RooMsgService::cleanup() 
+{
+  if (_instance) {
+    delete _instance ;
+    _instance = 0 ;
+  }
+}
+
 
 RooMsgService::RooMsgService() 
 {
@@ -280,6 +290,7 @@ RooMsgService& RooMsgService::instance()
   // Return reference to singleton instance 
   if (!_instance) {
     _instance = new RooMsgService() ;    
+    RooSentinel::activate() ;
   }
   return *_instance ;
 }

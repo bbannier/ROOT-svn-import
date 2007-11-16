@@ -287,6 +287,7 @@ Int_t RooAddModel::basisCode(const char* name) const
 
 RooAddModel::CacheElem* RooAddModel::getProjCache(const RooArgSet* nset, const RooArgSet* iset, const char* rangeName) const
 {
+
   // Check if cache already exists 
   CacheElem* cache = (CacheElem*) _projCacheMgr.getObj(nset,iset,0,RooNameReg::ptr(rangeName)) ;
   if (cache) {
@@ -354,7 +355,7 @@ RooAddModel::CacheElem* RooAddModel::getProjCache(const RooArgSet* nset, const R
   // *** PART 2 : Create projection coefficients ***
 
   // If no projections required stop here
-  if (!_projectCoefs) {
+  if (!_projectCoefs || _basis!=0 ) {
     _projCacheMgr.setObj(nset,iset,cache,RooNameReg::ptr(rangeName)) ;
     return cache ;
   }
