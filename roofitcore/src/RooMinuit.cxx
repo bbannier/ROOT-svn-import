@@ -56,6 +56,7 @@
 #include "RooRealVar.h"
 #include "RooFitResult.h"
 #include "RooAbsPdf.h"
+#include "RooSentinel.h"
 
 
 #if (__GNUC__==3&&__GNUC_MINOR__==2&&__GNUC_PATCHLEVEL__==3)
@@ -65,12 +66,22 @@ char* operator+( streampos&, char* );
 ClassImp(RooMinuit) 
 ;
 
-static TVirtualFitter *_theFitter = 0;
+TVirtualFitter *RooMinuit::_theFitter = 0 ;
+
+
+void RooMinuit::cleanup()
+{
+  if (_theFitter) {
+    delete _theFitter ;
+    _theFitter =0 ;
+  }
+}
 
 
 RooMinuit::RooMinuit(RooAbsReal& function)
 {
   // Constructor
+  RooSentinel::activate() ;
 
   // Store function reference
   _func = &function ;
@@ -80,6 +91,7 @@ RooMinuit::RooMinuit(RooAbsReal& function)
   _profile = kFALSE ;
   _handleLocalErrors = kFALSE ;
   _printLevel = 1 ;
+  _warnLevel = 0 ;
 
   // Examine parameter list
   RooArgSet* paramSet = function.getParameters(RooArgSet()) ;
@@ -209,7 +221,7 @@ RooFitResult* RooMinuit::fit(const char* options)
   if (opts.Contains("h")||!opts.Contains("m")) hesse() ;
   if (!opts.Contains("m")) minos() ;
   
-  return (!opts.Contains("r")) ? save() : 0 ; 
+  return (opts.Contains("r")) ? save() : 0 ; 
 }
 
 
@@ -837,7 +849,7 @@ void RooMinuitGlue(Int_t& /*np*/, Double_t* /*gin*/,
   // Static function that interfaces minuit with RooMinuit
 
   // Retrieve fit context and its components
-  RooMinuit* context = (RooMinuit*) _theFitter->GetObjectFit() ;
+  RooMinuit* context = (RooMinuit*) RooMinuit::_theFitter->GetObjectFit() ;
   ofstream* logf   = context->logfile() ;
   Double_t& maxFCN = context->maxFCN() ;
   Bool_t verbose   = context->_verbose ;

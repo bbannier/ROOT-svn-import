@@ -292,8 +292,6 @@ Double_t RooAdaptiveGaussKronrodIntegrator1D::integral(const Double_t *yvec)
   // Return values
   double result, error;
 
-  //cout << "integrating over range " << _xmin << " - " << _xmax << endl ;
-
   // Call GSL implementation of integeator  
   switch(_domainType) {
   case Closed:

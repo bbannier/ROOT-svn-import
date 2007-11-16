@@ -100,6 +100,8 @@ public:
   std::map<int,std::string> _levelNames ;
   std::map<int,std::string> _topicNames ;
 
+  static void cleanup() ;
+
 protected:
 
   Int_t activeStream(const RooAbsArg* self, MsgTopic facility, MsgLevel level) ;
