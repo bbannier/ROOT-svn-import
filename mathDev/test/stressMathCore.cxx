@@ -14,6 +14,9 @@
 #include "Math/IParamFunction.h"
 #include "Math/Integrator.h"
 #include <iostream>
+#include <limits>
+#include "TBenchmark.h"
+#include "TROOT.h"
 
 using namespace ROOT::Math; 
 
@@ -91,7 +94,11 @@ class StatFunction : public ROOT::Math::IParamFunction {
 public: 
 
    StatFunction(Func pdf, Func cdf, FuncQ quant) : fPdf(pdf), fCdf(cdf), fQuant(quant) 
-   {} 
+   {
+      fScale1 = 1.0E6; //scale for cdf test (integral)
+      fScale2 = 10;  //scale for quantile test
+      for(int i = 0; i< NPAR; ++i) fParams[i]=0;
+   } 
 
 
    unsigned int NPar() const { return NPAR; } 
@@ -112,6 +119,8 @@ public:
    // test cumulative function
    int Test(double x1, double x2, double xl = 1, double xu = 0, bool cumul = false); 
    
+   void ScaleTol1(double s) { fScale1 *= s; }  
+   void ScaleTol2(double s) { fScale2 *= s; }
 
 private: 
 
@@ -124,7 +133,8 @@ private:
    Func fCdf;
    FuncQ fQuant; 
    double fParams[NPAR];
-
+   double fScale1;
+   double fScale2;
 };
 
 void PrintStatus(int iret) { 
@@ -148,7 +158,7 @@ int StatFunction<F1,F2,N1,N2>::Test(double xmin, double xmax, double xlow, doubl
       double q1 = Cdf(v1);
       //std::cout << "v1 " << v1 << " pdf " << (*this)(v1) << " cdf " << q1 << " quantile " << Quantile(q1) << std::endl;  
       // calculate integral of pdf
-      Integrator ig(IntegrationOneDim::ADAPTIVE, 1.E-12,1.E-12,100000);
+      Integrator ig(IntegrationOneDim::ADAPTIVESINGULAR, 1.E-12,1.E-12,100000);
       ig.SetFunction(*this);
       double q2 = 0; 
       if (!c) { 
@@ -159,10 +169,10 @@ int StatFunction<F1,F2,N1,N2>::Test(double xmin, double xmax, double xlow, doubl
             q2 = ig.Integral(xlow,v1); 
 
          // use a larger scale (integral error is 10-9)
-         iret |= compare("test _cdf", q1, q2, 1.0E6);
+         iret |= compare("test _cdf", q1, q2, fScale1 );
          // test the quantile 
          double v2 = Quantile(q1); 
-         iret |= compare("test _quantile", v1, v2, 10.);
+         iret |= compare("test _quantile", v1, v2, fScale2 );
       }
       else { 
          // upper integral (cdf_c)
@@ -171,9 +181,9 @@ int StatFunction<F1,F2,N1,N2>::Test(double xmin, double xmax, double xlow, doubl
          else 
             q2 = ig.Integral(v1,xup);
  
-         iret |= compare("test _cdf_c", q1, q2, 1.0E6);
+         iret |= compare("test _cdf_c", q1, q2, fScale1);
          double v2 = Quantile(q1); 
-         iret |= compare("test _quantile_c", v1, v2, 10.);
+         iret |= compare("test _quantile_c", v1, v2, fScale2 );
       }
       if (iret)  { 
          std::cout << "Failed test for x = " << v1 << " p = "; 
@@ -182,7 +192,7 @@ int StatFunction<F1,F2,N1,N2>::Test(double xmin, double xmax, double xlow, doubl
          break;
       } 
    }
-   PrintStatus(iret);
+   if (c || iret != 0) PrintStatus(iret);
    return iret; 
 }
 
@@ -198,9 +208,12 @@ typedef StatFunction<F2,F1,2> Dist_chisquared;
 typedef StatFunction<F3,F2,3> Dist_fdistribution; 
 typedef StatFunction<F3,F2,3> Dist_gamma; 
 typedef StatFunction<F2,F1,2> Dist_gaussian; 
+typedef StatFunction<F3,F2,3> Dist_lognormal; 
+typedef StatFunction<F2,F1,2> Dist_tdistribution; 
  
 
 #define CREATE_DIST(name) Dist_ ##name  dist( name ## _pdf, name ## _cdf, name ##_quantile );
+#define CREATE_DIST_C(name) Dist_ ##name  distc( name ## _pdf, name ## _cdf_c, name ##_quantile_c );
 
 
 template<class Distribution> 
@@ -213,6 +226,8 @@ int TestDist(Distribution & d, double x1, double x2) {
 //int main(int argc,const char *argv[]) { 
 int main() { 
 
+   TBenchmark bm; 
+   bm.Start("stressMathCore");
    
    int iret = 0; 
    // test statistical function 
@@ -221,21 +236,101 @@ int main() {
       CREATE_DIST(beta);
       dist.SetParameters( 2, 2);
       iret |= dist.Test(0.01,0.99,0.,1.);
+      CREATE_DIST_C(beta);
+      distc.SetParameters( 2, 2);
+      iret |= distc.Test(0.01,0.99,0.,1.,true);
    }
 
    {
-      std::cout << "Gamma distribution      \t\t"; 
+      std::cout << "Gamma distribution     \t\t"; 
       CREATE_DIST(gamma);
       dist.SetParameters( 2, 1);
       iret |= dist.Test(0.05,5, 0.,1.);
+      CREATE_DIST_C(gamma);
+      distc.SetParameters( 2, 1);
+      iret |= distc.Test(0.05,5, 0.,1.,true);
    }
 
    {
-      std::cout << "Chisquare distribution  \t\t"; 
+      std::cout << "Chisquare distribution \t\t"; 
       CREATE_DIST(chisquared);
-      dist.SetParameters( 10);
+      dist.SetParameters( 10, 0);
+      dist.ScaleTol2(10);
       iret |= dist.Test(0.05,30, 0.);
+      CREATE_DIST_C(chisquared);
+      distc.SetParameters( 10, 0);
+      distc.ScaleTol2(10000000);  // t.b.c.
+      iret |= distc.Test(0.05,30, 0.,1.,true);
    }
+   {
+      std::cout << "Normal distribution  \t\t"; 
+      CREATE_DIST(gaussian);
+      dist.SetParameters( 1, 0);
+      dist.ScaleTol2(100);
+      iret |= dist.Test(-4,4);
+      CREATE_DIST_C(gaussian);
+      distc.SetParameters( 1, 0);
+      distc.ScaleTol2(100);
+      iret |= distc.Test(-4,4,1,0,true);
+   }
+   {
+      std::cout << "BreitWigner distribution \t"; 
+      CREATE_DIST(breitwigner);
+      dist.SetParameters( 1);
+      dist.ScaleTol2(10);
+      iret |= dist.Test(-5,5);
+      CREATE_DIST_C(breitwigner);
+      distc.SetParameters( 1);
+      distc.ScaleTol2(10);
+      iret |= distc.Test(-5,5,1,0,true);
+   }
+   {
+      std::cout << "F    distribution  \t\t"; 
+      CREATE_DIST(fdistribution);
+      dist.SetParameters( 5, 4);
+      dist.ScaleTol1(1000000);
+      dist.ScaleTol2(10);
+      // if enlarge scale test fails
+      iret |= dist.Test(0.05,5,0);
+      CREATE_DIST_C(fdistribution);
+      distc.SetParameters( 5, 4);
+//       dist.ScaleTol1(1000000);
+      distc.ScaleTol2(10);
+      // if enlarge scale test fails
+      iret |= distc.Test(0.05,5,0,1,true);
+   }
+   {
+      std::cout << "t    distribution  \t\t"; 
+      CREATE_DIST(tdistribution);
+      dist.SetParameters( 10 );
+//       dist.ScaleTol1(1000);
+       dist.ScaleTol2(5000);
+      iret |= dist.Test(-10,10);
+      CREATE_DIST_C(tdistribution);
+      distc.SetParameters( 10 );
+      distc.ScaleTol2(10000);  // t.b.c.
+      iret |= distc.Test(-10,10,1,0,true);
+   }
+   {
+      std::cout << "lognormal distribution  \t"; 
+      CREATE_DIST(lognormal);
+      dist.SetParameters(1,1 );
+      dist.ScaleTol1(1000);
+      iret |= dist.Test(0.01,5,0);
+      CREATE_DIST_C(lognormal);
+      distc.SetParameters(1,1 );
+      distc.ScaleTol2(1000000); // t.b.c.
+      iret |= distc.Test(0.01,5,0,1,true);
+   }
+
+   bm.Stop("stressMathCore");
+   std::cout <<"******************************************************************************\n";
+   bm.Print("stressMathCore");
+   const double reftime = 3.67; // ref time on  macbook pro (intel core duo 2.2 GHz)
+   double rootmarks = 800 * reftime / bm.GetCpuTime("stressMathCore");
+   std::cout << " ROOTMARKS = " << rootmarks << " ROOT version: " << gROOT->GetVersion() << "\t" 
+             << gROOT->GetSvnBranch() << "@" << gROOT->GetSvnRevision() << std::endl;
+   std::cout <<"*******************************************************************************\n";
 
    return iret; 
 }
