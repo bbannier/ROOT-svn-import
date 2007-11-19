@@ -1296,6 +1296,66 @@ int G__stub_method_asm(void* vaddress, int gtagnum, int reftype, void* this_ptr,
    return 0;
 }
 
+int G__evaluate_libp(G__param* rpara, G__param *libp, G__ifunc_table_internal *ifunc, int ifn)
+{
+   // This function will put the parameter of libp in rpara,
+   // but it will also evaluate the default parameters of ifunc
+   // putting them in rpara... at the end, rpara should be everything
+   // we need to execute a given function
+   // it returns 0 if everything is ok or a -1 if an error is found
+
+
+   // LF 08-08-07
+   // We need to instantiate the default parameters and create a variable 
+   // containing all of them...
+   //struct G__param rpara;
+   rpara->paran=0;
+
+         
+   // for methods with "..." libp->paran>ifunc->para_nu[ifn]
+   // but for methods with optional parameters the opposite 
+   // is true;
+   int paran = ifunc->para_nu[ifn];
+   if ((ifunc->ansi[ifn] == 2) && libp->paran>ifunc->para_nu[ifn])
+      paran = libp->paran;
+            
+   for (int counter=0; counter<paran; counter++) {
+      if (counter < libp->paran) {
+         // This means it's a given param (not by default)
+         rpara->para[rpara->paran] = libp->para[counter];
+         rpara->paran++;
+      }
+      else {
+         // This happens when it's by default
+
+         // If it's a parameter by default we have to get its real value
+         //
+         // LF 26/04/07
+         // Note: when pdefault!=0 and pdefault!=-1 it means it's a valid
+         //       pointer so I can only assume that it would be the
+         //       reference of an object but when can we encounter such
+         //       situation?
+         G__paramfunc *formal_param = ifunc->param[ifn][counter];
+
+         if((G__value *)(-1)==formal_param->pdefault) {
+            rpara->para[rpara->paran] = G__getexpr(formal_param->def);
+            rpara->paran++;
+         }
+         else if((G__value *)(0)==formal_param->pdefault){
+            G__fprinterr(G__serr,"Error in G__evaluate_libp: default param not found\n");
+            return -1;
+         }
+         else{
+            G__fprinterr(G__serr,"Error in G__evaluate_libp: unknown param\n");
+            return -1;
+         }
+      }
+   }  
+   return 0;
+}
+
+
+
 
 /* ---------------:: Leo & Diego March :: 2007--------------- */
 /* Non Dictionariy (Stub functions) Assembler Method Calling  */
@@ -1308,7 +1368,6 @@ int G__stub_method_asm(void* vaddress, int gtagnum, int reftype, void* this_ptr,
 /*                                                            */
 /* See: common.h and G__c.h for types information             */
 /* ---------------------------------------------------------- */
-
 int G__stub_method_calling(G__value *result7, G__param *libp, 
                            G__ifunc_table_internal *ifunc, int ifn)
 {
@@ -1793,6 +1852,17 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
    }
    else{// Not Constructor
       char * finalclass = 0;
+      
+      // LF 19-11-07
+      // We need to evaluate the parameters by default here, since we want to use those
+      // given by the static type and in the next function we will recursively call 
+      // G__stub_method_calling with a different type
+      struct G__param rpara;
+      if(G__evaluate_libp(&rpara, libp, ifunc, ifn)==-1){
+         G__fprinterr(G__serr,"Error in G__stub_method_calling: problem with the default parameters\n");
+         return -1;
+      }
+
       // Let's try to find the final type if we have a virtual function
       // tagnum cant be -1 here because a free standing function cant be
       // virtual also.
@@ -1937,9 +2007,9 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
                   
                //printf("G__stub_method_calling Calling function %s this=%p \n", new_ifunc->funcname[ifn], G__getstructoffset());
                if(G__get_funcptr(new_ifunc, ifn))
-                  intres = G__stub_method_calling(result7, libp, new_ifunc, ifn);
+                  intres = G__stub_method_calling(result7, &rpara, new_ifunc, ifn); // Default params already evaluated
                else
-                  intres = G__call_cppfunc(result7, libp, new_ifunc, ifn);
+                  intres = G__call_cppfunc(result7, &rpara, new_ifunc, ifn); // Default params already evaluated
                   
                G__tagnum = old_tag;
 
@@ -2181,55 +2251,6 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
 
       }
       else{
-         // LF 08-08-07
-         // We need to instantiate the default parameters and create a variable 
-         // containing all of them...
-         struct G__param rpara;
-         rpara.paran=0;
-
-         
-         // printf("-----------------------------\n");
-         // printf("          Parameters         \n");
-         // printf("-----------------------------\n");
-            
-         // for methods with "..." libp->paran>ifunc->para_nu[ifn]
-         // but for methods with optional parameters the opposite 
-         // is true;
-         int paran = ifunc->para_nu[ifn];
-         if ((ifunc->ansi[ifn] == 2) && libp->paran>ifunc->para_nu[ifn])
-            paran = libp->paran;
-            
-         for (int counter=0; counter<paran; counter++) {
-            if (counter < libp->paran) {
-               // This means it's a given param (not by default)
-               rpara.para[rpara.paran] = libp->para[counter];
-               rpara.paran++;
-            }
-            else {
-               // This happens when it's by default
-
-               // If it's a parameter by default we have to get its real value
-               //
-               // LF 26/04/07
-               // Note: when pdefault!=0 and pdefault!=-1 it means it's a valid
-               //       pointer so I can only assume that it would be the
-               //       reference of an object but when can we encounter such
-               //       situation?
-               G__paramfunc *formal_param = ifunc->param[ifn][counter];
-
-               if((G__value *)(-1)==formal_param->pdefault) {
-                  rpara.para[rpara.paran] = G__getexpr(formal_param->def);
-                  rpara.paran++;
-               }
-               else if((G__value *)(0)==formal_param->pdefault){
-                  printf("Error in G__stub_method_calling: default param not found \n");
-               }
-               else{
-                  printf("Error in G__stub_method_calling: unknown param \n");
-               }
-            }
-         }
-
          // We dont have a this ptr if this is a static function
          void* this_ptr=0;
 
