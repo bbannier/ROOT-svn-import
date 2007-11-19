@@ -1287,11 +1287,9 @@ int G__stub_method_asm(void* vaddress, int gtagnum, int reftype, void* this_ptr,
       __asm__ __volatile__("call *%1" : "=a" (res): "g" (vaddress));
       result7->obj.i = (long)res;
 
-      if(isupper(type)) {
+      if(!isupper(type)) {
          result7->ref = result7->obj.i;
-         if (reftype){
-            result7->obj.reftype.reftype = G__PARAREFERENCE;
-         }
+         result7->obj.reftype.reftype = G__PARAREFERENCE;
       }
    }
 
@@ -4980,7 +4978,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                     // LF 26-10-07
                     // Generate the stubs for those function needing a pointer to a reference (see TCLonesArray "virtual TObject*&	operator[](Int_t idx)")
                     // Is this condition correct and/or sufficient?
-                    ((ifunc->reftype[j] == G__PARAREFERENCE) && isupper(ifunc->type[j]) && strcmp(ifunc->funcname[j],"operator=")!=0)
+                    ((ifunc->reftype[j] == G__PARAREFERENCE) && isupper(ifunc->type[j]))
                     ){
 
 
@@ -5261,7 +5259,7 @@ void G__cppif_func(FILE *fp, FILE *hfp)
                 // LF 26-10-07
                 // Generate the stubs for those function needing a pointer to a reference (see TCLonesArray "virtual TObject*&	operator[](Int_t idx)")
                 // Is this condition correct and/or sufficient?
-                ((ifunc->reftype[j] == G__PARAREFERENCE) && isupper(ifunc->type[j]) && strcmp(ifunc->funcname[j],"operator=")!=0)
+                ((ifunc->reftype[j] == G__PARAREFERENCE) && isupper(ifunc->type[j]))
                )
              ) 
            ) 
@@ -9108,7 +9106,7 @@ void G__cpplink_memfunc(FILE *fp)
                       // LF 26-10-07
                       // Generate the stubs for those function needing a pointer to a reference (see TCLonesArray "virtual TObject*&	operator[](Int_t idx)")
                       // Is this condition correct and/or sufficient?
-                       ((ifunc->reftype[j] == G__PARAREFERENCE) && isupper(ifunc->type[j]) && strcmp(ifunc->funcname[j],"operator=")!=0)
+                       ((ifunc->reftype[j] == G__PARAREFERENCE) && isupper(ifunc->type[j]))
                       )
                      ){
                      if(strcmp(ifunc->funcname[j],G__struct.name[i])==0) {
@@ -10072,7 +10070,7 @@ void G__cpplink_func(FILE *fp)
                 // LF 26-10-07
                 // Generate the stubs for those function needing a pointer to a reference (see TCLonesArray "virtual TObject*&	operator[](Int_t idx)")
                 // Is this condition correct and/or sufficient?
-                ((ifunc->reftype[j] == G__PARAREFERENCE) && isupper(ifunc->type[j]) && strcmp(ifunc->funcname[j],"operator=")!=0)
+                ((ifunc->reftype[j] == G__PARAREFERENCE) && isupper(ifunc->type[j]))
                )
              ) 
            ) 
