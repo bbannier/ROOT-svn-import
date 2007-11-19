@@ -186,7 +186,7 @@ int G__include_file()
   static int G__gcomplevel=0;
 
   while((c=G__fgetc())!='\n' && c!='\r'
-        && c!='#'
+        && c!='#' && c!=-1
         ) {
     switch(c) {
     case '<':
