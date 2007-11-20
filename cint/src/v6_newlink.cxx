@@ -870,10 +870,15 @@ G__get_funcptr(G__ifunc_table_internal *ifunc, int ifn)
 // logic required before it (virtual table handling and stuff)
 // "para" is the parameters (like libp) and param are the 
 // formal parameters (like ifunc->param) 
-int G__stub_method_asm(void* vaddress, int gtagnum, int reftype, void* this_ptr, 
-                       G__param* rpara, G__params *fpara, int ansi, G__value *result7)
+int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, void* this_ptr, G__param* rpara, G__value *result7)
 {
+   void *vaddress = G__get_funcptr(ifunc, ifn);
    int paran = rpara->paran;
+
+   int reftype = ifunc->reftype[ifn];
+   G__params *fpara = &ifunc->param[ifn];
+   int ansi = ifunc->ansi[ifn];
+
          
    //for (int counter=0; counter<paran; counter++) {
    for (int k=paran-1; k>=0; k--) {    
@@ -1142,6 +1147,7 @@ int G__stub_method_asm(void* vaddress, int gtagnum, int reftype, void* this_ptr,
             //__asm__ __volatile__("pop" : "=r" (paddr+1) :: eax);
             /* Lowest Word */
             //__asm__ __volatile__("pop" : "=r" (paddr)   :: ebx);
+            
             __asm__ __volatile__("call *%1" : "=t" (result7->obj.d) : "g" (vaddress));
          }
          else{
@@ -1169,6 +1175,7 @@ int G__stub_method_asm(void* vaddress, int gtagnum, int reftype, void* this_ptr,
             //__asm__ __volatile__("pop" : "=r" (*(paddr+1)):: eax, ebx));
             /* Lowest Word */
             //__asm__ __volatile__("pop" : "=r" (*(paddr)):: eax, ebx));
+
             __asm__ __volatile__("call *%1" : "=t" (result7->obj.d) : "g" (vaddress));
 
          }
@@ -1249,13 +1256,44 @@ int G__stub_method_asm(void* vaddress, int gtagnum, int reftype, void* this_ptr,
 
       case 'u' : // This is a class.. treat it as a reference
       {
-         //__asm__ __volatile__("call %1" : "=a" (result7->obj.i): "g" (vaddress));
-         //result7->ref=result7->obj.i;
+         // LF 20-11-07
+         // This means we have to return a given object (i.e) a new object..
+         // This will be a temporary object for the compiles
+         // and it used to llok like:
+         // 
+         // /////////////////////////
+         // const Track* pobj;
+         // const Track xobj = ((const Event*) G__getstructoffset())->GetTrackCopy((int) G__int(libp->para[0]));
+         // pobj = new Track(xobj);
+         // result7->obj.i = (long) ((void*) pobj);
+         // result7->ref = result7->obj.i;
+         // G__store_tempobject(*result7);
+         // /////////////////////////
+         //
+         // In the stubs of a dictionary... we have to recreate the exact same thing here.
+         
+         //the first thing we need to find is the size
+         // of the object (since we have to handle the allocation)
+         // Getting the Class size
+         int osize;
+         G__value otype;
+         otype.type   = 'u';
+         otype.tagnum = result7->tagnum; // size of the return type!!!
+
+         // Class Size
+         osize = G__sizeof(&otype);
+
+         // The first thing we need is a new object of type T (the place holder)
+         void* pobject = operator new(osize);
+         
+         // The place holder is the last parameter we have to push !!!
+         __asm__ __volatile__("push %0" :: "g" ((void*) pobject));
+         
          long res=0;
          __asm__ __volatile__("call *%1" : "=a" (res): "g" (vaddress));
-         result7->obj.i = (long)res;
+         result7->obj.i = (long) ((void*) pobject);
          result7->ref = result7->obj.i;
-         result7->obj.reftype.reftype = G__PARANORMAL;
+         G__store_tempobject(*result7);
       }
       break;
 
@@ -2272,7 +2310,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
 
          // LF 08-08-07
          // Now let's call our lower level asm function
-         G__stub_method_asm(vaddress, gtagnum, ifunc->reftype[ifn], this_ptr, &rpara, &ifunc->param[ifn], ifunc->ansi[ifn], result7);
+         G__stub_method_asm(ifunc, ifn, gtagnum, this_ptr, &rpara, result7);
       }
    }    
 
