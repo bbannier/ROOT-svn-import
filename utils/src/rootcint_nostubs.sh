@@ -57,7 +57,8 @@ while true ; do
                 --lib-list-prefix) PREFIX=$2; shift 2;;
                 -I.) shift; break;;
                 --) shift ; break ;;
-                *) echo "Internal error!" ;; #exit 1 ;;
+                #*) echo "Internal error!" ;; #exit 1 ;;
+                 *) break;;
         esac
 done
 
@@ -99,23 +100,39 @@ fi
 
 
 # Temporary dictionaries generation
-echo rootcint $MODE $PREFIX -f ${FILENAME%.*}"Tmp1".cxx $COPTION $POPTION -. 1 $ROOTCINTARGS
+#echo -++- Generating the first dictionary: ${FILENAME%.*}"Tmp1".cxx
+#echo rootcint $MODE $PREFIX -f ${FILENAME%.*}"Tmp1".cxx $COPTION $POPTION -. 1 $ROOTCINTARGS
 rootcint $MODE $PREFIX -f ${FILENAME%.*}"Tmp1".cxx $COPTION $POPTION -. 1 $ROOTCINTARGS
 
 # Temporary dictionaries compilation
+#echo -++- Compiling the first dictionary: ${FILENAME%.*}"Tmp1".cxx
+#echo g++ $CXXFLAGS -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -I. -o ${FILENAME%.*}"Tmp1".o -c ${FILENAME%.*}"Tmp1".cxx
 g++ $CXXFLAGS -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -I. -o ${FILENAME%.*}"Tmp1".o -c ${FILENAME%.*}"Tmp1".cxx
 
-# Symbols extraction (Object Files and Dictionary Tmp1)
-nm -g -p --defined-only $OBJS | awk '{printf("%s\n", $3)}' >> ${FILENAME%.*}.nm
+#echo -++- Putting the symbols of the dictionary ${FILENAME%.*}"Tmp1".cxx in : ${FILENAME%.*}.nm
+#echo nm -g -p --defined-only ${FILENAME%.*}"Tmp1".o | awk '{printf("%s\n", $3)}' > ${FILENAME%.*}.nm
 nm -g -p --defined-only ${FILENAME%.*}"Tmp1".o | awk '{printf("%s\n", $3)}' > ${FILENAME%.*}.nm
 
-echo rootcint $MODE $PREFIX -f ${FILENAME%.*}"Tmp2".cxx $COPTION -. 2 --symbols-file ${FILENAME%.*}".nm" $ROOTCINTARGS
+# Symbols extraction (Object Files and Dictionary Tmp1)
+#echo -++- Putting the symbols of the .o files in : ${FILENAME%.*}.nm
+#echo nm -g -p --defined-only $OBJS | awk '{printf("%s\n", $3)}' >> ${FILENAME%.*}.nm
+
+if [ "$OBJS" != "" ]; then
+    nm -g -p --defined-only $OBJS | awk '{printf("%s\n", $3)}' >> ${FILENAME%.*}.nm
+fi
+
+#echo -++- Putting the symbols of the dictionary ${FILENAME%.*}"Tmp1".cxx in : ${FILENAME%.*}.nm
+#echo rootcint $MODE $PREFIX -f ${FILENAME%.*}"Tmp2".cxx $COPTION -. 2 --symbols-file ${FILENAME%.*}".nm" $ROOTCINTARGS
 rootcint $MODE $PREFIX -f ${FILENAME%.*}"Tmp2".cxx $COPTION -. 2 --symbols-file ${FILENAME%.*}".nm" $ROOTCINTARGS
 
 # Temporary Dictionar 2 compilation
+#echo -++- Compiling the second dictionary: ${FILENAME%.*}"Tmp2".cxx
+#echo g++ $CXXFLAGS -Iinclude -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -I. -o ${FILENAME%.*}"Tmp2".o -c ${FILENAME%.*}"Tmp2".cxx
 g++ $CXXFLAGS -Iinclude -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -I. -o ${FILENAME%.*}"Tmp2".o -c ${FILENAME%.*}"Tmp2".cxx
 
 # Symbols extraction from dictionary Tmp2
+#echo -++- Putting the symbols of the dictionary ${FILENAME%.*}"Tmp2".cxx in : ${FILENAME%.*}.nm
+#echo nm -g -p --defined-only ${FILENAME%.*}"Tmp2".o | awk '{printf("%s\n", $3)}' >> ${FILENAME%.*}.nm
 nm -g -p --defined-only ${FILENAME%.*}"Tmp2".o | awk '{printf("%s\n", $3)}' >> ${FILENAME%.*}.nm
 
 # We don't need the temporaries anymore
@@ -123,8 +140,8 @@ nm -g -p --defined-only ${FILENAME%.*}"Tmp2".o | awk '{printf("%s\n", $3)}' >> $
 #rm ${FILENAME%.*}"Tmp2".*
 
 # Final Dictionary Generation
-
-echo rootcint $MODE $PREFIX -f $FILENAME $COPTION $POPTION -. 3 --symbols-file ${FILENAME%.*}".nm" $ROOTCINTARGS
+#echo -++- Generating the real dictionary: ${FILENAME}
+#echo rootcint $MODE $PREFIX -f $FILENAME $COPTION $POPTION -. 3 --symbols-file ${FILENAME%.*}".nm" $ROOTCINTARGS
 rootcint $MODE $PREFIX -f $FILENAME $COPTION $POPTION -. 3 --symbols-file ${FILENAME%.*}".nm" $ROOTCINTARGS
 
 # We don't need the symbols file anymore
