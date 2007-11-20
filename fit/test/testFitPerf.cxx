@@ -50,7 +50,7 @@
 
 #include "MinimizerTypes.h"
 
-#define DEBUG
+//#define DEBUG
 
 int nfit;
 const int N = 20; 
@@ -717,6 +717,7 @@ int testGausFit() {
    // test LS algorithm 
    std::cout << "\n\nTest Least Square algorithms\n\n";
    iret |= FitUsingNewFitter<GSL_NLS>(h2,f2);
+   iret |= FitUsingNewFitter<FUMILI2>(h2,f2);
 
    iret |= FitUsingTH1Fit<FUMILI2>(h2,f1);
    iret |= FitUsingTH1Fit<TFUMILI>(h2,f1);
@@ -875,7 +876,7 @@ int testFitPerf() {
 #ifdef DEBUG
    nfit = 1; 
 #else 
-   nfit = 5; 
+   nfit = 1; 
 #endif
   iret |= testTreeFit(); 
 

@@ -160,7 +160,7 @@ double FitUtil::EvaluateChi2(IModelFunction & func, const BinData & data, const 
 }
 
 
-double FitUtil::EvaluateChi2Residual(IModelFunction & func, const BinData & data, const double * p, unsigned int i) {  
+      double FitUtil::EvaluateChi2Residual(IModelFunction & func, const BinData & data, const double * p, unsigned int i, double * g) {  
    // evaluate the chi2 contribution (residual term) 
    // need to implement integral calculation
 
@@ -169,12 +169,45 @@ double FitUtil::EvaluateChi2Residual(IModelFunction & func, const BinData & data
    double y = data.Value(i);
    double invError = data.InvError(i); 
    double fval = func ( x ); 
+   double resval = 0; 
    if (fval > - std::numeric_limits<double>::max() && fval < std::numeric_limits<double>::max() ) 
       // calculat chi2 point
-      return  ( y -fval )* invError;  	  
-   else 
-      return 0; 
+      resval =   ( y -fval )* invError;  	  
+   
+   // estimate gradient 
+   if (g == 0) return resval; 
+
+
+   unsigned int npar = func.NPar(); 
+   IGradModelFunction * gfunc = dynamic_cast<IGradModelFunction *>( &func); 
+
+   if (gfunc != 0) { 
+      //case function provides gradient
+      gfunc->ParameterGradient(  x , g );  
+      // mutiply by - 1 * weihgt
+      for (unsigned int k = 0; k < npar; ++k) {
+         g[k] *= - invError;
+      }       
+   }
+   else { 
+      // estimate gradient numerically with simple 2 point rule 
+      static const double kEps = 1.0E-4;      
+      std::vector<double> p2(p,p+npar);
+      double f0 = resval;
+      for (unsigned int k = 0; k < npar; ++k) {
+         p2[k] += kEps;
+         // t.b.d : treat case of infinities 
+         //if (fval > - std::numeric_limits<double>::max() && fval < std::numeric_limits<double>::max() ) 
+         double f2 = invError * ( y - func(x,&p2.front()) );
+         g[k] = ( f2 - f0 )/kEps;
+         p2[k] = p[k]; // restore original p value
+      }       
+   }
+
+   return resval; 
+
 }
+
 
 void FitUtil::EvaluateChi2Gradient(IModelFunction & f, const BinData & data, const double * p, double * grad, unsigned int & ) { 
    // evaluate gradient of chi2
@@ -262,13 +295,51 @@ inline double EvalLogF(double fval) {
 
 // for LogLikelihood functions
 
-double FitUtil::EvaluatePdf(IModelFunction & func, const UnBinData & data, const double * p, unsigned int i) {  
+      double FitUtil::EvaluatePdf(IModelFunction & func, const UnBinData & data, const double * p, unsigned int i, double * g) {  
    // evaluate the pdf contribution to the logl
 
    func.SetParameters(p);
    const double * x = data.Coords(i);
    double fval = func ( x ); 
-   return EvalLogF(fval);
+   //return EvalLogF(fval);
+   if (g == 0) return fval;
+
+   unsigned int npar = func.NPar(); 
+   IGradModelFunction * gfunc = dynamic_cast<IGradModelFunction *>( &func); 
+
+   // gradient  calculation
+   if (gfunc != 0) { 
+      //case function provides gradient
+      gfunc->ParameterGradient(  x , g );  
+   }
+   else { 
+      // estimate gradient numerically with simple 2 point rule 
+      static const double kEps = 1.0E-4;      
+      std::vector<double> p2(p,p+npar);
+      for (unsigned int k = 0; k < npar; ++k) {
+         p2[k] += kEps;
+         // t.b.d : treat case of infinities 
+         //if (fval > - std::numeric_limits<double>::max() && fval < std::numeric_limits<double>::max() ) 
+         double df = func(x,&p2.front() )  - fval;
+         g[k] = df/kEps;
+         p2[k] = p[k]; // restore original p value
+      }       
+   }
+
+#ifdef DEBUG
+   std::cout << x[i] << "\t"; 
+   std::cout << "\tpar = [ " << func.NPar() << " ] =  "; 
+   for (int ipar = 0; ipar < func.NPar(); ++ipar) 
+      std::cout << p[ipar] << "\t";
+   std::cout << "\tfval = " << fval;
+   std::cout << "\tgrad = [ "; 
+   for (int ipar = 0; ipar < func.NPar(); ++ipar) 
+      std::cout << g[ipar] << "\t";
+   std::cout << " ] "   << std::endl; 
+#endif
+
+
+   return fval;
 }
 
 double FitUtil::EvaluateLogL(IModelFunction & func, const UnBinData & data, const double * p, unsigned int &nPoints) {  
@@ -345,7 +416,7 @@ void FitUtil::EvaluateLogLGradient(IModelFunction & f, const UnBinData & data, c
 
 // for binned log likelihood functions      
 
-double FitUtil::EvaluatePoissonBinPdf(IModelFunction & func, const BinData & data, const double * p, unsigned int i) {  
+double FitUtil::EvaluatePoissonBinPdf(IModelFunction & func, const BinData & data, const double * p, unsigned int i, double * g ) {  
    // evaluate the pdf contribution to the logl
    // t.b.d. implement integral option
 
@@ -355,8 +426,43 @@ double FitUtil::EvaluatePoissonBinPdf(IModelFunction & func, const BinData & dat
    double fval = func ( x ); 
 
    // remove constant term depending on N
-   return  fval - y * EvalLogF( fval);  
+   double logPdf =   y * EvalLogF( fval) - fval;  
+   // need to return the pdf contribution (not the log)
 
+   double pdfval =  std::exp(logPdf);
+
+   if (g == 0) return pdfval; 
+
+   unsigned int npar = func.NPar(); 
+   IGradModelFunction * gfunc = dynamic_cast<IGradModelFunction *>( &func); 
+
+   // gradient  calculation
+   if (gfunc != 0) { 
+      //case function provides gradient
+      gfunc->ParameterGradient(  x , g );  
+      // correct g[] do be derivative of poisson term 
+      for (unsigned int k = 0; k < npar; ++k) {
+         g[k] *= ( y/fval - 1.) * pdfval; 
+      }       
+   }
+   else { 
+      // estimate gradient numerically with simple 2 point rule 
+      static const double kEps = 1.0E-4;      
+      std::vector<double> p2(p,p+npar);
+      for (unsigned int k = 0; k < npar; ++k) {
+         p2[k] += kEps;
+         // t.b.d : treat case of infinities 
+         // make derivatives of the log (more stables ) and correct afterwards
+         double fval2 = func(x,&p2.front() );    
+         double logPdf2 = y * EvalLogF( fval2) - fval2; 
+         double dlogPdf = (logPdf2 - logPdf)/kEps;
+         g[k] = dlogPdf * pdfval;
+         p2[k] = p[k]; // restore original p value
+
+      }       
+   }
+
+   return pdfval;
 }
 
 double FitUtil::EvaluatePoissonLogL(IModelFunction & func, const BinData & data, const double * p, unsigned int &nPoints) {  

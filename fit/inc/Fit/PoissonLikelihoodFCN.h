@@ -110,9 +110,9 @@ public:
 
    void ResetNCalls() { fNCalls = 0; }
 
-   /// i-th element   
-   double DataElement(const double * x, unsigned int i) const { 
-      return FitUtil::EvaluatePoissonBinPdf(fFunc, fData, x, i); 
+   /// i-th likelihood element and its gradient  
+   double DataElement(const double * x, unsigned int i, double * g) const { 
+      return FitUtil::EvaluatePoissonBinPdf(fFunc, fData, x, i, g); 
    }
 
    /// evaluate gradient 
@@ -121,6 +121,8 @@ public:
       FitUtil::EvaluatePoissonLogLGradient(fFunc, fData, x, g );
    }
 
+   /// get type of fit method function
+   virtual  typename BaseObjFunction::Type GetType() const { return BaseObjFunction::kLogLikelihood; }
 
 protected: 
 

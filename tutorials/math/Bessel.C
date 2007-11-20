@@ -29,7 +29,7 @@ void Bessel()
 {
   gSystem->Load("libMathMore");
 
-  TCanvas *DistCanvas = new TCanvas("DistCanvas", "Bessel functions example", 10, 10, 1000, 800);  
+  TCanvas *DistCanvas = new TCanvas("BesselCanvas", "Bessel functions example", 10, 10, 1000, 800);  
   DistCanvas->SetFillColor(17);
   DistCanvas->Divide(2, 2);
   DistCanvas->cd(1);
@@ -59,7 +59,10 @@ void Bessel()
 p1->SetFillColor(0);
 p1->SetTextFont(22);
 p1->SetTextColor(kBlack);
-
+//TPaveLabel * pt = new TPaveLabel(1.5,0.8,6.0,0.9,"cyl_bessel_j(#nu,x)");
+TPaveLabel * pt = new TPaveLabel(0.27,0.75,0.65,0.83,"cyl_bessel_j(#nu,x)","NDC");
+pt->SetFillColor(kYellow-10);
+pt->SetTextColor(kRed+3);
 //setting the legend
   leg->AddEntry(JBessel[0]->DrawCopy(), " J_0(x)", "l");
   leg->AddEntry(JBessel[1]->DrawCopy("same"), " J_1(x)", "l");
@@ -69,6 +72,7 @@ p1->SetTextColor(kBlack);
 
   leg->Draw();
   p1->Draw();
+  pt->Draw();
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    DistCanvas->cd(2);
@@ -97,6 +101,9 @@ p1->SetTextColor(kBlack);
     p2->SetFillColor(0);
     p2->SetTextFont(22);
     p2->SetTextColor(kBlack);
+    TPaveLabel * pt = new TPaveLabel(0.31,0.75,0.69,0.83,"cyl_bessel_k(#nu,x)","NDC");
+    pt->SetFillColor(kYellow-10);
+    pt->SetTextColor(kRed+3);
 
     //setting legend
     leg2->AddEntry(KBessel[0]->DrawCopy(), " K_0(x)", "l");
@@ -110,6 +117,7 @@ p1->SetTextColor(kBlack);
 
     leg2->Draw();
     p2->Draw();
+    pt->Draw();
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    DistCanvas->cd(3);
    gPad->SetGrid();
@@ -137,6 +145,9 @@ p1->SetTextColor(kBlack);
     p3->SetFillColor(0);
     p3->SetTextFont(22);
     p3->SetTextColor(kBlack);
+    TPaveLabel * pt = new TPaveLabel(0.27,0.75,0.65,0.83,"cyl_bessel_i(#nu,x)","NDC");
+    pt->SetFillColor(kYellow-10);
+    pt->SetTextColor(kRed+3);
 
     //setting legend
     leg3->AddEntry(iBessel[0]->DrawCopy(), " I_0", "l");
@@ -150,6 +161,7 @@ p1->SetTextColor(kBlack);
     //iBessel[0]->Draw();
     leg3->Draw();
     p3->Draw();
+    pt->Draw();
  //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
    DistCanvas->cd(4);
@@ -178,6 +190,10 @@ p1->SetTextColor(kBlack);
     p4->SetFillColor(0);
     p4->SetTextFont(22);
     p4->SetTextColor(kBlack);
+    TPaveLabel * pt = new TPaveLabel(0.27,0.75,0.65,0.83,"sph_bessel(#nu,x)","NDC");
+    pt->SetFillColor(kYellow-10);
+    pt->SetTextColor(kRed+3);
+
 
     //setting legend
 
@@ -189,6 +205,7 @@ p1->SetTextColor(kBlack);
 
     leg4->Draw();
     p4->Draw();
+    pt->Draw();
  
     DistCanvas->cd();
 }

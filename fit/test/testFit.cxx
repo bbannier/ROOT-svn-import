@@ -144,6 +144,7 @@ int testHisto1DFit() {
    std::cout << "Equivalent Chi2 from TF1::Fit " << func->GetChisquare() << std::endl;
 
 
+   
 
    
    // redo chi2fit
@@ -156,6 +157,9 @@ int testHisto1DFit() {
       std::cout << "Chi2 Fit Failed " << std::endl;
       return -1; 
    }
+
+
+
 
    // test grapherrors fit 
    std::cout << "\n\nTest Same Fit from a TGraphErrors" << std::endl; 
@@ -188,6 +192,18 @@ int testHisto1DFit() {
       return -1; 
    }
 
+
+   // reddo chi2fit using Fumili
+   std::cout << "\n\nRedo Chi2 Hist Fit using FUMILI" << std::endl; 
+   f.SetParameters(p);   
+   fitter.Config().SetMinimizer("Minuit2","Fumili");
+   ret = fitter.Fit(d, f);
+   if (ret)  
+      fitter.Result().Print(std::cout); 
+   else {
+      std::cout << "Chi2 Fit Failed " << std::endl;
+      return -1; 
+   }
 
 
    return 0;
@@ -433,9 +449,25 @@ int testUnBin1DFit() {
    if (ret)  
       fitter.Result().Print(std::cout); 
    else {
-      std::cout << " Fit Failed " << std::endl;
+      std::cout << "Unbinned Likelihood Fit Failed " << std::endl;
       return -1; 
    }
+
+   std::cout << "\n\nRedo Fit using FUMILI" << std::endl; 
+   f.SetParameters(p);   
+   fitter.Config().SetMinimizer("Fumili2");
+   // need to set function first (need to change this)
+   fitter.SetFunction(f);
+   fitter.Config().ParSettings(0).Fix(); //need to re-do it
+   ret = fitter.Fit(d);
+   if (ret)  
+      fitter.Result().Print(std::cout); 
+   else {
+      std::cout << "Unbinned Likelihood Fit using FUMILI Failed " << std::endl;
+      return -1; 
+   }
+
+
    return 0; 
 }
 

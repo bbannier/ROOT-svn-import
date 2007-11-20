@@ -115,16 +115,20 @@ public:
 
    void ResetNCalls() { fNCalls = 0; }
 
-   /// i-th likelihood contribution  
-   double DataElement(const double * x, unsigned int i) const { 
-      return FitUtil::EvaluatePdf(fFunc, fData, x, i); 
+   /// i-th likelihood contribution and its gradient
+   double DataElement(const double * x, unsigned int i, double * g) const { 
+      return FitUtil::EvaluatePdf(fFunc, fData, x, i, g); 
    }
+
 
    // need to be virtual to be instantited
    virtual void Gradient(const double *x, double *g) const { 
       // evaluate the chi2 gradient
       FitUtil::EvaluateLogLGradient(fFunc, fData, x, g, fNEffPoints);
    }
+
+   /// get type of fit method function
+   virtual  typename BaseObjFunction::Type GetType() const { return BaseObjFunction::kLogLikelihood; }
 
 
 protected: 
