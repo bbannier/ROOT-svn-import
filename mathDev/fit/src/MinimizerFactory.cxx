@@ -53,6 +53,11 @@ int GetAlgorithmIndex(const std::string & minimType, const std::string & algoTyp
    std::cout << "get index for algorithm " << algoname << std::endl;
 #endif
 
+   if (minimType == "Fumili2" ) {
+      minimType = "Minuit2"; 
+      algoname = "fumili";
+   }
+
    if (minimType == "Minuit2" || minimType == "Minuit" ) { 
       if (algoname == "migrad") return 0; 
       if (algoname == "simplex") return 1; 
@@ -61,6 +66,7 @@ int GetAlgorithmIndex(const std::string & minimType, const std::string & algoTyp
       if (algoname == "fumili" ) return 4;
       return 0; 
    }
+
    if (minimType == "GSLMultiMin") { 
       if (algoname == "conjugatefr") return 0; 
       if (algoname == "conjugatepr") return 1; 
@@ -76,18 +82,27 @@ int GetAlgorithmIndex(const std::string & minimType, const std::string & algoTyp
 #ifdef USE_PLUGIN_MANAGER
 ROOT::Math::Minimizer * MinimizerFactory::CreateMinimizer(const std::string & minimizerType, const std::string & algoType)  
 {
-   
+
+   const char * minim = minimizerType.c_str();
+   const char * algo = algoType.c_str();  
+
+   std::string s1,s2;
+   //case of fumili2
+   if (minimizerType == "Fumili2" ) {
+      s1 = "Minuit2";
+      s2 = "fumili";
+      minim = s1.c_str();
+      algo =  s2.c_str();
+   }
 
    // create Minimizer using the PM
    TPluginHandler *h; 
    //gDebug = 3; 
-   if ((h = gROOT->GetPluginManager()->FindHandler("ROOT::Math::Minimizer",minimizerType.c_str() ))) {
+   if ((h = gROOT->GetPluginManager()->FindHandler("ROOT::Math::Minimizer",minim ))) {
       if (h->LoadPlugin() == -1)
          return 0;
 
-      // use algorithm
-      const char * algo = algoType.c_str();  
-      
+      // create plug-in with required algorithm
       ROOT::Math::Minimizer * min = reinterpret_cast<ROOT::Math::Minimizer *>( h->ExecPlugin(1,algo ) ); 
 #ifdef DEBUG
       std::cout << "Loaded Minimizer " << minimizerType << "  " << algoType << "  " << algo << std::endl;

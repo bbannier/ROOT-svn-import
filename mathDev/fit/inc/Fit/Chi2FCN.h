@@ -65,6 +65,7 @@ public:
    typedef typename  BaseObjFunction::BaseFunction BaseFunction; 
 
    typedef  ROOT::Math::IParamMultiFunction IModelFunction;
+   typedef typename BaseObjFunction::Type Type;
 
    /** 
       Constructor from data set (binned ) and model function 
@@ -125,8 +126,8 @@ public:
    virtual void ResetNCalls() { fNCalls = 0; }
 
    /// i-th chi-square residual  
-   virtual double DataElement(const double * x, unsigned int i) const { 
-      return FitUtil::EvaluateChi2Residual(fFunc, fData, x, i); 
+   virtual double DataElement(const double * x, unsigned int i, double * g) const { 
+      return FitUtil::EvaluateChi2Residual(fFunc, fData, x, i, g); 
    }
 
    // need to be virtual to be instantited
@@ -134,6 +135,10 @@ public:
       // evaluate the chi2 gradient
       FitUtil::EvaluateChi2Gradient(fFunc, fData, x, g, fNEffPoints);
    }
+
+   /// get type of fit method function
+   virtual  typename BaseObjFunction::Type GetType() const { return BaseObjFunction::kLeastSquare; }
+
 
 protected: 
 

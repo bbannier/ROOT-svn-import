@@ -79,20 +79,33 @@ namespace FitUtil {
    */ 
    double ParallelEvalChi2(IModelFunction & func, const BinData & data, const double * x, unsigned int & nPoints);  
 
+   // methods required by dedicate minimizer like Fumili 
+ 
    /** 
        evaluate the residual contribution to the Chi2 given a model function and the BinPoint data 
+       and if the pointer g is not null evaluate also the gradient of the residual.
+       If the function provides parameter derivatives they are used otherwise a simple derivative calculation 
+       is used       
    */ 
-   double EvaluateChi2Residual(IModelFunction & func, const BinData & data, const double * x, unsigned int ipoint);  
+   double EvaluateChi2Residual(IModelFunction & func, const BinData & data, const double * x, unsigned int ipoint, double *g = 0);  
 
    /** 
-       evaluate the pdf contribution to the LogL given a model function and the BinPoint data 
+       evaluate the pdf contribution to the LogL given a model function and the BinPoint data.
+       If the pointer g is not null evaluate also the gradient of the pdf.
+       If the function provides parameter derivatives they are used otherwise a simple derivative calculation 
+       is used 
    */ 
-   double EvaluatePdf(IModelFunction & func, const UnBinData & data, const double * x, unsigned int ipoint); 
+   double EvaluatePdf(IModelFunction & func, const UnBinData & data, const double * x, unsigned int ipoint, double * g = 0); 
 
    /** 
-       evaluate the pdf contribution to the Poisson LogL given a model function and the BinPoint data 
+       evaluate the pdf contribution to the Poisson LogL given a model function and the BinPoint data. 
+       If the pointer g is not null evaluate also the gradient of the Poisson pdf.
+       If the function provides parameter derivatives they are used otherwise a simple derivative calculation 
+       is used 
    */ 
-   double EvaluatePoissonBinPdf(IModelFunction & func, const BinData & data, const double * x, unsigned int ipoint);  
+   double EvaluatePoissonBinPdf(IModelFunction & func, const BinData & data, const double * x, unsigned int ipoint, double * g = 0);  
+
+
    
 
 
