@@ -10,16 +10,14 @@ public:
   TestBasic1(TFile* refFile, Bool_t writeRef, Int_t verbose) : RooFitTestUnit(refFile,writeRef,verbose) {} ;
   Bool_t testCode() {
 
+    // "Generate,Fit and Plot on basic p.d.f"
+
     // Build Gaussian PDF
     RooRealVar x("x","x",-10,10) ;
     RooRealVar mean("mean","mean of gaussian",-1) ;
     RooRealVar sigma("sigma","width of gaussian",3) ;
     RooGaussian gauss("gauss","gaussian PDF",x,mean,sigma) ;  
-    
-    // Plot PDF
-    RooPlot* xframe = x.frame() ;
-    gauss.plotOn(xframe) ;
-    
+        
     // Generate a toy MC set
     RooDataSet* data = gauss.generate(x,10000) ;  
     
@@ -36,6 +34,8 @@ public:
     // Register output frame for comparison test
     regResult(r,"Basic1_Result") ;
     regPlot(xframe2,"Basic1_Plot") ;
+
+    delete data ;
  
     return kTRUE ;
   }
