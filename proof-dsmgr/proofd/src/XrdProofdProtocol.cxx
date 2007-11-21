@@ -3723,7 +3723,7 @@ int XrdProofdProtocol::SetProofServEnv(int psid, int loglevel, const char *cfg)
    //  Path to file with group information
    if (fgGroupsMgr.GetCfgFile()) {
       fprintf(frc,"# File with group information\n");
-      fprintf(frc, "ProofServ.GroupFile: %s\n", fgGroupsMgr.GetCfgFile());
+      fprintf(frc, "ProofDataSetManager.GroupFile: %s\n", fgGroupsMgr.GetCfgFile());
    }
 
    // Work dir
