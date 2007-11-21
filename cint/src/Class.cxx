@@ -840,20 +840,35 @@ void* Cint::G__ClassInfo::New()
     if(class_property&G__BIT_ISCPPCOMPILED) {
       // C++ precompiled class,struct
       struct G__param para;
-      G__InterfaceMethod defaultconstructor;
+      //G__InterfaceMethod defaultconstructor;
       para.paran=0;
       if(!G__struct.rootspecial[tagnum]) CheckValidRootInfo();
-      defaultconstructor
-	=(G__InterfaceMethod)G__struct.rootspecial[tagnum]->defaultconstructor;
-      if(defaultconstructor) {
-	G__CurrentCall(G__DELETEFREE, this, &tagnum);
-	(*defaultconstructor)(&buf,(char*)NULL,&para,0);
-	G__CurrentCall(G__NOP, 0, 0);
-	p = (void*)G__int(buf);
+
+      // DMS 21-XI-2007
+      long dmy;
+      p = (void*)NULL;
+
+      G__MethodInfo method = GetMethod(G__struct.name[tagnum],"",&dmy,ExactMatch,InThisScope);
+      G__ifunc_table_internal* ifunc_int = G__get_ifunc_internal(method.ifunc());
+
+      // Either the ifunc has stub pointer or direct function pointer(symbol)
+      if (ifunc_int&&(ifunc_int->pentry[dmy]->p||G__get_funcptr(ifunc_int, dmy))){
+         G__CurrentCall(G__DELETEFREE, this, &tagnum);
+         G__call_cppfunc(&buf,&para,ifunc_int,0);
+         G__CurrentCall(G__NOP, 0, 0);
+         p = (void*)G__int(buf);
       }
-      else {
-	p = (void*)NULL;
-      }
+      // defaultconstructor
+// 	=(G__InterfaceMethod)G__struct.rootspecial[tagnum]->defaultconstructor;
+//       if(defaultconstructor) {
+// 	G__CurrentCall(G__DELETEFREE, this, &tagnum);
+// 	(*defaultconstructor)(&buf,(char*)NULL,&para,0);
+// 	G__CurrentCall(G__NOP, 0, 0);
+// 	p = (void*)G__int(buf);
+// //      }
+//       else {
+// 	p = (void*)NULL;
+//       }
     }
     else if(class_property&G__BIT_ISCCOMPILED) {
       // C precompiled class,struct
@@ -894,22 +909,26 @@ void* Cint::G__ClassInfo::New(int n)
       G__InterfaceMethod defaultconstructor;
       para.paran=0;
       if(!G__struct.rootspecial[tagnum]) CheckValidRootInfo();
-      defaultconstructor
-	=(G__InterfaceMethod)G__struct.rootspecial[tagnum]->defaultconstructor;
-      if(defaultconstructor) {
-	if(n) G__cpp_aryconstruct = n;
-	G__CurrentCall(G__DELETEFREE, this, &tagnum);
-	(*defaultconstructor)(&buf,(char*)NULL,&para,0);
-	G__CurrentCall(G__NOP, 0, 0);
-	G__cpp_aryconstruct = 0;
-	p = (void*)G__int(buf);
-	// Record that we have allocated an array, and how many
-	// elements that array has, for use by the G__calldtor function.
-	G__alloc_newarraylist((long) p, n);
+
+      // DMS 21-XI-2007
+      long dmy;
+      p = (void*)NULL;
+
+      G__MethodInfo method = GetMethod(G__struct.name[tagnum],"",&dmy,ExactMatch,InThisScope);
+      G__ifunc_table_internal* ifunc_int = G__get_ifunc_internal(method.ifunc());
+      
+      if (ifunc_int&&(ifunc_int->pentry[dmy]->p||G__get_funcptr(ifunc_int, dmy))){
+
+         G__CurrentCall(G__DELETEFREE, this, &tagnum);
+         G__call_cppfunc(&buf,&para,ifunc_int,0);
+         G__CurrentCall(G__NOP, 0, 0);
+         p = (void*)G__int(buf);
+
       }
-      else {
-	p = (void*)NULL;
-      }
+      // Record that we have allocated an array, and how many
+      // elements that array has, for use by the G__calldtor function.
+      G__alloc_newarraylist((long) p, n);
+
     }
     else if(class_property&G__BIT_ISCCOMPILED) {
       // C precompiled class,struct
@@ -963,27 +982,27 @@ void* Cint::G__ClassInfo::New(void *arena)
     if(class_property&G__BIT_ISCPPCOMPILED) {
       // C++ precompiled class,struct
       struct G__param para;
-      G__InterfaceMethod defaultconstructor;
       para.paran=0;
       if(!G__struct.rootspecial[tagnum]) CheckValidRootInfo();
-      defaultconstructor
-	=(G__InterfaceMethod)G__struct.rootspecial[tagnum]->defaultconstructor;
-      if(defaultconstructor) {
-	G__setgvp((long)arena);
-	G__CurrentCall(G__DELETEFREE, this, &tagnum);
+
+       // DMS 21-XI-2007
+      long dmy;
+      p = (void*)NULL;
+
+      G__MethodInfo method = GetMethod(G__struct.name[tagnum],"",&dmy,ExactMatch,InThisScope);
+      G__ifunc_table_internal* ifunc_int = G__get_ifunc_internal(method.ifunc());
+      
+      if (ifunc_int&&(ifunc_int->pentry[dmy]->p||G__get_funcptr(ifunc_int, dmy))){
+
+         G__setgvp((long)arena);
+         G__CurrentCall(G__DELETEFREE, this, &tagnum);
 #ifdef G__ROOT
-        G__exec_alloc_lock();
+         G__exec_alloc_lock();
 #endif
-	(*defaultconstructor)(&buf,(char*)NULL,&para,0);
-#ifdef G__ROOT
-        G__exec_alloc_unlock();
-#endif
-	G__CurrentCall(G__NOP, 0, 0);
-	G__setgvp((long)G__PVOID);
-	p = (void*)G__int(buf);
-      }
-      else {
-	p = (void*)NULL;
+         G__call_cppfunc(&buf,&para,ifunc_int,0);
+         G__CurrentCall(G__NOP, 0, 0);
+         G__setgvp((long)G__PVOID);
+         p = (void*)G__int(buf);
       }
     }
     else if(class_property&G__BIT_ISCCOMPILED) {
@@ -1022,27 +1041,24 @@ void* Cint::G__ClassInfo::New(int n, void *arena)
     if(class_property&G__BIT_ISCPPCOMPILED) {
       // C++ precompiled class,struct
       struct G__param para;
-      G__InterfaceMethod defaultconstructor;
       para.paran=0;
       if(!G__struct.rootspecial[tagnum]) CheckValidRootInfo();
-      defaultconstructor
-	=(G__InterfaceMethod)G__struct.rootspecial[tagnum]->defaultconstructor;
-      if(defaultconstructor) {
-	G__cpp_aryconstruct = n;
-	G__setgvp((long)arena);
-	G__CurrentCall(G__DELETEFREE, this, &tagnum);
-	(*defaultconstructor)(&buf,(char*)NULL,&para,0);
-	G__CurrentCall(G__NOP, 0, 0);
-	G__setgvp((long)G__PVOID);
-	G__cpp_aryconstruct = 0;
-	p = (void*)G__int(buf);
-	// Record that we have allocated an array, and how many
-	// elements that array has, for use by the G__calldtor function.
-	G__alloc_newarraylist((long) p, n);
+
+      // DMS 21-XI-2007
+      long dmy;
+      p = (void*)NULL;
+      G__cpp_aryconstruct = n;
+      G__MethodInfo method = GetMethod(G__struct.name[tagnum],"",&dmy,ExactMatch,InThisScope);
+      G__ifunc_table_internal* ifunc_int = G__get_ifunc_internal(method.ifunc());
+      if (ifunc_int&&(ifunc_int->pentry[dmy]->p||G__get_funcptr(ifunc_int, dmy))){
+
+         G__setgvp((long)arena);
+         G__CurrentCall(G__DELETEFREE, this, &tagnum);
+         G__call_cppfunc(&buf,&para,ifunc_int,0);
+         G__CurrentCall(G__NOP, 0, 0);
+         p = (void*)G__int(buf);
       }
-      else {
-	p = (void*)NULL;
-      }
+
     }
     else if(class_property&G__BIT_ISCCOMPILED) {
       // C precompiled class,struct
