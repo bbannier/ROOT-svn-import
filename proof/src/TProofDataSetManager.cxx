@@ -61,7 +61,7 @@ TProofDataSetManager::TProofDataSetManager(const char *dataSetDir,
                                            const char *group,
                                            const char *user, Bool_t silent)
                      : fSilent(silent), fDataSetDir(dataSetDir), fGroup(group),
-                       fUser(user), fRedirUrl(), fCommonUser(), fCommonGroup(),
+                       fUser(user), fMSSUrl(), fCommonUser(), fCommonGroup(),
                        fCheckQuota(kFALSE), fGroupQuota(), fGroupUsed(),
                        fUserUsed(), fNTouchedFiles(0), fNOpenedFiles(0),
                        fNDisappearedFiles(0), fMTimeGroupConfig(-1)
@@ -74,10 +74,10 @@ TProofDataSetManager::TProofDataSetManager(const char *dataSetDir,
    fUserUsed.SetOwner();
 
    // Read config file
-   ReadGroupConfig(gEnv->GetValue("ProofServ.GroupFile",""));
+   ReadGroupConfig(gEnv->GetValue("ProofDataSetManager.GroupFile",""));
 
-   // Entry-point to the data pool
-   fRedirUrl = gEnv->GetValue("ProofServ.PoolUrl","");
+   // Entry-point to the mass storage system
+   fMSSUrl = gEnv->GetValue("ProofDataSetManager.MSSUrl","");
 }
 
 //______________________________________________________________________________
@@ -631,7 +631,8 @@ Int_t  TProofDataSetManager::ScanDataSet(TFileCollection *dataset, const char *o
 
    Bool_t changed = kFALSE;
 
-   TFileStager *stager = TFileStager::Open(fRedirUrl);
+   TFileStager *stager = (!fMSSUrl.IsNull()) ? TFileStager::Open(fMSSUrl) : 0;
+   Bool_t createStager = (stager) ? kFALSE : kTRUE;
 
    // Check which files have been staged, this can be replaced by a bulk command,
    // once it exists in the xrdclient
@@ -696,15 +697,25 @@ Int_t  TProofDataSetManager::ScanDataSet(TFileCollection *dataset, const char *o
       if (maxFiles > 0 && newStagedFiles.GetEntries() >= maxFiles)
          continue;
 
-      Bool_t result = stager->IsStaged(url.GetUrl());
-      if (gDebug > 0 && !fSilent)
-         Info(__FUNCTION__, "IsStaged: %s: %d", url.GetUrl(), result);
+      stager = createStager ? TFileStager::Open(url.GetUrl()) : stager;
+
+      Bool_t result = kFALSE;
+      if (stager) {
+         result = stager->IsStaged(url.GetUrl());
+         if (gDebug > 0 && !fSilent)
+            Info(__FUNCTION__, "IsStaged: %s: %d", url.GetUrl(), result);
+         if (createStager)
+            SafeDelete(stager);
+      } else {
+         Warning(__FUNCTION__, "could not get stager instance for '%s'", url.GetUrl());
+      }
 
       if (result == kFALSE)
          continue;
 
       newStagedFiles.Add(fileInfo);
    }
+   SafeDelete(stager);
 
    // loop over now staged files
    if (!fSilent && newStagedFiles.GetEntries() > 0)
@@ -1213,10 +1224,18 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
                               treeInfo = "        N/A";
 
                            treeInfo.Resize(21);
-                           Printf("%s|%7lld|%s|%5d GB| %3d %%", dsNameFormatted.Data(),
+                           // Renormalize the size to kB, MB or GB
+                           const char *unit[3] = {"kB", "MB", "GB"};
+                           Int_t k = 0, refsz = 1024;
+                           Int_t xsz = (Int_t) (dataset->GetTotalSize() / refsz);
+                           while (xsz > refsz && k < 2) {
+                              k++;
+                              refsz *= 1024;
+                              xsz = (Int_t) (dataset->GetTotalSize() / refsz);
+                           }
+                           Printf("%s|%7lld|%s|%5d %s| %3d %%", dsNameFormatted.Data(),
                                   dataset->GetNFiles(), treeInfo.Data(),
-                                  (Int_t) (dataset->GetTotalSize() / 1073741824),
-                                  (Int_t) dataset->GetStagedPercentage());
+                                  xsz, unit[k], (Int_t) dataset->GetStagedPercentage());
                         }
                         datasetMap->DeleteAll();
                      }

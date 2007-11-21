@@ -470,7 +470,7 @@ Bool_t TXNetSystem::IsOnline(const char *path)
    //EnvPutInt(NAME_CONNECTTIMEOUT, 5);
    TXNetSystemConnectGuard cg(this, path, true);
    // set values back
-   //EnvPutInt(NAME_FIRSTCONNECTMAXCNT, maxCnt);
+   EnvPutInt(NAME_FIRSTCONNECTMAXCNT, maxCnt);
    if (cg.IsValid()) {
       vecBool vb;
       vecString vs;
@@ -500,7 +500,8 @@ Bool_t TXNetSystem::IsOnline(const char *path)
             return kFALSE;
          default:
 	    if (gDebug > 0)
-              Error("IsOnline", "Unidentified response: %d. Check XProtocol.hh", cg.ClientAdmin()->LastServerResp()->status);
+              Error("IsOnline", "Unidentified response: %d. Check XProtocol.hh",
+                                cg.ClientAdmin()->LastServerResp()->status);
             return kFALSE;
       }
    }

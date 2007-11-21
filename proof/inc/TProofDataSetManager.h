@@ -39,7 +39,7 @@ private:
    TString fDataSetDir;   // location of datasets
    TString fGroup;        // Group to which the owner of this session belongs
    TString fUser;         // Owner of the session
-   TString fRedirUrl;     // Main redirector URL (for checking if files are staged)
+   TString fMSSUrl;       // URL for the Mass Storage System
    TString fCommonUser;   // user that stores the COMMON datasets
    TString fCommonGroup;  // group that stores the COMMON datasets
 
