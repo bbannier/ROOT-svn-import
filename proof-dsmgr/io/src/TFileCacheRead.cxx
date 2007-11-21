@@ -93,12 +93,14 @@ TFileCacheRead::TFileCacheRead(TFile *file, Int_t buffersize)
    fFirstIndexToPrefetch = 0;
    fAsyncReading = gEnv->GetValue("TFile.AsyncReading", 1);
    if (fAsyncReading) {
-      // If asynchronous reading is not supported by this TFile specialization
+      // Check if asynchronous reading is supported by this TFile specialization
+      fAsyncReading = kFALSE;
+      if (file && !(file->ReadBufferAsync(0, 0)))
+         fAsyncReading = kTRUE;
+   }
+   if (!fAsyncReading) {
       // we use sync primitives, hence we need the local buffer
-      if (file && file->ReadBufferAsync(0, 0)) {
-         fAsyncReading = kFALSE;
-         fBuffer    = new char[fBufferSize];
-      }
+      fBuffer = new char[fBufferSize];
    }
 
    fIsSorted    = kFALSE;
@@ -269,7 +271,7 @@ Int_t TFileCacheRead::ReadBuffer(char *buf, Long64_t pos, Int_t len)
             fFile->Seek(pos);
             // Notify if troubles arise
             if (fFile->ReadBuffer(buf, len))
-            return -1;
+               return -1;
             fFile->Seek(pos+len);
          }
          fBytesToPrefetch += len;
@@ -286,8 +288,10 @@ Int_t TFileCacheRead::ReadBuffer(char *buf, Long64_t pos, Int_t len)
    } else {
       Int_t loc = (Int_t)TMath::BinarySearch(fNseek,fSeekSort,pos);
       if (loc >= 0 && loc <fNseek && pos == fSeekSort[loc]) {
-         memcpy(buf,&fBuffer[fSeekPos[loc]],len);
-         fFile->Seek(pos+len);
+         if (buf) {
+            memcpy(buf,&fBuffer[fSeekPos[loc]],len);
+            fFile->Seek(pos+len);
+         }
          return 1;
       }
    }

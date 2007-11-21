@@ -262,8 +262,7 @@ TASImage::TASImage(const TASImage &img) : TImage(img)
 {
    // Image copy ctor.
 
-   fImage         = 0;
-   fPaintMode     = 1;
+   SetDefaults();
 
    if (img.IsValid()) {
       fImage = clone_asimage(img.fImage, SCL_DO_ALL);
@@ -290,6 +289,8 @@ TASImage::TASImage(const TASImage &img) : TImage(img)
 TASImage &TASImage::operator=(const TASImage &img)
 {
    // Image assignment operator.
+
+   SetDefaults();
 
    if (this != &img && img.IsValid()) {
       TImage::operator=(img);
@@ -348,7 +349,7 @@ static void init_icon_paths()
 
    TString guiIcons = gEnv->GetValue("Gui.IconPath", "");
 
-   gIconPaths[0] = ".";
+   gIconPaths[0] = StrDup(".");
    gIconPaths[1] = StrDup(homeIcons.Data());
    gIconPaths[2] = StrDup(rootIcons.Data());
    gIconPaths[3] = StrDup(guiIcons.Data());
@@ -361,7 +362,7 @@ static void init_icon_paths()
    gIconPaths[5] = EXTRAICONPATH;
 #endif
 
-   gIconPaths[6] = "";
+   gIconPaths[6] = 0;
 }
 
 //______________________________________________________________________________
@@ -981,7 +982,7 @@ void TASImage::FromPad(TVirtualPad *pad, Int_t x, Int_t y, UInt_t w, UInt_t h)
          fImage = clone_asimage(itmp->fImage, SCL_DO_ALL);
          if (itmp->fImage->alt.argb32) {
             UInt_t sz = itmp->fImage->width*itmp->fImage->height;
-            fImage->alt.argb32 = new ARGB32[sz];
+            fImage->alt.argb32 = (ARGB32*)safemalloc(sz*sizeof(ARGB32));
             memcpy(fImage->alt.argb32, itmp->fImage->alt.argb32, sz*4);
          }
       }
@@ -1058,9 +1059,9 @@ void TASImage::Draw(Option_t *option)
       h = Int_t(h*cx) + 28;
       TString rname = GetName();
       rname.ReplaceAll(".", "");
-		rname += Form("\", \"%s (%d x %d)", rname.Data(), fImage->width, fImage->height);
-		rname = "new TCanvas(\"" + rname + Form("\", %d, %d);", w, h);
-		gROOT->ProcessLineFast(rname.Data());
+      rname += Form("\", \"%s (%d x %d)", rname.Data(), fImage->width, fImage->height);
+      rname = "new TCanvas(\"" + rname + Form("\", %d, %d);", w, h);
+      gROOT->ProcessLineFast(rname.Data());
    }
 
    if (!opt.Contains("x")) {
@@ -1088,7 +1089,7 @@ void TASImage::Draw(Option_t *option)
 //______________________________________________________________________________
 void TASImage::Image2Drawable(ASImage *im, Drawable_t wid, Int_t x, Int_t y,
                               Int_t xsrc, Int_t ysrc, UInt_t wsrc, UInt_t hsrc,
-                              Option_t * /*opt*/)
+                              Option_t *opt)
 {
    // Draw asimage on drawable.
 
@@ -1170,6 +1171,12 @@ void TASImage::Image2Drawable(ASImage *im, Drawable_t wid, Int_t x, Int_t y,
 
       Pixmap_t pic = gVirtualX->CreatePixmapFromData(bits, wsrc, hsrc);
       if (pic) {
+         TString option = opt;
+         option.ToLower();
+         if (!option.Contains("opaque")) {
+            SETBIT(wsrc,31);
+            SETBIT(hsrc,31);
+         }
          gVirtualX->CopyArea(pic, wid, gc, 0, 0, wsrc, hsrc, x, y);
          gVirtualX->DeletePixmap(pic);
       } else {
@@ -2186,6 +2193,7 @@ void TASImage::SetImage(Pixmap_t pxm, Pixmap_t mask)
       unsigned char *mask_bits = gVirtualX->GetColorBits(mask, 0, 0, w, h);
       fImage = bitmap2asimage(bits, w, h, 0, mask_bits);
       delete [] mask_bits;
+      delete [] bits;
    }
 }
 
@@ -2584,7 +2592,7 @@ TObject *TASImage::Clone(const char *newname) const
 
    if (fImage->alt.argb32) {
       UInt_t sz = fImage->width * fImage->height;
-      im->fImage->alt.argb32 = new ARGB32[sz];
+      im->fImage->alt.argb32 = (ARGB32*)safemalloc(sz*sizeof(ARGB32));
       memcpy(im->fImage->alt.argb32, fImage->alt.argb32, sz * sizeof(ARGB32));
    }
 
@@ -5770,19 +5778,20 @@ void TASImage::GetImageBuffer(char **buffer, int *size, EImageFileTypes type)
    // Buffer must be deallocated after usage.
    // This method can be used for sending images over network.
 
-   if (!fImage) return;
-
    static ASImageExportParams params;
    Bool_t ret = kFALSE;
    int   isize = 0;
    char *ibuff = 0;
+   ASImage *img = fScaledImage ? fScaledImage->fImage : fImage;
+
+   if (!img) return;
 
    switch (type) {
       case TImage::kXpm:
-         ret = ASImage2xpmRawBuff(fImage, (CARD8 **)buffer, size, 0);
+         ret = ASImage2xpmRawBuff(img, (CARD8 **)buffer, size, 0);
          break;
       default:
-         ret = ASImage2PNGBuff(fImage, (CARD8 **)buffer, size, &params);
+         ret = ASImage2PNGBuff(img, (CARD8 **)buffer, size, &params);
    }
 
    if (!ret) {
@@ -6005,7 +6014,7 @@ void TASImage::Streamer(TBuffer &b)
          Double_t *vec = new Double_t[size];
          b.ReadFastArray(vec, size);
          SetImage(vec, w, h, &fPalette);
-         delete vec;
+         delete [] vec;
       }
       b.CheckByteCount(R__s, R__c, TASImage::IsA());
    } else {
@@ -6507,10 +6516,13 @@ void TASImage::SavePrimitive(ostream &out, Option_t * /*= ""*/)
    TString name = GetName();
    name.ReplaceAll(".", "_");
    TString str = buf;
+   static int ii = 0;
+   ii++;
 
    str.ReplaceAll("static", "");
    TString xpm = "xpm_";
    xpm += name;
+   xpm += ii;
    str.ReplaceAll("asxpm", xpm.Data());
    out << endl << str << endl << endl;
    out << "   TImage *";
