@@ -1203,7 +1203,7 @@ int XrdProofdProtocol::Login()
       return rc;
    }
 
-   // Check if user belongs to the group
+   // Check if user belongs to a group
    if (fgMgr.GroupsMgr() && fgMgr.GroupsMgr()->Num() > 0) {
       XrdProofGroup *g = 0;
       if (gname.length() > 0) {

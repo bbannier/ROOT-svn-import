@@ -586,6 +586,10 @@ int XrdProofdManager::ParseConfig(XrdProofUI ui, bool rcf)
    }
 
    // Groups
+   if (!fGroupsMgr)
+      // Create default group, if none explicitely requested
+      fGroupsMgr = new XrdProofGroupMgr;
+
    if (rcf) {
       // Re-assign groups
       if (fGroupsMgr && fGroupsMgr->Num() > 0) {
