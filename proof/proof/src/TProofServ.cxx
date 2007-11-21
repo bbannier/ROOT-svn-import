@@ -2812,7 +2812,7 @@ R__HIDDEN Int_t TProofServ::ApplyMaxQueries()
          FileStat_t st;
          if (gSystem->GetPathInfo(fn, st)) {
             Info("ApplyMaxQueries","file '%s' cannot be stated: remove it", fn.Data());
-            gSystem->Unlink(fn);
+            gSystem->Unlink(gSystem->DirName(fn));
             continue;
          }
 
