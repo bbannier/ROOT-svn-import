@@ -536,7 +536,8 @@ void TGFrame::Resize(UInt_t w, UInt_t h)
    // If w=0 && h=0 - Resize to deafult size
 
    if (w != fWidth || h != fHeight) {
-      TGDimension siz = GetDefaultSize();
+      TGDimension siz(0,0);
+      siz = GetDefaultSize();
       fWidth = w ? w : siz.fWidth;
       fHeight = h ? h : siz.fHeight;
       TGWindow::Resize(fWidth, fHeight);
@@ -559,7 +560,8 @@ void TGFrame::MoveResize(Int_t x, Int_t y, UInt_t w, UInt_t h)
    // If w=0 && h=0 - Resize to deafult size
 
    // we do it anyway as we don't know if it's only a move or only a resize
-   TGDimension siz = GetDefaultSize();
+   TGDimension siz(0,0);
+   siz = GetDefaultSize();
    fWidth = w ? w : siz.fWidth;
    fHeight = h ? h : siz.fHeight;
    fX = x; fY = y;
@@ -1543,7 +1545,7 @@ Bool_t TGMainFrame::HandleMotion(Event_t *event)
 
    if (gDNDManager && gDNDManager->IsDragging()) {
       gDNDManager->Drag(event->fXRoot, event->fYRoot,
-                        TGDNDManager::GetDNDactionCopy(), event->fTime);
+                        TGDNDManager::GetDNDActionCopy(), event->fTime);
    }
    return TGCompositeFrame::HandleMotion(event);
 }
@@ -1553,7 +1555,7 @@ Bool_t TGMainFrame::HandleSelection(Event_t *event)
 {
    // Handle primary selection event.
 
-   if ((Atom_t)event->fUser[1] == TGDNDManager::GetDNDselection()) {
+   if ((Atom_t)event->fUser[1] == TGDNDManager::GetDNDSelection()) {
       if (gDNDManager)
          return gDNDManager->HandleSelection(event);
    }
@@ -1565,7 +1567,7 @@ Bool_t TGMainFrame::HandleSelectionRequest(Event_t *event)
 {
    // Handle selection request event.
 
-   if ((Atom_t)event->fUser[1] == TGDNDManager::GetDNDselection()) {
+   if ((Atom_t)event->fUser[1] == TGDNDManager::GetDNDSelection()) {
       if (gDNDManager)
          return gDNDManager->HandleSelectionRequest(event);
    }

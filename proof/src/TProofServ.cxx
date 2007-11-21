@@ -341,7 +341,7 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
 
    // Read session specific rootrc file
    if (!gSystem->AccessPathName("session.rootrc", kReadPermission))
-      gEnv->ReadFile("session.rootrc", kEnvGlobal);
+      gEnv->ReadFile("session.rootrc", kEnvChange);
 
    // Wait (loop) to allow debugger to connect
    Bool_t test = (*argc >= 4 && !strcmp(argv[3], "test")) ? kTRUE : kFALSE;
@@ -2885,7 +2885,6 @@ R__HIDDEN Int_t TProofServ::ApplyMaxQueries()
          }
       }
    }
-   fKeptQueries = nqkept;
 
    // Cleanup
    delete sl;
@@ -3539,7 +3538,6 @@ void TProofServ::HandleProcess(TMessage *mess)
                   fQueries->Add(pqr);
                // Remove from the fQueries list
                fQueries->Remove(pq);
-               SafeDelete(pq);
             }
          }
 
