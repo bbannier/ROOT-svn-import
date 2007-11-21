@@ -639,12 +639,14 @@ TGWin32MainThread::~TGWin32MainThread()
    if (fCritSec) {
       ::LeaveCriticalSection(fCritSec);
       ::DeleteCriticalSection(fCritSec);
+      delete fCritSec;
    }
    fCritSec = 0;
 
    if (fMessageMutex) {
       ::LeaveCriticalSection(fMessageMutex);
       ::DeleteCriticalSection(fMessageMutex);
+      delete fMessageMutex;
    }
    fMessageMutex = 0;
 
@@ -997,6 +999,10 @@ Int_t TGWin32::OpenDisplay(const char *dpyName)
       gdk_debug_level = 0;
    }
 
+   fore.red = fore.green = fore.blue = 0;
+   back.red = back.green = back.blue = 0;
+   color.red = color.green = color.blue = 0;
+      
    fScreenNumber = 0;           //DefaultScreen(fDisplay);
    fVisual = gdk_visual_get_best();
    fColormap = gdk_colormap_get_system();
@@ -5489,8 +5495,21 @@ Bool_t TGWin32::CheckEvent(Window_t id, EGEventType type, Event_t & ev)
    Event_t tev;
    GdkEvent xev;
 
-   TGWin32MainThread::LockMSG();
    tev.fType = type;
+   tev.fWindow = (Window_t) id;
+   tev.fTime = 0;
+   tev.fX = tev.fY = 0;
+   tev.fXRoot = tev.fYRoot = 0;
+   tev.fCode = 0;
+   tev.fState = 0;
+   tev.fWidth = tev.fHeight = 0;
+   tev.fCount = 0;
+   tev.fSendEvent = kFALSE;
+   tev.fHandle = 0;
+   tev.fFormat = 0;
+   tev.fUser[0] = tev.fUser[1] = tev.fUser[2] = tev.fUser[3] = tev.fUser[4] = 0L;
+
+   TGWin32MainThread::LockMSG();
    MapEvent(tev, xev, kTRUE);
    Bool_t r = gdk_check_typed_window_event((GdkWindow *) id, xev.type, &xev);
 
@@ -5564,45 +5583,43 @@ void TGWin32::MapModifierState(UInt_t & state, UInt_t & xstate, Bool_t tox)
    }
 }
 
-void _set_event_time(GdkEvent * event, UInt_t time)
+static void _set_event_time(GdkEvent &event, UInt_t time)
 {
-   //
+   // set gdk event time
 
-   if (event) {
-      switch (event->type) {
+   switch (event.type) {
       case GDK_MOTION_NOTIFY:
-         event->motion.time = time;
+         event.motion.time = time;
       case GDK_BUTTON_PRESS:
       case GDK_2BUTTON_PRESS:
       case GDK_3BUTTON_PRESS:
       case GDK_BUTTON_RELEASE:
       case GDK_SCROLL:
-         event->button.time = time;
+         event.button.time = time;
       case GDK_KEY_PRESS:
       case GDK_KEY_RELEASE:
-         event->key.time = time;
+         event.key.time = time;
       case GDK_ENTER_NOTIFY:
       case GDK_LEAVE_NOTIFY:
-         event->crossing.time = time;
+         event.crossing.time = time;
       case GDK_PROPERTY_NOTIFY:
-         event->property.time = time;
+         event.property.time = time;
       case GDK_SELECTION_CLEAR:
       case GDK_SELECTION_REQUEST:
       case GDK_SELECTION_NOTIFY:
-         event->selection.time = time;
+         event.selection.time = time;
       case GDK_PROXIMITY_IN:
       case GDK_PROXIMITY_OUT:
-         event->proximity.time = time;
+         event.proximity.time = time;
       case GDK_DRAG_ENTER:
       case GDK_DRAG_LEAVE:
       case GDK_DRAG_MOTION:
       case GDK_DRAG_STATUS:
       case GDK_DROP_START:
       case GDK_DROP_FINISHED:
-         event->dnd.time = time;
+         event.dnd.time = time;
       default:                 /* use current time */
          break;
-      }
    }
 }
 
@@ -5765,7 +5782,8 @@ void TGWin32::MapEvent(Event_t & ev, GdkEvent & xev, Bool_t tox)
       if ((ev.fType == kMapNotify) || (ev.fType == kUnmapNotify)) {
          xev.any.window = (GdkWindow *) ev.fWindow;
       }
-      _set_event_time(&xev, ev.fTime);
+      if (xev.type != GDK_CLIENT_EVENT)
+         _set_event_time(xev, ev.fTime);
    } else {
       // map from gdk_event to Event_t
       ev.fType = kOtherEvent;
@@ -6015,18 +6033,16 @@ void TGWin32::ChangeWindowAttributes(Window_t id, SetWindowAttributes_t * attr)
    Mask_t evmask;
    HWND w, flag;
 
-   if (attr) {
-      color.pixel = attr->fBackgroundPixel;
-      color.red = GetRValue(attr->fBackgroundPixel);
-      color.green = GetGValue(attr->fBackgroundPixel);
-      color.blue = GetBValue(attr->fBackgroundPixel);
-   }
    if (attr && (attr->fMask & kWAEventMask)) {
       evmask = (Mask_t) attr->fEventMask;
       MapEventMask(evmask, xevmask);
       gdk_window_set_events((GdkWindow *) id, (GdkEventMask) xevmask);
    }
    if (attr && (attr->fMask & kWABackPixel)) {
+      color.pixel = attr->fBackgroundPixel;
+      color.red = GetRValue(attr->fBackgroundPixel);
+      color.green = GetGValue(attr->fBackgroundPixel);
+      color.blue = GetBValue(attr->fBackgroundPixel);
       gdk_window_set_background((GdkWindow *) id, &color);
    }
 //   if (attr && (attr->fMask & kWAOverrideRedirect))
@@ -7086,7 +7102,13 @@ Pixmap_t TGWin32::CreatePixmapFromData(unsigned char *bits, UInt_t width, UInt_t
    bmp_info.bmiHeader.biCompression = BI_RGB;
    bmp_info.bmiHeader.biSizeImage = 0;
    bmp_info.bmiHeader.biClrUsed = 0;
+   bmp_info.bmiHeader.biXPelsPerMeter = 0L;
+   bmp_info.bmiHeader.biYPelsPerMeter = 0L;
    bmp_info.bmiHeader.biClrImportant = 0;
+   bmp_info.bmiColors[0].rgbRed = 0;
+   bmp_info.bmiColors[0].rgbGreen = 0;
+   bmp_info.bmiColors[0].rgbBlue = 0;
+   bmp_info.bmiColors[0].rgbReserved = 0;
 
    HDC hdc = ::GetDC(NULL);
    HBITMAP hbitmap = ::CreateDIBitmap(hdc, &bmp_info.bmiHeader, CBM_INIT,
@@ -7351,6 +7373,7 @@ void TGWin32::ConvertSelection(Window_t win, Atom_t &sel, Atom_t &target,
     * fetch the data.
     */
    PostMessage(hWnd, gdk_selection_notify_msg, sel, target);
+   free(data);
 }
 
 //______________________________________________________________________________

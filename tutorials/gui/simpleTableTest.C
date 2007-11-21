@@ -110,7 +110,7 @@ TableTest::~TableTest()
 }
 
 TGSimpleTable *simpleTableTest(UInt_t ndrows = 500, UInt_t ndcols = 20, 
-                   UInt_t ntrows = 50, UInt_t ntcols = 10) {
+                   UInt_t ntrows = 20, UInt_t ntcols = 10) {
    TableTest *test = new TableTest(0, ndrows, ndcols, ntrows, ntcols, 500, 200);
    return test->GetTable();
 }

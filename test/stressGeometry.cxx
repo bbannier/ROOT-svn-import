@@ -148,7 +148,7 @@ void stressGeometry(const char *exp="*") {
       TGeoManager::Import(Form("http://root.cern.ch/files/%s",fname));
          
       sprintf(fname, "%s_ref.root", exps[i]);
-      if (gSystem->AccessPathName(fname)) {
+      if (!TFile::Open(Form("http://root.cern.ch/files/%s",fname))) {
          printf("File: %s does not exist, generating it\n", fname);
          WriteRef(i);
       }
@@ -182,13 +182,15 @@ void stressGeometry(const char *exp="*") {
 
 void ReadRef(Int_t kexp) {
    TStopwatch sw;
-   char fname[24];
-   sprintf(fname, "%s_ref.root", exps[kexp]);
-   TFile f(fname);
-   if (f.IsZombie()) return;
+   char fname[100];
+   sprintf(fname, "http://root.cern.ch/files/%s_ref.root", exps[kexp]);
+   TFile::SetCacheFileDir(".");   
+   TFile *f = TFile::Open(fname, "CACHEREAD");
+   if (!f) return;
+   printf("Reference file %s found\n", fname);
    TTree *TD = new TTree("TD","TGeo stress diff");
    TD->Branch("p",&p.x,"x/D:y/D:z/D:theta/D:phi/D:rad[4]/F");
-   TTree *T = (TTree*)f.Get("T");
+   TTree *T = (TTree*)f->Get("T");
    T->SetBranchAddress("p",&p.x);
    Long64_t nentries = T->GetEntries();
    TVectorD *vref = (TVectorD *)T->GetUserInfo()->At(0);
@@ -254,6 +256,7 @@ void ReadRef(Int_t kexp) {
       TD->Print();
    }   
    delete TD;
+   delete f;
    
    Double_t cp = sw.CpuTime();
    tpstot += cp;

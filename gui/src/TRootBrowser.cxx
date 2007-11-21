@@ -1,4 +1,4 @@
-// @(#)root/gui:$Id: TRootBrowser.cxx 20528 2007-10-29 16:37:11Z antcheva $
+// @(#)root/gui:$Id$
 // Author: Bertrand Bellenot   26/09/2007
 
 /*************************************************************************
@@ -370,6 +370,9 @@ void TRootBrowser::CloseWindow()
          if (el->fLayout && (el->fLayout != fgDefaultHints) &&
             (el->fLayout->References() > 0)) {
             el->fLayout->RemoveReference();
+            if (!el->fLayout->References()) {
+               delete el->fLayout;
+            }
          }
          fTabLeft->GetTabContainer(i)->GetList()->Remove(el);
          delete el;
@@ -392,6 +395,9 @@ void TRootBrowser::CloseWindow()
          if (el->fLayout && (el->fLayout != fgDefaultHints) &&
             (el->fLayout->References() > 0)) {
             el->fLayout->RemoveReference();
+            if (!el->fLayout->References()) {
+               delete el->fLayout;
+            }
          }
          fTabRight->GetTabContainer(i)->GetList()->Remove(el);
          delete el;
@@ -411,6 +417,9 @@ void TRootBrowser::CloseWindow()
          if (el->fLayout && (el->fLayout != fgDefaultHints) &&
             (el->fLayout->References() > 0)) {
             el->fLayout->RemoveReference();
+            if (!el->fLayout->References()) {
+               delete el->fLayout;
+            }
          }
          fTabBottom->GetTabContainer(i)->GetList()->Remove(el);
          delete el;
@@ -810,6 +819,9 @@ void TRootBrowser::RemoveTab(Int_t pos, Int_t subpos)
       if (el->fLayout && (el->fLayout != fgDefaultHints) &&
          (el->fLayout->References() > 0)) {
          el->fLayout->RemoveReference();
+         if (!el->fLayout->References()) {
+            delete el->fLayout;
+         }
       }
       edit->GetTabContainer(subpos)->GetList()->Remove(el);
       delete el;

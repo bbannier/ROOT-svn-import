@@ -982,7 +982,7 @@ void TASImage::FromPad(TVirtualPad *pad, Int_t x, Int_t y, UInt_t w, UInt_t h)
          fImage = clone_asimage(itmp->fImage, SCL_DO_ALL);
          if (itmp->fImage->alt.argb32) {
             UInt_t sz = itmp->fImage->width*itmp->fImage->height;
-            fImage->alt.argb32 = new ARGB32[sz];
+            fImage->alt.argb32 = (ARGB32*)safemalloc(sz*sizeof(ARGB32));
             memcpy(fImage->alt.argb32, itmp->fImage->alt.argb32, sz*4);
          }
       }
@@ -2193,6 +2193,7 @@ void TASImage::SetImage(Pixmap_t pxm, Pixmap_t mask)
       unsigned char *mask_bits = gVirtualX->GetColorBits(mask, 0, 0, w, h);
       fImage = bitmap2asimage(bits, w, h, 0, mask_bits);
       delete [] mask_bits;
+      delete [] bits;
    }
 }
 
@@ -2591,7 +2592,7 @@ TObject *TASImage::Clone(const char *newname) const
 
    if (fImage->alt.argb32) {
       UInt_t sz = fImage->width * fImage->height;
-      im->fImage->alt.argb32 = new ARGB32[sz];
+      im->fImage->alt.argb32 = (ARGB32*)safemalloc(sz*sizeof(ARGB32));
       memcpy(im->fImage->alt.argb32, fImage->alt.argb32, sz * sizeof(ARGB32));
    }
 
@@ -6013,7 +6014,7 @@ void TASImage::Streamer(TBuffer &b)
          Double_t *vec = new Double_t[size];
          b.ReadFastArray(vec, size);
          SetImage(vec, w, h, &fPalette);
-         delete vec;
+         delete [] vec;
       }
       b.CheckByteCount(R__s, R__c, TASImage::IsA());
    } else {
