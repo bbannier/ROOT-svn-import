@@ -42,4 +42,4 @@ distclean:      clean
 ###
 
 .$(SrcSuf).$(ObjSuf):
-	$(CXX) $(CXXFLAGS) -c $<
+	$(CXX) -g $(CXXFLAGS) -c $<
