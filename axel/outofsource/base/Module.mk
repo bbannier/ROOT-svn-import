@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := base
+MODDIR       := $(SRCDIR)/base
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -15,18 +15,18 @@ BASEDIRI     := $(BASEDIR)/inc
 BASEL1       := $(MODDIRI)/LinkDef1.h
 BASEL2       := $(MODDIRI)/LinkDef2.h
 BASEL3       := $(MODDIRI)/LinkDef3.h
-BASEDS1      := $(MODDIRS)/G__Base1.cxx
-BASEDS2      := $(MODDIRS)/G__Base2.cxx
-BASEDS3      := $(MODDIRS)/G__Base3.cxx
-BASEDO1      := $(BASEDS1:.cxx=.o)
-BASEDO2      := $(BASEDS2:.cxx=.o)
-BASEDO3      := $(BASEDS3:.cxx=.o)
+BASEDS1      := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Base1.cxx
+BASEDS2      := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Base2.cxx
+BASEDS3      := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Base3.cxx
+BASEDO1      := $(subst $(SRCDIR)/,,$(BASEDS1:.cxx=.o))
+BASEDO2      := $(subst $(SRCDIR)/,,$(BASEDS2:.cxx=.o))
+BASEDO3      := $(subst $(SRCDIR)/,,$(BASEDS3:.cxx=.o))
 
 # ManualBase4 only needs to be regenerated (and then changed manually) when
 # the dictionary interface changes
 BASEL4       := $(MODDIRI)/LinkDef4.h
 BASEDS4      := $(MODDIRS)/ManualBase4.cxx
-BASEDO4      := $(BASEDS4:.cxx=.o)
+BASEDO4      := $(subst $(SRCDIR)/,,$(BASEDS4:.cxx=.o))
 BASEH4       := TDirectory.h
 
 BASEDS       := $(BASEDS1) $(BASEDS2) $(BASEDS3) $(BASEDS4)
@@ -51,11 +51,11 @@ BASES        := $(filter-out $(BASEDS4),$(filter-out $(MODDIRS)/G__%,$(wildcard 
 else
 BASES        := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
 endif
-BASEO        := $(BASES:.cxx=.o)
+BASEO        := $(subst $(SRCDIR)/,,$(BASES:.cxx=.o))
 
 BASEDEP      := $(BASEO:.o=.d) $(BASEDO:.o=.d)
 
-BASEO        := $(filter-out $(MODDIRS)/precompile.o,$(BASEO))
+BASEO        := $(subst $(SRCDIR)/,,$(filter-out $(MODDIRS)/precompile.o,$(BASEO)))
 
 # used in the main Makefile
 ALLHDRS     += $(patsubst $(MODDIRI)/%.h,include/%.h,$(BASEH))
@@ -117,5 +117,5 @@ ifeq ($(ARCH),linuxicc)
 $(BASEDO3):     CXXFLAGS += -wd191
 endif
 $(BASEDO4): OPT = $(NOOPT)
-$(BASEDO4): CXXFLAGS += -I.
+$(BASEDO4): CXXFLAGS += -I$(SRCDIR)
 $(BASEDO4): PCHCXXFLAGS =

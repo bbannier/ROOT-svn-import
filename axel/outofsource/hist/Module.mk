@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := hist
+MODDIR       := $(SRCDIR)/hist
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ HISTDIRI     := $(HISTDIR)/inc
 
 ##### libHist #####
 HISTL        := $(MODDIRI)/LinkDef.h
-HISTDS       := $(MODDIRS)/G__Hist.cxx
+HISTDS       := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Hist.cxx
 HISTDO       := $(HISTDS:.cxx=.o)
 HISTDH       := $(HISTDS:.cxx=.h)
 
 HISTH        := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 HISTS        := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-HISTO        := $(HISTS:.cxx=.o)
+HISTO        := $(subst $(SRCDIR)/,,$(HISTS:.cxx=.o))
 
 HISTDEP      := $(HISTO:.o=.d) $(HISTDO:.o=.d)
 

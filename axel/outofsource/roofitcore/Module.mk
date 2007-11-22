@@ -3,7 +3,7 @@
 #
 # Author: Wouter Verkerke, 18/4/2005
 
-MODDIR         := roofitcore
+MODDIR         := $(SRCDIR)/roofitcore
 MODDIRS        := $(MODDIR)/src
 MODDIRI        := $(MODDIR)/inc
 
@@ -15,9 +15,9 @@ ROOFITCOREDIRI := $(ROOFITCOREDIR)/inc
 ROOFITCOREL1   := $(MODDIRI)/LinkDef1.h
 ROOFITCOREL2   := $(MODDIRI)/LinkDef2.h
 ROOFITCOREL3   := $(MODDIRI)/LinkDef3.h
-ROOFITCOREDS1  := $(MODDIRS)/G__RooFitCore1.cxx
-ROOFITCOREDS2  := $(MODDIRS)/G__RooFitCore2.cxx
-ROOFITCOREDS3  := $(MODDIRS)/G__RooFitCore3.cxx
+ROOFITCOREDS1  := $(subst $(SRCDIR)/,,$(MODDIRS))/G__RooFitCore1.cxx
+ROOFITCOREDS2  := $(subst $(SRCDIR)/,,$(MODDIRS))/G__RooFitCore2.cxx
+ROOFITCOREDS3  := $(subst $(SRCDIR)/,,$(MODDIRS))/G__RooFitCore3.cxx
 ROOFITCOREDO1  := $(ROOFITCOREDS1:.cxx=.o)
 ROOFITCOREDO2  := $(ROOFITCOREDS2:.cxx=.o)
 ROOFITCOREDO3  := $(ROOFITCOREDS3:.cxx=.o)
@@ -86,7 +86,7 @@ ROOFITCOREH2   := $(patsubst %,$(MODDIRI)/%,$(ROOFITCOREH2))
 ROOFITCOREH3   := $(patsubst %,$(MODDIRI)/%,$(ROOFITCOREH3))
 ROOFITCOREH    := $(ROOFITCOREH1) $(ROOFITCOREH2) $(ROOFITCOREH3)
 ROOFITCORES    := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-ROOFITCOREO    := $(ROOFITCORES:.cxx=.o)
+ROOFITCOREO    := $(subst $(SRCDIR)/,,$(ROOFITCORES:.cxx=.o))
 
 ROOFITCOREDEP  := $(ROOFITCOREO:.o=.d) $(ROOFITCOREDO:.o=.d)
 

@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := matrix
+MODDIR       := $(SRCDIR)/matrix
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ MATRIXDIRI   := $(MATRIXDIR)/inc
 
 ##### libMatrix #####
 MATRIXL      := $(MODDIRI)/LinkDef.h
-MATRIXDS     := $(MODDIRS)/G__Matrix.cxx
+MATRIXDS     := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Matrix.cxx
 MATRIXDO     := $(MATRIXDS:.cxx=.o)
 MATRIXDH     := $(MATRIXDS:.cxx=.h)
 
 MATRIXH      := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 MATRIXS      := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-MATRIXO      := $(MATRIXS:.cxx=.o)
+MATRIXO      := $(subst $(SRCDIR)/,,$(MATRIXS:.cxx=.o))
 
 MATRIXDEP    := $(MATRIXO:.o=.d) $(MATRIXDO:.o=.d)
 

@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := x11ttf
+MODDIR       := $(SRCDIR)/x11ttf
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ X11TTFDIRI   := $(X11TTFDIR)/inc
 
 ##### libGX11TTF #####
 X11TTFL      := $(MODDIRI)/LinkDef.h
-X11TTFDS     := $(MODDIRS)/G__X11TTF.cxx
+X11TTFDS     := $(subst $(SRCDIR)/,,$(MODDIRS))/G__X11TTF.cxx
 X11TTFDO     := $(X11TTFDS:.cxx=.o)
 X11TTFDH     := $(X11TTFDS:.cxx=.h)
 
 X11TTFH      := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 X11TTFS      := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-X11TTFO      := $(X11TTFS:.cxx=.o)
+X11TTFO      := $(subst $(SRCDIR)/,,$(X11TTFS:.cxx=.o))
 
 X11TTFDEP    := $(X11TTFO:.o=.d) $(X11TTFDO:.o=.d)
 

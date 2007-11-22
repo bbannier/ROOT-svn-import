@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR        := cint7
+MODDIR        := $(SRCDIR)/cint7
 MODDIRS       := $(MODDIR)/src
 MODDIRI       := $(MODDIR)/inc
 
@@ -27,7 +27,7 @@ CINT7S2       := $(filter-out $(MODDIRS)/v6_dmy%,$(wildcard $(MODDIRS)/*.cxx))
 
 CINT7S1       += $(CINT7DIRM)/G__setup.c
 
-CINT7ALLO     := $(CINT7S1:.c=.o) $(CINT7S2:.cxx=.o)
+CINT7ALLO     := $(subst $(SRCDIR)/,,$(subst $(SRCDIR)/,,$(CINT7S1:.c=.o) $(CINT7S2:.cxx=.o)))
 CINT7ALLDEP   := $(CINT7ALLO:.o=.d)
 
 CINT7CONF     := $(CINT7DIRI)/configcint.h
@@ -187,9 +187,9 @@ endif
 endif
 
 CINT7S        := $(CINT7S1) $(CINT7S2)
-CINT7O        := $(CINT7S1:.c=.o) $(CINT7S2:.cxx=.o)
-CINT7TMPO     := $(subst v6_loadfile.o,v6_loadfile_tmp.o,$(CINT7O))
-CINT7TMPO     := $(subst v6_pragma.o,v6_pragma_tmp.o,$(CINT7TMPO))
+CINT7O        := $(subst $(SRCDIR)/,,$(CINT7S1:.c=.o) $(CINT7S2:.cxx=.o))
+CINT7TMPO     := $(subst $(SRCDIR)/,,$(subst v6_loadfile.o,v6_loadfile_tmp.o,$(CINT7O)))
+CINT7TMPO     := $(subst $(SRCDIR)/,,$(subst v6_pragma.o,v6_pragma_tmp.o,$(CINT7TMPO)))
 CINT7TMPINC   := -I$(MODDIR)/inc -I$(MODDIR)/include -I$(MODDIR)/stl -I$(MODDIR)/lib -Iinclude
 CINT7DEP      := $(CINT7O:.o=.d)
 CINT7DEP      += $(MODDIRS)/v6_loadfile_tmp.d
@@ -201,14 +201,14 @@ CINT7LIB      := $(LPATH)/libCint7.$(SOEXT)
 
 ##### cint #####
 CINT7EXES     := $(CINT7DIRM)/cppmain.cxx
-CINT7EXEO     := $(CINT7EXES:.cxx=.o)
+CINT7EXEO     := $(subst $(SRCDIR)/,,$(CINT7EXES:.cxx=.o))
 CINT7EXEDEP   := $(CINT7EXEO:.o=.d)
 CINT7TMP      := $(CINT7DIRM)/cint7_tmp$(EXEEXT)
 CINT7         := bin/cint7$(EXEEXT)
 
 ##### makecint #####
 MAKECINT7S    := $(CINT7DIRT)/makecint.cxx
-MAKECINT7O    := $(MAKECINT7S:.cxx=.o)
+MAKECINT7O    := $(subst $(SRCDIR)/,,$(MAKECINT7S:.cxx=.o))
 MAKECINT7     := bin/makecint7$(EXEEXT)
 
 ##### iosenum.h #####
@@ -227,7 +227,7 @@ endif
 CINT7_STDIOH   := $(MODDIR)/include/stdio.h
 CINT7_MKINCLD  := $(MODDIR)/include/mkincld
 CINT7_MKINCLDS := $(MODDIR)/include/mkincld.c
-CINT7_MKINCLDO := $(MODDIR)/include/mkincld.o
+CINT7_MKINCLDO := $(MODDIR)/include/mkincld.o)
 
 # used in the main Makefile
 #ALLHDRS     += $(patsubst $(CINT7DIRS)/%.h,include/%.h,$(CINT7H1))

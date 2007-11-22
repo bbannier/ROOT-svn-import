@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, Eddy Offermann, 21/05/2003
 
-MODDIR       := quadp
+MODDIR       := $(SRCDIR)/quadp
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ QUADPDIRI    := $(QUADPDIR)/inc
 
 ##### libQuadp #####
 QUADPL       := $(MODDIRI)/LinkDef.h
-QUADPDS      := $(MODDIRS)/G__Quadp.cxx
+QUADPDS      := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Quadp.cxx
 QUADPDO      := $(QUADPDS:.cxx=.o)
 QUADPDH      := $(QUADPDS:.cxx=.h)
 
 QUADPH       := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 QUADPS       := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-QUADPO       := $(QUADPS:.cxx=.o)
+QUADPO       := $(subst $(SRCDIR)/,,$(QUADPS:.cxx=.o))
 
 QUADPDEP     := $(QUADPO:.o=.d) $(QUADPDO:.o=.d)
 

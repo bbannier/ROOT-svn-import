@@ -3,7 +3,7 @@
 #
 # Authors: Elias Athanasopoulos, 31/5/2004
 
-MODDIR         := ruby
+MODDIR         := $(SRCDIR)/ruby
 MODDIRS        := $(MODDIR)/src
 MODDIRI        := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ RUBYROOTDIRI   := $(RUBYROOTDIR)/inc
 
 ##### libRuby #####
 RUBYROOTL      := $(MODDIRI)/LinkDef.h
-RUBYROOTDS     := $(MODDIRS)/G__Ruby.cxx
+RUBYROOTDS     := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Ruby.cxx
 RUBYROOTDO     := $(RUBYROOTDS:.cxx=.o)
 RUBYROOTDH     := $(RUBYROOTDS:.cxx=.h)
 
 RUBYROOTH      := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 RUBYROOTS      := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-RUBYROOTO      := $(RUBYROOTS:.cxx=.o)
+RUBYROOTO      := $(subst $(SRCDIR)/,,$(RUBYROOTS:.cxx=.o))
 
 RUBYROOTDEP    := $(RUBYROOTO:.o=.d) $(RUBYROOTDO:.o=.d)
 

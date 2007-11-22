@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 12/4/2002
 
-MODDIR       := vmc
+MODDIR       := $(SRCDIR)/vmc
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,14 +13,14 @@ VMCDIRI      := $(VMCDIR)/inc
 
 ##### libVMC #####
 VMCL         := $(MODDIRI)/LinkDef.h
-VMCDS        := $(MODDIRS)/G__VMC.cxx
+VMCDS        := $(subst $(SRCDIR)/,,$(MODDIRS))/G__VMC.cxx
 VMCDO        := $(VMCDS:.cxx=.o)
 VMCDH        := $(VMCDS:.cxx=.h)
 
 VMCH1        := $(wildcard $(MODDIRI)/T*.h)
 VMCH         := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 VMCS         := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-VMCO         := $(VMCS:.cxx=.o)
+VMCO         := $(subst $(SRCDIR)/,,$(VMCS:.cxx=.o))
 
 VMCDEP       := $(VMCO:.o=.d) $(VMCDO:.o=.d)
 

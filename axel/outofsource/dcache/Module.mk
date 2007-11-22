@@ -2,7 +2,7 @@
 #
 # Author: Grzegorz Mazur <mazur@mail.desy.de>, 16/1/2002
 
-MODDIR       := dcache
+MODDIR       := $(SRCDIR)/dcache
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -12,13 +12,13 @@ DCACHEDIRI   := $(DCACHEDIR)/inc
 
 ##### libDCache #####
 DCACHEL      := $(MODDIRI)/LinkDef.h
-DCACHEDS     := $(MODDIRS)/G__DCache.cxx
+DCACHEDS     := $(subst $(SRCDIR)/,,$(MODDIRS))/G__DCache.cxx
 DCACHEDO     := $(DCACHEDS:.cxx=.o)
 DCACHEDH     := $(DCACHEDS:.cxx=.h)
 
 DCACHEH      := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 DCACHES      := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-DCACHEO      := $(DCACHES:.cxx=.o)
+DCACHEO      := $(subst $(SRCDIR)/,,$(DCACHES:.cxx=.o))
 
 DCACHEDEP    := $(DCACHEO:.o=.d) $(DCACHEDO:.o=.d)
 

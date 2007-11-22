@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := postscript
+MODDIR       := $(SRCDIR)/postscript
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ POSTSCRIPTDIRI := $(POSTSCRIPTDIR)/inc
 
 ##### libTree #####
 POSTSCRIPTL  := $(MODDIRI)/LinkDef.h
-POSTSCRIPTDS := $(MODDIRS)/G__PostScript.cxx
+POSTSCRIPTDS := $(subst $(SRCDIR)/,,$(MODDIRS))/G__PostScript.cxx
 POSTSCRIPTDO := $(POSTSCRIPTDS:.cxx=.o)
 POSTSCRIPTDH := $(POSTSCRIPTDS:.cxx=.h)
 
 POSTSCRIPTH  := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 POSTSCRIPTS  := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-POSTSCRIPTO  := $(POSTSCRIPTS:.cxx=.o)
+POSTSCRIPTO  := $(subst $(SRCDIR)/,,$(POSTSCRIPTS:.cxx=.o))
 
 POSTSCRIPTDEP := $(POSTSCRIPTO:.o=.d) $(POSTSCRIPTDO:.o=.d)
 

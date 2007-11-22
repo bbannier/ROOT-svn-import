@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := pythia6
+MODDIR       := $(SRCDIR)/pythia6
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ PYTHIA6DIRI  := $(PYTHIA6DIR)/inc
 
 ##### libEGPythia6 #####
 PYTHIA6L     := $(MODDIRI)/LinkDef.h
-PYTHIA6DS    := $(MODDIRS)/G__Pythia6.cxx
+PYTHIA6DS    := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Pythia6.cxx
 PYTHIA6DO    := $(PYTHIA6DS:.cxx=.o)
 PYTHIA6DH    := $(PYTHIA6DS:.cxx=.h)
 
 PYTHIA6H     := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 PYTHIA6S     := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-PYTHIA6O     := $(PYTHIA6S:.cxx=.o)
+PYTHIA6O     := $(subst $(SRCDIR)/,,$(PYTHIA6S:.cxx=.o))
 
 PYTHIA6DEP   := $(PYTHIA6O:.o=.d) $(PYTHIA6DO:.o=.d)
 

@@ -3,7 +3,7 @@
 #
 # Author: Valeri Fine, 20/5/2003
 
-MODDIR       := qtroot
+MODDIR       := $(SRCDIR)/qtroot
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ QTROOTDIRI   := $(QTROOTDIR)/inc
 
 ##### libQtRoot #####
 QTROOTL      := $(MODDIRI)/LinkDef.h
-QTROOTDS     := $(MODDIRS)/G__QtRoot.cxx
+QTROOTDS     := $(subst $(SRCDIR)/,,$(MODDIRS))/G__QtRoot.cxx
 QTROOTDO     := $(QTROOTDS:.cxx=.o)
 QTROOTDH     := $(QTROOTDS:.cxx=.h)
 
 QTROOTH      := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 QTROOTS      := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-QTROOTO      := $(QTROOTS:.cxx=.o)
+QTROOTO      := $(subst $(SRCDIR)/,,$(QTROOTS:.cxx=.o))
 
 QTROOTDEP    := $(QTROOTO:.o=.d) $(QTROOTDO:.o=.d)
 

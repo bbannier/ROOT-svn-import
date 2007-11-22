@@ -3,24 +3,26 @@
 #
 # Author: Gerardo Ganis, 7/4/2003
 
-MODDIR       := rpdutils
+MODDIR       := $(SRCDIR)/rpdutils
 MODDIRS      := $(MODDIR)/src
+MODDIRO      := rpdutils/src
 MODDIRI      := $(MODDIR)/inc
 
 RPDUTILDIR   := $(MODDIR)
 RPDUTILDIRS  := $(RPDUTILDIR)/src
+RPDUTILDIRO  := $(MODDIRO)
 RPDUTILDIRI  := $(RPDUTILDIR)/inc
 
 ##### $(RPDUTILO) #####
 RPDUTILH     := $(wildcard $(MODDIRI)/*.h)
 RPDUTILS     := $(wildcard $(MODDIRS)/*.cxx)
-RPDUTILO     := $(RPDUTILS:.cxx=.o)
+RPDUTILO     := $(subst $(MODDIRS),$(MODDIRO),$(RPDUTILS:.cxx=.o))
 
 RPDUTILDEP   := $(RPDUTILO:.o=.d)
 
 ##### for libSrvAuth #####
 SRVAUTHS     := $(MODDIRS)/rpdutils.cxx $(MODDIRS)/ssh.cxx
-SRVAUTHO     := $(SRVAUTHS:.cxx=.o)
+SRVAUTHO     := $(subst $(MODDIRS),$(MODDIRO),$(SRVAUTHS:.cxx=.o))
 
 SRVAUTHLIB   := $(LPATH)/libSrvAuth.$(SOEXT)
 
@@ -52,11 +54,11 @@ ifneq ($(GLOBUSLIB),)
 GLBSFLAGS     := $(GLOBUSINCDIR:%=-I%)
 GLBSLIBS      := $(GLOBUSLIBDIR) $(GLOBUSLIB)
 SRVAUTHS      += $(MODDIRS)/globus.cxx
-SRVAUTHO      += $(MODDIRS)/globus.o
+SRVAUTHO      += $(MODDIRO)/globus.o
 else
 GLBSFLAGS     := $(SSLINCDIR:%=-I%)
 RPDUTILS      := $(filter-out $(MODDIRS)/globus.cxx,$(RPDUTILS))
-RPDUTILO      := $(filter-out $(MODDIRS)/globus.o,$(RPDUTILO))
+RPDUTILO      := $(subst $(SRCDIR)/,,$(filter-out $(MODDIRO)/globus.o,$(RPDUTILO)))
 GLBSLIBS      += $(SSLLIBDIR) $(SSLLIB)
 endif
 

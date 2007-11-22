@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := graf
+MODDIR       := $(SRCDIR)/graf
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -14,8 +14,8 @@ GRAFDIRI     := $(GRAFDIR)/inc
 ##### libGraf #####
 GRAFL1       := $(MODDIRI)/LinkDef1.h
 GRAFL2       := $(MODDIRI)/LinkDef2.h
-GRAFDS1      := $(MODDIRS)/G__Graf1.cxx
-GRAFDS2      := $(MODDIRS)/G__Graf2.cxx
+GRAFDS1      := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Graf1.cxx
+GRAFDS2      := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Graf2.cxx
 GRAFDO1      := $(GRAFDS1:.cxx=.o)
 GRAFDO2      := $(GRAFDS2:.cxx=.o)
 GRAFDS       := $(GRAFDS1) $(GRAFDS2)
@@ -27,7 +27,7 @@ GRAFHD       := $(filter-out $(MODDIRI)/TTF.h,$(GRAFH))
 GRAFHD       := $(filter-out $(MODDIRI)/TText.h,$(GRAFHD))
 GRAFHD       := $(filter-out $(MODDIRI)/TLatex.h,$(GRAFHD))
 GRAFS        := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-GRAFO        := $(GRAFS:.cxx=.o)
+GRAFO        := $(subst $(SRCDIR)/,,$(GRAFS:.cxx=.o))
 
 GRAFDEP      := $(GRAFO:.o=.d) $(GRAFDO:.o=.d)
 

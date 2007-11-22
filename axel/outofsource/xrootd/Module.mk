@@ -3,17 +3,19 @@
 #
 # Author: G Ganis, 27/7/2004
 
-MODDIR     := xrootd
+MODDIR     := $(SRCDIR)/xrootd
 MODDIRS    := $(MODDIR)/src
+MODDIRO    := xrootd/src
 
 XROOTDVERS := xrootd-20071001-0000
 XROOTDDIR  := $(MODDIR)
-XROOTDDIRS := $(MODDIRS)
-XROOTDDIRD := $(MODDIRS)/xrootd
-XROOTDDIRI := $(MODDIRS)/xrootd/src
-XROOTDDIRL := $(MODDIRS)/xrootd/lib
-XROOTDSRCS := $(MODDIRS)/$(XROOTDVERS).src.tgz
-XROOTDETAG := $(MODDIRS)/headers.d
+XROOTDDIRS := $(MODDIRO)
+XROOTDDIRD := $(MODDIRO)/xrootd
+XROOTDDIRI := $(MODDIRO)/xrootd/src
+XROOTDDIRL := $(MODDIRO)/xrootd/lib
+XROOTDSRCSO:= $(MODDIRS)/$(XROOTDVERS).src.tgz
+XROOTDSRCS := $(MODDIRO)/$(XROOTDVERS).src.tgz
+XROOTDETAG := $(MODDIRO)/headers.d
 
 ##### Xrootd config options #####
 ifeq ($(PLATFORM),win32)
@@ -67,7 +69,11 @@ ALLLIBS    += $(XRDPLUGINS)
 ALLEXECS   += $(XRDEXECS)
 
 ##### local rules #####
-$(XROOTDETAG): $(XROOTDSRCS)
+$(XROOTDSRCS): $(XROOTDSRCSO)
+	mkdir -p $(dir $@)
+	cp $< $@
+
+$(XROOTDETAG): $(XROOTDSRCS) 
 		@(if [ -d $(XROOTDDIRD) ]; then \
 		   rm -rf $(XROOTDDIRD); \
 		fi; \

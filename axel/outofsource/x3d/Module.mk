@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := x3d
+MODDIR       := $(SRCDIR)/x3d
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,7 +13,7 @@ X3DDIRI      := $(X3DDIR)/inc
 
 ##### libX3d #####
 X3DL         := $(MODDIRI)/LinkDef.h
-X3DDS        := $(MODDIRS)/G__X3D.cxx
+X3DDS        := $(subst $(SRCDIR)/,,$(MODDIRS))/G__X3D.cxx
 X3DDO        := $(X3DDS:.cxx=.o)
 X3DDH        := $(X3DDS:.cxx=.h)
 
@@ -22,7 +22,7 @@ X3DH2        := $(MODDIRI)/x3d.h
 X3DH         := $(X3DH1) $(X3DH2)
 X3DS1        := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
 X3DS2        := $(wildcard $(MODDIRS)/*.c)
-X3DO         := $(X3DS1:.cxx=.o) $(X3DS2:.c=.o)
+X3DO         := $(subst $(SRCDIR)/,,$(X3DS1:.cxx=.o) $(X3DS2:.c=.o))
 
 X3DDEP       := $(X3DO:.o=.d) $(X3DDO:.o=.d)
 

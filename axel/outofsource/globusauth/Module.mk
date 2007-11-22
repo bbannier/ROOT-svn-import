@@ -4,7 +4,7 @@
 # Author: Fons Rademakers, 18/3/2002 (for krb5auth)
 # Mod by: Gerardo Ganis, 18/1/2003
 
-MODDIR       := globusauth
+MODDIR       := $(SRCDIR)/globusauth
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -15,7 +15,7 @@ GLBSAUTHDIRI := $(GLBSAUTHDIR)/inc
 ##### libGlobusAuth #####
 GLBSAUTHH    := $(wildcard $(MODDIRI)/*.h)
 GLBSAUTHS    := $(wildcard $(MODDIRS)/*.cxx)
-GLBSAUTHO    := $(GLBSAUTHS:.cxx=.o)
+GLBSAUTHO    := $(subst $(SRCDIR)/,,$(GLBSAUTHS:.cxx=.o))
 
 GLBSAUTHDEP  := $(GLBSAUTHO:.o=.d)
 
@@ -23,11 +23,11 @@ GLBSAUTHLIB  := $(LPATH)/libGlobusAuth.$(SOEXT)
 
 ##### experimental patch #####
 GLBPATCHS     :=
-GLBPATCHO     :=
+GLBPATCHO     :=$(subst $(SRCDIR)/,,)
 GLBPATCHDEP   :=
 ifneq ($(GLBPATCHFLAGS),)
 GLBPATCHS     := $(MODDIRS)/globus_gsi_credential.c
-GLBPATCHO     := $(GLBPATCHS:.c=.o)
+GLBPATCHO     := $(subst $(SRCDIR)/,,$(GLBPATCHS:.c=.o))
 GLBPATCHDEP   := $(GLBPATCHO:.o=.d)
 endif
 

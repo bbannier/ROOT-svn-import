@@ -3,7 +3,7 @@
 #
 # Author: Valeriy Onuchin, 24/4/2007
 
-MODDIR       := guihtml
+MODDIR       := $(SRCDIR)/guihtml
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ GUIHTMLDIRI  := $(GUIHTMLDIR)/inc
 
 ##### libGuiHtml #####
 GUIHTMLL     := $(MODDIRI)/LinkDef.h
-GUIHTMLDS    := $(MODDIRS)/G__GuiHtml.cxx
+GUIHTMLDS    := $(subst $(SRCDIR)/,,$(MODDIRS))/G__GuiHtml.cxx
 GUIHTMLDO    := $(GUIHTMLDS:.cxx=.o)
 GUIHTMLDH    := $(GUIHTMLDS:.cxx=.h)
 
 GUIHTMLH     := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 GUIHTMLS     := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-GUIHTMLO     := $(GUIHTMLS:.cxx=.o)
+GUIHTMLO     := $(subst $(SRCDIR)/,,$(GUIHTMLS:.cxx=.o))
 
 GUIHTMLDEP   := $(GUIHTMLO:.o=.d) $(GUIHTMLDO:.o=.d)
 

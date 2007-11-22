@@ -4,7 +4,7 @@
 # Author: Fons Rademakers, 20/6/2005
 
 
-MODDIR       := tmva
+MODDIR       := $(SRCDIR)/tmva
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -14,16 +14,16 @@ TMVADIRI     := $(TMVADIR)/inc
 
 ##### libTMVA #####
 TMVAL        := $(MODDIRI)/LinkDef.h
-TMVADS       := $(MODDIRS)/G__TMVA.cxx
+TMVADS       := $(subst $(SRCDIR)/,,$(MODDIRS))/G__TMVA.cxx
 TMVADO       := $(TMVADS:.cxx=.o)
 TMVADH       := $(TMVADS:.cxx=.h)
 
 TMVAH        := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
-TMVAH_CINT   := $(subst tmva/inc,include/TMVA,$(TMVAH))
+TMVAH_CINT   := $(subst $(MODDIRI),include/TMVA,$(TMVAH))
 TMVAS        := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-TMVAO        := $(TMVAS:.cxx=.o)
+TMVAO        := $(subst $(SRCDIR)/,,$(TMVAS:.cxx=.o))
 
-TMVADEP      := $(TMVAO:.o=.d) $(TMVADO:.o=.d)
+TMVADEP      := $(subst $(SRCDIR)/,,$(TMVAO:.o=.d) $(TMVADO:.o=.d))
 
 TMVALIB      := $(LPATH)/libTMVA.$(SOEXT)
 TMVAMAP      := $(TMVALIB:.$(SOEXT)=.rootmap)

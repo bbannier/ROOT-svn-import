@@ -2,7 +2,7 @@
 #
 # Author: Dan Bradley <dan@hep.wisc.edu>, 16/12/2002
 
-MODDIR       := chirp
+MODDIR       := $(SRCDIR)/chirp
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -12,13 +12,13 @@ CHIRPDIRI   := $(CHIRPDIR)/inc
 
 ##### libChirp #####
 CHIRPL      := $(MODDIRI)/LinkDef.h
-CHIRPDS     := $(MODDIRS)/G__Chirp.cxx
+CHIRPDS     := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Chirp.cxx
 CHIRPDO     := $(CHIRPDS:.cxx=.o)
 CHIRPDH     := $(CHIRPDS:.cxx=.h)
 
 CHIRPH      := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 CHIRPS      := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-CHIRPO      := $(CHIRPS:.cxx=.o)
+CHIRPO      := $(subst $(SRCDIR)/,,$(CHIRPS:.cxx=.o))
 
 CHIRPDEP    := $(CHIRPO:.o=.d) $(CHIRPDO:.o=.d)
 

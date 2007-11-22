@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := eg
+MODDIR       := $(SRCDIR)/eg
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,14 +13,14 @@ EGDIRI       := $(EGDIR)/inc
 
 ##### libEG #####
 EGL          := $(MODDIRI)/LinkDef.h
-EGDS         := $(MODDIRS)/G__EG.cxx
+EGDS         := $(subst $(SRCDIR)/,,$(MODDIRS))/G__EG.cxx
 EGDO         := $(EGDS:.cxx=.o)
 EGDH         := $(EGDS:.cxx=.h)
 
 EGH1         := $(wildcard $(MODDIRI)/T*.h)
 EGH          := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 EGS          := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-EGO          := $(EGS:.cxx=.o)
+EGO          := $(subst $(SRCDIR)/,,$(EGS:.cxx=.o))
 
 EGDEP        := $(EGO:.o=.d) $(EGDO:.o=.d)
 

@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := reflex
+MODDIR       := $(SRCDIR)/reflex
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,7 +13,7 @@ REFLEXDIRI   := $(REFLEXDIR)/inc
 
 ##### libReflex #####
 REFLEXL      := $(MODDIRI)/LinkDef.h
-REFLEXDS     := $(MODDIRS)/G__Reflex.cxx
+REFLEXDS     := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Reflex.cxx
 REFLEXDO     := $(REFLEXDS:.cxx=.o)
 REFLEXDH     := $(REFLEXDS:.cxx=.h)
 
@@ -27,7 +27,7 @@ REFLEXAPIH   := $(filter-out $(MODDIRI)/Reflex/Builder/ReflexBuilder.h,\
 	        $(filter-out $(MODDIRI)/Reflex/DictionaryGenerator.h,\
 		$(REFLEXAH) $(REFLEXBH)))))
 REFLEXS      := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-REFLEXO      := $(REFLEXS:.cxx=.o)
+REFLEXO      := $(subst $(SRCDIR)/,,$(REFLEXS:.cxx=.o))
 
 REFLEXDEP    := $(REFLEXO:.o=.d) $(REFLEXDO:.o=.d)
 

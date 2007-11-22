@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 7/12/2005
 
-MODDIR       := sql
+MODDIR       := $(SRCDIR)/sql
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ SQLDIRI      := $(SQLDIR)/inc
 
 ##### libSQL #####
 SQLL         := $(MODDIRI)/LinkDef.h
-SQLDS        := $(MODDIRS)/G__SQL.cxx
+SQLDS        := $(subst $(SRCDIR)/,,$(MODDIRS))/G__SQL.cxx
 SQLDO        := $(SQLDS:.cxx=.o)
 SQLDH        := $(SQLDS:.cxx=.h)
 
 SQLH         := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 SQLS         := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-SQLO         := $(SQLS:.cxx=.o)
+SQLO         := $(subst $(SRCDIR)/,,$(SQLS:.cxx=.o))
 
 SQLDEP       := $(SQLO:.o=.d) $(SQLDO:.o=.d)
 

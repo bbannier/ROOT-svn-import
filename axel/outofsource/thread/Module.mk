@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := thread
+MODDIR       := $(SRCDIR)/thread
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,7 +13,7 @@ THREADDIRI   := $(THREADDIR)/inc
 
 ##### libThread #####
 THREADL      := $(MODDIRI)/LinkDef.h
-THREADDS     := $(MODDIRS)/G__Thread.cxx
+THREADDS     := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Thread.cxx
 THREADDO     := $(THREADDS:.cxx=.o)
 THREADDH     := $(THREADDS:.cxx=.h)
 
@@ -49,7 +49,7 @@ THREADS      += $(MODDIRS)/TWin32Condition.cxx $(MODDIRS)/TWin32Mutex.cxx \
                 $(MODDIRS)/TWin32Thread.cxx $(MODDIRS)/TWin32ThreadFactory.cxx
 endif
 
-THREADO      := $(THREADS:.cxx=.o)
+THREADO      := $(subst $(SRCDIR)/,,$(THREADS:.cxx=.o))
 
 THREADDEP    := $(THREADO:.o=.d) $(THREADDO:.o=.d)
 

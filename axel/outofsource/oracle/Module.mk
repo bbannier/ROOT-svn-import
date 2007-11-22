@@ -3,7 +3,7 @@
 #
 # Author: Yan Liu, 11/17/2004
 
-MODDIR        := oracle
+MODDIR        := $(SRCDIR)/oracle
 MODDIRS       := $(MODDIR)/src
 MODDIRI       := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ ORACLEDIRI    := $(ORACLEDIR)/inc
 
 ##### libOracle #####
 ORACLEL       := $(MODDIRI)/LinkDef.h
-ORACLEDS      := $(MODDIRS)/G__Oracle.cxx
+ORACLEDS      := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Oracle.cxx
 ORACLEDO      := $(ORACLEDS:.cxx=.o)
 ORACLEDH      := $(ORACLEDS:.cxx=.h)
 
 ORACLEH       := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 ORACLES       := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-ORACLEO       := $(ORACLES:.cxx=.o)
+ORACLEO       := $(subst $(SRCDIR)/,,$(ORACLES:.cxx=.o))
 
 ORACLEDEP     := $(ORACLEO:.o=.d) $(ORACLEDO:.o=.d)
 

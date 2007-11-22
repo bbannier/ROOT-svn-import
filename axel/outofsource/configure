@@ -629,7 +629,7 @@ check_symbol() {
 	    # library!  However, we do not know what compiler to use
 	    # so we can not do the test.  Assume the symbol is in
 	    cat <<EOF > conftest.mk
-include config/Makefile.${arch}
+include ${SRCDIR}/config/Makefile.${arch}
 conftest:conftest.c $symbolfile
 	\$(CC) \$(CFLAGS) \$(LDFLAGS) $symbolfile \$< -o \$@
 
@@ -742,55 +742,72 @@ guess_architecture () {
 
 ###################################################################
 #
+### echo %%% Determine whether we build out of source
+#
+SRCDIR=.
+CONFDIR=`dirname ${0}`
+CONFDIR=`cd ${CONFDIR}; pwd`
+if test "${CONFDIR}" != "`pwd`"; then
+    SRCDIR=`dirname ${0}`
+    mkdir config
+    mkdir etc
+    mkdir etc/daemons
+    mkdir build
+    mkdir build/misc
+    mkdir macros
+fi
+
+###################################################################
+#
 ### echo %%% Some skeleton and config files
 #
-ARCHS=config/ARCHS
-MAKEIN=config/Makefile.in
+ARCHS=${SRCDIR}/config/ARCHS
+MAKEIN=${SRCDIR}/config/Makefile.in
 MAKEOUT=config/Makefile.config
-CONFIGUREIN=config/RConfigure.in
+CONFIGUREIN=${SRCDIR}/config/RConfigure.in
 CONFIGUREOUT=include/RConfigure.h
-RCONFIN=config/root-config.in
+RCONFIN=${SRCDIR}/config/root-config.in
 RCONFOUT=bin/root-config
-ROOTRCIN=config/rootrc.in
+ROOTRCIN=${SRCDIR}/config/rootrc.in
 ROOTRCOUT=etc/system.rootrc
-ROOTAUTHRCIN=config/rootauthrc.in
+ROOTAUTHRCIN=${SRCDIR}/config/rootauthrc.in
 ROOTAUTHRCOUT=etc/system.rootauthrc
-ROOTDAEMONRCIN=config/rootdaemonrc.in
+ROOTDAEMONRCIN=${SRCDIR}/config/rootdaemonrc.in
 ROOTDAEMONRCOUT=etc/system.rootdaemonrc
-MEMPROBEIN=config/memprobe.in
+MEMPROBEIN=${SRCDIR}/config/memprobe.in
 MEMPROBEOUT=bin/memprobe
-MIMEUNIXIN=config/mimes.unix.in
-MIMEWIN32IN=config/mimes.win32.in
+MIMEUNIXIN=${SRCDIR}/config/mimes.unix.in
+MIMEWIN32IN=${SRCDIR}/config/mimes.win32.in
 MIMEOUT=etc/root.mimes
-ROOTDIN=config/rootd.in
+ROOTDIN=${SRCDIR}/config/rootd.in
 ROOTDOUT=etc/daemons/rootd.rc.d
-ROOTDXINETDIN=config/rootd.xinetd.in
+ROOTDXINETDIN=${SRCDIR}/config/rootd.xinetd.in
 ROOTDXINETDOUT=etc/daemons/rootd.xinetd
-PROOFDIN=config/proofd.in
+PROOFDIN=${SRCDIR}/config/proofd.in
 PROOFDOUT=etc/daemons/proofd.rc.d
-PROOFDXINETDIN=config/proofd.xinetd.in
+PROOFDXINETDIN=${SRCDIR}/config/proofd.xinetd.in
 PROOFDXINETDOUT=etc/daemons/proofd.xinetd
-XROOTDIN=config/xrootd.in
+XROOTDIN=${SRCDIR}/config/xrootd.in
 XROOTDOUT=etc/daemons/xrootd.rc.d
-OLBDIN=config/olbd.in
+OLBDIN=${SRCDIR}/config/olbd.in
 OLBDOUT=etc/daemons/olbd.rc.d
-ROOTHELPIN=config/root-help.el.in
+ROOTHELPIN=${SRCDIR}/config/root-help.el.in
 ROOTHELPOUT=build/misc/root-help.el
-HTMLIN=config/html.C.in
+HTMLIN=${SRCDIR}/config/html.C.in
 HTMLOUT=macros/html.C
-THISROOTSHIN=config/thisroot.sh
+THISROOTSHIN=${SRCDIR}/config/thisroot.sh
 THISROOTSHOUT=bin/thisroot.sh
-THISROOTCSHIN=config/thisroot.csh
+THISROOTCSHIN=${SRCDIR}/config/thisroot.csh
 THISROOTCSHOUT=bin/thisroot.csh
-THISROOTBATIN=config/thisroot.bat
+THISROOTBATIN=${SRCDIR}/config/thisroot.bat
 THISROOTBATOUT=bin/thisroot.bat
-GENREFLEXSHIN=config/genreflex.in
+GENREFLEXSHIN=${SRCDIR}/config/genreflex.in
 GENREFLEXSHOUT=bin/genreflex
-GENREFLEXBATIN=config/genreflex.bat.in
+GENREFLEXBATIN=${SRCDIR}/config/genreflex.bat.in
 GENREFLEXBATOUT=bin/genreflex.bat
-GENREFLEXROOTCINTSHIN=config/genreflex-rootcint.in
+GENREFLEXROOTCINTSHIN=${SRCDIR}/config/genreflex-rootcint.in
 GENREFLEXROOTCINTSHOUT=bin/genreflex-rootcint
-GENREFLEXROOTCINTBATIN=config/genreflex-rootcint.bat.in
+GENREFLEXROOTCINTBATIN=${SRCDIR}/config/genreflex-rootcint.bat.in
 GENREFLEXROOTCINTBATOUT=bin/genreflex-rootcint.bat
 
 ######################################################################
@@ -1029,7 +1046,7 @@ else
    exit 1
 fi
 
-platform=`grep "^PLATFORM *=" config/Makefile.$arch | awk '{ print $3 }'`
+platform=`grep "^PLATFORM *=" ${SRCDIR}/config/Makefile.$arch | awk '{ print $3 }'`
 
 case $arch in
 sgicc)
@@ -4417,6 +4434,7 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@enable_pch@|$enable_pch|"            \
     -e "s|@buildtable@|$enable_table|"          \
     -e "s|@enable_thread@|$enable_thread|"      \
+    -e "s|@srcdir@|$SRCDIR|"                    \
     -e "s|@etcdir@|$etcdir|"                    \
     -e "s|@exceptions@|$enable_exceptions|"     \
     -e "s|@explicitlink@|$enable_explicitlink|" \
@@ -4904,6 +4922,10 @@ result done
 #---------------------------------------------------------------------
 # for reconfigure
 #
+if test "${SRCDIR}" != "."; then
+    cp ${SRCDIR}/Makefile .
+    cp -Rf ${SRCDIR}/etc .
+fi
 touch Makefile
 
 ######################################################################

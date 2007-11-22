@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := mathmore
+MODDIR       := $(SRCDIR)/mathmore
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -23,7 +23,7 @@ MATHMORELINC := $(MODDIRI)/Math/LinkDef_SpecFunc.h \
 		$(MODDIRI)/Math/LinkDef_StatFunc.h \
 		$(MODDIRI)/Math/LinkDef_RootFinding.h 
 
-MATHMOREDS   := $(MODDIRS)/G__MathMore.cxx
+MATHMOREDS   := $(subst $(SRCDIR)/,,$(MODDIRS))/G__MathMore.cxx
 MATHMOREDO   := $(MATHMOREDS:.cxx=.o)
 MATHMOREDH   := $(MATHMOREDS:.cxx=.h)
 MATHMOREDH1  := $(MODDIRI)/Math/DistFuncMathMore.h \
@@ -50,7 +50,7 @@ MATHMOREDH1  := $(MODDIRI)/Math/DistFuncMathMore.h \
 
 MATHMOREH    := $(filter-out $(MODDIRI)/Math/LinkDef%,$(wildcard $(MODDIRI)/Math/*.h))
 MATHMORES    := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-MATHMOREO    := $(MATHMORES:.cxx=.o)
+MATHMOREO    := $(subst $(SRCDIR)/,,$(MATHMORES:.cxx=.o))
 
 MATHMOREDEP  := $(MATHMOREO:.o=.d) $(MATHMOREDO:.o=.d)
 

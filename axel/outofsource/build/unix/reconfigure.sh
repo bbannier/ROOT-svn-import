@@ -18,12 +18,16 @@ if [ "x$1" != "x" ]; then
   what=" because $1 has changed"
 fi
 
+shift
+
+SRCDIR=$1
+
 echo ""
 echo "Trying to reconfigure${what}."
 echo "Using config statement:"
 echo "./configure $confline"
 echo ""
-./configure $confline --nohowto || exit 1
+${SRCDIR}/./configure $confline --nohowto || exit 1
 echo "Reconfigure successful."
 echo "If the build fails, please run ./configure again."
 echo ""

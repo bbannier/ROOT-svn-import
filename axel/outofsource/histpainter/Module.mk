@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := histpainter
+MODDIR       := $(SRCDIR)/histpainter
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,14 +13,14 @@ HISTPAINTERDIRI := $(HISTPAINTERDIR)/inc
 
 ##### libHistPainter #####
 HISTPAINTERL  := $(MODDIRI)/LinkDef.h
-HISTPAINTERDS := $(MODDIRS)/G__HistPainter.cxx
+HISTPAINTERDS := $(subst $(SRCDIR)/,,$(MODDIRS))/G__HistPainter.cxx
 HISTPAINTERDO := $(HISTPAINTERDS:.cxx=.o)
 HISTPAINTERDH := $(HISTPAINTERDS:.cxx=.h)
 
 HISTPAINTERH1 := $(wildcard $(MODDIRI)/T*.h)
 HISTPAINTERH  := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 HISTPAINTERS  := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-HISTPAINTERO  := $(HISTPAINTERS:.cxx=.o)
+HISTPAINTERO  := $(subst $(SRCDIR)/,,$(HISTPAINTERS:.cxx=.o))
 
 HISTPAINTERDEP := $(HISTPAINTERO:.o=.d) $(HISTPAINTERDO:.o=.d)
 

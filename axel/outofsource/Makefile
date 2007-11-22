@@ -30,15 +30,15 @@ ORDER_ := $(shell test $(MAKE_VERSION_MAJOR) -gt 3 || \
 ##### don't include this file since it may screw up things #####
 
 ifeq ($(findstring $(MAKECMDGOALS), maintainer-clean debian redhat),)
-include config/Makefile.$(ARCH)
+include $(SRCDIR)/config/Makefile.$(ARCH)
 endif
 ifeq ($(MAKECMDGOALS),clean)
-include config/Makefile.$(ARCH)
+include $(SRCDIR)/config/Makefile.$(ARCH)
 endif
 
 ##### Include library dependencies for explicit linking #####
 
-MAKEFILEDEP = config/Makefile.depend
+MAKEFILEDEP = $(SRCDIR)/config/Makefile.depend
 include $(MAKEFILEDEP)
 
 ##### Allow local macros #####
@@ -319,7 +319,7 @@ ifeq ($(GCC_MAJOR),4)
 PCHSUPPORTED  := $(ENABLEPCH)
 endif
 ifeq ($(PCHSUPPORTED),yes)
-PCHFILE        = include/precompile.h.gch
+PCHFILE        = $(SRCDIR)/include/precompile.h.gch
 PCHCXXFLAGS    = -DUSEPCH -include precompile.h
 PCHEXTRAOBJBUILD = $(CXX) $(CXXFLAGS) -DUSEPCH $(OPT) -x c++-header \
                    -c include/precompile.h $(CXXOUT)$(PCHFILE) \
@@ -355,28 +355,31 @@ endif
 ##### Store SVN revision number #####
 
 ifeq ($(shell which svn 2>&1 | sed -ne "s@.*/svn@svn@p"),svn)
-SVNREV  := $(shell build/unix/svninfo.sh)
+SVNREV  := $(shell $(SRCDIR)/build/unix/svninfo.sh)
 endif
 
 ##### Utilities #####
 
-ROOTCINTTMP   = $(ROOTCINTTMPEXE) $(addprefix -,$(ROOTDICTTYPE))
+ROOTCINTTMP   = mkdir -p $(dir $@); $(ROOTCINTTMPEXE) $(addprefix -,$(ROOTDICTTYPE))
 MAKEDEP       = $(RMKDEP)
-MAKELIB       = build/unix/makelib.sh $(MKLIBOPTIONS)
-MAKEDIST      = build/unix/makedist.sh
-MAKEDISTSRC   = build/unix/makedistsrc.sh
-MAKEVERSION   = build/unix/makeversion.sh
-IMPORTCINT    = build/unix/importcint.sh
-MAKECOMPDATA  = build/unix/compiledata.sh
-MAKECHANGELOG = build/unix/makechangelog.sh
-MAKEHTML      = build/unix/makehtml.sh
-MAKELOGHTML   = build/unix/makeloghtml.sh
-MAKECINTDLL   = build/unix/makecintdll.sh
-MAKESTATIC    = build/unix/makestatic.sh
-RECONFIGURE   = build/unix/reconfigure.sh
+ifneq ($(SRCDIR),)
+  MAKEDIR     = mkdir -p $(dir $@)
+endif
+MAKELIB       = $(SRCDIR)/build/unix/makelib.sh $(MKLIBOPTIONS)
+MAKEDIST      = $(SRCDIR)/build/unix/makedist.sh
+MAKEDISTSRC   = $(SRCDIR)/build/unix/makedistsrc.sh
+MAKEVERSION   = $(SRCDIR)/build/unix/makeversion.sh
+IMPORTCINT    = $(SRCDIR)/build/unix/importcint.sh
+MAKECOMPDATA  = $(SRCDIR)/build/unix/compiledata.sh
+MAKECHANGELOG = $(SRCDIR)/build/unix/makechangelog.sh
+MAKEHTML      = $(SRCDIR)/build/unix/makehtml.sh
+MAKELOGHTML   = $(SRCDIR)/build/unix/makeloghtml.sh
+MAKECINTDLL   = $(SRCDIR)/build/unix/makecintdll.sh
+MAKESTATIC    = $(SRCDIR)/build/unix/makestatic.sh
+RECONFIGURE   = $(SRCDIR)/build/unix/reconfigure.sh
 ifeq ($(PLATFORM),win32)
-MAKELIB       = build/win/makelib.sh
-MAKECOMPDATA  = build/win/compiledata.sh
+MAKELIB       = $(SRCDIR)/build/win/makelib.sh
+MAKECOMPDATA  = $(SRCDIR)/build/win/compiledata.sh
 endif
 
 ##### Compiler directives and run-control file #####
@@ -414,7 +417,7 @@ endif
 ##### pre-compiled header support #####
 
 ifeq ($(PCHSUPPORTED),yes)
-include config/Makefile.precomp
+include $(SRCDIR)/config/Makefile.precomp
 endif
 
 ##### all #####
@@ -432,48 +435,104 @@ INCLUDEFILES :=
 
 # special rules (need to be defined before generic ones)
 G__%.o: G__%.cxx
+	$(MAKEDIR)
 	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
 	   $(CXXFLAGS) -D__cplusplus -I$(CINTDIR)/lib/prec_stl \
 	   -I$(CINTDIR)/stl -- $<
 	$(CXX) $(NOOPT) $(CXXFLAGS) -I. $(CXXOUT)$@ -c $<
+# ifeq (nope,)
+# ./%.o: $(SRCDIR)/%.cxx
+# 	$(MAKEDEP) -R -f$*.d -Y -w 1000 -- $(CXXFLAGS) -D__cplusplus -- $<
+# 	$(CXX) $(OPT) $(CXXFLAGS) $(PCHCXXFLAGS) $(CXXOUT)$@ -c $<
+# %_tmp.o: %_tmp.cxx
+# 	$(MAKEDEP) -R -f$*.d -Y -w 1000 -- $(CXXFLAGS) -D__cplusplus -- $<
+# 	$(CXX) $(OPT) $(CXXFLAGS) $(PCHCXXFLAGS) $(CXXOUT)$@ -c $<
+# ./%_tmp.cxx: $(SRCDIR)/%_tmp.cxx
+# 	$(CP) $< $@ 
+# ./%.o: $(SRCDIR)/%.c
+# 	$(MAKEDEP) -R -f$*.d -Y -w 1000 -- $(CFLAGS) -- $<
+# 	$(CC) $(OPT) $(CFLAGS) $(CXXOUT)$@ -c $<
+# ./%.o: $(SRCDIR)/%.f
+# 	@mkdir $(notdir $@)
+# ifeq ($(F77),f2c)
+# 	f2c -a -A $<
+# 	$(CC) $(F77OPT) $(CFLAGS) $(CXXOUT)$@ -c $*.c
+# else
+# 	$(F77) $(F77OPT) $(F77FLAGS) $(CXXOUT)$@ -c $<
+# endif
+# endif
 
-cint/%.o: cint/%.cxx
-	$(MAKEDEP) -R -fcint/$*.d -Y -w 1000 -- $(CINTCXXFLAGS) -D__cplusplus -- $<
-	$(CXX) $(OPT) $(CINTCXXFLAGS) $(CXXOUT)$@ -c $<
+# ifeq (nope,)
+# cint/src/%.o: $(SRCDIR)/cint/src/%.cxx
+# 	$(MAKEDEP) -R -fcint/$*.d -Y -w 1000 -- $(CINTCXXFLAGS) -D__cplusplus -- $<
+# 	$(CXX) $(OPT) $(CINTCXXFLAGS) $(CXXOUT)$@ -c $<
 
-cint/%.o: cint/%.c
-	$(MAKEDEP) -R -fcint/$*.d -Y -w 1000 -- $(CINTCFLAGS) -- $<
-	$(CC) $(OPT) $(CINTCFLAGS) $(CXXOUT)$@ -c $<
+# cint/src/%.o: $(SRCDIR)/cint/src/%.c
+# 	$(MAKEDEP) -R -fcint/$*.d -Y -w 1000 -- $(CINTCFLAGS) -- $<
+# 	$(CC) $(OPT) $(CINTCFLAGS) $(CXXOUT)$@ -c $<
 
-cint7/%.o: cint7/%.cxx
-	$(MAKEDEP) -R -fcint7/$*.d -Y -w 1000 -- $(CINT7CXXFLAGS) -D__cplusplus -- $<
-	$(CXX) $(OPT) $(CINT7CXXFLAGS) $(CXXOUT)$@ -c $<
+# cint/main/%.o: $(SRCDIR)/cint/main/%.cxx
+# 	$(MAKEDEP) -R -fcint/$*.d -Y -w 1000 -- $(CINTCXXFLAGS) -D__cplusplus -- $<
+# 	$(CXX) $(OPT) $(CINTCXXFLAGS) $(CXXOUT)$@ -c $<
 
-cint7/%.o: cint7/%.c
-	$(MAKEDEP) -R -fcint7/$*.d -Y -w 1000 -- $(CINT7CFLAGS) -- $<
-	$(CC) $(OPT) $(CINT7CFLAGS) $(CXXOUT)$@ -c $<
+# cint/main/%.o: $(SRCDIR)/cint/main/%.c
+# 	$(MAKEDEP) -R -fcint/$*.d -Y -w 1000 -- $(CINTCFLAGS) -- $<
+# 	$(CC) $(OPT) $(CINTCXXFLAGS) $(CXXOUT)$@ -c $<
 
-build/%.o: build/%.cxx
-	$(CXX) $(OPT) $(CXXFLAGS) $(CXXOUT)$@ -c $<
+# cint7/src/%.o: $(SRCDIR)/cint7/src/%.cxx
+# 	$(MAKEDEP) -R -fcint7/$*.d -Y -w 1000 -- $(CINT7CXXFLAGS) -D__cplusplus -- $<
+# 	$(CXX) $(OPT) $(CINT7CXXFLAGS) $(CXXOUT)$@ -c $<
 
-build/%.o: build/%.c
-	$(CC) $(OPT) $(CFLAGS) $(CXXOUT)$@ -c $<
+# cint7/src/%.o: $(SRCDIR)/cint7/src/%.c
+# 	$(MAKEDEP) -R -fcint7/$*.d -Y -w 1000 -- $(CINT7CFLAGS) -- $<
+# 	$(CC) $(OPT) $(CINT7CFLAGS) $(CXXOUT)$@ -c $<
 
-%.o: %.cxx
-	$(MAKEDEP) -R -f$*.d -Y -w 1000 -- $(CXXFLAGS) -D__cplusplus -- $<
-	$(CXX) $(OPT) $(CXXFLAGS) $(PCHCXXFLAGS) $(CXXOUT)$@ -c $<
+# cint7/main/%.o: $(SRCDIR)/cint7/main/%.cxx
+# 	$(MAKEDEP) -R -fcint/$*.d -Y -w 1000 -- $(CINTCXXFLAGS) -D__cplusplus -- $<
+# 	$(CXX) $(OPT) $(CINTCXXFLAGS) $(CXXOUT)$@ -c $<
 
-%.o: %.c
-	$(MAKEDEP) -R -f$*.d -Y -w 1000 -- $(CFLAGS) -- $<
-	$(CC) $(OPT) $(CFLAGS) $(CXXOUT)$@ -c $<
+# cint7/main/%.o: $(SRCDIR)/cint7/main/%.c
+# 	$(MAKEDEP) -R -fcint/$*.d -Y -w 1000 -- $(CINTCFLAGS) -- $<
+# 	$(CC) $(OPT) $(CINTCXXFLAGS) $(CXXOUT)$@ -c $<
 
-%.o: %.f
+# build/%.o: $(SRCDIR)/build/%.cxx
+# 	$(CXX) $(OPT) $(CXXFLAGS) $(CXXOUT)$@ -c $<
+
+# build/%.o: $(SRCDIR)/build/%.c
+# 	$(CC) $(OPT) $(CFLAGS) $(CXXOUT)$@ -c $<
+# endif
+
+define SRCTOOBJ_template
+$(1)/%.o: $(SRCDIR)/$(1)/%.cxx
+	$$(MAKEDIR)
+ifneq ($$(MAKEDEP),)
+	$$(MAKEDEP) -R -f$$(@:.o=.d) -Y -w 1000 -- $$(CXXFLAGS) -D__cplusplus -- $$<
+endif
+	$$(CXX) $$(OPT) $$(CXXFLAGS) $$(PCHCXXFLAGS) $$(CXXOUT)$$@ -c $$<
+$(1)/%_tmp.o: $(1)/%_tmp.cxx
+	$$(MAKEDIR)
+ifneq ($$(MAKEDEP),)
+	$$(MAKEDEP) -R -f$$(@:.o=.d) -Y -w 1000 -- $$(CXXFLAGS) -D__cplusplus -- $$<
+endif
+	$$(CXX) $$(OPT) $$(CXXFLAGS) $$(PCHCXXFLAGS) $$(CXXOUT)$$@ -c $$<
+$(1)/%.o: $(SRCDIR)/$(1)/%.c
+	$$(MAKEDIR)
+ifneq ($$(MAKEDEP),)
+	$$(MAKEDEP) -R -f$$(@:.o=.d) -Y -w 1000 -- $$(CFLAGS) -- $$<
+endif
+	$$(CC) $$(OPT) $$(CFLAGS) $$(CXXOUT)$$@ -c $$<
+$(1)/%.o: $(SRCDIR)/$(1)/%.f
+	$$(MAKEDIR)
 ifeq ($(F77),f2c)
 	f2c -a -A $<
-	$(CC) $(F77OPT) $(CFLAGS) $(CXXOUT)$@ -c $*.c
+	$$(CC) $$(F77OPT) $$(CFLAGS) $$(CXXOUT)$$@ -c $$*.c
 else
-	$(F77) $(F77OPT) $(F77FLAGS) $(CXXOUT)$@ -c $<
+	$$(F77) $$(F77OPT) $$(F77FLAGS) $$(CXXOUT)$$@ -c $$<
 endif
+endef
+
+MODULESGENERIC := build $(filter-out build,$(MODULES))
+$(foreach module,$(MODULESGENERIC),$(eval $(call SRCTOOBJ_template,$(module))))
 
 ##### TARGETS #####
 .PHONY:         all fast config rootcint rootlibs rootexecs dist distsrc \
@@ -496,8 +555,8 @@ fast:           rootexecs
 skip:
 		@true;
 
-include $(patsubst %,%/Module.mk,$(MODULES))
-include cint/cintdlls.mk
+include $(addprefix $(SRCDIR)/,$(patsubst %,%/Module.mk,$(MODULES)))
+include $(SRCDIR)/cint/cintdlls.mk
 
 -include MyRules.mk            # allow local rules
 
@@ -510,7 +569,7 @@ ifeq ($(findstring skip,$(MAKECMDGOALS))$(findstring fast,$(MAKECMDGOALS)),)
 endif
 ifeq ($(PCHSUPPORTED),yes)
 INCLUDEPCHRULES = yes
-include config/Makefile.precomp
+include $(SRCDIR)/config/Makefile.precomp
 endif
 -include build/dummy.d          # must be last include
 endif
@@ -546,16 +605,16 @@ config/Makefile.config include/RConfigure.h etc/system.rootauthrc \
   etc/system.rootdaemonrc etc/root.mimes $(ROOTRC) bin/root-config: Makefile
 
 ifeq ($(findstring $(MAKECMDGOALS),distclean maintainer-clean debian redhat),)
-Makefile: configure config/rootrc.in config/RConfigure.in config/Makefile.in \
+Makefile: $(addprefix $(SRCDIR)/,configure config/rootrc.in config/RConfigure.in config/Makefile.in \
   config/root-config.in config/rootauthrc.in config/rootdaemonrc.in \
-  config/mimes.unix.in config/mimes.win32.in config.status
+  config/mimes.unix.in config/mimes.win32.in) config.status
 	@(if [ ! -x $(RECONFIGURE) ] || ! $(RECONFIGURE) "$?"; then \
 	   echo ""; echo "Please, run ./configure again as config option files ($?) have changed."; \
 	   echo ""; exit 1; \
 	 fi)
 endif
 
-$(COMPILEDATA): config/Makefile.$(ARCH) $(MAKECOMPDATA)
+$(COMPILEDATA): $(SRCDIR)/config/Makefile.$(ARCH) $(MAKECOMPDATA)
 	@$(MAKECOMPDATA) $(COMPILEDATA) "$(CXX)" "$(OPTFLAGS)" "$(DEBUGFLAGS)" \
 	   "$(CXXFLAGS)" "$(SOFLAGS)" "$(LDFLAGS)" "$(SOEXT)" "$(SYSLIBS)" \
 	   "$(LIBDIR)" "$(BOOTLIBS)" "$(RINTLIBS)" "$(INCDIR)" \

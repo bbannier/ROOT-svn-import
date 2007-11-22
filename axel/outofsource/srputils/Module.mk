@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := srputils
+MODDIR       := $(SRCDIR)/srputils
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -14,7 +14,7 @@ SRPUTILSDIRI := $(SRPUTILSDIR)/inc
 ##### libSRPAuth #####
 SRPUTILSH    := $(wildcard $(MODDIRI)/*.h)
 SRPUTILSS    := $(wildcard $(MODDIRS)/*.cxx)
-SRPUTILSO    := $(SRPUTILSS:.cxx=.o)
+SRPUTILSO    := $(subst $(SRCDIR)/,,$(SRPUTILSS:.cxx=.o))
 
 SRPUTILSDEP  := $(SRPUTILSO:.o=.d)
 
@@ -28,7 +28,7 @@ RPASSWD      := bin/rpasswd
 
 ##### rtconf #####
 RTCONFS      := $(MODDIRS)/rtconf.c
-RTCONFO      := $(RTCONFS:.c=.o)
+RTCONFO      := $(subst $(SRCDIR)/,,$(RTCONFS:.c=.o))
 RTCONFDEP    := $(RTCONFO:.o=.d)
 RTCONF       := bin/rtconf
 

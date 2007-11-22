@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := rint
+MODDIR       := $(SRCDIR)/rint
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ RINTDIRI     := $(RINTDIR)/inc
 
 ##### libRint #####
 RINTL        := $(MODDIRI)/LinkDef.h
-RINTDS       := $(MODDIRS)/G__Rint.cxx
+RINTDS       := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Rint.cxx
 RINTDO       := $(RINTDS:.cxx=.o)
 RINTDH       := $(RINTDS:.cxx=.h)
 
 RINTH        := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 RINTS        := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-RINTO        := $(RINTS:.cxx=.o)
+RINTO        := $(subst $(SRCDIR)/,,$(RINTS:.cxx=.o))
 
 RINTDEP      := $(RINTO:.o=.d) $(RINTDO:.o=.d)
 

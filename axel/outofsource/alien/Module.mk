@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 12/5/2002
 
-MODDIR       := alien
+MODDIR       := $(SRCDIR)/alien
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ ALIENDIRI    := $(ALIENDIR)/inc
 
 ##### libRAliEn #####
 ALIENL       := $(MODDIRI)/LinkDef.h
-ALIENDS      := $(MODDIRS)/G__Alien.cxx
+ALIENDS      := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Alien.cxx
 ALIENDO      := $(ALIENDS:.cxx=.o)
 ALIENDH      := $(ALIENDS:.cxx=.h)
 
 ALIENH       := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 ALIENS       := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-ALIENO       := $(ALIENS:.cxx=.o)
+ALIENO       := $(subst $(SRCDIR)/,,$(ALIENS:.cxx=.o))
 
 ALIENDEP     := $(ALIENO:.o=.d) $(ALIENDO:.o=.d)
 

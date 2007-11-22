@@ -3,20 +3,22 @@
 #
 # Author: Fons Rademakers, 8/8/2002
 
-MODDIR       := asimage
+MODDIR       := $(SRCDIR)/asimage
 MODDIRS      := $(MODDIR)/src
+MODDIRO      := asimage/src
 MODDIRI      := $(MODDIR)/inc
 
 ASIMAGEDIR   := $(MODDIR)
 ASIMAGEDIRS  := $(ASIMAGEDIR)/src
+ASIMAGEDIRO  := $(MODDIRO)
 ASIMAGEDIRI  := $(ASIMAGEDIR)/inc
 
 ASTEPVERS    := libAfterImage
 ASTEPSRCS    := $(MODDIRS)/$(ASTEPVERS).tar.gz
 ifeq ($(BUILTINASIMAGE),yes)
-ASTEPDIRS    := $(MODDIRS)/$(ASTEPVERS)
-ASTEPDIRI    := -I$(MODDIRS)/$(ASTEPVERS)
-ASTEPETAG    := $(MODDIRS)/headers.d
+ASTEPDIRS    := $(MODDIRO)/$(ASTEPVERS)
+ASTEPDIRI    := -I$(MODDIRO)/$(ASTEPVERS)
+ASTEPETAG    := $(MODDIRO)/headers.d
 else
 ASTEPDIRS    :=
 ASTEPDIRI    := $(ASINCDIR:%=-I%)
@@ -53,13 +55,13 @@ endif
 
 ##### libASImage #####
 ASIMAGEL     := $(MODDIRI)/LinkDef.h
-ASIMAGEDS    := $(MODDIRS)/G__ASImage.cxx
+ASIMAGEDS    := $(MODDIRO)/G__ASImage.cxx
 ASIMAGEDO    := $(ASIMAGEDS:.cxx=.o)
 ASIMAGEDH    := $(ASIMAGEDS:.cxx=.h)
 
 ASIMAGEH     := $(MODDIRI)/TASImage.h $(MODDIRI)/TASImagePlugin.h
 ASIMAGES     := $(MODDIRS)/TASImage.cxx
-ASIMAGEO     := $(ASIMAGES:.cxx=.o)
+ASIMAGEO     := $(subst $(SRCDIR)/,,$(ASIMAGES:.cxx=.o))
 
 ASIMAGEDEP   := $(ASIMAGEO:.o=.d) $(ASIMAGEDO:.o=.d)
 
@@ -68,13 +70,13 @@ ASIMAGEMAP   := $(ASIMAGELIB:.$(SOEXT)=.rootmap)
 
 ##### libASImageGui #####
 ASIMAGEGUIL  := $(MODDIRI)/LinkDefGui.h
-ASIMAGEGUIDS := $(MODDIRS)/G__ASImageGui.cxx
+ASIMAGEGUIDS := $(MODDIRO)/G__ASImageGui.cxx
 ASIMAGEGUIDO := $(ASIMAGEGUIDS:.cxx=.o)
 ASIMAGEGUIDH := $(ASIMAGEGUIDS:.cxx=.h)
 
 ASIMAGEGUIH  := $(MODDIRI)/TASPaletteEditor.h
 ASIMAGEGUIS  := $(MODDIRS)/TASPaletteEditor.cxx
-ASIMAGEGUIO  := $(ASIMAGEGUIS:.cxx=.o)
+ASIMAGEGUIO  := $(subst $(SRCDIR)/,,$(ASIMAGEGUIS:.cxx=.o))
 
 ASIMAGEGUIDEP := $(ASIMAGEGUIO:.o=.d) $(ASIMAGEGUIDO:.o=.d)
 
@@ -89,7 +91,7 @@ ASIMAGEGSDH := $(ASIMAGEGSDS:.cxx=.h)
 
 ASIMAGEGSH  := $(MODDIRI)/TASPluginGS.h
 ASIMAGEGSS  := $(MODDIRS)/TASPluginGS.cxx
-ASIMAGEGSO  := $(ASIMAGEGSS:.cxx=.o)
+ASIMAGEGSO  := $(subst $(SRCDIR)/,,$(ASIMAGEGSS:.cxx=.o))
 
 ASIMAGEGSDEP := $(ASIMAGEGSO:.o=.d) $(ASIMAGEGSDO:.o=.d)
 
@@ -122,11 +124,11 @@ $(ASTEPETAG):   $(ASTEPSRCS)
 		   rm -rf $(ASTEPDIRS); \
 		fi; \
 		echo "*** Extracting libAfterimage source ..."; \
-		cd $(ASIMAGEDIRS); \
-		if [ ! -d $(ASTEPVERS) ]; then \
-		   gunzip -c $(ASTEPVERS).tar.gz | tar xf -; \
+		\
+		if [ ! -d $(ASIMAGEDIRO)/$(ASTEPVERS) ]; then \
+		   gunzip -c $(ASIMAGEDIRS)/$(ASTEPVERS).tar.gz | ( cd $(ASIMAGEDIRO); tar xf - ); \
 		   etag=`basename $(ASTEPETAG)` ; \
-		   touch $$etag ; \
+		   touch $(ASIMAGEDIRO)/$$etag ; \
 		fi)
 
 $(ASTEPLIBA):   $(ASTEPETAG)
@@ -285,7 +287,7 @@ distclean-asimage: clean-asimage
 		   $(ASIMAGEGSLIB) $(ASIMAGEGSMAP)
 ifeq ($(BUILTINASIMAGE),yes)
 		@rm -f $(ASTEPLIB) $(ASTEPETAG)
-		@rm -rf $(ASIMAGEDIRS)/$(ASTEPVERS)
+		@rm -rf $(ASIMAGEDIRO)/$(ASTEPVERS)
 endif
 
 distclean::     distclean-asimage

@@ -3,7 +3,7 @@
 #
 # Authors: Linev Sergey, Rene Brun 10/05/2004
 
-MODDIR       := xml
+MODDIR       := $(SRCDIR)/xml
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ XMLDIRI      := $(XMLDIR)/inc
 
 ##### libXMLIO #####
 XMLL         := $(MODDIRI)/LinkDef.h
-XMLDS        := $(MODDIRS)/G__XML.cxx
+XMLDS        := $(subst $(SRCDIR)/,,$(MODDIRS))/G__XML.cxx
 XMLDO        := $(XMLDS:.cxx=.o)
 XMLDH        := $(XMLDS:.cxx=.h)
 
 XMLH         := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 XMLS         := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-XMLO         := $(XMLS:.cxx=.o)
+XMLO         := $(subst $(SRCDIR)/,,$(XMLS:.cxx=.o))
 
 XMLDEP       := $(XMLO:.o=.d) $(XMLDO:.o=.d)
 

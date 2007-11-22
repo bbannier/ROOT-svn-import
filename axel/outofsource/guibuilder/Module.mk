@@ -3,7 +3,7 @@
 #
 # Author: Valeriy Onuchin, 19/8/2004
 
-MODDIR       := guibuilder
+MODDIR       := $(SRCDIR)/guibuilder
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ GUIBLDDIRI   := $(GUIBLDDIR)/inc
 
 ##### libGuiBld #####
 GUIBLDL      := $(MODDIRI)/LinkDef.h
-GUIBLDDS     := $(MODDIRS)/G__GuiBld.cxx
+GUIBLDDS     := $(subst $(SRCDIR)/,,$(MODDIRS))/G__GuiBld.cxx
 GUIBLDDO     := $(GUIBLDDS:.cxx=.o)
 GUIBLDDH     := $(GUIBLDDS:.cxx=.h)
 
 GUIBLDH      := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 GUIBLDS      := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-GUIBLDO      := $(GUIBLDS:.cxx=.o)
+GUIBLDO      := $(subst $(SRCDIR)/,,$(GUIBLDS:.cxx=.o))
 
 GUIBLDDEP    := $(GUIBLDO:.o=.d) $(GUIBLDDO:.o=.d)
 

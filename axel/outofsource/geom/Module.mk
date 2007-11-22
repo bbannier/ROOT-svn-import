@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := geom
+MODDIR       := $(SRCDIR)/geom
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -14,8 +14,8 @@ GEOMDIRI     := $(GEOMDIR)/inc
 ##### libGeom #####
 GEOML1       := $(MODDIRI)/LinkDef1.h
 GEOML2       := $(MODDIRI)/LinkDef2.h
-GEOMDS1      := $(MODDIRS)/G__Geom1.cxx
-GEOMDS2      := $(MODDIRS)/G__Geom2.cxx
+GEOMDS1      := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Geom1.cxx
+GEOMDS2      := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Geom2.cxx
 GEOMDO1      := $(GEOMDS1:.cxx=.o)
 GEOMDO2      := $(GEOMDS2:.cxx=.o)
 GEOMDS       := $(GEOMDS1) $(GEOMDS2)
@@ -39,7 +39,7 @@ GEOMH1       := $(patsubst %,$(MODDIRI)/%,$(GEOMH1))
 GEOMH2       := $(patsubst %,$(MODDIRI)/%,$(GEOMH2))
 GEOMH        := $(GEOMH1) $(GEOMH2)
 GEOMS        := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-GEOMO        := $(GEOMS:.cxx=.o)
+GEOMO        := $(subst $(SRCDIR)/,,$(GEOMS:.cxx=.o))
 
 GEOMDEP      := $(GEOMO:.o=.d) $(GEOMDO:.o=.d)
 

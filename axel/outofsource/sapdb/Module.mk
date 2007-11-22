@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 24/8/2001
 
-MODDIR       := sapdb
+MODDIR       := $(SRCDIR)/sapdb
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ SAPDBDIRI    := $(SAPDBDIR)/inc
 
 ##### libSapDB #####
 SAPDBL       := $(MODDIRI)/LinkDef.h
-SAPDBDS      := $(MODDIRS)/G__SapDB.cxx
+SAPDBDS      := $(subst $(SRCDIR)/,,$(MODDIRS))/G__SapDB.cxx
 SAPDBDO      := $(SAPDBDS:.cxx=.o)
 SAPDBDH      := $(SAPDBDS:.cxx=.h)
 
 SAPDBH       := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 SAPDBS       := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-SAPDBO       := $(SAPDBS:.cxx=.o)
+SAPDBO       := $(subst $(SRCDIR)/,,$(SAPDBS:.cxx=.o))
 
 SAPDBDEP     := $(SAPDBO:.o=.d) $(SAPDBDO:.o=.d)
 

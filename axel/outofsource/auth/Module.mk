@@ -3,7 +3,7 @@
 #
 # Author: G. Ganis, 7/2005
 
-MODDIR       := auth
+MODDIR       := $(SRCDIR)/auth
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,7 +13,7 @@ AUTHDIRI     := $(AUTHDIR)/inc
 
 ##### libRootAuth #####
 RAUTHL       := $(MODDIRI)/LinkDefRoot.h
-RAUTHDS      := $(MODDIRS)/G__RootAuth.cxx
+RAUTHDS      := $(subst $(SRCDIR)/,,$(MODDIRS))/G__RootAuth.cxx
 RAUTHDO      := $(RAUTHDS:.cxx=.o)
 RAUTHDH      := $(RAUTHDS:.cxx=.h)
 
@@ -28,10 +28,10 @@ RAUTHS       := $(filter-out $(MODDIRS)/AFSAuth.cxx,$(RAUTHS))
 RAUTHH       := $(filter-out $(MODDIRI)/TAFS.h,$(RAUTHH))
 RAUTHS       := $(filter-out $(MODDIRS)/TAFS.cxx,$(RAUTHS))
 
-RAUTHO       := $(RAUTHS:.cxx=.o)
+RAUTHO       := $(subst $(SRCDIR)/,,$(RAUTHS:.cxx=.o))
 
 #### for libSrvAuth (built in rpdutils/Module.mk) ####
-DAEMONUTILSO := $(MODDIRS)/DaemonUtils.o
+DAEMONUTILSO := $(subst $(SRCDIR)/,,$(MODDIRS)/DaemonUtils.o)
 
 RAUTHDEP     := $(RAUTHO:.o=.d) $(RAUTHDO:.o=.d) $(DAEMONUTILSO:.o=.d)
 
@@ -41,14 +41,14 @@ RAUTHMAP     := $(RAUTHLIB:.$(SOEXT)=.rootmap)
 ##### libAFSAuth #####
 ifneq ($(AFSLIB),)
 AFSAUTHL       := $(MODDIRI)/LinkDefAFS.h
-AFSAUTHDS      := $(MODDIRS)/G__AFSAuth.cxx
+AFSAUTHDS      := $(subst $(SRCDIR)/,,$(MODDIRS))/G__AFSAuth.cxx
 AFSAUTHDO      := $(AFSAUTHDS:.cxx=.o)
 AFSAUTHDH      := $(AFSAUTHDS:.cxx=.h)
 
 AFSAUTHH     := $(MODDIRI)/AFSAuth.h $(MODDIRI)/AFSAuthTypes.h $(MODDIRI)/TAFS.h
 AFSAUTHS     := $(MODDIRS)/AFSAuth.cxx $(MODDIRS)/TAFS.cxx
 
-AFSAUTHO     := $(AFSAUTHS:.cxx=.o)
+AFSAUTHO     := $(subst $(SRCDIR)/,,$(AFSAUTHS:.cxx=.o))
 
 AFSAUTHDEP   := $(AFSAUTHO:.o=.d) $(AFSAUTHDO:.o=.d)
 
@@ -57,10 +57,10 @@ AFSAUTHMAP   := $(AFSAUTHLIB:.$(SOEXT)=.rootmap)
 endif
 
 #### for libSrvAuth (built in rpdutils/Module.mk) ####
-DAEMONUTILSO := $(MODDIRS)/DaemonUtils.o
+DAEMONUTILSO := $(subst $(SRCDIR)/,,$(MODDIRS)/DaemonUtils.o)
 
 #### for rootd and proofd ####
-RSAO         := $(AUTHDIRS)/rsaaux.o $(AUTHDIRS)/rsalib.o $(AUTHDIRS)/rsafun.o
+RSAO         := $(subst $(SRCDIR)/,,$(AUTHDIRS)/rsaaux.o $(AUTHDIRS)/rsalib.o $(AUTHDIRS)/rsafun.o)
 ifneq ($(AFSLIB),)
 RSAO         += $(MODDIRS)/AFSAuth.o
 endif

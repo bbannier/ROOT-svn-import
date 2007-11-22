@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := meta
+MODDIR       := $(SRCDIR)/meta
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ METADIRI     := $(METADIR)/inc
 
 ##### libMeta (part of libCore) #####
 METAL        := $(MODDIRI)/LinkDef.h
-METADS       := $(MODDIRS)/G__Meta.cxx
+METADS       := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Meta.cxx
 METADO       := $(METADS:.cxx=.o)
 METADH       := $(METADS:.cxx=.h)
 
 METAH        := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 METAS        := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-METAO        := $(METAS:.cxx=.o)
+METAO        := $(subst $(SRCDIR)/,,$(METAS:.cxx=.o))
 
 METADEP      := $(METAO:.o=.d) $(METADO:.o=.d)
 

@@ -11,7 +11,7 @@ FREETYPELDFLAGS := $(filter-out -l%,$(FREETYPELIBF))
 FREETYPEDEP     :=
 else
 
-MODDIR       := freetype
+MODDIR       := $(SRCDIR)/freetype
 MODDIRS      := $(MODDIR)/src
 
 FREETYPEVERS := freetype-2.1.9

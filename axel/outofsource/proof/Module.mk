@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := proof
+MODDIR       := $(SRCDIR)/proof
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ PROOFDIRI    := $(PROOFDIR)/inc
 
 ##### libProof #####
 PROOFL       := $(MODDIRI)/LinkDef.h
-PROOFDS      := $(MODDIRS)/G__Proof.cxx
+PROOFDS      := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Proof.cxx
 PROOFDO      := $(PROOFDS:.cxx=.o)
 PROOFDH      := $(PROOFDS:.cxx=.h)
 
 PROOFH       := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 PROOFS       := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-PROOFO       := $(PROOFS:.cxx=.o)
+PROOFO       := $(subst $(SRCDIR)/,,$(PROOFS:.cxx=.o))
 
 PROOFDEP     := $(PROOFO:.o=.d) $(PROOFDO:.o=.d)
 

@@ -2,6 +2,7 @@
 #
 # Makefile definitions included by the top Makefile
 
+SRCDIR         := @srcdir@
 ARCH           := @architecture@
 @rootbuild@
 USECONFIG      := @useconfig@

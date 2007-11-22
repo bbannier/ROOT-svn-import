@@ -3,7 +3,7 @@
 #
 # Authors: Pere Mato, Wim Lavrijsen, 22/4/2004
 
-MODDIR       := pyroot
+MODDIR       := $(SRCDIR)/pyroot
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ PYROOTDIRI   := $(PYROOTDIR)/inc
 
 ##### libPyROOT #####
 PYROOTL      := $(MODDIRI)/LinkDef.h
-PYROOTDS     := $(MODDIRS)/G__PyROOT.cxx
+PYROOTDS     := $(subst $(SRCDIR)/,,$(MODDIRS))/G__PyROOT.cxx
 PYROOTDO     := $(PYROOTDS:.cxx=.o)
 PYROOTDH     := $(PYROOTDS:.cxx=.h)
 
 PYROOTH      := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 PYROOTS      := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-PYROOTO      := $(PYROOTS:.cxx=.o)
+PYROOTO      := $(subst $(SRCDIR)/,,$(PYROOTS:.cxx=.o))
 
 PYROOTDEP    := $(PYROOTO:.o=.d) $(PYROOTDO:.o=.d)
 
@@ -35,7 +35,7 @@ ROOTPY       := $(subst $(MODDIR),$(LPATH),$(ROOTPYS))
 $(LPATH)/%.py: $(MODDIR)/%.py; cp $< $@
 endif
 ROOTPYC      := $(ROOTPY:.py=.pyc)
-ROOTPYO      := $(ROOTPY:.py=.pyo)
+ROOTPYO      := $(subst $(SRCDIR)/,,$(ROOTPY:.py=.pyo))
 
 # used in the main Makefile
 ALLHDRS     += $(patsubst $(MODDIRI)/%.h,include/%.h,$(PYROOTH))

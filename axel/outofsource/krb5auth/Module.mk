@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 18/3/2002
 
-MODDIR       := krb5auth
+MODDIR       := $(SRCDIR)/krb5auth
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,7 +13,7 @@ KRB5AUTHDIRI := $(KRB5AUTHDIR)/inc
 
 ##### libKrb5Auth #####
 KRB5AUTHL    := $(MODDIRI)/LinkDef.h
-KRB5AUTHDS   := $(MODDIRS)/G__Krb5Auth.cxx
+KRB5AUTHDS   := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Krb5Auth.cxx
 KRB5AUTHDO   := $(KRB5AUTHDS:.cxx=.o)
 KRB5AUTHDH   := $(KRB5AUTHDS:.cxx=.h)
 
@@ -21,7 +21,7 @@ KRB5AUTHH1   := $(patsubst %,$(MODDIRI)/%,TKSocket.h)
 
 KRB5AUTHH    := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 KRB5AUTHS    := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-KRB5AUTHO    := $(KRB5AUTHS:.cxx=.o)
+KRB5AUTHO    := $(subst $(SRCDIR)/,,$(KRB5AUTHS:.cxx=.o))
 
 KRB5AUTHDEP  := $(KRB5AUTHO:.o=.d)
 

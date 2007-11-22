@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := html
+MODDIR       := $(SRCDIR)/html
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ HTMLDIRI     := $(HTMLDIR)/inc
 
 ##### libHtml #####
 HTMLL        := $(MODDIRI)/LinkDef.h
-HTMLDS       := $(MODDIRS)/G__Html.cxx
+HTMLDS       := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Html.cxx
 HTMLDO       := $(HTMLDS:.cxx=.o)
 HTMLDH       := $(HTMLDS:.cxx=.h)
 
 HTMLH        := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 HTMLS        := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-HTMLO        := $(HTMLS:.cxx=.o)
+HTMLO        := $(subst $(SRCDIR)/,,$(HTMLS:.cxx=.o))
 
 HTMLDEP      := $(HTMLO:.o=.d) $(HTMLDO:.o=.d)
 

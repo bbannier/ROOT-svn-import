@@ -14,7 +14,7 @@ PCHHEADERS    = TObject.h
 PCHEXTRASRC   = base/src/precompile.cxx
 PCHEXTRAOBJ   = $(PCHEXTRASRC:.cxx=.o)
 PCHEXTRADEP   = $(PCHEXTRASRC:.cxx=.d)
-PCHEXTRAHDRI  = config/precompile.h.in
+PCHEXTRAHDRI  = $(SRCDIR)/config/precompile.h.in
 PCHEXTRAHDR   = include/precompile.h
 PCHDEP        = $(PCHFILE)
 ALLHDRS      += $(PCHEXTRAHDR)

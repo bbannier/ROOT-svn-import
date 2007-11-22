@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := cont
+MODDIR       := $(SRCDIR)/cont
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ CONTDIRI     := $(CONTDIR)/inc
 
 ##### libCont (part of libCore) #####
 CONTL        := $(MODDIRI)/LinkDef.h
-CONTDS       := $(MODDIRS)/G__Cont.cxx
+CONTDS       := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Cont.cxx
 CONTDO       := $(CONTDS:.cxx=.o)
 CONTDH       := $(CONTDS:.cxx=.h)
 
 CONTH        := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 CONTS        := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-CONTO        := $(CONTS:.cxx=.o)
+CONTO        := $(subst $(SRCDIR)/,,$(CONTS:.cxx=.o))
 
 CONTDEP      := $(CONTO:.o=.d) $(CONTDO:.o=.d)
 

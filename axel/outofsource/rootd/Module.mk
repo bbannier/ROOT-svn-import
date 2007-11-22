@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := rootd
+MODDIR       := $(SRCDIR)/rootd
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -14,7 +14,7 @@ ROOTDDIRI    := $(ROOTDDIR)/inc
 ##### rootd #####
 ROOTDH       := $(wildcard $(MODDIRI)/*.h)
 ROOTDS       := $(wildcard $(MODDIRS)/*.cxx)
-ROOTDO       := $(ROOTDS:.cxx=.o)
+ROOTDO       := $(subst $(SRCDIR)/,,$(ROOTDS:.cxx=.o))
 ROOTDDEP     := $(ROOTDO:.o=.d)
 ROOTD        := bin/rootd
 

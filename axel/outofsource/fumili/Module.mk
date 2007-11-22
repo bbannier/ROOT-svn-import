@@ -3,7 +3,7 @@
 #
 # Author: Rene Brun, 07/05/2003
 
-MODDIR       := fumili
+MODDIR       := $(SRCDIR)/fumili
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ FUMILIDIRI   := $(FUMILIDIR)/inc
 
 ##### libFumili #####
 FUMILIL      := $(MODDIRI)/LinkDef.h
-FUMILIDS     := $(MODDIRS)/G__Fumili.cxx
+FUMILIDS     := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Fumili.cxx
 FUMILIDO     := $(FUMILIDS:.cxx=.o)
 FUMILIDH     := $(FUMILIDS:.cxx=.h)
 
 FUMILIH      := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 FUMILIS      := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-FUMILIO      := $(FUMILIS:.cxx=.o)
+FUMILIO      := $(subst $(SRCDIR)/,,$(FUMILIS:.cxx=.o))
 
 FUMILIDEP    := $(FUMILIO:.o=.d) $(FUMILIDO:.o=.d)
 

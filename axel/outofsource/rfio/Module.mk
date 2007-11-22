@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := rfio
+MODDIR       := $(SRCDIR)/rfio
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ RFIODIRI     := $(RFIODIR)/inc
 
 ##### libRFIO #####
 RFIOL        := $(MODDIRI)/LinkDef.h
-RFIODS       := $(MODDIRS)/G__RFIO.cxx
+RFIODS       := $(subst $(SRCDIR)/,,$(MODDIRS))/G__RFIO.cxx
 RFIODO       := $(RFIODS:.cxx=.o)
 RFIODH       := $(RFIODS:.cxx=.h)
 
 RFIOH        := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 RFIOS        := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-RFIOO        := $(RFIOS:.cxx=.o)
+RFIOO        := $(subst $(SRCDIR)/,,$(RFIOS:.cxx=.o))
 
 RFIODEP      := $(RFIOO:.o=.d) $(RFIODO:.o=.d)
 

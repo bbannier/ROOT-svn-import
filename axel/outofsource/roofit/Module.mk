@@ -3,7 +3,7 @@
 #
 # Author: Wouter Verkerke, 18/4/2005
 
-MODDIR       := roofit
+MODDIR       := $(SRCDIR)/roofit
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ ROOFITDIRI   := $(ROOFITDIR)/inc
 
 ##### libRooFit #####
 ROOFITL      := $(MODDIRI)/LinkDef1.h
-ROOFITDS     := $(MODDIRS)/G__RooFit.cxx
+ROOFITDS     := $(subst $(SRCDIR)/,,$(MODDIRS))/G__RooFit.cxx
 ROOFITDO     := $(ROOFITDS:.cxx=.o)
 ROOFITDH     := $(ROOFITDS:.cxx=.h)
 
 ROOFITH      := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 ROOFITS      := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-ROOFITO      := $(ROOFITS:.cxx=.o)
+ROOFITO      := $(subst $(SRCDIR)/,,$(ROOFITS:.cxx=.o))
 
 ROOFITDEP    := $(ROOFITO:.o=.d) $(ROOFITDO:.o=.d)
 

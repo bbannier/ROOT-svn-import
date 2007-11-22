@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := zip
+MODDIR       := $(SRCDIR)/zip
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -48,7 +48,7 @@ else
 ZIPH	     := $(ZIPOLDH)
 ZIPS	     := $(ZIPOLDS)
 endif
-ZIPO         := $(ZIPS:.c=.o)
+ZIPO         := $(subst $(SRCDIR)/,,$(ZIPS:.c=.o))
 ZIPDEP       := $(ZIPO:.o=.d)
 
 # used in the main Makefile

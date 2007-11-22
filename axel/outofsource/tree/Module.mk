@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := tree
+MODDIR       := $(SRCDIR)/tree
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,7 +13,7 @@ TREEDIRI     := $(TREEDIR)/inc
 
 ##### libTree #####
 TREEL        := $(MODDIRI)/LinkDef.h
-TREEDS       := $(MODDIRS)/G__Tree.cxx
+TREEDS       := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Tree.cxx
 TREEDO       := $(TREEDS:.cxx=.o)
 TREEDH       := $(TREEDS:.cxx=.h)
 
@@ -26,7 +26,7 @@ TREEDH2      := TTree.h
 
 TREEH        := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 TREES        := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-TREEO        := $(TREES:.cxx=.o)
+TREEO        := $(subst $(SRCDIR)/,,$(TREES:.cxx=.o))
 
 TREEDEP      := $(TREEO:.o=.d) $(TREEDO:.o=.d)
 

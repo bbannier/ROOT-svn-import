@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 15/11/2006
 
-MODDIR       := ftgl
+MODDIR       := $(SRCDIR)/ftgl
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -14,7 +14,7 @@ FTGLDIRI     := $(FTGLDIR)/inc
 ##### libFTGL #####
 FTGLH        := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 FTGLS        := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-FTGLO        := $(FTGLS:.cxx=.o)
+FTGLO        := $(subst $(SRCDIR)/,,$(FTGLS:.cxx=.o))
 
 FTGLDEP      := $(FTGLO:.o=.d)
 

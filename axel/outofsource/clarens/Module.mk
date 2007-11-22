@@ -3,7 +3,7 @@
 #
 # Author: Maarten Ballintijn 18/10/2004
 
-MODDIR       := clarens
+MODDIR       := $(SRCDIR)/clarens
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ CLARENSDIRI  := $(CLARENSDIR)/inc
 
 ##### libClarens #####
 CLARENSL     := $(MODDIRI)/LinkDef.h
-CLARENSDS    := $(MODDIRS)/G__Clarens.cxx
+CLARENSDS    := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Clarens.cxx
 CLARENSDO    := $(CLARENSDS:.cxx=.o)
 CLARENSDH    := $(CLARENSDS:.cxx=.h)
 
 CLARENSH     := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 CLARENSS     := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-CLARENSO     := $(CLARENSS:.cxx=.o)
+CLARENSO     := $(subst $(SRCDIR)/,,$(CLARENSS:.cxx=.o))
 
 CLARENSDEP   := $(CLARENSO:.o=.d) $(CLARENSDO:.o=.d)
 
