@@ -190,6 +190,9 @@ TGFileBrowser::~TGFileBrowser()
 
    delete fContextMenu;
    delete fListTree;
+   if (fRootIcon) fClient->FreePicture(fRootIcon);
+   if (fFileIcon) fClient->FreePicture(fFileIcon);
+   if (fCachedPic) fClient->FreePicture(fCachedPic);
    Cleanup();
 }
 
@@ -219,6 +222,8 @@ void TGFileBrowser::Add(TObject *obj, const char *name, Int_t check)
       if(check > -1) {
          if (!fListTree->FindChildByName(fListLevel, name)) {
             TGListTreeItem *item = fListTree->AddItem(fListLevel, name, obj, pic, pic, kTRUE);
+            if ((pic != fFileIcon) && (pic != fCachedPic))
+               fClient->FreePicture(pic);
             fListTree->CheckItem(item, (Bool_t)check);
             TString tip(obj->ClassName());
             if (obj->GetTitle()) {
@@ -262,6 +267,8 @@ void TGFileBrowser::Add(TObject *obj, const char *name, Int_t check)
          else {
             if (!fListTree->FindChildByName(fListLevel, name)) {
                TGListTreeItem *item = fListTree->AddItem(fListLevel, name, obj, pic, pic);
+               if ((pic != fFileIcon) && (pic != fCachedPic))
+                  fClient->FreePicture(pic);
                item->SetDNDSource(kTRUE);
             }
          }
@@ -475,8 +482,7 @@ void TGFileBrowser::AddKey(TGListTreeItem *itm, TObject *obj, const char *name)
    TGListTreeItem *where;
    static TGListTreeItem *olditem = itm;
    static TGListTreeItem *item = itm;
-   static const TGPicture *pic  = 0;
-   static const TGPicture *pic2 = gClient->GetPicture("leaf_t.xpm");
+   const TGPicture *pic;
 
    if ((fCnt == 0) || (olditem != itm)) {
       olditem = item = itm;
@@ -503,9 +509,11 @@ void TGFileBrowser::AddKey(TGListTreeItem *itm, TObject *obj, const char *name)
       item->Rename(newname.Data());
    }
    GetObjPicture(&pic, obj);
-   if (!pic) pic = pic2;
+   if (!pic) pic = gClient->GetPicture("leaf_t.xpm");
    if (!fListTree->FindChildByName(item, name)) {
       TGListTreeItem *it = fListTree->AddItem(item, name, obj, pic, pic);
+      if ((pic != fFileIcon) && (pic != fCachedPic))
+         fClient->FreePicture(pic);
       it->SetDNDSource(kTRUE);
    }
    fCnt++;
@@ -876,6 +884,8 @@ void TGFileBrowser::DoubleClicked(TGListTreeItem *item, Int_t /*btn*/)
                   pic = fFileIcon;
                if (!fListTree->FindChildByName(item, fname)) {
                   itm = fListTree->AddItem(item,fname,pic,pic);
+                  if (pic != fFileIcon)
+                     fClient->FreePicture(pic);
                   itm->SetUserData(0);
                   itm->SetDNDSource(kTRUE);
                   if (size && modtime) {
@@ -1064,6 +1074,8 @@ void TGFileBrowser::GetObjPicture(const TGPicture **pic, TObject *obj)
       gClient->GetMimeTypeList()->AddType("[thumbnail]", iconname, iconname, iconname, "->Browse()");
       return;
    }
+   if (fCachedPic && (fCachedPic != fFileIcon))
+      fClient->FreePicture(fCachedPic);
    if (*pic == 0) {
       if (!obj->IsFolder())
          *pic = fFileIcon;

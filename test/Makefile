@@ -109,6 +109,12 @@ STRESSSHAPESO   = stressShapes.$(ObjSuf)
 STRESSSHAPESS   = stressShapes.$(SrcSuf)
 STRESSSHAPES    = stressShapes$(ExeSuf)
 
+ifeq ($(shell $(ROOTCONFIG) --has-roofit),yes)
+STRESSROOFITO  = stressRooFit.$(ObjSuf)
+STRESSROOFITS  = stressRooFit.$(SrcSuf)
+STRESSROOFIT   = stressRooFit$(ExeSuf)
+endif
+
 STRESSFITO    = stressFit.$(ObjSuf)
 STRESSFITS    = stressFit.$(SrcSuf)
 STRESSFIT     = stressFit$(ExeSuf)
@@ -124,6 +130,12 @@ STRESSHEPIX   = stressHepix$(ExeSuf)
 STRESSSPO     = stressSpectrum.$(ObjSuf)
 STRESSSPS     = stressSpectrum.$(SrcSuf)
 STRESSSP      = stressSpectrum$(ExeSuf)
+
+ifeq ($(shell $(ROOTCONFIG) --has-proof),yes)
+STRESSPROOFO  = stressProof.$(ObjSuf)
+STRESSPROOFS  = stressProof.$(SrcSuf)
+STRESSPROOF   = stressProof$(ExeSuf)
+endif
 
 TBENCHO       = TBench.$(ObjSuf) TBenchDict.$(ObjSuf)
 TBENCHS       = TBench.$(SrcSuf) TBenchDict.$(SrcSuf)
@@ -151,14 +163,16 @@ OBJS          = $(EVENTO) $(MAINEVENTO) $(HWORLDO) $(HSIMPLEO) $(MINEXAMO) \
                 $(STRESSSHAPESO) $(TCOLLBMO) $(STRESSGEOMETRYO) $(STRESSLO) \
                 $(STRESSGO) $(STRESSSPO) $(TESTBITSO) \
                 $(CTORTUREO) $(QPRANDOMO) $(THREADO) $(STRESSVECO) \
-                $(STRESSFITO) $(STRESSHEPIXO) $(STRESSENTRYLISTO)
+                $(STRESSFITO) $(STRESSHEPIXO) $(STRESSENTRYLISTO) \
+                $(STRESSROOFITO) $(STRESSPROOFO)
 
 PROGRAMS      = $(EVENT) $(HWORLD) $(HSIMPLE) $(MINEXAM) $(TSTRING) \
                 $(TCOLLEX) $(TCOLLBM) $(VVECTOR) $(VMATRIX) $(VLAZY) \
                 $(HELLOSO) $(ACLOCKSO) $(STRESS) $(TBENCHSO) $(BENCH) \
                 $(STRESSSHAPES) $(STRESSGEOMETRY) $(STRESSL) $(STRESSG) \
                 $(TESTBITS) $(CTORTURE) $(QPRANDOM) $(THREADS) $(STRESSSP) \
-                $(STRESSVEC) $(STRESSFIT) $(STRESSHEPIX) $(STRESSENTRYLIST)
+                $(STRESSVEC) $(STRESSFIT) $(STRESSHEPIX) $(STRESSENTRYLIST) \
+                $(STRESSROOFIT) $(STRESSPROOF)
 
 OBJS         += $(GUITESTO) $(GUIVIEWERO) $(TETRISO)
 PROGRAMS     += $(GUITEST) $(GUIVIEWER) $(TETRISSO)
@@ -359,6 +373,24 @@ $(STRESSHEPIX): $(STRESSHEPIXO) $(STRESSGEOMETRY) $(STRESSFIT) $(STRESSL) \
                 $(STRESSSP) $(STRESS)
 		$(LD) $(LDFLAGS) $(STRESSHEPIXO) $(LIBS) $(OutPutOpt)$@
 		$(MT_EXE)
+		@echo "$@ done"
+
+$(STRESSROOFIT): $(STRESSROOFITO)
+ifeq ($(PLATFORM),win32)
+		$(LD) $(LDFLAGS) $^ $(LIBS) '$(ROOTSYS)/lib/libRooFit.lib' '$(ROOTSYS)/lib/libRooFitCore.lib' '$(ROOTSYS)/lib/libHtml.lib' '$(ROOTSYS)/lib/libThread.lib' '$(ROOTSYS)/lib/libMinuit.lib' $(OutPutOpt)$@
+		$(MT_EXE)
+else
+		$(LD) $(LDFLAGS) $^ $(LIBS) -lRooFit -lRooFitCore -lHtml -lThread -lMinuit  $(OutPutOpt)$@
+endif
+		@echo "$@ done"
+
+$(STRESSPROOF): $(STRESSPROOFO)
+ifeq ($(PLATFORM),win32)
+		$(LD) $(LDFLAGS) $^ $(LIBS) '$(ROOTSYS)/lib/libProof.lib' '$(ROOTSYS)/lib/libThread.lib' $(OutPutOpt)$@
+		$(MT_EXE)
+else
+		$(LD) $(LDFLAGS) $(STRESSPROOFO) $(LIBS) -lProof -lThread $(OutPutOpt)$@
+endif
 		@echo "$@ done"
 
 $(BENCH):       $(BENCHO) $(TBENCHSO)
