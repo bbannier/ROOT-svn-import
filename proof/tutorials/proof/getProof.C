@@ -188,6 +188,8 @@ Int_t getXrootdPid(Int_t port)
    Int_t pid = -1;
 #if defined(__sun)
    const char *com = "-eo pid,comm";
+#elif defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
+   const char *com = "ax -w -w";
 #else
    const char *com = "-w -w -eo pid,command";
 #endif
