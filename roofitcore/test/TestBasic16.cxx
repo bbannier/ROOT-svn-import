@@ -70,7 +70,7 @@ public:
     simPars.setRealValue("w_Kao",0.15) ;
     simPars.setRealValue("w_NT1",0.3) ;
     simPars.setRealValue("w_NT2",0.4) ;
-    
+
     // Generate dummy per-event errors 
     RooBifurGauss gerr("gerr","error distribution",dterr,RooRealConstant::value(0.3),
 		       RooRealConstant::value(0.3),RooRealConstant::value(0.8)) ;
@@ -133,7 +133,8 @@ public:
     regPlot(frame6,"Basic16_Plot6") ;
 
     delete &config ;
-    
+    delete &simPars ;
+
     delete protoData ;
     delete data ;
     delete projData ;

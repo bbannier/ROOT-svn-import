@@ -19,6 +19,8 @@
 #include "RooFitResult.h"
 #include "RooDouble.h"
 #include "Roo1DTable.h"
+#include "RooTrace.h"
+#include "RooNumIntConfig.h"
 
 using namespace std ;
    
@@ -426,6 +428,14 @@ Int_t stressRooFit(const char* refFile, Bool_t writeRef, Int_t doVerbose, Int_t 
     }
   }
 
+  if (dryRun) {
+    // Preload singletons here so they don't show up in trace accounting
+    RooNumIntConfig::defaultConfig() ;
+    RooResolutionModel::identity() ;
+
+    RooTrace::active(1) ;
+  }
+
   // Add dedicated logging stream for errors that will remain active in silent mode
   RooMsgService::instance().addStream(RooMsgService::ERROR) ;
 
@@ -550,6 +560,10 @@ Int_t stressRooFit(const char* refFile, Bool_t writeRef, Int_t doVerbose, Int_t 
   if (oneTest<0 || oneTest==22) {
     TestBasic22 test22(fref,writeRef,doVerbose) ;
     StatusPrint(22,"Numeric Integration",-1) ; // to do
+  }
+
+  if (dryRun) {
+    RooTrace::dump() ;
   }
 
   gBenchmark->Stop("StressRooFit");

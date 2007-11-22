@@ -28,7 +28,7 @@ class RooAddModel : public RooResolutionModel {
 public:
 
   RooAddModel() ;
-  RooAddModel(const char *name, const char *title, const RooArgList& pdfList, const RooArgList& coefList) ;
+  RooAddModel(const char *name, const char *title, const RooArgList& pdfList, const RooArgList& coefList, Bool_t ownPdfList=kFALSE) ;
   RooAddModel(const RooAddModel& other, const char* name=0) ;
   virtual TObject* clone(const char* newname) const { return new RooAddModel(*this,newname) ; }
   virtual RooResolutionModel* convolution(RooFormulaVar* basis, RooAbsArg* owner) const ;
@@ -113,6 +113,8 @@ protected:
   Bool_t _allExtendable ;   //  Flag indicating if all PDF components are extendable
 
   mutable Int_t _coefErrCount ; //! Coefficient error counter
+
+  mutable RooArgSet _ownedComps ; //! Owned components
 
 private:
 

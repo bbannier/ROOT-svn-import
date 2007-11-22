@@ -75,6 +75,7 @@ public:
     regPlot(pframe ,"Basic15_PlotP") ;
     regPlot(xframe2,"Basic15_PlotX2") ;
     
+    delete sliceData ;
     delete data ;
     delete pdfProj ;
 

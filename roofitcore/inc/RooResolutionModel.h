@@ -46,10 +46,13 @@ public:
 
   virtual void printToStream(ostream& stream, PrintOption opt=Standard, TString indent= "") const ;
 
+  static void cleanup() ;
+
+  static RooFormulaVar* identity() ;
+
 protected:
 
   static RooFormulaVar* _identity ;  // Identity basis function pointe
-  static RooFormulaVar* identity() ;
 
 
   friend class RooConvGenContext ;

@@ -25,6 +25,7 @@ public:
     mean.setConstant(kFALSE) ;
     sigma.setConstant(kFALSE) ;
     RooFitResult* r = gauss.fitTo(*data,"mhr") ;
+    delete r ;
 
     // Plot PDF and toy data overlaid
     RooPlot* xframe2 = x.frame() ;
@@ -32,7 +33,7 @@ public:
     gauss.plotOn(xframe2) ;
      
     // Register output frame for comparison test
-    regResult(r,"Basic1_Result") ;
+    // regResult(r,"Basic1_Result") ;
     regPlot(xframe2,"Basic1_Plot") ;
 
     delete data ;

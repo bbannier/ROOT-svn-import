@@ -165,13 +165,25 @@ RooAbsOptGoodnessOfFit::RooAbsOptGoodnessOfFit(const char *name, const char *tit
   // Attach PDF to data set
   _pdfClone->attachDataSet(*_dataClone) ;
 
-  // Store normalization set
+  // Store normalization set  
   _normSet = (RooArgSet*) data.get()->snapshot(kFALSE) ;
 
   // Remove projected dependents from normalization set
   if (projDeps.getSize()>0) {
+
     _projDeps = (RooArgSet*) projDeps.snapshot(kFALSE) ;
+    
+    RooArgSet* tobedel = (RooArgSet*) _normSet->selectCommon(*_projDeps) ;
     _normSet->remove(*_projDeps,kTRUE,kTRUE) ;
+    
+    // Delete owned projected dependent copy in _normSet
+    TIterator* ii = tobedel->createIterator() ;
+    RooAbsArg* aa ;
+    while((aa=(RooAbsArg*)ii->Next())) {
+      delete aa ;
+    }
+    delete ii ;
+    delete tobedel ;
 
     // Mark all projected dependents as such
     RooArgSet *projDataDeps = (RooArgSet*) _dataClone->get()->selectCommon(*_projDeps) ;
@@ -206,6 +218,7 @@ RooAbsOptGoodnessOfFit::RooAbsOptGoodnessOfFit(const RooAbsOptGoodnessOfFit& oth
 {
   // Don't do a thing in master mode
   if (operMode()!=Slave) {
+    _projDeps = 0 ;
     _normSet = other._normSet ? ((RooArgSet*) other._normSet->snapshot()) : 0 ;   
     return ;
   }
@@ -241,9 +254,9 @@ RooAbsOptGoodnessOfFit::~RooAbsOptGoodnessOfFit()
   if (operMode()==Slave) {
     delete _pdfCloneSet ;
     delete _dataClone ;
-    delete _normSet ;
     delete _projDeps ;
   } 
+  delete _normSet ;
 }
 
 
