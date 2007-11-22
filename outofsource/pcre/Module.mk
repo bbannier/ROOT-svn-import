@@ -11,18 +11,20 @@ PCRELDFLAGS  := $(filter-out -l%,$(PCRELIBF))
 PCREDEP      :=
 else
 
-MODDIR       := pcre
+MODDIR       := $(SRCDIR)/pcre
 MODDIRS      := $(MODDIR)/src
+MODDIRO      := pcre/src
 
 PCREVERS     := pcre-6.4
 PCREDIR      := $(MODDIR)
 PCREDIRS     := $(MODDIRS)
-PCREDIRI     := $(MODDIRS)/$(PCREVERS)
+PCREDIRO     := $(MODDIRO)
+PCREDIRI     := $(MODDIRO)/$(PCREVERS)
 
 ##### libpcre #####
 PCRELIBS     := $(MODDIRS)/$(PCREVERS).tar.gz
 ifeq ($(PLATFORM),win32)
-PCRELIBA     := $(MODDIRS)/$(PCREVERS)/Win32/libpcre-6.4.lib
+PCRELIBA     := $(MODDIRO)/$(PCREVERS)/Win32/libpcre-6.4.lib
 PCRELIB      := $(LPATH)/libpcre.lib
 ifeq (yes,$(WINRTDEBUG))
 PCREBLD      := "libpcre - Win32 Debug"
@@ -30,7 +32,7 @@ else
 PCREBLD      := "libpcre - Win32 Release"
 endif
 else
-PCRELIBA     := $(MODDIRS)/$(PCREVERS)/.libs/libpcre.a
+PCRELIBA     := $(MODDIRO)/$(PCREVERS)/.libs/libpcre.a
 PCRELIB      := $(LPATH)/libpcre.a
 endif
 PCREINC      := $(PCREDIRI:%=-I%)
@@ -46,11 +48,11 @@ $(PCRELIB): $(PCRELIBA)
 
 $(PCRELIBA): $(PCRELIBS)
 ifeq ($(PLATFORM),win32)
-		@(if [ -d $(PCREDIRS)/$(PCREVERS) ]; then \
-			rm -rf $(PCREDIRS)/$(PCREVERS); \
+		@(if [ -d $(PCREDIRO)/$(PCREVERS) ]; then \
+			rm -rf $(PCREDIRO)/$(PCREVERS); \
 		fi; \
 		echo "*** Building $@..."; \
-		cd $(PCREDIRS); \
+		mkdir -p $(PCREDIRO); cd $(PCREDIRO); \
 		if [ ! -d $(PCREVERS) ]; then \
 			gunzip -c $(PCREVERS).tar.gz | tar xf -; \
 		fi; \
@@ -59,15 +61,15 @@ ifeq ($(PLATFORM),win32)
 		nmake -nologo -f Makefile.msc CFG=$(PCREBLD) \
 		NMCXXFLAGS="$(BLDCXXFLAGS) -I../../../../build/win -FIw32pragma.h")
 else
-		@(if [ -d $(PCREDIRS)/$(PCREVERS) ]; then \
-			rm -rf $(PCREDIRS)/$(PCREVERS); \
+		(if [ -d $(PCREDIRO)/$(PCREVERS) ]; then \
+			rm -rf $(PCREDIRO)/$(PCREVERS); \
 		fi; \
 		echo "*** Building $@..."; \
-		cd $(PCREDIRS); \
-		if [ ! -d $(PCREVERS) ]; then \
-			gunzip -c $(PCREVERS).tar.gz | tar xf -; \
+		mkdir -p $(PCREDIRO); \
+		if [ ! -d $(PCREDIRO)/$(PCREVERS) ]; then \
+			gunzip -c $(PCREDIRS)/$(PCREVERS).tar.gz | ( cd $(PCREDIRO); tar xf - ); \
 		fi; \
-		cd $(PCREVERS); \
+		cd $(PCREDIRO)/$(PCREVERS); \
 		PCRECC=$(CC); \
 		if [ $(ARCH) = "alphacxx6" ]; then \
 			PCRECC="cc"; \
@@ -101,14 +103,14 @@ all-pcre:       $(PCRELIB)
 
 clean-pcre:
 ifeq ($(PLATFORM),win32)
-		-@(if [ -d $(PCREDIRS)/$(PCREVERS)/win32 ]; then \
-			cd $(PCREDIRS)/$(PCREVERS)/win32; \
+		-@(if [ -d $(PCREDIRO)/$(PCREVERS)/win32 ]; then \
+			cd $(PCREDIRO)/$(PCREVERS)/win32; \
 			unset MAKEFLAGS; \
 			nmake -nologo -f Makefile.msc clean; \
 		fi)
 else
-		-@(if [ -d $(PCREDIRS)/$(PCREVERS) ]; then \
-			cd $(PCREDIRS)/$(PCREVERS); \
+		-@(if [ -d $(PCREDIRO)/$(PCREVERS) ]; then \
+			cd $(PCREDIRO)/$(PCREVERS); \
 			$(MAKE) clean; \
 		fi)
 endif
@@ -116,9 +118,9 @@ endif
 clean::         clean-pcre
 
 distclean-pcre: clean-pcre
-		@mv $(PCRELIBS) $(PCREDIRS)/-$(PCREVERS).tar.gz
-		@rm -rf $(PCRELIB) $(PCREDIRS)/pcre-*
-		@mv $(PCREDIRS)/-$(PCREVERS).tar.gz $(PCRELIBS)
+		@mv $(PCRELIBS) $(PCREDIRO)/-$(PCREVERS).tar.gz
+		@rm -rf $(PCRELIB) $(PCREDIRO)/pcre-*
+		@mv $(PCREDIRO)/-$(PCREVERS).tar.gz $(PCRELIBS)
 
 distclean::     distclean-pcre
 

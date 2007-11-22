@@ -3,7 +3,7 @@
 #
 # Author: Andrei Gheata, 08/08/2006
 
-MODDIR       := g4root
+MODDIR       := $(SRCDIR)/g4root
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -17,7 +17,7 @@ G4ROOTDIRI   := $(G4ROOTDIR)/inc
 
 ##### libG4root #####
 G4ROOTL1     := $(MODDIRI)/LinkDef.h
-G4ROOTDS1    := $(MODDIRS)/G__G4root.cxx
+G4ROOTDS1    := $(subst $(SRCDIR)/,,$(MODDIRS))/G__G4root.cxx
 G4ROOTDO1    := $(G4ROOTDS1:.cxx=.o)
 G4ROOTDS     := $(G4ROOTDS1)
 G4ROOTDO     := $(G4ROOTDO1)
@@ -29,7 +29,7 @@ G4ROOTH1     := $(patsubst %,$(MODDIRI)/%,$(G4ROOTH1))
 G4ROOTH2     := $(patsubst %,$(MODDIRI)/%,$(G4ROOTH2))
 G4ROOTH      := $(G4ROOTH1) $(G4ROOTH2)
 G4ROOTS      := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-G4ROOTO      := $(G4ROOTS:.cxx=.o)
+G4ROOTO      := $(subst $(SRCDIR)/,,$(G4ROOTS:.cxx=.o))
 
 G4ROOTDEP    := $(G4ROOTO:.o=.d) $(G4ROOTDO:.o=.d)
 

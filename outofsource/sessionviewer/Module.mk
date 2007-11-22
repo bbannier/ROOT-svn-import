@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 17/03/2007
 
-MODDIR       := sessionviewer
+MODDIR       := $(SRCDIR)/sessionviewer
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ SESSIONVIEWERDIRI := $(SESSIONVIEWERDIR)/inc
 
 ##### libSessionViewer #####
 SESSIONVIEWERL  := $(MODDIRI)/LinkDef.h
-SESSIONVIEWERDS := $(MODDIRS)/G__SessionViewer.cxx
+SESSIONVIEWERDS := $(subst $(SRCDIR)/,,$(MODDIRS))/G__SessionViewer.cxx
 SESSIONVIEWERDO := $(SESSIONVIEWERDS:.cxx=.o)
 SESSIONVIEWERDH := $(SESSIONVIEWERDS:.cxx=.h)
 
 SESSIONVIEWERH  := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 SESSIONVIEWERS  := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-SESSIONVIEWERO  := $(SESSIONVIEWERS:.cxx=.o)
+SESSIONVIEWERO  := $(subst $(SRCDIR)/,,$(SESSIONVIEWERS:.cxx=.o))
 
 SESSIONVIEWERDEP := $(SESSIONVIEWERO:.o=.d) $(SESSIONVIEWERDO:.o=.d)
 

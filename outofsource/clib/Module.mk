@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := clib
+MODDIR       := $(SRCDIR)/clib
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,15 +13,15 @@ CLIBDIRI     := $(CLIBDIR)/inc
 
 ##### libClib (part of libCore) #####
 CLIBL        := $(MODDIRI)/LinkDef.h
-CLIBDS       := $(MODDIRS)/G__Clib.cxx
+CLIBDS       := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Clib.cxx
 CLIBDO       := $(CLIBDS:.cxx=.o)
 CLIBDH       := $(CLIBDS:.cxx=.h)
 
 CLIBH        := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 CLIBS1       := $(wildcard $(MODDIRS)/*.c)
 CLIBS2       := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-CLIBO        := $(CLIBS1:.c=.o) $(CLIBS2:.cxx=.o)
-SNPRINTFO    := $(CLIBDIRS)/snprintf.o
+CLIBO        := $(subst $(SRCDIR)/,,$(CLIBS1:.c=.o) $(CLIBS2:.cxx=.o))
+SNPRINTFO    := $(subst $(SRCDIR)/,,$(CLIBDIRS)/snprintf.o)
 
 CLIBDEP      := $(CLIBO:.o=.d) $(CLIBDO:.o=.d)
 

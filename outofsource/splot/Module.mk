@@ -3,7 +3,7 @@
 #
 # Author: Rene Brun, 27/8/2003
 
-MODDIR      := splot
+MODDIR      := $(SRCDIR)/splot
 MODDIRS     := $(MODDIR)/src
 MODDIRI     := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ SPLOTDIRI   := $(SPLOTDIR)/inc
 
 ##### libSPlot #####
 SPLOTL      := $(MODDIRI)/LinkDef.h
-SPLOTDS     := $(MODDIRS)/G__SPlot.cxx
+SPLOTDS     := $(subst $(SRCDIR)/,,$(MODDIRS))/G__SPlot.cxx
 SPLOTDO     := $(SPLOTDS:.cxx=.o)
 SPLOTDH     := $(SPLOTDS:.cxx=.h)
 
 SPLOTH      := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 SPLOTS      := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-SPLOTO      := $(SPLOTS:.cxx=.o)
+SPLOTO      := $(subst $(SRCDIR)/,,$(SPLOTS:.cxx=.o))
 
 SPLOTDEP    := $(SPLOTO:.o=.d) $(SPLOTDO:.o=.d)
 

@@ -3,7 +3,7 @@
 #
 # Author: Ben Lloyd 09/11/06
 
-MODDIR       := gdml
+MODDIR       := $(SRCDIR)/gdml
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ GDMLDIRI     := $(GDMLDIR)/inc
 
 ##### libGdml #####
 GDMLL        := $(MODDIRI)/LinkDef.h
-GDMLDS       := $(MODDIRS)/G__Gdml.cxx
+GDMLDS       := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Gdml.cxx
 GDMLDO       := $(GDMLDS:.cxx=.o)
 GDMLDH       := $(GDMLDS:.cxx=.h)
 
 GDMLH        := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 GDMLS        := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-GDMLO        := $(GDMLS:.cxx=.o)
+GDMLO        := $(subst $(SRCDIR)/,,$(GDMLS:.cxx=.o))
 
 GDMLDEP      := $(GDMLO:.o=.d) $(GDMLDO:.o=.d)
 

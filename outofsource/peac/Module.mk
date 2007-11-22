@@ -3,7 +3,7 @@
 #
 # Author: Maarten Ballintijn 18/10/2004
 
-MODDIR       := peac
+MODDIR       := $(SRCDIR)/peac
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ PEACDIRI     := $(PEACDIR)/inc
 
 ##### libPeac #####
 PEACL        := $(MODDIRI)/LinkDef.h
-PEACDS       := $(MODDIRS)/G__Peac.cxx
+PEACDS       := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Peac.cxx
 PEACDO       := $(PEACDS:.cxx=.o)
 PEACDH       := $(PEACDS:.cxx=.h)
 
 PEACH        := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 PEACS        := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-PEACO        := $(PEACS:.cxx=.o)
+PEACO        := $(subst $(SRCDIR)/,,$(PEACS:.cxx=.o))
 
 PEACDEP      := $(PEACO:.o=.d) $(PEACDO:.o=.d)
 
@@ -28,13 +28,13 @@ PEACMAP      := $(PEACLIB:.$(SOEXT)=.rootmap)
 
 ##### libPeacGui #####
 PEACGUIL     := $(MODDIRI)/LinkDefGui.h
-PEACGUIDS    := $(MODDIRS)/G__PeacGui.cxx
+PEACGUIDS    := $(subst $(SRCDIR)/,,$(MODDIRS))/G__PeacGui.cxx
 PEACGUIDO    := $(PEACGUIDS:.cxx=.o)
 PEACGUIDH    := $(PEACGUIDS:.cxx=.h)
 
 PEACGUIH     := $(MODDIRI)/TProofStartupDialog.h
 PEACGUIS     := $(MODDIRS)/TProofStartupDialog.cxx
-PEACGUIO     := $(PEACGUIS:.cxx=.o)
+PEACGUIO     := $(subst $(SRCDIR)/,,$(PEACGUIS:.cxx=.o))
 
 PEACGUIDEP   := $(PEACGUIO:.o=.d) $(PEACGUIDO:.o=.d)
 
@@ -44,7 +44,7 @@ PEACGUIMAP   := $(PEACGUILIB:.$(SOEXT)=.rootmap)
 # remove GUI files from PEAC files
 PEACH        := $(filter-out $(PEACGUIH),$(PEACH))
 PEACS        := $(filter-out $(PEACGUIS),$(PEACS))
-PEACO        := $(filter-out $(PEACGUIO),$(PEACO))
+PEACO        := $(subst $(SRCDIR)/,,$(filter-out $(PEACGUIO),$(PEACO)))
 PEACDEP      := $(filter-out $(PEACGUIDEP),$(PEACDEP))
 
 # used in the main Makefile

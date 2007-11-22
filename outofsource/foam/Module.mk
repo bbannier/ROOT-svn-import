@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := foam
+MODDIR       := $(SRCDIR)/foam
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ FOAMDIRI     := $(FOAMDIR)/inc
 
 ##### libFoam.so #####
 FOAML      := $(MODDIRI)/LinkDef.h
-FOAMDS     := $(MODDIRS)/G__Foam.cxx
+FOAMDS     := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Foam.cxx
 FOAMDO     := $(FOAMDS:.cxx=.o)
 FOAMDH     := $(FOAMDS:.cxx=.h)
 
 FOAMH      := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 FOAMS      := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-FOAMO      := $(FOAMS:.cxx=.o)
+FOAMO      := $(subst $(SRCDIR)/,,$(FOAMS:.cxx=.o))
 
 FOAMDEP    := $(FOAMO:.o=.d) $(FOAMDO:.o=.d)
 

@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR           := geombuilder
+MODDIR           := $(SRCDIR)/geombuilder
 MODDIRS          := $(MODDIR)/src
 MODDIRI          := $(MODDIR)/inc
 
@@ -13,7 +13,7 @@ GEOMBUILDERDIRI  := $(GEOMBUILDERDIR)/inc
 
 ##### libGeomBuilder #####
 GEOMBUILDERL     := $(MODDIRI)/LinkDef.h
-GEOMBUILDERDS    := $(MODDIRS)/G__GeomBuilder.cxx
+GEOMBUILDERDS    := $(subst $(SRCDIR)/,,$(MODDIRS))/G__GeomBuilder.cxx
 GEOMBUILDERDO    := $(GEOMBUILDERDS:.cxx=.o)
 GEOMBUILDERDH    := $(GEOMBUILDERDS:.cxx=.h)
 
@@ -26,7 +26,7 @@ GEOMBUILDERH     := TGeoVolumeEditor.h TGeoBBoxEditor.h TGeoMediumEditor.h \
                     TGeoPgonEditor.h TGeoTrapEditor.h TGeoGedFrame.h
 GEOMBUILDERH     := $(patsubst %,$(MODDIRI)/%,$(GEOMBUILDERH))
 GEOMBUILDERS     := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-GEOMBUILDERO     := $(GEOMBUILDERS:.cxx=.o)
+GEOMBUILDERO     := $(subst $(SRCDIR)/,,$(GEOMBUILDERS:.cxx=.o))
 
 GEOMBUILDERDEP   := $(GEOMBUILDERO:.o=.d) $(GEOMBUILDERDO:.o=.d)
 

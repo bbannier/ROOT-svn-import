@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := mysql
+MODDIR       := $(SRCDIR)/mysql
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ MYSQLDIRI    := $(MYSQLDIR)/inc
 
 ##### libRMySQL #####
 MYSQLL       := $(MODDIRI)/LinkDef.h
-MYSQLDS      := $(MODDIRS)/G__MySQL.cxx
+MYSQLDS      := $(subst $(SRCDIR)/,,$(MODDIRS))/G__MySQL.cxx
 MYSQLDO      := $(MYSQLDS:.cxx=.o)
 MYSQLDH      := $(MYSQLDS:.cxx=.h)
 
 MYSQLH       := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 MYSQLS       := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-MYSQLO       := $(MYSQLS:.cxx=.o)
+MYSQLO       := $(subst $(SRCDIR)/,,$(MYSQLS:.cxx=.o))
 
 MYSQLDEP     := $(MYSQLO:.o=.d) $(MYSQLDO:.o=.d)
 

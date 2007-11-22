@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 23/1/2006
 
-MODDIR       := fftw
+MODDIR       := $(SRCDIR)/fftw
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ FFTWDIRI     := $(FFTWDIR)/inc
 
 #### libFFTW ####
 FFTWL        := $(MODDIRI)/LinkDef.h
-FFTWDS       := $(MODDIRS)/G__FFTW.cxx
+FFTWDS       := $(subst $(SRCDIR)/,,$(MODDIRS))/G__FFTW.cxx
 FFTWDO       := $(FFTWDS:.cxx=.o)
 FFTWDH       := $(FFTWDS:.cxx=.h)
 
 FFTWH        := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 FFTWS        := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-FFTWO        := $(FFTWS:.cxx=.o)
+FFTWO        := $(subst $(SRCDIR)/,,$(FFTWS:.cxx=.o))
 
 FFTWDEP      := $(FFTWO:.o=.d) $(FFTWDO:.o=.d)
 

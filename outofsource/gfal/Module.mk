@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 9/12/2005
 
-MODDIR       := gfal
+MODDIR       := $(SRCDIR)/gfal
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ GFALDIRI     := $(GFALDIR)/inc
 
 ##### libGFAL #####
 GFALL        := $(MODDIRI)/LinkDef.h
-GFALDS       := $(MODDIRS)/G__GFAL.cxx
+GFALDS       := $(subst $(SRCDIR)/,,$(MODDIRS))/G__GFAL.cxx
 GFALDO       := $(GFALDS:.cxx=.o)
 GFALDH       := $(GFALDS:.cxx=.h)
 
 GFALH        := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 GFALS        := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-GFALO        := $(GFALS:.cxx=.o)
+GFALO        := $(subst $(SRCDIR)/,,$(GFALS:.cxx=.o))
 
 GFALDEP      := $(GFALO:.o=.d) $(GFALDO:.o=.d)
 

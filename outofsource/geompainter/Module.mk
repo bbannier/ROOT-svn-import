@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := geompainter
+MODDIR       := $(SRCDIR)/geompainter
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,14 +13,14 @@ GEOMPAINTERDIRI := $(GEOMPAINTERDIR)/inc
 
 ##### libGeomPainter #####
 GEOMPAINTERL  := $(MODDIRI)/LinkDef.h
-GEOMPAINTERDS := $(MODDIRS)/G__GeomPainter.cxx
+GEOMPAINTERDS := $(subst $(SRCDIR)/,,$(MODDIRS))/G__GeomPainter.cxx
 GEOMPAINTERDO := $(GEOMPAINTERDS:.cxx=.o)
 GEOMPAINTERDH := $(GEOMPAINTERDS:.cxx=.h)
 
 GEOMPAINTERH1 := $(wildcard $(MODDIRI)/T*.h)
 GEOMPAINTERH  := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 GEOMPAINTERS  := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-GEOMPAINTERO  := $(GEOMPAINTERS:.cxx=.o)
+GEOMPAINTERO  := $(subst $(SRCDIR)/,,$(GEOMPAINTERS:.cxx=.o))
 
 GEOMPAINTERDEP := $(GEOMPAINTERO:.o=.d) $(GEOMPAINTERDO:.o=.d)
 

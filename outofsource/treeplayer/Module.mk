@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := treeplayer
+MODDIR       := $(SRCDIR)/treeplayer
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ TREEPLAYERDIRI := $(TREEPLAYERDIR)/inc
 
 ##### libTreePlayer #####
 TREEPLAYERL  := $(MODDIRI)/LinkDef.h
-TREEPLAYERDS := $(MODDIRS)/G__TreePlayer.cxx
+TREEPLAYERDS := $(subst $(SRCDIR)/,,$(MODDIRS))/G__TreePlayer.cxx
 TREEPLAYERDO := $(TREEPLAYERDS:.cxx=.o)
 TREEPLAYERDH := $(TREEPLAYERDS:.cxx=.h)
 
 TREEPLAYERH  := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 TREEPLAYERS  := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-TREEPLAYERO  := $(TREEPLAYERS:.cxx=.o)
+TREEPLAYERO  := $(subst $(SRCDIR)/,,$(TREEPLAYERS:.cxx=.o))
 
 TREEPLAYERDEP := $(TREEPLAYERO:.o=.d) $(TREEPLAYERDO:.o=.d)
 

@@ -3,7 +3,7 @@
 #
 # Author: Rene Brun, 28/09/2006
 
-MODDIR       := spectrum
+MODDIR       := $(SRCDIR)/spectrum
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ SPECTRUMDIRI := $(SPECTRUMDIR)/inc
 
 ##### libSpectrum #####
 SPECTRUML    := $(MODDIRI)/LinkDef.h
-SPECTRUMDS   := $(MODDIRS)/G__Spectrum.cxx
+SPECTRUMDS   := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Spectrum.cxx
 SPECTRUMDO   := $(SPECTRUMDS:.cxx=.o)
 SPECTRUMDH   := $(SPECTRUMDS:.cxx=.h)
 
 SPECTRUMH    := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 SPECTRUMS    := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-SPECTRUMO    := $(SPECTRUMS:.cxx=.o)
+SPECTRUMO    := $(subst $(SRCDIR)/,,$(SPECTRUMS:.cxx=.o))
 
 SPECTRUMDEP  := $(SPECTRUMO:.o=.d) $(SPECTRUMDO:.o=.d)
 

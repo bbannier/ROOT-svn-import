@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := castor
+MODDIR       := $(SRCDIR)/castor
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ CASTORDIRI   := $(CASTORDIR)/inc
 
 ##### libRCastor #####
 CASTORL      := $(MODDIRI)/LinkDef.h
-CASTORDS     := $(MODDIRS)/G__CASTOR.cxx
+CASTORDS     := $(subst $(SRCDIR)/,,$(MODDIRS))/G__CASTOR.cxx
 CASTORDO     := $(CASTORDS:.cxx=.o)
 CASTORDH     := $(CASTORDS:.cxx=.h)
 
 CASTORH      := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 CASTORS      := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-CASTORO      := $(CASTORS:.cxx=.o)
+CASTORO      := $(subst $(SRCDIR)/,,$(CASTORS:.cxx=.o))
 
 CASTORDEP    := $(CASTORO:.o=.d) $(CASTORDO:.o=.d)
 

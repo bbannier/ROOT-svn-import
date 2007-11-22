@@ -3,7 +3,7 @@
 #
 # Author: Rene Brun, 27/8/2003
 
-MODDIR       := mlp
+MODDIR       := $(SRCDIR)/mlp
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ MLPDIRI      := $(MLPDIR)/inc
 
 ##### libMLP #####
 MLPL         := $(MODDIRI)/LinkDef.h
-MLPDS        := $(MODDIRS)/G__MLP.cxx
+MLPDS        := $(subst $(SRCDIR)/,,$(MODDIRS))/G__MLP.cxx
 MLPDO        := $(MLPDS:.cxx=.o)
 MLPDH        := $(MLPDS:.cxx=.h)
 
 MLPH         := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 MLPS         := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-MLPO         := $(MLPS:.cxx=.o)
+MLPO         := $(subst $(SRCDIR)/,,$(MLPS:.cxx=.o))
 
 MLPDEP       := $(MLPO:.o=.d) $(MLPDO:.o=.d)
 

@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 20/6/2005
 
-MODDIR       := smatrix
+MODDIR       := $(SRCDIR)/smatrix
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -15,8 +15,8 @@ SMATRIXDIRI := $(SMATRIXDIR)/inc/Math
 SMATRIXL    := $(MODDIRI)/LinkDef.h
 SMATRIXL32  := $(MODDIRI)/LinkDefD32.h
 #SMATRIXLINC :=
-SMATRIXDS   := $(MODDIRS)/G__Smatrix.cxx
-SMATRIXDS32 := $(MODDIRS)/G__Smatrix32.cxx
+SMATRIXDS   := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Smatrix.cxx
+SMATRIXDS32 := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Smatrix32.cxx
 SMATRIXDO   := $(SMATRIXDS:.cxx=.o)
 SMATRIXDO32 := $(SMATRIXDS32:.cxx=.o)
 SMATRIXDH   := $(SMATRIXDS:.cxx=.h)
@@ -34,7 +34,7 @@ SMATRIXH1   := $(filter-out $(MODDIRI)/Math/LinkDef%, $(wildcard $(MODDIRI)/Math
 SMATRIXH2   := $(filter-out $(MODDIRI)/Math/LinkDef%, $(wildcard $(MODDIRI)/Math/*.icc))
 SMATRIXH    := $(SMATRIXH1) $(SMATRIXH2)
 SMATRIXS    := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-SMATRIXO    := $(SMATRIXS:.cxx=.o)
+SMATRIXO    := $(subst $(SRCDIR)/,,$(SMATRIXS:.cxx=.o))
 
 SMATRIXDEP  := $(SMATRIXO:.o=.d)  $(SMATRIXDO:.o=.d)
 
@@ -73,7 +73,7 @@ $(SMATRIXDS):  $(SMATRIXDH1) $(SMATRIXL) $(SMATRIXLINC) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
 		@echo "for files $(SMATRIXDH1)"
 		$(ROOTCINTTMP) -f $@ -c $(SMATRIXDH1) $(SMATRIXL)
-#		python reflex/python/genreflex/genreflex.py $(SMATRIXDIRS)/Dict.h -I$(SMATRIXDIRI) --selection_file=$(SMATRIXDIRS)/Selection.xml -o $(SMATRIXDIRS)/G__Smatrix.cxx
+#		python reflex/G__python/genreflex/genreflex.py $(SMATRIXDIRS)/Dict.h -I$(SMATRIXDIRI) --selection_file=$(SMATRIXDIRS)/Selection.xml -o $(SMATRIXDIRS)/Smatrix.cxx
 
 $(SMATRIXDS32): $(SMATRIXDH1) $(SMATRIXL32) $(SMATRIXLINC) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."

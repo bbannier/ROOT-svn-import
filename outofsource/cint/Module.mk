@@ -3,19 +3,22 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := cint
+MODDIR       := $(SRCDIR)/cint
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
 CINTDIR      := $(MODDIR)
+CINTDIR_     := cint
 CINTDIRS     := $(CINTDIR)/src
+CINTDIRO     := cint/src
 CINTDIRI     := $(CINTDIR)/inc
 CINTDIRM     := $(CINTDIR)/main
 CINTDIRT     := $(CINTDIR)/tool
 CINTDIRL     := $(CINTDIR)/lib
-CINTDIRDLLS  := $(CINTDIR)/include
-CINTDIRSTL   := $(CINTDIR)/stl
-CINTDIRDLLSTL:= $(CINTDIRL)/dll_stl
+CINTDIRL_    := $(CINTDIR_)/lib
+CINTDIRDLLS  := $(CINTDIR_)/include
+CINTDIRSTL   := $(CINTDIR_)/stl
+CINTDIRDLLSTL:= $(CINTDIRL_)/dll_stl
 
 ##### libCint #####
 CINTH        := $(wildcard $(MODDIRI)/*.h)
@@ -24,7 +27,7 @@ CINTS2       := $(wildcard $(MODDIRS)/*.cxx)
 
 CINTS1       += $(CINTDIRM)/G__setup.c
 
-CINTALLO     := $(CINTS1:.c=.o) $(CINTS2:.cxx=.o)
+CINTALLO     := $(subst $(CINTDIRS),$(CINTDIRO),$(CINTS1:.c=.o) $(CINTS2:.cxx=.o))
 CINTALLDEP   := $(CINTALLO:.o=.d)
 
 CINTCONF     := include/configcint.h
@@ -184,25 +187,25 @@ endif
 endif
 
 CINTS        := $(CINTS1) $(CINTS2)
-CINTO        := $(CINTS1:.c=.o) $(CINTS2:.cxx=.o)
+CINTO        := $(subst $(CINTDIRS),$(CINTDIRO),$(CINTS1:.c=.o) $(CINTS2:.cxx=.o))
 CINTTMPO     := $(subst v6_loadfile.o,v6_loadfile_tmp.o,$(CINTO))
 CINTTMPINC   := -I$(MODDIR)/include -I$(MODDIR)/stl -I$(MODDIR)/lib
 CINTDEP      := $(CINTO:.o=.d)
-CINTDEP      += $(MODDIRS)/v6_loadfile_tmp.d
-CINTALLDEP   += $(MODDIRS)/v6_loadfile_tmp.d
+CINTDEP      += $(CINTDIRO)/v6_loadfile_tmp.d
+CINTALLDEP   += $(CINTDIRO)/v6_loadfile_tmp.d
 
 CINTLIB      := $(LPATH)/libCint.$(SOEXT)
 
 ##### cint #####
 CINTEXES     := $(CINTDIRM)/cppmain.cxx
-CINTEXEO     := $(CINTEXES:.cxx=.o)
+CINTEXEO     := cint/main/cppmain.o
 CINTEXEDEP   := $(CINTEXEO:.o=.d)
-CINTTMP      := $(CINTDIRM)/cint_tmp$(EXEEXT)
+CINTTMP      := $(CINTDIRO)/cint_tmp$(EXEEXT)
 CINT         := bin/cint$(EXEEXT)
 
 ##### makecint #####
 MAKECINTS    := $(CINTDIRT)/makecint.cxx
-MAKECINTO    := $(MAKECINTS:.cxx=.o)
+MAKECINTO    := cint/tool/makecint.o
 MAKECINT     := bin/makecint$(EXEEXT)
 
 ##### iosenum.h #####
@@ -257,6 +260,11 @@ $(IOSENUMA):    $(CINTTMP)
 			touch $@; \
 		fi)
 
+cint/main/G__setup.o: cint/main/G__setup.cxx
+	$(MAKEDIR)
+	$(MAKEDEP) -R -f$(@:.o=.d) -Y -w 1000 -- $(CXXFLAGS) -D__cplusplus -- $<
+	$(CXX) $(OPT) $(CXXFLAGS) $(PCHCXXFLAGS) $(CXXOUT)$@ -c $<
+
 all-cint:       $(CINTLIB) $(CINT) $(CINTTMP) $(MAKECINT) $(IOSENUM)
 
 clean-cint:
@@ -267,23 +275,28 @@ clean::         clean-cint
 distclean-cint: clean-cint
 		@rm -f $(CINTALLDEP) $(CINTLIB) $(IOSENUM) $(CINTEXEDEP) \
 		   $(CINT) $(CINTTMP) $(MAKECINT) $(CINTDIRM)/*.exp \
-		   $(CINTDIRM)/*.lib $(CINTDIRS)/v6_loadfile_tmp.cxx \
+		   $(CINTDIRM)/*.lib $(SRCDIR)/,,$(CINTDIRS)/v6_loadfile_tmp.cxx) \
 		   $(CINTDIRDLLS)/sys/types.h $(CINTDIRDLLS)/systypes.h
 
 distclean::     distclean-cint
 
 ##### extra rules ######
-$(CINTDIRS)/libstrm.o:  CINTCXXFLAGS += -I$(CINTDIRL)/stream
-$(CINTDIRS)/sun5strm.o: CINTCXXFLAGS += -I$(CINTDIRL)/sunstrm
-$(CINTDIRS)/vcstrm.o:   CINTCXXFLAGS += -I$(CINTDIRL)/vcstream
-$(CINTDIRS)/%strm.o:    CINTCXXFLAGS += -I$(CINTDIRL)/$(notdir $(basename $@))
+$(CINTDIRO)/libstrm.o:  CINTCXXFLAGS += -I$(CINTDIRL)/stream
+$(CINTDIRO)/sun5strm.o: CINTCXXFLAGS += -I$(CINTDIRL)/sunstrm
+$(CINTDIRO)/vcstrm.o:   CINTCXXFLAGS += -I$(CINTDIRL)/vcstream
+$(CINTDIRO)/%strm.o:    CINTCXXFLAGS += -I$(CINTDIRL)/$(notdir $(basename $@))
 
 $(MAKECINTO) $(CINTALLO): $(CINTCONF)
 
-$(CINTDIRS)/v6_stdstrct.o:     CINTCXXFLAGS += -I$(CINTDIRL)/stdstrct
-$(CINTDIRS)/v6_loadfile_tmp.o: CINTCXXFLAGS += -UR__HAVE_CONFIG -DROOTBUILD
+$(CINTALLO) $(CINTTMPO) $(CINTEXEO) $(MAKECINTO): CXXFLAGS=$(CINTCXXFLAGS)
+$(CINTALLO) $(CINTTMPO) $(CINTEXEO) $(MAKECINTO): CFLAGS=$(CINTCFLAGS)
+$(CINTALLO) $(CINTTMPO) $(CINTEXEO) $(MAKECINTO): PCHCXXFLAGS=
 
-$(CINTDIRS)/v6_loadfile_tmp.cxx: $(CINTDIRS)/v6_loadfile.cxx
+$(CINTDIRO)/v6_stdstrct.o:     CINTCXXFLAGS += -I$(CINTDIRL)/stdstrct
+$(CINTDIRO)/v6_loadfile_tmp.o: CINTCXXFLAGS += -UR__HAVE_CONFIG -DROOTBUILD
+
+#$(subst $(SRCDIR)/,,$(CINTDIRS)/v6_loadfile_tmp.o): $(subst $(SRCDIR)/,,$(CINTDIRS)/v6_loadfile_tmp.cxx)
+$(CINTDIRO)/v6_loadfile_tmp.cxx: $(CINTDIRS)/v6_loadfile.cxx
 	cp -f $< $@
 
 ##### configcint.h

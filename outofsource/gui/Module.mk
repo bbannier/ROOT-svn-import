@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := gui
+MODDIR       := $(SRCDIR)/gui
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -15,9 +15,9 @@ GUIDIRI      := $(GUIDIR)/inc
 GUIL1        := $(MODDIRI)/LinkDef1.h
 GUIL2        := $(MODDIRI)/LinkDef2.h
 GUIL3        := $(MODDIRI)/LinkDef3.h
-GUIDS1       := $(MODDIRS)/G__Gui1.cxx
-GUIDS2       := $(MODDIRS)/G__Gui2.cxx
-GUIDS3       := $(MODDIRS)/G__Gui3.cxx
+GUIDS1       := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Gui1.cxx
+GUIDS2       := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Gui2.cxx
+GUIDS3       := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Gui3.cxx
 GUIDO1       := $(GUIDS1:.cxx=.o)
 GUIDO2       := $(GUIDS2:.cxx=.o)
 GUIDO3       := $(GUIDS3:.cxx=.o)
@@ -56,7 +56,7 @@ GUIH3        := $(patsubst %,$(MODDIRI)/%,$(GUIH3))
 GUIH4        := $(patsubst %,$(MODDIRI)/%,$(GUIH4))
 GUIH         := $(GUIH1) $(GUIH2) $(GUIH3) $(GUIH4)
 GUIS         := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-GUIO         := $(GUIS:.cxx=.o)
+GUIO         := $(subst $(SRCDIR)/,,$(GUIS:.cxx=.o))
 
 GUIDEP       := $(GUIO:.o=.d) $(GUIDO:.o=.d)
 

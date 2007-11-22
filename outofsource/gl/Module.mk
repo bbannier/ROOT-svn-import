@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := gl
+MODDIR       := $(SRCDIR)/gl
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,7 +13,7 @@ GLDIRI       := $(GLDIR)/inc
 
 ##### libRGL #####
 GLL          := $(MODDIRI)/LinkDef.h
-GLDS         := $(MODDIRS)/G__GL.cxx
+GLDS         := $(subst $(SRCDIR)/,,$(MODDIRS))/G__GL.cxx
 GLDO         := $(GLDS:.cxx=.o)
 GLDH         := $(GLDS:.cxx=.h)
 
@@ -43,7 +43,7 @@ ifeq ($(ARCH),win32)
 GLLIBS       := opengl32.lib glu32.lib
 endif
 
-GLO          := $(GLS:.cxx=.o)
+GLO          := $(subst $(SRCDIR)/,,$(GLS:.cxx=.o))
 GLO1         := $(GLS1:.c=.o)
 
 GLDEP        := $(GLO:.o=.d) $(GLDO:.o=.d) $(GLO1:.o=.d)

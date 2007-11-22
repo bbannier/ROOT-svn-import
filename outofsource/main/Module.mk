@@ -3,18 +3,20 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := main
+MODDIR       := $(SRCDIR)/main
 MODDIRS      := $(MODDIR)/src
+MODDIRO      := main/src
 MODDIRI      := $(MODDIR)/inc
 
 MAINDIR      := $(MODDIR)
 MAINDIRS     := $(MAINDIR)/src
+MAINDIRO     := $(MODDIRO)
 MAINDIRI     := $(MAINDIR)/inc
 MAINDIRW     := $(MAINDIR)/win32
 
 ##### root.exe #####
 ROOTEXES     := $(MODDIRS)/rmain.cxx
-ROOTEXEO     := $(ROOTEXES:.cxx=.o)
+ROOTEXEO     := $(subst $(SRCDIR)/,,$(ROOTEXES:.cxx=.o))
 ROOTEXEDEP   := $(ROOTEXEO:.o=.d)
 ifeq ($(ARCH),win32gcc)
 ROOTEXE      := bin/root_exe.exe
@@ -28,7 +30,7 @@ endif
 
 ##### proofserv #####
 PROOFSERVS   := $(MODDIRS)/pmain.cxx
-PROOFSERVO   := $(PROOFSERVS:.cxx=.o)
+PROOFSERVO   := $(subst $(SRCDIR)/,,$(PROOFSERVS:.cxx=.o))
 PROOFSERVDEP := $(PROOFSERVO:.o=.d)
 ifeq ($(ARCH),win32gcc)
 PROOFSERVEXE := bin/proofserv_exe.exe
@@ -47,7 +49,7 @@ endif
 
 ##### roots.exe #####
 ROOTSEXES   := $(MODDIRS)/roots.cxx
-ROOTSEXEO   := $(ROOTSEXES:.cxx=.o)
+ROOTSEXEO   := $(subst $(SRCDIR)/,,$(ROOTSEXES:.cxx=.o))
 ROOTSEXEDEP := $(ROOTSEXEO:.o=.d)
 ifeq ($(ARCH),win32gcc)
 ROOTSEXE    := bin/roots_exe.exe
@@ -62,7 +64,7 @@ endif
 
 ##### hadd #####
 HADDS        := $(MODDIRS)/hadd.cxx
-HADDO        := $(HADDS:.cxx=.o)
+HADDO        := $(subst $(MODDIRS),$(MODDIRO),$(HADDS:.cxx=.o))
 HADDDEP      := $(HADDO:.o=.d)
 HADD         := bin/hadd$(EXEEXT)
 
@@ -73,18 +75,18 @@ H2ROOTS2     := $(HBOOKS2)
 #H2ROOTS3    := $(wildcard $(MAINDIRW)/*.c)
 H2ROOTS3     := $(filter-out $(MAINDIRW)/cfopei.c, $(wildcard $(MAINDIRW)/*.c))
 H2ROOTS4     := $(MAINDIRW)/tzvers.f
-H2ROOTO      := $(H2ROOTS1:.cxx=.o) $(H2ROOTS2:.f=.o)
+H2ROOTO      := $(subst $(SRCDIR)/,,$(H2ROOTS1:.cxx=.o) $(H2ROOTS2:.f=.o))
 ifeq ($(PLATFORM),win32)
-H2ROOTO      += $(H2ROOTS3:.c=.o) $(H2ROOTS4:.f=.o)
+H2ROOTO      += $(subst $(SRCDIR)/,,$(H2ROOTS3:.c=.o) $(H2ROOTS4:.f=.o))
 endif
 H2ROOTDEP    := $(H2ROOTS1:.cxx=.d)
 H2ROOT       := bin/h2root$(EXEEXT)
 
 ##### g2root #####
 G2ROOTS      := $(MODDIRS)/g2root.f
-G2ROOTO      := $(G2ROOTS:.f=.o)
+G2ROOTO      := $(subst $(SRCDIR)/,,$(G2ROOTS:.f=.o))
 ifeq ($(PLATFORM),win32)
-G2ROOTO      += $(H2ROOTS3:.c=.o) $(H2ROOTS4:.f=.o)
+G2ROOTO      += $(subst $(SRCDIR)/,,$(H2ROOTS3:.c=.o) $(H2ROOTS4:.f=.o))
 endif
 G2ROOT       := bin/g2root$(EXEEXT)
 ifeq ($(PLATFORM),win32)
@@ -93,9 +95,9 @@ endif
 
 ##### g2rootold #####
 G2ROOTOLDS   := $(MODDIRS)/g2rootold.f
-G2ROOTOLDO   := $(G2ROOTOLDS:.f=.o)
+G2ROOTOLDO   := $(subst $(SRCDIR)/,,$(G2ROOTOLDS:.f=.o))
 ifeq ($(PLATFORM),win32)
-G2ROOTOLDO   += $(H2ROOTS3:.c=.o) $(H2ROOTS4:.f=.o)
+G2ROOTOLDO   += $(subst $(SRCDIR)/,,$(H2ROOTS3:.c=.o) $(H2ROOTS4:.f=.o))
 endif
 G2ROOTOLD    := bin/g2rootold$(EXEEXT)
 ifeq ($(PLATFORM),win32)
@@ -104,7 +106,7 @@ endif
 
 ##### ssh2rpd #####
 SSH2RPDS        := $(MODDIRS)/ssh2rpd.cxx
-SSH2RPDO        := $(SSH2RPDS:.cxx=.o)
+SSH2RPDO        := $(subst $(SRCDIR)/,,$(SSH2RPDS:.cxx=.o))
 SSH2RPDDEP      := $(SSH2RPDO:.o=.d)
 SSH2RPD         := bin/ssh2rpd$(EXEEXT)
 ifeq ($(PLATFORM),win32)
@@ -135,7 +137,7 @@ $(PROOFSERVEXE): $(PROOFSERVO) $(BOOTLIBSDEP)
 		$(LD) $(LDFLAGS) -o $@ $(PROOFSERVO) $(BOOTULIBS) \
 		   $(RPATH) $(BOOTLIBS) $(SYSLIBS)
 
-$(PROOFSERVSH): main/src/proofserv.sh
+$(PROOFSERVSH): $(SRCDIR)/main/src/proofserv.sh
 		@echo "Install proofserv wrapper."
 		@cp $< $@
 		@chmod 0755 $@
@@ -144,7 +146,7 @@ $(ROOTSEXE): $(ROOTSEXEO) $(BOOTLIBSDEP)
 		$(LD) $(LDFLAGS) -o $@ $(ROOTSEXEO) $(BOOTULIBS) \
 		   $(RPATH) $(BOOTLIBS) $(SYSLIBS)
 
-$(ROOTSSH): main/src/roots.sh
+$(ROOTSSH): $(SRCDIR)/main/src/roots.sh
 		@echo "Install roots wrapper."
 		@cp $< $@
 		@chmod 0755 $@

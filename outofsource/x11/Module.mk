@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := x11
+MODDIR       := $(SRCDIR)/x11
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,7 +13,7 @@ X11DIRI      := $(X11DIR)/inc
 
 ##### libGX11 #####
 X11L         := $(MODDIRI)/LinkDef.h
-X11DS        := $(MODDIRS)/G__X11.cxx
+X11DS        := $(subst $(SRCDIR)/,,$(MODDIRS))/G__X11.cxx
 X11DO        := $(X11DS:.cxx=.o)
 X11DH        := $(X11DS:.cxx=.h)
 
@@ -21,7 +21,7 @@ X11H1        := $(wildcard $(MODDIRI)/T*.h)
 X11H         := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 X11S1        := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
 X11S2        := $(wildcard $(MODDIRS)/*.c)
-X11O         := $(X11S1:.cxx=.o) $(X11S2:.c=.o)
+X11O         := $(subst $(SRCDIR)/,,$(X11S1:.cxx=.o) $(X11S2:.c=.o))
 
 X11DEP       := $(X11O:.o=.d) $(X11DO:.o=.d)
 

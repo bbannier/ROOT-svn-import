@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := treeviewer
+MODDIR       := $(SRCDIR)/treeviewer
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,7 +13,7 @@ TREEVIEWERDIRI := $(TREEVIEWERDIR)/inc
 
 ##### libTreeViewer #####
 TREEVIEWERL  := $(MODDIRI)/LinkDef.h
-TREEVIEWERDS := $(MODDIRS)/G__TreeViewer.cxx
+TREEVIEWERDS := $(subst $(SRCDIR)/,,$(MODDIRS))/G__TreeViewer.cxx
 TREEVIEWERDO := $(TREEVIEWERDS:.cxx=.o)
 TREEVIEWERDH := $(TREEVIEWERDS:.cxx=.h)
 
@@ -32,7 +32,7 @@ endif
 TREEVIEWERH  := $(patsubst %,$(MODDIRI)/%,$(TREEVIEWERH))
 TREEVIEWERS  := $(patsubst %,$(MODDIRS)/%,$(TREEVIEWERS))
 
-TREEVIEWERO  := $(TREEVIEWERS:.cxx=.o)
+TREEVIEWERO  := $(subst $(SRCDIR)/,,$(TREEVIEWERS:.cxx=.o))
 
 TREEVIEWERDEP := $(TREEVIEWERO:.o=.d) $(TREEVIEWERDO:.o=.d)
 

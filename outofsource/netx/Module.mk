@@ -3,7 +3,7 @@
 #
 # Author: G. Ganis, 8/7/2004
 
-MODDIR       := netx
+MODDIR       := $(SRCDIR)/netx
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ NETXDIRI     := $(NETXDIR)/inc
 
 ##### libNetx #####
 NETXL        := $(MODDIRI)/LinkDef.h
-NETXDS       := $(MODDIRS)/G__Netx.cxx
+NETXDS       := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Netx.cxx
 NETXDO       := $(NETXDS:.cxx=.o)
 NETXDH       := $(NETXDS:.cxx=.h)
 
 NETXH        := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 NETXS        := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-NETXO        := $(NETXS:.cxx=.o)
+NETXO        := $(subst $(SRCDIR)/,,$(NETXS:.cxx=.o))
 
 NETXDEP      := $(NETXO:.o=.d) $(NETXDO:.o=.d)
 

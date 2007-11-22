@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR      := odbc
+MODDIR      := $(SRCDIR)/odbc
 MODDIRS     := $(MODDIR)/src
 MODDIRI     := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ ODBCDIRI    := $(ODBCDIR)/inc
 
 ##### libODBC #####
 ODBCL       := $(MODDIRI)/LinkDef.h
-ODBCDS      := $(MODDIRS)/G__ODBC.cxx
+ODBCDS      := $(subst $(SRCDIR)/,,$(MODDIRS))/G__ODBC.cxx
 ODBCDO      := $(ODBCDS:.cxx=.o)
 ODBCDH      := $(ODBCDS:.cxx=.h)
 
 ODBCH       := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 ODBCS       := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-ODBCO       := $(ODBCS:.cxx=.o)
+ODBCO       := $(subst $(SRCDIR)/,,$(ODBCS:.cxx=.o))
 
 ODBCDEP     := $(ODBCO:.o=.d) $(ODBCDO:.o=.d)
 

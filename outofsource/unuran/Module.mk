@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := unuran
+MODDIR       := $(SRCDIR)/unuran
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -28,7 +28,7 @@ UNRS 	     := $(wildcard $(UNRDIRS)/src/utils/*.c)\
                 $(wildcard $(UNRDIRS)/src/tests/*.c) \
                 $(wildcard $(UNRDIRS)/src/uniform/*.c) \
                 $(wildcard $(UNRDIRS)/src/urng/*.c)
-UNRO         := $(UNRS:.c=.o)
+UNRO         := $(subst $(SRCDIR)/,,$(UNRS:.c=.o))
 
 ifeq ($(PLATFORM),win32)
 UNRLIBS      := $(MODDIRS)/$(UNRVERS)/src/.libs/libunuran.lib
@@ -40,7 +40,7 @@ UNRFLAGS     :=  -I$(MODDIRS)/$(UNRVERS)/src
 
 ##### libUnuran #####
 UNURANL      := $(MODDIRI)/LinkDef.h
-UNURANDS     := $(MODDIRS)/G__Unuran.cxx
+UNURANDS     := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Unuran.cxx
 UNURANDO     := $(UNURANDS:.cxx=.o)
 UNURANDH     := $(UNURANDS:.cxx=.h)
 UNURANDH1    := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
@@ -49,7 +49,7 @@ UNURANDH1    := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 UNURANH      := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 UNURANS      := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
 
-UNURANO      := $(UNURANS:.cxx=.o)
+UNURANO      := $(subst $(SRCDIR)/,,$(UNURANS:.cxx=.o))
 
 UNURANDEP    := $(UNURANO:.o=.d) $(UNURANDO:.o=.d)
 

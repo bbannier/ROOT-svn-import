@@ -3,7 +3,7 @@
 #
 # Author: Ilka Antcheva, 18/2/2004
 
-MODDIR    := ged
+MODDIR    := $(SRCDIR)/ged
 MODDIRS   := $(MODDIR)/src
 MODDIRI   := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ GEDDIRI   := $(GEDDIR)/inc
 
 ##### libGed #####
 GEDL      := $(MODDIRI)/LinkDef.h
-GEDDS     := $(MODDIRS)/G__Ged.cxx
+GEDDS     := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Ged.cxx
 GEDDO     := $(GEDDS:.cxx=.o)
 GEDDH     := $(GEDDS:.cxx=.h)
 
 GEDH      := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 GEDS      := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-GEDO      := $(GEDS:.cxx=.o)
+GEDO      := $(subst $(SRCDIR)/,,$(GEDS:.cxx=.o))
 
 GEDDEP    := $(GEDO:.o=.d) $(GEDDO:.o=.d)
 

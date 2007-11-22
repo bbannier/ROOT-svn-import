@@ -4,7 +4,7 @@
 #
 # Author: Valeri Fine, 21/10/2001
 
-MODDIR        := qt
+MODDIR        := $(SRCDIR)/qt
 MODDIRS       := $(MODDIR)/src
 MODDIRI       := $(MODDIR)/inc
 
@@ -14,7 +14,7 @@ GQTDIRI       := $(GQTDIR)/inc
 
 ##### libGQt #####
 GQTL          := $(MODDIRI)/LinkDef.h
-GQTDS         := $(MODDIRS)/G__GQt.cxx
+GQTDS         := $(subst $(SRCDIR)/,,$(MODDIRS))/G__GQt.cxx
 GQTDO         := $(GQTDS:.cxx=.o)
 GQTDH         := $(GQTDS:.cxx=.h)
 
@@ -28,7 +28,7 @@ GQTH1         := $(GQTDIRI)/TGQt.h  $(GQTDIRI)/TQtTimer.h              \
 GQTH          := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 GQTS          := $(filter-out $(MODDIRS)/moc_%,\
                  $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx)))
-GQTO          := $(GQTS:.cxx=.o)
+GQTO          := $(subst $(SRCDIR)/,,$(GQTS:.cxx=.o))
 
 GQTMOCH       := $(MODDIRI)/TQtWidget.h       $(MODDIRI)/TQtEmitter.h \
                  $(MODDIRI)/TQtClientFilter.h $(MODDIRI)/TQtClientGuard.h \
@@ -36,7 +36,7 @@ GQTMOCH       := $(MODDIRI)/TQtWidget.h       $(MODDIRI)/TQtEmitter.h \
                  $(MODDIRI)/TQtRootSlot.h
 
 GQTMOC        := $(subst $(MODDIRI)/,$(MODDIRS)/moc_,$(patsubst %.h,%.cxx,$(GQTMOCH)))
-GQTMOCO       := $(GQTMOC:.cxx=.o)
+GQTMOCO       := $(subst $(SRCDIR)/,,$(GQTMOC:.cxx=.o))
 
 GQTDEP        := $(GQTO:.o=.d) $(GQTDO:.o=.d)
 

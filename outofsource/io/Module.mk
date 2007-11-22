@@ -3,7 +3,7 @@
 #
 # Author: Rene Brun 06/02/2007
 
-MODDIR       := io
+MODDIR       := $(SRCDIR)/io
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ IODIRI       := $(IODIR)/inc
 
 ##### libRIO #####
 IOL          := $(MODDIRI)/LinkDef.h
-IODS         := $(MODDIRS)/G__IO.cxx
+IODS         := $(subst $(SRCDIR)/,,$(MODDIRS))/G__IO.cxx
 IODO         := $(IODS:.cxx=.o)
 IODH         := $(IODS:.cxx=.h)
 
 IOH          := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 IOS          := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-IOO          := $(IOS:.cxx=.o)
+IOO          := $(subst $(SRCDIR)/,,$(IOS:.cxx=.o))
 
 IODEP        := $(IOO:.o=.d) $(IODO:.o=.d)
 

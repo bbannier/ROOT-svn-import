@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := utils
+MODDIR       := $(SRCDIR)/utils
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -14,15 +14,17 @@ UTILSDIRI    := $(UTILSDIR)/inc
 ##### rootcint #####
 ROOTCINTS    := $(MODDIRS)/rootcint.cxx \
                 $(filter-out %_tmp.cxx,$(wildcard $(MODDIRS)/R*.cxx))
-ROOTCINTO    := $(ROOTCINTS:.cxx=.o)
-ROOTCINTTMPO := $(ROOTCINTS:.cxx=_tmp.o)
+ROOTCINTO    := $(subst $(SRCDIR)/,,$(ROOTCINTS:.cxx=.o))
+ROOTCINTTMPO := $(subst $(SRCDIR)/,,$(ROOTCINTS:.cxx=_tmp.o))
 ROOTCINTDEP  := $(ROOTCINTO:.o=.d) $(ROOTCINTTMPO:.o=.d) 
-ROOTCINTTMPEXE:= $(MODDIRS)/rootcint_tmp$(EXEEXT)
+ROOTCINTTMPEXE:= $(subst $(SRCDIR)/,,$(MODDIRS)/rootcint_tmp$(EXEEXT))
 ROOTCINTEXE  := bin/rootcint$(EXEEXT)
+
+CINTINCLUDE  := cint/include/api.h
 
 ##### rlibmap #####
 RLIBMAPS     := $(MODDIRS)/rlibmap.cxx
-RLIBMAPO     := $(RLIBMAPS:.cxx=.o)
+RLIBMAPO     := $(subst $(SRCDIR)/,,$(RLIBMAPS:.cxx=.o))
 RLIBMAPDEP   := $(RLIBMAPO:.o=.d)
 RLIBMAP      := bin/rlibmap$(EXEEXT)
 
@@ -34,7 +36,13 @@ $(ROOTCINTEXE): $(CINTLIB) $(ROOTCINTO) $(METAUTILSO) $(IOSENUM)
 		$(LD) $(LDFLAGS) -o $@ $(ROOTCINTO) $(METAUTILSO) \
 		   $(RPATH) $(CINTLIBS) $(CILIBS)
 
-$(ROOTCINTTMPEXE): $(CINTTMPO) $(ROOTCINTTMPO) $(METAUTILSO) $(IOSENUM)
+$(CINTINCLUDE):
+	mkdir -p cint/include
+	mkdir -p cint/lib/prec_stl
+	cp -Rf $(SRCDIR)/cint/include $(SRCDIR)/cint/stl cint
+	cp -Rf $(SRCDIR)/cint/lib/prec_stl $(SRCDIR)/cint/lib/dll_stl cint/lib
+
+$(ROOTCINTTMPEXE): $(CINTTMPO) $(ROOTCINTTMPO) $(METAUTILSO) $(IOSENUM) $(CINTINCLUDE)
 		$(LD) $(LDFLAGS) -o $@ \
 		   $(ROOTCINTTMPO) $(METAUTILSO) $(CINTTMPO) $(CILIBS)
 
@@ -60,10 +68,11 @@ distclean-utils: clean-utils
 distclean::     distclean-utils
 
 ##### extra rules ######
-$(UTILSDIRS)%_tmp.cxx: $(UTILSDIRS)%.cxx
+$(subst $(SRCDIR)/,,$(UTILSDIRS))/%_tmp.cxx: $(UTILSDIRS)/%.cxx
+	mkdir -p $(dir $@)
 	cp -f $< $@
 
-$(ROOTCINTTMPO): CXXFLAGS += -UR__HAVE_CONFIG -DROOTBUILD
+$(ROOTCINTTMPO): CXXFLAGS += -UR__HAVE_CONFIG -DROOTBUILD -I$(SRCDIR)/$(firstword $(dir $(ROOTCINTTMPO)))
 $(ROOTCINTTMPO): PCHCXXFLAGS =
 $(ROOTCINTO):    PCHCXXFLAGS =
 $(RLIBMAPO):     PCHCXXFLAGS =

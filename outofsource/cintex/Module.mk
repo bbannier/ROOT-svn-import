@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := cintex
+MODDIR       := $(SRCDIR)/cintex
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -15,7 +15,7 @@ CINTEXDIRI   := $(CINTEXDIR)/inc
 CINTEXL      := $(CINTEXDIRI)/LinkDef.h
 CINTEXH      := $(wildcard $(MODDIRI)/Cintex/*.h)
 CINTEXS      := $(wildcard $(MODDIRS)/*.cxx)
-CINTEXO      := $(CINTEXS:.cxx=.o)
+CINTEXO      := $(subst $(SRCDIR)/,,$(CINTEXS:.cxx=.o))
 
 CINTEXDEP    := $(CINTEXO:.o=.d)
 
@@ -32,7 +32,7 @@ $(LPATH)/%.py: $(MODDIR)/python/%.py; cp $< $@
 endif
 ifneq ($(BUILDPYTHON),no)
 CINTEXPYC    := $(CINTEXPY:.py=.pyc)
-CINTEXPYO    := $(CINTEXPY:.py=.pyo)
+CINTEXPYO    := $(subst $(SRCDIR)/,,$(CINTEXPY:.py=.pyo))
 endif
 
 # used in the main Makefile

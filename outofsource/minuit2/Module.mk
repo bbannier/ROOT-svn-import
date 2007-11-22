@@ -3,7 +3,7 @@
 #
 # Author: Rene Brun, 07/05/2003
 
-MODDIR        := minuit2
+MODDIR        := $(SRCDIR)/minuit2
 MODDIRS       := $(MODDIR)/src
 MODDIRI       := $(MODDIR)/inc
 
@@ -34,7 +34,7 @@ MINUITBASEDEP       := $(MINUITBASELIB)
 
 ##### libMinuit2 #####
 MINUIT2L     := $(MODDIRI)/LinkDef.h
-MINUIT2DS    := $(MODDIRS)/G__Minuit2.cxx
+MINUIT2DS    := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Minuit2.cxx
 MINUIT2DO    := $(MINUIT2DS:.cxx=.o)
 MINUIT2DH    := $(MINUIT2DS:.cxx=.h)
 
@@ -42,7 +42,7 @@ MINUIT2AH    := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 MINUIT2BH    := $(filter-out $(MODDIRI)/Minuit2/LinkDef%,$(wildcard $(MODDIRI)/Minuit2/*.h))
 MINUIT2H     := $(MINUIT2AH) $(MINUIT2BH)
 MINUIT2S     := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-MINUIT2O     := $(MINUIT2S:.cxx=.o)
+MINUIT2O     := $(subst $(SRCDIR)/,,$(MINUIT2S:.cxx=.o))
 
 MINUIT2DEP   := $(MINUIT2O:.o=.d) $(MINUIT2DO:.o=.d)
 

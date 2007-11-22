@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := minuit
+MODDIR       := $(SRCDIR)/minuit
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ MINUITDIRI   := $(MINUITDIR)/inc
 
 ##### libMinuit #####
 MINUITL      := $(MODDIRI)/LinkDef.h
-MINUITDS     := $(MODDIRS)/G__Minuit.cxx
+MINUITDS     := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Minuit.cxx
 MINUITDO     := $(MINUITDS:.cxx=.o)
 MINUITDH     := $(MINUITDS:.cxx=.h)
 
 MINUITH      := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 MINUITS      := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-MINUITO      := $(MINUITS:.cxx=.o)
+MINUITO      := $(subst $(SRCDIR)/,,$(MINUITS:.cxx=.o))
 
 MINUITDEP    := $(MINUITO:.o=.d) $(MINUITDO:.o=.d)
 

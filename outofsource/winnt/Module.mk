@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := winnt
+MODDIR       := $(SRCDIR)/winnt
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,14 +13,14 @@ WINNTDIRI    := $(WINNTDIR)/inc
 
 ##### libWinNT (part of libCore) #####
 WINNTL       := $(MODDIRI)/LinkDef.h
-WINNTDS      := $(MODDIRS)/G__WinNT.cxx
+WINNTDS      := $(subst $(SRCDIR)/,,$(MODDIRS))/G__WinNT.cxx
 WINNTDO      := $(WINNTDS:.cxx=.o)
 WINNTDH      := $(WINNTDS:.cxx=.h)
 
 WINNTH1      := $(MODDIRI)/TWinNTSystem.h
 WINNTH       := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 WINNTS       := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-WINNTO       := $(WINNTS:.cxx=.o)
+WINNTO       := $(subst $(SRCDIR)/,,$(WINNTS:.cxx=.o))
 
 WINNTDEP     := $(WINNTO:.o=.d) $(WINNTDO:.o=.d)
 

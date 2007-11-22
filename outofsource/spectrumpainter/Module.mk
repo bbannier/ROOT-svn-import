@@ -3,7 +3,7 @@
 #
 # Author: Olivier Couet, 27/11/2006
 
-MODDIR       := spectrumpainter
+MODDIR       := $(SRCDIR)/spectrumpainter
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ SPECTRUMPAINTERDIRI := $(SPECTRUMPAINTERDIR)/inc
 
 ##### libSpectrumPainter #####
 SPECTRUMPAINTERL  := $(MODDIRI)/LinkDef.h
-SPECTRUMPAINTERDS := $(MODDIRS)/G__Spectrum2Painter.cxx
+SPECTRUMPAINTERDS := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Spectrum2Painter.cxx
 SPECTRUMPAINTERDO := $(SPECTRUMPAINTERDS:.cxx=.o)
 SPECTRUMPAINTERDH := $(SPECTRUMPAINTERDS:.cxx=.h)
 
 SPECTRUMPAINTERH  := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 SPECTRUMPAINTERS  := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-SPECTRUMPAINTERO  := $(SPECTRUMPAINTERS:.cxx=.o)
+SPECTRUMPAINTERO  := $(subst $(SRCDIR)/,,$(SPECTRUMPAINTERS:.cxx=.o))
 
 SPECTRUMPAINTERDEP := $(SPECTRUMPAINTERO:.o=.d) $(SPECTRUMPAINTERDO:.o=.d)
 

@@ -3,7 +3,7 @@
 #
 # Author: Ilka Antcheva, 02/10/2006
 
-MODDIR       := fitpanel
+MODDIR       := $(SRCDIR)/fitpanel
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ FITPANELDIRI := $(FITPANELDIR)/inc
 
 ##### libFitPanel #####
 FITPANELL    := $(MODDIRI)/LinkDef.h
-FITPANELDS   := $(MODDIRS)/G__FitPanel.cxx
+FITPANELDS   := $(subst $(SRCDIR)/,,$(MODDIRS))/G__FitPanel.cxx
 FITPANELDO   := $(FITPANELDS:.cxx=.o)
 FITPANELDH   := $(FITPANELDS:.cxx=.h)
 
 FITPANELH    := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 FITPANELS    := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-FITPANELO    := $(FITPANELS:.cxx=.o)
+FITPANELO    := $(subst $(SRCDIR)/,,$(FITPANELS:.cxx=.o))
 
 FITPANELDEP  := $(FITPANELO:.o=.d) $(FITPANELDO:.o=.d)
 

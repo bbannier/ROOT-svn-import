@@ -3,7 +3,7 @@
 #
 # Author: Andreas Peters, 07/12/2005
 
-MODDIR       := monalisa
+MODDIR       := $(SRCDIR)/monalisa
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ MONALISADIRI := $(MONALISADIR)/inc
 
 ##### libMonaLisa #####
 MONALISAL    := $(MODDIRI)/LinkDef.h
-MONALISADS   := $(MODDIRS)/G__MonaLisa.cxx
+MONALISADS   := $(subst $(SRCDIR)/,,$(MODDIRS))/G__MonaLisa.cxx
 MONALISADO   := $(MONALISADS:.cxx=.o)
 MONALISADH   := $(MONALISADS:.cxx=.h)
 
 MONALISAH    := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 MONALISAS    := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-MONALISAO    := $(MONALISAS:.cxx=.o)
+MONALISAO    := $(subst $(SRCDIR)/,,$(MONALISAS:.cxx=.o))
 
 MONALISADEP  := $(MONALISAO:.o=.d) $(MONALISADO:.o=.d)
 

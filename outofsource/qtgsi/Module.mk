@@ -3,7 +3,7 @@
 #
 # Author: Bertrand Bellenot, 22/02/2006
 
-MODDIR       := qtgsi
+MODDIR       := $(SRCDIR)/qtgsi
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,17 +13,17 @@ QTGSIDIRI    := $(QTGSIDIR)/inc
 
 ##### libQtGSI #####
 QTGSIL        := $(MODDIRI)/LinkDef.h
-QTGSIDS       := $(MODDIRS)/G__QtGSI.cxx
+QTGSIDS       := $(subst $(SRCDIR)/,,$(MODDIRS))/G__QtGSI.cxx
 QTGSIDO       := $(QTGSIDS:.cxx=.o)
 QTGSIDH       := $(QTGSIDS:.cxx=.h)
 
 QTGSIH        := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 QTGSIS        := $(filter-out $(MODDIRS)/moc_%,\
                  $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx)))
-QTGSIO        := $(QTGSIS:.cxx=.o)
+QTGSIO        := $(subst $(SRCDIR)/,,$(QTGSIS:.cxx=.o))
 
 QTGSIMOC      := $(subst $(MODDIRI)/,$(MODDIRS)/moc_,$(patsubst %.h,%.cxx,$(QTGSIH)))
-QTGSIMOCO     := $(QTGSIMOC:.cxx=.o)
+QTGSIMOCO     := $(subst $(SRCDIR)/,,$(QTGSIMOC:.cxx=.o))
 
 QTGSIDEP      := $(QTGSIO:.o=.d) $(QTGSIDO:.o=.d) $(QTGSIMOCO:.o=.d)
 

@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 20/11/2002
 
-MODDIR       := ldap
+MODDIR       := $(SRCDIR)/ldap
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ LDAPDIRI     := $(LDAPDIR)/inc
 
 ##### libRLDAP #####
 LDAPL        := $(MODDIRI)/LinkDef.h
-LDAPDS       := $(MODDIRS)/G__LDAP.cxx
+LDAPDS       := $(subst $(SRCDIR)/,,$(MODDIRS))/G__LDAP.cxx
 LDAPDO       := $(LDAPDS:.cxx=.o)
 LDAPDH       := $(LDAPDS:.cxx=.h)
 
 LDAPH        := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 LDAPS        := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-LDAPO        := $(LDAPS:.cxx=.o)
+LDAPO        := $(subst $(SRCDIR)/,,$(LDAPS:.cxx=.o))
 
 LDAPDEP      := $(LDAPO:.o=.d) $(LDAPDO:.o=.d)
 

@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := physics
+MODDIR       := $(SRCDIR)/physics
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ PHYSICSDIRI  := $(PHYSICSDIR)/inc
 
 ##### libPhysics #####
 PHYSICSL     := $(MODDIRI)/LinkDef.h
-PHYSICSDS    := $(MODDIRS)/G__Physics.cxx
+PHYSICSDS    := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Physics.cxx
 PHYSICSDO    := $(PHYSICSDS:.cxx=.o)
 PHYSICSDH    := $(PHYSICSDS:.cxx=.h)
 
 PHYSICSH     := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 PHYSICSS     := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-PHYSICSO     := $(PHYSICSS:.cxx=.o)
+PHYSICSO     := $(subst $(SRCDIR)/,,$(PHYSICSS:.cxx=.o))
 
 PHYSICSDEP   := $(PHYSICSO:.o=.d) $(PHYSICSDO:.o=.d)
 

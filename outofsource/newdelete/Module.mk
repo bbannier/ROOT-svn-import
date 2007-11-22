@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := newdelete
+MODDIR       := $(SRCDIR)/newdelete
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -14,7 +14,7 @@ NEWDIRI      := $(NEWDIR)/inc
 ##### libNew #####
 NEWH         := $(wildcard $(MODDIRI)/*.h)
 NEWS         := $(wildcard $(MODDIRS)/*.cxx)
-NEWO         := $(NEWS:.cxx=.o)
+NEWO         := $(subst $(SRCDIR)/,,$(NEWS:.cxx=.o))
 
 NEWDEP       := $(NEWO:.o=.d)
 

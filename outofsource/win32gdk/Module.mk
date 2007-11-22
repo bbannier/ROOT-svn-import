@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 27/11/2001
 
-MODDIR       := win32gdk
+MODDIR       := $(SRCDIR)/win32gdk
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -31,7 +31,7 @@ endif
 
 ##### libWin32gdk #####
 WIN32GDKL    := $(MODDIRI)/LinkDef.h
-WIN32GDKDS   := $(MODDIRS)/G__Win32gdk.cxx
+WIN32GDKDS   := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Win32gdk.cxx
 WIN32GDKDO   := $(WIN32GDKDS:.cxx=.o)
 WIN32GDKDH   := $(WIN32GDKDS:.cxx=.h)
 
@@ -41,7 +41,7 @@ WIN32GDKS1   := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
 WIN32GDKS2   := $(wildcard $(MODDIRS)/*.c)
 WIN32GDKO1   := $(WIN32GDKS1:.cxx=.o)
 WIN32GDKO2   := $(WIN32GDKS2:.c=.o)
-WIN32GDKO    := $(WIN32GDKO1) $(WIN32GDKO2)
+WIN32GDKO    := $(subst $(SRCDIR)/,,$(WIN32GDKO1) $(WIN32GDKO2))
 
 WIN32GDKDEP  := $(WIN32GDKO:.o=.d) $(WIN32GDKDO:.o=.d)
 

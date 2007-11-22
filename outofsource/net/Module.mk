@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := net
+MODDIR       := $(SRCDIR)/net
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ NETDIRI      := $(NETDIR)/inc
 
 ##### libNet #####
 NETL         := $(MODDIRI)/LinkDef.h
-NETDS        := $(MODDIRS)/G__Net.cxx
+NETDS        := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Net.cxx
 NETDO        := $(NETDS:.cxx=.o)
 NETDH        := $(NETDS:.cxx=.h)
 
 NETH         := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 NETS         := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-NETO         := $(NETS:.cxx=.o)
+NETO         := $(subst $(SRCDIR)/,,$(NETS:.cxx=.o))
 
 NETDEP       := $(NETO:.o=.d) $(NETDO:.o=.d)
 

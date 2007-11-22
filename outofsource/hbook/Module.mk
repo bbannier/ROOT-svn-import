@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 18/2/2002
 
-MODDIR       := hbook
+MODDIR       := $(SRCDIR)/hbook
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,7 +13,7 @@ HBOOKDIRI    := $(HBOOKDIR)/inc
 
 ##### libHbook #####
 HBOOKL       := $(MODDIRI)/LinkDef.h
-HBOOKDS      := $(MODDIRS)/G__Hbook.cxx
+HBOOKDS      := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Hbook.cxx
 HBOOKDO      := $(HBOOKDS:.cxx=.o)
 HBOOKDH      := $(HBOOKDS:.cxx=.h)
 
@@ -22,7 +22,7 @@ HBOOKS1      := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
 HBOOKS2      := $(MODDIRS)/hntvar2.f
 HBOOKO1      := $(HBOOKS1:.cxx=.o)
 HBOOKO2      := $(HBOOKS2:.f=.o)
-HBOOKO       := $(HBOOKO1) $(HBOOKO2)
+HBOOKO       := $(subst $(SRCDIR)/,,$(HBOOKO1) $(HBOOKO2))
 
 HBOOKDEP     := $(HBOOKS1:.cxx=.d) $(HBOOKDO:.o=.d)
 

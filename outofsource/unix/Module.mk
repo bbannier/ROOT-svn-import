@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := unix
+MODDIR       := $(SRCDIR)/unix
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ UNIXDIRI     := $(UNIXDIR)/inc
 
 ##### libUnix (part of libCore) #####
 UNIXL        := $(MODDIRI)/LinkDef.h
-UNIXDS       := $(MODDIRS)/G__Unix.cxx
+UNIXDS       := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Unix.cxx
 UNIXDO       := $(UNIXDS:.cxx=.o)
 UNIXDH       := $(UNIXDS:.cxx=.h)
 
 UNIXH        := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 UNIXS        := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-UNIXO        := $(UNIXS:.cxx=.o)
+UNIXO        := $(subst $(SRCDIR)/,,$(UNIXS:.cxx=.o))
 
 UNIXDEP      := $(UNIXO:.o=.d) $(UNIXDO:.o=.d)
 

@@ -3,7 +3,7 @@
 #
 # Author: Philippe Canal 9/1/2004
 
-MODDIR         := metautils
+MODDIR         := $(SRCDIR)/metautils
 MODDIRS        := $(MODDIR)/src
 MODDIRI        := $(MODDIR)/inc
 
@@ -14,10 +14,10 @@ METAUTILSDIRI  := $(METAUTILSDIR)/inc
 ##### $(METAUTILSO) #####
 METAUTILSH     := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 METAUTILSS     := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-METAUTILSO     := $(METAUTILSS:.cxx=.o)
+METAUTILSO     := $(subst $(SRCDIR)/,,$(METAUTILSS:.cxx=.o))
 
 METAUTILSL     := $(MODDIRI)/LinkDef.h
-METAUTILSDS    := $(MODDIRS)/G__MetaUtils.cxx
+METAUTILSDS    := $(subst $(SRCDIR)/,,$(MODDIRS))/G__MetaUtils.cxx
 METAUTILSDO    := $(METAUTILSDS:.cxx=.o)
 METAUTILSDH    := $(METAUTILSDS:.cxx=.h)
 

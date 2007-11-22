@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := gpad
+MODDIR       := $(SRCDIR)/gpad
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ GPADDIRI     := $(GPADDIR)/inc
 
 ##### libGpad #####
 GPADL        := $(MODDIRI)/LinkDef.h
-GPADDS       := $(MODDIRS)/G__GPad.cxx
+GPADDS       := $(subst $(SRCDIR)/,,$(MODDIRS))/G__GPad.cxx
 GPADDO       := $(GPADDS:.cxx=.o)
 GPADDH       := $(GPADDS:.cxx=.h)
 
 GPADH        := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 GPADS        := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-GPADO        := $(GPADS:.cxx=.o)
+GPADO        := $(subst $(SRCDIR)/,,$(GPADS:.cxx=.o))
 
 GPADDEP      := $(GPADO:.o=.d) $(GPADDO:.o=.d)
 

@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := build
+MODDIR       := $(SRCDIR)/build
 
 RMKDEPDIR    := $(MODDIR)/rmkdepend
 BINDEXPDIR   := $(MODDIR)/win/bindexplib
@@ -12,8 +12,8 @@ BINDEXPDIR   := $(MODDIR)/win/bindexplib
 RMKDEPH      := $(wildcard $(RMKDEPDIR)/*.h)
 RMKDEPS1     := $(wildcard $(RMKDEPDIR)/*.c)
 RMKDEPS2     := $(wildcard $(RMKDEPDIR)/*.cxx)
-RMKDEPO1     := $(RMKDEPS1:.c=.o)
-RMKDEPO2     := $(RMKDEPS2:.cxx=.o)
+RMKDEPO1     := $(subst $(SRCDIR)/,,$(RMKDEPS1:.c=.o))
+RMKDEPO2     := $(subst $(SRCDIR)/,,$(RMKDEPS2:.cxx=.o))
 RMKDEPO      := $(RMKDEPO1) $(RMKDEPO2)
 RMKDEP       := bin/rmkdepend$(EXEEXT)
 ifeq ($(PLATFORM),win32)
@@ -26,7 +26,7 @@ endif
 ##### bindexplib #####
 ifeq ($(PLATFORM),win32)
 BINDEXPS     := $(wildcard $(BINDEXPDIR)/*.cxx)
-BINDEXPO     := $(BINDEXPS:.cxx=.o)
+BINDEXPO     := $(subst $(SRCDIR)/,,$(BINDEXPS:.cxx=.o))
 BINDEXP      := bin/bindexplib$(EXEEXT)
 
 W32PRAGMA    := build/win/w32pragma.h
@@ -61,14 +61,17 @@ distclean::     distclean-build
 
 
 ##### dependencies #####
-$(RMKDEPDIR)/cppsetup.o: $(RMKDEPDIR)/def.h $(RMKDEPDIR)/ifparser.h
-$(RMKDEPDIR)/ifparser.o: $(RMKDEPDIR)/ifparser.h
-$(RMKDEPDIR)/include.o:  $(RMKDEPDIR)/def.h
-$(RMKDEPDIR)/main.o:     $(RMKDEPDIR)/def.h $(RMKDEPDIR)/imakemdep.h
-$(RMKDEPDIR)/parse.o:    $(RMKDEPDIR)/def.h
-$(RMKDEPDIR)/pr.o:       $(RMKDEPDIR)/def.h
-$(RMKDEPDIR)/mainroot.o: $(RMKDEPDIR)/def.h
+$(subst $(SRCDIR)/,,$(RMKDEPDIR)/cppsetup.o): $(RMKDEPDIR)/def.h $(RMKDEPDIR)/ifparser.h
+$(subst $(SRCDIR)/,,$(RMKDEPDIR)/ifparser.o): $(RMKDEPDIR)/ifparser.h
+$(subst $(SRCDIR)/,,$(RMKDEPDIR)/include.o):  $(RMKDEPDIR)/def.h
+$(subst $(SRCDIR)/,,$(RMKDEPDIR)/main.o):     $(RMKDEPDIR)/def.h $(RMKDEPDIR)/imakemdep.h
+$(subst $(SRCDIR)/,,$(RMKDEPDIR)/parse.o):    $(RMKDEPDIR)/def.h
+$(subst $(SRCDIR)/,,$(RMKDEPDIR)/pr.o):       $(RMKDEPDIR)/def.h
+$(subst $(SRCDIR)/,,$(RMKDEPDIR)/mainroot.o): $(RMKDEPDIR)/def.h
 
 ##### local rules #####
 $(RMKDEPO1): CFLAGS += $(RMKDEPCFLAGS)
 $(RMKDEPO2): CXXFLAGS += $(RMKDEPCFLAGS)
+$(RMKDEPO) : RMKDEP:=
+$(RMKDEPO) : PCHCFLAGS:=
+$(RMKDEPO) : PCHCXXFLAGS:=

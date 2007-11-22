@@ -3,17 +3,19 @@
 #
 # Author: Gerardo Ganis  12/12/2005
 
-MODDIR       := proofx
+MODDIR       := $(SRCDIR)/proofx
 MODDIRS      := $(MODDIR)/src
+MODDIRB      := proofx/src
 MODDIRI      := $(MODDIR)/inc
 
 PROOFXDIR    := $(MODDIR)
 PROOFXDIRS   := $(PROOFXDIR)/src
+PROOFXDIRB   := $(MODDIRB)
 PROOFXDIRI   := $(PROOFXDIR)/inc
 
 ##### libProofx #####
 PROOFXL      := $(MODDIRI)/LinkDef.h
-PROOFXDS     := $(MODDIRS)/G__Proofx.cxx
+PROOFXDS     := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Proofx.cxx
 PROOFXDO     := $(PROOFXDS:.cxx=.o)
 PROOFXDH     := $(PROOFXDS:.cxx=.h)
 
@@ -28,7 +30,7 @@ else
 PROOFXH      := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 PROOFXS      := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
 endif
-PROOFXO      := $(PROOFXS:.cxx=.o)
+PROOFXO      := $(subst $(SRCDIR)/,,$(PROOFXS:.cxx=.o))
 
 PROOFXDEP    := $(PROOFXO:.o=.d) $(PROOFXDO:.o=.d)
 

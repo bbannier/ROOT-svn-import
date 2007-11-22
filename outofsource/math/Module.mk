@@ -3,7 +3,7 @@
 #
 # Author: Rene Brun 06/02/2007
 
-MODDIR       := math
+MODDIR       := $(SRCDIR)/math
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,7 +13,7 @@ MATHDIRI     := $(MATHDIR)/inc
 
 ##### libMath  #####
 MATHL        := $(MODDIRI)/LinkDef.h
-MATHDS       := $(MODDIRS)/G__Math.cxx
+MATHDS       := $(subst $(SRCDIR)/,,$(MODDIRS))/G__Math.cxx
 MATHDO       := $(MATHDS:.cxx=.o)
 MATHDH       := $(MATHDS:.cxx=.h)
 
@@ -21,7 +21,7 @@ MATHH1       := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 MATHH2       := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/Math/*.h))
 MATHH        := $(MATHH1) $(MATHH2)
 MATHS        := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-MATHO        := $(MATHS:.cxx=.o)
+MATHO        := $(subst $(SRCDIR)/,,$(MATHS:.cxx=.o))
 
 MATHDEP      := $(MATHO:.o=.d) $(MATHDO:.o=.d)
 

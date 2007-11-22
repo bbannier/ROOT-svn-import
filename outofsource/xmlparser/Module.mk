@@ -3,7 +3,7 @@
 #
 # Authors: Jose Lo
 
-MODDIR        := xmlparser
+MODDIR        := $(SRCDIR)/xmlparser
 MODDIRS       := $(MODDIR)/src
 MODDIRI       := $(MODDIR)/inc
 
@@ -13,13 +13,13 @@ XMLPARSERDIRI := $(XMLPARSERDIR)/inc
 
 ##### libXMLParser #####
 XMLPARSERL    := $(MODDIRI)/LinkDef.h
-XMLPARSERDS   := $(MODDIRS)/G__XMLParser.cxx
+XMLPARSERDS   := $(subst $(SRCDIR)/,,$(MODDIRS))/G__XMLParser.cxx
 XMLPARSERDO   := $(XMLPARSERDS:.cxx=.o)
 XMLPARSERDH   := $(XMLPARSERDS:.cxx=.h)
 
 XMLPARSERH    := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 XMLPARSERS    := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-XMLPARSERO    := $(XMLPARSERS:.cxx=.o)
+XMLPARSERO    := $(subst $(SRCDIR)/,,$(XMLPARSERS:.cxx=.o))
 
 XMLPARSERDEP  := $(XMLPARSERO:.o=.d) $(XMLPARSERDO:.o=.d)
 

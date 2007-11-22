@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 16/3/2007
 
-MODDIR       := proofplayer
+MODDIR       := $(SRCDIR)/proofplayer
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -13,7 +13,7 @@ PROOFPLAYERDIRI := $(PROOFPLAYERDIR)/inc
 
 ##### libProofPlayer #####
 PROOFPLAYERL  := $(MODDIRI)/LinkDef.h
-PROOFPLAYERDS := $(MODDIRS)/G__ProofPlayer.cxx
+PROOFPLAYERDS := $(subst $(SRCDIR)/,,$(MODDIRS))/G__ProofPlayer.cxx
 PROOFPLAYERDO := $(PROOFPLAYERDS:.cxx=.o)
 PROOFPLAYERDH := $(PROOFPLAYERDS:.cxx=.h)
 
@@ -21,7 +21,7 @@ PROOFPLAYERH  := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 PROOFPLAYERH  := $(filter-out $(MODDIRI)/TProofDraw%,$(PROOFPLAYERH))
 PROOFPLAYERS  := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
 PROOFPLAYERS  := $(filter-out $(MODDIRS)/TProofDraw%,$(PROOFPLAYERS))
-PROOFPLAYERO  := $(PROOFPLAYERS:.cxx=.o)
+PROOFPLAYERO  := $(subst $(SRCDIR)/,,$(PROOFPLAYERS:.cxx=.o))
 
 PROOFPLAYERDEP := $(PROOFPLAYERO:.o=.d) $(PROOFPLAYERDO:.o=.d)
 
@@ -30,13 +30,13 @@ PROOFPLAYERMAP := $(PROOFPLAYERLIB:.$(SOEXT)=.rootmap)
 
 ##### libProofDraw #####
 PROOFDRAWL   := $(MODDIRI)/LinkDefDraw.h
-PROOFDRAWDS  := $(MODDIRS)/G__ProofDraw.cxx
+PROOFDRAWDS  := $(subst $(SRCDIR)/,,$(MODDIRS))/G__ProofDraw.cxx
 PROOFDRAWDO  := $(PROOFDRAWDS:.cxx=.o)
 PROOFDRAWDH  := $(PROOFDRAWDS:.cxx=.h)
 
 PROOFDRAWH   := $(MODDIRI)/TProofDraw.h
 PROOFDRAWS   := $(MODDIRS)/TProofDraw.cxx
-PROOFDRAWO   := $(PROOFDRAWS:.cxx=.o)
+PROOFDRAWO   := $(subst $(SRCDIR)/,,$(PROOFDRAWS:.cxx=.o))
 
 PROOFDRAWDEP := $(PROOFDRAWO:.o=.d) $(PROOFDRAWDO:.o=.d)
 

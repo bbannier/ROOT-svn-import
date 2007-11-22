@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 20/6/2005
 
-MODDIR       := mathcore
+MODDIR       := $(SRCDIR)/mathcore
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -20,8 +20,8 @@ MATHCORELINC := $(MODDIRI)/Math/LinkDef_Func.h \
                 $(MODDIRI)/Math/LinkDef_Vector3D.h \
                 $(MODDIRI)/Math/LinkDef_Vector4D.h \
                 $(MODDIRI)/Math/LinkDef_Rotation.h
-MATHCOREDS   := $(MODDIRS)/G__MathCore.cxx
-MATHCOREDS32 := $(MODDIRS)/G__MathCore32.cxx
+MATHCOREDS   := $(subst $(SRCDIR)/,,$(MODDIRS))/G__MathCore.cxx
+MATHCOREDS32 := $(subst $(SRCDIR)/,,$(MODDIRS))/G__MathCore32.cxx
 MATHCOREDO   := $(MATHCOREDS:.cxx=.o)
 MATHCOREDO32 := $(MATHCOREDS32:.cxx=.o)
 MATHCOREDH   := $(MATHCOREDS:.cxx=.h)
@@ -74,7 +74,7 @@ MATHCOREAH   := $(filter-out $(MODDIRI)/Math/LinkDef%, $(wildcard $(MODDIRI)/Mat
 MATHCOREGVH  := $(filter-out $(MODDIRI)/Math/GenVector/LinkDef%, $(wildcard $(MODDIRI)/Math/GenVector/*.h))
 MATHCOREH    := $(MATHCOREAH) $(MATHCOREGVH)
 MATHCORES    := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-MATHCOREO    := $(MATHCORES:.cxx=.o)
+MATHCOREO    := $(subst $(SRCDIR)/,,$(MATHCORES:.cxx=.o))
 
 MATHCOREDEP  := $(MATHCOREO:.o=.d)  $(MATHCOREDO:.o=.d) $(MATHCOREDO32:.o=.d)
 
@@ -106,7 +106,7 @@ $(MATHCOREDS):  $(MATHCOREDH1) $(MATHCOREL) $(MATHCORELINC) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
 		@echo "for files $(MATHCOREDH1)"
 		$(ROOTCINTTMP) -f $@ -c $(MATHCOREDH1) $(MATHCOREL)
-#		genreflex $(MATHCOREDIRS)/MathCoreDict.h  --selection_file=$(MATHCOREDIRS)/selection_MathCore.xml -o $(MATHCOREDIRS)/G__MathCore.cxx -I$(MATHCOREDIRI)
+#		genreflex $(MATHCOREDIRS)/G__MathCoreDict.h  --selection_file=$(MATHCOREDIRS)/selection_MathCore.xml -o $(MATHCOREDIRS)/MathCore.cxx -I$(MATHCOREDIRI)
 
 $(MATHCOREDS32):$(MATHCOREDH132) $(MATHCOREL) $(MATHCORELINC) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
