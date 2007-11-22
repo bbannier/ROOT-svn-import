@@ -62,6 +62,11 @@ RooNumIntFactory::RooNumIntFactory()
 
 RooNumIntFactory::~RooNumIntFactory()
 {
+  std::map<std::string,pair<RooAbsIntegrator*,std::string> >::iterator iter = _map.begin() ;
+  while (iter != _map.end()) {
+    delete iter->second.first ;
+    ++iter ;
+  }  
 }
 
 RooNumIntFactory::RooNumIntFactory(const RooNumIntFactory& other) : TObject(other)

@@ -145,7 +145,7 @@ void RooAdaptiveGaussKronrodIntegrator1D::registerIntegrator(RooNumIntFactory& f
 
 
 
-RooAdaptiveGaussKronrodIntegrator1D::RooAdaptiveGaussKronrodIntegrator1D()
+RooAdaptiveGaussKronrodIntegrator1D::RooAdaptiveGaussKronrodIntegrator1D() : _x(0), _workspace(0)
 {
 }
 
@@ -213,7 +213,9 @@ RooAdaptiveGaussKronrodIntegrator1D::~RooAdaptiveGaussKronrodIntegrator1D()
   if (_workspace) {
     gsl_integration_workspace_free ((gsl_integration_workspace*) _workspace) ;
   }
-  delete[] _x ;
+  if (_x) {
+    delete[] _x ;
+  }
 }
 
 

@@ -74,6 +74,8 @@ void RooMsgService::cleanup()
 RooMsgService::RooMsgService() 
 {
   // Constructor
+  _silentMode = kFALSE ;
+
   _devnull = new ofstream("/dev/null") ;
 
   _levelNames[DEBUG]="DEBUG" ;
@@ -93,9 +95,10 @@ RooMsgService::RooMsgService()
   _topicNames[Optimization]="Optimization" ;
   _topicNames[Workspace]="Workspace" ;
   _topicNames[InputArguments]="InputArguments" ;
+  _topicNames[Tracing]="Tracing" ;
 
   addStream(RooMsgService::WARNING) ;
-  addStream(RooMsgService::INFO,Topic(RooMsgService::Generation|RooMsgService::Plotting|RooMsgService::Fitting|RooMsgService::Optimization|RooMsgService::Minimization)) ;
+  addStream(RooMsgService::INFO,Topic(RooMsgService::Generation|RooMsgService::Plotting|RooMsgService::Fitting|RooMsgService::Optimization|RooMsgService::Minimization|RooMsgService::Caching)) ;
 
   gMsgService = this ;
 
@@ -117,7 +120,7 @@ RooMsgService::~RooMsgService()
 
 
 Int_t RooMsgService::addStream(MsgLevel level, const RooCmdArg& arg1, const RooCmdArg& arg2, const RooCmdArg& arg3, 
-      					                const RooCmdArg& arg4, const RooCmdArg& arg5, const RooCmdArg& arg6) 
+    	      			               const RooCmdArg& arg4, const RooCmdArg& arg5, const RooCmdArg& arg6) 
 {
   // Add a message logging stream for message with given MsgLevel or higher (i.e. more severe)
   // This method accepts the following arguments to configure the stream
@@ -152,7 +155,7 @@ Int_t RooMsgService::addStream(MsgLevel level, const RooCmdArg& arg1, const RooC
   RooCmdConfig pc(Form("RooMsgService::addReportingStream(%s)",GetName())) ;
   pc.defineInt("prefix","Prefix",0,kTRUE) ;
   pc.defineInt("color","Color",0,static_cast<Int_t>(kBlack)) ;
-  pc.defineInt("topic","Topic",0,0) ;
+  pc.defineInt("topic","Topic",0,0xFFFFF) ;
   pc.defineString("objName","ObjectName",0,"") ;
   pc.defineString("className","ClassName",0,"") ;
   pc.defineString("baseClassName","BaseClassName",0,"") ;
@@ -350,6 +353,7 @@ Bool_t RooMsgService::StreamConfig::match(MsgLevel level, MsgTopic top, const Ro
 Bool_t RooMsgService::StreamConfig::match(MsgLevel level, MsgTopic top, const TObject* obj) 
 {
   // Determine if message from given object at given level on given topic is logged
+  if (!active) return kFALSE ;
   if (level<minLevel) return kFALSE ;
   if (!(topic&top)) return kFALSE ;
 
@@ -365,6 +369,10 @@ Bool_t RooMsgService::StreamConfig::match(MsgLevel level, MsgTopic top, const TO
 
 ostream& RooMsgService::log(const RooAbsArg* self, MsgLevel level, MsgTopic topic, Bool_t skipPrefix) 
 {
+  if (level>=ERROR) {
+    _errorCount++ ;
+  }
+
   // Return C++ ostream associated with given message configuration
   Int_t as = activeStream(self,topic,level) ;
   if (as==-1) {
@@ -383,6 +391,10 @@ ostream& RooMsgService::log(const RooAbsArg* self, MsgLevel level, MsgTopic topi
 
 ostream& RooMsgService::log(const TObject* self, MsgLevel level, MsgTopic topic, Bool_t skipPrefix) 
 {
+  if (level>=ERROR) {
+    _errorCount++ ;
+  }
+
   // Return C++ ostream associated with given message configuration
   Int_t as = activeStream(self,topic,level) ;
   if (as==-1) {
@@ -421,15 +433,19 @@ void RooMsgService::Print(Option_t *options) const
     
     map<int,string>::const_iterator is = _levelNames.find(_streams[i].minLevel) ;
     cout << "[" << i << "] MinLevel = " << is->second ;
+
     cout << " Topic = " ;
-    map<int,string>::const_iterator iter = _topicNames.begin() ;
-    while(iter!=_topicNames.end()) {
-      if (iter->first & _streams[i].topic) {
-	cout << iter->second << " " ;
+    if (_streams[i].topic != 0xFFFFF) {      
+      map<int,string>::const_iterator iter = _topicNames.begin() ;
+      while(iter!=_topicNames.end()) {
+	if (iter->first & _streams[i].topic) {
+	  cout << iter->second << " " ;
+	}
+	++iter ;
       }
-      ++iter ;
+    } else {
+      cout << " Any " ;
     }
-    cout << endl ;
     
 
     if (_streams[i].objectName.size()>0) {

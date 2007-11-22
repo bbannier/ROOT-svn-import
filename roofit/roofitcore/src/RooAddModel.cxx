@@ -72,7 +72,7 @@ RooAddModel::RooAddModel() :
 
 
 
-RooAddModel::RooAddModel(const char *name, const char *title, const RooArgList& pdfList, const RooArgList& coefList) :
+RooAddModel::RooAddModel(const char *name, const char *title, const RooArgList& pdfList, const RooArgList& coefList, Bool_t ownPdfList) :
   RooResolutionModel(name,title,((RooResolutionModel*)pdfList.at(0))->convVar()),
   _refCoefNorm("!refCoefNorm","Reference coefficient normalization set",this,kFALSE,kFALSE),
   _refCoefRangeName(0),
@@ -142,7 +142,14 @@ RooAddModel::RooAddModel(const char *name, const char *title, const RooArgList& 
 
   _coefCache = new Double_t[_pdfList.getSize()] ;
   _coefErrCount = _errorCount ;
+
+  if (ownPdfList) {
+    _ownedComps.addOwned(_pdfList) ;
+  }
+
 }
+
+
 
 
 
@@ -249,7 +256,7 @@ RooResolutionModel* RooAddModel::convolution(RooFormulaVar* basis, RooAbsArg* ow
     coefList.add(*coef) ;
   }
     
-  RooAddModel* convSum = new RooAddModel(newName,newTitle,modelList,coefList) ;
+  RooAddModel* convSum = new RooAddModel(newName,newTitle,modelList,coefList,kTRUE) ;
   convSum->changeBasis(basis) ;
   return convSum ;
 }

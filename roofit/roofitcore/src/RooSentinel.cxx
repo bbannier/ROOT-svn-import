@@ -34,6 +34,8 @@
 #include "RooNameReg.h"
 #include "RooArgSet.h"
 #include "RooRealConstant.h"
+#include "RooResolutionModel.h"
+#include "RooMath.h"
 
 Bool_t RooSentinel::_active = kFALSE ;
 
@@ -47,6 +49,8 @@ static void CleanUpRooFitAtExit()
   RooNameReg::cleanup() ;
   RooArgSet::cleanup() ;
   RooRealConstant::cleanup() ;
+  RooResolutionModel::cleanup() ;
+  RooMath::cleanup() ;
 }
 
 

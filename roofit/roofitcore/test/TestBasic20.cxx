@@ -64,6 +64,9 @@ public:
     regPlot(dtframe1,"Basic20_Plot1") ;
     regPlot(dtframe2,"Basic20_Plot2") ;
     regPlot(dtframe3,"Basic20_Plot3") ;
+
+    delete data ;
+    delete errdata ;
     
     return kTRUE ;
   }
