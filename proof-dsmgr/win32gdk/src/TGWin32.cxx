@@ -5583,6 +5583,46 @@ void TGWin32::MapModifierState(UInt_t & state, UInt_t & xstate, Bool_t tox)
    }
 }
 
+static void _set_event_time(GdkEvent &event, UInt_t time)
+{
+   // set gdk event time
+
+   switch (event.type) {
+      case GDK_MOTION_NOTIFY:
+         event.motion.time = time;
+      case GDK_BUTTON_PRESS:
+      case GDK_2BUTTON_PRESS:
+      case GDK_3BUTTON_PRESS:
+      case GDK_BUTTON_RELEASE:
+      case GDK_SCROLL:
+         event.button.time = time;
+      case GDK_KEY_PRESS:
+      case GDK_KEY_RELEASE:
+         event.key.time = time;
+      case GDK_ENTER_NOTIFY:
+      case GDK_LEAVE_NOTIFY:
+         event.crossing.time = time;
+      case GDK_PROPERTY_NOTIFY:
+         event.property.time = time;
+      case GDK_SELECTION_CLEAR:
+      case GDK_SELECTION_REQUEST:
+      case GDK_SELECTION_NOTIFY:
+         event.selection.time = time;
+      case GDK_PROXIMITY_IN:
+      case GDK_PROXIMITY_OUT:
+         event.proximity.time = time;
+      case GDK_DRAG_ENTER:
+      case GDK_DRAG_LEAVE:
+      case GDK_DRAG_MOTION:
+      case GDK_DRAG_STATUS:
+      case GDK_DROP_START:
+      case GDK_DROP_FINISHED:
+         event.dnd.time = time;
+      default:                 /* use current time */
+         break;
+   }
+}
+
 //______________________________________________________________________________
 void TGWin32::MapEvent(Event_t & ev, GdkEvent & xev, Bool_t tox)
 {
@@ -5647,7 +5687,6 @@ void TGWin32::MapEvent(Event_t & ev, GdkEvent & xev, Bool_t tox)
          xev.key.type = xev.type;
          MapModifierState(ev.fState, xev.key.state, kTRUE); // key mask
          xev.key.keyval = ev.fCode; // key code
-         xev.key.time = ev.fTime;
       }
       if (ev.fType == kButtonPress || ev.fType == kButtonRelease) {
          xev.button.window = (GdkWindow *) ev.fWindow;
@@ -5660,7 +5699,6 @@ void TGWin32::MapEvent(Event_t & ev, GdkEvent & xev, Bool_t tox)
          if (ev.fType == kButtonRelease)
             xev.button.state |= GDK_RELEASE_MASK;
          xev.button.button = ev.fCode; // button code
-         xev.button.time = ev.fTime;
       }
       if (ev.fType == kSelectionNotify) {
          xev.selection.window = (GdkWindow *) ev.fUser[0];
@@ -5701,7 +5739,6 @@ void TGWin32::MapEvent(Event_t & ev, GdkEvent & xev, Bool_t tox)
          xev.motion.y = ev.fY;
          xev.motion.x_root = ev.fXRoot;
          xev.motion.y_root = ev.fYRoot;
-         xev.motion.time = ev.fTime;
       }
       if ((ev.fType == kEnterNotify) || (ev.fType == kLeaveNotify)) {
          xev.crossing.window = (GdkWindow *) ev.fWindow;
@@ -5710,7 +5747,6 @@ void TGWin32::MapEvent(Event_t & ev, GdkEvent & xev, Bool_t tox)
          xev.crossing.y = ev.fY;
          xev.crossing.x_root = ev.fXRoot;
          xev.crossing.y_root = ev.fYRoot;
-         xev.crossing.time = ev.fTime;
          xev.crossing.mode = (GdkCrossingMode) ev.fCode; // NotifyNormal, NotifyGrab, NotifyUngrab
          MapModifierState(ev.fState, xev.crossing.state, kTRUE);  // key or button mask
       }
@@ -5742,11 +5778,12 @@ void TGWin32::MapEvent(Event_t & ev, GdkEvent & xev, Bool_t tox)
          xev.selection.selection = ev.fUser[1];
          xev.selection.target = ev.fUser[2];
          xev.selection.property = ev.fUser[3];
-         xev.selection.time = ev.fTime;
       }
       if ((ev.fType == kMapNotify) || (ev.fType == kUnmapNotify)) {
          xev.any.window = (GdkWindow *) ev.fWindow;
       }
+      if (xev.type != GDK_CLIENT_EVENT)
+         _set_event_time(xev, ev.fTime);
    } else {
       // map from gdk_event to Event_t
       ev.fType = kOtherEvent;
@@ -5783,6 +5820,7 @@ void TGWin32::MapEvent(Event_t & ev, GdkEvent & xev, Bool_t tox)
 
       ev.fSendEvent = kFALSE; //xev.any.send_event ? kTRUE : kFALSE;
       ev.fTime = gdk_event_get_time((GdkEvent *)&xev);
+      ev.fWindow = (Window_t) xev.any.window;
 
       if ((xev.type == GDK_MAP) || (xev.type == GDK_UNMAP)) {
          ev.fWindow = (Window_t) xev.any.window;
@@ -7314,8 +7352,6 @@ void TGWin32::ConvertSelection(Window_t win, Atom_t &sel, Atom_t &target,
    // Get Clipboard data.
 
    HGLOBAL hdata;
-   UChar_t *ptr, *data;
-   UInt_t i, length;
 
    static UINT gdk_selection_notify_msg = 
       RegisterWindowMessage("gdk-selection-notify");
@@ -7324,14 +7360,9 @@ void TGWin32::ConvertSelection(Window_t win, Atom_t &sel, Atom_t &target,
       return;
    }
    hdata = GetClipboardData(CF_PRIVATEFIRST);
-   ptr = (UChar_t *)GlobalLock(hdata);
-   length = GlobalSize(hdata);
-   data = (UChar_t *)malloc(length + 1);
-   for (i = 0; i < length; i++) {
-      *data++ = *ptr++;
-   }
-   GlobalUnlock(hdata);
    CloseClipboard();
+   if (hdata == 0)
+      return;
    /* Send ourselves an ersatz selection notify message so that we actually
     * fetch the data.
     */

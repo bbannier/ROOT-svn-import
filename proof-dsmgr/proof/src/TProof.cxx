@@ -457,7 +457,7 @@ Int_t TProof::Init(const char *masterurl, const char *conffile,
    fEnabledPackages = 0;
    fEndMaster      = IsMaster() ? kTRUE : kFALSE;
 
-   // Timeout for some collect actions 
+   // Timeout for some collect actions
    fCollectTimeout = gEnv->GetValue("Proof.CollectTimeout", -1);
 
    // Default entry point for the data pool is the master
@@ -1891,7 +1891,7 @@ Int_t TProof::Collect(TMonitor *mon, Long_t timeout)
 }
 
 //______________________________________________________________________________
-R__HIDDEN void TProof::CleanGDirectory(TList *ol)
+void TProof::CleanGDirectory(TList *ol)
 {
    // Remove links to objects in list 'ol' from gDirectory
 
@@ -2325,16 +2325,18 @@ Int_t TProof::CollectInputFrom(TSocket *s)
                (*mess) >> selec >> dsz >> first >> nent;
 
                // Start or reset the progress dialog
-               if (fProgressDialog && !TestBit(kUsingSessionGui)) {
-                  if (!fProgressDialogStarted) {
-                     fProgressDialog->ExecPlugin(5, this,
-                                                 selec.Data(), dsz, first, nent);
-                     fProgressDialogStarted = kTRUE;
-                  } else {
-                     ResetProgressDialog(selec, dsz, first, nent);
+               if (!gROOT->IsBatch()) {
+                  if (fProgressDialog && !TestBit(kUsingSessionGui)) {
+                     if (!fProgressDialogStarted) {
+                        fProgressDialog->ExecPlugin(5, this,
+                                                   selec.Data(), dsz, first, nent);
+                        fProgressDialogStarted = kTRUE;
+                     } else {
+                        ResetProgressDialog(selec, dsz, first, nent);
+                     }
                   }
+                  ResetBit(kUsingSessionGui);
                }
-               ResetBit(kUsingSessionGui);
             }
          }
          break;
@@ -3615,7 +3617,7 @@ Int_t TProof::Exec(const char *cmd, Bool_t plusMaster)
 }
 
 //______________________________________________________________________________
-R__HIDDEN Int_t TProof::Exec(const char *cmd, ESlaves list, Bool_t plusMaster)
+Int_t TProof::Exec(const char *cmd, ESlaves list, Bool_t plusMaster)
 {
    // Send command to be executed on the PROOF master and/or slaves.
    // Command can be any legal command line command. Commands like
@@ -4321,7 +4323,7 @@ Int_t TProof::ClearPackage(const char *package)
 }
 
 //______________________________________________________________________________
-R__HIDDEN Int_t TProof::DisablePackage(const char *package)
+Int_t TProof::DisablePackage(const char *package)
 {
    // Remove a specific package.
    // Returns 0 in case of success and -1 in case of error.
@@ -4356,7 +4358,7 @@ R__HIDDEN Int_t TProof::DisablePackage(const char *package)
 }
 
 //______________________________________________________________________________
-R__HIDDEN Int_t TProof::DisablePackageOnClient(const char *package)
+Int_t TProof::DisablePackageOnClient(const char *package)
 {
    // Remove a specific package from the client.
    // Returns 0 in case of success and -1 in case of error.
@@ -4373,7 +4375,7 @@ R__HIDDEN Int_t TProof::DisablePackageOnClient(const char *package)
 }
 
 //______________________________________________________________________________
-R__HIDDEN Int_t TProof::DisablePackages()
+Int_t TProof::DisablePackages()
 {
    // Remove all packages.
    // Returns 0 in case of success and -1 in case of error.
@@ -4617,7 +4619,7 @@ Int_t TProof::LoadPackage(const char *package, Bool_t notOnClient)
 }
 
 //______________________________________________________________________________
-R__HIDDEN Int_t TProof::LoadPackageOnClient(const TString &package)
+Int_t TProof::LoadPackageOnClient(const TString &package)
 {
    // Load specified package in the client. Executes the PROOF-INF/SETUP.C
    // script on the client. Returns 0 in case of success and -1 in case of error.
@@ -4719,7 +4721,7 @@ R__HIDDEN Int_t TProof::LoadPackageOnClient(const TString &package)
 }
 
 //______________________________________________________________________________
-R__HIDDEN Int_t TProof::UnloadPackage(const char *package)
+Int_t TProof::UnloadPackage(const char *package)
 {
    // Unload specified package.
    // Returns 0 in case of success and -1 in case of error.
@@ -4749,7 +4751,7 @@ R__HIDDEN Int_t TProof::UnloadPackage(const char *package)
 }
 
 //______________________________________________________________________________
-R__HIDDEN Int_t TProof::UnloadPackageOnClient(const char *package)
+Int_t TProof::UnloadPackageOnClient(const char *package)
 {
    // Unload a specific package on the client.
    // Returns 0 in case of success and -1 in case of error.
@@ -4784,7 +4786,7 @@ R__HIDDEN Int_t TProof::UnloadPackageOnClient(const char *package)
 }
 
 //______________________________________________________________________________
-R__HIDDEN Int_t TProof::UnloadPackages()
+Int_t TProof::UnloadPackages()
 {
    // Unload all packages.
    // Returns 0 in case of success and -1 in case of error.
@@ -6474,20 +6476,19 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
 
 
    //If skippedFiles is not provided we can not return list of skipped files.
-   if ((!skippedFiles || !&skippedFiles) && overwriteNone) {
+   if (!skippedFiles && overwriteNone) {
       Error("UploadDataSet",
             "Provide pointer to TList object as skippedFiles argument when using kOverwriteNoFiles option.");
       return kError;
    }
    //If skippedFiles is provided but did not point to a TList the have to STOP
-   if (skippedFiles && &skippedFiles)
-
+   if (skippedFiles) {
       if (skippedFiles->Class() != TList::Class()) {
          Error("UploadDataSet",
                "Provided skippedFiles argument does not point to a TList object.");
          return kError;
       }
-
+   }
    TSocket *master;
    if (fActiveSlaves->GetSize())
       master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
@@ -6586,7 +6587,7 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
                   Error("UploadDataSet", "file %s was not copied", fileUrl->GetUrl());
             } else {  // don't overwrite, but file exist and must be included
                fileList->GetList()->Add(new TFileInfo(Form("%s/%s", dest.Data(), ent)));
-               if (skippedFiles && &skippedFiles) {
+               if (skippedFiles) {
                   // user specified the TList *skippedFiles argument so we create
                   // the list of skipped files
                   skippedFiles->Add(new TFileInfo(fileUrl->GetUrl()));
