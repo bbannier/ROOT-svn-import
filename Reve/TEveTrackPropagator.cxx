@@ -14,6 +14,8 @@
 
 #include <TMath.h>
 
+#include <cassert>
+
 //______________________________________________________________________________
 void TEveTrackPropagator::Helix::Step(Vertex4D& v, TEveVector& p)
 {
