@@ -60,9 +60,6 @@ private:
    static Int_t       fgLockFileTimeLimit; // limit in seconds after a lock automatically expires
    static const char *fgCommonDataSetTag;  // name for common datasets, default: COMMON
 
-   Bool_t  ParseDataSetUri(const char *uri, TString *dsGroup = 0, TString *dsUser = 0,
-                           TString *dsName = 0, TString *dsTree = 0,
-                           Bool_t onlyCurrent = kFALSE, Bool_t wildcards = kFALSE);
    Bool_t  ReadGroupConfig(const char *cf = 0);
 
    TProofDataSetManager(const TProofDataSetManager&);             // not implemented
@@ -107,6 +104,10 @@ public:
    Int_t    GetNTouchedFiles() { return fNTouchedFiles; }
    Int_t    GetNOpenedFiles() { return fNOpenedFiles; }
    Int_t    GetNDisapparedFiles() { return fNDisappearedFiles; }
+
+   Bool_t   ParseDataSetUri(const char *uri, TString *dsGroup = 0, TString *dsUser = 0,
+                            TString *dsName = 0, TString *dsTree = 0,
+                            Bool_t onlyCurrent = kFALSE, Bool_t wildcards = kFALSE);
 
    Int_t    HandleRequest(TMessage *msg, TSocket *sock, FILE *flog);
 
