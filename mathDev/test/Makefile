@@ -114,6 +114,10 @@ STRESSSHAPESO   = stressShapes.$(ObjSuf)
 STRESSSHAPESS   = stressShapes.$(SrcSuf)
 STRESSSHAPES    = stressShapes$(ExeSuf)
 
+STRESSROOFITO  = stressRooFit.$(ObjSuf)
+STRESSROOFITS  = stressRooFit.$(SrcSuf)
+STRESSROOFIT   = stressRooFit$(ExeSuf)
+
 STRESSFITO    = stressFit.$(ObjSuf)
 STRESSFITS    = stressFit.$(SrcSuf)
 STRESSFIT     = stressFit$(ExeSuf)
@@ -156,14 +160,15 @@ OBJS          = $(EVENTO) $(MAINEVENTO) $(HWORLDO) $(HSIMPLEO) $(MINEXAMO) \
                 $(STRESSSHAPESO) $(TCOLLBMO) $(STRESSGEOMETRYO) $(STRESSLO) \
                 $(STRESSGO) $(STRESSSPO) $(TESTBITSO) \
                 $(CTORTUREO) $(QPRANDOMO) $(THREADO) $(STRESSVECO) $(STRESSMATHO) \
-                $(STRESSFITO) $(STRESSHEPIXO) $(STRESSENTRYLISTO)
+                $(STRESSFITO) $(STRESSHEPIXO) $(STRESSENTRYLISTO) $(STRESSROOFITO)
 
 PROGRAMS      = $(EVENT) $(HWORLD) $(HSIMPLE) $(MINEXAM) $(TSTRING) \
                 $(TCOLLEX) $(TCOLLBM) $(VVECTOR) $(VMATRIX) $(VLAZY) \
                 $(HELLOSO) $(ACLOCKSO) $(STRESS) $(TBENCHSO) $(BENCH) \
                 $(STRESSSHAPES) $(STRESSGEOMETRY) $(STRESSL) $(STRESSG) \
                 $(TESTBITS) $(CTORTURE) $(QPRANDOM) $(THREADS) $(STRESSSP) \
-                $(STRESSVEC) $(STRESSFIT) $(STRESSHEPIX) $(STRESSENTRYLIST) $(STRESSMATH)
+                $(STRESSVEC) $(STRESSFIT) $(STRESSHEPIX) $(STRESSENTRYLIST) $(STRESSROOFIT) $(STRESSMATH)
+
 
 OBJS         += $(GUITESTO) $(GUIVIEWERO) $(TETRISO)
 PROGRAMS     += $(GUITEST) $(GUIVIEWER) $(TETRISSO)
@@ -274,7 +279,7 @@ $(STRESSG):     $(STRESSGO)
 
 $(STRESSSP):    $(STRESSSPO)
 ifeq ($(PLATFORM),win32)
-		$(LD) $(LDFLAGS) $^ $(LIBS) ../lib/libSpectrum.lib $(OutPutOpt)$@
+		$(LD) $(LDFLAGS) $^ $(LIBS) '$(ROOTSYS)/lib/libSpectrum.lib' $(OutPutOpt)$@
 		$(MT_EXE)
 else
 		$(LD) $(LDFLAGS) $^ $(LIBS) -lSpectrum $(OutPutOpt)$@
@@ -283,7 +288,7 @@ endif
 
 $(STRESSVEC):   $(STRESSVECO)
 ifeq ($(PLATFORM),win32)
-		$(LD) $(LDFLAGS) $^ $(LIBS) ../lib/libMathCore.lib $(OutPutOpt)$@
+		$(LD) $(LDFLAGS) $^ $(LIBS) '$(ROOTSYS)/lib/libMathCore.lib' $(OutPutOpt)$@
 		$(MT_EXE)
 else
 		$(LD) $(LDFLAGS) $^ $(LIBS) -lMathCore $(OutPutOpt)$@
@@ -306,7 +311,7 @@ $(TESTBITS):    $(TESTBITSO)
 
 $(THREADS):     $(THREADSO)
 ifeq ($(PLATFORM),win32)
-		$(LD) $(LDFLAGS) $^ $(LIBS) ../lib/libThread.lib $(OutPutOpt)$@
+		$(LD) $(LDFLAGS) $^ $(LIBS) '$(ROOTSYS)/lib/libThread.lib' $(OutPutOpt)$@
 		$(MT_EXE)
 		@echo "$@ done"
 else
@@ -320,7 +325,7 @@ endif
 
 $(QPRANDOM):    $(QPRANDOMO)
 ifeq ($(PLATFORM),win32)
-		$(LD) $(LDFLAGS) $^ $(LIBS) ../lib/libQuadp.lib $(OutPutOpt)$@
+		$(LD) $(LDFLAGS) $^ $(LIBS) '$(ROOTSYS)/lib/libQuadp.lib' $(OutPutOpt)$@
 		$(MT_EXE)
 else
 		$(LD) $(LDFLAGS) $^ $(LIBS) -lQuadp $(OutPutOpt)$@
@@ -344,7 +349,7 @@ $(STRESS):      $(STRESSO) $(EVENT)
 
 $(STRESSGEOMETRY):  $(STRESSGEOMETRYO)
 ifeq ($(PLATFORM),win32)
-		$(LD) $(LDFLAGS) $^ $(LIBS) ../lib/libGeom.lib $(OutPutOpt)$@
+		$(LD) $(LDFLAGS) $^ $(LIBS) '$(ROOTSYS)/lib/libGeom.lib' $(OutPutOpt)$@
 		$(MT_EXE)
 else
 		$(LD) $(LDFLAGS) $^ $(LIBS) -lGeom $(OutPutOpt)$@
@@ -353,7 +358,7 @@ endif
 
 $(STRESSSHAPES):  $(STRESSSHAPESO)
 ifeq ($(PLATFORM),win32)
-		$(LD) $(LDFLAGS) $^ $(LIBS) ../lib/libGeom.lib $(OutPutOpt)$@
+		$(LD) $(LDFLAGS) $^ $(LIBS) '$(ROOTSYS)/lib/libGeom.lib' $(OutPutOpt)$@
 		$(MT_EXE)
 else
 		$(LD) $(LDFLAGS) $^ $(LIBS) -lGeom $(OutPutOpt)$@
@@ -373,6 +378,15 @@ $(STRESSHEPIX): $(STRESSHEPIXO) $(STRESSGEOMETRY) $(STRESSFIT) $(STRESSL) \
                 $(STRESSSP) $(STRESS)
 		$(LD) $(LDFLAGS) $(STRESSHEPIXO) $(LIBS) $(OutPutOpt)$@
 		$(MT_EXE)
+		@echo "$@ done"
+
+$(STRESSROOFIT): $(STRESSROOFITO)
+ifeq ($(PLATFORM),win32)
+		$(LD) $(LDFLAGS) $^ $(LIBS) '$(ROOTSYS)/lib/libRooFit.lib' '$(ROOTSYS)/lib/libRooFitCore.lib' '$(ROOTSYS)/lib/libHtml.lib' '$(ROOTSYS)/lib/libThread.lib' '$(ROOTSYS)/lib/libMinuit.lib' $(OutPutOpt)$@
+		$(MT_EXE)
+else
+		$(LD) $(LDFLAGS) $^ $(LIBS) -lRooFit -lRooFitCore -lHtml -lThread -lMinuit  $(OutPutOpt)$@
+endif
 		@echo "$@ done"
 
 $(BENCH):       $(BENCHO) $(TBENCHSO)
