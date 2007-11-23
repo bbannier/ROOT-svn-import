@@ -2547,8 +2547,8 @@ int XrdProofdProtocol::SetProofServEnv(int psid, int loglevel, const char *cfg)
    }
 
    // Data pool entry-point URL
-   if (fgPoolURL) {
-      XrdOucString purl(fgPoolURL);
+   if (fgMgr.PoolURL() && strlen(fgMgr.PoolURL()) > 0) {
+      XrdOucString purl(fgMgr.PoolURL());
       if (!purl.endswith("/"))
          purl += "/";
       fprintf(frc,"# URL for the data pool entry-point\n");
@@ -2605,9 +2605,9 @@ int XrdProofdProtocol::SetProofServEnv(int psid, int loglevel, const char *cfg)
    }
 
    //  Path to file with group information
-   if (fgGroupsMgr.GetCfgFile()) {
+   if (fgMgr.GroupsMgr() && fgMgr.GroupsMgr()->GetCfgFile()) {
       fprintf(frc,"# File with group information\n");
-      fprintf(frc, "ProofDataSetManager.GroupFile: %s\n", fgGroupsMgr.GetCfgFile());
+      fprintf(frc, "ProofDataSetManager.GroupFile: %s\n", fgMgr.GroupsMgr()->GetCfgFile());
    }
 
    // Work dir

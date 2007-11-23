@@ -71,7 +71,8 @@ public:
    enum EStatusBits {
       kHasBeenLookedUp = BIT(15),
       kWriteV3         = BIT(16),
-      kEmpty           = BIT(17)
+      kEmpty           = BIT(17),
+      kCorrupted       = BIT(18)
    };
 
 private:
@@ -122,7 +123,7 @@ public:
    void             Invalidate() { fValid = kFALSE; }
    Int_t            Compare(const TObject *obj) const;
    Bool_t           IsSortable() const { return kTRUE; }
-   Int_t            Lookup(Bool_t force = kFALSE);
+   Int_t            Lookup(Bool_t force = kFALSE, Bool_t stagedonly = kTRUE);
    void             SetLookedUp() { SetBit(kHasBeenLookedUp); }
 
    ClassDef(TDSetElement,6)  // A TDSet element
@@ -135,7 +136,9 @@ public:
    // TDSet status bits
    enum EStatusBits {
       kWriteV3         = BIT(16),
-      kEmpty           = BIT(17)
+      kEmpty           = BIT(17),
+      kValidityChecked = BIT(18),  // Set if elements validiy has been checked
+      kSomeInvalid     = BIT(19)   // Set if at least one element is invalid
    };
 
 private:
@@ -167,7 +170,8 @@ public:
                              const char *dir = 0, Long64_t first = 0,
                              Long64_t num = -1, const char *msd = 0);
    virtual Bool_t        Add(TDSet *set);
-   virtual Bool_t        Add(TCollection *fileinfo);
+   virtual Bool_t        Add(TCollection *fileinfo, const char *meta = 0);
+   virtual Bool_t        Add(TFileInfo *fileinfo, const char *meta = 0);
    virtual void          AddFriend(TDSet *friendset, const char *alias);
 
    virtual Long64_t      Process(const char *selector, Option_t *option = "",
@@ -191,7 +195,7 @@ public:
 
    Bool_t                IsTree() const { return fIsTree; }
    Bool_t                IsValid() const { return !fType.IsNull(); }
-   Bool_t                ElementsValid() const;
+   Bool_t                ElementsValid();
    const char           *GetType() const { return fType; }
    const char           *GetObjName() const { return fObjName; }
    const char           *GetDirectory() const { return fDir; }
@@ -218,7 +222,7 @@ public:
    void                  Validate();
    void                  Validate(TDSet *dset);
 
-   TList                *Lookup(Bool_t removeMissing = kFALSE);
+   TList                *Lookup(Bool_t removeMissing = kFALSE, Bool_t stagedonly = kTRUE);
    void                  SetLookedUp();
 
    void                  SetWriteV3(Bool_t on = kTRUE);

@@ -1640,7 +1640,7 @@ void TProofServ::Print(Option_t *option) const
 }
 
 //______________________________________________________________________________
-R__HIDDEN void TProofServ::RedirectOutput()
+void TProofServ::RedirectOutput()
 {
    // Redirect stdout to a log file. This log file will be flushed to the
    // client or master after each command.
@@ -1786,6 +1786,10 @@ void TProofServ::SendLogFile(Int_t status, Int_t start, Int_t end)
    // Determine the number of bytes left to be read from the log file.
    fflush(stdout);
 
+   // Do not send logs to master
+   if (!IsMaster())
+      FlushLogFile();
+
    off_t ltot=0, lnow=0;
    Int_t left = -1;
    Bool_t adhoc = kFALSE;
@@ -1888,7 +1892,7 @@ void TProofServ::SendParallel()
 }
 
 //______________________________________________________________________________
-R__HIDDEN Int_t TProofServ::UnloadPackage(const char *package)
+Int_t TProofServ::UnloadPackage(const char *package)
 {
    // Removes link to package in working directory,
    // removes entry from include path,
@@ -1927,7 +1931,7 @@ R__HIDDEN Int_t TProofServ::UnloadPackage(const char *package)
 }
 
 //______________________________________________________________________________
-R__HIDDEN Int_t TProofServ::UnloadPackages()
+Int_t TProofServ::UnloadPackages()
 {
    // Unloads all enabled packages. Returns -1 in case of error, 0 otherwise.
 
@@ -2421,7 +2425,7 @@ TProofServ *TProofServ::This()
 }
 
 //______________________________________________________________________________
-R__HIDDEN Int_t TProofServ::OldAuthSetup(TString &conf)
+Int_t TProofServ::OldAuthSetup(TString &conf)
 {
    // Setup authentication related stuff for old versions.
    // Provided for backward compatibility.
@@ -2466,11 +2470,11 @@ R__HIDDEN Int_t TProofServ::OldAuthSetup(TString &conf)
 }
 
 //______________________________________________________________________________
-R__HIDDEN TProofQueryResult *TProofServ::MakeQueryResult(Long64_t nent,
-                                                         const char *opt,
-                                                         TList *inlist, Long64_t fst,
-                                                         TDSet *dset, const char *selec,
-                                                         TObject *elist)
+TProofQueryResult *TProofServ::MakeQueryResult(Long64_t nent,
+                                               const char *opt,
+                                               TList *inlist, Long64_t fst,
+                                               TDSet *dset, const char *selec,
+                                               TObject *elist)
 {
    // Create a TProofQueryResult instance for this query.
 
@@ -2496,7 +2500,7 @@ R__HIDDEN TProofQueryResult *TProofServ::MakeQueryResult(Long64_t nent,
 }
 
 //______________________________________________________________________________
-R__HIDDEN void TProofServ::SetQueryRunning(TProofQueryResult *pq)
+void TProofServ::SetQueryRunning(TProofQueryResult *pq)
 {
    // Set query in running state.
 
@@ -2528,7 +2532,7 @@ R__HIDDEN void TProofServ::SetQueryRunning(TProofQueryResult *pq)
 }
 
 //______________________________________________________________________________
-R__HIDDEN void TProofServ::AddLogFile(TProofQueryResult *pq)
+void TProofServ::AddLogFile(TProofQueryResult *pq)
 {
    // Add part of log file concerning TQueryResult pq to its macro
    // container.
@@ -2561,7 +2565,7 @@ R__HIDDEN void TProofServ::AddLogFile(TProofQueryResult *pq)
 }
 
 //______________________________________________________________________________
-R__HIDDEN void TProofServ::FinalizeQuery(TProofQueryResult *pq)
+void TProofServ::FinalizeQuery(TProofQueryResult *pq)
 {
    // Final steps after Process() to complete the TQueryResult instance.
 
@@ -2671,7 +2675,7 @@ R__HIDDEN void TProofServ::FinalizeQuery(TProofQueryResult *pq)
 }
 
 //______________________________________________________________________________
-R__HIDDEN Int_t TProofServ::CleanupQueriesDir()
+Int_t TProofServ::CleanupQueriesDir()
 {
    // Remove all queries results referring to previous sessions
 
@@ -2711,7 +2715,7 @@ R__HIDDEN Int_t TProofServ::CleanupQueriesDir()
 }
 
 //______________________________________________________________________________
-R__HIDDEN void TProofServ::ScanPreviousQueries(const char *dir)
+void TProofServ::ScanPreviousQueries(const char *dir)
 {
    // Scan the queries directory for the results of previous queries.
    // The headers of the query results found are loaded in fPreviousQueries.
@@ -2785,7 +2789,7 @@ R__HIDDEN void TProofServ::ScanPreviousQueries(const char *dir)
 }
 
 //______________________________________________________________________________
-R__HIDDEN Int_t TProofServ::ApplyMaxQueries()
+Int_t TProofServ::ApplyMaxQueries()
 {
    // Scan the queries directory and remove the oldest ones (and relative dirs,
    // if empty) in such a way only fMaxQueries are kept.
@@ -2839,7 +2843,7 @@ R__HIDDEN Int_t TProofServ::ApplyMaxQueries()
          FileStat_t st;
          if (gSystem->GetPathInfo(fn, st)) {
             Info("ApplyMaxQueries","file '%s' cannot be stated: remove it", fn.Data());
-            gSystem->Unlink(fn);
+            gSystem->Unlink(gSystem->DirName(fn));
             continue;
          }
 
@@ -2896,7 +2900,7 @@ R__HIDDEN Int_t TProofServ::ApplyMaxQueries()
 }
 
 //______________________________________________________________________________
-R__HIDDEN Int_t TProofServ::LockSession(const char *sessiontag, TProofLockPath **lck)
+Int_t TProofServ::LockSession(const char *sessiontag, TProofLockPath **lck)
 {
    // Try locking query area of session tagged sessiontag.
    // The id of the locking file is returned in fid and must be
@@ -2954,7 +2958,7 @@ R__HIDDEN Int_t TProofServ::LockSession(const char *sessiontag, TProofLockPath *
 }
 
 //______________________________________________________________________________
-R__HIDDEN Int_t TProofServ::CleanupSession(const char *sessiontag)
+Int_t TProofServ::CleanupSession(const char *sessiontag)
 {
    // Cleanup query dir qdir.
 
@@ -2996,7 +3000,7 @@ R__HIDDEN Int_t TProofServ::CleanupSession(const char *sessiontag)
 }
 
 //______________________________________________________________________________
-R__HIDDEN void TProofServ::SaveQuery(TQueryResult *qr, const char *fout)
+void TProofServ::SaveQuery(TQueryResult *qr, const char *fout)
 {
    // Save current status of query 'qr' to file name fout.
    // If fout == 0 (default) use the default name.
@@ -3025,7 +3029,7 @@ R__HIDDEN void TProofServ::SaveQuery(TQueryResult *qr, const char *fout)
 }
 
 //______________________________________________________________________________
-R__HIDDEN void TProofServ::RemoveQuery(const char *queryref)
+void TProofServ::RemoveQuery(const char *queryref)
 {
    // Remove everything about query queryref.
 
@@ -3056,7 +3060,7 @@ R__HIDDEN void TProofServ::RemoveQuery(const char *queryref)
 }
 
 //______________________________________________________________________________
-R__HIDDEN void TProofServ::RemoveQuery(TQueryResult *qr, Bool_t soft)
+void TProofServ::RemoveQuery(TQueryResult *qr, Bool_t soft)
 {
    // Remove everything about query qr. If soft = TRUE leave a track
    // in memory with the relevant info
@@ -3092,8 +3096,7 @@ R__HIDDEN void TProofServ::RemoveQuery(TQueryResult *qr, Bool_t soft)
 }
 
 //______________________________________________________________________________
-R__HIDDEN TProofQueryResult *TProofServ::LocateQuery(TString queryref,
-                                                     Int_t &qry, TString &qdir)
+TProofQueryResult *TProofServ::LocateQuery(TString queryref, Int_t &qry, TString &qdir)
 {
    // Locate query referenced by queryref. Return pointer to instance
    // in memory, if any, or 0. Fills qdir with the query specific directory

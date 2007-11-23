@@ -253,8 +253,10 @@ void TFileInfo::Print(Option_t * /* option */) const
 
 //______________________________________________________________________________
 TFileInfoMeta::TFileInfoMeta(const char *objPath, const char *objClass,
-                             Long64_t entries, Long64_t first, Long64_t last)
-   : TNamed(objPath, objClass), fEntries(entries), fFirst(first), fLast(last)
+                             Long64_t entries, Long64_t first, Long64_t last,
+                             Long64_t totbytes, Long64_t zipbytes)
+              : TNamed(objPath, objClass), fEntries(entries), fFirst(first),
+                fLast(last), fTotBytes(totbytes), fZipBytes(zipbytes)
 {
    // Create file meta data object.
 
@@ -271,8 +273,10 @@ TFileInfoMeta::TFileInfoMeta(const char *objPath, const char *objClass,
 //______________________________________________________________________________
 TFileInfoMeta::TFileInfoMeta(const char *objPath, const char *objDir,
                              const char *objClass, Long64_t entries,
-                             Long64_t first, Long64_t last)
-   : TNamed(objPath, objClass), fEntries(entries), fFirst(first), fLast(last)
+                             Long64_t first, Long64_t last,
+                             Long64_t totbytes, Long64_t zipbytes)
+              : TNamed(objPath, objClass), fEntries(entries), fFirst(first),
+                fLast(last), fTotBytes(totbytes), fZipBytes(zipbytes)
 {
    // Create file meta data object.
 

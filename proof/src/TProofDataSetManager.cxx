@@ -812,8 +812,14 @@ Int_t  TProofDataSetManager::ScanDataSet(TFileCollection *dataset, const char *o
             // fill values
             // TODO if we cannot read the tree, is the file corrupt also?
             TTree *tree = dynamic_cast<TTree*> (file->Get(key->GetName()));
-            if (tree && tree->GetEntries() > 0)
-               metaData->SetEntries(tree->GetEntries());
+            if (tree) {
+               if (tree->GetEntries() > 0)
+                  metaData->SetEntries(tree->GetEntries());
+               if (tree->GetTotBytes() > 0)
+                  metaData->SetTotBytes(tree->GetTotBytes());
+               if (tree->GetZipBytes() > 0)
+                  metaData->SetZipBytes(tree->GetZipBytes());
+            }
          }
       }
 
