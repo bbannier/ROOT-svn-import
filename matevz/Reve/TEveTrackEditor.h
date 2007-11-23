@@ -22,7 +22,7 @@ class TGComboBox;
 
 class TEveGValuator;
 class TEveGDoubleValuator;
-class TEveTrackRnrStyleSubEditor;
+class TEveTrackPropagatorSubEditor;
 class TEveTrack;
 class TEveTrackList;
 
@@ -46,7 +46,7 @@ public:
    ~TEveTrackEditor(){}
 
    virtual void SetModel(TObject* obj);
-   void DoEditRnrStyle();
+   void DoEditPropagator();
 
    ClassDef(TEveTrackEditor, 0); // Editor for TEveTrack class.
 };
@@ -74,7 +74,7 @@ protected:
    TEveGDoubleValuator             *fPtRange;
    TEveGDoubleValuator             *fPRange;
 
-   TEveTrackRnrStyleSubEditor      *fRSSubEditor;
+   TEveTrackPropagatorSubEditor      *fRSSubEditor;
 
 public:
    TEveTrackListEditor(const TGWindow* p=0, Int_t width=170, Int_t height=30,

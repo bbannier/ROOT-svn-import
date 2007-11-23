@@ -9,8 +9,8 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#ifndef ROOT_TEveTrackRnrStyleEditor
-#define ROOT_TEveTrackRnrStyleEditor
+#ifndef ROOT_TEveTrackPropagatorEditor
+#define ROOT_TEveTrackPropagatorEditor
 
 #include <TGedFrame.h>
 
@@ -24,23 +24,23 @@ class TGLineStyleComboBox;
 
 class TAttMarkerEditor;
 
-class TEveTrackRnrStyle;
+class TEveTrackPropagator;
 
 class TEveGValuator;
 class TEveGDoubleValuator;
-class TEveTrackRnrStyleSubEditor;
+class TEveTrackPropagatorSubEditor;
 
-class TEveTrackRnrStyleSubEditor : public TGVerticalFrame
+class TEveTrackPropagatorSubEditor : public TGVerticalFrame
 {
-  friend class TEveTrackRnrStyleEditor;
+  friend class TEveTrackPropagatorEditor;
   friend class TEveTrackListEditor;
 
 private:
-  TEveTrackRnrStyleSubEditor(const TEveTrackRnrStyleSubEditor&);            // Not implemented
-  TEveTrackRnrStyleSubEditor& operator=(const TEveTrackRnrStyleSubEditor&); // Not implemented
+  TEveTrackPropagatorSubEditor(const TEveTrackPropagatorSubEditor&);            // Not implemented
+  TEveTrackPropagatorSubEditor& operator=(const TEveTrackPropagatorSubEditor&); // Not implemented
 
 protected:
-  TEveTrackRnrStyle  *fM;
+  TEveTrackPropagator  *fM;
 
   TEveGValuator      *fMaxR;
   TEveGValuator      *fMaxZ;
@@ -64,10 +64,10 @@ protected:
   TAttMarkerEditor   *fFVAtt;
 
 public:
-  TEveTrackRnrStyleSubEditor(const TGWindow* p);
-  virtual ~TEveTrackRnrStyleSubEditor() {}
+  TEveTrackPropagatorSubEditor(const TGWindow* p);
+  virtual ~TEveTrackPropagatorSubEditor() {}
 
-  void SetModel(TEveTrackRnrStyle* m);
+  void SetModel(TEveTrackPropagator* m);
 
   void Changed(); //*SIGNAL*
 
@@ -84,32 +84,32 @@ public:
 
   void CreateRefsContainer(TGVerticalFrame* p);
 
-  ClassDef(TEveTrackRnrStyleSubEditor, 0) // Sub-editor for TEveTrackRnrStyle class.
+  ClassDef(TEveTrackPropagatorSubEditor, 0) // Sub-editor for TEveTrackPropagator class.
 };
 
 /******************************************************************************/
-// TEveTrackRnrStyleEditor
+// TEveTrackPropagatorEditor
 /******************************************************************************/
 
-class TEveTrackRnrStyleEditor : public TGedFrame
+class TEveTrackPropagatorEditor : public TGedFrame
 {
 private:
-  TEveTrackRnrStyleEditor(const TEveTrackRnrStyleEditor&);            // Not implemented
-  TEveTrackRnrStyleEditor& operator=(const TEveTrackRnrStyleEditor&); // Not implemented
+  TEveTrackPropagatorEditor(const TEveTrackPropagatorEditor&);            // Not implemented
+  TEveTrackPropagatorEditor& operator=(const TEveTrackPropagatorEditor&); // Not implemented
 
   void CreateRefTab();
 protected:
-  TEveTrackRnrStyle           *fM;           // Model object.
-  TEveTrackRnrStyleSubEditor  *fRSSubEditor; // Render-style sub-editor.
+  TEveTrackPropagator           *fM;           // Model object.
+  TEveTrackPropagatorSubEditor  *fRSSubEditor; // Render-style sub-editor.
 
 public:
-  TEveTrackRnrStyleEditor(const TGWindow* p=0, Int_t width=170, Int_t height=30,
+  TEveTrackPropagatorEditor(const TGWindow* p=0, Int_t width=170, Int_t height=30,
                   UInt_t options=kChildFrame, Pixel_t back=GetDefaultFrameBackground());
-  ~TEveTrackRnrStyleEditor();
+  ~TEveTrackPropagatorEditor();
 
   virtual void SetModel(TObject* obj);
 
-  ClassDef(TEveTrackRnrStyleEditor, 1); // Editor for TEveTrackRnrStyle class.
+  ClassDef(TEveTrackPropagatorEditor, 1); // Editor for TEveTrackPropagator class.
 };
 
 #endif

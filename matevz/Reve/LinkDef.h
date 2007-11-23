@@ -110,11 +110,10 @@
 #pragma link C++ class TEveTrack+;
 #pragma link C++ class TEveTrackGL+;
 #pragma link C++ class TEveTrackEditor+;
-#pragma link C++ class TEveTrackRnrStyle+;
 #pragma link C++ class TEveTrackList+;
 #pragma link C++ class TEveTrackListEditor+;
-#pragma link C++ class TEveTrackRnrStyleSubEditor+;
-#pragma link C++ class TEveTrackRnrStyleEditor+;
+#pragma link C++ class TEveTrackPropagatorSubEditor+;
+#pragma link C++ class TEveTrackPropagatorEditor+;
 #pragma link C++ class TEveTrackPropagator+;
 #pragma link C++ class TEveTrackCounter+;
 #pragma link C++ class TEveTrackCounterEditor+;

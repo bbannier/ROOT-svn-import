@@ -11,7 +11,8 @@
 
 #include <TEveTrackEditor.h>
 #include <TEveTrack.h>
-#include <TEveTrackRnrStyleEditor.h>
+#include <TEveTrackPropagator.h>
+#include <TEveTrackPropagatorEditor.h>
 #include <TEveManager.h>
 
 #include <TEveGValuators.h>
@@ -52,8 +53,8 @@ TEveTrackEditor::TEveTrackEditor(const TGWindow *p, Int_t width, Int_t height,
 
    TGHorizontalFrame* f = new TGHorizontalFrame(this);
 
-   fRSEditor =  new TGTextButton(f, "Edit RnrStyle");
-   fRSEditor->Connect("Clicked()", "TEveTrackEditor", this, "DoEditRnrStyle()");
+   fRSEditor =  new TGTextButton(f, "Edit Propagator");
+   fRSEditor->Connect("Clicked()", "TEveTrackEditor", this, "DoEditPropagator()");
    f->AddFrame(fRSEditor, new TGLayoutHints(kLHintsLeft, 2, 1, 4, 4));
 
    AddFrame(f, new TGLayoutHints(kLHintsTop, 0,0,2,1));
@@ -66,9 +67,9 @@ void TEveTrackEditor::SetModel(TObject* obj)
 }
 
 //______________________________________________________________________________
-void TEveTrackEditor::DoEditRnrStyle()
+void TEveTrackEditor::DoEditPropagator()
 {
-   fGedEditor->SetModel(fGedEditor->GetPad(), fM->GetRnrStyle(), kButton1Down);
+   fGedEditor->SetModel(fGedEditor->GetPad(), fM->GetPropagator(), kButton1Down);
 }
 
 
@@ -129,7 +130,7 @@ TEveTrackListEditor::TEveTrackListEditor(const TGWindow *p,
    }
 
    MakeTitle("RenderStyle");
-   fRSSubEditor = new TEveTrackRnrStyleSubEditor(this);
+   fRSSubEditor = new TEveTrackPropagatorSubEditor(this);
    fRSSubEditor->Connect("Changed()", "TEveTrackListEditor", this, "Update()");
    AddFrame(fRSSubEditor, new TGLayoutHints(kLHintsTop | kLHintsExpandX, 2, 0,0,0));
    CreateRefsTab();
@@ -180,7 +181,7 @@ void TEveTrackListEditor::SetModel(TObject* obj)
    llim = TMath::Log10(fTC->fLimP);
    fPRange ->SetLimits(0, fTC->fLimP, llim < 2 ? TGNumberFormat::kNESRealTwo : (llim < 3 ? TGNumberFormat::kNESRealOne : TGNumberFormat::kNESInteger));
 
-   fRSSubEditor->SetModel(fTC->GetRnrStyle());
+   fRSSubEditor->SetModel(fTC->GetPropagator());
 }
 
 /******************************************************************************/

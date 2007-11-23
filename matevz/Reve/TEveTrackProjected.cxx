@@ -10,6 +10,7 @@
  *************************************************************************/
 
 #include <TEveTrackProjected.h>
+#include <TEveTrackPropagator.h>
 #include <TEveProjectionManager.h>
 #include <TEveVSDStructs.h>
 
@@ -109,7 +110,7 @@ Int_t  TEveTrackProjected::GetBreakPointIdx(Int_t start)
       {
          GetPoint(i,   v1.x, v1.y, v1.z);
          GetPoint(i+1, v2.x, v2.y, v2.z);
-         if(fProjection->AcceptSegment(v1, v2, fRnrStyle->fDelta) == kFALSE)
+         if(fProjection->AcceptSegment(v1, v2, fPropagator->fDelta) == kFALSE)
          {
             val = i;
             break;
@@ -241,5 +242,5 @@ void TEveTrackListProjected::SetProjection(TEveProjectionManager* proj, TEveProj
    SetRnrLine(tl.GetRnrLine());
    SetRnrPoints(tl.GetRnrPoints());
 
-   SetRnrStyle(tl.GetRnrStyle());
+   SetPropagator(tl.GetPropagator());
 }

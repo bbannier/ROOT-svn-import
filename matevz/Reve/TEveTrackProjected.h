@@ -53,7 +53,7 @@ public:
 
 
 /******************************************************************************/
-// TEveTrackRnrStyle
+// TEveTrackListProjected
 /******************************************************************************/
 
 class TEveTrackListProjected : public TEveTrackList,

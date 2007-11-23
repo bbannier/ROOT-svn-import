@@ -9,8 +9,9 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#include <TEveTrackRnrStyleEditor.h>
-#include <TEveTrack.h>
+#include <TEveTrackPropagatorEditor.h>
+#include <TEveTrackPropagator.h>
+// #include <TEveTrack.h>
 
 #include <TEveGValuators.h>
 #include <TEveManager.h>
@@ -28,14 +29,14 @@
 #include <TAttMarkerEditor.h>
 
 //______________________________________________________________________________
-// TEveTrackRnrStyleSubEditor
+// TEveTrackPropagatorSubEditor
 //
-// Sub-editor for TEveTrackRnrStyle class.
+// Sub-editor for TEveTrackPropagator class.
 
-ClassImp(TEveTrackRnrStyleSubEditor)
+ClassImp(TEveTrackPropagatorSubEditor)
 
 //______________________________________________________________________________
-TEveTrackRnrStyleSubEditor::TEveTrackRnrStyleSubEditor(const TGWindow *p):
+TEveTrackPropagatorSubEditor::TEveTrackPropagatorSubEditor(const TGWindow *p):
    TGVerticalFrame(p),
    fM (0),
 
@@ -68,7 +69,7 @@ TEveTrackRnrStyleSubEditor::TEveTrackRnrStyleSubEditor(const TGWindow *p):
    fMaxR->Build();
    fMaxR->SetLimits(0.1, 1000, 101, TGNumberFormat::kNESRealOne);
    fMaxR->SetToolTip("Maximum radius to which the tracks will be drawn.");
-   fMaxR->Connect("ValueSet(Double_t)", "TEveTrackRnrStyleSubEditor", this, "DoMaxR()");
+   fMaxR->Connect("ValueSet(Double_t)", "TEveTrackPropagatorSubEditor", this, "DoMaxR()");
    AddFrame(fMaxR, new TGLayoutHints(kLHintsTop, 1, 1, 1, 1));
 
    fMaxZ = new TEveGValuator(this, "Max Z:", 90, 0);
@@ -77,7 +78,7 @@ TEveTrackRnrStyleSubEditor::TEveTrackRnrStyleSubEditor(const TGWindow *p):
    fMaxZ->Build();
    fMaxZ->SetLimits(0.1, 2000, 101, TGNumberFormat::kNESRealOne);
    fMaxZ->SetToolTip("Maximum z-coordinate to which the tracks will be drawn.");
-   fMaxZ->Connect("ValueSet(Double_t)", "TEveTrackRnrStyleSubEditor", this, "DoMaxZ()");
+   fMaxZ->Connect("ValueSet(Double_t)", "TEveTrackPropagatorSubEditor", this, "DoMaxZ()");
    AddFrame(fMaxZ, new TGLayoutHints(kLHintsTop, 1, 1, 1, 1));
 
    fMaxOrbits = new TEveGValuator(this, "Orbits:", 90, 0);
@@ -86,7 +87,7 @@ TEveTrackRnrStyleSubEditor::TEveTrackRnrStyleSubEditor(const TGWindow *p):
    fMaxOrbits->Build();
    fMaxOrbits->SetLimits(0.1, 10, 101, TGNumberFormat::kNESRealOne);
    fMaxOrbits->SetToolTip("Maximal angular path of tracks' orbits (1 ~ 2Pi).");
-   fMaxOrbits->Connect("ValueSet(Double_t)", "TEveTrackRnrStyleSubEditor", this, "DoMaxOrbits()");
+   fMaxOrbits->Connect("ValueSet(Double_t)", "TEveTrackPropagatorSubEditor", this, "DoMaxOrbits()");
    AddFrame(fMaxOrbits, new TGLayoutHints(kLHintsTop, 1, 1, 1, 1));
 
    fMinAng = new TEveGValuator(this, "Angle:", 90, 0);
@@ -95,7 +96,7 @@ TEveTrackRnrStyleSubEditor::TEveTrackRnrStyleSubEditor(const TGWindow *p):
    fMinAng->Build();
    fMinAng->SetLimits(1, 160, 81, TGNumberFormat::kNESRealOne);
    fMinAng->SetToolTip("Minimal angular step between two helix points.");
-   fMinAng->Connect("ValueSet(Double_t)", "TEveTrackRnrStyleSubEditor", this, "DoMinAng()");
+   fMinAng->Connect("ValueSet(Double_t)", "TEveTrackPropagatorSubEditor", this, "DoMinAng()");
    AddFrame(fMinAng, new TGLayoutHints(kLHintsTop, 1, 1, 1, 1));
 
    fDelta = new TEveGValuator(this, "Delta:", 90, 0);
@@ -104,12 +105,12 @@ TEveTrackRnrStyleSubEditor::TEveTrackRnrStyleSubEditor(const TGWindow *p):
    fDelta->Build();
    fDelta->SetLimits(0.001, 10, 101, TGNumberFormat::kNESRealThree);
    fDelta->SetToolTip("Maximal error at the mid-point of the line connecting to helix points.");
-   fDelta->Connect("ValueSet(Double_t)", "TEveTrackRnrStyleSubEditor", this, "DoDelta()");
+   fDelta->Connect("ValueSet(Double_t)", "TEveTrackPropagatorSubEditor", this, "DoDelta()");
    AddFrame(fDelta, new TGLayoutHints(kLHintsTop, 1, 1, 1, 1));
 }
 
 //______________________________________________________________________________
-void TEveTrackRnrStyleSubEditor::CreateRefsContainer(TGVerticalFrame* p)
+void TEveTrackPropagatorSubEditor::CreateRefsContainer(TGVerticalFrame* p)
 {
    // Create a frame containing track-reference controls under parent
    // frame p.
@@ -133,9 +134,9 @@ void TEveTrackRnrStyleSubEditor::CreateRefsContainer(TGVerticalFrame* p)
       fitPM->AddFrame(fFitReferences);
       fitPM->AddFrame(fFitDecay);
 
-      fFitDecay->Connect("Clicked()","TEveTrackRnrStyleSubEditor", this, "DoFitPM()");
-      fFitReferences->Connect("Clicked()","TEveTrackRnrStyleSubEditor", this, "DoFitPM()");
-      fFitDaughters->Connect("Clicked()","TEveTrackRnrStyleSubEditor", this, "DoFitPM()");
+      fFitDecay->Connect("Clicked()","TEveTrackPropagatorSubEditor", this, "DoFitPM()");
+      fFitReferences->Connect("Clicked()","TEveTrackPropagatorSubEditor", this, "DoFitPM()");
+      fFitDaughters->Connect("Clicked()","TEveTrackPropagatorSubEditor", this, "DoFitPM()");
    }
    // Kinematics fitting.
    {
@@ -154,9 +155,9 @@ void TEveTrackRnrStyleSubEditor::CreateRefsContainer(TGVerticalFrame* p)
       rnrPM->AddFrame(fRnrReferences);
       rnrPM->AddFrame(fRnrDecay);
 
-      fRnrDecay->Connect("Clicked()","TEveTrackRnrStyleSubEditor", this, "DoRnrPM()");
-      fRnrReferences->Connect("Clicked()","TEveTrackRnrStyleSubEditor", this, "DoRnrPM()");
-      fRnrDaughters->Connect("Clicked()","TEveTrackRnrStyleSubEditor", this, "DoRnrPM()");
+      fRnrDecay->Connect("Clicked()","TEveTrackPropagatorSubEditor", this, "DoRnrPM()");
+      fRnrReferences->Connect("Clicked()","TEveTrackPropagatorSubEditor", this, "DoRnrPM()");
+      fRnrDaughters->Connect("Clicked()","TEveTrackPropagatorSubEditor", this, "DoRnrPM()");
 
       fRefsCont->AddFrame(fPMFrame, new TGLayoutHints(kLHintsTop, 1, 1, 1, 1));
    }
@@ -182,7 +183,7 @@ void TEveTrackRnrStyleSubEditor::CreateRefsContainer(TGVerticalFrame* p)
    fRefsCont->AddFrame(title1, new TGLayoutHints(kLHintsTop, 0, 0, 2, 0));
 
    fRnrFV = new TGCheckButton(fRefsCont, "Rnr");
-   fRnrFV->Connect("Clicked()","TEveTrackRnrStyleSubEditor", this, "DoRnrFV()");
+   fRnrFV->Connect("Clicked()","TEveTrackPropagatorSubEditor", this, "DoRnrFV()");
    fRefsCont->AddFrame(fRnrFV, new TGLayoutHints(kLHintsTop, 5, 1, 2, 0));
    {
       fFVAtt = new TAttMarkerEditor(fRefsCont);
@@ -195,7 +196,7 @@ void TEveTrackRnrStyleSubEditor::CreateRefsContainer(TGVerticalFrame* p)
 }
 
 //______________________________________________________________________________
-void TEveTrackRnrStyleSubEditor::SetModel(TEveTrackRnrStyle* m)
+void TEveTrackPropagatorSubEditor::SetModel(TEveTrackPropagator* m)
 {
    // Set model object.
 
@@ -232,7 +233,7 @@ void TEveTrackRnrStyleSubEditor::SetModel(TEveTrackRnrStyle* m)
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveTrackRnrStyleSubEditor::Changed()
+void TEveTrackPropagatorSubEditor::Changed()
 {
    // Update registered tracks and emit "Changed()" signal.
 
@@ -243,35 +244,35 @@ void TEveTrackRnrStyleSubEditor::Changed()
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveTrackRnrStyleSubEditor::DoMaxR()
+void TEveTrackPropagatorSubEditor::DoMaxR()
 {
    fM->SetMaxR(fMaxR->GetValue());
    Changed();
 }
 
 //______________________________________________________________________________
-void TEveTrackRnrStyleSubEditor::DoMaxZ()
+void TEveTrackPropagatorSubEditor::DoMaxZ()
 {
    fM->SetMaxZ(fMaxZ->GetValue());
    Changed();
 }
 
 //______________________________________________________________________________
-void TEveTrackRnrStyleSubEditor::DoMaxOrbits()
+void TEveTrackPropagatorSubEditor::DoMaxOrbits()
 {
    fM->SetMaxOrbs(fMaxOrbits->GetValue());
    Changed();
 }
 
 //______________________________________________________________________________
-void TEveTrackRnrStyleSubEditor::DoMinAng()
+void TEveTrackPropagatorSubEditor::DoMinAng()
 {
    fM->SetMinAng(fMinAng->GetValue());
    Changed();
 }
 
 //______________________________________________________________________________
-void TEveTrackRnrStyleSubEditor::DoDelta()
+void TEveTrackPropagatorSubEditor::DoDelta()
 {
    fM->SetDelta(fDelta->GetValue());
    Changed();
@@ -280,7 +281,7 @@ void TEveTrackRnrStyleSubEditor::DoDelta()
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveTrackRnrStyleSubEditor::DoFitPM()
+void TEveTrackPropagatorSubEditor::DoFitPM()
 {
    TGButton* b = (TGButton *) gTQSender;
    TEvePathMark::Type_e type = TEvePathMark::Type_e(b->WidgetId());
@@ -304,7 +305,7 @@ void TEveTrackRnrStyleSubEditor::DoFitPM()
 }
 
 //______________________________________________________________________________
-void TEveTrackRnrStyleSubEditor::DoRnrPM()
+void TEveTrackPropagatorSubEditor::DoRnrPM()
 {
    TGButton * b = (TGButton *) gTQSender;
    TEvePathMark::Type_e type = TEvePathMark::Type_e(b->WidgetId());
@@ -327,7 +328,7 @@ void TEveTrackRnrStyleSubEditor::DoRnrPM()
 }
 
 //______________________________________________________________________________
-void TEveTrackRnrStyleSubEditor::DoRnrFV()
+void TEveTrackPropagatorSubEditor::DoRnrFV()
 {
    fM->SetRnrFV(fRnrFV->IsOn());
    Changed();
@@ -335,16 +336,16 @@ void TEveTrackRnrStyleSubEditor::DoRnrFV()
 
 
 //______________________________________________________________________________
-// TEveTrackRnrStyleEditor
+// TEveTrackPropagatorEditor
 //
-// GUI editor for TEveTrackRnrStyle.
-// It's only a wrapper around a TEveTrackRnrStyleSubEditor that holds actual
+// GUI editor for TEveTrackPropagator.
+// It's only a wrapper around a TEveTrackPropagatorSubEditor that holds actual
 // widgets.
 
-ClassImp(TEveTrackRnrStyleEditor)
+ClassImp(TEveTrackPropagatorEditor)
 
 //______________________________________________________________________________
-TEveTrackRnrStyleEditor::TEveTrackRnrStyleEditor(const TGWindow *p,
+TEveTrackPropagatorEditor::TEveTrackPropagatorEditor(const TGWindow *p,
                                                  Int_t width, Int_t height,
                                                  UInt_t options, Pixel_t back) :
    TGedFrame(p, width, height, options | kVerticalFrame, back),
@@ -355,8 +356,8 @@ TEveTrackRnrStyleEditor::TEveTrackRnrStyleEditor(const TGWindow *p,
 
    MakeTitle("RenderStyle");
 
-   fRSSubEditor = new TEveTrackRnrStyleSubEditor(this);
-   fRSSubEditor->Connect("Changed()", "TEveTrackRnrStyleEditor", this, "Update()");
+   fRSSubEditor = new TEveTrackPropagatorSubEditor(this);
+   fRSSubEditor->Connect("Changed()", "TEveTrackPropagatorEditor", this, "Update()");
    AddFrame(fRSSubEditor, new TGLayoutHints(kLHintsTop | kLHintsExpandX, 2, 0,0,0));
 
    TGVerticalFrame* refsFrame = CreateEditorTabSubFrame("Refs");
@@ -376,11 +377,11 @@ TEveTrackRnrStyleEditor::TEveTrackRnrStyleEditor(const TGWindow *p,
    fRSSubEditor->fPMAtt->SetGedEditor((TGedEditor*)gReve->GetEditor());
    fRSSubEditor->fFVAtt->SetGedEditor((TGedEditor*)gReve->GetEditor());
 
-   fRSSubEditor->Connect("Changed()", "TEveTrackRnrStyleEditor", this, "Update()");
+   fRSSubEditor->Connect("Changed()", "TEveTrackPropagatorEditor", this, "Update()");
 }
 
 //______________________________________________________________________________
-TEveTrackRnrStyleEditor::~TEveTrackRnrStyleEditor()
+TEveTrackPropagatorEditor::~TEveTrackPropagatorEditor()
 {
    // Destructor. Noop.
 }
@@ -388,10 +389,10 @@ TEveTrackRnrStyleEditor::~TEveTrackRnrStyleEditor()
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveTrackRnrStyleEditor::SetModel(TObject* obj)
+void TEveTrackPropagatorEditor::SetModel(TObject* obj)
 {
    // Set model object.
 
-   fM = dynamic_cast<TEveTrackRnrStyle*>(obj);
+   fM = dynamic_cast<TEveTrackPropagator*>(obj);
    fRSSubEditor->SetModel(fM);
 }

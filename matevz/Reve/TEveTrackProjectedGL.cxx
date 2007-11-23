@@ -11,6 +11,7 @@
 
 #include <TEveTrackProjectedGL.h>
 #include <TEveTrackProjected.h>
+#include <TEveTrackPropagator.h>
 #include <TEveProjectionManager.h>
 #include <TEveGLUtil.h>
 
@@ -73,7 +74,7 @@ void TEveTrackProjectedGL::DirectDraw(TGLRnrCtx & rnrCtx) const
 
    // path-marks
    std::vector<TEvePathMark*>& pm = fM->fPathMarks;
-   TEveTrackRnrStyle& RS = *fM->GetRnrStyle();
+   TEveTrackPropagator& RS = *fM->GetPropagator();
    if(pm.size())
    {
       Float_t* pnts = new Float_t[3*pm.size()]; // maximum
