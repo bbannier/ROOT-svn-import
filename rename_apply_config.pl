@@ -31,19 +31,18 @@ $CFGFILE="rename-config";
 # Action starts here
 #-------------------------------------------------------------------------------
 
-die "Usage: $0 <original-dir> <modified-copy-dir>\n"
-     unless -d $ARGV[0] and -d $ARGV[1];
+if ($ARGV[0] =~ /^-cfg=([\w-]+)$/)
+{
+  $CFGFILE = $1;
+  shift @ARGV;
+}
 
-$origdir = $ARGV[0];
-$dir     = $ARGV[1];
-
-`rm -rf $dir`;
-`cp -a $origdir $dir`;
-
-chdir $dir;
-
+die "Usage: $0 [-cfg=<config-file>] <original-dir> <modified-copy-dir>\n"
+     unless -d $ARGV[0] and defined $ARGV[1];
 
 # read config, remove no-change entries in files / classes
+
+print "Using config-file '$CFGFILE'.\n";
 
 do "$CFGFILE" or die "Can't read config file $CFGFILE; run rename_dump_config_skeleton.pl and edit its output first.";
 
@@ -68,6 +67,17 @@ for $f (keys %classes)
   ++$N;
 }
 print "classes: removed $n noop entries, $N all entries.\n";
+
+
+# Copy directory, chdir to it
+
+$origdir = $ARGV[0];
+$dir     = $ARGV[1];
+
+`rm -rf $dir`;
+`cp -a $origdir $dir`;
+
+chdir $dir;
 
 
 # Loop over .h, .cxx and .C files and do the replace magick.
@@ -98,7 +108,6 @@ for $infile (@infiles)
     open FILE, $infile;
     $text = <FILE>;
     close FILE;
-    unlink $infile;
   }
 
   ### Text manipulation begin
