@@ -1,10 +1,10 @@
 // Stand-Alone reve initialization.
-// If class Reve::ReveManager is not know it attempts to load
+// If class TEveManager is not know it attempts to load
 // "libReve".
 
 void reve_sa_init(int mode=1)
 {
-  TClass* c = gROOT->GetClass("Reve::ReveManager");
+  TClass* c = gROOT->GetClass("TEveManager");
   if (!c) {
     Info("reve_sa_init", "tring to load libReve.");
     //gSystem->Load("libTreePlayer");
@@ -16,6 +16,6 @@ void reve_sa_init(int mode=1)
       Warning("reve_sa_init", "loading of libReve failed.");
   }
 
-  Reve::SetupEnvironment();
-  Reve::ReveManager::SpawnGui(mode);
+  SetupEnvironment();
+  TEveManager::SpawnGui(mode);
 }

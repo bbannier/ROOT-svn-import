@@ -1,8 +1,9 @@
-// $Header: /soft/cvsroot/AliRoot/EVE/macros/reve_lineset_test.C,v 1.1 2007/04/11 16:37:21 mtadel Exp $
+// @(#)root/reve:$Id$
+// Author: Matevz Tadel
 
-Reve::StraightLineSet* reve_lineset_test(Int_t nlines = 40, Int_t nmarkers = 4) 
+TEveStraightLineSet* reve_lineset_test(Int_t nlines = 40, Int_t nmarkers = 4) 
 {
-  Reve::StraightLineSet* ls = new Reve::StraightLineSet();
+  TEveStraightLineSet* ls = new TEveStraightLineSet();
 
   TRandom r(0);
   Float_t s = 100;

@@ -1,27 +1,32 @@
+// @(#)root/reve:$Id$
+// Author: Bertrand Bellenot
+
 #include "TCanvas.h"
 #include "TStyle.h"
 #include "TFile.h"
 #include "TStopwatch.h"
 #include "TError.h"
 
-namespace Reve{
-class TTriangleSet;
-}
+class TEveTriangleSet;
 
-Reve::TriangleSet *ts1=0, *ts2=0, *ts3=0;
+TEveTriangleSet *ts1=0, *ts2=0, *ts3=0;
 
 void triangleset()
 {
   {
-    ts1 = Reve::TriangleSet::ReadTrivialFile("broken_torus.tring");
+    ts1 = TEveTriangleSet::ReadTrivialFile("broken_torus.tring");
     ts1->SetName("RandomColors");
     ts1->GenerateTriangleNormals();
     ts1->GenerateRandomColors();
     ts1->SetColor(0);
+    TGeoHMatrix m;
+    Double_t scale[3] = { 0.5, 0.5, 0.5 };
+    m.SetScale(scale);
+    ts1->SetTransMatrix(m);
     gReve->AddRenderElement(ts1);
   }
   {
-    ts2 = Reve::TriangleSet::ReadTrivialFile("broken_torus.tring");
+    ts2 = TEveTriangleSet::ReadTrivialFile("broken_torus.tring");
     ts2->SetName("SmallBlue");
     ts2->GenerateTriangleNormals();
     ts2->SetColor(4);
@@ -33,7 +38,7 @@ void triangleset()
     gReve->AddRenderElement(ts2);
   }
   {
-    ts3 = Reve::TriangleSet::ReadTrivialFile("broken_torus.tring");
+    ts3 = TEveTriangleSet::ReadTrivialFile("broken_torus.tring");
     ts3->SetName("Spectrum");
     ts3->GenerateTriangleNormals();
     gStyle->SetPalette(1, 0);
