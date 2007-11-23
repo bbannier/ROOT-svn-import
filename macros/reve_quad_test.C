@@ -1,4 +1,5 @@
-// $Header: /soft/cvsroot/AliRoot/EVE/macros/reve_quad_test.C,v 1.12 2007/10/22 14:49:12 mtadel Exp $
+// @(#)root/reve:$Id$
+// Author: Matevz Tadel
 
 TEveQuadSet* reve_quad_test(Float_t x=0, Float_t y=0, Float_t z=0,
 			      Int_t num=100, Bool_t register=kTRUE)
@@ -25,7 +26,7 @@ TEveQuadSet* reve_quad_test(Float_t x=0, Float_t y=0, Float_t z=0,
   if (register)
   {
     gReve->AddRenderElement(q);
-    gReve->Redraw3D();
+    gReve->Redraw3D(kTRUE);
   }
 
   return q;
@@ -176,7 +177,7 @@ void reve_quad_test_hierarchy(Int_t n=4)
   TEveRGBAPalette* pal = new TEveRGBAPalette(20, 100);
   pal->SetLimits(0, 120);
 
-  TEveFrameBox*    box = new TEveFrameBox();
+  TEveFrameBox* box = new TEveFrameBox();
   box->SetAABox(-10, -10, -10, 20, 20, 20);
   box->SetFrameColor((Color_t) 33);
 
@@ -185,12 +186,9 @@ void reve_quad_test_hierarchy(Int_t n=4)
   //  l->SetMainColor((Color_t)3);
   gReve->AddRenderElement(l);
 
-  // PMD: obtain digit-tree from run-loader, loop over entries.
-
   for (Int_t i=0; i<n; ++i)
   {
     TEveQuadSet* qs = reve_quad_test_hexid(0, 0, 50*i, 50, kFALSE);
-    // PMD: loop over clones-array, create hexagons above threshold.
     qs->SetPalette(pal);
     qs->SetFrame(box);
     gReve->AddRenderElement(qs, l);

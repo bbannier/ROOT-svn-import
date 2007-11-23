@@ -1,3 +1,6 @@
+// @(#)root/reve:$Id$
+// Author: Matevz Tadel
+
 #include "TCanvas.h"
 #include "TStyle.h"
 #include "TFile.h"
@@ -9,10 +12,9 @@
 #include <stdio.h>
 #include <string.h>
 
-namespace Reve {
-   class TriangleSet;
-}
-Reve::TriangleSet *ts[2048];
+class TEveTriangleSet;
+
+TEveTriangleSet *ts[2048];
 
 // Believe3D Model file defines
 #define MAGICNUMBER 0xB3D0
@@ -523,11 +525,11 @@ Int_t ReadASCIIZ(FILE *f, char *name)
 //______________________________________________________________________________
 Int_t ConvertModel()
 {
-   // Convert from Model structure to Reve::TriangleSet
+   // Convert from Model structure to TEveTriangleSet
 
    Int_t i;
 
-   ts[nummodels] = new Reve::TriangleSet(model.numverts, model.numfaces);
+   ts[nummodels] = new TEveTriangleSet(model.numverts, model.numfaces);
    if (ts[nummodels] == 0)
       return -1;
    for (i=0; i<model.numverts; ++i) {
@@ -553,7 +555,7 @@ Int_t ConvertModel()
 }
 
 //______________________________________________________________________________
-void view3ds(const char *fname = "nasashuttle.3ds") //"eventhorizon.3ds")
+void view3ds(const char *fname = "nasashuttle.3ds")
 {
    // main...
 
@@ -564,10 +566,14 @@ void view3ds(const char *fname = "nasashuttle.3ds") //"eventhorizon.3ds")
    model.flist = 0;
    nummodels = 0;
    if (Read3DSFile(fname) == 0) {
+      TEveTriangleSet* parent = new TEveTriangleSet(0, 0);
+      parent->SetName(fname);
+      gReve->AddRenderElement(parent);
       for (i=0;i<nummodels;i++) {
          if (ts[i]) {
             ts[i]->GenerateTriangleNormals();
-            gReve->AddRenderElement(ts[i]);
+            ts[i]->RefHMTrans().RotateLF(1, 2, TMath::Pi());
+            gReve->AddRenderElement(ts[i], parent);
          }
       }
       gReve->Redraw3D(kTRUE);
