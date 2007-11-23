@@ -3317,8 +3317,11 @@ void TProofServ::HandleProcess(TMessage *mess)
                      dset->GetName());
                return;
             }
+            TString dsTree;
+            if (!(fDataSetManager->ParseDataSetUri(dset->GetName(), 0, 0, 0, &dsTree)))
+               dsTree = "";
             TSeqCollection* files = dataset->GetList();
-            if (!dset->Add(files)) {
+            if (!dset->Add(files, dsTree)) {
                SendAsynMessage(Form("HandleProcess on %s: error retrieving"
                                     " dataset: %s", fPrefix.Data(), dset->GetName()));
                Error("HandleProcess", "error retrieving dataset %s",

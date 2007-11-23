@@ -45,6 +45,7 @@
 #include "TSocket.h"
 #include "TProof.h"
 #include "TProofServ.h"
+#include "TUri.h"
 
 
 // Dataset lock file
@@ -633,6 +634,11 @@ Int_t  TProofDataSetManager::ScanDataSet(TFileCollection *dataset, const char *o
 
    TFileStager *stager = (!fMSSUrl.IsNull()) ? TFileStager::Open(fMSSUrl) : 0;
    Bool_t createStager = (stager) ? kFALSE : kTRUE;
+
+   // TODO preserve old value, set back
+   gEnv->SetValue("XNet.ReadAheadSize", 0);
+   gEnv->SetValue("XNet.ReadCacheSize", 0);
+   gEnv->SetValue("XNet.MaxRedirectCount", 7);
 
    // Check which files have been staged, this can be replaced by a bulk command,
    // once it exists in the xrdclient
@@ -1231,10 +1237,10 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
 
                            treeInfo.Resize(21);
                            // Renormalize the size to kB, MB or GB
-                           const char *unit[3] = {"kB", "MB", "GB"};
+                           const char *unit[4] = {"kB", "MB", "GB", "TB"};
                            Int_t k = 0, refsz = 1024;
                            Int_t xsz = (Int_t) (dataset->GetTotalSize() / refsz);
-                           while (xsz > refsz && k < 2) {
+                           while (xsz > 1024 && k < 3) {
                               k++;
                               refsz *= 1024;
                               xsz = (Int_t) (dataset->GetTotalSize() / refsz);
@@ -1433,88 +1439,85 @@ Bool_t TProofDataSetManager::ParseDataSetUri(const char *uri,
                                              TString *dsName, TString *dsTree,
                                              Bool_t onlyCurrent, Bool_t wildcards)
 {
-   // Parses a DataSetUri having 
-   //    the syntax [/dsGroup/dsUser/]dsName[/dsTree]         (if wildcards is kFALSE)
-   //    the syntax [/dsGroup|*/dsUser|*/][dsName[/dsTree]]   (if wildcards is kTRUE)
-   // Fills only the parameters that are non-zero.
-   // If onlyCurrent is set, the function fails if a group and user is given that
-   // is different from the current user.
-   // If wildcards, '*' is allowed in group and user and group, user, dsname is
-   // allowed to be empty.
+   // Parses a (relative) URI that describes a DataSet on the cluster.
+   // After resolving against a base URI consisting of proof://masterhost/group/user/
+   // - meaning masterhost, group and user of the current session -
+   // the path is checked to contain exactly three elements separated by '/':
+   // group/user/dsname
+   // If wildcards, '*' is allowed in group and user and dsname is allowed to be empty.
+   // If onlyCurrent, only group and user of current session are allowed.
+   // Only non-null parameters are filled by this function.
    // Returns kTRUE in case of success.
+ 
+   // construct our base URI using session defaults (host, group, user)
+   TUri base(fMSSUrl + "/" + fGroup + "/" + fUser + "/");
+   base.Print();
 
-   TString uriStr(uri);
-   TString ds, tree;
+   // append trailing slash if missing when wildcards enables
+   TString uristr(uri);
+   if (wildcards and !uristr.EndsWith("/") && uristr.Length() > 0)
+      uristr += '/';
 
-   // set default
-   TString group(fGroup);
-   TString user(fUser);
+   // resolve given URI agains the base
+   TUri resolved = TUri::Transform(uristr, base);
+   resolved.Print();
 
-   if (uriStr.Contains("/")) {
-
-      Ssiz_t from = 0;
-      TString tok;
-
-      // parse group/user
-      if (uriStr.Length() > 0 && uriStr[0] == '/') {
-         // Skip first token
-         from = 1;
-         // starts with group and user
-         if (!(uriStr.Tokenize(group, from, "/"))) {
-            Error("ParseDataSetUri", "group undefined");
-            return kFALSE;
-         }
-         if (!(uriStr.Tokenize(user, from, "/"))) {
-            Error("ParseDataSetUri", "user undefined - exit");
-            return kFALSE;
-         }
-
-         // Check user & group
-         if (onlyCurrent && (group.CompareTo(fGroup) || user.CompareTo(fUser))) {
-            Error("ParseDataSetUri", "only datasets from your group/user allowed");
-            return kFALSE;
-         }
-      }
-
-      // parse dsname, if any
-      uriStr.Tokenize(ds, from, "/");
-
-      // tree name (the rest)
-      if (from != kNPOS) {
-         tree = uriStr;
-         tree.Remove(0, from);
-      }
-   } else {
-      // No '/': take the sring as dataset name
-      ds = uriStr;
+   // some URI restrictions
+   if (resolved.GetScheme() != base.GetScheme()) {
+      Error ("ParseDataSetUri", "URI Scheme <%s> unsupported", resolved.GetScheme().Data());
+      return kFALSE;
    }
-
-   if (!wildcards && (group.IsNull() || user.IsNull())) {
-      Error("ParseDataSetUri", "Empty group/user.");
+   // notabene: hostname is treated unnormalised
+   if (resolved.GetHost() != base.GetHost()) {
+      Error ("ParseDataSetUri", "Hosts other than the master are not supported");
+      return kFALSE;
+   }
+   if (resolved.HasQuery()) {
+      Info ("ParseDataSetUri", "URI query part <%s> ignored", resolved.GetQuery().Data());
+   }
+      
+   // we have to tokenize an absolute path
+   TObjArray *tokens = resolved.GetPath().Tokenize("/");
+   // (0)/group(1)/user(2)/dsname(3)
+   if (tokens->GetEntries() != 4) {
+      Error ("ParseDataSetUri", "Illegal dataset path");
       return kFALSE;
    }
 
-   if (!wildcards && ds.IsNull()) {
-      Error("ParseDataSetUri", "Empty dataset name");
+   // get individual values from tokens
+   TString group = ((TObjString*) tokens->At(1))->GetString();
+   TString user =  ((TObjString*) tokens->At(2))->GetString();
+   TString name =  ((TObjString*) tokens->At(3))->GetString();
+   delete tokens;
+   TString tree =  resolved.GetFragment();
+
+   // check for unwanted use of wildcards
+   if ( (user=="*" or group=="*") && !wildcards) {
+      Error ("ParseDataSetUri", "No wildcards allowed for user/group in this context");
       return kFALSE;
    }
 
-   TString regExp("[^A-Za-z0-9-");
-   if (wildcards)
-      regExp += "*";
-   regExp += "]";
+   // dsname may only be empty if wildcards expected
+   if (!wildcards && name.IsNull()) {
+      Error ("ParseDataSetUri", "DataSet name is empty");
+      return kFALSE;
+   }
 
-   if (group.Contains(TRegexp(regExp))) {
+   // construct regexp whitelist for checking illegal characters in user/group
+   TPRegexp wcExp (wildcards ? "^(?:[A-Za-z0-9-]*|[*])$" : "^[A-Za-z0-9-]*$");
+
+   // check for illegal characters in all components
+   if (!wcExp.Match(group)) {
       Error("ParseDataSetUri", "Illegal characters in group");
       return kFALSE;
    }
 
-   if (user.Contains(TRegexp(regExp))) {
+   if (!wcExp.Match(user)) {
       Error("ParseDataSetUri", "Illegal characters in user");
       return kFALSE;
    }
 
-   if (ds.Contains(TRegexp("[^A-Za-z0-9-._]"))) {
+   if (name.Contains(TRegexp("[^A-Za-z0-9-._]"))) {
       Error("ParseDataSetUri", "Illegal characters in dataset name");
       return kFALSE;
    }
@@ -1524,13 +1527,19 @@ Bool_t TProofDataSetManager::ParseDataSetUri(const char *uri,
       return kFALSE;
    }
 
-   // Fill outputs
+   // Check user & group
+   if (onlyCurrent && (group.CompareTo(fGroup) || user.CompareTo(fUser))) {
+      Error("ParseDataSetUri", "only datasets from your group/user allowed");
+      return kFALSE;
+   }
+
+   // fill parameters passed by reference, if defined
    if (dsGroup)
       *dsGroup = group;
    if (dsUser)
       *dsUser = user;
    if (dsName)
-      *dsName = ds;
+      *dsName = name;
    if (dsTree)
       *dsTree = tree;
 
