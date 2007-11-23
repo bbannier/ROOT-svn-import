@@ -539,4 +539,4 @@ guiviewerDict.$(SrcSuf): guiviewer.h guiviewerLinkDef.h
 	@rootcint -f $@ -c $^
 
 .$(SrcSuf).$(ObjSuf):
-	$(CXX) -g $(CXXFLAGS) -c $<
+	$(CXX)  $(CXXFLAGS) -c $<
