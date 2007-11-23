@@ -114,9 +114,11 @@ STRESSSHAPESO   = stressShapes.$(ObjSuf)
 STRESSSHAPESS   = stressShapes.$(SrcSuf)
 STRESSSHAPES    = stressShapes$(ExeSuf)
 
+ifeq ($(shell $(ROOTCONFIG) --has-roofit),yes)
 STRESSROOFITO  = stressRooFit.$(ObjSuf)
 STRESSROOFITS  = stressRooFit.$(SrcSuf)
 STRESSROOFIT   = stressRooFit$(ExeSuf)
+endif
 
 STRESSFITO    = stressFit.$(ObjSuf)
 STRESSFITS    = stressFit.$(SrcSuf)
@@ -133,6 +135,10 @@ STRESSHEPIX   = stressHepix$(ExeSuf)
 STRESSSPO     = stressSpectrum.$(ObjSuf)
 STRESSSPS     = stressSpectrum.$(SrcSuf)
 STRESSSP      = stressSpectrum$(ExeSuf)
+
+STRESSPROOFO  = stressProof.$(ObjSuf)
+STRESSPROOFS  = stressProof.$(SrcSuf)
+STRESSPROOF   = stressProof$(ExeSuf)
 
 TBENCHO       = TBench.$(ObjSuf) TBenchDict.$(ObjSuf)
 TBENCHS       = TBench.$(SrcSuf) TBenchDict.$(SrcSuf)
@@ -160,14 +166,16 @@ OBJS          = $(EVENTO) $(MAINEVENTO) $(HWORLDO) $(HSIMPLEO) $(MINEXAMO) \
                 $(STRESSSHAPESO) $(TCOLLBMO) $(STRESSGEOMETRYO) $(STRESSLO) \
                 $(STRESSGO) $(STRESSSPO) $(TESTBITSO) \
                 $(CTORTUREO) $(QPRANDOMO) $(THREADO) $(STRESSVECO) $(STRESSMATHO) \
-                $(STRESSFITO) $(STRESSHEPIXO) $(STRESSENTRYLISTO) $(STRESSROOFITO)
+                $(STRESSFITO) $(STRESSHEPIXO) $(STRESSENTRYLISTO) \
+                $(STRESSROOFITO) $(STRESSPROOFO)
 
 PROGRAMS      = $(EVENT) $(HWORLD) $(HSIMPLE) $(MINEXAM) $(TSTRING) \
                 $(TCOLLEX) $(TCOLLBM) $(VVECTOR) $(VMATRIX) $(VLAZY) \
                 $(HELLOSO) $(ACLOCKSO) $(STRESS) $(TBENCHSO) $(BENCH) \
                 $(STRESSSHAPES) $(STRESSGEOMETRY) $(STRESSL) $(STRESSG) \
                 $(TESTBITS) $(CTORTURE) $(QPRANDOM) $(THREADS) $(STRESSSP) \
-                $(STRESSVEC) $(STRESSFIT) $(STRESSHEPIX) $(STRESSENTRYLIST) $(STRESSROOFIT) $(STRESSMATH)
+                $(STRESSVEC) $(STRESSFIT) $(STRESSHEPIX) $(STRESSENTRYLIST) \
+                $(STRESSROOFIT) $(STRESSPROOF) $(STRESSMATH)
 
 
 OBJS         += $(GUITESTO) $(GUIVIEWERO) $(TETRISO)
@@ -386,6 +394,15 @@ ifeq ($(PLATFORM),win32)
 		$(MT_EXE)
 else
 		$(LD) $(LDFLAGS) $^ $(LIBS) -lRooFit -lRooFitCore -lHtml -lThread -lMinuit  $(OutPutOpt)$@
+endif
+		@echo "$@ done"
+
+$(STRESSPROOF): $(STRESSPROOFO)
+ifeq ($(PLATFORM),win32)
+		$(LD) $(LDFLAGS) $^ $(LIBS) '$(ROOTSYS)/lib/libProof.lib' '$(ROOTSYS)/lib/libThread.lib' $(OutPutOpt)$@
+		$(MT_EXE)
+else
+		$(LD) $(LDFLAGS) $(STRESSPROOFO) $(LIBS) -lProof -lThread $(OutPutOpt)$@
 endif
 		@echo "$@ done"
 
