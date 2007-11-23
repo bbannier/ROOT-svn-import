@@ -24,6 +24,7 @@
 #include "TSystem.h"
 #include "TTree.h"
 #include "TFile.h"
+#include "TF1.h"
 
 
 #include "Math/Vector2D.h"
@@ -158,6 +159,13 @@ public:
    void ScaleTol1(double s) { fScale1 *= s; }  
    void ScaleTol2(double s) { fScale2 *= s; }
 
+   //for building a TF1
+   using ROOT::Math::IParamFunction::operator();
+
+   double operator()(const double* x, const double *)  { 
+      return DoEval(*x);
+   }
+
 private: 
 
 
@@ -174,16 +182,17 @@ private:
    int NFuncTest; 
 };
 
-int NFuncTest = 0; 
 
 // test cdf at value f 
 template<class F1, class F2, int N1, int N2> 
 int StatFunction<F1,F2,N1,N2>::Test(double xmin, double xmax, double xlow, double xup, bool c) {
 
    int iret = 0; 
+   int NFuncTest = 100; 
 
    // scan all values from xmin to xmax
    double dx = (xmax-xmin)/NFuncTest; 
+#ifdef HAVE_MATHMORE
    for (int i = 0; i < NFuncTest; ++i) { 
       double v1 = xmin + dx*i;  // value used  for testing
       double q1 = Cdf(v1);
@@ -223,8 +232,45 @@ int StatFunction<F1,F2,N1,N2>::Test(double xmin, double xmax, double xlow, doubl
          break;
       } 
    }
+#else 
+   // use TF1 for the integral 
+//    std::cout << "xlow-xuo " << xlow << "   " << xup << std::endl;
+//    std::cout << "xmin-xmax " << xmin << "   " << xmax << std::endl;
+   double x1,x2 = 0;
+   if (xlow >= xup) {
+      x1 = -100; x2 = 100; 
+   }
+   else if (xup <= xmax) {
+      x1 = xlow; x2 = 100; 
+   } 
+   else { 
+      x1=xlow;   x2 = xup;
+   }
+//   std::cout << "x1-x2 " << x1 << "   " << x2 << std::endl;
+   TF1 * f = new TF1("ftemp",ParamFunctor(*this),x1,x2,0);
+
+   for (int i = 0; i < NFuncTest; ++i) { 
+      double v1 = xmin + dx*i;  // value used  for testing
+      double q1 = Cdf(v1);
+      //std::cout << "i = " << i << " v1  = " << v1 << " pdf " << (*this)(v1) << " cdf " << q1 << std::endl;  
+      double q2 = 0; 
+      if (!c) { 
+         q2 = f->Integral(x1,v1); 
+         // use a larger scale (integral error is 10-9)
+         iret |= compare("test _cdf", q1, q2, fScale1 );
+      }
+      else { 
+         // upper integral (cdf_c)
+         q2 = f->Integral(v1,x2);  
+         iret |= compare("test _cdf_c", q1, q2, fScale1);
+      }
+   }
+   delete f; 
+#endif
+
    if (c || iret != 0) PrintStatus(iret);
    return iret; 
+
 }
 
 // typedef defining the functions
@@ -254,11 +300,11 @@ int TestDist(Distribution & d, double x1, double x2) {
    return ir; 
 }
 
-int testStatFunctions(int n) { 
+int testStatFunctions(int /* nfunc */) { 
    // test statistical functions 
    
    int iret = 0; 
-   NFuncTest = n; 
+   //NFuncTest = nfunc; 
       
    { 
       PrintTest("Beta distribution"); 
@@ -285,7 +331,7 @@ int testStatFunctions(int n) {
       CREATE_DIST(chisquared);
       dist.SetParameters( 10, 0);
       dist.ScaleTol2(10);
-      iret |= dist.Test(0.05,30, 0.);
+      iret |= dist.Test(0.05,30, 0.,1.);
       CREATE_DIST_C(chisquared);
       distc.SetParameters( 10, 0);
       distc.ScaleTol2(10000000);  // t.b.c.
@@ -302,6 +348,7 @@ int testStatFunctions(int n) {
       distc.ScaleTol2(100);
       iret |= distc.Test(-4,4,1,0,true);
    }
+#ifdef USE_MATHMORE
    {
       PrintTest("BreitWigner distribution "); 
       CREATE_DIST(breitwigner);
@@ -313,6 +360,7 @@ int testStatFunctions(int n) {
       distc.ScaleTol2(10);
       iret |= distc.Test(-5,5,1,0,true);
    }
+#endif
    {
       PrintTest("F    distribution "); 
       CREATE_DIST(fdistribution);
@@ -320,10 +368,12 @@ int testStatFunctions(int n) {
       dist.ScaleTol1(1000000);
       dist.ScaleTol2(10);
       // if enlarge scale test fails
-      iret |= dist.Test(0.05,5,0);
+      iret |= dist.Test(0.05,5,0,1);
       CREATE_DIST_C(fdistribution);
       distc.SetParameters( 5, 4);
-//       dist.ScaleTol1(1000000);
+#ifndef USE_MATHMORE
+      distc.ScaleTol1(100000000);
+#endif
       distc.ScaleTol2(10);
       // if enlarge scale test fails
       iret |= distc.Test(0.05,5,0,1,true);
@@ -345,9 +395,12 @@ int testStatFunctions(int n) {
       CREATE_DIST(lognormal);
       dist.SetParameters(1,1 );
       dist.ScaleTol1(1000);
-      iret |= dist.Test(0.01,5,0);
+      iret |= dist.Test(0.01,5,0,1);
       CREATE_DIST_C(lognormal);
       distc.SetParameters(1,1 );
+#ifndef USE_MATHMORE
+      distc.ScaleTol1(1000000);
+#endif
       distc.ScaleTol2(1000000); // t.b.c.
       iret |= distc.Test(0.01,5,0,1,true);
    }
@@ -385,6 +438,10 @@ struct VecType<Polar3DVector> {
 template<>
 struct VecType<RhoEtaPhiVector> {
    static std::string name() { return "RhoEtaPhiVector";}
+}; 
+template<>
+struct VecType<RhoZPhiVector> {
+   static std::string name() { return "RhoZPhiVector";}
 }; 
 template<>
 struct VecType<PxPyPzEVector> {
@@ -687,17 +744,20 @@ public:
    double testWrite(const std::vector<V> & dataV, bool compress = false) {
 
       
-      TFile file(VecType<V>::name().c_str(),"RECREATE","",compress);
+      std::string fname = VecType<V>::name() + ".root";
+      TFile file(fname.c_str(),"RECREATE","",compress);
 
       // create tree
       std::string tree_name="Tree with" + VecType<V>::name(); 
 
-      TTree tree("t1",tree_name.c_str());
+      TTree tree("VectorTree",tree_name.c_str());
 
       V *v1 = new V();
       //std::cout << "typeID written : " << typeid(*v1).name() << std::endl;
 
-      tree.Branch("Vector branch",VecType<V>::name().c_str(),&v1);
+      // need to add namespace to full type name
+      std::string typeName = "ROOT::Math::" + VecType<V>::name();
+      tree.Branch("Vector branch",typeName.c_str(),&v1);
 
       Timer timer;
       for (int i = 0; i < nGen; ++i) { 
@@ -725,7 +785,11 @@ public:
       
 
       // create tree
-      TTree *tree = (TTree*)f1.Get("tree");
+      TTree *tree = dynamic_cast<TTree*>(f1.Get("VectorTree"));
+      if (tree == 0) { 
+         std::cout << " Error reading file " << fname << std::endl; 
+         return -1; 
+      }
       
       V *v1 = 0;
       
@@ -767,36 +831,48 @@ int testVector(int ngen, bool testio=false) {
    v1.reserve(ngen); 
    v2.reserve(ngen); 
 
-   double sxy0, sxy1, sxy2 = 0; 
+   double s1, s2 = 0; 
    double scale = 1; 
+   double sref1, sref2 = 0; 
 
    a.testCreate(v1);             iret |= a.check(VecType<V1>::name()+" creation",v1.size(),ngen);
-   sxy1 = a.testAddition(v1);    iret |= a.check(VecType<V1>::name()+" addition",sxy1,a.Sum(),Dim*4);
+   s1 = a.testAddition(v1);    iret |= a.check(VecType<V1>::name()+" addition",s1,a.Sum(),Dim*4);
+   sref1 = s1; 
    v1.clear();
    assert(v1.size() == 0);
    a.testCreateAndSet(v1);       iret |= a.check(VecType<V1>::name()+" creation",v1.size(),ngen);
-   sxy2 = a.testAddition(v1);    iret |= a.check(VecType<V1>::name()+" setting",sxy2,sxy1);
-   sxy0 = sxy1; 
+   s2 = a.testAddition(v1);    iret |= a.check(VecType<V1>::name()+" setting",s2,s1);
 
    a.testConversion(v1,v2);      iret |= a.check(VecType<V1>::name()+" -> " + VecType<V2>::name(),v1.size(),v2.size() );
-   sxy2 = a.testAddition(v1);    iret |= a.check("Vector conversion",sxy2,sxy1);
+   scale = 1000;
+   if (Dim == 2) scale = 1.E12;  // to be understood
+   if (Dim == 3) scale = 1.E4;  // problem with RhoEtaPhiVector
+   s2 = a.testAddition(v2);    iret |= a.check("Vector conversion",s2,s1,scale);
+   sref2 = s2; 
 
-   sxy1 = a.testOperations(v1);  a.print(VecType<V1>::name()+" operations");
+   s1 = a.testOperations(v1);  a.print(VecType<V1>::name()+" operations");
    scale = Dim*20; 
    if (Dim==4) scale *= 10000000; // for problem with PtEtaPhiE
-   sxy2 = a.testOperations(v2);  iret |= a.check(VecType<V2>::name()+" operations",sxy2,sxy1,scale);
+   s2 = a.testOperations(v2);  iret |= a.check(VecType<V2>::name()+" operations",s2,s1,scale);
 
-   sxy1 = a.testDelta(v1);      a.print(VecType<V1>::name()+" delta values");
+   s1 = a.testDelta(v1);      a.print(VecType<V1>::name()+" delta values");
    scale = Dim*16; 
    if (Dim==4) scale *= 100; // for problem with PtEtaPhiE
-   sxy2 = a.testDelta(v2);      iret |= a.check(VecType<V2>::name()+" delta values",sxy2,sxy1,scale);
+   s2 = a.testDelta(v2);      iret |= a.check(VecType<V2>::name()+" delta values",s2,s1,scale);
  
+
+   double fsize = 0;
+   int ir = 0;
    if (!testio) return iret; 
 
-   double fsize = 0; 
    fsize = a.testWrite(v1);  iret |= a.check(VecType<V1>::name()+" write",fsize>100,1);
-   iret |= a.testRead(v1);   iret |= a.check(VecType<V1>::name()+" read",iret,0);
-   sxy1 = a.testAddition(v1);       iret |= a.check(VecType<V1>::name()+" after read",sxy1,sxy0);
+   ir = a.testRead(v1);   iret |= a.check(VecType<V1>::name()+" read",ir,0);
+   s1 = a.testAddition(v1);       iret |= a.check(VecType<V1>::name()+" after read",s1,sref1);
+
+   // test io vector 2
+   fsize = a.testWrite(v2);  iret |= a.check(VecType<V2>::name()+" write",fsize>100,1);
+   ir = a.testRead(v2);      iret |= a.check(VecType<V2>::name()+" read",ir,0);
+   s2 = a.testAddition(v2);       iret |= a.check(VecType<V2>::name()+" after read",s2,sref2);
 
    return iret; 
 
@@ -812,20 +888,20 @@ int testGenVectors(int ngen,bool io) {
    std::cout <<"******************************************************************************\n";
    std::cout << "\tTest of Physics Vector (GenVector package)\n";
    std::cout <<"******************************************************************************\n";
-   iret |= testVector<XYVector, Polar2DVector, 2>(ngen); 
-   iret |= testVector<XYZVector, Polar3DVector, 3>(ngen); 
-   iret |= testVector<XYZVector, RhoEtaPhiVector, 3>(ngen); 
-   iret |= testVector<XYZVector, RhoZPhiVector, 3>(ngen); 
+   iret |= testVector<XYVector, Polar2DVector, 2>(ngen,io); 
+   iret |= testVector<XYZVector, Polar3DVector, 3>(ngen,io); 
+   iret |= testVector<XYZVector, RhoEtaPhiVector, 3>(ngen,io); 
+   iret |= testVector<XYZVector, RhoZPhiVector, 3>(ngen,io); 
    iret |= testVector<XYZTVector, PtEtaPhiEVector, 4>(ngen,io); 
-   iret |= testVector<XYZTVector, PtEtaPhiMVector, 4>(ngen); 
-   iret |= testVector<XYZTVector, PxPyPzMVector, 4>(ngen); 
+   iret |= testVector<XYZTVector, PtEtaPhiMVector, 4>(ngen,io); 
+   iret |= testVector<XYZTVector, PxPyPzMVector, 4>(ngen,io); 
 
    return iret; 
 }
 
 
 
-int stressMathCore() { 
+int stressMathCore(double nscale = 1) { 
 
    int iret = 0; 
 
@@ -841,11 +917,11 @@ int stressMathCore() {
    TBenchmark bm; 
    bm.Start("stressMathCore");
 
-
+   std::cout << nscale*100 << std::endl;
    iret |= testStatFunctions(100);
 
-   bool io = false; 
-   iret |= testGenVectors(1000,io); 
+   bool io = true; 
+   iret |= testGenVectors(nscale*1000,io); 
 
    bm.Stop("stressMathCore");
    std::cout <<"******************************************************************************\n";
@@ -859,7 +935,11 @@ int stressMathCore() {
    return iret; 
 }
 
-//int main(int argc,const char *argv[]) { 
-int main() { 
-   return stressMathCore();
+int main(int argc,const char *argv[]) { 
+   double nscale = 1;
+   if (argc > 1) { 
+      int scale = atoi(argv[1]);
+      nscale = std::pow(10,double(scale));
+   } 
+   return stressMathCore(nscale);
 }

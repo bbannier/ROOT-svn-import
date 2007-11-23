@@ -148,7 +148,7 @@ void stressGeometry(const char *exp="*") {
       TGeoManager::Import(Form("http://root.cern.ch/files/%s",fname));
          
       sprintf(fname, "%s_ref.root", exps[i]);
-      if (gSystem->AccessPathName(fname)) {
+      if (!TFile::Open(Form("http://root.cern.ch/files/%s",fname))) {
          printf("File: %s does not exist, generating it\n", fname);
          WriteRef(i);
       }
@@ -182,13 +182,15 @@ void stressGeometry(const char *exp="*") {
 
 void ReadRef(Int_t kexp) {
    TStopwatch sw;
-   char fname[24];
-   sprintf(fname, "%s_ref.root", exps[kexp]);
-   TFile f(fname);
-   if (f.IsZombie()) return;
+   char fname[100];
+   sprintf(fname, "http://root.cern.ch/files/%s_ref.root", exps[kexp]);
+   TFile::SetCacheFileDir(".");   
+   TFile *f = TFile::Open(fname, "CACHEREAD");
+   if (!f) return;
+   printf("Reference file %s found\n", fname);
    TTree *TD = new TTree("TD","TGeo stress diff");
    TD->Branch("p",&p.x,"x/D:y/D:z/D:theta/D:phi/D:rad[4]/F");
-   TTree *T = (TTree*)f.Get("T");
+   TTree *T = (TTree*)f->Get("T");
    T->SetBranchAddress("p",&p.x);
    Long64_t nentries = T->GetEntries();
    TVectorD *vref = (TVectorD *)T->GetUserInfo()->At(0);
@@ -215,11 +217,10 @@ void ReadRef(Int_t kexp) {
       vect(2) += length;
       vect(3) += rad;
       diff = 0;
-      diff += TMath::Abs(nbound-p.nbound);
       diff += TMath::Abs(length-p.length);
       diff += TMath::Abs(safe-p.safe);
       diff += TMath::Abs(rad-p.rad);
-      if (diff > diffmax) {
+      if (TMath::Abs(rad-p.rad) > 0.1 || TMath::Abs(nbound-p.nbound) > 1) {
          nbad++;
          if (nbad < 10) {
             printf(" ==>Point %lld differs with diff = %g, x=%g, y=%g, z=%g\n",i,diff,p.x,p.y,p.z);
@@ -237,7 +238,8 @@ void ReadRef(Int_t kexp) {
       }    
    }
    diff = 0.;
-   for (Int_t j=1; j<4; j++) diff += TMath::Abs(vect_ref(j)-vect(j));
+   //for (Int_t j=1; j<4; j++) diff += TMath::Abs(vect_ref(j)-vect(j));
+   diff += TMath::Abs(vect_ref(3)-vect(3));
    if (diff > diffmax) {
 //      printf("Total weight=%g   ref=%g\n", vect(0), vect_ref(0));
       printf("Total nbound=%g   ref=%g\n", vect(1), vect_ref(1));
@@ -254,6 +256,7 @@ void ReadRef(Int_t kexp) {
       TD->Print();
    }   
    delete TD;
+   delete f;
    
    Double_t cp = sw.CpuTime();
    tpstot += cp;
