@@ -18,6 +18,7 @@
 #include <iostream>
 #include <iomanip>
 #include <limits>
+#include <cmath>
 #include "TBenchmark.h"
 #include "TROOT.h"
 #include "TRandom3.h"
@@ -921,7 +922,7 @@ int stressMathCore(double nscale = 1) {
    iret |= testStatFunctions(100);
 
    bool io = true; 
-   iret |= testGenVectors(nscale*1000,io); 
+   iret |= testGenVectors(int(nscale*1000),io); 
 
    bm.Stop("stressMathCore");
    std::cout <<"******************************************************************************\n";
@@ -939,7 +940,7 @@ int main(int argc,const char *argv[]) {
    double nscale = 1;
    if (argc > 1) { 
       int scale = atoi(argv[1]);
-      nscale = std::pow(10,double(scale));
+      nscale = std::pow(10.0,double(scale));
    } 
    return stressMathCore(nscale);
 }
