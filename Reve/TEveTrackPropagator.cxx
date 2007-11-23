@@ -28,7 +28,6 @@ void TEveTrackPropagator::Helix::Step(Vertex4D& v, TEveVector& p)
    Float_t pyt = p.y*fCos  + p.x*fSin;
    p.x = pxt;
    p.y = pyt;
-
 }
 
 //______________________________________________________________________________
@@ -40,43 +39,89 @@ void TEveTrackPropagator::Helix::StepVertex(Vertex4D& v, TEveVector& p, Vertex4D
    forw.t = v.t + fTimeStep;
 }
 
-
 //______________________________________________________________________________
 // TEveTrackPropagator
 //
-// Calculates path of a particle taking into account special
-// path-marks and imposed boundaries.
+//______________________________________________________________________________
+// TEveTrackPropagator
+//
+// Holding structure for a number of track rendering parameters.
+// Calculates path taking into account the parameters.
+//
+// This is decoupled from TEveTrack/TEveTrackList to allow sharing of the
+// Propagator among several instances. Back references are kept so the
+// tracks can be recreated when the parameters change.
+//
+// TEveTrackList has Get/Set methods for RnrStlye. TEveTrackEditor and
+// TEveTrackListEditor provide editor access.
 
 ClassImp(TEveTrackPropagator)
 
+Float_t       TEveTrackPropagator::fgDefMagField = 5;
+const Float_t TEveTrackPropagator::fgkB2C        = 0.299792458e-3;
+TEveTrackPropagator TEveTrackPropagator::fgDefStyle;
+
 //______________________________________________________________________________
-TEveTrackPropagator::TEveTrackPropagator(TEveTrackRnrStyle* rs, Int_t charge,
-                                         TEveVector& v, TEveVector& p, Float_t beta) :
-   fRnrMod   (rs),
-   fCharge   (charge),
+TEveTrackPropagator::TEveTrackPropagator() :
+   TObject(),
+   TEveRefBackPtr(),
+
+   fMagField(fgDefMagField),
+
+   fMaxR  (350),
+   fMaxZ  (450),
+
+   fMaxOrbs (0.5),
+   fMinAng  (45),
+   fDelta   (0.1),
+
+   fEditPathMarks(kFALSE),
+   fPMAtt(),
+
+   fFitDaughters  (kTRUE),
+   fFitReferences (kTRUE),
+   fFitDecay      (kTRUE),
+
+   fRnrDaughters  (kTRUE),
+   fRnrReferences (kTRUE),
+   fRnrDecay      (kTRUE),
+
+   fRnrFV(kFALSE),
+   fFVAtt(),
+
+   fCharge   (0),
    fVelocity (0.0f),
-   fV        (v.x, v.y, v.z),
+   fV        (),
    fN        (0),
-   fNLast    (-1),
+   fNLast    (0),
    fNMax     (4096)
 {
-   fVelocity = TMath::C()*beta;
+}
 
+//______________________________________________________________________________
+void   TEveTrackPropagator::InitTrack(TEveVector &v, TEveVector &p, Float_t beta, Int_t charge)
+{ 
+   fV.x = v.x;
+   fV.y = v.y;
+   fV.z = v.z;
+   fV.t = 0;
    fPoints.push_back(fV);
 
+   fVelocity = TMath::C()*beta;
+   fCharge = charge;
    if (fCharge)
    {
       // initialise helix
       using namespace TMath;
       Float_t pT = p.Perp();
-      fH.fA      = fRnrMod->fgkB2C *fRnrMod->fMagField * charge;
+      fH.fA      = fgkB2C *fMagField * charge;
       fH.fLam    = p.z/pT;
       fH.fR      = pT/fH.fA;
 
-      fH.fPhiStep = fRnrMod->fMinAng * DegToRad();
-      if (fRnrMod->fDelta < Abs(fH.fR))
+      fH.fPhiStep = fMinAng * DegToRad();
+      if (fDelta < Abs(fH.fR))
       {
-         Float_t ang  = 2*ACos(1 - fRnrMod->fDelta/Abs(fH.fR));
+         Float_t ang  = 2*ACos(1 - fDelta/Abs(fH.fR));
          if (ang < fH.fPhiStep) fH.fPhiStep = ang;
       }
       if (fH.fA < 0) fH.fPhiStep *= -1;
@@ -89,10 +134,18 @@ TEveTrackPropagator::TEveTrackPropagator(TEveTrackRnrStyle* rs, Int_t charge,
 }
 
 //______________________________________________________________________________
+void   TEveTrackPropagator::ResetTrack()
+{
+   fPoints.clear();
+   fN = 0; 
+   fNLast = 0;
+}
+
+//______________________________________________________________________________
 Bool_t TEveTrackPropagator::GoToVertex(TEveVector& v, TEveVector& p)
 {
    Bool_t hit;
-   if (fCharge != 0 && TMath::Abs(fRnrMod->fMagField) > 1e-5 && p.Perp2() > 1e-12)
+   if (fCharge != 0 && TMath::Abs(fMagField) > 1e-5 && p.Perp2() > 1e-12)
       hit = HelixToVertex(v, p);
    else
       hit = LineToVertex(v);
@@ -102,7 +155,7 @@ Bool_t TEveTrackPropagator::GoToVertex(TEveVector& v, TEveVector& p)
 //______________________________________________________________________________
 void TEveTrackPropagator::GoToBounds(TEveVector& p)
 {
-   if(fCharge != 0 && TMath::Abs(fRnrMod->fMagField) > 1e-5 && p.Perp2() > 1e-12)
+   if(fCharge != 0 && TMath::Abs(fMagField) > 1e-5 && p.Perp2() > 1e-12)
       HelixToBounds(p);
    else
       LineToBounds(p);
@@ -113,13 +166,13 @@ void TEveTrackPropagator::SetNumOfSteps()
 {
    using namespace TMath;
    // max orbits
-   fNLast = Int_t(fRnrMod->fMaxOrbs*TwoPi()/Abs(fH.fPhiStep));
+   fNLast = Int_t(fMaxOrbs*TwoPi()/Abs(fH.fPhiStep));
    // Z boundaries
    Float_t nz;
    if (fH.fLam > 0) {
-      nz = ( fRnrMod->fMaxZ - fV.z)/( fH.fLam*Abs(fH.fR*fH.fPhiStep) );
+      nz = ( fMaxZ - fV.z)/( fH.fLam*Abs(fH.fR*fH.fPhiStep) );
    } else {
-      nz = (-fRnrMod->fMaxZ - fV.z)/( fH.fLam*Abs(fH.fR*fH.fPhiStep) );
+      nz = (-fMaxZ - fV.z)/( fH.fLam*Abs(fH.fR*fH.fPhiStep) );
    }
    if (nz < fNLast) fNLast = Int_t(nz + 1);
    // printf("end steps in helix line %d \n", fNLast);
@@ -134,24 +187,24 @@ void TEveTrackPropagator::HelixToBounds(TEveVector& p)
    if (fNLast > 0)
    {
       Bool_t crosR = kFALSE;
-      if (fV.Perp() < fRnrMod->fMaxR + TMath::Abs(fH.fR))
+      if (fV.Perp() < fMaxR + TMath::Abs(fH.fR))
          crosR = true;
 
-      Float_t maxR2 = fRnrMod->fMaxR * fRnrMod->fMaxR;
+      Float_t maxR2 = fMaxR * fMaxR;
       Vertex4D forw;
       while (fN < fNLast)
       {
          fH.StepVertex(fV, p, forw);
          if (crosR && forw.Perp2() > maxR2)
          {
-            Float_t t = (fRnrMod->fMaxR - fV.R()) / (forw.R() - fV.R());
+            Float_t t = (fMaxR - fV.R()) / (forw.R() - fV.R());
             assert(t >= 0 && t <= 1);
             fPoints.push_back(fV + (forw-fV)*t);fN++;
             return;
          }
-         if (TMath::Abs(forw.z) > fRnrMod->fMaxZ)
+         if (TMath::Abs(forw.z) > fMaxZ)
          {
-            Float_t t = (fRnrMod->fMaxZ - TMath::Abs(fV.z)) / TMath::Abs((forw.z - fV.z));
+            Float_t t = (fMaxZ - TMath::Abs(fV.z)) / TMath::Abs((forw.z - fV.z));
             assert(t >= 0 && t <= 1);
             fPoints.push_back(fV + (forw-fV)*t);fN++;
             return;
@@ -167,7 +220,7 @@ Bool_t TEveTrackPropagator::HelixToVertex(TEveVector& v, TEveVector& p)
 {
    Float_t p0x = p.x, p0y = p.y;
    Float_t zs = fH.fLam*TMath::Abs(fH.fR*fH.fPhiStep);
-   Float_t maxrsq  = fRnrMod->fMaxR * fRnrMod->fMaxR;
+   Float_t maxrsq  = fMaxR * fMaxR;
    Float_t fnsteps = (v.z - fV.z)/zs;
    Int_t   nsteps  = Int_t((v.z - fV.z)/zs);
    Float_t sinf = TMath::Sin(fnsteps*fH.fPhiStep); // final sin
@@ -187,7 +240,7 @@ Bool_t TEveTrackPropagator::HelixToVertex(TEveVector& v, TEveVector& p)
          for (Int_t l=0; l<nsteps; l++)
          {
             fH.StepVertex(fV, p, forw);
-            if (fV.Perp2() > maxrsq || TMath::Abs(fV.z) > fRnrMod->fMaxZ)
+            if (fV.Perp2() > maxrsq || TMath::Abs(fV.z) > fMaxZ)
                return kFALSE;
             fH.Step(fV, p); fPoints.push_back(fV); fN++;
          }
@@ -233,16 +286,16 @@ void TEveTrackPropagator::LineToBounds(TEveVector& p)
    Float_t tZ = 0, Tb = 0;
    // time where particle intersect +/- fMaxZ
    if (p.z > 0) {
-      tZ = (fRnrMod->fMaxZ - fV.z)/p.z;
+      tZ = (fMaxZ - fV.z)/p.z;
    }
    else  if (p.z < 0 ) {
-      tZ = (-1)*(fRnrMod->fMaxZ + fV.z)/p.z;
+      tZ = (-1)*(fMaxZ + fV.z)/p.z;
    }
    // time where particle intersects cylinder
    Float_t tR = 0;
    Double_t a = p.x*p.x + p.y*p.y;
    Double_t b = 2*(fV.x*p.x + fV.y*p.y);
-   Double_t c = fV.x*fV.x + fV.y*fV.y - fRnrMod->fMaxR*fRnrMod->fMaxR;
+   Double_t c = fV.x*fV.x + fV.y*fV.y - fMaxR*fMaxR;
    Double_t D = b*b - 4*a*c;
    if (D >= 0) {
       Double_t D_sqrt=TMath::Sqrt(D);
@@ -269,3 +322,123 @@ void TEveTrackPropagator::FillPointSet(TEvePointSet* ps) const
       ps->SetNextPoint(v.x, v.y, v.z);
    }
 }
+
+/******************************************************************************/
+
+//______________________________________________________________________________
+void TEveTrackPropagator::RebuildTracks()
+{
+   // Rebuild all tracks using this render-style.
+
+   TEveTrack* track;
+   std::list<TEveElement*>::iterator i = fBackRefs.begin();
+   while (i != fBackRefs.end())
+   {
+      track = dynamic_cast<TEveTrack*>(*i);
+      track->MakeTrack();
+      track->ElementChanged();
+      ++i;
+   }
+}
+
+/******************************************************************************/
+
+//______________________________________________________________________________
+void TEveTrackPropagator::SetMaxR(Float_t x)
+{
+   // Set maximum radius and rebuild tracks.
+
+   fMaxR = x;
+   RebuildTracks();
+}
+
+//______________________________________________________________________________
+void TEveTrackPropagator::SetMaxZ(Float_t x)
+{
+   // Set maximum z and rebuild tracks.
+
+   fMaxZ = x;
+   RebuildTracks();
+}
+
+//______________________________________________________________________________
+void TEveTrackPropagator::SetMaxOrbs(Float_t x)
+{
+   // Set maximum number of orbits and rebuild tracks.
+
+   fMaxOrbs = x;
+   RebuildTracks();
+}
+
+//______________________________________________________________________________
+void TEveTrackPropagator::SetMinAng(Float_t x)
+{
+   // Set minimum step angle and rebuild tracks.
+
+   fMinAng = x;
+   RebuildTracks();
+}
+
+//______________________________________________________________________________
+void TEveTrackPropagator::SetDelta(Float_t x)
+{
+   // Set maximum error and rebuild tracks.
+
+   fDelta = x;
+   RebuildTracks();
+}
+
+//______________________________________________________________________________
+void TEveTrackPropagator::SetFitDaughters(Bool_t x)
+{
+   // Set daughter creation point fitting and rebuild tracks.
+
+   fFitDaughters = x;
+   RebuildTracks();
+}
+
+//______________________________________________________________________________
+void TEveTrackPropagator::SetFitReferences(Bool_t x)
+{
+   // Set track-reference fitting and rebuild tracks.
+
+   fFitReferences = x;
+   RebuildTracks();
+}
+
+//______________________________________________________________________________
+void TEveTrackPropagator::SetFitDecay(Bool_t x)
+{
+   // Set decay fitting and rebuild tracks.
+
+   fFitDecay = x;
+   RebuildTracks();
+}
+
+//______________________________________________________________________________
+void TEveTrackPropagator::SetRnrDecay(Bool_t rnr)
+{
+   // Set decay rendering and rebuild tracks.
+
+   fRnrDecay = rnr;
+   RebuildTracks();
+}
+
+//______________________________________________________________________________
+void TEveTrackPropagator::SetRnrDaughters(Bool_t rnr)
+{
+   // Set daughter rendering and rebuild tracks.
+
+   fRnrDaughters = rnr;
+   RebuildTracks();
+}
+
+//______________________________________________________________________________
+void TEveTrackPropagator::SetRnrReferences(Bool_t rnr)
+{
+   // Set track-reference rendering and rebuild tracks.
+
+   fRnrReferences = rnr;
+   RebuildTracks();
+}
+

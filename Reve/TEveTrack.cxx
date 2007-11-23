@@ -50,13 +50,13 @@ TEveTrack::TEveTrack() :
    fIndex(kMinInt),
    fPathMarks(),
 
-   fRnrStyle(0)
+   fPropagator(0)
 {
    // Default constructor.
 }
 
 //______________________________________________________________________________
-TEveTrack::TEveTrack(TParticle* t, Int_t label, TEveTrackRnrStyle* rs):
+TEveTrack::TEveTrack(TParticle* t, Int_t label, TEveTrackPropagator* rs):
    TEveLine(),
 
    fV(t->Vx(), t->Vy(), t->Vz()),
@@ -68,11 +68,11 @@ TEveTrack::TEveTrack(TParticle* t, Int_t label, TEveTrackRnrStyle* rs):
    fIndex(kMinInt),
    fPathMarks(),
 
-   fRnrStyle(0)
+   fPropagator(0)
 {
    // Constructor from TParticle.
 
-   SetRnrStyle(rs);
+   SetPropagator(rs);
    fMainColorPtr = &fLineColor;
 
    TParticlePDG* pdgp = t->GetPDG();
@@ -85,7 +85,7 @@ TEveTrack::TEveTrack(TParticle* t, Int_t label, TEveTrackRnrStyle* rs):
 }
 
 //______________________________________________________________________________
-TEveTrack::TEveTrack(TEveMCTrack* t, TEveTrackRnrStyle* rs):
+TEveTrack::TEveTrack(TEveMCTrack* t, TEveTrackPropagator* rs):
    TEveLine(),
 
    fV(t->Vx(), t->Vy(), t->Vz()),
@@ -97,11 +97,11 @@ TEveTrack::TEveTrack(TEveMCTrack* t, TEveTrackRnrStyle* rs):
    fIndex(t->index),
    fPathMarks(),
 
-   fRnrStyle(0)
+   fPropagator(0)
 {
    // Constructor from TEveUtil Monte Carlo track.
 
-   SetRnrStyle(rs);
+   SetPropagator(rs);
    fMainColorPtr = &fLineColor;
 
    TParticlePDG* pdgp = t->GetPDG();
@@ -114,7 +114,7 @@ TEveTrack::TEveTrack(TEveMCTrack* t, TEveTrackRnrStyle* rs):
 }
 
 //______________________________________________________________________________
-TEveTrack::TEveTrack(TEveRecTrack* t, TEveTrackRnrStyle* rs) :
+TEveTrack::TEveTrack(TEveRecTrack* t, TEveTrackPropagator* rs) :
    TEveLine(),
 
    fV(t->V),
@@ -126,11 +126,11 @@ TEveTrack::TEveTrack(TEveRecTrack* t, TEveTrackRnrStyle* rs) :
    fIndex(t->index),
    fPathMarks(),
 
-   fRnrStyle(0)
+   fPropagator(0)
 {
    // Constructor from TEveUtil reconstructed track.
 
-   SetRnrStyle(rs);
+   SetPropagator(rs);
    fMainColorPtr = &fLineColor;
 
    SetName(t->GetName());
@@ -148,7 +148,7 @@ TEveTrack::TEveTrack(const TEveTrack& t) :
    fLabel(t.fLabel),
    fIndex(t.fIndex),
    fPathMarks(),
-   fRnrStyle(0)
+   fPropagator(0)
 {
    // Copy constructor.
 
@@ -161,7 +161,7 @@ TEveTrack::TEveTrack(const TEveTrack& t) :
    fLineStyle = t.fLineStyle;
    fLineWidth = t.fLineWidth;
    SetPathMarks(t);
-   SetRnrStyle (t.fRnrStyle);
+   SetPropagator (t.fPropagator);
 }
 
 //______________________________________________________________________________
@@ -169,7 +169,7 @@ TEveTrack::~TEveTrack()
 {
    // Destructor.
 
-   SetRnrStyle(0);
+   SetPropagator(0);
    for (vpPathMark_i i=fPathMarks.begin(); i!=fPathMarks.end(); ++i)
       delete *i;
 }
@@ -212,7 +212,7 @@ void TEveTrack::SetTrackParams(const TEveTrack& t)
    fLineStyle = t.fLineStyle;
    fLineWidth = t.fLineWidth;
    fPathMarks.clear();
-   SetRnrStyle(t.fRnrStyle);
+   SetPropagator(t.fPropagator);
 }
 
 //______________________________________________________________________________
@@ -230,15 +230,15 @@ void TEveTrack::SetPathMarks(const TEveTrack& t)
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveTrack::SetRnrStyle(TEveTrackRnrStyle* rs)
+void TEveTrack::SetPropagator(TEveTrackPropagator* rs)
 {
    // Set track's render style.
    // Reference counts of old and new render-style are updated.
 
-   if (fRnrStyle == rs) return;
-   if (fRnrStyle) fRnrStyle->DecRefCount(this);
-   fRnrStyle = rs;
-   if (fRnrStyle) rs->IncRefCount(this);
+   if (fPropagator == rs) return;
+   if (fPropagator) fPropagator->DecRefCount(this);
+   fPropagator = rs;
+   if (fPropagator) rs->IncRefCount(this);
 }
 
 /******************************************************************************/
@@ -268,13 +268,13 @@ void TEveTrack::MakeTrack(Bool_t recurse)
 
    Reset(0);
 
-   TEveTrackRnrStyle& RS((fRnrStyle != 0) ? *fRnrStyle : TEveTrackRnrStyle::fgDefStyle);
+   TEveTrackPropagator& RS((fPropagator != 0) ? *fPropagator : TEveTrackPropagator::fgDefStyle);
    if ((TMath::Abs(fV.z) < RS.fMaxZ) &&
        (fV.x*fV.x + fV.y*fV.y < RS.fMaxR*RS.fMaxR))
    {
       TEveVector currP = fP;
       Bool_t decay = kFALSE;
-      TEveTrackPropagator prop(fRnrStyle, fCharge, fV, fP, fBeta);
+      fPropagator->InitTrack(fV, fP, fBeta, fCharge);
       for (std::vector<TEvePathMark*>::iterator i=fPathMarks.begin(); i!=fPathMarks.end(); ++i)
       {
          TEvePathMark* pm = *i;
@@ -284,7 +284,7 @@ void TEveTrack::MakeTrack(Bool_t recurse)
                TMath::Sqrt(pm->V.x*pm->V.x + pm->V.y*pm->V.y) > RS.fMaxR)
                goto bounds;
             // printf("%s fit reference  \n", fName.Data());
-            if (prop.GoToVertex(pm->V, currP)) {
+            if (fPropagator->GoToVertex(pm->V, currP)) {
                currP.x = pm->P.x; currP.y = pm->P.y; currP.z = pm->P.z;
             }
          }
@@ -294,7 +294,7 @@ void TEveTrack::MakeTrack(Bool_t recurse)
                 TMath::Sqrt(pm->V.x*pm->V.x + pm->V.y*pm->V.y) > RS.fMaxR)
                goto bounds;
             // printf("%s fit daughter  \n", fName.Data());
-            if (prop.GoToVertex(pm->V, currP)) {
+            if (fPropagator->GoToVertex(pm->V, currP)) {
                currP.x -= pm->P.x; currP.y -= pm->P.y; currP.z -= pm->P.z;
             }
          }
@@ -304,7 +304,7 @@ void TEveTrack::MakeTrack(Bool_t recurse)
                 TMath::Sqrt(pm->V.x*pm->V.x + pm->V.y*pm->V.y) > RS.fMaxR)
                goto bounds;
             // printf("%s fit decay \n", fName.Data());
-            prop.GoToVertex(pm->V, currP);
+            fPropagator->GoToVertex(pm->V, currP);
             decay = true;
             break;
          }
@@ -314,10 +314,11 @@ void TEveTrack::MakeTrack(Bool_t recurse)
       if(!decay || RS.fFitDecay == kFALSE)
       {
          // printf("%s loop to bounds  \n",fName.Data() );
-         prop.GoToBounds(currP);
+         fPropagator->GoToBounds(currP);
       }
       //  make_polyline:
-      prop.FillPointSet((TEvePointSet*)this);
+      fPropagator->FillPointSet(this);
+      fPropagator->ResetTrack();
    }
 
    if (recurse)
@@ -538,186 +539,6 @@ void TEveTrack::SetLineStyle(Style_t lstyle)
 
 /******************************************************************************/
 /******************************************************************************/
-
-//______________________________________________________________________________
-// TEveTrackRnrStyle
-//
-// Holding structure for a number of track rendering parameters.
-//
-// This is decoupled from TEveTrack/TEveTrackList to allow sharing of the
-// RnrStyle among several instances. Back references are kept so the
-// tracks can be recreated when the parameters change.
-//
-// TEveTrackList has Get/Set methods for RnrStlye. TEveTrackEditor and
-// TEveTrackListEditor provide editor access.
-
-ClassImp(TEveTrackRnrStyle)
-
-Float_t       TEveTrackRnrStyle::fgDefMagField = 5;
-const Float_t TEveTrackRnrStyle::fgkB2C        = 0.299792458e-3;
-TEveTrackRnrStyle TEveTrackRnrStyle::fgDefStyle;
-
-//______________________________________________________________________________
-TEveTrackRnrStyle::TEveTrackRnrStyle() :
-   TObject(),
-   TEveRefBackPtr(),
-
-   fMagField(fgDefMagField),
-
-   fMaxR  (350),
-   fMaxZ  (450),
-
-   fMaxOrbs (0.5),
-   fMinAng  (45),
-   fDelta   (0.1),
-
-   fEditPathMarks(kFALSE),
-   fPMAtt(),
-
-   fFitDaughters  (kTRUE),
-   fFitReferences (kTRUE),
-   fFitDecay      (kTRUE),
-
-   fRnrDaughters  (kTRUE),
-   fRnrReferences (kTRUE),
-   fRnrDecay      (kTRUE),
-
-   fRnrFV(kFALSE),
-   fFVAtt()
-{
-   // Default constructor.
-
-   fPMAtt.SetMarkerColor(4);
-   fPMAtt.SetMarkerStyle(2);
-
-   fFVAtt.SetMarkerSize(0.6);
-   fFVAtt.SetMarkerColor(4);
-   fFVAtt.SetMarkerStyle(2);
-}
-
-/******************************************************************************/
-
-//______________________________________________________________________________
-void TEveTrackRnrStyle::RebuildTracks()
-{
-   // Rebuild all tracks using this render-style.
-
-   TEveTrack* track;
-   std::list<TEveElement*>::iterator i = fBackRefs.begin();
-   while (i != fBackRefs.end())
-   {
-      track = dynamic_cast<TEveTrack*>(*i);
-      track->MakeTrack();
-      track->ElementChanged();
-      ++i;
-   }
-}
-
-/******************************************************************************/
-
-//______________________________________________________________________________
-void TEveTrackRnrStyle::SetMaxR(Float_t x)
-{
-   // Set maximum radius and rebuild tracks.
-
-   fMaxR = x;
-   RebuildTracks();
-}
-
-//______________________________________________________________________________
-void TEveTrackRnrStyle::SetMaxZ(Float_t x)
-{
-   // Set maximum z and rebuild tracks.
-
-   fMaxZ = x;
-   RebuildTracks();
-}
-
-//______________________________________________________________________________
-void TEveTrackRnrStyle::SetMaxOrbs(Float_t x)
-{
-   // Set maximum number of orbits and rebuild tracks.
-
-   fMaxOrbs = x;
-   RebuildTracks();
-}
-
-//______________________________________________________________________________
-void TEveTrackRnrStyle::SetMinAng(Float_t x)
-{
-   // Set minimum step angle and rebuild tracks.
-
-   fMinAng = x;
-   RebuildTracks();
-}
-
-//______________________________________________________________________________
-void TEveTrackRnrStyle::SetDelta(Float_t x)
-{
-   // Set maximum error and rebuild tracks.
-
-   fDelta = x;
-   RebuildTracks();
-}
-
-//______________________________________________________________________________
-void TEveTrackRnrStyle::SetFitDaughters(Bool_t x)
-{
-   // Set daughter creation point fitting and rebuild tracks.
-
-   fFitDaughters = x;
-   RebuildTracks();
-}
-
-//______________________________________________________________________________
-void TEveTrackRnrStyle::SetFitReferences(Bool_t x)
-{
-   // Set track-reference fitting and rebuild tracks.
-
-   fFitReferences = x;
-   RebuildTracks();
-}
-
-//______________________________________________________________________________
-void TEveTrackRnrStyle::SetFitDecay(Bool_t x)
-{
-   // Set decay fitting and rebuild tracks.
-
-   fFitDecay = x;
-   RebuildTracks();
-}
-
-//______________________________________________________________________________
-void TEveTrackRnrStyle::SetRnrDecay(Bool_t rnr)
-{
-   // Set decay rendering and rebuild tracks.
-
-   fRnrDecay = rnr;
-   RebuildTracks();
-}
-
-//______________________________________________________________________________
-void TEveTrackRnrStyle::SetRnrDaughters(Bool_t rnr)
-{
-   // Set daughter rendering and rebuild tracks.
-
-   fRnrDaughters = rnr;
-   RebuildTracks();
-}
-
-//______________________________________________________________________________
-void TEveTrackRnrStyle::SetRnrReferences(Bool_t rnr)
-{
-   // Set track-reference rendering and rebuild tracks.
-
-   fRnrReferences = rnr;
-   RebuildTracks();
-}
-
-
-/******************************************************************************/
-/******************************************************************************/
-
 //______________________________________________________________________________
 // TEveTrackList
 //
@@ -727,13 +548,13 @@ void TEveTrackRnrStyle::SetRnrReferences(Bool_t rnr)
 ClassImp(TEveTrackList)
 
 //______________________________________________________________________________
-TEveTrackList::TEveTrackList(TEveTrackRnrStyle* rs) :
+TEveTrackList::TEveTrackList(TEveTrackPropagator* rs) :
    TEveElementList(),
    TAttMarker(1, 20, 1),
    TAttLine(1,1,1),
 
    fRecurse(kTRUE),
-   fRnrStyle(0),
+   fPropagator(0),
    fRnrLine(kTRUE),
    fRnrPoints(kFALSE),
 
@@ -746,18 +567,18 @@ TEveTrackList::TEveTrackList(TEveTrackRnrStyle* rs) :
    fChildClass = TEveTrack::Class(); // override member from base TEveElementList
 
    fMainColorPtr = &fLineColor;
-   if (fRnrStyle== 0) rs = new TEveTrackRnrStyle;
-   SetRnrStyle(rs);
+   if (fPropagator== 0) rs = new TEveTrackPropagator;
+   SetPropagator(rs);
 }
 
 //______________________________________________________________________________
-TEveTrackList::TEveTrackList(const Text_t* name, TEveTrackRnrStyle* rs) :
+TEveTrackList::TEveTrackList(const Text_t* name, TEveTrackPropagator* rs) :
    TEveElementList(name),
    TAttMarker(1, 20, 1),
    TAttLine(1,1,1),
 
    fRecurse(kTRUE),
-   fRnrStyle      (0),
+   fPropagator(0),
    fRnrLine(kTRUE),
    fRnrPoints(kFALSE),
 
@@ -770,8 +591,8 @@ TEveTrackList::TEveTrackList(const Text_t* name, TEveTrackRnrStyle* rs) :
    fChildClass = TEveTrack::Class(); // override member from base TEveElementList
 
    fMainColorPtr = &fLineColor;
-   if (fRnrStyle== 0) rs = new TEveTrackRnrStyle;
-   SetRnrStyle(rs);
+   if (fPropagator== 0) rs = new TEveTrackPropagator;
+   SetPropagator(rs);
 }
 
 //______________________________________________________________________________
@@ -779,22 +600,22 @@ TEveTrackList::~TEveTrackList()
 {
    // Destructor.
 
-   SetRnrStyle(0);
+   SetPropagator(0);
 }
 
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveTrackList::SetRnrStyle(TEveTrackRnrStyle* rs)
+void TEveTrackList::SetPropagator(TEveTrackPropagator* rs)
 {
    // Set default render-style for tracks.
    // This is not enforced onto the tracks themselves but this is the
    // render-style that is show in the TEveTrackListEditor.
 
-   if (fRnrStyle == rs) return;
-   if (fRnrStyle) fRnrStyle->DecRefCount();
-   fRnrStyle = rs;
-   if (fRnrStyle) rs->IncRefCount();
+   if (fPropagator == rs) return;
+   if (fPropagator) fPropagator->DecRefCount();
+   fPropagator = rs;
+   if (fPropagator) rs->IncRefCount();
 }
 
 /******************************************************************************/

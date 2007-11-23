@@ -22,13 +22,13 @@
 #include <TMarker.h>
 #include <TQObject.h>
 
-class TEveTrackRnrStyle;
+class TEveTrackPropagator;
 class TEveTrackList;
 
 class TEveTrack : public TEveLine,
 		  public TQObject
 {
-   friend class TEveTrackRnrStyle;
+   friend class TEveTrackPropagator;
    friend class TEveTrackList;
    friend class TEveTrackCounter;
    friend class TEveTrackGL;
@@ -47,13 +47,13 @@ protected:
    Int_t              fIndex;      // Reconstruction index
    vpPathMark_t       fPathMarks;  // TEveVector of known points along the track
 
-   TEveTrackRnrStyle *fRnrStyle;   // Pointer to shared render-style
+   TEveTrackPropagator *fPropagator;   // Pointer to shared render-style
 
 public:
    TEveTrack();
-   TEveTrack(TParticle* t, Int_t label, TEveTrackRnrStyle* rs);
-   TEveTrack(TEveMCTrack*  t, TEveTrackRnrStyle* rs);
-   TEveTrack(TEveRecTrack* t, TEveTrackRnrStyle* rs);
+   TEveTrack(TParticle* t, Int_t label, TEveTrackPropagator* rs);
+   TEveTrack(TEveMCTrack*  t, TEveTrackPropagator* rs);
+   TEveTrack(TEveRecTrack* t, TEveTrackPropagator* rs);
    TEveTrack(const TEveTrack& t);
    virtual ~TEveTrack();
 
@@ -64,8 +64,8 @@ public:
 
    virtual void MakeTrack(Bool_t recurse=kTRUE);
 
-   TEveTrackRnrStyle* GetRnrStyle() const  { return fRnrStyle; }
-   void SetRnrStyle(TEveTrackRnrStyle* rs);
+   TEveTrackPropagator* GetPropagator() const  { return fPropagator; }
+   void SetPropagator(TEveTrackPropagator* rs);
    void SetAttLineAttMarker(TEveTrackList* tl);
 
    Int_t GetPdg()    const   { return fPdg;   }
@@ -105,75 +105,6 @@ public:
    ClassDef(TEveTrack, 1); // Track with given vertex, momentum and optional referece-points (path-marks) along its path.
 };
 
-
-/******************************************************************************/
-// TEveTrackRnrStyle
-/******************************************************************************/
-
-class TEveTrackRnrStyle : public TObject,
-			  public TEveRefBackPtr
-{
-private:
-   void                     RebuildTracks();
-
-public:
-   Float_t                  fMagField;      // Constant magnetic field along z.
-
-   // TEveTrack limits
-   Float_t                  fMaxR;          // Max radius for track extrapolation
-   Float_t                  fMaxZ;          // Max z-coordinate for track extrapolation.
-   // Helix limits
-   Float_t                  fMaxOrbs;       // Maximal angular path of tracks' orbits (1 ~ 2Pi).
-   Float_t                  fMinAng;        // Minimal angular step between two helix points.
-   Float_t                  fDelta;         // Maximal error at the mid-point of the line connecting to helix points.
-
-   // Path-mark control
-   Bool_t                   fEditPathMarks; // Show widgets for path-mark control in GUI editor.
-   TMarker                  fPMAtt;         // Marker attributes for rendering of path-marks.
-
-   Bool_t                   fFitDaughters;  // Pass through daughter creation points when extrapolating a track.
-   Bool_t                   fFitReferences; // Pass through given track-references when extrapolating a track.
-   Bool_t                   fFitDecay;      // Pass through decay point when extrapolating a track.
-
-   Bool_t                   fRnrDaughters;  // Render daughter path-marks.
-   Bool_t                   fRnrReferences; // Render track-reference path-marks.
-   Bool_t                   fRnrDecay;      // Render decay path-marks.
-
-   // First vertex control
-   Bool_t                   fRnrFV;         // Render first vertex.
-   TMarker                  fFVAtt;         // Marker attributes for fits vertex.
-
-   TEveTrackRnrStyle();
-
-   // callbacks
-   void   SetEditPathMarks(Bool_t x) { fEditPathMarks = x; }
-   void   SetRnrDaughters(Bool_t x);
-   void   SetRnrReferences(Bool_t x);
-   void   SetRnrDecay(Bool_t x);
-
-   void   SetRnrFV(Bool_t x){  fRnrFV = x;}
-
-   void   SetFitDaughters(Bool_t x);
-   void   SetFitReferences(Bool_t x);
-   void   SetFitDecay(Bool_t x);
-
-   void   SetMaxR(Float_t x);
-   void   SetMaxZ(Float_t x);
-   void   SetMaxOrbs(Float_t x);
-   void   SetMinAng(Float_t x);
-   void   SetDelta(Float_t x);
-
-   Float_t GetMagField() const     { return fMagField; }
-   void    SetMagField(Float_t mf) { fMagField = mf; }
-
-   static Float_t       fgDefMagField; // Default value for constant solenoid magnetic field.
-   static const Float_t fgkB2C;        // Constant for conversion of momentum to curvature.
-   static TEveTrackRnrStyle fgDefStyle;    // Default track render-style.
-
-   ClassDef(TEveTrackRnrStyle, 1); // Extrapolation parameters for tracks.
-};
-
-
 /******************************************************************************/
 // TEveTrackList
 /******************************************************************************/
@@ -192,7 +123,7 @@ private:
    Bool_t               fRecurse;    // Recurse when propagating marker/line attributes to tracks.
 
 protected:
-   TEveTrackRnrStyle   *fRnrStyle;   // Basic track rendering parameters, not enforced to elements.
+   TEveTrackPropagator* fPropagator;   // Basic track rendering parameters, not enforced to elements.
 
    Bool_t               fRnrLine;    // Render track as line.
    Bool_t               fRnrPoints;  // Render track as points.
@@ -207,15 +138,15 @@ protected:
    Float_t RoundMomentumLimit(Float_t x);
 
 public:
-   TEveTrackList(TEveTrackRnrStyle* rs=0);
-   TEveTrackList(const Text_t* name, TEveTrackRnrStyle* rs=0);
+   TEveTrackList(TEveTrackPropagator* rs=0);
+   TEveTrackList(const Text_t* name, TEveTrackPropagator* rs=0);
    virtual ~TEveTrackList();
 
    void  MakeTracks(Bool_t recurse=kTRUE);
    void  FindMomentumLimits(TEveElement* el, Bool_t recurse);
 
-   void  SetRnrStyle(TEveTrackRnrStyle* rs);
-   TEveTrackRnrStyle*  GetRnrStyle(){return fRnrStyle;}
+   void  SetPropagator(TEveTrackPropagator* rs);
+   TEveTrackPropagator*  GetPropagator(){return fPropagator;}
 
    //--------------------------------
 
