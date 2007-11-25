@@ -36,8 +36,8 @@ Alieve::JetPlane* jetplane(Int_t iev)
 
 // Render Jet Plane
 	gStyle->SetPalette(1, 0);
-	gReve->AddRenderElement(jp);
-	gReve->Redraw3D();
+	gEve->AddElement(jp);
+	gEve->Redraw3D();
 
 	return jp;
 }

@@ -1,4 +1,4 @@
-// @(#)root/reve:$Id$
+// @(#)root/eve:$Id$
 // Authors: Matevz Tadel & Alja Mrak-Tadel: 2006, 2007
 
 /*************************************************************************
@@ -41,7 +41,7 @@ TEveScene::TEveScene(const Text_t* n, const Text_t* t) :
 //______________________________________________________________________________
 TEveScene::~TEveScene()
 {
-   gReve->GetViewers()->SceneDestructing(this);
+   gEve->GetViewers()->SceneDestructing(this);
 }
 
 /******************************************************************************/

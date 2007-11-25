@@ -1,4 +1,4 @@
-// @(#)root/reve:$Id$
+// @(#)root/eve:$Id$
 // Authors: Matevz Tadel & Alja Mrak-Tadel: 2006, 2007
 
 /*************************************************************************
@@ -44,7 +44,7 @@ public:
    virtual void   SetRnrSelf(Bool_t rnr);
    virtual void   SetRnrState(Bool_t rnr);
 
-   virtual Bool_t AcceptRenderElement(TEveElement* el);
+   virtual Bool_t AcceptElement(TEveElement* el);
    virtual Bool_t HandleElementPaste(TEveElement* el);
 
    ClassDef(TEveSceneInfo, 0); // TEveUtil representation of TGLSceneInfo.

@@ -1,3 +1,8 @@
+# Eventually also run:
+#
+# find . -name \*.C -or -name \*.cxx -or -name \*.h | xargs grep -l gReve | xargs perl -pi -e 's/gReve/gEve/og;'
+# find . -name \*.C -or -name \*.cxx -or -name \*.h | xargs grep -l RenderElement | xargs perl -pi -e 's/RenderElement/Element/og;'
+
 $RENAME_FILES = 0;
 
 $FIX_FRONT_MATTER = 0; # edit below, too

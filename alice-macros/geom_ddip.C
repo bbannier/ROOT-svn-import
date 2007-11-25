@@ -4,11 +4,11 @@ void geom_ddip()
 {
   using namespace std;
 
-  gGeoManager = gReve->GetGeometry("$REVESYS/alice-data/alice_fullgeo.root");
+  gGeoManager = gEve->GetGeometry("$REVESYS/alice-data/alice_fullgeo.root");
   TGeoNode* node = gGeoManager->GetTopVolume()->FindNode("DDIP_1");
 
   Reve::GeoTopNodeRnrEl* re = new Reve::GeoTopNodeRnrEl(gGeoManager, node);
   re->UseNodeTrans();
-  gReve->AddGlobalRenderElement(re);
-  gReve->Redraw3D();
+  gEve->AddGlobalElement(re);
+  gEve->Redraw3D();
 }

@@ -25,8 +25,8 @@ TEveQuadSet* reve_quad_test(Float_t x=0, Float_t y=0, Float_t z=0,
 
   if (register)
   {
-    gReve->AddRenderElement(q);
-    gReve->Redraw3D(kTRUE);
+    gEve->AddElement(q);
+    gEve->Redraw3D(kTRUE);
   }
 
   return q;
@@ -55,8 +55,8 @@ TEveQuadSet* reve_quad_test_emc(Float_t x=0, Float_t y=0, Float_t z=0,
   TEveTrans& t = q->RefHMTrans();
   t.SetPos(x, y, z);
 
-  gReve->AddRenderElement(q);
-  gReve->Redraw3D();
+  gEve->AddElement(q);
+  gEve->Redraw3D();
 
   return q;
 }
@@ -82,8 +82,8 @@ TEveQuadSet* reve_quad_test_circ()
   TEveTrans& t = q->RefHMTrans();
   t.SetPos(0, 0, 300);
 
-  gReve->AddRenderElement(q);
-  gReve->Redraw3D();
+  gEve->AddElement(q);
+  gEve->Redraw3D();
 
   return q;
 }
@@ -110,8 +110,8 @@ TEveQuadSet* reve_quad_test_hex(Float_t x=0, Float_t y=0, Float_t z=0,
 
     if (register)
     {
-      gReve->AddRenderElement(q);
-      gReve->Redraw3D();
+      gEve->AddElement(q);
+      gEve->Redraw3D();
     }
   }
 
@@ -130,8 +130,8 @@ TEveQuadSet* reve_quad_test_hex(Float_t x=0, Float_t y=0, Float_t z=0,
 
     if (register)
     {
-      gReve->AddRenderElement(q);
-      gReve->Redraw3D();
+      gEve->AddElement(q);
+      gEve->Redraw3D();
     }
   }
 
@@ -162,8 +162,8 @@ TEveQuadSet* reve_quad_test_hexid(Float_t x=0, Float_t y=0, Float_t z=0,
 
     if (register)
     {
-      gReve->AddRenderElement(q);
-      gReve->Redraw3D();
+      gEve->AddElement(q);
+      gEve->Redraw3D();
     }
   }
 
@@ -181,18 +181,18 @@ void reve_quad_test_hierarchy(Int_t n=4)
   box->SetAABox(-10, -10, -10, 20, 20, 20);
   box->SetFrameColor((Color_t) 33);
 
-  TEveRenderElementList* l = new TEveRenderElementList("Parent/Dir");
+  TEveElementList* l = new TEveElementList("Parent/Dir");
   l->SetTitle("Tooltip");
   //  l->SetMainColor((Color_t)3);
-  gReve->AddRenderElement(l);
+  gEve->AddElement(l);
 
   for (Int_t i=0; i<n; ++i)
   {
     TEveQuadSet* qs = reve_quad_test_hexid(0, 0, 50*i, 50, kFALSE);
     qs->SetPalette(pal);
     qs->SetFrame(box);
-    gReve->AddRenderElement(qs, l);
+    gEve->AddElement(qs, l);
   }
 
-  gReve->Redraw3D();
+  gEve->Redraw3D();
 }

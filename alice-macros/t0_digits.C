@@ -24,13 +24,13 @@ void t0_digits()
   dt->GetEntry(0);
 
   gStyle->SetPalette(1, 0);
-  //  gReve->DisableRedraw();
+  //  gEve->DisableRedraw();
 
   Alieve::T0Module::MakeModules(digits);
 
   //Alieve::T0Module* m = new Alieve::T0Module(di);
   //
-  //gReve->EnableRedraw();
+  //gEve->EnableRedraw();
   //m->LoadQuadsDigits();
 }
 

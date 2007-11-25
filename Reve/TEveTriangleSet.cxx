@@ -1,4 +1,4 @@
-// @(#)root/reve:$Id$
+// @(#)root/eve:$Id$
 // Authors: Matevz Tadel & Alja Mrak-Tadel: 2006, 2007
 
 /*************************************************************************
@@ -123,7 +123,7 @@ void TEveTriangleSet::GenerateZNormalColors(Float_t fac, Int_t min, Int_t max,
       Int_t v = TMath::Nint(fac * N[2]);
       pal.ColorFromValue(v, C, kFALSE);
    }
-   gReve->Redraw3D();
+   gEve->Redraw3D();
 }
 
 /******************************************************************************/

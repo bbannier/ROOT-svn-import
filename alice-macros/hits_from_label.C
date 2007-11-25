@@ -1,6 +1,6 @@
 // $Id: hits_from_label.C,v 1.8 2007/10/22 14:49:12 mtadel Exp $
 
-void hits_from_label(Int_t label=0, Reve::RenderElement* cont)
+void hits_from_label(Int_t label=0, Reve::Element* cont)
 {
   Reve::PointSet* h;
   Reve::LoadMacro("its_hits.C");
@@ -30,5 +30,5 @@ void hits_from_label(Int_t label=0, Reve::RenderElement* cont)
   h = tof_hits("fX:fY:fZ", form, cont);
   if(h) h->SetMarkerSize(1);
 
-  gReve->Redraw3D();
+  gEve->Redraw3D();
 }

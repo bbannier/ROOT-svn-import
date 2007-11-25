@@ -1,4 +1,4 @@
-// @(#)root/reve:$Id$
+// @(#)root/eve:$Id$
 // Authors: Matevz Tadel & Alja Mrak-Tadel: 2006, 2007
 
 /*************************************************************************
@@ -52,7 +52,7 @@
 
 #include <iostream>
 
-TEveManager* gReve = 0;
+TEveManager* gEve = 0;
 
 //______________________________________________________________________________
 // TEveManager
@@ -90,10 +90,10 @@ TEveManager::TEveManager(UInt_t w, UInt_t h) :
 
    static const TEveException eH("TEveManager::TEveManager ");
 
-   if (gReve != 0)
+   if (gEve != 0)
       throw(eH + "There can be only one!");
 
-   gReve = this;
+   gEve = this;
 
    fRedrawTimer.Connect("Timeout()", "TEveManager", this, "DoRedraw3D()");
    fMacroFolder = new TFolder("EVE", "Visualization macros");
@@ -132,7 +132,7 @@ TEveManager::TEveManager(UInt_t w, UInt_t h) :
    fViewer  = new TEveViewer("GL-One");
    fViewer->SetGLViewer(glv);
    fViewer->IncDenyDestroy();
-   AddRenderElement(fViewer, fViewers);
+   AddElement(fViewer, fViewers);
 
    fScenes  = new TEveSceneList ("Scenes");
    fScenes->IncDenyDestroy();
@@ -140,11 +140,11 @@ TEveManager::TEveManager(UInt_t w, UInt_t h) :
 
    fGlobalScene = new TEveScene("Geometry scene");
    fGlobalScene->IncDenyDestroy();
-   AddRenderElement(fGlobalScene, fScenes);
+   AddElement(fGlobalScene, fScenes);
 
    fEventScene = new TEveScene("Event scene");
    fEventScene->IncDenyDestroy();
-   AddRenderElement(fEventScene, fScenes);
+   AddElement(fEventScene, fScenes);
 
    fViewer->AddScene(fGlobalScene);
    fViewer->AddScene(fEventScene);
@@ -206,7 +206,7 @@ TEveViewer* TEveManager::SpawnNewViewer(const Text_t* name, const Text_t* title,
    v->SpawnGLViewer(gClient->GetRoot(), embed ? fEditor : 0);
    v->IncDenyDestroy();
    if (embed)  fBrowser->StopEmbedding(), fBrowser->SetTabTitle(name, 1);
-   AddRenderElement(v, fViewers);
+   AddElement(v, fViewers);
    return v;
 }
 
@@ -216,7 +216,7 @@ TEveScene* TEveManager::SpawnNewScene(const Text_t* name, const Text_t* title)
    // Create a new scene.
 
    TEveScene* s = new TEveScene(name, title);
-   AddRenderElement(s, fScenes);
+   AddElement(s, fScenes);
    return s;
 }
 
@@ -235,11 +235,11 @@ TMacro* TEveManager::GetMacro(const Text_t* name) const
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveManager::EditRenderElement(TEveElement* rnr_element)
+void TEveManager::EditElement(TEveElement* rnr_element)
 {
-   static const TEveException eH("TEveManager::EditRenderElement ");
+   static const TEveException eH("TEveManager::EditElement ");
 
-   fEditor->DisplayRenderElement(rnr_element);
+   fEditor->DisplayElement(rnr_element);
 }
 
 /******************************************************************************/
@@ -284,7 +284,7 @@ void TEveManager::FullRedraw3D(Bool_t resetCameras, Bool_t dropLogicals)
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveManager::RenderElementChanged(TEveElement* rnr_element)
+void TEveManager::ElementChanged(TEveElement* rnr_element)
 {
    std::list<TEveElement*> scenes;
    rnr_element->CollectSceneParents(scenes);
@@ -309,14 +309,14 @@ int TEveManager::SpawnGuiAndRun(int argc, char **argv)
    TRint theApp("App", &argc, argv);
 
    TEveUtil::SetupGUI();
-   /* gReve = */ new TEveManager(w, h);
+   /* gEve = */ new TEveManager(w, h);
 
 run_loop:
    try {
       theApp.Run();
    }
    catch(TEveException& exc) {
-      gReve->SetStatusLine(exc.Data());
+      gEve->SetStatusLine(exc.Data());
       fprintf(stderr, "Exception: %s\n", exc.Data());
       goto run_loop;
    }
@@ -330,7 +330,7 @@ void TEveManager::SpawnGui()
    Int_t h =  768;
 
    TEveUtil::SetupGUI();
-   /* gReve = */ new TEveManager(w, h);
+   /* gEve = */ new TEveManager(w, h);
 }
 
 /******************************************************************************/
@@ -375,12 +375,12 @@ TGListTreeItem* TEveManager::AddEvent(TEveEventManager* event)
 {
    fCurrentEvent = event;
    fCurrentEvent->IncDenyDestroy();
-   AddRenderElement(fCurrentEvent, fEventScene);
+   AddElement(fCurrentEvent, fEventScene);
    return AddToListTree(event, kTRUE);
 }
 
 //______________________________________________________________________________
-TGListTreeItem* TEveManager::AddRenderElement(TEveElement* rnr_element,
+TGListTreeItem* TEveManager::AddElement(TEveElement* rnr_element,
                                               TEveElement* parent)
 {
    if (parent == 0) {
@@ -393,7 +393,7 @@ TGListTreeItem* TEveManager::AddRenderElement(TEveElement* rnr_element,
 }
 
 //______________________________________________________________________________
-TGListTreeItem* TEveManager::AddGlobalRenderElement(TEveElement* rnr_element,
+TGListTreeItem* TEveManager::AddGlobalElement(TEveElement* rnr_element,
                                                     TEveElement* parent)
 {
    if (parent == 0)
@@ -405,14 +405,14 @@ TGListTreeItem* TEveManager::AddGlobalRenderElement(TEveElement* rnr_element,
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveManager::RemoveRenderElement(TEveElement* rnr_element,
+void TEveManager::RemoveElement(TEveElement* rnr_element,
                                       TEveElement* parent)
 {
    parent->RemoveElement(rnr_element);
 }
 
 //______________________________________________________________________________
-void TEveManager::PreDeleteRenderElement(TEveElement* rnr_element)
+void TEveManager::PreDeleteElement(TEveElement* rnr_element)
 {
    if (fEditor->GetRnrElement() == rnr_element)
       fEditor->DisplayObject(0);
@@ -421,13 +421,13 @@ void TEveManager::PreDeleteRenderElement(TEveElement* rnr_element)
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveManager::RenderElementSelect(TEveElement* rnr_element)
+void TEveManager::ElementSelect(TEveElement* rnr_element)
 {
-   EditRenderElement(rnr_element);
+   EditElement(rnr_element);
 }
 
 //______________________________________________________________________________
-Bool_t TEveManager::RenderElementPaste(TEveElement* rnr_element)
+Bool_t TEveManager::ElementPaste(TEveElement* rnr_element)
 {
    TEveElement* src = fEditor->GetRnrElement();
    if (src)
@@ -436,12 +436,12 @@ Bool_t TEveManager::RenderElementPaste(TEveElement* rnr_element)
 }
 
 //______________________________________________________________________________
-void TEveManager::RenderElementChecked(TEveElement* rnrEl, Bool_t state)
+void TEveManager::ElementChecked(TEveElement* rnrEl, Bool_t state)
 {
    rnrEl->SetRnrState(state);
 
    if (fEditor->GetModel() == rnrEl->GetEditorObject())
-      fEditor->DisplayRenderElement(rnrEl);
+      fEditor->DisplayElement(rnrEl);
 
    rnrEl->ElementChanged();
 }

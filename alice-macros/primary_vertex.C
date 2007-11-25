@@ -28,24 +28,24 @@ Reve::BoxSet* make_vertex_boxes(AliESDVertex* v)
   bs->SetRenderMode(Reve::BoxSet::RM_Line);
   bs->AddBox(Reve::Box(-1, x[0], x[1], x[2], 1, 1, 2));
   bs->SetMainColor((Color_t) 2);
-  gReve->AddRenderElement(bs);
+  gEve->AddElement(bs);
 
   bs = new BoxSet("+- 30 sigma_r x 10 sigma_z");
   bs->SetRenderMode(Reve::BoxSet::RM_Line);
   bs->AddBox(Reve::Box(-1, x[0], x[1], x[2], 30*e[0], 30*e[1], 10*e[2]));
   bs->SetMainColor((Color_t) 3);
-  gReve->AddRenderElement(bs);
+  gEve->AddElement(bs);
 
-  gReve->Redraw3D();
+  gEve->Redraw3D();
 }
 
 void register_vertex_marker(TPolyMarker3D* m)
 {
   using namespace Reve;
   Color_t* colp = FindColorVar(m, "fMarkerColor");
-  RenderElementObjPtr* rnrEl = new RenderElementObjPtr(m, *colp);
-  gReve->AddRenderElement(rnrEl);
-  gReve->Redraw3D();
+  ElementObjPtr* rnrEl = new ElementObjPtr(m, *colp);
+  gEve->AddElement(rnrEl);
+  gEve->Redraw3D();
 }
 
 void primary_vertex_primitive(Bool_t showSPD=kTRUE, Bool_t showBoxes=kFALSE)
@@ -152,13 +152,13 @@ void primary_vertex(Bool_t showSPD=kTRUE, Bool_t rnrEllipse=kTRUE)
   AliESDVertex* PV  =  esd->GetPrimaryVertex();
   ls = ESDvertex_lineset(PV, "Primary Vertex");
   if(rnrEllipse) make_vertex_ellipses(ls, PV, kTRUE);
-  gReve->AddRenderElement(ls);
+  gEve->AddElement(ls);
 
   if(showSPD) 
   {
     AliESDVertex*  SPDV  = esd->GetVertex();
     ls = ESDvertex_lineset(SPDV, "SPD Vertex");
     if(rnrEllipse) make_vertex_ellipses(ls, SPDV, kFALSE);
-    gReve->AddRenderElement(ls);
+    gEve->AddElement(ls);
   }
 }

@@ -1,6 +1,6 @@
 // $Id: clusters_from_index.C,v 1.5 2007/10/22 14:49:12 mtadel Exp $
 
-Reve::PointSet* clusters_from_index(Int_t index=0, Reve::RenderElement* cont=0)
+Reve::PointSet* clusters_from_index(Int_t index=0, Reve::Element* cont=0)
 {
   AliESDEvent* esd = Alieve::Event::AssertESD();
 
@@ -34,7 +34,7 @@ Reve::PointSet* clusters_from_index(Int_t index=0, Reve::RenderElement* cont=0)
     clusters->SetPointId(atp);    }
 
   
-  if(clusters->Size() == 0 && gReve->GetKeepEmptyCont() == kFALSE) {
+  if(clusters->Size() == 0 && gEve->GetKeepEmptyCont() == kFALSE) {
     Warning("clusters_from_index", Form("No clusters for index '%d'", index));
     delete clusters;
     return 0;
@@ -57,8 +57,8 @@ Reve::PointSet* clusters_from_index(Int_t index=0, Reve::RenderElement* cont=0)
   clusters->SetTitle(tip);
 
   using namespace Reve;
-  gReve->AddRenderElement(clusters);
-  gReve->Redraw3D();
+  gEve->AddElement(clusters);
+  gEve->Redraw3D();
 
   return clusters;
 }

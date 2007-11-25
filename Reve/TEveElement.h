@@ -1,4 +1,4 @@
-// @(#)root/reve:$Id$
+// @(#)root/eve:$Id$
 // Authors: Matevz Tadel & Alja Mrak-Tadel: 2006, 2007
 
 /*************************************************************************
@@ -156,7 +156,7 @@ public:
    void SpawnEditor();                          // *MENU*
    virtual void ExportToCINT(Text_t* var_name); // *MENU*
 
-   virtual Bool_t AcceptRenderElement(TEveElement* /*el*/) { return kTRUE; }
+   virtual Bool_t AcceptElement(TEveElement* /*el*/) { return kTRUE; }
 
    virtual TGListTreeItem* AddElement(TEveElement* el);
    virtual void RemoveElement(TEveElement* el);
@@ -250,7 +250,7 @@ public:
    TClass* GetChildClass() const { return fChildClass; }
    void SetChildClass(TClass* c) { fChildClass = c; }
 
-   virtual Bool_t AcceptRenderElement(TEveElement* el);
+   virtual Bool_t AcceptElement(TEveElement* el);
 
    ClassDef(TEveElementList, 1); // List of TEveElement objects with a possibility to limit the class of accepted elements.
 };

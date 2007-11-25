@@ -1,4 +1,4 @@
-// @(#)root/reve:$Id$
+// @(#)root/eve:$Id$
 // Authors: Matevz Tadel & Alja Mrak-Tadel: 2006, 2007
 
 /*************************************************************************
@@ -99,17 +99,17 @@ public:
    TEveManager(UInt_t w, UInt_t h);
    virtual ~TEveManager();
 
-   TEveBrowser*     GetBrowser()   const { return fBrowser;   }
-   TEveGListTreeEditorFrame*  GetLTEFrame()  const { return fLTEFrame;  }
-   TEveGedEditor*   GetEditor()    const { return fEditor;    }
-   TGStatusBar*     GetStatusBar() const { return fStatusBar; }
+   TEveBrowser*      GetBrowser()   const { return fBrowser;   }
+   TEveGListTreeEditorFrame* GetLTEFrame()  const { return fLTEFrame;  }
+   TEveGedEditor*    GetEditor()    const { return fEditor;    }
+   TGStatusBar*      GetStatusBar() const { return fStatusBar; }
 
-   TEveSceneList*   GetScenes()   const { return fScenes;  }
-   TEveViewerList*  GetViewers()  const { return fViewers; }
+   TEveSceneList*    GetScenes()   const { return fScenes;  }
+   TEveViewerList*   GetViewers()  const { return fViewers; }
 
-   TEveViewer*      GetDefViewer()    const { return fViewer; }
-   TEveScene*       GetGlobalScene()  const { return fGlobalScene; }
-   TEveScene*       GetEventScene()   const { return fEventScene; }
+   TEveViewer*       GetDefViewer()    const { return fViewer; }
+   TEveScene*        GetGlobalScene()  const { return fGlobalScene; }
+   TEveScene*        GetEventScene()   const { return fEventScene; }
    TEveEventManager* GetCurrentEvent() const { return fCurrentEvent; }
 
    TCanvas*     AddCanvasTab(const char* name);
@@ -121,7 +121,7 @@ public:
    TFolder*     GetMacroFolder() const { return fMacroFolder; }
    TMacro*      GetMacro(const Text_t* name) const;
 
-   void EditRenderElement(TEveElement* rnr_element);
+   void EditElement(TEveElement* rnr_element);
 
    void DisableRedraw() { ++fRedrawDisabled; }
    void EnableRedraw()  { --fRedrawDisabled; if(fRedrawDisabled <= 0) Redraw3D(); }
@@ -140,7 +140,7 @@ public:
    void   SetKeepEmptyCont(Bool_t k) { fKeepEmptyCont = k; }
 
 
-   void RenderElementChanged(TEveElement* rnr_element);
+   void ElementChanged(TEveElement* rnr_element);
    void ScenesChanged(std::list<TEveElement*>& scenes);
 
    static int  SpawnGuiAndRun(int argc, char **argv);
@@ -152,17 +152,17 @@ public:
    void            RemoveFromListTree(TEveElement* re, TGListTree* lt, TGListTreeItem* lti);
 
    TGListTreeItem* AddEvent(TEveEventManager* event);
-   TGListTreeItem* AddRenderElement(TEveElement* rnr_element,
+   TGListTreeItem* AddElement(TEveElement* rnr_element,
                                     TEveElement* parent=0);
-   TGListTreeItem* AddGlobalRenderElement(TEveElement* rnr_element,
+   TGListTreeItem* AddGlobalElement(TEveElement* rnr_element,
                                           TEveElement* parent=0);
 
-   void RemoveRenderElement(TEveElement* rnr_element, TEveElement* parent);
-   void PreDeleteRenderElement(TEveElement* rnr_element);
+   void RemoveElement(TEveElement* rnr_element, TEveElement* parent);
+   void PreDeleteElement(TEveElement* rnr_element);
 
-   void   RenderElementSelect(TEveElement* rnr_element);
-   Bool_t RenderElementPaste(TEveElement* rnr_element);
-   void   RenderElementChecked(TEveElement* rnrEl, Bool_t state);
+   void   ElementSelect(TEveElement* rnr_element);
+   Bool_t ElementPaste(TEveElement* rnr_element);
+   void   ElementChecked(TEveElement* rnrEl, Bool_t state);
 
    void NotifyBrowser(TGListTreeItem* parent_lti=0);
    void NotifyBrowser(TEveElement* parent);
@@ -176,6 +176,6 @@ public:
    ClassDef(TEveManager, 0); // Reve application manager.
 };
 
-extern TEveManager* gReve;
+extern TEveManager* gEve;
 
 #endif

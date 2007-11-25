@@ -81,12 +81,12 @@ void MUON_display(Bool_t fromRaw = kFALSE, Bool_t showTracks = kTRUE)
   
   gStyle->SetPalette(1, 0);
 
-  gReve->DisableRedraw();
+  gEve->DisableRedraw();
   
-  Reve::RenderElementList* l = new Reve::RenderElementList("MUONChambers");
+  Reve::ElementList* l = new Reve::ElementList("MUONChambers");
   l->SetTitle("MUON chambers");
   l->SetMainColor(Color_t(2));
-  gReve->AddRenderElement(l);
+  gEve->AddElement(l);
   
   for (Int_t ic = 0; ic < 14; ic++) {
 
@@ -97,7 +97,7 @@ void MUON_display(Bool_t fromRaw = kFALSE, Bool_t showTracks = kTRUE)
     
     mucha->SetDataSource(g_muon_data);
 
-    gReve->AddRenderElement(mucha, l);
+    gEve->AddElement(mucha, l);
 
   }
 
@@ -109,14 +109,14 @@ void MUON_display(Bool_t fromRaw = kFALSE, Bool_t showTracks = kTRUE)
     MUON_MC_tracks();
   }
 
-  gReve->EnableRedraw();
-  gReve->Redraw3D(kTRUE);
+  gEve->EnableRedraw();
+  gEve->Redraw3D(kTRUE);
 
   /*
-  TGLViewer* view = dynamic_cast<TGLViewer*>(gReve->GetGLCanvas()->GetViewer3D());
+  TGLViewer* view = dynamic_cast<TGLViewer*>(gEve->GetGLCanvas()->GetViewer3D());
   view->ResetCamerasAfterNextUpdate();
-  gReve->GetGLCanvas()->Modified();
-  gReve->GetGLCanvas()->Update();
+  gEve->GetGLCanvas()->Modified();
+  gEve->GetGLCanvas()->Update();
   */
 }
 
@@ -138,7 +138,7 @@ void MUON_tracks() {
   lt->SetMainColor(Color_t(6));
   //lt->SetMUON();  
 
-  gReve->AddRenderElement(lt);
+  gEve->AddElement(lt);
 
   TMatrixD smatrix(2,2);
   TMatrixD sums(2,1);
@@ -165,7 +165,7 @@ void MUON_tracks() {
 
     track->MakeMUONTrack(mt);
 
-    gReve->AddRenderElement(track, lt);
+    gEve->AddElement(track, lt);
 
   }
 
@@ -191,7 +191,7 @@ void MUON_trigger_tracks() {
   lt->SetMainColor(Color_t(4));
   //lt->SetMUON();  
 
-  gReve->AddRenderElement(lt);
+  gEve->AddElement(lt);
 
   TMatrixD smatrix(2,2);
   TMatrixD sums(2,1);
@@ -218,7 +218,7 @@ void MUON_trigger_tracks() {
 
     track->MakeMUONTriggerTrack(mt);
 
-    gReve->AddRenderElement(track, lt);
+    gEve->AddElement(track, lt);
 
   }
 
@@ -235,7 +235,7 @@ void MUON_ESD_tracks() {
   lt->SetMainColor(Color_t(6));
   //lt->SetMUON();
 
-  gReve->AddRenderElement(lt);
+  gEve->AddElement(lt);
 
   AliESDMuonTrack *mt;
   Reve::RecTrack rt;
@@ -250,7 +250,7 @@ void MUON_ESD_tracks() {
 
     track->MakeESDTrack(mt);
 
-    gReve->AddRenderElement(track, lt);
+    gEve->AddElement(track, lt);
 
   }
 
@@ -270,7 +270,7 @@ void MUON_Ref_tracks() {
   Reve::TrackList* lt = new Reve::TrackList("Ref-Tracks"); 
   lt->SetMainColor(Color_t(6));
 
-  gReve->AddRenderElement(lt);
+  gEve->AddElement(lt);
 
   Reve::RecTrack rt;
   Int_t i = 0;  
@@ -282,7 +282,7 @@ void MUON_Ref_tracks() {
 
     track->MakeRefTrack(trackRef);
 
-    gReve->AddRenderElement(track, lt);
+    gEve->AddElement(track, lt);
 
   }
 
@@ -304,7 +304,7 @@ void MUON_MC_tracks() {
   lt->SetMainColor(Color_t(6));
   //lt->SetMUON();
 
-  gReve->AddRenderElement(lt);
+  gEve->AddElement(lt);
 
   Int_t pdgCode;
   TParticle *part;
@@ -328,7 +328,7 @@ void MUON_MC_tracks() {
 
     track->MakeMCTrack(part);
 
-    gReve->AddRenderElement(track, lt);
+    gEve->AddElement(track, lt);
 
   }
 

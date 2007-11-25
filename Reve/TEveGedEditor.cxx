@@ -1,4 +1,4 @@
-// @(#)root/reve:$Id$
+// @(#)root/eve:$Id$
 // Authors: Matevz Tadel & Alja Mrak-Tadel: 2006, 2007
 
 /*************************************************************************
@@ -60,7 +60,7 @@ TEveElement* TEveGedEditor::GetRnrElement() const
 }
 
 //______________________________________________________________________________
-void TEveGedEditor::DisplayRenderElement(TEveElement* re)
+void TEveGedEditor::DisplayElement(TEveElement* re)
 {
    fRnrElement = re;
    fObject     = fRnrElement ? fRnrElement->GetEditorObject() : 0;
@@ -98,7 +98,7 @@ void TEveGedEditor::Update(TGedFrame* /*gframe*/)
       fRnrElement->ElementChanged();
    }
 
-   gReve->Redraw3D();
+   gEve->Redraw3D();
 }
 
 /******************************************************************************/

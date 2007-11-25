@@ -1,4 +1,4 @@
-// @(#)root/reve:$Id$
+// @(#)root/eve:$Id$
 // Authors: Matevz Tadel & Alja Mrak-Tadel: 2006, 2007
 
 /*************************************************************************
@@ -644,7 +644,7 @@ void TEveTrackList::MakeTracks(Bool_t recurse)
    if (fMaxPt == 0) fMaxPt = fLimPt;
    if (fMaxP  == 0) fMaxP  = fLimP;
 
-   gReve->Redraw3D();
+   gEve->Redraw3D();
 }
 
 //______________________________________________________________________________
@@ -1050,14 +1050,14 @@ TEveTrack* TEveTrackList::FindTrackByLabel(Int_t label)
 
    for (List_i i=fChildren.begin(); i!=fChildren.end(); ++i) {
       if (((TEveTrack*)(*i))->GetLabel() == label) {
-         TGListTree     *lt   = gReve->GetLTEFrame()->GetListTree();
+         TGListTree     *lt   = gEve->GetLTEFrame()->GetListTree();
          TGListTreeItem *mlti = lt->GetSelected();
          if (mlti->GetUserData() != this)
             mlti = FindListTreeItem(lt);
          TGListTreeItem *tlti = (*i)->FindListTreeItem(lt, mlti);
          lt->HighlightItem(tlti);
          lt->SetSelected(tlti);
-         gReve->EditRenderElement(*i);
+         gEve->EditElement(*i);
          return (TEveTrack*) *i;
       }
    }
@@ -1071,14 +1071,14 @@ TEveTrack* TEveTrackList::FindTrackByIndex(Int_t index)
 
    for (List_i i=fChildren.begin(); i!=fChildren.end(); ++i) {
       if (((TEveTrack*)(*i))->GetIndex() == index) {
-         TGListTree     *lt   = gReve->GetLTEFrame()->GetListTree();
+         TGListTree     *lt   = gEve->GetLTEFrame()->GetListTree();
          TGListTreeItem *mlti = lt->GetSelected();
          if (mlti->GetUserData() != this)
             mlti = FindListTreeItem(lt);
          TGListTreeItem *tlti = (*i)->FindListTreeItem(lt, mlti);
          lt->HighlightItem(tlti);
          lt->SetSelected(tlti);
-         gReve->EditRenderElement(*i);
+         gEve->EditElement(*i);
          return (TEveTrack*) *i;
       }
    }
@@ -1248,13 +1248,13 @@ void TEveTrackCounter::DoTrackAction(TEveTrack* track)
             ++fGoodTracks;
          }
          track->ElementChanged();
-         gReve->Redraw3D();
+         gEve->Redraw3D();
 
          printf("TEveTrackCounter::CountTrack All=%d, Good=%d, Bad=%d\n",
                 fAllTracks, fGoodTracks, fAllTracks-fGoodTracks);
 
-         if (gReve->GetEditor()->GetModel() == GetObject())
-            gReve->EditRenderElement(this);
+         if (gEve->GetEditor()->GetModel() == GetObject())
+            gEve->EditElement(this);
 
          break;
       }

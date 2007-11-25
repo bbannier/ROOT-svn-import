@@ -16,7 +16,7 @@ kine_tracks(Double_t min_pt  = 0.1,   Double_t min_p   = 0.2,
     return 0;
   }
 
-  gReve->DisableRedraw();
+  gEve->DisableRedraw();
  
   Reve::TrackList* cont = new Reve::TrackList("Kine Tracks"); 
   cont->SetMainColor(Color_t(3));
@@ -24,7 +24,7 @@ kine_tracks(Double_t min_pt  = 0.1,   Double_t min_p   = 0.2,
   // !!! Watch the '-', apparently different sign convention then for ESD.
   rnrStyle->SetMagField( - gAlice->Field()->SolenoidField() );
 
-  gReve->AddRenderElement(cont);
+  gEve->AddElement(cont);
   Int_t count = 0;
   Int_t N = stack->GetNtrack();
   for (Int_t i=0; i<N; ++i) 
@@ -47,7 +47,7 @@ kine_tracks(Double_t min_pt  = 0.1,   Double_t min_p   = 0.2,
       track->SetStdTitle();
       set_track_color(track, pdg_col);
 
-      gReve->AddRenderElement(track, cont);
+      gEve->AddElement(track, cont);
 
       if (recurse)
 	kine_daughters(track, stack, min_pt, min_p, pdg_col, recurse);
@@ -71,8 +71,8 @@ kine_tracks(Double_t min_pt  = 0.1,   Double_t min_p   = 0.2,
   cont->UpdateItems();
 
   cont->MakeTracks(recurse);
-  gReve->EnableRedraw();
-  gReve->Redraw3D();
+  gEve->EnableRedraw();
+  gEve->Redraw3D();
 
   return cont;
 }
@@ -97,7 +97,7 @@ void kine_daughters(Reve::Track* parent,  AliStack* stack,
       dtrack->SetStdTitle();
       set_track_color(dtrack, pdg_col);
 
-      gReve->AddRenderElement(dtrack, parent);
+      gEve->AddElement(dtrack, parent);
 
       if (recurse)
 	kine_daughters(dtrack, stack, min_pt, min_p, pdg_col, recurse);
@@ -163,11 +163,11 @@ Color_t get_pdg_color(Int_t pdg)
 
 /******************************************************************************/
 
-Reve::RenderElement*
+Reve::Element*
 kine_track(Int_t  label,
 	   Bool_t import_mother    = kTRUE, Bool_t import_daughters = kTRUE,
 	   Bool_t pdg_col          = kTRUE, Bool_t recurse          = kTRUE,
-           Reve::RenderElement* cont = 0)
+           Reve::Element* cont = 0)
 
 {
   // Create mother and daughters tracks with given label.
@@ -211,7 +211,7 @@ kine_track(Int_t  label,
       rnrStyle->fMaxOrbs = 2;
       rnrStyle->SetEditPathMarks(kTRUE);
 
-      gReve->AddRenderElement(cont);
+      gEve->AddElement(cont);
       rs = tlist->GetRnrStyle();
     }
     else
@@ -239,7 +239,7 @@ kine_track(Int_t  label,
       set_track_color(track, pdg_col);
 
       track->MakeTrack();
-      gReve->AddRenderElement(track, cont);
+      gEve->AddElement(track, cont);
       cont = track;
     }
 
@@ -256,7 +256,7 @@ kine_track(Int_t  label,
 	set_track_color(track, pdg_col);
 
         track->MakeTrack();
-	gReve->AddRenderElement(track, cont);
+	gEve->AddElement(track, cont);
 
 	if (recurse)
 	  kine_daughters(track, stack, 0, 0, pdg_col, recurse);
@@ -265,7 +265,7 @@ kine_track(Int_t  label,
   }
 
   cont->UpdateItems();
-  gReve->Redraw3D();
+  gEve->Redraw3D();
   return cont;
 }
 

@@ -81,8 +81,8 @@ void vzero_digits()
   modL->RefHMTrans().SetPos(0, 0, 324);
   modR->RefHMTrans().SetPos(0, 0, -84);
 
-  gReve->AddRenderElement(modL);
-  gReve->AddRenderElement(modR);
+  gEve->AddElement(modL);
+  gEve->AddElement(modR);
 
-  gReve->Redraw3D();
+  gEve->Redraw3D();
 }

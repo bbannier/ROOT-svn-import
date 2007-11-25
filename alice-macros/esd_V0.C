@@ -83,7 +83,7 @@ Alieve::V0List* esd_V0(Double_t min_pt=0.1, Double_t max_pt=100)
   Reve::TrackRnrStyle* rnrStyle = cont->GetRnrStyle();
   rnrStyle->SetMagField( esd->GetMagneticField() );
 
-  gReve->AddRenderElement(cont);
+  gEve->AddElement(cont);
 
   Int_t count = 0;
   //for (Int_t n=0; count<3; n++) {
@@ -99,7 +99,7 @@ Alieve::V0List* esd_V0(Double_t min_pt=0.1, Double_t max_pt=100)
     
     Alieve::V0* myV0 = esd_make_v0(rnrStyle, primVertex, negTr,posTr, v0, n);
     if (myV0) {
-      gReve->AddRenderElement(myV0, cont);
+      gEve->AddElement(myV0, cont);
       count++;
     }
   }
@@ -108,7 +108,7 @@ Alieve::V0List* esd_V0(Double_t min_pt=0.1, Double_t max_pt=100)
   cont->UpdateItems();
 
   cont->MakeV0s();
-  gReve->Redraw3D();
+  gEve->Redraw3D();
 
   return cont;
 }

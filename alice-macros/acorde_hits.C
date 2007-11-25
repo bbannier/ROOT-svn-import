@@ -3,7 +3,7 @@
 Reve::PointSet*
 acorde_hits(const char *varexp    = "ACORDE.fX:ACORDE.fY:ACORDE.fZ",
 	 const char *selection = "",
-         Reve::RenderElement* cont = 0)
+         Reve::Element* cont = 0)
 {
   AliRunLoader* rl =  Alieve::Event::AssertRunLoader();
   rl->LoadHits("ACORDE");
@@ -21,7 +21,7 @@ acorde_hits(const char *varexp    = "ACORDE.fX:ACORDE.fY:ACORDE.fZ",
   TPointSelector ps(ht, points, varexp, selection);
   ps.Select();
 
-  if(points->Size() == 0 && gReve->GetKeepEmptyCont() == kFALSE) {
+  if(points->Size() == 0 && gEve->GetKeepEmptyCont() == kFALSE) {
     Warning("acorde_hits", Form("No hits match '%s'", selection));
     delete points;
    return 0;
@@ -34,10 +34,10 @@ acorde_hits(const char *varexp    = "ACORDE.fX:ACORDE.fY:ACORDE.fZ",
   points->SetMarkerColor((Color_t)2);
 
   if(cont)
-    gReve->AddRenderElement(cont, points);
+    gEve->AddElement(cont, points);
   else 
-    gReve->AddRenderElement(points);
-  gReve->Redraw3D();
+    gEve->AddElement(points);
+  gEve->Redraw3D();
 
   return points;
 }

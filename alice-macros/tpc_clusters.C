@@ -2,7 +2,7 @@
 
 namespace Reve
 {
-class RenderElement;
+class Element;
 class PointSet;
 }
 
@@ -19,7 +19,7 @@ class PointSet;
 
 #endif
 
-Reve::PointSet* tpc_clusters(Reve::RenderElement* cont=0, Float_t maxR=270)
+Reve::PointSet* tpc_clusters(Reve::Element* cont=0, Float_t maxR=270)
 {
   const Int_t kMaxCl=100*160;
 
@@ -62,7 +62,7 @@ Reve::PointSet* tpc_clusters(Reve::RenderElement* cont=0, Float_t maxR=270)
 
   delete clrow;
 
-  if(clusters->Size() == 0 && gReve->GetKeepEmptyCont() == kFALSE) {
+  if(clusters->Size() == 0 && gEve->GetKeepEmptyCont() == kFALSE) {
     Warning("tpc_clusters", "No TPC clusters");
     delete clusters;
     return 0;
@@ -81,8 +81,8 @@ Reve::PointSet* tpc_clusters(Reve::RenderElement* cont=0, Float_t maxR=270)
   clusters->SetTitle(tip);
 
   using namespace Reve;
-  gReve->AddRenderElement(clusters, cont);
-  gReve->Redraw3D();
+  gEve->AddElement(clusters, cont);
+  gEve->Redraw3D();
 
   return clusters;
 }

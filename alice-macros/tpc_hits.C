@@ -3,7 +3,7 @@
 Reve::PointSet*
 tpc_hits(const char *varexp    = "TPC2.fArray.fR:TPC2.fArray.fFi:TPC2.fArray.fZ",
 	 const char *selection = "TPC2.fArray.fR>80",
-         Reve::RenderElement* cont = 0)
+         Reve::Element* cont = 0)
 {
   // Extracts 'major' TPC hits (not the compressed ones).
   // This gives ~2.5% of all hits.
@@ -25,7 +25,7 @@ tpc_hits(const char *varexp    = "TPC2.fArray.fR:TPC2.fArray.fFi:TPC2.fArray.fZ"
   TPointSelector ps(ht, points, varexp, selection);
   ps.Select();
 
-  if (points->Size() == 0 && gReve->GetKeepEmptyCont() == kFALSE) {
+  if (points->Size() == 0 && gEve->GetKeepEmptyCont() == kFALSE) {
     Warning("tpc_hits", Form("No hits match '%s'", selection));
     delete points;
     return 0;
@@ -37,8 +37,8 @@ tpc_hits(const char *varexp    = "TPC2.fArray.fR:TPC2.fArray.fFi:TPC2.fArray.fZ"
   points->SetMarkerSize(.5);
   points->SetMarkerColor((Color_t)3);
 
-  gReve->AddRenderElement(points, cont);
-  gReve->Redraw3D();
+  gEve->AddElement(points, cont);
+  gEve->Redraw3D();
 
   return points;
 }

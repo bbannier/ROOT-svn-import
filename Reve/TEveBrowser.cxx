@@ -1,4 +1,4 @@
-// @(#)root/reve:$Id$
+// @(#)root/eve:$Id$
 // Authors: Matevz Tadel & Alja Mrak-Tadel: 2006, 2007
 
 /*************************************************************************
@@ -135,7 +135,7 @@ TEveGListTreeEditorFrame::~TEveGListTreeEditorFrame()
 {
    delete fCtxMenu;
 
-   // Should un-register editor, all items and list-tree from gReve ... eventually.
+   // Should un-register editor, all items and list-tree from gEve ... eventually.
 
    delete fEditor;
    delete fSplitter;
@@ -238,8 +238,8 @@ void TEveGListTreeEditorFrame::ItemChecked(TObject* obj, Bool_t state)
    // We recast it blindly back into the render element.
 
    TEveElement* rnrEl = (TEveElement*) obj;
-   gReve->RenderElementChecked(rnrEl, state);
-   gReve->Redraw3D();
+   gEve->ElementChecked(rnrEl, state);
+   gEve->Redraw3D();
 }
 
 //______________________________________________________________________________
@@ -255,12 +255,12 @@ void TEveGListTreeEditorFrame::ItemClicked(TGListTreeItem *item, Int_t btn, Int_
    switch (btn)
    {
       case 1:
-         gReve->RenderElementSelect(re);
+         gEve->ElementSelect(re);
          break;
 
       case 2:
-         if (gReve->RenderElementPaste(re))
-            gReve->Redraw3D();
+         if (gEve->ElementPaste(re))
+            gEve->Redraw3D();
          break;
 
       case 3:
@@ -337,8 +337,8 @@ void TEveGListTreeEditorFrame::ItemKeyPress(TGListTreeItem *entry, UInt_t keysym
          if (parent_re)
          {
             ResetSelectedTimer(entry);
-            gReve->RemoveRenderElement(rnr_el, parent_re);
-            gReve->Redraw3D();
+            gEve->RemoveElement(rnr_el, parent_re);
+            gEve->Redraw3D();
          }
       }
       else
@@ -346,8 +346,8 @@ void TEveGListTreeEditorFrame::ItemKeyPress(TGListTreeItem *entry, UInt_t keysym
          if (rnr_el->GetDenyDestroy() > 0)
             throw(eH + "DestroyDenied set for this top-level item.");
          ResetSelectedTimer(entry);
-         gReve->RemoveFromListTree(rnr_el, fListTree, entry);
-         gReve->Redraw3D();
+         gEve->RemoveFromListTree(rnr_el, fListTree, entry);
+         gEve->Redraw3D();
       }
    }
 }
@@ -454,17 +454,17 @@ void TEveBrowser::ReveMenu(Int_t id)
    switch (id)
    {
       case kNewViewer:
-         gReve->SpawnNewViewer("TEveViewer Pepe");
+         gEve->SpawnNewViewer("TEveViewer Pepe");
          break;
 
       case kNewScene:
-         gReve->SpawnNewScene("Scena Mica");
+         gEve->SpawnNewScene("Scena Mica");
          break;
 
       case kNewProjector: {
          TEveElement* pr = (TEveElement*) (gROOT->GetClass("TEveProjectionManager")->New());
          pr->SetRnrElNameTitle("Projector", "User-created projector.");
-         gReve->AddToListTree(pr, kTRUE);
+         gEve->AddToListTree(pr, kTRUE);
          break;
       }
       case kNewBrowser:
@@ -503,10 +503,10 @@ void TEveBrowser::ReveMenu(Int_t id)
 
       case kVerticalBrowser:
          if (fRevePopup->IsEntryChecked(kVerticalBrowser)) {
-            gReve->GetLTEFrame()->ReconfToHorizontal();
+            gEve->GetLTEFrame()->ReconfToHorizontal();
             fRevePopup->UnCheckEntry(kVerticalBrowser);
          } else {
-            gReve->GetLTEFrame()->ReconfToVertical();
+            gEve->GetLTEFrame()->ReconfToVertical();
             fRevePopup->CheckEntry(kVerticalBrowser);
          }
          break;

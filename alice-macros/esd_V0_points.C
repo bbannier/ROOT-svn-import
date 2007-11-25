@@ -25,8 +25,8 @@ esd_V0_points()
   points->SetMarkerSize(1);
   points->SetMarkerColor((Color_t)30);
 
-  gReve->AddRenderElement(points);
-  gReve->Redraw3D();
+  gEve->AddElement(points);
+  gEve->Redraw3D();
 
   return points;
 }

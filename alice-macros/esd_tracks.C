@@ -52,7 +52,7 @@ Reve::TrackList* esd_tracks(Double_t min_pt=0.1, Double_t max_pt=100)
   Reve::TrackRnrStyle* rnrStyle = cont->GetRnrStyle();
   rnrStyle->SetMagField( esd->GetMagneticField() );
 
-  gReve->AddRenderElement(cont);
+  gEve->AddElement(cont);
 
   Int_t    count = 0;
   Double_t pbuf[3];
@@ -77,7 +77,7 @@ Reve::TrackList* esd_tracks(Double_t min_pt=0.1, Double_t max_pt=100)
 
     Reve::Track* track = esd_make_track(rnrStyle, n, at, tp);
     track->SetAttLineAttMarker(cont);
-    gReve->AddRenderElement(track, cont);
+    gEve->AddElement(track, cont);
   }
 
   //PH The line below is replaced waiting for a fix in Root
@@ -91,7 +91,7 @@ Reve::TrackList* esd_tracks(Double_t min_pt=0.1, Double_t max_pt=100)
 
   cont->MakeTracks();
 
-  gReve->Redraw3D();
+  gEve->Redraw3D();
 
   return cont;
 }
@@ -112,7 +112,7 @@ Reve::TrackList* esd_tracks_from_array(TCollection* col, AliESDEvent* esd=0)
   Reve::TrackRnrStyle* rnrStyle = cont->GetRnrStyle();
   rnrStyle->SetMagField( esd->GetMagneticField() );
 
-  gReve->AddRenderElement(cont);
+  gEve->AddElement(cont);
 
   Int_t    count = 0;
   TIter    next(col);
@@ -130,7 +130,7 @@ Reve::TrackList* esd_tracks_from_array(TCollection* col, AliESDEvent* esd=0)
 
     Reve::Track* track = esd_make_track(rnrStyle, count, at);
     track->SetAttLineAttMarker(cont);
-    gReve->AddRenderElement(track, cont);
+    gEve->AddElement(track, cont);
   }
 
   //PH The line below is replaced waiting for a fix in Root
@@ -144,7 +144,7 @@ Reve::TrackList* esd_tracks_from_array(TCollection* col, AliESDEvent* esd=0)
 
   cont->MakeTracks();
 
-  gReve->Redraw3D();
+  gEve->Redraw3D();
 
   return cont;
 }
@@ -206,15 +206,15 @@ Float_t get_sigma_to_vertex(AliESDtrack* esdTrack)
   return d;
 }
 
-Reve::RenderElementList* esd_tracks_vertex_cut()
+Reve::ElementList* esd_tracks_vertex_cut()
 {
   // Import ESD tracks, separate them into five containers according to
   // primary-vertex cut and ITS refit status.
 
   AliESDEvent* esd = Alieve::Event::AssertESD();
 
-  Reve::RenderElementList* cont = new Reve::RenderElementList("ESD Tracks", 0, kTRUE);
-  gReve->AddRenderElement(cont);
+  Reve::ElementList* cont = new Reve::ElementList("ESD Tracks", 0, kTRUE);
+  gEve->AddElement(cont);
   Reve::TrackList *tl[5];
   Int_t            tc[5];
   Int_t            count = 0;
@@ -223,31 +223,31 @@ Reve::RenderElementList* esd_tracks_vertex_cut()
   tc[0] = 0;
   tl[0]->GetRnrStyle()->SetMagField( esd->GetMagneticField() );
   tl[0]->SetMainColor(Color_t(3));
-  gReve->AddRenderElement(tl[0], cont);
+  gEve->AddElement(tl[0], cont);
 
   tl[1] = new Reve::TrackList("3 < Sigma < 5");
   tc[1] = 0;
   tl[1]->GetRnrStyle()->SetMagField( esd->GetMagneticField() );
   tl[1]->SetMainColor(Color_t(7));
-  gReve->AddRenderElement(tl[1], cont);
+  gEve->AddElement(tl[1], cont);
 
   tl[2] = new Reve::TrackList("5 < Sigma");
   tc[2] = 0;
   tl[2]->GetRnrStyle()->SetMagField( esd->GetMagneticField() );
   tl[2]->SetMainColor(Color_t(46));
-  gReve->AddRenderElement(tl[2], cont);
+  gEve->AddElement(tl[2], cont);
 
   tl[3] = new Reve::TrackList("no ITS refit; Sigma < 5");
   tc[3] = 0;
   tl[3]->GetRnrStyle()->SetMagField( esd->GetMagneticField() );
   tl[3]->SetMainColor(Color_t(41));
-  gReve->AddRenderElement(tl[3], cont);
+  gEve->AddElement(tl[3], cont);
 
   tl[4] = new Reve::TrackList("no ITS refit; Sigma > 5");
   tc[4] = 0;
   tl[4]->GetRnrStyle()->SetMagField( esd->GetMagneticField() );
   tl[4]->SetMainColor(Color_t(48));
-  gReve->AddRenderElement(tl[4], cont);
+  gEve->AddElement(tl[4], cont);
 
   for (Int_t n=0; n<esd->GetNumberOfTracks(); n++)
   {
@@ -283,7 +283,7 @@ Reve::RenderElementList* esd_tracks_vertex_cut()
     char form[1000];
     sprintf(form,"Track idx=%d, sigma=%5.3f", at->GetID(), s);
     track->SetName(form);
-    gReve->AddRenderElement(track, tlist);
+    gEve->AddElement(track, tlist);
   }
 
   for (Int_t ti=0; ti<5; ++ti) {
@@ -310,7 +310,7 @@ Reve::RenderElementList* esd_tracks_vertex_cut()
   sprintf(form,"N all tracks = %d", count);
   cont->SetTitle(form);
   cont->UpdateItems();
-  gReve->Redraw3D();
+  gEve->Redraw3D();
 
   return cont;
 }

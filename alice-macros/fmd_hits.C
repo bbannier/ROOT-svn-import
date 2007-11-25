@@ -26,8 +26,8 @@ fmd_hits(const char *varexp    = "fX:fY:fZ",
   points->SetMarkerSize(.5);
   points->SetMarkerColor((Color_t)2);
 
-  gReve->AddRenderElement(points);
-  gReve->Redraw3D();
+  gEve->AddElement(points);
+  gEve->Redraw3D();
 
   return points;
 }

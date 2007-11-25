@@ -9,7 +9,7 @@ void emcal_digits()
   rl->LoadDigits("EMCAL");
   TTree* dt = rl->GetTreeD("EMCAL", kFALSE);
 
-  gGeoManager = gReve->GetGeometry("$REVESYS/alice-data/alice_fullgeo.root");
+  gGeoManager = gEve->GetGeometry("$REVESYS/alice-data/alice_fullgeo.root");
   TGeoNode* node = gGeoManager->GetTopVolume()->FindNode("XEN1_1");
 
   TGeoBBox* bbbox = (TGeoBBox*) node->GetDaughter(0) ->GetVolume()->GetShape();
@@ -17,9 +17,9 @@ void emcal_digits()
   TGeoBBox* sbbox = (TGeoBBox*) node->GetDaughter(10)->GetVolume()->GetShape();
   sbbox->Dump();
 
-  Reve::RenderElementList* l = new Reve::RenderElementList("EMCAL");
+  Reve::ElementList* l = new Reve::ElementList("EMCAL");
   l->SetTitle("Tooltip");
-  gReve->AddRenderElement(l);
+  gEve->AddElement(l);
 
   Reve::FrameBox* frame_big = new Reve::FrameBox();
   frame_big->SetAABoxCenterHalfSize(0, 0, 0, bbbox->GetDX(), bbbox->GetDY(), bbbox->GetDZ());
@@ -46,7 +46,7 @@ void emcal_digits()
     q->SetFrame(sm < 10 ? frame_big : frame_sml);
     q->SetPalette(pal);
 
-    gReve->AddRenderElement(q, l);
+    gEve->AddElement(q, l);
     smodules[sm] = q;
   }
 
@@ -107,5 +107,5 @@ void emcal_digits()
     smodules[iSupMod]->RefitPlex();
   }
 
-  gReve->Redraw3D();
+  gEve->Redraw3D();
 }

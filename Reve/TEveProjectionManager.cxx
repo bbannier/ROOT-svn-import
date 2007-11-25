@@ -1,4 +1,4 @@
-// @(#)root/reve:$Id$
+// @(#)root/eve:$Id$
 // Authors: Matevz Tadel & Alja Mrak-Tadel: 2006, 2007
 
 /*************************************************************************
@@ -160,7 +160,7 @@ void TEveProjectionManager::ImportElementsRecurse(TEveElement* rnr_el, TEveEleme
                                 tobj->GetTitle());
       new_re->SetRnrSelf     (rnr_el->GetRnrSelf());
       new_re->SetRnrChildren(rnr_el->GetRnrChildren());
-      gReve->AddRenderElement(new_re, parent);
+      gEve->AddElement(new_re, parent);
 
       for (List_i i=rnr_el->BeginChildren(); i!=rnr_el->EndChildren(); ++i)
          ImportElementsRecurse(*i, new_re);
@@ -218,7 +218,7 @@ void TEveProjectionManager::ProjectChildren()
 
    List_t scenes;
    CollectSceneParentsFromChildren(scenes, 0);
-   gReve->ScenesChanged(scenes);
+   gEve->ScenesChanged(scenes);
 }
 
 //______________________________________________________________________________

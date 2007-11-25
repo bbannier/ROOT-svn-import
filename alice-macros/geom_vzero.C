@@ -6,10 +6,10 @@ void geom_vzero()
 
   static const Reve::Exc_t eH("geom_vzero() ");
 
-  gGeoManager = gReve->GetGeometry("$REVESYS/alice-data/alice_fullgeo.root");
+  gGeoManager = gEve->GetGeometry("$REVESYS/alice-data/alice_fullgeo.root");
 
-  Reve::RenderElementList* list = new Reve::RenderElementList("VZero");
-  gReve->AddGlobalRenderElement(list);
+  Reve::ElementList* list = new Reve::ElementList("VZero");
+  gEve->AddGlobalElement(list);
 
   TGeoNode* node = 0;
   Reve::GeoTopNodeRnrEl* re;
@@ -28,7 +28,7 @@ void geom_vzero()
   }
   re = new Reve::GeoTopNodeRnrEl(gGeoManager, node);
   re->UseNodeTrans();
-  gReve->AddGlobalRenderElement(re, list);
+  gEve->AddGlobalElement(re, list);
 
   node = mnode->GetVolume()->FindNode("V0LE_1");
   if (!node) {
@@ -37,7 +37,7 @@ void geom_vzero()
   }
   re = new Reve::GeoTopNodeRnrEl(gGeoManager, node);
   re->UseNodeTrans();
-  gReve->AddGlobalRenderElement(re, list);
+  gEve->AddGlobalElement(re, list);
 
-  gReve->Redraw3D();
+  gEve->Redraw3D();
 }

@@ -23,7 +23,7 @@ void its_digits(Int_t mode=63)
   gStyle->SetPalette(1, 0);
   // Initialize palettes (?)
 
-  gReve->DisableRedraw();
+  gEve->DisableRedraw();
 
   TString sSector;
   TString bsSector="Sector";
@@ -36,25 +36,25 @@ void its_digits(Int_t mode=63)
   Int_t nsec, nstave, nlad, nMod;
 
   if (mode & 1) {
-    Reve::RenderElementList* l = new Reve::RenderElementList("SPD0");
+    Reve::ElementList* l = new Reve::ElementList("SPD0");
     l->SetTitle("SPDs' first layer");
     l->SetMainColor((Color_t)2);
-    gReve->AddRenderElement(l);
+    gEve->AddElement(l);
     for(nsec=0; nsec<10; nsec++) {
       sSector  = bsSector;
       sSector += nsec;
-      Reve::RenderElementList* relSector = new Reve::RenderElementList(sSector.Data());
+      Reve::ElementList* relSector = new Reve::ElementList(sSector.Data());
       relSector->SetMainColor((Color_t)2);
-      gReve->AddRenderElement(relSector, l);
+      gEve->AddElement(relSector, l);
       for(nstave=0; nstave<2; nstave++){
 	sStave  = bsStave;
 	sStave += nstave;
-	Reve::RenderElementList* relStave = new Reve::RenderElementList(sStave.Data());
+	Reve::ElementList* relStave = new Reve::ElementList(sStave.Data());
 	relStave->SetMainColor((Color_t)2);
-	gReve->AddRenderElement(relStave, relSector);
+	gEve->AddElement(relStave, relSector);
 	for(nMod=0; nMod<4; nMod++) {
 	  Alieve::ITSModule* m = new Alieve::ITSModule(i++, di);
-	  gReve->AddRenderElement(m, relStave);
+	  gEve->AddElement(m, relStave);
 	}
       }
     }
@@ -63,26 +63,26 @@ void its_digits(Int_t mode=63)
   }
 
   if (mode & 2) {
-    Reve::RenderElementList* l = new Reve::RenderElementList("SPD1");
+    Reve::ElementList* l = new Reve::ElementList("SPD1");
     l->SetTitle("SPDs' second layer");
     l->SetMainColor((Color_t)2);
-    gReve->AddRenderElement(l);
+    gEve->AddElement(l);
 
     for(nsec=0; nsec<10; nsec++) {
       sSector  = bsSector;
       sSector += nsec;
-      Reve::RenderElementList* relSector = new Reve::RenderElementList(sSector.Data());
+      Reve::ElementList* relSector = new Reve::ElementList(sSector.Data());
       relSector->SetMainColor((Color_t)2);
-      gReve->AddRenderElement(relSector, l);
+      gEve->AddElement(relSector, l);
       for(nstave=0; nstave<4; nstave++){
 	sStave  = bsStave;
 	sStave += nstave;
-	Reve::RenderElementList* relStave = new Reve::RenderElementList(sStave.Data());
+	Reve::ElementList* relStave = new Reve::ElementList(sStave.Data());
 	relStave->SetMainColor((Color_t)2);
-	gReve->AddRenderElement(relStave, relSector);
+	gEve->AddElement(relStave, relSector);
 	for(nMod=0; nMod<4; nMod++) {
 	  Alieve::ITSModule* m = new Alieve::ITSModule(i++, di);
-	  gReve->AddRenderElement(m, relStave);
+	  gEve->AddElement(m, relStave);
 	}
       }
     }
@@ -91,20 +91,20 @@ void its_digits(Int_t mode=63)
   }
 
   if (mode & 4) {
-    Reve::RenderElementList* l = new Reve::RenderElementList("SDD2");
+    Reve::ElementList* l = new Reve::ElementList("SDD2");
     l->SetTitle("SDDs' first layer");
     l->SetMainColor((Color_t)3);
-    gReve->AddRenderElement(l);
+    gEve->AddElement(l);
 
     for(nlad=0; nlad<14; nlad++) {
       sLadder  = bsLadder;
       sLadder += nlad;
-      Reve::RenderElementList* relLadder = new Reve::RenderElementList(sLadder.Data());
+      Reve::ElementList* relLadder = new Reve::ElementList(sLadder.Data());
       relLadder->SetMainColor((Color_t)3);
-      gReve->AddRenderElement(relLadder, l);
+      gEve->AddElement(relLadder, l);
       for(nMod=0; nMod<6; nMod++) {
 	Alieve::ITSModule* m = new Alieve::ITSModule(i++, di);
-	gReve->AddRenderElement(m, relLadder);
+	gEve->AddElement(m, relLadder);
       }
     }
   } else {
@@ -112,19 +112,19 @@ void its_digits(Int_t mode=63)
   }
 
   if (mode & 8) {
-    Reve::RenderElementList* l = new Reve::RenderElementList("SDD3");
+    Reve::ElementList* l = new Reve::ElementList("SDD3");
     l->SetTitle("SDDs' second layer");
     l->SetMainColor((Color_t)3);
-    gReve->AddRenderElement(l);
+    gEve->AddElement(l);
     for(nlad=0; nlad<22; nlad++) {
       sLadder  = bsLadder;
       sLadder += nlad;
-      Reve::RenderElementList* relLadder = new Reve::RenderElementList(sLadder.Data());
+      Reve::ElementList* relLadder = new Reve::ElementList(sLadder.Data());
       relLadder->SetMainColor((Color_t)3);
-      gReve->AddRenderElement(relLadder, l);
+      gEve->AddElement(relLadder, l);
       for(nMod=0; nMod<8; nMod++) {
 	Alieve::ITSModule* m = new Alieve::ITSModule(i++, di);
-	gReve->AddRenderElement(m, relLadder);
+	gEve->AddElement(m, relLadder);
       }
     }
   } else {
@@ -132,19 +132,19 @@ void its_digits(Int_t mode=63)
   }
 
   if (mode & 16) {
-    Reve::RenderElementList* l = new Reve::RenderElementList("SSD4");
+    Reve::ElementList* l = new Reve::ElementList("SSD4");
     l->SetTitle("SSDs' first layer");
     l->SetMainColor((Color_t)4);
-    gReve->AddRenderElement(l);
+    gEve->AddElement(l);
     for(nlad=0; nlad<34; nlad++) {
       sLadder  = bsLadder;
       sLadder += nlad;
-      Reve::RenderElementList* relLadder = new Reve::RenderElementList(sLadder.Data());
+      Reve::ElementList* relLadder = new Reve::ElementList(sLadder.Data());
       relLadder->SetMainColor((Color_t)4);
-      gReve->AddRenderElement(relLadder, l);
+      gEve->AddElement(relLadder, l);
       for(nMod=0; nMod<22; nMod++) {
 	Alieve::ITSModule* m = new Alieve::ITSModule(i++, di);
-	gReve->AddRenderElement(m, relLadder);
+	gEve->AddElement(m, relLadder);
       }
     }
   } else {
@@ -152,24 +152,24 @@ void its_digits(Int_t mode=63)
   }
 
   if (mode & 32) {
-    Reve::RenderElementList* l = new Reve::RenderElementList("SSD5");
+    Reve::ElementList* l = new Reve::ElementList("SSD5");
     l->SetTitle("SSDs' second layer");
     l->SetMainColor((Color_t)4);
-    gReve->AddRenderElement(l);
+    gEve->AddElement(l);
     for(nlad=0; nlad<38; nlad++) {
       sLadder  = bsLadder;
       sLadder += nlad;
-      Reve::RenderElementList* relLadder = new Reve::RenderElementList(sLadder.Data());
+      Reve::ElementList* relLadder = new Reve::ElementList(sLadder.Data());
       relLadder->SetMainColor((Color_t)4);
-      gReve->AddRenderElement(relLadder, l);
+      gEve->AddElement(relLadder, l);
       for(nMod=0; nMod<25; nMod++) {
 	Alieve::ITSModule* m = new Alieve::ITSModule(i++, di);
-	gReve->AddRenderElement(m, relLadder);
+	gEve->AddElement(m, relLadder);
       }
     }
   } else {
     i += 38*25;
   }
 
-  gReve->EnableRedraw();
+  gEve->EnableRedraw();
 }

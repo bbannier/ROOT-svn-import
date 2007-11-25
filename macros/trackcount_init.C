@@ -9,12 +9,12 @@ void trackcount_init()
   LoadMacro("tpc_clusters.C+");
 
   TEveTrackCounter* g_trkcnt = new TEveTrackCounter("Primary Counter");
-  gReve->AddGlobalRenderElement(g_trkcnt);
+  gEve->AddGlobalElement(g_trkcnt);
 
   Alieve::gEvent->AddNewEventCommand("on_new_event();");
   Alieve::gEvent->GotoEvent(0);
 
-  gReve->Redraw3D(kTRUE);
+  gEve->Redraw3D(kTRUE);
 }
 
 void on_new_event()
@@ -28,7 +28,7 @@ void on_new_event()
   primary_vertex(1, 1);
 
   TEveElementList* cont = esd_tracks_vertex_cut();
-  TGListTree* lt = gReve->GetListTree();
+  TGListTree* lt = gEve->GetListTree();
   TGListTreeItem* ti = cont->FindListTreeItem(lt);
   lt->OpenItem(ti);
 

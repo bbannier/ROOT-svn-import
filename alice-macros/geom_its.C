@@ -4,11 +4,11 @@ void geom_its()
 {
   using namespace std;
 
-  gGeoManager = gReve->GetGeometry("$REVESYS/alice-data/alice_fullgeo.root");
+  gGeoManager = gEve->GetGeometry("$REVESYS/alice-data/alice_fullgeo.root");
   TGeoNode* node = gGeoManager->GetTopVolume()->FindNode("ITSV_1");
 
   Reve::GeoTopNodeRnrEl* its_re = 
     new Reve::GeoTopNodeRnrEl(gGeoManager, node);
-  gReve->AddGlobalRenderElement(its_re);
-  gReve->Redraw3D();
+  gEve->AddGlobalElement(its_re);
+  gEve->Redraw3D();
 }

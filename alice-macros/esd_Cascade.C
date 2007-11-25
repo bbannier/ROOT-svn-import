@@ -67,7 +67,7 @@ Alieve::CascadeList* esd_Cascade(Double_t min_pt=0.1, Double_t max_pt=100)
   Reve::TrackRnrStyle* rnrStyle = cont->GetRnrStyle();
   rnrStyle->SetMagField( esd->GetMagneticField() );
 
-  gReve->AddRenderElement(cont);
+  gEve->AddElement(cont);
 
   Int_t count = 0;
   //for (Int_t n=0; count<3; n++) {
@@ -85,7 +85,7 @@ Alieve::CascadeList* esd_Cascade(Double_t min_pt=0.1, Double_t max_pt=100)
       Alieve::Cascade* myCas = esd_make_cas(rnrStyle, primVertex, cas,
 					  negTr, posTr, bachTr, n);
       if (myCas) {
-	gReve->AddRenderElement(myCas, cont);
+	gEve->AddElement(myCas, cont);
 	count++;
       }
     }
@@ -95,7 +95,7 @@ Alieve::CascadeList* esd_Cascade(Double_t min_pt=0.1, Double_t max_pt=100)
   cont->UpdateItems();
 
   cont->MakeCascades();
-  gReve->Redraw3D();
+  gEve->Redraw3D();
 
   return cont;
 }

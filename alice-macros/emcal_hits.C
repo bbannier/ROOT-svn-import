@@ -3,7 +3,7 @@
 Reve::PointSet*
 emcal_hits(const char *varexp    = "fX:fY:fZ",
 	   const char *selection = "",
-	   Reve::RenderElement* cont = 0)
+	   Reve::Element* cont = 0)
 {
   AliRunLoader* rl =  Alieve::Event::AssertRunLoader();
   rl->LoadHits("EMCAL");
@@ -21,7 +21,7 @@ emcal_hits(const char *varexp    = "fX:fY:fZ",
   TPointSelector ps(ht, points, varexp, selection);
   ps.Select();
 
-  if(points->Size() == 0 && gReve->GetKeepEmptyCont() == kFALSE) {
+  if(points->Size() == 0 && gEve->GetKeepEmptyCont() == kFALSE) {
     Warning("emcal_hits", Form("No hits match '%s'", selection));
     delete points;
     return 0;
@@ -33,8 +33,8 @@ emcal_hits(const char *varexp    = "fX:fY:fZ",
   points->SetMarkerSize(.5);
   points->SetMarkerColor((Color_t)2);
 
-  gReve->AddRenderElement(points, cont);
-  gReve->Redraw3D();
+  gEve->AddElement(points, cont);
+  gEve->Redraw3D();
 
   return points;
 }
