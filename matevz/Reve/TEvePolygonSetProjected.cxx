@@ -40,10 +40,9 @@ typedef std::list<Seg>::iterator It_t;
 // A set of projected polygons.
 // Used for storage of projected geometrical shapes.
 //
-// TEvePolygonProjected holds only indices into the master vertex
+// Internal struct Polygon_t holds only indices into the master vertex
 // array in TEvePolygonSetProjected.
 
-ClassImp(TEvePolygonProjected)
 ClassImp(TEvePolygonSetProjected)
 
 //______________________________________________________________________________
@@ -177,7 +176,7 @@ void TEvePolygonSetProjected::ProjectAndReducePoints()
 }
 
 //______________________________________________________________________________
-void TEvePolygonSetProjected::AddPolygon(std::list<Int_t>& pp, std::list<TEvePolygonProjected>& pols)
+void TEvePolygonSetProjected::AddPolygon(std::list<Int_t>& pp, vpPolygon_t& pols)
 {
    if(pp.size() <= 2) return;
 
@@ -196,9 +195,9 @@ void TEvePolygonSetProjected::AddPolygon(std::list<Int_t>& pp, std::list<TEvePol
    if((bbox[1]-bbox[0])<eps || (bbox[3]-bbox[2])<eps) return;
 
    // duplication
-   for (std::list<TEvePolygonProjected>::iterator poi = pols.begin(); poi!= pols.end(); poi++)
+   for (vpPolygon_i poi = pols.begin(); poi!= pols.end(); poi++)
    {
-      TEvePolygonProjected P = *poi;
+      Polygon_t P = *poi;
       if (pp.size() != (UInt_t)P.fNPnts)
          continue;
       std::list<Int_t>::iterator u = pp.begin();
@@ -215,14 +214,14 @@ void TEvePolygonSetProjected::AddPolygon(std::list<Int_t>& pp, std::list<TEvePol
       if (u == pp.end()) return;
    }
 
-   // printf("add %d TEvePolygonProjected points %d \n", pols.size(), pp.size());
+   // printf("add %d Polygon points %d \n", pols.size(), pp.size());
    Int_t* pv = new Int_t[pp.size()];
    Int_t count=0;
    for( std::list<Int_t>::iterator u = pp.begin(); u!= pp.end(); u++){
       pv[count] = *u;
       count++;
    }
-   pols.push_back(TEvePolygonProjected(pp.size(), pv));
+   pols.push_back(Polygon_t(pp.size(), pv));
    fSurf += (bbox[1]-bbox[0])*(bbox[3]-bbox[2]);
    //  printf("Add Surf %f\n",( bbox[1]-bbox[0])*(bbox[3]-bbox[2]));
 } // AddPolygon

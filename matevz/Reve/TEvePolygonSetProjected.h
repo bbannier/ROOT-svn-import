@@ -31,25 +31,7 @@ template<typename _Tp, typename _Alloc > class list;
 
 class TEveVector;
 
-class TEvePolygonProjected
-{
-public:
-   Int_t     fNPnts;
-   Int_t*    fPnts;
 
-   TEvePolygonProjected() : fNPnts(0), fPnts(0) {}
-   TEvePolygonProjected(Int_t n, Int_t* p) : fNPnts(n), fPnts(p) {}
-   TEvePolygonProjected(const TEvePolygonProjected& x) : fNPnts(x.fNPnts), fPnts(x.fPnts) {}
-   virtual ~TEvePolygonProjected() {}
-
-   TEvePolygonProjected& operator=(const TEvePolygonProjected& x)
-   { fNPnts = x.fNPnts; fPnts = x.fPnts; return *this; }
-
-   Int_t FindPoint(Int_t pi)
-   { for (Int_t i=0; i<fNPnts; ++i) if (fPnts[i] == pi) return i; return -1; }
-
-   ClassDef(TEvePolygonProjected, 0); // Internal structure holding point-indices during polygon projection / reduction.
-};
 
 
 class TEvePolygonSetProjected :  public TEveElementList,
@@ -63,17 +45,34 @@ private:
    TEvePolygonSetProjected(const TEvePolygonSetProjected&);            // Not implemented
    TEvePolygonSetProjected& operator=(const TEvePolygonSetProjected&); // Not implemented
 
-public:
-   typedef std::list<TEvePolygonProjected>           vpPolygon_t;
-   typedef vpPolygon_t::iterator           vpPolygon_i;
-   typedef vpPolygon_t::const_iterator     vpPolygon_ci;
+protected:
+   struct Polygon_t
+   {
+      Int_t     fNPnts;
+      Int_t*    fPnts;
+
+      Polygon_t() : fNPnts(0), fPnts(0) {}
+      Polygon_t(Int_t n, Int_t* p) : fNPnts(n), fPnts(p) {}
+      Polygon_t(const Polygon_t& x) : fNPnts(x.fNPnts), fPnts(x.fPnts) {}
+      virtual ~Polygon_t() {}
+
+      Polygon_t& operator=(const Polygon_t& x)
+      { fNPnts = x.fNPnts; fPnts = x.fPnts; return *this; }
+
+      Int_t FindPoint(Int_t pi)
+      { for (Int_t i=0; i<fNPnts; ++i) if (fPnts[i] == pi) return i; return -1; }
+   };
+
+   typedef std::list<Polygon_t>                    vpPolygon_t;
+   typedef vpPolygon_t::iterator                   vpPolygon_i;
+   typedef vpPolygon_t::const_iterator             vpPolygon_ci;
 
 private:
    TBuffer3D*   fBuff;
    Int_t*       fIdxMap; // map from original to projected and reduced point needed oly for geometry
 
    Bool_t       IsFirstIdxHead(Int_t s0, Int_t s1);
-   void         AddPolygon(std::list<Int_t, std::allocator<Int_t> >& pp, std::list<TEvePolygonProjected, std::allocator<TEvePolygonProjected> >& p);
+   void         AddPolygon(std::list<Int_t, std::allocator<Int_t> >& pp, std::list<Polygon_t, std::allocator<Polygon_t> >& p);
 
    void         ProjectAndReducePoints();
    void         MakePolygonsFromBP();
