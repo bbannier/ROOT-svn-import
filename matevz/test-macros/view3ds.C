@@ -568,15 +568,15 @@ void view3ds(const char *fname = "nasashuttle.3ds")
    if (Read3DSFile(fname) == 0) {
       TEveTriangleSet* parent = new TEveTriangleSet(0, 0);
       parent->SetName(fname);
-      gReve->AddRenderElement(parent);
+      gEve->AddElement(parent);
       for (i=0;i<nummodels;i++) {
          if (ts[i]) {
             ts[i]->GenerateTriangleNormals();
             ts[i]->RefHMTrans().RotateLF(1, 2, TMath::Pi());
-            gReve->AddRenderElement(ts[i], parent);
+            gEve->AddElement(ts[i], parent);
          }
       }
-      gReve->Redraw3D(kTRUE);
+      gEve->Redraw3D(kTRUE);
    }
    for (i = 0; i < nummaterials; i++)
       if (material[i] != 0) delete material[i];

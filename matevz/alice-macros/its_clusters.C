@@ -2,7 +2,7 @@
 
 namespace Reve
 {
-class RenderElement;
+class Element;
 class PointSet;
 }
 
@@ -20,7 +20,7 @@ class PointSet;
 
 #endif
 
-Reve::PointSet* its_clusters(Reve::RenderElement* cont=0, Float_t maxR=50)
+Reve::PointSet* its_clusters(Reve::Element* cont=0, Float_t maxR=50)
 {
   Alieve::Event::AssertGeometry();
 
@@ -56,7 +56,7 @@ Reve::PointSet* its_clusters(Reve::RenderElement* cont=0, Float_t maxR=50)
     }
   }
 
-  if(clusters->Size() == 0 && gReve->GetKeepEmptyCont() == kFALSE) {
+  if(clusters->Size() == 0 && gEve->GetKeepEmptyCont() == kFALSE) {
     Warning("its_clusters", "No ITS clusters");
     delete clusters;
     return 0;
@@ -75,8 +75,8 @@ Reve::PointSet* its_clusters(Reve::RenderElement* cont=0, Float_t maxR=50)
   clusters->SetTitle(tip);
 
   using namespace Reve;
-  gReve->AddRenderElement(clusters, cont);
-  gReve->Redraw3D();
+  gEve->AddElement(clusters, cont);
+  gEve->Redraw3D();
 
   return clusters;
 }

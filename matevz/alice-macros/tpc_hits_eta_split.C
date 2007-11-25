@@ -19,7 +19,7 @@ void tpc_hits_eta_split(const char *varexp    =
   l->SetMarkerStyle(20); // full circle
   l->SetMarkerSize(.5);
   
-  gReve->AddRenderElement(l);
+  gEve->AddElement(l);
   l->InitBins("Eta", 20, -2, 2);
 
   TPointSelector ps(ht, l, varexp, selection);
@@ -27,5 +27,5 @@ void tpc_hits_eta_split(const char *varexp    =
 
   l->CloseBins();
 
-  gReve->Redraw3D();
+  gEve->Redraw3D();
 }

@@ -1,12 +1,12 @@
 
-Reve::NLTProjector* NLT_test(Reve::RenderElement* top=0)
+Reve::NLTProjector* NLT_test(Reve::Element* top=0)
 {
   using namespace Reve;
 
-  Scene* s = gReve->SpawnNewScene("Projected Event");
-  gReve->GetDefViewer()->AddScene(s);
+  Scene* s = gEve->SpawnNewScene("Projected Event");
+  gEve->GetDefViewer()->AddScene(s);
 
-  TGLViewer* v = (TGLViewer *)gReve->GetGLViewer();
+  TGLViewer* v = (TGLViewer *)gEve->GetGLViewer();
   v->SetCurrentCamera(TGLViewer::kCameraOrthoXOY);
   TGLCameraMarkupStyle* mup = v->GetCameraMarkup();
   if(mup) mup->SetShow(kFALSE);
@@ -14,14 +14,14 @@ Reve::NLTProjector* NLT_test(Reve::RenderElement* top=0)
   NLTProjector* p = new NLTProjector;
   p->SetProjection(NLTProjection::PT_RhoZ, 0.01);
 
-  gReve->AddToListTree(p, kTRUE);
-  gReve->AddRenderElement(p, s);
+  gEve->AddToListTree(p, kTRUE);
+  gEve->AddElement(p, s);
 
-  top = gReve->GetCurrentEvent();
+  top = gEve->GetCurrentEvent();
   if (top)
     p->ImportElements(top);
 
-  gReve->Redraw3D(kTRUE);
+  gEve->Redraw3D(kTRUE);
 
   return p;
 }

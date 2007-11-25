@@ -18,12 +18,12 @@ void pmd_digits(Int_t mode = 0)
 
   //  cout << pmdt->GetEntries() << endl;
 
-  gReve->DisableRedraw();
+  gEve->DisableRedraw();
 
-  Reve::RenderElementList* l = new Reve::RenderElementList("PMD");
+  Reve::ElementList* l = new Reve::ElementList("PMD");
   // l->SetTitle("tooltip");
   // l->SetMainColor((Color_t)3);
-  gReve->AddRenderElement(l);
+  gEve->AddElement(l);
 
   Reve::RGBAPalette* pal = new Reve::RGBAPalette(20, 1000);
   pal->SetLimits(0, 1024);
@@ -78,17 +78,17 @@ void pmd_digits(Int_t mode = 0)
 	  zpos      = 360.;
 	}
       
-      Reve::RenderElementList* lplane = new Reve::RenderElementList(spl.Data());
+      Reve::ElementList* lplane = new Reve::ElementList(spl.Data());
       //  l->SetMainColor((Color_t)3);
-      gReve->AddRenderElement(lplane, l);
+      gEve->AddElement(lplane, l);
       
       for (Int_t iddl = istartDDL; iddl < iendDDL; iddl++)
 	{
 	  sddl = bsddl;
 	  sddl += iddl;
-	  Reve::RenderElementList* lddl = new Reve::RenderElementList(sddl.Data());
+	  Reve::ElementList* lddl = new Reve::ElementList(sddl.Data());
 	  //  l->SetMainColor((Color_t)3);
-	  gReve->AddRenderElement(lddl, lplane);
+	  gEve->AddElement(lddl, lplane);
 
 	  modnumber = iddl*6;
 
@@ -117,7 +117,7 @@ void pmd_digits(Int_t mode = 0)
                 b->SetFrameFill (kFALSE);
                 b->SetDrawBack  (kTRUE);
               }
-	      gReve->AddRenderElement(lmodule, lddl);
+	      gEve->AddElement(lmodule, lddl);
 	      modnumber++;
 	      if (iddl == 4 && modnumber == 30) modnumber = 42;
 	    }
@@ -127,9 +127,9 @@ void pmd_digits(Int_t mode = 0)
     }
 
 
-  gReve->EnableRedraw();
+  gEve->EnableRedraw();
   
-  gReve->Redraw3D();
+  gEve->Redraw3D();
 }
 
 // ---------------------------------------------------------------------- //

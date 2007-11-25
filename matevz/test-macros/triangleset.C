@@ -23,7 +23,7 @@ void triangleset()
     Double_t scale[3] = { 0.5, 0.5, 0.5 };
     m.SetScale(scale);
     ts1->SetTransMatrix(m);
-    gReve->AddRenderElement(ts1);
+    gEve->AddElement(ts1);
   }
   {
     ts2 = TEveTriangleSet::ReadTrivialFile("broken_torus.tring");
@@ -35,7 +35,7 @@ void triangleset()
     Double_t scale[3] = { 0.8, 0.8, 1.2 };
     m.SetScale(scale);
     ts2->SetTransMatrix(m);
-    gReve->AddRenderElement(ts2);
+    gEve->AddElement(ts2);
   }
   {
     ts3 = TEveTriangleSet::ReadTrivialFile("broken_torus.tring");
@@ -49,8 +49,8 @@ void triangleset()
     Double_t scale[3] = { 1.3, 1.0, 1.6 };
     m.SetScale(scale);
     ts3->SetTransMatrix(m);
-    gReve->AddRenderElement(ts3);
+    gEve->AddElement(ts3);
   }
 
-  gReve->Redraw3D(kTRUE);
+  gEve->Redraw3D(kTRUE);
 }

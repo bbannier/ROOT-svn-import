@@ -1,4 +1,4 @@
-// @(#)root/reve:$Id$
+// @(#)root/eve:$Id$
 // Authors: Matevz Tadel & Alja Mrak-Tadel: 2006, 2007
 
 /*************************************************************************
@@ -24,6 +24,7 @@ class TAttLine;
 class TEveGLUtil
 {
 public:
+   virtual ~TEveGLUtil() {}
 
 #ifndef __CINT__
 

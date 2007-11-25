@@ -10,7 +10,7 @@ Reve::TrackList* primary_vertex_tracks()
   rnrStyle->SetMagField( esd->GetMagneticField() );
   rnrStyle->fRnrFV = kTRUE;
   rnrStyle->fFVAtt->SetMarkerColor(2);
-  gReve->AddRenderElement(cont);
+  gEve->AddElement(cont);
 
   for (Int_t n=0; n<pv->GetNIndices(); n++)
   {
@@ -19,11 +19,11 @@ Reve::TrackList* primary_vertex_tracks()
     track->SetLineWidth(4);
     track->SetLineColor(cont->GetMainColor());
     track->SetLineStyle(7);
-    gReve->AddRenderElement(track, cont);
+    gEve->AddElement(track, cont);
   }
 
   cont->MakeTracks();
-  gReve->Redraw3D();
+  gEve->Redraw3D();
 
   return cont;
 }

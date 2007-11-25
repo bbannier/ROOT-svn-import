@@ -20,8 +20,8 @@ void NLT_trackcount_init()
   Reve::LoadMacro("its_clusters.C+");
   Reve::LoadMacro("tpc_clusters.C+");
 
-  Reve::Viewer* nv = gReve->SpawnNewViewer("NLT Projected");
-  Reve::Scene*  ns = gReve->SpawnNewScene("NLT"); 
+  Reve::Viewer* nv = gEve->SpawnNewViewer("NLT Projected");
+  Reve::Scene*  ns = gEve->SpawnNewScene("NLT"); 
   nv->AddScene(ns);
   TGLViewer* v = nv->GetGLViewer();
   v->SetCurrentCamera(TGLViewer::kCameraOrthoXOY);
@@ -29,11 +29,11 @@ void NLT_trackcount_init()
   if(mup) mup->SetShow(kFALSE);
 
   Reve::TrackCounter* g_trkcnt = new Reve::TrackCounter("Primary Counter");
-  gReve->AddToListTree(g_trkcnt, kFALSE);
+  gEve->AddToListTree(g_trkcnt, kFALSE);
 
   Reve::NLTProjector* p = new Reve::NLTProjector; proj = p;
-  gReve->AddToListTree(p, kTRUE);
-  gReve->AddRenderElement(proj, ns);
+  gEve->AddToListTree(p, kTRUE);
+  gEve->AddElement(proj, ns);
 
   // geometry
   Reve::GeoShapeRnrEl* gg = geom_gentle();
@@ -43,7 +43,7 @@ void NLT_trackcount_init()
   Alieve::gEvent->AddNewEventCommand("on_new_event();");
   Alieve::gEvent->GotoEvent(0);
 
-  gReve->Redraw3D(kTRUE);
+  gEve->Redraw3D(kTRUE);
 }
 
 /**************************************************************************/
@@ -58,7 +58,7 @@ void on_new_event()
 
   primary_vertex(1, 1);
 
-  Reve::RenderElementList* cont = esd_tracks_vertex_cut();
+  Reve::ElementList* cont = esd_tracks_vertex_cut();
 
   // Here we expect five TrackList containers.
   // First two have reasonable primaries (sigma-to-prim-vertex < 5).
@@ -67,7 +67,7 @@ void on_new_event()
   Reve::TrackCounter* g_trkcnt = Reve::TrackCounter::fgInstance;
   g_trkcnt->Reset();
   g_trkcnt->SetEventId(Alieve::gEvent->GetEventId());
-  Reve::RenderElement::List_i i = cont->BeginChildren();
+  Reve::Element::List_i i = cont->BeginChildren();
   while (i != cont->EndChildren()) {
     Reve::TrackList* l = dynamic_cast<Reve::TrackList*>(*i);
     if (l != 0) {
@@ -77,7 +77,7 @@ void on_new_event()
     }
     ++i;
   }
-  Reve::RenderElement* top = gReve->GetCurrentEvent();
+  Reve::Element* top = gEve->GetCurrentEvent();
   proj->DestroyElements();
   AliESDEvent* esd = Alieve::Event::AssertESD();
   Double_t x[3];

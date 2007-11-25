@@ -12,7 +12,7 @@ MAKEDEPEND = ${ROOTSYS}/bin/rmkdepend -Y -w 666 -f-
 ROOTCINT   = ${ROOTSYS}/bin/rootcint
 
 CPPFLAGS = -I. -I${REVESYS} -I${ROOTSYS}/include
-CXXFLAGS = -g -fPIC -Wall -Woverloaded-virtual -Wno-long-long -pedantic-errors -ansi
+CXXFLAGS = -g -fPIC -Wall -Woverloaded-virtual -Wno-long-long
 LDFLAGS  = -shared
 
 ROOTCINTFLAGS = -I. -I${REVESYS}

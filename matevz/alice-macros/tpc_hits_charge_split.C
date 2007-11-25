@@ -19,7 +19,7 @@ void tpc_hits_charge_split(const char *varexp    =
   l->SetMarkerStyle(20); // full circle
   l->SetMarkerSize(.5);
   
-  gReve->AddRenderElement(l);
+  gEve->AddElement(l);
   l->InitBins("Log Charge", 20, 0, 5);
 
   TPointSelector ps(ht, l, varexp, selection);
@@ -27,5 +27,5 @@ void tpc_hits_charge_split(const char *varexp    =
 
   l->CloseBins();
 
-  gReve->Redraw3D();
+  gEve->Redraw3D();
 }

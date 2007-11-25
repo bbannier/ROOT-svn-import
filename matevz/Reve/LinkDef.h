@@ -1,4 +1,4 @@
-// @(#)root/reve:$Id$
+// @(#)root/eve:$Id$
 // Authors: Matevz Tadel & Alja Mrak-Tadel: 2006, 2007
 
 /*************************************************************************
@@ -20,7 +20,7 @@
 
 // TEveManager
 #pragma link C++ class TEveManager+;
-#pragma link C++ global gReve;
+#pragma link C++ global gEve;
 
 // Basic helper classes
 #pragma link C++ class TEveException+;

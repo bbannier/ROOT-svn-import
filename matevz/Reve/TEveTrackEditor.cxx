@@ -1,4 +1,4 @@
-// @(#)root/reve:$Id$
+// @(#)root/eve:$Id$
 // Authors: Matevz Tadel & Alja Mrak-Tadel: 2006, 2007
 
 /*************************************************************************
@@ -160,8 +160,8 @@ void TEveTrackListEditor::CreateRefsTab()
 
    // path marks
    fRSSubEditor->CreateRefsContainer(fRefs);
-   fRSSubEditor->fPMAtt->SetGedEditor((TGedEditor*)gReve->GetEditor());
-   fRSSubEditor->fFVAtt->SetGedEditor((TGedEditor*)gReve->GetEditor());
+   fRSSubEditor->fPMAtt->SetGedEditor((TGedEditor*)gEve->GetEditor());
+   fRSSubEditor->fFVAtt->SetGedEditor((TGedEditor*)gEve->GetEditor());
 }
 
 /******************************************************************************/
@@ -384,19 +384,19 @@ void TEveTrackCounterEditor::SetModel(TObject* obj)
 //______________________________________________________________________________
 void TEveTrackCounterEditor::DoOrtoXY()
 {
-   gReve->GetGLViewer()->SetCurrentCamera(TGLViewer::kCameraOrthoXOY) ;
+   gEve->GetGLViewer()->SetCurrentCamera(TGLViewer::kCameraOrthoXOY) ;
 }
 
 //______________________________________________________________________________
 void TEveTrackCounterEditor::DoOrtoZY()
 {
-   gReve->GetGLViewer()->SetCurrentCamera(TGLViewer::kCameraOrthoZOY) ;
+   gEve->GetGLViewer()->SetCurrentCamera(TGLViewer::kCameraOrthoZOY) ;
 }
 
 //______________________________________________________________________________
 void TEveTrackCounterEditor::DoPersp()
 {
-   gReve->GetGLViewer()->SetCurrentCamera(TGLViewer::kCameraPerspXOZ) ;
+   gEve->GetGLViewer()->SetCurrentCamera(TGLViewer::kCameraPerspXOZ) ;
 }
 
 /******************************************************************************/
@@ -405,14 +405,14 @@ void TEveTrackCounterEditor::DoPersp()
 void TEveTrackCounterEditor::DoPrev()
 {
    TEveUtil::Macro("event_prev.C");
-   gReve->EditRenderElement(fM);
+   gEve->EditElement(fM);
 }
 
 //______________________________________________________________________________
 void TEveTrackCounterEditor::DoNext()
 {
    TEveUtil::Macro("event_next.C");
-   gReve->EditRenderElement(fM);
+   gEve->EditElement(fM);
 }
 
 //______________________________________________________________________________
@@ -420,7 +420,7 @@ void TEveTrackCounterEditor::DoSetEvent()
 {
    TEveUtil::LoadMacro("event_goto.C");
    gROOT->ProcessLine(Form("event_goto(%d);", (Int_t) fEventId->GetNumber()));
-   gReve->EditRenderElement(fM);
+   gEve->EditElement(fM);
 }
 
 /******************************************************************************/

@@ -1,4 +1,4 @@
-// @(#)root/reve:$Id$
+// @(#)root/eve:$Id$
 // Authors: Matevz Tadel & Alja Mrak-Tadel: 2006, 2007
 
 /*************************************************************************
@@ -41,8 +41,11 @@ ClassImp(TEveUtil)
 //______________________________________________________________________________
 void TEveUtil::SetupEnvironment()
 {
-   // Check if REVESYS exists, try fallback to $ALICE_ROOT/EVE.
    // Setup Include and Macro paths.
+   // Since inclusion into ROOT this does nothing but could
+   // potentially be reactivated if some common macros are established
+   // and shipped with binary ROOT (in macros/eve). For example, these
+   // might be used to spawn specific GUI / GL configurations.
 
    static const TEveException eH("TEveUtil::SetupEnvironment");
    static Bool_t setupDone = kFALSE;
@@ -52,6 +55,10 @@ void TEveUtil::SetupEnvironment()
       return;
    }
 
+   // Old initialization for ALICE.
+   // Left as an example.
+   /*
+   // Check if REVESYS exists, try fallback to $ALICE_ROOT/EVE.
    if(gSystem->Getenv("REVESYS") == 0) {
       if(gSystem->Getenv("ALICE_ROOT") != 0) {
          Info(eH.Data(), "setting REVESYS from ALICE_ROOT.");
@@ -75,25 +82,26 @@ void TEveUtil::SetupEnvironment()
       gInterpreter->AddIncludePath(gSystem->Getenv("ALICE_ROOT"));
    }
    gROOT->SetMacroPath(macPath);
+   */
 }
 
 //______________________________________________________________________________
 void TEveUtil::SetupGUI()
 {
-   TString fld( Form("%s/icons/", gSystem->Getenv("REVESYS")) );
-   // printf("foofoo %p %p %p %p\n",
-   //         TEveElement::fgRnrIcons[0],TEveElement::fgRnrIcons[1],
-   //         TEveElement::fgRnrIcons[2],TEveElement::fgRnrIcons[3]);
-   TEveElement::fgRnrIcons[0] = gClient->GetPicture(fld + "rnr00_t.xpm");
-   TEveElement::fgRnrIcons[1] = gClient->GetPicture(fld + "rnr01_t.xpm");
-   TEveElement::fgRnrIcons[2] = gClient->GetPicture(fld + "rnr10_t.xpm");
-   TEveElement::fgRnrIcons[3] = gClient->GetPicture(fld + "rnr11_t.xpm");
+   // Setup icon pictures and mime-types.
+
+   TString fld( Form("%s/icons/", gSystem->Getenv("ROOTSYS")) );
+
+   TEveElement::fgRnrIcons[0] = gClient->GetPicture(fld + "eve_rnr00_t.xpm");
+   TEveElement::fgRnrIcons[1] = gClient->GetPicture(fld + "eve_rnr01_t.xpm");
+   TEveElement::fgRnrIcons[2] = gClient->GetPicture(fld + "eve_rnr10_t.xpm");
+   TEveElement::fgRnrIcons[3] = gClient->GetPicture(fld + "eve_rnr11_t.xpm");
 
    TEveElement::fgListTreeIcons[0] = gClient->GetPicture("folder_t.xpm");
-   TEveElement::fgListTreeIcons[1] = gClient->GetPicture(fld + "viewer.xpm");
-   TEveElement::fgListTreeIcons[2] = gClient->GetPicture(fld + "scene.xpm");
-   TEveElement::fgListTreeIcons[3] = gClient->GetPicture(fld + "pointset.xpm");
-   TEveElement::fgListTreeIcons[4] = gClient->GetPicture(fld + "track.xpm");
+   TEveElement::fgListTreeIcons[1] = gClient->GetPicture(fld + "eve_viewer.xpm");
+   TEveElement::fgListTreeIcons[2] = gClient->GetPicture(fld + "eve_scene.xpm");
+   TEveElement::fgListTreeIcons[3] = gClient->GetPicture(fld + "eve_pointset.xpm");
+   TEveElement::fgListTreeIcons[4] = gClient->GetPicture(fld + "eve_track.xpm");
 
    gClient->GetMimeTypeList()->AddType("root/tmacro", "TEveMacro",
                                        "tmacro_s.xpm", "tmacro_t.xpm", "");
@@ -103,7 +111,6 @@ void TEveUtil::SetupGUI()
 
 namespace
 {
-
 //______________________________________________________________________________
 void ChompTail(TString& s, char c='.')
 {
@@ -111,7 +118,6 @@ void ChompTail(TString& s, char c='.')
    if(p != kNPOS)
       s.Remove(p);
 }
-
 }
 
 //______________________________________________________________________________
@@ -176,14 +182,18 @@ void TEveUtil::LoadMacro(const Text_t* mac)
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveUtil::ColorFromIdx(Color_t ci, UChar_t* col, Bool_t alpha)
+void TEveUtil::ColorFromIdx(Color_t ci, UChar_t col[4], Bool_t alpha)
 {
+   // Fill col with RGBA values corresponding to index ci. If alpha
+   // is true, set alpha component of col to 255.
+   // ROOT's indexed color palette does not support transparency.
+
    if (ci < 0) {
       col[0] = col[1] = col[2] = col[3] = 0;
       return;
    }
    TColor* c = gROOT->GetColor(ci);
-   if(c) {
+   if (c) {
       col[0] = (UChar_t)(255*c->GetRed());
       col[1] = (UChar_t)(255*c->GetGreen());
       col[2] = (UChar_t)(255*c->GetBlue());
@@ -193,8 +203,12 @@ void TEveUtil::ColorFromIdx(Color_t ci, UChar_t* col, Bool_t alpha)
 
 //______________________________________________________________________________
 void TEveUtil::ColorFromIdx(Float_t f1, Color_t c1, Float_t f2, Color_t c2,
-			    UChar_t* col, Bool_t alpha)
+			    UChar_t col[4], Bool_t alpha)
 {
+   // Fill col with weighted RGBA values corresponding to
+   // color-indices c1 and c2. If alpha is true, set alpha component
+   // of col to 255.
+
    TColor* t1 = gROOT->GetColor(c1);
    TColor* t2 = gROOT->GetColor(c2);
    if(t1 && t2) {
@@ -208,6 +222,13 @@ void TEveUtil::ColorFromIdx(Float_t f1, Color_t c1, Float_t f2, Color_t c2,
 //______________________________________________________________________________
 Color_t* TEveUtil::FindColorVar(TObject* obj, const Text_t* varname)
 {
+   // Find address of Color_t data-member with name varname in object
+   // obj.
+   //
+   // This is used to access color information for TGListTreeItem
+   // coloration from visualization macros that wrap TObjects into
+   // TEveElementObjectPtr instances.
+
    static const TEveException eH("TEveUtil::FindColorVar");
 
    Int_t off = obj->IsA()->GetDataMemberOffset(varname);
@@ -291,7 +312,8 @@ TEveGeoManagerHolder::~TEveGeoManagerHolder()
 //______________________________________________________________________________
 // TEveRefBackPtr
 //
-// Base-class for reference-counted objects with reverse references to TEveElement objects.
+// Base-class for reference-counted objects with reverse references to
+// TEveElement objects.
 
 ClassImp(TEveRefBackPtr)
 
@@ -299,11 +321,15 @@ ClassImp(TEveRefBackPtr)
 TEveRefBackPtr::TEveRefBackPtr() :
    TEveRefCnt(),
    fBackRefs()
-{}
+{
+   // Default constructor.
+}
 
 //______________________________________________________________________________
 TEveRefBackPtr::~TEveRefBackPtr()
 {
+   // Destructor. Noop, should complain if back-ref list is not empty.
+
    // !!!! Complain if list not empty.
 }
 
@@ -311,11 +337,18 @@ TEveRefBackPtr::~TEveRefBackPtr()
 TEveRefBackPtr::TEveRefBackPtr(const TEveRefBackPtr&) :
    TEveRefCnt(),
    fBackRefs()
-{}
+{
+   // Copy constructor. New copy starts with zero reference count and
+   // empty back-reference list.
+}
 
 //______________________________________________________________________________
 TEveRefBackPtr& TEveRefBackPtr::operator=(const TEveRefBackPtr&)
 {
+   // Assignment operator. Reference count and back-reference
+   // information is not assigned as these object hold pointers to a
+   // specific object.
+
    return *this;
 }
 
@@ -324,6 +357,8 @@ TEveRefBackPtr& TEveRefBackPtr::operator=(const TEveRefBackPtr&)
 //______________________________________________________________________________
 void TEveRefBackPtr::IncRefCount(TEveElement* re)
 {
+   // Increase reference cound and add re to the list of back-references.
+
    TEveRefCnt::IncRefCount();
    fBackRefs.push_back(re);
 }
@@ -331,6 +366,8 @@ void TEveRefBackPtr::IncRefCount(TEveElement* re)
 //______________________________________________________________________________
 void TEveRefBackPtr::DecRefCount(TEveElement* re)
 {
+   // Decrease reference cound and remove re from the list of back-references.
+
    static const TEveException eH("TEveRefBackPtr::DecRefCount ");
 
    std::list<TEveElement*>::iterator i =

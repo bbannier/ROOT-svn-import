@@ -1,4 +1,4 @@
-// @(#)root/reve:$Id$
+// @(#)root/eve:$Id$
 // Authors: Matevz Tadel & Alja Mrak-Tadel: 2006, 2007
 
 /*************************************************************************
@@ -374,8 +374,8 @@ TEveTrackPropagatorEditor::TEveTrackPropagatorEditor(const TGWindow *p,
 
    // path marks
    fRSSubEditor->CreateRefsContainer(refsFrame);
-   fRSSubEditor->fPMAtt->SetGedEditor((TGedEditor*)gReve->GetEditor());
-   fRSSubEditor->fFVAtt->SetGedEditor((TGedEditor*)gReve->GetEditor());
+   fRSSubEditor->fPMAtt->SetGedEditor((TGedEditor*)gEve->GetEditor());
+   fRSSubEditor->fFVAtt->SetGedEditor((TGedEditor*)gEve->GetEditor());
 
    fRSSubEditor->Connect("Changed()", "TEveTrackPropagatorEditor", this, "Update()");
 }

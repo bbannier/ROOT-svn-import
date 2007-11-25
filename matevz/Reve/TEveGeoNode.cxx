@@ -1,4 +1,4 @@
-// @(#)root/reve:$Id$
+// @(#)root/eve:$Id$
 // Authors: Matevz Tadel & Alja Mrak-Tadel: 2006, 2007
 
 /*************************************************************************
@@ -313,14 +313,14 @@ void TEveGeoTopNode::UseNodeTrans()
 void TEveGeoTopNode::SetVisOption(Int_t visopt)
 {
    fVisOption = visopt;
-   gReve->Redraw3D();
+   gEve->Redraw3D();
 }
 
 //______________________________________________________________________________
 void TEveGeoTopNode::SetVisLevel(Int_t vislvl)
 {
    fVisLevel = vislvl;
-   gReve->Redraw3D();
+   gEve->Redraw3D();
 }
 
 /******************************************************************************/
@@ -506,10 +506,10 @@ TEveGeoShapeExtract* TEveGeoShape::DumpShapeTree(TEveGeoShape* gsre, TEveGeoShap
 TEveGeoShape* TEveGeoShape::ImportShapeExtract(TEveGeoShapeExtract * gse,
                                                TEveElement    * parent)
 {
-   gReve->DisableRedraw();
+   gEve->DisableRedraw();
    TEveGeoShape* gsre = SubImportShapeExtract(gse, parent);
    gsre->ElementChanged();
-   gReve->EnableRedraw();
+   gEve->EnableRedraw();
    return gsre;
 }
 
@@ -529,7 +529,7 @@ TEveGeoShape* TEveGeoShape::SubImportShapeExtract(TEveGeoShapeExtract * gse,
    if (gsre->fShape)
       gsre->fShape->SetUniqueID(gsre->fShape->GetUniqueID() + 1);
 
-   gReve->AddGlobalRenderElement(gsre, parent);
+   gEve->AddGlobalElement(gsre, parent);
 
    if (gse->HasElements())
    {

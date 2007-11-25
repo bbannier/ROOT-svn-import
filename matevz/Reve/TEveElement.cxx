@@ -1,4 +1,4 @@
-// @(#)root/reve:$Id$
+// @(#)root/eve:$Id$
 // Authors: Matevz Tadel & Alja Mrak-Tadel: 2006, 2007
 
 /*************************************************************************
@@ -155,7 +155,7 @@ void TEveElement::CheckReferenceCount(const TEveException& eh)
       if (gDebug > 0)
          Info(eh, Form("auto-destructing '%s' on zero reference count.", GetRnrElName()));
 
-      gReve->PreDeleteRenderElement(this);
+      gEve->PreDeleteElement(this);
       delete this;
    }
 }
@@ -418,7 +418,7 @@ void TEveElement::SpawnEditor()
 {
    // Show GUI editor for this object.
 
-   gReve->EditRenderElement(this);
+   gEve->EditElement(this);
 }
 
 //______________________________________________________________________________
@@ -542,7 +542,7 @@ TGListTreeItem* TEveElement::AddElement(TEveElement* el)
 
    static const TEveException eH("TEveElement::AddElement ");
 
-   if ( ! AcceptRenderElement(el))
+   if ( ! AcceptElement(el))
       throw(eH + Form("parent '%s' rejects '%s'.",
                       GetRnrElName(), el->GetRnrElName()));
 
@@ -650,9 +650,9 @@ void TEveElement::Destroy()
    if (fDenyDestroy > 0)
       throw(eH + "this element '%s' is protected against destruction.", GetRnrElName());
 
-   gReve->PreDeleteRenderElement(this);
+   gEve->PreDeleteElement(this);
    delete this;
-   gReve->Redraw3D();
+   gEve->Redraw3D();
 }
 
 //______________________________________________________________________________
@@ -690,7 +690,7 @@ Bool_t TEveElement::HandleElementPaste(TEveElement* el)
    // React to element being pasted or dnd-ed.
    // Return true if redraw is needed.
 
-   gReve->AddRenderElement(el, this);
+   gEve->AddElement(el, this);
    return kTRUE;
 }
 
@@ -698,9 +698,9 @@ Bool_t TEveElement::HandleElementPaste(TEveElement* el)
 void TEveElement::ElementChanged(Bool_t update_scenes, Bool_t redraw)
 {
    if (update_scenes)
-      gReve->RenderElementChanged(this);
+      gEve->ElementChanged(this);
    if (redraw)
-      gReve->Redraw3D();
+      gEve->Redraw3D();
 }
 
 /******************************************************************************/
@@ -811,7 +811,7 @@ TEveElementList::TEveElementList(const Text_t* n, const Text_t* t, Bool_t doColo
 }
 
 //______________________________________________________________________________
-Bool_t TEveElementList::AcceptRenderElement(TEveElement* el)
+Bool_t TEveElementList::AcceptElement(TEveElement* el)
 {
    // Check if TEveElement el is inherited from fChildClass.
    // Virtual from TEveElement.

@@ -4,10 +4,10 @@ void geom_fmd()
 {
   using namespace std;
 
-  gGeoManager = gReve->GetGeometry("$REVESYS/alice-data/alice_fullgeo.root");
+  gGeoManager = gEve->GetGeometry("$REVESYS/alice-data/alice_fullgeo.root");
 
-  Reve::RenderElementList* list = new Reve::RenderElementList("FMD");
-  gReve->AddGlobalRenderElement(list);
+  Reve::ElementList* list = new Reve::ElementList("FMD");
+  gEve->AddGlobalElement(list);
 
   for(Int_t i=1; i<=3; ++i) {
     TGeoNode* node;
@@ -22,14 +22,14 @@ void geom_fmd()
     node = gGeoManager->GetTopVolume()->FindNode(form);
     re = new Reve::GeoTopNodeRnrEl(gGeoManager, node);
     re->UseNodeTrans();
-    gReve->AddGlobalRenderElement(re, list);
+    gEve->AddGlobalElement(re, list);
 
     sprintf(form,"F%dMB_%d", i, i);
     node = gGeoManager->GetTopVolume()->FindNode(form);
     re = new Reve::GeoTopNodeRnrEl(gGeoManager, node);
     re->UseNodeTrans();
-    gReve->AddGlobalRenderElement(re, list);
+    gEve->AddGlobalElement(re, list);
   }
 
-  gReve->Redraw3D();
+  gEve->Redraw3D();
 }

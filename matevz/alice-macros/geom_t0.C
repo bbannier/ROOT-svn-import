@@ -4,10 +4,10 @@ void geom_t0()
 {
   using namespace std;
 
-  gGeoManager = gReve->GetGeometry("$REVESYS/alice-data/alice_fullgeo.root");
+  gGeoManager = gEve->GetGeometry("$REVESYS/alice-data/alice_fullgeo.root");
 
-  Reve::RenderElementList* list = new Reve::RenderElementList("T0");
-  gReve->AddGlobalRenderElement(list);
+  Reve::ElementList* list = new Reve::ElementList("T0");
+  gEve->AddGlobalElement(list);
 
   TGeoNode* node;
   Reve::GeoTopNodeRnrEl* re;
@@ -15,12 +15,12 @@ void geom_t0()
   node = gGeoManager->GetTopVolume()->FindNode("0STR_1");
   re = new Reve::GeoTopNodeRnrEl(gGeoManager, node);
   re->UseNodeTrans();
-  gReve->AddGlobalRenderElement(re, list);
+  gEve->AddGlobalElement(re, list);
 
   node = gGeoManager->GetTopVolume()->FindNode("0STL_1");
   re = new Reve::GeoTopNodeRnrEl(gGeoManager, node);
   re->UseNodeTrans();
-  gReve->AddGlobalRenderElement(re, list);
+  gEve->AddGlobalElement(re, list);
 
-  gReve->Redraw3D();
+  gEve->Redraw3D();
 }

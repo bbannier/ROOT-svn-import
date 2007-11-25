@@ -1,4 +1,4 @@
-// @(#)root/reve:$Id$
+// @(#)root/eve:$Id$
 // Authors: Matevz Tadel & Alja Mrak-Tadel: 2006, 2007
 
 /*************************************************************************
@@ -116,7 +116,7 @@ void TEveDigitSet::SetMainColor(Color_t color)
       fFrame->SetFrameColor(color);
       fFrame->UpdateBackPtrItems();
    }
-   gReve->Redraw3D();
+   gEve->Redraw3D();
 }
 
 /******************************************************************************/

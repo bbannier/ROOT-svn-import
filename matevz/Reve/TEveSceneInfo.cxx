@@ -1,4 +1,4 @@
-// @(#)root/reve:$Id$
+// @(#)root/eve:$Id$
 // Authors: Matevz Tadel & Alja Mrak-Tadel: 2006, 2007
 
 /*************************************************************************
@@ -63,11 +63,11 @@ void TEveSceneInfo::SetRnrState(Bool_t rnr)
 /******************************************************************************/
 
 //______________________________________________________________________________
-Bool_t TEveSceneInfo::AcceptRenderElement(TEveElement* /*el*/)
+Bool_t TEveSceneInfo::AcceptElement(TEveElement* /*el*/)
 {
-   static const TEveException eH("TEveSceneInfo::AcceptRenderElement ");
+   static const TEveException eH("TEveSceneInfo::AcceptElement ");
 
-   gReve->SetStatusLine(eH + "this class does not accept children.");
+   gEve->SetStatusLine(eH + "this class does not accept children.");
    return kFALSE;
 }
 
@@ -76,6 +76,6 @@ Bool_t TEveSceneInfo::HandleElementPaste(TEveElement* /*el*/)
 {
    static const TEveException eH("TEveSceneInfo::HandleElementPaste ");
 
-   gReve->SetStatusLine(eH + "this class does not accept children.");
+   gEve->SetStatusLine(eH + "this class does not accept children.");
    return kFALSE;
 }

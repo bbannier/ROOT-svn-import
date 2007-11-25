@@ -13,7 +13,7 @@ void trd_hits_z_split(const char *varexp    = "fX:fY:fZ:fZ",
   l->SetMarkerStyle(20); // full circle
   l->SetMarkerSize(.5);
   
-  gReve->AddRenderElement(l);
+  gEve->AddElement(l);
   l->InitBins("Z", 20, -360, 360);
 
   TPointSelector ps(ht, l, varexp, selection);
@@ -21,5 +21,5 @@ void trd_hits_z_split(const char *varexp    = "fX:fY:fZ:fZ",
 
   l->CloseBins();
 
-  gReve->Redraw3D();
+  gEve->Redraw3D();
 }

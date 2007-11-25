@@ -1,4 +1,4 @@
-// @(#)root/reve:$Id$
+// @(#)root/eve:$Id$
 // Authors: Matevz Tadel & Alja Mrak-Tadel: 2006, 2007
 
 /*************************************************************************
@@ -79,7 +79,7 @@ void TEveViewer::AddScene(TEveScene* scene)
    TGLSceneInfo* glsi = fGLViewer->AddScene(scene->GetGLScene());
    if (glsi != 0) {
       TEveSceneInfo* si = new TEveSceneInfo(this, scene, glsi);
-      gReve->AddRenderElement(si, this);
+      gEve->AddElement(si, this);
    } else {
       throw(eH + "scene already in the viewer.");
    }
@@ -194,7 +194,7 @@ void TEveViewerList::SceneDestructing(TEveScene* scene)
          TEveSceneInfo* sinfo = (TEveSceneInfo*) *j;
          ++j;
          if (sinfo->GetScene() == scene)
-            gReve->RemoveRenderElement(sinfo, viewer);
+            gEve->RemoveElement(sinfo, viewer);
       }
    }
 }

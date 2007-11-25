@@ -34,8 +34,8 @@ t0_hits(const char *varexp    = "T0.fX:T0.fY:T0.fZ",
   points->SetMarkerSize(.5);
   points->SetMarkerColor((Color_t)3);
 
-  gReve->AddRenderElement(points);
-  gReve->Redraw3D();
+  gEve->AddElement(points);
+  gEve->Redraw3D();
 
   return points;
 }

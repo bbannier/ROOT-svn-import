@@ -1,4 +1,4 @@
-// @(#)root/reve:$Id$
+// @(#)root/eve:$Id$
 // Authors: Matevz Tadel & Alja Mrak-Tadel: 2006, 2007
 
 /*************************************************************************
@@ -31,7 +31,7 @@ public:
 
    TEveElement* GetRnrElement() const;
 
-   void DisplayRenderElement(TEveElement* re);
+   void DisplayElement(TEveElement* re);
    void DisplayObject(TObject* obj);
 
    virtual void SetModel(TVirtualPad* pad, TObject* obj, Int_t event);

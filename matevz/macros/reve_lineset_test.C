@@ -19,8 +19,8 @@ TEveStraightLineSet* reve_lineset_test(Int_t nlines = 40, Int_t nmarkers = 4)
     }
   }
   
-  gReve->AddRenderElement(ls);
-  gReve->Redraw3D();
+  gEve->AddElement(ls);
+  gEve->Redraw3D();
  
   return ls;  
 }

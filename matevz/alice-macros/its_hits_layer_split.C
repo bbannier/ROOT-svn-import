@@ -16,7 +16,7 @@ void its_hits_layer_split(const char *varexp    = "fX:fY:fZ:fLayer",
   l->SetMarkerStyle(2); // cross
   l->SetMarkerSize(.2);
 
-  gReve->AddRenderElement(l);
+  gEve->AddElement(l);
   l->InitBins("Layer", 6, 0.5, 6.5);
 
   TPointSelector ps(ht, l, varexp, selection);
@@ -24,5 +24,5 @@ void its_hits_layer_split(const char *varexp    = "fX:fY:fZ:fLayer",
 
   l->CloseBins();
 
-  gReve->Redraw3D();
+  gEve->Redraw3D();
 }

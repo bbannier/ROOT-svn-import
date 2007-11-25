@@ -1,4 +1,4 @@
-// @(#)root/reve:$Id$
+// @(#)root/eve:$Id$
 // Authors: Matevz Tadel & Alja Mrak-Tadel: 2006, 2007
 
 /*************************************************************************
@@ -489,7 +489,7 @@ void TEvePointSetArray::InitBins(const Text_t* quant_name,
       fBins[i]->SetMarkerStyle(fMarkerStyle);
       fBins[i]->SetMarkerSize(fMarkerSize);
       if (addRe)
-         gReve->AddRenderElement(fBins[i], this);
+         gEve->AddElement(fBins[i], this);
       else
          AddElement(fBins[i]);
    }

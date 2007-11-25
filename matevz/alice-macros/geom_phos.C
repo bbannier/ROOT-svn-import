@@ -4,10 +4,10 @@ void geom_phos()
 {
   using namespace std;
 
-  gGeoManager = gReve->GetGeometry("$REVESYS/alice-data/alice_fullgeo.root");
+  gGeoManager = gEve->GetGeometry("$REVESYS/alice-data/alice_fullgeo.root");
 
-  Reve::RenderElementList* list = new Reve::RenderElementList("PHOS");
-  gReve->AddGlobalRenderElement(list);
+  Reve::ElementList* list = new Reve::ElementList("PHOS");
+  gEve->AddGlobalElement(list);
 
   for(Int_t i=1; i<=5; ++i) {
     //PH The line below is replaced waiting for a fix in Root
@@ -20,8 +20,8 @@ void geom_phos()
 
     Reve::GeoTopNodeRnrEl* re = new Reve::GeoTopNodeRnrEl(gGeoManager, node);
     re->UseNodeTrans();
-    gReve->AddGlobalRenderElement(re, list);
+    gEve->AddGlobalElement(re, list);
   }
 
-  gReve->Redraw3D();
+  gEve->Redraw3D();
 }

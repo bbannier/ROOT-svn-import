@@ -7,6 +7,6 @@ void init_trd()
 	Reve::AssertMacro("region_marker.C");
 
 	Alieve::TRDLoaderManager *trd=new Alieve::TRDLoaderManager("TRD manager", "Loader manager for TRD data monitoring");
-	gReve->AddRenderElement(trd);
-	gReve->AddToListTree(trd, kTRUE);
+	gEve->AddElement(trd);
+	gEve->AddToListTree(trd, kTRUE);
 }

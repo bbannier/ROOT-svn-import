@@ -1,4 +1,4 @@
-// @(#)root/reve:$Id$
+// @(#)root/eve:$Id$
 // Authors: Matevz Tadel & Alja Mrak-Tadel: 2006, 2007
 
 /*************************************************************************
@@ -34,6 +34,7 @@ class TEveElement;
 class TEveUtil
 {
 public:
+   virtual ~TEveUtil() {}
 
    // Environment, Macro functions
 
@@ -47,9 +48,9 @@ public:
 
    // Color management
 
-   static void     ColorFromIdx(Color_t ci, UChar_t* col, Bool_t alpha=kTRUE);
+   static void     ColorFromIdx(Color_t ci, UChar_t col[4], Bool_t alpha=kTRUE);
    static void     ColorFromIdx(Float_t f1, Color_t c1, Float_t f2, Color_t c2,
-                                UChar_t* col, Bool_t alpha=kTRUE);
+                                UChar_t col[4], Bool_t alpha=kTRUE);
    static Color_t* FindColorVar(TObject* obj, const Text_t* varname);
 
    ClassDef(TEveUtil, 0); // Standard utility functions for Reve.
