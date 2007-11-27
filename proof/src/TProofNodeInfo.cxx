@@ -137,16 +137,16 @@ void TProofNodeInfo::Print(const Option_t *opt) const
       Printf("%d %s:%d %s %s", fNodeType, fNodeName.Data(), fPort,
                                fOrdinal.Data(), fWorkDir.Data());
    } else {
-      Printf("fNodeType:  %d", fNodeType);
-      Printf("fNodeName:  %s", fNodeName.Data());
-      Printf("fWorkDir:   %s", fWorkDir.Data());
-      Printf("fOrdinal:   %s", fOrdinal.Data());
-      Printf("fImage:     %s", fImage.Data());
-      Printf("fId:        %s", fId.Data());
-      Printf("fConfig:    %s", fConfig.Data());
-      Printf("fMsd:       %s", fMsd.Data());
-      Printf("fPort:      %d", fPort);
-      Printf("fPerfIndex: %d\n", fPerfIndex);
+      Printf(" NodeType:      %d", fNodeType);
+      Printf(" NodeName:      %s", fNodeName.Data());
+      Printf(" WorkDir:       %s", fWorkDir.Data());
+      Printf(" Ordinal:       %s", fOrdinal.Data());
+      Printf(" Image:         %s", fImage.Data());
+      Printf(" Id:            %s", fId.Data());
+      Printf(" Config:        %s", fConfig.Data());
+      Printf(" Msd:           %s", fMsd.Data());
+      Printf(" Port:          %d", fPort);
+      Printf(" Performance:   %d\n", fPerfIndex);
    }
 }
 

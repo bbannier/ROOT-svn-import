@@ -189,7 +189,11 @@ void MergeRootfile( TDirectory *target, TList *sourcelist, Int_t isdir )
    path.Remove( 0, 2 );
 
    TDirectory *first_source = (TDirectory*)sourcelist->First();
-   THashList allNames;
+   Int_t nguess = sourcelist->GetSize()+1000;
+   THashList allNames(nguess);
+   ((THashList*)target->GetList())->Rehash(nguess);
+   ((THashList*)target->GetListOfKeys())->Rehash(nguess);
+   TList listH;
    while(first_source) {
       TDirectory *current_sourcedir = first_source->GetDirectory(path);
       if (!current_sourcedir) {
@@ -208,18 +212,17 @@ void MergeRootfile( TDirectory *target, TList *sourcelist, Int_t isdir )
          if (current_sourcedir == target) break;
          //keep only the highest cycle number for each key
          if (oldkey && !strcmp(oldkey->GetName(),key->GetName())) continue;
+         if (!strcmp(key->GetClassName(),"TProcessID")) {key->ReadObj(); continue;}
          if (allNames.FindObject(key->GetName())) continue;
          allNames.Add(new TObjString(key->GetName()));
-            
          // read object from first source file
-         current_sourcedir->cd();
+         //current_sourcedir->cd();
          TObject *obj = key->ReadObj();
 
          if ( obj->IsA()->InheritsFrom( TH1::Class() ) ) {
             // descendant of TH1 -> merge it
 
             TH1 *h1 = (TH1*)obj;
-            TList listH;
 
             // loop over all source files and add the content of the
             // correspondant histogram to the one pointed to by "h1"
