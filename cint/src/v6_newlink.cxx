@@ -996,6 +996,13 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
          }
          break;
 
+         case 'b' : // Unsigned Char ????
+         {
+            unsigned char valueb = param.obj.uch;
+            __asm__ __volatile__("push %0" :: "g" (valueb));
+         }
+         break;
+
          case 'c' : // Char
          {
             char valuec = param.obj.ch;
@@ -1092,7 +1099,7 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
          break;
 
          default:
-            printf("Type %c not known yet (method)\n", para_type);
+            printf("Type %c not known yet (asm push)\n", para_type);
          }
       }
       else{
@@ -1185,6 +1192,12 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
       case 'i' : // Integer = Single Word
       {
          __asm__ __volatile__("call *%1" : "=a" (result7->obj.i) : "g" (vaddress));
+      }
+      break;
+
+      case 'b' : // Unsigned Char ????
+      {
+         __asm__ __volatile__("call *%1" : "=a" (result7->obj.uch) : "g" (vaddress));
       }
       break;
 
@@ -1308,7 +1321,7 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
       break;
                
       default:
-         printf("Type %c not known yet (call)\n", type);
+         printf("Type %c not known yet (asm call)\n", type);
 
          /*
            default: // This probably means it returns void
@@ -1778,6 +1791,13 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
                }
                break;
 
+               case 'b' : // Unsigned Char ????
+               {
+                  unsigned char valueb = param.obj.uch;
+                  __asm__ __volatile__("push %0" :: "g" (valueb));
+               }
+               break;
+
                case 'c' : // Char
                {
                   char valuec = param.obj.ch;
@@ -1863,7 +1883,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
                break;
 
                default:
-                  printf("Type %c not known yet (method)\n", para_type);
+                  printf("Type %c not known yet (stub method)\n", para_type);
                }
             }
             else{
