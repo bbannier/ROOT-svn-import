@@ -39,6 +39,7 @@
 
 #include <stdlib.h>
 
+#include "TROOT.h"
 #include "TGListTree.h"
 #include "TGPicture.h"
 #include "TGCanvas.h"
@@ -53,6 +54,8 @@
 #include "TSystem.h"
 #include "TString.h"
 #include "TObjString.h"
+#include "TGDNDManager.h"
+#include "TBufferFile.h"
 #include "Riostream.h"
 
 
@@ -138,6 +141,7 @@ TGListTreeItem::TGListTreeItem(TGClient *client, const char *name,
 
    fHasColor = kFALSE;
    fColor = 0;
+   fDNDState = 0;
 }
 
 //______________________________________________________________________________
@@ -149,6 +153,68 @@ TGListTreeItem::~TGListTreeItem()
    fClient->FreePicture(fClosedPic);
    fClient->FreePicture(fCheckedPic);
    fClient->FreePicture(fUncheckedPic);
+}
+
+//______________________________________________________________________________
+Bool_t TGListTreeItem::HasCheckedChild(Bool_t first)
+{
+   // Add all child items of 'item' into the list 'checked'.
+
+   TGListTreeItem *item = this;
+
+   while (item) {
+      if (item->IsChecked()) {
+         return kTRUE;
+      }
+      if (item->GetFirstChild()) {
+         if (item->GetFirstChild()->HasCheckedChild())
+            return kTRUE;
+      }
+      if (!first)
+         item = item->GetNextSibling();
+      else
+         break;
+   }
+   return kFALSE;
+}
+
+//______________________________________________________________________________
+Bool_t TGListTreeItem::HasUnCheckedChild(Bool_t first)
+{
+   // Add all child items of 'item' into the list 'checked'.
+
+   TGListTreeItem *item = this;
+
+   while (item) {
+      if (!item->IsChecked()) {
+         return kTRUE;
+      }
+      if (item->GetFirstChild()) {
+         if (item->GetFirstChild()->HasUnCheckedChild())
+            return kTRUE;
+      }
+      if (!first)
+         item = item->GetNextSibling();
+      else
+         break;
+   }
+   return kFALSE;
+}
+
+//______________________________________________________________________________
+void TGListTreeItem::UpdateState()
+{
+   // Update the state of the node 'item' according to the children states.
+
+   if ((!fChecked && HasCheckedChild(kTRUE)) ||
+       (fChecked && HasUnCheckedChild(kTRUE))) {
+      SetCheckBoxPictures(gClient->GetPicture("checked_dis_t.xpm"),
+                          gClient->GetPicture("unchecked_dis_t.xpm"));
+   }
+   else {
+      SetCheckBoxPictures(gClient->GetPicture("checked_t.xpm"),
+                          gClient->GetPicture("unchecked_t.xpm"));
+   }
 }
 
 //______________________________________________________________________________
@@ -164,8 +230,8 @@ void TGListTreeItem::CheckAllChildren(Bool_t state)
       if (IsChecked())
          Toggle();
    }
-
    CheckChildren(GetFirstChild(), state);
+   UpdateState();   
 }
 
 //______________________________________________________________________________
@@ -187,6 +253,7 @@ void TGListTreeItem::CheckChildren(TGListTreeItem *item, Bool_t state)
       if (item->GetFirstChild()) {
          CheckChildren(item->GetFirstChild(), state);
       }
+      item->UpdateState();   
       item = item->GetNextSibling();
    }
 }
@@ -275,6 +342,7 @@ TGListTree::TGListTree(TGWindow *p, UInt_t w, UInt_t h, UInt_t options,
    fAutoTips    = kFALSE;
    fAutoCheckBoxPic = kTRUE;
    fDisableOpen = kFALSE;
+   fBdown       = kFALSE;
 
    fGrayPixel   = GetGrayPixel();
    fFont        = GetDefaultFontStruct();
@@ -292,7 +360,14 @@ TGListTree::TGListTree(TGWindow *p, UInt_t w, UInt_t h, UInt_t options,
    fIndent   = 3;  // 0;
    fMargin   = 2;
 
+   fXDND = fYDND = 0;
+   fDNDData.fData = 0;
+   fDNDData.fDataLength = 0;
+   fDNDData.fDataType = 0;
+   fBuf = 0;
+
    fColorMode = kDefault;
+   fCheckMode = kSimple;
    if (fCanvas) fCanvas->GetVScrollbar()->SetSmallIncrement(20);
 
    gVirtualX->GrabButton(fId, kAnyButton, kAnyModifier,
@@ -303,6 +378,12 @@ TGListTree::TGListTree(TGWindow *p, UInt_t w, UInt_t h, UInt_t options,
             kLeaveWindowMask | kKeyPressMask);
    SetWindowName();
 
+   fDNDTypeList = new Atom_t[3];
+   fDNDTypeList[0] = gVirtualX->InternAtom("application/root", kFALSE);
+   fDNDTypeList[1] = gVirtualX->InternAtom("text/uri-list", kFALSE);
+   fDNDTypeList[2] = 0;
+   gVirtualX->SetDNDAware(fId, fDNDTypeList);
+   SetDNDTarget(kTRUE);
    fEditDisabled = kEditDisable | kEditDisableGrab | kEditDisableBtnEnable;
 }
 
@@ -318,6 +399,7 @@ TGListTree::TGListTree(TGCanvas *p,UInt_t options,ULong_t back) :
    fAutoTips    = kFALSE;
    fAutoCheckBoxPic = kTRUE;
    fDisableOpen = kFALSE;
+   fBdown       = kFALSE;
 
    fGrayPixel   = GetGrayPixel();
    fFont        = GetDefaultFontStruct();
@@ -335,7 +417,14 @@ TGListTree::TGListTree(TGCanvas *p,UInt_t options,ULong_t back) :
    fIndent   = 3;  // 0;
    fMargin   = 2;
 
+   fXDND = fYDND = 0;
+   fDNDData.fData = 0;
+   fDNDData.fDataLength = 0;
+   fDNDData.fDataType = 0;
+   fBuf = 0;
+
    fColorMode = kDefault;
+   fCheckMode = kSimple;
    if (fCanvas) fCanvas->GetVScrollbar()->SetSmallIncrement(20);
 
    gVirtualX->GrabButton(fId, kAnyButton, kAnyModifier,
@@ -346,6 +435,12 @@ TGListTree::TGListTree(TGCanvas *p,UInt_t options,ULong_t back) :
             kLeaveWindowMask | kKeyPressMask);
    SetWindowName();
 
+   fDNDTypeList = new Atom_t[3];
+   fDNDTypeList[0] = gVirtualX->InternAtom("application/root", kFALSE);
+   fDNDTypeList[1] = gVirtualX->InternAtom("text/uri-list", kFALSE);
+   fDNDTypeList[2] = 0;
+   gVirtualX->SetDNDAware(fId, fDNDTypeList);
+   SetDNDTarget(kTRUE);
    fEditDisabled = kEditDisable | kEditDisableGrab | kEditDisableBtnEnable;
 }
 
@@ -356,6 +451,7 @@ TGListTree::~TGListTree()
 
    TGListTreeItem *item, *sibling;
 
+   delete [] fDNDTypeList;
    delete fTip;
 
    item = fFirst;
@@ -368,7 +464,6 @@ TGListTree::~TGListTree()
       item = sibling;
    }
 }
-
 
 //---- highlighting utilities
 
@@ -462,6 +557,9 @@ Bool_t TGListTree::HandleButton(Event_t *event)
                (event->fX > minxchk)) {
                fLastY = event->fY;
                ToggleItem(item);
+               if (fCheckMode == kRecursive) {
+                  CheckAllChildren(item, item->IsChecked());
+               }
                UpdateChecked(item, kTRUE);
                Checked((TObject *)item->GetUserData(), item->IsChecked());
                return kTRUE;
@@ -471,6 +569,12 @@ Bool_t TGListTree::HandleButton(Event_t *event)
                ClearViewPort();
                return kTRUE;
             }
+         }
+         // DND specific
+         if (event->fCode == kButton1) {
+            fXDND = event->fX;
+            fYDND = event->fY;
+            fBdown = kTRUE;
          }
          if (fSelected) fSelected->fActive = kFALSE;
          fLastY = event->fY;
@@ -483,6 +587,9 @@ Bool_t TGListTree::HandleButton(Event_t *event)
          Clicked(item, event->fCode);
          Clicked(item, event->fCode, event->fXRoot, event->fYRoot);
       }
+   }
+   if (event->fType == kButtonRelease) {
+      fBdown = kFALSE;
    }
    return kTRUE;
 }
@@ -541,6 +648,79 @@ Bool_t TGListTree::HandleCrossing(Event_t *event)
 }
 
 //______________________________________________________________________________
+Atom_t TGListTree::HandleDNDPosition(Int_t /*x*/, Int_t y, Atom_t action,
+                                      Int_t /*xroot*/, Int_t /*yroot*/)
+{
+   // Handle dragging position events.
+
+   static TGListTreeItem *olditem = 0;
+   TGListTreeItem *item;
+   if ((item = FindItem(y)) != 0) {
+      if (item->IsDNDTarget()) {
+         fDropItem = item;
+         if (olditem)
+            HighlightItem(olditem, kFALSE, kTRUE);
+         HighlightItem(item, kTRUE, kTRUE);
+         olditem = item;
+         return action;
+      }
+   }
+   fDropItem = 0;
+   if (olditem) {
+      HighlightItem(olditem, kFALSE, kTRUE);
+      olditem = 0;
+   }
+   return kNone;
+}
+
+//______________________________________________________________________________
+Atom_t TGListTree::HandleDNDEnter(Atom_t *typelist)
+{
+   // Handle drag enter events.
+
+   Atom_t ret = kNone;
+   for (int i = 0; typelist[i] != kNone; ++i) {
+      if (typelist[i] == fDNDTypeList[0])
+         ret = fDNDTypeList[0];
+      if (typelist[i] == fDNDTypeList[1])
+         ret = fDNDTypeList[1];
+   }
+   return ret;
+}
+
+//______________________________________________________________________________
+Bool_t TGListTree::HandleDNDLeave()
+{
+   // Handle drag leave events.
+
+   return kTRUE;
+}
+
+//______________________________________________________________________________
+Bool_t TGListTree::HandleDNDDrop(TDNDData *data)
+{
+   // Handle drop events.
+
+   DataDropped(fDropItem, data);
+   HighlightItem(fDropItem, kFALSE, kTRUE);
+   //ClearHighlighted();
+   return kTRUE;
+}
+
+//______________________________________________________________________________
+void TGListTree::DataDropped(TGListTreeItem *item, TDNDData *data)
+{
+   // Emit DataDropped() signal.
+
+   Long_t args[2];
+
+   args[0] = (Long_t)item;
+   args[1] = (Long_t)data;
+
+   Emit("DataDropped(TGListTreeItem*,TDNDData*)", args);
+}
+
+//______________________________________________________________________________
 Bool_t TGListTree::HandleMotion(Event_t *event)
 {
    // Handle mouse motion event. Only used to set tool tip.
@@ -549,7 +729,10 @@ Bool_t TGListTree::HandleMotion(Event_t *event)
    fOnMouseOver = kFALSE;
    TGPosition pos = GetPagePosition();
 
-   if ((item = FindItem(event->fY)) != 0) {
+   if (gDNDManager->IsDragging()) {
+      gDNDManager->Drag(event->fXRoot, event->fYRoot,
+                        TGDNDManager::GetDNDActionCopy(), event->fTime);
+   } else if ((item = FindItem(event->fY)) != 0) {
 
       if (item->HasCheckBox()) {
          if ((event->fX < (item->fXtext - Int_t(item->fPicWidth)) +
@@ -562,10 +745,38 @@ Bool_t TGListTree::HandleMotion(Event_t *event)
             gVirtualX->SetCursor(fId, gVirtualX->CreateCursor(kHand));
          }
       }
-      if (fTipItem == item) return kTRUE;
-
-      OnMouseOver(item);
-      gVirtualX->SetCursor(fId, gVirtualX->CreateCursor(kHand));
+      if (!gDNDManager->IsDragging()) {
+         if (fBdown && ((abs(event->fX - fXDND) > 2) || (abs(event->fY - fYDND) > 2))) {
+            if (gDNDManager && item->IsDNDSource()) {
+               if (!fBuf) fBuf = new TBufferFile(TBuffer::kWrite);
+               fBuf->Reset();
+               if (item->fUserData) {
+                  fDNDData.fDataType = fDNDTypeList[0];
+                  fBuf->WriteObject((TObject *)item->fUserData);
+                  fDNDData.fData = fBuf->Buffer();
+                  fDNDData.fDataLength = fBuf->Length();
+               }
+               else {
+                  fDNDData.fDataType = fDNDTypeList[1];
+                  TString str = Form("file://%s/%s\r\n",
+                              gSystem->UnixPathName(gSystem->WorkingDirectory()),
+                              item->GetText());
+                  fDNDData.fData = (void *)strdup(str.Data());
+                  fDNDData.fDataLength = str.Length()+1;
+               }
+               SetDragPixmap(item->fClosedPic);
+               gDNDManager->StartDrag(this, event->fXRoot, event->fYRoot);
+            }
+         }
+      }
+      if (gDNDManager->IsDragging()) {
+         gDNDManager->Drag(event->fXRoot, event->fYRoot,
+                           TGDNDManager::GetDNDActionCopy(), event->fTime);
+      } else {
+         if (fTipItem == item) return kTRUE;
+         OnMouseOver(item);
+         gVirtualX->SetCursor(fId, gVirtualX->CreateCursor(kHand));
+      }
 
       if (fTip)
          fTip->Hide();
@@ -606,6 +817,10 @@ Bool_t TGListTree::HandleKey(Event_t *event)
    if (event->fType == kGKeyPress) {
       gVirtualX->LookupString(event, input, sizeof(input), keysym);
       n = strlen(input);
+
+      if (!event->fState && (EKeySym)keysym == kKey_Escape) {
+         if (gDNDManager->IsDragging()) gDNDManager->EndDrag();
+      }
 
       item = FindItem(event->fY);
       if (!item) return kFALSE;
@@ -1445,7 +1660,8 @@ void TGListTree::InsertChild(TGListTreeItem *parent, TGListTreeItem *item)
       }
 
    }
-   UpdateChecked(item);
+   if (item->HasCheckBox())
+      UpdateChecked(item);
 }
 
 //______________________________________________________________________________
@@ -1745,7 +1961,8 @@ Int_t TGListTree::ReparentChildren(TGListTreeItem *item,
 }
 
 //______________________________________________________________________________
-static Int_t Compare(const void *item1, const void *item2)
+extern "C"
+Int_t Compare(const void *item1, const void *item2)
 {
    return strcmp((*((TGListTreeItem **) item1))->GetText(),
                  (*((TGListTreeItem **) item2))->GetText());
@@ -1954,7 +2171,7 @@ start:
 
       item = FindChildByName(item, dirname);
 
-      if (!diritem && dirname) {
+      if (!diritem && dirname[0]) {
          fulldir += "/";
          fulldir += dirname;
 
@@ -2307,54 +2524,37 @@ void TGListTree::UpdateChecked(TGListTreeItem *item, Bool_t redraw)
 
    if (fAutoCheckBoxPic == kFALSE) return;
 
-   Bool_t diff = kFALSE;
-   TGListTreeItem *current = item;
-
-   if (item->GetParent()) {
-      current = item->GetParent()->GetFirstChild();
-   }
-   while (current) {
-      TGListTreeItem *parent = current->GetParent();
-      if ((parent) && (parent->HasCheckBox())) {
-         if ( ((parent->IsChecked()) && (!current->IsChecked())) ||
-              ((!parent->IsChecked()) && (current->IsChecked())) ) {
-            diff = kTRUE;
-            break;
-         }
-      }
-      current = current->fNextsibling;
-   }
-   if ((item->GetParent()) && (item->GetParent()->HasCheckBox())) {
-      if (diff) {
-         item->GetParent()->SetCheckBoxPictures(fClient->GetPicture("checked_dis_t.xpm"),
-                                                fClient->GetPicture("unchecked_dis_t.xpm"));
+   TGListTreeItem *parent;
+   TGListTreeItem *current;
+   current = item->GetFirstChild();
+   parent  = current ? current : item;
+   // recursively check parent/children status
+   while (parent && parent->HasCheckBox()) {
+      if ((!parent->IsChecked() && parent->HasCheckedChild(kTRUE)) ||
+          (parent->IsChecked() && parent->HasUnCheckedChild(kTRUE))) {
+         parent->SetCheckBoxPictures(fClient->GetPicture("checked_dis_t.xpm"),
+                                     fClient->GetPicture("unchecked_dis_t.xpm"));
       }
       else {
-         item->GetParent()->SetCheckBoxPictures(fClient->GetPicture("checked_t.xpm"),
-                                                fClient->GetPicture("unchecked_t.xpm"));
+         parent->SetCheckBoxPictures(fClient->GetPicture("checked_t.xpm"),
+                                     fClient->GetPicture("unchecked_t.xpm"));
       }
-   }
-   diff = kFALSE;
-   current = item->GetFirstChild();
-   while (current) {
-      if (current->HasCheckBox()) {
-         if ( ((current->IsChecked()) && (!item->IsChecked())) ||
-              ((!current->IsChecked()) && (item->IsChecked())) ) {
-            diff = kTRUE;
-            break;
+      parent = parent->GetParent();
+      if (parent && fCheckMode == kRecursive) {
+         if (!parent->IsChecked() && parent->GetFirstChild() && 
+             !parent->GetFirstChild()->HasUnCheckedChild()) {
+            parent->SetCheckBoxPictures(fClient->GetPicture("checked_t.xpm"),
+                                        fClient->GetPicture("unchecked_t.xpm"));
+            parent->CheckItem(kTRUE);
+         }
+         else if (parent->IsChecked() && parent->GetFirstChild() && 
+                  !parent->GetFirstChild()->HasCheckedChild()) {
+            parent->SetCheckBoxPictures(fClient->GetPicture("checked_t.xpm"),
+                                        fClient->GetPicture("unchecked_t.xpm"));
+            parent->CheckItem(kFALSE);
          }
       }
-      current = current->GetNextSibling();
    }
-   if (diff) {
-      item->SetCheckBoxPictures(fClient->GetPicture("checked_dis_t.xpm"),
-                                fClient->GetPicture("unchecked_dis_t.xpm"));
-   }
-   else {
-      item->SetCheckBoxPictures(fClient->GetPicture("checked_t.xpm"),
-                                fClient->GetPicture("unchecked_t.xpm"));
-   }
-
    if (redraw) {
       ClearViewPort();
    }

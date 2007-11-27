@@ -36,11 +36,15 @@
 #ifndef ROOT_TGWidget
 #include "TGWidget.h"
 #endif
+#ifndef ROOT_TDNDManager
+#include "TGDNDManager.h"
+#endif
 
 class TGPicture;
 class TGToolTip;
 class TGCanvas;
 class TList;
+class TBufferFile;
 
 class TGListTreeItem {
 
@@ -63,6 +67,7 @@ private:
    Int_t            fYtext;        // y position of item text
    UInt_t           fHeight;       // item height
    UInt_t           fPicWidth;     // width of item icon
+   Int_t            fDNDState;     // EDNDFlags
    const TGPicture *fOpenPic;      // icon for open state
    const TGPicture *fClosedPic;    // icon for closed state
    const TGPicture *fCheckedPic;   // icon for checked item
@@ -104,10 +109,22 @@ public:
    Bool_t          IsChecked() const { return fChecked; }
    void            CheckAllChildren(Bool_t state = kTRUE);
    void            CheckChildren(TGListTreeItem *item, Bool_t state);
-   
+
+   Bool_t          HasCheckedChild(Bool_t first=kFALSE);
+   Bool_t          HasUnCheckedChild(Bool_t first=kFALSE);
+   void            UpdateState();
+
    Color_t         GetColor() const { return fColor; }
    void            SetColor(Color_t color) { fHasColor = true;fColor = color; }
    void            ClearColor() { fHasColor = false; }
+
+   // drag and drop...
+   void            SetDNDSource(Bool_t onoff)
+                   { if (onoff) fDNDState |= kIsDNDSource; else fDNDState &= ~kIsDNDSource; }
+   void            SetDNDTarget(Bool_t onoff)
+                   { if (onoff) fDNDState |= kIsDNDTarget; else fDNDState &= ~kIsDNDTarget; }
+   Bool_t          IsDNDSource() const { return fDNDState & kIsDNDSource; }
+   Bool_t          IsDNDTarget() const { return fDNDState & kIsDNDTarget; }
 
    void            SavePrimitive(ostream &out, Option_t *option, Int_t n);
 
@@ -123,6 +140,10 @@ public:
       kDefault        = 0,
       kColorUnderline = BIT(0),
       kColorBox       = BIT(1)
+   };
+   enum ECheckMode {
+      kSimple    = BIT(2),
+      kRecursive = BIT(3)
    };
 
 protected:
@@ -144,11 +165,16 @@ protected:
    Int_t            fExposeBottom;   // bottom y position of visible region
    TGToolTip       *fTip;            // tooltip shown when moving over list items
    TGListTreeItem  *fTipItem;        // item for which tooltip is set
+   TBufferFile     *fBuf;            // buffer used for Drag and Drop
+   TDNDData         fDNDData;        // Drag and Drop data
+   Atom_t          *fDNDTypeList;    // handles DND types
+   TGListTreeItem  *fDropItem;       // item on which DND is over
    Bool_t           fAutoTips;       // assume item->fUserData is TObject and use GetTitle() for tip text
    Bool_t           fAutoCheckBoxPic;// change check box picture if parent and children have diffrent state
    Bool_t           fDisableOpen;    // disable branch opening on double-clicks
 
    EColorMarkupMode fColorMode;      // if/how to render item's main color
+   ECheckMode       fCheckMode;      // how to propagate check properties through the tree
    GContext_t       fColorGC;        // drawing context for main item color
 
    static Pixel_t        fgGrayPixel;
@@ -296,9 +322,23 @@ public:
    virtual void DoubleClicked(TGListTreeItem *entry, Int_t btn);  //*SIGNAL*
    virtual void DoubleClicked(TGListTreeItem *entry, Int_t btn, Int_t x, Int_t y);  //*SIGNAL*
    virtual void Checked(TObject *obj, Bool_t check);  //*SIGNAL*
+   virtual void DataDropped(TGListTreeItem *item, TDNDData *data);  //*SIGNAL*
+
+   Bool_t   HandleDNDDrop(TDNDData *data);
+   Atom_t   HandleDNDPosition(Int_t x, Int_t y, Atom_t action,
+                              Int_t xroot, Int_t yroot);
+   Atom_t   HandleDNDEnter(Atom_t * typelist);
+   Bool_t   HandleDNDLeave();
+
+   virtual TDNDData *GetDNDData(Atom_t) {
+      return &fDNDData;
+   }
 
    EColorMarkupMode GetColorMode() const { return fColorMode; }
    void SetColorMode(EColorMarkupMode colorMode) { fColorMode = colorMode; }
+
+   ECheckMode GetCheckMode() const { return fCheckMode; }
+   void SetCheckMode(ECheckMode mode) { fCheckMode = mode; }
 
    virtual void SavePrimitive(ostream &out, Option_t *option = "");
 

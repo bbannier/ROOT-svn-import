@@ -74,7 +74,10 @@ SYSTEMDO      = $(UNIXDO)
 endif
 endif
 ifeq ($(BUILDGL),yes)
-MODULES      += ftgl gl
+ifeq ($(BUILDFTGL),yes)
+MODULES      += ftgl
+endif
+MODULES      += gl
 endif
 ifeq ($(BUILDMYSQL),yes)
 MODULES      += mysql
@@ -743,6 +746,7 @@ endif
 	@rm -f etc/daemons/rootd.rc.d etc/daemons/rootd.xinetd
 	@rm -f etc/daemons/proofd.rc.d etc/daemons/proofd.xinetd
 	@rm -f etc/daemons/olbd.rc.d etc/daemons/xrootd.rc.d
+	@rm -f etc/svninfo.txt macros/html.C
 	@(find . -path '*/daemons' -prune -o -name *.d -exec rm -rf {} \; >/dev/null 2>&1;true)
 	@(find . -name *.o -exec rm -rf {} \; >/dev/null 2>&1;true)
 	-@cd test && $(MAKE) distclean
@@ -1069,3 +1073,11 @@ showbuild:
 	@echo "The list of modules to be built:"
 	@echo "--------------------------------"
 	@echo "$(MODULES)"
+
+showit:
+	@echo "Modules:$(word 1, $(MODULES))"
+	@$(foreach m, $(filter-out $(word 1, $(MODULES)), $(MODULES)), \
+	  echo -e "\t$(m)" ;) 
+	@echo "Libraries:$(word 1, $(ALLLIBS))"
+	@$(foreach l, $(filter-out $(word 1, $(ALLLIBS)), $(ALLLIBS)), \
+	  echo -e "\t$(l)" ;) 
