@@ -457,7 +457,7 @@ TPacketizerAdaptive::TPacketizerAdaptive(TDSet *dset, TList *slaves,
 
    // if fLoadBasedSched is 1 the packetizer calls GetWorkers at the start.
    fLoadBasedSched = kFALSE;
-   Long_t loadBasedSched = 0;
+   Int_t loadBasedSched = 0;
    if (TProof::GetParameter(input, "PROOF_LoadBasedSched",
                             loadBasedSched) == 0) {
       if (loadBasedSched == 1)
@@ -501,14 +501,22 @@ TPacketizerAdaptive::TPacketizerAdaptive(TDSet *dset, TList *slaves,
    TProof::GetParameter(input, "PROOF_BaseLocalPreference", baseLocalPreference);
    fBaseLocalPreference = (Float_t)baseLocalPreference;
 
+
+   //TODO: remove
+   Printf("fLoadBasedSched: %d !", fLoadBasedSched);
    if (fLoadBasedSched) {
       TList *wantWorkers = new TList();
       TList *workers = new TList();
       Int_t priorityTmp;
       gProofServ->GetWorkers(wantWorkers, workers, priorityTmp);
-      if (workers->GetSize() > 0)
+      if (workers->GetSize() > 0) {
+         //TODO: remove it
+         Printf("GetWorkers assigned the following %d workers for this job: ",
+                workers->GetSize());
+         workers->Print();
+
          gProofServ->GetProof()->SetParallel(workers->GetSize(), kTRUE);
-      else {
+      } else {
          Error("TPacketizerAdaptive", "GetWorkers returned an 'empty' list");
          return;
       }
