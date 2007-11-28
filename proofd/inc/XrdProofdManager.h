@@ -56,6 +56,8 @@ class XrdProofdManager {
 
    // List of available workers (on master only)
    std::list<XrdProofWorker *> *GetActiveWorkers();
+   // List of unique nodes (on master only)
+   std::list<XrdProofWorker *> *GetNodes();
    // Type of resource from which the info is taken
    int               ResourceType() const { return fResourceType; }
 
@@ -84,9 +86,9 @@ class XrdProofdManager {
    // This part may evolve in the future due to better understanding of
    // how resource brokering will work; for the time being we just move in
    // here the functionality we have now
-   int               Broadcast(int type, const char *msg, XrdProofdResponse *r);
+   int               Broadcast(int type, const char *msg, XrdProofdResponse *r, bool notify = 0);
    XrdClientMessage *Send(const char *url, int type,
-                          const char *msg, int srvtype, XrdProofdResponse *r);
+                          const char *msg, int srvtype, XrdProofdResponse *r, bool notify = 0);
 
    const char       *PROOFcfg() const { return fPROOFcfg.fName.c_str(); }
 
@@ -107,7 +109,10 @@ class XrdProofdManager {
    int               fResourceType; // resource type
    XrdProofdFile     fPROOFcfg;     // PROOF static configuration
 
-   std::list<XrdProofWorker *> fWorkers;  // vector of possible workers
+   int               fRequestTO;    // Timeout on broadcast request
+
+   std::list<XrdProofWorker *> fWorkers;  // List of possible workers
+   std::list<XrdProofWorker *> fNodes;   // List of worker unique nodes
 
    std::list<XrdProofServProxy *> fActiveSessions; // List of active sessions (non-idle)
 

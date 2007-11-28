@@ -17,8 +17,15 @@
 #include <TFile.h>
 #include <TSelector.h>
 
+class   TH1F;
+class   TH2F;
+
 class h1analysis : public TSelector {
    public :
+
+   TH1F           *hdmd;
+   TH2F           *h2;
+
    TTree          *fChain;    //pointer to the analyzed TTree or TChain
    //Declaration of leaves types
    Int_t           nrun;
@@ -529,6 +536,6 @@ Bool_t h1analysis::Notify()
 //   called when loading a new file
 //   get branch pointers
 
-   printf("Processing file: %s\n",fChain->GetCurrentFile()->GetName());
+   Info("Notify","processing file: %s",fChain->GetCurrentFile()->GetName());
    return kTRUE;
 }

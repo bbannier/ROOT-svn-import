@@ -172,6 +172,7 @@ TColor::~TColor()
    // Color destructor.
 
    gROOT->GetListOfColors()->Remove(this);
+   if (gROOT->GetListOfColors()->GetEntries() == 0) {fgPalette.Set(0); fgPalette=0;}
 }
 
 
@@ -678,6 +679,7 @@ void TColor::RGB2HLS(Float_t rr, Float_t gg, Float_t bb,
    // [0,1], hue is between [0,360], light and satur are [0,1].
 
    Float_t rnorm, gnorm, bnorm, minval, maxval, msum, mdiff, r, g, b;
+   minval = maxval =0 ;
    r = g = b = 0;
    if (rr > 0) r = rr; if (r > 1) r = 1;
    if (gg > 0) g = gg; if (g > 1) g = 1;

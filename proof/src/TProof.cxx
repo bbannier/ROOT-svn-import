@@ -457,7 +457,7 @@ Int_t TProof::Init(const char *masterurl, const char *conffile,
    fEnabledPackages = 0;
    fEndMaster      = IsMaster() ? kTRUE : kFALSE;
 
-   // Timeout for some collect actions 
+   // Timeout for some collect actions
    fCollectTimeout = gEnv->GetValue("Proof.CollectTimeout", -1);
 
    // Default entry point for the data pool is the master
@@ -1861,12 +1861,12 @@ Int_t TProof::Collect(TMonitor *mon, Long_t timeout)
          TIter nxs(al);
          TSocket *xs = 0;
          while ((xs = (TSocket *)nxs())) {
-           TSlave *wrk = FindSlave(xs);
-           if (wrk)
-              Info("Collect","   %s", wrk->GetName());
-           else
-              Info("Collect","   %p: %s:%d", xs, xs->GetInetAddress().GetHostName(),
-                                                 xs->GetInetAddress().GetPort());
+            TSlave *wrk = FindSlave(xs);
+            if (wrk)
+               Info("Collect","   %s", wrk->GetName());
+            else
+               Info("Collect","   %p: %s:%d", xs, xs->GetInetAddress().GetHostName(),
+                                                  xs->GetInetAddress().GetPort());
          }
       }
       mon->DeActivateAll();
@@ -1891,7 +1891,7 @@ Int_t TProof::Collect(TMonitor *mon, Long_t timeout)
 }
 
 //______________________________________________________________________________
-R__HIDDEN void TProof::CleanGDirectory(TList *ol)
+void TProof::CleanGDirectory(TList *ol)
 {
    // Remove links to objects in list 'ol' from gDirectory
 
@@ -1999,6 +1999,8 @@ Int_t TProof::CollectInputFrom(TSocket *s)
          {
             Int_t size;
             (*mess) >> size;
+            PDB(kGlobal,2)
+               Info("CollectInputFrom","kPROOF_LOGFILE: size: %d", size);
             RecvLogFile(s, size);
          }
          break;
@@ -2323,16 +2325,18 @@ Int_t TProof::CollectInputFrom(TSocket *s)
                (*mess) >> selec >> dsz >> first >> nent;
 
                // Start or reset the progress dialog
-               if (fProgressDialog && !TestBit(kUsingSessionGui)) {
-                  if (!fProgressDialogStarted) {
-                     fProgressDialog->ExecPlugin(5, this,
-                                                 selec.Data(), dsz, first, nent);
-                     fProgressDialogStarted = kTRUE;
-                  } else {
-                     ResetProgressDialog(selec, dsz, first, nent);
+               if (!gROOT->IsBatch()) {
+                  if (fProgressDialog && !TestBit(kUsingSessionGui)) {
+                     if (!fProgressDialogStarted) {
+                        fProgressDialog->ExecPlugin(5, this,
+                                                   selec.Data(), dsz, first, nent);
+                        fProgressDialogStarted = kTRUE;
+                     } else {
+                        ResetProgressDialog(selec, dsz, first, nent);
+                     }
                   }
+                  ResetBit(kUsingSessionGui);
                }
-               ResetBit(kUsingSessionGui);
             }
          }
          break;
@@ -3072,7 +3076,7 @@ Int_t TProof::Retrieve(const char *ref, const char *path)
       Broadcast(m, kActive);
       Collect(kActive, fCollectTimeout);
 
-      // Archive ir locally, if required
+      // Archive it locally, if required
       if (path) {
 
          // Get pointer to query
@@ -3561,7 +3565,7 @@ Int_t TProof::Exec(const char *cmd, Bool_t plusMaster)
 }
 
 //______________________________________________________________________________
-R__HIDDEN Int_t TProof::Exec(const char *cmd, ESlaves list, Bool_t plusMaster)
+Int_t TProof::Exec(const char *cmd, ESlaves list, Bool_t plusMaster)
 {
    // Send command to be executed on the PROOF master and/or slaves.
    // Command can be any legal command line command. Commands like
@@ -4267,7 +4271,7 @@ Int_t TProof::ClearPackage(const char *package)
 }
 
 //______________________________________________________________________________
-R__HIDDEN Int_t TProof::DisablePackage(const char *package)
+Int_t TProof::DisablePackage(const char *package)
 {
    // Remove a specific package.
    // Returns 0 in case of success and -1 in case of error.
@@ -4302,7 +4306,7 @@ R__HIDDEN Int_t TProof::DisablePackage(const char *package)
 }
 
 //______________________________________________________________________________
-R__HIDDEN Int_t TProof::DisablePackageOnClient(const char *package)
+Int_t TProof::DisablePackageOnClient(const char *package)
 {
    // Remove a specific package from the client.
    // Returns 0 in case of success and -1 in case of error.
@@ -4319,7 +4323,7 @@ R__HIDDEN Int_t TProof::DisablePackageOnClient(const char *package)
 }
 
 //______________________________________________________________________________
-R__HIDDEN Int_t TProof::DisablePackages()
+Int_t TProof::DisablePackages()
 {
    // Remove all packages.
    // Returns 0 in case of success and -1 in case of error.
@@ -4563,7 +4567,7 @@ Int_t TProof::LoadPackage(const char *package, Bool_t notOnClient)
 }
 
 //______________________________________________________________________________
-R__HIDDEN Int_t TProof::LoadPackageOnClient(const TString &package)
+Int_t TProof::LoadPackageOnClient(const TString &package)
 {
    // Load specified package in the client. Executes the PROOF-INF/SETUP.C
    // script on the client. Returns 0 in case of success and -1 in case of error.
@@ -4665,7 +4669,7 @@ R__HIDDEN Int_t TProof::LoadPackageOnClient(const TString &package)
 }
 
 //______________________________________________________________________________
-R__HIDDEN Int_t TProof::UnloadPackage(const char *package)
+Int_t TProof::UnloadPackage(const char *package)
 {
    // Unload specified package.
    // Returns 0 in case of success and -1 in case of error.
@@ -4695,7 +4699,7 @@ R__HIDDEN Int_t TProof::UnloadPackage(const char *package)
 }
 
 //______________________________________________________________________________
-R__HIDDEN Int_t TProof::UnloadPackageOnClient(const char *package)
+Int_t TProof::UnloadPackageOnClient(const char *package)
 {
    // Unload a specific package on the client.
    // Returns 0 in case of success and -1 in case of error.
@@ -4730,7 +4734,7 @@ R__HIDDEN Int_t TProof::UnloadPackageOnClient(const char *package)
 }
 
 //______________________________________________________________________________
-R__HIDDEN Int_t TProof::UnloadPackages()
+Int_t TProof::UnloadPackages()
 {
    // Unload all packages.
    // Returns 0 in case of success and -1 in case of error.
@@ -5570,7 +5574,7 @@ void TProof::ValidateDSet(TDSet *dset)
    }
 
    PDB(kGlobal,1)
-     Info("ValidateDSet","Calling Collect");
+      Info("ValidateDSet","Calling Collect");
    Collect(&usedslaves);
    SetDSet(0);
 }
@@ -5633,6 +5637,20 @@ void TProof::SetParameter(const char *par, const char *value)
       delete item;
    }
    il->Add(new TNamed(par, value));
+}
+
+//______________________________________________________________________________
+void TProof::SetParameter(const char *par, Int_t value)
+{
+   // Set an input list parameter.
+
+   TList *il = fPlayer->GetInputList();
+   TObject *item = il->FindObject(par);
+   if (item) {
+      il->Remove(item);
+      delete item;
+   }
+   il->Add(new TParameter<Int_t>(par, value));
 }
 
 //______________________________________________________________________________
@@ -6406,20 +6424,19 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
 
 
    //If skippedFiles is not provided we can not return list of skipped files.
-   if ((!skippedFiles || !&skippedFiles) && overwriteNone) {
+   if (!skippedFiles && overwriteNone) {
       Error("UploadDataSet",
             "Provide pointer to TList object as skippedFiles argument when using kOverwriteNoFiles option.");
       return kError;
    }
    //If skippedFiles is provided but did not point to a TList the have to STOP
-   if (skippedFiles && &skippedFiles)
-
+   if (skippedFiles) {
       if (skippedFiles->Class() != TList::Class()) {
          Error("UploadDataSet",
                "Provided skippedFiles argument does not point to a TList object.");
          return kError;
       }
-
+   }
    TSocket *master;
    if (fActiveSlaves->GetSize())
       master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
@@ -6518,7 +6535,7 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
                   Error("UploadDataSet", "file %s was not copied", fileUrl->GetUrl());
             } else {  // don't overwrite, but file exist and must be included
                fileList->Add(new TFileInfo(Form("%s/%s", dest.Data(), ent)));
-               if (skippedFiles && &skippedFiles) {
+               if (skippedFiles) {
                   // user specified the TList *skippedFiles argument so we create
                   // the list of skipped files
                   skippedFiles->Add(new TFileInfo(fileUrl->GetUrl()));
@@ -7415,6 +7432,24 @@ Int_t TProof::GetParameter(TCollection *c, const char *par, TString &value)
    }
    return -1;
 
+}
+
+//______________________________________________________________________________
+Int_t TProof::GetParameter(TCollection *c, const char *par, Int_t &value)
+{
+   // Get the value from the specified parameter from the specified collection.
+   // Returns -1 in case of error (i.e. list is 0, parameter does not exist
+   // or value type does not match), 0 otherwise.
+
+   TObject *obj = c->FindObject(par);
+   if (obj) {
+      TParameter<Int_t> *par = dynamic_cast<TParameter<Int_t>*>(obj);
+      if (par) {
+         value = par->GetVal();
+         return 0;
+      }
+   }
+   return -1;
 }
 
 //______________________________________________________________________________

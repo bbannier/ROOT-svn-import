@@ -9,12 +9,14 @@
  **********************************************************************/
 #ifdef __CINT__
 
+
 // define header gurad symbols to avoid CINT re-including the file 
 #pragma link C++ global ROOT_Math_SpecFuncMathCore;
 #pragma link C++ global ROOT_Math_PdfFuncMathCore;
 #pragma link C++ global ROOT_Math_ProbFuncMathCore;
 
 // special functionses
+
 #pragma link C++ function ROOT::Math::erf( double );
 #pragma link C++ function ROOT::Math::erfc( double );
 #pragma link C++ function ROOT::Math::tgamma( double );

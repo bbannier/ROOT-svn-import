@@ -102,8 +102,8 @@ public:
   TString* format(const RooCmdArg& formatArg) const ;
   TString* format(Int_t sigDigits, const char *options) const ;
 
-  static void printScientific(Bool_t flag=kFALSE) { _printScientific = flag ; }
-  static void printSigDigits(Int_t ndig=5) { _printSigDigits = ndig>1?ndig:1 ; }
+  static void printScientific(Bool_t flag=kFALSE) ;
+  static void printSigDigits(Int_t ndig=5) ;
 
   using RooAbsRealLValue::operator= ;
 
@@ -137,7 +137,7 @@ public:
 
   static RooSharedPropertiesList _sharedPropList; // List of properties shared among clone sets 
   static RooRealVarSharedProperties _nullProp ; // Null property
-  mutable RooRealVarSharedProperties* _sharedProp ; // Shared properties associated with this instance
+  mutable RooRealVarSharedProperties* _sharedProp ; //! Shared properties associated with this instance
 
   ClassDef(RooRealVar,4) // Real-valued variable 
 };

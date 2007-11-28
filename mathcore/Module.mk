@@ -52,6 +52,7 @@ MATHCOREDH1  :=  $(MODDIRI)/Math/Vector2D.h \
                  $(MODDIRI)/Math/DistFuncMathCore.h \
                  $(MODDIRI)/Math/IParamFunction.h \
                  $(MODDIRI)/Math/IFunction.h \
+                 $(MODDIRI)/Math/Functor.h \
                  $(MODDIRI)/Math/Minimizer.h \
                  $(MODDIRI)/Math/Integrator.h \
                  $(MODDIRI)/Math/VirtualIntegrator.h \

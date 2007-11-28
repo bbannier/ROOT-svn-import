@@ -67,7 +67,6 @@ static const char    *gTraceID = " ";
 
 // Static variables
 static XrdOucReqID   *XrdProofdReqID = 0;
-XrdSysRecMutex        gSysPrivMutex;
 
 // Loggers: we need two to avoid deadlocks
 static XrdSysLogger   gMainLogger;
@@ -503,8 +502,8 @@ int XrdgetProtocolPort(const char * /*pname*/, char * /*parms*/, XrdProtocol_Con
       // This function is called early on to determine the port we need to use. The
       // The default is ostensibly 1093 but can be overidden; which we allow.
 
-      // Default 1093
-      int port = (pi && pi->Port > 0) ? pi->Port : 1093;
+      // Default XPD_DEF_PORT (1093)
+      int port = (pi && pi->Port > 0) ? pi->Port : XPD_DEF_PORT;
       return port;
 }}
 
@@ -2715,10 +2714,20 @@ int XrdProofdProtocol::MapClient(bool all)
          }
 
          // Set ownership of the socket file to the client
-         if (fgChangeOwn && chown(pmgr->UNIXSockPath(), fUI.fUid, fUI.fGid) == -1) {
-            TRACEI(XERR, "MapClient: cannot set user ownership"
-                               " on UNIX socket (errno: "<<errno<<")");
-            return -1;
+         if (fgChangeOwn) {
+            if (chown(pmgr->UNIXSockPath(), fUI.fUid, fUI.fGid) == -1) {
+               TRACEI(XERR, "MapClient: cannot set user ownership"
+                            " on UNIX socket (errno: "<<errno<<")");
+               return -1;
+            }
+            // Make sure that it worked out
+            struct stat st;
+            if ((stat(pmgr->UNIXSockPath(), &st) != 0) || 
+                (int) st.st_uid != fUI.fUid || (int) st.st_gid != fUI.fGid) {
+               TRACEI(XERR, "MapClient: problems setting user ownership"
+                            " on UNIX socket");
+               return -1;
+            }
          }
 
       } else {
@@ -4762,6 +4771,8 @@ int XrdProofdProtocol::Admin()
 
    int rc = 1;
 
+   XrdSysMutexHelper mhc(fPClient->Mutex());
+
    // Unmarshall the data
    //
    int psid = ntohl(fRequest.proof.sid);
@@ -5093,7 +5104,7 @@ int XrdProofdProtocol::Admin()
          // Asynchronous notification to requester
          if (fgMgr.SrvType() != kXPD_WorkerServer) {
             cmsg = "Reset: verifying termination status (may take up to 10 seconds)";
-            fResponse.Send(kXR_attn, kXPD_srvmsg, (char *) cmsg.c_str(), cmsg.length());
+            fResponse.Send(kXR_attn, kXPD_srvmsg, 0, (char *) cmsg.c_str(), cmsg.length());
          }
 
          // Now we give sometime to sessions to terminate (10 sec).
@@ -5127,29 +5138,28 @@ int XrdProofdProtocol::Admin()
 
       // Asynchronous notification to requester
       if (fgMgr.SrvType() != kXPD_WorkerServer) {
-         cmsg = "Reset: terminating the remaining sessions";
-         fResponse.Send(kXR_attn, kXPD_srvmsg, (char *) cmsg.c_str(), cmsg.length());
+         cmsg = "Reset: terminating the remaining sessions ...";
+         fResponse.Send(kXR_attn, kXPD_srvmsg, 0, (char *) cmsg.c_str(), cmsg.length());
       }
 
       // Now we cleanup what left (any zombies or super resistent processes)
-      CleanupProofServ(all, usr);
+      int ncln = CleanupProofServ(all, usr);
+      if (ncln > 0) {
+         // Asynchronous notification to requester
+         cmsg = "Reset: wait 5 seconds for completion ...";
+         fResponse.Send(kXR_attn, kXPD_srvmsg, 0, (char *) cmsg.c_str(), cmsg.length());
+         sleep(5);
+      }
 
       // Cleanup all possible sessions around
       // (forward down the tree only if not leaf)
       if (fgMgr.SrvType() != kXPD_WorkerServer) {
 
          // Asynchronous notification to requester
-         cmsg = "Reset: forwarding the reset request to next tier(s)";
-         fResponse.Send(kXR_attn, kXPD_srvmsg, (char *) cmsg.c_str(), cmsg.length());
+         cmsg = "Reset: forwarding the reset request to next tier(s) ";
+         fResponse.Send(kXR_attn, kXPD_srvmsg, 0, (char *) cmsg.c_str(), cmsg.length());
 
-         fgMgr.Broadcast(type, usr, &fResponse);
-
-         // Asynchronous notification to requester
-         cmsg = "Reset: wait 2 seconds for completion";
-         fResponse.Send(kXR_attn, kXPD_srvmsg, (char *) cmsg.c_str(), cmsg.length());
-
-         // At least 2 seconds to complete
-         sleep(2);
+         fgMgr.Broadcast(type, usr, &fResponse, 1);
       }
 
       // Unlock the locked client mutexes
@@ -5161,6 +5171,117 @@ int XrdProofdProtocol::Admin()
 
       // Cleanup usr
       SafeDelArray(usr);
+
+      // Acknowledge user
+      fResponse.Send();
+
+   } else if (type == kSendMsgToUser) {
+
+      // Target client (default us)
+      XrdProofdClient *tgtclnt = fPClient;
+      XrdProofdClient *c = 0;
+      std::list<XrdProofdClient *>::iterator i;
+
+      // Extract the user name, if any
+      int len = fRequest.header.dlen;
+      if (len <= 0) {
+         // No message: protocol error?
+         TRACEP(XERR, "Admin: kSendMsgToUser: no message");
+         fResponse.Send(kXR_InvalidRequest,"Admin: kSendMsgToUser: no message");
+         return rc;
+      }
+
+      XrdOucString cmsg((const char *)fArgp->buff, len);
+      XrdOucString usr;
+      if (cmsg.beginswith("u:")) {
+         // Extract user
+         int isp = cmsg.find(' ');
+         if (isp != STR_NPOS) {
+            usr.assign(cmsg, 2, isp-1);
+            cmsg.erase(0, isp+1);
+         }
+         if (usr.length() > 0) {
+            TRACEP(DBG, "Admin: kSendMsgToUser: request for user: '"<<usr<<"'");
+            // Find the client instance
+            bool clntfound = 0;
+            for (i = fgProofdClients.begin(); i != fgProofdClients.end(); ++i) {
+               if ((c = *i) && c->Match(usr.c_str())) {
+                  tgtclnt = c;
+                  clntfound = 1;
+                  break;
+               }
+            }
+            if (!clntfound) {
+               // No message: protocol error?
+               TRACEP(XERR, "Admin: kSendMsgToUser: target client not found");
+               fResponse.Send(kXR_InvalidRequest,
+                              "Admin: kSendMsgToUser: target client not found");
+               return rc;
+            }
+         }
+      }
+      // Recheck message length
+      if (cmsg.length() <= 0) {
+         // No message: protocol error?
+         TRACEP(XERR, "Admin: kSendMsgToUser: no message after user specification");
+         fResponse.Send(kXR_InvalidRequest,
+                        "Admin: kSendMsgToUser: no message after user specification");
+         return rc;
+      }
+
+      // Check if allowed
+      bool all = 0;
+      if (!fSuperUser) {
+         if (usr.length() > 0) {
+            if (tgtclnt != fPClient) {
+               TRACEP(XERR, "Admin: kSendMsgToUser: not allowed to send messages to usr '"<<usr<<"'");
+               fResponse.Send(kXR_InvalidRequest,
+                           "Admin: kSendMsgToUser: not allowed to send messages to specified usr");
+               return rc;
+            }
+         } else {
+            TRACEP(XERR, "Admin: kSendMsgToUser: not allowed to send messages to connected users");
+            fResponse.Send(kXR_InvalidRequest,
+                           "Admin: kSendMsgToUser: not allowed to send messages to connected users");
+            return rc;
+         }
+      } else {
+         if (usr.length() <= 0)
+            all = 1;
+      }
+
+      // The clients to notified
+      std::list<XrdProofdClient *> *clnts;
+      if (all) {
+         // The full list
+         clnts = &fgProofdClients;
+      } else {
+         clnts = new std::list<XrdProofdClient *>;
+         clnts->push_back(tgtclnt);
+      }
+
+      // Loop over them
+      c = 0;
+      for (i = clnts->begin(); i != clnts->end(); ++i) {
+         if ((c = *i)) {
+
+            // This part may be not thread safe
+            XrdSysMutexHelper mh(c->Mutex());
+
+            // Notify the attached clients
+            int ic = 0;
+            XrdProofdProtocol *p = 0;
+            for (ic = 0; ic < (int) c->Clients()->size(); ic++) {
+               if ((p = c->Clients()->at(ic)) && p->fTopClient) {
+                  unsigned short sid;
+                  p->fResponse.GetSID(sid);
+                  p->fResponse.Set(c->RefSid());
+                  p->fResponse.Send(kXR_attn, kXPD_srvmsg, (char *) cmsg.c_str(), cmsg.length());
+                  p->fResponse.Set(sid);
+               }
+            }
+         }
+      }
 
       // Acknowledge user
       fResponse.Send();
@@ -5349,8 +5470,8 @@ int XrdProofdProtocol::Admin()
    } else if (type == kROOTVersion) {
 
       // Change default ROOT version
-      const char *t = (const char *) fArgp->buff;
-      int len = fRequest.header.dlen;
+      const char *t = fArgp ? (const char *) fArgp->buff : "default";
+      int len = fArgp ? fRequest.header.dlen : strlen("default");
       XrdOucString tag(t,len);
 
       // If a user name is given separate it out and check if
@@ -5919,10 +6040,10 @@ int XrdProofdProtocol::CleanupProofServ(bool all, const char *usr)
             bool muok = 1;
             if (fgMultiUser && !all) {
                // We need to check the user name: we may be the owner of somebody
-               // else process
+               // else process; if not session is attached, we kill it
                muok = 0;
                XrdProofServProxy *srv = fgMgr.GetActiveSession(pid);
-               if (srv && !strcmp(usr, srv->Client()))
+               if (!srv || (srv && !strcmp(usr, srv->Client())))
                   muok = 1;
             }
             if (muok)
@@ -6000,10 +6121,10 @@ int XrdProofdProtocol::CleanupProofServ(bool all, const char *usr)
             bool muok = 1;
             if (fgMultiUser && !all) {
                // We need to check the user name: we may be the owner of somebody
-               // else process
+               // else process; if no session is attached , we kill it
                muok = 0;
                XrdProofServProxy *srv = fgMgr.GetActiveSession(psi.pr_pid);
-               if (srv && !strcmp(usr, srv->Client()))
+               if (!srv || (srv && !strcmp(usr, srv->Client())))
                   muok = 1;
             }
             if (muok)
@@ -6050,10 +6171,10 @@ int XrdProofdProtocol::CleanupProofServ(bool all, const char *usr)
                bool muok = 1;
                if (fgMultiUser && !all) {
                   // We need to check the user name: we may be the owner of somebody
-                  // else process
+                  // else process; if no session is attached, we kill it
                   muok = 0;
                   XrdProofServProxy *srv = fgMgr.GetActiveSession(pl[np].kp_proc.p_pid);
-                  if (srv && !strcmp(usr, srv->Client()))
+                  if (!srv || (srv && !strcmp(usr, srv->Client())))
                      muok = 1;
                }
                if (muok)
@@ -6118,10 +6239,10 @@ int XrdProofdProtocol::CleanupProofServ(bool all, const char *usr)
          bool muok = 1;
          if (fgMultiUser && !all) {
             // We need to check the user name: we may be the owner of somebody
-            // else process
+            // else process; if no session is attached, we kill it
             muok = 0;
             XrdProofServProxy *srv = fgMgr.GetActiveSession(pid);
-            if (srv && !strcmp(usr, srv->Client()))
+            if (!srv || (srv && !strcmp(usr, srv->Client())))
                muok = 1;
          }
          if (muok)
@@ -6170,7 +6291,6 @@ int XrdProofdProtocol::KillProofServ(int pid, bool forcekill)
 
    if (pid > 0) {
       // We need the right privileges to do this
-      XrdSysMutexHelper mtxh(&gSysPrivMutex);
       XrdSysPrivGuard pGuard((uid_t)0, (gid_t)0);
       if (XpdBadPGuard(pGuard, fUI.fUid) && fgChangeOwn) {
          XrdOucString msg = "KillProofServ: could not get privileges";
@@ -6319,23 +6439,32 @@ int XrdProofdProtocol::ReadBuffer()
    }
 
    if (!buf) {
-      if (grep > 0) {
+      if (lout > 0) {
+         if (grep > 0) {
+            if (TRACING(DBG)) {
+               emsg = "ReadBuffer: nothing found by 'grep' in ";
+               emsg += filen;
+               emsg += ", pattern: ";
+               emsg += pattern;
+               TRACEP(DBG, emsg);
+            }
+            fResponse.Send();
+            return rc;
+         } else {
+            emsg = "ReadBuffer: could not read buffer from ";
+            emsg += (local) ? "local file " : "remote file ";
+            emsg += file;
+            TRACEP(XERR, emsg);
+            fResponse.Send(kXR_InvalidRequest, emsg.c_str());
+            return rc;
+         }
+      } else {
+         // Just got an empty buffer
          if (TRACING(DBG)) {
-            emsg = "ReadBuffer: nothing found by 'grep' in ";
-            emsg += filen;
-            emsg += ", pattern: ";
-            emsg += pattern;
+            emsg = "ReadBuffer: nothing found in ";
+            emsg += file;
             TRACEP(DBG, emsg);
          }
-         fResponse.Send();
-         return rc;
-      } else {
-         emsg = "ReadBuffer: could not read buffer from ";
-         emsg += (local) ? "local file " : "remote file ";
-         emsg += file;
-         TRACEP(XERR, emsg);
-         fResponse.Send(kXR_InvalidRequest, emsg.c_str());
-         return rc;
       }
    }
 
@@ -6599,6 +6728,9 @@ char *XrdProofdProtocol::ReadBufferRemote(const char *url, const char *file,
       if (xrsp && buf && (xrsp->DataLen() > 0)) {
          len = xrsp->DataLen();
       } else {
+         if (xrsp && !(xrsp->IsError()))
+            // The buffer was just empty: do not call it error
+            len = 0;
          SafeFree(buf);
       }
 

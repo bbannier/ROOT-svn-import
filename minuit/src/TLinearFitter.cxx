@@ -21,6 +21,7 @@
 #include "TH1.h"
 #include "TList.h"
 
+#include <iostream>
 
 ClassImp(TLinearFitter)
 
@@ -576,7 +577,11 @@ void TLinearFitter::AddToDesign(Double_t *x, Double_t y, Double_t e)
                val[ii]=f1->EvalPar(x)/e;
             } else {
                TFormula *f=(TFormula*)fInputFunction->GetLinearPart(ii);
-               val[ii]=f->EvalPar(x)/e;
+               if (f != 0) 
+                  val[ii]=f->EvalPar(x)/e;
+               else { 
+                  Error("AddTODesign","invalid function");
+               }
             }
          }
       }
@@ -841,6 +846,9 @@ Int_t TLinearFitter::Eval()
          }
       }
    }
+
+   fDesign.Print();
+   fAtb.Print();
 
    TDecompChol chol(fDesign);
    Bool_t ok;

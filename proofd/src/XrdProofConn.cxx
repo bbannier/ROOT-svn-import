@@ -492,6 +492,8 @@ XrdClientMessage *XrdProofConn::SendReq(XPClientRequest *req, const void *reqDat
 
    XrdSysMutexHelper l(*fMutex);
 
+   int maxTry = (fgMaxTry > -1) ? fgMaxTry : kXR_maxReqRetry;
+
    // We need the unmarshalled request for retries
    XPClientRequest reqsave;
    memcpy(&reqsave, req, sizeof(XPClientRequest));
@@ -513,7 +515,7 @@ XrdClientMessage *XrdProofConn::SendReq(XPClientRequest *req, const void *reqDat
       retry++;
       if (!answMex || answMex->IsError()) {
          TRACE(REQ,"XrdProofConn::SendReq: communication error detected with "<<URLTAG);
-         if (retry > kXR_maxReqRetry) {
+         if (retry > maxTry) {
             TRACE(REQ,"XrdProofConn::SendReq: max number of retries reached - Abort");
             abortcmd = 1;
          } else {
@@ -532,7 +534,7 @@ XrdClientMessage *XrdProofConn::SendReq(XPClientRequest *req, const void *reqDat
          if (!resp)
             abortcmd = CheckErrorStatus(answMex, retry, CmdName);
 
-         if (retry > kXR_maxReqRetry) {
+         if (retry > maxTry) {
             TRACE(REQ,"XrdProofConn::SendReq: max number of retries reached - Abort");
             abortcmd = 1;
          }
@@ -917,8 +919,11 @@ bool XrdProofConn::Login()
    reqhdr.login.capver[0] = (char)fCapVer;
 
    // We call SendReq, the function devoted to sending commands.
-   TRACE(REQ,"XrdProofConn::Login: logging into server "<<URLTAG<<
-         "; pid="<<reqhdr.login.pid<<"; uid=" << reqhdr.login.username);
+   if (TRACING(REQ)) {
+      XrdOucString usr((const char *)&reqhdr.login.username[0], 8);
+      TRACE(REQ,"XrdProofConn::Login: logging into server "<<URLTAG<<
+                "; pid="<<reqhdr.login.pid<<"; uid=" << usr);
+   }
 
    // Finish to fill up and ...
    SetSID(reqhdr.header.streamid);
