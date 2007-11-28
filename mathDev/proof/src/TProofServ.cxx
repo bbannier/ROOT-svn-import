@@ -82,15 +82,14 @@
 #include "TSQLServer.h"
 #include "TSQLResult.h"
 #include "TSQLRow.h"
+#include "TSortedList.h"
+#include "TParameter.h"
 
 // global proofserv handle
 TProofServ *gProofServ = 0;
 
 // debug hook
 static volatile Int_t gProofServDebug = 1;
-
-// Max number of queries kept (-1 to disable)
-Int_t TProofServ::fgMaxQueries = -1;
 
 //----- Interrupt signal handler -----------------------------------------------
 //______________________________________________________________________________
@@ -336,7 +335,7 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
 
    // Read session specific rootrc file
    if (!gSystem->AccessPathName("session.rootrc", kReadPermission))
-      gEnv->ReadFile("session.rootrc", kEnvGlobal);
+      gEnv->ReadFile("session.rootrc", kEnvChange);
 
    // Wait (loop) to allow debugger to connect
    Bool_t test = (*argc >= 4 && !strcmp(argv[3], "test")) ? kTRUE : kFALSE;
@@ -404,6 +403,11 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
    fShutdownTimerMtx = 0;
 
    fInflateFactor   = 1000;
+
+   // Quotas disabled by default
+   fMaxQueries      = -1;
+   fMaxBoxSize      = -1;
+   fHWMBoxSize      = -1;
 
    gProofDebugLevel = gEnv->GetValue("Proof.DebugLevel",0);
    fLogLevel = gProofDebugLevel;
@@ -1011,7 +1015,7 @@ void TProofServ::HandleSocketInput()
             PDB(kGlobal, 1)
                Info("HandleSocketInput:kPROOF_MAXQUERIES", "Enter");
             TMessage m(kPROOF_MAXQUERIES);
-            m << fgMaxQueries;
+            m << fMaxQueries;
             fSocket->Send(m);
          }
          // Notify
@@ -1617,7 +1621,7 @@ void TProofServ::Print(Option_t *option) const
 }
 
 //______________________________________________________________________________
-R__HIDDEN void TProofServ::RedirectOutput()
+void TProofServ::RedirectOutput()
 {
    // Redirect stdout to a log file. This log file will be flushed to the
    // client or master after each command.
@@ -1865,7 +1869,7 @@ void TProofServ::SendParallel()
 }
 
 //______________________________________________________________________________
-R__HIDDEN Int_t TProofServ::UnloadPackage(const char *package)
+Int_t TProofServ::UnloadPackage(const char *package)
 {
    // Removes link to package in working directory,
    // removes entry from include path,
@@ -1904,7 +1908,7 @@ R__HIDDEN Int_t TProofServ::UnloadPackage(const char *package)
 }
 
 //______________________________________________________________________________
-R__HIDDEN Int_t TProofServ::UnloadPackages()
+Int_t TProofServ::UnloadPackages()
 {
    // Unloads all enabled packages. Returns -1 in case of error, 0 otherwise.
 
@@ -2228,6 +2232,63 @@ Int_t TProofServ::SetupCommon()
    if (IsMaster())
       fGroupPriority = GetPriority();
 
+   // Quotas
+   TString quotas = gEnv->GetValue(Form("ProofServ.UserQuotas.%s", fUser.Data()),"");
+   if (quotas.IsNull())
+      quotas = gEnv->GetValue(Form("ProofServ.UserQuotasByGroup.%s", fGroup.Data()),"");
+   if (quotas.IsNull())
+      quotas = gEnv->GetValue("ProofServ.UserQuotas", "");
+   if (!quotas.IsNull()) {
+      // Parse it; format ("maxquerykept:10 hwmsz:800m maxsz:1g")
+      TString tok;
+      Ssiz_t from = 0;
+      while (quotas.Tokenize(tok, from, " ")) {
+         // Set max number of query results to keep
+         if (tok.BeginsWith("maxquerykept=")) {
+            tok.ReplaceAll("maxquerykept=","");
+            if (tok.IsDigit())
+               fMaxQueries = tok.Atoi();
+            else
+               Info("SetupCommon",
+                    "parsing 'maxquerykept' :ignoring token %s : not a digit", tok.Data());
+         }
+         // Set High-Water-Mark or max on the sandbox size
+         const char *ksz[2] = {"hwmsz=", "maxsz="};
+         for (Int_t j = 0; j < 2; j++) {
+            if (tok.BeginsWith(ksz[j])) {
+               tok.ReplaceAll(ksz[j],"");
+               Long64_t fact = -1;
+               if (!tok.IsDigit()) {
+                  // Parse (k, m, g)
+                  tok.ToLower();
+                  const char *s[3] = {"k", "m", "g"};
+                  Int_t i = 0, k = 1024;
+                  while (fact < 0) {
+                     if (tok.EndsWith(s[i]))
+                        fact = k;
+                     else
+                        k *= 1024;
+                  }
+                  tok.Remove(tok.Length()-1);
+               }
+               if (tok.IsDigit()) {
+                  if (j == 0)
+                     fHWMBoxSize = (fact > 0) ? tok.Atoi() * fact : tok.Atoi();
+                  else
+                     fMaxBoxSize = (fact > 0) ? tok.Atoi() * fact : tok.Atoi();
+               } else
+                  Info("SetupCommon", "parsing '%.*s' : ignoring token %s",
+                                      strlen(ksz[j])-1, ksz[j], tok.Data());
+            }
+         }
+      }
+   }
+
+   // Apply quotas, if any
+   if (IsMaster())
+      if (ApplyMaxQueries() != 0)
+         Warning("SetupCommon", "problems applying fMaxQueries");
+
    // Send "ROOTversion|ArchCompiler" flag
    if (fProtocol > 12) {
       TString vac = gROOT->GetVersion();
@@ -2333,7 +2394,7 @@ TProofServ *TProofServ::This()
 }
 
 //______________________________________________________________________________
-R__HIDDEN Int_t TProofServ::OldAuthSetup(TString &conf)
+Int_t TProofServ::OldAuthSetup(TString &conf)
 {
    // Setup authentication related stuff for old versions.
    // Provided for backward compatibility.
@@ -2378,11 +2439,11 @@ R__HIDDEN Int_t TProofServ::OldAuthSetup(TString &conf)
 }
 
 //______________________________________________________________________________
-R__HIDDEN TProofQueryResult *TProofServ::MakeQueryResult(Long64_t nent,
-                                                         const char *opt,
-                                                         TList *inlist, Long64_t fst,
-                                                         TDSet *dset, const char *selec,
-                                                         TObject *elist)
+TProofQueryResult *TProofServ::MakeQueryResult(Long64_t nent,
+                                               const char *opt,
+                                               TList *inlist, Long64_t fst,
+                                               TDSet *dset, const char *selec,
+                                               TObject *elist)
 {
    // Create a TProofQueryResult instance for this query.
 
@@ -2408,7 +2469,7 @@ R__HIDDEN TProofQueryResult *TProofServ::MakeQueryResult(Long64_t nent,
 }
 
 //______________________________________________________________________________
-R__HIDDEN void TProofServ::SetQueryRunning(TProofQueryResult *pq)
+void TProofServ::SetQueryRunning(TProofQueryResult *pq)
 {
    // Set query in running state.
 
@@ -2440,7 +2501,7 @@ R__HIDDEN void TProofServ::SetQueryRunning(TProofQueryResult *pq)
 }
 
 //______________________________________________________________________________
-R__HIDDEN void TProofServ::AddLogFile(TProofQueryResult *pq)
+void TProofServ::AddLogFile(TProofQueryResult *pq)
 {
    // Add part of log file concerning TQueryResult pq to its macro
    // container.
@@ -2473,7 +2534,7 @@ R__HIDDEN void TProofServ::AddLogFile(TProofQueryResult *pq)
 }
 
 //______________________________________________________________________________
-R__HIDDEN void TProofServ::FinalizeQuery(TProofQueryResult *pq)
+void TProofServ::FinalizeQuery(TProofQueryResult *pq)
 {
    // Final steps after Process() to complete the TQueryResult instance.
 
@@ -2537,34 +2598,41 @@ R__HIDDEN void TProofServ::FinalizeQuery(TProofQueryResult *pq)
    if (save) {
 
       // We may need some cleanup
-      if (fgMaxQueries > -1) {
-         if (fQueries && fKeptQueries >= fgMaxQueries) {
+      if (fMaxQueries > -1) {
+         if (fQueries && fKeptQueries >= fMaxQueries) {
             // Find oldest completed and archived query
             TQueryResult *fcom = 0;
             TQueryResult *farc = 0;
             TIter nxq(fQueries);
             TQueryResult *qr = 0;
-            while ((qr = (TQueryResult *) nxq())) {
-               if (qr->IsArchived()) {
-                  if (qr->GetOutputList() && !farc)
-                     farc = qr;
-               } else if (qr->GetStatus() > TQueryResult::kRunning && !fcom) {
-                  fcom = qr;
+            while (fKeptQueries >= fMaxQueries) {
+               while ((qr = (TQueryResult *) nxq())) {
+                  if (qr->IsArchived()) {
+                     if (qr->GetOutputList() && !farc)
+                        farc = qr;
+                  } else if (qr->GetStatus() > TQueryResult::kRunning && !fcom) {
+                     fcom = qr;
+                  }
+                  if (farc && fcom)
+                     break;
                }
-               if (farc && fcom)
+               if (farc) {
+                  RemoveQuery(farc, kTRUE);
+                  fKeptQueries--;
+               } else if (fcom) {
+                  RemoveQuery(fcom);
+                  fKeptQueries--;
+               }
+               if (!farc && !fcom)
                   break;
             }
-            if (farc) {
-               RemoveQuery(farc, kTRUE);
-               fKeptQueries--;
-            } else if (fcom) {
-               RemoveQuery(fcom);
-               fKeptQueries--;
-            }
          }
-         if (fKeptQueries < fgMaxQueries) {
+         if (fKeptQueries < fMaxQueries) {
             SaveQuery(pq);
             fKeptQueries++;
+         } else {
+            SendAsynMessage(Form("Too many saved queries (%d): cannot save %s:%s",
+                                 fKeptQueries, pq->GetTitle(),  pq->GetName()));
          }
       } else {
          SaveQuery(pq);
@@ -2576,7 +2644,7 @@ R__HIDDEN void TProofServ::FinalizeQuery(TProofQueryResult *pq)
 }
 
 //______________________________________________________________________________
-R__HIDDEN Int_t TProofServ::CleanupQueriesDir()
+Int_t TProofServ::CleanupQueriesDir()
 {
    // Remove all queries results referring to previous sessions
 
@@ -2616,7 +2684,7 @@ R__HIDDEN Int_t TProofServ::CleanupQueriesDir()
 }
 
 //______________________________________________________________________________
-R__HIDDEN void TProofServ::ScanPreviousQueries(const char *dir)
+void TProofServ::ScanPreviousQueries(const char *dir)
 {
    // Scan the queries directory for the results of previous queries.
    // The headers of the query results found are loaded in fPreviousQueries.
@@ -2690,7 +2758,118 @@ R__HIDDEN void TProofServ::ScanPreviousQueries(const char *dir)
 }
 
 //______________________________________________________________________________
-R__HIDDEN Int_t TProofServ::LockSession(const char *sessiontag, TProofLockPath **lck)
+Int_t TProofServ::ApplyMaxQueries()
+{
+   // Scan the queries directory and remove the oldest ones (and relative dirs,
+   // if empty) in such a way only fMaxQueries are kept.
+   // Return 0 on success, -1 in case of problems
+
+   // Nothing to do if fmaxQueries is -1.
+   if (fMaxQueries < 0)
+      return 0;
+
+   // We will sort the entries using the creation time
+   TSortedList *sl = new TSortedList;
+   sl->SetOwner();
+   // List with information
+   THashList *hl = new THashList;
+   hl->SetOwner();
+
+   // Keep track of the queries per session dir
+   TList *dl = new TList;
+   dl->SetOwner();
+
+   // Loop over session dirs
+   TString dir = fQueryDir;
+   Int_t idx = dir.Index("session-");
+   if (idx != kNPOS)
+      dir.Remove(idx);
+   void *dirs = gSystem->OpenDirectory(dir);
+   char *sess = 0;
+   while ((sess = (char *) gSystem->GetDirEntry(dirs))) {
+
+      // We are interested only in "session-..." subdirs
+      if (strlen(sess) < 7 || strncmp(sess,"session",7))
+         continue;
+
+      // We do not want this session at this level
+      if (strstr(sess, fSessionTag))
+         continue;
+
+      // Loop over query dirs
+      Int_t nq = 0;
+      void *dirq = gSystem->OpenDirectory(Form("%s/%s", dir.Data(), sess));
+      char *qry = 0;
+      while ((qry = (char *) gSystem->GetDirEntry(dirq))) {
+
+         // We are interested only in "n/" subdirs
+         if (qry[0] == '.')
+            continue;
+
+         // File with the query result
+         TString fn = Form("%s/%s/%s/query-result.root", dir.Data(), sess, qry);
+
+         FileStat_t st;
+         if (gSystem->GetPathInfo(fn, st)) {
+            Info("ApplyMaxQueries","file '%s' cannot be stated: remove it", fn.Data());
+            gSystem->Unlink(fn);
+            continue;
+         }
+
+         // Add the entry in the sorted list
+         sl->Add(new TObjString(Form("%d",st.fMtime)));
+         hl->Add(new TNamed((const char *)Form("%d",st.fMtime),fn.Data()));
+         nq++;
+      }
+      gSystem->FreeDirectory(dirq);
+
+      if (nq > 0)
+         dl->Add(new TParameter<Int_t>(Form("%s/%s", dir.Data(), sess), nq));
+      else
+         // Remove it
+         gSystem->Exec(Form("%s -fr %s/%s", kRM, dir.Data(), sess));
+   }
+   gSystem->FreeDirectory(dirs);
+
+   // Now we apply the quota
+   TIter nxq(sl, kIterBackward);
+   Int_t nqkept = 0;
+   TObjString *os = 0;
+   while ((os = (TObjString *)nxq())) {
+      if (nqkept < fMaxQueries) {
+         // Keep this and go to the next
+         nqkept++;
+      } else {
+         // Clean this
+         TNamed *nm = dynamic_cast<TNamed *>(hl->FindObject(os->GetName()));
+         if (nm) {
+            gSystem->Unlink(nm->GetTitle());
+            // Update dir counters
+            TString tdir(gSystem->DirName(nm->GetTitle()));
+            tdir = gSystem->DirName(tdir.Data());
+            TParameter<Int_t> *nq = dynamic_cast<TParameter<Int_t>*>(dl->FindObject(tdir));
+            if (nq) {
+               Int_t val = nq->GetVal();
+               nq->SetVal(--val);
+               if (nq->GetVal() <= 0)
+                  // Remove the directory if empty
+                  gSystem->Exec(Form("%s -fr %s", kRM, tdir.Data()));
+            }
+         }
+      }
+   }
+
+   // Cleanup
+   delete sl;
+   delete hl;
+   delete dl;
+
+   // Done
+   return 0;
+}
+
+//______________________________________________________________________________
+Int_t TProofServ::LockSession(const char *sessiontag, TProofLockPath **lck)
 {
    // Try locking query area of session tagged sessiontag.
    // The id of the locking file is returned in fid and must be
@@ -2748,7 +2927,7 @@ R__HIDDEN Int_t TProofServ::LockSession(const char *sessiontag, TProofLockPath *
 }
 
 //______________________________________________________________________________
-R__HIDDEN Int_t TProofServ::CleanupSession(const char *sessiontag)
+Int_t TProofServ::CleanupSession(const char *sessiontag)
 {
    // Cleanup query dir qdir.
 
@@ -2790,7 +2969,7 @@ R__HIDDEN Int_t TProofServ::CleanupSession(const char *sessiontag)
 }
 
 //______________________________________________________________________________
-R__HIDDEN void TProofServ::SaveQuery(TQueryResult *qr, const char *fout)
+void TProofServ::SaveQuery(TQueryResult *qr, const char *fout)
 {
    // Save current status of query 'qr' to file name fout.
    // If fout == 0 (default) use the default name.
@@ -2819,7 +2998,7 @@ R__HIDDEN void TProofServ::SaveQuery(TQueryResult *qr, const char *fout)
 }
 
 //______________________________________________________________________________
-R__HIDDEN void TProofServ::RemoveQuery(const char *queryref)
+void TProofServ::RemoveQuery(const char *queryref)
 {
    // Remove everything about query queryref.
 
@@ -2850,7 +3029,7 @@ R__HIDDEN void TProofServ::RemoveQuery(const char *queryref)
 }
 
 //______________________________________________________________________________
-R__HIDDEN void TProofServ::RemoveQuery(TQueryResult *qr, Bool_t soft)
+void TProofServ::RemoveQuery(TQueryResult *qr, Bool_t soft)
 {
    // Remove everything about query qr. If soft = TRUE leave a track
    // in memory with the relevant info
@@ -2886,8 +3065,7 @@ R__HIDDEN void TProofServ::RemoveQuery(TQueryResult *qr, Bool_t soft)
 }
 
 //______________________________________________________________________________
-R__HIDDEN TProofQueryResult *TProofServ::LocateQuery(TString queryref,
-                                                     Int_t &qry, TString &qdir)
+TProofQueryResult *TProofServ::LocateQuery(TString queryref, Int_t &qry, TString &qdir)
 {
    // Locate query referenced by queryref. Return pointer to instance
    // in memory, if any, or 0. Fills qdir with the query specific directory
@@ -3326,7 +3504,6 @@ void TProofServ::HandleProcess(TMessage *mess)
                   fQueries->Add(pqr);
                // Remove from the fQueries list
                fQueries->Remove(pq);
-               SafeDelete(pq);
             }
          }
 
@@ -4674,7 +4851,7 @@ TProofServ::EQueryAction TProofServ::GetWorkers(TList *workers,
 }
 
 //______________________________________________________________________________
-R__HIDDEN TList *TProofServ::GetDataSet(const char *name)
+TList *TProofServ::GetDataSet(const char *name)
 {
    // Utility function used in various methods for user dataset upload.
 
@@ -5134,10 +5311,10 @@ Int_t TProofServ::SendAsynMessage(const char *msg, Bool_t lf)
    // Returns the return value from TSocket::Send(TMessage &) .
    static TMessage m(kPROOF_MESSAGE);
 
-   // To leave a track in the output file ...
-   Info("SendAsynMessage","%s", (msg ? msg : "(null)"));
-   // ... avoiding double notification to the client
-   FlushLogFile();
+   // To leave a track in the output file ... if requested
+   // (clients will be notified twice)
+   PDB(kAsyn,1)
+      Info("SendAsynMessage","%s", (msg ? msg : "(null)"));
 
    if (fSocket && msg) {
       m.Reset(kPROOF_MESSAGE);

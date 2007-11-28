@@ -157,6 +157,7 @@ public:
 
    */
 
+
    template<class Function>
    inline void SetFunction(Function f); 
 
@@ -164,9 +165,11 @@ public:
        set one dimensional function for 1D integration
     */
 
+
    void SetFunction  (const IGenFunction &f, bool copy = false) { 
       if (fIntegrator) fIntegrator->SetFunction(f,copy);
    }
+
 
    /** 
       Set integration function from a multi-dim function type. 
@@ -177,7 +180,6 @@ public:
    */
    void SetFunction(const IMultiGenFunction &f, unsigned int icoord = 0, const double * x = 0);
 
-   
     // integration methods using a function 
 
     /**

@@ -16,12 +16,14 @@
 #include "Math/AdaptiveIntegratorMultiDim.h"
 
 
+
 #include "Math/OneDimFunctionAdapter.h"
 
 
 
 
 #ifndef MATH_NO_PLUGIN_MANAGER
+
 #include "TROOT.h"
 #include "TPluginManager.h"
 
@@ -46,6 +48,7 @@ void IntegratorOneDim::SetFunction(const IMultiGenFunction &f, unsigned int icoo
    SetFunction(adapter,true); // need to copy this object
 }
 
+
 // methods to create integrators 
 
    VirtualIntegratorOneDim * IntegratorOneDim::CreateIntegrator(IntegrationOneDim::Type type , double absTol, double relTol, unsigned int size, int rule) { 
@@ -56,6 +59,8 @@ void IntegratorOneDim::SetFunction(const IMultiGenFunction &f, unsigned int icoo
 #ifdef MATH_NO_PLUGIN_MANAGER    // no PM available
    ig =  new GSLIntegrator(type, absTol, relTol, size);
 #else 
+
+
 
    TPluginHandler *h; 
    //gDebug = 3; 

@@ -1,4 +1,4 @@
-// @(#)root/gui:$Id$
+// @(#)root/gui:$Id: TRootBrowser.cxx 20635 2007-11-04 08:56:07Z brun $
 // Author: Bertrand Bellenot   26/09/2007
 
 /*************************************************************************
@@ -287,6 +287,8 @@ TRootBrowser::~TRootBrowser()
    delete fMenuFile;
    delete fMenuBar;
    delete fMenuFrame;
+   delete fPreMenuFrame;
+   delete fTopMenuFrame;
    delete fToolbarFrame;
    delete fVSplitter;
    delete fHSplitter;
@@ -352,18 +354,25 @@ void TRootBrowser::CloseWindow()
    TGFrameElement *el;
    Int_t i;
    Disconnect(fMenuFile, "Activated(Int_t)", this, "HandleMenu(Int_t)");
+   Disconnect(fTabRight, "Selected(Int_t)", this, "DoTab(Int_t)");
+   fActBrowser = 0;
    for (i=0;i<fTabLeft->GetNumberOfTabs();i++) {
       el = (TGFrameElement *)fTabLeft->GetTabContainer(i)->GetList()->First();
       if (el && el->fFrame) {
          el->fFrame->SetFrameElement(0);
-         if (el->fFrame->InheritsFrom("TGMainFrame"))
+         if (el->fFrame->InheritsFrom("TGMainFrame")) {
             ((TGMainFrame *)el->fFrame)->CloseWindow();
+            gSystem->ProcessEvents();
+         }
          else
             delete el->fFrame;
          el->fFrame = 0;
          if (el->fLayout && (el->fLayout != fgDefaultHints) &&
             (el->fLayout->References() > 0)) {
             el->fLayout->RemoveReference();
+            if (!el->fLayout->References()) {
+               delete el->fLayout;
+            }
          }
          fTabLeft->GetTabContainer(i)->GetList()->Remove(el);
          delete el;
@@ -373,14 +382,22 @@ void TRootBrowser::CloseWindow()
       el = (TGFrameElement *)fTabRight->GetTabContainer(i)->GetList()->First();
       if (el && el->fFrame) {
          el->fFrame->SetFrameElement(0);
-         if (el->fFrame->InheritsFrom("TGMainFrame"))
+         if (el->fFrame->InheritsFrom("TGMainFrame")) {
+            Bool_t sleep = (el->fFrame->InheritsFrom("TRootCanvas")) ? kTRUE : kFALSE;
             ((TGMainFrame *)el->fFrame)->CloseWindow();
+            if (sleep)
+               gSystem->Sleep(150);
+            gSystem->ProcessEvents();
+         }
          else
             delete el->fFrame;
          el->fFrame = 0;
          if (el->fLayout && (el->fLayout != fgDefaultHints) &&
             (el->fLayout->References() > 0)) {
             el->fLayout->RemoveReference();
+            if (!el->fLayout->References()) {
+               delete el->fLayout;
+            }
          }
          fTabRight->GetTabContainer(i)->GetList()->Remove(el);
          delete el;
@@ -390,20 +407,25 @@ void TRootBrowser::CloseWindow()
       el = (TGFrameElement *)fTabBottom->GetTabContainer(i)->GetList()->First();
       if (el && el->fFrame) {
          el->fFrame->SetFrameElement(0);
-         if (el->fFrame->InheritsFrom("TGMainFrame"))
+         if (el->fFrame->InheritsFrom("TGMainFrame")) {
             ((TGMainFrame *)el->fFrame)->CloseWindow();
+            gSystem->ProcessEvents();
+         }
          else
             delete el->fFrame;
          el->fFrame = 0;
          if (el->fLayout && (el->fLayout != fgDefaultHints) &&
             (el->fLayout->References() > 0)) {
             el->fLayout->RemoveReference();
+            if (!el->fLayout->References()) {
+               delete el->fLayout;
+            }
          }
          fTabBottom->GetTabContainer(i)->GetList()->Remove(el);
          delete el;
       }
    }
-   fActBrowser = 0;
+   fPlugins.Delete();
    DeleteWindow();
 }
 
@@ -785,14 +807,22 @@ void TRootBrowser::RemoveTab(Int_t pos, Int_t subpos)
    TGFrameElement *el = (TGFrameElement *)edit->GetTabContainer(subpos)->GetList()->First();
    if (el && el->fFrame) {
       el->fFrame->SetFrameElement(0);
-      if (el->fFrame->InheritsFrom("TGMainFrame"))
+      if (el->fFrame->InheritsFrom("TGMainFrame")) {
+         Bool_t sleep = (el->fFrame->InheritsFrom("TRootCanvas")) ? kTRUE : kFALSE;
          ((TGMainFrame *)el->fFrame)->CloseWindow();
+         if (sleep)
+            gSystem->Sleep(150);
+         gSystem->ProcessEvents();
+      }
       else
          delete el->fFrame;
       el->fFrame = 0;
       if (el->fLayout && (el->fLayout != fgDefaultHints) &&
          (el->fLayout->References() > 0)) {
          el->fLayout->RemoveReference();
+         if (!el->fLayout->References()) {
+            delete el->fLayout;
+         }
       }
       edit->GetTabContainer(subpos)->GetList()->Remove(el);
       delete el;

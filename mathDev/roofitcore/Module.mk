@@ -29,8 +29,8 @@ ROOFITCOREDH   := $(ROOFITCOREDS:.cxx=.h)
 ROOFITCOREH1   := Roo1DTable.h RooAbsArg.h RooAbsBinning.h RooAbsCategory.h \
                   RooAbsCategoryLValue.h RooAbsCollection.h \
                   RooAbsData.h RooAbsFunc.h RooAbsGenContext.h \
-                  RooAbsGoodnessOfFit.h RooAbsHiddenReal.h RooAbsIntegrator.h \
-                  RooAbsLValue.h RooAbsMCStudyModule.h RooAbsOptGoodnessOfFit.h \
+                  RooAbsTestStatistic.h RooAbsHiddenReal.h RooAbsIntegrator.h \
+                  RooAbsLValue.h RooAbsMCStudyModule.h RooAbsOptTestStatistic.h \
                   RooAbsPdf.h RooAbsProxy.h RooAbsReal.h \
                   RooAbsRealLValue.h RooAbsRootFinder.h RooAbsString.h \
                   RooAcceptReject.h RooAdaptiveGaussKronrodIntegrator1D.h \
@@ -48,10 +48,9 @@ ROOFITCOREH1   := Roo1DTable.h RooAbsArg.h RooAbsBinning.h RooAbsCategory.h \
 ROOFITCOREH2   := RooDouble.h RooEffGenContext.h RooEllipse.h RooErrorHandler.h \
                   RooErrorVar.h RooFit.h RooFitResult.h RooFormula.h \
                   RooFormulaVar.h RooGaussKronrodIntegrator1D.h RooGenCategory.h \
-                  RooGenContext.h RooGenericPdf.h RooGenProdProj.h \
-                  RooGlobalFunc.h RooGraphEdge.h RooGraphNode.h RooGraphSpring.h \
+                  RooGenContext.h RooGenericPdf.h RooGenProdProj.h RooGlobalFunc.h  \
                   RooGrid.h RooHashTable.h RooHistError.h \
-                  RooHist.h RooHtml.h RooImproperIntegrator1D.h \
+                  RooHist.h RooImproperIntegrator1D.h \
                   RooIntegrator1D.h RooIntegrator2D.h RooIntegratorBinding.h \
                   RooInt.h RooInvTransform.h RooLinearVar.h RooLinkedListElem.h \
                   RooLinkedList.h RooLinkedListIter.h RooLinTransBinning.h RooList.h \
@@ -79,7 +78,7 @@ ROOFITCOREH3   := RooRandomizeParamMCSModule.h RooRangeBinning.h RooRealAnalytic
                   RooProdPdf.h RooMCStudy.h RooSimPdfBuilder.h RooTruthModel.h RooMsgService.h \
                   RooProjectedPdf.h RooWorkspace.h RooProfileLL.h RooAbsCachedPdf.h RooAbsSelfCachedPdf.h \
                   RooHistPdf.h RooCachedPdf.h RooFFTConvPdf.h RooDataHistSliceIter.h RooCacheManager.h \
-                  RooAbsCache.h RooAbsCacheElement.h RooObjCacheManager.h RooExtendedTerm.h 
+                  RooAbsCache.h RooAbsCacheElement.h RooObjCacheManager.h RooExtendedTerm.h RooSentinel.h
 
 ROOFITCOREH1   := $(patsubst %,$(MODDIRI)/%,$(ROOFITCOREH1))
 ROOFITCOREH2   := $(patsubst %,$(MODDIRI)/%,$(ROOFITCOREH2))

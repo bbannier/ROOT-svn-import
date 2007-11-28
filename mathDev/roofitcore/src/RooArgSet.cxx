@@ -45,6 +45,7 @@
 #include "Riostream.h"
 #include <iomanip>
 #include <fstream>
+#include <list>
 #include "TClass.h"
 #include "RooArgSet.h"
 #include "RooStreamParser.h"
@@ -54,6 +55,8 @@
 #include "RooStringVar.h"
 #include "RooTrace.h"
 #include "RooArgList.h"
+#include "RooSentinel.h"
+#include "RooMsgService.h"
 
 #if (__GNUC__==3&&__GNUC_MINOR__==2&&__GNUC_PATCHLEVEL__==3)
 char* operator+( streampos&, char* );
@@ -66,18 +69,33 @@ char* RooArgSet::_poolBegin = 0 ;
 char* RooArgSet::_poolCur = 0 ;
 char* RooArgSet::_poolEnd = 0 ;
 
+static std::list<void*> _memPoolList ;
+
+void RooArgSet::cleanup()
+{
+  std::list<void*>::iterator iter = _memPoolList.begin() ;
+  while(iter!=_memPoolList.end()) {
+    free(*iter) ;
+    iter++ ;
+  }
+}
+
 
 void* RooArgSet::operator new (size_t bytes)
 {
   if (!_poolBegin || _poolCur >= _poolEnd) {
 
     if (_poolBegin!=0) {
-      cout << "RooArgSet::operator new(), starting new 1MB memory pool" << endl ;
+      oocxcoutD((TObject*)0,Caching) << "RooArgSet::operator new(), starting new 1MB memory pool" << endl ;
     }
 
-    _poolBegin = (char*)malloc(1048576) ;
+    void* mem = malloc(1048576) ;
+    _poolBegin = (char*)mem ;
     _poolCur = _poolBegin ;
     _poolEnd = _poolBegin+(1048576) ;
+
+    _memPoolList.push_back(mem) ;
+    RooSentinel::activate() ;
   }
 
   char* ptr = _poolCur ;
@@ -227,8 +245,8 @@ RooArgSet::RooArgSet(const TCollection& tcoll, const char* name) :
   TObject* obj ;
   while((obj=iter->Next())) {
     if (!dynamic_cast<RooAbsArg*>(obj)) {
-      cout << "RooArgSet::RooArgSet(TCollection) element " << obj->GetName() 
-	   << " is not a RooAbsArg, ignored" << endl ;
+      coutW(InputArguments) << "RooArgSet::RooArgSet(TCollection) element " << obj->GetName() 
+			    << " is not a RooAbsArg, ignored" << endl ;
       continue ;
     }
     add(*(RooAbsArg*)obj) ;
@@ -296,7 +314,7 @@ RooAbsArg& RooArgSet::operator[](const char* name) const
   // the list will not be changed, only the value of the existing element!
   RooAbsArg* arg = find(name) ;
   if (!arg) {
-    cout << "RooArgSet::operator[](" << GetName() << ") ERROR: no element named " << name << " in set" << endl ;
+    coutE(InputArguments) << "RooArgSet::operator[](" << GetName() << ") ERROR: no element named " << name << " in set" << endl ;
     RooErrorHandler::softAbort() ;
   }
   return *arg ; 
@@ -314,7 +332,7 @@ Bool_t RooArgSet::checkForDup(const RooAbsArg& var, Bool_t silent) const
       if (!silent)
 	// print a warning if this variable is not the same one we
 	// already have
-	cout << "RooArgSet::checkForDup: ERROR argument with name " << var.GetName() << " is already in this set" << endl;
+	coutE(InputArguments) << "RooArgSet::checkForDup: ERROR argument with name " << var.GetName() << " is already in this set" << endl;
     }
     // don't add duplicates
     return kTRUE;
@@ -328,12 +346,12 @@ Double_t RooArgSet::getRealValue(const char* name, Double_t defVal, Bool_t verbo
 {
   RooAbsArg* raa = find(name) ;
   if (!raa) {
-    if (verbose) cout << "RooArgSet::getRealValue(" << GetName() << ") ERROR no object with name '" << name << "' found" << endl ;
+    if (verbose) coutE(InputArguments) << "RooArgSet::getRealValue(" << GetName() << ") ERROR no object with name '" << name << "' found" << endl ;
     return defVal ;
   }
   RooAbsReal* rar = dynamic_cast<RooAbsReal*>(raa) ;
   if (!rar) {
-    if (verbose) cout << "RooArgSet::getRealValue(" << GetName() << ") ERROR object '" << name << "' is not of type RooAbsReal" << endl ;
+    if (verbose) coutE(InputArguments) << "RooArgSet::getRealValue(" << GetName() << ") ERROR object '" << name << "' is not of type RooAbsReal" << endl ;
     return defVal ;
   }
   return rar->getVal() ;
@@ -344,12 +362,12 @@ Bool_t RooArgSet::setRealValue(const char* name, Double_t newVal, Bool_t verbose
 {
   RooAbsArg* raa = find(name) ;
   if (!raa) {
-    if (verbose) cout << "RooArgSet::setRealValue(" << GetName() << ") ERROR no object with name '" << name << "' found" << endl ;
+    if (verbose) coutE(InputArguments) << "RooArgSet::setRealValue(" << GetName() << ") ERROR no object with name '" << name << "' found" << endl ;
     return kTRUE ;
   }
   RooAbsRealLValue* rar = dynamic_cast<RooAbsRealLValue*>(raa) ;
   if (!rar) {
-    if (verbose) cout << "RooArgSet::setRealValue(" << GetName() << ") ERROR object '" << name << "' is not of type RooAbsRealLValue" << endl ;
+    if (verbose) coutE(InputArguments) << "RooArgSet::setRealValue(" << GetName() << ") ERROR object '" << name << "' is not of type RooAbsRealLValue" << endl ;
     return kTRUE;
   }
   rar->setVal(newVal) ;
@@ -362,12 +380,12 @@ const char* RooArgSet::getCatLabel(const char* name, const char* defVal, Bool_t 
 {
   RooAbsArg* raa = find(name) ;
   if (!raa) {
-    if (verbose) cout << "RooArgSet::getCatLabel(" << GetName() << ") ERROR no object with name '" << name << "' found" << endl ;
+    if (verbose) coutE(InputArguments) << "RooArgSet::getCatLabel(" << GetName() << ") ERROR no object with name '" << name << "' found" << endl ;
     return defVal ;
   }
   RooAbsCategory* rac = dynamic_cast<RooAbsCategory*>(raa) ;
   if (!rac) {
-    if (verbose) cout << "RooArgSet::getCatLabel(" << GetName() << ") ERROR object '" << name << "' is not of type RooAbsCategory" << endl ;
+    if (verbose) coutE(InputArguments) << "RooArgSet::getCatLabel(" << GetName() << ") ERROR object '" << name << "' is not of type RooAbsCategory" << endl ;
     return defVal ;
   }
   return rac->getLabel() ;
@@ -378,12 +396,12 @@ Bool_t RooArgSet::setCatLabel(const char* name, const char* newVal, Bool_t verbo
 {
   RooAbsArg* raa = find(name) ;
   if (!raa) {
-    if (verbose) cout << "RooArgSet::setCatLabel(" << GetName() << ") ERROR no object with name '" << name << "' found" << endl ;
+    if (verbose) coutE(InputArguments) << "RooArgSet::setCatLabel(" << GetName() << ") ERROR no object with name '" << name << "' found" << endl ;
     return kTRUE ;
   }
   RooAbsCategoryLValue* rac = dynamic_cast<RooAbsCategoryLValue*>(raa) ;
   if (!rac) {
-    if (verbose) cout << "RooArgSet::setCatLabel(" << GetName() << ") ERROR object '" << name << "' is not of type RooAbsCategory" << endl ;
+    if (verbose) coutE(InputArguments) << "RooArgSet::setCatLabel(" << GetName() << ") ERROR object '" << name << "' is not of type RooAbsCategory" << endl ;
     return kTRUE ;
   }
   rac->setLabel(newVal) ;
@@ -395,12 +413,12 @@ Int_t RooArgSet::getCatIndex(const char* name, Int_t defVal, Bool_t verbose) con
 {
   RooAbsArg* raa = find(name) ;
   if (!raa) {
-    if (verbose) cout << "RooArgSet::getCatLabel(" << GetName() << ") ERROR no object with name '" << name << "' found" << endl ;
+    if (verbose) coutE(InputArguments) << "RooArgSet::getCatLabel(" << GetName() << ") ERROR no object with name '" << name << "' found" << endl ;
     return defVal ;
   }
   RooAbsCategory* rac = dynamic_cast<RooAbsCategory*>(raa) ;
   if (!rac) {
-    if (verbose) cout << "RooArgSet::getCatLabel(" << GetName() << ") ERROR object '" << name << "' is not of type RooAbsCategory" << endl ;
+    if (verbose) coutE(InputArguments) << "RooArgSet::getCatLabel(" << GetName() << ") ERROR object '" << name << "' is not of type RooAbsCategory" << endl ;
     return defVal ;
   }
   return rac->getIndex() ;
@@ -411,12 +429,12 @@ Bool_t RooArgSet::setCatIndex(const char* name, Int_t newVal, Bool_t verbose)
 {
   RooAbsArg* raa = find(name) ;
   if (!raa) {
-    if (verbose) cout << "RooArgSet::setCatLabel(" << GetName() << ") ERROR no object with name '" << name << "' found" << endl ;
+    if (verbose) coutE(InputArguments) << "RooArgSet::setCatLabel(" << GetName() << ") ERROR no object with name '" << name << "' found" << endl ;
     return kTRUE ;
   }
   RooAbsCategoryLValue* rac = dynamic_cast<RooAbsCategoryLValue*>(raa) ;
   if (!rac) {
-    if (verbose) cout << "RooArgSet::setCatLabel(" << GetName() << ") ERROR object '" << name << "' is not of type RooAbsCategory" << endl ;
+    if (verbose) coutE(InputArguments) << "RooArgSet::setCatLabel(" << GetName() << ") ERROR object '" << name << "' is not of type RooAbsCategory" << endl ;
     return kTRUE ;
   }
   rac->setIndex(newVal) ;
@@ -428,12 +446,12 @@ const char* RooArgSet::getStringValue(const char* name, const char* defVal, Bool
 {
   RooAbsArg* raa = find(name) ;
   if (!raa) {
-    if (verbose) cout << "RooArgSet::getStringValue(" << GetName() << ") ERROR no object with name '" << name << "' found" << endl ;
+    if (verbose) coutE(InputArguments) << "RooArgSet::getStringValue(" << GetName() << ") ERROR no object with name '" << name << "' found" << endl ;
     return defVal ;
   }
   RooAbsString* ras = dynamic_cast<RooAbsString*>(raa) ;
   if (!ras) {
-    if (verbose) cout << "RooArgSet::getStringValue(" << GetName() << ") ERROR object '" << name << "' is not of type RooAbsString" << endl ;
+    if (verbose) coutE(InputArguments) << "RooArgSet::getStringValue(" << GetName() << ") ERROR object '" << name << "' is not of type RooAbsString" << endl ;
     return defVal ;
   }
   return ras->getVal() ;
@@ -444,12 +462,12 @@ Bool_t RooArgSet::setStringValue(const char* name, const char* newVal, Bool_t ve
 {
   RooAbsArg* raa = find(name) ;
   if (!raa) {
-    if (verbose) cout << "RooArgSet::setStringValue(" << GetName() << ") ERROR no object with name '" << name << "' found" << endl ;
+    if (verbose) coutE(InputArguments) << "RooArgSet::setStringValue(" << GetName() << ") ERROR no object with name '" << name << "' found" << endl ;
     return kTRUE ;
   }
   RooStringVar* ras = dynamic_cast<RooStringVar*>(raa) ;
   if (!ras) {
-    if (verbose) cout << "RooArgSet::setStringValue(" << GetName() << ") ERROR object '" << name << "' is not of type RooAbsString" << endl ;
+    if (verbose) coutE(InputArguments) << "RooArgSet::setStringValue(" << GetName() << ") ERROR object '" << name << "' is not of type RooAbsString" << endl ;
     return kTRUE ;
   }
   ras->setVal(newVal) ;
@@ -464,7 +482,7 @@ void RooArgSet::writeToFile(const char* fileName) const
   // See writeToStream() for details
   ofstream ofs(fileName) ;
   if (ofs.fail()) {
-    cout << "RooArgSet::writeToFile(" << GetName() << ") error opening file " << fileName << endl ;
+    coutE(InputArguments) << "RooArgSet::writeToFile(" << GetName() << ") error opening file " << fileName << endl ;
     return ;
   }
   writeToStream(ofs,kFALSE) ;
@@ -479,7 +497,7 @@ Bool_t RooArgSet::readFromFile(const char* fileName, const char* flagReadAtt, co
   // See readFromStream() for details
   ifstream ifs(fileName) ;
   if (ifs.fail()) {
-    cout << "RooArgSet::readFromFile(" << GetName() << ") error opening file " << fileName << endl ;
+    coutE(InputArguments) << "RooArgSet::readFromFile(" << GetName() << ") error opening file " << fileName << endl ;
     return kTRUE ;
   }
   return readFromStream(ifs,kFALSE,flagReadAtt,section,verbose) ;
@@ -498,7 +516,7 @@ void RooArgSet::writeToStream(ostream& os, Bool_t compact, const char* /*section
   // writeToStream() function.
 
   if (compact) {
-    cout << "RooArgSet::writeToStream(" << GetName() << ") compact mode not supported" << endl ;
+    coutE(InputArguments) << "RooArgSet::writeToStream(" << GetName() << ") compact mode not supported" << endl ;
     return ;
   }
 
@@ -557,7 +575,7 @@ Bool_t RooArgSet::readFromStream(istream& is, Bool_t compact, const char* flagRe
   // function.
 
   if (compact) {
-    cout << "RooArgSet::readFromStream(" << GetName() << ") compact mode not supported" << endl ;
+    coutE(InputArguments) << "RooArgSet::readFromStream(" << GetName() << ") compact mode not supported" << endl ;
     return kTRUE ;
   }
 
@@ -600,20 +618,18 @@ Bool_t RooArgSet::readFromStream(istream& is, Bool_t compact, const char* flagRe
     // Process include directives
     if (!token.CompareTo("include")) {
       if (parser.atEOL()) {
-	cout << "RooArgSet::readFromStream(" << GetName() 
-	     << "): no filename found after include statement" << endl ;
+	coutE(InputArguments) << "RooArgSet::readFromStream(" << GetName() 
+			      << "): no filename found after include statement" << endl ;
 	return kTRUE ;
       }
       TString filename = parser.readLine() ;
       ifstream incfs(filename) ;
       if (!incfs.good()) {
-	cout << "RooArgSet::readFromStream(" << GetName() << "): cannot open include file " << filename << endl ;
+	coutE(InputArguments) << "RooArgSet::readFromStream(" << GetName() << "): cannot open include file " << filename << endl ;
 	return kTRUE ;
       }
-      if (verbose) {
-	cout << "RooArgSet::readFromStream(" << GetName() << "): processing include file " 
-	     << filename << endl ;
-      }
+      coutI(InputArguments) << "RooArgSet::readFromStream(" << GetName() << "): processing include file " 
+			    << filename << endl ;
       if (readFromStream(incfs,compact,flagReadAtt,inSection?0:section,verbose)) return kTRUE ;
       continue ;
     }
@@ -659,16 +675,16 @@ Bool_t RooArgSet::readFromStream(istream& is, Bool_t compact, const char* flagRe
       }
       condStack[condStackLevel] = status ;
       
-      if (verbose) cout << "RooArgSet::readFromStream(" << GetName() 
-			<< "): conditional expression " << expr << " = " 
-			<< (condStack[condStackLevel]?"true":"false") << endl ;
+      if (verbose) cxcoutD(Eval) << "RooArgSet::readFromStream(" << GetName() 
+				 << "): conditional expression " << expr << " = " 
+				 << (condStack[condStackLevel]?"true":"false") << endl ;
       continue ; // go to next line
     }
     
     if (!token.CompareTo("else")) {
       // Must have seen an if statement before
       if (condStackLevel==0) {
-	cout << "RooArgSet::readFromStream(" << GetName() << "): unmatched 'else'" << endl ;
+	coutE(InputArguments) << "RooArgSet::readFromStream(" << GetName() << "): unmatched 'else'" << endl ;
       }
       
       if (parser.atEOL()) {
@@ -680,7 +696,7 @@ Bool_t RooArgSet::readFromStream(istream& is, Bool_t compact, const char* flagRe
 	// if anything follows it should be 'if'
 	token = parser.readToken() ;
 	if (token.CompareTo("if")) {
-	  cout << "RooArgSet::readFromStream(" << GetName() << "): syntax error: 'else " << token << "'" << endl ;
+	  coutE(InputArguments) << "RooArgSet::readFromStream(" << GetName() << "): syntax error: 'else " << token << "'" << endl ;
 	  return kTRUE ;
 	} else {
 	  if (anyCondTrue[condStackLevel]) {
@@ -701,7 +717,7 @@ Bool_t RooArgSet::readFromStream(istream& is, Bool_t compact, const char* flagRe
     if (!token.CompareTo("endif")) {
       // Must have seen an if statement before
       if (condStackLevel==0) {
-	cout << "RooArgSet::readFromStream(" << GetName() << "): unmatched 'endif'" << endl ;
+	coutE(InputArguments) << "RooArgSet::readFromStream(" << GetName() << "): unmatched 'endif'" << endl ;
 	return kTRUE ;
       }
       
@@ -716,14 +732,14 @@ Bool_t RooArgSet::readFromStream(istream& is, Bool_t compact, const char* flagRe
       // Process echo statements
       if (!token.CompareTo("echo")) {
 	TString message = parser.readLine() ;
-	cout << "RooArgSet::readFromStream(" << GetName() << "): >> " << message << endl ;
+	coutE(InputArguments) << "RooArgSet::readFromStream(" << GetName() << "): >> " << message << endl ;
 	continue ;
       } 
       
       // Process abort statements
       if (!token.CompareTo("abort")) {
 	TString message = parser.readLine() ;
-	cout << "RooArgSet::readFromStream(" << GetName() << "): USER ABORT" << endl ;
+	coutE(InputArguments) << "RooArgSet::readFromStream(" << GetName() << "): USER ABORT" << endl ;
 	return kTRUE ;
       } 
       
@@ -734,8 +750,8 @@ Bool_t RooArgSet::readFromStream(istream& is, Bool_t compact, const char* flagRe
 	if (parser.expectToken("=",kTRUE)) {
 	  parser.zapToEnd(kTRUE) ;
 	  retVal=kTRUE ;
-	  cout << "RooArgSet::readFromStream(" << GetName() 
-	       << "): missing '=' sign: " << arg << endl ;
+	  coutE(InputArguments) << "RooArgSet::readFromStream(" << GetName() 
+				<< "): missing '=' sign: " << arg << endl ;
 	  continue ;
 	}
 	Bool_t argRet = arg->readFromStream(is,kFALSE,verbose) ;	
@@ -743,8 +759,8 @@ Bool_t RooArgSet::readFromStream(istream& is, Bool_t compact, const char* flagRe
 	retVal |= argRet ;
       } else {
 	if (verbose) {
-	  cout << "RooArgSet::readFromStream(" << GetName() << "): argument " 
-	       << token << " not in list, ignored" << endl ;
+	  coutE(InputArguments) << "RooArgSet::readFromStream(" << GetName() << "): argument " 
+				<< token << " not in list, ignored" << endl ;
 	}
 	parser.zapToEnd(kTRUE) ;
       }
@@ -755,7 +771,7 @@ Bool_t RooArgSet::readFromStream(istream& is, Bool_t compact, const char* flagRe
   
   // Did we fully unwind the conditional stack?
   if (condStackLevel!=0) {
-    cout << "RooArgSet::readFromStream(" << GetName() << "): missing 'endif'" << endl ;
+    coutE(InputArguments) << "RooArgSet::readFromStream(" << GetName() << "): missing 'endif'" << endl ;
     return kTRUE ;
   }
   

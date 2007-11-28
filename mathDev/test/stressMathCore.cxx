@@ -1,4 +1,4 @@
-// @(#)root/test:$Id: stressVector.cxx 19826 2007-09-19 19:56:11Z rdm $
+// @(#)root/test:$Id$
 // Author: Lorenzo Moneta   06/2005 
 ///////////////////////////////////////////////////////////////////////////////////
 //
@@ -33,13 +33,27 @@
 #include "Math/Vector4D.h"
 #include "Math/VectorUtil.h"
 
+#include "Math/SVector.h"
+#include "Math/SMatrix.h"
+
+#include "TrackMathCore.h"
+
+
+//#define USE_REFLEX
+#ifdef USE_REFLEX
+#include "Cintex/Cintex.h"
+#include "Reflex/Reflex.h"
+#endif
+
 using namespace ROOT::Math; 
 
 #endif
 
 
+
 bool debug = true;  // print out reason of test failures
 bool debugTime = false; // print out separate timings for vectors 
+bool removeFiles = true; // remove Output root files 
 
 void PrintTest(std::string name) { 
    std::cout << std::left << std::setw(40) << name; 
@@ -150,9 +164,11 @@ public:
    double Cdf(double x) const { 
       return Evaluator<Func,NPAR>::F(fCdf,x, fParams); 
    }
+#ifdef HAVE_MATHMORE
    double Quantile(double x) const { 
       return Evaluator<FuncQ,NPARQ>::F(fQuant,x, fParams); 
    }
+#endif
 
    // test cumulative function
    int Test(double x1, double x2, double xl = 1, double xu = 0, bool cumul = false); 
@@ -180,7 +196,6 @@ private:
    double fParams[NPAR];
    double fScale1;
    double fScale2;
-   int NFuncTest; 
 };
 
 
@@ -289,10 +304,13 @@ typedef StatFunction<F2,F1,2> Dist_gaussian;
 typedef StatFunction<F3,F2,3> Dist_lognormal; 
 typedef StatFunction<F2,F1,2> Dist_tdistribution; 
  
-
+#ifdef HAVE_MATHMORE
 #define CREATE_DIST(name) Dist_ ##name  dist( name ## _pdf, name ## _cdf, name ##_quantile );
 #define CREATE_DIST_C(name) Dist_ ##name  distc( name ## _pdf, name ## _cdf_c, name ##_quantile_c );
-
+#else
+#define CREATE_DIST(name) Dist_ ##name  dist( name ## _pdf, name ## _cdf, 0 );
+#define CREATE_DIST_C(name) Dist_ ##name  distc( name ## _pdf, name ## _cdf_c, 0 );
+#endif
 
 template<class Distribution> 
 int TestDist(Distribution & d, double x1, double x2) { 
@@ -306,7 +324,8 @@ int testStatFunctions(int /* nfunc */) {
    
    int iret = 0; 
    //NFuncTest = nfunc; 
-      
+
+#ifdef HAVE_MATHMORE // wait that beta_pdf is in mathcore      
    { 
       PrintTest("Beta distribution"); 
       CREATE_DIST(beta);
@@ -316,6 +335,7 @@ int testStatFunctions(int /* nfunc */) {
       distc.SetParameters( 2, 2);
       iret |= distc.Test(0.01,0.99,0.,1.,true);
    }
+#endif
 
    {
       PrintTest("Gamma distribution"); 
@@ -349,7 +369,7 @@ int testStatFunctions(int /* nfunc */) {
       distc.ScaleTol2(100);
       iret |= distc.Test(-4,4,1,0,true);
    }
-#ifdef USE_MATHMORE
+#ifdef HAVE_MATHMORE
    {
       PrintTest("BreitWigner distribution "); 
       CREATE_DIST(breitwigner);
@@ -418,11 +438,12 @@ int testStatFunctions(int /* nfunc */) {
 
 template<class V> 
 struct VecType { 
-   static std::string name() { return "Vector";}
+   static std::string name() { return "MathCoreVector";}
 }; 
 template<>
 struct VecType<XYVector> {
    static std::string name() { return "XYVector";}
+   static std::string name32() { return "ROOT::Math::DisplacementVector2D<ROOT::Math::Cartesian2D<Double32_t> >";}
 }; 
 template<>
 struct VecType<Polar2DVector> {
@@ -431,6 +452,7 @@ struct VecType<Polar2DVector> {
 template<>
 struct VecType<XYZVector> {
    static std::string name() { return "XYZVector";}
+   static std::string name32() { return "ROOT::Math::DisplacementVector3D<ROOT::Math::Cartesian3D<Double32_t> >";}
 }; 
 template<>
 struct VecType<Polar3DVector> {
@@ -447,6 +469,7 @@ struct VecType<RhoZPhiVector> {
 template<>
 struct VecType<PxPyPzEVector> {
    static std::string name() { return "PxPyPzEVector";}
+   static std::string name32() { return "ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<Double32_t> >";}
 }; 
 template<>
 struct VecType<PtEtaPhiEVector> {
@@ -460,8 +483,31 @@ template<>
 struct VecType<PxPyPzMVector> {
    static std::string name() { return "PxPyPzMVector";}
 }; 
+template<>
+struct VecType<SVector<double,3> > {
+   static std::string name() { return "SVector3";}
+   static std::string name32() { return "ROOT::Math::SVector<Double32_t,3>";}
+}; 
+template<>
+struct VecType<SVector<double,4> > {
+   static std::string name() { return "SVector4";}
+   static std::string name32() { return "ROOT::Math::SVector<Double32_t,4>";}
+}; 
+template<>
+struct VecType<TrackD> {
+   static std::string name() { return "TrackD";}
+}; 
+template<>
+struct VecType<TrackD32> {
+   static std::string name() { return "TrackD32";}
+}; 
+template<>
+struct VecType<VecTrackD> {
+   static std::string name() { return "VecTrackD";}
+}; 
 
-// generic (2 dimension)
+
+// generic (2 dim)
 template<class V, int Dim>  
 struct VecOp { 
 
@@ -490,6 +536,7 @@ struct VecOp<V,3> {
          
 
 };
+
 // specialized for 4D 
 template<class V>  
 struct VecOp<V,4> { 
@@ -504,6 +551,28 @@ struct VecOp<V,4> {
       return ROOT::Math::VectorUtil::DeltaR2(v1,v2) + ROOT::Math::VectorUtil::InvariantMass(v1,v2);  }
 
 };
+// specialized for SVector<3>
+template<>  
+struct VecOp<SVector<double,3>,3> { 
+
+   typedef SVector<double,3> V; 
+   template<class It>
+   static V  Create(It &x, It &y, It &z , It & ) { return V(*x++,*y++,*z++);}
+
+   static double Add(const V & v) { return v(0) + v(1) + v(2); }
+};
+// specialized for SVector<4>
+template<>  
+struct VecOp<SVector<double,4>,4> { 
+
+   typedef SVector<double,4> V; 
+   template<class It>
+   static V  Create(It &x, It &y, It &z , It &t ) { return V(*x++,*y++,*z++,*t++);}
+
+   static double Add(const V & v) { return v(0) + v(1) + v(2) + v(3); }
+};
+
+
 
 // internal structure to measure the time
 
@@ -559,7 +628,6 @@ public:
       n2Loop(n2)
    {
       gTotTime  = 0; 
-      genData();
    }
     
 
@@ -621,6 +689,24 @@ public:
 // // //       dataE.resize(nGen);
          
    }
+
+   // gen data for a Ndim matrix or vector 
+   void genDataN() { 
+
+      // generate for all 4 d data 
+      TRandom3 r(111); // use a fixed seed to be able to reproduce tests
+      fSum = 0; 
+      dataX.reserve(nGen*Dim);
+      for (int i = 0; i < nGen*Dim ; ++ i) { 
+
+         // generate random data between [0,1]
+         double x = r.Rndm();
+         fSum += x;
+         dataX.push_back( x ); 
+      }
+   }
+
+
 
    typedef std::vector<double>::const_iterator DataIt; 
 
@@ -742,7 +828,7 @@ public:
    }
 
    template<class V> 
-   double testWrite(const std::vector<V> & dataV, bool compress = false) {
+   double testWrite(const std::vector<V> & dataV, std::string typeName="", bool compress = false) {
 
       
       std::string fname = VecType<V>::name() + ".root";
@@ -757,8 +843,18 @@ public:
       //std::cout << "typeID written : " << typeid(*v1).name() << std::endl;
 
       // need to add namespace to full type name
-      std::string typeName = "ROOT::Math::" + VecType<V>::name();
-      tree.Branch("Vector branch",typeName.c_str(),&v1);
+      if (typeName == "") {
+         typeName = "ROOT::Math::" + VecType<V>::name();
+      }
+      //std::cout << typeName << std::endl;
+
+      TBranch * br = tree.Branch("Vector branch",typeName.c_str(),&v1);
+      if (br == 0) { 
+         std::cout << "Error creating branch for" << typeName << "\n\t typeid is " 
+                   << typeid(*v1).name() << std::endl; 
+         return -1; 
+      }
+
 
       Timer timer;
       for (int i = 0; i < nGen; ++i) { 
@@ -766,7 +862,13 @@ public:
          tree.Fill();
       }
 
-      return file.Write();
+#ifdef DEBUG
+      tree.Print(); // debug
+#endif
+
+      file.Write();
+      file.Close();
+      return file.GetSize();
    }
 
    template<class V> 
@@ -809,14 +911,65 @@ public:
          tree->GetEntry(i);
          dataV.push_back(*v1); 
       }
+
+      if (removeFiles) gSystem->Unlink(fname.c_str());
+
       
       return 0; 
    }
 
 
+
+   // test of SVEctor's or SMatrix 
+   template<class V>
+   void testCreateSV( std::vector<V> & dataV) {     
+      Timer tim;
+      //DataIt x = dataX.begin(); 
+      double * x = &dataX.front();
+      double * end = x + dataX.size();
+      //SVector cannot be created from a generic iterator (should be fixed)
+      while (x != end) { 
+         dataV.push_back( V(x,x+Dim) );
+         assert(int(dataV.size()) <= nGen); 
+         x += Dim; 
+      }
+            
+   }
+
+   template <class V>
+   double testAdditionSV( const std::vector<V > & dataV) { 
+      V v0;
+      Timer t;
+      for (int i = 0; i < nGen; ++i) { 
+         v0 += dataV[i]; 
+      }
+      double tot = 0; 
+      typedef typename V::const_iterator It; 
+      for (It itr = v0.begin(); itr != v0.end(); ++itr) 
+         tot += *itr; 
+
+      return tot;
+   }  
+
+   template <class V>
+   double testAdditionTR( const std::vector<V > & dataV) { 
+      V v0;
+      Timer t;
+      for (int i = 0; i < nGen; ++i) { 
+         v0 += dataV[i]; 
+      }
+#ifdef DEBUG
+      v0.Print();
+#endif
+      return v0.Sum();
+   }  
+
+
 };
 
-
+//--------------------------------------------------------------------------------------
+// test of all physics vector (GenVector's)
+//--------------------------------------------------------------------------------------
 
 template<class V1, class V2, int Dim> 
 int testVector(int ngen, bool testio=false) { 
@@ -825,6 +978,7 @@ int testVector(int ngen, bool testio=false) {
 
    
    VectorTest<Dim> a(ngen); 
+   a.genData();
    
 
    std::vector<V1> v1; 
@@ -837,7 +991,7 @@ int testVector(int ngen, bool testio=false) {
    double sref1, sref2 = 0; 
 
    a.testCreate(v1);             iret |= a.check(VecType<V1>::name()+" creation",v1.size(),ngen);
-   s1 = a.testAddition(v1);    iret |= a.check(VecType<V1>::name()+" addition",s1,a.Sum(),Dim*4);
+   s1 = a.testAddition(v1);    iret |= a.check(VecType<V1>::name()+" addition",s1,a.Sum(),Dim*8);
    sref1 = s1; 
    v1.clear();
    assert(v1.size() == 0);
@@ -866,19 +1020,287 @@ int testVector(int ngen, bool testio=false) {
    int ir = 0;
    if (!testio) return iret; 
 
-   fsize = a.testWrite(v1);  iret |= a.check(VecType<V1>::name()+" write",fsize>100,1);
+   double estSize = ngen*8 * Dim + 10 * ngen;  //add extra bytes
+   scale = 0.1 / std::numeric_limits<double>::epsilon();
+   fsize = a.testWrite(v1);  iret |= a.check(VecType<V1>::name()+" write",fsize,estSize,scale);
    ir = a.testRead(v1);   iret |= a.check(VecType<V1>::name()+" read",ir,0);
    s1 = a.testAddition(v1);       iret |= a.check(VecType<V1>::name()+" after read",s1,sref1);
 
    // test io vector 2
-   fsize = a.testWrite(v2);  iret |= a.check(VecType<V2>::name()+" write",fsize>100,1);
+   fsize = a.testWrite(v2);  iret |= a.check(VecType<V2>::name()+" write",fsize,estSize,scale);
    ir = a.testRead(v2);      iret |= a.check(VecType<V2>::name()+" read",ir,0);
    s2 = a.testAddition(v2);       iret |= a.check(VecType<V2>::name()+" after read",s2,sref2);
+
+
+   // test io of double 32 for vector 1
+   if (Dim==2) return iret; 
+
+   estSize = ngen*4 * Dim + 10 * ngen;  //add extra bytes
+   scale = 0.1 / std::numeric_limits<double>::epsilon();
+   
+   std::string typeName = VecType<V1>::name32();
+   fsize = a.testWrite(v1,typeName);  iret |= a.check(VecType<V1>::name() +"_D32 write",fsize,estSize,scale);
+   ir = a.testRead(v1);   iret |= a.check(VecType<V1>::name()+"_D32 read",ir,0);
+   s1 = a.testAddition(v1);       iret |= a.check(VecType<V1>::name()+"_D32 after read",s1,sref1,1.E9);
+
 
    return iret; 
 
 }
 
+//--------------------------------------------------------------------------------------
+// test of Svector of dim 3 or 4
+//--------------------------------------------------------------------------------------
+
+template<int Dim> 
+int testVector34(int ngen, bool testio=false) { 
+   
+   int iret = 0;
+
+   
+   
+   VectorTest<Dim> a(ngen); 
+   a.genData();
+   
+   typedef SVector<double, Dim> SV; 
+   std::vector<SV> v1; 
+   v1.reserve(ngen); 
+
+   double s1 = 0; 
+   //double scale = 1; 
+   double sref1  = 0; 
+
+   std::string name = "SVector<double," + Util::ToString(Dim) + ">"; 
+   a.testCreate(v1);             iret |= a.check(name+" creation",v1.size(),ngen);
+   s1 = a.testAddition(v1);    iret |= a.check(name+" addition",s1,a.Sum(),Dim*8);
+   sref1 = s1; 
+
+   // test the io
+   double fsize = 0;
+   int ir = 0;
+   if (!testio) return iret; 
+
+   std::string typeName = "ROOT::Math::"+name;
+
+   double estSize = ngen*8 * Dim + 10 * ngen;
+   double scale = 0.1 / std::numeric_limits<double>::epsilon();
+   fsize = a.testWrite(v1,typeName);  iret |= a.check(name+" write",fsize,estSize,scale);
+   ir = a.testRead(v1);   iret |= a.check(name+" read",ir,0);
+   s1 = a.testAddition(v1);       iret |= a.check(name+" after read",s1,sref1);
+
+   //std::cout << "File size = " << fsize << " estimated " << 8 * Dim * ngen << std::endl;
+
+   // test Double32
+   estSize = ngen*4 * Dim + 10 * ngen;  //add extra bytes
+   scale = 0.1 / std::numeric_limits<double>::epsilon();
+   
+   typeName = VecType<SV>::name32();
+   fsize = a.testWrite(v1,typeName);  iret |= a.check(VecType<SV>::name() +"_D32 write",fsize,estSize,scale);
+   ir = a.testRead(v1);   iret |= a.check(VecType<SV>::name()+"_D32 read",ir,0);
+   s1 = a.testAddition(v1);       iret |= a.check(VecType<SV>::name()+"_D32 after read",s1,sref1,1.E9);
+
+
+   return iret; 
+}
+
+//--------------------------------------------------------------------------------------
+// test of generic Svector 
+//--------------------------------------------------------------------------------------
+
+template<int Dim> 
+int testSVector(int ngen, bool testio=false) { 
+   
+   // test the matrix if D2 is not equal to 1
+   int iret = 0;
+
+   
+   VectorTest<Dim> a(ngen); 
+   a.genDataN();
+   
+   typedef SVector<double, Dim> SV; 
+   std::vector<SV> v1; 
+   v1.reserve(ngen); 
+
+   double s1 = 0; 
+   //double scale = 1; 
+   double sref1  = 0; 
+
+   std::string name = "SVector<double," + Util::ToString(Dim) + ">"; 
+
+   a.testCreateSV(v1);             iret |= a.check(name+" creation",v1.size(),ngen);
+   s1 = a.testAdditionSV(v1);    iret |= a.check(name+" addition",s1,a.Sum(),Dim*4);
+   sref1 = s1; 
+
+   // test the io
+   double fsize = 0;
+   int ir = 0;
+   if (!testio) return iret; 
+
+
+   std::string typeName = "ROOT::Math::"+name;
+   double estSize = ngen*8 * Dim + 10. * ngen;
+   double scale = 0.1 / std::numeric_limits<double>::epsilon();
+   fsize = a.testWrite(v1,typeName);  iret |= a.check(name+" write",fsize,estSize,scale);
+   ir = a.testRead(v1);   iret |= a.check(name+" read",ir,0);
+   s1 = a.testAdditionSV(v1);       iret |= a.check(name+" after read",s1,sref1);
+
+
+   return iret; 
+}
+
+template<int D1, int D2>
+struct RepStd { 
+   typedef typename ROOT::Math::MatRepStd<double,D1,D2> R; 
+   static std::string name() {
+      return "ROOT::Math::MatRepStd<double," +  Util::ToString(D1) + "," + Util::ToString(D2) + "> "; 
+   }
+   static std::string name32() {
+      return "ROOT::Math::MatRepStd<Double32_t," +  Util::ToString(D1) + "," + Util::ToString(D2) + "> "; 
+   }
+   static std::string sname() { return ""; } 
+};
+template<int D1>
+struct RepSym { 
+   typedef typename ROOT::Math::MatRepSym<double,D1> R; 
+   static std::string name() {
+      return "ROOT::Math::MatRepSym<double," +  Util::ToString(D1) + "> "; 
+   }
+   static std::string name32() {
+      return "ROOT::Math::MatRepSym<Double32_t," +  Util::ToString(D1) + "> "; 
+   }
+   static std::string sname() { return "MatRepSym"; } 
+};
+
+//--------------------------------------------------------------------------------------
+// test of generic SMatrix
+//--------------------------------------------------------------------------------------
+
+template<int D1, int D2,class Rep > 
+int testSMatrix(int ngen, bool testio=false) { 
+   
+   // test the matrix if D2 is not equal to 1
+   int iret = 0;
+
+   
+   typedef typename Rep::R R;
+   typedef SMatrix<double, D1, D2,R> SM; 
+   // in the case of sym matrices SM::kSize is different than R::kSize
+   // need to use the R::kSize for Dim
+   const int Dim = R::kSize;
+   
+   VectorTest<Dim> a(ngen); 
+   a.genDataN();
+
+   std::vector<SM> v1; 
+   v1.reserve(ngen); 
+
+   double s1 = 0; 
+   //double scale = 1; 
+   double sref1  = 0; 
+
+   std::string name0 = "SMatrix<double," + Util::ToString(D1) + "," + Util::ToString(D2);
+   std::string name = name0 + "," + Rep::sname() +  ">";
+ 
+   a.testCreateSV(v1);             iret |= a.check(name+" creation",v1.size(),ngen);
+   s1 = a.testAdditionSV(v1);    iret |= a.check(name+" addition",s1,a.Sum(),Dim*4);
+   sref1 = s1; 
+
+   // test the io
+   if (!testio) return iret; 
+   double fsize = 0;
+   int ir = 0;
+
+   // the full name is needed for sym matrices
+   std::string typeName = "ROOT::Math::"+name0 + "," + Rep::name()  + ">";
+
+   double estSize = ngen*8 * Dim + 10 * ngen;
+   double scale = 0.1 / std::numeric_limits<double>::epsilon();
+   fsize = a.testWrite(v1,typeName);  iret |= a.check(name+" write",fsize,estSize,scale);
+   ir = a.testRead(v1);   iret |= a.check(name+" read",ir,0);
+   s1 = a.testAdditionSV(v1);       iret |= a.check(name+" after read",s1,sref1);
+
+
+   //std::cout << "File size = " << fsize << " estimated " << 8 * Dim * ngen << std::endl;
+
+   // test storing as Double32_t
+   // dictionay exist only for square matrices between 3 and 6 
+   if (D1 != D2) return iret; 
+   if (D1 < 3 || D1 > 6) return iret; 
+
+   double fsize32 = 0;
+
+   name0 = "SMatrix<Double32_t," + Util::ToString(D1) + "," + Util::ToString(D2);
+   name = name0 + "," + Rep::sname() +  ">";
+   typeName = "ROOT::Math::"+name0+ "," + Rep::name32()  + ">";
+
+
+   estSize = ngen* 4 * Dim + 10 * ngen;
+   scale = 0.1 / std::numeric_limits<double>::epsilon();
+   fsize32 = a.testWrite(v1,typeName);     iret |= a.check(name+" write",fsize32,estSize,scale);
+   ir = a.testRead(v1);   iret |= a.check(name+" read",ir,0);
+   //we read back float (scale errors then)
+   s1 = a.testAdditionSV(v1);       iret |= a.check(name+" after read",s1,sref1,1.E9);
+
+
+   return iret; 
+}
+
+
+//--------------------------------------------------------------------------------------
+// test of a track an object containing vector and matrices
+//--------------------------------------------------------------------------------------
+template<class T>
+int testTrack(int ngen) { 
+   
+   int iret = 0;
+
+   
+   const int Dim = T::kSize;
+   std::string name = T::Type();
+   
+   //std::cout << "Dim is " << Dim << std::endl;
+   
+   VectorTest<Dim> a(ngen); 
+   a.genDataN();
+
+   std::vector<T> v1; 
+   v1.reserve(ngen); 
+
+   double s1 = 0; 
+   //double scale = 1; 
+   double sref1  = 0; 
+
+ 
+   a.testCreateSV(v1);             iret |= a.check(name+" creation",v1.size(),ngen);
+   s1 = a.testAdditionTR(v1);    iret |= a.check(name+" addition",s1,a.Sum(),Dim*4);
+   sref1 = s1; 
+   //std::cout << " reference sum is " << sref1 << std::endl;
+
+   double fsize = 0;
+   int ir = 0;
+
+   // the full name is needed for sym matrices
+   std::string typeName = name;
+
+   int wsize = 8; 
+   if (T::IsD32() ) wsize = 4;
+   double estSize = ngen*wsize * Dim + 10 * ngen;
+   double scale = 0.1 / std::numeric_limits<double>::epsilon();
+   fsize = a.testWrite(v1,typeName);  iret |= a.check(name+" write",fsize,estSize,scale);
+   ir = a.testRead(v1);   iret |= a.check(name+" read",ir,0);
+   scale = 1; 
+   if (T::IsD32() ) scale = 1.E9; // use float numbers
+   s1 = a.testAdditionTR(v1);       iret |= a.check(name+" after read",s1,sref1,scale);
+   if (T::IsD32() ) { 
+     // check at double precision type must fail otherwise Double's are stored
+     bool pdebug = debug; debug = false; 
+     int ret = compare(" ",s1,sref1);
+     iret |= a.check(name+" Double32 test",ret,1);
+     debug = pdebug; 
+   } 
+
+   return iret; 
+}
 
 
 #endif
@@ -900,7 +1322,74 @@ int testGenVectors(int ngen,bool io) {
    return iret; 
 }
 
+int testSMatrix(int ngen,bool io) { 
 
+   int iret = 0; 
+
+   std::cout <<"******************************************************************************\n";
+   std::cout << "\tTest of SMatrix package\n";
+   std::cout <<"******************************************************************************\n";
+
+   if (io) { 
+      iret = gSystem->Load("libSmatrix");
+      if (iret !=0) { 
+         std::cerr <<"Error Loading libSmatrix" << std::endl;
+         io = false;
+      }
+   }
+
+   iret |= testVector34<3>(ngen,io); 
+   iret |= testVector34<4>(ngen,io); 
+
+   // test now matrices and vectors
+   iret |= testSVector<6>(ngen,io); 
+
+   // asymetric matrices we have only 4x3 and 3x4
+   iret |= testSMatrix<3,4,RepStd<3,4> >(ngen,io); 
+
+   iret |= testSMatrix<4,3,RepStd<4,3> >(ngen,io); 
+   iret |= testSMatrix<3,3,RepStd<3,3> >(ngen,io); 
+   // sym matrix
+   iret |= testSMatrix<5,5,RepSym<5> >(ngen,io); 
+
+   return iret; 
+}
+
+int testCompositeObj(int ngen) { 
+
+   int iret = 0; 
+
+   std::cout <<"******************************************************************************\n";
+   std::cout << "\tTest of a Composite Object (containing Vector's and Matrices)\n";
+   std::cout <<"******************************************************************************\n";
+
+#ifndef USE_REFLEX
+   std::cout << "Test Using CINT library\n\n"; 
+
+//    iret = gSystem->Load("libTrackMathCoreCint");
+//    if (iret !=0) { 
+//       std::cerr <<"Error Loading libTrackMathCoreCint" << std::endl;
+//    }
+
+   iret |= testTrack<TrackD>(ngen); 
+   iret |= testTrack<TrackD32>(ngen); 
+   iret |= testTrack<VecTrackD>(ngen); 
+
+#else 
+   std::cout << "Test Using Reflex library\n\n"; 
+
+#ifdef DEBUG
+   ROOT::Cintex::Cintex::SetDebug(1);
+#endif
+   ROOT::Cintex::Cintex::Enable();
+
+   iret |= testTrack<TrackD>(ngen); 
+   iret |= testTrack<TrackD32>(ngen); 
+   iret |= testTrack<VecTrackD>(ngen); 
+#endif
+
+   return iret;
+}
 
 int stressMathCore(double nscale = 1) { 
 
@@ -915,19 +1404,24 @@ int stressMathCore(double nscale = 1) {
 //    if (iret !=0) return iret; 
 
 
-   TBenchmark bm; 
+   TBenchmark bm;
    bm.Start("stressMathCore");
 
    std::cout << nscale*100 << std::endl;
    iret |= testStatFunctions(100);
 
    bool io = true; 
+
    iret |= testGenVectors(int(nscale*1000),io); 
+
+   iret |= testSMatrix(int(nscale*1000),io); 
+
+   iret |= testCompositeObj(int(nscale*1000)); 
 
    bm.Stop("stressMathCore");
    std::cout <<"******************************************************************************\n";
    bm.Print("stressMathCore");
-   const double reftime = 3.67; // ref time on  macbook pro (intel core duo 2.2 GHz)
+   const double reftime = 1.00; // ref time on  macbook pro (intel core duo 2.2 GHz)
    double rootmarks = 800 * reftime / bm.GetCpuTime("stressMathCore");
    std::cout << " ROOTMARKS = " << rootmarks << " ROOT version: " << gROOT->GetVersion() << "\t" 
              << gROOT->GetSvnBranch() << "@" << gROOT->GetSvnRevision() << std::endl;
