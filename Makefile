@@ -75,9 +75,9 @@ endif
 endif
 ifeq ($(BUILDGL),yes)
 ifeq ($(BUILDFTGL),yes)
-MODULES      += ftgl eve
+MODULES      += ftgl
 endif
-MODULES      += gl
+MODULES      += gl eve
 endif
 ifeq ($(BUILDMYSQL),yes)
 MODULES      += mysql
