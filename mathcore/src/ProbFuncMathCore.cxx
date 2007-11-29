@@ -2,20 +2,18 @@
 // Authors: L. Moneta, A. Zsenei   06/2005 
 
 
-#include <cmath>
+#include "Math/Math.h"
 #include "Math/ProbFuncMathCore.h"
 #include "Math/SpecFuncMathCore.h"
 
-#ifndef M_PI
-#define M_PI        3.14159265358979323846   /* pi */
-#endif
+
 
 
 namespace ROOT {
 namespace Math {
 
   
-
+   static const double kSqrt2 = 1.41421356237309515; // sqrt(2.)
 
    double beta_cdf_c(double x, double a, double b) {
       // use the fact that I(x,a,b) = 1. - I(1-x,b,a)
@@ -100,8 +98,8 @@ namespace Math {
          return 0.0;
          
       } else {
-         
-         return 1.0 - std::exp(- lambda * (x-x0));
+         // use expm1 funciton to avoid errors at small x
+         return - ROOT::Math::expm1( - lambda * (x-x0) ) ;
          
       }
       
@@ -109,7 +107,7 @@ namespace Math {
    
   
    double fdistribution_cdf_c(double x, double n, double m, double x0) {
-
+      // for the complement use the fact that IB(x,a,b) = 1. - IB(1-x,b,a)     
       return ROOT::Math::inc_beta(m/(m + n*(x-x0)), .5*m, .5*n);
   
    }
@@ -141,7 +139,7 @@ namespace Math {
    
    double lognormal_cdf_c(double x, double m, double s, double x0) {
       
-      double z = (std::log((x-x0))-m)/(s*std::sqrt(2.0)); 
+      double z = (std::log((x-x0))-m)/(s*kSqrt2); 
       if ( z > 1. )
          return 0.5*ROOT::Math::erfc(z);
       else 
@@ -153,7 +151,7 @@ namespace Math {
    
    double lognormal_cdf(double x, double m, double s, double x0) {
       
-      double z = (std::log((x-x0))-m)/(s*std::sqrt(2.0)); 
+      double z = (std::log((x-x0))-m)/(s*kSqrt2); 
       if ( z < -1. )
          return 0.5*ROOT::Math::erfc(-z);
       else 
@@ -165,7 +163,7 @@ namespace Math {
    
    double normal_cdf_c(double x, double sigma, double x0) {
       
-      double z = (x-x0)/(sigma*std::sqrt(2.0));
+      double z = (x-x0)/(sigma*kSqrt2);
       if ( z > 1. )
          return 0.5*ROOT::Math::erfc(z);
       else 
@@ -178,7 +176,7 @@ namespace Math {
    
    double normal_cdf(double x, double sigma, double x0) {
     
-      double z = (x-x0)/(sigma*std::sqrt(2.0));
+      double z = (x-x0)/(sigma*kSqrt2);
       if ( z < -1. )
          return 0.5*ROOT::Math::erfc(-z);
       else 

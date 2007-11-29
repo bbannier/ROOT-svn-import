@@ -14,6 +14,7 @@
 #pragma link C++ global ROOT_Math_SpecFuncMathCore;
 #pragma link C++ global ROOT_Math_PdfFuncMathCore;
 #pragma link C++ global ROOT_Math_ProbFuncMathCore;
+#pragma link C++ global ROOT_Math_QuantFuncMathCore;
 
 // special functionses
 
@@ -69,5 +70,27 @@
 #pragma link C++ function ROOT::Math::landau_cdf_c( double , double, double);
 #pragma link C++ function ROOT::Math::landau_cdf( double , double, double);
 
+// statitsical functions: quantiles
+#pragma link C++ function ROOT::Math::breitwigner_quantile_c(double,double);
+#pragma link C++ function ROOT::Math::breitwigner_quantile(double,double);
+#pragma link C++ function ROOT::Math::cauchy_quantile_c(double,double);
+#pragma link C++ function ROOT::Math::cauchy_quantile(double,double);
+#pragma link C++ function ROOT::Math::chisquared_quantile_c(double,double);
+#pragma link C++ function ROOT::Math::exponential_quantile_c(double,double);
+#pragma link C++ function ROOT::Math::exponential_quantile(double,double);
+#pragma link C++ function ROOT::Math::gamma_quantile_c(double,double,double);
+#pragma link C++ function ROOT::Math::gaussian_quantile_c(double,double);
+#pragma link C++ function ROOT::Math::gaussian_quantile(double,double);
+#pragma link C++ function ROOT::Math::lognormal_quantile_c(double,double,double);
+#pragma link C++ function ROOT::Math::lognormal_quantile(double,double,double);
+#pragma link C++ function ROOT::Math::normal_quantile_c(double,double);
+#pragma link C++ function ROOT::Math::normal_quantile(double,double);
+#pragma link C++ function ROOT::Math::uniform_quantile_c(double,double,double);
+#pragma link C++ function ROOT::Math::uniform_quantile(double,double,double);
+
+// #ifndef R__HAS_MATHMORE
+// #pragma link C++ function ROOT::Math::chisquared_quantile(double,double);
+// #pragma link C++ function ROOT::Math::gamma_quantile(double,double,double);
+// #endif
 
 #endif

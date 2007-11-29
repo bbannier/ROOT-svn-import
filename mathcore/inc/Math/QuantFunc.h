@@ -8,25 +8,35 @@
   *                                                                    *
   **********************************************************************/
 
-#ifndef ROOT_Math_DistFuncMathCore
-#define ROOT_Math_DistFuncMathCore
+/** 
+    Header file declaring the quantile distributions present in both 
+    MathCore and optionally MathMore. 
+    The MathMore ones are included only if ROOT has been built with MathMore. 
+*/
 
 
+#ifndef ROOT_Math_QuantFunc
+#define ROOT_Math_QuantFunc
 
-// pdf functions from Mathcore
-#ifndef ROOT_Math_PdfFuncMathCore
-#include "Math/PdfFuncMathCore.h"
+
+#ifndef ROOT_RConfigure
+#include "RConfigure.h"
 #endif
 
-// cdf from mathcore
-#ifndef ROOT_Math_ProbFuncMathCore
-#include "Math/ProbFuncMathCore.h"
-#endif
 
-// quantile functions from mathcore
+
 #ifndef ROOT_Math_QuantFuncMathCore
 #include "Math/QuantFuncMathCore.h"
 #endif
 
+// include distributions from MathMore when is there
+#ifdef R__HAS_MATHMORE  
 
-#endif  // ROOT_Math_DistFunc
+// extra quantiles in MathMore
+#ifndef ROOT_Math_QuantFuncMathMore
+#include "Math/QuantFuncMathMore.h"
+#endif
+
+#endif
+
+#endif  // ROOT_Math_QuantFunc

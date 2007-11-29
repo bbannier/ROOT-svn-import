@@ -1,4 +1,4 @@
-// @(#)root/fit:$Id: inc/Fit/MinimizerFactory.h,v 1.0 2006/01/01 12:00:00 moneta Exp $
+// @(#)root/mathcore:$Id$
 // Author: L. Moneta Fri Dec 22 14:43:33 2006
 
 /**********************************************************************
@@ -8,10 +8,10 @@
  *                                                                    *
  **********************************************************************/
 
-// Header file for class MinimizerFactory
+// Header file for class Factory
 
-#ifndef ROOT_Fit_MinimizerFactory
-#define ROOT_Fit_MinimizerFactory
+#ifndef ROOT_Math_Factory
+#define ROOT_Math_Factory
 
 #include <string>
 
@@ -19,22 +19,21 @@
 namespace ROOT { 
 
    namespace Math { 
-      class Minimizer; 
-   }
 
-   namespace Fit { 
-
+   class Minimizer; 
    
+
 /** 
-   MinimizerFactory  to create all type of Minimizer
-   use the Plugin Manager to create the minimizers
+   Factory  structure holding static functions to create interfaces 
+   using the Plugin Manager
 */ 
-struct MinimizerFactory {
+struct Factory { 
 
    /**
-      create the corrisponding Minimizer given the string
+      static method to create the corrisponding Minimizer given the string
     */
    static ROOT::Math::Minimizer * CreateMinimizer(const std::string & minimizerType = "Minuit2", const std::string & algoType = "Migrad");
+   
 
 }; 
 

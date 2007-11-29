@@ -1,4 +1,4 @@
-// @(#)root/fit:$Id: src/MinimizerFactory.cxx,v 1.0 2006/01/01 12:00:00 moneta Exp $
+// @(#)root/fit:$Id$
 // Author: L. Moneta Fri Dec 22 14:43:33 2006
 
 /**********************************************************************
@@ -10,7 +10,8 @@
 
 // Implementation file for class MinimizerFactory
 
-#include "Fit/MinimizerFactory.h"
+#include "Math/Factory.h"
+
 
 #define USE_PLUGIN_MANAGER
 
@@ -22,8 +23,8 @@
 
 #else 
 // all the minimizer implementation classes 
-#include "Fit/Minuit2Minimizer.h"
-#include "Fit/TMinuitMinimizer.h"
+#include "Minuit2/Minuit2Minimizer.h"
+#include "TMinuitMinimizer.h"
 #include "Fit/DummyMinimizer.h"
 #include "Math/GSLMinimizer.h"
 #include "Math/GSLNLSMinimizer.h"
@@ -38,9 +39,6 @@
 #include <iostream>
 #endif
 
-namespace ROOT { 
-
-   namespace Fit { 
 
 #ifndef USE_PLUGIN_MANAGER 
 int GetAlgorithmIndex(const std::string & minimType, const std::string & algoType) { 
@@ -80,7 +78,7 @@ int GetAlgorithmIndex(const std::string & minimType, const std::string & algoTyp
 #endif
 
 #ifdef USE_PLUGIN_MANAGER
-ROOT::Math::Minimizer * MinimizerFactory::CreateMinimizer(const std::string & minimizerType, const std::string & algoType)  
+ROOT::Math::Minimizer * ROOT::Math::Factory::CreateMinimizer(const std::string & minimizerType, const std::string & algoType)  
 {
 
    const char * minim = minimizerType.c_str();
@@ -114,7 +112,7 @@ ROOT::Math::Minimizer * MinimizerFactory::CreateMinimizer(const std::string & mi
                                                                                           
 }
 #else 
-Minimizer * MinimizerFactory::CreateMinimizer(const std::string & minimizerType, const std::string & algoType)  
+ROOT::Math::Minimizer * ROOT::Math::Factory::CreateMinimizer(const std::string & minimizerType, const std::string & algoType)  
 {
    // static method to create a minimizer . 
    // not using PM so direct dependency on all libraries (Minuit, Minuit2, MathMore, etc...)
@@ -126,11 +124,11 @@ Minimizer * MinimizerFactory::CreateMinimizer(const std::string & minimizerType,
    int algo = GetAlgorithmIndex(minimizerType,algoType);
 
    if (minimizerType ==  "Minuit2" )        
-       min = new ROOT::Fit::Minuit2Minimizer(algo); 
+       min = new ROOT::Minuit2::Minuit2Minimizer(algo); 
 
    // use TMinuit
-   else if (minimizerType ==  "Minuit" || minimizerType ==  "TMinuit")        
-       min = new ROOT::Fit::TMinuitMinimizer(algo);        
+//    else if (minimizerType ==  "Minuit" || minimizerType ==  "TMinuit")        
+//        min = new ROOT::Fit::TMinuitMinimizer(algo);        
 
    // use GSL minimizer 
    else if (minimizerType ==  "GSL")        
@@ -148,13 +146,11 @@ Minimizer * MinimizerFactory::CreateMinimizer(const std::string & minimizerType,
 
    // DEFAULT IS MINUIT2 based on MIGRAD
    else
-       min = new ROOT::Fit::Minuit2Minimizer(); 
+       min = new ROOT::Minuit2::Minuit2Minimizer(); 
 
    return min; 
 }
+
 #endif
 
-   } // end namespace Fit
-
-} // end namespace ROOT
 

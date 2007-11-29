@@ -1,7 +1,7 @@
 // test of minimization usingnew minimizer classes
 
 #include "Math/Minimizer.h"
-#include "Fit/MinimizerFactory.h"
+#include "Math/Factory.h"
 
 #include "TVirtualFitter.h"
 
@@ -512,7 +512,7 @@ int testNewMinimizer( const ROOT::Math::IMultiGenFunction & func, const double *
    TStopwatch w; 
    w.Start();
 
-   ROOT::Math::Minimizer * min = ROOT::Fit::MinimizerFactory::CreateMinimizer(minimizer, algoType);
+   ROOT::Math::Minimizer * min = ROOT::Math::Factory::CreateMinimizer(minimizer, algoType);
    if (min == 0) { 
       std::cout << "Error using minimizer " << minimizer << "  " << algoType << std::endl;
       return -1;

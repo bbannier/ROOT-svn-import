@@ -16,7 +16,7 @@
 #include "Math/Util.h"
 
 #include "Math/Minimizer.h"
-#include "Fit/MinimizerFactory.h"
+#include "Math/Factory.h"
 
 #include <cmath> 
 
@@ -111,7 +111,7 @@ ROOT::Math::Minimizer * FitConfig::CreateMinimizer() {
    // create minimizer according to the chosen configuration usinng the 
    // plug-in manager
 
-   ROOT::Math::Minimizer * min = MinimizerFactory::CreateMinimizer(fMinimizerType, fMinimAlgoType); 
+   ROOT::Math::Minimizer * min = ROOT::Math::Factory::CreateMinimizer(fMinimizerType, fMinimAlgoType); 
 
    if (min == 0) { 
       std::cout << "FitConfig: Could not create Minimizer " << fMinimizerType << std::endl;
