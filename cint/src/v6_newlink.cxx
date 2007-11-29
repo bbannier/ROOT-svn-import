@@ -1239,7 +1239,7 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
 
       case 'f' : // Float
       {
-         __asm__ __volatile__("call *%1" : "=a" (result7->obj.fl): "g" (vaddress));
+         __asm__ __volatile__("call *%1" : "=t" (result7->obj.fl): "g" (vaddress));
       }
       break;
 
@@ -2511,6 +2511,10 @@ int G__call_cppfunc(G__value *result7,G__param *libp,G__ifunc_table_internal *if
     }
     else if (!cppfunc && !G__get_funcptr(ifunc, ifn)){
        G__fprinterr(G__serr,"Error in G__call_cppfunc: There is no stub nor mangled name for function: %s \n", ifunc->funcname[ifn]);
+
+       if(ifunc->tagnum != -1)
+          G__fprinterr(G__serr,"Error in G__call_cppfunc: For class: %s \n", G__struct.name[ifunc->tagnum]);   
+       
        return -1;
     }
     else {
