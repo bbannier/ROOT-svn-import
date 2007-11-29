@@ -4464,8 +4464,6 @@ void G__cppif_geninline(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,i
          // Dont print them for the stats
          int hash;
          int idx;
-         G__hash(G__fulltagname(i,0),hash,idx);
-
          if(i != -1) {
             G__hash(G__fulltagname(i,0),hash,idx);
          }
