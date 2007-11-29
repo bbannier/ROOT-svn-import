@@ -19,7 +19,6 @@
 #pragma link C++ class ROOT::Fit::DataRange;
 #pragma link C++ class ROOT::Fit::DataOptions;
 //#pragma link C++ class ROOT::Fit::DataVector<ROOT::Fit::BinPoint>;
-#pragma link C++ class ROOT::Fit::MinimizerFactory;
 #pragma link C++ class ROOT::Fit::Fitter;
 #pragma link C++ class ROOT::Fit::FitConfig+;
 #pragma link C++ class ROOT::Fit::BinData+;
