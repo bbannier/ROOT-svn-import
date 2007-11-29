@@ -159,7 +159,7 @@ namespace Math {
    */
 
    inline double breitwigner_quantile_c(double z, double gamma) { 
-      return cauchy_quantile_c(z, 2.0* gamma);
+      return cauchy_quantile_c(z, gamma/2.0);
    }
 
 
@@ -181,7 +181,7 @@ namespace Math {
    */
 
    inline double breitwigner_quantile(double z, double gamma) { 
-      return cauchy_quantile(z, 2.0* gamma);
+      return cauchy_quantile(z, gamma/2.0);
    }
 
 

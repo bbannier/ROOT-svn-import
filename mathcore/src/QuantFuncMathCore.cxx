@@ -36,7 +36,7 @@ namespace Math {
       if (z == 1) return - std::numeric_limits<double>::infinity();
       if (z < 0.5)  
          // use fact that tan(PI(0.5-z)) = 1/tan(PI*z)
-         return -  b / std::tan( M_PI * z ); 
+         return  b / std::tan( M_PI * z ); 
       else 
          return  b * std::tan( M_PI * (0.5 -  z ) ); 
    }
@@ -49,7 +49,7 @@ namespace Math {
       if (z == 1) return + std::numeric_limits<double>::infinity();
       if (z < 0.5)  
          // use fact that tan(PI(0.5-z)) = 1/tan(PI*z)
-         return  b / std::tan( M_PI * z ); 
+         return  - b / std::tan( M_PI * z ); 
       else 
          return  b * std::tan( M_PI * ( z -  0.5 ) ); 
 
@@ -92,7 +92,7 @@ namespace Math {
      if (n == 0) return 0;  // is value of cdf for n = 0 
      if (z < 0.5) { 
         double y =  ROOT::Math::Cephes::incbi( .5*m, .5*n, z); 
-        return m/(n * y) - m; 
+        return m/(n * y) - m/n; 
      }
      else { 
         double y =  ROOT::Math::Cephes::incbi( .5*n, .5*m, 1.0 - z); 
