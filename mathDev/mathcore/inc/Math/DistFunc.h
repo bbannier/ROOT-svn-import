@@ -35,6 +35,11 @@
 #include "Math/ProbFuncMathCore.h"
 #endif
 
+//quantiles functions from mathcore
+#ifndef ROOT_Math_QuantFuncMathCore
+#include "Math/QuantFuncMathCore.h"
+#endif
+
 // include distributions from MathMore when is there
 #ifdef R__HAS_MATHMORE  
 
@@ -49,8 +54,8 @@
 // #endif
 
 // inverse (quantiles) are all in mathmore
-#ifndef ROOT_Math_ProbFuncInv
-#include "Math/ProbFuncInv.h"
+#ifndef ROOT_Math_QuantFuncMathMore
+#include "Math/QuantFuncMathMore.h"
 #endif
 
 #endif

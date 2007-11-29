@@ -547,6 +547,7 @@ namespace Math {
 
 
 
+#ifdef HAVE_OLD_STAT_FUNC
 
    /** @name Backward compatible MathCore CDF functions */ 
 
@@ -626,7 +627,7 @@ namespace Math {
       return tdistribution_cdf    (x, r, x0); 
    }
 
-
+#endif
 
 } // namespace Math
 } // namespace ROOT

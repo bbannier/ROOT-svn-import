@@ -33,29 +33,14 @@
 #pragma link C++ function ROOT::Math::sph_legendre(unsigned,unsigned,double);
 #pragma link C++ function ROOT::Math::sph_neumann(unsigned,double);
 
-// statistical functions: pdf of mathmore
+// statistical functions: 
 
 // quantiles: inverses of cdf
-#pragma link C++ function ROOT::Math::breitwigner_quantile_c(double,double);
-#pragma link C++ function ROOT::Math::breitwigner_quantile(double,double);
-#pragma link C++ function ROOT::Math::cauchy_quantile_c(double,double);
-#pragma link C++ function ROOT::Math::cauchy_quantile(double,double);
-#pragma link C++ function ROOT::Math::chisquared_quantile_c(double,double);
-#pragma link C++ function ROOT::Math::chisquared_quantile(double,double);
-#pragma link C++ function ROOT::Math::exponential_quantile_c(double,double);
-#pragma link C++ function ROOT::Math::exponential_quantile(double,double);
-#pragma link C++ function ROOT::Math::gamma_quantile_c(double,double,double);
-#pragma link C++ function ROOT::Math::gamma_quantile(double,double,double);
-#pragma link C++ function ROOT::Math::gaussian_quantile_c(double,double);
-#pragma link C++ function ROOT::Math::gaussian_quantile(double,double);
-#pragma link C++ function ROOT::Math::lognormal_quantile_c(double,double,double);
-#pragma link C++ function ROOT::Math::lognormal_quantile(double,double,double);
-#pragma link C++ function ROOT::Math::normal_quantile_c(double,double);
-#pragma link C++ function ROOT::Math::normal_quantile(double,double);
+
 #pragma link C++ function ROOT::Math::tdistribution_quantile_c(double,double);
 #pragma link C++ function ROOT::Math::tdistribution_quantile(double,double);
-#pragma link C++ function ROOT::Math::uniform_quantile_c(double,double,double);
-#pragma link C++ function ROOT::Math::uniform_quantile(double,double,double);
 
+#pragma link C++ function ROOT::Math::chisquared_quantile(double,double);
+#pragma link C++ function ROOT::Math::gamma_quantile(double,double,double);
 
 #endif

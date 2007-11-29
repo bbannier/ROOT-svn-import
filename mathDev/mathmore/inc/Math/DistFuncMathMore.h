@@ -34,9 +34,9 @@
 // #include "Math/ProbFuncMathMore.h"
 // #endif
 
-// inverse (quantiles) are all in mathmore
-#ifndef ROOT_Math_ProbFuncInv
-#include "Math/ProbFuncInv.h"
+// quantile functions from mathmore
+#ifndef ROOT_Math_QuantFuncMathMore
+#include "Math/QuantFuncMathMore.h"
 #endif
 
 
