@@ -569,6 +569,8 @@ float G__float(G__value buf)
         switch(buf.type) {
         case 'd': /* double */
         case 'f': /* float */
+                result = buf.obj.fl;
+                return(result);
         case 'w': /* logic */
                 result = (float)buf.obj.d;
                 return(result);
