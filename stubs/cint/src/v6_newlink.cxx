@@ -5082,11 +5082,11 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                     // LF 15-10-07
                     // Generate the stubs for those function needing a temp object..
                     // Is this condition correct and/or sufficient?
-                    ((ifunc->reftype[j] != G__PARAREFERENCE) &&
-                     (ifunc->type[j] == 'u') &&
-                     (G__struct.type[ifunc->p_tagtable[j]] == 'c' || 
-                      G__struct.type[ifunc->p_tagtable[j]] == 's' || 
-                      G__struct.type[ifunc->p_tagtable[j]] == 'u')) ||
+                    //((ifunc->reftype[j] != G__PARAREFERENCE) &&
+                    // (ifunc->type[j] == 'u') &&
+                    // (G__struct.type[ifunc->p_tagtable[j]] == 'c' || 
+                    //  G__struct.type[ifunc->p_tagtable[j]] == 's' || 
+                    //  G__struct.type[ifunc->p_tagtable[j]] == 'u')) ||
 
                     // LF 26-10-07
                     // Generate the stubs for those function needing a pointer to a reference (see TCLonesArray "virtual TObject*&	operator[](Int_t idx)")
@@ -5362,11 +5362,11 @@ void G__cppif_func(FILE *fp, FILE *hfp)
          if(  G__dicttype==0 || ((G__dicttype==3 || G__dicttype==4))) { 
             // The stubs where generated for functions needing temporal objects too... use them
             if  ( !ifunc->mangled_name[j] ||
-                  ((ifunc->reftype[j] != G__PARAREFERENCE) &&
-                   (ifunc->type[j] == 'u') &&
-                   (G__struct.type[ifunc->p_tagtable[j]] == 'c' || 
-                    G__struct.type[ifunc->p_tagtable[j]] == 's' || 
-                    G__struct.type[ifunc->p_tagtable[j]] == 'u')) ||
+                  //((ifunc->reftype[j] != G__PARAREFERENCE) &&
+                  // (ifunc->type[j] == 'u') &&
+                  // (G__struct.type[ifunc->p_tagtable[j]] == 'c' || 
+                  //  G__struct.type[ifunc->p_tagtable[j]] == 's' || 
+                  //  G__struct.type[ifunc->p_tagtable[j]] == 'u')) ||
                   // LF 26-10-07
                   // Generate the stubs for those function needing a pointer to a reference (see TCLonesArray "virtual TObject*&	operator[](Int_t idx)")
                   // Is this condition correct and/or sufficient?
@@ -9207,11 +9207,11 @@ void G__cpplink_memfunc(FILE *fp)
                       (!ifunc->mangled_name[j] || 
                       
                       // The stubs where generated for functions needing temporal objects too... use them
-                      ((ifunc->reftype[j] != G__PARAREFERENCE) &&
-                       (ifunc->type[j] == 'u') &&
-                       (G__struct.type[ifunc->p_tagtable[j]] == 'c' || 
-                        G__struct.type[ifunc->p_tagtable[j]] == 's' || 
-                        G__struct.type[ifunc->p_tagtable[j]] == 'u')) ||
+                      //((ifunc->reftype[j] != G__PARAREFERENCE) &&
+                      // (ifunc->type[j] == 'u') &&
+                      // (G__struct.type[ifunc->p_tagtable[j]] == 'c' || 
+                      //  G__struct.type[ifunc->p_tagtable[j]] == 's' || 
+                      //  G__struct.type[ifunc->p_tagtable[j]] == 'u')) ||
 
                       // LF 26-10-07
                       // Generate the stubs for those function needing a pointer to a reference (see TCLonesArray "virtual TObject*&	operator[](Int_t idx)")
@@ -10171,11 +10171,11 @@ void G__cpplink_func(FILE *fp)
              ((G__dicttype==3 || G__dicttype==4) && 
               // The stubs where generated for functions needing temporal objects too... use them
               ( !ifunc->mangled_name[j] ||
-                ((ifunc->reftype[j] != G__PARAREFERENCE) &&
-                 (ifunc->type[j] == 'u') &&
-                 (G__struct.type[ifunc->p_tagtable[j]] == 'c' || 
-                  G__struct.type[ifunc->p_tagtable[j]] == 's' || 
-                  G__struct.type[ifunc->p_tagtable[j]] == 'u')) ||
+                //((ifunc->reftype[j] != G__PARAREFERENCE) &&
+                // (ifunc->type[j] == 'u') &&
+                // (G__struct.type[ifunc->p_tagtable[j]] == 'c' || 
+                //  G__struct.type[ifunc->p_tagtable[j]] == 's' || 
+                //  G__struct.type[ifunc->p_tagtable[j]] == 'u')) ||
               
                 // LF 26-10-07
                 // Generate the stubs for those function needing a pointer to a reference (see TCLonesArray "virtual TObject*&	operator[](Int_t idx)")
