@@ -27,7 +27,14 @@
 #endif
 
 
+#ifdef HAVE_NO_EXPM1
+// needed to implement expm1
+#include <limits>
+#endif
+
+
 #ifndef M_PI
+
 #define M_PI       3.14159265358979323846264338328      // Pi 
 #endif
 
