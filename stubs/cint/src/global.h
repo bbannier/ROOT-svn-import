@@ -208,6 +208,12 @@ extern struct G__typedef  G__newtype;
 // LF 03-07-07
 extern const char *G__libname;
 
+// DMS I make global this variable
+typedef void* G__SHLHANDLE;
+extern G__SHLHANDLE G__sl_handle[G__MAX_SL];
+extern short G__allsl;
+
+
 /**************************************************************************
 * structure for input file
 **************************************************************************/

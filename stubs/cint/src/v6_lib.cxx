@@ -28,9 +28,10 @@
 #include <link.h>
 //#include <iostream>
 //#include <fstream>
-
 //#include <vector>
 #include <list>
+#include <limits.h>
+
 //#include <set>
 //#include <string>
 //#include <map>
@@ -119,34 +120,54 @@ get_linkmap_list()
 
 //______________________________________________________________________________
 void*
-G__get_address(const char* mangled_name)
+G__get_address(const char* mangled_name, char* libname)
 {
    // Get the addrees of a mangled name.
    // since we dont know in which library we wpuld have to look
    // in all the libraries that have already been loaded
    
-   void *address=0;
+    void *address=0;
    
-   // rem to delete this list
-   //list<struct link_map *> *linkmap_list = get_linkmap_list();
+//    // rem to delete this list
+//    list<struct link_map *> *linkmap_list = get_linkmap_list();
 
-   //list<struct link_map *>::iterator iter;
-   //for (iter = linkmap_list->begin(); iter != linkmap_list->end(); ++iter) {
-   //   struct link_map *lib_addr = *iter;
+//    list<struct link_map *>::iterator iter;
+//    for (iter = linkmap_list->begin(); iter != linkmap_list->end(); ++iter) {
+//       struct link_map *maptmp = *iter;
       
-      // now we have the library name... 
-      //link_map *maptmp;
-      //int ok = dlinfo(RTLD_SELF, RTLD_DI_LINKMAP, &maptmp);
-      //if (!ok) {
-      //}
-      //else{
-         address = dlsym(RTLD_DEFAULT, mangled_name);
-         //       if(address)
-         //   break;
-         //}
-         //}
+//       int ok = dlinfo(RTLD_SELF, RTLD_DI_LINKMAP, &maptmp);
+//       if (!ok&&!strcmp(maptmp->l_name,libname)) {
+//          address = dlsym(maptmp->l_addr,mangled_name);
+//          break;
+//       }
+  
+//    }
 
-         //delete linkmap_list;
+    for (int i=0;(i<G__allsl)&&(!address);i++){
+       address = dlsym(G__sl_handle[i],mangled_name);       
+    }
+
+   // if (!address)
+   //address = dlsym(RTLD_DEFAULT, mangled_name);
+
+  //   int i=0;
+
+//     if (libname){
+
+//        while(i<G__nfile) {
+
+//           if(G__matchfilename(i,libname))
+//              break;
+
+//           ++i;
+//        }      
+//     }
+    //   address = dlsym(G__sl_handle[G__srcfile[i].dictpos->allsl],mangled_name);
+    
+    if (!address)
+       address = dlsym(RTLD_DEFAULT, mangled_name);
+   
+   //delete linkmap_list;
    return address;
 }
 

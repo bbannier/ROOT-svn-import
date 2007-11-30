@@ -157,7 +157,7 @@ int G__dlclose G__P((G__SHLHANDLE handle));
 #endif /* G__WIN32 */
 
 #ifdef G__SHAREDLIB
-static int G__RTLD_flag = G__RTLD_LAZY;
+static int G__RTLD_flag = G__RTLD_NOW;
 #endif
 
 
