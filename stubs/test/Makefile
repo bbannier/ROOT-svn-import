@@ -462,7 +462,7 @@ endif
 endif
 
 clean:
-		@rm -f $(OBJS) core
+		@rm -f $(OBJS) core *Dict.*
 
 distclean:      clean
 		-@mv -f linearIO.root linearIO.roott
@@ -481,48 +481,48 @@ distclean:      clean
 Event.$(ObjSuf): Event.h
 MainEvent.$(ObjSuf): Event.h
 
-#EventDict.$(SrcSuf): Event.h EventLinkDef.h Event.$(ObjSuf)
-EventDict.$(SrcSuf): Event.h EventLinkDef.h 
+EventDict.$(SrcSuf): Event.h EventLinkDef.h Event.$(ObjSuf)
+#EventDict.$(SrcSuf): Event.h EventLinkDef.h 
 	@echo "Generating dictionary $@..."
-	@rootcint -f $@ -c $^
-	#$(CMDECHO)rootcint_nostubs.sh -f $@ -o Event.$(ObjSuf) -c $^
+	#rootcint -f $@ -c $^
+	@rootcint_nostubs.sh -f $@ -o Event.$(ObjSuf) -c $^
 
 
 Hello.$(ObjSuf): Hello.h
-#HelloDict.$(SrcSuf): Hello.h Hello.$(ObjSuf)
-HelloDict.$(SrcSuf): Hello.h 
+HelloDict.$(SrcSuf): Hello.h Hello.$(ObjSuf)
+#HelloDict.$(SrcSuf): Hello.h 
 	@echo "Generating dictionary $@..."
-	@rootcint -f $@ -c $^
-	#$(CMDECHO)rootcint_nostubs.sh -f $@ -o Hello.$(ObjSuf) -c $^
+	#@rootcint -f $@ -c $^
+	@rootcint_nostubs.sh -f $@ -o Hello.$(ObjSuf) -c $^
 
 Aclock.$(ObjSuf): Aclock.h
-#AclockDict.$(SrcSuf): Aclock.h Aclock.$(ObjSuf)
-AclockDict.$(SrcSuf): Aclock.h 
+AclockDict.$(SrcSuf): Aclock.h Aclock.$(ObjSuf)
+#AclockDict.$(SrcSuf): Aclock.h 
 	@echo "Generating dictionary $@..."
-	@rootcint -f $@ -c $^
-	#$(CMDECHO)rootcint_nostubs.sh -f $@ -o Aclock.$(ObjSuf) -c $^
+	#@rootcint -f $@ -c $^
+	@rootcint_nostubs.sh -f $@ -o Aclock.$(ObjSuf) -c $^
 
 
 Tetris.$(ObjSuf): Tetris.h
-#TetrisDict.$(SrcSuf): Tetris.h Tetris.$(ObjSuf)
-TetrisDict.$(SrcSuf): Tetris.h 
+TetrisDict.$(SrcSuf): Tetris.h Tetris.$(ObjSuf)
+#TetrisDict.$(SrcSuf): Tetris.h 
 	@echo "Generating dictionary $@..."
-	@rootcint -f $@ -c $^
-	#$(CMDECHO)rootcint_nostubs.sh -f $@ -o Tetris.$(ObjSuf) -c $^
+	#@rootcint -f $@ -c $^
+	@rootcint_nostubs.sh -f $@ -o Tetris.$(ObjSuf) -c $^
 
 TBench.$(ObjSuf): TBench.h
-TBenchDict.$(SrcSuf): TBench.h benchLinkDef.h
-#TBenchDict.$(SrcSuf): TBench.h benchLinkDef.h TBench.$(ObjSuf)
+#TBenchDict.$(SrcSuf): TBench.h benchLinkDef.h
+TBenchDict.$(SrcSuf): TBench.h benchLinkDef.h TBench.$(ObjSuf)
 	@echo "Generating dictionary $@..."
 	@rootcint -f $@ -c $^
-	#$(CMDECHO)rootcint_nostubs.sh -f $@ -o TBench.$(ObjSuf) -c $^
+	@rootcint_nostubs.sh -f $@ -o TBench.$(ObjSuf) -c $^
 
 guiviewer.$(ObjSuf): guiviewer.h
-#guiviewerDict.$(SrcSuf): guiviewer.h guiviewerLinkDef.h guiviewer.$(ObjSuf)
+guiviewerDict.$(SrcSuf): guiviewer.h guiviewerLinkDef.h guiviewer.$(ObjSuf)
 guiviewerDict.$(SrcSuf): guiviewer.h guiviewerLinkDef.h 
 	@echo "Generating dictionary $@..."
-	@rootcint -f $@ -c $^
-	#$(CMDECHO)rootcint_nostubs.sh -f $@ -o guiviewer.$(ObjSuf) -c $^
+	#@rootcint -f $@ -c $^
+	$(CMDECHO)rootcint_nostubs.sh -f $@ -o guiviewer.$(ObjSuf) -c $^
 
 .$(SrcSuf).$(ObjSuf):
 	$(CXX) $(CXXFLAGS) -c $<
