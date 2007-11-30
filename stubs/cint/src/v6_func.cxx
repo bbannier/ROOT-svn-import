@@ -1441,18 +1441,19 @@ G__value G__getfunction_libp(char* item, char* funcname, G__param* libp, int* kn
        * search for compiled(archived) function
        ***************************************************************/
       if (G__compiled_func(&result3, funcname, libp, hash) == 1) {
+         // --
 #ifdef G__ASM
          if (G__asm_noverflow) {
             /****************************************
              * LD_FUNC (compiled)
              ****************************************/
 #ifdef G__ASM_DBG
-            if (G__asm_dbg) G__fprinterr(G__serr,
-                  "%3x: LD_FUNC compiled %s paran=%d\n"
-                  , G__asm_cp, funcname, libp->paran);
-#endif
+            if (G__asm_dbg) {
+               G__fprinterr(G__serr, "%3x,%3x: LD_FUNC compiled '%s' paran: %d  %s:%d\n", G__asm_cp, G__asm_dt, funcname, libp->paran, __FILE__, __LINE__);
+            }
+#endif // G__ASM_DBG
             G__asm_inst[G__asm_cp] = G__LD_FUNC;
-            G__asm_inst[G__asm_cp+1] = (long)(&G__asm_name[G__asm_name_p]);
+            G__asm_inst[G__asm_cp+1] = (long) (&G__asm_name[G__asm_name_p]);
             G__asm_inst[G__asm_cp+2] = hash;
             G__asm_inst[G__asm_cp+3] = libp->paran;
             G__asm_inst[G__asm_cp+4] = (long)G__compiled_func;
@@ -1482,7 +1483,8 @@ G__value G__getfunction_libp(char* item, char* funcname, G__param* libp, int* kn
                   G__fprinterr(G__serr, "COMPILE ABORT function name buffer overflow");
                   G__printlinenum();
                }
-#endif
+#endif // G__ASM_DBG
+               // --
             }
          }
 #endif // G__ASM
@@ -1506,7 +1508,9 @@ G__value G__getfunction_libp(char* item, char* funcname, G__param* libp, int* kn
        * search for library function which are included in G__ci.c
        ***************************************************************/
       if (G__library_func(&result3, funcname, libp, hash) == 1) {
-         if (G__no_exec_compile) result3.type = 'i';
+         if (G__no_exec_compile) {
+            result3.type = 'i';
+         }
 #ifdef G__ASM
          if (G__asm_noverflow) {
             /****************************************
@@ -1516,12 +1520,12 @@ G__value G__getfunction_libp(char* item, char* funcname, G__param* libp, int* kn
             if (G__asm_dbg) {
                G__fprinterr(G__serr, "%3x,%3x: LD_FUNC library '%s' paran: %d  %s:%d\n", G__asm_cp, G__asm_dt, funcname, libp->paran, __FILE__, __LINE__);
             }
-#endif
+#endif // G__ASM_DBG
             G__asm_inst[G__asm_cp] = G__LD_FUNC;
-            G__asm_inst[G__asm_cp+1] = (long)(&G__asm_name[G__asm_name_p]);
+            G__asm_inst[G__asm_cp+1] = (long) (&G__asm_name[G__asm_name_p]);
             G__asm_inst[G__asm_cp+2] = hash;
             G__asm_inst[G__asm_cp+3] = libp->paran;
-            G__asm_inst[G__asm_cp+4] = (long)G__library_func;
+            G__asm_inst[G__asm_cp+4] = (long) G__library_func;
             G__asm_inst[G__asm_cp+5] = 0;
 
             // LF: 30-05-07
@@ -1529,6 +1533,7 @@ G__value G__getfunction_libp(char* item, char* funcname, G__param* libp, int* kn
             if(!G__p_ifunc) printf ("Serious trouble func 1569\n");
             
             if (G__asm_name_p + strlen(funcname) + 1 < G__ASM_FUNCNAMEBUF) {
+
                strcpy(G__asm_name + G__asm_name_p, funcname);
                G__asm_name_p += strlen(funcname) + 1;
                
@@ -1537,13 +1542,15 @@ G__value G__getfunction_libp(char* item, char* funcname, G__param* libp, int* kn
             else {
                G__abortbytecode();
 #ifdef G__ASM_DBG
-               if (G__asm_dbg)
+               if (G__asm_dbg) {
                   G__fprinterr(G__serr, "COMPILE ABORT function name buffer overflow");
+               }
                G__printlinenum();
-#endif
+#endif // -- G__ASM_DBG
+               // --
             }
          }
-#endif /* G__ASM */
+#endif // G__ASM
 
 #ifdef G__DUMPFILE
          if (G__dumpfile != NULL && 0 == G__no_exec_compile) {
@@ -2773,33 +2780,27 @@ G__value G__getfunction(char* item, int* known3, int memfunc_flag)
       if (G__USERCONV == funcmatch) goto templatefunc;
       if (G__EXACT != funcmatch) continue;
 
-
-
       /***************************************************************
        * search for compiled(archived) function
-       *
        ***************************************************************/
-      if (
-            memfunc_flag != G__CALLSTATICMEMFUNC &&
-            G__compiled_func(&result3, funcname, &fpara, hash) == 1) {
-
+      if ((memfunc_flag != G__CALLSTATICMEMFUNC) && G__compiled_func(&result3, funcname, &fpara, hash) == 1) {
+         // --
 #ifdef G__ASM
          if (G__asm_noverflow) {
             /****************************************
              * LD_FUNC (compiled)
              ****************************************/
 #ifdef G__ASM_DBG
-            if (G__asm_dbg) G__fprinterr(G__serr,
-                  "%3x: LD_FUNC compiled %s paran=%d\n"
-                  , G__asm_cp, funcname, fpara.paran);
-#endif
+            if (G__asm_dbg) {
+               G__fprinterr(G__serr, "%3x,%3x: LD_FUNC compiled '%s' paran: %d  %s:%d\n", G__asm_cp, G__asm_dt, funcname, fpara.paran, __FILE__, __LINE__);
+            }
+#endif // G__ASM_DBG
             G__asm_inst[G__asm_cp] = G__LD_FUNC;
-            G__asm_inst[G__asm_cp+1] = (long)(&G__asm_name[G__asm_name_p]);
+            G__asm_inst[G__asm_cp+1] = (long) (&G__asm_name[G__asm_name_p]);
             G__asm_inst[G__asm_cp+2] = hash;
             G__asm_inst[G__asm_cp+3] = fpara.paran;
-            G__asm_inst[G__asm_cp+4] = (long)G__compiled_func;
+            G__asm_inst[G__asm_cp+4] = (long) G__compiled_func;
             G__asm_inst[G__asm_cp+5] = 0;
-            
             // LF: 30-05-07
             G__asm_inst[G__asm_cp+6]=(long)G__p_ifunc;    
             if(!G__p_ifunc) printf ("Serious trouble func 2903\n");
@@ -2816,10 +2817,11 @@ G__value G__getfunction(char* item, int* known3, int memfunc_flag)
                   G__fprinterr(G__serr, "COMPILE ABORT function name buffer overflow");
                   G__printlinenum();
                }
-#endif
+#endif // G__ASM_DBG
+               // --
             }
          }
-#endif /* G__ASM */
+#endif // G__ASM
 
 #ifdef G__DUMPFILE
          if (G__dumpfile != NULL && 0 == G__no_exec_compile) {
@@ -2838,16 +2840,15 @@ G__value G__getfunction(char* item, int* known3, int memfunc_flag)
             ) {
             G__getindexedvalue(&result3, fpara.parameter[nindex]);
          }
-         return(result3);
+         return result3;
       }
-
-
       /***************************************************************
        * search for library function which are included in G__ci.c
-       *
        ***************************************************************/
       if (G__library_func(&result3, funcname, &fpara, hash) == 1) {
-         if (G__no_exec_compile) result3.type = 'i';
+         if (G__no_exec_compile) {
+            result3.type = 'i';
+         }
 #ifdef G__ASM
          if (G__asm_noverflow) {
             /****************************************
@@ -2859,12 +2860,11 @@ G__value G__getfunction(char* item, int* known3, int memfunc_flag)
             }
 #endif // G__ASM_DBG
             G__asm_inst[G__asm_cp] = G__LD_FUNC;
-            G__asm_inst[G__asm_cp+1] = (long)(&G__asm_name[G__asm_name_p]);
+            G__asm_inst[G__asm_cp+1] = (long) (&G__asm_name[G__asm_name_p]);
             G__asm_inst[G__asm_cp+2] = hash;
             G__asm_inst[G__asm_cp+3] = fpara.paran;
-            G__asm_inst[G__asm_cp+4] = (long)G__library_func;
+            G__asm_inst[G__asm_cp+4] = (long) G__library_func;
             G__asm_inst[G__asm_cp+5] = 0;
-            
             // LF: 30-05-07
             G__asm_inst[G__asm_cp+6]=(long)G__p_ifunc;
             if(!G__p_ifunc) printf ("Serious trouble func 2967\n");
@@ -2877,10 +2877,12 @@ G__value G__getfunction(char* item, int* known3, int memfunc_flag)
             else {
                G__abortbytecode();
 #ifdef G__ASM_DBG
-               if (G__asm_dbg)
+               if (G__asm_dbg) {
                   G__fprinterr(G__serr, "COMPILE ABORT function name buffer overflow");
+               }
                G__printlinenum();
 #endif // G__ASM_DBG
+               // --
             }
          }
 #endif // G__ASM

@@ -38,6 +38,7 @@
 #include "RooRealIntegral.h"
 #include "RooRealBinding.h"
 #include "RooScaledFunc.h"
+#include "RooMsgService.h"
 
 #include "Riostream.h"
 #include <iomanip>
@@ -237,11 +238,11 @@ void RooCurve::addPoints(const RooAbsFunc &func, Double_t xlo, Double_t xhi,
 
   // check the inputs
   if(!func.isValid()) {
-    cout << fName << "::addPoints: input function is not valid" << endl;
+    coutE(InputArguments) << fName << "::addPoints: input function is not valid" << endl;
     return;
   }
   if(minPoints <= 0 || xhi <= xlo) {
-    cout << fName << "::addPoints: bad input (nothing added)" << endl;
+    coutE(InputArguments) << fName << "::addPoints: bad input (nothing added)" << endl;
     return;
   }
 
@@ -412,8 +413,8 @@ Double_t RooCurve::average(Double_t xFirst, Double_t xLast) const
   // and dividing by xLast-xFirst
 
   if (xFirst>=xLast) {
-    cout << "RooCurve::average(" << GetName() 
-	 << ") invalid range (" << xFirst << "," << xLast << ")" << endl ;
+    coutE(InputArguments) << "RooCurve::average(" << GetName() 
+			  << ") invalid range (" << xFirst << "," << xLast << ")" << endl ;
     return 0 ;
   }
 
@@ -523,3 +524,17 @@ Double_t RooCurve::interpolate(Double_t xvalue, Double_t tolerance) const
  
   return retVal ;
 }
+
+
+Bool_t RooCurve::isIdentical(const RooCurve& other, Double_t tol) const 
+{
+  Int_t n= GetN();
+  for(Int_t i= 0; i < n; i++) {
+    if (fabs(fX[i]-other.fX[i])>tol) return kFALSE ;
+    if (fabs(fY[i]-other.fY[i])>tol) return kFALSE ;
+  }
+
+  return kTRUE ;
+}
+
+

@@ -318,7 +318,7 @@ static int G__isprivateassignoprifunc(int tagnum);
 static int G__isprivateassignoprvar(int tagnum);
 void G__cppif_gendefault(FILE *fp,FILE *hfp,int tagnum,int ifn,struct G__ifunc_table *ifunc,int isconstructor,int iscopyconstructor,int isdestructor,int isassignmentoperator,int isnonpublicnew);
 static char* G__vbo_funcname(int tagnum,int basetagnum,int basen);
-static int G__hascompiledoriginalbase(int tagnum);
+//static int G__hascompiledoriginalbase(int tagnum);
 static void G__declaretruep2f(FILE *fp,struct G__ifunc_table *ifunc,int j);
 static void G__printtruep2f(FILE *fp,struct G__ifunc_table *ifunc,int j);
 int G__tagtable_setup(int tagnum,int size,int cpplink,int isabstract,char *comment,G__incsetup setup_memvar,G__incsetup setup_memfunc);
@@ -8608,6 +8608,7 @@ void G__cpplink_typetable(FILE *fp, FILE *hfp)
 * G__hascompiledoriginalbase()
 *
 **************************************************************************/
+/* unused:
 static int G__hascompiledoriginalbase(int tagnum)
 {
   struct G__ifunc_table_internal *memfunc;
@@ -8626,6 +8627,7 @@ static int G__hascompiledoriginalbase(int tagnum)
   }
   return(0);
 }
+*/
 
 /**************************************************************************
 * G__cpplink_memvar()
@@ -11953,7 +11955,7 @@ void G__specify_link(int link_stub)
       store_line = G__ifile.line_number;
       fgetpos(G__ifile.fp,&pos);
       buf[len] = G__fgetc();
-      if(buf[len]==c||'='==buf[len]) c=G__fgetstream_template(buf+10,";\n\r");
+      if(buf[len]==c||'='==buf[len]) c=G__fgetstream_template(buf+len+1,";\n\r");
       else {
         fsetpos(G__ifile.fp,&pos);
         G__ifile.line_number = store_line;

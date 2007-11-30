@@ -50,6 +50,7 @@
 #include "RooNumber.h"
 #include "RooNumIntFactory.h"
 #include "RooIntegratorBinding.h"
+#include "RooMsgService.h"
 
 
 ClassImp(RooGaussKronrodIntegrator1D)
@@ -81,7 +82,7 @@ void RooGaussKronrodIntegrator1D::registerIntegrator(RooNumIntFactory& fact)
 
 
 
-RooGaussKronrodIntegrator1D::RooGaussKronrodIntegrator1D()
+RooGaussKronrodIntegrator1D::RooGaussKronrodIntegrator1D() : _x(0)
 {
 }
 
@@ -132,7 +133,9 @@ Bool_t RooGaussKronrodIntegrator1D::initialize()
 
 RooGaussKronrodIntegrator1D::~RooGaussKronrodIntegrator1D()
 {
-  delete[] _x ;
+  if (_x) {
+    delete[] _x ;
+  }
 }
 
 
@@ -143,7 +146,7 @@ Bool_t RooGaussKronrodIntegrator1D::setLimits(Double_t xmin, Double_t xmax) {
   // if this object was constructed to always use our integrand's limits.
 
   if(_useIntegrandLimits) {
-    cout << "RooGaussKronrodIntegrator1D::setLimits: cannot override integrand's limits" << endl;
+    oocoutE((TObject*)0,Eval) << "RooGaussKronrodIntegrator1D::setLimits: cannot override integrand's limits" << endl;
     return kFALSE;
   }
   _xmin= xmin;
@@ -228,7 +231,7 @@ Double_t RooGaussKronrodIntegrator1D::integral(const Double_t *yvec)
 #define GSL_SUCCESS 0
 #define GSL_EBADTOL 13  /* user specified an invalid tolerance */
 #define GSL_ETOL    14  /* failed to reach the specified tolerance */
-#define GSL_ERROR(a,b) cout << "RooGaussKronrodIntegrator1D::integral() ERROR: " << a << endl ; return b ;
+#define GSL_ERROR(a,b) oocoutE((TObject*)0,Eval) << "RooGaussKronrodIntegrator1D::integral() ERROR: " << a << endl ; return b ;
 #define GSL_DBL_MIN        2.2250738585072014e-308
 #define GSL_DBL_EPSILON    2.2204460492503131e-16
 

@@ -1,5 +1,5 @@
 //
-// Macro to run the ProofSimple selector.
+// Macro to run examples of analysis on PROOF.
 // This macro uses an existing PROOF session or starts one at the indicated URL.
 // In the case non existing PROOF session is found and no URL is given, the macro
 // tries to start a local PROOF session.
@@ -100,6 +100,10 @@ void runProof(const char *what = "simple",
    } else {
       fprintf(fs,"session-%s\n", proof->GetSessionTag());
       fclose(fs);
+   }
+   if (!proof) {
+      Printf("runProof: could not start/attach a PROOF session");
+      return;
    }
 
    // Set the number of workers (may only reduce the number of active workers
