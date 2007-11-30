@@ -108,6 +108,10 @@ X11TTFLIBDEPM          = $(X11LIBD) $(GRAFLIBD)
 X3DLIBDEPM             = $(G3DLIBD) $(GUILIBD)
 MONALISALIBDEPM        = $(NETLIBD) $(IOLIBD)
 THREADLIBDEPM          = $(IOLIBD)
+EVELIBDEPM             = $(GEOMLIB) $(GEOMPAINTERLIB) $(G3DLIB) $(GUILIB) \
+                         $(GPADLIB) $(GRAFLIB) $(HISTLIB) $(PHYSICSLIB) \
+                         $(GEDLIB) $(EGLIB) $(TREELIB) $(TREEPLAYERLIB) \
+                         $(GLLIB) $(FTGLLIB) $(IOLIB) $(RINTLIB)
 
 ifeq ($(EXPLICITLINK),yes)
 
@@ -187,6 +191,7 @@ X11TTFLIBDEP           = $(X11TTFLIBDEPM)
 X3DLIBDEP              = $(X3DLIBDEPM)
 MONALISALIBDEP         = $(MONALISALIBDEPM)
 THREADLIBDEP           = $(THREADLIBDEPM)
+EVELIBDEP              = $(EVELIBDEPM)
 
 ifeq ($(PLATFORM),win32)
 
@@ -201,7 +206,7 @@ ASIMAGEGUILIBEXTRA      = lib/libGraf.lib lib/libHist.lib lib/libGui.lib \
                           lib/libASImage.lib lib/libRIO.lib
 ASIMAGEGSLIBEXTRA       = lib/libGraf.lib lib/libASImage.lib
 GEDLIBEXTRA             = lib/libHist.lib lib/libGpad.lib lib/libGraf.lib \
-                          lib/libTree.lib lib/libTreePlayer.lib lib/libGui.lib 
+                          lib/libTree.lib lib/libTreePlayer.lib lib/libGui.lib
 POSTSCRIPTLIBEXTRA      = lib/libGraf.lib
 GUILIBEXTRA             = lib/libGpad.lib lib/libGraf.lib lib/libRIO.lib
 HISTPAINTERLIBEXTRA     = lib/libGraf.lib lib/libHist.lib lib/libMatrix.lib \
@@ -265,8 +270,7 @@ FOAMLIBEXTRA            = lib/libHist.lib
 ALIENLIBEXTRA           = lib/libXMLIO.lib lib/libNetx.lib lib/libTree.lib \
                           lib/libProofPlayer.lib lib/libNet.lib lib/RIO.lib
 ROOFITCORELIBEXTRA      = lib/libHist.lib lib/libGraf.lib lib/libMatrix.lib \
-                          lib/libTree.lib lib/libMinuit.lib lib/libHtml.lib \
-                          lib/libRIO.lib
+                          lib/libTree.lib lib/libMinuit.lib lib/libRIO.lib
 ROOFITLIBEXTRA          = lib/libRooFitCore.lib lib/libTree.lib lib/libRIO.lib
 CINT7LIBEXTRA           = lib/libReflex.lib
 CINTEXLIBEXTRA          = lib/libReflex.lib
@@ -290,6 +294,12 @@ GDMLLIBEXTRA            = lib/libGeom.lib lib/libXMLIO.lib lib/libHist.lib \
 UNURANLIBEXTRA          = lib/libHist.lib
 MONALISALIBEXTRA        = lib/libNet.lib lib/libRIO.lib
 THREADLIBEXTRA          = lib/libRIO.lib
+EVELIBEXTRA             = lib/libGeom.lib lib/libGeomPainter.lib \
+                          lib/libGpad.lib lib/libGraf3d.lib lib/libGui.lib \
+                          lib/libGraf.lib lib/libHist.lib lib/libPhysics.lib \
+                          lib/libGed.lib lib/libEG.lib lib/libTree.lib \
+                          lib/libTreePlayer.lib lib/libRGL.lib lib/libRIO.lib \
+                          lib/libRint.lib
 
 else
 
@@ -372,6 +382,9 @@ GDMLLIBEXTRA            = -Llib -lGeom -lXMLIO -lHist  -lRIO
 UNURANLIBEXTRA          = -Llib -lHist 
 MONALISALIBEXTRA        = -Llib -lNet -lRIO
 THREADLIBEXTRA          = -Llib -lRIO
+EVELIBEXTRA             = -Llib -lGeom -lGeomPainter -lGraf3d -lGui -lGpad \
+                          -lGraf -lHist -lPhysics -lGed -lEG -lTree \
+                          -lTreePlayer -lRGL -lRIO -lRint
 
 endif
 

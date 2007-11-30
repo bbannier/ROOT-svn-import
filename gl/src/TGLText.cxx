@@ -164,7 +164,7 @@ void TGLText::SetGLTextFont(Font_t fontnumber)
 {
    int fontid = fontnumber / 10;
 
-   char *fontname=0;
+   const char *fontname=0;
    if (fontid == 0)  fontname = "arialbd.ttf";
    if (fontid == 1)  fontname = "timesi.ttf";
    if (fontid == 2)  fontname = "timesbd.ttf";

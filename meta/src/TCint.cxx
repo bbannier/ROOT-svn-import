@@ -43,11 +43,11 @@
 #include "THashTable.h"
 #include "CallFunc.h"
 
-
 #include <cxxabi.h>
 #include <dlfcn.h>
 #include <link.h>
 #include <iostream>
+#include "RConfigure.h"
 
 #include <vector>
 #include <list>
@@ -633,7 +633,16 @@ Bool_t TCint::IsLoaded(const char* filename) const
       incPath.ReplaceAll(" :",":");
    }
    incPath.Prepend(".:");
-   incPath.Append(":$ROOTSYS/cint/include:$ROOTSYS/cint/stl");
+# ifdef CINTINCDIR
+   TString cintdir = CINTINCDIR;
+# else
+   TString cintdir = "$(ROOTSYS)/cint";
+# endif
+   incPath.Append(":");
+   incPath.Append(cintdir);
+   incPath.Append("/include:");
+   incPath.Append(cintdir);
+   incPath.Append("/stl");
    next = gSystem->Which(incPath, filename, kReadPermission);
    if (next) {
       file.Init(next);
@@ -1943,7 +1952,7 @@ void TCint::UpdateClassInfoWork(const char *item, Long_t tagnum)
          }
       }
    }
-  
+
    TClass *cl = gROOT->GetClass(item, load);
    if (cl) cl->ResetClassInfo(tagnum);
 }

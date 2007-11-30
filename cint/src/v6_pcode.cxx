@@ -5129,9 +5129,13 @@ int G__asm_optimize3(int *start)
       * sp
       ***************************************/
 #ifdef G__ASM_DBG
-      if(G__asm_inst[pc+1]<G__MAXSTRUCT) {
-        if(G__asm_dbg) G__fprinterr(G__serr,"%3lx: LD_FUNC %s paran=%d\n" ,pc
-                ,"compiled",G__asm_inst[pc+3]);
+      if (G__asm_dbg) {
+        if (G__asm_inst[pc+1] < G__MAXSTRUCT) {
+          G__fprinterr(G__serr, "%3lx: LD_FUNC '%s' paran: %d  %s:%d\n", pc, "compiled", G__asm_inst[pc+3], __FILE__, __LINE__);
+        }
+        else {
+          G__fprinterr(G__serr, "%3lx: LD_FUNC '%s' paran: %d  %s:%d\n", pc, (char*) G__asm_inst[pc+1], G__asm_inst[pc+3], __FILE__, __LINE__);
+        }
       }
       else {
         if(G__asm_dbg) G__fprinterr(G__serr,"%3lx: LD_FUNC %s paran=%d\n" ,pc

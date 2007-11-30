@@ -92,6 +92,10 @@ using namespace std;
 #pragma link C++ function getline;
 //#endif // G__ROOT
 
+#pragma if (G__GNUC_VER>=3001) && !defined(G__INTEL_COMPILER)
+#pragma link C++ function operator==(const string::iterator&,const string::iterator&);
+#pragma link C++ function operator!=(const string::iterator&,const string::iterator&);
+#pragma endif
 #endif // __MAKECINT__
 
 

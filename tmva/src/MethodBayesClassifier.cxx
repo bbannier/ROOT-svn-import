@@ -1,5 +1,5 @@
-// @(#)root/tmva $Id$    
-// Author: Marcin .... 
+// @(#)root/tmva $Id$
+// Author: Marcin ....
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -102,7 +102,7 @@ void  TMVA::MethodBayesClassifier::WriteWeightsToStream( ostream & o ) const
 void  TMVA::MethodBayesClassifier::ReadWeightsFromStream( istream & istr )
 {
    // read back the training results from a file (stream)
-   if (istr.eof());
+   if (istr.eof()) {}
 }
 
 //_______________________________________________________________________

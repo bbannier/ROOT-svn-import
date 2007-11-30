@@ -73,11 +73,11 @@ SYSTEMO       = $(UNIXO) $(UNIXTMPDO)
 SYSTEMDO      = $(UNIXDO) $(UNIXTMP2DO)
 endif
 endif
+ifeq ($(BUILDGL),yes)
 ifeq ($(BUILDFTGL),yes)
 MODULES      += ftgl
 endif
-ifeq ($(BUILDGL),yes)
-MODULES      += gl
+MODULES      += gl eve
 endif
 ifeq ($(BUILDMYSQL),yes)
 MODULES      += mysql
@@ -219,7 +219,7 @@ MODULES      += unix winnt x11 x11ttf win32gdk gl ftgl rfio castor \
                 ldap mlp krb5auth rpdutils globusauth pyroot ruby gfal \
                 qt qtroot qtgsi xrootd netx proofx alien clarens peac oracle \
                 xmlparser mathcore mathmore reflex cintex roofitcore roofit \
-                minuit2 monalisa fftw odbc unuran gdml g4root cint7
+                minuit2 monalisa fftw odbc unuran gdml eve g4root cint7
 MODULES      := $(sort $(MODULES))   # removes duplicates
 endif
 
@@ -769,6 +769,7 @@ endif
 	@rm -f etc/daemons/rootd.rc.d etc/daemons/rootd.xinetd
 	@rm -f etc/daemons/proofd.rc.d etc/daemons/proofd.xinetd
 	@rm -f etc/daemons/olbd.rc.d etc/daemons/xrootd.rc.d
+	@rm -f etc/svninfo.txt macros/html.C
 	@(find . -path '*/daemons' -prune -o -name *.d -exec rm -rf {} \; >/dev/null 2>&1;true)
 	@(find . -name *.o -exec rm -rf {} \; >/dev/null 2>&1;true)
 	-@cd test && $(MAKE) distclean
@@ -1099,7 +1100,7 @@ showbuild:
 showit:
 	@echo "Modules:$(word 1, $(MODULES))"
 	@$(foreach m, $(filter-out $(word 1, $(MODULES)), $(MODULES)), \
-	  echo -e "\t$(m)" ;) 
+	  echo -e "\t$(m)" ;)
 	@echo "Libraries:$(word 1, $(ALLLIBS))"
 	@$(foreach l, $(filter-out $(word 1, $(ALLLIBS)), $(ALLLIBS)), \
-	  echo -e "\t$(l)" ;) 
+	  echo -e "\t$(l)" ;)

@@ -1,6 +1,14 @@
 // @(#)root/gui:$Id$
 // Author: Bertrand Bellenot   26/09/2007
 
+/*************************************************************************
+ * Copyright (C) 1995-2007, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
+
 #include "TROOT.h"
 #include "TSystem.h"
 #include "TApplication.h"
@@ -111,22 +119,22 @@ void TGFileBrowser::CreateBrowser()
    fDrawOption->AddEntry(" surf4", dropt++);
    fDrawOption->AddEntry(" surf5", dropt++);
    fDrawOption->AddEntry(" text", dropt++);
-   fTopFrame->AddFrame(fDrawOption, new TGLayoutHints(kLHintsCenterY | 
+   fTopFrame->AddFrame(fDrawOption, new TGLayoutHints(kLHintsCenterY |
                        kLHintsRight, 2, 2, 2, 2));
    fTopFrame->AddFrame(new TGLabel(fTopFrame, "Draw Option: "),
-                       new TGLayoutHints(kLHintsCenterY | kLHintsRight, 
+                       new TGLayoutHints(kLHintsCenterY | kLHintsRight,
                        2, 2, 2, 2));
-   AddFrame(fTopFrame, new TGLayoutHints(kLHintsLeft | kLHintsTop | 
+   AddFrame(fTopFrame, new TGLayoutHints(kLHintsLeft | kLHintsTop |
             kLHintsExpandX, 2, 2, 2, 2));
    fCanvas   = new TGCanvas(this, 100, 100);
    fListTree = new TGListTree(fCanvas, kHorizontalFrame);
-   AddFrame(fCanvas, new TGLayoutHints(kLHintsLeft | kLHintsTop | 
+   AddFrame(fCanvas, new TGLayoutHints(kLHintsLeft | kLHintsTop |
                 kLHintsExpandX | kLHintsExpandY));
    fListTree->Connect("DoubleClicked(TGListTreeItem *, Int_t)",
       "TGFileBrowser", this, "DoubleClicked(TGListTreeItem *, Int_t)");
    fListTree->Connect("Clicked(TGListTreeItem *, Int_t, Int_t, Int_t)",
       "TGFileBrowser", this, "Clicked(TGListTreeItem *, Int_t, Int_t, Int_t)");
-   fListTree->Connect("Checked(TObject*, Bool_t)", "TGFileBrowser", 
+   fListTree->Connect("Checked(TObject*, Bool_t)", "TGFileBrowser",
       this, "Checked(TObject*, Bool_t)");
 
    fRootIcon = gClient->GetPicture("rootdb_t.xpm");
@@ -134,7 +142,7 @@ void TGFileBrowser::CreateBrowser()
 
    fBotFrame = new TGHorizontalFrame(this, 100, 30);
    fBotFrame->AddFrame(new TGLabel(fBotFrame, "Filter: "),
-                       new TGLayoutHints(kLHintsCenterY | kLHintsLeft, 
+                       new TGLayoutHints(kLHintsCenterY | kLHintsLeft,
                        2, 2, 2, 2));
    fFileType = new TGComboBox(fBotFrame, " All Files (*.*)");
    Int_t ftype = 1;
@@ -143,10 +151,10 @@ void TGFileBrowser::CreateBrowser()
    fFileType->AddEntry(" ROOT Files (*.root)", ftype++);
    fFileType->AddEntry(" Text Files (*.txt)", ftype++);
    fFileType->Resize(200, fFileType->GetTextEntry()->GetDefaultHeight());
-   fBotFrame->AddFrame(fFileType, new TGLayoutHints(kLHintsLeft | kLHintsTop | 
+   fBotFrame->AddFrame(fFileType, new TGLayoutHints(kLHintsLeft | kLHintsTop |
                 kLHintsExpandX, 2, 2, 2, 2));
    fFileType->Connect("Selected(Int_t)", "TGFileBrowser", this, "ApplyFilter(Int_t)");
-   AddFrame(fBotFrame, new TGLayoutHints(kLHintsLeft | kLHintsTop | 
+   AddFrame(fBotFrame, new TGLayoutHints(kLHintsLeft | kLHintsTop |
             kLHintsExpandX, 2, 2, 2, 2));
 
    fContextMenu = new TContextMenu("FileBrowserContextMenu") ;
@@ -161,13 +169,13 @@ void TGFileBrowser::CreateBrowser()
    Int_t igv = atoi(gv.Data());
    if (igv > 10)
       fGroupSize = igv;
-   
+
    if (gEnv->GetValue("Browser.ShowHidden", 0))
       fShowHidden = kTRUE;
    else
       fShowHidden = kFALSE;
 
-   TQObject::Connect("TGHtmlBrowser", "Clicked(char*)", 
+   TQObject::Connect("TGHtmlBrowser", "Clicked(char*)",
                      "TGFileBrowser", this, "Selected(char*)");
    fListLevel = 0;
    MapSubwindows();
@@ -182,6 +190,9 @@ TGFileBrowser::~TGFileBrowser()
 
    delete fContextMenu;
    delete fListTree;
+   if (fRootIcon) fClient->FreePicture(fRootIcon);
+   if (fFileIcon) fClient->FreePicture(fFileIcon);
+   if (fCachedPic) fClient->FreePicture(fCachedPic);
    Cleanup();
 }
 
@@ -211,6 +222,8 @@ void TGFileBrowser::Add(TObject *obj, const char *name, Int_t check)
       if(check > -1) {
          if (!fListTree->FindChildByName(fListLevel, name)) {
             TGListTreeItem *item = fListTree->AddItem(fListLevel, name, obj, pic, pic, kTRUE);
+            if ((pic != fFileIcon) && (pic != fCachedPic))
+               fClient->FreePicture(pic);
             fListTree->CheckItem(item, (Bool_t)check);
             TString tip(obj->ClassName());
             if (obj->GetTitle()) {
@@ -219,7 +232,7 @@ void TGFileBrowser::Add(TObject *obj, const char *name, Int_t check)
             }
             fListTree->SetToolTipItem(item, tip.Data());
          }
-      } 
+      }
       else {
          // special case for remote object
          Bool_t isRemote = kFALSE;
@@ -252,8 +265,12 @@ void TGFileBrowser::Add(TObject *obj, const char *name, Int_t check)
             }
          }
          else {
-            if (!fListTree->FindChildByName(fListLevel, name))
-               fListTree->AddItem(fListLevel, name, obj, pic, pic);
+            if (!fListTree->FindChildByName(fListLevel, name)) {
+               TGListTreeItem *item = fListTree->AddItem(fListLevel, name, obj, pic, pic);
+               if ((pic != fFileIcon) && (pic != fCachedPic))
+                  fClient->FreePicture(pic);
+               item->SetDNDSource(kTRUE);
+            }
          }
       }
    }
@@ -280,7 +297,7 @@ void TGFileBrowser::AddRemoteFile(TObject *obj)
    gid     = 0;
    modtime = 0;
    is_link = kFALSE;
-   
+
    TRemoteObject *robj = (TRemoteObject *)obj;
 
    robj->GetFileStat(&sbuf);
@@ -338,7 +355,7 @@ Option_t *TGFileBrowser::GetDrawOption() const
 }
 
 //______________________________________________________________________________
-void TGFileBrowser::GetFilePictures(const TGPicture **pic, Int_t file_type, 
+void TGFileBrowser::GetFilePictures(const TGPicture **pic, Int_t file_type,
                                     Bool_t is_link, const char *name)
 {
    // Determine the file picture for the given file type.
@@ -346,7 +363,7 @@ void TGFileBrowser::GetFilePictures(const TGPicture **pic, Int_t file_type,
    static TString cached_ext;
    static const TGPicture *cached_spic = 0;
    const char *ext = name ? strrchr(name, '.') : 0;
-   TString sname = name ? name : " "; 
+   TString sname = name ? name : " ";
    *pic = 0;
 
    if (ext && cached_spic && (cached_ext == ext)) {
@@ -465,8 +482,7 @@ void TGFileBrowser::AddKey(TGListTreeItem *itm, TObject *obj, const char *name)
    TGListTreeItem *where;
    static TGListTreeItem *olditem = itm;
    static TGListTreeItem *item = itm;
-   static const TGPicture *pic  = 0;
-   static const TGPicture *pic2 = gClient->GetPicture("leaf_t.xpm");
+   const TGPicture *pic;
 
    if ((fCnt == 0) || (olditem != itm)) {
       olditem = item = itm;
@@ -486,15 +502,19 @@ void TGFileBrowser::AddKey(TGListTreeItem *itm, TObject *obj, const char *name)
          item->Rename(newname.Data());
       }
       item = fListTree->AddItem(itm, name);
+      item->SetDNDSource(kTRUE);
    }
    if ((fCnt > fGroupSize) && (fCnt >= fNKeys-1)) {
       TString newname = Form("%s-%s", item->GetText(), name);
       item->Rename(newname.Data());
    }
    GetObjPicture(&pic, obj);
-   if (!pic) pic = pic2;
+   if (!pic) pic = gClient->GetPicture("leaf_t.xpm");
    if (!fListTree->FindChildByName(item, name)) {
-      fListTree->AddItem(item, name, obj, pic, pic);
+      TGListTreeItem *it = fListTree->AddItem(item, name, obj, pic, pic);
+      if ((pic != fFileIcon) && (pic != fCachedPic))
+         fClient->FreePicture(pic);
+      it->SetDNDSource(kTRUE);
    }
    fCnt++;
 }
@@ -549,7 +569,7 @@ void TGFileBrowser::CheckRemote(TGListTreeItem *item)
          if (!gApplication->GetAppRemote()) {
             gROOT->ProcessLine(Form(".R %s", item->GetText()));
             if (gApplication->GetAppRemote()) {
-               Getlinem(kInit, Form("\n%s:root [0]", 
+               Getlinem(kInit, Form("\n%s:root [0]",
                         gApplication->GetAppRemote()->ApplicationName()));
             }
          }
@@ -560,7 +580,7 @@ void TGFileBrowser::CheckRemote(TGListTreeItem *item)
          if (!gApplication->GetAppRemote()) {
             gROOT->ProcessLine(Form(".R %s", item->GetParent()->GetText()));
             if (gApplication->GetAppRemote()) {
-               Getlinem(kInit, Form("\n%s:root [0]", 
+               Getlinem(kInit, Form("\n%s:root [0]",
                         gApplication->GetAppRemote()->ApplicationName()));
             }
          }
@@ -571,7 +591,7 @@ void TGFileBrowser::CheckRemote(TGListTreeItem *item)
          }
       }
       else {
-         // check if the listtree item is from a local session or 
+         // check if the listtree item is from a local session or
          // from a remote session, then switch to the session it belongs to
          TGListTreeItem *top = item;
          while (top->GetParent()) {
@@ -584,7 +604,7 @@ void TGFileBrowser::CheckRemote(TGListTreeItem *item)
                // switch to remote session if not already in
                gROOT->ProcessLine(Form(".R %s", top->GetText()));
                if (gApplication->GetAppRemote()) {
-                  Getlinem(kInit, Form("\n%s:root [0]", 
+                  Getlinem(kInit, Form("\n%s:root [0]",
                            gApplication->GetAppRemote()->ApplicationName()));
                }
             }
@@ -656,7 +676,12 @@ void TGFileBrowser::Clicked(TGListTreeItem *item, Int_t btn, Int_t x, Int_t y)
       fListTree->ClearViewPort();
    }
    else {
-      if (!item->GetUserData()) {
+      if (item->GetUserData()) {
+         TObject *obj = (TObject *) item->GetUserData();
+         if (obj && obj->InheritsFrom("TKey"))
+            Chdir(item);
+      }
+      else {
          fListTree->GetPathnameFromItem(item, path);
          if (strlen(path) > 1) {
             TString dirname = DirName(item);
@@ -824,7 +849,7 @@ void TGFileBrowser::DoubleClicked(TGListTreeItem *item, Int_t /*btn*/)
          TIter next(files);
          TSystemFile *file;
          TString fname;
-         // directories first 
+         // directories first
          while ((file=(TSystemFile*)next())) {
             fname = file->GetName();
             if (file->IsDirectory()) {
@@ -833,12 +858,15 @@ void TGFileBrowser::DoubleClicked(TGListTreeItem *item, Int_t /*btn*/)
                if ((fname!="..") && (fname!=".")) { // skip it
                   if (!fListTree->FindChildByName(item, fname)) {
                      itm = fListTree->AddItem(item, fname);
+                     // uncomment line below to set directories as
+                     // DND targets
+                     //itm->SetDNDTarget(kTRUE);
                      itm->SetUserData(0);
                   }
                }
             }
          }
-         // then files... 
+         // then files...
          TIter nextf(files);
          while ((file=(TSystemFile*)nextf())) {
             fname = file->GetName();
@@ -856,7 +884,10 @@ void TGFileBrowser::DoubleClicked(TGListTreeItem *item, Int_t /*btn*/)
                   pic = fFileIcon;
                if (!fListTree->FindChildByName(item, fname)) {
                   itm = fListTree->AddItem(item,fname,pic,pic);
+                  if (pic != fFileIcon)
+                     fClient->FreePicture(pic);
                   itm->SetUserData(0);
+                  itm->SetDNDSource(kTRUE);
                   if (size && modtime) {
                      char *tiptext = FormatFileInfo(fname.Data(), size, modtime);
                      itm->SetTipText(tiptext);
@@ -902,11 +933,11 @@ void TGFileBrowser::DoubleClicked(TGListTreeItem *item, Int_t /*btn*/)
             if (fe) {
                TGCompositeFrame *embed = (TGCompositeFrame *)fe->fFrame;
                if (embed->InheritsFrom("TGTextEditor")) {
-                  gROOT->ProcessLine(Form("((TGTextEditor *)0x%lx)->LoadFile(\"%s\");", 
+                  gROOT->ProcessLine(Form("((TGTextEditor *)0x%lx)->LoadFile(\"%s\");",
                                      embed, f.GetName()));
                }
                else if (embed->InheritsFrom("TGTextEdit")) {
-                  gROOT->ProcessLine(Form("((TGTextEdit *)0x%lx)->LoadFile(\"%s\");", 
+                  gROOT->ProcessLine(Form("((TGTextEdit *)0x%lx)->LoadFile(\"%s\");",
                                      embed, f.GetName()));
                }
                else {
@@ -920,7 +951,7 @@ void TGFileBrowser::DoubleClicked(TGListTreeItem *item, Int_t /*btn*/)
          XXExecuteDefaultAction(&f);
       }
    }
-   gSystem->ChangeDirectory(savdir.Data());
+   //gSystem->ChangeDirectory(savdir.Data());
    fListTree->ClearViewPort();
 }
 
@@ -957,8 +988,8 @@ Long_t TGFileBrowser::XXExecuteDefaultAction(TObject *obj)
 //______________________________________________________________________________
 char *TGFileBrowser::FormatFileInfo(const char *fname, Long64_t size, Long_t modtime)
 {
-   // Format file information to be displayed in the tooltip. 
-   
+   // Format file information to be displayed in the tooltip.
+
    Long64_t fsize, bsize;
    TString infos = fname;
    infos += "\n";
@@ -1043,6 +1074,8 @@ void TGFileBrowser::GetObjPicture(const TGPicture **pic, TObject *obj)
       gClient->GetMimeTypeList()->AddType("[thumbnail]", iconname, iconname, iconname, "->Browse()");
       return;
    }
+   if (fCachedPic && (fCachedPic != fFileIcon))
+      fClient->FreePicture(fCachedPic);
    if (*pic == 0) {
       if (!obj->IsFolder())
          *pic = fFileIcon;
