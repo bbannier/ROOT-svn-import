@@ -93,8 +93,12 @@ using namespace std;
 //#endif // G__ROOT
 
 #pragma if (G__GNUC_VER>=3001) && !defined(G__INTEL_COMPILER)
-#pragma link C++ function operator==(const string::iterator&,const string::iterator&);
-#pragma link C++ function operator!=(const string::iterator&,const string::iterator&);
+// LF 30-11-07
+// Real men don't use iterators but reverse_iterator.... :D
+// it looks like operator==(const string::iterator&,const string::iterator&)
+// doesnt exist in the stl headers, how come?
+#pragma link C++ function operator==(const string::reverse_iterator&,const string::reverse_iterator&);
+#pragma link C++ function operator!=(const string::reverse_iterator&,const string::reverse_iterator&);
 #pragma endif
 #endif // __MAKECINT__
 
