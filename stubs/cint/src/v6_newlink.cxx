@@ -863,13 +863,7 @@ G__get_funcptr(G__ifunc_table_internal *ifunc, int ifn)
   if(!ifunc->mangled_name[ifn])
     return 0;
 
-  char* libname; 
-  if (G__struct.name[ifunc->tagnum])
-     libname = G__get_libname(G__struct.name[ifunc->tagnum]);
-  else
-     libname="";
-
-  ifunc->funcptr[ifn] = G__get_address(ifunc->mangled_name[ifn], libname);
+  ifunc->funcptr[ifn] = G__get_address(ifunc->mangled_name[ifn]);
   return ifunc->funcptr[ifn];
 }
 

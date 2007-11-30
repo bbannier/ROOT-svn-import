@@ -120,7 +120,7 @@ get_linkmap_list()
 
 //______________________________________________________________________________
 void*
-G__get_address(const char* mangled_name, char* libname)
+G__get_address(const char* mangled_name)
 {
    // Get the addrees of a mangled name.
    // since we dont know in which library we wpuld have to look
@@ -143,6 +143,7 @@ G__get_address(const char* mangled_name, char* libname)
   
 //    }
 
+    address = dlsym(0,mangled_name);
     for (int i=0;(i<G__allsl)&&(!address);i++){
        address = dlsym(G__sl_handle[i],mangled_name);       
     }
