@@ -172,7 +172,7 @@ Double_t RooAbsReal::traceEval(const RooArgSet* /*nset*/) const
 {
   // Calculate current value of object, with error tracing wrapper
   Double_t value = evaluate() ;
-  cxcoutD(ChangeTracking) << "RooAbsReal::getVal(" << GetName() << ") operMode = " << _operMode << " recalculated, new value = " << value << endl ;
+  cxcoutD(Tracing) << "RooAbsReal::getVal(" << GetName() << ") operMode = " << _operMode << " recalculated, new value = " << value << endl ;
   
   //Standard tracing code goes here
   if (!isValidReal(value)) {
@@ -1637,7 +1637,7 @@ RooPlot* RooAbsReal::plotAsymOn(RooPlot *frame, const RooAbsCategoryLValue& asym
     // add this new curve to the specified plot frame
     frame->addPlotable(curve, o.drawOptions);
 
-    cout << endl ;
+    ccoutW(Eval) << endl ;
 
     if (projDataSel!=o.projData) delete projDataSel ;
        
@@ -2075,6 +2075,11 @@ void RooAbsReal::selectNormalization(const RooArgSet*, Bool_t)
 
 void RooAbsReal::selectNormalizationRange(const char*, Bool_t) 
 {
+}
+
+void RooAbsReal::setCacheCheck(Bool_t flag) 
+{ 
+  _cacheCheck = flag ; 
 }
 
 

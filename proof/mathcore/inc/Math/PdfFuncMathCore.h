@@ -34,7 +34,15 @@ cumulative distributions. Additional distributions and all the inverses cumulati
 
 
 
+#if defined(__CINT__) && !defined(__MAKECINT__)
+// avoid to include header file when using CINT 
+#ifndef _WIN32
+#include "../lib/libMathCore.so"
+#else
+#include "../bin/libMathCore.dll"
+#endif
 
+#else
 
 
 #ifndef ROOT_Math_PdfFuncMathCore
@@ -65,6 +73,23 @@ namespace Math {
    */ 
 
   //@{
+
+  /**
+     
+  Probability density function of the beta distribution.
+  
+  \f[ p(x) = \frac{\Gamma (a + b) } {\Gamma(a)\Gamma(b) } x ^{a-1} (1 - x)^{b-1} \f]
+
+  for \f$0 \leq x \leq 1 \f$. For detailed description see 
+  <A HREF="http://mathworld.wolfram.com/BetaDistribution.html">
+  Mathworld</A>. 
+  
+  @ingroup PdfFunc
+
+  */
+
+  double beta_pdf(double x, double a, double b);
+
 
   /**
     
@@ -219,10 +244,26 @@ namespace Math {
  
   */
 
-  double gaussian_pdf(double x, double sigma, double x0 = 0);
+  double gaussian_pdf(double x, double sigma = 1, double x0 = 0);
 
 
 
+   /**
+
+   Probability density function of the Landau distribution.
+   
+   \f[  p(x) = \frac{1}{2 \pi i}\int_{c-i\infty}^{c+i\infty} e^{x s + s \log{s}} ds\f]
+
+   
+   Where s = (x-x0)/sigma. For detailed description see 
+   <A HREF="http://wwwasdoc.web.cern.ch/wwwasdoc/shortwrupsdir/g110/top.html">
+   CERNLIB</A>. The same algorithms as in CERNLIB (DENLAN)  is used 
+   
+   @ingroup PdfFunc
+   
+   */
+
+   double landau_pdf(double x, double sigma = 1, double x0 = 0.); 
 
 
   /**
@@ -260,9 +301,7 @@ namespace Math {
  
   */
 
-  double normal_pdf(double x, double sigma, double x0 = 0);
-
-
+  double normal_pdf(double x, double sigma =1, double x0 = 0);
 
 
   /**
@@ -334,3 +373,5 @@ namespace Math {
 
 
 #endif // ROOT_Math_PdfFunc
+
+#endif // if defined (__CINT__) && !defined(__MAKECINT__)
