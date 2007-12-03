@@ -337,7 +337,7 @@ Int_t TProofDataSetManager::WriteDataSet(const char *group, const char *user,
       Long_t tmp;
       if (gSystem->GetPathInfo(path, 0, (Long_t*) 0, 0, &tmp) != 0) {
          if (!fSilent)
-            Info(__FUNCTION__, "Dataset disappeared. Discarding update.");
+            Info("WriteDataSet", "Dataset disappeared. Discarding update.");
          return 3;
       }
    }
@@ -347,7 +347,7 @@ Int_t TProofDataSetManager::WriteDataSet(const char *group, const char *user,
       TMD5 *checksum2 = TMD5::FileChecksum(path);
       if (!checksum2) {
          if (!fSilent)
-            Error(__FUNCTION__, "Could not get checksum of %s", path.Data());
+            Error("WriteDataSet", "Could not get checksum of %s", path.Data());
          return 0;
       }
 
@@ -356,7 +356,7 @@ Int_t TProofDataSetManager::WriteDataSet(const char *group, const char *user,
 
       if (!checksumAgrees) {
          if (!fSilent)
-            Info(__FUNCTION__, "Dataset changed. Discarding update.");
+            Info("WriteDataSet", "Dataset changed. Discarding update.");
          return 2;
       }
    }
@@ -372,7 +372,8 @@ Int_t TProofDataSetManager::WriteDataSet(const char *group, const char *user,
    TFile *f = TFile::Open(tempFile, "RECREATE");
    if (!f) {
       if (!fSilent)
-         Error(__FUNCTION__, "Could not open dataset for writing %s", tempFile.Data());
+         Error("WriteDataSet",
+               "Could not open dataset for writing %s", tempFile.Data());
       return 0;
    }
 
@@ -392,8 +393,9 @@ Int_t TProofDataSetManager::WriteDataSet(const char *group, const char *user,
    // file is written, rename to real filename
    if (gSystem->Rename(tempFile, path) != 0) {
       if (!fSilent)
-         Error(__FUNCTION__, "Renaming %s to %s failed. Dataset might be corrupted.",
-                             tempFile.Data(), path.Data());
+         Error("WriteDataSet",
+               "Renaming %s to %s failed. Dataset might be corrupted.",
+               tempFile.Data(), path.Data());
       return 0;
    }
 
@@ -611,7 +613,7 @@ Int_t  TProofDataSetManager::ScanDataSet(TFileCollection *dataset, const char *o
       TString number = str(str.Index("=")+1, str.Length());
       maxFiles = number.Atoi();
       if (!fSilent)
-         Info(__FUNCTION__, "Processing a maximum of %d files", maxFiles);
+         Info("ScanDataSet", "processing a maximum of %d files", maxFiles);
       delete match;
       match = 0;
    }
@@ -651,7 +653,8 @@ Int_t  TProofDataSetManager::ScanDataSet(TFileCollection *dataset, const char *o
 
       if (!fileInfo->GetCurrentUrl()) {
          if (!fSilent)
-            Error(__FUNCTION__, "GetCurrentUrl() is 0 for %s", fileInfo->GetFirstUrl()->GetUrl());
+            Error("ScanDataSet",
+                  "GetCurrentUrl() is 0 for %s", fileInfo->GetFirstUrl()->GetUrl());
          continue;
       }
 
@@ -670,8 +673,9 @@ Int_t  TProofDataSetManager::ScanDataSet(TFileCollection *dataset, const char *o
          // check if file is still available, if touch is set actually read from the file
 
          if (!fSilent && (fNTouchedFiles+fNDisappearedFiles) % 100 == 0)
-            Info(__FUNCTION__, "Opening %d. file: %s", fNTouchedFiles+fNDisappearedFiles,
-                               fileInfo->GetCurrentUrl()->GetUrl());
+            Info("ScanDataSet",
+                 "opening %d. file: %s", fNTouchedFiles+fNDisappearedFiles,
+                 fileInfo->GetCurrentUrl()->GetUrl());
 
          TFile *file = TFile::Open(Form("%s?filetype=raw", url.GetUrl()));
 
@@ -686,7 +690,7 @@ Int_t  TProofDataSetManager::ScanDataSet(TFileCollection *dataset, const char *o
             fNTouchedFiles++;
          } else { // file could not be opened, reset staged bit
             if (!fSilent)
-               Info(__FUNCTION__, "File %s disappeared", url.GetUrl());
+               Info("ScanDataSet", "file %s disappeared", url.GetUrl());
             fileInfo->ResetBit(TFileInfo::kStaged);
             fNDisappearedFiles++;
             changed = kTRUE;
@@ -709,11 +713,12 @@ Int_t  TProofDataSetManager::ScanDataSet(TFileCollection *dataset, const char *o
       if (stager) {
          result = stager->IsStaged(url.GetUrl());
          if (gDebug > 0 && !fSilent)
-            Info(__FUNCTION__, "IsStaged: %s: %d", url.GetUrl(), result);
+            Info("ScanDataSet", "IsStaged: %s: %d", url.GetUrl(), result);
          if (createStager)
             SafeDelete(stager);
       } else {
-         Warning(__FUNCTION__, "could not get stager instance for '%s'", url.GetUrl());
+         Warning("ScanDataSet",
+                 "could not get stager instance for '%s'", url.GetUrl());
       }
 
       if (result == kFALSE)
@@ -725,10 +730,11 @@ Int_t  TProofDataSetManager::ScanDataSet(TFileCollection *dataset, const char *o
 
    // loop over now staged files
    if (!fSilent && newStagedFiles.GetEntries() > 0)
-      Info(__FUNCTION__, "Opening %d files that appear to be newly staged.",
-                         newStagedFiles.GetEntries());
+      Info("ScanDataSet",
+           "opening %d files that appear to be newly staged.",
+           newStagedFiles.GetEntries());
 
-   // prevent blocking of TFile::Open, if the file disappeared in the last nanoseconds
+   // Prevent blocking of TFile::Open, if the file disappeared in the last nanoseconds
    Bool_t oldStatus = TFile::GetOnlyStaged();
    TFile::SetOnlyStaged(kTRUE);
 
@@ -737,14 +743,14 @@ Int_t  TProofDataSetManager::ScanDataSet(TFileCollection *dataset, const char *o
    while ((fileInfo = dynamic_cast<TFileInfo*> (iter3.Next()))) {
 
       if (!fSilent && count++ % 100 == 0)
-         Info(__FUNCTION__, "Processing %d. 'new' file: %s",
-                            count, fileInfo->GetCurrentUrl()->GetUrl());
+         Info("ScanDataSet", "processing %d. 'new' file: %s",
+                             count, fileInfo->GetCurrentUrl()->GetUrl());
 
       TUrl *url = fileInfo->GetCurrentUrl();
 
       TFile *file = 0;
 
-      // to determine the size we have to open the file without the anchor
+      // To determine the size we have to open the file without the anchor
       // (otherwise we get the size of the contained file - in case of a zip archive)
       Bool_t zipFile = kFALSE;
       if (strlen(url->GetAnchor()) > 0) {
@@ -769,7 +775,7 @@ Int_t  TProofDataSetManager::ScanDataSet(TFileCollection *dataset, const char *o
       urlDiskServer.SetHost(file->GetEndpointUrl()->GetHost());
       fileInfo->AddUrl(urlDiskServer.GetUrl(), kTRUE);
       if (!fSilent)
-        Info(__FUNCTION__, "Added URL %s", urlDiskServer.GetUrl());
+        Info("ScanDataSet", "added URL %s", urlDiskServer.GetUrl());
 
       if (file->GetSize() > 0)
           fileInfo->SetSize(file->GetSize());
@@ -782,7 +788,7 @@ Int_t  TProofDataSetManager::ScanDataSet(TFileCollection *dataset, const char *o
          if (!file) {
             // if the file could be opened before, but fails now it is corrupt...
             if (!fSilent)
-               Info(__FUNCTION__, "Marking %s as corrupt", url->GetUrl());
+               Info("ScanDataSet", "marking %s as corrupt", url->GetUrl());
             fileInfo->SetBit(TFileInfo::kCorrupted);
             continue;
          }
@@ -812,7 +818,7 @@ Int_t  TProofDataSetManager::ScanDataSet(TFileCollection *dataset, const char *o
                fileInfo->AddMetaData(metaData);
 
                if (!fSilent && gDebug > 0)
-                  Info(__FUNCTION__, "Created meta data for tree %s", keyStr.Data());
+                  Info("ScanDataSet", "created meta data for tree %s", keyStr.Data());
             }
 
             // fill values
@@ -853,7 +859,7 @@ void TProofDataSetManager::GetQuota(const char *group, const char *user,
    // Gets quota information from this dataset
 
    if (!fSilent)
-      Info(__FUNCTION__, "Processing dataset %s %s %s", group, user, dsName);
+      Info("GetQuota", "processing dataset %s %s %s", group, user, dsName);
 
    if (dataset->GetTotalSize() > 0) {
       TParameter<Long64_t> *size =
@@ -887,7 +893,7 @@ void TProofDataSetManager::PrintUsedSpace()
    //
    // Prints the quota
 
-   Info(__FUNCTION__, "Listing used space");
+   Info("PrintUsedSpace", "listing used space");
 
    TIter iter(&fUserUsed);
    TObjString *group = 0;
@@ -922,7 +928,7 @@ void TProofDataSetManager::MonitorUsedSpace(TVirtualMonitoringWriter *monitoring
    //
    // Log info to the monitoring server
 
-   Info(__FUNCTION__, "Sending used space to monitoring server");
+   Info("MonitorUsedSpace", "sending used space to monitoring server");
 
    TIter iter(&fUserUsed);
    TObjString *group = 0;
@@ -969,7 +975,7 @@ Long64_t TProofDataSetManager::GetGroupUsed(const char *group)
       dynamic_cast<TParameter<Long64_t>*> (fGroupUsed.GetValue(group));
    if (!size) {
       if (!fSilent)
-         Error(__FUNCTION__, "Group %s not found", group);
+         Error("GetGroupUsed", "group %s not found", group);
       return 0;
    }
 
@@ -989,7 +995,7 @@ Long64_t TProofDataSetManager::GetGroupQuota(const char *group)
       dynamic_cast<TParameter<Long64_t>*> (fGroupQuota.GetValue(group));
    if (!value) {
       if (!fSilent)
-         Error(__FUNCTION__, "Group %s not found", group);
+         Error("GetGroupQuota", "group %s not found", group);
       return 0;
    }
    return value->GetVal();
@@ -1003,7 +1009,7 @@ void TProofDataSetManager::UpdateUsedSpace()
    TMap *datasets = GetDataSets(0, 0, "S");
    if (!datasets) {
       if (!fSilent)
-         Error(__FUNCTION__, "Did not retrieve datasets");
+         Error("UpdateUsedSpace", "did not retrieve datasets");
       return;
    }
 

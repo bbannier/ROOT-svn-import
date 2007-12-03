@@ -7054,7 +7054,8 @@ void TProof::ShowQuota(Option_t* opt)
    // if opt contains "U" shows also distribution of usage on user-level
 
    if (fProtocol < 15) {
-     Info("ShowQuota", "functionality not available: the server does not have dataset support");
+     Info("ShowQuota",
+          "functionality not available: the server does not have dataset support");
      return;
    }
 
@@ -7062,7 +7063,7 @@ void TProof::ShowQuota(Option_t* opt)
    if (fActiveSlaves->GetSize())
       master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
    else {
-      Error(__FUNCTION__, "No connection to the master!");
+      Error("ShowQuota", "No connection to the master!");
       return;
    }
 

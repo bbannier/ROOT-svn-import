@@ -624,7 +624,8 @@ TGridCollection *TAlien::OpenCollection(const char *collectionfile,
    if (path.BeginsWith("alien://", TString::kIgnoreCase)) {
       TAlien* alien = dynamic_cast<TAlien*> (gGrid);
       if (!alien) {
-        Error(__FUNCTION__, "Trying to read a collection, but gGrid not initialized with AliEn");
+        Error("OpenCollection",
+              "Trying to read a collection, but gGrid not initialized with AliEn");
         return 0;
       }
       TString lfn = path(strlen("alien://"), path.Length());
@@ -632,7 +633,8 @@ TGridCollection *TAlien::OpenCollection(const char *collectionfile,
         // it is a collection
         TGridResult* gridResult = alien->GetCollection(lfn);
         if (!gridResult) {
-          Error(__FUNCTION__, "Could not retrieve collection %d from the catalog", collectionfile);
+          Error("OpenCollection",
+                "Could not retrieve collection %d from the catalog", collectionfile);
           return 0;
         }
 
