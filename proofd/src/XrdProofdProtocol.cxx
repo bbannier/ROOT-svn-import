@@ -481,6 +481,9 @@ int XrdProofdProtocol::Configure(char *, XrdProtocol_Config *pi)
 
    // Process the config file for directives meaningful to us
    if (pi->ConfigFN) {
+      // Register (re-)config directives 
+      RegisterConfigDirectives();
+      RegisterReConfigDirectives();
       // Save path for re-configuration checks
       fgCfgFile.fName = pi->ConfigFN;
       XrdProofdAux::Expand(fgCfgFile.fName);
