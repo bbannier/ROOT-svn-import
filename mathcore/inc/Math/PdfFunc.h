@@ -23,19 +23,18 @@
 #include "RConfigure.h"
 #endif
 
-
-// some cdf are in MathCore others in mathmore
+// all cdf are in mathcore now
 #ifndef ROOT_Math_PdfFuncMathCore
 #include "Math/PdfFuncMathCore.h"
 #endif
 
-// include distributions from MathMore when is there
-#ifdef R__HAS_MATHMORE  
+// // include distributions from MathMore when is there
+// #ifdef R__HAS_MATHMORE  
 
-// extra cdf in MathMore
-#ifndef ROOT_Math_PdfFuncMathMore
-#include "Math/PdfFuncMathMore.h"
-#endif
+// // extra cdf in MathMore
+// #ifndef ROOT_Math_PdfFuncMathMore
+// #include "Math/PdfFuncMathMore.h"
+// #endif
 
 
 #endif
