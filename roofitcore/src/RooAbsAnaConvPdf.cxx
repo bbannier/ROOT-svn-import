@@ -101,10 +101,11 @@ RooAbsAnaConvPdf::RooAbsAnaConvPdf(const char *name, const char *title,
 
 RooAbsAnaConvPdf::RooAbsAnaConvPdf(const RooAbsAnaConvPdf& other, const char* name) : 
   RooAbsPdf(other,name), _isCopy(kTRUE),
-  _model(other._model), _convVar(other._convVar), 
+  _model(other._model), 
+  _convVar(other._convVar), 
   _convSet("convSet",this,other._convSet),
   _basisList(other._basisList),
-  _convNormSet(new RooArgSet(*other._convNormSet)),
+  _convNormSet(other._convNormSet? new RooArgSet(*other._convNormSet) : new RooArgSet() ),
   _convSetIter(_convSet.createIterator()),
   _coefNormMgr(other._coefNormMgr,this),
   _codeReg(other._codeReg)
@@ -158,16 +159,16 @@ Int_t RooAbsAnaConvPdf::declareBasis(const char* expression, const RooArgList& p
 
   // Sanity check
   if (_isCopy) {
-    cout << "RooAbsAnaConvPdf::declareBasis(" << GetName() << "): ERROR attempt to "
-	 << " declare basis functions in a copied RooAbsAnaConvPdf" << endl ;
+    coutE(InputArguments) << "RooAbsAnaConvPdf::declareBasis(" << GetName() << "): ERROR attempt to "
+			  << " declare basis functions in a copied RooAbsAnaConvPdf" << endl ;
     return -1 ;
   }
 
   // Resolution model must support declared basis
   if (!_model->isBasisSupported(expression)) {
-    cout << "RooAbsAnaConvPdf::declareBasis(" << GetName() << "): resolution model " 
-	 << _model->GetName() 
-	 << " doesn't support basis function " << expression << endl ;
+    coutE(InputArguments) << "RooAbsAnaConvPdf::declareBasis(" << GetName() << "): resolution model " 
+			  << _model->GetName() 
+			  << " doesn't support basis function " << expression << endl ;
     return -1 ;
   }
 
@@ -191,8 +192,8 @@ Int_t RooAbsAnaConvPdf::declareBasis(const char* expression, const RooArgList& p
   // Instantiate resModel x basisFunc convolution
   RooAbsReal* conv = _model->convolution(basisFunc,this) ;
   if (!conv) {
-    cout << "RooAbsAnaConvPdf::declareBasis(" << GetName() << "): unable to construct convolution with basis function '" 
-	 << expression << "'" << endl ;
+    coutE(InputArguments) << "RooAbsAnaConvPdf::declareBasis(" << GetName() << "): unable to construct convolution with basis function '" 
+			  << expression << "'" << endl ;
     return -1 ;
   }
   _convSet.add(*conv) ;
@@ -530,7 +531,7 @@ Double_t RooAbsAnaConvPdf::coefAnalyticalIntegral(Int_t coef, Int_t code, const 
   // the pass-through scenario (no integration) is implemented.
 
   if (code==0) return coefficient(coef) ;
-  cout << "RooAbsAnaConvPdf::coefAnalyticalIntegral(" << GetName() << ") ERROR: unrecognized integration code: " << code << endl ;
+  coutE(InputArguments) << "RooAbsAnaConvPdf::coefAnalyticalIntegral(" << GetName() << ") ERROR: unrecognized integration code: " << code << endl ;
   assert(0) ;
   return 1 ;
 }
