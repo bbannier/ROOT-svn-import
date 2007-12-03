@@ -413,21 +413,35 @@
 
 
 
-#ifndef _REENTRANT
- #define _REENTRANT
-#endif
 #include "RooFit.h"
 
 #include <string.h>
 #include <string.h>
 
-// Matthew D. Langston  <langston@SLAC.Stanford.EDU>
-//
-// Microsoft doesn't supply strings.h.  However, strings.h is only
-// required for strtok_r (a reentrant version of strtok), and
-// Microsoft's version of strtok is already thread safe.
 #ifndef _WIN32
 #include <strings.h>
+#else
+
+char *
+strtok_r(char *s1, const char *s2, char **lasts)
+{
+  char *ret;
+  
+  if (s1 == NULL)
+    s1 = *lasts;
+  while(*s1 && strchr(s2, *s1))
+    ++s1;
+  if(*s1 == '\0')
+    return NULL;
+  ret = s1;
+  while(*s1 && !strchr(s2, *s1))
+    ++s1;
+  if(*s1)
+    *s1++ = '\0';
+  *lasts = s1;
+  return ret;
+}
+
 #endif
 
 #include "RooSimPdfBuilder.h"
@@ -521,7 +535,7 @@ RooSimultaneous* RooSimPdfBuilder::buildPdf(const RooArgSet& buildConfig, const 
       delete[] buf ;
       return 0 ;      
     }
-    coutI(Workspace) << "RooSimPdfBuilder::buildPdf: category indexing physics model: " << physCatName << endl ;
+    coutI(ObjectHandling) << "RooSimPdfBuilder::buildPdf: category indexing physics model: " << physCatName << endl ;
   }
 
   // Create list of physics models to be built
@@ -551,7 +565,7 @@ RooSimultaneous* RooSimPdfBuilder::buildPdf(const RooArgSet& buildConfig, const 
     if (strchr(physName,'=')) {
       // Must have a physics category for mapping to make sense
       if (!physCat) {
-	coutW(Workspace) << "RooSimPdfBuilder::buildPdf: WARNING: without physCat specification "
+	coutW(ObjectHandling) << "RooSimPdfBuilder::buildPdf: WARNING: without physCat specification "
 			 << "<physCatState>=<pdfProtoName> association is meaningless" << endl ;
       }
       stateName = physName ;
@@ -591,7 +605,7 @@ RooSimultaneous* RooSimPdfBuilder::buildPdf(const RooArgSet& buildConfig, const 
       break ;
     }
   }
-  coutI(Workspace) << "RooSimPdfBuilder::buildPdf: list of physics models " << physModelSet << endl ;
+  coutI(ObjectHandling) << "RooSimPdfBuilder::buildPdf: list of physics models " << physModelSet << endl ;
 
 
 
@@ -612,15 +626,10 @@ RooSimultaneous* RooSimPdfBuilder::buildPdf(const RooArgSet& buildConfig, const 
     char* tokenPtr(0) ;
     if (strchr(catName,'(')) {
 
-#ifndef _WIN32
       catName = strtok_r(catName,"(",&tokenPtr) ;
       stateList = strtok_r(0,")",&tokenPtr) ;
-#else
-      catName = strtok(catName,"(") ;
-      stateList = strtok(0,")") ;
-#endif
 
-	} else {
+    } else {
       stateList = 0 ;
     }
 
@@ -635,7 +644,7 @@ RooSimultaneous* RooSimPdfBuilder::buildPdf(const RooArgSet& buildConfig, const 
 
     // Process optional state list
     if (stateList) {
-      coutI(Workspace) << "RooSimPdfBuilder::buildPdf: splitting of category " << catName 
+      coutI(ObjectHandling) << "RooSimPdfBuilder::buildPdf: splitting of category " << catName 
 		       << " restricted to states (" << stateList << ")" << endl ;
 
       // Create list named after this splitCat holding its selected states
@@ -643,11 +652,7 @@ RooSimultaneous* RooSimPdfBuilder::buildPdf(const RooArgSet& buildConfig, const 
       slist->SetName(catName) ;
       splitStateList.Add(slist) ;
 
-#ifndef _WIN32
       char* stateLabel = strtok_r(stateList,",",&tokenPtr) ;
-#else
-      char* stateLabel = strtok(stateList,",") ;
-#endif
 
       while(stateLabel) {
 	// Lookup state label and require it exists
@@ -661,11 +666,7 @@ RooSimultaneous* RooSimPdfBuilder::buildPdf(const RooArgSet& buildConfig, const 
 	}
 	slist->Add((TObject*)type) ;
 
-#ifndef _WIN32
 	stateLabel = strtok_r(0,",",&tokenPtr) ;
-#else
-	stateLabel = strtok(0,",") ;
-#endif
       }
     }
     
@@ -674,7 +675,7 @@ RooSimultaneous* RooSimPdfBuilder::buildPdf(const RooArgSet& buildConfig, const 
   if (physCat) splitCatSet.add(*physCat) ;
   RooSuperCategory masterSplitCat("masterSplitCat","Master splitting category",splitCatSet) ;
   
-  coutI(Workspace) << "RooSimPdfBuilder::buildPdf: list of splitting categories " << splitCatSet << endl ;
+  coutI(ObjectHandling) << "RooSimPdfBuilder::buildPdf: list of splitting categories " << splitCatSet << endl ;
 
   // Clone auxiliary split cats and attach to splitCatSet
   RooArgSet auxSplitSet ;
@@ -719,7 +720,7 @@ RooSimultaneous* RooSimPdfBuilder::buildPdf(const RooArgSet& buildConfig, const 
     }
     delete iter ;
 
-    coutI(Workspace) << "RooSimPdfBuilder::buildPdf: list of auxiliary splitting categories " << auxSplitSet << endl ;
+    coutI(ObjectHandling) << "RooSimPdfBuilder::buildPdf: list of auxiliary splitting categories " << auxSplitSet << endl ;
   }
 
 
@@ -729,7 +730,7 @@ RooSimultaneous* RooSimPdfBuilder::buildPdf(const RooArgSet& buildConfig, const 
   TIterator* physIter = physModelSet.createIterator() ;
   RooAbsPdf* physModel ;
   while((physModel=(RooAbsPdf*)physIter->Next())) {
-    coutI(Workspace) << "RooSimPdfBuilder::buildPdf: processing physics model " << physModel->GetName() << endl ;
+    coutI(ObjectHandling) << "RooSimPdfBuilder::buildPdf: processing physics model " << physModel->GetName() << endl ;
 
     RooCustomizer* physCustomizer = new RooCustomizer(*physModel,masterSplitCat,_splitNodeList) ;
     customizerList->Add(physCustomizer) ;
@@ -745,11 +746,7 @@ RooSimultaneous* RooSimPdfBuilder::buildPdf(const RooArgSet& buildConfig, const 
       strcpy(buf,ruleStr->getVal()) ;
       char *tokenPtr(0) ;
 
-#ifndef _WIN32
       char* token = strtok_r(buf,spaceChars,&tokenPtr) ;
-#else
-      char* token = strtok(buf,spaceChars) ;
-#endif
       
       enum Mode { SplitCat, Colon, ParamList } ;
       Mode mode(SplitCat) ;
@@ -758,6 +755,7 @@ RooSimultaneous* RooSimPdfBuilder::buildPdf(const RooArgSet& buildConfig, const 
       RooAbsCategory* splitCat(0) ;
 
       while(token) {
+
 	switch (mode) {
 	case SplitCat:
 	  {
@@ -772,12 +770,8 @@ RooSimultaneous* RooSimPdfBuilder::buildPdf(const RooArgSet& buildConfig, const 
 	      if (!splitCat) {
 		// Build now
 
-#ifndef _WIN32
 		char *tokptr = 0;
 		char *catName = strtok_r(token,",",&tokptr) ;
-#else
-		char *catName = strtok(token,",") ;
-#endif
 
 		RooArgSet compCatSet ;
 		while(catName) {
@@ -800,11 +794,7 @@ RooSimultaneous* RooSimPdfBuilder::buildPdf(const RooArgSet& buildConfig, const 
 		  }
 		  compCatSet.add(*cat) ;
 
-#ifndef _WIN32
 		  catName = strtok_r(0,",",&tokptr) ;
-#else
-		  catName = strtok(0,",") ;
-#endif
 		}		
 
 
@@ -885,26 +875,15 @@ RooSimultaneous* RooSimPdfBuilder::buildPdf(const RooArgSet& buildConfig, const 
 
 	    Bool_t lastCharIsComma = (token[strlen(token)-1]==',') ;
 
-#ifndef _WIN32
 	    char *tokptr = 0 ;
 	    char *paramName = strtok_r(token,",",&tokptr) ;
-#else
-	    char *tokptr(0) ;
-	    char *paramName = strtok(token,",") ;
-#endif
 
 	    // Check for fractional split option 'param_name[remainder_state]'
 	    char *remainderState = 0 ;
-#ifndef _WIN32
 	    char *tokptr2 = 0 ;
 	    if (paramName && strtok_r(paramName,"[",&tokptr2)) {
 	      remainderState = strtok_r(0,"]",&tokptr2) ;
 	    }
-#else
-	    if (paramName && strtok(paramName,"[")) {
-	      remainderState = strtok(0,"]") ;
-	    }
-#endif
 
 	    while(paramName) {
 
@@ -1008,23 +987,16 @@ RooSimultaneous* RooSimPdfBuilder::buildPdf(const RooArgSet& buildConfig, const 
 		if (!_splitNodeList.find(remLeafName)) {
 		  RooAbsArg* remLeaf = new RooFormulaVar(remLeafName,formExpr,fracLeafList) ;
 		  _splitNodeList.addOwned(*remLeaf) ;
-		  coutI(Workspace) << "RooSimPdfBuilder::buildPdf: creating remainder fraction formula for " << remainderState 
+		  coutI(ObjectHandling) << "RooSimPdfBuilder::buildPdf: creating remainder fraction formula for " << remainderState 
 				   << " specialization of split parameter " << param->GetName() << " " << formExpr << endl ;
 		}
 	      }
 
 	      // Parse next parameter name
-#ifndef _WIN32
 	      paramName = strtok_r(0,",",&tokptr) ;
 	      if (paramName && strtok_r(paramName,"[",&tokptr2)) {
 		remainderState = strtok_r(0,"]",&tokptr2) ;
 	      }
-#else
-	      paramName = strtok(0,",") ;
-	      if (paramName && strtok(paramName,"[")) {
-		remainderState = strtok(0,"]") ;
-	      }
-#endif
 	    }
 
 	    // Add the rule to the appropriate customizer ;
@@ -1037,11 +1009,7 @@ RooSimultaneous* RooSimPdfBuilder::buildPdf(const RooArgSet& buildConfig, const 
 	  }
 	}
 
-#ifndef _WIN32
 	token = strtok_r(0,spaceChars,&tokenPtr) ;
-#else
-	token = strtok(0,spaceChars) ;
-#endif
 
       }
       if (mode!=SplitCat) {
@@ -1051,12 +1019,12 @@ RooSimultaneous* RooSimPdfBuilder::buildPdf(const RooArgSet& buildConfig, const 
 
       //RooArgSet* paramSet = physModel->getParameters(dependents) ;
     } else {
-      coutI(Workspace) << "RooSimPdfBuilder::buildPdf: no splitting rules for " << physModel->GetName() << endl ;
+      coutI(ObjectHandling) << "RooSimPdfBuilder::buildPdf: no splitting rules for " << physModel->GetName() << endl ;
     }    
   }
   
-  coutI(Workspace)  << "RooSimPdfBuilder::buildPdf: configured customizers for all physics models" << endl ;
-  if (oodologI((TObject*)0,Workspace)) {
+  coutI(ObjectHandling)  << "RooSimPdfBuilder::buildPdf: configured customizers for all physics models" << endl ;
+  if (oodologI((TObject*)0,ObjectHandling)) {
     customizerList->Print() ;
   }
 
@@ -1104,7 +1072,7 @@ RooSimultaneous* RooSimPdfBuilder::buildPdf(const RooArgSet& buildConfig, const 
       physCustomizer = (RooCustomizer*) customizerList->First() ;
     }
 
-    coutI(Workspace) << "RooSimPdfBuilder::buildPdf: Customizing physics model " << physCustomizer->GetName() 
+    coutI(ObjectHandling) << "RooSimPdfBuilder::buildPdf: Customizing physics model " << physCustomizer->GetName() 
 		     << " for mode " << fcState->GetName() << endl ;    
 
     // Customizer PDF for current state and add to master simPdf
