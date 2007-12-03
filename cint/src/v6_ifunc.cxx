@@ -1287,6 +1287,17 @@ void G__make_ifunctable(char* funcheader)
       return;
    }
    else {
+      // LF 03-12-07
+      // Why wasn't the const here? can't a function be const and be implemented
+      // in the declaration??
+      if (0 == strncmp(paraname, "const", 5))
+         G__p_ifunc->isconst[func_now] |= G__CONSTFUNC;
+
+      // LF 07-11-07
+      // "throwness" is needed to declare the prototypes
+      if (0 == strncmp(paraname, "throw", 5) || strncmp(paraname, "const throw", 11) == 0)
+        G__p_ifunc->isconst[func_now] |= G__FUNCTHROW;
+
       /* Body of the function, skip until
        * 'func(param)  type param;  {...} '
        *                             ^
