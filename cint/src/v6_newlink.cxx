@@ -1101,7 +1101,7 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
          break;
 
          default:
-            printf("Type %c not known yet (asm push)\n", para_type);
+            G__fprinterr(G__serr,"Type %c not known yet (asm push)\n", para_type);
          }
       }
       else{
@@ -1323,7 +1323,7 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
       break;
                
       default:
-         printf("Type %c not known yet (asm call)\n", type);
+         G__fprinterr(G__serr,"Type %c not known yet (asm call)\n", type);
 
          /*
            default: // This probably means it returns void
@@ -1709,10 +1709,10 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
                   param = G__getexpr(formal_param->def);
                }
                else if((G__value *)(0)==formal_param->pdefault){
-                  printf("Error in G__stub_method_calling: default param not found \n");
+                  G__fprinterr(G__serr,"Error in G__stub_method_calling: default param not found \n");
                }
                else{
-                  printf("Error in G__stub_method_calling: unknown param \n");
+                  G__fprinterr(G__serr,"Error in G__stub_method_calling: unknown param \n");
                }
             }
 
@@ -1885,7 +1885,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
                break;
 
                default:
-                  printf("Type %c not known yet (stub method)\n", para_type);
+                  G__fprinterr(G__serr,"Type %c not known yet (stub method)\n", para_type);
                }
             }
             else{
@@ -1946,7 +1946,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
             int status = 0;
             finalclass = abi::__cxa_demangle(mangled, 0, 0, &status);
             if (!finalclass)
-               printf(" ** error demangling typeid");
+               G__fprinterr(G__serr,"** error demangling typeid \n");
             else {
 //             printf(" ** type id mangled   : %s \n", mangled);
 //             printf(" ** type id demangled : %s \n", finalclass);
@@ -1981,6 +1981,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
 
          // Axel said isbaseclass is not necessary
          if (tagnum>=0 && (G__isbaseclass(tagnum, gtagnum) || G__isbaseclass(gtagnum, tagnum))  /*tagnum!=gtagnum*/) {
+         //if (tagnum>=0 && tagnum!=gtagnum) {
             struct G__ifunc_table_internal *new_ifunc;
             long poffset;
             long pifn = ifn;
@@ -2084,6 +2085,10 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
             }
 
          }
+         else if(tagnum != gtagnum){
+            G__fprinterr(G__serr,"Warning: static type is %s but dynamic type is %s. Are you casting two different objects? \n", 
+                         G__struct.name[gtagnum], G__struct.name[tagnum]);
+         }
       }
 
       // We are in serious trouble here...
@@ -2091,7 +2096,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
       // This should never happen... all pure virtual functions
       // should had been redirected in the last if
       if(ifunc->ispurevirtual[ifn] && !G__get_funcptr(ifunc, ifn)) {
-         printf("Fatal Error: Trying to execute pure virtual function %s", ifunc->funcname[ifn]);
+         G__fprinterr(G__serr,"Fatal Error: Trying to execute pure virtual function %s", ifunc->funcname[ifn]);
          return -1;
       }
 
@@ -2790,7 +2795,7 @@ void G__gen_cpplink()
 
      // LF 09-10-07
      // The stubs are not printed and the internal status is not changed
-     if(G__dicttype==3 || G__dicttype==4)
+     if(G__dicttype==2 || G__dicttype==3 || G__dicttype==4)
         G__cppif_change_globalcomp();
   }
 
@@ -4457,7 +4462,11 @@ void G__cppif_geninline(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,i
    // LF 06-11-12
    // Since we are now registering the symbols for the second dictionary too...
    // We can try to inline all the functions without symbol
-   if ( !ifunc->mangled_name[j] ) {
+   if( G__NOLINK>ifunc->globalcomp[j] &&  /* with -c-1 option */
+      G__PUBLIC==ifunc->access[j] && /* public, this is always true */
+      /*0==ifunc->staticalloc[j] &&*/
+      ifunc->hash[j] &&
+      !ifunc->mangled_name[j]) {
       // LF
       if(G__dicttype==2 || G__dicttype==4) {
          // LF 21-06-07
@@ -11946,7 +11955,8 @@ void G__specify_link(int link_stub)
     fgetpos(G__ifile.fp,&pos);
     c = G__fgetstream_template(buf,";\n\r<>");
 
-    if(G__CPPLINK==globalcomp) globalcomp=G__METHODLINK;
+    if(G__CPPLINK==globalcomp) 
+       globalcomp=G__METHODLINK;
 
     if(('<'==c || '>'==c)
        &&(strcmp(buf,"operator")==0||strstr(buf,"::operator"))) {
@@ -12263,7 +12273,8 @@ void G__specify_link(int link_stub)
   else if(strncmp(buf,"all_methods",5)==0||
           strncmp(buf,"all_functions",5)==0) {
     if(';'!=c) c = G__fgetstream_template(buf,";\n\r");
-    if(G__CPPLINK==globalcomp) globalcomp=G__METHODLINK;
+    if(G__CPPLINK==globalcomp) 
+       globalcomp=G__METHODLINK;
     if(buf[0]) {
       struct G__ifunc_table_internal *ifunc;
       int ifn;
