@@ -238,8 +238,6 @@ Bool_t TProofServLogHandler::Notify()
             // Nothing to prepend
             log = line;
          }
-         // Keep track in the log file
-         Printf("%s", log.Data());
          // Send the message one level up
          m.Reset(kPROOF_MESSAGE);
          m << log;
@@ -1252,13 +1250,14 @@ void TProofServ::HandleSocketInput()
 
       case kPROOF_DATASETS:
          {
+            Int_t rc = -1;
             if (fDataSetManager)
-               fDataSetManager->HandleRequest(mess, fSocket, fLogFile);
+               rc = fDataSetManager->HandleRequest(mess, fSocket, fLogFile);
             else
                Error("HandleProcess",
                      "data manager instance undefined! - Protocol error?");
 
-            SendLogFile();
+            SendLogFile(rc);
          }
          break;
       case kPROOF_LIB_INC_PATH:

@@ -360,6 +360,8 @@ Long64_t TDSetElement::GetEntries(Bool_t isTree)
    // Record end-point Url and mark as looked-up; be careful to change
    // nothing in the file name, otherwise some cross-checks may fail
    TUrl *eu = (TUrl *) file->GetEndpointUrl();
+   eu->SetOptions(TUrl(fname).GetOptions());
+   eu->SetAnchor(TUrl(fname).GetAnchor());
    if (strlen(eu->GetProtocol()) > 0 && strcmp(eu->GetProtocol(), "file"))
       fName = eu->GetUrl();
    else
@@ -908,17 +910,7 @@ Bool_t TDSet::Add(TCollection *filelist, const char *meta)
    while ((o = next())) {
       TString cn(o->ClassName());
       if (cn == "TFileInfo") {
-#if 0
-         TFileInfo *fi = (TFileInfo *)o;
-         TFileInfoMeta *m = fi->GetMetaData(meta);
-         if (!m)
-            Add(fi->GetFirstUrl()->GetUrl());
-         else
-            Add(fi->GetFirstUrl()->GetUrl(), m->GetObject(), m->GetDirectory(),
-                m->GetFirst(), m->GetEntries());
-#else
          Add((TFileInfo *)o, meta);
-#endif
       } else if (cn == "TUrl") {
          Add(((TUrl *)o)->GetUrl());
       } else if (cn == "TObjString") {
@@ -971,7 +963,8 @@ Bool_t TDSet::Add(TFileInfo *fi, const char *meta)
       first = m->GetFirst();
       num = m->GetEntries();
    }
-   el = new TDSetElement(file, objname, dir, first, num);
+   el = new TDSetElement(file, objname, dir, first, -1);
+   el->SetEntries(num);
 
    // Set looked-up bit
    if (fi->TestBit(TFileInfo::kStaged))

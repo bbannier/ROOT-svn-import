@@ -1329,6 +1329,8 @@ int XrdProofdProtocol::Login()
    // Find out the server type: 'i', internal, means this is a proofsrv calling back.
    // For the time being authentication is required for clients only.
    bool needauth = 0;
+   bool ismaster = (fgMgr.SrvType() == kXPD_TopMaster ||
+                    fgMgr.SrvType() == kXPD_MasterServer) ? 1 : 0;
    switch (fRequest.login.role[0]) {
    case 'A':
       fSrvType = kXPD_Admin;
@@ -1339,7 +1341,7 @@ int XrdProofdProtocol::Login()
       fResponse.Set("int: ");
       break;
    case 'M':
-      if (fgMgr.SrvType() == kXPD_AnyServer || fgMgr.SrvType() == kXPD_TopMaster) {
+      if (fgMgr.SrvType() == kXPD_AnyServer || ismaster) {
          fTopClient = 1;
          fSrvType = kXPD_TopMaster;
          needauth = 1;
@@ -1352,7 +1354,7 @@ int XrdProofdProtocol::Login()
       }
       break;
    case 'm':
-      if (fgMgr.SrvType() == kXPD_AnyServer || fgMgr.SrvType() == kXPD_MasterServer) {
+      if (fgMgr.SrvType() == kXPD_AnyServer || ismaster) {
          fSrvType = kXPD_MasterServer;
          needauth = 1;
          fResponse.Set("m2m: ");

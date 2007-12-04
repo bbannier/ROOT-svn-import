@@ -743,7 +743,7 @@ Int_t  TProofDataSetManager::ScanDataSet(TFileCollection *dataset, const char *o
    while ((fileInfo = dynamic_cast<TFileInfo*> (iter3.Next()))) {
 
       if (!fSilent && count++ % 100 == 0)
-         Info("ScanDataSet", "processing %d. 'new' file: %s",
+         Info("ScanDataSet", "processing %d.'new' file: %s",
                              count, fileInfo->GetCurrentUrl()->GetUrl());
 
       TUrl *url = fileInfo->GetCurrentUrl();
@@ -1062,6 +1062,7 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
       return -1;
    }
 
+   Int_t rc = 0;
    TString dsUser, dsGroup, dsName;
    TString uri; // used in most cases
    TString opt;
@@ -1078,16 +1079,13 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
          {  (*mess) >> uri;
 
             if (ParseDataSetUri(uri, &dsGroup, &dsUser, &dsName) == kFALSE) {
-               sock->Send(kMESS_NOTOK);
+               rc = -1;
                break;
             }
 
-            if (ExistsDataSet(dsGroup, dsUser, dsName)) {
+            if (ExistsDataSet(dsGroup, dsUser, dsName))
                //Dataset name does exist
-               sock->Send(kMESS_NOTOK);
-            } else {
-               sock->Send("", kMESS_OK);
-            }
+               rc = -1;
          }
          break;
       case TProof::kRegisterDataSet:
@@ -1096,7 +1094,7 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
             (*mess) >> opt;
 
             if (ParseDataSetUri(uri, 0, 0, &dsName, 0, kTRUE) == kFALSE) {
-               sock->Send(kMESS_NOTOK);
+               rc = -1;
                break;
             }
 
@@ -1104,7 +1102,7 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
             TFileCollection *dataSet =
                dynamic_cast<TFileCollection*> ((mess->ReadObject(TFileCollection::Class())));
             if (!dataSet || dataSet->GetList()->GetSize() == 0) {
-               sock->Send(kMESS_NOTOK);
+               rc = -1;
                Error("HandleRequest", "can not save an empty list.");
                break;
             }
@@ -1114,7 +1112,7 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
                // Fail if it exists already
                if (ExistsDataSet(fGroup, fUser, dsName)) {
                   //Dataset name does exist
-                  sock->Send(kMESS_NOTOK);
+                  rc = -1;
                   delete dataSet;
                   break;
                }
@@ -1156,7 +1154,7 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
             if (fCheckQuota) {
                if (dataSet->GetTotalSize() <= 0) {
                   Error("HandleRequest", "Datasets without size information are not accepted");
-                  sock->Send(kMESS_NOTOK);
+                  rc = -1;
                   break;
                }
                // now check the quota
@@ -1169,8 +1167,8 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
                                     (Float_t) dataSet->GetTotalSize() / 1073741824,
                                     (Float_t) GetGroupQuota(fGroup)   / 1073741824);
                if (used > GetGroupQuota(fGroup)) {
+                  rc = -1;
                   Error("HandleRequest", "quota exceeded");
-                  sock->Send(kMESS_NOTOK);
                   break;
                }
             }
@@ -1179,11 +1177,9 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
 
             delete dataSet;
 
-            if (success) {
-               sock->Send(kMESS_OK);
-            } else {
+            if (!success) {
+               rc = -1;
                Error("HandleRequest", "could not write dataset");
-               sock->Send(kMESS_NOTOK);
             }
          }
          break;
@@ -1192,14 +1188,14 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
             (*mess) >> opt;
 
             if (ParseDataSetUri(uri, &dsGroup, &dsUser, 0, 0, kFALSE, kTRUE) == kFALSE) {
-               sock->Send(kMESS_NOTOK);
+               rc = -1;
                break;
             }
 
             TMap *datasets = GetDataSets(dsGroup, dsUser, "S");
             if (!datasets) {
                Error("HandleRequest", "could not read datasets");
-               sock->Send(kMESS_NOTOK);
+               rc = -1;
                break;
             }
 
@@ -1264,8 +1260,6 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
             datasets->DeleteAll();
             delete datasets;
             datasets = 0;
-            // Done
-            sock->Send(kMESS_OK);
          }
          break;
       case TProof::kGetDataSets:
@@ -1343,11 +1337,10 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
             }
 
             Bool_t success = RemoveDataSet(fGroup, fUser, dsName);
-            if (!success)
-            {  Error("HandleRequest", "error removing dataset %s", dsName.Data());
-               sock->Send(kMESS_NOTOK);
-            } else
-               sock->Send(kMESS_OK);
+            if (!success) {
+               Error("HandleRequest", "error removing dataset %s", dsName.Data());
+               rc = -1;
+            }
          }
          break;
       case TProof::kVerifyDataSet:
@@ -1356,7 +1349,7 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
 
             if (ParseDataSetUri(uri, 0, 0, &dsName, 0, kTRUE) == kFALSE) {
                // error
-               sock->Send(kMESS_NOTOK);
+               rc = -1;
                break;
             }
 
@@ -1369,10 +1362,11 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
             fSilent = fOldSilent;
 
             if (result > 0)
-               Printf("%d files 'new'; %d files touched; %d files disappeared",
+               Info("HandleRequest",
+                    "VerifyDataSet: %d files 'new'; %d files touched; %d files disappeared",
                       GetNOpenedFiles(), GetNTouchedFiles(), GetNDisapparedFiles());
 
-            sock->Send((result > 0) ? kMESS_OK : kMESS_NOTOK);
+            rc = (result > 0) ? GetNDisapparedFiles() : -1;
          }
          break;
       case TProof::kGetQuota:
@@ -1391,8 +1385,10 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
 
             TMap *groupQuotaMap = GetGroupQuotaMap();
             TMap *userUsedMap = GetUserUsedMap();
-            if (!groupQuotaMap || !userUsedMap)
-               sock->Send(kMESS_NOTOK);
+            if (!groupQuotaMap || !userUsedMap) {
+               rc = -1;
+               break;
+            }
 
             TIter iter(groupQuotaMap);
             TObjString *group = 0;
@@ -1426,11 +1422,10 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
 
                Printf("------------------------------------------------------");
             }
-            sock->Send(kMESS_OK);
          }
          break;
       default:
-         sock->Send(kMESS_NOTOK);
+         rc = -1;
          Error("HandleRequest", "unknown type %d", type);
          break;
    }
