@@ -236,7 +236,7 @@ int DoProtocolDirective(XrdProofdDirective *d,
 {
    // Generic directive processor
 
-   if (!d || !(d->fVal))
+   if (!d || !val)
       // undefined inputs
       return -1;
 
@@ -717,7 +717,7 @@ int XrdProofdProtocol::Config(const char *cfn, bool rcf)
          XrdProofdDirective *d = fst->Find(var);
          if (d) {
             // Process it
-            d->DoDirective(val, &cfg, 0);
+            d->DoDirective(val, &cfg, rcf);
          } else if (snd && (d = snd->Find(var))) {
             TRACE(XERR, "Config: directive xpd."<<var<<" cannot be re-configured");
          }
@@ -798,7 +798,7 @@ int XrdProofdProtocol::DoDirectivePutRc(char *val, XrdOucStream *cfg, bool)
 {
    // Process 'putenv' directives
 
-   if (!val)
+   if (!val || !cfg)
       // undefined inputs
       return -1;
 
@@ -2643,11 +2643,12 @@ int XrdProofdProtocol::SetProofServEnv(int psid, int loglevel, const char *cfg)
    fprintf(frc, "ProofServ.ClientVersion: %d\n", fPClient->Version());
 
    // Config file
-   fprintf(frc,"# Config file\n");
    if (cfg && strlen(cfg) > 0) {
+      fprintf(frc,"# Config file\n");
       // User defined
       fprintf(frc, "ProofServ.ProofConfFile: %s\n", cfg);
    } else {
+      fprintf(frc,"# Config file\n");
       if (fgMgr.IsSuperMst())
          fprintf(frc, "ProofServ.ProofConfFile: sm:\n");
    }
