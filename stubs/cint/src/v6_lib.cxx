@@ -143,7 +143,7 @@ G__get_address(const char* mangled_name)
   
 //    }
 
-    address = dlsym(0,mangled_name);
+    //address = dlsym(0,mangled_name);
     for (int i=0;(i<G__allsl)&&(!address);i++){
        address = dlsym(G__sl_handle[i],mangled_name);       
     }
@@ -165,8 +165,8 @@ G__get_address(const char* mangled_name)
 //     }
     //   address = dlsym(G__sl_handle[G__srcfile[i].dictpos->allsl],mangled_name);
     
-    if (!address)
-       address = dlsym(RTLD_DEFAULT, mangled_name);
+     if (!address)
+        address = dlsym(RTLD_DEFAULT, mangled_name);
    
    //delete linkmap_list;
    return address;
