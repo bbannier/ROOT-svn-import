@@ -180,7 +180,7 @@ Bool_t TFileInfo::RemoveMetaData(const char *meta)
    // Returns kTRUE if successful, kFALSE otherwise.
 
    if (fMetaDataList) {
-      if (!meta) {
+      if (!meta || strlen(meta) <= 0) {
          SafeDelete(fMetaDataList);
          return kTRUE;
       } else {
@@ -204,7 +204,7 @@ TFileInfoMeta *TFileInfo::GetMetaData(const char *meta) const
 
    if (fMetaDataList) {
       TFileInfoMeta *m;
-      if (!meta)
+      if (!meta || strlen(meta) <= 0)
          m = (TFileInfoMeta *) fMetaDataList->First();
       else
          m = (TFileInfoMeta *) fMetaDataList->FindObject(meta);

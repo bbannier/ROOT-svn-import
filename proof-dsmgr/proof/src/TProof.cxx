@@ -6757,23 +6757,11 @@ Bool_t TProof::RegisterDataSet(const char *dataSetName,
    Broadcast(mess);
 
    Bool_t result = kTRUE;
-   TMessage *retMess = 0;
-   if (master->Recv(retMess) <= 0) {
-      Error("RegisterDataSet", "No response from the master");
-      return kFALSE;
-   } else {
-      if (retMess->What() == kMESS_NOTOK) {
-         Printf("Dataset was not saved.");
-         result = kFALSE;
-      } else if (retMess->What() != kMESS_OK) {
-         Error("RegisterDataSet",
-               "Unexpected message type: %d", retMess->What());
-         retMess->Print();
-      }
-      delete retMess;
-   }
-
    Collect();
+   if (fStatus != 0) {
+      Error("RegisterDataSet", "dataset was not saved");
+      result = kFALSE;
+   }
    return result;
 }
 
@@ -6784,7 +6772,8 @@ TMap *TProof::GetDataSets(const char *uri, const char* optStr)
    // that match given uri
 
    if (fProtocol < 15) {
-      Info("GetDataSets", "functionality not available: the server does not have dataset support");
+      Info("GetDataSets",
+           "functionality not available: the server does not have dataset support");
       return 0;
    }
 
@@ -6792,7 +6781,7 @@ TMap *TProof::GetDataSets(const char *uri, const char* optStr)
    if (fActiveSlaves->GetSize())
       master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
    else {
-      Error("GetDataSets", "No connection to the master!");
+      Error("GetDataSets", "no connection to the master!");
       return 0;
    }
 
@@ -6813,7 +6802,7 @@ TMap *TProof::GetDataSets(const char *uri, const char* optStr)
 
    Collect(kActive, fCollectTimeout);
    delete retMess;
-   
+
    return dataSetMap;
 }
 
@@ -6824,7 +6813,8 @@ void TProof::ShowDataSets(const char *uri, const char* optStr)
    // By default shows the user's datasets and global ones
 
    if (fProtocol < 15) {
-      Info("ShowDataSets", "functionality not available: the server does not have dataset support");
+      Info("ShowDataSets",
+           "functionality not available: the server does not have dataset support");
       return;
    }
 
@@ -6832,7 +6822,8 @@ void TProof::ShowDataSets(const char *uri, const char* optStr)
    if (fActiveSlaves->GetSize())
       master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
    else {
-      Error("ShowDataSets", "No connection to the master!");
+      Error("ShowDataSets",
+            "no connection to the master!");
       return;
    }
 
@@ -6842,14 +6833,9 @@ void TProof::ShowDataSets(const char *uri, const char* optStr)
    mess << TString(optStr?optStr:"");
    Broadcast(mess);
 
-   TMessage *retMess = 0;
-   master->Recv(retMess);
-
-   if (retMess->What() != kMESS_OK)
-      Error("ShowDataSets", "error receiving datasets");
-
    Collect();
-   delete retMess;
+   if (fStatus != 0)
+      Error("ShowDataSets", "error receiving datasets information");
 }
 
 //______________________________________________________________________________
@@ -6868,7 +6854,7 @@ TFileCollection *TProof::GetDataSet(const char *uri, const char* optStr)
    if (fActiveSlaves->GetSize())
       master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
    else {
-      Error("GetDataSet", "No connection to the master!");
+      Error("GetDataSet", "no connection to the master!");
       return 0;
    }
    TMessage nameMess(kPROOF_DATASETS);
@@ -6876,15 +6862,15 @@ TFileCollection *TProof::GetDataSet(const char *uri, const char* optStr)
    nameMess << TString(uri?uri:"");
    nameMess << TString(optStr?optStr:"");
    if (Broadcast(nameMess) < 0)
-      Error("GetDataSet", "Sending request failed");
+      Error("GetDataSet", "sending request failed");
    TMessage *retMess = 0;
    master->Recv(retMess);
    TFileCollection *fileList = 0;
    if (retMess->What() == kMESS_OK) {
       if (!(fileList = (TFileCollection*)(retMess->ReadObject(TFileCollection::Class()))))
-         Error("GetDataSet", "Error reading list of files");
+         Error("GetDataSet", "error reading list of files");
    } else if (retMess->What() != kMESS_NOTOK)
-      Error("GetDataSet", "Wrong message type %d", retMess->What());
+      Error("GetDataSet", "wrong message type %d", retMess->What());
    Collect(kActive, fCollectTimeout);
    delete retMess;
    return fileList;
@@ -6899,9 +6885,8 @@ void TProof::ShowDataSet(const char *uri, const char* opt)
    if ((fileList = GetDataSet(uri))) {
       fileList->Print(opt);
       delete fileList;
-   }
-   else
-      Printf("No such dataset: %s", uri);
+   } else
+      Warning("ShowDataSet","no such dataset: %s", uri);
 }
 
 //______________________________________________________________________________
@@ -6910,17 +6895,11 @@ Int_t TProof::RemoveDataSet(const char *uri, const char* optStr)
    // Remove the specified dataset from the PROOF cluster.
    // Files are not deleted.
 
-   // check if  dataSetName is not excluded
-//   if (strchr(dataSet, '/')) {
-//      Error("RemoveDataSet", "Dataset name shall not include '/'");
-//      return kError;
-//   }
-
    TSocket *master;
    if (fActiveSlaves->GetSize())
       master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
    else {
-      Error("RemoveDataSet", "No connection to the master!");
+      Error("RemoveDataSet", "no connection to the master!");
       return kError;
    }
    TMessage nameMess(kPROOF_DATASETS);
@@ -6928,21 +6907,12 @@ Int_t TProof::RemoveDataSet(const char *uri, const char* optStr)
    nameMess << TString(uri?uri:"");
    nameMess << TString(optStr?optStr:"");
    if (Broadcast(nameMess) < 0)
-      Error("RemoveDataSet", "Sending request failed");
-   TMessage *mess;
-   TString errorMess;
-   master->Recv(mess);
+      Error("RemoveDataSet", "sending request failed");
    Collect(kActive, fCollectTimeout);
-   if (mess->What() != kMESS_OK) {
-      if (mess->What() != kMESS_NOTOK)
-         Error("RemoveDataSet", "unrecongnized message type: %d!",
-               mess->What());
-      delete mess;
+   if (fStatus != 0)
       return -1;
-   } else {
-      delete mess;
+   else
       return 0;
-   }
 }
 
 //______________________________________________________________________________
@@ -6969,46 +6939,22 @@ Int_t TProof::VerifyDataSet(const char *uri, const char* optStr)
    if (fActiveSlaves->GetSize())
       master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
    else {
-      Error("VerifyDataSet", "No connection to the master!");
+      Error("VerifyDataSet", "no connection to the master!");
       return kError;
    }
    TMessage nameMess(kPROOF_DATASETS);
    nameMess << Int_t(kVerifyDataSet);
-   nameMess << TString(uri?uri:"");
-   nameMess << TString(optStr?optStr:"");
-   if (Broadcast(nameMess) < 0)
-      Error("VerifyDataSet", "Sending request failed");
-   TMessage *mess;
-   master->Recv(mess);
+   nameMess << TString(uri ? uri : "");
+   nameMess << TString(optStr ? optStr : "");
+   Broadcast(nameMess);
+
    Collect(kActive, fCollectTimeout);
 
-   // TODO receive number of files?
-
-   if (mess->What() == kMESS_OK) {
-     /*TList *missingFiles;
-      missingFiles = (TList*)(mess->ReadObject(TList::Class()));
-      nMissingFiles = missingFiles->GetSize();
-      if (nMissingFiles == 0)
-         Printf("The files from %s dataset are all present on the cluster",
-                uri);
-      else {
-         Printf("The following files are missing from dataset %s ", uri);
-         Printf("at the moment:");
-         TIter next(missingFiles);
-         TFileInfo* fileInfo;
-         while ((fileInfo = (TFileInfo*)next())) {
-            Printf("\t%s", fileInfo->GetFirstUrl()->GetUrl());
-         }
-      }
-      missingFiles->SetOwner();
-      delete missingFiles;*/
-   } else if (mess->What() == kMESS_NOTOK) {
-      Printf("ValidateDataSet: no such dataset %s", uri);
-      delete mess;
+   if (fStatus < 0) {
+      Printf("VerifyDataSet: no such dataset %s", uri);
       return  -1;
    } else
-      Fatal("ValidateDataSet", "unknown message type %d", mess->What());
-   delete mess;
+      nMissingFiles = fStatus;
    return nMissingFiles;
 }
 
@@ -7021,10 +6967,10 @@ TMap *TProof::GetQuota(const char* optStr)
    if (fActiveSlaves->GetSize())
       master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
    else {
-      Error("GetQuota", "No connection to the master!");
+      Error("GetQuota", "no connection to the master!");
       return 0;
    }
-   
+
    TMessage mess(kPROOF_DATASETS);
    mess << Int_t(kGetQuota);
    mess << TString(optStr?optStr:"");
@@ -7037,9 +6983,8 @@ TMap *TProof::GetQuota(const char* optStr)
 
    if (retMess->What() == kMESS_OK) {
       groupQuotaMap = (TMap*) (retMess->ReadObject(TMap::Class()));
-   }
-   else
-     Printf ("GetQuota: Could not receive quotas");
+   } else
+     Error("GetQuota", "could not receive quotas");
 
    Collect();
    delete retMess;
@@ -7063,7 +7008,7 @@ void TProof::ShowQuota(Option_t* opt)
    if (fActiveSlaves->GetSize())
       master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
    else {
-      Error("ShowQuota", "No connection to the master!");
+      Error("ShowQuota", "no connection to the master!");
       return;
    }
 
@@ -7072,14 +7017,9 @@ void TProof::ShowQuota(Option_t* opt)
    mess << TString(opt?opt:"");
    Broadcast(mess);
 
-   TMessage *retMess = 0;
-   master->Recv(retMess);
-
-   if (retMess->What() != kMESS_OK)
-      Printf("Error receiving quotas");
-
    Collect();
-   delete retMess;
+   if (fStatus != 0)
+      Error("ShowQuota", "error receiving quota information");
 }
 
 //_____________________________________________________________________________

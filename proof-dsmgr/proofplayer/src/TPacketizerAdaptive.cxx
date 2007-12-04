@@ -892,7 +892,8 @@ void TPacketizerAdaptive::ValidateFiles(TDSet *dset, TList *slaves)
    while (kTRUE) {
 
       // send work
-      while( TSlave *s = (TSlave*)workers.First() ) {
+      Int_t files = 0;
+      while (TSlave *s = (TSlave *)workers.First()) {
 
          workers.Remove(s);
 
@@ -903,19 +904,18 @@ void TPacketizerAdaptive::ValidateFiles(TDSet *dset, TList *slaves)
          TFileStat *file = 0;
 
          // try its own node first
-         if ( (node = slstat->GetFileNode()) != 0 ) {
+         if ((node = slstat->GetFileNode()) != 0) {
             file = GetNextUnAlloc(node);
-            if ( file == 0 ) {
+            if (file == 0)
                slstat->SetFileNode(0);
-            }
          }
 
          // look for a file on any other node if necessary
-         if (file == 0) {
+         if (file == 0)
             file = GetNextUnAlloc();
-         }
 
-         if ( file != 0 ) {
+         if (file != 0) {
+            files++;
             // files are done right away
             RemoveActive(file);
 
@@ -965,7 +965,12 @@ void TPacketizerAdaptive::ValidateFiles(TDSet *dset, TList *slaves)
          }
       }
 
-      if ( mon.GetActive() == 0 ) break; // nothing to wait for anymore
+      if (files == 0) break; // all files done
+
+      if (mon.GetActive() == 0) {
+         workers.AddAll(slaves);
+         continue; // nothing to wait for anymore
+      }
 
       PDB(kPacketizer,3) {
          Info("ValidateFiles", "waiting for %d slaves:", mon.GetActive());
@@ -989,7 +994,7 @@ void TPacketizerAdaptive::ValidateFiles(TDSet *dset, TList *slaves)
 
       TMessage *reply;
 
-      if ( sock->Recv(reply) <= 0 ) {
+      if (sock->Recv(reply) <= 0) {
          // Help! lost a slave?
          ((TProof*)gProof)->MarkBad(slave);
          fValid = kFALSE;
@@ -998,24 +1003,24 @@ void TPacketizerAdaptive::ValidateFiles(TDSet *dset, TList *slaves)
          continue;
          }
 
-      if ( reply->What() == kPROOF_FATAL ) {
+      if (reply->What() == kPROOF_FATAL) {
          Error("ValidateFiles", "kPROOF_FATAL from slave-%s (%s)",
                slave->GetOrdinal(), slave->GetName());
          ((TProof*)gProof)->MarkBad(slave);
          fValid = kFALSE;
          continue;
-      } else if ( reply->What() == kPROOF_LOGFILE ) {
+      } else if (reply->What() == kPROOF_LOGFILE) {
          PDB(kPacketizer,3) Info("ValidateFiles", "got logfile");
          Int_t size;
          (*reply) >> size;
          ((TProof*)gProof)->RecvLogFile(sock, size);
          mon.Activate(sock);
          continue;
-      } else if ( reply->What() == kPROOF_LOGDONE ) {
+      } else if (reply->What() == kPROOF_LOGDONE) {
          PDB(kPacketizer,3) Info("ValidateFiles", "got logdone");
          mon.Activate(sock);
          continue;
-      } else if ( reply->What() != kPROOF_GETENTRIES ) {
+      } else if (reply->What() != kPROOF_GETENTRIES) {
          // Help! unexpected message type
          Error("ValidateFiles",
                "unexpected message type (%d) from slave-%s (%s)",
@@ -1040,10 +1045,10 @@ void TPacketizerAdaptive::ValidateFiles(TDSet *dset, TList *slaves)
       }
 
       e->SetTDSetOffset(entries);
-      if ( entries > 0 ) {
+      if (entries > 0) {
 
          if (!e->GetEntryList()) {
-            if ( e->GetFirst() > entries ) {
+            if (e->GetFirst() > entries) {
                Error("ValidateFiles",
                      "first (%d) higher then number of entries (%d) in %d",
                      e->GetFirst(), entries, e->GetFileName() );
@@ -1054,13 +1059,13 @@ void TPacketizerAdaptive::ValidateFiles(TDSet *dset, TList *slaves)
                dset->SetBit(TDSet::kSomeInvalid);
             }
 
-            if ( e->GetNum() == -1 ) {
-               e->SetNum( entries - e->GetFirst() );
-            } else if ( e->GetFirst() + e->GetNum() > entries ) {
+            if (e->GetNum() == -1) {
+               e->SetNum(entries - e->GetFirst());
+            } else if (e->GetFirst() + e->GetNum() > entries) {
                Error("ValidateFiles",
                      "Num (%d) + First (%d) larger then number of keys/entries (%d) in %s",
                      e->GetNum(), e->GetFirst(), entries, e->GetFileName() );
-               e->SetNum( entries - e->GetFirst() );
+               e->SetNum(entries - e->GetFirst());
             }
          }
 
