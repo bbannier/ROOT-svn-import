@@ -346,7 +346,7 @@ int XrdProofdManager::Config(const char *fn, bool rcf, XrdSysError *e)
          XrdProofdDirective *d = fst->Find(var);
          if (d) {
             // Process it
-            d->DoDirective(val, &cfg, 0);
+            d->DoDirective(val, &cfg, rcf);
          } else if (snd && (d = snd->Find(var))) {
             TRACE(XERR, "Config: directive xpd."<<var<<" cannot be re-configured");
          }
