@@ -526,11 +526,11 @@ struct VecType<TrackErrD32> {
 }; 
 template<>
 struct VecType<VecTrack<TrackD> > {
-   static std::string name() { return "VecTrack<TrackD> >";}
+   static std::string name() { return "VecTrackD";}
 }; 
 template<>
 struct VecType<VecTrack<TrackErrD> > {
-   static std::string name() { return "VecTrack<TrackErrD> >";}
+   static std::string name() { return "VecTrackErrD";}
 }; 
 
 
@@ -859,6 +859,7 @@ public:
 
       
       std::string fname = VecType<V>::name() + ".root";
+      // replace < character with _
       TFile file(fname.c_str(),"RECREATE","",compress);
 
       // create tree
@@ -1458,7 +1459,8 @@ int stressMathCore(double nscale = 1) {
    bm.Stop("stressMathCore");
    std::cout <<"******************************************************************************\n";
    bm.Print("stressMathCore");
-   const double reftime = 1.00; // ref time on  macbook pro (intel core duo 2.2 GHz)
+   //const double reftime = 1.00; // ref time on  macbook pro (intel core duo 2.2 GHz)
+   const double reftime = 1.17; // ref time on  imac  (intel dual core 32 bits  2. GHz)
    double rootmarks = 800 * reftime / bm.GetCpuTime("stressMathCore");
    std::cout << " ROOTMARKS = " << rootmarks << " ROOT version: " << gROOT->GetVersion() << "\t" 
              << gROOT->GetSvnBranch() << "@" << gROOT->GetSvnRevision() << std::endl;
