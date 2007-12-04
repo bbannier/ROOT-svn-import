@@ -157,7 +157,7 @@ int G__dlclose G__P((G__SHLHANDLE handle));
 #endif /* G__WIN32 */
 
 #ifdef G__SHAREDLIB
-static int G__RTLD_flag = G__RTLD_NOW;
+static int G__RTLD_flag = G__RTLD_LAZY;
 #endif
 
 
@@ -228,6 +228,7 @@ G__SHLHANDLE G__dlopen(char *path)
 #if defined(G__OSFDLL)
 
   handle = dlopen(path,G__RTLD_flag);
+  //handle = dlopen(path,RTLD_NOW);
   if(!handle) G__fprinterr(G__serr,"dlopen error: %s\n",dlerror());
 
 /****************************************************
