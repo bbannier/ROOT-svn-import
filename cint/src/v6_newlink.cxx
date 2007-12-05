@@ -1157,7 +1157,9 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
             /* Lowest Word */
             //__asm__ __volatile__("pop" : "=r" (paddr)   :: ebx);
             
-            __asm__ __volatile__("call *%1" : "=t" (result7->obj.d) : "g" (vaddress));
+            double result_val;
+            __asm__ __volatile__("call *%1" : "=t" (result_val) : "g" (vaddress));
+            G__letdouble(result7, 100, (double) (result_val));
          }
          else{
             int osize;
@@ -1193,79 +1195,105 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
 
       case 'i' : // Integer = Single Word
       {
-         __asm__ __volatile__("call *%1" : "=a" (result7->obj.i) : "g" (vaddress));
+         int return_val;
+         __asm__ __volatile__("call *%1" : "=a" (return_val) : "g" (vaddress));
+         G__letint(result7, 105, (long) (return_val));
       }
       break;
 
       case 'b' : // Unsigned Char ????
       {
-         __asm__ __volatile__("call *%1" : "=a" (result7->obj.uch) : "g" (vaddress));
+         unsigned char result_val;
+         __asm__ __volatile__("call *%1" : "=a" (result_val) : "g" (vaddress));
+         G__letint(result7, 98, (long) result_val);
       }
       break;
 
       case 'c' : // Char
       {
-         __asm__ __volatile__("call *%1" : "=a" (result7->obj.ch) : "g" (vaddress));
+         char return_val;
+         __asm__ __volatile__("call *%1" : "=a" (return_val) : "g" (vaddress));
+         G__letint(result7, 99, (long) (return_val));
       }
       break;
 
       case 's' : // Short
       {
-         __asm__ __volatile__("call *%1" : "=a" (result7->obj.sh): "g" (vaddress));
+         short return_val;
+         __asm__ __volatile__("call *%1" : "=a" (return_val): "g" (vaddress));
+         G__letint(result7, 115, (long) (return_val));
       }
       break;
 
       case 'r' : // Unsigned Short
       {
-         __asm__ __volatile__("call *%1" : "=a" (result7->obj.ush): "g" (vaddress));
+         unsigned short return_val;
+         __asm__ __volatile__("call *%1" : "=a" (return_val): "g" (vaddress));
+         G__letint(result7, 114, (long) (return_val));
       }
       break;
 
       case 'h' : // Unsigned Int
       {
-         __asm__ __volatile__("call *%1" : "=a" (result7->obj.uin): "g" (vaddress));
+         unsigned int return_val;
+         __asm__ __volatile__("call *%1" : "=a" (return_val): "g" (vaddress));
+         G__letint(result7, 104, (long) (return_val));
       }
       break;
 
       case 'l' : // Long
       {
-         __asm__ __volatile__("call *%1" : "=a" (result7->obj.i): "g" (vaddress));
+         long return_val;
+         __asm__ __volatile__("call *%1" : "=a" (return_val): "g" (vaddress));
+         G__letint(result7, 67, return_val);
       }
       break;
 
       case 'k' || 'b': // Unsigned Long
       {
-         __asm__ __volatile__("call *%1" : "=a" (result7->obj.ulo): "g" (vaddress));                  
+         unsigned long return_val;
+         __asm__ __volatile__("call *%1" : "=a" (result7->obj.ulo): "g" (vaddress));
+         G__letint(result7, 107, (long) (return_val));
       }
       break;
 
       case 'f' : // Float
       {
-         __asm__ __volatile__("call *%1" : "=t" (result7->obj.fl): "g" (vaddress));
+         float return_val;
+         __asm__ __volatile__("call *%1" : "=t" (return_val): "g" (vaddress));
+         G__letdouble(result7, 102, (double) return_val); 
       }
       break;
 
       case 'n' : // Long Long
       {
-         __asm__ __volatile__("call *%1" : "=A" (result7->obj.ll): "g" (vaddress));
+         long long return_val;
+         __asm__ __volatile__("call *%1" : "=A" (return_val): "g" (vaddress));
+         G__letLonglong(result7, 110, (G__int64) (return_val));
       }
       break;
 
       case 'm' : // unsigned Long Long
       {
-         __asm__ __volatile__("call *%1" : "=A" (result7->obj.ull): "g" (vaddress));
+         unsigned long long return_val;
+         __asm__ __volatile__("call *%1" : "=A" (return_val): "g" (vaddress));
+         G__letLonglong(result7, 109, (G__uint64) (return_val));
       }
       break;
 
-      case 'q' : // 
+      case 'q' : // long double
       {
-         __asm__ __volatile__("call *%1" : "=t" (result7->obj.ld): "g" (vaddress));
+         long double return_val;
+         __asm__ __volatile__("call *%1" : "=t" (return_val): "g" (vaddress));
+         G__letLongdouble (result7, 113, (long double) (return_val));
       }
       break;
 
       case 'g' : // bool 
       {
-         __asm__ __volatile__("call *%1" : "=a" (result7->obj.i): "g" (vaddress));
+         int result_val;
+         __asm__ __volatile__("call *%1" : "=a" (result_val): "g" (vaddress));
+         G__letint(result7, 103, (long) (result_val));
       }
       break;
 

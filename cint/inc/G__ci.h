@@ -1801,6 +1801,7 @@ extern G__EXPORT void G__add_macro G__P((G__CONST char *macro));
 extern G__EXPORT void G__check_setup_version G__P((int version,G__CONST char *func));
 extern G__EXPORT long G__int G__P((G__value buf));
 extern G__EXPORT long G__int_cast G__P((G__value buf));
+extern G__EXPORT float G__float G__P((G__value buf));
 extern G__EXPORT double G__double G__P((G__value buf));
 extern G__EXPORT G__value G__calc G__P((G__CONST char *expr));
 extern G__EXPORT int  G__loadfile G__P((G__CONST char* filename));
@@ -2027,6 +2028,7 @@ static void (*G__add_macro) G__P((G__CONST char *macro));
 static void (*G__check_setup_version) G__P((int version,G__CONST char *func));
 static long (*G__int) G__P((G__value buf));
 static double (*G__double) G__P((G__value buf));
+static float (*G__float) G__P((G__value buf));
 static G__value (*G__calc) G__P((G__CONST char *expr));
 static int  (*G__loadfile) G__P((G__CONST char* filename));
 static int  (*G__unloadfile) G__P((G__CONST char* filename));
@@ -2279,6 +2281,7 @@ G__EXPORT void G__SetCppCintApiPointers(
                 ,void* a137
                 ,void* a138
                 ,void* a139
+                ,void* a140
                 )
 {
   G__main = (int (*) G__P((int argc,char **argv)) ) a1;
@@ -2430,6 +2433,7 @@ G__EXPORT void G__SetCppCintApiPointers(
   G__get_ifile = (struct G__intput_ifile* (*) G__P((void)) ) a137;
   G__set_alloclockfunc   = (void (*) G__P((void* foo)) ) a138;
   G__set_allocunlockfunc = (void (*) G__P((void* foo)) ) a139;
+  G__float = (float (*) G__P((G__value buf)) ) a140;
 }
 
 #endif /* G__MULTITHREADLIBCINT */

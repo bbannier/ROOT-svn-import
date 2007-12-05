@@ -1476,7 +1476,7 @@ G__value G__letvariable(char* item, G__value expression, G__var_array* varglobal
             G__ASSIGN_VAR(G__LONGALLOC, unsigned long, G__int, result.obj.i);
          case 'f':
             // float
-            G__ASSIGN_VAR(G__FLOATALLOC, float, G__double, result.obj.d);
+            G__ASSIGN_VAR(G__FLOATALLOC, float, G__double, result.obj.i);
          case 'E':
             // file pointer
          case 'Y':
