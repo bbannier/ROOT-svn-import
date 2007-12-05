@@ -197,6 +197,7 @@ public:
 
       const TFileNode *obj = dynamic_cast<const TFileNode*>(other);
       R__ASSERT(obj != 0);
+
       // how many more events it has than obj
 
       if (fgNetworkFasterThanHD) {
@@ -892,7 +893,6 @@ void TPacketizerAdaptive::ValidateFiles(TDSet *dset, TList *slaves)
    while (kTRUE) {
 
       // send work
-      Int_t files = 0;
       while (TSlave *s = (TSlave *)workers.First()) {
 
          workers.Remove(s);
@@ -915,14 +915,14 @@ void TPacketizerAdaptive::ValidateFiles(TDSet *dset, TList *slaves)
             file = GetNextUnAlloc();
 
          if (file != 0) {
-            files++;
             // files are done right away
             RemoveActive(file);
 
             slstat->fCurFile = file;
-            file->GetNode()->IncExtSlaveCnt(slstat->GetName());
             TDSetElement *elem = file->GetElement();
             if (elem->GetEntries() < -1 || strlen(elem->GetTitle()) <= 0) {
+               // This is decremented when we get the reply
+               file->GetNode()->IncExtSlaveCnt(slstat->GetName());
                TMessage m(kPROOF_GETENTRIES);
                m << dset->IsTree()
                << TString(elem->GetFileName())
@@ -961,16 +961,18 @@ void TPacketizerAdaptive::ValidateFiles(TDSet *dset, TList *slaves)
                      }
                   }
                }
+               // Notify the client
+               n++;
+               gProof->SendDataSetStatus(msg, n, tot, st);
+
+               // This worker is ready for the next validation
+               workers.Add(s);
             }
          }
       }
 
-      if (files == 0) break; // all files done
-
-      if (mon.GetActive() == 0) {
-         workers.AddAll(slaves);
-         continue; // nothing to wait for anymore
-      }
+      // Check if there is anything to wait for
+      if (mon.GetActive() == 0) break;
 
       PDB(kPacketizer,3) {
          Info("ValidateFiles", "waiting for %d slaves:", mon.GetActive());
@@ -1188,9 +1190,11 @@ TDSetElement *TPacketizerAdaptive::GetNextPacket(TSlave *sl, TMessage *r)
    // find slave
 
    TSlaveStat *slstat = (TSlaveStat*) fSlaveStats->GetValue( sl );
-
-   R__ASSERT( slstat != 0 );
-
+   if (!slstat) {
+      Error("GetNextPacket", "TSlaveStat instance for worker %s not found!",
+                            (sl ? sl->GetName() : "**undef**"));
+      return 0;
+   }
    // update stats & free old element
 
    if ( slstat->fCurElem != 0 ) {
@@ -1337,7 +1341,12 @@ TDSetElement *TPacketizerAdaptive::GetNextPacket(TSlave *sl, TMessage *r)
       if (file->GetNode()->GetMySlaveCnt() == 0 &&
          file->GetElement()->GetFirst() == file->GetNextEntry()) {
          fNEventsOnRemLoc -= file->GetElement()->GetNum();
-         R__ASSERT(fNEventsOnRemLoc >= 0);
+         if (fNEventsOnRemLoc < 0) {
+            Error("GetNextPacket",
+                  "inconsistent value for fNEventsOnRemLoc (%d): stop delivering packets!",
+                  fNEventsOnRemLoc);
+            return 0;
+         }
       }
       file->GetNode()->IncExtSlaveCnt(slstat->GetName());
       file->GetNode()->IncRunSlaveCnt();

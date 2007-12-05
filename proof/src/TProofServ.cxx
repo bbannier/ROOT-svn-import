@@ -3334,6 +3334,11 @@ void TProofServ::HandleProcess(TMessage *mess)
             Error("HandleProcess", "no dataset manager: cannot proceed");
             return;
          }
+      } else {
+         // Make sure we lookup everything (unless the client required something else)
+         TString lookupopt;
+         if (TProof::GetParameter(input, "PROOF_LookupOpt", lookupopt) != 0)
+            input->Add(new TNamed("PROOF_LookupOpt","all"));
       }
 
       TProofQueryResult *pq = 0;
