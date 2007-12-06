@@ -71,7 +71,7 @@ void TEveProjectionManager::UpdateName()
 }
 
 //______________________________________________________________________________
-void TEveProjectionManager::SetProjection(TEveProjection::PType_e type, Float_t distort)
+void TEveProjectionManager::SetProjection(TEveProjection::EPType_e type, Float_t distort)
 {
    // Set projection type and distortion.
 
@@ -82,12 +82,12 @@ void TEveProjectionManager::SetProjection(TEveProjection::PType_e type, Float_t 
 
    switch (type)
    {
-      case TEveProjection::PT_CFishEye:
+      case TEveProjection::kPT_CFishEye:
       {
          fProjection  = new TEveCircularFishEyeProjection(fCenter);
          break;
       }
-      case TEveProjection::PT_RhoZ:
+      case TEveProjection::kPT_RhoZ:
       {
          fProjection  = new TEveRhoZProjection(fCenter);
          break;
@@ -115,7 +115,7 @@ Bool_t TEveProjectionManager::HandleElementPaste(TEveElement* el)
    // React to element being pasted or dnd-ed.
    // Return true if redraw is needed (virtual method).
 
-   size_t n_children  = fChildren.size();
+   List_t::size_type n_children  = fChildren.size();
    ImportElements(el);
    return n_children != fChildren.size();
 }
@@ -136,8 +136,9 @@ Bool_t TEveProjectionManager::ShouldImport(TEveElement* rnr_el)
 //______________________________________________________________________________
 void TEveProjectionManager::ImportElementsRecurse(TEveElement* rnr_el, TEveElement* parent)
 {
-   // If rnr_el is TEveProjectable add projected instance else add plain TEveElementList
-   // to parent. Call same function on rnr_el children.
+   // If rnr_el is TEveProjectable add projected instance else add
+   // plain TEveElementList to parent. Call same function on rnr_el
+   // children.
 
    if (ShouldImport(rnr_el))
    {

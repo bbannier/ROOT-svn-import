@@ -41,7 +41,7 @@
 ClassImp(TEvePointSet)
 
 //______________________________________________________________________________
-TEvePointSet::TEvePointSet(Int_t n_points, TreeVarType_e tv_type) :
+TEvePointSet::TEvePointSet(Int_t n_points, ETreeVarType_e tv_type) :
    TEveElement(fMarkerColor),
    TPointSet3D(n_points),
    TEvePointSelectorConsumer(tv_type),
@@ -56,7 +56,7 @@ TEvePointSet::TEvePointSet(Int_t n_points, TreeVarType_e tv_type) :
 }
 
 //______________________________________________________________________________
-TEvePointSet::TEvePointSet(const Text_t* name, Int_t n_points, TreeVarType_e tv_type) :
+TEvePointSet::TEvePointSet(const Text_t* name, Int_t n_points, ETreeVarType_e tv_type) :
    TEveElement(fMarkerColor),
    TPointSet3D(n_points),
    TEvePointSelectorConsumer(tv_type),
@@ -252,14 +252,14 @@ void TEvePointSet::TakeAction(TEvePointSelector* sel)
    Float_t  *p  = fP + 3*beg;
 
    switch(fSourceCS) {
-      case TVT_XYZ:
+      case kTVT_XYZ:
          while(n-- > 0) {
             p[0] = *vx; p[1] = *vy; p[2] = *vz;
             p += 3;
             ++vx; ++vy; ++vz;
          }
          break;
-      case TVT_RPhiZ:
+      case kTVT_RPhiZ:
          while(n-- > 0) {
             p[0] = *vx * TMath::Cos(*vy); p[1] = *vx * TMath::Sin(*vy); p[2] = *vz;
             p += 3;
@@ -442,13 +442,13 @@ void TEvePointSetArray::TakeAction(TEvePointSelector* sel)
       throw(eH + "requires 4-d varexp.");
 
    switch(fSourceCS) {
-      case TVT_XYZ:
+      case kTVT_XYZ:
          while(n-- > 0) {
             Fill(*vx, *vy, *vz, *qq);
             ++vx; ++vy; ++vz; ++qq;
          }
          break;
-      case TVT_RPhiZ:
+      case kTVT_RPhiZ:
          while(n-- > 0) {
             Fill(*vx * TMath::Cos(*vy), *vx * TMath::Sin(*vy), *vz, *qq);
             ++vx; ++vy; ++vz; ++qq;
