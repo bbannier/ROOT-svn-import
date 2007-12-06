@@ -24,6 +24,7 @@
 
 #include "TH1.h"
 #include "TH1.h"
+#include "TDirectory.h"
 #include "TMath.h"
 #include "RooMsgService.h"
 #include "RooDataHist.h"
@@ -922,11 +923,12 @@ Double_t RooDataHist::sum(const RooArgSet& sumSet, const RooArgSet& sliceSet, Bo
   // represented by this histogram
   
 
-  RooArgSet sliceOnlySet(sliceSet) ;
-  sliceOnlySet.remove(sumSet,kTRUE,kTRUE) ;
+  RooArgSet* sliceOnlySet = new RooArgSet(sliceSet) ;
+  sliceOnlySet->remove(sumSet,kTRUE,kTRUE) ;
 
-  _vars = sliceOnlySet ;
-  calculatePartialBinVolume(sliceOnlySet) ;
+  _vars = *sliceOnlySet ;
+  calculatePartialBinVolume(*sliceOnlySet) ;
+  delete sliceOnlySet ;
 
   TIterator* ssIter = sumSet.createIterator() ;
   
@@ -965,7 +967,6 @@ Double_t RooDataHist::sum(const RooArgSet& sumSet, const RooArgSet& sliceSet, Bo
     }
     
     if (!skip) {
-
       Double_t binVolume = correctForBinSize ? (*_pbinv)[ibin] : 1.0 ;
       total += _wgt[ibin]/binVolume ;
     }
@@ -1144,5 +1145,18 @@ TIterator* RooDataHist::sliceIterator(RooAbsArg& sliceArg, const RooArgSet& othe
   return new RooDataHistSliceIter(*this,*intArg) ;
 }
 
+void RooDataHist::SetName(const char *name) 
+{
+  if (_dir) _dir->GetList()->Remove(this);
+  TNamed::SetName(name) ;
+  if (_dir) _dir->GetList()->Add(this);
+}
+
+void RooDataHist::SetNameTitle(const char *name, const char* title) 
+{
+  if (_dir) _dir->GetList()->Remove(this);
+  TNamed::SetNameTitle(name,title) ;
+  if (_dir) _dir->GetList()->Add(this);
+}
 
 
