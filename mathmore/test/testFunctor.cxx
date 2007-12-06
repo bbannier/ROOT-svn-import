@@ -77,7 +77,11 @@ public:
    double Derivative(const double * x, int /* icoord */) const { return FUNC; }
    double Eval(const double * x) const { return FUNC; }
 };
-
+struct MyDerivFunction { 
+   double operator()(const double *x, int ) const { 
+      return FUNC; 
+   }
+};
 
 class MyFunction1D { 
 
@@ -92,6 +96,8 @@ public:
       return (*this)(*x); 
    } 
    
+   double Eval(double x) const { return FUNC1D; }
+
    double Derivative(double x) const { return FUNC1D; }
 };
 
@@ -241,21 +247,92 @@ void TestTimeRooPdf(RooAbsPdf & f, RooRealVar * vars) {
 #endif
 
 
-int main() { 
+// test all functor constructs
+void testMultiDim() { 
 
+   // multi-dim test 
+   std::cout <<"\n**************************************************************\n";
+   std::cout <<"Test of Multi-dim functors" << std::endl;
+   std::cout <<"***************************************************************\n\n";
 
-    
+   // test directly calling the function object
    MyFunction myf;
    TestTime(myf);
 
+   // test from a free function pointer
+   ROOT::Math::Functor f1(&freeFunction,2); 
+   TestTime(f1);
+
+   // test from function object
+   ROOT::Math::Functor f2(myf,2); 
+   TestTime(f2);
+
+   // test from a member function 
+   ROOT::Math::Functor f3(&myf,&MyFunction::Eval,2); 
+   TestTime(f3);
+
+   // test grad functor from an object providing eval and deriv.
+   ROOT::Math::GradFunctor  f4(myf,2); 
+   TestTime(f4);
+
+   // test grad functor from object and member functions
+   ROOT::Math::GradFunctor  f5(&myf,&MyFunction::Eval, &MyFunction::Derivative, 2); 
+   TestTime(f5);
+
+   // test from 2 function objects
+   MyDerivFunction myderf; 
+   ROOT::Math::GradFunctor  f6(myf,myderf, 2); 
+   TestTime(f6);
+}
+
+// test all functor constructs
+void testOneDim() { 
+
+  // test 1D functors 
+   std::cout <<"\n**************************************************************\n";
+   std::cout <<"Test of 1D functors" << std::endl;
+   std::cout <<"***************************************************************\n\n";
+
+   // test dircectly calling function object
    MyFunction1D myf1;
    TestTime(myf1);
 
-   ROOT::Math::GradFunctor  f1(myf,2); 
+   /// test free function
+   ROOT::Math::Functor1D  f1(&freeFunction1D); 
    TestTime(f1);
 
-   ROOT::Math::Functor f2(&freeFunction,2); 
+   // test from function object
+   ROOT::Math::Functor1D  f2(myf1); 
    TestTime(f2);
+
+   // test from member function 
+   ROOT::Math::Functor1D f3(&myf1,&MyFunction1D::Derivative); 
+   TestTime(f3);
+
+   // testgrad functor
+   
+   // from function object implementing both
+   ROOT::Math::GradFunctor1D  f4(myf1); 
+   TestTime(f4);
+   
+   // test grad functor from object and member functions
+   ROOT::Math::GradFunctor1D  f5(&myf1,&MyFunction1D::Eval, &MyFunction1D::Derivative); 
+   TestTime(f5);
+
+   // test from 2 function objects
+   ROOT::Math::GradFunctor1D  f6(&freeFunction1D,myf1); 
+   TestTime(f6);
+
+
+}
+
+  
+void testMore() { 
+ 
+
+   std::cout <<"\n**************************************************************\n";
+   std::cout <<"Extra  functor tests" << std::endl;
+   std::cout <<"***************************************************************\n\n";
 
    ROOT::Math::ParamFunctor fp1(&freeRootFunc2D); 
    TestTimePF(fp1);
@@ -264,26 +341,15 @@ int main() {
 //    TestTimePF(fp2);
 
 
-   DerivFunction f3; 
-   TestTime(f3);
+   DerivFunction fdf; 
+   TestTime(fdf);
 
-   ROOT::Math::Functor f4(&myf,&MyFunction::Eval,2); 
-   TestTime(f4);
 
    //1D
-
-   ROOT::Math::GradFunctor1D  f11(myf1); 
-   TestTime(f11);
-
-   ROOT::Math::Functor1D  f12(&freeFunction1D); 
-   TestTime(f12);
-
 
    DerivFunction1D f13; 
    TestTime(f13);
 
-   ROOT::Math::Functor1D f14(&myf1,&MyFunction1D::Derivative); 
-   TestTime(f14);
    
 
    
@@ -378,5 +444,16 @@ int main() {
    TestTimeRooPdf(rooExp,&x);
 #endif
 
+}
+
+int main() { 
+
+   testMultiDim();
+
+   testOneDim(); 
+
+   testMore(); 
+
    return 0;
+
 }
