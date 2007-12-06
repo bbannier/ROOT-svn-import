@@ -251,10 +251,10 @@ int main() {
    MyFunction1D myf1;
    TestTime(myf1);
 
-   ROOT::Math::Functor<ROOT::Math::IMultiGradFunction>  f1(myf,2); 
+   ROOT::Math::GradFunctor  f1(myf,2); 
    TestTime(f1);
 
-   ROOT::Math::Functor<ROOT::Math::IMultiGenFunction> f2(&freeFunction,2); 
+   ROOT::Math::Functor f2(&freeFunction,2); 
    TestTime(f2);
 
    ROOT::Math::ParamFunctor fp1(&freeRootFunc2D); 
@@ -267,22 +267,22 @@ int main() {
    DerivFunction f3; 
    TestTime(f3);
 
-   ROOT::Math::Functor<ROOT::Math::IMultiGenFunction> f4(&myf,&MyFunction::Eval,2); 
+   ROOT::Math::Functor f4(&myf,&MyFunction::Eval,2); 
    TestTime(f4);
 
    //1D
 
-   ROOT::Math::Functor1D<ROOT::Math::IGradFunction>  f11(myf1); 
+   ROOT::Math::GradFunctor1D  f11(myf1); 
    TestTime(f11);
 
-   ROOT::Math::Functor1D<ROOT::Math::IGenFunction> f12(&freeFunction1D); 
+   ROOT::Math::Functor1D  f12(&freeFunction1D); 
    TestTime(f12);
 
 
    DerivFunction1D f13; 
    TestTime(f13);
 
-   ROOT::Math::Functor1D<ROOT::Math::IGenFunction> f14(&myf1,&MyFunction1D::Derivative); 
+   ROOT::Math::Functor1D f14(&myf1,&MyFunction1D::Derivative); 
    TestTime(f14);
    
 
@@ -299,7 +299,7 @@ int main() {
 
    F1D fobj;
    //std::cout << typeid(&F1D::Eval).name() << std::endl;
-   ROOT::Math::Functor1D<ROOT::Math::IGenFunction> f6(std::bind1st(std::mem_fun(&F1D::Eval), &fobj) );
+   ROOT::Math::Functor1D f6(std::bind1st(std::mem_fun(&F1D::Eval), &fobj) );
    TestTime(f6);
 
    ROOT::Math::WrappedFunction<std::binder1st<std::mem_fun1_t<double, F1D, double> > >  f6a((std::bind1st(std::mem_fun(&F1D::Eval), &fobj)));
@@ -313,7 +313,7 @@ int main() {
    ROOT::Math::WrappedMemFunction<F1D, double (F1D::*)(double) >  f6b(fobj, &F1D::Eval );
    TestTime(f6b);
 
-   ROOT::Math::Functor1D<ROOT::Math::IGenFunction> f6c(&fobj, &F1D::Eval );
+   ROOT::Math::Functor1D f6c(&fobj, &F1D::Eval );
    TestTime(f6c);
 
 
@@ -356,15 +356,15 @@ int main() {
 //    double xx[1] = {2};
 //    f7(xx);
 
-   ROOT::Math::Functor<ROOT::Math::IMultiGenFunction> f8(f7b,f7b.NDim());
+   ROOT::Math::Functor f8(f7b,f7b.NDim());
    TestTime(f8);
 
 // this does not compile oin Windows, since it does not understand the default arguments
 #ifndef _WIN32
-   ROOT::Math::Functor1D<ROOT::Math::IGenFunction> f9(&tf1,&TF1::Eval);
+   ROOT::Math::Functor1D f9(&tf1,&TF1::Eval);
    TestTime(f9);
 
-   ROOT::Math::Functor<ROOT::Math::IMultiGenFunction> f10(&tf1,&TF1::EvalPar,tf1.GetNdim());
+   ROOT::Math::Functor f10(&tf1,&TF1::EvalPar,tf1.GetNdim());
    TestTime(f10);
 #endif
    
