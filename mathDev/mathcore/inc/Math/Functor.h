@@ -24,7 +24,6 @@
 
 #include <memory> 
 
-#include <vector>
 
 namespace ROOT { 
 
@@ -36,6 +35,14 @@ namespace Math {
    free C functions.
    It can be created from any function implementing the correct signature 
    corresponding to the requested type
+   In the case of one dimension the function evaluation object must implement
+   double operator() (double x). If it implements a method:  double Derivative(double x) 
+   can be used to create a Gradient function type. 
+   
+   In the case of multi-dimension the function evaluation object must implement 
+   double operator()(const double *x). If it implements a method: 
+   double Derivative(const double *x, int icoord) 
+   can be used to create a Gradient function type.
 
    @ingroup  CppFunctions
 
@@ -95,14 +102,19 @@ private :
 
 
 /** 
-   Functor Handler class for gradient functions where the gradient is provided as 
-   an additional callable function
+   Functor Handler class for gradient functions where both callable objects are provided for the function 
+   evaluation (type Func) and for the gradient (type GradFunc) .
    It can be created from any function implementing the correct signature 
    corresponding to the requested type
+   In the case of one dimension the function evaluation object and the derivative function object must implement
+   double operator() (double x).
+   In the case of multi-dimension the function evaluation object must implement 
+   double operator() (const double * x) and the gradient function object must implement 
+   double operator() (const double * x, int icoord) 
 
    @ingroup  CppFunctions
 */ 
-template<class ParentFunctor, class Func, class GradFunc = Func >
+template<class ParentFunctor, class Func, class GradFunc  >
 class FunctorGradHandler : public ParentFunctor::Impl { 
 
    typedef typename ParentFunctor::Impl ImplFunc; 
@@ -115,18 +127,16 @@ public:
    FunctorGradHandler(const Func & fun, const GradFunc & gfun) : 
       fDim(1), 
       fFunc(fun), 
-      fGFunc(gfun)  
+      fGradFunc(gfun)  
    {}
 
 
    // constructor for multi-dimensional functions 
-   template<class GradFuncIterator> 
-   FunctorGradHandler(const Func & fun, GradFuncIterator begin, GradFuncIterator end) :
+   FunctorGradHandler(unsigned int dim, const Func & fun, const GradFunc & gfun) :
+      fDim(dim),
       fFunc(fun), 
-      fGradient(std::vector<GradFunc>(begin,end) ) 
-   {
-      fDim = fGradient.size();
-   }
+      fGradFunc( gfun ) 
+   {}
 
    // clone of the function handler (use copy-ctor) 
    BaseFunc * Clone() const { return new FunctorGradHandler(*this); }
@@ -147,24 +157,27 @@ private :
    }  
 
    inline double DoDerivative (double x) const { 
-      return fGFunc(x);
+      return fGradFunc(x);
    }  
 
    inline double DoDerivative (const double * x, unsigned int icoord ) const { 
-      return fGradient[icoord](x); 
+      return fGradFunc(x, icoord); 
    }  
 
    
    unsigned int fDim; 
    mutable Func fFunc; 
-   mutable GradFunc fGFunc;  // for 1D case
-   mutable std::vector<GradFunc> fGradient; // for multi-dim case
+   mutable GradFunc fGradFunc;  
 
 };
 
 
 /**
    Functor Handler to Wrap pointers to member functions 
+   The member function type must be (XXX means any name is allowed) : 
+   double XXX ( double x) for 1D functions 
+   and 
+   double XXXX (const double *x) for multi-dimensional functions
 
    @ingroup  CppFunctions
 */
@@ -215,7 +228,11 @@ private :
 
 /**
    Functor Handler to Wrap pointers to member functions for the evaluation of the function 
-   and for the gradient evaluation
+   and the gradient.  
+   The member function type must be (XXX means any name is allowed) : 
+   double XXX ( double x) for 1D function and derivative evaluation  
+   double XXX (const double *x) for multi-dimensional function evaluation and 
+   double XXX (cost double *x, int icoord) for partial derivatives evaluation
 
    @ingroup  CppFunctions
 
@@ -305,10 +322,13 @@ public:
 ////////////////////////////////////////////////////////////////////////////////////////////////
 /**
    Functor class for Multidimensional functions. 
-   It is used to wrap in a very simple and convenient way 
-   any other C++ callable object (implemention double operator( const double * ) ) 
-   or a member function with the correct signature, 
-   like Foo::Eval(const double *)
+   It is used to wrap in a very simple and convenient way:  
+   <ul>
+   <li> any C++ callable object implemention double operator()( const double *  ) 
+   <li> a free C function of type double ()(double * ) 
+   <li> a member function with the correct signature like Foo::Eval(const double * ). 
+       In this case one pass the object pointer and a pointer to the member function (&Foo::Eval) 
+   </ul>
    The function dimension is required when constructing the functor.  
 
    @ingroup  CppFunctions
@@ -347,7 +367,7 @@ public:
       with the right signature (implementing operator()(double *x)
     */
    template <typename Func> 
-   Functor( Func f, unsigned int dim ) : 
+   Functor( const Func & f, unsigned int dim ) : 
       fImpl(new FunctorHandler<Functor,Func>(dim,f) )
    {}
 
@@ -406,17 +426,20 @@ private :
 
 
 /**
-   Functor1D class for One-dimensional functions. 
-   It is used to wrap in a very simple and convenient way 
-   any other C++ callable object (implemention double operator()( double  ) ) 
-   or a member function with the correct signature, 
-   like Foo::Eval(double ). 
-   In this case one pass the object pointer and a pointer to the member function (&Foo::Eval) 
+   Functor1D class for one-dimensional functions. 
+   It is used to wrap in a very simple and convenient way: 
+   <ul>
+   <li> any C++ callable object implemention double operator()( double  ) 
+   <li> a free C function of type double ()(double ) 
+   <li> a member function with the correct signature like Foo::Eval(double ). 
+       In this case one pass the object pointer and a pointer to the member function (&Foo::Eval) 
+   </ul>
+
 
    @ingroup  CppFunctions
 
  */
-//template<class IFuncType = IBaseFunctionOneDim >
+
 class Functor1D : public IBaseFunctionOneDim  { 
 
 
@@ -445,10 +468,9 @@ public:
       implementing operator() (double x)
     */
    template <typename Func> 
-   Functor1D(Func f) : 
+   Functor1D(const Func & f) : 
       fImpl(new FunctorHandler<Functor1D,Func>(f) )
    {}
-
 
 
    /** 
@@ -485,7 +507,7 @@ public:
 
 
    // clone of the function handler (use copy-ctor) 
-   IGenFunction * Clone() const { return new Functor1D(*this); }
+   ImplBase * Clone() const { return new Functor1D(*this); }
 
 
 private :
@@ -502,11 +524,19 @@ private :
 
 
 /**
-   Functor class for Multidimensional gradient functions. 
-   It is used to wrap in a very simple and convenient way 
-   C++ callable object (implemention double operator( const double * ) ) 
-   or a member function with the correct signature, 
-   like Foo::Eval(const double *)
+   GradFunctor class for Multidimensional gradient functions. 
+   It is used to wrap in a very C++ callable object to make gradient functions. 
+   It can be constructed in three different way: 
+   <ol>
+   <li> from an object implementing both  
+        double operator()( const double * ) for the function evaluation  and 
+        double Derivative(const double *, int icoord) for the partial derivatives
+    <li>from an object implementing any member function like Foo::XXX(const double *) for the function evaluation 
+        and any member function like Foo::XXX(const double *, int icoord) for the partial derivatives
+    <li>from an function object implementing 
+        double operator()( const double * ) for the function evaluation and another function object implementing 
+        double operator() (const double *, int icoord) for the partial derivatives
+   </ol>
    The function dimension is required when constructing the functor.  
 
    @ingroup  CppFunctions
@@ -532,31 +562,27 @@ public:
       Derivative(const double * x,icoord)
     */
    template <typename Func> 
-   GradFunctor( Func f, unsigned int dim ) : 
+   GradFunctor( const Func & f, unsigned int dim ) : 
       fImpl(new FunctorHandler<GradFunctor,Func>(dim,f) )
    {}
 
-
    /** 
-       construct from a pointer to member function (grad type multi-dim)
+       construct from a pointer to member function and member function types for function and derivative evaluations
     */ 
    template <class PtrObj, typename MemFn, typename GradMemFn>
-   GradFunctor(const PtrObj& p, MemFn memFn, GradMemFn gradFn, unsigned int dim = 0)
+   GradFunctor(const PtrObj& p, MemFn memFn, GradMemFn gradFn, unsigned int dim )
       : fImpl(new MemGradFunHandler<GradFunctor, PtrObj, MemFn, GradMemFn>(dim, p, memFn, gradFn))
    {}
 
-
-
    /**
-      construct for Analytical Gradient Functions of multi-dimension
-      Func gives the function evaluatiion, FuncIterator the gradient functions
-      A reference of GradFunc is needed to deduce its type. 
+      construct for Gradient Functions of multi-dimension
+      Func gives the function evaluatiion, GradFunc the partial derivatives
+      The function dimension is  required 
     */
-   template <typename Func, typename GradFunc, typename FuncIterator> 
-   GradFunctor(Func f, GradFunc &, FuncIterator begin, FuncIterator end  ) : 
-      fImpl(new FunctorGradHandler<GradFunctor,Func,GradFunc>(f, begin, end) )
+   template <typename Func, typename GradFunc> 
+   GradFunctor(const Func & f, const GradFunc & g, int dim  ) : 
+      fImpl(new FunctorGradHandler<GradFunctor,Func,GradFunc>(dim, f, g) )
    { }
-
 
 
    /** 
@@ -617,15 +643,22 @@ private :
 
 /**
    GradFunctor1D class for one-dimensional gradient functions. 
-   It is used to wrap in a very simple and convenient way 
-   a callable object (implemention double operator()( double  ) ) representing a function evaluation 
-   and another one representing the gradient, or a class with two member function, one for the
-   evaluation and one for the gradient. 
+   It is used to wrap in a very C++ callable object to make a 1D gradient functions. 
+   It can be constructed in three different way: 
+   <ol>
+   <li> from an object implementing both  
+        double operator()( double  ) for the function evaluation  and 
+        double Derivative(double ) for the partial derivatives
+    <li>from an object implementing any member function like Foo::XXX(double ) for the function evaluation 
+        and any other member function like Foo::YYY(double ) for the derivative.
+    <li>from an 2 function objects implementing 
+        double operator()( double ) . One object provides the function evaluation, the other the derivative.
+   </ol>
 
    @ingroup  CppFunctions
 
  */
-//template<class IFuncType = IBaseFunctionOneDim >
+
 class GradFunctor1D : public IGradientFunctionOneDim  { 
 
 
@@ -645,31 +678,30 @@ public:
       implementing both operator() (double x) and Derivative(double x)
     */
    template <typename Func> 
-   GradFunctor1D(Func f) : 
+   GradFunctor1D(const Func & f) : 
       fImpl(new FunctorHandler<GradFunctor1D,Func>(f) )
    {}
 
 
    /** 
-       construct from a pointer to class and two pinters to member function, one for 
-       te evaluation and one for the derivative. The member functions must take a double as 
-       argument and return a double
+       construct from a pointer to class and two pointers to member functions, one for 
+       the function evaluation and the other for the derivative. 
+       The member functions must take a double as argument and return a double
     */ 
    template <class PtrObj, typename MemFn, typename GradMemFn>
-   GradFunctor1D(unsigned int dim, const PtrObj& p, MemFn memFn, GradMemFn gradFn)
+   GradFunctor1D(const PtrObj& p, MemFn memFn, GradMemFn gradFn)
       : fImpl(new MemGradFunHandler<GradFunctor1D, PtrObj, MemFn, GradMemFn>(p, memFn, gradFn))
    {}
 
 
-
-
    /**
-      construct for Analytical Gradient Functions (of 1 dimension) from two 1D callable objects
+      construct from two 1D function objects
     */
    template <typename Func, typename GradFunc> 
-   GradFunctor1D(Func f, GradFunc g ) : 
+   GradFunctor1D(const Func & f, const GradFunc & g ) : 
       fImpl(new FunctorGradHandler<GradFunctor1D,Func, GradFunc>(f, g) )
    {}
+
 
    /** 
       Destructor (no operations)
@@ -687,7 +719,7 @@ public:
       Impl()  
    {
       if (rhs.fImpl.get() != 0) 
-         fImpl = std::auto_ptr<Impl>( dynamic_cast<ROOT::Math::IGradFunction *>( (rhs.fImpl)->Clone() ) ); 
+         fImpl = std::auto_ptr<Impl>( dynamic_cast<Impl *>( (rhs.fImpl)->Clone() ) ); 
    } 
 #endif
 
@@ -706,7 +738,7 @@ public:
 
 
    // clone of the function handler (use copy-ctor) 
-   IGenFunction * Clone() const { return new GradFunctor1D(*this); }
+   ImplBase * Clone() const { return new GradFunctor1D(*this); }
 
 
 private :
