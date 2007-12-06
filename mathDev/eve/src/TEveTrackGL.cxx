@@ -81,25 +81,25 @@ void TEveTrackGL::DirectDraw(TGLRnrCtx & rnrCtx) const
       for (std::vector<TEvePathMark*>::iterator i=pm.begin(); i!=pm.end(); ++i)
       {
          accept = kFALSE;
-         switch ((*i)->type)
+         switch ((*i)->fType)
          {
-            case(TEvePathMark::Daughter):
+            case(TEvePathMark::kDaughter):
                if(RS.GetRnrDaughters()) accept = kTRUE;
                break;
-            case(TEvePathMark::Reference):
+            case(TEvePathMark::kReference):
                if(RS.GetRnrReferences()) accept = kTRUE;
                break;
-            case(TEvePathMark::Decay):
+            case(TEvePathMark::kDecay):
                if(RS.GetRnrDecay()) accept = kTRUE;
                break;
          }
          if (accept)
          {
-            if((TMath::Abs((*i)->V.z) < RS.GetMaxZ()) && ((*i)->V.Perp() < RS.GetMaxR()))
+            if((TMath::Abs((*i)->fV.fZ) < RS.GetMaxZ()) && ((*i)->fV.Perp() < RS.GetMaxR()))
             {
-               pnts[3*N  ] =(*i)->V.x;
-               pnts[3*N+1] =(*i)->V.y;
-               pnts[3*N+2] =(*i)->V.z;
+               pnts[3*N  ] =(*i)->fV.fX;
+               pnts[3*N+1] =(*i)->fV.fY;
+               pnts[3*N+2] =(*i)->fV.fZ;
                N++;
             }
          }

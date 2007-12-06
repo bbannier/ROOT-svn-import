@@ -71,7 +71,7 @@ void TEveProjectionManager::UpdateName()
 }
 
 //______________________________________________________________________________
-void TEveProjectionManager::SetProjection(TEveProjection::PType_e type, Float_t distort)
+void TEveProjectionManager::SetProjection(TEveProjection::EPType_e type, Float_t distort)
 {
    // Set projection type and distortion.
 
@@ -82,12 +82,12 @@ void TEveProjectionManager::SetProjection(TEveProjection::PType_e type, Float_t 
 
    switch (type)
    {
-      case TEveProjection::PT_CFishEye:
+      case TEveProjection::kPT_CFishEye:
       {
          fProjection  = new TEveCircularFishEyeProjection(fCenter);
          break;
       }
-      case TEveProjection::PT_RhoZ:
+      case TEveProjection::kPT_RhoZ:
       {
          fProjection  = new TEveRhoZProjection(fCenter);
          break;
