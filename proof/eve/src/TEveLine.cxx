@@ -19,23 +19,23 @@
 ClassImp(TEveLine)
 
 //______________________________________________________________________________
-TEveLine::TEveLine(Int_t n_points, TreeVarType_e tv_type) :
+TEveLine::TEveLine(Int_t n_points, ETreeVarType_e tv_type) :
    TEvePointSet(n_points, tv_type),
    fRnrLine   (kTRUE),
    fRnrPoints (kFALSE)
 {
+   // Constructor.
+
    fMainColorPtr = &fLineColor;
 }
 
 //______________________________________________________________________________
-TEveLine::TEveLine(const Text_t* name, Int_t n_points, TreeVarType_e tv_type) :
+TEveLine::TEveLine(const Text_t* name, Int_t n_points, ETreeVarType_e tv_type) :
    TEvePointSet(name, n_points, tv_type),
    fRnrLine   (kTRUE),
    fRnrPoints (kFALSE)
 {
+   // Constructor.
+
    fMainColorPtr = &fLineColor;
 }
-
-//______________________________________________________________________________
-TEveLine::~TEveLine()
-{}

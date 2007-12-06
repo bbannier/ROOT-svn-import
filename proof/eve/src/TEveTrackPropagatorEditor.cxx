@@ -126,9 +126,9 @@ void TEveTrackPropagatorSubEditor::CreateRefsContainer(TGVerticalFrame* p)
       TGMatrixLayout *ml = new TGMatrixLayout(fitPM, 0,1,6);
       fitPM->SetLayoutManager(ml);
 
-      fFitDaughters  = new TGCheckButton(fitPM, "Fit Daughters", TEvePathMark::Daughter);
-      fFitReferences = new TGCheckButton(fitPM, "Fit Refs",      TEvePathMark::Reference);
-      fFitDecay      = new TGCheckButton(fitPM, "Fit Decay",     TEvePathMark::Decay);
+      fFitDaughters  = new TGCheckButton(fitPM, "Fit Daughters", TEvePathMark::kDaughter);
+      fFitReferences = new TGCheckButton(fitPM, "Fit Refs",      TEvePathMark::kReference);
+      fFitDecay      = new TGCheckButton(fitPM, "Fit Decay",     TEvePathMark::kDecay);
 
       fitPM->AddFrame(fFitDaughters);
       fitPM->AddFrame(fFitReferences);
@@ -147,9 +147,9 @@ void TEveTrackPropagatorSubEditor::CreateRefsContainer(TGVerticalFrame* p)
       TGMatrixLayout *ml = new TGMatrixLayout(rnrPM, 0,1,6);
       rnrPM->SetLayoutManager(ml);
 
-      fRnrDaughters  = new TGCheckButton(rnrPM, "Rnr Daughters", TEvePathMark::Daughter);
-      fRnrReferences = new TGCheckButton(rnrPM, "Rnr Refs",  TEvePathMark::Reference);
-      fRnrDecay      = new TGCheckButton(rnrPM, "Rnr Decay", TEvePathMark::Decay);
+      fRnrDaughters  = new TGCheckButton(rnrPM, "Rnr Daughters", TEvePathMark::kDaughter);
+      fRnrReferences = new TGCheckButton(rnrPM, "Rnr Refs",  TEvePathMark::kReference);
+      fRnrDecay      = new TGCheckButton(rnrPM, "Rnr Decay", TEvePathMark::kDecay);
 
       rnrPM->AddFrame(fRnrDaughters);
       rnrPM->AddFrame(fRnrReferences);
@@ -284,18 +284,18 @@ void TEveTrackPropagatorSubEditor::DoDelta()
 void TEveTrackPropagatorSubEditor::DoFitPM()
 {
    TGButton* b = (TGButton *) gTQSender;
-   TEvePathMark::Type_e type = TEvePathMark::Type_e(b->WidgetId());
+   TEvePathMark::EType_e type = TEvePathMark::EType_e(b->WidgetId());
    Bool_t on = b->IsOn();
 
    switch(type)
    {
-      case TEvePathMark::Daughter:
+      case TEvePathMark::kDaughter:
          fM->SetFitDaughters(on);
          break;
-      case TEvePathMark::Reference:
+      case TEvePathMark::kReference:
          fM->SetFitReferences(on);
          break;
-      case TEvePathMark::Decay:
+      case TEvePathMark::kDecay:
          fM->SetFitDecay(on);
          break;
       default:
@@ -308,16 +308,16 @@ void TEveTrackPropagatorSubEditor::DoFitPM()
 void TEveTrackPropagatorSubEditor::DoRnrPM()
 {
    TGButton * b = (TGButton *) gTQSender;
-   TEvePathMark::Type_e type = TEvePathMark::Type_e(b->WidgetId());
+   TEvePathMark::EType_e type = TEvePathMark::EType_e(b->WidgetId());
    Bool_t on = b->IsOn();
    switch(type){
-      case  TEvePathMark::Daughter:
+      case  TEvePathMark::kDaughter:
          fM->SetRnrDaughters(on);
          break;
-      case  TEvePathMark::Reference:
+      case  TEvePathMark::kReference:
          fM->SetRnrReferences(on);
          break;
-      case  TEvePathMark::Decay:
+      case  TEvePathMark::kDecay:
          fM->SetRnrDecay(on);
          break;
 
