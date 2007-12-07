@@ -33,15 +33,14 @@ $CFGFILE="rename-config";
 # Action starts here
 #-------------------------------------------------------------------------------
 
-if ($ARGV[0] =~ m!^-cfg=([-\w\./]+)$!)
+if ($ARGV[0] =~ /^-cfg=([\w-]+)$/)
 {
   $CFGFILE = $1;
   shift @ARGV;
 }
 
-die "Usage: $0 [-cfg=<config-file>] <files>\n" .
-    "  This version will NOT rename files, just replace includes.\n"
-  if $#ARGV == -1;
+die "Usage: $0 [-cfg=<config-file>] <original-dir> <modified-copy-dir>\n"
+     unless -d $ARGV[0] and defined $ARGV[1];
 
 # read config, remove no-change entries in files / classes
 
@@ -72,7 +71,20 @@ for $f (keys %classes)
 print "classes: removed $n noop entries, $N all entries.\n";
 
 
-@infiles = @ARGV;
+# Copy directory, chdir to it
+
+$origdir = $ARGV[0];
+$dir     = $ARGV[1];
+
+`rm -rf $dir`;
+`cp -a $origdir $dir`;
+
+chdir $dir;
+
+
+# Loop over .h, .cxx and .C files and do the replace magick.
+
+@infiles = split(' ', `find . -type f -name \\*.h -or -name \\*.cxx -or -name \\*.C`);
 
 # for $infile ("RenderElement.h", "RenderElement.cxx")
 for $infile (@infiles)
@@ -80,7 +92,16 @@ for $infile (@infiles)
   my ($path, $stem, $ext) = $infile =~ m!^(.*/)?([^/]+)\.(\w+)$!;
   $path =~ s!^\./!!;
 
-  my $outfile       = $infile;
+  my $outfile;
+  my $name_change;
+  if ($RENAME_FILES && exists $files{$stem}) {
+    $outfile     = "$path$files{$stem}.$ext";
+    $name_change = 1;
+  } else {
+    $outfile     = $infile;
+    $name_change = 0;
+  }
+
   my $replace_count = 0;
 
   # Read file into single scalar $text
@@ -103,12 +124,11 @@ for $infile (@infiles)
   }
 
   # Multiple inclusion protection (h files)
-  # This is a remnant from transformation of Reve itself.
-  # if ($ext eq "h")
-  # {
-  #   $text =~ s/^\#ifndef (REVE|ROOT)_\w+(_H)?/\#ifndef ROOT_$stem/m;
-  #   $text =~ s/^\#define (REVE|ROOT)_\w+(_H)?/\#define ROOT_$stem/m;
-  # }
+  if ($ext eq "h" && $name_change)
+  {
+    $text =~ s/^\#ifndef (REVE|ROOT)_\w+(_H)?/\#ifndef ROOT_$stem/m;
+    $text =~ s/^\#define (REVE|ROOT)_\w+(_H)?/\#define ROOT_$stem/m;
+  }
 
   # Namespace holding class definition (h files)
   if ($ext eq "h")
@@ -141,6 +161,7 @@ for $infile (@infiles)
   for $name (keys %classes)
   {
     my $repl = $classes{$name};
+    ### my $n = $text =~ s/(_|[^\w]|^)${name}([^\w]|$)/$1$repl$2/mg;
     my $n = $text =~ s/(_|[^\w]|^)${name}(?=[^\w]|$)/$1$repl/mg;
     $replace_count += $n;
   }
@@ -158,11 +179,12 @@ for $infile (@infiles)
 
   ### Text manipulation end
 
-  # Write file.
+  # Write file, possibly removing the old one.
   { 
     open  FILE, ">$outfile";
     print FILE $text;
     close FILE;
+    unlink $infile if $name_change;
   }
 
   printf "%-30s -> %-30s (%d)\n", $infile, $outfile, $replace_count;
