@@ -25,10 +25,8 @@ protected:
 
    mutable UInt_t  fBoxDL;   // Display-list id for a box atom.
 
-   virtual void DirectDraw(TGLRnrCtx & rnrCtx) const;
-
    Int_t  PrimitiveType() const;
-   Bool_t SetupColor(const TEveDigitSet::DigitBase& q) const;
+   Bool_t SetupColor(const TEveDigitSet::DigitBase_t& q) const;
    void   MakeOriginBox(Float_t p[24], Float_t dx, Float_t dy, Float_t dz) const;
    void   RenderBox(const Float_t p[24]) const;
    void   MakeDisplayList() const;
@@ -43,6 +41,7 @@ public:
 
    virtual Bool_t SetModel(TObject* obj, const Option_t* opt=0);
    virtual void   SetBBox();
+   virtual void   DirectDraw(TGLRnrCtx & rnrCtx) const;
 
    virtual Bool_t SupportsSecondarySelect() const { return kTRUE; }
    virtual void   ProcessSelection(TGLRnrCtx & rnrCtx, TGLSelectRecord & rec);

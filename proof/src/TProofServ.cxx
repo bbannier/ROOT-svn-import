@@ -1289,7 +1289,11 @@ void TProofServ::HandleSocketInput()
 
    recursive--;
 
-   if (fProof) fProof->SetActive(kFALSE);
+   if (fProof) {
+      fProof->SetActive(kFALSE);
+      // Reset PROOF to running state
+      fProof->SetRunStatus(TProof::kRunning);
+   }
 
    fRealTime += (Float_t)timer.RealTime();
    fCpuTime  += (Float_t)timer.CpuTime();
@@ -1450,6 +1454,10 @@ void TProofServ::HandleSocketInputDuringProcess()
          Error("HandleSocketInputDuringProcess", "unknown command %d", what);
          break;
 
+   }
+   if (fProof) {
+      // Reset PROOF to running state
+      fProof->SetRunStatus(TProof::kRunning);
    }
    delete mess;
 }

@@ -13,6 +13,7 @@
 
 #include "TEveManager.h"
 #include "TEveProjectionManager.h"
+#include "TEveTrans.h"
 
 #include "TTree.h"
 #include "TTreePlayer.h"
@@ -20,6 +21,9 @@
 
 #include "TColor.h"
 #include "TCanvas.h"
+#include "TBuffer3D.h"
+#include "TBuffer3DTypes.h"
+#include "TVirtualViewer3D.h"
 
 //______________________________________________________________________________
 // TEvePointSet
@@ -41,7 +45,7 @@
 ClassImp(TEvePointSet)
 
 //______________________________________________________________________________
-TEvePointSet::TEvePointSet(Int_t n_points, TreeVarType_e tv_type) :
+TEvePointSet::TEvePointSet(Int_t n_points, ETreeVarType_e tv_type) :
    TEveElement(fMarkerColor),
    TPointSet3D(n_points),
    TEvePointSelectorConsumer(tv_type),
@@ -56,7 +60,7 @@ TEvePointSet::TEvePointSet(Int_t n_points, TreeVarType_e tv_type) :
 }
 
 //______________________________________________________________________________
-TEvePointSet::TEvePointSet(const Text_t* name, Int_t n_points, TreeVarType_e tv_type) :
+TEvePointSet::TEvePointSet(const Text_t* name, Int_t n_points, ETreeVarType_e tv_type) :
    TEveElement(fMarkerColor),
    TPointSet3D(n_points),
    TEvePointSelectorConsumer(tv_type),
@@ -204,9 +208,23 @@ void TEvePointSet::Paint(Option_t* option)
 {
    // Paint point-set.
 
-   if(fRnrSelf == kFALSE) return;
+   static const TEveException eH("TEvePointSet::Paint ");
 
-   TPointSet3D::Paint(option);
+   if (fRnrSelf == kFALSE) return;
+
+   TBuffer3D buff(TBuffer3DTypes::kGeneric);
+
+   // Section kCore
+   buff.fID           = this;
+   buff.fColor        = GetMainColor();
+   buff.fTransparency = GetMainTransparency();
+   if (PtrMainHMTrans())
+      PtrMainHMTrans()->SetBuffer3D(buff);
+   buff.SetSectionsValid(TBuffer3D::kCore);
+
+   Int_t reqSections = gPad->GetViewer3D()->AddObject(buff);
+   if (reqSections != TBuffer3D::kNone)
+      Error(eH, "only direct GL rendering supported.");
 }
 
 /******************************************************************************/
@@ -252,14 +270,14 @@ void TEvePointSet::TakeAction(TEvePointSelector* sel)
    Float_t  *p  = fP + 3*beg;
 
    switch(fSourceCS) {
-      case TVT_XYZ:
+      case kTVT_XYZ:
          while(n-- > 0) {
             p[0] = *vx; p[1] = *vy; p[2] = *vz;
             p += 3;
             ++vx; ++vy; ++vz;
          }
          break;
-      case TVT_RPhiZ:
+      case kTVT_RPhiZ:
          while(n-- > 0) {
             p[0] = *vx * TMath::Cos(*vy); p[1] = *vx * TMath::Sin(*vy); p[2] = *vz;
             p += 3;
@@ -442,13 +460,13 @@ void TEvePointSetArray::TakeAction(TEvePointSelector* sel)
       throw(eH + "requires 4-d varexp.");
 
    switch(fSourceCS) {
-      case TVT_XYZ:
+      case kTVT_XYZ:
          while(n-- > 0) {
             Fill(*vx, *vy, *vz, *qq);
             ++vx; ++vy; ++vz; ++qq;
          }
          break;
-      case TVT_RPhiZ:
+      case kTVT_RPhiZ:
          while(n-- > 0) {
             Fill(*vx * TMath::Cos(*vy), *vx * TMath::Sin(*vy), *vz, *qq);
             ++vx; ++vy; ++vz; ++qq;
