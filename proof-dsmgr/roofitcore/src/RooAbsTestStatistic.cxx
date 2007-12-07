@@ -45,6 +45,14 @@
 ClassImp(RooAbsTestStatistic)
 ;
 
+RooAbsTestStatistic::RooAbsTestStatistic() 
+{ 
+  _init = kFALSE ; 
+  _gofArray = 0 ;
+  _mpfeArray = 0 ;
+}
+
+
 RooAbsTestStatistic::RooAbsTestStatistic(const char *name, const char *title, RooAbsPdf& pdf, RooAbsData& data,
 					 const RooArgSet& projDeps, const char* rangeName, const char* addCoefRangeName, 
 					 Int_t nCPU, Bool_t verbose, Bool_t splitCutRange) : 
@@ -53,8 +61,8 @@ RooAbsTestStatistic::RooAbsTestStatistic(const char *name, const char *title, Ro
   _pdf(&pdf),
   _data(&data),
   _projDeps((RooArgSet*)projDeps.Clone()),
-  _rangeName(rangeName),
-  _addCoefRangeName(addCoefRangeName),
+  _rangeName(rangeName?rangeName:""),
+  _addCoefRangeName(addCoefRangeName?addCoefRangeName:""),
   _splitRange(splitCutRange),
   _simCount(1),
   _verbose(verbose),
@@ -196,9 +204,9 @@ Bool_t RooAbsTestStatistic::initialize()
   if (_init) return kFALSE ;
 
   if (_gofOpMode==MPMaster) {
-    initMPMode(_pdf,_data,_projDeps,_rangeName,_addCoefRangeName) ;
+    initMPMode(_pdf,_data,_projDeps,_rangeName.size()?_rangeName.c_str():0,_addCoefRangeName.size()?_addCoefRangeName.c_str():0) ;
   } else if (_gofOpMode==SimMaster) {
-    initSimMode((RooSimultaneous*)_pdf,_data,_projDeps,_rangeName,_addCoefRangeName) ;
+    initSimMode((RooSimultaneous*)_pdf,_data,_projDeps,_rangeName.size()?_rangeName.c_str():0,_addCoefRangeName.size()?_addCoefRangeName.c_str():0) ;
   }
   _init = kTRUE ;
   return kFALSE ;
@@ -282,7 +290,7 @@ void RooAbsTestStatistic::initMPMode(RooAbsPdf* pdf, RooAbsData* data, const Roo
 
   // Create proto-goodness-of-fit 
   //cout << "initMPMode -- creating prototype gof" << endl ;
-  RooAbsTestStatistic* gof = create(GetName(),GetTitle(),*pdf,*data,*projDeps,rangeName,addCoefRangeName) ;
+  RooAbsTestStatistic* gof = create(GetName(),GetTitle(),*pdf,*data,*projDeps,rangeName,addCoefRangeName,_verbose,1,_splitRange) ;
 
   for (i=0 ; i<_nCPU ; i++) {
 
@@ -345,7 +353,7 @@ void RooAbsTestStatistic::initSimMode(RooSimultaneous* simpdf, RooAbsData* data,
     if (pdf && dset && dset->numEntries(kTRUE)!=0.) {      
       coutE(Fitting) << "RooAbsTestStatistic::initSimMode: creating slave GOF calculator #" << n << " for state " << type->GetName() 
 		     << " (" << dset->numEntries() << " dataset entries)" << endl ;
-      if (_splitRange) {
+      if (_splitRange && rangeName) {
 	_gofArray[n] = create(type->GetName(),type->GetName(),*pdf,*dset,*projDeps,Form("%s_%s",rangeName,type->GetName()),addCoefRangeName,_nCPU,_verbose,_splitRange) ;
       } else {
 	_gofArray[n] = create(type->GetName(),type->GetName(),*pdf,*dset,*projDeps,rangeName,addCoefRangeName,_nCPU,_verbose,_splitRange) ;

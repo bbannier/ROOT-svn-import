@@ -229,7 +229,10 @@ void TDSetElement::Validate(TDSetElement *elem)
       return;
    }
 
-   if (!strcmp(GetFileName(), elem->GetFileName()) &&
+   const char *name = TUrl(GetFileName()).GetFileAndOptions();
+   const char *elemname = TUrl(elem->GetFileName()).GetFileAndOptions();
+
+   if (!strcmp(name, elemname) &&
        !strcmp(GetDirectory(), elem->GetDirectory()) &&
        !strcmp(GetObjName(), elem->GetObjName())) {
       Long64_t entries = elem->fFirst + elem->fNum;
@@ -1348,6 +1351,9 @@ TList *TDSet::Lookup(Bool_t removeMissing, Bool_t stagedOnly)
       // Notify the client
       if (gProof && (n > 0 && !(n % n2)))
          gProof->SendDataSetStatus(msg, n, tot, st);
+      // Break if we have been asked to stop
+      if (gProof && gProof->GetRunStatus() != TProof::kRunning)
+         break;
    }
    // Notify the client if not all the files have entries to be processed
    // (which may happen if an entry-list is used)

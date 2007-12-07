@@ -3387,11 +3387,16 @@ void TProof::StopProcess(Bool_t abort, Int_t timeout)
    if (!IsValid())
       return;
 
+   // Flag that we have been stopped
+   ERunStatus rst = abort ? TProof::kAborted : TProof::kStopped;
+   SetRunStatus(rst);
+
    if (fPlayer)
       fPlayer->StopProcess(abort, timeout);
 
-   // Stop any blocking 'Collect' request
-   if (!IsMaster())
+   // Stop any blocking 'Collect' request; on masters we do this only if
+   // aborting; when stopping, we still need to receive the results 
+   if (!IsMaster() || abort)
       InterruptCurrentMonitor();
 
    if (fSlaves->GetSize() == 0)
@@ -5385,7 +5390,8 @@ void TProof::Progress(Long64_t total, Long64_t processed)
 
    if (gROOT->IsBatch()) {
       // Simple progress bar
-      PrintProgress(total, processed);
+      if (total > 0)
+         PrintProgress(total, processed);
    } else {
       EmitVA("Progress(Long64_t,Long64_t)", 2, total, processed);
    }
@@ -5405,7 +5411,8 @@ void TProof::Progress(Long64_t total, Long64_t processed, Long64_t bytesread,
 
    if (gROOT->IsBatch()) {
       // Simple progress bar
-      PrintProgress(total, processed, procTime);
+      if (total > 0)
+         PrintProgress(total, processed, procTime);
    } else {
       EmitVA("Progress(Long64_t,Long64_t,Long64_t,Float_t,Float_t,Float_t,Float_t)",
              7, total, processed, bytesread, initTime, procTime, evtrti, mbrti);
@@ -6372,7 +6379,7 @@ void TProof::Detach(Option_t *opt)
    }
 
    // Delete this instance
-   if (!fProgressDialogStarted)
+   if ((!fProgressDialogStarted) && !TestBit(kUsingSessionGui))
       delete this;
    else
       // ~TProgressDialog will delete this

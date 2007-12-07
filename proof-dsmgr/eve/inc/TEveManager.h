@@ -149,9 +149,9 @@ public:
 
    TGListTreeItem* AddEvent(TEveEventManager* event);
    TGListTreeItem* AddElement(TEveElement* rnr_element,
-                                    TEveElement* parent=0);
+                              TEveElement* parent=0);
    TGListTreeItem* AddGlobalElement(TEveElement* rnr_element,
-                                          TEveElement* parent=0);
+                                    TEveElement* parent=0);
 
    void RemoveElement(TEveElement* rnr_element, TEveElement* parent);
    void PreDeleteElement(TEveElement* rnr_element);
@@ -174,6 +174,6 @@ public:
    ClassDef(TEveManager, 0); // Reve application manager.
 };
 
-extern TEveManager* gEve;
+R__EXTERN TEveManager* gEve;
 
 #endif

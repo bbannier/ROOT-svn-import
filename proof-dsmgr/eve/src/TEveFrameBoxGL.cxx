@@ -13,6 +13,7 @@
 #include "TEveFrameBox.h"
 
 #include "TGLIncludes.h"
+#include "TGLUtil.h"
 
 #include "TMath.h"
 
@@ -29,14 +30,14 @@ void TEveFrameBoxGL::RenderFrame(const TEveFrameBox& b, Bool_t fillp)
 {
    const Float_t*  p =  b.fFramePoints;
 
-   if (b.fFrameType == TEveFrameBox::FT_Quad)
+   if (b.fFrameType == TEveFrameBox::kFT_Quad)
    {
       glBegin(fillp ? GL_POLYGON : GL_LINE_LOOP);
       glVertex3fv(p);       glVertex3fv(p + 3);
       glVertex3fv(p + 6);   glVertex3fv(p + 9);
       glEnd();
    }
-   else if (b.fFrameType == TEveFrameBox::FT_Box)
+   else if (b.fFrameType == TEveFrameBox::kFT_Box)
    {
       // !!! frame-fill not implemented for 3D frame.
       glBegin(GL_LINE_STRIP);
@@ -66,7 +67,7 @@ void TEveFrameBoxGL::Render(const TEveFrameBox* box)
    glEnable(GL_COLOR_MATERIAL);
    glDisable(GL_CULL_FACE);
 
-   if (b.fFrameType == TEveFrameBox::FT_Quad && b.fDrawBack)
+   if (b.fFrameType == TEveFrameBox::kFT_Quad && b.fDrawBack)
    {
       GLboolean lmts;
       glGetBooleanv(GL_LIGHT_MODEL_TWO_SIDE, &lmts);
@@ -81,7 +82,7 @@ void TEveFrameBoxGL::Render(const TEveFrameBox* box)
       TMath::Normal2Plane(p, p+3, p+6, normal);
       glNormal3fv(normal);
 
-      glColor4ubv(b.fBackRGBA);
+      TGLUtil::Color4ubv(b.fBackRGBA);
       RenderFrame(b, kTRUE);
 
       if (!lmts) glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_FALSE);
@@ -94,7 +95,7 @@ void TEveFrameBoxGL::Render(const TEveFrameBox* box)
    glEnable(GL_LINE_SMOOTH);
 
    glLineWidth(b.fFrameWidth);
-   glColor4ubv(b.fFrameRGBA);
+   TGLUtil::Color4ubv(b.fFrameRGBA);
    RenderFrame(b, b.fFrameFill);
 
    glPopAttrib();

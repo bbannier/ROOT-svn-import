@@ -364,7 +364,8 @@ TPacketizerAdaptive::TSlaveStat::TSlaveStat(TSlave *slave)
    : fSlave(slave), fFileNode(0), fCurFile(0), fCurElem(0), fProcessed(0),
      fProcTime(0), fCurProcessed(0), fCurProcTime(0)
 {
-   //constructor
+   // Constructor
+
    fDSubSet = new TList();
    fDSubSet->SetOwner();
 }
@@ -372,6 +373,8 @@ TPacketizerAdaptive::TSlaveStat::TSlaveStat(TSlave *slave)
 //______________________________________________________________________________
 TPacketizerAdaptive::TSlaveStat::~TSlaveStat()
 {
+   // Cleanup
+
    SafeDelete(fDSubSet);
 }
 
@@ -379,7 +382,8 @@ TPacketizerAdaptive::TSlaveStat::~TSlaveStat()
 void TPacketizerAdaptive::TSlaveStat::UpdateRates(Long64_t nEvents,
                                                   Float_t time)
 {
-   //Update packetizer rates
+   // Update packetizer rates
+
    if (fCurFile->IsDone()) {
       fCurProcTime = 0;
       fCurProcessed = 0;
@@ -395,6 +399,8 @@ void TPacketizerAdaptive::TSlaveStat::UpdateRates(Long64_t nEvents,
 //______________________________________________________________________________
 Int_t TPacketizerAdaptive::TSlaveStat::AddProcessed()
 {
+   // Add the current element to the fDSubSet (subset processed by this worker)
+
    if (fDSubSet && fCurElem) {
       fDSubSet->Add(fCurElem);
       return 0;
