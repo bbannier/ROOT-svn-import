@@ -106,15 +106,16 @@ TSystem::TSystem(const char *name, const char *title) : TNamed(name, title)
    if (gSystem && name[0] != '-' && strcmp(name, "Generic"))
       Error("TSystem", "only one instance of TSystem allowed");
 
-   fOnExitList    = 0;
-   fSignalHandler = 0;
-   fFileHandler   = 0;
-   fTimers        = 0;
-   fCompiled      = 0;
-   fHelpers       = 0;
-   fInsideNotify  = kFALSE;
-   fBeepDuration  = 0;
-   fBeepFreq      = 0;
+   fOnExitList          = 0;
+   fSignalHandler       = 0;
+   fFileHandler         = 0;
+   fStdExceptionHandler = 0;
+   fTimers              = 0;
+   fCompiled            = 0;
+   fHelpers             = 0;
+   fInsideNotify        = kFALSE;
+   fBeepDuration        = 0;
+   fBeepFreq            = 0;
 
    gLibraryVersion = new Int_t [gLibraryVersionMax];
    memset(gLibraryVersion, 0, gLibraryVersionMax*sizeof(Int_t));
@@ -138,6 +139,11 @@ TSystem::~TSystem()
    if (fFileHandler) {
       fFileHandler->Delete();
       SafeDelete(fFileHandler);
+   }
+
+   if (fStdExceptionHandler) {
+      fStdExceptionHandler->Delete();
+      SafeDelete(fStdExceptionHandler);
    }
 
    if (fTimers) {
@@ -171,9 +177,10 @@ Bool_t TSystem::Init()
    fSigcnt = 0;
    fLevel  = 0;
 
-   fSignalHandler = new TOrdCollection;
-   fFileHandler   = new TOrdCollection;
-   fTimers        = new TOrdCollection;
+   fSignalHandler       = new TOrdCollection;
+   fFileHandler         = new TOrdCollection;
+   fStdExceptionHandler = new TOrdCollection;
+   fTimers              = new TOrdCollection;
 
    fBuildArch     = BUILD_ARCH;
    fBuildCompiler = COMPILER;
@@ -287,6 +294,14 @@ const char *TSystem::HostName()
 }
 
 //______________________________________________________________________________
+void TSystem::NotifyApplicationCreated()
+{
+   // Hook to tell TSystem that the TApplication object has been created.
+
+   // Currently needed only for WinNT interface.
+}
+
+//______________________________________________________________________________
 void TSystem::Beep(Int_t freq /*=-1*/, Int_t duration /*=-1*/,
                    Bool_t setDefault /*=kFALSE*/)
 {
@@ -318,9 +333,8 @@ void TSystem::Run()
    fInControl = kTRUE;
    fDone      = kFALSE;
 
-#ifdef R__EH
+loop_entry:
    try {
-#endif
       RETRY {
          while (!fDone) {
             gApplication->StartIdleing();
@@ -328,7 +342,26 @@ void TSystem::Run()
             gApplication->StopIdleing();
          }
       } ENDTRY;
-#ifdef R__EH
+   }
+   catch (std::exception& exc) {
+      TIter next(fStdExceptionHandler);
+      TStdExceptionHandler* eh = 0;
+      while ((eh = (TStdExceptionHandler*) next())) {
+         switch (eh->Handle(exc))
+         {
+            case TStdExceptionHandler::kSEProceed:
+               break;
+            case TStdExceptionHandler::kSEHandled:
+               goto loop_entry;
+               break;
+            case TStdExceptionHandler::kSEAbort:
+               Warning("Run", "instructed to abort.\n");
+               goto loop_end;
+               break;
+         }
+         Warning("Run", "unhandled std::exception, rethrowing.\n");
+         throw;
+      }
    }
    catch (const char *str) {
       printf("%s\n", str);
@@ -337,8 +370,8 @@ void TSystem::Run()
    catch (...) {
       Warning("Run", "handle uncaugth exception, terminating\n");
    }
-#endif
 
+loop_end:
    fInControl = kFALSE;
 }
 
@@ -548,6 +581,28 @@ void TSystem::IgnoreInterrupt(Bool_t ignore)
    // behaviour. Typically call ignore interrupt before writing to disk.
 
    IgnoreSignal(kSigInterrupt, ignore);
+}
+
+//______________________________________________________________________________
+void TSystem::AddStdExceptionHandler(TStdExceptionHandler *eh)
+{
+   // Add an exception handler to list of system exception handlers. Only adds
+   // the handler if it is not already in the list of exception handlers.
+
+   if (eh && fStdExceptionHandler && (fStdExceptionHandler->FindObject(eh) == 0))
+      fStdExceptionHandler->Add(eh);
+}
+
+//______________________________________________________________________________
+TStdExceptionHandler *TSystem::RemoveStdExceptionHandler(TStdExceptionHandler *eh)
+{
+   // Remove an exception handler from list of exception handlers. Returns
+   // the handler or 0 if the handler was not in the list of exception handlers.
+
+   if (fStdExceptionHandler)
+      return (TStdExceptionHandler *)fStdExceptionHandler->Remove(eh);
+
+   return 0;
 }
 
 //______________________________________________________________________________
