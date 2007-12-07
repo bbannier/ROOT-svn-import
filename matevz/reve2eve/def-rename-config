@@ -3,9 +3,9 @@
 # find . -name \*.C -or -name \*.cxx -or -name \*.h | xargs grep -l gReve | xargs perl -pi -e 's/gReve/gEve/og;'
 # find . -name \*.C -or -name \*.cxx -or -name \*.h | xargs grep -l RenderElement | xargs perl -pi -e 's/RenderElement/Element/og;'
 
-$RENAME_FILES = 0;
-
-$FIX_FRONT_MATTER = 0; # edit below, too
+$RENAME_FILES       = 0;
+$REPLACE_REVE_GLOBS = 0; # Activate for first runs, avoid in general.
+$FIX_FRONT_MATTER   = 0; # edit below, too
 $FRONT_MATTER=<<'FNORD';
 // @(#)root/reve:$Id$
 // Authors: Matevz Tadel & Alja Mrak-Tadel: 2006, 2007
@@ -87,12 +87,88 @@ FNORD
 );
 
 %classes = (
-  # Manually added.
+  # Manually added stuff.
   'CPlex'		=> 'TEveChunkVector',
   'GLTextNS'		=> 'TEveGLText',
   'GLUtilNS'		=> 'TEveGLUtil',
   'Reve'		=> 'TEveUtil',
+  # Enum types.
+  'BoxType_e'           => 'EBoxType_e',
+  'ReveMenu_e'          => 'EReveMenu_e',
+  'RenderMode_e'        => 'ERenderMode_e',
+  'FrameType_e'         => 'EFrameType_e',
+  'StepMode_e'          => 'EStepMode_e',
+  'PType_e'             => 'EPType_e',
+  'PProc_e'             => 'EPProc_e',
+  'GeoMode_e'           => 'EGeoMode_e',
+  'QuadType_e'          => 'EQuadType_e',
+  'RenderMode_e'        => 'ERenderMode_e',
+  'LimitAction_e'       => 'ELimitAction_e',
+  'ClickAction_e'       => 'EClickAction_e',
+  'TreeVarType_e'       => 'ETreeVarType_e',
+  'Type_e'              => 'EType_e',
+  # Enum values.
+  'TEvePathMark::Decay'		=> 'TEvePathMark::kDecay',
+  'TEvePathMark::Daughter'	=> 'TEvePathMark::kDaughter',
+  'TEvePathMark::Reference'	=> 'TEvePathMark::kReference',
+  'BT_Undef'            => 'kBT_Undef',
+  'BT_FreeBox'          => 'kBT_FreeBox',
+  'BT_AABox'            => 'kBT_AABox',
+  'BT_AABoxFixedDim'    => 'kBT_AABoxFixedDim',
+  'RM_AsIs'             => 'kRM_AsIs',
+  'RM_TEveLine'         => 'kRM_TEveLine',
+  'RM_Fill'             => 'kRM_Fill',
+  'FT_None'             => 'kFT_None',
+  'FT_Quad'             => 'kFT_Quad',
+  'FT_Box'              => 'kFT_Box',
+  'MONO'                => 'kMONO',
+  'TOP_BOTTOM'          => 'kTOP_BOTTOM',
+  'LEFT_RIGHT'          => 'kLEFT_RIGHT',
+  'FOUR'                => 'kFOUR',
+  'SM_XYZ'              => 'kSM_XYZ',
+  'SM_YXZ'              => 'kSM_YXZ',
+  'SM_XZY'              => 'kSM_XZY',
+  'PT_Unknown'          => 'kPT_Unknown',
+  'PT_CFishEye'         => 'kPT_CFishEye',
+  'PT_RhoZ'             => 'kPT_RhoZ',
+  'PP_Plane'            => 'kPP_Plane',
+  'PP_Distort'          => 'kPP_Distort',
+  'PP_Full'             => 'kPP_Full',
+  'GM_Unknown'          => 'kGM_Unknown',
+  'GM_Polygons'         => 'kGM_Polygons',
+  'GM_Segments'         => 'kGM_Segments',
+  'QT_Undef'            => 'kQT_Undef',
+  'QT_FreeQuad'         => 'kQT_FreeQuad',
+  'QT_RectangleXY'      => 'kQT_RectangleXY',
+  'QT_RectangleXZ'      => 'kQT_RectangleXZ',
+  'QT_RectangleYZ'      => 'kQT_RectangleYZ',
+  'QT_RectangleXYFixedDim'      => 'kQT_RectangleXYFixedDim',
+  'QT_RectangleXYFixedZ'        => 'kQT_RectangleXYFixedZ',
+  'QT_RectangleXZFixedY'        => 'kQT_RectangleXZFixedY',
+  'QT_RectangleYZFixedX'        => 'kQT_RectangleYZFixedX',
+  'QT_RectangleXYFixedDimZ'     => 'kQT_RectangleXYFixedDimZ',
+  'QT_RectangleXZFixedDimY'     => 'kQT_RectangleXZFixedDimY',
+  'QT_RectangleYZFixedDimX'     => 'kQT_RectangleYZFixedDimX',
+  'QT_Rectangle_End'            => 'kQT_Rectangle_End',
+  'QT_LineXYFixedZ'             => 'kQT_LineXYFixedZ',
+  'QT_LineXZFixedY'             => 'kQT_LineXZFixedY',
+  'QT_Line_End'         => 'kQT_Line_End',
+  'QT_HexagonXY'        => 'kQT_HexagonXY',
+  'QT_HexagonYX'        => 'kQT_HexagonYX',
+  'QT_Hexagon_End'      => 'kQT_Hexagon_End',
+  'RM_AsIs'             => 'kRM_AsIs',
+  'RM_TEveLine'         => 'kRM_TEveLine',
+  'RM_Fill'             => 'kRM_Fill',
+  'LA_Cut'              => 'kLA_Cut',
+  'LA_Mark'             => 'kLA_Mark',
+  'LA_Clip'             => 'kLA_Clip',
+  'LA_Wrap'             => 'kLA_Wrap',
+  'CA_PrintTrackInfo'   => 'kCA_PrintTrackInfo',
+  'CA_ToggleTrack'      => 'kCA_ToggleTrack',
+  'TVT_XYZ'             => 'kTVT_XYZ',
+  'TVT_RPhiZ'           => 'kTVT_RPhiZ',
 
+  # Real class renames.
   'BoxSet' 		=> 'TEveBoxSet',
   'BoxSetGL' 		=> 'TEveBoxSetGL',
   'Cluster' 		=> 'TEveCluster',
