@@ -275,6 +275,7 @@ protected:
    TSeqCollection  *fTimers;           //List of timers
    TSeqCollection  *fSignalHandler;    //List of signal handlers
    TSeqCollection  *fFileHandler;      //List of file handlers
+   TSeqCollection  *fStdExceptionHandler; //List of std::exception handlers
    TSeqCollection  *fOnExitList;       //List of items to be cleaned-up on exit
 
    TString          fListLibs;         //List shared libraries, cache used by GetLibraries
@@ -326,6 +327,7 @@ public:
    virtual const char     *GetError();
    void                    RemoveOnExit(TObject *obj);
    virtual const char     *HostName();
+   virtual void            NotifyApplicationCreated();
 
    static Int_t            GetErrno();
    static void             ResetErrno();
@@ -351,6 +353,9 @@ public:
    virtual void            AddFileHandler(TFileHandler *fh);
    virtual TFileHandler   *RemoveFileHandler(TFileHandler *fh);
    virtual TSeqCollection *GetListOfFileHandlers() const { return fFileHandler; }
+   virtual void            AddStdExceptionHandler(TStdExceptionHandler *eh);
+   virtual TStdExceptionHandler *RemoveStdExceptionHandler(TStdExceptionHandler *eh);
+   virtual TSeqCollection *GetListOfStdExceptionHandlers() const { return fStdExceptionHandler; }
 
    //---- Floating Point Exceptions Control
    virtual Int_t           GetFPEMask();
