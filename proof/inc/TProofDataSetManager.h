@@ -56,9 +56,9 @@ private:
    TString fGroupConfigFile;  // Path to the group config file
    Long_t  fMTimeGroupConfig; // Last modification of the group config file
 
-   static const char *fgDataSetLockFile;   // dataset lock file
-   static Int_t       fgLockFileTimeLimit; // limit in seconds after a lock automatically expires
-   static const char *fgCommonDataSetTag;  // name for common datasets, default: COMMON
+   static TString fgDataSetLockFile;   // dataset lock file
+   static Int_t   fgLockFileTimeLimit; // limit in seconds after a lock automatically expires
+   static TString fgCommonDataSetTag;  // name for common datasets, default: COMMON
 
    Bool_t  ReadGroupConfig(const char *cf = 0);
 
