@@ -49,11 +49,11 @@
 
 
 // Dataset lock file
-const char *TProofDataSetManager::fgDataSetLockFile   = "/tmp/dataset-lock";
+TString TProofDataSetManager::fgDataSetLockFile;
 // Limit in seconds after a lock automatically expires
-Int_t        TProofDataSetManager::fgLockFileTimeLimit = 120;
+Int_t   TProofDataSetManager::fgLockFileTimeLimit = 120;
 // Name for common datasets
-const char*  TProofDataSetManager::fgCommonDataSetTag   = "COMMON";
+TString TProofDataSetManager::fgCommonDataSetTag = "COMMON";
 
 ClassImp(TProofDataSetManager)
 
@@ -73,6 +73,9 @@ TProofDataSetManager::TProofDataSetManager(const char *dataSetDir,
    fGroupQuota.SetOwner();
    fGroupUsed.SetOwner();
    fUserUsed.SetOwner();
+
+   // Fill locking path
+   fgDataSetLockFile = Form("%s/dataset-lock", gSystem->TempDirectory());
 
    // Read config file
    ReadGroupConfig(gEnv->GetValue("ProofDataSetManager.GroupFile",""));
@@ -228,10 +231,10 @@ const char *TProofDataSetManager::GetDataSetPath(const char *group,
    // Returns path of the indicated dataset
    // Contains a static TString for result. Copy result before using twice.
 
-   if (strcmp(group, fgCommonDataSetTag) == 0)
+   if (fgCommonDataSetTag == group)
      group = fCommonGroup;
 
-   if (strcmp(user, fgCommonDataSetTag) == 0)
+   if (fgCommonDataSetTag == user)
      user = fCommonUser;
 
    static TString result;
@@ -441,10 +444,10 @@ TMap *TProofDataSetManager::GetDataSets(const char *group, const char *user,
    //
    // 'option' is forwarded to GetDataSet .
 
-   if (group && strcmp(group, fgCommonDataSetTag) == 0)
+   if (group && fgCommonDataSetTag == group)
      group = fCommonGroup;
 
-   if (user && strcmp(user, fgCommonDataSetTag) == 0)
+   if (user && fgCommonDataSetTag == user)
      user = fCommonUser;
 
    TMap *result = new TMap;
@@ -526,11 +529,11 @@ TMap *TProofDataSetManager::GetDataSets(const char *group, const char *user,
 
                   // COMMON dataset transition
                   const char *mapGroup = currentGroup;
-                  if (strcmp(mapGroup, fCommonGroup) == 0)
-                     mapGroup = fgCommonDataSetTag;
+                  if (fCommonGroup == mapGroup)
+                     mapGroup = fgCommonDataSetTag.Data();
                   const char *mapUser = currentUser;
-                  if (strcmp(mapUser, fCommonUser) == 0)
-                     mapUser = fgCommonDataSetTag;
+                  if (fCommonUser == mapUser)
+                     mapUser = fgCommonDataSetTag.Data();
 
                   TMap *userMap = dynamic_cast<TMap*> (result->GetValue(mapGroup));
                   if (!userMap) {
@@ -968,7 +971,7 @@ Long64_t TProofDataSetManager::GetGroupUsed(const char *group)
    //
    // Returns the used space of that group
 
-   if (strcmp(group, fgCommonDataSetTag) == 0)
+   if (fgCommonDataSetTag == group)
       group = fCommonGroup;
 
    TParameter<Long64_t> *size =
@@ -988,7 +991,7 @@ Long64_t TProofDataSetManager::GetGroupQuota(const char *group)
    //
    // returns the quota a group is allowed to have
 
-   if (strcmp(group, fgCommonDataSetTag) == 0)
+   if (fgCommonDataSetTag == group)
       group = fCommonGroup;
 
    TParameter<Long64_t> *value =
