@@ -1,4 +1,3 @@
-base/src/ManualBase4.cxx:*          FROM HEADER FILES LISTED IN G__setup_cpp_environmentXXX().
 base/src/ManualBase4.cxx:extern "C" void G__cpp_reset_tagtableManualBase4();
 base/src/ManualBase4.cxx:extern "C" void G__set_cpp_environmentManualBase4() {
 base/src/ManualBase4.cxx:  G__add_compiledheader("base/inc/TObject.h");
@@ -229,12 +228,10 @@ cintex/src/CINTVariableBuilder.cxx:            << (G__AUTO==member_isstatic ? "a
 cintex/src/CINTVariableBuilder.cxx:      ::G__memvar_setup((void*)dm.Offset(),                         // p
 cintex/src/ROOTClassEnhancer.cxx:      int tagnum = ::G__defined_tagname(tagname, 2);
 cintex/src/ROOTClassEnhancer.cxx:      G__ClassInfo cl_info(tagnum);
-eve/src/TEveMacro.cxx:   //G__unloadfile(fname);
 foam/src/TFoam.cxx:   const Char_t *namefcn = G__p2f2funcname(fun); //name of integrand function
 guibuilder/src/TGuiBldDragManager.cxx:         G__calc((char *)str.Data());
 hist/src/TF1.cxx:   char *funcname = G__p2f2funcname(fcn);
 html/src/TClassDocOutput.cxx:               if (member->Property() & G__BIT_ISSTATIC)
-html/src/TDocParser.cxx:      const Int_t flagEnumConst = G__BIT_ISENUM | G__BIT_ISCONSTANT | G__BIT_ISSTATIC;
 io/src/TEmulatedCollectionProxy.cxx:               fPointers |= 0 != (fKey->fCase&G__BIT_ISPOINTER);
 io/src/TEmulatedCollectionProxy.cxx:                  if (fVal->fCase != G__BIT_ISFUNDAMENTAL) {
 io/src/TEmulatedCollectionProxy.cxx:         fPointers |= 0 != (fVal->fCase&G__BIT_ISPOINTER);
@@ -349,12 +346,10 @@ io/src/TGenCollectionStreamer.cxx:            case G__BIT_ISFUNDAMENTAL:  // Onl
 io/src/TGenCollectionStreamer.cxx:            case G__BIT_ISENUM:
 io/src/TGenCollectionStreamer.cxx:            case G__BIT_ISFUNDAMENTAL:  // Only handle primitives this way
 io/src/TGenCollectionStreamer.cxx:            case G__BIT_ISENUM:
-main/src/cppmain.cxx: * Source file main/G__cppmain.C
 main/src/cppmain.cxx:extern void G__setothermain(int othermain);
 main/src/cppmain.cxx:extern int G__main(int argc,char **argv);
 main/src/cppmain.cxx:   G__setothermain(0);
 main/src/cppmain.cxx:   return(G__main(argc,argv));
-mathcore/src/FunctorCint.cxx://#if defined(__MAKECINT__) || defined(G__DICTIONARY) 
 mathcore/src/FunctorCint.cxx:      char *funcname = G__p2f2funcname((void *) fPtr);
 mathcore/src/FunctorCint.cxx:   char *funcname = G__p2f2funcname((void *) p1);
 mathcore/src/FunctorCint.cxx:   char *funcname2 = G__p2f2funcname((void *) p2);
@@ -363,7 +358,6 @@ mathcore/src/FunctorCint.cxx:   char *funcname = G__p2f2funcname((void *) p1);
 mathcore/src/FunctorCint.cxx:   char *funcname2 = G__p2f2funcname((void *) p2);
 meta/src/TBaseClass.cxx:TBaseClass::TBaseClass(G__BaseClassInfo *info, TClass *cl) : TDictionary()
 meta/src/TBaseClass.cxx:   // TBaseClass dtor deletes adopted G__BaseClassInfo object.
-meta/src/TCint.cxx://#undef G__FPROTO_H
 meta/src/TCint.cxx:   ULong_t varp = G__getgvp();
 meta/src/TCint.cxx:   G__setgvp(G__PVOID);
 meta/src/TCint.cxx:   G__setgvp(varp);
@@ -557,7 +551,6 @@ meta/src/TStreamerElement.cxx:         G__ClassInfo info(sopen);
 meta/src/TStreamerElement.cxx:         if (info.IsValid() && info.Property()&G__BIT_ISENUM) {
 metautils/src/TClassEdit.cxx:                     G__ClassInfo info(base.c_str());
 metautils/src/TClassEdit.cxx:         G__TypedefInfo t;
-minuit2/src/TFitterMinuit.cxx://for the G__p2f2funcname symbol
 minuit2/src/TFitterMinuit.cxx:   char *funcname = G__p2f2funcname(fcn);
 minuit/src/TMinuit.cxx:   char *funcname = G__p2f2funcname(fcn);
 pyroot/src/Adapters.cxx:   return fMember->Property() & G__BIT_ISSTATIC;
@@ -707,11 +700,6 @@ pyroot/src/Utility.cxx:   G__linked_taginfo pti;
 pyroot/src/Utility.cxx:   int tagnum = G__get_linked_tagnum( &pti );
 rint/src/TRint.cxx:   if (!G__get_security_error())
 rint/src/TRint.cxx:      G__genericerror("\n *** Break *** keyboard interrupt");
-rint/src/TTabCom.cxx://          root> G__at[TAB]                                              //
-rint/src/TTabCom.cxx://          root> G__ateval                                               //
-rint/src/TTabCom.cxx://          root> G__at[TAB]                                              //
-rint/src/TTabCom.cxx://          root> G__ateval(                                              //
-rint/src/TTabCom.cxx://     because there are several overloaded versions of G__ateval().      //
 rint/src/TTabCom.cxx:      G__display_class(fout, (char*)"", 0, 0);
 rint/src/TTabCom.cxx:      G__DataMemberInfo *a;
 rint/src/TTabCom.cxx:      G__DataMemberInfo t;
@@ -741,11 +729,6 @@ table/src/TTable.cxx:   G__CallFunc callfunc;
 table/src/TTable.cxx:   G__unloadfile((Char_t *)exprFileName);
 thread/src/TThread.cxx:   G__set_alloclockfunc(CINT_alloc_lock);
 thread/src/TThread.cxx:   G__set_allocunlockfunc(CINT_alloc_unlock);
-tmva/src/GeneticAlgorithm.cxx:   const Bool_t GeneticAlgorithm__DEBUG__ = kFALSE;
-tmva/src/GeneticAlgorithm.cxx:         if (GeneticAlgorithm__DEBUG__) fLogger << kINFO << ">" << flush;
-tmva/src/GeneticAlgorithm.cxx:         if (GeneticAlgorithm__DEBUG__) fLogger << "=" << flush;
-tmva/src/GeneticAlgorithm.cxx:         if (GeneticAlgorithm__DEBUG__) fLogger << "<" << flush;
-tmva/src/GeneticAlgorithm.cxx:   if (GeneticAlgorithm__DEBUG__) fLogger << "." << flush;
 tree/src/ManualTree2.cxx:*          FROM HEADER FILES LISTED IN G__setup_cpp_environmentXXX().
 tree/src/ManualTree2.cxx:extern "C" void G__cpp_reset_tagtableManualTree2();
 tree/src/ManualTree2.cxx:extern "C" void G__set_cpp_environmentManualTree2() {
@@ -843,7 +826,6 @@ tree/src/TSelector.cxx:   // diagnostic in the case the class is not found in th
 tree/src/TSelector.cxx:   G__ClassInfo cl;
 tree/src/TTree.cxx:      G__ClassInfo* classinfo = clones->GetClass()->GetClassInfo();
 tree/src/TTree.cxx:            G__ClassInfo* classinfo = inklass->GetClassInfo();
-unix/src/TUnixSystem.cxx://#define G__OLDEXPAND
 utils/src/rootcint.cxx:   void  G__setothermain(int othermain);
 utils/src/rootcint.cxx:   void  G__setglobalcomp(int globalcomp);
 utils/src/rootcint.cxx:   int   G__main(int argc, char **argv);
