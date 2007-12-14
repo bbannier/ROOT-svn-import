@@ -945,6 +945,9 @@ typedef struct {
 } G__value ;
 
 
+// DMS
+   extern char G__wrappers;
+
 /**************************************************************************
 * reference type argument for precompiled function
 **************************************************************************/

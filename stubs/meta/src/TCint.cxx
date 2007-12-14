@@ -585,6 +585,14 @@ Int_t TCint::InitializeDictionaries()
 }
 
 //______________________________________________________________________________
+void TCint::EnableWrappers(bool value){
+
+   G__wrappers = (int) value;
+
+}
+
+
+//______________________________________________________________________________
 void TCint::EnableAutoLoading()
 {
    // Enable the automatic loading of shared libraries when a class
