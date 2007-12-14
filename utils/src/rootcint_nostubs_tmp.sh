@@ -98,19 +98,20 @@ g++ $CXXFLAGS -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -I. -o ${FILENAME
 # Put all the symbols of the .o in the nm file
 #echo -++- Putting the symbols of the .o files in : ${FILENAME%.*}.nm
 #echo nm -g -p --defined-only $OBJS | awk '{printf("%s\n", $3)}' > ${FILENAME%.*}.nm
-nm -g -p --defined-only $OBJS | awk '{printf("%s\n", $3)}' > ${FILENAME%.*}.nm
+#nm -g -p --defined-only $OBJS | awk '{printf("%s\n", $3)}' > ${FILENAME%.*}.nm
 
 # Symbols extraction
 # Put the symbols of the first dicionary in the nm file too
 #echo -++- Putting the symbols of the dictionary ${FILENAME%.*}"Tmp1".cxx in : ${FILENAME%.*}.nm
 #echo nm -g -p --defined-only ${FILENAME%.*}"Tmp1".o | awk '{printf("%s\n", $3)}' >> ${FILENAME%.*}.nm
-nm -g -p --defined-only ${FILENAME%.*}"Tmp1".o | awk '{printf("%s\n", $3)}' >> ${FILENAME%.*}.nm
+nm -g -p --defined-only ${FILENAME%.*}"Tmp1".o | awk '{printf("%s\n", $3)}' > ${FILENAME%.*}.nm
+nm -g -p --undefined-only ${FILENAME%.*}"Tmp1".o | awk '{printf("%s\n", $2)}' >> ${FILENAME%.*}.nm
 
 # Now we need the symbols for the second dictionary too (another safeguard)
 # Generate the second dictionary passing it the symbols of the .o files plus
 # those of the first dictionary
 #echo -++- Generating the second dictionary: ${FILENAME%.*}"Tmp2".cxx
-#echo utils/src/rootcint_tmp $MODE ${FILENAME%.*}"Tmp2".cxx -c --symbols-file ${FILENAME%.*}".nm" -. 2 $ROOTCINTARGS
+echo utils/src/rootcint_tmp $MODE ${FILENAME%.*}"Tmp2".cxx -c --symbols-file ${FILENAME%.*}".nm" -. 2 $ROOTCINTARGS
 utils/src/rootcint_tmp $MODE ${FILENAME%.*}"Tmp2".cxx -c --symbols-file ${FILENAME%.*}".nm"  -. 2 $ROOTCINTARGS
 
 # Compile the second dictionary (should have only inline functions)
@@ -122,10 +123,11 @@ g++ $CXXFLAGS -Iinclude -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -I. -o 
 #echo -++- Putting the symbols of the dictionary ${FILENAME%.*}"Tmp2".cxx in : ${FILENAME%.*}.nm
 #echo nm -g -p --defined-only ${FILENAME%.*}"Tmp2".o | awk '{printf("%s\n", $3)}' >> ${FILENAME%.*}.nm
 nm -g -p --defined-only ${FILENAME%.*}"Tmp2".o | awk '{printf("%s\n", $3)}' >> ${FILENAME%.*}.nm
+nm -g -p --undefined-only ${FILENAME%.*}"Tmp2".o | awk '{printf("%s\n", $2)}' >> ${FILENAME%.*}.nm
 
 # Final Dictionary Generation
-#echo -++- Generating the real dictionary: ${FILENAME}
-#echo utils/src/rootcint_tmp $MODE $FILENAME -c --symbols-file ${FILENAME%.*}".nm" -. 3 $ROOTCINTARGS
+echo -++- Generating the real dictionary: ${FILENAME}
+echo utils/src/rootcint_tmp $MODE $FILENAME -c --symbols-file ${FILENAME%.*}".nm" -. 3 $ROOTCINTARGS
 utils/src/rootcint_tmp $MODE $FILENAME -c --symbols-file ${FILENAME%.*}".nm" -. 3 $ROOTCINTARGS
 
 # We don't need the temporaries anymore (Now we do)

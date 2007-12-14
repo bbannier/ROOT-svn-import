@@ -29,7 +29,6 @@ TInterpreter::TInterpreter(const char *name, const char *title)
     : TNamed(name, title)
 {
    // TInterpreter ctor only called by derived classes.
-
    gInterpreter = this;
 }
 

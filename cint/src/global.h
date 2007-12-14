@@ -99,6 +99,9 @@ extern int G__asm_cp;               /* compile time program counter */
 extern int G__asm_dt;   /* compile time stack pointer */
 extern int G__asm_index;              /* variable index */
 
+// DMS 
+extern char G__wrappers;
+
 #endif // G__ASM
 
 /**************************************************************************
