@@ -1,0 +1,14 @@
+This directory contains files needed for automatic generation of class
+skeletons for Eve. Supports standard classes, ged and gl.
+
+USAGE:
+
+1.Download it to some location:
+cd <some-location>
+svn co https://root.cern.ch/svn/root/branches/dev/matevz/eve-genclass
+
+2. Run as:
+cd $ROOTSYS/eve
+<some-location>/eve-genclass/eve-genclass.pl base MyNewClass
+
+See code or usage instructions of the script for more information.
