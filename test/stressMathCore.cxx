@@ -1470,7 +1470,8 @@ int testCompositeObj(int ngen) {
 
    std::cout << "Test Using CINT library\n\n"; 
 
-   iret = gSystem->Load("libTrackMathCoreCint");
+   // put path relative to LD_LIBRARY_PATH
+   iret = gSystem->Load("../test/libTrackMathCoreCint");
    if (iret !=0) { 
       std::cerr <<"Error Loading libTrackMathCoreCint" << std::endl;
       return iret; 
@@ -1484,7 +1485,7 @@ int testCompositeObj(int ngen) {
 #endif
    ROOT::Cintex::Cintex::Enable();
 
-   iret = gSystem->Load("libTrackMathCoreRflx");
+   iret = gSystem->Load("../test/libTrackMathCoreRflx");
    if (iret !=0) { 
       std::cerr <<"Error Loading libTrackMathCoreRflx" << std::endl;
       return iret; 
@@ -1517,7 +1518,10 @@ int stressMathCore(double nscale = 1) {
    std::cout << "Test must be run in compile mode - use ACLIC to compile!!" << std::endl; 
 
 
-   return 0; 
+   gSystem->Load("libMathCore");
+   gSystem->Load("libTree");
+   gROOT->ProcessLine(".L stressMathCore.cxx++");
+   return stressMathCore();
 #endif
 //    iret |= gSystem->Load("libMathCore");
 //    iret |= gSystem->Load("libMathMore");
@@ -1547,9 +1551,8 @@ int stressMathCore(double nscale = 1) {
    bm.Stop("stressMathCore");
    std::cout <<"******************************************************************************\n";
    bm.Print("stressMathCore");
-   //const double reftime = 1.00; // ref time on  macbook pro (intel core duo 2.2 GHz)
-   const double reftime = 1.17; // ref time on  imac  (intel dual core 32 bits  2. GHz)
-   double rootmarks = 800 * reftime / bm.GetCpuTime("stressMathCore");
+   const double reftime = 1.70; // ref time on  pcbrun4
+   double rootmarks = 860 * reftime / bm.GetCpuTime("stressMathCore");
    std::cout << " ROOTMARKS = " << rootmarks << " ROOT version: " << gROOT->GetVersion() << "\t" 
              << gROOT->GetSvnBranch() << "@" << gROOT->GetSvnRevision() << std::endl;
    std::cout <<"*******************************************************************************\n";
