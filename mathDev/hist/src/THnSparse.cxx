@@ -26,7 +26,16 @@
 
 //______________________________________________________________________________
 //
-// THnSparseCompactBinCoord
+// THnSparseCompactBinCoord is a class used by THnSparse internally. It
+// represents a compacted n-dimensional array of bin coordinates (indices).
+// As the total number of bins in each dimension is known by THnSparse, bin
+// indices can be compacted to only use the amount of bins needed by the total
+// number of bins in each dimension. E.g. for a THnSparse with
+// {15, 100, 2, 20, 10, 100} bins per dimension, a bin index will only occupy
+// 28 bits (4+7+1+5+4+7), i.e. less than a 32bit integer. The tricky part is
+// the fast compression and decompression, the platform-independent storage
+// (think of endianness: the bits of the number 0x123456 depend on the
+// platform), and the hashing needed by THnSparseArrayChunk.
 //______________________________________________________________________________
 
 class THnSparseCompactBinCoord {
@@ -54,9 +63,10 @@ private:
    Int_t  fCoordBufferSize; // size of fBinCoordBuffer
    Int_t *fCurrentBin;      // current coordinates
 };
-//______________________________________________________________________________
-//______________________________________________________________________________
 
+
+//______________________________________________________________________________
+//______________________________________________________________________________
 
 
 //______________________________________________________________________________
@@ -158,9 +168,17 @@ ULong64_t THnSparseCompactBinCoord::GetHash()
 }
 
 
-//______________________________________________________________________________
-//______________________________________________________________________________
 
+//______________________________________________________________________________
+//
+// THnSparseArrayChunk is used internally by THnSparse.
+//
+// THnSparse stores its (dynamic size) array of bin coordinates and their
+// contents (and possibly errors) in a TObjArray of THnSparseArrayChunk. Each
+// of the chunks holds an array of THnSparseCompactBinCoord and the content
+// (a TArray*), which is created outside (by the templated derived classes of
+// THnSparse) and passed in at construction time.
+//______________________________________________________________________________
 
 
 ClassImp(THnSparseArrayChunk);
@@ -207,6 +225,9 @@ void THnSparseArrayChunk::Sumw2()
 
 
 //______________________________________________________________________________
+//
+//
+//    Efficient multidimensional histogram.
 //
 // Use a THnSparse instead of TH1 / TH2 / TH3 / array for histogramming when
 // only a small fraction of bins is filled. A 10-dimensional histogram with 10
@@ -626,6 +647,23 @@ Double_t THnSparse::GetSparseFractionMem() const {
 }
 
 //______________________________________________________________________________
+Bool_t THnSparse::IsInRange(Int_t *coord) const
+{
+   // Check whether bin coord is in range - i.e. not an underflow of overflow.
+
+   // will use whatever is set by SetRange() later...
+
+   for (Int_t i = 0; i < fNdimensions; ++i){
+      TAxis *axis = GetAxis(i);
+      if (axis->TestBit(TAxis::kAxisRange)
+          && (coord[i] < axis->GetFirst()
+               || coord[i] > axis->GetLast()))
+         return kFALSE;
+   }
+   return kTRUE;
+}
+
+//______________________________________________________________________________
 TH1D* THnSparse::Projection(Int_t xDim, Option_t* option /*= ""*/) const
 {
    // Project all bins into a 1-dimensional histogram,
@@ -656,9 +694,17 @@ TH1D* THnSparse::Projection(Int_t xDim, Option_t* option /*= ""*/) const
    Double_t err = 0.;
    Double_t preverr = 0.;
    Double_t v = 0.;
+   Int_t inRangeX = GetAxis(xDim)->GetFirst(); // force it to be in-range
+   Int_t oldCoordX = 0;
 
    for (Long64_t i = 0; i < GetNbins(); ++i) {
       v = GetBinContent(i, coord);
+
+      oldCoordX = coord[xDim];
+      coord[xDim] = inRangeX;
+      if (!IsInRange(coord)) continue;
+      coord[xDim] = oldCoordX;
+
       h->AddBinContent(coord[xDim], v);
 
       if (wantErrors) {
@@ -706,21 +752,36 @@ TH2D* THnSparse::Projection(Int_t xDim, Int_t yDim, Option_t* option /*= ""*/) c
    Bool_t haveErrors = GetCalculateErrors();
    Bool_t wantErrors = option && (strchr(option, 'E') || strchr(option, 'e'));
 
-   TH2D* h = new TH2D(name, title, GetAxis(xDim)->GetNbins(),
-                      GetAxis(xDim)->GetXmin(), GetAxis(xDim)->GetXmax(),
+   // y, x looks wrong, but it's what TH3::Project3D("xy") does
+   TH2D* h = new TH2D(name, title,
                       GetAxis(yDim)->GetNbins(),
-                      GetAxis(yDim)->GetXmin(), GetAxis(yDim)->GetXmax());
+                      GetAxis(yDim)->GetXmin(), GetAxis(yDim)->GetXmax(),
+                      GetAxis(xDim)->GetNbins(),
+                      GetAxis(xDim)->GetXmin(), GetAxis(xDim)->GetXmax());
 
    Int_t* coord = new Int_t[fNdimensions];
    Double_t err = 0.;
    Double_t preverr = 0.;
    Double_t v = 0.;
    Long_t bin = 0;
+   Int_t inRangeX = GetAxis(xDim)->GetFirst(); // force it to be in-range
+   Int_t inRangeY = GetAxis(yDim)->GetFirst(); // force it to be in-range
+   Int_t oldCoordX = 0;
+   Int_t oldCoordY = 0;
 
    memset(coord, 0, sizeof(Int_t) * fNdimensions);
    for (Long64_t i = 0; i < GetNbins(); ++i) {
       v = GetBinContent(i, coord);
-      bin = h->GetBin(coord[xDim], coord[yDim]);
+
+      oldCoordX = coord[xDim];
+      oldCoordY = coord[yDim];
+      coord[xDim] = inRangeX;
+      coord[yDim] = inRangeY;
+      if (!IsInRange(coord)) continue;
+      coord[xDim] = oldCoordX;
+      coord[yDim] = oldCoordY;
+
+      bin = h->GetBin(coord[yDim],coord[xDim] );
       h->AddBinContent(bin, v);
 
       if (wantErrors) {
@@ -728,8 +789,8 @@ TH2D* THnSparse::Projection(Int_t xDim, Int_t yDim, Option_t* option /*= ""*/) c
             err = GetBinError(i);
             err *= err;
          } else err = v;
-         preverr = h->GetBinError(coord[xDim],coord[yDim]);
-         h->SetBinError(coord[xDim], coord[yDim],
+         preverr = h->GetBinError(coord[yDim], coord[xDim]);
+         h->SetBinError(coord[yDim], coord[xDim],
                         TMath::Sqrt(preverr * preverr + err));
       }
    }
@@ -786,9 +847,27 @@ TH3D* THnSparse::Projection(Int_t xDim, Int_t yDim, Int_t zDim,
    Double_t preverr = 0.;
    Double_t v = 0.;
    Long_t bin = 0;
+   Int_t inRangeX = GetAxis(xDim)->GetFirst(); // force it to be in-range
+   Int_t inRangeY = GetAxis(yDim)->GetFirst(); // force it to be in-range
+   Int_t inRangeZ = GetAxis(zDim)->GetFirst(); // force it to be in-range
+   Int_t oldCoordX = 0;
+   Int_t oldCoordY = 0;
+   Int_t oldCoordZ = 0;
 
    for (Long64_t i = 0; i < GetNbins(); ++i) {
       v = GetBinContent(i, coord);
+
+      oldCoordX = coord[xDim];
+      oldCoordY = coord[yDim];
+      oldCoordZ = coord[zDim];
+      coord[xDim] = inRangeX;
+      coord[yDim] = inRangeY;
+      coord[zDim] = inRangeZ;
+      if (!IsInRange(coord)) continue;
+      coord[xDim] = oldCoordX;
+      coord[yDim] = oldCoordY;
+      coord[zDim] = oldCoordZ;
+
       bin = h->GetBin(coord[xDim], coord[yDim], coord[zDim]);
       h->AddBinContent(bin, v);
 
@@ -850,14 +929,24 @@ THnSparse* THnSparse::Projection(Int_t ndim, const Int_t* dim,
    Int_t* bins  = new Int_t[ndim];
    Int_t* coord = new Int_t[fNdimensions];
    memset(coord, 0, sizeof(Int_t) * fNdimensions);
+   Int_t* inRange = new Int_t[ndim];
+   for (Int_t d = 0; d < ndim; ++d)
+      inRange[d] = GetAxis(dim[d])->GetFirst(); // force it to be in-range
+
    Double_t err = 0.;
    Double_t preverr = 0.;
    Double_t v = 0.;
 
    for (Long64_t i = 0; i < GetNbins(); ++i) {
       v = GetBinContent(i, coord);
-      for (Int_t d = 0; d < ndim; ++d)
+
+      for (Int_t d = 0; d < ndim; ++d) {
          bins[d] = coord[dim[d]];
+         coord[dim[d]] = inRange[dim[d]];
+      }
+
+      if (!IsInRange(coord)) continue;
+
       h->AddBinContent(bins, v);
 
       if (wantErrors) {
@@ -1136,11 +1225,11 @@ void THnSparse::Divide(const THnSparse *h1, const THnSparse *h2, Double_t c1, Do
 }
 
 //______________________________________________________________________________
-Bool_t THnSparse::CheckConsistency(const THnSparse *h, Char_t * tag) const
+Bool_t THnSparse::CheckConsistency(const THnSparse *h, const char *tag) const
 {
-   // consistency check on (some of) the parameters of two histograms (for operations)
+   // Consistency check on (some of) the parameters of two histograms (for operations).
 
-   if(fNdimensions!=h->GetNdimensions()){
+   if (fNdimensions!=h->GetNdimensions()) {
       Warning(tag,"Different number of dimensions, cannot carry out operation on the histograms");
       return kFALSE;
    }

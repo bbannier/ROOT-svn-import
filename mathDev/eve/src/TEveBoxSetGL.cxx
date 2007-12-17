@@ -34,12 +34,6 @@ TEveBoxSetGL::TEveBoxSetGL() : fM(0), fBoxDL(0)
    // fDLCache = false; // Disable display list.
 }
 
-//______________________________________________________________________________
-TEveBoxSetGL::~TEveBoxSetGL()
-{
-   // Destructor. Noop.
-}
-
 /******************************************************************************/
 // Protected methods
 /******************************************************************************/
@@ -60,7 +54,7 @@ inline Bool_t TEveBoxSetGL::SetupColor(const TEveDigitSet::DigitBase_t& q) const
 
    if (fM->fValueIsColor)
    {
-      glColor4ubv((UChar_t*) & q.fValue);
+      TGLUtil::Color4ubv((UChar_t*) & q.fValue);
       return kTRUE;
    }
    else
@@ -68,7 +62,7 @@ inline Bool_t TEveBoxSetGL::SetupColor(const TEveDigitSet::DigitBase_t& q) const
       UChar_t c[4];
       Bool_t visible = fM->fPalette->ColorFromValue(q.fValue, fM->fDefaultValue, c);
       if (visible)
-         glColor4ubv(c);
+         TGLUtil::Color4ubv(c);
       return visible;
    }
 }
@@ -263,7 +257,7 @@ void TEveBoxSetGL::DirectDraw(TGLRnrCtx & rnrCtx) const
          GLenum primitiveType = PrimitiveType();
          while (bi.next())
          {
-            TEveBoxSet::BFreeBox& b = * (TEveBoxSet::BFreeBox*) bi();
+            TEveBoxSet::BFreeBox_t& b = * (TEveBoxSet::BFreeBox_t*) bi();
             if (SetupColor(b))
             {
                if (rnrCtx.SecSelection()) glLoadName(bi.index());

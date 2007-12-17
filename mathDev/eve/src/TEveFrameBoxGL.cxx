@@ -13,6 +13,7 @@
 #include "TEveFrameBox.h"
 
 #include "TGLIncludes.h"
+#include "TGLUtil.h"
 
 #include "TMath.h"
 
@@ -27,6 +28,8 @@ ClassImp(TEveFrameBoxGL)
 //______________________________________________________________________________
 void TEveFrameBoxGL::RenderFrame(const TEveFrameBox& b, Bool_t fillp)
 {
+   // Render the frame with GL.
+
    const Float_t*  p =  b.fFramePoints;
 
    if (b.fFrameType == TEveFrameBox::kFT_Quad)
@@ -58,6 +61,8 @@ void TEveFrameBoxGL::RenderFrame(const TEveFrameBox& b, Bool_t fillp)
 //______________________________________________________________________________
 void TEveFrameBoxGL::Render(const TEveFrameBox* box)
 {
+   // Render the frame-box with GL.
+
    const TEveFrameBox& b = *box;
 
    glPushAttrib(GL_POLYGON_BIT | GL_LINE_BIT | GL_ENABLE_BIT);
@@ -81,7 +86,7 @@ void TEveFrameBoxGL::Render(const TEveFrameBox* box)
       TMath::Normal2Plane(p, p+3, p+6, normal);
       glNormal3fv(normal);
 
-      glColor4ubv(b.fBackRGBA);
+      TGLUtil::Color4ubv(b.fBackRGBA);
       RenderFrame(b, kTRUE);
 
       if (!lmts) glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_FALSE);
@@ -94,7 +99,7 @@ void TEveFrameBoxGL::Render(const TEveFrameBox* box)
    glEnable(GL_LINE_SMOOTH);
 
    glLineWidth(b.fFrameWidth);
-   glColor4ubv(b.fFrameRGBA);
+   TGLUtil::Color4ubv(b.fFrameRGBA);
    RenderFrame(b, b.fFrameFill);
 
    glPopAttrib();

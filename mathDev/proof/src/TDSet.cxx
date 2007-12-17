@@ -70,7 +70,8 @@
 #include "TSystem.h"
 #include "THashList.h"
 
-#include "TStreamerInfo.h"
+#include "TVirtualStreamerInfo.h"
+#include "TClassRef.h"
 
 ClassImp(TDSetElement)
 ClassImp(TDSet)
@@ -220,7 +221,10 @@ void TDSetElement::Validate(TDSetElement *elem)
       return;
    }
 
-   if (!strcmp(GetFileName(), elem->GetFileName()) &&
+   const char *name = TUrl(GetFileName()).GetFileAndOptions();
+   const char *elemname = TUrl(elem->GetFileName()).GetFileAndOptions();
+
+   if (!strcmp(name, elemname) &&
        !strcmp(GetDirectory(), elem->GetDirectory()) &&
        !strcmp(GetObjName(), elem->GetObjName())) {
       Long64_t entries = elem->fFirst + elem->fNum;
@@ -351,6 +355,8 @@ Long64_t TDSetElement::GetEntries(Bool_t isTree)
    // Record end-point Url and mark as looked-up; be careful to change
    // nothing in the file name, otherwise some cross-checks may fail
    TUrl *eu = (TUrl *) file->GetEndpointUrl();
+   eu->SetOptions(TUrl(fname).GetOptions());
+   eu->SetAnchor(TUrl(fname).GetAnchor());
    if (strlen(eu->GetProtocol()) > 0 && strcmp(eu->GetProtocol(), "file"))
       fName = eu->GetUrl();
    else
@@ -1376,8 +1382,8 @@ void TDSetElement::Streamer(TBuffer &R__b)
 
          // Special treatment waiting for proper retrieving of stl containers
          FriendsList_t *friends = new FriendsList_t;
-         ((TStreamerInfo*)TClass::GetClass(typeid(FriendsList_t))->
-            GetStreamerInfo())->ReadBuffer(R__b,(char**)&friends,0);
+         static TClassRef classFriendsList = TClass::GetClass(typeid(FriendsList_t));
+         R__b.ReadClassBuffer( classFriendsList, friends, classFriendsList->GetClassVersion(), 0, 0);
          if (friends) {
             // Convert friends to a TList (to be written)
             fFriends = new TList();
@@ -1418,8 +1424,8 @@ void TDSetElement::Streamer(TBuffer &R__b)
                friends->push_back(std::make_pair((TDSetElement *)p->Key(),
                                    TString(((TObjString *)p->Value())->GetName())));
          }
-         ((TStreamerInfo*)TClass::GetClass(typeid(FriendsList_t))->
-            GetStreamerInfo())->WriteBuffer(R__b,(char *)friends,0);
+         static TClassRef classFriendsList = TClass::GetClass(typeid(FriendsList_t));
+         R__b.WriteClassBuffer( classFriendsList, &friends );
 
          // Older versions had an unused boolean called fIsTree: we fill it
          // with its default value

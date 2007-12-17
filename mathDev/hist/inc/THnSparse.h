@@ -14,7 +14,7 @@
 
 /*************************************************************************
 
- THnSparse: histogramming multi-dimensional, sparse distributions in 
+ THnSparse: histogramming multi-dimensional, sparse distributions in
  a memory-efficient way.
 
 *************************************************************************/
@@ -58,7 +58,7 @@ class TH3D;
 class THnSparseArrayChunk: public TObject {
  public:
    THnSparseArrayChunk():
-      fSingleCoordinateSize(0), fCoordinatesSize(0), fCoordinates(0), 
+      fSingleCoordinateSize(0), fCoordinatesSize(0), fCoordinates(0),
       fContent(0), fSumw2(0) {}
 
    THnSparseArrayChunk(Int_t coordsize, bool errors, TArray* cont);
@@ -82,7 +82,7 @@ class THnSparseArrayChunk: public TObject {
       // Check whether bin at idx batches idxbuf.
       // If we don't store indexes we trust the caller that it does match,
       // see comment in THnSparseCompactBinCoord::GetHash().
-      return fCoordinatesSize <= 4 || 
+      return fCoordinatesSize <= 4 ||
          !memcmp(fCoordinates + idx * fSingleCoordinateSize, idxbuf, fSingleCoordinateSize); }
 
    ClassDef(THnSparseArrayChunk, 1); // chunks of linearized bins
@@ -137,7 +137,8 @@ class THnSparse: public TNamed {
    THnSparse* CloneEmpty(const char* name, const char* title,
                          const TObjArray* axes, Int_t chunksize) const;
 
-   Bool_t CheckConsistency(const THnSparse *h, Char_t * tag) const;
+   Bool_t CheckConsistency(const THnSparse *h, const char *tag) const;
+   Bool_t IsInRange(Int_t *coord) const;
 
  public:
    THnSparse(const char* name, const char* title, Int_t dim,
@@ -213,7 +214,7 @@ class THnSparse: public TNamed {
    void Add(const THnSparse* h, Double_t c=1.);
    void Multiply(const THnSparse* h);
    void Divide(const THnSparse* h);
-   void Divide(const THnSparse* h1, const THnSparse* h2, Double_t c1 = 1., Double_t c2 = 1., Option_t* option=""); 
+   void Divide(const THnSparse* h1, const THnSparse* h2, Double_t c1 = 1., Double_t c2 = 1., Option_t* option="");
 
    void Reset(Option_t* option = "");
    void Sumw2();
@@ -225,6 +226,38 @@ class THnSparse: public TNamed {
 
    ClassDef(THnSparse, 1); // Interfaces of sparse n-dimensional histogram
 };
+
+
+
+//______________________________________________________________________________
+//
+// Templated implementation of the abstract base THnSparse.
+// All functionality and the interfaces to be used are in THnSparse!
+//
+// THnSparse does not know how to store any bin content itself. Instead, this
+// is delegated to the derived, templated class: the template parameter decides
+// what the format for the bin content is. In fact it even defines the array
+// itself; possible implementations probably derive from TArray.
+//
+// Typedefs exist for template parematers with ROOT's generic types:
+//
+//   Templated name        Typedef       Bin content type
+//   THnSparseT<TArrayC>   THnSparseC    Char_r
+//   THnSparseT<TArrayS>   THnSparseS    Short_t
+//   THnSparseT<TArrayI>   THnSparseI    Int_t
+//   THnSparseT<TArrayL>   THnSparseL    Long_t
+//   THnSparseT<TArrayF>   THnSparseF    Float_t
+//   THnSparseT<TArrayD>   THnSparseD    Double_t
+//
+// We recommend to use THnSparseC wherever possible, and to map its value space
+// of 256 possible values to e.g. float values outside the class. This saves an
+// enourmous amount of memory. Only if more than 256 values need to be
+// distinguished should e.g. THnSparseS or even THnSparseF be chosen.
+//
+// Implementation detail: the derived, templated class is kept extremely small
+// on purpose. That way the (templated thus inlined) uses of this class will
+// only create a small amount of machine code, in contrast to e.g. STL.
+//______________________________________________________________________________
 
 template <class CONT>
 class THnSparseT: public THnSparse {

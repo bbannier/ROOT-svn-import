@@ -25,6 +25,13 @@
 #include "TGedPatternSelect.h"
 #include "TColor.h"
 
+//______________________________________________________________________________
+/* Begin_Html
+<center><h2>The TSpider editor class</h2></center>
+Provides the graphical user interface to the spider plots.
+End_Html */
+
+
 ClassImp(TSpiderEditor)
 
 enum ESpiderWid {

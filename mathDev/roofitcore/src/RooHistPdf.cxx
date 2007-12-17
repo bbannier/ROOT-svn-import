@@ -21,14 +21,22 @@
 // discrete dimensions.
 
 #include "RooFit.h"
+#include "Riostream.h"
 
 #include "RooHistPdf.h"
 #include "RooHistPdf.h"
 #include "RooDataHist.h"
 #include "RooMsgService.h"
 
+
+
 ClassImp(RooHistPdf)
 ;
+
+
+RooHistPdf::RooHistPdf() : _dataHist(0) 
+{
+}
 
 RooHistPdf::RooHistPdf(const char *name, const char *title, const RooArgSet& vars, 
 		       const RooDataHist& dhist, Int_t intOrder) :
@@ -81,7 +89,8 @@ Double_t RooHistPdf::evaluate() const
 {
   // Return the current value: The value of the bin enclosing the current coordinates
   // of the dependents, normalized by the histograms contents
-  return _dataHist->weight(_depList,_intOrder,kTRUE) ;
+  Double_t ret =  _dataHist->weight(_depList,_intOrder,kTRUE) ;
+  return ret ;
 }
 
 

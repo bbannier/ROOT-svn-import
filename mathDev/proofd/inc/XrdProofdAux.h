@@ -79,8 +79,37 @@ public:
 };
 
 //
+// Class to handle configuration directives
+//
+class XrdProofdDirective;
+class XrdOucStream;
+typedef int (*XrdFunDirective_t)(XrdProofdDirective *, char *,
+                                 XrdOucStream *cfg, bool reconfig);
+class XrdProofdDirective {
+public:
+   void              *fVal;
+   XrdOucString       fName;
+   XrdFunDirective_t  fFun;
+   const char        *fHost; // needed to support old 'if' construct
+
+   XrdProofdDirective(const char *n, void *v, XrdFunDirective_t f) :
+                      fVal(v), fName(n), fFun(f) { }
+
+   int DoDirective(char *val, XrdOucStream *cfg, bool reconfig)
+                      { return (*fFun)(this, val, cfg, reconfig); }
+};
+// Function of general interest
+int DoDirectiveInt(XrdProofdDirective *, char *val, XrdOucStream *cfg, bool rcf);
+int DoDirectiveString(XrdProofdDirective *, char *val, XrdOucStream *cfg, bool rcf);
+// To set the host field in a loop over the hash list
+int SetHostInDirectives(const char *, XrdProofdDirective *d, void *h);
+
+//
 // Static methods
 //
+#if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
+typedef struct kinfo_proc kinfo_proc;
+#endif
 class XrdOucStream;
 class XrdProofdAux {
 public:
@@ -92,6 +121,9 @@ public:
    static char *Expand(char *p);
    static void Expand(XrdOucString &path);
    static long int GetLong(char *str);
+#if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
+   static int GetMacProcList(kinfo_proc **plist, int &nproc);
+#endif
    static int GetNumCPUs();
    static int GetUserInfo(const char *usr, XrdProofUI &ui);
    static int GetUserInfo(int uid, XrdProofUI &ui);

@@ -2074,11 +2074,11 @@ Int_t stressRooFit(const char* refFile, Bool_t writeRef, Int_t doVerbose, Int_t 
   printf("******************************************************************\n");
   gBenchmark->Print("StressFit");
 #ifdef __CINT__
-  Double_t reftime = 86.34; //macbrun interpreted
+  Double_t reftime = 86.34; //pcbrun4 interpreted
 #else
-  Double_t reftime = 12.07; //macbrun compiled
+  Double_t reftime = 21.27; //pcbrun4 compiled
 #endif
-  const Double_t rootmarks = 800*reftime/gBenchmark->GetCpuTime("StressRooFit");
+  const Double_t rootmarks = 860*reftime/gBenchmark->GetCpuTime("StressRooFit");
   
   printf("******************************************************************\n");
   printf("*  ROOTMARKS =%6.1f   *  Root%-8s  %d/%d\n",rootmarks,gROOT->GetVersion(),
@@ -2143,7 +2143,27 @@ int main(int argc,const char *argv[])
       cout << "stressRooFit: running single test " << argv[i+1] << endl ;
       oneTest = atoi(argv[++i]) ;      
     }
+    
+    if (arg=="-d") {
+      cout << "stressRooFit: setting gDebug to " << argv[i+1] << endl ;
+      gDebug = atoi(argv[++i]) ;
+    }
 
+   }
+
+  if (doWrite && refFileName.find("http:")==0) {
+
+    // Locate file name part in URL and update refFileName accordingly
+    char* buf = new char[refFileName.size()+1] ;
+    strcpy(buf,refFileName.c_str()) ;
+    char *ptr = strrchr(buf,'/') ;
+    if (!ptr) {
+      ptr = strrchr(buf,':') ;
+    }
+    refFileName = ptr+1 ;
+    delete[] buf ;
+
+    cout << "stressRooFit: WARNING running in write mode, but reference file is web file, writing local file instead: " << refFileName << endl ;
   }
 
   gBenchmark = new TBenchmark();
