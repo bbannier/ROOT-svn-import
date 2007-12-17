@@ -696,7 +696,7 @@ void TPacketizer::ValidateFiles(TDSet *dset, TList *slaves)
 
             s->GetSocket()->Send( m );
             mon.Activate(s->GetSocket());
-            PDB(kPacketizer,2) Info("TPacketizer","sent to slave-%s (%s) via %p GETENTRIES on %s %s %s %s",
+            PDB(kPacketizer,2) Info("TPacketizer","sent to worker-%s (%s) via %p GETENTRIES on %s %s %s %s",
                 s->GetOrdinal(), s->GetName(), s->GetSocket(), dset->IsTree() ? "tree" : "objects",
                 elem->GetFileName(), elem->GetDirectory(), elem->GetObjName());
          }
@@ -719,11 +719,26 @@ void TPacketizer::ValidateFiles(TDSet *dset, TList *slaves)
       }
 
       TSocket *sock = mon.Select();
+      // If we have been interrupted break
+      if (!sock) {
+         Error("ValidateFiles", "selection has been interrupted - STOP");
+         mon.DeActivateAll();
+         fValid = kFALSE;
+         break;
+      }
       mon.DeActivate(sock);
 
       PDB(kPacketizer,3) Info("ValidateFiles", "select returned: %p", sock);
 
       TSlave *slave = (TSlave *) slaves_by_sock.GetValue( sock );
+      if (!sock->IsValid()) {
+         // A socket got invalid during validation
+         Error("ValidateFiles", "worker-%s (%s) got invalid - STOP",
+               slave->GetOrdinal(), slave->GetName());
+         ((TProof*)gProof)->MarkBad(slave);
+         fValid = kFALSE;
+         break;
+      }
 
       TMessage *reply;
 
@@ -731,7 +746,7 @@ void TPacketizer::ValidateFiles(TDSet *dset, TList *slaves)
          // Help! lost a slave?
          ((TProof*)gProof)->MarkBad(slave);
          fValid = kFALSE;
-         Error("ValidateFiles", "Recv failed! for slave-%s (%s)",
+         Error("ValidateFiles", "Recv failed! for worker-%s (%s)",
                slave->GetOrdinal(), slave->GetName());
          continue;
          }
@@ -916,7 +931,7 @@ TDSetElement *TPacketizer::GetNextPacket(TSlave *sl, TMessage *r)
       fBytesRead += ((bytesRead > 0) ? bytesRead : 0);
 
       PDB(kPacketizer,2)
-         Info("GetNextPacket","slave-%s (%s): %lld %7.3lf %7.3lf %7.3lf %lld",
+         Info("GetNextPacket","worker-%s (%s): %lld %7.3lf %7.3lf %7.3lf %lld",
                               sl->GetOrdinal(), sl->GetName(),
                               numev, latency, proctime, proccpu, bytesRead);
 

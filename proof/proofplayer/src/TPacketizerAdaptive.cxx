@@ -938,7 +938,7 @@ void TPacketizerAdaptive::ValidateFiles(TDSet *dset, TList *slaves)
             mon.Activate(s->GetSocket());
             PDB(kPacketizer,2)
                Info("ValidateFiles",
-                    "sent to slave-%s (%s) via %p GETENTRIES on %s %s %s %s",
+                    "sent to worker-%s (%s) via %p GETENTRIES on %s %s %s %s",
                     s->GetOrdinal(), s->GetName(), s->GetSocket(),
                     dset->IsTree() ? "tree" : "objects", elem->GetFileName(),
                     elem->GetDirectory(), elem->GetObjName());
@@ -954,18 +954,33 @@ void TPacketizerAdaptive::ValidateFiles(TDSet *dset, TList *slaves)
          while (TSocket *s = (TSocket*) next()) {
             TSlave *sl = (TSlave *) slaves_by_sock.GetValue(s);
             if (sl)
-               Info("ValidateFiles", "   slave-%s (%s)",
+               Info("ValidateFiles", "   worker-%s (%s)",
                     sl->GetOrdinal(), sl->GetName());
          }
          delete act;
       }
 
       TSocket *sock = mon.Select();
+      // If we have been interrupted break
+      if (!sock) {
+         Error("ValidateFiles", "selection has been interrupted - STOP");
+         mon.DeActivateAll();
+         fValid = kFALSE;
+         break;
+      }
       mon.DeActivate(sock);
 
       PDB(kPacketizer,3) Info("ValidateFiles", "select returned: %p", sock);
 
       TSlave *slave = (TSlave *) slaves_by_sock.GetValue( sock );
+      if (!sock->IsValid()) {
+         // A socket got invalid during validation
+         Error("ValidateFiles", "worker-%s (%s) got invalid - STOP",
+               slave->GetOrdinal(), slave->GetName());
+         ((TProof*)gProof)->MarkBad(slave);
+         fValid = kFALSE;
+         break;
+      }
 
       TMessage *reply;
 
@@ -973,13 +988,13 @@ void TPacketizerAdaptive::ValidateFiles(TDSet *dset, TList *slaves)
          // Help! lost a slave?
          ((TProof*)gProof)->MarkBad(slave);
          fValid = kFALSE;
-         Error("ValidateFiles", "Recv failed! for slave-%s (%s)",
+         Error("ValidateFiles", "Recv failed! for worker-%s (%s)",
                slave->GetOrdinal(), slave->GetName());
          continue;
          }
 
       if ( reply->What() == kPROOF_FATAL ) {
-         Error("ValidateFiles", "kPROOF_FATAL from slave-%s (%s)",
+         Error("ValidateFiles", "kPROOF_FATAL from worker-%s (%s)",
                slave->GetOrdinal(), slave->GetName());
          ((TProof*)gProof)->MarkBad(slave);
          fValid = kFALSE;
@@ -998,7 +1013,7 @@ void TPacketizerAdaptive::ValidateFiles(TDSet *dset, TList *slaves)
       } else if ( reply->What() != kPROOF_GETENTRIES ) {
          // Help! unexpected message type
          Error("ValidateFiles",
-               "unexpected message type (%d) from slave-%s (%s)",
+               "unexpected message type (%d) from worker-%s (%s)",
                reply->What(), slave->GetOrdinal(), slave->GetName());
          ((TProof*)gProof)->MarkBad(slave);
          fValid = kFALSE;
@@ -1192,7 +1207,7 @@ TDSetElement *TPacketizerAdaptive::GetNextPacket(TSlave *sl, TMessage *r)
       fCumProcTime += proctime;
 
       PDB(kPacketizer,2)
-         Info("GetNextPacket","slave-%s (%s): %lld %7.3lf %7.3lf %7.3lf %lld",
+         Info("GetNextPacket","worker-%s (%s): %lld %7.3lf %7.3lf %7.3lf %lld",
               sl->GetOrdinal(), sl->GetName(),
               numev, latency, proctime, proccpu, bytesRead);
 
