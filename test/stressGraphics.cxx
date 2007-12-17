@@ -204,14 +204,19 @@ void stressGraphics(Int_t verbose = 0)
 {
    // Run all graphics stress tests.
 
-   // Check if $ROOTSYS/tutorials/hsimple.root exists
    gErrorIgnoreLevel = 9999;
+   gROOT->SetBatch();
+
+   // Check if $ROOTSYS/tutorials/hsimple.root exists
    gFile = new TFile("$(ROOTSYS)/tutorials/hsimple.root");
    if (gFile->IsZombie()) {
       delete gFile;
-      gFile = new TFile("hsimple.root");
+      printf("Create $(ROOTSYS)/tutorials/hsimple.root\n");
+      gROOT->Macro("$(ROOTSYS)/tutorials/hsimple.C");
+      gFile = new TFile("$(ROOTSYS)/tutorials/hsimple.root");
       if (gFile->IsZombie()) {
-         printf("File $(ROOTSYS)/tutorials/hsimple.root does not exist. Run tutorial hsimple.C first\n");
+         delete gFile;
+         printf("Could not create $(ROOTSYS)/tutorials/hsimple.root\n");
          return;
       }
    }
@@ -247,8 +252,6 @@ void stressGraphics(Int_t verbose = 0)
       cout << "*  Starting  Graphics - S T R E S S suite                            *" <<endl;
       cout << "**********************************************************************" <<endl;
    }
-
-   gROOT->SetBatch();
 
    gVerbose = verbose;
    gTestNum = 0;
@@ -338,7 +341,8 @@ void stressGraphics(Int_t verbose = 0)
       gBenchmark->Print("stressGraphics");
 
       Double_t ct = gBenchmark->GetCpuTime("stressGraphics");
-      const Double_t rootmarks = 600*(4.85/ct);
+      //normalize at 860 rootmarks on pcbrun4
+      const Double_t rootmarks = 860*(47.12/ct);
 
       printf("**********************************************************************\n");
       printf("*  ROOTMARKS =%6.1f   *  Root%-8s  %d/%d\n",rootmarks,gROOT->GetVersion(),

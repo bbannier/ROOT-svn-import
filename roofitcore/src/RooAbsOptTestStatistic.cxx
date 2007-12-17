@@ -31,6 +31,9 @@
 
 #include "RooFit.h"
 
+#include "Riostream.h"
+
+
 #include "RooAbsOptTestStatistic.h"
 #include "RooMsgService.h"
 #include "RooAbsPdf.h"
@@ -42,6 +45,15 @@
 
 ClassImp(RooAbsOptTestStatistic)
 ;
+
+RooAbsOptTestStatistic:: RooAbsOptTestStatistic()
+{
+  _normSet = 0 ;
+  _pdfCloneSet = 0 ;
+  _dataClone = 0 ;
+  _pdfClone = 0 ;
+  _projDeps = 0 ;
+}
 
 RooAbsOptTestStatistic::RooAbsOptTestStatistic(const char *name, const char *title, RooAbsPdf& pdf, RooAbsData& data,
 					 const RooArgSet& projDeps, const char* rangeName, const char* addCoefRangeName,
