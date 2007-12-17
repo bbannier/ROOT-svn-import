@@ -9,14 +9,15 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-//////////////////////////////////////////////////////////////////////////
-//                                                                      //
-// TGuiBldHintsButton                                                   //
-//                                                                      //
-//////////////////////////////////////////////////////////////////////////
-
 #include "TGuiBldHintsButton.h"
 #include "TGResourcePool.h"
+
+//_____________________________________________________________________________
+//
+// TGuiBldHintsButton
+//
+// Special button class used for editing layout hints in the ROOT GUI Builder.
+//_____________________________________________________________________________
 
 ClassImp(TGuiBldHintsButton)
 

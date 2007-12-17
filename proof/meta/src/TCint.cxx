@@ -168,7 +168,7 @@ void TCint::EnableAutoLoading()
    // Enable the automatic loading of shared libraries when a class
    // is used that is stored in a not yet loaded library. Uses the
    // information stored in the class/library map (typically
-   // $ROOTSYS/etc/system.rootmap).
+   // coming from the <lib>.rootmap files).
 
    G__set_class_autoloading_callback(&TCint_AutoLoadCallback);
    LoadLibraryMap();
@@ -1212,7 +1212,7 @@ Int_t TCint::LoadLibraryMap(const char *rootmapfile)
                         // Only declared the namespace do not specify any library because
                         // the namespace might be spread over several libraries and we do not
                         // know (yet?) which one the user will need!
-                        G__set_class_autoloading_table((char*)base.Data(), "");
+                        G__set_class_autoloading_table((char*)base.Data(), (char*)"");
                      }
                      ++k;
                   }
@@ -1303,7 +1303,7 @@ Int_t TCint::UnloadLibraryMap(const char *library)
             }
          }
 
-         G__set_class_autoloading_table((char*)cls.Data(), "");
+         G__set_class_autoloading_table((char*)cls.Data(), (char*)"");
          G__security_recover(stderr); // Ignore any error during this setting.
          delete tokens;
       }

@@ -1119,9 +1119,9 @@ Bool_t TNetSystem::ConsistentWith(const char *path, void *dirptr)
    // Check consistency of this helper with the one required
    // by 'path' or 'dirptr'.
 
-   // Standard check: only the protocol part of 'path' is required
-   // to match
+   // Standard check: only the protocol part of 'path' is required to match
    Bool_t checkstd = TSystem::ConsistentWith(path, dirptr);
+   if (!checkstd) return kFALSE;
 
    // Require match of 'user' and 'host'
    Bool_t checknet = path ? kFALSE : kTRUE;
@@ -1167,4 +1167,3 @@ Int_t TNetSystem::Unlink(const char *path)
    Warning("Unlink", "funtionality not implemented - ignored (path: %s)", path);
    return -1;
 }
-

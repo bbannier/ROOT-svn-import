@@ -36,6 +36,17 @@ ifeq ($(MAKECMDGOALS),clean)
 include config/Makefile.$(ARCH)
 endif
 
+##### Include compiler overrides specified via ./configure #####
+##### However, if we are building packages or cleaning, we #####
+##### don't include this file since it may screw up things #####
+
+ifeq ($(findstring $(MAKECMDGOALS), maintainer-clean debian redhat),)
+include config/Makefile.comp
+endif
+ifeq ($(MAKECMDGOALS),clean)
+include config/Makefile.comp
+endif
+
 ##### Include library dependencies for explicit linking #####
 
 MAKEFILEDEP = config/Makefile.depend
@@ -530,13 +541,15 @@ compiledata:    $(COMPILEDATA)
 
 config config/Makefile.:
 ifeq ($(BUILDING_WITHIN_IDE),)
-	@(if [ ! -f config/Makefile.config ] ; then \
+	@(if [ ! -f config/Makefile.config ] || \
+	     [ ! -f config/Makefile.comp ]; then \
 	   echo ""; echo "Please, run ./configure first"; echo ""; \
 	   exit 1; \
 	fi)
 else
 # Building from within an IDE, running configure
-	@(if [ ! -f config/Makefile.config ] ; then \
+	@(if [ ! -f config/Makefile.config ] || \
+	     [ ! -f config/Makefile.comp ]; then \
 	   ./configure --build=debug `cat config.status 2>/dev/null`; \
 	fi)
 endif
@@ -544,20 +557,22 @@ endif
 # Target Makefile is synonym for "run (re-)configure"
 # Makefile is target as we need to re-parse dependencies after
 # configure is run (as RConfigure.h changed etc)
-config/Makefile.config include/RConfigure.h etc/system.rootauthrc \
-  etc/system.rootdaemonrc etc/root.mimes $(ROOTRC) bin/root-config: Makefile
+config/Makefile.config config/Makefile.comp include/RConfigure.h \
+  etc/system.rootauthrc etc/system.rootdaemonrc etc/root.mimes $(ROOTRC) \
+  bin/root-config: Makefile
 
 ifeq ($(findstring $(MAKECMDGOALS),distclean maintainer-clean debian redhat),)
 Makefile: configure config/rootrc.in config/RConfigure.in config/Makefile.in \
-  config/root-config.in config/rootauthrc.in config/rootdaemonrc.in \
-  config/mimes.unix.in config/mimes.win32.in config.status
-	@(if [ ! -x $(RECONFIGURE) ] || ! $(RECONFIGURE) "$?"; then \
+  config/Makefile-comp.in config/root-config.in config/rootauthrc.in \
+  config/rootdaemonrc.in config/mimes.unix.in config/mimes.win32.in \
+  config.status
+	@( $(RECONFIGURE) "$?" || ( \
 	   echo ""; echo "Please, run ./configure again as config option files ($?) have changed."; \
 	   echo ""; exit 1; \
-	 fi)
+	 ) )
 endif
 
-$(COMPILEDATA): config/Makefile.$(ARCH) $(MAKECOMPDATA)
+$(COMPILEDATA): config/Makefile.$(ARCH) config/Makefile.comp $(MAKECOMPDATA)
 	@$(MAKECOMPDATA) $(COMPILEDATA) "$(CXX)" "$(OPTFLAGS)" "$(DEBUGFLAGS)" \
 	   "$(CXXFLAGS)" "$(SOFLAGS)" "$(LDFLAGS)" "$(SOEXT)" "$(SYSLIBS)" \
 	   "$(LIBDIR)" "$(BOOTLIBS)" "$(RINTLIBS)" "$(INCDIR)" \
@@ -755,8 +770,8 @@ endif
 
 maintainer-clean:: distclean
 	@rm -rf bin lib include htmldoc system.rootrc config/Makefile.config \
-	   $(ROOTRC) etc/system.rootauthrc etc/system.rootdaemonrc \
-	   etc/root.mimes build/misc/root-help.el \
+	   config/Makefile.comp $(ROOTRC) etc/system.rootauthrc \
+	   etc/system.rootdaemonrc etc/root.mimes build/misc/root-help.el \
 	   rootd/misc/rootd.rc.d build-arch-stamp build-indep-stamp \
 	   configure-stamp build-arch-cint-stamp config.status config.log
 
