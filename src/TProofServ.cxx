@@ -232,8 +232,6 @@ Bool_t TProofServLogHandler::Notify()
             // Nothing to prepend
             log = line;
          }
-         // Keep track in the log file
-         Printf("%s", log.Data());
          // Send the message one level up
          m.Reset(kPROOF_MESSAGE);
          m << log;
