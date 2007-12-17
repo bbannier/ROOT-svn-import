@@ -1243,7 +1243,8 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
                            treeInfo.Resize(21);
                            // Renormalize the size to kB, MB or GB
                            const char *unit[4] = {"kB", "MB", "GB", "TB"};
-                           Int_t k = 0, refsz = 1024;
+                           Int_t k = 0;
+                           Long64_t refsz = 1024;
                            Int_t xsz = (Int_t) (dataset->GetTotalSize() / refsz);
                            while (xsz > 1024 && k < 3) {
                               k++;
