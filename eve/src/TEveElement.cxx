@@ -21,6 +21,15 @@
 #include <algorithm>
 
 //______________________________________________________________________________
+//
+// Structure holding information about TGListTree and TGListTreeItem
+// that represents given TEveElement. This needed because each element
+// can appear in several list-trees as well as several times in the
+// same list-tree.
+
+ClassImp(TEveElement::TEveListTreeInfo)
+
+//______________________________________________________________________________
 // TEveElement
 //
 // Base class for TEveUtil visualization elements, providing hierarchy
@@ -730,10 +739,7 @@ void TEveElement::ElementChanged(Bool_t update_scenes, Bool_t redraw)
    // Call this after an element has been changed so that the state
    // can be propagated around the framework.
 
-   if (update_scenes)
-      gEve->ElementChanged(this);
-   if (redraw)
-      gEve->Redraw3D();
+  gEve->ElementChanged(this, update_scenes, redraw);
 }
 
 /******************************************************************************/
