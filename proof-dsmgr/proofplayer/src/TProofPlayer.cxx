@@ -205,6 +205,7 @@ TProofPlayer::~TProofPlayer()
 {
    // Destructor.
 
+   fInput->Clear("nodelete");
    SafeDelete(fInput);
    SafeDelete(fSelector);
    SafeDelete(fFeedbackTimer);
