@@ -5351,6 +5351,8 @@ void TProofServ::HandleException(Int_t sig)
 {
    // Exception handler: we do not try to recover here, just exit.
 
+   Error("HandleException","exception triggered by signal: %d", sig);
+
    gSystem->Exit(sig);
 }
 
