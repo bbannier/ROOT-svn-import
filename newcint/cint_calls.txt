@@ -12,75 +12,7 @@ That leaves
 base cintex io main meta metautils pyroot rint ruby table thread tree utils winnt
 
 
-base/src/ManualBase4.cxx:extern "C" void G__cpp_reset_tagtableManualBase4();
-base/src/ManualBase4.cxx:extern "C" void G__set_cpp_environmentManualBase4() {
-base/src/ManualBase4.cxx:  G__add_compiledheader("base/inc/TObject.h");
-base/src/ManualBase4.cxx:  G__add_compiledheader("base/inc/TMemberInspector.h");
-base/src/ManualBase4.cxx:  G__add_compiledheader("TDirectory.h");
-base/src/ManualBase4.cxx:  G__cpp_reset_tagtableManualBase4();
-base/src/ManualBase4.cxx:extern "C" int G__cpp_dllrevManualBase4() { return(30051515); }
-base/src/ManualBase4.cxx:class G__Sizep2memfuncManualBase4 {
-base/src/ManualBase4.cxx:  G__Sizep2memfuncManualBase4() {p=&G__Sizep2memfuncManualBase4::sizep2memfunc;}
-base/src/ManualBase4.cxx:    size_t (G__Sizep2memfuncManualBase4::*p)();
-base/src/ManualBase4.cxx:size_t G__get_sizep2memfuncManualBase4()
-base/src/ManualBase4.cxx:  G__Sizep2memfuncManualBase4 a;
-base/src/ManualBase4.cxx:  G__setsizep2memfunc((int)a.sizep2memfunc());
-base/src/ManualBase4.cxx:extern "C" void G__cpp_setup_inheritanceManualBase4() {
-base/src/ManualBase4.cxx:extern "C" void G__cpp_setup_typetableManualBase4() {
-base/src/ManualBase4.cxx:   G__search_typename2("Int_t",105,-1,0,-1);
-base/src/ManualBase4.cxx:   G__setnewtype(-1,"Signed integer 4 bytes (int)",0);
-base/src/ManualBase4.cxx:   G__search_typename2("Option_t",99,-1,256,-1);
-base/src/ManualBase4.cxx:   G__setnewtype(-1,"Option string (const char)",0);
-base/src/ManualBase4.cxx:extern "C" void G__cpp_setup_memvarManualBase4() {
-base/src/ManualBase4.cxx:static void G__setup_memfuncTDirectory(void) {
-base/src/ManualBase4.cxx:   G__tag_memfunc_setup(G__get_linked_tagnum(&G__ManualBase4LN_TDirectory));
-base/src/ManualBase4.cxx:   G__memfunc_setup("WriteObject",1122,G__ManualBase4_101_0_97, 105, -1, G__defined_typename("Int_t"), 0, 4, 1, 1, 0, 
-base/src/ManualBase4.cxx:   G__memfunc_setup("GetObject",887,G__ManualBase4_101_0_98, 121, -1, -1, 0, 2, 1, 1, 0, 
-base/src/ManualBase4.cxx:   G__tag_memfunc_reset();
-base/src/ManualBase4.cxx:extern "C" void G__cpp_setup_memfuncManualBase4() {
-base/src/ManualBase4.cxx:static void G__cpp_setup_global0() {
-base/src/ManualBase4.cxx:   G__resetplocal();
-base/src/ManualBase4.cxx:static void G__cpp_setup_global1() {
-base/src/ManualBase4.cxx:   G__resetglobalenv();
-base/src/ManualBase4.cxx:extern "C" void G__cpp_setup_globalManualBase4() {
-base/src/ManualBase4.cxx:  G__cpp_setup_global0();
-base/src/ManualBase4.cxx:  G__cpp_setup_global1();
-base/src/ManualBase4.cxx:static void G__cpp_setup_func0() {
-base/src/ManualBase4.cxx:   G__lastifuncposition();
-base/src/ManualBase4.cxx:static void G__cpp_setup_func1() {
-base/src/ManualBase4.cxx:static void G__cpp_setup_func2() {
-base/src/ManualBase4.cxx:   G__memfunc_setup("operator>>", 1000, G__ManualBase4__0_211, 117, G__get_linked_tagnum(&G__ManualBase4LN_TBuffer), -1, 1, 2, 1, 1, 0, 
-base/src/ManualBase4.cxx:   G__memfunc_setup("operator<<", 996, G__ManualBase4__0_212, 117, G__get_linked_tagnum(&G__ManualBase4LN_TBuffer), -1, 1, 2, 1, 1, 0, 
-base/src/ManualBase4.cxx:   G__resetifuncposition();
-base/src/ManualBase4.cxx:extern "C" void G__cpp_setup_funcManualBase4() {
-base/src/ManualBase4.cxx:  G__cpp_setup_func0();
-base/src/ManualBase4.cxx:  G__cpp_setup_func1();
-base/src/ManualBase4.cxx:  G__cpp_setup_func2();
-base/src/ManualBase4.cxx:G__linked_taginfo G__ManualBase4LN_TBuffer = { "TBuffer" , 99 , -1 };
-base/src/ManualBase4.cxx:G__linked_taginfo G__ManualBase4LN_TDirectory = { "TDirectory" , 99 , -1 };
-base/src/ManualBase4.cxx:extern "C" void G__cpp_reset_tagtableManualBase4() {
-base/src/ManualBase4.cxx:  G__ManualBase4LN_TBuffer.tagnum = -1 ;
-base/src/ManualBase4.cxx:  G__ManualBase4LN_TDirectory.tagnum = -1 ;
-base/src/ManualBase4.cxx:extern "C" void G__cpp_setup_tagtableManualBase4() {
-base/src/ManualBase4.cxx:   G__get_linked_tagnum(&G__ManualBase4LN_TBuffer);
-base/src/ManualBase4.cxx:   G__tagtable_setup(G__get_linked_tagnum(&G__ManualBase4LN_TDirectory),sizeof(TDirectory),-1,65280,"Describe directory structure in memory",NULL,G__setup_memfuncTDirectory);
-base/src/ManualBase4.cxx:extern "C" void G__cpp_setupManualBase4(void) {
-base/src/ManualBase4.cxx:  G__check_setup_version(30051515,"G__cpp_setupManualBase4()");
-base/src/ManualBase4.cxx:  G__set_cpp_environmentManualBase4();
-base/src/ManualBase4.cxx:  G__cpp_setup_tagtableManualBase4();
-base/src/ManualBase4.cxx:  G__cpp_setup_inheritanceManualBase4();
-base/src/ManualBase4.cxx:  G__cpp_setup_typetableManualBase4();
-base/src/ManualBase4.cxx:  G__cpp_setup_memvarManualBase4();
-base/src/ManualBase4.cxx:  G__cpp_setup_memfuncManualBase4();
-base/src/ManualBase4.cxx:  G__cpp_setup_globalManualBase4();
-base/src/ManualBase4.cxx:  G__cpp_setup_funcManualBase4();
-base/src/ManualBase4.cxx:   if(0==G__getsizep2memfunc()) G__get_sizep2memfuncManualBase4();
-base/src/ManualBase4.cxx:class G__cpp_setup_initManualBase4 {
-base/src/ManualBase4.cxx:    G__cpp_setup_initManualBase4() { G__add_setup_func("ManualBase4",(G__incsetup)(&G__cpp_setupManualBase4)); G__call_setup_funcs(); }
-base/src/ManualBase4.cxx:   ~G__cpp_setup_initManualBase4() { G__remove_setup_func("ManualBase4"); }
-base/src/ManualBase4.cxx:G__cpp_setup_initManualBase4 G__cpp_setup_initializerManualBase4;
-base/src/TQConnection.cxx:   G__CallFunc   *fFunc;      // CINT method invocation environment
-base/src/TQConnection.cxx:   G__ClassInfo  *fClass;     // CINT class for fFunc
+base/src/ManualBase4.cxx: (just like any other dictionary)
 base/src/TQConnection.cxx:   fFunc = new G__CallFunc;
 base/src/TQConnection.cxx:      fClass = new G__ClassInfo();
 base/src/TQConnection.cxx:   fFunc = new G__CallFunc;
@@ -101,265 +33,12 @@ base/src/TSystem.cxx:         if ( G__unloadfile( (char*) library.Data() ) != 0 
 base/src/TSystem.cxx:      G__Set_RTLD_NOW();
 base/src/TSystem.cxx:      G__Set_RTLD_LAZY();
 base/src/TVirtualFitter.cxx:   char *funcname = G__p2f2funcname(fcn);
-cintex/src/CINTClassBuilder.cxx:      fTaginfo = new G__linked_taginfo;
-cintex/src/CINTClassBuilder.cxx:      fTaginfo->tagnum = G__defined_tagname(fTaginfo->tagname, 2);
-cintex/src/CINTClassBuilder.cxx:         G__ClassInfo info(fTaginfo->tagnum);
-cintex/src/CINTClassBuilder.cxx:         if (!(info.Property() & (G__BIT_ISSTRUCT | G__BIT_ISCLASS))) {
-cintex/src/CINTClassBuilder.cxx:            G__search_tagname(fTaginfo->tagname, cl.IsClass() ? 'c' : 's'); 
-cintex/src/CINTClassBuilder.cxx:      fTaginfo->tagnum = G__get_linked_tagnum(fTaginfo);
-cintex/src/CINTClassBuilder.cxx:         rootFlag += G__BIT_ISABSTRACT;  // Abstract class
-cintex/src/CINTClassBuilder.cxx:      G__tagtable_setup( fTaginfo->tagnum,    // tag number
-cintex/src/CINTClassBuilder.cxx:                         G__CPPLINK,          // cpplink
-cintex/src/CINTClassBuilder.cxx:                         fSetup_memvar,       // G__setup_memvarMyClass
-cintex/src/CINTClassBuilder.cxx:                         fSetup_memfunc);     // G__setup_memfuncMyClass
-cintex/src/CINTClassBuilder.cxx:      int autoload = G__set_class_autoloading(0); // To avoid recursive loads
-cintex/src/CINTClassBuilder.cxx:      G__set_class_autoloading(autoload);
-cintex/src/CINTClassBuilder.cxx:      int autoload = G__set_class_autoloading(0); // To avoid recursive loads
-cintex/src/CINTClassBuilder.cxx:      G__set_class_autoloading(autoload);
-cintex/src/CINTClassBuilder.cxx:      G__tag_memfunc_setup(fTaginfo->tagnum);
-cintex/src/CINTClassBuilder.cxx:      ::G__tag_memfunc_reset();
-cintex/src/CINTClassBuilder.cxx:      G__tag_memvar_setup(fTaginfo->tagnum);
-cintex/src/CINTClassBuilder.cxx:         G__memvar_setup((void*)0,'l',0,0,-1,-1,-1,4,"G__virtualinfo=",0,0);
-cintex/src/CINTClassBuilder.cxx:      G__tag_memvar_reset();
-cintex/src/CINTClassBuilder.cxx:      if ( 0 == ::G__getnumbaseclass(fTaginfo->tagnum) )  {     
-cintex/src/CINTClassBuilder.cxx:         if ( 0 == ::G__getnumbaseclass(fTaginfo->tagnum) )  {
-cintex/src/CINTClassBuilder.cxx:               int b_tagnum = G__search_tagname(b_nam.c_str(), 'a');
-cintex/src/CINTClassBuilder.cxx:               long int type = (level == 0) ?  G__ISDIRECTINHERIT : 0;
-cintex/src/CINTClassBuilder.cxx:                     type = type | G__ISVIRTUALBASE;
-cintex/src/CINTClassBuilder.cxx:               int mod = base.IsPublic() ? G__PUBLIC : ( base.IsPrivate() ? G__PRIVATE : G__PROTECTED );
-cintex/src/CINTClassBuilder.cxx:               ::G__inheritance_setup(fTaginfo->tagnum, b_tagnum, offset, mod, type );
-cintex/src/CINTEnumBuilder.cxx:         G__ClassInfo cintEnum(name.c_str());
-cintex/src/CINTEnumBuilder.cxx:            G__linked_taginfo taginfo;
-cintex/src/CINTEnumBuilder.cxx:            G__get_linked_tagnum(&taginfo);
-cintex/src/CINTEnumBuilder.cxx:            ::G__tagtable_setup( tagnum, sizeof(int), -1, 0,(char*)NULL, NULL, NULL);
-cintex/src/CINTEnumBuilder.cxx:            ::G__resetplocal();
-cintex/src/CINTEnumBuilder.cxx:            int stagnum = ::G__defined_tagname(sname.c_str(), 2);
-cintex/src/CINTEnumBuilder.cxx:            ::G__tag_memvar_setup(stagnum);
-cintex/src/CINTEnumBuilder.cxx:               ::G__memvar_setup((void*)G__PVOID, 'p', 0, 0, -1, -1, -1, 1, item.c_str(), 1, (char*)NULL);
-cintex/src/CINTEnumBuilder.cxx:               ::G__memvar_setup((void*)G__PVOID, 'i', 0, 1, tagnum, -1, isstatic, 1, item.c_str(), 0, (char*)NULL);
-cintex/src/CINTEnumBuilder.cxx:            ::G__resetglobalenv();
-cintex/src/CINTEnumBuilder.cxx:            ::G__tag_memvar_reset();
-cintex/src/Cintex.cxx:      int autoload = G__set_class_autoloading(0); // To avoid recursive loads
-cintex/src/Cintex.cxx:      G__set_class_autoloading(autoload);
-cintex/src/Cintex.cxx:         int autoload = G__set_class_autoloading(0); // To avoid recursive loads
-cintex/src/Cintex.cxx:         G__set_class_autoloading(autoload);
-cintex/src/Cintex.cxx:         int autoload = G__set_class_autoloading(0); // To avoid recursive loads
-cintex/src/Cintex.cxx:         G__set_class_autoloading(autoload);
-cintex/src/CINTFunctional.cxx:   void StubContext_t::ProcessParam(G__param* libp) {
-cintex/src/CINTFunctional.cxx:         case 'd': fParcnv[i].obj.d  = G__double(libp->para[i]);fParam[i] = &fParcnv[i].obj.d; break;
-cintex/src/CINTFunctional.cxx:         case 'f': fParcnv[i].obj.fl = (float)G__double(libp->para[i]);fParam[i] = &fParcnv[i].obj.fl; break;
-cintex/src/CINTFunctional.cxx:         case 'n': fParcnv[i].obj.ll = G__Longlong(libp->para[i]);fParam[i] = &fParcnv[i].obj.ll; break;
-cintex/src/CINTFunctional.cxx:         case 'm': fParcnv[i].obj.ull= G__ULonglong(libp->para[i]);fParam[i] = &fParcnv[i].obj.ull; break;
-cintex/src/CINTFunctional.cxx:         case 'q': fParcnv[i].obj.ld = G__Longdouble(libp->para[i]);fParam[i] = &fParcnv[i].obj.ld; break;
-cintex/src/CINTFunctional.cxx:         case 'i': fParcnv[i].obj.i  = G__int(libp->para[i]);   fParam[i] = &fParcnv[i].obj.i; break;
-cintex/src/CINTFunctional.cxx:   void StubContext_t::ProcessResult(G__value* result, void* obj) { 
-cintex/src/CINTFunctional.cxx:      case 'y': G__setnull(result); break;
-cintex/src/CINTFunctional.cxx:                                G__value* result,
-cintex/src/CINTFunctional.cxx:                                G__CONST char* /*funcname*/,
-cintex/src/CINTFunctional.cxx:                                G__param* libp,
-cintex/src/CINTFunctional.cxx:         void* r = (*context->fStub)((void*)G__getstructoffset(), context->fParam, context->fStubctx);
-cintex/src/CINTFunctional.cxx:         if ( context->fRet_byvalue )  G__store_tempobject(*result);
-cintex/src/CINTFunctional.cxx:         G__genericerror(errtxt.c_str());
-cintex/src/CINTFunctional.cxx:         G__setnull(result);
-cintex/src/CINTFunctional.cxx:         G__genericerror("Exception: Unknown C++ exception");
-cintex/src/CINTFunctional.cxx:         G__setnull(result);
-cintex/src/CINTFunctional.cxx:                                     G__value* result,
-cintex/src/CINTFunctional.cxx:                                     G__CONST char* /*funcname*/,
-cintex/src/CINTFunctional.cxx:                                     G__param *libp,
-cintex/src/CINTFunctional.cxx:         long nary = G__getaryconstruct();
-cintex/src/CINTFunctional.cxx:         G__genericerror(errtxt.c_str());
-cintex/src/CINTFunctional.cxx:         G__genericerror("Exception: Unknown C++ exception");
-cintex/src/CINTFunctional.cxx:                                     G__value* result,
-cintex/src/CINTFunctional.cxx:                                     G__CONST char* /*funcname*/,
-cintex/src/CINTFunctional.cxx:                                     G__param* /*libp*/,
-cintex/src/CINTFunctional.cxx:      void* obj = (void*)G__getstructoffset();
-cintex/src/CINTFunctional.cxx:      if( G__getaryconstruct() ) {
-cintex/src/CINTFunctional.cxx:         if( G__PVOID == G__getgvp() ) { //  delete[] (TYPE*)(G__getstructoffset());
-cintex/src/CINTFunctional.cxx:            for(int i = G__getaryconstruct()-1; i>=0 ; i--)
-cintex/src/CINTFunctional.cxx:         long g__Xtmp = G__getgvp();
-cintex/src/CINTFunctional.cxx:         G__setgvp(G__PVOID);
-cintex/src/CINTFunctional.cxx:         G__setgvp(g__Xtmp);
-cintex/src/CINTFunctional.cxx:         if( !(long(obj) == G__getgvp() && G__PVOID != G__getgvp()) )  {
-cintex/src/CINTFunctional.cxx:            ::operator delete (obj); //G__operator_delete(obj);
-cintex/src/CINTFunctional.cxx:      G__setnull(result);
-cintex/src/CINTFunctional.cxx:   G__InterfaceMethod Allocate_stub_function( StubContext_t* obj, 
-cintex/src/CINTFunctional.cxx:                                              int (*fun)(StubContext_t*, G__value*, G__CONST char*, G__param*, int ) )
-cintex/src/CINTFunctional.cxx:      obj->fMethodCode = (G__InterfaceMethod)code;
-cintex/src/CINTFunctionBuilder.cxx:         G__lastifuncposition();
-cintex/src/CINTFunctionBuilder.cxx:         int ns_tag = G__search_tagname(sname.c_str(),'n');
-cintex/src/CINTFunctionBuilder.cxx:         G__tag_memfunc_setup(ns_tag);
-cintex/src/CINTFunctionBuilder.cxx:         G__resetifuncposition();
-cintex/src/CINTFunctionBuilder.cxx:         G__tag_memfunc_reset();
-cintex/src/CINTFunctionBuilder.cxx:      int access        = G__PUBLIC;
-cintex/src/CINTFunctionBuilder.cxx:      int memory_type   = 1; // G__LOCAL;  // G__AUTO=-1
-cintex/src/CINTFunctionBuilder.cxx:      G__InterfaceMethod stub;
-cintex/src/CINTFunctionBuilder.cxx:         funcname = G__ClassInfo(tagnum).Name();
-cintex/src/CINTFunctionBuilder.cxx:         funcname += G__ClassInfo(tagnum).Name();
-cintex/src/CINTFunctionBuilder.cxx:         access = G__PRIVATE;
-cintex/src/CINTFunctionBuilder.cxx:         access = G__PROTECTED;
-cintex/src/CINTFunctionBuilder.cxx:         access = G__PUBLIC;
-cintex/src/CINTFunctionBuilder.cxx:         const_ness = G__CONSTFUNC;
-cintex/src/CINTFunctionBuilder.cxx:         memory_type += G__CLASSSCOPE;
-cintex/src/CINTFunctionBuilder.cxx:      G__hash(funcname, hash, tmp);
-cintex/src/CINTFunctionBuilder.cxx:      G__usermemfunc_setup( const_cast<char*>(funcname.c_str()), // function Name
-cintex/src/CINTScopeBuilder.cxx:      G__linked_taginfo taginfo;
-cintex/src/CINTScopeBuilder.cxx:      int tagnum = G__defined_tagname(taginfo.tagname, 2);
-cintex/src/CINTScopeBuilder.cxx:      G__ClassInfo info(tagnum);
-cintex/src/CINTScopeBuilder.cxx:         G__get_linked_tagnum(&taginfo);
-cintex/src/CINTScopeBuilder.cxx:            G__tagtable_setup( taginfo.tagnum,       // tag number
-cintex/src/CINTScopeBuilder.cxx:                               G__CPPLINK,           // cpplink
-cintex/src/CINTTypedefBuilder.cxx:            if( -1 != G__defined_typename(nam.c_str()) ) return -1;
-cintex/src/CINTTypedefBuilder.cxx:            if ( !scope.IsTopScope() ) stagnum = ::G__defined_tagname(CintName(scope.Name(SCOPED)).c_str(), 1);
-cintex/src/CINTTypedefBuilder.cxx:            int r = ::G__search_typename2( t.Name().c_str(), rtypenum, rtagnum, 0, stagnum);
-cintex/src/CINTTypedefBuilder.cxx:            ::G__setnewtype(-1,NULL,0);
-cintex/src/CINTTypedefBuilder.cxx:         G__linked_taginfo taginfo;
-cintex/src/CINTTypedefBuilder.cxx:         G__search_typename2(name, 117, G__get_linked_tagnum(&taginfo),0,-1);
-cintex/src/CINTTypedefBuilder.cxx:         G__setnewtype(-1,NULL,0);
-cintex/src/CINTUtils.cxx:         tagnum = ::G__defined_tagname(dsc.second.c_str(), 2);
-cintex/src/CINTUtils.cxx:            G__linked_taginfo taginfo;
-cintex/src/CINTUtils.cxx:            G__get_linked_tagnum(&taginfo);
-cintex/src/CINTUtils.cxx:      else            return G__search_tagname(n.c_str(),'c');
-cintex/src/CINTUtils.cxx:            G__TypedefInfo tdef(ctype.second.c_str());
-cintex/src/CINTUtils.cxx:            int tagnum = G__defined_tagname(ctype.second.c_str(), 2);
-cintex/src/CINTUtils.cxx:            else if ( tagnum != -1 ) arg_sig += "'" + string(G__fulltagname(tagnum, 1)) + "'";
-cintex/src/CINTUtils.cxx:   void FillCintResult( G__value* result, const Type& typ, void* obj ) {
-cintex/src/CINTUtils.cxx:      case 'y': G__setnull(result); break;
-cintex/src/CINTUtils.cxx:         result->tagnum = G__search_tagname(ctype.second.c_str(),'c');
-cintex/src/CINTVariableBuilder.cxx:         ::G__resetplocal();
-cintex/src/CINTVariableBuilder.cxx:         int stagnum = ::G__defined_tagname(sname.c_str(), 2);
-cintex/src/CINTVariableBuilder.cxx:         ::G__tag_memvar_setup(stagnum);      
-cintex/src/CINTVariableBuilder.cxx:         ::G__resetglobalenv();
-cintex/src/CINTVariableBuilder.cxx:         ::G__tag_memvar_reset();
-cintex/src/CINTVariableBuilder.cxx:      int member_isstatic = G__AUTO;
-cintex/src/CINTVariableBuilder.cxx:         member_isstatic = G__LOCALSTATIC;
-cintex/src/CINTVariableBuilder.cxx:            ::G__loadlonglong(&member_tagnum, &member_typnum, G__LONGLONG);
-cintex/src/CINTVariableBuilder.cxx:            ::G__loadlonglong(&member_tagnum, &member_typnum, G__ULONGLONG);
-cintex/src/CINTVariableBuilder.cxx:            ::G__loadlonglong(&member_tagnum, &member_typnum, G__LONGDOUBLE);
-cintex/src/CINTVariableBuilder.cxx:      if ( dm.IsPrivate() )        member_access = G__PRIVATE;
-cintex/src/CINTVariableBuilder.cxx:      else if ( dm.IsProtected() ) member_access = G__PROTECTED;
-cintex/src/CINTVariableBuilder.cxx:      else if ( dm.IsPublic() )    member_access = G__PUBLIC;
-cintex/src/CINTVariableBuilder.cxx:            << (G__AUTO==member_isstatic ? "auto " : "static ")
-cintex/src/CINTVariableBuilder.cxx:      ::G__memvar_setup((void*)dm.Offset(),                         // p
-cintex/src/ROOTClassEnhancer.cxx:      int tagnum = ::G__defined_tagname(tagname, 2);
-cintex/src/ROOTClassEnhancer.cxx:      G__ClassInfo cl_info(tagnum);
 foam/src/TFoam.cxx:   const Char_t *namefcn = G__p2f2funcname(fun); //name of integrand function
 guibuilder/src/TGuiBldDragManager.cxx:         G__calc((char *)str.Data());
 hist/src/TF1.cxx:   char *funcname = G__p2f2funcname(fcn);
-html/src/TClassDocOutput.cxx:               if (member->Property() & G__BIT_ISSTATIC)
-io/src/TEmulatedCollectionProxy.cxx:               fPointers |= 0 != (fKey->fCase&G__BIT_ISPOINTER);
-io/src/TEmulatedCollectionProxy.cxx:                  if (fVal->fCase != G__BIT_ISFUNDAMENTAL) {
-io/src/TEmulatedCollectionProxy.cxx:         fPointers |= 0 != (fVal->fCase&G__BIT_ISPOINTER);
-io/src/TEmulatedCollectionProxy.cxx:            case G__BIT_ISFUNDAMENTAL:  // Only handle primitives this way
-io/src/TEmulatedCollectionProxy.cxx:            case G__BIT_ISENUM:
-io/src/TEmulatedCollectionProxy.cxx:            case G__BIT_ISCLASS:
-io/src/TEmulatedCollectionProxy.cxx:            case G__BIT_ISPOINTER|G__BIT_ISCLASS:
-io/src/TEmulatedCollectionProxy.cxx:            case G__BIT_ISPOINTER|kBIT_ISSTRING:
-io/src/TEmulatedCollectionProxy.cxx:            case G__BIT_ISPOINTER|kBIT_ISTSTRING|G__BIT_ISCLASS:
-io/src/TEmulatedCollectionProxy.cxx:            case G__BIT_ISFUNDAMENTAL:  // Only handle primitives this way
-io/src/TEmulatedCollectionProxy.cxx:            case G__BIT_ISENUM:
-io/src/TEmulatedCollectionProxy.cxx:            case G__BIT_ISCLASS:
-io/src/TEmulatedCollectionProxy.cxx:            case G__BIT_ISPOINTER|G__BIT_ISCLASS:
-io/src/TEmulatedCollectionProxy.cxx:            case G__BIT_ISPOINTER|kBIT_ISSTRING:
-io/src/TEmulatedCollectionProxy.cxx:            case G__BIT_ISPOINTER|kBIT_ISTSTRING|G__BIT_ISCLASS:
-io/src/TEmulatedCollectionProxy.cxx:            case G__BIT_ISFUNDAMENTAL:  // Only handle primitives this way
-io/src/TEmulatedCollectionProxy.cxx:            case G__BIT_ISENUM:
-io/src/TEmulatedCollectionProxy.cxx:            case G__BIT_ISCLASS:
-io/src/TEmulatedCollectionProxy.cxx:            case G__BIT_ISPOINTER|G__BIT_ISCLASS:
-io/src/TEmulatedCollectionProxy.cxx:            case G__BIT_ISPOINTER|kBIT_ISSTRING:
-io/src/TEmulatedCollectionProxy.cxx:            case G__BIT_ISPOINTER|kBIT_ISTSTRING|G__BIT_ISCLASS:
-io/src/TEmulatedCollectionProxy.cxx:            case G__BIT_ISFUNDAMENTAL:  // Only handle primitives this way
-io/src/TEmulatedCollectionProxy.cxx:            case G__BIT_ISENUM:
-io/src/TEmulatedCollectionProxy.cxx:            case G__BIT_ISCLASS:
-io/src/TEmulatedCollectionProxy.cxx:            case G__BIT_ISPOINTER|G__BIT_ISCLASS:
-io/src/TEmulatedCollectionProxy.cxx:            case G__BIT_ISPOINTER|kBIT_ISSTRING:
-io/src/TEmulatedCollectionProxy.cxx:            case G__BIT_ISPOINTER|kBIT_ISTSTRING|G__BIT_ISCLASS:
-io/src/TEmulatedCollectionProxy.cxx:      case G__BIT_ISFUNDAMENTAL:  //  Only handle primitives this way
-io/src/TEmulatedCollectionProxy.cxx:      case G__BIT_ISENUM:
-io/src/TEmulatedCollectionProxy.cxx:      case G__BIT_ISCLASS:
-io/src/TEmulatedCollectionProxy.cxx:      case G__BIT_ISPOINTER|G__BIT_ISCLASS:
-io/src/TEmulatedCollectionProxy.cxx:      case G__BIT_ISPOINTER|kBIT_ISSTRING:
-io/src/TEmulatedCollectionProxy.cxx:      case G__BIT_ISPOINTER|kBIT_ISTSTRING|G__BIT_ISCLASS:
-io/src/TEmulatedCollectionProxy.cxx:      case G__BIT_ISFUNDAMENTAL:  // Only handle primitives this way
-io/src/TEmulatedCollectionProxy.cxx:      case G__BIT_ISENUM:
-io/src/TEmulatedCollectionProxy.cxx:      case G__BIT_ISCLASS:
-io/src/TEmulatedCollectionProxy.cxx:      case G__BIT_ISPOINTER|G__BIT_ISCLASS:
-io/src/TEmulatedCollectionProxy.cxx:      case kBIT_ISSTRING|G__BIT_ISPOINTER:
-io/src/TEmulatedCollectionProxy.cxx:      case kBIT_ISTSTRING|G__BIT_ISCLASS|G__BIT_ISPOINTER:
-io/src/TEmulatedMapProxy.cxx:         case G__BIT_ISFUNDAMENTAL:  // Only handle primitives this way
-io/src/TEmulatedMapProxy.cxx:         case G__BIT_ISENUM:
-io/src/TEmulatedMapProxy.cxx:         case G__BIT_ISCLASS:
-io/src/TEmulatedMapProxy.cxx:         case G__BIT_ISPOINTER|G__BIT_ISCLASS:
-io/src/TEmulatedMapProxy.cxx:         case G__BIT_ISPOINTER|kBIT_ISSTRING:
-io/src/TEmulatedMapProxy.cxx:         case G__BIT_ISPOINTER|kBIT_ISTSTRING|G__BIT_ISCLASS:
-io/src/TEmulatedMapProxy.cxx:         case G__BIT_ISFUNDAMENTAL:  // Only handle primitives this way
-io/src/TEmulatedMapProxy.cxx:         case G__BIT_ISENUM:
-io/src/TEmulatedMapProxy.cxx:         case G__BIT_ISCLASS:
-io/src/TEmulatedMapProxy.cxx:         case G__BIT_ISPOINTER|G__BIT_ISCLASS:
-io/src/TEmulatedMapProxy.cxx:         case kBIT_ISSTRING|G__BIT_ISPOINTER:
-io/src/TEmulatedMapProxy.cxx:         case kBIT_ISTSTRING|G__BIT_ISCLASS|G__BIT_ISPOINTER:
-io/src/TGenCollectionProxy.cxx:      if ( fKey->fCase&G__BIT_ISPOINTER ) {
-io/src/TGenCollectionProxy.cxx:      if ( fVal->fCase&G__BIT_ISPOINTER ) {
-io/src/TGenCollectionProxy.cxx:         fCase |= G__BIT_ISPOINTER;
-io/src/TGenCollectionProxy.cxx:      // calling G__TypeInfo ti(inside.c_str());
-io/src/TGenCollectionProxy.cxx:            fCase |= G__BIT_ISPOINTER;
-io/src/TGenCollectionProxy.cxx:         fCase  |= G__BIT_ISCLASS;
 io/src/TGenCollectionProxy.cxx:         G__value gval = G__string2type_body(inside.c_str(),2);
 io/src/TGenCollectionProxy.cxx:         G__TypeInfo ti(gval);
 io/src/TGenCollectionProxy.cxx:         G__TypeInfo ti(inside.c_str());
-io/src/TGenCollectionProxy.cxx:               fCase |= G__BIT_ISPOINTER;
-io/src/TGenCollectionProxy.cxx:               fCase  |= G__BIT_ISCLASS;
-io/src/TGenCollectionProxy.cxx:               fCase = G__BIT_ISENUM;
-io/src/TGenCollectionProxy.cxx:            if ( prop&G__BIT_ISPOINTER ) {
-io/src/TGenCollectionProxy.cxx:            if ( prop&G__BIT_ISSTRUCT ) {
-io/src/TGenCollectionProxy.cxx:               prop |= G__BIT_ISCLASS;
-io/src/TGenCollectionProxy.cxx:            if ( prop&G__BIT_ISCLASS ) {
-io/src/TGenCollectionProxy.cxx:            else if ( prop&G__BIT_ISFUNDAMENTAL ) {
-io/src/TGenCollectionProxy.cxx:               R__ASSERT(fKind>0 && fKind<0x16 || (fKind==-1&&(prop&G__BIT_ISPOINTER)) );
-io/src/TGenCollectionProxy.cxx:            else if ( prop&G__BIT_ISENUM ) {
-io/src/TGenCollectionProxy.cxx:            fCase = prop & (G__BIT_ISPOINTER|G__BIT_ISFUNDAMENTAL|G__BIT_ISENUM|G__BIT_ISCLASS);
-io/src/TGenCollectionProxy.cxx:            if (fType == TString::Class() && (fCase&G__BIT_ISPOINTER)) {
-io/src/TGenCollectionProxy.cxx:   if ( ptr && fCase&G__BIT_ISPOINTER ) {
-io/src/TGenCollectionProxy.cxx:            fPointers = fPointers || (0 != (fKey->fCase&G__BIT_ISPOINTER));
-io/src/TGenCollectionProxy.cxx:         fPointers = fPointers || (0 != (fVal->fCase&G__BIT_ISPOINTER));
-io/src/TGenCollectionProxy.cxx:         if ( fKey->fCase&G__BIT_ISPOINTER ) {
-io/src/TGenCollectionProxy.cxx:         if ( fVal->fCase&G__BIT_ISPOINTER ) {
-io/src/TGenCollectionProxy.cxx:         if ( fVal->fCase&G__BIT_ISPOINTER ) {
-io/src/TGenCollectionStreamer.cxx:   case G__BIT_ISCLASS:
-io/src/TGenCollectionStreamer.cxx:   case G__BIT_ISPOINTER|G__BIT_ISCLASS:
-io/src/TGenCollectionStreamer.cxx:   case G__BIT_ISPOINTER|kBIT_ISSTRING:
-io/src/TGenCollectionStreamer.cxx:   case G__BIT_ISPOINTER|kBIT_ISTSTRING|G__BIT_ISCLASS:
-io/src/TGenCollectionStreamer.cxx:   case G__BIT_ISCLASS:
-io/src/TGenCollectionStreamer.cxx:   case G__BIT_ISPOINTER|G__BIT_ISCLASS:
-io/src/TGenCollectionStreamer.cxx:   case G__BIT_ISPOINTER|kBIT_ISSTRING:
-io/src/TGenCollectionStreamer.cxx:   case G__BIT_ISPOINTER|kBIT_ISTSTRING|G__BIT_ISCLASS:
-io/src/TGenCollectionStreamer.cxx:   case G__BIT_ISCLASS:
-io/src/TGenCollectionStreamer.cxx:   case G__BIT_ISPOINTER|G__BIT_ISCLASS:
-io/src/TGenCollectionStreamer.cxx:   case G__BIT_ISPOINTER|kBIT_ISSTRING:
-io/src/TGenCollectionStreamer.cxx:   case G__BIT_ISPOINTER|kBIT_ISTSTRING|G__BIT_ISCLASS:
-io/src/TGenCollectionStreamer.cxx:         case G__BIT_ISFUNDAMENTAL:  // Only handle primitives this way
-io/src/TGenCollectionStreamer.cxx:         case G__BIT_ISENUM:
-io/src/TGenCollectionStreamer.cxx:         case G__BIT_ISCLASS:
-io/src/TGenCollectionStreamer.cxx:         case G__BIT_ISPOINTER|G__BIT_ISCLASS:
-io/src/TGenCollectionStreamer.cxx:         case G__BIT_ISPOINTER|kBIT_ISSTRING:
-io/src/TGenCollectionStreamer.cxx:         case G__BIT_ISPOINTER|kBIT_ISTSTRING|G__BIT_ISCLASS:
-io/src/TGenCollectionStreamer.cxx:   case G__BIT_ISCLASS:
-io/src/TGenCollectionStreamer.cxx:   case G__BIT_ISPOINTER|G__BIT_ISCLASS:
-io/src/TGenCollectionStreamer.cxx:   case kBIT_ISSTRING|G__BIT_ISPOINTER:
-io/src/TGenCollectionStreamer.cxx:   case kBIT_ISTSTRING|G__BIT_ISCLASS|G__BIT_ISPOINTER:
-io/src/TGenCollectionStreamer.cxx:   case G__BIT_ISCLASS:
-io/src/TGenCollectionStreamer.cxx:   case G__BIT_ISPOINTER|G__BIT_ISCLASS:
-io/src/TGenCollectionStreamer.cxx:   case kBIT_ISSTRING|G__BIT_ISPOINTER:
-io/src/TGenCollectionStreamer.cxx:   case kBIT_ISTSTRING|G__BIT_ISCLASS|G__BIT_ISPOINTER:
-io/src/TGenCollectionStreamer.cxx:         case G__BIT_ISFUNDAMENTAL:  // Only handle primitives this way
-io/src/TGenCollectionStreamer.cxx:         case G__BIT_ISENUM:
-io/src/TGenCollectionStreamer.cxx:         case G__BIT_ISCLASS:
-io/src/TGenCollectionStreamer.cxx:         case G__BIT_ISPOINTER|G__BIT_ISCLASS:
-io/src/TGenCollectionStreamer.cxx:         case kBIT_ISSTRING|G__BIT_ISPOINTER:
-io/src/TGenCollectionStreamer.cxx:         case kBIT_ISTSTRING|G__BIT_ISCLASS|G__BIT_ISPOINTER:
-io/src/TGenCollectionStreamer.cxx:            case G__BIT_ISFUNDAMENTAL:  // Only handle primitives this way
-io/src/TGenCollectionStreamer.cxx:            case G__BIT_ISENUM:
-io/src/TGenCollectionStreamer.cxx:            case G__BIT_ISFUNDAMENTAL:  // Only handle primitives this way
-io/src/TGenCollectionStreamer.cxx:            case G__BIT_ISENUM:
 main/src/cppmain.cxx:extern void G__setothermain(int othermain);
 main/src/cppmain.cxx:extern int G__main(int argc,char **argv);
 main/src/cppmain.cxx:   G__setothermain(0);
@@ -480,25 +159,12 @@ meta/src/TCint.cxx:   G__IncludePathInfo path;
 meta/src/TClass.cxx:extern Long_t G__globalvarpointer;
 meta/src/TClass.cxx:   G__ClassInfo *classInfo = cl->GetClassInfo();
 meta/src/TClass.cxx:   G__DataMemberInfo m(*classInfo);
-meta/src/TClass.cxx:   //  - the member G__virtualinfo inserted by the CINT RTTI system
-meta/src/TClass.cxx:   if (prop & G__BIT_ISSTATIC)           return;
-meta/src/TClass.cxx:   if (prop & G__BIT_ISFUNDAMENTAL)      return;
-meta/src/TClass.cxx:   if (prop & G__BIT_ISENUM)             return;
-meta/src/TClass.cxx:   if (mname == "G__virtualinfo")        return;
-meta/src/TClass.cxx:   if (prop & G__BIT_ISARRAY) {
-meta/src/TClass.cxx:   if (!(prop&G__BIT_ISPOINTER)) {
-meta/src/TClass.cxx:      void *obj = (prop&G__BIT_ISPOINTER) ? *((void**)ptr) : (TObject*)ptr;
 meta/src/TClass.cxx:   if ( fInterStreamer ) delete ((G__CallFunc*)fInterStreamer);
 meta/src/TClass.cxx:            G__CallFunc func;
 meta/src/TClass.cxx:      G__CallFunc* f  = new G__CallFunc;
 meta/src/TClass.cxx:      G__CallFunc func;
-meta/src/TClass.cxx:            if ((inh->Property() & G__BIT_ISVIRTUALBASE) != 0)
 meta/src/TClass.cxx:         G__BaseClassInfo t(*GetClassInfo());
-meta/src/TClass.cxx:               if ((t.Property() & G__BIT_ISVIRTUALBASE) != 0) {
-meta/src/TClass.cxx:   // Make sure that the current G__ClassInfo is up to date.
-meta/src/TClass.cxx:   // On windows G__exec_bytecode can (seemingly) have several values :(
 meta/src/TClass.cxx:   if (faddr == (Long_t)G__exec_bytecode) {
-meta/src/TClass.cxx:      // function (G__exec_bytecode).
 meta/src/TClass.cxx:   G__CallFunc  func;
 meta/src/TClass.cxx:   G__MethodInfo *info = new G__MethodInfo(func.GetMethodInfo());
 meta/src/TClass.cxx:   int autoload_old = G__set_class_autoloading(0);
@@ -507,32 +173,22 @@ meta/src/TClass.cxx:         G__CallFunc* func = (G__CallFunc*)fInterStreamer;
 meta/src/TClass.cxx:            func  = new G__CallFunc;
 meta/src/TDataMember.cxx:TDataMember::TDataMember(G__DataMemberInfo *info, TClass *cl) : TDictionary()
 meta/src/TDataMember.cxx:      fInfo=new G__DataMemberInfo(*dm.fInfo);
-meta/src/TDataMember.cxx:   // TDataMember dtor deletes adopted G__DataMemberInfo object.
 meta/src/TDataType.cxx:TDataType::TDataType(G__TypedefInfo *info) : TDictionary()
-meta/src/TDataType.cxx:   // TDataType dtor deletes adopted G__TypedefInfo object.
 meta/src/TFunction.cxx:TFunction::TFunction(G__MethodInfo *info) : TDictionary()
 meta/src/TFunction.cxx:      fInfo = new G__MethodInfo(*orig.fInfo);
 meta/src/TFunction.cxx:         fInfo = new G__MethodInfo(*rhs.fInfo);
-meta/src/TFunction.cxx:   // TFunction dtor deletes adopted G__MethodInfo.
 meta/src/TFunction.cxx:   G__MethodArgInfo arg(*fInfo);
-meta/src/TFunction.cxx:      //if (arg.Property() & G__BIT_ISCONSTANT)   // is returned as part of the name
-meta/src/TFunction.cxx:   // can find which TFunction belongs to a G__MethodInfo object.
 meta/src/TFunction.cxx:   G__InterfaceMethod pfunc = fInfo->InterfaceMethod();
 meta/src/TFunction.cxx:      struct G__bytecodefunc *bytecode = fInfo->GetBytecode();
 meta/src/TFunction.cxx:      if(bytecode) pfunc = (G__InterfaceMethod)G__exec_bytecode;
 meta/src/TFunction.cxx:         pfunc = (G__InterfaceMethod)NULL;
 meta/src/TGlobal.cxx:TGlobal::TGlobal(G__DataMemberInfo *info) : TDictionary()
-meta/src/TGlobal.cxx:   // TGlobal dtor deletes adopted G__DataMemberInfo object.
-meta/src/TIsAProxy.cxx:         fVirtual = (fClass->GetClassInfo()->ClassProperty()&G__CLS_HASVIRTUAL) == G__CLS_HASVIRTUAL;
 meta/src/TMethodArg.cxx:TMethodArg::TMethodArg(G__MethodArgInfo *info, TFunction *method) : TDictionary()
-meta/src/TMethodArg.cxx:   // TMethodArg dtor deletes adopted G__MethodArgInfo object.
 meta/src/TMethodCall.cxx:   fFunc     = orig.fFunc ? new G__CallFunc(*orig.fFunc) : 0;
 meta/src/TMethodCall.cxx:      fFunc     = rhs.fFunc ? new G__CallFunc(*rhs.fFunc) : 0;
 meta/src/TMethodCall.cxx:static TClass *R__FindScope(const char *function, UInt_t &pos, G__ClassInfo &cinfo)
 meta/src/TMethodCall.cxx:   G__ClassInfo cinfo;
 meta/src/TMethodCall.cxx:   G__ClassInfo cinfo;
-meta/src/TMethodCall.cxx:                                     const G__ClassInfo &cinfo) 
-meta/src/TMethodCall.cxx:   // information should be passed via the TClass or G__ClassInfo.
 meta/src/TMethodCall.cxx:      fFunc = new G__CallFunc;
 meta/src/TMethodCall.cxx:   G__ClassInfo *scope = 0;
 meta/src/TMethodCall.cxx:   G__ClassInfo global;
@@ -567,16 +223,12 @@ metautils/src/TClassEdit.cxx:                     G__ClassInfo info(base.c_str()
 metautils/src/TClassEdit.cxx:         G__TypedefInfo t;
 minuit2/src/TFitterMinuit.cxx:   char *funcname = G__p2f2funcname(fcn);
 minuit/src/TMinuit.cxx:   char *funcname = G__p2f2funcname(fcn);
-pyroot/src/Adapters.cxx:   return fMember->Property() & G__BIT_ISSTATIC;
 pyroot/src/Adapters.cxx:      G__ClassInfo* clInfo = fClass->GetClassInfo();
 pyroot/src/Adapters.cxx:      G__ClassInfo* clInfo = fClass->GetClassInfo();
 pyroot/src/Adapters.cxx:   bool b = G__TypeInfo( Name( ROOT::Reflex::Q | ROOT::Reflex::S ).c_str() ).IsValid();
 pyroot/src/Adapters.cxx:   return G__TypeInfo( Name( ROOT::Reflex::SCOPED ).c_str() ).IsLoaded();
-pyroot/src/Adapters.cxx:      return fClass->Property() & G__BIT_ISNAMESPACE;
 pyroot/src/ConstructorHolder.cxx:         G__StoreEnv env;
 pyroot/src/ConstructorHolder.cxx:         G__stubstoreenv( &env, (void*)address, tagnum );
-pyroot/src/ConstructorHolder.cxx:         char temp[ G__ONELINE ];
-pyroot/src/ConstructorHolder.cxx:         snprintf( temp, G__ONELINE, fmt.c_str(),
 pyroot/src/ConstructorHolder.cxx:         G__getfunction( temp, &known, G__CALLCONSTRUCTOR );
 pyroot/src/ConstructorHolder.cxx:         G__stubrestoreenv( &env );
 pyroot/src/Converters.cxx:Bool_t PyROOT::T##name##Converter::SetArg( PyObject* pyobject, TParameter& para, G__CallFunc* func )\
@@ -592,7 +244,6 @@ pyroot/src/Converters.cxx:Bool_t PyROOT::TConstDoubleRefConverter::SetArg( PyObj
 pyroot/src/Converters.cxx:Bool_t PyROOT::TVoidConverter::SetArg( PyObject*, TParameter&, G__CallFunc* )
 pyroot/src/Converters.cxx:Bool_t PyROOT::TMacroConverter::SetArg( PyObject*, TParameter&, G__CallFunc* )
 pyroot/src/Converters.cxx:   G__DataMemberInfo dmi;
-pyroot/src/Converters.cxx:   while ( dmi.Next() ) {    // using G__ClassInfo().GetDataMember() would cause overwrite
 pyroot/src/Converters.cxx:Bool_t PyROOT::TLongLongConverter::SetArg( PyObject* pyobject, TParameter& para, G__CallFunc* func )
 pyroot/src/Converters.cxx:Bool_t PyROOT::TULongLongConverter::SetArg( PyObject* pyobject, TParameter& para, G__CallFunc* func )
 pyroot/src/Converters.cxx:Bool_t PyROOT::TCStringConverter::SetArg( PyObject* pyobject, TParameter& para, G__CallFunc* func )
@@ -732,8 +383,6 @@ ruby/src/drr.cxx:    G__ClassInfo *klass = new G__ClassInfo (classname);
 ruby/src/drr.cxx:    G__MethodInfo *minfo = new G__MethodInfo(klass->GetMethod(methname, cproto, &offset)); 
 ruby/src/drr.cxx:    G__CallFunc *func = NULL; 
 table/src/TTable.cxx:   switch(G__loadfile((Char_t *)exprFileName)) {
-table/src/TTable.cxx:      case G__LOADFILE_SUCCESS:
-table/src/TTable.cxx:      case G__LOADFILE_DUPLICATE:
 table/src/TTable.cxx:         G__unloadfile((Char_t *)exprFileName);
 table/src/TTable.cxx:   G__ClassInfo globals;
 table/src/TTable.cxx:   G__MethodInfo func = globals.GetMethod(funcName,argtypes,&offset);
@@ -743,82 +392,8 @@ table/src/TTable.cxx:   G__CallFunc callfunc;
 table/src/TTable.cxx:   G__unloadfile((Char_t *)exprFileName);
 thread/src/TThread.cxx:   G__set_alloclockfunc(CINT_alloc_lock);
 thread/src/TThread.cxx:   G__set_allocunlockfunc(CINT_alloc_unlock);
-tree/src/ManualTree2.cxx:*          FROM HEADER FILES LISTED IN G__setup_cpp_environmentXXX().
-tree/src/ManualTree2.cxx:extern "C" void G__cpp_reset_tagtableManualTree2();
-tree/src/ManualTree2.cxx:extern "C" void G__set_cpp_environmentManualTree2() {
-tree/src/ManualTree2.cxx:   G__add_compiledheader("TTree.h");
-tree/src/ManualTree2.cxx:   G__cpp_reset_tagtableManualTree2();
-tree/src/ManualTree2.cxx:extern "C" int G__cpp_dllrevManualTree2() { return(30051515); }
-tree/src/ManualTree2.cxx:class G__Sizep2memfuncManualTree2 {
-tree/src/ManualTree2.cxx:   G__Sizep2memfuncManualTree2(): p(&G__Sizep2memfuncManualTree2::sizep2memfunc) {}
-tree/src/ManualTree2.cxx:   size_t (G__Sizep2memfuncManualTree2::*p)();
-tree/src/ManualTree2.cxx:size_t G__get_sizep2memfuncManualTree2()
-tree/src/ManualTree2.cxx:   G__Sizep2memfuncManualTree2 a;
-tree/src/ManualTree2.cxx:   G__setsizep2memfunc((int)a.sizep2memfunc());
-tree/src/ManualTree2.cxx:extern "C" void G__cpp_setup_inheritanceManualTree2() {
-tree/src/ManualTree2.cxx:extern "C" void G__cpp_setup_typetableManualTree2() {
-tree/src/ManualTree2.cxx:   G__search_typename2("Int_t",105,-1,0,-1);
-tree/src/ManualTree2.cxx:   G__setnewtype(-1,"Signed integer 4 bytes (int)",0);
-tree/src/ManualTree2.cxx:   G__search_typename2("Option_t",99,-1,256,-1);
-tree/src/ManualTree2.cxx:   G__setnewtype(-1,"Option string (const char)",0);
-tree/src/ManualTree2.cxx:   G__search_typename2("Long64_t",110,-1,0,-1);
-tree/src/ManualTree2.cxx:   G__setnewtype(-1,"Portable signed long integer 8 bytes",0);
-tree/src/ManualTree2.cxx:extern "C" void G__cpp_setup_memvarManualTree2() {
-tree/src/ManualTree2.cxx:static void G__setup_memfuncTTree(void) {
-tree/src/ManualTree2.cxx:   G__tag_memfunc_setup(G__get_linked_tagnum(&G__ManualTree2LN_TTree));
-tree/src/ManualTree2.cxx:   G__memfunc_setup("Process",735,G__ManualTree2_126_0_132, 110, -1, G__defined_typename("Long64_t"), 0, 4, 1, 1, 0, 
-tree/src/ManualTree2.cxx:   G__memfunc_setup("Branch",590,G__ManualTree2_126_0_187, 85, G__get_linked_tagnum(&G__ManualTree2LN_TBranch), -1, 0, 5, 1, 1, 0, 
-tree/src/ManualTree2.cxx:   G__memfunc_setup("Branch",590,G__ManualTree2_126_0_188, 85, G__get_linked_tagnum(&G__ManualTree2LN_TBranch), -1, 0, 4, 1, 1, 0, 
-tree/src/ManualTree2.cxx:   G__memfunc_setup("SetBranchAddress",1600,G__ManualTree2_126_0_190, 121, -1, -1, 0, 3, 1, 1, 0, 
-tree/src/ManualTree2.cxx:   G__tag_memfunc_reset();
-tree/src/ManualTree2.cxx:extern "C" void G__cpp_setup_memfuncManualTree2() {
-tree/src/ManualTree2.cxx:static void G__cpp_setup_global0() {
-tree/src/ManualTree2.cxx:   G__resetplocal();
-tree/src/ManualTree2.cxx:static void G__cpp_setup_global1() {
-tree/src/ManualTree2.cxx:static void G__cpp_setup_global2() {
-tree/src/ManualTree2.cxx:   G__resetglobalenv();
-tree/src/ManualTree2.cxx:extern "C" void G__cpp_setup_globalManualTree2() {
-tree/src/ManualTree2.cxx:   G__cpp_setup_global0();
-tree/src/ManualTree2.cxx:   G__cpp_setup_global1();
-tree/src/ManualTree2.cxx:   G__cpp_setup_global2();
-tree/src/ManualTree2.cxx:static void G__cpp_setup_func0() {
-tree/src/ManualTree2.cxx:   G__lastifuncposition();
-tree/src/ManualTree2.cxx:static void G__cpp_setup_func1() {
-tree/src/ManualTree2.cxx:static void G__cpp_setup_func2() {
-tree/src/ManualTree2.cxx:   G__resetifuncposition();
-tree/src/ManualTree2.cxx:extern "C" void G__cpp_setup_funcManualTree2() {
-tree/src/ManualTree2.cxx:   G__cpp_setup_func0();
-tree/src/ManualTree2.cxx:   G__cpp_setup_func1();
-tree/src/ManualTree2.cxx:   G__cpp_setup_func2();
-tree/src/ManualTree2.cxx:G__linked_taginfo G__ManualTree2LN_TTree = { "TTree" , 99 , -1 };
-tree/src/ManualTree2.cxx:G__linked_taginfo G__ManualTree2LN_TBranch = { "TBranch" , 99 , -1 };
-tree/src/ManualTree2.cxx:G__linked_taginfo G__ManualTree2LN_TSelector = { "TSelector" , 99 , -1 };
-tree/src/ManualTree2.cxx:extern "C" void G__cpp_reset_tagtableManualTree2() {
-tree/src/ManualTree2.cxx:   G__ManualTree2LN_TTree.tagnum = -1 ;
-tree/src/ManualTree2.cxx:   G__ManualTree2LN_TBranch.tagnum = -1 ;
-tree/src/ManualTree2.cxx:   G__ManualTree2LN_TSelector.tagnum = -1 ;
-tree/src/ManualTree2.cxx:extern "C" void G__cpp_setup_tagtableManualTree2() {
-tree/src/ManualTree2.cxx:   G__tagtable_setup(G__get_linked_tagnum(&G__ManualTree2LN_TTree),sizeof(TTree),-1,65280,"Tree descriptor (the main ROOT I/O class)",NULL,G__setup_memfuncTTree);
-tree/src/ManualTree2.cxx:   G__get_linked_tagnum_fwd(&G__ManualTree2LN_TBranch);
-tree/src/ManualTree2.cxx:   G__get_linked_tagnum_fwd(&G__ManualTree2LN_TSelector);
-tree/src/ManualTree2.cxx:extern "C" void G__cpp_setupManualTree2(void) {
-tree/src/ManualTree2.cxx:   G__check_setup_version(30051515,"G__cpp_setupManualTree2()");
-tree/src/ManualTree2.cxx:   G__set_cpp_environmentManualTree2();
-tree/src/ManualTree2.cxx:   G__cpp_setup_tagtableManualTree2();
-tree/src/ManualTree2.cxx:   G__cpp_setup_inheritanceManualTree2();
-tree/src/ManualTree2.cxx:   G__cpp_setup_typetableManualTree2();
-tree/src/ManualTree2.cxx:   G__cpp_setup_memvarManualTree2();
-tree/src/ManualTree2.cxx:   G__cpp_setup_memfuncManualTree2();
-tree/src/ManualTree2.cxx:   G__cpp_setup_globalManualTree2();
-tree/src/ManualTree2.cxx:   G__cpp_setup_funcManualTree2();
-tree/src/ManualTree2.cxx:   if(0==G__getsizep2memfunc()) G__get_sizep2memfuncManualTree2();
-tree/src/ManualTree2.cxx:class G__cpp_setup_initManualTree2 {
-tree/src/ManualTree2.cxx:   G__cpp_setup_initManualTree2() { G__add_setup_func("ManualTree2",(G__incsetup)(&G__cpp_setupManualTree2)); G__call_setup_funcs(); }
-tree/src/ManualTree2.cxx:   ~G__cpp_setup_initManualTree2() { G__remove_setup_func("ManualTree2"); }
-tree/src/ManualTree2.cxx:G__cpp_setup_initManualTree2 G__cpp_setup_initializerManualTree2;
 tree/src/TSelectorCint.cxx:void TSelectorCint::SetFuncProto(G__CallFunc *cf, G__ClassInfo* cl,
 tree/src/TSelectorCint.cxx:void TSelectorCint::Build(TSelector *iselector, G__ClassInfo *cl, Bool_t isowner)
-tree/src/TSelectorCint.cxx:   // The G__MethodInfo created by SetFuncProto will remember the address
 tree/src/TSelectorCint.cxx:   fClass        = new G__ClassInfo(*cl);
 tree/src/TSelectorCint.cxx:   fFuncVersion  = new G__CallFunc();
 tree/src/TSelectorCint.cxx:   fFuncInit     = new G__CallFunc();
@@ -836,7 +411,6 @@ tree/src/TSelectorCint.cxx:   fFuncInp      = new G__CallFunc();
 tree/src/TSelectorCint.cxx:   fFuncOut      = new G__CallFunc();
 tree/src/TSelectorCint.cxx:   fFuncGetAbort = new G__CallFunc();
 tree/src/TSelectorCint.cxx:   fFuncGetStat  = new G__CallFunc();
-tree/src/TSelector.cxx:   // diagnostic in the case the class is not found in the G__ClassInfo table.
 tree/src/TSelector.cxx:   G__ClassInfo cl;
 tree/src/TTree.cxx:      G__ClassInfo* classinfo = clones->GetClass()->GetClassInfo();
 tree/src/TTree.cxx:            G__ClassInfo* classinfo = inklass->GetClassInfo();
@@ -863,13 +437,10 @@ utils/src/rootcint.cxx:   bool parentHasClassDef = methodinfo.IsValid() && (meth
 utils/src/rootcint.cxx:int GetClassVersion(G__ClassInfo &cl)
 utils/src/rootcint.cxx:   int version = (int)G__int(G__calc(funcname.c_str()));
 utils/src/rootcint.cxx:string GetNonConstMemberName(G__DataMemberInfo &m, const string &prefix = "")
-utils/src/rootcint.cxx:   if (m.Property() & (G__BIT_ISCONSTANT|G__BIT_ISPCONSTANT)) {
 utils/src/rootcint.cxx:      ret += G__ShadowMaker::GetNonConstTypeName(m);
 utils/src/rootcint.cxx:bool NeedShadowClass(G__ClassInfo& cl)
 utils/src/rootcint.cxx:   if (G__ShadowMaker::IsStdPair(cl)) return true;
 utils/src/rootcint.cxx:   if (G__ShadowMaker::IsSTLCont(cl.Name())) return false;
-utils/src/rootcint.cxx:   if (cl.RootFlag() == G__NOSTREAMER) return false;
-utils/src/rootcint.cxx:   return ((cl.RootFlag() & G__USEBYTECOUNT));
 utils/src/rootcint.cxx:bool NeedTypedefShadowClass(G__ClassInfo& cl)
 utils/src/rootcint.cxx:int NeedTemplateKeyword(G__ClassInfo &cl)
 utils/src/rootcint.cxx:      struct G__Definedtemplateclass *templ = G__defined_templateclass(templatename);
@@ -898,21 +469,14 @@ utils/src/rootcint.cxx:bool CheckConstructor(G__MethodInfo &methodinfo, int argR
 utils/src/rootcint.cxx:      && (methodinfo.Property() & G__BIT_ISPUBLIC)) {
 utils/src/rootcint.cxx:            G__MethodArgInfo args( methodinfo );
 utils/src/rootcint.cxx:bool HasDefaultConstructor(G__ClassInfo& cl, string *arg)
-utils/src/rootcint.cxx:   if (cl.Property() & G__BIT_ISNAMESPACE) return false;
-utils/src/rootcint.cxx:   if (cl.Property() & G__BIT_ISABSTRACT) return false;
 utils/src/rootcint.cxx:      G__MethodInfo methodinfo  = cl.GetMethod(cl.TmpltName(),proto.c_str(),&offset,G__ClassInfo::ExactMatch,G__ClassInfo::InThisScope);
 utils/src/rootcint.cxx:      G__MethodInfo tmethodinfo = cl.GetMethod(cl.Name(),     proto.c_str(),&offset,G__ClassInfo::ExactMatch,G__ClassInfo::InThisScope);
 utils/src/rootcint.cxx:         if  (methodinfo.IsValid() && !(methodinfo.Property() & G__BIT_ISPUBLIC) ) {
 utils/src/rootcint.cxx:bool NeedConstructor(G__ClassInfo& cl)
-utils/src/rootcint.cxx:   if (cl.Property() & G__BIT_ISNAMESPACE) return false;
-utils/src/rootcint.cxx:               || (!cl.HasMethod("ShowMembers") && (cl.RootFlag() & G__USEBYTECOUNT)
-utils/src/rootcint.cxx:               ) && !(cl.Property() & G__BIT_ISABSTRACT));
 utils/src/rootcint.cxx:bool CheckConstructor(G__ClassInfo& cl)
 utils/src/rootcint.cxx:bool NeedDestructor(G__ClassInfo& cl)
-utils/src/rootcint.cxx:   if (cl.Property() & G__BIT_ISNAMESPACE) return false;
 utils/src/rootcint.cxx:   G__MethodInfo methodinfo = cl.GetMethod(name.c_str(),proto,&offset);
 utils/src/rootcint.cxx:   if (methodinfo.IsValid() && !(methodinfo.Property() & G__BIT_ISPUBLIC) ) {
-utils/src/rootcint.cxx:      || (!cl.HasMethod("ShowMembers") && (cl.RootFlag() & G__USEBYTECOUNT)
 utils/src/rootcint.cxx:bool IsTemplateFloat16(G__ClassInfo &cl)
 utils/src/rootcint.cxx:   static G__TypeInfo ti;
 utils/src/rootcint.cxx:               G__ClassInfo subcl(current);
@@ -924,11 +488,6 @@ utils/src/rootcint.cxx:               G__ClassInfo subcl(current);
 utils/src/rootcint.cxx:int IsSTLContainer(G__DataMemberInfo &m)
 utils/src/rootcint.cxx:int IsSTLContainer(G__BaseClassInfo &m)
 utils/src/rootcint.cxx:int IsStreamable(G__DataMemberInfo &m)
-utils/src/rootcint.cxx:   if ((m.Property() & G__BIT_ISSTATIC) ||
-utils/src/rootcint.cxx:         strcmp(m.Name(), "G__virtualinfo") == 0) return 0;
-utils/src/rootcint.cxx:   if (((m.Type())->Property() & G__BIT_ISFUNDAMENTAL) ||
-utils/src/rootcint.cxx:       ((m.Type())->Property() & G__BIT_ISENUM)) return 0;
-utils/src/rootcint.cxx:   if (m.Property() & G__BIT_ISREFERENCE) return 0;
 utils/src/rootcint.cxx:G__TypeInfo &TemplateArg(G__DataMemberInfo &m, int count = 0)
 utils/src/rootcint.cxx:   static G__TypeInfo ti;
 utils/src/rootcint.cxx:G__TypeInfo &TemplateArg(G__BaseClassInfo &m, int count = 0)
@@ -936,54 +495,12 @@ utils/src/rootcint.cxx:   static G__TypeInfo ti;
 utils/src/rootcint.cxx:void WriteAuxFunctions(G__ClassInfo &cl)
 utils/src/rootcint.cxx:   string mappedname = G__map_cpp_name((char*)classname.c_str());
 utils/src/rootcint.cxx:int ElementStreamer(G__TypeInfo &ti, const char *R__t,int rwmode,const char *tcl=0)
-utils/src/rootcint.cxx:   long kase = prop & (G__BIT_ISPOINTER|G__BIT_ISFUNDAMENTAL|G__BIT_ISENUM);
-utils/src/rootcint.cxx:         case G__BIT_ISFUNDAMENTAL:
-utils/src/rootcint.cxx:         case G__BIT_ISPOINTER|R__BIT_ISTOBJECT|R__BIT_HASSTREAMER:
-utils/src/rootcint.cxx:         case G__BIT_ISENUM:
-utils/src/rootcint.cxx:         case R__BIT_HASSTREAMER|G__BIT_ISPOINTER:
-utils/src/rootcint.cxx:            if (ti.Property() & G__BIT_ISABSTRACT) {
-utils/src/rootcint.cxx:         case kBIT_ISSTRING|G__BIT_ISPOINTER:
-utils/src/rootcint.cxx:         case G__BIT_ISPOINTER:
-utils/src/rootcint.cxx:         case G__BIT_ISFUNDAMENTAL:
-utils/src/rootcint.cxx:         case G__BIT_ISPOINTER|R__BIT_ISTOBJECT|R__BIT_HASSTREAMER:
-utils/src/rootcint.cxx:         case G__BIT_ISENUM:
-utils/src/rootcint.cxx:         case R__BIT_HASSTREAMER|G__BIT_ISPOINTER:
-utils/src/rootcint.cxx:         case kBIT_ISSTRING|G__BIT_ISPOINTER:
-utils/src/rootcint.cxx:         case G__BIT_ISPOINTER:
 utils/src/rootcint.cxx:int STLContainerStreamer(G__DataMemberInfo &m, int rwmode)
-utils/src/rootcint.cxx:   if (m.Property() & G__BIT_ISARRAY) {
 utils/src/rootcint.cxx:   G__TypeInfo &ti = TemplateArg(m);
 utils/src/rootcint.cxx:      G__TypeInfo &ti = TemplateArg(m,1);
 utils/src/rootcint.cxx:   if (m.Property() & G__BIT_ISPOINTER) pa+=2;
 utils/src/rootcint.cxx:int STLStringStreamer(G__DataMemberInfo &m, int rwmode)
-utils/src/rootcint.cxx:         if ((m.Property() & G__BIT_ISPOINTER) &&
-utils/src/rootcint.cxx:             (m.Property() & G__BIT_ISARRAY)) {
-utils/src/rootcint.cxx:         } else if (m.Property() & G__BIT_ISARRAY) {
-utils/src/rootcint.cxx:            if (m.Property() & G__BIT_ISPOINTER)
-utils/src/rootcint.cxx:         if (m.Property() & G__BIT_ISPOINTER)
-utils/src/rootcint.cxx:         else if (m.Property() & G__BIT_ISARRAY) {
 utils/src/rootcint.cxx:int STLBaseStreamer(G__BaseClassInfo &m, int rwmode)
-utils/src/rootcint.cxx:         if ((TemplateArg(m).Property() & G__BIT_ISPOINTER) ||
-utils/src/rootcint.cxx:             (TemplateArg(m).Property() & G__BIT_ISFUNDAMENTAL) ||
-utils/src/rootcint.cxx:             (TemplateArg(m).Property() & G__BIT_ISENUM)) {
-utils/src/rootcint.cxx:            if (TemplateArg(m).Property() & G__BIT_ISENUM)
-utils/src/rootcint.cxx:                  if ((TemplateArg(m,1).Property() & G__BIT_ISPOINTER) ||
-utils/src/rootcint.cxx:                  (TemplateArg(m,1).Property() & G__BIT_ISFUNDAMENTAL) ||
-utils/src/rootcint.cxx:                  (TemplateArg(m,1).Property() & G__BIT_ISENUM)) {
-utils/src/rootcint.cxx:                  if ((TemplateArg(m,1).Property() & G__BIT_ISPOINTER) ||
-utils/src/rootcint.cxx:                      (TemplateArg(m,1).Property() & G__BIT_ISFUNDAMENTAL) ||
-utils/src/rootcint.cxx:                      (TemplateArg(m,1).Property() & G__BIT_ISENUM)) {
-utils/src/rootcint.cxx:         if (m.Property() & G__BIT_ISPOINTER) {
-utils/src/rootcint.cxx:         if ((TemplateArg(m).Property() & G__BIT_ISPOINTER) ||
-utils/src/rootcint.cxx:             (TemplateArg(m).Property() & G__BIT_ISFUNDAMENTAL) ||
-utils/src/rootcint.cxx:             (TemplateArg(m).Property() & G__BIT_ISENUM)) {
-utils/src/rootcint.cxx:            if (TemplateArg(m).Property() & G__BIT_ISENUM)
-utils/src/rootcint.cxx:                  if ((TemplateArg(m,1).Property() & G__BIT_ISPOINTER) ||
-utils/src/rootcint.cxx:                  (TemplateArg(m,1).Property() & G__BIT_ISFUNDAMENTAL) ||
-utils/src/rootcint.cxx:                  (TemplateArg(m,1).Property() & G__BIT_ISENUM)) {
-utils/src/rootcint.cxx:                  if ((TemplateArg(m,1).Property() & G__BIT_ISPOINTER) ||
-utils/src/rootcint.cxx:                      (TemplateArg(m,1).Property() & G__BIT_ISFUNDAMENTAL) ||
-utils/src/rootcint.cxx:                      (TemplateArg(m,1).Property() & G__BIT_ISENUM)) {
 utils/src/rootcint.cxx:int PointerToPointer(G__DataMemberInfo &m)
 utils/src/rootcint.cxx:void WriteInputOperator(G__ClassInfo &cl)
 utils/src/rootcint.cxx:   G__ClassInfo space = cl.EnclosingSpace();
@@ -994,7 +511,6 @@ utils/src/rootcint.cxx:      G__ShadowMaker nestTempShadowMaker(*dictSrcOut, "")
 utils/src/rootcint.cxx:void WriteClassInit(G__ClassInfo &cl)
 utils/src/rootcint.cxx:   string mappedname = G__map_cpp_name((char*)classname.c_str());
 utils/src/rootcint.cxx:      if (G__ShadowMaker::IsStdPair(cl)) {
-utils/src/rootcint.cxx:   } else { // if (cl.RootFlag() & G__USEBYTECOUNT ) {
 utils/src/rootcint.cxx:      G__ClassInfo gcl;
 utils/src/rootcint.cxx:      G__MethodInfo methodinfo = gcl.GetMethod(versionFunc,proto,&offset);
 utils/src/rootcint.cxx:      //fprintf(stderr,"DEBUG: %s has value %d\n",classname.c_str(),(int)G__int(G__calc(temporary)));
@@ -1143,3 +659,149 @@ winnt/src/TWinNTSystem.cxx:   extern int G__get_security_error();
 winnt/src/TWinNTSystem.cxx:   extern int G__genericerror(const char* msg);
 winnt/src/TWinNTSystem.cxx:            if (!G__get_security_error()) {
 winnt/src/TWinNTSystem.cxx:               G__genericerror("\n *** Break *** keyboard interrupt");
+
+
+===========================
+We don't care about cintex anymore (or do we need to?):
+
+cintex/src/CINTClassBuilder.cxx:      fTaginfo = new G__linked_taginfo;
+cintex/src/CINTClassBuilder.cxx:      fTaginfo->tagnum = G__defined_tagname(fTaginfo->tagname, 2);
+cintex/src/CINTClassBuilder.cxx:         G__ClassInfo info(fTaginfo->tagnum);
+cintex/src/CINTClassBuilder.cxx:         if (!(info.Property() & (G__BIT_ISSTRUCT | G__BIT_ISCLASS))) {
+cintex/src/CINTClassBuilder.cxx:            G__search_tagname(fTaginfo->tagname, cl.IsClass() ? 'c' : 's'); 
+cintex/src/CINTClassBuilder.cxx:      fTaginfo->tagnum = G__get_linked_tagnum(fTaginfo);
+cintex/src/CINTClassBuilder.cxx:         rootFlag += G__BIT_ISABSTRACT;  // Abstract class
+cintex/src/CINTClassBuilder.cxx:      G__tagtable_setup( fTaginfo->tagnum,    // tag number
+cintex/src/CINTClassBuilder.cxx:                         G__CPPLINK,          // cpplink
+cintex/src/CINTClassBuilder.cxx:                         fSetup_memvar,       // G__setup_memvarMyClass
+cintex/src/CINTClassBuilder.cxx:                         fSetup_memfunc);     // G__setup_memfuncMyClass
+cintex/src/CINTClassBuilder.cxx:      int autoload = G__set_class_autoloading(0); // To avoid recursive loads
+cintex/src/CINTClassBuilder.cxx:      G__set_class_autoloading(autoload);
+cintex/src/CINTClassBuilder.cxx:      int autoload = G__set_class_autoloading(0); // To avoid recursive loads
+cintex/src/CINTClassBuilder.cxx:      G__set_class_autoloading(autoload);
+cintex/src/CINTClassBuilder.cxx:      G__tag_memfunc_setup(fTaginfo->tagnum);
+cintex/src/CINTClassBuilder.cxx:      ::G__tag_memfunc_reset();
+cintex/src/CINTClassBuilder.cxx:      G__tag_memvar_setup(fTaginfo->tagnum);
+cintex/src/CINTClassBuilder.cxx:         G__memvar_setup((void*)0,'l',0,0,-1,-1,-1,4,"G__virtualinfo=",0,0);
+cintex/src/CINTClassBuilder.cxx:      G__tag_memvar_reset();
+cintex/src/CINTClassBuilder.cxx:      if ( 0 == ::G__getnumbaseclass(fTaginfo->tagnum) )  {     
+cintex/src/CINTClassBuilder.cxx:         if ( 0 == ::G__getnumbaseclass(fTaginfo->tagnum) )  {
+cintex/src/CINTClassBuilder.cxx:               int b_tagnum = G__search_tagname(b_nam.c_str(), 'a');
+cintex/src/CINTClassBuilder.cxx:               long int type = (level == 0) ?  G__ISDIRECTINHERIT : 0;
+cintex/src/CINTClassBuilder.cxx:                     type = type | G__ISVIRTUALBASE;
+cintex/src/CINTClassBuilder.cxx:               int mod = base.IsPublic() ? G__PUBLIC : ( base.IsPrivate() ? G__PRIVATE : G__PROTECTED );
+cintex/src/CINTClassBuilder.cxx:               ::G__inheritance_setup(fTaginfo->tagnum, b_tagnum, offset, mod, type );
+cintex/src/CINTEnumBuilder.cxx:         G__ClassInfo cintEnum(name.c_str());
+cintex/src/CINTEnumBuilder.cxx:            G__linked_taginfo taginfo;
+cintex/src/CINTEnumBuilder.cxx:            G__get_linked_tagnum(&taginfo);
+cintex/src/CINTEnumBuilder.cxx:            ::G__tagtable_setup( tagnum, sizeof(int), -1, 0,(char*)NULL, NULL, NULL);
+cintex/src/CINTEnumBuilder.cxx:            ::G__resetplocal();
+cintex/src/CINTEnumBuilder.cxx:            int stagnum = ::G__defined_tagname(sname.c_str(), 2);
+cintex/src/CINTEnumBuilder.cxx:            ::G__tag_memvar_setup(stagnum);
+cintex/src/CINTEnumBuilder.cxx:               ::G__memvar_setup((void*)G__PVOID, 'p', 0, 0, -1, -1, -1, 1, item.c_str(), 1, (char*)NULL);
+cintex/src/CINTEnumBuilder.cxx:               ::G__memvar_setup((void*)G__PVOID, 'i', 0, 1, tagnum, -1, isstatic, 1, item.c_str(), 0, (char*)NULL);
+cintex/src/CINTEnumBuilder.cxx:            ::G__resetglobalenv();
+cintex/src/CINTEnumBuilder.cxx:            ::G__tag_memvar_reset();
+cintex/src/Cintex.cxx:      int autoload = G__set_class_autoloading(0); // To avoid recursive loads
+cintex/src/Cintex.cxx:      G__set_class_autoloading(autoload);
+cintex/src/Cintex.cxx:         int autoload = G__set_class_autoloading(0); // To avoid recursive loads
+cintex/src/Cintex.cxx:         G__set_class_autoloading(autoload);
+cintex/src/Cintex.cxx:         int autoload = G__set_class_autoloading(0); // To avoid recursive loads
+cintex/src/Cintex.cxx:         G__set_class_autoloading(autoload);
+cintex/src/CINTFunctional.cxx:   void StubContext_t::ProcessParam(G__param* libp) {
+cintex/src/CINTFunctional.cxx:         case 'd': fParcnv[i].obj.d  = G__double(libp->para[i]);fParam[i] = &fParcnv[i].obj.d; break;
+cintex/src/CINTFunctional.cxx:         case 'f': fParcnv[i].obj.fl = (float)G__double(libp->para[i]);fParam[i] = &fParcnv[i].obj.fl; break;
+cintex/src/CINTFunctional.cxx:         case 'n': fParcnv[i].obj.ll = G__Longlong(libp->para[i]);fParam[i] = &fParcnv[i].obj.ll; break;
+cintex/src/CINTFunctional.cxx:         case 'm': fParcnv[i].obj.ull= G__ULonglong(libp->para[i]);fParam[i] = &fParcnv[i].obj.ull; break;
+cintex/src/CINTFunctional.cxx:         case 'q': fParcnv[i].obj.ld = G__Longdouble(libp->para[i]);fParam[i] = &fParcnv[i].obj.ld; break;
+cintex/src/CINTFunctional.cxx:         case 'i': fParcnv[i].obj.i  = G__int(libp->para[i]);   fParam[i] = &fParcnv[i].obj.i; break;
+cintex/src/CINTFunctional.cxx:   void StubContext_t::ProcessResult(G__value* result, void* obj) { 
+cintex/src/CINTFunctional.cxx:      case 'y': G__setnull(result); break;
+cintex/src/CINTFunctional.cxx:                                G__value* result,
+cintex/src/CINTFunctional.cxx:                                G__CONST char* /*funcname*/,
+cintex/src/CINTFunctional.cxx:                                G__param* libp,
+cintex/src/CINTFunctional.cxx:         void* r = (*context->fStub)((void*)G__getstructoffset(), context->fParam, context->fStubctx);
+cintex/src/CINTFunctional.cxx:         if ( context->fRet_byvalue )  G__store_tempobject(*result);
+cintex/src/CINTFunctional.cxx:         G__genericerror(errtxt.c_str());
+cintex/src/CINTFunctional.cxx:         G__setnull(result);
+cintex/src/CINTFunctional.cxx:         G__genericerror("Exception: Unknown C++ exception");
+cintex/src/CINTFunctional.cxx:         G__setnull(result);
+cintex/src/CINTFunctional.cxx:                                     G__value* result,
+cintex/src/CINTFunctional.cxx:                                     G__CONST char* /*funcname*/,
+cintex/src/CINTFunctional.cxx:                                     G__param *libp,
+cintex/src/CINTFunctional.cxx:         long nary = G__getaryconstruct();
+cintex/src/CINTFunctional.cxx:         G__genericerror(errtxt.c_str());
+cintex/src/CINTFunctional.cxx:         G__genericerror("Exception: Unknown C++ exception");
+cintex/src/CINTFunctional.cxx:                                     G__value* result,
+cintex/src/CINTFunctional.cxx:                                     G__CONST char* /*funcname*/,
+cintex/src/CINTFunctional.cxx:                                     G__param* /*libp*/,
+cintex/src/CINTFunctional.cxx:      void* obj = (void*)G__getstructoffset();
+cintex/src/CINTFunctional.cxx:      if( G__getaryconstruct() ) {
+cintex/src/CINTFunctional.cxx:         if( G__PVOID == G__getgvp() ) { //  delete[] (TYPE*)(G__getstructoffset());
+cintex/src/CINTFunctional.cxx:            for(int i = G__getaryconstruct()-1; i>=0 ; i--)
+cintex/src/CINTFunctional.cxx:         long g__Xtmp = G__getgvp();
+cintex/src/CINTFunctional.cxx:         G__setgvp(G__PVOID);
+cintex/src/CINTFunctional.cxx:         G__setgvp(g__Xtmp);
+cintex/src/CINTFunctional.cxx:         if( !(long(obj) == G__getgvp() && G__PVOID != G__getgvp()) )  {
+cintex/src/CINTFunctional.cxx:            ::operator delete (obj); //G__operator_delete(obj);
+cintex/src/CINTFunctional.cxx:      G__setnull(result);
+cintex/src/CINTFunctional.cxx:   G__InterfaceMethod Allocate_stub_function( StubContext_t* obj, 
+cintex/src/CINTFunctional.cxx:                                              int (*fun)(StubContext_t*, G__value*, G__CONST char*, G__param*, int ) )
+cintex/src/CINTFunctional.cxx:      obj->fMethodCode = (G__InterfaceMethod)code;
+cintex/src/CINTFunctionBuilder.cxx:         G__lastifuncposition();
+cintex/src/CINTFunctionBuilder.cxx:         int ns_tag = G__search_tagname(sname.c_str(),'n');
+cintex/src/CINTFunctionBuilder.cxx:         G__tag_memfunc_setup(ns_tag);
+cintex/src/CINTFunctionBuilder.cxx:         G__resetifuncposition();
+cintex/src/CINTFunctionBuilder.cxx:         G__tag_memfunc_reset();
+cintex/src/CINTFunctionBuilder.cxx:      int access        = G__PUBLIC;
+cintex/src/CINTFunctionBuilder.cxx:      int memory_type   = 1; // G__LOCAL;  // G__AUTO=-1
+cintex/src/CINTFunctionBuilder.cxx:      G__InterfaceMethod stub;
+cintex/src/CINTFunctionBuilder.cxx:         funcname = G__ClassInfo(tagnum).Name();
+cintex/src/CINTFunctionBuilder.cxx:         funcname += G__ClassInfo(tagnum).Name();
+cintex/src/CINTFunctionBuilder.cxx:         access = G__PRIVATE;
+cintex/src/CINTFunctionBuilder.cxx:         access = G__PROTECTED;
+cintex/src/CINTFunctionBuilder.cxx:         access = G__PUBLIC;
+cintex/src/CINTFunctionBuilder.cxx:         const_ness = G__CONSTFUNC;
+cintex/src/CINTFunctionBuilder.cxx:         memory_type += G__CLASSSCOPE;
+cintex/src/CINTFunctionBuilder.cxx:      G__hash(funcname, hash, tmp);
+cintex/src/CINTFunctionBuilder.cxx:      G__usermemfunc_setup( const_cast<char*>(funcname.c_str()), // function Name
+cintex/src/CINTScopeBuilder.cxx:      G__linked_taginfo taginfo;
+cintex/src/CINTScopeBuilder.cxx:      int tagnum = G__defined_tagname(taginfo.tagname, 2);
+cintex/src/CINTScopeBuilder.cxx:      G__ClassInfo info(tagnum);
+cintex/src/CINTScopeBuilder.cxx:         G__get_linked_tagnum(&taginfo);
+cintex/src/CINTScopeBuilder.cxx:            G__tagtable_setup( taginfo.tagnum,       // tag number
+cintex/src/CINTScopeBuilder.cxx:                               G__CPPLINK,           // cpplink
+cintex/src/CINTTypedefBuilder.cxx:            if( -1 != G__defined_typename(nam.c_str()) ) return -1;
+cintex/src/CINTTypedefBuilder.cxx:            if ( !scope.IsTopScope() ) stagnum = ::G__defined_tagname(CintName(scope.Name(SCOPED)).c_str(), 1);
+cintex/src/CINTTypedefBuilder.cxx:            int r = ::G__search_typename2( t.Name().c_str(), rtypenum, rtagnum, 0, stagnum);
+cintex/src/CINTTypedefBuilder.cxx:            ::G__setnewtype(-1,NULL,0);
+cintex/src/CINTTypedefBuilder.cxx:         G__linked_taginfo taginfo;
+cintex/src/CINTTypedefBuilder.cxx:         G__search_typename2(name, 117, G__get_linked_tagnum(&taginfo),0,-1);
+cintex/src/CINTTypedefBuilder.cxx:         G__setnewtype(-1,NULL,0);
+cintex/src/CINTUtils.cxx:         tagnum = ::G__defined_tagname(dsc.second.c_str(), 2);
+cintex/src/CINTUtils.cxx:            G__linked_taginfo taginfo;
+cintex/src/CINTUtils.cxx:            G__get_linked_tagnum(&taginfo);
+cintex/src/CINTUtils.cxx:      else            return G__search_tagname(n.c_str(),'c');
+cintex/src/CINTUtils.cxx:            G__TypedefInfo tdef(ctype.second.c_str());
+cintex/src/CINTUtils.cxx:            int tagnum = G__defined_tagname(ctype.second.c_str(), 2);
+cintex/src/CINTUtils.cxx:            else if ( tagnum != -1 ) arg_sig += "'" + string(G__fulltagname(tagnum, 1)) + "'";
+cintex/src/CINTUtils.cxx:   void FillCintResult( G__value* result, const Type& typ, void* obj ) {
+cintex/src/CINTUtils.cxx:      case 'y': G__setnull(result); break;
+cintex/src/CINTUtils.cxx:         result->tagnum = G__search_tagname(ctype.second.c_str(),'c');
+cintex/src/CINTVariableBuilder.cxx:         ::G__resetplocal();
+cintex/src/CINTVariableBuilder.cxx:         int stagnum = ::G__defined_tagname(sname.c_str(), 2);
+cintex/src/CINTVariableBuilder.cxx:         ::G__tag_memvar_setup(stagnum);      
+cintex/src/CINTVariableBuilder.cxx:         ::G__resetglobalenv();
+cintex/src/CINTVariableBuilder.cxx:         ::G__tag_memvar_reset();
+cintex/src/CINTVariableBuilder.cxx:      int member_isstatic = G__AUTO;
+cintex/src/CINTVariableBuilder.cxx:         member_isstatic = G__LOCALSTATIC;
+cintex/src/CINTVariableBuilder.cxx:            ::G__loadlonglong(&member_tagnum, &member_typnum, G__LONGLONG);
+cintex/src/CINTVariableBuilder.cxx:            ::G__loadlonglong(&member_tagnum, &member_typnum, G__ULONGLONG);
+cintex/src/CINTVariableBuilder.cxx:            ::G__loadlonglong(&member_tagnum, &member_typnum, G__LONGDOUBLE);
+cintex/src/CINTVariableBuilder.cxx:      if ( dm.IsPrivate() )        member_access = G__PRIVATE;
+cintex/src/CINTVariableBuilder.cxx:      else if ( dm.IsProtected() ) member_access = G__PROTECTED;
+cintex/src/CINTVariableBuilder.cxx:      else if ( dm.IsPublic() )    member_access = G__PUBLIC;
+cintex/src/CINTVariableBuilder.cxx:            << (G__AUTO==member_isstatic ? "auto " : "static ")
+cintex/src/CINTVariableBuilder.cxx:      ::G__memvar_setup((void*)dm.Offset(),                         // p
+cintex/src/ROOTClassEnhancer.cxx:      int tagnum = ::G__defined_tagname(tagname, 2);
+cintex/src/ROOTClassEnhancer.cxx:      G__ClassInfo cl_info(tagnum);
