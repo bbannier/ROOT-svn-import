@@ -431,6 +431,72 @@ Bool_t TProofDataSetManager::ExistsDataSet(const char *group, const char *user,
    return (gSystem->AccessPathName(path) == kFALSE);
 }
 
+Bool_t TProofDataSetManager::BrowseDataSets(const char *group, const char *user,
+                                         const char *option, TMap* target)
+{
+   //
+   // adds the dataset in the folder of group, user to the list in target
+   //
+   // for the rest see comment of GetDataSets
+
+   TString userDirPath;
+   userDirPath.Form("%s/%s/%s", fDataSetDir.Data(), group, user);
+   void *userDir = gSystem->OpenDirectory(userDirPath);
+   if (!userDir)
+     return kFALSE;
+
+   TRegexp rg("^[^./][^/]*.root$");  //check that it is a root file, not starting with "."
+
+   // loop over datasets
+   const char *dsEnt = 0;
+   while ((dsEnt = gSystem->GetDirEntry(userDir))) {
+      TString datasetFile(dsEnt);
+      if (datasetFile.Index(rg) != kNPOS) {
+          TString datasetName(datasetFile(0, datasetFile.Length()-5));
+
+          if (!fSilent)
+            Info("GetDataSets", "found dataset %s of user %s in group %s",
+                                datasetName.Data(), user, group);
+
+          TFileCollection *fileList = GetDataSet(group, user, datasetName, option);
+          if (!fileList) {
+            if (!fSilent)
+                Error("GetDataSets", "dataset %s (user %s, group %s) could not be opened",
+                                    datasetName.Data(), user, group);
+            continue;
+          }
+
+          // we found a dataset, now add it to the map
+
+          // COMMON dataset transition
+          const char *mapGroup = group;
+          if (fCommonGroup == mapGroup)
+            mapGroup = fgCommonDataSetTag.Data();
+          const char *mapUser = user;
+          if (fCommonUser == mapUser)
+            mapUser = fgCommonDataSetTag.Data();
+
+          TMap *userMap = dynamic_cast<TMap*> (target->GetValue(mapGroup));
+          if (!userMap) {
+            userMap = new TMap;
+            userMap->SetOwner();
+            target->Add(new TObjString(mapGroup), userMap);
+          }
+
+          TMap *datasetMap = dynamic_cast<TMap*> (userMap->GetValue(mapUser));
+          if (!datasetMap) {
+            datasetMap = new TMap;
+            datasetMap->SetOwner();
+            userMap->Add(new TObjString(mapUser), datasetMap);
+          }
+          datasetMap->Add(new TObjString(datasetName), fileList);
+      }
+  }
+  gSystem->FreeDirectory(userDir);
+
+  return kTRUE;
+}
+
 //______________________________________________________________________________
 TMap *TProofDataSetManager::GetDataSets(const char *group, const char *user,
                                         const char *option)
@@ -443,6 +509,9 @@ TMap *TProofDataSetManager::GetDataSets(const char *group, const char *user,
    //    <group> --> <map of users> --> <map of datasets> --> <dataset> (TFileCollection)
    //
    // 'option' is forwarded to GetDataSet .
+   //
+   // if option contains D a default selection is shown that include the ones from the current user,
+   // the ones from the group and the common ones
 
    if (group && fgCommonDataSetTag == group)
      group = fCommonGroup;
@@ -450,29 +519,42 @@ TMap *TProofDataSetManager::GetDataSets(const char *group, const char *user,
    if (user && fgCommonDataSetTag == user)
      user = fCommonUser;
 
+   // convert * to "nothing"
+   if (strcmp(group, "*") == 0 || strlen(group) == 0)
+      group = 0;
+   if (strcmp(user, "*") == 0 || strlen(user) == 0)
+      user = 0;
+
    TMap *result = new TMap;
    result->SetOwner();
 
    if (!fSilent)
       Info("GetDataSets", "opening dir %s", fDataSetDir.Data());
 
+   if (TString(option).Contains("D", TString::kIgnoreCase))
+   {
+      // add the common ones
+      BrowseDataSets(fCommonGroup, fCommonUser, option, result);
+      user = 0;
+   }
+
+   // group, user defined, no looping needed
+   if (user && group)
+   {
+      BrowseDataSets(group, user, option, result);
+      return result;
+   }
+
    void *dataSetDir = 0;
    if ((dataSetDir = gSystem->OpenDirectory(fDataSetDir))) {
-      // loop over groups (or just process <group>)
-      Bool_t continueGroup = kTRUE;
-      while (continueGroup) {
-         const char *currentGroup = 0;
-
-         if (group && strlen(group) > 0 && strcmp(group, "*")) {
-            currentGroup = group;
-            continueGroup = kFALSE;
-         } else {
-            currentGroup = gSystem->GetDirEntry(dataSetDir);
-            if (!currentGroup)
-               break;
-         }
+      // loop over groups
+      const char *currentGroup = 0;
+      while ((currentGroup = gSystem->GetDirEntry(dataSetDir))) {
 
          if (strcmp(currentGroup, ".") == 0 || strcmp(currentGroup, "..") == 0)
+            continue;
+
+         if (group && strcmp(group, currentGroup))
             continue;
 
          TString groupDirPath;
@@ -482,76 +564,17 @@ TMap *TProofDataSetManager::GetDataSets(const char *group, const char *user,
          if (!groupDir)
             continue;
 
-         // loop over users (or just process <user>)
-         Bool_t continueUser = kTRUE;
-         while (continueUser) {
-            const char *currentUser = 0;
-            if (user && strlen(user) > 0 && strcmp(user, "*")) {
-               currentUser = user;
-               continueUser = kFALSE;
-            } else {
-               currentUser = gSystem->GetDirEntry(groupDir);
-               if (!currentUser)
-                  break;
-            }
+         // loop over users
+         const char *currentUser = 0;
+         while ((currentUser = gSystem->GetDirEntry(groupDir))) {
 
             if (strcmp(currentUser, ".") == 0 || strcmp(currentUser, "..") == 0)
                continue;
 
-            TString userDirPath;
-            userDirPath.Form("%s/%s", groupDirPath.Data(), currentUser);
-            void *userDir = gSystem->OpenDirectory(userDirPath);
-            if (!userDir)
+            if (user && strcmp(user, currentUser))
                continue;
 
-            TRegexp rg("^[^./][^/]*.root$");  //check that it is a root file, not starting with "."
-
-            // loop over datasets
-            const char *dsEnt = 0;
-            while ((dsEnt = gSystem->GetDirEntry(userDir))) {
-               TString datasetFile(dsEnt);
-               if (datasetFile.Index(rg) != kNPOS) {
-                  TString datasetName(datasetFile(0, datasetFile.Length()-5));
-
-                  if (!fSilent)
-                     Info("GetDataSets", "found dataset %s of user %s in group %s",
-                                        datasetName.Data(), currentUser, currentGroup);
-
-                  TFileCollection *fileList = GetDataSet(currentGroup, currentUser, datasetName, option);
-                  if (!fileList) {
-                     if (!fSilent)
-                        Error("GetDataSets", "dataset %s (user %s, group %s) could not be opened",
-                                            datasetName.Data(), currentUser, currentGroup);
-                     continue;
-                  }
-
-                  // we found a dataset, now add it to the map
-
-                  // COMMON dataset transition
-                  const char *mapGroup = currentGroup;
-                  if (fCommonGroup == mapGroup)
-                     mapGroup = fgCommonDataSetTag.Data();
-                  const char *mapUser = currentUser;
-                  if (fCommonUser == mapUser)
-                     mapUser = fgCommonDataSetTag.Data();
-
-                  TMap *userMap = dynamic_cast<TMap*> (result->GetValue(mapGroup));
-                  if (!userMap) {
-                     userMap = new TMap;
-                     userMap->SetOwner();
-                     result->Add(new TObjString(mapGroup), userMap);
-                  }
-
-                  TMap *datasetMap = dynamic_cast<TMap*> (userMap->GetValue(mapUser));
-                  if (!datasetMap) {
-                     datasetMap = new TMap;
-                     datasetMap->SetOwner();
-                     userMap->Add(new TObjString(mapUser), datasetMap);
-                  }
-                  datasetMap->Add(new TObjString(datasetName), fileList);
-               }
-            }
-            gSystem->FreeDirectory(userDir);
+            BrowseDataSets(currentGroup, currentUser, option, result);
          }
          gSystem->FreeDirectory(groupDir);
       }
@@ -1190,12 +1213,15 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
          {  (*mess) >> uri;
             (*mess) >> opt;
 
+            // if uri is empty we display the default selection
+            Bool_t showDefault = (uri.Length() == 0);
+
             if (ParseDataSetUri(uri, &dsGroup, &dsUser, 0, 0, kFALSE, kTRUE) == kFALSE) {
                rc = -1;
                break;
             }
 
-            TMap *datasets = GetDataSets(dsGroup, dsUser, "S");
+            TMap *datasets = GetDataSets(dsGroup, dsUser, ((showDefault) ? "DS" : "S"));
             if (!datasets) {
                Error("HandleRequest", "could not read datasets");
                rc = -1;
@@ -1270,12 +1296,15 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
          {  (*mess) >> uri;
             (*mess) >> opt;
 
+            // if uri is empty, return the default selection
+            Bool_t showDefault = (uri.Length() == 0);
+
             if (ParseDataSetUri(uri, &dsGroup, &dsUser, 0, 0, kFALSE, kTRUE) == kFALSE) {
                sock->Send(kMESS_NOTOK);
                break;
             }
 
-            TMap *datasets = GetDataSets(dsGroup, dsUser);
+            TMap *datasets = GetDataSets(dsGroup, dsUser, ((showDefault) ? "D" : ""));
             TMap *returnMap = new TMap;
 
             TIter iter(datasets);
@@ -1456,7 +1485,6 @@ Bool_t TProofDataSetManager::ParseDataSetUri(const char *uri,
  
    // construct our base URI using session defaults (host, group, user)
    TUri base(fMSSUrl + "/" + fGroup + "/" + fUser + "/");
-   base.Print();
 
    // append trailing slash if missing when wildcards enables
    TString uristr(uri);
@@ -1465,7 +1493,6 @@ Bool_t TProofDataSetManager::ParseDataSetUri(const char *uri,
 
    // resolve given URI agains the base
    TUri resolved = TUri::Transform(uristr, base);
-   resolved.Print();
 
    // some URI restrictions
    if (resolved.GetScheme() != base.GetScheme()) {
