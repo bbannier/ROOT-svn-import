@@ -18,9 +18,9 @@
 // TProof                                                               //
 //                                                                      //
 // This class controls a Parallel ROOT Facility, PROOF, cluster.        //
-// It fires the slave servers, it keeps track of how many slaves are    //
-// running, it keeps track of the slaves running status, it broadcasts  //
-// messages to all slaves, it collects results, etc.                    //
+// It fires the worker servers, it keeps track of how many workers are  //
+// running, it keeps track of the workers running status, it broadcasts //
+// messages to all workers, it collects results, etc.                   //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -358,6 +358,7 @@ private:
    TString         fWorkDir;         //current work directory on remote servers
    Int_t           fLogLevel;        //server debug logging level
    Int_t           fStatus;          //remote return status (part of kPROOF_LOGDONE)
+   TList          *fRecvMessages;    //Messages received during collect not yet processed
    TList          *fSlaveInfo;       //!list returned by kPROOF_GETSLAVEINFO
    Bool_t          fMasterServ;      //true if we are a master server
    Bool_t          fSendGroupView;   //if true send new group view
