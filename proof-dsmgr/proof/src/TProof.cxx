@@ -14,9 +14,9 @@
 // TProof                                                               //
 //                                                                      //
 // This class controls a Parallel ROOT Facility, PROOF, cluster.        //
-// It fires the slave servers, it keeps track of how many slaves are    //
-// running, it keeps track of the slaves running status, it broadcasts  //
-// messages to all slaves, it collects results, etc.                    //
+// It fires the worker servers, it keeps track of how many workers are  //
+// running, it keeps track of the workers running status, it broadcasts //
+// messages to all workers, it collects results, etc.                   //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -361,6 +361,7 @@ TProof::~TProof()
    SafeDelete(fEnabledPackagesOnClient);
    SafeDelete(fPackageLock);
    SafeDelete(fGlobalPackageDirList);
+   SafeDelete(fRecvMessages);
 
    // remove file with redirected logs
    if (!IsMaster()) {
@@ -451,6 +452,8 @@ Int_t TProof::Init(const char *masterurl, const char *conffile,
    fImage          = fMasterServ ? "" : "<local>";
    fIntHandler     = 0;
    fStatus         = 0;
+   fRecvMessages   = new TList;
+   fRecvMessages->SetOwner(kTRUE);
    fSlaveInfo      = 0;
    fChains         = new TList;
    fAvailablePackages = 0;
@@ -1791,7 +1794,10 @@ Int_t TProof::Collect(TMonitor *mon, Long_t timeout)
    // If timeout >= 0, wait at most timeout seconds (timeout = -1 by default,
    // which means wait forever).
 
+   // Reset the status flag and clear the messages in the list, if any
    fStatus = 0;
+   fRecvMessages->Clear();
+
    if (!mon->GetActive()) return 0;
 
    DeActivateAsyncInput();
@@ -1936,6 +1942,12 @@ Int_t TProof::CollectInputFrom(TSocket *s)
    }
 
    switch (what) {
+
+      case kMESS_OK:
+         // Add the message to the list
+         fRecvMessages->Add(mess);
+         delete_mess = kFALSE;
+         break;
 
       case kMESS_OBJECT:
          fPlayer->HandleRecvHisto(mess);
@@ -6797,6 +6809,7 @@ TMap *TProof::GetDataSets(const char *uri, const char* optStr)
    mess << TString(uri?uri:"");
    mess << TString(optStr?optStr:"");
    Broadcast(mess);
+#if 0
    TMessage *retMess = 0;
    master->Recv(retMess);
    TMap *dataSetMap = 0;
@@ -6809,6 +6822,22 @@ TMap *TProof::GetDataSets(const char *uri, const char* optStr)
 
    Collect(kActive, fCollectTimeout);
    delete retMess;
+#else
+   Collect(kActive, fCollectTimeout);
+   TMap *dataSetMap = 0;
+   if (fStatus != 0) {
+      Error("GetDataSets", "error receiving datasets information");
+   } else {
+      // Look in the list
+      TMessage *retMess = (TMessage *) fRecvMessages->First();
+      if (retMess && retMess->What() == kMESS_OK) {
+         if (!(dataSetMap = (TMap *)(retMess->ReadObject(TMap::Class()))))
+            Error("GetDataSets", "error receiving datasets");
+      } else
+         Error("GetDataSets", "message not found or wrong type (%p)", retMess);
+   }
+
+#endif
 
    return dataSetMap;
 }
@@ -6840,7 +6869,7 @@ void TProof::ShowDataSets(const char *uri, const char* optStr)
    mess << TString(optStr?optStr:"");
    Broadcast(mess);
 
-   Collect();
+   Collect(kActive, fCollectTimeout);
    if (fStatus != 0)
       Error("ShowDataSets", "error receiving datasets information");
 }
@@ -6870,6 +6899,7 @@ TFileCollection *TProof::GetDataSet(const char *uri, const char* optStr)
    nameMess << TString(optStr?optStr:"");
    if (Broadcast(nameMess) < 0)
       Error("GetDataSet", "sending request failed");
+#if 0
    TMessage *retMess = 0;
    master->Recv(retMess);
    TFileCollection *fileList = 0;
@@ -6880,6 +6910,21 @@ TFileCollection *TProof::GetDataSet(const char *uri, const char* optStr)
       Error("GetDataSet", "wrong message type %d", retMess->What());
    Collect(kActive, fCollectTimeout);
    delete retMess;
+#else
+   Collect(kActive, fCollectTimeout);
+   TFileCollection *fileList = 0;
+   if (fStatus != 0) {
+      Error("GetDataSet", "error receiving datasets information");
+   } else {
+      // Look in the list
+      TMessage *retMess = (TMessage *) fRecvMessages->First();
+      if (retMess && retMess->What() == kMESS_OK) {
+         if (!(fileList = (TFileCollection*)(retMess->ReadObject(TFileCollection::Class()))))
+            Error("GetDataSet", "error reading list of files");
+      } else
+         Error("GetQuota", "message not found or wrong type (%p)", retMess);
+   }
+#endif
    return fileList;
 }
 
@@ -6958,7 +7003,7 @@ Int_t TProof::VerifyDataSet(const char *uri, const char* optStr)
    Collect(kActive, fCollectTimeout);
 
    if (fStatus < 0) {
-      Printf("VerifyDataSet: no such dataset %s", uri);
+      Info("VerifyDataSet", "no such dataset %s", uri);
       return  -1;
    } else
       nMissingFiles = fStatus;
@@ -6983,6 +7028,7 @@ TMap *TProof::GetQuota(const char* optStr)
    mess << TString(optStr?optStr:"");
    Broadcast(mess);
 
+#if 0
    TMessage *retMess = 0;
    master->Recv(retMess);
 
@@ -6995,6 +7041,21 @@ TMap *TProof::GetQuota(const char* optStr)
 
    Collect();
    delete retMess;
+#else
+   Collect(kActive, fCollectTimeout);
+   TMap *groupQuotaMap = 0;
+   if (fStatus < 0) {
+      Info("GetQuota", "could not receive quota");
+   } else {
+      // Look in the list
+      TMessage *retMess = (TMessage *) fRecvMessages->First();
+      if (retMess && retMess->What() == kMESS_OK) {
+         if (!(groupQuotaMap = (TMap*)(retMess->ReadObject(TMap::Class()))))
+            Error("GetQuota", "error getting quotas");
+      } else
+         Error("GetQuota", "message not found or wrong type (%p)", retMess);
+   }
+#endif
 
    return groupQuotaMap;
 }

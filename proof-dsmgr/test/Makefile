@@ -83,6 +83,7 @@ else
 STRESSMATHLIBS = -lMathCore -lReflex -lCintex
 endif
 
+TRACKMATHSRC = TrackMathCoreRflx.$(SrcSuf)
 TRACKMATHOBJ = TrackMathCoreRflx.$(ObjSuf)
 TRACKMATHLIB = libTrackMathCoreRflx.$(DllSuf)
 
@@ -95,6 +96,7 @@ else
 STRESSMATHLIBS = -lMathCore
 endif
 
+TRACKMATHSRC = TrackMathCoreCint.$(SrcSuf)
 TRACKMATHOBJ = TrackMathCoreCint.$(ObjSuf)
 TRACKMATHLIB = libTrackMathCoreCint.$(DllSuf)
  
@@ -604,7 +606,7 @@ endif
 
 
 clean:
-		@rm -f $(OBJS) core
+		@rm -f $(OBJS) $(TRACKMATHSRC) core
 
 distclean:      clean
 		-@mv -f linearIO.root linearIO.roott
