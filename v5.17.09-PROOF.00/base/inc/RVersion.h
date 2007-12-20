@@ -15,11 +15,11 @@
 */
 
 #define ROOT_RELEASE "5.17/09"
-#define ROOT_RELEASE_DATE "Dec 14 2007"
-#define ROOT_RELEASE_TIME "08:49:58"
-#define ROOT_SVN_REVISION 21358
-#define ROOT_SVN_BRANCH "trunk"
-#define ROOT_VERSION_CODE 332041
+#define ROOT_RELEASE_DATE "Dec 20 2007"
+#define ROOT_RELEASE_TIME "01:30:00"
+#define ROOT_SVN_REVISION 21516
+#define ROOT_SVN_BRANCH "branches/dev/proof-tags/v5-17-09-PROOF-00"
+#define ROOT_VERSION_CODE 332133
 #define ROOT_VERSION(a,b,c) (((a) << 16) + ((b) << 8) + (c))
 
 #endif
