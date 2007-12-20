@@ -29,6 +29,4 @@ public:
    ClassDef(CLASS, 1); // Short description.
 };
 
-}
-
 #endif
