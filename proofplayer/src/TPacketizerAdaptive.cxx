@@ -480,7 +480,7 @@ TPacketizerAdaptive::TPacketizerAdaptive(TDSet *dset, TList *slaves,
    Double_t minPacketTime = 0;
    if (TProof::GetParameter(input, "PROOF_MinPacketTime",
                             minPacketTime) == 0) {
-      Info("Process", "using alternate minimum time of a packet: %ld",
+      Info("Process", "using alternate minimum time of a packet: %f",
            minPacketTime);
       fgMinPacketTime = (Int_t) minPacketTime;
    }
