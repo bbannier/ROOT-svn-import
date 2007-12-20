@@ -4513,7 +4513,7 @@ void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,in
                //fprintf(fp,"%s aux%i;\n",G__struct.name[param->p_tagtable],k);      
             //else
             if (param->p_typetable!=-1)       
-               fprintf(fp,"%s aux%i;\n",G__newtype.name[param->p_typetable],k);      
+               fprintf(fp,"%s aux%i();\n",G__newtype.name[param->p_typetable],k);      
 
       }
 
