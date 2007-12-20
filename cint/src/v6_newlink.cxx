@@ -4472,6 +4472,277 @@ void G__cppif_change_globalcomp()
 #endif // G__SMALLOBJECT
 }
 
+void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,int j){
+
+   static int func_cod = 0;
+
+   // We cannont create a pointer to a constructor. To get the symbol in the .o file we create an object and we call de destructor.
+   if (i!=-1&&!strcmp(ifunc->funcname[j] ,G__struct.name[i])) {
+
+      if(ifunc->para_nu[j]==1&&ifunc->param[j][0]->p_tagtable!=-1&&ifunc->param[j][0]->reftype==1)
+         return;
+
+      // We cannot create an object which belongs to an abstract class.
+      if (G__struct.isabstract[ifunc->tagnum])
+         return;
+
+      int paran = ifunc->para_nu[j];
+
+      // our flag for globalfunctions
+      int globalfunc = 0;
+      // The other important point is that variadic functions take the parameters
+      // in the opposite order
+      if (ifunc->tagnum < 0)
+         globalfunc = 1;
+
+      // if this is a variadic func then pass the parameters
+      // in the same order of methods not the one of globals functions
+      if(ifunc->ansi[j] == 2)
+         globalfunc = 0;
+
+      fprintf(fp, "void const%i%i(){\n", ifunc->tagnum, func_cod);
+
+      for (int i=paran-1; i>-1; i--) {  
+              
+         int k = (ifunc->para_nu[j]-1) - i;
+         G__paramfunc *param = ifunc->param[j][k];
+            
+         if(isupper(param->type)&&(param->p_tagtable!=-1||param->p_typetable!=-1)&&param->reftype==0)
+
+            //if (param->p_tagtable!=-1)            
+               //fprintf(fp,"%s aux%i;\n",G__struct.name[param->p_tagtable],k);      
+            //else
+            if (param->p_typetable!=-1)       
+               fprintf(fp,"%s aux%i;\n",G__newtype.name[param->p_typetable],k);      
+
+      }
+
+
+      fprintf(fp, "%s* obj%i = new %s(",ifunc->funcname[j], ifunc->tagnum, ifunc->funcname[j]);
+      //fprintf(fp, "obj%i->%s();\n", ifunc->tagnum, ifunc->funcname[j]);
+
+      int k = 0;
+      for (int counter=paran-1; counter>-1; counter--) {
+         //for (int k=paran-1; k>=0; k--) {    
+         // Parameters in libp
+         // First push all the parameters passed in libp
+         // and the push the params by default
+         G__value param;
+         void *paramref = 0;
+         int isref = 0;
+         //int k = counter;
+               
+         // if this is a variadic function we have to push the parameters
+         // in the inverse order
+         //if (!globalfunc)
+         k = (paran-1) - counter;
+         //else
+         //   k = counter;
+
+         G__paramfunc *formal_param = ifunc->param[j][k];
+         char para_type = formal_param->type;
+
+         // If we have more parameters than the declarations allows
+         // (variadic function) then take the type of the actual parameter
+         // ... forget to check the declaration (will be null)
+         if(ifunc->ansi[j]==2)
+            para_type = param.type;
+
+         if(formal_param->reftype && param.ref) {
+            isref = 1;
+            paramref = (void *) param.ref;
+         }
+            
+         if(isupper(formal_param->type)){
+            isref = 1;
+         }
+               
+         if (counter!=paran-1)
+            fprintf(fp,",");
+               
+         // Pushing Parameter
+         // By Value or By Reference?
+         if (!isref){// By Value
+
+                     // Parameter's type? Push is different for each type
+            switch(para_type){
+
+            case 'd' : // Double = Double Word
+            {
+               fprintf(fp, "(double) 0");
+                     
+            }
+            break;
+                   
+            case 'i' : // Integer = Single Word
+            {
+               if (formal_param->p_tagtable==-1)
+                  fprintf(fp, " 0");
+               else  
+                  fprintf(fp, " (%s) 0", G__struct.name[formal_param->p_tagtable]);
+                     
+            }
+            break;
+
+            case 'b' : // Unsigned Char ????
+            {
+               fprintf(fp, " 'a'");
+                     
+            }
+            break;
+
+            case 'c' : // Char
+            {
+               fprintf(fp, " 'a'");
+                     
+            }
+            break;
+            
+            case 's' : // Short
+            {
+               fprintf(fp, "(short) 0");
+                     
+            }
+            break;
+
+            case 'r' : // Unsigned Short
+            {
+               fprintf(fp, "(unsigned short) 0");
+                     
+            }
+            break;
+
+            case 'h' : // Unsigned Int
+            {
+               fprintf(fp, "(unsigned int) 0");
+                     
+            }
+            break;
+
+            case 'l' : // Long
+            {
+               fprintf(fp, "(long) 0");
+                     
+            }
+            break;
+
+            case 'k' || 'b': // Unsigned Long
+            {
+               fprintf(fp, "(unsigned long) 0");
+            }
+            break;
+
+            case 'f' : // Float // Shouldnt it be treated as a double?
+            { 
+               fprintf(fp, "(float) 0");
+            }
+            break;
+
+            case 'n' : // Long Long
+            {
+               fprintf(fp, " 0");
+            }
+            break;
+
+            case 'm' : // unsigned Long Long
+            {
+               fprintf(fp, " 0");
+            }
+            break;
+
+            case 'q' : // should this be treated with two resgisters two?
+            {
+               fprintf(fp, " 0");
+            }
+            break;
+
+            case 'g' : // bool 
+            {
+               fprintf(fp, " true");
+            }
+            break;
+
+            case 'u' : // a class... treat it as a reference
+            {
+               fprintf(fp, " (void*) 0x64");
+
+            }
+            break;
+
+            default:
+               G__fprinterr(G__serr,"Type %c not known yet (stub method)\n", para_type);
+            }
+         }
+         else{
+                     
+            if(formal_param->p_tagtable!=-1){
+               if (formal_param->reftype==1)
+                  fprintf(fp,"*((%s*) 0x64)",G__struct.name[formal_param->p_tagtable]);   
+               else 
+                  fprintf(fp,"(%s*) 0x64",G__struct.name[formal_param->p_tagtable]); 
+               //else
+               // fprintf(fp,"aux%i",k);
+            }
+            else{  
+               if (formal_param->p_typetable!=-1){
+                 //  if (formal_param->reftype==0)
+//                      fprintf(fp,"aux%i",k);
+//                   else
+                  fprintf(fp,"(%s*) 0x64",G__newtype.name[formal_param->p_typetable]); 
+               }
+               else{  
+                  // Parameter's type? Push is different for each type
+                  switch(formal_param->type){
+
+                  case 'D' : // Double* 
+                  {
+                     fprintf(fp, " (Double*) 0x64");
+                     
+                  }
+                  break;
+                   
+                  case 'I' : // Integer*
+                  {
+                     fprintf(fp, " (Int_t*) 0x64");
+                     
+                  }
+                  break;
+
+                  case 'C' : // *Char
+                  {
+                     if (formal_param->reftype==2)
+                        fprintf(fp,"(char**) 0"); 
+                     else  
+                        fprintf(fp,"(char*) 0"); 
+                  }
+                  break;
+                  case 'Y' : // (void*)
+                  {
+                     fprintf(fp, " (void*) 0x64");
+
+                  }
+                  break;
+
+                  default:
+                     fprintf(fp, " Unkown: %c", formal_param->type);
+                     G__fprinterr(G__serr,"Type %c not known yet (stub method)\n",formal_param->type);
+                  }  
+                          
+               }
+            }
+         }        
+      }
+
+      fprintf(fp, ");\n");
+      fprintf(fp,"delete obj%i;\n",ifunc->tagnum);
+      fprintf(fp, "}\n");
+               
+   }
+
+   func_cod++;
+
+}
+
 
 void G__cppif_geninline(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,int j)
 {
@@ -4491,10 +4762,10 @@ void G__cppif_geninline(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,i
    // Since we are now registering the symbols for the second dictionary too...
    // We can try to inline all the functions without symbol
    if( G__NOLINK>ifunc->globalcomp[j] &&  /* with -c-1 option */
-      G__PUBLIC==ifunc->access[j] && /* public, this is always true */
-      /*0==ifunc->staticalloc[j] &&*/
+       G__PUBLIC==ifunc->access[j] && /* public, this is always true */
+       /*0==ifunc->staticalloc[j] &&*/
        ifunc->hash[j] ){//&&
-       //!ifunc->mangled_name[j]) { DMS
+      //!ifunc->mangled_name[j]) { DMS
       // LF
       if(G__dicttype==2 || G__dicttype==4 || G__dicttype == 3) {
          // LF 21-06-07
@@ -4504,7 +4775,7 @@ void G__cppif_geninline(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,i
          if(i != -1) {
             G__hash(G__fulltagname(i,0),hash,idx);
          }
-
+         
          // Print the return type
                   
          // we need to convert A::operator T() to A::operator ::T, or
@@ -4523,11 +4794,11 @@ void G__cppif_geninline(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,i
          
          // Static functions are not casted as member-functions
          // but as normal functions
-        if(ifunc->staticalloc[j]
-           || (i == -1) // global functions         
-           || G__struct.type[i] == 'n'
-           || strcmp(ifunc->funcname[j], "operator new")==0 /*operator new must be treated as a static function*/
-           || strcmp(ifunc->funcname[j], "operator new[]")==0) {
+         if(ifunc->staticalloc[j]
+            || (i == -1) // global functions         
+            || G__struct.type[i] == 'n'
+            || strcmp(ifunc->funcname[j], "operator new")==0 /*operator new must be treated as a static function*/
+            || strcmp(ifunc->funcname[j], "operator new[]")==0) {
             
             fprintf(fp," (*fmptr_%s)(", G__map_cpp_funcname(ifunc->tagnum, ifunc->funcname[j], j, ifunc->page));
                  
@@ -4597,6 +4868,7 @@ void G__cppif_geninline(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,i
             } else
                fprintf(fp," = &%s::%s; \n", G__fulltagname(i,0), ifunc->funcname[j]);
          }
+         
       }
    }
 }
@@ -5008,6 +5280,20 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                }
             }
 #endif
+            // Constructor and dictionary #2 DMS
+            if(!(strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
+                 strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
+                 strncmp(G__fulltagname(i,0),"list", strlen("list"))==0 ||
+                 strncmp(G__fulltagname(i,0),"deque", strlen("deque"))==0 ||
+                 strncmp(G__fulltagname(i,0),"set", strlen("set"))==0 ||
+                 strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))==0 || 
+                 strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))==0 ||
+                 strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
+                 strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
+                 strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0) &&
+               !strcmp(ifunc->funcname[j],G__struct.name[i]) && G__dicttype==2)
+               G__cppif_dummyobj(fp, ifunc, i, j);
+
             if(strcmp(ifunc->funcname[j],G__struct.name[i])==0 && 
                (!(!ifunc->mangled_name[j] && ifunc->funcptr[j]==(void*)-1) ||
                 (!ifunc->mangled_name[j] && G__dicttype!=2 )
@@ -5072,8 +5358,8 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                      ++isdestructor;
                   else if(G__dicttype!=3 && G__dicttype!=4){
                      isdestructor = -1;
-                     if (G__dicttype==2)
-                        G__cppif_geninline(fp, ifunc, i, j);
+                   //   if (G__dicttype==2)
+//                         G__cppif_geninline(fp, ifunc, i, j);
                   }
                }
                else{
