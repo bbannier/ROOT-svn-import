@@ -428,7 +428,6 @@ TPacketizerAdaptive::TPacketizerAdaptive(TDSet *dset, TList *slaves,
 
    // Init pointer members
    fSlaveStats = 0;
-   fSlaveStats = 0;
    fUnAllocated = 0;
    fActive = 0;
    fFileNodes = 0;
@@ -482,7 +481,7 @@ TPacketizerAdaptive::TPacketizerAdaptive(TDSet *dset, TList *slaves,
    if (TProof::GetParameter(input, "PROOF_MinPacketTime",
                             minPacketTime) == 0) {
       Info("Process", "using alternate minimum time of a packet: %ld",
-           packetAsAFraction);
+           minPacketTime);
       fgMinPacketTime = (Int_t) minPacketTime;
    }
 
