@@ -332,12 +332,14 @@ TDSetElement *TDSet::Next(Long64_t /*totalEntries*/)
 }
 
 //______________________________________________________________________________
-Long64_t TDSetElement::GetEntries(Bool_t isTree)
+Long64_t TDSetElement::GetEntries(Bool_t isTree, Bool_t openfile)
 {
-   // Returns number of entries in tree or objects in file. Returns -1 in
-   // case of error.
+   // Returns number of entries in tree or objects in file.
+   // If not yet defined and 'openfile' is TRUE, get the number from the file
+   // (may considerably slow down the application).
+   // Returns -1 in case of error.
 
-   if (fEntries > -1)
+   if (fEntries > -1 || !openfile)
       return fEntries;
 
    Double_t start = 0;

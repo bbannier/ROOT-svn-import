@@ -68,6 +68,7 @@ private:
 protected:
    const char *GetDataSetPath(const char *group, const char *user, const char *dsName);
    void GetQuota(const char *group, const char *user, const char *dsName, TFileCollection *dataset);
+   Bool_t BrowseDataSets(const char *group, const char *user, const char *option, TMap *target);
 
 public:
    TProofDataSetManager(const char *dataSetDir,

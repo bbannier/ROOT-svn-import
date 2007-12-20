@@ -106,7 +106,7 @@ public:
    Long64_t         GetFirst() const { return fFirst; }
    void             SetFirst(Long64_t first) { fFirst = first; }
    Long64_t         GetNum() const { return fNum; }
-   Long64_t         GetEntries(Bool_t istree = kTRUE);
+   Long64_t         GetEntries(Bool_t istree = kTRUE, Bool_t openfile = kTRUE);
    void             SetEntries(Long64_t ent) { fEntries = ent; }
    const char      *GetMsd() const { return fMsd; }
    void             SetNum(Long64_t num) { fNum = num; }
