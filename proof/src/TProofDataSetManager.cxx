@@ -520,9 +520,9 @@ TMap *TProofDataSetManager::GetDataSets(const char *group, const char *user,
      user = fCommonUser;
 
    // convert * to "nothing"
-   if (strcmp(group, "*") == 0 || strlen(group) == 0)
+   if (group && (strcmp(group, "*") == 0 || strlen(group) == 0))
       group = 0;
-   if (strcmp(user, "*") == 0 || strlen(user) == 0)
+   if (user && (strcmp(user, "*") == 0 || strlen(user) == 0))
       user = 0;
 
    TMap *result = new TMap;
@@ -1271,13 +1271,13 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
                            const char *unit[4] = {"kB", "MB", "GB", "TB"};
                            Int_t k = 0;
                            Long64_t refsz = 1024;
-                           Int_t xsz = (Int_t) (dataset->GetTotalSize() / refsz);
+                           Long64_t xsz = (Long64_t) (dataset->GetTotalSize() / refsz);
                            while (xsz > 1024 && k < 3) {
                               k++;
                               refsz *= 1024;
-                              xsz = (Int_t) (dataset->GetTotalSize() / refsz);
+                              xsz = (Long64_t) (dataset->GetTotalSize() / refsz);
                            }
-                           Printf("%s|%7lld|%s|%5d %s| %3d %%", dsNameFormatted.Data(),
+                           Printf("%s|%7lld|%s|%5lld %s| %3d %%", dsNameFormatted.Data(),
                                   dataset->GetNFiles(), treeInfo.Data(),
                                   xsz, unit[k], (Int_t) dataset->GetStagedPercentage());
                         }
