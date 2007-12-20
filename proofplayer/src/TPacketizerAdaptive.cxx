@@ -926,7 +926,8 @@ void TPacketizerAdaptive::ValidateFiles(TDSet *dset, TList *slaves)
 
             slstat->fCurFile = file;
             TDSetElement *elem = file->GetElement();
-            if (elem->GetEntries() < -1 || strlen(elem->GetTitle()) <= 0) {
+            Long64_t entries = elem->GetEntries(kTRUE, kFALSE);
+            if (entries < -1 || strlen(elem->GetTitle()) <= 0) {
                // This is decremented when we get the reply
                file->GetNode()->IncExtSlaveCnt(slstat->GetName());
                TMessage m(kPROOF_GETENTRIES);
@@ -945,25 +946,25 @@ void TPacketizerAdaptive::ValidateFiles(TDSet *dset, TList *slaves)
                      elem->GetDirectory(), elem->GetObjName());
             } else {
                // Fill the info
-               elem->SetTDSetOffset(elem->GetEntries());
-               if (elem->GetEntries() > 0) {
+               elem->SetTDSetOffset(entries);
+               if (entries > 0) {
                   if (!elem->GetEntryList()) {
-                     if (elem->GetFirst() > elem->GetEntries()) {
+                     if (elem->GetFirst() > entries) {
                         Error("ValidateFiles",
                               "first (%d) higher then number of entries (%d) in %d",
-                              elem->GetFirst(), elem->GetEntries(), elem->GetFileName() );
+                              elem->GetFirst(), entries, elem->GetFileName() );
                         // disable element
                         slstat->fCurFile->SetDone();
                         elem->Invalidate();
                         dset->SetBit(TDSet::kSomeInvalid);
                      }
                      if (elem->GetNum() == -1) {
-                        elem->SetNum(elem->GetEntries() - elem->GetFirst());
-                     } else if (elem->GetFirst() + elem->GetNum() > elem->GetEntries()) {
+                        elem->SetNum(entries - elem->GetFirst());
+                     } else if (elem->GetFirst() + elem->GetNum() > entries) {
                         Warning("ValidateFiles", "Num (%lld) + First (%lld) larger then number of"
                                  " keys/entries (%lld) in %s", elem->GetNum(), elem->GetFirst(),
-                                 elem->GetEntries(), elem->GetFileName());
-                        elem->SetNum(elem->GetEntries() - elem->GetFirst());
+                                 entries, elem->GetFileName());
+                        elem->SetNum(entries - elem->GetFirst());
                      }
                   }
                }

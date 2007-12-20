@@ -1251,12 +1251,15 @@ void TProofServ::HandleSocketInput()
       case kPROOF_DATASETS:
          {
             Int_t rc = -1;
-            if (fDataSetManager)
-               rc = fDataSetManager->HandleRequest(mess, fSocket, fLogFile);
-            else
-               Error("HandleProcess",
-                     "data manager instance undefined! - Protocol error?");
-
+            if (fProtocol > 16) {
+               if (fDataSetManager)
+                  rc = fDataSetManager->HandleRequest(mess, fSocket, fLogFile);
+               else
+                  Error("HandleProcess",
+                        "data manager instance undefined! - Protocol error?");
+            } else {
+               Error("HandleProcess", "old client: no or incompatible data set support");
+            }
             SendLogFile(rc);
          }
          break;
