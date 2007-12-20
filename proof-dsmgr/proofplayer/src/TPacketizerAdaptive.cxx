@@ -926,7 +926,7 @@ void TPacketizerAdaptive::ValidateFiles(TDSet *dset, TList *slaves)
             slstat->fCurFile = file;
             TDSetElement *elem = file->GetElement();
             Long64_t entries = elem->GetEntries(kTRUE, kFALSE);
-            if (entries < -1 || strlen(elem->GetTitle()) <= 0) {
+            if (entries < 0 || strlen(elem->GetTitle()) <= 0) {
                // This is decremented when we get the reply
                file->GetNode()->IncExtSlaveCnt(slstat->GetName());
                TMessage m(kPROOF_GETENTRIES);
