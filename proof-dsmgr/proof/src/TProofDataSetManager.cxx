@@ -1228,7 +1228,8 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
                break;
             }
 
-            Printf("Dataset URI                               |# Files|Default tree|# Events|  Disk  |Staged");
+            TList output;
+            output.SetOwner();
 
             TIter iter(datasets);
             TObjString *group = 0;
@@ -1277,9 +1278,12 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
                               refsz *= 1024;
                               xsz = (Long64_t) (dataset->GetTotalSize() / refsz);
                            }
-                           Printf("%s|%7lld|%s|%5lld %s| %3d %%", dsNameFormatted.Data(),
+
+                           TObjString* formattedLine = new TObjString;
+                           formattedLine->String().Form("%s|%7lld|%s|%5lld %s| %3d %%", dsNameFormatted.Data(),
                                   dataset->GetNFiles(), treeInfo.Data(),
                                   xsz, unit[k], (Int_t) dataset->GetStagedPercentage());
+                           output.Add(formattedLine);
                         }
                         datasetMap->DeleteAll();
                      }
@@ -1290,6 +1294,14 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
             datasets->DeleteAll();
             delete datasets;
             datasets = 0;
+
+            output.Sort();
+
+            Printf("Dataset URI                               |# Files|Default tree|# Events|  Disk  |Staged");
+            TIter iter4(&output);
+            TObjString* formattedLine = 0;
+            while ((formattedLine = dynamic_cast<TObjString*> (iter4())))
+              Printf("%s", formattedLine->String().Data());
          }
          break;
       case TProof::kGetDataSets:
