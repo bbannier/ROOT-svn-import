@@ -1,5 +1,5 @@
 // @(#)root/mathmore:$Id$
-// Authors: L. Moneta, A. Zsenei   08/2005 
+// Author: L. Moneta, A. Zsenei   08/2005 
 
  /**********************************************************************
   *                                                                    *
@@ -50,11 +50,14 @@ namespace Math {
    class GSLFunctionWrapper; 
 
 
+//________________________________________________________________________________________________________
   /**
      Base class for GSL Root-Finding algorithms for one dimensional functions which do not use function derivatives. 
-     For finding the roots users should instantiate the RootFinder class with the corresponding algorithms 
-     See mathlib::RootFinder class for documentation.
-     See the GSL <A HREF="http://www.gnu.org/software/gsl/manual/gsl-ref_32.html#SEC428"> online manual</A> for 
+     For finding the roots users should not use this class directly but instantiate the template 
+     ROOT::Math::RootFinder class with the corresponding algorithms. 
+     For example the ROOT::Math::RootFinder<ROOT::Math::Roots::Brent> for using the Brent algorithm. See that class also 
+     for the documentation. 
+     See the GSL <A HREF="http://www.gnu.org/software/gsl/manual/html_node/Root-Bracketing-Algorithms.html"> online manual</A> for 
      information on the GSL Root-Finding algorithms
 
      @ingroup RootFinders

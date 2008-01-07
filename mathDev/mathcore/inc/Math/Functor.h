@@ -320,10 +320,12 @@ public:
 #endif   
 
 
-////////////////////////////////////////////////////////////////////////////////////////////////
+
+//_______________________________________________________________________________________________
 /**
-   Functor class for Multidimensional functions. 
-   It is used to wrap in a very simple and convenient way:  
+   Documentation for class Functor class. 
+   It is used to wrap in a very simple and convenient way multi-dimensional function objects. 
+   It can wrap all the following types:
    <ul>
    <li> any C++ callable object implemention double operator()( const double *  ) 
    <li> a free C function of type double ()(double * ) 
@@ -342,10 +344,6 @@ public:
 
    typedef IBaseFunctionMultiDim Impl;   
    typedef IBaseFunctionMultiDim::BaseFunc ImplBase;   
-   //typedef MultiDim Dim;  
-//    typedef typename Impl::DimType DimType; 
-//    typedef typename Impl::CapType CapType; 
-   
 
    /** 
       Default constructor
@@ -425,12 +423,12 @@ private :
    }  
 
 
-   std::auto_ptr<Impl> fImpl; 
+   std::auto_ptr<Impl> fImpl;   // pointer to base functor handler
 
 
 }; 
 
-
+//______________________________________________________________________________________
 /**
    Functor1D class for one-dimensional functions. 
    It is used to wrap in a very simple and convenient way: 
@@ -528,12 +526,12 @@ private :
    }  
 
 
-   std::auto_ptr<Impl> fImpl; 
+   std::auto_ptr<Impl> fImpl;   // pointer to base functor handler
 
 
 }; 
 
-
+//_______________________________________________________________________________________________
 /**
    GradFunctor class for Multidimensional gradient functions. 
    It is used to wrap in a very C++ callable object to make gradient functions. 
@@ -651,12 +649,13 @@ private :
       return fImpl->Derivative(x,icoord);
    }  
 
-   std::auto_ptr<Impl> fImpl; 
+   std::auto_ptr<Impl> fImpl;    // pointer to base grad functor handler
 
 
 }; 
 
 
+//_______________________________________________________________________________________________
 /**
    GradFunctor1D class for one-dimensional gradient functions. 
    It is used to wrap in a very C++ callable object to make a 1D gradient functions. 
@@ -774,7 +773,7 @@ private :
       return fImpl->Derivative(x);
    }  
 
-   std::auto_ptr<Impl> fImpl; 
+   std::auto_ptr<Impl> fImpl;    // pointer to base gradient functor handler
 
 }; 
 

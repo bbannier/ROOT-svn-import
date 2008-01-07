@@ -9,12 +9,25 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+// TBranchProxyClassDescriptor                                          //
+//                                                                      //
+// Hold the processed information about a TClass used in a TBranch while//
+// TTreeProxyGenerator is parsing the TTree information.                //
+// Also contains the routine use to generate the appropriate code       //
+// fragment in the result of MakeProxy.                                 //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
+
 #include "TBranchProxyDescriptor.h"
 #include "TBranchProxyClassDescriptor.h"
 
 #include "TClass.h"
 #include "TError.h"
 #include "TVirtualStreamerInfo.h"
+
+ClassImp(ROOT::TBranchProxyClassDescriptor);
 
 namespace ROOT {
 

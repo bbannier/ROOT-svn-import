@@ -16,6 +16,11 @@
 #include "tableDescriptor.h"
 
 class TClass;
+//______________________________________________________________________________
+//
+// TTableDescriptor - run-time descriptor of the TTable object rows.
+//______________________________________________________________________________
+
 
 class TTableDescriptor : public TTable {
 protected:
@@ -70,8 +75,8 @@ public:
 //    ClassDefTable(TTableDescriptor,tableDescriptor_st)
 protected:                                        
    static  TTableDescriptor *fgColDescriptors;     
-   virtual TTableDescriptor *GetDescriptorPointer() const     { return fgColDescriptors;}                 
-   virtual void SetDescriptorPointer(TTableDescriptor *list)  { fgColDescriptors = list;}                  
+   virtual TTableDescriptor *GetDescriptorPointer() const;
+   virtual void SetDescriptorPointer(TTableDescriptor *list);
 public:                                           
    typedef tableDescriptor_st* iterator;                   
    TTableDescriptor() : TTable("TTableDescriptor",sizeof(tableDescriptor_st)), fRowClass(0), fSecondDescriptor(0) {SetType("tableDescriptor_st");}      
@@ -103,6 +108,5 @@ inline  void    TTableDescriptor::SetSize(UInt_t size,Int_t column)      {((tabl
 inline  void    TTableDescriptor::SetTypeSize(UInt_t size,Int_t column)  {((tableDescriptor_st *)At(column))->fTypeSize   = size;  }
 inline  void    TTableDescriptor::SetDimensions(UInt_t dim,Int_t column) {((tableDescriptor_st *)At(column))->fDimensions = dim;   }
 inline  void    TTableDescriptor::SetColumnType(TTable::EColumnType type,Int_t column) {((tableDescriptor_st *)At(column))->fType = type;  }
-inline  void    TTableDescriptor::SetCommentsSetName(const char *name){fgCommentsName =  name;}
 
 #endif

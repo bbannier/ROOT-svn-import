@@ -13,12 +13,16 @@
 //                                                                      //
 // TFriendProxy                                                         //
 //                                                                      //
+// Concrete implementation of the proxy around a Friend Tree.           //
+//                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
 #include "TFriendProxy.h"
 #include "TTree.h"
 #include "TList.h"
 #include "TFriendElement.h"
+
+ClassImp(ROOT::TFriendProxy);
 
 namespace ROOT {
 

@@ -46,11 +46,11 @@ public:
    virtual void RemoveElementLocal(TEveElement* el);
    virtual void RemoveElementsLocal();
 
-   virtual TObject* GetEditorObject() const;
+   virtual TObject* GetEditorObject(const TEveException& eh="TEveViewer::GetEditorObject ") const;
 
    virtual Bool_t HandleElementPaste(TEveElement* el);
 
-   virtual const TGPicture* GetListTreeIcon() { return TEveElement::fgListTreeIcons[1]; }
+   virtual const TGPicture* GetListTreeIcon();
 
    ClassDef(TEveViewer, 0); // Reve representation of TGLViewer.
 };

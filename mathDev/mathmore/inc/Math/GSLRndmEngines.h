@@ -1,5 +1,5 @@
 // @(#)root/mathmore:$Id$
-// Authors: L. Moneta, A. Zsenei   08/2005 
+// Author: L. Moneta, A. Zsenei   08/2005 
 
  /**********************************************************************
   *                                                                    *
@@ -45,14 +45,26 @@ namespace Math {
   //typedef gsl_rng_type GSLRngType; 
    class GSLRngWrapper; 
 
+   //_________________________________________________________________
+   /**
+      GSLRandomEngine
+      Base class for all GSL random engines, 
+      normally user instantiate the derived classes
+      which creates internally the generator.
 
-    /**
-       Base class for all GSL engines, 
-       normally user instantiate the derived classes
-       which creates internally the generator. 
+      The main GSL generators (see 
+      <A HREF="http://www.gnu.org/software/gsl/manual/html_node/Random-number-generator-algorithms.html">
+      here</A>) are available as derived classes 
+      In addition to generate uniform numbers it provides method for 
+      generating numbers according to pre-defined distributions 
+      using the GSL functions from 
+      <A HREF="http://www.gnu.org/software/gsl/manual/html_node/Random-Number-Distributions.html">
+      GSL random number distributions</A>. 
+
+
        
-       @ingroup Random
-    */ 
+      @ingroup Random
+   */ 
    class GSLRandomEngine { 
 
    public: 
@@ -242,10 +254,14 @@ namespace Math {
       mutable unsigned int  fCurTime;      // current time used to seed the generator
 
    }; 
-
+   
+   //_____________________________________________________________________________________
    /**
-      Mersenne-Twister genertaor
+      Mersenne-Twister generator
+      gsl_rng_mt19937 from 
+      <A HREF="http://www.gnu.org/software/gsl/manual/html_node/Random-number-generator-algorithms.html">here</A>
 
+      
       @ingroup Random
    */
    class GSLRngMT : public GSLRandomEngine { 
@@ -253,8 +269,10 @@ namespace Math {
       GSLRngMT(); 
    };
 
+   //_____________________________________________________________________________________
    /**
       Ranlux generator (James, Luscher) (defaul luxury)
+      see <A HREF="http://www.gnu.org/software/gsl/manual/html_node/Random-number-generator-algorithms.html">here</A>
 
       @ingroup Random
    */
@@ -263,8 +281,10 @@ namespace Math {
       GSLRngRanLux(); 
    };
 
+   //_____________________________________________________________________________________
    /**
       Second generation of Ranlux generator (with  luxury level of 2)
+      see <A HREF="http://www.gnu.org/software/gsl/manual/html_node/Random-number-generator-algorithms.html">here</A>
 
       @ingroup Random
    */
@@ -273,8 +293,10 @@ namespace Math {
       GSLRngRanLux2(); 
    };
 
+   //_____________________________________________________________________________________
    /**
       48 bits version of Second generation of Ranlux generator (with  luxury level of 2)
+      see <A HREF="http://www.gnu.org/software/gsl/manual/html_node/Random-number-generator-algorithms.html">here</A>
 
       @ingroup Random
    */
@@ -284,8 +306,10 @@ namespace Math {
    };
 
 
+   //_____________________________________________________________________________________
    /**
       Tausworthe generator by L'Ecuyer
+      see <A HREF="http://www.gnu.org/software/gsl/manual/html_node/Random-number-generator-algorithms.html">here</A>
 
       @ingroup Random
    */
@@ -294,8 +318,10 @@ namespace Math {
       GSLRngTaus(); 
    };
 
+   //_____________________________________________________________________________________
    /**
       Lagged Fibonacci generator by Ziff
+      see <A HREF="http://www.gnu.org/software/gsl/manual/html_node/Random-number-generator-algorithms.html">here</A>
 
       @ingroup Random
    */
@@ -304,8 +330,10 @@ namespace Math {
       GSLRngGFSR4(); 
    };
 
+   //_____________________________________________________________________________________
    /**
       Combined multiple recursive  generator (L'Ecuyer)
+      see <A HREF="http://www.gnu.org/software/gsl/manual/html_node/Random-number-generator-algorithms.html">here</A>
 
       @ingroup Random
    */ 
@@ -314,8 +342,10 @@ namespace Math {
       GSLRngCMRG(); 
    };
 
+   //_____________________________________________________________________________________
    /**
       5-th order multiple recursive  generator (L'Ecuyer, Blouin and Coutre)
+      see <A HREF="http://www.gnu.org/software/gsl/manual/html_node/Random-number-generator-algorithms.html">here</A>
 
       @ingroup Random
    */ 
@@ -324,9 +354,12 @@ namespace Math {
       GSLRngMRG(); 
    };
 
+   //_____________________________________________________________________________________
    /**
       BSD rand() generator  
-
+      gsl_rmg_rand from 
+      <A HREF="http://www.gnu.org/software/gsl/manual/html_node/Unix-random-number-generators.html">here</A>
+      
       @ingroup Random
    */
    class GSLRngRand : public GSLRandomEngine { 
@@ -334,8 +367,10 @@ namespace Math {
       GSLRngRand(); 
    };
 
+   //_____________________________________________________________________________________
    /**
       RANMAR generator 
+      see <A HREF="http://www.gnu.org/software/gsl/manual/html_node/Unix-random-number-generators.html">here</A>
 
       @ingroup Random
    */
@@ -344,8 +379,10 @@ namespace Math {
       GSLRngRanMar(); 
    };
 
+   //_____________________________________________________________________________________
    /**
       MINSTD generator (Park and Miller)
+      see <A HREF="http://www.gnu.org/software/gsl/manual/html_node/Unix-random-number-generators.html">here</A>
 
       @ingroup Random
    */
