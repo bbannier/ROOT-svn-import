@@ -29,6 +29,28 @@ TTableDescriptor *TTableDescriptor::fgColDescriptors = 0;
 TString TTableDescriptor::fgCommentsName = ".comments";
 TableClassImp(TTableDescriptor,tableDescriptor_st)
 
+//___________________________________________________________________
+TTableDescriptor *TTableDescriptor::GetDescriptorPointer() const 
+{ 
+   //return column descriptor
+   return fgColDescriptors;
+}
+
+//___________________________________________________________________
+void TTableDescriptor::SetDescriptorPointer(TTableDescriptor *list)  
+{ 
+   //set table descriptor
+   fgColDescriptors = list;
+}
+
+//___________________________________________________________________
+void TTableDescriptor::SetCommentsSetName(const char *name)
+{
+   //set comments name
+   fgCommentsName =  name;
+}
+
+
 //______________________________________________________________________________
 void TTableDescriptor::Streamer(TBuffer &R__b)
 {
