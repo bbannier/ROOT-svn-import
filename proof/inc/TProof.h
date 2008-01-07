@@ -88,6 +88,8 @@ class TSemaphore;
 class TSocket;
 class TTree;
 class TVirtualMutex;
+class TFileCollection;
+class TMap;
 
 // protocol changes:
 // 1 -> 2: new arguments for Process() command, option added
@@ -105,9 +107,10 @@ class TVirtualMutex;
 // 13 -> 14: new proofserv environment setting
 // 14 -> 15: add support for entry lists; new version of TFileInfo
 // 15 -> 16: add support for generic non-data based processing
+// 16 -> 17: new dataset handling system; support for TFileCollection processing 
 
 // PROOF magic constants
-const Int_t       kPROOF_Protocol        = 16;            // protocol version number
+const Int_t       kPROOF_Protocol        = 17;            // protocol version number
 const Int_t       kPROOF_Port            = 1093;          // IANA registered PROOF port
 const char* const kPROOF_ConfFile        = "proof.conf";  // default config file
 const char* const kPROOF_ConfDir         = "/usr/local/root";  // default config dir
@@ -119,7 +122,6 @@ const char* const kPROOF_DataSetDir      = "datasets";    // dataset dir, under 
 const char* const kPROOF_CacheLockFile   = "proof-cache-lock-";   // cache lock file
 const char* const kPROOF_PackageLockFile = "proof-package-lock-"; // package lock file
 const char* const kPROOF_QueryLockFile   = "proof-query-lock-";   // query lock file
-const char* const kPROOF_DataSetLockFile = "proof-dataset-lock-"; // dataset lock file
 
 #ifndef R__WIN32
 const char* const kCP     = "/bin/cp -fp";
@@ -235,6 +237,7 @@ class TProof : public TNamed, public TQObject {
 friend class TPacketizer;
 friend class TPacketizerDev;
 friend class TPacketizerAdaptive;
+friend class TProofDataSetManager;
 friend class TProofServ;
 friend class TProofInputHandler;
 friend class TProofInterruptHandler;
@@ -265,9 +268,15 @@ public:
       kOverwriteNoFiles    = 0x10,
       kAskUser             = 0x0
    };
+   enum ERegisterOpt {
+      kFailIfExists        = 0,
+      kOverwriteIfExists   = 1,
+      kMergeIfExists       = 2
+   };
    enum EUploadDataSetAnswer {
       kError               = -1,
-      kDataSetExists       = -2
+      kDataSetExists       = -2,
+      kFail		   = -3
    };
    enum EUploadPackageOpt {
       kUntar               = 0x0,  //Untar over existing dir [default]
@@ -314,11 +323,14 @@ private:
       kUploadDataSet       = 1,  //Upload a dataset
       kCheckDataSetName    = 2,  //Check wheter dataset of this name exists
       kGetDataSets         = 3,  //List datasets saved on  the master node
-      kCreateDataSet       = 4,  //Save a TList object as a dataset
-      kGetDataSet          = 5,  //Get a TList of TFileInfo objects
+      kRegisterDataSet     = 4,  //Save a TList object as a dataset
+      kGetDataSet          = 5,  //Get a TFileCollection of TFileInfo objects
       kVerifyDataSet       = 6,  //Try open all files from a dataset and report results
       kRemoveDataSet       = 7,  //Remove a dataset but leave files belonging to it
-      kAppendDataSet       = 8   //Add new files to an existing dataset
+      kMergeDataSet        = 8,  //Add new files to an existing dataset
+      kShowDataSets        = 9,  //Shows datasets, returns formatted output
+      kGetQuota            = 10, //Get quota info per group
+      kShowQuota           = 11  //Show quotas
    };
    enum ESendFileOpt {
       kAscii               = 0x0,
@@ -336,12 +348,17 @@ private:
       kBuildAll            = 0,
       kCollectBuildResults = 1
    };
+   enum EProofShowQuotaOpt {
+      kPerGroup = 0x1,
+      kPerUser = 0x2
+   };
 
    Bool_t          fValid;           //is this a valid proof object
    TString         fMaster;          //master server ("" if a master); used in the browser
    TString         fWorkDir;         //current work directory on remote servers
    Int_t           fLogLevel;        //server debug logging level
    Int_t           fStatus;          //remote return status (part of kPROOF_LOGDONE)
+   TList          *fRecvMessages;    //Messages received during collect not yet processed
    TList          *fSlaveInfo;       //!list returned by kPROOF_GETSLAVEINFO
    Bool_t          fMasterServ;      //true if we are a master server
    Bool_t          fSendGroupView;   //if true send new group view
@@ -551,6 +568,9 @@ public:
    Long64_t    Process(TDSet *dset, const char *selector,
                        Option_t *option = "", Long64_t nentries = -1,
                        Long64_t firstentry = 0);
+   Long64_t    Process(TFileCollection *fc, const char *selector,
+                       Option_t *option = "", Long64_t nentries = -1,
+                       Long64_t firstentry = 0);
    Long64_t    Process(const char *dsetname, const char *selector,
                        Option_t *option = "", Long64_t nentries = -1,
                        Long64_t firstentry = 0, TObject *enl = 0);
@@ -616,16 +636,19 @@ public:
                                      const char *file,
                                      const char *dest = 0,
                                      Int_t opt = kAskUser);
-   Int_t       CreateDataSet(const char *dataset,
-                             TList *files,
-                             Int_t opt = kAskUser);
-   TList      *GetDataSets(const char *dir = 0);
-   void        ShowDataSets(const char *dir = 0);
+   Bool_t       RegisterDataSet(const char *name,
+                                TFileCollection *dataset, const char* optStr = "");
+   TMap        *GetDataSets(const char *uri = 0, const char* optStr = "");
+   void        ShowDataSets(const char *uri = 0, const char* optStr = "");
 
-   void        ShowDataSet(const char *dataset);
-   Int_t       RemoveDataSet(const char *dateset);
-   Int_t       VerifyDataSet(const char *dataset);
-   TList      *GetDataSet(const char *dataset);
+   TMap        *GetQuota(const char* optStr = "");
+   void        ShowQuota(Option_t* opt = 0);
+
+   void        ShowDataSet(const char *dataset, const char* opt = "M");
+   Int_t       RemoveDataSet(const char *dataset, const char* optStr = "");
+   Int_t       VerifyDataSet(const char *dataset, const char* optStr = "");
+   TFileCollection *GetDataSet(const char *dataset, const char* optStr = "");
+   TList       *FindDataSets(const char *searchString, const char* optStr = "");
 
    const char *GetMaster() const { return fMaster; }
    const char *GetConfDir() const { return fConfDir; }

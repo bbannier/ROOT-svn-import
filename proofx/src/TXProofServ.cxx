@@ -39,7 +39,6 @@
 #include "TProofDebug.h"
 #include "TProof.h"
 #include "TProofPlayer.h"
-#include "TProofQueryResult.h"
 #include "TRegexp.h"
 #include "TClass.h"
 #include "TROOT.h"
@@ -48,7 +47,6 @@
 #include "TXSocketHandler.h"
 #include "TXUnixSocket.h"
 #include "compiledata.h"
-#include "TProofResourcesStatic.h"
 #include "TProofNodeInfo.h"
 #include "XProofProtocol.h"
 
@@ -649,6 +647,9 @@ Int_t TXProofServ::Setup()
 
    // Install seg violation handler
    gSystem->AddSignalHandler(new TXProofServSegViolationHandler(this));
+
+   if (gProofDebugLevel > 0)
+      Info("Setup", "successfully completed");
 
    // Done
    return 0;

@@ -1174,6 +1174,7 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
       TMethodCall callEnv;
       TClass *cl;
       noData = dset->TestBit(TDSet::kEmpty) ? kTRUE : kFALSE;
+      TList *listOfMissingFiles = 0;
 
       if (noData) {
 
@@ -1207,7 +1208,18 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
 
          // Lookup - resolve the end-point urls to optmize the distribution.
          // The lookup was previously called in the packetizer's constructor.
-         TList *listOfMissingFiles = dset->Lookup(kTRUE);
+         Bool_t stagedOnly = kTRUE;
+         TString lookupopt;
+         if (TProof::GetParameter(fInput, "PROOF_LookupOpt", lookupopt) == 0)
+            // Check option
+            stagedOnly = (lookupopt == "all") ? kFALSE : kTRUE;
+         listOfMissingFiles = dset->Lookup(kTRUE, stagedOnly);
+         if (fProof->GetRunStatus() != TProof::kRunning) {
+            // We have been asked to stop
+            Error("Process", "received stop/abort request");
+            fExitStatus = kAborted;
+            return -1;
+         }
          if (fProof->GetRunStatus() != TProof::kRunning) {
             // We have been asked to stop
             Error("Process", "received stop/abort request");
@@ -1224,20 +1236,6 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
                delete listOfMissingFiles;
             }
             return -1;
-         } else if (listOfMissingFiles) {
-            TIter missingFiles(listOfMissingFiles);
-            TDSetElement *elem;
-            while ((elem = (TDSetElement*) missingFiles.Next()))
-               gProofServ->SendAsynMessage(Form("File not found: %s - skipping!",
-                                                elem->GetName()));
-            listOfMissingFiles->SetName("MissingFiles");
-            AddOutputObject(listOfMissingFiles);
-            TStatus *tmpStatus = (TStatus *)GetOutput("PROOF_Status");
-            if (!tmpStatus) {
-               tmpStatus = new TStatus();
-               AddOutputObject(tmpStatus);
-            }
-            tmpStatus->Add("Some files were missing; check 'missingFiles' list");
          }
 
          if (TProof::GetParameter(fInput, "PROOF_Packetizer", packetizer) != 0)
@@ -1267,6 +1265,10 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
          callEnv.SetParam((Long64_t) first);
          callEnv.SetParam((Long64_t) nentries);
          callEnv.SetParam((Long_t) fInput);
+
+         // We are going to test validity during the packetizer initialization
+         dset->SetBit(TDSet::kValidityChecked);
+         dset->ResetBit(TDSet::kSomeInvalid);
       }
 
       // Get an instance of the packetizer
@@ -1283,7 +1285,37 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
          fExitStatus = kAborted;
          return -1;
       }
+      // Add invalid elemnets to the list of missing elements
+      TDSetElement *elem = 0;
+      if (!noData && dset->TestBit(TDSet::kSomeInvalid)) {
+         TIter nxe(dset->GetListOfElements());
+         while ((elem = (TDSetElement *)nxe())) {
+            if (!elem->GetValid()) {
+               if (!listOfMissingFiles)
+                  listOfMissingFiles = new TList;
+               listOfMissingFiles->Add(elem);
+               dset->Remove(elem, kFALSE);
+            }
+         }
+         // The invalid elements have been removed
+         dset->ResetBit(TDSet::kSomeInvalid);
+      }
 
+      // Record the list of missing or invalid elements in the output list
+      if (listOfMissingFiles) {
+         TIter missingFiles(listOfMissingFiles);
+         while ((elem = (TDSetElement*) missingFiles.Next()))
+            gProofServ->SendAsynMessage(Form("File not found: %s - skipping!",
+                                             elem->GetName()));
+         listOfMissingFiles->SetName("MissingFiles");
+         AddOutputObject(listOfMissingFiles);
+         TStatus *tmpStatus = (TStatus *)GetOutput("PROOF_Status");
+         if (!tmpStatus) {
+            tmpStatus = new TStatus();
+            AddOutputObject(tmpStatus);
+         }
+         tmpStatus->Add("Some files were missing; check 'missingFiles' list");
+      }
       // reset start, this is now managed by the packetizer
       first = 0;
 

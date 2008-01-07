@@ -70,7 +70,7 @@
 #include "TThread.h"
 #include "TTree.h"
 #include "TUrl.h"
-
+#include "TFileCollection.h"
 
 TProof *gProof = 0;
 TVirtualMutex *gProofMutex = 0;
@@ -361,6 +361,7 @@ TProof::~TProof()
    SafeDelete(fEnabledPackagesOnClient);
    SafeDelete(fPackageLock);
    SafeDelete(fGlobalPackageDirList);
+   SafeDelete(fRecvMessages);
 
    // remove file with redirected logs
    if (!IsMaster()) {
@@ -451,6 +452,8 @@ Int_t TProof::Init(const char *masterurl, const char *conffile,
    fImage          = fMasterServ ? "" : "<local>";
    fIntHandler     = 0;
    fStatus         = 0;
+   fRecvMessages   = new TList;
+   fRecvMessages->SetOwner(kTRUE);
    fSlaveInfo      = 0;
    fChains         = new TList;
    fAvailablePackages = 0;
@@ -1791,7 +1794,10 @@ Int_t TProof::Collect(TMonitor *mon, Long_t timeout)
    // If timeout >= 0, wait at most timeout seconds (timeout = -1 by default,
    // which means wait forever).
 
+   // Reset the status flag and clear the messages in the list, if any
    fStatus = 0;
+   fRecvMessages->Clear();
+
    if (!mon->GetActive()) return 0;
 
    DeActivateAsyncInput();
@@ -1936,6 +1942,12 @@ Int_t TProof::CollectInputFrom(TSocket *s)
    }
 
    switch (what) {
+
+      case kMESS_OK:
+         // Add the message to the list
+         fRecvMessages->Add(mess);
+         delete_mess = kFALSE;
+         break;
 
       case kMESS_OBJECT:
          fPlayer->HandleRecvHisto(mess);
@@ -2842,6 +2854,58 @@ Long64_t TProof::Process(TDSet *dset, const char *selector, Option_t *option,
 
 //   // Clear input list
 //   fPlayer->ClearInput();
+
+   if (fSync) {
+      // reactivate the default application interrupt handler
+      if (sh)
+         gSystem->AddSignalHandler(sh);
+   }
+
+   return rv;
+}
+
+//______________________________________________________________________________
+Long64_t TProof::Process(TFileCollection *fc, const char *selector,
+                         Option_t *option, Long64_t nentries, Long64_t first)
+{
+   // Process a data set (TFileCollection) using the specified selector (.C) file.
+   // The return value is -1 in case of error and TSelector::GetStatus() in
+   // in case of success.
+
+   if (!IsValid()) return -1;
+
+   if (fProtocol < 17) {
+      Info("Process", "server version < 5.18/00:"
+                      " processing of TFileCollection not supported");
+      return -1;
+   }
+
+   // Resolve query mode
+   fSync = (GetQueryMode(option) == kSync);
+
+   if (fSync && !IsIdle()) {
+      Info("Process","not idle, cannot submit synchronous query");
+      return -1;
+   }
+
+   // deactivate the default application interrupt handler
+   // ctrl-c's will be forwarded to PROOF to stop the processing
+   TSignalHandler *sh = 0;
+   if (fSync) {
+      if (gApplication)
+         sh = gSystem->RemoveSignalHandler(gApplication->GetSignalHandler());
+   }
+
+   Long64_t rv = -1;
+#if 0
+   // Attach the TFileCollection to an ad hoc TDset
+
+   Long64_t rv = fPlayer->Process(dset, selector, option, nentries, first);
+#else
+
+    Warning("Process", "processing of TFileCollection not implemented yet (%p)", fc);
+
+#endif
 
    if (fSync) {
       // reactivate the default application interrupt handler
@@ -6392,7 +6456,7 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
    // Client                             Master
    //    |------------>DataSetName----------->|
    //    |<-------kMESS_OK/kMESS_NOTOK<-------| (Name OK/file exist)
-   // (*)|-------> call CreateDataSet ------->|
+   // (*)|-------> call RegisterDataSet ------->|
    // (*) - optional
 
    if (fProtocol < 15) {
@@ -6501,7 +6565,7 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
       delete[] relativeDestDir;
 
       // Now we will actually copy files and create the TList object
-      TList *fileList = new TList();
+      TFileCollection *fileList = new TFileCollection();
       TIter next(files);
       while (TFileInfo *fileInfo = ((TFileInfo*)next())) {
          TUrl *fileUrl = fileInfo->GetFirstUrl();
@@ -6537,11 +6601,11 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
                Printf("Uploading %s to %s/%s",
                       fileUrl->GetUrl(), dest.Data(), ent);
                if (TFile::Cp(fileUrl->GetUrl(), Form("%s/%s", dest.Data(), ent))) {
-                  fileList->Add(new TFileInfo(Form("%s/%s", dest.Data(), ent)));
+                  fileList->GetList()->Add(new TFileInfo(Form("%s/%s", dest.Data(), ent)));
                } else
                   Error("UploadDataSet", "file %s was not copied", fileUrl->GetUrl());
             } else {  // don't overwrite, but file exist and must be included
-               fileList->Add(new TFileInfo(Form("%s/%s", dest.Data(), ent)));
+               fileList->GetList()->Add(new TFileInfo(Form("%s/%s", dest.Data(), ent)));
                if (skippedFiles) {
                   // user specified the TList *skippedFiles argument so we create
                   // the list of skipped files
@@ -6551,16 +6615,15 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
          } //if matching dir entry
       } //while
 
-      if ((fileCount = fileList->GetSize()) == 0) {
+      if ((fileCount = fileList->GetList()->GetSize()) == 0) {
          Printf("No files were copied. The dataset will not be saved");
       } else {
-         if (CreateDataSet(dataSetName, fileList,
-                     appendToDataSet?kAppend:kOverwriteDataSet) <= 0) {
+         TString opt = (appendToDataSet) ? "" : "O";
+         if (!RegisterDataSet(dataSetName, fileList, opt)) {
             Error("UploadDataSet", "Error while saving dataset!");
             fileCount = kError;
          }
       }
-      fileList->SetOwner();
       delete fileList;
    } else if (overwriteNoDataSet) {
       Printf("Dataset %s already exists", dataSetName);
@@ -6673,26 +6736,15 @@ Int_t TProof::UploadDataSetFromFile(const char *dataset, const char *file,
 }
 
 //______________________________________________________________________________
-Int_t TProof::CreateDataSet(const char *dataSetName,
-                              TList *files,
-                              Int_t opt)
+Bool_t TProof::RegisterDataSet(const char *dataSetName,
+                               TFileCollection *dataSet, const char* optStr)
 {
-   // Create a dataSet from files existing on the cluster (listed in files)
-   // and save it as dataSetName.
-   // No files are uploaded nor verified to exist on the cluster
-   // The 'files' argument is a list of TFileInfo objects describing the files
-   // as first url.
-   // The mask 'opt' is a combination of EUploadOpt:
-   //   kAppend             (0x1)   if set true files will be appended to
-   //                               the dataset existing by given name
-   //   kOverwriteDataSet   (0x2)   if dataset with given name exited it
-   //                               would be overwritten
-   //   kNoOverwriteDataSet (0x4)   do not overwirte if the dataset exists
-   //   kAskUser            (0x0)   ask user before overwriteng dataset/files
-   // The default value is kAskUser.
-   // The user will be asked to confirm overwriting dataset or files unless
-   // specified opt provides the answer!
-   //
+   // Register the 'dataSet' on the cluster under the current
+   // user, group and the given 'dataSetName'.
+   // Fails if a dataset named 'dataSetName' already exists, unless 'optStr'
+   // contains 'O', in which case the old dataset is overwritten.
+   // Returns kTRUE on success.
+
    // Communication Summary
    //   Client                              Master
    //     |------------>DataSetName----------->|
@@ -6702,196 +6754,113 @@ Int_t TProof::CreateDataSet(const char *dataSetName,
    //  (*) - optional
 
    // Check TFileInfo compatibility
-   if (fProtocol < 15) {
-      Info("CreateDataSet", "functionality not available: the server has an"
-                            " incompatible version of TFileInfo");
-      return kError;
+   if (fProtocol < 17) {
+      Info("RegisterDataSet",
+           "functionality not available: the server does not have dataset support");
+      return kFALSE;
    }
-
-   // check if  dataSetName is not excluded
-   if (strchr(dataSetName, '/')) {
-      if (strstr(dataSetName, "public") != dataSetName) {
-         Error("CreateDataSet",
-               "Name of public dataset should start with public/");
-         return kError;
-      }
-   }
-   if (opt & kOverwriteDataSet && opt & kAppend
-       || opt & kNoOverwriteDataSet && opt & kAppend
-       || opt & kNoOverwriteDataSet && opt & kOverwriteDataSet
-       || opt & kAskUser && opt & (kOverwriteDataSet |
-                                   kNoOverwriteDataSet |
-                                   kAppend)) {
-      Error("CreateDataSet", "you specified contradicting options.");
-      return kError;
-   }
-
-   if (opt & kOverwriteAllFiles || opt & kOverwriteNoFiles) {
-      Error("CreateDataSet", "you specified unsupported options.");
-      return kError;
-   }
-
-   // Decode options
-   Int_t goodName = (opt & (kOverwriteDataSet | kAppend)) ? 1 : -1;
-   Int_t appendToDataSet = (opt & kAppend) ? kTRUE : kFALSE;
-   Int_t overwriteNoDataSet = (opt & kNoOverwriteDataSet) ? kTRUE : kFALSE;
 
    TSocket *master;
    if (fActiveSlaves->GetSize())
       master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
    else {
-      Error("CreateDataSet", "No connection to the master!");
-      return kError;
+      Error("RegisterDataSet", "No connection to the master!");
+      return kFALSE;
    }
 
-   Int_t fileCount = 0; // return value
-   //TODO Below if statement is a copy from UploadDataSet
-   TMessage *retMess;
-   if (goodName == -1) { // -1 for undefined
-      // First check whether this dataset already exist unless
-      // kAppend or kOverWriteDataSet
-      TMessage nameMess(kPROOF_DATASETS);
-      nameMess << Int_t(kCheckDataSetName);
-      nameMess << TString(dataSetName);
-      Broadcast(nameMess);
-      master->Recv(retMess);
-      Collect(kActive, fCollectTimeout); //after each call to HandleDataSets
-      if (retMess->What() == kMESS_NOTOK) {
-         //We ask user to agree on overwriting the dataset name
-         while (goodName == -1 && !overwriteNoDataSet) {
-            Printf("Dataset %s already exists. ",
-                   dataSetName);
-            Printf("Do you want to overwrite it[Yes/No/Append]?");
-            TString answer;
-            answer.ReadToken(cin);
-            if (!strncasecmp(answer.Data(), "y", 1)) {
-               goodName = 1;
-            } else if (!strncasecmp(answer.Data(), "n", 1)) {
-               goodName = 0;
-            } else if (!strncasecmp(answer.Data(), "a", 1)) {
-               goodName = 1;
-               appendToDataSet = kTRUE;
-            }
-         }
-      }
-      else if (retMess->What() == kMESS_OK)
-         goodName = 1;
-      else
-         Error("CreateDataSet", "unrecongnized message type: %d!",
-            retMess->What());
-      delete retMess;
-   } // if (goodName == -1)
-   if (goodName == 1) {
-      if ((fileCount = files->GetSize()) == 0) {
-         Printf("No files specified!");
-      } else {
-         TMessage mess(kPROOF_DATASETS);
-         if (appendToDataSet)
-            mess << Int_t(kAppendDataSet);
-         else
-            mess << Int_t(kCreateDataSet);
-         mess << TString(dataSetName);
-         mess.WriteObject(files);
-         Broadcast(mess);
-         //Reusing the retMess.
-         if (master->Recv(retMess) <= 0) {
-            Error("CreateDataSet", "No response form the master");
-            fileCount = -1;
-         } else {
-            if (retMess->What() == kMESS_NOTOK) {
-               Printf("Dataset was not saved.");
-               fileCount = -1;
-            } else if (retMess->What() != kMESS_OK)
-               Error("CreateDataSet",
-                     "Unexpected message type: %d", retMess->What());
-            delete retMess;
-         }
-         Collect(kActive, fCollectTimeout);
-      }
-   } else if (overwriteNoDataSet) {
-      Printf("Dataset %s already exists", dataSetName);
-      return kDataSetExists;
-   } //if(goodName == 1)
+   TMessage mess(kPROOF_DATASETS);
+   mess << Int_t(kRegisterDataSet);
+   mess << TString(dataSetName);
+   mess << TString(optStr);
+   mess.WriteObject(dataSet);
+   Broadcast(mess);
 
-   return fileCount;
+   Bool_t result = kTRUE;
+   Collect();
+   if (fStatus != 0) {
+      Error("RegisterDataSet", "dataset was not saved");
+      result = kFALSE;
+   }
+   return result;
 }
 
 //______________________________________________________________________________
-TList *TProof::GetDataSets(const char *dir)
+TMap *TProof::GetDataSets(const char *uri, const char* optStr)
 {
-   // Get TList of TObjStrings with all datasets available on master:
-   // * with dir undifined - just ls contents of ~/proof/datasets,
-   // * with dir == "public" - ls ~/proof/datasets/public
-   // * with dir == "~username/public" - ls ~/username/datasets/public
+   // lists all datasets
+   // that match given uri
 
    if (fProtocol < 15) {
-      Info("GetDataSets", "functionality not available: the server has an"
-                          " incompatible version of TFileInfo");
+      Info("GetDataSets",
+           "functionality not available: the server does not have dataset support");
       return 0;
    }
 
-   TSocket *master;
+   TSocket *master = 0;
    if (fActiveSlaves->GetSize())
       master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
    else {
-      Error("GetDataSets", "No connection to the master!");
+      Error("GetDataSets", "no connection to the master!");
       return 0;
-   }
-
-   if (dir) {
-      // check if dir is correct; this check is not exhaustive
-      if (strstr(dir, "public") != dir && strchr(dir, '~') != dir) {
-         // dir does not start with "public" nor with '~'
-         Error("GetDataSets",
-               "directory should be of form '[~userName/]public'");
-         return 0;
-      }
    }
 
    TMessage mess(kPROOF_DATASETS);
    mess << Int_t(kGetDataSets);
-   mess << TString(dir?dir:"");
+   mess << TString(uri?uri:"");
+   mess << TString(optStr?optStr:"");
    Broadcast(mess);
-   TMessage *retMess;
-   master->Recv(retMess);
-   TList *dataSetList = 0;
-   if (retMess->What() == kMESS_OBJECT) {
-      dataSetList = (TList*)(retMess->ReadObject(TList::Class()));
-      if (!dataSetList)
-         Error("GetDataSets", "Error receiving list of datasets");
-   } else
-      Printf("The dataset directory could not be open");
    Collect(kActive, fCollectTimeout);
-   delete retMess;
-   return dataSetList;
+
+   TMap *dataSetMap = 0;
+   if (fStatus != 0) {
+      Error("GetDataSets", "error receiving datasets information");
+   } else {
+      // Look in the list
+      TMessage *retMess = (TMessage *) fRecvMessages->First();
+      if (retMess && retMess->What() == kMESS_OK) {
+         if (!(dataSetMap = (TMap *)(retMess->ReadObject(TMap::Class()))))
+            Error("GetDataSets", "error receiving datasets");
+      } else
+         Error("GetDataSets", "message not found or wrong type (%p)", retMess);
+   }
+
+   return dataSetMap;
 }
 
 //______________________________________________________________________________
-void TProof::ShowDataSets(const char *dir)
+void TProof::ShowDataSets(const char *uri, const char* optStr)
 {
-   // Show all datasets uploaded to the cluster (just ls contents of
-   // ~/proof/datasets or user/proof/datasets/public if 'dir' is defined).
-   // * with dir undifined - just ls contents of ~/proof/datasets,
-   // * with dir == "public" - ls ~/proof/datasets/public
-   // * with dir == "~username/public" - ls ~/username/datasets/public
+   // Shows datasets in locations that match the uri
+   // By default shows the user's datasets and global ones
 
-   TList *dataSetList;
-   if ((dataSetList = GetDataSets(dir))) {
-      if (dir)
-         Printf("DataSets in %s :", dir);
-      else
-         Printf("Existing DataSets:");
-      TIter next(dataSetList);
-      while (TObjString *obj = (TObjString*)next())
-         Printf("%s", obj->GetString().Data());
-      dataSetList->SetOwner();
-      delete dataSetList;
-   } else
-      Printf("Error getting a list of datasets");
+   if (fProtocol < 15) {
+      Info("ShowDataSets",
+           "functionality not available: the server does not have dataset support");
+      return;
+   }
+
+   TSocket *master = 0;
+   if (fActiveSlaves->GetSize())
+      master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
+   else {
+      Error("ShowDataSets",
+            "no connection to the master!");
+      return;
+   }
+
+   TMessage mess(kPROOF_DATASETS);
+   mess << Int_t(kShowDataSets);
+   mess << TString(uri?uri:"");
+   mess << TString(optStr?optStr:"");
+   Broadcast(mess);
+
+   Collect(kActive, fCollectTimeout);
+   if (fStatus != 0)
+      Error("ShowDataSets", "error receiving datasets information");
 }
 
 //______________________________________________________________________________
-TList *TProof::GetDataSet(const char *dataset)
+TFileCollection *TProof::GetDataSet(const char *uri, const char* optStr)
 {
    // Get a list of TFileInfo objects describing the files of the specified
    // dataset.
@@ -6902,94 +6871,86 @@ TList *TProof::GetDataSet(const char *dataset)
       return 0;
    }
 
-   TSocket *master;
+   TSocket *master = 0;
    if (fActiveSlaves->GetSize())
       master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
    else {
-      Error("GetDataSet", "No connection to the master!");
+      Error("GetDataSet", "no connection to the master!");
       return 0;
    }
    TMessage nameMess(kPROOF_DATASETS);
    nameMess << Int_t(kGetDataSet);
-   nameMess << TString(dataset);
+   nameMess << TString(uri?uri:"");
+   nameMess << TString(optStr?optStr:"");
    if (Broadcast(nameMess) < 0)
-      Error("GetDataSet", "Sending request failed");
-   TMessage *retMess;
-   master->Recv(retMess);
-   TList *fileList = 0;
-   if (retMess->What() == kMESS_OK) {
-      if (!(fileList = (TList*)(retMess->ReadObject(TList::Class()))))
-         Error("GetDataSet", "Error reading list of files");
-   } else if (retMess->What() != kMESS_NOTOK)
-      Error("GetDataSet", "Wrong message type %d", retMess->What());
+      Error("GetDataSet", "sending request failed");
+
    Collect(kActive, fCollectTimeout);
-   delete retMess;
+   TFileCollection *fileList = 0;
+   if (fStatus != 0) {
+      Error("GetDataSet", "error receiving datasets information");
+   } else {
+      // Look in the list
+      TMessage *retMess = (TMessage *) fRecvMessages->First();
+      if (retMess && retMess->What() == kMESS_OK) {
+         if (!(fileList = (TFileCollection*)(retMess->ReadObject(TFileCollection::Class()))))
+            Error("GetDataSet", "error reading list of files");
+      } else
+         Error("GetQuota", "message not found or wrong type (%p)", retMess);
+   }
+
    return fileList;
 }
 
 //______________________________________________________________________________
-void TProof::ShowDataSet(const char *dataset)
+void TProof::ShowDataSet(const char *uri, const char* opt)
 {
-   //Show content of specific dataset (cat ~/proof/datasets/dataset).
+   // display meta-info for given dataset usi
 
-   TList *fileList;
-   if ((fileList = GetDataSet(dataset))) {
-      if (fileList->GetSize()) {
-         //printing sorted list
-         Printf("Files in %s:", dataset);
-         TIter next(fileList);
-         while (TFileInfo *obj = (TFileInfo*)next())
-            Printf("%s", obj->GetFirstUrl()->GetUrl());
-      } else
-         Printf("There are no files in %s", dataset);
+   TFileCollection *fileList = 0;
+   if ((fileList = GetDataSet(uri))) {
+      fileList->Print(opt);
       delete fileList;
-   }
-   else
-      Printf("No such dataset: %s", dataset);
+   } else
+      Warning("ShowDataSet","no such dataset: %s", uri);
 }
 
 //______________________________________________________________________________
-Int_t TProof::RemoveDataSet(const char *dataSet)
+Int_t TProof::RemoveDataSet(const char *uri, const char* optStr)
 {
    // Remove the specified dataset from the PROOF cluster.
    // Files are not deleted.
-
-   // check if  dataSetName is not excluded
-//   if (strchr(dataSet, '/')) {
-//      Error("RemoveDataSet", "Dataset name shall not include '/'");
-//      return kError;
-//   }
 
    TSocket *master;
    if (fActiveSlaves->GetSize())
       master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
    else {
-      Error("RemoveDataSet", "No connection to the master!");
+      Error("RemoveDataSet", "no connection to the master!");
       return kError;
    }
    TMessage nameMess(kPROOF_DATASETS);
    nameMess << Int_t(kRemoveDataSet);
-   nameMess << TString(dataSet);
+   nameMess << TString(uri?uri:"");
+   nameMess << TString(optStr?optStr:"");
    if (Broadcast(nameMess) < 0)
-      Error("RemoveDataSet", "Sending request failed");
-   TMessage *mess;
-   TString errorMess;
-   master->Recv(mess);
+      Error("RemoveDataSet", "sending request failed");
    Collect(kActive, fCollectTimeout);
-   if (mess->What() != kMESS_OK) {
-      if (mess->What() != kMESS_NOTOK)
-         Error("RemoveDataSet", "unrecongnized message type: %d!",
-               mess->What());
-      delete mess;
+
+   if (fStatus != 0)
       return -1;
-   } else {
-      delete mess;
+   else
       return 0;
-   }
 }
 
 //______________________________________________________________________________
-Int_t TProof::VerifyDataSet(const char *dataSet)
+TList* TProof::FindDataSets(const char* /*searchString*/, const char* /*optStr*/)
+{
+   Error ("FindDataSets", "not yet implemented");
+   return (TList *) 0;
+}
+
+//______________________________________________________________________________
+Int_t TProof::VerifyDataSet(const char *uri, const char* optStr)
 {
    // Verify if all files in the specified dataset are available.
    // Print a list and return the number of missing files.
@@ -7005,43 +6966,88 @@ Int_t TProof::VerifyDataSet(const char *dataSet)
    if (fActiveSlaves->GetSize())
       master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
    else {
-      Error("VerifyDataSet", "No connection to the master!");
+      Error("VerifyDataSet", "no connection to the master!");
       return kError;
    }
    TMessage nameMess(kPROOF_DATASETS);
    nameMess << Int_t(kVerifyDataSet);
-   nameMess << TString(dataSet);
-   if (Broadcast(nameMess) < 0)
-      Error("VerifyDataSet", "Sending request failed");
-   TMessage *mess;
-   master->Recv(mess);
+   nameMess << TString(uri ? uri : "");
+   nameMess << TString(optStr ? optStr : "");
+   Broadcast(nameMess);
+
    Collect(kActive, fCollectTimeout);
-   if (mess->What() == kMESS_OK) {
-      TList *missingFiles;
-      missingFiles = (TList*)(mess->ReadObject(TList::Class()));
-      nMissingFiles = missingFiles->GetSize();
-      if (nMissingFiles == 0)
-         Printf("The files from %s dataset are all present on the cluster",
-                dataSet);
-      else {
-         Printf("The following files are missing from dataset %s ", dataSet);
-         Printf("at the moment:");
-         TIter next(missingFiles);
-         TFileInfo* fileInfo;
-         while ((fileInfo = (TFileInfo*)next())) {
-            Printf("\t%s", fileInfo->GetFirstUrl()->GetUrl());
-         }
-      }
-      missingFiles->SetOwner();
-      delete missingFiles;
-   } else if (mess->What() == kMESS_NOTOK) {
-      Printf("ValidateDataSet: no such dataset %s", dataSet);
-      delete mess;
+
+   if (fStatus < 0) {
+      Info("VerifyDataSet", "no such dataset %s", uri);
       return  -1;
    } else
-      Fatal("ValidateDataSet", "unknown message type %d", mess->What());
-   delete mess;
+      nMissingFiles = fStatus;
    return nMissingFiles;
+}
+
+//______________________________________________________________________________
+TMap *TProof::GetQuota(const char* optStr)
+{
+   // returns a map of the quotas of all groups
+
+   TSocket *master = 0;
+   if (fActiveSlaves->GetSize())
+      master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
+   else {
+      Error("GetQuota", "no connection to the master!");
+      return 0;
+   }
+
+   TMessage mess(kPROOF_DATASETS);
+   mess << Int_t(kGetQuota);
+   mess << TString(optStr?optStr:"");
+   Broadcast(mess);
+
+   Collect(kActive, fCollectTimeout);
+   TMap *groupQuotaMap = 0;
+   if (fStatus < 0) {
+      Info("GetQuota", "could not receive quota");
+   } else {
+      // Look in the list
+      TMessage *retMess = (TMessage *) fRecvMessages->First();
+      if (retMess && retMess->What() == kMESS_OK) {
+         if (!(groupQuotaMap = (TMap*)(retMess->ReadObject(TMap::Class()))))
+            Error("GetQuota", "error getting quotas");
+      } else
+         Error("GetQuota", "message not found or wrong type (%p)", retMess);
+   }
+
+   return groupQuotaMap;
+}
+
+//_____________________________________________________________________________
+void TProof::ShowQuota(Option_t* opt)
+{
+   // shows the quota and usage of all groups
+   // if opt contains "U" shows also distribution of usage on user-level
+
+   if (fProtocol < 15) {
+     Info("ShowQuota",
+          "functionality not available: the server does not have dataset support");
+     return;
+   }
+
+   TSocket *master = 0;
+   if (fActiveSlaves->GetSize())
+      master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
+   else {
+      Error("ShowQuota", "no connection to the master!");
+      return;
+   }
+
+   TMessage mess(kPROOF_DATASETS);
+   mess << Int_t(kShowQuota);
+   mess << TString(opt?opt:"");
+   Broadcast(mess);
+
+   Collect();
+   if (fStatus != 0)
+      Error("ShowQuota", "error receiving quota information");
 }
 
 //_____________________________________________________________________________

@@ -686,19 +686,50 @@ void TPacketizer::ValidateFiles(TDSet *dset, TList *slaves)
             RemoveActive(file);
 
             slstat->fCurFile = file;
-            file->GetNode()->IncSlaveCnt(slstat->GetName());
-            TMessage m(kPROOF_GETENTRIES);
             TDSetElement *elem = file->GetElement();
-            m << dset->IsTree()
-              << TString(elem->GetFileName())
-              << TString(elem->GetDirectory())
-              << TString(elem->GetObjName());
+            Long64_t entries = elem->GetEntries(kTRUE, kFALSE);
+            if (entries < 0 || strlen(elem->GetTitle()) <= 0) {
+               // This is decremented when we get the reply
+               file->GetNode()->IncSlaveCnt(slstat->GetName());
+               TMessage m(kPROOF_GETENTRIES);
+               m << dset->IsTree()
+               << TString(elem->GetFileName())
+               << TString(elem->GetDirectory())
+               << TString(elem->GetObjName());
 
-            s->GetSocket()->Send( m );
-            mon.Activate(s->GetSocket());
-            PDB(kPacketizer,2) Info("TPacketizer","sent to worker-%s (%s) via %p GETENTRIES on %s %s %s %s",
-                s->GetOrdinal(), s->GetName(), s->GetSocket(), dset->IsTree() ? "tree" : "objects",
-                elem->GetFileName(), elem->GetDirectory(), elem->GetObjName());
+               s->GetSocket()->Send( m );
+               mon.Activate(s->GetSocket());
+               PDB(kPacketizer,2)
+                  Info("ValidateFiles",
+                     "sent to worker-%s (%s) via %p GETENTRIES on %s %s %s %s",
+                     s->GetOrdinal(), s->GetName(), s->GetSocket(),
+                     dset->IsTree() ? "tree" : "objects", elem->GetFileName(),
+                     elem->GetDirectory(), elem->GetObjName());
+            } else {
+               // Fill the info
+               elem->SetTDSetOffset(entries);
+               if (entries > 0) {
+                  if (!elem->GetEntryList()) {
+                     if (elem->GetFirst() > entries) {
+                        Error("ValidateFiles",
+                              "first (%d) higher then number of entries (%d) in %d",
+                              elem->GetFirst(), entries, elem->GetFileName() );
+                        // disable element
+                        slstat->fCurFile->SetDone();
+                        elem->Invalidate();
+                        dset->SetBit(TDSet::kSomeInvalid);
+                     }
+                     if (elem->GetNum() == -1) {
+                        elem->SetNum(entries - elem->GetFirst());
+                     } else if (elem->GetFirst() + elem->GetNum() > entries) {
+                        Warning("ValidateFiles", "Num (%lld) + First (%lld) larger then number of"
+                                 " keys/entries (%lld) in %s", elem->GetNum(), elem->GetFirst(),
+                                 entries, elem->GetFileName());
+                        elem->SetNum(entries - elem->GetFirst());
+                     }
+                  }
+               }
+            }
          }
       }
 
@@ -813,9 +844,10 @@ void TPacketizer::ValidateFiles(TDSet *dset, TList *slaves)
                Error("ValidateFiles", "first (%d) higher then number of entries (%d) in %d",
                      e->GetFirst(), entries, e->GetFileName() );
 
-               // disable element
+               // Invalidate the element
                slavestat->fCurFile->SetDone();
-               fValid = kFALSE; // ???
+               e->Invalidate();
+               dset->SetBit(TDSet::kSomeInvalid);
             }
 
             if ( e->GetNum() == -1 ) {
@@ -846,9 +878,9 @@ void TPacketizer::ValidateFiles(TDSet *dset, TList *slaves)
             gProofServ->GetSocket()->Send(m);
          }
 
-         // disable element
-         if (dset->Remove(e) == -1)
-            Error("ValidateFiles", "removing of not-registered element %p failed", e);
+         // Invalidate the element
+         e->Invalidate();
+         dset->SetBit(TDSet::kSomeInvalid);
       }
 
       workers.Add(slave); // Ready for the next job
