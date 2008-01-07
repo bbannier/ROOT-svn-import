@@ -2296,8 +2296,7 @@ void TH1::Draw(Option_t *option)
    if (gPad) {
       if (!gPad->IsEditable()) gROOT->MakeDefCanvas();
       if (opt.Contains("same")) {
-         if (opt.Contains("same") &&
-             gPad->GetX1() == 0   && gPad->GetX2() == 1 &&
+         if (gPad->GetX1() == 0   && gPad->GetX2() == 1 &&
              gPad->GetY1() == 0   && gPad->GetY2() == 1 &&
              gPad->GetListOfPrimitives()->GetSize()==0) opt.ReplaceAll("same","");
       } else {
@@ -5166,6 +5165,9 @@ TH1 *TH1::Rebin(Int_t ngroup, const char*newname, const Double_t *xbins)
    if ((ngroup <= 0) || (ngroup > nbins)) {
       Error("Rebin", "Illegal value of ngroup=%d",ngroup);
       return 0;
+   }
+   if ((nbins/ngroup)%10 !=0) {
+      Warning("Rebin", "ngroup=%d must be an exact divider of nbins=%d",ngroup,nbins);
    }
    if (fDimension > 1 || InheritsFrom("TProfile")) {
       Error("Rebin", "Operation valid on 1-D histograms only");

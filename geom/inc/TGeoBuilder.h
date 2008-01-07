@@ -16,14 +16,22 @@
 #include "TObject.h"
 #endif
 
-/*************************************************************************
- * TGeoBuilder - Geometry construction class
- *
- *************************************************************************/
+///////////////////////////////////////////////////////////////////////////
+//                                                                       //
+//  TGeoBuilder                                                          //
+//                                                                       //
+// Geometry construction class                                           //
+//                                                                       //
+///////////////////////////////////////////////////////////////////////////
+
 class TGeoMaterial;
 class TGeoMatrix;
+class TGeoMedium;
 class TGeoShape;
 class TGeoVolume;
+class TGeoVolumeAssembly;
+class TGeoVolumeMulti;
+class TGeoManager;
 
 class TGeoBuilder : public TObject
 {

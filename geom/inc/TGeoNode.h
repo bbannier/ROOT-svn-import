@@ -32,10 +32,6 @@
 #include "TGeoPatternFinder.h"
 #endif
 
-#ifndef ROOT_TGeoVoxelFinder
-#include "TGeoVoxelFinder.h"
-#endif
-
 // forward declarations
 class TString;
 class TGeoVolume;
@@ -44,11 +40,12 @@ class TGeoMedium;
 class TGeoMatrix;
 class TGeoHMatrix;
 
-/*************************************************************************
- * TGeoNode - base class for logical nodes. They represent volumes
- *   positioned inside a mother volume
- *
- *************************************************************************/
+////////////////////////////////////////////////////////////////////////////
+//                                                                        //
+// TGeoNode - base class for logical nodes. They represent volumes        //
+//   positioned inside a mother volume                                    //
+//                                                                        //
+////////////////////////////////////////////////////////////////////////////
 
 class TGeoNode : public TNamed,
                  public TGeoAtt
@@ -143,10 +140,11 @@ public:
    ClassDef(TGeoNode, 2)               // base class for all geometry nodes
 };
 
-/*************************************************************************
- * TGeoNodeMatrix - node containing a general transformation
- *
- *************************************************************************/
+////////////////////////////////////////////////////////////////////////////
+//                                                                        //
+// TGeoNodeMatrix - node containing a general transformation              //
+//                                                                        //
+////////////////////////////////////////////////////////////////////////////
 
 class TGeoNodeMatrix : public TGeoNode
 {
@@ -174,10 +172,11 @@ public:
    ClassDef(TGeoNodeMatrix, 1)               // a geometry node in the general case
 };
 
-/*************************************************************************
- * TGeoNodeOffset - node containing only an translation offset
- *
- *************************************************************************/
+////////////////////////////////////////////////////////////////////////////
+//                                                                        //
+// TGeoNodeOffset - node containing only an translation offset            //
+//                                                                        //
+////////////////////////////////////////////////////////////////////////////
 
 class TGeoNodeOffset : public TGeoNode
 {
@@ -208,10 +207,11 @@ public:
    ClassDef(TGeoNodeOffset, 1)      // a geometry node with just an offset
 };
 
-/*************************************************************************
- * TGeoIterator - iterator for the node tree
- *
- *************************************************************************/
+////////////////////////////////////////////////////////////////////////////
+//                                                                        //
+// TGeoIterator - iterator for the node tree                              //
+//                                                                        //
+////////////////////////////////////////////////////////////////////////////
 
 class TGeoIterator
 {

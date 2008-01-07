@@ -21,6 +21,15 @@
 #include <algorithm>
 
 //______________________________________________________________________________
+//
+// Structure holding information about TGListTree and TGListTreeItem
+// that represents given TEveElement. This needed because each element
+// can appear in several list-trees as well as several times in the
+// same list-tree.
+
+ClassImp(TEveElement::TEveListTreeInfo)
+
+//______________________________________________________________________________
 // TEveElement
 //
 // Base class for TEveUtil visualization elements, providing hierarchy
@@ -65,7 +74,7 @@ TEveElement::~TEveElement()
 {
    // Destructor.
 
-   RemoveElements();
+   RemoveElementsInternal();
 
    for (List_i p=fParents.begin(); p!=fParents.end(); ++p)
    {
@@ -87,7 +96,9 @@ void TEveElement::SetRnrElNameTitle(const Text_t* name, const Text_t* title)
    // Here we attempt to cast the assigned object into TNamed and call
    // SetNameTitle() there.
 
-   TNamed* named = dynamic_cast<TNamed*>(GetObject());
+   static const TEveException eh("TEveElement::SetRnrElNameTitle ");
+
+   TNamed* named = dynamic_cast<TNamed*>(GetObject(eh));
    if (named)
       named->SetNameTitle(name, title);
 }
@@ -99,7 +110,9 @@ const Text_t* TEveElement::GetRnrElName() const
    // Here we attempt to cast the assigned object into TNamed and call
    // GetName() there.
 
-   TObject* named = dynamic_cast<TObject*>(GetObject());
+   static const TEveException eh("TEveElement::GetRnrElName ");
+
+   TObject* named = dynamic_cast<TObject*>(GetObject(eh));
    return named ? named->GetName() : "<no-name>";
 }
 
@@ -110,7 +123,9 @@ const Text_t*  TEveElement::GetRnrElTitle() const
    // Here we attempt to cast the assigned object into TNamed and call
    // GetTitle() there.
 
-   TObject* named = dynamic_cast<TObject*>(GetObject());
+   static const TEveException eh("TEveElement::GetRnrElTitle ");
+
+   TObject* named = dynamic_cast<TObject*>(GetObject(eh));
    return named ? named->GetTitle() : "<no-title>";
 }
 
@@ -133,10 +148,10 @@ void TEveElement::RemoveParent(TEveElement* re)
    // Removing parent is subordinate to removing an element.
    // This is an internal function.
 
-   static const TEveException eH("TEveElement::RemoveParent ");
+   static const TEveException eh("TEveElement::RemoveParent ");
 
    fParents.remove(re);
-   CheckReferenceCount(eH);
+   CheckReferenceCount(eh);
 }
 
 /******************************************************************************/
@@ -236,9 +251,9 @@ TGListTreeItem* TEveElement::AddIntoListTree(TGListTree* ltree,
    // Add this element into ltree to an already existing item
    // parent_lti.
 
-   static const TEveException eH("TEveElement::AddIntoListTree ");
+   static const TEveException eh("TEveElement::AddIntoListTree ");
 
-   TObject* tobj = GetObject(eH);
+   TObject* tobj = GetObject(eh);
    TGListTreeItem* item = ltree->AddItem(parent_lti, tobj->GetName(), this,
                                          0, 0, kTRUE);
    item->SetCheckBoxPictures(GetCheckBoxPicture(1, fRnrChildren),
@@ -301,7 +316,7 @@ Bool_t TEveElement::RemoveFromListTree(TGListTree* ltree,
    // Returns kTRUE if the item was found and removed, kFALSE
    // otherwise.
 
-   static const TEveException eH("TEveElement::RemoveFromListTree ");
+   static const TEveException eh("TEveElement::RemoveFromListTree ");
 
    sLTI_i i = FindItem(ltree, parent_lti);
    if (i != fItems.end()) {
@@ -309,7 +324,7 @@ Bool_t TEveElement::RemoveFromListTree(TGListTree* ltree,
       ltree->DeleteItem(i->fItem);
       ltree->ClearViewPort();
       fItems.erase(i);
-      if (parent_lti == 0) CheckReferenceCount(eH);
+      if (parent_lti == 0) CheckReferenceCount(eh);
       return kTRUE;
    } else {
       return kFALSE;
@@ -399,9 +414,9 @@ void TEveElement::UpdateItems()
 {
    // Update list-tree-items representing this element.
 
-   static const TEveException eH("TEveElement::UpdateItems ");
+   static const TEveException eh("TEveElement::UpdateItems ");
 
-   TObject* tobj = GetObject(eH);
+   TObject* tobj = GetObject(eh);
 
    for (sLTI_i i=fItems.begin(); i!=fItems.end(); ++i) {
       i->fItem->Rename(tobj->GetName());
@@ -415,7 +430,7 @@ void TEveElement::UpdateItems()
 /******************************************************************************/
 
 //______________________________________________________________________________
-TObject* TEveElement::GetObject(TEveException eh) const
+TObject* TEveElement::GetObject(const TEveException& eh) const
 {
    // Get a TObject associated with this render-element.
    // Most cases uses double-inheritance from TEveElement and TObject
@@ -454,8 +469,11 @@ void TEveElement::PadPaint(Option_t* option)
 {
    // Paint self and/or children into currently active pad.
 
-   if (GetRnrSelf() && GetObject())
-      GetObject()->Paint(option);
+   static const TEveException eh("TEveElement::PadPaint ");
+
+   TObject* obj = 0;
+   if (GetRnrSelf() && (obj = GetObject(eh)))
+      obj->Paint(option);
 
 
    if (GetRnrChildren()) {
@@ -566,10 +584,10 @@ TGListTreeItem* TEveElement::AddElement(TEveElement* el)
 {
    // Add el to the list of children.
 
-   static const TEveException eH("TEveElement::AddElement ");
+   static const TEveException eh("TEveElement::AddElement ");
 
    if ( ! AcceptElement(el))
-      throw(eH + Form("parent '%s' rejects '%s'.",
+      throw(eh + Form("parent '%s' rejects '%s'.",
                       GetRnrElName(), el->GetRnrElName()));
 
    el->AddParent(this);
@@ -605,11 +623,12 @@ void TEveElement::RemoveElementLocal(TEveElement* /*el*/)
 }
 
 //______________________________________________________________________________
-void TEveElement::RemoveElements()
+void TEveElement::RemoveElementsInternal()
 {
-   // Remove all elements. This assumes removing of all elements can be
-   // done more efficiently then looping over them and removing one by
-   // one.
+   // Remove all elements. This assumes removing of all elements can
+   // be done more efficiently then looping over them and removing one
+   // by one. This protected function performs the removal on the
+   // level of TEveElement.
 
    for (sLTI_i i=fItems.begin(); i!=fItems.end(); ++i)
    {
@@ -621,6 +640,16 @@ void TEveElement::RemoveElements()
       (*i)->RemoveParent(this);
    }
    fChildren.clear();
+}
+
+//______________________________________________________________________________
+void TEveElement::RemoveElements()
+{
+   // Remove all elements. This assumes removing of all elements can be
+   // done more efficiently then looping over them and removing one by
+   // one.
+
+   RemoveElementsInternal();
    ElementChanged();
 }
 
@@ -673,10 +702,10 @@ void TEveElement::Destroy()
 {
    // Destroy this element.
 
-   static const TEveException eH("TEveElement::Destroy ");
+   static const TEveException eh("TEveElement::Destroy ");
 
    if (fDenyDestroy > 0)
-      throw(eH + "this element '%s' is protected against destruction.", GetRnrElName());
+      throw(eh + "this element '%s' is protected against destruction.", GetRnrElName());
 
    gEve->PreDeleteElement(this);
    delete this;
@@ -688,7 +717,7 @@ void TEveElement::DestroyElements()
 {
    // Destroy all children of this element.
 
-   static const TEveException eH("TEveElement::DestroyElements ");
+   static const TEveException eh("TEveElement::DestroyElements ");
 
    while ( ! fChildren.empty()) {
       TEveElement* c = fChildren.front();
@@ -698,18 +727,20 @@ void TEveElement::DestroyElements()
             c->Destroy();
          }
          catch (TEveException exc) {
-            Warning(eH, Form("element destruction failed: '%s'.", exc.Data()));
+            Warning(eh, Form("element destruction failed: '%s'.", exc.Data()));
             RemoveElement(c);
          }
       }
       else
       {
          if (gDebug > 0)
-            Info(eH, Form("element '%s' is protected agains destruction, removin locally.", c->GetRnrElName()));
+            Info(eh, Form("element '%s' is protected agains destruction, removin locally.", c->GetRnrElName()));
 
          RemoveElement(c);
       }
    }
+
+   ElementChanged(kTRUE, kTRUE);
 }
 
 /******************************************************************************/
@@ -730,10 +761,7 @@ void TEveElement::ElementChanged(Bool_t update_scenes, Bool_t redraw)
    // Call this after an element has been changed so that the state
    // can be propagated around the framework.
 
-   if (update_scenes)
-      gEve->ElementChanged(this);
-   if (redraw)
-      gEve->Redraw3D();
+   gEve->ElementChanged(this, update_scenes, redraw);
 }
 
 /******************************************************************************/
@@ -752,6 +780,15 @@ TEveElement::GetCheckBoxPicture(Bool_t rnrSelf, Bool_t rnrDaughters)
    if (rnrDaughters ) idx++;
 
    return fgRnrIcons[idx];
+}
+
+//______________________________________________________________________________
+const TGPicture*
+TEveElement::GetListTreeIcon()
+{
+   // Returns pointer to first listtreeicon
+   
+   return fgListTreeIcons[0];
 }
 
 
@@ -781,7 +818,7 @@ TEveElementObjectPtr::TEveElementObjectPtr(TObject* obj, Color_t& mainColor, Boo
 }
 
 //______________________________________________________________________________
-TObject* TEveElementObjectPtr::GetObject(TEveException eh) const
+TObject* TEveElementObjectPtr::GetObject(const TEveException& eh) const
 {
    // Return external object.
    // Virtual from TEveElement.
@@ -797,9 +834,9 @@ void TEveElementObjectPtr::ExportToCINT(Text_t* var_name)
    // Export external object to CINT with variable name var_name.
    // Virtual from TEveElement.
 
-   static const TEveException eH("TEveElementObjectPtr::ExportToCINT ");
+   static const TEveException eh("TEveElementObjectPtr::ExportToCINT ");
 
-   TObject* obj = GetObject(eH);
+   TObject* obj = GetObject(eh);
    const char* cname = obj->IsA()->GetName();
    gROOT->ProcessLine(Form("%s* %s = (%s*)0x%lx;", cname, var_name, cname, obj));
 }

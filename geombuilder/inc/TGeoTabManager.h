@@ -93,6 +93,14 @@ public:
    ClassDef(TGeoTabManager, 0)   // Tab manager for geometry editors
 };
 
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+//  TGeoTreeDialog                                                      //
+//                                                                      //
+//  Dialog frame for selecting objects with a tree hierarchy            //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
+
 class TGeoTreeDialog : public TGTransientFrame {
 
 protected:
@@ -109,7 +117,7 @@ public:
    TGeoTreeDialog(TGFrame *caller, const TGWindow *main, UInt_t w = 1, UInt_t h = 1);
    virtual ~TGeoTreeDialog();
    
-   static TObject     *GetSelected() {return fgSelectedObj;}
+   static TObject     *GetSelected();
    // Slots
    virtual void        DoClose() = 0;
    virtual void        DoItemClick(TGListTreeItem *item, Int_t btn) = 0;
@@ -117,6 +125,14 @@ public:
 
    ClassDef(TGeoTreeDialog, 0)   // List-Tree based dialog
 };
+
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+//  TGeoVolumeDialog                                                    //
+//                                                                      //
+//  Special tree dialog class for selecting volumes.                    //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
 
 class TGeoVolumeDialog : public TGeoTreeDialog {
 
@@ -135,6 +151,14 @@ public:
    ClassDef(TGeoVolumeDialog, 0)   // List-Tree based volume dialog
 };
 
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+//  TGeoShapeDialog                                                     //
+//                                                                      //
+//  Special tree dialog class for selecting shapes.                     //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
+
 class TGeoShapeDialog : public TGeoTreeDialog {
 
 protected:
@@ -151,6 +175,14 @@ public:
 
    ClassDef(TGeoShapeDialog, 0)   // List-Tree based shape dialog
 };
+
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+//  TGeoMediumDialog                                                    //
+//                                                                      //
+//  Special tree dialog class for selecting media.                      //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
 
 class TGeoMediumDialog : public TGeoTreeDialog {
 
@@ -169,6 +201,14 @@ public:
    ClassDef(TGeoMediumDialog, 0)   // List-Tree based medium dialog
 };
 
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+//  TGeoMaterialDialog                                                  //
+//                                                                      //
+//  Special tree dialog class for selecting materials.                  //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
+
 class TGeoMaterialDialog : public TGeoTreeDialog {
 
 protected:
@@ -186,6 +226,14 @@ public:
    ClassDef(TGeoMaterialDialog, 0)   // List-Tree based material dialog
 };
 
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+//  TGeoMatrixDialog                                                    //
+//                                                                      //
+//  Special tree dialog class for selecting matrices.                   //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
+
 class TGeoMatrixDialog : public TGeoTreeDialog {
 
 protected:
@@ -202,6 +250,14 @@ public:
 
    ClassDef(TGeoMatrixDialog, 0)   // List-Tree based matrix dialog
 };
+
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+//  TGeoTransientPanel                                                  //
+//                                                                      //
+//  Special transient tab holding TGeo editors.                         //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
 
 class TGeoTransientPanel : public TGMainFrame {
    TGedEditor       *fGedEditor;        // ged-editor steering this panel

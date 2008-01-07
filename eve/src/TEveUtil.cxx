@@ -47,11 +47,11 @@ void TEveUtil::SetupEnvironment()
    // and shipped with binary ROOT (in macros/eve). For example, these
    // might be used to spawn specific GUI / GL configurations.
 
-   static const TEveException eH("TEveUtil::SetupEnvironment");
+   static const TEveException eh("TEveUtil::SetupEnvironment");
    static Bool_t setupDone = kFALSE;
 
    if (setupDone) {
-      Info(eH.Data(), "has already been run.");
+      Info(eh.Data(), "has already been run.");
       return;
    }
 
@@ -61,15 +61,15 @@ void TEveUtil::SetupEnvironment()
    // Check if REVESYS exists, try fallback to $ALICE_ROOT/EVE.
    if(gSystem->Getenv("REVESYS") == 0) {
       if(gSystem->Getenv("ALICE_ROOT") != 0) {
-         Info(eH.Data(), "setting REVESYS from ALICE_ROOT.");
+         Info(eh.Data(), "setting REVESYS from ALICE_ROOT.");
          gSystem->Setenv("REVESYS", Form("%s/EVE", gSystem->Getenv("ALICE_ROOT")));
       } else {
-         Error(eH.Data(), "REVESYS not defined, neither is ALICE_ROOT.");
+         Error(eh.Data(), "REVESYS not defined, neither is ALICE_ROOT.");
          gSystem->Exit(1);
       }
    }
    if(gSystem->AccessPathName(gSystem->Getenv("REVESYS")) == kTRUE) {
-      Error(eH.Data(), "REVESYS '%s' does not exist.", gSystem->Getenv("REVESYS"));
+      Error(eh.Data(), "REVESYS '%s' does not exist.", gSystem->Getenv("REVESYS"));
       gSystem->Exit(1);
    }
 
@@ -232,11 +232,11 @@ Color_t* TEveUtil::FindColorVar(TObject* obj, const Text_t* varname)
    // coloration from visualization macros that wrap TObjects into
    // TEveElementObjectPtr instances.
 
-   static const TEveException eH("TEveUtil::FindColorVar");
+   static const TEveException eh("TEveUtil::FindColorVar");
 
    Int_t off = obj->IsA()->GetDataMemberOffset(varname);
    if(off == 0)
-      throw(eH + "could not find member '" + varname + "' in class " + obj->IsA()->GetName() + ".");
+      throw(eh + "could not find member '" + varname + "' in class " + obj->IsA()->GetName() + ".");
    return (Color_t*) (((char*)obj) + off);
 }
 
@@ -245,7 +245,11 @@ Color_t* TEveUtil::FindColorVar(TObject* obj, const Text_t* varname)
 // TEveException
 /******************************************************************************/
 
-// TString .vs. string
+//______________________________________________________________________________
+// 
+// Exception class thrown by TEve classes and macros.
+
+ClassImp(TEveException)
 
 //______________________________________________________________________________
 bool operator==(const TString& t, const std::string& s)
@@ -277,6 +281,14 @@ TEveException operator+(const TEveException &s1,  const char *s2)
 // TEvePadHolder
 /******************************************************************************/
 
+//______________________________________________________________________________
+//
+// Exception safe wrapper for setting gPad.
+// Optionally calls gPad->Modified()/Update() in destructor.
+
+ClassImp(TEvePadHolder)
+
+//______________________________________________________________________________
 TEvePadHolder::TEvePadHolder(Bool_t modify_update_p, TVirtualPad* new_pad, Int_t subpad) :
    fOldPad        (gPad),
    fModifyUpdateP (modify_update_p)
@@ -301,9 +313,18 @@ TEvePadHolder::~TEvePadHolder()
    gPad = fOldPad;
 }
 
+
 /******************************************************************************/
 // TEveGeoManagerHolder
 /******************************************************************************/
+
+//______________________________________________________________________________
+//
+// Exception safe wrapper for setting gGeoManager.
+// Functionality to lock-unlock via setting of a static lock in
+// TGeoManager should be added (new feature of TGeoManager).
+
+ClassImp(TEveGeoManagerHolder)
 
 //______________________________________________________________________________
 TEveGeoManagerHolder::TEveGeoManagerHolder(TGeoManager* new_gmgr) :
@@ -323,8 +344,23 @@ TEveGeoManagerHolder::~TEveGeoManagerHolder()
 }
 
 
+/******************************************************************************/
+// TEveRefCnt
+/******************************************************************************/
+
 //______________________________________________________________________________
+//
+// Base-class for reference-counted objects.
+// By default the object is destroyed when zero referece-count is reached.
+
+ClassImp(TEveRefCnt)
+
+
+/******************************************************************************/
 // TEveRefBackPtr
+/******************************************************************************/
+
+//______________________________________________________________________________
 //
 // Base-class for reference-counted objects with reverse references to
 // TEveElement objects.
@@ -382,7 +418,7 @@ void TEveRefBackPtr::DecRefCount(TEveElement* re)
 {
    // Decrease reference cound and remove re from the list of back-references.
 
-   static const TEveException eH("TEveRefBackPtr::DecRefCount ");
+   static const TEveException eh("TEveRefBackPtr::DecRefCount ");
 
    std::list<TEveElement*>::iterator i =
       std::find(fBackRefs.begin(), fBackRefs.end(), re);
@@ -390,8 +426,8 @@ void TEveRefBackPtr::DecRefCount(TEveElement* re)
       fBackRefs.erase(i);
       TEveRefCnt::DecRefCount();
    } else {
-      Warning(eH, Form("render element '%s' not found in back-refs.",
-                       re->GetObject()->GetName()));
+      Warning(eh, Form("render element '%s' not found in back-refs.",
+                       re->GetObject(eh)->GetName()));
    }
 }
 
