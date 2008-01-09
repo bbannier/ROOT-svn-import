@@ -2122,7 +2122,8 @@ Int_t TProofServ::SetupCommon()
 # endif
 # ifdef COMPILER
    TString compiler = COMPILER;
-   compiler.Remove(0, compiler.Index("is ") + 3);
+   if (compiler.Index("is ") != kNPOS)
+      compiler.Remove(0, compiler.Index("is ") + 3);
    compiler = gSystem->DirName(compiler);
    if (!bindir.IsNull()) bindir += ":";
    bindir += compiler;
