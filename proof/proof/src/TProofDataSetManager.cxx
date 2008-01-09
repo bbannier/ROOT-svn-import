@@ -431,6 +431,7 @@ Bool_t TProofDataSetManager::ExistsDataSet(const char *group, const char *user,
    return (gSystem->AccessPathName(path) == kFALSE);
 }
 
+//______________________________________________________________________________
 Bool_t TProofDataSetManager::BrowseDataSets(const char *group, const char *user,
                                          const char *option, TMap* target)
 {
@@ -466,7 +467,7 @@ Bool_t TProofDataSetManager::BrowseDataSets(const char *group, const char *user,
             continue;
           }
 
-          // we found a dataset, now add it to the map
+          // We found a dataset, now add it to the map
 
           // COMMON dataset transition
           const char *mapGroup = group;
@@ -510,8 +511,8 @@ TMap *TProofDataSetManager::GetDataSets(const char *group, const char *user,
    //
    // 'option' is forwarded to GetDataSet .
    //
-   // if option contains D a default selection is shown that include the ones from the current user,
-   // the ones from the group and the common ones
+   // if option contains D a default selection is shown that include the ones
+   // from the current user, the ones from the group and the common ones
 
    if (group && fgCommonDataSetTag == group)
      group = fCommonGroup;
@@ -1098,10 +1099,6 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
       case TProof::kCheckDataSetName:
          //
          // Check whether this dataset exist
-         // Communication Summary
-         //   Client                              Master
-         //     |------------>DataSetName----------->|
-         //     |<-------kMESS_OK/kMESS_NOTOK<-------| (Name OK/file exists)
          {  (*mess) >> uri;
 
             if (ParseDataSetUri(uri, &dsGroup, &dsUser, &dsName) == kFALSE) {
@@ -1312,7 +1309,7 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
             Bool_t showDefault = (uri.Length() == 0);
 
             if (ParseDataSetUri(uri, &dsGroup, &dsUser, 0, 0, kFALSE, kTRUE) == kFALSE) {
-               sock->Send(kMESS_NOTOK);
+               rc = -1;
                break;
             }
 
@@ -1361,14 +1358,14 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
          {  (*mess) >> uri;
             (*mess) >> opt;
             if (ParseDataSetUri(uri, &dsGroup, &dsUser, &dsName) == kFALSE) {
-               sock->Send(kMESS_NOTOK);
+               rc = -1;
                break;
             }
             if (TFileCollection *fileList = GetDataSet(dsGroup, dsUser, dsName)) {
                sock->SendObject(fileList, kMESS_OK);
                delete fileList;
             } else                   // no such dataset
-               sock->Send(kMESS_NOTOK);
+               rc = -1;
          }
          break;
       case TProof::kRemoveDataSet:
@@ -1377,7 +1374,7 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
 
             if (ParseDataSetUri(uri, 0, 0, &dsName, 0, kTRUE) == kFALSE) {
                // error
-               sock->Send(kMESS_NOTOK);
+               rc = -1;
                break;
             }
 
@@ -1417,9 +1414,10 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
       case TProof::kGetQuota:
          {  (*mess) >> opt;
             TMap *groupQuotaMap = GetGroupQuotaMap();
-            if (!groupQuotaMap)
-               sock->Send(kMESS_NOTOK);
-
+            if (!groupQuotaMap) {
+               rc = -1;
+               break;
+            }
             sock->SendObject(groupQuotaMap, kMESS_OK);
          }
          break;
@@ -1519,20 +1517,22 @@ Bool_t TProofDataSetManager::ParseDataSetUri(const char *uri,
    if (resolved.HasQuery()) {
       Info ("ParseDataSetUri", "URI query part <%s> ignored", resolved.GetQuery().Data());
    }
-      
-   // we have to tokenize an absolute path
-   TObjArray *tokens = resolved.GetPath().Tokenize("/");
+
+   TString path(resolved.GetPath());   
    // (0)/group(1)/user(2)/dsname(3)
-   if (tokens->GetEntries() != 4) {
+   if (path.CountChar('/') != 3 || path[0] != '/') {
       Error ("ParseDataSetUri", "Illegal dataset path");
       return kFALSE;
    }
 
    // get individual values from tokens
-   TString group = ((TObjString*) tokens->At(1))->GetString();
-   TString user =  ((TObjString*) tokens->At(2))->GetString();
-   TString name =  ((TObjString*) tokens->At(3))->GetString();
-   delete tokens;
+   Int_t from = 1;
+   TString group = path(from, path.Index("/", from) - from);  
+   from = path.Index("/", from) + 1;
+   TString user = path(from, path.Index("/", from) - from);  
+   from = path.Index("/", from) + 1;
+   TString name = path(from, path.Length() - from);
+   
    TString tree =  resolved.GetFragment();
 
    // check for unwanted use of wildcards
