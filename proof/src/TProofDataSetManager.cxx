@@ -273,8 +273,7 @@ TFileCollection *TProofDataSetManager::GetDataSet(const char *group,
    TString path(GetDataSetPath(group, user, dsName));
 
    if (gSystem->AccessPathName(path) != kFALSE) {
-      if (!fSilent)
-         Error("GetDataSet", "File %s does not exist", path.Data());
+      Info("GetDataSet", "dataset %s does not exist", path.Data());
       return 0;
    }
 
@@ -284,7 +283,7 @@ TFileCollection *TProofDataSetManager::GetDataSet(const char *group,
       retrievedChecksum = TMD5::FileChecksum(path);
       if (!retrievedChecksum) {
          if (!fSilent)
-            Error("GetDataSet", "Could not get checksum of %s", path.Data());
+            Error("GetDataSet", "could not get checksum of %s", path.Data());
          return 0;
       }
    }
@@ -1361,7 +1360,8 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
                rc = -1;
                break;
             }
-            if (TFileCollection *fileList = GetDataSet(dsGroup, dsUser, dsName)) {
+            TFileCollection *fileList = GetDataSet(dsGroup, dsUser, dsName);
+            if (fileList) {
                sock->SendObject(fileList, kMESS_OK);
                delete fileList;
             } else                   // no such dataset
@@ -1474,7 +1474,7 @@ Int_t TProofDataSetManager::HandleRequest(TMessage *mess, TSocket *sock, FILE *f
    }
 
    // We are done
-   return 0;
+   return rc;
 }
 
 //______________________________________________________________________________
