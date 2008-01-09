@@ -6745,14 +6745,6 @@ Bool_t TProof::RegisterDataSet(const char *dataSetName,
    // contains 'O', in which case the old dataset is overwritten.
    // Returns kTRUE on success.
 
-   // Communication Summary
-   //   Client                              Master
-   //     |------------>DataSetName----------->|
-   //     |<-------kMESS_OK/kMESS_NOTOK<-------| (Name OK/file exist)
-   //  (*)|------->TList of TFileInfo -------->| (dataset to save)
-   //  (*)|<-------kMESS_OK/kMESS_NOTOK<-------| (transaction complete?)
-   //  (*) - optional
-
    // Check TFileInfo compatibility
    if (fProtocol < 17) {
       Info("RegisterDataSet",
@@ -6896,7 +6888,7 @@ TFileCollection *TProof::GetDataSet(const char *uri, const char* optStr)
          if (!(fileList = (TFileCollection*)(retMess->ReadObject(TFileCollection::Class()))))
             Error("GetDataSet", "error reading list of files");
       } else
-         Error("GetQuota", "message not found or wrong type (%p)", retMess);
+         Error("GetDataSet", "message not found or wrong type (%p)", retMess);
    }
 
    return fileList;
