@@ -7,9 +7,16 @@ mathcore
 minuit
 minuit2
 roofitcore
+winn
+tthread 
+main
 
 That leaves
-base cintex io main meta metautils pyroot rint ruby table thread tree utils winnt
+Core (base meta metautils) 
+io rint tree 
+utils 
+pyroot ruby table
+cintex 
 
 
 base/src/ManualBase4.cxx: (just like any other dictionary)
