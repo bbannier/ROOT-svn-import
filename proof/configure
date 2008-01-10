@@ -3560,6 +3560,7 @@ check_explicit "$enable_srp" "$enable_srp_explicit" \
 #
 # Check for AFS (libdes.a)
 #
+afsextracflags=""
 if test ! "x$enable_afs" = "xno" ; then
     if test ! "x$afsdir" = "x" ; then
 	afsdir="$afsdir $afsdir/afs"
@@ -3586,7 +3587,7 @@ if test ! "x$enable_afs" = "xno" ; then
     # header files
     #
     if test "x$enable_afs" = "xyes" ; then
-       incafs="stds.h kautils.h"
+       incafs="stds.h kautils.h com_err.h"
        for i in $incafs ; do
            check_header "afs/$i" "$found_dir" \
               /usr/include /usr/local/include /opt/include $finkdir/include
@@ -3594,6 +3595,13 @@ if test ! "x$enable_afs" = "xno" ; then
                afsincdir=""
                enable_afs="no"
                break
+           fi
+           if test "x$found_hdr" = "xafs/com_err.h" ; then
+              # check error_message prototype
+              afsnewerrormessage=`grep afs_error_message $found_dir/$found_hdr`
+              if test "x$afsnewerrormessage" = "x" ; then
+                 afsextracflags="-DAFS_OLD_COM_ERR"
+              fi
            fi
            if test "x$afsincdir" = "x" ; then
               afsincdir="-I$found_dir"
@@ -4411,6 +4419,7 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@afslib@|$afslib|"                    \
     -e "s|@afslibdir@|$afslibdir|"              \
     -e "s|@afsincdir@|$afsincdir|"              \
+    -e "s|@afsextracflags@|$afsextracflags|"    \
     -e "s|@alienincdir@|$alienincdir|"          \
     -e "s|@alienlib@|$alienlib|"                \
     -e "s|@alienlibdir@|$alienlibdir|"          \
