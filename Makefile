@@ -162,9 +162,6 @@ endif
 ifeq ($(BUILDUNURAN),yes)
 MODULES      += unuran
 endif
-ifeq ($(BUILDCINT7),yes)
-MODULES      += cint7
-endif
 ifeq ($(BUILDCINTEX),yes)
 MODULES      += cintex
 endif
@@ -236,33 +233,43 @@ endif
 
 MODULES      += main   # must be last, $(ALLLIBS) must be fully formed
 
+ifeq ($(BUILDCINT7),yes)
+MODULES      := $(filter-out reflex,$(subst cint,cint7,${MODULES}))
+endif
+
 ##### ROOT libraries #####
 
 LPATH         = lib
 
 ifneq ($(PLATFORM),win32)
 RPATH        := -L$(LPATH)
+ifeq ($(BUILDCINT7),yes)
+CINTLIBS     := -lCint -lReflex
+else
 CINTLIBS     := -lCint
-CINT7LIBS    := -lCint7 -lReflex
+endif
 NEWLIBS      := -lNew
-ROOTLIBS     := -lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad \
+ROOTLIBS     := -lCore $(CINTLIBS) -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad \
                 -lTree -lMatrix
-BOOTLIBS     := -lCore -lCint
+BOOTLIBS     := -lCore $(CINTLIBS)
 ifneq ($(ROOTDICTTYPE),cint)
 ROOTLIBS     += -lCintex -lReflex
 BOOTLIBS     += -lCintex -lReflex
 endif
 RINTLIBS     := -lRint
 else
+ifeq ($(BUILDCINT7),yes)
+CINTLIBS    := $(LPATH)/libCint.lib $(LPATH)/libReflex.lib
+else
 CINTLIBS     := $(LPATH)/libCint.lib
-CINT7LIBS    := $(LPATH)/libCint7.lib $(LPATH)/libReflex.lib
+endif
 NEWLIBS      := $(LPATH)/libNew.lib
-ROOTLIBS     := $(LPATH)/libCore.lib $(LPATH)/libCint.lib \
+ROOTLIBS     := $(LPATH)/libCore.lib $(CINTLIBS)
                 $(LPATH)/libRIO.lib $(LPATH)/libNet.lib \
                 $(LPATH)/libHist.lib $(LPATH)/libGraf.lib \
                 $(LPATH)/libGraf3d.lib $(LPATH)/libGpad.lib \
                 $(LPATH)/libTree.lib $(LPATH)/libMatrix.lib
-BOOTLIBS     := $(LPATH)/libCore.lib $(LPATH)/libCint.lib
+BOOTLIBS     := $(LPATH)/libCore.lib $(CINTLIBS)
 ifneq ($(ROOTDICTTYPE),cint)
 ROOTLIBS     += $(LPATH)/libCintex.lib $(LPATH)/libReflex.lib
 BOOTLIBS     += $(LPATH)/libCintex.lib $(LPATH)/libReflex.lib
@@ -459,12 +466,12 @@ cint/%.o: cint/%.c
 	$(CC) $(OPT) $(CINTCFLAGS) $(CXXOUT)$@ -c $<
 
 cint7/%.o: cint7/%.cxx
-	$(MAKEDEP) -R -fcint7/$*.d -Y -w 1000 -- $(CINT7CXXFLAGS) -D__cplusplus -- $<
-	$(CXX) $(OPT) $(CINT7CXXFLAGS) $(CXXOUT)$@ -c $<
+	$(MAKEDEP) -R -fcint7/$*.d -Y -w 1000 -- $(CINTCXXFLAGS) -D__cplusplus -- $<
+	$(CXX) $(OPT) $(CINTCXXFLAGS) $(CXXOUT)$@ -c $<
 
 cint7/%.o: cint7/%.c
-	$(MAKEDEP) -R -fcint7/$*.d -Y -w 1000 -- $(CINT7CFLAGS) -- $<
-	$(CC) $(OPT) $(CINT7CFLAGS) $(CXXOUT)$@ -c $<
+	$(MAKEDEP) -R -fcint7/$*.d -Y -w 1000 -- $(CINTCFLAGS) -- $<
+	$(CC) $(OPT) $(CINTCFLAGS) $(CXXOUT)$@ -c $<
 
 build/%.o: build/%.cxx
 	$(CXX) $(OPT) $(CXXFLAGS) $(CXXOUT)$@ -c $<
