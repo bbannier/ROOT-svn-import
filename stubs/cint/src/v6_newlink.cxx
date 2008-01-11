@@ -4500,25 +4500,24 @@ void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,in
       if(ifunc->ansi[j] == 2)
          globalfunc = 0;
 
-      fprintf(fp, "void const%i%i(){\n", ifunc->tagnum, func_cod);
+      fprintf(fp, "void const%s%i%i(){\n", G__map_cpp_funcname(ifunc->tagnum, ifunc->funcname[j], j, ifunc->page), ifunc->tagnum, func_cod);
 
-      for (int i=paran-1; i>-1; i--) {  
+  //     for (int i=paran-1; i>-1; i--) {  
               
-         int k = (ifunc->para_nu[j]-1) - i;
-         G__paramfunc *param = ifunc->param[j][k];
+//          int k = (ifunc->para_nu[j]-1) - i;
+//          G__paramfunc *param = ifunc->param[j][k];
             
-         if(isupper(param->type)&&(param->p_tagtable!=-1||param->p_typetable!=-1)&&param->reftype==0)
+//          if((isupper(param->type)&&(param->type=='Y')&&(param->p_typetable!=-1)&&param->reftype==0)||(param->type=='u'&&param->p_tagtable!=-1)){
+//             if (param->p_tagtable!=-1)            
+//                fprintf(fp,"%s aux%i;\n",G__fulltagname(param->p_tagtable,0),k);      
+//             else
+//                if (param->p_typetable!=-1)       
+//                   fprintf(fp,"%s aux%i;\n",G__fulltypename(param->p_typetable),k);      
+//          }
 
-            //if (param->p_tagtable!=-1)            
-               //fprintf(fp,"%s aux%i;\n",G__struct.name[param->p_tagtable],k);      
-            //else
-            if (param->p_typetable!=-1)       
-               fprintf(fp,"%s aux%i();\n",G__newtype.name[param->p_typetable],k);      
+//       }
 
-      }
-
-
-      fprintf(fp, "%s* obj%i = new %s(",ifunc->funcname[j], ifunc->tagnum, ifunc->funcname[j]);
+      fprintf(fp, "%s* obj%i = new %s(",G__fulltagname(ifunc->tagnum,0), ifunc->tagnum, G__fulltagname(ifunc->tagnum,0));
       //fprintf(fp, "obj%i->%s();\n", ifunc->tagnum, ifunc->funcname[j]);
 
       int k = 0;
@@ -4527,9 +4526,9 @@ void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,in
          // Parameters in libp
          // First push all the parameters passed in libp
          // and the push the params by default
-         G__value param;
+         //G__value param;
          void *paramref = 0;
-         int isref = 0;
+         int ispointer = 0;
          //int k = counter;
                
          // if this is a variadic function we have to push the parameters
@@ -4545,170 +4544,182 @@ void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,in
          // If we have more parameters than the declarations allows
          // (variadic function) then take the type of the actual parameter
          // ... forget to check the declaration (will be null)
-         if(ifunc->ansi[j]==2)
-            para_type = param.type;
+         // if(ifunc->ansi[j]==2)
+         //            para_type = param.type;
 
-         if(formal_param->reftype && param.ref) {
-            isref = 1;
-            paramref = (void *) param.ref;
-         }
-            
          if(isupper(formal_param->type)){
-            isref = 1;
-         }
+            ispointer = 1;
+         }  
+         //  else isref = 0
                
          if (counter!=paran-1)
             fprintf(fp,",");
                
-         // Pushing Parameter
          // By Value or By Reference?
-         if (!isref){// By Value
+         if (!ispointer){// By Value
 
-                     // Parameter's type? Push is different for each type
-            switch(para_type){
-
-            case 'd' : // Double = Double Word
-            {
-               fprintf(fp, "(double) 0");
-                     
-            }
-            break;
-                   
-            case 'i' : // Integer = Single Word
-            {
-               if (formal_param->p_tagtable==-1)
-                  fprintf(fp, " 0");
+            if (formal_param->reftype==1&&(formal_param->p_typetable!=-1||formal_param->p_tagtable!=-1)){
+               if(formal_param->p_typetable==-1)
+                  fprintf(fp,"*((%s*) 0x64)",G__fulltagname(formal_param->p_tagtable,0));   
                else  
-                  fprintf(fp, " (%s) 0", G__struct.name[formal_param->p_tagtable]);
-                     
+                  fprintf(fp,"*((%s*) 0x64)",G__fulltypename(formal_param->p_typetable));   
             }
-            break;
+            else{
 
-            case 'b' : // Unsigned Char ????
-            {
-               fprintf(fp, " 'a'");
-                     
-            }
-            break;
+               // Parameter's type? Push is different for each type
+               switch(para_type){
 
-            case 'c' : // Char
-            {
-               fprintf(fp, " 'a'");
+               case 'd' : // Double = Double Word
+               {
+                  fprintf(fp, "(double) 0");
                      
-            }
-            break;
+               }
+               break;
+                   
+               case 'i' : // Integer = Single Word
+               {
+                  if (formal_param->p_tagtable==-1)
+                     fprintf(fp, " 0");
+                  else  
+                     fprintf(fp, " (%s) 0", G__fulltagname(formal_param->p_tagtable,0));
+                     
+               }
+               break;
+
+               case 'b' : // Unsigned Char ????
+               {
+                  fprintf(fp, " 'a'");
+                     
+               }
+               break;
+
+               case 'c' : // Char
+               {
+                  fprintf(fp, " 'a'");
+                     
+               }
+               break;
             
-            case 's' : // Short
-            {
-               fprintf(fp, "(short) 0");
+               case 's' : // Short
+               {
+                  fprintf(fp, "(short) 0");
                      
-            }
-            break;
+               }
+               break;
 
-            case 'r' : // Unsigned Short
-            {
-               fprintf(fp, "(unsigned short) 0");
+               case 'r' : // Unsigned Short
+               {
+                  fprintf(fp, "(unsigned short) 0");
                      
-            }
-            break;
+               }
+               break;
 
-            case 'h' : // Unsigned Int
-            {
-               fprintf(fp, "(unsigned int) 0");
+               case 'h' : // Unsigned Int
+               {
+                  fprintf(fp, "(unsigned int) 0");
                      
-            }
-            break;
+               }
+               break;
 
-            case 'l' : // Long
-            {
-               fprintf(fp, "(long) 0");
+               case 'l' : // Long
+               {
+                  fprintf(fp, "(long) 0");
                      
-            }
-            break;
+               }
+               break;
 
-            case 'k' || 'b': // Unsigned Long
-            {
-               fprintf(fp, "(unsigned long) 0");
-            }
-            break;
+               case 'k' || 'b': // Unsigned Long
+               {
+                  fprintf(fp, "(unsigned long) 0");
+               }
+               break;
 
-            case 'f' : // Float // Shouldnt it be treated as a double?
-            { 
-               fprintf(fp, "(float) 0");
-            }
-            break;
+               case 'f' : // Float // Shouldnt it be treated as a double?
+               { 
+                  fprintf(fp, "(float) 0");
+               }
+               break;
 
-            case 'n' : // Long Long
-            {
-               fprintf(fp, " 0");
-            }
-            break;
+               case 'n' : // Long Long
+               {
+                  fprintf(fp, "(long long) 0");
+               }
+               break;
 
-            case 'm' : // unsigned Long Long
-            {
-               fprintf(fp, " 0");
-            }
-            break;
+               case 'm' : // unsigned Long Long
+               {
+                  fprintf(fp, "(unsigned long long) 0");
+               }
+               break;
 
-            case 'q' : // should this be treated with two resgisters two?
-            {
-               fprintf(fp, " 0");
-            }
-            break;
+               case 'q' : // should this be treated with two resgisters two?
+               {
+                  fprintf(fp, " 0");
+               }
+               break;
 
-            case 'g' : // bool 
-            {
-               fprintf(fp, " true");
-            }
-            break;
+               case 'g' : // bool 
+               {
+                  fprintf(fp, " true");
+               }
+               break;
 
-            case 'u' : // a class... treat it as a reference
-            {
-               fprintf(fp, " (void*) 0x64");
+               case 'u' : // a class... treat it as a reference
+               {
+                  fprintf(fp,"*((%s*) 0x64)",G__fulltagname(formal_param->p_tagtable,0)); 
+               }
+               break;
 
-            }
-            break;
-
-            default:
-               G__fprinterr(G__serr,"Type %c not known yet (stub method)\n", para_type);
+               default:
+                  G__fprinterr(G__serr,"Type %c not known yet (stub method)\n", para_type);
+               }
             }
          }
          else{
                      
             if(formal_param->p_tagtable!=-1){
                if (formal_param->reftype==1)
-                  fprintf(fp,"*((%s*) 0x64)",G__struct.name[formal_param->p_tagtable]);   
+                  fprintf(fp,"*((%s*) 0x64)",G__fulltagname(formal_param->p_tagtable,0));   
                else 
-                  fprintf(fp,"(%s*) 0x64",G__struct.name[formal_param->p_tagtable]); 
+                  fprintf(fp,"(%s*) 0x64", G__fulltagname(formal_param->p_tagtable,0)); 
                //else
                // fprintf(fp,"aux%i",k);
             }
             else{  
-               if (formal_param->p_typetable!=-1){
-                 //  if (formal_param->reftype==0)
-//                      fprintf(fp,"aux%i",k);
-//                   else
-                  fprintf(fp,"(%s*) 0x64",G__newtype.name[formal_param->p_typetable]); 
-               }
-               else{  
+       //         if (formal_param->p_typetable!=-1){
+//                  //  if (formal_param->reftype==0)
+// //                      fprintf(fp,"aux%i",k);
+// //                   else
+//                   fprintf(fp,"(%s*) 0x64",G__fulltypename(formal_param->p_typetable)); 
+//                }
+//                else{  
                   // Parameter's type? Push is different for each type
                   switch(formal_param->type){
 
-                  case 'D' : // Double* 
+                  case 'D': // Double* 
                   {
-                     fprintf(fp, " (Double*) 0x64");
+                     fprintf(fp, " (double*) 0x64");
                      
                   }
                   break;
                    
-                  case 'I' : // Integer*
+                  case 'I': // Integer*
                   {
                      fprintf(fp, " (Int_t*) 0x64");
                      
                   }
                   break;
 
-                  case 'C' : // *Char
+                  case 'B': // *UChar
+                  {
+                     if (formal_param->reftype==2)
+                        fprintf(fp,"(UChar_t**) 0"); 
+                     else  
+                        fprintf(fp,"(UChar_t*) 0"); 
+                  }
+                  break;
+
+                  case 'C': // *Char
                   {
                      if (formal_param->reftype==2)
                         fprintf(fp,"(char**) 0"); 
@@ -4716,19 +4727,58 @@ void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,in
                         fprintf(fp,"(char*) 0"); 
                   }
                   break;
-                  case 'Y' : // (void*)
+                  case 'Y': // (void*)
                   {
-                     fprintf(fp, " (void*) 0x64");
+                     if(formal_param->p_typetable==-1)
+                        fprintf(fp, " (void*) 0x64");
+                     else{
+                        if (formal_param->reftype==2)
+                           fprintf(fp,"(%s*) 0x64",G__fulltypename(formal_param->p_typetable)); 
+                        else  
+                           fprintf(fp,"*((%s*) 0x64)",G__fulltypename(formal_param->p_typetable));   
+
+                     }
 
                   }
                   break;
-
+                   case 'F': // *float
+                  {
+                     if (formal_param->reftype==2)
+                        fprintf(fp,"(float**) 0"); 
+                     else  
+                        fprintf(fp,"(float*) 0"); 
+                  }
+                  break;
+                  case 'N': // *long long
+                  {
+                     if (formal_param->reftype==2)
+                        fprintf(fp,"(Long64_t**) 0"); 
+                     else  
+                        fprintf(fp,"(Long64_t*) 0"); 
+                  }
+                  break;
+                  case 'L': // *long
+                  {
+                     if (formal_param->reftype==2)
+                        fprintf(fp,"(long**) 0"); 
+                     else  
+                        fprintf(fp,"(long*) 0"); 
+                  }
+                  break;
+                  case 'S': // *short
+                  {
+                     if (formal_param->reftype==2)
+                        fprintf(fp,"(short**) 0"); 
+                     else  
+                        fprintf(fp,"(short*) 0"); 
+                  }
+                  break;
                   default:
                      fprintf(fp, " Unkown: %c", formal_param->type);
                      G__fprinterr(G__serr,"Type %c not known yet (stub method)\n",formal_param->type);
                   }  
                           
-               }
+                  //}
             }
          }        
       }
@@ -4767,7 +4817,7 @@ void G__cppif_geninline(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,i
        ifunc->hash[j] ){//&&
       //!ifunc->mangled_name[j]) { DMS
       // LF
-      if(G__dicttype==2 || G__dicttype==4 || G__dicttype == 3) {
+      if(G__dicttype==2 || G__dicttype==4 || G__dicttype==3) {
          // LF 21-06-07
          // Dont print them for the stats
          int hash;
