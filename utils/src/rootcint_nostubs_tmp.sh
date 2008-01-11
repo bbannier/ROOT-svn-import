@@ -116,7 +116,7 @@ utils/src/rootcint_tmp $MODE ${FILENAME%.*}"Tmp2".cxx -c --symbols-file ${FILENA
 
 # Compile the second dictionary (should have only inline functions)
 #echo -++- Compiling the second dictionary: ${FILENAME%.*}"Tmp2".cxx
-#echo g++ $CXXFLAGS -Iinclude -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -I. -o ${FILENAME%.*}"Tmp2".o -c ${FILENAME%.*}"Tmp2".cxx
+echo g++ $CXXFLAGS -Iinclude -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -I. -o ${FILENAME%.*}"Tmp2".o -c ${FILENAME%.*}"Tmp2".cxx
 g++ $CXXFLAGS -Iinclude -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -I. -o ${FILENAME%.*}"Tmp2".o -c ${FILENAME%.*}"Tmp2".cxx
 
 # Add the symbols of the second dictionary to the .nm file
