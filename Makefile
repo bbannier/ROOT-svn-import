@@ -234,7 +234,7 @@ endif
 MODULES      += main   # must be last, $(ALLLIBS) must be fully formed
 
 ifeq ($(BUILDCINT7),yes)
-MODULES      := $(filter-out reflex,$(subst cint,cint7,${MODULES}))
+MODULES      := $(filter-out reflex,$(subst cint,cint7,$(filter-out cintex,${MODULES})))
 endif
 
 ##### ROOT libraries #####
