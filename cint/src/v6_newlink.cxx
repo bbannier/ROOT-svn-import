@@ -4635,7 +4635,7 @@ void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,in
                }
                break;
 
-               case 'k' || 'b': // Unsigned Long
+               case 'k': // Unsigned Long
                {
                   fprintf(fp, "(unsigned long) 0");
                }
@@ -4678,6 +4678,7 @@ void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,in
                break;
 
                default:
+                  fprintf(fp, " Unkown: %c", formal_param->type);
                   G__fprinterr(G__serr,"Type %c not known yet (stub method)\n", para_type);
                }
             }
@@ -4798,6 +4799,17 @@ void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,in
                         fprintf(fp,"(short*) 0"); 
                   }
                   break;
+
+                  case 'K': // Unsigned Long
+                  {
+                      if (formal_param->reftype==2)
+                        fprintf(fp,"(unsigned long**) 0"); 
+                     else  
+                        fprintf(fp,"(unsigned long*) 0"); 
+                  }
+                  break;
+
+
                   default:
                      fprintf(fp, " Unkown: %c", formal_param->type);
                      G__fprinterr(G__serr,"Type %c not known yet (stub method)\n",formal_param->type);
