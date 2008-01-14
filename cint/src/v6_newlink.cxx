@@ -4731,10 +4731,15 @@ void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,in
 
                   case 'C': // *Char
                   {
-                     if (formal_param->reftype==2)
-                        fprintf(fp,"(char**) 0"); 
-                     else  
-                        fprintf(fp,"(char*) 0"); 
+                     if (formal_param->reftype==2){
+                        if (formal_param->isconst)
+                           fprintf(fp,"(const char**) 0"); 
+                        else
+                           fprintf(fp,"(char**) 0"); 
+                     }
+                     else{  
+                           fprintf(fp,"(char*) 0"); 
+                     }
                   }
                   break;
                   
