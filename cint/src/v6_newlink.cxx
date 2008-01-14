@@ -4727,6 +4727,16 @@ void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,in
                         fprintf(fp,"(char*) 0"); 
                   }
                   break;
+                  
+                  case 'E': // FILE
+                  {
+                     if (formal_param->reftype==2)
+                        fprintf(fp,"(FILE**) 0"); 
+                     else  
+                        fprintf(fp,"(FILE*) 0"); 
+                  }
+                  break;
+
                   case 'Y': // (void*)
                   {
                      if(formal_param->p_typetable==-1)
