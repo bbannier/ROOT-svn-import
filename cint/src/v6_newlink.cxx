@@ -4569,6 +4569,13 @@ void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,in
                // Parameter's type? Push is different for each type
                switch(para_type){
 
+               case 'a' : // Double = Double Word
+               {
+                  fprintf(fp,"*((%s*) 0x64)",G__fulltypename(formal_param->p_typetable)); 
+                     
+               }
+               break;
+
                case 'd' : // Double = Double Word
                {
                   fprintf(fp, "(double) 0");
