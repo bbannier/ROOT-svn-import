@@ -4024,6 +4024,14 @@ void TProofServ::HandleCheckFile(TMessage *mess)
             // store md5 in package/PROOF-INF/md5.txt
             TString md5f = fPackageDir + "/" + packnam + "/PROOF-INF/md5.txt";
             TMD5::WriteChecksum(md5f, md5local);
+            // remove any previous building information
+            TString vrsf = Form("%s/%s/PROOF-INF/proofvers.txt",
+                                fPackageDir.Data(), packnam.Data());
+            if (!gSystem->AccessPathName(vrsf)) {
+               if ((st = gSystem->Exec(Form("%s %s", kRM, vrsf.Data()))))
+                  Error("HandleCheckFile",
+                        "failure removing proofvers.txt for package %s", packnam.Data());
+            }
             fSocket->Send(kPROOF_CHECKFILE);
             PDB(kPackage, 1)
                Info("HandleCheckFile",
@@ -4301,11 +4309,16 @@ Int_t TProofServ::HandleCache(TMessage *mess)
                         // untar package
                         TString cmd(Form(kUNTAR3, gunzip, par.Data()));
                         status = gSystem->Exec(cmd);
-                        if (status)
+                        if (status) {
                            Error("HandleCache", "kBuildPackage: failure executing: %s", cmd.Data());
-                        else
+                        } else {
+                           // Store md5 in package/PROOF-INF/md5.txt
+                           TMD5 *md5local = TMD5::FileChecksum(par);
+                           TString md5f = fPackageDir + "/" + package + "/PROOF-INF/md5.txt";
+                           TMD5::WriteChecksum(md5f, md5local);
                            // Go down to the package directory
                            gSystem->ChangeDirectory(pdir);
+                        }
                         delete [] gunzip;
                      } else
                         Error("HandleCache", "kBuildPackage: %s not found", kGUNZIP);
