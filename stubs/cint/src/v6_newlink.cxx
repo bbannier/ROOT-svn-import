@@ -4670,6 +4670,16 @@ void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,in
                   fprintf(fp, " true");
                }
                break;
+               
+               case '1': 
+               {
+                  if(formal_param->p_typetable==-1)
+                     fprintf(fp, " (void*) 0x64");
+                  else
+                     fprintf(fp,"(%s) 0x64",G__fulltypename(formal_param->p_typetable)); 
+               }
+               break;
+
 
                case 'u' : // a class... treat it as a reference
                {
@@ -4767,6 +4777,7 @@ void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,in
 
                   }
                   break;
+
                    case 'F': // *float
                   {
                      if (formal_param->reftype==2)
