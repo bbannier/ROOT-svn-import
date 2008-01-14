@@ -4688,7 +4688,10 @@ void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,in
                if (formal_param->reftype==1)
                   fprintf(fp,"*((%s*) 0x64)",G__fulltagname(formal_param->p_tagtable,0));   
                else 
-                  fprintf(fp,"(%s*) 0x64", G__fulltagname(formal_param->p_tagtable,0)); 
+                  if (formal_param->reftype==2)
+                     fprintf(fp,"(%s**) 0x64", G__fulltagname(formal_param->p_tagtable,0)); 
+                  else  
+                     fprintf(fp,"(%s*) 0x64", G__fulltagname(formal_param->p_tagtable,0)); 
                //else
                // fprintf(fp,"aux%i",k);
             }
