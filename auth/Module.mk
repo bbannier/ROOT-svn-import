@@ -137,7 +137,7 @@ distclean-auth: clean-auth
 distclean::     distclean-auth
 
 ##### extra rules ######
-$(RAUTHO):      CXXFLAGS += $(EXTRA_RAUTHFLAGS) $(AFSEXTRACFLAGS)
+$(RAUTHO):      CXXFLAGS += $(EXTRA_RAUTHFLAGS)
 $(RAUTHO):      PCHCXXFLAGS =
-$(AFSAUTHO):    CXXFLAGS += $(AFSINCDIR)
+$(AFSAUTHO):    CXXFLAGS += $(AFSINCDIR) $(AFSEXTRACFLAGS)
 $(AFSAUTHO):    PCHCXXFLAGS =
