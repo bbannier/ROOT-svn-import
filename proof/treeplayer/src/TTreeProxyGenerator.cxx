@@ -54,6 +54,7 @@ class TBranch;
 class TStreamerElement;
 
 #include "TClass.h"
+#include "TClassEdit.h"
 #include "TClonesArray.h"
 #include "TError.h"
 #include "TROOT.h"
@@ -372,7 +373,24 @@ namespace ROOT {
       TObject *obj = fListOfHeaders.FindObject(cl->GetName());
       if (obj) return;
 
-      if (cl->GetDeclFileName() && strlen(cl->GetDeclFileName()) ) {
+      TString directive;
+
+      Int_t stlType;
+      if (cl->GetCollectionProxy() && (stlType=TClassEdit::IsSTLCont(cl->GetName()))) {
+         const char *what = "";
+         switch(stlType)  {
+            case TClassEdit::kVector:   what = "vector"; break;
+            case TClassEdit::kList:     what = "list"; break;
+            case TClassEdit::kDeque:    what = "deque"; break;
+            case TClassEdit::kMap:      what = "map"; break;
+            case TClassEdit::kMultiMap: what = "multimap"; break;
+            case TClassEdit::kSet:      what = "set"; break;
+            case TClassEdit::kMultiSet: what = "multiset"; break;
+         }
+         directive = "#include <";
+         directive.Append(what);
+         directive.Append(">\n");
+      } else if (cl->GetDeclFileName() && strlen(cl->GetDeclFileName()) ) {
          // Actually we probably should look for the file ..
          const char *filename = cl->GetDeclFileName();
 
@@ -403,7 +421,9 @@ namespace ROOT {
                break;
             }
          }
-         TString directive = Form("#include \"%s\"\n",filename);
+         directive = Form("#include \"%s\"\n",filename);
+      }
+      if (directive.Length()) {
          TIter i( &fListOfHeaders );
          for(TNamed *n = (TNamed*) i(); n; n = (TNamed*)i() ) {
             if (directive == n->GetTitle()) {
@@ -1151,7 +1171,15 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
                }
             } else if (cl->GetCollectionProxy()) {
                isclones = TBranchProxyClassDescriptor::kSTL;
-               cl = cl->GetCollectionProxy()->GetValueClass();
+               if (cl->GetCollectionProxy()->GetValueClass()) {
+                  cl = cl->GetCollectionProxy()->GetValueClass();
+               } else {
+                  type = Form("TStlSimpleProxy<%s >", cl->GetName());
+                  AddHeader(cl);
+                  AddPragma(Form("#pragma link C++ class %s;\n", cl->GetName()));
+                  AddDescriptor( new TBranchProxyDescriptor( branchname, type, branchname ) );
+                  continue;
+               }
             }
             if (cl) {
                if (NeedToEmulate(cl,0) || branchname[strlen(branchname)-1] == '.' || branch->GetSplitLevel()) {
