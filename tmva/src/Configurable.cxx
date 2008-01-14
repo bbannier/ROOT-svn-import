@@ -25,13 +25,11 @@
  *                                                                                *
  **********************************************************************************/
 
-//_______________________________________________________________________
-//Begin_Html
-/*
-  Base Class for all classes that would like to habe option parsing enabled
-*/
-//End_Html
-//_______________________________________________________________________
+//________________________________________________________________________
+/* Begin_Html
+Base Class for all classes that need option parsing
+End_Html */
+//________________________________________________________________________
 
 #include <string>
 #include <iostream>
@@ -63,7 +61,7 @@ TMVA::Configurable::Configurable( const TString& theOption)
    : fOptions                    ( theOption ),
      fLooseOptionCheckingEnabled ( kTRUE ),
      fLastDeclaredOption         ( 0 ),
-     fLogger                     ( this )
+     fLogger (this)
 {
    // constructor
    fLogger.SetMinType( kINFO );

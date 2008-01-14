@@ -65,10 +65,10 @@ char *GetAFSErrorString(afs_int32 rc)
             emsg = "Authentication Server was unavailable";
             break;
          default:
-#ifndef AFS_OLD_COM_ERR
-            emsg = afs_error_message(rc);
-#else
+#ifdef R__AFSOLDCOMERR
             emsg = error_message(rc);
+#else
+            emsg = afs_error_message(rc);
 #endif
       }
    } else {
