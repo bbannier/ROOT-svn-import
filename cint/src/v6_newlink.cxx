@@ -4472,6 +4472,31 @@ void G__cppif_change_globalcomp()
 #endif // G__SMALLOBJECT
 }
 
+/**************************************************************************
+*  G__if_ary_union_constructor()
+*
+**************************************************************************/
+void G__if_ary_union_constructor(FILE *fp, int ifn, G__ifunc_table_internal *ifunc)
+{
+  int k, m;
+  char* p;
+
+  m = ifunc->para_nu[ifn];
+
+  for (k = 0; k < m; ++k) {
+    if (ifunc->param[ifn][k]->name) {
+      p = strchr(ifunc->param[ifn][k]->name, '[');
+      if (p) {
+        fprintf(fp, "  struct G__aRyp%d { %s a[1]%s; }* G__Ap%d = (struct G__aRyp%d*) 0x64;\n", k, G__type2string(ifunc->param[ifn][k]->type, ifunc->param[ifn][k]->p_tagtable, ifunc->param[ifn][k]->p_typetable, 0 , 0), p + 2, k, k, k);
+      }
+    }
+  }
+}
+
+/**************************************************************************
+*  G__cppif_dummyobj()
+*
+**************************************************************************/
 void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,int j){
 
    static int func_cod = 0;
@@ -4501,6 +4526,7 @@ void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,in
          globalfunc = 0;
 
       fprintf(fp, "void const%s%i%i(){\n", G__map_cpp_funcname(ifunc->tagnum, ifunc->funcname[j], j, ifunc->page), ifunc->tagnum, func_cod);
+      G__if_ary_union_constructor(fp, 0, ifunc);
 
   //     for (int i=paran-1; i>-1; i--) {  
               
@@ -4554,7 +4580,13 @@ void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,in
                
          if (counter!=paran-1)
             fprintf(fp,",");
-               
+
+         if (formal_param->name){
+            if(strchr(formal_param->name,'[')){
+               fprintf(fp,"G__Ap%d->a",counter);
+               continue;
+            }
+         }
          // By Value or By Reference?
          if (!ispointer){// By Value
 
@@ -4671,7 +4703,7 @@ void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,in
                }
                break;
                
-               case '1': 
+               case '1': // Function Pointer
                {
                   if(formal_param->p_typetable==-1)
                      fprintf(fp, " (void*) 0x64");
@@ -4696,8 +4728,10 @@ void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,in
          else{
                      
             if(formal_param->p_tagtable!=-1){
+               
                if (formal_param->reftype==1)
-                  fprintf(fp,"*((%s*) 0x64)",G__fulltagname(formal_param->p_tagtable,0));   
+                  fprintf(fp,"*((%s*) 0x64)", G__type2string(formal_param->type,formal_param->p_tagtable,formal_param->p_typetable,0,formal_param->isconst&G__CONSTVAR));
+               //fprintf(fp,"*((%s*) 0x64)",G__fulltagname(formal_param->p_tagtable,0));   
                else 
                   if (formal_param->reftype==2)
                      fprintf(fp,"(%s**) 0x64", G__fulltagname(formal_param->p_tagtable,0)); 
@@ -4724,6 +4758,14 @@ void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,in
                   }
                   break;
                    
+                  case 'H': // Unsigned Integer*
+                  {
+                     fprintf(fp, " (UInt_t*) 0x64");
+                     
+                  }
+                  break;
+
+
                   case 'I': // Integer*
                   {
                      fprintf(fp, " (Int_t*) 0x64");
@@ -4840,7 +4882,6 @@ void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,in
    func_cod++;
 
 }
-
 
 void G__cppif_geninline(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,int j)
 {
@@ -5832,7 +5873,6 @@ void G__cppif_dummyfuncname(FILE *fp)
   fprintf(fp,"   return(1 || funcname || hash || result7 || libp) ;\n");
 #endif
 }
-
 /**************************************************************************
 *  G__if_ary_union()
 *
