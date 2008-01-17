@@ -56,6 +56,7 @@
 
 #pragma link C++ class ROOT::Math::Factory+;
 
+#pragma link C++ class ROOT::Math::GaussIntegratorOneDim+;
 
 #include "LinkDef_Func.h" 
 #include "LinkDef_GenVector.h" 

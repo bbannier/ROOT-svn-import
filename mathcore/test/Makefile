@@ -214,10 +214,10 @@ endif
 
 
 clean:
-		@rm -f $(OBJS) core
+		@rm -f $(OBJS) core TrackDict.$(SrcSuf)
 
 distclean:      clean
-		@rm -f $(PROGRAMS) 
+		@rm -f $(PROGRAMS) libTrackDict.*
 
 
 .SUFFIXES: .$(SrcSuf)

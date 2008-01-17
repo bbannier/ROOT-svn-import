@@ -60,7 +60,8 @@ MATHCOREDH1  :=  $(MODDIRI)/Math/Vector2D.h \
                  $(MODDIRI)/Math/AdaptiveIntegratorMultiDim.h \
                  $(MODDIRI)/Math/IntegratorMultiDim.h \
                  $(MODDIRI)/Math/Factory.h \
-                 $(MODDIRI)/Math/FitMethodFunction.h 
+                 $(MODDIRI)/Math/FitMethodFunction.h \
+                 $(MODDIRI)/Math/GaussIntegrator.h
 
 
 MATHCOREDH132:=  $(MODDIRI)/Math/Vector2D.h \
