@@ -117,12 +117,12 @@ echo nm -g -p --defined-only ${FILENAME%.*}"Tmp1".o | awk '{printf("%s\n", $3)}'
 nm -g -p --defined-only ${FILENAME%.*}"Tmp1".o | awk '{printf("%s\n", $3)}' > ${FILENAME%.*}.nm
 
 # Symbols extraction (Object Files and Dictionary Tmp1)
-echo -++- Putting the symbols of the .o files in : ${FILENAME%.*}.nm
-echo nm -g -p --defined-only $OBJS | awk '{printf("%s\n", $3)}' >> ${FILENAME%.*}.nm
+#echo -++- Putting the symbols of the .o files in : ${FILENAME%.*}.nm
+#echo nm -g -p --defined-only $OBJS | awk '{printf("%s\n", $3)}' >> ${FILENAME%.*}.nm
 
-if [ "$OBJS" != "" ]; then
-    nm -g -p --defined-only $OBJS | awk '{printf("%s\n", $3)}' >> ${FILENAME%.*}.nm
-fi
+#if [ "$OBJS" != "" ]; then
+#    nm -g -p --defined-only $OBJS | awk '{printf("%s\n", $3)}' >> ${FILENAME%.*}.nm
+#fi
 
 echo -++- Putting the symbols of the dictionary ${FILENAME%.*}"Tmp1".cxx in : ${FILENAME%.*}.nm
 echo rootcint $MODE $PREFIX -f ${FILENAME%.*}"Tmp2".cxx $COPTION -. 2 --symbols-file ${FILENAME%.*}".nm" $ROOTCINTARGS
@@ -143,7 +143,7 @@ nm -g -p --defined-only ${FILENAME%.*}"Tmp2".o | awk '{printf("%s\n", $3)}' >> $
 #rm ${FILENAME%.*}"Tmp2".*
 
 # Final Dictionary Generation
-echo -++- Generating the real dictionary: ${FILENAME}
+echo -++- Generating the real XXX dictionary: ${FILENAME}
 echo rootcint $MODE $PREFIX -f $FILENAME $COPTION $POPTION -. 3 --symbols-file ${FILENAME%.*}".nm" $ROOTCINTARGS
 rootcint $MODE $PREFIX -f $FILENAME $COPTION $POPTION -. 3 --symbols-file ${FILENAME%.*}".nm" $ROOTCINTARGS
 
