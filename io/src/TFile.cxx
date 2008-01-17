@@ -100,6 +100,7 @@
 #include "TMathBase.h"
 #include "TObjString.h"
 #include "TStopwatch.h"
+#include "compiledata.h"
 #include <cmath>
 
 TFile *gFile;                 //Pointer to current file
@@ -2019,7 +2020,7 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
    //                   same effect as "new".
    // If, in addition to one of the 3 above options, the option "+" is specified,
    // the function will generate:
-   //   - a script called MAKE to build the shared lib
+   //   - a script called MAKEP to build the shared lib
    //   - a dirnameLinkDef.h file
    //   - rootcint will be run to generate a dirnameProjectDict.cxx file
    //   - dirnameProjectDict.cxx will be compiled with the current options in compiledata.h
@@ -2032,7 +2033,7 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
    //  - clear the previous directory content
    //  - generate the xxx.h files for all classes xxx found in this file
    //    and not yet known to the CINT dictionary.
-   //  - creates the build script MAKE
+   //  - creates the build script MAKEP
    //  - creates a LinkDef.h file
    //  - runs rootcint generating demoProjectDict.cxx
    //  - compiles demoProjectDict.cxx into demoProjectDict.o
@@ -2112,6 +2113,7 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
    FILE *sfp = fopen(spath.Data(),"w");
    fprintf(sfp, "#include \"%sProjectHeaders.h\"\n\n",dirname );
    fprintf(sfp, "#include \"%sLinkDef.h\"\n\n",dirname );
+   fprintf(sfp, "#include \"%sProjectDict.cxx\"\n\n",dirname );
    fclose( sfp );
 
    // loop on all TStreamerInfo classes
@@ -2143,12 +2145,12 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
       return;
    }
 
-   // create the MAKE file by looping on all *.h files
-   // delete MAKE if it already exists
+   // create the MAKEP file by looping on all *.h files
+   // delete MAKEP if it already exists
 #ifdef WIN32
-   sprintf(path,"%s/make.cmd",dirname);
+   sprintf(path,"%s/makep.cmd",dirname);
 #else
-   sprintf(path,"%s/MAKE",dirname);
+   sprintf(path,"%s/MAKEP",dirname);
 #endif
 #ifdef R__WINGCC
    FILE *fpMAKE = fopen(path,"wb");
@@ -2186,7 +2188,30 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
    
    next.Reset();
    while ((info = (TStreamerInfo*)next())) {
-      if (TClassEdit::IsSTLCont(info->GetName())) continue;
+      if (TClassEdit::IsSTLCont(info->GetName())) {
+         std::vector<std::string> inside;
+         int nestedLoc;
+         TClassEdit::GetSplit( info->GetName(), inside, nestedLoc );
+         Int_t stlkind =  TClassEdit::STLKind(inside[0].c_str());
+         TClass *key = TClass::GetClass(inside[1].c_str());
+         if (key) {
+            std::string what;
+            switch ( stlkind )  {
+            case TClassEdit::kMap:
+            case TClassEdit::kMultiMap: 
+               {
+                  what = "pair<";
+                  what += inside[1];
+                  what += ",";
+                  what += inside[2];
+                  what += " >";
+                  fprintf(fp,"#pragma link C++ class %s+;\n",what.c_str());
+                  break;
+               }
+            }
+         }
+         continue;
+      }
       TClass *cl = TClass::GetClass(info->GetName());
       if (cl) {
          if (cl->GetClassInfo()) continue; // skip known classes
@@ -2202,11 +2227,9 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
    TString sdirname(dirname);
 
    TString cmd = gSystem->GetMakeSharedLib();
-   TString sources( sdirname+"ProjectDict.cxx " );
-   sources.Append( sdirname+"ProjectSource.cxx ");
+   TString sources( sdirname+"ProjectSource.cxx ");
    cmd.ReplaceAll("$SourceFiles",sources.Data());
-   TString object( sdirname+"ProjectDict."+gSystem->GetObjExt() );
-   object.Append( " " + sdirname + "ProjectSource." );
+   TString object( sdirname + "ProjectSource." );
    object.Append( gSystem->GetObjExt() );
    cmd.ReplaceAll("$ObjectFiles", object.Data());
    cmd.ReplaceAll("$IncludePath",TString(gSystem->GetIncludePath()) + " -I" + dirname);
@@ -2214,22 +2237,30 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
    cmd.ReplaceAll("$LinkedLibs",gSystem->GetLibraries("","SDL"));
    cmd.ReplaceAll("$LibName",sdirname);
    cmd.ReplaceAll("$BuildDir",".");
+   TString sOpt;
+   TString rootbuild = ROOTBUILD;
+   if (rootbuild.Index("debug",0,TString::kIgnoreCase)==kNPOS) {
+      sOpt = gSystem->GetFlagsOpt();
+   } else {
+      sOpt = gSystem->GetFlagsDebug();
+   }
+   cmd.ReplaceAll("$Opt", sOpt);
 
    fprintf(fpMAKE,"%s\n",cmd.Data());
 
    fclose(fpMAKE);
-   printf("%s/MAKE file has been generated\n",dirname);
+   printf("%s/MAKEP file has been generated\n",dirname);
 
    // now execute the generated script compiling and generating the shared lib
    strcpy(path,gSystem->WorkingDirectory());
    gSystem->ChangeDirectory(dirname);
 #ifndef WIN32
-   gSystem->Exec("chmod +x MAKE");
+   gSystem->Exec("chmod +x MAKEP");
 #else
    // not really needed for Windows but it would work both both Unix and NT
    chmod("make.cmd",00700);
 #endif
-   int res = !gSystem->Exec("MAKE");
+   int res = !gSystem->Exec("MAKEP");
    gSystem->ChangeDirectory(path);
    sprintf(path,"%s/%s.%s",dirname,dirname,gSystem->GetSoExt());
    if (res) printf("Shared lib %s has been generated\n",path);
