@@ -4543,7 +4543,7 @@ void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,in
 
 //       }
 
-      fprintf(fp, "%s* obj%i = new %s(",G__fulltagname(ifunc->tagnum,0), ifunc->tagnum, G__fulltagname(ifunc->tagnum,0));
+      fprintf(fp, "%s obj%i(",G__fulltagname(ifunc->tagnum,0), ifunc->tagnum, G__fulltagname(ifunc->tagnum,0));
       //fprintf(fp, "obj%i->%s();\n", ifunc->tagnum, ifunc->funcname[j]);
 
       int k = 0;
@@ -4874,7 +4874,7 @@ void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,in
       }
 
       fprintf(fp, ");\n");
-      fprintf(fp,"delete obj%i;\n",ifunc->tagnum);
+      //fprintf(fp,"delete obj%i;\n",ifunc->tagnum);
       fprintf(fp, "}\n");
                
    }
@@ -7153,8 +7153,10 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
       // (CInt will try to declare them later on anyways)
        
       // I don't know how to get the pointer to a constructor so the only thing
-        // I can think of to use the default constructor is to create an object
+      // I can think of to use the default constructor is to create an object
+        fprintf(fp,"void G__func_def_const_%s(){\n",G__map_cpp_funcname(tagnum, funcname, ifn, page));
         fprintf(fp,"%s G__cons_%s;\n", G__fulltagname(tagnum, 0),  G__map_cpp_funcname(tagnum, funcname, ifn, page));
+        fprintf(fp,"}\n");
     }
     else{
     char buf[G__LONGLINE];
@@ -7316,7 +7318,6 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
        // if we didn't force the outlining for the default constructor
        // we have to do it here because we need the object created there
        // to be able to use a copy constructor
-       int isconstdefined = 1;
        if ( !(!isconstructor && !G__struct.isabstract[tagnum] && !isnonpublicnew) ) {
           // I don't know how to get the pointer to a constructor so the only thing
           // I can think of to use the default constructor is to create an object
@@ -7334,15 +7335,10 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
 
           // We look for the "new operator" ifunc in the current class and in its bases
           G__ifunc_table_internal * new_oper = G__get_methodhandle4(G__struct.name[tagnum], &para_new, G__struct.memfunc[tagnum], &pifn, &poffset, 0, 1,0,0);
-          
-          if(new_oper && (!isconstructor && !G__struct.isabstract[tagnum] && !isnonpublicnew))
-             fprintf(fp,"%s G__cons_%s; // needed by the copy cons.\n", G__fulltagname(tagnum, 0),  G__map_cpp_funcname(tagnum, funcname, ifn, page));
-          else
-             isconstdefined = 0;
+         
        }
 
-       if(isconstdefined)
-          fprintf(fp,"%s G__copycons_%s(G__cons_%s);\n", G__fulltagname(tagnum, 0), G__map_cpp_funcname(tagnum, funcname, ifn, page), G__map_cpp_funcname(tagnum, funcname, ifn, page) );
+       fprintf(fp,"%s G__copycons_%s(*((%s*) 0x64));\n", G__fulltagname(tagnum, 0), G__map_cpp_funcname(tagnum, funcname, ifn, page),G__fulltagname(tagnum, 0)  );
     }
     else{
     sprintf(funcname, "%s", G__struct.name[tagnum]);
