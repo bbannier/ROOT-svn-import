@@ -1750,6 +1750,9 @@ else
     enable_stubs="yes"
 fi
 
+message "Checking whether to create the stubs"
+result "$enable_stubs"
+
 ######################################################################
 #
 ### echo %%% Oracle Support - Third party libraries

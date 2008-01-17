@@ -46,14 +46,26 @@ CRYPTLIBS     = -lcrypt
 # Stub Functions Generation
 GCC_MAJOR     := $(shell $(CXX) -dumpversion 2>&1 | cut -d'.' -f1)
 GCC_MINOR     := $(shell $(CXX) -dumpversion 2>&1 | cut -d'.' -f2)
-ifeq ($(ENABLESTUBS),no)
- ifeq ($(GCC_MAJOR),3)
+#ifeq ($(ENABLESTUBS),no)
+# ifeq ($(GCC_MAJOR),3)
  # allow 3.2, 3.3, and 3.4:
-  ifneq ($(findstring $(GCC_MINOR),2 3 4),)
-   ROOTCINTTMP = export CXXFLAGS="$(CXXFLAGS)"; utils/src/rootcint_nostubs_tmp.sh -$(ROOTDICTTYPE)
-   CXXFLAGS += -DG__NOSTUBS
-  endif
+#  ifneq ($(findstring $(GCC_MINOR),2 3 4),)
+#   ROOTCINTTMP = export CXXFLAGS="$(CXXFLAGS)"; utils/src/rootcint_nostubs_tmp.sh -$(ROOTDICTTYPE)
+#   CXXFLAGS += -DG__NOSTUBS
+#  endif
+# endif
+#endif
+
+ifeq ($(GCC_MAJOR),3)
+# allow 3.2, 3.3, and 3.4:
+ ifneq ($(findstring $(GCC_MINOR),2 3 4),)
+  ROOTCINTTMP = export CXXFLAGS="$(CXXFLAGS)"; utils/src/rootcint_nostubs_tmp.sh -$(ROOTDICTTYPE)
  endif
+endif
+
+ifeq ($(ENABLESTUBS),no)
+ CXXFLAGS += -DG__NOSTUBS
+ CINTCXXFLAGS += -DG__NOSTUBS
 endif
 
 # Fortran:

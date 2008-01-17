@@ -349,6 +349,13 @@ void G__cppif_change_globalcomp();
 // DMS 
 char G__wrappers = 0;
 
+// LF
+// 15-01-08
+// We are adding a variable that comes directly from the configure
+// It will say if we want to print the stubs of not (rem that G__wrappers 
+// says if we want to USE them or not and for that they have to be printed)
+int G__nostubs = 0;
+
 /**************************************************************************
 * G__check_setup_version()
 *
@@ -2751,6 +2758,13 @@ void G__gen_cpplink()
   hfp=fopen(G__CPPLINK_H,"a");
   if(!hfp) G__fileerror(G__CPPLINK_H);
 
+  // LF 15-01-08
+  // Translate an ifdef into a normal global variable..
+  // sligthly more convenient
+#ifdef G__NOSTUBS 
+  G__nostubs = 1;
+#endif
+
   {
     int algoflag=0;
     int filen;
@@ -4906,7 +4920,7 @@ void G__cppif_geninline(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,i
        ifunc->hash[j] ){//&&
       //!ifunc->mangled_name[j]) { DMS
       // LF
-      if(G__dicttype==2 || G__dicttype==4 || G__dicttype==3) {
+      if(G__dicttype==2 || G__dicttype==4) {
          // LF 21-06-07
          // Dont print them for the stats
          int hash;
@@ -5352,6 +5366,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
   fprintf(fp,"\n/*********************************************************\n");
   fprintf(fp,"* Member function Interface Method\n");
   fprintf(fp,"*********************************************************/\n");
+  fprintf(fp,"// G__nostubs: %d\n", G__nostubs);
 
   for(i=0;i<G__struct.alltag;i++) {
     if(
@@ -5456,8 +5471,10 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                       strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
                       strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
                       strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0 )
-                     && !ifunc->ispurevirtual[j] && (G__dicttype==3 || G__dicttype==4)) || G__dicttype==0 || G__dicttype==3) {
-                    G__cppif_genconstructor(fp,hfp,i,j,ifunc);
+                     && !ifunc->ispurevirtual[j] && (G__dicttype==3 || G__dicttype==4)) 
+                    || G__dicttype==0 || G__dicttype==3 ) {
+                    if( !ifunc->mangled_name[j] || ifunc->funcptr[j]>0 || !G__nostubs) /*if there no is a symbol*/
+                       G__cppif_genconstructor(fp,hfp,i,j,ifunc);
                   }
                  
                  // LF 16-10-07
@@ -5476,7 +5493,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
             else if('~'==ifunc->funcname[j][0]) {
                /* destructor is created in gendefault later */
                if(G__PUBLIC==ifunc->access[j]){
-                  if((G__dicttype==3 || G__dicttype==4) && !ifunc->ispurevirtual[j] /*if there no is a symbol*/){
+                  if((G__dicttype==3 || G__dicttype==4) && !ifunc->ispurevirtual[j]){
                      if(
                         !(strcmp(ifunc->funcname[j],"operator const char*")==0 || 
                           strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
@@ -5489,7 +5506,8 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                           strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
                           strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
                           strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0)){
-                        G__cppif_gendefault(fp,hfp,i,j,ifunc,1,1,isdestructor,1,1);
+                        if( !ifunc->mangled_name[j] || ifunc->funcptr[j]>0 || !G__nostubs ) /*if there no is a symbol*/
+                           G__cppif_gendefault(fp,hfp,i,j,ifunc,1,1,isdestructor,1,1);
                         ++isdestructor; // don't try to create it later on
                      }
                   }
@@ -5580,7 +5598,8 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                        //   G__cppif_gendefault(fp,hfp,i,j,ifunc,1,1,1,0,1);
                        //}   
                        //else                 
-                       G__cppif_genfunc(fp,hfp,i,j,ifunc);
+                        if( !ifunc->mangled_name[j] || ifunc->funcptr[j]>0 || !G__nostubs )
+                           G__cppif_genfunc(fp,hfp,i,j,ifunc);
                     }
                     else if(!ifunc->ispurevirtual[j] && G__dicttype==4){
                  
@@ -5592,7 +5611,8 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                        //   G__cppif_gendefault(fp,hfp,i,j,ifunc,1,1,1,0,1);
                        //}
                        //else{  // generate stub for normal function
-                       G__cppif_genfunc(fp,hfp,i,j,ifunc);
+                       if( !ifunc->mangled_name[j] || ifunc->funcptr[j]>0 || !G__nostubs )
+                          G__cppif_genfunc(fp,hfp,i,j,ifunc);
                        //}
                     }
                     else if(G__dicttype==0){
@@ -5751,7 +5771,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
            //         strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
            //         strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0 )
            //          && !ifunc->isvirtual[j]) )
-           if(  G__dicttype==0 || G__dicttype==3 ||
+           if(  G__dicttype==0 || (G__dicttype==3) ||
                 (( G__dicttype==2 || G__dicttype==3 || G__dicttype==4)
                    && 
                    !(
@@ -5778,12 +5798,13 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                   strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0)
                  
               && (G__dicttype==3 || G__dicttype==4)) ){ //LF rem to create inlines for default functions
-              G__cppif_gendefault(fp,hfp,i,j,ifunc
-                                  ,isconstructor
-                                  ,iscopyconstructor
-                                  ,isdestructor
-                                  ,isassignmentoperator
-                                  ,isnonpublicnew);
+              if( !ifunc->mangled_name[j] || ifunc->funcptr[j]>0 || !G__nostubs )
+                 G__cppif_gendefault(fp,hfp,i,j,ifunc
+                                     ,isconstructor
+                                     ,iscopyconstructor
+                                     ,isdestructor
+                                     ,isassignmentoperator
+                                     ,isnonpublicnew);
            }
            //else if((isdestructor<=0) && (G__dicttype==3))
            //   G__cppif_gendefault(fp,hfp,i,j,ifunc
@@ -9678,8 +9699,8 @@ void G__cpplink_memfunc(FILE *fp)
                   
                   // Why do we have to put the isabstract here?
                   // it doesnt seem to be necesary in the original code
-                  if( !ifunc->ispurevirtual[j]// && 
-                      //(!ifunc->mangled_name[j] || 
+                  if( !ifunc->ispurevirtual[j] && 
+                      (!ifunc->mangled_name[j] || !G__nostubs) //|| 
                       
                       // The stubs where generated for functions needing temporal objects too... use them
                       //((ifunc->reftype[j] != G__PARAREFERENCE) &&
