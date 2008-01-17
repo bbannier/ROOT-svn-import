@@ -17,6 +17,7 @@
 #include "TMarker.h"
 #include "TPolyMarker3D.h"
 #include "TColor.h"
+#include "TROOT.h"
 
 // Updates
 #include "TEveManager.h"
@@ -258,10 +259,12 @@ void TEveTrack::SetAttLineAttMarker(TEveTrackList* tl)
 {
    // Set line and marker attributes from TEveTrackList.
 
+   SetRnrLine(tl->GetRnrLine());
    SetLineColor(tl->GetLineColor());
    SetLineStyle(tl->GetLineStyle());
    SetLineWidth(tl->GetLineWidth());
 
+   SetRnrPoints(tl->GetRnrPoints());
    SetMarkerColor(tl->GetMarkerColor());
    SetMarkerStyle(tl->GetMarkerStyle());
    SetMarkerSize(tl->GetMarkerSize());

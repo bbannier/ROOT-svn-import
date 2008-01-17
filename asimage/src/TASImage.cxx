@@ -602,8 +602,9 @@ void TASImage::WriteImage(const char *file, EImageFileTypes type)
       return;
    }
 
-   ASImageFileTypes atype;
-   MapFileTypes(type, (UInt_t&)atype);
+   UInt_t mytype;
+   MapFileTypes(type, mytype);
+   ASImageFileTypes atype = (ASImageFileTypes)mytype;
 
    UInt_t aquality;
    EImageQuality quality = GetImageQuality();
@@ -1233,7 +1234,7 @@ void TASImage::Paint(Option_t *option)
    }
 
    Int_t   tile_x = 0, tile_y = 0;
-   ULong_t tile_tint = 0;
+   CARD32  tile_tint = 0;
    Bool_t  tile = kFALSE;
    Bool_t  expand = kFALSE;
 
@@ -5946,7 +5947,8 @@ void TASImage::CreateThumbnail()
       return;
    }
 
-   ASImage2xpmRawBuff(padimg, (CARD8 **)&buf, &size, 0);
+   void *ptr = &buf;
+   ASImage2xpmRawBuff(padimg, (CARD8 **)ptr, &size, 0);
    fTitle = buf;
 
    destroy_asimage(&padimg);

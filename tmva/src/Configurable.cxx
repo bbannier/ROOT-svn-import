@@ -25,13 +25,11 @@
  *                                                                                *
  **********************************************************************************/
 
-//_______________________________________________________________________
-//Begin_Html
-/*
-  Base Class for all classes that would like to habe option parsing enabled
-*/
-//End_Html
-//_______________________________________________________________________
+//________________________________________________________________________
+/* Begin_Html
+Base Class for all classes that need option parsing
+End_Html */
+//________________________________________________________________________
 
 #include <string>
 #include <iostream>
@@ -58,12 +56,17 @@ using std::endl;
 
 ClassImp(TMVA::Configurable)
 
+#ifdef _WIN32
+/*Disable warning C4355: 'this' : used in base member initializer list*/
+#pragma warning ( disable : 4355 )
+#endif
+
 //_______________________________________________________________________
 TMVA::Configurable::Configurable( const TString& theOption)  
    : fOptions                    ( theOption ),
      fLooseOptionCheckingEnabled ( kTRUE ),
      fLastDeclaredOption         ( 0 ),
-     fLogger                     ( this )
+     fLogger (this)
 {
    // constructor
    fLogger.SetMinType( kINFO );
