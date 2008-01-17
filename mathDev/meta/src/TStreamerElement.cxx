@@ -30,6 +30,7 @@
 #include "Api.h"
 #include "TInterpreter.h"
 #include "TError.h"
+#include "TDataType.h"
 
 #include <string>
 namespace std {} using namespace std;
@@ -555,8 +556,12 @@ const char *TStreamerBase::GetInclude() const
 {
    // Return the proper include for this element.
 
-   if (GetClassPointer() && fBaseClass->GetClassInfo()) sprintf(gIncludeName,"\"%s\"",fBaseClass->GetDeclFileName());
-   else                            sprintf(gIncludeName,"\"%s.h\"",GetName());
+   if (GetClassPointer() && fBaseClass->GetClassInfo()) {
+      sprintf(gIncludeName,"\"%s\"",fBaseClass->GetDeclFileName());
+   } else {
+      std::string shortname( TClassEdit::ShortType( GetName(), 1 ) );
+      sprintf(gIncludeName,"\"%s.h\"",shortname.c_str());
+   }
    return gIncludeName;
 }
 
@@ -924,11 +929,34 @@ void TStreamerBasicType::Streamer(TBuffer &R__b)
       Version_t R__v = R__b.ReadVersion(&R__s, &R__c);
       if (R__v > 1) {
          R__b.ReadClassBuffer(TStreamerBasicType::Class(), this, R__v, R__s, R__c);
-         return;
+      } else {
+         //====process old versions before automatic schema evolution
+         TStreamerElement::Streamer(R__b);
+         R__b.CheckByteCount(R__s, R__c, TStreamerBasicType::IsA());
       }
-      //====process old versions before automatic schema evolution
-      TStreamerElement::Streamer(R__b);
-      R__b.CheckByteCount(R__s, R__c, TStreamerBasicType::IsA());
+      switch(fType) {
+         // basic types
+         case kBool_t:     fSize = sizeof(bool);      break;
+         case kShort_t:    fSize = sizeof(Short_t);   break;
+         case kInt_t:      fSize = sizeof(Int_t);     break;
+         case kLong_t:     fSize = sizeof(Long_t);    break; 
+         case kLong64_t:   fSize = sizeof(Long64_t);  break;
+         case kFloat_t:    fSize = sizeof(Float_t);   break;
+         case kFloat16_t:  fSize = sizeof(Float_t);   break;
+         case kDouble_t:   fSize = sizeof(Double_t);  break;
+         case kDouble32_t: fSize = sizeof(Double_t);  break;
+         case kUChar_t:    fSize = sizeof(UChar_t);   break;
+         case kUShort_t:   fSize = sizeof(UShort_t);  break;
+         case kUInt_t:     fSize = sizeof(UInt_t);    break;
+         case kULong_t:    fSize = sizeof(ULong_t);   break;
+         case kULong64_t:  fSize = sizeof(ULong64_t); break;
+         case kBits:       fSize = sizeof(UInt_t);    break;
+         case kCounter:    fSize = sizeof(Int_t);     break;
+         case kChar_t:     fSize = sizeof(Char_t);    break;
+         case kCharStar:   fSize = sizeof(Char_t*);   break;
+         default:          return; // If we don't change the size let's not remultiply it.
+      }
+      if (fArrayLength) fSize *= GetArrayLength();
    } else {
       R__b.WriteClassBuffer(TStreamerBasicType::Class(),this);
    }
@@ -990,8 +1018,12 @@ const char *TStreamerObject::GetInclude() const
    // Return the proper include for this element.
 
    TClass *cl = GetClassPointer();
-   if (cl && cl->GetClassInfo()) sprintf(gIncludeName,"\"%s\"",cl->GetDeclFileName());
-   else                          sprintf(gIncludeName,"\"%s.h\"",GetTypeName());
+   if (cl && cl->GetClassInfo()) {
+      sprintf(gIncludeName,"\"%s\"",cl->GetDeclFileName());
+   } else {
+      std::string shortname( TClassEdit::ShortType( GetTypeName(), 1 ) );
+      sprintf(gIncludeName,"\"%s.h\"",shortname.c_str());
+   }
    return gIncludeName;
 }
 
@@ -1077,8 +1109,12 @@ const char *TStreamerObjectAny::GetInclude() const
    // Return the proper include for this element.
 
    TClass *cl = GetClassPointer();
-   if (cl && cl->GetClassInfo()) sprintf(gIncludeName,"\"%s\"",cl->GetDeclFileName());
-   else                          sprintf(gIncludeName,"\"%s.h\"",GetTypeName());
+   if (cl && cl->GetClassInfo()) {
+      sprintf(gIncludeName,"\"%s\"",cl->GetDeclFileName());
+   } else {
+      std::string shortname( TClassEdit::ShortType( GetTypeName(), 1 ) );
+      sprintf(gIncludeName,"\"%s.h\"",shortname.c_str());
+   }
    return gIncludeName;
 }
 
@@ -1169,10 +1205,13 @@ const char *TStreamerObjectPointer::GetInclude() const
    // Return the proper include for this element.
 
    TClass *cl = GetClassPointer();
-   if (cl && cl->GetClassInfo()) sprintf(gIncludeName,"\"%s\"",cl->GetDeclFileName());
-   else                          sprintf(gIncludeName,"\"%s.h\"",GetTypeName());
-   char *star = strchr(gIncludeName,'*');
-   if (star) strcpy(star,star+1);
+   if (cl && cl->GetClassInfo()) {
+      sprintf(gIncludeName,"\"%s\"",cl->GetDeclFileName());
+   } else {
+      std::string shortname( TClassEdit::ShortType( GetTypeName(), 1 ) );
+      sprintf(gIncludeName,"\"%s.h\"",shortname.c_str());
+   }
+
    return gIncludeName;
 }
 
@@ -1269,10 +1308,13 @@ const char *TStreamerObjectAnyPointer::GetInclude() const
    // Return the proper include for this element.
 
    TClass *cl = GetClassPointer();
-   if (cl && cl->GetClassInfo()) sprintf(gIncludeName,"\"%s\"",cl->GetDeclFileName());
-   else                          sprintf(gIncludeName,"\"%s.h\"",GetTypeName());
-   char *star = strchr(gIncludeName,'*');
-   if (star) strcpy(star,star+1);
+   if (cl && cl->GetClassInfo()) {
+      sprintf(gIncludeName,"\"%s\"",cl->GetDeclFileName());
+   } else {
+      std::string shortname( TClassEdit::ShortType( GetTypeName(), 1 ) );
+      sprintf(gIncludeName,"\"%s.h\"",shortname.c_str());
+   }
+
    return gIncludeName;
 }
 
@@ -1584,15 +1626,10 @@ const char *TStreamerSTL::GetInclude() const
 //______________________________________________________________________________
 void TStreamerSTL::SetStreamer(TMemberStreamer  *streamer)
 {
-   //set pointer to Streamer function for this element
-   //NOTE: we do not take ownership
+   // Set pointer to Streamer function for this element
+   // NOTE: we do not take ownership
 
-   if (fType==TVirtualStreamerInfo::kSTLp || 1) return;
    fStreamer = streamer;
-   if (streamer && !IsaPointer() ) {
-      fType = TVirtualStreamerInfo::kStreamer;
-      fNewType = fType;
-   }
 }
 
 //______________________________________________________________________________

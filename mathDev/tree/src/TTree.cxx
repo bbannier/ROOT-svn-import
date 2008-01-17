@@ -3761,7 +3761,7 @@ Int_t TTree::GetEntry(Long64_t entry, Int_t getall)
    //   branch->SetAutoDelete(kTRUE);
    //    for (Long64_t i=0;i<nentries;i++) {
    //       T.GetEntry(i);
-   //       // the objrect event has been filled at this point
+   //       // the object event has been filled at this point
    //    }
    //   In this case, at each iteration, the object event is deleted by GetEntry
    //   and a new instance of Event is created and filled.
@@ -3773,7 +3773,7 @@ Int_t TTree::GetEntry(Long64_t entry, Int_t getall)
    //       delete event;
    //       event = 0;  // EXTREMELY IMPORTANT
    //       T.GetEntry(i);
-   //       // the objrect event has been filled at this point
+   //       // the object event has been filled at this point
    //    }
    //
    //  It is strongly recommended to use the default option 1. It has the
@@ -4615,7 +4615,7 @@ Int_t TTree::MakeSelector(const char* selector)
    // where T is the name of the Tree in file myfile.root
    // and myselect.h, myselect.C the name of the files created by this function.
    // In a ROOT session, you can do:
-   //    root > T->Process("select.C")
+   //    root > T->Process("myselect.C")
 
    return MakeClass(selector, "selector");
 }

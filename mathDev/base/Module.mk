@@ -111,6 +111,13 @@ ifeq ($(ARCH),alphacxx6)
 $(BASEDIRS)/TRandom.o: OPT = $(NOOPT)
 endif
 
+ifeq ($(GCC_MAJOR),4)
+ifeq ($(GCC_MINOR),1)
+$(BASEDIRS)/TString.o: CXXFLAGS += -Wno-strict-aliasing
+$(BASEDIRS)/TContextMenu.o: CXXFLAGS += -Wno-strict-aliasing
+endif
+endif
+
 $(BASEDO1) $(BASEDO2): $(PCREDEP)
 $(BASEDO1) $(BASEDO2): CXXFLAGS += $(PCREINC)
 ifeq ($(ARCH),linuxicc)
