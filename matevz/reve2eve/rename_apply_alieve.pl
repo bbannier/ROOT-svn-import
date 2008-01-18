@@ -6,7 +6,8 @@
 # Configuration
 #-------------------------------------------------------------------------------
 
-$CFGFILE="rename-config";
+$CFGFILE         = "rename-config";
+$NEW_DIR_POSTFIX = "new";
 
 # Several config vars can be set in config file, e.g.:
 #
@@ -33,14 +34,15 @@ $CFGFILE="rename-config";
 # Action starts here
 #-------------------------------------------------------------------------------
 
-if ($ARGV[0] =~ /^-cfg=([\w-]+)$/)
+if ($ARGV[0] =~ m!^-cfg=([-\w\./]+)$!)
 {
   $CFGFILE = $1;
   shift @ARGV;
 }
 
-die "Usage: $0 [-cfg=<config-file>] <original-dir> <modified-copy-dir>\n"
-     unless -d $ARGV[0] and defined $ARGV[1];
+die "Usage: $0 [-cfg=<config-file>] <files> <dirs>\n" .
+    "  This version will NOT rename files, just replace includes.\n"
+  if $#ARGV == -1;
 
 # read config, remove no-change entries in files / classes
 
@@ -71,27 +73,33 @@ for $f (keys %classes)
 print "classes: removed $n noop entries, $N all entries.\n";
 
 
-# Copy directory, chdir to it
+for $f (@ARGV) {
+  $f =~ s!/*$!!o;
+  if (-d $f) {
+    $origdir = "$f";
+    $dir     = "$f-$NEW_DIR_POSTFIX";
+    `rm -rf $dir`;
+    `cp -a $origdir $dir`;
+    push @infiles, split(' ', `find $dir -type f -name \\*.h -or -name \\*.cxx -or -name \\*.C`);    
+  } else {
+    push @infiles, $f;
+  }
+}
 
-$origdir = $ARGV[0];
-$dir     = $ARGV[1];
 
-`rm -rf $dir`;
-`cp -a $origdir $dir`;
-
-chdir $dir;
+# Print files to modify. Pays off check this before the real run.
+#
+# print join "\n", @infiles, "\n";
+# exit;
 
 
 # Loop over .h, .cxx and .C files and do the replace magick.
-
-@infiles = split(' ', `find . -type f -name \\*.h -or -name \\*.cxx -or -name \\*.C`);
-
-# for $infile ("RenderElement.h", "RenderElement.cxx")
 for $infile (@infiles)
 {
   my ($path, $stem, $ext) = $infile =~ m!^(.*/)?([^/]+)\.(\w+)$!;
   $path =~ s!^\./!!;
 
+  my $outfile       = $infile;
   my $outfile;
   my $name_change;
   if ($RENAME_FILES && exists $files{$stem}) {
@@ -123,45 +131,54 @@ for $infile (@infiles)
     $text = $FRONT_MATTER . $text;
   }
 
+  # Watch this !!!!!!!!!!!!!!  EDIT BELOW FOR NEW PROJECT !!!!!!!!!!!!!!!!
   # Multiple inclusion protection (h files)
   if ($ext eq "h" && $name_change)
   {
-    $text =~ s/^\#ifndef (REVE|ROOT)_\w+(_H)?/\#ifndef ROOT_$stem/m;
-    $text =~ s/^\#define (REVE|ROOT)_\w+(_H)?/\#define ROOT_$stem/m;
+    $text =~ s/^\#ifndef (ALIEVE|REVE|ROOT)_\w+(_H)?/\#ifndef ALIEVE_${stem}_H/m;
+    $text =~ s/^\#define (ALIEVE|REVE|ROOT)_\w+(_H)?/\#define ALIEVE_${stem}_H/m;
   }
 
   # Namespace holding class definition (h files)
-  if ($ext eq "h")
+  if ($STRIP_H_NAMESPACE and $ext eq "h")
   {
-    if ($text =~ m/^\s*namespace Reve\s*\{/m)
+    if ($text =~ m/^\s*namespace $STRIP_H_NAMESPACE\s*\{/m)
     {
-      $text =~ s/^\s*namespace Reve\s*\{//ms;
+      $text =~ s/^\s*namespace $STRIP_H_NAMESPACE\s*\{//ms;
       $text =~ s!^[ \t]*\}[ \t]*(//.*)?\s*(?=\#endif)!!m;
     }
   }
 
+  # Watch this !!!!!!!!!!!!!!  EDIT BELOW FOR NEW PROJECT !!!!!!!!!!!!!!!!
   # Remove Declarations like 'using namespace Reve'. (cxx and C files)
   if ($ext eq "cxx" or $ext eq "C")
   {
-    $text =~ s/^\s+using namespace Reve;\s*\n+//mg;
+    $text =~ s/^\s*using namespace Alieve;$//mg;
   }
 
+  # Watch this !!!!!!!!!!!!!!  EDIT BELOW FOR NEW PROJECT !!!!!!!!!!!!!!!!
   # Remove 'Reve::' and 'Reve/' stuff
-  $text =~ s/Reve:://mg;
-  $text =~ s!Reve/!!mg;
+  $text =~ s!Alieve::!!mg;
+  # $text =~ s!Alieve/!!mg; # Not for aliroot
 
   # Replace include files whose names have changed
   for $file (keys %files)
   {
     my $repl = $files{$file};
-    $text =~ s!^\#include (<|")${file}\.h("|>)!\#include <$repl.h>!mg;
+    $text =~ s!^\#include (<|")${file}\.h("|>)!\#include $1$repl.h$2!mg;
+  }
+
+  # Introduce early replacements
+  for $word (keys %prereplace) {
+    my $repl = $prereplace{$word};
+    my $n = $text =~ s/(_|[^\w]|^)${word}(?=[^\w]|$)/$1$repl/mg;
+    $replace_count += $n;
   }
 
   # Replace class names etc
   for $name (keys %classes)
   {
     my $repl = $classes{$name};
-    ### my $n = $text =~ s/(_|[^\w]|^)${name}([^\w]|$)/$1$repl$2/mg;
     my $n = $text =~ s/(_|[^\w]|^)${name}(?=[^\w]|$)/$1$repl/mg;
     $replace_count += $n;
   }
@@ -175,6 +192,13 @@ for $infile (@infiles)
       my $n = $text =~ s/(_|[^\w]|^)${name}([^\w]|$)/$1$repl$2/mg;
       $replace_count += $n;
     }
+  }
+
+  # Introduce late replacements
+  for $word (keys %postreplace) {
+    my $repl = $postreplace{$word};
+    my $n = $text =~ s/(_|[^\w]|^)${word}(?=[^\w]|$)/$1$repl/mg;
+    $replace_count += $n;
   }
 
   ### Text manipulation end

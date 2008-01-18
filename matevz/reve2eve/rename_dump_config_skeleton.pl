@@ -18,8 +18,7 @@ while ($_ = readdir D) {
   my $stem = $file;
   $stem =~ s/\..+//;
 
-  # $files{$stem} = "TEve${stem}";
-  $files{$stem} = "${stem}" if $stem =~ /NLT/;
+  $files{$stem} = "AliEve${stem}";
 }
 
 closedir D;
@@ -39,8 +38,7 @@ while ($_ = <F>) {
     my $cls = $fqn;
     $cls =~ s/.*:://;
 
-    # $classes{$cls} = "TEve${cls}";
-    $classes{$cls} = "${cls}" if $cls =~ /NLT/;
+    $classes{$cls} = "AliEve${cls}";
   }
 
 }
