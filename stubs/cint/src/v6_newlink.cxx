@@ -4166,7 +4166,7 @@ void G__if_ary_union_constructor(FILE *fp, int ifn, G__ifunc_table_internal *ifu
     if (ifunc->param[ifn][k]->name) {
       p = strchr(ifunc->param[ifn][k]->name, '[');
       if (p) {
-        fprintf(fp, "  struct G__aRyp%d { %s a[1]%s; }* G__Ap%d = (struct G__aRyp%d*) 0x64;\n", k, G__type2string(ifunc->param[ifn][k]->type, ifunc->param[ifn][k]->p_tagtable, ifunc->param[ifn][k]->p_typetable, 0 , 0), p + 2, k, k, k);
+        fprintf(fp, "  struct G__aRyp%d { %s a[1]%s; }* G__Ap%d = (struct G__aRyp%d*) 0x64;\n", k, G__type2string(ifunc->param[ifn][k]->type, ifunc->param[ifn][k]->p_tagtable, ifunc->param[ifn][k]->p_typetable, 0 , 0), p + 2, k, k);
       }
     }
   }
@@ -4207,14 +4207,13 @@ void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,in
     fprintf(fp, "void const%s%i%i(){\n", G__map_cpp_funcname(ifunc->tagnum, ifunc->funcname[j], j, ifunc->page), ifunc->tagnum, func_cod);
     G__if_ary_union_constructor(fp, 0, ifunc);
 
-    fprintf(fp, "%s obj%i(",G__fulltagname(ifunc->tagnum,0), ifunc->tagnum, G__fulltagname(ifunc->tagnum,0));
+    fprintf(fp, "%s obj%i(",G__fulltagname(ifunc->tagnum,0), ifunc->tagnum);
 
     int k = 0;
     for (int counter=paran-1; counter>-1; counter--) {
       // Parameters in libp
       // First push all the parameters passed in libp
       // and the push the params by default
-      void *paramref = 0;
       int ispointer = 0;
 
       // if this is a variadic function we have to push the parameters
@@ -6817,26 +6816,6 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
       // LF 01-11-07
       // Force the outlining of functions even if the weren't declared
       // (CInt will try to declare them later on anyways)
-
-      // if we didn't force the outlining for the default constructor
-      // we have to do it here because we need the object created there
-      // to be able to use a copy constructor
-      if ( !(!isconstructor && !G__struct.isabstract[tagnum] && !isnonpublicnew) ) {
-        // I don't know how to get the pointer to a constructor so the only thing
-        // I can think of to use the default constructor is to create an object
-
-        // index in the ifunc
-        long pifn;
-        long poffset;
-
-        // Single Constructor has only a parameter. The size of the object
-        G__param para_new;
-        para_new.paran = 0;
-
-        // We look for the "new operator" ifunc in the current class and in its bases
-        G__ifunc_table_internal * new_oper = G__get_methodhandle4(G__struct.name[tagnum], &para_new, G__struct.memfunc[tagnum], &pifn, &poffset, 0, 1,0,0);
-
-      }
 
       fprintf(fp,"%s G__copycons_%s(*((%s*) 0x64));\n", G__fulltagname(tagnum, 0), G__map_cpp_funcname(tagnum, funcname, ifn, page),G__fulltagname(tagnum, 0)  );
     }
@@ -10446,6 +10425,7 @@ int G__memfunc_setup_imp(const char *funcname,int hash
   int store_func_now = -1;
   struct G__ifunc_table_internal *store_p_ifunc = 0;
   int dtorflag=0;
+  (void) isvirtual;
 
   if('~'==funcname[0] && 0==G__struct.memfunc[G__p_ifunc->tagnum]->hash[0]) {
     store_func_now = G__func_now;
