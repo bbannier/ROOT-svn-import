@@ -450,13 +450,13 @@ int G__debug_compiledfunc_arg(FILE *fout,G__ifunc_table_internal *ifunc,int ifn,
  **************************************************************************
  **************************************************************************/
 
-//** LF 16/05/07 This function can be found in value.cxx
-//** but it's __#ifdef G__NEVER__ why is that so?
-//** put it here for the moment
-/****************************************************************
- * float G__float(G__value buf)
- *
- ****************************************************************/
+/**************************************************************************
+* float G__float(G__value buf)
+*
+* LF 16/05/07 This function can be found in value.cxx
+* but it's __#ifdef G__NEVER__ why is that so?
+* put it here for the moment
+**************************************************************************/
 float G__float(G__value buf)
 {
   float result;
@@ -503,11 +503,19 @@ int G__isbaseclass(int dertag, int basetag)
   return(0);
 }
 
-//
-// LF 09-08-08
-// look for an ifunc in all the inher. hierarchy.
-// This function will be called in the dictionary generation.
-// Not at run time.
+/**************************************************************************
+ * G__ifunc_exist_base
+ *
+ * LF 09-08-08
+ * look for an ifunc in all the inher. hierarchy.
+ * This function will be called in the dictionary generation.
+ * Not at run time.
+ *
+ * It will return the page of the function (its index) ...
+ * or it will return -1 when there is more than one possible index
+ * (we call it an ambiguous function).
+ * This is merely an optimization artifact for the function lookup
+ **************************************************************************/
 int G__ifunc_exist_base(int ifn, G__ifunc_table_internal *ifunc)
 {
   if (ifunc->tagnum<0)
@@ -642,11 +650,16 @@ int G__ifunc_exist_base(int ifn, G__ifunc_table_internal *ifunc)
   return ifunc_res->page_base;
 }
 
-// LF 23-10-07
-//
-// This is here just for compatibility reasons...
-// When we have an old dicionary, the page_base field will be -1.. in that case we need to do a full search
-struct G__ifunc_table_internal* G__ifunc_page_old_dict(char *funcname,int hash, G__ifunc_table_internal *ifunc, int allifunc)
+/**************************************************************************
+ * G__ifunc_page_old_dict
+ *
+ * LF 23-10-07
+ *
+ * This is here just for compatibility reasons...
+ * When we have an old dicionary, the page_base field will be -1...
+ * in that case we need to do a full search
+ **************************************************************************/
+struct G__ifunc_table_internal* G__ifunc_page_old_dict(char *funcname, int hash, G__ifunc_table_internal *ifunc, int allifunc)
 {
   // Look for a function with this name and special index in the given ifunc
   // (and its bases)
@@ -665,18 +678,18 @@ struct G__ifunc_table_internal* G__ifunc_page_old_dict(char *funcname,int hash, 
     }
     ifunc=ifunc->next;
   }
-
   return 0;
 }
 
-// LF 06-08-07
-//
-//
-struct G__ifunc_table_internal* G__ifunc_page(char *funcname,int hash, int page_base, G__ifunc_table_internal *ifunc, int allifunc)
+/**************************************************************************
+ * G__ifunc_page()
+ *
+ * LF 06-08-07
+ * Look for a function with this name and special index in the given ifunc
+ **************************************************************************/
+struct G__ifunc_table_internal* G__ifunc_page(char *funcname, int hash, int page_base, G__ifunc_table_internal *ifunc, int allifunc)
 {
-  // Lookt for a function with this name and special index in the given ifunc
-  // (and its bases)
-  G__ifunc_table_internal* ifunc_res=0;
+  G__ifunc_table_internal* ifunc_res = 0;
   int i;
   while(ifunc) {
     for(i=0;i<ifunc->allifunc;i++) {
@@ -691,14 +704,17 @@ struct G__ifunc_table_internal* G__ifunc_page(char *funcname,int hash, int page_
     }
     ifunc=ifunc->next;
   }
-
   return 0;
 }
 
-// LF 06-08-07
-//
-//
-struct G__ifunc_table_internal * G__ifunc_page_base(char *funcname,int hash,int page_base, G__ifunc_table_internal *ifunc, int allifunc)
+/**************************************************************************
+ * G__ifunc_page_base()
+ *
+ * LF 06-08-07
+ * Look for a function with this name and special index in the given ifunc
+ * (and look for it in its bases too)
+ **************************************************************************/
+struct G__ifunc_table_internal * G__ifunc_page_base(char *funcname, int hash,int page_base, G__ifunc_table_internal *ifunc, int allifunc)
 {
   G__ifunc_table_internal *ifunc_res = G__ifunc_page(funcname,hash,page_base,ifunc,allifunc);
 
@@ -713,7 +729,7 @@ struct G__ifunc_table_internal * G__ifunc_page_base(char *funcname,int hash,int 
   if(ifunc_res)
     return ifunc_res;
 
-  // If not.. llok for it in the base classes
+  // If not.. look for it in the base classes
 
   // tagnum's Base Classes structure
   G__inheritance* cbases = G__struct.baseclass[ifunc->tagnum];
@@ -741,8 +757,14 @@ struct G__ifunc_table_internal * G__ifunc_page_base(char *funcname,int hash,int 
   return 0;
 }
 
-void*
-G__get_funcptr(G__ifunc_table_internal *ifunc, int ifn)
+/**************************************************************************
+ * G__get_funcptr()
+ *
+ * returns the function pointer "contained" in an ifunc.
+ * if it has not been set up yet but we have the mangled name, then
+ * we fetch the address using this symbol
+ **************************************************************************/
+void* G__get_funcptr(G__ifunc_table_internal *ifunc, int ifn)
 {
   // returns the funcptr of an ifunc
   // and it's case it's null, it tries to get it
@@ -761,11 +783,15 @@ G__get_funcptr(G__ifunc_table_internal *ifunc, int ifn)
   return ifunc->funcptr[ifn];
 }
 
-// LF 08-08-07
-// Differentiate between the asm call of a function and the
-// logic required before it (virtual table handling and stuff)
-// "para" is the parameters (like libp) and param are the
-// formal parameters (like ifunc->param)
+/**************************************************************************
+ * G__stub_method_asm
+ *
+ * LF 08-08-07
+ * Differentiate between the asm call of a function and the
+ * logic required before it (virtual table handling and stuff)
+ * "para" is the parameters (like libp) and param are the
+ * formal parameters (like ifunc->param)
+ **************************************************************************/
 int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, void* this_ptr, G__param* rpara, G__value *result7)
 {
   void *vaddress = G__get_funcptr(ifunc, ifn);
@@ -1187,15 +1213,17 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
   return 0;
 }
 
+/**************************************************************************
+ * G__evaluate_libp
+ *
+ * This function will put the parameter of libp in rpara,
+ * but it will also evaluate the default parameters of ifunc
+ * putting them in rpara... at the end, rpara should be everything
+ * we need to execute a given function
+ * it returns 0 if everything is ok or a -1 if an error is found
+ **************************************************************************/
 int G__evaluate_libp(G__param* rpara, G__param *libp, G__ifunc_table_internal *ifunc, int ifn)
 {
-  // This function will put the parameter of libp in rpara,
-  // but it will also evaluate the default parameters of ifunc
-  // putting them in rpara... at the end, rpara should be everything
-  // we need to execute a given function
-  // it returns 0 if everything is ok or a -1 if an error is found
-
-
   // LF 08-08-07
   // We need to instantiate the default parameters and create a variable
   // containing all of them...
@@ -1244,20 +1272,23 @@ int G__evaluate_libp(G__param* rpara, G__param *libp, G__ifunc_table_internal *i
   return 0;
 }
 
-
-
-
-/* ---------------:: Leo & Diego March :: 2007--------------- */
-/* Non Dictionariy (Stub functions) Assembler Method Calling  */
-/*                                                            */
-/* vaddress = Method's Virtual Address                        */
-/* result7  = Method's return                                 */
-/* libp     = Method's Parameters                             */
-/* ifunc    = Interpreted Functions Table                     */
-/* ifn      = Method's index in ifunc                         */
-/*                                                            */
-/* See: common.h and G__c.h for types information             */
-/* ---------------------------------------------------------- */
+/**************************************************************************
+ * G__stub_method_calling
+ *
+ * Non Dictionariy (Stub functions) Assembler Method Calling
+ *
+ * This is the first step of the function execution without the stubs.
+ * We will find the rigth virtual function and let everything
+ * ready for the real evaluation
+ *
+ * vaddress = Method's Virtual Address
+ * result7  = Method's return
+ * libp     = Method's Parameters
+ * ifunc    = Interpreted Functions Table
+ * ifn      = Method's index in ifunc
+ *
+ * See: common.h and G__c.h for types information
+ **************************************************************************/
 int G__stub_method_calling(G__value *result7, G__param *libp,
                            G__ifunc_table_internal *ifunc, int ifn)
 {
@@ -2031,6 +2062,9 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
 
 /**************************************************************************
  * G__call_cppfunc()
+ *
+ * Here we choose if the function will be called thorugh the stubs or
+ * directly with asm calls
  **************************************************************************/
 int G__call_cppfunc(G__value *result7,G__param *libp,G__ifunc_table_internal *ifunc,int ifn)
 {
@@ -4055,12 +4089,12 @@ int G__isnonpublicnew(int tagnum)
 
 
 /**************************************************************************
+ * G__cppif_change_globalcomp()
+ *
  * LF 09-10-07
  * We need this silly method just to change the value of a field that
  * was changed in the stub generation (but since we got rid of the
  * stubs... the state isn't changed)
- *
- *
  **************************************************************************/
 void G__cppif_change_globalcomp()
 {
@@ -4142,8 +4176,8 @@ void G__if_ary_union_constructor(FILE *fp, int ifn, G__ifunc_table_internal *ifu
  *  G__cppif_dummyobj()
  *
  **************************************************************************/
-void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,int j){
-
+void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,int j)
+{
   static int func_cod = 0;
 
   // We cannont create a pointer to a constructor. To get the symbol in the .o file we create an object and we call de destructor.
@@ -4482,20 +4516,21 @@ void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,in
   func_cod++;
 }
 
+/**************************************************************************
+ * G__cppif_geninlin
+ *
+ * LF 29-05-06
+ * Rem we have to deal with inlined functions.
+ * And saddly CInt doesnt care about them.
+ * Axel said that we would be able to find out
+ * what symbols were in a library before generating the
+ * wrappers (he said that a dictionary will be divided in
+ * two parts).
+ * As an inmediate solution, force every single member function
+ * to be inlined by declaring a pointer to it
+ **************************************************************************/
 void G__cppif_geninline(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,int j)
 {
-  // LF 29-05-06
-  // Rem we have to deal with inlined functions.
-  // And saddly CInt doesnt care about them.
-  // Axel said that we would be able to find out
-  // what symbols were in a library before generating the
-  // wrappers (he said that a dictionary will be divided in
-  // two parts).
-  // As an inmediate solution, force every single member function
-  // to be inlined by declaring a pointer to it
-
-  // Output the function name.
-
   // LF 06-11-12
   // Since we are now registering the symbols for the second dictionary too...
   // We can try to inline all the functions without symbol
@@ -7093,11 +7128,12 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
  * base classes
  * RETURN -> NULL Method not found
  *           NOT NULL Method Found. Method's ifunc table pointer
+ *
+ *
+ * LF 06-08-08
+ * Changed to return the page instead of just not null
+ * (since 0 means not found then the index starts at 1)
  **************************************************************************/
-//
-// LF 06-08-08
-// Changed to return the page instead of just not null
-// (since 0 means not found then the index starts at 1)
 int G__method_inbase(int ifn, G__ifunc_table_internal *ifunc)
 {
   // tagnum's Base Classes structure
@@ -7144,14 +7180,14 @@ int G__method_inbase(int ifn, G__ifunc_table_internal *ifunc)
   return 0;
 }
 
-//
-// LF 06-08-08
-// Changed to return the page instead of just not null
-// (since 0 means not found then the index starts at 1)
-// 16-11-07
-// -1 now means than it was found in two or more parents...
-// the association can not be done here... we have to
-// do it at runtime
+/**************************************************************************
+ * G__method_inbase2()
+ *
+ * 16-11-07
+ * -1 now means than it was found in two or more parents...
+ * the association can not be done here... we have to
+ * do it at runtime
+ **************************************************************************///
 int G__method_inbase2(int ifn, G__ifunc_table_internal *ifunc)
 {
   int page_base = 0; // the result... 0 if not found (the index otehrwise)
@@ -10807,8 +10843,8 @@ int G__memfunc_setup2(const char *funcname,int hash,const char *mangled_name
   if(mangled_name)
     G__savestring(&G__p_ifunc->mangled_name[G__func_now],(char*)mangled_name);
 
-// LF 06-08-07
-// new virtual flags
+  // LF 06-08-07
+  // new virtual flags
 #ifdef G__TRUEP2F
   G__p_ifunc->ispurevirtual[G__func_now] = isvirtual&0x01;
   isvirtual = isvirtual/2;
@@ -10821,12 +10857,10 @@ int G__memfunc_setup2(const char *funcname,int hash,const char *mangled_name
 
   // LF 02-10-07
   // Do this only in setup_impl()
-
   if(dtorflag) {
     G__func_now = store_func_now;
     G__p_ifunc = store_p_ifunc;
   }
-
 
   return G__memfunc_setup_imp(funcname, hash, funcp, type, tagnum, typenum, reftype, para_nu, ansi, 
                               accessin, isconst, paras, comment
