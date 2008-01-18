@@ -214,7 +214,7 @@ endif
 
 
 clean:
-		@rm -f $(OBJS) core TrackDict.$(SrcSuf)
+		@rm -f $(OBJS) core TrackDict.$(SrcSuf) TrackDict.h
 
 distclean:      clean
 		@rm -f $(PROGRAMS) libTrackDict.*
