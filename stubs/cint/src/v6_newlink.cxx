@@ -4639,6 +4639,377 @@ void G__cppif_geninline(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,i
     }
   }
 }
+void G__cpp_methodcall(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,int j)
+{
+   // LF 29-05-06
+   // Rem we have to deal with inlined functions.
+   // And saddly CInt doesnt care about them.
+   // Axel said that we would be able to find out
+   // what symbols were in a library before generating the
+   // wrappers (he said that a dictionary will be divided in
+   // two parts).
+   // As an inmediate solution, force every single member function
+   // to be inlined by declaring a pointer to it
+
+   // Output the function name.
+
+   // LF 06-11-12
+   // Since we are now registering the symbols for the second dictionary too...
+   // We can try to inline all the functions without symbol
+   if( G__NOLINK>ifunc->globalcomp[j] &&  /* with -c-1 option */
+       G__PUBLIC==ifunc->access[j] && /* public, this is always true */
+       /*0==ifunc->staticalloc[j] &&*/
+       ifunc->hash[j] ){//&&
+      //!ifunc->mangled_name[j]) { DMS
+      // LF
+      if(G__dicttype==2 || G__dicttype==4 || G__dicttype==3) {
+         // LF 21-06-07
+         // Dont print them for the stats
+         int hash;
+         int idx;
+         if(i != -1) {
+            G__hash(G__fulltagname(i,0),hash,idx);
+         }
+         
+       
+         fprintf(fp,"%s dummyobj;\n",G__fulltagname(i,0));
+         fprintf(fp,"dummyobj.");
+         fprintf(fp,"%s(",ifunc->funcname[j]);
+
+         int paran = ifunc->para_nu[j];
+         int k = 0;
+         for (int counter=paran-1; counter>-1; counter--) {
+            //for (int k=paran-1; k>=0; k--) {    
+            // Parameters in libp
+            // First push all the parameters passed in libp
+            // and the push the params by default
+            //G__value param;
+            void *paramref = 0;
+            int ispointer = 0;
+            //int k = counter;
+               
+            // if this is a variadic function we have to push the parameters
+            // in the inverse order
+            //if (!globalfunc)
+            k = (paran-1) - counter;
+            //else
+            //   k = counter;
+
+            G__paramfunc *formal_param = ifunc->param[j][k];
+            char para_type = formal_param->type;
+
+            // If we have more parameters than the declarations allows
+            // (variadic function) then take the type of the actual parameter
+            // ... forget to check the declaration (will be null)
+            // if(ifunc->ansi[j]==2)
+            //            para_type = param.type;
+
+            if(isupper(formal_param->type)){
+               ispointer = 1;
+            }  
+            //  else isref = 0
+               
+            if (counter!=paran-1)
+               fprintf(fp,",");
+
+            if (formal_param->name){
+               if(strchr(formal_param->name,'[')){
+                  fprintf(fp,"G__Ap%d->a",counter);
+                  continue;
+               }
+            }
+            // By Value or By Reference?
+            if (!ispointer){// By Value
+
+               if (formal_param->reftype==1&&(formal_param->p_typetable!=-1||formal_param->p_tagtable!=-1)){
+                  if(formal_param->p_typetable==-1)
+                     fprintf(fp,"*((%s*) 0x64)",G__fulltagname(formal_param->p_tagtable,0));   
+                  else  
+                     fprintf(fp,"*((%s*) 0x64)",G__fulltypename(formal_param->p_typetable));   
+               }
+               else{
+
+                  // Parameter's type? Push is different for each type
+                  switch(para_type){
+
+                  case 'a' : // Double = Double Word
+                  {
+                     fprintf(fp,"*((%s*) 0x64)",G__fulltypename(formal_param->p_typetable)); 
+                     
+                  }
+                  break;
+
+                  case 'd' : // Double = Double Word
+                  {
+                     fprintf(fp, "(double) 0");
+                     
+                  }
+                  break;
+                   
+                  case 'i' : // Integer = Single Word
+                  {
+                     if (formal_param->p_tagtable==-1)
+                        fprintf(fp, " 0");
+                     else  
+                        fprintf(fp, " (%s) 0", G__fulltagname(formal_param->p_tagtable,0));
+                     
+                  }
+                  break;
+
+                  case 'b' : // Unsigned Char ????
+                  {
+                     fprintf(fp, " 'a'");
+                     
+                  }
+                  break;
+
+                  case 'c' : // Char
+                  {
+                     fprintf(fp, " 'a'");
+                     
+                  }
+                  break;
+            
+                  case 's' : // Short
+                  {
+                     fprintf(fp, "(short) 0");
+                     
+                  }
+                  break;
+
+                  case 'r' : // Unsigned Short
+                  {
+                     fprintf(fp, "(unsigned short) 0");
+                     
+                  }
+                  break;
+
+                  case 'h' : // Unsigned Int
+                  {
+                     fprintf(fp, "(unsigned int) 0");
+                     
+                  }
+                  break;
+
+                  case 'l' : // Long
+                  {
+                     fprintf(fp, "(long) 0");
+                     
+                  }
+                  break;
+
+                  case 'k': // Unsigned Long
+                  {
+                     fprintf(fp, "(unsigned long) 0");
+                  }
+                  break;
+
+                  case 'f' : // Float // Shouldnt it be treated as a double?
+                  { 
+                     fprintf(fp, "(float) 0");
+                  }
+                  break;
+
+                  case 'n' : // Long Long
+                  {
+                     fprintf(fp, "(long long) 0");
+                  }
+                  break;
+
+                  case 'm' : // unsigned Long Long
+                  {
+                     fprintf(fp, "(unsigned long long) 0");
+                  }
+                  break;
+
+                  case 'q' : // should this be treated with two resgisters two?
+                  {
+                     fprintf(fp, " 0");
+                  }
+                  break;
+
+                  case 'g' : // bool 
+                  {
+                     fprintf(fp, " true");
+                  }
+                  break;
+               
+                  case '1': // Function Pointer
+                  {
+                     if(formal_param->p_typetable==-1)
+                        fprintf(fp, " (void*) 0x64");
+                     else
+                        fprintf(fp,"(%s) 0x64",G__fulltypename(formal_param->p_typetable)); 
+                  }
+                  break;
+
+
+                  case 'u' : // a class... treat it as a reference
+                  {
+                     fprintf(fp,"*((%s*) 0x64)",G__fulltagname(formal_param->p_tagtable,0)); 
+                  }
+                  break;
+
+                  default:
+                     fprintf(fp, " Unkown: %c", formal_param->type);
+                     G__fprinterr(G__serr,"Type %c not known yet (stub method)\n", para_type);
+                  }
+               }
+            }
+            else{
+                     
+               if(formal_param->p_tagtable!=-1){
+               
+                  if (formal_param->reftype==1)
+                     fprintf(fp,"*((%s*) 0x64)", G__type2string(formal_param->type,formal_param->p_tagtable,formal_param->p_typetable,0,formal_param->isconst&G__CONSTVAR));
+                  //fprintf(fp,"*((%s*) 0x64)",G__fulltagname(formal_param->p_tagtable,0));   
+                  else 
+                     if (formal_param->reftype==2)
+                        fprintf(fp,"(%s**) 0x64", G__fulltagname(formal_param->p_tagtable,0)); 
+                     else  
+                        fprintf(fp,"(%s*) 0x64", G__fulltagname(formal_param->p_tagtable,0)); 
+                  //else
+                  // fprintf(fp,"aux%i",k);
+               }
+               else{  
+                  //         if (formal_param->p_typetable!=-1){
+//                  //  if (formal_param->reftype==0)
+// //                      fprintf(fp,"aux%i",k);
+// //                   else
+//                   fprintf(fp,"(%s*) 0x64",G__fulltypename(formal_param->p_typetable)); 
+//                }
+//                else{  
+                  // Parameter's type? Push is different for each type
+                  switch(formal_param->type){
+
+                  case 'D': // Double* 
+                  {
+                     fprintf(fp, " (double*) 0x64");
+                     
+                  }
+                  break;
+                   
+                  case 'H': // Unsigned Integer*
+                  {
+                     fprintf(fp, " (UInt_t*) 0x64");
+                     
+                  }
+                  break;
+
+
+                  case 'I': // Integer*
+                  {
+                     fprintf(fp, " (Int_t*) 0x64");
+                     
+                  }
+                  break;
+
+                  case 'B': // *UChar
+                  {
+                     if (formal_param->reftype==2)
+                        fprintf(fp,"(UChar_t**) 0"); 
+                     else  
+                        fprintf(fp,"(UChar_t*) 0"); 
+                  }
+                  break;
+
+                  case 'C': // *Char
+                  {
+                     if (formal_param->reftype==2){
+                        if (formal_param->isconst)
+                           fprintf(fp,"(const char**) 0"); 
+                        else
+                           fprintf(fp,"(char**) 0"); 
+                     }
+                     else{  
+                        fprintf(fp,"(char*) 0"); 
+                     }
+                  }
+                  break;
+                  
+                  case 'E': // FILE
+                  {
+                     if (formal_param->reftype==2)
+                        fprintf(fp,"(FILE**) 0"); 
+                     else  
+                        fprintf(fp,"(FILE*) 0"); 
+                  }
+                  break;
+
+                  case 'Y': // (void*)
+                  {
+                     if(formal_param->p_typetable==-1)
+                        fprintf(fp, " (void*) 0x64");
+                     else{
+                        if (formal_param->reftype==2)
+                           fprintf(fp,"(%s*) 0x64",G__fulltypename(formal_param->p_typetable)); 
+                        else  
+                           fprintf(fp,"*((%s*) 0x64)",G__fulltypename(formal_param->p_typetable));   
+
+                     }
+
+                  }
+                  break;
+
+                  case 'F': // *float
+                  {
+                     if (formal_param->reftype==2)
+                        fprintf(fp,"(float**) 0"); 
+                     else  
+                        fprintf(fp,"(float*) 0"); 
+                  }
+                  break;
+                  case 'N': // *long long
+                  {
+                     if (formal_param->reftype==2)
+                        fprintf(fp,"(Long64_t**) 0"); 
+                     else  
+                        fprintf(fp,"(Long64_t*) 0"); 
+                  }
+                  break;
+                  case 'L': // *long
+                  {
+                     if (formal_param->reftype==2)
+                        fprintf(fp,"(long**) 0"); 
+                     else  
+                        fprintf(fp,"(long*) 0"); 
+                  }
+                  break;
+                  case 'S': // *short
+                  {
+                     if (formal_param->reftype==2)
+                        fprintf(fp,"(short**) 0"); 
+                     else  
+                        fprintf(fp,"(short*) 0"); 
+                  }
+                  break;
+
+                  case 'K': // Unsigned Long
+                  {
+                     if (formal_param->reftype==2)
+                        fprintf(fp,"(unsigned long**) 0"); 
+                     else  
+                        fprintf(fp,"(unsigned long*) 0"); 
+                  }
+                  break;
+
+
+                  default:
+                     fprintf(fp, " Unkown: %c", formal_param->type);
+                     G__fprinterr(G__serr,"Type %c not known yet (stub method)\n",formal_param->type);
+                  }  
+                          
+                  //}
+               }
+            }        
+         }
+         
+         fprintf(fp,");\n");
+
+      }
+   }
+}  
+
 
 /**************************************************************************
  * G__make_default_ifunc()
@@ -5126,30 +5497,72 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
               // generate the inline code
 
               if(!ifunc->ispurevirtual[j] && G__dicttype==2){
-                // The inline of an operator== must be generated
-                // in a different way as one of a normal function
-                //if(strcmp(ifunc->funcname[j],"operator=")==0
-                //   && 'u'==ifunc->param[j][0]->type
-                //   && i==ifunc->param[j][0]->p_tagtable){
-                //   G__cppif_gendefault(fp,hfp,i,j,ifunc,1,1,1,0,1);
-                //}
-                //else{  // generate inline for normal function
-                if ( !(strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
-                       strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
-                       strncmp(G__fulltagname(i,0),"list", strlen("list"))==0 ||
-                       strncmp(G__fulltagname(i,0),"deque", strlen("deque"))==0 ||
-                       strncmp(G__fulltagname(i,0),"set", strlen("set"))==0 ||
-                       strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))==0 || 
-                       strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))==0 ||
-                       strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
-                       strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
-                       strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0) )
-                  G__cppif_geninline(fp, ifunc, i, j);
-                //}
+                       // The inline of an operator== must be generated
+                       // in a different way as one of a normal function
+                       //if(strcmp(ifunc->funcname[j],"operator=")==0
+                       //   && 'u'==ifunc->param[j][0]->type
+                       //   && i==ifunc->param[j][0]->p_tagtable){
+                       //   G__cppif_gendefault(fp,hfp,i,j,ifunc,1,1,1,0,1);
+                       //}   
+                       //else{  // generate inline for normal function
+                       if ( !(strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
+                               strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
+                               strncmp(G__fulltagname(i,0),"list", strlen("list"))==0 ||
+                               strncmp(G__fulltagname(i,0),"deque", strlen("deque"))==0 ||
+                               strncmp(G__fulltagname(i,0),"set", strlen("set"))==0 ||
+                               strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))==0 || 
+                               strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))==0 ||
+                               strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
+                               strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
+                              strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0) ){
+                          
+                          if (G__struct.isabstract[ifunc->tagnum])
+                             G__cppif_geninline(fp, ifunc, i, j); 
+                          else{   
+                             fprintf(fp, "\n void G__method_call%s(){\n",G__map_cpp_funcname(ifunc->tagnum,G__struct.name[ifunc->tagnum],i, ifunc->page));
+                             G__cpp_methodcall(fp, ifunc, i, j); 
+                             fprintf(fp,"}\n\n");
+                          }
+                          
+                       }
+                    }
+
+              
+              // If they werent generated automatically...
+              if(!(ifunc->funcptr[j]==(void*)-1)){
+                     if(!ifunc->ispurevirtual[j] && G__dicttype==3){
+                       // Now we have no symbol but we are in the third or fourth
+                       // dictionary... which means that the second one already tried to create it...
+                       // If that's the case we have no other choice but to generate the stub
+                       //if(strcmp(ifunc->funcname[j],"operator=")==0
+                       //   && 'u'==ifunc->param[j][0]->type
+                       //   && i==ifunc->param[j][0]->p_tagtable){
+                       //   G__cppif_gendefault(fp,hfp,i,j,ifunc,1,1,1,0,1);
+                       //}   
+                       //else                 
+                       G__cppif_genfunc(fp,hfp,i,j,ifunc);
+                    }
+                    else if(!ifunc->ispurevirtual[j] && G__dicttype==4){
+                 
+                       // The inline of an operator== must be generated
+                       // in a different way as one of a normal function
+                       //if(strcmp(ifunc->funcname[j],"operator=")==0
+                       //   && 'u'==ifunc->param[j][0]->type
+                       //   && i==ifunc->param[j][0]->p_tagtable){
+                       //   G__cppif_gendefault(fp,hfp,i,j,ifunc,1,1,1,0,1);
+                       //}
+                       //else{  // generate stub for normal function
+                       G__cppif_genfunc(fp,hfp,i,j,ifunc);
+                       //}
+                    }
+                    else if(G__dicttype==0){
+                       // This is the old case...
+                       // just do what we did before
+                       G__cppif_genfunc(fp,hfp,i,j,ifunc);
+                    }
               }
-              // else
 
-
+        
               // If they werent generated automatically...
               if(!(ifunc->funcptr[j]==(void*)-1)){
                 // if(!ifunc->mangled_name[j] ||
@@ -6816,8 +7229,22 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
       // LF 01-11-07
       // Force the outlining of functions even if the weren't declared
       // (CInt will try to declare them later on anyways)
+          // Single Constructor has only a parameter. The size of the object
+          G__param para_new;
+          para_new.paran = 0;
+          //para_new.para[0].typenum = 0;
+          //para_new.para[0].type = 'u';
+          //para_new.para[0].tagnum = 0;
 
-      fprintf(fp,"%s G__copycons_%s(*((%s*) 0x64));\n", G__fulltagname(tagnum, 0), G__map_cpp_funcname(tagnum, funcname, ifn, page),G__fulltagname(tagnum, 0)  );
+          // We look for the "new operator" ifunc in the current class and in its bases
+       //    G__ifunc_table_internal * new_oper = G__get_methodhandle4(G__struct.name[tagnum], &para_new, G__struct.memfunc[tagnum], &pifn, &poffset, 0, 1,0,0);
+          
+         //  if(new_oper && (!isconstructor && !G__struct.isabstract[tagnum] && !isnonpublicnew)){
+//              fprintf(fp, "%s G__cons_%s;\n", G__fulltagname(tagnum, 0), G__fulltagname(tagnum, 0));
+//              fprintf(fp,"%s G__copycons_%s(G__cons_%s);\n", G__fulltagname(tagnum, 0), G__map_cpp_funcname(tagnum, funcname, ifn, page),G__fulltagname(tagnum, 0));
+//           }
+         
+       }   
     }
     else{
       sprintf(funcname, "%s", G__struct.name[tagnum]);
@@ -6857,10 +7284,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
         ++page;
       }
     }
-  }
-
-
-
+  
   /*********************************************************************
    * destructor
    *********************************************************************/
