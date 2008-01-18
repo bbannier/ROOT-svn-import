@@ -1041,7 +1041,7 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
     {
       int return_val;
       __asm__ __volatile__("call *%1" : "=a" (return_val) : "g" (vaddress));
-      G__letint(result7, 105, (long) (return_val));
+      G__letint(result7, 'i', (long) (return_val));
     }
     break;
 
@@ -1049,7 +1049,7 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
     {
       unsigned char result_val;
       __asm__ __volatile__("call *%1" : "=a" (result_val) : "g" (vaddress));
-      G__letint(result7, 98, (long) result_val);
+      G__letint(result7, 'b', (long) result_val);
     }
     break;
 
@@ -1057,7 +1057,7 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
     {
       char return_val;
       __asm__ __volatile__("call *%1" : "=a" (return_val) : "g" (vaddress));
-      G__letint(result7, 99, (long) (return_val));
+      G__letint(result7, 'c', (long) (return_val));
     }
     break;
 
@@ -1065,7 +1065,7 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
     {
       short return_val;
       __asm__ __volatile__("call *%1" : "=a" (return_val): "g" (vaddress));
-      G__letint(result7, 115, (long) (return_val));
+      G__letint(result7, 's', (long) (return_val));
     }
     break;
 
@@ -1073,7 +1073,7 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
     {
       unsigned short return_val;
       __asm__ __volatile__("call *%1" : "=a" (return_val): "g" (vaddress));
-      G__letint(result7, 114, (long) (return_val));
+      G__letint(result7, 'r', (long) (return_val));
     }
     break;
 
@@ -1081,7 +1081,7 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
     {
       unsigned int return_val;
       __asm__ __volatile__("call *%1" : "=a" (return_val): "g" (vaddress));
-      G__letint(result7, 104, (long) (return_val));
+      G__letint(result7, 'h', (long) (return_val));
     }
     break;
 
@@ -1089,7 +1089,7 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
     {
       long return_val;
       __asm__ __volatile__("call *%1" : "=a" (return_val): "g" (vaddress));
-      G__letint(result7, 67, return_val);
+      G__letint(result7, 'l', return_val);
     }
     break;
 
@@ -1097,7 +1097,7 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
     {
       unsigned long return_val;
       __asm__ __volatile__("call *%1" : "=a" (result7->obj.ulo): "g" (vaddress));
-      G__letint(result7, 107, (long) (return_val));
+      G__letint(result7, 'k', (long) (return_val));
     }
     break;
 
@@ -1105,7 +1105,7 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
     {
       float return_val;
       __asm__ __volatile__("call *%1" : "=t" (return_val): "g" (vaddress));
-      G__letdouble(result7, 102, (double) return_val);
+      G__letdouble(result7, 'f', (double) return_val);
     }
     break;
 
@@ -1113,7 +1113,7 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
     {
       long long return_val;
       __asm__ __volatile__("call *%1" : "=A" (return_val): "g" (vaddress));
-      G__letLonglong(result7, 110, (G__int64) (return_val));
+      G__letLonglong(result7, 'n', (G__int64) (return_val));
     }
     break;
 
@@ -1121,7 +1121,7 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
     {
       unsigned long long return_val;
       __asm__ __volatile__("call *%1" : "=A" (return_val): "g" (vaddress));
-      G__letLonglong(result7, 109, (G__uint64) (return_val));
+      G__letLonglong(result7, 'm', (G__uint64) (return_val));
     }
     break;
 
@@ -1129,7 +1129,7 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
     {
       long double return_val;
       __asm__ __volatile__("call *%1" : "=t" (return_val): "g" (vaddress));
-      G__letLongdouble (result7, 113, (long double) (return_val));
+      G__letLongdouble (result7, 'q', (long double) (return_val));
     }
     break;
 
@@ -1137,7 +1137,7 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
     {
       int result_val;
       __asm__ __volatile__("call *%1" : "=a" (result_val): "g" (vaddress));
-      G__letint(result7, 103, (long) (result_val));
+      G__letint(result7, 'g', (long) (result_val));
     }
     break;
 
