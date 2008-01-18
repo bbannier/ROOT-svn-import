@@ -4,6 +4,7 @@
 # find . -name \*.C -or -name \*.cxx -or -name \*.h | xargs grep -l RenderElement | xargs perl -pi -e 's/RenderElement/Element/og;'
 
 $RENAME_FILES       = 0;
+$STRIP_H_NAMESPACE  = 0; # Set to string to strip, 0 to skip this.
 $REPLACE_REVE_GLOBS = 0; # Activate for first runs, avoid in general.
 $FIX_FRONT_MATTER   = 0; # edit below, too
 $FRONT_MATTER=<<'FNORD';
@@ -76,7 +77,7 @@ FNORD
   'Track' 		=> 'TEveTrack',
   'TrackEditors' 	=> 'TEveTrackEditor',
   'TrackGL' 		=> 'TEveTrackGL',
-  'TrackRnrStyleEditor' => 'TEveTrackRnrStyleEditor',
+  'TrackRnrStyleEditor' => 'TEveTrackPropagatorEditor',
   'TriangleSet' 	=> 'TEveTriangleSet',
   'TriangleSetEditor' 	=> 'TEveTriangleSetEditor',
   'TriangleSetGL' 	=> 'TEveTriangleSetGL',
@@ -86,12 +87,28 @@ FNORD
   'ZTransEditor' 	=> 'TEveTransEditor',
 );
 
+%prereplace =
+(
+  'gReve'		=> 'gEve',
+#  ''		=> '',
+
+);
+
+%postreplace =
+(
+  'AddRenderElement'		=> 'AddElement',
+  'AddGlobalRenderElement'	=> 'AddGlobalElement',
+  'GetRnrStyle'			=> 'GetPropagator',
+
+);
+
 %classes = (
   # Manually added stuff.
   'CPlex'		=> 'TEveChunkVector',
   'GLTextNS'		=> 'TEveGLText',
   'GLUtilNS'		=> 'TEveGLUtil',
   'Reve'		=> 'TEveUtil',
+
   # Enum types.
   'BoxType_e'           => 'EBoxType_e',
   'ReveMenu_e'          => 'EReveMenu_e',
@@ -108,9 +125,9 @@ FNORD
   'TreeVarType_e'       => 'ETreeVarType_e',
   'Type_e'              => 'EType_e',
   # Enum values.
-  'TEvePathMark::Decay'		=> 'TEvePathMark::kDecay',
-  'TEvePathMark::Daughter'	=> 'TEvePathMark::kDaughter',
-  'TEvePathMark::Reference'	=> 'TEvePathMark::kReference',
+  'PathMark::Decay'	=> 'TEvePathMark::kDecay',
+  'PathMark::Daughter'	=> 'TEvePathMark::kDaughter',
+  'PathMark::Reference'	=> 'TEvePathMark::kReference',
   'BT_Undef'            => 'kBT_Undef',
   'BT_FreeBox'          => 'kBT_FreeBox',
   'BT_AABox'            => 'kBT_AABox',
@@ -187,7 +204,7 @@ FNORD
   'GeoTopNodeRnrElEditor' => 'TEveGeoTopNodeEditor',
   'GridStepper' 	=> 'TEveGridStepper',
   'GridStepperEditor' 	=> 'TEveGridStepperEditor',
-  'GridStepperSubEditor' => 'TEveGridStepperSubEditor',
+  'GridStepperSubEditor'=> 'TEveGridStepperSubEditor',
   'Hit' 		=> 'TEveHit',
   'Line' 		=> 'TEveLine',
   'LineEditor' 		=> 'TEveLineEditor',
@@ -222,7 +239,7 @@ FNORD
   'QuadSetGL' 		=> 'TEveQuadSetGL',
   'RGBAPalette' 	=> 'TEveRGBAPalette',
   'RGBAPaletteEditor' 	=> 'TEveRGBAPaletteEditor',
-  'RGBAPaletteSubEditor' => 'TEveRGBAPaletteSubEditor',
+  'RGBAPaletteSubEditor'=> 'TEveRGBAPaletteSubEditor',
   'RGBrowser' 		=> 'TEveBrowser',
   'RGDoubleValuator' 	=> 'TEveGDoubleValuator',
   'RGEditor' 		=> 'TEveGedEditor',
@@ -250,7 +267,7 @@ FNORD
   'TGeoShapeExtract' 	=> 'TEveGeoShapeExtract',
   'TPointSelector' 	=> 'TEvePointSelector',
   'TPointSelectorConsumer' => 'TEvePointSelectorConsumer',
-  'TSelectorToEventList' => 'TEveSelectorToEventList',
+  'TSelectorToEventList'=> 'TEveSelectorToEventList',
   'TTreeQuery' 		=> 'TEveTreeQuery',
   'Track' 		=> 'TEveTrack',
   'TrackCounter' 	=> 'TEveTrackCounter',
@@ -259,9 +276,9 @@ FNORD
   'TrackGL' 		=> 'TEveTrackGL',
   'TrackList' 		=> 'TEveTrackList',
   'TrackListEditor' 	=> 'TEveTrackListEditor',
-  'TrackRnrStyle' 	=> 'TEveTrackRnrStyle',
-  'TrackRnrStyleEditor' => 'TEveTrackRnrStyleEditor',
-  'TrackRnrStyleSubEditor' => 'TEveTrackRnrStyleSubEditor',
+  'TrackRnrStyle' 	=> 'TEveTrackPropagator',
+  'TrackRnrStyleEditor' => 'TEveTrackPropagatorEditor',
+  'TrackRnrStyleSubEditor' => 'TEveTrackPropagatorSubEditor',
   'TriangleSet' 	=> 'TEveTriangleSet',
   'TriangleSetEditor' 	=> 'TEveTriangleSetEditor',
   'TriangleSetGL' 	=> 'TEveTriangleSetGL',

@@ -111,11 +111,11 @@ for $infile (@infiles)
   # }
 
   # Namespace holding class definition (h files)
-  if ($ext eq "h")
+  if ($STRIP_H_NAMESPACE and $ext eq "h")
   {
-    if ($text =~ m/^\s*namespace Reve\s*\{/m)
+    if ($text =~ m/^\s*namespace $STRIP_H_NAMESPACE\s*\{/m)
     {
-      $text =~ s/^\s*namespace Reve\s*\{//ms;
+      $text =~ s/^\s*namespace $STRIP_H_NAMESPACE\s*\{//ms;
       $text =~ s!^[ \t]*\}[ \t]*(//.*)?\s*(?=\#endif)!!m;
     }
   }
@@ -127,7 +127,7 @@ for $infile (@infiles)
   }
 
   # Remove 'Reve::' and 'Reve/' stuff
-  $text =~ s/Reve:://mg;
+  $text =~ s!Reve::!!mg;
   $text =~ s!Reve/!!mg;
 
   # Replace include files whose names have changed
@@ -135,6 +135,13 @@ for $infile (@infiles)
   {
     my $repl = $files{$file};
     $text =~ s!^\#include (<|")${file}\.h("|>)!\#include <$repl.h>!mg;
+  }
+
+  # Introduce early replacements
+  for $word (keys %prereplace) {
+    my $repl = $prereplace{$word};
+    my $n = $text =~ s/(_|[^\w]|^)${word}(?=[^\w]|$)/$1$repl/mg;
+    $replace_count += $n;
   }
 
   # Replace class names etc
@@ -154,6 +161,13 @@ for $infile (@infiles)
       my $n = $text =~ s/(_|[^\w]|^)${name}([^\w]|$)/$1$repl$2/mg;
       $replace_count += $n;
     }
+  }
+
+  # Introduce late replacements
+  for $word (keys %postreplace) {
+    my $repl = $postreplace{$word};
+    my $n = $text =~ s/(_|[^\w]|^)${word}(?=[^\w]|$)/$1$repl/mg;
+    $replace_count += $n;
   }
 
   ### Text manipulation end
