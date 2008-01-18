@@ -48,8 +48,8 @@ typedef __gnu_cxx::hash_map<const char*, int>::value_type G__structmap_pair;
 static
 void* G__get_struct_map()
 {
-   static __gnu_cxx::hash_map<const char*, int> structmap;
-   return &structmap;
+  static __gnu_cxx::hash_map<const char*, int> structmap;
+  return &structmap;
 }
 
 
@@ -449,121 +449,6 @@ int G__debug_compiledfunc_arg(FILE *fout,G__ifunc_table_internal *ifunc,int ifn,
  * Calling C++ compiled function
  **************************************************************************
  **************************************************************************/
-
-/**************************************************************************
- * G__get_vtbl_ptr
- *
- * LF 12/04/07:
- * It receives a pointer to an object and returns its pointer to the
- * virtual table... of course, we assume it's a dynamic type (i.e it HAS
- * a virtual table)
- *
- * For the moment I'm assuming it's the first field of an object gcc style
- **************************************************************************/
-void * G__get_vtbl_ptr(void *obj)
-{
-  void *vtbl = *(void ***)obj;
-  return vtbl;
-}
-
-/**************************************************************************
- * G__get_vtbl_adj
- *
- * LF 12/04/07:
- * It receives a pointer to a virtual table
- * and returns the offset to top for this type.
- * This should usually be zero, it's not in cases of base casting with
- * multiple inheritance (when you cast the most derived class to
- * some base that is not the left-most base)
- *
- * For the moment I'm assuming the offset is two fields above the
- * vtable entry
- **************************************************************************/
-int G__get_vtbl_adj(void *vtbl)
-{
-  int offset = (int) *((int*)((char *)vtbl - 2*sizeof(char*)));
-  return offset;
-}
-
-/**************************************************************************
- * G__virtual_table
- *
- * LF 12/04/07: For the moment it only prints the recreated virtual table
- *
- * What we need to do here is to recreate the virtual table of a given
- * method.
- *
- * For this the cxx abi is our guide:
- * http://www.codesourcery.com/cxx-abi/abi.html
- *
- * Read the section 2.5 "Virtual Table Layout"
- *
- * (we are assuming that this method is virtual, otherwise we wouldnt
- * need the class virtual table to make the call)
- **************************************************************************/
-int G__virtual_table(G__ifunc_table *ifunc)
-{
-  // LF 11/04/2007
-  // Dont show the first destructor... only the second one will
-  // be in the correct order (assuming that the are using the
-  // new version os dictionaries where the destructor is in the rigth order)
-  int isfirstdesc = 1;
-
-  printf("*** ------------ Printing virtual table   --------- ***   \n");
-  G__inheritance *bases = G__struct.baseclass[ifunc->tagnum];
-  struct G__ifunc_table_internal *new_ifunc;
-  for (int idx=0; idx < bases->basen; idx++) {
-    int basetagnum = -1;
-
-    // reset it for every class
-    isfirstdesc = 1;
-
-    // bases->herit[idx].property == 0
-    // This means the base got here with the "using" directive..
-    // (dont use it as part of the vtable)
-    if(bases->herit[idx]->property == 0)
-      continue;
-
-    basetagnum = bases->herit[idx]->basetagnum;
-    new_ifunc = G__struct.memfunc[basetagnum];
-
-    // Walk through all the method of this class
-    // checking wether it's virtual
-    while(new_ifunc) {
-      for(int i=0;i<new_ifunc->allifunc;i++) {
-        if(new_ifunc->isvirtual[i]) {
-          // Skip the first dictionary
-          if('~'==new_ifunc->funcname[i][0] && isfirstdesc)
-            isfirstdesc = 0;
-          else
-            printf("new_ifunc->funcname[%d] :%s \n", i, new_ifunc->funcname[i]);
-        }
-      }
-      new_ifunc = new_ifunc->next;
-    }
-  }
-
-  // reset it for every class
-  isfirstdesc = 1;
-
-  // After doing that for the bases, we have to do it for the
-  // class
-  new_ifunc = G__struct.memfunc[ifunc->tagnum];
-  while(new_ifunc) {
-    for(int i=0;i<new_ifunc->allifunc;i++) {
-      if(new_ifunc->isvirtual[i])
-        // Skip the first dictionary
-        if('~'==new_ifunc->funcname[i][0] && isfirstdesc)
-          isfirstdesc = 0;
-        else
-          printf("new_ifunc->funcname[i+1] :%s \n", new_ifunc->funcname[i]);
-    }
-    new_ifunc = new_ifunc->next;
-  }
-  printf("*** -----------------------------------------***   \n");
-
-  return 0;
-}
 
 //** LF 16/05/07 This function can be found in value.cxx
 //** but it's __#ifdef G__NEVER__ why is that so?
@@ -13836,88 +13721,6 @@ void G__gen_extra_include() {
 #endif
 
   }
-}
-
-
-void (*G__memfunc_register_func)(const char *, const char *) = 0;
-
-/**************************************************************************
- * G__memfunc_register()
- *
- * LF 17/04/07 This is called by the dictionary... and should be the one
- * that triggers the registering of the address for the functions.
- * Note: For the moment it will be implemented as a callback to the
- * function void TCint::Register(const char *libname).
- * (ugly ugly... but this still the protyping phase >D )
- **************************************************************************/
-int G__memfunc_register(const char* classname)
-{
-  // Try to register the symbols of this class (from its library)
-  const char *libname = 0;
-
-  if (classname)
-    libname = G__get_libname(classname);
-
-  //if( *libname == '\0' || strcmp("(tmpfile)", libname)==0 )
-  if( !libname && (*G__ifile.name != '\0' ) && strcmp("(tmpfile)", G__ifile.name)!=0){
-    libname = G__ifile.name;
-  }
-
-  if(G__memfunc_register_func){
-    // If classname==0 we want to register the free standing funcions...
-    // unfortunately there is no way to differentiate the class of this kind
-    // of functions so we have to register all the functions in the same library
-    G__memfunc_register_func(libname, classname);
-  }
-  //else
-  //printf("Warning: The callback hasnt been registered \n");
-
-  return(0);
-}
-
-int G__memfunc_register2(const char* classname, const char* libname)
-{
-  // Try to register the symbols of this class (from its library)
-  if(G__memfunc_register_func){
-    // If classname==0 we want to register the free standing funcions...
-    // unfortunately there is no way to differentiate the class of this kind
-    // of functions so we have to register all the functions in the same library
-    G__memfunc_register_func(libname, classname);
-  }
-  //else
-  //printf("Warning: The callback hasnt been registered \n");
-
-  return(0);
-}
-
-/**************************************************************************
- * G__memfunc_register_callback
- * This is just a trick to be able to call TCint::Register
- **************************************************************************/
-int G__memfunc_register_callback(void (*callback)(const char* libname, const char* classname))
-{
-  // Try to register the symbols of this class (from its library)
-  //printf("G__memfunc_register G__ifile.name:%s \n", G__ifile.name);
-  G__memfunc_register_func = callback;
-
-  return(0);
-}
-
-/**************************************************************************
- * G__get_libname
- * The classname is not the only thing we need when registering a
- * class. Usually we can call G__ifile.name but that wont be enough
- * when we are trying to register a class that is needed(called) by
- * another class
- **************************************************************************/
-char *G__get_libname(const char* classname)
-{
-  int tn = G__defined_tagname(classname,1);
-
-  if(tn == -1)
-    return 0;
-
-  return G__struct.libname[tn];
 }
 
 } /* extern "C" */
