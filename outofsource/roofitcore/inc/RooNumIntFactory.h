@@ -39,15 +39,20 @@ public:
 
   RooAbsIntegrator* createIntegrator(RooAbsFunc& func, const RooNumIntConfig& config, Int_t ndim=0) ;
 
+  static void cleanup() ;
+
 
 protected:
 	 
   friend class RooNumIntConfig ;
 
-  std::map<std::string,pair<RooAbsIntegrator*,std::string> > _map ;
+  std::map<std::string,std::pair<RooAbsIntegrator*,std::string> > _map ;
 
   RooNumIntFactory(); 
   RooNumIntFactory(const RooNumIntFactory& other) ;
+
+  static RooNumIntFactory* _instance ;
+
 
   ClassDef(RooNumIntFactory,1) // Numeric Integrator factory
 };

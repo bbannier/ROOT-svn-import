@@ -31,6 +31,7 @@
 
 
 #include "RooFit.h"
+#include "Riostream.h"
 
 #include "RooMCStudy.h"
 #include "RooAbsMCStudyModule.h"
@@ -50,7 +51,9 @@
 #include "RooCmdConfig.h"
 #include "RooGlobalFunc.h"
 #include "RooPullVar.h"
+#include "RooMsgService.h"
 
+using namespace std ;
 
 ClassImp(RooMCStudy)
   ;
@@ -143,10 +146,10 @@ RooMCStudy::RooMCStudy(const RooAbsPdf& model, const RooArgSet& observables,
   _canAddFitResults = kTRUE ;
   
   if (_extendedGen && _genProtoData && !_randProto) {
-    cout << "RooMCStudy::RooMCStudy: WARNING Using generator option 'e' (Poisson distribution of #events) together " << endl
-	 << "                        with a prototype dataset implies incomplete sampling or oversampling of proto data." << endl
-	 << "                        Use option \"r\" to randomize prototype dataset order and thus to randomize" << endl
-	 << "                        the set of over/undersampled prototype events for each generation cycle." << endl ;
+    oocoutW(_fitModel,Generation) << "RooMCStudy::RooMCStudy: WARNING Using generator option 'e' (Poisson distribution of #events) together " << endl
+				  << "                        with a prototype dataset implies incomplete sampling or oversampling of proto data." << endl
+				  << "                        Use option \"r\" to randomize prototype dataset order and thus to randomize" << endl
+				  << "                        the set of over/undersampled prototype events for each generation cycle." << endl ;
   }
   
   _genContext = _genModel->genContext(_dependents,_genProtoData,0,_verboseGen) ;
@@ -183,7 +186,7 @@ RooMCStudy::RooMCStudy(const RooAbsPdf& model, const RooArgSet& observables,
   for (iter=_modList.begin() ; iter!= _modList.end() ; ++iter) {
     Bool_t ok = (*iter)->doInitializeInstance(*this) ;
     if (!ok) {
-      cout << "RooMCStudy::ctor: removing study module " << (*iter)->GetName() << " from analysis chain because initialization failed" << endl ;
+      oocoutE(_fitModel,Generation) << "RooMCStudy::ctor: removing study module " << (*iter)->GetName() << " from analysis chain because initialization failed" << endl ;
       iter = _modList.erase(iter) ;
     }
   }
@@ -225,13 +228,14 @@ RooMCStudy::RooMCStudy(const RooAbsPdf& genModel, const RooAbsPdf& fitModel,
   _randProto = genOpt.Contains("r") ;
   
   if (_extendedGen && genProtoData && !_randProto) {
-    cout << "RooMCStudy::RooMCStudy: WARNING Using generator option 'e' (Poisson distribution of #events) together " << endl
-   	 << "                        with a prototype dataset implies incomplete sampling or oversampling of proto data." << endl
-   	 << "                        Use option \"r\" to randomize prototype dataset order and thus to randomize" << endl
-	 << "                        the set of over/undersampled prototype events for each generation cycle." << endl ;
+    oocoutE(_fitModel,Generation) << "RooMCStudy::RooMCStudy: WARNING Using generator option 'e' (Poisson distribution of #events) together " << endl
+				  << "                        with a prototype dataset implies incomplete sampling or oversampling of proto data." << endl
+				  << "                        Use option \"r\" to randomize prototype dataset order and thus to randomize" << endl
+				  << "                        the set of over/undersampled prototype events for each generation cycle." << endl ;
   }
   
   _genContext = genModel.genContext(dependents,genProtoData,0,_verboseGen) ;
+  _genParams = _genModel->getParameters(&_dependents) ;
   RooArgSet* tmp = genModel.getParameters(&dependents) ;
   _genInitParams = (RooArgSet*) tmp->snapshot(kFALSE) ;
   delete tmp ;
@@ -266,7 +270,7 @@ RooMCStudy::RooMCStudy(const RooAbsPdf& genModel, const RooAbsPdf& fitModel,
   for (iter=_modList.begin() ; iter!= _modList.end() ; ++iter) {
     Bool_t ok = (*iter)->doInitializeInstance(*this) ;
     if (!ok) {
-      cout << "RooMCStudy::ctor: removing study module " << (*iter)->GetName() << " from analysis chain because initialization failed" << endl ;
+      oocoutE(_fitModel,Generation) << "RooMCStudy::ctor: removing study module " << (*iter)->GetName() << " from analysis chain because initialization failed" << endl ;
       iter = _modList.erase(iter) ;
     }
   }
@@ -323,11 +327,11 @@ Bool_t RooMCStudy::run(Bool_t generate, Bool_t fit, Int_t nSamples, Int_t nEvtPe
 
   while(nSamples--) {
     
-    cout << "RooMCStudy::run: " ;
-    if (generate) cout << "Generating " ;
-    if (generate && fit) cout << "and " ;
-    if (fit) cout << "fitting " ;
-    cout << "sample " << nSamples << endl ;
+    oocoutI(_fitModel,Generation) << "RooMCStudy::run: " ;
+    if (generate) ooccoutI(_fitModel,Generation) << "Generating " ;
+    if (generate && fit) ooccoutI(_fitModel,Generation) << "and " ;
+    if (fit) ooccoutI(_fitModel,Generation) << "fitting " ;
+    ooccoutI(_fitModel,Generation) << "sample " << nSamples << endl ;
     
     _genSample = 0;
     Bool_t existingData = kFALSE ;
@@ -352,10 +356,10 @@ Bool_t RooMCStudy::run(Bool_t generate, Bool_t fit, Int_t nSamples, Int_t nEvtPe
       
       // Optional randomization of protodata for this run
       if (_randProto && _genProtoData && _genProtoData->numEntries()!=nEvt) {
-	cout << "RooMCStudy: (Re)randomizing event order in prototype dataset (Nevt=" << nEvt << ")" << endl ;
-          Int_t* newOrder = _genModel->randomizeProtoOrder(_genProtoData->numEntries(),nEvt) ;
-          _genContext->setProtoDataOrder(newOrder) ;
-          delete[] newOrder ;
+	oocoutI(_fitModel,Generation) << "RooMCStudy: (Re)randomizing event order in prototype dataset (Nevt=" << nEvt << ")" << endl ;
+	Int_t* newOrder = _genModel->randomizeProtoOrder(_genProtoData->numEntries(),nEvt) ;
+	_genContext->setProtoDataOrder(newOrder) ;
+	delete[] newOrder ;
       }
       
       // Actual generation of events
@@ -375,7 +379,7 @@ Bool_t RooMCStudy::run(Bool_t generate, Bool_t fit, Int_t nSamples, Int_t nEvtPe
       _genSample = (RooDataSet*) _genDataList.At(nSamples) ;
       existingData = kTRUE ;
       if (!_genSample) {
-   	cout << "RooMCStudy::run: WARNING: Sample #" << nSamples << " not loaded, skipping" << endl ;
+   	oocoutW(_fitModel,Generation) << "RooMCStudy::run: WARNING: Sample #" << nSamples << " not loaded, skipping" << endl ;
    	continue ;
       }
     }
@@ -615,7 +619,7 @@ Bool_t RooMCStudy::fitSample(RooAbsData* genSample)
 Bool_t RooMCStudy::addFitResult(const RooFitResult& fr) 
 {  
   if (!_canAddFitResults) {
-    cout << "RooMCStudy::addFitResult: ERROR cannot add fit results in current state" << endl ;
+    oocoutE(_fitModel,InputArguments) << "RooMCStudy::addFitResult: ERROR cannot add fit results in current state" << endl ;
     return kTRUE ;
   }
   
@@ -696,7 +700,7 @@ const RooArgSet* RooMCStudy::fitParams(Int_t sampleNum) const
   
   // Check if sampleNum is in range
   if (sampleNum<0 || sampleNum>=_fitParData->numEntries()) {
-    cout << "RooMCStudy::fitParams: ERROR, invalid sample number: " << sampleNum << endl ;    
+    oocoutE(_fitModel,InputArguments) << "RooMCStudy::fitParams: ERROR, invalid sample number: " << sampleNum << endl ;    
     return 0 ;
   }
   
@@ -711,7 +715,7 @@ const RooFitResult* RooMCStudy::fitResult(Int_t sampleNum) const
   
   // Check if sampleNum is in range
   if (sampleNum<0 || sampleNum>=_fitResList.GetSize()) {
-    cout << "RooMCStudy::fitResult: ERROR, invalid sample number: " << sampleNum << endl ;    
+    oocoutE(_fitModel,InputArguments) << "RooMCStudy::fitResult: ERROR, invalid sample number: " << sampleNum << endl ;    
     return 0 ;
   }
   
@@ -720,8 +724,8 @@ const RooFitResult* RooMCStudy::fitResult(Int_t sampleNum) const
   if (fr) {
     return fr ;
   } else {
-    cout << "RooMCStudy::fitResult: ERROR, no fit result saved for sample " 
-   	 << sampleNum << ", did you use the 'r; fit option?" << endl ;
+    oocoutE(_fitModel,InputArguments) << "RooMCStudy::fitResult: ERROR, no fit result saved for sample " 
+			  << sampleNum << ", did you use the 'r; fit option?" << endl ;
   }
   return 0 ;
 }
@@ -733,13 +737,13 @@ const RooDataSet* RooMCStudy::genData(Int_t sampleNum) const
   
   // Check that generated data was saved
   if (_genDataList.GetSize()==0) {
-    cout << "RooMCStudy::genData() ERROR, generated data was not saved" << endl ;
+    oocoutE(_fitModel,InputArguments) << "RooMCStudy::genData() ERROR, generated data was not saved" << endl ;
     return 0 ;
   }
   
   // Check if sampleNum is in range
   if (sampleNum<0 || sampleNum>=_genDataList.GetSize()) {
-    cout << "RooMCStudy::genData() ERROR, invalid sample number: " << sampleNum << endl ;    
+    oocoutE(_fitModel,InputArguments) << "RooMCStudy::genData() ERROR, invalid sample number: " << sampleNum << endl ;    
     return 0 ;
   }
   
@@ -777,7 +781,7 @@ RooPlot* RooMCStudy::plotParam(const char* paramName, const RooCmdArg& arg1, con
   // Find parameter in fitParDataSet
   RooRealVar* param = static_cast<RooRealVar*>(_fitParData->get()->find(paramName)) ;
   if (!param) {
-    cout << "RooMCStudy::plotParam: ERROR: no parameter defined with name " << paramName << endl ;  
+    oocoutE(_fitModel,InputArguments) << "RooMCStudy::plotParam: ERROR: no parameter defined with name " << paramName << endl ;  
     return 0 ;
   }
 

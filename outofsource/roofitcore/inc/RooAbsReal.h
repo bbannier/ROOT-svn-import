@@ -70,9 +70,9 @@ public:
   virtual Bool_t forceAnalyticalInt(const RooAbsArg& /*dep*/) const { return kFALSE ; }
   virtual void forceNumInt(Bool_t flag=kTRUE) { _forceNumInt = flag ; }
 
-  RooAbsReal* createIntegral(const RooArgSet& iset, const RooCmdArg arg1, const RooCmdArg arg2=RooCmdArg::none,
-                             const RooCmdArg arg3=RooCmdArg::none, const RooCmdArg arg4=RooCmdArg::none, const RooCmdArg arg5=RooCmdArg::none, 
-                             const RooCmdArg arg6=RooCmdArg::none, const RooCmdArg arg7=RooCmdArg::none, const RooCmdArg arg8=RooCmdArg::none) const ;
+  RooAbsReal* createIntegral(const RooArgSet& iset, const RooCmdArg arg1, const RooCmdArg arg2=RooCmdArg::none(),
+                             const RooCmdArg arg3=RooCmdArg::none(), const RooCmdArg arg4=RooCmdArg::none(), const RooCmdArg arg5=RooCmdArg::none(), 
+                             const RooCmdArg arg6=RooCmdArg::none(), const RooCmdArg arg7=RooCmdArg::none(), const RooCmdArg arg8=RooCmdArg::none()) const ;
 
   RooAbsReal* createIntegral(const RooArgSet& iset, const char* rangeName) const 
               { return createIntegral(iset,0,0,rangeName) ; }
@@ -133,10 +133,10 @@ public:
 
   // Create 1,2, and 3D histograms from and fill it
   TH1 *createHistogram(const char *name, const RooAbsRealLValue& xvar,
-                       const RooCmdArg& arg1=RooCmdArg::none, const RooCmdArg& arg2=RooCmdArg::none, 
-                       const RooCmdArg& arg3=RooCmdArg::none, const RooCmdArg& arg4=RooCmdArg::none, 
-                       const RooCmdArg& arg5=RooCmdArg::none, const RooCmdArg& arg6=RooCmdArg::none, 
-                       const RooCmdArg& arg7=RooCmdArg::none, const RooCmdArg& arg8=RooCmdArg::none) const ;
+                       const RooCmdArg& arg1=RooCmdArg::none(), const RooCmdArg& arg2=RooCmdArg::none(), 
+                       const RooCmdArg& arg3=RooCmdArg::none(), const RooCmdArg& arg4=RooCmdArg::none(), 
+                       const RooCmdArg& arg5=RooCmdArg::none(), const RooCmdArg& arg6=RooCmdArg::none(), 
+                       const RooCmdArg& arg7=RooCmdArg::none(), const RooCmdArg& arg8=RooCmdArg::none()) const ;
 
   // Fill a RooDataHist
   RooDataHist* fillDataHist(RooDataHist *hist, Double_t scaleFactor) const ;
@@ -149,7 +149,7 @@ public:
   virtual void printToStream(ostream& stream, PrintOption opt=Standard, TString indent= "") const ;
 
 
-  static void setCacheCheck(Bool_t flag) { _cacheCheck = flag ; }
+  static void setCacheCheck(Bool_t flag) ;
 
 protected:
 
@@ -214,6 +214,11 @@ protected:
   TString  _unit ;          // Unit for objects value
   TString  _label ;         // Plot label for objects value
   Bool_t   _forceNumInt ;   // Force numerical integration if flag set
+
+  mutable Float_t _floatValue ; //! Transient cache for floating point values from tree branches 
+  mutable Int_t   _intValue   ; //! Transient cache for integer values from tree branches 
+  mutable UChar_t _byteValue  ; //! Transient cache for byte values from tree branches 
+  mutable UInt_t  _uintValue  ; //! Transient cache for unsigned integer values from tree branches 
 
   friend class RooAbsPdf ;
   friend class RooAbsAnaConvPdf ;

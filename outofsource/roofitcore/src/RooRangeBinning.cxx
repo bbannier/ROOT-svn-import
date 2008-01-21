@@ -22,8 +22,9 @@
 
 #include "RooNumber.h"
 #include "RooNumber.h"
+#include "RooMsgService.h"
 #include "Riostream.h"
-
+#include "RooMsgService.h"
 
 #include "RooRangeBinning.h"
 
@@ -35,8 +36,8 @@ RooRangeBinning::RooRangeBinning(const char* name) :
   RooAbsBinning(name)
 {
   // Constructor
-  _range[0] = -RooNumber::infinity ;
-  _range[1] = +RooNumber::infinity ;
+  _range[0] = -RooNumber::infinity() ;
+  _range[1] = +RooNumber::infinity() ;
 
 }
 
@@ -70,7 +71,7 @@ void RooRangeBinning::setRange(Double_t xlo, Double_t xhi)
 {
   // Change limits
   if (xlo>xhi) {
-    cout << "RooRangeBinning::setRange: ERROR low bound > high bound" << endl ;
+    oocoutE((TObject*)0,InputArguments) << "RooRangeBinning::setRange: ERROR low bound > high bound" << endl ;
     return ;
   }
 

@@ -1745,13 +1745,18 @@ void TFormula::Analyze(const char *schain, Int_t &err, Int_t offset)
                         }
                      } else if (chaine(0,7) == "strstr(") {
                         compt = 7; nomb = 0; virgule = 0; nest=0;
+                        inString = false;
                         while(compt != lchain) {
                            compt++;
-                           if (chaine(compt-1,1) == "(") nest++;
-                           else if (chaine(compt-1,1) == ")") nest--;
-                           else if (chaine(compt-1,1) == "," && nest==0) {
-                              nomb++;
-                              if (nomb == 1 && virgule == 0) virgule = compt;
+                           if (chaine(compt-1,1) == "\"") {
+                              inString = !inString;
+                           }  else if (!inString) {
+                              if (chaine(compt-1,1) == "(") nest++;
+                              else if (chaine(compt-1,1) == ")") nest--;
+                              else if (chaine(compt-1,1) == "," && nest==0) {
+                                 nomb++;
+                                 if (nomb == 1 && virgule == 0) virgule = compt;
+                              }
                            }
                         }
                         if (nomb != 1) err = 28; // There are plus or minus than 2 arguments for strstr
@@ -2164,6 +2169,7 @@ Int_t TFormula::Compile(const char *expression)
             return -1;
          }
          SetBit(kIsCharacter);
+         last_string = kFALSE;
 
       } else if (last_string) {
          if (GetAction(i) == kEqual) {
@@ -2173,6 +2179,7 @@ Int_t TFormula::Compile(const char *expression)
             }
             SetAction(i, kStringEqual, GetActionParam(i) );
             SetBit(kIsCharacter);
+            last_string = kFALSE;
          } else if (GetAction(i) == kNotEqual) {
             if (!before_last_string) {
                Error("Compile", "Both operands of the operator != have to be either numbers or strings");
@@ -2180,6 +2187,7 @@ Int_t TFormula::Compile(const char *expression)
             }
             SetAction(i, kStringNotEqual, GetActionParam(i) );
             SetBit(kIsCharacter);
+            last_string = kFALSE;
          } else if (before_last_string) {
             // the i-2 element is a string not used in a string operation, let's down grade it
             // to a char array:
@@ -3437,8 +3445,8 @@ void  TFormula::MakePrimitive(const char *expr, Int_t pos)
    if (cbase=="<=") cbase="XleY";
    if (cbase==">") cbase="XgY";
    if (cbase==">=") cbase="XgeY";
-   if (cbase=="==") cbase="XeY";
-   if (cbase=="!=") cbase="XneY";
+   if (cbase=="==" && GetActionOptimized(pos)!=kStringEqual) cbase="XeY";
+   if (cbase=="!=" && GetActionOptimized(pos)!=kStringNotEqual) cbase="XneY";
 
    TFormulaPrimitive *prim = TFormulaPrimitive::FindFormula(cbase);
    if (prim) {

@@ -51,8 +51,8 @@ Bool_t wbug = kTRUE;
 ClassImp(TMVA::MethodSVM)
 
 //_______________________________________________________________________
-TMVA::MethodSVM::MethodSVM( TString jobName, TString methodTitle, DataSet& theData, 
-                            TString theOption, TDirectory* theTargetDir )
+TMVA::MethodSVM::MethodSVM( const TString& jobName, const TString& methodTitle, DataSet& theData, 
+                            const TString& theOption, TDirectory* theTargetDir )
    : TMVA::MethodBase( jobName, methodTitle, theData, theOption, theTargetDir )
    , fAlphas(0)
    , fErrorCache(0)
@@ -78,7 +78,7 @@ TMVA::MethodSVM::MethodSVM( TString jobName, TString methodTitle, DataSet& theDa
 
 //_______________________________________________________________________
 TMVA::MethodSVM::MethodSVM( DataSet& theData, 
-                            TString theWeightFile,  
+                            const TString& theWeightFile,  
                             TDirectory* theTargetDir )
    : TMVA::MethodBase( theData, theWeightFile, theTargetDir ) 
    , fAlphas(0)
@@ -272,7 +272,7 @@ void  TMVA::MethodSVM::WriteWeightsToStream( ostream& o ) const
 
       for (Int_t isv = 0; isv < fNsupv; isv++ ) {
          o << isv;
-         for (Int_t ivar = 0; ivar <= GetNvar(); ivar++)	  o << " " << (*fSupportVectors)[ivar][isv];
+         for (Int_t ivar = 0; ivar <= GetNvar(); ivar++)    o << " " << (*fSupportVectors)[ivar][isv];
          o << endl;
       }
 
@@ -314,12 +314,12 @@ void TMVA::MethodSVM::WriteWeightsToStream( TFile& ) const
     
    for (Int_t ievt = 0; ievt < Data().GetNEvtTrain(); ievt++) {
       if ((*fAlphas)[ievt] != 0) {
-	
+  
          for (Int_t ivar = 0; ivar < GetNvar(); ivar++) {
             sVVar[ivar] = (*fVariables)[ivar][ievt];
          }
          alpha_t->push_back((Double_t)(*fAlphas)[ievt] * (*fTypesVec)[ievt]);
-	
+  
          suppVecTree->Fill();
       }
    }

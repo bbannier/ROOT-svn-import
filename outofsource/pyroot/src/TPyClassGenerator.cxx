@@ -84,7 +84,8 @@ namespace {
             arg = PyInt_FromLong( (Long_t)G__Mint(libp->para[i]) );
             break;
          case 'h':
-            arg = PyInt_FromLong( (Long_t)G__Muint(libp->para[i]) );
+            //arg = PyLong_FromUnsignedLong( (UInt_t)G__Muint(libp->para[i]) );
+            arg = PyLong_FromUnsignedLong( *(ULong_t*)((void*)G__Mlong(libp->para[i])) );
             break;
          case 's':
             arg = PyInt_FromLong( (Long_t)G__Mshort(libp->para[i]) );
@@ -201,6 +202,8 @@ TClass* TPyClassGenerator::GetClass( const char* name, Bool_t load )
 
    G__ClassInfo gcl( tagnum );
 
+   G__tag_memfunc_setup( tagnum );
+
 // special case: constructor; add method and store callback
    PyROOT::Utility::InstallMethod( &gcl, pyclass, clName, "ellipsis", (void*)PyCtorCallback );
 
@@ -221,6 +224,8 @@ TClass* TPyClassGenerator::GetClass( const char* name, Bool_t load )
       Py_DECREF( attr );
       Py_DECREF( label );
    }
+
+   G__tag_memfunc_reset();
 
 // done, let ROOT manage the new class
    Py_DECREF( pyclass );

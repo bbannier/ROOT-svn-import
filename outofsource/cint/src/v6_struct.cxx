@@ -39,6 +39,7 @@ int G__calldtor(void* p, int tagnum, int isheap);
 int G__set_class_autoloading(int newvalue);
 void G__set_class_autoloading_callback(int (*p2f)(char*, char*));
 void G__set_class_autoloading_table(char* classname, char* libname);
+char* G__get_class_autoloading_table(char* classname);
 int G__defined_tagname(const char* tagname, int noerror);
 int G__search_tagname(const char* tagname, int type);
 
@@ -476,8 +477,13 @@ int G__class_autoloading(int tagnum)
          int res = (*G__p_class_autoloading)(G__fulltagname(tagnum, 1), copyLibname);
          if (G__struct.type[tagnum] == G__CLASS_AUTOLOAD) {
             if (strstr(G__struct.name[tagnum],"<") != 0) {
-               // Kill this entry.      
+               // Kill this entry.
+               int store_def_tagnum = G__def_tagnum;
+               int store_tagdefining = G__tagdefining;
+               G__tagdefining = G__def_tagnum = G__struct.parent_tagnum[tagnum];
                int found_tagnum = G__defined_tagname(G__struct.name[tagnum],3);
+               G__def_tagnum = store_def_tagnum;
+               G__tagdefining = store_tagdefining;
                if (found_tagnum != tagnum) {
                   // The autoload has seemingly failed!
                   // This can happens in 'normal' case if the string representation of the
@@ -1376,6 +1382,15 @@ void G__set_class_autoloading_callback(int (*p2f)(char*, char*))
 }
 
 //______________________________________________________________________________
+char* G__get_class_autoloading_table(char* classname)
+{
+   // Return the autoload entries for the class called classname.
+   int tagnum = G__defined_tagname(classname, 4);
+   if (tagnum < 0) return 0;
+   return G__struct.libname[tagnum];
+}
+
+//______________________________________________________________________________
 void G__set_class_autoloading_table(char* classname, char* libname)
 {
    // -- FIXME: Describe this function!
@@ -1443,6 +1458,7 @@ int G__defined_tagname(const char* tagname, int noerror)
    //               no error messages if template is not found
    //         = 2   if not found just return without trying template
    //         = 3   like 2, and no autoloading
+   //         = 4   like 3, and don't look for typedef
    //
    // CAUTION:
    // If template class with constant argument is given to this function,
@@ -1623,6 +1639,10 @@ try_again:
          return i;
       }
    }
+
+   if (noerror == 4)
+      return -1;
+
    // Search for typename.
    store_var_type = G__var_type;
    i = G__defined_typename(tagname);

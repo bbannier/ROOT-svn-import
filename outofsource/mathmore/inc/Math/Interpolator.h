@@ -46,70 +46,96 @@ namespace ROOT {
 namespace Math {
 
 
-  class GSLInterpolator;
+   class GSLInterpolator;
 
-  /**
-     Class for performing function interpolation of points.
-     The class is instantiated with an interpolation methods, passed as an enumeration in the constructor.
-     See Interpolation::Type for the available interpolation algorithms, which are implemented using GSL.
-     See also the <A HREF=http://www.gnu.org/software/gsl/manual/gsl-ref_26.html#SEC391">GSL manual</A> for more information.
-     The class provides additional methods for computing derivatives and integrals of interpolating functions.
+//_____________________________________________________________________________________
+   /**
+      Class for performing function interpolation of points.
+      The class is instantiated with an interpolation methods, passed as an enumeration in the constructor.
+      See Interpolation::Type for the available interpolation algorithms, which are implemented using GSL.
+      See also the <A HREF=http://www.gnu.org/software/gsl/manual/html_node/Interpolation.html">GSL manual</A> for more information.
+      The class provides additional methods for computing derivatives and integrals of interpolating functions.
+      
+      This class does not support copying.
+      @ingroup Interpolation
+   */
 
-     This class does not support copying.
-     @ingroup Interpolation
-  */
+class Interpolator {
 
-  class Interpolator {
+public:
 
-  public:
-    /**
-       Constructs an interpolator class from vector of data points \f$ (x_i, y_i )\f$ and with Interpolation::Type type.
-       The method will compute a continous interpolating function \f$ y(x) \f$ such that \f$ y_i = y ( x_i )\f$.
-     */
-    Interpolator(const std::vector<double> & x, const std::vector<double> & y, Interpolation::Type type = Interpolation::POLYNOMIAL);
+   /**
+      Constructs an interpolator class from  number of data points and with Interpolation::Type type.
+      The data can be set later on with the SetData method. 
+      In case the data size is not known, better using the default of zero or the next constructor later on. 
+      The defult interpolation type is Cubic spline
+   */
+   Interpolator(unsigned int ndata = 0, Interpolation::Type type = Interpolation::CSPLINE);
 
-    virtual ~Interpolator();
+   /**
+      Constructs an interpolator class from vector of data points \f$ (x_i, y_i )\f$ and with Interpolation::Type type.
+      The method will compute a continous interpolating function \f$ y(x) \f$ such that \f$ y_i = y ( x_i )\f$.
+      The defult interpolation type is Cubic spline
+   */
+   Interpolator(const std::vector<double> & x, const std::vector<double> & y, Interpolation::Type type = Interpolation::CSPLINE);
 
-  private:
-    // usually copying is non trivial, so we make this unaccessible
-    Interpolator(const Interpolator &);
-    Interpolator & operator = (const Interpolator &);
+   virtual ~Interpolator();
 
-  public:
+private:
+   // usually copying is non trivial, so we make this unaccessible
+   Interpolator(const Interpolator &);
+   Interpolator & operator = (const Interpolator &);
 
-    /**
-       Return the interpolated value at point x
-     */
-    double Eval( double x ) const;
+public:
 
-    /**
-       Return the derivative of the interpolated function at point x
-     */
-    double Deriv( double x ) const;
+   /**
+      Set the data vector ( x[] and y[] )
+      To be efficient, the size of the data must be the same of the value used in the constructor (ndata)
+      If this is not  the case a new re-initialization is performed with the new data size
+    */
+   bool SetData(const std::vector<double> & x, const std::vector<double> & y); 
 
-    /**
-       Return the second derivative of the interpolated function at point x
-     */
-    double Deriv2( double x ) const;
+   /**
+      Set the data vector ( x[] and y[] )
+      To be efficient, the size of the data must be the same of the value used when  constructing the class (ndata)
+      If this is not  the case a new re-initialization is performed with the new data size.
+    */
+   bool SetData(unsigned int ndata, const double * x, const double *  y); 
 
-    /**
-       Return the Integral of the interpolated function over the range [a,b]
-     */
-    double Integ( double a, double b) const;
+   /**
+      Return the interpolated value at point x
+   */
+   double Eval( double x ) const;
 
-    /**
-       Return the type of interpolation method
-     */
-    std::string TypeGet() const;
+   /**
+      Return the derivative of the interpolated function at point x
+   */
+   double Deriv( double x ) const;
 
-  protected:
+   /**
+      Return the second derivative of the interpolated function at point x
+   */
+   double Deriv2( double x ) const;
+
+   /**
+      Return the Integral of the interpolated function over the range [a,b]
+   */
+   double Integ( double a, double b) const;
+
+   /**
+      Return the type of interpolation method
+   */
+   std::string Type() const;
+   std::string TypeGet() const;
+
+protected:
 
 
-  private:
+private:
 
-    GSLInterpolator * fInterp;
+   GSLInterpolator * fInterp;   // pointer to GSL interpolator class
 
-  };
+};
 
 } // namespace Math
 } // namespace ROOT

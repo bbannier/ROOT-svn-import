@@ -32,6 +32,10 @@
 #include "RooDataHist.h"
 #include "RooAbsPdf.h"
 #include "RooCmdConfig.h"
+#include "RooMsgService.h"
+
+#include "Riostream.h"
+
 
 ClassImp(RooChi2Var)
 ;
@@ -42,7 +46,7 @@ RooChi2Var::RooChi2Var(const char *name, const char* title, RooAbsPdf& pdf, RooD
 		       const RooCmdArg& arg1,const RooCmdArg& arg2,const RooCmdArg& arg3,
 		       const RooCmdArg& arg4,const RooCmdArg& arg5,const RooCmdArg& arg6,
 		       const RooCmdArg& arg7,const RooCmdArg& arg8,const RooCmdArg& arg9) :
-  RooAbsOptGoodnessOfFit(name,title,pdf,data,
+  RooAbsOptTestStatistic(name,title,pdf,data,
 			 *(const RooArgSet*)RooCmdConfig::decodeObjOnTheFly("RooChi2Var::RooChi2Var","ProjectedObservables",0,&_emptySet
 									    ,arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9),
 			 RooCmdConfig::decodeStringOnTheFly("RooChi2Var::RooChi2Var","RangeWithName",0,"",arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9),
@@ -76,7 +80,7 @@ RooChi2Var::RooChi2Var(const char *name, const char* title, RooAbsPdf& pdf, RooD
 
 RooChi2Var::RooChi2Var(const char *name, const char *title, RooAbsPdf& pdf, RooDataHist& data,
 		     Bool_t extended, const char* cutRange, const char* addCoefRange,Int_t nCPU, Bool_t verbose, Bool_t splitCutRange) : 
-  RooAbsOptGoodnessOfFit(name,title,pdf,data,RooArgSet(),cutRange,addCoefRange,nCPU,verbose,splitCutRange),
+  RooAbsOptTestStatistic(name,title,pdf,data,RooArgSet(),cutRange,addCoefRange,nCPU,verbose,splitCutRange),
    _etype(RooAbsData::Poisson), _extended(extended)
 {
   
@@ -85,7 +89,7 @@ RooChi2Var::RooChi2Var(const char *name, const char *title, RooAbsPdf& pdf, RooD
 
 RooChi2Var::RooChi2Var(const char *name, const char *title, RooAbsPdf& pdf, RooDataHist& data,
 		     const RooArgSet& projDeps, Bool_t extended, const char* cutRange, const char* addCoefRange, Int_t nCPU, Bool_t verbose, Bool_t splitCutRange) : 
-  RooAbsOptGoodnessOfFit(name,title,pdf,data,projDeps,cutRange,addCoefRange,nCPU,verbose,splitCutRange),
+  RooAbsOptTestStatistic(name,title,pdf,data,projDeps,cutRange,addCoefRange,nCPU,verbose,splitCutRange),
   _etype(RooAbsData::Poisson), _extended(extended)
 {
   
@@ -93,7 +97,7 @@ RooChi2Var::RooChi2Var(const char *name, const char *title, RooAbsPdf& pdf, RooD
 
 
 RooChi2Var::RooChi2Var(const RooChi2Var& other, const char* name) : 
-  RooAbsOptGoodnessOfFit(other,name),
+  RooAbsOptTestStatistic(other,name),
   _etype(other._etype),
   _extended(other._extended)
 {
@@ -138,8 +142,8 @@ Double_t RooChi2Var::evaluatePartition(Int_t firstEvent, Int_t lastEvent) const
 
     // Return 0 if eInt=0, special handling in MINUIT will follow
     if (eInt==0.) {
-      cout << "RooChi2Var::RooChi2Var(" << GetName() << ") INFINITY ERROR: bin " << i 
-	   << " has zero error, but function is not zero (" << nPdf << ")" << endl ;
+      coutE(Eval) << "RooChi2Var::RooChi2Var(" << GetName() << ") INFINITY ERROR: bin " << i 
+		  << " has zero error, but function is not zero (" << nPdf << ")" << endl ;
       return 0 ;
     }
 

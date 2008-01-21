@@ -77,6 +77,7 @@
    extern "C" int statfs(const char *file, struct statfs *buffer);
 #   endif
 #elif defined(R__MACOSX)
+#   include <mach-o/dyld.h>
 #   include <sys/mount.h>
    extern "C" int statfs(const char *file, struct statfs *buffer);
 #elif defined(R__LINUX) || defined(R__HPUX) || defined(R__HURD)
@@ -160,8 +161,18 @@
 #   define HAVE_UTMPX_H
 #   define UTMP_NO_ADDR
 #endif
+
+#if defined(MAC_OS_X_VERSION_10_5)
+#   define HAVE_UTMPX_H
+#   define UTMP_NO_ADDR
+#   ifndef ut_user
+#      define ut_user ut_name
+#   endif
+#endif
+
 #if defined(R__ALPHA) || defined(R__AIX) || defined(R__FBSD) || \
-    defined(R__OBSD) || defined(R__LYNXOS) || defined(R__MACOSX)
+    defined(R__OBSD) || defined(R__LYNXOS) || \
+    (defined(R__MACOSX) && !defined(MAC_OS_X_VERSION_10_5))
 #   define UTMP_NO_ADDR
 #endif
 
@@ -340,6 +351,43 @@ static void SigHandler(ESignals sig)
       ((TUnixSystem*)gSystem)->DispatchSignals(sig);
 }
 
+#if defined(R__MACOSX)
+static TString gLinkedDylibs;
+
+//______________________________________________________________________________
+static void DylibAdded(const struct mach_header *mh, intptr_t /* vmaddr_slide */)
+{
+   static int i = 0;
+   static Bool_t gotFirstSo = kFALSE;
+   static TString linkedDylibs;
+
+   // to copy the local linkedDylibs to the global gLinkedDylibs call this
+   // function with mh==0
+   if (!mh) {
+      gLinkedDylibs = linkedDylibs;
+      return;
+   }
+
+   TString lib = _dyld_get_image_name(i++);
+
+   //printf("%s %p\n", lib.Data(), mh);
+
+   // when first .so is loaded we have finished loading all dylibs
+   // explicitly linked against the executable. Additional dylibs
+   // come when they are explicitly linked against loaded so's, currentky
+   // we are not interested in these
+   if (lib.EndsWith(".so"))
+      gotFirstSo = kTRUE;
+
+   // "libSystem.B.dylib" is always add by the linker, so no need to add it
+   if (!gotFirstSo && lib.EndsWith(".dylib") && !lib.EndsWith("/libSystem.B.dylib")) {
+      if (i > 1)
+         linkedDylibs += " ";
+      linkedDylibs += lib;
+   }
+}
+#endif
+
 
 ClassImp(TUnixSystem)
 
@@ -393,6 +441,11 @@ Bool_t TUnixSystem::Init()
       gRootDir= "/usr/local/root";
 #else
    gRootDir = ROOTPREFIX;
+#endif
+
+#if defined(R__MACOSX)
+   // trap loading of all dylibs to register dylib name
+   _dyld_register_func_for_add_image(DylibAdded);
 #endif
 
    return kFALSE;
@@ -1278,17 +1331,19 @@ int TUnixSystem::CopyFile(const char *f, const char *t, Bool_t overwrite)
 {
    // Copy a file. If overwrite is true and file already exists the
    // file will be overwritten. Returns 0 when successful, -1 in case
-   // of failure, -2 in case the file already exists and overwrite was false.
+   // of file open failure, -2 in case the file already exists and overwrite
+   // was false and -3 in case of error during copy.
 
    if (!AccessPathName(t) && !overwrite)
       return -2;
 
-   FILE* from = fopen(f, "r");
+   FILE *from = fopen(f, "r");
    if (!from)
       return -1;
 
-   FILE* to   = fopen(t, "w");
-   if (!to) return -2;
+   FILE *to   = fopen(t, "w");
+   if (!to)
+      return -1;
 
    const int bufsize = 1024;
    char buf[bufsize];
@@ -2476,7 +2531,9 @@ const char *TUnixSystem::GetLinkedLibraries()
    // Get list of shared libraries loaded at the start of the executable.
    // Returns 0 in case list cannot be obtained or in case of error.
 
+#if !defined(R__MACOSX)
    if (!gApplication) return 0;
+#endif
 
    static Bool_t once = kFALSE;
    static TString linkedLibs;
@@ -2489,14 +2546,20 @@ const char *TUnixSystem::GetLinkedLibraries()
    if (once)
       return 0;
 
+#if !defined(R__MACOSX)
    char *exe = gSystem->Which(Getenv("PATH"), gApplication->Argv(0),
                               kExecutePermission);
    if (!exe) {
       once = kTRUE;
       return 0;
    }
+#endif
 
 #if defined(R__MACOSX)
+   char *exe = 0;
+   DylibAdded(0, 0);
+   linkedLibs = gLinkedDylibs;
+#if 0
    FILE *p = OpenPipe(Form("otool -L %s", exe), "r");
    TString otool;
    while (otool.Gets(p)) {
@@ -2511,6 +2574,7 @@ const char *TUnixSystem::GetLinkedLibraries()
       delete tok;
    }
    ClosePipe(p);
+#endif
 #elif defined(R__LINUX) || defined(R__SOLARIS)
 #if defined(R__WINGCC )
    const char *cLDD="cygcheck";
@@ -3198,7 +3262,7 @@ static struct Signalmap_t {
    struct sigaction *fOldHandler;
    const char       *fSigName;
 } gSignalMap[kMAXSIGNALS] = {       // the order of the signals should be identical
-   { SIGBUS,   0, 0, "bus error" }, // to the one in SysEvtHandler.h
+   { SIGBUS,   0, 0, "bus error" }, // to the one in TSysEvtHandler.h
    { SIGSEGV,  0, 0, "segmentation violation" },
    { SIGSYS,   0, 0, "bad argument to system call" },
    { SIGPIPE,  0, 0, "write on a pipe with no one to read it" },

@@ -17,13 +17,25 @@
 
 
 
+#include "Math/OneDimFunctionAdapter.h"
+
+
+#include "RConfigure.h"
+// #ifndef ROOTINCDIR
+// #define MATH_NO_PLUGIN_MANAGER
+// #endif
+
 #ifndef MATH_NO_PLUGIN_MANAGER
+
 #include "TROOT.h"
 #include "TPluginManager.h"
 
 #else // case no plugin manager is available
+#ifdef R__HAS_MATHMORE
 #include "Math/GSLIntegrator.h"
 #include "Math/GSLMCIntegrator.h"
+#endif
+
 #endif
 
 #include <cassert>
@@ -31,6 +43,19 @@
 namespace ROOT {
 namespace Math {
 
+void IntegratorOneDim::SetFunction(const IMultiGenFunction &f, unsigned int icoord , const double * x ) { 
+   // set function from a multi-dim function 
+   // pass also x in case of multi-dim function express the other dimensions (which are fixed) 
+   unsigned int ndim = f.NDim(); 
+   assert (icoord < ndim); 
+   ROOT::Math::OneDimMultiFunctionAdapter<> adapter(f,ndim,icoord);
+   // case I pass a vector x which is needed (for example to compute I(y) = Integral( f(x,y) dx) ) need to setCX
+   if (x != 0) adapter.SetX(x, x+ ndim);
+   SetFunction(adapter,true); // need to copy this object
+}
+
+
+// methods to create integrators 
 
    VirtualIntegratorOneDim * IntegratorOneDim::CreateIntegrator(IntegrationOneDim::Type type , double absTol, double relTol, unsigned int size, int rule) { 
    // create the concrete class for one-dimensional integration. Use the plug-in manager if needed 
@@ -38,8 +63,15 @@ namespace Math {
    VirtualIntegratorOneDim * ig = 0; 
 
 #ifdef MATH_NO_PLUGIN_MANAGER    // no PM available
+#ifdef R__HAS_MATHMORE   
    ig =  new GSLIntegrator(type, absTol, relTol, size);
 #else 
+   MATH_ERROR_MSG("IntegratorOneDim::CreateIntegrator","Integrator type is not available in MathCore");
+#endif
+
+#else  // case of using Plugin Manager
+   
+
 
    TPluginHandler *h; 
    //gDebug = 3; 
@@ -81,7 +113,11 @@ VirtualIntegratorMultiDim * IntegratorMultiDim::CreateIntegrator(IntegrationMult
    VirtualIntegratorMultiDim * ig = 0; 
 
 #ifdef MATH_NO_PLUGIN_MANAGER  // no PM available 
+#ifdef R__HAS_MATHMORE   
    ig =  new GSLMCIntegrator(type, absTol, relTol, ncall);
+#else 
+   MATH_ERROR_MSG("IntegratorMultiDim::CreateIntegrator","Integrator type is not available in MathCore");
+#endif
 
 #else  // use ROOT PM 
       

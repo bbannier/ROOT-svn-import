@@ -25,13 +25,11 @@
  *                                                                                *
  **********************************************************************************/
 
-//_______________________________________________________________________
-//Begin_Html
-/*
-  Base Class for all classes that would like to habe option parsing enabled
-*/
-//End_Html
-//_______________________________________________________________________
+//________________________________________________________________________
+/* Begin_Html
+Base Class for all classes that need option parsing
+End_Html */
+//________________________________________________________________________
 
 #include <string>
 #include <iostream>
@@ -58,15 +56,21 @@ using std::endl;
 
 ClassImp(TMVA::Configurable)
 
+#ifdef _WIN32
+/*Disable warning C4355: 'this' : used in base member initializer list*/
+#pragma warning ( disable : 4355 )
+#endif
+
 //_______________________________________________________________________
 TMVA::Configurable::Configurable( const TString& theOption)  
    : fOptions                    ( theOption ),
      fLooseOptionCheckingEnabled ( kTRUE ),
      fLastDeclaredOption         ( 0 ),
-     fLogger                     ( this )
+     fLogger (this)
 {
    // constructor
    fLogger.SetMinType( kINFO );
+   fListOfOptions.SetOwner();   
 }
 
 //_______________________________________________________________________
@@ -80,6 +84,7 @@ void TMVA::Configurable::SplitOptions(const TString& theOpt, TList& loo) const
 {
    // splits the option string at ':' and fills the list 'loo' with the primitive strings
    TString splitOpt(theOpt);
+   loo.SetOwner();
    while (splitOpt.Length()>0) {
       if ( ! splitOpt.Contains(':') ) {
          loo.Add(new TObjString(splitOpt));
@@ -185,7 +190,7 @@ void TMVA::Configurable::ParseOptions( Bool_t verbose )
                paramParsed = kTRUE;
             }
             else fLogger << kFATAL << "Option " << decOpt->TheName() 
-                         << " has no predefined value " << optval << Endl;               
+                         << " does not have predefined value: \"" << optval << "\"" << Endl;               
          }
       }
 

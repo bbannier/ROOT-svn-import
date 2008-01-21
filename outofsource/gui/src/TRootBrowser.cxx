@@ -72,6 +72,8 @@
 #include "TRootBrowser.h"
 #include "TGFileBrowser.h"
 #include "TGInputDialog.h"
+#include "TRootHelpDialog.h"
+#include "HelpText.h"
 
 #include "Getline.h"
 
@@ -95,6 +97,14 @@ enum ENewBrowserMessages {
    kBrowse = 11011,
    kOpenFile,
    kClone,
+   kHelpAbout,
+   kHelpOnBrowser,
+   kHelpOnCanvas,
+   kHelpOnMenus,
+   kHelpOnGraphicsEd,
+   kHelpOnObjects,
+   kHelpOnPS,
+   kHelpOnRemote,
    kNewEditor,
    kNewCanvas,
    kNewHtml,
@@ -104,6 +114,15 @@ enum ENewBrowserMessages {
    kCloseWindow,
    kQuitRoot
 };
+
+//_____________________________________________________________________________
+//
+// TRootBrowser
+//
+// The main ROOT object browser.
+//_____________________________________________________________________________
+
+ClassImp(TRootBrowser)
 
 //______________________________________________________________________________
 TRootBrowser::TRootBrowser(TBrowser *b, const char *name, UInt_t width, 
@@ -167,6 +186,20 @@ void TRootBrowser::CreateBrowser(const char *name)
    fMenuFile  = new TGPopupMenu(gClient->GetDefaultRoot());
    fMenuFile->AddEntry("&Browse...             Ctrl+B", kBrowse);
    fMenuFile->AddEntry("&Open...                 Ctrl+O", kOpenFile);
+   fMenuFile->AddSeparator();
+   
+   fMenuHelp = new TGPopupMenu(fClient->GetRoot());
+   fMenuHelp->AddEntry("&About ROOT...",        kHelpAbout);
+   fMenuHelp->AddSeparator();
+   fMenuHelp->AddEntry("Help On Browser...",    kHelpOnBrowser);
+   fMenuHelp->AddEntry("Help On Canvas...",     kHelpOnCanvas);
+   fMenuHelp->AddEntry("Help On Menus...",      kHelpOnMenus);
+   fMenuHelp->AddEntry("Help On Graphics Editor...", kHelpOnGraphicsEd);
+   fMenuHelp->AddEntry("Help On Objects...",    kHelpOnObjects);
+   fMenuHelp->AddEntry("Help On PostScript...", kHelpOnPS);
+   fMenuHelp->AddEntry("Help On Remote Session...", kHelpOnRemote);
+   fMenuFile->AddPopup("Browser Help...", fMenuHelp);
+   
    fMenuFile->AddSeparator();
    fMenuFile->AddEntry("&Clone                   Ctrl+N", kClone);
    fMenuFile->AddSeparator();
@@ -251,6 +284,7 @@ void TRootBrowser::CreateBrowser(const char *name)
    fNbInitPlugins = 0;
    fEditFrame = 0;
    fEditTab   = 0;
+   fEditPos   = -1;
    fNbTab[0]  = fNbTab[1] = fNbTab[2] = 0;
    fCrTab[0]  = fCrTab[1] = fCrTab[2] = -1;
    
@@ -283,6 +317,7 @@ TRootBrowser::~TRootBrowser()
    delete fLH5;
    delete fLH6;
    delete fLH7;
+   delete fMenuHelp;
    delete fMenuExecPlugin;
    delete fMenuFile;
    delete fMenuBar;
@@ -569,6 +604,7 @@ void TRootBrowser::HandleMenu(Int_t id)
 {
    // Handle menu entries events.
 
+   TRootHelpDialog *hd;
    TString cmd;
    static Int_t eNr = 1;
    TGPopupMenu *sender = (TGPopupMenu *)gTQSender;
@@ -600,6 +636,67 @@ void TRootBrowser::HandleMenu(Int_t id)
                                   gSystem->UnixPathName(fi.fFilename)));
             }
          }
+         break;
+                  // Handle Help menu items...
+      case kHelpAbout:
+         {
+#ifdef R__UNIX
+            TString rootx;
+# ifdef ROOTBINDIR
+            rootx = ROOTBINDIR;
+# else
+            rootx = gSystem->Getenv("ROOTSYS");
+            if (!rootx.IsNull()) rootx += "/bin";
+# endif
+            rootx += "/root -a &";
+            gSystem->Exec(rootx);
+#else
+#ifdef WIN32
+            new TWin32SplashThread(kTRUE);
+#else
+            char str[32];
+            sprintf(str, "About ROOT %s...", gROOT->GetVersion());
+            hd = new TRootHelpDialog(this, str, 600, 400);
+            hd->SetText(gHelpAbout);
+            hd->Popup();
+#endif
+#endif
+         }
+         break;
+      case kHelpOnCanvas:
+         hd = new TRootHelpDialog(this, "Help on Canvas...", 600, 400);
+         hd->SetText(gHelpCanvas);
+         hd->Popup();
+         break;
+      case kHelpOnMenus:
+         hd = new TRootHelpDialog(this, "Help on Menus...", 600, 400);
+         hd->SetText(gHelpPullDownMenus);
+         hd->Popup();
+         break;
+      case kHelpOnGraphicsEd:
+         hd = new TRootHelpDialog(this, "Help on Graphics Editor...", 600, 400);
+         hd->SetText(gHelpGraphicsEditor);
+         hd->Popup();
+         break;
+      case kHelpOnBrowser:
+         hd = new TRootHelpDialog(this, "Help on Browser...", 600, 400);
+         hd->SetText(gHelpBrowser);
+         hd->Popup();
+         break;
+      case kHelpOnObjects:
+         hd = new TRootHelpDialog(this, "Help on Objects...", 600, 400);
+         hd->SetText(gHelpObjects);
+         hd->Popup();
+         break;
+      case kHelpOnPS:
+         hd = new TRootHelpDialog(this, "Help on PostScript...", 600, 400);
+         hd->SetText(gHelpPostscript);
+         hd->Popup();
+         break;
+      case kHelpOnRemote:
+         hd = new TRootHelpDialog(this, "Help on Browser...", 600, 400);
+         hd->SetText(gHelpRemote);
+         hd->Popup();
          break;
       case kClone:
          CloneBrowser();
@@ -910,6 +1007,7 @@ void TRootBrowser::StartEmbedding(Int_t pos, Int_t subpos)
    // Start embedding external frame in the tab "pos" and tab element "subpos".
 
    fEditTab = GetTab(pos);
+   fEditPos = pos;
 
    if (fEditFrame == 0) {
       if (subpos == -1) {
@@ -945,11 +1043,12 @@ void TRootBrowser::StopEmbedding(const char *name, TGLayoutHints *layout)
       fEditFrame->Layout();
       if (fEditTab == fTabRight)
          SwitchMenus(fEditFrame);
-      fEditFrame = fEditTab = 0;
    }
    if (name && strlen(name)) {
-      SetTabTitle(name);
+      SetTabTitle(name, fEditPos);
    }
+   fEditFrame = fEditTab = 0;
+   fEditPos = -1;
 }
 
 //______________________________________________________________________________

@@ -1055,8 +1055,8 @@ XMLNodePointer_t TGDMLParse::VolProcess(TXMLEngine* gdml, XMLNodePointer_t node)
                   reftemp = Form("%s_%s", reftemp, fCurrentFile);
                }
                if(fposmap.find(reftemp) != fposmap.end()) pos = fposmap[reftemp];
-	       else std::cout << "ERROR! Physvol's position " << reftemp << " not found!" << std::endl;
-	    } 
+               else std::cout << "ERROR! Physvol's position " << reftemp << " not found!" << std::endl;
+            } 
             else if((strcmp(tempattr, "rotation")) == 0) {
                attr = gdml->GetFirstAttr(subchild);
                RotProcess(gdml, subchild, attr);
@@ -1072,7 +1072,7 @@ XMLNodePointer_t TGDMLParse::VolProcess(TXMLEngine* gdml, XMLNodePointer_t node)
                   reftemp = Form("%s_%s", reftemp, fCurrentFile);
                }
                if (frotmap.find(reftemp) != frotmap.end()) rot = frotmap[reftemp];
-	       else std::cout << "ERROR! Physvol's rotation " << reftemp << " not found!" << std::endl;
+               else std::cout << "ERROR! Physvol's rotation " << reftemp << " not found!" << std::endl;
             }
             else if((strcmp(tempattr,"scale")) == 0) {
                attr = gdml->GetFirstAttr(subchild);
@@ -1089,8 +1089,8 @@ XMLNodePointer_t TGDMLParse::VolProcess(TXMLEngine* gdml, XMLNodePointer_t node)
                   reftemp = Form("%s_%s", reftemp, fCurrentFile);
                }
                if (fsclmap.find(reftemp) != fsclmap.end()) scl = fsclmap[reftemp];
-	       else std::cout << "ERROR! Physvol's scale " << reftemp << " not found!" << std::endl;
-	    }
+               else std::cout << "ERROR! Physvol's scale " << reftemp << " not found!" << std::endl;
+            }
 
             subchild = gdml->GetNext(subchild);
          }
@@ -1101,13 +1101,13 @@ XMLNodePointer_t TGDMLParse::VolProcess(TXMLEngine* gdml, XMLNodePointer_t node)
          TGeoHMatrix *transform = new TGeoHMatrix();         
 
          if (pos!=0) transform->SetTranslation(pos->GetTranslation());
-	 if (rot!=0) transform->SetRotation(rot->GetRotationMatrix());
+         if (rot!=0) transform->SetRotation(rot->GetRotationMatrix());
 
          if (scl!=0) { // Scaling must be added to the rotation matrix!
 
             Double_t scale3x3[9];
             memset(scale3x3,0,9*sizeof(Double_t));
-	    const Double_t *diagonal = scl->GetScale();
+            const Double_t *diagonal = scl->GetScale();
 
             scale3x3[0] = diagonal[0];
             scale3x3[4] = diagonal[1];
@@ -1116,21 +1116,21 @@ XMLNodePointer_t TGDMLParse::VolProcess(TXMLEngine* gdml, XMLNodePointer_t node)
             TGeoRotation scaleMatrix;
             scaleMatrix.SetMatrix(scale3x3);
             transform->Multiply(&scaleMatrix);
-	 }
+         }
 
 // BEGIN: reflectedSolid. Remove lines between if reflectedSolid will be removed from GDML!!!
 
-         if(freflvolmap.find(volref) != freflvolmap.end()) { // if the volume is a reflected volume the matrix needs to be CHANGED
-
+         if(freflvolmap.find(volref) != freflvolmap.end()) { 
+            // if the volume is a reflected volume the matrix needs to be CHANGED
             TGDMLRefl* temprefl = freflsolidmap[freflvolmap[volref]];
             transform->Multiply(temprefl->GetMatrix());
-       	 }
+         }
 
-         if(yesrefl == 1) { // reflection is done per solid so that we cancel it if exists in mother volume!!!
-
-              TGeoRotation prot;
-	      prot.SetMatrix(parentrot);
-              transform->MultiplyLeft(&prot);
+         if(yesrefl == 1) { 
+            // reflection is done per solid so that we cancel it if exists in mother volume!!!
+            TGeoRotation prot;
+            prot.SetMatrix(parentrot);
+            transform->MultiplyLeft(&prot);
          }
 
 // END: reflectedSolid

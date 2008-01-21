@@ -17,7 +17,7 @@
 #define ROO_REAL_CONSTANT
 
 #include "Rtypes.h"
-#include "Riostream.h"
+#include "Riosfwd.h"
 
 class RooAbsReal ;
 class RooArgList ;
@@ -30,6 +30,8 @@ public:
   inline RooRealConstant() {} ;
   virtual ~RooRealConstant() {} ;
   static RooConstVar& value(Double_t value) ;
+
+  static void cleanup() ;
 
 protected:
 

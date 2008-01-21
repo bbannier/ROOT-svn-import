@@ -20,10 +20,10 @@
 // use this class in the (normalization) integral configuration interface
 
 #include "TClass.h"
+#include "Riostream.h"
 
 #include "RooFit.h"
 
-#include "RooNumIntFactory.h"
 #include "RooNumIntFactory.h"
 #include "RooArgSet.h"
 #include "RooAbsFunc.h"
@@ -38,10 +38,17 @@
 #include "RooMCIntegrator.h"
 #include "RooGaussKronrodIntegrator1D.h"
 #include "RooAdaptiveGaussKronrodIntegrator1D.h"
+#include "RooSentinel.h"
 
+#include "RooMsgService.h"
+
+using namespace std ;
 
 ClassImp(RooNumIntFactory)
 ;
+
+RooNumIntFactory* RooNumIntFactory::_instance = 0 ;
+
 
 RooNumIntFactory::RooNumIntFactory()
 {
@@ -58,19 +65,33 @@ RooNumIntFactory::RooNumIntFactory()
 
 RooNumIntFactory::~RooNumIntFactory()
 {
+  std::map<std::string,pair<RooAbsIntegrator*,std::string> >::iterator iter = _map.begin() ;
+  while (iter != _map.end()) {
+    delete iter->second.first ;
+    ++iter ;
+  }  
 }
 
 RooNumIntFactory::RooNumIntFactory(const RooNumIntFactory& other) : TObject(other)
 {
 }
 
+
 RooNumIntFactory& RooNumIntFactory::instance()
 {
-  static RooNumIntFactory* _instance = 0 ;
   if (_instance==0) {
     _instance = new RooNumIntFactory ;
+    RooSentinel::activate() ;
   } 
   return *_instance ;
+}
+
+void RooNumIntFactory::cleanup()
+{
+  if (_instance) {
+    delete _instance ;
+    _instance = 0 ;
+  }
 }
 
 
@@ -146,8 +167,8 @@ RooAbsIntegrator* RooNumIntFactory::createIntegrator(RooAbsFunc& func, const Roo
 
   // Check that a method was defined for this case
   if (!method.CompareTo("N/A")) {
-    cout << "RooNumIntFactory::createIntegrator: No integration method has been defined for " 
-	 << (openEnded?"an open ended ":"a ") << ndim << "-dimensional integral" << endl ;
+    oocoutE((TObject*)0,Integration) << "RooNumIntFactory::createIntegrator: No integration method has been defined for " 
+				     << (openEnded?"an open ended ":"a ") << ndim << "-dimensional integral" << endl ;
     return 0 ;    
   }
 

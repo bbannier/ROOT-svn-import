@@ -9,6 +9,17 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+// TBranchProxyDescriptor                                               //
+//                                                                      //
+// Hold the processed information about a TBranch while                 //
+// TTreeProxyGenerator is parsing the TTree information.                //
+// Also contains the routine use to generate the appropriate code       //
+// fragment in the result of MakeProxy.                                 //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
+
 #include "TBranchProxyDescriptor.h"
 
 #include "TClonesArray.h"
@@ -18,6 +29,8 @@
 #include "TTreeFormula.h"
 #include "TFormLeafInfo.h"
 #include <ctype.h>
+
+ClassImp(ROOT::TBranchProxyDescriptor);
 
 namespace ROOT {
 
@@ -31,6 +44,9 @@ namespace ROOT {
       // Constructor.
 
       fDataName = GetName();
+      if (fDataName.Length() && fDataName[fDataName.Length()-1]=='.') fDataName.Remove(fDataName.Length()-1);
+
+      fDataName.ReplaceAll(".","_");
       fDataName.ReplaceAll("<","_");
       fDataName.ReplaceAll(">","_");
       if (!isalpha(fDataName[0])) fDataName.Insert(0,"_");
@@ -38,7 +54,6 @@ namespace ROOT {
       fDataName.ReplaceAll("*","st");
       fDataName.ReplaceAll("&","rf");
 
-      if (fDataName.Length() && fDataName[fDataName.Length()-1]=='.') fDataName.Remove(fDataName.Length()-1);
    }
    
    const char *TBranchProxyDescriptor::GetDataName() 

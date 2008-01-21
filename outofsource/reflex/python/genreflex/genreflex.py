@@ -179,7 +179,11 @@ class genreflex:
       if o in ('--rootmap-lib',):
         self.rootmaplib = a
       if o in ('-I', '-U', '-D', '-P', '-C') :
-        self.cppopt += '\'' + o + a + '\' '
+        # escape quotes; we need to use " because of windows cmd
+        poseq = a.find('=')
+        if poseq > 0 and a[poseq + 1] == '"' and a[-1] == '"' :
+          a = a[0:poseq + 1] + '\\' + a[poseq+1:-1] + '\\"'
+        self.cppopt += '"' + o + a + '" '
 #----------------------------------------------------------------------------------
   def check_files_dirs(self):
     #---Check existance of input files--------------------
@@ -267,12 +271,17 @@ class genreflex:
     else :
       print '--->> genreflex: WARNING: While trying to retrieve compiler version, found unknown compiler %s' % compiler
       return s
-    (inp,out,err) = os.popen3('%s %s'%(compiler,vopt))
+    (inp,out,err) = os.popen3('"%s" %s'%(compiler,vopt))
     serr = err.read()
-    if serr :
-      print '--->> genreflex: WARNING: While trying to retrieve compiler information. Cannot invoke %s %s' % (compiler,vopt)
-      print '--->> genreflex: WARNING: %s' % serr
-      return s
+    # cl puts its version into cerr!
+    if serr:
+      if bcomp in ('cl.exe','cl'):
+        s += '\nCompiler info:\n' + serr
+        return s
+      else:
+        print '--->> genreflex: WARNING: While trying to retrieve compiler information. Cannot invoke %s %s' % (compiler,vopt)
+        print '--->> genreflex: WARNING: %s' % serr
+        return s
     s += '\nCompiler info:\n' + out.read()
     return s
 #----------------------------------------------------------------------------------
@@ -289,7 +298,8 @@ class genreflex:
       else :
         dicfile = os.path.join(self.outputDir,name+file_extension)
       #---------------Parse the header file with GCC_XML
-      cmd  = '%s %s \'%s\' \'-fxml=%s\' %s -D__REFLEX__' %(self.gccxml, self.gccxmlopt, source, xmlfile, self.cppopt)
+      cmd  = '%s %s "%s" -fxml=%s %s -D__REFLEX__' %(self.gccxml, self.gccxmlopt, source, xmlfile, self.cppopt)
+      if 'debug' in self.opts : print '--->> genreflex: INFO: invoking ', cmd
       if not self.quiet : print '--->> genreflex: INFO: Parsing file %s with GCC_XML' % source,
       status = os.system(cmd)
       if status :

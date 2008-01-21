@@ -28,6 +28,13 @@ class TGStatusBar;
 class TGVSplitter;
 class TGHSplitter;
 
+//_____________________________________________________________________________
+//
+// TBrowserPlugin
+//
+// Helper class used to manage plugins (command or macro to be executed).
+//_____________________________________________________________________________
+
 class TBrowserPlugin : public TNamed
 {
 public:
@@ -57,6 +64,7 @@ protected:
    TGTab             *fTabRight;                   // Right Tab
    TGTab             *fTabBottom;                  // Bottom Tab
    TGTab             *fEditTab;                    // Tab in "Edit" mode
+   Int_t              fEditPos;                    // Id of tab in "Edit" mode
    TGVerticalFrame   *fVf;                         // Vertical frame
    TGHorizontalFrame *fHf;                         // Horizontal frame
    TGHorizontalFrame *fH1;                         // Horizontal frame
@@ -73,6 +81,7 @@ protected:
    TGMenuBar         *fMenuBar;                    // Main (owned) menu bar
    TGPopupMenu       *fMenuFile;                   // "File" popup menu
    TGPopupMenu       *fMenuExecPlugin;             // "Exec Plugin" popup menu
+   TGPopupMenu       *fMenuHelp;                   // "Browser Help" popup menu
    TGCompositeFrame  *fActMenuBar;                 // Actual (active) menu bar
    TBrowserImp       *fActBrowser;                 // Actual (active) browser imp
    TList              fBrowsers;                   // List of (sub)browsers

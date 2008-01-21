@@ -20,22 +20,35 @@
 // use this class in the (normalization) integral configuration interface
 
 #include "RooFit.h"
+#include "Riostream.h"
 
-#include "RooNumIntConfig.h"
 #include "RooNumIntConfig.h"
 #include "RooArgSet.h"
 #include "RooAbsIntegrator.h"
 #include "RooNumIntFactory.h"
+#include "RooMsgService.h"
 
 #include "TClass.h"
+
+
 
 ClassImp(RooNumIntConfig)
 ;
 
+RooNumIntConfig* RooNumIntConfig::_default = 0 ;
+
+void RooNumIntConfig::cleanup()
+{
+  if (_default) {
+    delete _default ;
+    _default = 0 ;
+  }
+}
+
+
 RooNumIntConfig& RooNumIntConfig::defaultConfig() 
 {
   // Return reference to instance of default numeric integrator configuration object
-  static RooNumIntConfig* _default = 0 ;
   
   // Instantiate object if it doesn't exist yet
   if (_default==0) {
@@ -190,7 +203,7 @@ const RooArgSet& RooNumIntConfig::getConfigSection(const char* name) const
   static RooArgSet dummy ;
   RooArgSet* config = (RooArgSet*) _configSets.FindObject(name) ;
   if (!config) {
-    cout << "RooNumIntConfig::getIntegrator: ERROR: no configuration stored for integrator '" << name << "'" << endl ;
+    oocoutE((TObject*)0,InputArguments) << "RooNumIntConfig::getIntegrator: ERROR: no configuration stored for integrator '" << name << "'" << endl ;
     return dummy ;
   }
   return *config ;
@@ -201,7 +214,7 @@ void RooNumIntConfig::setEpsAbs(Double_t newEpsAbs)
 {
   // Set absolute convergence criteria (convergence if abs(Err)<newEpsAbs)
   if (newEpsAbs<=0) {
-    cout << "RooNumIntConfig::setEpsAbs: ERROR: target absolute precision must be greater than zero" << endl ;
+    oocoutE((TObject*)0,InputArguments) << "RooNumIntConfig::setEpsAbs: ERROR: target absolute precision must be greater than zero" << endl ;
     return ;
   }
   _epsAbs = newEpsAbs ;
@@ -212,7 +225,7 @@ void RooNumIntConfig::setEpsRel(Double_t newEpsRel)
 {
   // Set relative convergence criteria (convergence if abs(Err)/abs(Int)<newEpsRel)
   if (newEpsRel<=0) {
-    cout << "RooNumIntConfig::setEpsRel: ERROR: target absolute precision must be greater than zero" << endl ;
+    oocoutE((TObject*)0,InputArguments) << "RooNumIntConfig::setEpsRel: ERROR: target absolute precision must be greater than zero" << endl ;
     return ;
   }
   _epsRel = newEpsRel ;

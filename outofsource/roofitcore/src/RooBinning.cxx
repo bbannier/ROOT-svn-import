@@ -30,6 +30,7 @@
 #include "RooAbsPdf.h"
 #include "RooRealVar.h"
 #include "RooNumber.h"
+#include "RooMsgService.h"
 
 ClassImp(RooBinning)
 ;
@@ -37,6 +38,8 @@ ClassImp(RooBinning)
 
 RooBinning::RooBinning(Double_t xlo, Double_t xhi, const char* name) : 
   RooAbsBinning(name), 
+  _xlo(0),
+  _xhi(0),
   _ownBoundLo(kTRUE), 
   _ownBoundHi(kTRUE), 
   _array(0)
@@ -50,6 +53,8 @@ RooBinning::RooBinning(Double_t xlo, Double_t xhi, const char* name) :
 
 RooBinning::RooBinning(Int_t nbins, Double_t xlo, Double_t xhi, const char* name) : 
   RooAbsBinning(name), 
+  _xlo(0),
+  _xhi(0),
   _ownBoundLo(kTRUE), 
   _ownBoundHi(kTRUE), 
   _array(0)
@@ -66,6 +71,8 @@ RooBinning::RooBinning(Int_t nbins, Double_t xlo, Double_t xhi, const char* name
 
 RooBinning::RooBinning(Int_t nbins, const Double_t* boundaries, const char* name) : 
   RooAbsBinning(name),
+  _xlo(0),
+  _xhi(0),
   _ownBoundLo(kTRUE), 
   _ownBoundHi(kTRUE), 
   _array(0)
@@ -265,7 +272,7 @@ Double_t* RooBinning::array() const
 void RooBinning::setRange(Double_t xlo, Double_t xhi) 
 {
   if (xlo>xhi) {
-    cout << "RooUniformBinning::setRange: ERROR low bound > high bound" << endl ;
+    coutE(InputArguments) << "RooUniformBinning::setRange: ERROR low bound > high bound" << endl ;
     return ;
   }
   
@@ -305,7 +312,7 @@ void RooBinning::setRange(Double_t xlo, Double_t xhi)
 void RooBinning::updateBinCount()
 {
   _bIter->Reset() ;
-  RooDouble* boundary ;  
+  RooDouble* boundary=0 ;  
   Int_t i(-1) ;
   while((boundary=(RooDouble*)_bIter->Next())) {
     Double_t bval = (Double_t)*boundary ;
@@ -321,7 +328,7 @@ void RooBinning::updateBinCount()
 Bool_t RooBinning::binEdges(Int_t bin, Double_t& xlo, Double_t& xhi) const 
 {
   if (bin<0 || bin>= _nbins) {
-    cout << "RooBinning::binEdges ERROR: bin number must be in range (0," << _nbins << ")" << endl ; 
+    coutE(InputArguments) << "RooBinning::binEdges ERROR: bin number must be in range (0," << _nbins << ")" << endl ; 
     return kTRUE ;
   }
   

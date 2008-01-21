@@ -31,8 +31,8 @@ public:
   Bool_t getInterval(const RooAbsFunc *Qu, const RooAbsFunc *Ql, Double_t pointEstimate, Double_t stepSize,
 		     Double_t &lo, Double_t &hi, Double_t nSigma) const;
   
-  inline static RooAbsFunc *createPoissonSum(Int_t n) { return new PoissonSum(n); }
-  inline static RooAbsFunc *createBinomialSum(Int_t n, Int_t m) { return new BinomialSum(n,m); }
+  static RooAbsFunc *createPoissonSum(Int_t n) ;
+  static RooAbsFunc *createBinomialSum(Int_t n, Int_t m) ;
 
 private:
 
@@ -63,7 +63,7 @@ private:
       return exp(-mu)*result;
     };
     inline Double_t getMinLimit(UInt_t /*index*/) const { return 0; }
-    inline Double_t getMaxLimit(UInt_t /*index*/) const { return RooNumber::infinity; }
+    inline Double_t getMaxLimit(UInt_t /*index*/) const { return RooNumber::infinity() ; }
   private:
     Int_t _n;
   };
