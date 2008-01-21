@@ -29,14 +29,6 @@
 #ifndef ROOT_TMVA_Config
 #define ROOT_TMVA_Config
 
-//////////////////////////////////////////////////////////////////////////
-//                                                                      //
-// Config                                                               //
-//                                                                      //
-// Singleton class for global configuration settings used by TMVA       //
-//                                                                      //
-//////////////////////////////////////////////////////////////////////////
-
 #include "Rtypes.h"
 #include "TString.h"
 
@@ -56,6 +48,9 @@ namespace TMVA {
       Bool_t UseColor() { return fUseColoredConsole; }
       void SetUseColor( Bool_t uc ) { fUseColoredConsole = uc; }
 
+      Bool_t Silent() { return fSilent; }
+      void SetSilent( Bool_t s ) { fSilent = s; }
+
    public:
 
       class VariablePlotting;
@@ -66,6 +61,7 @@ namespace TMVA {
 
       // publicly accessible global settings
       class VariablePlotting {
+         // data collection class to configure plotting of variables
       public:
          Float_t fTimesRMS;
          Int_t   fNbins1D;
@@ -90,7 +86,8 @@ namespace TMVA {
    private:
 
       Bool_t fUseColoredConsole;
-         
+      Bool_t fSilent; // no output at all
+
       mutable MsgLogger fLogger;   // message logger
          
       ClassDef(Config,0) // Singleton class for global configuration settings

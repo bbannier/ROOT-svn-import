@@ -88,9 +88,6 @@ TChain::TChain()
 
    // Add to the global list
    gROOT->GetListOfDataSets()->Add(this);
-
-   // Add to the global list
-   gROOT->GetListOfDataSets()->Add(this);
 }
 
 //______________________________________________________________________________
@@ -2272,6 +2269,7 @@ void TChain::SetEventList(TEventList *evlist)
    if (fEntryList){
       if (fEntryList->TestBit(kCanDelete))
          delete fEntryList;
+      fEntryList=0;
    }
 
    if (!evlist) {
@@ -2280,21 +2278,6 @@ void TChain::SetEventList(TEventList *evlist)
       return;
    }
 
-   if(fProofChain) {
-      //on proof, fEventList and fEntryList shouldn't be set at the same time
-      if (fEntryList){
-         //check, if the chain is the owner of the previous entry list
-         //(it happens, if the previous entry list was created from a user-defined
-         //TEventList in SetEventList() function)
-         if (fEntryList->TestBit(kCanDelete)){
-            delete fEntryList;
-         }
-         fEntryList = 0;
-      }
-      return;
-   }
-
-   fEventList = evlist;
    if(fProofChain) {
       //on proof, fEventList and fEntryList shouldn't be set at the same time
       if (fEntryList){

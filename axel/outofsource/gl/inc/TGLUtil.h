@@ -23,6 +23,9 @@ class TString;
 class TGLBoundingBox;
 class TGLCamera;
 
+class TAttMarker;
+class TAttLine;
+
 #include <cmath>
 #include <vector>
 #include <cassert>
@@ -902,6 +905,8 @@ private:
    static UInt_t fgDefaultDrawQuality;
    static UInt_t fgDrawQuality;
 
+   static UInt_t fgColorLockCount;
+
 protected:
    TGLUtil(const TGLUtil&) {} // copy constructor
    TGLUtil& operator=(const TGLUtil& glu) // assignment operator
@@ -917,10 +922,38 @@ public:
    enum ELineHeadShape { kLineHeadNone, kLineHeadArrow, kLineHeadBox };
    enum EAxesType      { kAxesNone, kAxesEdge, kAxesOrigin };
 
-   static void   SetDrawQuality(UInt_t dq)        { fgDrawQuality = dq; }
-   static void   ResetDrawQuality()               { fgDrawQuality = fgDefaultDrawQuality; }
-   static UInt_t GetDefaultDrawQuality()          { return fgDefaultDrawQuality; }
-   static void   SetDefaultDrawQuality(UInt_t dq) { fgDefaultDrawQuality = dq; }
+   static void   SetDrawQuality(UInt_t dq);
+   static void   ResetDrawQuality();
+   static UInt_t GetDefaultDrawQuality();
+   static void   SetDefaultDrawQuality(UInt_t dq);
+
+   static UInt_t LockColor();
+   static UInt_t UnlockColor();
+   static Bool_t IsColorLocked();
+
+   static void Color(Color_t color_index, Float_t alpha=1);
+   static void Color3ub(UChar_t r, UChar_t g, UChar_t b);
+   static void Color4ub(UChar_t r, UChar_t g, UChar_t b, UChar_t a);
+   static void Color3ubv(const UChar_t* rgb);
+   static void Color4ubv(const UChar_t* rgba);
+   static void Color3f(Float_t r, Float_t g, Float_t b);
+   static void Color4f(Float_t r, Float_t g, Float_t b, Float_t a);
+   static void Color3fv(const Float_t* rgb);
+   static void Color4fv(const Float_t* rgba);
+
+   static void BeginExtendPickRegion(Float_t scale);
+   static void EndExtendPickRegion();
+
+   static void RenderPolyMarkers(const TAttMarker& marker, Float_t* p, Int_t n,
+                                 Int_t pick_radius=0, Bool_t selection=kFALSE,
+                                 Bool_t sec_selection=kFALSE);
+   static void RenderPoints(const TAttMarker& marker, Float_t* p, Int_t n,
+                            Int_t pick_radius=0, Bool_t selection=kFALSE,
+                            Bool_t sec_selection=kFALSE);
+   static void RenderCrosses(const TAttMarker& marker, Float_t* p, Int_t n,
+                             Bool_t sec_selection=kFALSE);
+   static void RenderPolyLine(const TAttLine& al, Float_t* p, Int_t n,
+                              Int_t pick_radius=0, Bool_t selection=kFALSE);
 
    // TODO: These draw routines should take LOD hints
    static void SetDrawColors(const Float_t rgba[4]);
@@ -964,6 +997,21 @@ public:
    ~TGLCapabilitySwitch();
 };
 
+class TGLFloatHolder
+{
+   TGLFloatHolder(const TGLFloatHolder&);            // Not implemented
+   TGLFloatHolder& operator=(const TGLFloatHolder&); // Not implemented
+
+   Int_t    fWhat;
+   Float_t  fState;
+   Bool_t   fFlip;
+   void   (*fFoo)(Float_t);
+
+public:
+   TGLFloatHolder(Int_t what, Float_t state, void (*foo)(Float_t));
+   ~TGLFloatHolder();
+};
+
 class TGLEnableGuard {
 private:
    Int_t fCap;
@@ -989,7 +1037,6 @@ private:
    TGLDisableGuard(const TGLDisableGuard &);
    TGLDisableGuard &operator = (const TGLDisableGuard &);
 };
-
 
 class TGLSelectionBuffer {
    std::vector<UChar_t> fBuffer;

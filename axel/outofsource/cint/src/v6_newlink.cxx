@@ -289,7 +289,7 @@ static int G__isprivateassignoprifunc(int tagnum);
 static int G__isprivateassignoprvar(int tagnum);
 void G__cppif_gendefault(FILE *fp,FILE *hfp,int tagnum,int ifn,struct G__ifunc_table *ifunc,int isconstructor,int iscopyconstructor,int isdestructor,int isassignmentoperator,int isnonpublicnew);
 static char* G__vbo_funcname(int tagnum,int basetagnum,int basen);
-static int G__hascompiledoriginalbase(int tagnum);
+//static int G__hascompiledoriginalbase(int tagnum);
 static void G__declaretruep2f(FILE *fp,struct G__ifunc_table *ifunc,int j);
 static void G__printtruep2f(FILE *fp,struct G__ifunc_table *ifunc,int j);
 int G__tagtable_setup(int tagnum,int size,int cpplink,int isabstract,char *comment,G__incsetup setup_memvar,G__incsetup setup_memfunc);
@@ -3375,9 +3375,11 @@ static int G__isprivateconstructorvar(int tagnum,int iscopy)
   var=G__struct.memvar[tagnum];
   while(var) {
     for(ig15=0;ig15<var->allvar;ig15++) {
-      if('u'==var->type[ig15] && -1!=(memtagnum=var->p_tagtable[ig15]) &&
-         'e'!=G__struct.type[memtagnum]
+      if('u'==var->type[ig15] 
+         && -1!=(memtagnum=var->p_tagtable[ig15]) 
+         && 'e'!=G__struct.type[memtagnum]
          && memtagnum!=tagnum
+         && var->reftype[ig15]!=G__PARAREFERENCE
          ) {
         if(G__isprivateconstructorclass(memtagnum,iscopy)) return(1);
       }
@@ -3493,9 +3495,11 @@ static int G__isprivatedestructorvar(int tagnum)
   var=G__struct.memvar[tagnum];
   while(var) {
     for(ig15=0;ig15<var->allvar;ig15++) {
-      if('u'==var->type[ig15] && -1!=(memtagnum=var->p_tagtable[ig15]) &&
-         'e'!=G__struct.type[memtagnum]
+      if('u'==var->type[ig15] 
+         && -1!=(memtagnum=var->p_tagtable[ig15]) 
+         && 'e'!=G__struct.type[memtagnum]
          && memtagnum!=tagnum
+         && var->reftype[ig15]!=G__PARAREFERENCE
          ) {
         if(G__isprivatedestructorclass(memtagnum)) return(1);
       }
@@ -3597,9 +3601,11 @@ static int G__isprivateassignoprvar(int tagnum)
   var=G__struct.memvar[tagnum];
   while(var) {
     for(ig15=0;ig15<var->allvar;ig15++) {
-      if('u'==var->type[ig15] && -1!=(memtagnum=var->p_tagtable[ig15]) &&
-         'e'!=G__struct.type[memtagnum]
+      if('u'==var->type[ig15] 
+         && -1!=(memtagnum=var->p_tagtable[ig15])
+         && 'e'!=G__struct.type[memtagnum]
          && memtagnum!=tagnum
+         && var->reftype[ig15]!=G__PARAREFERENCE
          ) {
         if(G__isprivateassignoprclass(memtagnum)) return(1);
       }
@@ -3709,7 +3715,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
   if('n'==G__struct.type[tagnum]) return;
 
   page = ifunc->page;
-  if(ifn==G__MAXIFUNC) {
+  if(ifn>=G__MAXIFUNC) {
     ifn=0;
     ++page;
   }
@@ -3838,7 +3844,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
     fprintf(fp,         "}\n\n");
 
     ++ifn;
-    if (ifn == G__MAXIFUNC) {
+    if (ifn >= G__MAXIFUNC) {
       ifn = 0;
       ++page;
     }
@@ -3886,7 +3892,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
     fprintf(fp,     "}\n\n");
 
     ++ifn;
-    if (ifn == G__MAXIFUNC) {
+    if (ifn >= G__MAXIFUNC) {
       ifn = 0;
       ++page;
     }
@@ -3981,7 +3987,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
     fprintf(fp,   "}\n\n");
 
     ++ifn;
-    if (ifn == G__MAXIFUNC) {
+    if (ifn >= G__MAXIFUNC) {
       ifn = 0;
       ++page;
     }
@@ -4025,7 +4031,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
     fprintf(fp,   "}\n\n");
 
     ++ifn;
-    if (ifn == G__MAXIFUNC) {
+    if (ifn >= G__MAXIFUNC) {
       ifn = 0;
       ++page;
     }
@@ -5409,6 +5415,7 @@ void G__cpplink_typetable(FILE *fp, FILE *hfp)
 * G__hascompiledoriginalbase()
 *
 **************************************************************************/
+/* unused:
 static int G__hascompiledoriginalbase(int tagnum)
 {
   struct G__ifunc_table_internal *memfunc;
@@ -5427,6 +5434,7 @@ static int G__hascompiledoriginalbase(int tagnum)
   }
   return(0);
 }
+*/
 
 /**************************************************************************
 * G__cpplink_memvar()
@@ -6025,7 +6033,7 @@ void G__cpplink_memfunc(FILE *fp)
 #endif
            ) {
           page = ifunc->page;
-          if (j == G__MAXIFUNC) {
+          if (j >= G__MAXIFUNC) {
             j = 0;
             ++page;
           }
@@ -6058,7 +6066,7 @@ void G__cpplink_memfunc(FILE *fp)
 #endif
 
             ++j;
-            if (j == G__MAXIFUNC) {
+            if (j >= G__MAXIFUNC) {
               j = 0;
               ++page;
             }
@@ -6091,7 +6099,7 @@ void G__cpplink_memfunc(FILE *fp)
             fprintf(fp, ", \"u '%s' - 11 - -\", (char*) NULL);\n", G__fulltagname(i, 0));
 #endif
             ++j;
-            if (j == G__MAXIFUNC) {
+            if (j >= G__MAXIFUNC) {
               j = 0;
               ++page;
             }
@@ -6126,7 +6134,7 @@ void G__cpplink_memfunc(FILE *fp)
             fprintf(fp, ", \"\", (char*) NULL);\n");
 #endif
             if (0 == isdestructor) ++j;
-            if (j == G__MAXIFUNC) {
+            if (j >= G__MAXIFUNC) {
               j = 0;
               ++page;
             }
@@ -7024,7 +7032,7 @@ int G__memfunc_setup(const char *funcname,int hash,G__InterfaceMethod funcp
   struct G__ifunc_table_internal *store_p_ifunc = 0;
   int dtorflag=0;
    
-  if (G__p_ifunc->allifunc == G__MAXIFUNC) {
+  if (G__p_ifunc->allifunc >= G__MAXIFUNC) {
     G__p_ifunc->next=(struct G__ifunc_table_internal *)malloc(sizeof(struct G__ifunc_table_internal));
     memset(G__p_ifunc->next,0,sizeof(struct G__ifunc_table_internal));
     G__p_ifunc->next->allifunc=0;
@@ -7492,11 +7500,12 @@ int G__memfunc_next()
 {
 #ifndef G__SMALLOBJECT
   /* increment count */
-  ++G__p_ifunc->allifunc;
+  if(G__p_ifunc->allifunc < G__MAXIFUNC)
+     ++G__p_ifunc->allifunc;
   /***************************************************************
    * Allocate and initialize function table list
    ***************************************************************/
-  if(G__p_ifunc->allifunc==G__MAXIFUNC) {
+  if(G__p_ifunc->allifunc >= G__MAXIFUNC) {
     G__p_ifunc->next=(struct G__ifunc_table_internal *)malloc(sizeof(struct G__ifunc_table_internal));
     memset(G__p_ifunc->next,0,sizeof(struct G__ifunc_table_internal));
     G__p_ifunc->next->allifunc=0;
@@ -8086,7 +8095,7 @@ void G__specify_link(int link_stub)
       store_line = G__ifile.line_number;
       fgetpos(G__ifile.fp,&pos);
       buf[len] = G__fgetc();
-      if(buf[len]==c||'='==buf[len]) c=G__fgetstream_template(buf+10,";\n\r");
+      if(buf[len]==c||'='==buf[len]) c=G__fgetstream_template(buf+len+1,";\n\r");
       else {
         fsetpos(G__ifile.fp,&pos);
         G__ifile.line_number = store_line;

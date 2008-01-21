@@ -38,8 +38,8 @@
 // 
 
 #include "RooFit.h"
+#include "Riostream.h"
 
-#include "TIterator.h"
 #include "TIterator.h"
 #include "RooProdPdf.h"
 #include "RooRealProxy.h"
@@ -47,6 +47,9 @@
 #include "RooGenProdProj.h"
 #include "RooProduct.h"
 #include "RooNameReg.h"
+#include "RooMsgService.h"
+
+
 
 ClassImp(RooProdPdf)
 ;
@@ -118,9 +121,9 @@ RooProdPdf::RooProdPdf(const char *name, const char *title,
   if (pdf2.canBeExtended()) {
     if (_extendedIndex>=0) {
       // Protect against multiple extended terms
-      cout << "RooProdPdf::RooProdPdf(" << GetName() 
-	   << ") multiple components with extended terms detected,"
-	   << " product will not be extendible." << endl ;
+      coutW(InputArguments) << "RooProdPdf::RooProdPdf(" << GetName() 
+			    << ") multiple components with extended terms detected,"
+			    << " product will not be extendible." << endl ;
       _extendedIndex=-1 ;
     } else {
       _extendedIndex=_pdfList.index(&pdf2) ;
@@ -162,8 +165,8 @@ RooProdPdf::RooProdPdf(const char* name, const char* title, const RooArgList& pd
   while((arg=(RooAbsArg*)iter->Next())) {
     RooAbsPdf* pdf = dynamic_cast<RooAbsPdf*>(arg) ;
     if (!pdf) {
-      cout << "RooProdPdf::RooProdPdf(" << GetName() << ") list arg " 
-	   << pdf->GetName() << " is not a PDF, ignored" << endl ;
+      coutW(InputArguments) << "RooProdPdf::RooProdPdf(" << GetName() << ") list arg " 
+			    << pdf->GetName() << " is not a PDF, ignored" << endl ;
       continue ;
     }
     _pdfList.add(*pdf) ;
@@ -179,9 +182,9 @@ RooProdPdf::RooProdPdf(const char* name, const char* title, const RooArgList& pd
 
   // Protect against multiple extended terms
   if (numExtended>1) {
-    cout << "RooProdPdf::RooProdPdf(" << GetName() 
-	 << ") WARNING: multiple components with extended terms detected,"
-	 << " product will not be extendible." << endl ;
+    coutW(InputArguments) << "RooProdPdf::RooProdPdf(" << GetName() 
+			  << ") WARNING: multiple components with extended terms detected,"
+			  << " product will not be extendible." << endl ;
     _extendedIndex = -1 ;
   }
 
@@ -375,15 +378,15 @@ void RooProdPdf::initializeFromCmdArgList(const RooArgSet& fullPdfSet, const Roo
 
 
     } else if (TString(carg->GetName()).CompareTo("")) {
-      cout << "Unknown arg: " << carg->GetName() << endl ;
+      coutW(InputArguments) << "Unknown arg: " << carg->GetName() << endl ;
     }
   }
 
   // Protect against multiple extended terms
   if (numExtended>1) {
-    cout << "RooProdPdf::RooProdPdf(" << GetName() 
-	 << ") WARNING: multiple components with extended terms detected,"
-	 << " product will not be extendible." << endl ;
+    coutW(InputArguments) << "RooProdPdf::RooProdPdf(" << GetName() 
+			  << ") WARNING: multiple components with extended terms detected,"
+			  << " product will not be extendible." << endl ;
     _extendedIndex = -1 ;
   }
 
@@ -759,7 +762,6 @@ void RooProdPdf::getPartIntList(const RooArgSet* nset, const RooArgSet* iset,
   partList = &cache->_partList ;
   nsetList = &cache->_normList; 
 
-
   // We own contents of all lists filled by factorizeProduct() 
   groupedList.Delete() ;
   terms.Delete() ;
@@ -979,16 +981,20 @@ RooAbsReal* RooProdPdf::processProductTerm(const RooArgSet* nset, const RooArgSe
       
       RooAbsReal* partInt = new RooRealIntegral(name.Data(),name.Data(),*pdf,RooArgSet(),&termNSet) ;
       isOwned=kTRUE ;      
+
+      delete pIter ;
       return partInt ;
 
     } else {
       isOwned=kFALSE ;
+
+      delete pIter ;
       return pdf  ;
     }
   }
   delete pIter ;
 
-  cout << "RooProdPdf::processProductTerm(" << GetName() << ") unidentified term!!!" << endl ;
+  coutE(Eval) << "RooProdPdf::processProductTerm(" << GetName() << ") unidentified term!!!" << endl ;
   return 0;
 }
 
@@ -1230,6 +1236,13 @@ void RooProdPdf::generateEvent(Int_t code)
   }
 
 }
+
+
+RooProdPdf::CacheElem::~CacheElem() 
+{
+  _normList.Delete() ;
+}
+
 
 RooArgList RooProdPdf::CacheElem::containedArgs(Action) 
 {

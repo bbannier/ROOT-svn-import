@@ -29,6 +29,13 @@
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
 
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+// PDF wrapper for histograms; uses user-defined spline interpolation   //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
+
+
 #include <iomanip>
 #include <cassert>
 
@@ -50,7 +57,12 @@ TMVA::PDF*     TMVA::PDF::fgThisPDF           = 0;
 
 ClassImp(TMVA::PDF)
 
-//_______________________________________________________________________
+#ifdef _WIN32
+/*Disable warning C4355: 'this' : used in base member initializer list*/
+#pragma warning ( disable : 4355 )
+#endif
+
+   //_______________________________________________________________________
 TMVA::PDF::PDF()
    : fUseHistogram  ( kFALSE ),
      fNsmooth       ( 0 ),
@@ -63,6 +75,7 @@ TMVA::PDF::PDF()
      fIGetVal       ( 0 ),
      fKDEtype       ( KDEKernel::kNone ),
      fKDEiter       ( KDEKernel::kNonadaptiveKDE ),
+     fFineFactor    ( 0 ),
      fReadingVersion( 0 ),
      fLogger        ( this )
 {
@@ -132,13 +145,13 @@ TMVA::PDF::PDF( const TH1* hist, KDEKernel::EKernelType ktype, KDEKernel::EKerne
      fKDEtype       ( ktype ),
      fKDEiter       ( kiter ),
      fKDEborder     ( kborder ),
-     fFineFactor    ( FineFactor),
-     fLogger        ( this )
+     fFineFactor    ( FineFactor)
 {
    // constructor of kernel based PDF:
    // - default kernel type is Gaussian
    // - default number of iterations is 1 (i.e. nonadaptive KDE)
    // sanity check
+   fLogger   = this;
    if (hist == NULL) fLogger << kFATAL << "Called without valid histogram pointer!" << Endl;
 
    // histogram should be non empty
@@ -164,11 +177,13 @@ TMVA::PDF::PDF( const TH1* hist, KDEKernel::EKernelType ktype, KDEKernel::EKerne
 TMVA::PDF::~PDF()
 {
    // destructor
+
    if (fSpline       != NULL) delete fSpline; 
    if (fHist         != NULL) delete fHist;
    if (fPDFHist      != NULL) delete fPDFHist;
    if (fHistOriginal != NULL) delete fHistOriginal;
    if (fIGetVal      != NULL) delete fIGetVal;
+   if (fGraph        != NULL) delete fGraph;
 }
 
 //_______________________________________________________________________
@@ -183,8 +198,11 @@ void TMVA::PDF::BuildPDF( Bool_t checkHist )
    if (fNsmooth > 0) fHist->Smooth( fNsmooth );
 
    // fill histogramm to graph
+   if(fGraph) delete fGraph;
    fGraph = new TGraph( fHist );
  
+   if(fSpline) { delete fSpline; fSpline=0; }
+
    switch (fInterpolMethod) {
 
    case kSpline0:
@@ -567,7 +585,6 @@ istream& TMVA::operator>> ( istream& istr, PDF& pdf )
    // recreate the original hist
    if (pdf.fHistOriginal != 0) delete pdf.fHistOriginal;
    if (pdf.fHist != 0) delete pdf.fHist;
-
    pdf.fHistOriginal = new TH1F( hname, hname, nbins, xmin, xmax );
    pdf.fHist         = new TH1F( hnameSmooth, hnameSmooth, nbins, xmin, xmax );
 

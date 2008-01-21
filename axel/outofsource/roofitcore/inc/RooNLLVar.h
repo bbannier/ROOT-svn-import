@@ -16,18 +16,18 @@
 #ifndef ROO_NLL_VAR
 #define ROO_NLL_VAR
 
-#include "RooAbsOptGoodnessOfFit.h"
+#include "RooAbsOptTestStatistic.h"
 #include "RooCmdArg.h"
 
-class RooNLLVar : public RooAbsOptGoodnessOfFit {
+class RooNLLVar : public RooAbsOptTestStatistic {
 public:
 
   // Constructors, assignment etc
   RooNLLVar() {} ;  
   RooNLLVar(const char *name, const char* title, RooAbsPdf& pdf, RooAbsData& data,
-	    const RooCmdArg& arg1                , const RooCmdArg& arg2=RooCmdArg::none,const RooCmdArg& arg3=RooCmdArg::none,
-	    const RooCmdArg& arg4=RooCmdArg::none, const RooCmdArg& arg5=RooCmdArg::none,const RooCmdArg& arg6=RooCmdArg::none,
-	    const RooCmdArg& arg7=RooCmdArg::none, const RooCmdArg& arg8=RooCmdArg::none,const RooCmdArg& arg9=RooCmdArg::none) ;
+	    const RooCmdArg& arg1                , const RooCmdArg& arg2=RooCmdArg::none(),const RooCmdArg& arg3=RooCmdArg::none(),
+	    const RooCmdArg& arg4=RooCmdArg::none(), const RooCmdArg& arg5=RooCmdArg::none(),const RooCmdArg& arg6=RooCmdArg::none(),
+	    const RooCmdArg& arg7=RooCmdArg::none(), const RooCmdArg& arg8=RooCmdArg::none(),const RooCmdArg& arg9=RooCmdArg::none()) ;
 
   RooNLLVar(const char *name, const char *title, RooAbsPdf& pdf, RooAbsData& data,
 	    Bool_t extended=kFALSE, const char* rangeName=0, const char* addCoefRangeName=0, 
@@ -40,7 +40,7 @@ public:
   RooNLLVar(const RooNLLVar& other, const char* name=0);
   virtual TObject* clone(const char* newname) const { return new RooNLLVar(*this,newname); }
 
-  virtual RooAbsGoodnessOfFit* create(const char *name, const char *title, RooAbsPdf& pdf, RooAbsData& data,
+  virtual RooAbsTestStatistic* create(const char *name, const char *title, RooAbsPdf& pdf, RooAbsData& data,
 				      const RooArgSet& projDeps, const char* rangeName, const char* addCoefRangeName=0, Int_t nCPU=1, Bool_t verbose=kTRUE, Bool_t splitRange=kFALSE) {
     return new RooNLLVar(name,title,pdf,data,projDeps,_extended,rangeName, addCoefRangeName, nCPU, verbose,splitRange) ;
   }

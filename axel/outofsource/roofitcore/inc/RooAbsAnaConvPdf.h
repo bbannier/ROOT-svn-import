@@ -83,13 +83,11 @@ protected:
   RooRealVar* _convVar ;         //! Convolution variable
 
   RooArgSet* parseIntegrationRequest(const RooArgSet& intSet, Int_t& coefCode, RooArgSet* analVars=0) const ;
-  virtual Bool_t syncNormalizationPreHook(RooAbsReal* norm,const RooArgSet* nset) const ;
-  virtual void syncNormalizationPostHook(RooAbsReal* norm,const RooArgSet* nset) const ;
 
   const RooRealVar* convVar() const ;  //  Convolution variable 
 
   RooListProxy _convSet  ;             //  Set of (resModel (x) basisFunc) convolution objects
-  RooArgList _basisList ;              //  List of created basis functions
+  RooArgList _basisList ;              //!  List of created basis functions
   mutable RooArgSet* _convNormSet ;    //!  Subset of last normalization that applies to convolutions
   mutable TIterator* _convSetIter ;    //! Iterator over _convNormSet
 
@@ -97,7 +95,13 @@ protected:
   class CacheElem : public RooAbsCacheElement {
   public:
     virtual ~CacheElem() {} ;
-    RooArgList containedArgs(Action) { RooArgList l(_coefVarList) ; l.add(_normList) ; return l ; }
+
+    RooArgList containedArgs(Action) { 
+      RooArgList l(_coefVarList) ; 
+      l.add(_normList) ; 
+      return l ; 
+    }
+
     RooArgList _coefVarList ;
     RooArgList _normList ;
   } ;

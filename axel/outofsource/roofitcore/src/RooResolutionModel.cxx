@@ -64,12 +64,20 @@
 #include "TMath.h"
 #include "Riostream.h"
 #include "RooResolutionModel.h"
+#include "RooMsgService.h"
+#include "RooSentinel.h"
 
 ClassImp(RooResolutionModel) 
 ;
 
 RooFormulaVar* RooResolutionModel::_identity = 0;
 
+
+void RooResolutionModel::cleanup()
+{
+  delete _identity ;
+  _identity = 0 ;
+}
 
 RooResolutionModel::RooResolutionModel(const char *name, const char *title, RooRealVar& _x) : 
   RooAbsPdf(name,title), 
@@ -78,7 +86,9 @@ RooResolutionModel::RooResolutionModel(const char *name, const char *title, RooR
   _ownBasis(kFALSE)
 {
   // Constructor with convolution variable 'x'
-  if (!_identity) _identity = new RooFormulaVar("identity","1",RooArgSet("")) ;  
+  if (!_identity) {
+    _identity = identity() ; 
+  }
 }
 
 
@@ -122,6 +132,11 @@ RooResolutionModel::~RooResolutionModel()
 RooFormulaVar* RooResolutionModel::identity() 
 { 
   // Return identity formula pointer
+  if (!_identity) {
+    _identity = new RooFormulaVar("identity","1",RooArgSet("")) ;  
+    RooSentinel::activate() ;
+  }
+
   return _identity ; 
 }
 
@@ -134,10 +149,10 @@ RooResolutionModel* RooResolutionModel::convolution(RooFormulaVar* basis, RooAbs
 
   // Check that primary variable of basis functions is our convolution variable  
   if (basis->getParameter(0) != x.absArg()) {
-    cout << "RooResolutionModel::convolution(" << GetName() << "," << this  
-	 << ") convolution parameter of basis function and PDF don't match" << endl ;
-    cout << "basis->findServer(0) = " << basis->findServer(0) << endl ;
-    cout << "x.absArg()           = " << x.absArg() << endl ;
+    coutE(InputArguments) << "RooResolutionModel::convolution(" << GetName() << "," << this  
+			  << ") convolution parameter of basis function and PDF don't match" << endl 
+			  << "basis->findServer(0) = " << basis->findServer(0) << endl 
+			  << "x.absArg()           = " << x.absArg() << endl ;
     return 0 ;
   }
 
@@ -233,7 +248,7 @@ Double_t RooResolutionModel::getVal(const RooArgSet* nset) const
     _value = evaluate() ; 
 
     // WVE insert traceEval traceEval
-    if (_verboseDirty) cout << "RooResolutionModel(" << GetName() << ") value = " << _value << endl ;
+    if (_verboseDirty) cxcoutD(Tracing) << "RooResolutionModel(" << GetName() << ") value = " << _value << endl ;
 
     clearValueDirty() ; 
     clearShapeDirty() ; 
@@ -249,7 +264,10 @@ Bool_t RooResolutionModel::redirectServersHook(const RooAbsCollection& newServer
   // Forward redirectServers call to our basis function, which is not connected to either resolution
   // model or the physics model.
 
-  if (!_basis) return kFALSE ;
+  if (!_basis) {
+    _norm = 0 ;
+    return kFALSE ; 
+  } 
 
   RooFormulaVar* newBasis = (RooFormulaVar*) newServerList.find(_basis->GetName()) ;
   if (newBasis) {
@@ -295,8 +313,8 @@ Double_t RooResolutionModel::getNorm(const RooArgSet* nset) const
   }
 
   syncNormalization(nset,kFALSE) ;
-  if (_verboseEval>1) cout << IsA()->GetName() << "::getNorm(" << GetName() 
-			   << "): norm(" << _norm << ") = " << _norm->getVal() << endl ;
+  if (_verboseEval>1) cxcoutD(Tracing) << IsA()->GetName() << "::getNorm(" << GetName() 
+				       << "): norm(" << _norm << ") = " << _norm->getVal() << endl ;
 
   Double_t ret = _norm->getVal() ;
   return ret ;
@@ -324,8 +342,3 @@ void RooResolutionModel::printToStream(ostream& os, PrintOption opt, TString ind
   }
 }
 
-
-Bool_t RooResolutionModel::syncNormalizationPreHook(RooAbsReal*,const RooArgSet*) const 
-{ 
-  return (_basisCode!=0) ; 
-} 

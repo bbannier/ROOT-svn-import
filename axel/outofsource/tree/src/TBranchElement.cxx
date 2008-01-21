@@ -396,9 +396,6 @@ void TBranchElement::Init(TTree *tree, TBranch *parent,const char* bname, TStrea
             if (!clOfClones) {
                return;
             }
-            // Create a basket for the leafcount
-            TBasket *basket2 = new TBasket(name,fTree->GetName(),this);
-            fBaskets.Add(basket2);
             fType = 3;
             // ===> create sub branches for each data member of a TClonesArray
             //check that the contained objects class name is part of the element title
@@ -449,9 +446,6 @@ void TBranchElement::Init(TTree *tree, TBranch *parent,const char* bname, TStrea
                fNleaves = 1;
                fLeaves.Add(leaf);
                fTree->GetListOfLeaves()->Add(leaf);
-               // Create a basket for the master branch (the counter).
-               TBasket *basket2 = new TBasket(name,fTree->GetName(),this);
-               fBaskets.Add(basket2);
                // Check that the contained objects class name is part of the element title.
                // This name is mandatory when reading the tree later on and
                // the parent class with the pointer to the STL container is not available.
@@ -616,9 +610,6 @@ void TBranchElement::Init(TTree *tree, TBranch *parent, const char* bname, TClon
       fNleaves = 1;
       fLeaves.Add(leaf);
       fTree->GetListOfLeaves()->Add(leaf);
-      // Create a basket for the leafcount
-      TBasket* basket = new TBasket(name, fTree->GetName(), this);
-      fBaskets.Add(basket);
       // ===> create sub branches for each data member of a TClonesArray
       TClass* clonesClass = clones->GetClass();
       if (!clonesClass) {
@@ -751,9 +742,6 @@ void TBranchElement::Init(TTree *tree, TBranch *parent, const char* bname, TVirt
       fNleaves = 1;
       fLeaves.Add(leaf);
       fTree->GetListOfLeaves()->Add(leaf);
-      // Create a basket for the leafcount
-      TBasket* basket = new TBasket(name, fTree->GetName(), this);
-      fBaskets.Add(basket);
       // ===> create sub branches for each data member of an STL container value class
       TClass* valueClass = cont->GetValueClass();
       if (!valueClass) {
@@ -1116,14 +1104,18 @@ void TBranchElement::FillLeaves(TBuffer& b)
    //        inherit from tobject are not handled correctly?
    //
 
-   if ((fType <= 2) && TestBit(kBranchObject)) {
+   if ((fType <= 2)) {
       // We are not a TClonesArray master/sub nor an STL container master/sub,
       // so we are either a top-level branch, a base class branch, a split class
       // branch, or a data member branch.
       // FIXME: We should probably only map data member branches.
       // FIXME: We should only map addresses we actually do i/o on.
       // FIXME: We should map fAddress instead for MakeClass() trees.
-      b.MapObject((TObject*) fObject);
+      if (TestBit(kBranchObject)) {
+         b.MapObject((TObject*) fObject);
+      } else {
+         b.MapObject(fObject, fBranchClass);
+      }
    }
 
    //
@@ -1451,9 +1443,9 @@ void TBranchElement::InitInfo()
             // Try to compensate for a class that got unloaded on us.
             // Search through the streamer infos by checksum
             // and take the first match.
-            Int_t ninfos = cl->GetStreamerInfos()->GetEntriesFast();
-            for (Int_t i = 1; i < ninfos; ++i) {
-               TVirtualStreamerInfo* info = (TVirtualStreamerInfo*) cl->GetStreamerInfos()->At(i);
+            Int_t ninfos = cl->GetStreamerInfos()->GetEntriesFast() - 1;
+            for (Int_t i = -1; i < ninfos; ++i) {
+               TVirtualStreamerInfo* info = (TVirtualStreamerInfo*) cl->GetStreamerInfos()->UncheckedAt(i);
                if (!info) {
                   continue;
                }
@@ -1768,7 +1760,7 @@ const char* TBranchElement::GetTypeName() const
       "Bool_t",
       "Float16_t"
    };
-   Int_t itype = fStreamerType % 21;
+   Int_t itype = fStreamerType % 20;
    return types[itype];
 }
 
@@ -2716,8 +2708,12 @@ void TBranchElement::ReadLeaves(TBuffer& b)
    // FIXME: Does this mean that pointers to objects which
    //        do not inherit from tobject are not handled correctly?
 
-   if ((fType <= 2) && TestBit(kBranchObject) && fBranchClass->IsLoaded()) {
-      b.MapObject((TObject*) fObject);
+   if ((fType <= 2) && fBranchClass->IsLoaded()) {
+      if (TestBit(kBranchObject)) {
+         b.MapObject((TObject*) fObject);
+      } else {
+         b.MapObject(fObject, fBranchClass);
+      }
    }
 
    if (fType == 4) {
@@ -3492,11 +3488,17 @@ void TBranchElement::Streamer(TBuffer& R__b)
       TDirectory *dirsav = fDirectory;
       fDirectory = 0;  // to avoid recursive calls
 
+      // Record only positive 'version number'
+      Int_t classVersion = fClassVersion;
+      if (fClassVersion < 0) fClassVersion = -fClassVersion;
+
       // FIXME: Should we clear the kDeleteObject bit before writing?
       //        If we did we would have to remember to old value and
       //        put it back, we wouldn't want to forget that we owned
       //        something just because we got written to disk.
       R__b.WriteClassBuffer(TBranchElement::Class(), this);
+      
+      fClassVersion = classVersion;
 
       // make sure that all TVirtualStreamerInfo objects referenced by
       // this class are written to the file

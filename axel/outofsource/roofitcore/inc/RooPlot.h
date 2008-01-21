@@ -29,6 +29,7 @@ class RooArgSet ;
 class RooHist;
 class RooCurve ;
 class RooPlotable;
+class TDirectory ;
 class TAttLine;
 class TAttFill;
 class TAttMarker;
@@ -38,9 +39,10 @@ class TAxis;
 
 class RooPlot : public TNamed, public RooPrintable {
 public:
+  RooPlot() ;
   RooPlot(const char* name, const char* title, const RooAbsRealLValue &var, Double_t xmin, Double_t xmax, Int_t nBins) ;
   RooPlot(const RooAbsRealLValue &var, Double_t xmin, Double_t xmax, Int_t nBins);
-  RooPlot(Double_t xmin= 0, Double_t xmax= 1);
+  RooPlot(Double_t xmin, Double_t xmax);
   RooPlot(Double_t xmin, Double_t xmax, Double_t ymin, Double_t ymax);
   RooPlot(const RooAbsRealLValue &var1, const RooAbsRealLValue &var2);
   RooPlot(const RooAbsRealLValue &var1, const RooAbsRealLValue &var2,
@@ -60,12 +62,42 @@ public:
   Int_t GetNdivisions(Option_t* axis = "X") const ;
   Double_t GetMinimum(Double_t minval = -FLT_MAX) const ;
   Double_t GetMaximum(Double_t maxval = FLT_MAX) const ;
-  void SetXTitle(const char *title) ;
-  void SetYTitle(const char *title) ;
-  void SetZTitle(const char *title) ;
 
-  virtual void SetName(const char* name) ;
-  virtual void SetTitle(const char* title = "") ;
+  void SetAxisColor(Color_t color = 1, Option_t* axis = "X") ;
+  void SetAxisRange(Double_t xmin, Double_t xmax, Option_t* axis = "X") ;
+  void SetBarOffset(Float_t offset = 0.25) ;
+  void SetBarWidth(Float_t width = 0.5) ;
+  void SetContour(Int_t nlevels, const Double_t* levels = 0) ; 
+  void SetContourLevel(Int_t level, Double_t value) ; 
+  void SetDrawOption(Option_t* option = "") ; 
+  void SetFillAttributes() ; 
+  void SetFillColor(Color_t fcolor) ; 
+  void SetFillStyle(Style_t fstyle) ; 
+  void SetLabelColor(Color_t color = 1, Option_t* axis = "X") ; 
+  void SetLabelFont(Style_t font = 62, Option_t* axis = "X") ; 
+  void SetLabelOffset(Float_t offset = 0.005, Option_t* axis = "X") ; 
+  void SetLabelSize(Float_t size = 0.02, Option_t* axis = "X") ; 
+  void SetLineAttributes() ; 
+  void SetLineColor(Color_t lcolor) ; 
+  void SetLineStyle(Style_t lstyle) ; 
+  void SetLineWidth(Width_t lwidth) ; 
+  void SetMarkerAttributes() ; 
+  void SetMarkerColor(Color_t tcolor = 1) ; 
+  void SetMarkerSize(Size_t msize = 1) ; 
+  void SetMarkerStyle(Style_t mstyle = 1) ; 
+  void SetName(const char *name) ;
+  void SetTitle(const char *name) ;
+  void SetNameTitle(const char *name, const char* title) ;
+  void SetNdivisions(Int_t n = 510, Option_t* axis = "X") ; 
+  void SetOption(Option_t* option = " ") ; 
+  void SetStats(Bool_t stats = kTRUE) ; 
+  void SetTickLength(Float_t length = 0.02, Option_t* axis = "X") ; 
+  void SetTitleFont(Style_t font = 62, Option_t* axis = "X") ; 
+  void SetTitleOffset(Float_t offset = 1, Option_t* axis = "X") ; 
+  void SetTitleSize(Float_t size = 0.02, Option_t* axis = "X") ; 
+  void SetXTitle(const char* title) ; 
+  void SetYTitle(const char* title) ; 
+  void SetZTitle(const char* title) ; 
 
   // container management
   const char* nameOf(Int_t idx) const ;
@@ -160,6 +192,8 @@ protected:
 
   Double_t _defYmin ;        // Default minimum for Yaxis (as calculated from contents)
   Double_t _defYmax ;        // Default maximum for Yaxis (as calculated from contents)
+
+  TDirectory* _dir ;         //! non-persistent
 
   RooPlot(const RooPlot& other); // object cannot be copied
 

@@ -104,7 +104,11 @@ TObject *&TObjArray::operator[](Int_t i)
    // if i is out of bounds. Result may be used as an lvalue.
 
    int j = i-fLowerBound;
-   if (j >= 0 && j < fSize) return fCont[j];
+   if (j >= 0 && j < fSize) {
+      fLast = TMath::Max(j, GetAbsLast());
+      Changed();
+      return fCont[j];
+   }
    BoundsOk("operator[]", i);
    fLast = -2; // invalidate fLast since the result may be used as an lvalue
    return fCont[0];
@@ -192,7 +196,7 @@ void TObjArray::AddAtAndExpand(TObject *obj, Int_t idx)
    // of the array, expand the array (double its size).
 
    if (idx < fLowerBound) {
-      Error("AddAt", "out of bounds at %d in %x", idx, this);
+      Error("AddAt", "out of bounds at %d in %lx", idx, this);
       return;
    }
    if (idx-fLowerBound >= fSize)
@@ -790,4 +794,3 @@ void TObjArrayIter::Reset()
    else
       fCursor = fArray->Capacity() - 1;
 }
-

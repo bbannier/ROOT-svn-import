@@ -81,6 +81,11 @@ Begin_Macro(source)
 End_Macro
       
 Begin_Html
+<h4>Special case forcing black&white output.</h4>
+If the current style fill area color is set to 0, then ROOT will force
+a black&white output for all objects with a fill area defined and independently
+of the object fill style.
+   
 <a name="F2"></a><h3>Fill Area style</h3>
 The fill area style defines the pattern used to fill a polygon.
 The fill area style of any class inheriting from <tt>TAttFill</tt> can
@@ -97,6 +102,8 @@ method <tt>GetFillStyle</tt>.
    <li>  4000 :the window is transparent.                            </li>
    <li>  4000 to 4100 the window is 100% transparent to 100% opaque. </li>
 </ul>
+      The pad transparency is visible in binary outputs files like gif, jpg, png etc ..
+      but not in vector graphics output files like PS, PDF and SVG.
 </ul>
 
 pattern_number can have any value from 1 to 25 (see table), or any

@@ -16,7 +16,7 @@
 #ifndef ROO_TABLE
 #define ROO_TABLE
 
-#include "Riostream.h"
+#include "Riosfwd.h"
 #include <assert.h>
 #include "TNamed.h"
 #include "RooAbsCategory.h"
@@ -39,6 +39,8 @@ public:
   inline virtual void Print(Option_t *options= 0) const {
     printToStream(defaultStream(),parseOptions(options));
   }
+
+  virtual Bool_t isIdentical(const RooTable& other) = 0 ;
 
 protected:
 

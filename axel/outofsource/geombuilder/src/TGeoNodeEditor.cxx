@@ -9,15 +9,16 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-//////////////////////////////////////////////////////////////////////////
-//                                                                      //
-//  TGeoNodeEditor                                                    //
-//                                                                      //
-//////////////////////////////////////////////////////////////////////////
+//______________________________________________________________________________
+//                                                                      
+//  TGeoNodeEditor - Editor class for TGeoNode objects
+//                                                                      
+//______________________________________________________________________________
 
 #include "TGeoNodeEditor.h"
 #include "TGedEditor.h"
 #include "TGeoManager.h"
+#include "TGeoMatrix.h"
 #include "TGeoNode.h"
 #include "TPad.h"
 #include "TGTab.h"

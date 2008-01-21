@@ -20,8 +20,12 @@
 
 #include "RooFit.h"
 
+#include "Riostream.h"
+
+
 #include "RooAbsIntegrator.h"
 #include "RooAbsIntegrator.h"
+#include "RooMsgService.h"
 #include "TClass.h"
 
 ClassImp(RooAbsIntegrator)
@@ -41,7 +45,7 @@ Double_t RooAbsIntegrator::calculate(const Double_t *yvec)
   if (_printEvalCounter) integrand()->resetNumCall() ;
   Double_t ret = integral(yvec) ; 
   if (_printEvalCounter) {
-    cout << IsA()->GetName() << "::calculate() number of function calls = " << integrand()->numCall() << endl ;
+    cxcoutD(Tracing) << IsA()->GetName() << "::calculate() number of function calls = " << integrand()->numCall() << endl ;
   }
   return ret ;
 }

@@ -103,7 +103,7 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
   //   G) Split numeric list in integration list and summation list   
   //
 
-  oocxcoutI(&function,"Integration") << "RooRealIntegral::ctor(" << GetName() << ") Constructing integral of function " 
+  oocxcoutI(&function,Integration) << "RooRealIntegral::ctor(" << GetName() << ") Constructing integral of function " 
 				     << function.GetName() << " over observables" << depList << " with normalization " 
 				     << (funcNormSet?*funcNormSet:RooArgSet()) << " with range identifier " 
 				     << (rangeName?rangeName:"<none>") << endl ;
@@ -141,7 +141,7 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
   TIterator* depIter = intDepList.createIterator() ;
   while((arg=(RooAbsArg*)depIter->Next())) {
     if(!arg->isLValue()) {
-      cout << ClassName() << "::" << GetName() << ": cannot integrate non-lvalue ";
+      coutE(InputArguments) << ClassName() << "::" << GetName() << ": cannot integrate non-lvalue ";
       arg->Print("1");
       _valid= kFALSE;
     }
@@ -154,7 +154,7 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
   }
 
   if (_facList.getSize()>0) {
-    oocxcoutI(&function,"Integration") << function.GetName() << ": Factorizing obserables are " << _facList << endl ;
+    oocxcoutI(&function,Integration) << function.GetName() << ": Factorizing obserables are " << _facList << endl ;
   }
     
 
@@ -239,7 +239,7 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
   delete depIter ;
   
   if (anIntOKDepList.getSize()>0) {
-    oocxcoutI(&function,"Integration") << function.GetName() << ": Observables that function forcibly requires to be integrated internally " << anIntOKDepList << endl ;
+    oocxcoutI(&function,Integration) << function.GetName() << ": Observables that function forcibly requires to be integrated internally " << anIntOKDepList << endl ;
   }
 
 
@@ -268,10 +268,10 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
       RooAbsArg* leaf ;
       while((leaf=(RooAbsArg*)lIter->Next())) {
 	if (depList.find(leaf->GetName()) && isValueServer(*leaf)) {
-	  oocxcoutD(&function,"Integration") << function.GetName() << ": Adding observable " << leaf->GetName() << " of server " << arg->GetName() << " as shape dependent" << endl ;
+	  oocxcoutD(&function,Integration) << function.GetName() << ": Adding observable " << leaf->GetName() << " of server " << arg->GetName() << " as shape dependent" << endl ;
 	  addServer(*leaf,kFALSE,kTRUE) ;
 	} else if (!depList.find(leaf->GetName())) {
-	  oocxcoutD(&function,"Integration") << function.GetName() << ": Adding parameter " << leaf->GetName() << " of server " << arg->GetName() << " as value dependent" << endl ;
+	  oocxcoutD(&function,Integration) << function.GetName() << ": Adding parameter " << leaf->GetName() << " of server " << arg->GetName() << " as value dependent" << endl ;
 	  addServer(*leaf,kTRUE,kFALSE) ;
 	}	
       }
@@ -314,7 +314,7 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
     // Add server to list of dependents that are OK for analytical integration
     if (depOK) {
       anIntOKDepList.add(*arg,kTRUE) ;      
-      oocxcoutI(&function,"Integration") << function.GetName() << ": Observable " << arg->GetName() << " is suitable for analytical integration (if supported by p.d.f)" << endl ;
+      oocxcoutI(&function,Integration) << function.GetName() << ": Observable " << arg->GetName() << " is suitable for analytical integration (if supported by p.d.f)" << endl ;
     }
   }
   // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -322,7 +322,12 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
   // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
   RooArgSet anIntDepList ;
-  _mode = ((RooAbsReal&)_function.arg()).getAnalyticalIntegralWN(anIntOKDepList,_anaList,_funcNormSet,RooNameReg::str(_rangeName)) ;    
+
+  RooArgSet *anaSet = new RooArgSet( _anaList, Form("UniqueCloneOf_%s",_anaList.GetName()));
+  _mode = ((RooAbsReal&)_function.arg()).getAnalyticalIntegralWN(anIntOKDepList,*anaSet,_funcNormSet,RooNameReg::str(_rangeName)) ;    
+  _anaList.removeAll() ;
+  _anaList.add(*anaSet);    
+  delete anaSet;
 
   // Avoid confusion -- if mode is zero no analytical integral is defined regardless of contents of _anaListx
   if (_mode==0) {
@@ -330,7 +335,7 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
   }
 
   if (_mode!=0) {
-    oocxcoutI(&function,"Integration") << function.GetName() << ": Function integrated observables " << _anaList << " internally with code " << _mode << endl ;
+    oocxcoutI(&function,Integration) << function.GetName() << ": Function integrated observables " << _anaList << " internally with code " << _mode << endl ;
   }
 
 
@@ -420,13 +425,13 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
   delete numIter ;
 
   if (_anaList.getSize()>0) {
-    oocxcoutI(&function,"Integration") << function.GetName() << ": Observables " << _anaList << " are analytically integrated with code " << _mode << endl ;
+    oocxcoutI(&function,Integration) << function.GetName() << ": Observables " << _anaList << " are analytically integrated with code " << _mode << endl ;
   }
   if (_intList.getSize()>0) {
-    oocxcoutI(&function,"Integration") << function.GetName() << ": Observables " << _intList << " are numerically integrated" << endl ;
+    oocxcoutI(&function,Integration) << function.GetName() << ": Observables " << _intList << " are numerically integrated" << endl ;
   }
   if (_sumList.getSize()>0) {
-    oocxcoutI(&function,"Integration") << function.GetName() << ": Observables " << _sumList << " are numerically summed" << endl ;
+    oocxcoutI(&function,Integration) << function.GetName() << ": Observables " << _sumList << " are numerically summed" << endl ;
   }
   
 
@@ -552,7 +557,7 @@ Bool_t RooRealIntegral::initNumIntegrator() const
     _numIntegrand= new RooRealBinding(_function.arg(),_intList,_funcNormSet,kFALSE,_rangeName);
   }
   if(0 == _numIntegrand || !_numIntegrand->isValid()) {
-    cout << ClassName() << "::" << GetName() << ": failed to create valid integrand." << endl;
+    coutE(Integration) << ClassName() << "::" << GetName() << ": failed to create valid integrand." << endl;
     return kFALSE;
   }
 
@@ -560,15 +565,15 @@ Bool_t RooRealIntegral::initNumIntegrator() const
   _numIntEngine = RooNumIntFactory::instance().createIntegrator(*_numIntegrand,*_iconfig) ;
 
   if(0 == _numIntEngine || !_numIntEngine->isValid()) {
-    cout << ClassName() << "::" << GetName() << ": failed to create valid integrator." << endl;
+    coutE(Integration) << ClassName() << "::" << GetName() << ": failed to create valid integrator." << endl;
     return kFALSE;
   }
 
-  cxcoutI("Integration") << "RooRealIntegral::initNumIntegrator(" << GetName() << ") instantiated numeric integator of type " 
+  cxcoutI(Integration) << "RooRealIntegral::initNumIntegrator(" << GetName() << ") instantiated numeric integator of type " 
 			 << _numIntEngine->IsA()->GetName() << " to evaluate numeric integral of observables " << _intList << endl ;
 
   if (_intList.getSize()>1) {
-    cxcoutW("Integration") << "RooRealIntegral::initNumIntegrator(" << GetName() << ") evaluation requires " << _intList.getSize() << "-D numeric integration step. Evaluation may be slow, sufficient numeric precision for fitting & minimization is not guaranteed" << endl ;
+    cxcoutI(Integration) << "RooRealIntegral::initNumIntegrator(" << GetName() << ") evaluation requires " << _intList.getSize() << "-D numeric integration step. Evaluation may be slow, sufficient numeric precision for fitting & minimization is not guaranteed" << endl ;
   }
 
   _restartNumIntEngine = kFALSE ;
@@ -643,7 +648,7 @@ Double_t RooRealIntegral::evaluate() const
 
       // try to initialize our numerical integration engine
       if(!(_valid= initNumIntegrator())) {
-	cout << ClassName() << "::" << GetName()
+	coutE(Integration) << ClassName() << "::" << GetName()
 	     << ":evaluate: cannot initialize numerical integrator" << endl;
 	return 0;
       }
@@ -666,9 +671,9 @@ Double_t RooRealIntegral::evaluate() const
     {
       retVal =  ((RooAbsReal&)_function.arg()).analyticalIntegralWN(_mode,_funcNormSet,RooNameReg::str(_rangeName)) / jacobianProduct() ;
       if (RooAbsPdf::_verboseEval>0)
-	cout << "RooRealIntegral::evaluate_analytic(" << GetName() 
-	     << ")func = " << _function.arg().IsA()->GetName() << "::" << _function.arg().GetName()
-	     << " raw = " << retVal << endl ;
+	cxcoutD(Tracing) << "RooRealIntegral::evaluate_analytic(" << GetName() 
+			 << ")func = " << _function.arg().IsA()->GetName() << "::" << _function.arg().GetName()
+			 << " raw = " << retVal << endl ;
       break ;
     }
 
@@ -701,17 +706,17 @@ Double_t RooRealIntegral::evaluate() const
   }
 
 
-  if (dologD("ChangeTracking")) {
-    cxcoutD("ChangeTracking") << "RooRealIntegral::evaluate() anaInt = " << _anaList << " numInt = " << _intList << _sumList << " mode = " ;
+  if (dologD(Tracing)) {
+    cxcoutD(Tracing) << "RooRealIntegral::evaluate() anaInt = " << _anaList << " numInt = " << _intList << _sumList << " mode = " ;
     switch(_mode) {
-    case Hybrid: cout << "Hybrid" << endl ; break ;
-    case Analytic: cout << "Analytic" << endl ; break ;
-    case PassThrough: cout << "PassThrough" << endl ; break ;
+    case Hybrid: ccoutD(Tracing) << "Hybrid" << endl ; break ;
+    case Analytic: ccoutD(Tracing) << "Analytic" << endl ; break ;
+    case PassThrough: ccoutD(Tracing) << "PassThrough" << endl ; break ;
     }
   }
 
   if (RooAbsPdf::_verboseEval>0) {
-    cout << "RooRealIntegral::evaluate(" << GetName() << ") raw*fact = " << retVal << endl ;
+    cxcoutD(Tracing) << "RooRealIntegral::evaluate(" << GetName() << ") raw*fact = " << retVal << endl ;
   }
   return retVal ;
 }

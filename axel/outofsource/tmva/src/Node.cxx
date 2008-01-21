@@ -28,15 +28,16 @@
  **********************************************************************************/
 
 //_______________________________________________________________________
-//                                                                      
-// Node for the BinarySearch or Decision Trees 
-//                        
-// for the binary search tree, it basically consists of the EVENT, and 
-// pointers to the parent and daughters
-//                                                                       
-// in case of the Decision Tree, it specifies parent and daughters, as
-// well as "which variable is used" in the selection of this node, including
-// the respective cut value.
+/*
+  Node for the BinarySearch or Decision Trees.
+  
+  For the binary search tree, it basically consists of the EVENT, and
+  pointers to the parent and daughters
+
+  In case of the Decision Tree, it specifies parent and daughters, as
+  well as "which variable is used" in the selection of this node,
+  including the respective cut value.
+*/
 //______________________________________________________________________
 
 #include <stdexcept>
@@ -111,16 +112,6 @@ Int_t TMVA::Node::CountMeAndAllDaughters( void ) const
       n+= this->GetRight()->CountMeAndAllDaughters(); 
   
    return n;
-}
-
-//_______________________________________________________________________
-Int_t TMVA::Node::GetMemSize() const 
-{ 
-   // calculates the memory size of the node
-   Int_t size = sizeof(*this);
-   if (fLeft !=0) size += fLeft->GetMemSize();
-   if (fRight!=0) size += fRight->GetMemSize();
-   return size;
 }
 
 // print a node

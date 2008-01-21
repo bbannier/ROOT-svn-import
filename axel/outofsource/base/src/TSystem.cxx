@@ -40,7 +40,8 @@
 #include "TBrowser.h"
 #include "TString.h"
 #include "TOrdCollection.h"
-#include "TCint.h"
+#include "TInterpreter.h"
+#include "G__ci.h"
 #include "TRegexp.h"
 #include "TTimer.h"
 #include "TObjString.h"
@@ -106,15 +107,16 @@ TSystem::TSystem(const char *name, const char *title) : TNamed(name, title)
    if (gSystem && name[0] != '-' && strcmp(name, "Generic"))
       Error("TSystem", "only one instance of TSystem allowed");
 
-   fOnExitList    = 0;
-   fSignalHandler = 0;
-   fFileHandler   = 0;
-   fTimers        = 0;
-   fCompiled      = 0;
-   fHelpers       = 0;
-   fInsideNotify  = kFALSE;
-   fBeepDuration  = 0;
-   fBeepFreq      = 0;
+   fOnExitList          = 0;
+   fSignalHandler       = 0;
+   fFileHandler         = 0;
+   fStdExceptionHandler = 0;
+   fTimers              = 0;
+   fCompiled            = 0;
+   fHelpers             = 0;
+   fInsideNotify        = kFALSE;
+   fBeepDuration        = 0;
+   fBeepFreq            = 0;
 
    gLibraryVersion = new Int_t [gLibraryVersionMax];
    memset(gLibraryVersion, 0, gLibraryVersionMax*sizeof(Int_t));
@@ -138,6 +140,11 @@ TSystem::~TSystem()
    if (fFileHandler) {
       fFileHandler->Delete();
       SafeDelete(fFileHandler);
+   }
+
+   if (fStdExceptionHandler) {
+      fStdExceptionHandler->Delete();
+      SafeDelete(fStdExceptionHandler);
    }
 
    if (fTimers) {
@@ -171,9 +178,10 @@ Bool_t TSystem::Init()
    fSigcnt = 0;
    fLevel  = 0;
 
-   fSignalHandler = new TOrdCollection;
-   fFileHandler   = new TOrdCollection;
-   fTimers        = new TOrdCollection;
+   fSignalHandler       = new TOrdCollection;
+   fFileHandler         = new TOrdCollection;
+   fStdExceptionHandler = new TOrdCollection;
+   fTimers              = new TOrdCollection;
 
    fBuildArch     = BUILD_ARCH;
    fBuildCompiler = COMPILER;
@@ -287,6 +295,14 @@ const char *TSystem::HostName()
 }
 
 //______________________________________________________________________________
+void TSystem::NotifyApplicationCreated()
+{
+   // Hook to tell TSystem that the TApplication object has been created.
+
+   // Currently needed only for WinNT interface.
+}
+
+//______________________________________________________________________________
 void TSystem::Beep(Int_t freq /*=-1*/, Int_t duration /*=-1*/,
                    Bool_t setDefault /*=kFALSE*/)
 {
@@ -318,9 +334,8 @@ void TSystem::Run()
    fInControl = kTRUE;
    fDone      = kFALSE;
 
-#ifdef R__EH
+loop_entry:
    try {
-#endif
       RETRY {
          while (!fDone) {
             gApplication->StartIdleing();
@@ -328,17 +343,35 @@ void TSystem::Run()
             gApplication->StopIdleing();
          }
       } ENDTRY;
-#ifdef R__EH
+   }
+   catch (std::exception& exc) {
+      TIter next(fStdExceptionHandler);
+      TStdExceptionHandler* eh = 0;
+      while ((eh = (TStdExceptionHandler*) next())) {
+         switch (eh->Handle(exc))
+         {
+            case TStdExceptionHandler::kSEProceed:
+               break;
+            case TStdExceptionHandler::kSEHandled:
+               goto loop_entry;
+               break;
+            case TStdExceptionHandler::kSEAbort:
+               Warning("Run", "instructed to abort");
+               goto loop_end;
+               break;
+         }
+      }
+      throw;
    }
    catch (const char *str) {
       printf("%s\n", str);
    }
    // handle every exception
    catch (...) {
-      Warning("Run", "handle uncaugth exception, terminating\n");
+      Warning("Run", "handle uncaugth exception, terminating");
    }
-#endif
 
+loop_end:
    fInControl = kFALSE;
 }
 
@@ -548,6 +581,28 @@ void TSystem::IgnoreInterrupt(Bool_t ignore)
    // behaviour. Typically call ignore interrupt before writing to disk.
 
    IgnoreSignal(kSigInterrupt, ignore);
+}
+
+//______________________________________________________________________________
+void TSystem::AddStdExceptionHandler(TStdExceptionHandler *eh)
+{
+   // Add an exception handler to list of system exception handlers. Only adds
+   // the handler if it is not already in the list of exception handlers.
+
+   if (eh && fStdExceptionHandler && (fStdExceptionHandler->FindObject(eh) == 0))
+      fStdExceptionHandler->Add(eh);
+}
+
+//______________________________________________________________________________
+TStdExceptionHandler *TSystem::RemoveStdExceptionHandler(TStdExceptionHandler *eh)
+{
+   // Remove an exception handler from list of exception handlers. Returns
+   // the handler or 0 if the handler was not in the list of exception handlers.
+
+   if (fStdExceptionHandler)
+      return (TStdExceptionHandler *)fStdExceptionHandler->Remove(eh);
+
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -1066,7 +1121,8 @@ int TSystem::CopyFile(const char *, const char *, Bool_t)
 {
    // Copy a file. If overwrite is true and file already exists the
    // file will be overwritten. Returns 0 when successful, -1 in case
-   // of failure, -2 in case the file already exists and overwrite was false.
+   // of file open failure, -2 in case the file already exists and overwrite
+   // was false and -3 in case of error during copy.
 
    AbstractMethod("CopyFile");
    return -1;
@@ -1575,9 +1631,6 @@ int TSystem::Load(const char *module, const char *entry, Bool_t system)
       }
    }
 
-   // check whether lib l is in the fLinkedLibs list
-   // TO BE DONE
-
    recCall++;
 
    char *path = DynamicPathName(module);
@@ -1706,7 +1759,8 @@ void TSystem::ListSymbols(const char *, const char *)
 //______________________________________________________________________________
 void TSystem::ListLibraries(const char *regexp)
 {
-   // List all loaded shared libraries.
+   // List all loaded shared libraries. Regexp is a wildcard expression,
+   // see TRegexp::MakeWildcard.
 
    TString libs = GetLibraries(regexp);
    TRegexp separator("[^ \\t\\s]+");
@@ -1754,6 +1808,7 @@ const char *TSystem::GetLibraries(const char *regexp, const char *options,
                                   Bool_t isRegexp)
 {
    // Return a space separated list of loaded shared libraries.
+   // Regexp is a wildcard expression, see TRegexp::MakeWildcard.
    // This list is of a format suitable for a linker, i.e it may contain
    // -Lpathname and/or -lNameOfLib.
    // Option can be any of:
@@ -1762,17 +1817,19 @@ const char *TSystem::GetLibraries(const char *regexp, const char *options,
    //   D: shared libraries dynamically loaded after the start of the program.
    // For MacOS only:
    //   L: list the .dylib rather than the .so (this is intended for linking)
-   //      [This options is not the default]
+   //      This options is not the default
 
    fListLibs = "";
    TString libs = "";
    TString opt = options;
-   if ((opt.Length()==0) || (opt.First('D')!=kNPOS))
+   Bool_t so2dylib = (opt.First('L') != kNPOS);
+   if (so2dylib)
+      opt.ReplaceAll("L", "");
+   if (opt.IsNull() || opt.First('D') != kNPOS)
       libs += gInterpreter->GetSharedLibs();
 
-   if ((opt.Length()==0) || (opt.First('S')!=kNPOS)) {
+   if (opt.IsNull() || opt.First('S') != kNPOS) {
       if (!libs.IsNull()) libs.Append(" ");
-//#ifndef WIN32
       const char *linked;
       if ((linked = GetLinkedLibraries())) {
          if (fLinkedLibs != LINKEDLIBS) {
@@ -1780,7 +1837,7 @@ const char *TSystem::GetLibraries(const char *regexp, const char *options,
             TString custom = fLinkedLibs;
             custom.ReplaceAll(LINKEDLIBS,linked);
             if (custom == fLinkedLibs) {
-               // no replacement done, let's happen linked
+               // no replacement done, let's append linked
                libs.Append(linked);
                libs.Append(" ");
             }
@@ -1789,12 +1846,11 @@ const char *TSystem::GetLibraries(const char *regexp, const char *options,
             libs.Append(linked);
          }
       } else
-//#endif
          libs.Append(fLinkedLibs);
    }
 
    // Select according to regexp
-   if (regexp!=0 && strlen(regexp)!=0) {
+   if (regexp && *regexp) {
       TRegexp separator("[^ \\t\\s]+");
       TRegexp user_re(regexp, kTRUE);
       TString s;
@@ -1818,7 +1874,7 @@ const char *TSystem::GetLibraries(const char *regexp, const char *options,
       fListLibs = libs;
 
 #if defined(R__MACOSX)
-   if ( (opt.First('L')!=kNPOS) ) {
+   if (so2dylib) {
       TString libs = fListLibs;
       TString maclibs;
 
@@ -1832,7 +1888,7 @@ const char *TSystem::GetLibraries(const char *regexp, const char *options,
          index = libs.Index(separator, &end, start);
          if (index >= 0) {
             // Change .so into .dylib and remove the
-            // path info if it not accessible.
+            // path info if it is not accessible
             TString s = libs(index, end);
             if (s.Index(user_so) != kNPOS) {
                s.ReplaceAll(".so",".dylib");

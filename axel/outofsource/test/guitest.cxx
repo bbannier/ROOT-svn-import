@@ -563,7 +563,6 @@ TestMainFrame::TestMainFrame(const TGWindow *p, UInt_t w, UInt_t h)
    fCascadeMenu->AddEntry("ID = 5&3", 53);
    fCascadeMenu->AddSeparator();
    fCascadeMenu->AddPopup("&Cascaded 1", fCascade1Menu);
-   fCascadeMenu->AddPopup("C&ascaded 2", fCascade2Menu);
 
    fMenuTest = new TGPopupMenu(fClient->GetRoot());
    fMenuTest->AddLabel("Test different features...");
@@ -1137,6 +1136,9 @@ void TestDialog::CloseWindow()
    // Called when window is closed (via the window manager or not).
    // Let's stop histogram filling...
    fFillHistos = kFALSE;
+   // Add protection against double-clicks
+   fOkButton->SetState(kButtonDisabled);
+   fCancelButton->SetState(kButtonDisabled);
    // ... and close the Ged editor if it was activated.
    if (TVirtualPadEditor::GetPadEditor(kFALSE) != 0)
       TVirtualPadEditor::Terminate();
@@ -1681,7 +1683,7 @@ TestShutter::TestShutter(const TGWindow *p, const TGWindow *main,
    //fClient->WaitFor(this);
 }
 
-void TestShutter::AddShutterItem(const char *name, shutterData_t data[])
+void TestShutter::AddShutterItem(const char *name, shutterData_t *data)
 {
    TGShutterItem    *item;
    TGCompositeFrame *container;

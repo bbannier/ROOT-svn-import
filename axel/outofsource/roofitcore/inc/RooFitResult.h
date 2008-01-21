@@ -16,7 +16,7 @@
 #ifndef ROO_FIT_RESULT
 #define ROO_FIT_RESULT
 
-#include "Riostream.h"
+#include "Riosfwd.h"
 #include "RooAbsArg.h"
 #include "RooPrintable.h"
 #include "RooDirItem.h"
@@ -90,6 +90,11 @@ public:
   // Generate random perturbations of the final parameters using the covariance matrix
   const RooArgList& randomizePars() const;
 
+  Bool_t isIdentical(const RooFitResult& other, Double_t tol=5e-5, Double_t tolCorr=1e-4, Bool_t verbose=kTRUE) const ;
+
+  void SetName(const char *name) ;
+  void SetNameTitle(const char *name, const char* title) ;
+
 protected:
   
   friend class RooMinuit ;
@@ -108,7 +113,7 @@ protected:
   Double_t covariance(Int_t row, Int_t col) const;
 
   Int_t    _status ;          // MINUIT status code
-  Int_t    _covQual ;         // MUINUIT quality code of covariance matrix
+  Int_t    _covQual ;         // MINUIT quality code of covariance matrix
   Int_t    _numBadNLL ;       // Number calls with bad (zero,negative) likelihood 
   Double_t _minNLL ;          // NLL at minimum
   Double_t _edm ;             // Estimated distance to minimum

@@ -577,6 +577,7 @@ static int G__exec_function(char* statement, int* pc, int* piout, int* plargeste
    // Return 0 if function called, return 1 if function is *not* called.
    //
    if ((*pc == ';') || G__isoperator(*pc) || (*pc == ',') || (*pc == '.') || (*pc == '[')) {
+      //fprintf(stderr, "G__exec_function: Function call is followed by an operator.\n");
       if ((*pc != ';') && (*pc != ',')) {
          statement[(*piout)++] = *pc;
          *pc = G__fgetstream_new(statement + (*piout) , ";");
@@ -595,9 +596,11 @@ static int G__exec_function(char* statement, int* pc, int* piout, int* plargeste
       //
       // Evaluate the expression which contains the function call.
       //
+      //fprintf(stderr, "G__exec_function: Calling G__getexpr(): '%s'\n", statement);
       *presult = G__getexpr(statement);
    }
    else if (*pc == '(') {
+      //fprintf(stderr, "G__exec_function: Function call is followed by '('.\n");
       int len = strlen(statement);
       statement[len++] = *pc;
       *pc = G__fgetstream_newtemplate(statement + len, ")");
@@ -629,10 +632,12 @@ static int G__exec_function(char* statement, int* pc, int* piout, int* plargeste
       //
       // Evaluate the expression which contains the function call.
       //
+      //fprintf(stderr, "G__exec_function: Calling G__getexpr(): '%s'\n", statement);
       *presult = G__getexpr(statement);
    }
    else {
       // -- Function-style macro without ';' at the end.
+      //fprintf(stderr, "G__exec_function: We have a function-style macro call.\n");
       if (G__breaksignal) {
          int ret = G__beforelargestep(statement, piout, plargestep);
          if (ret > 1) {
@@ -802,6 +807,11 @@ static G__value G__exec_switch()
    int store_ifswitch = G__ifswitch;
    G__ifswitch = G__IFSWITCH;
    //
+   //
+   //
+   int store_G__prevcase = G__prevcase;
+   G__prevcase = 0;
+   //
    //  Scan the switch condition.
    //
    char condition[G__ONELINE];
@@ -822,6 +832,7 @@ static G__value G__exec_switch()
       if (ret > 1) {
          // Restore state.
          G__ifswitch = store_ifswitch;
+         G__prevcase = store_G__prevcase;
          // And return immediately.
          return G__null;
       }
@@ -865,13 +876,14 @@ static G__value G__exec_switch()
       //   fprintf(stderr, "G__exec_switch: compile whole switch block, peek ahead: '%s'\n", buf);
       //}
       // Flag that we need to generate code for case clauses.
+      int store_G__switch = G__switch;
       G__switch = 1;
       // Tell the parser to finish the switch block.
       int brace_level = 1;
       // Call the parser.
       G__exec_statement(&brace_level);
       // Restore state.
-      G__switch = 0;
+      G__switch = store_G__switch;
    }
    else {
       // -- We are going to execute the switch.
@@ -902,8 +914,10 @@ static G__value G__exec_switch()
       G__no_exec = 1;
 #endif // G__ASM
       // Tell the parser to evaluate case expressions.
+      int store_G__switch = G__switch;
       G__switch = 1;
       // Tell the parser it should return control after evaluating a case expression.
+      int store_G__switch_searching = G__switch_searching;
       G__switch_searching = 1;
       // Flag that we have not evaluated a case expression yet.
       result = G__start;
@@ -928,8 +942,8 @@ static G__value G__exec_switch()
       }
       //fprintf(stderr, "G__exec_switch: Case clause search has finished.\n");
       // Restore state.
-      G__switch = 0;
-      G__switch_searching = 0;
+      G__switch = store_G__switch;
+      G__switch_searching = store_G__switch_searching;
       G__no_exec = 0;
       G__no_exec_compile = store_no_exec_compile;
       //fprintf(stderr, "G__exec_switch: after case search: G__asm_noverflow: %d G__no_exec_compile: %d\n", G__asm_noverflow, G__no_exec_compile);
@@ -964,6 +978,7 @@ static G__value G__exec_switch()
          //  end of the block.
          //
          // Tell the parser to handle case clauses.
+         int store_G__switch = G__switch;
          G__switch = 1;
          // Tell the parser to go until the end of the switch block.
          int brace_level = 1;
@@ -973,7 +988,7 @@ static G__value G__exec_switch()
          result = G__exec_statement(&brace_level);
          //fprintf(stderr, "G__exec_switch: Case block parse has returned.\n");
          // Restore state.
-         G__switch = 0;
+         G__switch = store_G__switch;
          //
          //  Check if user requested an immediate return.
          //
@@ -981,6 +996,7 @@ static G__value G__exec_switch()
             // -- The user requested an immediate return.
             // Restore state.
             G__ifswitch = store_ifswitch;
+            G__prevcase = store_G__prevcase;
             // And return.
             return result;
          }
@@ -994,6 +1010,7 @@ static G__value G__exec_switch()
                //fprintf(stderr, "G__exec_switch: Case ended with a goto.\n");
                // Restore state.
                G__ifswitch = store_ifswitch;
+               G__prevcase = store_G__prevcase;
                // And return the goto result to the parser (our caller).
                return result;
             }
@@ -1006,6 +1023,7 @@ static G__value G__exec_switch()
             //   fprintf(stderr, "G__exec_switch: consume rest of switch block, peek ahead: '%s'\n", buf);
             //}
             int store_no_exec_compile = G__no_exec_compile;
+            int store_G__switch = G__switch;
 #ifdef G__ASM
             if (!G__asm_noverflow) {
                // Flag that we are skipping code.
@@ -1027,7 +1045,7 @@ static G__value G__exec_switch()
             // Restore state.
             G__no_exec = 0;
             G__no_exec_compile = store_no_exec_compile;
-            G__switch = 0;
+            G__switch = store_G__switch;
          }
       }
    }
@@ -1084,6 +1102,7 @@ static G__value G__exec_switch()
       //fprintf(stderr, "G__exec_switch: End.\n");
       // Restore state.
       G__ifswitch = store_ifswitch;
+      G__prevcase = store_G__prevcase;
       // All done, return null to the caller.
       return G__null;
    }
@@ -1099,6 +1118,7 @@ static G__value G__exec_switch()
          //fprintf(stderr, "G__exec_switch: End.\n");
          // Restore state.
          G__ifswitch = store_ifswitch;
+         G__prevcase = store_G__prevcase;
          // All done, consume the break return status and return null instead.
          return G__null;
       }
@@ -1113,12 +1133,14 @@ static G__value G__exec_switch()
          //fprintf(stderr, "G__exec_switch: End.\n");
          // Restore state.
          G__ifswitch = store_ifswitch;
+         G__prevcase = store_G__prevcase;
          // All done, return the continue status to our caller.
          return result;
       }
    }
    // Restore state.
    G__ifswitch = store_ifswitch;
+   G__prevcase = store_G__prevcase;
    // All done, return status of last executed command to caller.
    //fprintf(stderr, "G__exec_switch: End.\n");
    return result;
@@ -5046,6 +5068,7 @@ G__value G__exec_statement(int* mparen)
    int discarded_space = 0;
    char statement[G__LONGLINE];
    G__value result = G__null;
+   //fprintf(stderr, "\nG__exec_statement: Begin.\n");
    fpos_t start_pos;
    fgetpos(G__ifile.fp, &start_pos);
    int start_line = G__ifile.line_number;
@@ -6252,11 +6275,14 @@ G__value G__exec_statement(int* mparen)
                            G__tagnum = result.tagnum;
                            int store_constvar = G__constvar;
                            G__constvar = result.obj.i; // see G__string2type
+                           int store_reftype = G__reftype;
+                           G__reftype = result.obj.reftype.reftype;
                            statement[iout] = '(';
                            statement[iout+1] = '\0';
                            G__make_ifunctable(statement);
                            G__tagnum = store_tagnum;
                            G__constvar = store_constvar;
+                           G__reftype = store_reftype;
 #ifdef G__SECURITY
                            if (!*mparen) {
                               return G__null;
@@ -6679,7 +6705,7 @@ G__value G__exec_statement(int* mparen)
             break;
 
          case '(':
-            //fprintf(stderr, "G__exec_statement: Enter left parenthesis case.\n");
+            //fprintf(stderr, "\nG__exec_statement: Enter left parenthesis case.\n");
             statement[iout++] = c;
             statement[iout] = '\0';
             if (single_quote || double_quote) {
@@ -6774,39 +6800,6 @@ G__value G__exec_statement(int* mparen)
                         spaceflag = 0;
                      }
                      break;
-                  case 3:
-                     if (!strcmp(statement, "if(")) {
-                        result = G__exec_if();
-                        if ((G__return > G__RETURN_NON) || !*mparen) {
-                           return result;
-                        }
-                        // Check for break, continue, or goto executed during statement.
-                        if (result.type == G__block_break.type) {
-                           // -- Statement block was exited by break, continue, or goto.
-                           if (result.ref == G__block_goto.ref) {
-                              // -- Exited by goto.
-                              int found = G__search_gotolabel(0, &start_pos, start_line, mparen);
-                              // If found, continue parsing, the input file is now
-                              // positioned immediately after the colon of the label.
-                              // Otherwise, return and let our caller try to find it.
-                              if (!found) {
-                                 // -- Not found, maybe our caller can find it.
-                                 return G__block_goto;
-                              }
-                           }
-                           else {
-                              // -- Exited by break or continue.
-                              //fprintf(stderr, "G__exec_statement: break or continue executed from an if.\n");
-                              //fprintf(stderr, "End   G__exec_statement (from end of if, break or continue seen).\n");
-                              return result;
-                           }
-                        }
-                        // Reset the statement buffer.
-                        iout = 0;
-                        // Flag that any following whitespace does not trigger any semantic action.
-                        spaceflag = 0;
-                     }
-                     break;
                   case 6:
                      if (!strcmp(statement, "while(")) {
                         result = G__exec_while();
@@ -6844,6 +6837,51 @@ G__value G__exec_statement(int* mparen)
                         spaceflag = 0;
                      }
                      break;
+                  case 5:
+                     if ((*mparen == 1) && !strcmp(statement, "case(")) {
+                        // -- Handle keyword "case", even if skipping code.
+                        //fprintf(stderr, "G__exec_statement: Saw a case.\n");
+                        // Scan the case label in.
+                        char casepara[G__ONELINE];
+                        casepara[0] = '(';
+                        {
+                           int lencasepara = 1;
+                           c = G__fgetstream(casepara+lencasepara, ":");
+                           if (c==')') {
+                              lencasepara = strlen(casepara);
+                              casepara[lencasepara] = ')';
+                              ++lencasepara;
+                              G__fgetstream(casepara+lencasepara, ":");
+                           }
+                           c = G__fgetc();
+                           while (c == ':') {
+                              strcat(casepara, "::");
+                              lencasepara = strlen(casepara);
+                              G__fgetstream(casepara + lencasepara, ":");
+                              c = G__fgetc();
+                           }
+                        }
+                        // Backup one character.
+                        fseek(G__ifile.fp, -1, SEEK_CUR);
+                        // Flag that we have already displayed it, do not show it again.
+                        G__disp_mask = 1;
+                        //
+                        //  If we are not in a switch statement,
+                        //  then we are done.
+                        if (G__switch) {
+                           // -- We are in a switch statement, evaluate the case expression.
+                           G__value result = G__exec_switch_case(casepara);
+                           if (G__switch_searching) {
+                              // -- We are searching for a matching case, return value of case expression.
+                              return result;
+                           }
+                        }
+                        // Reset the statement buffer.
+                        iout = 0;
+                        // Flag that any following whitespace does not trigger any semantic action.
+                        spaceflag = 0;
+                     }
+                     break;
                   case 4:
                      if (!strcmp(statement, "for(")) {
                         result = G__exec_for();
@@ -6859,6 +6897,39 @@ G__value G__exec_statement(int* mparen)
                            if (!found) {
                               // -- Not found, maybe our caller can find it.
                               return G__block_goto;
+                           }
+                        }
+                        // Reset the statement buffer.
+                        iout = 0;
+                        // Flag that any following whitespace does not trigger any semantic action.
+                        spaceflag = 0;
+                     }
+                     break;                     
+                  case 3:
+                     if (!strcmp(statement, "if(")) {
+                        result = G__exec_if();
+                        if ((G__return > G__RETURN_NON) || !*mparen) {
+                           return result;
+                        }
+                        // Check for break, continue, or goto executed during statement.
+                        if (result.type == G__block_break.type) {
+                           // -- Statement block was exited by break, continue, or goto.
+                           if (result.ref == G__block_goto.ref) {
+                              // -- Exited by goto.
+                              int found = G__search_gotolabel(0, &start_pos, start_line, mparen);
+                              // If found, continue parsing, the input file is now
+                              // positioned immediately after the colon of the label.
+                              // Otherwise, return and let our caller try to find it.
+                              if (!found) {
+                                 // -- Not found, maybe our caller can find it.
+                                 return G__block_goto;
+                              }
+                           }
+                           else {
+                              // -- Exited by break or continue.
+                              //fprintf(stderr, "G__exec_statement: break or continue executed from an if.\n");
+                              //fprintf(stderr, "End   G__exec_statement (from end of if, break or continue seen).\n");
+                              return result;
                            }
                         }
                         // Reset the statement buffer.
@@ -6898,8 +6969,8 @@ G__value G__exec_statement(int* mparen)
                   //                     ^
                   c = G__fgetstream_new(statement + iout , ")");
                   iout = strlen(statement);
-                  statement[iout] = c;
-                  statement[++iout] = '\0';
+                  statement[iout++] = c;
+                  statement[iout] = '\0';
                   // Skip any following whitespace.
                   c = G__fgetspace();
                   // if 'func(xxxxxx) \n    nextexpr'   macro
@@ -6910,7 +6981,7 @@ G__value G__exec_statement(int* mparen)
                      // -- We have a new expression, either placement or parenthesized typename.
                      // Grab the rest of the line.
                      statement[iout++] = c;
-                     c = G__fgetstream(statement + iout, ";");
+                     c = G__fgetstream_template(statement + iout, ";");
                      // Find the position of the first open parenthesis.
                      char* pnew = strchr(statement, '(');
                      G__ASSERT(pnew);
@@ -6920,6 +6991,7 @@ G__value G__exec_statement(int* mparen)
                   }
                   else {
                      // -- Evaluate the expression which contains the function call.
+                     //fprintf(stderr, "G__exec_statement: Calling G__exec_function: '%s'\n", statement);
                      int notcalled = G__exec_function(statement, &c, &iout, &largestep, &result);
                      if (notcalled) {
                         return G__null;
@@ -6949,6 +7021,48 @@ G__value G__exec_statement(int* mparen)
                result = G__exec_else_if();
                if (!*mparen || (G__return > G__RETURN_NON)) {
                   return result;
+               }
+               // Reset the statement buffer.
+               iout = 0;
+               // Flag that any following whitespace does not trigger any semantic action.
+               spaceflag = 0;
+            } else if ((*mparen == 1) && !strcmp(statement, "case(")) {
+               // -- Handle keyword "case", even if skipping code.
+               //fprintf(stderr, "G__exec_statement: Saw a case.\n");
+               // Scan the case label in.
+               char casepara[G__ONELINE];
+               casepara[0] = '(';
+               {
+                  int lencasepara = 1;
+                  c = G__fgetstream(casepara+lencasepara, ":");
+                  if (c==')') {
+                     lencasepara = strlen(casepara);
+                     casepara[lencasepara] = ')';
+                     ++lencasepara;
+                     G__fgetstream(casepara+lencasepara, ":");
+                  }
+                  c = G__fgetc();
+                  while (c == ':') {
+                     strcat(casepara, "::");
+                     lencasepara = strlen(casepara);
+                     G__fgetstream(casepara + lencasepara, ":");
+                     c = G__fgetc();
+                  }
+               }
+               // Backup one character.
+               fseek(G__ifile.fp, -1, SEEK_CUR);
+               // Flag that we have already displayed it, do not show it again.
+               G__disp_mask = 1;
+               //
+               //  If we are not in a switch statement,
+               //  then we are done.
+               if (G__switch) {
+                  // -- We are in a switch statement, evaluate the case expression.
+                  G__value result = G__exec_switch_case(casepara);
+                  if (G__switch_searching) {
+                     // -- We are searching for a matching case, return value of case expression.
+                     return result;
+                  }
                }
                // Reset the statement buffer.
                iout = 0;

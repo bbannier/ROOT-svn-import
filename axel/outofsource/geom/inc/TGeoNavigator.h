@@ -20,10 +20,13 @@
 #include "TGeoCache.h"
 #endif
 
-/*************************************************************************
- * TGeoNavigator - Geometry navigator
- *
- *************************************************************************/
+////////////////////////////////////////////////////////////////////////////
+//                                                                        //
+// TGeoNavigator - Class containing the implementation of all navigation  //
+//   methods.
+//                                                                        //
+////////////////////////////////////////////////////////////////////////////
+
 class TGeoManager;
 class TGeoNode;
 class TGeoVolume;
@@ -77,7 +80,8 @@ private :
    TGeoNode             *fLastNode;         //! last searched node
    TGeoNode             *fNextNode;         //! next node that will be crossed
    TGeoCacheState       *fBackupState;      //! backup state
-   TGeoHMatrix          *fCurrentMatrix;    //! current global matrix
+   TGeoHMatrix          *fCurrentMatrix;    //! current stored global matrix
+   TGeoHMatrix          *fGlobalMatrix;     //! current pointer to cached global matrix
    TString               fPath;             //! path to current node
     
 public :
@@ -183,11 +187,11 @@ public :
 //   void                   SetCache(const TGeoNodeCache *cache) {fCache = (TGeoNodeCache*)cache;}
    //--- stack manipulation
    Int_t                  PushPath(Int_t startlevel=0) {return fCache->PushState(fCurrentOverlapping, startlevel, fNmany);}
-   Bool_t                 PopPath() {fCurrentOverlapping=fCache->PopState(fNmany); fCurrentNode=fCache->GetNode(); fLevel=fCache->GetLevel();return fCurrentOverlapping;}
-   Bool_t                 PopPath(Int_t index) {fCurrentOverlapping=fCache->PopState(fNmany,index); fCurrentNode=fCache->GetNode(); fLevel=fCache->GetLevel();return fCurrentOverlapping;}
+   Bool_t                 PopPath() {fCurrentOverlapping=fCache->PopState(fNmany); fCurrentNode=fCache->GetNode(); fLevel=fCache->GetLevel();fGlobalMatrix=fCache->GetCurrentMatrix();return fCurrentOverlapping;}
+   Bool_t                 PopPath(Int_t index) {fCurrentOverlapping=fCache->PopState(fNmany,index); fCurrentNode=fCache->GetNode(); fLevel=fCache->GetLevel();fGlobalMatrix=fCache->GetCurrentMatrix();return fCurrentOverlapping;}
    Int_t                  PushPoint(Int_t startlevel=0) {return fCache->PushState(fCurrentOverlapping, startlevel,fNmany,fPoint);}
-   Bool_t                 PopPoint() {fCurrentOverlapping=fCache->PopState(fNmany,fPoint); fCurrentNode=fCache->GetNode(); fLevel=fCache->GetLevel(); return fCurrentOverlapping;}
-   Bool_t                 PopPoint(Int_t index) {fCurrentOverlapping=fCache->PopState(fNmany,index, fPoint); fCurrentNode=fCache->GetNode(); fLevel=fCache->GetLevel(); return fCurrentOverlapping;}
+   Bool_t                 PopPoint() {fCurrentOverlapping=fCache->PopState(fNmany,fPoint); fCurrentNode=fCache->GetNode(); fLevel=fCache->GetLevel(); fGlobalMatrix=fCache->GetCurrentMatrix();return fCurrentOverlapping;}
+   Bool_t                 PopPoint(Int_t index) {fCurrentOverlapping=fCache->PopState(fNmany,index, fPoint); fCurrentNode=fCache->GetNode(); fLevel=fCache->GetLevel(); fGlobalMatrix=fCache->GetCurrentMatrix();return fCurrentOverlapping;}
    void                   PopDummy(Int_t ipop=9999) {fCache->PopDummy(ipop);}
    
    ClassDef(TGeoNavigator, 0)          // geometry navigator class

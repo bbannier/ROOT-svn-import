@@ -7,7 +7,7 @@ MODDIR     := $(SRCDIR)/xrootd
 MODDIRS    := $(MODDIR)/src
 MODDIRO    := xrootd/src
 
-XROOTDVERS := xrootd-20071001-0000
+XROOTDVERS := xrootd-20071116-0000
 XROOTDDIR  := $(MODDIR)
 XROOTDDIRS := $(MODDIRO)
 XROOTDDIRD := $(MODDIRO)/xrootd
@@ -19,7 +19,7 @@ XROOTDETAG := $(MODDIRO)/headers.d
 
 ##### Xrootd config options #####
 ifeq ($(PLATFORM),win32)
-ifeq (debug,$(findstring debug,$(ROOTBUILD)))
+ifeq (yes,$(WINRTDEBUG))
 XRDDBG      = "Win32 Debug"
 else
 XRDDBG      = "Win32 Release"
@@ -172,7 +172,7 @@ $(XRDPLUGINSA): $(XROOTDETAG)
 		   xopt="$$xopt --with-ssl-libdir=$$xlib"; \
 		fi; \
 		if [ ! "x$(SSLINCDIR)" = "x" ] ; then \
-		   xinc=`echo $(SSLINCDIR) | cut -c3-`; \
+		   xinc=`echo $(SSLINCDIR)`; \
 		   xopt="$$xopt --with-ssl-incdir=$$xinc"; \
 		fi; \
 		if [ ! "x$(SHADOWFLAGS)" = "x" ] ; then \
@@ -186,7 +186,7 @@ $(XRDPLUGINSA): $(XROOTDETAG)
 		   xopt="$$xopt --with-afs-libdir=$$xlib"; \
 		fi; \
 		if [ ! "x$(AFSINCDIR)" = "x" ] ; then \
-		   xinc=`echo $(AFSINCDIR) | cut -c3-`; \
+		   xinc=`echo $(AFSINCDIR)`; \
 		   xopt="$$xopt --with-afs-incdir=$$xinc"; \
 		fi; \
 		xopt="$$xopt --disable-krb4 --enable-echo --no-arch-subdirs --disable-mon"; \

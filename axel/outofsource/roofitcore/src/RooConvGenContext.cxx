@@ -47,13 +47,13 @@ RooConvGenContext::RooConvGenContext(const RooAbsAnaConvPdf &model, const RooArg
   // Build a generator for the physics PDF convoluted with the truth model
   // and a generator for the resolution model as PDF.
 
-  cxcoutI("Generation") << "RooConvGenContext::ctor() setting up special generator context for analytical convolution p.d.f. " << model.GetName() 
+  cxcoutI(Generation) << "RooConvGenContext::ctor() setting up special generator context for analytical convolution p.d.f. " << model.GetName() 
 			<< " for generation of observable(s) " << vars ;
 
   // Clone PDF and change model to internal truth model
   _pdfCloneSet = (RooArgSet*) RooArgSet(model).snapshot(kTRUE) ;
   if (!_pdfCloneSet) {
-    cout << "RooConvGenContext::RooConvGenContext(" << GetName() << ") Couldn't deep-clone PDF, abort," << endl ;
+    coutE(Generation) << "RooConvGenContext::RooConvGenContext(" << GetName() << ") Couldn't deep-clone PDF, abort," << endl ;
     RooErrorHandler::softAbort() ;
   }
 
@@ -69,7 +69,7 @@ RooConvGenContext::RooConvGenContext(const RooAbsAnaConvPdf &model, const RooArg
   // Clone resolution model and use as normal PDF
   _modelCloneSet = (RooArgSet*) RooArgSet(*model._convSet.at(0)).snapshot(kTRUE) ;
   if (!_modelCloneSet) {
-    cout << "RooConvGenContext::RooConvGenContext(" << GetName() << ") Couldn't deep-clone resolution model, abort," << endl ;
+    coutE(Generation) << "RooConvGenContext::RooConvGenContext(" << GetName() << ") Couldn't deep-clone resolution model, abort," << endl ;
     RooErrorHandler::softAbort() ;
   }
   RooResolutionModel* modelClone = (RooResolutionModel*) 
@@ -111,7 +111,7 @@ RooConvGenContext::RooConvGenContext(const RooNumConvPdf &model, const RooArgSet
   // Build a generator for the physics PDF convoluted with the truth model
   // and a generator for the resolution model as PDF.
 
-  cxcoutI("Generation") << "RooConvGenContext::ctor() setting up special generator context for numeric convolution p.d.f. " << model.GetName() 
+  cxcoutI(Generation) << "RooConvGenContext::ctor() setting up special generator context for numeric convolution p.d.f. " << model.GetName() 
 			<< " for generation of observable(s) " << vars << endl ;
 
   // Create generator for physics X truth model
@@ -143,7 +143,7 @@ RooConvGenContext::RooConvGenContext(const RooFFTConvPdf &model, const RooArgSet
   //
   // Build a generator for the physics PDF convoluted with the truth model
   // and a generator for the resolution model as PDF.
-  cxcoutI("Generation") << "RooConvGenContext::ctor() setting up special generator context for fft convolution p.d.f. " << model.GetName() 
+  cxcoutI(Generation) << "RooConvGenContext::ctor() setting up special generator context for fft convolution p.d.f. " << model.GetName() 
 			<< " for generation of observable(s) " << vars << endl ;
 
   // Create generator for physics X truth model

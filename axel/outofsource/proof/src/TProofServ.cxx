@@ -232,8 +232,6 @@ Bool_t TProofServLogHandler::Notify()
             // Nothing to prepend
             log = line;
          }
-         // Keep track in the log file
-         Printf("%s", log.Data());
          // Send the message one level up
          m.Reset(kPROOF_MESSAGE);
          m << log;
@@ -1275,7 +1273,11 @@ void TProofServ::HandleSocketInput()
 
    recursive--;
 
-   if (fProof) fProof->SetActive(kFALSE);
+   if (fProof) {
+      fProof->SetActive(kFALSE);
+      // Reset PROOF to running state
+      fProof->SetRunStatus(TProof::kRunning);
+   }
 
    fRealTime += (Float_t)timer.RealTime();
    fCpuTime  += (Float_t)timer.CpuTime();
@@ -1432,6 +1434,10 @@ void TProofServ::HandleSocketInputDuringProcess()
          Error("HandleSocketInputDuringProcess", "unknown command %d", what);
          break;
 
+   }
+   if (fProof) {
+      // Reset PROOF to running state
+      fProof->SetRunStatus(TProof::kRunning);
    }
    delete mess;
 }
@@ -2089,7 +2095,8 @@ Int_t TProofServ::SetupCommon()
 # endif
 # ifdef COMPILER
    TString compiler = COMPILER;
-   compiler.Remove(0, compiler.Index("is ") + 3);
+   if (compiler.Index("is ") != kNPOS)
+      compiler.Remove(0, compiler.Index("is ") + 3);
    compiler = gSystem->DirName(compiler);
    if (!bindir.IsNull()) bindir += ":";
    bindir += compiler;
@@ -2130,7 +2137,8 @@ Int_t TProofServ::SetupCommon()
    if (gProofDebugLevel > 0)
       Info("SetupCommon", "cache directory set to %s", fCacheDir.Data());
    fCacheLock =
-      new TProofLockPath(Form("%s%s",kPROOF_CacheLockFile,
+      new TProofLockPath(Form("%s/%s%s",
+                         gSystem->TempDirectory(), kPROOF_CacheLockFile,
                          TString(fCacheDir).ReplaceAll("/","%").Data()));
 
    // check and make sure "packages" directory exists
@@ -2141,7 +2149,8 @@ Int_t TProofServ::SetupCommon()
    if (gProofDebugLevel > 0)
       Info("SetupCommon", "package directory set to %s", fPackageDir.Data());
    fPackageLock =
-      new TProofLockPath(Form("%s%s",kPROOF_PackageLockFile,
+      new TProofLockPath(Form("%s/%s%s",
+                         gSystem->TempDirectory(), kPROOF_PackageLockFile,
                          TString(fPackageDir).ReplaceAll("/","%").Data()));
 
    // List of directories where to look for global packages
@@ -2199,8 +2208,9 @@ Int_t TProofServ::SetupCommon()
          Info("SetupCommon", "queries dir is %s", fQueryDir.Data());
 
       // Create 'queries' locker instance and lock it
-      fQueryLock = new TProofLockPath(Form("%s%s-%s",
-                       kPROOF_QueryLockFile,fSessionTag.Data(),
+      fQueryLock = new TProofLockPath(Form("%s/%s%s-%s",
+                       gSystem->TempDirectory(),
+                       kPROOF_QueryLockFile, fSessionTag.Data(),
                        TString(fQueryDir).ReplaceAll("/","%").Data()));
       fQueryLock->Lock();
 
@@ -2215,7 +2225,8 @@ Int_t TProofServ::SetupCommon()
       if (gProofDebugLevel > 0)
          Info("SetupCommon", "dataset dir is %s", fDataSetDir.Data());
       fDataSetLock =
-         new TProofLockPath(Form("%s%s", kPROOF_DataSetLockFile,
+         new TProofLockPath(Form("%s/%s%s",
+                            gSystem->TempDirectory(), kPROOF_DataSetLockFile,
                             TString(fDataSetDir).ReplaceAll("/","%").Data()));
 
       // Send session tag to client
@@ -2812,7 +2823,7 @@ Int_t TProofServ::ApplyMaxQueries()
          FileStat_t st;
          if (gSystem->GetPathInfo(fn, st)) {
             Info("ApplyMaxQueries","file '%s' cannot be stated: remove it", fn.Data());
-            gSystem->Unlink(fn);
+            gSystem->Unlink(gSystem->DirName(fn));
             continue;
          }
 
@@ -3965,6 +3976,14 @@ void TProofServ::HandleCheckFile(TMessage *mess)
             // store md5 in package/PROOF-INF/md5.txt
             TString md5f = fPackageDir + "/" + packnam + "/PROOF-INF/md5.txt";
             TMD5::WriteChecksum(md5f, md5local);
+            // remove any previous building information
+            TString vrsf = Form("%s/%s/PROOF-INF/proofvers.txt",
+                                fPackageDir.Data(), packnam.Data());
+            if (!gSystem->AccessPathName(vrsf)) {
+               if ((st = gSystem->Exec(Form("%s %s", kRM, vrsf.Data()))))
+                  Error("HandleCheckFile",
+                        "failure removing proofvers.txt for package %s", packnam.Data());
+            }
             fSocket->Send(kPROOF_CHECKFILE);
             PDB(kPackage, 1)
                Info("HandleCheckFile",
@@ -4242,11 +4261,16 @@ Int_t TProofServ::HandleCache(TMessage *mess)
                         // untar package
                         TString cmd(Form(kUNTAR3, gunzip, par.Data()));
                         status = gSystem->Exec(cmd);
-                        if (status)
+                        if (status) {
                            Error("HandleCache", "kBuildPackage: failure executing: %s", cmd.Data());
-                        else
+                        } else {
+                           // Store md5 in package/PROOF-INF/md5.txt
+                           TMD5 *md5local = TMD5::FileChecksum(par);
+                           TString md5f = fPackageDir + "/" + package + "/PROOF-INF/md5.txt";
+                           TMD5::WriteChecksum(md5f, md5local);
                            // Go down to the package directory
                            gSystem->ChangeDirectory(pdir);
+                        }
                         delete [] gunzip;
                      } else
                         Error("HandleCache", "kBuildPackage: %s not found", kGUNZIP);

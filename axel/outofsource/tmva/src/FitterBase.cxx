@@ -25,10 +25,12 @@
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
 
-//_______________________________________________________________________
-//                                                                      
-//  Baseclass for TMVA fitters
-//  Also defines generalised fitting interface
+//______________________________________________________________________
+/*
+  FitterBase
+
+  Baseclass for TMVA fitters. Also defines generalised fitting interface
+*/
 //_______________________________________________________________________
 
 #include "TMVA/FitterBase.h"
@@ -40,6 +42,11 @@
 #endif
 
 ClassImp(TMVA::FitterBase)
+
+#ifdef _WIN32
+/*Disable warning C4355: 'this' : used in base member initializer list*/
+#pragma warning ( disable : 4355 )
+#endif
 
 //_______________________________________________________________________
 TMVA::FitterBase::FitterBase( IFitterTarget& target, 

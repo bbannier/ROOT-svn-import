@@ -130,7 +130,8 @@ public:
       kCanRebin    = BIT(11), // can rebin axis
       kLogX        = BIT(15), // X-axis in log scale
       kIsZoomed    = BIT(16), // bit set when zooming on Y axis
-      kNoTitle     = BIT(17)  // don't draw the histogram title
+      kNoTitle     = BIT(17), // don't draw the histogram title
+      kIsAverage   = BIT(18)  // Bin contents are average (used by Add)
    };
 
    TH1(const TH1&);
@@ -199,6 +200,7 @@ public:
    virtual Double_t GetContourLevelPad(Int_t level) const;
 
    virtual Int_t    GetBin(Int_t binx, Int_t biny=0, Int_t binz=0) const;
+   virtual void     GetBinXYZ(Int_t binglobal, Int_t &binx, Int_t &biny, Int_t &binz) const;
    virtual Double_t GetBinCenter(Int_t bin) const {return fXaxis.GetBinCenter(bin);}
    virtual Double_t GetBinContent(Int_t bin) const;
    virtual Double_t GetBinContent(Int_t binx, Int_t biny) const;
@@ -325,14 +327,14 @@ public:
    virtual void     SetZTitle(const char *title) {fZaxis.SetTitle(title);}
    virtual TH1     *ShowBackground(Int_t niter=20, Option_t *option="same"); // *MENU*
    virtual Int_t    ShowPeaks(Double_t sigma=2, Option_t *option="", Double_t threshold=0.05); // *MENU*
-   virtual void     Smooth(Int_t ntimes=1, Int_t firstbin=-1, Int_t lastbin=-1); // *MENU*
+   virtual void     Smooth(Int_t ntimes=1, Int_t firstbin=1, Int_t lastbin=-1); // *MENU*
    static  void     SmoothArray(Int_t NN, Double_t *XX, Int_t ntimes=1);
    static  void     StatOverflows(Bool_t flag=kTRUE);
    virtual void     Sumw2();
    void             UseCurrentStyle();
    static  TH1     *TransformHisto(TVirtualFFT *fft, TH1* h_output,  Option_t *option);
 
-   ClassDef(TH1,5)  //1-Dim histogram base class
+   ClassDef(TH1,6)  //1-Dim histogram base class
 };
 
 //________________________________________________________________________

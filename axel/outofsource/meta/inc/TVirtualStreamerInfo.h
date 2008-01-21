@@ -101,7 +101,7 @@ public:
    virtual void        Clear(Option_t *) = 0;
    virtual void        Compile() = 0;
    virtual void        ForceWriteInfo(TFile *file, Bool_t force=kFALSE) = 0;
-   virtual Int_t       GenerateHeaderFile(const char *dirname) = 0;
+   virtual Int_t       GenerateHeaderFile(const char *dirname, const TList *subClasses = 0) = 0;
    virtual TClass     *GetClass() const  = 0;
    virtual UInt_t      GetCheckSum() const = 0;
    virtual Int_t       GetClassVersion() const = 0;
@@ -110,6 +110,7 @@ public:
    virtual Int_t       GetOffset(const char *) const = 0;
    virtual Int_t      *GetOffsets() const = 0;
    virtual Version_t   GetOldVersion() const = 0;
+   virtual Int_t       GetOnFileClassVersion() const = 0;
    virtual Int_t       GetNumber()  const = 0;
    virtual Int_t       GetSize()    const = 0;
    virtual TStreamerElement   *GetStreamerElement(const char*datamember, Int_t& offset) const = 0;

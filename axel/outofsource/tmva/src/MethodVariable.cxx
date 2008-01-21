@@ -1,5 +1,5 @@
 // @(#)root/tmva $Id$
-// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss 
+// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate Data analysis       *
@@ -41,8 +41,8 @@ ClassImp(TMVA::MethodVariable)
 using std::endl;
  
 //_______________________________________________________________________
-TMVA::MethodVariable::MethodVariable( TString jobName, TString methodTitle, DataSet& theData, 
-                                      TString theOption, TDirectory* theTargetDir )
+TMVA::MethodVariable::MethodVariable( const TString& jobName, const TString& methodTitle, DataSet& theData, 
+                                      const TString& theOption, TDirectory* theTargetDir )
    : TMVA::MethodBase( jobName, methodTitle, theData, theOption, theTargetDir )
 {
    // standard constructor
@@ -102,7 +102,7 @@ void  TMVA::MethodVariable::WriteWeightsToStream( ostream & o ) const
 void  TMVA::MethodVariable::ReadWeightsFromStream( istream & istr )
 {
    // Read configuration from input stream
-   if (istr.eof());
+   if (istr.eof()) { }
 }
 
 //_______________________________________________________________________

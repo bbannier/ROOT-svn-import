@@ -25,7 +25,7 @@ class RooResolutionModel : public RooAbsPdf {
 public:
 
   // Constructors, assignment etc
-  inline RooResolutionModel() { }
+  inline RooResolutionModel() : _basis(0) { }
   RooResolutionModel(const char *name, const char *title, RooRealVar& x) ; 
   RooResolutionModel(const RooResolutionModel& other, const char* name=0);
   virtual TObject* clone(const char* newname) const = 0 ;
@@ -46,17 +46,18 @@ public:
 
   virtual void printToStream(ostream& stream, PrintOption opt=Standard, TString indent= "") const ;
 
+  static void cleanup() ;
+
+  static RooFormulaVar* identity() ;
+
 protected:
 
   static RooFormulaVar* _identity ;  // Identity basis function pointe
-  static RooFormulaVar* identity() ;
 
 
   friend class RooConvGenContext ;
   friend class RooAddModel ;
   RooRealProxy x ;                   // Dependent/convolution variable
-
-  virtual Bool_t syncNormalizationPreHook(RooAbsReal* norm,const RooArgSet* nset) const ;
 
   virtual Bool_t redirectServersHook(const RooAbsCollection& newServerList, Bool_t mustReplaceAll, Bool_t nameChange, Bool_t isRecursive) ;
   virtual void changeBasis(RooFormulaVar* basis) ;

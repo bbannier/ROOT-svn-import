@@ -22,6 +22,10 @@ fail_on_missing=no
 noact="no"
 nohowto="no"
 logfile=config.log
+altcc=
+altcxx=
+altf77=
+altld=
 
 options="                    \
    enable_afs                \
@@ -95,6 +99,7 @@ enable_cint7=no
 enable_gdml=no
 enable_globus=no
 enable_explicitlink=no
+enable_pch=no
 enable_qt=no
 enable_qtgsi=no
 enable_roofit=no
@@ -725,13 +730,13 @@ guess_architecture () {
             echo "Please specify the architecture as the first argument."
             echo "Do '$0 --help' for a list of avaliable architectures."
             echo "Or file a bug at https://savannah.cern.ch/projects/savroot/"
-            echo "including the full config.log and a dump of" 
+            echo "including the full config.log and a dump of"
             echo "  touch dummy_file.c; gcc -E -dM dummy_file.c"
             exit 1
             ;;
     esac
     if [ "$arch" = "macosx" ]; then
-       if [ `sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2` = 5 ]; then
+       if [ `sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2` -ge 5 ]; then
           if `sysctl machdep.cpu.extfeatures | grep "64" > /dev/null  2>&1` ; then
              arch=macosx64
           fi
@@ -749,12 +754,9 @@ CONFDIR=`dirname ${0}`
 CONFDIR=`cd ${CONFDIR}; pwd`
 if test "${CONFDIR}" != "`pwd`"; then
     SRCDIR=`dirname ${0}`
-    mkdir config
-    mkdir etc
-    mkdir etc/daemons
-    mkdir build
-    mkdir build/misc
-    mkdir macros
+    for d in config etc etc/daemons build build/misc macros; do
+        test ! -d $d && mkdir $d
+    done
 fi
 
 ###################################################################
@@ -764,8 +766,12 @@ fi
 ARCHS=${SRCDIR}/config/ARCHS
 MAKEIN=${SRCDIR}/config/Makefile.in
 MAKEOUT=config/Makefile.config
+MAKECOMPIN=${SRCDIR}/config/Makefile-comp.in
+MAKECOMPOUT=config/Makefile.comp
 CONFIGUREIN=${SRCDIR}/config/RConfigure.in
 CONFIGUREOUT=include/RConfigure.h
+CONFIGOPTIN=${SRCDIR}/config/RConfigOptions.in
+CONFIGOPTOUT=include/RConfigOptions.h
 RCONFIN=${SRCDIR}/config/root-config.in
 RCONFOUT=bin/root-config
 ROOTRCIN=${SRCDIR}/config/rootrc.in
@@ -869,6 +875,7 @@ ROOT will be compiled with static directory names, and you should not set
 the ROOTSYS environment variable.
 
 enable/disable options, prefix with either --enable- or --disable-
+
   afs                AFS support, requires AFS libs and objects
   alien              AliEn support, requires libgapiUI from ALICE
   asimage            Image processing support, requires libAfterImage
@@ -997,6 +1004,13 @@ with options, prefix with --with-, enables corresponding support
   xpm-libdir         XPM support, path to libXpm
   xrootd             XROOTD support, path to alternative XROOTD distribution
 
+with compiler options, prefix with --with-, overrides default value
+
+  cc                 alternative C compiler and options to be used
+  cxx                alternative C++ compiler and options to be used
+  f77                alternative Fortran compiler and options to be used
+  ld                 alternative Linker and options to be used
+
 Supported Architectures:
 
 EOF
@@ -1094,7 +1108,8 @@ fi
 ### echo %%% Some clean up
 #
 trapcmd="rm -f Makefile.tmp RConfigure.tmp RConfigure-out.tmp \
-         root-config.tmp rootrc.tmp \
+         RConfigOptions.tmp RConfigOptions-out.tmp \
+         Makefile-comp.tmp root-config.tmp rootrc.tmp \
          rootauthrc.tmp rootdaemonrc.tmp memprobe.tmp rootd.tmp \
          proofd.tmp rootd.xinetd.tmp proofd.xinetd.tmp conftest.mk \
          conftest.c conftest xrootd.tmp olbd.tmp"
@@ -1194,6 +1209,10 @@ if test $# -gt 0 ; then
       --with-x11-libdir=*)     x11libdir=$optarg     ;;
       --with-xpm-libdir=*)     xpmlibdir=$optarg     ;;
       --with-xrootd=*)         xrootddir=$optarg     ; enable_xrootd="yes"  ;;
+      --with-cc=*)             altcc=$optarg         ;;
+      --with-cxx=*)            altcxx=$optarg        ;;
+      --with-f77=*)            altf77=$optarg        ;;
+      --with-ld=*)             altld=$optarg         ;;
       ################################################################
       #
       # Enable/disable to turn on/off third party software linkage and
@@ -1264,7 +1283,9 @@ fi
 #
 if test "x$noact" = "xno"; then
     cp -f $MAKEIN Makefile.tmp
+    cp -f $MAKECOMPIN Makefile-comp.tmp
     cp -f $CONFIGUREIN RConfigure.tmp
+    cp -f $CONFIGOPTIN RConfigOptions.tmp
     cp -f $RCONFIN root-config.tmp
     cp -f $ROOTRCIN rootrc.tmp
     cp -f $ROOTAUTHRCIN rootauthrc.tmp
@@ -1408,9 +1429,22 @@ fi
 # Check for posix thread library
 #
 case $platform in
-macosx|win32)
+win32)
     if test "x$enable_thread" = "x"; then
         enable_thread="yes"
+    fi
+    ;;
+macosx)
+    if test "x$enable_thread" = "x" || test "x$enable_thread" = "xyes"; then
+        if [ `sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2` -ge 5 ]; then
+            enable_thread="yes"
+            threadflag="-D_REENTRANT -pthread"
+            threadlib="-pthread"
+            threadlibdir=
+        else
+            enable_thread="yes"
+            threadflag="-D_REENTRANT"
+        fi
     fi
     ;;
 linux|fbsd)
@@ -1431,7 +1465,7 @@ win32gcc)
     fi
     ;;
 hpuxia64acc)
-    if test "x$enable_thread" = "x"; then
+    if test "x$enable_thread" = "x" || test "x$enable_thread" = "xyes"; then
         enable_thread="yes"
         threadflag="-mt"
         threadlib="-mt"
@@ -1498,8 +1532,8 @@ result "$enable_builtin_freetype"
 #
 ### echo %%% libftgl (builtin or system) - Mandatory lib
 #
-# Mandatory test, must succeed 
-# (see http://homepages.paradise.net.nz/henryj/code/index.html#FTGL) 
+# Mandatory test, must succeed
+# (see http://homepages.paradise.net.nz/henryj/code/index.html#FTGL)
 #
 ftglincdir=include
 if test "x$platform" = "xwin32"; then
@@ -1512,17 +1546,17 @@ fi
 if test "x$enable_builtin_ftgl" = "x" || \
    test "x$enable_builtin_ftgl" = "xno" ; then
 
-   # check if we have pkg-config 
+   # check if we have pkg-config
    if `$cwhich pkg-config > /dev/null 2>&1` ; then
 
       message "Checking for libftgl"
-      if pkg-config --exists ftgl ; then 
+      if pkg-config --exists ftgl ; then
 	  result "ok"
-	  ftglincdir=`pkg-config --cflags-only-I ftgl | sed 's/-I//g'` 
-	  ftgllibs=`pkg-config --libs-only-l ftgl | sed s'/-lftgl/-lftgl_pic/'` 
-	  ftgllibdir=`pkg-config --libs-only-L ftgl | sed 's/-L//g'`  
+	  ftglincdir=`pkg-config --cflags-only-I ftgl | sed 's/-I//g'`
+	  ftgllibs=`pkg-config --libs-only-l ftgl | sed s'/-lftgl/-lftgl_pic/'`
+	  ftgllibdir=`pkg-config --libs-only-L ftgl | sed 's/-L//g'`
 	  enable_builtin_ftgl=no
-      else 
+      else
 	  enable_builtin_ftgl=yes
 	  result "no"
       fi
@@ -1632,7 +1666,7 @@ if test ! "x$enable_opengl" = "xno" && test ! "$platform" = "win32" ; then
 
     # Mac OS X 10.5.0 problem
     if test "x$platform" = "xmacosx"; then
-       if [ `sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2` = 5 ]; then
+       if [ `sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2` -eq 5 ]; then
           opengllib="-dylib_file /usr/X11R6/lib/libGL.dylib:/usr/X11R6/lib/libGL.dylib"
        fi
     fi
@@ -1933,7 +1967,7 @@ check_qtvers()
 if test ! "x$enable_qt" = "xno" || \
    test ! "x$enable_qtgsi" = "xno"; then
     # Check for Qt include and library
-    # Check for Qt 4 first 
+    # Check for Qt 4 first
     check_header "Qt/qglobal.h" "$qtincdir" $QTDIR/include \
         /usr/local/include/  /usr/local/qt/include  \
         /usr/include /usr/include/qt4
@@ -1958,25 +1992,29 @@ if test ! "x$enable_qt" = "xno" || \
 	    qttestdir=$qtmainincdir/Qt
 	fi
 	check_qtvers "$qttestdir" $qtverneed $qttoonew
-	if test $qtvers -eq 4 ; then 
-	    check_library "libQtCore QtCore QtCore4" "$enable_shared" \
+	if test $qtvers -eq 4 ; then
+	    qt4suffix="4"
+	    if test "x$enable_winrtdebug" = "xyes"; then
+	        qt4suffix="d4"
+	    fi
+	    check_library "libQtCore QtCore QtCore$qt4suffix" "$enable_shared" \
 		"$qtlibdir" $QTDIR $QTDIR/lib /usr/local/lib \
 		/usr/local/qt/lib /usr/lib /usr/qt/lib
 	    qtlib=$found_lib
 	    qtlibdir=$found_dir
-	    check_library "libQtGui QtGui QtGui4" "$enable_shared" \
-		"$found_raw_dir"  "" 
+	    check_library "libQtGui QtGui QtGui$qt4suffix" "$enable_shared" \
+		"$found_raw_dir"  ""
 	    qtlib="$qtlib $found_lib"
-	    check_library "libQt3Support Qt3Support Qt3Support4" \
+	    check_library "libQt3Support Qt3Support Qt3Support$qt4suffix" \
 		"$enable_shared" "$found_raw_dir"  ""
 	    qtlib="$qtlib $found_lib"
-	    check_library "libQtOpenGL QtOpenGL QtOpenGL4" "$enable_shared" \
+	    check_library "libQtOpenGL QtOpenGL QtOpenGL$qt4suffix" \
+		"$enable_shared" "$found_raw_dir"  ""
+	    qtlib="$qtlib $found_lib"
+	    check_library "libQtSvg QtSvg QtSvg$qt4suffix" "$enable_shared" \
 		"$found_raw_dir"  ""
 	    qtlib="$qtlib $found_lib"
-	    check_library "libQtSvg QtSvg QtSvg4" "$enable_shared" \
-		"$found_raw_dir"  ""
-	    qtlib="$qtlib $found_lib"
-	    check_library "libQtXml QtXml QtXml4" "$enable_shared" \
+	    check_library "libQtXml QtXml QtXml$qt4suffix" "$enable_shared" \
 		"$found_raw_dir"  ""
 	    qtlib="$qtlib $found_lib"
 	else
@@ -1986,20 +2024,20 @@ if test ! "x$enable_qt" = "xno" || \
 	fi
     fi
 
-    if test $qtvers -eq 0 ; then 
+    if test $qtvers -eq 0 ; then
 	logmsg "No Qt4 was found, let's try to find Qt3 instead"
 	check_header "qt.h" "$qtincdir" $QTDIR $QTDIR/include \
             /usr/local/include  /usr/local/qt/include /usr/include \
             /usr/include/qt /usr/include/qt3
 	qtinc=$found_hdr
 	qtincdir=$found_dir
-	if ! test "x$found_hdr" = "x" ; then 
+	if ! test "x$found_hdr" = "x" ; then
 	    qtverneed="3.3.0"
 	    qttoonew="4.0.0"
 	    qttestdir=$qtincdir
 	    check_qtvers "$qttestdir" $qtverneed $qttoonew
 	fi
-	if test $qtvers -eq 3 ; then 
+	if test $qtvers -eq 3 ; then
 	    check_library \
 		"libqt-mt libqt qt-mt* qt-mt334 qt-mt335 qt-mt336 qt" \
 		"$enable_shared" "$qtlibdir" \
@@ -2021,11 +2059,11 @@ if test ! "x$enable_qt" = "xno" || \
 	logmsg " Checking for $qtmocexe in $i"
 	for j in $i/moc-qt${qtvers} $i/moc-qt${qtvers}.exe $i/moc $i/moc.exe ;
 	do
-	    if test -x $j ; then 
+	    if test -x $j ; then
 		moc_vers=`$j -v >/dev/stdout 2>&1 | \
 		    sed -e 's/.*(Qt //' -e 's/\.[0-9]*\.[0-9]*)//'`
-		if test $moc_vers -ne $qtvers ; then 
-		    # Moc version does not match Qt version 
+		if test $moc_vers -ne $qtvers ; then
+		    # Moc version does not match Qt version
 		    continue
 		fi
 		qtmocexe=$j
@@ -2033,7 +2071,7 @@ if test ! "x$enable_qt" = "xno" || \
 		break
 	    fi
 	done
-	if ! test "x$qtmocexe" = "x" ; then break ; fi 
+	if ! test "x$qtmocexe" = "x" ; then break ; fi
     done
 
     # Correct path for win32
@@ -2062,7 +2100,7 @@ check_explicit "$enable_qt" "$enable_qt_explicit" \
 #
 ### echo %%% RFIO Support - Third party libraries
 #
-# (See http://http://savannah.cern.ch/files/?group=castor)
+# (See http://savannah.cern.ch/files/?group=castor)
 #
 # Check for rfio_api.h of CASTOR 2 and librfio or libshift
 #
@@ -2311,13 +2349,13 @@ if test ! "x$enable_monalisa" = "xno"; then
     monalisalibdir=$found_dir
 
     check_header "monalisawsclient.h" "$tmpincdir" $MONALISA $MONALISA/include \
-	/usr/local/include /opt/alien/include /opt/monalisa/include \
+	/usr/local/include /opt/alien/api/include /opt/monalisa/include \
 	/usr/include
     monalisawsinc=$found_hdr
     monalisawsincdir=$found_dir
 
     check_library "libmonalisawsclient" "$enable_shared" "$tmplibdir" \
-	$MONALISA $MONALISA/lib /usr/local/lib /opt/alien/lib \
+	$MONALISA $MONALISA/lib /usr/local/lib /opt/alien/api/lib \
 	/opt/monalisa/lib /usr/lib
     monalisawslib=$found_lib
     monalisawslibdir=$found_dir
@@ -2607,7 +2645,7 @@ if test ! "x$enable_asimage" = "xno" ; then
        check_header "jpeglib.h" "" $ASIMAGE $ASIMAGE/include \
           /usr/local/include /usr/include /opt/include
        asjpegincdir=$found_dir
-       check_header "png.h" "" $ASIMAGE $ASIMAGE/include \
+       check_header "png.h" "" $ASIMAGE $ASIMAGE/include $ASPNG/include \
           /usr/local/include /usr/include /usr/local/include/libpng \
           /opt/include
        aspngincdir=$found_dir
@@ -2637,7 +2675,7 @@ if test ! "x$enable_asimage" = "xno" ; then
        fi
        for k in $aslibs ; do
            check_library $k "$enable_shared" "" \
-             $ASIMAGE $ASIMAGE/lib /usr/local/lib /usr/lib /opt/lib
+             $ASIMAGE $ASIMAGE/lib $ASPNG/lib /usr/local/lib /usr/lib /opt/lib
            if test "x$k" = "xlibz" ; then
                found_libz=$found_lib
                found_dirz=$found_dir
@@ -2898,6 +2936,7 @@ xrdcomm=""
 # If we are required to use an external XROOTD distribution
 # we just define the pointers
 extraxrdflags=""
+# extraxrdflags="-DOLDXRDLOCATE"
 if test ! "x$xrootddir" = "x"; then
 
    # We do not need to build, just the paths for includes and libs
@@ -2914,22 +2953,26 @@ if test ! "x$xrootddir" = "x"; then
    fi
    decrefone=20070628
    decreftwo=20070723
+   decrefthree=20071004
    decver=0
    if test ! "x$xrdver" = "xunknown"; then
       tmpver=`echo $xrdver | cut -c2-9`
       decver=`expr 1 \* 0"$tmpver"`
    fi
    if [ $decver -gt $decrefone ] ; then
-      if [ $decver -gt $decreftwo ] ; then
-         xrdcomm="$xrdcomm (version is > 20070723)"
+      if [ $decver -gt $decrefthree ] ; then
+         xrdcomm="$xrdcomm (version is > 20071004)"
          extraxrdflags=""
+      elif [ $decver -gt $decreftwo ] ; then
+         xrdcomm="$xrdcomm (version is > 20070723)"
+         extraxrdflags="-DOLDXRDLOCATE"
       else
          xrdcomm="$xrdcomm (version is > 20070628)"
-         extraxrdflags="-DOLDXRDOUC"
+         extraxrdflags="-DOLDXRDOUC -DOLDXRDLOCATE"
       fi
    else
       xrdcomm="$xrdcomm (version is <= 20070628: setting the appropriate compilation flag)"
-      extraxrdflags="-DOLDXRCPHYCONN -DOLDXRDOUC"
+      extraxrdflags="-DOLDXRCPHYCONN -DOLDXRDOUC -DOLDXRDLOCATE"
    fi
 
 else
@@ -3529,35 +3572,90 @@ check_explicit "$enable_srp" "$enable_srp_explicit" \
 #
 # (See http://www.openafs.org)
 #
-# Check for AFS (libdes.a)
+# Check for AFS
 #
+afsextracflags=""
 if test ! "x$enable_afs" = "xno" ; then
     if test ! "x$afsdir" = "x" ; then
-	afsdir="$afsdir $afsdir/afs"
+       afsdir="$afsdir $afsdir/afs"
     fi
 
-    #
-    # Libraries
-    #
+    hasafserrormessage="no"
+    afs_shared=$enable_shared
     afslibdirs="$AFS/lib /usr/lib /usr/local/lib /opt/lib $finkdir/lib"
-    afslib=""
-    afslibdir=""
-    for i in libafsauthent libafsrpc ; do
-	check_library "$i" "no" "$afsdir" $afslibdirs
-	if test "x$found_lib" = "x" ; then
-	    afslib=""
-	    afslibdir=""
-	    enable_afs="no"
-	    break
-        fi
-	afslib="$afslib $found_lib"
-	afslibdir="$afslibdir $found_dir"
-    done
+    afslibs="libafsrpc libafsauthent"
+    if test "x$afs_shared" = "xyes" ; then
+
+       # We try to use the shared version of the libraries; however, for OpenAFS
+       # versions <= 1.4.6 these were inconsistent, some needed symbols not being
+       # exported. We need to check the symbols first
+       echo "Checking for shared AFS libs:"
+       check_library libafsrpc "$afs_shared" "$afsdir" $afslibdirs
+       if test "x$found_lib" = "x" ; then
+          afslib=""
+          afslibdir=""
+          enable_afs="no"
+          break
+       fi
+       #
+       # Check symbols
+       #
+       afssymbols="afs_add_to_error_table strcompose stolower ucstring lcstring AssertionFailed"
+       for s in $afssymbols ; do
+          check_symbol $s "$found_lib" "$found_dir"
+          if test  $found_symbol -eq 0 ; then
+             result "Checking for AFS symbols: '$s' not found"
+             afs_shared="no"
+             break
+          fi
+       done
+       #
+       # Save lib, if OK
+       if test "x$afs_shared" = "xyes" ; then
+          afslib="$found_lib"
+          afslibdir="$found_dir"
+          afslibs="libafsauthent"
+          # Check for afs_error_message, if needed
+          if test "x$hasafserrormessage" = "xno" ; then
+             check_symbol afs_error_message "$found_lib" "$found_dir"
+             if test  $found_symbol -eq 1 ; then
+                hasafserrormessage="yes"
+             fi
+          fi
+       else
+          echo "Checking for static AFS libs:"
+       fi
+    fi
+
+    if test "x$enable_afs" = "xyes" ; then
+       #
+       # Libraries
+       #
+       for i in $afslibs ; do
+          check_library "$i" "$afs_shared" "$afsdir" $afslibdirs
+          if test "x$found_lib" = "x" ; then
+             afslib=""
+             afslibdir=""
+             enable_afs="no"
+             break
+          fi
+          afslib="$found_lib $afslib"
+          afslibdir=" $found_dir $afslibdir"
+
+          # Check for afs_error_message, if needed
+          if test "x$hasafserrormessage" = "xno" ; then
+             check_symbol afs_error_message "$afslib" "$afslibdir"
+             if test  $found_symbol -eq 1 ; then
+                hasafserrormessage="yes"
+             fi
+          fi
+       done
+    fi
     #
     # header files
     #
     if test "x$enable_afs" = "xyes" ; then
-       incafs="stds.h kautils.h"
+       incafs="stds.h kautils.h com_err.h"
        for i in $incafs ; do
            check_header "afs/$i" "$found_dir" \
               /usr/include /usr/local/include /opt/include $finkdir/include
@@ -3584,6 +3682,18 @@ if test ! "x$enable_afs" = "xno" ; then
 
     if test "x$afslib" = "x" ; then
         enable_afs="no"
+    else
+        # flag for error_message prototype
+        if test "x$hasafserrormessage" = "xno" ; then
+           afsextracflags="-DR__AFSOLDCOMERR"
+        fi
+        # Warn about usage of static libs to build a shared object
+        if test "x$afs_shared" = "xno" ; then
+            echo "### WARNING: AFS enabled using static libraries: this may lead to relocation-related"
+            echo "### errors or warnings if the static libraries are not compiled with the correct options;"
+            echo "### if this happens, please re-run with --enable-shared or move to openafs >= 1.5.x"
+            echo "### or rebuild the AFS static libs with the '-fPIC' option."
+        fi
     fi
 fi
 check_explicit "$enable_afs" "$enable_afs_explicit" \
@@ -3771,6 +3881,10 @@ if test ! "x$enable_mathmore" = "xno"; then
     # Check for GSL include and library
     gslskip=
     hasmathmore="define"
+    # by default use now static GSL library everywhere
+    #enable_gsl_shared=$enable_shared"
+    enable_gsl_shared="no"
+
     check_header "gsl/gsl_version.h" "$gslincdir" $GSL $GSL/include \
 	$GSL/api /usr/local/include /usr/include /opt/gsl/include \
 	$finkdir/include
@@ -3795,7 +3909,7 @@ if test ! "x$enable_mathmore" = "xno"; then
     if test ! "x$gslflags" = "x"; then
 	#check for the library now
 	gsllibdir0=$gsllibdir
-	check_library "libgsl gslML gsl" "$enable_shared" "$gsllibdir" \
+	check_library "libgsl gslML gsl" "$enable_gsl_shared" "$gsllibdir" \
 	    $GSL $GSL/lib $GSL/.libs /usr/local/lib /usr/lib /opt/gsl/lib \
 	    $finkdir/lib
 
@@ -3805,7 +3919,7 @@ if test ! "x$enable_mathmore" = "xno"; then
 	    # in case of shared libs (gsllibdir is not empty) need gslcblas
 	    # assume libgslcblas is in same dir as libgsl
 	    #if test ! "x$gsllibdir" = "x"; then
-		check_library "libgslcblas gslcblasML gslcblas cblas" "$enable_shared" "$gsllibdir0" \
+		check_library "libgslcblas gslcblasML gslcblas cblas" "$enable_gsl_shared" "$gsllibdir0" \
 		    $GSL $GSL/lib $GSL/.libs /usr/local/lib /usr/lib /opt/gsl/lib \
 		    $finkdir/lib
 		if test ! "x$found_lib" = "x"; then
@@ -3855,7 +3969,10 @@ if test ! "x$enable_mathmore" = "xno"; then
 	        # and linker flags
 		result "ok"
 	        gslflags=`gsl-config --cflags`
-	        gsllibs=`gsl-config --libs`
+	        #gsllibs=`gsl-config --libs`
+		#use static libs
+		gslprefix=`gsl-config --prefix`
+		gsllibs="$gslprefix/lib/libgsl.a $gslprefix/lib/libgslcblas.a"
 		gsllibdir=""
                 gslversion=$gsl_version
             fi
@@ -4240,6 +4357,7 @@ fi
 rm -f lib/libRXML* bin/libRXML* bin/xproofd etc/system.rootmap
 rm -f lib/libProofGui* bin/libProofGui* bin/xrdgsiproxy
 rm -f lib/libMySQL* bin/libMySQL* lib/libGedOld* bin/libGedOld*
+rm -f lib/libASPluginGS.*
 
 ######################################################################
 #
@@ -4257,6 +4375,10 @@ if test "x$enable_globus" = "xyes" && test "x$enable_rpath" = "xyes"; then
     case "$arch" in
         solarisCC5)
           sed -e "s|@ldflags@|-R$globusdir/lib @ldflags@|" \
+                 < Makefile.tmp > Makefile.tmpp
+          ;;
+        solarisgcc*)
+          sed -e "s|@ldflags@|-Wl,-rpath,$globusdir/lib @ldflags@|" \
                  < Makefile.tmp > Makefile.tmpp
           ;;
         linux*)
@@ -4296,6 +4418,10 @@ if test ! "x$haveconfig" = "x" ; then
        case "$arch" in
           solarisCC5)
              sed -e "s|@ldflags@|-R$libdir @ldflags@|" \
+                    < Makefile.tmp > Makefile.tmpp
+             ;;
+          solarisgcc*)
+             sed -e "s|@ldflags@|-Wl,-rpath,$libdir @ldflags@|" \
                     < Makefile.tmp > Makefile.tmpp
              ;;
           linux*)
@@ -4366,6 +4492,7 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@afslib@|$afslib|"                    \
     -e "s|@afslibdir@|$afslibdir|"              \
     -e "s|@afsincdir@|$afsincdir|"              \
+    -e "s|@afsextracflags@|$afsextracflags|"    \
     -e "s|@alienincdir@|$alienincdir|"          \
     -e "s|@alienlib@|$alienlib|"                \
     -e "s|@alienlibdir@|$alienlibdir|"          \
@@ -4575,7 +4702,7 @@ sed -e "s|@srcdir@|$srcdir|"                    \
     -e "s|@buildsrputil@|$enable_srputil|"      \
     -e "s|@buildkrb5@|$enable_krb5|"            \
     -e "s|@buildglobus@|$enable_globus|"        \
-    -e "s|@buildxrdgsi@|$buildxrdgsi|"        \
+    -e "s|@buildxrdgsi@|$buildxrdgsi|"          \
     -e "s|@buildclarens@|$enable_clarens|"      \
     -e "s|@buildpeac@|$buildpeac|"              \
     < Makefile.tmp > $MAKEOUT
@@ -4589,6 +4716,20 @@ if test "x$platform" = "xwin32"; then
     < $MAKEOUT >> Makefile.tmp
     mv -f Makefile.tmp $MAKEOUT
 fi
+
+result "done"
+
+#---------------------------------------------------------------------
+# config/Makefile.comp
+#
+
+message "Writing $MAKECOMPOUT"
+sed -e "s|@altcc@|$altcc|"     \
+    -e "s|@altcxx@|$altcxx|"   \
+    -e "s|@altf77@|$altf77|"   \
+    -e "s|@altld@|$altld|"     \
+    < Makefile-comp.tmp > $MAKECOMPOUT
+rm -f Makefile-comp.tmp
 
 result "done"
 
@@ -4612,19 +4753,11 @@ sed \
     -e "s|@srcdir@|$srcdir|"               \
     -e "s|@ttffontdir@|$fontdir|"          \
     -e "s|@setresuid@|$setresuid|"         \
-    -e "s|@configoptions@|$configoptions|" \
     -e "s|@hasmathmore@|$hasmathmore|"     \
     -e "s|@haspthread@|$haspthread|"       \
     -e "s|@hasxft@|$hasxft|"               \
     < RConfigure.tmp > RConfigure-out.tmp
 rm -f RConfigure.tmp
-
-if test ! "x$enable_ruby" = "xno"; then
-   echo "" >> RConfigure-out.tmp
-   ruby -rrbconfig -e 'puts Config::CONFIG["ruby_version"]' | \
-   sed 's/^\([0-9]\)\.\([0-9]\)/#define R__RUBY_MAJOR \1@#define R__RUBY_MINOR \2/' | \
-   tr '@' '\n' >> RConfigure-out.tmp
-fi
 
 # only update $CONFIGUREOUT when different
 if test -f $CONFIGUREOUT; then
@@ -4636,6 +4769,36 @@ if test -f $CONFIGUREOUT; then
    fi
 else
    mv -f RConfigure-out.tmp $CONFIGUREOUT
+fi
+
+result "done"
+
+#---------------------------------------------------------------------
+# include/RConfigOptions.h
+#
+message "Writing $CONFIGOPTOUT"
+sed \
+    -e "s|@configoptions@|$configoptions|" \
+    < RConfigOptions.tmp > RConfigOptions-out.tmp
+rm -f RConfigOptions.tmp
+
+if test ! "x$enable_ruby" = "xno"; then
+   echo "" >> RConfigOptions-out.tmp
+   ruby -rrbconfig -e 'puts Config::CONFIG["ruby_version"]' | \
+   sed 's/^\([0-9]\)\.\([0-9]\)/#define R__RUBY_MAJOR \1@#define R__RUBY_MINOR \2/' | \
+   tr '@' '\n' >> RConfigOptions-out.tmp
+fi
+
+# only update $CONFIGOPTOUT when different
+if test -f $CONFIGOPTOUT; then
+   diff RConfigOptions-out.tmp $CONFIGOPTOUT > /dev/null; status=$?;
+   if [ "$status" -ne "0" ]; then
+      mv -f RConfigOptions-out.tmp $CONFIGOPTOUT
+   else
+      rm -f RConfigOptions-out.tmp
+   fi
+else
+   mv -f RConfigOptions-out.tmp $CONFIGOPTOUT
 fi
 
 result "done"
@@ -4678,6 +4841,10 @@ sed -e "s|@architecture@|$arch|"           \
     -e "s|@dicttype@|$dicttype|"           \
     -e "s|@zliblib@|$zliblib|"             \
     -e "s|@pythonvers@|$pythonvers|"       \
+    -e "s|@altcc@|$altcc|"                 \
+    -e "s|@altcxx@|$altcxx|"               \
+    -e "s|@altf77@|$altf77|"               \
+    -e "s|@altld@|$altld|"                 \
    < root-config.tmp > $RCONFOUT
 rm -f root-config.tmp
 chmod 755 $RCONFOUT

@@ -30,6 +30,7 @@
 
 
 
+
 /**
 
 @defgroup Integration Numerical Integration
@@ -43,7 +44,7 @@ namespace Math {
 
 
 
-
+//____________________________________________________________________________________________
 /**
 
 User Class for performing numerical integration of a function in one dimension.
@@ -85,7 +86,8 @@ public:
     // constructors
 
 
-    /** Constructor of one dimensional Integrator, default type is adaptive
+    /** 
+        Constructor of one dimensional Integrator, default type is adaptive
 
        @param type   integration type (adaptive, non-adaptive, etc..)
        @param absTol desired absolute Error
@@ -94,14 +96,15 @@ public:
        @param rule  Gauss-Kronrod integration rule (only for GSL ADAPTIVE type)  
                      
        Possible rule values are GAUS15 (rule = 1), GAUS21( rule = 2), GAUS31(rule =3), GAUS41 (rule=4), GAUS51 (rule =5), GAUS61(rule =6)
-       lower rules are indicated for singular funcitons while higher for smooth functions to get better accuracies
+       lower rules are indicated for singular functions while higher for smooth functions to get better accuracies
     */
     explicit
     IntegratorOneDim(IntegrationOneDim::Type type = IntegrationOneDim::ADAPTIVE, double absTol = 1.E-9, double relTol = 1E-6, unsigned int size = 1000, unsigned int rule = 3) { 
        fIntegrator = CreateIntegrator(type, absTol, relTol, size, rule); 
     }
     
-    /** Constructor of one dimensional Integrator passing a function interface
+   /** 
+       Constructor of one dimensional Integrator passing a function interface
 
        @param f      integration function (1D interface). It is copied inside
        @param type   integration type (adaptive, non-adaptive, etc..)
@@ -116,7 +119,8 @@ public:
       SetFunction(f,true);
    }
 
-    /** Template Constructor of one dimensional Integrator passing a generic function object
+   /** 
+        Template Constructor of one dimensional Integrator passing a generic function object
 
        @param f      integration function (any C++ callable object implementing operator()(double x)
        @param type   integration type (adaptive, non-adaptive, etc..)
@@ -156,19 +160,28 @@ public:
 
    */
 
+
    template<class Function>
-inline void SetFunction(Function f); 
+   inline void SetFunction(Function f); 
 
    /** 
        set one dimensional function for 1D integration
     */
-   //template<>
-   //void SetFunction<const ROOT::Math::IGenFunction &> (const IGenFunction &f) 
 
-void SetFunction  (const IGenFunction &f, bool copy = false) { 
-  if (fIntegrator) fIntegrator->SetFunction(f,copy);
+
+   void SetFunction  (const IGenFunction &f, bool copy = false) { 
+      if (fIntegrator) fIntegrator->SetFunction(f,copy);
    }
-   
+
+
+   /** 
+      Set integration function from a multi-dim function type. 
+      Can be used in case of having 1D function implementing the generic interface
+       @param f      integration function
+       @param icoord index of coordinate on which the intergation is performed 
+       @param x  array of the passed variables values. In case of dim=1 is not required
+   */
+   void SetFunction(const IMultiGenFunction &f, unsigned int icoord = 0, const double * x = 0);
 
     // integration methods using a function 
 
@@ -347,7 +360,7 @@ protected:
 
 private:
 
-   VirtualIntegratorOneDim * fIntegrator;
+   VirtualIntegratorOneDim * fIntegrator;   // pointer to integrator interface class
 
 };
 

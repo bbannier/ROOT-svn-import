@@ -15,7 +15,7 @@ MODDIR       := $(SRCDIR)/pcre
 MODDIRS      := $(MODDIR)/src
 MODDIRO      := pcre/src
 
-PCREVERS     := pcre-6.4
+PCREVERS     := pcre-7.4
 PCREDIR      := $(MODDIR)
 PCREDIRS     := $(MODDIRS)
 PCREDIRO     := $(MODDIRO)
@@ -24,7 +24,7 @@ PCREDIRI     := $(MODDIRO)/$(PCREVERS)
 ##### libpcre #####
 PCRELIBS     := $(MODDIRS)/$(PCREVERS).tar.gz
 ifeq ($(PLATFORM),win32)
-PCRELIBA     := $(MODDIRO)/$(PCREVERS)/Win32/libpcre-6.4.lib
+PCRELIBA     := $(MODDIRO)/$(PCREVERS)/Win32/libpcre-7.4.lib
 PCRELIB      := $(LPATH)/libpcre.lib
 ifeq (yes,$(WINRTDEBUG))
 PCREBLD      := "libpcre - Win32 Debug"

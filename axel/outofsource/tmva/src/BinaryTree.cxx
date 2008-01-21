@@ -27,10 +27,13 @@
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
 
-//_______________________________________________________________________
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+// BinaryTree                                                           //
 //                                                                      //
 // Base class for BinarySearch and Decision Trees                       //
-//______________________________________________________________________//
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
 
 #include <string>
 #include <stdexcept>
@@ -44,8 +47,9 @@ ClassImp(TMVA::BinaryTree)
 
 //_______________________________________________________________________
 TMVA::BinaryTree::BinaryTree( void )
-   : fRoot ( NULL ), 
-     fNNodes ( 0 ),
+   : fRoot  ( NULL ), 
+     fNNodes( 0 ),
+     fDepth ( 0 ),
      fLogger( "BinaryTree" )
 {
    // constructor for a yet "empty" tree. Needs to be filled afterwards
@@ -92,7 +96,7 @@ UInt_t TMVA::BinaryTree::CountNodes(TMVA::Node *n)
    // return the number of nodes in the tree. (make a new count --> takes time)
 
    if (n == NULL){ //default, start at the tree top, then descend recursively
-      n = (Node*) this->GetRoot();
+      n = (Node*)this->GetRoot();
       if (n == NULL) return 0 ;
    } 
 
@@ -111,7 +115,7 @@ UInt_t TMVA::BinaryTree::CountNodes(TMVA::Node *n)
 //_______________________________________________________________________
 void TMVA::BinaryTree::Print(ostream & os) const
 {
-   //recursively print the tree
+   // recursively print the tree
    this->GetRoot()->PrintRec(os);
    os << "-1" << endl;
 }
@@ -119,7 +123,7 @@ void TMVA::BinaryTree::Print(ostream & os) const
 //_______________________________________________________________________
 ostream& TMVA::operator<< (ostream& os, const TMVA::BinaryTree& tree)
 { 
-   //print the tree recursinvely using the << operator
+   // print the tree recursinvely using the << operator
    tree.Print(os);
    return os; // Return the output stream.
 }
@@ -127,11 +131,38 @@ ostream& TMVA::operator<< (ostream& os, const TMVA::BinaryTree& tree)
 //_______________________________________________________________________
 void TMVA::BinaryTree::Read(istream & istr)
 {
-   // recursively read the tree
-   if (GetRoot()==0) SetRoot(CreateNode());
-   char pos='s';
-   UInt_t depth =0;
-   GetRoot()->ReadRec(istr,pos,depth);
+   // Read the binary tree from an input stream.
+   // The input stream format depends on the tree type,
+   // it is defined be the node of the tree
+
+   Node * currentNode = GetRoot();
+   Node* parent = 0;
+
+   if(currentNode==0) {
+      currentNode=CreateNode();
+      SetRoot(currentNode);
+   }
+
+   while(1) {
+      if ( ! currentNode->ReadDataRecord(istr) ) {
+         delete currentNode;
+         this->SetTotalTreeDepth();
+         return;
+      }
+
+      // find parent node
+      while( parent!=0 && parent->GetDepth() != currentNode->GetDepth()-1) parent=parent->GetParent();
+      
+      if (parent!=0) { // link new node to parent
+         currentNode->SetParent(parent);
+         if (currentNode->GetPos()=='l') parent->SetLeft(currentNode);
+         if (currentNode->GetPos()=='r') parent->SetRight(currentNode);
+      }
+
+      parent = currentNode; // latest node read might be parent of new one
+
+      currentNode = CreateNode(); // create a new node to be read next
+   }
 }
 
 //_______________________________________________________________________
@@ -140,4 +171,26 @@ istream& TMVA::operator>> (istream& istr, TMVA::BinaryTree& tree)
    // read the tree from an istream
    tree.Read(istr);
    return istr;
+}
+//_______________________________________________________________________
+void TMVA::BinaryTree::SetTotalTreeDepth( Node *n)
+{
+   // descend a tree to find all its leaf nodes, fill max depth reached in the
+   // tree at the same time. 
+
+   if (n == NULL){ //default, start at the tree top, then descend recursively
+      n = (Node*) this->GetRoot();
+      if (n == NULL) {
+         fLogger << kFATAL << "SetTotalTreeDepth: started with undefined ROOT node" <<Endl;
+         return ;
+      }
+   } 
+   if (this->GetLeftDaughter(n) != NULL){
+      this->SetTotalTreeDepth( this->GetLeftDaughter(n) );
+   }
+   if (this->GetRightDaughter(n) != NULL) {
+      this->SetTotalTreeDepth( this->GetRightDaughter(n) );
+   }
+   if (n->GetDepth() > this->GetTotalTreeDepth()) this->SetTotalTreeDepth(n->GetDepth());
+   return;
 }

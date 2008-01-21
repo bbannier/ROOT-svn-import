@@ -64,6 +64,7 @@ public:
 private:
    UInt_t            fCheckSum;          //checksum of original class
    Int_t             fClassVersion;      //Class version identifier
+   Int_t             fOnFileClassVersion;//!Class version identifier as stored on file.
    Int_t             fNumber;            //!Unique identifier
    Int_t             fNdata;             //!number of optmized types
    Int_t             fSize;              //!size of the persistent class
@@ -85,6 +86,9 @@ private:
    void              BuildUserInfo(const char *info);
    static Double_t   GetValueAux(Int_t type, void *ladd, int k, Int_t len);
    static void       PrintValueAux(char *ladd, Int_t atype, TStreamerElement * aElement, Int_t aleng, Int_t *count);
+
+   UInt_t            GenerateIncludes(FILE *fp, char *inclist);
+   void              GenerateDeclaration(FILE *fp, FILE *sfp, const TList *subClasses, Bool_t top = kTRUE);
 
 protected:
    TStreamerInfo(const TStreamerInfo&);
@@ -147,7 +151,7 @@ public:
    void                Compile();
    void                ComputeSize();
    void                ForceWriteInfo(TFile *file, Bool_t force=kFALSE);
-   Int_t               GenerateHeaderFile(const char *dirname);
+   Int_t               GenerateHeaderFile(const char *dirname, const TList *subClasses = 0);
    TClass             *GetClass() const {return fClass;}
    UInt_t              GetCheckSum() const {return fCheckSum;}
    Int_t               GetClassVersion() const {return fClassVersion;}
@@ -162,6 +166,7 @@ public:
    Int_t               GetOffset(const char *) const;
    Int_t              *GetOffsets() const {return fOffset;}
    Version_t           GetOldVersion() const {return fOldVersion;}
+   Int_t               GetOnFileClassVersion() const {return fOnFileClassVersion;}
    Int_t               GetSize()    const;
    Int_t               GetSizeElements()    const;
    TStreamerElement   *GetStreamerElement(const char*datamember, Int_t& offset) const;

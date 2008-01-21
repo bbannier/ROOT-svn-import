@@ -42,6 +42,8 @@
 #include "TEnv.h"
 #include "THashTable.h"
 
+#include "RConfigure.h"
+
 #include <vector>
 #include <set>
 #include <string>
@@ -69,7 +71,7 @@ extern "C" void TCint_UpdateClassInfo(char *c, Long_t l) {
 
 extern "C" int TCint_AutoLoadCallback(char *c, char *l) {
    ULong_t varp = G__getgvp();
-   G__setgvp(G__PVOID);
+   G__setgvp((Long_t)G__PVOID);
    string cls(c);
    int result =  TCint::AutoLoadCallback(cls.c_str(), l);
    G__setgvp(varp);
@@ -209,7 +211,16 @@ Bool_t TCint::IsLoaded(const char* filename) const
       incPath.ReplaceAll(" :",":");
    }
    incPath.Prepend(".:");
-   incPath.Append(":$ROOTSYS/cint/include:$ROOTSYS/cint/stl");
+# ifdef CINTINCDIR
+   TString cintdir = CINTINCDIR;
+# else
+   TString cintdir = "$(ROOTSYS)/cint";
+# endif
+   incPath.Append(":");
+   incPath.Append(cintdir);
+   incPath.Append("/include:");
+   incPath.Append(cintdir);
+   incPath.Append("/stl");
    next = gSystem->Which(incPath, filename, kReadPermission);
    if (next) {
       file.Init(next);
@@ -403,7 +414,7 @@ void TCint::PrintIntro()
 void TCint::RecursiveRemove(TObject *obj)
 {
    // Delete object from CINT symbol table so it can not be used anymore.
-   // CINT object are always on the heap.
+   // CINT objects are always on the heap.
 
    if (obj->IsOnHeap() && fgSetOfSpecials && !((std::set<TObject*>*)fgSetOfSpecials)->empty()) {
       std::set<TObject*>::iterator iSpecial = ((std::set<TObject*>*)fgSetOfSpecials)->find(obj);
@@ -1201,7 +1212,12 @@ Int_t TCint::LoadLibraryMap(const char *rootmapfile)
                         // Only declared the namespace do not specify any library because
                         // the namespace might be spread over several libraries and we do not
                         // know (yet?) which one the user will need!
-                        G__set_class_autoloading_table((char*)base.Data(), "");
+
+                        // But what if it's not a namespace but a class?
+                        // Does CINT already know it?
+                        const char* baselib = G__get_class_autoloading_table((char*)base.Data());
+                        if ((!baselib || !baselib[0]) && !rec->FindObject(base))
+                           G__set_class_autoloading_table((char*)base.Data(), "");
                      }
                      ++k;
                   }
@@ -1304,7 +1320,7 @@ Int_t TCint::UnloadLibraryMap(const char *library)
 //______________________________________________________________________________
 Int_t TCint::AutoLoad(const char *cls)
 {
-   // Load library containing specified class. Returns 0 in case of error
+   // Load library containing the specified class. Returns 0 in case of error
    // and 1 in case if success.
 
    Int_t status = 0;
@@ -1512,7 +1528,6 @@ void TCint::UpdateClassInfoWork(const char *item, Long_t tagnum)
    if (cl) cl->ResetClassInfo(tagnum);
 }
 
-
 //______________________________________________________________________________
 void TCint::UpdateAllCanvases()
 {
@@ -1676,4 +1691,3 @@ const char *TCint::GetIncludePath()
 
    return fIncludePath;
 }
-

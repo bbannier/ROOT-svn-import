@@ -43,6 +43,7 @@ TMVA::RuleEnsemble::RuleEnsemble( RuleFit *rf )
    , fAverageSupport   ( 0.8 )
    , fAverageRuleSigma ( 0.4 )  // default value - used if only linear model is chosen
    , fRuleMinDist      ( 1e-3 ) // closest allowed 'distance' between two rules
+   , fRuleMapEvents    ( 0 )
    , fLogger( "RuleFit" )
 {
    // constructor
@@ -52,6 +53,7 @@ TMVA::RuleEnsemble::RuleEnsemble( RuleFit *rf )
 //_______________________________________________________________________
 TMVA::RuleEnsemble::RuleEnsemble( const RuleEnsemble& other )
    : fAverageSupport   ( 1 )
+   , fRuleMapEvents(0)
    , fLogger( "RuleFit" )
 {
    // copy constructor
@@ -60,7 +62,8 @@ TMVA::RuleEnsemble::RuleEnsemble( const RuleEnsemble& other )
 
 //_______________________________________________________________________
 TMVA::RuleEnsemble::RuleEnsemble()
-   : fLogger( "RuleFit" )
+   : fRuleMapEvents(0)
+   , fLogger( "RuleFit" )
 {
    // constructor
 }
@@ -679,14 +682,12 @@ Double_t TMVA::RuleEnsemble::PdfRule( Double_t & nsig, Double_t & ntot  ) const
    Double_t sump  = 0;
    Double_t sumok = 0;
    Double_t sumz  = 0;
-   Double_t ssb;
-   Double_t neve;
    //
    UInt_t nrules = fRules.size();
    for (UInt_t ir=0; ir<nrules; ir++) {
-      if (fEventRuleVal[ir]>0) {
-         ssb = fEventRuleVal[ir]*GetRulesConst(ir)->GetSSB(); // S/(S+B) is evaluated in CalcRuleSupport() using ALL training events
-         neve = GetRulesConst(ir)->GetSSBNeve(); // number of events accepted by the rule
+      if(fEventRuleVal[ir]) {
+         Double_t ssb = GetRulesConst(ir)->GetSSB(); // S/(S+B) is evaluated in CalcRuleSupport() using ALL training events
+         Double_t neve = GetRulesConst(ir)->GetSSBNeve(); // number of events accepted by the rule
          sump  += ssb*neve; // number of signal events
          sumok += neve; // total number of events passed
       } else sumz += 1.0; // all events
