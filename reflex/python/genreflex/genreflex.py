@@ -271,11 +271,11 @@ class genreflex:
     else :
       print '--->> genreflex: WARNING: While trying to retrieve compiler version, found unknown compiler %s' % compiler
       return s
-    (inp,out,err) = os.popen3('%s %s'%(compiler,vopt))
+    (inp,out,err) = os.popen3('"%s" %s'%(compiler,vopt))
     serr = err.read()
     # cl puts its version into cerr!
     if serr:
-      if bcomp in ('cl.exe','cl'):
+      if bcomp in ('cl.exe','cl') and serr.find('is not recognized') == -1:
         s += '\nCompiler info:\n' + serr
         return s
       else:
@@ -298,7 +298,7 @@ class genreflex:
       else :
         dicfile = os.path.join(self.outputDir,name+file_extension)
       #---------------Parse the header file with GCC_XML
-      cmd  = '%s %s %s -fxml=%s %s -D__REFLEX__' %(self.gccxml, self.gccxmlopt, source, xmlfile, self.cppopt)
+      cmd  = '%s %s "%s" -fxml=%s %s -D__REFLEX__' %(self.gccxml, self.gccxmlopt, source, xmlfile, self.cppopt)
       if 'debug' in self.opts : print '--->> genreflex: INFO: invoking ', cmd
       if not self.quiet : print '--->> genreflex: INFO: Parsing file %s with GCC_XML' % source,
       status = os.system(cmd)
