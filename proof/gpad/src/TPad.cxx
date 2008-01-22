@@ -4168,9 +4168,11 @@ void TPad::Print(const char *filenam, Option_t *option)
    //    }// end loop
    //    c1.Print("file.ps]");   // No actual print, just close.
    //
-   // It's posiible to Print pad into an animated GIF file by specifying file name as
-   // "myfile.gif+" of "myfile.gif+NN" , where NN is delay of displaying subimages
-   // during animation in 10ms units. If NN is ommitted the delay between subimages is zero.
+   // It is possible to print a pad into an animated GIF file by specifying the
+   // file name as "myfile.gif+" or "myfile.gif+NN", where NN*10ms is delay
+   // between the subimages' display. If NN is ommitted the delay between
+   // subimages is zero. Each picture is added in the animation thanks to a loop
+   // similar to the following one:
    //
    //    for (int i=0; i<10; ++i) {
    //      // fill canvas for context i
@@ -4178,6 +4180,8 @@ void TPad::Print(const char *filenam, Option_t *option)
    //
    //      c1.Print("file.gif+5");  // print canvas to GIF file with 50ms delays
    //    }// end loop
+   //
+   // The delay between each frame must be specified in each Print() statement.
 
    TString psname, fs1, fs2;
    char *filename;
@@ -4220,7 +4224,7 @@ void TPad::Print(const char *filenam, Option_t *option)
       psname.Prepend("/");
       psname.Prepend(gEnv->GetValue("Canvas.PrintDirectory","."));
    }
-   if (!gPad->IsBatch() && fCanvas) 
+   if (!gPad->IsBatch() && fCanvas)
       gVirtualX->SelectWindow(GetCanvasID());
 
    // Save pad/canvas in alternative formats
@@ -4361,10 +4365,14 @@ void TPad::Print(const char *filenam, Option_t *option)
    // is not on the screen, set batch mode
    Bool_t mustOpen  = kTRUE;
    Bool_t mustClose = kTRUE;
-   char *copen   = (char*)strstr(psname.Data(),"("); if (copen)   *copen   = 0;
-   char *cclose  = (char*)strstr(psname.Data(),")"); if (cclose)  *cclose  = 0;
-   char *copenb  = (char*)strstr(psname.Data(),"["); if (copenb)  *copenb  = 0;
-   char *ccloseb = (char*)strstr(psname.Data(),"]"); if (ccloseb) *ccloseb = 0;
+   char *copen=0, *cclose=0, *copenb=0, *ccloseb=0;
+   if (!image) {
+      // The parenthesis mechanism is only valid for PS files.
+      copen   = (char*)strstr(psname.Data(),"("); if (copen)   *copen   = 0;
+      cclose  = (char*)strstr(psname.Data(),")"); if (cclose)  *cclose  = 0;
+      copenb  = (char*)strstr(psname.Data(),"["); if (copenb)  *copenb  = 0;
+      ccloseb = (char*)strstr(psname.Data(),"]"); if (ccloseb) *ccloseb = 0;
+   }
    gVirtualPS = (TVirtualPS*)gROOT->GetListOfSpecials()->FindObject(psname);
    if (gVirtualPS) {mustOpen = kFALSE; mustClose = kFALSE;}
    if (copen  || copenb)  mustClose = kFALSE;
