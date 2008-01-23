@@ -1178,9 +1178,6 @@ Int_t TPacketizerAdaptive::CalculatePacketSize(TObject *slStatPtr)
       // in case the worker has suddenly slowed down
       if (rate < 0.25 * slstat->GetAvgRate())
          rate = (rate + slstat->GetAvgRate()) / 2;
-      // in case the worker was generally slow
-      if (rate < 0.20 * (fTotalEntries - fProcessed))
-         packetTime *= 2;
       num = (Long64_t)(rate * packetTime);
    } else { //first packet for this slave in this query
       Int_t packetSize = (fTotalEntries - fProcessed)
@@ -1386,9 +1383,10 @@ TDSetElement *TPacketizerAdaptive::GetNextPacket(TSlave *sl, TMessage *r)
    Long64_t first = file->GetNextEntry();
    Long64_t last = base->GetFirst() + base->GetNum();
 
-   // if the remaining part is smaller than the packetsize, increase the packetsize
+   // if the remaining part is smaller than the (packetsize * 1.5)
+   // then increase the packetsize
 
-   if ( first + num >= last ) {
+   if ( first + num * 1.5 >= last ) {
       num = last - first;
       file->SetDone(); // done
 
