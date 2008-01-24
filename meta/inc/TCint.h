@@ -46,11 +46,7 @@ class TMethod;
 class TObjArray;
 class TEnv;
 class TVirtualMutex;
-class THashTable;
-class TSymbolLookup;
 
-#include <string>
-#include <map>
 using namespace std;
 
 R__EXTERN TVirtualMutex *gCINTMutex;
@@ -68,8 +64,6 @@ private:
    TEnv           *fMapfile;        //map of classes and libraries
    TObjArray      *fRootMapFiles;   //list of non-default rootmap files loaded
    Bool_t          fLockProcessLine;//true if ProcessLine should lock gCINTMutex
-   
-   multimap<string, TSymbolLookup*> *fSymbolTable;    // List of libraries with their symbols 
    static void    *fgSetOfSpecials; //set of TObject*s used in CINT variables
 
    TCint() : fMore(-1), fExitCode(0), fDictPos(), fDictPosGlobals(),
@@ -101,7 +95,6 @@ public:
    const char *GetSharedLibDeps(const char *lib);
    const char *GetIncludePath();
    TObjArray  *GetRootMapFiles() const { return fRootMapFiles; }
-   multimap<string, TSymbolLookup*> *GetSymbolTable() { return fSymbolTable; }
    Int_t   InitializeDictionaries();
    Bool_t  IsLoaded(const char *filename) const;
    Int_t   Load(const char *filenam, Bool_t system = kFALSE);
@@ -144,17 +137,6 @@ public:
    Bool_t  IsProcessLineLocked() const { return fLockProcessLine; }
    void    SetProcessLineLock(Bool_t lock = kTRUE) { fLockProcessLine = lock; }
    const char *TypeName(const char *typeDesc);
-
-   //______________________________________________________________________________   
-   void    MapDependantTypes();
-   void    MapDependantTypesX();
-   void    MapDependantTypesTree();
-
-   //static Int_t       SymbolList(struct link_map *map, char **symbols, int **address);
-   static void        Register(const char *libname, const char *clstr);
-
-   Int_t  RegisterPointer(const char *classname, const char *method, const char *proto, void *ptr);
-   //______________________________________________________________________________
 
    static void *FindSpecialObject(const char *name, G__ClassInfo *type, void **prevObj, void **assocPtr);
    static int   AutoLoadCallback(const char *cls, const char *lib);
