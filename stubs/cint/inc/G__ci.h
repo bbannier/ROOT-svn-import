@@ -1790,7 +1790,6 @@ extern G__EXPORT int G__memfunc_para_setup G__P((int ifn,int type,int tagnum,int
 extern G__EXPORT int G__tag_memfunc_reset G__P((void));
 extern G__EXPORT int G__memfunc_register G__P((G__CONST char* classname));
 extern G__EXPORT int G__memfunc_register2 G__P((G__CONST char* classname, G__CONST char* libname));
-extern G__EXPORT int G__memfunc_register_callback G__P((void (*callback)(G__CONST char* libname, G__CONST char* classname)));
 extern G__EXPORT char *G__get_libname  G__P((G__CONST char* classname));
 extern G__EXPORT void G__letint G__P((G__value *buf,int type,long value));
 extern G__EXPORT void G__letdouble G__P((G__value *buf,int type,double value));
