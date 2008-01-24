@@ -48,6 +48,13 @@ TGLWidgetContainer::TGLWidgetContainer(TGLWidget *owner, Window_t id, const TGWi
 }
 
 //______________________________________________________________________________
+Bool_t TGLWidgetContainer::HandleCrossing(Event_t *ev)
+{
+   // Handle mouse crossing event.
+   return fOwner->HandleCrossing(ev);
+}
+
+//______________________________________________________________________________
 Bool_t TGLWidgetContainer::HandleButton(Event_t *ev)
 {
    //Delegate call to the owner.
@@ -66,6 +73,13 @@ Bool_t TGLWidgetContainer::HandleConfigureNotify(Event_t *ev)
 {
    //Delegate call to the owner.
    return fOwner->HandleConfigureNotify(ev);
+}
+
+//______________________________________________________________________________
+Bool_t TGLWidgetContainer::HandleFocusChange(Event_t *ev)
+{
+   //Delegate call to the owner.
+   return fOwner->HandleFocusChange(ev);
 }
 
 //______________________________________________________________________________
@@ -159,6 +173,7 @@ TGLWidget::TGLWidget(const TGWindow &p, Bool_t select,
       gVirtualX->SelectInput(
                              fContainer->GetId(), kKeyPressMask | kExposureMask | kPointerMotionMask
                              | kStructureNotifyMask | kFocusChangeMask
+                             | kEnterWindowMask | kLeaveWindowMask
                             );
       gVirtualX->SetInputFocus(fContainer->GetId());
    }
@@ -186,6 +201,7 @@ TGLWidget::TGLWidget(const TGLFormat &format, const TGWindow &p, Bool_t select,
       gVirtualX->SelectInput(
                              fContainer->GetId(), kKeyPressMask | kExposureMask | kPointerMotionMask
                              | kStructureNotifyMask | kFocusChangeMask
+                             | kEnterWindowMask | kLeaveWindowMask
                             );
       gVirtualX->SetInputFocus(fContainer->GetId());
    }
@@ -211,6 +227,7 @@ TGLWidget::TGLWidget(const TGWindow &p, Bool_t select,
       gVirtualX->SelectInput(
                              fContainer->GetId(), kKeyPressMask | kExposureMask | kPointerMotionMask
                              | kStructureNotifyMask | kFocusChangeMask
+                             | kEnterWindowMask | kLeaveWindowMask
                             );
       gVirtualX->SetInputFocus(fContainer->GetId());
    }
@@ -237,6 +254,7 @@ TGLWidget::TGLWidget(const TGLFormat &format, const TGWindow &p, Bool_t select,
       gVirtualX->SelectInput(
                              fContainer->GetId(), kKeyPressMask | kExposureMask | kPointerMotionMask
                              | kStructureNotifyMask | kFocusChangeMask
+                             | kEnterWindowMask | kLeaveWindowMask
                             );
       gVirtualX->SetInputFocus(fContainer->GetId());
    }
@@ -338,6 +356,36 @@ Bool_t TGLWidget::HandleConfigureNotify(Event_t *ev)
    }
 
    Emit("HandleConfigureNotify(Event_t*)", (Long_t)ev);
+
+   return kTRUE;
+}
+
+//______________________________________________________________________________
+Bool_t TGLWidget::HandleFocusChange(Event_t *ev)
+{
+   //Signal. Under Win32 I have to switch between
+   //threads to let direct usage of gl code.
+   if (!gVirtualX->IsCmdThread()) {
+      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->HandleFocusChange((Event_t *)0x%lx)", this, ev));
+      return kTRUE;
+   }
+
+   Emit("HandleFocusChange(Event_t*)", (Long_t)ev);
+
+   return kTRUE;
+}
+
+//______________________________________________________________________________
+Bool_t TGLWidget::HandleCrossing(Event_t *ev)
+{
+   //Signal. Under Win32 I have to switch between
+   //threads to let direct usage of gl code.
+   if (!gVirtualX->IsCmdThread()) {
+      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->HandleCrossing((Event_t *)0x%lx)", this, ev));
+      return kTRUE;
+   }
+
+   Emit("HandleCrossing(Event_t*)", (Long_t)ev);
 
    return kTRUE;
 }
