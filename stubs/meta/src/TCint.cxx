@@ -520,7 +520,7 @@ TCint::TCint(const char *name, const char *title) : TInterpreter(name, title)
    // Register the callback for registering symbols 
    if (gDebug > 0)
       Info("Load", " Registering TCint::Register in Cint :%p", (void*)TCint::Register);
-   G__memfunc_register_callback(TCint::Register);
+   //G__memfunc_register_callback(TCint::Register);
 }
 
 //______________________________________________________________________________
