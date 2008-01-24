@@ -10950,8 +10950,14 @@ int G__memfunc_setup2(const char *funcname,int hash,const char *mangled_name
 
   // LF 06-07-07
   // Keep the mangled name in addition to everything else
-  if(mangled_name)
-    G__savestring(&G__p_ifunc->mangled_name[G__func_now],(char*)mangled_name);
+  
+  // LF 24-01-08
+  // Don't copy the string... just point to it since it should 
+  // in the .o
+  //if(mangled_name)
+  //  G__savestring(&G__p_ifunc->mangled_name[G__func_now],(char*)mangled_name);
+  // Be careful... this pointer can't be changed
+  G__p_ifunc->mangled_name[G__func_now] = (char *)mangled_name;
 
   // LF 06-08-07
   // new virtual flags
