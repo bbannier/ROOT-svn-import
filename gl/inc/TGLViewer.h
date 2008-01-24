@@ -39,6 +39,7 @@ class TGLClipSet;
 class TGLManipSet;
 class TGLCameraMarkupStyle;
 class TGLContextIdentity;
+class TTimer;
 
 class TContextMenu;
 
@@ -139,6 +140,8 @@ protected:
    void        SetupCameras(Bool_t reset);
 
 protected:
+   TTimer            *fMouseTimer;     // mouse delay timer
+   TTimer            *fToolTipTimer;   // tool tip delay timer
    TGLWidget         *fGLWindow;
    Int_t              fGLDevice; //!for embedded gl viewer
    TGLContextIdentity*fGLCtxId;  //!for embedded gl viewer
@@ -249,7 +252,11 @@ public:
 
    virtual void SelectionChanged();    // *SIGNAL*
    virtual void OverlayDragFinished(); // *SIGNAL*
+   virtual void MouseIdle(TGLPhysicalShape*,UInt_t,UInt_t); // *SIGNAL*
+   virtual void MouseOver(TGLPhysicalShape*); // *SIGNAL*
+   virtual void Activated() { Emit("Activated()"); } // *SIGNAL*
 
+   Bool_t HandleTimer(TTimer *t);
    // Interaction - events to ExecuteEvent are passed on to these
    Bool_t HandleEvent(Event_t *ev);
    Bool_t HandleButton(Event_t *ev);
@@ -258,6 +265,8 @@ public:
    Bool_t HandleKey(Event_t *ev);
    Bool_t HandleMotion(Event_t *ev);
    Bool_t HandleExpose(Event_t *ev);
+   Bool_t HandleFocusChange(Event_t *);
+   Bool_t HandleCrossing(Event_t *);
    void   Repaint();
 
    ClassDef(TGLViewer,0) // Standard ROOT GL viewer.

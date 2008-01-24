@@ -111,6 +111,7 @@
 #pragma link C++ class TF2GL;
 #pragma link C++ class TH2GL;
 #pragma link C++ class TGLParametricEquationGL;
+#pragma link C++ class TGLEmbeddedViewer;
 
 #ifndef _WIN32
 #pragma link C++ class TX11GLManager;

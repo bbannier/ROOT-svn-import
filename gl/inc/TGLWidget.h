@@ -44,6 +44,8 @@ public:
    Bool_t HandleKey(Event_t *ev);
    Bool_t HandleMotion(Event_t *ev);
    //Bool_t HandleExpose(Event_t *ev);
+   Bool_t HandleFocusChange(Event_t *);
+   Bool_t HandleCrossing(Event_t *);
 
    void   DoRedraw();
 
@@ -108,6 +110,8 @@ public:
    Bool_t            HandleKey(Event_t *event);            //*SIGNAL*
    Bool_t            HandleMotion(Event_t *event);         //*SIGNAL*
 //   Bool_t            HandleExpose(Event_t *event);         //*SIGNAL*
+   Bool_t            HandleFocusChange(Event_t *);        //*SIGNAL*
+   Bool_t            HandleCrossing(Event_t *);           //*SIGNAL*
    void              Repaint();                           //*SIGNAL*
 
    Int_t             GetWindowIndex()const;
