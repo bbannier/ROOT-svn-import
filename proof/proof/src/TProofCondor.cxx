@@ -39,7 +39,8 @@ ClassImp(TProofCondor)
 
 //______________________________________________________________________________
 TProofCondor::TProofCondor(const char *masterurl, const char *conffile,
-                           const char *confdir, Int_t loglevel, TProofMgr *mgr)
+                           const char *confdir, Int_t loglevel,
+                           const char *alias, TProofMgr *mgr)
   : fCondor(0), fTimer(0)
 {
    // Start proof using condor
