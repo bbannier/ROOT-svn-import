@@ -11,9 +11,10 @@ include $(ROOTSYS)/test/Makefile.arch
 #------------------------------------------------------------------------------
 
 ifeq ($(PLATFORM),win32)
-EXTRALIBS        = -include:_G__cpp_setupG__MathCore -include:_G__cpp_setupG__MathCore32 "$(ROOTSYS)/lib/libMathCore.lib"
+EXTRALIBS        = -include:_G__cpp_setupG__MathCore -include:_G__cpp_setupG__MathCore32 "$(ROOTSYS)/lib/libMathCore.lib" \
+"$(ROOTSYS)/lib/libMathMore.lib"
 else
-EXTRALIBS        = -lMathCore
+EXTRALIBS        = -lMathCore -lMathMore
 CXXFLAGS += -g
 endif
 
@@ -104,12 +105,14 @@ INTEGRATIONOBJ      = testIntegration.$(ObjSuf)
 INTEGRATIONSRC      = testIntegration.$(SrcSuf)
 INTEGRATION         = testIntegration$(ExeSuf)
 
+ROOTFINDEROBJ      = testRootFinder.$(ObjSuf)
+ROOTFINDERSRC      = testRootFinder.$(SrcSuf)
+ROOTFINDER         = testRootFinder$(ExeSuf)
+
+OBJS          = $(COORDINATES3DOBJ) $(COORDINATES4DOBJ) $(ROTATIONOBJ) $(BOOSTOBJ) $(GENVECTOROBJ) $(VECTORIOOBJ) $(STRESS3DOBJ) $(STRESS2DOBJ) $(ITERATOROBJ) $(VECTOROPOBJ) $(INTEGRATIONOBJ) $(ROOTFINDEROBJ)
 
 
-OBJS          = $(COORDINATES3DOBJ) $(COORDINATES4DOBJ) $(ROTATIONOBJ) $(BOOSTOBJ) $(GENVECTOROBJ) $(VECTORIOOBJ) $(STRESS3DOBJ) $(STRESS2DOBJ) $(ITERATOROBJ) $(VECTOROPOBJ) $(INTEGRATIONOBJ)
-
-
-PROGRAMS      = $(COORDINATES3D)  $(COORDINATES4D) $(ROTATION) $(BOOST) $(GENVECTOR) $(VECTORIO) $(STRESS3D) $(STRESS2D) $(ITERATOR) $(VECTOROP) $(INTEGRATION)
+PROGRAMS      = $(COORDINATES3D)  $(COORDINATES4D) $(ROTATION) $(BOOST) $(GENVECTOR) $(VECTORIO) $(STRESS3D) $(STRESS2D) $(ITERATOR) $(VECTOROP) $(INTEGRATION) $(ROOTFINDER)
 
 
 		  
@@ -156,6 +159,10 @@ $(ITERATOR):           $(ITERATOROBJ)
 		    @echo "$@ done"
 
 $(INTEGRATION): $(INTEGRATIONOBJ)
+		$(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) $(OutPutOpt)$@
+		@echo "$@ done"
+
+$(ROOTFINDER): $(ROOTFINDEROBJ)
 		$(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) $(OutPutOpt)$@
 		@echo "$@ done"
 
