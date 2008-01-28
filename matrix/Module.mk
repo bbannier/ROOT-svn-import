@@ -43,7 +43,7 @@ $(MATRIXLIB):   $(MATRIXO) $(MATRIXDO) $(ORDER_) $(MAINLIBS)
 		   "$(SOFLAGS)" libMatrix.$(SOEXT) $@ "$(MATRIXO) $(MATRIXDO)" \
 		   "$(MATRIXLIBEXTRA)"
 
-$(MATRIXDS):    $(MATRIXH) $(MATRIXL) $(MATRIXO) $(ROOTCINTTMPEXE)
+$(MATRIXDS):    $(MATRIXH) $(MATRIXL) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(MATRIXH) $(MATRIXL)
 

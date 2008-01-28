@@ -45,7 +45,7 @@ $(NETLIB):      $(NETO) $(NETDO) $(ORDER_) $(MAINLIBS) $(NETLIBDEP)
 		   "$(SOFLAGS)" libNet.$(SOEXT) $@ "$(NETO) $(NETDO)" \
 		   "$(NETLIBEXTRA)"
 
-$(NETDS):       $(NETH) $(NETL) $(NETO) $(ROOTCINTTMPEXE)
+$(NETDS):       $(NETH) $(NETL) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(NETH) $(NETL)
 

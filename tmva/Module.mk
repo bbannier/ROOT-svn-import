@@ -48,7 +48,7 @@ $(TMVALIB):     $(TMVAO) $(TMVADO) $(ORDER_) $(MAINLIBS) $(TMVALIBDEP)
 		   "$(SOFLAGS)" libTMVA.$(SOEXT) $@ "$(TMVAO) $(TMVADO)" \
 		   "$(TMVALIBEXTRA)"
 
-$(TMVADS):      $(TMVAH_CINT) $(TMVAL) $(TMVAO) $(ROOTCINTTMPEXE)
+$(TMVADS):      $(TMVAH_CINT) $(TMVAL) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
 		@echo "CXXFLAGS   : " $(CXXFLAGS)
 		@echo "CFLAGS     : " $(CFLAGS)

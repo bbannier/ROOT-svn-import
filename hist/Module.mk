@@ -43,7 +43,7 @@ $(HISTLIB):     $(HISTO) $(HISTDO) $(ORDER_) $(MAINLIBS) $(HISTLIBDEP)
 		   "$(SOFLAGS)" libHist.$(SOEXT) $@ "$(HISTO) $(HISTDO)" \
 		   "$(HISTLIBEXTRA)"
 
-$(HISTDS):      $(HISTH) $(HISTL) $(HISTO) $(ROOTCINTTMPEXE)
+$(HISTDS):      $(HISTH) $(HISTL) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(HISTH) $(HISTL)
 

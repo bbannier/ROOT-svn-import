@@ -33,7 +33,7 @@ INCLUDEFILES += $(UNIXDEP)
 include/%.h:    $(UNIXDIRI)/%.h
 		cp $< $@
 
-$(UNIXDS):      $(UNIXH) $(UNIXL) $(UNIXO) $(ROOTCINTTMPEXE)
+$(UNIXDS):      $(UNIXH) $(UNIXL) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(UNIXH) $(UNIXL)
 

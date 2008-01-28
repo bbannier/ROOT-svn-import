@@ -43,7 +43,7 @@ $(GFALLIB):     $(GFALO) $(GFALDO) $(ORDER_) $(MAINLIBS)
 		   "$(SOFLAGS)" libGFAL.$(SOEXT) $@ "$(GFALO) $(GFALDO)" \
 		   "$(GFALLIBEXTRA) $(GFALLIBDIR) $(GFALCLILIB)"
 
-$(GFALDS):      $(GFALH) $(GFALL) $(GFALO) $(ROOTCINTTMPEXE)
+$(GFALDS):      $(GFALH) $(GFALL) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(GFALH) $(GFALL)
 
