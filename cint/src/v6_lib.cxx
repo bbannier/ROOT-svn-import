@@ -25,7 +25,11 @@
 
 //#include <cxxabi.h>
 //#include <dlfcn.h>
+
+#ifndef __APPLE__     /* Apple MacOS X */
 #include <link.h>
+#endif
+
 //#include <iostream>
 //#include <fstream>
 //#include <vector>
@@ -35,6 +39,12 @@
 //#include <set>
 //#include <string>
 //#include <map>
+
+
+#ifdef __APPLE__     /* Apple MacOS X */
+#include <dlfcn.h>
+#endif
+
 using namespace std;
 
 //______________________________________________________________________________

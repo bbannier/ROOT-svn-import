@@ -17,6 +17,10 @@
 #include <list>
 #include <string>
 
+#ifdef __APPLE__     /* Apple MacOS X */
+#include <libgen.h>
+#endif
+
 extern std::list<G__DLLINIT>* G__initpermanentsl;
 
 extern "C" {
