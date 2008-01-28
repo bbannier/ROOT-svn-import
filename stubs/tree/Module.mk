@@ -50,7 +50,7 @@ $(TREELIB):     $(TREEO) $(TREEDO) $(ORDER_) $(MAINLIBS) $(TREELIBDEP)
 		   "$(SOFLAGS)" libTree.$(SOEXT) $@ "$(TREEO) $(TREEDO)" \
 		   "$(TREELIBEXTRA)"
 
-$(TREEDS):      $(TREEH) $(TREEL) $(TREEO) $(ROOTCINTTMPEXE)
+$(TREEDS):      $(TREEH) $(TREEL) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(TREEH) $(TREEL)
 
@@ -58,7 +58,7 @@ $(TREEDS):      $(TREEH) $(TREEL) $(TREEO) $(ROOTCINTTMPEXE)
 # on demand after deleting the file
 $(TREEDS2):
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -o "$(TREEO)" -c $(TREEDH2) $(TREEL2)
+		$(ROOTCINTTMP) -f $@ -c $(TREEDH2) $(TREEL2)
 
 $(TREEMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(TREEL)
 		$(RLIBMAP) -o $(TREEMAP) -l $(TREELIB) \

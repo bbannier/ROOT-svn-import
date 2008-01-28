@@ -35,7 +35,7 @@ include/%.h:    $(METAUTILSDIRI)/%.h
 
 # $(ROOTCINTTMP) not yet known at this stage, use explicit path of rootcint_tmp
 # $(METAUTILSDS): $(METAUTILSH) $(METAUTILSL) utils/src/rootcint_tmp$(EXEEXT)
-$(METAUTILSDS): $(METAUTILSH) $(METAUTILSL) $(METAUTILSO) $(ROOTCINTTMPEXE)
+$(METAUTILSDS): $(METAUTILSH) $(METAUTILSL) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c -DG__API $(METAUTILSH) $(METAUTILSL)
 

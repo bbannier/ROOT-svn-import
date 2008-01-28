@@ -43,7 +43,7 @@ $(ROOFITLIB):   $(ROOFITO) $(ROOFITDO) $(ORDER_) $(MAINLIBS) $(ROOFITLIBDEP)
 		   "$(SOFLAGS)" libRooFit.$(SOEXT) $@ "$(ROOFITO) $(ROOFITDO)" \
 		   "$(ROOFITLIBEXTRA)"
 
-$(ROOFITDS):    $(ROOFITH) $(ROOFITL) $(ROOFITO) $(ROOTCINTTMPEXE)
+$(ROOFITDS):    $(ROOFITH) $(ROOFITL) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(ROOFITH) $(ROOFITL)
 
