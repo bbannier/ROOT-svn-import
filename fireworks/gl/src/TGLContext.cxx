@@ -33,6 +33,8 @@
 #include "TGLFormat.h"
 #include "TGLUtil.h"
 
+#include "TFTGLManager.h"
+
 //______________________________________________________________________________
 //
 // This class encapsulates window-system specific information about a
@@ -400,6 +402,22 @@ ClassImp(TGLContextIdentity)
 TGLContextIdentity* TGLContextIdentity::fgDefaultIdentity = new TGLContextIdentity;
 
 //______________________________________________________________________________
+TGLContextIdentity::TGLContextIdentity():
+fFontManager(0), fCnt(0), fClientCnt(0)
+{
+   // Constructor.
+
+}
+
+//______________________________________________________________________________
+TGLContextIdentity::~TGLContextIdentity()
+{
+   // Destructor.
+
+   if (fFontManager) delete fFontManager;
+}
+
+//______________________________________________________________________________
 void TGLContextIdentity::AddRef(TGLContext* ctx)
 {
    //Add context ctx to the list of references.
@@ -467,6 +485,14 @@ TGLContext* TGLContextIdentity::GetDefaultContextAny()
    if (fgDefaultIdentity == 0 || fgDefaultIdentity->fCtxs.empty())
       return 0;
    return fgDefaultIdentity->fCtxs.front();
+}
+
+//______________________________________________________________________________
+TFTGLManager* TGLContextIdentity::GetFontManager()
+{
+   //Get the free-type font-manager associated with this context-identity.
+   if(!fFontManager) fFontManager = new TFTGLManager();
+   return fFontManager;
 }
 
 //______________________________________________________________________________
