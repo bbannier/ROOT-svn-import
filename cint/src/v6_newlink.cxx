@@ -460,24 +460,30 @@ int G__debug_compiledfunc_arg(FILE *fout,G__ifunc_table_internal *ifunc,int ifn,
 **************************************************************************/
 float G__float(G__value buf)
 {
-  float result;
   switch(buf.type) {
   case 'd': /* double */
   case 'f': /* float */
-    result = buf.obj.fl;
-    return(result);
+    return (float) buf.obj.d;
   case 'w': /* logic */
-    result = (float)buf.obj.d;
-    return(result);
-  case 'k': /* unsigned long */
-  case 'h': /* unsigned int */
   case 'r': /* unsigned short */
+    return (float) buf.obj.ush;
+  case 'h': /* unsigned int */
+    return (float) buf.obj.uin;
+#ifndef G__BOOL4BYTE
+  case 'g': /* bool */
+#endif
   case 'b': /* unsigned char */
-    result = (float)(buf.obj.ulo);
-    return(result);
+    return (float) buf.obj.uch;
+  case 'k': /* unsigned long */
+    return (float) buf.obj.ulo;
+  case 'n': return (float) buf.obj.ll;
+  case 'm': return (float) buf.obj.ull;
+  case 'q': return (float) buf.obj.ld;
+  case 'i': return (float) buf.obj.in;
+  case 'c': return (float) buf.obj.ch;
+  case 's': return (float) buf.obj.sh;
   default:
-    result = (float)buf.obj.i;
-    return(result);
+    return (float)buf.obj.i;
   }
 }
 
@@ -1815,11 +1821,16 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
       }
 
       // Axel said isbaseclass is not necessary
-      if (tagnum>=0 && (G__isbaseclass(tagnum, gtagnum) || G__isbaseclass(gtagnum, tagnum))  /*tagnum!=gtagnum*/) {
-        //if (tagnum>=0 && tagnum!=gtagnum) {
+      //if (tagnum>=0 && (G__isbaseclass(tagnum, gtagnum) || G__isbaseclass(gtagnum, tagnum))  /*tagnum!=gtagnum*/) {
+      if (tagnum>=0 && tagnum!=gtagnum) {
         struct G__ifunc_table_internal *new_ifunc;
         long poffset;
         long pifn = ifn;
+
+        if(!(G__isbaseclass(tagnum, gtagnum) || G__isbaseclass(gtagnum, tagnum))){
+          G__fprinterr(G__serr,"Warning: static type is %s but dynamic type is %s. Are you casting two different objects? \n", 
+                     G__struct.name[gtagnum], G__struct.name[tagnum]);
+        }
 
         new_ifunc = G__struct.memfunc[tagnum];
 
@@ -1894,9 +1905,8 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
           return intres;
         }
       }
-      else if(tagnum != gtagnum){
-        G__fprinterr(G__serr,"Warning: static type is %s but dynamic type is %s. Are you casting two different objects? \n", 
-                     G__struct.name[gtagnum], G__struct.name[tagnum]);
+      else if(tagnum==-1 && gtagnum!=tagnum){
+        G__fprinterr(G__serr,"Warning: CInt doesn't know about the class %s but it knows about %s (did you forget the ClassDef?)\n", finalclass, G__struct.name[gtagnum]);
       }
     }
 
