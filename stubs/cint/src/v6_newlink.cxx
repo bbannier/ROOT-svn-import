@@ -4148,6 +4148,7 @@ void G__write_preface(FILE *fp, struct G__ifunc_table_internal *ifunc, int i)
   else if(G__PROJNAME[0]) dllid=G__PROJNAME;
   else dllid="";
 
+  (void) ifunc;
   fprintf(fp, "void G__function_%d_%s() \n{\n", i, G__map_cpp_name(dllid));
 }
 
@@ -4163,8 +4164,9 @@ void G__write_preface(FILE *fp, struct G__ifunc_table_internal *ifunc, int i)
  **************************************************************************/
 void G__write_dummy_ptr(FILE *fp, struct G__ifunc_table_internal *ifunc, int i)
 {
-   // Now print the dummy pointer we will use..
+  // Now print the dummy pointer we will use..
   // be sure to rem the name
+  (void) ifunc;
   if(G__struct.type[i]!='n'){  // This is only for classes (we can't have an object of a namespace)
      fprintf(fp,"  %s* ptr_%d;\n",G__fulltagname(i,0), i);
   }
@@ -4186,6 +4188,8 @@ void G__write_dummy_ptr(FILE *fp, struct G__ifunc_table_internal *ifunc, int i)
  **************************************************************************/
 void G__write_postface(FILE *fp, struct G__ifunc_table_internal *ifunc, int i)
 {
+  (void) ifunc;
+  (void) i;
   fprintf(fp, "}\n");
 }
 
@@ -4633,7 +4637,6 @@ void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,in
       k = (paran-1) - counter;
 
       G__paramfunc *formal_param = ifunc->param[j][k];
-      char para_type = formal_param->type;
 
       if(isupper(formal_param->type)) {
         ispointer = 1;
