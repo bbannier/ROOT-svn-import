@@ -55,7 +55,15 @@ const char *filters[] = {
    "*.txt"
 };
 
-////////////////////////////////////////////////////////////////////////////////////
+//_____________________________________________________________________________
+//
+// TCursorSwitcher
+//
+// Helper class used to change the cursor in a method and restore the 
+// original one when going out of the method scope.
+//_____________________________________________________________________________
+
+///////////////////////////////////////////////////////////////////////////////
 class TCursorSwitcher {
 private:
    TGWindow *fW1;
@@ -70,6 +78,14 @@ public:
       if (fW2) gVirtualX->SetCursor(fW2->GetId(), gVirtualX->CreateCursor(kPointer));
    }
 };
+
+//_____________________________________________________________________________
+//
+// TGFileBrowser
+//
+// System file browser, used as TRootBrowser plug-in.
+// This class is the real core of the ROOT browser.
+//_____________________________________________________________________________
 
 ClassImp(TGFileBrowser)
 
@@ -828,11 +844,13 @@ void TGFileBrowser::DoubleClicked(TGListTreeItem *item, Int_t /*btn*/)
             gApplication->ProcessLine("((TApplicationServer *)gApplication)->BrowseFile(0);");
          }
       }
-      obj->Browse(fBrowser);
-      fNKeys = 0;
-      fCnt = 0;
-      fListTree->ClearViewPort();
-      return;
+      if (!obj->InheritsFrom("TObjString")) {
+         obj->Browse(fBrowser);
+         fNKeys = 0;
+         fCnt = 0;
+         fListTree->ClearViewPort();
+         return;
+      }
    }
    flags = id = size = modtime = 0;
    gSystem->GetPathInfo(dirname.Data(), &id, &size, &flags, &modtime);
@@ -886,7 +904,9 @@ void TGFileBrowser::DoubleClicked(TGListTreeItem *item, Int_t /*btn*/)
                   itm = fListTree->AddItem(item,fname,pic,pic);
                   if (pic != fFileIcon)
                      fClient->FreePicture(pic);
-                  itm->SetUserData(0);
+                  itm->SetUserData(new TObjString(Form("file://%s/%s\r\n",
+                                   gSystem->UnixPathName(file->GetTitle()),
+                                   file->GetName())), kTRUE);
                   itm->SetDNDSource(kTRUE);
                   if (size && modtime) {
                      char *tiptext = FormatFileInfo(fname.Data(), size, modtime);
@@ -910,9 +930,17 @@ void TGFileBrowser::DoubleClicked(TGListTreeItem *item, Int_t /*btn*/)
          rfile = (TDirectory *)gROOT->GetListOfFiles()->FindObject(obj);
          if (!rfile) {
             rfile = (TDirectory *)gROOT->ProcessLine(Form("new TFile(\"%s\")",fname.Data()));
-            item->SetUserData(rfile);
          }
          if (rfile) {
+            // replace actual user data (TObjString) by the TDirectory...
+            if (item->GetUserData()) {
+               // first delete the data to avoid memory leaks
+               TObject *obj = static_cast<TObject *>(item->GetUserData());
+               // only delete TObjString as they are the only objects
+               // created who have to be deleted
+               delete dynamic_cast<TObjString *>(obj);
+            }
+            item->SetUserData(rfile);
             fNKeys = rfile->GetListOfKeys()->GetEntries();
             fCnt = 0;
             rfile->Browse(fBrowser);
@@ -927,9 +955,11 @@ void TGFileBrowser::DoubleClicked(TGListTreeItem *item, Int_t /*btn*/)
       else if (IsTextFile(dirname.Data())) {
          gSystem->ChangeDirectory(gSystem->DirName(dirname.Data()));
          if (fNewBrowser) {
+            TGFrameElement *fe = 0;
             TGTab *tabRight = fNewBrowser->GetTabRight();
             TGCompositeFrame *frame = tabRight->GetCurrentContainer();
-            TGFrameElement *fe = (TGFrameElement *)frame->GetList()->First();
+            if (frame)
+               fe = (TGFrameElement *)frame->GetList()->First();
             if (fe) {
                TGCompositeFrame *embed = (TGCompositeFrame *)fe->fFrame;
                if (embed->InheritsFrom("TGTextEditor")) {
@@ -944,6 +974,9 @@ void TGFileBrowser::DoubleClicked(TGListTreeItem *item, Int_t /*btn*/)
                   XXExecuteDefaultAction(&f);
                }
             }
+            else {
+               XXExecuteDefaultAction(&f);
+            }
          }
       }
       else {
@@ -951,7 +984,7 @@ void TGFileBrowser::DoubleClicked(TGListTreeItem *item, Int_t /*btn*/)
          XXExecuteDefaultAction(&f);
       }
    }
-   //gSystem->ChangeDirectory(savdir.Data());
+   gSystem->ChangeDirectory(savdir.Data());
    fListTree->ClearViewPort();
 }
 

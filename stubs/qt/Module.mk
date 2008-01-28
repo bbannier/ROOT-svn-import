@@ -91,8 +91,8 @@ $(GQTLIB):      $(GQTO) $(GQTDO) $(GQTMOCO) $(ORDER_) $(MAINLIBS) $(GQTLIBDEP)
 		   "$(GQTLIBEXTRA) $(QTLIBDIR) $(QTLIB)"
 
 $(GQTDS):       $(GQTH1) $(GQTL) $(GQTO) $(ROOTCINTTMPEXE)
-		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -o "$(GQTO)" -c $(GQTH1) $(GQTL)
+@echo "Generating dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -c $(GQTH1) $(GQTL)
 
 $(GQTMAP):      $(RLIBMAP) $(MAKEFILEDEP) $(GQTL)
 		$(RLIBMAP) -o $(GQTMAP) -l $(GQTLIB) \
@@ -128,9 +128,10 @@ endif
 
 qtcint: lib/qtcint.dll
 
-lib/qtcint.dll: $(CINTTMP) $(ROOTCINTTMPEXE) cint/lib/qt/qtcint.h \
+lib/qtcint.dll: cint/lib/qt/qtcint.h \
                 cint/lib/qt/qtclasses.h cint/lib/qt/qtglobals.h \
-                cint/lib/qt/qtfunctions.h
+                cint/lib/qt/qtfunctions.h \
+		$(ROOTCINTTMPDEP) $(CINTTMP)
 	$(MAKECINTDLL) $(PLATFORM) C++ qtcint qt \
 	  " -p $(GQTCXXFLAGS) qtcint.h " \
            "$(CINTTMP)" "$(ROOTCINTTMP)" \

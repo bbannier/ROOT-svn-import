@@ -35,7 +35,7 @@ protected:
 
 public:
    TEveViewer(const Text_t* n="TEveViewer", const Text_t* t="");
-   virtual ~TEveViewer();
+   virtual ~TEveViewer() {}
 
    TGLViewer* GetGLViewer() const { return fGLViewer; }
    void SetGLViewer(TGLViewer* s);
@@ -46,11 +46,11 @@ public:
    virtual void RemoveElementLocal(TEveElement* el);
    virtual void RemoveElementsLocal();
 
-   virtual TObject* GetEditorObject() const;
+   virtual TObject* GetEditorObject(const TEveException& eh="TEveViewer::GetEditorObject ") const;
 
    virtual Bool_t HandleElementPaste(TEveElement* el);
 
-   virtual const TGPicture* GetListTreeIcon() { return TEveElement::fgListTreeIcons[1]; }
+   virtual const TGPicture* GetListTreeIcon();
 
    ClassDef(TEveViewer, 0); // Reve representation of TGLViewer.
 };
@@ -70,7 +70,7 @@ protected:
 
 public:
    TEveViewerList(const Text_t* n="TEveViewerList", const Text_t* t="");
-   virtual ~TEveViewerList();
+   virtual ~TEveViewerList() {}
 
    void RepaintChangedViewers(Bool_t resetCameras, Bool_t dropLogicals);
    void RepaintAllViewers(Bool_t resetCameras, Bool_t dropLogicals);

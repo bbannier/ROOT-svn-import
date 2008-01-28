@@ -37,6 +37,10 @@ class TEvePointSet : public TEveElement,
 {
    friend class TEvePointSetArray;
 
+private:
+   TEvePointSet(const TEvePointSet&);            // Not implemented
+   TEvePointSet& operator=(const TEvePointSet&); // Not implemented
+
 protected:
    TString  fTitle;           // Title/tooltip of the TEvePointSet.
    TArrayI *fIntIds;          // Optional array of integer ideices.
@@ -45,8 +49,8 @@ protected:
    void AssertIntIdsSize();
 
 public:
-   TEvePointSet(Int_t n_points=0, TreeVarType_e tv_type=TVT_XYZ);
-   TEvePointSet(const Text_t* name, Int_t n_points=0, TreeVarType_e tv_type=TVT_XYZ);
+   TEvePointSet(Int_t n_points=0, ETreeVarType_e tv_type=kTVT_XYZ);
+   TEvePointSet(const Text_t* name, Int_t n_points=0, ETreeVarType_e tv_type=kTVT_XYZ);
    virtual ~TEvePointSet();
 
    virtual void ComputeBBox();
@@ -74,7 +78,7 @@ public:
    virtual void InitFill(Int_t subIdNum);
    virtual void TakeAction(TEvePointSelector*);
 
-   virtual const TGPicture* GetListTreeIcon() { return TEveElement::fgListTreeIcons[3]; }
+   virtual const TGPicture* GetListTreeIcon();
 
    virtual TClass* ProjectedClass() const;
 

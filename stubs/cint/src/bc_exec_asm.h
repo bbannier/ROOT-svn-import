@@ -12,6 +12,7 @@ extern "C" void G__exec_alloc_unlock();
 int G__exec_asm(int start, int stack, G__value* presult, long localmem)
 {
    // -- Execute the bytecode which was compiled on-the-fly by the interpreter.
+   char clnull[1]; clnull[0] = 0;
    int i; /* misc counter */
    int pc; /* instruction program counter */
    int sp; /* data stack pointer */
@@ -936,7 +937,7 @@ int G__exec_asm(int start, int stack, G__value* presult, long localmem)
                fpara.para[i] = G__asm_stack[sp-fpara.paran+i];
             }
             sp -= fpara.paran;
-            G__asm_stack[sp] = G__getvariable("", &i, (struct G__var_array*) G__asm_inst[pc+4], 0);
+            G__asm_stack[sp] = G__getvariable(clnull, &i, (struct G__var_array*) G__asm_inst[pc+4], 0);
             pc += 5;
 #ifdef G__ASM_DBG
             if (G__asm_dbg) {
@@ -978,7 +979,7 @@ int G__exec_asm(int start, int stack, G__value* presult, long localmem)
 #ifdef G__ASM_DBG
             if (G__asm_dbg) G__fprinterr(G__serr, "  value=%g\n", G__double(G__asm_stack[sp-1]));
 #endif
-            G__letvariable("", G__asm_stack[sp-1], (struct G__var_array*) G__asm_inst[pc+4], 0);
+            G__letvariable(clnull, G__asm_stack[sp-1], (struct G__var_array*) G__asm_inst[pc+4], 0);
             pc += 5;
 #ifdef G__ASM_DBG
             break;
@@ -1011,7 +1012,7 @@ int G__exec_asm(int start, int stack, G__value* presult, long localmem)
                fpara.para[i] = G__asm_stack[sp-fpara.paran+i];
             }
             sp -= fpara.paran;
-            G__asm_stack[sp] = G__getvariable("", &i, (struct G__var_array *) G__asm_inst[pc+4], &G__global);
+            G__asm_stack[sp] = G__getvariable(clnull, &i, (struct G__var_array *) G__asm_inst[pc+4], &G__global);
             pc += 5;
 #ifdef G__ASM_DBG
             if (G__asm_dbg) G__fprinterr(G__serr, " return=%g , 0x%lx\n", G__double(G__asm_stack[sp]), G__int(G__asm_stack[sp]));
@@ -1053,7 +1054,7 @@ int G__exec_asm(int start, int stack, G__value* presult, long localmem)
                G__fprinterr(G__serr, "  value=%g,%d\n", G__double(G__asm_stack[sp-1]), G__int(G__asm_stack[sp-1]));
             }
 #endif
-            G__letvariable("", G__asm_stack[sp-1], (struct G__var_array *) G__asm_inst[pc+4], &G__global);
+            G__letvariable(clnull, G__asm_stack[sp-1], (struct G__var_array *) G__asm_inst[pc+4], &G__global);
             pc += 5;
 #ifdef G__ASM_DBG
             break;
@@ -1091,7 +1092,7 @@ int G__exec_asm(int start, int stack, G__value* presult, long localmem)
             sp -= fpara.paran;
             store_struct_offset_localmem = G__store_struct_offset;
             G__store_struct_offset = (long) localmem;
-            G__asm_stack[sp] = G__getvariable("", &i, (struct G__var_array*) G__asm_inst[pc+4], &G__global);
+            G__asm_stack[sp] = G__getvariable(clnull, &i, (struct G__var_array*) G__asm_inst[pc+4], &G__global);
             G__store_struct_offset = store_struct_offset_localmem;
             pc += 5;
 #ifdef G__ASM_DBG
@@ -1146,7 +1147,7 @@ int G__exec_asm(int start, int stack, G__value* presult, long localmem)
             store_struct_offset_localmem = G__store_struct_offset;
             // The variable is in the bytecode local memory block.
             G__store_struct_offset = (long) localmem;
-            G__letvariable("", G__asm_stack[sp-1], (struct G__var_array*) G__asm_inst[pc+4], &G__global);
+            G__letvariable(clnull, G__asm_stack[sp-1], (struct G__var_array*) G__asm_inst[pc+4], &G__global);
             // Restore the structure offset.
             G__store_struct_offset = store_struct_offset_localmem;
             pc += 5;

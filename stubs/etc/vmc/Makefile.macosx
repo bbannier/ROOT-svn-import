@@ -36,7 +36,7 @@ AWK	  = awk
 #
 CXXOPTS       = $(OPT) -pipe -Wall -W -Woverloaded-virtual  
 COPT	      = $(OPT) 
-FOPT	      = $(OPT) -fno-second-underscore -fsloppy-char 
+FOPT	      = $(OPT) -fno-second-underscore
 
 # CERNLIB defines
 
@@ -63,8 +63,7 @@ SOFLAGS       = -dynamiclib -undefined dynamic_lookup -single_module
 ifeq (g95,$(findstring g95,$(ROOTBUILD)))
 SHLIB += -L$(shell g95 --print-search-dirs | sed -n -e 's/install: //p') -lf95
 else
-SHLIB += -ldl -L$(shell gfortran --print-search-dirs | sed -n -e 's/install: //p') -lgfortranbegin -lgfortran
+SHLIB := $(shell gfortran -print-file-name=libgfortran.dylib)
+SHLIB += $(shell gfortran -print-file-name=libgfortranbegin.a)
+SHLIB += -ldl
 endif
-
-
-

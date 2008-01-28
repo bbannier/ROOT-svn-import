@@ -42,21 +42,20 @@
 #include "TGeoShape.h"
 #endif
 
-#ifndef ROOT_TGeoVoxelFinder
-#include "TGeoVoxelFinder.h"
-#endif
-
 // forward declarations
 class TH2F;
 class TGeoNode;
 class TGeoMatrix;
 class TGeoPatternFinder;
+class TGeoVoxelFinder;
 class TGeoManager;
 
-/*************************************************************************
- * TGeoVolume - class description
- *
- *************************************************************************/
+////////////////////////////////////////////////////////////////////////////
+//                                                                        //
+// TGeoVolume - base class representing a single volume having a shape    //
+//   and a medium.                                                        //
+//                                                                        //
+////////////////////////////////////////////////////////////////////////////
 
 class TGeoVolume : public TNamed,
                    public TGeoAtt,
@@ -165,7 +164,7 @@ public:
    TGeoMedium     *GetMedium() const                 {return fMedium;}
    TObject        *GetField() const                  {return fField;}
    TGeoPatternFinder *GetFinder() const              {return fFinder;}
-   TGeoVoxelFinder   *GetVoxels() const              {return (fVoxels && !fVoxels->IsInvalid())?fVoxels:NULL;}
+   TGeoVoxelFinder   *GetVoxels() const;
    const char     *GetIconName() const               {return fShape->GetName();}
    Int_t           GetIndex(const TGeoNode *node) const;
    TGeoNode       *GetNode(const char *name) const;
@@ -234,11 +233,12 @@ public:
    ClassDef(TGeoVolume, 5)              // geometry volume descriptor
 };
 
-/*************************************************************************
- * TGeoVolumeMulti - class storing a list of volumes that have to
- *   be handled togeather at build time
- *
- *************************************************************************/
+////////////////////////////////////////////////////////////////////////////
+//                                                                        //
+// TGeoVolumeMulti - class storing a list of volumes that have to         //
+//   be handled togeather at build time                                   //
+//                                                                        //
+////////////////////////////////////////////////////////////////////////////
 
 class TGeoVolumeMulti : public TGeoVolume
 {
@@ -284,11 +284,12 @@ public:
    ClassDef(TGeoVolumeMulti, 3)     // class to handle multiple volumes in one step
 };
 
-/*************************************************************************
- * TGeoVolumeAssembly - special assembly of volumes
- *  
- *
- *************************************************************************/
+////////////////////////////////////////////////////////////////////////////
+//                                                                        //
+// TGeoVolumeAssembly - special assembly of volumes. The assembly has no  //
+//   medium and its shape is the union of all component shapes            //
+//                                                                        //
+////////////////////////////////////////////////////////////////////////////
 
 class TGeoVolumeAssembly : public TGeoVolume
 {

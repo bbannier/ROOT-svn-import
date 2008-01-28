@@ -29,9 +29,9 @@
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
 
+
 //_______________________________________________________________________
-//Begin_Html
-/*
+/* Begin_Html
   Multivariate optimisation of signal efficiency for given background  
   efficiency, applying rectangular minimum and maximum requirements.
 
@@ -86,8 +86,9 @@
 
   <p>
   See class description for Method Likelihood for a detailed explanation.
-*/
-//End_Html
+
+End_Html */
+//_______________________________________________________________________
 
 #include <iostream>
 
@@ -113,8 +114,8 @@
 ClassImp(TMVA::MethodCuts)
 
 //_______________________________________________________________________
-TMVA::MethodCuts::MethodCuts( TString jobName, TString methodTitle, DataSet& theData, 
-                              TString theOption, TDirectory* theTargetDir )
+TMVA::MethodCuts::MethodCuts( const TString& jobName, const TString& methodTitle, DataSet& theData, 
+                              const TString& theOption, TDirectory* theTargetDir )
    : MethodBase( jobName, methodTitle, theData, theOption, theTargetDir )
 { 
    // standard constructor
@@ -130,7 +131,7 @@ TMVA::MethodCuts::MethodCuts( TString jobName, TString methodTitle, DataSet& the
 
 //_______________________________________________________________________
 TMVA::MethodCuts::MethodCuts( DataSet& theData, 
-                              TString theWeightFile,  
+                              const TString& theWeightFile,  
                               TDirectory* theTargetDir )
    : MethodBase( theData, theWeightFile, theTargetDir ) 
 {
@@ -282,6 +283,17 @@ void TMVA::MethodCuts::ProcessOptions()
    // process user options
    MethodBase::ProcessOptions();
 
+   // sanity check, do not allow the input variables to be normalised, because this 
+   // only creates problems when interpreting the cuts
+   if (IsNormalised()) {
+      fLogger << kWARNING << "Normalisation of the input variables for cut optimisation is not" << Endl;
+      fLogger << kWARNING << "supported because this provides intransparent cut values, and no" << Endl;
+      fLogger << kWARNING << "improvement in the performance of the algorithm." << Endl;
+      fLogger << kWARNING << "Please remove \"Normalise\" option from booking option string" << Endl;
+      fLogger << kWARNING << "==> Will reset normalisation flag to \"False\"" << Endl;
+      SetNormalised( kFALSE );
+   }
+
    if      (fFitMethodS == "MC" ) fFitMethod = kUseMonteCarlo;
    else if (fFitMethodS == "GA" ) fFitMethod = kUseGeneticAlgorithm;
    else if (fFitMethodS == "SA" ) fFitMethod = kUseSimulatedAnnealing;
@@ -381,7 +393,55 @@ Double_t TMVA::MethodCuts::GetMvaValue()
 }
 
 //_______________________________________________________________________
-void TMVA::MethodCuts::GetCuts( Double_t effS, std::vector<Double_t>& cutMin, std::vector<Double_t>& cutMax ) const
+void TMVA::MethodCuts::PrintCuts( Double_t effS ) const
+{
+   // print cuts
+
+   std::vector<Double_t> cutsMin;
+   std::vector<Double_t> cutsMax;
+   Int_t ibin = Int_t((effS - fEffSMin)/(fEffSMax - fEffSMin)*Double_t(fNbins));
+   GetCuts( effS, cutsMin, cutsMax );
+
+   // retrieve variable expressions (could be transformations)
+   std::vector<TString>* varVec = GetVarTransform().GetTransformationStrings();
+   if (!varVec) fLogger << kFATAL << "Big troubles in \"PrintCuts\": zero varVec pointer" << Endl;
+
+   UInt_t maxL = 0;
+   for (UInt_t ivar=0; ivar<cutsMin.size(); ivar++) {
+      if ((UInt_t)(*varVec)[ivar].Length() > maxL) maxL = (*varVec)[ivar].Length();
+   }
+   UInt_t maxLine = 20+maxL+16;
+
+   for (UInt_t i=0; i<maxLine; i++) fLogger << "-";
+   fLogger << Endl;
+   fLogger << kINFO << "Cut values for requested signal efficiency: " << effS << Endl;
+   fLogger << kINFO << "Corresponding background efficiency       : " << fEffBvsSLocal->GetBinContent( ibin +1 ) 
+           << ")" << Endl;
+   if (GetVariableTransform() != Types::kNone) {
+      fLogger << kINFO << "NOTE: The cuts are applied to TRANFORMED variables (see explicit transformation below)" << Endl;
+      fLogger << kINFO << "      Name of the transformation: \"" << GetVarTransform().GetName() << "\"" << Endl;
+   }
+   for (UInt_t i=0; i<maxLine; i++) fLogger << "-";
+   fLogger << Endl;
+   for (UInt_t ivar=0; ivar<cutsMin.size(); ivar++) {
+      fLogger << kINFO 
+              << "Cut[" << setw(2) << ivar << "]: " 
+              << setw(10) << cutsMin[ivar] 
+              << " < " 
+              << setw(maxL) << (*varVec)[ivar]
+              << " <= " 
+              << setw(10) << cutsMax[ivar] << Endl;
+   }
+   for (UInt_t i=0; i<maxLine; i++) fLogger << "-";
+   fLogger << Endl;
+
+   delete varVec; // yes, ownership has been given to us
+}
+
+//_______________________________________________________________________
+void TMVA::MethodCuts::GetCuts( Double_t effS, 
+                                std::vector<Double_t>& cutMin, 
+                                std::vector<Double_t>& cutMax ) const
 {
    // retrieve cut values for given signal efficiency
 
@@ -513,6 +573,12 @@ void  TMVA::MethodCuts::Train( void )
 
    if (fBinaryTreeS != 0) { delete fBinaryTreeS; fBinaryTreeS = 0; }
    if (fBinaryTreeB != 0) { delete fBinaryTreeB; fBinaryTreeB = 0; }
+
+   fEffSMin = fEffBvsSLocal->GetBinCenter(1);
+   fEffSMax = fEffBvsSLocal->GetBinCenter(fNbins);
+
+   // some output
+   PrintCuts( 0.5 );
 }
 
 //_______________________________________________________________________
@@ -813,8 +879,8 @@ void  TMVA::MethodCuts::WriteWeightsToStream( ostream & o ) const
      << " ... cutMin[ivar=n-1] cutMax[ivar=n-1]" << endl;
    for (Int_t ibin=0; ibin<fNbins; ibin++) {
       o << setw(4) << ibin+1 << "  "    
-        << setw(8)<< fEffBvsSLocal->GetBinCenter( ibin +1 ) << "  " 
-        << setw(8)<< fEffBvsSLocal->GetBinContent( ibin +1 ) << "  ";  
+        << setw(8)<< fEffBvsSLocal->GetBinCenter ( ibin + 1 ) << "  " 
+        << setw(8)<< fEffBvsSLocal->GetBinContent( ibin + 1 ) << "  ";  
       for (Int_t ivar=0; ivar<GetNvar(); ivar++)
          o <<setw(10)<< fCutMin[ivar][ibin] << "  " << setw(10) << fCutMax[ivar][ibin] << "  ";
       o << endl;
@@ -1016,7 +1082,7 @@ Double_t TMVA::MethodCuts::GetEfficiency( TString theString, TTree* theTree, Dou
    // [1]: the value of background efficiency at which the signal efficiency 
    //      is to be returned
 
-   if (theTree == 0); // dummy 
+   if (theTree == 0) { } // dummy 
 
    // parse input string for required background efficiency
    TList* list  = TMVA::Tools::ParseFormatLine( theString, ":" );

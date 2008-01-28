@@ -20,21 +20,21 @@ extern "C" {
 
 // Static functions.
 static void G__getiparseobject(G__value* result, char* item);
-static G__value G__conditionaloperator(G__value defined, char* expression, int ig1, char* ebuf);
-static int G__iscastexpr_body(char* ebuf, int lenbuf);
+static G__value G__conditionaloperator(G__value defined, const char* expression, int ig1, char* ebuf);
+static int G__iscastexpr_body(const char* ebuf, int lenbuf);
 #ifdef G__PTR2MEMFUNC
-static int G__getpointer2memberfunc(char* item, G__value* presult);
+static int G__getpointer2memberfunc(const char* item, G__value* presult);
 #endif // G__PTR2MEMFUNC
 static int G__getoperator(int newoperator, int oldoperator);
 
 // External functions.
 char* G__setiparseobject(G__value* result, char* str);
-G__value G__calc_internal(char* exprwithspace);
-G__value G__getexpr(char* expression);
+G__value G__calc_internal(const char* exprwithspace);
+G__value G__getexpr(const char* expression);
 G__value G__getprod(char* expression1);
-G__value G__getpower(char* expression2);
-G__value G__getitem(char* item);
-int G__test(char* expr);
+G__value G__getpower(const char* expression2);
+G__value G__getitem(const char* item);
+int G__test(const char* expr);
 int G__btest(int operator2, G__value lresult, G__value rresult);
 
 // Functions in the C interface.
@@ -408,7 +408,7 @@ G__value G__calc(const char* exprwithspace);
       while(pp_and) { \
          G__free_tempobject(); --G__templevel; /* 1516 */ \
          if(G__asm_dbg) \
-            G__fprinterr(G__serr,"   %3x: CNDJMP assigned for AND %x  %s:%d\n", ppointer_and[pp_and-1] - 1, G__asm_cp, __FILE__, __LINE__); \
+            G__fprinterr(G__serr,"   %3x: CNDJMP assigned for AND %3x  %s:%d\n", ppointer_and[pp_and-1] - 1, G__asm_cp, __FILE__, __LINE__); \
          if(G__PVOID==G__asm_inst[ppointer_and[pp_and-1]]) /* 1575 */ \
             G__asm_inst[ppointer_and[--pp_and]] = G__asm_cp; \
          else --pp_and; /* 1575 */ \
@@ -431,7 +431,7 @@ G__value G__calc(const char* exprwithspace);
       while(pp_or) { \
          G__free_tempobject(); --G__templevel; \
          if(G__asm_dbg) \
-            G__fprinterr(G__serr,"   %s: CND1JMP assigned for OR %x  %s:%d\n", ppointer_or[pp_or-1] - 1, G__asm_cp, __FILE__, __LINE__); \
+            G__fprinterr(G__serr,"   %3x: CND1JMP assigned for OR %3x  %s:%d\n", ppointer_or[pp_or-1] - 1, G__asm_cp, __FILE__, __LINE__); \
          G__asm_inst[ppointer_or[--pp_or]] = G__asm_cp; \
       } \
    } \
@@ -551,7 +551,7 @@ static void G__getiparseobject(G__value* result, char* item)
 }
 
 //______________________________________________________________________________
-static G__value G__conditionaloperator(G__value defined, char* expression, int ig1, char* ebuf)
+static G__value G__conditionaloperator(G__value defined, const char* expression, int ig1, char* ebuf)
 {
    // -- Evaluate a?b:c operator.
    int tempop = 0;
@@ -649,7 +649,7 @@ static G__value G__conditionaloperator(G__value defined, char* expression, int i
 }
 
 //______________________________________________________________________________
-static int G__iscastexpr_body(char* ebuf, int lenbuf)
+static int G__iscastexpr_body(const char* ebuf, int lenbuf)
 {
    // --
    int result;
@@ -669,18 +669,20 @@ static int G__iscastexpr_body(char* ebuf, int lenbuf)
 
 #ifdef G__PTR2MEMFUNC
 //______________________________________________________________________________
-static int G__getpointer2memberfunc(char* item, G__value* presult)
+static int G__getpointer2memberfunc(const char* item, G__value* presult)
 {
    int hash = 0;
    long scope_struct_offset = 0;
    int scope_tagnum = -1;
    int ifn;
    struct G__ifunc_table_internal *memfunc;
-   char *p = strstr(item, "::");
+   const char *p = strstr(item, "::");
 
    if (!p) return(0);
 
-   G__scopeoperator(item, &hash, &scope_struct_offset, &scope_tagnum);
+   char item2[G__LONGLINE];
+   strcpy(item2,item);
+   G__scopeoperator(item2, &hash, &scope_struct_offset, &scope_tagnum);
    if (scope_tagnum < 0 || scope_tagnum >= G__struct.alltag) return(0);
 
    G__incsetup_memfunc(scope_tagnum);
@@ -947,7 +949,7 @@ char* G__setiparseobject(G__value* result, char* str)
 }
 
 //______________________________________________________________________________
-G__value G__calc_internal(char* exprwithspace)
+G__value G__calc_internal(const char* exprwithspace)
 {
    // -- Grand entry for C/C++ expression evaluator.
    //
@@ -1084,7 +1086,7 @@ G__value G__calc_internal(char* exprwithspace)
 }
 
 //______________________________________________________________________________
-G__value G__getexpr(char* expression)
+G__value G__getexpr(const char* expression)
 {
    // -- Grand entry for C/C++ expression evaluator. Space chars must be removed.
    //printf("Begin G__getexpr('%s') ...\n", expression);
@@ -1121,7 +1123,7 @@ G__value G__getexpr(char* expression)
       return G__null;
    }
    if (strlen(expression) > (G__BUFLEN - 2)) {
-      ebuf = (char*) malloc(strlen(expression) + 2);
+      ebuf = (char*) malloc(strlen(expression) + 6);
    }
    if (!ebuf) {
       G__genericerror("Internal error: malloc, G__getexpr(), ebuf");
@@ -1610,7 +1612,7 @@ G__value G__getprod(char* expression1)
 }
 
 //______________________________________________________________________________
-G__value G__getpower(char* expression2)
+G__value G__getpower(const char* expression2)
 {
    // --
    G__value defined2, reg;
@@ -1719,7 +1721,7 @@ G__value G__getpower(char* expression2)
 }
 
 //______________________________________________________________________________
-G__value G__getitem(char* item)
+G__value G__getitem(const char* item)
 {
    // --
    int known;
@@ -1820,7 +1822,9 @@ G__value G__getitem(char* item)
 #endif // G__ASM
          break;
       case '\'':
-         result3 = G__strip_singlequotation(item);
+         char tmp[G__ONELINE];
+         strcpy(tmp,item);
+         result3 = G__strip_singlequotation(tmp);
          result3.tagnum = -1;
          result3.typenum = -1;
          result3.ref = 0;
@@ -1872,7 +1876,10 @@ G__value G__getitem(char* item)
       // --
       case '_':
          if ('$' == item[1]) {
-            G__getiparseobject(&result3, item);
+            char tmp[G__ONELINE];
+            strcpy(tmp,item);
+            //G__getiparseobject(&result3, item);
+            G__getiparseobject(&result3, tmp);
             return result3;
          }
       // --
@@ -1881,7 +1888,8 @@ G__value G__getitem(char* item)
          known = 0;
          G__var_type = 'p';
          // variable
-         result3 = G__getvariable(item, &known, &G__global, G__p_local);
+         strcpy(tmp,item);
+         result3 = G__getvariable(tmp, &known, &G__global, G__p_local);
          if (!known && (result3.tagnum != -1) && !result3.obj.i) {
             // this is "a.b", we know "a", but it has no "b" - there is no use
             // in looking at other places.
@@ -1970,7 +1978,7 @@ G__value G__getitem(char* item)
 }
 
 //______________________________________________________________________________
-int G__test(char* expr)
+int G__test(const char* expr)
 {
    G__value result = G__getexpr(expr);
    if (result.type == 'u') {

@@ -422,6 +422,7 @@
 #include <strings.h>
 #else
 
+
 char *
 strtok_r(char *s1, const char *s2, char **lasts)
 {
@@ -444,6 +445,7 @@ strtok_r(char *s1, const char *s2, char **lasts)
 
 #endif
 
+#include "Riostream.h"
 #include "RooSimPdfBuilder.h"
 
 #include "RooRealVar.h"
@@ -472,10 +474,10 @@ strtok_r(char *s1, const char *s2, char **lasts)
 #include "RooGenericPdf.h"
 #include "RooMsgService.h"
 
+using namespace std ;
 
 ClassImp(RooSimPdfBuilder)
 ;
-
 
 
 RooSimPdfBuilder::RooSimPdfBuilder(const RooArgSet& protoPdfSet) :
@@ -483,6 +485,7 @@ RooSimPdfBuilder::RooSimPdfBuilder(const RooArgSet& protoPdfSet) :
 {
   _compSplitCatSet.setHashTableSize(1000) ;
   _splitNodeList.setHashTableSize(10000) ;
+  _splitNodeListOwned.setHashTableSize(10000) ;
 }
 
 
@@ -509,7 +512,7 @@ RooArgSet* RooSimPdfBuilder::createProtoBuildConfig()
 
 void RooSimPdfBuilder::addSpecializations(const RooArgSet& specSet) 
 {
-  _splitNodeList.addOwned(specSet) ;
+  _splitNodeList.add(specSet) ;
 }
 
 
@@ -971,7 +974,8 @@ RooSimultaneous* RooSimPdfBuilder::buildPdf(const RooArgSet& buildConfig, const 
 		  if (!splitLeaf) {
 		    // If not create it now
 		    splitLeaf = (RooAbsArg*) param->clone(splitLeafName) ;
-		    _splitNodeList.addOwned(*splitLeaf) ;
+		    _splitNodeList.add(*splitLeaf) ;
+		    _splitNodeListOwned.addOwned(*splitLeaf) ;
 		  }
 		  fracLeafList.add(*splitLeaf) ;
 		  formExpr.Append(Form("-@%d",i++)) ;
@@ -986,7 +990,8 @@ RooSimultaneous* RooSimPdfBuilder::buildPdf(const RooArgSet& buildConfig, const 
 		// Check if no specialization was already specified for remainder state
 		if (!_splitNodeList.find(remLeafName)) {
 		  RooAbsArg* remLeaf = new RooFormulaVar(remLeafName,formExpr,fracLeafList) ;
-		  _splitNodeList.addOwned(*remLeaf) ;
+		  _splitNodeList.add(*remLeaf) ;
+		  _splitNodeListOwned.addOwned(*remLeaf) ;
 		  coutI(ObjectHandling) << "RooSimPdfBuilder::buildPdf: creating remainder fraction formula for " << remainderState 
 				   << " specialization of split parameter " << param->GetName() << " " << formExpr << endl ;
 		}

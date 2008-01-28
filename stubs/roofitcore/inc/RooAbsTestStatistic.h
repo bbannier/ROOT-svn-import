@@ -16,9 +16,10 @@
 #ifndef ROO_ABS_TEST_STATISTIC
 #define ROO_ABS_TEST_STATISTIC
 
-#include "Riostream.h"
+#include "Riosfwd.h"
 #include "RooAbsReal.h"
 #include "RooSetProxy.h"
+#include <string>
 
 class RooArgSet ;
 class RooAbsData ;
@@ -35,7 +36,7 @@ class RooAbsTestStatistic : public RooAbsReal {
 public:
 
   // Constructors, assignment etc
-  inline RooAbsTestStatistic() { }
+  RooAbsTestStatistic() ;
   RooAbsTestStatistic(const char *name, const char *title, RooAbsPdf& pdf, RooAbsData& data,
 		      const RooArgSet& projDeps, const char* rangeName=0, const char* addCoefRangeName=0, 
 		      Int_t nCPU=1, Bool_t verbose=kTRUE, Bool_t splitCutRange=kTRUE) ;
@@ -43,7 +44,7 @@ public:
   virtual ~RooAbsTestStatistic();
   virtual RooAbsTestStatistic* create(const char *name, const char *title, RooAbsPdf& pdf, RooAbsData& data,
 				      const RooArgSet& projDeps, const char* rangeName=0, const char* addCoefRangeName=0, 
-				      Int_t nCPU=1, Bool_t verbose=kTRUE, Bool_t splitCutRange=kTRUE) = 0 ;
+				      Int_t nCPU=1, Bool_t verbose=kTRUE, Bool_t splitCutRange=kFALSE) = 0 ;
 
   virtual void constOptimizeTestStatistic(ConstOpCode opcode) ;
   virtual Double_t combinedValue(RooAbsReal** gofArray, Int_t nVal) const = 0 ;
@@ -70,8 +71,8 @@ protected:
   RooAbsPdf* _pdf ;
   RooAbsData* _data ;
   const RooArgSet* _projDeps ;
-  const char*    _rangeName ; //! 
-  const char*    _addCoefRangeName ; //!
+  std::string _rangeName ; 
+  std::string _addCoefRangeName ; 
   Bool_t _splitRange ;
   Int_t _simCount ;
   Bool_t _verbose ;
@@ -82,7 +83,7 @@ private:
   void initSimMode(RooSimultaneous* pdf, RooAbsData* data, const RooArgSet* projDeps, const char* rangeName, const char* addCoefRangeName) ;    
   void initMPMode(RooAbsPdf* pdf, RooAbsData* data, const RooArgSet* projDeps, const char* rangeName, const char* addCoefRangeName) ;
 
-  mutable Bool_t _init ;
+  mutable Bool_t _init ; //! 
   GOFOpMode   _gofOpMode ;
 
   Int_t       _nEvents ;

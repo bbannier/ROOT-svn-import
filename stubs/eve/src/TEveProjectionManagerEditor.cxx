@@ -59,8 +59,8 @@ TEveProjectionManagerEditor::TEveProjectionManagerEditor(const TGWindow *p,
       TGLabel* lab = new TGLabel(f, "Type");
       f->AddFrame(lab, new TGLayoutHints(kLHintsLeft|kLHintsBottom, 1, 31, 1, 2));
       fType = new TGComboBox(f);
-      fType->AddEntry("CFishEye", TEveProjection::PT_CFishEye);
-      fType->AddEntry("RhoZ",     TEveProjection::PT_RhoZ);
+      fType->AddEntry("CFishEye", TEveProjection::kPT_CFishEye);
+      fType->AddEntry("RhoZ",     TEveProjection::kPT_RhoZ);
       TGListBox* lb = fType->GetListBox();
       lb->Resize(lb->GetWidth(), 2*18);
       fType->Resize(80, 20);
@@ -234,9 +234,9 @@ void TEveProjectionManagerEditor::SetModel(TObject* obj)
 
    fDrawCenter->SetState(fM->GetDrawCenter()  ? kButtonDown : kButtonUp);
    fDrawOrigin->SetState(fM->GetDrawOrigin()  ? kButtonDown : kButtonUp);
-   fCenterX->SetValue(fM->GetCenter().x);
-   fCenterY->SetValue(fM->GetCenter().y);
-   fCenterZ->SetValue(fM->GetCenter().z);
+   fCenterX->SetValue(fM->GetCenter().fX);
+   fCenterY->SetValue(fM->GetCenter().fY);
+   fCenterZ->SetValue(fM->GetCenter().fZ);
 }
 
 //______________________________________________________________________________
@@ -244,7 +244,7 @@ void TEveProjectionManagerEditor::DoType(Int_t type)
 {
    // Slot for setting of projection type.
 
-   fM->SetProjection((TEveProjection::PType_e)type, 0.001f * fDistortion->GetValue());
+   fM->SetProjection((TEveProjection::EPType_e)type, 0.001f * fDistortion->GetValue());
    fM->ProjectChildren();
    Update();
 }

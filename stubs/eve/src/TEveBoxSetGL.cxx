@@ -34,12 +34,6 @@ TEveBoxSetGL::TEveBoxSetGL() : fM(0), fBoxDL(0)
    // fDLCache = false; // Disable display list.
 }
 
-//______________________________________________________________________________
-TEveBoxSetGL::~TEveBoxSetGL()
-{
-   // Destructor. Noop.
-}
-
 /******************************************************************************/
 // Protected methods
 /******************************************************************************/
@@ -50,17 +44,17 @@ Int_t TEveBoxSetGL::PrimitiveType() const
    // Return GL primitive used to render the boxes, based on the
    // render-mode specified in the model object.
 
-   return (fM->fRenderMode != TEveDigitSet::RM_TEveLine) ? GL_QUADS : GL_LINE_LOOP;
+   return (fM->fRenderMode != TEveDigitSet::kRM_TEveLine) ? GL_QUADS : GL_LINE_LOOP;
 }
 
 //______________________________________________________________________________
-inline Bool_t TEveBoxSetGL::SetupColor(const TEveDigitSet::DigitBase& q) const
+inline Bool_t TEveBoxSetGL::SetupColor(const TEveDigitSet::DigitBase_t& q) const
 {
    // Set GL color for given primitive.
 
    if (fM->fValueIsColor)
    {
-      glColor4ubv((UChar_t*) & q.fValue);
+      TGLUtil::Color4ubv((UChar_t*) & q.fValue);
       return kTRUE;
    }
    else
@@ -68,7 +62,7 @@ inline Bool_t TEveBoxSetGL::SetupColor(const TEveDigitSet::DigitBase& q) const
       UChar_t c[4];
       Bool_t visible = fM->fPalette->ColorFromValue(q.fValue, fM->fDefaultValue, c);
       if (visible)
-         glColor4ubv(c);
+         TGLUtil::Color4ubv(c);
       return visible;
    }
 }
@@ -129,14 +123,14 @@ void TEveBoxSetGL::MakeDisplayList() const
    // Some box-types don't benefit from the display-list rendering and
    // so display-list is not created.
 
-   if (fM->fBoxType == TEveBoxSet::BT_AABox ||
-       fM->fBoxType == TEveBoxSet::BT_AABoxFixedDim)
+   if (fM->fBoxType == TEveBoxSet::kBT_AABox ||
+       fM->fBoxType == TEveBoxSet::kBT_AABoxFixedDim)
    {
       if (fBoxDL == 0)
          fBoxDL = glGenLists(1);
 
       Float_t p[24];
-      if (fM->fBoxType == TEveBoxSet::BT_AABox)
+      if (fM->fBoxType == TEveBoxSet::kBT_AABox)
          MakeOriginBox(p, 1.0f, 1.0f, 1.0f);
       else
          MakeOriginBox(p, fM->fDefWidth, fM->fDefHeight, fM->fDefDepth);
@@ -240,9 +234,9 @@ void TEveBoxSetGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    glColorMaterial(GL_FRONT_AND_BACK, GL_DIFFUSE);
    glEnable(GL_COLOR_MATERIAL);
 
-   if (mB.fRenderMode == TEveDigitSet::RM_Fill)
+   if (mB.fRenderMode == TEveDigitSet::kRM_Fill)
       glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-   else if (mB.fRenderMode == TEveDigitSet::RM_TEveLine)
+   else if (mB.fRenderMode == TEveDigitSet::kRM_TEveLine)
       glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
    if (mB.fDisableLigting) glDisable(GL_LIGHTING);
@@ -258,12 +252,12 @@ void TEveBoxSetGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    switch (mB.fBoxType)
    {
 
-      case TEveBoxSet::BT_FreeBox:
+      case TEveBoxSet::kBT_FreeBox:
       {
          GLenum primitiveType = PrimitiveType();
          while (bi.next())
          {
-            TEveBoxSet::BFreeBox& b = * (TEveBoxSet::BFreeBox*) bi();
+            TEveBoxSet::BFreeBox_t& b = * (TEveBoxSet::BFreeBox_t*) bi();
             if (SetupColor(b))
             {
                if (rnrCtx.SecSelection()) glLoadName(bi.index());
@@ -276,12 +270,12 @@ void TEveBoxSetGL::DirectDraw(TGLRnrCtx & rnrCtx) const
          break;
       } // end case free-box
 
-      case TEveBoxSet::BT_AABox:
+      case TEveBoxSet::kBT_AABox:
       {
          glEnable(GL_NORMALIZE);
          while (bi.next())
          {
-            TEveBoxSet::BAABox& b = * (TEveBoxSet::BAABox*) bi();
+            TEveBoxSet::BAABox_t& b = * (TEveBoxSet::BAABox_t*) bi();
             if (SetupColor(b))
             {
                if (rnrCtx.SecSelection()) glLoadName(bi.index());
@@ -296,11 +290,11 @@ void TEveBoxSetGL::DirectDraw(TGLRnrCtx & rnrCtx) const
          break;
       }
 
-      case TEveBoxSet::BT_AABoxFixedDim:
+      case TEveBoxSet::kBT_AABoxFixedDim:
       {
          while (bi.next())
          {
-            TEveBoxSet::BAABoxFixedDim& b = * (TEveBoxSet::BAABoxFixedDim*) bi();
+            TEveBoxSet::BAABoxFixedDim_t& b = * (TEveBoxSet::BAABoxFixedDim_t*) bi();
             if (SetupColor(b))
             {
                if (rnrCtx.SecSelection()) glLoadName(bi.index());

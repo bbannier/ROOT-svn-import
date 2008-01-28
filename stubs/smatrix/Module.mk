@@ -72,13 +72,15 @@ $(SMATRIXLIB): $(SMATRIXO) $(SMATRIXDO) $(SMATRIXDO32) $(ORDER_) $(MAINLIBS)
 $(SMATRIXDS):  $(SMATRIXDH1) $(SMATRIXL) $(SMATRIXLINC) $(SMATRIXO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
 		@echo "for files $(SMATRIXDH1)"
-		utils/src/rootcint_tmp -f $@ -c -o "$(SMATRIXO)" $(SMATRIXDH1) $(SMATRIXL)
+		utils/src/rootcint_tmp -f $@ -c $(SMATRIXDH1) $(SMATRIXL)
+
 #		python reflex/python/genreflex/genreflex.py $(SMATRIXDIRS)/Dict.h -I$(SMATRIXDIRI) --selection_file=$(SMATRIXDIRS)/Selection.xml -o $(SMATRIXDIRS)/G__Smatrix.cxx
+
 
 $(SMATRIXDS32): $(SMATRIXDH1) $(SMATRIXL32) $(SMATRIXLINC) $(SMATRIXO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
 		@echo "for files $(SMATRIXDH1)"
-		utils/src/rootcint_tmp -f $@ -c -o "$(SMATRIXO)" $(SMATRIXDH1) $(SMATRIXL32)
+		utils/src/rootcint_tmp -f $@ -c $(SMATRIXDH1) $(SMATRIXL32)
 
 $(SMATRIXMAP):  $(RLIBMAP) $(MAKEFILEDEP) $(SMATRIXL) $(SMATRIXLINC)
 		$(RLIBMAP) -o $(SMATRIXMAP) -l $(SMATRIXLIB) \

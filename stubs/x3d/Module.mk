@@ -48,7 +48,7 @@ $(X3DLIB):      $(X3DO) $(X3DDO) $(ORDER_) $(MAINLIBS) $(X3DLIBDEP)
 
 $(X3DDS):       $(X3DH1) $(X3DL) $(X3DO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -o "$(X3DO)" -c $(X3DH1) $(X3DL)
+		$(ROOTCINTTMP) -f $@ -c $(X3DH1) $(X3DL)
 
 $(X3DMAP):      $(RLIBMAP) $(MAKEFILEDEP) $(X3DL)
 		$(RLIBMAP) -o $(X3DMAP) -l $(X3DLIB) \

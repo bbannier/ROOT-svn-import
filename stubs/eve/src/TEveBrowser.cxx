@@ -21,6 +21,7 @@
 
 #include <Riostream.h>
 
+#include "TClass.h"
 #include "TROOT.h"
 #include "TStyle.h"
 #include "TSystem.h"
@@ -66,6 +67,8 @@ TEveGListTreeEditorFrame::TEveGListTreeEditorFrame(const Text_t* name, Int_t wid
    fCtxMenu     (0),
    fNewSelected (0)
 {
+   // Constructor.
+
    SetWindowName(name);
    SetCleanup(kNoCleanup);
 
@@ -133,6 +136,8 @@ TEveGListTreeEditorFrame::TEveGListTreeEditorFrame(const Text_t* name, Int_t wid
 //______________________________________________________________________________
 TEveGListTreeEditorFrame::~TEveGListTreeEditorFrame()
 {
+   // Destructor.
+
    delete fCtxMenu;
 
    // Should un-register editor, all items and list-tree from gEve ... eventually.
@@ -150,6 +155,8 @@ TEveGListTreeEditorFrame::~TEveGListTreeEditorFrame()
 //______________________________________________________________________________
 void TEveGListTreeEditorFrame::ReconfToHorizontal()
 {
+   // Reconfigure to horizontal layout, list-tree and editor side by side.
+
    UnmapWindow();
 
    fFrame->ChangeOptions(kHorizontalFrame);
@@ -191,6 +198,8 @@ void TEveGListTreeEditorFrame::ReconfToHorizontal()
 //______________________________________________________________________________
 void TEveGListTreeEditorFrame::ReconfToVertical()
 {
+   // Reconfigure to vertical layout, list-tree above the editor.
+
    UnmapWindow();
 
    fFrame->ChangeOptions(kVerticalFrame);
@@ -234,8 +243,10 @@ void TEveGListTreeEditorFrame::ReconfToVertical()
 //______________________________________________________________________________
 void TEveGListTreeEditorFrame::ItemChecked(TObject* obj, Bool_t state)
 {
-   // Item's user-data is blindly casted into TObject.
-   // We recast it blindly back into the render element.
+   // Item has been checked, propagate state change and redraw.
+
+   // Item's user-data was blindly casted into TObject in the caller.
+   // We recast it blindly back into the TEveElement.
 
    TEveElement* rnrEl = (TEveElement*) obj;
    gEve->ElementChecked(rnrEl, state);
@@ -245,12 +256,19 @@ void TEveGListTreeEditorFrame::ItemChecked(TObject* obj, Bool_t state)
 //______________________________________________________________________________
 void TEveGListTreeEditorFrame::ItemClicked(TGListTreeItem *item, Int_t btn, Int_t x, Int_t y)
 {
+   // Item has been clicked, based on mouse button do:
+   // M1 - select, show in editor;
+   // M2 - paste (call gEve->ElementPaste();
+   // M3 - popup context menu.
+
    //printf("ItemClicked item %s List %d btn=%d, x=%d, y=%d\n",
    //  item->GetText(),fDisplayFrame->GetList()->GetEntries(), btn, x, y);
 
+   static const TEveException eh("TEveGListTreeEditorFrame::ItemClicked ");
+
    TEveElement* re = (TEveElement*)item->GetUserData();
    if(re == 0) return;
-   TObject* obj = re->GetObject();
+   TObject* obj = re->GetObject(eh);
 
    switch (btn)
    {
@@ -278,6 +296,10 @@ void TEveGListTreeEditorFrame::ItemClicked(TGListTreeItem *item, Int_t btn, Int_
 //______________________________________________________________________________
 void TEveGListTreeEditorFrame::ItemDblClicked(TGListTreeItem* item, Int_t btn)
 {
+   // Item has been double-clicked, potentially expand the children.
+
+   static const TEveException eh("TEveGListTreeEditorFrame::ItemDblClicked ");
+
    if (btn != 1) return;
 
    TEveElement* re = (TEveElement*) item->GetUserData();
@@ -285,7 +307,7 @@ void TEveGListTreeEditorFrame::ItemDblClicked(TGListTreeItem* item, Int_t btn)
 
    re->ExpandIntoListTree(fListTree, item);
 
-   TObject* obj = re->GetObject();
+   TObject* obj = re->GetObject(eh);
    if (obj)
    {
       // Browse geonodes.
@@ -313,12 +335,16 @@ void TEveGListTreeEditorFrame::ItemDblClicked(TGListTreeItem* item, Int_t btn)
 //______________________________________________________________________________
 void TEveGListTreeEditorFrame::ItemKeyPress(TGListTreeItem *entry, UInt_t keysym, UInt_t /*mask*/)
 {
-   static const TEveException eH("TEveGListTreeEditorFrame::ItemKeyPress ");
+   // A key has been pressed for an item.
+   // Only <Delete> key is handled here.
+
+   static const TEveException eh("TEveGListTreeEditorFrame::ItemKeyPress ");
 
    // replace entry with selected!
    entry = fListTree->GetSelected();
    if (entry == 0) return;
 
+   // !!! This is overly complex because TGListTree takes too much initiative.
    if (keysym == kKey_Delete)
    {
       TEveElement* rnr_el = dynamic_cast<TEveElement*>
@@ -329,7 +355,7 @@ void TEveGListTreeEditorFrame::ItemKeyPress(TGListTreeItem *entry, UInt_t keysym
       if (entry->GetParent())
       {
          if (rnr_el->GetDenyDestroy() > 0 && rnr_el->GetNItems() == 1)
-            throw(eH + "DestroyDenied set for this item.");
+            throw(eh + "DestroyDenied set for this item.");
 
          TEveElement* parent_re = dynamic_cast<TEveElement*>
             ((TEveElement*) entry->GetParent()->GetUserData());
@@ -344,7 +370,7 @@ void TEveGListTreeEditorFrame::ItemKeyPress(TGListTreeItem *entry, UInt_t keysym
       else
       {
          if (rnr_el->GetDenyDestroy() > 0)
-            throw(eH + "DestroyDenied set for this top-level item.");
+            throw(eh + "DestroyDenied set for this top-level item.");
          ResetSelectedTimer(entry);
          gEve->RemoveFromListTree(rnr_el, fListTree, entry);
          gEve->Redraw3D();
@@ -355,6 +381,9 @@ void TEveGListTreeEditorFrame::ItemKeyPress(TGListTreeItem *entry, UInt_t keysym
 //______________________________________________________________________________
 void TEveGListTreeEditorFrame::ResetSelectedTimer(TGListTreeItem* lti)
 {
+   // Reset timer needed for proper re-selection after deletion of an
+   // item.
+
    fNewSelected = lti->GetPrevSibling();
    if (! fNewSelected) {
       fNewSelected = lti->GetNextSibling();
@@ -368,6 +397,9 @@ void TEveGListTreeEditorFrame::ResetSelectedTimer(TGListTreeItem* lti)
 //______________________________________________________________________________
 void TEveGListTreeEditorFrame::ResetSelected()
 {
+   // Callback for timer needed for proper re-selection after deletion
+   // of an item.
+
    fListTree->HighlightItem(fNewSelected);
    fListTree->SetSelected(fNewSelected);
    fNewSelected = 0;
@@ -384,6 +416,8 @@ ClassImp(TEveBrowser)
 //______________________________________________________________________________
 void TEveBrowser::SetupCintExport(TClass* cl)
 {
+   // Add "Export to CINT" into context-menu for class cl.
+
    TList* l = cl->GetMenuList();
    TClassMenuItem* n = new TClassMenuItem(TClassMenuItem::kPopupUserFunction, cl,
                                           "Export to CINT", "ExportToCINT", this, "const char*,TObject*", 1);
@@ -394,6 +428,8 @@ void TEveBrowser::SetupCintExport(TClass* cl)
 //______________________________________________________________________________
 void TEveBrowser::CalculateReparentXY(TGObject* parent, Int_t& x, Int_t& y)
 {
+   // Calculate position of a widget for reparenting into parent.
+
    UInt_t   w, h;
    Window_t childdum;
    gVirtualX->GetWindowSize(parent->GetId(), x, y, w, h);
@@ -406,7 +442,7 @@ void TEveBrowser::CalculateReparentXY(TGObject* parent, Int_t& x, Int_t& y)
 
 namespace
 {
-enum ReveMenu_e {
+enum EReveMenu_e {
    kNewViewer,  kNewScene,  kNewProjector,
    kNewBrowser, kNewCanvas, kNewCanvasExt, kNewTextEditor, kNewHtmlBrowser,
    kVerticalBrowser
@@ -418,7 +454,9 @@ TEveBrowser::TEveBrowser(UInt_t w, UInt_t h) :
    TRootBrowser(0, "Eve Main Window", w, h, "", kFALSE),
    fFileBrowser(0)
 {
-   // Construct Eve menu
+   // Constructor.
+
+   // Construct Eve menu.
 
    fRevePopup = new TGPopupMenu(gClient->GetRoot());
    fRevePopup->AddEntry("New &Viewer",      kNewViewer);
@@ -449,6 +487,8 @@ TEveBrowser::TEveBrowser(UInt_t w, UInt_t h) :
 //______________________________________________________________________________
 void TEveBrowser::ReveMenu(Int_t id)
 {
+   // Handle events from Eve menu.
+
    switch (id)
    {
       case kNewViewer:
@@ -519,6 +559,8 @@ void TEveBrowser::ReveMenu(Int_t id)
 //______________________________________________________________________________
 void TEveBrowser::InitPlugins()
 {
+   // Initialize standard plugins.
+
    // File browser plugin...
    StartEmbedding(0);
    //gROOT->ProcessLine(Form("new TGFileBrowser((const TGWindow *)0x%lx, 200, 500)",

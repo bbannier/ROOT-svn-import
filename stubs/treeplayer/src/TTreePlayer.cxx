@@ -388,7 +388,7 @@ TTree *TTreePlayer::CopyTree(const char *selection, Option_t *, Long64_t nentrie
    nentries = GetEntriesToProcess(firstentry, nentries);
 
    // Compile selection expression if there is one
-   TTreeFormula *select = 0; // no need to interfer with fSelect since we
+   TTreeFormula *select = 0; // no need to interfere with fSelect since we
                              // handle the loop explicitly below and can call
                              // UpdateFormulaLeaves ourselves.
    if (strlen(selection)) {
@@ -458,7 +458,7 @@ Long64_t TTreePlayer::DrawScript(const char* wrapperPrefix,
    // If the branch name can not be used a proper C++ symbol name,
    // it will be modified as follow:
    //    - white spaces are removed
-   //    - if the leadind character is not a letter, an underscore is inserted
+   //    - if the leading character is not a letter, an underscore is inserted
    //    - < and > are replace by underscores
    //    - * is replaced by st
    //    - & is replaced by rf
@@ -535,9 +535,9 @@ Long64_t TTreePlayer::DrawSelect(const char *varexp0, const char *selection, Opt
 //  and will be 0 otherwise.
 //
 //  The expressions can use all the operations and build-in functions
-//  supported by TFormula (See TFormula::Analyze), including free 
+//  supported by TFormula (See TFormula::Analyze), including free
 //  standing function taking numerical arguments (TMath::Bessel).
-//  In addition, you can call member functions taking numerical 
+//  In addition, you can call member functions taking numerical
 //  arguments. For example:
 //      - "TMath::BreitWigner(fPx,3,2)"
 //      - "event.GetHistogram().GetXaxis().GetXmax()"
@@ -556,7 +556,7 @@ Long64_t TTreePlayer::DrawSelect(const char *varexp0, const char *selection, Opt
 //  Examples:
 //      selection1 = "x<y && sqrt(z)>3.2"
 //      selection2 = "(x+y)*(sqrt(z)>3.2"
-//  selection1 returns a weigth = 0 or 1
+//  selection1 returns a weight = 0 or 1
 //  selection2 returns a weight = x+y if sqrt(z)>3.2
 //             returns a weight = 0 otherwise.
 //
@@ -745,7 +745,7 @@ Long64_t TTreePlayer::DrawSelect(const char *varexp0, const char *selection, Opt
 //     ============================================
 //
 //  You can refer to the tree (or chain) containing the data by using the
-//  string 'This'.  
+//  string 'This'.
 //  You can then could any TTree methods.  For example:
 //     tree->Draw("This->GetReadEntry()");
 //  will display the local entry numbers be read.
@@ -771,7 +771,7 @@ Long64_t TTreePlayer::DrawSelect(const char *varexp0, const char *selection, Opt
 //  Length$(formula): return the total number of element of the formula given as a
 //                    parameter.
 //  Sum$(formula): return the sum of the value of the elements of the formula given
-//                    as a parameter.  For eaxmple the mean for all the elements in
+//                    as a parameter.  For example the mean for all the elements in
 //                    one entry can be calculated with:
 //                Sum$(formula)/Length$(formula)
 //
@@ -787,7 +787,7 @@ Long64_t TTreePlayer::DrawSelect(const char *varexp0, const char *selection, Opt
 //    tree->Draw("arr3[0]+arr3[1]+arr3[2]");
 //                 will draw the sum arr3 for the index 0 to 2 only if the
 //                 actual_size_of_arr3 is greater or equal to 3.
-//                 Note that the array in 'primary' is flatened/linearilized thus using
+//                 Note that the array in 'primary' is flattened/linearized thus using
 //                 Alt$ with multi-dimensional arrays of different dimensions in unlikely
 //                 to yield the expected results.  To visualize a bit more what elements
 //                 would be matched by TTree::Draw, TTree::Scan can be used:
@@ -833,14 +833,14 @@ Long64_t TTreePlayer::DrawSelect(const char *varexp0, const char *selection, Opt
 //     Making a Profile histogram
 //     ==========================
 //  In case of a 2-Dim expression, one can generate a TProfile histogram
-//  instead of a TH2F histogram by specyfying option=prof or option=profs.
+//  instead of a TH2F histogram by specifying option=prof or option=profs.
 //  The option=prof is automatically selected in case of y:x>>pf
 //  where pf is an existing TProfile histogram.
 //
 //     Making a 2D Profile histogram
 //     ==========================
 //  In case of a 3-Dim expression, one can generate a TProfile2D histogram
-//  instead of a TH3F histogram by specyfying option=prof or option=profs.
+//  instead of a TH3F histogram by specifying option=prof or option=profs.
 //  The option=prof is automatically selected in case of z:y:x>>pf
 //  where pf is an existing TProfile2D histogram.
 //
@@ -885,7 +885,7 @@ Long64_t TTreePlayer::DrawSelect(const char *varexp0, const char *selection, Opt
 //      Using a TEventList or a TEntryList as Input
 //      ===========================
 //  Once a TEventList or a TEntryList object has been generated, it can be used as input
-//  for TTree::Draw. Use TTree::SetEventList or TTree::SetEntryList to set the 
+//  for TTree::Draw. Use TTree::SetEventList or TTree::SetEntryList to set the
 //  current event list
 //  Example1:
 //     TEventList *elist = (TEventList*)gDirectory->Get("yplus");
@@ -930,9 +930,9 @@ Long64_t TTreePlayer::DrawSelect(const char *varexp0, const char *selection, Opt
 //    -GetSelectedRows()    // return the number of entries accepted by the
 //                          //selection expression. In case where no selection
 //                          //was specified, returns the number of entries processed.
-//    -GetV1()              //returns a pointer to the float array of V1
-//    -GetV2()              //returns a pointer to the float array of V2
-//    -GetV3()              //returns a pointer to the float array of V3
+//    -GetV1()              //returns a pointer to the double array of V1
+//    -GetV2()              //returns a pointer to the double array of V2
+//    -GetV3()              //returns a pointer to the double array of V3
 //    -GetW()               //returns a pointer to the double array of Weights
 //                          //where weight equal the result of the selection expression.
 //   where V1,V2,V3 correspond to the expressions in
@@ -1140,7 +1140,7 @@ Int_t TTreePlayer::Fit(const char *formula ,const char *varexp, const char *sele
 //   =============
 // The function returns the status of the histogram fit (see TH1::Fit)
 // If no entries were selected, the function returns -1;
-//   (ie fitResult is null is the fit is OK)
+//   (i.e. fitResult is null if the fit is OK)
 
    Int_t nch = strlen(option) + 10;
    char *opt = new char[nch];
@@ -1151,7 +1151,7 @@ Int_t TTreePlayer::Fit(const char *formula ,const char *varexp, const char *sele
 
    delete [] opt;
    Int_t fitResult = -1;
-   
+
    if (fHistogram && nsel > 0) {
       fitResult = fHistogram->Fit(formula,option,goption);
    }
@@ -1301,37 +1301,36 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
    opt.ToLower();
 
    // Connect output files
-   char *thead = new char[256];
-
    if (!classname) classname = fTree->GetName();
-   sprintf(thead,"%s.h",classname);
-   FILE *fp = fopen(thead,"w");
+
+   TString thead;
+   thead.Form("%s.h", classname);
+   FILE *fp = fopen(thead, "w");
    if (!fp) {
-      printf("Cannot open output file:%s\n",thead);
-      delete [] thead;
+      Info("MakeClass","cannot open output file:%s", thead.Data());
       return 3;
    }
-   char *tcimp = new char[256];
-   sprintf(tcimp,"%s.C",classname);
-   FILE *fpc = fopen(tcimp,"w");
+   TString tcimp;
+   tcimp.Form("%s.C", classname);
+   FILE *fpc = fopen(tcimp, "w");
    if (!fpc) {
-      printf("Cannot open output file:%s\n",tcimp);
-      delete [] thead;
-      delete [] tcimp;
+      Info("MakeClass","cannot open output file:%s", tcimp.Data());
+      fclose(fp);
       return 3;
    }
-   char *treefile = new char[1000];
+   TString treefile;
    if (fTree->GetDirectory() && fTree->GetDirectory()->GetFile()) {
-      strcpy(treefile,fTree->GetDirectory()->GetFile()->GetName());
+      treefile = fTree->GetDirectory()->GetFile()->GetName();
    } else {
-      strcpy(treefile,"Memory Directory");
+      treefile = "Memory Directory";
    }
    // In the case of a chain, the GetDirectory information usually does
    // pertain to the Chain itself but to the currently loaded tree.
    // So we can not rely on it.
    Bool_t ischain = fTree->InheritsFrom("TChain");
    Bool_t isHbook = fTree->InheritsFrom("THbookTree");
-   if (isHbook) strcpy(treefile,fTree->GetTitle());
+   if (isHbook)
+      treefile = fTree->GetTitle();
 
 //======================Generate classname.h=====================
    // Print header
@@ -1343,7 +1342,7 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
    fprintf(fp,"// %s by ROOT version %s\n",td.AsString(),gROOT->GetVersion());
    if (!ischain) {
       fprintf(fp,"// from TTree %s/%s\n",fTree->GetName(),fTree->GetTitle());
-      fprintf(fp,"// found on file: %s\n",treefile);
+      fprintf(fp,"// found on file: %s\n",treefile.Data());
    } else {
       fprintf(fp,"// from TChain %s/%s\n",fTree->GetName(),fTree->GetTitle());
    }
@@ -1360,7 +1359,7 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
 
 // First loop on all leaves to generate dimension declarations
    Int_t len, lenb,l;
-   char blen[128];
+   char blen[1024];
    char *bname;
    Int_t *leaflen = new Int_t[nleaves];
    TObjArray *leafs = new TObjArray(nleaves);
@@ -1425,15 +1424,15 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
       fprintf(fp,"   TTree          *fChain;   //!pointer to the analyzed TTree or TChain\n");
       fprintf(fp,"   Int_t           fCurrent; //!current Tree number in a TChain\n");
    }
-   fprintf(fp,"\n   // Declaration of leave types\n");
+   fprintf(fp,"\n   // Declaration of leaf types\n");
    TLeaf *leafcount;
    TLeafObject *leafobj;
    TBranchElement *bre=0;
    const char *headOK  = "   ";
    const char *headcom = " //";
    const char *head;
-   char branchname[128];
-   char aprefix[128];
+   char branchname[1024];
+   char aprefix[1024];
    TObjArray branches(100);
    TObjArray mustInit(100);
    TObjArray mustInitArr(100);
@@ -1584,7 +1583,7 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
             if (twodim) strcat(dimensions,(char*)(twodim+1));
          }
          const char* leafcountName = leafcount->GetName();
-         char b2len[128];
+         char b2len[1024];
          if (bre && bre->GetBranchCount2()) {
             TLeaf * l2 = (TLeaf*)bre->GetBranchCount2()->GetListOfLeaves()->At(0);
             strcpy(b2len,l2->GetName());
@@ -1686,17 +1685,18 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
          fprintf(fp,"      // a single tree instead of a chain\n");
       }
       if (isHbook) {
-         fprintf(fp,"      THbookFile *f = (THbookFile*)gROOT->GetListOfBrowsables()->FindObject(\"%s\");\n",treefile);
+         fprintf(fp,"      THbookFile *f = (THbookFile*)gROOT->GetListOfBrowsables()->FindObject(\"%s\");\n",
+                    treefile.Data());
          fprintf(fp,"      if (!f) {\n");
-         fprintf(fp,"         f = new THbookFile(\"%s\");\n",treefile);
+         fprintf(fp,"         f = new THbookFile(\"%s\");\n",treefile.Data());
          fprintf(fp,"      }\n");
          Int_t hid;
          sscanf(fTree->GetName(),"h%d",&hid);
          fprintf(fp,"      tree = (TTree*)f->Get(%d);\n\n",hid);
       } else {
-         fprintf(fp,"      TFile *f = (TFile*)gROOT->GetListOfFiles()->FindObject(\"%s\");\n",treefile);
+         fprintf(fp,"      TFile *f = (TFile*)gROOT->GetListOfFiles()->FindObject(\"%s\");\n",treefile.Data());
          fprintf(fp,"      if (!f) {\n");
-         fprintf(fp,"         f = new TFile(\"%s\");\n",treefile);
+         fprintf(fp,"         f = new TFile(\"%s\");\n",treefile.Data());
          if (gDirectory != gFile) {
             fprintf(fp,"         f->cd(\"%s\");\n",gDirectory->GetPath());
          }
@@ -1771,7 +1771,7 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
    fprintf(fp,"   // The Init() function is called when the selector needs to initialize\n"
               "   // a new tree or chain. Typically here the branch addresses and branch\n"
               "   // pointers of the tree will be set.\n"
-              "   // It is normaly not necessary to make changes to the generated\n"
+              "   // It is normally not necessary to make changes to the generated\n"
               "   // code, but the routine can be extended by the user if needed.\n"
               "   // Init() will be called many times when running on PROOF\n"
               "   // (once per file to be processed).\n\n");
@@ -1875,7 +1875,7 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
    fprintf(fp,"{\n");
    fprintf(fp,"   // The Notify() function is called when a new file is opened. This\n"
               "   // can be either for a new TTree in a TChain or when when a new TTree\n"
-              "   // is started when using PROOF. It is normaly not necessary to make changes\n"
+              "   // is started when using PROOF. It is normally not necessary to make changes\n"
               "   // to the generated code, but the routine can be extended by the\n"
               "   // user if needed. The return value is currently not used.\n\n");
    fprintf(fp,"   return kTRUE;\n");
@@ -1910,7 +1910,7 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
    if (!opt.Contains("selector")) {
       // generate code for class member function Loop()
       fprintf(fpc,"#define %s_cxx\n",classname);
-      fprintf(fpc,"#include \"%s\"\n",thead);
+      fprintf(fpc,"#include \"%s\"\n",thead.Data());
       fprintf(fpc,"#include <TH2.h>\n");
       fprintf(fpc,"#include <TStyle.h>\n");
       fprintf(fpc,"#include <TCanvas.h>\n");
@@ -1958,7 +1958,7 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
       fprintf(fpc,"// from the ROOT class TSelector. For more information on the TSelector\n"
                   "// framework see $ROOTSYS/README/README.SELECTOR or the ROOT User Manual.\n\n");
       fprintf(fpc,"// The following methods are defined in this file:\n");
-      fprintf(fpc,"//    Begin():        called everytime a loop on the tree starts,\n");
+      fprintf(fpc,"//    Begin():        called every time a loop on the tree starts,\n");
       fprintf(fpc,"//                    a convenient place to create your histograms.\n");
       fprintf(fpc,"//    SlaveBegin():   called after Begin(), when on PROOF called only on the\n"
                   "//                    slave servers.\n");
@@ -1975,7 +1975,7 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
       fprintf(fpc,"// Root > T->Process(\"%s.C\",\"some options\")\n",classname);
       fprintf(fpc,"// Root > T->Process(\"%s.C+\")\n",classname);
       fprintf(fpc,"//\n\n");
-      fprintf(fpc,"#include \"%s\"\n",thead);
+      fprintf(fpc,"#include \"%s\"\n",thead.Data());
       fprintf(fpc,"#include <TH2.h>\n");
       fprintf(fpc,"#include <TStyle.h>\n");
       fprintf(fpc,"\n");
@@ -2046,11 +2046,8 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
       fprintf(fpc,"\n");
       fprintf(fpc,"}\n");
    }
-   Info("MakeClass","Files: %s and %s generated from TTree: %s",thead,tcimp,fTree->GetName());
+   Info("MakeClass","Files: %s and %s generated from TTree: %s",thead.Data(),tcimp.Data(),fTree->GetName());
    delete [] leafStatus;
-   delete [] thead;
-   delete [] tcimp;
-   delete [] treefile;
    fclose(fp);
    fclose(fpc);
 
@@ -2080,22 +2077,24 @@ Int_t TTreePlayer::MakeCode(const char *filename)
 // and anal.C the name of the file created by this function.
 //
 // NOTE: Since the implementation of this function, a new and better
-//       function TTree::MakeClass() has been developped.
+//       function TTree::MakeClass() has been developed.
 
 // Connect output file
-   char *tfile = new char[1000];
-   if (filename) strcpy(tfile,filename);
-   else          sprintf(tfile,"%s.C",fTree->GetName());
-   FILE *fp = fopen(tfile,"w");
+   TString tfile;
+   if (filename)
+      tfile = filename;
+   else
+      tfile.Form("%s.C", fTree->GetName());
+   FILE *fp = fopen(tfile, "w");
    if (!fp) {
-      printf("Cannot open output file:%s\n",tfile);
+      Printf("MakeCode","cannot open output file %s", tfile.Data());
       return 3;
    }
-   char *treefile = new char[1000];
+   TString treefile;
    if (fTree->GetDirectory() && fTree->GetDirectory()->GetFile()) {
-      strcpy(treefile,fTree->GetDirectory()->GetFile()->GetName());
+      treefile = fTree->GetDirectory()->GetFile()->GetName();
    } else {
-      strcpy(treefile,"Memory Directory");
+      treefile = "Memory Directory";
    }
    // In the case of a chain, the GetDirectory information usually does
    // pertain to the Chain itself but to the currently loaded tree.
@@ -2112,7 +2111,7 @@ Int_t TTreePlayer::MakeCode(const char *filename)
    fprintf(fp,"//     (%s by ROOT version%s)\n",td.AsString(),gROOT->GetVersion());
    if (!ischain) {
       fprintf(fp,"//   from TTree %s/%s\n",fTree->GetName(),fTree->GetTitle());
-      fprintf(fp,"//   found on file: %s\n",treefile);
+      fprintf(fp,"//   found on file: %s\n",treefile.Data());
    } else {
       fprintf(fp,"//   from TChain %s/%s\n",fTree->GetName(),fTree->GetTitle());
    }
@@ -2129,9 +2128,9 @@ Int_t TTreePlayer::MakeCode(const char *filename)
       fprintf(fp,"   // The following code should be used if you want this code to access\n");
       fprintf(fp,"   // a single tree instead of a chain\n");
    }
-   fprintf(fp,"   TFile *f = (TFile*)gROOT->GetListOfFiles()->FindObject(\"%s\");\n",treefile);
+   fprintf(fp,"   TFile *f = (TFile*)gROOT->GetListOfFiles()->FindObject(\"%s\");\n",treefile.Data());
    fprintf(fp,"   if (!f) {\n");
-   fprintf(fp,"      f = new TFile(\"%s\");\n",treefile);
+   fprintf(fp,"      f = new TFile(\"%s\");\n",treefile.Data());
    if (gDirectory != gFile) {
       fprintf(fp,"      f->cd(\"%s\");\n",gDirectory->GetPath());
    }
@@ -2160,7 +2159,7 @@ Int_t TTreePlayer::MakeCode(const char *filename)
    const char *headOK  = "   ";
    const char *headcom = " //";
    const char *head;
-   char branchname[128];
+   char branchname[1024];
    for (l=0;l<nleaves;l++) {
       TLeaf *leaf = (TLeaf*)leaves->UncheckedAt(l);
       len = leaf->GetLen();
@@ -2283,9 +2282,7 @@ Int_t TTreePlayer::MakeCode(const char *filename)
    fprintf(fp,"//   }\n");
    fprintf(fp,"}\n");
 
-   printf("Macro: %s generated from Tree: %s\n",tfile,fTree->GetName());
-   delete [] tfile;
-   delete [] treefile;
+   printf("Macro: %s generated from Tree: %s\n",tfile.Data(), fTree->GetName());
    fclose(fp);
 
    return 0;
@@ -2318,7 +2315,7 @@ Int_t TTreePlayer::MakeProxy(const char *proxyClassname,
    //    nohist : indicates that the generated ProcessFill should not
    //             fill the histogram.
    //
-   // 'maxUnrolling' controls how deep in the class hierachy does the
+   // 'maxUnrolling' controls how deep in the class hierarchy does the
    // system 'unroll' class that are not split.  'unrolling' a class
    // will allow direct access to its data members a class (this
    // emulates the behavior of TTreeFormula).
@@ -2333,7 +2330,7 @@ Int_t TTreePlayer::MakeProxy(const char *proxyClassname,
    // For example with Event.root, if
    //    Double_t somepx = fTracks.fPx[2];
    // is executed by one of the method of the skeleton,
-   // somepx will updated with the current value of fPx of the 3rd track.
+   // somepx will be updated with the current value of fPx of the 3rd track.
    //
    // Both macrofilename and the optional cutfilename are expected to be
    // the name of source files which contain at least a free standing
@@ -2358,27 +2355,27 @@ Int_t TTreePlayer::MakeProxy(const char *proxyClassname,
    //
    // Access to TClonesArray.
    //
-   // If a branch (or member) is a TClonesArray (let's say fTracks), you 
+   // If a branch (or member) is a TClonesArray (let's say fTracks), you
    // can access the TClonesArray itself by using ->:
    //    fTracks->GetLast();
-   // However this will load the full TClonesArray object and its content.  
+   // However this will load the full TClonesArray object and its content.
    // To quickly read the size of the TClonesArray use (note the dot):
    //    fTracks.GetEntries();
    // This will read only the size from disk if the TClonesArray has been
    // split.
    // To access the content of the TClonesArray, use the [] operator:
-   //    float px = fTracks[i].fPx; // fPx of the i-th track 
+   //    float px = fTracks[i].fPx; // fPx of the i-th track
    //
    // Warning:
-   //    The variable actually use for access are 'wrapper' around the 
-   // real data type (to add autoload for example) and hence getting to 
+   //    The variable actually use for access are 'wrapper' around the
+   // real data type (to add autoload for example) and hence getting to
    // the data involves the implicit call to a C++ conversion operator.
    // This conversion is automatic in most case.  However it is not invoked
    // in a few cases, in particular in variadic function (like printf).
    // So when using printf you should either explicitly cast the value or
    // use any intermediary variable:
    //      fprintf(stdout,"trs[%d].a = %d\n",i,(int)trs.a[i]);
-   // 
+   //
    // Also, optionally, the generated selector will also call methods named
    // macrofilename_methodname in each of 6 main selector methods if the method
    // macrofilename_methodname exist (Where macrofilename is stripped of its
@@ -2445,7 +2442,7 @@ TPrincipal *TTreePlayer::Principal(const char *varexp, const char *selection, Op
 //   If option "p" and "d" print results of analysis
 //   If option "p" and "h" generate standard histograms
 //   If option "p" and "c" generate code of conversion functions
-//   return a pointer to the TPrincipal object. It is the user responsability
+//   return a pointer to the TPrincipal object. It is the user responsibility
 //   to delete this object.
 //   The option default value is "np"
 //
@@ -2590,7 +2587,7 @@ Long64_t TTreePlayer::Process(const char *filename,Option_t *option, Long64_t ne
    // filename must contain a valid class implementation derived from TSelector,
    // where TSelector has the following member functions:
    //
-   //    Begin():        called everytime a loop on the tree starts,
+   //    Begin():        called every time a loop on the tree starts,
    //                    a convenient place to create your histograms.
    //    SlaveBegin():   called after Begin(), when on PROOF called only on the
    //                    slave servers.
@@ -2667,7 +2664,7 @@ Long64_t TTreePlayer::Process(TSelector *selector,Option_t *option, Long64_t nen
    //
    //   The TSelector class has the following member functions:
    //
-   //    Begin():        called everytime a loop on the tree starts,
+   //    Begin():        called every time a loop on the tree starts,
    //                    a convenient place to create your histograms.
    //    SlaveBegin():   called after Begin(), when on PROOF called only on the
    //                    slave servers.
@@ -2690,8 +2687,8 @@ Long64_t TTreePlayer::Process(TSelector *selector,Option_t *option, Long64_t nen
 
    selector->SetOption(option);
 
-   selector->Begin(fTree);       //<===call user initialisation function
-   selector->SlaveBegin(fTree);  //<===call user initialisation function
+   selector->Begin(fTree);       //<===call user initialization function
+   selector->SlaveBegin(fTree);  //<===call user initialization function
    if (selector->Version() >= 2)
       selector->Init(fTree);
    selector->Notify();
@@ -2824,8 +2821,8 @@ Long64_t TTreePlayer::Scan(const char *varexp, const char *selection,
    // *        x *        6 * arr1[3][0]*           *
    // *        x *        7 * arr1[3][1]*           *
    //
-   // However, if there is a selection criterium which is an array, then
-   // all the formulas will be synchronized with the selection criterium
+   // However, if there is a selection criterion which is an array, then
+   // all the formulas will be synchronized with the selection criterion
    // (see TTreePlayer::DrawSelect for more information).
    //
    // The options string can contains the following parameters:
@@ -3452,7 +3449,7 @@ Int_t TTreePlayer::UnbinnedFit(const char *funcname ,const char *varexp, const c
 //   The number of entries used in the fit can be obtained via
 //     mytree.GetSelectedRows();
 //   If the number of selected entries is null the function returns -1
- 
+
    Int_t npar,nvpar,nparx;
    Int_t i;
    Int_t fitResult = 0;
@@ -3467,7 +3464,7 @@ Int_t TTreePlayer::UnbinnedFit(const char *funcname ,const char *varexp, const c
    if (npar <=0) { Error("UnbinnedFit", "Illegal number of parameters = %d",npar); return 0; }
 
    // Spin through the data to select out the events of interest
-   // Make sure that the arrays V1,etc are created large enough to accomodate
+   // Make sure that the arrays V1,etc are created large enough to accommodate
    // all entries
    Long64_t oldEstimate = fTree->GetEstimate();
    Long64_t nent = fTree->GetEntriesFriend();
@@ -3501,7 +3498,7 @@ Int_t TTreePlayer::UnbinnedFit(const char *funcname ,const char *varexp, const c
 
    TString opt = option;
    opt.ToLower();
-   // Some initialisations
+   // Some initializations
    if (!opt.Contains("v")) {
       arglist[0] = -1;
       tFitter->ExecuteCommand("SET PRINT", arglist,1);
@@ -3622,7 +3619,7 @@ void TTreePlayer::UpdateFormulaLeaves()
                ((TEntryList*)fSelector->GetObject())->SetTree(fTree->GetTree());
             }
          }
-      }   
+      }
       if (fSelectorFromFile==fSelectorUpdate) {
          TIter next(fSelectorFromFile->GetOutputList());
          TEntryList *elist=0;

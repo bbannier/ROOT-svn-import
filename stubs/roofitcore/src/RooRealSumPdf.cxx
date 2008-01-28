@@ -29,8 +29,8 @@
 //
 
 #include "RooFit.h"
+#include "Riostream.h"
 
-#include "TIterator.h"
 #include "TIterator.h"
 #include "TList.h"
 #include "RooRealSumPdf.h"
@@ -43,8 +43,19 @@
 #include "RooMsgService.h"
 
 
+
 ClassImp(RooRealSumPdf)
 ;
+
+RooRealSumPdf::RooRealSumPdf() :
+  _lastFuncIntSet(0),
+  _lastFuncNormSet(0),
+  _funcIntList(0),
+  _funcNormList(0)
+{
+  _funcIter  = _funcList.createIterator() ;
+  _coefIter  = _coefList.createIterator() ;
+}
 
 
 RooRealSumPdf::RooRealSumPdf(const char *name, const char *title) :

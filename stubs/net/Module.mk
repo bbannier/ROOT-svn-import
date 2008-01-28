@@ -47,7 +47,7 @@ $(NETLIB):      $(NETO) $(NETDO) $(ORDER_) $(MAINLIBS) $(NETLIBDEP)
 
 $(NETDS):       $(NETH) $(NETL) $(NETO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -o "$(NETO)" -c $(NETH) $(NETL)
+		$(ROOTCINTTMP) -f $@ -c $(NETH) $(NETL)
 
 $(NETMAP):      $(RLIBMAP) $(MAKEFILEDEP) $(NETL)
 		$(RLIBMAP) -o $(NETMAP) -l $(NETLIB) -d $(NETLIBDEPM) -c $(NETL)

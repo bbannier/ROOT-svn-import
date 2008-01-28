@@ -83,6 +83,8 @@ private:
    void    CreateXClient(const char *url, Option_t *option, Int_t netopt,
                          Bool_t parallelopen);
 
+   Int_t   ParseCacheOptions(const char *opts,
+                             Int_t &cachesz, Int_t &readaheadsz, Int_t &rmpolicy);
    // Synchronizes the cache size in XrdClient
    // XrdClient cannot have a cache size smaller than the one in TFile
    void    SynchronizeCacheSize();
@@ -115,6 +117,8 @@ public:
    virtual Bool_t   ReadBufferAsync(Long64_t offs, Int_t len);
    virtual TFile::EAsyncOpenStatus GetAsyncOpenStatus();
    virtual Bool_t   IsOpen() const;
+
+   virtual void     Print(Option_t *option="") const;
    virtual Bool_t   ReadBuffer(char *buf, Int_t len);
    virtual Bool_t   ReadBuffers(char *buf,  Long64_t *pos, Int_t *len, Int_t nbuf);
    virtual Int_t    ReOpen(const Option_t *mode);

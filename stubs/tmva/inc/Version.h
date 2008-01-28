@@ -38,10 +38,10 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#define TMVA_RELEASE      "3.8.11"
-#define TMVA_RELEASE_DATE "Oct 26, 2007"
-#define TMVA_RELEASE_TIME "13:15:52"
-#define TMVA_VERSION_CODE 198667
+#define TMVA_RELEASE      "3.8.13"
+#define TMVA_RELEASE_DATE "Dec 22, 2007"
+#define TMVA_RELEASE_TIME "00:14:06"
+#define TMVA_VERSION_CODE 198669
 #define TMVA_VERSION(a,b,c) (((a) << 16) + ((b) << 8) + (c))
 
 #endif

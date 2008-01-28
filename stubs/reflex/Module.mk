@@ -151,7 +151,7 @@ $(REFLEXDICTLIB): $(REFLEXDO) $(ORDER_) $(MAINLIBS) $(REFLEXLIB)
 
 $(REFLEXDS): $(REFLEXAPIH) $(REFLEXL) $(REFLEXO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		utils/src/rootcint_tmp -f $@ -c -o "$(REFLEXO)" -p -Ireflex/inc $(REFLEXAPIH) $(REFLEXL)
+		utils/src/rootcint_tmp -f $@ -c -p -Ireflex/inc $(REFLEXAPIH) $(REFLEXL)
 
 $(REFLEXDICTMAP): $(RLIBMAP) $(MAKEFILEDEP) $(REFLEXL)
 		$(RLIBMAP) -o $(REFLEXDICTMAP) -l $(REFLEXDICTLIB) \

@@ -27,10 +27,13 @@
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
 
-//_______________________________________________________________________
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+// BinaryTree                                                           //
 //                                                                      //
 // Base class for BinarySearch and Decision Trees                       //
-//______________________________________________________________________//
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
 
 #include <string>
 #include <stdexcept>
@@ -44,8 +47,9 @@ ClassImp(TMVA::BinaryTree)
 
 //_______________________________________________________________________
 TMVA::BinaryTree::BinaryTree( void )
-   : fRoot ( NULL ), 
-     fNNodes ( 0 ),
+   : fRoot  ( NULL ), 
+     fNNodes( 0 ),
+     fDepth ( 0 ),
      fLogger( "BinaryTree" )
 {
    // constructor for a yet "empty" tree. Needs to be filled afterwards
@@ -92,7 +96,7 @@ UInt_t TMVA::BinaryTree::CountNodes(TMVA::Node *n)
    // return the number of nodes in the tree. (make a new count --> takes time)
 
    if (n == NULL){ //default, start at the tree top, then descend recursively
-      n = (Node*) this->GetRoot();
+      n = (Node*)this->GetRoot();
       if (n == NULL) return 0 ;
    } 
 
@@ -127,6 +131,10 @@ ostream& TMVA::operator<< (ostream& os, const TMVA::BinaryTree& tree)
 //_______________________________________________________________________
 void TMVA::BinaryTree::Read(istream & istr)
 {
+   // Read the binary tree from an input stream.
+   // The input stream format depends on the tree type,
+   // it is defined be the node of the tree
+
    Node * currentNode = GetRoot();
    Node* parent = 0;
 
@@ -138,6 +146,7 @@ void TMVA::BinaryTree::Read(istream & istr)
    while(1) {
       if ( ! currentNode->ReadDataRecord(istr) ) {
          delete currentNode;
+         this->SetTotalTreeDepth();
          return;
       }
 
@@ -162,4 +171,26 @@ istream& TMVA::operator>> (istream& istr, TMVA::BinaryTree& tree)
    // read the tree from an istream
    tree.Read(istr);
    return istr;
+}
+//_______________________________________________________________________
+void TMVA::BinaryTree::SetTotalTreeDepth( Node *n)
+{
+   // descend a tree to find all its leaf nodes, fill max depth reached in the
+   // tree at the same time. 
+
+   if (n == NULL){ //default, start at the tree top, then descend recursively
+      n = (Node*) this->GetRoot();
+      if (n == NULL) {
+         fLogger << kFATAL << "SetTotalTreeDepth: started with undefined ROOT node" <<Endl;
+         return ;
+      }
+   } 
+   if (this->GetLeftDaughter(n) != NULL){
+      this->SetTotalTreeDepth( this->GetLeftDaughter(n) );
+   }
+   if (this->GetRightDaughter(n) != NULL) {
+      this->SetTotalTreeDepth( this->GetRightDaughter(n) );
+   }
+   if (n->GetDepth() > this->GetTotalTreeDepth()) this->SetTotalTreeDepth(n->GetDepth());
+   return;
 }

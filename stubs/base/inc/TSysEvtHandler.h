@@ -91,8 +91,8 @@ public:
    virtual void    ResetReadyMask() { fReadyMask = 0; }
    virtual void    SetReadReady() { fReadyMask |= 0x1; }
    virtual void    SetWriteReady() { fReadyMask |= 0x2; }
-   virtual Bool_t  IsReadReady() const { return (fReadyMask & 0x1); }
-   virtual Bool_t  IsWriteReady() const { return (fReadyMask & 0x2); }
+   virtual Bool_t  IsReadReady() const { return (fReadyMask & 0x1) == 0x1; }
+   virtual Bool_t  IsWriteReady() const { return (fReadyMask & 0x2) == 0x2; }
    virtual void    Add();
    virtual void    Remove();
 
@@ -160,5 +160,33 @@ inline void TSignalHandler::HandleDelayedSignal()
    } else
       fDelay = 0;
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+// TStdExceptionHandler                                                 //
+//                                                                      //
+// Handles standard C++ exceptions.                                     //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
+
+namespace std { class exception; }
+
+class TStdExceptionHandler : public TSysEvtHandler {
+
+public:
+   enum EStatus { kSEProceed, kSEHandled, kSEAbort };
+
+   TStdExceptionHandler();
+   virtual ~TStdExceptionHandler() { }
+
+   virtual void     Add();
+   virtual void     Remove();
+   virtual Bool_t   Notify();
+
+   virtual EStatus  Handle(std::exception& exc) = 0;
+
+   ClassDef(TStdExceptionHandler,0)  //C++ exception handler
+};
 
 #endif

@@ -335,7 +335,7 @@ void THistPainter::DrawPanel()
    }
    TVirtualPadEditor *editor = TVirtualPadEditor::GetPadEditor();
    editor->Show();
-   gROOT->ProcessLine(Form("((TCanvas*)0x%x)->Selected((TVirtualPad*)0x%x,(TObject*)0x%x,1)",gPad->GetCanvas(),gPad,fH));
+   gROOT->ProcessLine(Form("((TCanvas*)0x%lx)->Selected((TVirtualPad*)0x%lx,(TObject*)0x%lx,1)",gPad->GetCanvas(),gPad,fH));
 }
 
 
@@ -467,7 +467,7 @@ void THistPainter::FitPanel()
    }
 
    if (!TClass::GetClass("TFitEditor")) gSystem->Load("libFitPanel");
-   gROOT->ProcessLine(Form("TFitEditor::Open((TVirtualPad*)0x%x,(TObject*)0x%x)",gPad,fH));
+   gROOT->ProcessLine(Form("TFitEditor::Open((TVirtualPad*)0x%lx,(TObject*)0x%lx)",gPad,fH));
 }
 
 
@@ -632,6 +632,8 @@ Int_t THistPainter::MakeChopt(Option_t *choptin)
 
    Hoption.HighRes  = 0;
 
+   Hoption.Zero     = 0;
+
    //check for graphical cuts
    MakeCuts(chopt);
 
@@ -690,8 +692,9 @@ Int_t THistPainter::MakeChopt(Option_t *choptin)
       Hoption.Lego = 1; strncpy(l,"    ",4);
       if (l[4] == '1') { Hoption.Lego = 11; l[4] = ' '; }
       if (l[4] == '2') { Hoption.Lego = 12; l[4] = ' '; }
-      l = strstr(chopt,"FB");   if (l) { Hoption.FrontBox = 0; strncpy(l,"  ",2); }
-      l = strstr(chopt,"BB");   if (l) { Hoption.BackBox = 0;  strncpy(l,"  ",2); }
+      l = strstr(chopt,"FB"); if (l) { Hoption.FrontBox = 0; strncpy(l,"  ",2); }
+      l = strstr(chopt,"BB"); if (l) { Hoption.BackBox = 0;  strncpy(l,"  ",2); }
+      l = strstr(chopt,"0");  if (l) { Hoption.Zero = 1;  strncpy(l," ",1); }
    }
 
    l = strstr(chopt,"SURF");
@@ -1002,6 +1005,8 @@ void THistPainter::Paint(Option_t *option)
    //    "LEGO"   : Draw a lego plot with hidden line removal
    //    "LEGO1"  : Draw a lego plot with hidden surface removal
    //    "LEGO2"  : Draw a lego plot using colors to show the cell contents
+   //               When the option "0" is used with any LEGO option, the
+   //               empty bins are not drawn.
    //    "SURF"   : Draw a surface plot with hidden line removal
    //    "SURF1"  : Draw a surface plot with hidden surface removal
    //    "SURF2"  : Draw a surface plot using colors to show the cell contents
@@ -1053,6 +1058,9 @@ void THistPainter::Paint(Option_t *option)
    //               content's absolute value. A sunken button is drawn for negative values
    //               a raised one for positive.
    //    "COL"    : a box is drawn for each cell with a color scale varying with contents
+   //               All the none empty bins are painted. Empty bins are not painted
+   //               unless some bins have a negative content because in that case the null
+   //               bins might be not empty.
    //    "COLZ"   : same as "COL". In addition the color palette is also drawn
    //    "CONT"   : Draw a contour plot (same as CONT0)
    //    "CONT0"  : Draw a contour plot using surface colors to distinguish contours
@@ -1391,8 +1399,11 @@ void THistPainter::Paint(Option_t *option)
    //    "LEGO1"  : Draw a lego plot with hidden surface removal
    //    "LEGO2"  : Draw a lego plot using colors to show the cell contents
    //
-   //      See TStyle::SeTPaletteAxis to change the color palette.
-   //      We suggest you use palette 1 with the call
+   //    When the option "0" is used with any LEGO option, the empty
+   //    bins are not drawn.
+   //
+   //    See TStyle::SeTPaletteAxis to change the color palette.
+   //    We suggest you use palette 1 with the call
    //        gStyle->SetColorPalette(1)
    //
    //Begin_Html
@@ -1665,7 +1676,7 @@ void THistPainter::Paint(Option_t *option)
    if (Hoption.Spec) {
       if (!TableInit()) return;
       if (!TClass::GetClass("TSpectrum2Painter")) gSystem->Load("libSpectrumPainter");
-      gROOT->ProcessLineFast(Form("TSpectrum2Painter::PaintSpectrum((TH2F*)0x%x,\"%s\")",fH,option));
+      gROOT->ProcessLineFast(Form("TSpectrum2Painter::PaintSpectrum((TH2F*)0x%lx,\"%s\")",fH,option));
       return;
    }
 
@@ -2517,10 +2528,16 @@ void THistPainter::PaintColorLevels(Option_t *)
 {
    // Control function to draw a table as a color plot.
    //
-   //       For each cell (i,j) a box is drawn with a color proportional
-   //       to the cell content.
-   //       The color table used is defined in the current style (gStyle).
-   //       The color palette in TStyle can be modified via TStyle::SeTPaletteAxis.
+   // For each cell (i,j) a box is drawn with a color proportional
+   // to the cell content.
+   //
+   // The color table used is defined in the current style (gStyle).
+   //
+   // The color palette in TStyle can be modified via TStyle::SeTPaletteAxis.
+   //
+   // All the none empty bins are painted. Empty bins are not painted unless
+   // some bins have a negative content because in that case the null bins
+   // might be not empty.
    //Begin_Html
    /*
    <img src="gif/PaintCol.gif">
@@ -4350,20 +4367,23 @@ void THistPainter::PaintLego(Option_t *)
 {
    // Control function to draw a table as a lego plot.
    //
-   //      In a lego plot, cell contents are represented as 3-d boxes.
-   //      The height of the box is proportional to the cell content.
+   //   In a lego plot, cell contents are represented as 3-d boxes.
+   //   The height of the box is proportional to the cell content.
    //
-   //      A lego plot can be represented in several coordinate systems.
-   //      Default system is Cartesian coordinates.
-   //      Possible systems are CYL,POL,SPH,PSR.
+   //   A lego plot can be represented in several coordinate systems.
+   //   Default system is Cartesian coordinates.
+   //   Possible systems are CYL,POL,SPH,PSR.
    //
-   //      See THistPainter::Draw for the list of Lego options.
-   //      See TPainter3dAlgorithms for more examples of lego options.
+   //   "LEGO"   : Draw a lego plot with hidden line removal
+   //   "LEGO1"  : Draw a lego plot with hidden surface removal
+   //   "LEGO2"  : Draw a lego plot using colors to show the cell contents
    //
-   //      See TStyle::SeTPaletteAxis to change the color palette.
-   //      It is suggested to use palette 1 via the call
+   //   When the option "0" is used with any LEGO option, the empty
+   //   bins are not drawn.
+   //
+   //   See TStyle::SeTPaletteAxis to change the color palette.
+   //   It is suggested to use palette 1 via the call
    //      gStyle->SetColorPalette(1)
-   //
    //Begin_Html
    /*
    <img src="gif/PaintLego1.gif">

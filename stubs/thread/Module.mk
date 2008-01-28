@@ -84,7 +84,7 @@ $(THREADLIB):   $(THREADO) $(THREADDO) $(ORDER_) $(MAINLIBS) $(THREADLIBDEP)
 
 $(THREADDS):    $(THREADH) $(THREADL) $(THREADO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -o "$(THREADO)" -c $(THREADH) $(THREADL)
+		$(ROOTCINTTMP) -f $@ -c $(THREADH) $(THREADL)
 
 $(THREADMAP):   $(RLIBMAP) $(MAKEFILEDEP) $(THREADL)
 		$(RLIBMAP) -o $(THREADMAP) -l $(THREADLIB) \
@@ -105,7 +105,7 @@ distclean::     distclean-thread
 ##### cintdlls ######
 
 ifneq ($(ARCH),win32)
-$(CINTDIRDLLS)/pthread.dll: $(CINTTMP) $(ROOTCINTTMPEXE) cint/lib/pthread/pthd.h
+$(CINTDIRDLLS)/pthread.dll: cint/lib/pthread/pthd.h $(ROOTCINTTMPDEP) $(CINTTMP)
 	@$(MAKECINTDLL) $(PLATFORM) C pthread pthread pthd.h \
            "$(CINTTMP)" "$(ROOTCINTTMP)" \
 	   "$(MAKELIB)" "$(CXX)" "$(CC)" "$(LD)" "$(OPT)" "$(CINTCXXFLAGS)" \

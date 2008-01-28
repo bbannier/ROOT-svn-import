@@ -57,8 +57,7 @@ ROOFITCOREH2   := RooDouble.h RooEffGenContext.h RooEllipse.h RooErrorHandler.h 
                   RooListProxy.h RooMapCatEntry.h RooMappedCategory.h RooMath.h \
                   RooMCIntegrator.h RooMinuit.h RooMPSentinel.h \
                   RooMultiCategory.h RooMultiCatIter.h RooNameReg.h \
-                  RooNameSet.h RooNLLVar.h RooNormListManager.h \
-                  RooNormManager.h RooNormSetCache.h RooNumber.h \
+                  RooNameSet.h RooNLLVar.h RooNormSetCache.h RooNumber.h \
                   RooNumConvolution.h RooNumConvPdf.h RooNumIntConfig.h RooNumIntFactory.h \
                   RooPlotable.h RooPlot.h RooPolyVar.h RooPrintable.h \
                   RooProdGenContext.h RooProduct.h RooPullVar.h \
@@ -108,15 +107,15 @@ $(ROOFITCORELIB): $(ROOFITCOREO) $(ROOFITCOREDO) $(ORDER_) $(MAINLIBS) $(ROOFITC
 
 $(ROOFITCOREDS1): $(ROOFITCOREH1) $(ROOFITCOREL1) $(ROOFITCOREO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -o "$(ROOFITCOREO)" -c $(ROOFITCOREH1) $(ROOFITCOREL1)
+		$(ROOTCINTTMP) -f $@ -c $(ROOFITCOREH1) $(ROOFITCOREL1)
 
 $(ROOFITCOREDS2): $(ROOFITCOREH2) $(ROOFITCOREL2) $(ROOFITCOREO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -o "$(ROOFITCOREO)" -c $(ROOFITCOREH2) $(ROOFITCOREL2)
+		$(ROOTCINTTMP) -f $@ -c $(ROOFITCOREH2) $(ROOFITCOREL2)
 
 $(ROOFITCOREDS3): $(ROOFITCOREH3) $(ROOFITCOREL3) $(ROOFITCOREO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -o "$(ROOFITCOREO)" -c $(ROOFITCOREH3) $(ROOFITCOREL3)
+		$(ROOTCINTTMP) -f $@ -c $(ROOFITCOREH3) $(ROOFITCOREL3)
 
 $(ROOFITCOREMAP): $(RLIBMAP) $(MAKEFILEDEP) $(ROOFITCOREL)
 		$(RLIBMAP) -o $(ROOFITCOREMAP) -l $(ROOFITCORELIB) \

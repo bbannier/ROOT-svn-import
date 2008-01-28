@@ -45,7 +45,7 @@ $(RINTLIB):     $(RINTO) $(RINTDO) $(ORDER_) $(MAINLIBS)
 
 $(RINTDS):      $(RINTH) $(RINTL) $(RINTO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -o "$(RINTO)" -c $(RINTH) $(RINTL)
+		$(ROOTCINTTMP) -f $@ -c $(RINTH) $(RINTL)
 
 $(RINTMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(RINTL)
 		$(RLIBMAP) -o $(RINTMAP) -l $(RINTLIB) \

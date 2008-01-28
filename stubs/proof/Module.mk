@@ -45,7 +45,7 @@ $(PROOFLIB):    $(PROOFO) $(PROOFDO) $(ORDER_) $(MAINLIBS) $(PROOFLIBDEP)
 
 $(PROOFDS):     $(PROOFH) $(PROOFL) $(PROOFO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -o "$(PROOFO)" -c $(PROOFH) $(PROOFL)
+		$(ROOTCINTTMP) -f $@ -c $(PROOFH) $(PROOFL)
 
 $(PROOFMAP):    $(RLIBMAP) $(MAKEFILEDEP) $(PROOFL)
 		$(RLIBMAP) -o $(PROOFMAP) -l $(PROOFLIB) \

@@ -21,8 +21,8 @@
 
 
 #include "RooFit.h"
+#include "Riostream.h"
 
-#include <math.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -36,6 +36,8 @@
 #include "RooRangeBinning.h"
 #include "RooCmdConfig.h"
 #include "RooMsgService.h"
+
+
 
 ClassImp(RooRealVar)
 ;
@@ -850,14 +852,14 @@ void RooRealVar::Streamer(TBuffer &R__b)
       }
       if (R__v==3) {
  	R__b >> _sharedProp ;
-	_sharedProp = (RooRealVarSharedProperties*) _sharedPropList.registerProperties(_sharedProp) ;
+	_sharedProp = (RooRealVarSharedProperties*) _sharedPropList.registerProperties(_sharedProp,kFALSE) ;
       }
       if (R__v==4) {
 	RooRealVarSharedProperties* tmpSharedProp = new RooRealVarSharedProperties() ;
 	tmpSharedProp->Streamer(R__b) ;
 	if (!(_nullProp==*tmpSharedProp)) {
 // 	  cout << "RooRealVar::streamer registering shared prop " << tmpSharedProp << endl ;
-	  _sharedProp = (RooRealVarSharedProperties*) _sharedPropList.registerProperties(tmpSharedProp) ;
+	  _sharedProp = (RooRealVarSharedProperties*) _sharedPropList.registerProperties(tmpSharedProp,kFALSE) ;
 	} else {
 // 	  cout << "RooRealVar::streamer deleting shared prop " << tmpSharedProp << endl ;
 	  delete tmpSharedProp ;

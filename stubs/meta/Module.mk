@@ -35,7 +35,7 @@ include/%.h:    $(METADIRI)/%.h
 
 $(METADS):      $(METAH) $(METAL) $(METAO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -o "$(METAO)" -c -DG__API $(METAH) $(METAL)
+		$(ROOTCINTTMP) -f $@ -c -DG__API $(METAH) $(METAL)
 
 all-meta:       $(METAO) $(METADO)
 

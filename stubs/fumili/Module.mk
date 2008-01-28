@@ -43,9 +43,10 @@ $(FUMILILIB):   $(FUMILIO) $(FUMILIDO) $(ORDER_) $(MAINLIBS) $(FUMILILIBDEP)
 		   "$(SOFLAGS)" libFumili.$(SOEXT) $@ "$(FUMILIO) $(FUMILIDO)" \
 		   "$(FUMILILIBEXTRA)"
 
+
 $(FUMILIDS):    $(FUMILIH) $(FUMILIL) $(FUMILIO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -o "$(FUMILIO)" -c $(FUMILIH) $(FUMILIL)
+		$(ROOTCINTTMP) -f $@ -c $(FUMILIH) $(FUMILIL)
 
 $(FUMILIMAP):   $(RLIBMAP) $(MAKEFILEDEP) $(FUMILIL)
 		$(RLIBMAP) -o $(FUMILIMAP) -l $(FUMILILIB) \

@@ -46,7 +46,7 @@ $(VMCLIB):      $(VMCO) $(VMCDO) $(ORDER_) $(MAINLIBS) $(VMCLIBDEP)
 
 $(VMCDS):       $(VMCH1) $(VMCL) $(VMCO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -o "$(VMCO)" -c $(VMCH1) $(VMCL)
+		$(ROOTCINTTMP) -f $@ -c $(VMCH1) $(VMCL)
 
 $(VMCMAP):      $(RLIBMAP) $(MAKEFILEDEP) $(VMCL)
 		$(RLIBMAP) -o $(VMCMAP) -l $(VMCLIB) \

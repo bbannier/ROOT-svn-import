@@ -47,7 +47,7 @@ public:
    TEveTransSubEditor(TGWindow* p);
    virtual ~TEveTransSubEditor() {}
 
-   void SetDataFromTrans(TEveTrans* t);
+   void SetModel(TEveTrans* t);
    void SetTransFromData();
 
    void UseTrans();     //*SIGNAL*
@@ -56,6 +56,10 @@ public:
    void DoUseTrans();
    void DoEditTrans();
    void DoTransChanged();
+
+   TEveGTriVecValuator*  GetPosValuator(){ return fPos;}
+   TEveGTriVecValuator*  GetRotValuator(){ return fRot;}
+   TEveGTriVecValuator*  GetScaleValuator(){ return fScale;}
 
    ClassDef(TEveTransSubEditor, 0); // Sub-editor for TEveTrans class.
 };
@@ -68,11 +72,12 @@ private:
    TEveTransEditor& operator=(const TEveTransEditor&); // Not implemented
 
 protected:
-   TEveTrans* fM; // Model object.
+   TEveTrans          *fM;  // Model object.
+   TEveTransSubEditor *fSE; // Actual editor widget.
 
 public:
    TEveTransEditor(const TGWindow* p=0, Int_t width=170, Int_t height=30, UInt_t options = kChildFrame, Pixel_t back=GetDefaultFrameBackground());
-   virtual ~TEveTransEditor();
+   virtual ~TEveTransEditor() {}
 
    virtual void SetModel(TObject* obj);
 

@@ -13,11 +13,18 @@
 //                                                                      //
 // TFriendProxyDescriptor                                               //
 //                                                                      //
+// Hold the processed information about a Friend TTree while            //
+// TTreeProxyGenerator is parsing the TTree information.                //
+// Also contains the routine use to generate the appropriate code       //
+// fragment in the result of MakeProxy.                                 //
+//                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
 #include "TFriendProxyDescriptor.h"
 #include "TBranchProxyDescriptor.h"
 #include "TList.h"
+
+ClassImp(ROOT::TFriendProxyDescriptor);
 
 namespace ROOT {
 

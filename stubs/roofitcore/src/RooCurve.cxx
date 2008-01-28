@@ -30,7 +30,6 @@
 #include "RooFit.h"
 
 #include "RooCurve.h"
-#include "RooCurve.h"
 #include "RooHist.h"
 #include "RooAbsReal.h"
 #include "RooArgSet.h"
@@ -46,6 +45,8 @@
 #include <assert.h>
 #include <deque>
 #include <algorithm>
+
+using namespace std ;
 
 ClassImp(RooCurve)
 
@@ -167,7 +168,7 @@ RooCurve::RooCurve(const char* name, const char* title, const RooCurve& c1, cons
 
   // Loop over X points
   deque<double>::iterator iter ;
-  Double_t last(-RooNumber::infinity) ;
+  Double_t last(-RooNumber::infinity()) ;
   for (iter=pointList.begin() ; iter!=pointList.end() ; ++iter) {
 
     if ((*iter-last)>1e-10) {      

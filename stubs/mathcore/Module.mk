@@ -59,8 +59,8 @@ MATHCOREDH1  :=  $(MODDIRI)/Math/Vector2D.h \
                  $(MODDIRI)/Math/AllIntegrationTypes.h \
                  $(MODDIRI)/Math/AdaptiveIntegratorMultiDim.h \
                  $(MODDIRI)/Math/IntegratorMultiDim.h \
-                 $(MODDIRI)/Math/Factory.h 
-#                 $(MODDIRI)/Math/Functor.h \
+                 $(MODDIRI)/Math/Factory.h \
+                 $(MODDIRI)/Math/FitMethodFunction.h 
 
 
 MATHCOREDH132:=  $(MODDIRI)/Math/Vector2D.h \
@@ -106,13 +106,14 @@ $(MATHCORELIB): $(MATHCOREO) $(MATHCOREDO) $(MATHCOREDO32) $(ORDER_) $(MAINLIBS)
 $(MATHCOREDS):  $(MATHCOREDH1) $(MATHCOREL) $(MATHCORELINC) $(MATHCOREO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
 		@echo "for files $(MATHCOREDH1)"
-		utils/src/rootcint_tmp -f $@ -c -o "$(MATHCOREO)" $(MATHCOREDH1) $(MATHCOREL)
+		utils/src/rootcint_tmp -f $@ -c $(MATHCOREDH1) $(MATHCOREL)
+
 #		genreflex $(MATHCOREDIRS)/MathCoreDict.h  --selection_file=$(MATHCOREDIRS)/selection_MathCore.xml -o $(MATHCOREDIRS)/G__MathCore.cxx -I$(MATHCOREDIRI)
 
 $(MATHCOREDS32):$(MATHCOREDH132) $(MATHCOREL) $(MATHCORELINC) $(MATHCOREO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
 		@echo "for files $(MATHCOREDH132)"
-		utils/src/rootcint_tmp -f $@ -c -o "$(MATHCOREO)" $(MATHCOREDH132) $(MATHCOREL32)
+		utils/src/rootcint_tmp -f $@ -c $(MATHCOREDH132) $(MATHCOREL32)
 
 $(MATHCOREMAP): $(RLIBMAP) $(MAKEFILEDEP) $(MATHCOREL) $(MATHCORELINC) $(MATHCOREL32)
 		$(RLIBMAP) -o $(MATHCOREMAP) -l $(MATHCORELIB) \

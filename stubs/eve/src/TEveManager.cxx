@@ -19,14 +19,6 @@
 #include "TEveBrowser.h"
 #include "TEveGedEditor.h"
 
-#include "TGMenu.h"
-#include "TGTab.h"
-#include "TGToolBar.h"
-#include "TGLabel.h"
-#include "TGTextEntry.h"
-#include "TGSplitter.h"
-#include "TRootEmbeddedCanvas.h"
-
 #include "TGStatusBar.h"
 
 #include "TGLSAViewer.h"
@@ -35,7 +27,6 @@
 #include "TFile.h"
 #include "TMacro.h"
 #include "TFolder.h"
-#include "TStyle.h"
 #include "TBrowser.h"
 #include "TPad.h"
 #include "TCanvas.h"
@@ -43,10 +34,7 @@
 #include "TRint.h"
 #include "TVirtualX.h"
 #include "TEnv.h"
-#include "TStyle.h"
 #include "TColor.h"
-#include "TGeoShape.h"
-#include <KeySymbols.h>
 #include "TVirtualGL.h"
 #include "TPluginManager.h"
 
@@ -64,6 +52,7 @@ ClassImp(TEveManager)
 
 //______________________________________________________________________________
 TEveManager::TEveManager(UInt_t w, UInt_t h) :
+   fExcHandler  (0),
    fBrowser     (0),
    fEditor      (0),
    fStatusBar   (0),
@@ -88,12 +77,14 @@ TEveManager::TEveManager(UInt_t w, UInt_t h) :
 {
    // Constructor.
 
-   static const TEveException eH("TEveManager::TEveManager ");
+   static const TEveException eh("TEveManager::TEveManager ");
 
    if (gEve != 0)
-      throw(eH + "There can be only one!");
+      throw(eh + "There can be only one!");
 
    gEve = this;
+
+   fExcHandler = new TExceptionHandler;
 
    fRedrawTimer.Connect("Timeout()", "TEveManager", this, "DoRedraw3D()");
    fMacroFolder = new TFolder("EVE", "Visualization macros");
@@ -161,6 +152,8 @@ TEveManager::TEveManager(UInt_t w, UInt_t h) :
 TEveManager::~TEveManager()
 {
    // Destructor.
+
+   delete fExcHandler;
 }
 
 /******************************************************************************/
@@ -221,12 +214,14 @@ TEveScene* TEveManager::SpawnNewScene(const Text_t* name, const Text_t* title)
 }
 
 /******************************************************************************/
-// TEveUtil::Macro management
+// Macro management
 /******************************************************************************/
 
 //______________________________________________________________________________
 TMacro* TEveManager::GetMacro(const Text_t* name) const
 {
+   // Find macro in fMacroFolder by name.
+
    return dynamic_cast<TMacro*>(fMacroFolder->FindObject(name));
 }
 
@@ -235,11 +230,13 @@ TMacro* TEveManager::GetMacro(const Text_t* name) const
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveManager::EditElement(TEveElement* rnr_element)
+void TEveManager::EditElement(TEveElement* element)
 {
-   static const TEveException eH("TEveManager::EditElement ");
+   // Show element in default editor.
 
-   fEditor->DisplayElement(rnr_element);
+   static const TEveException eh("TEveManager::EditElement ");
+
+   fEditor->DisplayElement(element);
 }
 
 /******************************************************************************/
@@ -263,7 +260,7 @@ void TEveManager::DoRedraw3D()
 
    // printf("TEveManager::DoRedraw3D redraw triggered\n");
 
-   fScenes ->RepaintChangedScenes();
+   fScenes ->RepaintChangedScenes (fDropLogicals);
    fViewers->RepaintChangedViewers(fResetCameras, fDropLogicals);
 
    fResetCameras = kFALSE;
@@ -277,18 +274,31 @@ void TEveManager::FullRedraw3D(Bool_t resetCameras, Bool_t dropLogicals)
 {
    // Perform 3D redraw of all scenes and viewers.
 
-   fScenes ->RepaintAllScenes();
+   fScenes ->RepaintAllScenes (fDropLogicals);
    fViewers->RepaintAllViewers(resetCameras, dropLogicals);
 }
 
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveManager::ElementChanged(TEveElement* rnr_element)
+void TEveManager::ElementChanged(TEveElement* element, Bool_t update_scenes, Bool_t redraw)
 {
-   std::list<TEveElement*> scenes;
-   rnr_element->CollectSceneParents(scenes);
-   ScenesChanged(scenes);
+   // Element was changed, perform framework side action.
+   // Called from TEveElement::ElementChanged().
+
+   static const TEveException eh("TEveElement::ElementChanged ");
+
+   if (fEditor->GetModel() == element->GetEditorObject(eh))
+      fEditor->DisplayElement(element);
+
+   if (update_scenes) {
+      std::list<TEveElement*> scenes;
+      element->CollectSceneParents(scenes);
+      ScenesChanged(scenes);
+   }
+
+   if (redraw)
+      Redraw3D();
 }
 
 //______________________________________________________________________________
@@ -326,16 +336,17 @@ TEveManager::AddToListTree(TEveElement* re, Bool_t open, TGListTree* lt)
 }
 
 //______________________________________________________________________________
-void TEveManager::RemoveFromListTree(TEveElement* re, TGListTree* lt, TGListTreeItem* lti)
+void TEveManager::RemoveFromListTree(TEveElement* element,
+                                     TGListTree* lt, TGListTreeItem* lti)
 {
-   // Remove top-level rnr-el from list-tree with specified tree-item.
+   // Remove top-level element from list-tree with specified tree-item.
 
-   static const TEveException eH("TEveManager::RemoveFromListTree ");
+   static const TEveException eh("TEveManager::RemoveFromListTree ");
 
    if (lti->GetParent())
-      throw(eH + "not a top-level item.");
+      throw(eh + "not a top-level item.");
 
-   re->RemoveFromListTree(lt, 0);
+   element->RemoveFromListTree(lt, 0);
 }
 
 /******************************************************************************/
@@ -343,6 +354,10 @@ void TEveManager::RemoveFromListTree(TEveElement* re, TGListTree* lt, TGListTree
 //______________________________________________________________________________
 TGListTreeItem* TEveManager::AddEvent(TEveEventManager* event)
 {
+   // Add a new event and make it the current event.
+   // It is added into the event-scene and as a top-level list-tree
+   // item.
+
    fCurrentEvent = event;
    fCurrentEvent->IncDenyDestroy();
    AddElement(fCurrentEvent, fEventScene);
@@ -350,88 +365,91 @@ TGListTreeItem* TEveManager::AddEvent(TEveEventManager* event)
 }
 
 //______________________________________________________________________________
-TGListTreeItem* TEveManager::AddElement(TEveElement* rnr_element,
-                                              TEveElement* parent)
+TGListTreeItem* TEveManager::AddElement(TEveElement* element,
+                                        TEveElement* parent)
 {
+   // Add an element. If parent is not specified it is added into
+   // current event (which is created if does not exist).
+
    if (parent == 0) {
       if (fCurrentEvent == 0)
          AddEvent(new TEveEventManager("Event", "Auto-created event directory"));
       parent = fCurrentEvent;
    }
 
-   return parent->AddElement(rnr_element);
+   return parent->AddElement(element);
 }
 
 //______________________________________________________________________________
-TGListTreeItem* TEveManager::AddGlobalElement(TEveElement* rnr_element,
-                                                    TEveElement* parent)
+TGListTreeItem* TEveManager::AddGlobalElement(TEveElement* element,
+                                              TEveElement* parent)
 {
+   // Add a global element, i.e. one that does not change on each
+   // event, like geometry or projection manager.
+   // If parent is not specified it is added to a global scene.
+
    if (parent == 0)
       parent = fGlobalScene;
 
-   return parent->AddElement(rnr_element);
+   return parent->AddElement(element);
 }
 
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveManager::RemoveElement(TEveElement* rnr_element,
-                                      TEveElement* parent)
+void TEveManager::RemoveElement(TEveElement* element,
+                                TEveElement* parent)
 {
-   parent->RemoveElement(rnr_element);
+   // Remove element from parent.
+
+   parent->RemoveElement(element);
 }
 
 //______________________________________________________________________________
-void TEveManager::PreDeleteElement(TEveElement* rnr_element)
+void TEveManager::PreDeleteElement(TEveElement* element)
 {
-   if (fEditor->GetRnrElement() == rnr_element)
+   // Called from TEveElement prior to its destruction so the
+   // framework components (like object editor) can unreference it.
+
+   if (fEditor->GetEveElement() == element)
       fEditor->DisplayObject(0);
+
+   std::list<TEveElement*> scenes;
+   element->CollectSceneParents(scenes);
+   ScenesChanged(scenes);
 }
 
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveManager::ElementSelect(TEveElement* rnr_element)
+void TEveManager::ElementSelect(TEveElement* element)
 {
-   EditElement(rnr_element);
+   // Select an element.
+
+   EditElement(element);
 }
 
 //______________________________________________________________________________
-Bool_t TEveManager::ElementPaste(TEveElement* rnr_element)
+Bool_t TEveManager::ElementPaste(TEveElement* element)
 {
-   TEveElement* src = fEditor->GetRnrElement();
+   // Paste has been called.
+
+   // The object to paste is taken from the editor (this is not
+   // exactly right) and handed to 'element' for pasting.
+
+   TEveElement* src = fEditor->GetEveElement();
    if (src)
-      return rnr_element->HandleElementPaste(src);
+      return element->HandleElementPaste(src);
    return kFALSE;
 }
 
 //______________________________________________________________________________
-void TEveManager::ElementChecked(TEveElement* rnrEl, Bool_t state)
+void TEveManager::ElementChecked(TEveElement* element, Bool_t state)
 {
-   rnrEl->SetRnrState(state);
+   // An element has been checked in the list-tree.
 
-   if (fEditor->GetModel() == rnrEl->GetEditorObject())
-      fEditor->DisplayElement(rnrEl);
-
-   rnrEl->ElementChanged();
-}
-
-/******************************************************************************/
-
-//______________________________________________________________________________
-void TEveManager::NotifyBrowser(TGListTreeItem* parent_lti)
-{
-   TGListTree* lt = GetListTree();
-   if (parent_lti)
-      lt->OpenItem(parent_lti);
-   lt->ClearViewPort();
-}
-
-//______________________________________________________________________________
-void TEveManager::NotifyBrowser(TEveElement* parent)
-{
-   TGListTreeItem* parent_lti = parent ? parent->FindListTreeItem(GetListTree()) : 0;
-   NotifyBrowser(parent_lti);
+   element->SetRnrState(state);
+   element->ElementChanged();
 }
 
 /******************************************************************************/
@@ -441,23 +459,25 @@ void TEveManager::NotifyBrowser(TEveElement* parent)
 //______________________________________________________________________________
 TGeoManager* TEveManager::GetGeometry(const TString& filename)
 {
-   static const TEveException eH("TEveManager::GetGeometry ");
+   // Get geometry with given filename.
+   // This is cached internally so the second time this function is
+   // called with the same argument the same geo-manager is returned.
+
+   static const TEveException eh("TEveManager::GetGeometry ");
 
    TString exp_filename = filename;
    gSystem->ExpandPathName(exp_filename);
-   printf("%s loading: '%s' -> '%s'.\n", eH.Data(),
+   printf("%s loading: '%s' -> '%s'.\n", eh.Data(),
           filename.Data(), exp_filename.Data());
 
    std::map<TString, TGeoManager*>::iterator g = fGeometries.find(filename);
    if (g != fGeometries.end()) {
       return g->second;
    } else {
-      if (gSystem->AccessPathName(exp_filename, kReadPermission))
-         throw(eH + "file '" + exp_filename + "' not readable.");
       gGeoManager = 0;
-      TGeoManager::Import(filename);
-      if (gGeoManager == 0)
-         throw(eH + "GeoManager import failed.");
+      if (TGeoManager::Import(filename) == 0)
+         throw(eh + "GeoManager::Import() failed for '" + exp_filename + "'.");
+
       gGeoManager->GetTopVolume()->VisibleDaughters(1);
 
       // Import colors exported by Gled, if they exist.
@@ -485,6 +505,47 @@ TGeoManager* TEveManager::GetGeometry(const TString& filename)
    }
 }
 
+//______________________________________________________________________________
+TGeoManager* TEveManager::GetGeometryByAlias(const TString& alias)
+{
+   // Get geometry with given alias.
+   // The alias must be registered via RegisterGeometryAlias().
+
+   static const TEveException eh("TEveManager::GetGeometry ");
+
+   std::map<TString, TString>::iterator i = fGeometryAliases.find(alias);
+   if (i == fGeometryAliases.end())
+      throw(eh + "geometry alias '" + alias + "' not registered.");
+   return GetGeometry(i->second);
+}
+
+//______________________________________________________________________________
+TGeoManager* TEveManager::GetDefaultGeometry()
+{
+   // Get the default geometry.
+   // It should be registered via RegisterGeometryName("Default", <URL>).
+
+   return GetGeometryByAlias("Default");
+}
+
+//______________________________________________________________________________
+void TEveManager::RegisterGeometryAlias(const TString& alias, const TString& filename)
+{
+   // Register 'name' as an alias for geometry file 'filename'.
+   // The old aliases are silently overwritten.
+   // After that the geometry can be retrieved also by calling:
+   //   gEve->GetGeometryByName(name);
+
+   fGeometryAliases[alias] = filename;
+}
+
+//______________________________________________________________________________
+void TEveManager::SetStatusLine(const char* text)
+{
+   // Set the text in the right side of browser's status bar.
+
+   fBrowser->SetStatusText(text, 1);
+}
 
 /******************************************************************************/
 // Static initialization.
@@ -496,7 +557,12 @@ TEveManager* TEveManager::Create()
    // If global TEveManager* gEve is not set initialize it.
    // Returns gEve.
 
-   if (gEve == 0) {
+   if (gEve == 0)
+   {
+      // Make sure that the GUI system is initialized.
+      TApplication::NeedGraphicsLibs();
+      gApplication->InitializeGraphics();
+
       Int_t w = 1024;
       Int_t h =  768;
 
@@ -509,19 +575,28 @@ TEveManager* TEveManager::Create()
 
 
 /******************************************************************************/
-// Testing exceptions
+// TEveManager::TExceptionHandler
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveManager::SetStatusLine(const char* text)
-{
-   fStatusBar->SetText(text);
-}
+//
+// Exception handler for Eve exceptions.
+
+ClassImp(TEveManager::TExceptionHandler)
 
 //______________________________________________________________________________
-void TEveManager::ThrowException(const char* text)
+TStdExceptionHandler::EStatus
+TEveManager::TExceptionHandler::Handle(std::exception& exc)
 {
-   static const TEveException eH("TEveManager::ThrowException ");
+   // Handle exceptions deriving from TEveException.
 
-   throw(eH + text);
+   TEveException* ex = dynamic_cast<TEveException*>(&exc);
+   if (ex) {
+      Info("Handle", ex->Data());
+      gEve->SetStatusLine(ex->Data());
+      gSystem->Beep();
+      return kSEHandled;
+   } else {
+      return kSEProceed;
+   }
 }

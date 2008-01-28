@@ -97,6 +97,8 @@ TGLViewer::TGLViewer(TVirtualPad * pad, Int_t x, Int_t y,
 
    fPushAction(kPushStd), fAction(kDragNone), fLastPos(0,0), fActiveButtonID(0),
    fRedrawTimer(0),
+   fMaxSceneDrawTimeHQ(5000),
+   fMaxSceneDrawTimeLQ(100),
    fClearColor(1),
    fAxesType(TGLUtil::kAxesNone),
    fAxesDepthTest(kTRUE),
@@ -145,6 +147,8 @@ TGLViewer::TGLViewer(TVirtualPad * pad) :
 
    fPushAction(kPushStd), fAction(kDragNone), fLastPos(0,0), fActiveButtonID(0),
    fRedrawTimer(0),
+   fMaxSceneDrawTimeHQ(5000),
+   fMaxSceneDrawTimeLQ(100),
    fClearColor(1),
    fAxesType(TGLUtil::kAxesNone),
    fAxesDepthTest(kTRUE),
@@ -428,17 +432,15 @@ void TGLViewer::DoDraw()
       timer.Start();
    }
 
+   // Setup scene draw time
+   fRnrCtx->SetRenderTimeout(fLOD == TGLRnrCtx::kLODHigh ?
+                             fMaxSceneDrawTimeHQ :
+                             fMaxSceneDrawTimeLQ);
+
    // GL pre draw setup
    if (!fIsPrinting) PreDraw();
 
    PreRender();
-
-   // Setup total scene draw time
-   // Unlimted for high quality draws, 200 msec otherwise
-   Double_t sceneDrawTime = (fLOD == TGLRnrCtx::kLODHigh) ? 0.0 : 200.0;
-   if (fVisScenes.size() > 1)
-      sceneDrawTime /= fVisScenes.size();
-   fRnrCtx->SetRenderTimeout(sceneDrawTime);
 
    Render();
 
@@ -457,23 +459,21 @@ void TGLViewer::DoDraw()
       Info("TGLViewer::DoDraw()", "Took %f msec", timer.End());
    }
 
-   Bool_t redrawReq = kFALSE;
+
+   // Check if further redraws are needed and schedule them.
 
    if (CurrentCamera().UpdateInterest(kFALSE)) {
       // Reset major view-dependant cache.
       ResetSceneInfos();
-      redrawReq = kTRUE;
-   }
-   if (fLOD != TGLRnrCtx::kLODHigh) {
-      // Request final draw pass.
-      redrawReq = kTRUE;
+      fRedrawTimer->RequestDraw(0, fLOD);
    }
 
-   // Request final pass high quality redraw via timer
-   if (redrawReq) {
+   if (fLOD != TGLRnrCtx::kLODHigh &&
+       (fAction < kDragCameraRotate || fAction > kDragCameraDolly))
+   {
+      // Request final draw pass.
       fRedrawTimer->RequestDraw(100, TGLRnrCtx::kLODHigh);
    }
-
 }
 
 //______________________________________________________________________________
@@ -903,6 +903,31 @@ void TGLViewer::SetViewport(Int_t x, Int_t y, Int_t width, Int_t height)
 /**************************************************************************/
 
 //______________________________________________________________________________
+TGLCamera& TGLViewer::RefCamera(ECameraType cameraType)
+{
+   // Return camera reference by type.
+
+   // TODO: Move these into a vector!
+   switch(cameraType) {
+      case kCameraPerspXOZ:
+         return fPerspectiveCameraXOZ;
+      case kCameraPerspYOZ:
+         return fPerspectiveCameraYOZ;
+      case kCameraPerspXOY:
+         return fPerspectiveCameraXOY;
+      case kCameraOrthoXOY:
+         return fOrthoXOYCamera;
+      case kCameraOrthoXOZ:
+         return fOrthoXOZCamera;
+      case kCameraOrthoZOY:
+         return fOrthoZOYCamera;
+      default:
+         Error("TGLViewer::SetCurrentCamera", "invalid camera type");
+         return *fCurrentCamera;
+   }
+}
+
+//______________________________________________________________________________
 void TGLViewer::SetCurrentCamera(ECameraType cameraType)
 {
    // Set current active camera - 'cameraType' one of:
@@ -916,27 +941,27 @@ void TGLViewer::SetCurrentCamera(ECameraType cameraType)
 
    // TODO: Move these into a vector!
    switch(cameraType) {
-      case(kCameraPerspXOZ): {
+      case kCameraPerspXOZ: {
          fCurrentCamera = &fPerspectiveCameraXOZ;
          break;
       }
-      case(kCameraPerspYOZ): {
+      case kCameraPerspYOZ: {
          fCurrentCamera = &fPerspectiveCameraYOZ;
          break;
       }
-      case(kCameraPerspXOY): {
+      case kCameraPerspXOY: {
          fCurrentCamera = &fPerspectiveCameraXOY;
          break;
       }
-      case(kCameraOrthoXOY): {
+      case kCameraOrthoXOY: {
          fCurrentCamera = &fOrthoXOYCamera;
          break;
       }
-      case(kCameraOrthoXOZ): {
+      case kCameraOrthoXOZ: {
          fCurrentCamera = &fOrthoXOZCamera;
          break;
       }
-      case(kCameraOrthoZOY): {
+      case kCameraOrthoZOY: {
          fCurrentCamera = &fOrthoZOYCamera;
          break;
       }
@@ -975,21 +1000,21 @@ void TGLViewer::SetOrthoCamera(ECameraType camera,
 
    // TODO: Move these into a vector!
    switch(camera) {
-      case(kCameraOrthoXOY): {
+      case kCameraOrthoXOY: {
          fOrthoXOYCamera.Configure(zoom, dolly, center, hRotate, vRotate);
          if (fCurrentCamera == &fOrthoXOYCamera) {
             RequestDraw(TGLRnrCtx::kLODHigh);
          }
          break;
       }
-      case(kCameraOrthoXOZ): {
+      case kCameraOrthoXOZ: {
          fOrthoXOZCamera.Configure(zoom, dolly, center, hRotate, vRotate);
          if (fCurrentCamera == &fOrthoXOZCamera) {
             RequestDraw(TGLRnrCtx::kLODHigh);
          }
          break;
       }
-      case(kCameraOrthoZOY): {
+      case kCameraOrthoZOY: {
          fOrthoZOYCamera.Configure(zoom, dolly, center, hRotate, vRotate);
          if (fCurrentCamera == &fOrthoZOYCamera) {
             RequestDraw(TGLRnrCtx::kLODHigh);
@@ -1023,21 +1048,21 @@ void TGLViewer::SetPerspectiveCamera(ECameraType camera,
 
    // TODO: Move these into a vector!
    switch(camera) {
-      case(kCameraPerspXOZ): {
+      case kCameraPerspXOZ: {
          fPerspectiveCameraXOZ.Configure(fov, dolly, center, hRotate, vRotate);
          if (fCurrentCamera == &fPerspectiveCameraXOZ) {
             RequestDraw(TGLRnrCtx::kLODHigh);
          }
          break;
       }
-      case(kCameraPerspYOZ): {
+      case kCameraPerspYOZ: {
          fPerspectiveCameraYOZ.Configure(fov, dolly, center, hRotate, vRotate);
          if (fCurrentCamera == &fPerspectiveCameraYOZ) {
             RequestDraw(TGLRnrCtx::kLODHigh);
          }
          break;
       }
-      case(kCameraPerspXOY): {
+      case kCameraPerspXOY: {
          fPerspectiveCameraXOY.Configure(fov, dolly, center, hRotate, vRotate);
          if (fCurrentCamera == &fPerspectiveCameraXOY) {
             RequestDraw(TGLRnrCtx::kLODHigh);
@@ -1078,7 +1103,8 @@ void TGLViewer::SetGuideState(Int_t axesType, Bool_t axesDepthTest, Bool_t refer
    fAxesType    = axesType;
    fAxesDepthTest = axesDepthTest;
    fReferenceOn = referenceOn;
-   fReferencePos.Set(referencePos[0], referencePos[1], referencePos[2]);
+   if (referencePos)
+      fReferencePos.Set(referencePos[0], referencePos[1], referencePos[2]);
    if (fGLDevice != -1)
       gGLManager->MarkForDirectCopy(fGLDevice, kTRUE);
    RequestDraw();
@@ -1402,11 +1428,16 @@ Bool_t TGLViewer::HandleButton(Event_t * event)
    // Button UP
    else if (event->fType == kButtonRelease)
    {
-      if (fAction == kDragOverlay) {
+      if (fAction == kDragOverlay)
+      {
          fCurrentOvlElm->Handle(*fRnrCtx, fOvlSelRec, event);
          OverlayDragFinished();
          if (RequestOverlaySelect(event->fX, event->fY))
             RequestDraw();
+      }
+      else if (fAction >= kDragCameraRotate && fAction <= kDragCameraDolly)
+      {
+         RequestDraw(TGLRnrCtx::kLODHigh);
       }
 
       // TODO: Check on Linux - on Win32 only see button release events
@@ -1415,14 +1446,14 @@ Bool_t TGLViewer::HandleButton(Event_t * event)
          // Buttons 4/5 are mouse wheel
          // Note: Modifiers (ctrl/shift) disabled as fState doesn't seem to
          // have correct modifier flags with mouse wheel under Windows.
-         case(kButton5): {
+         case kButton5: {
             // Zoom out (adjust camera FOV)
             if (CurrentCamera().Zoom(+50, kFALSE, kFALSE)) { //TODO : val static const somewhere
                RequestDraw();
             }
             break;
          }
-         case(kButton4): {
+         case kButton4: {
             // Zoom in (adjust camera FOV)
             if (CurrentCamera().Zoom(-50, kFALSE, kFALSE)) { //TODO : val static const somewhere
                RequestDraw();
