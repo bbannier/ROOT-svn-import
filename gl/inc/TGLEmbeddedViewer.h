@@ -38,7 +38,8 @@ public:
    TGLEmbeddedViewer(const TGWindow *parent, TVirtualPad *pad = 0);
    ~TGLEmbeddedViewer();
 
-   virtual const char* GetName() const { return "GLViewer"; }
+   virtual const char *GetName() const { return "GLViewer"; }
+   TGLWidget          *GetGLWindow() const { return fGLWindow; }
 
    TGCompositeFrame*   GetFrame() const { return fFrame; }
 

@@ -123,7 +123,7 @@ TGLViewer::TGLViewer(TVirtualPad * pad, Int_t x, Int_t y,
    //    'x', 'y' - initial top left position
    //    'width', 'height' - initial width/height
 
-   fToolTipTimer = fMouseTimer = 0;
+   fMouseTimer = 0;
    InitSecondaryObjects();
 
    SetViewport(x, y, width, height);
@@ -175,7 +175,7 @@ TGLViewer::TGLViewer(TVirtualPad * pad) :
    //    'x', 'y' - initial top left position
    //    'width', 'height' - initial width/height
 
-   fToolTipTimer = fMouseTimer = 0;
+   fMouseTimer = 0;
    InitSecondaryObjects();
 
    if (fGLDevice != -1) {
@@ -203,7 +203,6 @@ void TGLViewer::InitSecondaryObjects()
 
    fRedrawTimer = new TGLRedrawTimer(*this);
    fMouseTimer = new TTimer(this, 250);
-   fToolTipTimer = new TTimer(this, 1000);
 }
 
 //______________________________________________________________________________
@@ -212,7 +211,6 @@ TGLViewer::~TGLViewer()
    // Destroy viewer object.
 
    delete fMouseTimer;
-   delete fToolTipTimer;
    delete fLightSet;
    delete fClipSet;
    delete fSelectedPShapeRef;
@@ -1337,8 +1335,6 @@ Bool_t TGLViewer::HandleEvent(Event_t *event)
       if (fMouseTimer) {
          fMouseTimer->Reset();
          fMouseTimer->TurnOn();
-         fToolTipTimer->Reset();
-         fToolTipTimer->TurnOn();
       }
    }
    if (event->fType == kFocusOut) {
@@ -1346,8 +1342,6 @@ Bool_t TGLViewer::HandleEvent(Event_t *event)
       if (fMouseTimer) {
          fMouseTimer->Reset();
          fMouseTimer->TurnOff();
-         fToolTipTimer->Reset();
-         fToolTipTimer->TurnOff();
       }
    }
 
@@ -1369,8 +1363,6 @@ Bool_t TGLViewer::HandleFocusChange(Event_t *event)
       if (fMouseTimer) {
          fMouseTimer->Reset();
          fMouseTimer->TurnOn();
-         fToolTipTimer->Reset();
-         fToolTipTimer->TurnOn();
       }
       Activated();
    }
@@ -1379,8 +1371,6 @@ Bool_t TGLViewer::HandleFocusChange(Event_t *event)
       if (fMouseTimer) {
          fMouseTimer->Reset();
          fMouseTimer->TurnOff();
-         fToolTipTimer->Reset();
-         fToolTipTimer->TurnOff();
       }
    }
 
@@ -1402,18 +1392,15 @@ Bool_t TGLViewer::HandleCrossing(Event_t *event)
       if (fMouseTimer) {
          fMouseTimer->Reset();
          fMouseTimer->TurnOn();
-         fToolTipTimer->Reset();
-         fToolTipTimer->TurnOn();
       }
-//      Activated();
+      // Maybe, maybe not...
+      //Activated();
    }
    if (event->fType == kLeaveNotify) {
       fAction = kDragNone;
       if (fMouseTimer) {
          fMouseTimer->Reset();
          fMouseTimer->TurnOff();
-         fToolTipTimer->Reset();
-         fToolTipTimer->TurnOff();
       }
    }
 
@@ -1438,8 +1425,6 @@ Bool_t TGLViewer::HandleButton(Event_t * event)
       // Allow a single action/button down/up pairing - block others
       MouseIdle(0, 0, 0);
       Activated();
-      fToolTipTimer->Reset();
-      fToolTipTimer->TurnOff();
       if (fAction != kNone)
          return kFALSE;
 
@@ -1542,8 +1527,6 @@ Bool_t TGLViewer::HandleButton(Event_t * event)
    // Button UP
    else if (event->fType == kButtonRelease)
    {
-      fToolTipTimer->Reset();
-      fToolTipTimer->TurnOn();
       if (fAction == kDragOverlay)
       {
          fCurrentOvlElm->Handle(*fRnrCtx, fOvlSelRec, event);
@@ -1633,7 +1616,6 @@ Bool_t TGLViewer::HandleKey(Event_t *event)
 {
    // Handle keyboard 'event'.
 
-   if (fToolTipTimer) fToolTipTimer->Reset();
    MouseIdle(0, 0, 0);
    if (IsLocked()) {
       if (gDebug>3) {
@@ -1686,6 +1668,11 @@ Bool_t TGLViewer::HandleKey(Event_t *event)
                RefreshPadEditor(this);
             }
             redraw = kTRUE;
+            break;
+
+         case kKey_F1:
+            RequestSelect(fLastPos.fX, fLastPos.fY, kFALSE);
+            MouseIdle(fSelRec.GetPhysShape(), (UInt_t)fLastPos.fX, (UInt_t)fLastPos.fY);
             break;
 
             // Camera
@@ -1749,7 +1736,6 @@ Bool_t TGLViewer::HandleMotion(Event_t * event)
 {
    // Handle mouse motion 'event'.
 
-   if (fToolTipTimer) fToolTipTimer->Reset();
    MouseIdle(0, 0, 0);
    if (IsLocked()) {
       if (gDebug>3) {
@@ -1805,22 +1791,18 @@ Bool_t TGLViewer::HandleTimer(TTimer *t)
 {
    // If mouse delay timer times out emit signal.
 
-   //if (t != fMouseTimer) return kTRUE;
+   if (t != fMouseTimer) return kTRUE;
    static UInt_t oldx = 0, oldy = 0;
    static TGLPhysicalShape *shape = 0;
    if (fAction == kDragNone) {
-      RequestSelect(fLastPos.fX, fLastPos.fY, kFALSE);
-      if (shape != fSelRec.GetPhysShape()) {
-         shape = fSelRec.GetPhysShape();
-         if (t == fMouseTimer)
+      if (oldx != (UInt_t)fLastPos.fX || oldy != (UInt_t)fLastPos.fY) {
+         RequestSelect(fLastPos.fX, fLastPos.fY, kFALSE);
+         if (shape != fSelRec.GetPhysShape()) {
+            shape = fSelRec.GetPhysShape();
             MouseOver(shape);
-      }
-      if (t == fToolTipTimer) {
-         if (oldx != (UInt_t)fLastPos.fX || oldy != (UInt_t)fLastPos.fY) {
-            MouseIdle(shape, (UInt_t)fLastPos.fX, (UInt_t)fLastPos.fY);
-            oldx = (UInt_t)fLastPos.fX;
-            oldy = (UInt_t)fLastPos.fY;
          }
+         oldx = (UInt_t)fLastPos.fX;
+         oldy = (UInt_t)fLastPos.fY;
       }
    }
    return kTRUE;
