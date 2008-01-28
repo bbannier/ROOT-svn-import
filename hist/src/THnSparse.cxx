@@ -26,7 +26,16 @@
 
 //______________________________________________________________________________
 //
-// THnSparseCompactBinCoord
+// THnSparseCompactBinCoord is a class used by THnSparse internally. It
+// represents a compacted n-dimensional array of bin coordinates (indices).
+// As the total number of bins in each dimension is known by THnSparse, bin
+// indices can be compacted to only use the amount of bins needed by the total
+// number of bins in each dimension. E.g. for a THnSparse with
+// {15, 100, 2, 20, 10, 100} bins per dimension, a bin index will only occupy
+// 28 bits (4+7+1+5+4+7), i.e. less than a 32bit integer. The tricky part is
+// the fast compression and decompression, the platform-independent storage
+// (think of endianness: the bits of the number 0x123456 depend on the
+// platform), and the hashing needed by THnSparseArrayChunk.
 //______________________________________________________________________________
 
 class THnSparseCompactBinCoord {
@@ -54,9 +63,10 @@ private:
    Int_t  fCoordBufferSize; // size of fBinCoordBuffer
    Int_t *fCurrentBin;      // current coordinates
 };
-//______________________________________________________________________________
-//______________________________________________________________________________
 
+
+//______________________________________________________________________________
+//______________________________________________________________________________
 
 
 //______________________________________________________________________________
@@ -158,9 +168,17 @@ ULong64_t THnSparseCompactBinCoord::GetHash()
 }
 
 
-//______________________________________________________________________________
-//______________________________________________________________________________
 
+//______________________________________________________________________________
+//
+// THnSparseArrayChunk is used internally by THnSparse.
+//
+// THnSparse stores its (dynamic size) array of bin coordinates and their
+// contents (and possibly errors) in a TObjArray of THnSparseArrayChunk. Each
+// of the chunks holds an array of THnSparseCompactBinCoord and the content
+// (a TArray*), which is created outside (by the templated derived classes of
+// THnSparse) and passed in at construction time.
+//______________________________________________________________________________
 
 
 ClassImp(THnSparseArrayChunk);
@@ -207,6 +225,9 @@ void THnSparseArrayChunk::Sumw2()
 
 
 //______________________________________________________________________________
+//
+//
+//    Efficient multidimensional histogram.
 //
 // Use a THnSparse instead of TH1 / TH2 / TH3 / array for histogramming when
 // only a small fraction of bins is filled. A 10-dimensional histogram with 10
@@ -262,7 +283,11 @@ void THnSparseArrayChunk::Sumw2()
 // * Projections
 // The dimensionality of a THnSparse can be reduced by projecting it to
 // 1, 2, 3, or n dimensions, which can be represented by a TH1, TH2, TH3, or
-// a THnSparse. See the Projection() members.
+// a THnSparse. See the Projection() members. To only project parts of the
+// histogram, call
+//   THnSparse::GetAxis(12)->SetRange(from_bin, to_bin);
+// See the important remark in THnSparse::IsInRange() when excluding under-
+// and overflow bins!
 //
 // * Internal Representation
 // An entry for a filled bin consists of its n-dimensional coordinates and
@@ -626,6 +651,38 @@ Double_t THnSparse::GetSparseFractionMem() const {
 }
 
 //______________________________________________________________________________
+Bool_t THnSparse::IsInRange(Int_t *coord) const
+{
+   // Check whether bin coord is in range, as defined by TAxis::SetRange().
+   // Currently, TAxis::SetRange() does not allow to select all but over- and
+   // underflow bins (it instead resets the axis to "no range selected").
+   // Instead, simply call
+   //    TAxis* axis12 = hsparse.GetAxis(12);
+   //    axis12->SetRange(1, axis12->GetNbins());
+   //    axis12->SetBit(TAxis::kAxisRange);
+   // to deselect the under- and overflow bins in the 12th dimension.
+
+   Int_t min = 0;
+   Int_t max = 0;
+   for (Int_t i = 0; i < fNdimensions; ++i) {
+      TAxis *axis = GetAxis(i);
+      if (!axis->TestBit(TAxis::kAxisRange)) continue;
+      min = axis->GetFirst();
+      max = axis->GetLast();
+      if (min == 0 && max == 0) {
+         // special case where TAxis::SetBit(kAxisRange) and
+         // over- and underflow bins are de-selected.
+         // first and last are == 0 due to axis12->SetRange(1, axis12->GetNbins());
+         min = 1;
+         max = axis->GetNbins();
+      }
+      if (coord[i] < min || coord[i] > max)
+         return kFALSE;
+   }
+   return kTRUE;
+}
+
+//______________________________________________________________________________
 TH1D* THnSparse::Projection(Int_t xDim, Option_t* option /*= ""*/) const
 {
    // Project all bins into a 1-dimensional histogram,
@@ -646,10 +703,14 @@ TH1D* THnSparse::Projection(Int_t xDim, Option_t* option /*= ""*/) const
    }
 
    Bool_t haveErrors = GetCalculateErrors();
-   Bool_t wantErrors = option && (strchr(option, 'E') || strchr(option, 'e'));
+   Bool_t wantErrors = option && (strchr(option, 'E') || strchr(option, 'e')) || haveErrors;
 
    TH1D* h = new TH1D(name, title, GetAxis(xDim)->GetNbins(),
                       GetAxis(xDim)->GetXmin(), GetAxis(xDim)->GetXmax());
+
+   TAxis *axis = GetAxis(xDim);
+   Bool_t hadRange = axis->TestBit(TAxis::kAxisRange);
+   axis->SetBit(TAxis::kAxisRange, kFALSE);
 
    Int_t* coord = new Int_t[fNdimensions];
    memset(coord, 0, sizeof(Int_t) * fNdimensions);
@@ -659,7 +720,8 @@ TH1D* THnSparse::Projection(Int_t xDim, Option_t* option /*= ""*/) const
 
    for (Long64_t i = 0; i < GetNbins(); ++i) {
       v = GetBinContent(i, coord);
-      h->AddBinContent(coord[xDim], v);
+
+      if (!IsInRange(coord)) continue;
 
       if (wantErrors) {
          if (haveErrors) {
@@ -669,11 +731,17 @@ TH1D* THnSparse::Projection(Int_t xDim, Option_t* option /*= ""*/) const
          preverr = h->GetBinError(coord[xDim]);
          h->SetBinError(coord[xDim], TMath::Sqrt(preverr * preverr + err));
       }
+
+      // only _after_ error calculation, or sqrt(v) is taken into account!
+      h->AddBinContent(coord[xDim], v);
    }
 
    delete [] coord;
 
    h->SetEntries(fEntries);
+
+   // reset kAxisRange bit:
+   axis->SetBit(TAxis::kAxisRange, hadRange);
 
    return h;
 }
@@ -704,12 +772,21 @@ TH2D* THnSparse::Projection(Int_t xDim, Int_t yDim, Option_t* option /*= ""*/) c
    }
 
    Bool_t haveErrors = GetCalculateErrors();
-   Bool_t wantErrors = option && (strchr(option, 'E') || strchr(option, 'e'));
+   Bool_t wantErrors = option && (strchr(option, 'E') || strchr(option, 'e')) || haveErrors;
 
-   TH2D* h = new TH2D(name, title, GetAxis(xDim)->GetNbins(),
-                      GetAxis(xDim)->GetXmin(), GetAxis(xDim)->GetXmax(),
+   // y, x looks wrong, but it's what TH3::Project3D("xy") does
+   TH2D* h = new TH2D(name, title,
                       GetAxis(yDim)->GetNbins(),
-                      GetAxis(yDim)->GetXmin(), GetAxis(yDim)->GetXmax());
+                      GetAxis(yDim)->GetXmin(), GetAxis(yDim)->GetXmax(),
+                      GetAxis(xDim)->GetNbins(),
+                      GetAxis(xDim)->GetXmin(), GetAxis(xDim)->GetXmax());
+
+   TAxis *axisX = GetAxis(xDim);
+   Bool_t hadRangeX = axisX->TestBit(TAxis::kAxisRange);
+   axisX->SetBit(TAxis::kAxisRange, kFALSE);
+   TAxis *axisY = GetAxis(yDim);
+   Bool_t hadRangeY = axisY->TestBit(TAxis::kAxisRange);
+   axisY->SetBit(TAxis::kAxisRange, kFALSE);
 
    Int_t* coord = new Int_t[fNdimensions];
    Double_t err = 0.;
@@ -720,22 +797,31 @@ TH2D* THnSparse::Projection(Int_t xDim, Int_t yDim, Option_t* option /*= ""*/) c
    memset(coord, 0, sizeof(Int_t) * fNdimensions);
    for (Long64_t i = 0; i < GetNbins(); ++i) {
       v = GetBinContent(i, coord);
-      bin = h->GetBin(coord[xDim], coord[yDim]);
-      h->AddBinContent(bin, v);
+
+      if (!IsInRange(coord)) continue;
+
+      bin = h->GetBin(coord[yDim],coord[xDim] );
 
       if (wantErrors) {
          if (haveErrors) {
             err = GetBinError(i);
             err *= err;
          } else err = v;
-         preverr = h->GetBinError(coord[xDim],coord[yDim]);
-         h->SetBinError(coord[xDim], coord[yDim],
+         preverr = h->GetBinError(coord[yDim], coord[xDim]);
+         h->SetBinError(coord[yDim], coord[xDim],
                         TMath::Sqrt(preverr * preverr + err));
       }
+
+      // only _after_ error calculation, or sqrt(v) is taken into account!
+      h->AddBinContent(bin, v);
    }
    delete [] coord;
 
    h->SetEntries(fEntries);
+
+   // reset kAxisRange bit:
+   axisX->SetBit(TAxis::kAxisRange, hadRangeX);
+   axisY->SetBit(TAxis::kAxisRange, hadRangeY);
 
    return h;
 }
@@ -771,14 +857,25 @@ TH3D* THnSparse::Projection(Int_t xDim, Int_t yDim, Int_t zDim,
    }
 
    Bool_t haveErrors = GetCalculateErrors();
-   Bool_t wantErrors = option && (strchr(option, 'E') || strchr(option, 'e'));
+   Bool_t wantErrors = option && (strchr(option, 'E') || strchr(option, 'e')) || haveErrors;
 
-    TH3D* h = new TH3D(name, title, GetAxis(xDim)->GetNbins(),
+   TH3D* h = new TH3D(name, title, GetAxis(xDim)->GetNbins(),
                       GetAxis(xDim)->GetXmin(), GetAxis(xDim)->GetXmax(),
                       GetAxis(yDim)->GetNbins(),
                       GetAxis(yDim)->GetXmin(), GetAxis(yDim)->GetXmax(),
                       GetAxis(zDim)->GetNbins(),
                       GetAxis(zDim)->GetXmin(), GetAxis(zDim)->GetXmax());
+
+
+   TAxis *axisX = GetAxis(xDim);
+   Bool_t hadRangeX = axisX->TestBit(TAxis::kAxisRange);
+   axisX->SetBit(TAxis::kAxisRange, kFALSE);
+   TAxis *axisY = GetAxis(yDim);
+   Bool_t hadRangeY = axisY->TestBit(TAxis::kAxisRange);
+   axisY->SetBit(TAxis::kAxisRange, kFALSE);
+   TAxis *axisZ = GetAxis(zDim);
+   Bool_t hadRangeZ = axisZ->TestBit(TAxis::kAxisRange);
+   axisZ->SetBit(TAxis::kAxisRange, kFALSE);
 
    Int_t* coord = new Int_t[fNdimensions];
    memset(coord, 0, sizeof(Int_t) * fNdimensions);
@@ -789,8 +886,10 @@ TH3D* THnSparse::Projection(Int_t xDim, Int_t yDim, Int_t zDim,
 
    for (Long64_t i = 0; i < GetNbins(); ++i) {
       v = GetBinContent(i, coord);
+
+      if (!IsInRange(coord)) continue;
+
       bin = h->GetBin(coord[xDim], coord[yDim], coord[zDim]);
-      h->AddBinContent(bin, v);
 
       if (wantErrors) {
          if (haveErrors) {
@@ -801,10 +900,18 @@ TH3D* THnSparse::Projection(Int_t xDim, Int_t yDim, Int_t zDim,
          h->SetBinError(coord[xDim], coord[yDim], coord[zDim],
                         TMath::Sqrt(preverr * preverr + err));
       }
+
+      // only _after_ error calculation, or sqrt(v) is taken into account!
+      h->AddBinContent(bin, v);
    }
    delete [] coord;
 
    h->SetEntries(fEntries);
+
+   // reset kAxisRange bit:
+   axisX->SetBit(TAxis::kAxisRange, hadRangeX);
+   axisY->SetBit(TAxis::kAxisRange, hadRangeY);
+   axisZ->SetBit(TAxis::kAxisRange, hadRangeZ);
 
    return h;
 }
@@ -844,21 +951,32 @@ THnSparse* THnSparse::Projection(Int_t ndim, const Int_t* dim,
 
    THnSparse* h = CloneEmpty(name.Data(), title.Data(), &newaxes, fChunkSize);
 
+   Bool_t* hadRange  = new Bool_t[ndim];
+   for (Int_t d = 0; d < ndim; ++d){
+      TAxis *axis = GetAxis(dim[d]);
+      hadRange[d] = axis->TestBit(TAxis::kAxisRange);
+      axis->SetBit(TAxis::kAxisRange, kFALSE);
+   }
+
    Bool_t haveErrors = GetCalculateErrors();
-   Bool_t wantErrors = option && (strchr(option, 'E') || strchr(option, 'e'));
+   Bool_t wantErrors = option && (strchr(option, 'E') || strchr(option, 'e')) || haveErrors;
 
    Int_t* bins  = new Int_t[ndim];
    Int_t* coord = new Int_t[fNdimensions];
    memset(coord, 0, sizeof(Int_t) * fNdimensions);
+
    Double_t err = 0.;
    Double_t preverr = 0.;
    Double_t v = 0.;
 
    for (Long64_t i = 0; i < GetNbins(); ++i) {
       v = GetBinContent(i, coord);
-      for (Int_t d = 0; d < ndim; ++d)
+
+      for (Int_t d = 0; d < ndim; ++d) {
          bins[d] = coord[dim[d]];
-      h->AddBinContent(bins, v);
+      }
+
+      if (!IsInRange(coord)) continue;
 
       if (wantErrors) {
          if (haveErrors) {
@@ -866,14 +984,23 @@ THnSparse* THnSparse::Projection(Int_t ndim, const Int_t* dim,
             err *= err;
          } else err = v;
          preverr = h->GetBinError(bins);
-         h->SetBinError(bins, preverr * preverr + err);
+         h->SetBinError(bins, TMath::Sqrt(preverr * preverr + err));
       }
+
+      // only _after_ error calculation, or sqrt(v) is taken into account!
+      h->AddBinContent(bins, v);
    }
 
    delete [] bins;
    delete [] coord;
 
    h->SetEntries(fEntries);
+
+   // reset kAxisRange bit:
+   for (Int_t d = 0; d < ndim; ++d)
+      GetAxis(dim[d])->SetBit(TAxis::kAxisRange, hadRange[d]);
+
+   delete [] hadRange;
 
    return h;
 }
@@ -1136,11 +1263,11 @@ void THnSparse::Divide(const THnSparse *h1, const THnSparse *h2, Double_t c1, Do
 }
 
 //______________________________________________________________________________
-Bool_t THnSparse::CheckConsistency(const THnSparse *h, Char_t * tag) const
+Bool_t THnSparse::CheckConsistency(const THnSparse *h, const char *tag) const
 {
-   // consistency check on (some of) the parameters of two histograms (for operations)
+   // Consistency check on (some of) the parameters of two histograms (for operations).
 
-   if(fNdimensions!=h->GetNdimensions()){
+   if (fNdimensions!=h->GetNdimensions()) {
       Warning(tag,"Different number of dimensions, cannot carry out operation on the histograms");
       return kFALSE;
    }
@@ -1170,7 +1297,7 @@ void THnSparse::SetBinContent(const Int_t* coord, Double_t v)
    GetCompactCoord()->SetCoord(coord);
    Long_t bin = GetBinIndexForCurrentBin(kTRUE);
    THnSparseArrayChunk* chunk = GetChunk(bin / fChunkSize);
-   return chunk->fContent->SetAt(v, bin % fChunkSize);
+   chunk->fContent->SetAt(v, bin % fChunkSize);
 }
 
 //______________________________________________________________________________
@@ -1182,7 +1309,7 @@ void THnSparse::SetBinError(const Int_t* coord, Double_t e)
    Long_t bin = GetBinIndexForCurrentBin(kTRUE);
 
    THnSparseArrayChunk* chunk = GetChunk(bin / fChunkSize);
-   return chunk->fSumw2->SetAt(e*e, bin % fChunkSize);
+   chunk->fSumw2->SetAt(e*e, bin % fChunkSize);
 }
 
 //______________________________________________________________________________
@@ -1277,7 +1404,6 @@ THnSparse* THnSparse::Rebin(const Int_t* group) const
       v = GetBinContent(i, coord);
       for (Int_t d = 0; d < ndim; ++d)
          bins[d] = (coord[d] - 1) / group[d] + 1;
-      h->AddBinContent(bins, v);
 
       if (wantErrors) {
          if (haveErrors) {
@@ -1287,6 +1413,9 @@ THnSparse* THnSparse::Rebin(const Int_t* group) const
          preverr = h->GetBinError(bins);
          h->SetBinError(bins, TMath::Sqrt(preverr * preverr + err));
       }
+
+      // only _after_ error calculation, or sqrt(v) is taken into account!
+      h->AddBinContent(bins, v);
    }
 
    delete [] bins;

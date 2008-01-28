@@ -76,6 +76,7 @@
 #include "TGeoShape.h"
 #include "TGeoVolume.h"
 #include "TVirtualGeoPainter.h"
+#include "TGeoVoxelFinder.h"
 #include "TGeoNode.h"
 #include "TMath.h"
 #include "TStopwatch.h"
@@ -666,6 +667,25 @@ TGeoNodeMatrix::TGeoNodeMatrix(const TGeoVolume *vol, const TGeoMatrix *matrix) 
 }
 
 //_____________________________________________________________________________
+TGeoNodeMatrix::TGeoNodeMatrix(const TGeoNodeMatrix& gnm)
+               :TGeoNode(gnm), 
+                fMatrix(gnm.fMatrix)
+{
+// Copy ctor.
+}
+
+//_____________________________________________________________________________
+TGeoNodeMatrix& TGeoNodeMatrix::operator=(const TGeoNodeMatrix& gnm)
+{
+// Assignment.
+   if (this!=&gnm) {
+      TGeoNode::operator=(gnm); 
+      fMatrix=gnm.fMatrix;
+   }
+   return *this;
+}
+      
+//_____________________________________________________________________________
 TGeoNodeMatrix::~TGeoNodeMatrix()
 {
 // Destructor
@@ -719,6 +739,14 @@ TGeoNode *TGeoNodeMatrix::MakeCopyNode() const
    if (IsVirtual()) node->SetVirtual();
    return node;
 }
+
+//_____________________________________________________________________________
+void TGeoNodeMatrix::SetMatrix(const TGeoMatrix *matrix)
+{
+// Matrix setter.
+   fMatrix = (TGeoMatrix*)matrix;
+   if (!fMatrix) fMatrix = gGeoIdentity;
+}   
 
 /*************************************************************************
  * TGeoNodeOffset - node containing an offset

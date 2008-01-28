@@ -24,71 +24,71 @@ class TEveQuadSet : public TEveDigitSet
    TEveQuadSet& operator=(const TEveQuadSet&); // Not implemented
 
 public:
-   enum QuadType_e
+   enum EQuadType_e
       {
-         QT_Undef,                // unknown-ignored
-         QT_FreeQuad,             // arbitrary quad: specify 4*(x,y,z) quad corners
-         QT_RectangleXY,          // rectangle in x-y plane: specify x, y, z, w, h
-         QT_RectangleXZ,          // rectangle in x-z plane: specify x, y, z, w, h
-         QT_RectangleYZ,          // rectangle in y-z plane: specify x, y, z, w, h
-         QT_RectangleXYFixedDim,  // rectangle in x-y plane: specify x, y, z; w, h taken from fDefWidth/Height
-         QT_RectangleXYFixedZ,    // rectangle in x-y plane: specify x, y, w, h; z taken from fDefCoord
-         QT_RectangleXZFixedY,    // rectangle in x-z plane: specify x, z, w, h; y taken from fDefCoord
-         QT_RectangleYZFixedX,    // rectangle in y-z plane: specify y, z, w, h; x taken from fDefWidth/Height/Coord
-         QT_RectangleXYFixedDimZ, // rectangle in x-y plane: specify x, y; w, h, z taken from fDefWidth/Height/Coord
-         QT_RectangleXZFixedDimY, // rectangle in x-z plane: specify x, z; w, h, y taken from fDefWidth/Height/Coord
-         QT_RectangleYZFixedDimX, // rectangle in y-z plane: specify y, z; w, h, x taken from fDefWidth/Height/Coord
-         QT_Rectangle_End,
+         kQT_Undef,                // unknown-ignored
+         kQT_FreeQuad,             // arbitrary quad: specify 4*(x,y,z) quad corners
+         kQT_RectangleXY,          // rectangle in x-y plane: specify x, y, z, w, h
+         kQT_RectangleXZ,          // rectangle in x-z plane: specify x, y, z, w, h
+         kQT_RectangleYZ,          // rectangle in y-z plane: specify x, y, z, w, h
+         kQT_RectangleXYFixedDim,  // rectangle in x-y plane: specify x, y, z; w, h taken from fDefWidth/Height
+         kQT_RectangleXYFixedZ,    // rectangle in x-y plane: specify x, y, w, h; z taken from fDefCoord
+         kQT_RectangleXZFixedY,    // rectangle in x-z plane: specify x, z, w, h; y taken from fDefCoord
+         kQT_RectangleYZFixedX,    // rectangle in y-z plane: specify y, z, w, h; x taken from fDefWidth/Height/Coord
+         kQT_RectangleXYFixedDimZ, // rectangle in x-y plane: specify x, y; w, h, z taken from fDefWidth/Height/Coord
+         kQT_RectangleXZFixedDimY, // rectangle in x-z plane: specify x, z; w, h, y taken from fDefWidth/Height/Coord
+         kQT_RectangleYZFixedDimX, // rectangle in y-z plane: specify y, z; w, h, x taken from fDefWidth/Height/Coord
+         kQT_Rectangle_End,
          // line modes (needed for uniform handling of silicon-strip digits)
-         QT_LineXYFixedZ,         // line in x-y plane: specify x, y, w(dx), h(dy); z taken from fDefCoord
-         QT_LineXZFixedY,         // line in x-z plane: specify x, z, w(dx), h(dz); y taken from fDefCoord
-         QT_Line_End,
+         kQT_LineXYFixedZ,         // line in x-y plane: specify x, y, w(dx), h(dy); z taken from fDefCoord
+         kQT_LineXZFixedY,         // line in x-z plane: specify x, z, w(dx), h(dz); y taken from fDefCoord
+         kQT_Line_End,
          // hexagon modes
-         QT_HexagonXY,            // horizontal hexagon: specify x, y, z, r
-         QT_HexagonYX,            // vertical   hexagon: specify x, y, z, r
-         QT_Hexagon_End
+         kQT_HexagonXY,            // horizontal hexagon: specify x, y, z, r
+         kQT_HexagonYX,            // vertical   hexagon: specify x, y, z, r
+         kQT_Hexagon_End
          // circle modes:
          // QT_CircleXY,          // specify r, z
          // QT_CircleXYFixedZ,    // specify r
          // QT_CircleXYFixedR,    // specify z
       };
 
-   enum RenderMode_e { RM_AsIs, RM_TEveLine, RM_Fill };
+   enum ERenderMode_e { kRM_AsIs, kRM_TEveLine, kRM_Fill };
 
 protected:
 
-   struct QFreeQuad     : public DigitBase      { Float_t fVertices[12]; };
+   struct QFreeQuad_t     : public DigitBase_t      { Float_t fVertices[12]; };
 
-   struct QOrigin       : public DigitBase      { Float_t fA, fB; };
+   struct QOrigin_t       : public DigitBase_t      { Float_t fA, fB; };
 
-   struct QRectFixDimC  : public QOrigin       { };
+   struct QRectFixDimC_t  : public QOrigin_t       { };
 
-   struct QRectFixDim   : public QRectFixDimC  { Float_t fC; };
+   struct QRectFixDim_t   : public QRectFixDimC_t  { Float_t fC; };
 
-   struct QRectFixC     : public QRectFixDimC  { Float_t fW, fH; };
+   struct QRectFixC_t     : public QRectFixDimC_t  { Float_t fW, fH; };
 
-   struct QRect         : public QRectFixDim   { Float_t fW, fH; };
+   struct QRect_t         : public QRectFixDim_t   { Float_t fW, fH; };
 
-   struct QLineFixC     : public QOrigin       { Float_t fDx, fDy; };
+   struct QLineFixC_t     : public QOrigin_t       { Float_t fDx, fDy; };
 
-   struct QHex          : public QOrigin       { Float_t fC, fR; };
+   struct QHex_t          : public QOrigin_t       { Float_t fC, fR; };
 
 protected:
-   QuadType_e        fQuadType;
+   EQuadType_e       fQuadType;
 
    Float_t           fDefWidth;     // Breadth assigned to first coordinate  (A)
    Float_t           fDefHeight;    // Breadth assigned to second coordinate (B)
    Float_t           fDefCoord;     // Default value for third coordinate    (C)
 
-   static Int_t SizeofAtom(QuadType_e qt);
+   static Int_t SizeofAtom(EQuadType_e qt);
 
 public:
    TEveQuadSet(const Text_t* n="TEveQuadSet", const Text_t* t="");
-   TEveQuadSet(QuadType_e quadType, Bool_t valIsCol, Int_t chunkSize,
+   TEveQuadSet(EQuadType_e quadType, Bool_t valIsCol, Int_t chunkSize,
                const Text_t* n="TEveQuadSet", const Text_t* t="");
-   virtual ~TEveQuadSet();
+   virtual ~TEveQuadSet() {}
 
-   void Reset(QuadType_e quadType, Bool_t valIsCol, Int_t chunkSize);
+   void Reset(EQuadType_e quadType, Bool_t valIsCol, Int_t chunkSize);
 
    Float_t GetDefWidth()  const { return fDefWidth;  }
    Float_t GetDefHeight() const { return fDefHeight; }

@@ -11,12 +11,10 @@
 
 #include "TEveStraightLineSetGL.h"
 #include "TEveStraightLineSet.h"
-#include "TEveGLUtil.h"
-
-#include "TGLRnrCtx.h"
-#include "TGLSelectRecord.h"
 
 #include "TGLIncludes.h"
+#include "TGLRnrCtx.h"
+#include "TGLSelectRecord.h"
 
 //______________________________________________________________________________
 // TEveStraightLineSetGL
@@ -33,16 +31,14 @@ TEveStraightLineSetGL::TEveStraightLineSetGL() : TGLObject(), fM(0)
    // fDLCache = false; // Disable display list.
 }
 
-//______________________________________________________________________________
-TEveStraightLineSetGL::~TEveStraightLineSetGL()
-{}
-
 /******************************************************************************/
 
 //______________________________________________________________________________
 Bool_t TEveStraightLineSetGL::SetModel(TObject* obj, const Option_t* /*opt*/)
 {
-   if(SetModelCheckClass(obj, TEveStraightLineSet::Class())) {
+   // Set model object.
+
+   if (SetModelCheckClass(obj, TEveStraightLineSet::Class())) {
       fM = dynamic_cast<TEveStraightLineSet*>(obj);
       return kTRUE;
    }
@@ -52,14 +48,16 @@ Bool_t TEveStraightLineSetGL::SetModel(TObject* obj, const Option_t* /*opt*/)
 //______________________________________________________________________________
 void TEveStraightLineSetGL::SetBBox()
 {
+   // Setup bounding box information.
+
    // !! This ok if master sub-classed from TAttBBox
    SetAxisAlignedBBox(((TEveStraightLineSet*)fExternalObj)->AssertBBox());
 }
 
 //______________________________________________________________________________
-Bool_t TEveStraightLineSetGL::ShouldCache(TGLRnrCtx & rnrCtx) const
+Bool_t TEveStraightLineSetGL::ShouldDLCache(const TGLRnrCtx& rnrCtx) const
 {
-   // Override from TGLDrawable.
+   // Override from TGLLogicalShape.
    // To account for large point-sizes we modify the projection matrix
    // during selection and thus we need a direct draw.
 
@@ -70,24 +68,26 @@ Bool_t TEveStraightLineSetGL::ShouldCache(TGLRnrCtx & rnrCtx) const
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveStraightLineSetGL::DirectDraw(TGLRnrCtx & rnrCtx) const
+void TEveStraightLineSetGL::DirectDraw(TGLRnrCtx& rnrCtx) const
 {
+   // Render the line-set with GL.
+
    // printf("TEveStraightLineSetGL::DirectDraw Style %d, LOD %d\n", flags.Style(), flags.LOD());
 
    TEveStraightLineSet& mL = * fM;
 
-   glPushAttrib(GL_POINT_BIT | GL_LINE_BIT | GL_ENABLE_BIT);
-
    // lines
-   TEveGLUtil::TGLCapabilitySwitch lights_off(GL_LIGHTING, false);
-   if(mL.GetRnrLines() && mL.GetLinePlex().Size() > 0)
+   TGLCapabilitySwitch lights_off(GL_LIGHTING, kFALSE);
+   if (mL.GetRnrLines() && mL.GetLinePlex().Size() > 0)
    {
+      glPushAttrib(GL_LINE_BIT | GL_ENABLE_BIT);
+
       glDisable(GL_LIGHTING);
       glColorMaterial(GL_FRONT_AND_BACK, GL_DIFFUSE);
       glEnable(GL_COLOR_MATERIAL);
       UChar_t color[4];
       TEveUtil::ColorFromIdx(mL.GetLineColor(), color);
-      glColor4ubv(color);
+      TGLUtil::Color4ubv(color);
       glLineWidth(mL.GetLineWidth());
       if (mL.GetLineStyle() > 1) {
          Int_t    fac = 1;
@@ -107,15 +107,23 @@ void TEveStraightLineSetGL::DirectDraw(TGLRnrCtx & rnrCtx) const
          glEnable(GL_LINE_STIPPLE);
       }
 
+      // During selection extend picking region for large line-widths.
+      Bool_t changePM = kFALSE;
+      if (rnrCtx.Selection() && mL.GetLineWidth() > rnrCtx.GetPickRadius())
+      {
+         changePM = kTRUE;
+         TGLUtil::BeginExtendPickRegion((Float_t) rnrCtx.GetPickRadius() / mL.GetLineWidth());
+      }
+
       TEveChunkManager::iterator li(mL.GetLinePlex());
-      if(rnrCtx.SecSelection())
+      if (rnrCtx.SecSelection())
       {
          GLuint name = 0;
          glPushName(1);
          glPushName(0);
          while (li.next())
          {
-            TEveStraightLineSet::TEveLine& l = * (TEveStraightLineSet::TEveLine*) li();
+            TEveStraightLineSet::Line_t& l = * (TEveStraightLineSet::Line_t*) li();
             glLoadName(name);
             {
                glBegin(GL_LINES);
@@ -133,18 +141,22 @@ void TEveStraightLineSetGL::DirectDraw(TGLRnrCtx & rnrCtx) const
          glBegin(GL_LINES);
          while (li.next())
          {
-            TEveStraightLineSet::TEveLine& l = * (TEveStraightLineSet::TEveLine*) li();
+            TEveStraightLineSet::Line_t& l = * (TEveStraightLineSet::Line_t*) li();
             glVertex3f(l.fV1[0], l.fV1[1], l.fV1[2]);
             glVertex3f(l.fV2[0], l.fV2[1], l.fV2[2]);
          }
          glEnd();
       }
+
+      if (changePM)
+         TGLUtil::EndExtendPickRegion();
+
+      glPopAttrib();
    }
-   glPopAttrib();
 
 
    // markers
-   if(mL.GetRnrMarkers() && mL.GetMarkerPlex().Size() > 0)
+   if (mL.GetRnrMarkers() && mL.GetMarkerPlex().Size() > 0)
    {
       TEveChunkManager::iterator mi(mL.GetMarkerPlex());
       Float_t* pnts = new Float_t[mL.GetMarkerPlex().Size()*3];
@@ -152,18 +164,21 @@ void TEveStraightLineSetGL::DirectDraw(TGLRnrCtx & rnrCtx) const
       Int_t lidx = -1;
       while (mi.next())
       {
-         TEveStraightLineSet::Marker& m = * (TEveStraightLineSet::Marker*) mi();
+         TEveStraightLineSet::Marker_t& m = * (TEveStraightLineSet::Marker_t*) mi();
          lidx = m.fLineID;
-         TEveStraightLineSet::TEveLine& l = * (TEveStraightLineSet::TEveLine*) mL.GetLinePlex().Atom(lidx);
+         TEveStraightLineSet::Line_t& l = * (TEveStraightLineSet::Line_t*) mL.GetLinePlex().Atom(lidx);
          pnt[0] = l.fV1[0] + (l.fV2[0] - l.fV1[0])*m.fPos;
          pnt[1] = l.fV1[1] + (l.fV2[1] - l.fV1[1])*m.fPos;
          pnt[2] = l.fV1[2] + (l.fV2[2] - l.fV1[2])*m.fPos;;
          pnt   += 3;
       }
-      if(rnrCtx.SecSelection()) glPushName(2);
-      TEveGLUtil::RenderPolyMarkers((TAttMarker&)mL, pnts, mL.GetMarkerPlex().Size(),
-                                    rnrCtx.Selection(), rnrCtx.SecSelection());
-      if(rnrCtx.SecSelection()) glPopName();
+      if (rnrCtx.SecSelection()) glPushName(2);
+      TGLUtil::RenderPolyMarkers((TAttMarker&)mL,
+                                 pnts, mL.GetMarkerPlex().Size(),
+                                 rnrCtx.GetPickRadius(),
+                                 rnrCtx.Selection(),
+                                 rnrCtx.SecSelection());
+      if (rnrCtx.SecSelection()) glPopName();
       delete [] pnts;
    }
 
@@ -172,17 +187,19 @@ void TEveStraightLineSetGL::DirectDraw(TGLRnrCtx & rnrCtx) const
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveStraightLineSetGL::ProcessSelection(TGLRnrCtx       & /*rnrCtx*/,
-                                             TGLSelectRecord & rec)
+void TEveStraightLineSetGL::ProcessSelection(TGLRnrCtx& /*rnrCtx*/,
+                                             TGLSelectRecord& rec)
 {
+   // Process results of the secondary selection.
+
    if (rec.GetN() != 3) return;
-   if(rec.GetItem(1) == 1)
+   if (rec.GetItem(1) == 1)
    {
       printf("selected line %d\n", rec.GetItem(2));
    }
    else
    {
-      TEveStraightLineSet::Marker& m = * (TEveStraightLineSet::Marker*) fM->GetMarkerPlex().Atom(rec.GetItem(2));
+      TEveStraightLineSet::Marker_t& m = * (TEveStraightLineSet::Marker_t*) fM->GetMarkerPlex().Atom(rec.GetItem(2));
       printf("Selected point %d on line %d\n", rec.GetItem(2), m.fLineID);
    }
 }

@@ -16,7 +16,7 @@
 #ifndef ROO_ABS_CATEGORY
 #define ROO_ABS_CATEGORY
 
-#include "Riostream.h"
+#include "Riosfwd.h"
 #include "TObjArray.h"
 #include "RooAbsArg.h"
 #include "RooCatType.h"
@@ -29,7 +29,7 @@ class Roo1DTable ;
 class RooAbsCategory : public RooAbsArg {
 public:
   // Constructors, assignment etc.
-  RooAbsCategory() { _typeIter = _types.MakeIterator() ; } ;
+  RooAbsCategory() { _treeVar = kFALSE ; _typeIter = _types.MakeIterator() ; } ;
   RooAbsCategory(const char *name, const char *title);
   RooAbsCategory(const RooAbsCategory& other, const char* name=0) ;
   virtual ~RooAbsCategory();
@@ -87,6 +87,7 @@ protected:
   virtual void setTreeBranchStatus(TTree& t, Bool_t active) ;
   virtual void fillTreeBranch(TTree& t) ;
 
+  mutable UChar_t    _byteValue ; //! Transient cache for byte values from tree branches
   mutable RooCatType _value ; // Current value
   TObjArray  _types ;         // Array of allowed values
   TIterator* _typeIter ;      //!

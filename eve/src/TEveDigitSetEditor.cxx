@@ -52,24 +52,18 @@ TEveDigitSetEditor::TEveDigitSetEditor(const TGWindow *p, Int_t width, Int_t hei
    MakeTitle("Transformation matrix");
 
    fHMTrans = new TEveTransSubEditor(this);
+   AddFrame(fHMTrans, new TGLayoutHints(kLHintsTop | kLHintsExpandX, 2, 0, 0, 0));
    fHMTrans->Connect("UseTrans()",     "TEveDigitSetEditor", this, "Update()");
    fHMTrans->Connect("TransChanged()", "TEveDigitSetEditor", this, "Update()");
-   AddFrame(fHMTrans, new TGLayoutHints(kLHintsTop | kLHintsExpandX, 2, 0, 0, 0));
 
 
    MakeTitle("Palette controls");
 
    fPalette = new TEveRGBAPaletteSubEditor(this);
-   fPalette->Connect("Changed", "TEveDigitSetEditor", this, "Update()");
    AddFrame(fPalette, new TGLayoutHints(kLHintsTop | kLHintsExpandX, 2, 0, 0, 0));
+   fPalette->Connect("Changed", "TEveDigitSetEditor", this, "Update()");
 
    CreateInfoTab();
-}
-
-//______________________________________________________________________________
-TEveDigitSetEditor::~TEveDigitSetEditor()
-{
-   // Destructor. Noop.
 }
 
 /******************************************************************************/
@@ -117,7 +111,7 @@ void TEveDigitSetEditor::SetModel(TObject* obj)
 
    fM = dynamic_cast<TEveDigitSet*>(obj);
 
-   fHMTrans->SetDataFromTrans(&fM->fHMTrans);
+   fHMTrans->SetModel(&fM->fHMTrans);
 
    if (fM->fValueIsColor || fM->fPalette == 0) {
       fPalette->UnmapWindow();
@@ -178,7 +172,7 @@ void TEveDigitSetEditor::PlotHisto(Int_t min, Int_t max)
    h->SetBit(kCanDelete);
    TEveChunkManager::iterator qi(fM->fPlex);
    while (qi.next())
-      h->Fill(((TEveDigitSet::DigitBase*)qi())->fValue);
+      h->Fill(((TEveDigitSet::DigitBase_t*)qi())->fValue);
 
    gStyle->SetOptStat(1111111);
    h->Draw();

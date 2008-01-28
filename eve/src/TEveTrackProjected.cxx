@@ -23,17 +23,11 @@ ClassImp(TEveTrackProjected)
 
 //______________________________________________________________________________
 TEveTrackProjected::TEveTrackProjected() :
-   TEveTrack     (),
-   fOrigPnts(0),
+   TEveTrack  (),
+   fOrigPnts  (0),
    fProjection(0)
 {
    // Default constructor.
-}
-
-//______________________________________________________________________________
-TEveTrackProjected::~TEveTrackProjected()
-{
-   // Destructor. Noop.
 }
 
 /******************************************************************************/
@@ -41,6 +35,8 @@ TEveTrackProjected::~TEveTrackProjected()
 //______________________________________________________________________________
 void TEveTrackProjected::SetProjection(TEveProjectionManager* proj, TEveProjectable* model)
 {
+   // This is virtual method from base-class TEveProjected.
+  
    TEveProjected::SetProjection(proj, model);
    TEveTrack* origTrack = dynamic_cast<TEveTrack*>(fProjectable);
 
@@ -53,6 +49,8 @@ void TEveTrackProjected::SetProjection(TEveProjectionManager* proj, TEveProjecta
 //______________________________________________________________________________
 void TEveTrackProjected::UpdateProjection()
 {
+   // This is virtual method from base-class TEveProjected.
+
    fProjection = fProjector->GetProjection();
    MakeTrack(kFALSE); // TEveProjectionManager makes recursive calls
 }
@@ -61,14 +59,16 @@ void TEveTrackProjected::UpdateProjection()
 void TEveTrackProjected::GetBreakPoint(Int_t idx, Bool_t back,
                                        Float_t& x, Float_t& y, Float_t& z)
 {
+   // With bisection calculate break-point vertex.
+
    TEveVector vL = fOrigPnts[idx];
    TEveVector vR = fOrigPnts[idx+1];
    TEveVector vM, vLP, vMP;
    while((vL-vR).Mag() > 0.01)
    {
       vM.Mult(vL+vR, 0.5f);
-      vLP.Set(vL); fProjection->ProjectPoint(vLP.x, vLP.y, vLP.z);
-      vMP.Set(vM); fProjection->ProjectPoint(vMP.x, vMP.y, vMP.z);
+      vLP.Set(vL); fProjection->ProjectPoint(vLP.fX, vLP.fY, vLP.fZ);
+      vMP.Set(vM); fProjection->ProjectPoint(vMP.fX, vMP.fY, vMP.fZ);
       if(fProjection->AcceptSegment(vLP, vMP, 0.0f))
       {
          vL.Set(vM);
@@ -77,19 +77,14 @@ void TEveTrackProjected::GetBreakPoint(Int_t idx, Bool_t back,
       {
          vR.Set(vM);
       }
-      //printf("new interval Mag %f (%f, %f, %f)(%f, %f, %f) \n",(vL-vR).Mag(), vL.x, vL.y, vL.z, vR.x, vR.y, vR.z);
    }
 
-   if(back)
-   {
-      x = vL.x; y = vL.y; z = vL.z;
-   }
-   else
-   {
-      x = vR.x; y = vR.y; z = vR.z;
+   if(back) {
+      x = vL.fX; y = vL.fY; z = vL.fZ;
+   } else {
+      x = vR.fX; y = vR.fY; z = vR.fZ;
    }
    fProjection->ProjectPoint(x, y, z);
-   // printf("TEveTrackProjected::GetBreakPoint %d (%f, %f, %f) \n", idx, x, y, z);
 }
 
 //______________________________________________________________________________
@@ -108,8 +103,8 @@ Int_t  TEveTrackProjected::GetBreakPointIdx(Int_t start)
       Int_t i = start;
       while(i < fLastPoint)
       {
-         GetPoint(i,   v1.x, v1.y, v1.z);
-         GetPoint(i+1, v2.x, v2.y, v2.z);
+         GetPoint(i,   v1.fX, v1.fY, v1.fZ);
+         GetPoint(i+1, v2.fX, v2.fY, v2.fZ);
          if(fProjection->AcceptSegment(v1, v2, fPropagator->GetDelta()) == kFALSE)
          {
             val = i;
@@ -118,7 +113,6 @@ Int_t  TEveTrackProjected::GetBreakPointIdx(Int_t start)
          i++;
       }
    }
-   // printf("BreakPoint IDX start:%d, BREAK %d,  total:%d \n", start, val, Size());
    return val;
 }
 
@@ -160,17 +154,17 @@ void TEveTrackProjected::MakeTrack(Bool_t recurse)
          break;
 
       GetBreakPoint(bR, kTRUE,  x, y, z); vvec.push_back(TEveVector(x, y, z));
-      fBreakPoints.push_back(vvec.size());
+      fBreakPoints.push_back((Int_t)vvec.size());
       GetBreakPoint(bR, kFALSE, x, y, z); vvec.push_back(TEveVector(x, y, z));
 
       bL = bR + 1;
       bR = GetBreakPointIdx(bL);
    }
-   fBreakPoints.push_back(vvec.size()); // Mark the track-end for drawing.
+   fBreakPoints.push_back((Int_t)vvec.size()); // Mark the track-end for drawing.
 
-   Reset(vvec.size());
+   Reset((Int_t)vvec.size());
    for (std::vector<TEveVector>::iterator i=vvec.begin(); i!=vvec.end(); ++i)
-      SetNextPoint((*i).x, (*i).y, (*i).z);
+      SetNextPoint((*i).fX, (*i).fY, (*i).fZ);
    delete [] fOrigPnts;
 }
 
@@ -179,20 +173,23 @@ void TEveTrackProjected::MakeTrack(Bool_t recurse)
 //______________________________________________________________________________
 void TEveTrackProjected::PrintLineSegments()
 {
+   // Print line segments info.
+
    printf("%s LineSegments:\n", GetName());
    Int_t start = 0;
    Int_t segment = 0;
-   TEveVector S;
-   TEveVector E;
+   TEveVector sVec;
+   TEveVector bPnt;
    for (std::vector<Int_t>::iterator bpi = fBreakPoints.begin();
         bpi != fBreakPoints.end(); ++bpi)
    {
       Int_t size = *bpi - start;
 
-      GetPoint(start, S.x, S.y, S.z);
-      GetPoint((*bpi)-1, E.x, E.y, E.z);
+      GetPoint(start, sVec.fX, sVec.fY, sVec.fZ);
+      GetPoint((*bpi)-1, bPnt.fX, bPnt.fY, bPnt.fZ);
       printf("seg %d size %d start %d ::(%f, %f, %f) (%f, %f, %f)\n",
-             segment, size, start, S.x, S.y, S.z, E.x, E.y, E.z);
+             segment, size, start, sVec.fX, sVec.fY, sVec.fZ,
+             bPnt.fX, bPnt.fY, bPnt.fZ);
       start   += size;
       segment ++;
    }
@@ -203,6 +200,8 @@ void TEveTrackProjected::PrintLineSegments()
 //______________________________________________________________________________
 void TEveTrackProjected::CtrlClicked(TEveTrack* /*track*/)
 {
+    // Virtual method from from base-class TEveTrack.
+
    TEveTrack* t = dynamic_cast<TEveTrack*>(fProjectable);
    if (t)
       t->CtrlClicked(t);
@@ -230,6 +229,8 @@ TEveTrackListProjected::TEveTrackListProjected() :
 //______________________________________________________________________________
 void TEveTrackListProjected::SetProjection(TEveProjectionManager* proj, TEveProjectable* model)
 {
+   // This is virtual method from base-class TEveProjected.
+
    TEveProjected::SetProjection(proj, model);
 
    TEveTrackList& tl   = * dynamic_cast<TEveTrackList*>(model);

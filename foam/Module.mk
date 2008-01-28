@@ -45,7 +45,7 @@ $(FOAMLIB):     $(FOAMO) $(FOAMDO) $(ORDER_) $(MAINLIBS) $(FOAMLIBDEP)
 
 $(FOAMDS):      $(FOAMH) $(FOAML) $(FOAMO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -o "$(FOAMO)" -c $(FOAMH) $(FOAML)
+		$(ROOTCINTTMP) -f $@ -c $(FOAMH) $(FOAML)
 
 $(FOAMMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(FOAML)
 		$(RLIBMAP) -o $(FOAMMAP) -l $(FOAMLIB) \

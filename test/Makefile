@@ -73,25 +73,32 @@ STRESSVECO   = stressVector.$(ObjSuf)
 STRESSVECS   = stressVector.$(SrcSuf)
 STRESSVEC    = stressVector$(ExeSuf)
 
+STRESSMATHO   = stressMathCore.$(ObjSuf) 
+STRESSMATHS   = stressMathCore.$(SrcSuf) 
 ifneq ($(USE_REFLEX),)
 CXXFLAGS += -DUSE_REFLEX
-STRESSMATHO   = stressMathCore.$(ObjSuf)  TrackMathCoreRflx.$(ObjSuf) 
-STRESSMATHS   = stressMathCore.$(SrcSuf)  TrackMathCoreRflx.$(SrcSuf)
 ifeq ($(PLATFORM),win32)
 STRESSMATHLIBS = '$(ROOTSYS)/lib/libMathCore.lib' '$(ROOTSYS)/lib/libReflex.lib' '$(ROOTSYS)/lib/libCintex.lib' 
 else
 STRESSMATHLIBS = -lMathCore -lReflex -lCintex
 endif
 
+TRACKMATHSRC = TrackMathCoreRflx.$(SrcSuf)
+TRACKMATHOBJ = TrackMathCoreRflx.$(ObjSuf)
+TRACKMATHLIB = libTrackMathCoreRflx.$(DllSuf)
+
+
 else 
-STRESSMATHO   = stressMathCore.$(ObjSuf) TrackMathCoreCint.$(ObjSuf) 
-STRESSMATHS   = stressMathCore.$(SrcSuf) TrackMathCoreCint.$(SrcSuf)
 
 ifeq ($(PLATFORM),win32)
 STRESSMATHLIBS = '$(ROOTSYS)/lib/libMathCore.lib'
 else
 STRESSMATHLIBS = -lMathCore
 endif
+
+TRACKMATHSRC = TrackMathCoreCint.$(SrcSuf)
+TRACKMATHOBJ = TrackMathCoreCint.$(ObjSuf)
+TRACKMATHLIB = libTrackMathCoreCint.$(DllSuf)
  
 endif
 
@@ -99,6 +106,17 @@ STRESSMATH    = stressMathCore$(ExeSuf)
 
 
 
+endif
+
+ifeq ($(shell $(ROOTCONFIG) --has-mathmore),yes)
+STRESSMATHMOREO   = stressMathMore.$(ObjSuf) 
+STRESSMATHMORES   = stressMathMore.$(SrcSuf)  
+ifeq ($(PLATFORM),win32)
+STRESSMATHMORELIBS = '$(ROOTSYS)/lib/libMathCore.lib' '$(ROOTSYS)/lib/libMathMore.lib'  
+else
+STRESSMATHMORELIBS = -lMathCore -lMathMore
+endif
+STRESSMATHMORE    = stressMathMore$(ExeSuf)
 endif
 
 VLAZYO        = vlazy.$(ObjSuf)
@@ -194,7 +212,7 @@ OBJS          = $(EVENTO) $(MAINEVENTO) $(HWORLDO) $(HSIMPLEO) $(MINEXAMO) \
                 $(STRESSGO) $(STRESSSPO) $(TESTBITSO) $(STRESSTMVAO) \
                 $(CTORTUREO) $(QPRANDOMO) $(THREADO) $(STRESSVECO) $(STRESSMATHO) \
                 $(STRESSFITO) $(STRESSHEPIXO) $(STRESSENTRYLISTO) \
-                $(STRESSROOFITO) $(STRESSPROOFO)
+                $(STRESSROOFITO) $(STRESSPROOFO) $(STRESSMATHMOREO)
 
 
 PROGRAMS      = $(EVENT) $(HWORLD) $(HSIMPLE) $(MINEXAM) $(TSTRING) \
@@ -203,7 +221,8 @@ PROGRAMS      = $(EVENT) $(HWORLD) $(HSIMPLE) $(MINEXAM) $(TSTRING) \
                 $(STRESSSHAPES) $(STRESSGEOMETRY) $(STRESSL) $(STRESSG) \
                 $(TESTBITS) $(CTORTURE) $(QPRANDOM) $(THREADS) $(STRESSSP) \
                 $(STRESSVEC) $(STRESSFIT) $(STRESSHEPIX) $(STRESSENTRYLIST) \
-                $(STRESSROOFIT) $(STRESSPROOF) $(STRESSMATH) $(STRESSTMVA)
+                $(STRESSROOFIT) $(STRESSPROOF) $(STRESSMATH) $(STRESSTMVA) \
+                $(STRESSMATHMORE)
 
 
 OBJS         += $(GUITESTO) $(GUIVIEWERO) $(TETRISO)
@@ -332,11 +351,11 @@ endif
 		@echo "$@ done"
 
 
-#ifneq ($(useReflex),)
 
 
 
-libTrackMathCoreRflx.$(DllSuf): 	TrackMathCoreRflx.$(ObjSuf) 
+
+$(TRACKMATHLIB):	$(TRACKMATHOBJ)
 ifeq ($(ARCH),aix)
 		/usr/ibmcxx/bin/makeC++SharedLib $(OutPutOpt) $@ $(LIBS) -p 0 $^
 else
@@ -353,64 +372,32 @@ else
 		   $(OutPutOpt) $(subst .$(DllSuf),.so,$@)
 endif
 else
-ifeq ($(PLATFORM),win32)
-		bindexplib $* $^ > $*.def
-		lib -nologo -MACHINE:IX86 $^ -def:$*.def \
-		   $(OutPutOpt)$(EVENTLIB)
-		$(LD) $(SOFLAGS) $(LDFLAGS) $^ $*.exp $(LIBS) \
-		   $(OutPutOpt)$@
+		$(LD) $(SOFLAGS) $(LDFLAGS) $^ $(LIBS) $(STRESSMATHLIBS) $(OutPutOpt)$@
 		$(MT_DLL)
-else
-		$(LD) $(SOFLAGS) $(LDFLAGS) $^ $(OutPutOpt) $@ $(EXPLLINKLIBS)
-endif
-endif
-endif
-endif
-		@echo "$@ done"
-
 #endif
-
-libTrackMathCoreCint.$(DllSuf): 	TrackMathCoreCint.$(ObjSuf) 
-ifeq ($(ARCH),aix)
-		/usr/ibmcxx/bin/makeC++SharedLib $(OutPutOpt) $@ $(LIBS) -p 0 $^
-else
-ifeq ($(ARCH),aix5)
-		/usr/vacpp/bin/makeC++SharedLib $(OutPutOpt) $@ $(LIBS) -p 0 $^
-else
-ifeq ($(PLATFORM),macosx)
-# We need to make both the .dylib and the .so
-		$(LD) $(SOFLAGS) $^ $(OutPutOpt) $@
-ifeq ($(MACOSX_MINOR),4)
-		ln -sf $@ $(subst .$(DllSuf),.so,$@)
-else
-		$(LD) -bundle -undefined $(UNDEFOPT) $(LDFLAGS) $^ \
-		   $(OutPutOpt) $(subst .$(DllSuf),.so,$@)
 endif
-else
+endif
+endif
+
+$(STRESSMATH):   $(STRESSMATHO) $(TRACKMATHLIB)
 ifeq ($(PLATFORM),win32)
-		bindexplib $* $^ > $*.def
-		lib -nologo -MACHINE:IX86 $^ -def:$*.def \
-		   $(OutPutOpt)$(EVENTLIB)
-		$(LD) $(SOFLAGS) $(LDFLAGS) $^ $*.exp $(LIBS) \
-		   $(OutPutOpt)$@
-		$(MT_DLL)
-else
-		$(LD) $(SOFLAGS) $(LDFLAGS) $^ $(OutPutOpt) $@ $(EXPLLINKLIBS)
-endif
-endif
-endif
-endif
-		@echo "$@ done"
-
-
-$(STRESSMATH):   $(STRESSMATHO)
-ifeq ($(PLATFORM),win32)
-		$(LD) $(LDFLAGS) $^ $(LIBS) $(STRESSMATHLIBS)  $(OutPutOpt)$@
+		$(LD) $(LDFLAGS) $(STRESSMATHO) $(LIBS) $(STRESSMATHLIBS)  $(OutPutOpt)$@
 		$(MT_EXE)
 else
-		$(LD) $(LDFLAGS) $^ $(LIBS) $(STRESSMATHLIBS)  $(OutPutOpt)$@
+		$(LD) $(LDFLAGS) $(STRESSMATHO) $(LIBS) $(STRESSMATHLIBS)  $(OutPutOpt)$@
 endif
 		@echo "$@ done"
+
+
+$(STRESSMATHMORE):   $(STRESSMATHMOREO)
+ifeq ($(PLATFORM),win32)
+		$(LD) $(LDFLAGS) $^ $(LIBS) $(STRESSMATHMORELIBS)  $(OutPutOpt)$@
+		$(MT_EXE)
+else
+		$(LD) $(LDFLAGS) $^ $(LIBS) $(STRESSMATHMORELIBS)  $(OutPutOpt)$@
+endif
+		@echo "$@ done"
+
 
 $(TESTBITS):    $(TESTBITSO)
 		$(LD) $(LDFLAGS) $^ $(LIBS) $(OutPutOpt)$@
@@ -615,8 +602,10 @@ endif
 endif
 endif
 
+
 clean:
-		@rm -f $(OBJS) core *Dict.*
+		@rm -f $(OBJS) $(TRACKMATHSRC) core *Dict.*
+
 
 distclean:      clean
 		-@mv -f linearIO.root linearIO.roott

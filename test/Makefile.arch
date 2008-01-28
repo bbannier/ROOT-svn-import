@@ -10,6 +10,10 @@ ROOTCONFIG   := root-config
 
 ARCH         := $(shell $(ROOTCONFIG) --arch)
 PLATFORM     := $(shell $(ROOTCONFIG) --platform)
+ALTCC        := $(shell $(ROOTCONFIG) --cc)
+ALTCXX       := $(shell $(ROOTCONFIG) --cxx)
+ALTF77       := $(shell $(ROOTCONFIG) --f77)
+ALTLD        := $(shell $(ROOTCONFIG) --ld)
 
 CXX           =
 ObjSuf        = o
@@ -502,7 +506,7 @@ LDFLAGS       = $(LDOPT) -nologo
 SOFLAGS       = -DLL
 
 EXPLLINKLIBS  = $(ROOTLIBS) $(ROOTGLIBS)
-ifeq ($(VC_MAJOR),14)
+ifneq (,$(findstring $(VC_MAJOR),14 15))
 MT_EXE        = mt -nologo -manifest $@.manifest -outputresource:$@\;1; rm -f $@.manifest
 MT_DLL        = mt -nologo -manifest $@.manifest -outputresource:$@\;2; rm -f $@.manifest
 else
@@ -532,3 +536,16 @@ CXXFLAGS     += $(ROOTCFLAGS)
 LDFLAGS      += $(ROOTLDFLAGS)
 LIBS          = $(ROOTLIBS) $(SYSLIBS)
 GLIBS         = $(ROOTGLIBS) $(SYSLIBS)
+
+ifneq ($(ALTCC),)
+   CC  = $(ALTCC)
+endif
+ifneq ($(ALTCXX),)
+   CXX = $(ALTCXX)
+endif
+ifneq ($(ALTF77),)
+   F77 = $(ALTF77)
+endif
+ifneq ($(ALTLD),)
+   LD  = $(ALTLD)
+endif

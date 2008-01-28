@@ -87,7 +87,7 @@ namespace ROOT {
 
       Int_t GetEntries() { return obj.GetEntries(); }
 
-      const T* At(int i) {
+      const T* At(UInt_t i) {
          static T default_val;
          if (!obj.Read()) return &default_val;
          if (obj.GetWhere()==0) return &default_val;
@@ -97,13 +97,15 @@ namespace ROOT {
          else return &default_val;
       }
 
-      const T* operator [](int i) { return At(i); }
+      const T* operator [](Int_t i) { return At(i); }
+      const T* operator [](UInt_t i) { return At(i); }
 
    };
 
    template <class T>
    class TStlObjProxy  {
       TStlProxy obj;
+      typedef T value_t;
    public:
       InjecTBranchProxyInterface();
 
@@ -122,22 +124,25 @@ namespace ROOT {
       TStlObjProxy(TBranchProxyDirector *director, TBranchProxy *parent, const char *name, const char* top = 0, const char* mid = 0) : 
          obj(director,parent, name, top, mid) {};
       ~TStlObjProxy() {};
-
-      const TVirtualCollectionProxy* GetPtr() { return obj.GetPtr(); }
+      
+      TVirtualCollectionProxy* GetCollection() { 
+         return obj.GetPtr();
+      }
 
       Int_t GetEntries() { return obj.GetEntries(); }
 
-      const T* At(int i) {
-         static T default_val;
-         if (!obj.Read()) return &default_val;
-         if (obj.GetWhere()==0) return &default_val;
+      const value_t& At(UInt_t i) {
+         static const value_t default_val;
+         if (!obj.Read()) return default_val;
+         if (obj.GetWhere()==0) return default_val;
 
-         T* temp = (T*)obj.GetStlStart(i);
-         if (temp) return temp;
-         else return &default_val;
+         value_t *temp = (value_t*)obj.GetStlStart(i);
+         if (temp) return *temp;
+         else return default_val;
       }
 
-      const T* operator [](int i) { return At(i); }
+      const value_t& operator [](Int_t i) { return At(i); }
+      const value_t& operator [](UInt_t i) { return At(i); }
 
    };
 
@@ -181,7 +186,7 @@ namespace ROOT {
          return 0;
       }
 
-      const value_t At(int i) {
+      const value_t At(UInt_t i) {
          static value_t default_val;
          T *temp = ROOT::TObjProxy<T>::GetPtr();
          if (temp) {
@@ -193,7 +198,8 @@ namespace ROOT {
          else return default_val;
       }
 
-      const T* operator [](int i) { return At(i); }
+      const value_t operator [](Int_t i) { return At(i); }
+      const value_t operator [](UInt_t i) { return At(i); }
 
       T* operator->() { return ROOT::TObjProxy<T>::GetPtr(); }
       operator T*() { return ROOT::TObjProxy<T>::GetPtr(); }

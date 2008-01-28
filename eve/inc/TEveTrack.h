@@ -31,6 +31,9 @@ class TEveTrack : public TEveLine
    friend class TEveTrackCounter;
    friend class TEveTrackGL;
 
+private:
+   TEveTrack& operator=(const TEveTrack&); // Not implemented
+
 public:
    typedef std::vector<TEvePathMark*>           vpPathMark_t;
    typedef std::vector<TEvePathMark*>::iterator vpPathMark_i;
@@ -96,7 +99,7 @@ public:
    virtual void CtrlClicked(TEveTrack*); // *SIGNAL*
    virtual void SetLineStyle(Style_t lstyle);
 
-   virtual const TGPicture* GetListTreeIcon() { return fgListTreeIcons[4]; };
+   virtual const TGPicture* GetListTreeIcon();
 
    virtual TClass* ProjectedClass() const;
 
@@ -199,7 +202,7 @@ class TEveTrackCounter : public TEveElement, public TNamed
    friend class TEveTrackCounterEditor;
 
 public:
-   enum ClickAction_e { CA_PrintTrackInfo, CA_ToggleTrack };
+   enum EClickAction_e { kCA_PrintTrackInfo, kCA_ToggleTrack };
 
 private:
    TEveTrackCounter(const TEveTrackCounter&);            // Not implemented

@@ -45,7 +45,7 @@ $(GPADLIB):     $(GPADO) $(GPADDO) $(ORDER_) $(MAINLIBS) $(GPADLIBDEP)
 
 $(GPADDS):      $(GPADH) $(GPADL) $(GPADO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -o "$(GPADO)" -c $(GPADH) $(GPADL)
+		$(ROOTCINTTMP) -f $@ -c $(GPADH) $(GPADL)
 
 $(GPADMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(GPADL)
 		$(RLIBMAP) -o $(GPADMAP) -l $(GPADLIB) \

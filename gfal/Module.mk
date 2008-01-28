@@ -45,7 +45,7 @@ $(GFALLIB):     $(GFALO) $(GFALDO) $(ORDER_) $(MAINLIBS)
 
 $(GFALDS):      $(GFALH) $(GFALL) $(GFALO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -o "$(GFALO)" -c $(GFALH) $(GFALL)
+		$(ROOTCINTTMP) -f $@ -c $(GFALH) $(GFALL)
 
 $(GFALMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(GFALL)
 		$(RLIBMAP) -o $(GFALMAP) -l $(GFALLIB) \

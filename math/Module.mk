@@ -54,7 +54,7 @@ $(MATHLIB):     $(MATHO) $(MATHDO) $(ORDER_) $(MAINLIBS)
 
 $(MATHDS):      $(MATHH) $(MATHL) $(MATHO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -o "$(MATHO)" -c $(MATHH) $(MATHL)
+		$(ROOTCINTTMP) -f $@ -c $(MATHH) $(MATHL)
 
 $(MATHMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(MATHL)
 		$(RLIBMAP) -o $(MATHMAP) -l $(MATHLIB) \

@@ -36,6 +36,17 @@ ifeq ($(MAKECMDGOALS),clean)
 include config/Makefile.$(ARCH)
 endif
 
+##### Include compiler overrides specified via ./configure #####
+##### However, if we are building packages or cleaning, we #####
+##### don't include this file since it may screw up things #####
+
+ifeq ($(findstring $(MAKECMDGOALS), maintainer-clean debian redhat),)
+include config/Makefile.comp
+endif
+ifeq ($(MAKECMDGOALS),clean)
+include config/Makefile.comp
+endif
+
 ##### Include library dependencies for explicit linking #####
 
 MAKEFILEDEP = config/Makefile.depend
@@ -342,8 +353,10 @@ endif
 
 ifeq ($(GCC_MAJOR),3)
 ifneq ($(GCC_MINOR),0)
+ifneq ($(F77),)
 LIBFRTBEGIN  := $(shell $(F77) -print-file-name=libfrtbegin.a)
 F77LIBS      := $(LIBFRTBEGIN) $(F77LIBS)
+endif
 endif
 endif
 ifeq ($(GCC_MAJOR),4)
@@ -402,9 +415,8 @@ ifneq ($(BUILTINZLIB),yes)
 CORELIBEXTRA += $(ZLIBCLILIB)
 endif
 
-#LF
-#COREDICTLIB      := $(LPATH)/libCoreDict.$(SOEXT)
-#COREDICTMAP      := $(COREDICTLIB:.$(SOEXT)=.rootmap)
+##### Dependencies for all dictionaries
+ROOTCINTTMPDEP = $(ROOTCINTTMPO) $(ORDER_) $(ROOTCINTTMPEXE)
 
 ##### In case shared libs need to resolve all symbols (e.g.: aix, win32) #####
 
@@ -534,13 +546,15 @@ compiledata:    $(COMPILEDATA)
 
 config config/Makefile.:
 ifeq ($(BUILDING_WITHIN_IDE),)
-	@(if [ ! -f config/Makefile.config ] ; then \
+	@(if [ ! -f config/Makefile.config ] || \
+	     [ ! -f config/Makefile.comp ]; then \
 	   echo ""; echo "Please, run ./configure first"; echo ""; \
 	   exit 1; \
 	fi)
 else
 # Building from within an IDE, running configure
-	@(if [ ! -f config/Makefile.config ] ; then \
+	@(if [ ! -f config/Makefile.config ] || \
+	     [ ! -f config/Makefile.comp ]; then \
 	   ./configure --build=debug `cat config.status 2>/dev/null`; \
 	fi)
 endif
@@ -548,20 +562,23 @@ endif
 # Target Makefile is synonym for "run (re-)configure"
 # Makefile is target as we need to re-parse dependencies after
 # configure is run (as RConfigure.h changed etc)
-config/Makefile.config include/RConfigure.h etc/system.rootauthrc \
-  etc/system.rootdaemonrc etc/root.mimes $(ROOTRC) bin/root-config: Makefile
+config/Makefile.config config/Makefile.comp include/RConfigure.h \
+  include/RConfigOptions.h etc/system.rootauthrc etc/system.rootdaemonrc \
+  etc/root.mimes $(ROOTRC) \
+  bin/root-config: Makefile
 
 ifeq ($(findstring $(MAKECMDGOALS),distclean maintainer-clean debian redhat),)
 Makefile: configure config/rootrc.in config/RConfigure.in config/Makefile.in \
-  config/root-config.in config/rootauthrc.in config/rootdaemonrc.in \
-  config/mimes.unix.in config/mimes.win32.in config.status
-	@(if [ ! -x $(RECONFIGURE) ] || ! $(RECONFIGURE) "$?"; then \
+  config/Makefile-comp.in config/root-config.in config/rootauthrc.in \
+  config/rootdaemonrc.in config/mimes.unix.in config/mimes.win32.in \
+  config.status
+	@( $(RECONFIGURE) "$?" || ( \
 	   echo ""; echo "Please, run ./configure again as config option files ($?) have changed."; \
 	   echo ""; exit 1; \
-	 fi)
+	 ) )
 endif
 
-$(COMPILEDATA): config/Makefile.$(ARCH) $(MAKECOMPDATA)
+$(COMPILEDATA): config/Makefile.$(ARCH) config/Makefile.comp $(MAKECOMPDATA)
 	@$(MAKECOMPDATA) $(COMPILEDATA) "$(CXX)" "$(OPTFLAGS)" "$(DEBUGFLAGS)" \
 	   "$(CXXFLAGS)" "$(SOFLAGS)" "$(LDFLAGS)" "$(SOEXT)" "$(SYSLIBS)" \
 	   "$(LIBDIR)" "$(BOOTLIBS)" "$(RINTLIBS)" "$(INCDIR)" \
@@ -727,7 +744,7 @@ rootdrpm:
 	fi
 
 clean::
-	@rm -f __compiledata *~ core $(PCHFILE)
+	@rm -f __compiledata *~ core include/precompile.*
 
 ifeq ($(CXX),KCC)
 clean::
@@ -740,8 +757,10 @@ endif
 
 distclean:: clean
 	-@mv -f include/RConfigure.h include/RConfigure.h-
+
 	@rm -f include/*.h $(ROOTMAP) $(CORELIB) $(COREDICTLIB) $(COREMAP) $(COREDICTMAP)
 	-@mv -f include/RConfigure.h- include/RConfigure.h
+	-@mv -f include/RConfigOptions.h- include/RConfigOptions.h
 	@rm -f bin/*.dll bin/*.exp bin/*.lib bin/*.pdb \
                lib/*.def lib/*.exp lib/*.lib lib/*.dll.a \
                *.def .def
@@ -751,6 +770,7 @@ endif
 	-@mv -f tutorials/gallery.root tutorials/gallery.root-
 	-@mv -f tutorials/mlp/mlpHiggs.root tutorials/mlp/mlpHiggs.root-
 	-@mv -f tutorials/quadp/stock.root tutorials/quadp/stock.root-
+	@(find tutorials -name "files" -exec rm -rf {} \; >/dev/null 2>&1;true)
 	@(find tutorials -name "*.root" -exec rm -rf {} \; >/dev/null 2>&1;true)
 	@(find tutorials -name "*.ps" -exec rm -rf {} \; >/dev/null 2>&1;true)
 	@(find tutorials -name "*.gif" -exec rm -rf {} \; >/dev/null 2>&1;true)
@@ -759,6 +779,7 @@ endif
 	@(find tutorials -name "*.so" -exec rm -rf {} \; >/dev/null 2>&1;true)
 	@(find tutorials -name "work.pc" -exec rm -rf {} \; >/dev/null 2>&1;true)
 	@(find tutorials -name "work.pcl" -exec rm -rf {} \; >/dev/null 2>&1;true)
+	@rm -rf tutorials/eve/aliesd
 	-@mv -f tutorials/gallery.root- tutorials/gallery.root
 	-@mv -f tutorials/mlp/mlpHiggs.root- tutorials/mlp/mlpHiggs.root
 	-@mv -f tutorials/quadp/stock.root- tutorials/quadp/stock.root
@@ -776,8 +797,8 @@ endif
 
 maintainer-clean:: distclean
 	@rm -rf bin lib include htmldoc system.rootrc config/Makefile.config \
-	   $(ROOTRC) etc/system.rootauthrc etc/system.rootdaemonrc \
-	   etc/root.mimes build/misc/root-help.el \
+	   config/Makefile.comp $(ROOTRC) etc/system.rootauthrc \
+	   etc/system.rootdaemonrc etc/root.mimes build/misc/root-help.el \
 	   rootd/misc/rootd.rc.d build-arch-stamp build-indep-stamp \
 	   configure-stamp build-arch-cint-stamp config.status config.log
 

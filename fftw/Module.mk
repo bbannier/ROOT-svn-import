@@ -45,7 +45,7 @@ $(FFTWLIB):     $(FFTWO) $(FFTWDO) $(ORDER_) $(MAINLIBS) $(FFTWLIBDEP)
 
 $(FFTWDS):      $(FFTWH) $(FFTWL) $(FFTWO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -o "$(FFTWO)" -c $(FFTWH) $(FFTWL)
+		$(ROOTCINTTMP) -f $@ -c $(FFTWH) $(FFTWL)
 
 $(FFTWMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(FFTWL)
 		$(RLIBMAP) -o $(FFTWMAP) -l $(FFTWLIB) \

@@ -43,7 +43,7 @@ $(EVELIB):      $(EVEO) $(EVEDO) $(ORDER_) $(MAINLIBS) $(EVELIBDEP)
 		   "$(SOFLAGS)" libEve.$(SOEXT) $@ "$(EVEO) $(EVEDO)" \
 		   "$(EVELIBEXTRA) $(FTGLLIBDIR) $(FTGLLIBS) $(GLLIBS)"
 
-$(EVEDS):       $(EVEH) $(EVEL) $(ROOTCINTTMPEXE)
+$(EVEDS):       $(EVEH) $(EVEL) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(EVEH) $(EVEDIRS)/SolarisCCDictHack.h $(EVEL)
 
@@ -69,3 +69,13 @@ $(EVEO) $(EVEDO): CXXFLAGS += $(OPENGLINCDIR:%=-I%) $(FTGLINCDIR:%=-I%)
 else
 $(EVEO) $(EVEDO): CXXFLAGS += $(OPENGLINCDIR:%=-I%) $(FTGLINCDIR:%=-I%)
 endif
+
+eve/src/TEveTextGL.o: \
+                $(FREETYPEDEP)
+eve/src/TEveTextGL.o: \
+                CXXFLAGS += $(FREETYPEINC) $(FTGLINCDIR:%=-I%)
+
+eve/src/TEveText.o: \
+                $(FREETYPEDEP)
+eve/src/TEveText.o: \
+                CXXFLAGS += $(FREETYPEINC) $(FTGLINCDIR:%=-I%)

@@ -41,7 +41,7 @@ ClassImp(RooAbsCategory)
 ;
 
 RooAbsCategory::RooAbsCategory(const char *name, const char *title) : 
-  RooAbsArg(name,title), _treeVar(kFALSE)
+  RooAbsArg(name,title), _value("NULL",0), _treeVar(kFALSE)
 {
   // Constructor
   _typeIter = _types.MakeIterator() ;
@@ -379,7 +379,7 @@ void RooAbsCategory::attachToTree(TTree& t, Int_t bufSize)
     } else if (!typeName.CompareTo("UChar_t")) {
       coutI(DataHandling) << "RooAbsReal::attachToTree(" << GetName() << ") TTree UChar_t branch " << GetName() 
 			  << " will be interpreted as category index" << endl ;
-      t.SetBranchAddress(cleanName,&((Bool_t&)_value._value)) ;
+      t.SetBranchAddress(cleanName,&_byteValue) ;
       setAttribute("UCHARIDXONLY_TREE_BRANCH",kTRUE) ;
       _treeVar = kTRUE ;
       return ;
@@ -500,7 +500,7 @@ void RooAbsCategory::copyCache(const RooAbsArg* source)
       }
     } if (source->getAttribute("UCHARIDXONLY_TREE_BRANCH")) {
       // Lookup cat state from other-index because label is missing
-      Int_t tmp = *reinterpret_cast<UChar_t*>(&(other->_value._value)) ;
+      Int_t tmp = other->_byteValue ;
       const RooCatType* type = lookupType(tmp) ;
       if (type) {
 	_value = *type ;

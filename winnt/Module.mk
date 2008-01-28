@@ -36,7 +36,7 @@ include/%.h:    $(WINNTDIRI)/%.h
 
 $(WINNTDS):     $(WINNTH1) $(WINNTL) $(WINNTO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -o "$(WINNTO)" -c $(WINNTH1) $(WINNTL)
+		$(ROOTCINTTMP) -f $@ -c $(WINNTH1) $(WINNTL)
 
 all-winnt:      $(WINNTO) $(WINNTDO)
 

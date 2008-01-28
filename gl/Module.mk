@@ -70,7 +70,7 @@ $(GLLIB):       $(GLO) $(GLO1) $(GLDO) $(ORDER_) $(MAINLIBS) $(GLLIBDEP)
 
 $(GLDS):	$(GLH2) $(GLL) $(GLO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -o "$(GLO)" -c $(GLH2) $(GLL)
+		$(ROOTCINTTMP) -f $@ -c $(GLH2) $(GLL)
 
 $(GLMAP):       $(RLIBMAP) $(MAKEFILEDEP) $(GLL)
 		$(RLIBMAP) -o $(GLMAP) -l $(GLLIB) \
@@ -101,5 +101,15 @@ $(GLDIRS)/gl2ps.o: CFLAGS += $(OPENGLINCDIR:%=-I%)
 gl/src/TGLText.o: \
                 $(FREETYPEDEP)
 gl/src/TGLText.o: \
+                CXXFLAGS += $(FREETYPEINC) $(FTGLINCDIR:%=-I%)
+
+gl/src/TGLContext.o: \
+                $(FREETYPEDEP)
+gl/src/TGLContext.o: \
+                CXXFLAGS += $(FREETYPEINC) $(FTGLINCDIR:%=-I%)
+
+gl/src/TFTGLManager.o: \
+                $(FREETYPEDEP)
+gl/src/TFTGLManager.o: \
                 CXXFLAGS += $(FREETYPEINC) $(FTGLINCDIR:%=-I%)
 

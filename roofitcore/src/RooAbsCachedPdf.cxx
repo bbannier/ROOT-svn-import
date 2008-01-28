@@ -12,8 +12,10 @@
  // -- CLASS DESCRIPTION [PDF] -- 
  // Your description goes here... 
 
-#include <iostream> 
+#include "Riostream.h" 
+using namespace std ;
 
+#include "RooFit.h"
 #include "TString.h"
 #include "RooAbsCachedPdf.h" 
 #include "RooAbsReal.h" 

@@ -29,18 +29,19 @@ ClassImp(TEveQuadSetGL)
 
 TEveQuadSetGL::TEveQuadSetGL() : TGLObject(), fM(0)
 {
+   // Constructor.
+
    // fDLCache = false; // Disable DL.
 }
-
-//______________________________________________________________________________
-TEveQuadSetGL::~TEveQuadSetGL()
-{}
 
 /******************************************************************************/
 
 //______________________________________________________________________________
 Bool_t TEveQuadSetGL::ShouldDLCache(const TGLRnrCtx & rnrCtx) const
 {
+   // Decide if render-pass given by rnrCtx should use the display-list cache.
+   // Virtual from TGLLogicalShape.
+
    if (rnrCtx.DrawPass() == TGLRnrCtx::kPassOutlineLine)
       return kFALSE;
    return TGLObject::ShouldDLCache(rnrCtx);
@@ -51,6 +52,8 @@ Bool_t TEveQuadSetGL::ShouldDLCache(const TGLRnrCtx & rnrCtx) const
 //______________________________________________________________________________
 Bool_t TEveQuadSetGL::SetModel(TObject* obj, const Option_t* /*opt*/)
 {
+   // Set model object.
+
    Bool_t ok = SetModelCheckClass(obj, TEveQuadSet::Class());
    fM = ok ? dynamic_cast<TEveQuadSet*>(obj) : 0;
    return ok;
@@ -59,17 +62,21 @@ Bool_t TEveQuadSetGL::SetModel(TObject* obj, const Option_t* /*opt*/)
 //______________________________________________________________________________
 void TEveQuadSetGL::SetBBox()
 {
+   // Setup bounding box.
+
    SetAxisAlignedBBox(fM->AssertBBox());
 }
 
 /******************************************************************************/
 
 //______________________________________________________________________________
-inline Bool_t TEveQuadSetGL::SetupColor(const TEveDigitSet::DigitBase& q) const
+inline Bool_t TEveQuadSetGL::SetupColor(const TEveDigitSet::DigitBase_t& q) const
 {
+   // Set color for rendering of the specified quad.
+
    if (fM->fValueIsColor)
    {
-      glColor4ubv((UChar_t*) & q.fValue);
+      TGLUtil::Color4ubv((UChar_t*) & q.fValue);
       return kTRUE;
    }
    else
@@ -77,7 +84,7 @@ inline Bool_t TEveQuadSetGL::SetupColor(const TEveDigitSet::DigitBase& q) const
       UChar_t c[4];
       Bool_t visible = fM->fPalette->ColorFromValue(q.fValue, fM->fDefaultValue, c);
       if (visible)
-         glColor4ubv(c);
+         TGLUtil::Color4ubv(c);
       return visible;
    }
 }
@@ -87,6 +94,8 @@ inline Bool_t TEveQuadSetGL::SetupColor(const TEveDigitSet::DigitBase& q) const
 //______________________________________________________________________________
 void TEveQuadSetGL::DirectDraw(TGLRnrCtx & rnrCtx) const
 {
+   // Draw quad-set with GL.
+
    static const TEveException eH("TEveQuadSetGL::DirectDraw ");
 
    // printf("QuadSetGLRenderer::DirectDraw Style %d, LOD %d\n", rnrCtx.Style(), rnrCtx.LOD());
@@ -111,16 +120,16 @@ void TEveQuadSetGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    glEnable(GL_COLOR_MATERIAL);
    glDisable(GL_CULL_FACE);
 
-   if (mQ.fRenderMode == TEveDigitSet::RM_Fill)
+   if (mQ.fRenderMode == TEveDigitSet::kRM_Fill)
       glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-   else if (mQ.fRenderMode == TEveDigitSet::RM_TEveLine)
+   else if (mQ.fRenderMode == TEveDigitSet::kRM_TEveLine)
       glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
    if (mQ.fDisableLigting)  glDisable(GL_LIGHTING);
 
-   if (mQ.fQuadType < TEveQuadSet::QT_Rectangle_End)      RenderQuads(rnrCtx);
-   else if (mQ.fQuadType < TEveQuadSet::QT_Line_End)      RenderLines(rnrCtx);
-   else if (mQ.fQuadType < TEveQuadSet::QT_Hexagon_End)   RenderHexagons(rnrCtx);
+   if (mQ.fQuadType < TEveQuadSet::kQT_Rectangle_End)      RenderQuads(rnrCtx);
+   else if (mQ.fQuadType < TEveQuadSet::kQT_Line_End)      RenderLines(rnrCtx);
+   else if (mQ.fQuadType < TEveQuadSet::kQT_Hexagon_End)   RenderHexagons(rnrCtx);
 
    glPopAttrib();
 
@@ -129,15 +138,17 @@ void TEveQuadSetGL::DirectDraw(TGLRnrCtx & rnrCtx) const
 //______________________________________________________________________________
 void TEveQuadSetGL::RenderQuads(TGLRnrCtx & rnrCtx) const
 {
+   // GL rendering for free-quads and rectangles.
+
    static const TEveException eH("TEveQuadSetGL::RenderQuads ");
 
    TEveQuadSet& mQ = * fM;
 
    GLenum primitiveType;
-   if (mQ.fRenderMode != TEveDigitSet::RM_TEveLine)
+   if (mQ.fRenderMode != TEveDigitSet::kRM_TEveLine)
    {
       primitiveType = GL_QUADS;
-      if (mQ.fQuadType == TEveQuadSet::QT_FreeQuad)
+      if (mQ.fQuadType == TEveQuadSet::kQT_FreeQuad)
          glEnable(GL_NORMALIZE);
       else
          glNormal3f(0, 0, 1);
@@ -152,11 +163,11 @@ void TEveQuadSetGL::RenderQuads(TGLRnrCtx & rnrCtx) const
    switch (mQ.fQuadType)
    {
 
-      case TEveQuadSet::QT_FreeQuad:
+      case TEveQuadSet::kQT_FreeQuad:
       {
          Float_t e1[3], e2[3], normal[3];
          while (qi.next()) {
-            TEveQuadSet::QFreeQuad& q = * (TEveQuadSet::QFreeQuad*) qi();
+            TEveQuadSet::QFreeQuad_t& q = * (TEveQuadSet::QFreeQuad_t*) qi();
             if (SetupColor(q))
             {
                Float_t* p = q.fVertices;
@@ -176,10 +187,10 @@ void TEveQuadSetGL::RenderQuads(TGLRnrCtx & rnrCtx) const
          break;
       }
 
-      case TEveQuadSet::QT_RectangleXY:
+      case TEveQuadSet::kQT_RectangleXY:
       {
          while (qi.next()) {
-            TEveQuadSet::QRect& q = * (TEveQuadSet::QRect*) qi();
+            TEveQuadSet::QRect_t& q = * (TEveQuadSet::QRect_t*) qi();
             if (SetupColor(q))
             {
                if (rnrCtx.SecSelection()) glLoadName(qi.index());
@@ -194,10 +205,10 @@ void TEveQuadSetGL::RenderQuads(TGLRnrCtx & rnrCtx) const
          break;
       }
 
-      case TEveQuadSet::QT_RectangleXZ:
+      case TEveQuadSet::kQT_RectangleXZ:
       {
          while (qi.next()) {
-            TEveQuadSet::QRect& q = * (TEveQuadSet::QRect*) qi();
+            TEveQuadSet::QRect_t& q = * (TEveQuadSet::QRect_t*) qi();
             if (SetupColor(q))
             {
                if (rnrCtx.SecSelection()) glLoadName(qi.index());
@@ -212,10 +223,10 @@ void TEveQuadSetGL::RenderQuads(TGLRnrCtx & rnrCtx) const
          break;
       }
 
-      case TEveQuadSet::QT_RectangleYZ:
+      case TEveQuadSet::kQT_RectangleYZ:
       {
          while (qi.next()) {
-            TEveQuadSet::QRect& q = * (TEveQuadSet::QRect*) qi();
+            TEveQuadSet::QRect_t& q = * (TEveQuadSet::QRect_t*) qi();
             if (SetupColor(q))
             {
                if (rnrCtx.SecSelection()) glLoadName(qi.index());
@@ -230,12 +241,12 @@ void TEveQuadSetGL::RenderQuads(TGLRnrCtx & rnrCtx) const
          break;
       }
 
-      case TEveQuadSet::QT_RectangleXYFixedDim:
+      case TEveQuadSet::kQT_RectangleXYFixedDim:
       {
          const Float_t& w = mQ.fDefWidth;
          const Float_t& h = mQ.fDefHeight;
          while (qi.next()) {
-            TEveQuadSet::QRectFixDim& q = * (TEveQuadSet::QRectFixDim*) qi();
+            TEveQuadSet::QRectFixDim_t& q = * (TEveQuadSet::QRectFixDim_t*) qi();
             if (SetupColor(q))
             {
                if (rnrCtx.SecSelection()) glLoadName(qi.index());
@@ -250,11 +261,11 @@ void TEveQuadSetGL::RenderQuads(TGLRnrCtx & rnrCtx) const
          break;
       }
 
-      case TEveQuadSet::QT_RectangleXYFixedZ:
+      case TEveQuadSet::kQT_RectangleXYFixedZ:
       {
          const Float_t& z = mQ.fDefCoord;
          while (qi.next()) {
-            TEveQuadSet::QRectFixC& q = * (TEveQuadSet::QRectFixC*) qi();
+            TEveQuadSet::QRectFixC_t& q = * (TEveQuadSet::QRectFixC_t*) qi();
             if (SetupColor(q))
             {
                if (rnrCtx.SecSelection()) glLoadName(qi.index());
@@ -269,11 +280,11 @@ void TEveQuadSetGL::RenderQuads(TGLRnrCtx & rnrCtx) const
          break;
       }
 
-      case TEveQuadSet::QT_RectangleXZFixedY:
+      case TEveQuadSet::kQT_RectangleXZFixedY:
       {
          const Float_t& y = mQ.fDefCoord;
          while (qi.next()) {
-            TEveQuadSet::QRectFixC& q = * (TEveQuadSet::QRectFixC*) qi();
+            TEveQuadSet::QRectFixC_t& q = * (TEveQuadSet::QRectFixC_t*) qi();
             if (SetupColor(q))
             {
                if (rnrCtx.SecSelection()) glLoadName(qi.index());
@@ -288,11 +299,11 @@ void TEveQuadSetGL::RenderQuads(TGLRnrCtx & rnrCtx) const
          break;
       }
 
-      case TEveQuadSet::QT_RectangleYZFixedX:
+      case TEveQuadSet::kQT_RectangleYZFixedX:
       {
          const Float_t& x = mQ.fDefCoord;
          while (qi.next()) {
-            TEveQuadSet::QRectFixC& q = * (TEveQuadSet::QRectFixC*) qi();
+            TEveQuadSet::QRectFixC_t& q = * (TEveQuadSet::QRectFixC_t*) qi();
             if (SetupColor(q))
             {
                if (rnrCtx.SecSelection()) glLoadName(qi.index());
@@ -307,13 +318,13 @@ void TEveQuadSetGL::RenderQuads(TGLRnrCtx & rnrCtx) const
          break;
       }
 
-      case TEveQuadSet::QT_RectangleXYFixedDimZ:
+      case TEveQuadSet::kQT_RectangleXYFixedDimZ:
       {
          const Float_t& z = mQ.fDefCoord;
          const Float_t& w = mQ.fDefWidth;
          const Float_t& h = mQ.fDefHeight;
          while (qi.next()) {
-            TEveQuadSet::QRectFixDimC& q = * (TEveQuadSet::QRectFixDimC*) qi();
+            TEveQuadSet::QRectFixDimC_t& q = * (TEveQuadSet::QRectFixDimC_t*) qi();
             if (SetupColor(q))
             {
                if (rnrCtx.SecSelection()) glLoadName(qi.index());
@@ -328,13 +339,13 @@ void TEveQuadSetGL::RenderQuads(TGLRnrCtx & rnrCtx) const
          break;
       }
 
-      case TEveQuadSet::QT_RectangleXZFixedDimY:
+      case TEveQuadSet::kQT_RectangleXZFixedDimY:
       {
          const Float_t& y = mQ.fDefCoord;
          const Float_t& w = mQ.fDefWidth;
          const Float_t& h = mQ.fDefHeight;
          while (qi.next()) {
-            TEveQuadSet::QRectFixDimC& q = * (TEveQuadSet::QRectFixDimC*) qi();
+            TEveQuadSet::QRectFixDimC_t& q = * (TEveQuadSet::QRectFixDimC_t*) qi();
             if (SetupColor(q))
             {
                if (rnrCtx.SecSelection()) glLoadName(qi.index());
@@ -349,13 +360,13 @@ void TEveQuadSetGL::RenderQuads(TGLRnrCtx & rnrCtx) const
          break;
       }
 
-      case TEveQuadSet::QT_RectangleYZFixedDimX:
+      case TEveQuadSet::kQT_RectangleYZFixedDimX:
       {
          const Float_t& x = mQ.fDefCoord;
          const Float_t& w = mQ.fDefWidth;
          const Float_t& h = mQ.fDefHeight;
          while (qi.next()) {
-            TEveQuadSet::QRectFixDimC& q = * (TEveQuadSet::QRectFixDimC*) qi();
+            TEveQuadSet::QRectFixDimC_t& q = * (TEveQuadSet::QRectFixDimC_t*) qi();
             if (SetupColor(q))
             {
                if (rnrCtx.SecSelection()) glLoadName(qi.index());
@@ -381,6 +392,8 @@ void TEveQuadSetGL::RenderQuads(TGLRnrCtx & rnrCtx) const
 //______________________________________________________________________________
 void TEveQuadSetGL::RenderLines(TGLRnrCtx & rnrCtx) const
 {
+   // GL rendering for line-types.
+ 
    static const TEveException eH("TEveQuadSetGL::RenderLines ");
 
    TEveQuadSet& mQ = * fM;
@@ -392,11 +405,11 @@ void TEveQuadSetGL::RenderLines(TGLRnrCtx & rnrCtx) const
    switch (mQ.fQuadType)
    {
 
-      case TEveQuadSet::QT_LineXYFixedZ:
+      case TEveQuadSet::kQT_LineXYFixedZ:
       {
          const Float_t& z = mQ.fDefCoord;
          while (qi.next()) {
-            TEveQuadSet::QLineFixC& q = * (TEveQuadSet::QLineFixC*) qi();
+            TEveQuadSet::QLineFixC_t& q = * (TEveQuadSet::QLineFixC_t*) qi();
             if (SetupColor(q))
             {
                if (rnrCtx.SecSelection()) glLoadName(qi.index());
@@ -409,11 +422,11 @@ void TEveQuadSetGL::RenderLines(TGLRnrCtx & rnrCtx) const
          break;
       }
 
-      case TEveQuadSet::QT_LineXZFixedY:
+      case TEveQuadSet::kQT_LineXZFixedY:
       {
          const Float_t& z = mQ.fDefCoord;
          while (qi.next()) {
-            TEveQuadSet::QLineFixC& q = * (TEveQuadSet::QLineFixC*) qi();
+            TEveQuadSet::QLineFixC_t& q = * (TEveQuadSet::QLineFixC_t*) qi();
             if (SetupColor(q))
             {
                if (rnrCtx.SecSelection()) glLoadName(qi.index());
@@ -437,13 +450,15 @@ void TEveQuadSetGL::RenderLines(TGLRnrCtx & rnrCtx) const
 //______________________________________________________________________________
 void TEveQuadSetGL::RenderHexagons(TGLRnrCtx & rnrCtx) const
 {
+   // GL rendering for hexagons.
+
    static const TEveException eH("TEveQuadSetGL::RenderHexagons ");
 
    const Float_t sqr3hf = 0.5*TMath::Sqrt(3);
 
    TEveQuadSet& mQ = * fM;
 
-   GLenum primitveType = (mQ.fRenderMode != TEveDigitSet::RM_TEveLine) ?
+   GLenum primitveType = (mQ.fRenderMode != TEveDigitSet::kRM_TEveLine) ?
       GL_POLYGON : GL_LINE_LOOP;
 
    glNormal3f(0, 0, 1);
@@ -455,10 +470,10 @@ void TEveQuadSetGL::RenderHexagons(TGLRnrCtx & rnrCtx) const
    switch (mQ.fQuadType)
    {
 
-      case TEveQuadSet::QT_HexagonXY:
+      case TEveQuadSet::kQT_HexagonXY:
       {
          while (qi.next()) {
-            TEveQuadSet::QHex& q = * (TEveQuadSet::QHex*) qi();
+            TEveQuadSet::QHex_t& q = * (TEveQuadSet::QHex_t*) qi();
             if (SetupColor(q))
             {
                const Float_t rh = q.fR * 0.5;
@@ -477,10 +492,10 @@ void TEveQuadSetGL::RenderHexagons(TGLRnrCtx & rnrCtx) const
          break;
       }
 
-      case TEveQuadSet::QT_HexagonYX:
+      case TEveQuadSet::kQT_HexagonYX:
       {
          while (qi.next()) {
-            TEveQuadSet::QHex& q = * (TEveQuadSet::QHex*) qi();
+            TEveQuadSet::QHex_t& q = * (TEveQuadSet::QHex_t*) qi();
             if (SetupColor(q))
             {
                const Float_t rh = q.fR * 0.5;
@@ -513,8 +528,8 @@ void TEveQuadSetGL::RenderHexagons(TGLRnrCtx & rnrCtx) const
 void TEveQuadSetGL::ProcessSelection(TGLRnrCtx & /*rnrCtx*/, TGLSelectRecord & rec)
 {
    // Processes secondary selection from TGLViewer.
-   // Calls TPointSet3D::PointSelected(Int_t) with index of selected
-   // point as an argument.
+   // Calls DigitSelected(Int_t) in the model object with index of
+   // selected point as the argument.
 
    if (rec.GetN() < 2) return;
    fM->DigitSelected(rec.GetItem(1));

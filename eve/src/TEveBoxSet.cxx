@@ -25,9 +25,9 @@
 //
 // A collection of 3D-boxes. The way how the boxes are defined depends
 // on the fBoxType data-member.
-//   BT_FreeBox         arbitrary box: specify 8*(x,y,z) box corners
-//   BT_AABox           axis-aligned box: specify (x,y,z) and (w, h, d)
-//   BT_AABoxFixedDim   axis-aligned box w/ fixed dimensions: specify (x,y,z)
+//   kBT_FreeBox         arbitrary box: specify 8*(x,y,z) box corners
+//   kBT_AABox           axis-aligned box: specify (x,y,z) and (w, h, d)
+//   kBT_AABoxFixedDim   axis-aligned box w/ fixed dimensions: specify (x,y,z)
 //                      also set fDefWidth, fDefHeight and fDefDepth
 //
 // Each box can be assigned:
@@ -43,7 +43,7 @@ ClassImp(TEveBoxSet)
 TEveBoxSet::TEveBoxSet(const Text_t* n, const Text_t* t) :
    TEveDigitSet  (n, t),
 
-   fBoxType      (BT_Undef),
+   fBoxType      (kBT_Undef),
    fDefWidth     (1),
    fDefHeight    (1),
    fDefDepth     (1)
@@ -57,17 +57,17 @@ TEveBoxSet::TEveBoxSet(const Text_t* n, const Text_t* t) :
 /******************************************************************************/
 
 //______________________________________________________________________________
-Int_t TEveBoxSet::SizeofAtom(TEveBoxSet::BoxType_e bt)
+Int_t TEveBoxSet::SizeofAtom(TEveBoxSet::EBoxType_e bt)
 {
    // Return size of data-structure describing a box of type bt.
 
    static const TEveException eH("TEveBoxSet::SizeofAtom ");
 
    switch (bt) {
-      case BT_Undef:                return 0;
-      case BT_FreeBox:              return sizeof(BFreeBox);
-      case BT_AABox:                return sizeof(BAABox);
-      case BT_AABoxFixedDim:        return sizeof(BAABoxFixedDim);
+      case kBT_Undef:                return 0;
+      case kBT_FreeBox:              return sizeof(BFreeBox_t);
+      case kBT_AABox:                return sizeof(BAABox_t);
+      case kBT_AABoxFixedDim:        return sizeof(BAABoxFixedDim_t);
       default:                      throw(eH + "unexpected atom type.");
    }
    return 0;
@@ -76,7 +76,7 @@ Int_t TEveBoxSet::SizeofAtom(TEveBoxSet::BoxType_e bt)
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveBoxSet::Reset(TEveBoxSet::BoxType_e boxType, Bool_t valIsCol, Int_t chunkSize)
+void TEveBoxSet::Reset(TEveBoxSet::EBoxType_e boxType, Bool_t valIsCol, Int_t chunkSize)
 {
    // Reset the data containers to zero size.
    // The arguments describe the basic parameters of data storage.
@@ -106,14 +106,14 @@ void TEveBoxSet::Reset()
 void TEveBoxSet::AddBox(const Float_t* verts)
 {
    // Create a new box from a set of 8 vertices.
-   // To be used for box-type BT_FreeBox.
+   // To be used for box-type kBT_FreeBox.
 
    static const TEveException eH("TEveBoxSet::AddBox ");
 
-   if (fBoxType != BT_FreeBox)
+   if (fBoxType != kBT_FreeBox)
       throw(eH + "expect free box-type.");
 
-   BFreeBox* b = (BFreeBox*) NewDigit();
+   BFreeBox_t* b = (BFreeBox_t*) NewDigit();
    memcpy(b->fVertices, verts, sizeof(b->fVertices));
 }
 
@@ -122,14 +122,14 @@ void TEveBoxSet::AddBox(Float_t a, Float_t b, Float_t c, Float_t w, Float_t h, F
 {
    // Create a new axis-aligned box from at a given position and with
    // specified dimensions.
-   // To be used for box-type BT_AABox.
+   // To be used for box-type kBT_AABox.
 
    static const TEveException eH("TEveBoxSet::AddBox ");
 
-   if (fBoxType != BT_AABox)
+   if (fBoxType != kBT_AABox)
       throw(eH + "expect axis-aligned box-type.");
 
-   BAABox* box = (BAABox*) NewDigit();
+   BAABox_t* box = (BAABox_t*) NewDigit();
    box->fA = a; box->fB = b; box->fC = c;
    box->fW = w; box->fH = h; box->fD = d;
 }
@@ -138,14 +138,14 @@ void TEveBoxSet::AddBox(Float_t a, Float_t b, Float_t c, Float_t w, Float_t h, F
 void TEveBoxSet::AddBox(Float_t a, Float_t b, Float_t c)
 {
    // Create a new axis-aligned box from at a given position.
-   // To be used for box-type BT_AABoxFixedDim.
+   // To be used for box-type kBT_AABoxFixedDim.
 
    static const TEveException eH("TEveBoxSet::AddBox ");
 
-   if (fBoxType != BT_AABoxFixedDim)
+   if (fBoxType != kBT_AABoxFixedDim)
       throw(eH + "expect axis-aligned fixed-dimension box-type.");
 
-   BAABoxFixedDim* box = (BAABoxFixedDim*) NewDigit();
+   BAABoxFixedDim_t* box = (BAABoxFixedDim_t*) NewDigit();
    box->fA = a; box->fB = b; box->fC = c;
 }
 
@@ -181,10 +181,10 @@ void TEveBoxSet::ComputeBBox()
    switch (fBoxType)
    {
 
-      case BT_FreeBox:
+      case kBT_FreeBox:
       {
          while (bi.next()) {
-            BFreeBox& b = * (BFreeBox*) bi();
+            BFreeBox_t& b = * (BFreeBox_t*) bi();
             Float_t * p = b.fVertices;
             for(int i=0; i<8; ++i, p+=3)
                BBoxCheckPoint(p);
@@ -192,20 +192,20 @@ void TEveBoxSet::ComputeBBox()
          break;
       }
 
-      case BT_AABox:
+      case kBT_AABox:
       {
          while (bi.next()) {
-            BAABox& b = * (BAABox*) bi();
+            BAABox_t& b = * (BAABox_t*) bi();
             BBoxCheckPoint(b.fA, b.fB, b.fC);
             BBoxCheckPoint(b.fA + b.fW, b.fB + b.fH , b.fC + b.fD);
          }
          break;
       }
 
-      case BT_AABoxFixedDim:
+      case kBT_AABoxFixedDim:
       {
          while (bi.next()) {
-            BAABoxFixedDim& b = * (BAABoxFixedDim*) bi();
+            BAABoxFixedDim_t& b = * (BAABoxFixedDim_t*) bi();
             BBoxCheckPoint(b.fA, b.fB, b.fC);
             BBoxCheckPoint(b.fA + fDefWidth, b.fB + fDefHeight , b.fC + fDefDepth);
          }
@@ -230,7 +230,7 @@ void TEveBoxSet::Test(Int_t nboxes)
 {
    // Fill the structure with a random set of boxes.
 
-   Reset(BT_AABox, kTRUE, nboxes);
+   Reset(kBT_AABox, kTRUE, nboxes);
    TRandom rnd(0);
    const Float_t origin = 10, size = 2;
    Int_t color;

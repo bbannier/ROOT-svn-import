@@ -49,7 +49,7 @@ $(HBOOKLIB):    $(HBOOKO) $(HBOOKDO) $(ORDER_) $(MAINLIBS) $(HBOOKLIBDEP)
 
 $(HBOOKDS):     $(HBOOKH) $(HBOOKL) $(HBOOKO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -o "$(HBOOKO)" -c $(HBOOKH) $(HBOOKL)
+		$(ROOTCINTTMP) -f $@ -c $(HBOOKH) $(HBOOKL)
 
 $(HBOOKMAP):    $(RLIBMAP) $(MAKEFILEDEP) $(HBOOKL)
 		$(RLIBMAP) -o $(HBOOKMAP) -l $(HBOOKLIB) \

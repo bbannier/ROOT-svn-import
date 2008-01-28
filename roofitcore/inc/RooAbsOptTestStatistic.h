@@ -16,7 +16,7 @@
 #ifndef ROO_ABS_OPT_TEST_STATISTIC
 #define ROO_ABS_OPT_TEST_STATISTIC
 
-#include "Riostream.h"
+#include "Riosfwd.h"
 #include "RooAbsTestStatistic.h"
 #include "RooSetProxy.h"
 
@@ -28,10 +28,10 @@ class RooAbsOptTestStatistic : public RooAbsTestStatistic {
 public:
 
   // Constructors, assignment etc
-  inline RooAbsOptTestStatistic() { }
+  RooAbsOptTestStatistic() ;
   RooAbsOptTestStatistic(const char *name, const char *title, RooAbsPdf& pdf, RooAbsData& data,
 			 const RooArgSet& projDeps, const char* rangeName=0, const char* addCoefRangeName=0, 
-			 Int_t nCPU=1, Bool_t verbose=kTRUE, Bool_t splitCutRange=kTRUE) ;
+			 Int_t nCPU=1, Bool_t verbose=kTRUE, Bool_t splitCutRange=kFALSE) ;
   RooAbsOptTestStatistic(const RooAbsOptTestStatistic& other, const char* name=0);
   virtual ~RooAbsOptTestStatistic();
 

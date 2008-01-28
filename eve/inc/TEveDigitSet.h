@@ -37,34 +37,34 @@ class TEveDigitSet : public TEveElement,
    TEveDigitSet& operator=(const TEveDigitSet&); // Not implemented
 
 public:
-   enum RenderMode_e { RM_AsIs, RM_TEveLine, RM_Fill };
+   enum ERenderMode_e { kRM_AsIs, kRM_TEveLine, kRM_Fill };
 
 protected:
-   struct DigitBase
+   struct DigitBase_t
    {
       // Base-class for digit representation classes.
 
       Int_t fValue; // signal value of a digit (can be direct RGBA color)
       TRef  fId;    // external object reference
 
-      DigitBase(Int_t v=0) : fValue(v), fId() {}
+      DigitBase_t(Int_t v=0) : fValue(v), fId() {}
    };
 
    Int_t             fDefaultValue;   // Default signal value.
    Bool_t            fValueIsColor;   // Interpret signal value as RGBA color.
    Bool_t            fOwnIds;         // Flag specifying if id-objects are owned by the TEveDigitSet
    TEveChunkManager  fPlex;           // Container of digit data.
-   DigitBase*        fLastDigit;      //! The last digit added to collection.
+   DigitBase_t*      fLastDigit;      //! The last digit added to collection.
 
    TEveFrameBox*     fFrame;          // Pointer to frame structure.
    TEveRGBAPalette*  fPalette;        // Pointer to signal-color palette.
-   RenderMode_e      fRenderMode;     // Render mode: as-is / line / filled.
+   ERenderMode_e     fRenderMode;     // Render mode: as-is / line / filled.
    Bool_t            fDisableLigting; // Disable lighting for rendering.
    Bool_t            fEmitSignals;    // Emit signals on secondary-select.
    Bool_t            fHistoButtons;   // Show histogram buttons in object editor.
    TEveTrans         fHMTrans;        // Overall transformation of whole collection.
 
-   DigitBase* NewDigit();
+   DigitBase_t* NewDigit();
    void       ReleaseIds();
 
 public:
@@ -75,7 +75,7 @@ public:
    virtual void   SetMainColor(Color_t color);
 
    // Implemented in sub-classes:
-   // virtual void Reset(QuadType_e quadType, Bool_t valIsCol, Int_t chunkSize);
+   // virtual void Reset(EQuadType_e quadType, Bool_t valIsCol, Int_t chunkSize);
 
    void RefitPlex();
    void ScanMinMaxValues(Int_t& min, Int_t& max);
@@ -92,8 +92,8 @@ public:
    Bool_t GetOwnIds() const     { return fOwnIds; }
    void   SetOwnIds(Bool_t o)   { fOwnIds = o; }
 
-   DigitBase* GetDigit(Int_t n) { return (DigitBase*) fPlex.Atom(n);   }
-   TObject*   GetId(Int_t n)    { return GetDigit(n)->fId.GetObject(); }
+   DigitBase_t* GetDigit(Int_t n) { return (DigitBase_t*) fPlex.Atom(n);   }
+   TObject*     GetId(Int_t n)    { return GetDigit(n)->fId.GetObject(); }
 
    // --------------------------------
 
@@ -110,16 +110,16 @@ public:
    TEveChunkManager* GetPlex() { return &fPlex; }
 
    TEveFrameBox* GetFrame() const { return fFrame; }
-   void      SetFrame(TEveFrameBox* b);
+   void          SetFrame(TEveFrameBox* b);
 
    Bool_t GetValueIsColor()  const { return fValueIsColor; }
 
    TEveRGBAPalette* GetPalette() const { return fPalette; }
-   void         SetPalette(TEveRGBAPalette* p);
+   void             SetPalette(TEveRGBAPalette* p);
    TEveRGBAPalette* AssertPalette();
 
-   RenderMode_e  GetRenderMode() const { return fRenderMode; }
-   void SetRenderMode(RenderMode_e rm) { fRenderMode = rm; }
+   ERenderMode_e  GetRenderMode()           const { return fRenderMode; }
+   void           SetRenderMode(ERenderMode_e rm) { fRenderMode = rm; }
 
    Bool_t GetEmitSignals() const   { return fEmitSignals; }
    void   SetEmitSignals(Bool_t f) { fEmitSignals = f; }
@@ -127,7 +127,7 @@ public:
    Bool_t GetHistoButtons() const   { return fHistoButtons; }
    void   SetHistoButtons(Bool_t f) { fHistoButtons = f; }
 
-   TEveTrans& RefHMTrans() { return fHMTrans; }
+   TEveTrans& RefHMTrans()                    { return fHMTrans; }
    void SetTransMatrix(Double_t* carr)        { fHMTrans.SetFrom(carr); }
    void SetTransMatrix(const TGeoMatrix& mat) { fHMTrans.SetFrom(mat);  }
 

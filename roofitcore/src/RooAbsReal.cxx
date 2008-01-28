@@ -254,7 +254,23 @@ void RooAbsReal::printToStream(ostream& os, PrintOption opt, TString indent) con
   //     Shape : value, units, plot range
   //   Verbose : default binning and print label
 
-  RooAbsArg::printToStream(os,opt,indent);
+  if (opt == OneLine) { 
+    RooAbsArg::printToStream(os,opt,indent);
+  }
+
+  if (opt == Standard) {
+    os << ClassName() << "::" << GetName() << "[ " ;
+
+    for (Int_t i=0 ; i<numProxies() ; i++) {
+      RooAbsProxy* p = getProxy(i) ;
+      if (!TString(p->name()).BeginsWith("!")) {
+	p->print(os) ;
+	os << " " ;
+      }
+    }    
+    os << "] = " << _value << endl ;
+  }
+
   if(opt >= Shape) {
     os << indent << "--- RooAbsReal ---" << endl;
     TString unit(_unit);
@@ -1803,13 +1819,13 @@ void RooAbsReal::copyCache(const RooAbsArg* source)
     _value = other->_value ;
   } else {
     if (source->getAttribute("FLOAT_TREE_BRANCH")) {
-      _value = *reinterpret_cast<Float_t*>(&other->_value) ;
+      _value = other->_floatValue ;
     } else if (source->getAttribute("INTEGER_TREE_BRANCH")) {
-      _value = *reinterpret_cast<Int_t*>(&other->_value) ;
+      _value = other->_intValue ;
     } else if (source->getAttribute("BYTE_TREE_BRANCH")) {
-      _value = *reinterpret_cast<UChar_t*>(&other->_value) ;
+      _value = other->_byteValue ;
     } else if (source->getAttribute("UNSIGNED_INTEGER_TREE_BRANCH")) {
-      _value = *reinterpret_cast<UInt_t*>(&other->_value) ;
+      _value = other->_uintValue ;
     } 
   }
   setValueDirty() ;
@@ -1832,25 +1848,25 @@ void RooAbsReal::attachToTree(TTree& t, Int_t bufSize)
 		  << " will be converted to double precision" << endl ;
       setAttribute("FLOAT_TREE_BRANCH",kTRUE) ;
       _treeVar = kTRUE ;
-      t.SetBranchAddress(cleanName,reinterpret_cast<Float_t*>(&_value)) ;
+      t.SetBranchAddress(cleanName,&_floatValue) ;
     } else if (!typeName.CompareTo("Int_t")) {
       coutI(Eval) << "RooAbsReal::attachToTree(" << GetName() << ") TTree Int_t branch " << GetName() 
 		  << " will be converted to double precision" << endl ;
       setAttribute("INTEGER_TREE_BRANCH",kTRUE) ;
       _treeVar = kTRUE ;
-      t.SetBranchAddress(cleanName,reinterpret_cast<Int_t*>(&_value)) ;
+      t.SetBranchAddress(cleanName,&_intValue) ;
     } else if (!typeName.CompareTo("UChar_t")) {
       coutI(Eval) << "RooAbsReal::attachToTree(" << GetName() << ") TTree UChar_t branch " << GetName() 
 		  << " will be converted to double precision" << endl ;
       setAttribute("BYTE_TREE_BRANCH",kTRUE) ;
       _treeVar = kTRUE ;
-      t.SetBranchAddress(cleanName,reinterpret_cast<UChar_t*>(&_value)) ;
+      t.SetBranchAddress(cleanName,&_byteValue) ;
     }  else if (!typeName.CompareTo("UInt_t")) { 
       coutI(Eval) << "RooAbsReal::attachToTree(" << GetName() << ") TTree UInt_t branch " << GetName() 
 		  << " will be converted to double precision" << endl ;
       setAttribute("UNSIGNED_INTEGER_TREE_BRANCH",kTRUE) ;
       _treeVar = kTRUE ;
-      t.SetBranchAddress(cleanName,reinterpret_cast<UInt_t*>(&_value)) ;
+      t.SetBranchAddress(cleanName,&_uintValue) ;
     } else {
       t.SetBranchAddress(cleanName,&_value) ;
     }   

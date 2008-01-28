@@ -67,7 +67,7 @@ $(PEACLIB):     $(PEACO) $(PEACDO) $(ORDER_) $(MAINLIBS) $(PEACLIBDEP)
 
 $(PEACDS):      $(PEACH) $(PEACL) $(PEACO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -o "$(PEACO)" -c $(PEACH) $(PEACL)
+		$(ROOTCINTTMP) -f $@ -c $(PEACH) $(PEACL)
 
 $(PEACMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(PEACL)
 		$(RLIBMAP) -o $(PEACMAP) -l $(PEACLIB) \
@@ -81,7 +81,7 @@ $(PEACGUILIB):  $(PEACGUIO) $(PEACGUIDO) $(ORDER_) $(MAINLIBS) $(PEACGUILIBDEP)
 
 $(PEACGUIDS):   $(PEACGUIH) $(PEACGUIL) $(PEACGUIO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -o "$(PEACGUIO)" -c $(PEACGUIH) $(PEACGUIL)
+		$(ROOTCINTTMP) -f $@ -c $(PEACGUIH) $(PEACGUIL)
 
 $(PEACGUIMAP):  $(RLIBMAP) $(MAKEFILEDEP) $(PEACGUIL)
 		$(RLIBMAP) -o $(PEACGUIMAP) -l $(PEACGUILIB) \

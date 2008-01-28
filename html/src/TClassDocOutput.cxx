@@ -27,6 +27,20 @@
 #include "Riostream.h"
 #include <sstream>
 
+//______________________________________________________________________________
+//
+// Write the documentation for a class or namespace. The documentation is
+// parsed by TDocParser and then passed to TClassDocOutput to generate
+// the class doc header, the class description, members overview, and method
+// documentation. All generic output functionality is in TDocOutput; it is
+// re-used in this derived class.
+// 
+// You usually do not use this class yourself; it is invoked indirectly by
+// THtml. Customization of the output should happen via the interfaces defined
+// by THtml.
+//______________________________________________________________________________
+
+
 ClassImp(TClassDocOutput);
 
 //______________________________________________________________________________
@@ -1509,13 +1523,13 @@ void TClassDocOutput::WriteClassDocHeader(std::ostream& classFile)
       classFile << "<a class=\"descrheadentry\" href=\"" << wikiLink << "\">wiki</a> ";
    }
 
-   classFile << "</div>" << endl;
+   classFile << endl << "</div>" << endl;
 
    classFile << "<div class=\"descrhead\">" << endl
       << "<span class=\"descrtitle\">Sections:</span>" << endl
       << "<a class=\"descrheadentry\" href=\"#" << currClassNameMangled;
    if (fHtml->IsNamespace(fCurrentClass))
-      classFile << ":description\">namespace description</a></span> ";
+      classFile << ":description\">namespace description</a> ";
    else
       classFile << ":description\">class description</a> ";
    classFile << endl

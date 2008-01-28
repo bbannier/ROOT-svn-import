@@ -81,14 +81,15 @@ $(GUILIB):      $(GUIO) $(GUIDO) $(ORDER_) $(MAINLIBS) $(GUILIBDEP)
 		   "$(GUILIBEXTRA)"
 
 $(GUIDS1):      $(GUIH1) $(GUIL1) $(GUIO) $(ROOTCINTTMPEXE)
-		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -o "$(GUIO)" -c $(GUIH1) $(GUIL1)
+		@echo "Generating dictionary..." 
+		$(ROOTCINTTMP) -f $@ -c $(GUIH1) $(GUIL1)
 $(GUIDS2):      $(GUIH2) $(GUIL2) $(GUIO) $(ROOTCINTTMPEXE)
+
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -o "$(GUIO)" -c $(GUIH2) $(GUIL2)
+		$(ROOTCINTTMP) -f $@ -c $(GUIH2) $(GUIL2)
 $(GUIDS3):      $(GUIH3) $(GUIL3) $(GUIO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -o "$(GUIO)" -c $(GUIH3) $(GUIL3)
+		$(ROOTCINTTMP) -f $@ -c $(GUIH3) $(GUIL3)
 
 $(GUIMAP):      $(RLIBMAP) $(MAKEFILEDEP) $(GUIL)
 		$(RLIBMAP) -o $(GUIMAP) -l $(GUILIB) \

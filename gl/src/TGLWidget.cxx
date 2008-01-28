@@ -25,6 +25,18 @@
 #include "TGLIncludes.h"
 #include "TGLUtil.h"
 
+/******************************************************************************/
+//TGLWidgetContainer
+/******************************************************************************/
+
+//______________________________________________________________________________
+//
+// Auxiliary "widget container" class.
+// Does not throw (base classe can throw?).
+// Immutable - after constructed, fOwner is
+// invariant, cannot change.
+// Non-copyable.
+
 ClassImp(TGLWidgetContainer)
 
 //______________________________________________________________________________
@@ -86,6 +98,45 @@ void TGLWidgetContainer::DoRedraw()
    return fOwner->Repaint();
 }
 
+
+/******************************************************************************/
+// TGLWidget
+/******************************************************************************/
+
+//______________________________________________________________________________
+//
+// GL window with context. _Must_ _have_ a parent window
+// (the 'parent' parameter of ctors). The current version inherits
+// TGCanvas (I'm not sure about future versions), probably, in future
+// multiple inheritance will be added - the second
+// base class will be TGLPaintDevice or something like this.
+//
+// Usage:
+// - Simply create TGLWidget as an embedded widget, and
+//   connect your slots to signals you need: HandleExpose, HandleConfigureNotify, etc.
+//   In your slots you can use gl API directly - under Win32 TGLWidget switches
+//   between threads internally (look TGLPShapeObjEditor for such usage).
+// - You can write your own class, derived from TGLWidget, with PaintGL and InitGL
+//   overriden.
+//
+// Resources (and invariants):
+// -fContainer (TGLWidgetContainer) - controlled by std::auto_ptr
+// -fWindowIndex - controlled manually (see CreateWidget and dtor)
+// -fGLContext - controlled by std::auto_ptr
+// -visual info for X11 version, controlled manually (see CreateGLContainer and dtor)
+//
+// Exceptions:
+// -can be thrown only during construction.
+// -under win32 class does not throw itself (but some internal operations can throw)
+// -under X11 can throw std::runtime_error (from CreateGLContext).
+// -In case of exceptions resources will be freed.
+//
+// TGLWidget object is immutable as far as it was created.
+//
+// Boolean parameter defines, if you want to grab user's input or not.
+// By default you want, but for example when not - see TGLPShapeObjEditor.
+//
+// Non-copyable.
 
 ClassImp(TGLWidget)
 
@@ -252,7 +303,7 @@ Bool_t TGLWidget::HandleButton(Event_t *ev)
    //Signal. Under Win32 I have to switch between
    //threads to let direct usage of gl code.
    if (!gVirtualX->IsCmdThread()) {
-      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%x)->HandleButton((Event_t *)0x%x)", this, ev));
+      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->HandleButton((Event_t *)0x%lx)", this, ev));
       return kTRUE;
    }
 
@@ -267,7 +318,7 @@ Bool_t TGLWidget::HandleDoubleClick(Event_t *ev)
    //Signal. Under Win32 I have to switch between
    //threads to let direct usage of gl code.
    if (!gVirtualX->IsCmdThread()) {
-      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%x)->HandleDoubleClick((Event_t *)0x%x)", this, ev));
+      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->HandleDoubleClick((Event_t *)0x%lx)", this, ev));
       return kTRUE;
    }
 
@@ -282,7 +333,7 @@ Bool_t TGLWidget::HandleConfigureNotify(Event_t *ev)
    //Signal. Under Win32 I have to switch between
    //threads to let direct usage of gl code.
    if (!gVirtualX->IsCmdThread()) {
-      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%x)->HandleConfigureNotify((Event_t *)0x%x)", this, ev));
+      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->HandleConfigureNotify((Event_t *)0x%lx)", this, ev));
       return kTRUE;
    }
 
@@ -297,7 +348,7 @@ Bool_t TGLWidget::HandleKey(Event_t *ev)
    //Signal. Under Win32 I have to switch between
    //threads to let direct usage of gl code.
    if (!gVirtualX->IsCmdThread()) {
-      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%x)->HandleKey((Event_t *)0x%x)", this, ev));
+      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->HandleKey((Event_t *)0x%lx)", this, ev));
       return kTRUE;
    }
 
@@ -312,7 +363,7 @@ Bool_t TGLWidget::HandleMotion(Event_t *ev)
    //Signal. Under Win32 I have to switch between
    //threads to let direct usage of gl code.
    if (!gVirtualX->IsCmdThread()) {
-      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%x)->HandleMotion((Event_t *)0x%x)", this, ev));
+      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->HandleMotion((Event_t *)0x%lx)", this, ev));
       return kTRUE;
    }
 
@@ -328,7 +379,7 @@ Bool_t TGLWidget::HandleExpose(Event_t *ev)
    //Signal. Under Win32 I have to switch between
    //threads to let direct usage of gl code.
    if (!gVirtualX->IsCmdThread()) {
-      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%x)->HandleExpose((Event_t *)0x%x)", this, ev));
+      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->HandleExpose((Event_t *)0x%lx)", this, ev));
       return kTRUE;
    }
 
@@ -440,7 +491,7 @@ void TGLWidget::CreateWidget(const TGLPaintDevice *shareDevice)
 
    try {
       if (!gVirtualX->IsCmdThread())
-         gROOT->ProcessLineFast(Form("((TGLWidget *)0x%x)->SetFormat()", this));
+         gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->SetFormat()", this));
       else
          SetFormat();
       fGLContext.reset(new TGLContext(this, shareDevice ? shareDevice->GetContext() : 0));
@@ -461,7 +512,7 @@ void TGLWidget::CreateWidget()
 
    try {
       if (!gVirtualX->IsCmdThread())
-         gROOT->ProcessLineFast(Form("((TGLWidget *)0x%x)->SetFormat()", this));
+         gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->SetFormat()", this));
       else
          SetFormat();
       fGLContext.reset(new TGLContext(this));
@@ -669,7 +720,7 @@ void TGLWidget::Repaint()
 {
    //Forse re-drawing of gl-widget.
 /*   if (!gVirtualX->IsCmdThread()) {
-      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%x)->Repaint()", this));
+      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->Repaint()", this));
       return;
    }
 
@@ -677,7 +728,7 @@ void TGLWidget::Repaint()
    InitGL();
    PaintGL();
    SwapBuffers();*/
-   
+
    Emit("Repaint()");
 }
 

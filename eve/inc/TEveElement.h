@@ -82,6 +82,8 @@ protected:
 
    List_t   fChildren;             // List of children.
 
+   virtual void RemoveElementsInternal();
+
 public:
    TEveElement();
    TEveElement(Color_t& main_color);
@@ -117,8 +119,8 @@ public:
 
    virtual void PadPaint(Option_t* option);
 
-   virtual TObject* GetObject(TEveException eh="TEveElement::GetObject ") const;
-   virtual TObject* GetEditorObject() const { return GetObject(); }
+   virtual TObject* GetObject      (const TEveException& eh="TEveElement::GetObject ") const;
+   virtual TObject* GetEditorObject(const TEveException& eh="TEveElement::GetEditorObject ") const { return GetObject(eh); }
    /*
      TRef&    GetSource() { return fSource; }
      TObject* GetSourceObject() const { return fSource.GetObject(); }
@@ -130,8 +132,8 @@ public:
 
    // --------------------------------
 
-   virtual Int_t ExpandIntoListTree(TGListTree* ltree, TGListTreeItem* parent);
-   virtual Int_t DestroyListSubTree(TGListTree* ltree, TGListTreeItem* parent);
+   virtual void ExpandIntoListTree(TGListTree* ltree, TGListTreeItem* parent);
+   virtual void DestroyListSubTree(TGListTree* ltree, TGListTreeItem* parent);
 
    virtual TGListTreeItem* AddIntoListTree(TGListTree* ltree,
                                            TGListTreeItem* parent_lti);
@@ -193,7 +195,7 @@ public:
    virtual TEveTrans* PtrMainHMTrans()     { return 0; }
 
    static  const TGPicture* GetCheckBoxPicture(Bool_t rnrElement, Bool_t rnrDaughter);
-   virtual const TGPicture* GetListTreeIcon() { return fgListTreeIcons[0]; }
+   virtual const TGPicture* GetListTreeIcon();
 
    ClassDef(TEveElement, 1); // Base class for TEveUtil visualization elements, providing hierarchy management, rendering control and list-tree item management.
 };
@@ -218,7 +220,7 @@ public:
    TEveElementObjectPtr(TObject* obj, Color_t& mainColor, Bool_t own=kTRUE);
    virtual ~TEveElementObjectPtr();
 
-   virtual TObject* GetObject(TEveException eh="TEveElementObjectPtr::GetObject ") const;
+   virtual TObject* GetObject(const TEveException& eh="TEveElementObjectPtr::GetObject ") const;
    virtual void     ExportToCINT(Text_t* var_name);
 
    Bool_t GetOwnObject() const   { return fOwnObject; }
@@ -235,6 +237,10 @@ public:
 class TEveElementList : public TEveElement,
                         public TNamed
 {
+private:
+   TEveElementList(const TEveElementList&);            // Not implemented
+   TEveElementList& operator=(const TEveElementList&); // Not implemented
+
 protected:
    Color_t   fColor;       // Color of the object.
    Bool_t    fDoColor;     // Should serve fColor as the main color of the object.

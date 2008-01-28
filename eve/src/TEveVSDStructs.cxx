@@ -22,28 +22,36 @@ ClassImp(TEveVector)
 //______________________________________________________________________________
 Float_t TEveVector::Eta() const
 {
+   // Calculate eta of the point, pretending it's a momentum vector.
+
    Float_t cosTheta = CosTheta();
    if (cosTheta*cosTheta < 1) return -0.5* TMath::Log( (1.0-cosTheta)/(1.0+cosTheta) );
-   Warning("Eta","transverse momentum = 0! return +/- 10e10");
-   return (z >= 0) ? 10e10 : -10e10;
+   Warning("Eta","transverse momentum = 0, returning +/- 1e10");
+   return (fZ >= 0) ? 1e10 : -1e10;
 }
 
 //______________________________________________________________________________
 TEveVector TEveVector::operator + (const TEveVector & b)
 {
-   return TEveVector(x + b.x, y + b.y, z + b.z);
+   // Vector addition.
+
+   return TEveVector(fX + b.fX, fY + b.fY, fZ + b.fZ);
 }
 
 //______________________________________________________________________________
 TEveVector TEveVector::operator - (const TEveVector & b)
 {
-   return TEveVector(x - b.x, y - b.y, z - b.z);
+   // Vector subtraction.
+
+   return TEveVector(fX - b.fX, fY - b.fY, fZ - b.fZ);
 }
 
 //______________________________________________________________________________
 TEveVector TEveVector::operator * (Float_t a)
 {
-   return TEveVector(a*x, a*y, a*z);
+   // Multiplication with scalar.
+
+   return TEveVector(a*fX, a*fY, a*fZ);
 }
 
 
@@ -56,14 +64,16 @@ TEveVector TEveVector::operator * (Float_t a)
 ClassImp(TEvePathMark)
 
 //______________________________________________________________________________
-const char* TEvePathMark::type_name()
+const char* TEvePathMark::TypeName()
 {
-   switch (type)
+   // Return the name of path-mark type.
+
+   switch (fType)
    {
-      case Daughter:  return "Daughter";
-      case Reference: return "Reference";
-      case Decay:     return "Decay";
-      default:        return "Unknown";
+      case kDaughter:  return "Daughter";
+      case kReference: return "Reference";
+      case kDecay:     return "Decay";
+      default:         return "Unknown";
    }
 }
 

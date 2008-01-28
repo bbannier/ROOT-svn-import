@@ -17,6 +17,8 @@
 #include "TGCanvas.h"
 #include "TCanvas.h"
 
+#include "TClass.h"
+
 //______________________________________________________________________________
 // TEveGedEditor
 //
@@ -28,9 +30,11 @@ ClassImp(TEveGedEditor)
 //______________________________________________________________________________
 TEveGedEditor::TEveGedEditor(TCanvas* canvas, Int_t width, Int_t height) :
    TGedEditor(canvas),
-   fRnrElement(0),
-   fObject    (0)
+   fElement  (0),
+   fObject   (0)
 {
+   // Constructor.
+
    Resize(width, height);
 
    // Fix priority for TAttMarkerEditor.
@@ -54,24 +58,32 @@ TEveGedEditor::TEveGedEditor(TCanvas* canvas, Int_t width, Int_t height) :
 }
 
 //______________________________________________________________________________
-TEveElement* TEveGedEditor::GetRnrElement() const
+TEveElement* TEveGedEditor::GetEveElement() const
 {
-   return (fModel == fObject) ? fRnrElement : 0;
+   // Return eve-element if it is the model object.
+
+   return (fModel == fObject) ? fElement : 0;
 }
 
 //______________________________________________________________________________
 void TEveGedEditor::DisplayElement(TEveElement* re)
 {
-   fRnrElement = re;
-   fObject     = fRnrElement ? fRnrElement->GetEditorObject() : 0;
+   // Show a TEveElement in editor.
+
+   static const TEveException eh("TEveGedEditor::DisplayElement ");
+
+   fElement = re;
+   fObject  = fElement ? fElement->GetEditorObject(eh) : 0;
    TGedEditor::SetModel(fPad, fObject, kButton1Down);
 }
 
 //______________________________________________________________________________
 void TEveGedEditor::DisplayObject(TObject* obj)
 {
-   fRnrElement = dynamic_cast<TEveElement*>(obj);
-   fObject     = obj;
+   // Show a TObject in editor.
+
+   fElement = dynamic_cast<TEveElement*>(obj);
+   fObject  = obj;
    TGedEditor::SetModel(fPad, obj, kButton1Down);
 }
 
@@ -80,22 +92,25 @@ void TEveGedEditor::DisplayObject(TObject* obj)
 //______________________________________________________________________________
 void TEveGedEditor::SetModel(TVirtualPad* pad, TObject* obj, Int_t event)
 {
+   // Set model object.
+
    // !!!! do something so that such calls from elswhere will also
    // now the render element
 
-   fRnrElement = dynamic_cast<TEveElement*>(obj);
-   fObject     = obj;
+   fElement = dynamic_cast<TEveElement*>(obj);
+   fObject  = obj;
    TGedEditor::SetModel(pad, obj, event);
 }
 
 //______________________________________________________________________________
 void TEveGedEditor::Update(TGedFrame* /*gframe*/)
 {
-   // Virtual method from TGedEditor ... called on every change.
+   // Virtual method from TGedEditor, called on every change.
+   // Propagates changes to TEveElement and TEveManager.
 
-   if (fRnrElement) {
-      fRnrElement->UpdateItems();
-      fRnrElement->ElementChanged();
+   if (fElement) {
+      fElement->UpdateItems();
+      fElement->ElementChanged();
    }
 
    gEve->Redraw3D();

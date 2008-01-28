@@ -17,6 +17,7 @@
 #include "TMarker.h"
 #include "TPolyMarker3D.h"
 #include "TColor.h"
+#include "TROOT.h"
 
 // Updates
 #include "TEveManager.h"
@@ -93,8 +94,8 @@ TEveTrack::TEveTrack(TEveMCTrack* t, TEveTrackPropagator* rs):
    fBeta(t->P()/t->Energy()),
    fPdg(0),
    fCharge(0),
-   fLabel(t->label),
-   fIndex(t->index),
+   fLabel(t->fLabel),
+   fIndex(t->fIndex),
    fPathMarks(),
 
    fPropagator(0)
@@ -105,7 +106,7 @@ TEveTrack::TEveTrack(TEveMCTrack* t, TEveTrackPropagator* rs):
    fMainColorPtr = &fLineColor;
 
    TParticlePDG* pdgp = t->GetPDG();
-   if(pdgp == 0) {
+   if (pdgp == 0) {
       t->ResetPdgCode(); pdgp = t->GetPDG();
    }
    fCharge = (Int_t) TMath::Nint(pdgp->Charge()/3);
@@ -117,13 +118,13 @@ TEveTrack::TEveTrack(TEveMCTrack* t, TEveTrackPropagator* rs):
 TEveTrack::TEveTrack(TEveRecTrack* t, TEveTrackPropagator* rs) :
    TEveLine(),
 
-   fV(t->V),
-   fP(t->P),
-   fBeta(t->beta),
+   fV(t->fV),
+   fP(t->fP),
+   fBeta(t->fBeta),
    fPdg(0),
-   fCharge(t->sign),
-   fLabel(t->label),
-   fIndex(t->index),
+   fCharge(t->fSign),
+   fLabel(t->fLabel),
+   fIndex(t->fIndex),
    fPathMarks(),
 
    fPropagator(0)
@@ -173,6 +174,17 @@ TEveTrack::~TEveTrack()
       delete *i;
 }
 
+
+//______________________________________________________________________________
+const TGPicture*
+TEveTrack::GetListTreeIcon()
+{
+   // Returns pointer to listtree track icon
+   
+   return fgListTreeIcons[4];
+}
+
+
 /******************************************************************************/
 
 //______________________________________________________________________________
@@ -185,7 +197,7 @@ void TEveTrack::SetStdTitle()
    SetTitle(Form("Index=%s, Label=%s\nChg=%d, Pdg=%d\n"
                  "pT=%.3f, pZ=%.3f\nV=(%.3f, %.3f, %.3f)",
                  idx.Data(), lbl.Data(), fCharge, fPdg,
-                 fP.Perp(), fP.z, fV.x, fV.y, fV.z));
+                 fP.Perp(), fP.fZ, fV.fX, fV.fY, fV.fZ));
 }
 
 //______________________________________________________________________________
@@ -220,7 +232,7 @@ void TEveTrack::SetPathMarks(const TEveTrack& t)
    // Copy path-marks from t.
 
    const std::vector<TEvePathMark*>& refs = t.GetPathMarksRef();
-   for(std::vector<TEvePathMark*>::const_iterator i=refs.begin(); i!=refs.end(); ++i)
+   for (std::vector<TEvePathMark*>::const_iterator i=refs.begin(); i!=refs.end(); ++i)
    {
       fPathMarks.push_back(new TEvePathMark(**i));
    }
@@ -247,10 +259,12 @@ void TEveTrack::SetAttLineAttMarker(TEveTrackList* tl)
 {
    // Set line and marker attributes from TEveTrackList.
 
+   SetRnrLine(tl->GetRnrLine());
    SetLineColor(tl->GetLineColor());
    SetLineStyle(tl->GetLineStyle());
    SetLineWidth(tl->GetLineWidth());
 
+   SetRnrPoints(tl->GetRnrPoints());
    SetMarkerColor(tl->GetMarkerColor());
    SetMarkerStyle(tl->GetMarkerStyle());
    SetMarkerSize(tl->GetMarkerSize());
@@ -267,11 +281,11 @@ void TEveTrack::MakeTrack(Bool_t recurse)
 
    Reset(0);
 
-   TEveTrackPropagator& RS((fPropagator != 0) ? *fPropagator : TEveTrackPropagator::fgDefStyle);
+   TEveTrackPropagator& rTP((fPropagator != 0) ? *fPropagator : TEveTrackPropagator::fgDefStyle);
 
-   const Float_t maxRsq = RS.GetMaxR() * RS.GetMaxR();
+   const Float_t maxRsq = rTP.GetMaxR() * rTP.GetMaxR();
 
-   if (TMath::Abs(fV.z) < RS.GetMaxZ() && fV.x*fV.x + fV.y*fV.y < maxRsq)
+   if (TMath::Abs(fV.fZ) < rTP.GetMaxZ() && fV.fX*fV.fX + fV.fY*fV.fY < maxRsq)
    {
       TEveVector currP = fP;
       Bool_t decay = kFALSE;
@@ -279,40 +293,40 @@ void TEveTrack::MakeTrack(Bool_t recurse)
       for (std::vector<TEvePathMark*>::iterator i=fPathMarks.begin(); i!=fPathMarks.end(); ++i)
       {
          TEvePathMark* pm = *i;
-         if (RS.GetFitReferences() && pm->type == TEvePathMark::Reference)
+         if (rTP.GetFitReferences() && pm->fType == TEvePathMark::kReference)
          {
-            if (TMath::Abs(pm->V.z) > RS.GetMaxZ() ||
-               pm->V.x*pm->V.x + pm->V.y*pm->V.y > maxRsq)
+            if (TMath::Abs(pm->fV.fZ) > rTP.GetMaxZ() ||
+               pm->fV.fX*pm->fV.fX + pm->fV.fY*pm->fV.fY > maxRsq)
                goto bounds;
             // printf("%s fit reference  \n", fName.Data());
-            if (fPropagator->GoToVertex(pm->V, currP)) {
-               currP.x = pm->P.x; currP.y = pm->P.y; currP.z = pm->P.z;
+            if (fPropagator->GoToVertex(pm->fV, currP)) {
+               currP.fX = pm->fP.fX; currP.fY = pm->fP.fY; currP.fZ = pm->fP.fZ;
             }
          }
-         else if (RS.GetFitDaughters() &&  pm->type == TEvePathMark::Daughter)
+         else if (rTP.GetFitDaughters() &&  pm->fType == TEvePathMark::kDaughter)
          {
-            if (TMath::Abs(pm->V.z) > RS.GetMaxZ() ||
-                pm->V.x*pm->V.x + pm->V.y*pm->V.y > maxRsq)
+            if (TMath::Abs(pm->fV.fZ) > rTP.GetMaxZ() ||
+                pm->fV.fX*pm->fV.fX + pm->fV.fY*pm->fV.fY > maxRsq)
                goto bounds;
             // printf("%s fit daughter  \n", fName.Data());
-            if (fPropagator->GoToVertex(pm->V, currP)) {
-               currP.x -= pm->P.x; currP.y -= pm->P.y; currP.z -= pm->P.z;
+            if (fPropagator->GoToVertex(pm->fV, currP)) {
+               currP.fX -= pm->fP.fX; currP.fY -= pm->fP.fY; currP.fZ -= pm->fP.fZ;
             }
          }
-         else if (RS.GetFitDecay() &&  pm->type == TEvePathMark::Decay)
+         else if (rTP.GetFitDecay() &&  pm->fType == TEvePathMark::kDecay)
          {
-            if (TMath::Abs(pm->V.z) > RS.GetMaxZ() ||
-                pm->V.x*pm->V.x + pm->V.y*pm->V.y > maxRsq)
+            if (TMath::Abs(pm->fV.fZ) > rTP.GetMaxZ() ||
+                pm->fV.fX*pm->fV.fX + pm->fV.fY*pm->fV.fY > maxRsq)
                goto bounds;
             // printf("%s fit decay \n", fName.Data());
-            fPropagator->GoToVertex(pm->V, currP);
+            fPropagator->GoToVertex(pm->fV, currP);
             decay = true;
             break;
          }
       } // loop path-marks
 
    bounds:
-      if(!decay || RS.GetFitDecay() == kFALSE)
+      if (!decay || rTP.GetFitDecay() == kFALSE)
       {
          // printf("%s loop to bounds  \n",fName.Data() );
          fPropagator->GoToBounds(currP);
@@ -346,10 +360,10 @@ TClass* TEveTrack::ProjectedClass() const
 
 namespace {
 
-struct cmp_pathmark
+struct Cmp_pathmark_t
 {
    bool operator()(TEvePathMark* const & a, TEvePathMark* const & b)
-   { return a->time < b->time; }
+   { return a->fTime < b->fTime; }
 };
 
 }
@@ -359,7 +373,7 @@ void TEveTrack::SortPathMarksByTime()
 {
    // Sort registerd pat-marks by time.
 
-   std::sort(fPathMarks.begin(), fPathMarks.end(), cmp_pathmark());
+   std::sort(fPathMarks.begin(), fPathMarks.end(), Cmp_pathmark_t());
 }
 
 /******************************************************************************/
@@ -392,10 +406,10 @@ void TEveTrack::ImportClustersFromIndex()
    // Import clusters marked with same reconstructed track index as the track.
    // Uses macro "clusters_from_index.C".
 
-   static const TEveException eH("TEveTrack::ImportClustersFromIndex ");
+   static const TEveException eh("TEveTrack::ImportClustersFromIndex ");
 
    if (fIndex == kMinInt)
-      throw(eH + "index not set.");
+      throw(eh + "index not set.");
 
    TEveUtil::LoadMacro("clusters_from_index.C");
    gROOT->ProcessLine(Form("clusters_from_index(%d, (TEveElement*)%p);",
@@ -410,14 +424,14 @@ void TEveTrack::ImportKine()
    // Import kinematics of the track's label recursively.
    // Uses macro "kine_tracks.C".
 
-   static const TEveException eH("TEveTrack::ImportKine ");
+   static const TEveException eh("TEveTrack::ImportKine ");
 
    if (fLabel == kMinInt)
-      throw(eH + "label not set.");
+      throw(eh + "label not set.");
 
    Int_t label;
    if (fLabel < 0) {
-      Warning(eH, "label negative, taking absolute value.");
+      Warning(eh, "label negative, taking absolute value.");
       label = -fLabel;
    } else {
       label = fLabel;
@@ -441,14 +455,14 @@ void TEveTrack::ImportKineWithArgs(Bool_t importMother, Bool_t importDaugters,
    //   recurse          recursive import of daughters' daughters
    // Uses macro "kine_tracks.C".
 
-   static const TEveException eH("TEveTrack::ImportKineWithArgs ");
+   static const TEveException eh("TEveTrack::ImportKineWithArgs ");
 
    if (fLabel == kMinInt)
-      throw(eH + "label not set.");
+      throw(eh + "label not set.");
 
    Int_t label;
    if (fLabel < 0) {
-      Warning(eH, "label negative, taking absolute value.");
+      Warning(eh, "label negative, taking absolute value.");
       label = -fLabel;
    } else {
       label = fLabel;
@@ -467,14 +481,14 @@ void TEveTrack::PrintKineStack()
    // Print kinematics pertaining to track's label.
    // Uses macro "print_kine_from_label.C".
 
-   static const TEveException eH("TEveTrack::PrintKineStack ");
+   static const TEveException eh("TEveTrack::PrintKineStack ");
 
    if (fLabel == kMinInt)
-      throw(eH + "label not set.");
+      throw(eh + "label not set.");
 
    Int_t label;
    if (fLabel < 0) {
-      Warning(eH, "label negative, taking absolute value.");
+      Warning(eh, "label negative, taking absolute value.");
       label = -fLabel;
    } else {
       label = fLabel;
@@ -489,20 +503,20 @@ void TEveTrack::PrintPathMarks()
 {
    // Print registered path-marks.
 
-   static const TEveException eH("TEveTrack::PrintPathMarks ");
+   static const TEveException eh("TEveTrack::PrintPathMarks ");
 
-   printf("TEveTrack '%s', number of path marks %ld, label %d\n",
-          GetName(), fPathMarks.size(), fLabel);
+   printf("TEveTrack '%s', number of path marks %d, label %d\n",
+          GetName(), (Int_t)fPathMarks.size(), fLabel);
 
    TEvePathMark* pm;
-   for(vpPathMark_i i=fPathMarks.begin(); i!=fPathMarks.end(); i++)
+   for (vpPathMark_i i=fPathMarks.begin(); i!=fPathMarks.end(); i++)
    {
       pm = *i;
       printf("  %-9s  p: %8f %8f %8f Vertex: %8e %8e %8e %g \n",
-             pm->type_name(),
-             pm->P.x,  pm->P.y, pm->P.z,
-             pm->V.x,  pm->V.y, pm->V.z,
-             pm->time);
+             pm->TypeName(),
+             pm->fP.fX,  pm->fP.fY, pm->fP.fZ,
+             pm->fV.fX,  pm->fV.fY, pm->fV.fZ,
+             pm->fTime);
    }
 }
 
@@ -877,7 +891,7 @@ void TEveTrackList::SetMarkerStyle(Style_t style, TEveElement* el)
       track = dynamic_cast<TEveTrack*>(*i);
       if (track && track->GetMarkerStyle() == fMarkerStyle)
          track->SetMarkerStyle(style);
-      if(fRecurse)
+      if (fRecurse)
          SetMarkerStyle(style, *i);
    }
 }
@@ -1145,7 +1159,7 @@ TEveTrackCounter::TEveTrackCounter(const Text_t* name, const Text_t* title) :
    TNamed(name, title),
 
    fBadLineStyle (6),
-   fClickAction  (CA_ToggleTrack),
+   fClickAction  (kCA_ToggleTrack),
    fAllTracks    (0),
    fGoodTracks   (0),
    fTrackLists   ()
@@ -1225,20 +1239,22 @@ void TEveTrackCounter::DoTrackAction(TEveTrack* track)
    // sub-containers.
    // In this case one should also override RemoveElementLocal.
 
+   static const TEveException eh("TEveTrackCounter::DoTrackAction ");
+
    switch (fClickAction)
    {
 
-      case CA_PrintTrackInfo:
+      case kCA_PrintTrackInfo:
       {
-         printf("TEveTrack '%s'\n", track->GetObject()->GetName());
+         printf("TEveTrack '%s'\n", track->GetObject(eh)->GetName());
          TEveVector &v = track->fV, &p = track->fP;
          printf("  Vx=%f, Vy=%f, Vz=%f; Pt=%f, Pz=%f, phi=%f)\n",
-                v.x, v.y, v.z, p.Perp(), p.z, TMath::RadToDeg()*p.Phi());
+                v.fX, v.fY, v.fZ, p.Perp(), p.fZ, TMath::RadToDeg()*p.Phi());
          printf("  <other information should be printed ... full AliESDtrack>\n");
          break;
       }
 
-      case CA_ToggleTrack:
+      case kCA_ToggleTrack:
       {
          if (track->GetLineStyle() == 1)
          {
@@ -1254,7 +1270,7 @@ void TEveTrackCounter::DoTrackAction(TEveTrack* track)
          printf("TEveTrackCounter::CountTrack All=%d, Good=%d, Bad=%d\n",
                 fAllTracks, fGoodTracks, fAllTracks-fGoodTracks);
 
-         if (gEve->GetEditor()->GetModel() == GetObject())
+         if (gEve->GetEditor()->GetModel() == GetObject(eh))
             gEve->EditElement(this);
 
          break;

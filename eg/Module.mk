@@ -46,7 +46,7 @@ $(EGLIB):       $(EGO) $(EGDO) $(ORDER_) $(MAINLIBS) $(EGLIBDEP)
 
 $(EGDS):        $(EGH1) $(EGL) $(EGO) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -o "$(EGO)" -c $(EGH1) $(EGL)
+		$(ROOTCINTTMP) -f $@ -c $(EGH1) $(EGL)
 
 $(EGMAP):       $(RLIBMAP) $(MAKEFILEDEP) $(EGL)
 		$(RLIBMAP) -o $(EGMAP) -l $(EGLIB) \

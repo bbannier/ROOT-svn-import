@@ -19,6 +19,10 @@
 #include "TGColorSelect.h"
 #include "TGColorDialog.h"
 
+//______________________________________________________________________________
+//
+// GUI editor for class TEvePolygonSetProjected.
+
 ClassImp(TEvePolygonSetProjectedEditor)
 
 //______________________________________________________________________________
@@ -30,6 +34,8 @@ TEvePolygonSetProjectedEditor::TEvePolygonSetProjectedEditor(const TGWindow *p,
    fLineWidth(0),
    fLineColor(0)
 {
+   // Constructor.
+
    MakeTitle("TEvePolygonSetProjected");
 
    {
@@ -52,15 +58,13 @@ TEvePolygonSetProjectedEditor::TEvePolygonSetProjectedEditor(const TGWindow *p,
    }
 }
 
-//______________________________________________________________________________
-TEvePolygonSetProjectedEditor::~TEvePolygonSetProjectedEditor()
-{}
-
 /******************************************************************************/
 
 //______________________________________________________________________________
 void TEvePolygonSetProjectedEditor::SetModel(TObject* obj)
 {
+   // Set model object.
+
    fPS = dynamic_cast<TEvePolygonSetProjected*>(obj);
    fLineWidth->SetNumber(fPS->fLineWidth);
    fLineColor->SetColor(TColor::Number2Pixel(fPS->GetLineColor()), kFALSE);
@@ -71,6 +75,8 @@ void TEvePolygonSetProjectedEditor::SetModel(TObject* obj)
 //______________________________________________________________________________
 void TEvePolygonSetProjectedEditor::DoLineWidth()
 {
+   // Slot for setting line with of polygon outline.
+
    fPS->fLineWidth = fLineWidth->GetNumber();
    Update();
 }
@@ -78,6 +84,8 @@ void TEvePolygonSetProjectedEditor::DoLineWidth()
 //______________________________________________________________________________
 void TEvePolygonSetProjectedEditor::DoLineColor(Pixel_t pixel)
 {
+   // Slot for setting line color of polygon outline.
+
    fPS->SetLineColor(pixel);
    Update();
 }

@@ -519,9 +519,10 @@ int G__main(int argc, char** argv)
    long G__argpointer[G__MAXARG];
    char dumpfile[G__MAXFILENAME];
    G__value result;
-   char* linkfilename = 0;
+   const char* linkfilename = 0;
    int linkflag = 0;
    char* dllid = 0;
+   char clnull[1]; clnull[0]=0;
    struct G__dictposition stubbegin;
    char* icom = 0;
    stubbegin.ptype = (char*) G__PVOID;
@@ -646,8 +647,9 @@ int G__main(int argc, char** argv)
    /*************************************************************
     * Get command options
     *************************************************************/
-   // LF add '.' and 'L'
-   while ((c = getopt(argc, argv, ".:a:b:c:d:ef:gij:kl:mn:pq:rstu:vw:x:y:z:AB:CD:EF:G:H:I:J:L:KM:N:O:P:QRSTU:VW:X:Y:Z:-:@+:")) != EOF) {
+   char magicchars[100];
+   strcpy(magicchars,".:a:b:c:d:ef:gij:kl:mn:pq:rstu:vw:x:y:z:AB:CD:EF:G:H:I:J:L:KM:N:O:P:QRSTU:VW:X:Y:Z:-:@+:");
+   while ((c = getopt(argc, argv, magicchars)) != EOF) {
       switch (c) {
 #ifndef G__OLDIMPLEMENTATION2226
          case '+':
@@ -937,7 +939,7 @@ int G__main(int argc, char** argv)
                }
             }
             if (!dllid) {
-               dllid = "";
+               dllid = clnull;
             }
             //if(G__dicttype ==) // LF
             G__set_globalcomp(optarg, linkfilename, dllid);
@@ -1875,7 +1877,8 @@ int G__init_globals()
 
    /* The first entry in the const string is a blank string
     * which is never used */
-   G__conststringlist.string = "";
+   char clnull[1]; clnull[0]=0;
+   G__conststringlist.string = clnull;
    G__conststringlist.hash = 0;
    G__conststringlist.prev = 0;
    G__plastconststring = &G__conststringlist;
@@ -2339,10 +2342,10 @@ void G__set_stdio_handle(FILE *sout, FILE *serr, FILE *sin)
 }
 
 //______________________________________________________________________________
-char *G__cint_version()
+const char *G__cint_version()
 {
    if (G__cintv6) return(G__CINTVERSIONSTR_V6);
-   else          return(G__CINTVERSIONSTR_V5);
+   else           return(G__CINTVERSIONSTR_V5);
    /* return "5.14.34, Mar 10 2000"; */
 }
 

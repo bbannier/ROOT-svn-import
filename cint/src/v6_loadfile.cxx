@@ -291,7 +291,7 @@ int G__include_file()
 * G__getmakeinfo()
 *
 ******************************************************************/
-char *G__getmakeinfo(char *item)
+const char *G__getmakeinfo(const char *item)
 {
   char makeinfo[G__MAXFILENAME];
   FILE *fp;
@@ -380,16 +380,20 @@ char *G__getmakeinfo(char *item)
 /******************************************************************
 * G__getmakeinfo1()
 *
+* TO BE FIXED. ONE SHOULD CALL getmakeinfo instead
+*
+*
 ******************************************************************/
-char *G__getmakeinfo1(char *item)
+const char *G__getmakeinfo1(const char *item)
 {
-  char *buf = G__getmakeinfo(item);
-#ifndef G__HAVE_CONFIG
-  char *p = buf;
-  while(*p && !isspace(*p)) ++p;
-  *p = 0;
-#endif
-  return(buf);
+  return G__getmakeinfo(item);
+  //char *buf = (char*)G__getmakeinfo(item);
+//#ifndef G__HAVE_CONFIG
+//  char *p = buf;
+//  while(*p && !isspace(*p)) ++p;
+//  *p = 0;
+//#endif
+//  return(buf);
 }
 
 /******************************************************************
@@ -472,10 +476,10 @@ int G__getcintsysdir()
 #ifdef G__WIN32
       HMODULE hmodule=0;
       if(GetModuleFileName(hmodule,G__cintsysdir,G__MAXFILENAME)) {
-        char *p = G__strrstr(G__cintsysdir,(char*)G__psep);
+        char *p = (char*)G__strrstr(G__cintsysdir,(char*)G__psep);
         if(p) *p = 0;
 # ifdef G__ROOT
-        p = G__strrstr(G__cintsysdir,(char*)G__psep);
+        p = (char*)G__strrstr(G__cintsysdir,(char*)G__psep);
         if(p) *p = 0;
         strcat(G__cintsysdir,G__psep);
         strcat(G__cintsysdir,"cint");
@@ -549,7 +553,7 @@ int G__isfilebusy(int ifn)
 /******************************************************************
 * G__matchfilename(i,filename)
 ******************************************************************/
-int G__matchfilename(int i1,char *filename)
+int G__matchfilename(int i1,const char *filename)
 {
 #if  !defined(__CINT__)
 
@@ -579,9 +583,9 @@ int G__matchfilename(int i1,char *filename)
 
   char *filenamebase;
   if((strcmp(G__srcfile[i1].filename,filename)==0)) return(1);
-  filenamebase = G__strrstr(G__srcfile[i1].filename,"./");
+  filenamebase = (char*)G__strrstr(G__srcfile[i1].filename,"./");
   if(filenamebase) {
-    char *parentdir = G__strrstr(G__srcfile[i1].filename,"../");
+    char *parentdir = (char*)G__strrstr(G__srcfile[i1].filename,"../");
     if(!parentdir && strcmp(filename,filenamebase+2)==0) {
       char buf[G__ONELINE];
 #if defined(G__WIN32)
@@ -613,13 +617,13 @@ int G__matchfilename(int i1,char *filename)
 /******************************************************************
 * G__stripfilename(filename)
 ******************************************************************/
-char* G__stripfilename(char *filename)
+const char* G__stripfilename(const char *filename)
 {
-  char *filenamebase;
+  const char *filenamebase;
   if(!filename) return("");
   filenamebase = G__strrstr(filename,"./");
   if(filenamebase) {
-    char *parentdir = G__strrstr(filename,"../");
+    const char *parentdir = G__strrstr(filename,"../");
     char buf[G__ONELINE];
 #if defined(G__WIN32)
     char *p;
@@ -718,7 +722,7 @@ int G__unloadfile(const char *filename)
   G__LockCriticalSection();
 
   strcpy(buf,filename);
-  fname = G__strrstr(buf,"::");
+  fname = (char*)G__strrstr(buf,"::");
   if(fname) {
     scope = buf;
     *fname = 0;
@@ -1185,7 +1189,7 @@ int G__loadfile(const char *filenamein)
 {
   FILE *tmpfp;
   int external_compiler = 0;
-  char* compiler_option = "";
+  const char* compiler_option = "";
   int store_prerun;
   int i1=0;
   struct G__var_array *store_p_local;
@@ -1206,7 +1210,7 @@ int G__loadfile(const char *filenamein)
   int store_macroORtemplateINfile;
   int len;
   int len1;
-  char *dllpost;
+  const char *dllpost;
   short store_iscpp;
   G__UINT32 store_security;
   char addpost[3][8];
@@ -2128,6 +2132,82 @@ int G__loadfile(const char *filenamein)
 }
 
 /**************************************************************************
+* G__setfilecontext()
+*
+* Set the current G__ifile to filename, allocate an entry in G__srcfiles
+* if necessary. Set ifile to the previous G__ifile to it can be popped.
+* This function does not load any file, it just provides a valid G__ifile
+* context for type manipulations.
+*
+* Returns 0 in case of error.
+* Returns 1 if file entry is newly allocated, 2 otherwise.
+*
+**************************************************************************/
+
+int  G__setfilecontext(const char* filename, G__input_file* ifile)
+{
+   if (!filename) return 0;
+   
+   int null_entry = -1;
+   int found_entry = -1;
+   // find G__srcfile index matching filename
+   for (int i = 0; (found_entry == -1) && i < G__nfile; ++i)
+      if (G__srcfile[i].filename) {
+          if (!strcmp(G__srcfile[i].filename, filename))
+             found_entry = i;
+      }
+      else if (null_entry == -1)
+         null_entry = i;
+
+   if (found_entry == -1) {
+      int fentry = null_entry;
+      if (fentry == -1)
+         fentry = G__nfile;
+
+      G__srcfile[fentry].dictpos
+         = (struct G__dictposition*)malloc(sizeof(struct G__dictposition));
+      G__srcfile[fentry].dictpos->ptype = (char*)NULL;
+      G__store_dictposition(G__srcfile[fentry].dictpos);
+      if (null_entry == -1) {
+         G__nfile++;
+      }
+
+#ifdef G__SECURITY
+      G__srcfile[fentry].security = G__security;
+#endif
+      int hash = 0;
+      int temp = 0;
+      G__hash(filename,hash,temp);
+      G__srcfile[fentry].hash = hash;
+      G__srcfile[fentry].prepname = NULL;
+      G__srcfile[fentry].filename = (char*)malloc(strlen(filename)+1);
+      strcpy(G__srcfile[fentry].filename,filename);
+      G__srcfile[fentry].fp = 0;
+      G__srcfile[fentry].included_from = G__ifile.filenum;
+      G__srcfile[fentry].ispermanentsl = 1;
+      G__srcfile[fentry].initsl = 0;
+      G__srcfile[fentry].hasonlyfunc = (struct G__dictposition*)NULL;
+      G__srcfile[fentry].parent_tagnum = G__get_envtagnum();
+      G__srcfile[fentry].slindex = -1;
+      G__srcfile[fentry].breakpoint = 0;
+      found_entry = fentry;
+   }
+
+   if (ifile) *ifile = G__ifile;
+   G__ifile.fp = G__srcfile[found_entry].fp;
+   G__ifile.filenum = found_entry;
+   strcpy(G__ifile.name, G__srcfile[found_entry].filename);
+   G__ifile.line_number = 0;
+   G__ifile.str = 0;
+   G__ifile.pos = 0;
+   G__ifile.vindex = 0;
+   if (found_entry != -1)
+      return 2;
+   return 1;
+}
+
+
+/**************************************************************************
 * G__preprocessor()
 *
 * Use C/C++ preprocessor prior to interpretation.
@@ -2135,9 +2215,9 @@ int G__loadfile(const char *filenamein)
 *  CPPPREP and CPREP.
 *
 **************************************************************************/
-int G__preprocessor(char *outname,char *inname,int cppflag
-                    ,char *macros,char *undeflist,char *ppopt
-                    ,char *includepath)
+int G__preprocessor(      char *outname,const char *inname,int cppflag
+                   ,const char *macros,const char *undeflist,const char *ppopt
+                   ,const char *includepath)
 {
   char temp[G__LARGEBUF];
   /* char *envcpp; */
@@ -2149,7 +2229,7 @@ int G__preprocessor(char *outname,char *inname,int cppflag
   char *post;
 
   inlen = strlen(inname);
-  post = strrchr(inname,'.');
+  post = (char*)strrchr(inname,'.');
 
   if(post && inlen>2) {
     if(0==strcmp(inname+strlen(inname)-2,".c")) {

@@ -25,38 +25,38 @@ class TEveBoxSet: public TEveDigitSet
    TEveBoxSet& operator=(const TEveBoxSet&); // Not implemented
 
 public:
-   enum BoxType_e
+   enum EBoxType_e
       {
-         BT_Undef,           // unknown-ignored
-         BT_FreeBox,         // arbitrary box: specify 8*(x,y,z) box corners
-         BT_AABox,           // axis-aligned box: specify (x,y,z) and (w, h, d)
-         BT_AABoxFixedDim    // axis-aligned box w/ fixed dimensions: specify (x,y,z)
+         kBT_Undef,           // unknown-ignored
+         kBT_FreeBox,         // arbitrary box: specify 8*(x,y,z) box corners
+         kBT_AABox,           // axis-aligned box: specify (x,y,z) and (w, h, d)
+         kBT_AABoxFixedDim    // axis-aligned box w/ fixed dimensions: specify (x,y,z)
       };
 
 protected:
 
-   struct BFreeBox       : public DigitBase { Float_t fVertices[24]; };
+   struct BFreeBox_t       : public DigitBase_t { Float_t fVertices[24]; };
 
-   struct BOrigin        : public DigitBase { Float_t fA, fB, fC; };
+   struct BOrigin_t        : public DigitBase_t { Float_t fA, fB, fC; };
 
-   struct BAABox         : public BOrigin   { Float_t fW, fH, fD; };
+   struct BAABox_t         : public BOrigin_t   { Float_t fW, fH, fD; };
 
-   struct BAABoxFixedDim : public BOrigin {};
+   struct BAABoxFixedDim_t : public BOrigin_t {};
 
 protected:
-   BoxType_e         fBoxType;      // Type of rendered box.
+   EBoxType_e        fBoxType;      // Type of rendered box.
 
    Float_t           fDefWidth;     // Breadth assigned to first coordinate  (A).
    Float_t           fDefHeight;    // Breadth assigned to second coordinate (B).
    Float_t           fDefDepth;     // Breadth assigned to third coordinate  (C).
 
-   static Int_t SizeofAtom(BoxType_e bt);
+   static Int_t SizeofAtom(EBoxType_e bt);
 
 public:
    TEveBoxSet(const Text_t* n="TEveBoxSet", const Text_t* t="");
    virtual ~TEveBoxSet() {}
 
-   void Reset(BoxType_e boxType, Bool_t valIsCol, Int_t chunkSize);
+   void Reset(EBoxType_e boxType, Bool_t valIsCol, Int_t chunkSize);
    void Reset();
 
    void AddBox(const Float_t* verts);

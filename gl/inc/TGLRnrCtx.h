@@ -22,6 +22,7 @@ class TGLCamera;
 class TGLSceneBase;
 class TGLSceneInfo;
 
+class FTFont;
 class TGLContextIdentity;
 
 class TGLClip;
@@ -89,6 +90,7 @@ protected:
    // Selection stuff
    Bool_t          fSelection;
    Bool_t          fSecSelection;
+   Int_t           fPickRadius;
    TGLRect        *fPickRectangle;
    TGLSelectBuffer*fSelectBuffer;
 
@@ -134,6 +136,9 @@ public:
    Short_t SceneStyle()  const         { return fSceneStyle; }
    void    SetSceneStyle(Short_t sty)  { fSceneStyle = sty;  }
 
+   FTFont*  GetFont(Int_t size, Int_t file, Int_t mode);
+   Bool_t   ReleaseFont(Int_t size, Int_t file, Int_t mode);
+
    TGLClip* ViewerClip()         const { return fViewerClip; }
    void     SetViewerClip(TGLClip *p)  { fViewerClip = p;    }
    TGLClip* SceneClip()          const { return fSceneClip;  }
@@ -166,14 +171,14 @@ public:
    UInt_t GetEventKeySym()   const { return fEventKeySym; }
    void   SetEventKeySym(UInt_t k) { fEventKeySym = k; }
 
-   Bool_t IsDLCaptureOpen() const { return fDLCaptureOpen; }
+   Bool_t IsDLCaptureOpen() const  { return fDLCaptureOpen; }
    void   OpenDLCapture();
    void   CloseDLCapture();
 
    TGLContextIdentity* GetGLCtxIdentity()   const { return fGLCtxIdentity; }
    void SetGLCtxIdentity(TGLContextIdentity* cid) { fGLCtxIdentity = cid; }
 
-   GLUquadric * GetGluQuadric() { return  fQuadric; }
+   GLUquadric * GetGluQuadric() { return fQuadric; }
 
    ClassDef(TGLRnrCtx, 0) // Collection of objects and data passes along all rendering calls.
 }; // endclass TGLRnrCtx

@@ -54,7 +54,7 @@ $(TMVADS):      $(TMVAH_CINT) $(TMVAL) $(TMVAO) $(ROOTCINTTMPEXE)
 		@echo "CFLAGS     : " $(CFLAGS)
 		@echo "TMVAH_CINT : " $(TMVAH_CINT)
 		@echo "LDFLAGS    : " $(LDFLAGS)
-		$(ROOTCINTTMP) -f $@ -o "$(TMVAO)" -c $(TMVAH_CINT) $(TMVAL)
+		$(ROOTCINTTMP) -f $@ -c $(TMVAH_CINT) $(TMVAL)
 
 $(TMVAMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(TMVAL)
 		$(RLIBMAP) -o $(TMVAMAP) -l $(TMVALIB) \
