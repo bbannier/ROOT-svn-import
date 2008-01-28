@@ -1394,7 +1394,7 @@ Bool_t TGLViewer::HandleCrossing(Event_t *event)
          fMouseTimer->TurnOn();
       }
       // Maybe, maybe not...
-      //Activated();
+      Activated();
    }
    if (event->fType == kLeaveNotify) {
       fAction = kDragNone;
