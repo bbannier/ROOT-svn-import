@@ -5270,7 +5270,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
 
               
               // If they werent generated automatically...
-              //if(!(ifunc->funcptr[j]==(void*)-1) && !ifunc->mangled_name[j]){
+              if(!(ifunc->funcptr[j]==(void*)-1) && (!ifunc->mangled_name[j] || !G__nostubs)){
                 if(!ifunc->ispurevirtual[j] && G__dicttype==3){
                   // Now we have no symbol but we are in the third or fourth
                   // dictionary... which means that the second one already tried to create it...
@@ -5285,7 +5285,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                   // just do what we did before
                   G__cppif_genfunc(fp,hfp,i,j,ifunc);
                 }
-                //}
+              }
         
             }
           } /* if PUBLIC */
@@ -5440,7 +5440,7 @@ void G__cppif_func(FILE *fp, FILE *hfp)
                 // Generate the stubs for those function needing a pointer to a reference (see TCLonesArray "virtual TObject*&	operator[](Int_t idx)")
                 // Is this condition correct and/or sufficient?
                 ((ifunc->reftype[j] == G__PARAREFERENCE) && isupper(ifunc->type[j]))
-            )
+            || !G__nostubs)
             G__cppif_genfunc(fp,hfp,-1,j,ifunc);
         }
         else {
@@ -10024,12 +10024,12 @@ void G__cpplink_func(FILE *fp)
         if(  G__dicttype==0 ||
              ((G__dicttype==3 || G__dicttype==4) &&
               // The stubs where generated for functions needing temporal objects too... use them
-              ( !ifunc->mangled_name[j] ||
+              ( !ifunc->mangled_name[j] || 
                 // LF 26-10-07
                 // Generate the stubs for those function needing a pointer to a reference (see TCLonesArray "virtual TObject*&	operator[](Int_t idx)")
                 // Is this condition correct and/or sufficient?
                 ((ifunc->reftype[j] == G__PARAREFERENCE) && isupper(ifunc->type[j]))
-                )
+                || !G__nostubs)
                )
           )
           fprintf(fp,"%s, ",G__map_cpp_funcname(-1
