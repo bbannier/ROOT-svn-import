@@ -9347,9 +9347,14 @@ void G__cpplink_memfunc(FILE *fp)
                 fprintf(fp, "   G__memfunc_setup2(");
 
               fprintf(fp, "\"%s\", %d, ", funcname, hash);
+
               // 04-07-07 print the mangled name after the funcname and hash
-              if(G__dicttype!=0)
-                fprintf(fp,"0," /*ifunc_constructor->mangled_name[j]*/);
+              if(G__dicttype!=0) {
+                if(ifunc->mangled_name[j])
+                  fprintf(fp,"\"%s\",", ifunc->mangled_name[j]);
+                else
+                  fprintf(fp,"0,");
+              }
 
               fprintf(fp, "%s, ", G__map_cpp_funcname(i, funcname, j, page));
 
@@ -9392,8 +9397,13 @@ void G__cpplink_memfunc(FILE *fp)
 
               fprintf(fp, "\"%s\", %d, ", funcname, hash);
 
-              if(G__dicttype!=0)
-                fprintf(fp,"0," /*ifunc_copyconstructor->mangled_name[j]*/);          
+              // 04-07-07 print the mangled name after the funcname and hash
+              if(G__dicttype!=0) {
+                if(ifunc->mangled_name[j])
+                  fprintf(fp,"\"%s\",", ifunc->mangled_name[j]);
+                else
+                  fprintf(fp,"0,");
+              }
 
               fprintf(fp, "%s, ", G__map_cpp_funcname(i, funcname, j, page));
 
@@ -9488,9 +9498,13 @@ void G__cpplink_memfunc(FILE *fp)
 
               fprintf(fp, "\"%s\", %d, ", funcname, hash);
 
-              if(G__dicttype!=0)
-                fprintf(fp,"0,"/*ifunc_assignmentoperator->mangled_name[j]*/);
-
+              // 04-07-07 print the mangled name after the funcname and hash
+              if(G__dicttype!=0) {
+                if(ifunc->mangled_name[j])
+                  fprintf(fp,"\"%s\",", ifunc->mangled_name[j]);
+                else
+                  fprintf(fp,"0,");
+              }
 
               fprintf(fp, "%s, ", G__map_cpp_funcname(i, funcname, j, page));
 
