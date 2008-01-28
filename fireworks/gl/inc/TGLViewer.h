@@ -141,7 +141,6 @@ protected:
 
 protected:
    TTimer            *fMouseTimer;     // mouse delay timer
-   TTimer            *fToolTipTimer;   // tool tip delay timer
    TGLWidget         *fGLWindow;
    Int_t              fGLDevice; //!for embedded gl viewer
    TGLContextIdentity*fGLCtxId;  //!for embedded gl viewer
