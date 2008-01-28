@@ -324,7 +324,6 @@ Bool_t TGLWidget::HandleButton(Event_t *ev)
       gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->HandleButton((Event_t *)0x%lx)", this, ev));
       return kTRUE;
    }
-   gVirtualX->SetInputFocus(fContainer->GetId());
 
    Emit("HandleButton(Event_t*)", (Long_t)ev);
 
@@ -385,8 +384,6 @@ Bool_t TGLWidget::HandleCrossing(Event_t *ev)
       gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->HandleCrossing((Event_t *)0x%lx)", this, ev));
       return kTRUE;
    }
-   // Maybe, maybe not...
-   gVirtualX->SetInputFocus(fContainer->GetId());
 
    Emit("HandleCrossing(Event_t*)", (Long_t)ev);
 
