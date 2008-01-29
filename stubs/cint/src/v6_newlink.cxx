@@ -9133,9 +9133,37 @@ void G__cpplink_memfunc(FILE *fp)
                 // 28-01-08: What we just said is false again because we don't have the *.o
                 // anymore... so we have to continue with our assumptions
 
+		// 29-01-08
+		// Let's do it in the same way we did for genfunc... like that
+		// we shouldnt get any difference between the stubs and the memfuns
+
+		// If they werent generated automatically...
+		if(!(ifunc->funcptr[j]==(void*)-1) && (!ifunc->mangled_name[j] || !G__nostubs)){
+		  if(!ifunc->ispurevirtual[j] && G__dicttype==3){
+		    // Now we have no symbol but we are in the third or fourth
+		    // dictionary... which means that the second one already tried to create it...
+		    // If that's the case we have no other choice but to generate the stub
+		    fprintf(fp, "%s, ", G__map_cpp_funcname(i, ifunc->funcname[j], j, ifunc->page));
+		  }
+		  else if(!ifunc->ispurevirtual[j] && G__dicttype==4){
+		    fprintf(fp, "%s, ", G__map_cpp_funcname(i, ifunc->funcname[j], j, ifunc->page));
+		  }
+		  else if(G__dicttype==0){
+		    // This is the old case...
+		    // just do what we did before
+		    fprintf(fp, "%s, ", G__map_cpp_funcname(i, ifunc->funcname[j], j, ifunc->page));
+		  }
+		  else
+		    fprintf(fp, "(G__InterfaceMethod) NULL, ");
+		}
+		else
+		  fprintf(fp, "(G__InterfaceMethod) NULL, ");
+
                 // Why do we have to put the isabstract here?
                 // it doesnt seem to be necesary in the original code
-                if( !ifunc->ispurevirtual[j] ||
+                //
+/*
+		if( !ifunc->ispurevirtual[j] ||
                     (!ifunc->mangled_name[j] || !G__nostubs)
                   ) {
                   if(strcmp(ifunc->funcname[j],G__struct.name[i])==0) {
@@ -9151,6 +9179,7 @@ void G__cpplink_memfunc(FILE *fp)
                 }
                 else
                   fprintf(fp, "(G__InterfaceMethod) NULL, ");
+*/
               }
             }
             else
