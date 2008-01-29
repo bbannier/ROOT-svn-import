@@ -861,10 +861,14 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
           // Parameter Pointer
           int *paddr = (int *) &dparam;
 
+#ifdef __x86_64__
+	  __asm__ __volatile__("push %0" :: "g" (dparam));
+#else
           /* Highest Word */
           __asm__ __volatile__("push %0" :: "g" (*(paddr+1)));
           /* Lowest Word */
           __asm__ __volatile__("push %0" :: "g" (*paddr));
+#endif
         }
         else if(param.type=='f') {
           double fparam = (double) G__float(param);
@@ -872,10 +876,14 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
           // Parameter Pointer
           int *paddr = (int *) &fparam;
 
+#ifdef __x86_64__
+	  __asm__ __volatile__("push %0" :: "g" (fparam));
+#else
           /* Highest Word */
           __asm__ __volatile__("push %0" :: "g" (*(paddr+1)));
           /* Lowest Word */
           __asm__ __volatile__("push %0" :: "g" (*paddr));
+#endif
         }
         else{
           long iparam = (long) G__int(param);
@@ -888,10 +896,14 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
           double value = (double) iparam;
           int * pointer = (int*) &value;
 
+#ifdef __x86_64__
+	  __asm__ __volatile__("push %0" :: "g" (iparam));
+#else
           /* Highest Word */
           __asm__ __volatile__("push %0" :: "g" (*(pointer+1)));
           /* Lowest Word */
           __asm__ __volatile__("push %0" :: "g" (*pointer));
+#endif
         }
 
         break;
@@ -967,11 +979,14 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
         // Parameter Pointer
         int *paddr = (int *) &fparam;
 
+#ifdef __x86_64__
+	__asm__ __volatile__("push %0" :: "g" (fparam));
+#else
         /* Highest Word */
         __asm__ __volatile__("push %0" :: "g" (*(paddr+1)));
         /* Lowest Word */
         __asm__ __volatile__("push %0" :: "g" (*paddr));
-
+#endif
       }
       break;
 
@@ -1578,20 +1593,29 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
               // Parameter Pointer
               int *paddr = (int *) &dparam;
 
-              /* Highest Word */
+#ifdef __x86_64__
+	      __asm__ __volatile__("push %0" :: "g" (dparam));
+#else
+	      /* Highest Word */
               __asm__ __volatile__("push %0" :: "g" (*(paddr+1)));
               /* Lowest Word */
               __asm__ __volatile__("push %0" :: "g" (*paddr));
+#endif
             }
             else if(param.type=='f') {
               double fparam = (double) G__float(param);
 
               // Parameter Pointer
               int *paddr = (int *) &fparam;
+
+#ifdef __x86_64__
+	      __asm__ __volatile__("push %0" :: "g" (fparam));
+#else
               /* Highest Word */
               __asm__ __volatile__("push %0" :: "g" (*(paddr+1)));
               /* Lowest Word */
               __asm__ __volatile__("push %0" :: "g" (*paddr));
+#endif
             }
             else{
               long iparam = (long) G__int(param);
@@ -1605,10 +1629,14 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
               double value = (double) iparam;
               int * pointer = (int*) &value;
 
+#ifdef __x86_64__
+	      __asm__ __volatile__("push %0" :: "g" (iparam));
+#else
               /* Highest Word */
               __asm__ __volatile__("push %0" :: "g" (*(pointer+1)));
               /* Lowest Word */
               __asm__ __volatile__("push %0" :: "g" (*pointer));
+#endif
             }
 
             break;
