@@ -115,8 +115,13 @@ TCint::TCint(const char *name, const char *title) : TInterpreter(name, title)
    optind = 1;  // make sure getopt() works in the main program
 #endif
 
+   G__wrappers = gEnv->GetValue("Cint.EnableWrappers",0);
+
    // Make sure that ALL macros are seen as C++.
    G__LockCpp();
+
+
+
 }
 
 //______________________________________________________________________________
@@ -168,7 +173,6 @@ void TCint::EnableWrappers(bool value){
    G__wrappers = (int) value;
 
 }
-
 
 //______________________________________________________________________________
 void TCint::EnableAutoLoading()
