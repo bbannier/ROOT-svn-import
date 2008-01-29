@@ -165,6 +165,10 @@
 #include <iostream>
 #include "cintdictversion.h"
 
+#ifdef __APPLE__ /* Apple MacOS X */
+#include <libgen.h>
+#endif
+
 #ifdef fgets // in G__ci.h
 #  undef fgets
 #  undef printf
@@ -4681,7 +4685,9 @@ int main(int argc, char **argv)
       } else {
          
 #ifndef ROOTBUILD
-         string headerb(basename(header.c_str()));
+	char *header_c = (char*) header.c_str(); // basename shouldnt change the content (it looks safe)
+         const char *basen = basename(header_c);
+	 string headerb(basen);
          string::size_type idx = headerb.rfind("Tmp");
          
          int l;
