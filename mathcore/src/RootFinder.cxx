@@ -90,7 +90,7 @@ int RootFinder::SetMethod(RootFinder::Type type)
       
    case GSL_BISECTION:
       //fSolver = new ROOT::Math::Roots::Bisection();
-      stype == "Bisection";
+      stype = "Bisection";
       break;
    case GSL_FALSE_POS:
       //fSolver = new ROOT::Math::Roots::FalsePos();
