@@ -21,9 +21,14 @@
 
 #include <cxxabi.h>
 #include <dlfcn.h>
-#include <link.h>
 #include <iostream>
 #include <fstream>
+
+#ifndef __APPLE__  /* Apple MacOS X */
+#include <link.h> // lib stuff
+#else
+#include <libgen.h> // needed for basename
+#endif
 
 #include <vector>
 #include <list>
