@@ -21,34 +21,38 @@ namespace Math {
 
 BrentRootFinder::BrentRootFinder() : fNpx(100)
 {
-   fFunctionCopied = false;
    fFunction = 0;
 }
 
-BrentRootFinder::BrentRootFinder(const IGenFunction & function, bool copy) : fNpx(100)
+BrentRootFinder::~BrentRootFinder() {}
+
+int BrentRootFinder::SetFunction(const ROOT::Math::IGenFunction& f, double xlow, double xup)
 {
-   fFunctionCopied = false;
-   fFunction = 0;
-   SetFunction(function, copy);
+   fFunction = &f;
+
+   if (xlow >= xup) 
+   {
+      double tmp = xlow;
+      xlow = xup; 
+      xup = tmp;
+   }
+   fXMin = xlow;
+   fXMax = xup;
+
+   return 0;
 }
 
-BrentRootFinder::~BrentRootFinder()
+const char* BrentRootFinder::Name() const
 {
-   if ( fFunction != 0 && fFunctionCopied )
-      delete fFunction;
+   return "BrentRootFinder";
 }
 
-void BrentRootFinder::SetFunction (const IGenFunction & function, bool copy)
+double BrentRootFinder::Root() const
 {
-   if ( copy )
-      fFunction = function.Clone();
-   else
-      fFunction = &function;
-
-   fFunctionCopied = copy;
+   return fRoot;
 }
 
-double BrentRootFinder::Root(double xmin, double xmax) const
+int BrentRootFinder::Solve(int, double, double /*double xmin, double xmax*/)
 {
    // Returns the X value corresponding to the function value fy for (xmin<x<xmax).
    // Method:
@@ -61,12 +65,15 @@ double BrentRootFinder::Root(double xmin, double xmax) const
 
    double fy = 0; // To find the root
 
-   if (xmin >= xmax) 
-   {
-      double tmp = xmin;
-      xmin = xmax; 
-      xmax = tmp;
-   }
+   // TODO: Change xmin & xmax by fXMin & fXMax
+//    if (xmin >= xmax) 
+//    {
+//       double tmp = xmin;
+//       xmin = xmax; 
+//       xmax = tmp;
+//    }
+   double xmin = fXMin;
+   double xmax = fXMax;
 
    int niter=0;
    double x;
@@ -82,7 +89,11 @@ double BrentRootFinder::Root(double xmin, double xmax) const
       x = MinimBrent(4, xmin, xmax, x, fy, ok);
       niter++;
    }
-   return x;
+
+   fRoot = x;
+
+   //return x;
+   return 1;
 }
 
 double BrentRootFinder::MinimStep(int type, double &xmin, double &xmax, double fy) const

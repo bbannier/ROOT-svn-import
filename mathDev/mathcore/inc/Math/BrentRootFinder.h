@@ -13,30 +13,40 @@
 // Created by: David Gonzalez Maline  : Wed Jan 21 2008
 // 
 
+#ifndef ROOT_Math_BrentRootFinder
+#define ROOT_Math_BrentRootFinder
+
 #include <Math/IFunction.h>
+#include <Math/IRootFinderMethod.h>
 
 namespace ROOT {
 namespace Math {
 
-class BrentRootFinder {
-public:
-   ~BrentRootFinder();
-   BrentRootFinder();
-   BrentRootFinder(const IGenFunction &, bool copy=false);
+   class BrentRootFinder: public IRootFinderMethod {
+   public:
+      virtual ~BrentRootFinder();
+      BrentRootFinder();
+      
+      using IRootFinderMethod::SetFunction;
+      int SetFunction(const ROOT::Math::IGenFunction& f, double xlow, double xup);
+      
+      int Solve(int maxIter = 100, double absTol = 1E-3, double relTol = 1E-6);
+      double Root() const;
+      
+      const char* Name() const;
+      
+   protected:
+      double MinimStep(int type, double &xmin, double &xmax, double fy) const;
+      double MinimBrent(int type, double &xmin, double &xmax, double xmiddle, double fy, bool &ok) const;
+      
+   protected:
+      const IGenFunction* fFunction;
+      const int fNpx;
+      double fXMin, fXMax;
+      double fRoot;
+   };
    
-   // Implementing VirtualIntegratorOneDim Interface
-   void SetFunction (const IGenFunction &, bool copy=false);
-   double Root(double xmin, double xmax) const;
-
-protected:
-   double MinimStep(int type, double &xmin, double &xmax, double fy) const;
-   double MinimBrent(int type, double &xmin, double &xmax, double xmiddle, double fy, bool &ok) const;
-
-protected:
-   const IGenFunction* fFunction;
-   bool fFunctionCopied;
-   const int fNpx;
-};
-
 };
 };
+
+#endif

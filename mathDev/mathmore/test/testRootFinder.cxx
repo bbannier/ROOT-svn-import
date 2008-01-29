@@ -74,7 +74,7 @@ void testRootFinder() {
   //ROOT::Math::IGenFunction *func = &polyf;
   ROOT::Math::Functor1D    *func = new ROOT::Math::Functor1D (&myfunc);
 
-  ROOT::Math::RootFinder<ROOT::Math::Roots::Bisection> *rf1 = new ROOT::Math::RootFinder<ROOT::Math::Roots::Bisection>;
+  ROOT::Math::RootFinder *rf1 = new ROOT::Math::RootFinder(ROOT::Math::RootFinder::GSL_BISECTION);
   timer.Reset(); timer.Start(); myfuncCalls = 0;
   for (int i = 0; i < iterTest; ++i)
   {
@@ -85,7 +85,7 @@ void testRootFinder() {
   printStats(rf1, status, timer);
 
 
-  ROOT::Math::RootFinder<ROOT::Math::Roots::FalsePos> *rf2 = new ROOT::Math::RootFinder<ROOT::Math::Roots::FalsePos>;
+  ROOT::Math::RootFinder *rf2 = new ROOT::Math::RootFinder(ROOT::Math::RootFinder::GSL_FALSE_POS);
   timer.Reset(); timer.Start(); myfuncCalls = 0;
   for (int i = 0; i < iterTest; ++i)
   {
@@ -97,7 +97,7 @@ void testRootFinder() {
 
   // methods using derivatives 
 
-  ROOT::Math::RootFinder<ROOT::Math::Roots::Secant> *rf3 = new ROOT::Math::RootFinder<ROOT::Math::Roots::Secant>;
+  ROOT::Math::RootFinder *rf3 = new ROOT::Math::RootFinder(ROOT::Math::RootFinder::GSL_SECANT);
   timer.Reset(); timer.Start(); myfuncCalls = 0;
   for (int i = 0; i < iterTest; ++i)
   {
@@ -108,7 +108,7 @@ void testRootFinder() {
   printStats(rf3, status, timer);
 
   
-  ROOT::Math::RootFinder<ROOT::Math::Roots::Steffenson> *rf4 = new ROOT::Math::RootFinder<ROOT::Math::Roots::Steffenson>;
+  ROOT::Math::RootFinder *rf4 = new ROOT::Math::RootFinder(ROOT::Math::RootFinder::GSL_STEFFENSON);
   timer.Reset(); timer.Start(); myfuncCalls = 0;
   for (int i = 0; i < iterTest; ++i)
   {

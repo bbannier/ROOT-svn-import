@@ -31,7 +31,6 @@ MATHMOREDH1  := $(MODDIRI)/Math/DistFuncMathMore.h \
 		$(MODDIRI)/Math/Derivator.h \
 		$(MODDIRI)/Math/Interpolator.h \
 		$(MODDIRI)/Math/InterpolationTypes.h \
-		$(MODDIRI)/Math/RootFinder.h \
 		$(MODDIRI)/Math/GSLRootFinder.h \
 		$(MODDIRI)/Math/GSLRootFinderDeriv.h \
 		$(MODDIRI)/Math/RootFinderAlgorithms.h \
