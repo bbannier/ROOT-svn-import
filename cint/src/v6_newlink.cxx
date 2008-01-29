@@ -9139,14 +9139,21 @@ void G__cpplink_memfunc(FILE *fp)
 
 		// If they werent generated automatically...
 		if(!(ifunc->funcptr[j]==(void*)-1) && (!ifunc->mangled_name[j] || !G__nostubs)){
-		  if(!ifunc->ispurevirtual[j] && G__dicttype==3){
-		    // Now we have no symbol but we are in the third or fourth
-		    // dictionary... which means that the second one already tried to create it...
-		    // If that's the case we have no other choice but to generate the stub
-		    fprintf(fp, "%s, ", G__map_cpp_funcname(i, ifunc->funcname[j], j, ifunc->page));
-		  }
-		  else if(!ifunc->ispurevirtual[j] && G__dicttype==4){
-		    fprintf(fp, "%s, ", G__map_cpp_funcname(i, ifunc->funcname[j], j, ifunc->page));
+		  if(!ifunc->ispurevirtual[j] && (G__dicttype==3 || G__dicttype==4)){
+		    if(strcmp(ifunc->funcname[j],G__struct.name[i])==0) {
+		      // constructor need special handling
+		      if(0==G__struct.isabstract[i]&&0==isnonpublicnew) {
+			fprintf(fp, "%s, ", G__map_cpp_funcname(i, ifunc->funcname[j], j, ifunc->page));
+		      }
+		      else
+			fprintf(fp, "(G__InterfaceMethod) NULL, ");
+		    }
+		    else {
+		      // Now we have no symbol but we are in the third or fourth
+		      // dictionary... which means that the second one already tried to create it...
+		      // If that's the case we have no other choice but to generate the stub
+		      fprintf(fp, "%s, ", G__map_cpp_funcname(i, ifunc->funcname[j], j, ifunc->page));
+		    }
 		  }
 		  else if(G__dicttype==0){
 		    // This is the old case...
