@@ -45,8 +45,9 @@ void testRootFinder() {
    timer.Reset(); timer.Start(); myfuncCalls = 0;
    for (int i = 0; i < iterTest; ++i)
    {
-      brf.SetFunction( *func );
-      root = brf.Root(0, 5);
+      brf.SetFunction( *func, 0, 5 );
+      brf.Solve();
+      root = brf.Root();
    }
    timer.Stop();
    std::cout << "RootFinder Stats:" << std::endl;
@@ -57,7 +58,7 @@ void testRootFinder() {
    timer.Reset(); timer.Start(); myfuncCalls = 0;
    for (int i = 0; i < iterTest; ++i)
    {
-      brf.SetFunction( *func ); // Just to make a fair comparision!
+      brf.SetFunction( *func, 0, 5 ); // Just to make a fair comparision!
       root = f1->GetX(0, 0, 5);
    }
    timer.Stop();

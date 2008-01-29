@@ -62,6 +62,8 @@ MATHCOREDH1  :=  $(MODDIRI)/Math/Vector2D.h \
                  $(MODDIRI)/Math/Factory.h \
                  $(MODDIRI)/Math/FitMethodFunction.h \
                  $(MODDIRI)/Math/GaussIntegrator.h \
+                 $(MODDIRI)/Math/RootFinder.h \
+                 $(MODDIRI)/Math/IRootFinderMethod.h \
                  $(MODDIRI)/Math/BrentRootFinder.h 
 
 
