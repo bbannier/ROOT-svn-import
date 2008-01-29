@@ -9138,7 +9138,7 @@ void G__cpplink_memfunc(FILE *fp)
 		// we shouldnt get any difference between the stubs and the memfuns
 
 		// If they werent generated automatically...
-		if(!(ifunc->funcptr[j]==(void*)-1) && (!ifunc->mangled_name[j] || !G__nostubs)){
+		if(/*!(ifunc->funcptr[j]==(void*)-1) && */ (!ifunc->mangled_name[j] || !G__nostubs)){
 		  if(!ifunc->ispurevirtual[j] && (G__dicttype==3 || G__dicttype==4)){
 		    if(strcmp(ifunc->funcname[j],G__struct.name[i])==0) {
 		      // constructor need special handling
