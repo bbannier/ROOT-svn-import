@@ -384,6 +384,8 @@ Bool_t TGLWidget::HandleCrossing(Event_t *ev)
       gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->HandleCrossing((Event_t *)0x%lx)", this, ev));
       return kTRUE;
    }
+   if (gVirtualX->GetInputFocus() != fContainer->GetId()) 
+      gVirtualX->SetInputFocus(fContainer->GetId());
 
    Emit("HandleCrossing(Event_t*)", (Long_t)ev);
 
