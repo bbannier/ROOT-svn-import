@@ -9135,7 +9135,7 @@ void G__cpplink_memfunc(FILE *fp)
 
                 // Why do we have to put the isabstract here?
                 // it doesnt seem to be necesary in the original code
-                if( !ifunc->ispurevirtual[j] &&
+                if( //!ifunc->ispurevirtual[j] &&
                     (!ifunc->mangled_name[j] || !G__nostubs)
                   ) {
                   if(strcmp(ifunc->funcname[j],G__struct.name[i])==0) {
