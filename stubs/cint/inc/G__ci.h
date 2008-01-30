@@ -1856,7 +1856,7 @@ extern G__EXPORT void G__add_setup_func G__P((G__CONST char *libname, G__incsetu
 extern G__EXPORT void G__remove_setup_func G__P((G__CONST char *libname));
 extern G__EXPORT void G__setgvp G__P((long gvp));
 
-// LF
+// (stub-less calls)
 extern G__EXPORT struct G__ifunc_table_internal* G__ifunc_page_base G__P((char *funcname,int hash,int page_base, struct G__ifunc_table_internal *ifunc, int allifunc));
    extern G__EXPORT int G__method_inbase2 G__P((int ifn, struct G__ifunc_table_internal *ifunc));
 

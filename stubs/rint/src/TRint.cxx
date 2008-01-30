@@ -147,7 +147,7 @@ TRint::TRint(const char *appClassName, Int_t *argc, char **argv, void *options,
       PrintLogo(lite);
    }
 
-   // LF: 30-05-07
+   // 30-05-07 (stub-less calss)
    // Move this to TApplication to fullfil the dependancy when registering TDictionary
    /*
    // Load some frequently used includes

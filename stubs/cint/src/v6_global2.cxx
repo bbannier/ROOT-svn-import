@@ -44,8 +44,10 @@ int G__globalcomp;       /* make compiled func's global table */
 int G__store_globalcomp;
 long G__globalvarpointer = G__PVOID; /* make compiled func's global table */
 
-// LF 10-07-07
-int G__isfilebundled = 0;       /* indicate if we have a bundle file in rootcint */
+// 10-07-07
+// indicate if we have a bundle file in rootcint 
+// (impt for printing the temp dicts)
+int G__isfilebundled = 0;
 short G__dicttype = 0;
 
 #ifdef __cplusplus

@@ -2055,16 +2055,16 @@ void G__letstruct(G__value* result, int linear_index, G__var_array* var, int ig1
                   if (ig2 && G__asm_noverflow) {
                      G__asm_dt = store_dt;
                      int x;
-                     // LF 30-05-07
+                     // 30-05-07
                      // G__LD_FUNC now has 6 parameters
-                     // LF 05-06-07 (now 7 with diego's changes)
+                     // 05-06-07 (now 7 with diego's changes)
                      if (G__LD_FUNC == G__asm_inst[G__asm_cp-7]) {
                         for (x = 0; x < 7; ++x) {
                            G__asm_inst[store_cp+x] = G__asm_inst[G__asm_cp-7+x];
                         }
                         G__asm_cp = store_cp + 7;
                      }
-                     // LF 23-10-12
+                     // 23-10-12 (stub-less calls)
                      // We added one more field... should it be until 9?
                      else if (G__LD_IFUNC == G__asm_inst[G__asm_cp-9]) {
                         for (x = 0;x < 9;x++)
@@ -4088,7 +4088,7 @@ static G__value G__allocvariable(G__value result, G__value para[], G__var_array*
             if (G__struct.iscpplink[G__tagnum] == G__CPPLINK) {
                // precompiled class
                // Move LD_FUNC instruction
-               // LF LD_FUNC now has 6 parameters 06-06-07
+               // LD_FUNC now has 6 parameters 06-06-07
                G__inc_cp_asm(-7, 0);
                for (int ix = 6; ix > -1; --ix) {
                   G__asm_inst[G__asm_cp+ix+6] = G__asm_inst[G__asm_cp+ix];
@@ -4103,7 +4103,7 @@ static G__value G__allocvariable(G__value result, G__value para[], G__var_array*
                G__asm_inst[G__asm_cp+2] = (long) var;
                G__asm_inst[G__asm_cp+3] = 0L; /* This is the 'mode'. I am not sure what it should be */
                G__inc_cp_asm(4, 0);
-               G__inc_cp_asm(7, 0); //LF  /* increment for moved LD_FUNC instruction */
+               G__inc_cp_asm(7, 0); //  /* increment for moved LD_FUNC instruction */
                G__asm_inst[G__asm_cp] = G__PUSHSTROS;
                G__inc_cp_asm(1, 0);
 #ifdef G__ASM_DBG
@@ -4410,8 +4410,8 @@ static G__value G__allocvariable(G__value result, G__value para[], G__var_array*
                G__asm_inst[G__asm_cp+3] = 2; // paran
                G__asm_inst[G__asm_cp+4] = (long) G__compiled_func;
                G__asm_inst[G__asm_cp+5] = 0;
-               G__asm_inst[G__asm_cp+6] = (long) G__p_ifunc; //LF 13-09-07 is this safe?
-               G__inc_cp_asm(7, 0); // LF
+               G__asm_inst[G__asm_cp+6] = (long) G__p_ifunc; //13-09-07 is this safe?
+               G__inc_cp_asm(7, 0); // add 1 for the ifunc (stub-less calls)
             }
          }
          break;

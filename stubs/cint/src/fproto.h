@@ -306,7 +306,7 @@ void G__cpplink_func(FILE *pfp);
 void G__incsetup_memvar(int tagnum);
 void G__incsetup_memfunc(int tagnum);
 
-// LF 04-07-07
+// 04-07-07
 // v6_symbols.cxx
 void   G__register_class(const char *libname, const char *clstr);
 void*  G__get_address(const char* mangled_name);

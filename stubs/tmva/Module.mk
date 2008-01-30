@@ -50,10 +50,6 @@ $(TMVALIB):     $(TMVAO) $(TMVADO) $(ORDER_) $(MAINLIBS) $(TMVALIBDEP)
 
 $(TMVADS):      $(TMVAH_CINT) $(TMVAL) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		@echo "CXXFLAGS   : " $(CXXFLAGS)
-		@echo "CFLAGS     : " $(CFLAGS)
-		@echo "TMVAH_CINT : " $(TMVAH_CINT)
-		@echo "LDFLAGS    : " $(LDFLAGS)
 		$(ROOTCINTTMP) -f $@ -c $(TMVAH_CINT) $(TMVAL)
 
 $(TMVAMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(TMVAL)

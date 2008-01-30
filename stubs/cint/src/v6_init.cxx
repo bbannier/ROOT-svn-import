@@ -17,8 +17,8 @@
 #include <list>
 #include <string>
 
-#ifdef __APPLE__     /* Apple MacOS X */
-#include <libgen.h>
+#ifdef __APPLE__
+#include <libgen.h> //needed for basename
 #endif
 
 extern std::list<G__DLLINIT>* G__initpermanentsl;
@@ -401,7 +401,7 @@ void G__setglobalcomp(int globalcomp)
 //______________________________________________________________________________
 void G__setisfilebundled(int isfilebundled)
 {
-   G__isfilebundled = isfilebundled;
+  G__isfilebundled = isfilebundled;
 }
 
 //______________________________________________________________________________
@@ -505,8 +505,6 @@ int G__main(int argc, char** argv)
    char* forceassignment = 0;
    int xfileflag = 0;
    char sourcefile[G__MAXFILENAME];
-   //int dicttype = 0; // LF 09-07-07 -- 0 for dict, 1 for ShowMembers
-
    /*************************************************************
     * C/C++ interpreter option related variables
     *************************************************************/
@@ -675,17 +673,17 @@ int G__main(int argc, char** argv)
          case 'j':
             G__multithreadlibcint = atoi(optarg);
             break;
-         // LF 03-07-07 new option to include the library name
+         // 03-07-07 new option to include the library name (it's actualli the .nm file)
          case 'L':
             G__libname = optarg;
             break;
          case '.':
-            // LF 09-07-07 new option to separate the dictionaries
+            // 09-07-07 new option to separate the dictionaries
             // If G__dicttype==0 write everything (like in the old times)
             // If G__dicttype==1 the write the ShowMembers
             // If G__dicttype==2 write only the pointer to inline functions      
             // If G__dicttype==3 write all the memfunc_setup rubbish
-            // do we still need to fill up teh structures and all that?
+            // do we still need to fill up the structures and all that?
             G__dicttype = atoi(optarg);
             break;
          case 'm':
@@ -945,7 +943,6 @@ int G__main(int argc, char** argv)
             if (!dllid) {
                dllid = clnull;
             }
-            //if(G__dicttype ==) // LF
             G__set_globalcomp(optarg, linkfilename, dllid);
             break;
          case 's': /* step into mode */
@@ -1135,7 +1132,6 @@ int G__main(int argc, char** argv)
    int includes_printed = 0;
    std::string linkfilename_h;
    if (G__globalcomp < G__NOLINK) {
-      //if(!G__dicttype) // LF
       G__gen_cppheader(0);
    }
    
@@ -1203,7 +1199,7 @@ int G__main(int argc, char** argv)
          if (!includes_printed && !G__isfilebundled) {
             linkfilename_h = linkfilename;
             std::string::size_type in = linkfilename_h.rfind(".");
-            if(in != std::string::npos){
+            if(in != std::string::npos) {
                int l = in;
                linkfilename_h[l+1] = 'h';
                linkfilename_h[l+2] = '\0';   
@@ -1212,31 +1208,28 @@ int G__main(int argc, char** argv)
             std::string headerb(basename(dllid));
             std::string::size_type idx = headerb.rfind("Tmp");
             int l;
-            if(idx != std::string::npos){
+            if(idx != std::string::npos) {
                l = idx;
                headerb[l] = '\0';   
             }
-            else{
+            else {
                idx = headerb.rfind(".");
-               if(idx != std::string::npos){
+               if(idx != std::string::npos) {
                   l = idx;
                   headerb[l] = '\0';   
                }
             } 
 
-            // LF 12-11-07
+            // 12-11-07
             // put protection against multiple includes of dictionaries' .h
             FILE *fp = fopen(linkfilename_h.c_str(),"a");
-            //if(!fp) G__fileerror(G__CPPLINK_H);
-            if(fp){
-               fprintf(fp,"#ifndef G__includes_dict_%s //init 1223\n", headerb.c_str());
-               fprintf(fp,"#define G__includes_dict_%s //init 1224 //%s\n", headerb.c_str(), sourcefile);
+            if(fp) {
+               fprintf(fp,"#ifndef G__includes_dict_%s\n", headerb.c_str());
+               fprintf(fp,"#define G__includes_dict_%s\n", headerb.c_str(), sourcefile);
                fclose(fp);
             }
             includes_printed = 1;
          }
-
-         //if(!G__dicttype) // LF
          G__gen_cppheader(sourcefile);
       }
 
@@ -1255,7 +1248,6 @@ int G__main(int argc, char** argv)
    }
    if (G__globalcomp < G__NOLINK && includes_printed && !G__isfilebundled) {
       FILE *fp = fopen(linkfilename_h.c_str(),"a");
-      //if(!fp) G__fileerror(G__CPPLINK_H);
       if(fp){
          fprintf(fp,"#endif\n");
          fclose(fp);
@@ -1279,11 +1271,12 @@ int G__main(int argc, char** argv)
       G__fprinterr(G__serr, "Warning: Error occurred during reading source files\n");
    }
 
-   if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3 || G__dicttype==4){ // LF
+   // Try to differentiate the different kinds of tmp dicts.
+   // (although we used the all here so it's a bit silly)
+   if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3 || G__dicttype==4) {
       G__init_process_cmd(); 
       MapDependantTypes();
       G__gen_extra_include();
-
    }
 
    if (G__globalcomp == G__CPPLINK) {
@@ -1291,9 +1284,11 @@ int G__main(int argc, char** argv)
       if (G__steptrace || G__stepover) {
          while (!G__pause());
       }
-      
-      if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3 || G__dicttype==4) // LF
-      G__gen_cpplink();
+
+      // Try to differentiate the different kinds of tmp dicts.
+      // (although we used the all here so it's a bit silly)      
+      if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3 || G__dicttype==4)
+         G__gen_cpplink();
 #if !defined(G__ROOT) && !defined(G__D0)
       G__scratch_all();
 #endif
@@ -1308,11 +1303,12 @@ int G__main(int argc, char** argv)
    else if (G__globalcomp == G__CLINK) {
       // -- C header.
       if (G__steptrace || G__stepover) {
-         while (!G__pause());
+        while (!G__pause());
       }
-      if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3 || G__dicttype==4){ // LF
+      // Try to differentiate the different kinds of tmp dicts.
+      // (although we used the all here so it's a bit silly)      
+      if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3 || G__dicttype==4)
          G__gen_clink();
-      }
 #if !defined(G__ROOT) && !defined(G__D0)
       G__scratch_all();
 #endif
@@ -1326,7 +1322,9 @@ int G__main(int argc, char** argv)
    }
 #ifdef G__ROOT
    else if (G__globalcomp == R__CPPLINK) {
-      if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3 || G__dicttype==4) // LF
+      // Try to differentiate the different kinds of tmp dicts.
+      // (although we used the all here so it's a bit silly) 
+      if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3 || G__dicttype==4)
          rflx_gendict(linkfilename, sourcefile);
       
       return EXIT_SUCCESS;

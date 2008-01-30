@@ -41,20 +41,14 @@ extern "C" int G__LD_IFUNC_optimize(struct G__ifunc_table_internal* ifunc,int if
     G__asm_inst[pc] = G__LD_FUNC;
     G__asm_inst[pc+1] = (long)m.Name();
     // preserve hash:2 and paran:3
-    
     G__asm_inst[pc+4] = (long)m.InterfaceMethod();
     G__asm_inst[pc+5] = 0;
     if (ifunc && ifunc->pentry[ifn]) G__asm_inst[pc+5] = ifunc->pentry[ifn]->ptradjust;
 
-    // LF: 30-05-07
+    // 30-05-07 (used for the stub-less calls)
     G__asm_inst[pc+6] = (long)ifunc;
-    if(!ifunc) printf ("Serious trouble inst 48\n");
-
     G__asm_inst[pc+7] = G__JMP;
     G__asm_inst[pc+8] = pc+9;
-    //G__asm_inst[pc+8] = pc+10;
-    //G__asm_inst[pc+9] = G__NOP;
-
     return(1);
   }
   else if(m.Property()&G__BIT_ISBYTECODE) {
@@ -66,17 +60,12 @@ extern "C" int G__LD_IFUNC_optimize(struct G__ifunc_table_internal* ifunc,int if
     // preserve hash:2 and paran:3
     G__asm_inst[pc+4] = (long)G__exec_bytecode;
 
-    // LF: 30-05-07
+    // 30-05-07
     G__asm_inst[pc+5] = 0;
     if (ifunc && ifunc->pentry[ifn]) G__asm_inst[pc+5] = ifunc->pentry[ifn]->ptradjust;
-
     G__asm_inst[pc+6] = (long)ifunc;
-    if(!ifunc) printf ("Serious trouble inst 48\n");
-
     G__asm_inst[pc+7] = G__JMP;
     G__asm_inst[pc+8] = pc+9;
-    //G__asm_inst[pc+9] = G__NOP;
-
     return(1);
   }
   return(0);
@@ -296,12 +285,10 @@ void G__bc_inst::LD_FUNC(const char* funcname,int hash,int paran,void* pfunc, G_
   G__asm_inst[G__asm_cp+5] = 0;
   if (ifunc && ifunc->pentry[ifn]) G__asm_inst[G__asm_cp+5] = ifunc->pentry[ifn]->ptradjust;
 
-  // LF: 30-05-07
+  // 30-05-07
   // This couldnt be fixed since we dont have the pointer to ifunc
   // FIXME
   G__asm_inst[G__asm_cp+6]=(long)0;
-
-  if(!pfunc) printf ("Serious trouble inst 286 FIXME\n");
 
   if(G__asm_name_p+strlen(funcname)+1<G__ASM_FUNCNAMEBUF) {
     strcpy(G__asm_name+G__asm_name_p,funcname);
@@ -338,10 +325,8 @@ void G__bc_inst::LD_FUNC_BC(struct G__ifunc_table* iref,int ifn,int paran,void* 
   G__asm_inst[G__asm_cp+5] = 0;
   if (ifunc && ifunc->pentry[ifn]) G__asm_inst[G__asm_cp+5] = ifunc->pentry[ifn]->ptradjust;
   
-  // LF: 30-05-07
+  // 30-05-07 (stub-less calls)
   G__asm_inst[G__asm_cp+6]=(long)ifunc;
-  if(!ifunc) printf ("Serious trouble inst 321\n");
-
   inc_cp_asm(7,0);
 }
 
@@ -365,11 +350,9 @@ void G__bc_inst::LD_FUNC_VIRTUAL(struct G__ifunc_table* iref,int ifn,int paran,v
   G__asm_inst[G__asm_cp+5] = 0;
   if (ifunc && ifunc->pentry[ifn]) G__asm_inst[G__asm_cp+5] = ifunc->pentry[ifn]->ptradjust;
 
-  // LF: 30-05-07
+  // 30-05-07 (stub-less calls)
   G__asm_inst[G__asm_cp+6]=(long)ifunc;
-  if(!ifunc) printf ("Serious trouble inst 340\n");
-
-  inc_cp_asm(7,0); //LF 30-05-07 add 1
+  inc_cp_asm(7,0); // 30-05-07 add 1
 }
 
 /**************************************************************************
@@ -772,7 +755,7 @@ void G__bc_inst::LD_IFUNC(struct G__ifunc_table *iref,int ifn,int hash
     G__asm_inst[G__asm_cp+5]=(long)funcmatch;
     G__asm_inst[G__asm_cp+6]=(long)memfunc_flag;
     G__asm_inst[G__asm_cp+7]=(long)ifn;
-    G__asm_inst[G__asm_cp+7]=(long)G__NOP; // LF... Empty field needed in bc_exec_asm.h
+    G__asm_inst[G__asm_cp+7]=(long)G__NOP; // Empty field needed in bc_exec_asm.h
     inc_cp_asm(9,0);
   }
 }

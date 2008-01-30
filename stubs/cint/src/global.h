@@ -208,7 +208,9 @@ extern struct G__inheritance G__globalusingnamespace;
 extern struct G__tagtable G__struct;
 extern struct G__typedef  G__newtype;
 
-// LF 03-07-07
+// 03-07-07
+// This is not the libname but the .nm file taht is passed to newlink
+// with all the symbols needed to register the functions
 extern const char *G__libname;
 
 // DMS I make global this variable
@@ -326,7 +328,8 @@ extern short G__ansiheader ;
 extern G__value G__ansipara;
 extern short G__enumdef;
 
-// LF 10-07-07
+// 10-07-07
+// Can tell if we are writing the temp. dicts or the real one
 extern short G__dicttype;
 
 extern char G__tagname[G__MAXNAME];

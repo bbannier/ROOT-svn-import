@@ -409,7 +409,7 @@ G__value Cint::G__CallFunc::Execute(void *pobject)
   long index = method.Index();
   G__CurrentCall(G__SETMEMFUNCENV, method.ifunc(), &index);
 
-  // LF: 11/05/07
+  // 11/05/07
   // Dont call the function through the dictionaries. First
   // check if it was registered (and call it)
   struct G__ifunc_table_internal *ifunc = G__get_ifunc_internal(method.ifunc());
@@ -483,64 +483,4 @@ void Cint::G__CallFunc::SetFuncType() {
       result.obj.reftype.reftype = ifunc->reftype[ifn];
     }
   }
-}
-
-
-
-///////////////////////////////////////////////////////////////////////////
-int Cint::G__CallFunc::SetFuncPtr(void *ptr)
-{
-   if(method.IsValid()) {
-      G__LockCriticalSection();
-      struct G__ifunc_table_internal *ifunc = G__get_ifunc_internal(method.ifunc());
-      int ifn = method.Index();
-
-      // Only if the pointer has not been already registered
-      //if(ifunc->funcptr[ifn] == 0)
-      
-      // LF 26/04/07
-      // Allow pointer overwriting to be able to handle
-      // correctly the in-charge (deleting) destructors
-      ifunc->funcptr[ifn] = ptr;
-      G__UnlockCriticalSection();
-
-      return 0;
-   }
-   return -1;
-}
-
-
-// LF 24-04-07
-///////////////////////////////////////////////////////////////////////////
-G__MethodInfo Cint::G__CallFunc::GetFunc(const char* fname,const char* arg
-                                         ,long* poffset
-                                         ,MatchMode mode, int noerror)
-{
-  struct G__ifunc_table_internal *ifunc;
-  char *funcname;
-  char *param;
-  long index;
-
-  G__fprinterr(G__serr,"Warning: Cint::G__CallFunc::GetFunc() LF: deprecated \n");
-
-  /* Search for method */
-  ifunc = &G__ifunc;
-  funcname = (char*)fname;
-  param = (char*)arg;
-  int convmode = Cint::G__ClassInfo::ExactMatch; 
-  switch(mode) {
-  case ExactMatch:              convmode=0; break;
-  case ConversionMatch:         convmode=1; break;
-  default:                      convmode=0; break;
-  }  
-  G__ifunc_table* iref = G__get_methodhandle3(funcname,param,ifunc,&index,poffset
-                                             ,convmode
-                                             ,1
-                                             ,noerror
-                                             ,0);
-
-  /* Initialize method object */
-  G__MethodInfo method;
-  method.Init((long)iref,index,(G__ClassInfo*)NULL);
-  return(method);
 }
