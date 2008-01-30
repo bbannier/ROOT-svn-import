@@ -568,6 +568,7 @@ int G__ifunc_exist_base(int ifn, G__ifunc_table_internal *ifunc)
         //class we generete the stub
         if (base!=-1 && ifunc_res)
           goto end;
+
       }
     }
   }
@@ -4991,7 +4992,7 @@ void G__make_default_ifunc(G__ifunc_table_internal *ifunc_copy)
 
 /**************************************************************************
 * G__cppif_memfunc() working
-*
+* Writes the stub functions in the dictioinary
 *
 **************************************************************************/
 void G__cppif_memfunc(FILE *fp, FILE *hfp)
@@ -5008,8 +5009,9 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
   fprintf(fp,"*********************************************************/\n");
   fprintf(fp,"// G__nostubs: %d\n", G__nostubs);
 
+  /* This loop goes through all the classes loaded in the G__struct */
   for(i=0;i<G__struct.alltag;i++) {
-    if(
+     if( /* Linkage */
       (G__CPPLINK==G__struct.globalcomp[i]||
        G__CLINK==G__struct.globalcomp[i]
        || G__ONLYMETHODLINK==G__struct.globalcomp[i]
@@ -5019,7 +5021,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
         )
       &&
       -1!=G__struct.line_number[i]&&G__struct.hash[i]&&
-      '$'!=G__struct.name[i][0] && 'e'!=G__struct.type[i]) {
+      '$'!=G__struct.name[i][0] && 'e'!=G__struct.type[i]) { /* Not enums */
       ifunc = G__struct.memfunc[i];
       isconstructor=0;
       iscopyconstructor=0;
@@ -5043,9 +5045,10 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
 
       // Flag to see if we have written the dummy pointer
       int ptr_written = 0;
+      // Go through all the function members in the class 
       while(ifunc) {
         for(j=0;j<ifunc->allifunc;j++) {
-          if(G__PUBLIC==ifunc->access[j]
+           if(G__PUBLIC==ifunc->access[j] // Public Method?
              || (G__PROTECTED==ifunc->access[j] &&
                  (G__PROTECTEDACCESS&G__struct.protectedaccess[i]))
              || (G__PRIVATEACCESS&G__struct.protectedaccess[i])
@@ -5077,6 +5080,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
             }
 #endif
             // Constructor and dictionary #2
+            // Generating dummy object for getting the symbols of default constructor and destructor
             if(!(strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
                  strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
                  strncmp(G__fulltagname(i,0),"list", strlen("list"))==0 ||
@@ -5088,11 +5092,12 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                  strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
                  strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0) &&
                !strcmp(ifunc->funcname[j],G__struct.name[i]) && G__dicttype==2)
-              G__cppif_dummyobj(fp, ifunc, i, j);
-
+               G__cppif_dummyobj(fp, ifunc, i, j);
+            
+            // Constructor? ClassName == FunctionName
             if(strcmp(ifunc->funcname[j],G__struct.name[i])==0 &&
-               (!(!ifunc->mangled_name[j] && ifunc->funcptr[j]==(void*)-1) ||
-                (!ifunc->mangled_name[j] && G__dicttype!=2 )
+               (!(!ifunc->mangled_name[j] && ifunc->funcptr[j]==(void*)-1) || // No mangled name and No function Pointer
+                (!ifunc->mangled_name[j] && G__dicttype!=2 ) // No mangled name and no dicttype=2
                  )
               ) {
               /* constructor needs special handling */
@@ -5112,7 +5117,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                      strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0 )
                    && !ifunc->ispurevirtual[j] && (G__dicttype==3 || G__dicttype==4)) 
                   || G__dicttype==0 || G__dicttype==3 ) {
-                  if( !ifunc->mangled_name[j] || ifunc->funcptr[j]>0 || !G__nostubs) /*if there no is a symbol*/
+                  if( !ifunc->mangled_name[j] || ifunc->funcptr[j]>0 || !G__nostubs) /* if there no is a symbol or the no stubs flag is not activated */
                     G__cppif_genconstructor(fp,hfp,i,j,ifunc);
                 }
               }
@@ -5125,7 +5130,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                 ++iscopyconstructor;
               }
             }
-            else if('~'==ifunc->funcname[j][0]) {
+            else if('~'==ifunc->funcname[j][0]) { // Destructor?
               /* destructor is created in gendefault later */
               if(G__PUBLIC==ifunc->access[j]){
                 if((G__dicttype==3 || G__dicttype==4) && !ifunc->ispurevirtual[j]){
@@ -5141,12 +5146,12 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                       strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
                       strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
                       strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0)){
-                    if( !ifunc->mangled_name[j] || ifunc->funcptr[j]>0 || !G__nostubs ) /*if there no is a symbol*/
+                    if( !ifunc->mangled_name[j] || ifunc->funcptr[j]>0 || !G__nostubs ) /* if there no is a symbol or the no stubs flag is not activated */
                       G__cppif_gendefault(fp,hfp,i,j,ifunc,1,1,isdestructor,1,1);
                     ++isdestructor; // don't try to create it later on
                   }
                 }
-                else if((G__dicttype==3 || G__dicttype==4) && ifunc->mangled_name[j] /*if there no is a symbol*/)
+                else if((G__dicttype==3 || G__dicttype==4) && ifunc->mangled_name[j] /*if there is not a symbol*/)
                   ++isdestructor;
                 else if(G__dicttype!=3 && G__dicttype!=4){
                   isdestructor = -1;
