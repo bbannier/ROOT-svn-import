@@ -1661,7 +1661,7 @@ G__value G__string2type_body(const char *typenamin,int noerror)
 
   strcpy(typenam,typenamin);
 
-  // LF 20/04/07
+  // 20/04/07
   // We need G__get_methodhandle to be able to find functions that
   // have an ellipsis as the declared parameter. But that thing
   // is not declared as a type in CINT so I'm just hacking my
@@ -1921,7 +1921,7 @@ G__value G__string2type(const char *typenamin)
 /******************************************************************
 * G__string2type
 *
-* LF: 17-07-07
+* 17-07-07
 ******************************************************************/
 G__value G__string2type2(const char *typenamin, int noerror)
 {

@@ -643,7 +643,7 @@ G__MethodInfo Cint::G__ClassInfo::GetMethod(const char* fname,const char* arg
 }
 
 ///////////////////////////////////////////////////////////////////////////
-// LF 17-07-07 overload it to pass a no-error flag
+// 17-07-07 overload it to pass a no-error flag
 G__MethodInfo Cint::G__ClassInfo::GetMethod(const char* fname,const char* arg
 				      ,long* poffset
 				      ,MatchMode mode

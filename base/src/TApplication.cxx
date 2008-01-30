@@ -173,7 +173,7 @@ TApplication::TApplication(const char *appClassName,
       InitializeGraphics();
    }
 
-   // LF: 30-05-07
+   // 30-05-07
    // Move this from TRint to fullfil the dependancy when registering TDictionary
    // Load some frequently used includes
    Int_t includes = gEnv->GetValue("Rint.Includes",1);
@@ -199,7 +199,7 @@ TApplication::TApplication(const char *appClassName,
       }
    }
 
-   // LF: 30-05-07
+   // 30-05-07
    // We have a problem when parsing default parameters
    // check: 
    // TH1::GetMaximun(Double_t maxval = FLT_MAX) const

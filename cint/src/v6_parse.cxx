@@ -7327,6 +7327,7 @@ G__value G__exec_statement(int* mparen)
                }
             }
             break;
+
 #ifdef G__TEMPLATECLASS
          case '<':
             statement[iout] = '\0';

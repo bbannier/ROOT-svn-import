@@ -119,9 +119,6 @@ TCint::TCint(const char *name, const char *title) : TInterpreter(name, title)
 
    // Make sure that ALL macros are seen as C++.
    G__LockCpp();
-
-
-
 }
 
 //______________________________________________________________________________
@@ -168,7 +165,8 @@ Int_t TCint::InitializeDictionaries()
 }
 
 //______________________________________________________________________________
-void TCint::EnableWrappers(bool value){
+void TCint::EnableWrappers(bool value)
+{
 
    G__wrappers = (int) value;
 

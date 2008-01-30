@@ -102,11 +102,6 @@ G__CallFunc {
   G__InterfaceMethod InterfaceMethod() { return pfunc; }
   void SetArgs(const char* args);
   G__MethodInfo GetMethodInfo() { return method; }
-  int SetFuncPtr(void *ptr);
-
-  static G__MethodInfo GetFunc(const char* fname,const char* arg,long* poffset,
-                               MatchMode mode=ConversionMatch, int noerror=0);
-
  private:
   void SetFuncType();
 #ifndef __MAKECINT__

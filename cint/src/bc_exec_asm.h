@@ -572,7 +572,7 @@ int G__exec_asm(int start, int stack, G__value* presult, long localmem)
             * 3 paran
             * 4 (*func)()
             * 5 this ptr offset for multiple inheritance
-            * 6 ifunc         // LF 30-05-07
+            * 6 ifunc         // 30-05-07 (needed for stub-less calls)
             * stack
             * sp-paran+1      <- sp-paran+1
             * sp-2
@@ -655,7 +655,7 @@ int G__exec_asm(int start, int stack, G__value* presult, long localmem)
             if (G__stepover) {
                G__step |= store_step;
             }
-            pc += 7; //LF 05-06-07 add 1+1
+            pc += 7; // 05-06-07 add 1+1
             if (result->type) {
                ++sp;
             }
@@ -1374,7 +1374,7 @@ int G__exec_asm(int start, int stack, G__value* presult, long localmem)
             * 5 funcmatch
             * 6 memfunc_flag
             * 7 index
-            * 8 empty field.. -1 by default (LF 23-10-07)
+            * 8 empty field.. -1 by default (23-10-07)
             * stack
             * sp-paran+1      <- sp-paran+1
             * sp-2
@@ -1406,12 +1406,10 @@ int G__exec_asm(int start, int stack, G__value* presult, long localmem)
                   G__asm_inst[pc+5] = ifunc->pentry[G__asm_index]->ptradjust;
                }
 
-               // LF 06-05-07
+               // 06-05-07 (needed for stub-less calls)
                G__asm_inst[pc+6] = (long)ifunc;
                G__asm_inst[pc+7] = G__JMP;
                G__asm_inst[pc+8] = pc+9;
-               //G__asm_inst[pc+8] = pc+9;
-               //G__asm_inst[pc+9] = G__NOP;
                goto ld_func;
             }
 #endif
@@ -1435,7 +1433,7 @@ int G__exec_asm(int start, int stack, G__value* presult, long localmem)
             G__memberfunc_tagnum = store_memberfunc_tagnum;
             G__memberfunc_struct_offset = store_memberfunc_struct_offset;
             G__exec_memberfunc = store_exec_memberfunc;
-            pc += 9; // LF add 1 to include empty field
+            pc += 9; // add 1 to include empty field
             if (funcnamebuf[0] != '~') {
                ++sp;
             }

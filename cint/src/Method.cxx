@@ -260,7 +260,7 @@ G__InterfaceMethod Cint::G__MethodInfo::InterfaceMethod()
        ) {
       G__UnlockCriticalSection();
 
-      // LF 25-05-07
+      // 25-05-07
       // We have a problem here (are we ever going to stop having them ;))
       // I discovered the first time I removed the stubs from dictionaries.
       // The thing is that if we get here it has to be a compiled class

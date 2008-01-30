@@ -32,8 +32,9 @@ class TFunction;
 class TMethod;
 class TObjArray;
 
+
 class TInterpreter : public TNamed {
-   
+
 protected:
    virtual void Execute(TMethod *method, TObjArray *params, int *error = 0) = 0;
 

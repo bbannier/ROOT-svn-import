@@ -551,7 +551,6 @@ void G__make_ifunctable(char* funcheader)
    /* set funcname to G__p_ifunc */
    G__func_now = G__p_ifunc->allifunc;
    G__func_page = G__p_ifunc->page;
-   //G__func_page=G__p_ifunc->page_base; //LF 09-08-07
    func_now = G__func_now;
    if ('~' == funcheader[0] && 0 == ifunc->hash[0]) {
       G__p_ifunc = ifunc;
@@ -1057,8 +1056,9 @@ void G__make_ifunctable(char* funcheader)
                ifunc_last->page = store_ifunc_tmp->page;
                store_ifunc_tmp->page = tmp.page;
    
-               ifunc_last->page_base = store_ifunc_tmp->page_base;  // LF 09-08-07
-               store_ifunc_tmp->page_base = tmp.page_base;          // LF 09-08-07
+               // 09-08-07
+               ifunc_last->page_base = store_ifunc_tmp->page_base;
+               store_ifunc_tmp->page_base = tmp.page_base;
 
                // fix pentry
                if (ifunc_last->pentry[0] == &store_ifunc_tmp->entry[0])
@@ -1152,10 +1152,10 @@ void G__make_ifunctable(char* funcheader)
       if (0 == strncmp(paraname, "const", 5))
          G__p_ifunc->isconst[func_now] |= G__CONSTFUNC;
 
-      // LF 07-11-07
+      // 07-11-07
       // "throwness" is needed to declare the prototypes
       if (0 == strncmp(paraname, "throw", 5) || strncmp(paraname, "const throw", 11) == 0)
-        G__p_ifunc->isconst[func_now] |= G__FUNCTHROW;
+         G__p_ifunc->isconst[func_now] |= G__FUNCTHROW;
    }
    else if (
       strncmp(paraname, "=", 1) == 0 ||
@@ -1207,10 +1207,10 @@ void G__make_ifunctable(char* funcheader)
       if (0 == strncmp(paraname, "const", 5))
          G__p_ifunc->isconst[func_now] |= G__CONSTFUNC;
 
-      // LF 07-11-07
+      // 07-11-07
       // "throwness" is needed to declare the prototypes
       if (0 == strncmp(paraname, "throw", 5) || strncmp(paraname, "const throw", 11) == 0)
-        G__p_ifunc->isconst[func_now] |= G__FUNCTHROW;
+         G__p_ifunc->isconst[func_now] |= G__FUNCTHROW;
    }
    else if (strcmp(paraname, "const") == 0 ||
             strcmp(paraname, "const ") == 0
@@ -1289,16 +1289,16 @@ void G__make_ifunctable(char* funcheader)
       return;
    }
    else {
-      // LF 03-12-07
+      // 03-12-07
       // Why wasn't the const here? can't a function be const and be implemented
       // in the declaration??
       if (0 == strncmp(paraname, "const", 5))
          G__p_ifunc->isconst[func_now] |= G__CONSTFUNC;
 
-      // LF 07-11-07
+      // 07-11-07
       // "throwness" is needed to declare the prototypes
       if (0 == strncmp(paraname, "throw", 5) || strncmp(paraname, "const throw", 11) == 0)
-        G__p_ifunc->isconst[func_now] |= G__FUNCTHROW;
+         G__p_ifunc->isconst[func_now] |= G__FUNCTHROW;
 
       /* Body of the function, skip until
        * 'func(param)  type param;  {...} '
@@ -1546,7 +1546,6 @@ void G__make_ifunctable(char* funcheader)
             }
          }
          G__func_page = ifunc->page;
-         //G__func_page=ifunc->page_base; //LF 09-08-07
          G__func_now = iexist;
          G__p_ifunc = ifunc;
       } /* of if(ifunc) */
@@ -1572,7 +1571,7 @@ void G__make_ifunctable(char* funcheader)
             G__p_ifunc->next->allifunc = 0;
             G__p_ifunc->next->next = (struct G__ifunc_table_internal *)NULL;
             G__p_ifunc->next->page = G__p_ifunc->page + 1;
-            G__p_ifunc->next->page_base = 0; //LF 09-08-07
+            G__p_ifunc->next->page_base = 0; // 09-08-07 (index of this func in the base class)
             {
                //int i,j;
                //for (i = 0; i < G__MAXIFUNC; i++) {
@@ -1681,7 +1680,7 @@ void G__make_ifunctable(char* funcheader)
    }
 #endif
 
-   // LF 09-08-07
+   // 09-08-07
    G__p_ifunc->page_base = G__method_inbase2(func_now, G__p_ifunc);
    if(G__p_ifunc->page_base==0)
      G__p_ifunc->page_base = G__p_ifunc->page+1;
@@ -3484,7 +3483,7 @@ void G__rate_parameter_match(G__param* libp, G__ifunc_table_internal* p_ifunc, i
             if (ifunc2 && -1 != ifn2)
                funclist->p_rate[i] = G__USRCONVMATCH;
             else {
-              // LF: 24/04/07
+              // 4/04/07
               // There is a particular case which should be handled in a
               // especial way...
               // va_list : take a look at TObject::DoError to see an axample,
@@ -4361,7 +4360,6 @@ void G__display_ambiguous(int scopetagnum, const char* funcname, G__param* libp,
 * If match found, expand template, parse as pre-run
 ***********************************************************************/
 //______________________________________________________________________________
-
 struct G__funclist* G__add_templatefunc(const char* funcnamein, G__param* libp, int hash, G__funclist* funclist, G__ifunc_table_internal* p_ifunc, int isrecursive)
 {
    // -- FIXME: Describe this function!
@@ -4690,7 +4688,7 @@ struct G__ifunc_table_internal* G__overload_match(const char* funcname, G__param
    if (!match)
    {
       funclist =  G__add_templatefunc(funcname, libp, hash, funclist
-                                      , store_ifunc, isrecursive); //LF 1 is the old behaviour
+                                      , store_ifunc, isrecursive); //1 is the old behaviour
    }
 
    if (!match && (G__TRYUNARYOPR == memfunc_flag || G__TRYBINARYOPR == memfunc_flag))
@@ -5103,7 +5101,7 @@ int G__interpret_func(G__value* result7, const char* funcname, G__param* libp, i
       return 1;
    }
    
-   // LF 24-05-07
+   // 24-05-07
    // We had a check in ifunc to verify that this function had a pointer
    // to the stub. In the new algorith this pointer may be null in case
    // we dont create the stub. Now it has to check that that and that 
@@ -5274,9 +5272,7 @@ int G__interpret_func(G__value* result7, const char* funcname, G__param* libp, i
                G__asm_inst[G__asm_cp+5] = p_ifunc->pentry[ifn]->ptradjust;
             }
             
-            G__asm_inst[G__asm_cp+6]=(long)p_ifunc; // LF 30-05-07
-            if(!p_ifunc) printf ("Serious trouble ifunc 5274\n");
-            
+            G__asm_inst[G__asm_cp+6]=(long)p_ifunc; // 30-05-07 (stub-less calls)
             G__inc_cp_asm(7, 0);
          }
          else {
@@ -5305,9 +5301,7 @@ int G__interpret_func(G__value* result7, const char* funcname, G__param* libp, i
                G__asm_inst[G__asm_cp+5] = p_ifunc->pentry[ifn]->ptradjust;
             }
            
-            G__asm_inst[G__asm_cp+6]=(long)p_ifunc; // LF 30-05-07
-            if(!p_ifunc) printf ("Serious trouble ifunc 5274\n");
-
+            G__asm_inst[G__asm_cp+6]=(long)p_ifunc; // 30-05-07 (stub-less calls)
             G__inc_cp_asm(7, 0);
          }
       }
@@ -5326,7 +5320,7 @@ int G__interpret_func(G__value* result7, const char* funcname, G__param* libp, i
          G__asm_inst[G__asm_cp+5] = (long) funcmatch;
          G__asm_inst[G__asm_cp+6] = (long) memfunc_flag;
          G__asm_inst[G__asm_cp+7] = (long) ifn;
-         G__asm_inst[G__asm_cp+8] = (long) G__NOP; // LF... Empty field needed in bc_exec_asm.h
+         G__asm_inst[G__asm_cp+8] = (long) G__NOP; //  Empty field needed in bc_exec_asm.h
          
          G__inc_cp_asm(9, 0);
       }
@@ -5440,7 +5434,7 @@ int G__interpret_func(G__value* result7, const char* funcname, G__param* libp, i
             memcpy((void*)xbase, (void*)ybase, sizeof(int)*nybase);
          }
          if (ifunc) {
-            if (!ifunc->pentry[iexist]->p && !G__get_funcptr(p_ifunc, ifn) ) { // LF 12-09-07
+            if (!ifunc->pentry[iexist]->p && !G__get_funcptr(p_ifunc, ifn) ) { // 12-09-07 (stub-less calls)
                G__fprinterr(G__serr, "Error: virtual %s() header found but not defined", funcname);
                G__genericerror(0);
                G__exec_memberfunc = store_exec_memberfunc;
@@ -6798,10 +6792,11 @@ struct G__ifunc_table_internal* G__get_ifunchandle(const char* funcname, G__para
 }
 
 //
-// LF 31-07-07
+// 31-07-07
 //
-// code replication fixme
+// FIXME: code replication
 //
+//______________________________________________________________________________
 struct G__ifunc_table_internal *G__get_ifunchandle2(char *funcname,G__param *libp
                                           ,int hash,G__ifunc_table_internal *p_ifunc
                                           ,long *pifn
@@ -6835,7 +6830,7 @@ struct G__ifunc_table_internal *G__get_ifunchandle2(char *funcname,G__param *lib
         /* main() no overloading */
         if(G__HASH_MAIN==hash && strcmp(funcname,"main")==0) break; 
         
-        // LF 31-07-07
+        // 31-07-07
         // constness was not checked before
         if( (p_ifunc->isconst[ifn] & G__CONSTFUNC) !=  isconst) {
            ++ifn;
@@ -6991,11 +6986,12 @@ struct G__ifunc_table_internal* G__get_ifunchandle_base(const char* funcname, G_
    return(ifunc);
 }
 
-
-// LF 31-07-07
-// 
-// More code replication... fix me
-// 
+/**************************************************************************
+* G__get_ifunchandle_base2
+*
+* LF: 31-07-07
+* FIXME: More code replication...
+**************************************************************************/
 struct G__ifunc_table_internal *G__get_ifunchandle_base2(char *funcname,G__param *libp
                                                ,int hash,G__ifunc_table_internal *p_ifunc
                                                ,long *pifn
@@ -7076,8 +7072,9 @@ void G__argtype2param(const char* argtype, G__param* libp)
 /**************************************************************************
 * G__argtype2param2()
 *
-* LF: 17/07/07 
+* 17/07/07 
 * Exactly the same as 'G__argtype2param'
+* FIXME: Code replication
 **************************************************************************/
 void G__argtype2param2(char *argtype,G__param *libp,int noerror,int& error)
 {
@@ -7288,11 +7285,12 @@ struct G__ifunc_table* G__get_methodhandle2(char* funcname, G__param* libp, G__i
 /**************************************************************************
 * G__get_methodhandle3
 *
-* LF: 17/07/07
+* 17/07/07
 * Exactly the same as 'G__get_methodhandle' except that we pass a 
 * noerror code to G__argtype2param2
 * this code replication could be avoided but for the moment I prefer
 * keep things clear
+* FIXME: Code replication
 **************************************************************************/
 struct G__ifunc_table *G__get_methodhandle3(char *funcname,char *argtype
                                            ,G__ifunc_table_internal *p_ifunc
@@ -7315,7 +7313,7 @@ struct G__ifunc_table *G__get_methodhandle3(char *funcname,char *argtype
   G__def_tagnum = p_ifunc->tagnum;
   G__tagdefining = p_ifunc->tagnum;
   
-  // LF 17-07-07
+  // 17-07-07
   int error = 0;
   G__argtype2param2(argtype,&para, noerror, error);
   
@@ -7365,7 +7363,7 @@ struct G__ifunc_table *G__get_methodhandle3(char *funcname,char *argtype
    
    /* if no exact match, try to instantiate template function */
 
-   // LF 24-10-07 Don't try this when registering symbols...
+   // 24-10-07 Don't try this when registering symbols...
    // the match should be exact.. shouldnt it?
    //funclist = G__add_templatefunc(funcname,&para,hash,funclist,p_ifunc,0,withInheritance);
    //if(funclist && funclist->rate==G__EXACTMATCH) {
@@ -7389,11 +7387,16 @@ struct G__ifunc_table *G__get_methodhandle3(char *funcname,char *argtype
   return G__get_ifunc_ref(ifunc);
 }
 
-
-// LF 03-08-07
-// more code replicatopn FIXME
-//
-//
+/**************************************************************************
+* G__get_methodhandle4
+*
+* 03-08-07
+* Exactly the same as 'G__get_methodhandle' except that we pass a 
+* noerror code to G__argtype2param2
+* this code replication could be avoided but for the moment I prefer
+* keep things clear
+* FIXME: Code replication
+**************************************************************************/
 struct G__ifunc_table_internal *G__get_methodhandle4(char *funcname
                                            ,struct G__param* libp
                                            ,G__ifunc_table_internal *p_ifunc

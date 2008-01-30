@@ -165,8 +165,8 @@
 #include <iostream>
 #include "cintdictversion.h"
 
-#ifdef __APPLE__ /* Apple MacOS X */
-#include <libgen.h>
+#ifdef __APPLE__
+#include <libgen.h> // Needed for basename
 #endif
 
 #ifdef fgets // in G__ci.h
@@ -4223,7 +4223,7 @@ int main(int argc, char **argv)
    string libfilename;
    const char *env_dict_type=getenv("ROOTDICTTYPE");
    const char *libname;
-   int dicttype = 0; // LF 09-07-07 -- 0 for dict, 1 for ShowMembers
+   int dicttype = 0; // 09-07-07 -- 0 for dict, 1 for ShowMembers
    G__setisfilebundled(0);
 
    if (env_dict_type)
@@ -4448,16 +4448,17 @@ int main(int argc, char **argv)
          strncpy(argvv[argcc], dictname, s-dictname); argcc++;
 
          while (ic < argc && (*argv[ic] == '-' || *argv[ic] == '+')) {
-            // LF 29-10-07
+            // 29-10-07
             // We want to ignore the "--cxx"
-            // coming from the new, wrapper-less scheme... (this should be temporal, find a better way to do it)
+            // coming from the new, wrapper-less scheme... 
+            // (this should be temporal, find a better way to do it)
             if (!strcmp(argv[ic], "--cxx")) {
                ++ic;
                ++ic;
                continue;
             }
 
-            // LF 26-10-07
+            // 26-10-07
             // We want to ignore the "-o" "--object-files" 
             // coming from the new, wrapper-less scheme
             if (!strcmp(argv[ic], "-o") || !strcmp(argv[ic], "--object-files") || !strcmp(argv[ic], "-object-files")) {
@@ -4466,7 +4467,7 @@ int main(int argc, char **argv)
                continue;
             }
 
-            // LF 09-07-07
+            // 09-07-07
             // We want to separate the generation of the dictionary
             // source.
             // We need one that will be the real dictionary and
@@ -4483,7 +4484,7 @@ int main(int argc, char **argv)
                continue;
             }
 
-            // LF 03-07-07
+            // 03-07-07
             // We need the library path in the dictionary generation
             // the easiest way is to get it as a parameter
             if (!strcmp(argv[ic], "-L") ||  !strcmp(argv[ic], "--symbols-file")) {
@@ -4617,12 +4618,7 @@ int main(int argc, char **argv)
       }
    }
    else{
-      
-      //if (!strcmp(argv[ic], "-p")) {
-      //   ++ic;
-      //}
-
-      // LF 29-10-07
+      // 29-10-07
       // We want to ignore the "--cxx"
       // coming from the new, wrapper-less scheme... (this should be temporal, find a better way to do it)
       if (!strcmp(argv[ic], "--cxx")) {
@@ -4630,7 +4626,7 @@ int main(int argc, char **argv)
          ++ic;
       }
 
-      // LF 26-10-07
+      // 26-10-07
       // We want to ignore the "-o" "--object-files" 
       // coming from the new, wrapper-less scheme
       if (!strcmp(argv[ic], "-o") || !strcmp(argv[ic], "--object-files") || !strcmp(argv[ic], "-object-files")) {
@@ -4638,8 +4634,7 @@ int main(int argc, char **argv)
          ++ic;
       }
 
-
-      // LF 09-07-07
+      // 09-07-07
       // We want to separate the generation of the dictionary
       // source.
       // We need one that will be the real dictionary and
@@ -4655,7 +4650,7 @@ int main(int argc, char **argv)
          ++ic;
       }
 
-      // LF 03-07-07
+      // 03-07-07
       // We need the library path in the dictionary generation
       // the easiest way is to get it as a parameter
       if (!strcmp(argv[ic], "-L") ||  !strcmp(argv[ic], "--symbols-file")) {
@@ -4665,8 +4660,6 @@ int main(int argc, char **argv)
          ++ic;
       }
    }
-
-
    iv = 0;
    il = 0;
 
@@ -4685,7 +4678,7 @@ int main(int argc, char **argv)
       } else {
          
 #ifndef ROOTBUILD
-	char *header_c = (char*) header.c_str(); // basename shouldnt change the content (it looks safe)
+	 char *header_c = (char*) header.c_str(); // basename shouldnt change the content (it looks safe)
          const char *basen = basename(header_c);
 	 string headerb(basen);
          string::size_type idx = headerb.rfind("Tmp");
@@ -4703,13 +4696,13 @@ int main(int argc, char **argv)
             }
          }
 
-         // LF 12-11-07
+         // 12-11-07
          // put protection against multiple includes of dictionaries' .h
-         fprintf(bundle,"#ifndef G__includes_dict_%s //rootcint 4678\n", headerb.c_str());
-         fprintf(bundle,"#define G__includes_dict_%s //rootcint 4679\n", headerb.c_str());
+         fprintf(bundle,"#ifndef G__includes_dict_%s\n", headerb.c_str());
+         fprintf(bundle,"#define G__includes_dict_%s\n", headerb.c_str());
 #endif
-         fprintf(bundle,"#include \"TObject.h\" //rootcint 4681\n");
-         fprintf(bundle,"#include \"TMemberInspector.h\" //rootcint 4682\n");
+         fprintf(bundle,"#include \"TObject.h\"\n");
+         fprintf(bundle,"#include \"TMemberInspector.h\"\n");
       }
    }
    for (i = ic; i < argc; i++) {
@@ -4936,9 +4929,9 @@ int main(int argc, char **argv)
       (*dictSrcOut) << std::endl;
    }
 
-   // LF 26-07-07
+   // 26-07-07
    // dont generate the showmembers if we only want 
-   // all the memfunc_setup stuff
+   // all the memfunc_setup stuff (stub-less calls)
    if(dicttype==0 || dicttype==1 || dicttype==4) {   
 
 
@@ -5095,12 +5088,6 @@ int main(int argc, char **argv)
             }
          }
       }
-
-      // LF 09-07-07
-      // dont generate the showmembers if we only want 
-      // all the memfunc_setup stuff
-      //if(dicttype!=0 && dicttype!=1)
-      //   return 0;
 
       // Keep track of classes processed by reading Linkdef file.
       // When all classes in LinkDef are done, loop over all classes known
@@ -5262,7 +5249,7 @@ int main(int argc, char **argv)
       if (!il) remove(autold);
       if (use_preprocessor) remove(bundlename.c_str());
    
-   } // LF 
+   } // (stub-less calls)
 
    // Append CINT dictionary to file containing Streamers and ShowMembers
    if (ifl) {
@@ -5287,7 +5274,7 @@ int main(int argc, char **argv)
          int  nl = 0;
          char inclf[kMaxLen];
          
-         // LF 07-11-07
+         // 07-11-07
          // Include the temporaries here to get one file with everything
          char inclfTmp1[kMaxLen];
          char inclfTmp2[kMaxLen];
@@ -5322,7 +5309,7 @@ int main(int argc, char **argv)
                   fprintf(fpd, "#include \"%s\"\n", inclf);
                }
 
-               // LF 07-11-07
+               // 07-11-07
                // Put the includes to temporary files when generating the third dictionary
                if(dicttype==3){
                  if (longheadername && dictpathname.length() ) {

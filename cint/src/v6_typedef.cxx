@@ -789,7 +789,7 @@ void G__define_type()
     G__newtype.comment[typenum].filenum = -1;
     G__newtype.nindex[typenum]=nindex;
 #ifdef G__TYPEDEFFPOS
-    // LF 21/05/07
+    // 21/05/07
     // G__ifile.filenum at this moment might point to a temporal file
     // but later on a real file will be registered with this number
     // and will create confusion. If this is a temporal file just
@@ -1191,8 +1191,8 @@ int G__defined_typename(const char *type_name)
 * calling this function
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
-* LF: 17-07-07
-* Has to be changed to avoid code replication
+* 17-07-07
+* FIXME: Has to be changed to avoid code replication
 ******************************************************************/
 int G__defined_typename2(const char *type_name, int noerror)
 {
