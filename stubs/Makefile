@@ -245,8 +245,7 @@ RPATH        := -L$(LPATH)
 CINTLIBS     := -lCint
 CINT7LIBS    := -lCint7 -lReflex
 NEWLIBS      := -lNew
-ROOTLIBS     := -lCore -lCint -lRIO -lNet -lHist \
-                -lGraf -lGraf3d -lGpad\
+ROOTLIBS     := -lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad \
                 -lTree -lMatrix
 BOOTLIBS     := -lCore -lCint
 ifneq ($(ROOTDICTTYPE),cint)
@@ -589,7 +588,6 @@ build/dummy.d: config Makefile $(ALLHDRS) $(RMKDEP) $(BINDEXP) $(PCHDEP)
 	   touch $@; \
 	fi)
 
-#LF
 $(CORELIB): $(COREO) $(COREDO) $(CINTLIB) $(PCREDEP) $(CORELIBDEP)
 ifneq ($(ARCH),alphacxx6)
 	@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
@@ -601,24 +599,8 @@ else
 	   "$(CORELIBEXTRA) $(PCRELDFLAGS) $(PCRELIB) $(CRYPTLIBS)"
 endif
 
-#LF
-#$(COREDICTLIB): $(COREDO) $(CINTLIB) $(PCREDEP) $(COREDICTLIBDEP)
-#ifneq ($(ARCH),alphacxx6)
-#	@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
-#	   "$(SOFLAGS)" libCoreDict.$(SOEXT) $@ "$(COREDO)" \
-#	   "$(COREDICTLIBEXTRA) $(PCRELDFLAGS) $(PCRELIB) $(CRYPTLIBS)"
-#else
-#	@$(MAKELIB) $(PLATFORM) $(LD) "$(CORELDFLAGS)" \
-#	   "$(SOFLAGS)" libCoreDict.$(SOEXT) $@ "$(COREDO)" \
-#	   "$(COREDICTLIBEXTRA) $(PCRELDFLAGS) $(PCRELIB) $(CRYPTLIBS)"
-#endif
-
 $(COREMAP): $(RLIBMAP) $(MAKEFILEDEP) $(COREL)
 	$(RLIBMAP) -o $(COREMAP) -l $(CORELIB) -d $(CORELIBDEPM) -c $(COREL)
-
-#LF
-#$(COREDICTMAP): $(RLIBMAP) $(MAKEFILEDEP) $(COREL)
-#	$(RLIBMAP) -o $(COREDICTMAP) -l $(COREDICTLIB) -d $(CORELIB) $(CORELIBDEPM) -c $(COREL)
 
 map::   $(ALLMAPS)
 
@@ -757,7 +739,7 @@ endif
 
 distclean:: clean
 	-@mv -f include/RConfigure.h include/RConfigure.h-
-
+	-@mv -f include/RConfigOptions.h include/RConfigOptions.h-
 	@rm -f include/*.h $(ROOTMAP) $(CORELIB) $(COREDICTLIB) $(COREMAP) $(COREDICTMAP)
 	-@mv -f include/RConfigure.h- include/RConfigure.h
 	-@mv -f include/RConfigOptions.h- include/RConfigOptions.h
