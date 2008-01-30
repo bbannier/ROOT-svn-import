@@ -57,7 +57,6 @@ options="                    \
    enable_mathmore           \
    enable_monalisa           \
    enable_mysql              \
-   enable_stubs              \
    enable_odbc               \
    enable_opengl             \
    enable_oracle             \
@@ -109,9 +108,10 @@ enable_rpath=no
 enable_ruby=no
 enable_shadowpw=
 enable_soversion=no
-enable_stubs=yes         # Complete Dictionaries by default
 enable_table=no
 enable_thread=yes        # cannot be disabled (not in above options list)
+enable_stubs=yes         # Complete Dictionaries by default (All stubs)
+enable_stubs_test=yes    # Complete Dictionaries by default (All stubs)
 enable_unuran=no
 enable_winrtdebug=
 enable_xrootd=           # must be set explicitely via --enable-xrootd
@@ -852,6 +852,8 @@ FIRST argument one of the architecures given at the end of this message.
    --macrodir      Macro installation dir    (<datadir>/macros)
    --mandir        Manpages installation dir (<prefix>/share/man/man1)
    --no-create     Do not create output files, dry run
+   --no-stubs      Remove Stubs from dictionaries (Direct call mechanism)
+   --no-stubs-test Remove Stubs from dictionaries (Keep the stubs in the dictionary for test purpose. We can switch from the old behaviour to the new behaviour - function direct call - in runtime)
    --prefix        Installation prefix       (/usr/local)
    --srcdir        Sources installation dir  (<datadir>/src)
    --testdir       Tests                     (<docdir>/test)
@@ -915,7 +917,6 @@ enable/disable options, prefix with either --enable- or --disable-
   soversion          Set version number in sonames (recommended)
   srp                SRP support, requires SRP source tree
   ssl                SSL encryption support, requires openssl
-  stubs              Rootcint generates dictionaries whith or whitout stub functions (if architecture supports it)
   table              Build libTable contrib library
   unuran             UNURAN - package for generating non-uniform random numbers
   winrtdebug         Link against the Windows debug runtime library
@@ -1125,6 +1126,8 @@ if test $# -gt 0 ; then
       --no-create)             noact="yes"           ;;
       --nohowto)               nohowto="yes"         ;;
       --fail-on-missing)       fail_on_missing="yes" ;;
+      --no-stubs)              enable_stubs="no"; cp -f utils/src/rootcint_nostubs.sh bin;;
+      --no-stubs-test)         enable_stubs_test="no";    cp -f utils/src/rootcint_nostubs.sh bin/;;
       --with-afs=*)            afsdir=$optarg        ; enable_afs="yes"     ;;
       --with-alien-incdir=*)   alienincdir=$optarg   ; enable_alien="yes"   ;;
       --with-alien-libdir=*)   alienlibdir=$optarg   ; enable_alien="yes"   ;;
@@ -1767,15 +1770,10 @@ check_explicit "$enable_mysql" "$enable_mysql_explicit" \
 ### echo %%% Check for Stub removal support
 #
 
-if test "x$enable_stubs" = "xno"; then
-    enable_stubs="no"
-    cp -f utils/src/rootcint.sh bin/
-else
-    enable_stubs="yes"
-fi
-
 message "Checking whether to create the stubs"
 result "$enable_stubs"
+message "Checking whether to create stubs for test purpose"
+result "$enable_stubs_test"
 
 ######################################################################
 #
@@ -4564,6 +4562,7 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@buildmonalisa@|$enable_monalisa|"    \
     -e "s|@enable_pch@|$enable_pch|"            \
     -e "s|@enable_stubs@|$enable_stubs|"        \
+    -e "s|@enable_stubs_test@|$enable_stubs_test|" \
     -e "s|@buildtable@|$enable_table|"          \
     -e "s|@enable_thread@|$enable_thread|"      \
     -e "s|@etcdir@|$etcdir|"                    \

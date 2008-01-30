@@ -111,7 +111,6 @@
 #pragma link C++ class TTask+;
 #pragma link C++ class TTime;
 #pragma link C++ class TTimer;
-#pragma link C++ class TSingleShotCleaner;
 #pragma link C++ class TQObject-;
 #pragma link C++ class TQObjSender;
 #pragma link C++ class TQClass;
