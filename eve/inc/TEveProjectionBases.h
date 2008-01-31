@@ -66,7 +66,7 @@ private:
    TEveProjected& operator=(const TEveProjected&); // Not implemented
 
 protected:
-   TEveProjectionManager *fProjector;     // manager
+   TEveProjectionManager *fManager;       // manager
    TEveProjectable       *fProjectable;   // link to original object
    Float_t                fDepth;         // z coordinate
 

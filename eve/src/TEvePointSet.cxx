@@ -647,7 +647,7 @@ void TEvePointSetProjected::UpdateProjection()
    // Reapply the projection.
    // Virtual from TEveProjected.
 
-   TEveProjection& proj = * fProjector->GetProjection();
+   TEveProjection& proj = * fManager->GetProjection();
    TEvePointSet     & ps   = * dynamic_cast<TEvePointSet*>(fProjectable);
 
    Int_t n = ps.GetN();

@@ -23,7 +23,7 @@
 class TEveProjection
 {
 public:
-   enum EPType_e   { kPT_Unknown, kPT_CFishEye, kPT_RhoZ };     // type
+   enum EPType_e   { kPT_Unknown, kPT_RPhi, kPT_RhoZ };        // type
    enum EPProc_e   { kPP_Plane, kPP_Distort, kPP_Full };        // procedure
    enum EGeoMode_e { kGM_Unknown, kGM_Polygons, kGM_Segments }; // reconstruction of geometry
 
@@ -110,19 +110,19 @@ public:
 
 ////////////////////////////////////////////////////////////////
 //                                                            //
-// TEveCircularFishEyeProjection                              //
+// TEveRPhiProjection                              //
 //                                                            //
 ////////////////////////////////////////////////////////////////
 
-class TEveCircularFishEyeProjection : public TEveProjection
+class TEveRPhiProjection : public TEveProjection
 {
 public:
-   TEveCircularFishEyeProjection(TEveVector& center):TEveProjection(center) { fType = kPT_CFishEye; fGeoMode = kGM_Polygons; fName="CircularFishEye"; }
-   virtual ~TEveCircularFishEyeProjection() {}
+   TEveRPhiProjection(TEveVector& center):TEveProjection(center) { fType = kPT_RPhi; fGeoMode = kGM_Polygons; fName="RhoPhi"; }
+   virtual ~TEveRPhiProjection() {}
 
    virtual void ProjectPoint(Float_t& x, Float_t& y, Float_t& z, EPProc_e proc = kPP_Full);
 
-   ClassDef(TEveCircularFishEyeProjection, 0); // XY non-linear projection.
+   ClassDef(TEveRPhiProjection, 0); // XY non-linear projection.
 };
 
 #endif

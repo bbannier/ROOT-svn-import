@@ -143,7 +143,7 @@ void TEvePolygonSetProjected::ProjectAndReducePoints()
 {
    // Project and reduce buffer points.
 
-   TEveProjection* projection = fProjector->GetProjection();
+   TEveProjection* projection = fManager->GetProjection();
 
    Int_t buffN = fBuff->NbPnts();
    TEveVector*  pnts  = new TEveVector[buffN];
@@ -245,7 +245,7 @@ void TEvePolygonSetProjected::MakePolygonsFromBP()
 {
    // Build polygons from list of buffer polygons.
 
-   TEveProjection* projection = fProjector->GetProjection();
+   TEveProjection* projection = fManager->GetProjection();
    Int_t* bpols = fBuff->fPols;
    for (UInt_t pi = 0; pi< fBuff->NbPols(); pi++)
    {
@@ -304,7 +304,7 @@ void TEvePolygonSetProjected::MakePolygonsFromBS()
 
    LSeg_t segs;
    LSegIt_t it;
-   TEveProjection* projection = fProjector->GetProjection();
+   TEveProjection* projection = fManager->GetProjection();
    for (UInt_t s = 0; s < fBuff->NbSegs(); ++s)
    {
       Bool_t duplicate = kFALSE;
@@ -370,7 +370,7 @@ void  TEvePolygonSetProjected::ProjectBuffer3D()
    // Project current buffer.
 
    ProjectAndReducePoints();
-   TEveProjection::EGeoMode_e mode = fProjector->GetProjection()->GetGeoMode();
+   TEveProjection::EGeoMode_e mode = fManager->GetProjection()->GetGeoMode();
 
    switch (mode)
    {

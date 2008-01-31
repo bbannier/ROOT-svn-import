@@ -166,7 +166,7 @@ void TEveStraightLineSetProjected::UpdateProjection()
    // Callback that actually performs the projection.
    // Called when projection parameters have been updated.
 
-   TEveProjection&      proj  = * fProjector->GetProjection();
+   TEveProjection&      proj  = * fManager->GetProjection();
    TEveStraightLineSet& orig  = * dynamic_cast<TEveStraightLineSet*>(fProjectable);
 
    // Lines

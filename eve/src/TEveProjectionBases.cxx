@@ -54,7 +54,7 @@ ClassImp(TEveProjected)
 
 //______________________________________________________________________________
 TEveProjected::TEveProjected() :
-   fProjector   (0),
+   fManager     (0),
    fProjectable (0),
    fDepth       (0)
 {
@@ -78,7 +78,7 @@ void TEveProjected::SetProjection(TEveProjectionManager* proj, TEveProjectable* 
    // immediately after default constructor.
    // See also TEveProjectionManager::ImportElements().
 
-   fProjector   = proj;
+   fManager   = proj;
    if (fProjectable) fProjectable->RemoveProjected(this);
    fProjectable = model;
    if (fProjectable) fProjectable->AddProjected(this);
