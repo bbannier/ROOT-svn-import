@@ -252,14 +252,14 @@ Bool_t TEveRhoZProjection::AcceptSegment(TEveVector& v1, TEveVector& v2, Float_t
 
 
 //______________________________________________________________________________
-// TEveCircularFishEyeProjection
+// TEveRPhiProjection
 //
 // XY projection with distortion around given center.
 
-ClassImp(TEveCircularFishEyeProjection)
+ClassImp(TEveRPhiProjection)
 
 //______________________________________________________________________________
-void TEveCircularFishEyeProjection::ProjectPoint(Float_t& x, Float_t& y, Float_t& z,
+void TEveRPhiProjection::ProjectPoint(Float_t& x, Float_t& y, Float_t& z,
                                                  EPProc_e proc)
 {
    // Project point.

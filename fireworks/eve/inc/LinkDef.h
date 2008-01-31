@@ -176,7 +176,7 @@
 #pragma link C++ class TEveProjected+;
 #pragma link C++ class TEveProjection+;
 #pragma link C++ class TEveRhoZProjection+;
-#pragma link C++ class TEveCircularFishEyeProjection+;
+#pragma link C++ class TEveRPhiProjection+;
 
 #pragma link C++ class TEveProjectionManager+;
 #pragma link C++ class TEveProjectionManagerEditor+;

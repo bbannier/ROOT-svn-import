@@ -13,7 +13,6 @@
 #include "TEveManager.h"
 #include "TEveProjectionBases.h"
 
-#include "TAttBBox.h"
 #include "TBuffer3D.h"
 #include "TBuffer3DTypes.h"
 #include "TVirtualPad.h"
@@ -38,12 +37,13 @@ ClassImp(TEveProjectionManager)
 //______________________________________________________________________________
 TEveProjectionManager::TEveProjectionManager():
    TEveElementList("TEveProjectionManager",""),
+   TAttBBox(),
    fProjection (0),
    fCurrentDepth(0)
 {
    // Constructor.
 
-   fProjection  = new TEveCircularFishEyeProjection(fCenter);
+   fProjection  = new TEveRPhiProjection(fCenter);
    UpdateName();
 }
 
@@ -97,9 +97,9 @@ void TEveProjectionManager::SetProjection(TEveProjection::EPType_e type, Float_t
 
    switch (type)
    {
-      case TEveProjection::kPT_CFishEye:
+      case TEveProjection::kPT_RPhi:
       {
-         fProjection  = new TEveCircularFishEyeProjection(fCenter);
+         fProjection  = new TEveRPhiProjection(fCenter);
          break;
       }
       case TEveProjection::kPT_RhoZ:
@@ -206,18 +206,9 @@ void TEveProjectionManager::ProjectChildrenRecurse(TEveElement* rnr_el)
       TAttBBox* bb = dynamic_cast<TAttBBox*>(pted);
       if (bb)
       {
-         Float_t x, y, z, *b = bb->AssertBBox();
-         //         Float_t x, y, z;
-         x = b[0]; y = b[2]; z = b[4]; 
-         if (x < fBBox[0]) fBBox[0] = x;   if (x > fBBox[1]) fBBox[1] = x;
-         if (y < fBBox[2]) fBBox[2] = y;   if (y > fBBox[3]) fBBox[3] = y;
-         if (z < fBBox[4]) fBBox[4] = z;   if (z > fBBox[5]) fBBox[5] = z;
-
-         x = b[1]; y = b[3]; z = b[5]; 
-         if (x < fBBox[0]) fBBox[0] = x;   if (x > fBBox[1]) fBBox[1] = x;
-         if (y < fBBox[2]) fBBox[2] = y;   if (y > fBBox[3]) fBBox[3] = y;
-         if (z < fBBox[4]) fBBox[4] = z;   if (z > fBBox[5]) fBBox[5] = z;
-
+         Float_t* b = bb->AssertBBox();
+         BBoxCheckPoint(b[0], b[2], b[4]);
+         BBoxCheckPoint(b[1], b[3], b[5]);
       }
       rnr_el->ElementChanged(kFALSE);
    }
@@ -232,10 +223,7 @@ void TEveProjectionManager::ProjectChildren()
    // Project children recursevly, update BBox and notify ReveManger
    // the scenes have chenged.
 
-   for (Int_t i = 0; i<6; i++) {
-      fBBox[i] = 0.f;
-   }
-
+   BBoxZero();
    ProjectChildrenRecurse(this);
 
    for (List_i i=fDependentEls.begin(); i!=fDependentEls.end(); ++i) {
@@ -247,4 +235,19 @@ void TEveProjectionManager::ProjectChildren()
    List_t scenes;
    CollectSceneParentsFromChildren(scenes, 0);
    gEve->ScenesChanged(scenes);
+}
+
+//______________________________________________________________________________
+void TEveProjectionManager::ComputeBBox()
+{
+   // Virtual from TAttBBox; fill bounding-box information.
+
+   static const TEveException eH("TEveProjectionManager::ComputeBBox ");
+
+   if(GetNChildren() == 0) {
+      BBoxZero();
+      return;
+   }
+
+   BBoxInit();
 }

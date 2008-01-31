@@ -51,7 +51,7 @@ void TEveTrackProjected::UpdateProjection()
 {
    // This is virtual method from base-class TEveProjected.
 
-   fProjection = fProjector->GetProjection();
+   fProjection = fManager->GetProjection();
    MakeTrack(kFALSE); // TEveProjectionManager makes recursive calls
 }
 

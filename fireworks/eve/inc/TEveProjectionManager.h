@@ -13,10 +13,13 @@
 #define ROOT_TEveProjectionManager
 
 #include "TEveElement.h"
+#include "TAttBBox.h"
 #include "TEveProjections.h"
 #include "TEveVSDStructs.h"
 
-class TEveProjectionManager : public TEveElementList
+
+class TEveProjectionManager : public TEveElementList,
+                              public TAttBBox
 {
 private:
    TEveProjectionManager(const TEveProjectionManager&);            // Not implemented
@@ -26,8 +29,6 @@ protected:
    TEveProjection* fProjection;     // projection
    TEveVector      fCenter;         // center of distortion
    Float_t         fCurrentDepth;   // z depth of object being projected
-
-   Float_t         fBBox[6];        // projected children bounding box
 
    List_t          fDependentEls;   // elements that depend on manager and need to be destroyed with it
 
@@ -57,7 +58,7 @@ public:
    virtual void    ProjectChildren();
    virtual void    ProjectChildrenRecurse(TEveElement* rnr_el);
 
-   Float_t*        GetBBox() { return &fBBox[0]; }
+   virtual void    ComputeBBox();
 
    ClassDef(TEveProjectionManager, 0); // Manager class for steering of projections and managing projected objects.
 };
