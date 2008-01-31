@@ -139,7 +139,6 @@ void TEveTransSubEditor::SetModel(TEveTrans* t)
    fEditTrans->SetState(fTrans->fEditTrans ? kButtonDown : kButtonUp);
    if (fTrans->fEditTrans)
    {
-     fEditTransFrame->MapWindow();
 
      // rotation
      if (fTrans->GetEditRotation() == kFALSE)
@@ -165,6 +164,7 @@ void TEveTransSubEditor::SetModel(TEveTrans* t)
        fScale->GetValuator(1)->GetEntry()->SetState(kTRUE);
        fScale->GetValuator(2)->GetEntry()->SetState(kTRUE);
      }
+      fEditTransFrame->MapWindow();
    }
    else
       fEditTransFrame->UnmapWindow();
@@ -233,11 +233,7 @@ void TEveTransSubEditor::DoEditTrans()
    // Slot for EditTrans.
 
    fTrans->SetEditTrans(fEditTrans->IsOn());
-   if (fEditTrans->IsOn())
-      fEditTransFrame->MapWindow();
-   else
-      fEditTransFrame->UnmapWindow();
-   ((TGMainFrame*)fEditTransFrame->GetMainFrame())->Layout();
+   TransChanged();
 }
 
 //______________________________________________________________________________
