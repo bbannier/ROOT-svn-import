@@ -955,7 +955,6 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
       case 'l' : // Long
       {
         long valuel = G__int(param);
-        //int valuel = param.obj.i;
         __asm__ __volatile__("push %0" :: "g" (valuel));
       }
       break;
@@ -970,7 +969,11 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
       case 'f' : // Float // Shouldnt it be treated as a double?
       {
         float valuef = G__float(param);
-        __asm__ __volatile__("push %0" :: "g" (valuef));
+
+	// Casting a single precision to a doeble precision should be safe
+	// 31-01-08: We do this because the compiler complains in x86-64 (optimized)
+	double valued = (double) valuef;
+        __asm__ __volatile__("push %0" :: "g" (valued));
       }
       break;
 
@@ -1704,7 +1707,11 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
           case 'f' : // Float // Shouldnt it be treated as a double?
           {
             float valuef = G__float(param);
-            __asm__ __volatile__("push %0" :: "g" (valuef));
+
+	    // Casting a single precision to a doeble precision should be safe
+	    // 31-01-08: We do this because the compiler complains in x86-64 (optimized)
+	    double valued = (double) valuef;
+            __asm__ __volatile__("push %0" :: "g" (valued));
           }
           break;
 
