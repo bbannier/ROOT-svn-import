@@ -33,7 +33,7 @@ INCLUDEFILES += $(METADEP)
 include/%.h:    $(METADIRI)/%.h
 		cp $< $@
 
-$(METADS):      $(METAH) $(METAL) $(ROOTCINTTMPDEP)
+$(METADS):      $(METAH) $(METAL) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c -DG__API $(METAH) $(METAL)
 

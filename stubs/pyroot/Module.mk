@@ -67,7 +67,7 @@ ifeq ($(ARCH),win32)
 		cp -f bin/$(notdir $@) $(PYROOTPYD)
 endif
 
-$(PYROOTDS):    $(PYROOTH) $(PYROOTL) $(ROOTCINTTMPDEP)
+$(PYROOTDS):    $(PYROOTH) $(PYROOTL) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(PYROOTH) $(PYROOTL)
 

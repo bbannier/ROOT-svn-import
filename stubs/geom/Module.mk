@@ -63,11 +63,11 @@ $(GEOMLIB):     $(GEOMO) $(GEOMDO) $(ORDER_) $(MAINLIBS) $(GEOMLIBDEP)
 		   "$(SOFLAGS)" libGeom.$(SOEXT) $@ "$(GEOMO) $(GEOMDO)" \
 		   "$(GEOMLIBEXTRA)"
 
-$(GEOMDS1):     $(GEOMH1) $(GEOML1) $(ROOTCINTTMPDEP)
+$(GEOMDS1):     $(GEOMH1) $(GEOML1) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(GEOMH1) $(GEOML1)
 
-$(GEOMDS2):     $(GEOMH2) $(GEOML2) $(ROOTCINTTMPDEP)
+$(GEOMDS2):     $(GEOMH2) $(GEOML2) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(GEOMH2) $(GEOML2)
 

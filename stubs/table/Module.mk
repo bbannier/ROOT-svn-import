@@ -43,9 +43,9 @@ $(TABLELIB):    $(TABLEO) $(TABLEDO) $(ORDER_) $(MAINLIBS) $(TABLELIBDEP)
 		   "$(SOFLAGS)" libTable.$(SOEXT) $@ "$(TABLEO) $(TABLEDO)" \
 		   "$(TABLELIBEXTRA)"
 
-$(TABLEDS):     $(TABLEH) $(TABLEL) $(ROOTCINTTMPDEP)
+$(TABLEDS):     $(TABLEH) $(TABLEL) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMPDEP) -f $@ -c $(TABLEH) $(TABLEL)
+		$(ROOTCINTTMPEXE) -f $@ -c $(TABLEH) $(TABLEL)
 
 $(TABLEMAP):    $(RLIBMAP) $(MAKEFILEDEP) $(TABLEL)
 		$(RLIBMAP) -o $(TABLEMAP) -l $(TABLELIB) \
