@@ -251,8 +251,6 @@ public:
    virtual Double_t IntegralMultiple(Int_t n, const Double_t *a, const Double_t *b, Int_t minpts, Int_t maxpts, Double_t epsilon, Double_t &relerr,Int_t &nfnevl, Int_t &ifail);
    virtual Double_t IntegralMultiple(Int_t n, const Double_t *a, const Double_t *b, Double_t epsilon, Double_t &relerr);
    virtual Bool_t   IsInside(const Double_t *x) const;
-   Double_t         MinimBrent(Int_t type, Double_t &xmin, Double_t &xmax, Double_t xmiddle, Double_t fy, Bool_t &ok) const;
-   Double_t         MinimStep(Int_t type, Double_t &xmin, Double_t &xmax, Double_t fy) const;
    virtual void     Paint(Option_t *option="");
    virtual void     Print(Option_t *option="") const;
    virtual void     ReleaseParameter(Int_t ipar);

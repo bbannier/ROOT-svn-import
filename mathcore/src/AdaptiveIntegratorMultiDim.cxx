@@ -329,6 +329,7 @@ L160: //to divide or not
    nfnevl = ifncls;       //number of function evaluations performed.
    fResult = result;
    fError = abserr;//wk[isbrgn-1];
+   fRelError = relerr;
    fNEval = nfnevl;
    delete [] wk;
   

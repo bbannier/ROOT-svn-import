@@ -36,12 +36,7 @@ namespace Math {
       const char* Name() const;
       
    protected:
-      double MinimStep(int type, double &xmin, double &xmax, double fy) const;
-      double MinimBrent(int type, double &xmin, double &xmax, double xmiddle, double fy, bool &ok) const;
-      
-   protected:
       const IGenFunction* fFunction;
-      const int fNpx;
       double fXMin, fXMax;
       double fRoot;
    };
