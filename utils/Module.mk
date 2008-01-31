@@ -17,7 +17,7 @@ ROOTCINTS    := $(MODDIRS)/rootcint.cxx \
 ROOTCINTO    := $(ROOTCINTS:.cxx=.o)
 ROOTCINTTMPO := $(ROOTCINTS:.cxx=_tmp.o)
 ROOTCINTDEP  := $(ROOTCINTO:.o=.d) $(ROOTCINTTMPO:.o=.d) 
-ROOTCINTTMPDEP:= $(MODDIRS)/rootcint_tmp$(EXEEXT)
+ROOTCINTTMPEXE:= $(MODDIRS)/rootcint_tmp$(EXEEXT)
 ROOTCINTEXE  := bin/rootcint$(EXEEXT)
 
 #DICTGENERATOR := utils/src/rootcint_tmp
@@ -36,7 +36,7 @@ $(ROOTCINTEXE): $(CINTLIB) $(ROOTCINTO) $(METAUTILSO) $(IOSENUM)
 		$(LD) $(LDFLAGS) -o $@ $(ROOTCINTO) $(METAUTILSO) \
 		   $(RPATH) $(CINTLIBS) $(CILIBS)
 
-$(ROOTCINTTMPDEP): $(CINTTMPO) $(ROOTCINTTMPO) $(METAUTILSO) $(IOSENUM)
+$(ROOTCINTTMPEXE): $(CINTTMPO) $(ROOTCINTTMPO) $(METAUTILSO) $(IOSENUM)
 		$(LD) $(LDFLAGS) -o $@ \
 		   $(ROOTCINTTMPO) $(METAUTILSO) $(CINTTMPO) $(CILIBS)
 
@@ -47,7 +47,7 @@ else
 		$(LD) $(LDFLAGS) -o $@ $< imagehlp.lib
 endif
 
-all-utils:      $(ROOTCINTTMPDEP) $(ROOTCINTEXE) $(RLIBMAP)
+all-utils:      $(ROOTCINTTMPEXE) $(ROOTCINTEXE) $(RLIBMAP)
 
 clean-utils:
 		@rm -f $(ROOTCINTTMPO) $(ROOTCINTO) $(RLIBMAPO)
@@ -55,7 +55,7 @@ clean-utils:
 clean::         clean-utils
 
 distclean-utils: clean-utils
-		@rm -f $(ROOTCINTDEP) $(ROOTCINTTMPDEP) $(ROOTCINTEXE) \
+		@rm -f $(ROOTCINTDEP) $(ROOTCINTTMPEXE) $(ROOTCINTEXE) \
 		   $(RLIBMAPDEP) $(RLIBMAP) \
 		   $(UTILSDIRS)/*.exp $(UTILSDIRS)/*.lib $(UTILSDIRS)/*_tmp.cxx
 

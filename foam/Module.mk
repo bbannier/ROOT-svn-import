@@ -43,7 +43,7 @@ $(FOAMLIB):     $(FOAMO) $(FOAMDO) $(ORDER_) $(MAINLIBS) $(FOAMLIBDEP)
 		   "$(SOFLAGS)" libFoam.$(SOEXT) $@ "$(FOAMO) $(FOAMDO)" \
 		   "$(FOAMLIBEXTRA)"
 
-$(FOAMDS):      $(FOAMH) $(FOAML) $(ROOTCINTTMPDEP)
+$(FOAMDS):      $(FOAMH) $(FOAML) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(FOAMH) $(FOAML)
 

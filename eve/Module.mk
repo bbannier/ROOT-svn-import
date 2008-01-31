@@ -43,7 +43,7 @@ $(EVELIB):      $(EVEO) $(EVEDO) $(ORDER_) $(MAINLIBS) $(EVELIBDEP)
 		   "$(SOFLAGS)" libEve.$(SOEXT) $@ "$(EVEO) $(EVEDO)" \
 		   "$(EVELIBEXTRA) $(FTGLLIBDIR) $(FTGLLIBS) $(GLLIBS)"
 
-$(EVEDS):       $(EVEH) $(EVEL) $(ROOTCINTTMPDEP)
+$(EVEDS):       $(EVEH) $(EVEL) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(EVEH) $(EVEDIRS)/SolarisCCDictHack.h $(EVEL)
 

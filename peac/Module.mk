@@ -65,7 +65,7 @@ $(PEACLIB):     $(PEACO) $(PEACDO) $(ORDER_) $(MAINLIBS) $(PEACLIBDEP)
 		   "$(SOFLAGS)" libPeac.$(SOEXT) $@ "$(PEACO) $(PEACDO)" \
 		   "$(PEACLIBEXTRA)"
 
-$(PEACDS):      $(PEACH) $(PEACL) $(ROOTCINTTMPDEP)
+$(PEACDS):      $(PEACH) $(PEACL) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(PEACH) $(PEACL)
 
@@ -79,7 +79,7 @@ $(PEACGUILIB):  $(PEACGUIO) $(PEACGUIDO) $(ORDER_) $(MAINLIBS) $(PEACGUILIBDEP)
 		   "$(PEACGUIO) $(PEACGUIDO)" \
 		   "$(PEACGUILIBEXTRA)"
 
-$(PEACGUIDS):   $(PEACGUIH) $(PEACGUIL) $(ROOTCINTTMPDEP)
+$(PEACGUIDS):   $(PEACGUIH) $(PEACGUIL) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(PEACGUIH) $(PEACGUIL)
 
