@@ -970,10 +970,14 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
       {
         float valuef = G__float(param);
 
+#ifdef __x86_64__
 	// Casting a single precision to a doeble precision should be safe
 	// 31-01-08: We do this because the compiler complains in x86-64 (optimized)
 	double valued = (double) valuef;
         __asm__ __volatile__("push %0" :: "g" (valued));
+#else
+        __asm__ __volatile__("push %0" :: "g" (valuef));
+#endif
       }
       break;
 
@@ -1708,10 +1712,14 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
           {
             float valuef = G__float(param);
 
-	    // Casting a single precision to a doeble precision should be safe
-	    // 31-01-08: We do this because the compiler complains in x86-64 (optimized)
-	    double valued = (double) valuef;
+#ifdef __x86_64__
+            // Casting a single precision to a doeble precision should be safe
+            // 31-01-08: We do this because the compiler complains in x86-64 (optimized)
+            double valued = (double) valuef;
             __asm__ __volatile__("push %0" :: "g" (valued));
+#else
+            __asm__ __volatile__("push %0" :: "g" (valuef));
+#endif
           }
           break;
 
