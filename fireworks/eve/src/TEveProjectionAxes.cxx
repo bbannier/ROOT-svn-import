@@ -29,8 +29,8 @@ TEveProjectionAxes::TEveProjectionAxes(TEveProjectionManager* m) :
    fDrawCenter(kFALSE),
    fDrawOrigin(kFALSE),
 
-   fSplitMode(kPosition),
-   fSplitLevel(1)
+   fStepMode(kPosition),
+   fNumTickMarks(7)
 {
    // Constructor.
 
@@ -73,14 +73,8 @@ void TEveProjectionAxes::ComputeBBox()
 }
 
 //______________________________________________________________________________
-void TEveProjectionAxes::SetSplitMode( EMode mode) 
-{ 
-   fSplitMode = mode;
-}
-
-//______________________________________________________________________________
-const TGPicture* TEveProjectionAxes::GetListTreeIcon() 
-{ 
+const TGPicture* TEveProjectionAxes::GetListTreeIcon()
+{
    //return pointset icon
-   return TEveElement::fgListTreeIcons[6]; 
+   return TEveElement::fgListTreeIcons[6];
 }

@@ -14,7 +14,7 @@
 #include "TEveProjectionManager.h"
 
 #include "TGLRnrCtx.h"
-#include "TGLIncludes.h" 
+#include "TGLIncludes.h"
 #include "TFTGLManager.h"
 #include "FTFont.h"
 #include "TMath.h"
@@ -115,27 +115,11 @@ void TEveProjectionAxesGL::RenderText(const char* txt, Float_t x, Float_t y) con
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveProjectionAxesGL::SetRange(Float_t pos, Int_t ax) const
-{
-   // Set range from bounding box.
-  
-   using namespace TMath;
-
-   Float_t limit =  fProjection->GetLimit(ax, pos > 0 ? kTRUE: kFALSE);
-   if (fProjection->GetDistortion() > 0.001 && Abs(pos) > Abs(limit *0.97))
-   {
-      pos = limit*0.95;
-   }
-   
-   fTMList.push_back(TM_t(pos, fProjection->GetValForScreenPos(ax, pos)));
-}
-
-/******************************************************************************/
-
-//______________________________________________________________________________
 void TEveProjectionAxesGL::DrawTickMarks(Float_t y) const
 {
    // Draw tick-marks on the current axis.
+
+   if(fMode == TFTGLManager::kTexture) glDisable(GL_TEXTURE_2D);
 
    glBegin(GL_LINES);
    for (std::list<TM_t>::iterator it = fTMList.begin(); it!= fTMList.end(); ++it)
@@ -144,6 +128,8 @@ void TEveProjectionAxesGL::DrawTickMarks(Float_t y) const
       glVertex2f((*it).first, y);
    }
    glEnd();
+
+   if(fMode == TFTGLManager::kTexture) glEnable(GL_TEXTURE_2D);
 }
 
 //______________________________________________________________________________
@@ -155,7 +141,7 @@ void TEveProjectionAxesGL::DrawHInfo() const
    DrawTickMarks(-tmH);
 
    Float_t off = tmH + fLabelOff*tmH;
-   Float_t llx, lly, llz, urx, ury, urz; 
+   Float_t llx, lly, llz, urx, ury, urz;
    const char* txt;
    for (std::list<TM_t>::iterator it = fTMList.begin(); it!= fTMList.end(); ++it)
    {
@@ -204,54 +190,65 @@ void TEveProjectionAxesGL::DrawVInfo() const
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveProjectionAxesGL::SplitInterval(Int_t ax) const
+void TEveProjectionAxesGL::SplitInterval(Float_t p1, Float_t p2, Int_t ax) const
 {
-   // Build a list of labels and their positions.
+    // Build an array of tick-mark position-value pairs.
 
-   if (fAxesModel->GetSplitLevel())
-   {
-      if (fAxesModel->GetSplitMode() == TEveProjectionAxes::kValue) 
-      {
-         SplitIntervalByVal(fTMList.front().second, fTMList.back().second, ax, 0);
-      }
-      else if (fAxesModel->GetSplitMode() == TEveProjectionAxes::kPosition)
-      {
-         SplitIntervalByPos(fTMList.front().first, fTMList.back().first, ax, 0);
-      }
+    Float_t down = fProjection->GetLimit(ax, kFALSE)*0.95;
+    p1 = p1<down ? down : p1;
+
+    Float_t up = fProjection->GetLimit(ax, kTRUE)*0.95;
+    p2 = p2>up ? up : p2;
+
+    if (fAxesModel->GetStepMode() == TEveProjectionAxes::kValue)
+    {
+       SplitIntervalByVal(fProjection->GetValForScreenPos(ax, p1), fProjection->GetValForScreenPos(ax, p2), ax);
+    }
+    else if (fAxesModel->GetStepMode() == TEveProjectionAxes::kPosition)
+    {
+      SplitIntervalByPos(p1, p2, ax);
+    }
+}
+
+//______________________________________________________________________________
+void TEveProjectionAxesGL::SplitIntervalByPos(Float_t p1, Float_t p2, Int_t ax) const
+{
+   // Add tick-marks at equidistant position.
+
+   TEveVector zeroPos;
+   fProjection->ProjectVector(zeroPos);
+   Float_t step = (p2-p1)/fAxesModel->GetNumTickMarks();
+
+   Float_t p = zeroPos.fX;
+   while (p > p1) {
+     fTMList.push_back(TM_t(p , fProjection->GetValForScreenPos(ax, p)));
+     p -= step;
+   }
+
+   p = zeroPos.fX + step;
+   while (p < p2) {
+     fTMList.push_back(TM_t(p , fProjection->GetValForScreenPos(ax, p)));
+     p += step;
    }
 }
 
 //______________________________________________________________________________
-void TEveProjectionAxesGL::SplitIntervalByPos(Float_t minp, Float_t maxp, Int_t ax, Int_t level) const
+void TEveProjectionAxesGL::SplitIntervalByVal(Float_t v1, Float_t v2, Int_t ax) const
 {
-   // Add tick-mark and label with position in the middle of given interval.
+   // Add tick-marks on fixed value step.
 
-   Float_t p = (minp+maxp)*0.5;
-   Float_t v = fProjection->GetValForScreenPos(ax, p);
-   fTMList.push_back(TM_t(p, v));
+   Float_t step = (v2-v1)/fAxesModel->GetNumTickMarks();
 
-   level++;
-   if (level<fAxesModel->GetSplitLevel())
-   {
-      SplitIntervalByPos(minp, p , ax, level);
-      SplitIntervalByPos(p, maxp, ax, level);
+   Float_t v = 0.f;
+   while (v > v1) {
+      fTMList.push_back(TM_t(fProjection->GetScreenVal(ax, v) , v));
+     v -= step;
    }
-}
 
-//______________________________________________________________________________
-void TEveProjectionAxesGL::SplitIntervalByVal(Float_t minv, Float_t maxv, Int_t ax, Int_t level) const
-{
-   // Add tick-mark and label with value in the middle of given interval.
-
-   Float_t v = (minv+maxv)*0.5;
-   Float_t p = fProjection->GetScreenVal(ax, v);
-   fTMList.push_back(TM_t(p, v));
-
-   level++;
-   if (level<fAxesModel->GetSplitLevel())
-   {
-      SplitIntervalByVal(minv, v , ax, level);
-      SplitIntervalByVal(v, maxv, ax, level);
+   v = step;
+   while (v < v2) {
+      fTMList.push_back(TM_t(fProjection->GetScreenVal(ax, v) , v));
+     v += step;
    }
 }
 
@@ -264,50 +261,10 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
    // Virtual from TGLLogicalShape.
 
    fProjection = fAxesModel->GetManager()->GetProjection();
-
    Float_t* bbox = fAxesModel->GetBBox();
    fRange = bbox[1] - bbox[0];
    TEveVector zeroPos;
    fProjection->ProjectVector(zeroPos);
-    
-   SetModelFont(fAxesModel, rnrCtx);
-   TFTGLManager::PreRender(fMode);
-   {  
-      glPushMatrix();
-      glTranslatef(0, bbox[2], 0);
-      // left
-      fTMList.push_back(TM_t(zeroPos.fX, 0));
-      SetRange(bbox[0], 0); SplitInterval(0);
-      DrawHInfo();
-      // right, skip middle
-      fTMList.push_back(TM_t(zeroPos.fX, 0));
-      SetRange(bbox[1], 0); SplitInterval(0); fTMList.pop_front();
-      DrawHInfo();
-      glPopMatrix();
-   }
-   {
-      glPushMatrix();
-      glTranslatef(bbox[0], 0, 0);
-      // labels bottom
-      fTMList.push_back(TM_t(zeroPos.fY, 0));
-      SetRange(bbox[2], 1); SplitInterval(1);
-      DrawVInfo();
-      // labels top, skip middle
-      fTMList.push_back(TM_t(zeroPos.fY, 0));
-      SetRange(bbox[3], 1); SplitInterval(1); fTMList.pop_front();
-      DrawVInfo();
-      glPopMatrix();
-   }
-
-   // axes title
-   glPushMatrix();
-   glTranslatef(zeroPos.fX, bbox[3]*1.1, 0);
-   Float_t llx, lly, llz, urx, ury, urz; 
-   fFont->BBox(fAxesModel->GetText(), llx, lly, llz, urx, ury, urz);
-   RenderText(fAxesModel->GetText(), -llx, 0);
-   glPopMatrix();
-
-   TFTGLManager::PostRender(fMode);
 
    // axes lines
    glBegin(GL_LINES);
@@ -317,7 +274,7 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
    glVertex3f(bbox[0], bbox[3], 0.);
    glEnd();
 
-   // projection center
+   // projection center and origin marker
    Float_t d = 10;
    if (fAxesModel->GetDrawCenter()) {
       Float_t* c = fProjection->GetProjectedCenter();
@@ -328,7 +285,6 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
       glVertex3f(c[0] ,   c[1],    c[2] + d); glVertex3f(c[0]    , c[1]   , c[2] - d);
       glEnd();
    }
-
    if (fAxesModel->GetDrawOrigin()) {
       TEveVector zero;
       fProjection->ProjectVector(zero);
@@ -339,6 +295,34 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
       glVertex3f(zero[0] ,   zero[1],    zero[2] + d); glVertex3f(zero[0]    , zero[1]   , zero[2] - d);
       glEnd();
    }
+
+
+   SetModelFont(fAxesModel, rnrCtx);
+   TFTGLManager::PreRender(fMode);
+
+   // title
+   glPushMatrix();
+   glTranslatef(zeroPos.fX, bbox[3]*1.1, 0);
+   Float_t llx, lly, llz, urx, ury, urz;
+   fFont->BBox(fAxesModel->GetText(), llx, lly, llz, urx, ury, urz);
+   RenderText(fAxesModel->GetText(), -llx, 0);
+   glPopMatrix();
+
+   // X-axis tick-marks & labels
+   glPushMatrix();
+   glTranslatef(0, bbox[2], 0);
+   SplitInterval(bbox[0], bbox[1], 0);
+   DrawHInfo();
+   glPopMatrix();
+
+   // Y-axis tick-marks & labels
+   glPushMatrix();
+   glTranslatef(bbox[0], 0, 0);
+   SplitInterval(bbox[2], bbox[3], 1);
+   DrawVInfo();
+   glPopMatrix();
+
+   TFTGLManager::PostRender(fMode);
 
    fProjection = 0;
 }

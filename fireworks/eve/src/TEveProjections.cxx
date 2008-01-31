@@ -32,7 +32,9 @@ TEveProjection::TEveProjection(TEveVector& center) :
    fCenter(center.fX, center.fY, center.fZ),
    fDistortion(0.0f),
    fFixedRadius(300),
-   fScale(1.0f)
+   fScale(1.0f),
+   fLowLimit(-1e50, -1e50, -1e50),
+   fUpLimit(  1e50,  1e50,  1e50)
 {
    // Constructor.
 }

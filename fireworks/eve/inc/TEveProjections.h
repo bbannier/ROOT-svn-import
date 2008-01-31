@@ -37,9 +37,10 @@ protected:
 
    Float_t             fDistortion;    // distortion
    Float_t             fFixedRadius;   // projected radius independent of distortion
+
    Float_t             fScale;         // scale factor to keep projected radius fixed
-   TEveVector          fUpLimit;       // convergence of point +infinity
-   TEveVector          fLowLimit;      // convergence of point -infinity
+   TEveVector          fLowLimit;      // convergence of point +infinity
+   TEveVector          fUpLimit;       // convergence of point -infinity
 
 public:
    TEveProjection(TEveVector& center);
