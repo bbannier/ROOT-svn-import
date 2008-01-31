@@ -756,6 +756,13 @@ Int_t TStreamerInfo::WriteBufferAux(TBuffer &b, const TVirtualCollectionProxy &a
                                           fNdata,fType,fgElement,fComp);
 }
 
+Int_t TStreamerInfo::WriteBufferAux(TBuffer &b, const TPointerCollectionAdapter &arr, Int_t first,Int_t narr,Int_t eoffset,Int_t mode)
+{
+  return TStreamerInfo__WriteBufferAuxImp(this,b,arr,first,narr,eoffset,mode,
+                                          fMethod,fElem,fLength,fClass,fOffset,fNewType,
+                                          fNdata,fType,fgElement,fComp);
+}
+
 #endif
 
 //______________________________________________________________________________
@@ -769,6 +776,17 @@ Int_t TStreamerInfo::WriteBufferSTL(TBuffer &b, TVirtualCollectionProxy *cont, I
    int ret = WriteBufferAux(b, *cont,first,nc,eoffset,1);
    return ret;
 }
+
+//______________________________________________________________________________
+Int_t TStreamerInfo::WriteBufferSTLPtrs(TBuffer &b, TVirtualCollectionProxy *cont, Int_t nc, Int_t first, Int_t eoffset )
+{
+   // Write for STL container.
+   if (!nc) return 0;
+   R__ASSERT((unsigned int)nc==cont->Size());
+   int ret = WriteBufferAux(b, TPointerCollectionAdapter(cont),first,nc,eoffset,1);
+   return ret;
+}
+
 
 //______________________________________________________________________________
 Int_t TStreamerInfo::WriteBuffer(TBuffer &b, char *ipointer, Int_t first)
