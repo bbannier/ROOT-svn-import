@@ -112,4 +112,3 @@ gl/src/TFTGLManager.o: \
                 $(FREETYPEDEP)
 gl/src/TFTGLManager.o: \
                 CXXFLAGS += $(FREETYPEINC) $(FTGLINCDIR:%=-I%)
-

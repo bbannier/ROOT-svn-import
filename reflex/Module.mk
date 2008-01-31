@@ -152,7 +152,7 @@ $(REFLEXDICTLIB): $(REFLEXDO) $(ORDER_) $(MAINLIBS) $(REFLEXLIB)
 
 $(REFLEXDS): $(REFLEXAPIH) $(REFLEXL) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
-		utils/src/rootcint_tmp -f $@ -c -p -Ireflex/inc $(REFLEXAPIH) $(REFLEXL)
+		$(ROOTCINTTMP) -f $@ -c -p -Ireflex/inc $(REFLEXAPIH) $(REFLEXL)
 
 $(REFLEXDICTMAP): $(RLIBMAP) $(MAKEFILEDEP) $(REFLEXL)
 		$(RLIBMAP) -o $(REFLEXDICTMAP) -l $(REFLEXDICTLIB) \
@@ -161,7 +161,6 @@ $(REFLEXDICTMAP): $(RLIBMAP) $(MAKEFILEDEP) $(REFLEXL)
 all-reflex:     $(REFLEXLIB) $(REFLEXDICTLIB) $(REFLEXDICTMAP) $(RFLX_GRFLXPYC) $(RFLX_GRFLXPY)
 
 clean-genreflex:
-		@rm -f bin/genreflex*
 		@rm -rf lib/python/genreflex
 
 clean-check-reflex:

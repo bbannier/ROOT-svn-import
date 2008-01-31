@@ -1,6 +1,6 @@
 # -*- mode: makefile -*-
 #
-# Makefile containing libra1ry dependencies
+# Makefile containing library dependencies
 
 NETLIBDEPM             = $(IOLIB)
 HISTLIBDEPM            = $(MATRIXLIB)
@@ -331,7 +331,7 @@ GEOMBUILDERLIBEXTRA     = -Llib -lGeom -lGraf3d -lGpad -lGraf -lGui -lGed
 ASIMAGELIBEXTRA         = -Llib -lGraf
 ASIMAGEGUILIBEXTRA      = -Llib -lGraf -lHist -lGui -lASImage -lRIO
 ASIMAGEGSLIBEXTRA       = -Llib -lGraf -lASImage
-MLPLIBEXTRA             = -Llib -lHist -lMatrix  -lTree -lGraf -lGpad \
+MLPLIBEXTRA             = -Llib -lHist -lMatrix -lTree -lGraf -lGpad \
                           -lTreePlayer
 SPECTRUMLIBEXTRA        = -Llib -lHist -lMatrix
 TMVALIBEXTRA            = -Llib -lRIO -lHist -lMatrix -lTree -lGraf -lGpad \
@@ -339,14 +339,14 @@ TMVALIBEXTRA            = -Llib -lRIO -lHist -lMatrix -lTree -lGraf -lGpad \
 SPLOTLIBEXTRA           = -Llib -lMatrix -lHist -lTree -lTreePlayer -lGraf3d -lGraf
 QTROOTLIBEXTRA          = -Llib -lGui -lGQt
 GQTLIBEXTRA             = -Llib -lGui -lGpad -lGraf -lRint
-QUADPLIBEXTRA           = -Llib -lMatrix 
+QUADPLIBEXTRA           = -Llib -lMatrix
 RUBYLIBEXTRA            = -Llib -lHist
 GUIBLDLIBEXTRA          = -Llib -lGui -lGraf
 GUIHTMLLIBEXTRA         = -Llib -lGui -lGraf -lNet
 XMLLIBEXTRA             = -Llib -lRIO
 FOAMLIBEXTRA            = -Llib -lHist
 ALIENLIBEXTRA           = -Llib -lXMLIO -lNetx -lTree -lProofPlayer -lNet -lRIO
-ROOFITCORELIBEXTRA      = -Llib -lHist -lGraf -lMatrix -lTree -lMinuit -lHtml -lRIO
+ROOFITCORELIBEXTRA      = -Llib -lHist -lGraf -lMatrix -lTree -lMinuit -lRIO
 ROOFITLIBEXTRA          = -Llib -lRooFitCore -lTree -lRIO -lMatrix
 CINT7LIBEXTRA           = -Llib -lReflex
 CINTEXLIBEXTRA          = -Llib -lReflex
