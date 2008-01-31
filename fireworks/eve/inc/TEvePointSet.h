@@ -78,6 +78,8 @@ public:
    virtual void InitFill(Int_t subIdNum);
    virtual void TakeAction(TEvePointSelector*);
 
+   virtual void PointSelected(Int_t id); // *SIGNAL*
+
    virtual const TGPicture* GetListTreeIcon();
 
    virtual TClass* ProjectedClass() const;
