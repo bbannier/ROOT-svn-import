@@ -149,7 +149,7 @@ $(REFLEXDICTLIB): $(REFLEXDO) $(ORDER_) $(MAINLIBS) $(REFLEXLIB)
 		"$(SOFLAGS)" libReflexDict.$(SOEXT) $@ "$(REFLEXDO)" \
 		"$(REFLEXDICTLIBEXTRA)"
 
-$(REFLEXDS): $(REFLEXAPIH) $(REFLEXL) $(ROOTCINTTMPEXE)
+$(REFLEXDS): $(REFLEXAPIH) $(REFLEXL) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
 		utils/src/rootcint_tmp -f $@ -c -p -Ireflex/inc $(REFLEXAPIH) $(REFLEXL)
 
