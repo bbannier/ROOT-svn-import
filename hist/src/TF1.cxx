@@ -2379,7 +2379,8 @@ Double_t TF1::Integral(Double_t a, Double_t b, const Double_t *params, Double_t 
    //      g->IntegralFast(n,x,w,0,100000)= 1.253
 
    ROOT::Math::WrappedTF1 wf1(*this);
-   wf1.SetParameters(params);
+   if ( params )
+      wf1.SetParameters( params );
 
    ROOT::Math::GaussIntegratorOneDim giod;
    giod.SetFunction(wf1);
