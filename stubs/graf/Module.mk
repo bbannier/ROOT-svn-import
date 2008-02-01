@@ -56,7 +56,7 @@ $(GRAFDS1):     $(GRAFHD) $(GRAFL1) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(GRAFHD) $(GRAFL1)
 $(GRAFDS2):     $(GRAFH) $(GRAFL2) $(ROOTCINTTMPDEP)
-               @echo "Generating dictionary $@..."
+		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(FREETYPEINC) $(GRAFH) $(GRAFL2)
 
 $(GRAFMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(GRAFL1) $(GRAFL2)
