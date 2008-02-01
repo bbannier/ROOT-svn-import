@@ -1,14 +1,12 @@
 #! /bin/sh
 
-CVS2CL=build/unix/cvs2cl.pl
+SVN2CL=build/unix/svn2cl.sh
 
 echo ""
-echo "Generating README/ChangeLog from CVS logs..."
+echo "Generating README/ChangeLog from SVN logs..."
 echo ""
 
 # Generate ChangeLog from version v5-12-00 till now
 $SVN2CL -i -f README/ChangeLog -r HEAD:15807
-
-rm -f README/ChangeLog.bak
 
 exit 0
