@@ -36,6 +36,13 @@ TGSplitFrame::~TGSplitFrame()
 }
 
 //______________________________________________________________________________
+void TGSplitFrame::AddFrame(TGFrame *f, TGLayoutHints *l)
+{
+   TGCompositeFrame::AddFrame(f, l);
+   fFrame = f;
+}
+
+//______________________________________________________________________________
 void TGSplitFrame::Cleanup()
 {
    // recursively cleanup child frames.
@@ -57,19 +64,20 @@ void TGSplitFrame::Cleanup()
 }
 
 //______________________________________________________________________________
-void TGSplitFrame::HSplit()
+void TGSplitFrame::HSplit(UInt_t h)
 {
    // Horizontally split the frame.
 
    // return if already splitted
    if ((fSplitter != 0) || (fFirst != 0) || (fSecond != 0) || (fFrame != 0))
       return;
+   UInt_t height = (h > 0) ? h : fHeight/2;
    // set correct option (vertical frame)
    ChangeOptions((GetOptions() & ~kHorizontalFrame) | kVerticalFrame);
    // create first split frame with fixed height - required for the splitter
-   fFirst = new TGSplitFrame(this, 400, 300, kSunkenFrame | kFixedHeight);
+   fFirst = new TGSplitFrame(this, fWidth, height, kSunkenFrame | kFixedHeight);
    // create second split frame
-   fSecond = new TGSplitFrame(this, 400, 300, kSunkenFrame);
+   fSecond = new TGSplitFrame(this, fWidth, height, kSunkenFrame);
    // create horizontal splitter
    fSplitter = new TGHSplitter(this, 4, 4);
    // set the splitter's frame to the first one
@@ -82,19 +90,20 @@ void TGSplitFrame::HSplit()
 }
 
 //______________________________________________________________________________
-void TGSplitFrame::VSplit()
+void TGSplitFrame::VSplit(UInt_t w)
 {
    // Vertically split the frame.
 
    // return if already splitted
    if ((fSplitter != 0) || (fFirst != 0) || (fSecond != 0) || (fFrame != 0))
       return;
+   UInt_t width = (w > 0) ? w : fWidth/2;
    // set correct option (horizontal frame)
    ChangeOptions((GetOptions() & ~kVerticalFrame) | kHorizontalFrame);
    // create first split frame with fixed width - required for the splitter
-   fFirst = new TGSplitFrame(this, 400, 300, kSunkenFrame | kFixedWidth);
+   fFirst = new TGSplitFrame(this, width, fHeight, kSunkenFrame | kFixedWidth);
    // create second split frame
-   fSecond = new TGSplitFrame(this, 400, 300, kSunkenFrame);
+   fSecond = new TGSplitFrame(this, width, fHeight, kSunkenFrame);
    // create vertical splitter
    fSplitter = new TGVSplitter(this, 4, 4);
    // set the splitter's frame to the first one

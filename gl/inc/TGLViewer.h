@@ -254,6 +254,7 @@ public:
    virtual void MouseIdle(TGLPhysicalShape*,UInt_t,UInt_t); // *SIGNAL*
    virtual void MouseOver(TGLPhysicalShape*); // *SIGNAL*
    virtual void Activated() { Emit("Activated()"); } // *SIGNAL*
+   virtual void DoubleClicked() { Emit("DoubleClicked()"); } // *SIGNAL*
 
    Bool_t HandleTimer(TTimer *t);
    // Interaction - events to ExecuteEvent are passed on to these

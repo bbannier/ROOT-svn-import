@@ -1588,6 +1588,7 @@ Bool_t TGLViewer::HandleDoubleClick(Event_t *event)
          ResetCurrentCamera();
          RequestDraw();
       }
+      DoubleClicked();
    }
    return kTRUE;
 }
