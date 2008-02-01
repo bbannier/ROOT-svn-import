@@ -46,7 +46,7 @@ $(X11LIB):      $(X11O) $(X11DO) $(ORDER_) $(MAINLIBS)
 		   "$(X11LIBEXTRA) $(XLIBS)"
 
 $(X11DS):       $(X11H1) $(X11L) $(ROOTCINTTMPDEP)
-	@echo "Generating dictionary $@..."
+		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(X11H1) $(X11L)
 
 $(X11MAP):      $(RLIBMAP) $(MAKEFILEDEP) $(X11L)

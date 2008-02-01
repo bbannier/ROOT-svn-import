@@ -45,7 +45,7 @@ $(TABLELIB):    $(TABLEO) $(TABLEDO) $(ORDER_) $(MAINLIBS) $(TABLELIBDEP)
 
 $(TABLEDS):     $(TABLEH) $(TABLEL) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMPDEP) -f $@ -c $(TABLEH) $(TABLEL)
+		$(ROOTCINTTMP) -f $@ -c $(TABLEH) $(TABLEL)
 
 $(TABLEMAP):    $(RLIBMAP) $(MAKEFILEDEP) $(TABLEL)
 		$(RLIBMAP) -o $(TABLEMAP) -l $(TABLELIB) \
