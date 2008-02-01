@@ -616,8 +616,7 @@ endif
 
 
 clean:
-		@rm -f $(OBJS) $(TRACKMATHSRC) core *Dict.*
-
+		@rm -f $(OBJS) $(TRACKMATHSRC) core
 
 distclean:      clean
 		-@mv -f linearIO.root linearIO.roott
@@ -636,48 +635,34 @@ distclean:      clean
 Event.$(ObjSuf): Event.h
 MainEvent.$(ObjSuf): Event.h
 
-EventDict.$(SrcSuf): Event.h EventLinkDef.h Event.$(ObjSuf)
-#EventDict.$(SrcSuf): Event.h EventLinkDef.h 
-	@echo "Generating dictionary $@..."
-	#rootcint -f $@ -c $^
-	@rootcint_nostubs.sh -f $@ -o Event.$(ObjSuf) -c $^
-
-
-Hello.$(ObjSuf): Hello.h
-HelloDict.$(SrcSuf): Hello.h Hello.$(ObjSuf)
-#HelloDict.$(SrcSuf): Hello.h 
-	@echo "Generating dictionary $@..."
-	#@rootcint -f $@ -c $^
-	@rootcint_nostubs.sh -f $@ -o Hello.$(ObjSuf) -c $^
-
-Aclock.$(ObjSuf): Aclock.h
-AclockDict.$(SrcSuf): Aclock.h Aclock.$(ObjSuf)
-#AclockDict.$(SrcSuf): Aclock.h 
-	@echo "Generating dictionary $@..."
-	#@rootcint -f $@ -c $^
-	@rootcint_nostubs.sh -f $@ -o Aclock.$(ObjSuf) -c $^
-
-
-Tetris.$(ObjSuf): Tetris.h
-TetrisDict.$(SrcSuf): Tetris.h Tetris.$(ObjSuf)
-#TetrisDict.$(SrcSuf): Tetris.h 
-	@echo "Generating dictionary $@..."
-	#@rootcint -f $@ -c $^
-	@rootcint_nostubs.sh -f $@ -o Tetris.$(ObjSuf) -c $^
-
-TBench.$(ObjSuf): TBench.h
-#TBenchDict.$(SrcSuf): TBench.h benchLinkDef.h
-TBenchDict.$(SrcSuf): TBench.h benchLinkDef.h TBench.$(ObjSuf)
+EventDict.$(SrcSuf): Event.h EventLinkDef.h
 	@echo "Generating dictionary $@..."
 	@rootcint -f $@ -c $^
-	@rootcint_nostubs.sh -f $@ -o TBench.$(ObjSuf) -c $^
+
+Hello.$(ObjSuf): Hello.h
+HelloDict.$(SrcSuf): Hello.h
+	@echo "Generating dictionary $@..."
+	@rootcint -f $@ -c $^
+
+Aclock.$(ObjSuf): Aclock.h
+AclockDict.$(SrcSuf): Aclock.h
+	@echo "Generating dictionary $@..."
+	@rootcint -f $@ -c $^
+
+Tetris.$(ObjSuf): Tetris.h
+TetrisDict.$(SrcSuf): Tetris.h
+	@echo "Generating dictionary $@..."
+	@rootcint -f $@ -c $^
+
+TBench.$(ObjSuf): TBench.h
+TBenchDict.$(SrcSuf): TBench.h benchLinkDef.h
+	@echo "Generating dictionary $@..."
+	@rootcint -f $@ -c $^
 
 guiviewer.$(ObjSuf): guiviewer.h
-guiviewerDict.$(SrcSuf): guiviewer.h guiviewerLinkDef.h guiviewer.$(ObjSuf)
-guiviewerDict.$(SrcSuf): guiviewer.h guiviewerLinkDef.h 
+guiviewerDict.$(SrcSuf): guiviewer.h guiviewerLinkDef.h
 	@echo "Generating dictionary $@..."
-	#@rootcint -f $@ -c $^
-	$(CMDECHO)rootcint_nostubs.sh -f $@ -o guiviewer.$(ObjSuf) -c $^
+	@rootcint -f $@ -c $^
 
 stressMathCore.$(ObjSuf): 	TrackMathCore.h
 TrackMathCoreCint.$(SrcSuf): 	TrackMathCore.h TrackMathCoreLinkDef.h

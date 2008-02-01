@@ -68,17 +68,17 @@ public:
    virtual ~TChain();
 
    virtual Int_t     Add(TChain* chain);
-   virtual Int_t     Add(const char* name, Long64_t nentries = TChain::kBigNumber);
-   virtual Int_t     AddFile(const char* name, Long64_t nentries = TChain::kBigNumber, const char* tname = "");
-   virtual Int_t     AddFileInfoList(TCollection* list, Long64_t nfiles = TChain::kBigNumber);
+   virtual Int_t     Add(const char* name, Long64_t nentries = kBigNumber);
+   virtual Int_t     AddFile(const char* name, Long64_t nentries = kBigNumber, const char* tname = "");
+   virtual Int_t     AddFileInfoList(TCollection* list, Long64_t nfiles = kBigNumber);
    virtual TFriendElement *AddFriend(const char* chainname, const char* dummy = "");
    virtual TFriendElement *AddFriend(const char* chainname, TFile* dummy);
    virtual TFriendElement *AddFriend(TTree* chain, const char* alias = "", Bool_t warn = kFALSE);
    virtual void      Browse(TBrowser*);
    virtual void      CanDeleteRefs(Bool_t flag = kTRUE);
    virtual void      CreatePackets();
-   virtual Long64_t  Draw(const char* varexp, const TCut& selection, Option_t* option = "", Long64_t nentries = TChain::kBigNumber, Long64_t firstentry = 0);
-   virtual Long64_t  Draw(const char* varexp, const char* selection, Option_t* option = "", Long64_t nentries = TChain::kBigNumber, Long64_t firstentry = 0); // *MENU*
+   virtual Long64_t  Draw(const char* varexp, const TCut& selection, Option_t* option = "", Long64_t nentries = kBigNumber, Long64_t firstentry = 0);
+   virtual Long64_t  Draw(const char* varexp, const char* selection, Option_t* option = "", Long64_t nentries = kBigNumber, Long64_t firstentry = 0); // *MENU*
    virtual void      Draw(Option_t* opt) { Draw(opt, "", "", 1000000000, 0); }
    virtual Int_t     Fill() { MayNotUse("Fill()"); return -1; }
    virtual TBranch  *FindBranch(const char* name);
@@ -113,15 +113,15 @@ public:
    virtual Int_t     LoadBaskets(Long64_t maxmemory);
    virtual Long64_t  LoadTree(Long64_t entry);
            void      Lookup(Bool_t force = kFALSE);
-   virtual void      Loop(Option_t *option="", Long64_t nentries=TChain::kBigNumber, Long64_t firstentry=0); // *MENU*
+   virtual void      Loop(Option_t *option="", Long64_t nentries=kBigNumber, Long64_t firstentry=0); // *MENU*
    virtual void      ls(Option_t *option="") const;
    virtual Long64_t  Merge(const char *name, Option_t *option = "");
    virtual Long64_t  Merge(TCollection *list, Option_t *option = "");
    virtual Long64_t  Merge(TFile *file, Int_t basketsize, Option_t *option="");
    virtual void      Print(Option_t *option="") const;
-   virtual Long64_t  Process(const char *filename, Option_t *option="", Long64_t nentries=TChain::kBigNumber, Long64_t firstentry=0); // *MENU*
+   virtual Long64_t  Process(const char *filename, Option_t *option="", Long64_t nentries=kBigNumber, Long64_t firstentry=0); // *MENU*
 #ifndef __CINT__
-   virtual Long64_t  Process(TSelector *selector, Option_t *option="",  Long64_t nentries=TChain::kBigNumber, Long64_t firstentry=0);
+   virtual Long64_t  Process(TSelector *selector, Option_t *option="",  Long64_t nentries=kBigNumber, Long64_t firstentry=0);
 #endif
    virtual void      Reset(Option_t *option="");
    virtual void      ResetBranchAddress(TBranch *);
