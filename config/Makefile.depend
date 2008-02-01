@@ -3,7 +3,7 @@
 # Makefile containing library dependencies
 
 NETLIBDEPM             = $(IOLIB)
-HISTLIBDEPM            = $(MATRIXLIB)
+HISTLIBDEPM            = $(MATRIXLIB) $(MATHCORELIB)
 GRAFLIBDEPM            = $(HISTLIB) $(MATRIXLIB) $(IOLIB)
 GPADLIBDEPM            = $(GRAFLIB) $(HISTLIB)
 G3DLIBDEPM             = $(GRAFLIB) $(HISTLIB) $(GPADLIB)
@@ -184,7 +184,7 @@ EVELIBDEP              = $(EVELIBDEPM)
 ifeq ($(PLATFORM),win32)
 
 NETLIBEXTRA             = lib/libRIO.lib
-HISTLIBEXTRA            = lib/libMatrix.lib
+HISTLIBEXTRA            = lib/libMatrix.lib lib/libMathCore.lib
 GRAFLIBEXTRA            = lib/libHist.lib lib/libMatrix.lib lib/libRIO.lib
 GPADLIBEXTRA            = lib/libGraf.lib lib/libHist.lib
 G3DLIBEXTRA             = lib/libGraf.lib lib/libHist.lib lib/libGpad.lib
@@ -293,7 +293,7 @@ EVELIBEXTRA             = lib/libGeom.lib lib/libGeomPainter.lib \
 else
 
 NETLIBEXTRA             = -Llib -lRIO
-HISTLIBEXTRA            = -Llib -lMatrix
+HISTLIBEXTRA            = -Llib -lMatrix -lMathCore
 GRAFLIBEXTRA            = -Llib -lHist -lMatrix -lRIO
 GPADLIBEXTRA            = -Llib -lGraf -lHist
 G3DLIBEXTRA             = -Llib -lGraf -lHist -lGpad

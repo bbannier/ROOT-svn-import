@@ -184,6 +184,7 @@ namespace ROOT {
             return fSolver->Name(); 
          }
          
+#ifdef LATER
          /**
             Test convertgence Status of current iteration using interval values (for bracketing algorithms)
          */
@@ -204,7 +205,7 @@ namespace ROOT {
          static int TestResidual(double f,  double epsAbs) { 
             return GSLRootHelper::TestResidual(f, epsAbs); 
          }
-         
+#endif         
          
          
       protected: 
