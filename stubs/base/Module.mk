@@ -73,11 +73,9 @@ base/src/TSystem.d base/src/TSystem.o: $(COMPILEDATA)
 
 $(BASEDS1):     $(BASEH1) $(BASEL1) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
-
 		$(ROOTCINTTMP) -f $@ -c $(BASEH1) $(BASEL1)
 $(BASEDS2):     $(BASEH1) $(BASEL2) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
-
 		$(ROOTCINTTMP) -f $@ -c $(BASEH1) $(BASEL2)
 $(BASEDS3):     $(BASEH3) $(BASEL3) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."

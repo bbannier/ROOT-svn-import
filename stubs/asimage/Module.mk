@@ -194,7 +194,7 @@ $(ASIMAGELIB):  $(ASIMAGEO) $(ASIMAGEDO) $(ASTEPDEP) $(FREETYPEDEP) \
 		    $(ASEXTRALIBDIR) $(ASEXTRALIB) $(XLIBS)"
 
 $(ASIMAGEDS):   $(ASIMAGEH) $(ASIMAGEL) $(ROOTCINTTMPDEP)
-	@echo "Generating dictionary $@..."
+		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(ASIMAGEH) $(ASIMAGEL)
 
 $(ASIMAGEMAP):  $(RLIBMAP) $(MAKEFILEDEP) $(ASIMAGEL)

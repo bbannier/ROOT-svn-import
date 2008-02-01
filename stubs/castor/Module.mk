@@ -45,7 +45,7 @@ $(CASTORLIB):   $(CASTORO) $(CASTORDO) $(ORDER_) $(MAINLIBS) $(CASTORLIBDEP)
 		   "$(CASTORLIBEXTRA) $(CASTORLIBDIR) $(CASTORCLILIB)"
 
 $(CASTORDS):    $(CASTORH) $(CASTORL) $(ROOTCINTTMPDEP)
-	@echo "Generating dictionary $@..."
+		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(CASTORH) $(CASTORL)
 
 $(CASTORMAP):   $(RLIBMAP) $(MAKEFILEDEP) $(CASTORL)
