@@ -35,10 +35,12 @@ public:
                 UInt_t options = 0);
    virtual ~TGSplitFrame();
 
-   virtual void   HSplit();
-   virtual void   VSplit();
+   virtual void   AddFrame(TGFrame *f, TGLayoutHints *l = 0);
+   virtual void   HSplit(UInt_t h = 0);
+   virtual void   VSplit(UInt_t w = 0);
    virtual void   Cleanup();
    TGSplitFrame  *GetFirst() const { return fFirst; }
+   TGFrame       *GetFrame() const { return fFrame; }
    TGSplitFrame  *GetSecond() const { return fSecond; }
    TGSplitter    *GetSplitter() const { return fSplitter; }
 
