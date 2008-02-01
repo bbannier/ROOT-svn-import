@@ -49,7 +49,7 @@ $(HISTDS):      $(HISTH) $(HISTL) $(ROOTCINTTMPDEP)
 
 $(HISTMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(HISTL)
 		$(RLIBMAP) -o $(HISTMAP) -l $(HISTLIB) \
-		-d $(HISTLIBDEPM) -c $(HISTL)
+		   -d $(HISTLIBDEPM) -c $(HISTL)
 
 all-hist:       $(HISTLIB) $(HISTMAP)
 
