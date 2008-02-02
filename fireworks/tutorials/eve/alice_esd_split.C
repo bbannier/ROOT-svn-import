@@ -75,6 +75,9 @@
 */
 
 
+R__EXTERN TEveProjectionManager *gRPhiMgr;
+R__EXTERN TEveProjectionManager *gRhoZMgr;
+TEveGeoShape *gGeoShape;
 
 // Forward declarations.
 
@@ -86,6 +89,7 @@ class AliExternalTrackParam;
 Bool_t     alice_esd_loadlib(const char* file, const char* project);
 void       make_gui();
 void       load_event();
+void       update_projections();
 
 void       alice_esd_read();
 TEveTrack* esd_make_track(TEveTrackPropagator* trkProp, Int_t index, AliESDtrack* at,
@@ -113,7 +117,6 @@ AliESDfriend *esd_friend = 0;
 Int_t esd_event_id       = 0; // Current event id.
 
 TEveTrackList *track_list = 0;
-
 
 /******************************************************************************/
 // Initialization and steering functions
@@ -172,21 +175,45 @@ void alice_esd_split()
    }
 
    TEveManager::Create();
+   
+   // Adapt the main frame to the screen size...
+   Int_t qq; 
+   UInt_t ww, hh;
+   gVirtualX->GetWindowSize(gVirtualX->GetDefaultRootWindow(), qq, qq, ww, hh);
+   Float_t screen_ratio = (Float_t)ww/(Float_t)hh;
+   if (screen_ratio > 1.5) {
+      gEve->GetBrowser()->MoveResize(100, 50, ww - 300, hh - 100);
+      gEve->GetBrowser()->SetWMPosition(100, 50);
+   }
+   else {
+      gEve->GetBrowser()->Move(50, 50);
+      gEve->GetBrowser()->SetWMPosition(50, 50);
+   }
 
    { // Simple geometry
       TFile* geom = TFile::Open(esd_geom_file_name, "CACHEREAD");
       if (!geom)
          return;
       TEveGeoShapeExtract* gse = (TEveGeoShapeExtract*) geom->Get("Gentle");
-      TEveGeoShape* gsre = TEveGeoShape::ImportShapeExtract(gse, 0);
+      gGeoShape = TEveGeoShape::ImportShapeExtract(gse, 0);
       geom->Close();
       delete geom;
    }
 
    make_gui();
 
+   // import the geometry in the projection managers
+   if (gRPhiMgr) {
+      gRPhiMgr->ImportElements(gGeoShape);
+   }
+   if (gRhoZMgr) {
+      gRhoZMgr->ImportElements(gGeoShape);
+   }
+
    load_event();
 
+   update_projections();
+   
    gEve->Redraw3D(kTRUE); // Reset camera after the first event has been shown.
 }
 
@@ -227,6 +254,24 @@ void load_event()
    gEve->Redraw3D(kFALSE, kTRUE);
 }
 
+//______________________________________________________________________________
+void update_projections()
+{
+   // cleanup then import geometry and event 
+   // in the projection managers
+   
+   TEveElement* top = gEve->GetCurrentEvent();
+   if (gRPhiMgr && top) {
+      gRPhiMgr->DestroyElements();
+      gRPhiMgr->ImportElements(gGeoShape);
+      gRPhiMgr->ImportElements(top);
+   }
+   if (gRhoZMgr && top) {
+      gRhoZMgr->DestroyElements();
+      gRhoZMgr->ImportElements(gGeoShape);
+      gRhoZMgr->ImportElements(top);
+   }
+}
 
 /******************************************************************************/
 // GUI
@@ -244,6 +289,7 @@ public:
       if (esd_event_id < esd_tree->GetEntries() - 1) {
          ++esd_event_id;
          load_event();
+         update_projections();
       } else {
          printf("Already at last event.\n");
       }
@@ -253,6 +299,7 @@ public:
       if (esd_event_id > 0) {
          --esd_event_id;
          load_event();
+         update_projections();
       } else {
          printf("Already at first event.\n");
       }
