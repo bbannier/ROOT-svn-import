@@ -5,8 +5,6 @@
 #include "TGLayout.h"
 #include "TGSplitter.h"
 #include "TGLWidget.h"
-#include "TRootEmbeddedCanvas.h"
-#include "TCanvas.h"
 #include "TEvePad.h"
 #include "TGeoManager.h"
 #include "TString.h"
@@ -19,13 +17,15 @@
 #include "HelpText.h"
 #include "TClass.h"
 #include "Riostream.h"
-#include "TGPicture.h"
-#include "TImage.h"
 #include "TEnv.h"
 #include "TGListTree.h"
+#include "TGTextView.h"
+
 #include "TEveManager.h"
 #include "TEveViewer.h"
 #include "TEveBrowser.h"
+#include "TEveProjectionManager.h"
+#include "TEveGeoNode.h"
 
 #include "TGSplitFrame.h"
 #include "TGLEmbeddedViewer.h"
@@ -59,11 +59,11 @@ public:
 private:
    TEvePad           *fPad;         // pad used as geometry container
    TGSplitFrame      *fSplitFrame;  // main (first) split frame
-   TGLEmbeddedViewer *fTLViewer;    // top-left GL viewer
-   TGLEmbeddedViewer *fTRViewer;    // top-right GL viewer
-   TGLEmbeddedViewer *fBLViewer;    // bottom-left GL viewer
-   TGLEmbeddedViewer *fBRViewer;    // bottom-right GL viewer
+   TGLEmbeddedViewer *fViewer0;     // main GL viewer
+   TGLEmbeddedViewer *fViewer1;     // first GL viewer
+   TGLEmbeddedViewer *fViewer2;     // second GL viewer
    TGLEmbeddedViewer *fActViewer;   // actual (active) GL viewer
+   TGTextView        *fTextView;
    TGMenuBar         *fMenuBar;     // main menu bar
    TGPopupMenu       *fMenuFile;    // 'File' popup menu
    TGPopupMenu       *fMenuHelp;    // 'Help' popup menu
@@ -73,33 +73,32 @@ private:
    TGShapedToolTip   *fShapedToolTip;   // shaped tooltip
    Bool_t             fIsEmbedded;
 
-   TEveViewer        *fViewer[4];
+   TEveViewer        *fViewer[3];
+   TEveProjectionManager *fRPhiMgr;
+   TEveProjectionManager *fRhoZMgr;
 
-protected:
-   void InitGL();
-   void PreDraw();
-   void PostDraw();
-   void MakeCurrent() const;
-   void SwapBuffers() const;
-
-   // Cameras
-   void        SetViewport(Int_t x, Int_t y, Int_t width, Int_t height);
-   void        SetupCameras(Bool_t reset);
-   
 public:
    SplitGLView(const TGWindow *p=0, UInt_t w=800, UInt_t h=600, Bool_t embed=kFALSE);
    virtual ~SplitGLView();
 
    void           ItemClicked(TGListTreeItem *item, Int_t btn, Int_t x, Int_t y);
    void           HandleMenu(Int_t id);
+   void           OnDoubleClick();
    void           OnMouseIdle(TGLPhysicalShape *shape, UInt_t posx, UInt_t posy);
    void           OnMouseOver(TGLPhysicalShape *shape);
    void           OnViewerActivated();
    void           OpenFile(const char *fname);
    void           ToggleOrthoRotate();
    void           ToggleOrthoDolly();
+
+   TEveProjectionManager *GetRPhiMgr() const { return fRPhiMgr; }
+   TEveProjectionManager *GetRhoZMgr() const { return fRhoZMgr; }
+
    ClassDef(SplitGLView, 0)
 };
+
+TEveProjectionManager *gRPhiMgr = 0;
+TEveProjectionManager *gRhoZMgr = 0;
 
 ClassImp(SplitGLView)
 
@@ -110,6 +109,7 @@ SplitGLView::SplitGLView(const TGWindow *p, UInt_t w, UInt_t h, Bool_t embed) :
    // Main frame constructor.
 
    TGSplitFrame *frm;
+   TEveScene *s;
 
    // create the "file" popup menu
    fMenuFile = new TGPopupMenu(gClient->GetRoot());
@@ -173,35 +173,38 @@ SplitGLView::SplitGLView(const TGWindow *p, UInt_t w, UInt_t h, Bool_t embed) :
                0, 0, 10, 0));
    }
 
+   // create eve pad (our geometry container)
+   fPad = new TEvePad();
+
    // create the split frames
    fSplitFrame = new TGSplitFrame(this, 800, 600);
    AddFrame(fSplitFrame, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
    // split it once
-   fSplitFrame->HSplit();
+   fSplitFrame->HSplit(434);
    // then split each part again (this will make four parts)
-   fSplitFrame->GetFirst()->VSplit();
-   fSplitFrame->GetSecond()->VSplit();
+   fSplitFrame->GetSecond()->VSplit(266);
+   fSplitFrame->GetSecond()->GetSecond()->VSplit(266);
 
-   // create eve pad (our geometry container)
-   fPad = new TEvePad();
-   // get top left split frame
-   frm = fSplitFrame->GetFirst()->GetFirst();
+   // get top (main) split frame
+   frm = fSplitFrame->GetFirst();
    // create (embed) a GL viewer inside
-   fTLViewer = new TGLEmbeddedViewer(frm, fPad);
-   frm->AddFrame(fTLViewer->GetFrame(), new TGLayoutHints(kLHintsExpandX | 
+   fViewer0 = new TGLEmbeddedViewer(frm, fPad);
+   frm->AddFrame(fViewer0->GetFrame(), new TGLayoutHints(kLHintsExpandX | 
                  kLHintsExpandY));
-   // set the camera to orthographic (XOY) for this viewer
-   fTLViewer->SetCurrentCamera(TGLViewer::kCameraOrthoXOY);
+   // set the camera to perspective (XOZ) for this viewer
+   fViewer0->SetCurrentCamera(TGLViewer::kCameraPerspXOZ);
    // connect signal we are interested to
-   fTLViewer->Connect("MouseOver(TGLPhysicalShape*)", "SplitGLView", this, 
+   fViewer0->Connect("MouseOver(TGLPhysicalShape*)", "SplitGLView", this, 
                       "OnMouseOver(TGLPhysicalShape*)");
-   fTLViewer->Connect("Activated()", "SplitGLView", this, 
+   fViewer0->Connect("Activated()", "SplitGLView", this, 
                       "OnViewerActivated()");
-   fTLViewer->Connect("MouseIdle(TGLPhysicalShape*,UInt_t,UInt_t)", 
+   fViewer0->Connect("MouseIdle(TGLPhysicalShape*,UInt_t,UInt_t)", 
                       "SplitGLView", this, 
                       "OnMouseIdle(TGLPhysicalShape*,UInt_t,UInt_t)");
+   fViewer0->Connect("DoubleClicked()", "SplitGLView", this, 
+                      "OnDoubleClick()");
    fViewer[0] = new TEveViewer("SplitGLViewer[0]");
-   fViewer[0]->SetGLViewer(fTLViewer);
+   fViewer[0]->SetGLViewer(fViewer0);
    fViewer[0]->IncDenyDestroy();
    if (fIsEmbedded && gEve) {
       fViewer[0]->AddScene(gEve->GetGlobalScene());
@@ -209,80 +212,83 @@ SplitGLView::SplitGLView(const TGWindow *p, UInt_t w, UInt_t h, Bool_t embed) :
       gEve->AddElement(fViewer[0], gEve->GetViewers());
    }
 
-   // get top right split frame
-   frm = fSplitFrame->GetFirst()->GetSecond();
-   // create (embed) a GL viewer inside
-   fTRViewer = new TGLEmbeddedViewer(frm, fPad);
-   frm->AddFrame(fTRViewer->GetFrame(), new TGLayoutHints(kLHintsExpandX | 
-                 kLHintsExpandY));
-   // set the camera to orthographic (XOZ) for this viewer
-   fTRViewer->SetCurrentCamera(TGLViewer::kCameraOrthoXOZ);
-   // connect signal we are interested to
-   fTRViewer->Connect("MouseOver(TGLPhysicalShape*)", "SplitGLView", this, 
-                      "OnMouseOver(TGLPhysicalShape*)");
-   fTRViewer->Connect("Activated()", "SplitGLView", this, 
-                      "OnViewerActivated()");
-   fTRViewer->Connect("MouseIdle(TGLPhysicalShape*,UInt_t,UInt_t)", 
-                      "SplitGLView", this, 
-                      "OnMouseIdle(TGLPhysicalShape*,UInt_t,UInt_t)");
-   fViewer[1] = new TEveViewer("SplitGLViewer[1]");
-   fViewer[1]->SetGLViewer(fTRViewer);
-   fViewer[1]->IncDenyDestroy();
-   if (fIsEmbedded && gEve) {
-      fViewer[1]->AddScene(gEve->GetGlobalScene());
-      fViewer[1]->AddScene(gEve->GetEventScene());
-      gEve->AddElement(fViewer[1], gEve->GetViewers());
-   }
+   s = gEve->SpawnNewScene("PhiZ Projection");
+   // projections
+   fRhoZMgr = new TEveProjectionManager();
+   gEve->AddElement(fRhoZMgr, (TEveElement *)s);
+   gEve->AddToListTree(fRhoZMgr, kTRUE);
 
    // get bottom left split frame
    frm = fSplitFrame->GetSecond()->GetFirst();
    // create (embed) a GL viewer inside
-   fBLViewer = new TGLEmbeddedViewer(frm, fPad);
-   frm->AddFrame(fBLViewer->GetFrame(), new TGLayoutHints(kLHintsExpandX | 
+   fViewer1 = new TGLEmbeddedViewer(frm, fPad);
+   frm->AddFrame(fViewer1->GetFrame(), new TGLayoutHints(kLHintsExpandX | 
                  kLHintsExpandY));
-   // set the camera to orthographic (ZOY) for this viewer
-   fBLViewer->SetCurrentCamera(TGLViewer::kCameraOrthoZOY);
+   // set the camera to orthographic (XOY) for this viewer
+   fViewer1->SetCurrentCamera(TGLViewer::kCameraOrthoXOY);
    // connect signal we are interested to
-   fBLViewer->Connect("MouseOver(TGLPhysicalShape*)", "SplitGLView", this, 
+   fViewer1->Connect("MouseOver(TGLPhysicalShape*)", "SplitGLView", this, 
                       "OnMouseOver(TGLPhysicalShape*)");
-   fBLViewer->Connect("Activated()", "SplitGLView", this, 
+   fViewer1->Connect("Activated()", "SplitGLView", this, 
                       "OnViewerActivated()");
-   fBLViewer->Connect("MouseIdle(TGLPhysicalShape*,UInt_t,UInt_t)", 
+   fViewer1->Connect("MouseIdle(TGLPhysicalShape*,UInt_t,UInt_t)", 
                       "SplitGLView", this, 
                       "OnMouseIdle(TGLPhysicalShape*,UInt_t,UInt_t)");
+   fViewer1->Connect("DoubleClicked()", "SplitGLView", this, 
+                     "OnDoubleClick()");
+   fViewer[1] = new TEveViewer("SplitGLViewer[1]");
+   fViewer[1]->SetGLViewer(fViewer1);
+   fViewer[1]->IncDenyDestroy();
+   if (fIsEmbedded && gEve) {
+      fRhoZMgr->ImportElements((TEveElement *)gEve->GetGlobalScene());
+      fRhoZMgr->ImportElements((TEveElement *)gEve->GetEventScene());
+      fRhoZMgr->SetProjection(TEveProjection::kPT_RhoZ);
+      fViewer[1]->AddScene(s);
+      gEve->AddElement(fViewer[1], gEve->GetViewers());
+   }
+   gRhoZMgr = fRhoZMgr;
+
+   s = gEve->SpawnNewScene("RhoPhi Projection");
+   // projections
+   fRPhiMgr = new TEveProjectionManager();
+   gEve->AddElement(fRPhiMgr, (TEveElement *)s);
+   gEve->AddToListTree(fRPhiMgr, kTRUE);
+
+   // get bottom center split frame
+   frm = fSplitFrame->GetSecond()->GetSecond()->GetFirst();
+   // create (embed) a GL viewer inside
+   fViewer2 = new TGLEmbeddedViewer(frm, fPad);
+   frm->AddFrame(fViewer2->GetFrame(), new TGLayoutHints(kLHintsExpandX | 
+                 kLHintsExpandY));
+   // set the camera to orthographic (XOY) for this viewer
+   fViewer2->SetCurrentCamera(TGLViewer::kCameraOrthoXOY);
+   // connect signal we are interested to
+   fViewer2->Connect("MouseOver(TGLPhysicalShape*)", "SplitGLView", this, 
+                      "OnMouseOver(TGLPhysicalShape*)");
+   fViewer2->Connect("Activated()", "SplitGLView", this, 
+                      "OnViewerActivated()");
+   fViewer2->Connect("MouseIdle(TGLPhysicalShape*,UInt_t,UInt_t)", 
+                      "SplitGLView", this, 
+                      "OnMouseIdle(TGLPhysicalShape*,UInt_t,UInt_t)");
+   fViewer2->Connect("DoubleClicked()", "SplitGLView", this, 
+                     "OnDoubleClick()");
    fViewer[2] = new TEveViewer("SplitGLViewer[2]");
-   fViewer[2]->SetGLViewer(fBLViewer);
+   fViewer[2]->SetGLViewer(fViewer2);
    fViewer[2]->IncDenyDestroy();
    if (fIsEmbedded && gEve) {
-      fViewer[2]->AddScene(gEve->GetGlobalScene());
-      fViewer[2]->AddScene(gEve->GetEventScene());
+      fRPhiMgr->ImportElements((TEveElement *)gEve->GetGlobalScene());
+      fRPhiMgr->ImportElements((TEveElement *)gEve->GetEventScene());
+      fRPhiMgr->SetProjection(TEveProjection::kPT_RPhi);
+      fViewer[2]->AddScene(s);
       gEve->AddElement(fViewer[2], gEve->GetViewers());
    }
+   gRPhiMgr = fRPhiMgr;
 
    // get bottom right split frame
-   frm = fSplitFrame->GetSecond()->GetSecond();
-   // create (embed) a GL viewer inside
-   fBRViewer = new TGLEmbeddedViewer(frm, fPad);
-   frm->AddFrame(fBRViewer->GetFrame(), new TGLayoutHints(kLHintsExpandX | 
-                 kLHintsExpandY));
-   // set the camera to perspective (XOZ) for this viewer
-   fBRViewer->SetCurrentCamera(TGLViewer::kCameraPerspXOZ);
-   // connect signal we are interested to
-   fBRViewer->Connect("MouseOver(TGLPhysicalShape*)", "SplitGLView", this, 
-                      "OnMouseOver(TGLPhysicalShape*)");
-   fBRViewer->Connect("Activated()", "SplitGLView", this, 
-                      "OnViewerActivated()");
-   fBRViewer->Connect("MouseIdle(TGLPhysicalShape*,UInt_t,UInt_t)", 
-                      "SplitGLView", this, 
-                      "OnMouseIdle(TGLPhysicalShape*,UInt_t,UInt_t)");
-   fViewer[3] = new TEveViewer("SplitGLViewer[3]");
-   fViewer[3]->SetGLViewer(fBRViewer);
-   fViewer[3]->IncDenyDestroy();
-   if (fIsEmbedded && gEve) {
-      fViewer[3]->AddScene(gEve->GetGlobalScene());
-      fViewer[3]->AddScene(gEve->GetEventScene());
-      gEve->AddElement(fViewer[3], gEve->GetViewers());
-   }
+   frm = fSplitFrame->GetSecond()->GetSecond()->GetSecond();
+   // create (embed) a text view inside
+   fTextView = new TGTextView(frm, 100, 100, kSunkenFrame | kDoubleBorder);
+   frm->AddFrame(fTextView, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
 
    if (fIsEmbedded && gEve) {
       gEve->GetListTree()->Connect("Clicked(TGListTreeItem*, Int_t, Int_t, Int_t)",
@@ -294,7 +300,6 @@ SplitGLView::SplitGLView(const TGWindow *p, UInt_t w, UInt_t h, Bool_t embed) :
    Resize(GetDefaultSize());
    MapSubwindows();
    MapWindow();
-
 }
 
 //______________________________________________________________________________
@@ -303,21 +308,50 @@ SplitGLView::~SplitGLView()
    // Clean up main frame...
    //Cleanup();
    
+   fMenuFile->Disconnect("Activated(Int_t)", this, "HandleMenu(Int_t)");
+   fMenuCamera->Disconnect("Activated(Int_t)", this, "HandleMenu(Int_t)");
+   fMenuScene->Disconnect("Activated(Int_t)", this, "HandleMenu(Int_t)");
+   fMenuHelp->Disconnect("Activated(Int_t)", this, "HandleMenu(Int_t)");
+   fViewer0->Disconnect("MouseOver(TGLPhysicalShape*)", this, 
+                         "OnMouseOver(TGLPhysicalShape*)");
+   fViewer0->Disconnect("Activated()", this, "OnViewerActivated()");
+   fViewer0->Disconnect("MouseIdle(TGLPhysicalShape*,UInt_t,UInt_t)", 
+                         this, "OnMouseIdle(TGLPhysicalShape*,UInt_t,UInt_t)");
+   fViewer1->Disconnect("MouseOver(TGLPhysicalShape*)", this, 
+                         "OnMouseOver(TGLPhysicalShape*)");
+   fViewer1->Disconnect("Activated()", this, "OnViewerActivated()");
+   fViewer1->Disconnect("MouseIdle(TGLPhysicalShape*,UInt_t,UInt_t)", 
+                         this, "OnMouseIdle(TGLPhysicalShape*,UInt_t,UInt_t)");
+   fViewer2->Disconnect("MouseOver(TGLPhysicalShape*)", this, 
+                         "OnMouseOver(TGLPhysicalShape*)");
+   fViewer2->Disconnect("Activated()", this, "OnViewerActivated()");
+   fViewer2->Disconnect("MouseIdle(TGLPhysicalShape*,UInt_t,UInt_t)", 
+                         this, "OnMouseIdle(TGLPhysicalShape*,UInt_t,UInt_t)");
+   if (fIsEmbedded && gEve) {
+      gEve->GetListTree()->Disconnect("Clicked(TGListTreeItem*, Int_t, Int_t, Int_t)",
+               this, "ItemClicked(TGListTreeItem*, Int_t, Int_t, Int_t)");
+      gEve->RemoveElement(fViewer[0], gEve->GetViewers());
+      gEve->RemoveElement(fViewer[1], gEve->GetViewers());
+      gEve->RemoveElement(fViewer[2], gEve->GetViewers());
+   }
+   delete fViewer[0];
+   delete fViewer[1];
+   delete fViewer[2];
    delete fShapedToolTip;
    delete fMenuFile;
    delete fMenuScene;
    delete fMenuCamera;
    delete fMenuHelp;
    delete fMenuBar;
-   if (!fIsEmbedded)
-      delete fStatusBar;
-   delete fTLViewer;
-   delete fTRViewer;
-   delete fBLViewer;
-   delete fBRViewer;
+   delete fViewer0;
+   delete fViewer1;
+   delete fViewer2;
    delete fSplitFrame;
    delete fPad;
-   gApplication->Terminate(0);
+   if (!fIsEmbedded) {
+      delete fStatusBar;
+      gApplication->Terminate(0);
+   }
 }
 
 //______________________________________________________________________________
@@ -381,10 +415,9 @@ void SplitGLView::HandleMenu(Int_t id)
          break;
 
       case kSceneUpdateAll:
-         fTLViewer->UpdateScene();
-         fTRViewer->UpdateScene();
-         fBLViewer->UpdateScene();
-         fBRViewer->UpdateScene();
+         fViewer0->UpdateScene();
+         fViewer1->UpdateScene();
+         fViewer2->UpdateScene();
          break;
 
       case kHelpAbout:
@@ -489,7 +522,6 @@ void SplitGLView::OnViewerActivated()
 
    if (fActViewer == 0) return;
 
-   //gVirtualX->SetInputFocus(fActViewer->GetGLWindow()->GetContainer()->GetId());
    // get the highlight color (only once)
    if (green == 0) {
       gClient->GetColorByName("green", green);
@@ -539,10 +571,9 @@ void SplitGLView::OpenFile(const char *fname)
    // and add the geometry to eve pad (container)
    fPad->GetListOfPrimitives()->Add(gGeoManager->GetTopVolume());
    // paint the geometry in each GL viewer
-   fTLViewer->PadPaint(fPad);
-   fTRViewer->PadPaint(fPad);
-   fBLViewer->PadPaint(fPad);
-   fBRViewer->PadPaint(fPad);
+   fViewer0->PadPaint(fPad);
+   fViewer1->PadPaint(fPad);
+   fViewer2->PadPaint(fPad);
 }
 
 //______________________________________________________________________________
@@ -596,6 +627,43 @@ void SplitGLView::ItemClicked(TGListTreeItem *item, Int_t btn, Int_t x, Int_t y)
          gVirtualX->SetInputFocus(ev->GetGLWindow()->GetContainer()->GetId());
       }
    }
+}
+
+//______________________________________________________________________________
+void SplitGLView::OnDoubleClick()
+{
+
+   TGSplitFrame *mainframe;
+   TGFrameElement *el = 0;
+   
+   TGLEmbeddedViewer *sourceview = (TGLEmbeddedViewer *)gTQSender;
+   if (sourceview == 0) return;
+
+   TGCompositeFrame *sourceframe = (TGCompositeFrame *)sourceview->GetFrame()->GetParent();
+   if (sourceframe == fSplitFrame->GetFirst()) return;
+
+   mainframe = fSplitFrame->GetFirst();
+   TGCompositeFrame *temp = (TGCompositeFrame *)fSplitFrame->GetFirst()->GetFrame();
+
+   temp->UnmapWindow();
+   mainframe->RemoveFrame(temp);
+   temp->ReparentWindow(gClient->GetDefaultRoot());
+   
+   sourceview->GetFrame()->UnmapWindow();
+   sourceframe->RemoveFrame(sourceview->GetFrame());
+   sourceview->GetFrame()->ReparentWindow(mainframe);
+   mainframe->AddFrame(sourceview->GetFrame(), new TGLayoutHints(kLHintsExpandX | 
+                       kLHintsExpandY));
+   sourceview->GetFrame()->Resize(mainframe->GetDefaultSize());
+   mainframe->MapSubwindows();
+   mainframe->Layout();
+
+   temp->ReparentWindow(sourceframe);
+   sourceframe->AddFrame(temp, new TGLayoutHints(kLHintsExpandX | 
+                         kLHintsExpandY));
+   temp->Resize(sourceframe->GetDefaultSize());
+   sourceframe->MapSubwindows();
+   sourceframe->Layout();
 }
 
 // Linkdef
