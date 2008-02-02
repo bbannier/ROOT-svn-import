@@ -381,6 +381,7 @@ void alice_esd_read()
    if (track_list == 0) {
       track_list = new TEveTrackList("ESD Tracks"); 
       track_list->SetMainColor(Color_t(6));
+      //track_list->SetLineWidth(2);
       track_list->SetMarkerColor(kYellow);
       track_list->SetMarkerStyle(4);
       track_list->SetMarkerSize(0.5);
