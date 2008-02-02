@@ -634,7 +634,6 @@ void SplitGLView::OnDoubleClick()
 {
 
    TGSplitFrame *mainframe;
-   TGFrameElement *el = 0;
    
    TGLEmbeddedViewer *sourceview = (TGLEmbeddedViewer *)gTQSender;
    if (sourceview == 0) return;
