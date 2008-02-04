@@ -61,6 +61,7 @@
 #pragma link C++ class ROOT::Math::RootFinder+;
 #pragma link C++ class ROOT::Math::IRootFinderMethod+;
 #pragma link C++ class ROOT::Math::BrentRootFinder+;
+#pragma link C++ class ROOT::Math::BrentMinimizer1D+;
 
 #include "LinkDef_Func.h" 
 #include "LinkDef_GenVector.h" 

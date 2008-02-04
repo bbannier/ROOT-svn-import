@@ -65,6 +65,7 @@ MATHCOREDH1  :=  $(MODDIRI)/Math/Vector2D.h \
                  $(MODDIRI)/Math/RootFinder.h \
                  $(MODDIRI)/Math/IRootFinderMethod.h \
                  $(MODDIRI)/Math/BrentMethods.h \
+                 $(MODDIRI)/Math/BrentMinimizer1D.h \
                  $(MODDIRI)/Math/BrentRootFinder.h 
 
 
