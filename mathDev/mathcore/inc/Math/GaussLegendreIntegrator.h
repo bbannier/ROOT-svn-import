@@ -8,38 +8,54 @@
  *                                                                    *
  **********************************************************************/
 
-// Header file for RichardsonDerivator
+// Header file for GaussIntegrator
 // 
-// Created by: David Gonzalez Maline  : Mon Feb 4 2008
+// Created by: David Gonzalez Maline  : Wed Jan 16 2008
 // 
 
 #include <Math/IFunction.h>
+#include <Math/VirtualIntegrator.h>
 
 namespace ROOT {
 namespace Math {
 
-class RichardsonDerivator {
+class GaussLegendreIntegrator: public VirtualIntegratorOneDim {
 public:
-   ~RichardsonDerivator();
-   RichardsonDerivator();
+   GaussLegendreIntegrator(int num = 10 ,double eps=1e-12);
+   virtual ~GaussLegendreIntegrator();
    
+   void SetNumberPoints(int num);
+
    // Implementing VirtualIntegrator Interface
    void SetRelTolerance (double);
+   void SetAbsTolerance (double);
+   double Result () const;
    double Error () const;
+   int Status () const;
 
    // Implementing VirtualIntegratorOneDim Interface
-   double Derivative1 (double x);
-   double Derivative2 (double x);
-   double Derivative3 (double x);
+   double Integral (double a, double b);
+   void SetFunction (const IGenFunction &, bool copy=false);
+   double Integral ();
+   double IntegralUp (double a);
+   double IntegralLow (double b);
+   double Integral (const std::vector< double > &pts);
+   double IntegralCauchy (double a, double b, double c);
 
-   void SetFunction (const IGenFunction &, double xmin, double xmax);
+private:
+   // Middle functions
+   void CalcGaussLegendreSamplingPoints();
 
 protected:
+   int fNum;
+   double* fX;
+   double* fW;
    double fEpsilon;
+   bool fUsedOnce;
+   double fLastResult;
    double fLastError;
    const IGenFunction* fFunction;
    bool fFunctionCopied;
-   double fXMin, fXMax;
 
 };
 
