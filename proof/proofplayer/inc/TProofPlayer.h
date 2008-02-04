@@ -17,12 +17,14 @@
 //                                                                      //
 // TProofPlayer                                                         //
 //                                                                      //
-// This internal class steers processing in PROOF. One instance of this //
-// is created per each query. On the client it collects information     //
-// the inputs(dataset and selector), it invokes the Begin() method and  //
-// finalizes the query by calling Terminate(). On the master it checks  //
-// the dataset, it creates the packetizer and takes care of merging the //
-// results of the single workers.                                       //
+// This internal class steers processing in PROOF. Instances of this    //
+// class and its subclasses are created per each query on the client,   //
+// the master(s) and the workers. On the client it collects             //
+// information on the input(dataset and selector), it invokes the       //
+// Begin() method and finalizes the query by calling Terminate().       //
+// On the master its subclass - TProofPlayerRemote checks the dataset,  //
+// creates the packetizer and takes care of merging the results of the  //
+// workers.                                                             //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -203,7 +205,7 @@ public:
 //                                                                      //
 // TProofPlayerRemote                                                   //
 //                                                                      //
-// Object of this class is responsible for a query on the master and    //
+// Object of this class is created for each query on the master and     //
 // on the client.                                                       //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
