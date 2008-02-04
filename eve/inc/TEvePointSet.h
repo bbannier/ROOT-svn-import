@@ -68,8 +68,6 @@ public:
    void   SetPointIntIds(Int_t* ids);
    void   SetPointIntIds(Int_t n, Int_t* ids);
 
-   virtual void SetRnrElNameTitle(const Text_t* name, const Text_t* title);
-
    virtual void SetMarkerColor(Color_t col)
    { SetMainColor(col); }
 

@@ -36,6 +36,7 @@ TEveProjectionAxes::TEveProjectionAxes(TEveProjectionManager* m) :
 
    SetName("ProjectionAxes");
    fText = "Axes Title";
+   fCanEditMainTrans = kFALSE;
 
    fManager->AddDependent(this);
 }

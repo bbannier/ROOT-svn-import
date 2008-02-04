@@ -40,9 +40,9 @@ ClassImp(TEveDigitSetEditor)
 TEveDigitSetEditor::TEveDigitSetEditor(const TGWindow *p, Int_t width, Int_t height,
                                        UInt_t options, Pixel_t back) :
    TGedFrame(p, width, height, options | kVerticalFrame, back),
-   fM(0),
-   fHMTrans   (0),
-   fPalette   (0),
+   fM       (0),
+   fTrans   (0),
+   fPalette (0),
 
    fHistoButtFrame(0),
    fInfoFrame(0)
@@ -51,10 +51,10 @@ TEveDigitSetEditor::TEveDigitSetEditor(const TGWindow *p, Int_t width, Int_t hei
 
    MakeTitle("Transformation matrix");
 
-   fHMTrans = new TEveTransSubEditor(this);
-   AddFrame(fHMTrans, new TGLayoutHints(kLHintsTop | kLHintsExpandX, 2, 0, 0, 0));
-   fHMTrans->Connect("UseTrans()",     "TEveDigitSetEditor", this, "Update()");
-   fHMTrans->Connect("TransChanged()", "TEveDigitSetEditor", this, "Update()");
+   fTrans = new TEveTransSubEditor(this);
+   AddFrame(fTrans, new TGLayoutHints(kLHintsTop | kLHintsExpandX, 2, 0, 0, 0));
+   fTrans->Connect("UseTrans()",     "TEveDigitSetEditor", this, "Update()");
+   fTrans->Connect("TransChanged()", "TEveDigitSetEditor", this, "Update()");
 
 
    MakeTitle("Palette controls");
@@ -111,7 +111,7 @@ void TEveDigitSetEditor::SetModel(TObject* obj)
 
    fM = dynamic_cast<TEveDigitSet*>(obj);
 
-   fHMTrans->SetModel(&fM->fHMTrans);
+   fTrans->SetModel(fM->PtrMainTrans());
 
    if (fM->fValueIsColor || fM->fPalette == 0) {
       fPalette->UnmapWindow();

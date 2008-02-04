@@ -22,6 +22,7 @@ class TGListTreeItem;
 class TGPicture;
 
 class TEveTrans;
+class TGeoMatrix;
 
 /******************************************************************************/
 // TEveElement
@@ -70,17 +71,20 @@ public:
 protected:
    // TRef     fSource;
 
-   Bool_t   fRnrSelf;              // Render this element.
-   Bool_t   fRnrChildren;          // Render children of this element.
-   Color_t* fMainColorPtr;         // Pointer to main-color variable.
+   List_t     fParents;              // List of parents.
+   List_t     fChildren;             // List of children.
 
-   sLTI_t   fItems;                // Set of list-tree-items.
-   List_t   fParents;              // List of parents.
+   Bool_t     fDestroyOnZeroRefCnt;  // Auto-destruct when ref-count reaches zero.
+   Int_t      fDenyDestroy;          // Deny-destroy count.
 
-   Bool_t   fDestroyOnZeroRefCnt;  // Auto-destruct when ref-count reaches zero.
-   Int_t    fDenyDestroy;          // Deny-destroy count.
+   Bool_t     fRnrSelf;              // Render this element.
+   Bool_t     fRnrChildren;          // Render children of this element.
+   Bool_t     fCanEditMainTrans;     // Allow editing of main transformation.
 
-   List_t   fChildren;             // List of children.
+   Color_t   *fMainColorPtr;         // Pointer to main-color variable.
+   TEveTrans *fMainTrans;            // Pointer to main transformation matrix.
+
+   sLTI_t     fItems;                // Set of list-tree-items.
 
    virtual void RemoveElementsInternal();
 
@@ -89,9 +93,11 @@ public:
    TEveElement(Color_t& main_color);
    virtual ~TEveElement();
 
-   virtual void SetRnrElNameTitle(const Text_t* name, const Text_t* title);
-   virtual const Text_t* GetRnrElName()  const;
-   virtual const Text_t* GetRnrElTitle() const;
+   virtual const Text_t* GetElementName()  const;
+   virtual const Text_t* GetElementTitle() const;
+   virtual void SetElementName (const Text_t* name);
+   virtual void SetElementTitle(const Text_t* title);
+   virtual void SetElementNameTitle(const Text_t* name, const Text_t* title);
 
    virtual void AddParent(TEveElement* re);
    virtual void RemoveParent(TEveElement* re);
@@ -172,9 +178,11 @@ public:
    virtual Bool_t HandleElementPaste(TEveElement* el);
    virtual void   ElementChanged(Bool_t update_scenes=kTRUE, Bool_t redraw=kFALSE);
 
-   virtual Bool_t CanEditRnrElement()    { return kTRUE; }
+   virtual Bool_t CanEditElement() const { return kTRUE; }
+   virtual Bool_t SingleRnrState() const { return kFALSE; }
    virtual Bool_t GetRnrSelf()     const { return fRnrSelf; }
    virtual Bool_t GetRnrChildren() const { return fRnrChildren; }
+   virtual Bool_t GetRnrState()    const { return fRnrSelf && fRnrChildren; }
    virtual void   SetRnrSelf(Bool_t rnr);
    virtual void   SetRnrChildren(Bool_t rnr);
    virtual void   SetRnrState(Bool_t rnr);
@@ -191,8 +199,15 @@ public:
    virtual UChar_t GetMainTransparency() const  { return 0; }
    virtual void    SetMainTransparency(UChar_t) {}
 
-   virtual Bool_t  CanEditMainHMTrans() { return kFALSE; }
-   virtual TEveTrans* PtrMainHMTrans()     { return 0; }
+   virtual Bool_t     CanEditMainTrans() { return  fCanEditMainTrans; }
+   virtual Bool_t     HasMainTrans()     { return  fMainTrans != 0;   }
+   virtual TEveTrans* PtrMainTrans();
+   virtual TEveTrans& RefMainTrans();
+   virtual void       InitMainTrans(Bool_t can_edit=kTRUE);
+   virtual void       DestroyMainTrans();
+
+   virtual void SetTransMatrix(Double_t* carr);
+   virtual void SetTransMatrix(const TGeoMatrix& mat);
 
    static  const TGPicture* GetCheckBoxPicture(Bool_t rnrElement, Bool_t rnrDaughter);
    virtual const TGPicture* GetListTreeIcon();

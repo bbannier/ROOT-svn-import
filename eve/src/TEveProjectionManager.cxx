@@ -173,10 +173,8 @@ void TEveProjectionManager::ImportElementsRecurse(TEveElement* rnr_el, TEveEleme
       {
          new_re = new TEveElementList;
       }
-      TObject *tobj   = rnr_el->GetObject(eh);
-      new_re->SetRnrElNameTitle(Form("NLT %s", tobj->GetName()),
-                                tobj->GetTitle());
-      new_re->SetRnrSelf     (rnr_el->GetRnrSelf());
+      new_re->SetElementName(Form("NLT %s", rnr_el->GetElementName()));
+      new_re->SetRnrSelf    (rnr_el->GetRnrSelf());
       new_re->SetRnrChildren(rnr_el->GetRnrChildren());
       gEve->AddElement(new_re, parent);
 

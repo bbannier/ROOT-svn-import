@@ -501,7 +501,7 @@ void TEveBrowser::ReveMenu(Int_t id)
 
       case kNewProjector: {
          TEveElement* pr = (TEveElement*) (gROOT->GetClass("TEveProjectionManager")->New());
-         pr->SetRnrElNameTitle("Projector", "User-created projector.");
+         pr->SetElementNameTitle("Projector", "User-created projector.");
          gEve->AddToListTree(pr, kTRUE);
          break;
       }

@@ -45,11 +45,11 @@ TEveText::TEveText(const Text_t* txt) :
    fExtrude(1.0f),
 
    fAutoBehave(kTRUE),
-   fLighting(kFALSE),
-   fHMTrans()
+   fLighting(kFALSE)
 {
    // Constructor.
 
+   InitMainTrans();
    SetFontMode(TFTGLManager::kPixmap);
 }
 
@@ -104,8 +104,9 @@ void TEveText::SetFontMode( Int_t mode)
    fMode = mode;
 
    Bool_t edit = (fMode > TFTGLManager::kPixmap);
-   fHMTrans.SetEditRotation(edit);
-   fHMTrans.SetEditScale(edit);
+   TEveTrans& t = RefMainTrans();
+   t.SetEditRotation(edit);
+   t.SetEditScale(edit);
 }
 
 
@@ -122,8 +123,8 @@ void TEveText::Paint(Option_t* )
    buff.fID           = this;
    buff.fColor        = GetMainColor();
    buff.fTransparency = GetMainTransparency();
-   if (PtrMainHMTrans())
-      PtrMainHMTrans()->SetBuffer3D(buff);
+   if (HasMainTrans())
+      RefMainTrans().SetBuffer3D(buff);
    buff.SetSectionsValid(TBuffer3D::kCore);
 
    Int_t reqSections = gPad->GetViewer3D()->AddObject(buff);

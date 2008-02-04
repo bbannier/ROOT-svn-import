@@ -78,19 +78,9 @@ protected:
 
    Line_t*           fLastLine; //!
 
-   Bool_t            fTrans;
-   TEveTrans         fHMTrans;
-
 public:
    TEveStraightLineSet(const Text_t* n="StraightLine", const Text_t* t="");
    virtual ~TEveStraightLineSet() {}
-
-   virtual Bool_t  CanEditMainHMTrans() { return  kTRUE; }
-   virtual TEveTrans* PtrMainHMTrans()  { return &fHMTrans; }
-
-   TEveTrans& RefHMTrans() { return fHMTrans; }
-   void SetTransMatrix(Double_t* carr)        { fHMTrans.SetFrom(carr); }
-   void SetTransMatrix(const TGeoMatrix& mat) { fHMTrans.SetFrom(mat);  }
 
    virtual void SetLineColor(Color_t col) { SetMainColor(col); }
 
@@ -127,8 +117,6 @@ private:
 public:
    TEveStraightLineSetProjected();
    virtual ~TEveStraightLineSetProjected() {}
-
-   virtual Bool_t  CanEditMainHMTrans() { return  kFALSE; }
 
    virtual void SetProjection(TEveProjectionManager* proj, TEveProjectable* model);
 

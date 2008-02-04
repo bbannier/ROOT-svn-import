@@ -62,7 +62,6 @@ protected:
    Bool_t            fDisableLigting; // Disable lighting for rendering.
    Bool_t            fEmitSignals;    // Emit signals on secondary-select.
    Bool_t            fHistoButtons;   // Show histogram buttons in object editor.
-   TEveTrans         fHMTrans;        // Overall transformation of whole collection.
 
    DigitBase_t* NewDigit();
    void       ReleaseIds();
@@ -126,10 +125,6 @@ public:
 
    Bool_t GetHistoButtons() const   { return fHistoButtons; }
    void   SetHistoButtons(Bool_t f) { fHistoButtons = f; }
-
-   TEveTrans& RefHMTrans()                    { return fHMTrans; }
-   void SetTransMatrix(Double_t* carr)        { fHMTrans.SetFrom(carr); }
-   void SetTransMatrix(const TGeoMatrix& mat) { fHMTrans.SetFrom(mat);  }
 
    ClassDef(TEveDigitSet, 1); // Base-class for storage of digit collections; provides transformation matrix (TEveTrans), signal to color mapping (TEveRGBAPalette) and visual grouping (TEveFrameBox).
 };

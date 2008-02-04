@@ -49,7 +49,7 @@ TEveGeoNode::TEveGeoNode(TGeoNode* node) :
    char* l = (char*) dynamic_cast<TAttLine*>(node->GetVolume());
    SetMainColorPtr((Color_t*)(l + sizeof(void*)));
 
-   fRnrSelf      = fNode->TGeoAtt::IsVisible();
+   fRnrSelf = fNode->TGeoAtt::IsVisible();
 }
 
 //______________________________________________________________________________
@@ -297,7 +297,7 @@ do_dump:
 // TEveGeoTopNode
 //
 // A wrapper over a TGeoNode, possibly displaced with a global
-// trasformation fGlobalTrans (the matrix is owned by this class).
+// trasformation stored in TEveElement.
 //
 // It holds a pointer to TGeoManager and controls for steering of
 // TGeoPainter.
@@ -309,24 +309,16 @@ TEveGeoTopNode::TEveGeoTopNode(TGeoManager* manager, TGeoNode* node,
                                Int_t visopt, Int_t vislvl) :
    TEveGeoNode  (node),
    fManager     (manager),
-   fGlobalTrans (),
    fVisOption   (visopt),
    fVisLevel    (vislvl)
 {
    // Constructor.
 
-   fRnrSelf = kTRUE;
+   InitMainTrans();
+   fRnrSelf = kTRUE; // Override back from TEveGeoNode.
 }
 
 /******************************************************************************/
-
-//______________________________________________________________________________
-void TEveGeoTopNode::SetGlobalTrans(const TGeoHMatrix* m)
-{
-   // Set transformation matrix.
-
-   fGlobalTrans.SetFrom(*m);
-}
 
 //______________________________________________________________________________
 void TEveGeoTopNode::UseNodeTrans()
@@ -334,7 +326,7 @@ void TEveGeoTopNode::UseNodeTrans()
    // Use transforamtion matrix from the TGeoNode.
    // Warning: this is local transformation of the node!
 
-   fGlobalTrans.SetFrom(*fNode->GetMatrix());
+   RefMainTrans().SetFrom(*fNode->GetMatrix());
 }
 
 /******************************************************************************/
@@ -396,7 +388,7 @@ void TEveGeoTopNode::Paint(Option_t* option)
       TVirtualGeoPainter* vgp = fManager->GetGeomPainter();
       if(vgp != 0) {
          TGeoHMatrix geomat;
-         fGlobalTrans.SetGeoHMatrix(geomat);
+         if (HasMainTrans()) RefMainTrans().SetGeoHMatrix(geomat);
          vgp->PaintNode(fNode, option, &geomat);
       }
       fManager->SetTopVolume(top_volume);
@@ -448,16 +440,15 @@ ClassImp(TEveGeoShape)
 
 //______________________________________________________________________________
 TEveGeoShape::TEveGeoShape(const Text_t* name, const Text_t* title) :
-   TEveElement(),
+   TEveElement   (fColor),
    TNamed        (name, title),
-   fHMTrans      (),
    fColor        (0),
    fTransparency (0),
    fShape        (0)
 {
    // Constructor.
 
-   fMainColorPtr = &fColor;
+   InitMainTrans();
 }
 
 //______________________________________________________________________________
@@ -488,7 +479,7 @@ void TEveGeoShape::Paint(Option_t* /*option*/)
    buff.fID           = this;
    buff.fColor        = fColor;
    buff.fTransparency = fTransparency;
-   fHMTrans.SetBuffer3D(buff);
+   RefMainTrans().SetBuffer3D(buff);
    buff.fLocalFrame   = kTRUE; // Always enforce local frame (no geo manager).
 
    fShape->GetBuffer3D(TBuffer3D::kBoundingBox | TBuffer3D::kShapeSpecific, kTRUE);
@@ -528,7 +519,7 @@ TEveGeoShapeExtract* TEveGeoShape::DumpShapeTree(TEveGeoShape* gsre,
    // Export this shape and its descendants into a geoshape-extract.
 
    TEveGeoShapeExtract* she = new TEveGeoShapeExtract(gsre->GetName(), gsre->GetTitle());
-   she->SetTrans(gsre->RefHMTrans().Array());
+   she->SetTrans(gsre->RefMainTrans().Array());
    Int_t ci = gsre->GetColor();
    TColor* c = gROOT->GetColor(ci);
    Float_t rgba[4] = {1, 0, 0, 1 - gsre->GetMainTransparency()/100.};
@@ -581,7 +572,7 @@ TEveGeoShape* TEveGeoShape::SubImportShapeExtract(TEveGeoShapeExtract* gse,
    // Recursive version for importing a shape extract tree.
 
    TEveGeoShape* gsre = new TEveGeoShape(gse->GetName(), gse->GetTitle());
-   gsre->fHMTrans.SetFromArray(gse->GetTrans());
+   gsre->RefMainTrans().SetFromArray(gse->GetTrans());
    const Float_t* rgba = gse->GetRGBA();
    gsre->fColor        = TColor::GetColor(rgba[0], rgba[1], rgba[2]);
    gsre->fTransparency = (UChar_t) (100.0f*(1.0f - rgba[3]));
@@ -631,9 +622,9 @@ TBuffer3D* TEveGeoShape::MakeBuffer3D()
    }
 
    TBuffer3D* buff  = fShape->MakeBuffer3D();
-   if (fHMTrans.GetUseTrans())
+   TEveTrans& mx    = RefMainTrans();
+   if (mx.GetUseTrans())
    {
-      TEveTrans& mx = RefHMTrans();
       Int_t n = buff->NbPnts();
       Double_t* pnts = buff->fPnts;
       for(Int_t k = 0; k < n; ++k)

@@ -48,12 +48,12 @@ public:
 
    virtual void   ExpandIntoListTree(TGListTree* ltree, TGListTreeItem* parent);
 
-   virtual Bool_t CanEditRnrElement() { return false; }
+   virtual Bool_t CanEditElement() const { return kFALSE; }
    virtual void SetRnrSelf(Bool_t rnr);
    virtual void SetRnrChildren(Bool_t rnr);
    virtual void SetRnrState(Bool_t rnr);
 
-   virtual Bool_t CanEditMainColor()  { return true; }
+   virtual Bool_t CanEditMainColor()  { return kTRUE; }
    virtual void   SetMainColor(Color_t color);
    virtual void   SetMainColor(Pixel_t pixel);
 
@@ -76,7 +76,6 @@ class TEveGeoTopNode : public TEveGeoNode
 
 protected:
    TGeoManager* fManager;
-   TEveTrans    fGlobalTrans;
    Int_t        fVisOption;
    Int_t        fVisLevel;
 
@@ -84,11 +83,6 @@ public:
    TEveGeoTopNode(TGeoManager* manager, TGeoNode* node, Int_t visopt=1, Int_t vislvl=3);
    virtual ~TEveGeoTopNode() {}
 
-   virtual Bool_t     CanEditMainHMTrans() { return  kTRUE; }
-   virtual TEveTrans* PtrMainHMTrans()     { return &fGlobalTrans; }
-
-   TEveTrans&   RefGlobalTrans() { return fGlobalTrans; }
-   void         SetGlobalTrans(const TGeoHMatrix* m);
    void         UseNodeTrans();
 
    Int_t GetVisOption() const { return fVisOption; }
@@ -96,7 +90,7 @@ public:
    Int_t GetVisLevel()  const { return fVisLevel; }
    void  SetVisLevel(Int_t vislvl);
 
-   virtual Bool_t CanEditRnrElement() { return true; }
+   virtual Bool_t CanEditElement() const { return kTRUE; }
    virtual void SetRnrSelf(Bool_t rnr);
 
    virtual void Draw(Option_t* option="");
@@ -124,7 +118,6 @@ class TEveGeoShape : public TEveElement,
    TEveGeoShape& operator=(const TEveGeoShape&); // Not implemented
 
 protected:
-   TEveTrans         fHMTrans;
    Color_t           fColor;
    UChar_t           fTransparency;
    TGeoShape*        fShape;
@@ -141,13 +134,6 @@ public:
    virtual Bool_t  CanEditMainTransparency()      { return kTRUE; }
    virtual UChar_t GetMainTransparency() const    { return fTransparency; }
    virtual void    SetMainTransparency(UChar_t t) { fTransparency = t; }
-
-   virtual Bool_t     CanEditMainHMTrans() { return  kTRUE; }
-   virtual TEveTrans* PtrMainHMTrans()     { return &fHMTrans; }
-
-   TEveTrans& RefHMTrans() { return fHMTrans; }
-   void SetTransMatrix(Double_t* carr)        { fHMTrans.SetFrom(carr); }
-   void SetTransMatrix(const TGeoMatrix& mat) { fHMTrans.SetFrom(mat);  }
 
    Color_t     GetColor()        { return fColor; }
    TGeoShape*  GetShape()        { return fShape; }
