@@ -40,8 +40,6 @@ protected:
    Bool_t            fAutoBehave;   // use defaults
    Bool_t            fLighting;     // enable GL lighting
 
-   TEveTrans         fHMTrans;      // overall transformation
-
 public:
    TEveText(const Text_t* txt="");
    virtual ~TEveText() {}
@@ -69,9 +67,6 @@ public:
 
    Float_t GetExtrude() const    { return fExtrude; }
    void    SetExtrude(Float_t x) { fExtrude = x;    }
-
-   virtual Bool_t     CanEditMainHMTrans() { return kTRUE; }
-   virtual TEveTrans* PtrMainHMTrans()     { return &fHMTrans; }
 
    virtual const TGPicture* GetListTreeIcon();
 

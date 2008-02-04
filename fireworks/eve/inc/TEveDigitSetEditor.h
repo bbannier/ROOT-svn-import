@@ -38,7 +38,7 @@ private:
 protected:
    TEveDigitSet             *fM;              // Model object.
 
-   TEveTransSubEditor       *fHMTrans;        // TEveTrans sub-editor.
+   TEveTransSubEditor       *fTrans;          // TEveTrans sub-editor.
    TEveRGBAPaletteSubEditor *fPalette;        // Palette sub-editor.
 
    TGHorizontalFrame    *fHistoButtFrame;  // Frame holding histogram display buttons.

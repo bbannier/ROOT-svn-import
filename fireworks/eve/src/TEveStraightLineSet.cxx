@@ -37,11 +37,11 @@ TEveStraightLineSet::TEveStraightLineSet(const Text_t* n, const Text_t* t):
    fOwnMarkersIds (kFALSE),
    fRnrMarkers    (kTRUE),
    fRnrLines      (kTRUE),
-   fLastLine      (0),
-   fTrans         (kFALSE),
-   fHMTrans       ()
+   fLastLine      (0)
 {
    // Constructor.
+
+   InitMainTrans();
 
    fMainColorPtr = &fLineColor;
    fLineColor    = 4;
@@ -109,7 +109,7 @@ void TEveStraightLineSet::Paint(Option_t* /*option*/)
    buff.fColor        = fLineColor;
    buff.fTransparency = 0;
    buff.fLocalFrame   = kFALSE;
-   fHMTrans.SetBuffer3D(buff);
+   RefMainTrans().SetBuffer3D(buff);
    buff.SetSectionsValid(TBuffer3D::kCore);
 
    Int_t reqSections = gPad->GetViewer3D()->AddObject(buff);
@@ -175,11 +175,14 @@ void TEveStraightLineSetProjected::UpdateProjection()
    Float_t p2[3];
    TEveChunkManager::iterator li(orig.GetLinePlex());
 
+   TEveTrans& origTrans = orig.RefMainTrans();
    Double_t s1, s2, s3;
-   orig.RefHMTrans().GetScale(s1, s2, s3);
-   TEveTrans mx; mx.Scale(s1, s2, s3);
    Double_t x, y, z;
-   orig.RefHMTrans().GetPos(x, y, z);
+   origTrans.GetScale(s1, s2, s3);
+   origTrans.GetPos(x, y, z);
+
+   TEveTrans mx;
+   mx.Scale(s1, s2, s3);
    while (li.next())
    {
       Line_t* l = (Line_t*) li();

@@ -58,10 +58,11 @@ TEveDigitSet::TEveDigitSet(const Text_t* n, const Text_t* t) :
    fRenderMode     (kRM_Fill),
    fDisableLigting (kTRUE),
    fEmitSignals    (kFALSE),
-   fHistoButtons   (kTRUE),
-   fHMTrans        ()
+   fHistoButtons   (kTRUE)
 {
    // Constructor.
+
+   InitMainTrans();
 }
 
 //______________________________________________________________________________
@@ -217,7 +218,7 @@ void TEveDigitSet::Paint(Option_t* /*option*/)
    buff.fID           = this;
    buff.fColor        = fFrame ? fFrame->GetFrameColor() : 1;
    buff.fTransparency = 0;
-   fHMTrans.SetBuffer3D(buff);
+   RefMainTrans().SetBuffer3D(buff);
    buff.SetSectionsValid(TBuffer3D::kCore);
 
    Int_t reqSections = gPad->GetViewer3D()->AddObject(buff);

@@ -199,18 +199,6 @@ void TEvePointSet::SetPointIntIds(Int_t n, Int_t* ids)
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEvePointSet::SetRnrElNameTitle(const Text_t* name, const Text_t* title)
-{
-   // Set name and title of point-set.
-   // Virtual in TEveElement.
-
-   SetName(name);
-   SetTitle(title);
-}
-
-/******************************************************************************/
-
-//______________________________________________________________________________
 void TEvePointSet::Paint(Option_t* /*option*/)
 {
    // Paint point-set.
@@ -225,8 +213,8 @@ void TEvePointSet::Paint(Option_t* /*option*/)
    buff.fID           = this;
    buff.fColor        = GetMainColor();
    buff.fTransparency = GetMainTransparency();
-   if (PtrMainHMTrans())
-      PtrMainHMTrans()->SetBuffer3D(buff);
+   if (HasMainTrans())
+      RefMainTrans().SetBuffer3D(buff);
    buff.SetSectionsValid(TBuffer3D::kCore);
 
    Int_t reqSections = gPad->GetViewer3D()->AddObject(buff);

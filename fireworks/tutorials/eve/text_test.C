@@ -20,7 +20,7 @@ TEveText* text_test()
    gEve->AddElement(marker);
 
    TEveText* t = new TEveText("DADA");
-   t->PtrMainHMTrans()->RotateLF(1, 3, TMath::PiOver2());
+   t->PtrMainTrans()->RotateLF(1, 3, TMath::PiOver2());
    t->SetMainColor((Color_t)(kOrange-2));
    t->SetFontSize(64);
    t->SetLighting(kTRUE);

@@ -10,8 +10,9 @@
  *************************************************************************/
 
 #include "TEveElement.h"
+#include "TEveTrans.h"
 #include "TEveManager.h"
-#include "TEveGedEditor.h"
+#include "TGeoMatrix.h"
 
 #include "TClass.h"
 #include "TROOT.h"
@@ -45,28 +46,32 @@ const TGPicture* TEveElement::fgListTreeIcons[8] = { 0 };
 
 //______________________________________________________________________________
 TEveElement::TEveElement() :
-   fRnrSelf             (kTRUE),
-   fRnrChildren         (kTRUE),
-   fMainColorPtr        (0),
-   fItems               (),
    fParents             (),
+   fChildren            (),
    fDestroyOnZeroRefCnt (kTRUE),
    fDenyDestroy         (0),
-   fChildren            ()
+   fRnrSelf             (kTRUE),
+   fRnrChildren         (kTRUE),
+   fCanEditMainTrans    (kFALSE),
+   fMainColorPtr        (0),
+   fMainTrans           (0),
+   fItems               ()
 {
    // Default contructor.
 }
 
 //______________________________________________________________________________
 TEveElement::TEveElement(Color_t& main_color) :
-   fRnrSelf             (kTRUE),
-   fRnrChildren         (kTRUE),
-   fMainColorPtr        (&main_color),
-   fItems               (),
    fParents             (),
+   fChildren            (),
    fDestroyOnZeroRefCnt (kTRUE),
    fDenyDestroy         (0),
-   fChildren            ()
+   fRnrSelf             (kTRUE),
+   fRnrChildren         (kTRUE),
+   fCanEditMainTrans    (kFALSE),
+   fMainColorPtr        (&main_color),
+   fMainTrans           (0),
+   fItems               ()
 {
    // Constructor.
 }
@@ -87,48 +92,78 @@ TEveElement::~TEveElement()
 
    for (sLTI_i i=fItems.begin(); i!=fItems.end(); ++i)
       i->fTree->DeleteItem(i->fItem);
+
+   delete fMainTrans;
 }
 
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveElement::SetRnrElNameTitle(const Text_t* name, const Text_t* title)
-{
-   // Virtual function for setting of name and title of render element.
-   // Here we attempt to cast the assigned object into TNamed and call
-   // SetNameTitle() there.
-
-   static const TEveException eh("TEveElement::SetRnrElNameTitle ");
-
-   TNamed* named = dynamic_cast<TNamed*>(GetObject(eh));
-   if (named)
-      named->SetNameTitle(name, title);
-}
-
-//______________________________________________________________________________
-const Text_t* TEveElement::GetRnrElName() const
+const Text_t* TEveElement::GetElementName() const
 {
    // Virtual function for retrieveing name of the render-element.
    // Here we attempt to cast the assigned object into TNamed and call
    // GetName() there.
 
-   static const TEveException eh("TEveElement::GetRnrElName ");
+   static const TEveException eh("TEveElement::GetElementName ");
 
    TObject* named = dynamic_cast<TObject*>(GetObject(eh));
    return named ? named->GetName() : "<no-name>";
 }
 
 //______________________________________________________________________________
-const Text_t*  TEveElement::GetRnrElTitle() const
+const Text_t*  TEveElement::GetElementTitle() const
 {
    // Virtual function for retrieveing title of the render-element.
    // Here we attempt to cast the assigned object into TNamed and call
    // GetTitle() there.
 
-   static const TEveException eh("TEveElement::GetRnrElTitle ");
+   static const TEveException eh("TEveElement::GetElementTitle ");
 
    TObject* named = dynamic_cast<TObject*>(GetObject(eh));
    return named ? named->GetTitle() : "<no-title>";
+}
+
+//______________________________________________________________________________
+void TEveElement::SetElementName(const Text_t* name)
+{
+   // Virtual function for setting of name of an element.
+   // Here we attempt to cast the assigned object into TNamed and call
+   // SetName() there.
+
+   static const TEveException eh("TEveElement::SetElementName ");
+
+   TNamed* named = dynamic_cast<TNamed*>(GetObject(eh));
+   if (named)
+      named->SetName(name);
+}
+
+//______________________________________________________________________________
+void TEveElement::SetElementTitle(const Text_t* title)
+{
+   // Virtual function for setting of title of an element.
+   // Here we attempt to cast the assigned object into TNamed and call
+   // SetTitle() there.
+
+   static const TEveException eh("TEveElement::SetElementTitle ");
+
+   TNamed* named = dynamic_cast<TNamed*>(GetObject(eh));
+   if (named)
+      named->SetTitle(title);
+}
+
+//______________________________________________________________________________
+void TEveElement::SetElementNameTitle(const Text_t* name, const Text_t* title)
+{
+   // Virtual function for setting of name and title of render element.
+   // Here we attempt to cast the assigned object into TNamed and call
+   // SetNameTitle() there.
+
+   static const TEveException eh("TEveElement::SetElementNameTitle ");
+
+   TNamed* named = dynamic_cast<TNamed*>(GetObject(eh));
+   if (named)
+      named->SetNameTitle(name, title);
 }
 
 /******************************************************************************/
@@ -168,7 +203,7 @@ void TEveElement::CheckReferenceCount(const TEveException& eh)
       fDenyDestroy <= 0  &&  fDestroyOnZeroRefCnt)
    {
       if (gDebug > 0)
-         Info(eh, Form("auto-destructing '%s' on zero reference count.", GetRnrElName()));
+         Info(eh, Form("auto-destructing '%s' on zero reference count.", GetElementName()));
 
       gEve->PreDeleteElement(this);
       delete this;
@@ -220,7 +255,7 @@ void TEveElement::ExpandIntoListTree(TGListTree* ltree,
    // Returns number of inserted elements.
    // If parent already has children, it does nothing.
    //
-   // RnrEl can be inserted in a list-tree several times, thus we can not
+   // Element can be inserted in a list-tree several times, thus we can not
    // search through fItems to get parent here.
    // Anyhow, it is probably known as it must have been selected by the user.
 
@@ -493,6 +528,12 @@ void TEveElement::SetRnrSelf(Bool_t rnr)
    // Set render state of this element, i.e. if it will be published
    // on next scene update pass.
 
+   if (SingleRnrState())
+   {
+      SetRnrState(rnr);
+      return;
+   }
+
    if (rnr != fRnrSelf)
    {
       fRnrSelf = rnr;
@@ -514,6 +555,12 @@ void TEveElement::SetRnrChildren(Bool_t rnr)
 {
    // Set render state of this element's children, i.e. if they will
    // be published on next scene update pass.
+
+   if (SingleRnrState())
+   {
+      SetRnrState(rnr);
+      return;
+   }
 
    if (rnr != fRnrChildren)
    {
@@ -579,6 +626,75 @@ void TEveElement::SetMainColor(Pixel_t pixel)
    SetMainColor(Color_t(TColor::GetColor(pixel)));
 }
 
+
+/******************************************************************************/
+
+//______________________________________________________________________________
+TEveTrans* TEveElement::PtrMainTrans()
+{
+   // Return pointer to main transformation. It is created if not yet
+   // existing.
+
+   if (!fMainTrans)
+      InitMainTrans();
+
+   return fMainTrans;
+}
+
+//______________________________________________________________________________
+TEveTrans& TEveElement::RefMainTrans()
+{
+   // Return reference to main transformation. It is created if not yet
+   // existing.
+
+   if (!fMainTrans)
+      InitMainTrans();
+
+   return *fMainTrans;
+}
+
+//______________________________________________________________________________
+void TEveElement::InitMainTrans(Bool_t can_edit)
+{
+   // Initialize the main transformation to identity matrix.
+   // If can_edit is true (default), the user will be able to edit the
+   // transformation parameters via TEveElementEditor.
+
+   if (fMainTrans)
+      fMainTrans->UnitTrans();
+   else
+      fMainTrans = new TEveTrans;
+   fCanEditMainTrans = can_edit;
+}
+
+//______________________________________________________________________________
+void TEveElement::DestroyMainTrans()
+{
+   // Destroy the main transformation matrix, it will always be taken
+   // as identity. Editing of transformation parameters is disabled.
+
+   delete fMainTrans;
+   fMainTrans = 0;
+   fCanEditMainTrans = kFALSE;
+}
+
+//______________________________________________________________________________
+void TEveElement::SetTransMatrix(Double_t* carr)
+{
+   // Set transformation matrix from colum-major array.
+
+   RefMainTrans().SetFrom(carr);
+}
+
+//______________________________________________________________________________
+void TEveElement::SetTransMatrix(const TGeoMatrix& mat)
+{
+   // Set transformation matrix from TGeo's matrix.
+
+   RefMainTrans().SetFrom(mat);
+}
+
+
 /******************************************************************************/
 
 //______________________________________________________________________________
@@ -590,7 +706,7 @@ TGListTreeItem* TEveElement::AddElement(TEveElement* el)
 
    if ( ! AcceptElement(el))
       throw(eh + Form("parent '%s' rejects '%s'.",
-                      GetRnrElName(), el->GetRnrElName()));
+                      GetElementName(), el->GetElementName()));
 
    el->AddParent(this);
    fChildren.push_back(el);
@@ -707,7 +823,7 @@ void TEveElement::Destroy()
    static const TEveException eh("TEveElement::Destroy ");
 
    if (fDenyDestroy > 0)
-      throw(eh + "this element '%s' is protected against destruction.", GetRnrElName());
+      throw(eh + "this element '%s' is protected against destruction.", GetElementName());
 
    gEve->PreDeleteElement(this);
    delete this;
@@ -736,8 +852,8 @@ void TEveElement::DestroyElements()
       else
       {
          if (gDebug > 0)
-            Info(eh, Form("element '%s' is protected agains destruction, removin locally.", c->GetRnrElName()));
-
+            Info(eh, Form("element '%s' is protected agains destruction, removing locally.",
+			  c->GetElementName()));
          RemoveElement(c);
       }
    }

@@ -54,7 +54,7 @@ public:
 
    virtual const TGPicture* GetListTreeIcon();
 
-   virtual Bool_t  CanEditMainHMTrans() { return  kFALSE;}
+   virtual Bool_t  CanEditMainTrans() { return kFALSE;}
 
    ClassDef(TEveProjectionAxes, 1); // Short description.
 };
