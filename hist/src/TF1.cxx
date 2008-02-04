@@ -31,6 +31,7 @@
 #include "Math/BrentMethods.h"
 #include "Math/GaussIntegrator.h"
 #include "Math/AdaptiveIntegratorMultiDim.h"
+#include "Math/RichardsonDerivator.h"
 
 //#include <iostream>
 
@@ -1120,33 +1121,19 @@ Double_t TF1::Derivative(Double_t x, Double_t *params, Double_t eps) const
    //
    // Author: Anna Kreshuk
 
-   const Double_t kC1 = 1e-15;
+   // I didn't do it! To change EvalPar to const!!! or remove const from
+   // this method!
+   ROOT::Math::WrappedTF1 wf1(*( const_cast<TF1 *> (this) )); 
+   if ( params )
+      wf1.SetParameters( params );
 
-   if(eps< 1e-10 || eps > 1e-2) {
-      Warning("Derivative","parameter esp=%g out of allowed range[1e-10,1e-2], reset to 0.001",eps);
-      eps = 0.001;
-   }
-   Double_t xmin, xmax;
+   ROOT::Math::RichardsonDerivator rd;
+   double xmin, xmax;
    GetRange(xmin, xmax);
-   Double_t h = eps*(xmax-xmin);
+   rd.SetFunction(wf1, xmin, xmax);
+   rd.SetRelTolerance(eps);
+   return rd.Derivative1(x);
 
-   Double_t xx[1];
-   TF1 *func = (TF1*)this;
-   func->InitArgs(xx, params);
-   xx[0] = x+h;     Double_t f1 = func->EvalPar(xx, params);
-   xx[0] = x;       Double_t fx = func->EvalPar(xx, params);
-   xx[0] = x-h;     Double_t f2 = func->EvalPar(xx, params);
-
-   xx[0] = x+h/2;   Double_t g1 = func->EvalPar(xx, params);
-   xx[0] = x-h/2;   Double_t g2 = func->EvalPar(xx, params);
-
-   //compute the central differences
-   Double_t h2    = 1/(2.*h);
-   Double_t d0    = f1 - f2;
-   Double_t d2    = 2*(g1 - g2);
-   gErrorTF1       = kC1*h2*fx;  //compute the error
-   Double_t deriv = h2*(4*d2 - d0)/3.;
-   return deriv;
 }
 
 
@@ -1184,33 +1171,18 @@ Double_t TF1::Derivative2(Double_t x, Double_t *params, Double_t eps) const
    //
    // Author: Anna Kreshuk
 
-   const Double_t kC1 = 2*1e-15;
+   // I didn't do it! To change EvalPar to const!!! or remove const from
+   // this method!
+   ROOT::Math::WrappedTF1 wf1(*( const_cast<TF1 *> (this) )); 
+   if ( params )
+      wf1.SetParameters( params );
 
-   if(eps< 1e-6 || eps > 1e-2) {
-      Warning("Derivative2","parameter esp=%g out of allowed range[1e-6,1e-2], reset to 0.001",eps);
-      eps = 0.001;
-   }
-   Double_t xmin, xmax;
+   ROOT::Math::RichardsonDerivator rd;
+   double xmin, xmax;
    GetRange(xmin, xmax);
-   Double_t h = eps*(xmax-xmin);
-
-   Double_t xx[1];
-   TF1 *func = (TF1*)this;
-   func->InitArgs(xx, params);
-   xx[0] = x+h;     Double_t f1 = func->EvalPar(xx, params);
-   xx[0] = x;       Double_t f2 = func->EvalPar(xx, params);
-   xx[0] = x-h;     Double_t f3 = func->EvalPar(xx, params);
-
-   xx[0] = x+h/2;   Double_t g1 = func->EvalPar(xx, params);
-   xx[0] = x-h/2;   Double_t g3 = func->EvalPar(xx, params);
-
-   //compute the central differences
-   Double_t hh    = 1/(h*h);
-   Double_t d0    = f3 - 2*f2 + f1;
-   Double_t d2    = 4*g3 - 8*f2 +4*g1;
-   gErrorTF1       = kC1*hh*f2;  //compute the error
-   Double_t deriv = hh*(4*d2 - d0)/3.;
-   return deriv;
+   rd.SetFunction(wf1, xmin, xmax);
+   rd.SetRelTolerance(eps);
+   return rd.Derivative2(x);
 }
 
 
@@ -1248,35 +1220,18 @@ Double_t TF1::Derivative3(Double_t x, Double_t *params, Double_t eps) const
    //
    // Author: Anna Kreshuk
 
-   //const Double_t C1 = (1e-16)*TMath::Sqrt(5./2.)*TMath::Sqrt(16*64 + 1.)/3;
-   const Double_t kC1 = 1e-15;
+   // I didn't do it! To change EvalPar to const!!! or remove const from
+   // this method!
+   ROOT::Math::WrappedTF1 wf1(*( const_cast<TF1 *> (this) )); 
+   if ( params )
+      wf1.SetParameters( params );
 
-   if(eps< 1e-4 || eps > 1e-2) {
-      Warning("Derivative3","parameter esp=%g out of allowed range[1e-4,1e-2], reset to 0.001",eps);
-      eps = 0.001;
-   }
-   Double_t xmin, xmax;
+   ROOT::Math::RichardsonDerivator rd;
+   double xmin, xmax;
    GetRange(xmin, xmax);
-   Double_t h = eps*(xmax-xmin);
-
-   Double_t xx[1];
-   TF1 *func = (TF1*)this;
-   func->InitArgs(xx, params);
-   xx[0] = x+2*h;   Double_t f1 = func->EvalPar(xx, params);
-   xx[0] = x+h;     Double_t f2 = func->EvalPar(xx, params);
-   xx[0] = x-h;     Double_t f3 = func->EvalPar(xx, params);
-   xx[0] = x-2*h;   Double_t f4 = func->EvalPar(xx, params);
-   xx[0] = x;       Double_t fx = func->EvalPar(xx, params);
-   xx[0] = x+h/2;   Double_t g2 = func->EvalPar(xx, params);
-   xx[0] = x-h/2;   Double_t g3 = func->EvalPar(xx, params);
-
-   //compute the central differences
-   Double_t hhh  = 1/(h*h*h);
-   Double_t d0   = 0.5*f1 - f2 +f3 - 0.5*f4;
-   Double_t d2   = 4*f2 - 8*g2 +8*g3 - 4*f3;
-   gErrorTF1      = kC1*hhh*fx;   //compute the error
-   Double_t deriv = hhh*(4*d2 - d0)/3.;
-   return deriv;
+   rd.SetFunction(wf1, xmin, xmax);
+   rd.SetRelTolerance(eps);
+   return rd.Derivative3(x);
 }
 
 
