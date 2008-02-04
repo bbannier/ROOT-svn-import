@@ -27,6 +27,7 @@
 #include "Math/WrappedFunction.h"
 #include "Math/WrappedTF1.h"
 #include "Math/RootFinder.h"
+#include "Math/BrentMinimizer1D.h"
 #include "Math/BrentMethods.h"
 #include "Math/GaussIntegrator.h"
 #include "Math/AdaptiveIntegratorMultiDim.h"
@@ -47,6 +48,15 @@ public:
    GFunc(const TF1* function , double y ):fFunction(function), fY0(y) {}
    double operator()(double x) const {
       return fFunction->Eval(x) - fY0;
+   }
+};
+
+class GInverseFunc {
+   const TF1* fFunction;
+public:
+   GInverseFunc(const TF1* function):fFunction(function) {}
+   double operator()(double x) const {
+      return - fFunction->Eval(x);
    }
 };
 
@@ -1555,22 +1565,14 @@ Double_t TF1::GetMaximum(Double_t xmin, Double_t xmax) const
    //  the fNpx to a small value speeds the algorithm up many times.
    //  Then, Brent's method is applied on the bracketed interval
 
-   if (xmin >= xmax) {xmin = fXmin; xmax = fXmax;}
+   ROOT::Math::BrentMinimizer1D bm;
+   GInverseFunc g(this);
+   ROOT::Math::WrappedFunction<GInverseFunc> wf1(g);
+   bm.SetFunction( wf1, xmin, xmax );
+   bm.Minimize(10, 0, 0 );
    Double_t x;
-   Int_t niter=0;
-   ROOT::Math::WrappedFunction<const TF1&> wf1(*this);
-   x = MinimStep(&wf1, 3, xmin, xmax, 0, fNpx);
-   Bool_t ok = kTRUE;
-   x = MinimBrent(&wf1, 3, xmin, xmax, x, 0, ok);
-   while (!ok){
-      if (niter>10){
-         Error("GetMaximum", "maximum search didn't converge");
-         break;
-      }
-      x=MinimStep(&wf1, 3, xmin, xmax, 0, fNpx);
-      x = MinimBrent(&wf1, 3, xmin, xmax, x, 0, ok);
-      niter++;
-   }
+   x = - bm.FValMinimum();
+
    return x;
 }
 
@@ -1587,22 +1589,14 @@ Double_t TF1::GetMaximumX(Double_t xmin, Double_t xmax) const
    //  the fNpx to a small value speeds the algorithm up many times.
    //  Then, Brent's method is applied on the bracketed interval
 
-   if (xmin >= xmax) {xmin = fXmin; xmax = fXmax;}
+   ROOT::Math::BrentMinimizer1D bm;
+   GInverseFunc g(this);
+   ROOT::Math::WrappedFunction<GInverseFunc> wf1(g);
+   bm.SetFunction( wf1, xmin, xmax );
+   bm.Minimize(10, 0, 0 );
    Double_t x;
-   Int_t niter=0;
-   ROOT::Math::WrappedFunction<const TF1&> wf1(*this);
-   x = MinimStep(&wf1, 2, xmin, xmax, 0, fNpx);
-   Bool_t ok = kTRUE;
-   x = MinimBrent(&wf1, 2, xmin, xmax, x, 0, ok);
-   while (!ok){
-      if (niter>10){
-         Error("GetMaximumX", "maximum search didn't converge");
-         break;
-      }
-      x=MinimStep(&wf1, 2, xmin, xmax, 0, fNpx);
-      x = MinimBrent(&wf1, 2, xmin, xmax, x, 0, ok);
-      niter++;
-   }
+   x = bm.XMinimum();
+
    return x;
 }
 
@@ -1619,22 +1613,13 @@ Double_t TF1::GetMinimum(Double_t xmin, Double_t xmax) const
    //  a small value speeds the algorithm up many times.
    //  Then, Brent's method is applied on the bracketed interval
 
-   if (xmin >= xmax) {xmin = fXmin; xmax = fXmax;}
-   Double_t x;
-   Int_t niter=0;
+   ROOT::Math::BrentMinimizer1D bm;
    ROOT::Math::WrappedFunction<const TF1&> wf1(*this);
-   x = MinimStep(&wf1, 1, xmin, xmax, 0, fNpx);
-   Bool_t ok = kTRUE;
-   x = MinimBrent(&wf1, 1, xmin, xmax, x, 0, ok);
-   while (!ok){
-      if (niter>10){
-         Error("GetMinimum", "minimum search didn't converge");
-         break;
-      }
-      x=MinimStep(&wf1, 1, xmin, xmax, 0, fNpx);
-      x = MinimBrent(&wf1, 1, xmin, xmax, x, 0, ok);
-      niter++;
-   }
+   bm.SetFunction( wf1, xmin, xmax );
+   bm.Minimize(10, 0, 0 );
+   Double_t x;
+   x = bm.FValMinimum();
+
    return x;
 }
 
@@ -1652,22 +1637,13 @@ Double_t TF1::GetMinimumX(Double_t xmin, Double_t xmax) const
    //  a small value speeds the algorithm up many times.
    //  Then, Brent's method is applied on the bracketed interval
 
-   if (xmin >= xmax) {xmin = fXmin; xmax = fXmax;}
-   Int_t niter=0;
-   Double_t x;
+   ROOT::Math::BrentMinimizer1D bm;
    ROOT::Math::WrappedFunction<const TF1&> wf1(*this);
-   x = MinimStep(&wf1, 0, xmin, xmax, 0, fNpx);
-   Bool_t ok = kTRUE;
-   x = MinimBrent(&wf1, 0, xmin, xmax, x, 0, ok);
-   while (!ok){
-      if (niter>10){
-         Error("GetMinimumX", "minimum search didn't converge");
-         break;
-      }
-      x=MinimStep(&wf1, 0, xmin, xmax, 0, fNpx);
-      x = MinimBrent(&wf1, 0, xmin, xmax, x, 0, ok);
-      niter++;
-   }
+   bm.SetFunction( wf1, xmin, xmax );
+   bm.Minimize(10, 0, 0 );
+   Double_t x;
+   x = bm.XMinimum();
+
    return x;
 }
 
