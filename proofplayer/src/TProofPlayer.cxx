@@ -1574,7 +1574,8 @@ Long64_t TProofPlayerRemote::Finalize(TQueryResult *qr)
    PDB(kGlobal,1) Info("Finalize(TQueryResult *)","Enter");
 
    if (!IsClient()) {
-      Info("Finalize(TQueryResult *)","method to be executed only clients");
+      Info("Finalize(TQueryResult *)",
+           "method to be executed only on the clients");
       return -1;
    }
 
