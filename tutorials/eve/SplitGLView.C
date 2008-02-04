@@ -212,7 +212,7 @@ SplitGLView::SplitGLView(const TGWindow *p, UInt_t w, UInt_t h, Bool_t embed) :
       gEve->AddElement(fViewer[0], gEve->GetViewers());
    }
 
-   s = gEve->SpawnNewScene("PhiZ Projection");
+   s = gEve->SpawnNewScene("Rho-Z Projection");
    // projections
    fRhoZMgr = new TEveProjectionManager();
    gEve->AddElement(fRhoZMgr, (TEveElement *)s);
@@ -248,7 +248,7 @@ SplitGLView::SplitGLView(const TGWindow *p, UInt_t w, UInt_t h, Bool_t embed) :
    }
    gRhoZMgr = fRhoZMgr;
 
-   s = gEve->SpawnNewScene("RhoPhi Projection");
+   s = gEve->SpawnNewScene("Rho-Phi Projection");
    // projections
    fRPhiMgr = new TEveProjectionManager();
    gEve->AddElement(fRPhiMgr, (TEveElement *)s);
