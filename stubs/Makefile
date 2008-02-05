@@ -598,7 +598,7 @@ ifneq ($(ARCH),alphacxx6)
 	   "$(CORELIBEXTRA) $(PCRELDFLAGS) $(PCRELIB) $(CRYPTLIBS)"
 else
 	@$(MAKELIB) $(PLATFORM) $(LD) "$(CORELDFLAGS)" \
-	   "$(SOFLAGS)" libCore.$(SOEXT) $@ "$(COREO) " \
+	   "$(SOFLAGS)" libCore.$(SOEXT) $@ "$(COREO) $(COREDO)" \
 	   "$(CORELIBEXTRA) $(PCRELDFLAGS) $(PCRELIB) $(CRYPTLIBS)"
 endif
 
