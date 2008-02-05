@@ -2,11 +2,6 @@
 
 # Dictionary Filename
 FILENAME=
-# Can be used to produce a list of libraries needed by the header files being parsed
-PREFIX=
-# Options -c and -p
-COPTION=
-POPTION=
 # Arguments
 ARGS=$*
 # List of object files
@@ -19,6 +14,8 @@ HELP=
 MODE=
 # CXXFLAGS (from root-config if unset)
 CXXFLAGS=${CXXFLAGS:-`root-config --cflags`}
+# Dictionary Generator
+ROOTCINT=$ROOTSYS/bin/rootcint
 
 # Usage Message
 USAGE="Usage: rootcint [-v][-v0-4] [-cint|-reflex|-gccxml] [-l] [-f] [out.cxx] [-o] \"file1.o file2.o...\" [-c] file1.h[+][-][!] file2.h[+][-][!]...[LinkDef.h] 
@@ -27,7 +24,7 @@ and must be before the -f flags
 For more extensive help type: utils/src/rootcint -h"
 
 # Getopt call
-TEMP=`getopt -a -o vlf:o:c:hI:p: --long cint,reflex,gccxml,v0,v1,v2,v3,v4,object-files:,symbols-file:,lib-list-prefix:,I.,DCASE_int, \
+TEMP=`getopt -a -o vlf:o:c:hI:p: --long tmp,cint,reflex,gccxml,v0,v1,v2,v3,v4,object-files:,symbols-file:,lib-list-prefix: \
      -n 'rootcint' -- "$@"`
 
 # Wrong usage
@@ -42,24 +39,21 @@ while true ; do
         case "$1" in
                 -v)  shift ;;
                 --v0|--v1|--v2|--v3|--v4) shift ;;
+                --tmp) ROOTCINT=utils/src/rootcint_tmp; shift;;
                 --cint) MODE=$1; shift ;;
                 --reflex) MODE=$1; shift ;;
                 --gccxml) MODE=$1; shift ;;
                 -l) shift ;;
-                -p) POPTION="-p"; shift ;;
+                -p) shift ;;
                 -f) FILENAME=$2; shift 2 ;;
                 -o|--object-files) OBJS=$2; ARGOBJS=$1; shift 2;;
-                -c) COPTION="-c"; shift;;
-                -I) shift 2; break;;
+                -c) shift 1; break;;
                 -.) shift 2;;
                 -h) HELP=1; shift 1;;
                 --symbols-file) shift 2;;
-                --lib-list-prefix) PREFIX=$2; shift 2;;
-                -I.) shift; break;;
-                --) shift; break ;;
-                -DCASE_int) shift;; 
-                #*) echo "Internal error!" ;; #exit 1 ;;
-                 *) break;;
+                --lib-list-prefix) shift 2;;
+                --) shift ; break ;;
+                *) echo "Internal error!" ;; #exit 1 ;;
         esac
 done
 
@@ -77,78 +71,84 @@ then
 fi
 
 # We make up the new list of arguments for generating temporary dictionaries
-ROOTCINTARGS=${ARGS/"$OBJS"/} 
-ROOTCINTARGS=${ROOTCINTARGS/$OBJS/}
+ROOTCINTARGS=${ARGS/$OBJS/} 
 ROOTCINTARGS=${ROOTCINTARGS/--object-files/} 
 ROOTCINTARGS=${ROOTCINTARGS/-o/}
 ROOTCINTARGS=${ROOTCINTARGS/-f/}
+ROOTCINTARGS=${ROOTCINTARGS/-tmp/}
 ROOTCINTARGS=${ROOTCINTARGS/-cint/}
 ROOTCINTARGS=${ROOTCINTARGS/-reflex/}
 ROOTCINTARGS=${ROOTCINTARGS/-gccxml/}
 ROOTCINTARGS=${ROOTCINTARGS/-I./}
 ROOTCINTARGS=${ROOTCINTARGS/$FILENAME/}
 ROOTCINTARGS=${ROOTCINTARGS/--cxx/}
-ROOTCINTARGS=${ROOTCINTARGS/--lib-list-prefix=/}
-ROOTCINTARGS=${ROOTCINTARGS/$PREFIX/}
-ROOTCINTARGS=${ROOTCINTARGS/-p/}
+ROOTCINTARGS=${ROOTCINTARGS/$CXXFLAGS/}
 ROOTCINTARGS=${ROOTCINTARGS/-c/}
 
 # We remove one score from the mode option name
 MODE=${MODE/--/-}
 
-if [ "$PREFIX" != "" ]; then
-    PREFIX="--lib-list-prefix=$PREFIX"
-fi
-
-
 # Temporary dictionaries generation
+# Generate the first dictionary.. i.e the one with the shadow classes
 echo -++- Generating the first dictionary: ${FILENAME%.*}"Tmp1".cxx
-echo "$ROOTCINTARGS"
-echo rootcint $MODE $PREFIX -f ${FILENAME%.*}"Tmp1".cxx $COPTION $POPTION -. 1 $ROOTCINTARGS
-rootcint $MODE $PREFIX -f ${FILENAME%.*}"Tmp1".cxx $COPTION $POPTION -. 1 $ROOTCINTARGS
+echo $ROOTCINT $MODE ${FILENAME%.*}"Tmp1".cxx -c -. 1 $ROOTCINTARGS
+$ROOTCINT $MODE ${FILENAME%.*}"Tmp1".cxx -c -. 1 $ROOTCINTARGS
 
 # Temporary dictionaries compilation
 echo -++- Compiling the first dictionary: ${FILENAME%.*}"Tmp1".cxx
 echo g++ $CXXFLAGS -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -I. -o ${FILENAME%.*}"Tmp1".o -c ${FILENAME%.*}"Tmp1".cxx
 g++ $CXXFLAGS -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -I. -o ${FILENAME%.*}"Tmp1".o -c ${FILENAME%.*}"Tmp1".cxx
 
+# Put all the symbols of the .o in the nm file
+echo -++- Putting the symbols of the .o files in : ${FILENAME%.*}.nm
+echo nm -g -p --defined-only $OBJS | awk '{printf("%s\n", $3)}' > ${FILENAME%.*}.nm
+#nm -g -p --defined-only $OBJS | awk '{printf("%s\n", $3)}' > ${FILENAME%.*}.nm
+
+# Symbols extraction
+# Put the symbols of the first dicionary in the nm file too
 echo -++- Putting the symbols of the dictionary ${FILENAME%.*}"Tmp1".cxx in : ${FILENAME%.*}.nm
-echo nm -g -p --defined-only ${FILENAME%.*}"Tmp1".o | awk '{printf("%s\n", $3)}' > ${FILENAME%.*}.nm
+echo nm -g -p --defined-only ${FILENAME%.*}"Tmp1".o | awk '{printf("%s\n", $3)}' >> ${FILENAME%.*}.nm
 nm -g -p --defined-only ${FILENAME%.*}"Tmp1".o | awk '{printf("%s\n", $3)}' > ${FILENAME%.*}.nm
+nm -g -p --undefined-only ${FILENAME%.*}"Tmp1".o | awk '{printf("%s\n", $2)}' >> ${FILENAME%.*}.nm
 
-# Symbols extraction (Object Files and Dictionary Tmp1)
-#echo -++- Putting the symbols of the .o files in : ${FILENAME%.*}.nm
-#echo nm -g -p --defined-only $OBJS | awk '{printf("%s\n", $3)}' >> ${FILENAME%.*}.nm
+# Now we need the symbols for the second dictionary too (another safeguard)
+# Generate the second dictionary passing it the symbols of the .o files plus
+# those of the first dictionary
+#echo -++- Generating the second dictionary: ${FILENAME%.*}"Tmp2".cxx
+echo $ROOTCINT $MODE ${FILENAME%.*}"Tmp2".cxx -c --symbols-file ${FILENAME%.*}".nm" -. 2 $ROOTCINTARGS
+$ROOTCINT $MODE ${FILENAME%.*}"Tmp2".cxx -c --symbols-file ${FILENAME%.*}".nm"  -. 2 $ROOTCINTARGS
 
-#if [ "$OBJS" != "" ]; then
-#    nm -g -p --defined-only $OBJS | awk '{printf("%s\n", $3)}' >> ${FILENAME%.*}.nm
-#fi
-
-echo -++- Putting the symbols of the dictionary ${FILENAME%.*}"Tmp1".cxx in : ${FILENAME%.*}.nm
-echo rootcint $MODE $PREFIX -f ${FILENAME%.*}"Tmp2".cxx $COPTION -. 2 --symbols-file ${FILENAME%.*}".nm" $ROOTCINTARGS
-rootcint $MODE $PREFIX -f ${FILENAME%.*}"Tmp2".cxx $COPTION -. 2 --symbols-file ${FILENAME%.*}".nm" $ROOTCINTARGS
-
-# Temporary Dictionary 2 compilation
-echo -++- Compiling the second dictionary: ${FILENAME%.*}"Tmp2".cxx
+# Compile the second dictionary (should have only inline functions)
+#echo -++- Compiling the second dictionary: ${FILENAME%.*}"Tmp2".cxx
 echo g++ $CXXFLAGS -Iinclude -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -I. -o ${FILENAME%.*}"Tmp2".o -c ${FILENAME%.*}"Tmp2".cxx
 g++ $CXXFLAGS -Iinclude -pthread -Ipcre/src/pcre-6.4 -I$ROOTSYS/include/ -I. -o ${FILENAME%.*}"Tmp2".o -c ${FILENAME%.*}"Tmp2".cxx
 
-# Symbols extraction from dictionary Tmp2
+# Add the symbols of the second dictionary to the .nm file
 echo -++- Putting the symbols of the dictionary ${FILENAME%.*}"Tmp2".cxx in : ${FILENAME%.*}.nm
 echo nm -g -p --defined-only ${FILENAME%.*}"Tmp2".o | awk '{printf("%s\n", $3)}' >> ${FILENAME%.*}.nm
 nm -g -p --defined-only ${FILENAME%.*}"Tmp2".o | awk '{printf("%s\n", $3)}' >> ${FILENAME%.*}.nm
+nm -g -p --undefined-only ${FILENAME%.*}"Tmp2".o | awk '{printf("%s\n", $2)}' >> ${FILENAME%.*}.nm
 
-# We don't need the temporaries anymore
+# Final Dictionary Generation
+echo -++- Generating the real dictionary: ${FILENAME}
+echo $ROOTCINT $MODE $FILENAME -c --symbols-file ${FILENAME%.*}".nm" -. 3 $ROOTCINTARGS
+$ROOTCINT $MODE $FILENAME -c --symbols-file ${FILENAME%.*}".nm" -. 3 $ROOTCINTARGS
+
+# We don't need the temporaries anymore (Now we do)
 #rm ${FILENAME%.*}"Tmp1".*
 #rm ${FILENAME%.*}"Tmp2".*
 
 # Final Dictionary Generation
-echo -++- Generating the real XXX dictionary: ${FILENAME}
-echo rootcint $MODE $PREFIX -f $FILENAME $COPTION $POPTION -. 3 --symbols-file ${FILENAME%.*}".nm" $ROOTCINTARGS
-rootcint $MODE $PREFIX -f $FILENAME $COPTION $POPTION -. 3 --symbols-file ${FILENAME%.*}".nm" $ROOTCINTARGS
+#utils/src/rootcint_tmp -cint $FILENAME --symbols-file ${FILENAME%.*}".nm"  -. 4 $ROOTCINTARGS
 
 # We don't need the symbols file anymore
 #rm ${FILENAME%.*}.nm
+
+
+
+
+
+ 
 
 
 

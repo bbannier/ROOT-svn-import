@@ -346,16 +346,6 @@ int G__isprivateassignopr(int tagnum);
 
 void G__cppif_change_globalcomp();
 
-// It indicates if the stubs should be used (when they are already there)
-// It can be activated at run-time
-char G__wrappers = 0;
-
-// 15-01-08
-// We are adding a variable that comes directly from the configure
-// It will say if we want to print the stubs of not (rem that G__wrappers
-// says if we want to USE them or not and for that they have to be printed)
-char G__nostubs = 0;
-
 /**************************************************************************
 * G__check_setup_version()
 *
