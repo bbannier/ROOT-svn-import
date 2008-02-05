@@ -469,7 +469,7 @@ int G__istypename(char* temp)
       strcmp(temp, "register") == 0 ||
       strcmp(temp, "bool") == 0 ||
       (G__iscpp && strcmp(temp, "typename") == 0) ||
-      -1 != G__defined_typename(temp) ||
+      -1 != G__defined_typename(temp, 0) ||
       -1 != G__defined_tagname(temp, 2) ||
       G__defined_templateclass(temp)
    ) {
@@ -645,7 +645,7 @@ void G__make_ifunctable(char* funcheader)
          else {
             int oprtypenum;
             oprtype[strlen(oprtype)-1] = 0;
-            oprtypenum = G__defined_typename(oprtype);
+            oprtypenum = G__defined_typename(oprtype, 0);
             if (
                -1 != oprtypenum &&
                -1 == G__newtype.tagnum[oprtypenum] &&
@@ -1876,7 +1876,7 @@ int G__readansiproto(G__ifunc_table_internal* ifunc, int func_now)
             G__tagdefining = G__friendtagnum;
             G__def_tagnum = G__friendtagnum;
          }
-         typenum = G__defined_typename(paraname);
+         typenum = G__defined_typename(paraname, 0);
          if (-1 == typenum) {
             tagnum = G__defined_tagname(paraname, 1);
             if (-1 == tagnum) {
@@ -1906,7 +1906,7 @@ int G__readansiproto(G__ifunc_table_internal* ifunc, int func_now)
             }
             else {
                /* re-evaluate typedef name in case of template class */
-               if (strchr(paraname, '<')) typenum = G__defined_typename(paraname);
+               if (strchr(paraname, '<')) typenum = G__defined_typename(paraname, 0);
                type = 'u';
             }
          }

@@ -3564,7 +3564,7 @@ static void G__setup_memfuncCintcLcLG__MethodInfo(void) {
    G__memfunc_setup("NArg",360,G__G__API_40_0_15, 105, -1, -1, 0, 0, 1, 1, 0, "", (char*)NULL, (void*) NULL, 0);
    G__memfunc_setup("NDefaultArg",1069,G__G__API_40_0_16, 105, -1, -1, 0, 0, 1, 1, 0, "", (char*)NULL, (void*) NULL, 0);
    G__memfunc_setup("HasVarArgs",978,G__G__API_40_0_17, 105, -1, -1, 0, 0, 1, 1, 0, "", (char*)NULL, (void*) NULL, 0);
-   G__memfunc_setup("InterfaceMethod",1522,G__G__API_40_0_18, 89, -1, G__defined_typename("G__InterfaceMethod"), 0, 0, 1, 1, 0, "", (char*)NULL, (void*) NULL, 0);
+   G__memfunc_setup("InterfaceMethod",1522,G__G__API_40_0_18, 89, -1, G__defined_typename("G__InterfaceMethod", 0), 0, 0, 1, 1, 0, "", (char*)NULL, (void*) NULL, 0);
    G__memfunc_setup("GetBytecode",1103,G__G__API_40_0_19, 85, G__get_linked_tagnum(&G__G__APILN_G__bytecodefunc), -1, 0, 0, 1, 1, 0, "", (char*)NULL, (void*) NULL, 0);
    G__memfunc_setup("GetLocalVariable",1585,G__G__API_40_0_20, 117, G__get_linked_tagnum(&G__G__APILN_CintcLcLG__DataMemberInfo), -1, 0, 0, 1, 1, 0, "", (char*)NULL, (void*) NULL, 0);
    G__memfunc_setup("PointerToFunc",1328,G__G__API_40_0_21, 89, -1, -1, 0, 0, 1, 1, 0, "", (char*)NULL, (void*) NULL, 0);
@@ -3710,7 +3710,7 @@ static void G__setup_memfuncCintcLcLG__ClassInfo(void) {
    G__memfunc_setup("IncHeapInstanceCount",2006,G__G__API_43_0_55, 121, -1, -1, 0, 0, 1, 1, 0, "", (char*)NULL, (void*) NULL, 0);
    G__memfunc_setup("ResetHeapInstanceCount",2239,G__G__API_43_0_56, 121, -1, -1, 0, 0, 1, 1, 0, "", (char*)NULL, (void*) NULL, 0);
    G__memfunc_setup("RootFlag",798,G__G__API_43_0_57, 105, -1, -1, 0, 0, 1, 1, 0, "", (char*)NULL, (void*) NULL, 0);
-   G__memfunc_setup("GetInterfaceMethod",1810,G__G__API_43_0_58, 89, -1, G__defined_typename("G__InterfaceMethod"), 0, 5, 1, 1, 0, 
+   G__memfunc_setup("GetInterfaceMethod",1810,G__G__API_43_0_58, 89, -1, G__defined_typename("G__InterfaceMethod", 0), 0, 5, 1, 1, 0, 
 "C - - 10 - fname C - - 10 - arg "
 "L - - 0 - poffset i 'Cint::G__ClassInfo::MatchMode' - 0 'ConversionMatch' mode "
 "i 'Cint::G__ClassInfo::InheritanceMode' - 0 'WithInheritance' imode", (char*)NULL, (void*) NULL, 0);
@@ -3785,7 +3785,7 @@ static void G__setup_memfuncCintcLcLG__TypeInfo(void) {
    G__memfunc_setup("Type",418,G__G__API_47_0_13, 105, -1, -1, 0, 0, 1, 1, 8, "", (char*)NULL, (void*) NULL, 0);
    G__memfunc_setup("Reftype",735,G__G__API_47_0_14, 105, -1, -1, 0, 0, 1, 1, 8, "", (char*)NULL, (void*) NULL, 0);
    G__memfunc_setup("Isconst",739,G__G__API_47_0_15, 105, -1, -1, 0, 0, 1, 1, 8, "", (char*)NULL, (void*) NULL, 0);
-   G__memfunc_setup("Value",509,G__G__API_47_0_16, 117, G__get_linked_tagnum(&G__G__APILN_G__value), G__defined_typename("G__value"), 0, 0, 1, 1, 8, "", (char*)NULL, (void*) NULL, 0);
+   G__memfunc_setup("Value",509,G__G__API_47_0_16, 117, G__get_linked_tagnum(&G__G__APILN_G__value), G__defined_typename("G__value", 0), 0, 0, 1, 1, 8, "", (char*)NULL, (void*) NULL, 0);
    // automatic copy constructor
    G__memfunc_setup("G__TypeInfo", 1075, G__G__API_47_0_18, (int) ('i'), G__get_linked_tagnum(&G__G__APILN_CintcLcLG__TypeInfo), -1, 0, 1, 1, 1, 0, "u 'Cint::G__TypeInfo' - 11 - -", (char*) NULL, (void*) NULL, 0);
    // automatic destructor
@@ -3848,12 +3848,12 @@ static void G__setup_memfuncCintcLcLG__CallFunc(void) {
    G__memfunc_setup("SetArgRef",867,G__G__API_52_0_22, 121, -1, -1, 0, 1, 1, 1, 0, "n - 'G__int64' 1 - ll", (char*)NULL, (void*) NULL, 0);
    G__memfunc_setup("SetArgRef",867,G__G__API_52_0_23, 121, -1, -1, 0, 1, 1, 1, 0, "m - 'G__uint64' 1 - ull", (char*)NULL, (void*) NULL, 0);
    G__memfunc_setup("SetArgRef",867,G__G__API_52_0_24, 121, -1, -1, 0, 1, 1, 1, 0, "q - - 1 - ld", (char*)NULL, (void*) NULL, 0);
-   G__memfunc_setup("Execute",723,G__G__API_52_0_25, 117, G__get_linked_tagnum(&G__G__APILN_G__value), G__defined_typename("G__value"), 0, 1, 1, 1, 0, "Y - - 0 - pobject", (char*)NULL, (void*) NULL, 0);
+   G__memfunc_setup("Execute",723,G__G__API_52_0_25, 117, G__get_linked_tagnum(&G__G__APILN_G__value), G__defined_typename("G__value", 0), 0, 1, 1, 1, 0, "Y - - 0 - pobject", (char*)NULL, (void*) NULL, 0);
    G__memfunc_setup("Exec",389,G__G__API_52_0_26, 121, -1, -1, 0, 1, 1, 1, 0, "Y - - 0 - pobject", (char*)NULL, (void*) NULL, 0);
    G__memfunc_setup("ExecInt",688,G__G__API_52_0_27, 108, -1, -1, 0, 1, 1, 1, 0, "Y - - 0 - pobject", (char*)NULL, (void*) NULL, 0);
    G__memfunc_setup("ExecDouble",992,G__G__API_52_0_28, 100, -1, -1, 0, 1, 1, 1, 0, "Y - - 0 - pobject", (char*)NULL, (void*) NULL, 0);
-   G__memfunc_setup("ExecInt64",794,G__G__API_52_0_29, 110, -1, G__defined_typename("G__int64"), 0, 1, 1, 1, 0, "Y - - 0 - pobject", (char*)NULL, (void*) NULL, 0);
-   G__memfunc_setup("InterfaceMethod",1522,G__G__API_52_0_30, 89, -1, G__defined_typename("G__InterfaceMethod"), 0, 0, 1, 1, 0, "", (char*)NULL, (void*) NULL, 0);
+   G__memfunc_setup("ExecInt64",794,G__G__API_52_0_29, 110, -1, G__defined_typename("G__int64", 0), 0, 1, 1, 1, 0, "Y - - 0 - pobject", (char*)NULL, (void*) NULL, 0);
+   G__memfunc_setup("InterfaceMethod",1522,G__G__API_52_0_30, 89, -1, G__defined_typename("G__InterfaceMethod", 0), 0, 0, 1, 1, 0, "", (char*)NULL, (void*) NULL, 0);
    G__memfunc_setup("SetArgs",697,G__G__API_52_0_31, 121, -1, -1, 0, 1, 1, 1, 0, "C - - 10 - args", (char*)NULL, (void*) NULL, 0);
    G__memfunc_setup("GetMethodInfo",1293,G__G__API_52_0_32, 117, G__get_linked_tagnum(&G__G__APILN_CintcLcLG__MethodInfo), -1, 0, 0, 1, 1, 0, "", (char*)NULL, (void*) NULL, 0);
    // automatic destructor

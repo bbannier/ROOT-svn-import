@@ -64,7 +64,7 @@ int G__TypeReader::append(const string& token,int c) {
   else if(token=="enum")     m_type='e';
   else {
     if(-1!=tagnum || -1!=typenum) return(0); // already got type
-    int ltypenum = G__defined_typename(token.c_str()); // legacy
+    int ltypenum = G__defined_typename(token.c_str(), 0); // legacy
     if(-1!=ltypenum) {
       typenum = ltypenum;
       tagnum = G__newtype.tagnum[typenum];

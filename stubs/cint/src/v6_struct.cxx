@@ -1645,7 +1645,7 @@ try_again:
 
    // Search for typename.
    store_var_type = G__var_type;
-   i = G__defined_typename(tagname);
+   i = G__defined_typename(tagname, 0);
    G__var_type = store_var_type;
    if (i != -1) {
       i = G__newtype.tagnum[i];
