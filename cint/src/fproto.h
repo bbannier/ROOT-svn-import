@@ -309,7 +309,6 @@ void G__incsetup_memfunc(int tagnum);
 // 04-07-07
 // v6_symbols.cxx
 void   G__register_class(const char *libname, const char *clstr);
-void*  G__get_symbol_address(const char* mangled_name);
 void MapDependantTypes();
 
 int G__separate_parameter(char *original,int *pos,char *param);
