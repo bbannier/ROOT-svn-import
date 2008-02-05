@@ -1550,7 +1550,7 @@ int G__getfullpath(char* string, char* pbegin, int i)
    int tagnum = -1, typenum;
    string[i] = '\0';
    if (0 == pbegin[0]) return(i);
-   typenum = G__defined_typename(pbegin);
+   typenum = G__defined_typename(pbegin, 0);
    if (-1 == typenum) tagnum = G__defined_tagname(pbegin, 1);
    if ((-1 != typenum && -1 != G__newtype.parent_tagnum[typenum]) ||
          (-1 != tagnum  && -1 != G__struct.parent_tagnum[tagnum])) {

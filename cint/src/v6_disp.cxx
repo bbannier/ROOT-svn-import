@@ -1034,7 +1034,7 @@ int G__display_typedef(FILE *fout,const char *name,int startin)
   i=0;
   while(name[i]&&isspace(name[i])) i++;
   if(name[i]) {
-    start = G__defined_typename(name+i);
+    start = G__defined_typename(name+i, 0);
     if(-1==start) {
       G__fprinterr(G__serr,"!!!Type %s is not defined\n",name+i);
       return(0);

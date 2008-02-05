@@ -140,7 +140,7 @@ extern "C" void G__cpp_setup_memvarManualBase4() {
 static void G__setup_memfuncTDirectory(void) {
    /* TDirectory */
    G__tag_memfunc_setup(G__get_linked_tagnum(&G__ManualBase4LN_TDirectory));
-   G__memfunc_setup("WriteObject",1122,G__ManualBase4_101_0_97, 105, -1, G__defined_typename("Int_t"), 0, 4, 1, 1, 0, 
+   G__memfunc_setup("WriteObject",1122,G__ManualBase4_101_0_97, 105, -1, G__defined_typename("Int_t", 0), 0, 4, 1, 1, 0, 
 "Y - - 10 - obj C - - 10 - name "
 "C - 'Option_t' 10 '\"\"' option i - 'Int_t' 0 '0' bufsize", (char*)NULL, (void*) NULL, 0);
    G__memfunc_setup("GetObject",887,G__ManualBase4_101_0_98, 121, -1, -1, 0, 2, 1, 1, 0, 

@@ -866,7 +866,7 @@ char* G__rename_templatefunc(char *funcname, int isrealloc)
             buf[len] = 0;
          }
          else buf2[0] = 0;
-         typenum = G__defined_typename(buf);
+         typenum = G__defined_typename(buf, 0);
          if (-1 != typenum) {
             strcpy(buf, G__fulltypename(typenum));
          }
@@ -1607,7 +1607,7 @@ G__value G__getfunction_libp(const char* item, char* funcname, G__param* libp, i
          || G__CALLSTATICMEMFUNC == memfunc_flag
       ) {
       int store_var_typeX = G__var_type;
-      i = G__defined_typename(funcname);
+      i = G__defined_typename(funcname, 0);
       G__var_type = store_var_typeX;
       if (-1 != i) {
          if (-1 != G__newtype.tagnum[i]) {
@@ -2941,7 +2941,7 @@ G__value G__getfunction(const char* item, int* known3, int memfunc_flag)
          || G__CALLSTATICMEMFUNC == memfunc_flag
       ) {
       int store_var_typeX = G__var_type;
-      i = G__defined_typename(funcname);
+      i = G__defined_typename(funcname, 0);
       G__var_type = store_var_typeX;
       if (-1 != i) {
          if (-1 != G__newtype.tagnum[i]) {
@@ -3448,7 +3448,7 @@ int G__special_func(G__value* result7, char* funcname, G__param* libp, int hash)
 int G__defined(char *tname)
 {
    int tagnum, typenum;
-   typenum = G__defined_typename(tname);
+   typenum = G__defined_typename(tname, 0);
    if (-1 != typenum) return 1;
    tagnum = G__defined_tagname(tname, 2);
    if (-1 != tagnum) return 1;
