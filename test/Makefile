@@ -634,7 +634,6 @@ distclean:      clean
 
 Event.$(ObjSuf): Event.h
 MainEvent.$(ObjSuf): Event.h
-
 EventDict.$(SrcSuf): Event.h EventLinkDef.h
 	@echo "Generating dictionary $@..."
 	@rootcint -f $@ -c $^
@@ -645,7 +644,7 @@ HelloDict.$(SrcSuf): Hello.h
 	@rootcint -f $@ -c $^
 
 Aclock.$(ObjSuf): Aclock.h
-AclockDict.$(SrcSuf): Aclock.h
+AclockDict.$(SrcSuf): Aclock.
 	@echo "Generating dictionary $@..."
 	@rootcint -f $@ -c $^
 
@@ -655,7 +654,6 @@ TetrisDict.$(SrcSuf): Tetris.h
 	@rootcint -f $@ -c $^
 
 TBench.$(ObjSuf): TBench.h
-TBenchDict.$(SrcSuf): TBench.h benchLinkDef.h
 	@echo "Generating dictionary $@..."
 	@rootcint -f $@ -c $^
 
@@ -672,7 +670,6 @@ TrackMathCoreCint.$(SrcSuf): 	TrackMathCore.h TrackMathCoreLinkDef.h
 TrackMathCoreRflx.$(SrcSuf): 	TrackMathCore.h TrackMathCoreRflx.xml
 			@echo "Generating dictionary $@ using gccxml ..."
 			genreflex TrackMathCore.h --selection_file=TrackMathCoreRflx.xml -o TrackMathCoreRflx.cxx  -I$(ROOTSYS)/include
-
 
 
 .$(SrcSuf).$(ObjSuf):

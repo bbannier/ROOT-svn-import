@@ -51,13 +51,13 @@ endif
 
 ifeq ($(NOSTUBS),yes)
  ifeq ($(GCC_MAJOR),3)
-# allow 3.2, 3.3, and 3.4:
+	# allow 3.2, 3.3, and 3.4:
   ifneq ($(findstring $(GCC_MINOR),2 3 4),)
-   ROOTCINTTMP := export CXXFLAGS="$(CXXFLAGS)"; utils/src/rootcint_nostubs_tmp.sh -$(ROOTDICTTYPE)
+	 ROOTCINTTMP := export CXXFLAGS="$(CXXFLAGS)"; utils/src/rootcint_nostubs_tmp.sh -$(ROOTDICTTYPE)
  else
 	NOSTUBS := "no"
 	NOSTUBSTEST := "no"	
-  endif
+	endif	
  endif
 endif
 

@@ -354,7 +354,7 @@ char G__wrappers = 0;
 // We are adding a variable that comes directly from the configure
 // It will say if we want to print the stubs of not (rem that G__wrappers
 // says if we want to USE them or not and for that they have to be printed)
-int G__nostubs = 0;
+char G__nostubs = 0;
 
 /**************************************************************************
 * G__check_setup_version()
@@ -601,7 +601,7 @@ int G__ifunc_exist_base(int ifn, G__ifunc_table_internal *ifunc)
           // We have an ambiguous function...
           // mark its page_base as negative
           if(n>1){
-            ifuncb->page_base = ifuncb->page_base * (-1);
+            ifuncb->page_base *= ifuncb->page_base * (-1);
             ifunc_res->page_base = ifunc_res->page_base * (-1);
             return -1;
           }

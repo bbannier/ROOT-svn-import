@@ -2011,11 +2011,15 @@ static int (*G__tag_memvar_reset) G__P((void));
 static int (*G__tag_memfunc_setup) G__P((int tagnum));
 
 #ifdef G__TRUEP2F
-static int (*G__memfunc_setup) G__P((G__CONST char *funcname,int hash,G__CONST char *mangled_name,G__InterfaceMethod funcp,int type
-,int tagnum,int typenum,int reftype,int para_nu,int ansi,int access,int isconst,G__CONST char *paras,G__CONST char *comment,void* tp2f,int isvirtual));
+static int (*G__memfunc_setup) G__P((G__CONST char *funcname,int hash, G__InterfaceMethod funcp,int type, int tagnum,int typenum,int reftype,int para_nu,int ansi,int access,int isconst,G__CONST char *paras,G__CONST char *comment,void* tp2f,int isvirtual));
 #else /* G__TRUEP2F */
-static int (*G__memfunc_setup) G__P((G__CONST char *funcname,int hash,G__CONST char *mangled_name,G__InterfaceMethod funcp,int type
-,int tagnum,int typenum,int reftype,int para_nu,int ansi,int access,int isconst,G__CONST char *paras,G__CONST char *comment));
+static int (*G__memfunc_setup) G__P((G__CONST char *funcname,int hash, G__InterfaceMethod funcp,int type ,int tagnum,int typenum,int reftype,int para_nu,int ansi,int access,int isconst,G__CONST char *paras,G__CONST char *comment));
+#endif /* G__TRUEP2F */
+
+#ifdef G__TRUEP2F
+static int (*G__memfunc_setup2) G__P((G__CONST char *funcname,int hash, G__CONST char *mangled_name, G__InterfaceMethod funcp,int type, int tagnum,int typenum,int reftype,int para_nu,int ansi,int access,int isconst,G__CONST char *paras,G__CONST char *comment,void* tp2f,int isvirtual));
+#else /* G__TRUEP2F */
+static int (*G__memfunc_setup2) G__P((G__CONST char *funcname,int hash,G__CONST char *mangled_name,G__InterfaceMethod funcp,int type ,int tagnum,int typenum,int reftype,int para_nu,int ansi,int access,int isconst,G__CONST char *paras,G__CONST char *comment));
 #endif /* G__TRUEP2F */
 
 static int (*G__memfunc_next) G__P((void));
@@ -2437,6 +2441,16 @@ G__EXPORT void G__SetCppCintApiPointers(
   G__set_alloclockfunc   = (void (*) G__P((void* foo)) ) a138;
   G__set_allocunlockfunc = (void (*) G__P((void* foo)) ) a139;
   G__float = (float (*) G__P((G__value buf)) ) a140;
+
+  #ifdef G__TRUEP2F
+  G__memfunc_setup2 = (int (*) G__P((G__CONST char *funcname,int hash,G__InterfaceMethod funcp,int type
+,int tagnum,int typenum,int reftype,int para_nu,int ansi,int access,int isconst,G__CONST char *paras,G__CONST char *comment,void* tp2f,int isvirtual))  ) a141;
+#else /* G__TRUEP2F */
+  G__memfunc_setup2 = (int (*) G__P((G__CONST char *funcname,int hash,G__InterfaceMethod funcp,int type
+,int tagnum,int typenum,int reftype,int para_nu,int ansi,int access,int isconst,G__CONST char *paras,G__CONST char *comment)) )  a142;
+#endif /* G__TRUEP2F */
+  
+
 }
 
 #endif /* G__MULTITHREADLIBCINT */
