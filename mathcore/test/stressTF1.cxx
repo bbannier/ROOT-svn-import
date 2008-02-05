@@ -6,12 +6,16 @@
 #include "TGraph.h"
 #include "TH2.h"
 #include "TStopwatch.h"
+#include <cmath>
 
 using namespace std;
 
 const double XMIN = 0, XMAX = 2*TMath::Pi();
 const Int_t NB = 100;
 const Int_t REP = 1000;
+
+double sumTime = 0; 
+
 
 void DrawFunction(TF1* f1)
 {
@@ -24,7 +28,7 @@ void DrawFunction(TF1* f1)
       ceros[i] = 0;
    }
 
-   TCanvas* c1 = new TCanvas("c1", "Sin(x)", 600, 400);
+   new TCanvas("c1", "Sin(x)", 600, 400);
    TH2F* hpx = new TH2F("hpx", "Sin(x)", NB, XMIN, XMAX, NB, -1,1);
    hpx->SetStats(kFALSE);
    hpx->Draw();
@@ -41,11 +45,12 @@ void DrawFunction(TF1* f1)
    axis->SetLineStyle(2);
    axis->SetTitle("Function: axis");
    axis->Draw("SAME");
+   
 }
 
 int PrintStatus(const char* begin, double result, double expected, double time)
 {
-   double difference = fabs(result-expected);
+   double difference = std::abs(result-expected);
    string passed = "FALSE";
 
    if ( difference < 1E-7 )
@@ -102,6 +107,8 @@ int TestRoot(TF1* f1)
 
    cout << "Total Time: " << totalTime << endl;
 
+   sumTime += totalTime;
+
    return status;
 }
 
@@ -134,6 +141,8 @@ int TestMaxMin(TF1* f1)
 
    cout << "Total Time: " << totalTime << endl;
 
+   sumTime += totalTime;
+
    return status;
 }
 
@@ -160,6 +169,8 @@ int TestDerivative(TF1* f1)
    }
 
    cout << "Total Time: " << totalTime << endl;
+
+   sumTime += totalTime;
 
    return status;
 }
@@ -188,6 +199,8 @@ int TestIntegral(TF1* f1)
 
    cout << "Total Time: " << totalTime << endl;
 
+   sumTime += totalTime;
+
    return status;
 }
 
@@ -206,6 +219,8 @@ int stressTF1()
    status += TestIntegral(f1);
 
    cout << "End of Tests..." << endl;
+   cout << "Total time for all tests: " << sumTime << endl;
+   
 
    return status;
 }
