@@ -24,6 +24,8 @@ GaussLegendreIntegrator::GaussLegendreIntegrator(int num, double eps)
    fUsedOnce = false;
    fFunctionCopied = false;
    fFunction = 0;
+
+   CalcGaussLegendreSamplingPoints();
 }
 
 GaussLegendreIntegrator::~GaussLegendreIntegrator()
@@ -40,6 +42,13 @@ void GaussLegendreIntegrator::SetNumberPoints(int num)
    fNum = num;
    CalcGaussLegendreSamplingPoints();
 }
+
+void GaussLegendreIntegrator::GetWeightVectors(double *x, double *w)
+{
+   memcpy(x, fX, fNum);
+   memcpy(w, fW, fNum);
+}
+
 
 double GaussLegendreIntegrator::Integral(double a, double b)
 {
@@ -105,8 +114,6 @@ void GaussLegendreIntegrator::SetFunction (const IGenFunction & function, bool c
       fFunction = &function;
 
    fFunctionCopied = copy;
-
-   CalcGaussLegendreSamplingPoints();
 }
 
 

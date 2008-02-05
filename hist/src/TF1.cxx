@@ -30,6 +30,7 @@
 #include "Math/BrentMinimizer1D.h"
 #include "Math/BrentMethods.h"
 #include "Math/GaussIntegrator.h"
+#include "Math/GaussLegendreIntegrator.h"
 #include "Math/AdaptiveIntegratorMultiDim.h"
 #include "Math/RichardsonDerivator.h"
 
@@ -2365,27 +2366,19 @@ Double_t TF1::IntegralFast(const TGraph *g, Double_t a, Double_t b, Double_t *pa
 
 
 //______________________________________________________________________________
-Double_t TF1::IntegralFast(Int_t num, Double_t *x, Double_t *w, Double_t a, Double_t b, Double_t *params)
+Double_t TF1::IntegralFast(Int_t num, Double_t * /* x */, Double_t * /* w */, Double_t a, Double_t b, Double_t *params, Double_t epsilon)
 {
    // Gauss-Legendre integral, see CalcGaussLegendreSamplingPoints
 
-   if (num<=0 || x == 0 || w == 0)
-      return 0;
+   // Now x and w are not used!
 
-   const Double_t a0 = (b + a)/2;
-   const Double_t b0 = (b - a)/2;
+   ROOT::Math::WrappedTF1 wf1(*this);
+   if ( params )
+      wf1.SetParameters( params );
+   ROOT::Math::GaussLegendreIntegrator gli(num,epsilon);
+   gli.SetFunction( wf1 );
+   return gli.Integral(a, b);
 
-   Double_t xx[1];
-   InitArgs(xx, params);
-
-   Double_t result = 0.0;
-   for (int i=0; i<num; i++)
-   {
-      xx[0] = a0 + b0*x[i];
-      result += w[i] * EvalPar(xx, params);
-   }
-
-   return result*b0;
 }
 
 
@@ -3194,47 +3187,10 @@ void TF1::CalcGaussLegendreSamplingPoints(Int_t num, Double_t *x, Double_t *w, D
    //
    // Reference: Numerical Recipes in C, Second Edition
 
-   if (num<=0 || eps<=0)
-      return;
+   // This function is just kept like this for backward compatibility!
 
-   // The roots of symmetric is the interval, so we only have to find half of them
-   const UInt_t m = (num+1)/2;
+   ROOT::Math::GaussLegendreIntegrator gli(num,eps);
+   gli.GetWeightVectors(x, w);
 
-   Double_t z, pp, p1,p2, p3;
 
-   // Loop over the disired roots
-   for (UInt_t i=0; i<m; i++) {
-      z = TMath::Cos(TMath::Pi()*(i+0.75)/(num+0.5));
-
-      // Starting with the above approximation to the i-th root, we enter
-      // the main loop of refinement by Newton's method
-      do {
-         p1=1.0;
-         p2=0.0;
-
-         // Loop up the recurrence relation to get the Legendre
-         // polynomial evaluated at z
-         for (int j=0; j<num; j++)
-         {
-            p3 = p2;
-            p2 = p1;
-            p1 = ((2.0*j+1.0)*z*p2-j*p3)/(j+1.0);
-         }
-         // p1 is now the desired Legendre polynomial. We next compute pp, its
-         // derivative, by a standard relation involving also p2, the polynomial
-         // of one lower order
-         pp = num*(z*p1-p2)/(z*z-1.0);
-         // Newton's method
-         z -= p1/pp;
-
-      } while (TMath::Abs(p1/pp) > eps);
-
-      // Put root and its symmetric counterpart
-      x[i]       = -z;
-      x[num-i-1] =  z;
-
-      // Compute the weight and put its symmetric counterpart
-      w[i]       = 2.0/((1.0-z*z)*pp*pp);
-      w[num-i-1] = w[i];
-   }
 }

@@ -25,6 +25,7 @@ public:
    virtual ~GaussLegendreIntegrator();
    
    void SetNumberPoints(int num);
+   void GetWeightVectors(double *x, double *w);
 
    // Implementing VirtualIntegrator Interface
    void SetRelTolerance (double);
