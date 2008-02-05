@@ -142,7 +142,7 @@ extern "C" void G__cpp_setup_memvarManualTree2() {
 static void G__setup_memfuncTTree(void) {
    /* TTree */
    G__tag_memfunc_setup(G__get_linked_tagnum(&G__ManualTree2LN_TTree));
-   G__memfunc_setup("Process",735,G__ManualTree2_126_0_132, 110, -1, G__defined_typename("Long64_t"), 0, 4, 1, 1, 0, 
+   G__memfunc_setup("Process",735,G__ManualTree2_126_0_132, 110, -1, G__defined_typename("Long64_t", 0), 0, 4, 1, 1, 0, 
       "Y - - 0 - selector C - 'Option_t' 10 '\"\"' option "
       "n - 'Long64_t' 0 '1000000000' nentries n - 'Long64_t' 0 '0' firstentry", (char*)NULL, (void*) NULL, 1);
    G__memfunc_setup("Branch",590,G__ManualTree2_126_0_187, 85, G__get_linked_tagnum(&G__ManualTree2LN_TBranch), -1, 0, 5, 1, 1, 0, 
