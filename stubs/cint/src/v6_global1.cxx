@@ -97,6 +97,10 @@ int G__asm_noverflow=0; /* When this is set to 1, compilation starts.
 
 int G__asm_dbg=0; /* p-code debugging flag, only valid when compiled with
                    * G__ASM_DBG */
+
+char G__wrappers = 0;
+char G__nostubs = 0;
+
 #ifdef G__ASM_DBG
 const char *G__LOOPCOMPILEABORT="LOOP COMPILE ABORTED";
 #endif
