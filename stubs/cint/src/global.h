@@ -100,7 +100,8 @@ extern int G__asm_dt;   /* compile time stack pointer */
 extern int G__asm_index;              /* variable index */
 
 // DMS 
-extern char G__wrappers;
+   extern char G__wrappers;
+   extern char G__nostubs;
 
 #endif // G__ASM
 
