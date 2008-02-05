@@ -131,7 +131,7 @@ get_linkmap_list()
 
 //______________________________________________________________________________
 void*
-G__get_address(const char* mangled_name)
+G__get_symbol_address(const char* mangled_name)
 {
   // Get the addrees of a mangled name.
   // since we dont know in which library we wpuld have to look

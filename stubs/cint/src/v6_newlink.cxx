@@ -788,7 +788,7 @@ void* G__get_funcptr(G__ifunc_table_internal *ifunc, int ifn)
   if(!ifunc->mangled_name[ifn])
     return 0;
 
-  ifunc->funcptr[ifn] = G__get_address(ifunc->mangled_name[ifn]);
+  ifunc->funcptr[ifn] = G__get_symbol_address(ifunc->mangled_name[ifn]);
   return ifunc->funcptr[ifn];
 }
 
