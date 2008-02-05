@@ -1,4 +1,3 @@
-
 #1 * Could you please protect _ALL_ your changes in CINT by #ifdef
 G__NOSTUBS?
 
@@ -565,25 +564,46 @@ IN PROGRESS
 
  ditto... (I was half expecting it to change again)
 
-80 * in config/Makefile.linux, could you surround the GCC version extraction by
+#80 * in config/Makefile.linux, could you surround the GCC version extraction by
 ifeq ($(ENABLESTUBS)$(ENABLESTUBSTEST),no)
 ...
 endif
-81 * in config/Makefile.linux, why do you have two clauses
+
+#81 * in config/Makefile.linux, why do you have two clauses
 ifeq ($(ENABLESTUBS),no)
 setting the CXXFLAGS 1.5 times?
 
-82 * in config/Makefile.linux, if you decide that the GCC version is improper,
+#82 * in config/Makefile.linux, if you decide that the GCC version is improper,
 could you reset ENABLESTUBS:=yes?
 
-83 * what happens if I do configure --no-stubs --no-stubs-test
+#83 * what happens if I do configure --no-stubs --no-stubs-test
 
-84 * in config/Makefile.linux, can you combine the two ROOTCINTTMP setters (for
+#84 * in config/Makefile.linux, can you combine the two ROOTCINTTMP setters (for
 ENABLESTUBS, ENABLESTUBSTEST) and only set -DG__NOSTUBS etc when ENABLESTUBS is
 set?
 
-85 * cint/src/Class.cxx, line 849ff: what happened to the "rootspecial" stuff -
+#85 * cint/src/Class.cxx, line 849ff: what happened to the "rootspecial" stuff -
 can you really just remove it? Around line 905 you left the call to
 CheckValidRootInfo() but removed the access to
 G__struct.rootspecial[tagnum]->defaultconstructor - why is it not the same for
 line 849ff? And do you need the rootspacial? Or can you really just remove it?
+
+
+#86 * v6_init.cxx: G__dicttype - could you make that an enum, possibly with a step
+number? E.g. what used to be "3" could be kDictType3_ForceOutline or so. What
+happened to G__dicttype==1?
+
+#87 * v6_newlink.cxx: 6652: please keep "if(ifn>=G__MAXIFUNC)"
+
+#88 * v6_newlink.cxx: 9961: why don't we veto static functions anymore?
+
+#89 * v6_loadfile.cxx: 189: where does the "c!=-1" come from?
+
+#90 * rootcint_nostubs.ch: what happens (flow control wise) if an error occurs say
+at the second call to rootcint or the call to g++? "rm -rf /"?
+
+#91 * rootcint_nostubs_tmp.sh: is there a difference to rootcint_nostubs.sh? Can
+you combine the two?
+
+#92 * v6_newlink.cxx: 4155: where does G__if_ary_union_constructor come from? What
+does it do? Doc, please.
