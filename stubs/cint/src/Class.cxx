@@ -938,7 +938,8 @@ void* Cint::G__ClassInfo::New(void *arena)
       G__InterfaceMethod defaultconstructor;
       para.paran=0;
       if(!G__struct.rootspecial[tagnum]) CheckValidRootInfo();
-    // DMS 21-XI-2007
+    
+      // DMS 21-XI-2007
       long dmy;
       p = (void*)NULL;
 
