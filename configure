@@ -111,8 +111,8 @@ enable_shadowpw=
 enable_soversion=no
 enable_table=no
 enable_thread=yes        # cannot be disabled (not in above options list)
-enable_stubs=yes         # Complete Dictionaries by default (All stubs)
-enable_stubs_test=yes    # Complete Dictionaries by default (All stubs)
+no_stubs=no         # Complete Dictionaries by default (All stubs)
+no_stubs_test=no    # Complete Dictionaries by default (All stubs)
 enable_unuran=no
 enable_winrtdebug=
 enable_xrootd=           # must be set explicitely via --enable-xrootd
@@ -1129,8 +1129,8 @@ if test $# -gt 0 ; then
       --no-create)             noact="yes"           ;;
       --nohowto)               nohowto="yes"         ;;
       --fail-on-missing)       fail_on_missing="yes" ;;
-      --no-stubs)              enable_stubs="no"; cp -f utils/src/rootcint_nostubs.sh bin;;
-      --no-stubs-test)         enable_stubs_test="no";    cp -f utils/src/rootcint_nostubs.sh bin/;;
+      --no-stubs)              no_stubs="yes";;
+      --no-stubs-test)         no_stubs_test="yes";;
       --with-afs=*)            afsdir=$optarg        ; enable_afs="yes"     ;;
       --with-alien-incdir=*)   alienincdir=$optarg   ; enable_alien="yes"   ;;
       --with-alien-libdir=*)   alienlibdir=$optarg   ; enable_alien="yes"   ;;
@@ -1773,10 +1773,13 @@ check_explicit "$enable_mysql" "$enable_mysql_explicit" \
 ### echo %%% Check for Stub removal support
 #
 
-message "Checking whether to create the stubs"
-result "$enable_stubs"
-message "Checking whether to create stubs for test purpose"
-result "$enable_stubs_test"
+if test "x$no_stubs" = "xyes" || test "x$no_stubs_test" = "xyes"; then
+    no_stubs="yes"
+    cp -f utils/src/rootcint_nostubs.sh bin
+fi
+
+message "Checking whether to activate symbol function call mechanism (aka stubs/wrappers removal)"
+result "$no_stubs"
 
 ######################################################################
 #
@@ -4592,8 +4595,8 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@buildgdml@|$enable_gdml|"            \
     -e "s|@buildmonalisa@|$enable_monalisa|"    \
     -e "s|@enable_pch@|$enable_pch|"            \
-    -e "s|@enable_stubs@|$enable_stubs|"        \
-    -e "s|@enable_stubs_test@|$enable_stubs_test|" \
+    -e "s|@no_stubs@|$no_stubs|"                \
+    -e "s|@no_stubs_test@|$no_stubs_test|"      \
     -e "s|@buildtable@|$enable_table|"          \
     -e "s|@enable_thread@|$enable_thread|"      \
     -e "s|@etcdir@|$etcdir|"                    \
