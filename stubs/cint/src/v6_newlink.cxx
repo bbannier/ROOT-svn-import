@@ -24,6 +24,7 @@
 #include <stack>
 #include <string>
 #include <ext/hash_map>
+#include <dlfcn.h> // needed for dlsym
 
 // Be careful with this include LF
 #include <typeinfo>
@@ -764,6 +765,29 @@ struct G__ifunc_table_internal * G__ifunc_page_base(char *funcname, int hash,int
     }
   }
   return 0;
+}
+
+/**************************************************************************
+ * G__get_symbol_address()
+ *
+ * It will return a memory address that should contain the function 
+ * specified by the mangled name (symbol).
+ * It will look for it in all the libraries registered in G__sl_handle[i]
+ * and in those loaded by using RTLD_DEFAULT.
+ * It migth return null in case it's not found
+ **************************************************************************/
+void* G__get_symbol_address(const char* mangled_name)
+{
+  void *address=0;
+   
+  for (int i=0;(i<G__allsl)&&(!address);i++){
+    address = dlsym(G__sl_handle[i],mangled_name);       
+  }
+
+  if (!address)
+    address = dlsym(RTLD_DEFAULT, mangled_name);
+  
+  return address;
 }
 
 /**************************************************************************
