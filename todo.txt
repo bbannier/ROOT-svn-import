@@ -608,5 +608,8 @@ at the second call to rootcint or the call to g++? "rm -rf /"?
 #91 * rootcint_nostubs_tmp.sh: is there a difference to rootcint_nostubs.sh? Can
 you combine the two?
 
+Yes there is. rootcint_nostubs_tmp.sh call rootint_tmp (root compilation) and rootcint_nostubs.sh is for the user to compile his classes.
+
+
 #92 * v6_newlink.cxx: 4155: where does G__if_ary_union_constructor come from? What
 does it do? Doc, please.
