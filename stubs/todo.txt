@@ -5,14 +5,18 @@ G__NOSTUBS?
 Can be done... the only thing is to discuss the nostubs-test thingy
 to make it coherent (it doesn't look trivial though).
 
+Axel: This is not urgent - but you have large chunks of code that can be trivially protected - and that should be protected, because some compilers will not like it. So that ABI specific code should be protected en bloc.
 
+POSTPONED
+-------------------------------------------------------------------------------
 #2 * why do you need mathcore/inc/Math/LinkDef2.h?
 
  I changed it but I don't remember why... MathCore is a tricky beast
  anyways and it needs to be re-checked because there are still some
  warnings...
 
-
+POSTPONED
+-------------------------------------------------------------------------------
 #3 * why do you exclude COREDO from libCore (Makefile, line 600)?
 
  my bad... we changed that so many times that I don't even remember
@@ -21,8 +25,7 @@ to make it coherent (it doesn't look trivial though).
 
 
  DONE
-
-
+-------------------------------------------------------------------------------
 #4 * TClass.h: why do you need New(ENewType defConstructor =
  _TClass::_kClassNew);?
 
@@ -33,7 +36,10 @@ to make it coherent (it doesn't look trivial though).
  to avoid it but that doesn't work for the moment... (you end up with
  an error saying that kClassNew is not know)
 
+Axel: OK, that's a blocker. We need to discuss.
 
+POSTPONED
+-------------------------------------------------------------------------------
 #5 * cint/lib/dll_stl/str.h: why did you _replace_
  op==(string::it,string::it) by op==(string::rev_it,string::rev_it)?
 
@@ -42,7 +48,10 @@ to make it coherent (it doesn't look trivial though).
  the former... I know it's bad, that's why a left an -easily-
  trackable comment over there ;)
 
+Axel: This, too, needs to be fixed; we need ideally both op==, and cannot survive without the original one.
 
+POSTPONED
+-------------------------------------------------------------------------------
 #6 * cint/src/Class.cxx: why do you need to overload
  Cint::G__ClassInfo::GetMethod() - can't you just add a default
  value for noerror to be backward comp?
@@ -52,16 +61,15 @@ to make it coherent (it doesn't look trivial though).
  method is deprecated and can be removed.
  That method has been removed.
 
-
-
+DONE
+-------------------------------------------------------------------------------
 #7 * fproto.h: could you rename G__get_address() to
  G__get_symbol_address(), please?
 
  If everything were that simple... :D
 
-
 DONE
-
+-------------------------------------------------------------------------------
 
 #8 * fproto.h: any reason why you changed G__find_[first|
  last]_scope_operator to return a char* instead of a const char*?
@@ -69,16 +77,18 @@ DONE
 
  nopes... this is one of those merge issues
 
-
-DONE (Changes made in fproto.h, v6_opr.cxx, v6_struct.cxx,
+DONE 
+(Changes made in fproto.h, v6_opr.cxx, v6_struct.cxx,
 v6_typedef.cxx)
 
-
+-------------------------------------------------------------------------------
 #9 * v6_lib.cxx: could you update the file doc, explaining what
  actually _is_ done instead of what might maybe be done? :-)
 
  hehehe... such things happen when you change plans along the way ;)
 
+DONE
+-------------------------------------------------------------------------------
 #10 * v6_lib.cxx: why does this file contain functions that are not
  needed anymore?
 
@@ -91,8 +101,8 @@ it has been deprecated... now we end up with a short function and I
 will move it to newlink.cxx
 
 
-
-
+DONE
+-------------------------------------------------------------------------------
 #11 * v6_typedef.cxx:791ff: if you set filenum=-1 at least ".typedefs"
  should crash. I think there is something similar in G__struct. But
  anyway - why do you see this typedef staying around (so it can get
@@ -103,17 +113,24 @@ will move it to newlink.cxx
  way... this is one of those places where we needed a better grasp of
  CInt to make changes... I will ask you about it later on...
 
-
+POSTPONED
+-------------------------------------------------------------------------------
 #12 * v6_typedef.cxx: int G__defined_typename2(const char *type_name,
  int noerror) "Has to be changed to avoid code replication" - can
  you? :-)
 
  I hope... all those replicated functions are way too ugly
 
+Axel:
+The problems with the function duplicates are
+* you fix one because you found a bug - but the other don't get fixed because GDB didn't complain about them
+* in the end they are slightly different, and nobody knows whether that's intentional or by accident (because of patches not making it into all versions of the function)
+* it's extremely difficult to see what the intended difference between the functions is - much more than a "if (mode==kDictionaryOutput) {...}" or whatever.
 
 It's done... but I had to change all its callers.. is that fine?
 
-
+DONE
+-------------------------------------------------------------------------------
 #13 * common.h:255: why?! what used to be G__STATICCONST is now
  G__FUNCTHROW, and one cannot OR these bits anymore, because
  G__STATICCONST is not a bit anymore!
@@ -122,8 +139,13 @@ It's done... but I had to change all its callers.. is that fine?
  kind of messed it up... now some things come to my mind again :D
 
 
-Done... for the record, we should avoid mixing decimal and hexas....
+for the record, we should avoid mixing decimal and hexas....
+DONE
 
+Axel: How many bits do you have left? the CONST part gets folded in - so can you still afford a 0x20?
+Yeps... that's what I did... used the 6th bit for that
+
+-------------------------------------------------------------------------------
 #14 * v6_init.cxx: you have reverted my typeid(size_t) patch!
 
  I have never seen that before (and Diego agrees) ... this one goes
@@ -132,7 +154,8 @@ Done... for the record, we should avoid mixing decimal and hexas....
 
 your typeid should be there now... it's the same merge problem.. sigh..
 
-
+DONE
+-------------------------------------------------------------------------------
 #15 * v6_ifunc.cxx:3485ff: could you tag everything that is compiler
  specific in the non-stubs handling, so we know where to work on for
  new compilers? Like
@@ -143,7 +166,8 @@ your typeid should be there now... it's the same merge problem.. sigh..
  We tried.... the idea was to put all that in a single function...
  but we didn't succeed... we will try to mark to dependant parts
 
-
+POSTPONED
+-------------------------------------------------------------------------------
 
 #16 * v6_ifunc.cxx:4691: //1 is the old behavior - which "1"?
 
@@ -151,7 +175,8 @@ your typeid should be there now... it's the same merge problem.. sigh..
  recursive so we always pass 0 instead of the variable (which wold
  pass 1 in the old behaviour)
 
-
+RECHECK
+-------------------------------------------------------------------------------
 
 
 #17 * v6_ifunc.cxx:5448: why?
@@ -160,7 +185,7 @@ your typeid should be there now... it's the same merge problem.. sigh..
  destructors in G__struct (of course, such thing is beyond my
  understanding).
 
-
+-------------------------------------------------------------------------------
 #18 * v6_ifunc.cxx:6794ff: G__get_ifunchandle2,
  G__get_ifunchandle_base2, G__argtype2param2 (claiming to be exactly
  the same as G__argtype2param...), G__get_methodhandle3,
@@ -173,7 +198,8 @@ your typeid should be there now... it's the same merge problem.. sigh..
  beginning so I preferred to do that instead of changing the original
  functions.... I guess now is a good time to re factor all that.
 
-
+IN PROGRESS
+-------------------------------------------------------------------------------
 #19 * v6_ifunc.cxx:7059: what's the consequence of that "if (buf.type !
  = -1)"? Do the stubless calls not support variadic functions?
 
