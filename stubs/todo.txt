@@ -1,19 +1,19 @@
 
-#1 Could you please protect _ALL_ your changes in CINT by #ifdef
+#1 * Could you please protect _ALL_ your changes in CINT by #ifdef
 G__NOSTUBS?
 
 Can be done... the only thing is to discuss the nostubs-test thingy
 to make it coherent (it doesn't look trivial though).
 
 
-#2 why do you need mathcore/inc/Math/LinkDef2.h?
+#2 * why do you need mathcore/inc/Math/LinkDef2.h?
 
  I changed it but I don't remember why... MathCore is a tricky beast
  anyways and it needs to be re-checked because there are still some
  warnings...
 
 
-#3 why do you exclude COREDO from libCore (Makefile, line 600)?
+#3 * why do you exclude COREDO from libCore (Makefile, line 600)?
 
  my bad... we changed that so many times that I don't even remember
  what we were supposed to do.... (I think I took it out in that
@@ -538,3 +538,26 @@ your typeid should be there now... it's the same merge problem.. sigh..
 #79  * v6_lib.cxx: why do you have so many commented include statements?
 
  ditto... (I was half expecting it to change again)
+
+80 * in config/Makefile.linux, could you surround the GCC version extraction by
+ifeq ($(ENABLESTUBS)$(ENABLESTUBSTEST),no)
+...
+endif
+81 * in config/Makefile.linux, why do you have two clauses
+ifeq ($(ENABLESTUBS),no)
+setting the CXXFLAGS 1.5 times?
+
+82 * in config/Makefile.linux, if you decide that the GCC version is improper,
+could you reset ENABLESTUBS:=yes?
+
+83 * what happens if I do configure --no-stubs --no-stubs-test
+
+84 * in config/Makefile.linux, can you combine the two ROOTCINTTMP setters (for
+ENABLESTUBS, ENABLESTUBSTEST) and only set -DG__NOSTUBS etc when ENABLESTUBS is
+set?
+
+85 * cint/src/Class.cxx, line 849ff: what happened to the "rootspecial" stuff -
+can you really just remove it? Around line 905 you left the call to
+CheckValidRootInfo() but removed the access to
+G__struct.rootspecial[tagnum]->defaultconstructor - why is it not the same for
+line 849ff? And do you need the rootspacial? Or can you really just remove it?
