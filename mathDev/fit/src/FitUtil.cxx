@@ -115,19 +115,35 @@ double FitUtil::EvaluateChi2(IModelFunction & func, const BinData & data, const 
    const DataOptions & fitOpt = data.Opt();
    IntegralEvaluator igEval( fitOpt.fIntegral, func); 
 
+   bool useCoordErrors = data.UseCoordErrors();
+
    for (unsigned int i = 0; i < n; ++ i) { 
+
+//#define OLD
+#ifdef OLD
       const double * x = data.Coords(i);
       double y = data.Value(i);
       double invError = data.InvError(i); 
+#else 
+
+      double y, invError; 
+      const double * x = data.GetPoint(i,y, invError);
+//       const BinPoint & point = data.GetPoint(i); 
+//       const double * x = point.Coords();
+//       double y = point.Value();
+//       double invError = point.InvError(); 
+
+#endif 
 
       double fval = 0;
+
       if (!fitOpt.fIntegral )
          fval = func ( x ); 
       else { 
          // calculate normalized integral (divided by bin volume)
          fval = igEval( x, data.Coords(i+1) ) ; 
       }
-   
+
 
 #ifdef DEBUG      
       std::cout << x[0] << "  " << y << "  " << 1./invError << " params : "; 
@@ -136,13 +152,29 @@ double FitUtil::EvaluateChi2(IModelFunction & func, const BinData & data, const 
       std::cout << "\tfval = " << fval << std::endl; 
 #endif
 
-      // avoid singularity in the function (infinity and nan ) in the chi2 sum 
-      // eventually add possibility of excluding some points (like singularity) 
-      if (fval > - std::numeric_limits<double>::max() && fval < std::numeric_limits<double>::max() ) { 
-         // calculat chi2 point
-         double tmp = ( y -fval )* invError;  	  
-         chi2 += tmp*tmp;
+
+//#ifdef LATER
+      double  resval = 0; 
+      if (!useCoordErrors) { 
+            double tmp = ( y -fval )* invError;  	  
+            resval = tmp * tmp;
       }
+         
+      if (useCoordErrors ) { 
+         double ey = 1;
+         const double * ex = data.GetPointError(i, ey); 
+         double e2 = ey * ey; 
+         for (unsigned int icoord = 0; icoord < func.NDim(); ++icoord) { 
+            e2 += ex[icoord] * ex[icoord];  // need to multuply by the derivative
+         } 
+         double w2 = (e2 > 0) ? 1.0/e2 : 0;  
+         resval = w2 * ( y - fval ) *  ( y - fval); 
+      }
+      
+      // avoid (infinity and nan ) in the chi2 sum 
+      // eventually add possibility of excluding some points (like singularity) 
+      if ( resval < std::numeric_limits<double>::max() )  
+         chi2 += resval; 
       else 
          nRejected++; 
       
@@ -349,6 +381,7 @@ double FitUtil::EvaluateLogL(IModelFunction & func, const UnBinData & data, cons
 
 #ifdef DEBUG
    std::cout << "\n\nFit data size = " << n << std::endl;
+   std::cout << "func pointer is " << typeid(func).name() << std::endl;
 #endif
 
    double logl = 0;
@@ -371,7 +404,7 @@ double FitUtil::EvaluateLogL(IModelFunction & func, const UnBinData & data, cons
          nRejected++; // reject points with negative pdf (cannot exist)
       }
       else 
-         logl -= EvalLogF( fval); 
+         logl += EvalLogF( fval); 
       
    }
    
@@ -382,7 +415,7 @@ double FitUtil::EvaluateLogL(IModelFunction & func, const UnBinData & data, cons
    std::cout << "Logl = " << logl << " np = " << nPoints << std::endl;
 #endif
    
-   return logl;
+   return -logl;
 }
 
 void FitUtil::EvaluateLogLGradient(IModelFunction & f, const UnBinData & data, const double * p, double * grad, unsigned int & ) { 

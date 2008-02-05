@@ -13,6 +13,13 @@
 #ifndef ROOT_Fit_Fitter
 #define ROOT_Fit_Fitter
 
+/**
+@defgroup Fit Fitter classes
+
+Classes used for fitting
+*/
+
+
 #ifndef ROOT_Fit_DataVectorfwd
 #include "Fit/DataVectorfwd.h"
 #endif
@@ -48,6 +55,7 @@ namespace ROOT {
    The configuration of the fit (parameters, options, etc...) are specified in the 
    ROOT::Math::FitConfig class. 
 
+   @ingroup Fit
 
 */ 
 class Fitter {

@@ -17,6 +17,10 @@
 #include "Math/WrappedMultiTF1.h"
 #include "Math/WrappedParamFunction.h"
 
+#include "TGraphErrors.h"
+
+#include "TStyle.h"
+
 #ifdef USE_MATHMORE_FUNC
 #include "Math/WrappedParamFunction.h"
 #endif
@@ -64,21 +68,25 @@ void printData(const ROOT::Fit::UnBinData & data) {
    std::cout << "\ndata size is " << data.Size() << std::endl;
 }    
 
-void FillUnBinData(ROOT::Fit::UnBinData &d, TTree * tree ) { 
-   // fill the unbin data set from a TTree
+bool USE_BRANCH = false;
+ROOT::Fit::UnBinData * FillUnBinData(TTree * tree, bool copyData = true, unsigned int dim = 1 ) { 
 
+   // fill the unbin data set from a TTree
+   ROOT::Fit::UnBinData * d = 0; 
+   // for the large tree
    if (std::string(tree->GetName()) == "t2") { 
+      d = new ROOT::Fit::UnBinData();
       // large tree 
       unsigned int n = tree->GetEntries(); 
       std::cout << "number of unbin data is " << n << " of dim " << N << std::endl;
-      d.Initialize(n,N);
+      d->Initialize(n,N);
       TBranch * bx = tree->GetBranch("x"); 
       double vx[N];
       bx->SetAddress(vx); 
       std::vector<double>  m(N);
       for (int unsigned i = 0; i < n; ++i) {
          bx->GetEntry(i);
-         d.Add(vx);
+         d->Add(vx);
          for (int j = 0; j < N; ++j) 
             m[j] += vx[j];
       }
@@ -87,41 +95,98 @@ void FillUnBinData(ROOT::Fit::UnBinData &d, TTree * tree ) {
          std::cout << m[j]/n << "  ";
       std::cout << "\n";
       
-      return; 
+      return d; 
    }
-   double * x = tree->GetV1(); 
-   if (x == 0) { 
+   if (USE_BRANCH) 
+   {
+      d = new ROOT::Fit::UnBinData();
       unsigned int n = tree->GetEntries(); 
       //std::cout << "number of unbin data is " << n << std::endl;
-      d.Initialize(n,2);
-      TBranch * bx = tree->GetBranch("x"); 
-      TBranch * by = tree->GetBranch("y"); 
-      double v[2];
-      bx->SetAddress(&v[0]); 
-      by->SetAddress(&v[1]); 
-      for (int unsigned i = 0; i < n; ++i) {
-         bx->GetEntry(i);
-         by->GetEntry(i);
-         d.Add(v);
+
+      if (dim == 2) { 
+         d->Initialize(n,2);
+         TBranch * bx = tree->GetBranch("x"); 
+         TBranch * by = tree->GetBranch("y"); 
+         double v[2];
+         bx->SetAddress(&v[0]); 
+         by->SetAddress(&v[1]); 
+         for (int unsigned i = 0; i < n; ++i) {
+            bx->GetEntry(i);
+            by->GetEntry(i);
+            d->Add(v);
+         }
       }
+      else if (dim == 1) { 
+         d->Initialize(n,1);
+         TBranch * bx = tree->GetBranch("x"); 
+         double v[1];
+         bx->SetAddress(&v[0]); 
+         for (int unsigned i = 0; i < n; ++i) {
+            bx->GetEntry(i);
+            d->Add(v);
+         }
+      }
+
+      return d; 
 
       //printData(d);
    }
    else {
-      // use array pre-allocated in tree->Draw . This is faster
-      //assert(x != 0); 
-      unsigned int n = tree->GetSelectedRows(); 
+      tree->SetEstimate(tree->GetEntries());
+
+      // use TTREE::Draw
+      if (dim == 2) { 
+         tree->Draw("x:y",0,"goff");  // goff is used to turn off the graphics
+         double * x = tree->GetV1(); 
+         double * y = tree->GetV2(); 
+
+         if (x == 0 || y == 0) { 
+            USE_BRANCH= true;
+            return FillUnBinData(tree, true, dim);
+         }
+
+         // use array pre-allocated in tree->Draw . This is faster
+         //assert(x != 0); 
+         unsigned int n = tree->GetSelectedRows(); 
+
+         if (copyData) { 
+            d = new ROOT::Fit::UnBinData(n,2);
+            double vx[2]; 
+            for (int unsigned i = 0; i < n; ++i) {         
+               vx[0] = x[i]; 
+               vx[1] = y[i];
+               d->Add(vx);
+            }
+         }  
+         else  // use data pointers directly 
+            d = new ROOT::Fit::UnBinData(n,x,y);
          
-      //std::cout << "number of unbin data is " << n << std::endl;
-         
-      // if having drawn the tree before 
-      d.Initialize(n);
-      for (unsigned int i = 0; i < n; ++i) 
-         d.Add(x[i]);
+      }
+      else if ( dim == 1) { 
+
+            tree->Draw("x",0,"goff");  // goff is used to turn off the graphics
+            double * x = tree->GetV1(); 
+
+            if (x == 0) { 
+               USE_BRANCH= true;
+               return FillUnBinData(tree, true, dim);
+            }
+            unsigned int n = tree->GetSelectedRows(); 
+
+            if (copyData) { 
+               d = new ROOT::Fit::UnBinData(n,1);
+               for (int unsigned i = 0; i < n; ++i) {         
+                  d->Add(x[i]);
+               }
+            }  
+            else
+               d = new ROOT::Fit::UnBinData(n,x);
+         }
+      return d;
    }
       
    //std::copy(x,x+n, d.begin() );
-
+   return 0; 
 } 
 
 
@@ -143,13 +208,14 @@ typedef ROOT::Math::IParamMultiFunction Func;
 template <class MinType>
 int DoFit(TH1 * hist, Func & func, bool debug = false, bool useGrad = false) {  
 
+   //std::cout << "Fit histogram " << std::endl;
+
    ROOT::Fit::BinData d; 
    ROOT::Fit::FillData(d,hist);
 
    //printData(d);
 
    // create the fitter 
-   //std::cout << "Fit parameter 2  " << f.Parameters()[2] << std::endl;
 
    ROOT::Fit::Fitter fitter; 
    fitter.Config().SetMinimizer(MinType::name(),MinType::name2());
@@ -193,12 +259,20 @@ int DoFit(TH1 * hist, Func & func, bool debug = false, bool useGrad = false) {
 
 // unbin fit
 template <class MinType>
-int DoFit(TTree * tree, Func & func, bool debug = false, bool = false ) {  
+int DoFit(TTree * tree, Func & func, bool debug = false, bool copyData = false ) {  
 
-   ROOT::Fit::UnBinData d; 
+   ROOT::Fit::UnBinData * d  = FillUnBinData(tree, copyData, func.NDim() );  
    // need to have done Tree->Draw() before fit
-   FillUnBinData(d,tree);
+   //FillUnBinData(d,tree);
 
+   //std::cout << "data size type and size  is " << typeid(*d).name() <<  "   " << d->Size() << std::endl;
+   if (copyData) 
+      std::cout << "\tcopy data in FitData\n";
+   else
+      std::cout << "\tre-use original data \n";
+
+         
+         
    //printData(d);
 
    // create the fitter 
@@ -210,6 +284,9 @@ int DoFit(TTree * tree, Func & func, bool debug = false, bool = false ) {
    if (debug) 
       fitter.Config().MinimizerOptions().SetPrintLevel(3);
 
+   // set tolerance 1 for tree to be same as in TTTreePlayer::UnBinFIt
+   fitter.Config().MinimizerOptions().SetTolerance(1);
+
 
    // create the function
 
@@ -217,14 +294,18 @@ int DoFit(TTree * tree, Func & func, bool debug = false, bool = false ) {
    // need to fix param 0 , normalization in the unbinned fits
    //fitter.Config().ParSettings(0).Fix();
 
-   bool ret = fitter.Fit(d);
+   bool ret = fitter.Fit(*d);
    if (!ret) {
       std::cout << " Fit Failed " << std::endl;
       return -1; 
    }
    if (debug) 
       fitter.Result().Print(std::cout);    
+
+   delete d; 
+
    return 0; 
+
 }
 
 template <class MinType, class FitObj>
@@ -232,12 +313,13 @@ int FitUsingNewFitter(FitObj * fitobj, Func & func, bool useGrad=false) {
 
    std::cout << "\n************************************************************\n"; 
    std::cout << "\tFit using new Fit::Fitter\n";
-   std::cout << "\tMinimizer is " << MinType::name() << "  " << MinType::name2() << std::endl; 
+   std::cout << "\tMinimizer is " << MinType::name() << "  " << MinType::name2() << " func dim = " << func.NDim() << std::endl; 
 
    int iret = 0; 
    TStopwatch w; w.Start(); 
 
 #ifdef DEBUG
+   std::cout << "initial Parameters " << iniPar << "  " << *iniPar << "   " <<  *(iniPar+1) << std::endl;
    func.SetParameters(iniPar);
    iret |= DoFit<MinType>(fitobj,func,true, useGrad);
 
@@ -275,11 +357,11 @@ void SetTFitter( MinType  ) {
 
 
 // fit using Fit method
-template <class MinType>
-int FitUsingTH1Fit(TH1 * hist, TF1 * func) { 
+template <class T, class MinType>
+int FitUsingTFit(T * hist, TF1 * func) { 
 
    std::cout << "\n************************************************************\n"; 
-   std::cout << "\tFit using TH1::Fit\n";
+   std::cout << "\tFit using " << hist->ClassName() << "::Fit\n";
    std::cout << "\tMinimizer is " << MinType::name() << std::endl; 
 
       
@@ -620,8 +702,8 @@ int testPolyFit() {
    //h1->Draw();
    iniPar[0] = 2.; iniPar[1] = 2.; iniPar[2] = 2.;
 
-   iret |= FitUsingTH1Fit<TMINUIT>(h1,f1);
-   iret |= FitUsingTH1Fit<MINUIT2>(h1,f1);
+   iret |= FitUsingTFit<TH1,TMINUIT>(h1,f1);
+   iret |= FitUsingTFit<TH1,MINUIT2>(h1,f1);
    // dummy for testing
    //iret |= FitUsingNewFitter<DUMMY>(h1,f1);
 
@@ -634,6 +716,13 @@ int testPolyFit() {
    iret |= FitUsingNewFitter<MINUIT2>(h1,f2);
    iret |= FitUsingNewFitter<TMINUIT>(h1,f2);
 
+   // test with a graph 
+
+   gStyle->SetErrorX(0.); // to seto zero error on X
+   TGraphErrors * gr = new TGraphErrors(h1);
+   iret |= FitUsingTFit<TGraph,TMINUIT>(gr,f1);
+
+   iret |= FitUsingTFit<TGraph,MINUIT2>(gr,f1);
 
    return iret;
 }
@@ -674,9 +763,9 @@ int testGausFit() {
 
 
 
-   std::string fname = std::string("gaus");
+   //std::string fname = std::string("gaus");
    //TF1 * func = (TF1*)gROOT->GetFunction(fname.c_str());
-//   TF1 * f2 = new TF1("gaus",fname.c_str(),-5,5.);
+   //TF1 * f1 = new TF1("gaus",fname.c_str(),-5,5.);
    TF1 * f1 = new TF1("gaussian",gaussian,-5,5.,3);
    //f2->SetParameters(0,1,1);
 
@@ -690,9 +779,6 @@ int testGausFit() {
    iniPar[0] = 100.; iniPar[1] = 2.; iniPar[2] = 2.;
 
 
-   iret |= FitUsingTH1Fit<TMINUIT>(h2,f1);
-   //iret |= FitUsingTH1Fit<MINUIT2>(h2,f1);
-
    // use simply TF1 wrapper 
    //ROOT::Math::WrappedMultiTF1 f2(*f1); 
    ROOT::Math::WrappedParamFunction<> f2(gaussian,1,iniPar,iniPar+3); 
@@ -701,6 +787,19 @@ int testGausFit() {
    iret |= FitUsingNewFitter<MINUIT2>(h2,f2);
    iret |= FitUsingNewFitter<TMINUIT>(h2,f2);
 //    iret |= FitUsingNewFitter<GSL_PR>(h2,f2);
+
+
+   iret |= FitUsingTFit<TH1,TMINUIT>(h2,f1);
+   iret |= FitUsingTFit<TH1,MINUIT2>(h2,f1);
+
+
+   // test also fitting a TGraphErrors with histogram data
+   gStyle->SetErrorX(0.); // to seto zero error on X
+   TGraphErrors * gr = new TGraphErrors(h2);
+
+   iret |= FitUsingTFit<TGraph,TMINUIT>(gr,f1);
+   iret |= FitUsingTFit<TGraph,MINUIT2>(gr,f1);
+
 
 //#ifdef LATER
    // test using grad function
@@ -719,11 +818,11 @@ int testGausFit() {
    iret |= FitUsingNewFitter<GSL_NLS>(h2,f2);
    iret |= FitUsingNewFitter<FUMILI2>(h2,f2);
 
-   iret |= FitUsingTH1Fit<FUMILI2>(h2,f1);
-   iret |= FitUsingTH1Fit<TFUMILI>(h2,f1);
+   iret |= FitUsingTFit<TH1,FUMILI2>(h2,f1);
+   iret |= FitUsingTFit<TH1,TFUMILI>(h2,f1);
 //#endif
 
-   iret |= FitUsingRooFit(h2,f1);
+   //iret |= FitUsingRooFit(h2,f1);
 
    return iret; 
 }
@@ -745,7 +844,11 @@ int testTreeFit() {
    t1.Branch("ev",&ev,"ev/I");
    
    //fill the tree
-   for (Int_t i=0;i<10000;i++) {
+   int nrows = 10000;
+#ifdef TREE_FIT2D
+   nrows = 10000;
+#endif
+   for (Int_t i=0;i<nrows;i++) {
       gRandom->Rannor(x,y);
       x *= 2; x += 1.;
       y *= 3; y -= 2; 
@@ -756,8 +859,13 @@ int testTreeFit() {
    }
    //t1.Draw("x"); // to select fit variable 
 
-   //TF1 * f = new TF1("gausnorm", gausnorm, -10,10, 2); 
-   TF2 * f1 = new TF2("gausnorm2D", gausnorm2D, -10,10, -10,10, 4); 
+   TF1 * f1 = new TF1("gausnorm", gausnorm, -10,10, 2);
+   TF2 * f2 = new TF2("gausnorm2D", gausnorm2D, -10,10, -10,10, 4); 
+
+   ROOT::Math::WrappedParamFunction<> wf1(gausnorm,1,iniPar,iniPar+2); 
+   ROOT::Math::WrappedParamFunction<> wf2(gausnorm2D,2,iniPar,iniPar+4); 
+
+ 
    iniPar[0] = 0; 
    iniPar[1] = 1; 
    iniPar[2] = 0; 
@@ -765,15 +873,36 @@ int testTreeFit() {
 
    // use simply TF1 wrapper 
    //ROOT::Math::WrappedMultiTF1 f2(*f1); 
-   ROOT::Math::WrappedParamFunction<> f2(gausnorm2D,2,iniPar,iniPar+4); 
 
    int iret = 0; 
-   iret |= FitUsingNewFitter<MINUIT2>(&t1,f2);
+
+   // fit 1D first
+
+
+   iret |= FitUsingTTreeFit<MINUIT2>(&t1,f1,"x");
+   iret |= FitUsingTTreeFit<MINUIT2>(&t1,f1,"x");
+   
+   iret |= FitUsingTTreeFit<TMINUIT>(&t1,f1,"x");
+
+   iret |= FitUsingNewFitter<MINUIT2>(&t1,wf1,false); // not copying the data
+   iret |= FitUsingNewFitter<TMINUIT>(&t1,wf1,false); // not copying the data
+   iret |= FitUsingNewFitter<MINUIT2>(&t1,wf1,true); // copying the data
+   iret |= FitUsingNewFitter<TMINUIT>(&t1,wf1,true); // copying the data
+
+   // fit 2D 
+
+
+
+   iret |= FitUsingTTreeFit<MINUIT2>(&t1,f2,"x:y");
+   iret |= FitUsingTTreeFit<TMINUIT>(&t1,f2,"x:y");
+
+   iret |= FitUsingNewFitter<MINUIT2>(&t1,wf2, true);
+   iret |= FitUsingNewFitter<MINUIT2>(&t1,wf2, false);
+
+
 
    iret |= FitUsingRooFit(&t1,f1);
 
-   iret |= FitUsingTTreeFit<MINUIT2>(&t1,f1,"x:y");
-   iret |= FitUsingTTreeFit<TMINUIT>(&t1,f1,"x:y");
    
    return iret; 
 
@@ -870,8 +999,6 @@ int testFitPerf() {
 
    int iret = 0; 
 
- //return iret; 
-
 
 #ifdef DEBUG
    nfit = 1; 
@@ -881,10 +1008,14 @@ int testFitPerf() {
   iret |= testTreeFit(); 
 
 
+ //return iret; 
+
 #ifndef DEBUG
    nfit = 10000; 
 #endif
    iret |= testPolyFit(); 
+
+
 
 #ifndef DEBUG
    nfit = 10; 

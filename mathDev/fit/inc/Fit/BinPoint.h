@@ -13,12 +13,8 @@
 #ifndef ROOT_Fit_BinPoint
 #define ROOT_Fit_BinPoint
 
-#include <vector>
 
 
-/** 
-@defgroup FitData Fit Data Classes 
-*/
 
 namespace ROOT { 
 
@@ -38,33 +34,49 @@ class BinPoint {
 public: 
 
    
-   typedef  std::vector<double> CoordData; 
+   //typedef  std::vector<double> CoordData; 
 
 
    /** 
       Constructor
    */ 
    explicit BinPoint (unsigned int n = 1) : 
-      fCoords(std::vector<double> (n) ), 
+      fDim(n),
+      fCoords(0 ), 
+      fCoordErr( 0),
       fValue(0), 
+      fError(1),
       fInvError(1)
    {}
 
-   /**
-      constructor from a vector of coordinates, y value and y error
-    */
-   BinPoint (const std::vector<double> & x, double y, double ey = 1) : 
-      fCoords(x), 
-      fValue(y), 
-      fInvError( ey!= 0 ? 1.0/ey : 0 )
-   { }
+//    /**
+//       constructor from a vector of coordinates, y value and y error
+//     */
+//    BinPoint (const std::vector<double> & x, double y, double ey = 1) : 
+//       fCoords(x), 
+//       fValue(y), 
+//       fInvError( ey!= 0 ? 1.0/ey : 0 )
+//    { }
    
-   template <class Iterator> 
-   BinPoint (const Iterator begin, const Iterator end, double y, double ey = 1) : 
-      fCoords(begin,end), 
-      fValue(y), 
-      fInvError( ey!= 0. ? 1.0/ey : 1. )
-   { }
+//    template <class Iterator> 
+//    BinPoint (const Iterator begin, const Iterator end, double y, double ey = 1) : 
+//       fCoords(begin,end), 
+//       fValue(y), 
+//       fInvError( ey!= 0. ? 1.0/ey : 1. )
+//    { }
+
+   void Set(const double * x, double value, double invErr) { 
+      fCoords = x; 
+      fValue = value; 
+      fInvError = invErr;
+   }
+
+   void Set(const double * x, double value, const double * ex, double err) { 
+      fCoords = x; 
+      fValue = value;
+      fCoordErr = ex; 
+      fError = err;
+   }
 
 
    /** 
@@ -85,7 +97,7 @@ public:
     /**
       return vector of coordinates 
     */
-   const std::vector<double> & Coords() const { return fCoords; }
+   const double * Coords() const { return fCoords; }
 
    /**
       return the value (bin height in case of an histogram)
@@ -96,7 +108,8 @@ public:
       return the error on the value 
     */
    double Error() const { 
-      return fInvError != 0 ? 1.0/fInvError : 0; 
+      //return fInvError != 0 ? 1.0/fInvError : 0; 
+      return fError;
    } 
 
    /**
@@ -107,7 +120,7 @@ public:
    /** 
      get the dimension (dimension of the cooordinates)
     */
-   unsigned int NDim() const { return  fCoords.size(); }
+   unsigned int NDim() const { return  fDim; }
 
    /**
       check if a Point is inside the given range 
@@ -116,11 +129,14 @@ public:
 
 private: 
 
+   unsigned int fDim;
    //double fCoords[N];
-   CoordData fCoords; 
+   const double * fCoords; 
+   const double * fCoordErr; 
    
    double fValue; 
    // better to store the inverse of the error (is more efficient)
+   double fError; 
    double fInvError; 
 
 
