@@ -228,6 +228,9 @@ IN PROGRESS
 
  Yes, My Lord! ... ohh such good memories...
 
+DONE
+-------------------------------------------------------------------------------
+
 #24 * v6_newlink.cxx:1680ff: I think G__float was not to be used; use
  G__double instead. Do you need G__float?
 
