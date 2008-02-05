@@ -115,7 +115,7 @@ protected:
 
    void    RebuildTracks();
 
-   void    InitHelix();
+   void    InitHelix(const TEveVector& p);
    void    SetNumOfSteps();
    Bool_t  HelixToVertex(TEveVector& v, TEveVector& p);
    void    HelixToBounds(TEveVector& p);
