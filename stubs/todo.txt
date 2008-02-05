@@ -596,6 +596,8 @@ line 849ff? And do you need the rootspacial? Or can you really just remove it?
 number? E.g. what used to be "3" could be kDictType3_ForceOutline or so. What
 happened to G__dicttype==1?
 
+dicttype = 1 generates dictionary with showMembers (look for dicttype in rootcint.cxx)
+
 #87 * v6_newlink.cxx: 6652: please keep "if(ifn>=G__MAXIFUNC)"
 
 #88 * v6_newlink.cxx: 9961: why don't we veto static functions anymore?
