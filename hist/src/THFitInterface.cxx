@@ -12,7 +12,8 @@
 
 #include "THFitInterface.h"
 
-#include "Fit/DataVector.h"
+#include "Fit/BinData.h"
+
 //#include "Fit/BinPoint.h"
 
 //#define DEBUG
@@ -188,7 +189,7 @@ void FillData(BinData & dv, const TH1 * hfit, TF1 * func)
       }
       else if (ndim == 1) { 
 #ifdef DEBUG
-         std::cout << " add point " << x[0] << "  " << hfit->GetBinContent(binx) << std::endl;
+         std::cout << "bin " << binx << " add point " << x[0] << "  " << hfit->GetBinContent(binx) << std::endl;
 #endif
          // for 1D 
          if (fitOpt.fUseRange && IsPointOutOfRange(func,&x.front()) ) continue;

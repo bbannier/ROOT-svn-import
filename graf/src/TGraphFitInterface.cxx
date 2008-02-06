@@ -12,7 +12,7 @@
 
 #include "TGraphFitInterface.h"
 
-#include "Fit/DataVector.h"
+#include "Fit/BinData.h"
 
 #include "TGraph.h" 
 #include "TMultiGraph.h" 

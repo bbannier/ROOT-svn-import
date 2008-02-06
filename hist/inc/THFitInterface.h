@@ -13,9 +13,9 @@
 #ifndef ROOT_THFitInterface
 #define ROOT_THFitInterface
 
-#ifndef ROOT_Fit_DataVectorfwd
-#include "Fit/DataVectorfwd.h"
-#endif
+// #ifndef ROOT_Fit_DataVectorfwd
+// #include "Fit/DataVectorfwd.h"
+// #endif
 
 class TH1; 
 class TF1;
@@ -25,6 +25,7 @@ namespace ROOT {
 
    namespace Fit { 
 
+      class BinData; 
 
 
       /** 

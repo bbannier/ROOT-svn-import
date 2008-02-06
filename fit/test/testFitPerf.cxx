@@ -7,7 +7,8 @@
 #include "TTree.h"
 #include "TROOT.h"
 
-#include "Fit/DataVector.h"
+#include "Fit/BinData.h"
+#include "Fit/UnBinData.h"
 //#include "Fit/BinPoint.h"
 #include "Fit/Fitter.h"
 #include "THFitInterface.h"
