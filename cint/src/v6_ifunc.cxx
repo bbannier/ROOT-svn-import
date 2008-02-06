@@ -6695,6 +6695,7 @@ struct G__ifunc_table_internal* G__get_ifunchandle(const char* funcname, G__para
             // constness was not checked before
             if(isconst) { // This means we want to check for constness
                isconst -= 1; // a bit hacky... be aware
+               if (isconst) isconst = G__CONSTFUNC;
                if( (p_ifunc->isconst[ifn] & G__CONSTFUNC) !=  isconst) {
                  ++ifn;
                  continue;
