@@ -18,6 +18,7 @@
 #include "TGLPhysicalShape.h"
 #include "TGLLogicalShape.h"
 #include "TGLEmbeddedViewer.h"
+#include "TGLEventHandler.h"
 
 ClassImp(TGLEmbeddedViewer)
 
@@ -55,21 +56,8 @@ void TGLEmbeddedViewer::CreateFrames()
    fGLWindow = new TGLWidget(*fFrame, kTRUE, 10, 10, 0);
    // Direct events from the TGWindow directly to the base viewer
 
-   fGLWindow->Connect("HandleButton(Event_t*)", "TGLViewer", this, 
-                      "HandleButton(Event_t*)");
-   fGLWindow->Connect("HandleDoubleClick(Event_t*)", "TGLViewer", this, 
-                      "HandleDoubleClick(Event_t*)");
-   fGLWindow->Connect("HandleKey(Event_t*)", "TGLViewer", this, 
-                      "HandleKey(Event_t*)");
-   fGLWindow->Connect("HandleMotion(Event_t*)", "TGLViewer", this, 
-                      "HandleMotion(Event_t*)");
-   fGLWindow->Connect("Repaint()", "TGLViewer", this, "Repaint()");
-   fGLWindow->Connect("HandleConfigureNotify(Event_t*)", "TGLViewer", this, 
-                      "HandleConfigureNotify(Event_t*)");
-   fGLWindow->Connect("HandleFocusChange(Event_t*)", "TGLViewer", this, 
-                      "HandleFocusChange(Event_t*)");
-   fGLWindow->Connect("HandleCrossing(Event_t*)", "TGLViewer", this, 
-                      "HandleCrossing(Event_t*)");
+   fEventHandler = new TGLEventHandler("Default", fGLWindow, this);
+   fGLWindow->SetEventHandler(fEventHandler);
 
    fFrame->AddFrame(fGLWindow, new TGLayoutHints(kLHintsExpandX | 
                     kLHintsExpandY, 2, 2, 2, 2));

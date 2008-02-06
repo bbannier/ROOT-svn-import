@@ -30,20 +30,23 @@
 #endif
 
 class TGLWidget;
+class TGLEventHandler;
 
 class TGLWidgetContainer : public TGCompositeFrame {
 private:
    TGLWidget *fOwner;
+   TGLEventHandler *fEventHandler;
 
 public:
    TGLWidgetContainer(TGLWidget *owner, Window_t id, const TGWindow *parent);
 
+   TGLEventHandler *GetEventHandler() const { return fEventHandler; }
+   void             SetEventHandler(TGLEventHandler *eh) { fEventHandler = eh; }
    Bool_t HandleButton(Event_t *ev);
    Bool_t HandleDoubleClick(Event_t *ev);
    Bool_t HandleConfigureNotify(Event_t *ev);
    Bool_t HandleKey(Event_t *ev);
    Bool_t HandleMotion(Event_t *ev);
-   //Bool_t HandleExpose(Event_t *ev);
    Bool_t HandleFocusChange(Event_t *);
    Bool_t HandleCrossing(Event_t *);
 
@@ -74,6 +77,8 @@ private:
 
    std::set<TGLContext *>            fValidContexts;
 
+   TGLEventHandler                  *fEventHandler;
+
 public:
    TGLWidget(const TGWindow &parent, Bool_t selectInput,
              const TGLPaintDevice *shareDevice,
@@ -103,17 +108,6 @@ public:
    void              SwapBuffers();
    const TGLContext *GetContext()const;
 
-   //Signals. Names can be changed (for example PaintSignal, DoubleClickSignal etc.)
-   Bool_t            HandleButton(Event_t *event);         //*SIGNAL*
-   Bool_t            HandleDoubleClick(Event_t *event);    //*SIGNAL*
-   Bool_t            HandleConfigureNotify(Event_t *event);//*SIGNAL*
-   Bool_t            HandleKey(Event_t *event);            //*SIGNAL*
-   Bool_t            HandleMotion(Event_t *event);         //*SIGNAL*
-//   Bool_t            HandleExpose(Event_t *event);         //*SIGNAL*
-   Bool_t            HandleFocusChange(Event_t *);        //*SIGNAL*
-   Bool_t            HandleCrossing(Event_t *);           //*SIGNAL*
-   void              Repaint();                           //*SIGNAL*
-
    Int_t             GetWindowIndex()const;
    const  TGLFormat *GetPixelFormat()const;
    Int_t             GetContId()const;
@@ -123,6 +117,9 @@ public:
    void              SetFormat();
    //To repaint gl-widget without GUI events.
    void              ExtractViewport(Int_t *vp)const;
+
+   TGLEventHandler  *GetEventHandler() const { return fEventHandler; }
+   void              SetEventHandler(TGLEventHandler *eh);
 
 private:
    TGLWidget(const TGLWidget &);

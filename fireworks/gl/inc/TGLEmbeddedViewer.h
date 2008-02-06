@@ -21,6 +21,7 @@
 #endif
 
 class TGLRenderArea;
+class TGLEventHandler;
 
 class TGLEmbeddedViewer : public TGLViewer {
 
