@@ -48,17 +48,6 @@ ifeq ($(NOSTUBS),yes)
 	GCC_MINOR     := $(shell $(CXX) -dumpversion 2>&1 | cut -d'.' -f2)
 endif
 
-ifeq ($(NOSTUBS),yes)
- ifeq ($(GCC_MAJOR),3)
-# allow 3.2, 3.3, and 3.4:
-  ifneq ($(findstring $(GCC_MINOR),2 3 4),)
-   ROOTCINTTMP := export CXXFLAGS="$(CXXFLAGS)"; utils/src/rootcint_nostubs_tmp.sh -$(ROOTDICTTYPE)
- else
-	NOSTUBS := "no"
-	NOSTUBSTEST := "no"	
-  endif
- endif
-endif
 
 ifeq ($(NOSTUBS),yes)
 	ifeq ($(NOSTUBSTEST),no)
@@ -66,6 +55,19 @@ ifeq ($(NOSTUBS),yes)
 		CINTCXXFLAGS += -DG__NOSTUBS
 	endif
 endif
+
+ifeq ($(NOSTUBS),yes)
+ ifeq ($(GCC_MAJOR),3)
+# allow 3.2, 3.3, and 3.4:
+  ifneq ($(findstring $(GCC_MINOR),2 3 4),)
+   ROOTCINTTMP = export CXXFLAGS="$(CXXFLAGS)"; utils/src/rootcint_nostubs_tmp.sh -$(ROOTDICTTYPE)
+ else
+	NOSTUBS := "no"
+	NOSTUBSTEST := "no"	
+  endif
+ endif
+endif
+
 
 # Fortran:
 F77           =
