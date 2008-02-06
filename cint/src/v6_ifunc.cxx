@@ -6816,7 +6816,7 @@ struct G__ifunc_table_internal* G__get_ifunchandle(const char* funcname, G__para
 }
 
 //______________________________________________________________________________
-struct G__ifunc_table_internal* G__get_ifunchandle_base(const char* funcname, G__param* libp, int hash, G__ifunc_table_internal* p_ifunc, long* pifn, long* poffset, int access, int funcmatch, int withInheritance)
+struct G__ifunc_table_internal* G__get_ifunchandle_base(const char* funcname, G__param* libp, int hash, G__ifunc_table_internal* p_ifunc, long* pifn, long* poffset, int access, int funcmatch, int withInheritance, int isconst)
 {
    // -- FIXME: Describe this function!
    int tagnum;
@@ -6826,7 +6826,7 @@ struct G__ifunc_table_internal* G__get_ifunchandle_base(const char* funcname, G_
 
    /* Search for function */
    *poffset = 0;
-   ifunc = G__get_ifunchandle(funcname, libp, hash, p_ifunc, pifn, access, funcmatch, 0);
+   ifunc = G__get_ifunchandle(funcname, libp, hash, p_ifunc, pifn, access, funcmatch, isconst);
    if (ifunc || !withInheritance) return(ifunc);
 
    /* Search for base class function if member function */
@@ -6843,7 +6843,7 @@ struct G__ifunc_table_internal* G__get_ifunchandle_base(const char* funcname, G_
             *poffset = baseclass->herit[basen]->baseoffset;
             p_ifunc = G__struct.memfunc[baseclass->herit[basen]->basetagnum];
             ifunc = G__get_ifunchandle(funcname, libp, hash, p_ifunc, pifn
-                                       , access, funcmatch, 0);
+                                       , access, funcmatch, isconst);
             if (ifunc) return(ifunc);
          }
          ++basen;
@@ -6852,54 +6852,6 @@ struct G__ifunc_table_internal* G__get_ifunchandle_base(const char* funcname, G_
 
    /* Not found , ifunc=NULL */
    return(ifunc);
-}
-
-/**************************************************************************
-* G__get_ifunchandle_base2
-*
-* LF: 31-07-07
-* FIXME: More code replication...
-**************************************************************************/
-struct G__ifunc_table_internal *G__get_ifunchandle_base2(char *funcname,G__param *libp
-                                               ,int hash,G__ifunc_table_internal *p_ifunc
-                                               ,long *pifn
-                                               ,long *poffset
-                                               ,int access,int funcmatch
-                                               ,int withInheritance
-                                               ,int isconst)
-{
-  int tagnum;
-  struct G__ifunc_table_internal *ifunc;
-  int basen=0;
-  struct G__inheritance *baseclass;
-
-  /* Search for function */
-  *poffset = 0;
-  ifunc=G__get_ifunchandle(funcname,libp,hash,p_ifunc,pifn,access,funcmatch,isconst);
-  if(ifunc || !withInheritance) return(ifunc);
-
-  /* Search for base class function if member function */
-  tagnum = p_ifunc->tagnum;
-  if(-1!=tagnum) {
-    baseclass = G__struct.baseclass[tagnum];
-    while(basen<baseclass->basen) {
-      if(baseclass->herit[basen]->baseaccess&G__PUBLIC) {
-#ifdef G__VIRTUALBASE
-        /* Can not handle virtual base class member function for ERTTI
-         * because pointer to the object is not given  */
-#endif
-        *poffset = baseclass->herit[basen]->baseoffset;
-        p_ifunc = G__struct.memfunc[baseclass->herit[basen]->basetagnum];
-        ifunc=G__get_ifunchandle(funcname,libp,hash,p_ifunc,pifn
-                                 ,access,funcmatch,isconst);
-        if(ifunc) return(ifunc);
-      }
-      ++basen;
-    }
-  }
-
-  /* Not found , ifunc=NULL */
-  return(ifunc);
 }
 
 //______________________________________________________________________________
@@ -7004,7 +6956,7 @@ struct G__ifunc_table* G__get_methodhandle(const char* funcname, const char* arg
       /* first, search for exact match */
       ifunc = G__get_ifunchandle_base(funcname, &para, hash, p_ifunc, pifn, poffset
                                       , G__PUBLIC_PROTECTED_PRIVATE, G__EXACT
-                                      , withInheritance
+                                      , withInheritance, 0
                                      );
       if (ifunc) return G__get_ifunc_ref(ifunc);
 
@@ -7086,7 +7038,7 @@ struct G__ifunc_table* G__get_methodhandle2(char* funcname, G__param* libp, G__i
       /* first, search for exact match */
       ifunc = G__get_ifunchandle_base(funcname, libp, hash, p_ifunc, pifn, poffset
                                       , G__PUBLIC_PROTECTED_PRIVATE, G__EXACT
-                                      , withInheritance
+                                      , withInheritance, 0
                                      );
       if (ifunc) return G__get_ifunc_ref(ifunc);
     
@@ -7107,7 +7059,7 @@ struct G__ifunc_table* G__get_methodhandle2(char* funcname, G__param* libp, G__i
          ifunc = G__get_ifunchandle_base(funcname, libp, hash, p_ifunc, pifn, poffset
                                          , G__PUBLIC_PROTECTED_PRIVATE
                                          , match
-                                         , withInheritance
+                                         , withInheritance, 0
                                         );
          if (ifunc) return G__get_ifunc_ref(ifunc);
       }
@@ -7189,7 +7141,7 @@ struct G__ifunc_table *G__get_methodhandle3(char *funcname,char *argtype
  }
  else {
    /* first, search for exact match */
-   ifunc=G__get_ifunchandle_base2(funcname,&para,hash,p_ifunc,pifn,poffset
+   ifunc=G__get_ifunchandle_base(funcname,&para,hash,p_ifunc,pifn,poffset
                                  ,G__PUBLIC_PROTECTED_PRIVATE,G__EXACT
                                  ,withInheritance
                                  ,isconst);
@@ -7212,7 +7164,7 @@ struct G__ifunc_table *G__get_methodhandle3(char *funcname,char *argtype
      ifunc=G__get_ifunchandle_base(funcname,&para,hash,p_ifunc,pifn,poffset
                                    ,G__PUBLIC_PROTECTED_PRIVATE
                                    ,match
-                                   ,withInheritance
+                                   ,withInheritance, 0
                                    );
      if(ifunc) return G__get_ifunc_ref(ifunc);
    }
@@ -7286,7 +7238,7 @@ struct G__ifunc_table_internal *G__get_methodhandle4(char *funcname
  }
  else {
    /* first, search for exact match */
-   ifunc=G__get_ifunchandle_base2(funcname,libp,hash,p_ifunc,pifn,poffset
+   ifunc=G__get_ifunchandle_base(funcname,libp,hash,p_ifunc,pifn,poffset
                                  ,G__PUBLIC_PROTECTED_PRIVATE,G__EXACT
                                  ,withInheritance,isconst
                                  );
@@ -7306,7 +7258,7 @@ struct G__ifunc_table_internal *G__get_methodhandle4(char *funcname
    //G__funclist_delete(funclist);
    
    for(match=G__EXACT;match<=G__STDCONV;match++) {
-     ifunc=G__get_ifunchandle_base2(funcname,libp,hash,p_ifunc,pifn,poffset
+     ifunc=G__get_ifunchandle_base(funcname,libp,hash,p_ifunc,pifn,poffset
                                    ,G__PUBLIC_PROTECTED_PRIVATE
                                    ,match
                                    ,withInheritance,isconst
