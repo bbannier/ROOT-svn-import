@@ -6649,7 +6649,21 @@ struct G__ifunc_table_internal* G__ifunc_ambiguous(G__ifunc_table_internal* ifun
 }
 
 //______________________________________________________________________________
-struct G__ifunc_table_internal* G__get_ifunchandle(const char* funcname, G__param* libp, int hash, G__ifunc_table_internal* p_ifunc, long* pifn, int access, int funcmatch)
+// 05-02-08
+// We add extraparameters to avoid code replication. We need no pass the noerror
+// argument to G__argtype2param and isconst to G__get_ifunchandle_base
+//
+// Note: the constness was not checked before and I think it's important
+// to check it, afterall const overloading is allowed. The problem is that
+// Cint was ignoring it before so we need it an option to do exactly that.. 
+// ignore it.
+// isconst can be: 
+// 0 (do everything as before, i.e. ignore the constness)
+// 1 (look for a non-const function)
+// 2 (look for a const function)
+// Note: This should be put into something like an enum
+//
+struct G__ifunc_table_internal* G__get_ifunchandle(const char* funcname, G__param* libp, int hash, G__ifunc_table_internal* p_ifunc, long* pifn, int access, int funcmatch, int isconst)
 {
    // -- FIXME: Describe this function!
    int ifn = 0;
@@ -6676,6 +6690,16 @@ struct G__ifunc_table_internal* G__get_ifunchandle(const char* funcname, G__para
             /* set(reset) match flag ipara temporarily */
             itemp = 0;
             ipara = 1;
+
+            // 31-07-07
+            // constness was not checked before
+            if(isconst) { // This means we want to check for constness
+               isconst -= 1; // a bit hacky... be aware
+               if( (p_ifunc->isconst[ifn] & G__CONSTFUNC) !=  isconst) {
+                 ++ifn;
+                 continue;
+               }
+            }
 
             if (p_ifunc->ansi[ifn] == 0) break; /* K&R C style header */
             /* main() no overloading */
@@ -6791,162 +6815,6 @@ struct G__ifunc_table_internal* G__get_ifunchandle(const char* funcname, G__para
    return(p_ifunc);
 }
 
-//
-// 31-07-07
-//
-// FIXME: code replication
-//
-//______________________________________________________________________________
-struct G__ifunc_table_internal *G__get_ifunchandle2(char *funcname,G__param *libp
-                                          ,int hash,G__ifunc_table_internal *p_ifunc
-                                          ,long *pifn
-                                          ,int access,int funcmatch,int isconst)
-{
-  int ifn=0;
-  int ipara=0;
-  int itemp=0;
-
-  if(-1!=p_ifunc->tagnum) G__incsetup_memfunc(p_ifunc->tagnum);
-
-  /*******************************************************
-   * while interpreted function list exists
-   *******************************************************/
-  while(p_ifunc) {
-    while((ipara==0)&&(ifn<p_ifunc->allifunc)) {
-      /* if hash (sum of funcname char) matchs */
-      if(hash==p_ifunc->hash[ifn]&&strcmp(funcname,p_ifunc->funcname[ifn])==0 
-         && (p_ifunc->access[ifn]&access)) {
-        /**************************************************
-         * for overloading of function and operator
-         **************************************************/
-        /**************************************************
-         * check if parameter type matchs
-         **************************************************/
-        /* set(reset) match flag ipara temporarily */
-        itemp=0;
-        ipara=1;
-        
-        if(p_ifunc->ansi[ifn]==0) break; /* K&R C style header */
-        /* main() no overloading */
-        if(G__HASH_MAIN==hash && strcmp(funcname,"main")==0) break; 
-        
-        // 31-07-07
-        // constness was not checked before
-        if( (p_ifunc->isconst[ifn] & G__CONSTFUNC) !=  isconst) {
-           ++ifn;
-           continue;
-        }
-
-        /* if more actual parameter than formal parameter, unmatch */
-        if(p_ifunc->para_nu[ifn]<libp->paran) {
-          ipara=0;
-          itemp=p_ifunc->para_nu[ifn]; /* end of this parameter */
-          ++ifn; /* next function */
-        }
-        else {
-          /* scan each parameter */
-          while(itemp<p_ifunc->para_nu[ifn]) {
-            if((G__value*)NULL==p_ifunc->param[ifn][itemp]->pdefault && 
-               itemp>=libp->paran
-               ) {
-              ipara = 0;
-            }
-            else if (p_ifunc->param[ifn][itemp]->pdefault && itemp>=libp->paran) {
-              ipara = 2; /* I'm not sure what this is, Fons. */
-            }
-            else {   
-              ipara=G__param_match(p_ifunc->param[ifn][itemp]->type
-                                   ,p_ifunc->param[ifn][itemp]->p_tagtable
-                                   ,p_ifunc->param[ifn][itemp]->pdefault
-                                   ,libp->para[itemp].type
-                                   ,libp->para[itemp].tagnum
-                                   ,&(libp->para[itemp])
-                                   ,libp->parameter[itemp]
-                                   ,funcmatch
-                                   ,p_ifunc->para_nu[ifn]-itemp-1
-                                   ,p_ifunc->param[ifn][itemp]->reftype
-                                   ,p_ifunc->param[ifn][itemp]->isconst
-                                   /* ,p_ifunc->isexplicit[ifn] */
-                                   );
-            }
-            switch(ipara) {
-            case 2: /* default parameter */
-#ifdef G__ASM_DBG
-              if(G__asm_dbg) {
-                G__fprinterr(G__serr," default%d %c tagnum%d %p : %c tagnum%d %d\n"
-                        ,itemp
-                        ,p_ifunc->param[ifn][itemp]->type
-                        ,p_ifunc->param[ifn][itemp]->p_tagtable
-                        ,p_ifunc->param[ifn][itemp]->pdefault
-                        ,libp->para[itemp].type
-                        ,libp->para[itemp].tagnum
-                        ,funcmatch);
-              }
-#endif
-              itemp=p_ifunc->para_nu[ifn]; /* end of this parameter */
-              break;
-            case 1: /* match this one, next parameter */
-#ifdef G__ASM_DBG
-              if(G__asm_dbg) {
-                G__fprinterr(G__serr," match%d %c tagnum%d %p : %c tagnum%d %d\n"
-                        ,itemp
-                        ,p_ifunc->param[ifn][itemp]->type
-                        ,p_ifunc->param[ifn][itemp]->p_tagtable
-                        ,p_ifunc->param[ifn][itemp]->pdefault
-                        ,libp->para[itemp].type
-                        ,libp->para[itemp].tagnum
-                        ,funcmatch);
-              }
-#endif
-              if(G__EXACT!=funcmatch)
-                G__warn_refpromotion(p_ifunc,ifn,itemp,libp);
-              ++itemp; /* next function parameter */
-              break;
-            case 0: /* unmatch, next function */
-#ifdef G__ASM_DBG
-              if(G__asm_dbg) {
-                G__fprinterr(G__serr," unmatch%d %c tagnum%d %p : %c tagnum%d %d\n"
-                        ,itemp
-                        ,p_ifunc->param[ifn][itemp]->type
-                        ,p_ifunc->param[ifn][itemp]->p_tagtable
-                        ,p_ifunc->param[ifn][itemp]->pdefault
-                        ,libp->para[itemp].type
-                        ,libp->para[itemp].tagnum
-                        ,funcmatch);
-              }
-#endif
-              itemp=p_ifunc->para_nu[ifn]; 
-              /* exit from while loop */
-              break;
-            }
-            
-          } /* end of while(itemp<p_ifunc->para_nu[ifn]) */
-          if(ipara==0) { /* parameter doesn't match */
-            ++ifn; /* next function */
-          }
-        }
-      }
-      else {  /* funcname doesn't match */
-        ++ifn;
-      }
-    }  /* end of while((ipara==0))&&(ifn<p_ifunc->allifunc)) */
-    /******************************************************************
-     * next page of interpreted function list
-     *******************************************************************/
-    if(ifn>=p_ifunc->allifunc) {
-      p_ifunc=p_ifunc->next;
-      ifn=0;
-    }
-    else {
-      break; /* get out from while(p_ifunc) loop */
-    }
-  } /* end of while(p_ifunc) */
-
-
-  *pifn = ifn;
-  return(p_ifunc);
-}
-
 //______________________________________________________________________________
 struct G__ifunc_table_internal* G__get_ifunchandle_base(const char* funcname, G__param* libp, int hash, G__ifunc_table_internal* p_ifunc, long* pifn, long* poffset, int access, int funcmatch, int withInheritance)
 {
@@ -6958,7 +6826,7 @@ struct G__ifunc_table_internal* G__get_ifunchandle_base(const char* funcname, G_
 
    /* Search for function */
    *poffset = 0;
-   ifunc = G__get_ifunchandle(funcname, libp, hash, p_ifunc, pifn, access, funcmatch);
+   ifunc = G__get_ifunchandle(funcname, libp, hash, p_ifunc, pifn, access, funcmatch, 0);
    if (ifunc || !withInheritance) return(ifunc);
 
    /* Search for base class function if member function */
@@ -6975,7 +6843,7 @@ struct G__ifunc_table_internal* G__get_ifunchandle_base(const char* funcname, G_
             *poffset = baseclass->herit[basen]->baseoffset;
             p_ifunc = G__struct.memfunc[baseclass->herit[basen]->basetagnum];
             ifunc = G__get_ifunchandle(funcname, libp, hash, p_ifunc, pifn
-                                       , access, funcmatch);
+                                       , access, funcmatch, 0);
             if (ifunc) return(ifunc);
          }
          ++basen;
@@ -7007,7 +6875,7 @@ struct G__ifunc_table_internal *G__get_ifunchandle_base2(char *funcname,G__param
 
   /* Search for function */
   *poffset = 0;
-  ifunc=G__get_ifunchandle2(funcname,libp,hash,p_ifunc,pifn,access,funcmatch,isconst);
+  ifunc=G__get_ifunchandle(funcname,libp,hash,p_ifunc,pifn,access,funcmatch,isconst);
   if(ifunc || !withInheritance) return(ifunc);
 
   /* Search for base class function if member function */
@@ -7022,7 +6890,7 @@ struct G__ifunc_table_internal *G__get_ifunchandle_base2(char *funcname,G__param
 #endif
         *poffset = baseclass->herit[basen]->baseoffset;
         p_ifunc = G__struct.memfunc[baseclass->herit[basen]->basetagnum];
-        ifunc=G__get_ifunchandle2(funcname,libp,hash,p_ifunc,pifn
+        ifunc=G__get_ifunchandle(funcname,libp,hash,p_ifunc,pifn
                                  ,access,funcmatch,isconst);
         if(ifunc) return(ifunc);
       }
