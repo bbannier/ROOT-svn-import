@@ -1,5 +1,6 @@
 /*
-  alice_esd.C - a simple event-display for ALICE ESD tracks and clusters
+  alice_esd_split.C - a simple event-display for ALICE ESD tracks and clusters
+                      version with several windows in the same workspace
 
   ------------------------------------------------------------------------
   ------------------------------------------------------------------------
@@ -205,9 +206,19 @@ void alice_esd_split()
 
    // import the geometry in the projection managers
    if (gRPhiMgr) {
+      TEveProjectionAxes* a = new TEveProjectionAxes(gRPhiMgr);
+      a->SetNumTickMarks(3);
+      a->SetText("R-Phi");
+      a->SetFontSize(10);
+      gEve->GetScenes()->FindChild("R-Phi Projection")->AddElement(a);
       gRPhiMgr->ImportElements(gGeoShape);
    }
    if (gRhoZMgr) {
+      TEveProjectionAxes* a = new TEveProjectionAxes(gRhoZMgr);
+      a->SetNumTickMarks(3);
+      a->SetText("Rho-Z");
+      a->SetFontSize(10);
+      gEve->GetScenes()->FindChild("Rho-Z Projection")->AddElement(a);
       gRhoZMgr->ImportElements(gGeoShape);
    }
 
