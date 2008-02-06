@@ -64,6 +64,7 @@ public:
 
    virtual void   SendMessage(const TGWindow *w, Long_t msg, Long_t parm1, Long_t parm2);
    virtual Bool_t ProcessMessage(Long_t, Long_t, Long_t) { return kFALSE; }
+   virtual void   Repaint() { }
 
    ClassDef(TGEventHandler,0)  // Abstract event handler
 };

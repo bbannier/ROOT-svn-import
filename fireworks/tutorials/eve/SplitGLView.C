@@ -83,6 +83,7 @@ public:
 
    void           ItemClicked(TGListTreeItem *item, Int_t btn, Int_t x, Int_t y);
    void           HandleMenu(Int_t id);
+   void           OnClicked(TObject *obj);
    void           OnDoubleClick();
    void           OnMouseIdle(TGLPhysicalShape *shape, UInt_t posx, UInt_t posy);
    void           OnMouseOver(TGLPhysicalShape *shape);
@@ -203,6 +204,8 @@ SplitGLView::SplitGLView(const TGWindow *p, UInt_t w, UInt_t h, Bool_t embed) :
                       "OnMouseIdle(TGLPhysicalShape*,UInt_t,UInt_t)");
    fViewer0->Connect("DoubleClicked()", "SplitGLView", this, 
                       "OnDoubleClick()");
+   fViewer0->Connect("Clicked(TObject*)", "SplitGLView", this, 
+                      "OnClicked(TObject*)");
    fViewer[0] = new TEveViewer("SplitGLViewer[0]");
    fViewer[0]->SetGLViewer(fViewer0);
    fViewer[0]->IncDenyDestroy();
@@ -236,6 +239,8 @@ SplitGLView::SplitGLView(const TGWindow *p, UInt_t w, UInt_t h, Bool_t embed) :
                       "OnMouseIdle(TGLPhysicalShape*,UInt_t,UInt_t)");
    fViewer1->Connect("DoubleClicked()", "SplitGLView", this, 
                      "OnDoubleClick()");
+   fViewer1->Connect("Clicked(TObject*)", "SplitGLView", this, 
+                      "OnClicked(TObject*)");
    fViewer[1] = new TEveViewer("SplitGLViewer[1]");
    fViewer[1]->SetGLViewer(fViewer1);
    fViewer[1]->IncDenyDestroy();
@@ -272,6 +277,8 @@ SplitGLView::SplitGLView(const TGWindow *p, UInt_t w, UInt_t h, Bool_t embed) :
                       "OnMouseIdle(TGLPhysicalShape*,UInt_t,UInt_t)");
    fViewer2->Connect("DoubleClicked()", "SplitGLView", this, 
                      "OnDoubleClick()");
+   fViewer2->Connect("Clicked(TObject*)", "SplitGLView", this, 
+                      "OnClicked(TObject*)");
    fViewer[2] = new TEveViewer("SplitGLViewer[2]");
    fViewer[2]->SetGLViewer(fViewer2);
    fViewer[2]->IncDenyDestroy();
@@ -628,6 +635,17 @@ void SplitGLView::ItemClicked(TGListTreeItem *item, Int_t, Int_t, Int_t)
          gVirtualX->SetInputFocus(ev->GetGLWindow()->GetContainer()->GetId());
       }
    }
+}
+
+//______________________________________________________________________________
+void SplitGLView::OnClicked(TObject *obj)
+{
+   // Handle click events in GL viewer
+
+   if (obj)
+      fStatusBar->SetText(Form("User clicked on: \"%s\"", obj->GetName()), 1);
+   else
+      fStatusBar->SetText("", 1);
 }
 
 //______________________________________________________________________________

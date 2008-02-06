@@ -30,18 +30,18 @@
 #endif
 
 class TGLWidget;
-class TGLEventHandler;
+class TGEventHandler;
 
 class TGLWidgetContainer : public TGCompositeFrame {
 private:
    TGLWidget *fOwner;
-   TGLEventHandler *fEventHandler;
+   TGEventHandler *fEventHandler;
 
 public:
    TGLWidgetContainer(TGLWidget *owner, Window_t id, const TGWindow *parent);
 
-   TGLEventHandler *GetEventHandler() const { return fEventHandler; }
-   void             SetEventHandler(TGLEventHandler *eh) { fEventHandler = eh; }
+   TGEventHandler  *GetEventHandler() const { return fEventHandler; }
+   void             SetEventHandler(TGEventHandler *eh) { fEventHandler = eh; }
    Bool_t HandleButton(Event_t *ev);
    Bool_t HandleDoubleClick(Event_t *ev);
    Bool_t HandleConfigureNotify(Event_t *ev);
@@ -77,7 +77,7 @@ private:
 
    std::set<TGLContext *>            fValidContexts;
 
-   TGLEventHandler                  *fEventHandler;
+   TGEventHandler                   *fEventHandler;
 
 public:
    TGLWidget(const TGWindow &parent, Bool_t selectInput,
@@ -118,8 +118,8 @@ public:
    //To repaint gl-widget without GUI events.
    void              ExtractViewport(Int_t *vp)const;
 
-   TGLEventHandler  *GetEventHandler() const { return fEventHandler; }
-   void              SetEventHandler(TGLEventHandler *eh);
+   TGEventHandler   *GetEventHandler() const { return fEventHandler; }
+   void              SetEventHandler(TGEventHandler *eh);
 
 private:
    TGLWidget(const TGLWidget &);

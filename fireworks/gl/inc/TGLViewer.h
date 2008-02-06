@@ -25,7 +25,7 @@
 #include "TTimer.h"
 #include "TPoint.h"
 
-#include "TGLEventHandler.h"
+#include "TGEventHandler.h"
 
 #include "GuiTypes.h"
 #include "RQ_OBJECT.h"
@@ -94,7 +94,7 @@ protected:
    TGLOverlayElement  * fCurrentOvlElm;        //! current overlay element
    TGLOvlSelectRecord   fOvlSelRec;            //! select record from last overlay select
 
-   TGLEventHandler     *fEventHandler;
+   TGEventHandler      *fEventHandler;
 
    // Mouse ineraction
 public:
@@ -256,7 +256,11 @@ public:
    virtual void MouseIdle(TGLPhysicalShape*,UInt_t,UInt_t); // *SIGNAL*
    virtual void MouseOver(TGLPhysicalShape*); // *SIGNAL*
    virtual void Activated() { Emit("Activated()"); } // *SIGNAL*
+   virtual void Clicked(TObject *obj) { Emit("Clicked(TObject*)", (Long_t)obj); } //*SIGNAL*
    virtual void DoubleClicked() { Emit("DoubleClicked()"); } // *SIGNAL*
+
+   TGEventHandler *GetEventHandler() const { return fEventHandler; }
+   virtual void    SetEventHandler(TGEventHandler *handler) { fEventHandler = handler; }
 
 //   Bool_t HandleTimer(TTimer *t);
 

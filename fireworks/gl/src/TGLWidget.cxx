@@ -708,7 +708,7 @@ void TGLWidget::ExtractViewport(Int_t *vp)const
 }
 
 //______________________________________________________________________________
-void TGLWidget::SetEventHandler(TGLEventHandler *eh)
+void TGLWidget::SetEventHandler(TGEventHandler *eh)
 { 
    fEventHandler = eh; 
    fContainer->SetEventHandler(eh);
