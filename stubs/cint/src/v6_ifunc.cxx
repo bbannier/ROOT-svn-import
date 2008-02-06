@@ -7035,7 +7035,14 @@ struct G__ifunc_table_internal *G__get_ifunchandle_base2(char *funcname,G__param
 }
 
 //______________________________________________________________________________
-void G__argtype2param(const char* argtype, G__param* libp)
+//
+// 05-02-08
+// Add new parameters needed to avoid code replication, these are:
+// "int noerror,int& error"
+// If we want to obtain the old behaviour we have to call this function
+// with noerror=0 and some placeholder to keep the value of error 
+// (or zero if we want to ignore it too)
+void G__argtype2param(const char* argtype, G__param* libp, int noerror, int* error)
 {
    // -- FIXME: Describe this function!
    char typenam[G__MAXNAME*2];
@@ -7055,52 +7062,11 @@ void G__argtype2param(const char* argtype, G__param* libp)
             char* end = start + strlen(start) - 1;
             while (isspace(*end) && end != start) --end;
          }
-         G__value buf = G__string2type(start, 0);
-
-         // LF 20/04/07
-         // This means the argument is "..."
-         // How do we handle that properly?
-         if (buf.type != -1) {
-            libp->para[libp->paran] = buf;
-            ++libp->paran;
-         }
-      }
-   }
-   while (',' == c);
-}
-
-/**************************************************************************
-* G__argtype2param2()
-*
-* 17/07/07 
-* Exactly the same as 'G__argtype2param'
-* FIXME: Code replication
-**************************************************************************/
-void G__argtype2param2(char *argtype,G__param *libp,int noerror,int& error)
-{
-   // -- FIXME: Describe this function!
-   char typenam[G__MAXNAME*2];
-   int p = 0;
-   int c;
-   char *endmark = ",);";
-
-   libp->paran = 0;
-   libp->para[0] = G__null;
-
-   do {
-      c = G__getstream_template(argtype, &p, typenam, endmark);
-      if (typenam[0]) {
-         char* start = typenam;
-         while (isspace(*start)) ++start;
-         if (*start) {
-            char* end = start + strlen(start) - 1;
-            while (isspace(*end) && end != start) --end;
-         }
          G__value buf = G__string2type(start, noerror);
 
          // LF 17-07-07
-         if (buf.type==0 && buf.typenum==-1)
-            error = 1;
+         if (error && buf.type==0 && buf.typenum==-1)
+            *error = 1;
 
          // LF 20/04/07
          // This means the argument is "..."
@@ -7129,7 +7095,7 @@ struct G__ifunc_table* G__get_methodhandle(const char* funcname, const char* arg
    int store_tagdefining = G__tagdefining;
    G__def_tagnum = p_ifunc->tagnum;
    G__tagdefining = p_ifunc->tagnum;
-   G__argtype2param(argtype, &para);
+   G__argtype2param(argtype, &para, 0, 0);
    G__def_tagnum = store_def_tagnum;
    G__tagdefining = store_tagdefining;
    G__hash(funcname, hash, temp);
@@ -7315,7 +7281,7 @@ struct G__ifunc_table *G__get_methodhandle3(char *funcname,char *argtype
   
   // 17-07-07
   int error = 0;
-  G__argtype2param2(argtype,&para, noerror, error);
+  G__argtype2param(argtype,&para, noerror, &error);
   
   G__def_tagnum = store_def_tagnum;
   G__tagdefining = store_tagdefining;

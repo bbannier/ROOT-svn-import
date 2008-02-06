@@ -1310,7 +1310,7 @@ G__MethodInfo Cint::G__ClassInfo::AddMethod(const char* typenam,const char* fnam
   } else {
      char *argtype = (char*)arg;
      struct G__param para;
-     G__argtype2param(argtype,&para);
+     G__argtype2param(argtype,&para,0,0);
 
      ifunc->para_nu[index] = para.paran;
      for(int i=0;i<para.paran;i++) {
