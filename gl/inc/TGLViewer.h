@@ -25,6 +25,8 @@
 #include "TTimer.h"
 #include "TPoint.h"
 
+#include "TGLEventHandler.h"
+
 #include "GuiTypes.h"
 #include "RQ_OBJECT.h"
 
@@ -50,6 +52,7 @@ class TGLViewer : public TVirtualViewer3D,
 {
    RQ_OBJECT("TGLViewer")
    friend class TGLOutput;
+   friend class TGLEventHandler;
 public:
 
    enum ECameraType { kCameraPerspXOZ, kCameraPerspYOZ, kCameraPerspXOY,
@@ -91,6 +94,8 @@ protected:
    TGLOverlayElement  * fCurrentOvlElm;        //! current overlay element
    TGLOvlSelectRecord   fOvlSelRec;            //! select record from last overlay select
 
+   TGLEventHandler     *fEventHandler;
+
    // Mouse ineraction
 public:
    enum EPushAction   { kPushStd,
@@ -101,8 +106,6 @@ public:
 protected:
    EPushAction          fPushAction;
    EDragAction          fAction;
-   TPoint               fLastPos;
-   UInt_t               fActiveButtonID;
 
    // Redraw timer
    TGLRedrawTimer     * fRedrawTimer;        //! timer for triggering redraws
@@ -140,7 +143,6 @@ protected:
    void        SetupCameras(Bool_t reset);
 
 protected:
-   TTimer            *fMouseTimer;     // mouse delay timer
    TGLWidget         *fGLWindow;
    Int_t              fGLDevice; //!for embedded gl viewer
    TGLContextIdentity*fGLCtxId;  //!for embedded gl viewer
@@ -256,18 +258,7 @@ public:
    virtual void Activated() { Emit("Activated()"); } // *SIGNAL*
    virtual void DoubleClicked() { Emit("DoubleClicked()"); } // *SIGNAL*
 
-   Bool_t HandleTimer(TTimer *t);
-   // Interaction - events to ExecuteEvent are passed on to these
-   Bool_t HandleEvent(Event_t *ev);
-   Bool_t HandleButton(Event_t *ev);
-   Bool_t HandleDoubleClick(Event_t *ev);
-   Bool_t HandleConfigureNotify(Event_t *ev);
-   Bool_t HandleKey(Event_t *ev);
-   Bool_t HandleMotion(Event_t *ev);
-   Bool_t HandleExpose(Event_t *ev);
-   Bool_t HandleFocusChange(Event_t *);
-   Bool_t HandleCrossing(Event_t *);
-   void   Repaint();
+//   Bool_t HandleTimer(TTimer *t);
 
    ClassDef(TGLViewer,0) // Standard ROOT GL viewer.
 };
