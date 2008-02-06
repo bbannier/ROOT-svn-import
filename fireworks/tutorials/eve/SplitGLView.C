@@ -248,7 +248,7 @@ SplitGLView::SplitGLView(const TGWindow *p, UInt_t w, UInt_t h, Bool_t embed) :
    }
    gRhoZMgr = fRhoZMgr;
 
-   s = gEve->SpawnNewScene("Rho-Phi Projection");
+   s = gEve->SpawnNewScene("R-Phi Projection");
    // projections
    fRPhiMgr = new TEveProjectionManager();
    gEve->AddElement(fRPhiMgr, (TEveElement *)s);
@@ -654,7 +654,7 @@ void SplitGLView::OnDoubleClick()
    TGSplitFrame::SwitchFrames(sourceview->GetFrame(), dest, prev);
 }
 
-// Linkdef
+// Linkdef
 #ifdef __CINT__
 
 #pragma link C++ class SplitGLView;
