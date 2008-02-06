@@ -6902,7 +6902,21 @@ void G__argtype2param(const char* argtype, G__param* libp, int noerror, int* err
 }
 
 //______________________________________________________________________________
-struct G__ifunc_table* G__get_methodhandle(const char* funcname, const char* argtype, G__ifunc_table* p_iref, long* pifn, long* poffset, int withConversion, int withInheritance)
+//
+// 05-02-08
+// We add extraparameters to avoid code replication. We need no pass the noerror
+// argument to G__argtype2param and isconst to G__get_ifunchandle_base
+//
+// Note: the constness was not checked before and I think it's important
+// to check it, afterall const overloading is allowed. The problem is that
+// Cint was ignoring it before so we need it an option to do exactly that.. 
+// ignore it.
+// isconst can be: 
+// 0 (do everything as before, i.e. ignore the constness)
+// 1 (look for a non-const function)
+// 2 (look for a const function)
+// Note: This should be put into something like an enum
+struct G__ifunc_table* G__get_methodhandle(const char* funcname, const char* argtype, G__ifunc_table* p_iref, long* pifn, long* poffset, int withConversion, int withInheritance, int noerror, int isconst)
 {
    // -- FIXME: Describe this function!
    struct G__ifunc_table_internal *ifunc;
@@ -6916,11 +6930,17 @@ struct G__ifunc_table* G__get_methodhandle(const char* funcname, const char* arg
    int store_tagdefining = G__tagdefining;
    G__def_tagnum = p_ifunc->tagnum;
    G__tagdefining = p_ifunc->tagnum;
-   G__argtype2param(argtype, &para, 0, 0);
+
+   // 17-07-07
+   int error = 0;
+   G__argtype2param(argtype,&para, noerror, &error);
+   //G__argtype2param(argtype, &para, 0, 0);
    G__def_tagnum = store_def_tagnum;
    G__tagdefining = store_tagdefining;
    G__hash(funcname, hash, temp);
 
+   if(error)
+      return 0;
 
    if (withConversion)
    {
@@ -6957,19 +6977,23 @@ struct G__ifunc_table* G__get_methodhandle(const char* funcname, const char* arg
       /* first, search for exact match */
       ifunc = G__get_ifunchandle_base(funcname, &para, hash, p_ifunc, pifn, poffset
                                       , G__PUBLIC_PROTECTED_PRIVATE, G__EXACT
-                                      , withInheritance, 0
+                                      , withInheritance, isconst
                                      );
       if (ifunc) return G__get_ifunc_ref(ifunc);
 
       /* if no exact match, try to instantiate template function */
-      funclist = G__add_templatefunc(funcname, &para, hash, funclist, p_ifunc, 0);
-      if (funclist && funclist->rate == G__EXACTMATCH) {
-         ifunc = funclist->ifunc;
-         *pifn = funclist->ifn;
+      // 24-10-07 Don't try this when registering symbols...
+      // the match should be exact.. shouldnt it?
+      if(noerror==0) {
+         funclist = G__add_templatefunc(funcname, &para, hash, funclist, p_ifunc, 0);
+         if (funclist && funclist->rate == G__EXACTMATCH) {
+           ifunc = funclist->ifunc;
+            *pifn = funclist->ifn;
+            G__funclist_delete(funclist);
+            return G__get_ifunc_ref(ifunc);
+         }
          G__funclist_delete(funclist);
-         return G__get_ifunc_ref(ifunc);
       }
-      G__funclist_delete(funclist);
 
       // FIXME: Remove this code for now, we should not attempt conversions
       //        here, we have specified an exact prototype.
@@ -7067,111 +7091,6 @@ struct G__ifunc_table* G__get_methodhandle2(char* funcname, G__param* libp, G__i
    }
 
    return G__get_ifunc_ref(ifunc);
-}
-
-/**************************************************************************
-* G__get_methodhandle3
-*
-* 17/07/07
-* Exactly the same as 'G__get_methodhandle' except that we pass a 
-* noerror code to G__argtype2param2
-* this code replication could be avoided but for the moment I prefer
-* keep things clear
-* FIXME: Code replication
-**************************************************************************/
-struct G__ifunc_table *G__get_methodhandle3(char *funcname,char *argtype
-                                           ,G__ifunc_table_internal *p_ifunc
-                                           ,long *pifn,long *poffset
-                                           ,int withConversion
-                                           ,int withInheritance
-                                           ,int noerror
-                                           ,int isconst)
-{
-  struct G__ifunc_table_internal *ifunc;
-  //struct G__ifunc_table_internal *p_ifunc = G__get_ifunc_internal(p_iref);
-  struct G__param para;
-  int hash;
-  int temp;
-  struct G__funclist *funclist = (struct G__funclist*)NULL;
-  int match;
-
-  int store_def_tagnum = G__def_tagnum;
-  int store_tagdefining = G__tagdefining;
-  G__def_tagnum = p_ifunc->tagnum;
-  G__tagdefining = p_ifunc->tagnum;
-  
-  // 17-07-07
-  int error = 0;
-  G__argtype2param(argtype,&para, noerror, &error);
-  
-  G__def_tagnum = store_def_tagnum;
-  G__tagdefining = store_tagdefining;
-  G__hash(funcname,hash,temp);
-
-  if(error)
-     return 0;
-
- if(withConversion) {
-   int tagnum = p_ifunc->tagnum;
-   int ifn = (int)(*pifn);
-
-   if(-1!=tagnum) G__incsetup_memfunc(tagnum);
-
-   ifunc = G__overload_match(funcname,&para,hash,p_ifunc,G__TRYNORMAL
-                             ,G__PUBLIC_PROTECTED_PRIVATE,&ifn,0
-                             ,(withConversion&0x2)?1:0) ;
-   *poffset = 0;
-   *pifn = ifn;
-   if(ifunc || !withInheritance) return G__get_ifunc_ref(ifunc);
-   if(-1!=tagnum) {
-     int basen=0;
-     struct G__inheritance *baseclass = G__struct.baseclass[tagnum];
-     while(basen<baseclass->basen) {
-       if(baseclass->herit[basen]->baseaccess&G__PUBLIC) {
-         G__incsetup_memfunc(baseclass->herit[basen]->basetagnum);
-         *poffset = baseclass->herit[basen]->baseoffset;
-         p_ifunc = G__struct.memfunc[baseclass->herit[basen]->basetagnum];
-         ifunc = G__overload_match(funcname,&para,hash,p_ifunc,G__TRYNORMAL
-                                   ,G__PUBLIC_PROTECTED_PRIVATE,&ifn,0,0) ;
-         *pifn = ifn;
-         if(ifunc) return G__get_ifunc_ref(ifunc);
-       }
-       ++basen;
-     }
-   }
- }
- else {
-   /* first, search for exact match */
-   ifunc=G__get_ifunchandle_base(funcname,&para,hash,p_ifunc,pifn,poffset
-                                 ,G__PUBLIC_PROTECTED_PRIVATE,G__EXACT
-                                 ,withInheritance
-                                 ,isconst);
-   if(ifunc) return G__get_ifunc_ref(ifunc);
-   
-   /* if no exact match, try to instantiate template function */
-
-   // 24-10-07 Don't try this when registering symbols...
-   // the match should be exact.. shouldnt it?
-   //funclist = G__add_templatefunc(funcname,&para,hash,funclist,p_ifunc,0,withInheritance);
-   //if(funclist && funclist->rate==G__EXACTMATCH) {
-   //  ifunc = funclist->ifunc;
-   //  *pifn = funclist->ifn;
-   //  G__funclist_delete(funclist);
-   //  return G__get_ifunc_ref(ifunc);
-   //}
-   //G__funclist_delete(funclist);
-   
-   for(match=G__EXACT;match<=G__STDCONV;match++) {
-     ifunc=G__get_ifunchandle_base(funcname,&para,hash,p_ifunc,pifn,poffset
-                                   ,G__PUBLIC_PROTECTED_PRIVATE
-                                   ,match
-                                   ,withInheritance, 0
-                                   );
-     if(ifunc) return G__get_ifunc_ref(ifunc);
-   }
- }
- 
-  return G__get_ifunc_ref(ifunc);
 }
 
 /**************************************************************************

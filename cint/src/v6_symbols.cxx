@@ -715,13 +715,15 @@ int G__register_pointer(const char *classname, const char *method, const char *p
     /* Search for method */
     funcname = (char*)method;
     param = (char*)proto;
-    iref = G__get_methodhandle3(funcname,param,G__p_ifunc,&index,&offset,0,0,2,isconst?G__CONSTFUNC:0);
+    //iref = G__get_methodhandle(funcname,param,G__p_ifunc,&index,&offset,0,0,2,isconst?G__CONSTFUNC:0);
+    iref = G__get_methodhandle(funcname,param,G__get_ifunc_ref(G__p_ifunc),&index,&offset,0,0,2,isconst?2:1);
   }
   else {
     /* Search for method */
     funcname = (char*)method;
     param = (char*)proto;
-    iref = G__get_methodhandle3(funcname,param,ifunc,&index,&offset,0,0,2,isconst?G__CONSTFUNC:0);
+    //iref = G__get_methodhandle(funcname,param,ifunc,&index,&offset,0,0,2,isconst?G__CONSTFUNC:0);
+    iref = G__get_methodhandle(funcname,param,G__get_ifunc_ref(ifunc),&index,&offset,0,0,2,isconst?2:1);
   }
   if (!iref)
     return -1;

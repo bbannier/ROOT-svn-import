@@ -595,7 +595,7 @@ G__InterfaceMethod Cint::G__ClassInfo::GetInterfaceMethod(const char* fname
   param = (char*)arg;
   ifunc = G__get_ifunc_internal(G__get_methodhandle(funcname,param,G__get_ifunc_ref(ifunc),&index,poffset
 			      ,(mode==ConversionMatch)?1:0
-                              ,imode
+                              ,imode,0 ,0
 			      ));
 
   if(
@@ -633,7 +633,7 @@ G__MethodInfo Cint::G__ClassInfo::GetMethod(const char* fname,const char* arg
   }
   G__ifunc_table* iref = G__get_methodhandle(funcname,param,G__get_ifunc_ref(ifunc),&index,poffset
 			      ,convmode
-			      ,(imode==WithInheritance)?1:0
+                                             ,(imode==WithInheritance)?1:0, 0, 0
 			      );
 
   /* Initialize method object */
@@ -658,7 +658,7 @@ G__MethodInfo Cint::G__ClassInfo::GetMethod(const char* fname,struct G__param* l
 
   G__ifunc_table* iref = G__get_methodhandle2(funcname,libp,G__get_ifunc_ref(ifunc),&index,poffset
 			       ,(mode==ConversionMatch)?1:0
-			       ,(imode==WithInheritance)?1:0
+                                              ,(imode==WithInheritance)?1:0
                                );
 
   /* Initialize method object */
