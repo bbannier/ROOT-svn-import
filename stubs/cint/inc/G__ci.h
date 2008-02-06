@@ -1447,19 +1447,14 @@ struct G__ifunc_table *G__get_methodhandle G__P((const char *funcname,const char
                                            ,struct G__ifunc_table *p_ifunc
                                            ,long *pifn,long *poffset
                                            ,int withConversion
-                                           ,int withInheritance));
+                                           ,int withInheritance
+                                           ,int noerror,int isconst));
 struct G__ifunc_table *G__get_methodhandle2 G__P((char *funcname
                                            ,struct G__param* libp
                                            ,struct G__ifunc_table *p_ifunc
                                            ,long *pifn,long *poffset
                                            ,int withConversion
                                            ,int withInheritance));
-struct G__ifunc_table *G__get_methodhandle3 G__P((char *funcname,char *argtype
-                                           ,struct G__ifunc_table_internal *p_ifunc
-                                           ,long *pifn,long *poffset
-                                           ,int withConversion
-                                           ,int withInheritance
-                                           ,int noerror,int isconst));
 struct G__ifunc_table_internal *G__get_methodhandle4 G__P((char *funcname
                                            ,struct G__param* libp
                                            ,struct G__ifunc_table_internal *p_ifunc

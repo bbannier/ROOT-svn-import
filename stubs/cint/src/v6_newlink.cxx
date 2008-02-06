@@ -5952,10 +5952,10 @@ void G__cppif_genconstructor(FILE *fp, FILE * /* hfp */, int tagnum, int ifn, G_
     long index;
     long offset;
     ireffound = G__get_methodhandle("operator new", "size_t", iref,
-                                &index, &offset, 0, 0);
+                                &index, &offset, 0, 0, 0, 0);
     has_own_new1arg = (ireffound != 0);
     ireffound = G__get_methodhandle("operator new", "size_t, void*", iref,
-                                &index, &offset, 0, 0);
+                                &index, &offset, 0, 0, 0, 0);
     has_own_new2arg = (ireffound != 0);
   }
 
@@ -6757,9 +6757,9 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
         struct G__ifunc_table* ireffound = 0;
         long index;
         long offset;
-        ireffound = G__get_methodhandle("operator new", "size_t", iref, &index, &offset, 0, 0);
+        ireffound = G__get_methodhandle("operator new", "size_t", iref, &index, &offset, 0, 0, 0, 0);
         has_own_new1arg = (ireffound != 0);
-        ireffound = G__get_methodhandle("operator new", "size_t, void*", iref, &index, &offset, 0, 0);
+        ireffound = G__get_methodhandle("operator new", "size_t, void*", iref, &index, &offset, 0, 0, 0, 0);
         has_own_new2arg = (ireffound != 0);
       }
 
@@ -7018,9 +7018,9 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
         struct G__ifunc_table* ireffound = 0;
         long index;
         long offset;
-        ireffound = G__get_methodhandle("operator delete", "void*", iref, &index, &offset, 0, 0);
+        ireffound = G__get_methodhandle("operator delete", "void*", iref, &index, &offset, 0, 0, 0, 0);
         has_own_delete1arg = (ireffound != 0);
-        ireffound = G__get_methodhandle("operator delete", "void*, size_t", iref, &index, &offset, 0, 0);
+        ireffound = G__get_methodhandle("operator delete", "void*, size_t", iref, &index, &offset, 0, 0, 0, 0);
         has_own_delete2arg = (ireffound != 0);
       }
 
