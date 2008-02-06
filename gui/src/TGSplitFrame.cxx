@@ -116,6 +116,49 @@ void TGSplitFrame::VSplit(UInt_t w)
 }
 
 //______________________________________________________________________________
+void TGSplitFrame::SwitchFrames(TGCompositeFrame *frame, TGCompositeFrame *dest,
+                                TGCompositeFrame *prev)
+{
+   // Switch (exchange) two frames.
+   // frame is the source, dest is the destination (the new parent)
+   // prev is the frame that has to be exchanged with the source 
+   // (the one actually in the destination)
+
+   // get parent of the source (its container)
+   TGCompositeFrame *parent = (TGCompositeFrame *)frame->GetParent();
+
+   // unmap the window (to avoid flickering)
+   prev->UnmapWindow();
+   // remove it from the destination frame
+   dest->RemoveFrame(prev);
+   // temporary reparent it to root (desktop window)
+   prev->ReparentWindow(gClient->GetDefaultRoot());
+
+   // now unmap the source window (still to avoid flickering)
+   frame->UnmapWindow();
+   // remove it from its parent (its container)
+   parent->RemoveFrame(frame);
+   // reparent it to the target location
+   frame->ReparentWindow(dest);
+   // add it to its new parent (for layout managment)
+   dest->AddFrame(frame, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+   // Layout...
+   frame->Resize(dest->GetDefaultSize());
+   dest->MapSubwindows();
+   dest->Layout();
+
+   // now put back the previous one in the previous source parent
+   // reparent to the previous source container
+   prev->ReparentWindow(parent);
+   // add it to the frame (for layout managment)
+   parent->AddFrame(prev, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+   // Layout...
+   prev->Resize(parent->GetDefaultSize());
+   parent->MapSubwindows();
+   parent->Layout();
+}
+
+//______________________________________________________________________________
 void TGSplitFrame::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
 {
    // Save a splittable frame as a C++ statement(s) on output stream out.

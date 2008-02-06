@@ -2758,6 +2758,8 @@ void TGSplitButton::SetSplit(Bool_t split)
 Bool_t TGSplitButton::HandleButton(Event_t *event)
 {                    
    // Handle button events.
+
+   if (fState == kButtonDisabled) return kTRUE;
    if (fSplit) return HandleSButton(event);
 
    Bool_t in = (event->fX >= 0) && (event->fY >= 0) &&

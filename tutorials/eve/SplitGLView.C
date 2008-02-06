@@ -634,54 +634,26 @@ void SplitGLView::OnDoubleClick()
 {
    // Handle double-clicks in GL viewer
 
-   TGSplitFrame *mainframe;
-
    // get the origin (sender) of the signal
    TGLEmbeddedViewer *sourceview = (TGLEmbeddedViewer *)gTQSender;
    if (sourceview == 0) return;
 
-   // get its parent (container) frame
-   TGCompositeFrame *sourceframe = (TGCompositeFrame *)sourceview->GetFrame()->GetParent();
-   if (sourceframe == fSplitFrame->GetFirst()) return;
-
-   // top (main) GL View frame
-   mainframe = fSplitFrame->GetFirst();
-   TGCompositeFrame *temp = (TGCompositeFrame *)fSplitFrame->GetFirst()->GetFrame();
-
-   // unmap the window (to avoid flickering)
-   temp->UnmapWindow();
-   // remove it from the main frame
-   mainframe->RemoveFrame(temp);
-   // temporary reparent it to root (desktop window)
-   temp->ReparentWindow(gClient->GetDefaultRoot());
-
-   // now unmap the sender window (still to avoid flickering)
-   sourceview->GetFrame()->UnmapWindow();
-   // remove it from its container (parent)
-   sourceframe->RemoveFrame(sourceview->GetFrame());
-   // reparent it to the target location (top GL View frame)
-   sourceview->GetFrame()->ReparentWindow(mainframe);
-   // add it to the frame (for layout managment)
-   mainframe->AddFrame(sourceview->GetFrame(), new TGLayoutHints(kLHintsExpandX | 
-                       kLHintsExpandY));
-   // Layout...
-   sourceview->GetFrame()->Resize(mainframe->GetDefaultSize());
-   mainframe->MapSubwindows();
-   mainframe->Layout();
-
-   // now put back the previous one in the previous source location
-   // reparent to the previous source container
-   temp->ReparentWindow(sourceframe);
-   // add it to the frame (for layout managment)
-   sourceframe->AddFrame(temp, new TGLayoutHints(kLHintsExpandX | 
-                         kLHintsExpandY));
-   // Layout...
-   temp->Resize(sourceframe->GetDefaultSize());
-   sourceframe->MapSubwindows();
-   sourceframe->Layout();
+   // target: top (main) GL View frame
+   TGSplitFrame *dest = fSplitFrame->GetFirst();
+   // source frame
+   TGCompositeFrame *source = (TGCompositeFrame *)sourceview->GetFrame();
+   // get its parent frame (its container)
+   TGCompositeFrame *sourceframe = (TGCompositeFrame *)source->GetParent();
+   // skip if source and target are the same
+   if (sourceframe == dest) return;
+   // get the pointer to the frame that has to be exchanged with the 
+   // source one (the one actually in the destination)
+   TGCompositeFrame *prev = (TGCompositeFrame *)dest->GetFrame();
+   // finally swith the frames
+   TGSplitFrame::SwitchFrames(sourceview->GetFrame(), dest, prev);
 }
 
-// Linkdef
+// Linkdef
 #ifdef __CINT__
 
 #pragma link C++ class SplitGLView;

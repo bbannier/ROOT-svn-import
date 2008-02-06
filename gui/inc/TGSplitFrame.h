@@ -44,6 +44,8 @@ public:
    TGSplitFrame  *GetSecond() const { return fSecond; }
    TGSplitter    *GetSplitter() const { return fSplitter; }
 
+   static  void   SwitchFrames(TGCompositeFrame *frame, TGCompositeFrame *dest,
+                               TGCompositeFrame *prev);
    virtual void   SavePrimitive(ostream &out, Option_t *option = "");
 
    ClassDef(TGSplitFrame, 0) // Splittable composite frame
