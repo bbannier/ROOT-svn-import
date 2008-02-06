@@ -268,6 +268,7 @@ Bool_t TGLEventHandler::HandleCrossing(Event_t *event)
 Bool_t TGLEventHandler::HandleButton(Event_t * event)
 {
    // Handle mouse button 'event'.
+   static Event_t eventSt = {kOtherEvent, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, kFALSE, 0, 0, {0,0,0,0,0}};
 
    if (fGLViewer->IsLocked()) {
       if (gDebug>2) {
@@ -285,6 +286,9 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
       fGLViewer->Activated();
       if (fGLViewer->GetAction() != kNone)
          return kFALSE;
+      eventSt.fX = event->fX;
+      eventSt.fY = event->fY;
+      eventSt.fCode = event->fCode;
 
       if (fGLViewer->GetPushAction() == TGLViewer::kPushCamCenter)
       {
@@ -422,6 +426,21 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
       fGLViewer->fAction = TGLViewer::kDragNone;
       if (fGLViewer->fGLDevice != -1)
          gGLManager->MarkForDirectCopy(fGLViewer->fGLDevice, kFALSE);
+      if ((event->fX == eventSt.fX) &&
+          (event->fY == eventSt.fY) &&
+          (eventSt.fCode == event->fCode)) {
+         TObject *obj = 0;
+         fGLViewer->RequestSelect(fLastPos.fX, fLastPos.fY, kFALSE);
+         TGLPhysicalShape *phys_shape = fGLViewer->fSelRec.GetPhysShape();
+         if (phys_shape) {
+            obj = phys_shape->GetLogical()->GetExternal();
+         }
+         fGLViewer->Clicked(obj);
+         eventSt.fX = 0;
+         eventSt.fY = 0;
+         eventSt.fCode = 0;
+         eventSt.fState = 0;
+      }
    }
 
    return kTRUE;
