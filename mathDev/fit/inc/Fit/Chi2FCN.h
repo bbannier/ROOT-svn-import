@@ -22,8 +22,8 @@
 #endif
 
 
-#ifndef ROOT_Fit_DataVector
-#include "Fit/DataVector.h"
+#ifndef ROOT_Fit_BinData
+#include "Fit/BinData.h"
 #endif
 
 
@@ -158,8 +158,10 @@ private:
 #ifdef ROOT_FIT_PARALLEL
       return FitUtilParallel::EvaluateChi2(fFunc, fData, x, fNEffPoints); 
 #else 
-
-      return FitUtil::EvaluateChi2(fFunc, fData, x, fNEffPoints); 
+      if (!fData.UseCoordErrors() ) 
+         return FitUtil::EvaluateChi2(fFunc, fData, x, fNEffPoints); 
+      else 
+         return FitUtil::EvaluateChi2Effective(fFunc, fData, x, fNEffPoints); 
 #endif
    } 
 

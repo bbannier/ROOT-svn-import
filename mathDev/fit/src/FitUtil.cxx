@@ -12,8 +12,9 @@
 
 #include "Fit/FitUtil.h"
 
-#include "Fit/DataVector.h"
-#include "Fit/BinPoint.h"
+#include "Fit/BinData.h"
+#include "Fit/UnBinData.h"
+//#include "Fit/BinPoint.h"
 
 #include "Math/IParamFunction.h"
 #include "Math/Integrator.h"
@@ -22,6 +23,7 @@
 #include <limits>
 #include <cmath>
 #include <cassert> 
+//#include <memory>
 
 //#define DEBUG
 #ifdef DEBUG
@@ -88,18 +90,73 @@ namespace ROOT {
             ROOT::Math::IntegratorMultiDim * fIgNDim; 
          }; 
 
-      }
 
 
+         // simple gradient calculator using the 2 points rule
+
+         class SimpleGradientCalculator { 
+
+         public: 
+            // construct from function and gradient dimension gdim
+            // gdim = npar for parameter gradient
+            // gdim = ndim for coordinate gradients
+            SimpleGradientCalculator(IModelFunction & func, unsigned int gdim) : 
+               fEps(1.0E-4),
+               fN(gdim),
+               fFunc(func),
+               fVec(std::vector<double>(gdim) )
+            {}
+
+            // calculate gradient at point (x,p) knnowing already value f0 (we gain a function eval.)
+            void ParameterGradient(const double * x, const double * p, double f0, double * g) { 
+               // fVec are the cached parameter values
+               std::copy(p, p+fN, fVec.begin()); 
+               for (unsigned int k = 0; k < fN; ++k) {
+                  fVec[k] += fEps;
+                  // t.b.d : treat case of infinities 
+                  //if (fval > - std::numeric_limits<double>::max() && fval < std::numeric_limits<double>::max() ) 
+                  double f2 = fFunc(x, &fVec.front() );
+//         double f2 = invError * ( y - func(x,&p2.front()) );
+                  g[k] = ( f2 - f0 )/fEps;
+                  fVec[k] = p[k]; // restore original p value
+               }
+            }
+
+            void Gradient(const double * x, double f0, double * g) { 
+               // fVec are the cached coordinate values
+               std::copy(x, x+fN, fVec.begin()); 
+               for (unsigned int k = 0; k < fN; ++k) {
+                  fVec[k] += fEps;
+                  // t.b.d : treat case of infinities 
+                  //if (fval > - std::numeric_limits<double>::max() && fval < std::numeric_limits<double>::max() ) 
+                  double f2 = fFunc( &fVec.front() );
+                  g[k] = ( f2 - f0 )/fEps;
+                  fVec[k] = x[k]; // restore original x value
+               }
+            }
+
+         private:
+
+            double fEps; 
+            unsigned int fN; 
+            IModelFunction & fFunc; 
+            std::vector<double> fVec; 
+         };
+      }       
+
+
+//___________________________________________________________________________________________________________________________
 // for chi2 functions
+//___________________________________________________________________________________________________________________________
 
 double FitUtil::EvaluateChi2(IModelFunction & func, const BinData & data, const double * p, unsigned int & nPoints) {  
    // evaluate the chi2 given a  function reference  , the data and returns the value and also in nPoints 
    // the actual number of used points
-
+   // normal chi2 using only error on values (from fitting histogram)
+   // optionally intergal of function in the bin is used 
    
    unsigned int n = data.Size();
-
+ 
 #ifdef DEBUG
    std::cout << "\n\nFit data size = " << n << std::endl;
    std::cout << "evaluate chi2 using function " << &func << "  " << p << std::endl; 
@@ -111,11 +168,10 @@ double FitUtil::EvaluateChi2(IModelFunction & func, const BinData & data, const 
 
    func.SetParameters(p); 
 
-   // get fit option and check case of using integral of bins
+   // get fit option and check case if using integral of bins
    const DataOptions & fitOpt = data.Opt();
    IntegralEvaluator igEval( fitOpt.fIntegral, func); 
 
-   bool useCoordErrors = data.UseCoordErrors();
 
    for (unsigned int i = 0; i < n; ++ i) { 
 
@@ -128,10 +184,6 @@ double FitUtil::EvaluateChi2(IModelFunction & func, const BinData & data, const 
 
       double y, invError; 
       const double * x = data.GetPoint(i,y, invError);
-//       const BinPoint & point = data.GetPoint(i); 
-//       const double * x = point.Coords();
-//       double y = point.Value();
-//       double invError = point.InvError(); 
 
 #endif 
 
@@ -153,23 +205,83 @@ double FitUtil::EvaluateChi2(IModelFunction & func, const BinData & data, const 
 #endif
 
 
-//#ifdef LATER
-      double  resval = 0; 
-      if (!useCoordErrors) { 
-            double tmp = ( y -fval )* invError;  	  
-            resval = tmp * tmp;
-      }
-         
-      if (useCoordErrors ) { 
-         double ey = 1;
-         const double * ex = data.GetPointError(i, ey); 
-         double e2 = ey * ey; 
-         for (unsigned int icoord = 0; icoord < func.NDim(); ++icoord) { 
-            e2 += ex[icoord] * ex[icoord];  // need to multuply by the derivative
-         } 
-         double w2 = (e2 > 0) ? 1.0/e2 : 0;  
-         resval = w2 * ( y - fval ) *  ( y - fval); 
-      }
+      double tmp = ( y -fval )* invError;  	  
+      double resval = tmp * tmp;
+
+      if ( resval < std::numeric_limits<double>::max() )  
+         chi2 += resval; 
+      else 
+         nRejected++; 
+      
+   }
+   
+   // reset the number of fitting data points
+   if (nRejected != 0)  nPoints = n - nRejected;
+
+#ifdef DEBUG
+   std::cout << "chi2 = " << chi2 << " n = " << nRejected << std::endl;
+#endif
+
+   return chi2;
+}
+
+
+//___________________________________________________________________________________________________________________________
+
+double FitUtil::EvaluateChi2Effective(IModelFunction & func, const BinData & data, const double * p, unsigned int & nPoints) {  
+   // evaluate the chi2 given a  function reference  , the data and returns the value and also in nPoints 
+   // the actual number of used points
+   // method using the error in the coordinates
+   // integral of bin does not make sense in this case
+   
+   unsigned int n = data.Size();
+
+ 
+#ifdef DEBUG
+   std::cout << "\n\nFit data size = " << n << std::endl;
+   std::cout << "evaluate chi2 using function " << &func << "  " << p << std::endl; 
+#endif
+
+   assert(data.UseCoordErrors() ); 
+
+   double chi2 = 0;
+   int nRejected = 0; 
+   
+
+   func.SetParameters(p); 
+
+   unsigned int ndim = func.NDim();
+   SimpleGradientCalculator gradCalc(func, ndim );  
+   std::vector<double> grad( ndim ); 
+
+
+   for (unsigned int i = 0; i < n; ++ i) { 
+
+
+      double y, tmp = 0; 
+      const double * x = data.GetPoint(i,y, tmp);
+
+      double fval = func( x );
+
+
+
+
+      double ey = 0;
+      const double * ex = data.GetPointError(i, ey); 
+      double e2 = ey * ey; 
+      gradCalc.Gradient(x, fval, &grad[0]);
+      for (unsigned int icoord = 0; icoord < ndim; ++icoord) { 
+         e2 += ex[icoord] * ex[icoord] * grad[icoord];  
+      } 
+      double w2 = (e2 > 0) ? 1.0/e2 : 0;  
+      double resval = w2 * ( y - fval ) *  ( y - fval); 
+
+#ifdef DEBUG      
+      std::cout << x[0] << "  " << y << "  " << ey << " params : "; 
+      for (int ipar = 0; ipar < func.NPar(); ++ipar) 
+         std::cout << p[ipar] << "\t";
+      std::cout << "\tfval = " << fval << std::endl; 
+#endif
       
       // avoid (infinity and nan ) in the chi2 sum 
       // eventually add possibility of excluding some points (like singularity) 
@@ -186,13 +298,14 @@ double FitUtil::EvaluateChi2(IModelFunction & func, const BinData & data, const 
 #ifdef DEBUG
    std::cout << "chi2 = " << chi2 << " n = " << nRejected << std::endl;
 #endif
-   
+
    return chi2;
 
 }
 
 
-      double FitUtil::EvaluateChi2Residual(IModelFunction & func, const BinData & data, const double * p, unsigned int i, double * g) {  
+//___________________________________________________________________________________________________________________________
+double FitUtil::EvaluateChi2Residual(IModelFunction & func, const BinData & data, const double * p, unsigned int i, double * g) {  
    // evaluate the chi2 contribution (residual term) 
    // need to implement integral calculation
 
@@ -216,25 +329,16 @@ double FitUtil::EvaluateChi2(IModelFunction & func, const BinData & data, const 
    if (gfunc != 0) { 
       //case function provides gradient
       gfunc->ParameterGradient(  x , g );  
-      // mutiply by - 1 * weihgt
-      for (unsigned int k = 0; k < npar; ++k) {
-         g[k] *= - invError;
-      }       
    }
    else { 
-      // estimate gradient numerically with simple 2 point rule 
-      static const double kEps = 1.0E-4;      
-      std::vector<double> p2(p,p+npar);
-      double f0 = resval;
-      for (unsigned int k = 0; k < npar; ++k) {
-         p2[k] += kEps;
-         // t.b.d : treat case of infinities 
-         //if (fval > - std::numeric_limits<double>::max() && fval < std::numeric_limits<double>::max() ) 
-         double f2 = invError * ( y - func(x,&p2.front()) );
-         g[k] = ( f2 - f0 )/kEps;
-         p2[k] = p[k]; // restore original p value
-      }       
+      SimpleGradientCalculator  gc(func, npar); 
+      gc.ParameterGradient(x, p, resval, g); 
    }
+   // mutiply by - 1 * weihgt
+   for (unsigned int k = 0; k < npar; ++k) {
+      g[k] *= - invError;
+   }       
+
 
    return resval; 
 

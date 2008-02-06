@@ -16,8 +16,8 @@
 #include "Fit/PoissonLikelihoodFCN.h"
 #include "Fit/LogLikelihoodFCN.h"
 #include "Math/Minimizer.h"
-#include "Fit/BinPoint.h"
-#include "Fit/DataVector.h"
+#include "Fit/BinData.h"
+#include "Fit/UnBinData.h"
 
 #include <memory> 
 

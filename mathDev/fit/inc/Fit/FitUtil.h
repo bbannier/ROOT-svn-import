@@ -37,11 +37,20 @@ namespace FitUtil {
    typedef  ROOT::Math::IParamMultiFunction IModelFunction;
    typedef  ROOT::Math::IParamMultiGradFunction IGradModelFunction;
 
+   /** Chi2 Functions */
+
    /** 
        evaluate the Chi2 given a model function and the data at the point x. 
        return also nPoints as the effective number of used points in the Chi2 evaluation
    */ 
    double EvaluateChi2(IModelFunction & func, const BinData & data, const double * x, unsigned int & nPoints);  
+
+   /** 
+       evaluate the effective Chi2 given a model function and the data at the point x. 
+       The effective chi2 uses the errors on the coordinates : W = 1/(sigma_y**2 + ( sigma_x_i * df/dx_i )**2 )
+       return also nPoints as the effective number of used points in the Chi2 evaluation
+   */ 
+   double EvaluateChi2Effective(IModelFunction & func, const BinData & data, const double * x, unsigned int & nPoints);  
 
    /** 
        evaluate the Chi2 gradient given a model function and the data at the point x. 

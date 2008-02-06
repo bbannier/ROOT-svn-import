@@ -21,8 +21,8 @@
 #include "Math/IParamFunction.h"
 #endif
 
-#ifndef ROOT_Fit_DataVector
-#include "Fit/DataVector.h"
+#ifndef ROOT_Fit_UnBinData
+#include "Fit/UnBinData.h"
 #endif
 
 #ifndef ROOT_Fit_FitUtil
