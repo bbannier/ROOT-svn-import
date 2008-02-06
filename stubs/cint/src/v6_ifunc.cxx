@@ -7055,7 +7055,7 @@ void G__argtype2param(const char* argtype, G__param* libp)
             char* end = start + strlen(start) - 1;
             while (isspace(*end) && end != start) --end;
          }
-         G__value buf = G__string2type(start);
+         G__value buf = G__string2type(start, 0);
 
          // LF 20/04/07
          // This means the argument is "..."
@@ -7096,7 +7096,7 @@ void G__argtype2param2(char *argtype,G__param *libp,int noerror,int& error)
             char* end = start + strlen(start) - 1;
             while (isspace(*end) && end != start) --end;
          }
-         G__value buf = G__string2type2(start, noerror);
+         G__value buf = G__string2type(start, noerror);
 
          // LF 17-07-07
          if (buf.type==0 && buf.typenum==-1)

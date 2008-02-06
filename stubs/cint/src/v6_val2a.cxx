@@ -1909,24 +1909,17 @@ G__value G__string2type_body(const char *typenamin,int noerror)
 /******************************************************************
 * G__string2type
 *
-******************************************************************/
-G__value G__string2type(const char *typenamin)
-{
-  int store_var_type = G__var_type;
-  G__value buf = G__string2type_body(typenamin,0);
-  G__var_type = store_var_type;
-  return(buf);
-}
-
-/******************************************************************
-* G__string2type
+* 05-02-08
 *
-* 17-07-07
+* To avoid code replication we add an additional parameter:
+* "int noerror" which will be passed to G__string2type_body.
+* If we want to obtain the old behavior of this function, we
+* just have to pass 0.
 ******************************************************************/
-G__value G__string2type2(const char *typenamin, int noerror)
+G__value G__string2type(const char *typenamin, int noerror)
 {
   int store_var_type = G__var_type;
-  G__value buf = G__string2type_body(typenamin,noerror);
+  G__value buf = G__string2type_body(typenamin, noerror);
   G__var_type = store_var_type;
   return(buf);
 }

@@ -1659,8 +1659,7 @@ int G__EXPORT G__deletevariable G__P((G__CONST char* varname));
 extern G__EXPORT int G__optimizemode G__P((int optimizemode));
 extern G__EXPORT int G__getoptimizemode G__P((void));
 G__value G__string2type_body G__P((G__CONST char *typenamin,int noerror));
-G__value G__string2type G__P((G__CONST char *typenamin));
-G__value G__string2type2 G__P((G__CONST char *typenamin, int noerror));
+G__value G__string2type G__P((G__CONST char *typenamin, int noerror));
 extern G__EXPORT void* G__findsym G__P((G__CONST char *fname));
 
 extern G__EXPORT int G__IsInMacro G__P((void));
