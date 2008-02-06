@@ -113,6 +113,11 @@ public:
    List_i EndChildren()   { return fChildren.end();   }
    Int_t  GetNChildren() const { return fChildren.size(); }
 
+   TEveElement* FindChild(const TString& name, const TClass* cls=0);
+   TEveElement* FindChild(TPRegexp& regexp, const TClass* cls=0);
+   Int_t        FindChildren(List_t& matches, const TString&  name, const TClass* cls=0);
+   Int_t        FindChildren(List_t& matches, TPRegexp& regexp, const TClass* cls=0);
+
    void EnableListElements (Bool_t rnr_self=kTRUE,  Bool_t rnr_children=kTRUE);  // *MENU*
    void DisableListElements(Bool_t rnr_self=kFALSE, Bool_t rnr_children=kFALSE); // *MENU*
 

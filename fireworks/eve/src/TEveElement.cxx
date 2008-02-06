@@ -15,6 +15,7 @@
 #include "TGeoMatrix.h"
 
 #include "TClass.h"
+#include "TPRegexp.h"
 #include "TROOT.h"
 #include "TColor.h"
 #include "TCanvas.h"
@@ -776,6 +777,94 @@ void TEveElement::RemoveElementsLocal()
 {
    // Perform additional local removal of all elements.
    // See comment to RemoveelementLocal(TEveElement*).
+}
+
+/******************************************************************************/
+
+//______________________________________________________________________________
+TEveElement* TEveElement::FindChild(const TString&  name, const TClass* cls)
+{
+   // Find the first child with given name.  If cls is specified (non
+   // 0), it is also checked.
+   //
+   // Returns 0 if not found.
+
+   for (List_i i=fChildren.begin(); i!=fChildren.end(); ++i)
+   {
+      if (name.CompareTo((*i)->GetElementName()) == 0)
+      {
+         if (!cls || (cls && (*i)->IsA()->InheritsFrom(cls)))
+            return *i;
+      }
+   }
+   return 0;
+}
+
+//______________________________________________________________________________
+TEveElement* TEveElement::FindChild(TPRegexp& regexp, const TClass* cls)
+{
+   // Find the first child whose name matches regexp. If cls is
+   // specified (non 0), it is also checked.
+   //
+   // Returns 0 if not found.
+
+   for (List_i i=fChildren.begin(); i!=fChildren.end(); ++i)
+   {
+      if (regexp.MatchB((*i)->GetElementName()))
+      {
+         if (!cls || (cls && (*i)->IsA()->InheritsFrom(cls)))
+            return *i;
+      }
+   }
+   return 0;
+}
+
+//______________________________________________________________________________
+Int_t TEveElement::FindChildren(List_t& matches,
+                                const TString& name, const TClass* cls)
+{
+   // Find all children with given name and append them to matches
+   // list. If class is specified (non 0), it is also checked.
+   //
+   // Returns number of elements added to the list.
+
+   Int_t count = 0;
+   for (List_i i=fChildren.begin(); i!=fChildren.end(); ++i)
+   {
+      if (name.CompareTo((*i)->GetElementName()) == 0)
+      {
+         if (!cls || (cls && (*i)->IsA()->InheritsFrom(cls)))
+         {
+            matches.push_back(*i);
+            ++count;
+         }
+      }
+   }
+   return count;
+}
+
+//______________________________________________________________________________
+Int_t TEveElement::FindChildren(List_t& matches,
+                                TPRegexp& regexp, const TClass* cls)
+{
+   // Find all children whose name matches regexp and append them to
+   // matches list.
+   //
+   // Returns number of elements added to the list.
+
+   Int_t count = 0;
+   for (List_i i=fChildren.begin(); i!=fChildren.end(); ++i)
+   {
+      if (regexp.MatchB((*i)->GetElementName()))
+      {
+         if (!cls || (cls && (*i)->IsA()->InheritsFrom(cls)))
+         {
+            matches.push_back(*i);
+            ++count;
+         }
+      }
+   }
+   return count;
 }
 
 /******************************************************************************/
