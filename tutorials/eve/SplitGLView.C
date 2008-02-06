@@ -463,6 +463,7 @@ void SplitGLView::OnMouseIdle(TGLPhysicalShape *shape, UInt_t posx, UInt_t posy)
 
    static TH1F *h1f = 0;
    TFormula *form1 = new TFormula("form1","abs(sin(x)/x)");
+   form1->Update(); // silent warning about unused variable...
    TF1 *sqroot = new TF1("sqroot","x*gaus(0) + [3]*form1",0,10);
    sqroot->SetParameters(10,4,1,20);
    if (h1f == 0)
@@ -611,7 +612,7 @@ void SplitGLView::ToggleOrthoDolly()
 }
 
 //______________________________________________________________________________
-void SplitGLView::ItemClicked(TGListTreeItem *item, Int_t btn, Int_t x, Int_t y)
+void SplitGLView::ItemClicked(TGListTreeItem *item, Int_t, Int_t, Int_t)
 {
    // Item has been clicked, based on mouse button do:
 
