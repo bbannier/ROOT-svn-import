@@ -669,7 +669,7 @@ int G__bc_casejump(void* p,int val);
 
 G__value G__alloc_exceptionbuffer(int tagnum);
 
-void G__argtype2param(const char *argtype,struct G__param *libp);
+void G__argtype2param(const char *argtype,struct G__param *libp, int noerror, int* error);
 
 void G__letbool(G__value *buf,int type,long value);
 long G__bool(G__value buf);
