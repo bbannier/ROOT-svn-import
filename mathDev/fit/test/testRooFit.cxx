@@ -19,7 +19,8 @@
 
 #include "Math/DistFunc.h"
 
-#include "Fit/DataVector.h"
+#include "Fit/UnBinData.h"
+#include "Fit/BinData.h"
 #include "Fit/Fitter.h"
 //#include "THFitInterface.h"
 
