@@ -266,10 +266,10 @@ public:
    Bool_t             IsTObject() const;
    void               MakeCustomMenuList();
    void               Move(void *arenaFrom, void *arenaTo) const;
-   void              *New(ENewType defConstructor = TClass::kClassNew);
-   void              *New(void *arena, ENewType defConstructor = TClass::kClassNew);
-   void              *NewArray(Long_t nElements, ENewType defConstructor = TClass::kClassNew);
-   void              *NewArray(Long_t nElements, void *arena, ENewType defConstructor = TClass::kClassNew);
+   void              *New(ENewType defConstructor = kClassNew);
+   void              *New(void *arena, ENewType defConstructor = kClassNew);
+   void              *NewArray(Long_t nElements, ENewType defConstructor = kClassNew);
+   void              *NewArray(Long_t nElements, void *arena, ENewType defConstructor = kClassNew);
    virtual void       PostLoadCheck();
    Long_t             Property() const;
    Int_t              ReadBuffer(TBuffer &b, void *pointer, Int_t version, UInt_t start, UInt_t count);

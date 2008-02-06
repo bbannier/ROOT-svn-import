@@ -1347,6 +1347,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
   struct G__dyntype { virtual ~G__dyntype() {} };
 
   long store_struct_offset = G__store_struct_offset;
+  int store_tagnum = G__tagnum;
 
   // This should usually be done in G__stub_method_asm but since we are 
   // still doing the cons. and dest. calls here, we might need it for
@@ -1360,6 +1361,10 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
   // the environment (is it caused by CallFunc ?)
   if(gtagnum < 0)
     gtagnum = G__tagnum;
+  
+  // this is redundant if gtagnum < 0
+  // but I want to say that G__tagnum is always changed
+  G__tagnum = gtagnum; //G_getexpr will use it to find a variable within a class
 
   // We will try to do the special case for constructors here...
   // I couldnt find a field in the ifunc table telling us if it's acons.
@@ -2101,6 +2106,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
   }
 
   G__store_struct_offset = store_struct_offset;
+  G__tagnum = store_tagnum;
   return 0;
 }
 
