@@ -9,8 +9,8 @@
 #include "TROOT.h"
 #include "TVirtualFitter.h"
 
-#include "Fit/DataVector.h"
-//#include "Fit/BinPoint.h"
+#include "Fit/BinData.h"
+#include "Fit/UnBinData.h"
 #include "THFitInterface.h"
 #include "TGraphFitInterface.h"
 #include "Fit/Fitter.h"
@@ -417,6 +417,8 @@ int testHisto2DFit() {
 
 int testUnBin1DFit() { 
 
+   int iret = 0;
+
    std::string fname("gausn");
    TF1 * func = (TF1*)gROOT->GetFunction(fname.c_str());
 
@@ -429,7 +431,7 @@ int testUnBin1DFit() {
       d.Add( rndm.Gaus(0,1) );
   
 
-   printData(d);
+   // printData(d);
 
    // create the function
    ROOT::Math::WrappedMultiTF1 f(*func); 
@@ -443,14 +445,24 @@ int testUnBin1DFit() {
    fitter.SetFunction(f);
    std::cout << "fix parameter 0 " << " to value " << f.Parameters()[0] << std::endl;
    fitter.Config().ParSettings(0).Fix();
-   //fitter.Config().MinimizerOptions().SetPrintLevel(3);
+   // set range in sigma sigma > 0
+   std::cout << "set lower range to 0 for sigma " << std::endl;
+   fitter.Config().ParSettings(2).SetLowerLimit(0);
+
+#ifdef DEBUG
+   fitter.Config().MinimizerOptions().SetPrintLevel(3);
+#endif
+
+//    double x[1]; x[0] = 0.; 
+//    std::cout << "fval " << f(x) << std::endl;
+//    x[0] = 1.; std::cout << "fval " << f(x) << std::endl;
 
    bool ret = fitter.Fit(d);
    if (ret)  
       fitter.Result().Print(std::cout); 
    else {
-      std::cout << "Unbinned Likelihood Fit Failed " << std::endl;
-      return -1; 
+      std::cout << "Unbinned Likelihood Fit Failed " << std::endl; 
+      iret |= 1;
    }
 
    std::cout << "\n\nRedo Fit using FUMILI" << std::endl; 
@@ -459,16 +471,19 @@ int testUnBin1DFit() {
    // need to set function first (need to change this)
    fitter.SetFunction(f);
    fitter.Config().ParSettings(0).Fix(); //need to re-do it
+   // set range in sigma sigma > 0
+   fitter.Config().ParSettings(2).SetLowerLimit(0);
+
    ret = fitter.Fit(d);
    if (ret)  
       fitter.Result().Print(std::cout); 
    else {
-      std::cout << "Unbinned Likelihood Fit using FUMILI Failed " << std::endl;
-      return -1; 
+      std::cout << "Unbinned Likelihood Fit using FUMILI Failed " << std::endl;      
+      iret |= 1;
    }
 
 
-   return 0; 
+   return iret; 
 }
 
 template<typename Test> 

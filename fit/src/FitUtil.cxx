@@ -20,6 +20,8 @@
 #include "Math/Integrator.h"
 #include "Math/IntegratorMultiDim.h"
 
+#include "Math/Error.h"
+
 #include <limits>
 #include <cmath>
 #include <cassert> 
@@ -46,7 +48,7 @@ namespace ROOT {
          // and this is a dummy class
          struct IntegralEvaluator { 
 
-            IntegralEvaluator(bool useIntegral, const ROOT::Math::IMultiGenFunction & f) : 
+            IntegralEvaluator(const ROOT::Math::IMultiGenFunction & f, bool useIntegral = true) : 
                fDim(f.NDim()),
                fIg1Dim(0), 
                fIgNDim(0) 
@@ -66,6 +68,11 @@ namespace ROOT {
             ~IntegralEvaluator() { 
                if (fIg1Dim) delete fIg1Dim; 
                if (fIgNDim) delete fIgNDim; 
+            }
+
+            void SetFunction(const ROOT::Math::IMultiGenFunction & f) { 
+               if (fIg1Dim) fIg1Dim->SetFunction(f);
+               else if (fIgNDim) fIgNDim->SetFunction(f); 
             }
 
             double operator()(const double *x1, const double * x2) { 
@@ -142,7 +149,36 @@ namespace ROOT {
             IModelFunction & fFunc; 
             std::vector<double> fVec; 
          };
-      }       
+
+
+         // function to avoid infinities or nan
+         double CorrectValue(double rval) { 
+            // avoid infinities or nan in  rval
+            if (rval > - std::numeric_limits<double>::max() && rval < std::numeric_limits<double>::max() ) 
+               return rval; 
+            else if (rval < 0)
+               // case -inf
+               return -std::numeric_limits<double>::max(); 
+            else 
+               // case + inf or nan
+               return  + std::numeric_limits<double>::max(); 
+         }
+         bool CheckValue(double & rval) { 
+            if (rval > - std::numeric_limits<double>::max() && rval < std::numeric_limits<double>::max() ) 
+               return true; 
+            else if (rval < 0) { 
+               // case -inf
+               rval =  -std::numeric_limits<double>::max(); 
+               return false; 
+            }
+            else { 
+               // case + inf or nan
+               rval =  + std::numeric_limits<double>::max(); 
+               return false; 
+            }
+         }
+
+      } // end namespace  FitUtil      
 
 
 //___________________________________________________________________________________________________________________________
@@ -170,7 +206,7 @@ double FitUtil::EvaluateChi2(IModelFunction & func, const BinData & data, const 
 
    // get fit option and check case if using integral of bins
    const DataOptions & fitOpt = data.Opt();
-   IntegralEvaluator igEval( fitOpt.fIntegral, func); 
+   IntegralEvaluator igEval( func, fitOpt.fIntegral); 
 
 
    for (unsigned int i = 0; i < n; ++ i) { 
@@ -258,8 +294,8 @@ double FitUtil::EvaluateChi2Effective(IModelFunction & func, const BinData & dat
    for (unsigned int i = 0; i < n; ++ i) { 
 
 
-      double y, tmp = 0; 
-      const double * x = data.GetPoint(i,y, tmp);
+      double y = 0; 
+      const double * x = data.GetPoint(i,y);
 
       double fval = func( x );
 
@@ -306,22 +342,37 @@ double FitUtil::EvaluateChi2Effective(IModelFunction & func, const BinData & dat
 
 //___________________________________________________________________________________________________________________________
 double FitUtil::EvaluateChi2Residual(IModelFunction & func, const BinData & data, const double * p, unsigned int i, double * g) {  
-   // evaluate the chi2 contribution (residual term) 
-   // need to implement integral calculation
+   // evaluate the chi2 contribution (residual term) only for data with no coord-errors
+   // This function is used in the specialized least square algorithms like FUMILI or L.M.
+   // if we have error on the coordinates method is not implemented 
+   //  integral option is also not yet implemented
+   //  one can use in that case normal chi2 method
+  
+   if (data.UseCoordErrors()) 
+      MATH_ERROR_MSG("FitUtil::EvaluateChi2Residual","Error on the coordinates are not used in calculating Chi2 residual");
+
+   if (data.Opt().fIntegral )
+      MATH_WARN_MSG("FitUtil::EvaluateChi2Residual","Bin integral is not used in calculating Chi2 residual");
+
 
    func.SetParameters(p);
-   const double * x = data.Coords(i);
-   double y = data.Value(i);
-   double invError = data.InvError(i); 
+
+   double y, invError = 0; 
+   const double * x = data.GetPoint(i,y, invError);
+
    double fval = func ( x ); 
-   double resval = 0; 
-   if (fval > - std::numeric_limits<double>::max() && fval < std::numeric_limits<double>::max() ) 
-      // calculat chi2 point
-      resval =   ( y -fval )* invError;  	  
+
+//       // calculate normalized integral (divided by bin volume)
+//       IntegralEvaluator igEval( func, fitOpt.fIntegral); 
+//       fval = igEval( x, data.Coords(i+1) ) ; 
+
+   double resval =   ( y -fval )* invError;  	   
+
+   // avoid infinities or nan in  resval
+   resval = CorrectValue(resval);
    
    // estimate gradient 
    if (g == 0) return resval; 
-
 
    unsigned int npar = func.NPar(); 
    IGradModelFunction * gfunc = dynamic_cast<IGradModelFunction *>( &func); 
@@ -332,7 +383,7 @@ double FitUtil::EvaluateChi2Residual(IModelFunction & func, const BinData & data
    }
    else { 
       SimpleGradientCalculator  gc(func, npar); 
-      gc.ParameterGradient(x, p, resval, g); 
+      gc.ParameterGradient(x, p, fval, g); 
    }
    // mutiply by - 1 * weihgt
    for (unsigned int k = 0; k < npar; ++k) {
@@ -345,15 +396,27 @@ double FitUtil::EvaluateChi2Residual(IModelFunction & func, const BinData & data
 }
 
 
-void FitUtil::EvaluateChi2Gradient(IModelFunction & f, const BinData & data, const double * p, double * grad, unsigned int & ) { 
+void FitUtil::EvaluateChi2Gradient(IModelFunction & f, const BinData & data, const double * p, double * grad, unsigned int & nPoints) { 
    // evaluate gradient of chi2
-   // need to implement case with integral option
+   // this function is used when the model function knows how to calculate the derivative and we can  
+   // avoid that the minimizer re-computes them 
+   //
+   // need to implement cases with integral option and errors on the coordinates
+   
+   if (data.Opt().fIntegral )
+      MATH_WARN_MSG("FitUtil::EvaluateChi2Residual","Bin integral is not used in calculating Chi2 gradient");
+
+   if (data.UseCoordErrors()) 
+      MATH_ERROR_MSG("FitUtil::EvaluateChi2Residual","Error on the coordinates are not used in calculating Chi2 gradient");
+
+   unsigned int nRejected = 0; 
 
    IGradModelFunction * fg = dynamic_cast<IGradModelFunction *>( &f); 
-   assert (fg != 0); // must be called by a grad function
+   assert (fg != 0); // must be called by a gradient function
 
    IGradModelFunction & func = *fg; 
    unsigned int n = data.Size();
+
 
 #ifdef DEBUG
    std::cout << "\n\nFit data size = " << n << std::endl;
@@ -370,9 +433,11 @@ void FitUtil::EvaluateChi2Gradient(IModelFunction & f, const BinData & data, con
    std::vector<double> g( npar); 
 
    for (unsigned int i = 0; i < n; ++ i) { 
-      const double * x = data.Coords(i);
-      double y = data.Value(i);
-      double invError = data.InvError(i); 
+
+
+      double y, invError = 0; 
+      const double * x = data.GetPoint(i,y, invError);
+
       double fval = func ( x ); 
       func.ParameterGradient(  x , &gradFunc[0] );  
 
@@ -382,31 +447,32 @@ void FitUtil::EvaluateChi2Gradient(IModelFunction & f, const BinData & data, con
          std::cout << p[ipar] << "\t";
       std::cout << "\tfval = " << fval << std::endl; 
 #endif
+      if ( !CheckValue(fval) ) { 
+         nRejected++; 
+         continue;
+      } 
 
       // loop on the parameters
       for (unsigned int ipar = 0; ipar < npar ; ++ipar) { 
 
          // avoid singularity in the function (infinity and nan ) in the chi2 sum 
          // eventually add possibility of excluding some points (like singularity) 
-         if (  (fval > - std::numeric_limits<double>::max() && fval < std::numeric_limits<double>::max() ) && 
-               (gradFunc[ipar] > - std::numeric_limits<double>::max() && 
-                gradFunc[ipar] < std::numeric_limits<double>::max() ) )
-               { 
-                  // calculate derivative point contribution
-                  double tmp = - 2.0 * ( y -fval )* invError * invError * gradFunc[ipar];  	  
-                  g[ipar] += tmp;
-               }
-//          else 
-//             nRejected++; 
+         double dfval = gradFunc[ipar];
+         if ( !CheckValue(dfval) ) { 
+               nRejected++; 
+               break; // exit loop on parameters
+         } 
+ 
+         // calculate derivative point contribution
+         double tmp = - 2.0 * ( y -fval )* invError * invError * gradFunc[ipar];  	  
+         g[ipar] += tmp;
       
       }
 
-   }
+   } 
 
-//    // reset the number of fitting data points
-//    if (nRejected != 0)  nPoints = n - nRejected;
-//    if (nPoints != fNPoints)
-//       std::cout << "Warning : Number of points differes between Chi2 evaluation and derivatives " << std::endl; 
+   // correct the number of points
+   if (nRejected != 0)  nPoints = n - nRejected;
 
    // copy result 
    std::copy(g.begin(), g.end(), grad);
@@ -414,7 +480,10 @@ void FitUtil::EvaluateChi2Gradient(IModelFunction & f, const BinData & data, con
 }
 
 
-      
+//______________________________________________________________________________________________________
+//
+//  Log Likelihood functions       
+//_______________________________________________________________________________________________________
 
 // utility function used by the likelihoods 
 
@@ -431,7 +500,7 @@ inline double EvalLogF(double fval) {
 
 // for LogLikelihood functions
 
-      double FitUtil::EvaluatePdf(IModelFunction & func, const UnBinData & data, const double * p, unsigned int i, double * g) {  
+double FitUtil::EvaluatePdf(IModelFunction & func, const UnBinData & data, const double * p, unsigned int i, double * g) {  
    // evaluate the pdf contribution to the logl
 
    func.SetParameters(p);
@@ -449,18 +518,10 @@ inline double EvalLogF(double fval) {
       gfunc->ParameterGradient(  x , g );  
    }
    else { 
-      // estimate gradient numerically with simple 2 point rule 
-      static const double kEps = 1.0E-4;      
-      std::vector<double> p2(p,p+npar);
-      for (unsigned int k = 0; k < npar; ++k) {
-         p2[k] += kEps;
-         // t.b.d : treat case of infinities 
-         //if (fval > - std::numeric_limits<double>::max() && fval < std::numeric_limits<double>::max() ) 
-         double df = func(x,&p2.front() )  - fval;
-         g[k] = df/kEps;
-         p2[k] = p[k]; // restore original p value
-      }       
-   }
+      // estimate gradieant numerically with simple 2 point rule 
+      SimpleGradientCalculator gc(func, npar); 
+      gc.ParameterGradient(x, p, fval, g ); 
+   }       
 
 #ifdef DEBUG
    std::cout << x[i] << "\t"; 
@@ -500,7 +561,7 @@ double FitUtil::EvaluateLogL(IModelFunction & func, const UnBinData & data, cons
       for (unsigned int j = 0; j < data.PointSize(); ++j)
          std::cout << x[j] << "\t"; 
       std::cout << "\tpar = [ " << func.NPar() << " ] =  "; 
-      for (int ipar = 0; ipar < func.NPar(); ++ipar) 
+      for (unsigned int ipar = 0; ipar < func.NPar(); ++ipar) 
          std::cout << p[ipar] << "\t";
       std::cout << "\tfval = " << fval << std::endl; 
 #endif
@@ -550,16 +611,23 @@ void FitUtil::EvaluateLogLGradient(IModelFunction & f, const UnBinData & data, c
    std::copy(g.begin(), g.end(), grad);
    }
 }
-
+//_________________________________________________________________________________________________
 // for binned log likelihood functions      
-
+//------------------------------------------------------------------------------------------------
 double FitUtil::EvaluatePoissonBinPdf(IModelFunction & func, const BinData & data, const double * p, unsigned int i, double * g ) {  
    // evaluate the pdf contribution to the logl
    // t.b.d. implement integral option
 
    func.SetParameters(p);
-   const double * x = data.Coords(i);
-   double y = data.Value(i);
+
+   if (data.Opt().fIntegral )
+      MATH_WARN_MSG("FitUtil::EvaluatePoissonBinPdf","Bin integral is not used in calculating pdf for Poisson pdf for the bin");
+
+
+   double y = 0; 
+   const double * x = data.GetPoint(i,y);
+
+
    double fval = func ( x ); 
 
    // remove constant term depending on N
@@ -604,6 +672,8 @@ double FitUtil::EvaluatePoissonBinPdf(IModelFunction & func, const BinData & dat
 
 double FitUtil::EvaluatePoissonLogL(IModelFunction & func, const BinData & data, const double * p, unsigned int &nPoints) {  
    // evaluate the Poisson Log Likelihood
+   // for binned likelihood fits
+
    unsigned int n = data.Size();
 
    
@@ -613,7 +683,7 @@ double FitUtil::EvaluatePoissonLogL(IModelFunction & func, const BinData & data,
 
    // get fit option and check case of using integral of bins
    const DataOptions & fitOpt = data.Opt();
-   IntegralEvaluator igEval( fitOpt.fIntegral, func); 
+   IntegralEvaluator igEval( func, fitOpt.fIntegral); 
 
    for (unsigned int i = 0; i < n; ++ i) { 
       const double * x = data.Coords(i);
