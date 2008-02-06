@@ -7097,10 +7097,12 @@ struct G__ifunc_table* G__get_methodhandle2(char* funcname, G__param* libp, G__i
 * G__get_methodhandle4
 *
 * 03-08-07
-* Exactly the same as 'G__get_methodhandle' except that we pass a 
-* noerror code to G__argtype2param2
+* Exactly the same as 'G__get_methodhandle2' except that we pass a 
+* noerror code to G__argtype2param.
+* We also receive a G__ifunc_table_internal instead of a G__ifunc_table
+* and return the same (this makes things slightly faster)
 * this code replication could be avoided but for the moment I prefer
-* keep things clear
+* to keep things clear
 * FIXME: Code replication
 **************************************************************************/
 struct G__ifunc_table_internal *G__get_methodhandle4(char *funcname
