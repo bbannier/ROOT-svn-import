@@ -58,7 +58,7 @@ include $(MAKEFILEDEP)
 
 ##### Modules to build #####
 
-MODULES       = build cint metautils pcre utils base cont meta io net math \
+MODULES       = build cint metautils pcre utils base cont meta io net math mathcore \
                 zip clib matrix newdelete hist tree freetype graf gpad \
                 g3d gui minuit histpainter treeplayer ged treeviewer physics \
                 postscript rint thread html eg geom geompainter vmc fumili \
@@ -147,9 +147,9 @@ endif
 ifeq ($(BUILDQTGSI),yes)
 MODULES      += qtgsi
 endif
-ifeq ($(BUILDMATHCORE),yes)
-MODULES      += mathcore
-endif
+#ifeq ($(BUILDMATHCORE),yes)
+#MODULES      += mathcore
+#endif
 ifeq ($(BUILDMATHMORE),yes)
 MODULES      += mathmore
 endif
