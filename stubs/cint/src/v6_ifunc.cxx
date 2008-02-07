@@ -4688,7 +4688,7 @@ struct G__ifunc_table_internal* G__overload_match(const char* funcname, G__param
    if (!match)
    {
       funclist =  G__add_templatefunc(funcname, libp, hash, funclist
-                                      , store_ifunc, isrecursive); //1 is the old behaviour
+                                      , store_ifunc, isrecursive);
    }
 
    if (!match && (G__TRYUNARYOPR == memfunc_flag || G__TRYBINARYOPR == memfunc_flag))

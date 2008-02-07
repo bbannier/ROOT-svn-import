@@ -11947,7 +11947,7 @@ void G__specify_link(int link_stub)
       fpara.paran=0;
 
       G__hash(buf,hash,tmp);
-      funclist=G__add_templatefunc(buf,&fpara,hash,funclist,x_ifunc,0); //1 is the old behaviour
+      funclist=G__add_templatefunc(buf,&fpara,hash,funclist,x_ifunc,0);
       if(funclist) {
         funclist->ifunc->globalcomp[funclist->ifn] = globalcomp;
         G__funclist_delete(funclist);
