@@ -11,11 +11,9 @@
 
 #include "TEveTextGL.h"
 #include "TEveText.h"
-#include "TFTGLManager.h"
+#include "TGLFontManager.h"
 #include "TGLUtil.h"
 #include "TGLCamera.h"
-
-#include "FTFont.h"
 
 #include "TGLRnrCtx.h"
 #include "TGLIncludes.h"
@@ -32,8 +30,8 @@ ClassImp(TEveTextGL);
 //______________________________________________________________________________
 TEveTextGL::TEveTextGL() :
    TGLObject(),
-   fSize(0), fFile(0), fMode(0),
-   fFont(0), fM(0)
+   fM(0),
+   fFont(0)
 {
    // Constructor.
 
@@ -61,17 +59,17 @@ void TEveTextGL::SetBBox()
 }
 
 //______________________________________________________________________________
-void TEveTextGL::SetModelFont(TEveText* model, TGLRnrCtx & rnrCtx) const
+void TEveTextGL::SetFont(TEveText* model, TGLRnrCtx & rnrCtx) const
 {
-  if (fSize != model->GetSize() || fFile != model->GetFile() || fMode != model->GetMode())
-   {
-      if (fFont)
-         rnrCtx.ReleaseFont(fSize, fFile, fMode);
+   // Set FTGL font according to TEveText font attributes.
 
-      fSize = model->GetSize();
-      fFile = model->GetFile();
-      fMode = model->GetMode();
-      fFont = rnrCtx.GetFont(fSize, fFile, fMode);
+   if(fFont == 0) {
+      fFont = (TGLFont*)rnrCtx.GetFont(model->GetFontSize(), model->GetFontFile(), model->GetFontMode());
+   }
+   else if (fFont->GetSize() != model->GetFontSize() || fFont->GetFile() != model->GetFontFile()
+            || fFont->GetMode() != model->GetFontMode()) {
+      rnrCtx.ReleaseFont(fFont);
+      fFont = (TGLFont*)rnrCtx.GetFont(model->GetFontSize(), model->GetFontFile(), model->GetFontMode());
    }
 }
 
@@ -84,16 +82,16 @@ void TEveTextGL::DirectDraw(TGLRnrCtx & rnrCtx) const
 
    static const TEveException eH("TEveTextGL::DirectDraw ");
 
-   SetModelFont(fM, rnrCtx);
-
+   SetFont(fM, rnrCtx);
+  
    //  bbox initialisation
-   if (fBoundingBox.IsEmpty() && fMode > TFTGLManager::kPixmap)
+   if (fBoundingBox.IsEmpty() && fFont->GetMode() > TGLFont::kPixmap)
    {
       Float_t bbox[6];
       fFont->BBox(fM->GetText(), bbox[0], bbox[1], bbox[2],
                   bbox[3], bbox[4], bbox[5]);
 
-      if (fMode == TFTGLManager::kExtrude) {
+      if (fFont->GetMode() == TGLFont::kExtrude) {
          // Depth goes, the other z-way, swap.
          Float_t tmp = bbox[2];
          bbox[2] = bbox[5] * fM->GetExtrude();
@@ -111,13 +109,13 @@ void TEveTextGL::DirectDraw(TGLRnrCtx & rnrCtx) const
       ncthis->UpdateBoundingBoxesOfPhysicals();
    }
 
-   // rendering  
-   TFTGLManager::PreRender(fMode);
-   TGLCapabilitySwitch lights(GL_LIGHTING, fM->GetAutoBehave() ? (fMode > TFTGLManager::kOutline) : (fM->GetLighting()));
-   switch(fMode)
+   // rendering
+   fFont->PreRender();
+   TGLCapabilitySwitch lights(GL_LIGHTING, fM->GetAutoLighting() ? (fFont->GetMode() > TGLFont::kOutline) : (fM->GetLighting()));
+   switch(fFont->GetMode())
    {
-      case TFTGLManager::kBitmap:
-      case TFTGLManager::kPixmap:
+      case TGLFont::kBitmap:
+      case TGLFont::kPixmap:
          if (rnrCtx.Selection()) {
             // calculate 3D coordinates for picking
             const GLdouble *pm = rnrCtx.RefCamera().RefLastNoPickProjM().CArr();
@@ -148,9 +146,9 @@ void TEveTextGL::DirectDraw(TGLRnrCtx & rnrCtx) const
             fFont->Render(fM->GetText());
          }
          break;
-      case TFTGLManager::kOutline:
-      case TFTGLManager::kExtrude:
-      case TFTGLManager::kPolygon:
+      case TGLFont::kOutline:
+      case TGLFont::kExtrude:
+      case TGLFont::kPolygon:
          if (fM->GetExtrude() != 1.0) {
             glPushMatrix();
             glScalef(1.0f, 1.0f, fM->GetExtrude());
@@ -160,11 +158,11 @@ void TEveTextGL::DirectDraw(TGLRnrCtx & rnrCtx) const
             fFont->Render(fM->GetText());
          }
          break;
-      case TFTGLManager::kTexture:
+      case TGLFont::kTexture:
          fFont->Render(fM->GetText());
          break;
       default:
          throw(eH + "unsupported FTGL-type.");
    }
-   TFTGLManager::PostRender(fMode);
+   fFont->PostRender();
 }

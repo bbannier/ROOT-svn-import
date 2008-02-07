@@ -13,7 +13,7 @@
 #include "TEveText.h"
 #include "TEveGValuators.h"
 
-#include "TFTGLManager.h"
+#include "TGLFontManager.h"
 
 #include "TColor.h"
 #include "TGLabel.h"
@@ -44,7 +44,7 @@ TEveTextEditor::TEveTextEditor(const TGWindow *p, Int_t width, Int_t height,
    fExtrude(0),
 
    fLighting(0),
-   fAutoBehave(0)
+   fAutoLighting(0)
 {
    // Constructor.
 
@@ -58,8 +58,8 @@ TEveTextEditor::TEveTextEditor(const TGWindow *p, Int_t width, Int_t height,
 
    // Face Size combo
    fSize = MakeLabeledCombo("Size:");
-   Int_t* fsp = &TFTGLManager::GetFontSizeArray()->front();
-   Int_t  nums = TFTGLManager::GetFontSizeArray()->size();
+   Int_t* fsp = &TGLFontManager::GetFontSizeArray()->front();
+   Int_t  nums = TGLFontManager::GetFontSizeArray()->size();
    for(Int_t i= 0; i< nums; i++)
    {
       fSize->AddEntry(Form("%-2d", fsp[i]), fsp[i]);
@@ -68,7 +68,7 @@ TEveTextEditor::TEveTextEditor(const TGWindow *p, Int_t width, Int_t height,
 
    // Font File combo
    fFile = MakeLabeledCombo("File:");
-   TObjArray* farr = TFTGLManager::GetFontFileArray();
+   TObjArray* farr = TGLFontManager::GetFontFileArray();
    TIter next(farr);
    TObjString* os;
    Int_t cnt = 0;
@@ -81,12 +81,12 @@ TEveTextEditor::TEveTextEditor(const TGWindow *p, Int_t width, Int_t height,
 
    // Mode combo
    fMode = MakeLabeledCombo("Mode:");
-   fMode->AddEntry("Bitmap",  TFTGLManager::kBitmap);
-   fMode->AddEntry("Pixmap",  TFTGLManager::kPixmap);
-   fMode->AddEntry("Outline", TFTGLManager::kOutline);
-   fMode->AddEntry("Polygon", TFTGLManager::kPolygon);
-   fMode->AddEntry("Extrude", TFTGLManager::kExtrude);
-   fMode->AddEntry("Texture", TFTGLManager::kTexture);
+   fMode->AddEntry("Bitmap",  TGLFont::kBitmap);
+   fMode->AddEntry("Pixmap",  TGLFont::kPixmap);
+   fMode->AddEntry("Outline", TGLFont::kOutline);
+   fMode->AddEntry("Polygon", TGLFont::kPolygon);
+   fMode->AddEntry("Extrude", TGLFont::kExtrude);
+   fMode->AddEntry("Texture", TGLFont::kTexture);
    fMode->Connect("Selected(Int_t)", "TEveTextEditor", this, "DoFontMode()");
 
    fExtrude = new TEveGValuator(this, "Depth:", 90, 0);
@@ -105,13 +105,15 @@ TEveTextEditor::TEveTextEditor(const TGWindow *p, Int_t width, Int_t height,
    f1->AddFrame(new TGHorizontal3DLine(f1), new TGLayoutHints(kLHintsExpandX, 5, 5, 7, 7));
    AddFrame(f1, new TGLayoutHints(kLHintsTop, 0, 0, 8, 0));
 
-   fAutoBehave  = new TGCheckButton(this, "AutoBehave");
-   AddFrame(fAutoBehave, new TGLayoutHints(kLHintsLeft, 1,2,0,0));
-   fAutoBehave->Connect("Toggled(Bool_t)", "TEveTextEditor", this, "DoAutoBehave()");
-
-   fLighting  = new TGCheckButton(this, "GL Lighting");
-   AddFrame(fLighting, new TGLayoutHints(kLHintsLeft, 1,2,0,0));
-   fLighting->Connect("Toggled(Bool_t)", "TEveTextEditor", this, "DoLighting()");
+   
+   TGCompositeFrame *alf = new TGCompositeFrame(this, 145, 10, kHorizontalFrame );
+   fAutoLighting  = new TGCheckButton(alf, "AutoLighting");
+   alf->AddFrame(fAutoLighting, new TGLayoutHints(kLHintsLeft, 1,2,0,0));
+   fAutoLighting->Connect("Toggled(Bool_t)", "TEveTextEditor", this, "DoAutoLighting()");
+   fLighting  = new TGCheckButton(alf, "Lighting");
+   alf->AddFrame(fLighting, new TGLayoutHints(kLHintsLeft, 1,2,0,0));
+   fLighting->Connect("Toggled(Bool_t)", "TEveTextEditor", this, "DoLighting()"); 
+   AddFrame(alf, new TGLayoutHints(kLHintsTop, 0, 0, 0, 0));
 }
 
 //______________________________________________________________________________
@@ -158,15 +160,15 @@ void TEveTextEditor::SetModel(TObject* obj)
    if (strcmp(fM->GetText(), fText->GetText()))
       fText->SetText(fM->GetText());
 
-   fSize->Select(fM->GetSize(), kFALSE);
-   fFile->Select(fM->GetFile(), kFALSE);
+   fSize->Select(fM->GetFontSize(), kFALSE);
+   fFile->Select(fM->GetFontFile(), kFALSE);
 
    // mode
-   fMode->Select(fM->GetMode(), kFALSE);
+   fMode->Select(fM->GetFontMode(), kFALSE);
 
    // lightning
-   fAutoBehave->SetState(fM->GetAutoBehave() ? kButtonDown : kButtonUp);
-   if (fM->GetAutoBehave()) {
+   fAutoLighting->SetState(fM->GetAutoLighting() ? kButtonDown : kButtonUp);
+   if (fM->GetAutoLighting()) {
       fLighting->SetDisabledAndSelected(fM->GetLighting() ? kButtonDown : kButtonUp);
    } else {
       fLighting->SetEnabled();
@@ -174,7 +176,7 @@ void TEveTextEditor::SetModel(TObject* obj)
    }
 
    // extrude
-   if (fM->GetMode() == TFTGLManager::kExtrude)
+   if (fM->GetFontMode() == TGLFont::kExtrude)
    {
       ShowFrame(fExtrude);
       fExtrude->SetValue(fM->GetExtrude());
@@ -230,11 +232,11 @@ void TEveTextEditor::DoExtrude()
 }
 
 //______________________________________________________________________________
-void TEveTextEditor::DoAutoBehave()
+void TEveTextEditor::DoAutoLighting()
 {
    // Slot for enabling/disabling defaults.
 
-   fM->SetAutoBehave(fAutoBehave->IsOn());
+   fM->SetAutoLighting(fAutoLighting->IsOn());
    Update();
 }
 

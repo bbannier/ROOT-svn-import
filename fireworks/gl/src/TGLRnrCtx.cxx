@@ -18,7 +18,7 @@
 #include "TGLSelectBuffer.h"
 #include "TGLIncludes.h"
 #include "TGLUtil.h"
-#include "TFTGLManager.h"
+#include "TGLFontManager.h"
 #include "TGLContext.h"
 
 #include <TError.h>
@@ -189,22 +189,6 @@ Int_t TGLRnrCtx::GetPickRadius()
 /**************************************************************************/
 
 //______________________________________________________________________
-FTFont* TGLRnrCtx::GetFont(Int_t size, Int_t file, Int_t mode)
-{
-   // Get font in the GL rendering context.
-
-   return fGLCtxIdentity->GetFontManager()->GetFont(size, file, (TFTGLManager::EMode)mode);
-}
-
-//______________________________________________________________________
-Bool_t TGLRnrCtx::ReleaseFont(Int_t size, Int_t file, Int_t mode)
-{
-   // Release font in the GL rendering context.
-
-   return fGLCtxIdentity->GetFontManager()->ReleaseFont(size, file, (TFTGLManager::EMode)mode);
-}
-
-//______________________________________________________________________
 Bool_t TGLRnrCtx::IsDrawPassFilled() const
 {
    // Returns true if current render-pass uses filled polygon style.
@@ -230,6 +214,23 @@ void TGLRnrCtx::CloseDLCapture()
    fDLCaptureOpen = kFALSE;
 }
 
+/**************************************************************************/
+
+//______________________________________________________________________
+const TGLFont* TGLRnrCtx::GetFont(Int_t size, Int_t file, Int_t mode)
+{
+   // Get font in the GL rendering context.
+
+   return fGLCtxIdentity->GetFontManager()->GetFont(size, file, (TGLFont::EMode)mode);
+}
+
+//______________________________________________________________________
+Bool_t TGLRnrCtx::ReleaseFont(TGLFont* font)
+{
+   // Release font in the GL rendering context.
+
+   return fGLCtxIdentity->GetFontManager()->ReleaseFont(font);
+}
 
 /**************************************************************************/
 // Static helpers

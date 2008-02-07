@@ -15,8 +15,8 @@
 
 #include "TGLRnrCtx.h"
 #include "TGLIncludes.h"
-#include "TFTGLManager.h"
-#include "FTFont.h"
+#include "TGLFontManager.h"
+
 #include "TMath.h"
 
 //______________________________________________________________________________
@@ -100,7 +100,7 @@ void TEveProjectionAxesGL::RenderText(const char* txt, Float_t x, Float_t y) con
 {
    // Render FTFont at given location.
 
-   if (fMode < TFTGLManager::kTexture) {
+   if (fFont->GetMode() < TGLFont::kTexture) {
       glRasterPos3f(0, 0, 0);
       glBitmap(0, 0, 0, 0, x, y, 0);
       fFont->Render(txt);
@@ -119,7 +119,7 @@ void TEveProjectionAxesGL::DrawTickMarks(Float_t y) const
 {
    // Draw tick-marks on the current axis.
 
-   if(fMode == TFTGLManager::kTexture) glDisable(GL_TEXTURE_2D);
+   if(fFont->GetMode() == TGLFont::kTexture) glDisable(GL_TEXTURE_2D);
 
    glBegin(GL_LINES);
    for (std::list<TM_t>::iterator it = fTMList.begin(); it!= fTMList.end(); ++it)
@@ -129,7 +129,7 @@ void TEveProjectionAxesGL::DrawTickMarks(Float_t y) const
    }
    glEnd();
 
-   if(fMode == TFTGLManager::kTexture) glEnable(GL_TEXTURE_2D);
+   if(fFont->GetMode() == TGLFont::kTexture) glEnable(GL_TEXTURE_2D);
 }
 
 //______________________________________________________________________________
@@ -297,8 +297,9 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
    }
 
 
-   SetModelFont(fAxesModel, rnrCtx);
-   TFTGLManager::PreRender(fMode);
+   SetFont(fAxesModel, rnrCtx);
+   fFont->PreRender();
+   TGLCapabilitySwitch lights(GL_LIGHTING, fAxesModel->GetAutoLighting() ? (fFont->GetMode() > TGLFont::kOutline) : (fAxesModel->GetLighting()));
 
    // title
    glPushMatrix();
@@ -322,7 +323,7 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
    DrawVInfo();
    glPopMatrix();
 
-   TFTGLManager::PostRender(fMode);
+   fFont->PostRender();
 
    fProjection = 0;
 }

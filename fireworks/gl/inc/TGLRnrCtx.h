@@ -22,7 +22,7 @@ class TGLCamera;
 class TGLSceneBase;
 class TGLSceneInfo;
 
-class FTFont;
+class TGLFont;
 class TGLContextIdentity;
 
 class TGLClip;
@@ -136,9 +136,6 @@ public:
    Short_t SceneStyle()  const         { return fSceneStyle; }
    void    SetSceneStyle(Short_t sty)  { fSceneStyle = sty;  }
 
-   FTFont*  GetFont(Int_t size, Int_t file, Int_t mode);
-   Bool_t   ReleaseFont(Int_t size, Int_t file, Int_t mode);
-
    TGLClip* ViewerClip()         const { return fViewerClip; }
    void     SetViewerClip(TGLClip *p)  { fViewerClip = p;    }
    TGLClip* SceneClip()          const { return fSceneClip;  }
@@ -174,6 +171,9 @@ public:
    Bool_t IsDLCaptureOpen() const  { return fDLCaptureOpen; }
    void   OpenDLCapture();
    void   CloseDLCapture();
+
+   const TGLFont* GetFont(Int_t size, Int_t file, Int_t mode);
+   Bool_t   ReleaseFont(TGLFont* font);
 
    TGLContextIdentity* GetGLCtxIdentity()   const { return fGLCtxIdentity; }
    void SetGLCtxIdentity(TGLContextIdentity* cid) { fGLCtxIdentity = cid; }
