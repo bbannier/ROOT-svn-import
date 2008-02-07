@@ -624,7 +624,6 @@ struct G__ifunc_table_internal* G__ifunc_page_old_dict(char *funcname, int hash,
 {
   // Look for a function with this name and special index in the given ifunc
   // (and its bases)
-  G__ifunc_table_internal* ifunc_res=0;
   int i;
   while(ifunc) {
     for(i=0;i<ifunc->allifunc;i++) {
@@ -632,8 +631,6 @@ struct G__ifunc_table_internal* G__ifunc_page_old_dict(char *funcname, int hash,
           ifunc->page_base==-1 &&
           strcmp(ifunc->funcname[allifunc], funcname) == 0)
          || (ifunc->funcname[allifunc][0]=='~' && funcname[0]=='~') ) {
-
-        ifunc_res=ifunc;
         return(ifunc);
       }
     }
@@ -650,7 +647,6 @@ struct G__ifunc_table_internal* G__ifunc_page_old_dict(char *funcname, int hash,
  **************************************************************************/
 struct G__ifunc_table_internal* G__ifunc_page(char *funcname, int hash, int page_base, G__ifunc_table_internal *ifunc, int allifunc)
 {
-  G__ifunc_table_internal* ifunc_res = 0;
   int i;
   while(ifunc) {
     for(i=0;i<ifunc->allifunc;i++) {
@@ -658,8 +654,6 @@ struct G__ifunc_table_internal* G__ifunc_page(char *funcname, int hash, int page
           ifunc->page_base==page_base &&
           strcmp(ifunc->funcname[allifunc], funcname) == 0)
          || (ifunc->funcname[allifunc][0]=='~' && funcname[0]=='~') ) {
-
-        ifunc_res=ifunc;
         return(ifunc);
       }
     }
