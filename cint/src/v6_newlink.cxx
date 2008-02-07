@@ -552,8 +552,8 @@ int G__ifunc_exist_base(int ifn, G__ifunc_table_internal *ifunc)
           // We have an ambiguous function...
           // mark its page_base as negative
           if(n>1){
-            ifuncb->page_base *= ifuncb->page_base * (-1);
-            ifunc_res->page_base = ifunc_res->page_base * (-1);
+            ifuncb->page_base *= -1;
+            ifunc_res->page_base *= -1;
             return -1;
           }
 
@@ -591,8 +591,8 @@ int G__ifunc_exist_base(int ifn, G__ifunc_table_internal *ifunc)
               // We have an ambiguous function...
               // mark its page_base as negative
               if(n>1){
-                ifuncb->page_base = ifuncb->page_base * (-1);
-                ifunc_res->page_base = ifunc_res->page_base * (-1);
+                ifuncb->page_base *= -1;
+                ifunc_res->page_base *= -1;
                 return -1;
               }
 
@@ -9324,7 +9324,7 @@ void G__cpplink_memfunc(FILE *fp)
                 int page_base_amb = G__ifunc_exist_base(j, ifunc);
                 if(page_base==-1 || page_base_amb==-1)
                   if(page_base>-1)
-                    page_base = page_base * (-1);
+                    page_base *= -1;
 
                 // put "ispurevirtual" in the less significant bit and shift the rest to the left
                 virtflag = 2*page_base + ifunc->ispurevirtual[j];
