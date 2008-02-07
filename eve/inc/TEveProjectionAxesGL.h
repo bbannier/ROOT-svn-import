@@ -15,7 +15,6 @@
 #include "TEveTextGL.h"
 #include <list>
 
-class FTFont;
 class TEveProjectionAxes;
 class TEveProjection;
 

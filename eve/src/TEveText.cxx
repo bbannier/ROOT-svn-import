@@ -11,7 +11,7 @@
 
 #include "TEveText.h"
 
-#include "TFTGLManager.h"
+#include "TGLFontManager.h"
 #include "TObjArray.h"
 #include "TObjString.h"
 #include "TString.h"
@@ -39,28 +39,18 @@ TEveText::TEveText(const Text_t* txt) :
    fText(txt),
    fTextColor(0),
 
-   fSize(12),
-   fFile(4),
-   fMode(-1),
+   fFontSize(12),
+   fFontFile(4),
+   fFontMode(-1),
    fExtrude(1.0f),
 
-   fAutoBehave(kTRUE),
+   fAutoLighting(kTRUE),
    fLighting(kFALSE)
 {
    // Constructor.
 
    InitMainTrans();
-   SetFontMode(TFTGLManager::kPixmap);
-}
-
-/******************************************************************************/
-
-//______________________________________________________________________________
-const TGPicture* TEveText::GetListTreeIcon() 
-{ 
-   //return pointset icon.
-
-   return TEveElement::fgListTreeIcons[5]; 
+   SetFontMode(TGLFont::kExtrude);
 }
 
 //______________________________________________________________________________
@@ -69,21 +59,21 @@ void TEveText::SetFontSize(Int_t val, Bool_t validate)
    // Set valid font size.
 
    if (validate) {
-      Int_t* fsp = &TFTGLManager::GetFontSizeArray()->front();
-      Int_t  ns  = TFTGLManager::GetFontSizeArray()->size();
+      Int_t* fsp = &TGLFontManager::GetFontSizeArray()->front();
+      Int_t  ns  = TGLFontManager::GetFontSizeArray()->size();
       Int_t  idx = TMath::BinarySearch(ns, fsp, val);
-      fSize = fsp[idx];
+      fFontSize = fsp[idx];
    } else {
-      fSize = val;
+      fFontSize = val;
    }
 }
 
 //______________________________________________________________________________
 void TEveText::SetFontFile(const char* name)
 {
-   // Set font file regarding to staticTFTGLManager fgFontFileArray.
+   // Set font file regarding to static TGLFontManager fgFontFileArray.
 
-   TObjArray* fa =TFTGLManager::GetFontFileArray();
+   TObjArray* fa =TGLFontManager::GetFontFileArray();
    TIter  next_base(fa);
    TObjString* os;
    Int_t idx = 0;
@@ -99,16 +89,15 @@ void TEveText::SetFontFile(const char* name)
 //______________________________________________________________________________
 void TEveText::SetFontMode( Int_t mode)
 {
-   // Set current font attributes.
+   // Set FTFont class ID.
 
-   fMode = mode;
+   fFontMode = mode;
 
-   Bool_t edit = (fMode > TFTGLManager::kPixmap);
+   Bool_t edit = (fFontMode > TGLFont::kPixmap);
    TEveTrans& t = RefMainTrans();
    t.SetEditRotation(edit);
    t.SetEditScale(edit);
 }
-
 
 //______________________________________________________________________________
 void TEveText::Paint(Option_t* )
@@ -140,4 +129,12 @@ void TEveText::ComputeBBox()
    // used as bbox.
 
    BBoxZero();
+}
+
+//______________________________________________________________________________
+const TGPicture* TEveText::GetListTreeIcon() 
+{ 
+   // Return TEveText icon.
+
+   return TEveElement::fgListTreeIcons[5]; 
 }
