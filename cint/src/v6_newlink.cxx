@@ -2220,7 +2220,6 @@ int G__call_cppfunc(G__value *result7,G__param *libp,G__ifunc_table_internal *if
     // We store the this-pointer
     long save_offset = G__store_struct_offset;
 
-#ifdef G__EXCEPTIONWRAPPER
     /* 15/03/2007 */
     // 1 Parameter && Registered Method in ifunc && Neither static method nor function
     // (G__tagnum > -1) is not needed because G__tagnum can be -1 when we have free
@@ -2234,10 +2233,15 @@ int G__call_cppfunc(G__value *result7,G__param *libp,G__ifunc_table_internal *if
       G__stub_method_calling(result7, libp, ifunc, ifn);
     }
     else if (cppfunc) {
+#ifdef G__EXCEPTIONWRAPPER
       /* 15/03/2007 */
       // this-pointer adjustment
       G__this_adjustment(ifunc, ifn);
       G__ExceptionWrapper((G__InterfaceMethod)cppfunc,result7,(char*)ifunc,libp,ifn);
+#else
+    // Stub calling
+    (*cppfunc)(result7,(char*)ifunc,libp,ifn);
+#endif
     }
     else if (!cppfunc && !G__get_funcptr(ifunc, ifn)) {
       G__fprinterr(G__serr,"Error in G__call_cppfunc: There is no stub nor mangled name for function: %s \n", ifunc->funcname[ifn]);
@@ -2252,10 +2256,6 @@ int G__call_cppfunc(G__value *result7,G__param *libp,G__ifunc_table_internal *if
       G__fprinterr(G__serr,"Error in G__call_cppfunc: Function %s could not be called. \n", ifunc->funcname[ifn]);
       return -1;
     }
-#else
-    // Stub calling
-    (*cppfunc)(result7,(char*)ifunc,libp,ifn);
-#endif
 
     // This-pointer restoring
     G__store_struct_offset = save_offset;
@@ -2437,7 +2437,7 @@ void G__gen_cpplink()
   fp = fopen(G__CPPLINK_C,"a");
   if(!fp) G__fileerror(G__CPPLINK_C);
 
-  if(G__dicttype!=2)
+  if(G__dicttype!=kFunctionSymbols)
      fprintf(fp,"  G__cpp_reset_tagtable%s();\n",G__DLLID);
   fprintf(fp,"}\n");
 
@@ -2520,29 +2520,29 @@ void G__gen_cpplink()
   // Member Function Interface Method Ej: G__G__Hist_95_0_2()
   // Stub Functions
   if (!G__suppress_methods) {
-    if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3 || G__dicttype==4)
+    if(G__dicttype==kCompleteDictionary || G__dicttype==kFunctionSymbols || G__dicttype==kNoWrappersDictionary)
       G__cppif_memfunc(fp,hfp);
 
     // 09-10-07
     // The stubs are not printed and the internal status is not changed
-    if(G__dicttype==2 || G__dicttype==3 || G__dicttype==4)
+    if(G__dicttype==kFunctionSymbols || G__dicttype==kNoWrappersDictionary)
       G__cppif_change_globalcomp();
   }
 
-  if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3 || G__dicttype==4)
+  if(G__dicttype==kCompleteDictionary || G__dicttype==kFunctionSymbols || G__dicttype==kNoWrappersDictionary)
     G__cppif_func(fp,hfp);
 
   if (!G__suppress_methods) {
-    if(G__dicttype==0 || G__dicttype==3 || G__dicttype==4)
+    if(G__dicttype==kCompleteDictionary || G__dicttype==kNoWrappersDictionary)
       G__cppstub_memfunc(fp);
   }
 
-  if(G__dicttype==0 || G__dicttype==3 || G__dicttype==4)
+  if(G__dicttype==kCompleteDictionary || G__dicttype==kNoWrappersDictionary)
     G__cppstub_func(fp);
 
   fprintf(hfp,"#endif\n\n");
 
-  if(G__dicttype==0 || G__dicttype==3 || G__dicttype==4) {
+  if(G__dicttype==kCompleteDictionary || G__dicttype==kNoWrappersDictionary) {
     G__cppif_p2memfunc(fp);
 
 #ifdef G__VIRTUALBASE
@@ -2765,7 +2765,7 @@ void G__cpplink_header(FILE *fp)
     fprintf(fp,"#undef G__MULTITHREADLIBCINTCPP\n");
 
   // 10-07-07
-  if(G__dicttype==0 || G__dicttype==3 || G__dicttype==4) {
+  if(G__dicttype==kCompleteDictionary || G__dicttype==kNoWrappersDictionary) {
      fprintf(fp,"extern \"C\" {\n");
 
 #if defined(G__BORLAND) || defined(G__VISUAL)
@@ -3496,10 +3496,10 @@ void G__set_globalcomp(const char *mode,const char *linkfilename,const char *dll
 #endif
 
     // 10-07-07
-    // if G__dicttype==0 we want to generate the ShowMembers only
+    // if G__dicttype==kCompleteDictionary we want to generate the ShowMembers only
     // but there is some kind of problem with globals and we still
     // need to execute this function
-    if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3 || G__dicttype==4){
+    if(G__dicttype==kCompleteDictionary || G__dicttype==kFunctionSymbols || G__dicttype==kNoWrappersDictionary){
       fp = fopen(G__CPPLINK_C,"w");
       if(!fp) G__fileerror(G__CPPLINK_C);
       fprintf(fp,"/********************************************************\n");
@@ -3517,7 +3517,7 @@ void G__set_globalcomp(const char *mode,const char *linkfilename,const char *dll
       fprintf(fp,"#endif\n");
       fprintf(fp,"\n");
 
-      if(G__dicttype!=2)
+      if(G__dicttype!=kFunctionSymbols)
         fprintf(fp,"extern \"C\" void G__cpp_reset_tagtable%s();\n",G__DLLID);
 
       fprintf(fp,"\nextern \"C\" void G__set_cpp_environment%s() {\n",G__DLLID);
@@ -3541,7 +3541,7 @@ void G__set_globalcomp(const char *mode,const char *linkfilename,const char *dll
 #endif
 
     // 10-07-07
-    if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3 || G__dicttype==4){
+    if(G__dicttype==kCompleteDictionary || G__dicttype==kFunctionSymbols || G__dicttype==kNoWrappersDictionary){
       fp = fopen(G__CLINK_C,"w");
       if(!fp) G__fileerror(G__CLINK_C);
       fprintf(fp,"/********************************************************\n");
@@ -3549,7 +3549,7 @@ void G__set_globalcomp(const char *mode,const char *linkfilename,const char *dll
       fprintf(fp,"********************************************************/\n");
       fprintf(fp,"#include \"%s\" //newlink 3717 \n",G__CLINK_H);
 
-      if(G__dicttype!=2)
+      if(G__dicttype!=kFunctionSymbols)
         fprintf(fp,"void G__c_reset_tagtable%s();\n",G__DLLID);
 
       fprintf(fp,"void G__set_c_environment%s() {\n",G__DLLID);
@@ -3578,7 +3578,7 @@ void G__set_globalcomp(const char *mode,const char *linkfilename,const char *dll
 #endif
 
     // 10-07-07
-    if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3 || G__dicttype==4){
+    if(G__dicttype==kCompleteDictionary || G__dicttype==kFunctionSymbols || G__dicttype==kNoWrappersDictionary){
       fp = fopen(G__CPPLINK_C,"w");
       if(!fp) G__fileerror(G__CPPLINK_C);
       fprintf(fp,"/********************************************************\n");
@@ -3723,7 +3723,7 @@ void G__gen_cppheader(char *headerfilein)
         fclose(fp);
 
         // 10-07-07
-        if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3 || G__dicttype==4) {
+        if(G__dicttype==kCompleteDictionary || G__dicttype==kFunctionSymbols || G__dicttype==kNoWrappersDictionary) {
           fp = fopen(G__CPPLINK_C,"a");
           if(!fp) G__fileerror(G__CPPLINK_C);
           fprintf(fp,"  G__add_compiledheader(\"%s\");\n",headerfile);
@@ -3737,7 +3737,7 @@ void G__gen_cppheader(char *headerfilein)
         fclose(fp);
 
         // 10-07-07
-        if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3 || G__dicttype==4) {
+        if(G__dicttype==kCompleteDictionary || G__dicttype==kFunctionSymbols || G__dicttype==kNoWrappersDictionary) {
           fp = fopen(G__CLINK_C,"a");
           if(!fp) G__fileerror(G__CLINK_C);
           fprintf(fp,"  G__add_compiledheader(\"%s\");\n",headerfile);
@@ -4282,7 +4282,7 @@ void G__cppif_geninline(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,i
       /*0==ifunc->staticalloc[j] &&*/
       ifunc->hash[j] ){//&&
     //!ifunc->mangled_name[j]) { DMS
-    if(G__dicttype==2 || G__dicttype==4) {
+    if(G__dicttype==kFunctionSymbols) {
       int hash;
       int idx;
       if(i != -1) {
@@ -4620,7 +4620,7 @@ void G__cpp_methodcall(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,in
       /*0==ifunc->staticalloc[j] &&*/
       ifunc->hash[j] ){//&&
     //!ifunc->mangled_name[j]) { DMS
-    if(G__dicttype==2 || G__dicttype==4 || G__dicttype==3) {
+    if(G__dicttype==kFunctionSymbols || G__dicttype==kNoWrappersDictionary) {
       int hash;
       int idx;
       if(i != -1) {
@@ -5069,13 +5069,13 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
       // 03-07-07
       // Trigger the symbol registering to have them at hand
       // Do it here when we have the library and the class
-      if(G__dicttype == 2 || G__dicttype == 3 || G__dicttype==4)
+      if(G__dicttype==kFunctionSymbols || G__dicttype==kNoWrappersDictionary)
         G__register_class(G__libname, G__type2string('u',i,-1,0,0));
 
       /* member function interface */
       fprintf(fp,"\n/* %s */\n",G__fulltagname(i,0));
 
-      if(G__dicttype==2)
+      if(G__dicttype==kFunctionSymbols)
         G__write_preface(fp, ifunc, i);
 
       // Flag to see if we have written the dummy pointer
@@ -5096,7 +5096,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
             // Dont try to evaluate this condition in case we have the new scheme...
             // the automatic methods are created with size<0 by default so it
             // mmesses it up
-            if (G__dicttype==0 ||
+            if (G__dicttype==kCompleteDictionary ||
                 !(
                   strncmp(G__fulltagname(i,0),"string", strlen("string"))!=0 &&
                   strncmp(G__fulltagname(i,0),"vector", strlen("vector"))!=0 &&
@@ -5126,13 +5126,13 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                  strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
                  strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
                  strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0) &&
-               !strcmp(ifunc->funcname[j],G__struct.name[i]) && G__dicttype==2)
+               !strcmp(ifunc->funcname[j],G__struct.name[i]) && G__dicttype==kFunctionSymbols)
                G__cppif_dummyobj(fp, ifunc, i, j);
             
             // Constructor? ClassName == FunctionName
             if(strcmp(ifunc->funcname[j],G__struct.name[i])==0 &&
                (!(!ifunc->mangled_name[j] && ifunc->funcptr[j]==(void*)-1) || // No mangled name and No function Pointer
-                (!ifunc->mangled_name[j] && G__dicttype!=2 ) // No mangled name and no dicttype=2
+                (!ifunc->mangled_name[j] && G__dicttype!=kFunctionSymbols ) // No mangled name and no dicttype=2
                  )
               ) {
               /* constructor needs special handling */
@@ -5150,8 +5150,8 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                      strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
                      strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
                      strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0 )
-                   && !ifunc->ispurevirtual[j] && (G__dicttype==3 || G__dicttype==4)) 
-                  || G__dicttype==0 || G__dicttype==3 ) {
+                    && !ifunc->ispurevirtual[j] && G__dicttype==kNoWrappersDictionary) 
+                  || G__dicttype==kCompleteDictionary || G__dicttype==kNoWrappersDictionary ) {
                   if( !ifunc->mangled_name[j] || ifunc->funcptr[j]>0 || !G__nostubs) /* if there no is a symbol or the no stubs flag is not activated */
                     G__cppif_genconstructor(fp,hfp,i,j,ifunc);
                 }
@@ -5168,7 +5168,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
             else if('~'==ifunc->funcname[j][0]) { // Destructor?
               /* destructor is created in gendefault later */
               if(G__PUBLIC==ifunc->access[j]){
-                if((G__dicttype==3 || G__dicttype==4) && !ifunc->ispurevirtual[j]){
+                if((G__dicttype==kNoWrappersDictionary) && !ifunc->ispurevirtual[j]){
                   if(
                     !(strcmp(ifunc->funcname[j],"operator const char*")==0 ||
                       strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
@@ -5186,9 +5186,9 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                     ++isdestructor; // don't try to create it later on
                   }
                 }
-                else if((G__dicttype==3 || G__dicttype==4) && ifunc->mangled_name[j] /*if there is not a symbol*/)
+                else if((G__dicttype==kNoWrappersDictionary) && ifunc->mangled_name[j] /*if there is not a symbol*/)
                   ++isdestructor;
-                else if(G__dicttype!=3 && G__dicttype!=4){
+                else if(G__dicttype!=kNoWrappersDictionary){
                   isdestructor = -1;
                 }
               }
@@ -5216,7 +5216,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
 
               // If there is no symbol and this is the second dictionary
               // generate the inline code
-              if(!ifunc->ispurevirtual[j] && G__dicttype==2){
+              if(!ifunc->ispurevirtual[j] && G__dicttype==kFunctionSymbols){
                 if ( !(strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
                        strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
                        strncmp(G__fulltagname(i,0),"list", strlen("list"))==0 ||
@@ -5249,16 +5249,13 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
 
               // If they werent generated automatically...
               if(!(ifunc->funcptr[j]==(void*)-1) && (!ifunc->mangled_name[j] || !G__nostubs)){
-                if(!ifunc->ispurevirtual[j] && G__dicttype==3){
+                if(!ifunc->ispurevirtual[j] && G__dicttype==kNoWrappersDictionary){
                   // Now we have no symbol but we are in the third or fourth
                   // dictionary... which means that the second one already tried to create it...
                   // If that's the case we have no other choice but to generate the stub
                   G__cppif_genfunc(fp,hfp,i,j,ifunc);
                 }
-                else if(!ifunc->ispurevirtual[j] && G__dicttype==4){
-                  G__cppif_genfunc(fp,hfp,i,j,ifunc);
-                }
-                else if(G__dicttype==0){
+                else if(G__dicttype==kCompleteDictionary){
                   // This is the old case...
                   // just do what we did before
                   G__cppif_genfunc(fp,hfp,i,j,ifunc);
@@ -5270,7 +5267,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
           else { /* if PROTECTED or PRIVATE */
             if(strcmp(ifunc->funcname[j],G__struct.name[i])==0) {
               ++isconstructor;
-              if (G__dicttype==2)
+              if (G__dicttype==kFunctionSymbols)
                 G__cppif_geninline(fp, ifunc, i, j);
               if(
                 ifunc->para_nu[j]>0 &&
@@ -5296,7 +5293,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                     && i==ifunc->param[j][0]->p_tagtable
               ) {
               ++isassignmentoperator;
-              if (G__dicttype==2)
+              if (G__dicttype==kFunctionSymbols)
                 G__cppif_geninline(fp, ifunc, i, j);
             }
 #endif
@@ -5313,7 +5310,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
           // 28-01-08
           // Why are the defaults method introduced after the class registering?
           // If we do that, we won't be able to avoid their stubs...
-          if( (G__dicttype == 2 || G__dicttype==3 || G__dicttype==4) &&
+          if( (G__dicttype==kFunctionSymbols || G__dicttype==kNoWrappersDictionary) &&
               strncmp(G__fulltagname(i,0),"string", strlen("string"))!=0 &&
               strncmp(G__fulltagname(i,0),"vector", strlen("vector"))!=0 &&
               strncmp(G__fulltagname(i,0),"list", strlen("list"))!=0 &&
@@ -5336,8 +5333,8 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
           // With the new scheme of mangled names in the dicitionary we need wrappers
           // for the default functions (constructor and assignment operator)...
           // except for the destructor but deal with that in G__cppif_gendefault
-          if(  G__dicttype==0 || (G__dicttype==3) ||
-               (( G__dicttype==2 || G__dicttype==3 || G__dicttype==4)
+          if(  G__dicttype==kCompleteDictionary || G__dicttype==kNoWrappersDictionary ||
+               (( G__dicttype==kFunctionSymbols || G__dicttype==kNoWrappersDictionary)
                 &&
                 !(
                   strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
@@ -5362,7 +5359,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                  strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
                  strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0)
 
-                && (G__dicttype==3 || G__dicttype==4)) ){ // rem to create inlines for default functions
+                && (G__dicttype==kNoWrappersDictionary)) ){ // rem to create inlines for default functions
             if( !ifunc->mangled_name[j] || ifunc->funcptr[j]>0 || !G__nostubs )
               G__cppif_gendefault(fp,hfp,i,j,ifunc
                                   ,isconstructor
@@ -5376,7 +5373,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
         ifunc=ifunc->next;
       } /* while(ifunc) */
 
-      if(G__dicttype==2)
+      if(G__dicttype==kFunctionSymbols)
         G__write_postface(fp, ifunc, i);
     } /* if(globalcomp) */
   } /* for(i) */
@@ -5396,7 +5393,7 @@ void G__cppif_func(FILE *fp, FILE *hfp)
   // 30-07-07
   // Trigger the symbol registering to have them at hand
   // Do it here when we have the library and the class
-  if(G__dicttype == 2 || G__dicttype == 3 || G__dicttype==4)
+  if(G__dicttype==kFunctionSymbols || G__dicttype==kNoWrappersDictionary)
     G__register_class(G__libname, 0);
 
   fprintf(fp,"\n/* Setting up global function */\n");
@@ -5413,7 +5410,7 @@ void G__cppif_func(FILE *fp, FILE *hfp)
         // Generate the stubs only for operators
         // (when talking about global functions)
         // 11-07-07
-        if(  G__dicttype==0 || ((G__dicttype==3 || G__dicttype==4))) {
+        if(  G__dicttype==kCompleteDictionary || G__dicttype==kNoWrappersDictionary) {
           // The stubs where generated for functions needing temporal objects too... use them
           if  ( !ifunc->mangled_name[j] ||
                 // 26-10-07
@@ -6693,7 +6690,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
   }
 
   if (!isconstructor && !G__struct.isabstract[tagnum] && !isnonpublicnew) {
-    if(G__dicttype==3 || G__dicttype==4){
+    if(G__dicttype==kNoWrappersDictionary){
       // index in the ifunc
       long pifn;
       long poffset;
@@ -6710,7 +6707,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
         page = cons_oper->page;
     }
 
-    if(G__dicttype==2 || G__dicttype==4  &&
+    if(G__dicttype==kFunctionSymbols &&
        !(
          strncmp(G__fulltagname(tagnum,0),"string", strlen("string"))==0 ||
          strncmp(G__fulltagname(tagnum,0),"vector", strlen("vector"))==0 ||
@@ -6851,7 +6848,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
   }
 
   if (!iscopyconstructor && !G__struct.isabstract[tagnum] && !isnonpublicnew) {
-    if(G__dicttype==3 || G__dicttype==4){
+    if(G__dicttype==kNoWrappersDictionary){
       // index in the ifunc
       long pifn;
       long poffset;
@@ -6870,7 +6867,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
         page = cons_oper->page;
     }
 
-    if(G__dicttype==2 || G__dicttype==4 &&
+    if(G__dicttype==kFunctionSymbols &&
        !(
          strncmp(G__fulltagname(tagnum,0),"string", strlen("string"))==0 ||
          strncmp(G__fulltagname(tagnum,0),"vector", strlen("vector"))==0 ||
@@ -6962,12 +6959,12 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
   // 06-7-07
   // Dont generate the wrappers for the general case of the destructors
   // do it only for all those stranges classes we dont support yet
-  if (0 >= isdestructor && G__dicttype==0) {
+  if (0 >= isdestructor && G__dicttype==kCompleteDictionary) {
     isdestructor = G__isprivatedestructor(tagnum);
   }
 
   if ((0 >= isdestructor) && (G__struct.type[tagnum] != 'n')) {
-    if(G__dicttype==3 || G__dicttype==4){
+    if(G__dicttype==kNoWrappersDictionary){
       // index in the ifunc
       long pifn;
       long poffset;
@@ -6990,7 +6987,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
     if(!G__struct.memfunc[tagnum]->mangled_name[0])
       isdestdefined = 0;
 
-    if(G__dicttype==2 || G__dicttype==4 &&
+    if(G__dicttype==kFunctionSymbols &&
        !(
          strncmp(G__fulltagname(tagnum,0),"string", strlen("string"))==0 ||
          strncmp(G__fulltagname(tagnum,0),"vector", strlen("vector"))==0 ||
@@ -7107,7 +7104,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
   }
 
   if (!isassignmentoperator) {
-    if(G__dicttype==3 || G__dicttype==4){
+    if(G__dicttype==kNoWrappersDictionary){
       // index in the ifunc
       long pifn;
       long poffset;
@@ -7126,7 +7123,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
         page = op_oper->page;
     }
 
-    if(G__dicttype==2 || G__dicttype==4 &&
+    if(G__dicttype==kFunctionSymbols &&
        !(
          strncmp(G__fulltagname(tagnum,0),"string", strlen("string"))==0 ||
          strncmp(G__fulltagname(tagnum,0),"vector", strlen("vector"))==0 ||
@@ -7318,7 +7315,7 @@ void G__cppif_genfunc(FILE *fp, FILE * /* hfp */, int tagnum, int ifn, G__ifunc_
 
   // If the virtual method 'ifn' (in ifunc) exists in any Base Clase then we have
   // an overridden virtual method,so the stub function for it is not generated
-  if ((G__dicttype!=3 && G__dicttype!=4) && (ifunc->isvirtual[ifn]) && (G__method_inbase(ifn, ifunc)))
+  if (G__dicttype!=kNoWrappersDictionary && (ifunc->isvirtual[ifn]) && (G__method_inbase(ifn, ifunc)))
     return;
 
 #ifndef G__SMALLOBJECT
@@ -9028,7 +9025,7 @@ void G__cpplink_memfunc(FILE *fp)
             // Dont try to evaluate this condition in case we have the new scheme...
             // the automatic methods are created with size<0 by default so it
             // mmesses it up
-            if (G__dicttype==0 ||
+            if (G__dicttype==kCompleteDictionary ||
                 !(
                   strncmp(G__fulltagname(i,0),"string", strlen("string"))!=0 &&
                   strncmp(G__fulltagname(i,0),"vector", strlen("vector"))!=0 &&
@@ -9048,7 +9045,7 @@ void G__cpplink_memfunc(FILE *fp)
 #endif
 
             // Check for constructor, destructor, or operator=.
-            if ( (G__dicttype==0 ||
+            if ( (G__dicttype==kCompleteDictionary ||
                   !(
                     strncmp(G__fulltagname(i,0),"string", strlen("string"))!=0 &&
                     strncmp(G__fulltagname(i,0),"vector", strlen("vector"))!=0 &&
@@ -9074,7 +9071,7 @@ void G__cpplink_memfunc(FILE *fp)
               if ((ifunc->para_nu[j] >= 1) && (ifunc->param[j][0]->type == 'u') && (i == ifunc->param[j][0]->p_tagtable) && (ifunc->param[j][0]->reftype == G__PARAREFERENCE) && ((ifunc->para_nu[j] == 1) || ifunc->param[j][1]->pdefault)) {
                 ++iscopyconstructor;
               }
-            } else if ((G__dicttype==0 ||
+            } else if ((G__dicttype==kCompleteDictionary ||
                         !(
                           strncmp(G__fulltagname(i,0),"string", strlen("string"))!=0 &&
                           strncmp(G__fulltagname(i,0),"vector", strlen("vector"))!=0 &&
@@ -9105,7 +9102,7 @@ void G__cpplink_memfunc(FILE *fp)
             }
 
 #ifdef G__DEFAULTASSIGNOPR
-            else if ( (G__dicttype==0 ||
+            else if ( (G__dicttype==kCompleteDictionary ||
                        !(
                          strncmp(G__fulltagname(i,0),"string", strlen("string"))!=0 &&
                          strncmp(G__fulltagname(i,0),"vector", strlen("vector"))!=0 &&
@@ -9132,7 +9129,7 @@ void G__cpplink_memfunc(FILE *fp)
             /* function name and return type */
 
             // 11-07-07 create a switch for the normal dictionaries
-            if(G__dicttype==0)
+            if(G__dicttype==kCompleteDictionary)
               fprintf(fp,"   G__memfunc_setup(");
             else
               fprintf(fp,"   G__memfunc_setup2(");
@@ -9140,7 +9137,7 @@ void G__cpplink_memfunc(FILE *fp)
             fprintf(fp,"\"%s\",%d,",ifunc->funcname[j],ifunc->hash[j]);
 
             // 04-07-07 print the mangled name after the funcname and hash
-            if(G__dicttype!=0) {
+            if(G__dicttype!=kCompleteDictionary) {
               if(ifunc->mangled_name[j])
                 fprintf(fp,"\"%s\",", ifunc->mangled_name[j]);
               else
@@ -9159,7 +9156,7 @@ void G__cpplink_memfunc(FILE *fp)
               // If the method is virtual. Is it overridden? -> Does it exist in the base classes? 
               //  Virtual method found in the base classes(we have an overridden virtual method)so it
               //  has not stub function in its dictionary
-              if ((G__dicttype!=3 && G__dicttype!=4) && (ifunc->isvirtual[j]) && (G__method_inbase(j, ifunc)))
+              if (G__dicttype!=kNoWrappersDictionary && (ifunc->isvirtual[j]) && (G__method_inbase(j, ifunc)))
                 // Null Stub Pointer
                 fprintf(fp, "(G__InterfaceMethod) NULL," );
               else {
@@ -9181,7 +9178,7 @@ void G__cpplink_memfunc(FILE *fp)
 
 		// If they werent generated automatically...
 		if(/*!(ifunc->funcptr[j]==(void*)-1) && */ (!ifunc->mangled_name[j] || !G__nostubs)){
-		  if(!ifunc->ispurevirtual[j] && (G__dicttype==3 || G__dicttype==4)){
+		  if(!ifunc->ispurevirtual[j] && G__dicttype==kNoWrappersDictionary){
 		    if(strcmp(ifunc->funcname[j],G__struct.name[i])==0) {
 		      // constructor need special handling
 		      if(0==G__struct.isabstract[i]&&0==isnonpublicnew) {
@@ -9197,7 +9194,7 @@ void G__cpplink_memfunc(FILE *fp)
 		      fprintf(fp, "%s, ", G__map_cpp_funcname(i, ifunc->funcname[j], j, ifunc->page));
 		    }
 		  }
-		  else if(G__dicttype==0){
+		  else if(G__dicttype==kCompleteDictionary){
 		    // This is the old case...
 		    // just do what we did before
 		    fprintf(fp, "%s, ", G__map_cpp_funcname(i, ifunc->funcname[j], j, ifunc->page));
@@ -9343,7 +9340,7 @@ void G__cpplink_memfunc(FILE *fp)
               fprintf(fp, ", (void*) NULL");
 
             int virtflag = 0;
-            if(G__dicttype==0) {
+            if(G__dicttype==kCompleteDictionary) {
               virtflag = ifunc->isvirtual[j] + ifunc->ispurevirtual[j]*2;
             }
             else {
@@ -9439,7 +9436,7 @@ void G__cpplink_memfunc(FILE *fp)
                    strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
                    strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
                    strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0 )
-                && (G__dicttype==3 || G__dicttype==4)) || G__dicttype==0){
+                && G__dicttype==kNoWrappersDictionary ) || G__dicttype==kCompleteDictionary){
             /****************************************************************
              * setup default constructor
              ****************************************************************/
@@ -9450,7 +9447,7 @@ void G__cpplink_memfunc(FILE *fp)
               G__hash(funcname, hash, k);
               fprintf(fp, "   // automatic default constructor\n");
 
-              if(G__dicttype==0)
+              if(G__dicttype==kCompleteDictionary)
                 fprintf(fp, "   G__memfunc_setup(");
               else
                 fprintf(fp, "   G__memfunc_setup2(");
@@ -9458,7 +9455,7 @@ void G__cpplink_memfunc(FILE *fp)
               fprintf(fp, "\"%s\", %d, ", funcname, hash);
 
               // 04-07-07 print the mangled name after the funcname and hash
-              if(G__dicttype!=0) {
+              if(G__dicttype!=kCompleteDictionary) {
                 if(ifunc->mangled_name[j])
                   fprintf(fp,"\"%s\",", ifunc->mangled_name[j]);
                 else
@@ -9499,7 +9496,7 @@ void G__cpplink_memfunc(FILE *fp)
               G__hash(funcname, hash, k);
               fprintf(fp, "   // automatic copy constructor\n");
 
-              if(G__dicttype==0)
+              if(G__dicttype==kCompleteDictionary)
                 fprintf(fp, "   G__memfunc_setup(");
               else
                 fprintf(fp, "   G__memfunc_setup2(");
@@ -9507,7 +9504,7 @@ void G__cpplink_memfunc(FILE *fp)
               fprintf(fp, "\"%s\", %d, ", funcname, hash);
 
               // 04-07-07 print the mangled name after the funcname and hash
-              if(G__dicttype!=0) {
+              if(G__dicttype!=kCompleteDictionary) {
                 if(ifunc->mangled_name[j])
                   fprintf(fp,"\"%s\",", ifunc->mangled_name[j]);
                 else
@@ -9548,14 +9545,14 @@ void G__cpplink_memfunc(FILE *fp)
               G__hash(funcname, hash, k);
               fprintf(fp, "   // automatic destructor\n");
 
-              if(G__dicttype==0)
+              if(G__dicttype==kCompleteDictionary)
                 fprintf(fp, "   G__memfunc_setup(");
               else
                 fprintf(fp, "   G__memfunc_setup2(");
 
               fprintf(fp, "\"%s\", %d, ", funcname, hash);
               //04-07-07 print the mangled name after the funcname and hash
-              if(G__dicttype!=0){
+              if(G__dicttype!=kCompleteDictionary){
                 if( isdestructor && ifunc_destructor->mangled_name[j])
                   fprintf(fp,"\"%s\",", ifunc_destructor->mangled_name[j]);
                 else
@@ -9600,7 +9597,7 @@ void G__cpplink_memfunc(FILE *fp)
               G__hash(funcname, hash, k);
               fprintf(fp, "   // automatic assignment operator\n");
 
-              if(G__dicttype==0)
+              if(G__dicttype==kCompleteDictionary)
                 fprintf(fp, "   G__memfunc_setup(");
               else
                 fprintf(fp, "   G__memfunc_setup2(");
@@ -9608,7 +9605,7 @@ void G__cpplink_memfunc(FILE *fp)
               fprintf(fp, "\"%s\", %d, ", funcname, hash);
 
               // 04-07-07 print the mangled name after the funcname and hash
-              if(G__dicttype!=0) {
+              if(G__dicttype!=kCompleteDictionary) {
                 if(ifunc->mangled_name[j])
                   fprintf(fp,"\"%s\",", ifunc->mangled_name[j]);
                 else
@@ -9993,14 +9990,14 @@ void G__cpplink_func(FILE *fp)
         G__declaretruep2f(fp,ifunc,j);
 #endif
 
-        if(G__dicttype==0)
+        if(G__dicttype==kCompleteDictionary)
           fprintf(fp, "   G__memfunc_setup(");
         else
           fprintf(fp,"   G__memfunc_setup2(");
 
         fprintf(fp,"\"%s\", %d, ",ifunc->funcname[j],ifunc->hash[j]);
         // 04-07-07 print the mangled name after the funcname and hash
-        if(G__dicttype!=0){
+        if(G__dicttype!=kCompleteDictionary){
           if(ifunc->mangled_name[j])
             fprintf(fp,"\"%s\",", ifunc->mangled_name[j]);
           else
@@ -10011,8 +10008,8 @@ void G__cpplink_func(FILE *fp)
         // Remember we only have stubs for global operators...
         // for the rest just point to null
         /* function name and return type */
-        if(  G__dicttype==0 ||
-             ((G__dicttype==3 || G__dicttype==4) &&
+        if(  G__dicttype==kCompleteDictionary ||
+             ((G__dicttype==kNoWrappersDictionary) &&
               // The stubs where generated for functions needing temporal objects too... use them
               ( !ifunc->mangled_name[j] || 
                 // 26-10-07

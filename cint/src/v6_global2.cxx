@@ -48,7 +48,7 @@ long G__globalvarpointer = G__PVOID; /* make compiled func's global table */
 // indicate if we have a bundle file in rootcint 
 // (impt for printing the temp dicts)
 int G__isfilebundled = 0;
-short G__dicttype = 0;
+G__dictgenmode G__dicttype = kCompleteDictionary;
 
 #ifdef __cplusplus
 struct G__filetable G__srcfile[G__MAXFILE];

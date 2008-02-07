@@ -685,7 +685,7 @@ int G__main(int argc, char** argv)
             // If G__dicttype==2 write only the pointer to inline functions      
             // If G__dicttype==3 write all the memfunc_setup rubbish
             // do we still need to fill up the structures and all that?
-            G__dicttype = atoi(optarg);
+            G__dicttype = (G__dictgenmode) atoi(optarg);
             break;
          case 'm':
             G__lang = G__ONEBYTE;
