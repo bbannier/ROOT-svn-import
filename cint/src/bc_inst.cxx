@@ -287,7 +287,8 @@ void G__bc_inst::LD_FUNC(const char* funcname,int hash,int paran,void* pfunc, G_
 
   // 30-05-07
   // This couldnt be fixed since we dont have the pointer to ifunc
-  // FIXME
+  // Warning: This could lead to a serious problem if we try to execute
+  // the stub through the ifunc instead of the pfunc (but that shouldn't happen)
   G__asm_inst[G__asm_cp+6]=(long)0;
 
   if(G__asm_name_p+strlen(funcname)+1<G__ASM_FUNCNAMEBUF) {
