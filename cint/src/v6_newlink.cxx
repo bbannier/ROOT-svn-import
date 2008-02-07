@@ -442,45 +442,6 @@ int G__debug_compiledfunc_arg(FILE *fout,G__ifunc_table_internal *ifunc,int ifn,
  **************************************************************************/
 
 /**************************************************************************
-* float G__float(G__value buf)
-*
-* 16/05/07 
-* This function can be found in value.cxx
-* but it's __#ifdef G__NEVER__ why is that so?
-* put it here for the moment
-* Remove this function and use 'G__convertT(const G__value* buf)'
-* from value.h
-**************************************************************************/
-float G__float(G__value buf)
-{
-  switch(buf.type) {
-  case 'd': /* double */
-  case 'f': /* float */
-    return (float) buf.obj.d;
-  case 'w': /* logic */
-  case 'r': /* unsigned short */
-    return (float) buf.obj.ush;
-  case 'h': /* unsigned int */
-    return (float) buf.obj.uin;
-#ifndef G__BOOL4BYTE
-  case 'g': /* bool */
-#endif
-  case 'b': /* unsigned char */
-    return (float) buf.obj.uch;
-  case 'k': /* unsigned long */
-    return (float) buf.obj.ulo;
-  case 'n': return (float) buf.obj.ll;
-  case 'm': return (float) buf.obj.ull;
-  case 'q': return (float) buf.obj.ld;
-  case 'i': return (float) buf.obj.in;
-  case 'c': return (float) buf.obj.ch;
-  case 's': return (float) buf.obj.sh;
-  default:
-    return (float)buf.obj.i;
-  }
-}
-
-/**************************************************************************
  * G__isbaseclass()
  *
  * check if dertag (derived tagnum) is a descendant of basetag (basetagnum)
@@ -886,7 +847,7 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
 #endif
         }
         else if(param.type=='f') {
-          double fparam = (double) G__float(param);
+          double fparam = (double) G__double(param);
 
 #ifdef __x86_64__
 	  __asm__ __volatile__("push %0" :: "g" (fparam));
@@ -982,12 +943,12 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
 
       case 'f' : // Float // Shouldnt it be treated as a double?
       {
-        float valuef = G__float(param);
+        float valuef = (float) G__double(param);
 
 #ifdef __x86_64__
-	// Casting a single precision to a doeble precision should be safe
-	// 31-01-08: We do this because the compiler complains in x86-64 (optimized)
-	double valued = (double) valuef;
+        // Casting a single precision to a doeble precision should be safe
+        // 31-01-08: We do this because the compiler complains in x86-64 (optimized)
+        double valued = (double) valuef;
         __asm__ __volatile__("push %0" :: "g" (valued));
 #else
         __asm__ __volatile__("push %0" :: "g" (valuef));
@@ -1631,7 +1592,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
 #endif
             }
             else if(param.type=='f') {
-              double fparam = (double) G__float(param);
+              double fparam = (double) G__double(param);
 
 #ifdef __x86_64__
 	      __asm__ __volatile__("push %0" :: "g" (fparam));
@@ -1729,7 +1690,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
 
           case 'f' : // Float // Shouldnt it be treated as a double?
           {
-            float valuef = G__float(param);
+            float valuef = (float) G__double(param);
 
 #ifdef __x86_64__
             // Casting a single precision to a doeble precision should be safe
