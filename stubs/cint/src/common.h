@@ -517,6 +517,20 @@ struct G__breakcontinue_list {
 
 #endif /* of G__ASM */
 
+/**************************************************************************
+* Dictionary Generation Modes
+*
+* It is used for managing the flavour of the generated dictionary by rootcint
+* 0 kCompleteDictionary = Complete dictionary with all stubs/wrappers (old style)
+* 1 kShadowMembers = This dictionary contains the shadow members (Temporary dictionary #1)
+* 2 kFunctionSymbols = This dictionary allows us to get the symbols of the member functions
+* (Temporary dictionary #2) via pointers to the member functions, constructor dummy calls and 
+* forcing inline member functions to be outline.
+* 3 kNoWrappersDictionary = No Wrappers Dictionary (New Style) (#include temporary dictionaries)
+*
+**************************************************************************/
+
+typedef enum { kCompleteDictionary, kShadowMembers, kFunctionSymbols, kNoWrappersDictionary} G__dictgenmode;
 
 
 /**************************************************************************

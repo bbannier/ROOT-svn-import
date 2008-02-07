@@ -333,7 +333,7 @@ extern short G__enumdef;
 
 // 10-07-07
 // Can tell if we are writing the temp. dicts or the real one
-extern short G__dicttype;
+extern G__dictgenmode G__dicttype;
 
 extern char G__tagname[G__MAXNAME];
 extern long G__store_struct_offset; /* used to be int */
