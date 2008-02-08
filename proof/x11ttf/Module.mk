@@ -31,9 +31,9 @@ ALLHDRS     += $(patsubst $(MODDIRI)/%.h,include/%.h,$(X11TTFH))
 ALLLIBS     += $(X11TTFLIB)
 ALLMAPS     += $(X11TTFMAP)
 
-#ifeq ($(XFTLIB),yes)
+ifeq ($(XFTLIB),yes)
 XLIBS       += $(X11LIBDIR) -lXft
-#endif
+endif
 
 # include all dependency files
 INCLUDEFILES += $(X11TTFDEP)
@@ -49,7 +49,7 @@ $(X11TTFLIB):   $(X11TTFO) $(X11TTFDO) $(FREETYPEDEP) $(ORDER_) $(MAINLIBS) $(X1
 		   "$(FREETYPELDFLAGS) $(FREETYPELIB) \
 		    $(X11TTFLIBEXTRA) $(XLIBS)"
 
-$(X11TTFDS):    $(X11TTFH) $(X11TTFL) $(ROOTCINTTMPEXE)
+$(X11TTFDS):    $(X11TTFH) $(X11TTFL) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(FREETYPEINC) $(X11TTFH) $(X11TTFL)
 

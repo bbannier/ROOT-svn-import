@@ -40,11 +40,17 @@ FOPT	      = $(OPT) -m64 -fno-second-underscore
 
 # CERNLIB defines
 
-CLIBDEFS_TMP  = -DCERNLIB_LINUX -DCERNLIB_BLDLIB -DCERNLIB_CZ 
+CLIBDEFS_TMP  = -DCERNLIB_LXIA64 -DCERNLIB_BLDLIB -DCERNLIB_CZ 
 ifeq (i386,$(findstring i386,$(ARCH_PPCI386)))
 CLIBDEFS      = $(CLIBDEFS_TMP) 
 else
 CLIBDEFS      = $(CLIBDEFS_TMP) -DCERNLIB_PPC
+endif
+
+ifeq (g95,$(findstring g95,$(ROOTBUILD)))
+CLIBDEFS     += -DCERNLIB_G95
+else
+CLIBDEFS     += -DCERNLIB_GFORTRAN
 endif
 
 CLIBCXXOPTS   = $(CLIBDEFS)
@@ -63,7 +69,7 @@ SOFLAGS       = -m64 -dynamiclib -undefined dynamic_lookup -single_module
 ifeq (g95,$(findstring g95,$(ROOTBUILD)))
 SHLIB += -L$(shell g95 --print-search-dirs | sed -n -e 's/install: //p') -lf95
 else
-SHLIB := $(shell gfortran -print-file-name=libgfortran.dylib)
-SHLIB += $(shell gfortran -print-file-name=libgfortranbegin.a)
+SHLIB := $(shell gfortran -m64 -print-file-name=libgfortran.dylib)
+SHLIB += $(shell gfortran -m64 -print-file-name=libgfortranbegin.a)
 SHLIB += -ldl
 endif

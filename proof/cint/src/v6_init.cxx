@@ -15,6 +15,7 @@
 
 #include "common.h"
 #include <list>
+#include <typeinfo>
 
 extern std::list<G__DLLINIT>* G__initpermanentsl;
 
@@ -509,9 +510,10 @@ int G__main(int argc, char** argv)
    long G__argpointer[G__MAXARG];
    char dumpfile[G__MAXFILENAME];
    G__value result;
-   char* linkfilename = 0;
+   const char* linkfilename = 0;
    int linkflag = 0;
    char* dllid = 0;
+   char clnull[1]; clnull[0]=0;
    struct G__dictposition stubbegin;
    char* icom = 0;
    stubbegin.ptype = (char*) G__PVOID;
@@ -636,7 +638,9 @@ int G__main(int argc, char** argv)
    /*************************************************************
     * Get command options
     *************************************************************/
-   while ((c = getopt(argc, argv, "a:b:c:d:ef:gij:kl:mn:pq:rstu:vw:x:y:z:AB:CD:EF:G:H:I:J:KM:N:O:P:QRSTU:VW:X:Y:Z:-:@+:")) != EOF) {
+   char magicchars[100];
+   strcpy(magicchars,"a:b:c:d:ef:gij:kl:mn:pq:rstu:vw:x:y:z:AB:CD:EF:G:H:I:J:KM:N:O:P:QRSTU:VW:X:Y:Z:-:@+:");
+   while ((c = getopt(argc, argv, magicchars)) != EOF) {
       switch (c) {
 #ifndef G__OLDIMPLEMENTATION2226
          case '+':
@@ -913,7 +917,7 @@ int G__main(int argc, char** argv)
                }
             }
             if (!dllid) {
-               dllid = "";
+               dllid = clnull;
             }
             G__set_globalcomp(optarg, linkfilename, dllid);
             break;
@@ -1786,7 +1790,8 @@ int G__init_globals()
 
    /* The first entry in the const string is a blank string
     * which is never used */
-   G__conststringlist.string = "";
+   char clnull[1]; clnull[0]=0;
+   G__conststringlist.string = clnull;
    G__conststringlist.hash = 0;
    G__conststringlist.prev = 0;
    G__plastconststring = &G__conststringlist;
@@ -2133,14 +2138,14 @@ void G__platformMacro()
 
    // setup size_t, ssize_t
    int size_t_type = 0;
-   if (sizeof(size_t) == G__INTALLOC)
+   if (typeid(size_t) == typeid(unsigned int))
       size_t_type = 'i';
-   else if (sizeof(size_t) == G__LONGALLOC)
+   else if (typeid(size_t) == typeid(unsigned long))
       size_t_type = 'l';
-   else if (sizeof(size_t) == G__LONGLONGALLOC)
+   else if (typeid(size_t) == typeid(unsigned long long))
       size_t_type = 'n';
-   else G__fprinterr(G__serr, "On your platform, size_t has a weird size of %d which is not handled yet!\n",
-                        sizeof(size_t));
+   else G__fprinterr(G__serr, "On your platform, size_t has a weird typeid of %s which is not handled yet!\n",
+                        typeid(size_t).name());
 
    G__search_typename2("size_t", size_t_type - 1, -1, 0, -1);
    G__setnewtype(-1, NULL, 0);
@@ -2250,10 +2255,10 @@ void G__set_stdio_handle(FILE *sout, FILE *serr, FILE *sin)
 }
 
 //______________________________________________________________________________
-char *G__cint_version()
+const char *G__cint_version()
 {
    if (G__cintv6) return(G__CINTVERSIONSTR_V6);
-   else          return(G__CINTVERSIONSTR_V5);
+   else           return(G__CINTVERSIONSTR_V5);
    /* return "5.14.34, Mar 10 2000"; */
 }
 
