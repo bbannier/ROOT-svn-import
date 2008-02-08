@@ -1776,6 +1776,8 @@ check_explicit "$enable_mysql" "$enable_mysql_explicit" \
 if test "x$no_stubs" = "xyes" || test "x$no_stubs_test" = "xyes"; then
     no_stubs="yes"
     cp -f utils/src/rootcint_nostubs.sh bin
+    # We force rootcint recompilation and the with make all root dictionaries will be regenerated
+    touch utils/src/rootcint.cxx
 fi
 
 message "Checking whether to activate symbol function call mechanism (aka stubs/wrappers removal)"

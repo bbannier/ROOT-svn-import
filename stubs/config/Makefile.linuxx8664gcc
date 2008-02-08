@@ -42,6 +42,7 @@ XLIBS         = $(XPMLIBDIR) $(XPMLIB) $(X11LIBDIR) -lXext -lX11
 CILIBS        = -lm -ldl -rdynamic
 CRYPTLIBS     = -lcrypt
 
+
 # Stub Functions Generation
 ifeq ($(NOSTUBS),yes)
 	GCC_MAJOR     := $(shell $(CXX) -dumpversion 2>&1 | cut -d'.' -f1)
@@ -67,7 +68,6 @@ ifeq ($(NOSTUBS),yes)
   endif
  endif
 endif
-
 
 # Fortran:
 F77           =
