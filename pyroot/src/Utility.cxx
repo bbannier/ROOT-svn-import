@@ -172,6 +172,56 @@ Bool_t PyROOT::Utility::AddToClass( PyObject* pyclass, const char* label, PyCall
 }
 
 //____________________________________________________________________________
+Bool_t PyROOT::Utility::BuildTemplateName( PyObject*& pyname, PyObject* args, int argoff )
+{
+// helper to construct the "< type, type, ... >" part of a templated name (either
+// for a class as in MakeRootTemplateClass in RootModule.cxx) or for method lookup
+// (as in TemplatedMemberHook, below)
+
+   PyString_ConcatAndDel( &pyname, PyString_FromString( "<" ) );
+
+   Py_ssize_t nArgs = PyTuple_GET_SIZE( args );
+   for ( int i = argoff; i < nArgs; ++i ) {
+   // add type as string to name
+      PyObject* tn = PyTuple_GET_ITEM( args, i );
+      if ( PyString_Check( tn ) )
+         PyString_Concat( &pyname, tn );
+      else if ( PyObject_HasAttrString( tn, const_cast< char* >( "__name__" ) ) ) {
+      // this works for type objects
+         PyObject* tpName = PyObject_GetAttrString( tn, const_cast< char* >( "__name__" ) );
+
+      // special case for strings
+         if ( strcmp( PyString_AS_STRING( tpName ), "str" ) == 0 ) {
+            Py_DECREF( tpName );
+            tpName = PyString_FromString( "std::string" );
+         }
+
+         PyString_ConcatAndDel( &pyname, tpName );
+      } else {
+      // last ditch attempt, works for things like int values
+         PyObject* pystr = PyObject_Str( tn );
+         if ( ! pystr ) {
+            return kFALSE;
+         }
+
+         PyString_ConcatAndDel( &pyname, pystr );
+      }
+
+   // add a comma, as needed
+      if ( i != nArgs - 1 )
+         PyString_ConcatAndDel( &pyname, PyString_FromString( "," ) );
+   }
+
+// close template name; prevent '>>', which should be '> >'
+   if ( PyString_AsString( pyname )[ PyString_Size( pyname ) - 1 ] == '>' )
+      PyString_ConcatAndDel( &pyname, PyString_FromString( " >" ) );
+   else
+      PyString_ConcatAndDel( &pyname, PyString_FromString( ">" ) );
+
+   return kTRUE;
+}
+
+//____________________________________________________________________________
 Bool_t PyROOT::Utility::InitProxy( PyObject* module, PyTypeObject* pytype, const char* name )
 {
 // finalize proxy type
@@ -300,7 +350,7 @@ void PyROOT::Utility::ErrMsgCallback( char* msg )
       return;
 
 // get file name and line number
-   char* errFile = G__stripfilename( G__get_ifile()->name );
+   char* errFile = (char*)G__stripfilename( G__get_ifile()->name );
    int errLine = G__get_ifile()->line_number;
 
 // ignore ROOT-style FILE/LINE messages
