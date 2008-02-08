@@ -5038,8 +5038,8 @@ void G__write_dummy_param(FILE *fp, G__paramfunc *formal_param)
       case 'm' : fprintf(fp, "(unsigned long long) 0");
         break;
 
-        // should this be treated with two resgisters two?
-      case 'q' : fprintf(fp, " 0");
+        // long double
+      case 'q' : fprintf(fp, "(long double) 0");
         break;
 
         // bool 
@@ -5090,15 +5090,15 @@ void G__write_dummy_param(FILE *fp, G__paramfunc *formal_param)
         break;
                    
         // Unsigned Integer*
-      case 'H': fprintf(fp, "UInt_t");
+      case 'H': fprintf(fp, "unsigned int");
         break;
 
         // Integer*
-      case 'I': fprintf(fp, "Int_t");
+      case 'I': fprintf(fp, "int");
         break;
 
         // *UChar
-      case 'B': fprintf(fp,"UChar_t"); 
+      case 'B': fprintf(fp,"unsigned char"); 
         break;
 
         // *Char
@@ -5124,7 +5124,7 @@ void G__write_dummy_param(FILE *fp, G__paramfunc *formal_param)
         break;
 
         // *long long
-      case 'N': fprintf(fp,"Long64_t"); 
+      case 'N': fprintf(fp,"long long"); 
         break;
 
         // *long
@@ -5151,9 +5151,13 @@ void G__write_dummy_param(FILE *fp, G__paramfunc *formal_param)
       case 'M': fprintf(fp,"unsigned long long"); 
         break;
 
+        // long double
+      case 'Q': fprintf(fp,"long double"); 
+        break;
+
       default:
         fprintf(fp, " Unkown: %c", formal_param->type);
-        G__fprinterr(G__serr,"Type %c not known yet (methodcall)\n",formal_param->type);
+        G__fprinterr(G__serr,"Type %c not known yet (G__write_dummy_param)\n",formal_param->type);
       }  
       fprintf(fp,"*");
     }
