@@ -775,6 +775,7 @@ typedef union unld { G__int64 lval; double dval; } UNLD;
  * At this point the parameters have already been evaluated and we
  * only need to push them to the stack and make the function call
  **************************************************************************/
+#ifdef __x86_64__
 int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, void* this_ptr, G__param* rpara, G__value *result7)
 {
   void *vaddress = G__get_funcptr(ifunc, ifn);
@@ -957,12 +958,9 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
         }
         else{
           long iparam = (long) G__int(param);
-          int osize;
           G__value otype;
           otype.type   = 'u';
           otype.tagnum = gtagnum;
-
-          osize = G__sizeof(&otype);
 
 #ifdef __x86_64__
 	  __asm__ __volatile__("push %0" :: "g" (iparam));
@@ -1149,12 +1147,10 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
         G__letdouble(result7, 100, (double) (result_val));
       }
       else{
-        int osize;
         G__value otype;
         otype.type   = 'u';
         otype.tagnum = gtagnum;
 
-        osize = G__sizeof(&otype);
         __asm__ __volatile__("call *%1" : "=t" (result7->obj.d) : "g" (vaddress));
       }
 
@@ -1351,6 +1347,7 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
 
   return 0;
 }
+#endif
 
 /**************************************************************************
  * G__stub_method_asm
@@ -1448,12 +1445,9 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
         }
         else{
           long iparam = (long) G__int(param);
-          int osize;
           G__value otype;
           otype.type   = 'u';
           otype.tagnum = gtagnum;
-
-          osize = G__sizeof(&otype);
 
 #ifdef __x86_64__
 	  __asm__ __volatile__("push %0" :: "g" (iparam));
@@ -1616,12 +1610,10 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
         G__letdouble(result7, 100, (double) (result_val));
       }
       else{
-        int osize;
         G__value otype;
         otype.type   = 'u';
         otype.tagnum = gtagnum;
 
-        osize = G__sizeof(&otype);
         __asm__ __volatile__("call *%1" : "=t" (result7->obj.d) : "g" (vaddress));
       }
 
@@ -2189,13 +2181,9 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
             }
             else{
               long iparam = (long) G__int(param);
-              int osize;
               G__value otype;
               otype.type   = 'u';
               otype.tagnum = gtagnum;
-
-              osize = G__sizeof(&otype);
-              //double value = (double) param.obj.i;
 
 #ifdef __x86_64__
 	      __asm__ __volatile__("push %0" :: "g" (iparam));
