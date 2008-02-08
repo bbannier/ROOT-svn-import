@@ -1479,29 +1479,25 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
 
       case 'b' : // Unsigned Char ????
       {
-        unsigned char valueb = param.obj.uch;
-        __asm__ __volatile__("push %0" :: "g" (valueb));
+        __asm__ __volatile__("push %0" :: "g" (param.obj.uch));
       }
       break;
 
       case 'c' : // Char
       {
-        char valuec = param.obj.ch;
-        __asm__ __volatile__("push %0" :: "g" (valuec));
+        __asm__ __volatile__("push %0" :: "g" (param.obj.ch));
       }
       break;
 
       case 's' : // Short
       {
-        short values = param.obj.sh;
-        __asm__ __volatile__("push %0" :: "g" (values));
+        __asm__ __volatile__("push %0" :: "g" (param.obj.sh));
       }
       break;
 
       case 'r' : // Unsigned Short
       {
-        unsigned short valuer = param.obj.ush;
-        __asm__ __volatile__("push %0" :: "g" (valuer));
+        __asm__ __volatile__("push %0" :: "g" (param.obj.ush));
       }
       break;
 
@@ -2225,15 +2221,13 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
 
           case 'b' : // Unsigned Char ????
           {
-            unsigned char valueb = param.obj.uch;
-            __asm__ __volatile__("push %0" :: "g" (valueb));
+            __asm__ __volatile__("push %0" :: "g" (param.obj.uch));
           }
           break;
 
           case 'c' : // Char
           {
-            char valuec = param.obj.ch;
-            __asm__ __volatile__("push %0" :: "g" (valuec));
+            __asm__ __volatile__("push %0" :: "g" (param.obj.ch));
           }
           break;
 
@@ -2246,8 +2240,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
 
           case 'r' : // Unsigned Short
           {
-            unsigned short valuer = param.obj.ush;
-            __asm__ __volatile__("push %0" :: "g" (valuer));
+            __asm__ __volatile__("push %0" :: "g" (param.obj.ush));
           }
           break;
 
@@ -2261,7 +2254,6 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
           case 'l' : // Long
           {
             long valuel = G__int(param);
-            //int valuel = param.obj.i;
             __asm__ __volatile__("push %0" :: "g" (valuel));
           }
           break;
