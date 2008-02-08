@@ -37,7 +37,9 @@ POSTPONED
 
 Axel: OK, that's a blocker. We need to discuss.
 
-POSTPONED
+Axel explained this and it was actually not very complicated. We just needed to pass the tagnum
+in the global variable.
+DONE
 -------------------------------------------------------------------------------
 #5 * cint/lib/dll_stl/str.h: why did you _replace_
  op==(string::it,string::it) by op==(string::rev_it,string::rev_it)?
@@ -175,6 +177,11 @@ POSTPONED
  pass 1 in the old behaviour)
 
 RECHECK
+
+Axel: Please put a more explicit comment in there.
+
+That seems to be unchanged. I'm removing the comment.
+DONE
 -------------------------------------------------------------------------------
 
 
@@ -197,23 +204,46 @@ RECHECK
  beginning so I preferred to do that instead of changing the original
  functions.... I guess now is a good time to re factor all that.
 
-IN PROGRESS
+I removed all of the except for G__get_methodhandle4 which is a copy of *methodhandle2 but
+this is for optimization purposes... we save a little bit in the function call is we can use the
+ifunc_table_internal instead of the ref.
+
+DONE
 -------------------------------------------------------------------------------
 #19 * v6_ifunc.cxx:7059: what's the consequence of that "if (buf.type !
  = -1)"? Do the stubless calls not support variadic functions?
 
  They do... but not the parser. (when reading the symbols)
 
+Axel: Ehrm, so that boils down to the same thing? Variadic functions will get a wrapper? 
+(That's fine - I'm just trying to understand what you are doing there.)
+
+This means that the "..." will be ignored whe converting the parameters in a "char *" to a G__param,
+I think this would work because the number of parameters in a variadic function can change and 
+the "..." don't count for that (the parameters are evaluated in a different way).
+
+(and yes, we can remove the stubs for variadic functions)
+
+DONE
+-------------------------------------------------------------------------------
 #20 * v6_ifunc.cxx:7259: spaces
 
  yips... I'm still looking for the -w in svn ;)
 
+
+RECHECK
+-------------------------------------------------------------------------------
 #21 * bc_inst.cxx:289ff: when you say you can't fix it why keep the
  "FIXME!"?
 
  I want a flag to point out a potential problem.... we can always
  change it for "Potential SEGFAULT " :D
 
+Axel: :-) OK.
+
+Changed the FIXME by a warning being a bit more verbose
+DONE
+-------------------------------------------------------------------------------
 #22 * v6_newlink.cxx:27: ext/hash_map only exists on GCC compilers.
  This include will break CINT e.g. on windows, solaris,... Same with
  cxxabi.h. Again, these must be protected with G__NOSTUBS _and_ the
@@ -222,7 +252,7 @@ IN PROGRESS
  Yips... no doubt about that... we will bother you again later to see
  how we can try to compile it on windows...
 
-
+-------------------------------------------------------------------------------
 #23 * v6_newlink.cxx:350: G__wrappers and G__nostubs should be defined
  in globals[2].cxx
 
@@ -239,11 +269,19 @@ DONE
  I though float and double were different (isn't float single
  precision, therefore only 32 bits in x86_64?)
 
+Axel: Yes, but CINT always stores values as doubles. obj.f should not be used.
+
+ok... The only thing is remembering to turn the double (known by cint) to a float when we want
+to push it for the function call
+
+DONE
+-------------------------------------------------------------------------------
 #25 * v6_newlink.cxx: 1832f: ... *= -1; is more readable (twice)
 
  :?... we discussed that in person...
 
-
+DONE
+-------------------------------------------------------------------------------
 #26 * v6_newlink.cxx: 1847f: if you found one function candidate in the
  current class then you do not need to loop over the bases, or do
  you? Shouldn't the bases' functions be hidden? I.e. shouldn't it be
@@ -252,11 +290,20 @@ DONE
  We are looking for ambiguous functions... so we need to look at all
  of them.
 
+Axel: Doubt it; I'll come over to discuss it.
+
+RECHECK (reread that code)
+
+-------------------------------------------------------------------------------
 #27 * v6_newlink.cxx: 1905, 1930: why do you set ifunc_res - it's not
  used anywhere?
 
  I don't remember... ;)
 
+ifunc_res has been removed.
+
+DONE
+-------------------------------------------------------------------------------
 
 #28 * v6_newlink.cxx: 2050: instead of copying each parameter (param =
  rpara->para[k]) could you just keep a ptr or better yet a const ref
@@ -264,61 +311,93 @@ DONE
 
  can do
 
-
+DONE
+-------------------------------------------------------------------------------
 #29 * v6_newlink.cxx: 2095ff: can't you trivially combine the __asm__
  calls of these three cases, by having the double value set
  differently but then passing it by the same lines of code?
 
  yes... it just had a low priority...
 
+Axel: Agreed. This should be done as soon as Diego add another supported compiler :-)
+-------------------------------------------------------------------------------
 #30 * v6_newlink.cxx: 2125, 2292: osize is unused
 
  nevermind... how can you see such things?... if you have some kind
  tool to look for that kind of error it will be deeply appreciated...
  my carelessness doesn't really follow my common sense...
 
+Axel: It's my eyes. Sorry, I cannot spare them.
 
+DONE
+-------------------------------------------------------------------------------
 #31 * v6_newlink.cxx: 2150ff: why do you need to create a local copy of
  the value in param.obj - can't you pass param.obj.xyz to __asm__
  directly?
 
  remnants of code that was changed 12 times... :D
 
+DONE 
 
+(We still have some of those that use things like G__int(), we have to check if they can be removed too)
+-------------------------------------------------------------------------------
 #32 * v6_newlink.cxx: 2215: long long does not fit into 2 ints. Why is
  the case for G__uint 64 _so_ different?
 
+Axel: Mind commenting on that one? ;-) I assume you'll fix it?
 
+sizeof(long long) = 8
+sizeof(int) = 4
 
+So we are assuming that to pass a long long to a function we have to push it to the stack as two 
+words. This has to be done for all the types being bigger than 4 (i.e. "long long" and "double")
+
+Note: What do we do with the "long double" which should be 12 bytes long? 
+
+RECHECK
+-------------------------------------------------------------------------------
 #33 * v6_newlink.cxx: 2282: I suppose "Parameter's type?" is meant to
  be "Return type?"
 
  yipes... that tool you have again? :P
 
+Some comments were added
 
-
+DONE
+-------------------------------------------------------------------------------
 #34 * v6_newlink.cxx: 2238: no way Jose - can't squeeze a long double
  into an int!
 
  I thought we weren't doing it... must check
 
 
+I don't see it :/
+
+
+RECHECK
+-------------------------------------------------------------------------------
 #35 * v6_newlink.cxx: 2450: type 'y' is "void" :-)
 
  eventually... we came to understand such subtleties...
 
+DONE
+-------------------------------------------------------------------------------
 #36 * v6_newlink.cxx: 2630ff: could you please combine (most of) the
  code for the array-new and the non-array-new?
 
  we would like too... again... it's low at the priority list
 
+Axel: Humm. See my reasoning above why delaying the refactoring of copied code is bad.
 
+-------------------------------------------------------------------------------
 #37 * v6_newlink.cxx: 2760ff: don't I know this code from somewhere
  already? Could you refactor it, please?
 
  I know... I'm sure there must a tool to do such things too :D
 
+Axel: There is, actually, at least on windows. But it's about twice as fast to do it by hand ;-)
 
+-------------------------------------------------------------------------------
 #38 * v6_newlink.cxx: 3000: why is the c'tor call so different from the
  regular func calls (involving eax etc)? Or can you "just" set up
  yet another regular func call? Keep in mind that we need to re-
@@ -326,29 +405,42 @@ DONE
 
  159th thing to do :/ ... yes, it's ugly... and yes, we would like to
  have just one nice asm function...
-
+-------------------------------------------------------------------------------
 
 #39 * v6_newlink.cxx: 3038: "tagnum = (int) ((*iter).second);" ->
  "tagnum = iter->second;"
 
  This made laugh ....
 
+DONE
+-------------------------------------------------------------------------------
 #40 * v6_newlink.cxx: 3084: I don't understand why CINT thinks a class
  doesn't derive from TObject if it doesn't have a ClassDef.
 
  The G__isbaseclass doesn't work... is there another way to check
  this kind of thing?
 
+Axel: Need to discuss, I don't understand.
+
+We discussed it, Axel said CInt doesn't need a ClassDef to "know" about a function, it only
+needs to read the header file. Now I don't understand why it doesnt work either.
+
+RECHECK
+-------------------------------------------------------------------------------
 #41 * v6_newlink.cxx: 3137: what do we do about the offset for virtual
  inheritance - does G__isanybase handle that?
 
  we are betting on it...
+
+Axel: And it does!
+-------------------------------------------------------------------------------
 
 #42 * v6_newlink.cxx: 3197: can you combine array / scalar deletion?
  Can you factor out the call setup code, at _least_ combine it with
  the new() part?
 
  with some luck...
+-------------------------------------------------------------------------------
 
 #43 * v6_newlink.cxx: 3303: what does that comment reference? I don't
  see any EAX.
@@ -357,41 +449,65 @@ DONE
 
  I guess it's time to send it to a greener field...
 
-
+DONE
+-------------------------------------------------------------------------------
 #44 * v6_newlink.cxx: 3381: this-ptr adjustment happens inside
  G__stub_method_calling? Please add a comment if that's the case.
 
  I don't see what you refer to... but there shouldnt be a permanent
  adjustment in G__stub_method_calling...
 
+Axel: Assuming I remember correctly: the this-ptr adjustment was asymmetric, say it happened in 
+the "else" part but not in the "if". So I was wondering whether it happens in a function call within 
+the "if" part.
 
+It's because the adjustment is needed when calling the stub but not when we use asm directly.
+It has to do with diego's changes to remove the stubs of inherited functions. In that case, an
+adjustment of the this pointer to the base classs is needed.
+
+DONE
+-------------------------------------------------------------------------------
 #45 * v6_newlink.cxx: 3346: must have wrappers #ifndef
  G__EXCEPTIONWRAPPER?
 
  I dont see your point... I must rem to ask you in person.
 
+Axel: If G__EXCEPTIONWRAPPER is not defined then the thing blows up, because you're not handling that part of the code (I think).
 
+You were rigth... this is fixed.
+
+DONE
+-------------------------------------------------------------------------------
 #46 * v6_newlink.cxx: 3723 (and more): don't put C++ comments into
  dict; we can (and do) generate also C dictionaries with this code.
 
  noted...
 
+-------------------------------------------------------------------------------
 #47 * v6_newlink.cxx: 4453: "q" == long double == cast is missing!
  must check
 
+DONE
+-------------------------------------------------------------------------------
 #48 * v6_newlink.cxx: 4504: UInt_t etc are ROOT! Don't use them in CINT.
 
  hauhauahuahauha...
 
+How did that even compile?! Did you #include "Rtypes.h"?
 
+DONE
+-------------------------------------------------------------------------------
 #49 * v6_newlink.cxx: 4080, 9007: "Dont try to evaluate this condition"
- which condition? Mention "if(ifunc->pentry[j]->size<0) continue; /
+ which condition? Mention 
 
-#50 * already precompiled */" in the comment.
+"if(ifunc->pentry[j]->size<0) continue; /*already precompiled */" 
+in the comment.
 
  can be done.. ;)
-
-
+DONE
+-------------------------------------------------------------------------------
+50* ?
+-------------------------------------------------------------------------------
 #51 * v6_newlink.cxx: 4090 (and below, also 5155, 5200, 5300,6800...):
  why do you veto these (and only these) STL classes? And could you
  please factor it out + cache the result?
@@ -400,7 +516,9 @@ DONE
  thought they were the ones hand coded into Cint... and yes... it's
  ugly... I hate all those confusing IF's we have with them...
 
+Axel: Need to talk to you which problems they have.
 
+-------------------------------------------------------------------------------
 #52 * v6_newlink.cxx: 9359: #else // 1289_YET  || !1993 etc - where
  does that come from?
  I don't know... that was already there.
