@@ -1376,7 +1376,7 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
     void *paramref = 0;
     int isref = 0;
 
-    G__value param = rpara->para[k];
+    const G__value &param = rpara->para[k];
     G__paramfunc *formal_param = fpara->operator[](k);
 
     if(ansi!=2 && formal_param->reftype!=G__PARANORMAL){
