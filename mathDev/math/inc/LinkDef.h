@@ -33,4 +33,6 @@
 #pragma link C++ class TRandom2+;
 #pragma link C++ class TRandom3-;
 
+#pragma link C++ function TMath::MinElement(Long64_t, const Double_t*);
+
 #endif
