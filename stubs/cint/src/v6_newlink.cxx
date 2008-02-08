@@ -1559,7 +1559,20 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
       case 'q' : // should this be treated with two resgisters two?
       {
         long double valueq = G__Longdouble(param);
-        __asm__ __volatile__("push %0" :: "g" (valueq));
+
+#ifdef __x86_64__
+	__asm__ __volatile__("push %0" :: "g" (valueq));
+#else
+        // Parameter Pointer
+        int *paddr = (int *) &valueq;
+
+        // This has to be checked
+        __asm__ __volatile__("push %0" :: "g" (*(paddr+2)));
+        /* Highest Word */
+        __asm__ __volatile__("push %0" :: "g" (*(paddr+1)));
+        /* Lowest Word */
+        __asm__ __volatile__("push %0" :: "g" (*paddr));
+#endif
       }
       break;
 
