@@ -764,8 +764,27 @@ void* G__get_funcptr(G__ifunc_table_internal *ifunc, int ifn)
 
 typedef union unld { G__int64 lval; double dval; } UNLD;
 
+#define ASM_X86_64_ARGS_PASSING(dval, lval) { \
+__asm__ __volatile__("movlpd %0, %%xmm0"  :: "m" (dval[0]) : "%xmm0"); \
+__asm__ __volatile__("movlpd %0, %%xmm1"  :: "m" (dval[1]) : "%xmm1"); \
+__asm__ __volatile__("movlpd %0, %%xmm2"  :: "m" (dval[2]) : "%xmm2"); \
+__asm__ __volatile__("movlpd %0, %%xmm3"  :: "m" (dval[3]) : "%xmm3"); \
+__asm__ __volatile__("movlpd %0, %%xmm4"  :: "m" (dval[4]) : "%xmm4"); \
+__asm__ __volatile__("movlpd %0, %%xmm5"  :: "m" (dval[5]) : "%xmm5"); \
+__asm__ __volatile__("movlpd %0, %%xmm6"  :: "m" (dval[6]) : "%xmm6"); \
+__asm__ __volatile__("movlpd %0, %%xmm7"  :: "m" (dval[7]) : "%xmm7"); \
+__asm__ __volatile__("movq %0, %%rdi" :: "m" (lval[0]) : "%rdi"); \
+__asm__ __volatile__("movq %0, %%rsi" :: "m" (lval[1]) : "%rsi"); \
+__asm__ __volatile__("movq %0, %%rdx" :: "m" (lval[2]) : "%rdx"); \
+__asm__ __volatile__("movq %0, %%rcx" :: "m" (lval[3]) : "%rcx"); \
+__asm__ __volatile__("movq %0, %%r8"  :: "m" (lval[4]) : "%r8"); \
+__asm__ __volatile__("movq %0, %%r9"  :: "m" (lval[5]) : "%r9"); \
+__asm__ __volatile__("movl $8, %eax");  \
+}
+
+
 /**************************************************************************
- * G__stub_method_asm
+ * G__stub_method_asm_x86_64
  *
  * 08-08-07
  * Differentiate between the asm call of a function and the
@@ -1115,24 +1134,6 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
 
   if (reftype == G__PARAREFERENCE || isupper(type))
     isref = 1;
-
-  /*
-  __asm__ __volatile__("movlpd %0, %%xmm0"  :: "m" (dval[0]) : "%xmm0");
-  __asm__ __volatile__("movlpd %0, %%xmm1"  :: "m" (dval[1]) : "%xmm1");
-  __asm__ __volatile__("movlpd %0, %%xmm2"  :: "m" (dval[2]) : "%xmm2");
-  __asm__ __volatile__("movlpd %0, %%xmm3"  :: "m" (dval[3]) : "%xmm3");
-  __asm__ __volatile__("movlpd %0, %%xmm4"  :: "m" (dval[4]) : "%xmm4");
-  __asm__ __volatile__("movlpd %0, %%xmm5"  :: "m" (dval[5]) : "%xmm5");
-  __asm__ __volatile__("movlpd %0, %%xmm6"  :: "m" (dval[6]) : "%xmm6");
-  __asm__ __volatile__("movlpd %0, %%xmm7"  :: "m" (dval[7]) : "%xmm7");
-  __asm__ __volatile__("movq %0, %%rdi" :: "m" (lval[0]) : "%rdi");
-  __asm__ __volatile__("movq %0, %%rsi" :: "m" (lval[1]) : "%rsi");
-  __asm__ __volatile__("movq %0, %%rdx" :: "m" (lval[2]) : "%rdx");
-  __asm__ __volatile__("movq %0, %%rcx" :: "m" (lval[3]) : "%rcx");
-  __asm__ __volatile__("movq %0, %%r8"  :: "m" (lval[4]) : "%r8");
-  __asm__ __volatile__("movq %0, %%r9"  :: "m" (lval[5]) : "%r9");
-  __asm__ __volatile__("movl $8, %eax");  // number of used xmm registers
-  */
   
   // By Value or By Reference?
   if (!isref){// By Value
@@ -1143,6 +1144,7 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
     case 'd' : // Double = Double Word
       if((type=='d')||(type=='q')){
         double result_val;
+        ASM_X86_64_ARGS_PASSING(dval, lval)
         __asm__ __volatile__("call *%1" : "=t" (result_val) : "g" (vaddress));
         G__letdouble(result7, 100, (double) (result_val));
       }
@@ -1151,6 +1153,7 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
         otype.type   = 'u';
         otype.tagnum = gtagnum;
 
+        ASM_X86_64_ARGS_PASSING(dval, lval)
         __asm__ __volatile__("call *%1" : "=t" (result7->obj.d) : "g" (vaddress));
       }
 
@@ -1159,6 +1162,7 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
     case 'i' : // Integer = Single Word
     {
       int return_val;
+      ASM_X86_64_ARGS_PASSING(dval, lval)
       __asm__ __volatile__("call *%1" : "=a" (return_val) : "g" (vaddress));
       G__letint(result7, 'i', (long) (return_val));
     }
@@ -1167,6 +1171,7 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
     case 'b' : // Unsigned Char ????
     {
       unsigned char result_val;
+      ASM_X86_64_ARGS_PASSING(dval, lval)
       __asm__ __volatile__("call *%1" : "=a" (result_val) : "g" (vaddress));
       G__letint(result7, 'b', (long) result_val);
     }
@@ -1175,6 +1180,7 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
     case 'c' : // Char
     {
       char return_val;
+      ASM_X86_64_ARGS_PASSING(dval, lval)
       __asm__ __volatile__("call *%1" : "=a" (return_val) : "g" (vaddress));
       G__letint(result7, 'c', (long) (return_val));
     }
@@ -1183,6 +1189,7 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
     case 's' : // Short
     {
       short return_val;
+      ASM_X86_64_ARGS_PASSING(dval, lval)
       __asm__ __volatile__("call *%1" : "=a" (return_val): "g" (vaddress));
       G__letint(result7, 's', (long) (return_val));
     }
@@ -1191,6 +1198,7 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
     case 'r' : // Unsigned Short
     {
       unsigned short return_val;
+      ASM_X86_64_ARGS_PASSING(dval, lval)
       __asm__ __volatile__("call *%1" : "=a" (return_val): "g" (vaddress));
       G__letint(result7, 'r', (long) (return_val));
     }
@@ -1199,6 +1207,7 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
     case 'h' : // Unsigned Int
     {
       unsigned int return_val;
+      ASM_X86_64_ARGS_PASSING(dval, lval)
       __asm__ __volatile__("call *%1" : "=a" (return_val): "g" (vaddress));
       G__letint(result7, 'h', (long) (return_val));
     }
@@ -1207,6 +1216,7 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
     case 'l' : // Long
     {
       long return_val;
+      ASM_X86_64_ARGS_PASSING(dval, lval)
       __asm__ __volatile__("call *%1" : "=a" (return_val): "g" (vaddress));
       G__letint(result7, 'l', return_val);
     }
@@ -1215,6 +1225,7 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
     case 'k' || 'b': // Unsigned Long
     {
       unsigned long return_val;
+      ASM_X86_64_ARGS_PASSING(dval, lval)
       __asm__ __volatile__("call *%1" : "=a" (result7->obj.ulo): "g" (vaddress));
       G__letint(result7, 'k', (long) (return_val));
     }
@@ -1223,6 +1234,7 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
     case 'f' : // Float
     {
       float return_val;
+      ASM_X86_64_ARGS_PASSING(dval, lval)
       __asm__ __volatile__("call *%1" : "=t" (return_val): "g" (vaddress));
       G__letdouble(result7, 'f', (double) return_val);
     }
@@ -1231,6 +1243,7 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
     case 'n' : // Long Long
     {
       long long return_val;
+      ASM_X86_64_ARGS_PASSING(dval, lval)
       __asm__ __volatile__("call *%1" : "=A" (return_val): "g" (vaddress));
       G__letLonglong(result7, 'n', (G__int64) (return_val));
     }
@@ -1239,6 +1252,7 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
     case 'm' : // unsigned Long Long
     {
       unsigned long long return_val;
+      ASM_X86_64_ARGS_PASSING(dval, lval)
       __asm__ __volatile__("call *%1" : "=A" (return_val): "g" (vaddress));
       G__letLonglong(result7, 'm', (G__uint64) (return_val));
     }
@@ -1247,6 +1261,7 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
     case 'q' : // long double
     {
       long double return_val;
+      ASM_X86_64_ARGS_PASSING(dval, lval)
       __asm__ __volatile__("call *%1" : "=t" (return_val): "g" (vaddress));
       G__letLongdouble (result7, 'q', (long double) (return_val));
     }
@@ -1255,6 +1270,7 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
     case 'g' : // bool
     {
       int result_val;
+      ASM_X86_64_ARGS_PASSING(dval, lval)
       __asm__ __volatile__("call *%1" : "=a" (result_val): "g" (vaddress));
       G__letint(result7, 'g', (long) (result_val));
     }
@@ -1296,6 +1312,8 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
       __asm__ __volatile__("push %0" :: "g" ((void*) pobject));
 
       long res=0;
+
+      ASM_X86_64_ARGS_PASSING(dval, lval)
       __asm__ __volatile__("call *%1" : "=a" (res): "g" (vaddress));
       result7->obj.i = (long) ((void*) pobject);
       result7->ref = result7->obj.i;
@@ -1305,21 +1323,8 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
 
     case 'y' : // treat it as void function (what is 'y' ???)
     {
-      __asm__ __volatile__("movlpd %0, %%xmm0"  :: "m" (dval[0]) : "%xmm0");
-      __asm__ __volatile__("movlpd %0, %%xmm1"  :: "m" (dval[1]) : "%xmm1");
-      __asm__ __volatile__("movlpd %0, %%xmm2"  :: "m" (dval[2]) : "%xmm2");
-      __asm__ __volatile__("movlpd %0, %%xmm3"  :: "m" (dval[3]) : "%xmm3");
-      __asm__ __volatile__("movlpd %0, %%xmm4"  :: "m" (dval[4]) : "%xmm4");
-      __asm__ __volatile__("movlpd %0, %%xmm5"  :: "m" (dval[5]) : "%xmm5");
-      __asm__ __volatile__("movlpd %0, %%xmm6"  :: "m" (dval[6]) : "%xmm6");
-      __asm__ __volatile__("movlpd %0, %%xmm7"  :: "m" (dval[7]) : "%xmm7");
-      __asm__ __volatile__("movq %0, %%rdi" :: "m" (lval[0]) : "%rdi");
-      __asm__ __volatile__("movq %0, %%rsi" :: "m" (lval[1]) : "%rsi");
-      __asm__ __volatile__("movq %0, %%rdx" :: "m" (lval[2]) : "%rdx");
-      __asm__ __volatile__("movq %0, %%rcx" :: "m" (lval[3]) : "%rcx");
-      __asm__ __volatile__("movq %0, %%r8"  :: "m" (lval[4]) : "%r8");
-      __asm__ __volatile__("movq %0, %%r9"  :: "m" (lval[5]) : "%r9");
-      __asm__ __volatile__("movl $8, %eax");  // number of used xmm registers
+
+       ASM_X86_64_ARGS_PASSING(dval, lval)
 
       __asm__ __volatile__("call *%0" :: "g" (vaddress));
 
@@ -1978,7 +1983,15 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
           // We use the default new operator
           pobject = operator new[](osize*n);
         }
-        else {   // Yes, we have a nice overriden operator new and we have its symbol yhea c'mon. Hack me baby!
+        else {   // Yes, we have a nice overriden operator new yeah c'mon!. Hack me baby!
+
+           G__param args;
+           args.paran = 1;
+
+           args.para[0].type = 'l';
+           G__letdouble(&args.para[0],(int) 'l', (((long) osize)*n));
+
+           // G__stub_method_asm(new_oper, pifn, gtagnum, (G__get_funcptr(new_oper, pifn)), &args, result7);
           // Size Parameter for the new operator
           __asm__ __volatile__("push %0" :: "r" (((long) osize)*n));
           // overridden new operator call. Return allocated memory in pobject
@@ -2171,7 +2184,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
               // Parameter Pointer
               int *paddr = (int *) &dparam;
 
-	      /* Highest Word */
+              /* Highest Word */
               __asm__ __volatile__("push %0" :: "g" (*(paddr+1)));
               /* Lowest Word */
               __asm__ __volatile__("push %0" :: "g" (*paddr));
@@ -2202,14 +2215,15 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
 	      __asm__ __volatile__("push %0" :: "g" (iparam));
 #else
               double value = (double) iparam;
-              int * pointer = (int*) &value;
+              int * paddr = (int*) &value;
 
               /* Highest Word */
-              __asm__ __volatile__("push %0" :: "g" (*(pointer+1)));
+              __asm__ __volatile__("push %0" :: "g" (*(paddr+1)));
               /* Lowest Word */
-              __asm__ __volatile__("push %0" :: "g" (*pointer));
+              __asm__ __volatile__("push %0" :: "g" (*paddr));
 #endif
             }
+
 
             break;
 
