@@ -1138,7 +1138,9 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
   // By Value or By Reference?
   if (!isref){// By Value
 
-    // Parameter's type? Pop is different for each type
+    // Although the call to the function is the same,
+    // the way to pick un the result depends on the return type
+    // (which makes the call look different)
     switch(type){
 
     case 'd' : // Double = Double Word
@@ -1618,7 +1620,9 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
   // By Value or By Reference?
   if (!isref){// By Value
 
-    // Parameter's type? Pop is different for each type
+    // Although the call to the function is the same,
+    // the way to pick un the result depends on the return type
+    // (which makes the call look different)
     switch(type){
 
     case 'd' : // Double = Double Word
@@ -2312,7 +2316,20 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
           case 'q' : // should this be treated with two resgisters two?
           {
             long double valueq = G__Longdouble(param);
+
+#ifdef __x86_64__
             __asm__ __volatile__("push %0" :: "g" (valueq));
+#else
+            // Parameter Pointer
+            int *paddr = (int *) &valueq;
+
+            // This has to be checked
+            __asm__ __volatile__("push %0" :: "g" (*(paddr+2)));
+            /* Highest Word */
+            __asm__ __volatile__("push %0" :: "g" (*(paddr+1)));
+            /* Lowest Word */
+            __asm__ __volatile__("push %0" :: "g" (*paddr));
+#endif
           }
           break;
 
@@ -2378,7 +2395,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
       __gnu_cxx::hash_map<const char*, int> *gmap = (__gnu_cxx::hash_map<const char*, int>*) G__get_struct_map();
       __gnu_cxx::hash_map<const char*, int>::iterator  iter = gmap->find(mangled);
       if (iter != gmap->end() ) {
-        tagnum = (int) ((*iter).second);
+        tagnum = iter->second;
       }
 
       // if we dont find it in the map then we have to
@@ -2641,11 +2658,6 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
       if ((gtagnum > -1) && (!ifunc->staticalloc[ifn]))
         this_ptr = (void*) G__getstructoffset();
 
-      // 02/05/07
-      // Change a single function call by a specialied call that handles the
-      // return type... I'm assuming that the result from a call is always
-      // stored in eax so this code is higly dependant!!!
-
       // Return Structure
       result7->type    = ifunc->type[ifn];
       result7->tagnum  = ifunc->p_tagtable[ifn];
@@ -2790,14 +2802,14 @@ int G__call_cppfunc(G__value *result7,G__param *libp,G__ifunc_table_internal *if
       G__stub_method_calling(result7, libp, ifunc, ifn);
     }
     else if (cppfunc) {
-#ifdef G__EXCEPTIONWRAPPER
       /* 15/03/2007 */
       // this-pointer adjustment
       G__this_adjustment(ifunc, ifn);
+#ifdef G__EXCEPTIONWRAPPER
       G__ExceptionWrapper((G__InterfaceMethod)cppfunc,result7,(char*)ifunc,libp,ifn);
 #else
-    // Stub calling
-    (*cppfunc)(result7,(char*)ifunc,libp,ifn);
+      // Stub calling
+      (*cppfunc)(result7,(char*)ifunc,libp,ifn);
 #endif
     }
     else if (!cppfunc && !G__get_funcptr(ifunc, ifn)) {
@@ -4104,7 +4116,7 @@ void G__set_globalcomp(const char *mode,const char *linkfilename,const char *dll
       fprintf(fp,"/********************************************************\n");
       fprintf(fp,"* %s\n",G__CLINK_C);
       fprintf(fp,"********************************************************/\n");
-      fprintf(fp,"#include \"%s\" //newlink 3717 \n",G__CLINK_H);
+      fprintf(fp,"#include \"%s\"\n",G__CLINK_H);
 
       if(G__dicttype!=kFunctionSymbols)
         fprintf(fp,"void G__c_reset_tagtable%s();\n",G__DLLID);
@@ -4144,7 +4156,7 @@ void G__set_globalcomp(const char *mode,const char *linkfilename,const char *dll
       fprintf(fp,"*          FROM HEADER FILES LISTED IN G__setup_cpp_environmentXXX().\n");
       fprintf(fp,"*          CHANGE THOSE HEADER FILES AND REGENERATE THIS FILE.\n");
       fprintf(fp,"********************************************************/\n");
-      fprintf(fp,"#include \"%s\" //newlink 3757 \n",G__CPPLINK_H);
+      fprintf(fp,"#include \"%s\"\n",G__CPPLINK_H);
 
       fprintf(fp,"\n");
       fclose(fp);
@@ -4276,7 +4288,7 @@ void G__gen_cppheader(char *headerfilein)
       case G__CPPLINK:
         fp = fopen(G__CPPLINK_H,"a");
         if(!fp) G__fileerror(G__CPPLINK_H);
-        fprintf(fp,"#include \"%s\" //newlink 3889 \n",headerfile);
+        fprintf(fp,"#include \"%s\"\n",headerfile);
         fclose(fp);
 
         // 10-07-07
@@ -4290,7 +4302,7 @@ void G__gen_cppheader(char *headerfilein)
       case G__CLINK:
         fp = fopen(G__CLINK_H,"a");
         if(!fp) G__fileerror(G__CLINK_H);
-        fprintf(fp,"#include \"%s\" //newlink 3903 \n",headerfile);
+        fprintf(fp,"#include \"%s\"\n",headerfile);
         fclose(fp);
 
         // 10-07-07
@@ -4304,7 +4316,7 @@ void G__gen_cppheader(char *headerfilein)
       case R__CPPLINK:
         fp = fopen(G__CPPLINK_H,"a");
         if(!fp) G__fileerror(G__CPPLINK_H);
-        fprintf(fp,"#include \"%s\" //newlink 3917 \n",headerfile);
+        fprintf(fp,"#include \"%s\"\n",headerfile);
         fclose(fp);
         break;
       }
@@ -4965,7 +4977,7 @@ void G__write_dummy_param(FILE *fp, G__paramfunc *formal_param)
         fprintf(fp,"*((%s*) 0x64)",G__fulltypename(formal_param->p_typetable));   
     }
     else {
-      // Parameter's type? Push is different for each type
+      // Parameter's type
       switch(para_type) {
 
         // Double = Double Word
@@ -5599,7 +5611,6 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
   fprintf(fp,"\n/*********************************************************\n");
   fprintf(fp,"* Member function Interface Method\n");
   fprintf(fp,"*********************************************************/\n");
-  fprintf(fp,"// G__nostubs: %d\n", G__nostubs);
 
   /* This loop goes through all the classes loaded in the G__struct */
   for(i=0;i<G__struct.alltag;i++) {
@@ -13693,7 +13704,7 @@ void G__gen_extra_include() {
     /* Add the extra include ad the beginning of the files */
     fprintf(fp,"\n/* Includes added by #pragma extra_include */\n");
     for(i=0; i< G__extra_inc_n; i++) {
-      fprintf(fp,"#include \"%s\" //newlink 13153 \n",G__extra_include[i]);
+      fprintf(fp,"#include \"%s\"\n",G__extra_include[i]);
     }
 
     /* Copy rest of the header file */
@@ -13713,7 +13724,7 @@ void G__gen_extra_include() {
 
     fprintf(fp,"\n/* Includes added by #pragma extra_include */\n");
     for(i=0; i< G__extra_inc_n; i++) {
-      fprintf(fp,"#include \"%s\" //newlink 13173 \n",G__extra_include[i]);
+      fprintf(fp,"#include \"%s\"\n",G__extra_include[i]);
     }
     fprintf(fp,"\n");
     fclose(fp);
