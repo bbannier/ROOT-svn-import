@@ -81,6 +81,14 @@
 #pragma link C++ typedef TEveElement::List_t;
 #pragma link C++ typedef TEveElement::List_i;
 
+#pragma link C++ class std::set<TEveElement*>;
+#pragma link C++ class std::set<TEveElement*>::iterator;
+#pragma link C++ typedef TEveElement::Set_t;
+#pragma link C++ typedef TEveElement::Set_i;
+
+// TEveSelection
+#pragma link C++ class TEveSelection+;
+
 // GL-interface
 #pragma link C++ class TEveScene+;
 #pragma link C++ class TEveSceneList+;

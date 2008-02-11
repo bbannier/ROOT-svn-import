@@ -57,6 +57,9 @@ TEvePointSet::TEvePointSet(Int_t n_points, ETreeVarType_e tv_type) :
    // Constructor.
 
    fMarkerStyle = 20;
+
+   // Override from TEveElement.
+   fPickable = kTRUE;
 }
 
 //______________________________________________________________________________
@@ -498,8 +501,7 @@ void TEvePointSetArray::TakeAction(TEvePointSelector* sel)
 
 //______________________________________________________________________________
 void TEvePointSetArray::InitBins(const Text_t* quant_name,
-                                 Int_t nbins, Double_t min, Double_t max,
-                                 Bool_t addRe)
+                                 Int_t nbins, Double_t min, Double_t max)
 {
    // Initialize internal point-sets with given binning parameters.
 
@@ -525,10 +527,7 @@ void TEvePointSetArray::InitBins(const Text_t* quant_name,
       fBins[i]->SetMarkerColor(fMarkerColor);
       fBins[i]->SetMarkerStyle(fMarkerStyle);
       fBins[i]->SetMarkerSize(fMarkerSize);
-      if (addRe)
-         gEve->AddElement(fBins[i], this);
-      else
-         AddElement(fBins[i]);
+      AddElement(fBins[i]);
    }
 }
 
@@ -609,14 +608,14 @@ void TEvePointSetArray::SetRange(Double_t min, Double_t max)
 
 
 /******************************************************************************/
+// TEvePointSetProjected
 /******************************************************************************/
 
 //______________________________________________________________________________
-// TEvePointSetProjected
 //
 // Projected copy of a TEvePointSet.
 
-ClassImp(TEvePointSetProjected)
+ClassImp(TEvePointSetProjected);
 
 //______________________________________________________________________________
 TEvePointSetProjected::TEvePointSetProjected() :

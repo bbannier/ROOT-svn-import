@@ -14,18 +14,26 @@
 #include "TEveSceneInfo.h"
 
 #include "TEveManager.h"
+#include "TEveSelection.h"
+#include "TEveProjectionBases.h"
 
 #include "TGLSAViewer.h"
 #include "TGLScenePad.h"
 
-#include "TGLOrthoCamera.h" // For fixing defaults in root 5.17.4
+#include "TGLPhysicalShape.h" // For handling OnMouseIdle signal
+#include "TGLLogicalShape.h"  // For handling OnMouseIdle signal
+
+
+//==============================================================================
+//==============================================================================
+// TEveViewer
+//==============================================================================
 
 //______________________________________________________________________________
-// TEveViewer
 //
 // Reve representation of TGLViewer.
 
-ClassImp(TEveViewer)
+ClassImp(TEveViewer);
 
 //______________________________________________________________________________
 TEveViewer::TEveViewer(const Text_t* n, const Text_t* t) :
@@ -81,7 +89,7 @@ void TEveViewer::AddScene(TEveScene* scene)
    TGLSceneInfo* glsi = fGLViewer->AddScene(scene->GetGLScene());
    if (glsi != 0) {
       TEveSceneInfo* si = new TEveSceneInfo(this, scene, glsi);
-      gEve->AddElement(si, this);
+      AddElement(si);
    } else {
       throw(eh + "scene already in the viewer.");
    }
@@ -136,24 +144,39 @@ Bool_t TEveViewer::HandleElementPaste(TEveElement* el)
    }
 }
 
+
 /******************************************************************************/
 /******************************************************************************/
+// TEveViewerList
 /******************************************************************************/
 
 //______________________________________________________________________________
-// TEveViewerList
 //
 // List of Viewers providing common operations on TEveViewer collections.
 
-ClassImp(TEveViewerList)
+ClassImp(TEveViewerList);
 
 //______________________________________________________________________________
 TEveViewerList::TEveViewerList(const Text_t* n, const Text_t* t) :
-   TEveElementList(n, t)
+   TEveElementList(n, t),
+   fPickToSelect  (kPSProjectable)
+
 {
    // Constructor.
 
    SetChildClass(TEveViewer::Class());
+}
+
+//______________________________________________________________________________
+void TEveViewerList::Connect()
+{
+   Bool_t status;
+   status=TQObject::Connect("TGLViewer", "MouseOver(TGLPhysicalShape*)",
+                     "TEveViewerList", this, "OnMouseOver(TGLPhysicalShape*)");
+   printf("Connect MouseOver %d\n", status);
+   status=TQObject::Connect("TGLViewer", "Clicked(TObject*)",
+                     "TEveViewerList", this, "OnClicked(TObject*)");
+   printf("Connect  Clicked %d\n", status);
 }
 
 /******************************************************************************/
@@ -170,7 +193,7 @@ void TEveViewerList::RepaintChangedViewers(Bool_t resetCameras, Bool_t dropLogic
       {
          // printf(" TEveViewer '%s' changed ... reqesting draw.\n", (*i)->GetObject()->GetName());
 
-         if (resetCameras)        glv->PostSceneBuildSetup(kTRUE);
+         if (resetCameras) glv->PostSceneBuildSetup(kTRUE);
          if (dropLogicals) glv->SetSmartRefresh(kFALSE);
 
          glv->RequestDraw(TGLRnrCtx::kLODHigh);
@@ -219,5 +242,81 @@ void TEveViewerList::SceneDestructing(TEveScene* scene)
          if (sinfo->GetScene() == scene)
             gEve->RemoveElement(sinfo, viewer);
       }
+   }
+}
+
+
+/******************************************************************************/
+// Processing of events from TGLViewers.
+/******************************************************************************/
+
+//______________________________________________________________________________
+TEveElement* TEveViewerList::MapPickedToSelected(TEveElement* el)
+{
+   if (el == 0 || el->GetPickable() == kFALSE)
+      return 0;
+
+   switch (fPickToSelect)
+   {
+      case kPSIgnore:
+      {
+         return 0;
+      }
+      case kPSElement:
+      {
+         return el;
+      }
+      case kPSProjectable:
+      {
+         TEveProjected* p = dynamic_cast<TEveProjected*>(el);
+         if (p)
+            return dynamic_cast<TEveElement*>(p->GetProjectable());
+         else
+            return el;
+      }
+      case kPSCompound:
+      {
+         Error("TEveViewerList::MapPickedToSelected", "Compound pick-to-select mode not supported.");
+         return el;
+      }  
+   }
+   return el;
+}
+
+//______________________________________________________________________________
+void TEveViewerList::OnMouseOver(TGLPhysicalShape *pshape)
+{
+   TObject     *obj = 0;
+   TEveElement *el  = 0;
+
+   if (pshape)
+   {
+      TGLLogicalShape* lshape = const_cast<TGLLogicalShape*>(pshape->GetLogical());
+      obj = lshape->GetExternal();
+      el = MapPickedToSelected(dynamic_cast<TEveElement*>(obj));
+   }
+
+   TEveSelection* h = gEve->GetHighlight();
+   if (el || h->GetNChildren() > 0)
+   {
+      h->RemoveElements();
+      if (el)
+         h->AddElement(el);
+      gEve->Redraw3D();
+   }
+}
+
+//______________________________________________________________________________
+void TEveViewerList::OnClicked(TObject *obj)
+{
+   TEveElement* el = MapPickedToSelected(dynamic_cast<TEveElement*>(obj));
+
+   TEveSelection* s = gEve->GetSelection();
+   if (el || s->GetNChildren() > 0)
+   {
+      s->RemoveElements();
+      if (el)
+         s->AddElement(el);
+      gEve->Redraw3D();
    }
 }

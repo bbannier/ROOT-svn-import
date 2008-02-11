@@ -11,6 +11,7 @@
 
 #include "TEveManager.h"
 
+#include "TEveSelection.h"
 #include "TEveViewer.h"
 #include "TEveScene.h"
 #include "TEvePad.h"
@@ -73,6 +74,10 @@ TEveManager::TEveManager(UInt_t w, UInt_t h) :
    fTimerActive    (kFALSE),
    fRedrawTimer    (),
 
+   fStampedElements(),
+   fSelection      (0),
+   fHighlight      (0),
+
    fGeometries     ()
 {
    // Constructor.
@@ -85,6 +90,10 @@ TEveManager::TEveManager(UInt_t w, UInt_t h) :
    gEve = this;
 
    fExcHandler = new TExceptionHandler;
+
+   fSelection = new TEveSelection("Global Selection");
+   fHighlight = new TEveSelection("Global Highlight");
+   fHighlight->SetHighlightMode();
 
    fRedrawTimer.Connect("Timeout()", "TEveManager", this, "DoRedraw3D()");
    fMacroFolder = new TFolder("EVE", "Visualization macros");
@@ -124,6 +133,8 @@ TEveManager::TEveManager(UInt_t w, UInt_t h) :
    fViewer->SetGLViewer(glv);
    fViewer->IncDenyDestroy();
    AddElement(fViewer, fViewers);
+
+   fViewers->Connect();
 
    fScenes  = new TEveSceneList ("Scenes");
    fScenes->IncDenyDestroy();
@@ -260,8 +271,15 @@ void TEveManager::DoRedraw3D()
 
    // printf("TEveManager::DoRedraw3D redraw triggered\n");
 
-   fScenes ->RepaintChangedScenes (fDropLogicals);
+   // fScenes ->RepaintChangedScenes (fDropLogicals);
+   fScenes ->ProcessSceneChanges(fDropLogicals, fStampedElements);
    fViewers->RepaintChangedViewers(fResetCameras, fDropLogicals);
+
+   for (TEveElement::Set_i i = fStampedElements.begin(); i != fStampedElements.end(); ++i)
+   {
+      (*i)->ClearStamps();
+   }
+   fStampedElements.clear();
 
    fResetCameras = kFALSE;
    fDropLogicals = kFALSE;
@@ -292,7 +310,7 @@ void TEveManager::ElementChanged(TEveElement* element, Bool_t update_scenes, Boo
       fEditor->DisplayElement(element);
 
    if (update_scenes) {
-      std::list<TEveElement*> scenes;
+      TEveElement::List_t scenes;
       element->CollectSceneParents(scenes);
       ScenesChanged(scenes);
    }
@@ -302,7 +320,7 @@ void TEveManager::ElementChanged(TEveElement* element, Bool_t update_scenes, Boo
 }
 
 //______________________________________________________________________________
-void TEveManager::ScenesChanged(std::list<TEveElement*>& scenes)
+void TEveManager::ScenesChanged(TEveElement::List_t& scenes)
 {
    // Mark all scenes from the given list as changed.
 
@@ -365,8 +383,7 @@ TGListTreeItem* TEveManager::AddEvent(TEveEventManager* event)
 }
 
 //______________________________________________________________________________
-TGListTreeItem* TEveManager::AddElement(TEveElement* element,
-                                        TEveElement* parent)
+void TEveManager::AddElement(TEveElement* element, TEveElement* parent)
 {
    // Add an element. If parent is not specified it is added into
    // current event (which is created if does not exist).
@@ -377,12 +394,11 @@ TGListTreeItem* TEveManager::AddElement(TEveElement* element,
       parent = fCurrentEvent;
    }
 
-   return parent->AddElement(element);
+   parent->AddElement(element);
 }
 
 //______________________________________________________________________________
-TGListTreeItem* TEveManager::AddGlobalElement(TEveElement* element,
-                                              TEveElement* parent)
+void TEveManager::AddGlobalElement(TEveElement* element, TEveElement* parent)
 {
    // Add a global element, i.e. one that does not change on each
    // event, like geometry or projection manager.
@@ -391,7 +407,7 @@ TGListTreeItem* TEveManager::AddGlobalElement(TEveElement* element,
    if (parent == 0)
       parent = fGlobalScene;
 
-   return parent->AddElement(element);
+   parent->AddElement(element);
 }
 
 /******************************************************************************/
@@ -414,9 +430,11 @@ void TEveManager::PreDeleteElement(TEveElement* element)
    if (fEditor->GetEveElement() == element)
       fEditor->DisplayObject(0);
 
-   std::list<TEveElement*> scenes;
-   element->CollectSceneParents(scenes);
-   ScenesChanged(scenes);
+   fScenes->DestroyElementRenderers(element);
+
+   TEveElement::Set_i sei;
+   if ((sei = fStampedElements.find(element)) != fStampedElements.end())
+      fStampedElements.erase(sei);
 }
 
 /******************************************************************************/

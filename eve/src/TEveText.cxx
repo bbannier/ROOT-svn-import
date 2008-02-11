@@ -50,7 +50,7 @@ TEveText::TEveText(const Text_t* txt) :
    // Constructor.
 
    InitMainTrans();
-   SetFontMode(TGLFont::kExtrude);
+   SetFontMode(TGLFont::kPixmap);
 }
 
 //______________________________________________________________________________

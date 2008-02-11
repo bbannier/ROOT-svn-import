@@ -341,6 +341,8 @@ void TGLViewer::InitGL()
    glCullFace(GL_BACK);
    glClearColor(0.f, 0.f, 0.f, 1.f);
    glClearDepth(1.0);
+   glColorMaterial(GL_FRONT_AND_BACK, GL_DIFFUSE);
+   glEnable(GL_COLOR_MATERIAL);
    glMaterialf(GL_BACK, GL_SHININESS, 0.0);
    glPolygonMode(GL_FRONT, GL_FILL);
    glDisable(GL_BLEND);
@@ -1153,6 +1155,14 @@ void TGLViewer::MouseOver(TGLPhysicalShape *shape)
    // Emit MouseOver signal.
 
    Emit("MouseOver(TGLPhysicalShape*)", (Long_t)shape);
+}
+
+//______________________________________________________________________________
+void TGLViewer::Clicked(TObject *obj)
+{
+   // Emit Clicked signal.
+
+   Emit("Clicked(TObject*)", (Long_t)obj);
 }
 
 //______________________________________________________________________________

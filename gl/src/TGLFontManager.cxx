@@ -24,36 +24,73 @@
 ClassImp(TGLFont);
 
 //______________________________________________________________________________
-TGLFont::TGLFont(Int_t size, Int_t font,  EMode mode, FTFont* f):
-   fSize(size), fFile(font), fMode(mode), fFont(f)
+TGLFont::TGLFont(Int_t size, Int_t font, EMode mode, const FTFont* f):
+   fSize(size), fFile(font), fMode(mode), fFont(f), fDepth(1)
 {
    // Constructor.
 }
 
 //______________________________________________________________________________
+TGLFont::TGLFont(const TGLFont& o) :
+   fSize(o.fSize), fFile(o.fFile), fMode(o.fMode), fFont(o.fFont), fDepth(o.fDepth)
+{
+   // Copy constructor.
+}
+
+//______________________________________________________________________________
+TGLFont& TGLFont::operator=(const TGLFont& o)
+{
+   // Assignment operator.
+
+   fSize  = o.fSize;
+   fFile  = o.fFile;
+   fMode  = o.fMode;
+   fFont  = o.fFont;
+   fDepth = o.fDepth;
+   return *this;
+}
+
+
+/******************************************************************************/
+
+//______________________________________________________________________________
 void TGLFont::BBox(const char* txt, Float_t& llx, Float_t& lly, Float_t& llz, Float_t& urx, Float_t& ury, Float_t& urz) const
 {
-   // Get bounding box. Cast to non-const FTFont* because FTGL is not const correct.
-  
-   FTFont* f = (FTFont*)fFont;
-   f->BBox(txt, llx, lly, llz, urx, ury, urz);
+   // Get bounding box.
+
+   // FTGL is not const correct.
+   const_cast<FTFont*>(fFont)->BBox(txt, llx, lly, llz, urx, ury, urz);
 }
 
 //______________________________________________________________________________
 void TGLFont::Render(const char* txt) const
 {
-   // Render text. Cast to non-const FTFont* because FTGL is not const correct.
+   // Render text.
 
-   FTFont* f = (FTFont*)fFont;
-   f->Render(txt);
+   Bool_t scaleDepth = (fMode == kExtrude && fDepth != 1.0f);
+
+   if (scaleDepth) {
+      glPushMatrix();
+      // !!! 0.2*fSize is hard-coded in TGLFontManager::GetFont(), too. 
+      glTranslatef(0.0f, 0.0f, 0.5f*fDepth * 0.2f*fSize);
+      glScalef(1.0f, 1.0f, fDepth);
+   }
+
+   // FTGL is not const correct.
+   const_cast<FTFont*>(fFont)->Render(txt);
+
+   if (scaleDepth) {
+      glPopMatrix();
+   }
 }
 
 //______________________________________________________________________________
-void TGLFont::PreRender()
+void TGLFont::PreRender(Bool_t autoLight, Bool_t lightOn) const
 {
    // Set-up GL state before FTFont rendering.
 
-   switch(fMode) {
+   switch (fMode)
+   {
       case kBitmap:
       case kPixmap:
          glPushAttrib(GL_CURRENT_BIT | GL_ENABLE_BIT);
@@ -64,64 +101,53 @@ void TGLFont::PreRender()
       case kTexture:
          glPushAttrib(GL_POLYGON_BIT | GL_ENABLE_BIT);
          glEnable(GL_TEXTURE_2D);
-         glEnable(GL_COLOR_MATERIAL);
          glDisable(GL_CULL_FACE);
          glEnable(GL_ALPHA_TEST);
          glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
          glAlphaFunc(GL_GEQUAL, 0.0625);
          break;
-      case kExtrude:
-      case kPolygon:
       case kOutline:
+      case kPolygon:
+      case kExtrude:
          glPushAttrib(GL_POLYGON_BIT | GL_ENABLE_BIT);
          glEnable(GL_NORMALIZE);
-         glColorMaterial(GL_FRONT_AND_BACK, GL_DIFFUSE);
-         glEnable(GL_COLOR_MATERIAL);
          glDisable(GL_CULL_FACE);
-         break;
+         break;         
       default:
+         Warning("TGLFont::PreRender", "Font mode undefined.");
+         glPushAttrib(GL_LIGHTING_BIT);
          break;
    }
 
-   if(fMode > TGLFont::kOutline) 
+   if ((autoLight && fMode > TGLFont::kOutline) || (!autoLight && lightOn))
       glEnable(GL_LIGHTING);
-   else 
+   else
       glDisable(GL_LIGHTING);
 }
 
 //______________________________________________________________________________
-void TGLFont::PostRender()
+void TGLFont::PostRender() const
 {
-   // Set-up GL state after FTFont rendering.
+   // Reset GL state after FTFont rendering.
 
-   switch(fMode) {
-      case kBitmap:
-      case kPixmap:
-      case kTexture:
-      case kExtrude:
-      case kPolygon:
-      case kOutline:
-         glPopAttrib();
-         break;
-      default:
-         break;
-      }
+   glPopAttrib();
 }
 
+
 //______________________________________________________________________________
-// TGLFontManager
 //
 // A FreeType GL font manager.
 //
 // Each GL rendering context has an instance of FTGLManager.
 // This enables FTGL fonts to be shared same way as textures and display lists.
 
-ClassImp(TGLFontManager)
+ClassImp(TGLFontManager);
 
 TObjArray   TGLFontManager::fgFontFileArray;
 TGLFontManager::FontSizeVec_t TGLFontManager::fgFontSizeArray;
 Bool_t  TGLFontManager::fgStaticInitDone = kFALSE;
 
+//______________________________________________________________________________
 TGLFontManager::~TGLFontManager()
 {
    // Destructor.
@@ -135,7 +161,7 @@ TGLFontManager::~TGLFontManager()
 }
 
 //______________________________________________________________________________
-const TGLFont* TGLFontManager::GetFont(Int_t size, Int_t fileID, TGLFont::EMode mode)
+const TGLFont& TGLFontManager::GetFont(Int_t size, Int_t fileID, TGLFont::EMode mode)
 {
    // Provide font with given size, file and FTGL class.
 
@@ -180,23 +206,22 @@ const TGLFont* TGLFontManager::GetFont(Int_t size, Int_t fileID, TGLFont::EMode 
             break;
       }
       ftfont->FaceSize(size);
-      return & fFontMap.insert(std::make_pair(TGLFont(size, fileID, mode, ftfont), 1)).first->first;
+      return fFontMap.insert(std::make_pair(TGLFont(size, fileID, mode, ftfont), 1)).first->first;
    } 
    else
    {
       it->second = it->second;
-      return & it->first;
+      return it->first;
    }
 }
 
 //______________________________________________________________________________
-Bool_t TGLFontManager::ReleaseFont(TGLFont* font)
+Bool_t TGLFontManager::ReleaseFont(const TGLFont& font)
 {
-   // Release font with given attributes. Returns false if font has not been found
-   // in the managers font set.
+   // Release font with given attributes. Returns false if font has
+   // not been found in the managers font set.
 
-   std::map<TGLFont, Int_t>::iterator it = 
-      fFontMap.find(TGLFont(font->GetSize(), font->GetFile(), font->GetMode()));
+   std::map<TGLFont, Int_t>::iterator it = fFontMap.find(font);
 
    if (it != fFontMap.end()) {
       it->second = it->second -1;

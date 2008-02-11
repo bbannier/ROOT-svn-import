@@ -13,9 +13,9 @@
 #define ROOT_TEveTextGL
 
 #include "TGLObject.h"
+#include "TGLFontManager.h"
 
 class TEveText;
-class TGLFont;
 
 class TEveTextGL : public TGLObject
 {
@@ -24,11 +24,11 @@ private:
    TEveTextGL& operator=(const TEveTextGL&); // Not implemented
 
 protected:
-   TEveText             *fM;        // model object.
-   mutable TGLFont      *fFont;     // FTFont wrapper
-   mutable Double_t      fX[4][3];  // 3D position of font
+   TEveText              *fM;        // model object.
+   mutable TGLFont        fFont;     // FTFont wrapper
+   mutable Double_t       fX[4][3];  // 3D position of font
 
-   void    SetFont(TEveText* model, TGLRnrCtx & rnrCtx) const;
+   void    SetFont(TGLRnrCtx & rnrCtx) const;
 public:
    TEveTextGL();
    virtual ~TEveTextGL() {}

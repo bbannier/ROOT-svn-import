@@ -126,8 +126,7 @@ public:
    virtual void TakeAction(TEvePointSelector*);
 
 
-   void InitBins(const Text_t* quant_name, Int_t nbins, Double_t min, Double_t max,
-                 Bool_t addRe=kTRUE);
+   void InitBins(const Text_t* quant_name, Int_t nbins, Double_t min, Double_t max);
    void Fill(Double_t x, Double_t y, Double_t z, Double_t quant);
    void SetPointId(TObject* id);
    void CloseBins();

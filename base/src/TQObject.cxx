@@ -559,6 +559,41 @@ TList *TQObject::GetListOfClassSignals() const
 }
 
 //______________________________________________________________________________
+void TQObject::CollectClassSignals(TList& list, const char* signal, TClass* cls)
+{
+   // Collect class signals matching compressed signal-signature
+   // 'signal' from class cls and all its base-classes.
+   //
+   // The recursive traversal is not performed for classes not
+   // deriving from TQClass.
+
+   if (cls == 0) cls = IsA();
+
+   TQClass *qcl;
+   if ((qcl = dynamic_cast<TQClass*>(cls)))
+   {
+      // Find matching signal.
+      TIter             next_cl_list(qcl->fListOfSignals);
+      TQConnectionList *clist;
+      while ((clist = (TQConnectionList*)next_cl_list()))
+      {
+         if (!strcmp(signal, clist->GetName())) {
+            list.Add(clist);
+            break;
+         }
+      }
+
+      // Descend into base-classes.
+      TIter       next_base_class(cls->GetListOfBases());
+      TBaseClass *base;
+      while ((base = (TBaseClass*) next_base_class()))
+      {
+         CollectClassSignals(list, signal, base->GetClassPointer());
+      }
+   }
+}
+
+//______________________________________________________________________________
 void TQObject::HighPriority(const char *signal_name, const char *slot_name)
 {
    // 1. If slot_name = 0 => makes signal defined by the signal_name
@@ -802,24 +837,24 @@ void TQObject::Emit(const char *signal_name, Long_t param)
    // Example:
    //          theButton->Emit("Clicked(int)",id)
 
-   TList *slist = GetListOfClassSignals();
+   if (!signal_name)
+      return;
 
-   if ((!slist && !fListOfSignals) || !signal_name)
+   char *signal = CompressName(signal_name);
+
+   TList classSigs;
+   CollectClassSignals(classSigs, signal);
+
+   if ((classSigs.IsEmpty() && !fListOfSignals))
       return;
 
    register TQConnectionList *clist  = 0;
    register TQConnection *connection = 0;
 
-   char *signal = CompressName(signal_name);
-
    // execute class signals
-   if (slist) {
-      TIter nextcl_list(slist);
+   if (!classSigs.IsEmpty()) {
+      TIter nextcl_list(&classSigs);
       while ((clist = (TQConnectionList*)nextcl_list())) {
-         if (!strcmp(signal,clist->GetName())) break;
-      }
-
-      if (clist) {
          TIter nextcl(clist);
          while ((connection = (TQConnection*)nextcl())) {
             gTQSender = GetSender();

@@ -1164,8 +1164,6 @@ void TGLUtil::RenderPolyMarkers(const TAttMarker& marker, Float_t* p, Int_t n,
    glPushAttrib(GL_ENABLE_BIT | GL_POINT_BIT | GL_LINE_BIT);
 
    glDisable(GL_LIGHTING);
-   glColorMaterial(GL_FRONT_AND_BACK, GL_DIFFUSE);
-   glEnable(GL_COLOR_MATERIAL);
    TGLUtil::Color(marker.GetMarkerColor());
 
    Int_t s = marker.GetMarkerStyle();
@@ -1309,8 +1307,6 @@ void TGLUtil::RenderPolyLine(const TAttLine& aline, Float_t* p, Int_t n,
    glPushAttrib(GL_ENABLE_BIT | GL_LINE_BIT);
 
    glDisable(GL_LIGHTING);
-   glColorMaterial(GL_FRONT_AND_BACK, GL_DIFFUSE);
-   glEnable(GL_COLOR_MATERIAL);
    TGLUtil::Color(aline.GetLineColor());
    glLineWidth(aline.GetLineWidth());
    if (aline.GetLineStyle() > 1) {

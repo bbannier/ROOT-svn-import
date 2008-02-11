@@ -42,6 +42,16 @@ TEveProjectable::~TEveProjectable()
    }
 }
 
+//______________________________________________________________________________
+void TEveProjectable::AddProjectedsToSet(std::set<TEveElement*>& set)
+{
+   // Add the projected elements to the set, dyn-casting them to
+   // TEveElement.
+
+   for (ProjList_i i=fProjectedList.begin(); i!=fProjectedList.end(); ++i)
+      set.insert(dynamic_cast<TEveElement*>(*i));
+}
+
 
 //______________________________________________________________________________
 // TEveProjected

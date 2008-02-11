@@ -95,6 +95,12 @@ TGLRnrCtx::TGLRnrCtx(TGLViewerBase* viewer) :
       fViewerStyle = fSceneStyle = kFill;
       fDrawPass = kPassFill;
    }
+
+   // Colors for different shape-selection-levels.
+   fSSLColor[0][0] = 255; fSSLColor[0][1] = 255; fSSLColor[0][2] = 255; fSSLColor[0][3] = 255;
+   fSSLColor[1][0] = 255; fSSLColor[1][1] = 200; fSSLColor[1][2] = 200; fSSLColor[1][3] = 255;
+   fSSLColor[2][0] = 200; fSSLColor[2][1] = 255; fSSLColor[2][2] = 255; fSSLColor[2][3] = 255;
+   fSSLColor[3][0] = 200; fSSLColor[3][1] = 200; fSSLColor[3][2] = 255; fSSLColor[3][3] = 255;
 }
 
 //______________________________________________________________________
@@ -124,6 +130,19 @@ TGLSceneBase & TGLRnrCtx::RefScene()
 }
 
 /**************************************************************************/
+
+//______________________________________________________________________
+Bool_t TGLRnrCtx::IsDrawPassFilled() const
+{
+   // Returns true if current render-pass uses filled polygon style.
+
+   return fDrawPass == kPassFill || fDrawPass == kPassOutlineFill;
+}
+
+
+/******************************************************************************/
+// Selection & picking
+/******************************************************************************/
 
 //______________________________________________________________________________
 void TGLRnrCtx::BeginSelection(Int_t x, Int_t y, Int_t r)
@@ -186,15 +205,35 @@ Int_t TGLRnrCtx::GetPickRadius()
    return fPickRadius;
 }
 
-/**************************************************************************/
 
-//______________________________________________________________________
-Bool_t TGLRnrCtx::IsDrawPassFilled() const
+/******************************************************************************/
+// Colors for Shape-Selection-Level
+/******************************************************************************/
+
+void TGLRnrCtx::SetSSLColor(Int_t level, UChar_t r, UChar_t g, UChar_t b, UChar_t a)
 {
-   // Returns true if current render-pass uses filled polygon style.
+   // Set highlight color for shape-selection-level level.
 
-   return fDrawPass == kPassFill || fDrawPass == kPassOutlineFill;
+   fSSLColor[level][0] = r;
+   fSSLColor[level][1] = g;
+   fSSLColor[level][2] = b;
+   fSSLColor[level][3] = a;
 }
+
+void TGLRnrCtx::SetSSLColor(Int_t level, UChar_t rgba[4])
+{
+   // Set highlight color for shape-selection-level level.
+
+   fSSLColor[level][0] = rgba[0];
+   fSSLColor[level][1] = rgba[1];
+   fSSLColor[level][2] = rgba[2];
+   fSSLColor[level][3] = rgba[3];
+}
+
+
+/**************************************************************************/
+// Display-list state
+/******************************************************************************/
 
 //______________________________________________________________________
 void TGLRnrCtx::OpenDLCapture()
@@ -214,10 +253,13 @@ void TGLRnrCtx::CloseDLCapture()
    fDLCaptureOpen = kFALSE;
 }
 
-/**************************************************************************/
+
+/******************************************************************************/
+// TGLFont interface
+/******************************************************************************/
 
 //______________________________________________________________________
-const TGLFont* TGLRnrCtx::GetFont(Int_t size, Int_t file, Int_t mode)
+const TGLFont& TGLRnrCtx::GetFont(Int_t size, Int_t file, Int_t mode)
 {
    // Get font in the GL rendering context.
 
@@ -225,12 +267,13 @@ const TGLFont* TGLRnrCtx::GetFont(Int_t size, Int_t file, Int_t mode)
 }
 
 //______________________________________________________________________
-Bool_t TGLRnrCtx::ReleaseFont(TGLFont* font)
+Bool_t TGLRnrCtx::ReleaseFont(const TGLFont& font)
 {
    // Release font in the GL rendering context.
 
    return fGLCtxIdentity->GetFontManager()->ReleaseFont(font);
 }
+
 
 /**************************************************************************/
 // Static helpers

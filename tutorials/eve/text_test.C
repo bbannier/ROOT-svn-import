@@ -23,6 +23,7 @@ TEveText* text_test()
    t->PtrMainTrans()->RotateLF(1, 3, TMath::PiOver2());
    t->SetMainColor((Color_t)(kOrange-2));
    t->SetFontSize(64);
+   t->SetFontMode(TGLFont::kExtrude);
    t->SetLighting(kTRUE);
    gEve->AddElement(t);
 

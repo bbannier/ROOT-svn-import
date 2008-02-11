@@ -10,37 +10,49 @@ class FTFont;
 class TGLFont
 {
 public:
-   enum EMode { kUndef = -1, kBitmap, kPixmap, kTexture, kOutline, kPolygon, kExtrude}; // FTGL class
+   enum EMode
+   {
+      kUndef = -1,
+      kBitmap, kPixmap,
+      kTexture, kOutline, kPolygon, kExtrude
+   }; // Font-types of FTGL.
 
 private:
-   TGLFont& operator=(const TGLFont&); // not implemented
 
 protected:
-   Int_t    fSize;   // free-type face size
-   Int_t    fFile;   // free-type file name
-   EMode    fMode;   // free-type FTGL class id
+   Int_t         fSize;   // free-type face size
+   Int_t         fFile;   // free-type file name
+   EMode         fMode;   // free-type FTGL class id
 
-   const  FTFont* fFont;  // FTGL font
+   const FTFont *fFont;   // FTGL font
+
+   Float_t       fDepth;  // depth of extruded fonts, enforced at render time.
 
 public:
-   TGLFont(): fSize(-1), fFile(1), fMode(kUndef),fFont(0) {}
-   TGLFont(Int_t size, Int_t font, EMode mode, FTFont* f=0);
-   TGLFont(const TGLFont& o) : fSize(o.GetSize()), fFile(o.GetFile()), fMode(o.GetMode()), fFont(fFont = o.GetFont()){}
-   virtual ~TGLFont(){};
+   TGLFont(): fSize(-1), fFile(-1), fMode(kUndef), fFont(0), fDepth(1) {}
+   TGLFont(Int_t size, Int_t font, EMode mode, const FTFont* f=0);
+   TGLFont(const TGLFont& o);
+   virtual ~TGLFont() {}
 
-   Int_t GetSize()const { return fSize;} 
-   Int_t GetFile()const { return fFile;} 
-   EMode GetMode()const { return fMode;}
+   TGLFont& operator=(const TGLFont& o);
 
-   const FTFont* GetFont() const {return fFont;}
+   Int_t GetSize() const { return fSize;} 
+   Int_t GetFile() const { return fFile;} 
+   EMode GetMode() const { return fMode;}
+
+   const FTFont* GetFont() const { return fFont; }
+
+   void SetDepth(Float_t d) { fDepth = d; }
 
    // FTGL wrapper functions
-   void   BBox  ( const char* txt, Float_t& llx, Float_t& lly, Float_t& llz, Float_t& urx, Float_t& ury, Float_t& urz) const;
-   void   Render(const char* txt) const;
+   void   BBox(const Text_t* txt,
+               Float_t& llx, Float_t& lly, Float_t& llz,
+               Float_t& urx, Float_t& ury, Float_t& urz) const;
+   void   Render(const Text_t* txt) const;
 
    // helper gl draw functions
-   virtual void   PreRender();
-   virtual void   PostRender();
+   virtual void PreRender(Bool_t autoLight=kTRUE, Bool_t lightOn=kFALSE) const;
+   virtual void PostRender() const;
 
    Bool_t operator< (const TGLFont& o) const
    {
@@ -81,8 +93,8 @@ public:
    TGLFontManager(){}
    virtual ~TGLFontManager();
 
-   const  TGLFont* GetFont(Int_t size, Int_t file, TGLFont::EMode mode);
-   Bool_t ReleaseFont(TGLFont* font);
+   const TGLFont& GetFont(Int_t size, Int_t file, TGLFont::EMode mode);
+   Bool_t         ReleaseFont(const TGLFont& font);
 
    static TObjArray*        GetFontFileArray();
    static FontSizeVec_t*    GetFontSizeArray();
