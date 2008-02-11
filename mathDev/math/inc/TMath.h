@@ -464,7 +464,7 @@ Long64_t TMath::LocMax(Long64_t n, const T *a) {
    return loc;      
 }
 
-template <typename T> Double_t TMath::Mean(Long64_t n, const T *a, const Double_t *w=0)
+template <typename T> Double_t TMath::Mean(Long64_t n, const T *a, const Double_t *w)
 {
    // Return the weighted mean of an array a with length n.
 
@@ -529,7 +529,7 @@ template <typename T> Double_t TMath::RMS(Long64_t n, const T *a)
    return rms;
 }
 
-template <typename T> Double_t TMath::Median(Long64_t n, const T *a,  const Double_t *w=0, Long64_t *work=0)
+template <typename T> Double_t TMath::Median(Long64_t n, const T *a,  const Double_t *w, Long64_t *work)
 {
    // Return the median of the array a where each entry i has weight w[i] .
    // Both arrays have a length of at least n . The median is a number obtained
@@ -593,7 +593,7 @@ template <typename T> Long64_t BinarySearch(Long64_t n, const T **array, T value
    return nbelow-1;
 }
 
-template <typename Element, typename Index, typename Size> void TMath::Sort(Size n, const Element* a, Index* index, Bool_t down=kTRUE)
+template <typename Element, typename Index, typename Size> void TMath::Sort(Size n, const Element* a, Index* index, Bool_t down)
 {
    // Sort the n1 elements of the Short_t array a.
    // In output the array index contains the indices of the sorted array.
