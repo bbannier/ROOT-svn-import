@@ -1768,8 +1768,7 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
       // Getting the Class size
 
        // if Function is a constructor we don't return any value
-       if (strcmp(ifunc->funcname[ifn], G__struct.name[ifunc->tagnum])== 0){
-          
+       if ((ifunc->tagnum > -1) && (strcmp(ifunc->funcname[ifn], G__struct.name[ifunc->tagnum])== 0)) {
            __asm__ __volatile__("call *%0" :: "g" (vaddress));
 
            result7->obj.i = (long) this_ptr;
@@ -1934,6 +1933,16 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
   // this is redundant if gtagnum < 0
   // but I want to say that G__tagnum is always changed
   G__tagnum = gtagnum; //G_getexpr will use it to find a variable within a class
+
+  // 19-11-07
+  // We need to evaluate the parameters by default here, since we want to use those
+  // given by the static type and in the next function we will recursively call 
+  // G__stub_method_calling with a different type
+  struct G__param rpara;
+  if(G__evaluate_libp(&rpara, libp, ifunc, ifn)==-1){
+    G__fprinterr(G__serr,"Error in G__stub_method_calling: problem with the default parameters\n");
+    return -1;
+  }
 
   // We will try to do the special case for constructors here...
   // I couldnt find a field in the ifunc table telling us if it's acons.
@@ -2131,7 +2140,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
 
     /* n = constructor arity (see array constructor) */
     for (int i=0;i<n;i++)
-       G__stub_method_asm(ifunc, ifn, gtagnum, ((void*)((long)pobject + (i*osize))), libp, result7);
+       G__stub_method_asm(ifunc, ifn, gtagnum, ((void*)((long)pobject + (i*osize))), &rpara, result7);
 
     result7->obj.i = (long) pobject;
     // Object's Reference
@@ -2142,16 +2151,6 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
   }
   else{// Not Constructor
     char * finalclass = 0;
-
-    // 19-11-07
-    // We need to evaluate the parameters by default here, since we want to use those
-    // given by the static type and in the next function we will recursively call 
-    // G__stub_method_calling with a different type
-    struct G__param rpara;
-    if(G__evaluate_libp(&rpara, libp, ifunc, ifn)==-1){
-      G__fprinterr(G__serr,"Error in G__stub_method_calling: problem with the default parameters\n");
-      return -1;
-    }
 
     // Let's try to find the final type if we have a virtual function
     // tagnum cant be -1 here because a free standing function cant be
@@ -9569,10 +9568,6 @@ void G__cpplink_memfunc(FILE *fp)
             }
 
             fprintf(fp, ", %d", virtflag);
-#else // 1289_YET  || !1993
-            fprintf(fp, ", (void*) NULL, %d", virtflag);
-#endif // 1289_YET
-
 #endif // G__TRUEP2F
             fprintf(fp, ");\n");
           } // end of if access public && not pure virtual func
@@ -12678,6 +12673,8 @@ void G__specify_link(int link_stub)
   if(';'!=c) c=G__fignorestream("#;");
   if(';'!=c) G__genericerror("Syntax error: #pragma link");
 }
+
+#endif /* G__SMALLOBJECT */
 
 /**************************************************************************
 * G__incsetup_memvar()
