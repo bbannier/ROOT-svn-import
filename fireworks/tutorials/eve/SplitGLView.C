@@ -521,14 +521,19 @@ void SplitGLView::OnViewerActivated()
    // Used to know which GL viewer is active.
 
    static Pixel_t green = 0;
+
    // set the actual GL viewer frame to default color
    if (fActViewer)
       fActViewer->GetFrame()->ChangeBackground(GetDefaultFrameBackground());
 
    // change the actual GL viewer to the one who emitted the signal
-   fActViewer = (TGLEmbeddedViewer *)gTQSender;
+   // fActViewer = (TGLEmbeddedViewer *)gTQSender;
+   fActViewer = dynamic_cast<TGLEmbeddedViewer*>((TQObject*)gTQSender);
 
-   if (fActViewer == 0) return;
+   if (fActViewer == 0) {
+      printf ("dyncast failed ...\n");
+      return;
+   }
 
    // get the highlight color (only once)
    if (green == 0) {
@@ -654,7 +659,7 @@ void SplitGLView::OnDoubleClick()
    // Handle double-clicks in GL viewer
 
    // get the origin (sender) of the signal
-   TGLEmbeddedViewer *sourceview = (TGLEmbeddedViewer *)gTQSender;
+   TGLEmbeddedViewer *sourceview = dynamic_cast<TGLEmbeddedViewer*>((TQObject*)gTQSender);
    if (sourceview == 0) return;
 
    // target: top (main) GL View frame

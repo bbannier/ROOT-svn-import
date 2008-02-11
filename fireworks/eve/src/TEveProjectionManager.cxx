@@ -43,7 +43,7 @@ TEveProjectionManager::TEveProjectionManager():
 {
    // Constructor.
 
-   fProjection  = new TEveRPhiProjection(fCenter);
+   fProjection = new TEveRPhiProjection(fCenter);
    UpdateName();
 }
 
@@ -176,7 +176,7 @@ void TEveProjectionManager::ImportElementsRecurse(TEveElement* rnr_el, TEveEleme
       new_re->SetElementName(Form("NLT %s", rnr_el->GetElementName()));
       new_re->SetRnrSelf    (rnr_el->GetRnrSelf());
       new_re->SetRnrChildren(rnr_el->GetRnrChildren());
-      gEve->AddElement(new_re, parent);
+      parent->AddElement(new_re);
 
       for (List_i i=rnr_el->BeginChildren(); i!=rnr_el->EndChildren(); ++i)
          ImportElementsRecurse(*i, new_re);

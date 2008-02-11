@@ -18,12 +18,14 @@
 
 class TBuffer3D;
 
+class TEveElement;
+
 class TEveProjected;
 class TEveProjectionManager;
 
 ////////////////////////////////////////////////////////////////
 //                                                            //
-// TEveProjectable                                             //
+// TEveProjectable                                            //
 //                                                            //
 // Abstract base class for non-linear projectable objects.    //
 //                                                            //
@@ -36,7 +38,10 @@ private:
    TEveProjectable& operator=(const TEveProjectable&); // Not implemented
 
 protected:
-   std::list<TEveProjected*> fProjectedList; // references to projected instances.
+   typedef std::list<TEveProjected*>            ProjList_t;
+   typedef std::list<TEveProjected*>::iterator  ProjList_i;
+
+   ProjList_t       fProjectedList; // references to projected instances.
 
 public:
    TEveProjectable();
@@ -47,13 +52,15 @@ public:
    virtual void AddProjected(TEveProjected* p)    { fProjectedList.push_back(p); }
    virtual void RemoveProjected(TEveProjected* p) { fProjectedList.remove(p); }
 
+   virtual void AddProjectedsToSet(std::set<TEveElement*>& set);
+
    ClassDef(TEveProjectable, 0); // Abstract base class for classes that can be transformed with non-linear projections.
 };
 
 
 ////////////////////////////////////////////////////////////////
 //                                                            //
-// TEveProjected                                               //
+// TEveProjected                                              //
 //                                                            //
 // Abstract base class for non-linear projected objects.      //
 //                                                            //
@@ -73,6 +80,8 @@ protected:
 public:
    TEveProjected();
    virtual ~TEveProjected();
+
+   TEveProjectable* GetProjectable() const { return fProjectable; }
 
    virtual void SetProjection(TEveProjectionManager* proj, TEveProjectable* model);
    virtual void UnRefProjectable(TEveProjectable* assumed_parent);

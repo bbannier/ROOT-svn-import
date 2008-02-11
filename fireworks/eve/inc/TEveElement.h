@@ -68,6 +68,9 @@ public:
    typedef std::list<TEveElement*>              List_t;
    typedef std::list<TEveElement*>::iterator    List_i;
 
+   typedef std::set<TEveElement*>               Set_t;
+   typedef std::set<TEveElement*>::iterator     Set_i;
+
 protected:
    // TRef     fSource;
 
@@ -132,6 +135,8 @@ public:
 
    virtual TObject* GetObject      (const TEveException& eh="TEveElement::GetObject ") const;
    virtual TObject* GetEditorObject(const TEveException& eh="TEveElement::GetEditorObject ") const { return GetObject(eh); }
+   virtual TObject* GetRenderObject(const TEveException& eh="TEveElement::GetRenderObject ") const { return GetObject(eh); }
+
    /*
      TRef&    GetSource() { return fSource; }
      TObject* GetSourceObject() const { return fSource.GetObject(); }
@@ -171,7 +176,7 @@ public:
 
    virtual Bool_t AcceptElement(TEveElement* /*el*/) { return kTRUE; }
 
-   virtual TGListTreeItem* AddElement(TEveElement* el);
+   virtual void AddElement(TEveElement* el);
    virtual void RemoveElement(TEveElement* el);
    virtual void RemoveElementLocal(TEveElement* el);
    virtual void RemoveElements();
@@ -214,6 +219,64 @@ public:
    virtual void SetTransMatrix(Double_t* carr);
    virtual void SetTransMatrix(const TGeoMatrix& mat);
 
+
+   // Selection state and management
+   //--------------------------------
+protected:
+   Bool_t  fPickable;
+   Bool_t  fSelected;             //!
+   Bool_t  fHighlighted;          //!
+   Short_t fImpliedSelected;      //!
+   Short_t fImpliedHighlighted;   //!
+
+public:
+   typedef void (TEveElement::* Select_foo)      (Bool_t);
+   typedef void (TEveElement::* ImplySelect_foo) ();
+
+   Bool_t GetPickable()   const { return fPickable; }
+   void   SetPickable(Bool_t p) { fPickable = p; }
+
+   void SelectElement(Bool_t state);
+   void IncImpliedSelected();
+   void DecImpliedSelected();
+
+   void HighlightElement(Bool_t state);
+   void IncImpliedHighlighted();
+   void DecImpliedHighlighted();
+
+   virtual void FillImpliedSelectedSet(Set_t& impSelSet);
+
+   virtual UChar_t GetSelectedLevel() const;
+
+   // Change-stamping and change bits
+   //---------------------------------
+
+   enum EChangeBits
+   {
+      kCBColorSelection =  1, // Main color or select/hilite state changed.
+      kCBTransBBox      =  2, // Transformation matrix or bounding-box changed.
+      kCBObjProps       =  4  // Object changed, requires dropping its display-lists.
+      // kCBElementAdded   =  8, // Element was added to a new parent.
+      // kCBElementRemoved = 16  // Element was removed from a parent.
+
+      // Deletions are handled in a special way in TEveManager::PreDeleteElement().
+   };
+
+protected:
+   UChar_t fChangeBits;
+
+public:
+   void StampColorSelection() { AddStamp(kCBColorSelection); }
+   void StampTransBBox()      { AddStamp(kCBTransBBox); }
+   void StampObjProps()       { AddStamp(kCBObjProps); }
+   // void StampElementAdded()   { AddStamp(kCBElementAdded); }
+   // void StampElementRemoved() { AddStamp(kCBElementRemoved); }
+   void ClearStamps()         { fChangeBits = 0; }
+   void SetStamp(UChar_t bits);
+   void AddStamp(UChar_t bits);
+
+   // List-tree icons
+   //-----------------
    static  const TGPicture* GetCheckBoxPicture(Bool_t rnrElement, Bool_t rnrDaughter);
    virtual const TGPicture* GetListTreeIcon();
 

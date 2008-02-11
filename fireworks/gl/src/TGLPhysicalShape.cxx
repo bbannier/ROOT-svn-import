@@ -63,7 +63,7 @@ TGLPhysicalShape::TGLPhysicalShape(UInt_t id, const TGLLogicalShape & logicalSha
    fFirstPSRef   (0),
    fID           (id),
    fTransform    (transform),
-   fSelected     (kFALSE),
+   fSelected     (0),
    fInvertedWind (invertedWind),
    fModified     (kFALSE),
    fManip        (kManipAll)
@@ -91,7 +91,7 @@ TGLPhysicalShape::TGLPhysicalShape(UInt_t id, const TGLLogicalShape & logicalSha
    fFirstPSRef   (0),
    fID           (id),
    fTransform    (transform),
-   fSelected     (kFALSE),
+   fSelected     (0),
    fInvertedWind (invertedWind),
    fModified     (kFALSE),
    fManip        (kManipAll)
@@ -360,7 +360,7 @@ void TGLPhysicalShape::Draw(TGLRnrCtx & rnrCtx) const
 
       // TGLCapabilitySwitch bs(GL_BLEND, kTRUE), lss(GL_LINE_SMOOTH, kTRUE);
 
-      SetupGLColors(rnrCtx, selColor);
+      glColor4ubv(rnrCtx.GetSSLColor(fSelected));
       TGLUtil::LockColor();
       for (int i = 0; i < 8; ++i)
       {

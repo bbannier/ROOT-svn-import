@@ -12,6 +12,8 @@
 #include "TEveElement.h"
 #include "TEveTrans.h"
 #include "TEveManager.h"
+#include "TEveProjectionBases.h"
+
 #include "TGeoMatrix.h"
 
 #include "TClass.h"
@@ -56,7 +58,13 @@ TEveElement::TEveElement() :
    fCanEditMainTrans    (kFALSE),
    fMainColorPtr        (0),
    fMainTrans           (0),
-   fItems               ()
+   fItems               (),
+   fPickable            (kFALSE),
+   fSelected            (kFALSE),
+   fHighlighted         (kFALSE),
+   fImpliedSelected     (0),
+   fImpliedHighlighted  (0),
+   fChangeBits          (0)
 {
    // Default contructor.
 }
@@ -72,7 +80,13 @@ TEveElement::TEveElement(Color_t& main_color) :
    fCanEditMainTrans    (kFALSE),
    fMainColorPtr        (&main_color),
    fMainTrans           (0),
-   fItems               ()
+   fItems               (),
+   fPickable            (kFALSE),
+   fSelected            (kFALSE),
+   fHighlighted         (kFALSE),
+   fImpliedSelected     (0),
+   fImpliedHighlighted  (0),
+   fChangeBits          (0)
 {
    // Constructor.
 }
@@ -459,7 +473,7 @@ void TEveElement::UpdateItems()
    for (sLTI_i i=fItems.begin(); i!=fItems.end(); ++i) {
       i->fItem->Rename(tobj->GetName());
       i->fItem->SetTipText(tobj->GetTitle());
-      i->fItem->CheckItem(fRnrSelf);
+      i->fItem->CheckItem(fRnrSelf); // !!!!! this is strange, we have more state!
       if (fMainColorPtr != 0) i->fItem->SetColor(GetMainColor());
       i->fTree->ClearViewPort();
    }
@@ -510,7 +524,7 @@ void TEveElement::PadPaint(Option_t* option)
    static const TEveException eh("TEveElement::PadPaint ");
 
    TObject* obj = 0;
-   if (GetRnrSelf() && (obj = GetObject(eh)))
+   if (GetRnrSelf() && (obj = GetRenderObject(eh)))
       obj->Paint(option);
 
 
@@ -600,10 +614,12 @@ void TEveElement::SetRnrState(Bool_t rnr)
 //______________________________________________________________________________
 void TEveElement::SetMainColor(Color_t color)
 {
-   // Set main color of the render-element.
+   // Set main color of the element.
    // List-tree-items are updated.
 
    Color_t oldcol = GetMainColor();
+
+   // !!!!! WTF is this? At least should be moved somewhere else ...
    for (List_i i=fChildren.begin(); i!=fChildren.end(); ++i) {
       if ((*i)->GetMainColor() == oldcol) (*i)->SetMainColor(color);
    }
@@ -699,7 +715,7 @@ void TEveElement::SetTransMatrix(const TGeoMatrix& mat)
 /******************************************************************************/
 
 //______________________________________________________________________________
-TGListTreeItem* TEveElement::AddElement(TEveElement* el)
+void TEveElement::AddElement(TEveElement* el)
 {
    // Add el to the list of children.
 
@@ -711,9 +727,8 @@ TGListTreeItem* TEveElement::AddElement(TEveElement* el)
 
    el->AddParent(this);
    fChildren.push_back(el);
-   TGListTreeItem* ret = el->AddIntoListTrees(this);
+   el->AddIntoListTrees(this);
    ElementChanged();
-   return ret;
 }
 
 //______________________________________________________________________________
@@ -768,8 +783,11 @@ void TEveElement::RemoveElements()
    // done more efficiently then looping over them and removing one by
    // one.
 
-   RemoveElementsInternal();
-   ElementChanged();
+   if ( ! fChildren.empty())
+   {
+      RemoveElementsInternal();
+      ElementChanged();
+   }
 }
 
 //______________________________________________________________________________
@@ -947,7 +965,7 @@ void TEveElement::DestroyElements()
       }
    }
 
-   ElementChanged(kTRUE, kTRUE);
+   gEve->Redraw3D();
 }
 
 /******************************************************************************/
@@ -969,6 +987,119 @@ void TEveElement::ElementChanged(Bool_t update_scenes, Bool_t redraw)
    // can be propagated around the framework.
 
    gEve->ElementChanged(this, update_scenes, redraw);
+}
+
+
+/******************************************************************************/
+// Select/hilite
+/******************************************************************************/
+
+//______________________________________________________________________________
+void TEveElement::SelectElement(Bool_t state)
+{
+   // Set element's selection state. Stamp appropriately.
+
+   if (fSelected != state) {
+      fSelected = state;
+      StampColorSelection();
+   }
+}
+
+//______________________________________________________________________________
+void TEveElement::IncImpliedSelected()
+{
+   // Increase element's implied-selection count. Stamp appropriately.
+
+   if (fImpliedSelected++ == 0)
+      StampColorSelection();
+}
+
+//______________________________________________________________________________
+void TEveElement::DecImpliedSelected()
+{
+   // Decrease element's implied-selection count. Stamp appropriately.
+
+   if (--fImpliedSelected == 0)
+      StampColorSelection();
+}
+
+//______________________________________________________________________________
+void TEveElement::HighlightElement(Bool_t state)
+{
+   // Set element's highlight state. Stamp appropriately.
+
+   if (fHighlighted != state) {
+      fHighlighted = state;
+      StampColorSelection();
+   }
+}
+
+//______________________________________________________________________________
+void TEveElement::IncImpliedHighlighted()
+{
+   // Increase element's implied-highlight count. Stamp appropriately.
+
+   if (fImpliedHighlighted++ == 0)
+      StampColorSelection();
+}
+
+//______________________________________________________________________________
+void TEveElement::DecImpliedHighlighted()
+{
+   // Decrease element's implied-highlight count. Stamp appropriately.
+
+   if (--fImpliedHighlighted == 0)
+      StampColorSelection();
+}
+
+//______________________________________________________________________________
+void TEveElement::FillImpliedSelectedSet(Set_t& impSelSet)
+{
+   // Populate set impSelSet with derived / dependant elements.
+
+   TEveProjectable* p = dynamic_cast<TEveProjectable*>(this);
+   if (p)
+   {
+      p->AddProjectedsToSet(impSelSet);
+   }
+}
+
+//______________________________________________________________________________
+UChar_t TEveElement::GetSelectedLevel() const
+{
+   // Get selection level, needed for rendering selection and
+   // highlight feedback.
+   // This should go to TAtt3D.
+
+   if (fSelected)               return 1;
+   if (fImpliedSelected > 0)    return 2;
+   if (fHighlighted)            return 3;
+   if (fImpliedHighlighted > 0) return 4;
+   return 0;
+}
+
+/******************************************************************************/
+// Stamping
+/******************************************************************************/
+
+//______________________________________________________________________________
+void TEveElement::SetStamp(UChar_t bits)
+{
+   // Set fChangeBits to bits.
+   // Register this element to gEve as stamped.
+
+   fChangeBits = bits;
+   gEve->ElementStamped(this); 
+}
+
+//______________________________________________________________________________
+void TEveElement::AddStamp(UChar_t bits)
+{
+   // Add (bitwise or) given stamps to fChangeBits.
+   // Register this element to gEve as stamped.
+
+   fChangeBits |= bits;
+   gEve->ElementStamped(this);
 }
 
 /******************************************************************************/

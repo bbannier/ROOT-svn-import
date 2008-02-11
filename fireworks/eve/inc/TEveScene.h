@@ -43,13 +43,16 @@ public:
 
    void   Changed()         { fChanged = kTRUE; }
    Bool_t IsChanged() const { return fChanged;  }
-   void   Repaint();
+   void   Repaint(Bool_t dropLogicals=kFALSE);
 
    TGLScenePad* GetGLScene() const { return fGLScene; }
    void SetGLScene(TGLScenePad* s) { fGLScene = s; }
 
    virtual void SetName(const Text_t* n);
    virtual void Paint(Option_t* option = "");
+
+   void DestroyElementRenderers(TEveElement* element);
+   void DestroyElementRenderers(TObject* rnrObj);
 
    virtual const TGPicture* GetListTreeIcon();
 
@@ -75,6 +78,10 @@ public:
 
    void RepaintChangedScenes(Bool_t dropLogicals);
    void RepaintAllScenes(Bool_t dropLogicals);
+
+   void DestroyElementRenderers(TEveElement* element);
+
+   void ProcessSceneChanges(Bool_t dropLogicals, Set_t& stampSet);
 
    ClassDef(TEveSceneList, 0); // List of Scenes providing common operations on TEveScene collections.
 };

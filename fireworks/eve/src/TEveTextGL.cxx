@@ -11,7 +11,6 @@
 
 #include "TEveTextGL.h"
 #include "TEveText.h"
-#include "TGLFontManager.h"
 #include "TGLUtil.h"
 #include "TGLCamera.h"
 
@@ -20,7 +19,6 @@
 #include "TGLBoundingBox.h"
 
 //______________________________________________________________________________
-// TEveTextGL
 //
 // OpenGL renderer class for TEveText.
 //
@@ -31,7 +29,7 @@ ClassImp(TEveTextGL);
 TEveTextGL::TEveTextGL() :
    TGLObject(),
    fM(0),
-   fFont(0)
+   fFont()
 {
    // Constructor.
 
@@ -59,21 +57,26 @@ void TEveTextGL::SetBBox()
 }
 
 //______________________________________________________________________________
-void TEveTextGL::SetFont(TEveText* model, TGLRnrCtx & rnrCtx) const
+void TEveTextGL::SetFont(TGLRnrCtx & rnrCtx) const
 {
    // Set FTGL font according to TEveText font attributes.
 
-   if(fFont == 0) {
-      fFont = (TGLFont*)rnrCtx.GetFont(model->GetFontSize(), model->GetFontFile(), model->GetFontMode());
+   if (fFont.GetMode() == TGLFont::kUndef)
+   {
+      fFont = rnrCtx.GetFont(fM->GetFontSize(), fM->GetFontFile(), fM->GetFontMode());
    }
-   else if (fFont->GetSize() != model->GetFontSize() || fFont->GetFile() != model->GetFontFile()
-            || fFont->GetMode() != model->GetFontMode()) {
+   else if (fFont.GetSize() != fM->GetFontSize() ||
+            fFont.GetFile() != fM->GetFontFile() ||
+            fFont.GetMode() != fM->GetFontMode())
+   {
       rnrCtx.ReleaseFont(fFont);
-      fFont = (TGLFont*)rnrCtx.GetFont(model->GetFontSize(), model->GetFontFile(), model->GetFontMode());
+      fFont = rnrCtx.GetFont(fM->GetFontSize(), fM->GetFontFile(), fM->GetFontMode());
    }
+   fFont.SetDepth(fM->GetExtrude());
 }
 
 /******************************************************************************/
+
 //______________________________________________________________________________
 void TEveTextGL::DirectDraw(TGLRnrCtx & rnrCtx) const
 {
@@ -82,16 +85,16 @@ void TEveTextGL::DirectDraw(TGLRnrCtx & rnrCtx) const
 
    static const TEveException eH("TEveTextGL::DirectDraw ");
 
-   SetFont(fM, rnrCtx);
+   SetFont(rnrCtx);
   
    //  bbox initialisation
-   if (fBoundingBox.IsEmpty() && fFont->GetMode() > TGLFont::kPixmap)
+   if (fBoundingBox.IsEmpty() && fFont.GetMode() > TGLFont::kPixmap)
    {
       Float_t bbox[6];
-      fFont->BBox(fM->GetText(), bbox[0], bbox[1], bbox[2],
-                  bbox[3], bbox[4], bbox[5]);
+      fFont.BBox(fM->GetText(), bbox[0], bbox[1], bbox[2],
+                 bbox[3], bbox[4], bbox[5]);
 
-      if (fFont->GetMode() == TGLFont::kExtrude) {
+      if (fFont.GetMode() == TGLFont::kExtrude) {
          // Depth goes, the other z-way, swap.
          Float_t tmp = bbox[2];
          bbox[2] = bbox[5] * fM->GetExtrude();
@@ -110,9 +113,9 @@ void TEveTextGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    }
 
    // rendering
-   fFont->PreRender();
-   TGLCapabilitySwitch lights(GL_LIGHTING, fM->GetAutoLighting() ? (fFont->GetMode() > TGLFont::kOutline) : (fM->GetLighting()));
-   switch(fFont->GetMode())
+   glPushMatrix();
+   fFont.PreRender(fM->GetAutoLighting(), fM->GetLighting());
+   switch (fFont.GetMode())
    {
       case TGLFont::kBitmap:
       case TGLFont::kPixmap:
@@ -128,8 +131,8 @@ void TEveTextGL::DirectDraw(TGLRnrCtx & rnrCtx) const
             GLdouble x, y, z;
             gluProject(fX[0][0], fX[0][1], fX[0][2], mm, pm, vp, &x, &y, &z);
             Float_t bbox[6];
-            fFont->BBox(fM->GetText(), bbox[0], bbox[1], bbox[2],
-                        bbox[3], bbox[4], bbox[5]);
+            fFont.BBox(fM->GetText(), bbox[0], bbox[1], bbox[2],
+                       bbox[3], bbox[4], bbox[5]);
             gluUnProject(x + bbox[0], y + bbox[1], z, mm, pm, vp, &fX[0][0], &fX[0][1], &fX[0][2]);
             gluUnProject(x + bbox[3], y + bbox[1], z, mm, pm, vp, &fX[1][0], &fX[1][1], &fX[1][2]);
             gluUnProject(x + bbox[3], y + bbox[4], z, mm, pm, vp, &fX[2][0], &fX[2][1], &fX[2][2]);
@@ -143,7 +146,7 @@ void TEveTextGL::DirectDraw(TGLRnrCtx & rnrCtx) const
             glEnd();
          } else {
             glRasterPos3i(0, 0, 0);
-            fFont->Render(fM->GetText());
+            fFont.Render(fM->GetText());
          }
          break;
       case TGLFont::kOutline:
@@ -152,17 +155,18 @@ void TEveTextGL::DirectDraw(TGLRnrCtx & rnrCtx) const
          if (fM->GetExtrude() != 1.0) {
             glPushMatrix();
             glScalef(1.0f, 1.0f, fM->GetExtrude());
-            fFont->Render(fM->GetText());
+            fFont.Render(fM->GetText());
             glPopMatrix();
          } else {
-            fFont->Render(fM->GetText());
+            fFont.Render(fM->GetText());
          }
          break;
       case TGLFont::kTexture:
-         fFont->Render(fM->GetText());
+         fFont.Render(fM->GetText());
          break;
       default:
          throw(eH + "unsupported FTGL-type.");
    }
-   fFont->PostRender();
+   fFont.PostRender();
+   glPopMatrix();
 }

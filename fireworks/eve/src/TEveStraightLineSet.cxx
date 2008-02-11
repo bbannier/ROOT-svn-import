@@ -42,6 +42,7 @@ TEveStraightLineSet::TEveStraightLineSet(const Text_t* n, const Text_t* t):
    // Constructor.
 
    InitMainTrans();
+   fPickable = kTRUE;
 
    fMainColorPtr = &fLineColor;
    fLineColor    = 4;

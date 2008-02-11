@@ -83,10 +83,10 @@ TEveTextEditor::TEveTextEditor(const TGWindow *p, Int_t width, Int_t height,
    fMode = MakeLabeledCombo("Mode:");
    fMode->AddEntry("Bitmap",  TGLFont::kBitmap);
    fMode->AddEntry("Pixmap",  TGLFont::kPixmap);
+   fMode->AddEntry("Texture", TGLFont::kTexture);
    fMode->AddEntry("Outline", TGLFont::kOutline);
    fMode->AddEntry("Polygon", TGLFont::kPolygon);
    fMode->AddEntry("Extrude", TGLFont::kExtrude);
-   fMode->AddEntry("Texture", TGLFont::kTexture);
    fMode->Connect("Selected(Int_t)", "TEveTextEditor", this, "DoFontMode()");
 
    fExtrude = new TEveGValuator(this, "Depth:", 90, 0);

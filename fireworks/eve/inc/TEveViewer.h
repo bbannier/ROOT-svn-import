@@ -17,6 +17,7 @@
 class TGWindow;
 class TGedEditor;
 class TGLViewer;
+class TGLPhysicalShape;
 
 class TEveScene;
 
@@ -62,20 +63,41 @@ public:
 
 class TEveViewerList : public TEveElementList
 {
+public:
+   enum EPickToSelect // How to convert GL picking events to selection:
+   {
+      kPSIgnore,      // ignore GL picking
+      kPSElement,     // select element
+      kPSProjectable, // select projectable and all its projections (default)
+      kPSCompound     // select compound and all its projections
+   };
+
 private:
    TEveViewerList(const TEveViewerList&);            // Not implemented
    TEveViewerList& operator=(const TEveViewerList&); // Not implemented
 
 protected:
+   Int_t        fPickToSelect;
 
 public:
    TEveViewerList(const Text_t* n="TEveViewerList", const Text_t* t="");
    virtual ~TEveViewerList() {}
 
+   virtual void Connect();
+
    void RepaintChangedViewers(Bool_t resetCameras, Bool_t dropLogicals);
    void RepaintAllViewers(Bool_t resetCameras, Bool_t dropLogicals);
 
    void SceneDestructing(TEveScene* scene);
+
+   // --------------------------------
+
+   Int_t GetPickToSelect()   const { return fPickToSelect; }
+   void  SetPickToSelect(Int_t ps) { fPickToSelect = ps; }
+
+   TEveElement* MapPickedToSelected(TEveElement* el);
+   void OnMouseOver(TGLPhysicalShape* shape);
+   void OnClicked(TObject *obj);
 
    ClassDef(TEveViewerList, 0); // List of Viewers providing common operations on TEveViewer collections.
 };
