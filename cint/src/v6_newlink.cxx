@@ -4530,6 +4530,31 @@ void G__if_ary_union_constructor(FILE *fp, int ifn, G__ifunc_table_internal *ifu
   }
 }
 
+
+/**************************************************************************
+ *  G__is_tagnum_safe(int i)
+ *
+ * 08-02-2008
+ * We have some problems to create the tmp dictionaries of certain classes.
+ * Here we create an artificial condition telling us if the passed tagnum
+ * is one of this classes...
+ * This should be avoided, what we need is a more general conditions for
+ * the cases where we fail creating the dictionary
+ **************************************************************************/
+bool G__is_tagnum_safe(int i)
+{
+  return (strncmp(G__fulltagname(i,0),"string", strlen("string"))!=0 &&
+          strncmp(G__fulltagname(i,0),"vector", strlen("vector"))!=0 &&
+          strncmp(G__fulltagname(i,0),"list", strlen("list"))!=0 &&
+          strncmp(G__fulltagname(i,0),"deque", strlen("deque"))!=0 &&
+          strncmp(G__fulltagname(i,0),"set", strlen("set"))!=0 &&
+          strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))!=0 &&
+          strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))!=0 &&
+          strncmp(G__fulltagname(i,0),"map", strlen("map"))!=0 &&
+          strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))!=0 &&
+          strncmp(G__fulltagname(i,0),"complex", strlen("complex"))!=0 );
+}
+
 /**************************************************************************
  *  G__write_preface()
  *
@@ -5438,19 +5463,10 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
             // 08-10-07
             // Dont try to evaluate this condition in case we have the new scheme...
             // the automatic methods are created with size<0 by default so it
-            // mmesses it up
-            if (G__dicttype==kCompleteDictionary ||
-                !(
-                  strncmp(G__fulltagname(i,0),"string", strlen("string"))!=0 &&
-                  strncmp(G__fulltagname(i,0),"vector", strlen("vector"))!=0 &&
-                  strncmp(G__fulltagname(i,0),"list", strlen("list"))!=0 &&
-                  strncmp(G__fulltagname(i,0),"deque", strlen("deque"))!=0 &&
-                  strncmp(G__fulltagname(i,0),"set", strlen("set"))!=0 &&
-                  strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))!=0 &&
-                  strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))!=0 &&
-                  strncmp(G__fulltagname(i,0),"map", strlen("map"))!=0 &&
-                  strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))!=0 &&
-                  strncmp(G__fulltagname(i,0),"complex", strlen("complex"))!=0 )){
+            // mmesses it up.
+            // And by this condition I mean the inside the following if
+            // i.e (ifunc->pentry[j]->size < 0)
+            if (G__dicttype==kCompleteDictionary || !G__is_tagnum_safe(i)){
               if (ifunc->pentry[j]->size < 0) {
                 // already precompiled, skip it
                 continue;
@@ -5459,18 +5475,10 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
 #endif
             // Constructor and dictionary #2
             // Generating dummy object for getting the symbols of default constructor and destructor
-            if(!(strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
-                 strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
-                 strncmp(G__fulltagname(i,0),"list", strlen("list"))==0 ||
-                 strncmp(G__fulltagname(i,0),"deque", strlen("deque"))==0 ||
-                 strncmp(G__fulltagname(i,0),"set", strlen("set"))==0 ||
-                 strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))==0 || 
-                 strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))==0 ||
-                 strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
-                 strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
-                 strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0) &&
-               !strcmp(ifunc->funcname[j],G__struct.name[i]) && G__dicttype==kFunctionSymbols)
-               G__cppif_dummyobj(fp, ifunc, i, j);
+            if(!strcmp(ifunc->funcname[j],G__struct.name[i]) 
+               && G__dicttype==kFunctionSymbols
+               && G__is_tagnum_safe(i))
+              G__cppif_dummyobj(fp, ifunc, i, j);
             
             // Constructor? ClassName == FunctionName
             if(strcmp(ifunc->funcname[j],G__struct.name[i])==0 &&
@@ -5483,16 +5491,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
               {
                 // No Constructor Stub
                 if(((!ifunc->mangled_name[j] || /*if there is no symbol*/
-                     strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
-                     strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
-                     strncmp(G__fulltagname(i,0),"list", strlen("list"))==0 ||
-                     strncmp(G__fulltagname(i,0),"deque", strlen("deque"))==0 ||
-                     strncmp(G__fulltagname(i,0),"set", strlen("set"))==0 ||
-                     strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))==0 || 
-                     strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))==0 ||
-                     strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
-                     strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
-                     strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0 )
+                     !G__is_tagnum_safe(i) )
                     && !ifunc->ispurevirtual[j] && G__dicttype==kNoWrappersDictionary) 
                   || G__dicttype==kCompleteDictionary || G__dicttype==kNoWrappersDictionary ) {
                   if( !ifunc->mangled_name[j] || ifunc->funcptr[j]>0 || !G__nostubs) /* if there no is a symbol or the no stubs flag is not activated */
@@ -5512,18 +5511,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
               /* destructor is created in gendefault later */
               if(G__PUBLIC==ifunc->access[j]){
                 if((G__dicttype==kNoWrappersDictionary) && !ifunc->ispurevirtual[j]){
-                  if(
-                    !(strcmp(ifunc->funcname[j],"operator const char*")==0 ||
-                      strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
-                      strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
-                      strncmp(G__fulltagname(i,0),"list", strlen("list"))==0 ||
-                      strncmp(G__fulltagname(i,0),"deque", strlen("deque"))==0 ||
-                      strncmp(G__fulltagname(i,0),"set", strlen("set"))==0 ||
-                      strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))==0 || 
-                      strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))==0 ||
-                      strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
-                      strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
-                      strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0)){
+                  if(G__is_tagnum_safe(i)) {
                     if( !ifunc->mangled_name[j] || ifunc->funcptr[j]>0 || !G__nostubs ) /* if there no is a symbol or the no stubs flag is not activated */
                       G__cppif_gendefault(fp,hfp,i,j,ifunc,1,1,isdestructor,1,1);
                     ++isdestructor; // don't try to create it later on
@@ -5560,16 +5548,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
               // If there is no symbol and this is the second dictionary
               // generate the inline code
               if(!ifunc->ispurevirtual[j] && G__dicttype==kFunctionSymbols){
-                if ( !(strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
-                       strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
-                       strncmp(G__fulltagname(i,0),"list", strlen("list"))==0 ||
-                       strncmp(G__fulltagname(i,0),"deque", strlen("deque"))==0 ||
-                       strncmp(G__fulltagname(i,0),"set", strlen("set"))==0 ||
-                       strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))==0 || 
-                       strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))==0 ||
-                       strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
-                       strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
-                       strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0) ){
+                if (G__is_tagnum_safe(i)) {
                   if(G__struct.isabstract[ifunc->tagnum]) {
                     G__cppif_geninline(fp, ifunc, i, j);
                   }
@@ -5654,17 +5633,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
           // Why are the defaults method introduced after the class registering?
           // If we do that, we won't be able to avoid their stubs...
           if( (G__dicttype==kFunctionSymbols || G__dicttype==kNoWrappersDictionary) &&
-              strncmp(G__fulltagname(i,0),"string", strlen("string"))!=0 &&
-              strncmp(G__fulltagname(i,0),"vector", strlen("vector"))!=0 &&
-              strncmp(G__fulltagname(i,0),"list", strlen("list"))!=0 &&
-              strncmp(G__fulltagname(i,0),"deque", strlen("deque"))!=0 &&
-              strncmp(G__fulltagname(i,0),"set", strlen("set"))!=0 &&
-              strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))!=0 &&
-              strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))!=0 &&
-              strncmp(G__fulltagname(i,0),"map", strlen("map"))!=0 &&
-              strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))!=0 &&
-              strncmp(G__fulltagname(i,0),"complex", strlen("complex"))!=0
-            )
+              G__is_tagnum_safe(i))
             G__make_default_ifunc(ifunc_default);
 
           // 21-06-07
@@ -5678,31 +5647,8 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
           // except for the destructor but deal with that in G__cppif_gendefault
           if(  G__dicttype==kCompleteDictionary || G__dicttype==kNoWrappersDictionary ||
                (( G__dicttype==kFunctionSymbols || G__dicttype==kNoWrappersDictionary)
-                &&
-                !(
-                  strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
-                  strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
-                  strncmp(G__fulltagname(i,0),"list", strlen("list"))==0 ||
-                  strncmp(G__fulltagname(i,0),"deque", strlen("deque"))==0 ||
-                  strncmp(G__fulltagname(i,0),"set", strlen("set"))==0 ||
-                  strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))==0 || 
-                  strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))==0 ||
-                  strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
-                  strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
-                  strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0)) ||
-               ((
-                 strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
-                 strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
-                 strncmp(G__fulltagname(i,0),"list", strlen("list"))==0 ||
-                 strncmp(G__fulltagname(i,0),"deque", strlen("deque"))==0 ||
-                 strncmp(G__fulltagname(i,0),"set", strlen("set"))==0 ||
-                 strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))==0 || 
-                 strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))==0 ||
-                 strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
-                 strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
-                 strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0)
-
-                && (G__dicttype==kNoWrappersDictionary)) ){ // rem to create inlines for default functions
+                && G__is_tagnum_safe(i)) ||
+               (G__dicttype==kNoWrappersDictionary && !G__is_tagnum_safe(i)) ){ // rem to create inlines for default functions
             if( !ifunc->mangled_name[j] || ifunc->funcptr[j]>0 || !G__nostubs )
               G__cppif_gendefault(fp,hfp,i,j,ifunc
                                   ,isconstructor
@@ -7050,18 +6996,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
         page = cons_oper->page;
     }
 
-    if(G__dicttype==kFunctionSymbols &&
-       !(
-         strncmp(G__fulltagname(tagnum,0),"string", strlen("string"))==0 ||
-         strncmp(G__fulltagname(tagnum,0),"vector", strlen("vector"))==0 ||
-         strncmp(G__fulltagname(tagnum,0),"list", strlen("list"))==0 ||
-         strncmp(G__fulltagname(tagnum,0),"deque", strlen("deque"))==0 ||
-         strncmp(G__fulltagname(tagnum,0),"set", strlen("set"))==0 ||
-         strncmp(G__fulltagname(tagnum,0),"multiset", strlen("multiset"))==0 || 
-         strncmp(G__fulltagname(tagnum,0),"allocator", strlen("allocator"))==0 ||
-         strncmp(G__fulltagname(tagnum,0),"map", strlen("map"))==0 ||
-         strncmp(G__fulltagname(tagnum,0),"multimap", strlen("multimap"))==0 ||
-         strncmp(G__fulltagname(tagnum,0),"complex", strlen("complex"))==0)){
+    if(G__dicttype==kFunctionSymbols && G__is_tagnum_safe(tagnum)){
       // 01-11-07
       // Force the outlining of functions even if the weren't declared
       // (CInt will try to declare them later on anyways)
@@ -7210,18 +7145,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
         page = cons_oper->page;
     }
 
-    if(G__dicttype==kFunctionSymbols &&
-       !(
-         strncmp(G__fulltagname(tagnum,0),"string", strlen("string"))==0 ||
-         strncmp(G__fulltagname(tagnum,0),"vector", strlen("vector"))==0 ||
-         strncmp(G__fulltagname(tagnum,0),"list", strlen("list"))==0 ||
-         strncmp(G__fulltagname(tagnum,0),"deque", strlen("deque"))==0 ||
-         strncmp(G__fulltagname(tagnum,0),"set", strlen("set"))==0 ||
-         strncmp(G__fulltagname(tagnum,0),"multiset", strlen("multiset"))==0 || 
-         strncmp(G__fulltagname(tagnum,0),"allocator", strlen("allocator"))==0 ||
-         strncmp(G__fulltagname(tagnum,0),"map", strlen("map"))==0 ||
-         strncmp(G__fulltagname(tagnum,0),"multimap", strlen("multimap"))==0 ||
-         strncmp(G__fulltagname(tagnum,0),"complex", strlen("complex"))==0)) {
+    if(G__dicttype==kFunctionSymbols && G__is_tagnum_safe(tagnum)) {
 
       // 01-11-07
       // Force the outlining of functions even if the weren't declared
@@ -7330,18 +7254,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
     if(!G__struct.memfunc[tagnum]->mangled_name[0])
       isdestdefined = 0;
 
-    if(G__dicttype==kFunctionSymbols &&
-       !(
-         strncmp(G__fulltagname(tagnum,0),"string", strlen("string"))==0 ||
-         strncmp(G__fulltagname(tagnum,0),"vector", strlen("vector"))==0 ||
-         strncmp(G__fulltagname(tagnum,0),"list", strlen("list"))==0 ||
-         strncmp(G__fulltagname(tagnum,0),"deque", strlen("deque"))==0 ||
-         strncmp(G__fulltagname(tagnum,0),"set", strlen("set"))==0 ||
-         strncmp(G__fulltagname(tagnum,0),"multiset", strlen("multiset"))==0 || 
-         strncmp(G__fulltagname(tagnum,0),"allocator", strlen("allocator"))==0 ||
-         strncmp(G__fulltagname(tagnum,0),"map", strlen("map"))==0 ||
-         strncmp(G__fulltagname(tagnum,0),"multimap", strlen("multimap"))==0 ||
-         strncmp(G__fulltagname(tagnum,0),"complex", strlen("complex"))==0)) {
+    if(G__dicttype==kFunctionSymbols && G__is_tagnum_safe(tagnum)) {
       // 01-11-07
       // Force the outlining of functions even if the weren't declared
       // (CInt will try to declare them later on anyways)
@@ -7466,18 +7379,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
         page = op_oper->page;
     }
 
-    if(G__dicttype==kFunctionSymbols &&
-       !(
-         strncmp(G__fulltagname(tagnum,0),"string", strlen("string"))==0 ||
-         strncmp(G__fulltagname(tagnum,0),"vector", strlen("vector"))==0 ||
-         strncmp(G__fulltagname(tagnum,0),"list", strlen("list"))==0 ||
-         strncmp(G__fulltagname(tagnum,0),"deque", strlen("deque"))==0 ||
-         strncmp(G__fulltagname(tagnum,0),"set", strlen("set"))==0 ||
-         strncmp(G__fulltagname(tagnum,0),"multiset", strlen("multiset"))==0 || 
-         strncmp(G__fulltagname(tagnum,0),"allocator", strlen("allocator"))==0 ||
-         strncmp(G__fulltagname(tagnum,0),"map", strlen("map"))==0 ||
-         strncmp(G__fulltagname(tagnum,0),"multimap", strlen("multimap"))==0 ||
-         strncmp(G__fulltagname(tagnum,0),"complex", strlen("complex"))==0) ) {
+    if(G__dicttype==kFunctionSymbols && G__is_tagnum_safe(tagnum)) {
       // 01-11-07
       // Force the outlining of functions even if the weren't declared
       // (CInt will try to declare them later on anyways)
@@ -9368,18 +9270,7 @@ void G__cpplink_memfunc(FILE *fp)
             // Dont try to evaluate this condition in case we have the new scheme...
             // the automatic methods are created with size<0 by default so it
             // mmesses it up
-            if (G__dicttype==kCompleteDictionary ||
-                !(
-                  strncmp(G__fulltagname(i,0),"string", strlen("string"))!=0 &&
-                  strncmp(G__fulltagname(i,0),"vector", strlen("vector"))!=0 &&
-                  strncmp(G__fulltagname(i,0),"list", strlen("list"))!=0 &&
-                  strncmp(G__fulltagname(i,0),"deque", strlen("deque"))!=0 &&
-                  strncmp(G__fulltagname(i,0),"set", strlen("set"))!=0 &&
-                  strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))!=0 &&
-                  strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))!=0 &&
-                  strncmp(G__fulltagname(i,0),"map", strlen("map"))!=0 &&
-                  strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))!=0 &&
-                  strncmp(G__fulltagname(i,0),"complex", strlen("complex"))!=0)){
+            if (G__dicttype==kCompleteDictionary || !G__is_tagnum_safe(i)){
               if (ifunc->pentry[j]->size < 0) {
                 // already precompiled, skip it
                 continue;
@@ -9388,20 +9279,8 @@ void G__cpplink_memfunc(FILE *fp)
 #endif
 
             // Check for constructor, destructor, or operator=.
-            if ( (G__dicttype==kCompleteDictionary ||
-                  !(
-                    strncmp(G__fulltagname(i,0),"string", strlen("string"))!=0 &&
-                    strncmp(G__fulltagname(i,0),"vector", strlen("vector"))!=0 &&
-                    strncmp(G__fulltagname(i,0),"list", strlen("list"))!=0 &&
-                    strncmp(G__fulltagname(i,0),"deque", strlen("deque"))!=0 &&
-                    strncmp(G__fulltagname(i,0),"set", strlen("set"))!=0 &&
-                    strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))!=0 &&
-                    strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))!=0 &&
-                    strncmp(G__fulltagname(i,0),"map", strlen("map"))!=0 &&
-                    strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))!=0 &&
-                    strncmp(G__fulltagname(i,0),"complex", strlen("complex"))!=0
-                    ))
-                 && !strcmp(ifunc->funcname[j], G__struct.name[i])) {
+            if ( !strcmp(ifunc->funcname[j], G__struct.name[i]) && 
+                 (G__dicttype==kCompleteDictionary || !G__is_tagnum_safe(i)) ) {
               // We have a constructor.
               if (G__struct.isabstract[i]) {
                 continue;
@@ -9414,19 +9293,7 @@ void G__cpplink_memfunc(FILE *fp)
               if ((ifunc->para_nu[j] >= 1) && (ifunc->param[j][0]->type == 'u') && (i == ifunc->param[j][0]->p_tagtable) && (ifunc->param[j][0]->reftype == G__PARAREFERENCE) && ((ifunc->para_nu[j] == 1) || ifunc->param[j][1]->pdefault)) {
                 ++iscopyconstructor;
               }
-            } else if ((G__dicttype==kCompleteDictionary ||
-                        !(
-                          strncmp(G__fulltagname(i,0),"string", strlen("string"))!=0 &&
-                          strncmp(G__fulltagname(i,0),"vector", strlen("vector"))!=0 &&
-                          strncmp(G__fulltagname(i,0),"list", strlen("list"))!=0 &&
-                          strncmp(G__fulltagname(i,0),"deque", strlen("deque"))!=0 &&
-                          strncmp(G__fulltagname(i,0),"set", strlen("set"))!=0 &&
-                          strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))!=0 &&
-                          strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))!=0 &&
-                          strncmp(G__fulltagname(i,0),"map", strlen("map"))!=0 &&
-                          strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))!=0 &&
-                          strncmp(G__fulltagname(i,0),"complex", strlen("complex"))!=0
-                          ))
+            } else if ((G__dicttype==kCompleteDictionary || !G__is_tagnum_safe(i))
                        && ifunc->funcname[j][0] == '~') {
               // We have a destructor.
               dtoraccess = ifunc->access[j];
@@ -9445,22 +9312,10 @@ void G__cpplink_memfunc(FILE *fp)
             }
 
 #ifdef G__DEFAULTASSIGNOPR
-            else if ( (G__dicttype==kCompleteDictionary ||
-                       !(
-                         strncmp(G__fulltagname(i,0),"string", strlen("string"))!=0 &&
-                         strncmp(G__fulltagname(i,0),"vector", strlen("vector"))!=0 &&
-                         strncmp(G__fulltagname(i,0),"list", strlen("list"))!=0 &&
-                         strncmp(G__fulltagname(i,0),"deque", strlen("deque"))!=0 &&
-                         strncmp(G__fulltagname(i,0),"set", strlen("set"))!=0 &&
-                         strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))!=0 &&
-                         strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))!=0 &&
-                         strncmp(G__fulltagname(i,0),"map", strlen("map"))!=0 &&
-                         strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))!=0 &&
-                         strncmp(G__fulltagname(i,0),"complex", strlen("complex"))!=0
-                         ))
-                      && !strcmp(ifunc->funcname[j], "operator=")
+            else if ( !strcmp(ifunc->funcname[j], "operator=")
                       && ('u' == ifunc->param[j][0]->type)
-                      && (i == ifunc->param[j][0]->p_tagtable)) {
+                      && (i == ifunc->param[j][0]->p_tagtable)
+                      && (G__dicttype==kCompleteDictionary || !G__is_tagnum_safe(i))) {
               // We have an operator=.
               ++isassignmentoperator;
             }
@@ -9768,18 +9623,8 @@ void G__cpplink_memfunc(FILE *fp)
             ++page;
           }
 
-          if ((
-                (  strncmp(G__fulltagname(i,0),"string", strlen("string"))==0 ||
-                   strncmp(G__fulltagname(i,0),"vector", strlen("vector"))==0 ||
-                   strncmp(G__fulltagname(i,0),"list", strlen("list"))==0 ||
-                   strncmp(G__fulltagname(i,0),"deque", strlen("deque"))==0 ||
-                   strncmp(G__fulltagname(i,0),"set", strlen("set"))==0 ||
-                   strncmp(G__fulltagname(i,0),"multiset", strlen("multiset"))==0 || 
-                   strncmp(G__fulltagname(i,0),"allocator", strlen("allocator"))==0 ||
-                   strncmp(G__fulltagname(i,0),"map", strlen("map"))==0 ||
-                   strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))==0 ||
-                   strncmp(G__fulltagname(i,0),"complex", strlen("complex"))==0 )
-                && G__dicttype==kNoWrappersDictionary ) || G__dicttype==kCompleteDictionary){
+          if (G__dicttype==kCompleteDictionary || 
+              ( G__dicttype==kNoWrappersDictionary && !G__is_tagnum_safe(i)) ){
             /****************************************************************
              * setup default constructor
              ****************************************************************/
