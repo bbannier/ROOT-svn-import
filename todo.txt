@@ -518,6 +518,11 @@ DONE
 
 Axel: Need to talk to you which problems they have.
 
+DONE
+
+There is a silly function that tells wheter a tagnum is safe or not... but there is no cache for it.
+
+RECHECK
 -------------------------------------------------------------------------------
 #52 * v6_newlink.cxx: 9359: #else // 1289_YET  || !1993 etc - where
  does that come from?
@@ -525,18 +530,34 @@ Axel: Need to talk to you which problems they have.
 
  Note: Check for consistency
 
+Axel: Huh? Then why does the patch say it's added?
 
+
+It was removed from the trunk in one of the syncs but somehow it was left behind in our version...
+very weird.
+
+DONE
+-------------------------------------------------------------------------------
 #53 * v6_newlink.cxx: 11930: //1 is which old behavior? What "1"?
 
  duplicated question :P
 
 
+The comment was removed... it was kind of confusing
+
+DONE
+-------------------------------------------------------------------------------
 #54 * v6_newlink.cxx: 12476: what happened to the "#endif /
  *G__SMALLOBJECT*/"?
 
  I couldnt find this one :/
 
+Axel: Nevermind; the compiler would have complained.
 
+I dont know what happened to it but I put it back... by the way, because of this the ifdef of
+question 52 was compiling... I cant believe both bugs where confabulating against us!!!
+DONE
+-------------------------------------------------------------------------------
 #55 * v6_symbols.cxx: should we rename this to v6_symbols_gcc3.cxx or
  at least v6_symbols_gcc.cxx?
 
@@ -547,7 +568,10 @@ Axel: Need to talk to you which problems they have.
  Although I think It's not specific... I would like to see how true
  that is...
 
+Axel: OK, then leave it as it is for now.
 
+DONE
+-------------------------------------------------------------------------------
 #56 * v6_symbols.cxx: use a simpler hash (much faster and pretty good,
  too), e.g.
      inline Hash_t Hash(const std::string& s) {
@@ -563,30 +587,72 @@ Axel: Need to talk to you which problems they have.
 
  Everything reducing code is welcome...
 
+Axel: And increasing speed - you do that for every symbol (and the lookups)!
 
+DONE
+-------------------------------------------------------------------------------
 #57 * v6_symbols.cxx: TSymbol: use const char* as member fMangled (just
  point to the lib's text), make fIdWhatever an int witha  bitmask
  (saves 4bytes per symbol + c'tor instructions)
 
  All that code is crap... it was supposed to proof of concept...
 
+Axel: So it's not used?
+
+It is... but I have been wanting to re-write all that since the beginning
+
+fMangled was changed to a char * but it can't just point to the lib because it's not the lib what 
+is being read, is the file. So we still need to allocate space for this name.
+
+fIdSpecial was introduced to tell wheter we have a constructor or destructor, the other constructor
+and destructors arent really needed (the not in-charge and the in-charge deleting) so I just deleted
+them.
+
+DONE 
+-------------------------------------------------------------------------------
 #58 * v6_symbols.cxx: TSymbol::Hash() { return fClassHash; } is
  sufficient :-)
+
+DONE
+-------------------------------------------------------------------------------
 #59 * v6_symbols.cxx: TSymbolLookup::AddRegistered, SetLibname should
  take a "const string&" or better yet a const char*.
+
+the problem is that I don't know the scope of the strings (that come from newlink) so I have to
+create a copy anyways... (I have no preference over strings or chars* )
+
+RECHECK
+-------------------------------------------------------------------------------
 #60 * v6_symbols.cxx: TSymbolLookup::fRegistered should be a set!
+
+POSTPONED
+-------------------------------------------------------------------------------
 #61 * v6_symbols.cxx: TSymbolLookup::SetSymbols() (and d'tor): who
  deletes the list<TSymbol*>?
 
  Ditto...
 
 
+SetSymbols is never used :/
+
+I thougth that the destructor of the multimap would call the destructor of every object.
+
+RECHECK
+-------------------------------------------------------------------------------
 #62 * v6_symbols.cxx: MapDependantTypesTree: ROOT specific, must be
  moved to ROOT.
 
  It was there at the beginning... but it's so ugly I can't believe it
  has to be there...
 
+Axel: OK, let me know; we have to find a solution (it's a blocker).
+
+The non-use of this mapping won't present any errors anymore, the only problem is that stubs
+with this kind of type will be generated (all the code related to MapDependantTypes could be 
+removed)
+
+DONE
+-------------------------------------------------------------------------------
 #63 * v6_symbols.cxx: locate_linkmap, get_linkmap: not used anymore?
  then remove, please.
 
@@ -594,23 +660,37 @@ Axel: Need to talk to you which problems they have.
 
  (don't worry... it will be removed in one of the cleanups)
 
+DONE
+-------------------------------------------------------------------------------
 #64 * v6_symbols.cxx: example TTree::TFriendLock::TFriendLock: we need
  to discuss this. What's the issue exactly?
 
  I think it's because we find it when we demangle the symbols but we
  don't find it in CInt's memory (no ClassDef) ...
 
+Axel: Need to chat on that one.
+
+This kind of thing shouldn't be needed anymore, if can't find it we just generate the stub but we
+don't complain about it. Therefore, that code has been removed.
+
+DONE
+-------------------------------------------------------------------------------
 #65 * v6_symbols.cxx: paramtoken[index]=='0'...: use >=, <= or "isdigit"
 
  isdigit... I knew someone would be smart enough to put that function
  somewhere :D
 
+DONE
+-------------------------------------------------------------------------------
 #66 * v6_var.cxx: 1513: why obj.i?
 
  i don't rem the trigger but it was causing a segfault... what are
  the side effects? (can we really get float from i?... it looks fishy)
 
+Axel: You introduced the "i". The version in the trunk has "obj.d". Which I find more sensible :-)
 
+RECHECK
+-------------------------------------------------------------------------------
 #67 * v6_var.cxx: 4106keep:
  -#ifdef G__ASM_DBG
  -               if (G__asm_dbg) {
@@ -619,7 +699,10 @@ Axel: Need to talk to you which problems they have.
  -               }
  -#endif // G__ASM_DBG
 
+I dont know why it was taken out :/
 
+DONE
+-------------------------------------------------------------------------------
 #68 * G__ci.h: must _not_ contain G__ifunc_table_internal (that's where
  its name comes from). Do we really need it in the public interface?
 
@@ -627,16 +710,21 @@ Axel: Need to talk to you which problems they have.
  need it... I dont see a problem moving it...
  Or can it be moved to fproto.h?
 
+DONE
 
+methodhandle4 was moved to fproto
+-------------------------------------------------------------------------------
 #69 * G__ci.h: no G__float
 
-
+DONE
+-------------------------------------------------------------------------------
 #70 * G__ci.h: why did G__display_class change the constness of its
  name parameter?
 
  svn says that happened in a merge... we have to check it out
 
 
+-------------------------------------------------------------------------------
 #71 * G__ci.h: you shouldn't change G__memfunc_setup; just introduce
  G__memfunc_setup_sym (or ...2).
 
@@ -644,47 +732,64 @@ Axel: Need to talk to you which problems they have.
 
  "Where is my mind...."
 
+Axel: I'm talking about the func ptr (in the second part of G__ci.h). I discussed already with Diego yesterday.
+
+I think it has been done
+
+RECHECK
+-------------------------------------------------------------------------------
 #72 * rootcint.cxx: 4450ff: --cxx still needed? -o still needed?
 
  deprecated...
 
+DONE (they were removed)
+-------------------------------------------------------------------------------
 #73 * rootcint.cxx: doc for if (!strcmp(argv[ic], "-.")) talks about -S!
 
  we are trying to see if we can make enough damage to earn a
  permanent position :P
 
+RECHECK in a not so far future
+-------------------------------------------------------------------------------
 #74 * rootcint.cxx: 4680: indentation
 
  that has to be rechecked.... for every file
 
+RECHECK
+-------------------------------------------------------------------------------
 #75 * rootcint.cxx: can you send me a diff with 'svn diff -x "-b -u"'
  of rootcint.cxx, please?
 
  is this what you want to see?
  <rootcint_bu.diff>
 
+Axel: Thanks, yes! Looks good (apart from the unnecessary options which should be removed).
+
+DONE (I guess ... )
+-------------------------------------------------------------------------------
 #76 * utils/Module.mk: why did you replace ROOTCINTTMPEXE by
  ROOTCINTTMPDEP? I believe that's wrong... You probably need to
  revert this file.
 
  We changed them all... you are probably right
 
-
+DONE
+-------------------------------------------------------------------------------
 #77 * TApplication.cxx: 175ff: Why is this needed to be moved? FLT_MAX:
  TH1 must #include float.h so why doesn't CINT find that symbol?
 
  I dont know... that code is pretty old... I will check it out.
 
-
+-------------------------------------------------------------------------------
 #78 * base/inc/TString.h: again, why do you need to prefix the enum
  constant with its class name? This should not be required.
 
  duplicated... commented at the beginning..
-
+-------------------------------------------------------------------------------
 #79  * v6_lib.cxx: why do you have so many commented include statements?
 
  ditto... (I was half expecting it to change again)
-
+-------------------------------------------------------------------------------
 #80 * in config/Makefile.linux, could you surround the GCC version extraction by
 ifeq ($(ENABLESTUBS)$(ENABLESTUBSTEST),no)
 ...
