@@ -1445,8 +1445,7 @@ struct G__ifunc_table *G__get_methodhandle G__P((const char *funcname,const char
                                            ,struct G__ifunc_table *p_ifunc
                                            ,long *pifn,long *poffset
                                            ,int withConversion
-                                           ,int withInheritance
-                                           ,int noerror,int isconst));
+                                           ,int withInheritance));
 struct G__ifunc_table *G__get_methodhandle2 G__P((char *funcname
                                            ,struct G__param* libp
                                            ,struct G__ifunc_table *p_ifunc
