@@ -1197,6 +1197,7 @@ int G__main(int argc, char** argv)
       }
 
       if (G__NOLINK > G__globalcomp) {
+#ifdef G__NOSTUBS
          if (!includes_printed && !G__isfilebundled) {
             linkfilename_h = linkfilename;
             std::string::size_type in = linkfilename_h.rfind(".");
@@ -1231,6 +1232,7 @@ int G__main(int argc, char** argv)
             }
             includes_printed = 1;
          }
+#endif // G__NOSTUBS
          G__gen_cppheader(sourcefile);
       }
 

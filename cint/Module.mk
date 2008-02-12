@@ -37,6 +37,7 @@ CINTS2       := $(filter-out $(MODDIRS)/v6_macos.%,$(CINTS2))
 CINTS2       := $(filter-out $(MODDIRS)/v6_winnt.%,$(CINTS2))
 CINTS2       := $(filter-out $(MODDIRS)/v6_newsos.%,$(CINTS2))
 CINTS2       := $(filter-out $(MODDIRS)/v6_loadfile_tmp.%,$(CINTS2))
+CINTS2       := $(filter-out $(MODDIRS)/v6_symbols.%,$(CINTS2))
 CINTS2       := $(filter-out $(MODDIRS)/allstrm.%,$(CINTS2))
 CINTS2       := $(filter-out $(MODDIRS)/kccstrm.%,$(CINTS2))
 CINTS2       := $(filter-out $(MODDIRS)/sunstrm.%,$(CINTS2))
@@ -181,6 +182,10 @@ CINTS2       := $(filter-out $(MODDIRS)/longif.%,$(CINTS2))
 CINTS2       += $(MODDIRS)/gcc3strm.cxx
 CINTS2       += $(MODDIRS)/longif3.cxx
 endif
+endif
+
+ifeq ($(NOSTUBS),yes)
+CINTS2       += $(MODDIRS)/v6_symbols.cxx
 endif
 
 CINTS        := $(CINTS1) $(CINTS2)

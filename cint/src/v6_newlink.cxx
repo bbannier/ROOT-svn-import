@@ -23,19 +23,20 @@
 #include "Api.h"
 #include <stack>
 #include <string>
-#include <ext/hash_map>
-#include <dlfcn.h> // needed for dlsym
 
-// Be careful with this include LF
-#include <typeinfo>
-
-// We need this silly thing because typeid gives us the mangled name
-#include <cxxabi.h>
+#ifdef G__NOSTUBS
+# include <ext/hash_map>
+# include <dlfcn.h> // needed for dlsym
+# include <typeinfo>
+# include <cxxabi.h>
+#endif
 
 #ifndef G__TESTMAIN
 #include <sys/stat.h>
 #endif
 #include <string>
+
+#ifdef G__NOSTUBS
 
 // 03-08-08
 // Due to G__struct.hash inneficiency we are forced to create the same
@@ -52,6 +53,7 @@ void* G__get_struct_map()
   static __gnu_cxx::hash_map<const char*, int> structmap;
   return &structmap;
 }
+#endif
 
 
 #ifdef _WIN32
@@ -434,6 +436,9 @@ int G__debug_compiledfunc_arg(FILE *fout,G__ifunc_table_internal *ifunc,int ifn,
   G__in_pause=0;
   return(G__pause());
 }
+
+
+#ifdef G__NOSTUBS
 
 /**************************************************************************
  **************************************************************************
@@ -2449,6 +2454,8 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
   return 0;
 }
 
+
+#endif // defined G__NOSTUBS
 
 /**************************************************************************
  * G__call_cppfunc()
@@ -9541,6 +9548,7 @@ void G__cpplink_memfunc(FILE *fp)
               virtflag = ifunc->isvirtual[j] + ifunc->ispurevirtual[j]*2;
             }
             else {
+#ifdef G__NOSTUBS
               if(ifunc->isvirtual[j]){
                 // 06-08-07
                 // Trying to optimize the virtual function execution.
@@ -9565,6 +9573,7 @@ void G__cpplink_memfunc(FILE *fp)
                 // put "ispurevirtual" in the less significant bit and shift the rest to the left
                 virtflag = 2*page_base + ifunc->ispurevirtual[j];
               }
+#endif
             }
 
             fprintf(fp, ", %d", virtflag);
@@ -12780,8 +12789,8 @@ void G__incsetup_memfunc(int tagnum)
            && 2>=G__struct.memfunc[tagnum]->allifunc)){
        // G__setup_memfuncXXX execution
        std::list<G__incsetup>::iterator iter;
-       if(G__struct.incsetup_memfunc[tagnum]->size())
-          for (iter=G__struct.incsetup_memfunc[tagnum]->begin(); iter != G__struct.incsetup_memfunc[tagnum]->end(); iter ++)
+       if(!G__struct.incsetup_memfunc[tagnum]->empty())
+          for (iter=G__struct.incsetup_memfunc[tagnum]->begin(); iter != G__struct.incsetup_memfunc[tagnum]->end(); ++iter)
              (*iter)();
    }
 #else
@@ -12790,11 +12799,9 @@ void G__incsetup_memfunc(int tagnum)
     G__struct.incsetup_memfunc[tagnum] = 0;
 
     std::list<G__incsetup>::iterator iter;
-    if(store_memfunc->size()){
-      for (iter=store_memfunc->begin(); iter != store_memfunc->end(); iter ++){
-        if(iter!=0 && *iter){
-          (*iter)();
-        }
+    if(!store_memfunc->empty()){
+      for (iter=store_memfunc->begin(); iter != store_memfunc->end(); ++iter) {
+        if (*iter) (*iter)();
       }
     }
 
