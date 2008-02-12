@@ -6883,7 +6883,7 @@ void G__argtype2param(const char* argtype, G__param* libp, int noerror, int* err
             char* end = start + strlen(start) - 1;
             while (isspace(*end) && end != start) --end;
          }
-         G__value buf = G__string2type(start, noerror);
+         G__value buf = G__string2type_noerror(start, noerror);
 
          // LF 17-07-07
          if (error && buf.type==0 && buf.typenum==-1)

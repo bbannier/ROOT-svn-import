@@ -1916,12 +1916,21 @@ G__value G__string2type_body(const char *typenamin,int noerror)
 * If we want to obtain the old behavior of this function, we
 * just have to pass 0.
 ******************************************************************/
-G__value G__string2type(const char *typenamin, int noerror)
+G__value G__string2type_noerror(const char *typenamin, int noerror)
 {
   int store_var_type = G__var_type;
   G__value buf = G__string2type_body(typenamin, noerror);
   G__var_type = store_var_type;
   return(buf);
+}
+
+/******************************************************************
+* G__string2type
+*
+******************************************************************/
+G__value G__string2type(const char *typenamin)
+{
+  return G__string2type_noerror(typenamin, 0);
 }
 
 } /* extern "C" */

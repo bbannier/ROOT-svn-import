@@ -6268,7 +6268,7 @@ G__value G__exec_statement(int* mparen)
                               --iout;
                            }
                            statement[iout] = '\0';
-                           result = G__string2type(statement + 9, 0);
+                           result = G__string2type(statement + 9);
                            store_tagnum = G__tagnum;
                            G__var_type = result.type;
                            G__typenum = result.typenum;
