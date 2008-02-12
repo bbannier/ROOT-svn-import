@@ -69,6 +69,9 @@ public:
    void SetPropagator(TEveTrackPropagator* rs);
    void SetAttLineAttMarker(TEveTrackList* tl);
 
+   const TEveVector& GetVertex()   const { return fV; }
+   const TEveVector& GetMomentum() const { return fP; }
+
    Int_t GetPdg()    const   { return fPdg;   }
    void SetPdg(Int_t pdg)    { fPdg = pdg;    }
    Int_t GetCharge() const   { return fCharge; }
