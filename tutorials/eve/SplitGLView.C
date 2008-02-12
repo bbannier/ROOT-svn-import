@@ -96,8 +96,8 @@ public:
    HtmlSummary(const char *title);
    virtual ~HtmlSummary();
 
-   HtmlObjTable  *AddTable(const char *name, Int_t nfields, Int_t nvals, Bool_t exp=kTRUE, Option_t *opt="");
-//   HtmlObjTable  *AddFirst(const char *name, Int_t nfields, Int_t nvals, Bool_t exp=kTRUE);
+   HtmlObjTable  *AddTable(const char *name, Int_t nfields, Int_t nvals, 
+                           Bool_t exp=kTRUE, Option_t *opt="");
    HtmlObjTable  *GetTable(Int_t at) const { return (HtmlObjTable *)fObjTables->At(at); }
    void           Build();
    void           Clear(Option_t *option="");
