@@ -409,7 +409,7 @@ void TEveGListTreeEditorFrame::ResetSelected()
 //______________________________________________________________________________
 // TEveBrowser
 //
-// Specialization of TRootBrowser for Reve.
+// Specialization of TRootBrowser for Eve.
 
 ClassImp(TEveBrowser)
 

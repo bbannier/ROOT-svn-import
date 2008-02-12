@@ -94,7 +94,7 @@ private:
    TEveVector   fProjectedCenter; // projected center of distortion.
 
 public:
-   TEveRhoZProjection(TEveVector& center) : TEveProjection(center) { fType = kPT_RhoZ; fName="RhoZ"; }
+   TEveRhoZProjection(TEveVector& center);
    virtual ~TEveRhoZProjection() {}
 
    virtual   Bool_t    AcceptSegment(TEveVector& v1, TEveVector& v2, Float_t tolerance);
@@ -110,14 +110,14 @@ public:
 
 ////////////////////////////////////////////////////////////////
 //                                                            //
-// TEveRPhiProjection                              //
+// TEveRPhiProjection                                         //
 //                                                            //
 ////////////////////////////////////////////////////////////////
 
 class TEveRPhiProjection : public TEveProjection
 {
 public:
-   TEveRPhiProjection(TEveVector& center):TEveProjection(center) { fType = kPT_RPhi; fGeoMode = kGM_Polygons; fName="RhoPhi"; }
+   TEveRPhiProjection(TEveVector& center);
    virtual ~TEveRPhiProjection() {}
 
    virtual void ProjectPoint(Float_t& x, Float_t& y, Float_t& z, EPProc_e proc = kPP_Full);

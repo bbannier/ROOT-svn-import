@@ -232,7 +232,7 @@ void TEveDigitSet::DigitSelected(Int_t idx)
    // Called from renderer when a digit with index idx is selected.
 
    if (fEmitSignals) {
-      CtrlClicked(this, idx);
+      SecSelected(this, idx);
    } else {
       DigitBase_t* qb = GetDigit(idx);
       TObject* obj = qb->fId.GetObject();
@@ -244,15 +244,15 @@ void TEveDigitSet::DigitSelected(Int_t idx)
 }
 
 //______________________________________________________________________________
-void TEveDigitSet::CtrlClicked(TEveDigitSet* qs, Int_t idx)
+void TEveDigitSet::SecSelected(TEveDigitSet* qs, Int_t idx)
 {
-   // Emit a CtrlClicked signal.
+   // Emit a SecSelected signal.
 
    Long_t args[2];
    args[0] = (Long_t) qs;
    args[1] = (Long_t) idx;
 
-   Emit("CtrlClicked(TEveDigitSet*, Int_t)", args);
+   Emit("SecSelected(TEveDigitSet*, Int_t)", args);
 }
 
 /******************************************************************************/

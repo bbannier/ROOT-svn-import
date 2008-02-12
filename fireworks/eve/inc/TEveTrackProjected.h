@@ -46,7 +46,7 @@ public:
 
    void         PrintLineSegments();
 
-   virtual void CtrlClicked(TEveTrack*); // marked as signal in TEveTrack
+   virtual void SecSelected(TEveTrack*); // marked as signal in TEveTrack
 
    ClassDef(TEveTrackProjected, 1); // Projected copy of a TEveTrack.
 };

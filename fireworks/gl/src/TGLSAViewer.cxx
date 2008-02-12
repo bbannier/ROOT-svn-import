@@ -73,7 +73,7 @@ DIRECT SCENE INTERACTIONS\n\n\
    MOVE a selected shape using Shift+Mid mouse drag.\n\n\
    Invoke the CONTEXT menu with Shift+Right mouse click.\n\n\
    Secondary selection and direct render object interaction is initiated\n\
-   by Control+Left mouse click. Only few classes support this option.\n\n\
+   by Alt+Left mouse click (Mod1, actually). Only few classes support this option.\n\n\
 CAMERA\n\n\
    The \"Camera\" menu is used to select the different projections from \n\
    the 3D world onto the 2D viewport. There are three perspective cameras:\n\n\

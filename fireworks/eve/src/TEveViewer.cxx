@@ -63,7 +63,6 @@ void TEveViewer::SetGLViewer(TGLViewer* s)
    fGLViewer = s;
 
    fGLViewer->SetSmartRefresh(kTRUE);
-   // fGLViewer->SetResetCamerasOnUpdate(kFALSE);
    fGLViewer->SetResetCameraOnDoubleClick(kFALSE);
 }
 
@@ -159,7 +158,7 @@ ClassImp(TEveViewerList);
 //______________________________________________________________________________
 TEveViewerList::TEveViewerList(const Text_t* n, const Text_t* t) :
    TEveElementList(n, t),
-   fPickToSelect  (kPSProjectable)
+   fPickToSelect  (kPS_Projectable)
 
 {
    // Constructor.
@@ -170,13 +169,12 @@ TEveViewerList::TEveViewerList(const Text_t* n, const Text_t* t) :
 //______________________________________________________________________________
 void TEveViewerList::Connect()
 {
-   Bool_t status;
-   status=TQObject::Connect("TGLViewer", "MouseOver(TGLPhysicalShape*)",
+   // Connect to TGLViewer class-signals.
+
+   TQObject::Connect("TGLViewer", "MouseOver(TGLPhysicalShape*)",
                      "TEveViewerList", this, "OnMouseOver(TGLPhysicalShape*)");
-   printf("Connect MouseOver %d\n", status);
-   status=TQObject::Connect("TGLViewer", "Clicked(TObject*)",
-                     "TEveViewerList", this, "OnClicked(TObject*)");
-   printf("Connect  Clicked %d\n", status);
+   TQObject::Connect("TGLViewer", "Clicked(TObject*,UInt_t,UInt_t)",
+                     "TEveViewerList", this, "OnClicked(TObject*,UInt_t,UInt_t)");
 }
 
 /******************************************************************************/
@@ -258,15 +256,15 @@ TEveElement* TEveViewerList::MapPickedToSelected(TEveElement* el)
 
    switch (fPickToSelect)
    {
-      case kPSIgnore:
+      case kPS_Ignore:
       {
          return 0;
       }
-      case kPSElement:
+      case kPS_Element:
       {
          return el;
       }
-      case kPSProjectable:
+      case kPS_Projectable:
       {
          TEveProjected* p = dynamic_cast<TEveProjected*>(el);
          if (p)
@@ -274,7 +272,7 @@ TEveElement* TEveViewerList::MapPickedToSelected(TEveElement* el)
          else
             return el;
       }
-      case kPSCompound:
+      case kPS_Compound:
       {
          Error("TEveViewerList::MapPickedToSelected", "Compound pick-to-select mode not supported.");
          return el;
@@ -307,16 +305,25 @@ void TEveViewerList::OnMouseOver(TGLPhysicalShape *pshape)
 }
 
 //______________________________________________________________________________
-void TEveViewerList::OnClicked(TObject *obj)
+void TEveViewerList::OnClicked(TObject *obj, UInt_t button, UInt_t state)
 {
+   if (button != kButton1 || state & kKeyShiftMask || state & kKeyMod1Mask)
+      return;
+
    TEveElement* el = MapPickedToSelected(dynamic_cast<TEveElement*>(obj));
 
    TEveSelection* s = gEve->GetSelection();
    if (el || s->GetNChildren() > 0)
    {
-      s->RemoveElements();
+      if (!(state & kKeyControlMask))
+         s->RemoveElements();
       if (el)
-         s->AddElement(el);
+      {
+         if (s->HasChild(el))
+             s->RemoveElement(el);
+         else
+            s->AddElement(el);
+      }
       gEve->Redraw3D();
    }
 }

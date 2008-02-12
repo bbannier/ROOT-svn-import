@@ -71,7 +71,7 @@ void TEveTrackGL::ProcessSelection(TGLRnrCtx & /*rnrCtx*/, TGLSelectRecord & rec
    for (Int_t j=0; j<rec.GetN(); ++j) printf ("%d ", rec.GetItem(j));
    printf("\n");
 
-   ((TEveTrack*)fM)->CtrlClicked((TEveTrack*)fM);
+   ((TEveTrack*)fM)->SecSelected((TEveTrack*)fM);
 }
 
 //______________________________________________________________________________

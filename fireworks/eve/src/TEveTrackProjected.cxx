@@ -198,13 +198,13 @@ void TEveTrackProjected::PrintLineSegments()
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveTrackProjected::CtrlClicked(TEveTrack* /*track*/)
+void TEveTrackProjected::SecSelected(TEveTrack* /*track*/)
 {
     // Virtual method from from base-class TEveTrack.
 
    TEveTrack* t = dynamic_cast<TEveTrack*>(fProjectable);
    if (t)
-      t->CtrlClicked(t);
+      t->SecSelected(t);
 }
 
 

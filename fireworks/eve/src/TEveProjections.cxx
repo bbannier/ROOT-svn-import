@@ -167,7 +167,18 @@ Float_t TEveProjection::GetScreenVal(Int_t i, Float_t x)
 // Transformation from 3D to 2D. X axis represent Z coordinate. Y axis have value of
 // radius with a sign of Y coordinate.
 
-ClassImp(TEveRhoZProjection)
+ClassImp(TEveRhoZProjection);
+
+//______________________________________________________________________________
+TEveRhoZProjection::TEveRhoZProjection(TEveVector& center) :
+   TEveProjection(center)
+{
+   // Constructor.
+
+   fType    = kPT_RhoZ;
+   // fGeoMode = kGM_Polygons; // Unknown from TEveProjection.
+   fName    = "RhoZ";
+}
 
 //______________________________________________________________________________
 void TEveRhoZProjection::SetCenter(TEveVector& v)
@@ -256,7 +267,18 @@ Bool_t TEveRhoZProjection::AcceptSegment(TEveVector& v1, TEveVector& v2, Float_t
 //
 // XY projection with distortion around given center.
 
-ClassImp(TEveRPhiProjection)
+ClassImp(TEveRPhiProjection);
+
+//______________________________________________________________________________
+TEveRPhiProjection::TEveRPhiProjection(TEveVector& center) :
+   TEveProjection(center)
+{
+   // Constructor.
+
+   fType    = kPT_RPhi;
+   fGeoMode = kGM_Polygons;
+   fName    = "RhoPhi";
+}
 
 //______________________________________________________________________________
 void TEveRPhiProjection::ProjectPoint(Float_t& x, Float_t& y, Float_t& z,
