@@ -1326,7 +1326,7 @@ int G__getp2ftype(struct G__ifunc_table_internal *ifunc,int ifn)
   }
   strcpy(p,")");
 
-  typenum = G__defined_typename(temp, 0);
+  typenum = G__defined_typename(temp);
 
   return(typenum);
 }

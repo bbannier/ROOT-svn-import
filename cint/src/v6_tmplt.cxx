@@ -235,7 +235,7 @@ int G__settemplatealias(const char *tagnamein,char *tagname,int tagnum
 		*(p-1) = '>'; 
 		*p = 0;
 	  }
-      if(0!=strcmp(tagnamein,tagname) && -1==G__defined_typename(tagname, 0)) {
+      if(0!=strcmp(tagnamein,tagname) && -1==G__defined_typename(tagname)) {
         int typenum=G__newtype.alltype++;
         G__newtype.type[typenum]='u';
         G__newtype.tagnum[typenum] = tagnum;
@@ -1724,7 +1724,7 @@ static void G__templatemaptypename(char *string)
     G__ASSERT (strlen (p) < sizeof (saveref));
     strcpy (saveref, p);
     *p = '\0';
-    if(-1!=(tagnum=G__defined_typename(string, 0))) {
+    if(-1!=(tagnum=G__defined_typename(string))) {
       char type = G__newtype.type[tagnum];
       int ref = G__newtype.reftype[tagnum];
 #ifndef G__OLDIMPLEMENTATION1712
@@ -2038,7 +2038,7 @@ int G__instantiate_templateclass(const char *tagnamein, int noerror)
   char tagname[G__LONGLINE];
   strcpy(tagname,tagnamein);
 
-  typenum =G__defined_typename(tagname, 0);
+  typenum =G__defined_typename(tagname);
   if(-1!=typenum) return(G__newtype.tagnum[typenum]);
 
 #ifdef G__ASM
@@ -2188,7 +2188,7 @@ int G__instantiate_templateclass(const char *tagnamein, int noerror)
     int templatearg_enclosedscope=G__templatearg_enclosedscope;
     G__templatearg_enclosedscope=store_templatearg_enclosedscope;
 #endif
-    if(-1==G__defined_typename(tagname, 0)) {
+    if(-1==G__defined_typename(tagname)) {
       typenum=G__newtype.alltype++;
       G__newtype.type[typenum]='u';
       G__newtype.name[typenum]=(char*)malloc(strlen(tagname)+1);
@@ -3581,7 +3581,7 @@ int G__createtemplatefunc(char *funcname,G__Templatearg *targ
     else {
       /* f(c a) */
       /* 4.1. function parameter, fixed typedef */
-      if(-1!=(typenum=G__defined_typename(paraname, 0))) {
+      if(-1!=(typenum=G__defined_typename(paraname))) {
         deftmpfunc->func_para.type[tmp]=G__newtype.type[typenum];
         deftmpfunc->func_para.typenum[tmp]=typenum;
         deftmpfunc->func_para.tagnum[tmp]=G__newtype.tagnum[typenum];

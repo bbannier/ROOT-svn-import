@@ -1434,11 +1434,11 @@ int hash;
 #endif
     if(G__no_exec_compile) {
       G__letint(result7,'u',(long)0);
-      result7->typenum = G__defined_typename("div_t", 0);
+      result7->typenum = G__defined_typename("div_t");
       result7->tagnum = G__newtype.tagnum[result7->typenum];
       return(1);
     }
-    result7->typenum = G__defined_typename("div_t", 0);
+    result7->typenum = G__defined_typename("div_t");
     result7->tagnum = G__newtype.tagnum[result7->typenum];
     result7->type = 'u';
     G__alloc_tempobject(result7->tagnum,result7->typenum);
@@ -1976,11 +1976,11 @@ int hash;
 #endif
     if(G__no_exec_compile) {
       G__letint(result7,'u',(long)0);
-      result7->typenum = G__defined_typename("ldiv_t", 0);
+      result7->typenum = G__defined_typename("ldiv_t");
       result7->tagnum = G__newtype.tagnum[result7->typenum];
       return(1);
     }
-    result7->typenum = G__defined_typename("ldiv_t", 0);
+    result7->typenum = G__defined_typename("ldiv_t");
     result7->tagnum = G__newtype.tagnum[result7->typenum];
     result7->type = 'u';
     G__alloc_tempobject(result7->tagnum,result7->typenum);
@@ -2204,7 +2204,7 @@ int hash;
     }
 #endif
     if(G__no_exec_compile) {
-      result7->typenum = G__defined_typename("time_t", 0);
+      result7->typenum = G__defined_typename("time_t");
       result7->tagnum = G__newtype.tagnum[result7->typenum];
       result7->type = G__newtype.type[result7->typenum];
       result7->obj.i = 0;
@@ -2214,7 +2214,7 @@ int hash;
     G__CHECKNONULL(0,'U'); /* not checking struct tag */
     G__letint(result7,'l',(long)mktime((struct tm *)G__int(libp->para[0])));
 
-    result7->typenum = G__defined_typename("time_t", 0);
+    result7->typenum = G__defined_typename("time_t");
     result7->tagnum = G__newtype.tagnum[result7->typenum];
     result7->type = G__newtype.type[result7->typenum];
     result7->ref = 0;
@@ -2619,7 +2619,7 @@ int hash;
 #endif
     if(G__no_exec_compile) {
       G__letint(result7,'l',(long)0);
-      result7->typenum = G__defined_typename("size_t", 0);
+      result7->typenum = G__defined_typename("size_t");
       result7->tagnum = G__newtype.tagnum[result7->typenum];
       result7->type = G__newtype.type[result7->typenum];
       return(1);
@@ -2631,7 +2631,7 @@ int hash;
 					 ,(size_t)G__int(libp->para[1])
 					 ,(char*)G__int(libp->para[2])
 					 ,(struct tm*)G__int(libp->para[3])));
-    result7->typenum = G__defined_typename("size_t", 0);
+    result7->typenum = G__defined_typename("size_t");
     result7->tagnum = G__newtype.tagnum[result7->typenum];
     result7->type = G__newtype.type[result7->typenum];
     return(1);

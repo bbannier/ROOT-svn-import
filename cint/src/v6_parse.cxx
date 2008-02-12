@@ -3631,7 +3631,7 @@ static int G__IsFundamentalDecl()
          result = 0;
       }
       else {
-         int typenum = G__defined_typename(type_name, 0);
+         int typenum = G__defined_typename(type_name);
          if (typenum != -1) {
             switch (G__newtype.type[typenum]) {
                case 'b': // unsigned char
@@ -4361,7 +4361,7 @@ static int G__defined_type(char* type_name, int len)
    //
    //  Check for a typedef name.
    //
-   G__typenum = G__defined_typename(type_name, 0);
+   G__typenum = G__defined_typename(type_name);
    if (G__typenum == -1) {
       // -- It was not a typedef name.
       //
@@ -4392,7 +4392,7 @@ static int G__defined_type(char* type_name, int len)
       }
       else {
          // -- Ok, we found it, now check again as a typedef name (FIXME: Why???).
-         G__typenum = G__defined_typename(type_name, 0);
+         G__typenum = G__defined_typename(type_name);
          if (G__typenum != -1) {
             G__reftype += G__newtype.reftype[G__typenum];
             G__typedefnindex = G__newtype.nindex[G__typenum];
@@ -4544,7 +4544,7 @@ int G__defined_macro(const char* macro)
       // Look for typedef names defined by '#define foo int'.
       int save_tagnum = G__def_tagnum;
       G__def_tagnum = -1;
-      int stat = G__defined_typename(macro, 0);
+      int stat = G__defined_typename(macro);
       G__def_tagnum = save_tagnum;
       if (stat >= 0) {
          return 1;

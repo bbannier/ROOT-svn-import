@@ -389,7 +389,7 @@ void G__define_type()
     rawunsigned=1;
   }
   else {
-    itemp = G__defined_typename(type1, 0);
+    itemp = G__defined_typename(type1);
     if(-1!=itemp) {
       type=G__newtype.type[itemp];
       switch(reftype) {
@@ -1046,9 +1046,8 @@ void G__define_type()
 
 }
 
-
 /******************************************************************
-* G__defined_typename(type_name)
+* G__defined_typename_noerror(type_name)
 *
 * Search already defined typedef names, -1 is returned if not found
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1061,7 +1060,7 @@ void G__define_type()
 * problem for this is that we need to change all its callers
 * and pass this new option (0 guarantees the old behavior)
 ******************************************************************/
-int G__defined_typename(const char *type_name, int noerror)
+int G__defined_typename_noerror(const char *type_name, int noerror)
 {
   int i;
   int len;
@@ -1185,6 +1184,20 @@ int G__defined_typename(const char *type_name, int noerror)
 #endif
   return(typenum);
 
+}
+
+/******************************************************************
+* G__defined_typename(type_name)
+*
+* Search already defined typedef names, -1 is returned if not found
+* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+* Note that this modify G__var_type, you may need to reset it after
+* calling this function
+* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+******************************************************************/
+int G__defined_typename(const char *type_name)
+{
+  return G__defined_typename_noerror(type_name, 0);
 }
 
 /******************************************************************

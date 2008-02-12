@@ -1686,7 +1686,7 @@ G__value G__string2type_body(const char *typenamin,int noerror)
     isconst=1;
   } else
   if(strncmp(typenam,"const",5)==0 &&
-     -1==G__defined_tagname(typenam,2) && -1==G__defined_typename(typenam, 0)) {
+     -1==G__defined_tagname(typenam,2) && -1==G__defined_typename(typenam)) {
     strcpy(temp,typenam+5);
     strcpy(typenam,temp);
     isconst=1;
@@ -1860,7 +1860,7 @@ G__value G__string2type_body(const char *typenamin,int noerror)
   }
 
   if(0==result.type) {
-    result.typenum=G__defined_typename(typenam, noerror);
+    result.typenum=G__defined_typename_noerror(typenam, noerror);
     if(result.typenum != -1) {
       result.tagnum=G__newtype.tagnum[result.typenum];
       result.type=G__newtype.type[result.typenum];
