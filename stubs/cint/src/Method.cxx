@@ -278,7 +278,7 @@ G__InterfaceMethod Cint::G__MethodInfo::InterfaceMethod()
       if((G__InterfaceMethod)ifunc->pentry[index]->p)
          return((G__InterfaceMethod)ifunc->pentry[index]->p);
       else 
-         return((G__InterfaceMethod)ifunc->funcptr);
+         return((G__InterfaceMethod)ifunc->funcptr[index]);
     }
     else {
       G__UnlockCriticalSection();
