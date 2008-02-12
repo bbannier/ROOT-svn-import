@@ -410,7 +410,7 @@ Axel: There is, actually, at least on windows. But it's about twice as fast to d
 #39 * v6_newlink.cxx: 3038: "tagnum = (int) ((*iter).second);" ->
  "tagnum = iter->second;"
 
- This made laugh ....
+ This made me laugh ....
 
 DONE
 -------------------------------------------------------------------------------
@@ -850,8 +850,17 @@ DONE
 -------------------------------------------------------------------------------
 
 #87 * v6_newlink.cxx: 6652: please keep "if(ifn>=G__MAXIFUNC)"
+
+Why does it have to be >= instead of ==??
+DONE (it was reverted in several places)
+
+DONE
 -------------------------------------------------------------------------------
 #88 * v6_newlink.cxx: 9961: why don't we veto static functions anymore?
+
+We discussed that in person... the change has been reverted.
+
+DONE
 -------------------------------------------------------------------------------
 #89 * v6_loadfile.cxx: 189: where does the "c!=-1" come from?
 -------------------------------------------------------------------------------
