@@ -97,10 +97,11 @@ TGLRnrCtx::TGLRnrCtx(TGLViewerBase* viewer) :
    }
 
    // Colors for different shape-selection-levels.
-   fSSLColor[0][0] = 255; fSSLColor[0][1] = 255; fSSLColor[0][2] = 255; fSSLColor[0][3] = 255;
-   fSSLColor[1][0] = 255; fSSLColor[1][1] = 200; fSSLColor[1][2] = 200; fSSLColor[1][3] = 255;
-   fSSLColor[2][0] = 200; fSSLColor[2][1] = 255; fSSLColor[2][2] = 255; fSSLColor[2][3] = 255;
+   fSSLColor[0][0] =   0; fSSLColor[0][1] =   0; fSSLColor[0][2] =   0; fSSLColor[0][3] =   0;
+   fSSLColor[1][0] = 255; fSSLColor[1][1] = 255; fSSLColor[1][2] = 255; fSSLColor[1][3] = 255;
+   fSSLColor[2][0] = 255; fSSLColor[2][1] = 255; fSSLColor[2][2] = 255; fSSLColor[2][3] = 255;
    fSSLColor[3][0] = 200; fSSLColor[3][1] = 200; fSSLColor[3][2] = 255; fSSLColor[3][3] = 255;
+   fSSLColor[4][0] = 200; fSSLColor[4][1] = 200; fSSLColor[4][2] = 255; fSSLColor[4][3] = 255;
 }
 
 //______________________________________________________________________

@@ -257,6 +257,7 @@ public:
    virtual void MouseOver(TGLPhysicalShape*); // *SIGNAL*
    virtual void Activated() { Emit("Activated()"); } // *SIGNAL*
    virtual void Clicked(TObject *obj); //*SIGNAL*
+   virtual void Clicked(TObject *obj, UInt_t button, UInt_t state); //*SIGNAL*
    virtual void DoubleClicked() { Emit("DoubleClicked()"); } // *SIGNAL*
 
    TGEventHandler *GetEventHandler() const { return fEventHandler; }

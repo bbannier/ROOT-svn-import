@@ -1166,6 +1166,18 @@ void TGLViewer::Clicked(TObject *obj)
 }
 
 //______________________________________________________________________________
+void TGLViewer::Clicked(TObject *obj, UInt_t button, UInt_t state)
+{
+   // Emit Clicked signal with button id and modifier state.
+
+   Long_t args[3];
+   args[0] = (Long_t)obj;
+   args[1] = button;
+   args[2] = state;
+   Emit("Clicked(TObject*,UInt_t,UInt_t)", args);
+}
+
+//______________________________________________________________________________
 void TGLViewer::MouseIdle(TGLPhysicalShape *shape, UInt_t posx, UInt_t posy)
 {
    // Emit MouseIdle signal.

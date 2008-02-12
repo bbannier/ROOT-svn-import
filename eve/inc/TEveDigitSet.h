@@ -102,7 +102,7 @@ public:
    virtual void Paint(Option_t* option="");
 
    virtual void DigitSelected(Int_t idx);
-   virtual void CtrlClicked(TEveDigitSet* qs, Int_t idx); // *SIGNAL*
+   virtual void SecSelected(TEveDigitSet* qs, Int_t idx); // *SIGNAL*
 
    // --------------------------------
 

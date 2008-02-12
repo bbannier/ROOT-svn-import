@@ -69,7 +69,7 @@ public:
 
    enum EShapeSelectionLevel
    {
-      kSSLNotSelected = -1,
+      kSSLNotSelected,
       kSSLSelected,
       kSSLImpliedSelected,
       kSSLHighlighted,
@@ -109,8 +109,8 @@ protected:
    TGLRect        *fPickRectangle;
    TGLSelectBuffer*fSelectBuffer;
 
-   // Colors for shape-selection-level 0 -> 3
-   UChar_t         fSSLColor[4][4];
+   // Colors for shape-selection-levels
+   UChar_t         fSSLColor[5][4];
 
    UInt_t          fEventKeySym;
 

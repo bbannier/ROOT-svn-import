@@ -33,9 +33,11 @@ typedef std::list<Seg_t>           LSeg_t;
 typedef std::list<Seg_t>::iterator LSegIt_t;
 }
 
+/******************************************************************************/
+// TEvePolygonSetProjected
+/******************************************************************************/
 
 //______________________________________________________________________________
-// TEvePolygonSetProjected
 //
 // A set of projected polygons.
 // Used for storage of projected geometrical shapes.
@@ -43,7 +45,7 @@ typedef std::list<Seg_t>::iterator LSegIt_t;
 // Internal struct Polygon_t holds only indices into the master vertex
 // array in TEvePolygonSetProjected.
 
-ClassImp(TEvePolygonSetProjected)
+ClassImp(TEvePolygonSetProjected);
 
 //______________________________________________________________________________
 TEvePolygonSetProjected::TEvePolygonSetProjected(const Text_t* n, const Text_t* t) :
@@ -107,7 +109,8 @@ void TEvePolygonSetProjected::SetProjection(TEveProjectionManager* proj,
    {
       Color_t color = gre->GetMainColor();
       SetMainColor(color);
-      SetLineColor((Color_t)TColor::GetColorBright(color));
+      SetLineColor(color);
+      // SetLineColor((Color_t)TColor::GetColorBright(color));
       SetMainTransparency(gre->GetMainTransparency());
    }
 }
@@ -388,12 +391,14 @@ void  TEvePolygonSetProjected::ProjectBuffer3D()
       }
       case TEveProjection::kGM_Unknown:
       {
+         MakePolygonsFromBP();
          Float_t surfBP = fSurf;
          fSurf = 0;
          MakePolygonsFromBS();
-         if(fSurf < surfBP)
+         if (fSurf < surfBP)
          {
             fPolsBP.swap(fPols);
+            fSurf = surfBP;
             fPolsBS.clear();
          }
          else
@@ -453,10 +458,11 @@ void TEvePolygonSetProjected::DumpPolys() const
    // Dump information about built polygons.
 
    printf("TEvePolygonSetProjected %d polygons\n", (Int_t)fPols.size());
+   Int_t cnt = 0;
    for (vpPolygon_ci i = fPols.begin(); i!= fPols.end(); i++)
    {
       Int_t nPnts = (*i).fNPnts;
-      printf("Points of polygon %d:\n", nPnts);
+      printf("Points of polygon %d [Np = %d]:\n", ++cnt, nPnts);
       for (Int_t vi = 0; vi<nPnts; ++vi) {
          Int_t pi = (*i).fPnts[vi];
          printf("(%f, %f, %f)", fPnts[pi].fX, fPnts[pi].fY, fPnts[pi].fZ);

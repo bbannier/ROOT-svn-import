@@ -800,6 +800,14 @@ void TEveElement::RemoveElementsLocal()
 /******************************************************************************/
 
 //______________________________________________________________________________
+Bool_t TEveElement::HasChild(TEveElement* el)
+{
+   // Check if element el is a child of this element.
+
+   return (std::find(fChildren.begin(), fChildren.end(), el) != fChildren.end());
+}
+
+//______________________________________________________________________________
 TEveElement* TEveElement::FindChild(const TString&  name, const TClass* cls)
 {
    // Find the first child with given name.  If cls is specified (non

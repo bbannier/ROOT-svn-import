@@ -116,6 +116,7 @@ public:
    List_i EndChildren()   { return fChildren.end();   }
    Int_t  GetNChildren() const { return fChildren.size(); }
 
+   Bool_t       HasChild(TEveElement* el);
    TEveElement* FindChild(const TString& name, const TClass* cls=0);
    TEveElement* FindChild(TPRegexp& regexp, const TClass* cls=0);
    Int_t        FindChildren(List_t& matches, const TString&  name, const TClass* cls=0);

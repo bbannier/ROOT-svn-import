@@ -337,7 +337,7 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
                   } else {
                      fGLViewer->SelectionChanged(); // Just notify clients.
                   }
-               } else if (event->fState & kKeyControlMask) {
+               } else if (event->fState & kKeyMod1Mask) {
                   fGLViewer->RequestSelect(event->fX, event->fY, kTRUE);
                   if (fGLViewer->fSecSelRec.GetPhysShape() != 0) {
                      TGLLogicalShape& lshape = const_cast<TGLLogicalShape&>
@@ -436,6 +436,7 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
             obj = phys_shape->GetLogical()->GetExternal();
          }
          fGLViewer->Clicked(obj);
+         fGLViewer->Clicked(obj, event->fCode, event->fState);
          eventSt.fX = 0;
          eventSt.fY = 0;
          eventSt.fCode = 0;

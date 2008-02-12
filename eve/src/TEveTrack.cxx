@@ -523,12 +523,12 @@ void TEveTrack::PrintPathMarks()
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveTrack::CtrlClicked(TEveTrack* track)
+void TEveTrack::SecSelected(TEveTrack* track)
 {
-   // Emits "CtrlClicked(TEveTrack*)" signal.
+   // Emits "SecSelected(TEveTrack*)" signal.
    // Called from TEveTrackGL on secondary-selection.
 
-   Emit("CtrlClicked(TEveTrack*)", (Long_t)track);
+   Emit("SecSelected(TEveTrack*)", (Long_t)track);
 }
 
 //______________________________________________________________________________
@@ -1165,10 +1165,10 @@ TEveTrackCounter::TEveTrackCounter(const Text_t* name, const Text_t* title) :
    fTrackLists   ()
 {
    // Constructor.
-   // Connects to global signal "TEveTrack", "CtrlClicked(TEveTrack*)".
+   // Connects to global signal "TEveTrack", "SecSelected(TEveTrack*)".
 
    if (fgInstance == 0) fgInstance = this;
-   TQObject::Connect("TEveTrack", "CtrlClicked(TEveTrack*)",
+   TQObject::Connect("TEveTrack", "SecSelected(TEveTrack*)",
                      "TEveTrackCounter", this, "DoTrackAction(TEveTrack*)");
 }
 
