@@ -307,25 +307,28 @@ void G__incsetup_memvar(int tagnum);
 void G__incsetup_memfunc(int tagnum);
 
 // 04-07-07
-// v6_symbols.cxx
-void   G__register_class(const char *libname, const char *clstr);
-void MapDependantTypes();
-int G__defined_typename_noerror(const char *type_name, int noerror);
+// (stub-less calls)
+int   G__method_inbase2(int ifn, struct G__ifunc_table_internal *ifunc);
+void* G__get_funcptr(struct G__ifunc_table_internal *ifunc, int ifn);
+int   G__stub_method_calling (G__value *result7, struct G__param *libp, struct G__ifunc_table_internal *ifunc, int ifn);
+void  G__register_class(const char *libname, const char *clstr);
+void  MapDependantTypes();
+int   G__defined_typename_noerror(const char *type_name, int noerror);
 G__value G__string2type_noerror(const char *typenamin, int noerror);
 
-struct G__ifunc_table *G__get_methodhandle_noerror G__P((const char *funcname,const char *argtype
+struct G__ifunc_table *G__get_methodhandle_noerror(const char *funcname,const char *argtype
                                            ,struct G__ifunc_table *p_ifunc
                                            ,long *pifn,long *poffset
                                            ,int withConversion
                                            ,int withInheritance
-                                           ,int noerror,int isconst));
-struct G__ifunc_table_internal *G__get_methodhandle4 G__P((char *funcname
+                                           ,int noerror,int isconst);
+struct G__ifunc_table_internal *G__get_methodhandle4(char *funcname
                                            ,struct G__param* libp
                                            ,struct G__ifunc_table_internal *p_ifunc
                                            ,long *pifn,long *poffset
                                            ,int withConversion
                                            ,int withInheritance
-                                           ,int noerror,int isconst));
+                                           ,int noerror,int isconst);
 
 int G__separate_parameter(char *original,int *pos,char *param);
 int G__parse_parameter_link(char *paras);

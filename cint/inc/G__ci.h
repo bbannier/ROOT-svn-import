@@ -1834,14 +1834,6 @@ extern G__EXPORT void G__addpragma G__P((char* comname,void (*p2f) G__P((char*))
 extern G__EXPORT void G__add_setup_func G__P((G__CONST char *libname, G__incsetup func));
 extern G__EXPORT void G__remove_setup_func G__P((G__CONST char *libname));
 extern G__EXPORT void G__setgvp G__P((long gvp));
-
-// (stub-less calls)
-extern G__EXPORT struct G__ifunc_table_internal* G__ifunc_page_base G__P((char *funcname,int hash,int page_base, struct G__ifunc_table_internal *ifunc, int allifunc));
-   extern G__EXPORT int G__method_inbase2 G__P((int ifn, struct G__ifunc_table_internal *ifunc));
-
-extern G__EXPORT void* G__get_funcptr G__P((struct G__ifunc_table_internal *ifunc, int ifn));
-extern G__EXPORT int   G__stub_method_calling G__P((G__value *result7, struct G__param *libp, 
-                                                   struct G__ifunc_table_internal *ifunc, int ifn));
 extern G__EXPORT void G__set_stdio_handle G__P((FILE* sout,FILE* serr,FILE* sin));
 extern G__EXPORT void G__setautoconsole G__P((int autoconsole));
 extern G__EXPORT int G__AllocConsole G__P((void));
@@ -1933,15 +1925,6 @@ extern G__EXPORT int G__display_includepath(FILE *fout);
 extern G__EXPORT void G__set_alloclockfunc(void(*)());
 extern G__EXPORT void G__set_allocunlockfunc(void(*)());
 extern G__EXPORT int G__usermemfunc_setup(char *funcname,int hash,int (*funcp)(),int type,
-                         int tagnum,int typenum,int reftype,
-                         int para_nu,int ansi,int accessin,int isconst,
-                         char *paras, char *comment
-#ifdef G__TRUEP2F
-                         ,void *truep2f,int isvirtual
-#endif
-                         ,void *userparam);
-
-extern G__EXPORT int G__usermemfunc_setup2(char *funcname,int hash,char *mangled_name,int (*funcp)(),int type,
                          int tagnum,int typenum,int reftype,
                          int para_nu,int ansi,int accessin,int isconst,
                          char *paras, char *comment
