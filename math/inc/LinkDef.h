@@ -96,19 +96,19 @@
 #pragma link C++ function TMath::KOrdStat(Long64_t, const Long_t*, Long64_t, Long64_t*);
 #pragma link C++ function TMath::KOrdStat(Long64_t, const Long64_t*, Long64_t, Long64_t*);
 
-#pragma link C++ function TMath::BinarySearch(Long64_t, const Short_t*, Short_t);
-#pragma link C++ function TMath::BinarySearch(Long64_t, const Int_t*, Int_t);
-#pragma link C++ function TMath::BinarySearch(Long64_t, const Float_t*, Float_t);
-#pragma link C++ function TMath::BinarySearch(Long64_t, const Double_t*, Double_t);
-#pragma link C++ function TMath::BinarySearch(Long64_t, const Long_t*, Long_t);
-#pragma link C++ function TMath::BinarySearch(Long64_t, const Long64_t*, Long64_t);
+// #pragma link C++ function TMath::BinarySearch(Long64_t, const Short_t*, Short_t);
+// #pragma link C++ function TMath::BinarySearch(Long64_t, const Int_t*, Int_t);
+// #pragma link C++ function TMath::BinarySearch(Long64_t, const Float_t*, Float_t);
+// #pragma link C++ function TMath::BinarySearch(Long64_t, const Double_t*, Double_t);
+// #pragma link C++ function TMath::BinarySearch(Long64_t, const Long_t*, Long_t);
+// #pragma link C++ function TMath::BinarySearch(Long64_t, const Long64_t*, Long64_t);
 
-#pragma link C++ function TMath::BinarySearch(Long64_t, const Short_t**, Short_t);
-#pragma link C++ function TMath::BinarySearch(Long64_t, const Int_t**, Int_t);
-#pragma link C++ function TMath::BinarySearch(Long64_t, const Float_t**, Float_t);
-#pragma link C++ function TMath::BinarySearch(Long64_t, const Double_t**, Double_t);
-#pragma link C++ function TMath::BinarySearch(Long64_t, const Long_t**, Long_t);
-#pragma link C++ function TMath::BinarySearch(Long64_t, const Long64_t**, Long64_t);
+// #pragma link C++ function TMath::BinarySearch(Long64_t, const Short_t**, Short_t);
+// #pragma link C++ function TMath::BinarySearch(Long64_t, const Int_t**, Int_t);
+// #pragma link C++ function TMath::BinarySearch(Long64_t, const Float_t**, Float_t);
+// #pragma link C++ function TMath::BinarySearch(Long64_t, const Double_t**, Double_t);
+// #pragma link C++ function TMath::BinarySearch(Long64_t, const Long_t**, Long_t);
+// #pragma link C++ function TMath::BinarySearch(Long64_t, const Long64_t**, Long64_t);
 
 #pragma link C++ function TMath::IsInside(Float_t, Float_t, Int_t, Float_t*, Float_t*);
 #pragma link C++ function TMath::IsInside(Int_t, Int_t, Int_t, Int_t*, Int_t*);

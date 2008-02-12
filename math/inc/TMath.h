@@ -421,12 +421,14 @@ template <typename T> inline T TMath::NormCross(const T v1[3],const T v2[3],T ou
 template <typename T> 
 T TMath::MinElement(Long64_t n, const T *a) {
    // Return minimum of array a of length n.
+
    return *std::min_element(a,a+n);
 }
 
 template <typename T>
 T TMath::MaxElement(Long64_t n, const T *a) { 
    // Return maximum of array a of length n.
+
    return *std::max_element(a,a+n); 
 }
 
@@ -434,34 +436,16 @@ template <typename T>
 Long64_t TMath::LocMin(Long64_t n, const T *a) {
    // Return index of array with the minimum element.
    // If more than one element is minimum returns first found.
-   
-   if  (n <= 0 || !a) return -1;
-   T xmin = a[0];
-   Long64_t loc = 0;
-   for  (Long64_t i = 1; i < n; i++) {
-      if (xmin > a[i])  {
-         xmin = a[i];
-         loc = i;
-      }
-   }
-   return loc;
+
+   return (Long64_t) (std::min_element(a, a+n) - a);
 }
 
 template <typename T>
 Long64_t TMath::LocMax(Long64_t n, const T *a) {
    // Return index of array with the maximum element.
    // If more than one element is maximum returns first found.
-   
-   if  (n <= 0 || !a) return -1;
-   T xmax = a[0];
-   Long64_t loc = 0;
-   for  (Long64_t i = 1; i < n; i++) {
-      if (xmax < a[i])  {
-         xmax = a[i];
-         loc = i;
-      }
-   }
-   return loc;      
+
+   return (Long64_t) (std::max_element(a, a+n) - a);
 }
 
 template <typename T> Double_t TMath::Mean(Long64_t n, const T *a, const Double_t *w)
