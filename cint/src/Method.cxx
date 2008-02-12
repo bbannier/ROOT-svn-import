@@ -277,8 +277,8 @@ G__InterfaceMethod Cint::G__MethodInfo::InterfaceMethod()
       // if the interface method is zero
       if((G__InterfaceMethod)ifunc->pentry[index]->p)
          return((G__InterfaceMethod)ifunc->pentry[index]->p);
-      else 
-         return((G__InterfaceMethod)ifunc->funcptr[index]);
+      else  // WARNING WARNING We are changing the semantics of this return. If there no stub function we return the address of the function. I don't know the consequences of this behaviour. We will have to recheck this point.
+         return((G__InterfaceMethod) G__get_funcptr(ifunc,index));
     }
     else {
       G__UnlockCriticalSection();
