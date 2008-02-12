@@ -48,7 +48,6 @@ class TObjArray;
 class TEnv;
 class TVirtualMutex;
 
-using namespace std;
 
 R__EXTERN TVirtualMutex *gCINTMutex;
 

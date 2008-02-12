@@ -7159,7 +7159,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
       fprintf(fp,     "}\n\n");
 
       ++ifn;
-      if (ifn == G__MAXIFUNC) {
+      if (ifn >= G__MAXIFUNC) {
         ifn = 0;
         ++page;
       }
@@ -7289,7 +7289,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
       fprintf(fp,   "}\n\n");
 
       ++ifn;
-      if (ifn == G__MAXIFUNC) {
+      if (ifn >= G__MAXIFUNC) {
         ifn = 0;
         ++page;
       }
@@ -7364,7 +7364,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
       fprintf(fp,   "}\n\n");
 
       ++ifn;
-      if (ifn == G__MAXIFUNC) {
+      if (ifn >= G__MAXIFUNC) {
         ifn = 0;
         ++page;
       }
@@ -9712,7 +9712,7 @@ void G__cpplink_memfunc(FILE *fp)
               // LF
               if (0 == isdestructor)
                 ++j;
-              if (j == G__MAXIFUNC) {
+              if (j >= G__MAXIFUNC) {
                 j = 0;
                 ++page;
               }
@@ -10108,7 +10108,7 @@ void G__cpplink_func(FILE *fp)
       }
       if(G__NOLINK>ifunc->globalcomp[j] &&  /* with -c-1 option */
          G__PUBLIC==ifunc->access[j] && /* public, this is always true */
-         /*0==ifunc->staticalloc[j] &&*/
+         0==ifunc->staticalloc[j] &&
          ifunc->hash[j]) {   /* not static */
 
         if(strcmp(ifunc->funcname[j],"operator new")==0 &&
