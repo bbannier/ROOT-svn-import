@@ -39,10 +39,9 @@ using namespace std;
 
 static int gDebug = 0;
 
-inline unsigned long hash(const std::string& s)
+inline unsigned long hash(const char* str)
 {
   unsigned long hash = 5381;
-  const char* str = s.c_str();
 
   while(*str) {
     hash *= 5;
@@ -65,33 +64,34 @@ private:
   TSymbol(const TSymbol& sym);       //Avoid copying ptrs
   TSymbol& operator=(const TSymbol& sym);  //Avoid copying ptrs
 
+  static const short CONST  = 0x01; // first bit 
+  static const short DEST   = 0x02; // second bit 
+
 public:
-  void          *fFunc;
   unsigned int   fClassHash;
 
   // This points directly to the name in the library
-  string  fMangled;
+  char*    fMangled;
       
-  bool    fIsDest;
-  bool    fIsDestInC;
-  bool    fIsDestInCDel;
-  bool    fIsConst;
-  bool    fIsConstInC;
+  short fIdSpecial; // Is it a constructor or destructor?
 
   TSymbol()
-    : fFunc(0), /*fHash(0),*/ fClassHash(0), fIsDest(false), fIsDestInC(false), 
-      fIsDestInCDel(false), fIsConst(false), fIsConstInC(false)
+    : fClassHash(0), fMangled(0), fIdSpecial(0)
   {
   }
 
-  TSymbol(string &mangled, void* func)
-    : fFunc(func), /*fHash(0),*/ fClassHash(0), fMangled(mangled), fIsDest(false), 
-      fIsDestInC(false), fIsDestInCDel(false), fIsConst(false), fIsConstInC(false)
+  TSymbol(const char* mangled)
+    : fClassHash(0)
   {
+    fMangled = new char[strlen(mangled) + 1];
+    strcpy(fMangled, mangled);
+
+    fIdSpecial = 0;
   }
 
   ~TSymbol()
   {
+    delete [] fMangled;
   }
 
   void SetHash(char *demanstr)
@@ -167,33 +167,31 @@ public:
 
         // ** constructors
         if ( classname_notemp == protoname) {
-          fIsConst = true;
+          SetConst();
           // if this not the constructor in charge then just continue
-          if(!(strstr(fMangled.c_str(), classname_notemp.c_str()) && strstr(fMangled.c_str(), "C1")  )) {
+          if(!(strstr(fMangled, classname_notemp.c_str()) && strstr(fMangled, "C1")  )) {
             // This is not the constructor in-charge... ignore it
             return;
           }
-          fIsConstInC = true;
         }
 
         // ** destructors
         string dest("~");
         dest += classname_notemp;
         if ( dest == protoname){
-          fIsDest = true;
+          SetDest();
                
-          if(strstr(fMangled.c_str(), classname_notemp.c_str()) && strstr(fMangled.c_str(), "D0")) {
+          if(strstr(fMangled, classname_notemp.c_str()) && strstr(fMangled, "D0")) {
             // This is the deleting constructor
-            fIsDestInCDel = true;
 
             // 27-07-07
             // We ignore the deleting constructor since we do
             // that job in newlink
             return;
           }
-          else if( strstr(fMangled.c_str(), classname_notemp.c_str()) && strstr(fMangled.c_str(), "D1") ){
+          else if( strstr(fMangled, classname_notemp.c_str()) && strstr(fMangled, "D1") ){
             // This is the in-charge (non deleting) constructor
-            fIsDestInC = true;
+            // Dont do anything but keep it
           }
           else {
             // Ignoring destructor not-in-charge for" << classstr.Data() << endl; 
@@ -223,9 +221,7 @@ public:
                    (pos_greater != string::npos) &&
                    index>pos_smaller && index<pos_greater ) {
             // How is the isinteger(char) when using the stl?
-            if( (classname[index]=='0' || classname[index]=='1' || classname[index]=='2' || classname[index]=='3' || classname[index]=='4' ||
-                 classname[index]=='5' || classname[index]=='6' || classname[index]=='7' || classname[index]=='8' || classname[index]=='9')
-                && classname[index+1]=='u'){
+            if( isdigit(classname[index]) && classname[index+1]=='u') {
               classname.erase(index+1,1);
               pos_greater  = classname.find_last_of(">", classname.size()-1);
             }
@@ -235,7 +231,7 @@ public:
           else
             index++;
         }
-        fClassHash = hash(classname);
+        fClassHash = hash(classname.c_str());
         return;
       }
       else {
@@ -253,11 +249,7 @@ public:
   {
     // The hash of a symbol is going to be hash of the method's name
     // ie. "TObject::Dump" for the method dump in TObject
-
-    if (fClassHash)
-      return fClassHash;
-
-    return 0;
+    return fClassHash;
   }
 
   char* Demangle()
@@ -270,7 +262,7 @@ public:
     // Instead of copying the fMangled name just do the demangling
     // I dont know why the symbols start with __Z if the ABI wants them
     // to start with _Z... until understanding it just hack your way through
-    const char *cline = fMangled.c_str();
+    const char *cline = fMangled;
     if ( cline[0]=='_' && cline[1]=='_') {
       cline = cline++;
     }
@@ -301,8 +293,27 @@ public:
     return name;
   }
    
-  //ClassDef(TSymbol,0)
+  bool IsConst()
+  {
+    return fIdSpecial & CONST;
+  }
 
+  bool IsDest()
+  {
+    return fIdSpecial & DEST;
+  }
+
+  void SetConst()
+  {
+    fIdSpecial &= CONST;
+  }
+
+  void SetDest()
+  {
+    fIdSpecial &= DEST;
+  }
+
+  //ClassDef(TSymbol,0)
 };
 
 
@@ -316,19 +327,19 @@ private:
   TSymbolLookup& operator=(const TSymbolLookup& sym);  //Avoid copying ptrs
 
 public:
-  string    fLibname;
+  const char*    fLibname; // can this be just a reference? wont it change in CInt?
   std::list<std::string>  fRegistered;
   std::list<TSymbol*>    *fSymbols;
 
   TSymbolLookup()
   {
+    fLibname    = 0;
     fSymbols    = 0;
   }
 
   TSymbolLookup(const char *libname, std::list<TSymbol*> *symbols)
   {
-    fSymbols    = 0;
-    fLibname    = string(libname);
+    fLibname    = libname;
     fSymbols    = symbols;
   }
 
@@ -338,7 +349,7 @@ public:
     fSymbols->clear();
   }
    
-  void AddRegistered(string &classname)
+  void AddRegistered(const string &classname)
   {
     fRegistered.push_back(classname);
   }
@@ -348,7 +359,7 @@ public:
     // This is just the name of the library
     // (always remember that this is the fullpath)
 
-    if (fLibname.size())
+    if (fLibname)
       return hash(fLibname);
 
     return 0;
@@ -364,12 +375,12 @@ public:
     return false;
   }
    
-  void SetLibname(string &libname)
+  void SetLibname(const char* libname)
   {
     // Give a libname to this object
     //delete fLibname;
 
-    fLibname = string(libname);
+    fLibname = libname;
   }
 
   void SetSymbols(std::list<TSymbol*> *table)
@@ -413,6 +424,11 @@ void MapDependantTypes()
   // it will use an internal type like "_IO_FILE".
   // This mapping is completely dependant of the compiler
   // so we have to be very careful about it.
+  // 12-02-08
+  // The non-use of this  mapping won't present any errors anymore,
+  // the only problem is that stubs with this kind of type will be
+  // generated (all the code related to MapDependantTypes could be removed)
+
   G__process_cmd ("typedef FILE _IO_FILE", prompt, &more,0, 0);
 
   // gui/inc/WidgetMessageTypes.h
@@ -442,6 +458,7 @@ void MapDependantTypesX()
 }
 
 //______________________________________________________________________________
+/*
 void MapDependantTypesTree()
 {
 
@@ -453,106 +470,9 @@ void MapDependantTypesTree()
   // 07/05/2007
   // This class doesnt have a classdef so I dont know yet how to handle it
   G__process_cmd("typedef struct {} TFriendLock", prompt, &more,0, 0);
-  G__process_cmd("typedef ifstream basic_ifstream<char, std::char_traits<char>>", prompt, &more,0, 0);
-}
 
-/*
-//______________________________________________________________________________
-// This method is not used anymore
-struct link_map *
-locate_linkmap()
-{
-  // locate base link-map in memory
-  //
-  // 08/05/07
-  // Taken from the phrack magazine but modified to find the link map
-  // of the current process (as such we dont need ptracing abilities)
-
-  Elf32_Ehdr      *ehdr   = (Elf32_Ehdr*) malloc(sizeof(Elf32_Ehdr));
-  Elf32_Phdr      *phdr   = (Elf32_Phdr*) malloc(sizeof(Elf32_Phdr));
-  Elf32_Dyn       *dyn    = (Elf32_Dyn*)  malloc(sizeof(Elf32_Dyn));
-  Elf32_Word      got;
-  struct link_map *l      = (link_map*)   malloc(sizeof(struct link_map));
-  unsigned long   phdr_addr , dyn_addr , map_addr;
-
-
-  // first we check from elf header, mapped at 0x08048000, the offset
-  // to the program header table from where we try to locate
-  // PT_DYNAMIC section.
-  //
-  memcpy(ehdr, (const void*)0x08048000, sizeof(Elf32_Ehdr));
-
-  phdr_addr = 0x08048000 + ehdr->e_phoff;
-
-  memcpy(phdr, (const void*)phdr_addr, sizeof(Elf32_Phdr));
-
-  while ( phdr->p_type != PT_DYNAMIC ) {
-    memcpy(phdr, (const void*) (phdr_addr += sizeof(Elf32_Phdr)), sizeof(Elf32_Phdr));
-  }
-
-  // now go through dynamic section until we find address of the GOT
-
-  memcpy(dyn, (const void*)phdr->p_vaddr, sizeof(Elf32_Dyn));
-  dyn_addr = phdr->p_vaddr;
-
-  while ( dyn->d_tag != DT_PLTGOT ) {
-    memcpy(dyn, (const void*)(dyn_addr += sizeof(Elf32_Dyn)), sizeof(Elf32_Dyn));
-  }
-
-  got = (Elf32_Word) dyn->d_un.d_ptr;
-  got += 4; 		// second GOT entry, remember?
-
-  // now just read first link_map item and return it
-  memcpy(&map_addr, (const void*) got, 4);
-   
-  memcpy(l, (const void*)map_addr, sizeof(struct link_map));
-
-  free(phdr);
-  free(ehdr);
-  free(dyn);
-
-  return l;
-}
-
-//______________________________________________________________________________
-// This method is not used anymore
-struct link_map *
-get_linkmap(const char *libname)
-{
-  // Get the list of the libraries currently loaded and compare it to 
-  // "libname". If it's found return the link_map for that library
-   
-  //struct link_map *map = locate_linkmap();
-  //struct link_map *map_iter;
-  //struct link_map *map_res = 0;
-
-  //for (map_iter = map; map_iter; map_iter = map_iter->l_next) {
-  //   if( map_iter->l_name && 
-  //       (strcmp(map_iter->l_name, libname)==0 ||
-  //        strcmp(gSystem->BaseName(map_iter->l_name), gSystem->BaseName(libname))==0 )) {
-  //      map_res = map_iter;
-  //      break;
-  //   }
-  //}
-
-  //free(map);
-  //return map_res;
-
-  // 04-07-07 dont scan the memory... just open the library
-  void* handle = dlopen(libname, RTLD_LAZY);
-  if (!handle) {
-    cerr << "Error during dlopen(): " << dlerror() << endl;
-    return 0;
-  }
-
-  struct link_map *lmap;
-  if (dlinfo (handle, RTLD_DI_LINKMAP, &lmap) == -1)
-    cerr << "Error during dlinfo(): " << dlerror() << endl;
-   
-  return lmap;
 }
 */
-
 //______________________________________________________________________________
 static std::list<TSymbol*>*
 G__symbol_list(const char* lib)
@@ -567,14 +487,22 @@ G__symbol_list(const char* lib)
   // before it was zero and now it's teh real hash... it has
   // to be modified for something more practical!!!
   std::list<TSymbol*> *symbol_list = new std::list<TSymbol*>;
-
-  string line;
+  
+  FILE * fp;
+  char *line = NULL;
+  size_t len_line = 0;
   ifstream myfile (lib);
-  if (myfile.is_open()) {
-    while (!myfile.eof()) {
-      getline (myfile,line);
-         
-      TSymbol *symbol = new TSymbol(line, (void*)0);
+
+  fp = fopen(lib, "r");
+  if (fp) {
+    while (getline(&line, &len_line, fp) != -1) {
+      // The stupid getline will add the eol character if it's found
+      size_t len = strlen(line);
+      if(len>1 && line[len-1]=='\n') {
+        line[len-1] = '\0';
+      }
+
+      TSymbol *symbol = new TSymbol((const char*)line);
       char* demangled = symbol->Demangle();
       symbol->SetHash(demangled);
       
@@ -595,19 +523,22 @@ G__symbol_list(const char* lib)
       if (demangled)
         free(demangled);
     }
-    myfile.close();
+    fclose(fp);
   }
-
   else 
     cout << "Error: couldnt open file: " << lib << endl;
-   
+  
+
+  if (line)
+    free(line);
+
   return symbol_list;
 }
 
 
 //______________________________________________________________________________
 int G__register_pointer(const char *classname, const char *method, const char *proto,
-                    void *ptr, const char *mangled_name, int isconst)
+                        const char *mangled_name, int isconst)
 {
   // Try to register the function pointer 'ptr' for a given method
   // of a given class with a certain prototype, i.e. "char*,int,float".
@@ -726,13 +657,11 @@ void G__register_class(const char *libname, const char *clstr)
     // ** Pre-process a token
   }
 
-  unsigned int  classhash = hash(classname);
+  unsigned int  classhash = hash(classname.c_str());
   int nreg = 0;
   std::list<TSymbol*> *demangled = 0;
   int nerrors = 0;
   int isFreeFunc = classname.empty();
-  int destInCharge = 0;    // Was this desc registered?
-  int destInChargeDel = 0; // Was this desc registered?
 
   if(!libname || strcmp(libname,"")==0 ){
     if (gDebug > 0) {
@@ -779,9 +708,6 @@ void G__register_class(const char *libname, const char *clstr)
   if(strcmp(bname, "libGX11.so")==0) {
     MapDependantTypesX();
   }
-  else if(strcmp(bname, "libTree.so")==0) {
-    MapDependantTypesTree();
-  }
   free(basec);
   /*********************************/
    
@@ -794,7 +720,7 @@ void G__register_class(const char *libname, const char *clstr)
   multimap<string,TSymbolLookup*>::iterator  iter    = symbolt->find(string(libname));
   TSymbolLookup *symt = 0;
   if (iter != symbolt->end()) {
-    symt = (TSymbolLookup *) ((*iter).second);
+    symt = (TSymbolLookup *) (iter->second);
   }
 
   if (gDebug > 0)
@@ -975,18 +901,6 @@ void G__register_class(const char *libname, const char *clstr)
       continue;
     }
 
-    // How can we get rid of this class in a clean way?
-    // The problem is that this class is declared in TTree.h but there is no
-    // .h for itself and there is no dictionary so CInt does not know about it
-    // but we will find it when we read the symbols :/ ....
-    // maybe we should change things like TTree::TFriendLock::TFriendLock to
-    // just TFriendLock::TFriendLock but I'm not sure about the consequences
-    // that can have.
-    if(clstr && strcmp(clstr, "TTree")==0 && protostr.find("TFriendLock::")!=string::npos ) {
-      ++list_iter;
-      continue;
-    }
-      
     // 10/05/07
     // this is small hack (yes... again). Let's ignore all the functions
     // that belong to std and start with __ (why? they are weird)
@@ -1017,7 +931,7 @@ void G__register_class(const char *libname, const char *clstr)
       cerr << "methodstr: " << methodstr << endl;
 
     // Very annoying class... check it later
-    if(symbol->fIsConst && methodstr=="TFormulaPrimitive"){
+    if(symbol->IsConst() && methodstr=="TFormulaPrimitive"){
       ++list_iter;
       continue;
     }
@@ -1231,14 +1145,14 @@ void G__register_class(const char *libname, const char *clstr)
       
     // 11-10-07
     // Get rid of the "<>" part in something like TParameter<float>::TParameter()
-    if(symbol->fIsConst){
+    if(symbol->IsConst()){
       string::size_type itri = finalclass.find("<");
       
       if(itri != string::npos){
         methodstr = finalclass;
       }
     }
-    else if(symbol->fIsDest){
+    else if(symbol->IsDest()){
       string::size_type itri = finalclass.find("<");
       
       if(itri != string::npos) {
@@ -1281,15 +1195,13 @@ void G__register_class(const char *libname, const char *clstr)
       
     char *tmpstr = new char[classname.size()+56]; // it could be changed by G__register_pointer and the size can be bigger
     strcpy(tmpstr, classname.c_str());
-    if( G__register_pointer(tmpstr, methodstr.c_str(), newsignature.c_str(), 
-                        symbol->fFunc, symbol->fMangled.c_str(),isconst) == -1) {
+    if( G__register_pointer(tmpstr, methodstr.c_str(), newsignature.c_str(), symbol->fMangled,isconst) == -1) {
       // yahoo.... we can finally call our register method
       if (gDebug > 0) {
         cerr << "xxx Couldnt register the method: " << methodstr << endl;
         cerr << "xxx from the class    : " << finalclass << endl;
         cerr << "xxx classname    : " << classname << endl;
         cerr << "xxx with the signature: " << newsignature << endl;
-        cerr << "xxx with the address : " << symbol->fFunc << endl << endl ;
       }
       nerrors++;
     }
@@ -1298,11 +1210,10 @@ void G__register_class(const char *libname, const char *clstr)
         cerr << " *** Method registered  : " << methodstr << endl;
         cerr << " *** from the class     : " << finalclass << endl;
         cerr << " *** with the signature : " << newsignature << endl;
-        cerr << " *** with the address : " << symbol->fFunc << endl << endl ;
       }
       nreg++;
     }
-    delete tmpstr;
+    delete [] tmpstr;
 
     ++list_iter;
     demangled->remove(symbol);

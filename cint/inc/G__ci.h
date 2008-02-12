@@ -1069,7 +1069,6 @@ extern G__value G__null;
 * struct forward declaration; real ones are in common.h
 **************************************************************************/
 struct G__ifunc_table;
-struct G__ifunc_table_internal;
 struct G__var_array;
 struct G__dictposition;
 struct G__comment_info;
@@ -1083,7 +1082,6 @@ struct G__funcentry_VMS;
 struct G__ifunc_table_VMS;
 #endif
 struct G__ifunc_table;
-struct G__ifunc_table_internal;
 struct G__inheritance;
 struct G__var_array;
 struct G__tagtable;
@@ -1455,13 +1453,6 @@ struct G__ifunc_table *G__get_methodhandle2 G__P((char *funcname
                                            ,long *pifn,long *poffset
                                            ,int withConversion
                                            ,int withInheritance));
-struct G__ifunc_table_internal *G__get_methodhandle4 G__P((char *funcname
-                                           ,struct G__param* libp
-                                           ,struct G__ifunc_table_internal *p_ifunc
-                                           ,long *pifn,long *poffset
-                                           ,int withConversion
-                                           ,int withInheritance
-                                           ,int noerror,int isconst));
 struct G__var_array *G__searchvariable G__P((char *varname,int varhash
                                        ,struct G__var_array *varlocal
                                        ,struct G__var_array *varglobal
@@ -1797,7 +1788,6 @@ extern G__EXPORT void G__add_macro G__P((G__CONST char *macro));
 extern G__EXPORT void G__check_setup_version G__P((int version,G__CONST char *func));
 extern G__EXPORT long G__int G__P((G__value buf));
 extern G__EXPORT long G__int_cast G__P((G__value buf));
-extern G__EXPORT float G__float G__P((G__value buf));
 extern G__EXPORT double G__double G__P((G__value buf));
 extern G__EXPORT G__value G__calc G__P((G__CONST char *expr));
 extern G__EXPORT int  G__loadfile G__P((G__CONST char* filename));
@@ -2029,7 +2019,6 @@ static void (*G__add_macro) G__P((G__CONST char *macro));
 static void (*G__check_setup_version) G__P((int version,G__CONST char *func));
 static long (*G__int) G__P((G__value buf));
 static double (*G__double) G__P((G__value buf));
-static float (*G__float) G__P((G__value buf));
 static G__value (*G__calc) G__P((G__CONST char *expr));
 static int  (*G__loadfile) G__P((G__CONST char* filename));
 static int  (*G__unloadfile) G__P((G__CONST char* filename));
@@ -2434,7 +2423,6 @@ G__EXPORT void G__SetCppCintApiPointers(
   G__get_ifile = (struct G__intput_ifile* (*) G__P((void)) ) a137;
   G__set_alloclockfunc   = (void (*) G__P((void* foo)) ) a138;
   G__set_allocunlockfunc = (void (*) G__P((void* foo)) ) a139;
-  G__float = (float (*) G__P((G__value buf)) ) a140;
 
   #ifdef G__TRUEP2F
   G__memfunc_setup2 = (int (*) G__P((G__CONST char *funcname,int hash,G__InterfaceMethod funcp,int type
