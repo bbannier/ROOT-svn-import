@@ -950,52 +950,19 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
 
       case 'd' : // Double = Double Word
         if((param.type=='d')||(param.type=='q')){
-          double dparam = (double) G__double(param);
-
-#ifdef __x86_64__
-	  __asm__ __volatile__("push %0" :: "g" (dparam));
-#else
-          // Parameter Pointer
-          int *paddr = (int *) &dparam;
-
-          /* Highest Word */
-          __asm__ __volatile__("push %0" :: "g" (*(paddr+1)));
-          /* Lowest Word */
-          __asm__ __volatile__("push %0" :: "g" (*paddr));
-#endif
+           double dparam = (double) G__double(param);
+           __asm__ __volatile__("push %0" :: "g" (dparam));
         }
         else if(param.type=='f') {
-          double fparam = (double) G__double(param);
-
-#ifdef __x86_64__
-	  __asm__ __volatile__("push %0" :: "g" (fparam));
-#else
-          // Parameter Pointer
-          int *paddr = (int *) &fparam;
-
-          /* Highest Word */
-          __asm__ __volatile__("push %0" :: "g" (*(paddr+1)));
-          /* Lowest Word */
-          __asm__ __volatile__("push %0" :: "g" (*paddr));
-#endif
+           double fparam = (double) G__double(param);  
+           __asm__ __volatile__("push %0" :: "g" (fparam));
         }
         else{
-          long iparam = (long) G__int(param);
-          G__value otype;
-          otype.type   = 'u';
-          otype.tagnum = gtagnum;
-
-#ifdef __x86_64__
-	  __asm__ __volatile__("push %0" :: "g" (iparam));
-#else
-          double value = (double) iparam;
-          int * pointer = (int*) &value;
-
-          /* Highest Word */
-          __asm__ __volatile__("push %0" :: "g" (*(pointer+1)));
-          /* Lowest Word */
-          __asm__ __volatile__("push %0" :: "g" (*pointer));
-#endif
+           long iparam = (long) G__int(param);
+           G__value otype;
+           otype.type   = 'u';
+           otype.tagnum = gtagnum;
+           __asm__ __volatile__("push %0" :: "g" (iparam));
         }
 
         break;
@@ -1060,32 +1027,18 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
       {
         float valuef = (float) G__double(param);
 
-#ifdef __x86_64__
         // Casting a single precision to a doeble precision should be safe
         // 31-01-08: We do this because the compiler complains in x86-64 (optimized)
         double valued = (double) valuef;
         __asm__ __volatile__("push %0" :: "g" (valued));
-#else
-        __asm__ __volatile__("push %0" :: "g" (valuef));
-#endif
       }
       break;
 
       case 'n' : // Long Long
       {
         G__int64 fparam = (G__int64) G__Longlong(param);
+        __asm__ __volatile__("push %0" :: "g" (fparam));
 
-#ifdef __x86_64__
-	__asm__ __volatile__("push %0" :: "g" (fparam));
-#else
-        // Parameter Pointer
-        int *paddr = (int *) &fparam;
-
-        /* Highest Word */
-        __asm__ __volatile__("push %0" :: "g" (*(paddr+1)));
-        /* Lowest Word */
-        __asm__ __volatile__("push %0" :: "g" (*paddr));
-#endif
       }
       break;
 
@@ -1126,12 +1079,6 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
     }
   }
   }
-#ifndef __x86_64__
-  // Here we push the this pointer as the last parameter
-  // BUT DO NOT do it if it's a static function
-  if (this_ptr)
-    __asm__ __volatile__("push %0" :: "g" ((void*) this_ptr));
-#endif
 
   int type = result7->type;
   int isref   = 0;
@@ -1311,7 +1258,7 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
       // Class Size
       osize = G__sizeof(&otype);
 
-      // The second thing we need is a new object of type T (the place holder)
+D      // The second thing we need is a new object of type T (the place holder)
       void* pobject = operator new(osize);
 
       // The place holder is the last parameter we have to push !!!
@@ -1331,7 +1278,6 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
     {
 
        ASM_X86_64_ARGS_PASSING(dval, lval)
-
       __asm__ __volatile__("call *%0" :: "g" (vaddress));
 
       // if this a void function the return type must be 0
@@ -1373,464 +1319,411 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
  **************************************************************************/
 int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, void* this_ptr, G__param* rpara, G__value *result7)
 {
-  void *vaddress = G__get_funcptr(ifunc, ifn);
-  int paran = rpara->paran;
+   
+   void *vaddress = G__get_funcptr(ifunc, ifn);
+   int paran = rpara->paran;
 
-  int reftype = ifunc->reftype[ifn];
-  G__params *fpara = &ifunc->param[ifn];
-  int ansi = ifunc->ansi[ifn];
+   int reftype = ifunc->reftype[ifn];
+   G__params *fpara = &ifunc->param[ifn];
+   int ansi = ifunc->ansi[ifn];
 
-  for (int k=paran-1; k>=0; k--) {
-    void *paramref = 0;
-    int isref = 0;
+   /* Pushing Parameters in the stack */
+   for (int k=paran-1; k>=0; k--) {
+      void *paramref = 0;
+      int isref = 0;
 
-    const G__value &param = rpara->para[k];
-    G__paramfunc *formal_param = fpara->operator[](k);
+      const G__value &param = rpara->para[k];
+      G__paramfunc *formal_param = fpara->operator[](k);
 
-    if(ansi!=2 && formal_param->reftype!=G__PARANORMAL){
+      if(ansi!=2 && formal_param->reftype!=G__PARANORMAL){
+         isref = 1;
+         paramref = (void *) param.ref;
+      }
+
+      if(ansi==2 && param.type!='i' && param.type!='d' && param.type!='f' &&  param.ref){
+         isref = 1;
+         paramref = (void *) param.ref;
+      }
+
+      // This means the parameter is a pointer
+      if(isupper(param.type) || isupper(formal_param->type)){
+         isref = 1;
+         paramref = (void *)(param.obj.i);
+      }
+
+      // This means the parameter is a pointer
+      if(formal_param->type=='u'){
+         //isref = 1;
+         paramref = (void *)(param.obj.i);
+      }
+
+      // Pushing Parameter
+      // By Value or By Reference?
+      if (!isref){// By Value
+         unsigned char para_type = formal_param->type;
+
+         // If we have more parameters than the declarations allows
+         // (variadic function) then take the type of the actual parameter
+         // ... forget to check the declaration (will be null)
+         if(ansi==2)
+            para_type = param.type;
+
+         // Parameter's type? Push is different for each type
+         switch(para_type){
+
+         case 'd' : // Double = Double Word
+
+            double value;
+            int *paddr;
+         
+            if((param.type=='d')||(param.type=='q')||(param.type=='f')) 
+               value = (double) G__double(param);
+            else
+               value = (double) G__int(param);
+            
+            // Parameter Pointer
+            paddr = (int*) &value;
+
+            /* Highest Word */
+            __asm__ __volatile__("push %0" :: "g" (*(paddr+1)));
+            /* Lowest Word */
+            __asm__ __volatile__("push %0" :: "g" (*paddr));
+
+            break;
+
+         case 'i' : // Integer = Single Word
+         {
+            long valuei = (long) G__int(param);
+            __asm__ __volatile__("push %0" :: "g" (valuei));
+         }
+         break;
+
+         case 'b' : // Unsigned Char ????
+         {
+            __asm__ __volatile__("push %0" :: "g" (param.obj.uch));
+         }
+         break;
+
+         case 'c' : // Char
+         {
+            __asm__ __volatile__("push %0" :: "g" (param.obj.ch));
+         }
+         break;
+
+         case 's' : // Short
+         {
+            __asm__ __volatile__("push %0" :: "g" (param.obj.sh));
+         }
+         break;
+
+         case 'r' : // Unsigned Short
+         {
+            __asm__ __volatile__("push %0" :: "g" (param.obj.ush));
+         }
+         break;
+
+         case 'h' : // Unsigned Int
+         {
+            long valueh = G__uint(param);
+            __asm__ __volatile__("push %0" :: "g" (valueh));
+         }
+         break;
+
+         case 'l' : // Long
+         {
+            long valuel = G__int(param);
+            __asm__ __volatile__("push %0" :: "g" (valuel));
+         }
+         break;
+
+         case 'k' || 'b': // Unsigned Long
+         {
+            long valuekb = G__uint(param);
+            __asm__ __volatile__("push %0" :: "g" (valuekb));
+         }
+         break;
+
+         case 'f' : // Float // Shouldnt it be treated as a double?
+         {
+            float valuef = (float) G__double(param);
+            __asm__ __volatile__("push %0" :: "g" (valuef));
+         }
+         break;
+
+         case 'n' : // Long Long
+         {
+            G__int64 fparam = (G__int64) G__Longlong(param);
+            // Parameter Pointer
+            int *paddr = (int *) &fparam;
+
+            /* Highest Word */
+            __asm__ __volatile__("push %0" :: "g" (*(paddr+1)));
+            /* Lowest Word */
+            __asm__ __volatile__("push %0" :: "g" (*paddr));
+         }
+         break;
+
+         case 'm' : // unsigned Long Long
+         {
+            G__int64 valuem = G__Longlong(param);
+            __asm__ __volatile__("push %0" :: "A" (valuem));
+         }
+         break;
+
+         case 'q' : // should this be treated with two resgisters two?
+         {
+            long double valueq = G__Longdouble(param);
+
+            // Parameter Pointer
+            int *paddr = (int *) &valueq;
+
+            // This has to be checked
+            __asm__ __volatile__("push %0" :: "g" (*(paddr+2)));
+            /* Highest Word */
+            __asm__ __volatile__("push %0" :: "g" (*(paddr+1)));
+            /* Lowest Word */
+            __asm__ __volatile__("push %0" :: "g" (*paddr));
+         }
+         break;
+
+         case 'g' : // bool
+         {
+            long valueb = G__bool(param);
+            __asm__ __volatile__("push %0" :: "g" (valueb));
+         }
+         break;
+
+         case 'u' : // a class... treat it as a reference
+         {
+            __asm__ __volatile__("push %0" :: "g" ((void*)paramref));
+         }
+         break;
+
+         default:
+            G__fprinterr(G__serr,"Type %c not known yet (asm push)\n", para_type);
+         }
+      }
+      else
+         __asm__ __volatile__("push %0" :: "g" ((void*)paramref));
+    
+   }
+
+   // Here we push the this pointer as the last parameter
+   // BUT DO NOT do it if it's a static function
+   if (this_ptr)
+      __asm__ __volatile__("push %0" :: "g" ((void*) this_ptr));
+
+   int type = result7->type;
+   int isref   = 0;
+
+   if (reftype == G__PARAREFERENCE || isupper(type))
       isref = 1;
-      paramref = (void *) param.ref;
-    }
 
-    if(ansi==2 && param.type!='i' && param.type!='d' && param.type!='f' &&  param.ref){
-      isref = 1;
-      paramref = (void *) param.ref;
-    }
+   // By Value or By Reference?
+   if (!isref){// By Value
 
-    // This means the parameter is a pointer
-    if(isupper(param.type) || isupper(formal_param->type)){
-      isref = 1;
-      paramref = (void *)(param.obj.i);
-    }
-
-    // This means the parameter is a pointer
-    if(formal_param->type=='u'){
-      //isref = 1;
-      paramref = (void *)(param.obj.i);
-    }
-
-    // Pushing Parameter
-    // By Value or By Reference?
-    if (!isref){// By Value
-      unsigned char para_type = formal_param->type;
-
-      // If we have more parameters than the declarations allows
-      // (variadic function) then take the type of the actual parameter
-      // ... forget to check the declaration (will be null)
-      if(ansi==2)
-        para_type = param.type;
-
-      // Parameter's type? Push is different for each type
-      switch(para_type){
+      // Although the call to the function is the same,
+      // the way to pick un the result depends on the return type
+      // (which makes the call look different)
+      switch(type){
 
       case 'd' : // Double = Double Word
-        if((param.type=='d')||(param.type=='q')){
-          double dparam = (double) G__double(param);
+         if((type=='d')||(type=='q')){
+            double result_val;
+            __asm__ __volatile__("call *%1" : "=t" (result_val) : "g" (vaddress));
+            G__letdouble(result7, 100, (double) (result_val));
+         }
+         else
+            __asm__ __volatile__("call *%1" : "=t" (result7->obj.d) : "g" (vaddress));
 
-#ifdef __x86_64__
-	  __asm__ __volatile__("push %0" :: "g" (dparam));
-#else
-          // Parameter Pointer
-          int *paddr = (int *) &dparam;
-
-          /* Highest Word */
-          __asm__ __volatile__("push %0" :: "g" (*(paddr+1)));
-          /* Lowest Word */
-          __asm__ __volatile__("push %0" :: "g" (*paddr));
-#endif
-        }
-        else if(param.type=='f') {
-          double fparam = (double) G__double(param);
-
-#ifdef __x86_64__
-	  __asm__ __volatile__("push %0" :: "g" (fparam));
-#else
-          // Parameter Pointer
-          int *paddr = (int *) &fparam;
-
-          /* Highest Word */
-          __asm__ __volatile__("push %0" :: "g" (*(paddr+1)));
-          /* Lowest Word */
-          __asm__ __volatile__("push %0" :: "g" (*paddr));
-#endif
-        }
-        else{
-          long iparam = (long) G__int(param);
-          G__value otype;
-          otype.type   = 'u';
-          otype.tagnum = gtagnum;
-
-#ifdef __x86_64__
-	  __asm__ __volatile__("push %0" :: "g" (iparam));
-#else
-          double value = (double) iparam;
-          int * pointer = (int*) &value;
-
-          /* Highest Word */
-          __asm__ __volatile__("push %0" :: "g" (*(pointer+1)));
-          /* Lowest Word */
-          __asm__ __volatile__("push %0" :: "g" (*pointer));
-#endif
-        }
-
-        break;
+         break;
 
       case 'i' : // Integer = Single Word
       {
-        long valuei = (long) G__int(param);
-        __asm__ __volatile__("push %0" :: "g" (valuei));
+         int return_val;
+         __asm__ __volatile__("call *%1" : "=a" (return_val) : "g" (vaddress));
+         G__letint(result7, 'i', (long) (return_val));
       }
       break;
 
       case 'b' : // Unsigned Char ????
       {
-        __asm__ __volatile__("push %0" :: "g" (param.obj.uch));
+         unsigned char result_val;
+         __asm__ __volatile__("call *%1" : "=a" (result_val) : "g" (vaddress));
+         G__letint(result7, 'b', (long) result_val);
       }
       break;
 
       case 'c' : // Char
       {
-        __asm__ __volatile__("push %0" :: "g" (param.obj.ch));
+         char return_val;
+         __asm__ __volatile__("call *%1" : "=a" (return_val) : "g" (vaddress));
+         G__letint(result7, 'c', (long) (return_val));
       }
       break;
 
       case 's' : // Short
       {
-        __asm__ __volatile__("push %0" :: "g" (param.obj.sh));
+         short return_val;
+         __asm__ __volatile__("call *%1" : "=a" (return_val): "g" (vaddress));
+         G__letint(result7, 's', (long) (return_val));
       }
       break;
 
       case 'r' : // Unsigned Short
       {
-        __asm__ __volatile__("push %0" :: "g" (param.obj.ush));
+         unsigned short return_val;
+         __asm__ __volatile__("call *%1" : "=a" (return_val): "g" (vaddress));
+         G__letint(result7, 'r', (long) (return_val));
       }
       break;
 
       case 'h' : // Unsigned Int
       {
-        long valueh = G__uint(param);
-        __asm__ __volatile__("push %0" :: "g" (valueh));
+         unsigned int return_val;
+         __asm__ __volatile__("call *%1" : "=a" (return_val): "g" (vaddress));
+         G__letint(result7, 'h', (long) (return_val));
       }
       break;
 
       case 'l' : // Long
       {
-        long valuel = G__int(param);
-        __asm__ __volatile__("push %0" :: "g" (valuel));
+         long return_val;
+         __asm__ __volatile__("call *%1" : "=a" (return_val): "g" (vaddress));
+         G__letint(result7, 'l', return_val);
       }
       break;
 
       case 'k' || 'b': // Unsigned Long
       {
-        long valuekb = G__uint(param);
-        __asm__ __volatile__("push %0" :: "g" (valuekb));
+         unsigned long return_val;
+         __asm__ __volatile__("call *%1" : "=a" (result7->obj.ulo): "g" (vaddress));
+         G__letint(result7, 'k', (long) (return_val));
       }
       break;
 
-      case 'f' : // Float // Shouldnt it be treated as a double?
+      case 'f' : // Float
       {
-        float valuef = (float) G__double(param);
-
-#ifdef __x86_64__
-        // Casting a single precision to a doeble precision should be safe
-        // 31-01-08: We do this because the compiler complains in x86-64 (optimized)
-        double valued = (double) valuef;
-        __asm__ __volatile__("push %0" :: "g" (valued));
-#else
-        __asm__ __volatile__("push %0" :: "g" (valuef));
-#endif
+         float return_val;
+         __asm__ __volatile__("call *%1" : "=t" (return_val): "g" (vaddress));
+         G__letdouble(result7, 'f', (double) return_val);
       }
       break;
 
       case 'n' : // Long Long
       {
-        G__int64 fparam = (G__int64) G__Longlong(param);
-
-#ifdef __x86_64__
-	__asm__ __volatile__("push %0" :: "g" (fparam));
-#else
-        // Parameter Pointer
-        int *paddr = (int *) &fparam;
-
-        /* Highest Word */
-        __asm__ __volatile__("push %0" :: "g" (*(paddr+1)));
-        /* Lowest Word */
-        __asm__ __volatile__("push %0" :: "g" (*paddr));
-#endif
+         long long return_val;
+         __asm__ __volatile__("call *%1" : "=A" (return_val): "g" (vaddress));
+         G__letLonglong(result7, 'n', (G__int64) (return_val));
       }
       break;
 
       case 'm' : // unsigned Long Long
       {
-        G__int64 valuem = G__Longlong(param);
-        __asm__ __volatile__("push %0" :: "A" (valuem));
+         unsigned long long return_val;
+         __asm__ __volatile__("call *%1" : "=A" (return_val): "g" (vaddress));
+         G__letLonglong(result7, 'm', (G__uint64) (return_val));
       }
       break;
 
-      case 'q' : // should this be treated with two resgisters two?
+      case 'q' : // long double
       {
-        long double valueq = G__Longdouble(param);
-
-#ifdef __x86_64__
-	__asm__ __volatile__("push %0" :: "g" (valueq));
-#else
-        // Parameter Pointer
-        int *paddr = (int *) &valueq;
-
-        // This has to be checked
-        __asm__ __volatile__("push %0" :: "g" (*(paddr+2)));
-        /* Highest Word */
-        __asm__ __volatile__("push %0" :: "g" (*(paddr+1)));
-        /* Lowest Word */
-        __asm__ __volatile__("push %0" :: "g" (*paddr));
-#endif
+         long double return_val;
+         __asm__ __volatile__("call *%1" : "=t" (return_val): "g" (vaddress));
+         G__letLongdouble (result7, 'q', (long double) (return_val));
       }
       break;
 
       case 'g' : // bool
       {
-        long valueb = G__bool(param);
-        __asm__ __volatile__("push %0" :: "g" (valueb));
+         int result_val;
+         __asm__ __volatile__("call *%1" : "=a" (result_val): "g" (vaddress));
+         G__letint(result7, 'g', (long) (result_val));
       }
       break;
 
-      case 'u' : // a class... treat it as a reference
+      case 'u' : // This is a class.. treat it as a reference
       {
-        __asm__ __volatile__("push %0" :: "g" ((void*)paramref));
+         // 20-11-07
+         // This means we have to return a given object (i.e) a new object..
+         // This will be a temporary object for the compiles
+         // and it used to llok like:
+         //
+         // /////////////////////////
+         // const Track* pobj;
+         // const Track xobj = ((const Event*) G__getstructoffset())->GetTrackCopy((int) G__int(libp->para[0]));
+         // pobj = new Track(xobj);
+         // result7->obj.i = (long) ((void*) pobj);
+         // result7->ref = result7->obj.i;
+         // G__store_tempobject(*result7);
+         // /////////////////////////
+         //
+         // In the stubs of a dictionary... we have to recreate the exact same thing here.
+
+         //the first thing we need to find is the size
+         // of the object (since we have to handle the allocation)
+         // Getting the Class size
+
+         // if Function is a constructor we don't return any value
+         if ((ifunc->tagnum > -1) && (strcmp(ifunc->funcname[ifn], G__struct.name[ifunc->tagnum])== 0)) {
+            __asm__ __volatile__("call *%0" :: "g" (vaddress));
+
+            result7->obj.i = (long) this_ptr;
+            // Object's Reference
+            result7->ref = (long) this_ptr;
+    
+         }
+         else{
+            int osize;
+            G__value otype;
+            otype.type   = 'u';
+            otype.tagnum = result7->tagnum; // size of the return type!!!
+
+            // Class Size
+            osize = G__sizeof(&otype);
+
+            // The second thing we need is a new object of type T (the place holder)
+            void* pobject = operator new(osize);
+
+            // The place holder is the last parameter we have to push !!!
+            __asm__ __volatile__("push %0" :: "g" ((void*) pobject));
+
+            long res=0;
+            __asm__ __volatile__("call *%1" : "=a" (res): "g" (vaddress));
+            result7->obj.i = (long) ((void*) pobject);
+            result7->ref = result7->obj.i;
+            G__store_tempobject(*result7);
+         }
+      }
+      break;
+
+      case 'y' : // treat it as void function (what is 'y' ???)
+      {
+         __asm__ __volatile__("call *%0" :: "g" (vaddress));
+
+         // if this a void function the return type must be 0
+         // why isnt it 'y'?
+         G__setnull(result7);
       }
       break;
 
       default:
-        G__fprinterr(G__serr,"Type %c not known yet (asm push)\n", para_type);
+         G__fprinterr(G__serr,"Type %c not known yet (asm call)\n", type);
       }
-    }
-    else{
+   }
+   else{
       //int parama = *paramref;
-      __asm__ __volatile__("push %0" :: "g" ((void*)paramref));
-    }
-  }
+      long res=0;
+      __asm__ __volatile__("call *%1" : "=a" (res): "g" (vaddress));
+      result7->obj.i = (long)res;
 
-  // Here we push the this pointer as the last parameter
-  // BUT DO NOT do it if it's a static function
-  if (this_ptr)
-    __asm__ __volatile__("push %0" :: "g" ((void*) this_ptr));
-
-  int type = result7->type;
-  int isref   = 0;
-
-  if (reftype == G__PARAREFERENCE || isupper(type))
-    isref = 1;
-
-  // By Value or By Reference?
-  if (!isref){// By Value
-
-    // Although the call to the function is the same,
-    // the way to pick un the result depends on the return type
-    // (which makes the call look different)
-    switch(type){
-
-    case 'd' : // Double = Double Word
-      if((type=='d')||(type=='q')){
-        double result_val;
-        __asm__ __volatile__("call *%1" : "=t" (result_val) : "g" (vaddress));
-        G__letdouble(result7, 100, (double) (result_val));
+      if(!isupper(type)) {
+         result7->ref = result7->obj.i;
+         result7->obj.reftype.reftype = G__PARAREFERENCE;
       }
-      else{
-        G__value otype;
-        otype.type   = 'u';
-        otype.tagnum = gtagnum;
+   }
 
-        __asm__ __volatile__("call *%1" : "=t" (result7->obj.d) : "g" (vaddress));
-      }
-
-      break;
-
-    case 'i' : // Integer = Single Word
-    {
-      int return_val;
-      __asm__ __volatile__("call *%1" : "=a" (return_val) : "g" (vaddress));
-      G__letint(result7, 'i', (long) (return_val));
-    }
-    break;
-
-    case 'b' : // Unsigned Char ????
-    {
-      unsigned char result_val;
-      __asm__ __volatile__("call *%1" : "=a" (result_val) : "g" (vaddress));
-      G__letint(result7, 'b', (long) result_val);
-    }
-    break;
-
-    case 'c' : // Char
-    {
-      char return_val;
-      __asm__ __volatile__("call *%1" : "=a" (return_val) : "g" (vaddress));
-      G__letint(result7, 'c', (long) (return_val));
-    }
-    break;
-
-    case 's' : // Short
-    {
-      short return_val;
-      __asm__ __volatile__("call *%1" : "=a" (return_val): "g" (vaddress));
-      G__letint(result7, 's', (long) (return_val));
-    }
-    break;
-
-    case 'r' : // Unsigned Short
-    {
-      unsigned short return_val;
-      __asm__ __volatile__("call *%1" : "=a" (return_val): "g" (vaddress));
-      G__letint(result7, 'r', (long) (return_val));
-    }
-    break;
-
-    case 'h' : // Unsigned Int
-    {
-      unsigned int return_val;
-      __asm__ __volatile__("call *%1" : "=a" (return_val): "g" (vaddress));
-      G__letint(result7, 'h', (long) (return_val));
-    }
-    break;
-
-    case 'l' : // Long
-    {
-      long return_val;
-      __asm__ __volatile__("call *%1" : "=a" (return_val): "g" (vaddress));
-      G__letint(result7, 'l', return_val);
-    }
-    break;
-
-    case 'k' || 'b': // Unsigned Long
-    {
-      unsigned long return_val;
-      __asm__ __volatile__("call *%1" : "=a" (result7->obj.ulo): "g" (vaddress));
-      G__letint(result7, 'k', (long) (return_val));
-    }
-    break;
-
-    case 'f' : // Float
-    {
-      float return_val;
-      __asm__ __volatile__("call *%1" : "=t" (return_val): "g" (vaddress));
-      G__letdouble(result7, 'f', (double) return_val);
-    }
-    break;
-
-    case 'n' : // Long Long
-    {
-      long long return_val;
-      __asm__ __volatile__("call *%1" : "=A" (return_val): "g" (vaddress));
-      G__letLonglong(result7, 'n', (G__int64) (return_val));
-    }
-    break;
-
-    case 'm' : // unsigned Long Long
-    {
-      unsigned long long return_val;
-      __asm__ __volatile__("call *%1" : "=A" (return_val): "g" (vaddress));
-      G__letLonglong(result7, 'm', (G__uint64) (return_val));
-    }
-    break;
-
-    case 'q' : // long double
-    {
-      long double return_val;
-      __asm__ __volatile__("call *%1" : "=t" (return_val): "g" (vaddress));
-      G__letLongdouble (result7, 'q', (long double) (return_val));
-    }
-    break;
-
-    case 'g' : // bool
-    {
-      int result_val;
-      __asm__ __volatile__("call *%1" : "=a" (result_val): "g" (vaddress));
-      G__letint(result7, 'g', (long) (result_val));
-    }
-    break;
-
-    case 'u' : // This is a class.. treat it as a reference
-    {
-      // 20-11-07
-      // This means we have to return a given object (i.e) a new object..
-      // This will be a temporary object for the compiles
-      // and it used to llok like:
-      //
-      // /////////////////////////
-      // const Track* pobj;
-      // const Track xobj = ((const Event*) G__getstructoffset())->GetTrackCopy((int) G__int(libp->para[0]));
-      // pobj = new Track(xobj);
-      // result7->obj.i = (long) ((void*) pobj);
-      // result7->ref = result7->obj.i;
-      // G__store_tempobject(*result7);
-      // /////////////////////////
-      //
-      // In the stubs of a dictionary... we have to recreate the exact same thing here.
-
-      //the first thing we need to find is the size
-      // of the object (since we have to handle the allocation)
-      // Getting the Class size
-
-       // if Function is a constructor we don't return any value
-       if ((ifunc->tagnum > -1) && (strcmp(ifunc->funcname[ifn], G__struct.name[ifunc->tagnum])== 0)) {
-           __asm__ __volatile__("call *%0" :: "g" (vaddress));
-
-           result7->obj.i = (long) this_ptr;
-           // Object's Reference
-           result7->ref = (long) this_ptr;
-    
-       }
-       else{
-          int osize;
-          G__value otype;
-          otype.type   = 'u';
-          otype.tagnum = result7->tagnum; // size of the return type!!!
-
-          // Class Size
-          osize = G__sizeof(&otype);
-
-          // The second thing we need is a new object of type T (the place holder)
-          void* pobject = operator new(osize);
-
-          // The place holder is the last parameter we have to push !!!
-          __asm__ __volatile__("push %0" :: "g" ((void*) pobject));
-
-          long res=0;
-          __asm__ __volatile__("call *%1" : "=a" (res): "g" (vaddress));
-          result7->obj.i = (long) ((void*) pobject);
-          result7->ref = result7->obj.i;
-          G__store_tempobject(*result7);
-       }
-    }
-    break;
-
-    case 'y' : // treat it as void function (what is 'y' ???)
-    {
-      __asm__ __volatile__("call *%0" :: "g" (vaddress));
-
-      // if this a void function the return type must be 0
-      // why isnt it 'y'?
-      G__setnull(result7);
-    }
-    break;
-
-    default:
-      G__fprinterr(G__serr,"Type %c not known yet (asm call)\n", type);
-    }
-  }
-  else{
-    //int parama = *paramref;
-    long res=0;
-    __asm__ __volatile__("call *%1" : "=a" (res): "g" (vaddress));
-    result7->obj.i = (long)res;
-
-    if(!isupper(type)) {
-      result7->ref = result7->obj.i;
-      result7->obj.reftype.reftype = G__PARAREFERENCE;
-    }
-  }
-
-  return 0;
+   return 0;
 }
 
 /**************************************************************************
@@ -1937,6 +1830,9 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
   // this is redundant if gtagnum < 0
   // but I want to say that G__tagnum is always changed
   G__tagnum = gtagnum; //G_getexpr will use it to find a variable within a class
+  
+  // Return values for new and delete parameters.
+  G__value op_return;
 
   // 19-11-07
   // We need to evaluate the parameters by default here, since we want to use those
@@ -2015,16 +1911,20 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
         }
         else {   // Yes, we have a nice overriden operator new yeah c'mon!. Hack me baby!
 
+           // Parameter Value
            G__letint(&para_new.para[0],(int) 'h', (((long) osize)*n));
-           // Return Value
-           G__value resultNew;
-           resultNew.type = 'U';
+
+           op_return.type = 'U';
 
            // Assembler Call
-           G__stub_method_asm(new_oper, pifn, gtagnum, 0, &para_new, &resultNew);
+#ifdef __x86_64__
+           G__stub_method_asm_x86_64(new_oper, pifn, gtagnum, 0, &para_new, &op_return);
+#else      
+           G__stub_method_asm(new_oper, pifn, gtagnum, 0, &para_new, &op_return);
+#endif
            
            // Allocated Address
-           pobject = (void *) resultNew.obj.i;
+           pobject = (void *) op_return.obj.i;
 
         }
       }
@@ -2050,17 +1950,20 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
         }
         else { 
 
+           // Parameter Values
            G__letint(&para_new.para[0],(int) 'h', (((long) osize)*n));
            G__letint(&para_new.para[1],(int) 'Y', (long) gvp);
-           // Return Value
-           G__value resultNew;
-           resultNew.type = 'U';
+          
+           op_return.type = 'U';
 
-           // Assembler Call
-           G__stub_method_asm(new_oper, pifn, gtagnum, 0, &para_new, &resultNew);
+#ifdef __x86_64__
+           G__stub_method_asm_x86_64(new_oper, pifn, gtagnum, 0, &para_new, &op_return);
+#else      
+           G__stub_method_asm(new_oper, pifn, gtagnum, 0, &para_new, &op_return);
+#endif
            
            // Allocated Address
-           pobject = (void *) resultNew.obj.i;
+           pobject = (void *) op_return.obj.i;
 
         }
       }
@@ -2084,14 +1987,18 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
         else{ // Yes, we have a nice overriden operator new.
 
            G__letint(&para_new.para[0],(int) 'h', (long) osize);
-           // Return Value
-           G__value resultNew;
-           resultNew.type = 'U';
+       
+           op_return.type = 'U';
 
-           G__stub_method_asm(new_oper, pifn, gtagnum, 0, &para_new, &resultNew);
+           // Assembler Call
+#ifdef __x86_64__
+           G__stub_method_asm_x86_64(new_oper, pifn, gtagnum, 0, &para_new, &op_return);
+#else      
+           G__stub_method_asm(new_oper, pifn, gtagnum, 0, &para_new, &op_return);
+#endif
 
            // Allocated Address
-           pobject = (void *) resultNew.obj.i;
+           pobject = (void *) op_return.obj.i;
 
         }
       } else { // We already have a valid space for the object
@@ -2117,14 +2024,17 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
            G__letint(&para_new.para[0],(int) 'h', (long) osize);
            G__letint(&para_new.para[1],(int) 'Y', (long) gvp);
         
-           // Return Value
-           G__value resultNew;
-           resultNew.type = 'U';
+           op_return.type = 'U';
 
-           G__stub_method_asm(new_oper, pifn, gtagnum, 0, &para_new, &resultNew);
+           // Assembler 
+#ifdef __x86_64__
+           G__stub_method_asm_x86_64(new_oper, pifn, gtagnum, 0, &para_new, &op_return);
+#else      
+           G__stub_method_asm(new_oper, pifn, gtagnum, 0, &para_new, &op_return);
+#endif
 
            // Allocated Address
-           pobject = (void *) resultNew.obj.i;
+           pobject = (void *) op_return.obj.i;
 
         }
       }
@@ -2143,8 +2053,13 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
     /* ------------------- */
 
     /* n = constructor arity (see array constructor) */
-    for (int i=0;i<n;i++)
+    for (int i=0;i<n;i++){
+#ifdef __x86_64__
+       G__stub_method_asm_x86_64(ifunc, ifn, gtagnum, ((void*)((long)pobject + (i*osize))), &rpara, result7);
+#else      
        G__stub_method_asm(ifunc, ifn, gtagnum, ((void*)((long)pobject + (i*osize))), &rpara, result7);
+#endif
+    }
 
     result7->obj.i = (long) pobject;
     // Object's Reference
@@ -2313,7 +2228,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
       long gvp = G__getgvp();
       long soff = G__getstructoffset();
       int n = G__getaryconstruct();
-      G__param para_des;
+      G__param para_del;
 
       int osize;
       long pifn;
@@ -2328,38 +2243,46 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
       }
 
       if (n) { // Array destructor
+
+         para_del.paran = 1;
+         para_del.para[0].typenum = 0;
+         para_del.para[0].type = 'Y';
+         para_del.para[0].tagnum = 0;      
+
+         // We look for the "delete operator" ifunc in the current class and in its bases
+         G__ifunc_table_internal *del_oper = G__get_methodhandle4("operator delete[]", &para_del, ifunc, &pifn, &poffset,0,1,0,0);
+
         if ((gvp == G__PVOID) || (gvp == 0)) {
           // 27-07-07
           // This means we have to delete this object from the heap
           // (calling both delete and destructor)
+                 
 
-          // as the first step we call the destructor for the objects
-          for(int idx = 0; idx < n; idx++) {
-            // Pushing This Pointer
-            __asm__ __volatile__("push %0" :: "g" ((void*)((long)soff + (idx*osize))) : "eax");
-            // Jumping. Ale Hop!
-            __asm__ __volatile__("call *%0" :: "r" (vaddress) : "eax");
-          }
-
-          // Single Constructor has only a parameter. The size of the object
-          para_des.paran = 1;
-          para_des.para[0].typenum = 0;
-          para_des.para[0].type = 'Y';
-          para_des.para[0].tagnum = 0;
-
-          // We look for the "delete operator" ifunc in the current class and in its bases
-          G__ifunc_table_internal *des_oper = G__get_methodhandle4("operator delete[]", &para_des, ifunc, &pifn, &poffset,0,1,0,0);
-
+           // as the first step we call the destructor for the objects
+           for(int idx = 0; idx < n; idx++){
+#ifdef __x86_64__
+              G__stub_method_asm_x86_64(ifunc, ifn, gtagnum, ((void*)((long)soff + (idx*osize))), libp, result7);     
+#else      
+              G__stub_method_asm(ifunc, ifn, gtagnum, ((void*)((long)soff + (idx*osize))), libp, result7);
+#endif 
+           }
+        
           // is the delete operator overriden?
-          if (!des_oper) { // No, it's not
+          if (!del_oper) { // No, it's not
             // We use the default delete operator
             operator delete[]((void*) soff);
           }
           else{ // Yes, we have a nice overriden operator delete and we have its symbol yhea c'mon. Hack me baby!
-            // Size Parameter for the delete operator
-            __asm__ __volatile__("push %0" :: "g" ((long) soff));
-            // overridden delete operator call.
-            __asm__ __volatile__("call *%0" :: "g" ((long) G__get_funcptr(des_oper, pifn)));
+
+             G__letint(&para_del.para[0],(int) 'Y', (long) soff);
+
+             op_return.type = 'Y';
+
+#ifdef __x86_64__
+              G__stub_method_asm_x86_64(del_oper, pifn, gtagnum, 0, &para_del, &op_return);
+#else      
+              G__stub_method_asm(del_oper, pifn, gtagnum, 0, &para_del, &op_return);
+#endif
           }
         }
         else {
@@ -2368,56 +2291,75 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
 
           // Now we have two parameters (placement delete).
           G__setgvp(G__PVOID);
-          for (int i = n - 1; i >= 0; --i) {
-            // Pushing This Pointer
-            __asm__ __volatile__("push %0" :: "g" (soff + (i*osize)));
-            // Jumping
-            __asm__ __volatile__("call *%0" :: "g" (vaddress));
-          }
-          G__setgvp(gvp);
-        }
+          
+          G__letint(&para_del.para[0],(int) 'Y', (long) soff);
+          op_return.type = 'U';
 
+          for (int i = n - 1; i >= 0; --i){ 
+#ifdef __x86_64__
+              G__stub_method_asm_x86_64(del_oper, pifn, gtagnum, 0, &para_del, &op_return);
+#else      
+              G__stub_method_asm(del_oper, pifn, gtagnum, 0, &para_del, &op_return);
+#endif
+          }
+                    
+          G__setgvp(gvp);
       }
-      else { // Single destructor
-        if ((gvp == G__PVOID) || (gvp == 0)) {
+
+    }
+    else { // Single destructor
+
+       // Single dest. has only a parameter. The size of the object
+       para_del.paran = 1;
+       para_del.para[0].typenum = 0;
+       para_del.para[0].type = 'Y';
+       para_del.para[0].tagnum = 0;
+
+       // We look for the "des operator" ifunc in the current class and in its bases
+       G__ifunc_table_internal *del_oper = G__get_methodhandle4("operator delete", &para_del, ifunc, &pifn, &poffset,0,1,0,0);
+       
+       if ((gvp == G__PVOID) || (gvp == 0)) {
           // as the first step we call the destructor for the objects
           // for this to work this symbols has to be the in-charge
           // non-deleting destructor
 
-          // Pushing This Pointer
-          __asm__ __volatile__("push %0" :: "g" ((long)soff) : "eax");
-          // Jumping. Ale Hop!
-          __asm__ __volatile__("call *%0" :: "r" (vaddress) : "eax");
-
-          // Single dest. has only a parameter. The size of the object
-          para_des.paran = 1;
-          para_des.para[0].typenum = 0;
-          para_des.para[0].type = 'Y';
-          para_des.para[0].tagnum = 0;
-
-          // We look for the "des operator" ifunc in the current class and in its bases
-          G__ifunc_table_internal *des_oper = G__get_methodhandle4("operator delete", &para_des, ifunc, &pifn, &poffset,0,1,0,0);
+#ifdef __x86_64__
+          G__stub_method_asm_x86_64(ifunc, ifn, gtagnum, (void*)((long)soff), libp, result7);
+#else      
+          G__stub_method_asm(ifunc, ifn, gtagnum, (void*)((long)soff), libp, result7);
+#endif
 
           // is the des operator overriden?
-          if (!des_oper) { // No, it's not
+          if (!del_oper) { // No, it's not
             operator delete((void*) soff);
           }
           else { // Yes, we have a nice overriden operator des.
-            // Size Parameter for the delete operator
-            __asm__ __volatile__("push %0" :: "g" ((long) soff));
-            // overridden delete operator call.
-            __asm__ __volatile__("call *%0" :: "g" ((long) G__get_funcptr(des_oper, pifn)));
+            
+             G__letint(&para_del.para[0],(int) 'Y', (long) soff);
+             op_return.type = 'U';
+
+#ifdef __x86_64__
+          G__stub_method_asm_x86_64(del_oper, pifn, gtagnum, 0, &para_del, &op_return);
+#else      
+          G__stub_method_asm(del_oper, pifn, gtagnum, 0, &para_del, &op_return);
+#endif
           }
         } 
         else { // We already have a valid space for the object
           G__setgvp(G__PVOID);
 
-          // Pushing This Pointer
-          __asm__ __volatile__("push %0" :: "g" ((long) soff));
-          // Jumping
-          __asm__ __volatile__("call *%0" :: "g" (vaddress));
+           G__letint(&para_del.para[0],(int) 'Y', (long) soff);
+           op_return.type = 'U';
 
-          G__setgvp(gvp);
+           for (int i = n - 1; i >= 0; --i){ 
+#ifdef __x86_64__
+          G__stub_method_asm_x86_64(del_oper, pifn, gtagnum, 0, &para_del, &op_return);
+#else      
+          G__stub_method_asm(del_oper, pifn, gtagnum, 0, &para_del, &op_return);
+#endif
+           }
+
+           G__setgvp(gvp);
         }
       }
       // destructors dont return anything
@@ -10818,9 +10760,9 @@ int G__memfunc_setup_imp(const char *funcname,int hash
   G__p_ifunc->entry[G__func_now].ptradjust = 0;
 
   // Stub Pointer initialisation.
-  // If funcp parameter is null. It means that the stub is in a base class.
+  // If funcp parameter is null and there is no mangled name. It means that the stub is in a base class.
   // We have to look for the stub pointer in the base classes.
-  if (!funcp&&(G__p_ifunc->isvirtual[G__func_now])&&(G__p_ifunc->access[G__func_now]==G__PUBLIC)){
+  if (!G__p_ifunc->mangled_name[G__func_now]&&!funcp&&(G__p_ifunc->isvirtual[G__func_now])&&(G__p_ifunc->access[G__func_now]==G__PUBLIC)){
 
     // tagnum's Base Classes structure
     G__inheritance* cbases = G__struct.baseclass[G__p_ifunc->tagnum];
