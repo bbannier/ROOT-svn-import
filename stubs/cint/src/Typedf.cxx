@@ -33,7 +33,7 @@ void Cint::G__TypedefInfo::Init()
 void Cint::G__TypedefInfo::Init(const char *typenamein)
 {
   char store_var_type = G__var_type;
-  typenum = G__defined_typename(typenamein, 0);
+  typenum = G__defined_typename(typenamein);
   if(-1!=typenum&&typenum<G__newtype.alltype) {
     tagnum = G__newtype.tagnum[typenum];
     type = G__newtype.type[typenum];

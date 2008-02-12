@@ -8518,7 +8518,7 @@ void G__cpplink_tagtable(FILE *fp, FILE *hfp)
                       ,buf ,mappedtagname,mappedtagname);
           }
           else if('$'==G__struct.name[i][0]&&
-          isupper(G__newtype.type[G__defined_typename(G__struct.name[i]+1, 0)])) {
+          isupper(G__newtype.type[G__defined_typename(G__struct.name[i]+1)])) {
             fprintf(fp,"   G__tagtable_setup(G__get_linked_tagnum(&%s),sizeof(%s),%d,%d,%s,NULL,NULL);\n"
                     ,G__mark_linked_tagnum(i)
                     ,G__type2string('u',i,-1,0,0)
@@ -8926,7 +8926,7 @@ void G__cpplink_memvar(FILE *fp)
          //  FIXME: What is this block doing?
          //
          if (G__struct.name[i][0] == '$') {
-            int typenum = G__defined_typename(G__struct.name[i] + 1, 0);
+            int typenum = G__defined_typename(G__struct.name[i] + 1);
             if (isupper(G__newtype.type[typenum])) {
                continue;
             }
@@ -9079,7 +9079,7 @@ void G__cpplink_memvar(FILE *fp)
                   //  Typenum of data type, if it is a typedef.
                   //
                   if (var->p_typetable[j] != -1) {
-                     fprintf(fp, "G__defined_typename(\"%s\", 0),", G__newtype.name[var->p_typetable[j]]);
+                     fprintf(fp, "G__defined_typename(\"%s\"),", G__newtype.name[var->p_typetable[j]]);
                   }
                   else {
                      fprintf(fp, "-1,");
@@ -9446,7 +9446,7 @@ void G__cpplink_memfunc(FILE *fp)
               fprintf(fp, "-1, ");
 
             if (-1 != ifunc->p_typetable[j])
-              fprintf(fp, "G__defined_typename(\"%s\", 0), ", G__fulltypename(ifunc->p_typetable[j]));
+              fprintf(fp, "G__defined_typename(\"%s\"), ", G__fulltypename(ifunc->p_typetable[j]));
             else
               fprintf(fp, "-1, ");
 
@@ -9938,7 +9938,7 @@ void G__cpplink_global(FILE *fp)
           fprintf(fp,"-1,");
 
         if(-1!=var->p_typetable[j])
-          fprintf(fp,"G__defined_typename(\"%s\", 0),"
+          fprintf(fp,"G__defined_typename(\"%s\"),"
                   ,G__newtype.name[var->p_typetable[j]]);
         else
           fprintf(fp,"-1,");
@@ -10225,7 +10225,7 @@ void G__cpplink_func(FILE *fp)
           fprintf(fp,"-1, ");
 
         if(-1!=ifunc->p_typetable[j])
-          fprintf(fp,"G__defined_typename(\"%s\", 0), "
+          fprintf(fp,"G__defined_typename(\"%s\"), "
                   ,G__newtype.name[ifunc->p_typetable[j]]);
         else
           fprintf(fp,"-1, ");
@@ -11292,10 +11292,10 @@ int G__parse_parameter_link(char* paras)
     else {
       if (type_name[0] == '\'') {
         type_name[std::strlen(type_name)-1] = '\0';
-        typenum = G__defined_typename(type_name + 1, 0);
+        typenum = G__defined_typename(type_name + 1);
       }
       else {
-        typenum = G__defined_typename(type_name, 0);
+        typenum = G__defined_typename(type_name);
       }
     }
     G__separate_parameter(paras, &os, c_reftype_const);
@@ -12386,7 +12386,7 @@ void G__specify_link(int link_stub)
 #endif /* G__REGEXP */
     }
     else {
-      i = G__defined_typename(buf, 0);
+      i = G__defined_typename(buf);
       if(-1!=i) {
         G__newtype.globalcomp[i] = globalcomp;
         if(-1!=G__newtype.tagnum[i] &&

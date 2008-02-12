@@ -3024,7 +3024,7 @@ void G__define_var(int tagnum, int typenum)
                      index = strchr(temp, '(');
                      if (index) {
                         *index = '\0';
-                        flag = G__defined_typename(temp, 0);
+                        flag = G__defined_typename(temp);
                         if ((flag != -1) && (G__newtype.tagnum[flag] == G__tagnum)) {
                            sprintf(temp1, "%s(%s", G__struct.name[G__tagnum], index + 1);
                            strcpy(temp, temp1);

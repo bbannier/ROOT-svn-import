@@ -133,7 +133,7 @@ static int G__handle_as_typedef(char* oldtype, char* newtype)
          type = 'u' + ispointer;
       }
       else {
-         typenum = G__defined_typename(oldtype, 0);
+         typenum = G__defined_typename(oldtype);
          if (typenum >= 0) {
             type = G__newtype.type[typenum];
             tagnum = G__newtype.tagnum[typenum];
@@ -636,7 +636,7 @@ void G__define()
          !strcmp(initvalue, "double") ||
          !strcmp(initvalue, "float") ||
          !strcmp(initvalue, "longdouble") ||
-         (G__defined_typename(initvalue, 0) != -1) ||
+         (G__defined_typename(initvalue) != -1) ||
          (G__defined_tagname(initvalue, 2) != -1) ||
          G__defined_templateclass(initvalue)
       )

@@ -134,7 +134,7 @@ G__value G__new_operator(const char* express)
    if (initializer) {
       *initializer = '(';
    }
-   typenum = G__defined_typename(type, 0);
+   typenum = G__defined_typename(type);
    if (typenum != -1) {
       tagnum = G__newtype.tagnum[typenum];
    }
@@ -237,7 +237,7 @@ G__value G__new_operator(const char* express)
    //
    //  Identify type.
    //
-   G__typenum = G__defined_typename(type, 0);
+   G__typenum = G__defined_typename(type);
    if (G__typenum != -1) {
       G__tagnum = G__newtype.tagnum[G__typenum];
       var_type = G__newtype.type[G__typenum];
@@ -578,7 +578,7 @@ G__value G__new_operator(const char* express)
       *bp = 0;
       ++bp;
       // construct = "TYPE" , bp = "ARG"
-      typenum = G__defined_typename(construct, 0);
+      typenum = G__defined_typename(construct);
       if (typenum != -1) {
          strcpy(construct, G__type2string(G__newtype.type[typenum], G__newtype.tagnum[typenum], -1, G__newtype.reftype[typenum], 0));
       }

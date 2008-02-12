@@ -277,7 +277,7 @@ G__value G__castvalue_bc(char* casttype, G__value result3, int bc)
          hasstar = casttype[lenitem];
          casttype[lenitem] = '\0';
       }
-      if (-1 == G__defined_tagname(casttype, 2) && -1 == G__defined_typename(casttype, 0)) {
+      if (-1 == G__defined_tagname(casttype, 2) && -1 == G__defined_typename(casttype)) {
          isconst = 1;
          if (hasstar) casttype[lenitem] = hasstar;
          G__SlideString(casttype, 5);
@@ -557,7 +557,7 @@ G__value G__castvalue_bc(char* casttype, G__value result3, int bc)
       }
       if (type == '\0') {
          int store_var_type = G__var_type;
-         result3.typenum = G__defined_typename(casttype, 0);
+         result3.typenum = G__defined_typename(casttype);
          G__var_type = store_var_type;
          if (result3.typenum == -1) {
             tagnum = G__defined_tagname(casttype, 0);

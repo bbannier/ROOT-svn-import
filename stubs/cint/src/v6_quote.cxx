@@ -385,7 +385,7 @@ G__value G__strip_singlequotation(char *string)
       if(G__IsDBCSLeadByte(string[1])) {
         G__CheckDBCS2ndByte(string[2]);
         result.obj.i=result.obj.i*0x100+string[2];
-        result.typenum = G__defined_typename("wchar_t", 0);
+        result.typenum = G__defined_typename("wchar_t");
         result.tagnum = G__newtype.tagnum[result.typenum];
         result.type = G__newtype.type[result.typenum];
       }

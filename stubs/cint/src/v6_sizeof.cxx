@@ -169,7 +169,7 @@ int G__Lsizeof(const char *type_name)
     else                            return(G__INTALLOC);
   }
 
-  typenum = G__defined_typename(type_name, 0);
+  typenum = G__defined_typename(type_name);
   if(-1 != typenum) {
     switch(G__newtype.type[typenum]) {
     case 'n':
@@ -443,7 +443,7 @@ long *G__typeid(const char *typenamein)
   else if(strcmp(type_name,"longdouble")==0) {
     strcpy(type_name,"G__longdouble");
   }
-  typenum = G__defined_typename(type_name, 0);
+  typenum = G__defined_typename(type_name);
   if(-1 != typenum) {
     type    = G__newtype.type[typenum];
     tagnum  = G__newtype.tagnum[typenum];

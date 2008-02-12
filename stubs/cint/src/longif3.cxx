@@ -1289,10 +1289,10 @@ static void G__cpp_setup_func0() {
    G__memfunc_setup("operator==",998,G__longif__3_9,105,-1,-1,0,2,1,1,0,
 "u 'G__longlong' - 11 - a u 'G__longlong' - 11 - b",(char*)NULL
 ,(void*)NULL,0);
-   G__memfunc_setup("operator<<",996,G__longif__4_9,117,G__get_linked_tagnum(&G__longifLN_basic_ostreamlEcharcOchar_traitslEchargRsPgR),G__defined_typename("ostream", 0),1,2,1,1,0,
+   G__memfunc_setup("operator<<",996,G__longif__4_9,117,G__get_linked_tagnum(&G__longifLN_basic_ostreamlEcharcOchar_traitslEchargRsPgR),G__defined_typename("ostream"),1,2,1,1,0,
 "u 'basic_ostream<char,char_traits<char> >' 'ostream' 1 - ost u 'G__longlong' - 11 - a",(char*)NULL
 ,(void*)NULL,0);
-   G__memfunc_setup("operator>>",1000,G__longif__5_9,117,G__get_linked_tagnum(&G__longifLN_basic_istreamlEcharcOchar_traitslEchargRsPgR),G__defined_typename("istream", 0),1,2,1,1,0,
+   G__memfunc_setup("operator>>",1000,G__longif__5_9,117,G__get_linked_tagnum(&G__longifLN_basic_istreamlEcharcOchar_traitslEchargRsPgR),G__defined_typename("istream"),1,2,1,1,0,
 "u 'basic_istream<char,char_traits<char> >' 'istream' 1 - ist u 'G__longlong' - 1 - a",(char*)NULL
 ,(void*)NULL,0);
    G__memfunc_setup("operator+",919,G__longif__6_9,117,G__get_linked_tagnum(&G__longifLN_G__ulonglong),-1,0,2,1,1,0,
@@ -1349,10 +1349,10 @@ static void G__cpp_setup_func1() {
    G__memfunc_setup("operator==",998,G__longif__2_11,105,-1,-1,0,2,1,1,0,
 "u 'G__ulonglong' - 11 - a u 'G__ulonglong' - 11 - b",(char*)NULL
 ,(void*)NULL,0);
-   G__memfunc_setup("operator<<",996,G__longif__3_11,117,G__get_linked_tagnum(&G__longifLN_basic_ostreamlEcharcOchar_traitslEchargRsPgR),G__defined_typename("ostream", 0),1,2,1,1,0,
+   G__memfunc_setup("operator<<",996,G__longif__3_11,117,G__get_linked_tagnum(&G__longifLN_basic_ostreamlEcharcOchar_traitslEchargRsPgR),G__defined_typename("ostream"),1,2,1,1,0,
 "u 'basic_ostream<char,char_traits<char> >' 'ostream' 1 - ost u 'G__ulonglong' - 11 - a",(char*)NULL
 ,(void*)NULL,0);
-   G__memfunc_setup("operator>>",1000,G__longif__4_11,117,G__get_linked_tagnum(&G__longifLN_basic_istreamlEcharcOchar_traitslEchargRsPgR),G__defined_typename("istream", 0),1,2,1,1,0,
+   G__memfunc_setup("operator>>",1000,G__longif__4_11,117,G__get_linked_tagnum(&G__longifLN_basic_istreamlEcharcOchar_traitslEchargRsPgR),G__defined_typename("istream"),1,2,1,1,0,
 "u 'basic_istream<char,char_traits<char> >' 'istream' 1 - ist u 'G__ulonglong' - 1 - a",(char*)NULL
 ,(void*)NULL,0);
 }
@@ -1416,10 +1416,10 @@ static void G__cpp_setup_func2() {
    G__memfunc_setup("operator==",998,G__longif__2_25,105,-1,-1,0,2,1,1,0,
 "u 'G__longdouble' - 11 - a u 'G__longdouble' - 11 - b",(char*)NULL
 ,(void*)NULL,0);
-   G__memfunc_setup("operator<<",996,G__longif__3_25,117,G__get_linked_tagnum(&G__longifLN_basic_ostreamlEcharcOchar_traitslEchargRsPgR),G__defined_typename("ostream", 0),1,2,1,1,0,
+   G__memfunc_setup("operator<<",996,G__longif__3_25,117,G__get_linked_tagnum(&G__longifLN_basic_ostreamlEcharcOchar_traitslEchargRsPgR),G__defined_typename("ostream"),1,2,1,1,0,
 "u 'basic_ostream<char,char_traits<char> >' 'ostream' 1 - ost u 'G__longdouble' - 11 - a",(char*)NULL
 ,(void*)NULL,0);
-   G__memfunc_setup("operator>>",1000,G__longif__4_25,117,G__get_linked_tagnum(&G__longifLN_basic_istreamlEcharcOchar_traitslEchargRsPgR),G__defined_typename("istream", 0),1,2,1,1,0,
+   G__memfunc_setup("operator>>",1000,G__longif__4_25,117,G__get_linked_tagnum(&G__longifLN_basic_istreamlEcharcOchar_traitslEchargRsPgR),G__defined_typename("istream"),1,2,1,1,0,
 "u 'basic_istream<char,char_traits<char> >' 'istream' 1 - ist u 'G__longdouble' - 1 - a",(char*)NULL
 ,(void*)NULL,0);
    G__memfunc_setup("G__printformatld",1675,G__longif__5_25,121,-1,-1,0,3,1,1,0,
