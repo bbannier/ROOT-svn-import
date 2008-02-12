@@ -17,14 +17,16 @@
 //                                                                      //
 // TProofPlayer                                                         //
 //                                                                      //
-// This internal class steers processing in PROOF. Instances of this    //
-// class and its subclasses are created per each query on the client,   //
-// the master(s) and the workers. On the client it collects             //
-// information on the input(dataset and selector), it invokes the       //
-// Begin() method and finalizes the query by calling Terminate().       //
-// On the master its subclass - TProofPlayerRemote checks the dataset,  //
-// creates the packetizer and takes care of merging the results of the  //
-// workers.                                                             //
+// This internal class and its subclasses steer the processing in PROOF.//
+// Instances of the TProofPlayer class are created on the worker nodes  //
+// per session and do the processing.                                   //
+// Instances of its subclass - TProofPlayerRemote are created per each  //
+// query on the master(s) and on the client. On the master(s),          //
+// TProofPlayerRemote coordinate processing, check the dataset, create  //
+// the packetizer and take care of merging the results of the workers.  //
+// The instance on the client collects information on the input         //
+// (dataset and selector), it invokes the Begin() method and finalizes  //
+// the query by calling Terminate().                                    //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -205,8 +207,13 @@ public:
 //                                                                      //
 // TProofPlayerRemote                                                   //
 //                                                                      //
-// Object of this class is created for each query on the master and     //
-// on the client.                                                       //
+// Instances of TProofPlayerRemote are created per each query on the    //
+// master(s) and on the client. On the master(s), TProofPlayerRemote    //
+// coordinate processing, check the dataset, create the packetizer      //
+// and take care of merging the results of the workers.                 //
+// The instance on the client collects information on the input         //
+// (dataset and selector), it invokes the Begin() method and finalizes  //
+// the query by calling Terminate().                                    //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
