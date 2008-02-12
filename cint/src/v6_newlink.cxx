@@ -728,7 +728,7 @@ struct G__ifunc_table_internal * G__ifunc_page_base(char *funcname, int hash,int
  **************************************************************************/
 void* G__get_symbol_address(const char* mangled_name)
 {
-  void *address=G__findsym(manled_namme);   
+  void *address=G__findsym(mangled_name);   
 
 #ifdef G__OSFDLL
   if (!address)
