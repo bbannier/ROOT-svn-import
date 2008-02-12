@@ -4104,6 +4104,11 @@ static G__value G__allocvariable(G__value result, G__value para[], G__var_array*
                G__asm_inst[G__asm_cp+3] = 0L; /* This is the 'mode'. I am not sure what it should be */
                G__inc_cp_asm(4, 0);
                G__inc_cp_asm(7, 0); //  /* increment for moved LD_FUNC instruction */
+#ifdef G__ASM_DBG
+               if (G__asm_dbg) {
+                  G__fprinterr(G__serr, "%3x,%3x: PUSHSTROS  %s:%d\n", G__asm_cp, G__asm_dt, __FILE__, __LINE__);
+               }
+#endif // G__ASM_DBG
                G__asm_inst[G__asm_cp] = G__PUSHSTROS;
                G__inc_cp_asm(1, 0);
 #ifdef G__ASM_DBG

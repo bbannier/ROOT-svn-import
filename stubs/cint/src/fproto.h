@@ -310,6 +310,13 @@ void G__incsetup_memfunc(int tagnum);
 // v6_symbols.cxx
 void   G__register_class(const char *libname, const char *clstr);
 void MapDependantTypes();
+struct G__ifunc_table_internal *G__get_methodhandle4 G__P((char *funcname
+                                           ,struct G__param* libp
+                                           ,struct G__ifunc_table_internal *p_ifunc
+                                           ,long *pifn,long *poffset
+                                           ,int withConversion
+                                           ,int withInheritance
+                                           ,int noerror,int isconst));
 
 int G__separate_parameter(char *original,int *pos,char *param);
 int G__parse_parameter_link(char *paras);

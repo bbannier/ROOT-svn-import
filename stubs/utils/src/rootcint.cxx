@@ -4431,10 +4431,8 @@ int main(int argc, char **argv)
    argvv[0] = argv[0];
    argcc = 1;
 
-
    if (!strcmp(argv[ic], "-c")) {
       icc++;
-
       if (ifl) {
          char *s;
          ic++;
@@ -4448,25 +4446,6 @@ int main(int argc, char **argv)
          strncpy(argvv[argcc], dictname, s-dictname); argcc++;
 
          while (ic < argc && (*argv[ic] == '-' || *argv[ic] == '+')) {
-            // 29-10-07
-            // We want to ignore the "--cxx"
-            // coming from the new, wrapper-less scheme... 
-            // (this should be temporal, find a better way to do it)
-            if (!strcmp(argv[ic], "--cxx")) {
-               ++ic;
-               ++ic;
-               continue;
-            }
-
-            // 26-10-07
-            // We want to ignore the "-o" "--object-files" 
-            // coming from the new, wrapper-less scheme
-            if (!strcmp(argv[ic], "-o") || !strcmp(argv[ic], "--object-files") || !strcmp(argv[ic], "-object-files")) {
-               ++ic;
-               ++ic;
-               continue;
-            }
-
             // 09-07-07
             // We want to separate the generation of the dictionary
             // source.
@@ -4618,22 +4597,6 @@ int main(int argc, char **argv)
       }
    }
    else{
-      // 29-10-07
-      // We want to ignore the "--cxx"
-      // coming from the new, wrapper-less scheme... (this should be temporal, find a better way to do it)
-      if (!strcmp(argv[ic], "--cxx")) {
-         ++ic;
-         ++ic;
-      }
-
-      // 26-10-07
-      // We want to ignore the "-o" "--object-files" 
-      // coming from the new, wrapper-less scheme
-      if (!strcmp(argv[ic], "-o") || !strcmp(argv[ic], "--object-files") || !strcmp(argv[ic], "-object-files")) {
-         ++ic;
-         ++ic;
-      }
-
       // 09-07-07
       // We want to separate the generation of the dictionary
       // source.
@@ -4678,19 +4641,19 @@ int main(int argc, char **argv)
       } else {
          
 #ifndef ROOTBUILD
-	 char *header_c = (char*) header.c_str(); // basename shouldnt change the content (it looks safe)
+         char *header_c = (char*) header.c_str(); // basename shouldnt change the content (it looks safe)
          const char *basen = basename(header_c);
-	 string headerb(basen);
+         string headerb(basen);
          string::size_type idx = headerb.rfind("Tmp");
          
          int l;
-         if(idx != string::npos){
+         if(idx != string::npos) {
             l = idx;
             headerb[l] = '\0';   
          }
          else{
             idx = headerb.rfind(".");
-            if(idx != string::npos){
+            if(idx != string::npos) {
                l = idx;
                headerb[l] = '\0';   
             }
@@ -4729,7 +4692,7 @@ int main(int argc, char **argv)
       }
       if (use_preprocessor && *argv[i] != '-' && *argv[i] != '+') {
          StrcpyArgWithEsc(esc_arg, argv[i]);
-         fprintf(bundle,"#include \"%s\" //rootcint 4684\n", esc_arg);
+         fprintf(bundle,"#include \"%s\"\n", esc_arg);
          includedFilesForBundle.push_back(argv[i]);
          if (!insertedBundle) {
             argvv[argcc++] = (char*)bundlename.c_str();
@@ -4933,8 +4896,6 @@ int main(int argc, char **argv)
    // dont generate the showmembers if we only want 
    // all the memfunc_setup stuff (stub-less calls)
    if(dicttype==0 || dicttype==1 || dicttype==4) {   
-
-
       //
       // We will loop over all the classes several times.
       // In order we will call
