@@ -48,7 +48,7 @@ namespace ROOT {
                }
             }
 
-            if( -1 != G__defined_typename(nam.c_str(),0) ) return -1;
+            if( -1 != G__defined_typename(nam.c_str()) ) return -1;
 	
             if ( Cintex::Debug() )  {
                std::cout << "Cintex: Building typedef " << nam << std::endl;
