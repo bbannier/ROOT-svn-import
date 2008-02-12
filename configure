@@ -805,6 +805,8 @@ GENREFLEXROOTCINTSHIN=config/genreflex-rootcint.in
 GENREFLEXROOTCINTSHOUT=bin/genreflex-rootcint
 GENREFLEXROOTCINTBATIN=config/genreflex-rootcint.bat.in
 GENREFLEXROOTCINTBATOUT=bin/genreflex-rootcint.bat
+ROOTCINTSTUBSHIN=utils/src/rootcint_nostubs.sh
+ROOTCINTSTUBSHOUT=bin/rootcint_nostubs.sh
 
 ######################################################################
 #
@@ -1767,21 +1769,6 @@ if test ! "x$enable_mysql" = "xno"; then
 fi
 check_explicit "$enable_mysql" "$enable_mysql_explicit" \
      "Explicitly required MySQL dependencies not fulfilled"
-
-######################################################################
-#
-### echo %%% Check for Stub removal support
-#
-
-if test "x$no_stubs" = "xyes" || test "x$no_stubs_test" = "xyes"; then
-    no_stubs="yes"
-    cp -f utils/src/rootcint_nostubs.sh bin
-    # We force rootcint recompilation and the with make all root dictionaries will be regenerated
-    touch utils/src/rootcint.cxx
-fi
-
-message "Checking whether to activate symbol function call mechanism (aka stubs/wrappers removal)"
-result "$no_stubs"
 
 ######################################################################
 #
@@ -4261,6 +4248,18 @@ fi
 
 ######################################################################
 #
+### echo %%% Check for Stub removal support
+#
+
+message "Checking whether to activate symbol function call mechanism (aka stubs/wrappers removal)"
+if test "x$no_stubs" = "xyes" || test "x$no_stubs_test" = "xyes"; then
+    no_stubs="yes"
+fi
+
+result "$no_stubs"
+
+######################################################################
+#
 ### echo %%% Debian or Red Hat package list
 #
 # If we're asked to build for a set of RPMs or Debian packages, we
@@ -5121,6 +5120,16 @@ if test "x$enable_reflex" = "xyes"; then
     fi
 else
     rm -f bin/genreflex*
+fi
+
+#---------------------------------------------------------------------
+# bin/rootcint_nostubs
+#
+if test "x$no_stubs" = "xyes"; then
+    message "Writing $ROOTCINTSTUBSHOUT"
+    cp -f  $ROOTCINTSTUBSHIN $ROOTCINTSTUBSHOUT
+    # force rootcint recompilation and thus regenerate dictionaries
+    touch utils/src/rootcint.cxx
 fi
 
 #---------------------------------------------------------------------
