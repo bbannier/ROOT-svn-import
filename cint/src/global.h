@@ -216,12 +216,6 @@ extern struct G__typedef  G__newtype;
 // with all the symbols needed to register the functions
 extern const char *G__libname;
 
-// DMS I make global this variable
-typedef void* G__SHLHANDLE;
-extern G__SHLHANDLE G__sl_handle[G__MAX_SL];
-extern short G__allsl;
-
-
 /**************************************************************************
 * structure for input file
 **************************************************************************/

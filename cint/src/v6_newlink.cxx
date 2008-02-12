@@ -718,29 +718,6 @@ struct G__ifunc_table_internal * G__ifunc_page_base(char *funcname, int hash,int
 }
 
 /**************************************************************************
- * G__get_symbol_address()
- *
- * It will return a memory address that should contain the function 
- * specified by the mangled name (symbol).
- * It will look for it in all the libraries registered in G__sl_handle[i]
- * and in those loaded by using RTLD_DEFAULT.
- * It migth return null in case it's not found
- **************************************************************************/
-void* G__get_symbol_address(const char* mangled_name)
-{
-  void *address=0;
-   
-  for (int i=0;(i<G__allsl)&&(!address);i++){
-    address = dlsym(G__sl_handle[i],mangled_name);       
-  }
-
-  if (!address)
-    address = dlsym(RTLD_DEFAULT, mangled_name);
-  
-  return address;
-}
-
-/**************************************************************************
  * G__get_funcptr()
  *
  * returns the function pointer "contained" in an ifunc.
@@ -762,7 +739,7 @@ void* G__get_funcptr(G__ifunc_table_internal *ifunc, int ifn)
   if(!ifunc->mangled_name[ifn])
     return 0;
 
-  ifunc->funcptr[ifn] = G__get_symbol_address(ifunc->mangled_name[ifn]);
+  ifunc->funcptr[ifn] = G__findsym(ifunc->mangled_name[ifn]);
   return ifunc->funcptr[ifn];
 }
 
