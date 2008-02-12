@@ -6916,7 +6916,7 @@ void G__argtype2param(const char* argtype, G__param* libp, int noerror, int* err
 // 1 (look for a non-const function)
 // 2 (look for a const function)
 // Note: This should be put into something like an enum
-struct G__ifunc_table* G__get_methodhandle(const char* funcname, const char* argtype, G__ifunc_table* p_iref, long* pifn, long* poffset, int withConversion, int withInheritance, int noerror, int isconst)
+struct G__ifunc_table* G__get_methodhandle_noerror(const char* funcname, const char* argtype, G__ifunc_table* p_iref, long* pifn, long* poffset, int withConversion, int withInheritance, int noerror, int isconst)
 {
    // -- FIXME: Describe this function!
    struct G__ifunc_table_internal *ifunc;
@@ -7010,6 +7010,16 @@ struct G__ifunc_table* G__get_methodhandle(const char* funcname, const char* arg
 
    return G__get_ifunc_ref(ifunc);
 }
+
+//______________________________________________________________________________
+//
+// This will behave as the old function but is based in a new implementation
+// where "noerror" and "isconst" must be given
+struct G__ifunc_table* G__get_methodhandle(const char* funcname, const char* argtype, G__ifunc_table* p_iref, long* pifn, long* poffset, int withConversion, int withInheritance)
+{
+  return G__get_methodhandle_noerror(funcname, argtype, p_iref, pifn, poffset, withConversion, withInheritance, 0, 0);
+}
+
 
 //______________________________________________________________________________
 struct G__ifunc_table* G__get_methodhandle2(char* funcname, G__param* libp, G__ifunc_table* p_iref, long* pifn, long* poffset, int withConversion, int withInheritance)
