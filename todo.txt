@@ -6,7 +6,7 @@ to make it coherent (it doesn't look trivial though).
 
 Axel: This is not urgent - but you have large chunks of code that can be trivially protected - and that should be protected, because some compilers will not like it. So that ABI specific code should be protected en bloc.
 
-POSTPONED
+DONE
 -------------------------------------------------------------------------------
 #2 * why do you need mathcore/inc/Math/LinkDef2.h?
 
@@ -14,7 +14,7 @@ POSTPONED
  anyways and it needs to be re-checked because there are still some
  warnings...
 
-POSTPONED
+DONE
 -------------------------------------------------------------------------------
 #3 * why do you exclude COREDO from libCore (Makefile, line 600)?
 
@@ -51,7 +51,7 @@ DONE
 
 Axel: This, too, needs to be fixed; we need ideally both op==, and cannot survive without the original one.
 
-POSTPONED
+POSTPONED (BLOCKER)
 -------------------------------------------------------------------------------
 #6 * cint/src/Class.cxx: why do you need to overload
  Cint::G__ClassInfo::GetMethod() - can't you just add a default
@@ -191,6 +191,7 @@ DONE
  destructors in G__struct (of course, such thing is beyond my
  understanding).
 
+DONE
 -------------------------------------------------------------------------------
 #18 * v6_ifunc.cxx:6794ff: G__get_ifunchandle2,
  G__get_ifunchandle_base2, G__argtype2param2 (claiming to be exactly
@@ -252,6 +253,7 @@ DONE
  Yips... no doubt about that... we will bother you again later to see
  how we can try to compile it on windows...
 
+DONE
 -------------------------------------------------------------------------------
 #23 * v6_newlink.cxx:350: G__wrappers and G__nostubs should be defined
  in globals[2].cxx
@@ -320,6 +322,7 @@ DONE
  yes... it just had a low priority...
 
 Axel: Agreed. This should be done as soon as Diego add another supported compiler :-)
+
 -------------------------------------------------------------------------------
 #30 * v6_newlink.cxx: 2125, 2292: osize is unused
 
@@ -405,6 +408,8 @@ Axel: There is, actually, at least on windows. But it's about twice as fast to d
 
  159th thing to do :/ ... yes, it's ugly... and yes, we would like to
  have just one nice asm function...
+
+DONE
 -------------------------------------------------------------------------------
 
 #39 * v6_newlink.cxx: 3038: "tagnum = (int) ((*iter).second);" ->
@@ -433,6 +438,7 @@ RECHECK
  we are betting on it...
 
 Axel: And it does!
+DONE
 -------------------------------------------------------------------------------
 
 #42 * v6_newlink.cxx: 3197: can you combine array / scalar deletion?
@@ -483,6 +489,7 @@ DONE
 
  noted...
 
+DONE
 -------------------------------------------------------------------------------
 #47 * v6_newlink.cxx: 4453: "q" == long double == cast is missing!
  must check
@@ -621,7 +628,7 @@ DONE
 the problem is that I don't know the scope of the strings (that come from newlink) so I have to
 create a copy anyways... (I have no preference over strings or chars* )
 
-RECHECK
+DONE
 -------------------------------------------------------------------------------
 #60 * v6_symbols.cxx: TSymbolLookup::fRegistered should be a set!
 
@@ -689,7 +696,7 @@ DONE
 
 Axel: You introduced the "i". The version in the trunk has "obj.d". Which I find more sensible :-)
 
-RECHECK
+RECHECK (BLOCKER)
 -------------------------------------------------------------------------------
 #67 * v6_var.cxx: 4106keep:
  -#ifdef G__ASM_DBG
@@ -738,7 +745,7 @@ Axel: I'm talking about the func ptr (in the second part of G__ci.h). I discusse
 
 I think it has been done
 
-RECHECK
+DONE
 -------------------------------------------------------------------------------
 #72 * rootcint.cxx: 4450ff: --cxx still needed? -o still needed?
 
@@ -782,6 +789,7 @@ DONE
 
  I dont know... that code is pretty old... I will check it out.
 
+BLOCKER
 -------------------------------------------------------------------------------
 #78 * base/inc/TString.h: again, why do you need to prefix the enum
  constant with its class name? This should not be required.
@@ -839,6 +847,7 @@ CheckValidRootInfo() but removed the access to
 G__struct.rootspecial[tagnum]->defaultconstructor - why is it not the same for
 line 849ff? And do you need the rootspacial? Or can you really just remove it?
 
+BLOCKER
 -------------------------------------------------------------------------------
 #86 * v6_init.cxx: G__dicttype - could you make that an enum, possibly with a step
 number? E.g. what used to be "3" could be kDictType3_ForceOutline or so. What
@@ -863,9 +872,13 @@ We discussed that in person... the change has been reverted.
 DONE
 -------------------------------------------------------------------------------
 #89 * v6_loadfile.cxx: 189: where does the "c!=-1" come from?
+
+DONE
 -------------------------------------------------------------------------------
 #90 * rootcint_nostubs.ch: what happens (flow control wise) if an error occurs say
 at the second call to rootcint or the call to g++? "rm -rf /"?
+
+RECHECK
 -------------------------------------------------------------------------------
 #91 * rootcint_nostubs_tmp.sh: is there a difference to rootcint_nostubs.sh? Can
 you combine the two?
@@ -875,4 +888,6 @@ DONE
 
 #92 * v6_newlink.cxx: 4155: where does G__if_ary_union_constructor come from? What
 does it do? Doc, please.
+
+RECHECK
 -------------------------------------------------------------------------------
