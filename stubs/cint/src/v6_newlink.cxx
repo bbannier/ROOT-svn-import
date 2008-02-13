@@ -739,33 +739,6 @@ void* G__get_symbol_address(const char* mangled_name)
 }
 
 
-/**************************************************************************
- * G__get_funcptr()
- *
- * returns the function pointer "contained" in an ifunc.
- * if it has not been set up yet but we have the mangled name, then
- * we fetch the address using this symbol
- **************************************************************************/
-void* G__get_funcptr(G__ifunc_table_internal *ifunc, int ifn)
-{
-  // returns the funcptr of an ifunc
-  // and it's case it's null, it tries to get it
-  // from the mangled_name
-
-  if( !ifunc )
-    return 0;
-
-  if(ifunc->funcptr[ifn] && ifunc->funcptr[ifn]!=(void*)-1)
-    return ifunc->funcptr[ifn];
-
-  if(!ifunc->mangled_name[ifn])
-    return 0;
-
-  ifunc->funcptr[ifn] = G__get_symbol_address(ifunc->mangled_name[ifn]);
-  return ifunc->funcptr[ifn];
-}
-
-
 typedef union unld { G__int64 lval; double dval; } UNLD;
 
 #define ASM_X86_64_ARGS_PASSING(dval, lval) { \
@@ -1258,7 +1231,7 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
       // Class Size
       osize = G__sizeof(&otype);
 
-D      // The second thing we need is a new object of type T (the place holder)
+      // The second thing we need is a new object of type T (the place holder)
       void* pobject = operator new(osize);
 
       // The place holder is the last parameter we have to push !!!
@@ -1304,7 +1277,8 @@ D      // The second thing we need is a new object of type T (the place holder)
 
   return 0;
 }
-#endif
+#endif // VAARG_PASS_BY_REFERENCE
+
 
 /**************************************************************************
  * G__stub_method_asm
@@ -2398,6 +2372,38 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
 
 #endif // defined G__NOSTUBS
 
+
+/**************************************************************************
+ * G__get_funcptr()
+ *
+ * returns the function pointer "contained" in an ifunc.
+ * if it has not been set up yet but we have the mangled name, then
+ * we fetch the address using this symbol
+ **************************************************************************/
+void* G__get_funcptr(G__ifunc_table_internal *ifunc, int ifn)
+{
+  // returns the funcptr of an ifunc
+  // and it's case it's null, it tries to get it
+  // from the mangled_name
+
+#ifdef G__NOSTUBS
+  if( !ifunc )
+    return 0;
+
+  if(ifunc->funcptr[ifn] && ifunc->funcptr[ifn]!=(void*)-1)
+    return ifunc->funcptr[ifn];
+
+  if(!ifunc->mangled_name[ifn])
+    return 0;
+
+  ifunc->funcptr[ifn] = G__get_symbol_address(ifunc->mangled_name[ifn]);
+  return ifunc->funcptr[ifn];
+#else
+  return 0;
+#endif
+}
+
+
 /**************************************************************************
  * G__call_cppfunc()
  *
@@ -2507,6 +2513,7 @@ int G__call_cppfunc(G__value *result7,G__param *libp,G__ifunc_table_internal *if
     // We store the this-pointer
     long save_offset = G__store_struct_offset;
 
+#ifdef G__NOSTUBS
     /* 15/03/2007 */
     // 1 Parameter && Registered Method in ifunc && Neither static method nor function
     // (G__tagnum > -1) is not needed because G__tagnum can be -1 when we have free
@@ -2519,7 +2526,9 @@ int G__call_cppfunc(G__value *result7,G__param *libp,G__ifunc_table_internal *if
       // Registered Method in ifunc. Then We Can Call the method without the stub function
       G__stub_method_calling(result7, libp, ifunc, ifn);
     }
-    else if (cppfunc) {
+    else 
+#endif
+    if (cppfunc) {
       /* 15/03/2007 */
       // this-pointer adjustment
       G__this_adjustment(ifunc, ifn);
@@ -5381,11 +5390,13 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
 
       ifunc_default = ifunc;
 
+#ifdef G__NOSTUBS
       // 03-07-07
       // Trigger the symbol registering to have them at hand
       // Do it here when we have the library and the class
       if(G__dicttype==kFunctionSymbols || G__dicttype==kNoWrappersDictionary)
         G__register_class(G__libname, G__type2string('u',i,-1,0,0));
+#endif
 
       /* member function interface */
       fprintf(fp,"\n/* %s */\n",G__fulltagname(i,0));
@@ -5626,11 +5637,13 @@ void G__cppif_func(FILE *fp, FILE *hfp)
   int j;
   struct G__ifunc_table_internal *ifunc;
 
+#ifdef G__NOSTUBS
   // 30-07-07
   // Trigger the symbol registering to have them at hand
   // Do it here when we have the library and the class
   if(G__dicttype==kFunctionSymbols || G__dicttype==kNoWrappersDictionary)
     G__register_class(G__libname, 0);
+#endif
 
   fprintf(fp,"\n/* Setting up global function */\n");
   ifunc = &G__ifunc;
@@ -6926,6 +6939,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
   }
 
   if (!isconstructor && !G__struct.isabstract[tagnum] && !isnonpublicnew) {
+#ifdef G__NOSTUBS
     if(G__dicttype==kNoWrappersDictionary){
       // index in the ifunc
       long pifn;
@@ -6942,7 +6956,9 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
       if(cons_oper && !(!cons_oper->mangled_name[pifn] && cons_oper->funcptr[pifn]!=(void*)-1))
         page = cons_oper->page;
     }
+#endif
 
+#ifdef G__NOSTUBS
     if(G__dicttype==kFunctionSymbols && G__is_tagnum_safe(tagnum)){
       // 01-11-07
       // Force the outlining of functions even if the weren't declared
@@ -6952,7 +6968,9 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
       // I can think of to use the default constructor is to create an object
       fprintf(fp,"  %s G__cons_%s;\n", G__fulltagname(tagnum, 0),  G__map_cpp_funcname(tagnum, funcname, ifn, page));
     }
-    else{
+    else
+#endif
+    {
       char buf[G__LONGLINE];
       strcpy(buf, G__fulltagname(tagnum, 1));
 
@@ -7073,6 +7091,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
   }
 
   if (!iscopyconstructor && !G__struct.isabstract[tagnum] && !isnonpublicnew) {
+#ifdef G__NOSTUBS
     if(G__dicttype==kNoWrappersDictionary){
       // index in the ifunc
       long pifn;
@@ -7091,7 +7110,9 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
       if(cons_oper && !(!cons_oper->mangled_name[pifn] && cons_oper->funcptr[pifn]!=(void*)-1))
         page = cons_oper->page;
     }
+#endif
 
+#ifdef G__NOSTUBS
     if(G__dicttype==kFunctionSymbols && G__is_tagnum_safe(tagnum)) {
 
       // 01-11-07
@@ -7126,7 +7147,9 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
       if(isconstdefined)
         fprintf(fp,"  %s G__copycons_%s(G__cons_%s);\n", G__fulltagname(tagnum, 0), G__map_cpp_funcname(tagnum, funcname, ifn, page),G__map_cpp_funcname(tagnum, funcname, ifn, page));
     }
-    else{
+    else
+#endif // G__NOSTUBS
+    {
       sprintf(funcname, "%s", G__struct.name[tagnum]);
 
       fprintf(fp,     "// automatic copy constructor\n");
@@ -7178,6 +7201,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
   }
 
   if ((0 >= isdestructor) && (G__struct.type[tagnum] != 'n')) {
+#ifdef G__NOSTUBS
     if(G__dicttype==kNoWrappersDictionary){
       // index in the ifunc
       long pifn;
@@ -7196,11 +7220,13 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
       if(des_oper && !(!des_oper->mangled_name[pifn] && des_oper->funcptr[pifn]!=(void*)-1) )
         page = des_oper->page;
     }
+#endif
 
     int isdestdefined = 1;
     if(!G__struct.memfunc[tagnum]->mangled_name[0])
       isdestdefined = 0;
 
+#ifdef G__NOSTUBS
     if(G__dicttype==kFunctionSymbols && G__is_tagnum_safe(tagnum)) {
       // 01-11-07
       // Force the outlining of functions even if the weren't declared
@@ -7210,7 +7236,9 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
       // How can we force the destructor symbol to be included?
       // is it enough with the object creation?
     }
-    else{
+    else
+#endif
+    {
       char buf[G__LONGLINE];
       strcpy(buf, G__fulltagname(tagnum, 1));
 
@@ -7307,6 +7335,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
   }
 
   if (!isassignmentoperator) {
+#ifdef G__NOSTUBS
     if(G__dicttype==kNoWrappersDictionary){
       // index in the ifunc
       long pifn;
@@ -7325,7 +7354,9 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
       if(op_oper && !(!op_oper->mangled_name[pifn] && op_oper->funcptr[pifn]!=(void*)-1))
         page = op_oper->page;
     }
+#endif
 
+#ifdef G__NOSTUBS
     if(G__dicttype==kFunctionSymbols && G__is_tagnum_safe(tagnum)) {
       // 01-11-07
       // Force the outlining of functions even if the weren't declared
@@ -7336,7 +7367,9 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
 
       fprintf(fp," (void)(G__assignop_%s);\n", G__map_cpp_funcname(tagnum, funcname, ifn, page));
     }
-    else{
+    else
+#endif
+    {
       sprintf(funcname, "operator=");
       fprintf(fp,   "// automatic assignment operator\n");
 
