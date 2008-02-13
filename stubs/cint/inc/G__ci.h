@@ -945,9 +945,6 @@ typedef struct {
 } G__value ;
 
 
-// DMS
-   extern char G__wrappers;
-
 /**************************************************************************
 * reference type argument for precompiled function
 **************************************************************************/
@@ -1910,6 +1907,8 @@ extern G__EXPORT int G__close_inputfiles G__P((void));
 extern G__EXPORT int G__const_resetnoerror G__P((void));
 extern G__EXPORT int G__const_setnoerror G__P((void));
 extern G__EXPORT int G__const_whatnoerror G__P((void));
+extern G__EXPORT void G__enable_wrappers(int set);
+extern G__EXPORT int G__wrappers_enabled();
 /* earlier in this file: G__deleteglobal */
 /* earlier in this file: G__exec_bytecode */
 /* earlier in this file: G__findsym */

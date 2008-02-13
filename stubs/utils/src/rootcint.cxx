@@ -189,7 +189,9 @@ extern "C" {
    int   G__main(int argc, char **argv);
    void  G__exit(int rtn);
    struct G__includepath *G__getipathentry();
+#ifdef G__NOSTUBS
    void  G__setisfilebundled(int isfilebundled);
+#endif
 }
 const char *ShortTypeName(const char *typeDesc);
 
@@ -4224,7 +4226,9 @@ int main(int argc, char **argv)
    const char *env_dict_type=getenv("ROOTDICTTYPE");
    const char *libname;
    int dicttype = 0; // 09-07-07 -- 0 for dict, 1 for ShowMembers
+#ifdef G__NOSTUBS
    G__setisfilebundled(0);
+#endif
 
    if (env_dict_type)
       if (!strcmp(env_dict_type, "cint"))
@@ -4639,8 +4643,7 @@ int main(int argc, char **argv)
                  argv[0], bundlename.c_str());
          use_preprocessor = 0;
       } else {
-         
-#ifndef ROOTBUILD
+#if defined (G__NOSTUBS) && !defined(ROOTBUILD)
          char *header_c = (char*) header.c_str(); // basename shouldnt change the content (it looks safe)
          const char *basen = basename(header_c);
          string headerb(basen);
@@ -4740,7 +4743,9 @@ int main(int argc, char **argv)
       argvv[argcc++] = autold;
    }
    
+#ifdef G__NOSTUBS
    if(insertedBundle) G__setisfilebundled(1);
+#endif
 
    G__ShadowMaker::VetoShadow(); // we create them ourselves
    G__setothermain(2);
@@ -4763,7 +4768,7 @@ int main(int argc, char **argv)
          fclose(fpd);
       }
    }
-   G__setglobalcomp(0);  // G__NOLINK
+   G__setglobalcomp(0); // G__NOLINK
 #endif
 
    // We ran cint to load the in-memory database,

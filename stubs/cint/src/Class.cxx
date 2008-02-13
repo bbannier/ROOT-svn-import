@@ -817,6 +817,7 @@ void* Cint::G__ClassInfo::New()
           G__CurrentCall(G__NOP, 0, 0);
           p = (void*)G__int(buf);
        }
+#ifdef G__NOSTUBS
        else{
           /* If we have a function pointer */
           G__ifunc_table_internal* internalifuncconst 
@@ -828,6 +829,7 @@ void* Cint::G__ClassInfo::New()
              p = (void*)G__int(buf);
           }
        }
+#endif
     }
     else if(class_property&G__BIT_ISCCOMPILED) {
       // C precompiled class,struct
@@ -880,6 +882,7 @@ void* Cint::G__ClassInfo::New(int n)
           G__CurrentCall(G__NOP, 0, 0);
           p = (void*)G__int(buf);
        }
+#ifdef G__NOSTUBS
        else{
           /* If we have a function pointer */
           G__ifunc_table_internal* internalifuncconst 
@@ -891,6 +894,7 @@ void* Cint::G__ClassInfo::New(int n)
              p = (void*)G__int(buf);
           }
        }
+#endif
 
       // Record that we have allocated an array, and how many
       // elements that array has, for use by the G__calldtor function.
@@ -967,6 +971,7 @@ void* Cint::G__ClassInfo::New(void *arena)
           G__CurrentCall(G__NOP, 0, 0);
           p = (void*)G__int(buf);
        }
+#ifdef G__NOSTUBS
        else{
           /* If we have a function pointer */
           G__ifunc_table_internal* internalifuncconst 
@@ -982,7 +987,7 @@ void* Cint::G__ClassInfo::New(void *arena)
              p = (void*)G__int(buf);
           }
        }
-
+#endif
     }
     else if(class_property&G__BIT_ISCCOMPILED) {
       // C precompiled class,struct
@@ -1043,6 +1048,7 @@ void* Cint::G__ClassInfo::New(int n, void *arena)
           // elements that array has, for use by the G__calldtor function.
           G__alloc_newarraylist((long) p, n);
        }
+#ifdef G__NOSTUBS
        else{
           /* If we have a function pointer */
           G__ifunc_table_internal* internalifuncconst 
@@ -1062,7 +1068,7 @@ void* Cint::G__ClassInfo::New(int n, void *arena)
              G__alloc_newarraylist((long) p, n);
           }
        }
-
+#endif
     }
     else if(class_property&G__BIT_ISCCOMPILED) {
       // C precompiled class,struct
