@@ -794,7 +794,7 @@ void G__define_type()
     // but later on a real file will be registered with this number
     // and will create confusion. If this is a temporal file just
     // ignore its number
-    if( !strlen(G__ifile.name)>3 || strncmp("(tmp", G__ifile.name, 4) ) {
+    if( strlen(G__ifile.name) < 4 || strncmp("(tmp", G__ifile.name, 4) ) {
        G__newtype.filenum[typenum] = G__ifile.filenum;
        G__newtype.linenum[typenum] = G__ifile.line_number;
     }

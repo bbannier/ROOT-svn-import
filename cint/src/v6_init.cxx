@@ -1274,6 +1274,7 @@ int G__main(int argc, char** argv)
       G__fprinterr(G__serr, "Warning: Error occurred during reading source files\n");
    }
 
+#ifdef G__NOSTUBS
    // Try to differentiate the different kinds of tmp dicts.
    // (although we used the all here so it's a bit silly)
    if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3 || G__dicttype==4) {
@@ -1281,6 +1282,7 @@ int G__main(int argc, char** argv)
       MapDependantTypes();
       G__gen_extra_include();
    }
+#endif
 
    if (G__globalcomp == G__CPPLINK) {
       // -- C++ header.

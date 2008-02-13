@@ -416,11 +416,14 @@ G__value Cint::G__CallFunc::Execute(void *pobject)
   int ifn = method.Index();
 
   if(G__get_funcptr(ifunc, ifn)) {
+#ifdef G__NOSTUBS
      if ((method.MemberOf())->Tagnum() > -1)
         G__tagnum = (method.MemberOf())->Tagnum();
      ret = G__stub_method_calling(&result, &para, ifunc, ifn);
+#endif
    }
-  else {
+  else
+   {
      G__store_struct_offset += (long) method.GetThisPointerOffset();
 #ifdef G__ASM_WHOLEFUNC
      if(pfunc) {
@@ -434,7 +437,7 @@ G__value Cint::G__CallFunc::Execute(void *pobject)
 #endif
      else ret = ExecInterpretedFunc(&result);
      G__store_struct_offset -= (long) method.GetThisPointerOffset();
-        }
+   }
 
   G__CurrentCall(G__NOP, 0, 0);
   // Restore  object address
