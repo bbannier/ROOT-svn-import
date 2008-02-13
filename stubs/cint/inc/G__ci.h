@@ -1163,14 +1163,15 @@ struct G__comment_info {
 #define G__USEBYTECOUNT   0x04
 
 struct G__RootSpecial {
-  char* deffile;
-  int defline;
-  char* impfile;
-  int impline;
-  int version;
-  unsigned int instancecount;
-  unsigned int heapinstancecount;
-  void* defaultconstructor;
+   char* deffile;
+   int defline;
+   char* impfile;
+   int impline;
+   int version;
+   unsigned int instancecount;
+   unsigned int heapinstancecount;
+   void* defaultconstructor; /* defaultconstructor wrapper/stub pointer */
+   struct G__ifunc_table* defaultconstructorifunc; /* defaultconstructor ifunc entry */
 };
 
 /**************************************************************************
