@@ -1779,594 +1779,459 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
                            G__ifunc_table_internal *ifunc, int ifn)
 {
 
-  /**************************************************************************
-   * Create a dummy strct to be able to perform a typeif(void*)
-   * based on DynamicType from Reflex
-   **************************************************************************/
-  struct G__dyntype { virtual ~G__dyntype() {} };
+   /**************************************************************************
+    * Create a dummy strct to be able to perform a typeif(void*)
+    * based on DynamicType from Reflex
+    **************************************************************************/
+   struct G__dyntype { virtual ~G__dyntype() {} };
 
-  long store_struct_offset = G__store_struct_offset;
-  int store_tagnum = G__tagnum;
+   long store_struct_offset = G__store_struct_offset;
+   int store_tagnum = G__tagnum;
 
-  // This should usually be done in G__stub_method_asm but since we are 
-  // still doing the cons. and dest. calls here, we might need it for
-  // rhose
-  void *vaddress = G__get_funcptr(ifunc, ifn);
+   // Getting the class's name
+   int gtagnum = ifunc->tagnum;
 
-  // Getting the class's name
-  int gtagnum = ifunc->tagnum;
-
-  // If wee don't get it from the ifunc, try getting it from
-  // the environment (is it caused by CallFunc ?)
-  if(gtagnum < 0)
-    gtagnum = G__tagnum;
+   // If wee don't get it from the ifunc, try getting it from
+   // the environment (is it caused by CallFunc ?)
+   if(gtagnum < 0)
+      gtagnum = G__tagnum;
   
-  // this is redundant if gtagnum < 0
-  // but I want to say that G__tagnum is always changed
-  G__tagnum = gtagnum; //G_getexpr will use it to find a variable within a class
+   // this is redundant if gtagnum < 0
+   // but I want to say that G__tagnum is always changed
+   G__tagnum = gtagnum; //G_getexpr will use it to find a variable within a class
   
-  // Return values for new and delete parameters.
-  G__value op_return;
+   // Return values for new and delete parameters.
+   G__value op_return;
 
-  // 19-11-07
-  // We need to evaluate the parameters by default here, since we want to use those
-  // given by the static type and in the next function we will recursively call 
-  // G__stub_method_calling with a different type
-  struct G__param rpara;
-  if(G__evaluate_libp(&rpara, libp, ifunc, ifn)==-1){
-    G__fprinterr(G__serr,"Error in G__stub_method_calling: problem with the default parameters\n");
-    return -1;
-  }
-
-  // We will try to do the special case for constructors here...
-  // I couldnt find a field in the ifunc table telling us if it's acons.
-  // so we would have to verify that the name of the function is actually
-  // the name of the class (Axel said that constructors return an 'int' so
-  // we can do that check to speed things up a bit)
-  // Method's name == Class Name?
-  if((ifunc->type[ifn] == 'i') && (gtagnum > -1) && (strcmp(ifunc->funcname[ifn], G__struct.name[gtagnum])== 0)){
-    // ----------------------
-    // CONSTRUCTOR PROCEDURE
-    // ----------------------
-    // #1: Memory location trough the new operator (Important: Is the new operator overriden?)
-    // #2: Constructor Call to set up the located memory by the new operator
-
-    // If this is a cons. the first thing we need to find is the size
-    // of the object (since we have to handle the allocation)
-    // Getting the Class size
-    int osize;
-    G__value otype;
-    otype.type   = 'u';
-    otype.tagnum = gtagnum;
-
-    // Class Size
-    osize = G__sizeof(&otype);
-
-    // Constructor arity
-    int n = G__getaryconstruct();
-
-    // Variable's pointer
-    long gvp = G__getgvp();
-
-    // Pointer to new object
-    void* pobject;
-
-    /* ---------------------- */
-    /*  NEW Operator calling  */
-    /* ---------------------- */
-
-    // We need to check if the new operator has been overidden by any class in the hierarchy
-    // Here the new parameters
-    G__param para_new;
-
-    // index in the ifunc
-    long pifn;
-    long poffset;
-
-    // Constructor arity => Number of objects to initialize. Objects array?
-    // Constructor Arity. Array Constructor? Single Constructor?
-    if (n) { // Array Constructor
-      // Do we have already an address for the object?. Is the "this" pointer valid?
-      if ((gvp == G__PVOID) || (gvp == 0)) { // We don't have a valid space, so we need to request a new one to the "new operator"  
-
-        // Single Constructor has only a parameter. The size of the object
-        para_new.paran = 1;
-        para_new.para[0].typenum = 0;
-        para_new.para[0].type = 'h';
-        para_new.para[0].tagnum = 0;
-
-        // We look for the "new operator" ifunc in the current class and in its bases
-        G__ifunc_table_internal * new_oper = G__get_methodhandle4("operator new[]", &para_new, ifunc, &pifn, &poffset, 0, 1,0,0);
-
-        // is the new operator overriden?
-        if (!new_oper) { // No, it's not
-          // We use the default new operator
-          pobject = operator new[](osize*n);
-        }
-        else {   // Yes, we have a nice overriden operator new yeah c'mon!. Hack me baby!
-
-           // Parameter Value
-           G__letint(&para_new.para[0],(int) 'h', (((long) osize)*n));
-
-           op_return.type = 'U';
-
-           // Assembler Call
-#ifdef __x86_64__
-           G__stub_method_asm_x86_64(new_oper, pifn, gtagnum, 0, &para_new, &op_return);
-#else      
-           G__stub_method_asm(new_oper, pifn, gtagnum, 0, &para_new, &op_return);
-#endif
-           
-           // Allocated Address
-           pobject = (void *) op_return.obj.i;
-
-        }
-      }
-      else { // We already have a valid space for the object
-        // Now we have two parameters (placement new). The first is the size of the object and the second one is the address.
-        para_new.paran = 2;
-        // First Paremeter
-        para_new.para[0].typenum = 0;
-        para_new.para[0].type = 'h';
-        para_new.para[0].tagnum = 0;
-
-        // Second Parameter
-        para_new.para[1].typenum = 0;
-        para_new.para[1].type = 'Y';
-        para_new.para[1].tagnum = 0;
-
-        // We look for the "new operator" ifunc in the current class and in its bases
-        G__ifunc_table_internal *new_oper = G__get_methodhandle4("operator new[]", &para_new, ifunc, &pifn, &poffset, 0, 1,0,0);
-
-        // is the new operator overriden?
-        if (!new_oper) {// No, it's not
-          pobject = operator new[](osize*n,(void*) gvp);
-        }
-        else { 
-
-           // Parameter Values
-           G__letint(&para_new.para[0],(int) 'h', (((long) osize)*n));
-           G__letint(&para_new.para[1],(int) 'Y', (long) gvp);
-          
-           op_return.type = 'U';
-
-#ifdef __x86_64__
-           G__stub_method_asm_x86_64(new_oper, pifn, gtagnum, 0, &para_new, &op_return);
-#else      
-           G__stub_method_asm(new_oper, pifn, gtagnum, 0, &para_new, &op_return);
-#endif
-           
-           // Allocated Address
-           pobject = (void *) op_return.obj.i;
-
-        }
-      }
-    }
-    else { // Single Constructor
-      // Do we have already an address for the object. Is "This" pointer null?
-      if ((gvp == G__PVOID) || (gvp == 0)) {// We don't have a valid space, so we need to request a new one to the "new operator"  
-        // Single Constructor has only a parameter. The size of the object
-        para_new.paran = 1;
-        para_new.para[0].typenum = 0;
-        para_new.para[0].type = 'h';
-        para_new.para[0].tagnum = 0;
-        
-        // We look for the "new operator" ifunc in the current class and in its bases
-        G__ifunc_table_internal *new_oper = G__get_methodhandle4("operator new", &para_new, ifunc, &pifn, &poffset, 0, 1,0,0);
-
-        // is the new operator overriden?
-        if (!new_oper) { // No, it's not
-          pobject = operator new(osize);
-        }
-        else{ // Yes, we have a nice overriden operator new.
-
-           G__letint(&para_new.para[0],(int) 'h', (long) osize);
-       
-           op_return.type = 'U';
-
-           // Assembler Call
-#ifdef __x86_64__
-           G__stub_method_asm_x86_64(new_oper, pifn, gtagnum, 0, &para_new, &op_return);
-#else      
-           G__stub_method_asm(new_oper, pifn, gtagnum, 0, &para_new, &op_return);
-#endif
-
-           // Allocated Address
-           pobject = (void *) op_return.obj.i;
-
-        }
-      } else { // We already have a valid space for the object
-        // Single Constructor has only a parameter. The size of the object
-        para_new.paran = 2;
-        para_new.para[0].typenum = 0;
-        para_new.para[0].type = 'h';
-        para_new.para[0].tagnum = 0;
-
-        para_new.para[1].typenum = 0;
-        para_new.para[1].type = 'Y';
-        para_new.para[1].tagnum = 0;
-        
-        // We look for the "new operator" ifunc in the current class and in its bases
-        G__ifunc_table_internal *new_oper = G__get_methodhandle4("operator new", &para_new, ifunc, &pifn, &poffset, 0, 1,0,0);
-
-        // is the new operator overriden?
-        if (!new_oper) { // No, it's not
-          pobject = operator new(osize,(void*) gvp);
-        }
-        else{ // Yes, we have a nice overriden operator new.
-
-           G__letint(&para_new.para[0],(int) 'h', (long) osize);
-           G__letint(&para_new.para[1],(int) 'Y', (long) gvp);
-        
-           op_return.type = 'U';
-
-           // Assembler 
-#ifdef __x86_64__
-           G__stub_method_asm_x86_64(new_oper, pifn, gtagnum, 0, &para_new, &op_return);
-#else      
-           G__stub_method_asm(new_oper, pifn, gtagnum, 0, &para_new, &op_return);
-#endif
-
-           // Allocated Address
-           pobject = (void *) op_return.obj.i;
-
-        }
-      }
-      n=1; // We have to execute the constructor only one time
-    }
-
-    // 27-04-07
-    // The actual version of Cint has a limitation with
-    // the array constructor: it cant receive paramaters (or at least,
-    // it ignores them). Here I will try to pass the parameters of
-    // the constructors for every object (to handle something like
-    // string *str = new string[10]("strriiiinnnggg")   ).
-
-    /* ------------------- */
-    /*  Constructor call   */
-    /* ------------------- */
-
-    /* n = constructor arity (see array constructor) */
-    for (int i=0;i<n;i++){
-#ifdef __x86_64__
-       G__stub_method_asm_x86_64(ifunc, ifn, gtagnum, ((void*)((long)pobject + (i*osize))), &rpara, result7);
-#else      
-       G__stub_method_asm(ifunc, ifn, gtagnum, ((void*)((long)pobject + (i*osize))), &rpara, result7);
-#endif
-    }
-
-    result7->obj.i = (long) pobject;
-    // Object's Reference
-    result7->ref = (long) pobject;
-    // Object's Type
-    result7->type = 'u';
-
-  }
-  else{// Not Constructor
-    char * finalclass = 0;
-
-    // Let's try to find the final type if we have a virtual function
-    // tagnum cant be -1 here because a free standing function cant be
-    // virtual also.
-    if(ifunc->isvirtual[ifn] && G__getstructoffset()){
-      G__dyntype *dyntype = (G__dyntype *) G__getstructoffset();
-      const char *mangled = typeid(*dyntype).name();
-
-      // 08-08-07
-      // look for this mangled name in our hash_map 
-      // (speed things up, it could also be looked up in the cint structs)
-      int tagnum = -1;
-      __gnu_cxx::hash_map<const char*, int> *gmap = (__gnu_cxx::hash_map<const char*, int>*) G__get_struct_map();
-      __gnu_cxx::hash_map<const char*, int>::iterator  iter = gmap->find(mangled);
-      if (iter != gmap->end() ) {
-        tagnum = iter->second;
-      }
-
-      // if we dont find it in the map then we have to
-      // look for it in Cint and add it to the map
-      if(tagnum==-1) {
-        int status = 0;
-        finalclass = abi::__cxa_demangle(mangled, 0, 0, &status);
-        if (!finalclass) {
-          G__fprinterr(G__serr,"** error demangling typeid \n");
-        }
-        else {
-          // printf(" ** type id mangled   : %s \n", mangled);
-          // printf(" ** type id demangled : %s \n", finalclass);
-        }
-
-        // Before continuingwe check that the method is implemented in the
-        // the final class...
-        // consider:
-        //
-        // TH1F h1 = new TH1F()
-        // h1->Draw()
-        //
-        // when it gets here, the classname is TH1 because Draw()
-        // is implemented there, not in TH1F. That will confuse our
-        // basic implementation.
-
-        // The 3 as a parameter means we disble autoloading... this could be a problem in certain cases
-        // The case we have in mind is when we have:
-        // B inherits from A, B *b=new A AND the dict lib is separated from the normal
-        // lib. Only in such weird cases this might be a problem.
-        tagnum = G__defined_tagname(finalclass, 3);
-
-        // if we find it in cint then let's add it to the map
-        if(tagnum>=0)
-          gmap->insert(G__structmap_pair((mangled),tagnum));
-
-        // rem to free everything returned by abi::__cxa_demangle
-        if(finalclass)
-          free(finalclass);
-      }
-
-      // Axel said isbaseclass is not necessary
-      // 28-01-08
-      // This is a bit tricky because we can find the (illegal) case of a class
-      // that inherits from TObject but hasn't declared a ClassDef, in that case, CInt thinks
-      // that that class doesnt inherith from TObject... but if we don't do that then the 
-      // (also illegal) case of sibling casting won't be catched... which one is worse for us?
-      //if (tagnum>=0 && (G__isbaseclass(tagnum, gtagnum) || G__isbaseclass(gtagnum, tagnum))  /*tagnum!=gtagnum*/) {
-      if (tagnum>=0 && tagnum!=gtagnum) {
-        struct G__ifunc_table_internal *new_ifunc;
-        long poffset;
-        long pifn = ifn;
-
-        if(!(G__isbaseclass(tagnum, gtagnum) || G__isbaseclass(gtagnum, tagnum))){
-          G__fprinterr(G__serr,"Warning: static type is %s but dynamic type is %s. Are you casting two different objects? \n", 
-                       G__struct.name[gtagnum], G__struct.name[tagnum]);
-        }
-
-        new_ifunc = G__struct.memfunc[tagnum];
-        G__incsetup_memfunc(tagnum);
-
-        // 23-10-12
-        // We need a way to know that we need with an old dictionary
-        if(ifunc)
-          new_ifunc = G__ifunc_page_base(ifunc->funcname[ifn], ifunc->hash[ifn], ifunc->page_base, new_ifunc, ifn);
-
-        // 08-08-07
-        // in case of collisions do the whole matching
-        if(new_ifunc->page_base<0 ){
-          G__paramfunc *parfunc = ifunc->param[ifn].fparams;
-          struct G__param fpara;
-          fpara.paran=0;
-          fpara.para[0]=G__null;
-
-          while (parfunc) {
-            if (parfunc->type) {
-              fpara.para[fpara.paran].tagnum  = parfunc->p_tagtable;
-              fpara.para[fpara.paran].obj.reftype.reftype = parfunc->reftype;
-              fpara.para[fpara.paran].isconst = parfunc->isconst;
-              fpara.para[fpara.paran].type    = parfunc->type;
-              fpara.paran++;
-            }
-            parfunc = parfunc->next;
-          }
-          new_ifunc = G__struct.memfunc[tagnum];
-          new_ifunc = G__get_methodhandle4(ifunc->funcname[ifn], &fpara, new_ifunc, &pifn, &poffset, 1, 1, 0, 0);
-        }
-        
-        if(new_ifunc && (ifunc!=new_ifunc)){
-          // we have an animal that looks like a dog and we have
-          // to make him bark...
-          // i.e. we have a derived class casted as a base class
-          // and we have to execute the method of the derived class not
-          // the one from the base class
-          int intres;
-          int old_tag;
-          tagnum = new_ifunc->tagnum;
-          int offset = G__isanybase(gtagnum, tagnum, 0);
-
-          // 12/04/07
-          // How can I change the this ptr cleanly?
-          // hacking through it doesn't look like the best solution :/
-          if(offset > 0){
-            G__store_struct_offset -= offset;
-          }
-
-          // Be careful....
-          old_tag = G__tagnum;
-          G__tagnum = tagnum;
-
-          if(G__get_funcptr(new_ifunc, ifn)&&G__wrappers)
-            intres = G__stub_method_calling(result7, &rpara, new_ifunc, ifn); // Default params already evaluated
-          else
-            intres = G__call_cppfunc(result7, &rpara, new_ifunc, ifn); // Default params already evaluated
-
-          G__tagnum = old_tag;
-          // change back the this pointer
-          if(offset != 0){
-            G__store_struct_offset += offset;
-          }
-          return intres;
-        }
-      }
-      else if(tagnum==-1 && gtagnum!=tagnum){
-        G__fprinterr(G__serr,"Warning: CInt doesn't know about the class %s but it knows about %s (did you forget the ClassDef?)\n", finalclass, G__struct.name[gtagnum]);
-      }
-    }
-
-    // We are in serious trouble here...
-    // we are trying to execute a pure virtual function.
-    // This should never happen... all pure virtual functions
-    // should had been redirected in the last if
-    if(ifunc->ispurevirtual[ifn] && !G__get_funcptr(ifunc, ifn)) {
-      G__fprinterr(G__serr,"Fatal Error: Trying to execute pure virtual function %s", ifunc->funcname[ifn]);
+   // 19-11-07
+   // We need to evaluate the parameters by default here, since we want to use those
+   // given by the static type and in the next function we will recursively call 
+   // G__stub_method_calling with a different type
+   struct G__param rpara;
+   if(G__evaluate_libp(&rpara, libp, ifunc, ifn)==-1){
+      G__fprinterr(G__serr,"Error in G__stub_method_calling: problem with the default parameters\n");
       return -1;
-    }
+   }
 
-    // Destructor? Method's Name == ~ClassName?
-    if (ifunc->funcname[ifn][0]=='~'){
-      long gvp = G__getgvp();
-      long soff = G__getstructoffset();
-      int n = G__getaryconstruct();
-      G__param para_del;
+   // We will try to do the special case for constructors here...
+   // I couldnt find a field in the ifunc table telling us if it's acons.
+   // so we would have to verify that the name of the function is actually
+   // the name of the class (Axel said that constructors return an 'int' so
+   // we can do that check to speed things up a bit)
+   // Method's name == Class Name?
+   if((ifunc->type[ifn] == 'i') && (gtagnum > -1) && (strcmp(ifunc->funcname[ifn], G__struct.name[gtagnum])== 0)){
+      // ----------------------
+      // CONSTRUCTOR PROCEDURE
+      // ----------------------
+      // #1: Memory location trough the new operator (Important: Is the new operator overriden?)
+      // #2: Constructor Call to set up the located memory by the new operator
 
+      // If this is a cons. the first thing we need to find is the size
+      // of the object (since we have to handle the allocation)
+      // Getting the Class size
       int osize;
-      long pifn;
-      long poffset;
       G__value otype;
       otype.type   = 'u';
       otype.tagnum = gtagnum;
 
-      osize = G__sizeof(&otype);
-      if (!soff) {
-        return(1);
-      }
+      // Class Size
+      osize = G__sizeof(&otype);   
 
-      if (n) { // Array destructor
+      // Variable's pointer
+      long gvp = G__getgvp();
 
-         para_del.paran = 1;
-         para_del.para[0].typenum = 0;
-         para_del.para[0].type = 'Y';
-         para_del.para[0].tagnum = 0;      
+      // Pointer to new object
+      void* pobject = (void *) 0;
 
-         // We look for the "delete operator" ifunc in the current class and in its bases
-         G__ifunc_table_internal *del_oper = G__get_methodhandle4("operator delete[]", &para_del, ifunc, &pifn, &poffset,0,1,0,0);
+      /* ---------------------- */
+      /*  NEW Operator calling  */
+      /* ---------------------- */
 
-        if ((gvp == G__PVOID) || (gvp == 0)) {
-          // 27-07-07
-          // This means we have to delete this object from the heap
-          // (calling both delete and destructor)
-                 
+      // We need to check if the new operator has been overidden by any class in the hierarchy
+      // Here the new parameters
+      G__param para_new;
 
-           // as the first step we call the destructor for the objects
-           for(int idx = 0; idx < n; idx++){
-#ifdef __x86_64__
-              G__stub_method_asm_x86_64(ifunc, ifn, gtagnum, ((void*)((long)soff + (idx*osize))), libp, result7);     
-#else      
-              G__stub_method_asm(ifunc, ifn, gtagnum, ((void*)((long)soff + (idx*osize))), libp, result7);
-#endif 
-           }
-        
-          // is the delete operator overriden?
-          if (!del_oper) { // No, it's not
-            // We use the default delete operator
-            operator delete[]((void*) soff);
-          }
-          else{ // Yes, we have a nice overriden operator delete and we have its symbol yhea c'mon. Hack me baby!
+      // index in the ifunc
+      long pifn;
+      long poffset;
 
-             G__letint(&para_del.para[0],(int) 'Y', (long) soff);
+      // Constructor arity => Number of objects to initialize. Objects array?
+      // Constructor Arity. Array Constructor? Single Constructor?
+      int arity = G__getaryconstruct();
 
-             op_return.type = 'Y';
+      // Space to allocate
+      long allocatedsize;
+      if (arity)
+         allocatedsize = ((long) osize)*arity;
+      else
+         allocatedsize = (long) osize;
+    
+      // New Operator ifunc entry
+      G__ifunc_table_internal * new_oper;
 
-#ifdef __x86_64__
-              G__stub_method_asm_x86_64(del_oper, pifn, gtagnum, 0, &para_del, &op_return);
-#else      
-              G__stub_method_asm(del_oper, pifn, gtagnum, 0, &para_del, &op_return);
-#endif
-          }
-        }
-        else {
-          // this means we are trying to delete a sub-object.. which
-          // means we dont want to free its memory... just call the destructor
+      // New operator has at least one parameter. The size of the allocated space
+      para_new.paran = 1;
 
-          // Now we have two parameters (placement delete).
-          G__setgvp(G__PVOID);
-          
-          G__letint(&para_del.para[0],(int) 'Y', (long) soff);
-          op_return.type = 'U';
+      para_new.para[0].typenum = 0;
+      para_new.para[0].type = 'h';
+      para_new.para[0].tagnum = 0;
 
-          for (int i = n - 1; i >= 0; --i){ 
-#ifdef __x86_64__
-              G__stub_method_asm_x86_64(del_oper, pifn, gtagnum, 0, &para_del, &op_return);
-#else      
-              G__stub_method_asm(del_oper, pifn, gtagnum, 0, &para_del, &op_return);
-#endif
-          }
-                    
-          G__setgvp(gvp);
-      }
+      G__letint(&para_new.para[0],(int) 'h', allocatedsize);
 
-    }
-    else { // Single destructor
-
-       // Single dest. has only a parameter. The size of the object
-       para_del.paran = 1;
-       para_del.para[0].typenum = 0;
-       para_del.para[0].type = 'Y';
-       para_del.para[0].tagnum = 0;
-
-       // We look for the "des operator" ifunc in the current class and in its bases
-       G__ifunc_table_internal *del_oper = G__get_methodhandle4("operator delete", &para_del, ifunc, &pifn, &poffset,0,1,0,0);
+      // Do we have already an address for the object?. Is the "this" pointer valid?
+      if ((gvp != G__PVOID) && (gvp != 0)) { // We have a valid space, so we will call the placement new
+     
+         // We already have a valid space for the object
+         // Now we have a second parameter (placement new). The first is the size of the object and the second one is the address.
+         para_new.paran = 2;
+     
+         // In this case we have a second parameter: The address for the allocated space.
+         para_new.para[1].typenum = 0;
+         para_new.para[1].type = 'Y';
+         para_new.para[1].tagnum = 0;
        
-       if ((gvp == G__PVOID) || (gvp == 0)) {
-          // as the first step we call the destructor for the objects
-          // for this to work this symbols has to be the in-charge
-          // non-deleting destructor
-
-#ifdef __x86_64__
-          G__stub_method_asm_x86_64(ifunc, ifn, gtagnum, (void*)((long)soff), libp, result7);
-#else      
-          G__stub_method_asm(ifunc, ifn, gtagnum, (void*)((long)soff), libp, result7);
-#endif
-
-          // is the des operator overriden?
-          if (!del_oper) { // No, it's not
-            operator delete((void*) soff);
-          }
-          else { // Yes, we have a nice overriden operator des.
-            
-             G__letint(&para_del.para[0],(int) 'Y', (long) soff);
-             op_return.type = 'U';
-
-#ifdef __x86_64__
-          G__stub_method_asm_x86_64(del_oper, pifn, gtagnum, 0, &para_del, &op_return);
-#else      
-          G__stub_method_asm(del_oper, pifn, gtagnum, 0, &para_del, &op_return);
-#endif
-          }
-        } 
-        else { // We already have a valid space for the object
-          G__setgvp(G__PVOID);
-
-           G__letint(&para_del.para[0],(int) 'Y', (long) soff);
-           op_return.type = 'U';
-
-           for (int i = n - 1; i >= 0; --i){ 
-#ifdef __x86_64__
-          G__stub_method_asm_x86_64(del_oper, pifn, gtagnum, 0, &para_del, &op_return);
-#else      
-          G__stub_method_asm(del_oper, pifn, gtagnum, 0, &para_del, &op_return);
-#endif
-           }
-
-           G__setgvp(gvp);
-        }
+         G__letint(&para_new.para[1],(int) 'Y', (long) gvp);
+               
       }
-      // destructors dont return anything
-      G__setnull(result7);
-    }
-    else{
-      // We dont have a this ptr if this is a static function
-      void* this_ptr = 0;
 
-      // Here get this pointer (to be passed to the asm call)
-      // BUT DO NOT do it if it's a static function
-      if ((gtagnum > -1) && (!ifunc->staticalloc[ifn]))
-        this_ptr = (void*) G__getstructoffset();
+      // We look for the "new operator" ifunc in the current class and in its bases
+      if (arity)
+         new_oper = G__get_methodhandle4("operator new[]", &para_new, ifunc, &pifn, &poffset, 0, 1,0,0);
+      else 
+         new_oper = G__get_methodhandle4("operator new", &para_new, ifunc, &pifn, &poffset, 0, 1,0,0);
 
-      // Return Structure
-      result7->type    = ifunc->type[ifn];
-      result7->tagnum  = ifunc->p_tagtable[ifn];
-      result7->typenum = ifunc->p_typetable[ifn];
-      result7->isconst = ifunc->isconst[ifn];
+      // is the new operator overriden?
+      if (!new_oper) { // No, it's not
+         // We use the default new operator
+         if ((gvp == G__PVOID) || (gvp == 0)){ // Valid space? Placement new?
 
-      // 08-08-07
-      // Now let's call our lower level asm function
+            // No valid space we have to request/allocate a new address
+            if (arity)
+               pobject = operator new[](osize*arity);
+            else 
+               pobject = operator new(osize);
+         }
+         else{ // We have an address already. placement New is executed
+            if (arity)
+               pobject = operator new[](osize*arity,(void*) gvp);
+            else 
+               pobject = operator new(osize,(void*) gvp);
+         }
+      }
+      else
+      { // Yes, we have a nice overriden operator new yeah c'mon!. Hack me baby! 
+           
+         op_return.type = 'U';
+           
 #ifdef __x86_64__
-      G__stub_method_asm_x86_64(ifunc, ifn, gtagnum, this_ptr, &rpara, result7);
+         G__stub_method_asm_x86_64(new_oper, pifn, gtagnum, 0, &para_new, &op_return);
 #else      
-      G__stub_method_asm(ifunc, ifn, gtagnum, this_ptr, &rpara, result7);
-#endif
-    }
-  }
+         G__stub_method_asm(new_oper, pifn, gtagnum, 0, &para_new, &op_return);
+#endif   
+         // Allocated Address
+         pobject = (void *) op_return.obj.i;
+      }
+  
+      if (!arity)
+         arity=1; // We have to execute the constructor only one time
+    
+      // 27-04-07
+      // The actual version of Cint has a limitation with
+      // the array constructor: it cant receive paramaters (or at least,
+      // it ignores them). Here I will try to pass the parameters of
+      // the constructors for every object (to handle something like
+      // string *str = new string[10]("strriiiinnnggg")   ).
 
-  G__store_struct_offset = store_struct_offset;
-  G__tagnum = store_tagnum;
-  return 0;
+      /* ------------------- */
+      /*  Constructor call   */
+      /* ------------------- */
+
+      /* n = constructor arity (see array constructor) */
+      for (int i=0;i<arity;i++){
+#ifdef __x86_64__
+         G__stub_method_asm_x86_64(ifunc, ifn, gtagnum, ((void*)((long)pobject + (i*osize))), &rpara, result7);
+#else      
+         G__stub_method_asm(ifunc, ifn, gtagnum, ((void*)((long)pobject + (i*osize))), &rpara, result7);
+#endif
+      }
+
+      result7->obj.i = (long) pobject;
+      // Object's Reference
+      result7->ref = (long) pobject;
+      // Object's Type
+      result7->type = 'u';
+
+   }
+   else{// Not Constructor
+      char * finalclass = 0;
+
+      // Let's try to find the final type if we have a virtual function
+      // tagnum cant be -1 here because a free standing function cant be
+      // virtual also.
+      if(ifunc->isvirtual[ifn] && G__getstructoffset()){
+         G__dyntype *dyntype = (G__dyntype *) G__getstructoffset();
+         const char *mangled = typeid(*dyntype).name();
+
+         // 08-08-07
+         // look for this mangled name in our hash_map 
+         // (speed things up, it could also be looked up in the cint structs)
+         int tagnum = -1;
+         __gnu_cxx::hash_map<const char*, int> *gmap = (__gnu_cxx::hash_map<const char*, int>*) G__get_struct_map();
+         __gnu_cxx::hash_map<const char*, int>::iterator  iter = gmap->find(mangled);
+         if (iter != gmap->end() ) {
+            tagnum = iter->second;
+         }
+
+         // if we dont find it in the map then we have to
+         // look for it in Cint and add it to the map
+         if(tagnum==-1) {
+            int status = 0;
+            finalclass = abi::__cxa_demangle(mangled, 0, 0, &status);
+            if (!finalclass) {
+               G__fprinterr(G__serr,"** error demangling typeid \n");
+            }
+            else {
+               // printf(" ** type id mangled   : %s \n", mangled);
+               // printf(" ** type id demangled : %s \n", finalclass);
+            }
+
+            // Before continuingwe check that the method is implemented in the
+            // the final class...
+            // consider:
+            //
+            // TH1F h1 = new TH1F()
+            // h1->Draw()
+            //
+            // when it gets here, the classname is TH1 because Draw()
+            // is implemented there, not in TH1F. That will confuse our
+            // basic implementation.
+
+            // The 3 as a parameter means we disble autoloading... this could be a problem in certain cases
+            // The case we have in mind is when we have:
+            // B inherits from A, B *b=new A AND the dict lib is separated from the normal
+            // lib. Only in such weird cases this might be a problem.
+            tagnum = G__defined_tagname(finalclass, 3);
+
+            // if we find it in cint then let's add it to the map
+            if(tagnum>=0)
+               gmap->insert(G__structmap_pair((mangled),tagnum));
+
+            // rem to free everything returned by abi::__cxa_demangle
+            if(finalclass)
+               free(finalclass);
+         }
+
+         // Axel said isbaseclass is not necessary
+         // 28-01-08
+         // This is a bit tricky because we can find the (illegal) case of a class
+         // that inherits from TObject but hasn't declared a ClassDef, in that case, CInt thinks
+         // that that class doesnt inherith from TObject... but if we don't do that then the 
+         // (also illegal) case of sibling casting won't be catched... which one is worse for us?
+         //if (tagnum>=0 && (G__isbaseclass(tagnum, gtagnum) || G__isbaseclass(gtagnum, tagnum))  /*tagnum!=gtagnum*/) {
+         if (tagnum>=0 && tagnum!=gtagnum) {
+            struct G__ifunc_table_internal *new_ifunc;
+            long poffset;
+            long pifn = ifn;
+
+            if(!(G__isbaseclass(tagnum, gtagnum) || G__isbaseclass(gtagnum, tagnum))){
+               G__fprinterr(G__serr,"Warning: static type is %s but dynamic type is %s. Are you casting two different objects? \n", 
+                            G__struct.name[gtagnum], G__struct.name[tagnum]);
+            }
+
+            new_ifunc = G__struct.memfunc[tagnum];
+            G__incsetup_memfunc(tagnum);
+
+            // 23-10-12
+            // We need a way to know that we need with an old dictionary
+            if(ifunc)
+               new_ifunc = G__ifunc_page_base(ifunc->funcname[ifn], ifunc->hash[ifn], ifunc->page_base, new_ifunc, ifn);
+
+            // 08-08-07
+            // in case of collisions do the whole matching
+            if(new_ifunc->page_base<0 ){
+               G__paramfunc *parfunc = ifunc->param[ifn].fparams;
+               struct G__param fpara;
+               fpara.paran=0;
+               fpara.para[0]=G__null;
+
+               while (parfunc) {
+                  if (parfunc->type) {
+                     fpara.para[fpara.paran].tagnum  = parfunc->p_tagtable;
+                     fpara.para[fpara.paran].obj.reftype.reftype = parfunc->reftype;
+                     fpara.para[fpara.paran].isconst = parfunc->isconst;
+                     fpara.para[fpara.paran].type    = parfunc->type;
+                     fpara.paran++;
+                  }
+                  parfunc = parfunc->next;
+               }
+               new_ifunc = G__struct.memfunc[tagnum];
+               new_ifunc = G__get_methodhandle4(ifunc->funcname[ifn], &fpara, new_ifunc, &pifn, &poffset, 1, 1, 0, 0);
+            }
+        
+            if(new_ifunc && (ifunc!=new_ifunc)){
+               // we have an animal that looks like a dog and we have
+               // to make him bark...
+               // i.e. we have a derived class casted as a base class
+               // and we have to execute the method of the derived class not
+               // the one from the base class
+               int intres;
+               int old_tag;
+               tagnum = new_ifunc->tagnum;
+               int offset = G__isanybase(gtagnum, tagnum, 0);
+
+               // 12/04/07
+               // How can I change the this ptr cleanly?
+               // hacking through it doesn't look like the best solution :/
+               if(offset > 0){
+                  G__store_struct_offset -= offset;
+               }
+
+               // Be careful....
+               old_tag = G__tagnum;
+               G__tagnum = tagnum;
+
+               if(G__get_funcptr(new_ifunc, ifn)&&G__wrappers)
+                  intres = G__stub_method_calling(result7, &rpara, new_ifunc, ifn); // Default params already evaluated
+               else
+                  intres = G__call_cppfunc(result7, &rpara, new_ifunc, ifn); // Default params already evaluated
+
+               G__tagnum = old_tag;
+               // change back the this pointer
+               if(offset != 0){
+                  G__store_struct_offset += offset;
+               }
+               return intres;
+            }
+         }
+         else if(tagnum==-1 && gtagnum!=tagnum){
+            G__fprinterr(G__serr,"Warning: CInt doesn't know about the class %s but it knows about %s (did you forget the ClassDef?)\n", finalclass, G__struct.name[gtagnum]);
+         }
+      }
+
+      // We are in serious trouble here...
+      // we are trying to execute a pure virtual function.
+      // This should never happen... all pure virtual functions
+      // should had been redirected in the last if
+      if(ifunc->ispurevirtual[ifn] && !G__get_funcptr(ifunc, ifn)) {
+         G__fprinterr(G__serr,"Fatal Error: Trying to execute pure virtual function %s", ifunc->funcname[ifn]);
+         return -1;
+      }
+
+      // Destructor? Method's Name == ~ClassName?
+      if (ifunc->funcname[ifn][0]=='~'){
+         long gvp = G__getgvp();
+         long soff = G__getstructoffset();
+         int arity = G__getaryconstruct();
+         G__param para_del;
+
+         int osize;
+         long pifn;
+         long poffset;
+         G__value otype;
+         otype.type   = 'u';
+         otype.tagnum = gtagnum;
+
+         osize = G__sizeof(&otype);
+         if (!soff) {
+            return(1);
+         }
+
+         if (!arity) 
+            arity = 1;
+
+         // delete operator ifunc pointer
+         G__ifunc_table_internal *del_oper;
+
+         // In the first step we call the destructor for the objects
+         for(int idx = 0; idx < arity; idx++){
+         
+            if ((gvp != G__PVOID) && (gvp != 0))
+               G__setgvp(G__PVOID);
+
+#ifdef __x86_64__
+            G__stub_method_asm_x86_64(ifunc, ifn, gtagnum, ((void*)((long)soff + (idx*osize))), libp, result7);     
+#else          
+            G__stub_method_asm(ifunc, ifn, gtagnum, ((void*)((long)soff + (idx*osize))), libp, result7);
+
+#endif      
+
+            if ((gvp != G__PVOID) && (gvp != 0))
+               G__setgvp(gvp);
+
+         }
+      
+         if ((gvp == G__PVOID) || (gvp == 0)) {
+
+            // 27-07-07  
+            // This means we have to delete this object from the heap
+            // (calling both delete and destructor)
+
+            para_del.paran = 1;
+            para_del.para[0].typenum = 0;
+            para_del.para[0].type = 'Y';
+            para_del.para[0].tagnum = 0;      
+      
+            // We look for the "delete operator" ifunc in the current class and in its bases
+            if (arity)
+               del_oper = G__get_methodhandle4("operator delete[]", &para_del, ifunc, &pifn, &poffset,0,1,0,0);
+            else 
+               del_oper = G__get_methodhandle4("operator delete", &para_del, ifunc, &pifn, &poffset,0,1,0,0);
+      
+            // Setting up parameter
+            G__letint(&para_del.para[0],(int) 'Y', (long) soff);
+      
+            // Return parameter
+            op_return.type = 'Y';
+                            
+            // is the delete operator overriden?
+            if (!del_oper) { // No, it's not
+               // We use the default delete operator
+               if (arity > 1)
+                  operator delete[]((void*) soff);
+               else 
+                  operator delete((void*) soff);
+            }
+            else{ // Yes, we have a nice overriden operator delete and we have its symbol yhea c'mon. Hack me baby!
+                     
+#ifdef __x86_64__
+               G__stub_method_asm_x86_64(del_oper, pifn, gtagnum, 0, &para_del, &op_return);
+#else       
+               G__stub_method_asm(del_oper, pifn, gtagnum, 0, &para_del, &op_return);
+#endif
+            }
+              
+         }
+         // destructors doesn't return anything
+         G__setnull(result7);
+      }
+      else{
+         // We dont have a this ptr if this is a static function
+         void* this_ptr = 0;
+
+         // Here get this pointer (to be passed to the asm call)
+         // BUT DO NOT do it if it's a static function
+         if ((gtagnum > -1) && (!ifunc->staticalloc[ifn]))
+            this_ptr = (void*) G__getstructoffset();
+
+         // Return Structure
+         result7->type    = ifunc->type[ifn];
+         result7->tagnum  = ifunc->p_tagtable[ifn];
+         result7->typenum = ifunc->p_typetable[ifn];
+         result7->isconst = ifunc->isconst[ifn];
+
+         // 08-08-07
+         // Now let's call our lower level asm function
+#ifdef __x86_64__
+         G__stub_method_asm_x86_64(ifunc, ifn, gtagnum, this_ptr, &rpara, result7);
+#else      
+         G__stub_method_asm(ifunc, ifn, gtagnum, this_ptr, &rpara, result7);
+#endif
+      }
+   }
+
+   G__store_struct_offset = store_struct_offset;
+   G__tagnum = store_tagnum;
+   return 0;
 }
 
 

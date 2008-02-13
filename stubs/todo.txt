@@ -392,6 +392,7 @@ DONE
 
 Axel: Humm. See my reasoning above why delaying the refactoring of copied code is bad.
 
+DONE
 -------------------------------------------------------------------------------
 #37 * v6_newlink.cxx: 2760ff: don't I know this code from somewhere
  already? Could you refactor it, please?
