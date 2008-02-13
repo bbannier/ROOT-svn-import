@@ -61,6 +61,8 @@
 #include "Varargs.h"
 #include "TQObject.h"
 #include "TQConnection.h"
+#include "THashList.h"
+#include "TPRegexp.h"
 #include "TROOT.h"
 #include "TClass.h"
 #include "TSystem.h"
@@ -88,104 +90,67 @@ ClassImpQ(TQObject)
 ClassImpQ(TQObjSender)
 ClassImpQ(TQClass)
 
-/////////////////// internal use static functions ///////////////////
-//______________________________________________________________________________
-static char *ResolveTypes(const char *method)
+////////////////////////////// internal functions //////////////////////////////
+namespace
 {
-   // Resolve any typedefs in the method signature. For example:
-   // func(Float_t,Int_t) becomes func(float,int).
-   // The returned string must be deleted by the user.
-
-   if (!method || !*method) return 0;
-
-   char *str = new char[strlen(method)+1];
-   if (str) strcpy(str, method);
-
-   TString res;
-
-   char *s = strtok(str, "(");
-   res = s;
-   res += "(";
-
-   Bool_t first = kTRUE;
-   while ((s = strtok(0, ",)"))) {
-      char *s1, s2 = 0;
-      if ((s1 = strchr(s, '*'))) {
-         *s1 = 0;
-         s2  = '*';
-      }
-      if (!s1 && (s1 = strchr(s, '&'))) {
-         *s1 = 0;
-         s2  = '&';
-      }
-      TDataType *dt = gROOT->GetType(s);
-      if (s1) *s1 = s2;
-      if (!first) res += ",";
-      if (dt) {
-         res += dt->GetFullTypeName();
-         if (s1) res += s1;
-      } else
-         res += s;
-      first = kFALSE;
-   }
-
-   res += ")";
-
-   delete [] str;
-   str = new char[res.Length()+1];
-   strcpy(str, res.Data());
-
-   return str;
-}
 
 //______________________________________________________________________________
-static char *CompressName(const char *method_name)
+TString CompressName(const char *method_name)
 {
    // Removes "const" words and blanks from full (with prototype)
-   // method name.
+   // method name and resolve any typedefs in the method signature.
    //
-   //  Example: CompressName(" Draw(const char *, const char *,
-   //                               Option_t * , Int_t , Int_t)")
-   //
-   // Returns the string "Draw(char*,char*,char*,int,int)"
-   // The returned string must be deleted by the user.
+   // Example: CompressName(" Draw(const char *, const char *,
+   //                              Option_t * , Int_t , Int_t)");
+   // returns the string "Draw(char*,char*,char*,int,int)".
 
-   if (!method_name || !*method_name) return 0;
+   static TPRegexp *constRe = 0, *wspaceRe = 0;
+   static TVirtualMutex *lock = 0;
 
-   char *str = new char[strlen(method_name)+1];
-   if (str) strcpy(str, method_name);
+   R__LOCKGUARD2(lock);
 
-   char *tmp = str;
-
-   // substitute "const" with white spaces
-   while ((tmp = strstr(tmp,"const"))) {
-      for (int i = 0; i < 5; i++) *(tmp+i) = ' ';
+   if (constRe == 0) {
+      constRe  = new TPRegexp("(?<=\\(|\\s|,|&|\\*)const(?=\\s|,|\\)|&|\\*)");
+      wspaceRe = new TPRegexp("\\s+");
    }
 
-   tmp = str;
-   char *s;
-   s = str;
+   TString res = method_name;
 
-   Bool_t quote = kFALSE;
-   while (*tmp) {
-      if (*tmp == '\"')
-         quote = quote ? kFALSE : kTRUE;
-      if (*tmp != ' ' || quote)
-         *s++ = *tmp;
-      tmp++;
+   constRe ->Substitute(res, "", "go");
+   wspaceRe->Substitute(res, "", "go");
+
+   TStringToken methargs(res, "\\(|\\)", kTRUE);
+
+   methargs.NextToken();
+   res = methargs;
+   res += "(";
+
+   methargs.NextToken();
+   TStringToken arg(methargs, ",");
+   while (arg.NextToken())
+   {
+      Int_t  pri = arg.Length() - 1;
+      Char_t prc = 0;
+      if (arg[pri] == '*' || arg[pri] == '&') {
+         prc = arg[pri];
+         arg.Remove(pri);
+      }
+      TDataType *dt = gROOT->GetType(arg.Data());
+      if (dt) {
+         res += dt->GetFullTypeName();
+      } else {
+         res += arg;
+      }
+      if (prc)          res += prc;
+      if (!arg.AtEnd()) res += ",";
    }
-   *s = '\0';
-
-   s = ResolveTypes(str);
-
-   delete [] str;
-
-   return s;
+   res += ")";
+   return res;
 }
 
 //______________________________________________________________________________
-static TMethod *GetMethodWithPrototype(TClass *cl, const char *method,
-                                       const char *proto, Int_t &nargs)
+TMethod *GetMethodWithPrototype(TClass *cl, const char *method,
+                                const char *proto, Int_t &nargs)
 {
    // Almost the same as TClass::GetMethodWithPrototype().
 
@@ -278,6 +243,10 @@ static TMethod *GetMethod(TClass *cl, const char *method, const char *params)
    }
    return 0;
 }
+
+}
+////////////////////////// end of internal functions ///////////////////////////
+
 
 //______________________________________________________________________________
 Int_t TQObject::CheckConnectArgs(TQObject *sender,
@@ -559,36 +528,26 @@ TList *TQObject::GetListOfClassSignals() const
 }
 
 //______________________________________________________________________________
-void TQObject::CollectClassSignals(TList& list, const char* signal, TClass* cls)
+void TQObject::CollectClassSignalLists(TList& list, TClass* cls)
 {
-   // Collect class signals matching compressed signal-signature
-   // 'signal' from class cls and all its base-classes.
+   // Collect class signal lists from class cls and all its
+   // base-classes.
    //
    // The recursive traversal is not performed for classes not
    // deriving from TQClass.
 
-   if (cls == 0) cls = IsA();
-
-   TQClass *qcl;
-   if ((qcl = dynamic_cast<TQClass*>(cls)))
+   TQClass *qcl = dynamic_cast<TQClass*>(cls);
+   if (qcl)
    {
-      // Find matching signal.
-      TIter             next_cl_list(qcl->fListOfSignals);
-      TQConnectionList *clist;
-      while ((clist = (TQConnectionList*)next_cl_list()))
-      {
-         if (!strcmp(signal, clist->GetName())) {
-            list.Add(clist);
-            break;
-         }
-      }
+      if (qcl->fListOfSignals)
+         list.Add(qcl->fListOfSignals);
 
       // Descend into base-classes.
       TIter       next_base_class(cls->GetListOfBases());
       TBaseClass *base;
       while ((base = (TBaseClass*) next_base_class()))
       {
-         CollectClassSignals(list, signal, base->GetClassPointer());
+         CollectClassSignalLists(list, base->GetClassPointer());
       }
    }
 }
@@ -601,13 +560,10 @@ void TQObject::HighPriority(const char *signal_name, const char *slot_name)
    //    the time for lookup.
    // 2. If slot_name != 0 => makes slot defined by the slot_name
    //    to be executed first when signal_name is emitted.
+   // Signal name is not compressed.
 
-   TQConnectionList *clist = 0;
-   TIter    next_list(fListOfSignals);
-   while ((clist = (TQConnectionList*)next_list())) {
-      if (!strcmp(signal_name,clist->GetName()))
-         break;
-   }
+   TQConnectionList *clist = (TQConnectionList*)
+      fListOfSignals->FindObject(signal_name);
 
    if (!clist)  return;      // not found
    if (!slot_name)  {        // update list of signal lists
@@ -615,13 +571,7 @@ void TQObject::HighPriority(const char *signal_name, const char *slot_name)
       fListOfSignals->AddFirst(clist);
       return;
    } else {                   // slot_name != 0 , update signal list
-      TQConnection *con = 0;
-      TIter next_con(clist);
-      while ((con = (TQConnection*)next_con())) {
-         if (!strcmp(slot_name,con->GetName()))
-            break;
-      }
-
+      TQConnection *con = (TQConnection*) clist->FindObject(slot_name);
       if (!con) return;       // not found
       clist->Remove(con);     // remove and add as first
       clist->AddFirst(con);
@@ -636,13 +586,10 @@ void TQObject::LowPriority(const char *signal_name, const char *slot_name)
    //    for lookup.
    // 2. If slot_name != 0 => makes slot defined by the slot_name
    //    to  be executed last when signal_name is emitted.
+   // Signal name is not compressed.
 
-   TQConnectionList *clist = 0;
-   TIter    next_list(fListOfSignals);
-   while ((clist = (TQConnectionList*)next_list())) {
-      if (!strcmp(signal_name,clist->GetName()))
-         break;
-   }
+   TQConnectionList *clist = (TQConnectionList*)
+      fListOfSignals->FindObject(signal_name);
 
    if (!clist)   return;
    if (!slot_name)  {
@@ -650,12 +597,7 @@ void TQObject::LowPriority(const char *signal_name, const char *slot_name)
       fListOfSignals->AddLast(clist);
       return;
    } else  {                  // slot_name != 0 , update signal list
-      TQConnection *con = 0;
-      TIter next_con(clist);
-      while ((con = (TQConnection*)next_con())) {
-         if (!strcmp(slot_name,con->GetName()))  break;
-      }
-
+      TQConnection *con = (TQConnection*) clist->FindObject(slot_name);
       if (!con) return;
       clist->Remove(con);     // remove and add as last
       clist->AddLast(con);
@@ -671,25 +613,16 @@ Bool_t TQObject::HasConnection(const char *signal_name) const
    if (!fListOfSignals)
       return kFALSE;
 
-   register TQConnectionList *clist  = 0;
-   char *signal = CompressName(signal_name);
+   TString signal = CompressName(signal_name);
 
-   // check object signals
-   TIter next_list(fListOfSignals);
-   while ((clist = (TQConnectionList*)next_list())) {
-      if (!strcmp(signal, clist->GetName())) {
-         delete [] signal;
-         return kTRUE;
-      }
-   }
-   delete [] signal;
-   return kFALSE;
+   return (fListOfSignals->FindObject(signal) != 0);
 }
 
 //______________________________________________________________________________
 Int_t TQObject::NumberOfSignals() const
 {
    // Return number of signals for this object.
+   // Only checks for object signals.
 
    if (fListOfSignals)
       return fListOfSignals->GetSize();
@@ -713,43 +646,32 @@ void TQObject::Emit(const char *signal_name)
    // Example:
    //          theButton->Emit("Clicked()");
 
-   if (!signal_name)
+   TList classSigLists;
+   CollectClassSignalLists(classSigLists, IsA());
+
+   if (classSigLists.IsEmpty() && !fListOfSignals)
       return;
 
    TString signal = CompressName(signal_name);
 
-   TList classSigs;
-   CollectClassSignals(classSigs, signal);
-
-   if (classSigs.IsEmpty() && !fListOfSignals)
-      return;
-
-   register TQConnectionList *clist  = 0;
    register TQConnection *connection = 0;
 
    // execute class signals
-   if (!classSigs.IsEmpty()) {
-      TIter nextcl_list(&classSigs);
-      while ((clist = (TQConnectionList*)nextcl_list())) {
-         TIter nextcl(clist);
-         while ((connection = (TQConnection*)nextcl())) {
-            gTQSender = GetSender();
-            connection->ExecuteMethod();
-         }
+   TList *sigList;
+   TIter  nextSigList(&classSigLists);
+   while ((sigList = (TList*) nextSigList()))
+   {
+      TIter nextcl((TQConnectionList*) sigList->FindObject(signal));
+      while ((connection = (TQConnection*)nextcl())) {
+         gTQSender = GetSender();
+         connection->ExecuteMethod();
       }
    }
    if (!fListOfSignals)
       return;
 
    // execute object signals
-   TIter next_list(fListOfSignals);
-   while ((clist = (TQConnectionList*)next_list())) {
-      if (!strcmp(signal,clist->GetName())) break;
-   }
-   if (!clist)
-      return;
-
-   TIter next(clist);
+   TIter next((TQConnectionList*) fListOfSignals->FindObject(signal));
    while (fListOfSignals && (connection = (TQConnection*)next())) {
       gTQSender = GetSender();
       connection->ExecuteMethod();
@@ -777,43 +699,32 @@ void TQObject::EmitVA(const char *signal_name, Int_t nargs, va_list ap)
    // Activate signal with variable argument list.
    // For internal use and for var arg EmitVA() in RQ_OBJECT.h.
 
-   if (!signal_name)
+   TList classSigLists;
+   CollectClassSignalLists(classSigLists, IsA());
+
+   if (classSigLists.IsEmpty() && !fListOfSignals)
       return;
 
    TString signal = CompressName(signal_name);
 
-   TList classSigs;
-   CollectClassSignals(classSigs, signal);
-
-   if (classSigs.IsEmpty() && !fListOfSignals)
-      return;
-
-   register TQConnectionList *clist  = 0;
    register TQConnection *connection = 0;
 
    // execute class signals
-   if (!classSigs.IsEmpty()) {
-      TIter nextcl_list(&classSigs);
-      while ((clist = (TQConnectionList*)nextcl_list())) {
-         TIter nextcl(clist);
-         while ((connection = (TQConnection*)nextcl())) {
-            gTQSender = GetSender();
-            connection->ExecuteMethod(nargs, ap);
-         }
+   TList *sigList;
+   TIter  nextSigList(&classSigLists);
+   while ((sigList = (TList*) nextSigList()))
+   {
+      TIter nextcl((TQConnectionList*) sigList->FindObject(signal));
+      while ((connection = (TQConnection*)nextcl())) {
+         gTQSender = GetSender();
+         connection->ExecuteMethod(nargs, ap);
       }
    }
    if (!fListOfSignals)
       return;
 
    // execute object signals
-   TIter next_list(fListOfSignals);
-   while ((clist = (TQConnectionList*)next_list())) {
-      if (!strcmp(signal,clist->GetName())) break;
-   }
-   if (!clist)
-      return;
-
-   TIter next(clist);
+   TIter next((TQConnectionList*) fListOfSignals->FindObject(signal));
    while (fListOfSignals && (connection = (TQConnection*)next())) {
       gTQSender = GetSender();
       connection->ExecuteMethod(nargs, ap);
@@ -827,43 +738,32 @@ void TQObject::Emit(const char *signal_name, Long_t param)
    // Example:
    //          theButton->Emit("Clicked(int)",id)
 
-   if (!signal_name)
+   TList classSigLists;
+   CollectClassSignalLists(classSigLists, IsA());
+
+   if (classSigLists.IsEmpty() && !fListOfSignals)
       return;
 
    TString signal = CompressName(signal_name);
 
-   TList classSigs;
-   CollectClassSignals(classSigs, signal);
-
-   if (classSigs.IsEmpty() && !fListOfSignals)
-      return;
-
-   register TQConnectionList *clist  = 0;
    register TQConnection *connection = 0;
 
    // execute class signals
-   if (!classSigs.IsEmpty()) {
-      TIter nextcl_list(&classSigs);
-      while ((clist = (TQConnectionList*)nextcl_list())) {
-         TIter nextcl(clist);
-         while ((connection = (TQConnection*)nextcl())) {
-            gTQSender = GetSender();
-            connection->ExecuteMethod(param);
-         }
+   TList *sigList;
+   TIter  nextSigList(&classSigLists);
+   while ((sigList = (TList*) nextSigList()))
+   {
+      TIter nextcl((TQConnectionList*) sigList->FindObject(signal));
+      while ((connection = (TQConnection*)nextcl())) {
+         gTQSender = GetSender();
+         connection->ExecuteMethod(param);
       }
    }
    if (!fListOfSignals)
       return;
 
    // execute object signals
-   TIter next_list(fListOfSignals);
-   while ((clist = (TQConnectionList*)next_list())) {
-      if (!strcmp(signal,clist->GetName())) break;
-   }
-   if (!clist)
-      return;
-
-   TIter next(clist);
+   TIter next((TQConnectionList*) fListOfSignals->FindObject(signal));
    while (fListOfSignals && (connection = (TQConnection*)next())) {
       gTQSender = GetSender();
       connection->ExecuteMethod(param);
@@ -877,43 +777,32 @@ void TQObject::Emit(const char *signal_name, Long64_t param)
    // Example:
    //          theButton->Emit("Progress(Long64_t)",processed)
 
-   if (!signal_name)
+   TList classSigLists;
+   CollectClassSignalLists(classSigLists, IsA());
+
+   if (classSigLists.IsEmpty() && !fListOfSignals)
       return;
 
    TString signal = CompressName(signal_name);
 
-   TList classSigs;
-   CollectClassSignals(classSigs, signal);
-
-   if (classSigs.IsEmpty() && !fListOfSignals)
-      return;
-
-   register TQConnectionList *clist  = 0;
    register TQConnection *connection = 0;
 
    // execute class signals
-   if (!classSigs.IsEmpty()) {
-      TIter nextcl_list(&classSigs);
-      while ((clist = (TQConnectionList*)nextcl_list())) {
-         TIter nextcl(clist);
-         while ((connection = (TQConnection*)nextcl())) {
-            gTQSender = GetSender();
-            connection->ExecuteMethod(param);
-         }
+   TList *sigList;
+   TIter  nextSigList(&classSigLists);
+   while ((sigList = (TList*) nextSigList()))
+   {
+      TIter nextcl((TQConnectionList*) sigList->FindObject(signal));
+      while ((connection = (TQConnection*)nextcl())) {
+         gTQSender = GetSender();
+         connection->ExecuteMethod(param);
       }
    }
    if (!fListOfSignals)
       return;
 
    // execute object signals
-   TIter next_list(fListOfSignals);
-   while ((clist = (TQConnectionList*)next_list())) {
-      if (!strcmp(signal,clist->GetName())) break;
-   }
-   if (!clist)
-      return;
-
-   TIter next(clist);
+   TIter next((TQConnectionList*) fListOfSignals->FindObject(signal));
    while (fListOfSignals && (connection = (TQConnection*)next())) {
       gTQSender = GetSender();
       connection->ExecuteMethod(param);
@@ -927,43 +816,32 @@ void TQObject::Emit(const char *signal_name, Double_t param)
    // Example:
    //          theButton->Emit("Scale(float)",factor)
 
-   if (!signal_name)
+   TList classSigLists;
+   CollectClassSignalLists(classSigLists, IsA());
+
+   if (classSigLists.IsEmpty() && !fListOfSignals)
       return;
 
    TString signal = CompressName(signal_name);
 
-   TList classSigs;
-   CollectClassSignals(classSigs, signal);
-
-   if (classSigs.IsEmpty() && !fListOfSignals)
-      return;
-
-   register TQConnectionList *clist  = 0;
    register TQConnection *connection = 0;
 
    // execute class signals
-   if (!classSigs.IsEmpty()) {
-      TIter nextcl_list(&classSigs);
-      while ((clist = (TQConnectionList*)nextcl_list())) {
-         TIter nextcl(clist);
-         while ((connection = (TQConnection*)nextcl())) {
-            gTQSender = GetSender();
-            connection->ExecuteMethod(param);
-         }
+   TList *sigList;
+   TIter  nextSigList(&classSigLists);
+   while ((sigList = (TList*) nextSigList()))
+   {
+      TIter nextcl((TQConnectionList*) sigList->FindObject(signal));
+      while ((connection = (TQConnection*)nextcl())) {
+         gTQSender = GetSender();
+         connection->ExecuteMethod(param);
       }
    }
    if (!fListOfSignals)
       return;
 
    // execute object signals
-   TIter next_list(fListOfSignals);
-   while ((clist = (TQConnectionList*)next_list())) {
-      if (!strcmp(signal,clist->GetName())) break;
-   }
-   if (!clist)
-      return;
-
-   TIter next(clist);
+   TIter next((TQConnectionList*) fListOfSignals->FindObject(signal));
    while (fListOfSignals && (connection = (TQConnection*)next())) {
       gTQSender = GetSender();
       connection->ExecuteMethod(param);
@@ -977,43 +855,32 @@ void TQObject::Emit(const char *signal_name, const char *params)
    // Example:
    //          myObject->Emit("Error(char*)","Fatal error");
 
-   if (!signal_name)
+   TList classSigLists;
+   CollectClassSignalLists(classSigLists, IsA());
+
+   if (classSigLists.IsEmpty() && !fListOfSignals)
       return;
 
    TString signal = CompressName(signal_name);
 
-   TList classSigs;
-   CollectClassSignals(classSigs, signal);
-
-   if (classSigs.IsEmpty() && !fListOfSignals)
-      return;
-
-   register TQConnectionList *clist  = 0;
    register TQConnection *connection = 0;
 
    // execute class signals
-   if (!classSigs.IsEmpty()) {
-      TIter nextcl_list(&classSigs);
-      while ((clist = (TQConnectionList*)nextcl_list())) {
-         TIter nextcl(clist);
-         while ((connection = (TQConnection*)nextcl())) {
-            gTQSender = GetSender();
-            connection->ExecuteMethod(params);
-         }
+   TList *sigList;
+   TIter  nextSigList(&classSigLists);
+   while ((sigList = (TList*) nextSigList()))
+   {
+      TIter nextcl((TQConnectionList*) sigList->FindObject(signal));
+      while ((connection = (TQConnection*)nextcl())) {
+         gTQSender = GetSender();
+         connection->ExecuteMethod(params);
       }
    }
    if (!fListOfSignals)
       return;
 
    // execute object signals
-   TIter next_list(fListOfSignals);
-   while ((clist = (TQConnectionList*)next_list())) {
-      if (!strcmp(signal,clist->GetName())) break;
-   }
-   if (!clist)
-      return;
-
-   TIter next(clist);
+   TIter next((TQConnectionList*) fListOfSignals->FindObject(signal));
    while (fListOfSignals && (connection = (TQConnection*)next())) {
       gTQSender = GetSender();
       connection->ExecuteMethod(params);
@@ -1039,42 +906,34 @@ void TQObject::Emit(const char *signal_name, Long_t *paramArr)
    //
    //    processor->Emit("Evaluated(Float_t,Float_t)",args);
 
-   if (!signal_name)
+   TList classSigLists;
+   CollectClassSignalLists(classSigLists, IsA());
+
+   if (classSigLists.IsEmpty() && !fListOfSignals)
       return;
 
    TString signal = CompressName(signal_name);
-
-   TList classSigs;
-   CollectClassSignals(classSigs, signal);
-
-   if (classSigs.IsEmpty() && !fListOfSignals)
-      return;
 
    register TQConnectionList *clist  = 0;
    register TQConnection *connection = 0;
 
    // execute class signals
-   if (!classSigs.IsEmpty()) {
-      TIter nextcl_list(&classSigs);
-      while ((clist = (TQConnectionList*)nextcl_list())) {
-         TIter nextcl(clist);
-         while ((connection = (TQConnection*)nextcl())) {
-            gTQSender = GetSender();
-            connection->ExecuteMethod(paramArr, clist->GetNargs());
-         }
+   TList *sigList;
+   TIter  nextSigList(&classSigLists);
+   while ((sigList = (TList*) nextSigList()))
+   {
+      clist = (TQConnectionList*) sigList->FindObject(signal);
+      TIter nextcl(clist);
+      while ((connection = (TQConnection*)nextcl())) {
+         gTQSender = GetSender();
+         connection->ExecuteMethod(paramArr, clist->GetNargs());
       }
    }
    if (!fListOfSignals)
       return;
 
    // execute object signals
-   TIter next_list(fListOfSignals);
-   while ((clist = (TQConnectionList*)next_list())) {
-      if (!strcmp(signal,clist->GetName())) break;
-   }
-   if (!clist)
-      return;
-
+   clist = (TQConnectionList*) fListOfSignals->FindObject(signal);
    TIter next(clist);
    while (fListOfSignals && (connection = (TQConnection*)next())) {
       gTQSender = GetSender();
@@ -1097,8 +956,8 @@ Bool_t TQObject::ConnectToClass(TQObject *sender,
       return kFALSE;
 
    // remove "const" and strip blanks
-   char *signal_name = CompressName(signal);
-   char *slot_name   = CompressName(slot);
+   TString signal_name = CompressName(signal);
+   TString slot_name   = CompressName(slot);
 
    // check consitency of signal/slot methods/args
    Int_t nsigargs;
@@ -1106,14 +965,10 @@ Bool_t TQObject::ConnectToClass(TQObject *sender,
       return kFALSE;
 
    if (!sender->fListOfSignals)
-      sender->fListOfSignals = new TList();
+      sender->fListOfSignals = new THashList();
 
-   TQConnectionList *clist=0;
-   TIter next_list(sender->fListOfSignals);
-
-   while ((clist = (TQConnectionList*)next_list())) {
-      if (!strcmp(signal_name,clist->GetName())) break;
-   }
+   TQConnectionList *clist = (TQConnectionList*)
+      sender->fListOfSignals->FindObject(signal_name);
 
    if (!clist) {
       clist = new TQConnectionList(signal_name, nsigargs);
@@ -1138,10 +993,6 @@ Bool_t TQObject::ConnectToClass(TQObject *sender,
       sender->Connected(signal_name);
    }
 
-   // cleaning
-   if (signal_name) { delete [] signal_name; signal_name = 0; }
-   if (slot_name) { delete [] slot_name; slot_name = 0; }
-
    return kTRUE;
 }
 
@@ -1163,23 +1014,18 @@ Bool_t TQObject::ConnectToClass(const char *class_name,
       return kFALSE;
 
    TList *slist = ((TQClass*)sender)->fListOfSignals;
-   char *signal_name = CompressName(signal);
-   char *slot_name   = CompressName(slot);
+   TString signal_name = CompressName(signal);
+   TString slot_name   = CompressName(slot);
 
    // check consitency of signal/slot methods/args
    Int_t nsigargs;
    if ((nsigargs = CheckConnectArgs(0, sender, signal_name, cl, slot_name)) == -1)
       return kFALSE;
 
-   TQConnectionList *clist = 0;
-
    if (!slist)
-      ((TQClass*)sender)->fListOfSignals = slist = new TList();
+      ((TQClass*)sender)->fListOfSignals = slist = new THashList();
 
-   TIter next_list(slist);
-   while ((clist = (TQConnectionList*)next_list())) {
-      if (!strcmp(signal_name,clist->GetName())) break;
-   }
+   TQConnectionList *clist = (TQConnectionList*) slist->FindObject(signal_name);
 
    if (!clist) {
       clist = new TQConnectionList(signal_name, nsigargs);
@@ -1203,10 +1049,6 @@ Bool_t TQObject::ConnectToClass(const char *class_name,
       if (!connection->FindObject(clist)) connection->Add(clist);
       ((TQClass*)sender)->Connected(signal_name);
    }
-
-   // cleaning
-   if (signal_name)  { delete [] signal_name; signal_name = 0; }
-   if (slot_name) { delete [] slot_name; slot_name = 0; }
 
    return kTRUE;
 }
@@ -1260,22 +1102,18 @@ Bool_t TQObject::Connect(TQObject *sender,
       return kFALSE;
 
    // remove "const" and strip blanks
-   char *signal_name = CompressName(signal);
-   char *slot_name   = CompressName(slot);
+   TString signal_name = CompressName(signal);
+   TString slot_name   = CompressName(slot);
 
    // check consitency of signal/slot methods/args
    Int_t nsigargs;
    if ((nsigargs = CheckConnectArgs(sender, sender->IsA(), signal_name, 0, slot_name)) == -1)
       return kFALSE;
 
-   if (!sender->fListOfSignals) sender->fListOfSignals = new TList();
+   if (!sender->fListOfSignals) sender->fListOfSignals = new THashList();
 
-   TQConnectionList *clist = 0;
-   TIter next_list(sender->fListOfSignals);
-
-   while ((clist = (TQConnectionList*)next_list())) {
-      if (!strcmp(signal_name,clist->GetName())) break;
-   }
+   TQConnectionList *clist = (TQConnectionList*)
+      sender->fListOfSignals->FindObject(signal_name);
 
    if (!clist) {
       clist = new TQConnectionList(signal_name, nsigargs);
@@ -1299,10 +1137,6 @@ Bool_t TQObject::Connect(TQObject *sender,
       if (!connection->FindObject(clist)) connection->Add(clist);
       sender->Connected(signal_name);
    }
-
-   // cleaning
-   if (signal_name) { delete [] signal_name; signal_name = 0; }
-   if (slot_name) { delete [] slot_name; slot_name = 0; }
 
    return kTRUE;
 }
@@ -1361,25 +1195,20 @@ Bool_t TQObject::Connect(const char *class_name,
 
    TList *slist = ((TQClass*)sender)->fListOfSignals;
 
-   char *signal_name = CompressName(signal);
-   char *slot_name   = CompressName(slot);
+   TString signal_name = CompressName(signal);
+   TString slot_name   = CompressName(slot);
 
    // check consitency of signal/slot methods/args
    Int_t nsigargs;
    if ((nsigargs = CheckConnectArgs(0, sender, signal_name, 0, slot_name)) == -1)
       return kFALSE;
 
-   TQConnectionList *clist = 0;
-
    if (!slist) {
-      slist = ((TQClass*)sender)->fListOfSignals = new TList();
+      slist = ((TQClass*)sender)->fListOfSignals = new THashList();
    }
 
-   TIter next_list(slist);
-
-   while ((clist = (TQConnectionList*)next_list()))  {
-      if (!strcmp(signal_name,clist->GetName())) break;
-   }
+   TQConnectionList *clist = (TQConnectionList*)
+      slist->FindObject(signal_name);
 
    if (!clist) {
       clist = new TQConnectionList(signal_name, nsigargs);
@@ -1404,10 +1233,6 @@ Bool_t TQObject::Connect(const char *class_name,
       ((TQClass*)sender)->Connected(signal_name);
    }
 
-   // cleaning
-   if (signal_name)  { delete [] signal_name; signal_name = 0; }
-   if (slot_name) { delete [] slot_name; slot_name = 0; }
-
    return kTRUE;
 }
 
@@ -1427,8 +1252,8 @@ Bool_t TQObject::Connect(const char *signal,
    // interpreted class. See also RQ_OBJECT.h.
 
    // remove "const" and strip blanks
-   char *signal_name = CompressName(signal);
-   char *slot_name   = CompressName(slot);
+   TString signal_name = CompressName(signal);
+   TString slot_name   = CompressName(slot);
 
    // check consitency of signal/slot methods/args
    TClass *cl = 0;
@@ -1438,14 +1263,10 @@ Bool_t TQObject::Connect(const char *signal,
    if ((nsigargs = CheckConnectArgs(this, IsA(), signal_name, cl, slot_name)) == -1)
       return kFALSE;
 
-   if (!fListOfSignals) fListOfSignals = new TList();
+   if (!fListOfSignals) fListOfSignals = new THashList();
 
-   TQConnectionList *clist = 0;
-   TIter next_list(fListOfSignals);
-
-   while ((clist = (TQConnectionList*)next_list())) {
-      if (!strcmp(signal_name,clist->GetName())) break;
-   }
+   TQConnectionList *clist = (TQConnectionList*)
+      fListOfSignals->FindObject(signal_name);
 
    if (!clist) {
       clist = new TQConnectionList(signal_name, nsigargs);
@@ -1469,10 +1290,6 @@ Bool_t TQObject::Connect(const char *signal,
       if (!connection->FindObject(clist)) connection->Add(clist);
       Connected(signal_name);
    }
-
-   // cleaning
-   if (signal_name) { delete [] signal_name; signal_name = 0; }
-   if (slot_name) { delete [] slot_name; slot_name = 0; }
 
    return kTRUE;
 }
@@ -1524,8 +1341,8 @@ Bool_t TQObject::Disconnect(TQObject *sender,
 
    if (!sender->GetListOfSignals()) return kFALSE;
 
-   char *signal_name = CompressName(signal);
-   char *slot_name   = CompressName(slot);
+   TString signal_name = CompressName(signal);
+   TString slot_name   = CompressName(slot);
 
    TQConnectionList *slist = 0;
    TIter next_signal(sender->GetListOfSignals());
@@ -1554,10 +1371,6 @@ Bool_t TQObject::Disconnect(TQObject *sender,
    if (sender->GetListOfSignals() && sender->GetListOfSignals()->IsEmpty()) {
       SafeDelete(sender->fListOfSignals);
    }
-
-   // cleaning
-   if (signal_name) { delete [] signal_name; signal_name = 0; }
-   if (slot_name) { delete [] slot_name; slot_name = 0; }
 
    return return_value;
 }

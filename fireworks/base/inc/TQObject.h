@@ -85,7 +85,7 @@ public:
    TList   *GetListOfSignals() const { return fListOfSignals; }
    TList   *GetListOfConnections() const { return fListOfConnections; }
 
-   void  CollectClassSignals(TList& list, const char* signal, TClass* cls=0);
+   void  CollectClassSignalLists(TList& list, TClass* cls);
 
    void  EmitVA(const char *signal, Int_t nargs, ...);
    void  EmitVA(const char *signal, Int_t nargs, va_list va);
