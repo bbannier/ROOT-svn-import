@@ -138,9 +138,6 @@ $ROOTCINT $MODE $FILENAME -c --symbols-file ${FILENAME%.*}".nm" -. 3 $ROOTCINTAR
 #rm ${FILENAME%.*}"Tmp1".*
 #rm ${FILENAME%.*}"Tmp2".*
 
-# Final Dictionary Generation
-#utils/src/rootcint_tmp -cint $FILENAME --symbols-file ${FILENAME%.*}".nm"  -. 4 $ROOTCINTARGS
-
 # We don't need the symbols file anymore
 #rm ${FILENAME%.*}.nm
 
