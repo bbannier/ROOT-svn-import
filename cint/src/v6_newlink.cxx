@@ -60,8 +60,20 @@ void* G__get_struct_map()
 #include "windows.h"
 #include <errno.h>
 extern "C"
-
 extern const char *G__libname;
+
+extern "C"
+void G__enable_wrappers(int set) {
+   // enable wrappers
+   G__wrappers = 1;
+}
+
+extern "C"
+int G__wrappers_enabled() {
+   // whether wrappers are enabled
+   return G__wrappers;
+}
+
 
 FILE *FOpenAndSleep(const char *filename, const char *mode) {
    int tries=0;
