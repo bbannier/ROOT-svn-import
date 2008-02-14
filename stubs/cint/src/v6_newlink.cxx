@@ -5389,7 +5389,9 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
 
               // If there is no symbol and this is the second dictionary
               // generate the inline code
-              if(!ifunc->ispurevirtual[j] && G__dicttype==kFunctionSymbols){
+
+              // 14-02-08 When ifunc->funcptr[j]==(void*)-2 we have to force the creation of the stub
+              if(!ifunc->ispurevirtual[j] && G__dicttype==kFunctionSymbols && ifunc->funcptr[j]!=(void*)-2){
                 if (G__is_tagnum_safe(i)) {
                   if(G__struct.isabstract[ifunc->tagnum]) {
                     G__cppif_geninline(fp, ifunc, i, j);
@@ -5413,8 +5415,9 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
 
               // The ifunc->funcptr[j]==(void*)-1 means that they were generated automatically,
               // if that is the case and we are writing the final dictionary (kCompleteDictionary),
-              // we can't write the stubs for the operator=
-              if(/*!(ifunc->funcptr[j]==(void*)-1) &&*/ (!ifunc->mangled_name[j] || !G__nostubs)){
+              // we can't write the stubs for the operator=.
+              // 14-02-08 When ifunc->funcptr[j]==(void*)-2 we have to force the creation of the stub
+              if((ifunc->funcptr[j]==(void*)-2) || !ifunc->mangled_name[j] || !G__nostubs){
                 if(!ifunc->ispurevirtual[j] && G__dicttype==kNoWrappersDictionary){
                   // Now we have no symbol but we are in the third or fourth
                   // dictionary... which means that the second one already tried to create it...
@@ -5538,7 +5541,7 @@ void G__cppif_func(FILE *fp, FILE *hfp)
         // Generate the stubs only for operators
         // (when talking about global functions)
         // 11-07-07
-        if(  G__dicttype==kCompleteDictionary || G__dicttype==kNoWrappersDictionary) {
+        if(G__dicttype==kCompleteDictionary || G__dicttype==kNoWrappersDictionary) {
           // The stubs where generated for functions needing temporal objects too... use them
           if  ( !ifunc->mangled_name[j] ||
                 // 26-10-07
@@ -5549,7 +5552,9 @@ void G__cppif_func(FILE *fp, FILE *hfp)
             G__cppif_genfunc(fp,hfp,-1,j,ifunc);
         }
         else {
-          if (!ifunc->mangled_name[j])
+          // we can't write the stubs for the operator=.
+          // 14-02-08 When ifunc->funcptr[j]==(void*)-2 we have to force the creation of the stub
+          if (!ifunc->mangled_name[j] && ifunc->funcptr[j]!=(void*)-2)
             G__cppif_geninline(fp, ifunc, -1, j);
         }
       } /* if(access) */
@@ -11686,7 +11691,7 @@ void G__specify_link(int link_stub)
         else if (*iOpt == "nostreamer") rfNoStreamer = 1;
         else if (*iOpt == "noinputoper") rfNoInputOper = 1;
         else if (*iOpt == "evolution") rfUseBytecount = 1;
-        else if (*iOpt == "stubs") rfUseStubs = 1;
+        else if (*iOpt == "stub") rfUseStubs = 1;
         else {
            G__printlinenum();
            G__fprinterr(G__serr,"Warning: ignoring unknown #pragma link option=%s\n", iOpt->c_str());
@@ -11945,6 +11950,7 @@ void G__specify_link(int link_stub)
       p=strrchr(param,')');
       *p='\0';
       G__SetGlobalcomp(funcname,param,globalcomp);
+      if(rfUseStubs) G__SetForceStub(funcname,param);
       ++done;
       return;
     }
@@ -11997,6 +12003,7 @@ void G__specify_link(int link_stub)
                          ,"G__CINT_",8)!=0)
              ){
             ifunc->globalcomp[i] = globalcomp;
+            if(rfUseStubs) ifunc->funcptr[i]=(void*)-2;
             ++done;
           }
         }
@@ -12019,6 +12026,7 @@ void G__specify_link(int link_stub)
                          ,"G__CINT_",8)!=0)
              ){
             ifunc->globalcomp[i] = globalcomp;
+            if(rfUseStubs) ifunc->funcptr[i]=(void*)-2;
             ++done;
           }
         }
@@ -12039,6 +12047,7 @@ void G__specify_link(int link_stub)
                          ,"G__CINT_",8)!=0)
              ) {
             ifunc->globalcomp[i] = globalcomp;
+            if(rfUseStubs) ifunc->funcptr[i]=(void*)-2;
             ++done;
             /*G__fprinterr(G__serr,"#pragma link changed %s\n",ifunc->funcname[i]);*/
           }
@@ -12058,6 +12067,7 @@ void G__specify_link(int link_stub)
                          ,"G__CINT_",8)!=0)
              ) {
             ifunc->globalcomp[i] = globalcomp;
+            if(rfUseStubs) ifunc->funcptr[i]=(void*)-2;
             ++done;
           }
         }
@@ -12075,6 +12085,7 @@ void G__specify_link(int link_stub)
       funclist=G__add_templatefunc(buf,&fpara,hash,funclist,x_ifunc,0);
       if(funclist) {
         funclist->ifunc->globalcomp[funclist->ifn] = globalcomp;
+        if(rfUseStubs) funclist->ifunc->funcptr[i]=(void*)-2;
         G__funclist_delete(funclist);
         ++done;
       }

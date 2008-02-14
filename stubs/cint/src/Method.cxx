@@ -380,6 +380,15 @@ void Cint::G__MethodInfo::SetGlobalcomp(int globalcomp)
   }
 }
 ///////////////////////////////////////////////////////////////////////////
+void Cint::G__MethodInfo::SetForceStub()
+{
+  if(IsValid()) {
+    struct G__ifunc_table_internal *ifunc;
+    ifunc = G__get_ifunc_internal((struct G__ifunc_table*)handle);
+    ifunc->funcptr[index]=(void*)-2;
+  }
+}
+///////////////////////////////////////////////////////////////////////////
 int Cint::G__MethodInfo::IsValid()
 {
   if(handle) {
@@ -672,6 +681,56 @@ int Cint::G__SetGlobalcomp(char *funcname,char *param,int globalcomp)
 
   if(method.IsValid()) {
     method.SetGlobalcomp(globalcomp);
+    return(0);
+  }
+  else {
+    G__fprinterr(G__serr,"Warning: #pragma link, function %s(%s) not found"
+	    ,fname,param);
+    G__printlinenum();
+    return(1);
+  }
+}
+///////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////
+// Global function to force the creation of the stub when using G__NOSTUBS
+///////////////////////////////////////////////////////////////////////////
+int Cint::G__SetForceStub(char *funcname,char *param)
+{
+  G__ClassInfo globalscope;
+  G__MethodInfo method;
+  long dummy=0;
+  char classname[G__LONGLINE];
+
+  // Actually find the last :: to get the full classname, including
+  // namespace and/or containing classes.
+  strcpy(classname,funcname);
+  char *fname = 0;
+  char * tmp = classname;
+  while ( (tmp = strstr(tmp,"::")) ) {
+    fname = tmp;
+    tmp += 2;
+  }
+  if(fname) {
+    *fname=0;
+    fname+=2;
+    globalscope.Init(classname);
+  }
+  else {
+    fname = funcname;
+  }
+
+  if(strcmp(fname,"*")==0) {
+    method.Init(globalscope);
+    while(method.Next()) {
+      method.SetForceStub();
+    }
+    return(0);
+  }
+  method=globalscope.GetMethod(fname,param,&dummy);
+
+  if(method.IsValid()) {
+    method.SetForceStub();
     return(0);
   }
   else {

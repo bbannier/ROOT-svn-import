@@ -90,6 +90,7 @@ void G__InitGetSpecialValue(G__pMethodSpecialValue pmethod);
 G__EXPORT
 #endif
 int G__SetGlobalcomp(char *funcname,char *param,int globalcomp); // Method.cxx
+int G__SetForceStub(char *funcname,char *param); // Method.cxx
 
 #ifndef __CINT__
 G__EXPORT
