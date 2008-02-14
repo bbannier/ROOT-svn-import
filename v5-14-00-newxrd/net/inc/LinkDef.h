@@ -45,5 +45,6 @@
 #pragma link C++ class TGridCollection+;
 #pragma link C++ class TSecContext;
 #pragma link C++ class TSecContextCleanup;
+#pragma link C++ class TFileStager;
 
 #endif

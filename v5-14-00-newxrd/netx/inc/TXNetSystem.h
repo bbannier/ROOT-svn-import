@@ -33,15 +33,34 @@
 #include "Rtypes.h"
 #endif
 
+#ifndef ROOT_TString
+#include "TString.h"
+#endif
+
+#ifndef OLDXRDLOCATE
+#ifndef ROOT_THashList
+#include "THashList.h"
+#endif
+#endif
+
 #include "XrdOuc/XrdOucString.hh"
 #include "XrdClient/XrdClientVector.hh"
 
 class XrdClientAdmin;
+class TCollection;
 class TXNetSystemConnectGuard;
 
 typedef XrdClientVector<XrdOucString> vecString;
 typedef XrdClientVector<bool>         vecBool;
 
+#ifndef OLDXRDLOCATE
+class TXrdClientAdminWrapper : public TNamed {
+public:
+   TXrdClientAdminWrapper(const char *key, XrdClientAdmin *ca) : TNamed(key,""), fXCA(ca) { }
+   virtual ~TXrdClientAdminWrapper();
+   XrdClientAdmin *fXCA;
+};
+#endif
 
 class TXNetSystem : public TNetSystem {
 
@@ -54,6 +73,7 @@ private:
    void           *fDirp;         // Directory pointer
    vecString       fDirList;      // Buffer for directory content
    Bool_t          fDirListValid; // fDirList content valid ?
+   TString         fDirEntry;     // Last dir entry 
    TString         fUrl;          // Initial url
 
    static Bool_t   fgInitDone;    // Avoid initializing more than once
@@ -62,21 +82,35 @@ private:
    XrdClientAdmin *Connect(const char *url); // Connect to server
    void           *GetDirPtr() const { return fDirp; }
    void            InitXrdClient();
-   void            SaveEndPointUrl();
+
+#ifndef OLDXRDLOCATE
+   static THashList fgAddrFQDN;   // Cross-table address<->FQDN
+   static THashList fgAdminHash;  // List of existing XrdClientAdmin
+   static XrdClientAdmin *GetClientAdmin(const char *url);
+   static TString GetKey(const char *url);
+#endif
 
 public:
    TXNetSystem(Bool_t owner = kTRUE);
    TXNetSystem(const char *url, Bool_t owner = kTRUE);
-   virtual ~TXNetSystem();
+   virtual ~TXNetSystem() { }
 
    Bool_t              AccessPathName(const char *path, EAccessMode mode);
    virtual Bool_t      ConsistentWith(const char *path, void *dirptr);
    virtual void        FreeDirectory(void *dirp);
    virtual const char *GetDirEntry(void *dirp);
    virtual Int_t       GetPathInfo(const char* path, FileStat_t &buf);
+   virtual Int_t       Locate(const char* path, TString &endurl);
    virtual Int_t       MakeDirectory(const char* dir);
    virtual void       *OpenDirectory(const char* dir);
    virtual int         Unlink(const char *path);
+
+   // TXNetSystem specific
+   Bool_t              GetPathsInfo(const char *paths, UChar_t *info);
+   Bool_t              IsOnline(const char *path);
+   Bool_t              Prepare(const char *path, UChar_t opt = 8, UChar_t prio = 0);
+   Int_t               Prepare(TCollection *paths,
+                               UChar_t opt = 8, UChar_t prio = 0, TString *buf = 0);
 
    ClassDef(TXNetSystem,0)   // System management class for xrootd servers
 };
@@ -97,6 +131,7 @@ public:
 
    XrdClientAdmin *ClientAdmin() const { return fClientAdmin; }
 
+   void NotifyLastError();
 };
 
 #endif

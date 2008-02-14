@@ -24,10 +24,12 @@ NETXO        := $(NETXS:.cxx=.o)
 NETXDEP      := $(NETXO:.o=.d) $(NETXDO:.o=.d)
 
 NETXLIB      := $(LPATH)/libNetx.$(SOEXT)
+NETXMAP      := $(NETXLIB:.$(SOEXT)=.rootmap)
 
 # used in the main Makefile
 ALLHDRS      += $(patsubst $(MODDIRI)/%.h,include/%.h,$(NETXH))
 ALLLIBS      += $(NETXLIB)
+ALLMAPS      += $(NETXMAP)
 
 # include all dependency files
 INCLUDEFILES += $(NETXDEP)
@@ -42,6 +44,7 @@ ifeq ($(wildcard $(XROOTDDIRI)/*.hh),)
 XROOTDDIRI   := $(XROOTDDIR)/src
 endif
 XROOTDDIRL   := $(XROOTDDIR)/lib
+XROOTDDIRP   := $(XROOTDDIRL)
 endif
 endif
 
@@ -55,30 +58,28 @@ endif
 ifeq ($(PLATFORM),win32)
 NETXLIBEXTRA += $(XROOTDDIRL)/libXrdClient.lib
 else
-NETXLIBEXTRA += $(XROOTDDIRL)/libXrdClient.a $(XROOTDDIRL)/libXrdOuc.a \
-		$(XROOTDDIRL)/libXrdNet.a $(XROOTDDIRL)/libXrdSys.a
+NETXLIBEXTRA += -L$(XROOTDDIRL) -lXrdOuc -lXrdSys \
+                -L$(XROOTDDIRP) -lXrdClient
 endif
 
 ##### local rules #####
 include/%.h:    $(NETXDIRI)/%.h $(XROOTDETAG)
 		cp $< $@
 
-$(NETXLIB):     $(NETXO) $(NETXDO) $(XRDPLUGINS) $(ORDER_) $(MAINLIBS) $(NETXLIBDEP)
+$(NETXLIB):     $(NETXO) $(NETXDO) $(ORDER_) $(MAINLIBS) $(NETXLIBDEP) \
+                $(XRDPLUGINS)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
 		   "$(SOFLAGS)" libNetx.$(SOEXT) $@ "$(NETXO) $(NETXDO)" \
 		   "$(NETXLIBEXTRA)"
 
-$(NETXDS):      $(NETXH1) $(NETXL) $(ROOTCINTTMPEXE) $(XROOTDETAG)
+$(NETXDS):      $(NETXH1) $(NETXL) $(XROOTDETAG) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(NETXINCEXTRA) $(NETXH) $(NETXL)
 
-all-netx:       $(NETXLIB)
+$(NETXMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(NETXL)
+		$(RLIBMAP) -o $(NETXMAP) -l $(NETXLIB) -d $(NETXLIBDEPM) -c $(NETXL)
 
-map-netx:       $(RLIBMAP)
-		$(RLIBMAP) -r $(ROOTMAP) -l $(NETXLIB) \
-		   -d $(NETXLIBDEP) -c $(NETXL)
-
-map::           map-netx
+all-netx:       $(NETXLIB) $(NETXMAP)
 
 clean-netx:
 		@rm -f $(NETXO) $(NETXDO)
@@ -86,10 +87,13 @@ clean-netx:
 clean::         clean-netx
 
 distclean-netx: clean-netx
-		@rm -f $(NETXDEP) $(NETXDS) $(NETXDH) $(NETXLIB)
+		@rm -f $(NETXDEP) $(NETXDS) $(NETXDH) $(NETXLIB) $(NETXMAP)
 
 distclean::     distclean-netx
 
 ##### extra rules ######
 $(NETXO) $(NETXDO): $(XROOTDETAG)
 $(NETXO) $(NETXDO): CXXFLAGS += $(NETXINCEXTRA) $(EXTRA_XRDFLAGS)
+ifeq ($(PLATFORM),win32)
+$(NETXO) $(NETXDO): CXXFLAGS += -DNOGDI $(EXTRA_XRDFLAGS)
+endif

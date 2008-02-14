@@ -22,14 +22,16 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#include "TString.h"
 #include "TEnv.h"
+#include "TFileStager.h"
+#include "TObjString.h"
+#include "TROOT.h"
 #include "TSocket.h"
+#include "TString.h"
 #include "TUrl.h"
 #include "TVirtualMutex.h"
 #include "TXNetFile.h"
 #include "TXNetSystem.h"
-#include "TROOT.h"
 
 #include "XrdClient/XrdClientAdmin.hh"
 #include "XrdClient/XrdClientConn.hh"
@@ -41,6 +43,10 @@ ClassImp(TXNetSystem);
 
 Bool_t TXNetSystem::fgInitDone = kFALSE;
 Bool_t TXNetSystem::fgRootdBC = kTRUE;
+#ifndef OLDXRDLOCATE
+THashList TXNetSystem::fgAddrFQDN;
+THashList TXNetSystem::fgAdminHash;
+#endif
 
 //_____________________________________________________________________________
 TXNetSystem::TXNetSystem(Bool_t owner) : TNetSystem(owner)
@@ -68,6 +74,11 @@ TXNetSystem::TXNetSystem(const char *url, Bool_t owner) : TNetSystem(owner)
    fDirListValid = kFALSE;
    fUrl = url;
 
+#ifndef OLDXRDLOCATE
+   fgAddrFQDN.SetOwner();
+   fgAdminHash.SetOwner();
+#endif
+
    // Set debug level
    EnvPutInt(NAME_DEBUG, gEnv->GetValue("XNet.Debug", -1));
 
@@ -79,10 +90,8 @@ TXNetSystem::TXNetSystem(const char *url, Bool_t owner) : TNetSystem(owner)
    TNetSystem::InitRemoteEntity(url);
 
    TXNetSystemConnectGuard cguard(this, url);
-   if (!cguard.IsValid()) {
+   if (!cguard.IsValid() && !fIsRootd)
       Error("TXNetSystem","fatal error: connection creation failed.");
-      gSystem->Abort();
-   }
 
    return;
 }
@@ -98,7 +107,11 @@ XrdClientAdmin *TXNetSystem::Connect(const char *url)
    TString dummy = url;
    dummy += "/dummy";
 
-   XrdClientAdmin *cadm = new XrdClientAdmin(dummy);
+#ifndef OLDXRDLOCATE
+   XrdClientAdmin *cadm = TXNetSystem::GetClientAdmin(dummy);
+#else
+   XrdClientAdmin *cadm = XrdClientAdmin::GetClientAdmin(dummy);
+#endif
 
    if (!cadm) {
       Error("Connect","fatal error: new object creation failed.");
@@ -128,7 +141,7 @@ XrdClientAdmin *TXNetSystem::Connect(const char *url)
             Int_t rproto = TXNetFile::GetRootdProtocol(s);
             if (rproto < 0) {
                Error("TXNetSystem", "getting protocol of the rootd server");
-               delete cadm;
+               cadm = 0;
                return 0;
             }
             // Finalize TSocket initialization
@@ -159,19 +172,18 @@ XrdClientAdmin *TXNetSystem::Connect(const char *url)
 
             // Type of server
             fIsRootd = kTRUE;
-
-            delete cadm;
+            cadm = 0;
 
          } else {
             Error("Connect", "some severe error occurred while opening"
                   " the connection at %s - exit", url);
-            delete cadm;
+            cadm = 0;
             return cadm;
          }
       } else {
          Error("Connect",
                "while opening the connection at %s - exit", url);
-         delete cadm;
+         cadm = 0;
          return cadm;
       }
    }
@@ -180,19 +192,17 @@ XrdClientAdmin *TXNetSystem::Connect(const char *url)
 }
 
 //_____________________________________________________________________________
-TXNetSystem::~TXNetSystem()
-{
-   // Destructor
-}
-
-
-//_____________________________________________________________________________
 void TXNetSystem::InitXrdClient()
 {
    // One-time initialization of some communication variables for xrootd protocol
 
    // Init vars with default debug level -1, so we do not get warnings
    TXNetFile::SetEnv();
+
+#if defined(OLDXRDLOCATE) && !defined(OLDXRDOUC)
+   // Use optimized connections
+   XrdClientAdmin::SetAdminConn();
+#endif
 
    // Only once
    fgInitDone = kTRUE;
@@ -225,6 +235,8 @@ void* TXNetSystem::OpenDirectory(const char* dir)
          cg.ClientAdmin()->ExistDirs(dirs, existDirs);
          if (existDirs.GetSize()>0 && existDirs[0])
             return fDirp;
+         else
+            cg.NotifyLastError();
       }
       return 0;
    }
@@ -247,6 +259,8 @@ void TXNetSystem::FreeDirectory(void *dirp)
       fDir = "";
       fDirp = 0;
       fDirListValid = kFALSE;
+      fDirEntry = "";
+      fDirList.Clear();
       return;
    }
 
@@ -265,7 +279,12 @@ Int_t TXNetSystem::MakeDirectory(const char* dir)
       if (cg.IsValid()) {
          // use default permissions 755 to create directory
          Bool_t ok = cg.ClientAdmin()->Mkdir(TUrl(dir).GetFile(),7,5,5);
-         return (ok ? 0 : -1);
+         if (ok) {
+            return 0;
+         } else {
+            cg.NotifyLastError();
+            return -1;
+         }
       }
    }
 
@@ -291,16 +310,20 @@ const char* TXNetSystem::GetDirEntry(void *dirp)
          TXNetSystemConnectGuard cg(this, fUrl);
          if (cg.IsValid()) {
             Bool_t ok = cg.ClientAdmin()->DirList(fDir, fDirList);
-            if (ok)
+            if (ok) {
                fDirListValid = kTRUE;
-            else
+            } else {
+               cg.NotifyLastError();
                return 0;
+            }
          }
       }
 
       // Return entries one by one with each call of method
-      if (fDirList.GetSize() > 0)
-         return fDirList.Pop_back().c_str();
+      if (fDirList.GetSize() > 0) {
+         fDirEntry = fDirList.Pop_front().c_str();
+         return fDirEntry.Data();
+      }
       return 0;   // until all of them have been returned
    }
 
@@ -318,7 +341,6 @@ Int_t TXNetSystem::GetPathInfo(const char* path, FileStat_t &buf)
    // NOTICE: Not all information is available with an xrootd server.
 
    if (fIsXRootd) {
-
       TXNetSystemConnectGuard cg(this, path);
       if (cg.IsValid()) {
 
@@ -351,6 +373,9 @@ Int_t TXNetSystem::GetPathInfo(const char* path, FileStat_t &buf)
 
             buf.fIsLink = 0;     // not available
             return 0;
+         } else {
+            if (gDebug > 0)
+               cg.NotifyLastError();
          }
       }
       return 1;
@@ -427,15 +452,288 @@ int TXNetSystem::Unlink(const char *path)
 
             // Done
             return ((ok) ? 0 : -1);
+         } else if (!ok) {
+            cg.NotifyLastError();
          }
       }
    }
 
    if (gDebug > 1)
-      Info("AccessPathName", "calling TNetSystem::AccessPathName");
+      Info("Unlink", "calling TNetSystem::Unlink");
    return -1;    // not implemented for rootd
 }
 
+//_____________________________________________________________________________
+Bool_t TXNetSystem::IsOnline(const char *path)
+{
+   // Check if the file defined by 'path' is ready to be used
+
+   TXNetSystemConnectGuard cg(this, path);
+   if (cg.IsValid()) {
+      vecBool vb;
+      vecString vs;
+      XrdOucString pathname = TUrl(path).GetFileAndOptions();
+      pathname.replace("\n","\r");
+      vs.Push_back(pathname);
+      if (gDebug > 1 )
+         Info("IsOnline", "Checking %s\n",path);
+      cg.ClientAdmin()->IsFileOnline(vs,vb);
+      if (!cg.ClientAdmin()->LastServerResp()) {
+         return kFALSE;
+      }
+
+      switch (cg.ClientAdmin()->LastServerResp()->status) {
+         case kXR_ok:
+            if (vb[0]) {
+               return kTRUE;
+            } else {
+               return kFALSE;
+         }
+         case kXR_error:
+            if (gDebug > 0)
+               Info("IsOnline", "error %d : %s", cg.ClientAdmin()->LastServerError()->errnum,
+                                 cg.ClientAdmin()->LastServerError()->errmsg);
+            return kFALSE;
+         default:
+            if (gDebug > 0)
+               Info("IsOnline", "unidentified response: %d; check XProtocol.hh",
+                                 cg.ClientAdmin()->LastServerResp()->status);
+            return kFALSE;
+      }
+   }
+   return kFALSE;
+}
+
+//_____________________________________________________________________________
+Bool_t TXNetSystem::Prepare(const char *path, UChar_t option, UChar_t priority)
+{
+   // Issue a prepare request for file defined by 'path'
+
+   TXNetSystemConnectGuard cg(this, path);
+   if (cg.IsValid()) {
+      XrdOucString pathname = TUrl(path).GetFileAndOptions();
+      vecString vs;
+      vs.Push_back(pathname);
+      cg.ClientAdmin()->Prepare(vs, (kXR_char)option, (kXR_char)priority);
+      if (gDebug >0)
+         Info("Prepare", "Got Status %d for %s",
+              cg.ClientAdmin()->LastServerResp()->status, pathname.c_str());
+      if (!(cg.ClientAdmin()->LastServerResp()->status)){
+         return kTRUE;
+      }
+      cg.NotifyLastError();
+   }
+
+   // Done
+   return kFALSE;
+}
+
+//_____________________________________________________________________________
+Int_t TXNetSystem::Prepare(TCollection *paths,
+                           UChar_t opt, UChar_t prio, TString *bufout)
+{
+   // Issue a prepare request for a list of files defined by 'paths', which must
+   // be of one of the following types: TFileInfo, TUrl, TObjString.
+   // On output, bufout, if defined, points to a buffer form that can be used
+   // with GetPathsInfo.
+   // Return the number of paths found or -1 if any error occured.
+
+   if (!paths) {
+      Warning("Prepare", "input list is empty!");
+      return -1;
+   }
+
+   Int_t npaths = 0;
+
+   TXNetSystemConnectGuard cg(this, "");
+   if (cg.IsValid()) {
+
+      TString *buf = (bufout) ? bufout : new TString();
+
+      // Prepare the buffer
+      TObject *o = 0;
+      TUrl u;
+      TString path;
+      TIter nxt(paths);
+      while ((o = nxt()))  {
+         // Extract the path name from the allowed object types
+         TString pn = TFileStager::GetPathName(o);
+         if (pn == "") {
+            Warning("Prepare", "object is of unexpected type %s - ignoring", o->ClassName());
+            continue;
+         }
+         u.SetUrl(pn);
+         // The path
+         path = u.GetFileAndOptions();
+         path.ReplaceAll("\n","\r");
+         npaths++;
+         *buf += Form("%s\n", path.Data());
+      }
+
+      Info("Prepare","buffer ready: issuing prepare ...");
+      cg.ClientAdmin()->Prepare(buf->Data(), (kXR_char)opt, (kXR_char)prio);
+      if (!bufout)
+         delete buf;
+      if (gDebug >0)
+         Info("Prepare", "Got Status %d",
+              cg.ClientAdmin()->LastServerResp()->status);
+      if (!(cg.ClientAdmin()->LastServerResp()->status)){
+         return npaths;
+      }
+      cg.NotifyLastError();
+   }
+
+   // Done
+   return -1;
+}
+
+//_____________________________________________________________________________
+Bool_t TXNetSystem::GetPathsInfo(const char *paths, UChar_t *info)
+{
+   // Retrieve status of a '\n'-separated list of files in 'paths'.
+   // The information is returned as one UChar_t per file in 'info';
+   // 'info' must be allocated by the caller.
+
+   if (!paths) {
+      Warning("GetPathsInfo", "input list is empty!");
+      return kFALSE;
+   }
+
+   TXNetSystemConnectGuard cg(this, "");
+   if (cg.IsValid()) {
+      cg.ClientAdmin()->SysStatX(paths, info);
+      if (gDebug >0)
+         Info("GetPathsInfo", "Got Status %d",
+              cg.ClientAdmin()->LastServerResp()->status);
+      if (!(cg.ClientAdmin()->LastServerResp()->status)){
+         return kTRUE;
+      }
+      cg.NotifyLastError();
+   }
+
+   // Done
+   return kFALSE;
+}
+
+//_____________________________________________________________________________
+Int_t TXNetSystem::Locate(const char *path, TString &eurl)
+{
+   // Get end-point url of a file. Info is returned in eurl.
+   // The function returns 0 in case of success and 1 if the file could
+   // not be stat'ed.
+
+   if (fIsXRootd) {
+      TXNetSystemConnectGuard cg(this, path);
+      if (cg.IsValid()) {
+
+#ifndef OLDXRDLOCATE
+         // Extract the directory name
+         XrdClientLocate_Info li;
+         TString edir = TUrl(path).GetFile();
+
+         if (cg.ClientAdmin()->Locate((kXR_char *)edir.Data(), li)) {
+            TUrl u(path);
+            XrdClientUrlInfo ui((const char *)&li.Location[0]);
+            // We got the IP address but we need the FQDN: if we did not resolve
+            // it yet do it and cache the result
+            TNamed *hn = 0;
+            if (fgAddrFQDN.GetSize() <= 0 ||
+               !(hn = dynamic_cast<TNamed *>(fgAddrFQDN.FindObject(ui.Host.c_str())))) {
+               TInetAddress a(gSystem->GetHostByName(ui.Host.c_str()));
+               if (strlen(a.GetHostName()) > 0)
+                  hn = new TNamed(ui.Host.c_str(), a.GetHostName());
+               else
+                  hn = new TNamed(ui.Host.c_str(), ui.Host.c_str());
+               fgAddrFQDN.Add(hn);
+               if (gDebug > 0)
+                  Info("Locate","caching host name: %s", hn->GetTitle());
+            }
+            if (hn)
+               u.SetHost(hn->GetTitle());
+            else
+               u.SetHost(ui.Host.c_str());
+            u.SetPort(ui.Port);
+            eurl = u.GetUrl();
+            return 0;
+         }
+#else
+         // Extract the directory name
+         XrdClientUrlInfo ui;
+         TString edir = TUrl(path).GetFile();
+
+         if (cg.ClientAdmin()->Locate((kXR_char *)edir.Data(), ui, kTRUE)) {
+            TUrl u(path);
+            u.SetHost(ui.Host.c_str());
+            u.SetPort(ui.Port);
+            eurl = u.GetUrl();
+            return 0;
+         }
+#endif
+         cg.NotifyLastError();
+      }
+      return 1;
+   }
+
+   // Not implemented
+   Warning("Locate", "method not implemented!");
+   return -1;
+}
+
+#ifndef OLDXRDLOCATE
+//_____________________________________________________________________________
+XrdClientAdmin *TXNetSystem::GetClientAdmin(const char *url)
+{
+   // Checks if an admin for 'url' exists already.
+   // Avoid duplications.
+   XrdClientAdmin *ca = 0;
+
+   // ID key
+   TString key = TXNetSystem::GetKey(url);
+
+   // If we have one for 'key', just use it
+   TXrdClientAdminWrapper *caw = 0;
+   if (fgAdminHash.GetSize() > 0 &&
+      (caw = dynamic_cast<TXrdClientAdminWrapper *>(fgAdminHash.FindObject(key.Data()))))
+      return caw->fXCA;
+
+   // Create one and save the reference in the hash table
+   ca = new XrdClientAdmin(url);
+   fgAdminHash.Add(new TXrdClientAdminWrapper(key, ca));
+
+   // Done
+   return ca;
+}
+
+//_____________________________________________________________________________
+TString TXNetSystem::GetKey(const char *url)
+{
+   // Build from uu a unique ID key used in hash tables
+
+   TUrl u(url);
+   TString key(u.GetUser());
+   if (!key.IsNull())
+      key += "@";
+   key += u.GetHost();
+   if (u.GetPort() > 0) {
+      key += ":";
+      key += u.GetPort();
+   }
+
+   // Done
+   return key;
+}
+
+//
+// Wrapper class
+//
+//_____________________________________________________________________________
+TXrdClientAdminWrapper::~TXrdClientAdminWrapper()
+{
+   // Destructor: destroy the instance
+
+   SafeDelete(fXCA);
+}
+#endif
 
 //
 // Guard methods
@@ -448,7 +746,8 @@ TXNetSystemConnectGuard::TXNetSystemConnectGuard(TXNetSystem *xn, const char *ur
 
     if (xn)
        // Connect
-       fClientAdmin = xn->Connect(url);
+       fClientAdmin = (url && strlen(url) > 0) ? xn->Connect(url)
+                                               : xn->Connect(xn->fUrl);
 }
 
 //_____________________________________________________________________________
@@ -456,7 +755,15 @@ TXNetSystemConnectGuard::~TXNetSystemConnectGuard()
 {
    // Destructor: close the connection
 
-   if (fClientAdmin)
-      delete fClientAdmin;
+   fClientAdmin = 0;
 }
 
+//_____________________________________________________________________________
+void TXNetSystemConnectGuard::NotifyLastError()
+{
+   // Print message about last occured error
+
+   if (fClientAdmin)
+      if (fClientAdmin->GetClientConn())
+         Printf("Srv err: %s", fClientAdmin->GetClientConn()->LastServerError.errmsg);
+}

@@ -24,6 +24,9 @@
 #ifndef ROOT_TDirectory
 #include "TDirectory.h"
 #endif
+#ifndef ROOT_TStopwatch
+#include "TStopwatch.h"
+#endif
 #ifndef ROOT_TUrl
 #include "TUrl.h"
 #endif
@@ -42,6 +45,8 @@ public:
    // Asynchronous open request status
    enum EAsyncOpenStatus { kAOSNotAsync = -1,  kAOSFailure = 0,
                            kAOSInProgress = 1, kAOSSuccess = 2 };
+   // Open timeout constants
+   enum EOpenTimeOut { kInstantTimeout = 0, kEternalTimeout = 999999999 };
 
 protected:
    Double_t         fSumBuffer;      //Sum of buffer sizes of objects written so far
@@ -89,6 +94,8 @@ protected:
    static Long64_t  fgFileCounter; //Counter for all opened files
    static Int_t     fgReadCalls;   //Number of bytes read from all TFile objects
    static Bool_t    fgReadInfo;    //if true (default) ReadStreamerInfo is called when opening a file
+   static UInt_t    fgOpenTimeout; //Timeout for open operations in ms  - 0 corresponds to blocking i/o
+   static Bool_t    fgOnlyStaged ; //Before the file is opened, it is checked, that the file is staged, if not, the open fails
 
    virtual EAsyncOpenStatus GetAsyncOpenStatus() { return fAsyncOpenStatus; }
    Long64_t      GetRelOffset() const { return fOffset - fArchiveOffset; }
@@ -115,6 +122,8 @@ protected:
 private:
    TFile(const TFile &);            //Files cannot be copied
    void operator=(const TFile &);
+
+   static void   CpProgress(Long64_t bytesread, Long64_t size, TStopwatch &watch);
 
 public:
    // TFile status bits
@@ -218,7 +227,7 @@ public:
                             Int_t netopt = 0);
    static TFile       *Open(TFileOpenHandle *handle);
 
-   static EFileType    GetType(const char *name, Option_t *option = "");
+   static EFileType    GetType(const char *name, Option_t *option = "", TString *prefix = 0);
 
    static EAsyncOpenStatus GetAsyncOpenStatus(const char *name);
    static EAsyncOpenStatus GetAsyncOpenStatus(TFileOpenHandle *handle);
@@ -235,6 +244,14 @@ public:
 
    static Long64_t     GetFileCounter();
    static void         IncrementFileCounter();
+
+   static Bool_t       Cp(const char *src, const char *dst, Bool_t progressbar = kTRUE,
+                          UInt_t buffersize = 1000000);
+
+   static UInt_t       SetOpenTimeout(UInt_t timeout);  // in ms
+   static UInt_t       GetOpenTimeout(); // in ms
+   static Bool_t       SetOnlyStaged(Bool_t onlystaged);
+   static Bool_t       GetOnlyStaged();
 
    ClassDef(TFile,7)  //ROOT file
 };

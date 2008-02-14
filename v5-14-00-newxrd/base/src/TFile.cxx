@@ -60,6 +60,8 @@ Long64_t TFile::fgFileCounter = 0;
 Int_t    TFile::fgReadCalls = 0;
 Bool_t   TFile::fgReadInfo = kTRUE;
 TList   *TFile::fgAsyncOpenRequests = 0;
+UInt_t   TFile::fgOpenTimeout = TFile::kEternalTimeout;
+Bool_t   TFile::fgOnlyStaged = 0;
 
 const Int_t kBEGIN = 100;
 
@@ -2622,9 +2624,12 @@ Bool_t TFileOpenHandle::Matches(const char *url)
 }
 
 //______________________________________________________________________________
-TFile::EFileType TFile::GetType(const char *name, Option_t *option)
+TFile::EFileType TFile::GetType(const char *name, Option_t *option, TString *prefix)
 {
    // Resolve the file type as a function of the protocol field in 'name'
+   // If defined, the string 'prefix' is added when testing the locality of
+   // a 'name' with network-like structure (i.e. root://host//path); if the file
+   // is local, on return 'prefix' will contain the actual local path of the file.
 
    EFileType type = kDefault;
 
@@ -2640,7 +2645,9 @@ TFile::EFileType TFile::GetType(const char *name, Option_t *option)
       //        readonly mode and the current user has read access;
       //    ii) the specified user is equal to the current user then open local
       //        TFile.
+#if 0
       const char *lfname = 0;
+#endif
       Bool_t localFile = kFALSE;
       TUrl url(name);
       //
@@ -2652,6 +2659,7 @@ TFile::EFileType TFile::GetType(const char *name, Option_t *option)
       else if (opts.Contains("remote=0"))
          forceRemote = kFALSE;
       if (!forceRemote) {
+#if 0
          TInetAddress a(gSystem->GetHostByName(url.GetHost()));
          TInetAddress b(gSystem->GetHostByName(gSystem->HostName()));
          if (!strcmp(a.GetHostName(), b.GetHostName())) {
@@ -2680,6 +2688,48 @@ TFile::EFileType TFile::GetType(const char *name, Option_t *option)
             if (read || sameUser)
                localFile = kTRUE;
          }
+#else
+
+         TInetAddress a(gSystem->GetHostByName(url.GetHost()));
+         TInetAddress b(gSystem->GetHostByName(gSystem->HostName()));
+         if (!strcmp(a.GetHostName(), b.GetHostName()) ||
+             !strcmp(a.GetHostAddress(), b.GetHostAddress())) {
+            Bool_t read = kFALSE;
+            TString opt = option;
+            opt.ToUpper();
+            if (opt == "" || opt == "READ") read = kTRUE;
+            const char *fname = url.GetFileAndOptions();
+            TString lfname;
+            if (fname[0] == '/') {
+               if (prefix)
+                  lfname = Form("%s%s", prefix->Data(), fname);
+               else
+                  lfname = fname;
+            } else if (fname[0] == '~' || fname[0] == '$') {
+               lfname = fname;
+            } else {
+               lfname = Form("%s/%s", gSystem->HomeDirectory(), fname);
+            }
+            if (read) {
+               char *fn;
+               if ((fn = gSystem->ExpandPathName(TUrl(lfname).GetFile()))) {
+                  if (gSystem->AccessPathName(fn, kReadPermission))
+                     read = kFALSE;
+                  delete [] fn;
+               }
+            }
+            Bool_t sameUser = kFALSE;
+            UserGroup_t *u = gSystem->GetUserInfo();
+            if (u && !strcmp(u->fUser, url.GetUser()))
+               sameUser = kTRUE;
+            delete u;
+            if (read || sameUser)
+               localFile = kTRUE;
+            if (localFile && prefix)
+               *prefix = lfname;
+         }
+
+#endif
       }
       //
       // Adjust the type according to findings
@@ -2769,4 +2819,203 @@ const TUrl *TFile::GetEndpointUrl(const char* name)
 
    // Information not yet available
    return (const TUrl *)0;
+}
+
+//______________________________________________________________________________
+void TFile::CpProgress(Long64_t bytesread, Long64_t size, TStopwatch &watch)
+{
+   // Print file copy progress.
+
+   fprintf(stderr, "[TFile::Cp] Total %.02f MB\t|", (Double_t)size/1048576);
+
+   for (int l = 0; l < 20; l++) {
+      if (size > 0) {
+         if (l < 20*bytesread/size)
+            fprintf(stderr, "=");
+         else if (l == 20*bytesread/size)
+            fprintf(stderr, ">");
+         else if (l > 20*bytesread/size)
+            fprintf(stderr, ".");
+      } else
+         fprintf(stderr, "=");
+   }
+   // Allow to update the GUI while uploading files
+   gSystem->ProcessEvents();
+   watch.Stop();
+   Double_t lCopy_time = watch.RealTime();
+   fprintf(stderr, "| %.02f %% [%.01f MB/s]\r",
+           100.0*(size?(bytesread/size):1), bytesread/lCopy_time/1048576.);
+   watch.Continue();
+}
+
+//______________________________________________________________________________
+Bool_t TFile::Cp(const char *src, const char *dst, Bool_t progressbar,
+                 UInt_t buffersize)
+{
+   // Allows to copy file from src to dst URL. Returns kTRUE in case of success,
+   // kFALSE otherwise.
+
+   TStopwatch watch;
+   Bool_t success = kFALSE;
+
+   TUrl sURL(src, kTRUE);
+   TUrl dURL(dst, kTRUE);
+
+   TString oopt = "RECREATE";
+   TString ourl = dURL.GetUrl();
+
+   TString raw = "filetype=raw";
+
+   TString opt = sURL.GetOptions();
+   if (opt == "")
+      opt = raw;
+   else
+      opt += "&" + raw;
+   sURL.SetOptions(opt);
+
+   opt = dURL.GetOptions();
+   if (opt == "")
+      opt = raw;
+   else
+      opt += "&" + raw;
+   dURL.SetOptions(opt);
+
+   char *copybuffer = 0;
+
+   TFile *sfile = 0;
+   TFile *dfile = 0;
+
+   sfile = TFile::Open(sURL.GetUrl(), "READ");
+
+   if (!sfile) {
+      ::Error("TFile::Cp", "cannot open source file %s", src);
+      goto copyout;
+   }
+   // "RECREATE" does not work always well with XROOTD
+   // namely when some pieces of the path are missing;
+   // we force "NEW" in such a case
+   if (TFile::GetType(ourl, "") == TFile::kNet)
+      if (gSystem->AccessPathName(ourl)) {
+         oopt = "NEW";
+         // Force creation of the missing parts of the path
+         opt += "&mkpath=1";
+         dURL.SetOptions(opt);
+      }
+
+   dfile = TFile::Open(dURL.GetUrl(), oopt);
+
+   if (!dfile) {
+      ::Error("TFile::Cp", "cannot open destination file %s", dst);
+      goto copyout;
+   }
+
+   sfile->Seek(0);
+   dfile->Seek(0);
+
+   copybuffer = new char[buffersize];
+   if (!copybuffer) {
+      ::Error("TFile::Cp", "cannot allocate the copy buffer");
+      goto copyout;
+   }
+
+   Bool_t   readop;
+   Bool_t   writeop;
+   Long64_t read;
+   Long64_t written;
+   Long64_t totalread;
+   Long64_t filesize;
+   Long64_t b00;
+   filesize  = sfile->GetSize();
+   totalread = 0;
+   watch.Start();
+
+   b00 = sfile->GetBytesRead();
+
+   do {
+      if (progressbar) CpProgress(totalread, filesize,watch);
+
+      Long64_t b1 = sfile->GetBytesRead() - b00;
+
+      Long64_t readsize;
+      if (filesize - b1 > (Long64_t)buffersize) {
+         readsize = buffersize;
+      } else {
+         readsize = filesize - b1;
+      }
+
+      Long64_t b0 = sfile->GetBytesRead();
+      sfile->Seek(totalread,TFile::kBeg);
+      readop = sfile->ReadBuffer(copybuffer, (Int_t)readsize);
+      read   = sfile->GetBytesRead() - b0;
+      if (read < 0) {
+         ::Error("TFile::Cp", "cannot read from source file %s", src);
+         goto copyout;
+      }
+
+      Long64_t w0 = dfile->GetBytesWritten();
+      writeop = dfile->WriteBuffer(copybuffer, (Int_t)read);
+      written = dfile->GetBytesWritten() - w0;
+      if (written != read) {
+         ::Error("TFile::Cp", "cannot write %d bytes to destination file %s", read, dst);
+         goto copyout;
+      }
+      totalread += read;
+   } while (read == (Long64_t)buffersize);
+
+   if (progressbar) {
+      CpProgress(totalread, filesize,watch);
+      fprintf(stderr, "\n");
+   }
+
+   success = kTRUE;
+
+copyout:
+   if (sfile) sfile->Close();
+   if (dfile) dfile->Close();
+
+   if (sfile) delete sfile;
+   if (dfile) delete dfile;
+   if (copybuffer) delete[] copybuffer;
+
+   watch.Stop();
+   watch.Reset();
+
+   return success;
+}
+
+//______________________________________________________________________________
+UInt_t TFile::SetOpenTimeout(UInt_t timeout)
+{
+   // Sets open timeout time (in ms). Returns previous timeout value.
+
+   UInt_t to = fgOpenTimeout;
+   fgOpenTimeout = timeout;
+   return to;
+}
+
+//______________________________________________________________________________
+UInt_t TFile::GetOpenTimeout()
+{
+   // Returns open timeout (in ms).
+
+   return fgOpenTimeout;
+}
+//______________________________________________________________________________
+Bool_t TFile::SetOnlyStaged(Bool_t onlystaged)
+{
+   // Sets only staged flag. Returns previous value of flag.
+   // When true we check before opening the file if it is staged, if not,
+   // the open fails.
+
+   Bool_t f = fgOnlyStaged;
+   fgOnlyStaged = onlystaged;
+   return f;
+}
+
+//______________________________________________________________________________
+Bool_t TFile::GetOnlyStaged()
+{
+   // Returns staged only flag.
+
+   return fgOnlyStaged;
 }
