@@ -8,6 +8,8 @@ ARGS=$*
 OBJS=
 # Used Option for passing the object files (--objec-files or -o)
 ARGOBJS=
+# lib-list-prefix value
+PREFIX=
 # User ask for help
 HELP=
 # Mode (-cint or -reflex or -gccxml)
@@ -24,7 +26,7 @@ and must be before the -f flags
 For more extensive help type: utils/src/rootcint -h"
 
 # Getopt call
-TEMP=`getopt -a -o vlf:o:c:hI:p: --long tmp,cint,reflex,gccxml,v0,v1,v2,v3,v4,object-files:,symbols-file:,lib-list-prefix: \
+TEMP=`getopt -a -o vlf:o:c:hI:p: --long tmp,cint,reflex,gccxml,v0,v1,v2,v3,v4,object-files:,symbols-file:,lib-list-prefix=: \
      -n 'rootcint' -- "$@"`
 
 # Wrong usage
@@ -51,7 +53,7 @@ while true ; do
                 -.) shift 2;;
                 -h) HELP=1; shift 1;;
                 --symbols-file) shift 2;;
-                --lib-list-prefix) shift 2;;
+                --lib-list-prefix=) PREFIX=$2; shift 2;;
                 --) shift ; break ;;
                 *) echo "Internal error!" ;; #exit 1 ;;
         esac
@@ -59,6 +61,11 @@ done
 
 if [ "x${FILENAME}" = "x" ]; then
     HELP=1;
+fi
+
+if [ -n "$PREFIX" ]; then
+    PREFIX="--lib-list-prefix="${PREFIX}
+    echo "CACA"
 fi
 
 # User Needs Help. 
@@ -83,6 +90,8 @@ ROOTCINTARGS=${ROOTCINTARGS/-I./}
 ROOTCINTARGS=${ROOTCINTARGS/$FILENAME/}
 ROOTCINTARGS=${ROOTCINTARGS/--cxx/}
 ROOTCINTARGS=${ROOTCINTARGS/$CXXFLAGS/}
+ROOTCINTARGS=${ROOTCINTARGS/--lib-list-prefix=/}
+ROOTCINTARGS=${ROOTCINTARGS/$PREFIX/}
 ROOTCINTARGS=${ROOTCINTARGS/-c/}
 
 # We remove one score from the mode option name
@@ -91,8 +100,8 @@ MODE=${MODE/--/-}
 # Temporary dictionaries generation
 # Generate the first dictionary.. i.e the one with the shadow classes
 echo -++- Generating the first dictionary: ${FILENAME%.*}"Tmp1".cxx
-echo $ROOTCINT $MODE ${FILENAME%.*}"Tmp1".cxx -c -. 1 $ROOTCINTARGS
-$ROOTCINT $MODE ${FILENAME%.*}"Tmp1".cxx -c -. 1 $ROOTCINTARGS
+echo $ROOTCINT $PREFIX $MODE ${FILENAME%.*}"Tmp1".cxx -c -. 1 $ROOTCINTARGS
+$ROOTCINT $PREFIX $MODE ${FILENAME%.*}"Tmp1".cxx -c -. 1 $ROOTCINTARGS
 
 # Temporary dictionaries compilation
 echo -++- Compiling the first dictionary: ${FILENAME%.*}"Tmp1".cxx
@@ -115,8 +124,8 @@ nm -g -p --undefined-only ${FILENAME%.*}"Tmp1".o | awk '{printf("%s\n", $2)}' >>
 # Generate the second dictionary passing it the symbols of the .o files plus
 # those of the first dictionary
 #echo -++- Generating the second dictionary: ${FILENAME%.*}"Tmp2".cxx
-echo $ROOTCINT $MODE ${FILENAME%.*}"Tmp2".cxx -c --symbols-file ${FILENAME%.*}".nm" -. 2 $ROOTCINTARGS
-$ROOTCINT $MODE ${FILENAME%.*}"Tmp2".cxx -c --symbols-file ${FILENAME%.*}".nm"  -. 2 $ROOTCINTARGS
+echo $ROOTCINT $PREFIX $MODE ${FILENAME%.*}"Tmp2".cxx -c --symbols-file ${FILENAME%.*}".nm" -. 2 $ROOTCINTARGS
+$ROOTCINT $PREFIX $MODE ${FILENAME%.*}"Tmp2".cxx -c --symbols-file ${FILENAME%.*}".nm"  -. 2 $ROOTCINTARGS
 
 # Compile the second dictionary (should have only inline functions)
 #echo -++- Compiling the second dictionary: ${FILENAME%.*}"Tmp2".cxx
@@ -131,8 +140,8 @@ nm -g -p --undefined-only ${FILENAME%.*}"Tmp2".o | awk '{printf("%s\n", $2)}' >>
 
 # Final Dictionary Generation
 echo -++- Generating the real dictionary: ${FILENAME}
-echo $ROOTCINT $MODE $FILENAME -c --symbols-file ${FILENAME%.*}".nm" -. 3 $ROOTCINTARGS
-$ROOTCINT $MODE $FILENAME -c --symbols-file ${FILENAME%.*}".nm" -. 3 $ROOTCINTARGS
+echo $ROOTCINT $PREFIX $MODE $FILENAME -c --symbols-file ${FILENAME%.*}".nm" -. 3 $ROOTCINTARGS
+$ROOTCINT $PREFIX $MODE $FILENAME -c --symbols-file ${FILENAME%.*}".nm" -. 3 $ROOTCINTARGS
 
 # We don't need the temporaries anymore (Now we do)
 #rm ${FILENAME%.*}"Tmp1".*
