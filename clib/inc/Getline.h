@@ -12,6 +12,10 @@
 #ifndef _GETLINE_
 #define _GETLINE_
 
+#ifndef ROOT_DllImport
+#include "DllImport.h"
+#endif
+
 #ifndef __CINT__
 #ifdef __cplusplus
 extern "C" {
