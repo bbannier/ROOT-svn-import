@@ -37,13 +37,6 @@
 namespace ROOT { 
 namespace Math { 
 
-//    namespace Minim1D {
-      
-//       enum Type { GOLDENSECTION, 
-//                   BRENT
-//       };
-//    }
-   
    class IMinimizer1D {
       
    public: 
@@ -53,16 +46,53 @@ namespace Math {
       
    public: 
       
-      //virtual int Iterate() = 0;  // Only for GSLMethods
+      /**
+       * Return current estimate of the position of the minimum
+       */
       virtual double XMinimum() const = 0; 
+
+      /**
+       * Return current lower bound of the minimization interval
+       */
       virtual double XLower() const = 0; 
+
+      /**
+       * Return current upper bound of the minimization interval
+       */
       virtual double XUpper() const = 0; 
+
+      /**
+       * Return function value at current estimate of the minimum
+       */
       virtual double FValMinimum() const = 0; 
+
+      /**
+       * Return function value at current lower bound of the minimization interval
+       */
       virtual double FValLower() const = 0; 
+
+      /**
+       * Return function value at current upper bound of the minimization interval
+       */
       virtual double FValUpper() const = 0; 
+
+      /**
+       * Find minimum position iterating until convergence specified by the absolute and relative tolerance or
+       * the maximum number of iteration is reached
+       * \@param maxIter maximum number of iteration
+       * \@param absTol desired absolute error in the minimum position
+       * \@param absTol desired relative error in the minimum position
+       */
       virtual int Minimize( int maxIter, double absTol, double relTol) = 0; 
+
+      /**
+       * Return number of iteration used to find minimum
+       */
       virtual int Iterations() const = 0;
 
+      /**
+       * Return name of minimization algorithm
+       */
       virtual const char * Name() const = 0;  
 
    };  // end class IMinimizer1D

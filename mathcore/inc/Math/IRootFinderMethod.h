@@ -31,7 +31,6 @@ public:
    IRootFinderMethod() {}
    
    // Common functionality
-   //void SetFunction (const IGenFunction &, bool copy=false);
    virtual int SetFunction(const ROOT::Math::IGradFunction&, double) // for algorithms using derivatives only!
    {
       MATH_ERROR_MSG("SetFunction", "This method must be used with a Root Finder algorithm using derivatives");
@@ -58,14 +57,6 @@ public:
       MATH_ERROR_MSG("Iterations", "This method must be used with a Root Finder algorithm wrapping the GSL Library");
       return -1;
    }
-      
-// protected:
-//    double fRoot;
-//    bool fSolvedOnce;
-//    const IGenFunction* fFunction;
-
-// private:
-//    bool fFunctionCopied;
 
 };
 

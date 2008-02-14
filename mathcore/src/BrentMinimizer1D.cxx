@@ -39,15 +39,19 @@ namespace Math {
 
 BrentMinimizer1D::BrentMinimizer1D(): IMinimizer1D() 
 {
-    fFunction = 0;
-    fXMin = 0;
-    fXMax = 0;
+   // Default Constructor
+
+   fFunction = 0;
+   fXMin = 0;
+   fXMax = 0;
 }
  
 BrentMinimizer1D::~BrentMinimizer1D() {}
 
 int BrentMinimizer1D::SetFunction(const ROOT::Math::IGenFunction& f, double xlow, double xup)
 {
+   // Set integration function (flag control if function must be copied inside)
+   
    fFunction = &f;
 
    if (xlow >= xup) 
@@ -64,36 +68,55 @@ int BrentMinimizer1D::SetFunction(const ROOT::Math::IGenFunction& f, double xlow
 
 double BrentMinimizer1D::XMinimum() const
 {
+   // Return current estimate of the position of the minimum
+
    return fXMinimum;
 }
 
 double BrentMinimizer1D::XLower() const
 {
+   // Return current lower bound of the minimization interval
+
    return fXMin;
 }
 
 double BrentMinimizer1D::XUpper() const
 {
+   // Return current upper bound of the minimization interval
+
    return fXMax;
 }
  
 double BrentMinimizer1D::FValMinimum() const
 {
+   // Return function value at current estimate of the minimum
+
    return (*fFunction)(fXMinimum);
 }
 
 double BrentMinimizer1D::FValLower() const
 {
+   // Return function value at current lower bound of the minimization interval
+
    return (*fFunction)(fXMin);
 }
 
 double BrentMinimizer1D::FValUpper() const
 {
+   // Return function value at current upper bound of the minimization interval
+
    return (*fFunction)(fXMax);
 }
 
 int BrentMinimizer1D::Minimize( int maxIter, double , double )
 {
+   // Find minimum position iterating until convergence specified by the absolute and relative tolerance or
+   // the maximum number of iteration is reached
+   // \@param maxIter maximum number of iteration
+   // \@param absTol desired absolute error in the minimum position
+   // \@param absTol desired relative error in the minimum position
+
+
    int niter=0;
    double x;
    double xmin = fXMin;
@@ -121,12 +144,16 @@ int BrentMinimizer1D::Minimize( int maxIter, double , double )
 
 int BrentMinimizer1D::Iterations() const
 {
+   // Return number of iteration used to find minimum
+
    return fNIter;
 }
 
 
 const char * BrentMinimizer1D::Name() const
 {
+   // Return name of minimization algorithm
+
    return "BrentMinimizer1D";
 }
 
