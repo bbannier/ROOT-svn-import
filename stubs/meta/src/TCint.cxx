@@ -144,6 +144,8 @@ void TCint::ClearFileBusy()
    // Reset CINT internal state in case a previous action was not correctly
    // terminated by G__init_cint() and G__dlmod().
 
+   R__LOCKGUARD(gCINTMutex);
+   
    G__clearfilebusy(0);
 }
 
@@ -152,6 +154,8 @@ void TCint::ClearStack()
 {
    // Delete existing temporary values
 
+   R__LOCKGUARD(gCINTMutex);
+   
    G__clearstack();
 }
 
@@ -161,6 +165,8 @@ Int_t TCint::InitializeDictionaries()
    // Initialize all registered dictionaries. Normally this is already done
    // by G__init_cint() and G__dlmod().
 
+   R__LOCKGUARD(gCINTMutex);
+   
    return G__call_setup_funcs();
 }
 
@@ -180,6 +186,8 @@ void TCint::EnableAutoLoading()
    // information stored in the class/library map (typically
    // $ROOTSYS/etc/system.rootmap).
 
+   R__LOCKGUARD(gCINTMutex);
+   
    G__set_class_autoloading_callback(&TCint_AutoLoadCallback);
    LoadLibraryMap();
 }
@@ -204,6 +212,8 @@ Bool_t TCint::IsLoaded(const char* filename) const
    //            the include path
    //            the shared library path
 
+   R__LOCKGUARD(gCINTMutex);
+   
    G__SourceFileInfo file(filename);
    if (file.IsValid()) { return kTRUE; };
 
@@ -255,6 +265,7 @@ Int_t TCint::Load(const char *filename, Bool_t system)
    // if 'system' is true, the library is never unloaded.
 
    R__LOCKGUARD2(gCINTMutex);
+   
    int i;
    if (!system)
       i = G__loadfile(filename);
@@ -370,6 +381,8 @@ Long_t TCint::ProcessLineSynch(const char *line, EErrorCode *error)
    // Let CINT process a command line synchronously, i.e we are waiting
    // it will be finished.
 
+   R__LOCKGUARD(gCINTMutex);
+
    if (gApplication) {
       if (gApplication->IsCmdThread())
          return ProcessLine(line, error);
@@ -426,6 +439,8 @@ void TCint::RecursiveRemove(TObject *obj)
    // Delete object from CINT symbol table so it can not be used anymore.
    // CINT objects are always on the heap.
 
+   R__LOCKGUARD(gCINTMutex);
+
    if (obj->IsOnHeap() && fgSetOfSpecials && !((std::set<TObject*>*)fgSetOfSpecials)->empty()) {
       std::set<TObject*>::iterator iSpecial = ((std::set<TObject*>*)fgSetOfSpecials)->find(obj);
       if (iSpecial != ((std::set<TObject*>*)fgSetOfSpecials)->end()) {
@@ -441,6 +456,8 @@ void TCint::Reset()
    // Reset the CINT state to the state saved by the last call to
    // TCint::SaveContext().
 
+   R__LOCKGUARD(gCINTMutex);
+   
    G__scratch_upto(&fDictPos);
 }
 
@@ -449,6 +466,8 @@ void TCint::ResetAll()
 {
    // Reset the CINT state to its initial state.
 
+   R__LOCKGUARD(gCINTMutex);
+   
    G__init_cint("cint +V");
    G__init_process_cmd();
 }
@@ -458,6 +477,8 @@ void TCint::ResetGlobals()
 {
    // Reset the CINT global object state to the state saved by the last
    // call to TCint::SaveGlobalsContext().
+   
+   R__LOCKGUARD(gCINTMutex);
 
    G__scratch_globals_upto(&fDictPosGlobals);
 }
@@ -468,6 +489,8 @@ void TCint::RewindDictionary()
    // Rewind CINT dictionary to the point where it was before executing
    // the current macro. This function is typically called after SEGV or
    // ctlr-C after doing a longjmp back to the prompt.
+   
+   R__LOCKGUARD(gCINTMutex);
 
    G__rewinddictionary();
 }
@@ -477,6 +500,8 @@ Int_t TCint::DeleteGlobal(void *obj)
 {
    // Delete obj from CINT symbol table so it cannot be accessed anymore.
    // Returns 1 in case of success and 0 in case object was not in table.
+   
+   R__LOCKGUARD(gCINTMutex);
 
    return G__deleteglobal(obj);
 }
@@ -485,6 +510,8 @@ Int_t TCint::DeleteGlobal(void *obj)
 void TCint::SaveContext()
 {
    // Save the current CINT state.
+   
+   R__LOCKGUARD(gCINTMutex);
 
    G__store_dictposition(&fDictPos);
 }
@@ -493,6 +520,7 @@ void TCint::SaveContext()
 void TCint::SaveGlobalsContext()
 {
    // Save the current CINT state of global objects.
+   R__LOCKGUARD(gCINTMutex);
 
    G__store_dictposition(&fDictPosGlobals);
 }
@@ -504,6 +532,7 @@ void TCint::UpdateListOfGlobals()
    // is called by TROOT::GetListOfGlobals().
 
    R__LOCKGUARD2(gCINTMutex);
+   
    G__DataMemberInfo t, *a;
    while (t.Next()) {
       // if name cannot be obtained no use to put in list
@@ -527,6 +556,7 @@ void TCint::UpdateListOfGlobalFunctions()
    // is called by TROOT::GetListOfGlobalFunctions().
 
    R__LOCKGUARD2(gCINTMutex);
+   
    G__MethodInfo t, *a;
    void* vt =0;
 
@@ -609,6 +639,7 @@ void TCint::SetClassInfo(TClass *cl, Bool_t reload)
    // Set pointer to CINT's G__ClassInfo in TClass.
 
    R__LOCKGUARD2(gCINTMutex);
+   
    if (!cl->fClassInfo || reload) {
 
       delete cl->fClassInfo; cl->fClassInfo = 0;
@@ -657,6 +688,8 @@ Bool_t TCint::CheckClassInfo(const char *name)
    // specifically check that each level of nesting is already loaded.
    // In case of templates the idea is that everything between the outer
    // '<' and '>' has to be skipped, e.g.: aap<pipo<noot>::klaas>::a_class
+   
+   R__LOCKGUARD(gCINTMutex);
 
    char *classname = new char[strlen(name)*2];
    strcpy(classname,name);
@@ -719,6 +752,7 @@ void TCint::CreateListOfBaseClasses(TClass *cl)
    // Create list of pointers to base class(es) for TClass cl.
 
    R__LOCKGUARD2(gCINTMutex);
+   
    if (!cl->fBase) {
 
       cl->fBase = new TList;
@@ -740,6 +774,7 @@ void TCint::CreateListOfDataMembers(TClass *cl)
    // Create list of pointers to data members for TClass cl.
 
    R__LOCKGUARD2(gCINTMutex);
+   
    if (!cl->fData) {
 
       cl->fData = new TList;
@@ -761,6 +796,7 @@ void TCint::CreateListOfMethods(TClass *cl)
    // Create list of pointers to methods for TClass cl.
 
    R__LOCKGUARD2(gCINTMutex);
+   
    if (!cl->fMethod) {
 
       cl->fMethod = new TList;
@@ -782,6 +818,7 @@ void TCint::CreateListOfMethodArgs(TFunction *m)
    // Create list of pointers to method arguments for TMethod m.
 
    R__LOCKGUARD2(gCINTMutex);
+   
    if (!m->fMethodArgs) {
 
       m->fMethodArgs = new TList;
@@ -806,6 +843,7 @@ TString TCint::GetMangledName(TClass *cl, const char *method,
    // class is 0 the global function list will be searched.
 
    R__LOCKGUARD2(gCINTMutex);
+   
    G__CallFunc  func;
    Long_t       offset;
 
@@ -827,6 +865,7 @@ TString TCint::GetMangledNameWithPrototype(TClass *cl, const char *method,
    // list will be searched.
 
    R__LOCKGUARD2(gCINTMutex);
+   
    Long_t             offset;
 
    if (cl)
@@ -844,6 +883,7 @@ void *TCint::GetInterfaceMethod(TClass *cl, const char *method,
    // ones). If the class is 0 the global function list will be searched.
 
    R__LOCKGUARD2(gCINTMutex);
+   
    G__CallFunc  func;
    Long_t       offset;
 
@@ -865,6 +905,7 @@ void *TCint::GetInterfaceMethodWithPrototype(TClass *cl, const char *method,
    // function list will be searched.
 
    R__LOCKGUARD2(gCINTMutex);
+   
    G__InterfaceMethod f;
    Long_t             offset;
 
@@ -885,6 +926,8 @@ const char *TCint::GetInterpreterTypeName(const char *name, Bool_t full)
    // This is used in particular to synchronize between the name used
    // by rootcint and by the run-time enviroment (TClass)
    // Return 0 if the name is not known.
+   
+   R__LOCKGUARD(gCINTMutex);
 
    if (!gInterpreter->CheckClassInfo(name)) return 0;
    G__ClassInfo cl(name);
@@ -901,6 +944,7 @@ void TCint::Execute(const char *function, const char *params, int *error)
    // Execute a global function with arguments params.
 
    R__LOCKGUARD2(gCINTMutex);
+   
    G__CallFunc  func;
    G__ClassInfo cl;
    Long_t       offset;
@@ -920,6 +964,7 @@ void TCint::Execute(TObject *obj, TClass *cl, const char *method,
    // Execute a method from class cl with arguments params.
 
    R__LOCKGUARD2(gCINTMutex);
+   
    void       *address;
    Long_t      offset;
    G__CallFunc func;
@@ -1002,6 +1047,8 @@ void TCint::Execute(TObject *obj, TClass *cl, TMethod *method, TObjArray *params
 Long_t TCint::ExecuteMacro(const char *filename, EErrorCode *error)
 {
    // Execute a CINT macro.
+   
+   R__LOCKGUARD(gCINTMutex);
 
    return TApplication::ExecuteFile(filename, (int*)error);
 }
@@ -1112,6 +1159,8 @@ Int_t TCint::LoadLibraryMap(const char *rootmapfile)
    // for a class (autoload mechanism).
    // See also the AutoLoadCallback() method below.
 
+   R__LOCKGUARD(gCINTMutex);
+   
    // open the [system].rootmap files
    if (!fMapfile) {
       fMapfile = new TEnv(".rootmap");
@@ -1263,6 +1312,8 @@ Int_t TCint::UnloadLibraryMap(const char *library)
    TEnvRec *rec;
    TIter next(fMapfile->GetTable());
 
+   R__LOCKGUARD(gCINTMutex);
+   
    Int_t ret = 0;
 
    while ((rec = (TEnvRec*) next())) {
@@ -1332,6 +1383,8 @@ Int_t TCint::AutoLoad(const char *cls)
 {
    // Load library containing the specified class. Returns 0 in case of error
    // and 1 in case if success.
+   
+   R__LOCKGUARD(gCINTMutex);
 
    Int_t status = 0;
 
@@ -1379,6 +1432,8 @@ Int_t TCint::AutoLoadCallback(const char *cls, const char *lib)
 {
    // Load library containing specified class. Returns 0 in case of error
    // and 1 in case if success.
+   
+   R__LOCKGUARD(gCINTMutex);
 
    if (!gROOT || !gInterpreter || !cls || !lib) return 0;
 
@@ -1462,7 +1517,9 @@ void TCint::UpdateClassInfo(char *item, Long_t tagnum)
    // a class (e.g. after re-executing the setup function). In such
    // cases we have to update the tagnum in the G__ClassInfo used by
    // the TClass for class "item".
-
+   
+   R__LOCKGUARD(gCINTMutex);
+ 
    if (gROOT && gROOT->GetListOfClasses()) {
 
       static Bool_t entered = kFALSE;
@@ -1676,7 +1733,9 @@ void TCint::AddIncludePath(const char *path)
    // Add the given path to the list of directories in which the interpreter
    // looks for include files. Only one path item can be specified at a
    // time, i.e. "path1:path2" is not supported.
-
+   
+   R__LOCKGUARD(gCINTMutex);
+   
    char *incpath = gSystem->ExpandPathName(path);
 
    G__add_ipath(incpath);
@@ -1689,7 +1748,9 @@ const char *TCint::GetIncludePath()
 {
    // Refresh the list of include paths known to the interpreter and return it
    // with -I prepended.
-
+   
+   R__LOCKGUARD(gCINTMutex);
+   
    fIncludePath = "";
 
    G__IncludePathInfo path;
