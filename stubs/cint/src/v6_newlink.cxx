@@ -1305,7 +1305,6 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
  **************************************************************************/
 int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, void* this_ptr, G__param* rpara, G__value *result7)
 {
-   
    void *vaddress = G__get_funcptr(ifunc, ifn);
    int paran = rpara->paran;
 
@@ -4874,8 +4873,8 @@ void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,in
   static int func_cod = 0;
 
   if (i!=-1&&!strcmp(ifunc->funcname[j] ,G__struct.name[i]) && G__struct.type[i]!='n') {
-    if(ifunc->para_nu[j]==1&&ifunc->param[j][0]->p_tagtable!=-1&&ifunc->param[j][0]->reftype==1)
-      return;
+    //if(ifunc->para_nu[j]==1&&ifunc->param[j][0]->p_tagtable!=-1&&ifunc->param[j][0]->reftype==1)
+    //  return;
 
     // We cannot create an object which belongs to an abstract class.
     if (G__struct.isabstract[ifunc->tagnum])
@@ -5268,6 +5267,13 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
       ifunc_default = ifunc;
 
 #ifdef G__NOSTUBS
+      // 28-01-08
+      // Why are the defaults method introduced after the class registering?
+      // If we do that, we won't be able to avoid their stubs...
+      if( (G__dicttype==kFunctionSymbols || G__dicttype==kNoWrappersDictionary) &&
+          G__is_tagnum_safe(i))
+        G__make_default_ifunc(ifunc_default);
+
       // 03-07-07
       // Trigger the symbol registering to have them at hand
       // Do it here when we have the library and the class
@@ -5308,38 +5314,36 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
               }
             }
 #endif
-            // Constructor and dictionary #2
-            // Generating dummy object for getting the symbols of default constructor and destructor
-            if(!strcmp(ifunc->funcname[j],G__struct.name[i]) 
-               && G__dicttype==kFunctionSymbols
-               && G__is_tagnum_safe(i))
-              G__cppif_dummyobj(fp, ifunc, i, j);
-            
             // Constructor? ClassName == FunctionName
-            if(strcmp(ifunc->funcname[j],G__struct.name[i])==0 &&
-               (!(!ifunc->mangled_name[j] && ifunc->funcptr[j]==(void*)-1) || // No mangled name and No function Pointer
-                (!ifunc->mangled_name[j] && G__dicttype!=kFunctionSymbols ) // No mangled name and no dicttype=2
-                 )
-              ) {
-              /* constructor needs special handling */
-              if(0==G__struct.isabstract[i]&&0==isnonpublicnew)
-              {
-                // No Constructor Stub
-                if(((!ifunc->mangled_name[j] || /*if there is no symbol*/
-                     !G__is_tagnum_safe(i) )
-                    && !ifunc->ispurevirtual[j] && G__dicttype==kNoWrappersDictionary) 
-                  || G__dicttype==kCompleteDictionary || G__dicttype==kNoWrappersDictionary ) {
-                  if( !ifunc->mangled_name[j] || ifunc->funcptr[j]>0 || !G__nostubs) /* if there no is a symbol or the no stubs flag is not activated */
-                    G__cppif_genconstructor(fp,hfp,i,j,ifunc);
-                }
+            if(!strcmp(ifunc->funcname[j],G__struct.name[i])) {
+              // Constructor and dictionary #2
+              // Generating dummy object for getting the symbols of default constructor and destructor
+              if(G__dicttype==kFunctionSymbols) {
+                if(G__is_tagnum_safe(i))
+                  G__cppif_dummyobj(fp, ifunc, i, j);
               }
-              ++isconstructor;
-              if(ifunc->para_nu[j]>=1&&
-                 'u'==ifunc->param[j][0]->type&&
-                 i==ifunc->param[j][0]->p_tagtable&&
-                 G__PARAREFERENCE==ifunc->param[j][0]->reftype&&
-                 (1==ifunc->para_nu[j]||ifunc->param[j][1]->pdefault)) {
-                ++iscopyconstructor;
+              else if( !(!ifunc->mangled_name[j] /*&& ifunc->funcptr[j]==(void*)-1*/) || // No mangled name and No function Pointer
+                       (!ifunc->mangled_name[j] && G__dicttype!=kFunctionSymbols ) // No mangled name and no dicttype=2         
+                ){
+                /* constructor needs special handling */
+                if(0==G__struct.isabstract[i]&&0==isnonpublicnew) {
+                  // No Constructor Stub
+                  if(((!ifunc->mangled_name[j] || /*if there is no symbol*/
+                       !G__is_tagnum_safe(i) )
+                      && !ifunc->ispurevirtual[j] && G__dicttype==kNoWrappersDictionary) 
+                     || G__dicttype==kCompleteDictionary || G__dicttype==kNoWrappersDictionary ) {
+                    if( !ifunc->mangled_name[j] /*|| ifunc->funcptr[j]>0*/ || !G__nostubs) /* if there no is a symbol or the no stubs flag is not activated */
+                      G__cppif_genconstructor(fp,hfp,i,j,ifunc);
+                  }
+                }
+                ++isconstructor;
+                if(ifunc->para_nu[j]>=1&&
+                   'u'==ifunc->param[j][0]->type&&
+                   i==ifunc->param[j][0]->p_tagtable&&
+                   G__PARAREFERENCE==ifunc->param[j][0]->reftype&&
+                   (1==ifunc->para_nu[j]||ifunc->param[j][1]->pdefault)) {
+                  ++iscopyconstructor;
+                }
               }
             }
             else if('~'==ifunc->funcname[j][0]) { // Destructor?
@@ -5347,7 +5351,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
               if(G__PUBLIC==ifunc->access[j]){
                 if((G__dicttype==kNoWrappersDictionary) && !ifunc->ispurevirtual[j]){
                   if(G__is_tagnum_safe(i)) {
-                    if( !ifunc->mangled_name[j] || ifunc->funcptr[j]>0 || !G__nostubs ) /* if there no is a symbol or the no stubs flag is not activated */
+                    if( !ifunc->mangled_name[j] /*|| ifunc->funcptr[j]>0*/ || !G__nostubs ) /* if there no is a symbol or the no stubs flag is not activated */
                       G__cppif_gendefault(fp,hfp,i,j,ifunc,1,1,isdestructor,1,1);
                     ++isdestructor; // don't try to create it later on
                   }
@@ -5372,7 +5376,10 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
 #ifdef G__DEFAULTASSIGNOPR
               if(strcmp(ifunc->funcname[j],"operator=")==0
                  && 'u'==ifunc->param[j][0]->type
-                 && i==ifunc->param[j][0]->p_tagtable && !(!ifunc->mangled_name[j] && ifunc->funcptr[j]==(void*)-1)) {
+                 && i==ifunc->param[j][0]->p_tagtable) {
+              if( G__dicttype!=kNoWrappersDictionary ||
+                  (G__dicttype==kNoWrappersDictionary &&
+                   !(!ifunc->mangled_name[j] && ifunc->funcptr[j]==(void*)-1)))
                 ++isassignmentoperator;
               }
 #endif
@@ -5404,13 +5411,16 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                 }
               }
 
-              // If they werent generated automatically...
-              if(!(ifunc->funcptr[j]==(void*)-1) && (!ifunc->mangled_name[j] || !G__nostubs)){
+              // The ifunc->funcptr[j]==(void*)-1 means that they were generated automatically,
+              // if that is the case and we are writing the final dictionary (kCompleteDictionary),
+              // we can't write the stubs for the operator=
+              if(/*!(ifunc->funcptr[j]==(void*)-1) &&*/ (!ifunc->mangled_name[j] || !G__nostubs)){
                 if(!ifunc->ispurevirtual[j] && G__dicttype==kNoWrappersDictionary){
                   // Now we have no symbol but we are in the third or fourth
                   // dictionary... which means that the second one already tried to create it...
                   // If that's the case we have no other choice but to generate the stub
-                  G__cppif_genfunc(fp,hfp,i,j,ifunc);
+                  if(!(strcmp(ifunc->funcname[j],"operator=")==0 && ifunc->funcptr[j]==(void*)-1))
+                    G__cppif_genfunc(fp,hfp,i,j,ifunc);
                 }
                 else if(G__dicttype==kCompleteDictionary){
                   // This is the old case...
@@ -5463,14 +5473,6 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
            && G__ONLYMETHODLINK!=G__struct.globalcomp[i]
           ){
 
-
-          // 28-01-08
-          // Why are the defaults method introduced after the class registering?
-          // If we do that, we won't be able to avoid their stubs...
-          if( (G__dicttype==kFunctionSymbols || G__dicttype==kNoWrappersDictionary) &&
-              G__is_tagnum_safe(i))
-            G__make_default_ifunc(ifunc_default);
-
           // 21-06-07
           // for the stats dont generate default memebers
           // Note: we don't want neither constructor nor copyconstructor 
@@ -5484,7 +5486,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                (( G__dicttype==kFunctionSymbols || G__dicttype==kNoWrappersDictionary)
                 && G__is_tagnum_safe(i)) ||
                (G__dicttype==kNoWrappersDictionary && !G__is_tagnum_safe(i)) ){ // rem to create inlines for default functions
-            if( !ifunc->mangled_name[j] || ifunc->funcptr[j]>0 || !G__nostubs )
+            if( !ifunc->mangled_name[j] /*|| ifunc->funcptr[j]>0*/ || !G__nostubs )
               G__cppif_gendefault(fp,hfp,i,j,ifunc
                                   ,isconstructor
                                   ,iscopyconstructor
@@ -6815,6 +6817,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
     isconstructor = G__isprivateconstructor(tagnum, 0);
   }
 
+  int isconstused = 0;
   if (!isconstructor && !G__struct.isabstract[tagnum] && !isnonpublicnew) {
 #ifdef G__NOSTUBS
     if(G__dicttype==kNoWrappersDictionary){
@@ -6830,20 +6833,45 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
       G__ifunc_table_internal * cons_oper = G__get_methodhandle4(G__struct.name[tagnum], &para_cons, G__struct.memfunc[tagnum], &pifn, &poffset, 0, 1,0,0);
 
       // Look for it in the ifunc table is it was already create in make_default_ifunc
-      if(cons_oper && !(!cons_oper->mangled_name[pifn] && cons_oper->funcptr[pifn]!=(void*)-1))
+      if(cons_oper && !(!cons_oper->mangled_name[pifn] /*&& cons_oper->funcptr[pifn]!=(void*)-1*/))
         page = cons_oper->page;
     }
 #endif
 
 #ifdef G__NOSTUBS
-    if(G__dicttype==kFunctionSymbols && G__is_tagnum_safe(tagnum)){
+    if(G__dicttype==kFunctionSymbols){
       // 01-11-07
       // Force the outlining of functions even if the weren't declared
       // (CInt will try to declare them later on anyways)
 
-      // I don't know how to get the pointer to a constructor so the only thing
-      // I can think of to use the default constructor is to create an object
-      fprintf(fp,"  %s G__cons_%s;\n", G__fulltagname(tagnum, 0),  G__map_cpp_funcname(tagnum, funcname, ifn, page));
+      if(G__is_tagnum_safe(tagnum)) {
+        // if we didn't force the outlining for the default constructor 	 
+        // we have to do it here because we need the object created there 	 
+        // to be able to use a copy constructor 
+        if ( !(!isconstructor && !G__struct.isabstract[tagnum] && !isnonpublicnew) ) { 	 
+          // I don't know how to get the pointer to a constructor so the only thing 	 
+          // I can think of to use the default constructor is to create an object 	 
+	  	 
+          // index in the ifunc 	 
+          long pifn; 	 
+          long poffset; 	 
+	  	 
+          // Single Constructor has only a parameter. The size of the object 	 
+          G__param para_new; 	 
+          para_new.paran = 0; 	 
+	  	 
+          // We look for the "new operator" ifunc in the current class and in its bases 	 
+          G__ifunc_table_internal* new_oper = G__get_methodhandle4(G__struct.name[tagnum], &para_new, G__struct.memfunc[tagnum], &pifn, &poffset, 0, 1,0,0);
+      
+          if(new_oper && (!isconstructor && !G__struct.isabstract[tagnum] && !isnonpublicnew))
+            isconstused = 1;
+        }
+
+        // I don't know how to get the pointer to a constructor so the only thing
+        // I can think of to use the default constructor is to create an object
+        if(isconstused)
+          fprintf(fp,"  %s G__cons_%s;\n", G__fulltagname(tagnum, 0),  G__map_cpp_funcname(tagnum, funcname, ifn, page));
+      }
     }
     else
 #endif
@@ -6984,45 +7012,45 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
       // We look for the "new operator" ifunc in the current class and in its bases
       G__ifunc_table_internal * cons_oper = G__get_methodhandle4(G__struct.name[tagnum], &para_cons, G__struct.memfunc[tagnum], &pifn, &poffset, 0, 1,0,0);
 
-      if(cons_oper && !(!cons_oper->mangled_name[pifn] && cons_oper->funcptr[pifn]!=(void*)-1))
+      if(cons_oper && !(!cons_oper->mangled_name[pifn] /*&& cons_oper->funcptr[pifn]!=(void*)-1*/))
         page = cons_oper->page;
     }
 #endif
 
 #ifdef G__NOSTUBS
-    if(G__dicttype==kFunctionSymbols && G__is_tagnum_safe(tagnum)) {
-
+    if(G__dicttype==kFunctionSymbols) {
       // 01-11-07
       // Force the outlining of functions even if the weren't declared
       // (CInt will try to declare them later on anyways)
 
-      // if we didn't force the outlining for the default constructor 	 
-      // we have to do it here because we need the object created there 	 
-      // to be able to use a copy constructor 
-      int isconstdefined = 1;
-      if ( !(!isconstructor && !G__struct.isabstract[tagnum] && !isnonpublicnew) ) { 	 
-        // I don't know how to get the pointer to a constructor so the only thing 	 
-        // I can think of to use the default constructor is to create an object 	 
+      if(G__is_tagnum_safe(tagnum)) {
+        // if we didn't force the outlining for the default constructor 	 
+        // we have to do it here because we need the object created there 	 
+        // to be able to use a copy constructor 
+        if (!(!isconstructor && !G__struct.isabstract[tagnum] && !isnonpublicnew)) { 	 
+          // I don't know how to get the pointer to a constructor so the only thing 	 
+          // I can think of to use the default constructor is to create an object 	 
 	  	 
-        // index in the ifunc 	 
-        long pifn; 	 
-        long poffset; 	 
+          // index in the ifunc 	 
+          long pifn; 	 
+          long poffset; 	 
 	  	 
-        // Single Constructor has only a parameter. The size of the object 	 
-        G__param para_new; 	 
-        para_new.paran = 0; 	 
+          // Single Constructor has only a parameter. The size of the object 	 
+          G__param para_new; 	 
+          para_new.paran = 0; 	 
 	  	 
-        // We look for the "new operator" ifunc in the current class and in its bases 	 
-        G__ifunc_table_internal* new_oper = G__get_methodhandle4(G__struct.name[tagnum], &para_new, G__struct.memfunc[tagnum], &pifn, &poffset, 0, 1,0,0);
+          // We look for the "new operator" ifunc in the current class and in its bases 	 
+          G__ifunc_table_internal* new_oper = G__get_methodhandle4(G__struct.name[tagnum], &para_new, G__struct.memfunc[tagnum], &pifn, &poffset, 0, 1,0,0);
       
-        if(new_oper && (!isconstructor && !G__struct.isabstract[tagnum] && !isnonpublicnew))
-          fprintf(fp, "  %s G__cons_%s;\n", G__fulltagname(tagnum, 0),  G__map_cpp_funcname(tagnum, funcname, ifn, page));
-        else
-          isconstdefined = 0;
-      }
+          if(!isconstused && new_oper && (!isconstructor && !G__struct.isabstract[tagnum] && !isnonpublicnew)){
+            fprintf(fp, "  %s G__cons_%s;\n", G__fulltagname(tagnum, 0),  G__map_cpp_funcname(tagnum, funcname, ifn, page));
+            isconstused = 1;
+          }
+        }
 	  	 
-      if(isconstdefined)
-        fprintf(fp,"  %s G__copycons_%s(G__cons_%s);\n", G__fulltagname(tagnum, 0), G__map_cpp_funcname(tagnum, funcname, ifn, page),G__map_cpp_funcname(tagnum, funcname, ifn, page));
+        if(isconstused)
+          fprintf(fp,"  %s G__copycons_%s(G__cons_%s);\n", G__fulltagname(tagnum, 0), G__map_cpp_funcname(tagnum, funcname, ifn, page),G__map_cpp_funcname(tagnum, funcname, ifn, page));
+      }
     }
     else
 #endif // G__NOSTUBS
@@ -7094,7 +7122,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
       G__ifunc_table_internal * des_oper = G__get_methodhandle4(funcname, &para_des, G__struct.memfunc[tagnum], &pifn, &poffset, 0, 1,0,0);
 
       // Look for it in the ifunc table is it was already create in make_default_ifunc
-      if(des_oper && !(!des_oper->mangled_name[pifn] && des_oper->funcptr[pifn]!=(void*)-1) )
+      if(des_oper && !(!des_oper->mangled_name[pifn] /*&& des_oper->funcptr[pifn]!=(void*)-1*/) )
         page = des_oper->page;
     }
 #endif
@@ -7103,12 +7131,15 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
     if(!G__struct.memfunc[tagnum]->mangled_name[0])
       isdestdefined = 0;
 
+
+
 #ifdef G__NOSTUBS
-    if(G__dicttype==kFunctionSymbols && G__is_tagnum_safe(tagnum)) {
+    if(G__dicttype==kFunctionSymbols) {
       // 01-11-07
       // Force the outlining of functions even if the weren't declared
       // (CInt will try to declare them later on anyways)
 
+      //if(G__is_tagnum_safe(tagnum))
       // 28-01-08
       // How can we force the destructor symbol to be included?
       // is it enough with the object creation?
@@ -7228,21 +7259,22 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
       // We look for the "new operator" ifunc in the current class and in its bases
       G__ifunc_table_internal * op_oper = G__get_methodhandle4("operator=", &para_op, G__struct.memfunc[tagnum], &pifn, &poffset, 0, 1,0,0);
 
-      if(op_oper && !(!op_oper->mangled_name[pifn] && op_oper->funcptr[pifn]!=(void*)-1))
+      if(op_oper && !(!op_oper->mangled_name[pifn] /*&& op_oper->funcptr[pifn]!=(void*)-1*/))
         page = op_oper->page;
     }
 #endif
 
 #ifdef G__NOSTUBS
-    if(G__dicttype==kFunctionSymbols && G__is_tagnum_safe(tagnum)) {
+    if(G__dicttype==kFunctionSymbols) {
       // 01-11-07
       // Force the outlining of functions even if the weren't declared
       // (CInt will try to declare them later on anyways)
 
-      sprintf(funcname, "operator=");
-      fprintf(fp,"%s& (%s::*G__assignop_%s)(const %s&) = &%s::operator=;\n", G__fulltagname(tagnum, 0), G__fulltagname(tagnum, 0), G__map_cpp_funcname(tagnum, funcname, ifn, page), G__fulltagname(tagnum, 0), G__fulltagname(tagnum, 0) );
-
-      fprintf(fp," (void)(G__assignop_%s);\n", G__map_cpp_funcname(tagnum, funcname, ifn, page));
+      if(G__is_tagnum_safe(tagnum)) {
+        sprintf(funcname, "operator=");
+        fprintf(fp,"%s& (%s::*G__assignop_%s)(const %s&) = &%s::operator=;\n", G__fulltagname(tagnum, 0), G__fulltagname(tagnum, 0), G__map_cpp_funcname(tagnum, funcname, ifn, page), G__fulltagname(tagnum, 0), G__fulltagname(tagnum, 0) );
+        fprintf(fp," (void)(G__assignop_%s);\n", G__map_cpp_funcname(tagnum, funcname, ifn, page));
+      }
     }
     else
 #endif
@@ -9137,24 +9169,39 @@ void G__cpplink_memfunc(FILE *fp)
 
             // Check for constructor, destructor, or operator=.
             if ( !strcmp(ifunc->funcname[j], G__struct.name[i]) && 
-                 (G__dicttype==kCompleteDictionary || !G__is_tagnum_safe(i)) ) {
+                 (G__dicttype==kNoWrappersDictionary || G__dicttype==kCompleteDictionary || !G__is_tagnum_safe(i)) ) {
               // We have a constructor.
+              // If this was generated automatically.. print it... but dont re-do it at the end
+              if (ifunc->funcptr[j]==(void*)-1)
+                ++isconstructor;
+
               if (G__struct.isabstract[i]) {
-                continue;
+                // Dont continue in this step because we used make_default_ifunc which
+                // will create them as normal functions
+                if(G__dicttype!=kNoWrappersDictionary)
+                  continue;
               }
               if (isnonpublicnew) {
-                continue;
+                // Dont continue in this step because we used make_default_ifunc which
+                // will create them as normal functions
+                if(G__dicttype!=kNoWrappersDictionary)
+                  continue;
               }
               ++isconstructor;
 
               if ((ifunc->para_nu[j] >= 1) && (ifunc->param[j][0]->type == 'u') && (i == ifunc->param[j][0]->p_tagtable) && (ifunc->param[j][0]->reftype == G__PARAREFERENCE) && ((ifunc->para_nu[j] == 1) || ifunc->param[j][1]->pdefault)) {
                 ++iscopyconstructor;
               }
-            } else if ((G__dicttype==kCompleteDictionary || !G__is_tagnum_safe(i))
+            } else if ((G__dicttype==kNoWrappersDictionary || G__dicttype==kCompleteDictionary || !G__is_tagnum_safe(i))
                        && ifunc->funcname[j][0] == '~') {
+              // If this was generated automatically.. print it... but dont re-do it at the end
+              if (ifunc->funcptr[j]==(void*)-1)
+                ++isdestructor;
+
               // We have a destructor.
               dtoraccess = ifunc->access[j];
               virtualdtorflag = ifunc->isvirtual[j] + (ifunc->ispurevirtual[j] * 2);
+              // Why do we need this condition?
               if (G__PUBLIC != ifunc->access[j]) {
                 ++isdestructor;
               }
@@ -9163,25 +9210,59 @@ void G__cpplink_memfunc(FILE *fp)
 
               if ((G__PROTECTED == ifunc->access[j]) && G__struct.protectedaccess[i] && !G__precomp_private) {
                 G__fprinterr(G__serr, "Limitation: can not generate dictionary for protected destructor for %s\n", G__fulltagname(i, 1));
-                continue;
+                // Dont continue in this step because we used make_default_ifunc which
+                // will create them as normal functions
+                if(G__dicttype!=kNoWrappersDictionary)
+                  continue;
               }
-              continue;
+              // Dont continue in this step because we used make_default_ifunc which
+              // will create them as normal functions
+              if(G__dicttype!=kNoWrappersDictionary)
+                continue;
             }
 
 #ifdef G__DEFAULTASSIGNOPR
             else if ( !strcmp(ifunc->funcname[j], "operator=")
                       && ('u' == ifunc->param[j][0]->type)
-                      && (i == ifunc->param[j][0]->p_tagtable)
-                      && (G__dicttype==kCompleteDictionary || !G__is_tagnum_safe(i))) {
+                      && (i == ifunc->param[j][0]->p_tagtable)) {
               // We have an operator=.
-              ++isassignmentoperator;
+              if( G__dicttype!=kNoWrappersDictionary ||
+                  (G__dicttype==kNoWrappersDictionary &&
+                   !(!ifunc->mangled_name[j] && ifunc->funcptr[j]==(void*)-1)))
+                ++isassignmentoperator;
             }
 #endif
-
             /****************************************************************
              * setup normal function
              ****************************************************************/
             /* function name and return type */
+
+
+            // Note: when this conditions are fullfilled, we don't generate the stub
+            // for the assigment operator (when it's automatic)... so dont't generate its
+            // memfunc either
+            // The ifunc->funcptr[j]==(void*)-1 means that they were generated automatically,
+            // if that is the case and we are writing the final dictionary (kCompleteDictionary),
+            // we can't write the stubs for the operator=
+            if(/*!(ifunc->funcptr[j]==(void*)-1) &&*/ (!ifunc->mangled_name[j] || !G__nostubs)){
+              if(!ifunc->ispurevirtual[j] && G__dicttype==kNoWrappersDictionary){
+                // Now we have no symbol but we are in the third or fourth
+                // dictionary... which means that the second one already tried to create it...
+                // If that's the case we have no other choice but to generate the stub
+                if((strcmp(ifunc->funcname[j],"operator=")==0 && ifunc->funcptr[j]==(void*)-1) /*&& !G__is_tagnum_safe(i)*/)
+                  continue;
+              }
+            }
+
+            if(/*!(ifunc->funcptr[j]==(void*)-1) &&*/ (!ifunc->mangled_name[j] || !G__nostubs)){
+              if(!ifunc->ispurevirtual[j] && G__dicttype==kNoWrappersDictionary){
+                // Now we have no symbol but we are in the third or fourth
+                // dictionary... which means that the second one already tried to create it...
+                // If that's the case we have no other choice but to generate the stub
+                if(ifunc->funcname[j][0]=='~' &&  !G__is_tagnum_safe(i))
+                  continue;
+              }
+            }
 
             // 11-07-07 create a switch for the normal dictionaries
             if(G__dicttype==kCompleteDictionary)
@@ -9479,7 +9560,7 @@ void G__cpplink_memfunc(FILE *fp)
           }
 
           if (G__dicttype==kCompleteDictionary || 
-              ( G__dicttype==kNoWrappersDictionary && !G__is_tagnum_safe(i)) ){
+              ( G__dicttype==kNoWrappersDictionary /*&& !G__is_tagnum_safe(i)*/) ){
             /****************************************************************
              * setup default constructor
              ****************************************************************/
@@ -11574,6 +11655,7 @@ void G__specify_link(int link_stub)
   int rfNoInputOper = 0;
   int rfUseBytecount = 0;
   int rfNoMap = 0;
+  int rfUseStubs = 0;
 
   /*************************************************************************
   * #pragma link [spec] options=...
@@ -11602,6 +11684,7 @@ void G__specify_link(int link_stub)
         else if (*iOpt == "nostreamer") rfNoStreamer = 1;
         else if (*iOpt == "noinputoper") rfNoInputOper = 1;
         else if (*iOpt == "evolution") rfUseBytecount = 1;
+        else if (*iOpt == "stubs") rfUseStubs = 1;
         else {
            G__printlinenum();
            G__fprinterr(G__serr,"Warning: ignoring unknown #pragma link option=%s\n", iOpt->c_str());
