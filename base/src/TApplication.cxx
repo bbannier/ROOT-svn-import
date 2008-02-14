@@ -208,7 +208,7 @@ TApplication::TApplication(const char *appClassName,
    // therefore, cint has no idea about it.
    // Hack our way through by reading such file...
    // how many of them should we read?
-   ProcessLine(".L $ROOTSYS/cint/include/float.h", kTRUE);
+   //ProcessLine(".L $ROOTSYS/cint/include/float.h", kTRUE);
 
    // Make sure all registered dictionaries have been initialized
    // and that all types have been loaded
