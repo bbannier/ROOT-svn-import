@@ -3690,7 +3690,7 @@ void G__set_globalcomp(const char *mode,const char *linkfilename,const char *dll
       fprintf(fp,"\n");
 
       if(G__dicttype!=kFunctionSymbols)
-        fprintf(fp,"extern \"C\" void G__cpp_reset_tagtable%s();\n",G__DLLID);
+         fprintf(fp,"extern \"C\" void G__cpp_reset_tagtable%s();\n",G__DLLID);
 
       fprintf(fp,"\nextern \"C\" void G__set_cpp_environment%s() {\n",G__DLLID);
       fclose(fp);
@@ -5829,6 +5829,7 @@ static void G__x8664_vararg(FILE *fp, int ifn, G__ifunc_table_internal *ifunc,
       if (!strcmp(fn, cls)) {
          // variadic constructor case, not yet supported
          printf("G__x8664_vararg: variadic constructors not yet supported\n");
+         return;
       } else {
          // write return type
          char *typestring = G__type2string(type, ptagnum, typenum, reftype, isconst);
@@ -7337,6 +7338,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
  * Changed to return the page instead of just not null
  * (since 0 means not found then the index starts at 1)
  **************************************************************************/
+extern "C"
 int G__method_inbase(int ifn, G__ifunc_table_internal *ifunc)
 {
   // tagnum's Base Classes structure
