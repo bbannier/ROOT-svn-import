@@ -52,6 +52,7 @@ protected:
    void     Interrupt(Int_t type);
    Int_t    Ping();
    TObjString *SendCoordinator(Int_t kind, const char *msg = 0, Int_t int2 = 0);
+   Int_t    SendGroupPriority(const char *grp, Int_t priority);
    void     SetAlias(const char *alias);
    void     SetReady();
    void     StopProcess(Bool_t abort, Int_t timeout);

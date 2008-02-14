@@ -64,6 +64,7 @@ public:
    virtual Int_t     GetN() const { return fN;}
    virtual Float_t  *GetP() const { return fP;}
    virtual void      GetPoint(Int_t n, Float_t &x, Float_t &y, Float_t &z) const;
+   virtual void      GetPoint(Int_t n, Double_t &x, Double_t &y, Double_t &z) const;
    Option_t         *GetOption() const {return fOption.Data();}
    virtual void      ls(Option_t *option="") const;
    virtual Int_t     Merge(TCollection *list);

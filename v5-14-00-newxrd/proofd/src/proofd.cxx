@@ -154,9 +154,7 @@
 // 13: support for SSH authentication via SSH tunnel
 // 14: add env setup message
 
-#ifdef R__HAVE_CONFIG
 #include "RConfigure.h"
-#endif
 #include "RConfig.h"
 
 #include <ctype.h>
@@ -277,6 +275,21 @@ void ErrSys(int level, const char *msg)
 
 //--- Proofd routines ----------------------------------------------------------
 
+#if defined(__sun)
+//______________________________________________________________________________
+extern "C" { void ProofdTerm(int)
+{
+   // Termination upon receipt of a SIGTERM or SIGINT.
+
+   ErrorInfo("ProofdTerm: rootd.cxx: got a SIGTERM/SIGINT");
+   // Terminate properly
+   RpdAuthCleanup(0,0);
+   // Close network connection
+   NetClose();
+   // exit
+   exit(0);
+}}
+#else
 //______________________________________________________________________________
 static void ProofdTerm(int)
 {
@@ -290,6 +303,7 @@ static void ProofdTerm(int)
    // exit
    exit(0);
 }
+#endif
 
 //______________________________________________________________________________
 const char *RerouteUser()

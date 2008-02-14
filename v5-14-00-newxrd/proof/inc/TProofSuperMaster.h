@@ -31,7 +31,7 @@
 #include "TString.h"
 #endif
 
-class TProofPlayer;
+class TVirtualProofPlayer;
 class TDSet;
 
 class TProofSuperMaster : public TProof {
@@ -42,13 +42,14 @@ protected:
    Bool_t    StartSlaves(Bool_t, Bool_t);
    Long64_t  Process(TDSet *set, const char *selector,
                      Option_t *option = "", Long64_t nentries = -1,
-                     Long64_t firstentry = 0, TEventList *evl = 0);
+                     Long64_t firstentry = 0);
    void      ValidateDSet(TDSet *dset);
-   virtual   TProofPlayer *MakePlayer();
+   virtual   TVirtualProofPlayer *MakePlayer(const char *player = 0, TSocket *s = 0);
 
 public:
    TProofSuperMaster(const char *masterurl, const char *conffile = kPROOF_ConfFile,
-                     const char *confdir = kPROOF_ConfDir, Int_t loglevel = 0);
+                     const char *confdir = kPROOF_ConfDir, Int_t loglevel = 0,
+                     const char *alias = 0, TProofMgr *mgr = 0);
    virtual ~TProofSuperMaster() { }
 
    ClassDef(TProofSuperMaster,0) //PROOF control class for making submasters

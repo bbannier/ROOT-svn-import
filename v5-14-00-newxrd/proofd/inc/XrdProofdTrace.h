@@ -33,16 +33,23 @@
 #define TRACE_XERR      0x0040
 #define TRACE_FORK      0x0080
 #define TRACE_HDBG      0x0100
+#define TRACE_SCHED     0x0200
+#define TRACE_ADMIN     0x0400
 
 #ifndef NODEBUG
 
 #ifndef ROOT_Riosfwd
 #include "Riosfwd.h"
 #endif
+#ifndef ROOT_DllImport
+#include "DllImport.h"
+#endif
 #include "XrdOuc/XrdOucTrace.hh"
 
+R__EXTERN XrdOucTrace *XrdProofdTrace;
+
 // Auxilliary macro
-#define TRACING(x) (XrdProofdTrace->What & TRACE_ ## x)
+#define TRACING(x) (XrdProofdTrace && (XrdProofdTrace->What & TRACE_ ## x))
 #define TRACESET(act,on) \
         if (on) { \
            XrdProofdTrace->What |= TRACE_ ## act; \
@@ -73,6 +80,11 @@
 #define TRACES(act, x) \
    if (TRACING(act)) \
       {XrdProofdTrace->Beg(TRACEID,TRACELINK->ID,TRSID); cerr <<x; \
+       XrdProofdTrace->End();}
+
+#define TRACESTR(act, x) \
+   if (TRACING(act)) \
+      {XrdProofdTrace->Beg(TRACEID,TRACELINK->ID,RESPONSE.STRID()); cerr <<x; \
        XrdProofdTrace->End();}
 
 //

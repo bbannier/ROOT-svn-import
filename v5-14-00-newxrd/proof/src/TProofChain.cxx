@@ -1,3 +1,4 @@
+
 // @(#)root/proof:$Id$
 // Author: G. Ganis  Nov 2006
 
@@ -20,8 +21,11 @@
 
 #include "TProofChain.h"
 #include "TDSet.h"
+#include "TList.h"
 #include "TProof.h"
-
+#include "TROOT.h"
+#include "TEventList.h"
+#include "TEntryList.h"
 
 ClassImp(TProofChain)
 
@@ -57,15 +61,22 @@ TProofChain::~TProofChain()
    // Destructor
 
    if (fChain) {
-      if (fChain)
-         gProof->RemoveChain(fChain);
       SafeDelete(fSet);
+      // Remove the chain from the private lists in the TProof objects
+      TIter nxp(gROOT->GetListOfSockets());
+      TObject *o = 0;
+      TProof *p = 0;
+      while ((o = nxp()))
+         if ((p = dynamic_cast<TProof *>(o)))
+            p->RemoveChain(fChain);
+      fChain = 0;
    } else {
       // Not owner
       fSet = 0;
    }
    SafeDelete(fTree);
    fDirectory    = 0;
+
 }
 
 //______________________________________________________________________________
@@ -111,7 +122,13 @@ Long64_t TProofChain::Draw(const char *varexp, const TCut &selection,
    if (fDrawFeedback)
       gProof->SetDrawFeedbackOption(fDrawFeedback, option);
    fReadEntry = firstentry;
-   fSet->SetEventList(fEventList);
+
+   // Set either the entry-list (priority) or the event-list
+   if (fEntryList) {
+      fSet->SetEntryList(fEntryList);
+   } else if (fEventList) {
+      fSet->SetEntryList(fEventList);
+   }
 
    Long64_t rv = fSet->Draw(varexp, selection, option, nentries, firstentry);
    return rv;
@@ -134,7 +151,14 @@ Long64_t TProofChain::Draw(const char *varexp, const char *selection,
    if (fDrawFeedback)
       gProof->SetDrawFeedbackOption(fDrawFeedback, option);
    fReadEntry = firstentry;
-   fSet->SetEventList(fEventList);
+
+   // Set either the entry-list (priority) or the event-list
+   if (fEntryList) {
+      fSet->SetEntryList(fEntryList);
+   } else if (fEventList) {
+      fSet->SetEntryList(fEventList);
+   }
+
    Long64_t rv = fSet->Draw(varexp, selection, option, nentries, firstentry);
    return rv;
 }
@@ -199,6 +223,13 @@ Long64_t TProofChain::Process(const char *filename, Option_t *option,
    // in case of success.
    // See TDSet::Process().
 
+   // Set either the entry-list (priority) or the event-list
+   if (fEntryList) {
+      fSet->SetEntryList(fEntryList);
+   } else if (fEventList) {
+      fSet->SetEntryList(fEventList);
+   }
+
    return fSet->Process(filename, option, nentries, firstentry);
 }
 
@@ -210,7 +241,7 @@ Long64_t TProofChain::Process(TSelector *selector, Option_t *option,
    // The return value is -1 in case of error and TSelector::GetStatus() in
    // in case of success.
 
-   if (selector || option || nentries || firstentry);
+   if (selector || option || nentries || firstentry) { }
    //   return fSet->Process(selector, option, nentries, firstentry);
    Warning("Process", "not implemented"); // TODO
    return -1;
@@ -258,8 +289,7 @@ void TProofChain::Progress(Long64_t total, Long64_t processed)
 
    if (gROOT->IsInterrupted() && gProof)
       gProof->StopProcess(kTRUE);
-   if (total)
-      ;
+   if (total) { }
 
    fReadEntry = processed;
 }

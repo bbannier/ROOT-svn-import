@@ -51,6 +51,7 @@ class XrdClientMessage;
 class XrdClientPhyConnection;
 class XrdSysRecMutex;
 class XrdSecProtocol;
+class XrdSysPlugin;
 
 class XrdProofConn  : public XrdClientAbsUnsolMsgHandler {
 
@@ -98,6 +99,9 @@ private:
    static int          fgMaxTry; //max number of connection attempts
    static int          fgTimeWait; //Wait time between an attempt and the other
 
+   static XrdSysPlugin *fgSecPlugin;       // Sec library plugin
+   static void         *fgSecGetProtocol;  // Sec protocol getter
+
    XrdSecProtocol     *Authenticate(char *plist, int lsiz);
    bool                CheckErrorStatus(XrdClientMessage *, int &, const char *);
    bool                CheckResp(struct ServerResponseHeader *resp,
@@ -110,7 +114,7 @@ private:
    XReqErrorType       LowWrite(XPClientRequest *, const void *, int);
    bool                MatchStreamID(struct ServerResponseHeader *resp);
    XrdClientMessage   *SendRecv(XPClientRequest *req,
-                                const void *reqData, void **answData);
+                                const void *reqData, char **answData);
    virtual void        SetAsync(XrdClientAbsUnsolMsgHandler *uh);
 
    void                SetInterrupt();
@@ -130,13 +134,13 @@ public:
    const char         *GetUrl() { return (const char *) fUrl.GetUrl().c_str(); }
    const char         *GetLastErr() { return fLastErrMsg.c_str(); }
 
-   bool                IsValid() const { return fConnected; }
+   bool                IsValid() const;
 
    // Send, Recv interfaces
    virtual int         ReadRaw(void *buf, int len);
    virtual XrdClientMessage *ReadMsg();
    XrdClientMessage   *SendReq(XPClientRequest *req, const void *reqData,
-                               void **answData, const char *CmdName);
+                               char **answData, const char *CmdName);
    void                SetSID(kXR_char *sid);
    virtual int         WriteRaw(const void *buf, int len);
 

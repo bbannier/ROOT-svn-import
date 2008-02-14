@@ -10,6 +10,8 @@
 
 #include "XProtocol/XProtocol.hh"
 
+#define XPD_DEF_PORT 1093
+
 // KINDS of SERVERS
 //
 //
@@ -56,6 +58,42 @@ enum XProofRequestTypes {
 #define kXPD_OpModeOpen       0
 #define kXPD_OpModeControlled 1
 
+// Type of resources
+enum EResourceType {
+   kRTStatic,
+   kRTDynamic
+};
+
+// Worker selection options
+enum EStaticSelOpt {
+   kSSORoundRobin = 0,
+   kSSORandom     = 1,
+   kSSOLoadBased  = 2
+};
+
+// Should be the same as in proofx/inc/TXSocket.h
+enum EAdminMsgType {
+   kQuerySessions     = 1000,
+   kSessionTag        = 1001,
+   kSessionAlias      = 1002,
+   kGetWorkers        = 1003,
+   kQueryWorkers      = 1004,
+   kCleanupSessions   = 1005,
+   kQueryLogPaths     = 1006,
+   kReadBuffer        = 1007,
+   kQueryROOTVersions = 1008,
+   kROOTVersion       = 1009,
+   kGroupProperties   = 1010,
+   kSendMsgToUser     = 1011
+};
+
+// XPROOFD Worker CPU load sharing options
+enum XProofSchedOpts {
+   kXPD_sched_off = 0,
+   kXPD_sched_local = 1,     // Priorities defined in a local file on the worker
+   kXPD_sched_central = 2    // Priorities communicated by the master
+};
+
 // XPROOFD SERVER STATUS
 enum XProofSessionStatus {
    kXPD_idle            = 0,
@@ -72,6 +110,7 @@ enum XProofSessionStatus {
 #define kXPD_fb_prog      0x10
 #define kXPD_logmsg       0x20
 #define kXPD_querynum     0x40
+#define kXPD_process      0x80
 
 //_______________________________________________
 // PROTOCOL DEFINITION: SERVER'S RESPONSES TYPES
@@ -99,7 +138,9 @@ enum XProofActionCode {
    kXPD_errmsg,    // 5106     // Error message from server with log string
    kXPD_timer,     // 5107     // Server request to start a timer for delayed termination
    kXPD_urgent,    // 5108     // Urgent message to be processed in the reader thread
-   kXPD_flush      // 5109     // Server request to flush stdout (before retrieving logs)
+   kXPD_flush,     // 5109     // Server request to flush stdout (before retrieving logs)
+   kXPD_inflate,   // 5110     // Server request to inflate processing times
+   kXPD_priority   // 5111     // Server request to propagate a group priority
 };
 
 //_______________________________________________

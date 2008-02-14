@@ -116,7 +116,8 @@ Long64_t     TXSockBuf::fgMemMax = 10485760; // Max allowed allocated memory [10
 TXSocket::TXSocket(const char *url, Char_t m, Int_t psid, Char_t capver,
                    const char *logbuf, Int_t loglevel, TXHandler *handler)
          : TSocket(), fMode(m), fLogLevel(loglevel),
-           fBuffer(logbuf), fASem(0), fDontTimeout(kFALSE), fXrdProofdVersion(-1)
+           fBuffer(logbuf), fASem(0), fDontTimeout(kFALSE), fRDInterrupt(kFALSE),
+           fXrdProofdVersion(-1)
 {
    // Constructor
    // Open the connection to a remote XrdProofd instance and start a PROOF
@@ -189,8 +190,9 @@ TXSocket::TXSocket(const char *url, Char_t m, Int_t psid, Char_t capver,
       fConn = new XrdProofConn(url, md, psid, capver, this, fBuffer.Data());
       if (!fConn || !(fConn->IsValid())) {
          if (fConn->GetServType() != XrdProofConn::kSTProofd)
-             Error("TXSocket", "severe error occurred while opening a connection"
-                   " to server [%s]: %s", url, fConn->GetLastErr());
+            if (gDebug > 0)
+               Error("TXSocket", "fatal error occurred while opening a connection"
+                                 " to server [%s]: %s", url, fConn->GetLastErr());
          return;
       }
 
@@ -210,8 +212,10 @@ TXSocket::TXSocket(const char *url, Char_t m, Int_t psid, Char_t capver,
       fUser = fConn->fUser.c_str();
       fHost = fConn->fHost.c_str();
       fPort = fConn->fPort;
-      if (m == 'C')
+      if (m == 'C') {
+         fXrdProofdVersion = fConn->fRemoteProtocol;
          fRemoteProtocol = fConn->fRemoteProtocol;
+      }
 
       // Also in the base class
       fUrl = fConn->fUrl.GetUrl().c_str();
@@ -251,6 +255,16 @@ TXSocket::~TXSocket()
 }
 
 //_____________________________________________________________________________
+void TXSocket::SetSessionID(Int_t id)
+{
+   // Set session ID to 'id'. If id < 0, disable also the asynchronous handler.
+
+   if (id < 0 && fConn)
+      fConn->SetAsync(0);
+   fSessionID = id;
+}
+
+//_____________________________________________________________________________
 void TXSocket::DisconnectSession(Int_t id, Option_t *opt)
 {
    // Disconnect a session. Use opt= "S" or "s" to
@@ -282,6 +296,10 @@ void TXSocket::DisconnectSession(Int_t id, Option_t *opt)
       XrdClientMessage *xrsp =
          fConn->SendReq(&Request, (const void *)0, 0, "DisconnectSession");
 
+      // Print error msg, if any
+      if (!xrsp && fConn->GetLastErr())
+         Printf("%s: %s", fHost.Data(), fConn->GetLastErr());
+
       // Cleanup
       SafeDelete(xrsp);
    }
@@ -296,7 +314,7 @@ void TXSocket::Close(Option_t *opt)
    // A session ID can be given using #...# signature, e.g. "#1#".
    // Default is opt = "".
 
-   // Remove any reference in the glovbal pipe and ready-sock queue
+   // Remove any reference in the global pipe and ready-sock queue
    TXSocket::FlushPipe(this);
 
    // Make sure we are connected
@@ -316,6 +334,9 @@ void TXSocket::Close(Option_t *opt)
          sessID = o.IsDigit() ? o.Atoi() : sessID;
       }
    }
+
+   // Disconnect the asynchronous requests handler
+   fConn->SetAsync(0);
 
    if (sessID > -1) {
       // Warn the remote session, if any (after destroy the session is gone)
@@ -467,6 +488,52 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
                Error("ProcessUnsolicitedMsg","handler undefined");
          }
          break;
+      case kXPD_inflate:
+         //
+         // Set inflate factor
+         {
+            kXR_int32 inflate = 1000;
+            if (len > 0) {
+               memcpy(&inflate, pdata, sizeof(kXR_int32));
+               inflate = net2host(inflate);
+               if (gDebug > 1)
+                  Info("ProcessUnsolicitedMsg","kXPD_inflate: factor: %d", inflate);
+               // Update pointer to data
+               pdata = (void *)((char *)pdata + sizeof(kXR_int32));
+               len -= sizeof(kXR_int32);
+            }
+            // Handle this input in this thread to avoid queuing on the
+            // main thread
+            XHandleIn_t hin = {acod, inflate, 0, 0};
+            if (fHandler)
+               fHandler->HandleInput((const void *)&hin);
+            else
+               Error("ProcessUnsolicitedMsg","handler undefined");
+         }
+         break;
+      case kXPD_priority:
+         //
+         // Broadcast group priority
+         {
+            kXR_int32 priority = -1;
+            if (len > 0) {
+               memcpy(&priority, pdata, sizeof(kXR_int32));
+               priority = net2host(priority);
+               if (gDebug > 1)
+                  Info("ProcessUnsolicitedMsg","kXPD_priority: priority: %d", priority);
+               // Update pointer to data
+               pdata = (void *)((char *)pdata + sizeof(kXR_int32));
+               len -= sizeof(kXR_int32);
+            }
+            // Handle this input in this thread to avoid queuing on the
+            // main thread
+            XHandleIn_t hin = {acod, priority, 0, 0};
+            if (fHandler)
+               fHandler->HandleInput((const void *)&hin);
+            else
+               Error("ProcessUnsolicitedMsg","handler undefined");
+         }
+         break;
       case kXPD_flush:
          //
          // Flush request
@@ -565,9 +632,29 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
       case kXPD_srvmsg:
          //
          // Service message
-         Printf(" ");
-         Printf("| Message from server:");
-         Printf("| %.*s", len, (char *)pdata);
+         {
+            // The next 4 bytes may contain a flag to control the way the message is displayed
+            kXR_int32 opt = 0;
+            memcpy(&opt, pdata, sizeof(kXR_int32));
+            opt = net2host(opt);
+            if (opt == 0 || opt == 1) {
+               // Update pointer to data
+               pdata = (void *)((char *)pdata + sizeof(kXR_int32));
+               len -= sizeof(kXR_int32);
+            } else {
+               opt = 1;
+            }
+
+            if (opt == 0) {
+               // One line
+               Printf("| %.*s", len, (char *)pdata);
+            } else {
+               // A small header
+               Printf(" ");
+               Printf("| Message from server:");
+               Printf("| %.*s", len, (char *)pdata);
+            }
+         }
          break;
       case kXPD_errmsg:
          //
@@ -822,108 +909,121 @@ Bool_t TXSocket::Create()
       return kFALSE;
    }
 
-   XPClientRequest reqhdr;
+   Int_t retriesleft = gEnv->GetValue("XProof.CreationRetries", 4);
 
-   // We fill the header struct containing the request for login
-   memset( &reqhdr, 0, sizeof(reqhdr));
-   fConn->SetSID(reqhdr.header.streamid);
+   while (retriesleft--) {
 
-   // This will be a kXP_attach or kXP_create request
-   if (fMode == 'A') {
-      reqhdr.header.requestid = kXP_attach;
-      reqhdr.proof.sid = fSessionID;
-   } else {
-      reqhdr.header.requestid = kXP_create;
-   }
+      XPClientRequest reqhdr;
 
-   // Send log level
-   reqhdr.proof.int1 = fLogLevel;
+      // We fill the header struct containing the request for login
+      memset( &reqhdr, 0, sizeof(reqhdr));
+      fConn->SetSID(reqhdr.header.streamid);
 
-   // Send also the chosen alias
-   const void *buf = (const void *)(fBuffer.Data());
-   reqhdr.header.dlen = fBuffer.Length();
-   if (gDebug >= 2)
-      Info("Create", "sending %d bytes to server", reqhdr.header.dlen);
-
-   // We call SendReq, the function devoted to sending commands.
-   if (gDebug > 1)
-      Info("Create", "creating session of server %s", fUrl.Data());
-
-   // server response header
-   struct ServerResponseBody_Protocol *srvresp = 0;
-   XrdClientMessage *xrsp = fConn->SendReq(&reqhdr, buf,
-                                          (void **)&srvresp, "TXSocket::Create");
-
-   // In any, the URL the data pool entry point will be stored here
-   fBuffer = "";
-   if (xrsp) {
-
-      //
-      // Pointer to data
-      void *pdata = (void *)(xrsp->GetData());
-      Int_t len = xrsp->DataLen();
-
-      if (len >= (Int_t)sizeof(kXR_int32)) {
-         // The first 4 bytes contain the session ID
-         kXR_int32 psid = 0;
-         memcpy(&psid, pdata, sizeof(kXR_int32));
-         fSessionID = net2host(psid);
-         pdata = (void *)((char *)pdata + sizeof(kXR_int32));
-         len -= sizeof(kXR_int32);
+      // This will be a kXP_attach or kXP_create request
+      if (fMode == 'A') {
+         reqhdr.header.requestid = kXP_attach;
+         reqhdr.proof.sid = fSessionID;
       } else {
-         Error("Create","session ID is undefined!");
+         reqhdr.header.requestid = kXP_create;
       }
 
-      if (len >= (Int_t)sizeof(kXR_int16)) {
-         // The second 2 bytes contain the remote PROOF protocol version
-         kXR_int16 dver = 0;
-         memcpy(&dver, pdata, sizeof(kXR_int16));
-         fRemoteProtocol = net2host(dver);
-         pdata = (void *)((char *)pdata + sizeof(kXR_int16));
-         len -= sizeof(kXR_int16);
-      } else {
-         Warning("Create","protocol version of the remote PROOF undefined!");
-      }
+      // Send log level
+      reqhdr.proof.int1 = fLogLevel;
 
-      if (fRemoteProtocol == 0) {
-         // We are dealing with an older server: the PROOF protocol is on 4 bytes
-         len += sizeof(kXR_int16);
-         kXR_int32 dver = 0;
-         memcpy(&dver, pdata, sizeof(kXR_int32));
-         fRemoteProtocol = net2host(dver);
-         pdata = (void *)((char *)pdata + sizeof(kXR_int32));
-         len -= sizeof(kXR_int32);
-      } else {
+      // Send also the chosen alias
+      const void *buf = (const void *)(fBuffer.Data());
+      reqhdr.header.dlen = fBuffer.Length();
+      if (gDebug >= 2)
+         Info("Create", "sending %d bytes to server", reqhdr.header.dlen);
+
+      // We call SendReq, the function devoted to sending commands.
+      if (gDebug > 1)
+         Info("Create", "creating session of server %s", fUrl.Data());
+
+      // server response header
+      char *answData = 0;
+      XrdClientMessage *xrsp = fConn->SendReq(&reqhdr, buf,
+                                              &answData, "TXSocket::Create");
+      struct ServerResponseBody_Protocol *srvresp = (struct ServerResponseBody_Protocol *)answData;
+
+      // In any, the URL the data pool entry point will be stored here
+      fBuffer = "";
+      if (xrsp) {
+
+         //
+         // Pointer to data
+         void *pdata = (void *)(xrsp->GetData());
+         Int_t len = xrsp->DataLen();
+
+         if (len >= (Int_t)sizeof(kXR_int32)) {
+            // The first 4 bytes contain the session ID
+            kXR_int32 psid = 0;
+            memcpy(&psid, pdata, sizeof(kXR_int32));
+            fSessionID = net2host(psid);
+            pdata = (void *)((char *)pdata + sizeof(kXR_int32));
+            len -= sizeof(kXR_int32);
+         } else {
+            Error("Create","session ID is undefined!");
+         }
+
          if (len >= (Int_t)sizeof(kXR_int16)) {
-            // The third 2 bytes contain the remote XrdProofdProtocol version
+            // The second 2 bytes contain the remote PROOF protocol version
             kXR_int16 dver = 0;
             memcpy(&dver, pdata, sizeof(kXR_int16));
-            fXrdProofdVersion = net2host(dver);
+            fRemoteProtocol = net2host(dver);
             pdata = (void *)((char *)pdata + sizeof(kXR_int16));
             len -= sizeof(kXR_int16);
          } else {
-            Warning("Create","version of the remote XrdProofdProtocol undefined!");
+            Warning("Create","protocol version of the remote PROOF undefined!");
          }
+
+         if (fRemoteProtocol == 0) {
+            // We are dealing with an older server: the PROOF protocol is on 4 bytes
+            len += sizeof(kXR_int16);
+            kXR_int32 dver = 0;
+            memcpy(&dver, pdata, sizeof(kXR_int32));
+            fRemoteProtocol = net2host(dver);
+            pdata = (void *)((char *)pdata + sizeof(kXR_int32));
+            len -= sizeof(kXR_int32);
+         } else {
+            if (len >= (Int_t)sizeof(kXR_int16)) {
+               // The third 2 bytes contain the remote XrdProofdProtocol version
+               kXR_int16 dver = 0;
+               memcpy(&dver, pdata, sizeof(kXR_int16));
+               fXrdProofdVersion = net2host(dver);
+               pdata = (void *)((char *)pdata + sizeof(kXR_int16));
+               len -= sizeof(kXR_int16);
+            } else {
+               Warning("Create","version of the remote XrdProofdProtocol undefined!");
+            }
+         }
+
+         if (len > 0) {
+            // From top masters, the url of the data pool
+            char *url = new char[len+1];
+            memcpy(url, pdata, len);
+            url[len] = 0;
+            fBuffer = url;
+            delete[] url;
+         }
+
+         // Cleanup
+         SafeDelete(xrsp);
+         if (srvresp)
+            free(srvresp);
+
+         // Notify
+         return kTRUE;
+      } else {
+         // Print error mag, if any
+         if (fConn->GetLastErr())
+            Printf("%s: %s", fHost.Data(), fConn->GetLastErr());
       }
 
-      if (len > 0) {
-         // From top masters, the url of the data pool
-         char *url = new char[len+1];
-         memcpy(url, pdata, len);
-         url[len] = 0;
-         fBuffer = url;
-         delete[] url;
-      }
+      Info("Create",
+           "creation/attachment attempt failed: %d attempts left", retriesleft);
 
-      // Cleanup
-      SafeDelete(xrsp);
-      if (srvresp)
-         free(srvresp);
-
-      // Notify
-      return kTRUE;
-
-   }
+   } // Creation retries
 
    // Notify failure
    Error("Create:",
@@ -978,10 +1078,16 @@ Int_t TXSocket::SendRaw(const void *buffer, Int_t length, ESendRecvOptions opt)
       SafeDelete(xrsp);
       // ok
       return nsent;
+   } else {
+      // Print error message, if any
+      if (fConn->GetLastErr())
+         Printf("%s: %s", fHost.Data(), fConn->GetLastErr());
+      else
+         Printf("%s: error occured but no message from server", fHost.Data());
    }
 
    // Failure notification (avoid using the handler: we may be exiting)
-   Error("SendRaw", "problems sending data to server");
+   Error("SendRaw", "%s: problems sending data to server", fHost.Data());
 
    return -1;
 }
@@ -1016,15 +1122,20 @@ Bool_t TXSocket::Ping(Bool_t)
    Request.sendrcv.dlen = 0;
 
    // Send request
-   kXR_int32 *pres = 0;
+   char *pans = 0;
    XrdClientMessage *xrsp =
-      fConn->SendReq(&Request, (const void *)0, (void **)&pres, "Ping");
+      fConn->SendReq(&Request, (const void *)0, &pans, "Ping");
+   kXR_int32 *pres = (kXR_int32 *) pans;
 
    // Get the result
    Bool_t res = kFALSE;
    if (xrsp && xrsp->HeaderStatus() == kXR_ok) {
       *pres = net2host(*pres);
       res = (*pres == 1);
+   } else {
+      // Print error mag, if any
+      if (fConn->GetLastErr())
+         Printf("%s: %s", fHost.Data(), fConn->GetLastErr());
    }
 
    // Cleanup
@@ -1049,10 +1160,10 @@ Int_t TXSocket::PickUpReady()
 
    // User can choose whether to wait forever or for a fixed amount of time
    if (!fDontTimeout) {
-      static Int_t timeout = gEnv->GetValue("XProof.ReadTimeout", 60) * 1000;
+      static Int_t timeout = gEnv->GetValue("XProof.ReadTimeout", 300) * 1000;
       static Int_t dt = 2000;
       Int_t to = timeout;
-      while (to) {
+      while (to && !fRDInterrupt) {
          if (fASem.Wait(dt) != 0) {
             to -= dt;
             if (to <= 0) {
@@ -1064,6 +1175,12 @@ Int_t TXSocket::PickUpReady()
             }
          } else
             break;
+      }
+      // We wait forever
+      if (fRDInterrupt) {
+         Error("PickUpReady","interrupted");
+         fRDInterrupt = kFALSE;
+         return -1;
       }
    } else {
       // We wait forever
@@ -1264,6 +1381,10 @@ Int_t TXSocket::SendInterrupt(Int_t type)
       SafeDelete(xrsp);
       // ok
       return 0;
+   } else {
+      // Print error mag, if any
+      if (fConn->GetLastErr())
+         Printf("%s: %s", fHost.Data(), fConn->GetLastErr());
    }
 
    // Failure notification (avoid using the handler: we may be exiting)
@@ -1307,6 +1428,9 @@ Int_t TXSocket::Send(const TMessage &mess)
    // Parse message type to choose sending options
    kXR_int32 fSendOptDefault = fSendOpt;
    switch (mess.What()) {
+      case kPROOF_PROCESS:
+         fSendOpt |= kXPD_process;
+         break;
       case kPROOF_PROGRESS:
       case kPROOF_FEEDBACK:
          fSendOpt |= kXPD_fb_prog;
@@ -1385,8 +1509,8 @@ Int_t TXSocket::Recv(TMessage *&mess)
 }
 
 //______________________________________________________________________________
-TObjString *TXSocket::SendCoordinator(Int_t kind,
-                                      const char *msg, Int_t int2, Long64_t l64)
+TObjString *TXSocket::SendCoordinator(Int_t kind, const char *msg, Int_t int2,
+                                      Long64_t l64, Int_t int3, const char *)
 {
    // Send message to intermediate coordinator.
    // If any output is due, this is returned as an obj string to be
@@ -1398,18 +1522,19 @@ TObjString *TXSocket::SendCoordinator(Int_t kind,
    XPClientRequest reqhdr;
    const void *buf = 0;
    char *bout = 0;
-   void **vout = 0;
+   char **vout = 0;
    memset(&reqhdr, 0, sizeof(reqhdr));
    fConn->SetSID(reqhdr.header.streamid);
    reqhdr.header.requestid = kXP_admin;
    reqhdr.proof.int1 = kind;
    reqhdr.proof.int2 = int2;
    switch (kind) {
+      case kQueryROOTVersions:
       case kQuerySessions:
       case kQueryWorkers:
          reqhdr.proof.sid = 0;
          reqhdr.header.dlen = 0;
-         vout = (void **)&bout;
+         vout = (char **)&bout;
          break;
       case kCleanupSessions:
          reqhdr.proof.int2 = (kXR_int32) kXPD_TopMaster;
@@ -1418,29 +1543,41 @@ TObjString *TXSocket::SendCoordinator(Int_t kind,
          buf = (msg) ? (const void *)msg : buf;
          break;
       case kQueryLogPaths:
-         vout = (void **)&bout;
+         vout = (char **)&bout;
+      case kSendMsgToUser:
+      case kGroupProperties:
       case kSessionTag:
       case kSessionAlias:
          reqhdr.proof.sid = fSessionID;
          reqhdr.header.dlen = (msg) ? strlen(msg) : 0;
          buf = (msg) ? (const void *)msg : buf;
          break;
+      case kROOTVersion:
+         reqhdr.header.dlen = (msg) ? strlen(msg) : 0;
+         buf = (msg) ? (const void *)msg : buf;
+         break;
       case kGetWorkers:
          reqhdr.proof.sid = fSessionID;
          reqhdr.header.dlen = 0;
-         vout = (void **)&bout;
+         vout = (char **)&bout;
          break;
       case kReadBuffer:
          reqhdr.header.requestid = kXP_readbuf;
          reqhdr.readbuf.ofs = l64;
          reqhdr.readbuf.len = int2;
+         if (int3 > 0 && fXrdProofdVersion < 1003) {
+            Info("SendCoordinator", "kReadBuffer: old server (ver %d < 1003):"
+                 " grep functionality not supported", fXrdProofdVersion);
+            return sout;
+         }
+         reqhdr.readbuf.int1 = int3;
          if (!msg || strlen(msg) <= 0) {
             Info("SendCoordinator", "kReadBuffer: file path undefined");
             return sout;
          }
          reqhdr.header.dlen = strlen(msg);
          buf = (const void *)msg;
-         vout = (void **)&bout;
+         vout = (char **)&bout;
          break;
       default:
          Info("SendCoordinator", "unknown message kind: %d", kind);
@@ -1457,12 +1594,14 @@ TObjString *TXSocket::SendCoordinator(Int_t kind,
       // Check if we need to create an output string
       if (bout && (xrsp->DataLen() > 0))
          sout = new TObjString(TString(bout,xrsp->DataLen()));
-
       if (bout)
          free(bout);
       SafeDelete(xrsp);
+   } else {
+      // Print error msg, if any
+      if (fConn->GetLastErr())
+         Printf("%s: %s", fHost.Data(), fConn->GetLastErr());
    }
-
 
    // Failure notification (avoid using the handler: we may be exiting)
    return sout;
@@ -1497,9 +1636,14 @@ void TXSocket::SendUrgent(Int_t type, Int_t int1, Int_t int2)
    // Send request
    XrdClientMessage *xrsp =
       fConn->SendReq(&Request, (const void *)0, 0, "SendUrgent");
-   if (xrsp)
+   if (xrsp) {
       // Cleanup
       SafeDelete(xrsp);
+   } else {
+      // Print error msg, if any
+      if (fConn->GetLastErr())
+         Printf("%s: %s", fHost.Data(), fConn->GetLastErr());
+   }
 
    // Done
    return;
@@ -1543,7 +1687,10 @@ void TXSocket::InitEnvs()
    if (denyCO.Length() > 0)
       EnvPutString(NAME_CONNECTDOMAINDENY_RE, denyCO.Data());
 
-   // Connect Timeout
+   // Max number of retries on first connect and related timeout
+   XrdProofConn::SetRetryParam(-1, -1);
+   Int_t maxRetries = gEnv->GetValue("XProof.FirstConnectMaxCnt",5);
+   EnvPutInt(NAME_FIRSTCONNECTMAXCNT, maxRetries);
    Int_t connTO = gEnv->GetValue("XProof.ConnectTimeout", 2);
    EnvPutInt(NAME_CONNECTTIMEOUT, connTO);
 
@@ -1561,12 +1708,19 @@ void TXSocket::InitEnvs()
                                       DFLT_STARTGARBAGECOLLECTORTHREAD);
    EnvPutInt(NAME_STARTGARBAGECOLLECTORTHREAD, garbCollTh);
 
-   // Max number of retries on first connect
-   Int_t maxRetries = gEnv->GetValue("XProof.FirstConnectMaxCnt",5);
-   EnvPutInt(NAME_FIRSTCONNECTMAXCNT, maxRetries);
-
    // No automatic proofd backward-compatibility
    EnvPutInt(NAME_KEEPSOCKOPENIFNOTXRD, 0);
+
+   // Dynamic forwarding (SOCKS4)
+   TString socks4Host = gEnv->GetValue("XNet.SOCKS4Host","");
+   Int_t socks4Port = gEnv->GetValue("XNet.SOCKS4Port",-1);
+   if (socks4Port > 0) {
+      if (socks4Host.IsNull())
+         // Default
+         socks4Host = "127.0.0.1";
+      EnvPutString(NAME_SOCKS4HOST, socks4Host.Data());
+      EnvPutInt(NAME_SOCKS4PORT, socks4Port);
+   }
 
    // For password-based authentication
    TString autolog = gEnv->GetValue("XSec.Pwd.AutoLogin","1");
@@ -1648,6 +1802,43 @@ void TXSocket::InitEnvs()
    fgInitDone = kTRUE;
 }
 
+
+//_____________________________________________________________________________
+TXSockBuf::TXSockBuf(Char_t *bp, Int_t sz, Bool_t own)
+{ 
+   //constructor
+   fBuf = fMem = bp; 
+   fSiz = fLen = sz; 
+   fOwn = own; 
+   fCid = -1; 
+   fgBuffMem += sz; 
+}
+
+//_____________________________________________________________________________
+TXSockBuf::~TXSockBuf() 
+{
+   //destructor
+   if (fOwn && fMem) { 
+      free(fMem); 
+      fgBuffMem -= fSiz; 
+   }
+}
+
+//_____________________________________________________________________________
+void TXSockBuf::Resize(Int_t sz) 
+{ 
+   //resize socket buffer
+   if (sz > fSiz) {
+      if ((fMem = (Char_t *)realloc(fMem, sz))) { 
+         fgBuffMem += (sz - fSiz);
+         fBuf = fMem; 
+         fSiz = sz; 
+         fLen = 0;
+      }
+   }
+}
+
+//_____________________________________________________________________________
 //
 // TXSockBuf static methods
 //

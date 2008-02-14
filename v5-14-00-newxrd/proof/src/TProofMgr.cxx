@@ -162,6 +162,21 @@ TList *TProofMgr::QuerySessions(Option_t *opt)
 }
 
 //______________________________________________________________________________
+Int_t TProofMgr::SendMsgToUsers(const char *, const char *)
+{
+   // Send a message to connected users. Only superusers can do this.
+   // The first argument specifies the message or the file from where to take
+   // the message.
+   // The second argument specifies the user to which to send the message: if
+   // empty or null the message is send to all the connected users.
+   // return 0 in case of success, -1 in case of error
+
+   Warning("SendMsgToUsers","functionality not supported");
+
+   return -1;
+}
+
+//______________________________________________________________________________
 Int_t TProofMgr::Reset(const char *)
 {
    // Send a cleanup request for the sessions associated with the current
@@ -303,10 +318,11 @@ TList *TProofMgr::GetListOfManagers()
    // Update the list with new entries
    if (gROOT->GetListOfProofs()) {
       TIter nxp(gROOT->GetListOfProofs());
-      TProofMgr *p = 0;
-      while ((p = dynamic_cast<TProofMgr *> (nxp())))
-         if (!fgListOfManagers.FindObject(p))
-            fgListOfManagers.Add(p);
+      TObject *o = 0;
+      while ((o = nxp())) {
+         if (o->InheritsFrom("TProofMgr") && !fgListOfManagers.FindObject(o))
+            fgListOfManagers.Add(o);
+      }
    }
 
    // Get rid of invalid entries and notify
@@ -319,7 +335,8 @@ TList *TProofMgr::GetListOfManagers()
             fgListOfManagers.Remove(o);
          } else {
             TProofMgr *p = (TProofMgr *)o;
-            Printf("// #%d: \"%s\" (%s)", ++nm, p->GetName(), p->GetTitle());
+            if (gDebug > 0)
+               Printf("// #%d: \"%s\" (%s)", ++nm, p->GetName(), p->GetTitle());
          }
       }
    } else {
@@ -411,16 +428,7 @@ TProofMgr_t TProofMgr::GetXProofMgrHook()
 
    if (!fgTXProofMgrHook) {
       // Load the appropriate library ...
-#ifdef ROOTLIBDIR
-      TString prooflib = TString(ROOTLIBDIR);
-#else
-#ifndef WIN32
-      TString prooflib = TString(gRootDir) + "/lib";
-#else
-      TString prooflib = TString(gRootDir) + "/bin";
-#endif
-#endif
-      prooflib += "/libProofx";
+      TString prooflib = "libProofx";
       char *p = 0;
       if ((p = gSystem->DynamicPathName(prooflib, kTRUE))) {
          delete[] p;

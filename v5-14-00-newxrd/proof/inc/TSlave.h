@@ -30,14 +30,12 @@
 #ifndef ROOT_TString
 #include "TString.h"
 #endif
-#ifndef ROOT_TSocket
-#include "TSocket.h"
-#endif
 
 class TFileHandler;
 class TObjString;
 class TProof;
 class TSlave;
+class TSocket;
 
 // Special type for the hook to external function setting up authentication
 // related stuff for old versions. For backward compatibility.
@@ -82,6 +80,7 @@ protected:
    TString       fProofWorkDir; //base proofserv working directory (info obtained from slave)
    TString       fWorkDir;   //slave's working directory (info obtained from slave)
    TString       fUser;      //slave's user id
+   TString       fGroup;     //slave's group id
    Int_t         fPort;      //slave's port number
    TString       fOrdinal;   //slave's ordinal number
    Int_t         fPerfIdx;   //relative CPU performance index
@@ -97,12 +96,16 @@ protected:
    Int_t         fParallel;  //number of active slaves
    TString       fMsd;       //mass storage domain of slave
 
+   TString       fROOTVers;  //ROOT version run by worker
+   TString       fArchComp;  //Build architecture, compiler on worker (e.g. linux-gcc345)
+
    TSlave();
    virtual void  FlushSocket() { }
    void          Init(TSocket *s, Int_t stype);
    virtual void  Interrupt(Int_t type);
    virtual Int_t Ping();
    virtual TObjString *SendCoordinator(Int_t kind, const char *msg = 0, Int_t int2 = 0);
+   virtual Int_t SendGroupPriority(const char * /*grp*/, Int_t /*priority*/) { return 0; }
    virtual void  SetAlias(const char *alias);
    virtual void  SetStatus(Int_t st) { fStatus = st; }
    virtual void  StopProcess(Bool_t abort, Int_t timeout);
@@ -120,6 +123,7 @@ public:
    const char    *GetProofWorkDir() const { return fProofWorkDir; }
    const char    *GetWorkDir() const { return fWorkDir; }
    const char    *GetUser() const { return fUser; }
+   const char    *GetGroup() const { return fGroup; }
    Int_t          GetPort() const { return fPort; }
    const char    *GetOrdinal() const { return fOrdinal; }
    Int_t          GetPerfIdx() const { return fPerfIdx; }
@@ -136,6 +140,9 @@ public:
    TFileHandler  *GetInputHandler() const { return fInput; }
    void           SetInputHandler(TFileHandler *ih);
 
+   const char    *GetArchCompiler() const { return fArchComp; }
+   const char    *GetROOTVersion() const { return fROOTVers; }
+
    virtual Bool_t IsValid() const { return fSocket ? kTRUE : kFALSE; }
 
    void           Print(Option_t *option="") const;
@@ -143,6 +150,9 @@ public:
    virtual Int_t  SetupServ(Int_t stype, const char *conffile);
 
    virtual void   SetInterruptHandler(Bool_t /* on */) { }
+
+   void           SetArchCompiler(const char *ac) { fArchComp = ac; }
+   void           SetROOTVersion(const char *rv) { fROOTVers = rv; }
 
    static void    SetTXSlaveHook(TSlave_t xslavehook);
 

@@ -21,6 +21,7 @@
 
 #include "XrdProofPhyConn.h"
 
+#include "XrdVersion.hh"
 #include "XrdClient/XrdClientEnv.hh"
 #include "XrdClient/XrdClientConnMgr.hh"
 #include "XrdClient/XrdClientConst.hh"
@@ -39,7 +40,6 @@
 
 // Tracing utils
 #include "XrdProofdTrace.h"
-extern XrdOucTrace *XrdProofdTrace;
 static const char *gTraceID = " ";
 #define TRACEID gTraceID
 
@@ -68,39 +68,36 @@ bool XrdProofPhyConn::Init(const char *url)
 {
    // Initialization
 
+   // Mutex
+   fMutex = new XrdSysRecMutex();
+
    // Save url
    fUrl.TakeUrl(XrdOucString(url));
 
-   if (!fTcp) {
-      // Set some variables
+   // Get user
+   fUser = fUrl.User.c_str();
+   if (fUser.length() <= 0) {
+      // Use local username, if not specified
 #ifndef WIN32
       struct passwd *pw = getpwuid(getuid());
-      fUser = (pw) ? pw->pw_name : "";
+      fUser = pw ? pw->pw_name : "";
 #else
-      char  name[256];
-      DWORD length = sizeof (name);
-      ::GetUserName(name, &length);
-      fUser = name;
+      char  lname[256];
+      DWORD length = sizeof (lname);
+      ::GetUserName(lname, &length);
+      fUser = lname;
 #endif
-      fHost = XrdNetDNS::getHostName("localhost");
-      fPort = -1;
+   }
 
+   // Host and Port
+   if (!fTcp) {
+      fHost = XrdNetDNS::getHostName(((fUrl.Host.length() > 0) ?
+                                       fUrl.Host.c_str() : "localhost"));
+      fPort = -1;
+      fUrl.Host = "";
+      fUrl.User = "";
    } else {
 
-      // Parse Url
-      fUser = fUrl.User.c_str();
-      if (fUser.length() <= 0) {
-         // Use local username, if not specified
-#ifndef WIN32
-         struct passwd *pw = getpwuid(getuid());
-         fUser = pw ? pw->pw_name : "";
-#else
-         char  lname[256];
-         DWORD length = sizeof (lname);
-         ::GetUserName(lname, &length);
-         fUser = lname;
-#endif
-      }
       fHost = fUrl.Host.c_str();
       fPort = fUrl.Port;
       // Check port
@@ -182,7 +179,7 @@ bool XrdProofPhyConn::Init(const char *url)
 int XrdProofPhyConn::Connect()
 {
    // Connect to remote server
-   char *ctype[2] = {"UNIX", "TCP"};
+   const char *ctype[2] = {"UNIX", "TCP"};
 
    // Create physical connection
 #ifdef OLDXRCPHYCONN
@@ -259,7 +256,7 @@ bool XrdProofPhyConn::GetAccessToSrv()
 
    // Now we are connected and we ask for the kind of the server
    { XrdClientPhyConnLocker pcl(fPhyConn);
-      fServerType = DoHandShake();
+   fServerType = DoHandShake();
    }
 
    switch (fServerType) {
@@ -269,7 +266,6 @@ bool XrdProofPhyConn::GetAccessToSrv()
 
       // Now we can start the reader thread in the physical connection, if needed
       fPhyConn->StartReader();
-//      fPhyConn->SetTTL(DLBD_TTL);// = DLBD_TTL;
       fPhyConn->fServerType = kSTBaseXrootd;
       break;
 

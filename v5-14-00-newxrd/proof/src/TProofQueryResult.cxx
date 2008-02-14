@@ -19,7 +19,7 @@
 
 #include "TDSet.h"
 #include "TError.h"
-#include "TEventList.h"
+#include "TList.h"
 #include "TProofQueryResult.h"
 #include "TSystem.h"
 
@@ -29,7 +29,7 @@ ClassImp(TProofQueryResult)
 //______________________________________________________________________________
 TProofQueryResult::TProofQueryResult(Int_t sn, const char *opt, TList *inlist,
                                      Long64_t ent, Long64_t fst, TDSet *dset,
-                                     const char *sel, TEventList *elist)
+                                     const char *sel, TObject *elist)
                   : TQueryResult(sn, opt, inlist, ent, fst, sel)
 {
    // Main constructor.

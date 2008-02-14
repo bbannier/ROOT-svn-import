@@ -28,6 +28,9 @@
 class TFile;
 class TBrowser;
 class TCut;
+class TEntryList;
+class TEventList;
+class TCollection;
 
 class TChain : public TTree {
 
@@ -67,10 +70,10 @@ public:
    virtual Int_t     Add(TChain* chain);
    virtual Int_t     Add(const char* name, Long64_t nentries = kBigNumber);
    virtual Int_t     AddFile(const char* name, Long64_t nentries = kBigNumber, const char* tname = "");
-   virtual Int_t     AddFileInfoList(TList* list, Long64_t nfiles = kBigNumber);
+   virtual Int_t     AddFileInfoList(TCollection* list, Long64_t nfiles = kBigNumber);
    virtual TFriendElement *AddFriend(const char* chainname, const char* dummy = "");
    virtual TFriendElement *AddFriend(const char* chainname, TFile* dummy);
-   virtual TFriendElement *AddFriend(TTree* chain, const char* alias, Bool_t warn = kFALSE);
+   virtual TFriendElement *AddFriend(TTree* chain, const char* alias = "", Bool_t warn = kFALSE);
    virtual void      Browse(TBrowser*);
    virtual void      CanDeleteRefs(Bool_t flag = kTRUE);
    virtual void      CreatePackets();
@@ -106,7 +109,7 @@ public:
    virtual Double_t  GetWeight() const;
    virtual Int_t     LoadBaskets(Long64_t maxmemory);
    virtual Long64_t  LoadTree(Long64_t entry);
-           void      Lookup();
+           void      Lookup(Bool_t force = kFALSE);
    virtual void      Loop(Option_t *option="", Long64_t nentries=kBigNumber, Long64_t firstentry=0); // *MENU*
    virtual void      ls(Option_t *option="") const;
    virtual Long64_t  Merge(const char *name, Option_t *option = "");
@@ -125,6 +128,9 @@ public:
 
    virtual void      SetBranchStatus(const char *bname, Bool_t status=1, UInt_t *found=0);
    virtual void      SetDirectory(TDirectory *dir);
+   virtual void      SetEntryList(TEntryList *elist, Option_t *opt="");
+   virtual void      SetEntryListFile(const char *filename="", Option_t *opt="");
+   virtual void      SetEventList(TEventList *evlist);
    virtual void      SetMakeClass(Int_t make) { TTree::SetMakeClass(make); if (fTree) fTree->SetMakeClass(make);}
    virtual void      SetPacketSize(Int_t size = 100);
    virtual void      SetProof(Bool_t on = kTRUE, Bool_t refresh = kFALSE, Bool_t gettreeheader = kFALSE);
