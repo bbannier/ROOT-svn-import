@@ -272,6 +272,7 @@
 #include "TDirectory.h"
 #include "TError.h"
 #include "TEventList.h"
+#include "TEntryList.h"
 #include "TFile.h"
 #include "TFolder.h"
 #include "TFriendElement.h"
@@ -3718,6 +3719,25 @@ Int_t TTree::GetEntry(Long64_t entry, Int_t getall)
 }
 
 //______________________________________________________________________________
+TEntryList* TTree::GetEntryList()
+{
+//Returns the entry list, set to this tree
+//
+//The returned object is not owned by the tree, even if the entry list was created
+//by the SetEventList() function (see also comments of SetEventList())
+
+   if (!fEntryList) return 0;
+
+   //check, if the entry list is owned by the tree.
+   //This lack of "constness" is caused by the SetEventList() function
+   //creating an entry list.
+   if (fEntryList->TestBit(kCanDelete) == kTRUE){
+      fEntryList->SetBit(kCanDelete, kFALSE);
+   }
+   return fEntryList;
+}
+
+//______________________________________________________________________________
 Long64_t TTree::GetEntryNumber(Long64_t entry) const
 {
    // -- Return entry number corresponding to entry.
@@ -5510,6 +5530,63 @@ Long64_t TTree::SetEntries(Long64_t n)
    }
    fEntries = nMax;
    return fEntries;
+}
+
+//_______________________________________________________________________
+void TTree::SetEntryList(TEntryList *enlist, Option_t * /*opt*/)
+{
+   //Set an EntryList
+
+   if (fEntryList) {
+      //check if the previous entry list is owned by the tree
+      if (fEntryList->TestBit(kCanDelete)){
+         delete fEntryList;
+      }
+   }
+   fEventList = 0;
+   if (!enlist) {
+      fEntryList = 0;
+      return;
+   }
+   fEntryList = enlist;
+   fEntryList->SetTree(this);
+
+}
+
+//_______________________________________________________________________
+void TTree::SetEventList(TEventList *evlist)
+{
+//This function transfroms the given TEventList into a TEntryList
+//The new TEntryList is owned by the TTree and gets deleted when the tree
+//is deleted. This TEntryList can be returned by GetEntryList() function, and after
+//GetEntryList() function is called, the TEntryList is not owned by the tree
+//any more.
+
+   fEventList = evlist;
+   if (fEntryList){
+      if (fEntryList->TestBit(kCanDelete))
+         delete fEntryList;
+   }
+
+   if (!evlist) {
+      fEntryList = 0;
+      fEventList = 0;
+      return;
+   }
+
+   fEventList = evlist;
+   char enlistname[100];
+   sprintf(enlistname, "%s_%s", evlist->GetName(), "entrylist");
+   fEntryList = new TEntryList(enlistname, evlist->GetTitle());
+   Int_t nsel = evlist->GetN();
+   fEntryList->SetTree(this);
+   Long64_t entry;
+   for (Int_t i=0; i<nsel; i++){
+      entry = evlist->GetEntry(i);
+      fEntryList->Enter(entry);
+   }
+   fEntryList->SetReapplyCut(evlist->GetReapplyCut());
+   fEntryList->SetBit(kCanDelete, kTRUE);
 }
 
 //_______________________________________________________________________

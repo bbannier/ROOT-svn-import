@@ -667,4 +667,16 @@ void TPolyMarker3D::GetPoint(Int_t n, Float_t &x, Float_t &y, Float_t &z) const
    z = fP[kDimension*n+2];
 }
 
+//_______________________________________________________________________
+void TPolyMarker3D::GetPoint(Int_t n, Double_t &x, Double_t &y, Double_t &z) const
+{
+   // Fills the parameters x, y, z with the coordinate of the n-th point
+   // n must be between 0 and Size() - 1.
+
+   if (n < 0 || n >= Size()) return;
+   if (!fP) return;
+   x = (Double_t)fP[kDimension*n  ];
+   y = (Double_t)fP[kDimension*n+1];
+   z = (Double_t)fP[kDimension*n+2];
+}
 

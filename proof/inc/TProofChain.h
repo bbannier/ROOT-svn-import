@@ -28,7 +28,7 @@
 
 class TDSet;
 class TDrawFeedback;
-
+class TList;
 
 class TProofChain : public TChain {
 
@@ -60,7 +60,7 @@ public:
    virtual TObjArray   *GetListOfBranches() {return (fTree ? fTree->GetListOfBranches() : (TObjArray *)0); }
    virtual TObjArray   *GetListOfLeaves()   {return (fTree ? fTree->GetListOfLeaves() : (TObjArray *)0);}
    virtual TList       *GetListOfFriends()    const {return 0;}
-   virtual TSeqCollection *GetListOfAliases() const {return 0;}
+   virtual TList       *GetListOfAliases() const {return 0;}
 
     // GetMakeClass is left non-virtual for efficiency reason.
     // Making it virtual affects the performance of the I/O
@@ -75,6 +75,8 @@ public:
    virtual Long64_t     Process(TSelector *selector, Option_t *option="",
                                 Long64_t nentries=1000000000, Long64_t firstentry=0);
    virtual void         SetDebug(Int_t level=1, Long64_t min=0, Long64_t max=9999999); // *MENU*
+   virtual void         SetEventList(TEventList *evlist) { fEventList = evlist; }
+   virtual void         SetEntryList(TEntryList *enlist, const Option_t *) { fEntryList = enlist; }
    virtual void         SetName(const char *name); // *MENU*
    virtual void         ConnectProof();
    virtual void         ReleaseProof();

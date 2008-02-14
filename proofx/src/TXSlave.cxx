@@ -33,6 +33,7 @@
 #include "TThread.h"
 #include "TXSocket.h"
 #include "TXSocketHandler.h"
+#include "Varargs.h"
 
 ClassImp(TXSlave)
 
@@ -41,16 +42,14 @@ ClassImp(TXSlave)
 //---- Hook to the constructor -------------------------------------------------
 //---- This is needed to avoid using the plugin manager which may create -------
 //---- problems in multi-threaded environments. --------------------------------
-
-extern "C" {
-   TSlave *GetTXSlave(const char *url, const char *ord, Int_t perf,
-                      const char *image, TProof *proof, Int_t stype,
-                      const char *workdir, const char *msd)
-   {
-      return ((TSlave *)(new TXSlave(url, ord, perf, image,
-                                     proof, stype, workdir, msd)));
-   }
+TSlave *GetTXSlave(const char *url, const char *ord, Int_t perf,
+                     const char *image, TProof *proof, Int_t stype,
+                     const char *workdir, const char *msd)
+{
+   return ((TSlave *)(new TXSlave(url, ord, perf, image,
+                                    proof, stype, workdir, msd)));
 }
+
 class XSlaveInit {
  public:
    XSlaveInit() {
@@ -155,9 +154,10 @@ void TXSlave::Init(const char *host, Int_t stype)
    }
 
    // Fill members
-   fName = url.GetHost();
+   fName = url.GetHostFQDN();
    fPort = url.GetPort(); // We get the right default if the port is not specified
-
+   // Group specification , if any, uses the password field, i.e. user[:group]
+   fGroup = url.GetPasswd();
 
    // The field 'psid' is interpreted as session ID when we are attaching
    // to an existing session (ID passed in the options field of the url) or
@@ -286,7 +286,7 @@ Int_t TXSlave::SetupServ(Int_t, const char *)
    // The Init method is technology specific and is overwritten by derived
    // classes.
 
-   // get back startup message of proofserv (we are now talking with
+   // Get back startup message of proofserv (we are now talking with
    // the real proofserver and not anymore with the proofd front-end)
    Int_t what;
    char buf[512];
@@ -363,8 +363,30 @@ void TXSlave::Interrupt(Int_t type)
    if (!IsValid()) return;
 
    if (type == TProof::kLocalInterrupt) {
-      // Equivalent to an error condition on the socket
-      HandleError();
+
+      // Deactivate and flush the local socket (we are not - yet - closing
+      // the session, so we do less things that in case of an error ...)
+      if (fProof) {
+
+         // Attach to the monitor instance, if any
+         TMonitor *mon = fProof->fCurrentMonitor;
+         if (mon && fSocket && mon->GetListOfActives()->FindObject(fSocket)) {
+            // Synchronous collection in TProof
+            if (gDebug > 2)
+               Info("Interrupt", "%p: deactivating from monitor %p", this, mon);
+            mon->DeActivate(fSocket);
+         }
+      } else {
+         Warning("Interrupt", "%p: reference to PROOF missing", this);
+      }
+
+      // Post semaphore to wake up anybody waiting; send as many posts as needed
+      if (fSocket) {
+         R__LOCKGUARD(((TXSocket *)fSocket)->fAMtx);
+         TSemaphore *sem = &(((TXSocket *)fSocket)->fASem);
+         while (sem->TryWait() != 1)
+            sem->Post();
+      }
       return;
    }
 
@@ -464,15 +486,32 @@ void TXSlave::SetAlias(const char *alias)
    return;
 }
 
+//______________________________________________________________________________
+Int_t TXSlave::SendGroupPriority(const char *grp, Int_t priority)
+{
+   // Communicate to the coordinator the priprity of the group to which the
+   // user belongs
+   // Return 0 on success
+
+   // Nothing to do if not in contact with coordinator
+   if (!IsValid()) return -1;
+
+   ((TXSocket *)fSocket)->SendCoordinator(TXSocket::kGroupProperties, grp, priority);
+
+   return 0;
+}
+
 //_____________________________________________________________________________
 Bool_t TXSlave::HandleError(const void *)
 {
    // Handle error on the input socket
 
-   Info("HandleError", "%p: got called ... fProof: %p", this, fProof);
+   Info("HandleError", "%p:%s:%s got called ... fProof: %p, fSocket: %p",
+                       this, fName.Data(), fOrdinal.Data(), fProof, fSocket);
 
    // Interrupt underlying socket operations
-   ((TXSocket *)fSocket)->SetInterrupt();
+   if (fSocket)
+      ((TXSocket *)fSocket)->SetInterrupt();
 
    // Remove signal handler
    SetInterruptHandler(kFALSE);
@@ -486,13 +525,11 @@ Bool_t TXSlave::HandleError(const void *)
       // Attach to the monitor instance, if any
       TMonitor *mon = fProof->fCurrentMonitor;
 
-      if (gDebug > 2)
-         Info("HandleError", "%p: proof: %p, mon: %p", this, fProof, mon);
+      Info("HandleError", "%p: proof: %p, mon: %p", this, fProof, mon);
 
-      if (mon && mon->GetListOfActives()->FindObject(fSocket)) {
+      if (mon && fSocket && mon->GetListOfActives()->FindObject(fSocket)) {
          // Synchronous collection in TProof
-         if (gDebug > 2)
-            Info("HandleError", "%p: deactivating from monitor %p", this, mon);
+         Info("HandleError", "%p: deactivating from monitor %p", this, mon);
          mon->DeActivate(fSocket);
       }
       // Update lists:
@@ -507,7 +544,8 @@ Bool_t TXSlave::HandleError(const void *)
          else
             Warning("HandleError", "%p: global reference to TProofServ missing");
          // The session is gone
-         ((TXSocket *)fSocket)->SetSessionID(-1);
+         if (fSocket)
+            ((TXSocket *)fSocket)->SetSessionID(-1);
          fProof->MarkBad(this);
       } else {
          // On clients the proof session should be removed from the lists
@@ -516,6 +554,9 @@ Bool_t TXSlave::HandleError(const void *)
          TProofMgr *mgr= fProof->GetManager();
          if (mgr)
             mgr->ShutdownSession(fProof);
+         Close("P");
+         SafeDelete(fSocket);
+         fValid = kFALSE;
       }
    } else {
       Warning("HandleError", "%p: reference to PROOF missing", this);
@@ -529,8 +570,7 @@ Bool_t TXSlave::HandleError(const void *)
          sem->Post();
    }
 
-   if (gDebug > 0)
-      Info("HandleError", "%p: DONE ... ", this);
+   Info("HandleError", "%p: DONE ... ", this);
 
    // We are done
    return kTRUE;

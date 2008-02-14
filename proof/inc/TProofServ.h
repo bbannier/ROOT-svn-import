@@ -30,11 +30,14 @@
 #ifndef ROOT_TString
 #include "TString.h"
 #endif
-#ifndef ROOT_Htypes
-#include "Htypes.h"
+#ifndef ROOT_TSysEvtHandler
+#include "TSysEvtHandler.h"
 #endif
 #ifndef ROOT_TStopwatch
 #include "TStopwatch.h"
+#endif
+#ifndef ROOT_TTimer
+#include "TTimer.h"
 #endif
 #ifndef ROOT_TProofQueryResult
 #include "TProofQueryResult.h"
@@ -42,14 +45,17 @@
 
 class TDSet;
 class TProof;
-class TProofPlayer;
+class TVirtualProofPlayer;
 class TProofLockPath;
 class TSocket;
+class THashList;
 class TList;
 class TDSetElement;
 class TMessage;
 class TTimer;
 class TMutex;
+class TFileCollection;
+class TProofDataSetManager;
 
 // Hook to external function setting up authentication related stuff
 // for old versions.
@@ -68,6 +74,7 @@ public:
 private:
    TString       fService;          //service we are running, either "proofserv" or "proofslave"
    TString       fUser;             //user as which we run
+   TString       fGroup;            //group the user belongs to
    TString       fConfDir;          //directory containing cluster config information
    TString       fConfFile;         //file containing config information
    TString       fWorkDir;          //directory containing all proof related info
@@ -75,17 +82,17 @@ private:
    TString       fSessionTag;       //tag for the session
    TString       fSessionDir;       //directory containing session dependent files
    TString       fPackageDir;       //directory containing packages and user libs
+   THashList    *fGlobalPackageDirList;  //list of directories containing global packages libs
    TString       fCacheDir;         //directory containing cache of user files
    TString       fQueryDir;         //directory containing query results and status
    TString       fDataSetDir;       //directory containing info about known data sets
    TProofLockPath *fPackageLock;    //package dir locker
    TProofLockPath *fCacheLock;      //cache dir locker
    TProofLockPath *fQueryLock;      //query dir locker
-   TProofLockPath *fDataSetLock;    //dataset dir locker
    TString       fArchivePath;      //default archive path
    TSocket      *fSocket;           //socket connection to client
    TProof       *fProof;            //PROOF talking to slave servers
-   TProofPlayer *fPlayer;           //actual player
+   TVirtualProofPlayer *fPlayer;    //actual player
    FILE         *fLogFile;          //log file
    Int_t         fLogFileDes;       //log file descriptor
    TList        *fEnabledPackages;  //list of enabled packages
@@ -95,6 +102,7 @@ private:
    Int_t         fGroupSize;        //size of the active slave group
    Int_t         fLogLevel;         //debug logging level
    Int_t         fNcmd;             //command history number
+   Int_t         fGroupPriority;    //priority of group the user belongs to (0 - 100)
    Bool_t        fEndMaster;        //true for a master in direct contact only with workers
    Bool_t        fMasterServ;       //true if we are a master server
    Bool_t        fInterrupt;        //if true macro execution will be stopped
@@ -111,41 +119,51 @@ private:
    TList        *fWaitingQueries;   //list of TProofQueryResult wating to be processed
    Bool_t        fIdle;             //TRUE if idle
 
+   TString       fPrefix;           //Prefix identifying the node
+
+   Bool_t        fRealTimeLog;      //TRUE if log messages should be send back in real-time
+
    Bool_t        fShutdownWhenIdle; // If TRUE, start shutdown delay countdown when idle
    TTimer       *fShutdownTimer;    // Timer used for delayed session shutdown
    TMutex       *fShutdownTimerMtx; // Actions on the timer must be atomic
 
-   static Int_t  fgMaxQueries;      //Max number of queries fully kept
+   Int_t         fInflateFactor;    // Factor in 1/1000 to inflate the CPU time
 
-   virtual void  RedirectOutput();
+   TProofDataSetManager* fDataSetManager; // dataset manager
+
+   // Quotas (-1 to disable)
+   Int_t         fMaxQueries;       //Max number of queries fully kept
+   Long64_t      fMaxBoxSize;       //Max size of the sandbox
+   Long64_t      fHWMBoxSize;       //High-Water-Mark on the sandbox size
+
+   void          RedirectOutput();
    Int_t         CatMotd();
    Int_t         UnloadPackage(const char *package);
    Int_t         UnloadPackages();
    Int_t         OldAuthSetup(TString &wconf);
+   Int_t         GetPriority();
 
    // Query handlers
    void          AddLogFile(TProofQueryResult *pq);
+   Int_t         ApplyMaxQueries();
    Int_t         CleanupQueriesDir();
-   void          FinalizeQuery(TProofPlayer *p, TProofQueryResult *pq);
-   TList        *GetDataSet(const char *name);
-
+   void          FinalizeQuery(TProofQueryResult *pq);
    TProofQueryResult *MakeQueryResult(Long64_t nentries, const char *opt,
                                       TList *inl, Long64_t first, TDSet *dset,
-                                      const char *selec, TEventList *evl);
+                                      const char *selec, TObject *elist);
    TProofQueryResult *LocateQuery(TString queryref, Int_t &qry, TString &qdir);
    void          RemoveQuery(TQueryResult *qr, Bool_t soft = kFALSE);
    void          RemoveQuery(const char *queryref);
    void          SaveQuery(TQueryResult *qr, const char *fout = 0);
    void          SetQueryRunning(TProofQueryResult *pq);
 
-   virtual Int_t LockSession(const char *sessiontag, TProofLockPath **lck);
+   Int_t         LockSession(const char *sessiontag, TProofLockPath **lck);
    Int_t         CleanupSession(const char *sessiontag);
    void          ScanPreviousQueries(const char *dir);
 
 protected:
    virtual void  HandleArchive(TMessage *mess);
    virtual Int_t HandleCache(TMessage *mess);
-   virtual Int_t HandleDataSets(TMessage *mess);
    virtual void  HandleCheckFile(TMessage *mess);
    virtual void  HandleLibIncPath(TMessage *mess);
    virtual void  HandleProcess(TMessage *mess);
@@ -156,11 +174,14 @@ protected:
 
    virtual void  HandleSocketInputDuringProcess();
    virtual Int_t Setup();
+   Int_t         SetupCommon();
+   virtual void  MakePlayer();
+   virtual void  DeletePlayer();
 
    virtual void  SetShutdownTimer(Bool_t, Int_t) { }
 
-   static void  ErrorHandler(Int_t level, Bool_t abort, const char *location,
-                             const char *msg);
+   static void   ErrorHandler(Int_t level, Bool_t abort, const char *location,
+                              const char *msg);
 
 public:
    TProofServ(Int_t *argc, char **argv, FILE *flog = 0);
@@ -173,8 +194,10 @@ public:
    const char    *GetConfDir()    const { return fConfDir; }
    const char    *GetConfFile()   const { return fConfFile; }
    const char    *GetUser()       const { return fUser; }
+   const char    *GetGroup()      const { return fGroup; }
    const char    *GetWorkDir()    const { return fWorkDir; }
    const char    *GetImage()      const { return fImage; }
+   const char    *GetSessionTag() const { return fSessionTag; }
    const char    *GetSessionDir() const { return fSessionDir; }
    Int_t          GetProtocol()   const { return fProtocol; }
    const char    *GetOrdinal()    const { return fOrdinal; }
@@ -186,11 +209,22 @@ public:
    Float_t        GetCpuTime()    const { return fCpuTime; }
    void           GetOptions(Int_t *argc, char **argv);
 
+   Int_t          GetInflateFactor() const { return fInflateFactor; }
+
+   const char    *GetPrefix()     const { return fPrefix; }
+
+   void           FlushLogFile();
+
+   Int_t          CopyFromCache(const char *name);
+   Int_t          CopyToCache(const char *name, Int_t opt = 0);
+
    virtual EQueryAction GetWorkers(TList *workers, Int_t &prioritychange);
 
+   virtual void   HandleException(Int_t sig);
    virtual void   HandleSocketInput();
    virtual void   HandleUrgentData();
    virtual void   HandleSigPipe();
+   virtual void   HandleTermination() { Terminate(0); }
    void           Interrupt() { fInterrupt = kTRUE; }
    Bool_t         IsEndMaster() const { return fEndMaster; }
    Bool_t         IsMaster() const { return fMasterServ; }
@@ -205,6 +239,7 @@ public:
    TDSetElement  *GetNextPacket(Long64_t totalEntries = -1);
    void           Reset(const char *dir);
    Int_t          ReceiveFile(const char *file, Bool_t bin, Long64_t size);
+   virtual Int_t  SendAsynMessage(const char *msg, Bool_t lf = kTRUE);
    virtual void   SendLogFile(Int_t status = 0, Int_t start = -1, Int_t end = -1);
    void           SendStatistics();
    void           SendParallel();
@@ -235,6 +270,8 @@ public:
    Int_t         Unlock();
 
    Bool_t        IsLocked() const { return (fLockId > -1); }
+
+   ClassDef(TProofLockPath,0)  //PROOF Server path locker
 };
 
 class TProofLockPathGuard {
@@ -244,6 +281,57 @@ private:
 public:
    TProofLockPathGuard(TProofLockPath *l) { fLocker = l; if (fLocker) fLocker->Lock(); }
    ~TProofLockPathGuard() { if (fLocker) fLocker->Unlock(); }
+};
+
+//----- Handles output from commands executed externally via a pipe. ---------//
+//----- The output is redirected one level up (i.e., to master or client). ---//
+//______________________________________________________________________________
+class TProofServLogHandler : public TFileHandler {
+private:
+   TSocket     *fSocket; // Socket where to redirect the message
+   FILE        *fFile;   // File connected with the open pipe
+   TString      fPfx;    // Prefix to be prepended to messages
+
+   static TString fgPfx; // Default prefix to be prepended to messages
+public:
+   enum EStatusBits { kFileIsPipe = BIT(23) };
+   TProofServLogHandler(const char *cmd, TSocket *s, const char *pfx = "");
+   TProofServLogHandler(FILE *f, TSocket *s, const char *pfx = "");
+   virtual ~TProofServLogHandler();
+
+   Bool_t IsValid() { return ((fFile && fSocket) ? kTRUE : kFALSE); }
+
+   Bool_t Notify();
+   Bool_t ReadNotify() { return Notify(); }
+
+   static void SetDefaultPrefix(const char *pfx);
+};
+
+//--- Guard class: close pipe, deactivatethe related descriptor --------------//
+//______________________________________________________________________________
+class TProofServLogHandlerGuard {
+
+private:
+   TProofServLogHandler   *fExecHandler;
+
+public:
+   TProofServLogHandlerGuard(const char *cmd, TSocket *s,
+                             const char *pfx = "", Bool_t on = kTRUE);
+   TProofServLogHandlerGuard(FILE *f, TSocket *s,
+                             const char *pfx = "", Bool_t on = kTRUE);
+   virtual ~TProofServLogHandlerGuard();
+};
+
+//--- Special timer to constrol delayed shutdowns
+//______________________________________________________________________________
+class TShutdownTimer : public TTimer {
+private:
+   TProofServ    *fProofServ;
+
+public:
+   TShutdownTimer(TProofServ *p, Int_t delay) : TTimer(delay, kFALSE), fProofServ(p) { }
+
+   Bool_t Notify();
 };
 
 #endif

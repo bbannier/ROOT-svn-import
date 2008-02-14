@@ -36,16 +36,15 @@ class TXProofServ : public TProofServ, public TXHandler {
 private:
    TXProofServInterruptHandler *fInterruptHandler;
    TXSocketHandler             *fInputHandler;
-   TList                       *fEnvList;
    TString                      fSockPath;
 
    Bool_t        fTerminated; //true if Terminate() has been already called
 
    Int_t         LockSession(const char *sessiontag, TProofLockPath **lck);
 
-   Int_t         ReadEnvFile(Int_t dbglevel = 0);
    void          SendLogFile(Int_t status = 0, Int_t start = -1, Int_t end = -1);
    void          SetShutdownTimer(Bool_t on = kTRUE, Int_t delay = 0);
+
    Int_t         Setup();
 
 public:

@@ -39,10 +39,14 @@ ClassImp(TProofCondor)
 
 //______________________________________________________________________________
 TProofCondor::TProofCondor(const char *masterurl, const char *conffile,
-                           const char *confdir, Int_t loglevel)
+                           const char *confdir, Int_t loglevel,
+                           const char *alias, TProofMgr *mgr)
   : fCondor(0), fTimer(0)
 {
    // Start proof using condor
+
+   // This may be needed during init
+   fManager = mgr;
 
    fUrl = TUrl(masterurl);
 
@@ -403,10 +407,10 @@ TString TProofCondor::GetJobAd()
 
    ad = "JobUniverse = 5\n"; // vanilla
    ad += Form("Cmd = \"%s/bin/proofd\"\n", GetConfDir());
-   ad += "Iwd = \"/tmp\"\n";
+   ad += Form("Iwd = \"%s\"\n", gSystem->TempDirectory());
    ad += "In = \"/dev/null\"\n";
-   ad += "Out = \"/tmp/proofd.out.$(Port)\"\n";
-   ad += "Err = \"/tmp/proofd.err.$(Port)\"\n";
+   ad += Form("Out = \"%s/proofd.out.$(Port)\"\n", gSystem->TempDirectory());
+   ad += Form("Err = \"%s/proofd.err.$(Port)\"\n", gSystem->TempDirectory());
    ad += Form("Args = \"-f -p $(Port) -d %d %s\"\n", GetLogLevel(), GetConfDir());
 
    return ad;

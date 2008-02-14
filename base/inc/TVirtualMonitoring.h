@@ -37,14 +37,14 @@ private:
    Double_t fValue;  // double monitor value
 
 public:
-   TVirtualMonitoringWriter() : TNamed() { }
+   TVirtualMonitoringWriter() : TNamed(), fValue(0) { }
    TVirtualMonitoringWriter(const char *name, Double_t value)
       : TNamed(name, ""), fValue(value) { }
 
    virtual ~TVirtualMonitoringWriter() { }
    virtual Bool_t SendFileReadProgress(TFile * /*file*/, Bool_t /*force*/ =kFALSE)
       { MayNotUse("SendFileReadProgress"); return kFALSE; }
-   virtual Bool_t SendParameters(TList * /*valuelist*/)
+   virtual Bool_t SendParameters(TList * /*valuelist*/, const char * /*identifier*/ = 0)
       { MayNotUse("SendParameters"); return kFALSE; }
    virtual Bool_t SendInfoTime() { MayNotUse("SendInfoTime"); return kFALSE; }
    virtual Bool_t SendInfoUser(const char * /*user*/ = 0) { MayNotUse("SendInfoUser"); return kFALSE; }

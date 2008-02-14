@@ -22,6 +22,7 @@
 
 #include "TProofSuperMaster.h"
 #include "TString.h"
+#include "TObjString.h"
 #include "TError.h"
 #include "TList.h"
 #include "TSortedList.h"
@@ -33,7 +34,7 @@
 #include "TSemaphore.h"
 #include "TDSet.h"
 #include "TPluginManager.h"
-#include "TProofPlayer.h"
+#include "TVirtualProofPlayer.h"
 #include "TMessage.h"
 #include "TUrl.h"
 #include "TProofResourcesStatic.h"
@@ -43,9 +44,13 @@ ClassImp(TProofSuperMaster)
 
 //______________________________________________________________________________
 TProofSuperMaster::TProofSuperMaster(const char *masterurl, const char *conffile,
-                                     const char *confdir, Int_t loglevel)
+                                     const char *confdir, Int_t loglevel,
+                                     const char *alias, TProofMgr *mgr)
 {
    // Start super master PROOF session.
+
+   // This may be needed during init
+   fManager = mgr;
 
    fUrl = TUrl(masterurl);
 
@@ -56,7 +61,7 @@ TProofSuperMaster::TProofSuperMaster(const char *masterurl, const char *conffile
    if (!confdir  || strlen(confdir) == 0)
       confdir = kPROOF_ConfDir;
 
-   Init(masterurl, conffile, confdir, loglevel);
+   Init(masterurl, conffile, confdir, loglevel, alias);
 }
 
 //______________________________________________________________________________
@@ -71,22 +76,18 @@ Bool_t TProofSuperMaster::StartSlaves(Bool_t parallel, Bool_t)
    // then a kPROOF_LOGDONE message (which must be collected)
    // while slaves do not.
 
-   // Parse the config file
-   TProofResourcesStatic *resources = new TProofResourcesStatic(fConfDir, fConfFile);
-   fConfFile = resources->GetFileName(); // Update the global file name (with path)
-   PDB(kGlobal,1) Info("StartSlaves", "using PROOF config file: %s", fConfFile.Data());
-
-   // Get the master
-   TProofNodeInfo *master = resources->GetMaster();
-   if (master)
-      fImage = master->GetImage();
-   if (!master || (fImage.Length() == 0)) {
-      Error("StartSlaves",
-            "no appropriate master line found in %s", fConfFile.Data());
+   Int_t pc = 0;
+   TList *submasterList = new TList;
+   // Get list of workers
+   if (gProofServ->GetWorkers(submasterList, pc) == TProofServ::kQueryStop) {
+      Error("StartSlaves", "getting list of submaster nodes");
       return kFALSE;
    }
+   fImage = gProofServ->GetImage();
+   if (fImage.IsNull())
+      fImage = Form("%s:%s", TUrl(gSystem->HostName()).GetHostFQDN(),
+                             gProofServ->GetWorkDir());
 
-   TList *submasterList = resources->GetSubmasters();
    UInt_t nSubmasters = submasterList->GetSize();
    UInt_t nSubmastersDone = 0;
    Int_t ord = 0;
@@ -154,9 +155,16 @@ Bool_t TProofSuperMaster::StartSlaves(Bool_t parallel, Bool_t)
       } // end if (parallel)
       else {
          // create submaster server
+         TUrl u(Form("%s:%d", submaster->GetNodeName().Data(), sport));
+         // Add group info in the password firdl, if any
+         if (strlen(gProofServ->GetGroup()) > 0) {
+            // Set also the user, otherwise the password is not exported
+            if (strlen(u.GetUser()) <= 0)
+               u.SetUser(gProofServ->GetUser());
+            u.SetPasswd(gProofServ->GetGroup());
+         }
          TSlave *slave =
-            CreateSubmaster(Form("%s:%d", submaster->GetNodeName().Data(), sport),
-                            fullord, image, msd);
+            CreateSubmaster(u.GetUrl(), fullord, image, msd);
 
          // Add to global list (we will add to the monitor list after
          // finalizing the server startup)
@@ -186,8 +194,7 @@ Bool_t TProofSuperMaster::StartSlaves(Bool_t parallel, Bool_t)
    } // end loop over all submasters
 
    // Cleanup
-   delete resources;
-   resources = 0;
+   SafeDelete(submasterList);
 
    nSubmastersDone = 0;
    if (parallel) {
@@ -301,9 +308,11 @@ Bool_t TProofSuperMaster::StartSlaves(Bool_t parallel, Bool_t)
 
 //______________________________________________________________________________
 Long64_t TProofSuperMaster::Process(TDSet *set, const char *selector, Option_t *option,
-                                    Long64_t nentries, Long64_t first, TEventList *evl)
+                                    Long64_t nentries, Long64_t first)
 {
    // Process a data set (TDSet) using the specified selector (.C) file.
+   // Entry- or event-lists should be set in the data set object using
+   // TDSet::SetEntryList.
    // The return value is -1 in case of error and TSelector::GetStatus() in
    // in case of success.
 
@@ -315,7 +324,7 @@ Long64_t TProofSuperMaster::Process(TDSet *set, const char *selector, Option_t *
       GetProgressDialog()->ExecPlugin(5, this, selector, set->GetListOfElements()->GetSize(),
                                   first, nentries);
 
-   return GetPlayer()->Process(set, selector, option, nentries, first, evl);
+   return GetPlayer()->Process(set, selector, option, nentries, first);
 }
 
 //______________________________________________________________________________
@@ -341,6 +350,7 @@ void TProofSuperMaster::ValidateDSet(TDSet *dset)
       if (!p) {
          smlist = new TList;
          smlist->SetName(sl->GetMsd());
+
          smholder.Add(smlist);
          TList *elemlist = new TSortedList(kSortDescending);
          elemlist->SetName(TString(sl->GetMsd())+"_elem");
@@ -396,28 +406,34 @@ void TProofSuperMaster::ValidateDSet(TDSet *dset)
             mesg << &set;
 
             TSlave *sl = dynamic_cast<TSlave*>(sms->At(i));
-            PDB(kGlobal,1) Info("ValidateDSet",
-                                "Sending TDSet with %d elements to slave %s"
-                                " to be validated",
-                                set.GetListOfElements()->GetSize(),
-                                sl->GetOrdinal());
+            PDB(kGlobal,1)
+               Info("ValidateDSet",
+                    "Sending TDSet with %d elements to worker %s"
+                    " to be validated", set.GetListOfElements()->GetSize(),
+                                        sl->GetOrdinal());
             sl->GetSocket()->Send(mesg);
             usedsms.Add(sl);
          }
       }
    }
 
-   PDB(kGlobal,1) Info("ValidateDSet","Calling Collect");
+   PDB(kGlobal,1)
+      Info("ValidateDSet","Calling Collect");
    Collect(&usedsms);
    SetDSet(0);
 }
 
 //______________________________________________________________________________
-TProofPlayer *TProofSuperMaster::MakePlayer()
+TVirtualProofPlayer *TProofSuperMaster::MakePlayer(const char *player, TSocket *s)
 {
-   // Construct a TProofPlayer object.
+   // Construct a TProofPlayer object. The player string specifies which
+   // player should be created: remote, slave, sm (supermaster) or base.
+   // Default is sm. Socket is needed in case a slave player is created.
 
-   SetPlayer(new TProofPlayerSuperMaster(this));
+   if (!player)
+      player = "sm";
+
+   SetPlayer(TVirtualProofPlayer::Create(player, this, s));
    return GetPlayer();
 }
 

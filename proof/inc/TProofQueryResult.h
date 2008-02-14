@@ -26,7 +26,6 @@
 #endif
 
 class TDSet;
-class TEventList;
 class TProofServ;
 
 class TProofQueryResult : public TQueryResult {
@@ -38,7 +37,7 @@ private:
 
    TProofQueryResult(Int_t seqnum, const char *opt, TList *inlist,
                      Long64_t entries, Long64_t first, TDSet *dset,
-                     const char *selec, TEventList *elist = 0);
+                     const char *selec, TObject *elist = 0);
 
    void  SetFinalized() { TQueryResult::SetFinalized(); }
    void  SetRunning(Int_t startlog, const char *par);

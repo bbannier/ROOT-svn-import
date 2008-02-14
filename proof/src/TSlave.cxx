@@ -20,9 +20,7 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#ifdef R__HAVE_CONFIG
 #include "RConfigure.h"
-#endif
 #include "TApplication.h"
 #include "TSlave.h"
 #include "TProof.h"
@@ -55,7 +53,7 @@ TSlave::TSlave(const char *url, const char *ord, Int_t perf,
     fParallel(0), fMsd(msd)
 {
    // Create a PROOF slave object. Called via the TProof ctor.
-   fName = TUrl(url).GetHost();
+   fName = TUrl(url).GetHostFQDN();
    fPort = TUrl(url).GetPort();
 
    Init(url, -1, stype);
@@ -161,7 +159,7 @@ void TSlave::Init(const char *host, Int_t port, Int_t stype)
       fSocket->Send(m);
    } else {
       Info("Init","** NOT ** Sending kPROOF_SETENV RemoteProtocol : %d",
-         fSocket->GetRemoteProtocol());   
+         fSocket->GetRemoteProtocol());
    }
 
    char buf[512];
@@ -343,11 +341,17 @@ void TSlave::Print(Option_t *) const
    const char *sst[] = { "invalid" , "valid", "inactive" };
    Int_t st = fSocket ? ((fStatus == kInactive) ? 2 : 1) : 0;
 
-   Printf("*** Slave %s  (%s)", fOrdinal.Data(), sst[st]);
+   Printf("*** Worker %s  (%s)", fOrdinal.Data(), sst[st]);
    Printf("    Host name:               %s", GetName());
    Printf("    Port number:             %d", GetPort());
+   Printf("    ROOT version|rev|tag:    %s", GetROOTVersion());
+   Printf("    Architecture-Compiler:   %s", GetArchCompiler());
    if (fSocket) {
-      Printf("    User:                    %s", GetUser());
+      if (strlen(GetGroup()) > 0) {
+         Printf("    User/Group:              %s/%s", GetUser(), GetGroup());
+      } else {
+         Printf("    User:                    %s", GetUser());
+      }
       if (fSocket->GetSecContext())
          Printf("    Security context:        %s", fSocket->GetSecContext()->AsString(sc));
       Printf("    Proofd protocol version: %d", fSocket->GetRemoteProtocol());
@@ -381,11 +385,7 @@ Int_t TSlave::OldAuthSetup(Bool_t master, TString wconf)
 
    if (!oldAuthSetupHook) {
       // Load libraries needed for (server) authentication ...
-#ifdef ROOTLIBDIR
-      TString authlib = TString(ROOTLIBDIR) + "/libRootAuth";
-#else
-      TString authlib = TString(gRootDir) + "/lib/libRootAuth";
-#endif
+      TString authlib = "libRootAuth";
       char *p = 0;
       // The generic one
       if ((p = gSystem->DynamicPathName(authlib, kTRUE))) {
@@ -444,11 +444,7 @@ TSlave *TSlave::Create(const char *url, const char *ord, Int_t perf,
    if (!fgTXSlaveHook) {
 
       // Load the library containing TXSlave ...
-#ifdef ROOTLIBDIR
-      TString proofxlib = TString(ROOTLIBDIR) + "/libProofx";
-#else
-      TString proofxlib = TString(gRootDir) + "/lib/libProofx";
-#endif
+      TString proofxlib = "libProofx";
       char *p = 0;
       if ((p = gSystem->DynamicPathName(proofxlib, kTRUE))) {
          delete[] p;

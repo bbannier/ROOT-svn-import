@@ -20,5 +20,5 @@
 
 #include "TProofDebug.h"
 
-TProofDebug::EProofDebugMask gProofDebugMask = TProofDebug::kNone;
+TProofDebug::EProofDebugMask gProofDebugMask = TProofDebug::kAll;
 Int_t gProofDebugLevel = 0;

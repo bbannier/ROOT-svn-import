@@ -41,15 +41,20 @@
 #include "TDSet.h"
 
 #include "Riostream.h"
+#include "RVersion.h"
 #include "TClass.h"
 #include "TClassTable.h"
 #include "TCut.h"
 #include "TError.h"
+#include "TEntryList.h"
+#include "TEnv.h"
+#include "TEventList.h"
 #include "TFile.h"
 #include "TFileInfo.h"
+#include "TFileStager.h"
 #include "TFriendElement.h"
 #include "TKey.h"
-#include "TList.h"
+#include "THashList.h"
 #include "TMap.h"
 #include "TROOT.h"
 #include "TTimeStamp.h"
@@ -59,66 +64,93 @@
 #include "TVirtualPerfStats.h"
 #include "TProof.h"
 #include "TProofChain.h"
+#include "TProofServ.h"
 #include "TPluginManager.h"
 #include "TChain.h"
 #include "TChainElement.h"
 #include "TSystem.h"
 #include "THashList.h"
-#include <set>
-#include <queue>
+
+#if 0
+#include "TVirtualStreamerInfo.h"
+#endif
+#include "TClassRef.h"
 
 ClassImp(TDSetElement)
 ClassImp(TDSet)
 
 //______________________________________________________________________________
+TDSetElement::TDSetElement() : TNamed("",""),
+                               fDirectory(),
+                               fFirst(0),
+                               fNum(0),
+                               fMsd(),
+                               fTDSetOffset(0),
+                               fEntryList(0),
+                               fValid(kFALSE),
+                               fEntries(0),
+                               fFriends(0)
+{
+   // Default constructor
+   ResetBit(kWriteV3);
+   ResetBit(kHasBeenLookedUp);
+   ResetBit(kEmpty);
+   ResetBit(kCorrupted);
+}
+
+//______________________________________________________________________________
 TDSetElement::TDSetElement(const char *file, const char *objname, const char *dir,
                            Long64_t first, Long64_t num,
-                           const char *msd)
+                           const char *msd) : TNamed(file, objname)
 {
    // Create a TDSet element.
 
-   fFileName = file;
    if (first < 0) {
-      Warning("TDSetElement", "first must be >= 0, %d is not allowed - setting to 0", first);
+      Warning("TDSetElement", "first must be >= 0, %lld is not allowed - setting to 0", first);
       fFirst = 0;
    } else {
       fFirst = first;
    }
    if (num < -1) {
-      Warning("TDSetElement", "num must be >= -1, %d is not allowed - setting to -1", num);
+      Warning("TDSetElement", "num must be >= -1, %lld is not allowed - setting to -1", num);
       fNum   = -1;
    } else {
       fNum   = num;
    }
    fMsd         = msd;
    fTDSetOffset = 0;
-   fEventList   = 0;
+   fEntryList   = 0;
    fFriends     = 0;
    fValid       = kFALSE;
    fEntries     = -1;
 
-   if (objname)
-      fObjName = objname;
    if (dir)
       fDirectory = dir;
+
+   ResetBit(kWriteV3);
+   ResetBit(kHasBeenLookedUp);
+   ResetBit(kEmpty);
+   ResetBit(kCorrupted);
 }
 
 //______________________________________________________________________________
-TDSetElement::TDSetElement(const TDSetElement& elem) : TObject()
+TDSetElement::TDSetElement(const TDSetElement& elem)
+             : TNamed(elem.GetFileName(), elem.GetObjName())
 {
    // copy constructor
-   fFileName = elem.GetFileName();
-   fObjName = elem.GetObjName();
    fDirectory = elem.GetDirectory();
    fFirst = elem.fFirst;
    fNum = elem.fNum;
    fMsd = elem.fMsd;
    fTDSetOffset = elem.fTDSetOffset;
-   fEventList = 0;
+   fEntryList = 0;
    fValid = elem.fValid;
    fEntries = elem.fEntries;
-   fIsTree = elem.fIsTree;
    fFriends = 0;
+   ResetBit(kWriteV3);
+   ResetBit(kHasBeenLookedUp);
+   ResetBit(kEmpty);
+   ResetBit(kCorrupted);
 }
 
 //______________________________________________________________________________
@@ -126,14 +158,6 @@ TDSetElement::~TDSetElement()
 {
    // Clean up the element.
    DeleteFriends();
-}
-
-//______________________________________________________________________________
-const char *TDSetElement::GetObjName() const
-{
-   // Return object name.
-
-   return fObjName;
 }
 
 //______________________________________________________________________________
@@ -151,15 +175,15 @@ void TDSetElement::Print(Option_t *opt) const
 
    if (opt && opt[0] == 'a') {
       cout << IsA()->GetName()
-           << " file=\"" << fFileName
+           << " file=\"" << GetName()
            << "\" dir=\"" << fDirectory
-           << "\" obj=\"" << fObjName
+           << "\" obj=\"" << GetTitle()
            << "\" first=" << fFirst
            << " num=" << fNum
            << " msd=\"" << fMsd
            << "\"" << endl;
    } else
-      cout << "\tLFN: " << fFileName << endl;
+      cout << "\tLFN: " << GetName() << endl;
 }
 
 //______________________________________________________________________________
@@ -209,7 +233,10 @@ void TDSetElement::Validate(TDSetElement *elem)
       return;
    }
 
-   if (!strcmp(GetFileName(), elem->GetFileName()) &&
+   const char *name = TUrl(GetFileName()).GetFileAndOptions();
+   const char *elemname = TUrl(elem->GetFileName()).GetFileAndOptions();
+
+   if (!strcmp(name, elemname) &&
        !strcmp(GetDirectory(), elem->GetDirectory()) &&
        !strcmp(GetObjName(), elem->GetObjName())) {
       Long64_t entries = elem->fFirst + elem->fNum;
@@ -246,11 +273,11 @@ Int_t TDSetElement::Compare(const TObject *obj) const
    const TDSetElement *elem = dynamic_cast<const TDSetElement*>(obj);
    if (!elem) {
       if (obj)
-         return fFileName.CompareTo(obj->GetName());
+         return (strncmp(GetName(),obj->GetName(),strlen(GetName()))) ? 1 : 0;
       return -1;
    }
 
-   Int_t order = fFileName.CompareTo(elem->GetFileName());
+   Int_t order = strncmp(GetName(),elem->GetFileName(),strlen(GetName()));
    if (order == 0) {
       if (GetFirst() < elem->GetFirst())
          return -1;
@@ -261,7 +288,6 @@ Int_t TDSetElement::Compare(const TObject *obj) const
    return order;
 }
 
-
 //______________________________________________________________________________
 void TDSetElement::AddFriend(TDSetElement *friendElement, const char *alias)
 {
@@ -271,9 +297,11 @@ void TDSetElement::AddFriend(TDSetElement *friendElement, const char *alias)
       Error("AddFriend", "The friend TDSetElement is null!");
       return;
    }
-   if (!fFriends)
-      fFriends = new FriendsList_t;
-   fFriends->push_back(std::make_pair(new TDSetElement(*friendElement), TString(alias)));
+   if (!fFriends) {
+      fFriends = new TList();
+      fFriends->SetOwner();
+   }
+   fFriends->Add(new TPair(new TDSetElement(*friendElement), new TObjString(alias)));
 }
 
 //______________________________________________________________________________
@@ -282,9 +310,12 @@ void TDSetElement::DeleteFriends()
    // Deletes the list of friends and all the friends on the list.
    if (!fFriends)
       return;
-   for (FriendsList_t::iterator i = fFriends->begin();
-             i != fFriends->end(); ++i) {
-      delete i->first;
+
+   TIter nxf(fFriends);
+   TPair *p = 0;
+   while ((p = (TPair *) nxf())) {
+      delete p->Key();
+      delete p->Value();
    }
    delete fFriends;
    fFriends = 0;
@@ -304,30 +335,46 @@ TDSetElement *TDSet::Next(Long64_t /*totalEntries*/)
 }
 
 //______________________________________________________________________________
-Long64_t TDSetElement::GetEntries(Bool_t isTree)
+Long64_t TDSetElement::GetEntries(Bool_t isTree, Bool_t openfile)
 {
-   // Returns number of entries in tree or objects in file. Returns -1 in
-   // case of error.
+   // Returns number of entries in tree or objects in file.
+   // If not yet defined and 'openfile' is TRUE, get the number from the file
+   // (may considerably slow down the application).
+   // Returns -1 in case of error.
 
-   if (fEntries > -1)
+   if (fEntries > -1 || !openfile)
       return fEntries;
 
    Double_t start = 0;
    if (gPerfStats != 0) start = TTimeStamp();
 
-   TFile *file = TFile::Open(fFileName);
+   // Take into account possible prefixes
+   TFile::EFileType typ = TFile::kDefault;
+   TString fname = gEnv->GetValue("Path.Localroot","");
+   if (!fname.IsNull())
+      typ = TFile::GetType(GetName(), "", &fname);
+   if (typ != TFile::kLocal)
+      fname = GetName();
+   TFile *file = TFile::Open(fname);
 
    if (gPerfStats != 0) {
-      gPerfStats->FileOpenEvent(file, fFileName, double(TTimeStamp())-start);
+      gPerfStats->FileOpenEvent(file, GetName(), double(TTimeStamp())-start);
    }
 
    if (file == 0) {
-      ::SysError("TDSet::GetEntries", "cannot open file %s", fFileName.Data());
+      ::SysError("TDSet::GetEntries", "cannot open file %s", GetName());
       return -1;
    }
 
-   // Record end-point Url and mark has looked-up
-   fFileName = ((TUrl *)file->GetEndpointUrl())->GetUrl();
+   // Record end-point Url and mark as looked-up; be careful to change
+   // nothing in the file name, otherwise some cross-checks may fail
+   TUrl *eu = (TUrl *) file->GetEndpointUrl();
+   eu->SetOptions(TUrl(fname).GetOptions());
+   eu->SetAnchor(TUrl(fname).GetAnchor());
+   if (strlen(eu->GetProtocol()) > 0 && strcmp(eu->GetProtocol(), "file"))
+      fName = eu->GetUrl();
+   else
+      fName = eu->GetFileAndOptions();
    SetBit(kHasBeenLookedUp);
 
    TDirectory *dirsave = gDirectory;
@@ -342,8 +389,8 @@ Long64_t TDSetElement::GetEntries(Bool_t isTree)
 
    if (isTree) {
 
-      TString on(fObjName);
-      TString sreg(fObjName);
+      TString on(GetTitle());
+      TString sreg(GetTitle());
       // If a wild card we will use the first object of the type
       // requested compatible with the reg expression we got
       if (sreg.Length() <= 0 || sreg == "" || sreg.Contains("*")) {
@@ -376,7 +423,7 @@ Long64_t TDSetElement::GetEntries(Bool_t isTree)
       TKey *key = dir->GetKey(on);
       if (key == 0) {
          Error("GetEntries", "cannot find tree \"%s\" in %s",
-               fObjName.Data(), fFileName.Data());
+               GetTitle(), GetName());
          delete file;
          return -1;
       }
@@ -399,24 +446,29 @@ Long64_t TDSetElement::GetEntries(Bool_t isTree)
 }
 
 //______________________________________________________________________________
-void TDSetElement::Lookup(Bool_t force)
+Int_t TDSetElement::Lookup(Bool_t force, Bool_t stagedOnly)
 {
    // Resolve end-point URL for this element
+   // Return 0 on success and -1 otherwise
    static Int_t xNetPluginOK = -1;
    static TString xNotRedir;
+   static TFileStager *xStager = 0;
+   Int_t retVal = 0;
 
    // Check if required
    if (!force && HasBeenLookedUp())
-      return;
+      return retVal;
+
+   if (stagedOnly && !HasBeenLookedUp())
+      return -1;
 
    // Open the file as raw to avoid the (slow) initialization
-   TUrl url(fFileName);
+   TUrl url(GetName());
    // Save current options and anchor
    TString anch = url.GetAnchor();
    TString opts = url.GetOptions();
-   // Add the 'raw' specification for fast opening
-   url.SetOptions(Form("%s&filetype=rawremote=1", opts.Data()));
-   const char *name = url.GetUrl();
+   // The full path
+   TString name(url.GetUrl());
 
    // Depending on the type of backend, it might not make any sense to lookup
    Bool_t doit = kFALSE;
@@ -436,7 +488,7 @@ void TDSetElement::Lookup(Bool_t force)
       // The server may not be redirector: we might know this from the past
       // experience, if any
       if (xNotRedir.Length() > 0) {
-         TUrl u(fFileName);
+         TUrl u(GetName());
          TString hp(Form("|%s:%d|", u.GetHostFQDN(), u.GetPort()));
          if (xNotRedir.Contains(hp))
             doit = kFALSE;
@@ -447,31 +499,63 @@ void TDSetElement::Lookup(Bool_t force)
    // AccessPathName the path, but the TXNetSystem implementation is very
    // slow. To be fixed.
    if (doit) {
-      // Open the file
-      TFile *f = TFile::Open(name);
-      if (!f || f->IsZombie()) {
-         Error("Lookup", "Couldn't open %s\n", name);
-      } else {
-         TUrl *u = (TUrl *) f->GetEndpointUrl();
-         // If not redirected, save the server coordinates to avoid
-         // redoing it next time
-         if (!(f->TestBit(TFile::kRedirected))) {
-            xNotRedir += Form("|%s:%d|", u->GetHostFQDN(), u->GetPort());
-         } else {
-            // Get the effective end-point url
-            TUrl eu(u->GetUrl());
-            // Restore original options and anchor, if any
-            eu.SetOptions(opts);
-            eu.SetAnchor(anch);
-            // Save it into the element
-            fFileName = eu.GetUrl();
+      if (!xStager || !xStager->Matches(name)) {
+         SafeDelete(xStager);
+         if (!(xStager = TFileStager::Open(name))) {
+            Error("Lookup", "TFileStager instance cannot be instantiated");
+            retVal = -1;
          }
-         delete f;
+      }
+      if (xStager && xStager->Locate(name.Data(), name) == 0) {
+         // Get the effective end-point Url
+         url.SetUrl(name);
+         // Restore original options and anchor, if any
+         url.SetOptions(opts);
+         url.SetAnchor(anch);
+         // Save it into the element
+         fName = url.GetUrl();
+      } else {
+         // Failure
+         Error("Lookup", "couldn't lookup %s\n", name.Data());
+         retVal = -1;
       }
    }
 
    // Mark has looked-up
    SetBit(kHasBeenLookedUp);
+   return retVal;
+}
+
+//______________________________________________________________________________
+void TDSetElement::SetEntryList(TObject *aList, Long64_t first, Long64_t num)
+{
+   // Set entry (or event) list for this element
+
+   if (!aList)
+      return;
+
+   // Link the proper object
+   TEventList *evl = 0;
+   TEntryList *enl = dynamic_cast<TEntryList *>(aList);
+   if (!enl)
+      evl = dynamic_cast<TEventList *>(aList);
+   if (!enl && !evl) {
+      Error("SetEntryList", "type of input object must be either TEntryList "
+                            "or TEventList (found: '%s' - do nothing", aList->ClassName());
+      return;
+   }
+
+   // Action depends on the type
+   if (enl) {
+      enl->SetEntriesToProcess(num);
+   } else {
+      for (; num > 0; num--, first++)
+         evl->Enter(evl->GetEntry((Int_t)first));
+   }
+   fEntryList = aList;
+
+   // Done
+   return;
 }
 
 //______________________________________________________________________________
@@ -479,13 +563,17 @@ TDSet::TDSet()
 {
    // Default ctor.
 
-   fElements = new TList;
+   fElements = new THashList;
    fElements->SetOwner();
    fIsTree    = kFALSE;
    fIterator  = 0;
    fCurrent   = 0;
-   fEventList = 0;
+   fEntryList = 0;
    fProofChain = 0;
+   ResetBit(kWriteV3);
+   ResetBit(kEmpty);
+   ResetBit(kValidityChecked);
+   ResetBit(kSomeInvalid);
 
    // Add to the global list
    gROOT->GetListOfDataSets()->Add(this);
@@ -510,12 +598,16 @@ TDSet::TDSet(const char *name,
    // For backward compatibility the type can also be passed via 'name',
    // in which case 'type' is ignored.
 
-   fElements = new TList;
+   fElements = new THashList;
    fElements->SetOwner();
    fIterator = 0;
    fCurrent  = 0;
-   fEventList = 0;
+   fEntryList = 0;
    fProofChain = 0;
+   ResetBit(kWriteV3);
+   ResetBit(kEmpty);
+   ResetBit(kValidityChecked);
+   ResetBit(kSomeInvalid);
 
    fType = "TTree";
    TClass *c = 0;
@@ -523,7 +615,7 @@ TDSet::TDSet(const char *name,
    if (name && strlen(name) > 0) {
       // In the old constructor signature it was the 'type'
       if (!type) {
-         if ((c = gROOT->GetClass(name)))
+         if ((c = TClass::GetClass(name)))
             fType = name;
          else
             // Default type is 'TTree'
@@ -533,16 +625,16 @@ TDSet::TDSet(const char *name,
          fName = name;
          // Check type
          if (strlen(type) > 0)
-            if ((c = gROOT->GetClass(type)))
+            if ((c = TClass::GetClass(type)))
                fType = type;
       }
    } else if (type && strlen(type) > 0) {
       // Check the type
-      if ((c = gROOT->GetClass(type)))
+      if ((c = TClass::GetClass(type)))
          fType = type;
    }
    // The correct class type
-   c = gROOT->GetClass(fType);
+   c = TClass::GetClass(fType);
 
    fIsTree = (c->InheritsFrom("TTree")) ? kTRUE : kFALSE;
 
@@ -566,16 +658,20 @@ TDSet::TDSet(const char *name,
 TDSet::TDSet(const TChain &chain, Bool_t withfriends)
 {
    // Create a named TDSet object from existing TChain 'chain'.
-   // If 'eithfriends' is kTRUE add allso friends.
-   // This constructor substitutes for the static methods TChain::MakeTDSet
-   // allowing to keep all PROOF references in 'proof'.
+   // If 'withfriends' is kTRUE add also friends.
+   // This constructor substituted the static methods TChain::MakeTDSet
+   // removing any residual dependence of 'tree' on 'proof'.
 
-   fElements = new TList;
+   fElements = new THashList;
    fElements->SetOwner();
    fIterator = 0;
    fCurrent  = 0;
-   fEventList = 0;
+   fEntryList = 0;
    fProofChain = 0;
+   ResetBit(kWriteV3);
+   ResetBit(kEmpty);
+   ResetBit(kValidityChecked);
+   ResetBit(kSomeInvalid);
 
    fType = "TTree";
    fIsTree = kTRUE;
@@ -597,7 +693,14 @@ TDSet::TDSet(const TChain &chain, Bool_t withfriends)
          dir = tree;
          tree = behindSlash;
       }
-      Add(file, tree, dir);
+      if (Add(file, tree, dir)) {
+         if (elem->HasBeenLookedUp()) {
+            // Save lookup information, if any
+            TDSetElement *dse = (TDSetElement *) fElements->Last();
+            if (dse)
+               dse->SetLookedUp();
+         }
+      }
    }
    SetDirectory(0);
 
@@ -633,6 +736,7 @@ TDSet::TDSet(const TChain &chain, Bool_t withfriends)
 TDSet::~TDSet()
 {
    // Cleanup.
+
    SafeDelete(fElements);
    SafeDelete(fIterator);
    SafeDelete(fProofChain);
@@ -642,9 +746,11 @@ TDSet::~TDSet()
 
 //______________________________________________________________________________
 Long64_t TDSet::Process(const char *selector, Option_t *option, Long64_t nentries,
-                        Long64_t first, TEventList *evl)
+                        Long64_t first, TObject *enl)
 {
    // Process TDSet on currently active PROOF session.
+   // The last argument 'enl' specifies an entry- or event-list to be used as
+   // event selection.
    // The return value is -1 in case of error and TSelector::GetStatus() in
    // in case of success.
 
@@ -653,8 +759,11 @@ Long64_t TDSet::Process(const char *selector, Option_t *option, Long64_t nentrie
       return -1;
    }
 
+   // Set entry list
+   SetEntryList(enl);
+
    if (gProof)
-      return gProof->Process(this, selector, option, nentries, first, evl);
+      return gProof->Process(this, selector, option, nentries, first);
 
    Error("Process", "no active PROOF session");
    return -1;
@@ -753,13 +862,10 @@ Bool_t TDSet::Add(const char *file, const char *objname, const char *dir,
    }
 
    // check, if it already exists in the TDSet
-   TDSetElement *el;
-   Reset();
-   while ((el = Next())) {
-      if (!(strcmp(el->GetFileName(), file))) {
-         Warning("Add", "duplicate, %40s is already in dataset, ignored", file);
-         return kFALSE;
-      }
+   TDSetElement *el = (TDSetElement *) fElements->FindObject(file);
+   if (el) {
+      Warning("Add", "duplicate, %40s is already in dataset, ignored", file);
+      return kFALSE;
    }
    if (!objname)
       objname = GetObjName();
@@ -797,19 +903,86 @@ Bool_t TDSet::Add(TDSet *dset)
 }
 
 //______________________________________________________________________________
-Bool_t TDSet::Add(TList *fileinfo)
+Bool_t TDSet::Add(TCollection *filelist, const char *meta)
 {
-   // Add files passed as list of TfileInfo objects
+   // Add files passed as list of TFileInfo, TUrl or TObjString objects .
+   // If TFileInfo, the first entry and the number of entries are also filled.
+   // The argument 'meta' can be used to specify one of the subsets in the
+   // file as described in the metadata of TFileInfo. By default the first one
+   // is taken.
 
-   if (!fileinfo)
+   if (!filelist)
       return kFALSE;
 
-   TFileInfo *fi = 0;
-   TIter next(fileinfo);
-   while ((fi = (TFileInfo *) next())) {
-      Add(fi->GetFirstUrl()->GetUrl(kTRUE), 0, 0,
-          fi->GetFirst(), fi->GetEntries());
+   TObject *o = 0;
+   TIter next(filelist);
+   while ((o = next())) {
+      TString cn(o->ClassName());
+      if (cn == "TFileInfo") {
+         Add((TFileInfo *)o, meta);
+      } else if (cn == "TUrl") {
+         Add(((TUrl *)o)->GetUrl());
+      } else if (cn == "TObjString") {
+         Add(((TObjString *)o)->GetName());
+      } else {
+         Warning("Add","found object fo unexpected type %s - ignoring", cn.Data());
+      }
    }
+
+   return kTRUE;
+}
+
+//______________________________________________________________________________
+Bool_t TDSet::Add(TFileInfo *fi, const char *meta)
+{
+   // Add file described by 'fi' to list of files to be analyzed.
+   // The argument 'meta' can be used to specify a subsets in the
+   // file as described in the metadata of TFileInfo. By default the first one
+   // is taken.
+
+   if (!fi) {
+      Error("Add", "TFileInfo object name must be specified");
+      return kFALSE;
+   }
+
+   // Element to be added
+   TDSetElement *el = 0;
+
+   // Check if it already exists in the TDSet
+   const char *file = fi->GetFirstUrl()->GetUrl();
+   if ((el = (TDSetElement *) fElements->FindObject(file))) {
+      Warning("Add", "duplicate, %40s is already in dataset, ignored", file);
+      return kFALSE;
+   }
+
+   // Get the metadata, if any
+   TFileInfoMeta *m = fi->GetMetaData(meta);
+
+   // Create the element
+   const char *objname = 0;
+   const char *dir = 0;
+   Long64_t first = 0;
+   Long64_t num = -1;
+   if (!m) {
+      objname = GetObjName();
+      dir = GetDirectory();
+   } else {
+      objname = (m->GetObject() && strlen(m->GetObject())) ? m->GetObject() : GetObjName();
+      dir = (m->GetDirectory() && strlen(m->GetDirectory())) ? m->GetDirectory() : GetDirectory();
+      first = m->GetFirst();
+      num = m->GetEntries();
+   }
+   el = new TDSetElement(file, objname, dir, first, -1);
+   el->SetEntries(num);
+
+   // Set looked-up bit
+   if (fi->TestBit(TFileInfo::kStaged))
+      el->SetBit(TDSetElement::kHasBeenLookedUp);
+   if (fi->TestBit(TFileInfo::kCorrupted))
+      el->SetBit(TDSetElement::kCorrupted);
+
+   // Add the element
+   fElements->Add(el);
 
    return kTRUE;
 }
@@ -842,15 +1015,14 @@ Int_t TDSet::ExportFileList(const char *fpath, Option_t *opt)
    // Create the file list
    TList *fileinfo = new TList;
    fileinfo->SetOwner();
-   TFileInfo *fi = 0;
 
    TDSetElement *dse = 0;
    TIter next(fElements);
    while ((dse = (TDSetElement *) next())) {
-      Long64_t last = (dse->GetNum() > 0) ? dse->GetFirst()+dse->GetNum()-1 : -1;
-      fi = new TFileInfo(dse->GetFileName(), (Long64_t)(-1), 0,
-                         0, dse->GetEntries(), dse->GetFirst(),
-                         last);
+      TFileInfoMeta *m = new TFileInfoMeta(dse->GetTitle(), dse->GetDirectory(), GetType(),
+                                           dse->GetNum(), dse->GetFirst());
+      TFileInfo *fi = new TFileInfo(dse->GetFileName());
+      fi->AddMetaData(m);
       fileinfo->Add(fi);
    }
 
@@ -925,7 +1097,7 @@ void TDSet::Reset()
 
 //______________________________________________________________________________
 Long64_t TDSet::GetEntries(Bool_t isTree, const char *filename, const char *path,
-                           const char *objname)
+                           TString &objname)
 {
    // Returns number of entries in tree or objects in file. Returns -1 in
    // case of error.
@@ -933,7 +1105,14 @@ Long64_t TDSet::GetEntries(Bool_t isTree, const char *filename, const char *path
    Double_t start = 0;
    if (gPerfStats != 0) start = TTimeStamp();
 
-   TFile *file = TFile::Open(filename);
+   // Take into acoount possible prefixes
+   TFile::EFileType typ = TFile::kDefault;
+   TString fname = gEnv->GetValue("Path.Localroot","");
+   if (!fname.IsNull())
+      typ = TFile::GetType(filename, "", &fname);
+   if (typ != TFile::kLocal)
+      fname = filename;
+   TFile *file = TFile::Open(fname);
 
    if (gPerfStats != 0) {
       gPerfStats->FileOpenEvent(file, filename, double(TTimeStamp())-start);
@@ -955,6 +1134,7 @@ Long64_t TDSet::GetEntries(Bool_t isTree, const char *filename, const char *path
    dirsave->cd();
 
    Long64_t entries;
+   Bool_t fillname = kFALSE;
    if (isTree) {
 
       TString on(objname);
@@ -962,6 +1142,7 @@ Long64_t TDSet::GetEntries(Bool_t isTree, const char *filename, const char *path
       // If a wild card we will use the first object of the type
       // requested compatible with the reg expression we got
       if (sreg.Length() <= 0 || sreg == "" || sreg.Contains("*")) {
+         fillname = kTRUE;
          if (sreg.Contains("*"))
             sreg.ReplaceAll("*", ".*");
          else
@@ -991,7 +1172,7 @@ Long64_t TDSet::GetEntries(Bool_t isTree, const char *filename, const char *path
       TKey *key = dir->GetKey(on);
       if (key == 0) {
          ::Error("TDSet::GetEntries", "cannot find tree \"%s\" in %s",
-                 objname, filename);
+                 objname.Data(), filename);
          delete file;
          return -1;
       }
@@ -1003,6 +1184,9 @@ Long64_t TDSet::GetEntries(Bool_t isTree, const char *filename, const char *path
       }
       entries = tree->GetEntries();
       delete tree;
+
+      // Return full name in case of wildcards
+      objname = (fillname) ? on : objname;
 
    } else {
       TList *keys = dir->GetListOfKeys();
@@ -1085,27 +1269,36 @@ TTree* TDSet::GetTreeHeader(TProof* proof)
 }
 
 //______________________________________________________________________________
-Bool_t TDSet::ElementsValid() const
+Bool_t TDSet::ElementsValid()
 {
-   // Check if all elemnts are valid.
+   // Check if all elements are valid.
 
+   if (TestBit(TDSet::kValidityChecked))
+      return (TestBit(TDSet::kSomeInvalid) ? kFALSE : kTRUE);
+
+   SetBit(TDSet::kValidityChecked);
+   ResetBit(TDSet::kSomeInvalid);
    TIter nextElem(GetListOfElements());
    while (TDSetElement *elem = dynamic_cast<TDSetElement*>(nextElem())) {
-      if (!elem->GetValid()) return kFALSE;
+      if (!elem->GetValid()) {
+         SetBit(TDSet::kSomeInvalid);
+         return kFALSE;
+      }
    }
    return kTRUE;
 }
 
 //______________________________________________________________________________
-Int_t TDSet::Remove(TDSetElement *elem)
+Int_t TDSet::Remove(TDSetElement *elem, Bool_t deleteElem)
 {
    // Remove TDSetElement 'elem' from the list.
    // Return 0 on success, -1 if the element is not in the list
 
-   if (!elem || !(GetListOfElements()->Remove(elem)))
+   if (!elem || !(((THashList *)(GetListOfElements()))->Remove(elem)))
       return -1;
 
-   SafeDelete(elem);
+   if (deleteElem)
+      SafeDelete(elem);
    return 0;
 }
 
@@ -1122,23 +1315,59 @@ void TDSet::Validate()
 }
 
 //______________________________________________________________________________
-void TDSet::Lookup()
+TList *TDSet::Lookup(Bool_t removeMissing, Bool_t stagedOnly)
 {
    // Resolve the end-point URL for the current elements of this data set
+   // If the removeMissing option is set to kTRUE, remove the TDSetElements
+   // that can not be located. 
+   // The method returns the list of removed TDSetElements (if any) or NULL.
+   // The list of removed elements must be later deleted.
+   // If the stagedOnly option is set to kTRUE only the elements that are
+   // currently staged are considered; the others are added to the missing
+   // file lists; this is the default.
 
+   // If an entry- or event- list has been given, assign the relevant portions
+   // to each element; this allows to look-up only for the elements which have
+   // something to be processed, so it is better to do it before the real look-up
+   // operations.
+   SplitEntryList();
+
+   TList *listOfMissingFiles = 0;
    TString msg("Looking up for exact location of files");
    UInt_t n = 0;
+   UInt_t ng = 0;
    UInt_t tot = GetListOfElements()->GetSize();
+   UInt_t n2 = (tot > 50) ? (UInt_t) tot / 50 : 1;
    Bool_t st = kTRUE;
    TIter nextElem(GetListOfElements());
    while (TDSetElement *elem = dynamic_cast<TDSetElement*>(nextElem())) {
-      if (!elem->GetValid())
-         elem->Lookup();
+      if (elem->GetNum() != 0) { // -1 means "all entries"
+         ng++;
+         if (!elem->GetValid())
+            if (elem->Lookup(kFALSE, stagedOnly))
+               if (removeMissing) {
+                  if (Remove(elem, kFALSE))
+                     Error("Lookup", "Error removing a missing file");
+                  if (!listOfMissingFiles)
+                     listOfMissingFiles = new TList;
+                  listOfMissingFiles->Add(elem);
+               }
+      }
       n++;
       // Notify the client
-      if (gProof)
+      if (gProof && (n > 0 && !(n % n2)))
          gProof->SendDataSetStatus(msg, n, tot, st);
+      // Break if we have been asked to stop
+      if (gProof && gProof->GetRunStatus() != TProof::kRunning)
+         break;
    }
+   // Notify the client if not all the files have entries to be processed
+   // (which may happen if an entry-list is used)
+   if (ng < tot && gProofServ) {
+      msg = Form("Files with entries to be processed: %d (out of %d)\n", ng, tot);
+      gProofServ->SendAsynMessage(msg);
+   }
+   return listOfMissingFiles;
 }
 
 //______________________________________________________________________________
@@ -1167,7 +1396,7 @@ void TDSet::Validate(TDSet* dset)
       if (!elem->GetValid()) continue;
       TString dir_file_obj = elem->GetDirectory();
       dir_file_obj += "_";
-      dir_file_obj += elem->GetFileName();
+      dir_file_obj += TUrl(elem->GetFileName()).GetFileAndOptions();
       dir_file_obj += "_";
       dir_file_obj += elem->GetObjName();
       TPair *p = dynamic_cast<TPair*>(bestElements.FindObject(dir_file_obj));
@@ -1191,13 +1420,283 @@ void TDSet::Validate(TDSet* dset)
       if (!elem->GetValid()) {
          TString dir_file_obj = elem->GetDirectory();
          dir_file_obj += "_";
-         dir_file_obj += elem->GetFileName();
+         dir_file_obj += TUrl(elem->GetFileName()).GetFileAndOptions();
          dir_file_obj += "_";
          dir_file_obj += elem->GetObjName();
          if (TPair *p = dynamic_cast<TPair*>(bestElements.FindObject(dir_file_obj))) {
             TDSetElement* validelem = dynamic_cast<TDSetElement*>(p->Value());
             elem->Validate(validelem);
          }
+      }
+   }
+}
+
+#if ROOT_VERSION_CODE >= ROOT_VERSION(5,15,2)
+//
+// To handle requests coming from version 3 client / masters we need
+// a special streamer
+//______________________________________________________________________________
+void TDSetElement::Streamer(TBuffer &R__b)
+{
+   // Stream an object of class TDSetElement.
+
+   if (R__b.IsReading()) {
+      UInt_t R__s, R__c;
+      Version_t R__v = R__b.ReadVersion(&R__s, &R__c);
+      ResetBit(kWriteV3);
+      if (R__v > 4) {
+         R__b.ReadClassBuffer(TDSetElement::Class(), this, R__v, R__s, R__c);
+      } else {
+         // For version 3 client / masters we need a special streamer
+         SetBit(kWriteV3);
+         if (R__v > 3) {
+            TNamed::Streamer(R__b);
+         } else {
+            // Old versions were not deriving from TNamed and had the
+            // file name and the object type name in the first two members
+            TObject::Streamer(R__b);
+            TString name, title;
+            R__b >> name >> title;
+            SetNameTitle(name, title);
+         }
+         // Now we read the standard part
+         R__b >> fDirectory;
+         R__b >> fFirst;
+         R__b >> fNum;
+         R__b >> fMsd;
+         R__b >> fTDSetOffset;
+         TEventList *evl;
+         R__b >> evl;
+         R__b >> fValid;
+         R__b >> fEntries;
+
+         // Special treatment waiting for proper retrieving of stl containers
+         FriendsList_t *friends = new FriendsList_t;
+         static TClassRef classFriendsList = TClass::GetClass(typeid(FriendsList_t));
+         R__b.ReadClassBuffer( classFriendsList, friends, classFriendsList->GetClassVersion(), 0, 0);
+         if (friends) {
+            // Convert friends to a TList (to be written)
+            fFriends = new TList();
+            fFriends->SetOwner();
+            for (FriendsList_t::iterator i = friends->begin();
+                 i != friends->end(); ++i) {
+               TDSetElement *dse = (TDSetElement *) i->first->Clone();
+               fFriends->Add(new TPair(dse, new TObjString(i->second.Data())));
+            }
+         }
+         // the value for fIsTree (only older versions are sending it)
+         Bool_t tmpIsTree;
+         R__b >> tmpIsTree;
+         R__b.CheckByteCount(R__s, R__c, TDSetElement::IsA());
+      }
+   } else {
+      if (TestBit(kWriteV3)) {
+         // For version 3 client / masters we need a special streamer
+         R__b << Version_t(3);
+         TObject::Streamer(R__b);
+         R__b << TString(GetName());
+         R__b << TString(GetTitle());
+         R__b << fDirectory;
+         R__b << fFirst;
+         R__b << fNum;
+         R__b << fMsd;
+         R__b << fTDSetOffset;
+         R__b << (TEventList *)0;
+         R__b << fValid;
+         R__b << fEntries;
+
+         // Special treatment waiting for proper retrieving of stl containers
+         FriendsList_t *friends = new FriendsList_t;
+         if (fFriends) {
+            TIter nxf(fFriends);
+            TPair *p = 0;
+            while ((p = (TPair *)nxf()))
+               friends->push_back(std::make_pair((TDSetElement *)p->Key(),
+                                   TString(((TObjString *)p->Value())->GetName())));
+         }
+         static TClassRef classFriendsList = TClass::GetClass(typeid(FriendsList_t));
+         R__b.WriteClassBuffer( classFriendsList, &friends );
+
+         // Older versions had an unused boolean called fIsTree: we fill it
+         // with its default value
+         R__b << kFALSE;
+      } else {
+         R__b.WriteClassBuffer(TDSetElement::Class(),this);
+      }
+   }
+}
+
+//______________________________________________________________________________
+void TDSet::Streamer(TBuffer &R__b)
+{
+   // Stream an object of class TDSet.
+
+   if (R__b.IsReading()) {
+      UInt_t R__s, R__c;
+      Version_t R__v = R__b.ReadVersion(&R__s, &R__c);
+      ResetBit(kWriteV3);
+      if (R__v > 3) {
+         R__b.ReadClassBuffer(TDSet::Class(), this, R__v, R__s, R__c);
+      } else {
+         // For version 3 client / masters we need a special streamer
+         SetBit(kWriteV3);
+         TNamed::Streamer(R__b);
+         R__b >> fDir;
+         R__b >> fType;
+         R__b >> fObjName;
+         TList elems;
+         elems.Streamer(R__b);
+         elems.SetOwner(kFALSE);
+         if (elems.GetSize() > 0) {
+            fElements = new THashList;
+            fElements->SetOwner();
+            TDSetElement *e = 0;
+            TIter nxe(&elems);
+            while ((e = (TDSetElement *)nxe())) {
+               fElements->Add(e);
+            }
+         } else {
+            fElements = 0;
+         }
+         R__b >> fIsTree;
+      }
+   } else {
+      if (TestBit(kWriteV3)) {
+         // For version 3 client / masters we need a special streamer
+         R__b << Version_t(3);
+         TNamed::Streamer(R__b);
+         R__b << fDir;
+         R__b << fType;
+         R__b << fObjName;
+         TList elems;
+         if (fElements) {
+            elems.SetOwner(kFALSE);
+            if (fElements->GetSize() > 0) {
+               TDSetElement *e = 0;
+               TIter nxe(fElements);
+               while ((e = (TDSetElement *)nxe()))
+                  elems.Add(e);
+            }
+         }
+         elems.Streamer(R__b);
+         R__b << fIsTree;
+      } else {
+         R__b.WriteClassBuffer(TDSet::Class(),this);
+      }
+   }
+}
+#endif
+
+//______________________________________________________________________________
+void TDSet::SetWriteV3(Bool_t on)
+{
+   // Set/Reset the 'OldStreamer' bit in this instance and its elements.
+   // Needed for backward compatibility in talking to old client / masters.
+
+   if (on)
+      SetBit(TDSet::kWriteV3);
+   else
+      ResetBit(TDSet::kWriteV3);
+   // Loop over dataset elements
+   TIter nxe(GetListOfElements());
+   TObject *o = 0;
+   while ((o = nxe()))
+      if (on)
+         o->SetBit(TDSetElement::kWriteV3);
+      else
+         o->ResetBit(TDSetElement::kWriteV3);
+}
+
+//______________________________________________________________________________
+void TDSet::SetEntryList(TObject *aList)
+{
+   // Set entry (or event) list for this data set
+
+   if (!aList)
+      return;
+
+   // Link the proper object
+   TEventList *evl = 0;
+   TEntryList *enl = dynamic_cast<TEntryList *>(aList);
+   if (!enl)
+      evl = dynamic_cast<TEventList *>(aList);
+   if (!enl && !evl) {
+      Error("SetEntryList", "type of input object must be either TEntryList "
+                            "or TEventList (found: '%s' - do nothing", aList->ClassName());
+      return;
+   }
+
+   // Action depends on the type
+   fEntryList = (enl) ? enl : (TEntryList *)evl;
+
+   // Done
+   return;
+}
+
+//______________________________________________________________________________
+void TDSet::SplitEntryList()
+{
+   // Splits the main entry (or event) list into sub-lists for the elements of
+   // thet data set
+
+   if (!fEntryList) {
+      if (gDebug > 0)
+         Info("SplitEntryList", "no entry- (or event-) list to split - do nothing");
+      return;
+   }
+
+   // Action depend on type of list
+   TEntryList *enl = dynamic_cast<TEntryList *>(fEntryList);
+   if (enl) {
+      // TEntryList
+      TIter next(fElements);
+      TDSetElement *el=0;
+      TEntryList *sublist = 0;
+      while ((el=(TDSetElement*)next())){
+         sublist = enl->GetEntryList(el->GetObjName(), el->GetFileName());
+         if (sublist){
+            el->SetEntryList(sublist);
+            el->SetNum(sublist->GetN());
+         } else {
+            sublist = new TEntryList("", "");
+            el->SetEntryList(sublist);
+            el->SetNum(0);
+         }
+      }
+   } else {
+      TEventList *evl = dynamic_cast<TEventList *>(fEntryList);
+      if (evl) {
+         // TEventList
+         TIter next(fElements);
+         TDSetElement *el, *prev;
+
+         prev = dynamic_cast<TDSetElement*> (next());
+         if (!prev)
+            return;
+         Long64_t low = prev->GetTDSetOffset();
+         Long64_t high = low;
+         Long64_t currPos = 0;
+         do {
+            el = dynamic_cast<TDSetElement*> (next());
+            // kMaxLong64 means infinity
+            high = (el == 0) ? kMaxLong64 : el->GetTDSetOffset();
+#ifdef DEBUG
+            while (currPos < evl->GetN() && evl->GetEntry(currPos) < low) {
+               Error("SplitEntryList",
+                     "TEventList: event outside of the range of any of the TDSetElements");
+               currPos++;        // unnecessary check
+            }
+#endif
+            TEventList* nevl = new TEventList();
+            while (currPos < evl->GetN() && evl->GetEntry((Int_t)currPos) < high) {
+               nevl->Enter(evl->GetEntry((Int_t)currPos) - low);
+               currPos++;
+            }
+            prev->SetEntryList(nevl);
+            prev->SetNum(nevl->GetN());
+            low = high;
+            prev = el;
+         } while (el);
       }
    }
 }

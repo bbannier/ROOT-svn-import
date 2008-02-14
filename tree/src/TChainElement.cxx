@@ -83,3 +83,13 @@ void TChainElement::SetPacketSize(Int_t size)
 
    fPacketSize = size;
 }
+
+//_______________________________________________________________________
+void TChainElement::SetLookedUp(Bool_t y)
+{
+   // Set/Reset the looked-up bit
+   if (y)
+      SetBit(kHasBeenLookedUp);
+   else
+      ResetBit(kHasBeenLookedUp);
+}

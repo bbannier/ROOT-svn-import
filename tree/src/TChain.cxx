@@ -50,6 +50,12 @@
 #include "TTreeCache.h"
 #include "TUrl.h"
 #include "TVirtualIndex.h"
+#include "TEventList.h"
+#include "TEntryList.h"
+#include "TEntryListFromFile.h"
+#include "TFileStager.h"
+
+const Long64_t theBigNumber = Long64_t(1234567890)<<28;
 
 ClassImp(TChain)
 
@@ -418,7 +424,7 @@ Int_t TChain::AddFile(const char* name, Long64_t nentries /* = kBigNumber */, co
 }
 
 //______________________________________________________________________________
-Int_t TChain::AddFileInfoList(TList* fileinfolist, Long64_t nfiles /* = kBigNumber */)
+Int_t TChain::AddFileInfoList(TCollection* fileinfolist, Long64_t nfiles /* = kBigNumber */)
 {
    // -- Add all files referenced in the list to the chain.
 
@@ -1351,9 +1357,11 @@ Long64_t TChain::LoadTree(Long64_t entry)
 }
 
 //______________________________________________________________________________
-void TChain::Lookup()
+void TChain::Lookup(Bool_t force)
 {
-   // -- Check the files in the chain.
+   // Check / locate the files in the chain.
+   // By default only the files not yet looked up are checked.
+   // Use force = kTRUE to check / re-check every file.
 
    TIter next(fFiles);
    TChainElement* element = 0;
@@ -1361,35 +1369,60 @@ void TChain::Lookup()
    printf("\n");
    printf("TChain::Lookup - Looking up %d files .... \n", nelements);
    Int_t nlook = 0;
+   TFileStager *stg = 0;
    while ((element = (TChainElement*) next())) {
+      // Do not do it more than needed
+      if (element->HasBeenLookedUp() && !force) continue;
+      // Count
       nlook++;
       // Get the Url
-      TUrl cachefileurl(element->GetTitle());
+      TUrl elemurl(element->GetTitle());
       // Save current options and anchor
-      TString anchor = cachefileurl.GetAnchor();
-      TString options = cachefileurl.GetOptions();
-      // Add the 'raw' specification for fast opening
-      cachefileurl.SetOptions(Form("%s&filetype=raw", options.Data()));
-      // Open the file
-      TFile* cachefile = TFile::Open(cachefileurl.GetUrl());
-      if ((!cachefile) || cachefile->IsZombie()) {
-         fFiles->Remove(element);
-         Error("Lookup", "Couldn't open %s\n", cachefileurl.GetUrl());
-      } else {
-         printf("Lookup | %03.02f %% finished\r", 100.0 * nlook / nelements);
-         fflush(stdout);
+      TString anchor = elemurl.GetAnchor();
+      TString options = elemurl.GetOptions();
+      // Reset options and anchor
+      elemurl.SetOptions("");
+      elemurl.SetAnchor("");
+      // Locate the file
+      TString eurl(elemurl.GetUrl());
+      if (!stg || !stg->Matches(eurl)) {
+         SafeDelete(stg);
+         stg = TFileStager::Open(eurl);
+         if (!stg) {
+            Error("Lookup", "TFileStager instance cannot be instantiated");
+            break;
+         }
+      }
+      Int_t n1 = (nelements > 100) ? (Int_t) nelements / 100 : 1;
+      if (stg->Locate(eurl.Data(), eurl) == 0) {
+         if (nlook > 0 && !(nlook % n1)) {
+            printf("Lookup | %3d %% finished\r", 100 * nlook / nelements);
+            fflush(stdout);
+         }
          // Get the effective end-point Url
-         TUrl endurl = ((TUrl*) cachefile->GetEndpointUrl())->GetUrl();
+         elemurl.SetUrl(eurl);
          // Restore original options and anchor, if any
-         endurl.SetOptions(options);
-         endurl.SetAnchor(anchor);
+         elemurl.SetOptions(options);
+         elemurl.SetAnchor(anchor);
          // Save it into the element
-         element->SetTitle(endurl.GetUrl());
-         delete cachefile;
-         cachefile = 0;
+         element->SetTitle(elemurl.GetUrl());
+         // Remember
+         element->SetLookedUp();
+      } else {
+         // Failure: remove
+         fFiles->Remove(element);
+         if (gSystem->AccessPathName(eurl))
+            Error("Lookup", "file %s does not exist\n", eurl.Data());
+         else
+            Error("Lookup", "file %s cannot be read\n", eurl.Data());
       }
    }
-   printf("\n");
+   if (nelements > 0)
+      printf("Lookup | %3d %% finished\n", 100 * nlook / nelements);
+   else
+      printf("\n");
+   fflush(stdout);
+   SafeDelete(stg);
 }
 
 //______________________________________________________________________________
@@ -1944,6 +1977,209 @@ void TChain::SetDirectory(TDirectory* dir)
    } else {
       fFile = 0;
    }
+}
+
+//_______________________________________________________________________
+void TChain::SetEntryList(TEntryList *elist, Option_t *opt)
+{
+   //Set the input entry list (processing the entries of the chain will then be
+   //limited to the entries in the list)
+   //This function finds correspondance between the sub-lists of the TEntryList
+   //and the trees of the TChain
+   //By default (opt=""), both the file names of the chain elements and
+   //the file names of the TEntryList sublists are expanded to full path name.
+   //If opt = "ne", the file names are taken as they are and not expanded
+
+   if (fEntryList){
+      //check, if the chain is the owner of the previous entry list
+      //(it happens, if the previous entry list was created from a user-defined
+      //TEventList in SetEventList() function)
+      if (fEntryList->TestBit(kCanDelete)){
+         delete fEntryList;
+      }
+      fEntryList = 0;
+   }
+   if (!elist){
+      fEntryList = 0;
+      fEventList = 0;
+      return;
+   }
+   if (!elist->TestBit(kCanDelete)){
+      //this is a direct call to SetEntryList, not via SetEventList
+      fEventList = 0;
+   }
+   if (elist->GetN() == 0){
+      fEntryList = elist;
+      return;
+   }
+   if (fProofChain){
+      //for processing on proof, event list and entry list can't be
+      //set at the same time.
+      fEventList = 0;
+      fEntryList = elist;
+      return;
+   }
+
+   Int_t ne = fFiles->GetEntries();
+   Int_t listfound=0;
+   TString treename, filename;
+
+   TEntryList *templist = 0;
+   for (Int_t ie = 0; ie<ne; ie++){
+      treename =((TChainElement*)fFiles->UncheckedAt(ie))->GetName();
+      filename = ((TChainElement*)fFiles->UncheckedAt(ie))->GetTitle();
+      templist = elist->GetEntryList(treename.Data(), filename.Data(), opt);
+      if (templist) {
+         listfound++;
+         templist->SetTreeNumber(ie);
+      }
+   }
+
+   if (listfound == 0){
+      Error("SetEntryList", "No list found for the trees in this chain");
+      fEntryList = 0;
+      return;
+   }
+   fEntryList = elist;
+   TList *elists = elist->GetLists();
+   Bool_t shift = kFALSE;
+   TIter next(elists);
+
+   //check, if there are sub-lists in the entry list, that don't
+   //correspond to any trees in the chain
+   while((templist = (TEntryList*)next())){
+      if (templist->GetTreeNumber() < 0){
+         shift = kTRUE;
+         break;
+      }
+   }
+   fEntryList->SetShift(shift);
+
+}
+
+//_______________________________________________________________________
+void TChain::SetEntryListFile(const char *filename, Option_t * /*opt*/)
+{
+// Set the input entry list (processing the entries of the chain will then be
+// limited to the entries in the list). This function creates a special kind
+// of entry list (TEntryListFromFile object) that loads lists, corresponding
+// to the chain elements, one by one, so that only one list is in memory at a time.
+//
+// If there is an error opening one of the files, this file is skipped and the
+// next file is loaded
+//
+// File naming convention:
+// - by default, filename_elist.root is used, where filename is the
+//   name of the chain element
+// - xxx$xxx.root - $ sign is replaced by the name of the chain element
+// If the list name is not specified (by passing filename_elist.root/listname to
+// the TChain::SetEntryList() function, the first object of class TEntryList
+// in the file is taken.
+//
+// It is assumed, that there are as many list files, as there are elements in
+// the chain and they are in the same order
+
+
+   if (fEntryList){
+      //check, if the chain is the owner of the previous entry list
+      //(it happens, if the previous entry list was created from a user-defined
+      //TEventList in SetEventList() function)
+      if (fEntryList->TestBit(kCanDelete)){
+         delete fEntryList;
+      }
+      fEntryList = 0;
+   }
+
+   fEventList = 0;
+
+   TString basename(filename);
+
+   Int_t dotslashpos = basename.Index(".root/");
+   TString behind_dot_root = "";
+   if (dotslashpos>=0) {
+      // Copy the list name specification
+      behind_dot_root = basename(dotslashpos+6,basename.Length()-dotslashpos+6);
+      // and remove it from basename
+      basename.Remove(dotslashpos+5);
+   }
+   fEntryList = new TEntryListFromFile(basename.Data(), behind_dot_root.Data(), fNtrees);
+   fEntryList->SetBit(kCanDelete, kTRUE);
+   ((TEntryListFromFile*)fEntryList)->SetFileNames(fFiles);
+}
+
+
+//_______________________________________________________________________
+void TChain::SetEventList(TEventList *evlist)
+{
+//This function transfroms the given TEventList into a TEntryList
+//
+//NOTE, that this function loads all tree headers, because the entry numbers
+//in the TEventList are global and have to be recomputed, taking into account
+//the number of entries in each tree.
+//
+//The new TEntryList is owned by the TChain and gets deleted when the chain
+//is deleted. This TEntryList is returned by GetEntryList() function, and after
+//GetEntryList() function is called, the TEntryList is not owned by the chain
+//any more and will not be deleted with it.
+
+   fEventList = evlist;
+   if (fEntryList){
+      if (fEntryList->TestBit(kCanDelete))
+         delete fEntryList;
+      fEntryList=0;
+   }
+
+   if (!evlist) {
+      fEntryList = 0;
+      fEventList = 0;
+      return;
+   }
+
+   if(fProofChain) {
+      //on proof, fEventList and fEntryList shouldn't be set at the same time
+      if (fEntryList){
+         //check, if the chain is the owner of the previous entry list
+         //(it happens, if the previous entry list was created from a user-defined
+         //TEventList in SetEventList() function)
+         if (fEntryList->TestBit(kCanDelete)){
+            delete fEntryList;
+         }
+         fEntryList = 0;
+      }
+      return;
+   }
+
+   TEntryList *enlist = new TEntryList(evlist->GetName(), evlist->GetTitle());
+
+   Int_t nsel = evlist->GetN();
+   Long64_t globalentry, localentry;
+   const char *treename;
+   const char *filename;
+   if (fTreeOffset[fNtrees-1]==theBigNumber){
+      //Load all the tree headers if the tree offsets are not known
+      //It is assumed here, that loading the last tree will load all 
+      //previous ones
+      printf("loading trees\n");
+      (const_cast<TChain*>(this))->LoadTree(evlist->GetEntry(evlist->GetN()-1));
+   }
+   for (Int_t i=0; i<nsel; i++){
+      globalentry = evlist->GetEntry(i);
+      //add some protection from globalentry<0 here
+      Int_t treenum = 0;
+      while (globalentry>=fTreeOffset[treenum]) 
+         treenum++;
+      treenum--;
+      localentry = globalentry - fTreeOffset[treenum];
+      // printf("globalentry=%lld, treeoffset=%lld, localentry=%lld\n", globalentry, fTreeOffset[treenum], localentry);
+      treename = ((TNamed*)fFiles->At(treenum))->GetName();
+      filename = ((TNamed*)fFiles->At(treenum))->GetTitle();
+      //printf("entering for tree %s %s\n", treename, filename);
+      enlist->SetTree(treename, filename);
+      enlist->Enter(localentry);
+   }
+   enlist->SetBit(kCanDelete, kTRUE);
+   enlist->SetReapplyCut(evlist->GetReapplyCut());
+   SetEntryList(enlist);
 }
 
 //_______________________________________________________________________

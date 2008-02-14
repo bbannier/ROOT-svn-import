@@ -24,6 +24,7 @@
 #include "TSlave.h"
 #include "TXSocketHandler.h"
 #include "TXHandler.h"
+#include "TList.h"
 
 
 ClassImp(TXSocketHandler)

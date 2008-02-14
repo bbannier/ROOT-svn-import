@@ -33,10 +33,12 @@ PROOFXO      := $(PROOFXS:.cxx=.o)
 PROOFXDEP    := $(PROOFXO:.o=.d) $(PROOFXDO:.o=.d)
 
 PROOFXLIB    := $(LPATH)/libProofx.$(SOEXT)
+PROOFXMAP    := $(PROOFXLIB:.$(SOEXT)=.rootmap)
 
 # used in the main Makefile
 ALLHDRS      += $(patsubst $(MODDIRI)/%.h,include/%.h,$(PROOFXH))
 ALLLIBS      += $(PROOFXLIB)
+ALLMAPS      += $(PROOFXMAP)
 
 # include all dependency files
 INCLUDEFILES += $(PROOFXDEP)
@@ -51,6 +53,7 @@ ifeq ($(wildcard $(XROOTDDIRI)/*.hh),)
 XROOTDDIRI   := $(XROOTDDIR)/src
 endif
 XROOTDDIRL   := $(XROOTDDIR)/lib
+XROOTDDIRP   := $(XROOTDDIRL)
 endif
 endif
 
@@ -63,32 +66,30 @@ PROOFXINCEXTRA += $(PROOFDDIRI:%=-I%)
 ifeq ($(PLATFORM),win32)
 PROOFXLIBEXTRA += $(XROOTDDIRL)/libXrdClient.lib
 else
-PROOFXLIBEXTRA += $(XROOTDDIRL)/libXrdClient.a $(XROOTDDIRL)/libXrdOuc.a \
-		  $(XROOTDDIRL)/libXrdNet.a
+PROOFXLIBEXTRA += -L$(XROOTDDIRL) -lXrdOuc -lXrdSys -lXrdNet \
+                  -L$(XROOTDDIRP) -lXrdClient
 endif
 
 ##### local rules #####
 include/%.h:    $(PROOFXDIRI)/%.h $(XROOTDETAG)
 		cp $< $@
 
-$(PROOFXLIB):   $(PROOFXO) $(XPCONNO) $(PROOFXDO) $(ORDER_) $(MAINLIBS) \
+$(PROOFXLIB):   $(PROOFXO) $(PROOFXDO) $(XPCONNO) $(ORDER_) $(MAINLIBS) \
                 $(PROOFXLIBDEP) $(XRDPLUGINS)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
 		   "$(SOFLAGS)" libProofx.$(SOEXT) $@ \
 		   "$(PROOFXO) $(XPCONNO) $(PROOFXDO)" \
 		   "$(PROOFXLIBEXTRA)"
 
-$(PROOFXDS):    $(PROOFXH) $(PROOFXL) $(ROOTCINTTMPEXE) $(XROOTDETAG)
+$(PROOFXDS):    $(PROOFXH) $(PROOFXL) $(XROOTDETAG) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(PROOFXINCEXTRA) $(PROOFXH) $(PROOFXL)
 
-all-proofx:     $(PROOFXLIB)
+$(PROOFXMAP):   $(RLIBMAP) $(MAKEFILEDEP) $(PROOFXL)
+		$(RLIBMAP) -o $(PROOFXMAP) -l $(PROOFXLIB) \
+		   -d $(PROOFXLIBDEPM) -c $(PROOFXL)
 
-map-proofx:     $(RLIBMAP)
-		$(RLIBMAP) -r $(ROOTMAP) -l $(PROOFXLIB) \
-		   -d $(PROOFXLIBDEP) -c $(PROOFXL)
-
-map::           map-proofx
+all-proofx:     $(PROOFXLIB) $(PROOFXMAP)
 
 clean-proofx:
 		@rm -f $(PROOFXO) $(PROOFXDO)
@@ -96,7 +97,7 @@ clean-proofx:
 clean::         clean-proofx
 
 distclean-proofx: clean-proofx
-		@rm -f $(PROOFXDEP) $(PROOFXDS) $(PROOFXDH) $(PROOFXLIB)
+		@rm -f $(PROOFXDEP) $(PROOFXDS) $(PROOFXDH) $(PROOFXLIB) $(PROOFXMAP)
 
 distclean::     distclean-proofx
 

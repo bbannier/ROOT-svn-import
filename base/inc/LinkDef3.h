@@ -162,6 +162,8 @@
 #pragma link C++ class TZIPMember+;
 #pragma link C++ class TTimeStamp+;
 #pragma link C++ class TFileInfo+;
+#pragma link C++ class TFileInfoMeta+;
+#pragma link C++ class TFileCollection+;
 #pragma link C++ class TVirtualAuth;
 #pragma link C++ class TVirtualMutex;
 #pragma link C++ class TLockGuard;
@@ -172,6 +174,8 @@
 #pragma link C++ class TVirtualMonitoringReader;
 #pragma link C++ class TObjectSpy;
 #pragma link C++ class TObjectRefSpy;
+#pragma link C++ class TUri;
+#pragma link C++ function operator==(const TUri&, const TUri&);
 
 // Insure the creation of the TClass object for pairs that might be
 // inside the cintdlls.

@@ -104,6 +104,7 @@ private:
 
    // Whether to timeout or not
    Bool_t              fDontTimeout;   // If true wait forever for incoming messages
+   Bool_t              fRDInterrupt;   // To interrupt waiting for messages
 
    // Version of the remote XrdProofdProtocol
    Int_t               fXrdProofdVersion;
@@ -137,12 +138,16 @@ private:
    static void         DumpReadySock(); // Dump content of the ready-socket list
 
 public:
-   // Should be the same as in proofd/src/XrdProofdProtocol.cxx (local definitions)
+   // Should be the same as in proofd/inc/XProofProtocol.h (local definitions)
    enum ECoordMsgType { kQuerySessions = 1000,
                         kSessionTag, kSessionAlias, kGetWorkers, kQueryWorkers,
                         kCleanupSessions,
                         kQueryLogPaths,
-                        kReadBuffer };
+                        kReadBuffer,
+                        kQueryROOTVersions,
+                        kROOTVersion,
+                        kGroupProperties,
+                        kSendMsgToUser};
    // Should be the same as in proofd/src/XrdProofdProtocol::Urgent
    enum EUrgentMsgType { kStopProcess = 2000 };
 
@@ -175,7 +180,7 @@ public:
    virtual void        RemoveClientID() { }
    virtual void        SetClientID(Int_t) { }
    void                SetSendOpt(ESendRecvOptions o) { fSendOpt = o; }
-   void                SetSessionID(Int_t id) { fSessionID = id; }
+   void                SetSessionID(Int_t id);
 
    // Send interfaces
    Int_t               Send(const TMessage &mess);
@@ -187,8 +192,8 @@ public:
    Int_t               SendRaw(const void *buf, Int_t len,
                                ESendRecvOptions opt = kDontBlock);
 
-   TObjString         *SendCoordinator(Int_t kind,
-                                       const char *msg = 0, Int_t int2 = 0, Long64_t l64 = 0);
+   TObjString         *SendCoordinator(Int_t kind, const char *msg = 0, Int_t int2 = 0,
+                                       Long64_t l64 = 0, Int_t int3 = 0, const char *opt = 0);
 
 
    // Recv interfaces
@@ -210,7 +215,8 @@ public:
    void                SendUrgent(Int_t type, Int_t int1, Int_t int2);
 
    // Interrupt the low level socket
-   void                SetInterrupt() { if (fConn) fConn->SetInterrupt(); }
+   void                SetInterrupt() { fRDInterrupt = kTRUE;
+                                        if (fConn) fConn->SetInterrupt(); }
 
    // Flush the asynchronous queue
    Int_t               Flush();
@@ -240,13 +246,10 @@ public:
    Bool_t  fOwn;
    Int_t   fCid;
 
-   TXSockBuf(Char_t *bp=0, Int_t sz=0, Bool_t own=1)
-             { fBuf = fMem = bp; fSiz = fLen = sz; fOwn = own; fCid = -1; fgBuffMem += sz; }
-  ~TXSockBuf() {if (fOwn && fMem) { free(fMem); fgBuffMem -= fSiz; }}
+   TXSockBuf(Char_t *bp=0, Int_t sz=0, Bool_t own=1);
+  ~TXSockBuf();
 
-   void Resize(Int_t sz) { if (sz > fSiz)
-                              if ((fMem = (Char_t *)realloc(fMem, sz))) { fgBuffMem += (sz - fSiz);
-                                 fBuf = fMem; fSiz = sz; fLen = 0;}}
+   void Resize(Int_t sz);
 
    static Long64_t BuffMem();
    static Long64_t GetMemMax();

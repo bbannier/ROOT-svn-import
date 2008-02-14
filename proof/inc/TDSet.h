@@ -41,104 +41,116 @@
 // (typically on the PROOF master server), not at creation time.        //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
-
 #ifndef ROOT_TNamed
 #include "TNamed.h"
 #endif
 
-#ifndef ROOT_TEventList
-#include "TEventList.h"
-#endif
+class TChain;
+class TCollection;
+class TCut;
+class TDSet;
+class TEventList;
+class TEntryList;
+class TFileInfo;
+class THashList;
+class TIter;
+class TList;
+class TProof;
+class TProofChain;
+class TTree;
 
+// For backward compatibility (handle correctly requests from old clients)
 #include <set>
 #include <list>
 
-class TList;
-class TDSet;
-class TEventList;
-class TFileInfo;
-class TCut;
-class TTree;
-class TChain;
-class TProof;
-class TEventList;
-class TProofChain;
-
-class TDSetElement : public TObject {
+class TDSetElement : public TNamed {
 public:
    typedef  std::list<std::pair<TDSetElement*, TString> > FriendsList_t;
-private:
    // TDSetElement status bits
    enum EStatusBits {
-      kHasBeenLookedUp = BIT(15)
+      kHasBeenLookedUp = BIT(15),
+      kWriteV3         = BIT(16),
+      kEmpty           = BIT(17),
+      kCorrupted       = BIT(18)
    };
 
-   TString          fFileName;   // physical or logical file name
-   TString          fObjName;    // name of objects to be analyzed in this file
+private:
    TString          fDirectory;  // directory in file where to look for objects
    Long64_t         fFirst;      // first entry to process
    Long64_t         fNum;        // number of entries to process
    TString          fMsd;        // mass storage domain name
    Long64_t         fTDSetOffset;// the global offset in the TDSet of the first
                                  // entry in this element
-   TEventList      *fEventList;  // event list to be used in processing
+   TObject         *fEntryList;  // entry (or event) list to be used in processing
    Bool_t           fValid;      // whether or not the input values are valid
    Long64_t         fEntries;    // total number of possible entries in file
-   FriendsList_t   *fFriends;    // friend elements
-   Bool_t           fIsTree;     // true if type is a TTree (or TTree derived)
+   TList           *fFriends;    // friend elements
 
    Bool_t           HasBeenLookedUp() const { return TestBit(kHasBeenLookedUp); }
 
+   TDSetElement& operator=(const TDSetElement &); // Not implemented
+
 public:
-   TDSetElement() { fValid = kFALSE; fEventList = 0; fEntries = -1; fFriends = 0; }
+   TDSetElement();
    TDSetElement(const char *file, const char *objname = 0,
                 const char *dir = 0, Long64_t first = 0, Long64_t num = -1,
                 const char *msd = 0);
    TDSetElement(const TDSetElement& elem);
    virtual ~TDSetElement();
 
-   virtual FriendsList_t *GetListOfFriends() const { return fFriends; }
+   virtual TList   *GetListOfFriends() const { return fFriends; }
    virtual void     AddFriend(TDSetElement *friendElement, const char *alias);
    virtual void     DeleteFriends();
-   const char      *GetFileName() const { return fFileName; }
+   const char      *GetFileName() const { return GetName(); }
    Long64_t         GetFirst() const { return fFirst; }
    void             SetFirst(Long64_t first) { fFirst = first; }
    Long64_t         GetNum() const { return fNum; }
-   Long64_t         GetEntries(Bool_t istree = kTRUE);
+   Long64_t         GetEntries(Bool_t istree = kTRUE, Bool_t openfile = kTRUE);
    void             SetEntries(Long64_t ent) { fEntries = ent; }
    const char      *GetMsd() const { return fMsd; }
    void             SetNum(Long64_t num) { fNum = num; }
    Bool_t           GetValid() const { return fValid; }
-   const char      *GetObjName() const;
+   const char      *GetObjName() const { return GetTitle(); }
    const char      *GetDirectory() const;
    void             Print(Option_t *options="") const;
    Long64_t         GetTDSetOffset() const { return fTDSetOffset; }
    void             SetTDSetOffset(Long64_t offset) { fTDSetOffset = offset; }
-   TEventList      *GetEventList() const { return fEventList; }
-   void             SetEventList(TEventList *aList) { fEventList = aList; }
+   void             SetEntryList(TObject *aList, Long64_t first = -1, Long64_t num = -1);
+   TObject         *GetEntryList() const { return fEntryList; }
    void             Validate(Bool_t isTree);
    void             Validate(TDSetElement *elem);
    void             Invalidate() { fValid = kFALSE; }
    Int_t            Compare(const TObject *obj) const;
    Bool_t           IsSortable() const { return kTRUE; }
-   void             Lookup(Bool_t force = kFALSE);
+   Int_t            Lookup(Bool_t force = kFALSE, Bool_t stagedonly = kTRUE);
    void             SetLookedUp() { SetBit(kHasBeenLookedUp); }
 
-   ClassDef(TDSetElement,3)  // A TDSet element
+   ClassDef(TDSetElement,6)  // A TDSet element
 };
 
 
 class TDSet : public TNamed {
 
+public:
+   // TDSet status bits
+   enum EStatusBits {
+      kWriteV3         = BIT(16),
+      kEmpty           = BIT(17),
+      kValidityChecked = BIT(18),  // Set if elements validiy has been checked
+      kSomeInvalid     = BIT(19)   // Set if at least one element is invalid
+   };
+
 private:
    TString        fDir;         // name of the directory
    TString        fType;        // type of objects (e.g. TTree);
    TString        fObjName;     // name of objects to be analyzed (e.g. TTree name)
-   TList         *fElements;    //-> list of TDSetElements
+   THashList     *fElements;    //-> list of TDSetElements
    Bool_t         fIsTree;      // true if type is a TTree (or TTree derived)
    TIter         *fIterator;    //! iterator on fElements
-   TEventList    *fEventList;   //! event list for processing
+   TObject       *fEntryList;   //! entry (or event) list for processing
    TProofChain   *fProofChain;  //! for browsing purposes
+
+   void           SplitEntryList(); //Split entry list between elements
 
    TDSet(const TDSet &);           // not implemented
    void operator=(const TDSet &);  // not implemented
@@ -148,7 +160,8 @@ protected:
 
 public:
    TDSet();
-   TDSet(const char *name, const char *objname = "*", const char *dir = "/", const char *type=0);
+   TDSet(const char *name, const char *objname = "*",
+         const char *dir = "/", const char *type = 0);
    TDSet(const TChain &chain, Bool_t withfriends = kTRUE);
    virtual ~TDSet();
 
@@ -156,13 +169,14 @@ public:
                              const char *dir = 0, Long64_t first = 0,
                              Long64_t num = -1, const char *msd = 0);
    virtual Bool_t        Add(TDSet *set);
-   virtual Bool_t        Add(TList *fileinfo);
+   virtual Bool_t        Add(TCollection *fileinfo, const char *meta = 0);
+   virtual Bool_t        Add(TFileInfo *fileinfo, const char *meta = 0);
    virtual void          AddFriend(TDSet *friendset, const char *alias);
 
    virtual Long64_t      Process(const char *selector, Option_t *option = "",
                                  Long64_t nentries = -1,
                                  Long64_t firstentry = 0,
-                                 TEventList *evl = 0); // *MENU*
+                                 TObject *enl = 0); // *MENU*
    virtual Long64_t      Draw(const char *varexp, const char *selection,
                               Option_t *option = "", Long64_t nentries = -1,
                               Long64_t firstentry = 0); // *MENU*
@@ -180,20 +194,20 @@ public:
 
    Bool_t                IsTree() const { return fIsTree; }
    Bool_t                IsValid() const { return !fType.IsNull(); }
-   Bool_t                ElementsValid() const;
+   Bool_t                ElementsValid();
    const char           *GetType() const { return fType; }
    const char           *GetObjName() const { return fObjName; }
    const char           *GetDirectory() const { return fDir; }
-   TList                *GetListOfElements() const { return fElements; }
+   TList                *GetListOfElements() const { return (TList *)fElements; }
 
-   Int_t                 Remove(TDSetElement *elem);
+   Int_t                 Remove(TDSetElement *elem, Bool_t deleteElem = kTRUE);
 
    virtual void          Reset();
    virtual TDSetElement *Next(Long64_t totalEntries = -1);
    TDSetElement         *Current() const { return fCurrent; };
 
    static Long64_t       GetEntries(Bool_t isTree, const char *filename,
-                                    const char *path, const char *objname);
+                                    const char *path, TString &objname);
 
    void                  AddInput(TObject *obj);
    void                  ClearInput();
@@ -202,15 +216,17 @@ public:
    virtual void          StartViewer(); // *MENU*
 
    virtual TTree        *GetTreeHeader(TProof *proof);
-   virtual void          SetEventList(TEventList *evl) { fEventList = evl;}
-   TEventList           *GetEventList() const {return fEventList; }
+   virtual void          SetEntryList(TObject *aList);
+   TObject              *GetEntryList() const { return fEntryList; }
    void                  Validate();
    void                  Validate(TDSet *dset);
 
-   void                  Lookup();
+   TList                *Lookup(Bool_t removeMissing = kFALSE, Bool_t stagedonly = kTRUE);
    void                  SetLookedUp();
 
-   ClassDef(TDSet,3)  // Data set for remote processing (PROOF)
+   void                  SetWriteV3(Bool_t on = kTRUE);
+
+   ClassDef(TDSet,6)  // Data set for remote processing (PROOF)
 };
 
 #endif

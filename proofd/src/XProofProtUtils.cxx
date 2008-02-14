@@ -24,6 +24,11 @@
 #      define __macos__
 #   endif
 #endif
+#ifdef __sun
+#   ifndef __solaris__
+#      define __solaris__
+#   endif
+#endif
 #ifndef WIN32
 #include <sys/types.h>
 #include <netinet/in.h>
