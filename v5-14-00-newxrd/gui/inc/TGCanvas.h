@@ -72,7 +72,6 @@ protected:
    static const TGGC &GetLineGC();
 
    virtual void DoRedraw();
-   virtual void ClearViewPort();
    virtual void ActivateItem(TGFrameElement* el);
    virtual void DeActivateItem(TGFrameElement* el);
    virtual void SearchPattern();
@@ -93,6 +92,7 @@ public:
    virtual ~TGContainer();
 
    virtual void DrawRegion(Int_t x, Int_t y, UInt_t w, UInt_t h);
+   virtual void ClearViewPort();
    virtual void Associate(const TGWindow *w) { fMsgWindow = w; }
    virtual void AdjustPosition();
    virtual void SetPagePosition(const TGPosition& pos);
