@@ -18,6 +18,8 @@ bool GaussIntegratorOneDim::fgAbsValue = false;
 
 GaussIntegratorOneDim::GaussIntegratorOneDim()
 {
+   // Default Constructor.
+
    fEpsilon = 1e-12;
    fLastResult = fLastError = 0;
    fUsedOnce = false;
@@ -27,6 +29,8 @@ GaussIntegratorOneDim::GaussIntegratorOneDim()
 
 GaussIntegratorOneDim::~GaussIntegratorOneDim()
 {
+   // Deletes the function if it was previously copied.
+
    if ( fFunction != 0 && fFunctionCopied )
       delete fFunction;
 }
@@ -43,6 +47,82 @@ void GaussIntegratorOneDim::AbsValue(bool flag)
 
 double GaussIntegratorOneDim::Integral(double a, double b)
 {
+   // Return Integral of function between a and b.
+   //
+   //   based on original CERNLIB routine DGAUSS by Sigfried Kolbig
+   //   converted to C++ by Rene Brun
+   //
+   // This function computes, to an attempted specified accuracy, the value
+   // of the integral.
+   //Begin_Latex
+   //   I = #int^{B}_{A} f(x)dx
+   //End_Latex
+   // Usage:
+   //   In any arithmetic expression, this function has the approximate value
+   //   of the integral I.
+   //   - A, B: End-points of integration interval. Note that B may be less
+   //           than A.
+   //   - params: Array of function parameters. If 0, use current parameters.
+   //   - epsilon: Accuracy parameter (see Accuracy).
+   //
+   //Method:
+   //   For any interval [a,b] we define g8(a,b) and g16(a,b) to be the 8-point
+   //   and 16-point Gaussian quadrature approximations to
+   //Begin_Latex
+   //   I = #int^{b}_{a} f(x)dx
+   //End_Latex
+   //   and define
+   //Begin_Latex
+   //   r(a,b) = #frac{#||{g_{16}(a,b)-g_{8}(a,b)}}{1+#||{g_{16}(a,b)}}
+   //End_Latex
+   //   Then,
+   //Begin_Latex
+   //   G = #sum_{i=1}^{k}g_{16}(x_{i-1},x_{i})
+   //End_Latex
+   //   where, starting with x0 = A and finishing with xk = B,
+   //   the subdivision points xi(i=1,2,...) are given by
+   //Begin_Latex
+   //   x_{i} = x_{i-1} + #lambda(B-x_{i-1})
+   //End_Latex
+   //   Begin_Latex #lambdaEnd_Latex is equal to the first member of the
+   //   sequence 1,1/2,1/4,... for which r(xi-1, xi) < EPS.
+   //   If, at any stage in the process of subdivision, the ratio
+   //Begin_Latex
+   //   q = #||{#frac{x_{i}-x_{i-1}}{B-A}}
+   //End_Latex
+   //   is so small that 1+0.005q is indistinguishable from 1 to
+   //   machine accuracy, an error exit occurs with the function value
+   //   set equal to zero.
+   //
+   // Accuracy:
+   //   Unless there is severe cancellation of positive and negative values of
+   //   f(x) over the interval [A,B], the relative error may be considered as
+   //   specifying a bound on the <I>relative</I> error of I in the case
+   //   |I|&gt;1, and a bound on the absolute error in the case |I|&lt;1. More
+   //   precisely, if k is the number of sub-intervals contributing to the
+   //   approximation (see Method), and if
+   //Begin_Latex
+   //   I_{abs} = #int^{B}_{A} #||{f(x)}dx
+   //End_Latex
+   //   then the relation
+   //Begin_Latex
+   //   #frac{#||{G-I}}{I_{abs}+k} < EPS
+   //End_Latex
+   //   will nearly always be true, provided the routine terminates without
+   //   printing an error message. For functions f having no singularities in
+   //   the closed interval [A,B] the accuracy will usually be much higher than
+   //   this.
+   //
+   // Error handling:
+   //   The requested accuracy cannot be obtained (see Method).
+   //   The function value is set equal to zero.
+   //
+   // Note 1:
+   //   Values of the function f(x) at the interval end-points A and B are not
+   //   required. The subprogram may therefore be used when these values are
+   //   undefined.
+   //
+
    const double kHF = 0.5;
    const double kCST = 5./1000;
 
@@ -70,8 +150,6 @@ double GaussIntegratorOneDim::Integral(double a, double b)
       return 0.0;
    }
 
-   //InitArgs(xx,params);
-
    h = 0;
    if (b == a) return h;
    aconst = kCST/std::abs(b-a);
@@ -86,11 +164,9 @@ CASE2:
    for (i=0;i<4;i++) {
       u     = c2*x[i];
       xx[0] = c1+u;
-      //f1    = EvalPar(xx,params);
       f1    = (*fFunction)(xx);
       if (fgAbsValue) f1 = std::abs(f1);
       xx[0] = c1-u;
-      //f2    = EvalPar(xx,params);
       f2    = (*fFunction) (xx);
       if (fgAbsValue) f2 = std::abs(f2);
       s8   += w[i]*(f1 + f2);
@@ -99,11 +175,9 @@ CASE2:
    for (i=4;i<12;i++) {
       u     = c2*x[i];
       xx[0] = c1+u;
-      //f1    = EvalPar(xx,params);
       f1    = (*fFunction) (xx);
       if (fgAbsValue) f1 = std::abs(f1);
       xx[0] = c1-u;
-      //f2    = EvalPar(xx,params);
       f2    = (*fFunction) (xx);
       if (fgAbsValue) f2 = std::abs(f2);
       s16  += w[i]*(f1 + f2);
@@ -123,26 +197,27 @@ CASE2:
    fLastError = std::abs(s16-c2*s8);
 
    return h;
-   
-   /*
-   return ((TF1*)f)->Integral(a,b);
-   */
 }
    
 
 void GaussIntegratorOneDim::SetRelTolerance (double eps)
 {
+   // Set the desired relative Error
+
    fEpsilon = eps;
 }
 
 void GaussIntegratorOneDim::SetAbsTolerance (double)
 {
-   // TODO
+   // This method is not implemented.
+
    MATH_ERROR_MSG("ROOT::Math::GausIntegratorOneDim", "There is no Absolute Tolerance!");
 }
 
 double GaussIntegratorOneDim::Result () const
 {
+   // Return  the Result of the last Integral calculation.
+
    if (!fUsedOnce)
       MATH_ERROR_MSG("ROOT::Math::GausIntegratorOneDim", "You must calculate the result at least once!");
 
@@ -151,17 +226,22 @@ double GaussIntegratorOneDim::Result () const
 
 double GaussIntegratorOneDim::Error() const
 {
+   // Return the estimate of the absolute Error of the last Integral calculation.
+
    return fLastError;
 }
 
 int GaussIntegratorOneDim::Status() const
 {
-   // TODO
+   // This method is not implemented.
+
    return 0;
 }
 
 void GaussIntegratorOneDim::SetFunction (const IGenFunction & function, bool copy)
 {
+   // Set integration function (flag control if function must be copied inside)
+
    if ( copy )
       fFunction = function.Clone();
    else
@@ -173,31 +253,36 @@ void GaussIntegratorOneDim::SetFunction (const IGenFunction & function, bool cop
 
 double GaussIntegratorOneDim::Integral ()
 {
-   // TODO
+   // This method is not implemented.
+
    return 0.0;
 }
 
 double GaussIntegratorOneDim::IntegralUp (double /*a*/)
 {
-   // TODO
+   // This method is not implemented.
+
    return 0.0;
 }
 
 double GaussIntegratorOneDim::IntegralLow (double /*b*/)
 {
-   // TODO
+   // This method is not implemented.
+
    return 0.0;
 }
 
 double GaussIntegratorOneDim::Integral (const std::vector< double > &/*pts*/)
 {
-   // TODO
+   // This method is not implemented.
+
    return 0.0;
 }
 
 double GaussIntegratorOneDim::IntegralCauchy (double /*a*/, double /*b*/, double /*c*/)
 {
-   // TODO
+   // This method is not implemented.
+
    return 0.0;
 }
 

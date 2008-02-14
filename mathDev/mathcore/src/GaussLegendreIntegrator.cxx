@@ -16,6 +16,8 @@ namespace Math {
 
 GaussLegendreIntegrator::GaussLegendreIntegrator(int num, double eps)
 {
+   // Basic contructor of GaussLegendreIntegrator.
+
    fEpsilon = eps;
    fNum = num;
    fX = 0;
@@ -39,12 +41,20 @@ GaussLegendreIntegrator::~GaussLegendreIntegrator()
 
 void GaussLegendreIntegrator::SetNumberPoints(int num)
 {
+   // Set the number of points used in the calculation of the
+   // integral
    fNum = num;
    CalcGaussLegendreSamplingPoints();
 }
 
 void GaussLegendreIntegrator::GetWeightVectors(double *x, double *w)
 {
+   // Returns the arrays x and w containing the abscissa and weight of
+   // the Gauss-Legendre n-point quadrature formula.
+   //
+   // Gauss-Legendre: W(x)=1 -1<x<1 
+   //                 (j+1)P_{j+1} = (2j+1)xP_j-jP_{j-1}
+
    memcpy(x, fX, fNum);
    memcpy(w, fW, fNum);
 }
@@ -76,18 +86,23 @@ double GaussLegendreIntegrator::Integral(double a, double b)
 
 void GaussLegendreIntegrator::SetRelTolerance (double eps)
 {
+   // Set the desired relative Error
+
    fEpsilon = eps;
    CalcGaussLegendreSamplingPoints();
 }
 
 void GaussLegendreIntegrator::SetAbsTolerance (double)
 {
-   // TODO
+   // Absolute Tolerance is not used in this class.
+
    MATH_ERROR_MSG("ROOT::Math::GausIntegratorOneDim", "There is no Absolute Tolerance!");
 }
 
 double GaussLegendreIntegrator::Result () const
 {
+   // Returns the result of the last Integral calculation
+
    if (!fUsedOnce)
       MATH_ERROR_MSG("ROOT::Math::GausIntegratorOneDim", "You must calculate the result at least once!");
 
@@ -96,18 +111,25 @@ double GaussLegendreIntegrator::Result () const
 
 double GaussLegendreIntegrator::Error() const
 {
-   // TODO
+   // This method is not implemented.
+
    return fLastError;
+   // TODO
 }
 
 int GaussLegendreIntegrator::Status() const
 {
-   // TODO
+   // This method is not implemented.
+
    return 0;
+   // TODO
 }
 
 void GaussLegendreIntegrator::SetFunction (const IGenFunction & function, bool copy)
 {
+   // Set integration function (flag control if function must be
+   // copied inside)
+
    if ( copy )
       fFunction = function.Clone();
    else
@@ -119,31 +141,31 @@ void GaussLegendreIntegrator::SetFunction (const IGenFunction & function, bool c
 
 double GaussLegendreIntegrator::Integral ()
 {
-   // TODO
+   // This method is not implemented.
    return 0.0;
 }
 
 double GaussLegendreIntegrator::IntegralUp (double /*a*/)
 {
-   // TODO
+   // This method is not implemented.
    return 0.0;
 }
 
 double GaussLegendreIntegrator::IntegralLow (double /*b*/)
 {
-   // TODO
+   // This method is not implemented.
    return 0.0;
 }
 
 double GaussLegendreIntegrator::Integral (const std::vector< double > &/*pts*/)
 {
-   // TODO
+   // This method is not implemented.
    return 0.0;
 }
 
 double GaussLegendreIntegrator::IntegralCauchy (double /*a*/, double /*b*/, double /*c*/)
 {
-   // TODO
+   // This method is not implemented.
    return 0.0;
 }
 
