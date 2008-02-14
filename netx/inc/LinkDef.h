@@ -15,6 +15,7 @@
 #pragma link off all functions;
 
 #pragma link C++ class TXNetFile;
+#pragma link C++ class TXNetFileStager;
 #pragma link C++ class TXNetSystem;
 
 #endif
