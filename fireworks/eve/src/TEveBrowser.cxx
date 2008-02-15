@@ -303,9 +303,11 @@ void TEveGListTreeEditorFrame::ItemChecked(TObject* obj, Bool_t state)
 
    // Item's user-data was blindly casted into TObject in the caller.
    // We recast it blindly back into the TEveElement.
+   TEveElement* el = (TEveElement*) obj;
 
-   TEveElement* rnrEl = (TEveElement*) obj;
-   gEve->ElementChecked(rnrEl, state);
+   // We refuse the old state Toggle, so the passed state is the old
+   // state of the item, we need to ask for its negation.
+   gEve->ElementChecked(el, !state);
    gEve->Redraw3D();
 }
 

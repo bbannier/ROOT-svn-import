@@ -64,7 +64,7 @@ public:
    virtual Bool_t          HasCheckBox()       const { return kTRUE; }
    virtual void            CheckItem(Bool_t=kTRUE)   { printf("TEveListTreeItem::CheckItem - to be ignored ... all done via signal Checked().\n"); }
    virtual void            Toggle()                  { NotSupported("Toggle"); }
-   virtual Bool_t          IsChecked()         const { NotSupported("ClearColor"); return kTRUE; }
+   virtual Bool_t          IsChecked()         const { return fElement->GetRnrState(); }
 
    // Propagation of checked-state form children to parents. Not needed, ignore.
 
