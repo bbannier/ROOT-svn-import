@@ -9467,29 +9467,31 @@ void G__cpplink_memfunc(FILE *fp)
                   tmp[pos_tmp] = '\0';
                   pos_tmp++;
 
-                  // Now look for the variable
-                  long struct_offset = 0;
-                  long store_struct_offset = 0;
-                  int ig15 = 0;
-                  int varhash = 0;
-                  int isdecl = 0;
-                  struct G__var_array* var = 0;
-                  G__hash(tmp, varhash, ig15);
-                  var = G__searchvariable((char*)tmp, varhash, 0, &G__global, &struct_offset, &store_struct_offset, &ig15, isdecl);
-                  if (var && (var->type[ig15]=='P' || var->type[ig15]=='p')) {
-                    G__value result3;
-                    int known = 0;
-                    result3 = G__getvariable(tmp, &known, &G__global, G__p_local);
-                    if(var->type[ig15]=='P')
-                      sprintf(&res[pos_res], "%e", G__double(result3));
-                    else
-                      sprintf(&res[pos_res], "%ld", G__int(result3));
-                    pos_res = strlen(res);
-                  }
-                  else {
-                    // If we dont think this is a macro, the copy the same thing
-                    strcpy(&res[pos_res], tmp);
-                    pos_res += strlen(tmp);
+                  if(pos_tmp>1){
+                    // Now look for the variable
+                    long struct_offset = 0;
+                    long store_struct_offset = 0;
+                    int ig15 = 0;
+                    int varhash = 0;
+                    int isdecl = 0;
+                    struct G__var_array* var = 0;
+                    G__hash(tmp, varhash, ig15);
+                    var = G__searchvariable((char*)tmp, varhash, 0, &G__global, &struct_offset, &store_struct_offset, &ig15, isdecl);
+                    if (var && (var->type[ig15]=='P' || var->type[ig15]=='p')) {
+                      G__value result3;
+                      int known = 0;
+                      result3 = G__getvariable(tmp, &known, &G__global, G__p_local);
+                      if(var->type[ig15]=='P')
+                        sprintf(&res[pos_res], "%e", G__double(result3));
+                      else
+                        sprintf(&res[pos_res], "%ld", G__int(result3));
+                      pos_res = strlen(res);
+                    }
+                    else {
+                      // If we dont think this is a macro, the copy the same thing
+                      strcpy(&res[pos_res], tmp);
+                      pos_res += strlen(tmp);
+                    }
                   }
                 }
                 fprintf(fp, "'%s' ", G__quotedstring(res, buf));
