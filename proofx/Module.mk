@@ -87,11 +87,11 @@ $(PROOFXDS):    $(PROOFXH) $(PROOFXL) $(XROOTDETAG) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(PROOFXINCEXTRA) $(PROOFXH) $(PROOFXL)
 
-$(PROOFXMAP):   $(RLIBMAP) $(MAKEFILEDEP) $(PROOFXL)
-		$(RLIBMAP) -o $(PROOFXMAP) -l $(PROOFXLIB) \
-		   -d $(PROOFXLIBDEPM) -c $(PROOFXL)
+all-proofx:     $(PROOFXLIB)
 
-all-proofx:     $(PROOFXLIB) $(PROOFXMAP)
+map-proofx:     $(RLIBMAP)
+		$(RLIBMAP) -r $(ROOTMAP) -l $(PROOFXLIB) \
+		   -d $(PROOFXLIBDEP) -c $(PROOFXL)
 
 clean-proofx:
 		@rm -f $(PROOFXO) $(PROOFXDO)
@@ -99,7 +99,7 @@ clean-proofx:
 clean::         clean-proofx
 
 distclean-proofx: clean-proofx
-		@rm -f $(PROOFXDEP) $(PROOFXDS) $(PROOFXDH) $(PROOFXLIB) $(PROOFXMAP)
+		@rm -f $(PROOFXDEP) $(PROOFXDS) $(PROOFXDH) $(PROOFXLIB)
 
 distclean::     distclean-proofx
 

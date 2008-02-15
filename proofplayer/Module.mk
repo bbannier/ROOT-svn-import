@@ -50,10 +50,9 @@ ALLLIBS       += $(PROOFPLAYERLIB) $(PROOFDRAWLIB)
 ALLMAPS       += $(PROOFPLAYERMAP) $(PROOFDRAWMAP)
 
 ifeq ($(PLATFORM),win32)
-PROOFPLAYERLIBEXTRA = $(LPATH)/libProof.lib $(LPATH)/libHist.lib $(LPATH)/libTree.lib \
-                      $(LPATH)/libCore.lib $(LPATH)/libThread.lib
+PROOFPLAYERLIBEXTRA = $(LPATH)/libProof.lib
 else
-PROOFPLAYERLIBEXTRA = -L$(LPATH) -lProof -lHist -lTree -lCore -lThread
+PROOFPLAYERLIBEXTRA = -L$(LPATH) -lProof
 endif
 
 # include all dependency files
@@ -74,10 +73,6 @@ $(PROOFPLAYERDS): $(PROOFPLAYERH) $(PROOFPLAYERL) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(PROOFPLAYERH) $(PROOFPLAYERL)
 
-$(PROOFPLAYERMAP): $(RLIBMAP) $(MAKEFILEDEP) $(PROOFPLAYERL)
-		$(RLIBMAP) -o $(PROOFPLAYERMAP) -l $(PROOFPLAYERLIB) \
-		   -d $(PROOFPLAYERLIBDEPM) -c $(PROOFPLAYERL)
-
 $(PROOFDRAWLIB): $(PROOFDRAWO) $(PROOFDRAWDO) $(ORDER_) $(MAINLIBS) \
                    $(PROOFDRAWLIBDEP)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
@@ -89,11 +84,17 @@ $(PROOFDRAWDS): $(PROOFDRAWH) $(PROOFDRAWL) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(PROOFDRAWH) $(PROOFDRAWL)
 
-$(PROOFDRAWMAP): $(RLIBMAP) $(MAKEFILEDEP) $(PROOFDRAWL)
-		$(RLIBMAP) -o $(PROOFDRAWMAP) -l $(PROOFDRAWLIB) \
-		   -d $(PROOFDRAWLIBDEPM) -c $(PROOFDRAWL)
+all-proofplayer: $(PROOFPLAYERLIB) $(PROOFDRAWLIB)
 
-all-proofplayer: $(PROOFPLAYERLIB) $(PROOFPLAYERMAP) $(PROOFDRAWLIB) $(PROOFDRAWMAP)
+map-proofplayer:  $(RLIBMAP)
+		$(RLIBMAP) -r $(ROOTMAP) -l $(PROOFPLAYERLIB) \
+		   -d $(PROOFPLAYERLIBDEP) -c $(PROOFPLAYERL)
+
+map-proofdraw:  $(RLIBMAP)
+		$(RLIBMAP) -r $(ROOTMAP) -l $(PROOFDRAWLIB) \
+		   -d $(PROOFDRAWLIBDEP) -c $(PROOFDRAWL)
+
+map::           map-proofplayer map-proofdraw
 
 clean-proofplayer:
 		@rm -f $(PROOFPLAYERO) $(PROOFPLAYERDO) $(PROOFDRAWO) $(PROOFDRAWDO)
@@ -102,9 +103,9 @@ clean::         clean-proofplayer
 
 distclean-proofplayer: clean-proofplayer
 		@rm -f $(PROOFPLAYERDEP) $(PROOFPLAYERDS) $(PROOFPLAYERDH) \
-		   $(PROOFPLAYERLIB) $(PROOFPLAYERMAP) \
+		   $(PROOFPLAYERLIB) \
 		   $(PROOFDRAWDEP) $(PROOFDRAWDS) $(PROOFDRAWDH) \
-		   $(PROOFDRAWLIB) $(PROOFDRAWMAP) \
+		   $(PROOFDRAWLIB)
 
 distclean::     distclean-proofplayer
 

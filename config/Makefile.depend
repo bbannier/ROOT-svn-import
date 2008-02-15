@@ -53,15 +53,12 @@ PROOFLIBDEP         = $(TREELIB) $(G3DLIB) $(GRAFLIB) $(HISTLIB) \
                       $(TREEPLAYERLIB) $(THREADLIB)
 PROOFLIBEXTRA       = lib/libTree.lib lib/libGraf3d.lib lib/libGraf.lib \
                       lib/libHist.lib lib/libTreePlayer.lib lib/libThread.lib
-PROOFPLAYERLIBDEP   = $(PROOFLIB) $(HISTLIB) $(CORELIB) $(TREELIB) \
-                         $(THREADLIB)
-PROOFPLAYERLIBEXTRA = lib/libProof.lib lib/libHist.lib lib/libTree.lib \
-                      lib/libCore.lib lib/libThread.lib
+PROOFPLAYERLIBDEP   = $(PROOFLIB)
+PROOFPLAYERLIBEXTRA = lib/libProof.lib
+PROOFDRAWLIBDEP     = $(PROOFPLAYERLIB)
+PROOFDRAWLIBEXTRA   = lib/libProofPlayer.lib
 PROOFXLIBDEP        = $(PROOFLIB) $(THREADLIB) $(XPDLIB)
 PROOFXLIBEXTRA      = lib/libProof.lib lib/libThread.lib lib/libXrdProofd.lib
-PROOFGUILIBDEP      = $(PROOFLIB) $(GUILIB) $(GPADLIB) $(GRAFLIB) $(TREELIB)
-PROOFGUILIBEXTRA    = lib/libProof.lib lib/libGui.lib lib/libGpad.lib \
-                      lib/libGraf.lib lib/libTree.lib
 PEACLIBDEP          = $(PROOFLIB) $(CLARENSLIB)
 PEACLIBEXTRA        = lib/libProof.lib lib/libClarens.lib
 PEACGUILIBDEP       = $(GUILIB)
@@ -135,6 +132,8 @@ QTGSILIBEXTRA       = lib/libGui.lib lib/libGpad.lib
 FITPANELLIBDEP      = $(GUILIB) $(GPADLIB) $(HISTLIB) $(GRAFLIB) $(TREELIB)
 FITPANELLIBEXTRA    = lib/libGui.lib lib/libGpad.lib lib/libHist.lib \
                       lib/libGraf.lib lib/libTree.lib 
+NETXLIBDEP          = $(CORELIB) $(THREADLIB)
+NETXLIBEXTRA        = lib/libCore.lib lib/libThread.lib
 
 else
 
@@ -174,13 +173,12 @@ TREEVIEWERLIBEXTRA  = -Llib -lTree -lGpad -lGraf -lHist -lGui
 PROOFLIBDEP         = $(TREELIB) $(G3DLIB) $(GRAFLIB) $(HISTLIB) \
                       $(TREEPLAYERLIB) $(THREADLIB)
 PROOFLIBEXTRA       = -Llib -lTree -lGraf3d -lGraf -lHist -lTreePlayer -lThread
-PROOFPLAYERLIBDEP   = $(PROOFLIB) $(HISTLIB) $(CORELIB) $(TREELIB) \
-                         $(THREADLIB)
-PROOFPLAYERLIBEXTRA = -Llib -lProof -lHist -lTree -lCore -lThread
+PROOFPLAYERLIBDEP   = $(PROOFLIB)
+PROOFPLAYERLIBEXTRA = -Llib -lProof
+PROOFDRAWLIBDEP     = $(PROOFPLAYERLIB)
+PROOFDRAWLIBEXTRA   = -Llib -lProofPlayer
 PROOFXLIBDEP        = $(PROOFLIB) $(THREADLIB) $(XPDLIB)
 PROOFXLIBEXTRA      = -Llib -lProof -lThread -lXrdProofd
-PROOFGUILIBDEP      = $(PROOFLIB) $(GUILIB) $(GPADLIB) $(GRAFLIB) $(TREELIB)
-PROOFGUILIBEXTRA    = -Llib -lProof -lGui -lGpad -lGraf -lTree
 PEACLIBDEP          = $(PROOFLIB) $(CLARENSLIB)
 PEACLIBEXTRA        = -Llib -lProof -lClarens
 PEACGUILIBDEP       = $(GUILIB)
@@ -258,5 +256,7 @@ FITPANELLIBDEP      = $(GUILIB) $(GPADLIB) $(HISTLIB) $(GRAFLIB) $(TREELIB)
 FITPANELLIBEXTRA    = -Llib -lGui -lGpad -lHist -lGraf -lTree 
 HADDLIBDEP          = $(TREEPLAYERLIB)
 HADDLIBEXTRA        = -lTreePlayer
+NETXLIBDEP          = $(CORELIB) $(THREADLIB)
+NETXLIBEXTRA        = -Llib -lCore -lThread
 
 endif

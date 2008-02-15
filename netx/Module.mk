@@ -76,10 +76,13 @@ $(NETXDS):      $(NETXH1) $(NETXL) $(XROOTDETAG) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(NETXINCEXTRA) $(NETXH) $(NETXL)
 
-$(NETXMAP):     $(RLIBMAP) $(MAKEFILEDEP) $(NETXL)
-		$(RLIBMAP) -o $(NETXMAP) -l $(NETXLIB) -d $(NETXLIBDEPM) -c $(NETXL)
+all-netx:       $(NETXLIB)
 
-all-netx:       $(NETXLIB) $(NETXMAP)
+map-netx:       $(RLIBMAP)
+		$(RLIBMAP) -r $(ROOTMAP) -l $(NETXLIB) \
+		   -d $(NETXLIBDEP) -c $(NETXL)
+
+map::           map-netx
 
 clean-netx:
 		@rm -f $(NETXO) $(NETXDO)
@@ -87,7 +90,7 @@ clean-netx:
 clean::         clean-netx
 
 distclean-netx: clean-netx
-		@rm -f $(NETXDEP) $(NETXDS) $(NETXDH) $(NETXLIB) $(NETXMAP)
+		@rm -f $(NETXDEP) $(NETXDS) $(NETXDH) $(NETXLIB)
 
 distclean::     distclean-netx
 
