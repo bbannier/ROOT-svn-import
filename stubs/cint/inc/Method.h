@@ -77,6 +77,7 @@ G__MethodInfo {
   int GetDefiningScopeTagnum();
   struct G__friendtag* GetFriendInfo();
   void SetGlobalcomp(int globalcomp);
+  void SetForceStub();
   int IsValid();
   int SetFilePos(const char* fname);
   int Next();
