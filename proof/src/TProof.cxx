@@ -508,7 +508,10 @@ Int_t TProof::Init(const char *masterurl, const char *conffile,
 
    // Make remote PROOF player
    fPlayer = 0;
-   MakePlayer();
+   if (!MakePlayer()) {
+      Error("Init", "failure creating player");
+      return 0;
+   }
 
    fFeedback = new TList;
    fFeedback->SetOwner();

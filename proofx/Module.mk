@@ -67,7 +67,8 @@ ifeq ($(PLATFORM),win32)
 PROOFXLIBEXTRA += $(XROOTDDIRL)/libXrdClient.lib
 else
 PROOFXLIBEXTRA += -L$(XROOTDDIRL) -lXrdOuc -lXrdSys -lXrdNet \
-                  -L$(XROOTDDIRP) -lXrdClient
+                  -L$(XROOTDDIRP) -lXrdClient \
+                  -L$(LPATH) -lProof -lThread -lXrdProofd
 endif
 
 ##### local rules #####
@@ -76,6 +77,7 @@ include/%.h:    $(PROOFXDIRI)/%.h $(XROOTDETAG)
 
 $(PROOFXLIB):   $(PROOFXO) $(PROOFXDO) $(XPCONNO) $(ORDER_) $(MAINLIBS) \
                 $(PROOFXLIBDEP) $(XRDPLUGINS)
+		@echo "Creating lib: deps are: $(X3DLIBEXTRA) ..."
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
 		   "$(SOFLAGS)" libProofx.$(SOEXT) $@ \
 		   "$(PROOFXO) $(XPCONNO) $(PROOFXDO)" \

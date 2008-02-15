@@ -36,6 +36,7 @@ THREADS      := $(MODDIRS)/TCondition.cxx $(MODDIRS)/TConditionImp.cxx \
                 $(MODDIRS)/TMutex.cxx $(MODDIRS)/TMutexImp.cxx \
                 $(MODDIRS)/TRWLock.cxx $(MODDIRS)/TSemaphore.cxx \
                 $(MODDIRS)/TThread.cxx $(MODDIRS)/TThreadFactory.cxx \
+                $(MODDIRS)/TLockFile.cxx \
                 $(MODDIRS)/TThreadImp.cxx
 ifneq ($(ARCH),win32)
 THREADS      += $(MODDIRS)/TPosixCondition.cxx $(MODDIRS)/TPosixMutex.cxx \
