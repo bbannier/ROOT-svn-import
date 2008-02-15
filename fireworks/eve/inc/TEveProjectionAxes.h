@@ -52,7 +52,7 @@ public:
 
    virtual void    ComputeBBox();
 
-   virtual const TGPicture* GetListTreeIcon();
+   virtual const TGPicture* GetListTreeIcon(Bool_t open=kFALSE);
 
    virtual Bool_t  CanEditMainTrans() { return kFALSE;}
 

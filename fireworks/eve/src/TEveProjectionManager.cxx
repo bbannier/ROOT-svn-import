@@ -22,8 +22,11 @@
 
 #include <list>
 
-//______________________________________________________________________________
+/******************************************************************************/
 // TEveProjectionManager
+/******************************************************************************/
+
+//______________________________________________________________________________
 //
 // Manager class for steering of projections and managing projected
 // objects.
@@ -32,13 +35,13 @@
 // scene.  It enables to interactivly set TEveProjection parameters
 // and updates projected scene accordingly.
 
-ClassImp(TEveProjectionManager)
+ClassImp(TEveProjectionManager);
 
 //______________________________________________________________________________
 TEveProjectionManager::TEveProjectionManager():
    TEveElementList("TEveProjectionManager",""),
    TAttBBox(),
-   fProjection (0),
+   fProjection  (0),
    fCurrentDepth(0)
 {
    // Constructor.
@@ -218,8 +221,8 @@ void TEveProjectionManager::ProjectChildrenRecurse(TEveElement* rnr_el)
 //______________________________________________________________________________
 void TEveProjectionManager::ProjectChildren()
 {
-   // Project children recursevly, update BBox and notify ReveManger
-   // the scenes have chenged.
+   // Project children recursevly, update BBox and notify TEveManger
+   // the scenes have changed.
 
    BBoxZero();
    ProjectChildrenRecurse(this);

@@ -53,13 +53,69 @@
 #include "TGeoVolume.h"
 #include "TGeoNode.h"
 
+
+/******************************************************************************/
+/******************************************************************************/
+// TEveListTreeItem
+/******************************************************************************/
+
 //______________________________________________________________________________
+//
+// Special list-tree-item for Eve.
+//
+// Most state is picked directly from TEveElement, no need to store it
+// locally nor to manage its consistency.
+//
+// Handles also selected/highlighted colors and, in the future,
+// drag-n-drop.
+
+ClassImp(TEveListTreeItem);
+
+//______________________________________________________________________________
+void TEveListTreeItem::NotSupported(const char* func) const
+{
+   // Warn about access to function members that should never be called.
+   // TGListTree calls them in cases that are not used by Eve.
+
+   Warning(Form("TEveListTreeItem::%s()", func), "not supported.");
+}
+
+//______________________________________________________________________________
+Color_t TEveListTreeItem::GetActiveColor() const
+{
+   // Return highlight color corresponding to current state of TEveElement.
+
+   switch (fElement->GetSelectedLevel())
+   {
+      case 1: return kBlue - 2;
+      case 2: return kBlue - 6;
+      case 3: return kCyan - 2;
+      case 4: return kCyan - 6;
+   }
+   return 0;
+}
+
+//______________________________________________________________________________
+UInt_t TEveListTreeItem::GetPicWidth() const
+{
+   // Return positioning offset for magick in TGListTree::DrawItem().
+   // !!!! Needs to be fixed there ...
+
+   return GetPicture()->GetWidth() + GetCheckBoxPicture()->GetWidth();
+}
+
+
+/******************************************************************************/
+/******************************************************************************/
 // TEveGListTreeEditorFrame
+/******************************************************************************/
+
+//______________________________________________________________________________
 //
 // Composite GUI frame for parallel display of a TGListTree and TEveGedEditor.
 //
 
-ClassImp(TEveGListTreeEditorFrame)
+ClassImp(TEveGListTreeEditorFrame);
 
 //______________________________________________________________________________
 TEveGListTreeEditorFrame::TEveGListTreeEditorFrame(const Text_t* name, Int_t width, Int_t height) :
@@ -406,12 +462,16 @@ void TEveGListTreeEditorFrame::ResetSelected()
 }
 
 
-//______________________________________________________________________________
+/******************************************************************************/
+/******************************************************************************/
 // TEveBrowser
+/******************************************************************************/
+
+//______________________________________________________________________________
 //
 // Specialization of TRootBrowser for Eve.
 
-ClassImp(TEveBrowser)
+ClassImp(TEveBrowser);
 
 //______________________________________________________________________________
 void TEveBrowser::SetupCintExport(TClass* cl)

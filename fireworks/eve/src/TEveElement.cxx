@@ -21,10 +21,16 @@
 #include "TROOT.h"
 #include "TColor.h"
 #include "TCanvas.h"
+#include "TEveBrowser.h"
 #include "TGListTree.h"
 #include "TGPicture.h"
 
 #include <algorithm>
+
+//==============================================================================
+//==============================================================================
+// TEveElement::TEveListTreeInfo
+//==============================================================================
 
 //______________________________________________________________________________
 //
@@ -33,18 +39,23 @@
 // can appear in several list-trees as well as several times in the
 // same list-tree.
 
-ClassImp(TEveElement::TEveListTreeInfo)
+ClassImp(TEveElement::TEveListTreeInfo);
+
+
+//==============================================================================
+//==============================================================================
+// TEveElement
+//==============================================================================
 
 //______________________________________________________________________________
-// TEveElement
 //
 // Base class for TEveUtil visualization elements, providing hierarchy
 // management, rendering control and list-tree item management.
 
-ClassImp(TEveElement)
+ClassImp(TEveElement);
 
 //______________________________________________________________________________
-const TGPicture* TEveElement::fgRnrIcons[4] = { 0 };
+const TGPicture* TEveElement::fgRnrIcons[4]      = { 0 };
 const TGPicture* TEveElement::fgListTreeIcons[8] = { 0 };
 
 //______________________________________________________________________________
@@ -116,13 +127,13 @@ TEveElement::~TEveElement()
 //______________________________________________________________________________
 const Text_t* TEveElement::GetElementName() const
 {
-   // Virtual function for retrieveing name of the render-element.
+   // Virtual function for retrieveing name of the element.
    // Here we attempt to cast the assigned object into TNamed and call
    // GetName() there.
 
    static const TEveException eh("TEveElement::GetElementName ");
 
-   TObject* named = dynamic_cast<TObject*>(GetObject(eh));
+   TNamed* named = dynamic_cast<TNamed*>(GetObject(eh));
    return named ? named->GetName() : "<no-name>";
 }
 
@@ -135,7 +146,7 @@ const Text_t*  TEveElement::GetElementTitle() const
 
    static const TEveException eh("TEveElement::GetElementTitle ");
 
-   TObject* named = dynamic_cast<TObject*>(GetObject(eh));
+   TNamed* named = dynamic_cast<TNamed*>(GetObject(eh));
    return named ? named->GetTitle() : "<no-title>";
 }
 
@@ -305,17 +316,8 @@ TGListTreeItem* TEveElement::AddIntoListTree(TGListTree* ltree,
 
    static const TEveException eh("TEveElement::AddIntoListTree ");
 
-   TObject* tobj = GetObject(eh);
-   TGListTreeItem* item = ltree->AddItem(parent_lti, tobj->GetName(), this,
-                                         0, 0, kTRUE);
-   item->SetCheckBoxPictures(GetCheckBoxPicture(1, fRnrChildren),
-                             GetCheckBoxPicture(0, fRnrChildren));
-
-   item->SetPictures(GetListTreeIcon(),GetListTreeIcon());
-   item->CheckItem(fRnrSelf);
-
-   if (fMainColorPtr != 0) item->SetColor(GetMainColor());
-   item->SetTipText(tobj->GetTitle());
+   TGListTreeItem* item = new TEveListTreeItem(this);
+   ltree->AddItem(parent_lti, item);
 
    fItems.insert(TEveListTreeInfo(ltree, item));
    ltree->ClearViewPort();
@@ -468,15 +470,8 @@ void TEveElement::UpdateItems()
 
    static const TEveException eh("TEveElement::UpdateItems ");
 
-   TObject* tobj = GetObject(eh);
-
-   for (sLTI_i i=fItems.begin(); i!=fItems.end(); ++i) {
-      i->fItem->Rename(tobj->GetName());
-      i->fItem->SetTipText(tobj->GetTitle());
-      i->fItem->CheckItem(fRnrSelf); // !!!!! this is strange, we have more state!
-      if (fMainColorPtr != 0) i->fItem->SetColor(GetMainColor());
+   for (sLTI_i i=fItems.begin(); i!=fItems.end(); ++i)
       i->fTree->ClearViewPort();
-   }
 }
 
 /******************************************************************************/
@@ -552,16 +547,7 @@ void TEveElement::SetRnrSelf(Bool_t rnr)
    if (rnr != fRnrSelf)
    {
       fRnrSelf = rnr;
-
-      for (sLTI_i i=fItems.begin(); i!=fItems.end(); ++i)
-      {
-         if (i->fItem->IsChecked() != rnr) {
-            i->fItem->SetCheckBoxPictures(GetCheckBoxPicture(1, fRnrChildren),
-                                          GetCheckBoxPicture(0, fRnrChildren));
-            i->fItem->CheckItem(fRnrSelf);
-            i->fTree->ClearViewPort();
-         }
-      }
+      UpdateItems();
    }
 }
 
@@ -580,13 +566,7 @@ void TEveElement::SetRnrChildren(Bool_t rnr)
    if (rnr != fRnrChildren)
    {
       fRnrChildren = rnr;
-
-      for (sLTI_i i=fItems.begin(); i!=fItems.end(); ++i)
-      {
-         i->fItem->SetCheckBoxPictures(GetCheckBoxPicture(fRnrSelf, fRnrChildren),
-                                       GetCheckBoxPicture(fRnrSelf, fRnrChildren));
-         i->fTree->ClearViewPort();
-      }
+      UpdateItems();
    }
 }
 
@@ -599,13 +579,7 @@ void TEveElement::SetRnrState(Bool_t rnr)
    if (fRnrSelf != rnr || fRnrChildren != rnr)
    {
       fRnrSelf = fRnrChildren = rnr;
-
-      for (sLTI_i i=fItems.begin(); i!=fItems.end(); ++i)
-      {
-         i->fItem->SetCheckBoxPictures(GetCheckBoxPicture(1,1), GetCheckBoxPicture(0,0));
-         i->fItem->CheckItem(fRnrSelf);
-         i->fTree->ClearViewPort();
-      }
+      UpdateItems();
    }
 }
 
@@ -626,12 +600,7 @@ void TEveElement::SetMainColor(Color_t color)
 
    if (fMainColorPtr) {
       *fMainColorPtr = color;
-      for (sLTI_i i=fItems.begin(); i!=fItems.end(); ++i) {
-         if (i->fItem->GetColor() != color) {
-            i->fItem->SetColor(GetMainColor());
-            i->fTree->ClearViewPort();
-         }
-      }
+      UpdateItems();
    }
 }
 
@@ -997,7 +966,6 @@ void TEveElement::ElementChanged(Bool_t update_scenes, Bool_t redraw)
    gEve->ElementChanged(this, update_scenes, redraw);
 }
 
-
 /******************************************************************************/
 // Select/hilite
 /******************************************************************************/
@@ -1111,39 +1079,42 @@ void TEveElement::AddStamp(UChar_t bits)
 }
 
 /******************************************************************************/
-// Statics
+// List-tree icons
 /******************************************************************************/
 
 //______________________________________________________________________________
-const TGPicture*
-TEveElement::GetCheckBoxPicture(Bool_t rnrSelf, Bool_t rnrDaughters)
+const TGPicture* TEveElement::GetListTreeIcon(Bool_t open)
+{
+   // Returns pointer to first listtreeicon
+
+   // Need better solution for icon-loading/ids !!!!
+   return fgListTreeIcons[open ? 7 : 0];
+}
+
+//______________________________________________________________________________
+const TGPicture* TEveElement::GetListTreeCheckBoxIcon()
 {
    // Returns list-tree-item check-box picture appropriate for given
    // rendering state.
 
    Int_t idx = 0;
-   if (rnrSelf)       idx = 2;
-   if (rnrDaughters ) idx++;
+   if (fRnrSelf)      idx = 2;
+   if (fRnrChildren ) idx++;
 
    return fgRnrIcons[idx];
 }
 
-//______________________________________________________________________________
-const TGPicture*
-TEveElement::GetListTreeIcon()
-{
-   // Returns pointer to first listtreeicon
-   
-   return fgListTreeIcons[0];
-}
 
-
-//______________________________________________________________________________
+/******************************************************************************/
+/******************************************************************************/
 // TEveElementObjectPtr
+/******************************************************************************/
+
+//______________________________________________________________________________
 //
 // TEveElement with external TObject as a holder of visualization data.
 
-ClassImp(TEveElementObjectPtr)
+ClassImp(TEveElementObjectPtr);
 
 //______________________________________________________________________________
 TEveElementObjectPtr::TEveElementObjectPtr(TObject* obj, Bool_t own) :
@@ -1199,9 +1170,10 @@ TEveElementObjectPtr::~TEveElementObjectPtr()
 
 /******************************************************************************/
 /******************************************************************************/
+// TEveElementList
+/******************************************************************************/
 
 //______________________________________________________________________________
-// TEveElementList
 //
 // A list of TEveElements.
 //
@@ -1212,7 +1184,7 @@ TEveElementObjectPtr::~TEveElementObjectPtr()
 // !!! should have two ctors (like in TEveElement), one with Color_t&
 // and set fDoColor automatically, based on which ctor is called.
 
-ClassImp(TEveElementList)
+ClassImp(TEveElementList);
 
 //______________________________________________________________________________
 TEveElementList::TEveElementList(const Text_t* n, const Text_t* t, Bool_t doColor) :

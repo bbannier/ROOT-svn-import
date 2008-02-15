@@ -30,13 +30,17 @@
 #include <functional>
 #include <iostream>
 
-//______________________________________________________________________________
+//==============================================================================
+//==============================================================================
 // TEveTrack
+//==============================================================================
+
+//______________________________________________________________________________
 //
 // Visual representation of a track.
 //
 
-ClassImp(TEveTrack)
+ClassImp(TEveTrack);
 
 //______________________________________________________________________________
 TEveTrack::TEveTrack() :
@@ -176,10 +180,9 @@ TEveTrack::~TEveTrack()
 
 
 //______________________________________________________________________________
-const TGPicture*
-TEveTrack::GetListTreeIcon()
+const TGPicture* TEveTrack::GetListTreeIcon(Bool_t)
 {
-   // Returns pointer to listtree track icon
+   // Returns list-tree icon for TEveTrack.
    
    return fgListTreeIcons[4];
 }
@@ -552,15 +555,17 @@ void TEveTrack::SetLineStyle(Style_t lstyle)
 }
 
 
-/******************************************************************************/
-/******************************************************************************/
-//______________________________________________________________________________
+//==============================================================================
+//==============================================================================
 // TEveTrackList
+//==============================================================================
+
+//______________________________________________________________________________
 //
 // A list of tracks supporting change of common attributes and
 // selection based on track parameters.
 
-ClassImp(TEveTrackList)
+ClassImp(TEveTrackList);
 
 //______________________________________________________________________________
 TEveTrackList::TEveTrackList(TEveTrackPropagator* rs) :
@@ -1131,13 +1136,14 @@ TClass* TEveTrackList::ProjectedClass() const
 }
 
 
-/******************************************************************************/
-/******************************************************************************/
+//==============================================================================
+//==============================================================================
+// TEveTrackCounter
+//==============================================================================
 
 #include "TEveGedEditor.h"
 
 //______________________________________________________________________________
-// TEveTrackCounter
 //
 // Provides event-based method for tagging of good / bad (or primary /
 // secondary) tracks. A report can be written into a text file.
@@ -1148,7 +1154,7 @@ TClass* TEveTrackList::ProjectedClass() const
 // Some of the functionality is implemented in TEveTrackCounterEditor
 // class.
 
-ClassImp(TEveTrackCounter)
+ClassImp(TEveTrackCounter);
 
 //______________________________________________________________________________
 TEveTrackCounter* TEveTrackCounter::fgInstance = 0;

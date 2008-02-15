@@ -100,6 +100,7 @@
 #pragma link C++ class TEvePad+;
 
 // TEveBrowser
+#pragma link C++ class TEveListTreeItem+;
 #pragma link C++ class TEveGListTreeEditorFrame+;
 #pragma link C++ class TEveBrowser+;
 

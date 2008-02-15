@@ -89,9 +89,10 @@ TEvePointSet::~TEvePointSet()
 /******************************************************************************/
 
 //______________________________________________________________________________
-const TGPicture* TEvePointSet::GetListTreeIcon() 
+const TGPicture* TEvePointSet::GetListTreeIcon(Bool_t) 
 { 
-   //return pointset icon
+   // Return pointset icon.
+
    return TEveElement::fgListTreeIcons[3]; 
 }
 
