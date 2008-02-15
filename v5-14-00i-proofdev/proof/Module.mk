@@ -47,11 +47,13 @@ $(PROOFDS):     $(PROOFH) $(PROOFL) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(PROOFH) $(PROOFL)
 
-$(PROOFMAP):    $(RLIBMAP) $(MAKEFILEDEP) $(PROOFL)
-		$(RLIBMAP) -o $(PROOFMAP) -l $(PROOFLIB) \
-		   -d $(PROOFLIBDEPM) -c $(PROOFL)
+all-proof:      $(PROOFLIB)
 
-all-proof:      $(PROOFLIB) $(PROOFMAP)
+map-proof:       $(RLIBMAP)
+		$(RLIBMAP) -r $(ROOTMAP) -l $(PROOFLIB) \
+		   -d $(PROOFLIBDEP) -c $(PROOFL)
+
+map::           map-proof
 
 clean-proof:
 		@rm -f $(PROOFO) $(PROOFDO)
@@ -59,6 +61,6 @@ clean-proof:
 clean::         clean-proof
 
 distclean-proof: clean-proof
-		@rm -f $(PROOFDEP) $(PROOFDS) $(PROOFDH) $(PROOFLIB) $(PROOFMAP)
+		@rm -f $(PROOFDEP) $(PROOFDS) $(PROOFDH) $(PROOFLIB)
 
 distclean::     distclean-proof
