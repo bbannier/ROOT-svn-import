@@ -784,7 +784,7 @@ __asm__ __volatile__("movl $8, %eax");  \
  * only need to push them to the stack and make the function call
  **************************************************************************/
 #ifdef __x86_64__
-int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, void* this_ptr, G__param* rpara, G__value *result7)
+int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, void* this_ptr, G__param* rpara, G__value *result7)
 {
   void *vaddress = G__get_funcptr(ifunc, ifn);
   int paran = rpara->paran;
@@ -1001,7 +1001,7 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
       }
       break;
 
-      case 'k' || 'b': // Unsigned Long
+      case 'k': case 'b': // Unsigned Long
       {
         long valuekb = G__uint(param);
         __asm__ __volatile__("push %0" :: "g" (valuekb));
@@ -1160,7 +1160,7 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
     }
     break;
 
-    case 'k' || 'b': // Unsigned Long
+    case 'k': case 'b': // Unsigned Long
     {
       unsigned long return_val;
       ASM_X86_64_ARGS_PASSING(dval, lval)
@@ -1303,7 +1303,7 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, int gtagn
  * At this point the parameters have already been evaluated and we
  * only need to push them to the stack and make the function call
  **************************************************************************/
-int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, void* this_ptr, G__param* rpara, G__value *result7)
+int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, void* this_ptr, G__param* rpara, G__value *result7)
 {
    void *vaddress = G__get_funcptr(ifunc, ifn);
    int paran = rpara->paran;
@@ -1421,7 +1421,7 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
          }
          break;
 
-         case 'k' || 'b': // Unsigned Long
+         case 'k': // Unsigned Long
          {
             long valuekb = G__uint(param);
             __asm__ __volatile__("push %0" :: "g" (valuekb));
@@ -1579,7 +1579,7 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, int gtagnum, voi
       }
       break;
 
-      case 'k' || 'b': // Unsigned Long
+      case 'k':  // Unsigned Long
       {
          unsigned long return_val;
          __asm__ __volatile__("call *%1" : "=a" (result7->obj.ulo): "g" (vaddress));
@@ -1935,9 +1935,9 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
          op_return.type = 'U';
            
 #ifdef __x86_64__
-         G__stub_method_asm_x86_64(new_oper, pifn, gtagnum, 0, &para_new, &op_return);
+         G__stub_method_asm_x86_64(new_oper, pifn, 0, &para_new, &op_return);
 #else      
-         G__stub_method_asm(new_oper, pifn, gtagnum, 0, &para_new, &op_return);
+         G__stub_method_asm(new_oper, pifn, 0, &para_new, &op_return);
 #endif   
          // Allocated Address
          pobject = (void *) op_return.obj.i;
@@ -1960,9 +1960,9 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
       /* n = constructor arity (see array constructor) */
       for (int i=0;i<arity;i++){
 #ifdef __x86_64__
-         G__stub_method_asm_x86_64(ifunc, ifn, gtagnum, ((void*)((long)pobject + (i*osize))), &rpara, result7);
+         G__stub_method_asm_x86_64(ifunc, ifn, ((void*)((long)pobject + (i*osize))), &rpara, result7);
 #else      
-         G__stub_method_asm(ifunc, ifn, gtagnum, ((void*)((long)pobject + (i*osize))), &rpara, result7);
+         G__stub_method_asm(ifunc, ifn, ((void*)((long)pobject + (i*osize))), &rpara, result7);
 #endif
       }
 
@@ -2160,9 +2160,9 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
                G__setgvp(G__PVOID);
 
 #ifdef __x86_64__
-            G__stub_method_asm_x86_64(ifunc, ifn, gtagnum, ((void*)((long)soff + (idx*osize))), libp, result7);     
+            G__stub_method_asm_x86_64(ifunc, ifn, ((void*)((long)soff + (idx*osize))), libp, result7);     
 #else          
-            G__stub_method_asm(ifunc, ifn, gtagnum, ((void*)((long)soff + (idx*osize))), libp, result7);
+            G__stub_method_asm(ifunc, ifn, ((void*)((long)soff + (idx*osize))), libp, result7);
 
 #endif      
 
@@ -2205,9 +2205,9 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
             else{ // Yes, we have a nice overriden operator delete and we have its symbol yhea c'mon. Hack me baby!
                      
 #ifdef __x86_64__
-               G__stub_method_asm_x86_64(del_oper, pifn, gtagnum, 0, &para_del, &op_return);
+               G__stub_method_asm_x86_64(del_oper, pifn, 0, &para_del, &op_return);
 #else       
-               G__stub_method_asm(del_oper, pifn, gtagnum, 0, &para_del, &op_return);
+               G__stub_method_asm(del_oper, pifn, 0, &para_del, &op_return);
 #endif
             }
               
@@ -2233,9 +2233,9 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
          // 08-08-07
          // Now let's call our lower level asm function
 #ifdef __x86_64__
-         G__stub_method_asm_x86_64(ifunc, ifn, gtagnum, this_ptr, &rpara, result7);
+         G__stub_method_asm_x86_64(ifunc, ifn, this_ptr, &rpara, result7);
 #else      
-         G__stub_method_asm(ifunc, ifn, gtagnum, this_ptr, &rpara, result7);
+         G__stub_method_asm(ifunc, ifn, this_ptr, &rpara, result7);
 #endif
       }
    }
@@ -9437,8 +9437,66 @@ void G__cpplink_memfunc(FILE *fp)
                 fprintf(fp, "- ");
 
               fprintf(fp, "%d ", ifunc->param[j][k]->reftype + ifunc->param[j][k]->isconst*10);
-              if (ifunc->param[j][k]->def)
+              if (ifunc->param[j][k]->def) {
+#ifdef G__NOSTUBS
+                // 15-02-08: Here we find a nasty problem. When we want to evaluate a default
+                // parameter in the stub-less calls, the experssion (of this parameters) must
+                // be known to CInt, which migth not be true at run-time. To fix this, we will
+                // try to convert macros, to actual values when generating the dictionary
+                char res[256]; // possible overflow
+                char tmp[256]; // possible overflow
+                char *str = ifunc->param[j][k]->def;
+                int pos_res=0;
+                int pos_str=0;
+
+                while(str[pos_str]!='\0') {
+                  int pos_tmp=0;
+                  
+                  // Copy everything if it doesnt start with a letter
+                  while(!isalpha(str[pos_str]) && str[pos_str]!='\0'){
+                    res[pos_res] = str[pos_str];
+                    pos_res++; pos_str++;
+                  }
+                  res[pos_res] = '\0';
+
+                  // if it's a letter, then look for the end of the name
+                  while(isdigit(str[pos_str]) || isalpha(str[pos_str]) || str[pos_str]=='_'){
+                    tmp[pos_tmp] = str[pos_str];
+                    pos_tmp++;  pos_str++;
+                  }
+                  tmp[pos_tmp] = '\0';
+                  pos_tmp++;
+
+                  // Now look for the variable
+                  long struct_offset = 0;
+                  long store_struct_offset = 0;
+                  int ig15 = 0;
+                  int varhash = 0;
+                  int isdecl = 0;
+                  struct G__var_array* var = 0;
+                  G__hash(tmp, varhash, ig15);
+                  var = G__searchvariable((char*)tmp, varhash, 0, &G__global, &struct_offset, &store_struct_offset, &ig15, isdecl);
+                  if (var && (var->type[ig15]=='P' || var->type[ig15]=='p')) {
+                    G__value result3;
+                    int known = 0;
+                    result3 = G__getvariable(tmp, &known, &G__global, G__p_local);
+                    if(var->type[ig15]=='P')
+                      sprintf(&res[pos_res], "%e", G__double(result3));
+                    else
+                      sprintf(&res[pos_res], "%ld", G__int(result3));
+                    pos_res = strlen(res);
+                  }
+                  else {
+                    // If we dont think this is a macro, the copy the same thing
+                    strcpy(&res[pos_res], tmp);
+                    pos_res += strlen(tmp);
+                  }
+                }
+                fprintf(fp, "'%s' ", G__quotedstring(res, buf));
+#else                
                 fprintf(fp, "'%s' ", G__quotedstring(ifunc->param[j][k]->def, buf));
+#endif // G__NOSTUBS                
+              }
               else
                 fprintf(fp, "- ");
               if (ifunc->param[j][k]->name)
