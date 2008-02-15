@@ -17,7 +17,7 @@ XROOTDETAG := $(MODDIRS)/headers.d
 
 ##### Xrootd config options #####
 ifeq ($(PLATFORM),win32)
-ifeq (debug,$(findstring debug,$(ROOTBUILD)))
+ifeq (yes,$(WINRTDEBUG))
 XRDDBG      = "Win32 Debug"
 else
 XRDDBG      = "Win32 Release"
@@ -40,7 +40,10 @@ endif
 
 ##### Xrootd executables #####
 ifneq ($(PLATFORM),win32)
-XRDEXEC     = xrootd olbd xrdcp xrd xrdpwdadmin xrdgsiproxy
+XRDEXEC     = xrootd olbd xrdcp xrd xrdpwdadmin
+ifneq ($(BUILDXRDGSI),)
+XRDEXEC    += xrdgsiproxy
+endif
 else
 XRDEXEC     = xrdcp.exe
 endif
@@ -53,6 +56,7 @@ XRDPLUGINS := $(XRDPLUGINSA)
 else
 XRDPLUGINSA:= $(XROOTDDIRL)/libXrdSec.$(XRDSOEXT)
 XRDPLUGINS := $(LPATH)/libXrdSec.$(XRDSOEXT)
+XROOTDDIRP := $(LPATH)
 ifeq ($(ARCH),win32gcc)
 XRDPLUGINS := $(patsubst $(LPATH)/%.$(XRDSOEXT),bin/%.$(XRDSOEXT),$(XRDPLUGINS))
 endif
@@ -85,7 +89,8 @@ endif
 ifneq ($(PLATFORM),win32)
 $(XRDPLUGINS): $(XRDPLUGINSA)
 		@(if [ -d $(XROOTDDIRL) ]; then \
-		    lsplug=`find $(XROOTDDIRL) -name "libXrd*.$(XRDSOEXT)"` ; \
+		    lsplug=`find $(XROOTDDIRL) -name "libXrd*.$(XRDSOEXT)"` ;\
+		    lsplug="$$lsplug `find $(XROOTDDIRL) -name "libXrd*.dylib"`" ;\
 		    for i in $$lsplug ; do \
 		       echo "Copying $$i ..." ; \
 		       if [ "x$(ARCH)" = "xwin32gcc" ] ; then \
@@ -94,8 +99,12 @@ $(XRDPLUGINS): $(XRDPLUGINSA)
 		          ln -sf bin/$$lname $(LPATH)/$$lname ; \
 		          ln -sf bin/$$lname "$(LPATH)/$$lname.a" ; \
 		       else \
+		          if [ "x$(PLATFORM)" = "xmacosx" ] ; then \
+		             lname=`basename $$i` ; \
+		             install_name_tool -id $(LIBDIR)/$$lname $$i ; \
+		          fi ; \
 		          cp $$i $(LPATH)/ ; \
-		       fi; \
+		       fi ; \
 		    done ; \
 		  fi)
 endif
@@ -123,7 +132,9 @@ ifneq ($(PLATFORM),win32)
 $(XRDPLUGINSA): $(XROOTDETAG)
 		@(cd $(XROOTDDIRS); \
 		RELE=`uname -r`; \
-		case "$(ARCH):$$RELE" in \
+		CHIP=`uname -m | tr '[A-Z]' '[a-z]'`; \
+		PROC=`uname -p`; \
+		case "$(ARCH):$$RELE:$$CHIP:$$PROC" in \
 		freebsd*:*)      xopt="--ccflavour=gcc";; \
 		linuxicc:*)      xopt="--ccflavour=icc --use-xrd-strlcpy";; \
 		linuxia64ecc:*)  xopt="--ccflavour=icc --use-xrd-strlcpy";; \
@@ -131,7 +142,10 @@ $(XRDPLUGINSA): $(XROOTDETAG)
 		linuxx8664icc:*) xopt="--ccflavour=iccx8664 --use-xrd-strlcpy";; \
 		linuxppc64gcc:*) xopt="--ccflavour=gccppc64 --use-xrd-strlcpy";; \
 		linux*:*)        xopt="--ccflavour=gcc --use-xrd-strlcpy";; \
-		macos*:*)        xopt="--ccflavour=macos";; \
+		macosx64:*)      xopt="--ccflavour=macos64";; \
+		macosx*:*)       xopt="--ccflavour=macos";; \
+		solaris*:*:i86pc:x86*) xopt="--ccflavour=sunCCamd --use-xrd-strlcpy";; \
+		solaris*:*:i86pc:*) xopt="--ccflavour=sunCCi86pc --use-xrd-strlcpy";; \
 		solarisgcc:5.8)  xopt="--ccflavour=gcc";; \
 		solaris*:5.8)    xopt="--ccflavour=sunCC";; \
 		solarisgcc:5.9)  xopt="--ccflavour=gcc";; \
@@ -144,15 +158,30 @@ $(XRDPLUGINSA): $(XROOTDETAG)
 		if [ "x$(KRB5LIB)" = "x" ] ; then \
 		   xopt="$$xopt --disable-krb5"; \
 		fi; \
+		if [ "x$(BUILDXRDGSI)" = "x" ] ; then \
+		   xopt="$$xopt --disable-gsi"; \
+		fi; \
 		if [ ! "x$(SSLLIBDIR)" = "x" ] ; then \
 		   xlib=`echo $(SSLLIBDIR) | cut -c3-`; \
 		   xopt="$$xopt --with-ssl-libdir=$$xlib"; \
 		fi; \
 		if [ ! "x$(SSLINCDIR)" = "x" ] ; then \
-		   xopt="$$xopt --with-ssl-incdir=$(SSLINCDIR)"; \
+		   xinc=`echo $(SSLINCDIR)`; \
+		   xopt="$$xopt --with-ssl-incdir=$$xinc"; \
 		fi; \
 		if [ ! "x$(SHADOWFLAGS)" = "x" ] ; then \
 		   xopt="$$xopt --enable-shadowpw"; \
+		fi; \
+		if [ ! "x$(AFSLIB)" = "x" ] ; then \
+		   xopt="$$xopt --enable-afs"; \
+		fi; \
+		if [ ! "x$(AFSLIBDIR)" = "x" ] ; then \
+		   xlib=`echo $(AFSLIBDIR) | cut -c3-`; \
+		   xopt="$$xopt --with-afs-libdir=$$xlib"; \
+		fi; \
+		if [ ! "x$(AFSINCDIR)" = "x" ] ; then \
+		   xinc=`echo $(AFSINCDIR)`; \
+		   xopt="$$xopt --with-afs-incdir=$$xinc"; \
 		fi; \
 		xopt="$$xopt --disable-krb4 --enable-echo --no-arch-subdirs --disable-mon"; \
 		cd xrootd; \
@@ -186,6 +215,7 @@ else
 		@(if [ -d $(XROOTDDIRD) ]; then \
 		   rm -rf $(XROOTDDIRD); \
 		fi;)
+		@rm -f $(XROOTDETAG)
 endif
 
 clean::         clean-xrootd

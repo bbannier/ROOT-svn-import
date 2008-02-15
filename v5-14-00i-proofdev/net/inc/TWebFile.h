@@ -18,8 +18,7 @@
 // TWebFile                                                             //
 //                                                                      //
 // A TWebFile is like a normal TFile except that it reads its data      //
-// via a (slightly modified) apache web server. A TWebFile is a         //
-// read-only file.                                                      //
+// via a standard apache web server. A TWebFile is a read-only file.    //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -30,18 +29,33 @@
 #include "TUrl.h"
 #endif
 
+class TSocket;
+class TWebSocket;
+
 
 class TWebFile : public TFile {
 
+friend class TWebSocket;
+
 private:
-   TWebFile() { }
-   void Init(Bool_t);
-   Int_t GetFromWeb(char *buf, Int_t len, const TString &msg);
+   mutable Long64_t  fSize;         // file size
+   TSocket          *fSocket;       // socket for HTTP/1.1 (stays alive between calls)
+   Bool_t            fHasModRoot;   // true if server has mod_root installed
+   Bool_t            fHTTP11;
+
+   TWebFile() : fSocket(0) { }
+   void   Init(Bool_t);
+   Int_t  GetHead();
+   Int_t  GetLine(TSocket *s, char *line, Int_t size);
+   Int_t  GetFromWeb(char *buf, Int_t len, const TString &msg);
+   Int_t  GetFromWeb10(char *buf, Int_t len, const TString &msg);
+   Bool_t ReadBuffer10(char *buf, Int_t len);
+   Bool_t ReadBuffers10(char *buf, Long64_t *pos, Int_t *len, Int_t nbuf);
 
 public:
    TWebFile(const char *url);
    TWebFile(TUrl url);
-   virtual ~TWebFile() { }
+   virtual ~TWebFile();
 
    Long64_t GetSize() const;
    Bool_t   IsOpen() const;

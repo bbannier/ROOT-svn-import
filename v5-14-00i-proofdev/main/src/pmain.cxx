@@ -25,8 +25,9 @@
 #include <stdio.h>
 #include <errno.h>
 
-#ifdef R__HAVE_CONFIG
 #include "RConfigure.h"
+#ifdef R__AFS
+#include "TAFS.h"
 #endif
 #include "TApplication.h"
 #include "TInterpreter.h"
@@ -36,6 +37,13 @@
 // Special type for the hook to the TXProofServ constructor, needed to avoid
 // using the plugin manager
 typedef TApplication *(*TProofServ_t)(Int_t *argc, char **argv, FILE *flog);
+#ifdef R__AFS
+// Special type for the hook to the TAFS constructor, needed to avoid
+// using the plugin manager
+typedef TAFS *(*TAFS_t)(const char *, const char *, Int_t);
+// Instance of the AFS token class
+static TAFS *gAFS = 0;
+#endif
 
 //______________________________________________________________________________
 static FILE *RedirectOutput(const char *logfile, const char *loc)
@@ -54,7 +62,7 @@ static FILE *RedirectOutput(const char *logfile, const char *loc)
 
    if (loc)
       fprintf(stderr,"%s: RedirectOutput: reopen %s\n", loc, logfile);
-   FILE *flog = freopen(logfile, "w", stdout);
+   FILE *flog = freopen(logfile, "a", stdout);
    if (!flog) {
       fprintf(stderr,"%s: RedirectOutput: could not freopen stdout\n", loc);
       return 0;
@@ -81,6 +89,48 @@ static FILE *RedirectOutput(const char *logfile, const char *loc)
    return fLog;
 }
 
+#ifdef R__AFS
+//______________________________________________________________________________
+static Int_t InitAFS(const char *fileafs, const char *loc)
+{
+   // Init AFS token using credentials at fileafs
+
+   TString getter("GetTAFS");
+   char *p = 0;
+   TString afslib = "libAFSAuth";
+   if ((p = gSystem->DynamicPathName(afslib, kTRUE))) {
+      delete[] p;
+      if (gSystem->Load(afslib) == -1) {
+         if (loc)
+            fprintf(stderr,"%s: can't load %s\n", loc, afslib.Data());
+         return -1;
+      }
+   } else {
+      if (loc)
+         fprintf(stderr,"%s: can't locate %s\n", loc, afslib.Data());
+      return -1;
+   }
+
+   // Locate constructor
+   Func_t f = gSystem->DynFindSymbol(afslib, getter);
+   if (f) {
+      gAFS = (*((TAFS_t)f))(fileafs, 0, -1);
+      if (!gAFS) {
+         if (loc)
+            fprintf(stderr,"%s: could not initialize a valid TAFS\n", loc);
+         return -1;
+      }
+   } else {
+      if (loc)
+         fprintf(stderr,"%s: can't find %s\n", loc, getter.Data());
+      return -1;
+   }
+
+   // Done
+   return 0;
+}
+#endif
+
 //______________________________________________________________________________
 int main(int argc, char **argv)
 {
@@ -91,21 +141,18 @@ int main(int argc, char **argv)
    while (debug)
       ;
 #endif
-
-   int loglevel = -1;
-   if (getenv("ROOTPROOFLOGLEVEL"))
+   int loglevel = (argc >= 6) ? strtol(argv[5], 0, 10) : -1;
+   if (loglevel < 0 && getenv("ROOTPROOFLOGLEVEL"))
       loglevel = atoi(getenv("ROOTPROOFLOGLEVEL"));
    if (loglevel > 0)
       fprintf(stderr,"%s: starting %s\n", argv[1], argv[0]);
 
    // Redirect the output
    FILE *fLog = 0;
-   char *logfile = 0;
-   const char *sessdir = getenv("ROOTPROOFSESSDIR");
-   if (sessdir && !getenv("ROOTPROOFDONOTREDIR")) {
-      logfile = new char[strlen(sessdir) + 5];
-      sprintf(logfile, "%s.log", sessdir);
-      char *loc = (loglevel > 0) ? argv[1] : 0;
+   char *loc = 0;
+   char *logfile = (char *)getenv("ROOTPROOFLOGFILE");
+   if (logfile && !getenv("ROOTPROOFDONOTREDIR")) {
+      loc = (loglevel > 0) ? argv[1] : 0;
       if (loglevel > 0)
          fprintf(stderr,"%s: redirecting output to %s\n", argv[1], logfile);
       if (!(fLog = RedirectOutput(logfile, loc))) {
@@ -117,6 +164,18 @@ int main(int argc, char **argv)
       fprintf(stderr,"%s: output redirected to: %s\n",
              argv[1], (logfile ? logfile : "+++not redirected+++"));
 
+#ifdef R__AFS
+   // Init AFS, if required
+   if (getenv("ROOTPROOFAFSCREDS")) {
+      if (InitAFS(getenv("ROOTPROOFAFSCREDS"), loc) != 0) {
+          fprintf(stderr,"%s: unable to initialize the AFS token\n", argv[1]);
+      } else {
+         if (loglevel > 0)
+            fprintf(stderr,"%s: AFS token initialized\n", argv[1]);
+      }
+   }
+#endif
+
    gROOT->SetBatch();
    TApplication *theApp = 0;
 
@@ -124,15 +183,11 @@ int main(int argc, char **argv)
    gInterpreter->EnableAutoLoading();
 
    TString getter("GetTProofServ");
-#ifdef ROOTLIBDIR
-   TString prooflib = TString(ROOTLIBDIR) + "/libProof";
-#else
-   TString prooflib = TString(gRootDir) + "/lib/libProof";
-#endif
+   TString prooflib = "libProof";
    if (argc > 2) {
       // XPD: additionally load the appropriate library
-      prooflib.ReplaceAll("/libProof", "/libProofx");
-      getter.ReplaceAll("GetTProofServ", "GetTXProofServ");
+      prooflib = "libProofx";
+      getter = "GetTXProofServ";
    }
    char *p = 0;
    if ((p = gSystem->DynamicPathName(prooflib, kTRUE))) {
@@ -160,6 +215,12 @@ int main(int argc, char **argv)
       fprintf(stderr,"%s: running the TProofServ application\n", argv[1]);
 
    theApp->Run();
+
+#ifdef R__AFS
+   // Cleanup
+   if (gAFS)
+      delete gAFS;
+#endif
 
    // We can exit now
    gSystem->Exit(0);

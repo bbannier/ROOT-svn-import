@@ -49,6 +49,13 @@ ALLHDRS       += $(patsubst $(MODDIRI)/%.h,include/%.h,$(PROOFDRAWH))
 ALLLIBS       += $(PROOFPLAYERLIB) $(PROOFDRAWLIB)
 ALLMAPS       += $(PROOFPLAYERMAP) $(PROOFDRAWMAP)
 
+ifeq ($(PLATFORM),win32)
+PROOFPLAYERLIBEXTRA = $(LPATH)/libProof.lib $(LPATH)/libHist.lib $(LPATH)/libTree.lib \
+                      $(LPATH)/libCore.lib $(LPATH)/libThread.lib
+else
+PROOFPLAYERLIBEXTRA = -L$(LPATH) -lProof -lHist -lTree -lCore -lThread
+endif
+
 # include all dependency files
 INCLUDEFILES += $(PROOFPLAYERDEP) $(PROOFDRAWDEP)
 

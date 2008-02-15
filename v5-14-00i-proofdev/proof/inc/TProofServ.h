@@ -270,8 +270,6 @@ public:
    Int_t         Unlock();
 
    Bool_t        IsLocked() const { return (fLockId > -1); }
-
-   ClassDef(TProofLockPath,0)  //PROOF Server path locker
 };
 
 class TProofLockPathGuard {
