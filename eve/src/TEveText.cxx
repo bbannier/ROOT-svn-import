@@ -132,7 +132,7 @@ void TEveText::ComputeBBox()
 }
 
 //______________________________________________________________________________
-const TGPicture* TEveText::GetListTreeIcon() 
+const TGPicture* TEveText::GetListTreeIcon(Bool_t) 
 { 
    // Return TEveText icon.
 

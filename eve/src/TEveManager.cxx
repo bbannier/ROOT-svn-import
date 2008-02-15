@@ -277,6 +277,7 @@ void TEveManager::DoRedraw3D()
 
    for (TEveElement::Set_i i = fStampedElements.begin(); i != fStampedElements.end(); ++i)
    {
+      (*i)->UpdateItems(); // !!! maybe better just to redraw list-trees
       (*i)->ClearStamps();
    }
    fStampedElements.clear();

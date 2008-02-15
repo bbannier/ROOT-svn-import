@@ -48,7 +48,7 @@ TEveViewer::TEveViewer(const Text_t* n, const Text_t* t) :
 /******************************************************************************/
 
 //______________________________________________________________________________
-const TGPicture* TEveViewer::GetListTreeIcon() 
+const TGPicture* TEveViewer::GetListTreeIcon(Bool_t) 
 { 
    //return eveviewer icon
    return TEveElement::fgListTreeIcons[1]; 

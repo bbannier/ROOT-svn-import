@@ -202,9 +202,10 @@ public:
    Color_t* GetMainColorPtr()               { return fMainColorPtr; }
    void     SetMainColorPtr(Color_t* color) { fMainColorPtr = color; }
 
+   virtual Bool_t  HasMainColor() const { return fMainColorPtr != 0; }
    virtual Color_t GetMainColor() const { return fMainColorPtr ? *fMainColorPtr : 0; }
    virtual void    SetMainColor(Color_t color);
-   void    SetMainColor(Pixel_t pixel);
+   void            SetMainColor(Pixel_t pixel);
 
    virtual Bool_t  CanEditMainTransparency()    { return kFALSE; }
    virtual UChar_t GetMainTransparency() const  { return 0; }
@@ -276,12 +277,14 @@ public:
    void SetStamp(UChar_t bits);
    void AddStamp(UChar_t bits);
 
+
    // List-tree icons
    //-----------------
-   static  const TGPicture* GetCheckBoxPicture(Bool_t rnrElement, Bool_t rnrDaughter);
-   virtual const TGPicture* GetListTreeIcon();
 
-   ClassDef(TEveElement, 1); // Base class for TEveUtil visualization elements, providing hierarchy management, rendering control and list-tree item management.
+   virtual const TGPicture* GetListTreeIcon(Bool_t open=kFALSE);
+   virtual const TGPicture* GetListTreeCheckBoxIcon();
+
+   ClassDef(TEveElement, 0); // Base class for TEveUtil visualization elements, providing hierarchy management, rendering control and list-tree item management.
 };
 
 
@@ -310,7 +313,7 @@ public:
    Bool_t GetOwnObject() const   { return fOwnObject; }
    void   SetOwnObject(Bool_t o) { fOwnObject = o; }
 
-   ClassDef(TEveElementObjectPtr, 1); // TEveElement with external TObject as a holder of visualization data.
+   ClassDef(TEveElementObjectPtr, 0); // TEveElement with external TObject as a holder of visualization data.
 };
 
 
@@ -335,6 +338,13 @@ public:
                    Bool_t doColor=kFALSE);
    virtual ~TEveElementList() {}
 
+   virtual const Text_t* GetElementName()  const { return TNamed::GetName(); }
+   virtual const Text_t* GetElementTitle() const { return TNamed::GetTitle(); }
+   virtual void SetElementName (const Text_t* name)  { TNamed::SetName(name); }
+   virtual void SetElementTitle(const Text_t* title) { TNamed::SetTitle(title); }
+   virtual void SetElementNameTitle(const Text_t* name, const Text_t* title)
+   { TNamed::SetNameTitle(name, title); }
+
    virtual Bool_t CanEditMainColor()  { return fDoColor; }
 
    TClass* GetChildClass() const { return fChildClass; }
@@ -342,7 +352,7 @@ public:
 
    virtual Bool_t AcceptElement(TEveElement* el);
 
-   ClassDef(TEveElementList, 1); // List of TEveElement objects with a possibility to limit the class of accepted elements.
+   ClassDef(TEveElementList, 0); // List of TEveElement objects with a possibility to limit the class of accepted elements.
 };
 
 #endif

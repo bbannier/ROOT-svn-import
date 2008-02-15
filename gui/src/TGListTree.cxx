@@ -68,6 +68,7 @@ TGGC          *TGListTree::fgColorGC = 0;
 
 
 ClassImp(TGListTreeItem)
+ClassImp(TGListTreeItemStd)
 ClassImp(TGListTree)
 
 
@@ -92,15 +93,35 @@ static Int_t FontTextWidth(FontStruct_t f, const char *c)
 }
 
 
+/******************************************************************************/
+/******************************************************************************/
+// TGListTreeItem
+/******************************************************************************/
+
 //______________________________________________________________________________
-TGListTreeItem::TGListTreeItem(TGClient *client, const char *name,
-                               const TGPicture *opened,
-                               const TGPicture *closed,
-                               Bool_t checkbox)
+TGListTreeItem::TGListTreeItem(TGClient *client) :
+   fClient(client),
+   fParent    (0), fFirstchild(0), fPrevsibling(0), fNextsibling(0),
+   fOpen (kFALSE), fDNDState  (0),
+   fY         (0), fXtext     (0), fYtext(0), fHeight(0)
+{
+   // Constructor.
+}
+
+
+/******************************************************************************/
+/******************************************************************************/
+// TGListTreeItemStd
+/******************************************************************************/
+
+//______________________________________________________________________________
+TGListTreeItemStd::TGListTreeItemStd(TGClient *client, const char *name,
+                                     const TGPicture *opened,
+                                     const TGPicture *closed,
+                                     Bool_t checkbox) :
+   TGListTreeItem(client)
 {
    // Create list tree item.
-
-   fClient = client;
 
    fText = name;
    fCheckBox = checkbox;
@@ -128,14 +149,7 @@ TGListTreeItem::TGListTreeItem(TGClient *client, const char *name,
    else
       fPicWidth  = TMath::Max(fOpenPic->GetWidth(), fClosedPic->GetWidth());
 
-   fOpen = fActive = kFALSE;
-
-   fParent =
-   fFirstchild =
-   fPrevsibling =
-   fNextsibling = 0;
-   fY =
-   fHeight = 0;
+   fActive = kFALSE;
 
    fOwnsData = kFALSE;
    fUserData = 0;
@@ -146,7 +160,7 @@ TGListTreeItem::TGListTreeItem(TGClient *client, const char *name,
 }
 
 //______________________________________________________________________________
-TGListTreeItem::~TGListTreeItem()
+TGListTreeItemStd::~TGListTreeItemStd()
 {
    // Delete list tree item.
 
@@ -161,7 +175,15 @@ TGListTreeItem::~TGListTreeItem()
 }
 
 //______________________________________________________________________________
-Bool_t TGListTreeItem::HasCheckedChild(Bool_t first)
+Color_t TGListTreeItemStd::GetActiveColor() const
+{
+   // Return color for marking items that are active or selected.
+
+   return fClient->GetResourcePool()->GetSelectedBgndColor();
+}
+
+//______________________________________________________________________________
+Bool_t TGListTreeItemStd::HasCheckedChild(Bool_t first)
 {
    // Add all child items of 'item' into the list 'checked'.
 
@@ -184,7 +206,7 @@ Bool_t TGListTreeItem::HasCheckedChild(Bool_t first)
 }
 
 //______________________________________________________________________________
-Bool_t TGListTreeItem::HasUnCheckedChild(Bool_t first)
+Bool_t TGListTreeItemStd::HasUnCheckedChild(Bool_t first)
 {
    // Add all child items of 'item' into the list 'checked'.
 
@@ -207,7 +229,7 @@ Bool_t TGListTreeItem::HasUnCheckedChild(Bool_t first)
 }
 
 //______________________________________________________________________________
-void TGListTreeItem::UpdateState()
+void TGListTreeItemStd::UpdateState()
 {
    // Update the state of the node 'item' according to the children states.
 
@@ -223,7 +245,7 @@ void TGListTreeItem::UpdateState()
 }
 
 //______________________________________________________________________________
-void TGListTreeItem::CheckAllChildren(Bool_t state)
+void TGListTreeItemStd::CheckAllChildren(Bool_t state)
 {
    // Set all child items of this one checked if state=kTRUE,
    // unchecked if state=kFALSE.
@@ -240,7 +262,7 @@ void TGListTreeItem::CheckAllChildren(Bool_t state)
 }
 
 //______________________________________________________________________________
-void TGListTreeItem::CheckChildren(TGListTreeItem *item, Bool_t state)
+void TGListTreeItemStd::CheckChildren(TGListTreeItem *item, Bool_t state)
 {
    // Set all child items of 'item' checked if state=kTRUE;
    // unchecked if state=kFALSE.
@@ -264,15 +286,7 @@ void TGListTreeItem::CheckChildren(TGListTreeItem *item, Bool_t state)
 }
 
 //______________________________________________________________________________
-void TGListTreeItem::Rename(const char *new_name)
-{
-   // Rename a list tree item.
-
-   fText = new_name;
-}
-
-//______________________________________________________________________________
-void TGListTreeItem::SetCheckBox(Bool_t on)
+void TGListTreeItemStd::SetCheckBox(Bool_t on)
 {
    // Set a check box on the tree node.
 
@@ -285,7 +299,7 @@ void TGListTreeItem::SetCheckBox(Bool_t on)
 }
 
 //___________________________________________________________________________
-void TGListTreeItem::SetCheckBoxPictures(const TGPicture *checked,
+void TGListTreeItemStd::SetCheckBoxPictures(const TGPicture *checked,
                                          const TGPicture *unchecked)
 {
    // Change list tree check item icons.
@@ -310,7 +324,7 @@ void TGListTreeItem::SetCheckBoxPictures(const TGPicture *checked,
 }
 
 //___________________________________________________________________________
-void TGListTreeItem::SetPictures(const TGPicture *opened, const TGPicture *closed)
+void TGListTreeItemStd::SetPictures(const TGPicture *opened, const TGPicture *closed)
 {
    // Change list tree item icons.
 
@@ -332,6 +346,12 @@ void TGListTreeItem::SetPictures(const TGPicture *opened, const TGPicture *close
    fOpenPic   = opened;
    fClosedPic = closed;
 }
+
+
+/******************************************************************************/
+/******************************************************************************/
+// TGListTree
+/******************************************************************************/
 
 //______________________________________________________________________________
 TGListTree::TGListTree(TGWindow *p, UInt_t w, UInt_t h, UInt_t options,
@@ -481,8 +501,8 @@ void TGListTree::HighlightItem(TGListTreeItem *item, Bool_t state, Bool_t draw)
       if ((item == fSelected) && !state) {
          fSelected = 0;
          if (draw) DrawItemName(fId, item);
-      } else if (state != item->fActive) {
-         item->fActive = state;
+      } else if (state != item->IsActive()) { // !!!! leave active alone ...
+         item->SetActive(state);
          if (draw) DrawItemName(fId, item);
       }
    }
@@ -496,7 +516,7 @@ void TGListTree::HighlightChildren(TGListTreeItem *item, Bool_t state, Bool_t dr
    while (item) {
       HighlightItem(item, state, draw);
       if (item->fFirstchild)
-         HighlightChildren(item->fFirstchild, state, (item->fOpen) ? draw : kFALSE);
+         HighlightChildren(item->fFirstchild, state, (item->IsOpen()) ? draw : kFALSE);
       item = item->fNextsibling;
    }
 }
@@ -548,29 +568,31 @@ Bool_t TGListTree::HandleButton(Event_t *event)
             Int_t minx, maxx;
             Int_t minxchk = 0, maxxchk = 0;
             if (item->HasCheckBox()) {
-               minxchk = (item->fXtext - Int_t(item->fPicWidth));
-               maxxchk = (item->fXtext - Int_t(item->fPicWidth)) +
-                       Int_t(item->fCheckedPic->GetWidth()) - 4;
+               minxchk = (item->fXtext - Int_t(item->GetPicWidth()));
+               // !!!! GetCheckBoxPicture()->GetWidth() was checked-box-width
+               maxxchk = (item->fXtext - Int_t(item->GetPicWidth())) +
+                  Int_t(item->GetCheckBoxPicture()->GetWidth()) - 4;
                maxx = maxxchk - 8;
                minx = minxchk - 16;
             }
             else {
-               maxx = (item->fXtext - Int_t(item->fPicWidth)) - 8;
-               minx = (item->fXtext - Int_t(item->fPicWidth)) - 16;
+               maxx = (item->fXtext - Int_t(item->GetPicWidth())) - 8;
+               minx = (item->fXtext - Int_t(item->GetPicWidth())) - 16;
             }
             if ((item->HasCheckBox()) && (event->fX < maxxchk) &&
-               (event->fX > minxchk)) {
+               (event->fX > minxchk))
+            {
                fLastY = event->fY;
                ToggleItem(item);
                if (fCheckMode == kRecursive) {
                   CheckAllChildren(item, item->IsChecked());
                }
-               UpdateChecked(item, kTRUE);
+               UpdateChecked(item, kTRUE); // !!!! should go inside if above?
                Checked((TObject *)item->GetUserData(), item->IsChecked());
                return kTRUE;
             }
             if ((event->fX < maxx) && (event->fX > minx)) {
-               item->fOpen = !item->fOpen;
+               item->SetOpen( ! item->IsOpen()); // !!!!
                ClearViewPort();
                return kTRUE;
             }
@@ -581,7 +603,7 @@ Bool_t TGListTree::HandleButton(Event_t *event)
             fYDND = event->fY;
             fBdown = kTRUE;
          }
-         if (fSelected) fSelected->fActive = kFALSE;
+         if (fSelected) fSelected->SetActive(kFALSE); // !!!! what was state before ?
          fLastY = event->fY;
          UnselectAll(kTRUE);
          //item->fActive = kTRUE; // this is done below w/redraw
@@ -623,9 +645,9 @@ Bool_t TGListTree::HandleDoubleClick(Event_t *event)
    // Otherwise, just use default behaviour (open item).
    if (event->fCode == kButton1 && item) {
       ClearViewPort();
-      item->fOpen = !item->fOpen;
+      item->SetOpen( ! item->IsOpen()); // !!!!
       if (item != fSelected) { // huh?!
-         if (fSelected) fSelected->fActive = kFALSE;
+         if (fSelected) fSelected->SetActive(kFALSE); // !!!!
          UnselectAll(kTRUE);
          HighlightItem(item, kTRUE, kTRUE);
       }
@@ -740,9 +762,11 @@ Bool_t TGListTree::HandleMotion(Event_t *event)
    } else if ((item = FindItem(event->fY)) != 0) {
 
       if (item->HasCheckBox()) {
-         if ((event->fX < (item->fXtext - Int_t(item->fPicWidth)) +
-                           Int_t(item->fCheckedPic->GetWidth()) - 4) &&
-             (event->fX > (item->fXtext - Int_t(item->fPicWidth)))) {
+         // !!!! was item->fCheckedPic->GetWidth()
+         if ((event->fX < (item->fXtext - Int_t(item->GetPicWidth())) +
+              Int_t(item->GetCheckBoxPicture()->GetWidth()) - 4) &&
+             (event->fX > (item->fXtext - Int_t(item->GetPicWidth()))))
+         {
             gVirtualX->SetCursor(fId, gVirtualX->CreateCursor(kPointer));
             return kTRUE;
          }
@@ -755,8 +779,10 @@ Bool_t TGListTree::HandleMotion(Event_t *event)
             if (gDNDManager && item->IsDNDSource()) {
                if (!fBuf) fBuf = new TBufferFile(TBuffer::kWrite);
                fBuf->Reset();
-               if (item->fUserData) {
-                  TObject *obj = static_cast<TObject *>(item->fUserData);
+               // !!!!! Here check virtual Bool_t HandlesDragAndDrop()
+               // and let the item handle this.
+               if (item->GetUserData()) {
+                  TObject *obj = static_cast<TObject *>(item->GetUserData());
                   if (dynamic_cast<TObject *>(obj)) {
                      TObjString *ostr = dynamic_cast<TObjString *>(obj);
                      if (ostr) {
@@ -769,7 +795,7 @@ Bool_t TGListTree::HandleMotion(Event_t *event)
                      }
                      else {
                         fDNDData.fDataType = fDNDTypeList[0];
-                        fBuf->WriteObject((TObject *)item->fUserData);
+                        fBuf->WriteObject((TObject *)item->GetUserData());
                         fDNDData.fData = fBuf->Buffer();
                         fDNDData.fDataLength = fBuf->Length();
                      }
@@ -783,7 +809,8 @@ Bool_t TGListTree::HandleMotion(Event_t *event)
                   fDNDData.fData = (void *)strdup(str.Data());
                   fDNDData.fDataLength = str.Length()+1;
                }
-               SetDragPixmap(item->fClosedPic);
+               // !!! was item->fClosedPic
+               SetDragPixmap(item->GetPicture());
                gDNDManager->StartDrag(this, event->fXRoot, event->fYRoot);
             }
          }
@@ -800,9 +827,9 @@ Bool_t TGListTree::HandleMotion(Event_t *event)
       if (fTip)
          fTip->Hide();
 
-      if (item->fTipText.Length() > 0) {
+      if (item->GetTipTextLength() > 0) {
 
-         SetToolTipText(item->fTipText.Data(), item->fXtext,
+         SetToolTipText(item->GetTipText(), item->fXtext,
                         item->fY -pos.fY +item->fHeight -4, 1000);
 
       } else if (fAutoTips && item->GetUserData()) {
@@ -1132,21 +1159,12 @@ void TGListTree::LineUp(Bool_t /*select*/)
 
    if (!fCanvas || !fSelected) return;
 
-   const TGPicture *pic1, *pic2;
    Int_t height;
 
-   if (fSelected->fOpen) {
-      pic2 = fSelected->fOpenPic;
-   } else {
-      pic2 = fSelected->fClosedPic;
-   }
+   const  TGPicture*pic2 = fSelected->GetPicture();
 
    if (fSelected->HasCheckBox()){
-      if (fSelected->IsChecked()) {
-         pic1 = fSelected->fOpenPic;
-      } else {
-         pic1 = fSelected->fClosedPic;
-      }
+      const TGPicture *pic1 = fSelected->GetCheckBoxPicture();
       height  = TMath::Max(pic2->GetHeight() + fVspacing, pic1->GetHeight() + fVspacing);
    } else {
       height = pic2->GetHeight() + fVspacing;
@@ -1165,20 +1183,12 @@ void TGListTree::LineDown(Bool_t /*select*/)
 
    if (!fCanvas || !fSelected) return;
 
-   const TGPicture *pic1, *pic2;
    Int_t height;
 
-   if (fSelected->fOpen)
-      pic2 = fSelected->fOpenPic;
-   else
-      pic2 = fSelected->fClosedPic;
+   const  TGPicture*pic2 = fSelected->GetPicture();
 
    if (fSelected->HasCheckBox()){
-      if (fSelected->IsChecked()) {
-         pic1 = fSelected->fOpenPic;
-      } else {
-         pic1 = fSelected->fClosedPic;
-      }
+      const TGPicture *pic1 = fSelected->GetCheckBoxPicture();
       height  = TMath::Max(pic2->GetHeight() + fVspacing, pic1->GetHeight() + fVspacing);
    } else {
       height = pic2->GetHeight() + fVspacing;
@@ -1338,7 +1348,7 @@ void TGListTree::Draw(Handle_t id, Int_t yevent, Int_t hevent)
       if (width > fDefw) fDefw = width;
 
       y += height + fVspacing;
-      if (item->fFirstchild && item->fOpen) {
+      if (item->fFirstchild && item->IsOpen()) {
          y = DrawChildren(id, item->fFirstchild, x, y, xbranch);
       }
 
@@ -1362,7 +1372,7 @@ Int_t TGListTree::DrawChildren(Handle_t id, TGListTreeItem *item,
    Int_t  xbranch;
    TGPosition pos = GetPagePosition();
 
-   x += fIndent + (Int_t)item->fParent->fPicWidth;
+   x += fIndent + (Int_t)item->fParent->GetPicWidth();
    while (item) {
       xbranch = xroot;
 
@@ -1372,7 +1382,7 @@ Int_t TGListTree::DrawChildren(Handle_t id, TGListTreeItem *item,
       if (width > fDefw) fDefw = width;
 
       y += height + fVspacing;
-      if ((item->fFirstchild) && (item->fOpen)) {
+      if ((item->fFirstchild) && (item->IsOpen())) {
          y = DrawChildren(id, item->fFirstchild, x, y, xbranch);
       }
 
@@ -1390,31 +1400,14 @@ void TGListTree::DrawItem(Handle_t id, TGListTreeItem *item, Int_t x, Int_t y,
    Int_t  xpic2, ypic2, xbranch, ybranch, xtext, ytext, xline, yline, xc;
    Int_t  xpic1 = 0, ypic1 = 0;
    UInt_t height;
-   const TGPicture *pic1 = 0, *pic2;
-
-   TGPosition pos = GetPagePosition();
-   TGDimension dim = GetPageDimension();
-
-   // Select the pixmap to use, if any
-   if (item->fOpen) {
-      pic2 = item->fOpenPic;
-   } else {
-      pic2 = item->fClosedPic;
-   }
-
-   if (item->HasCheckBox()) {
-      if (item->IsChecked()) {
-         pic1 = item->fCheckedPic;
-      } else {
-         pic1 = item->fUncheckedPic;
-      }
-   }
+   const TGPicture *pic1 = item->GetCheckBoxPicture();
+   const TGPicture *pic2 = item->GetPicture();
 
    // Compute the height of this line
    height = FontHeight(fFont);
    xpic2 = x;
-   xtext = x + fHspacing + (Int_t)item->fPicWidth;
-   if ((item->HasCheckBox()) && (pic1)) {
+   xtext = x + fHspacing + (Int_t)item->GetPicWidth();
+   if (pic1) {
       if (pic1->GetHeight() > height) {
          ytext = y + (Int_t)((pic1->GetHeight() - height) >> 1);
          height = pic1->GetHeight();
@@ -1447,7 +1440,7 @@ void TGListTree::DrawItem(Handle_t id, TGListTreeItem *item, Int_t x, Int_t y,
    } else {
       if (xline == 0) xline = xpic2;
       ypic2 = ytext = y;
-      xbranch = xpic2 + (Int_t)(item->fPicWidth >> 1);
+      xbranch = xpic2 + (Int_t)(item->GetPicWidth() >> 1);
       yline = ybranch = ypic2 + (Int_t)(height >> 1);
       yline = ypic2 + (Int_t)(height >> 1);
    }
@@ -1462,13 +1455,15 @@ void TGListTree::DrawItem(Handle_t id, TGListTreeItem *item, Int_t x, Int_t y,
    item->fHeight = height;
 
    // projected coordinates
-   Int_t yp = y - pos.fY;
-   Int_t ylinep = yline - pos.fY;
-   Int_t ybranchp = ybranch - pos.fY;
-   Int_t ypicp = ypic2 - pos.fY;
+   TGPosition  pos = GetPagePosition();
+   TGDimension dim = GetPageDimension();
+   Int_t yp        = y       - pos.fY;
+   Int_t ylinep    = yline   - pos.fY;
+   Int_t ybranchp  = ybranch - pos.fY;
+   Int_t ypicp     = ypic2   - pos.fY;
 
-   if ((yp >= fExposeTop) && (yp <= (Int_t)dim.fHeight)) {
-
+   if ((yp >= fExposeTop) && (yp <= (Int_t)dim.fHeight))
+   {
       if (*xroot >= 0) {
          xc = *xroot;
 
@@ -1480,7 +1475,7 @@ void TGListTree::DrawItem(Handle_t id, TGListTreeItem *item, Int_t x, Int_t y,
 
          TGListTreeItem *p = item->fParent;
          while (p) {
-            xc -= (fIndent + (Int_t)item->fPicWidth);
+            xc -= (fIndent + (Int_t)item->GetPicWidth());
             if (p->fNextsibling) {
                gVirtualX->DrawLine(id, fLineGC, xc, yp, xc, yp+height);
             }
@@ -1489,28 +1484,18 @@ void TGListTree::DrawItem(Handle_t id, TGListTreeItem *item, Int_t x, Int_t y,
          gVirtualX->DrawLine(id, fLineGC, *xroot, ylinep, xline /*xpic2*/ /*xbranch*/, ylinep);
          DrawNode(id, item, *xroot, yline);
       }
-      if (item->fOpen && item->fFirstchild) {
+      if (item->IsOpen() && item->fFirstchild) {
          gVirtualX->DrawLine(id, fLineGC, xbranch, ybranchp/*yline*/,
-                        xbranch, yp+height);
+                             xbranch, yp+height);
       }
-      // if (pic2)
-      //    pic2->Draw(id, fDrawGC, xpic2, ypic2);
-      if (item->HasCheckBox()) {
-         if (item->IsChecked())
-            item->fCheckedPic->Draw(id, fDrawGC, xpic1, ypicp);
-         else
-            item->fUncheckedPic->Draw(id, fDrawGC, xpic1, ypicp);
-      }
-      if (item->fActive || item == fSelected) {
-         item->fOpenPic->Draw(id, fDrawGC, xpic2, ypicp);
-      } else {
-         item->fClosedPic->Draw(id, fDrawGC, xpic2, ypicp);
-      }
+      if (pic1)
+         pic1->Draw(id, fDrawGC, xpic1, ypicp);
+      pic2->Draw(id, fDrawGC, xpic2, ypicp);
       DrawItemName(id, item);
    }
 
    *xroot = xbranch;
-   *retwidth = FontTextWidth(fFont, item->fText.Data()) + item->fPicWidth;
+   *retwidth  = FontTextWidth(fFont, item->GetText()) + item->GetPicWidth();
    *retheight = height;
 }
 
@@ -1522,32 +1507,33 @@ void TGListTree::DrawItemName(Handle_t id, TGListTreeItem *item)
    UInt_t width;
    TGPosition pos = GetPagePosition();
 
-   width = FontTextWidth(fFont, item->fText.Data());
-   if (item->fActive || item == fSelected) {
-      gVirtualX->SetForeground(fDrawGC, fgDefaultSelectedBackground);
+   width = FontTextWidth(fFont, item->GetText());
+   // !!!! should make something different for selected.
+   if (item->IsActive() || item == fSelected) {
+      gVirtualX->SetForeground(fDrawGC, item->GetActiveColor());
       gVirtualX->FillRectangle(id, fDrawGC,
                           item->fXtext, item->fYtext-pos.fY, width, FontHeight(fFont));
       gVirtualX->SetForeground(fDrawGC, fgBlackPixel);
       gVirtualX->DrawString(id, fHighlightGC,
                        item->fXtext, item->fYtext - pos.fY + FontAscent(fFont),
-                       item->fText.Data(), item->fText.Length());
+                       item->GetText(), item->GetTextLength());
    } else {
       gVirtualX->FillRectangle(id, fHighlightGC,
                           item->fXtext, item->fYtext-pos.fY, width, FontHeight(fFont));
       gVirtualX->DrawString(id, fDrawGC,
                        item->fXtext, item->fYtext-pos.fY + FontAscent(fFont),
-                       item->fText.Data(), item->fText.Length());
+                       item->GetText(), item->GetTextLength());
    }
 
-   if (fColorMode != 0 && item->fHasColor) {
-      gVirtualX->SetForeground(fColorGC, TColor::Number2Pixel(item->fColor));
+   if (fColorMode != 0 && item->HasColor()) {
+      gVirtualX->SetForeground(fColorGC, TColor::Number2Pixel(item->GetColor()));
       if (fColorMode & kColorUnderline) {
          Int_t y = item->fYtext-pos.fY + FontAscent(fFont) + 2;
          gVirtualX->DrawLine(id, fColorGC, item->fXtext, y, item->fXtext + width, y);
       }
       if (fColorMode & kColorBox) {
          Int_t x = item->fXtext + width + 4;
-         Int_t y = item->fYtext-pos.fY  + 3;
+         Int_t y = item->fYtext - pos.fY  + 3;
          Int_t h = FontAscent(fFont)    - 4;
          gVirtualX->FillRectangle(id, fColorGC, x, y, h, h);
          gVirtualX->DrawRectangle(id, fDrawGC,  x, y, h, h);
@@ -1567,7 +1553,7 @@ void TGListTree::DrawNode(Handle_t id, TGListTreeItem *item, Int_t x, Int_t y)
       gVirtualX->DrawLine(id, fHighlightGC, x, yp-2, x, yp+2);
       gVirtualX->SetForeground(fHighlightGC, fgBlackPixel);
       gVirtualX->DrawLine(id, fHighlightGC, x-2, yp, x+2, yp);
-      if (!item->fOpen)
+      if (!item->IsOpen())
          gVirtualX->DrawLine(id, fHighlightGC, x, yp-2, x, yp+2);
       gVirtualX->SetForeground(fHighlightGC, fGrayPixel);
       gVirtualX->DrawLine(id, fHighlightGC, x-4, yp-4, x+4, yp-4);
@@ -1585,6 +1571,8 @@ void TGListTree::SetToolTipText(const char *text, Int_t x, Int_t y, Long_t delay
    // milliseconds (minimum 250). To remove tool tip call method with
    // delayms = 0. To change delayms you first have to call this method
    // with delayms=0.
+
+   // !!!! what's this all about?
 
    if (delayms == 0) {
       delete fTip;
@@ -1679,7 +1667,7 @@ void TGListTree::InsertChild(TGListTreeItem *parent, TGListTreeItem *item)
       }
 
    }
-   if (item->HasCheckBox())
+   if (item->HasCheckBox()) // !!!! only for recursive mode
       UpdateChecked(item);
 }
 
@@ -1730,20 +1718,18 @@ Int_t TGListTree::SearchChildren(TGListTreeItem *item, Int_t y, Int_t findy,
 {
    // Search child item.
 
+   // !!!! What is this doing?
+
    UInt_t height;
    const TGPicture *pic;
 
    while (item) {
-      // Select the pixmap to use, if any
-
-      if (item->fOpen)
-         pic = item->fOpenPic;
-      else
-         pic = item->fClosedPic;
+      // Select the pixmap to use
+      pic = item->GetPicture();
 
       // Compute the height of this line
       height = FontHeight(fFont);
-      if (pic && (pic->GetHeight() > height))
+      if (pic->GetHeight() > height)
          height = pic->GetHeight();
 
       if ((findy >= y) && (findy <= y + (Int_t)height)) {
@@ -1752,7 +1738,7 @@ Int_t TGListTree::SearchChildren(TGListTreeItem *item, Int_t y, Int_t findy,
       }
 
       y += (Int_t)height + fVspacing;
-      if ((item->fFirstchild) && (item->fOpen)) {
+      if (item->fFirstchild && item->IsOpen()) { // !!!! why IsOpen? shouldn't we find all ...
          y = SearchChildren(item->fFirstchild, y, findy, finditem);
          if (*finditem) return -1;
       }
@@ -1778,11 +1764,8 @@ TGListTreeItem *TGListTree::FindItem(Int_t findy)
    item = fFirst;
    finditem = 0;
    while (item && !finditem) {
-      // Select the pixmap to use, if any
-      if (item->fOpen)
-         pic = item->fOpenPic;
-      else
-         pic = item->fClosedPic;
+      // Select the pixmap to use
+      pic = item->GetPicture();
 
       // Compute the height of this line
       height = FontHeight(fFont);
@@ -1793,7 +1776,7 @@ TGListTreeItem *TGListTree::FindItem(Int_t findy)
          return item;
 
       y += (Int_t)height + fVspacing;
-      if ((item->fFirstchild) && (item->fOpen)) {
+      if ((item->fFirstchild) && (item->IsOpen())) { // !!!! again, why IsOpen()
          y = SearchChildren(item->fFirstchild, y, findy, &finditem);
          //if (finditem) return finditem;
       }
@@ -1806,6 +1789,16 @@ TGListTreeItem *TGListTree::FindItem(Int_t findy)
 //----- Public Functions
 
 //______________________________________________________________________________
+void TGListTree::AddItem(TGListTreeItem *parent, TGListTreeItem *item)
+{
+   // Add given item to list tree.
+
+   InsertChild(parent, item);
+
+   DoRedraw();
+}
+
+//______________________________________________________________________________
 TGListTreeItem *TGListTree::AddItem(TGListTreeItem *parent, const char *string,
                                     const TGPicture *open, const TGPicture *closed,
                                     Bool_t checkbox)
@@ -1814,7 +1807,7 @@ TGListTreeItem *TGListTree::AddItem(TGListTreeItem *parent, const char *string,
 
    TGListTreeItem *item;
 
-   item = new TGListTreeItem(fClient, string, open, closed, checkbox);
+   item = new TGListTreeItemStd(fClient, string, open, closed, checkbox);
    InsertChild(parent, item);
 
    DoRedraw();
@@ -1880,7 +1873,7 @@ void TGListTree::OpenItem(TGListTreeItem *item)
    // Open item in list tree (i.e. show child items).
 
    if (item) {
-      item->fOpen = kTRUE;
+      item->SetOpen(kTRUE);
       AdjustPosition(item);
    }
 }
@@ -1891,7 +1884,7 @@ void TGListTree::CloseItem(TGListTreeItem *item)
    // Close item in list tree (i.e. hide child items).
 
    if (item) {
-      item->fOpen = kFALSE;
+      item->SetOpen(kFALSE);
       AdjustPosition(item);
    }
 }
@@ -1903,10 +1896,10 @@ Int_t TGListTree::RecursiveDeleteItem(TGListTreeItem *item, void *ptr)
    // at item.
 
    if (item && ptr) {
-      if (item->fUserData == ptr) {
+      if (item->GetUserData() == ptr) {
          DeleteItem(item);
       } else {
-         if (item->fOpen && item->fFirstchild) {
+         if (item->IsOpen() && item->fFirstchild) {
             RecursiveDeleteItem(item->fFirstchild,  ptr);
          }
          RecursiveDeleteItem(item->fNextsibling, ptr);
@@ -1923,7 +1916,7 @@ void TGListTree::SetToolTipItem(TGListTreeItem *item, const char *string)
    // be used to get the tip text.
 
    if (item) {
-      item->fTipText = string;
+      item->SetTipText(string);
    }
 }
 
@@ -2081,7 +2074,7 @@ TGListTreeItem *TGListTree::FindSiblingByName(TGListTreeItem *item, const char *
       }
 
       while (item) {
-         if (item->fText == name) {
+         if (strcmp(item->GetText(), name) == 0) {
             return item;
          }
          item = item->fNextsibling;
@@ -2103,7 +2096,7 @@ TGListTreeItem *TGListTree::FindSiblingByData(TGListTreeItem *item, void *userDa
       }
 
       while (item) {
-         if (item->fUserData == userData) {
+         if (item->GetUserData() == userData) {
             return item;
          }
          item = item->fNextsibling;
@@ -2128,7 +2121,7 @@ TGListTreeItem *TGListTree::FindChildByName(TGListTreeItem *item, const char *na
    }
 
    while (item) {
-      if (item->fText == name) {
+      if (strcmp(item->GetText(), name) == 0) {
          return item;
       }
       item = item->fNextsibling;
@@ -2151,7 +2144,7 @@ TGListTreeItem *TGListTree::FindChildByData(TGListTreeItem *item, void *userData
    }
 
    while (item) {
-      if (item->fUserData == userData) {
+      if (item->GetUserData() == userData) {
          return item;
       }
       item = item->fNextsibling;
@@ -2236,7 +2229,7 @@ void TGListTree::GetPathnameFromItem(TGListTreeItem *item, char *path, Int_t dep
 
    *path = '\0';
    while (item) {
-      sprintf(tmppath, "/%s%s", item->fText.Data(), path);
+      sprintf(tmppath, "/%s%s", item->GetText(), path);
       strcpy(path, tmppath);
       item = item->fParent;
       if (--depth == 0 && item) {
@@ -2394,10 +2387,8 @@ void TGListTree::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
    TGListTreeItem *current;
    current = GetFirstItem();
 
-   if (current->fOpenPic)
-      out << "   const TGPicture *popen;       //used for list tree items" << endl;
-   if (current->fClosedPic)
-      out << "   const TGPicture *pclose;      //used for list tree items" << endl;
+   out << "   const TGPicture *popen;       //used for list tree items" << endl;
+   out << "   const TGPicture *pclose;      //used for list tree items" << endl;
    out << endl;
 
    while (current) {
@@ -2439,7 +2430,7 @@ void TGListTree::SaveChildren(ostream &out, TGListTreeItem *item, Int_t &n)
 }
 
 //______________________________________________________________________________
-void TGListTreeItem::SavePrimitive(ostream &out, Option_t *option, Int_t n)
+void TGListTreeItemStd::SavePrimitive(ostream &out, Option_t *option, Int_t n)
 {
    // Save a list tree item attributes as a C++ statements on output stream.
 
@@ -2587,7 +2578,7 @@ TGListTreeItem *TGListTree::FindItemByObj(TGListTreeItem *item, void *ptr)
 
    TGListTreeItem *fitem;
    if (item && ptr) {
-      if (item->fUserData == ptr)
+      if (item->GetUserData() == ptr)
          return item;
       else {
          if (item->fFirstchild) {

@@ -74,8 +74,9 @@ void TEveProjectionAxes::ComputeBBox()
 }
 
 //______________________________________________________________________________
-const TGPicture* TEveProjectionAxes::GetListTreeIcon()
+const TGPicture* TEveProjectionAxes::GetListTreeIcon(Bool_t)
 {
-   //return pointset icon
+   // Return TEveProjectionAxes icon.
+
    return TEveElement::fgListTreeIcons[6];
 }

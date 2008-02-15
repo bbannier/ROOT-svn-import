@@ -70,7 +70,7 @@ public:
    virtual void   Paint(Option_t* option="");
    virtual void   ComputeBBox();
 
-   virtual const TGPicture* GetListTreeIcon();
+   virtual const TGPicture* GetListTreeIcon(Bool_t open=kFALSE);
 
    ClassDef(TEveText, 0); // Class for visualisation of text with FTGL font.
 };

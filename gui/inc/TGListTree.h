@@ -46,29 +46,112 @@ class TGCanvas;
 class TList;
 class TBufferFile;
 
-class TGListTreeItem {
-
-friend class TGListTree;
+class TGListTreeItem
+{
+   friend class TGListTree;
 
 private:
+   TGListTreeItem(const TGListTreeItem&);             // not implemented
+   TGListTreeItem& operator=(const TGListTreeItem&);  // not implemented
+
+protected:
    TGClient        *fClient;       // pointer to TGClient
    TGListTreeItem  *fParent;       // pointer to parent
    TGListTreeItem  *fFirstchild;   // pointer to first child item
    TGListTreeItem  *fPrevsibling;  // pointer to previous sibling
    TGListTreeItem  *fNextsibling;  // pointer to next sibling
+
    Bool_t           fOpen;         // true if item is open
+
+   Int_t            fDNDState;     // EDNDFlags
+
+   // State managed by TGListTree during drawing.
+   Int_t            fY;            // y position of item
+   Int_t            fXtext;        // x position of item text
+   Int_t            fYtext;        // y position of item text
+   UInt_t           fHeight;       // item height
+
+public:
+   TGListTreeItem(TGClient *client=gClient);
+   virtual ~TGListTreeItem() {}
+
+   TGListTreeItem *GetParent()      const { return fParent; }
+   TGListTreeItem *GetFirstChild()  const { return fFirstchild; }
+   TGListTreeItem *GetPrevSibling() const { return fPrevsibling; }
+   TGListTreeItem *GetNextSibling() const { return fNextsibling; }
+
+   virtual Bool_t          IsOpen()    const { return fOpen; }
+   virtual void            SetOpen(Bool_t o) { fOpen = o; }
+
+   virtual Bool_t          IsActive() const = 0;
+   virtual Color_t         GetActiveColor() const = 0;
+   virtual void            SetActive(Bool_t) {}
+
+   void                    Rename(const char* new_name) { SetText(new_name); }
+   virtual const char     *GetText() const = 0;
+   virtual Int_t           GetTextLength() const = 0;
+   virtual const char     *GetTipText() const = 0;
+   virtual Int_t           GetTipTextLength() const = 0;
+   virtual void            SetText(const char *) {}
+   virtual void            SetTipText(const char *) {}
+
+   virtual void            SetUserData(void *, Bool_t=kFALSE) {}
+   virtual void           *GetUserData() const = 0;
+
+   virtual const TGPicture*GetPicture() const = 0;
+   virtual void            SetPictures(const TGPicture*, const TGPicture*) {}
+   virtual const TGPicture*GetCheckBoxPicture() const = 0;
+   virtual void            SetCheckBoxPictures(const TGPicture*, const TGPicture*) {}
+   virtual UInt_t          GetPicWidth() const = 0;
+
+   virtual void            SetCheckBox(Bool_t=kTRUE) {}
+   virtual Bool_t          HasCheckBox() const = 0;
+   virtual void            CheckItem(Bool_t=kTRUE) = 0;
+   virtual void            Toggle() { SetCheckBox( ! IsChecked()); }
+   virtual Bool_t          IsChecked() const = 0;
+
+   // Propagation of checked-state form children to parents.
+   virtual void            CheckAllChildren(Bool_t=kTRUE) {}
+   virtual void            CheckChildren(TGListTreeItem*, Bool_t) {}
+   virtual Bool_t          HasCheckedChild(Bool_t=kFALSE)   { return kTRUE; } // !!!!
+   virtual Bool_t          HasUnCheckedChild(Bool_t=kFALSE) { return kTRUE; } // !!!!
+   virtual void            UpdateState() {}
+
+   // Item coloration (underline + minibox)
+   virtual Bool_t          HasColor() const = 0;
+   virtual Color_t         GetColor() const = 0;
+   virtual void            SetColor(Color_t) {}
+   virtual void            ClearColor() {}
+
+   // Drag and drop.
+   void            SetDNDSource(Bool_t onoff)
+                   { if (onoff) fDNDState |= kIsDNDSource; else fDNDState &= ~kIsDNDSource; }
+   void            SetDNDTarget(Bool_t onoff)
+                   { if (onoff) fDNDState |= kIsDNDTarget; else fDNDState &= ~kIsDNDTarget; }
+   Bool_t          IsDNDSource() const { return fDNDState & kIsDNDSource; }
+   Bool_t          IsDNDTarget() const { return fDNDState & kIsDNDTarget; }
+
+   // Allow handling by the items themselves ... NOT USED in TGListTree yet !!!!
+   virtual Bool_t  HandlesDragAndDrop() const { return kFALSE; }
+   virtual void    HandleDrag() {}
+   virtual void    HandleDrop() {}
+
+   virtual void    SavePrimitive(ostream&, Option_t*, Int_t) {}
+
+   ClassDef(TGListTreeItem,0)  // Abstract base-class for items that go into a TGListTree container.
+};
+
+
+class TGListTreeItemStd : public TGListTreeItem
+{
+private:
    Bool_t           fActive;       // true if item is active
    Bool_t           fCheckBox;     // true if checkbox is visible
    Bool_t           fChecked;      // true if item is checked
    Bool_t           fOwnsData;     // true if user data has to be deleted
    TString          fText;         // item text
    TString          fTipText;      // tooltip text
-   Int_t            fY;            // y position of item
-   Int_t            fXtext;        // x position of item text
-   Int_t            fYtext;        // y position of item text
-   UInt_t           fHeight;       // item height
    UInt_t           fPicWidth;     // width of item icon
-   Int_t            fDNDState;     // EDNDFlags
    const TGPicture *fOpenPic;      // icon for open state
    const TGPicture *fClosedPic;    // icon for closed state
    const TGPicture *fCheckedPic;   // icon for checked item
@@ -78,58 +161,55 @@ private:
    Bool_t           fHasColor;     // true if item has assigned color
    Color_t          fColor;        // item's color
 
-   TGListTreeItem(const TGListTreeItem&);             // not implemented
-   TGListTreeItem& operator=(const TGListTreeItem&);  // not implemented
+   TGListTreeItemStd(const TGListTreeItemStd&);             // not implemented
+   TGListTreeItemStd& operator=(const TGListTreeItemStd&);  // not implemented
 
 public:
-   TGListTreeItem(TGClient *fClient = gClient, const char *name = 0,
-                  const TGPicture *opened = 0, const TGPicture *closed = 0,
-                  Bool_t checkbox = kFALSE);
-   virtual ~TGListTreeItem();
+   TGListTreeItemStd(TGClient *fClient = gClient, const char *name = 0,
+                     const TGPicture *opened = 0, const TGPicture *closed = 0,
+                     Bool_t checkbox = kFALSE);
+   virtual ~TGListTreeItemStd();
 
-   void Rename(const char *new_name);
+   virtual Color_t         GetActiveColor() const;
+   virtual Bool_t          IsActive()       const { return fActive; }
+   virtual void            SetActive(Bool_t a)    { fActive = a; }
 
-   TGListTreeItem *GetParent() const { return fParent; }
-   TGListTreeItem *GetFirstChild() const { return fFirstchild; }
-   TGListTreeItem *GetPrevSibling() const { return fPrevsibling; }
-   TGListTreeItem *GetNextSibling() const { return fNextsibling; }
-   Bool_t          IsActive() const { return fActive; }
-   Bool_t          IsOpen() const { return fOpen; }
-   const char     *GetText() const { return fText.Data(); }
-   void            SetTipText(const char *tip) { fTipText = tip; }
-   const char     *GetTipText() const { return fTipText.Data(); }
-   void            SetUserData(void *userData, Bool_t own=kFALSE) { fUserData = userData; fOwnsData=own; }
-   void           *GetUserData() const { return fUserData; }
-   void            SetPictures(const TGPicture *opened, const TGPicture *closed);
-   void            SetCheckBoxPictures(const TGPicture *checked, const TGPicture *unchecked);
+   virtual const char     *GetText()             const { return fText.Data(); }
+   virtual Int_t           GetTextLength()       const { return fText.Length(); }
+   virtual const char     *GetTipText()          const { return fTipText.Data(); }
+   virtual Int_t           GetTipTextLength()    const { return fTipText.Length(); }
+   virtual void            SetText(const char *text)   { fText = text; }
+   virtual void            SetTipText(const char *tip) { fTipText = tip; }
 
-   void            SetCheckBox(Bool_t on = kTRUE);
-   Bool_t          HasCheckBox() const { return fCheckBox; }
-   void            CheckItem(Bool_t checked = kTRUE) { fChecked = checked; }
-   void            Toggle() { fChecked = !fChecked; }
-   Bool_t          IsChecked() const { return fChecked; }
-   void            CheckAllChildren(Bool_t state = kTRUE);
-   void            CheckChildren(TGListTreeItem *item, Bool_t state);
+   virtual void            SetUserData(void *userData, Bool_t own=kFALSE) { fUserData = userData; fOwnsData=own; }
+   virtual void           *GetUserData() const { return fUserData; }
 
-   Bool_t          HasCheckedChild(Bool_t first=kFALSE);
-   Bool_t          HasUnCheckedChild(Bool_t first=kFALSE);
-   void            UpdateState();
+   virtual const TGPicture*GetPicture()         const { return fOpen ? fOpenPic : fClosedPic; }
+   virtual const TGPicture*GetCheckBoxPicture() const { return fCheckBox ? (fChecked ? fCheckedPic : fUncheckedPic) : 0; }
+   virtual void            SetPictures(const TGPicture *opened, const TGPicture *closed);
+   virtual void            SetCheckBoxPictures(const TGPicture *checked, const TGPicture *unchecked);
+   virtual UInt_t          GetPicWidth() const { return fPicWidth; }
 
-   Color_t         GetColor() const { return fColor; }
-   void            SetColor(Color_t color) { fHasColor = true;fColor = color; }
-   void            ClearColor() { fHasColor = false; }
+   virtual void            SetCheckBox(Bool_t on = kTRUE);
+   virtual Bool_t          HasCheckBox() const { return fCheckBox; }
+   virtual void            CheckItem(Bool_t checked = kTRUE) { fChecked = checked; }
+   virtual void            Toggle() { fChecked = !fChecked; }
+   virtual Bool_t          IsChecked() const { return fChecked; }
 
-   // drag and drop...
-   void            SetDNDSource(Bool_t onoff)
-                   { if (onoff) fDNDState |= kIsDNDSource; else fDNDState &= ~kIsDNDSource; }
-   void            SetDNDTarget(Bool_t onoff)
-                   { if (onoff) fDNDState |= kIsDNDTarget; else fDNDState &= ~kIsDNDTarget; }
-   Bool_t          IsDNDSource() const { return fDNDState & kIsDNDSource; }
-   Bool_t          IsDNDTarget() const { return fDNDState & kIsDNDTarget; }
+   virtual void            CheckAllChildren(Bool_t state = kTRUE);
+   virtual void            CheckChildren(TGListTreeItem *item, Bool_t state);
+   virtual Bool_t          HasCheckedChild(Bool_t first=kFALSE);
+   virtual Bool_t          HasUnCheckedChild(Bool_t first=kFALSE);
+   virtual void            UpdateState();
 
-   void            SavePrimitive(ostream &out, Option_t *option, Int_t n);
+   virtual Bool_t          HasColor() const { return fHasColor; }
+   virtual Color_t         GetColor() const { return fColor; }
+   virtual void            SetColor(Color_t color) { fHasColor = true;fColor = color; }
+   virtual void            ClearColor() { fHasColor = false; }
 
-   ClassDef(TGListTreeItem,0)  //Item that goes into a TGListTree container
+   virtual void            SavePrimitive(ostream &out, Option_t *option, Int_t n);
+
+   ClassDef(TGListTreeItemStd,0)  //Item that goes into a TGListTree container
 };
 
 
@@ -250,6 +330,7 @@ public:
    virtual TGDimension GetDefaultSize() const
             { return TGDimension(fDefw, fDefh); }
 
+   void            AddItem(TGListTreeItem *parent, TGListTreeItem *item);
    TGListTreeItem *AddItem(TGListTreeItem *parent, const char *string,
                            const TGPicture *open = 0,
                            const TGPicture *closed = 0,

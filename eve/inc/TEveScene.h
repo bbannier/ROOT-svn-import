@@ -54,7 +54,7 @@ public:
    void DestroyElementRenderers(TEveElement* element);
    void DestroyElementRenderers(TObject* rnrObj);
 
-   virtual const TGPicture* GetListTreeIcon();
+   virtual const TGPicture* GetListTreeIcon(Bool_t open=kFALSE);
 
    ClassDef(TEveScene, 0); // Reve representation of TGLScene.
 };
