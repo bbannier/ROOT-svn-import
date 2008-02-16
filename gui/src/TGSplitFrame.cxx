@@ -116,8 +116,8 @@ void TGSplitFrame::VSplit(UInt_t w)
 }
 
 //______________________________________________________________________________
-void TGSplitFrame::SwitchFrames(TGCompositeFrame *frame, TGCompositeFrame *dest,
-                                TGCompositeFrame *prev)
+void TGSplitFrame::SwitchFrames(TGFrame *frame, TGCompositeFrame *dest,
+                                TGFrame *prev)
 {
    // Switch (exchange) two frames.
    // frame is the source, dest is the destination (the new parent)
