@@ -81,18 +81,18 @@ void TEveListTreeItem::NotSupported(const char* func) const
 }
 
 //______________________________________________________________________________
-Color_t TEveListTreeItem::GetActiveColor() const
+Pixel_t TEveListTreeItem::GetActiveColor() const
 {
    // Return highlight color corresponding to current state of TEveElement.
 
    switch (fElement->GetSelectedLevel())
    {
-      case 1: return kBlue - 2;
-      case 2: return kBlue - 6;
-      case 3: return kCyan - 2;
-      case 4: return kCyan - 6;
+      case 1: return TColor::Number2Pixel(kBlue - 2);
+      case 2: return TColor::Number2Pixel(kBlue - 6);
+      case 3: return TColor::Number2Pixel(kCyan - 2);
+      case 4: return TColor::Number2Pixel(kCyan - 6);
    }
-   return 0;
+   return TGFrame::GetDefaultSelectedBackground();
 }
 
 //______________________________________________________________________________
@@ -101,7 +101,8 @@ UInt_t TEveListTreeItem::GetPicWidth() const
    // Return positioning offset for magick in TGListTree::DrawItem().
    // !!!! Needs to be fixed there ...
 
-   return GetPicture()->GetWidth() + GetCheckBoxPicture()->GetWidth();
+//   return GetPicture()->GetWidth() + GetCheckBoxPicture()->GetWidth();
+   return GetPicture()->GetWidth();
 }
 
 
