@@ -143,11 +143,7 @@ TGListTreeItemStd::TGListTreeItemStd(TGClient *client, const char *name,
    fCheckedPic   = fClient->GetPicture("checked_t.xpm");
    fUncheckedPic = fClient->GetPicture("unchecked_t.xpm");
 
-   if (fCheckBox)
-      fPicWidth  = TMath::Max(fCheckedPic->GetWidth() + fOpenPic->GetWidth(),
-                              fCheckedPic->GetWidth() + fClosedPic->GetWidth());
-   else
-      fPicWidth  = TMath::Max(fOpenPic->GetWidth(), fClosedPic->GetWidth());
+   fPicWidth  = TMath::Max(fOpenPic->GetWidth(), fClosedPic->GetWidth());
 
    fActive = kFALSE;
 
@@ -175,11 +171,11 @@ TGListTreeItemStd::~TGListTreeItemStd()
 }
 
 //______________________________________________________________________________
-Color_t TGListTreeItemStd::GetActiveColor() const
+Pixel_t TGListTreeItemStd::GetActiveColor() const
 {
    // Return color for marking items that are active or selected.
 
-   return fClient->GetResourcePool()->GetSelectedBgndColor();
+   return TGFrame::GetDefaultSelectedBackground();
 }
 
 //______________________________________________________________________________
@@ -291,11 +287,7 @@ void TGListTreeItemStd::SetCheckBox(Bool_t on)
    // Set a check box on the tree node.
 
    fCheckBox = on;
-   if (fCheckBox)
-      fPicWidth  = TMath::Max(fCheckedPic->GetWidth() + fOpenPic->GetWidth(),
-                              fCheckedPic->GetWidth() + fClosedPic->GetWidth());
-   else
-      fPicWidth  = TMath::Max(fOpenPic->GetWidth(), fClosedPic->GetWidth());
+   fPicWidth  = TMath::Max(fOpenPic->GetWidth(), fClosedPic->GetWidth());
 }
 
 //___________________________________________________________________________
@@ -568,12 +560,10 @@ Bool_t TGListTree::HandleButton(Event_t *event)
             Int_t minx, maxx;
             Int_t minxchk = 0, maxxchk = 0;
             if (item->HasCheckBox()) {
-               minxchk = (item->fXtext - Int_t(item->GetPicWidth()));
-               // !!!! GetCheckBoxPicture()->GetWidth() was checked-box-width
-               maxxchk = (item->fXtext - Int_t(item->GetPicWidth())) +
-                  Int_t(item->GetCheckBoxPicture()->GetWidth()) - 4;
-               maxx = maxxchk - 8;
-               minx = minxchk - 16;
+               minxchk = (item->fXtext - item->GetCheckBoxPicture()->GetWidth());
+               maxxchk = (item->fXtext - 4);
+               maxx = maxxchk - Int_t(item->GetPicWidth()) - 8;
+               minx = minxchk - Int_t(item->GetPicWidth()) - 16;
             }
             else {
                maxx = (item->fXtext - Int_t(item->GetPicWidth())) - 8;
@@ -762,10 +752,8 @@ Bool_t TGListTree::HandleMotion(Event_t *event)
    } else if ((item = FindItem(event->fY)) != 0) {
 
       if (item->HasCheckBox()) {
-         // !!!! was item->fCheckedPic->GetWidth()
-         if ((event->fX < (item->fXtext - Int_t(item->GetPicWidth())) +
-              Int_t(item->GetCheckBoxPicture()->GetWidth()) - 4) &&
-             (event->fX > (item->fXtext - Int_t(item->GetPicWidth()))))
+         if ((event->fX < (item->fXtext - 4) &&
+             (event->fX > (item->fXtext - (Int_t)item->GetCheckBoxPicture()->GetWidth()))))
          {
             gVirtualX->SetCursor(fId, gVirtualX->CreateCursor(kPointer));
             return kTRUE;
@@ -830,7 +818,7 @@ Bool_t TGListTree::HandleMotion(Event_t *event)
       if (item->GetTipTextLength() > 0) {
 
          SetToolTipText(item->GetTipText(), item->fXtext,
-                        item->fY -pos.fY +item->fHeight -4, 1000);
+                        item->fY - pos.fY + item->fHeight - 4, 1000);
 
       } else if (fAutoTips && item->GetUserData()) {
          // must derive from TObject (in principle user can put pointer
@@ -838,7 +826,7 @@ Bool_t TGListTree::HandleMotion(Event_t *event)
          TObject *obj = (TObject *)item->GetUserData();
          if (obj->InheritsFrom(TObject::Class())) {
             SetToolTipText(obj->GetTitle(), item->fXtext,
-                           item->fY -pos.fY +item->fHeight -4, 1000);
+                           item->fY - pos.fY + item->fHeight - 4, 1000);
          }
       }
       fTipItem = item;
@@ -1161,13 +1149,13 @@ void TGListTree::LineUp(Bool_t /*select*/)
 
    Int_t height;
 
-   const  TGPicture*pic2 = fSelected->GetPicture();
+   const  TGPicture*pic1 = fSelected->GetPicture();
 
    if (fSelected->HasCheckBox()){
-      const TGPicture *pic1 = fSelected->GetCheckBoxPicture();
-      height  = TMath::Max(pic2->GetHeight() + fVspacing, pic1->GetHeight() + fVspacing);
+      const TGPicture *pic2 = fSelected->GetCheckBoxPicture();
+      height  = TMath::Max(pic1->GetHeight() + fVspacing, pic2->GetHeight() + fVspacing);
    } else {
-      height = pic2->GetHeight() + fVspacing;
+      height = pic1->GetHeight() + fVspacing;
    }
 
    Int_t newpos = fCanvas->GetVsbPosition() - height;
@@ -1185,13 +1173,13 @@ void TGListTree::LineDown(Bool_t /*select*/)
 
    Int_t height;
 
-   const  TGPicture*pic2 = fSelected->GetPicture();
+   const  TGPicture*pic1 = fSelected->GetPicture();
 
    if (fSelected->HasCheckBox()){
-      const TGPicture *pic1 = fSelected->GetCheckBoxPicture();
-      height  = TMath::Max(pic2->GetHeight() + fVspacing, pic1->GetHeight() + fVspacing);
+      const TGPicture *pic2 = fSelected->GetCheckBoxPicture();
+      height  = TMath::Max(pic1->GetHeight() + fVspacing, pic2->GetHeight() + fVspacing);
    } else {
-      height = pic2->GetHeight() + fVspacing;
+      height = pic1->GetHeight() + fVspacing;
    }
 
    Int_t newpos = fCanvas->GetVsbPosition() + height;
@@ -1397,33 +1385,17 @@ void TGListTree::DrawItem(Handle_t id, TGListTreeItem *item, Int_t x, Int_t y,
 {
    // Draw list tree item.
 
-   Int_t  xpic2, ypic2, xbranch, ybranch, xtext, ytext, xline, yline, xc;
-   Int_t  xpic1 = 0, ypic1 = 0;
+   Int_t  xpic1, ypic1, xbranch, ybranch, xtext, ytext, xline, yline, xc;
+   Int_t  xpic2 = 0, ypic2 = 0;
    UInt_t height;
-   const TGPicture *pic1 = item->GetCheckBoxPicture();
-   const TGPicture *pic2 = item->GetPicture();
+   const TGPicture *pic1 = item->GetPicture();
+   const TGPicture *pic2 = item->GetCheckBoxPicture();
 
    // Compute the height of this line
    height = FontHeight(fFont);
-   xpic2 = x;
+   xline = 0;
+   xpic1 = x;
    xtext = x + fHspacing + (Int_t)item->GetPicWidth();
-   if (pic1) {
-      if (pic1->GetHeight() > height) {
-         ytext = y + (Int_t)((pic1->GetHeight() - height) >> 1);
-         height = pic1->GetHeight();
-         ypic1 = y;
-      } else {
-         ytext = y;
-         ypic1 = y + (Int_t)((height - pic1->GetHeight()) >> 1);
-      }
-      xpic1 = x;
-      xpic2 = xpic1 + pic1->GetWidth();
-      xline = xpic1;
-   } else {
-      xpic2 = x;
-      ypic2 = y;
-      xline = 0;
-   }
    if (pic2) {
       if (pic2->GetHeight() > height) {
          ytext = y + (Int_t)((pic2->GetHeight() - height) >> 1);
@@ -1433,16 +1405,31 @@ void TGListTree::DrawItem(Handle_t id, TGListTreeItem *item, Int_t x, Int_t y,
          ytext = y;
          ypic2 = y + (Int_t)((height - pic2->GetHeight()) >> 1);
       }
-      xbranch = xpic2 + (Int_t)(pic2->GetWidth() >> 1);
-      ybranch = ypic2 + (Int_t)pic2->GetHeight();
-      yline = ypic2 + (Int_t)(pic2->GetHeight() >> 1);
-      if (xline == 0) xline = xpic2;
+      xpic2 = xpic1 + pic1->GetWidth() + 2;
+      xtext += pic2->GetWidth();
    } else {
-      if (xline == 0) xline = xpic2;
-      ypic2 = ytext = y;
-      xbranch = xpic2 + (Int_t)(item->GetPicWidth() >> 1);
-      yline = ybranch = ypic2 + (Int_t)(height >> 1);
-      yline = ypic2 + (Int_t)(height >> 1);
+      ypic1 = y;
+      xline = 0;
+   }
+   if (pic1) {
+      if (pic1->GetHeight() > height) {
+         ytext = y + (Int_t)((pic1->GetHeight() - height) >> 1);
+         height = pic1->GetHeight();
+         ypic1 = y;
+      } else {
+         ytext = y;
+         ypic1 = y + (Int_t)((height - pic1->GetHeight()) >> 1);
+      }
+      xbranch = xpic1 + (Int_t)(pic1->GetWidth() >> 1);
+      ybranch = ypic1 + (Int_t)pic1->GetHeight();
+      yline = ypic1 + (Int_t)(pic1->GetHeight() >> 1);
+      if (xline == 0) xline = xpic1;
+   } else {
+      if (xline == 0) xline = xpic1;
+      ypic1 = ytext = y;
+      xbranch = xpic1 + (Int_t)(item->GetPicWidth() >> 1);
+      yline = ybranch = ypic1 + (Int_t)(height >> 1);
+      yline = ypic1 + (Int_t)(height >> 1);
    }
 
    // height must be even, otherwise our dashed line wont appear properly
@@ -1460,7 +1447,7 @@ void TGListTree::DrawItem(Handle_t id, TGListTreeItem *item, Int_t x, Int_t y,
    Int_t yp        = y       - pos.fY;
    Int_t ylinep    = yline   - pos.fY;
    Int_t ybranchp  = ybranch - pos.fY;
-   Int_t ypicp     = ypic2   - pos.fY;
+   Int_t ypicp     = ypic1   - pos.fY;
 
    if ((yp >= fExposeTop) && (yp <= (Int_t)dim.fHeight))
    {
@@ -1481,16 +1468,16 @@ void TGListTree::DrawItem(Handle_t id, TGListTreeItem *item, Int_t x, Int_t y,
             }
             p = p->fParent;
          }
-         gVirtualX->DrawLine(id, fLineGC, *xroot, ylinep, xline /*xpic2*/ /*xbranch*/, ylinep);
+         gVirtualX->DrawLine(id, fLineGC, *xroot, ylinep, xpic1, ylinep);
          DrawNode(id, item, *xroot, yline);
       }
       if (item->IsOpen() && item->fFirstchild) {
-         gVirtualX->DrawLine(id, fLineGC, xbranch, ybranchp/*yline*/,
-                             xbranch, yp+height);
+         gVirtualX->DrawLine(id, fLineGC, xbranch, ybranchp, xbranch, 
+                             yp+height);
       }
-      if (pic1)
-         pic1->Draw(id, fDrawGC, xpic1, ypicp);
-      pic2->Draw(id, fDrawGC, xpic2, ypicp);
+      pic1->Draw(id, fDrawGC, xpic1, ypicp);
+      if (pic2)
+         pic2->Draw(id, fDrawGC, xpic2, ypicp);
       DrawItemName(id, item);
    }
 
@@ -1510,16 +1497,18 @@ void TGListTree::DrawItemName(Handle_t id, TGListTreeItem *item)
    width = FontTextWidth(fFont, item->GetText());
    // !!!! should make something different for selected.
    if (item->IsActive() || item == fSelected) {
+      // bb: to be fixed!! Very strange behaviour...
+//      gVirtualX->SetForeground(fDrawGC, fgDefaultSelectedBackground);
       gVirtualX->SetForeground(fDrawGC, item->GetActiveColor());
-      gVirtualX->FillRectangle(id, fDrawGC,
-                          item->fXtext, item->fYtext-pos.fY, width, FontHeight(fFont));
+      gVirtualX->FillRectangle(id, fDrawGC, item->fXtext, 
+                       item->fYtext-pos.fY, width, FontHeight(fFont));
       gVirtualX->SetForeground(fDrawGC, fgBlackPixel);
       gVirtualX->DrawString(id, fHighlightGC,
                        item->fXtext, item->fYtext - pos.fY + FontAscent(fFont),
                        item->GetText(), item->GetTextLength());
    } else {
-      gVirtualX->FillRectangle(id, fHighlightGC,
-                          item->fXtext, item->fYtext-pos.fY, width, FontHeight(fFont));
+      gVirtualX->FillRectangle(id, fHighlightGC, item->fXtext, 
+                       item->fYtext-pos.fY, width, FontHeight(fFont));
       gVirtualX->DrawString(id, fDrawGC,
                        item->fXtext, item->fYtext-pos.fY + FontAscent(fFont),
                        item->GetText(), item->GetTextLength());

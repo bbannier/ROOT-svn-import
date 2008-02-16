@@ -41,7 +41,7 @@ public:
    virtual ~TEveListTreeItem() {}
 
    virtual Bool_t          IsActive()       const { return fElement->GetSelectedLevel() != 0; }
-   virtual Color_t         GetActiveColor() const;
+   virtual Pixel_t         GetActiveColor() const;
    virtual void            SetActive(Bool_t)      { NotSupported("SetActive"); }
 
    virtual const char     *GetText()          const { return fElement->GetElementName(); }

@@ -84,7 +84,7 @@ public:
    virtual void            SetOpen(Bool_t o) { fOpen = o; }
 
    virtual Bool_t          IsActive() const = 0;
-   virtual Color_t         GetActiveColor() const = 0;
+   virtual Pixel_t         GetActiveColor() const = 0;
    virtual void            SetActive(Bool_t) {}
 
    void                    Rename(const char* new_name) { SetText(new_name); }
@@ -170,7 +170,7 @@ public:
                      Bool_t checkbox = kFALSE);
    virtual ~TGListTreeItemStd();
 
-   virtual Color_t         GetActiveColor() const;
+   virtual Pixel_t         GetActiveColor() const;
    virtual Bool_t          IsActive()       const { return fActive; }
    virtual void            SetActive(Bool_t a)    { fActive = a; }
 
