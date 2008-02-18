@@ -691,8 +691,17 @@ TGFileBrowser* TEveBrowser::MakeFileBrowser()
    TBrowserImp    imp;
    TBrowser      *tb = new TBrowser("Pipi", "Strel", &imp);
    TGFileBrowser *fb = new TGFileBrowser(gClient->GetRoot(), tb, 200, 500);
-   tb->SetBrowserImp((TBrowserImp *)fb);
+//   tb->SetBrowserImp((TBrowserImp *)fb);
+   tb->SetBrowserImp((TBrowserImp *)this);
    fb->SetBrowser(tb);
    fb->SetNewBrowser(this);
+   gROOT->GetListOfBrowsers()->Remove(tb);
    return fb;
+}
+//______________________________________________________________________________
+void TEveBrowser::ReallyDelete()
+{
+   // Really delete the browser and the this GUI.
+
+   delete this;    // will in turn delete this object
 }

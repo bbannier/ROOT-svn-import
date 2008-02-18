@@ -239,6 +239,10 @@ TGLSAViewer::~TGLSAViewer()
 
    fGedEditor->DisconnectFromCanvas();
 
+   if (fEventHandler) {
+      fGLWindow->SetEventHandler(0);
+      delete fEventHandler;
+   }
    delete fHelpMenu;
    delete fCameraMenu;
    delete fFileSaveMenu;

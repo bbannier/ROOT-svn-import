@@ -45,6 +45,10 @@ TGLEmbeddedViewer::~TGLEmbeddedViewer()
    // Destroy standalone viewer object.
 
 //   delete fGLArea;
+   if (fEventHandler) {
+      fGLWindow->SetEventHandler(0);
+      delete fEventHandler;
+   }
    delete fFrame;
 }
 
