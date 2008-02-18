@@ -147,9 +147,6 @@ TRint::TRint(const char *appClassName, Int_t *argc, char **argv, void *options,
       PrintLogo(lite);
    }
 
-   // 30-05-07 (stub-less calss)
-   // Move this to TApplication to fullfil the dependancy when registering TDictionary
-   /*
    // Load some frequently used includes
    Int_t includes = gEnv->GetValue("Rint.Includes", 1);
    // When the interactive ROOT starts, it can automatically load some frequently
@@ -173,7 +170,6 @@ TRint::TRint(const char *appClassName, Int_t *argc, char **argv, void *options,
                                                    // and CINT will not be able to properly unload these files
       }
    }
-   */
 
    // Disallow the interpretation of Rtypes.h, TError.h and TGenericClassInfo.h
    ProcessLine("#define ROOT_Rtypes 0", kTRUE);
