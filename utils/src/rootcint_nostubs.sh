@@ -29,7 +29,7 @@ and must be before the -f flags
 For more extensive help type: utils/src/rootcint -h"
 
 # Getopt call
-TEMP=`getopt -a -o vlf:chI:p --long tmp,cint,reflex,gccxml,v0,v1,v2,v3,v4,symbols-file:,lib-list-prefix=: \
+TEMP=`getopt -a -o vlf:chI:p --long DG__API,tmp,cint,reflex,gccxml,v0,v1,v2,v3,v4,symbols-file:,lib-list-prefix=: \
      -n 'rootcint' -- "$@"`
 
 # Wrong usage
