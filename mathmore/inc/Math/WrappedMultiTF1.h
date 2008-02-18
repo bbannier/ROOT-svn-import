@@ -85,7 +85,7 @@ public:
        Clone the wrapper but not the original function
    */
    IMultiGenFunction * Clone() const { 
-      return new WrappedMultiTF1(*fFunc); 
+      return new WrappedMultiTF1(*this); 
    } 
 
    /// function dimension

@@ -59,15 +59,20 @@ void FFT()
    c1_1->cd();
 
    //A function to sample
-   TF1 *fsin = new TF1("fsin", "sin(x)+sin(2*x)+sin(0.5*x)+1", 0, 4*TMath::Pi());
+   //TF1 *fsin = new TF1("fsin", "sin(x)+sin(2*x)+sin(0.5*x)+1", 0, 4*TMath::Pi());
+   double xmax = 10*TMath::Pi(); 
+   TF1 *fsin = new TF1("fsin", "sin(x) + 0.5 * sin(2.*x) + 2.* sin( 0.5 * x) ", 0, xmax);
    fsin->Draw();
-   Int_t n=25;
-   TH1D *hsin = new TH1D("hsin", "hsin", n+1, 0, 4*TMath::Pi());
+   Int_t n=100;
+   TH1D *hsin = new TH1D("hsin", "hsin", n+1, 0, xmax);
    Double_t x;
    //Fill the histogram with function values
    for (Int_t i=0; i<=n; i++){
-      x = (Double_t(i)/n)*(4*TMath::Pi());
-      hsin->SetBinContent(i+1, fsin->Eval(x));
+      x = (Double_t(i)/n)*(xmax);
+      if (i > 40 && i <  60) 
+//      if ( i < 10 || i > 90) 
+//      hsin->SetBinContent(i+1, fsin->Eval(x));
+         hsin->SetBinContent(i+1,1.);
    }
    hsin->Draw("same");
    fsin->GetXaxis()->SetLabelSize(0.05);
@@ -83,7 +88,7 @@ void FFT()
    c1_3->cd();
    //Look at the phase of the output
    TH1 *hp = 0;
-   hp = hsin->FFT(hp, "PH");
+   hp = hsin->FFT(hp, "RE");
    hp->Draw();
    hp->SetStats(kFALSE);
    hp->GetXaxis()->SetLabelSize(0.05);

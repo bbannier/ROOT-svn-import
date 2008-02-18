@@ -32,7 +32,6 @@
 
 // CINT
 #include "Api.h"
-#include "../cint/src/common.h"
 
 // Standard
 #include <stdexcept>
@@ -128,7 +127,6 @@ namespace {
 //____________________________________________________________________________
    PyObject* PyStyleIndex( PyObject* self, PyObject* index )
    {
-   // TODO: verify and perhaps fix this to use PyInt_AsSsize_t
       Py_ssize_t idx = PyInt_AsSsize_t( index );
       if ( idx == (Py_ssize_t)-1 && PyErr_Occurred() )
          return 0;
@@ -455,8 +453,7 @@ namespace {
          Py_DECREF( found );
       }
 
-   // TODO: verify and perhaps fix this to use PyInt_FromSsize_t
-      return PyLong_FromLong( (Long_t)count );
+      return PyInt_FromSsize_t( count );
    }
 
 
@@ -530,11 +527,10 @@ namespace {
             oseq->RemoveAt( (Int_t)i );
          }
 
-      // TODO: verify and perhaps fix this to use Py_ssize_t in the loop
          for ( Py_ssize_t i = 0; i < PySequence_Size( obj ); ++i ) {
             ObjectProxy* item = (ObjectProxy*)PySequence_GetItem( obj, i );
             item->Release();
-            oseq->AddAt( (TObject*) item->GetObject(), i + start );
+            oseq->AddAt( (TObject*) item->GetObject(), (Int_t)(i + start) );
             Py_DECREF( item );
          }
 
@@ -618,8 +614,7 @@ namespace {
 
          args = PyTuple_New( 2 );
          PyTuple_SET_ITEM( args, 0, self );
-      // TODO: verify and perhaps fix to use PyInt_FromSsize_t
-         PyTuple_SET_ITEM( args, 1, PyLong_FromLong( (Long_t)PySequence_Size( self ) - 1 ) );
+         PyTuple_SET_ITEM( args, 1, PyInt_FromSsize_t( PySequence_Size( self ) - 1 ) );
       }
 
       return callSelfIndex( args, "RemoveAt" );
@@ -762,8 +757,7 @@ namespace {
          Py_ssize_t start, stop, step;
          PySlice_GetIndices( index, PyObject_Length( (PyObject*)self ), &start, &stop, &step );
          for ( Py_ssize_t i = start; i < stop; i += step ) {
-         // TODO: verify and perhaps fix to use PyInt_FromSsize_t
-            PyObject* pyidx = PyInt_FromLong( (Long_t)i );
+            PyObject* pyidx = PyInt_FromSsize_t( i );
             CallPyObjMethod( nseq, "push_back", CallPyObjMethod( (PyObject*)self, "_vector__at", pyidx ) );
             Py_DECREF( pyidx );
          }
@@ -780,16 +774,8 @@ namespace {
       PyObject* iter = CallPySelfMethod( args, "begin", "O" );
       if ( iter ) {
          PyObject* end = CallPySelfMethod( args, "end", "O" );
-         if ( end ) {
-            if ( *(void**)((ObjectProxy*)end)->fObject == *(void**)((ObjectProxy*)iter)->fObject ) {
-            // no iter if there are no entries
-               Py_DECREF( iter );
-               iter = 0;
-               PyErr_SetString( PyExc_StopIteration, "" );
-            } else {
-               PyObject_SetAttrString( iter, const_cast< char* >( "end" ), end );
-            }
-         }
+         if ( end )
+            PyObject_SetAttrString( iter, const_cast< char* >( "end" ), end );
          Py_XDECREF( end );
       }
       return iter;
@@ -873,8 +859,7 @@ namespace {
       PyObject* data = CallPyObjMethod( PyTuple_GET_ITEM( args, 0 ), "GetName" );
       Py_ssize_t size = PySequence_Size( data );
       Py_DECREF( data );
-   // TODO: verify and perhaps fix to use PyInt_FromSsize_t
-      return PyInt_FromLong( (Long_t)size );
+      return PyInt_FromSsize_t( size );
    }
 
 
@@ -925,26 +910,31 @@ namespace {
          return 0;
 
       PyObject* next = 0;
-
       PyObject* last = PyObject_GetAttrString( self, const_cast< char* >( "end" ) );
+
       if ( last != 0 ) {
-         PyObject* dummy = PyInt_FromLong( 1l );
-         PyObject* iter = CallPyObjMethod( self, "__postinc__", dummy );
-         Py_DECREF( dummy );
-         if ( iter != 0 ) {
-            if ( *(void**)((ObjectProxy*)last)->fObject == *(void**)((ObjectProxy*)iter)->fObject )
-               PyErr_SetString( PyExc_StopIteration, "" );
-            else
-               next = CallPyObjMethod( iter, "__deref__" );
-         } else {
+      // handle special case of empty container (i.e. self is end)
+         if ( *(void**)((ObjectProxy*)last)->fObject == *(void**)((ObjectProxy*)self)->fObject ) {
             PyErr_SetString( PyExc_StopIteration, "" );
+         } else {
+            PyObject* dummy = PyInt_FromLong( 1l );
+            PyObject* iter = CallPyObjMethod( self, "__postinc__", dummy );
+            Py_DECREF( dummy );
+            if ( iter != 0 ) {
+               if ( *(void**)((ObjectProxy*)last)->fObject == *(void**)((ObjectProxy*)iter)->fObject )
+                  PyErr_SetString( PyExc_StopIteration, "" );
+               else
+                  next = CallPyObjMethod( iter, "__deref__" );
+            } else {
+               PyErr_SetString( PyExc_StopIteration, "" );
+            }
+            Py_XDECREF( iter );
          }
-         Py_XDECREF( iter );
       } else {
          PyErr_SetString( PyExc_StopIteration, "" );
       }
-      Py_XDECREF( last );
 
+      Py_XDECREF( last );
       return next;
    }
 
@@ -1279,39 +1269,29 @@ namespace {
    using namespace PyROOT;
 
 //- TFN behaviour ------------------------------------------------------------
-   typedef std::pair< PyObject*, int > CallInfo_t;
-
    int TFNPyCallback( G__value* res, G__CONST char*, struct G__param* libp, int hash )
    {
       PyObject* result = 0;
 
    // retrieve function information
-      G__ifunc_table* ifunc = 0;
-      long index = 0;
+      Long_t npar = 0;
+      PyObject* pyfunc = PyROOT::Utility::GetInstalledMethod( res->tagnum, &npar );
+      if ( ! pyfunc )
+         return 0;
 
-   // from cint/src/common.h
-#define G__RECMEMFUNCENV      (long)0x7fff0036
-      G__CurrentCall( G__RECMEMFUNCENV, &ifunc, &index );
+   // prepare arguments and call
+      PyObject* arg1 = BufFac_t::Instance()->PyBuffer_FromMemory(
+         (double*)G__int(libp->para[0]), 4 );
 
-      G__MethodInfo mi; mi.Init((long)ifunc, index, 0);
-      CallInfo_t* ci = (CallInfo_t*)mi.GetUserParam();
+      if ( npar != 0 ) {
+         PyObject* arg2 = BufFac_t::Instance()->PyBuffer_FromMemory(
+            (double*)G__int(libp->para[1]), npar );
+         result = PyObject_CallFunction( pyfunc, (char*)"OO", arg1, arg2 );
+         Py_DECREF( arg2 );
+      } else
+         result = PyObject_CallFunction( pyfunc, (char*)"O", arg1 );
 
-      if ( ci->first != 0 ) {
-      // prepare arguments and call
-         PyObject* arg1 = BufFac_t::Instance()->PyBuffer_FromMemory(
-            (double*)G__int(libp->para[0]), 4 );
-
-         if ( ci->second != 0 ) {
-            PyObject* arg2 = BufFac_t::Instance()->PyBuffer_FromMemory(
-               (double*)G__int(libp->para[1]), ci->second );
-
-            result = PyObject_CallFunction( ci->first, (char*)"OO", arg1, arg2 );
-            Py_DECREF( arg2 );
-         } else
-            result = PyObject_CallFunction( ci->first, (char*)"O", arg1 );
-
-         Py_DECREF( arg1 );
-      }
+      Py_DECREF( arg1 );
 
    // translate result, throw if an error has occurred
       double d = 0.;
@@ -1333,35 +1313,30 @@ namespace {
       PyObject* result = 0;
 
    // retrieve function information
-      G__ifunc_table* ifunc = 0;
-      long index = 0;
-      G__CurrentCall( G__RECMEMFUNCENV, &ifunc, &index );
+      PyObject* pyfunc = PyROOT::Utility::GetInstalledMethod( res->tagnum );
+      if ( ! pyfunc )
+         return 0;
 
-      G__MethodInfo mi; mi.Init((long)ifunc, index, 0);
-      PyObject* pyfunc = (PyObject*)mi.GetUserParam();
-
-      if ( pyfunc != 0 ) {
-      // prepare arguments
-         PyObject* arg1 = BufFac_t::Instance()->PyBuffer_FromMemory(
-            (Int_t*)G__int(libp->para[0]), 1 );
-         int npar = G__int(libp->para[0]);
+   // prepare arguments
+      PyObject* arg1 = BufFac_t::Instance()->PyBuffer_FromMemory(
+         (Int_t*)G__int(libp->para[0]), 1 );
+      int npar = G__int(libp->para[0]);
  
-         PyObject* arg2 = BufFac_t::Instance()->PyBuffer_FromMemory(
-            (Double_t*)G__int(libp->para[1]), npar );
+      PyObject* arg2 = BufFac_t::Instance()->PyBuffer_FromMemory(
+         (Double_t*)G__int(libp->para[1]), npar );
 
-         PyObject* arg3 = PyList_New( 1 );
-         PyList_SetItem( arg3, 0, PyFloat_FromDouble( G__double(libp->para[2]) ) );
+      PyObject* arg3 = PyList_New( 1 );
+      PyList_SetItem( arg3, 0, PyFloat_FromDouble( G__double(libp->para[2]) ) );
 
-         PyObject* arg4 = BufFac_t::Instance()->PyBuffer_FromMemory(
-            (Double_t*)G__int(libp->para[3]), npar );
+      PyObject* arg4 = BufFac_t::Instance()->PyBuffer_FromMemory(
+         (Double_t*)G__int(libp->para[3]), npar );
 
-      // perform actual call
-         result = PyObject_CallFunction( pyfunc, (char*)"OOOOi",
-            arg1, arg2, arg3, arg4, (int)G__int(libp->para[4]) );
-         *(Double_t*)G__Doubleref(&libp->para[2]) = PyFloat_AsDouble( PyList_GetItem( arg3, 0 ) );
+   // perform actual call
+      result = PyObject_CallFunction( pyfunc, (char*)"OOOOi",
+         arg1, arg2, arg3, arg4, (int)G__int(libp->para[4]) );
+      *(Double_t*)G__Doubleref(&libp->para[2]) = PyFloat_AsDouble( PyList_GetItem( arg3, 0 ) );
 
-         Py_DECREF( arg2 ); Py_DECREF( arg3 ); Py_DECREF( arg4 );
-      }
+      Py_DECREF( arg4 ); Py_DECREF( arg3 ); Py_DECREF( arg2 ); Py_DECREF( arg1 );
 
       if ( ! result ) {
          PyErr_Print();
@@ -1370,13 +1345,12 @@ namespace {
 
       Py_XDECREF( result );
 
+      G__setnull( res );
       return ( 1 || hash || res || libp );
    }
 
 //____________________________________________________________________________
    class TPretendInterpreted: public PyCallable {
-      static int fgCount;
-
    public:
       TPretendInterpreted( int nArgs ) : fNArgs( nArgs ) {}
 
@@ -1396,40 +1370,9 @@ namespace {
          return kTRUE;
       }
 
-      G__MethodInfo Register( void* callback,
-         const char* name, const char* signature, const char* retcode )
-      {
-      // build CINT function placeholder
-         G__ClassInfo gcl;                   // global namespace
-
-         Long_t offset = 0;
-         G__MethodInfo m = gcl.GetMethod( name, signature, &offset );
-
-         if ( ! m.IsValid() ) {
-         // create a new global function
-            m = gcl.AddMethod( retcode, name, signature, 0, 0, callback );       // boundary safe
-
-         // offset counter from this that serves to associate pyobject with tp2f
-            fgCount += 1;
-
-         // setup association for CINT
-            G__ifunc_table_internal* ifunc = G__get_ifunc_internal(m.ifunc());
-            int index = m.Index();
-            ifunc->pentry[index]->tp2f = (void*)((Long_t)this + fgCount);
-
-         // setup association for ourselves
-            int tag = -6666 - fgCount;
-            ifunc->p_tagtable[index] = tag;
-         }
-
-         return m;
-      }
-
    private:
       Int_t fNArgs;
    };
-
-   int TPretendInterpreted::fgCount = 0;
 
 //____________________________________________________________________________
    class TF1InitWithPyFunc : public TPretendInterpreted {
@@ -1469,28 +1412,14 @@ namespace {
          if ( PyErr_Occurred() )
             return 0;
 
-      // build placeholder, get CINT info
-         G__MethodInfo m = Register( (void*)TFNPyCallback, name, "double*, double*", "D" );
- 
       // verify/setup the callback parameters
-         int npar = 0;             // default value if not given
+         Long_t npar = 0;             // default value if not given
          if ( argc == reqNArgs+1 )
             npar = PyInt_AsLong( PyTuple_GET_ITEM( args, reqNArgs ) );
 
-         if ( ! m.GetUserParam() ) {
-         // no func yet, install current one
-            Py_INCREF( pyfunc );
-            m.SetUserParam((void*)new pairPyObjInt_t( pyfunc, npar ));
-         } else {
-         // old func: flip if different, keep if same
-            pairPyObjInt_t* oldp = (pairPyObjInt_t*)m.GetUserParam();
-            if ( oldp->first != pyfunc ) {
-               Py_INCREF( pyfunc ); Py_DECREF( oldp->first );
-               oldp->first = pyfunc;
-            }
-
-            oldp->second = npar;             // setting is quicker than checking
-         }
+      // registration with CINT (note: CINT style signature for free functions)
+         Long_t fid = Utility::InstallMethod(
+            0, pyfunc, name, "D - - 0 D - - 0", (void*)TFNPyCallback, 2, npar );
 
       // get constructor
          MethodProxy* method =
@@ -1505,8 +1434,7 @@ namespace {
                Py_INCREF( item );
                PyTuple_SET_ITEM( newArgs, iarg, item );
             } else {
-               PyTuple_SET_ITEM( newArgs, iarg,
-                  PyCObject_FromVoidPtr( (void*)m.PointerToFunc(), NULL ) );
+               PyTuple_SET_ITEM( newArgs, iarg, PyCObject_FromVoidPtr( (void*)fid, NULL ) );
             }
          }
 
@@ -1606,15 +1534,10 @@ namespace {
          if ( pyname != 0 )
             name = PyString_AsString( pyname );
 
-      // build placeholder, get CINT info
-         G__MethodInfo m = Register( (void*)TMinuitPyCallback, name,
-            "int&, double*, double&, double*, int", "V" );
-
-      // setup the callback parameter
-         Py_INCREF( pyfunc );
-         if ( m.GetUserParam() )
-            Py_DECREF((PyObject*)m.GetUserParam());
-         m.SetUserParam((void*)pyfunc);
+      // registration with CINT (note: CINT style signature for free functions)
+         Long_t fid = Utility::InstallMethod( 0, pyfunc, name,
+            "i - - 1 - - D - - 0 - - d - - 1 - - D - - 0 - - i - - 0 - -",
+            (void*)TMinuitPyCallback, 5 );
 
       // get function
          MethodProxy* method =
@@ -1622,8 +1545,7 @@ namespace {
 
       // build new argument array
          PyObject* newArgs = PyTuple_New( 1 );
-         PyTuple_SET_ITEM( newArgs, 0,
-            PyCObject_FromVoidPtr( (void*)m.PointerToFunc(), NULL ) );
+         PyTuple_SET_ITEM( newArgs, 0, PyCObject_FromVoidPtr( (void*)fid, NULL ) );
 
       // re-run
          PyObject* result = PyObject_CallObject( (PyObject*)method, newArgs );

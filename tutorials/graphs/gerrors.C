@@ -19,7 +19,8 @@ void gerrors() {
    gr->SetTitle("TGraphErrors Example");
    gr->SetMarkerColor(4);
    gr->SetMarkerStyle(21);
-   gr->Draw("ALP");
+   gr->SetFillColor(kBlue);
+   gr->Draw("A E3");
 
    c1->Update();
 }

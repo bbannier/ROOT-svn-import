@@ -552,7 +552,7 @@ void TLinearFitter::AddToDesign(Double_t *x, Double_t y, Double_t e)
    Int_t i, j, ii;
    y/=e;
 
-   Double_t val[100];
+   Double_t val[1000];
 
    if ((fSpecial>100)&&(fSpecial<200)){
       //polynomial fitting
@@ -967,6 +967,14 @@ void TLinearFitter::ReleaseParameter(Int_t ipar)
 }
 
 //______________________________________________________________________________
+void TLinearFitter::GetAtbVector(TVectorD &v)
+{
+   if (v.GetNoElements()!=fAtb.GetNoElements())
+      v.ResizeTo(fAtb.GetNoElements());
+   v = fAtb;
+}
+
+//______________________________________________________________________________
 Double_t TLinearFitter::GetChisquare()
 {
    // Get the Chisquare.
@@ -1204,6 +1212,16 @@ void TLinearFitter::GetCovarianceMatrix(TMatrixD &matr)
       matr.ResizeTo(fNfunctions, fNfunctions);
    }
    matr = fParCovar;
+}
+
+//______________________________________________________________________________
+void TLinearFitter::GetDesignMatrix(TMatrixD &matr)
+{
+//Returns the internal design matrix
+   if (matr.GetNrows()!=fNfunctions || matr.GetNcols()!=fNfunctions){
+      matr.ResizeTo(fNfunctions, fNfunctions);
+   }
+   matr = fDesign;
 }
 
 //______________________________________________________________________________

@@ -12,6 +12,7 @@
 //#include "Fit/BinPoint.h"
 #include "Fit/Fitter.h"
 #include "THFitInterface.h"
+#include "TGraphFitInterface.h"
 
 #include "Math/IParamFunction.h"
 #include "Math/WrappedTF1.h"
@@ -55,7 +56,7 @@
 
 #include "MinimizerTypes.h"
 
-//#define DEBUG
+#define DEBUG
 
 int nfit;
 const int N = 20; 
@@ -206,8 +207,8 @@ void printData(const T & data) {
 
 // fitting using new fitter
 typedef ROOT::Math::IParamMultiFunction Func;  
-template <class MinType>
-int DoFit(TH1 * hist, Func & func, bool debug = false, bool useGrad = false) {  
+template <class MinType, class T>
+int DoBinFit(T * hist, Func & func, bool debug = false, bool useGrad = false) {  
 
    //std::cout << "Fit histogram " << std::endl;
 
@@ -259,8 +260,8 @@ int DoFit(TH1 * hist, Func & func, bool debug = false, bool useGrad = false) {
 }
 
 // unbin fit
-template <class MinType>
-int DoFit(TTree * tree, Func & func, bool debug = false, bool copyData = false ) {  
+template <class MinType, class T>
+int DoUnBinFit(T * tree, Func & func, bool debug = false, bool copyData = false ) {  
 
    ROOT::Fit::UnBinData * d  = FillUnBinData(tree, copyData, func.NDim() );  
    // need to have done Tree->Draw() before fit
@@ -309,11 +310,24 @@ int DoFit(TTree * tree, Func & func, bool debug = false, bool copyData = false )
 
 }
 
+template <class MinType>
+int DoFit(TTree * tree, Func & func, bool debug = false, bool copyData = false ) {  
+   return DoUnBinFit<MinType, TTree>(tree, func, debug, copyData); 
+}
+template <class MinType>
+int DoFit(TH1 * h1, Func & func, bool debug = false, bool copyData = false ) {  
+   return DoBinFit<MinType, TH1>(h1, func, debug, copyData); 
+}
+template <class MinType>
+int DoFit(TGraph * gr, Func & func, bool debug = false, bool copyData = false ) {  
+   return DoBinFit<MinType, TGraph>(gr, func, debug, copyData); 
+}
+
 template <class MinType, class FitObj>
 int FitUsingNewFitter(FitObj * fitobj, Func & func, bool useGrad=false) { 
 
    std::cout << "\n************************************************************\n"; 
-   std::cout << "\tFit using new Fit::Fitter\n";
+   std::cout << "\tFit using new Fit::Fitter  " << typeid(*fitobj).name() << std::endl;
    std::cout << "\tMinimizer is " << MinType::name() << "  " << MinType::name2() << " func dim = " << func.NDim() << std::endl; 
 
    int iret = 0; 
@@ -725,6 +739,15 @@ int testPolyFit() {
 
    iret |= FitUsingTFit<TGraph,MINUIT2>(gr,f1);
 
+   iret |= FitUsingNewFitter<MINUIT2>(gr,f2);
+
+   // try with error in X
+   gStyle->SetErrorX(0.5); // to seto zero error on X
+   TGraphErrors * gr2 = new TGraphErrors(h1);
+   iret |= FitUsingTFit<TGraph,TMINUIT>(gr2,f1);
+
+   iret |= FitUsingNewFitter<MINUIT2>(gr2,f2);
+
    return iret;
 }
 
@@ -800,6 +823,16 @@ int testGausFit() {
 
    iret |= FitUsingTFit<TGraph,TMINUIT>(gr,f1);
    iret |= FitUsingTFit<TGraph,MINUIT2>(gr,f1);
+
+   iret |= FitUsingNewFitter<MINUIT2>(gr,f2);
+
+   // try with error in X
+   gStyle->SetErrorX(0.5); // to seto zero error on X
+   TGraphErrors * gr2 = new TGraphErrors(h2);
+   iret |= FitUsingTFit<TGraph,TMINUIT>(gr2,f1);
+
+   iret |= FitUsingNewFitter<MINUIT2>(gr2,f2);
+
 
 
 //#ifdef LATER

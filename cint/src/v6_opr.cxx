@@ -19,7 +19,7 @@
 extern "C" {
 
 //______________________________________________________________________________
-static char* G__getoperatorstring(int operatortag)
+static const char* G__getoperatorstring(int operatortag)
 {
    switch (operatortag) {
       case '+': /* add */
@@ -1876,7 +1876,7 @@ int G__scopeoperator(char* name, int* phash, long* pstruct_offset, int* ptagnum)
    char* pparen;
    re_try_after_std:
    // search for pattern "::"
-   pc = G__find_first_scope_operator(name);
+   pc = (char*)G__find_first_scope_operator(name);
    // no scope operator, return
    pparen = strchr(name, '(');
    if (NULL == pc || strncmp(name, "operator ", 9) == 0 || (pparen && pparen < pc)) {
@@ -1894,7 +1894,7 @@ int G__scopeoperator(char* name, int* phash, long* pstruct_offset, int* ptagnum)
       G__hash(name, (*phash), i)
       /* If we do no have anymore scope operator, we know the request of
          for the global name space */
-      pc = G__find_first_scope_operator(name);
+      pc = (char*)G__find_first_scope_operator(name);
       if (pc == 0) return(G__GLOBALSCOPE);
    }
 #ifndef G__STD_NAMESPACE
@@ -1947,7 +1947,7 @@ int G__scopeoperator(char* name, int* phash, long* pstruct_offset, int* ptagnum)
 
       scope = member;
    }
-   while ((pc = G__find_first_scope_operator(scope)));
+   while ((pc = (char*)G__find_first_scope_operator(scope)));
    *pstruct_offset += offset_sum;
 #ifdef G__ASM
    if (G__asm_noverflow) {
@@ -1999,7 +1999,7 @@ int G__cmp(G__value buf1, G__value buf2)
 }
 
 //______________________________________________________________________________
-int G__getunaryop(char unaryop, char* expression, char* buf, G__value* preg)
+int G__getunaryop(char unaryop, const char* expression, char* buf, G__value* preg)
 {
    int nest = 0;
    int c = 0;
@@ -2607,7 +2607,7 @@ int G__overloadopr(int operatortag, G__value expressionin, G__value* defined)
 }
 
 //______________________________________________________________________________
-int G__parenthesisovldobj(G__value* result3, G__value* result, char* realname, G__param* libp
+int G__parenthesisovldobj(G__value* result3, G__value* result, const char* realname, G__param* libp
 #ifdef G__ASM
 , int flag /* flag whether to generate PUSHSTROS, SETSTROS */
 #else

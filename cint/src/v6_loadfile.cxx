@@ -291,7 +291,7 @@ int G__include_file()
 * G__getmakeinfo()
 *
 ******************************************************************/
-char *G__getmakeinfo(char *item)
+const char *G__getmakeinfo(const char *item)
 {
   char makeinfo[G__MAXFILENAME];
   FILE *fp;
@@ -380,16 +380,20 @@ char *G__getmakeinfo(char *item)
 /******************************************************************
 * G__getmakeinfo1()
 *
+* TO BE FIXED. ONE SHOULD CALL getmakeinfo instead
+*
+*
 ******************************************************************/
-char *G__getmakeinfo1(char *item)
+const char *G__getmakeinfo1(const char *item)
 {
-  char *buf = G__getmakeinfo(item);
-#ifndef G__HAVE_CONFIG
-  char *p = buf;
-  while(*p && !isspace(*p)) ++p;
-  *p = 0;
-#endif
-  return(buf);
+  return G__getmakeinfo(item);
+  //char *buf = (char*)G__getmakeinfo(item);
+//#ifndef G__HAVE_CONFIG
+//  char *p = buf;
+//  while(*p && !isspace(*p)) ++p;
+//  *p = 0;
+//#endif
+//  return(buf);
 }
 
 /******************************************************************
@@ -417,7 +421,7 @@ void G__SetUseCINTSYSDIR(int UseCINTSYSDIR)
 ******************************************************************/
 int G__getcintsysdir()
 {
-  char *env;
+  const char *env;
   if('*'==G__cintsysdir[0]) {
 #if defined(G__ROOT)
 # ifdef ROOTBUILD
@@ -472,10 +476,10 @@ int G__getcintsysdir()
 #ifdef G__WIN32
       HMODULE hmodule=0;
       if(GetModuleFileName(hmodule,G__cintsysdir,G__MAXFILENAME)) {
-        char *p = G__strrstr(G__cintsysdir,(char*)G__psep);
+        char *p = (char*)G__strrstr(G__cintsysdir,(char*)G__psep);
         if(p) *p = 0;
 # ifdef G__ROOT
-        p = G__strrstr(G__cintsysdir,(char*)G__psep);
+        p = (char*)G__strrstr(G__cintsysdir,(char*)G__psep);
         if(p) *p = 0;
         strcat(G__cintsysdir,G__psep);
         strcat(G__cintsysdir,"cint");
@@ -549,7 +553,7 @@ int G__isfilebusy(int ifn)
 /******************************************************************
 * G__matchfilename(i,filename)
 ******************************************************************/
-int G__matchfilename(int i1,char *filename)
+int G__matchfilename(int i1,const char *filename)
 {
 #if  !defined(__CINT__)
 
@@ -579,9 +583,9 @@ int G__matchfilename(int i1,char *filename)
 
   char *filenamebase;
   if((strcmp(G__srcfile[i1].filename,filename)==0)) return(1);
-  filenamebase = G__strrstr(G__srcfile[i1].filename,"./");
+  filenamebase = (char*)G__strrstr(G__srcfile[i1].filename,"./");
   if(filenamebase) {
-    char *parentdir = G__strrstr(G__srcfile[i1].filename,"../");
+    char *parentdir = (char*)G__strrstr(G__srcfile[i1].filename,"../");
     if(!parentdir && strcmp(filename,filenamebase+2)==0) {
       char buf[G__ONELINE];
 #if defined(G__WIN32)
@@ -613,13 +617,13 @@ int G__matchfilename(int i1,char *filename)
 /******************************************************************
 * G__stripfilename(filename)
 ******************************************************************/
-char* G__stripfilename(char *filename)
+const char* G__stripfilename(const char *filename)
 {
-  char *filenamebase;
+  const char *filenamebase;
   if(!filename) return("");
   filenamebase = G__strrstr(filename,"./");
   if(filenamebase) {
-    char *parentdir = G__strrstr(filename,"../");
+    const char *parentdir = G__strrstr(filename,"../");
     char buf[G__ONELINE];
 #if defined(G__WIN32)
     char *p;
@@ -718,7 +722,7 @@ int G__unloadfile(const char *filename)
   G__LockCriticalSection();
 
   strcpy(buf,filename);
-  fname = G__strrstr(buf,"::");
+  fname = (char*)G__strrstr(buf,"::");
   if(fname) {
     scope = buf;
     *fname = 0;
@@ -1185,7 +1189,7 @@ int G__loadfile(const char *filenamein)
 {
   FILE *tmpfp;
   int external_compiler = 0;
-  char* compiler_option = "";
+  const char* compiler_option = "";
   int store_prerun;
   int i1=0;
   struct G__var_array *store_p_local;
@@ -1206,7 +1210,7 @@ int G__loadfile(const char *filenamein)
   int store_macroORtemplateINfile;
   int len;
   int len1;
-  char *dllpost;
+  const char *dllpost;
   short store_iscpp;
   G__UINT32 store_security;
   char addpost[3][8];
@@ -2211,9 +2215,9 @@ int  G__setfilecontext(const char* filename, G__input_file* ifile)
 *  CPPPREP and CPREP.
 *
 **************************************************************************/
-int G__preprocessor(char *outname,char *inname,int cppflag
-                    ,char *macros,char *undeflist,char *ppopt
-                    ,char *includepath)
+int G__preprocessor(      char *outname,const char *inname,int cppflag
+                   ,const char *macros,const char *undeflist,const char *ppopt
+                   ,const char *includepath)
 {
   char temp[G__LARGEBUF];
   /* char *envcpp; */
@@ -2225,7 +2229,7 @@ int G__preprocessor(char *outname,char *inname,int cppflag
   char *post;
 
   inlen = strlen(inname);
-  post = strrchr(inname,'.');
+  post = (char*)strrchr(inname,'.');
 
   if(post && inlen>2) {
     if(0==strcmp(inname+strlen(inname)-2,".c")) {

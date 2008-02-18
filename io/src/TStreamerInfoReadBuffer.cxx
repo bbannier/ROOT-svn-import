@@ -1436,6 +1436,14 @@ Int_t TStreamerInfo::ReadBufferSkip(TBuffer &b, const TVirtualCollectionProxy &a
                                           fMethod,fLength,fComp,fOldVersion);
 }
 
+Int_t TStreamerInfo::ReadBufferSkip(TBuffer &b, const TPointerCollectionAdapter &arr, Int_t i, Int_t kase,
+                                    TStreamerElement *aElement, Int_t narr,
+                                    Int_t eoffset)
+{
+  return TStreamerInfo__ReadBufferSkipImp(this, b,arr,i,kase,aElement,narr,eoffset,
+                                          fMethod,fLength,fComp,fOldVersion);
+}
+
 Int_t TStreamerInfo::ReadBufferConv(TBuffer &b, char** const &arr,  Int_t i, Int_t kase,
                                     TStreamerElement *aElement, Int_t narr,
                                     Int_t eoffset)
@@ -1446,6 +1454,15 @@ Int_t TStreamerInfo::ReadBufferConv(TBuffer &b, char** const &arr,  Int_t i, Int
 }
 
 Int_t TStreamerInfo::ReadBufferConv(TBuffer &b, const TVirtualCollectionProxy &arr,  Int_t i, Int_t kase,
+                                    TStreamerElement *aElement, Int_t narr,
+                                    Int_t eoffset)
+{
+  return TStreamerInfo__ReadBufferConvImp(b,arr,i,kase,aElement,narr,eoffset,fMethod,
+                                          fElem,fLength,fClass,fOffset,fNewType,fNdata,fType,fgElement,fComp,
+                                          fOldVersion);
+}
+
+Int_t TStreamerInfo::ReadBufferConv(TBuffer &b, const TPointerCollectionAdapter &arr,  Int_t i, Int_t kase,
                                     TStreamerElement *aElement, Int_t narr,
                                     Int_t eoffset)
 {
@@ -1468,6 +1485,13 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const TVirtualCollectionProxy &arr, 
                                       fLength,fClass,fOffset,fNewType,fNdata,fType,fgElement,fComp,fOldVersion);
 }
 
+Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const TPointerCollectionAdapter &arr, Int_t first,
+                                Int_t narr, Int_t eoffset, Int_t arrayMode)
+{
+  return TStreamerInfo__ReadBufferImp(this,b,arr,first,narr,eoffset,arrayMode,fMethod,fElem,
+                                      fLength,fClass,fOffset,fNewType,fNdata,fType,fgElement,fComp,fOldVersion);
+}
+
 #endif
 
 
@@ -1479,6 +1503,18 @@ Int_t TStreamerInfo::ReadBufferSTL(TBuffer &b, TVirtualCollectionProxy *cont,
 
    if (!nc) return 0;
    int ret = ReadBuffer(b, *cont, first,nc,eoffset,1);
+   return ret;
+}
+
+//______________________________________________________________________________
+Int_t TStreamerInfo::ReadBufferSTLPtrs(TBuffer &b,
+                                       TVirtualCollectionProxy *cont,
+                                       Int_t nc, Int_t first, Int_t eoffset )
+{
+   //  The STL vector/list is deserialized from the buffer b
+
+   if (!nc) return 0;
+   int ret = ReadBuffer(b, TPointerCollectionAdapter(cont), first,nc,eoffset,1);
    return ret;
 }
 

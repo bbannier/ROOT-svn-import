@@ -183,12 +183,21 @@ public:
       fDataWrapper = 0; 
       fDim = dim; 
       fPointSize = GetPointSize(err,dim);  
-      if (fDataVector) 
-         (fDataVector->Data()).resize( maxpoints * fPointSize );
+      if (fDataVector) { 
+         // resize vector by adding the extra points on top of the previously existing ones 
+         (fDataVector->Data()).resize( fDataVector->Size() + maxpoints * fPointSize );
+      }
       else 
          fDataVector = new DataVector(fPointSize*maxpoints);
    }
 
+//    /**
+//       re-initialize adding some additional set of points keeping the previous ones
+//     */
+//    void ReInitialize(unsigned int nexpoints) { 
+//       if (!fDataVector) return; 
+//       (fDataVector->Data()).resize( fDataVector->Size() + nexpoints * fPointSize );      
+//    }
       
    unsigned int PointSize() const { 
       return fPointSize; 
@@ -203,6 +212,23 @@ public:
       if (fPointSize > fDim +2) return true; 
       return false;
    }
+
+
+   /**
+      add one dim data with only coordinate and values
+   */
+   void Add(double x, double y ) { 
+      int index = fNPoints*PointSize();
+      assert (fDataVector != 0);
+      assert (PointSize() == 2 ); 
+      assert (index + PointSize() <= DataSize() ); 
+
+      double * itr = &((fDataVector->Data())[ index ]);
+      *itr++ = x; 
+      *itr++ = y; 
+
+      fNPoints++;
+   }
    
    /**
       add one dim data with no error in x
@@ -211,6 +237,7 @@ public:
    void Add(double x, double y, double ey) { 
       int index = fNPoints*PointSize(); 
       //std::cout << "this = " << this << " index " << index << " fNPoints " << fNPoints << "  ds   " << DataSize() << std::endl; 
+      assert( fDim == 1);
       assert (fDataVector != 0);
       assert (PointSize() == 3 ); 
       assert (index + PointSize() <= DataSize() ); 
@@ -229,6 +256,7 @@ public:
    void Add(double x, double y, double ex, double ey) { 
       int index = fNPoints*PointSize(); 
       assert (fDataVector != 0);
+      assert( fDim == 1);
       assert (PointSize() == 4 ); 
       assert (index + PointSize() <= DataSize() ); 
 
@@ -486,6 +514,8 @@ public:
    unsigned int Size() const { 
       return (Opt().fIntegral) ? fNPoints-1 : fNPoints; 
    }
+
+   unsigned int NDim() const { return fDim; } 
 
 protected: 
 

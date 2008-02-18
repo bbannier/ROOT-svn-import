@@ -40,11 +40,12 @@ ifeq ($(MACOSX_MINOR),3)
 ASEXTRALIB   += -lz
 endif
 ASTEPDEP     := $(ASTEPLIB)
-ifeq (debug,$(findstring debug,$(ROOTBUILD)))
-ASTEPDBG      = "--enable-gdb"
-else
+##### To trigger the debug printouts for libafterimage when ROOTBUILD=debug
+##### ifeq (debug,$(findstring debug,$(ROOTBUILD)))
+##### ASTEPDBG      = "--enable-gdb"
+##### else
 ASTEPDBG      =
-endif
+##### endif
 else
 ASTEPLIBA    := $(ASLIBDIR) $(ASLIB)
 ASTEPLIB     := $(ASLIBDIR) $(ASLIB)
@@ -193,7 +194,7 @@ $(ASIMAGELIB):  $(ASIMAGEO) $(ASIMAGEDO) $(ASTEPDEP) $(FREETYPEDEP) \
                     $(FREETYPELDFLAGS) $(FREETYPELIB) \
 		    $(ASEXTRALIBDIR) $(ASEXTRALIB) $(XLIBS)"
 
-$(ASIMAGEDS):   $(ASIMAGEH) $(ASIMAGEL) $(ROOTCINTTMPEXE)
+$(ASIMAGEDS):   $(ASIMAGEH) $(ASIMAGEL) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(ASIMAGEH) $(ASIMAGEL)
 
@@ -211,7 +212,7 @@ $(ASIMAGEGUILIB):  $(ASIMAGEGUIO) $(ASIMAGEGUIDO) $(ASTEPDEP) $(FREETYPEDEP) \
                     $(FREETYPELDFLAGS) $(FREETYPELIB) \
 		    $(ASEXTRALIBDIR) $(ASEXTRALIB) $(XLIBS)"
 
-$(ASIMAGEGUIDS): $(ASIMAGEGUIH) $(ASIMAGEGUIL) $(ROOTCINTTMPEXE)
+$(ASIMAGEGUIDS): $(ASIMAGEGUIH) $(ASIMAGEGUIL) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(ASIMAGEGUIH) $(ASIMAGEGUIL)
 

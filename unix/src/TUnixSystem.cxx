@@ -372,15 +372,15 @@ static void DylibAdded(const struct mach_header *mh, intptr_t /* vmaddr_slide */
 
    //printf("%s %p\n", lib.Data(), mh);
 
-   // when first .so is loaded we have finished loading all dylibs
+   // when libSystem.B.dylib is loaded we have finished loading all dylibs
    // explicitly linked against the executable. Additional dylibs
    // come when they are explicitly linked against loaded so's, currentky
    // we are not interested in these
-   if (lib.EndsWith(".so"))
+   if (lib.EndsWith("/libSystem.B.dylib"))
       gotFirstSo = kTRUE;
 
-   // "libSystem.B.dylib" is always add by the linker, so no need to add it
-   if (!gotFirstSo && lib.EndsWith(".dylib") && !lib.EndsWith("/libSystem.B.dylib")) {
+   // add all libs loaded before libSystem.B.dylib
+   if (!gotFirstSo && (lib.EndsWith(".dylib") || lib.EndsWith(".so"))) {
       if (i > 1)
          linkedDylibs += " ";
       linkedDylibs += lib;
@@ -4082,6 +4082,11 @@ static const char *DynamicPath(const char *newpath = 0, Bool_t reset = kFALSE)
          dynpath = rdynpath; dynpath += ":"; dynpath += ldpath;
       }
 
+#ifdef CINTINCDIR
+         dynpath += ":"; dynpath += CINTINCDIR; dynpath += "/stl";
+#else
+         dynpath += ":"; dynpath += gRootDir; dynpath += "/cint/stl";
+#endif
 #ifdef ROOTLIBDIR
       if (!dynpath.Contains(ROOTLIBDIR)) {
          dynpath += ":"; dynpath += ROOTLIBDIR;
