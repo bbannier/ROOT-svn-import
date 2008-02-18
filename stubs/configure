@@ -2545,37 +2545,6 @@ check_explicit "$enable_pythia8" "$enable_pythia8_explicit" \
 
 ######################################################################
 #
-### echo %%% Pythia8  Usage - Third party libraries
-#
-# (See http://root.cern.ch and Lund)
-#
-# Check for libpythia8
-#
-
-if test "x$enable_pythia8" = "xyes" || test ! "x$PYTHIA8" = "x" ; then
-    # Check for PYTHIA8 include and library
-    check_header "Pythia.h" "$pythia8incdir" $PYTHIA8 $PYTHIA8/include
-    pythia8incdir=$found_dir
-    enable_pythia8=yes
-    result "yes"
-    check_library "libpythia8" "$enable_shared" "$pythia8libdir" \
-	    $PYTHIA8/lib /opt/pythia8 \
-	    /usr/local/lib/pythia8 /usr/lib/pythia8 \
-	    /usr/local/lib/pythia8 /usr/lib /usr/local/lib
-    pythia8lib=$found_lib
-    pythia8libdir=$found_dir
-
-    if test "x$pythia8lib" = "x" ; then
-       enable_pythia8=no
-       result "no"
-    fi
-fi
-check_explicit "$enable_pythia8" "$enable_pythia8_explicit" \
-     "Explicitly required Pythia8 dependencies not fulfilled"
-
-
-######################################################################
-#
 ### echo %%% dCache Support - Third party libraries
 #
 # (See http://www.dcache.org)
