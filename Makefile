@@ -75,13 +75,13 @@ else
 ifeq ($(ARCH),win32gcc)
 MODULES      += unix x11 x11ttf x3d rootx
 SYSTEML       = $(UNIXL)
-SYSTEMO       = $(UNIXO) 
-SYSTEMDO      = $(UNIXDO) 
+SYSTEMO       = $(UNIXO)
+SYSTEMDO      = $(UNIXDO)
 else
 MODULES      += unix x11 x11ttf x3d rootx
 SYSTEML       = $(UNIXL)
-SYSTEMO       = $(UNIXO) 
-SYSTEMDO      = $(UNIXDO) 
+SYSTEMO       = $(UNIXO)
+SYSTEMDO      = $(UNIXDO)
 endif
 endif
 ifeq ($(BUILDGL),yes)
@@ -411,7 +411,7 @@ COREL         = $(BASEL1) $(BASEL2) $(BASEL3) $(CONTL) $(METAL) \
 COREO         = $(BASEO) $(CONTO) $(METAO) $(SYSTEMO) $(ZIPO) $(CLIBO) \
                 $(METAUTILSO) $(MATHO)
 COREDO        = $(BASEDO) $(CONTDO) $(METADO) $(SYSTEMDO) $(CLIBDO) \
-                $(METAUTILSDO) $(MATHDO) 
+                $(METAUTILSDO) $(MATHDO)
 
 CORELIB      := $(LPATH)/libCore.$(SOEXT)
 COREMAP      := $(CORELIB:.$(SOEXT)=.rootmap)
