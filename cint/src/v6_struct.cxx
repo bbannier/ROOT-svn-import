@@ -1557,7 +1557,7 @@ int G__defined_tagname(const char* tagname, int noerror)
    else {
       strcpy(temp, tagname);
    }
-   p = (char*) G__find_last_scope_operator(temp);
+   p = (char*)G__find_last_scope_operator(temp);
    if (p) {
       strcpy(atom_tagname, p + 2);
       *p = '\0';
@@ -1757,7 +1757,7 @@ int G__search_tagname(const char* tagname, int type)
          return -1;
       }
       strcpy(temp, tagname);
-      p = (char*) G__find_last_scope_operator(temp);
+      p = (char*)G__find_last_scope_operator(temp);
       if (p) {
          strcpy(atom_tagname, p + 2);
          *p = '\0';

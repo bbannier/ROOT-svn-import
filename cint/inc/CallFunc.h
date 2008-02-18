@@ -102,6 +102,7 @@ G__CallFunc {
   G__InterfaceMethod InterfaceMethod() { return pfunc; }
   void SetArgs(const char* args);
   G__MethodInfo GetMethodInfo() { return method; }
+
  private:
   void SetFuncType();
 #ifndef __MAKECINT__

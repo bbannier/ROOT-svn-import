@@ -267,7 +267,6 @@ int G__warnundefined(const char* item)
             && !G__splitmessage(tmp)
 #endif // G__OLDIMPELMENTATION1174
          ) {
-         //char *p = strchr(item, '(');
          char *p = strchr(tmp, '(');
          if (p) {
             //char tmp[G__ONELINE];

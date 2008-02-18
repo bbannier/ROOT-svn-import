@@ -20,7 +20,6 @@
 
 #ifndef __CINT__
 #ifdef __cplusplus
-
 extern "C" {
 #endif
 #endif
@@ -104,7 +103,6 @@ extern int G__asm_index;              /* variable index */
 extern char G__wrappers;
 // This variable is set by the configure system
 extern char G__nostubs;
-
 #endif // G__ASM
 
 /**************************************************************************
@@ -212,7 +210,7 @@ extern struct G__tagtable G__struct;
 extern struct G__typedef  G__newtype;
 
 // 03-07-07
-// This is not the libname but the .nm file taht is passed to newlink
+// This is not the libname but the .nm file that is passed to newlink
 // with all the symbols needed to register the functions
 extern const char *G__libname;
 
@@ -328,7 +326,6 @@ extern short G__enumdef;
 // 10-07-07
 // Can tell if we are writing the temp. dicts or the real one
 extern G__dictgenmode G__dicttype;
-
 extern char G__tagname[G__MAXNAME];
 extern long G__store_struct_offset; /* used to be int */
 extern FILE *G__header,*G__temp1,*G__temp3,*G__temp5,*G__temp7,*G__temp8;

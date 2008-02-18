@@ -2288,11 +2288,11 @@ void* G__get_funcptr(G__ifunc_table_internal *ifunc, int ifn)
  **************************************************************************/
 int G__call_cppfunc(G__value *result7,G__param *libp,G__ifunc_table_internal *ifunc,int ifn)
 {
-
   G__InterfaceMethod cppfunc;
   int result;
 
   cppfunc = (G__InterfaceMethod)ifunc->pentry[ifn]->p;
+
 
 #ifdef G__ASM
   if(G__asm_noverflow) {
@@ -2443,8 +2443,6 @@ int G__call_cppfunc(G__value *result7,G__param *libp,G__ifunc_table_internal *if
   return(result);
 }
 
-
-
 /**************************************************************************
 * G__ctordtor_initialize()
 **************************************************************************/
@@ -2532,10 +2530,8 @@ void G__gen_clink()
   G__cppstub_func(fp);
 
   G__cpplink_typetable(fp,hfp);
-
   G__cpplink_memvar(fp);
   G__cpplink_global(fp);
-
   G__cpplink_func(fp);
   G__cpplink_tagtable(fp,hfp);
   fprintf(fp,"void G__c_setup%s() {\n",G__DLLID);
@@ -2720,20 +2716,12 @@ void G__gen_cpplink()
 #ifdef G__VIRTUALBASE
     G__cppif_inheritance(fp);
 #endif
-
     G__cpplink_inheritance(fp);
     G__cpplink_typetable(fp,hfp);
-
     G__cpplink_memvar(fp);
-
-    if (!G__suppress_methods) {
-      G__cpplink_memfunc(fp);
-    }
-
+    if (!G__suppress_methods) G__cpplink_memfunc(fp);
     G__cpplink_global(fp);
-
     G__cpplink_func(fp);
-
     G__cpplink_tagtable(fp,hfp);
     fprintf(fp,"extern \"C\" void G__cpp_setup%s(void) {\n",G__DLLID);
 #ifdef G__BUILTIN
@@ -4284,7 +4272,6 @@ int G__isnonpublicnew(int tagnum)
   return(0);
 }
 
-
 /**************************************************************************
  * G__cppif_change_globalcomp()
  *
@@ -4382,6 +4369,7 @@ void G__if_ary_union_constructor(FILE *fp, int ifn, G__ifunc_table_internal *ifu
  **************************************************************************/
 bool G__is_tagnum_safe(int i)
 {
+#ifdef G__NOSTUBS
   return (strncmp(G__fulltagname(i,0),"string", strlen("string"))!=0 &&
           strncmp(G__fulltagname(i,0),"vector", strlen("vector"))!=0 &&
           strncmp(G__fulltagname(i,0),"list", strlen("list"))!=0 &&
@@ -4392,6 +4380,9 @@ bool G__is_tagnum_safe(int i)
           strncmp(G__fulltagname(i,0),"map", strlen("map"))!=0 &&
           strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))!=0 &&
           strncmp(G__fulltagname(i,0),"complex", strlen("complex"))!=0 );
+#else
+  return true;
+#endif
 }
 
 /**************************************************************************
@@ -5253,7 +5244,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
 
   /* This loop goes through all the classes loaded in the G__struct */
   for(i=0;i<G__struct.alltag;i++) {
-     if( /* Linkage */
+    if( /* Linkage */
       (G__CPPLINK==G__struct.globalcomp[i]||
        G__CLINK==G__struct.globalcomp[i]
        || G__ONLYMETHODLINK==G__struct.globalcomp[i]
@@ -5299,7 +5290,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
       // Go through all the function members in the class 
       while(ifunc) {
         for(j=0;j<ifunc->allifunc;j++) {
-           if(G__PUBLIC==ifunc->access[j] // Public Method?
+          if(G__PUBLIC==ifunc->access[j] // Public Method?
              || (G__PROTECTED==ifunc->access[j] &&
                  (G__PROTECTEDACCESS&G__struct.protectedaccess[i]))
              || (G__PRIVATEACCESS&G__struct.protectedaccess[i])
@@ -5322,7 +5313,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
             }
 #endif
             // Constructor? ClassName == FunctionName
-            if(!strcmp(ifunc->funcname[j],G__struct.name[i])) {
+            if(strcmp(ifunc->funcname[j],G__struct.name[i])==0) {
               // Constructor and dictionary #2
               // Generating dummy object for getting the symbols of default constructor and destructor
               if(G__dicttype==kFunctionSymbols) {
@@ -6764,18 +6755,18 @@ int G__isprivateassignopr(int tagnum)
 
 
 /**************************************************************************
- * G__cppif_gendefault()
- *
- * Create default constructor and destructor. If default constructor is
- * given in the header file, the interface function created here for
- * the default constructor will be redundant and won't be used.
- *
- * Copy constructor and operator=(), if not explisitly specified in the
- * header file, are handled as memberwise copy by cint parser. Validity of
- * this handling is questionalble especially when base class has explicit
- * copy constructor or operator=().
- *
- **************************************************************************/
+* G__cppif_gendefault()
+*
+* Create default constructor and destructor. If default constructor is
+* given in the header file, the interface function created here for
+* the default constructor will be redundant and won't be used.
+*
+* Copy constructor and operator=(), if not explisitly specified in the
+* header file, are handled as memberwise copy by cint parser. Validity of
+* this handling is questionalble especially when base class has explicit
+* copy constructor or operator=().
+*
+**************************************************************************/
 void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
                          int ifn, G__ifunc_table_internal* ifunc,
                          int isconstructor, int iscopyconstructor,
@@ -6807,7 +6798,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
   if('n'==G__struct.type[tagnum]) return;
 
   page = ifunc->page;
-  if(ifn==G__MAXIFUNC) {
+  if(ifn>=G__MAXIFUNC) {
     ifn=0;
     ++page;
   }
@@ -6823,8 +6814,8 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
 #endif
 
   /*********************************************************************
-   * default constructor
-   *********************************************************************/
+  * default constructor
+  *********************************************************************/
 
   if (!isconstructor) {
     isconstructor = G__isprivateconstructor(tagnum, 0);
@@ -6993,7 +6984,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
       fprintf(fp,         "}\n\n");
 
       ++ifn;
-      if (ifn == G__MAXIFUNC) {
+      if (ifn >= G__MAXIFUNC) {
         ifn = 0;
         ++page;
       }
@@ -8688,7 +8679,7 @@ void G__cpplink_typetable(FILE *fp, FILE *hfp)
 
   fprintf(fp,"\n   /* Setting up typedef entry */\n");
   for(i=0;i<G__newtype.alltype;i++) {
-     if(G__NOLINK>G__newtype.globalcomp[i]) {
+    if(G__NOLINK>G__newtype.globalcomp[i]) {
       if(!(G__newtype.parent_tagnum[i] == -1 ||
            (G__nestedtypedef &&
             (G__struct.globalcomp[G__newtype.parent_tagnum[i]]<G__NOLINK
@@ -8801,8 +8792,8 @@ void G__cpplink_memvar(FILE *fp)
    //  Loop over all known classes, enums, namespaces, structs and unions.
    //
    for (int i = 0; i < G__struct.alltag; ++i) {
-     if (
-        // -- Class is marked for dictionary generation.
+      if (
+         // -- Class is marked for dictionary generation.
          (
             (G__struct.globalcomp[i] == G__CPPLINK) || // Class is marked for c++ dictionary, or
             (G__struct.globalcomp[i] == G__CLINK) // Class is marked for c dictionary,
@@ -9396,7 +9387,7 @@ void G__cpplink_memfunc(FILE *fp)
 
             fprintf(fp, "%d, ", ifunc->reftype[j]);
 
-            // K&R style if para_nu==-1, force it to 0
+            /* K&R style if para_nu==-1, force it to 0 */
             if (0 > ifunc->para_nu[j]) fprintf(fp, "0, ");
             else                       fprintf(fp, "%d, ", ifunc->para_nu[j]);
 
@@ -9408,17 +9399,16 @@ void G__cpplink_memfunc(FILE *fp)
             fprintf(fp, "%d, ", ifunc->access[j]);
             fprintf(fp, "%d, ", ifunc->isconst[j]);
 
-            // newline to avoid lines more than 256 char for CMZ
+            /* newline to avoid lines more than 256 char for CMZ */
             if (ifunc->para_nu[j] > 1) fprintf(fp, "\n");
             fprintf(fp, "\"");
-
 
             /****************************************************************
              * function parameter
              ****************************************************************/
 
             for (k = 0; k < ifunc->para_nu[j]; k++) {
-              // newline to avoid lines more than 256 char for CMZ
+              /* newline to avoid lines more than 256 char for CMZ */
               if (G__CPPLINK == G__globalcomp && k && 0 == (k%2)) fprintf(fp, "\"\n\"");
               if (isprint(ifunc->param[j][k]->type)) {
                 fprintf(fp, "%c ", ifunc->param[j][k]->type);
@@ -9447,8 +9437,8 @@ void G__cpplink_memfunc(FILE *fp)
                 // parameter in the stub-less calls, the experssion (of this parameters) must
                 // be known to CInt, which migth not be true at run-time. To fix this, we will
                 // try to convert macros, to actual values when generating the dictionary
-                char res[256]; // possible overflow
-                char tmp[256]; // possible overflow
+                char res[G__ONELINE]; // possible overflow
+                char tmp[G__ONELINE]; // possible overflow
                 char *str = ifunc->param[j][k]->def;
                 int pos_res=0;
                 int pos_str=0;
@@ -9517,11 +9507,11 @@ void G__cpplink_memfunc(FILE *fp)
             fprintf(fp, ", %s", buf);
 #ifdef G__TRUEP2F
             if (
-              (ifunc->staticalloc[j] || 'n' == G__struct.type[i])
+               (ifunc->staticalloc[j] || 'n' == G__struct.type[i])
 #ifndef G__OLDIMPLEMENTATION1292
-              && G__PUBLIC == ifunc->access[j]
+               && G__PUBLIC == ifunc->access[j]
 #endif // G__OLDIMPLEMENTATION1292
-              && G__MACROLINK != ifunc->globalcomp[j]
+               && G__MACROLINK != ifunc->globalcomp[j]
               ) {
               int k;
               fprintf(fp, ", (void*) (%s (*)("
@@ -9590,10 +9580,7 @@ void G__cpplink_memfunc(FILE *fp)
               if ('u' == ifunc->param[j][0]->type && i == ifunc->param[j][0]->p_tagtable && G__PARAREFERENCE == ifunc->param[j][0]->reftype && (1 == ifunc->para_nu[j] || ifunc->param[j][1]->pdefault)) {
                 // copy constructor
                 ++iscopyconstructor;
-                //ifunc_copyconstructor = ifunc;
               }
-              //else
-              //   ifunc_constructor = ifunc;
             } else if ('~' == ifunc->funcname[j][0]) {
               // destructor
               ++isdestructor;
@@ -9616,14 +9603,14 @@ void G__cpplink_memfunc(FILE *fp)
         } // end for(j), loop over all ifuncs
 
         if (ifunc->next == 0
-            // dummy
+           // dummy
 #ifndef G__OLDIMPLEMENTATON1656
-            && G__NOLINK == G__struct.iscpplink[i]
+           && G__NOLINK == G__struct.iscpplink[i]
 #endif
 #ifndef G__OLDIMPLEMENTATON1730
-            && G__ONLYMETHODLINK != G__struct.globalcomp[i]
+           && G__ONLYMETHODLINK != G__struct.globalcomp[i]
 #endif
-          ) {
+           ) {
           page = ifunc->page;
           if (j >= G__MAXIFUNC) {
             j = 0;
@@ -9823,13 +9810,11 @@ void G__cpplink_memfunc(FILE *fp)
 #endif
             }
           }
-
 #endif
         } /* end of ifunc->next */
         ifunc = ifunc->next;
       } /* end while(ifunc) */
       fprintf(fp, "   G__tag_memfunc_reset();\n");
-
       fprintf(fp, "}\n\n");
     } /* end if(globalcomp) */
   } /* end for(i) */
@@ -10130,10 +10115,10 @@ static void G__printtruep2f(FILE *fp, G__ifunc_table_internal *ifunc, int j)
 #endif
 
 /**************************************************************************
- * G__cpplink_func()
- *
- *  making C++ link routine to global function
- **************************************************************************/
+* G__cpplink_func()
+*
+*  making C++ link routine to global function
+**************************************************************************/
 void G__cpplink_func(FILE *fp)
 {
   int j,k;
@@ -10280,7 +10265,7 @@ void G__cpplink_func(FILE *fp)
             fprintf(fp,"- ");
 
           fprintf(fp,"%d "
-                  ,ifunc->param[j][k]->reftype+ifunc->param[j][k]->isconst*10);
+                ,ifunc->param[j][k]->reftype+ifunc->param[j][k]->isconst*10);
           if(ifunc->param[j][k]->def)
             fprintf(fp,"'%s' ",G__quotedstring(ifunc->param[j][k]->def,buf));
           else fprintf(fp,"- ");
@@ -10305,8 +10290,8 @@ void G__cpplink_func(FILE *fp)
   fprintf(fp,"   G__resetifuncposition();\n");
 
   /********************************************************
-   * call user initialization function if specified
-   ********************************************************/
+  * call user initialization function if specified
+  ********************************************************/
   if(G__INITFUNC) {
     fprintf(fp,"  %s();\n",G__INITFUNC);
   }
@@ -10322,7 +10307,6 @@ void G__cpplink_func(FILE *fp)
   for(fnc=0;fnc<divn;fnc++) {
     fprintf(fp,"  G__cpp_setup_func%d();\n",fnc);
   }
-
   fprintf(fp,"}\n");
 }
 
@@ -10386,6 +10370,7 @@ int G__tagtable_setup(int tagnum,int size,int cpplink,int isabstract,const char 
      // If setup_memfunc is not NULL we push the G__setup_memfuncXXX pointer into the list 
      if (setup_memfunc&&!found)
         G__struct.incsetup_memfunc[tagnum]->push_back(setup_memfunc);
+
 #endif /* 1656 */
     if(G__asm_dbg ) {
       if(G__dispmsg>=G__DISPWARN) {
@@ -10646,8 +10631,7 @@ int G__tag_memvar_reset()
 * G__usermemfunc_setup
 *
 **************************************************************************/
-int G__usermemfunc_setup(char *funcname,int hash,
-                         int (*funcp)(),int type,
+int G__usermemfunc_setup(char *funcname,int hash,int (*funcp)(),int type,
                          int tagnum,int typenum,int reftype,
                          int para_nu,int ansi,int accessin,int isconst,
                          char *paras, char *comment
@@ -10724,12 +10708,12 @@ int G__tag_memfunc_setup(int tagnum)
   return(0);
 }
 
-/**
- * G__memfunc_setup_imp()
- * Common part for G__memfunc_setup and G__memfunc_setup2
- * Since isvirtual calculation iss different for both of them,
- * the code is incompatible now
- */
+/**************************************************************************
+* G__memfunc_setup_imp()
+* Common part for G__memfunc_setup and G__memfunc_setup2
+* Since isvirtual calculation iss different for both of them,
+* the code is incompatible now
+**************************************************************************/
 int G__memfunc_setup_imp(const char *funcname,int hash
                          ,G__InterfaceMethod funcp
                          ,int type,int tagnum,int typenum,int reftype
@@ -11968,8 +11952,7 @@ void G__specify_link(int link_stub)
     fgetpos(G__ifile.fp,&pos);
     c = G__fgetstream_template(buf,";\n\r<>");
 
-    if(G__CPPLINK==globalcomp)
-       globalcomp=G__METHODLINK;
+    if(G__CPPLINK==globalcomp) globalcomp=G__METHODLINK;
 
     if(('<'==c || '>'==c)
        &&(strcmp(buf,"operator")==0||strstr(buf,"::operator"))) {
@@ -12292,8 +12275,7 @@ void G__specify_link(int link_stub)
   else if(strncmp(buf,"all_methods",5)==0||
           strncmp(buf,"all_functions",5)==0) {
     if(';'!=c) c = G__fgetstream_template(buf,";\n\r");
-    if(G__CPPLINK==globalcomp)
-       globalcomp=G__METHODLINK;
+    if(G__CPPLINK==globalcomp) globalcomp=G__METHODLINK;
     if(buf[0]) {
       struct G__ifunc_table_internal *ifunc;
       int ifn;
@@ -13367,6 +13349,7 @@ void G__gen_extra_include() {
 
   }
 }
+
 
 } /* extern "C" */
 
