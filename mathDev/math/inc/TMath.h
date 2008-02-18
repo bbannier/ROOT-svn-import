@@ -557,7 +557,7 @@ template <typename T> Long64_t TMath::BinarySearch(Long64_t n, const T  *array, 
    return nbelow-1;
 }
 
-template <typename T> Long64_t BinarySearch(Long64_t n, const T **array, T value)
+template <typename T> Long64_t TMath::BinarySearch(Long64_t n, const T **array, T value)
 {
    // Binary search in an array of n values to locate value.
    //
@@ -775,13 +775,13 @@ void TMath::SortImp(Size n1, const Element *a,
       index[n-1] = index[0];
       ai = a[i3-1];
       n--;
-      if(n-1 < 0) {index[0] = i3; break;}
+      if( n < 1) {index[0] = i3; break;}
       i1 = 1;
       while(2) {
          i2 = i1+i1;
          if (i2 <= n) i22 = index[i2-1];
          if (i2-n > 0) {index[i1-1] = i3; break;}
-         if (i2-n < 0) {
+         if (i2 < n) {
             i222 = index[i2];
             if (a[i22-1] - a[i222-1] < 0) {
                i2++;
