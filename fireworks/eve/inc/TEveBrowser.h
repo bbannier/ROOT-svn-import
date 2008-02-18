@@ -137,6 +137,8 @@ public:
    TEveBrowser(UInt_t w, UInt_t h);
    virtual ~TEveBrowser() {}
 
+   void ReallyDelete();
+
    void InitPlugins();
 
    TGFileBrowser* MakeFileBrowser();

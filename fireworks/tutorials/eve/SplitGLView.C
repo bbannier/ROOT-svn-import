@@ -605,22 +605,18 @@ SplitGLView::~SplitGLView()
    fViewer2->Disconnect("Activated()", this, "OnViewerActivated()");
    fViewer2->Disconnect("MouseIdle(TGLPhysicalShape*,UInt_t,UInt_t)", 
                          this, "OnMouseIdle(TGLPhysicalShape*,UInt_t,UInt_t)");
-   if (fIsEmbedded && gEve) {
-      gEve->GetListTree()->Disconnect("Clicked(TGListTreeItem*, Int_t, Int_t, Int_t)",
-               this, "ItemClicked(TGListTreeItem*, Int_t, Int_t, Int_t)");
-      gEve->RemoveElement(fViewer[0], gEve->GetViewers());
-      gEve->RemoveElement(fViewer[1], gEve->GetViewers());
-      gEve->RemoveElement(fViewer[2], gEve->GetViewers());
+   if (!fIsEmbedded) {
+      delete fViewer[0];
+      delete fViewer[1];
+      delete fViewer[2];
    }
-   delete fViewer[0];
-   delete fViewer[1];
-   delete fViewer[2];
    delete fShapedToolTip;
    delete fMenuFile;
    delete fMenuScene;
    delete fMenuCamera;
    delete fMenuHelp;
-   delete fMenuBar;
+   if (!fIsEmbedded)
+      delete fMenuBar;
    delete fViewer0;
    delete fViewer1;
    delete fViewer2;
