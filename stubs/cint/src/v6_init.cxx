@@ -1129,13 +1129,16 @@ int G__main(int argc, char** argv)
    /* else G__dumpfile = G__memhist; */
 #endif
 #endif
-   
+
+#ifdef G__NOSTUBS
    int includes_printed = 0;
    std::string linkfilename_h;
+#endif //G__NOSTUBS
+
    if (G__globalcomp < G__NOLINK) {
       G__gen_cppheader(0);
    }
-   
+
    /*************************************************************
     * prerun, read whole ifuncs to allocate global variables and
     * make ifunc table.
@@ -1204,7 +1207,7 @@ int G__main(int argc, char** argv)
             if(in != std::string::npos) {
                int l = in;
                linkfilename_h[l+1] = 'h';
-               linkfilename_h[l+2] = '\0';   
+               linkfilename_h[l+2] = '\0';
             }
 
             std::string headerb(basename(dllid));
@@ -1212,15 +1215,15 @@ int G__main(int argc, char** argv)
             int l;
             if(idx != std::string::npos) {
                l = idx;
-               headerb[l] = '\0';   
+               headerb[l] = '\0';
             }
             else {
                idx = headerb.rfind(".");
                if(idx != std::string::npos) {
                   l = idx;
-                  headerb[l] = '\0';   
+                  headerb[l] = '\0';
                }
-            } 
+            }
 
             // 12-11-07
             // put protection against multiple includes of dictionaries' .h
@@ -1249,6 +1252,7 @@ int G__main(int argc, char** argv)
          return(EXIT_SUCCESS);
       }
    }
+#ifdef G__NOSTUBS
    if (G__globalcomp < G__NOLINK && includes_printed && !G__isfilebundled) {
       FILE *fp = fopen(linkfilename_h.c_str(),"a");
       if(fp){
@@ -1256,6 +1260,7 @@ int G__main(int argc, char** argv)
          fclose(fp);
       }
    }
+#endif // G__NOSTUBS
 
    if (icom) {
       int more = 0;
@@ -1277,12 +1282,14 @@ int G__main(int argc, char** argv)
 #ifdef G__NOSTUBS
    // Try to differentiate the different kinds of tmp dicts.
    // (although we used the all here so it's a bit silly)
-   if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3 || G__dicttype==4) {
-      G__init_process_cmd(); 
+   if(G__dicttype==kCompleteDictionary || G__dicttype==kFunctionSymbols || G__dicttype==kNoWrappersDictionary) {
+      G__init_process_cmd();
       MapDependantTypes();
       G__gen_extra_include();
    }
-#endif
+#else
+   G__gen_extra_include();
+#endif //G__NOSTUBS
 
    if (G__globalcomp == G__CPPLINK) {
       // -- C++ header.
@@ -1290,10 +1297,15 @@ int G__main(int argc, char** argv)
          while (!G__pause());
       }
 
+#ifdef G__NOSTUBS
       // Try to differentiate the different kinds of tmp dicts.
-      // (although we used the all here so it's a bit silly)      
-      if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3 || G__dicttype==4)
+      // (although we used the all here so it's a bit silly)
+      if(G__dicttype==kCompleteDictionary || G__dicttype==kFunctionSymbols || G__dicttype==kNoWrappersDictionary)
          G__gen_cpplink();
+#else
+      G__gen_cpplink();
+#endif //G__NOSTUBS
+
 #if !defined(G__ROOT) && !defined(G__D0)
       G__scratch_all();
 #endif
@@ -1308,12 +1320,18 @@ int G__main(int argc, char** argv)
    else if (G__globalcomp == G__CLINK) {
       // -- C header.
       if (G__steptrace || G__stepover) {
-        while (!G__pause());
+         while (!G__pause());
       }
+
+#ifdef G__NOSTUBS
       // Try to differentiate the different kinds of tmp dicts.
-      // (although we used the all here so it's a bit silly)      
-      if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3 || G__dicttype==4)
+      // (although we used the all here so it's a bit silly)
+      if(G__dicttype==kCompleteDictionary || G__dicttype==kFunctionSymbols || G__dicttype==kNoWrappersDictionary)
          G__gen_clink();
+#else
+      G__gen_clink();
+#endif //G__NOSTUBS
+
 #if !defined(G__ROOT) && !defined(G__D0)
       G__scratch_all();
 #endif
@@ -1327,11 +1345,15 @@ int G__main(int argc, char** argv)
    }
 #ifdef G__ROOT
    else if (G__globalcomp == R__CPPLINK) {
+#ifdef G__NOSTUBS
       // Try to differentiate the different kinds of tmp dicts.
-      // (although we used the all here so it's a bit silly) 
-      if(G__dicttype==0 || G__dicttype==2 || G__dicttype==3 || G__dicttype==4)
+      // (although we used the all here so it's a bit silly)
+      if(G__dicttype==kCompleteDictionary || G__dicttype==kFunctionSymbols || G__dicttype==kNoWrappersDictionary)
          rflx_gendict(linkfilename, sourcefile);
-      
+#else
+      rflx_gendict(linkfilename, sourcefile);
+#endif //G__NOSTUBS
+
       return EXIT_SUCCESS;
    }
 #endif

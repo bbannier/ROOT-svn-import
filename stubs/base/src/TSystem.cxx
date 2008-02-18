@@ -1690,7 +1690,6 @@ int TSystem::Load(const char *module, const char *entry, Bool_t system)
          gLibraryVersion[gLibraryVersionIdx] = 0;
       }
       gLibraryVersionIdx--;
-  
       delete [] path;
    }
 

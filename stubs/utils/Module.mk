@@ -17,7 +17,7 @@ ROOTCINTS    := $(MODDIRS)/rootcint.cxx \
 ROOTCINTO    := $(ROOTCINTS:.cxx=.o)
 ROOTCINTTMPO := $(ROOTCINTS:.cxx=_tmp.o)
 ROOTCINTDEP  := $(ROOTCINTO:.o=.d) $(ROOTCINTTMPO:.o=.d) 
-ROOTCINTTMPEXE := $(MODDIRS)/rootcint_tmp$(EXEEXT)
+ROOTCINTTMPEXE:= $(MODDIRS)/rootcint_tmp$(EXEEXT)
 ROOTCINTEXE  := bin/rootcint$(EXEEXT)
 
 ##### rlibmap #####

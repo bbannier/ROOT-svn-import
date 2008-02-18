@@ -228,7 +228,6 @@ G__SHLHANDLE G__dlopen(const char *path)
 #if defined(G__OSFDLL)
 
   handle = dlopen(path,G__RTLD_flag);
-  //handle = dlopen(path,RTLD_NOW);
   if(!handle) G__fprinterr(G__serr,"dlopen error: %s\n",dlerror());
 
 /****************************************************

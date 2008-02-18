@@ -5131,15 +5131,13 @@ int G__interpret_func(G__value* result7, const char* funcname, G__param* libp, i
       //
 #ifdef G__ASM_WHOLEFUNC
       !p_ifunc->pentry[ifn]->p &&
-      !p_ifunc->funcptr[ifn] &&
-      !p_ifunc->mangled_name[ifn] &&
       !p_ifunc->ispurevirtual[ifn] &&
       (G__asm_wholefunction  == G__ASM_FUNC_NOP) &&
+      !G__get_funcptr(p_ifunc, ifn) &&
       p_ifunc->hash[ifn]
 #else
       !p_ifunc->pentry[ifn]->p &&
-      !p_ifunc->funcptr[ifn] &&
-      !p_ifunc->mangled_name[ifn] &&
+      !G__get_funcptr(p_ifunc, ifn) &&
       !p_ifunc->ispurevirtual[ifn]
 #endif
       //
@@ -5460,7 +5458,7 @@ int G__interpret_func(G__value* result7, const char* funcname, G__param* libp, i
             memcpy((void*)xbase, (void*)ybase, sizeof(int)*nybase);
          }
          if (ifunc) {
-            if (!ifunc->pentry[iexist]->p && !G__get_funcptr(p_ifunc, ifn) ) { // 12-09-07 (stub-less calls)
+            if (!ifunc->pentry[iexist]->p && !G__get_funcptr(p_ifunc, ifn)) {// 12-09-07 (stub-less calls)
                G__fprinterr(G__serr, "Error: virtual %s() header found but not defined", funcname);
                G__genericerror(0);
                G__exec_memberfunc = store_exec_memberfunc;
@@ -7102,7 +7100,7 @@ struct G__ifunc_table* G__get_methodhandle2(char* funcname, G__param* libp, G__i
                                       , withInheritance, 0
                                      );
       if (ifunc) return G__get_ifunc_ref(ifunc);
-    
+
       /* if no exact match, try to instantiate template function */
       funclist = G__add_templatefunc(funcname, libp, hash, funclist, p_ifunc, 0);
       if (funclist && funclist->rate == G__EXACTMATCH) {
