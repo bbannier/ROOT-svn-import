@@ -239,7 +239,7 @@ public:
     */ 
    unsigned int Size() const { return fNPoints; }
 
-
+   unsigned int NDim() const { return fDim; } 
 
 protected: 
 

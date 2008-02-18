@@ -120,6 +120,9 @@ endif
 ifeq ($(BUILDG4ROOT),yes)
 MODULES      += g4root
 endif
+ifeq ($(BUILDGLITE),yes)
+MODULES      += glite
+endif
 ifeq ($(BUILDCHIRP),yes)
 MODULES      += chirp
 endif
@@ -128,6 +131,9 @@ MODULES      += asimage
 endif
 ifeq ($(BUILDFPYTHIA6),yes)
 MODULES      += pythia6
+endif
+ifeq ($(BUILDFPYTHIA8),yes)
+MODULES      += pythia8
 endif
 ifeq ($(BUILDFFTW3),yes)
 MODULES      += fftw
@@ -230,7 +236,7 @@ MODULES      += unix winnt x11 x11ttf win32gdk gl ftgl rfio castor \
                 ldap mlp krb5auth rpdutils globusauth pyroot ruby gfal \
                 qt qtroot qtgsi xrootd netx proofx alien clarens peac oracle \
                 xmlparser mathcore mathmore reflex cintex roofitcore roofit \
-                minuit2 monalisa fftw odbc unuran gdml eve g4root cint7
+                minuit2 monalisa fftw odbc unuran gdml eve g4root cint7 glite
 MODULES      := $(sort $(MODULES))   # removes duplicates
 endif
 
@@ -412,6 +418,9 @@ COREMAP      := $(CORELIB:.$(SOEXT)=.rootmap)
 ifneq ($(BUILTINZLIB),yes)
 CORELIBEXTRA += $(ZLIBCLILIB)
 endif
+
+##### Dependencies for all dictionaries
+ROOTCINTTMPDEP = $(ROOTCINTTMPO) $(ORDER_) $(ROOTCINTTMPEXE)
 
 ##### In case shared libs need to resolve all symbols (e.g.: aix, win32) #####
 
@@ -722,7 +731,7 @@ rootdrpm:
 	fi
 
 clean::
-	@rm -f __compiledata *~ core $(PCHFILE)
+	@rm -f __compiledata *~ core include/precompile.*
 
 ifeq ($(CXX),KCC)
 clean::
@@ -742,7 +751,9 @@ distclean:: clean
 	@rm -f bin/*.dll bin/*.exp bin/*.lib bin/*.pdb \
                lib/*.def lib/*.exp lib/*.lib lib/*.dll.a \
                *.def .def
-ifeq ($(PLATFORM),macosx)
+ifeq ($(subst $(MACOSX_MINOR),,1234),1234)
+	@rm -f lib/*.dylib
+else
 	@rm -f lib/*.so
 endif
 	-@mv -f tutorials/gallery.root tutorials/gallery.root-

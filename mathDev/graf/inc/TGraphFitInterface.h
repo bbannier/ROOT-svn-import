@@ -31,12 +31,13 @@ namespace ROOT {
           fill the data vector from a TGraph. Pass also the TF1 function which is 
           needed in case to exclude points rejected by the function
       */ 
-      void FillData ( BinData  & dv, const TGraph * gr, TF1 * func = 0); 
+      void FillData ( BinData  & dv, const TGraph * gr, bool useErrorX = true, TF1 * func = 0 ); 
       /** 
           fill the data vector from a TMultiGraph. Pass also the TF1 function which is 
           needed in case to exclude points rejected by the function
       */ 
-      void FillData ( BinData  & dv, const TMultiGraph * gr, TF1 * func = 0); 
+      void FillData ( BinData  & dv, const TMultiGraph * gr, bool useErrorX = true, TF1 * func = 0); 
+
       
       
 

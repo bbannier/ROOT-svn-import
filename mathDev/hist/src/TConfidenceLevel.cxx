@@ -20,6 +20,8 @@
 #include "TMath.h"
 #include "Riostream.h"
 
+#include <vector>
+
 ClassImp(TConfidenceLevel)
 
 Double_t const TConfidenceLevel::fgMCLM2S = 0.025;
@@ -216,6 +218,7 @@ Double_t TConfidenceLevel::GetExpectedCLsb_b(Int_t sigma) const
    // Get the expected Confidence Level for the signal plus background hypothesis
    // if there is only background.
 
+   double sum = 0; 
    Double_t result = 0;
    switch (sigma) {
    case -2:
@@ -234,6 +237,10 @@ Double_t TConfidenceLevel::GetExpectedCLsb_b(Int_t sigma) const
       }
    case 0:
       {
+         for (Int_t i = 0; i < fNMC; i++)
+               sum += fLRB[fISB[i]] / fNMC;
+         std::cout << "(sumLR = " << sum << ") ";
+
          for (Int_t i = 0; i < fNMC; i++)
             if (fTSB[fISB[i]] <= fTSB[fISB[TMath::Min((Int_t) fNMC,(Int_t) TMath::Max((Int_t) 1,(Int_t) (fNMC * fgMCLMED)))]])
                result += fLRB[fISB[i]] / fNMC;
@@ -265,6 +272,7 @@ Double_t TConfidenceLevel::GetExpectedCLb_sb(Int_t sigma) const
    // Get the expected Confidence Level for the background only
    // if there is signal and background.
 
+   double sum = 0; 
    Double_t result = 0;
    switch (sigma) {
    case 2:
@@ -283,6 +291,9 @@ Double_t TConfidenceLevel::GetExpectedCLb_sb(Int_t sigma) const
       }
    case 0:
       {
+         for (Int_t i = 0; i < fNMC; i++)
+               sum += fLRS[fISS[i]] / fNMC;
+         std::cout << "(sumLR = " << sum << ") ";
          for (Int_t i = 0; i < fNMC; i++)
             if (fTSS[fISS[i]] <= fTSS[fISS[TMath::Min((Int_t) fNMC,(Int_t) TMath::Max((Int_t) 1,(Int_t) (fNMC * fgMCLMED)))]])
                result += fLRS[fISS[i]] / fNMC;
@@ -419,7 +430,7 @@ Double_t TConfidenceLevel::Get5sProbability() const
 
 
 //______________________________________________________________________________
-void  TConfidenceLevel::Draw(const Option_t*)
+void  TConfidenceLevel::Draw(const Option_t* opt)
 {
    // Display sort of a "canonical" -2lnQ plot.
    // This results in a plot with 2 elements:
@@ -440,17 +451,198 @@ void  TConfidenceLevel::Draw(const Option_t*)
       sb_hist->Fill(-2*(fTSS[i]-fStot));
    }
    b_hist->Draw();
+   sb_hist->SetLineColor(kBlue);
    sb_hist->Draw("Same");
-   sb_hist->SetLineStyle(3);
+
+
+
+   if (opt != 0)  return;
+
+
+   // draw the LR curves 
+//#ifdef LATER
+   
+//#endif
+
+
+
+   NewExpCL(true);
+
+   // LRS and LRB are sorted now
+   double xmin = std::min(log(fLRS[0] ),log(fLRB[0] ) );
+   double xmax = std::max(log(fLRS[int(fNMC)-1] ),log(fLRB[int(fNMC)-1] ) );
+
+   TH1F *h_lrs = new TH1F("LRS","LRS",50,xmin,xmax);
+   TH1F *h_lrb = new TH1F("LRB","LRB",50,xmin,xmax);
+   for (i=0; i<fNMC; i++) {
+      h_lrs->Fill(log(fLRS[i]));
+      h_lrb->Fill(log(fLRB[i]));
+   }
+   
+//   h_lrb->Draw();
+   h_lrs->SetLineColor(kBlue);
+//   h_lrs->Draw("Same");
+      
+
 }
 
+void  TConfidenceLevel::NewExpCL(bool draw) 
+{
+
+   TH1D *h_clsb_b = 0;
+   TH1D *h_clb_b = 0;
+   TH1D *h_clsb_sb = 0;
+   TH1D *h_clb_sb = 0;
+
+   // need to sort lrs and lrss
+   double * begin = &fLRS[0]; 
+   double * end = begin + int(fNMC); 
+   std::sort(begin, end); 
+   begin = &fLRB[0]; 
+   end = begin + int(fNMC); 
+   std::sort(begin, end); 
+
+   if (draw) { 
+   // draw the expected CL curves 
+
+      h_clsb_b = new TH1D("CLSB_B","CLSB_B",100,0,1);
+      h_clb_b = new TH1D("CLB_B","CLB_B",100,0,1);
+      h_clsb_sb = new TH1D("CLSB_SB","CLSB_SB",100,0,1);
+      h_clb_sb = new TH1D("CLB_SB","CLB_SB",100,0,1);
+
+   }
+
+   // new calculation of expected CL 
+   std::vector<double> vCLb_sb(fNMC);
+   std::vector<double> vCLb_b(fNMC);
+   std::vector<double> vCLsb_sb(fNMC);
+   std::vector<double> vCLsb_b(fNMC);
+
+   for (int i=0; i<fNMC; i++) {
+
+      double clsb_b = 0;
+      double clsb_sb = 0;
+      double clb_sb = 0;
+      double clb_b = 0;
+
+      
+      double xb = fLRB[i]; 
+      double xsb = fLRS[i];
+
+
+// use stl algorithm from build in CDF optaining sorting fLRB and fLRS
+
+
+      double * begin = &fLRS[0]; 
+      double * end = begin + int(fNMC); 
+      double * posb = std::upper_bound(begin, end, xb);
+      double * possb = std::upper_bound(begin, end, xsb);
+      clsb_b = std::distance(begin, posb);
+      clsb_sb = std::distance(begin, possb);
+
+      begin = &fLRB[0]; 
+      end = begin + int(fNMC); 
+      posb = std::upper_bound(begin, end, xb);
+      possb = std::upper_bound(begin, end, xsb);
+      clb_b = std::distance(begin, posb);
+      clb_sb = std::distance(begin, possb);
+
+      
+
+#ifdef DO_LOOP
+
+      clb_b = i;
+      clsb_sb = i;
+
+      double xsb = exp( fTSS[i]-fStot ); 
+      double xb =  exp( fTSB[i]-fStot ); 
+
+      for (int j = 0;  j < fNMC; j++ )   { 
+         if (fLRS[j] > xb) {
+            clsb_b = j; 
+            break; 
+         }
+      }    
+      for (int j = 0;  j < fNMC; j++ )   { 
+         if (fLRB[j] > xsb) {
+            clb_sb = j; 
+            break; 
+         }
+      }  
+#endif  
+#ifdef NOLOP
+      double xsb = fTSS[i]; 
+      double xb =  fTSB[i]; 
+      for (int j = 0; j < fNMC; j++) {
+         if (fTSS[fISS[j]] > xb) { 
+            clsb_b = j; 
+            break; 
+         }
+      }
+      for (int j = 0; j < fNMC; j++) {
+         if (fTSB[fISB[j]] > xsb) { 
+            clb_sb = j; 
+            break; 
+         }
+      }
+   
+#endif
+#ifdef DEBUG
+      std::cout << "xsb , xb = " << xsb << "  " << xb << std::endl; 
+      std::cout << "cl values for i " << i << "  " << clb_b/fNMC << "  " << clb_sb/fNMC << "  " << clsb_b/fNMC << "  " << clsb_sb/fNMC << std::endl;
+#endif 
+      if (draw) { 
+         h_clsb_b->Fill(clsb_b/fNMC);
+         h_clsb_sb->Fill(clsb_sb/fNMC);
+         h_clb_b->Fill(clb_b/fNMC);
+         h_clb_sb->Fill(clb_sb/fNMC);
+      }
+
+      vCLb_sb[i] = clb_sb/fNMC;
+      vCLsb_b[i] = clsb_b/fNMC;
+      vCLsb_sb[i] = clsb_sb/fNMC;
+      vCLb_b[i] = clb_b/fNMC;
+   }
+
+   if (draw)  {  
+
+      h_clsb_b->Draw(); 
+      h_clb_sb->SetLineColor(kBlue);
+      h_clb_sb->Draw("Same");
+      h_clb_b->SetLineColor(kRed);
+      h_clb_b->Draw("Same");
+      h_clsb_sb->SetLineColor(kGreen);
+      h_clsb_sb->Draw("Same");
+   }
+
+   // calculate average and median 
+   std::cout << "New Average  CLb_sb " << TMath::Mean(fNMC, &vCLb_sb.front() ) << " Median  " <<  TMath::Median(fNMC, &vCLb_sb.front() )
+             << std::endl;
+   std::cout << "New Average  CLsb_b " << TMath::Mean(fNMC, &vCLsb_b.front() ) << " Median  " <<  TMath::Median(fNMC, &vCLsb_b.front() )
+             << std::endl;
+   std::cout << "New Average  CLb_b " << TMath::Mean(fNMC, &vCLb_b.front() ) << " Median  " <<  TMath::Median(fNMC, &vCLb_b.front() )
+             << std::endl;
+   std::cout << "New Average  CLsb_sb " << TMath::Mean(fNMC, &vCLsb_sb.front() ) << " Median  " <<  TMath::Median(fNMC, &vCLsb_sb.front() )
+             << std::endl;
+
+}
 
 //______________________________________________________________________________
 void  TConfidenceLevel::SetTSB(Double_t * in)
 {
    // Set the TSB.
    fTSB = in; 
+
+
    TMath::Sort(fNNMC, fTSB, fISB, 0); 
+
+#ifdef DEBUG
+   std::cout << "\nTSB "  << std::endl;
+   for (int i = 0; i < fNNMC; i++) 
+      std::cout << fTSB[fISB[i]] << "  "; 
+   std::cout << std::endl;
+#endif
+
 }
 
 
@@ -459,5 +651,38 @@ void  TConfidenceLevel::SetTSS(Double_t * in)
 {
    // Set the TSS.
    fTSS = in; 
+
+
    TMath::Sort(fNNMC, fTSS, fISS, 0); 
+
+#ifdef DEBUG
+   std::cout << "\nTSS "  << std::endl;
+   for (int i = 0; i < fNNMC; i++) 
+      std::cout << in[fISS[i]] << "  "; 
+   std::cout << std::endl;
+#endif
+   
+}
+
+void  TConfidenceLevel::SetLRS(Double_t * in)
+{
+   fLRS = in; 
+
+#ifdef DEBUG
+   std::cout << "\nLRS "  << std::endl;
+   for (int i = 0; i < fNNMC; i++) 
+      std::cout << in[fISS[i]] << "  "; 
+   std::cout << std::endl;
+#endif
+}
+
+void  TConfidenceLevel::SetLRB(Double_t * in)
+{
+   fLRB = in; 
+#ifdef DEBUG
+   std::cout << "\nLRB "  << std::endl;
+   for (int i = 0; i < fNNMC; i++) 
+      std::cout << in[fISB[i]] << "  "; 
+   std::cout << std::endl;
+#endif
 }

@@ -305,10 +305,17 @@ double FitUtil::EvaluateChi2Effective(IModelFunction & func, const BinData & dat
       double ey = 0;
       const double * ex = data.GetPointError(i, ey); 
       double e2 = ey * ey; 
-      gradCalc.Gradient(x, fval, &grad[0]);
-      for (unsigned int icoord = 0; icoord < ndim; ++icoord) { 
-         e2 += ex[icoord] * ex[icoord] * grad[icoord];  
-      } 
+      // before calculating the gradient check that all error in x are not zero
+      unsigned int icoord = 0; 
+      while ( icoord < ndim && ex[icoord] == 0.)  { icoord++; } 
+      if (icoord < ndim) { 
+         for (unsigned int icoord = 0; icoord < ndim; ++icoord) { 
+            if (ex[icoord] != 0) 
+               gradCalc.Gradient(x, fval, &grad[0]);
+            double edx = ex[icoord] * grad[icoord]; 
+            e2 += edx * edx;  
+         } 
+      }
       double w2 = (e2 > 0) ? 1.0/e2 : 0;  
       double resval = w2 * ( y - fval ) *  ( y - fval); 
 

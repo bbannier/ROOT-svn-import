@@ -162,10 +162,10 @@ int testHisto1DFit() {
 
 
    // test grapherrors fit 
-   std::cout << "\n\nTest Same Fit from a TGraphErrors" << std::endl; 
+   std::cout << "\n\nTest Same Fit from a TGraphErrors - no coord errors" << std::endl; 
    TGraphErrors gr(h1); 
    ROOT::Fit::BinData dg; 
-   ROOT::Fit::FillData(dg,&gr,func);
+   ROOT::Fit::FillData(dg,&gr, false);
 
    f.SetParameters(p);   
    ret = fitter.Fit(dg, f);
@@ -175,6 +175,26 @@ int testHisto1DFit() {
       std::cout << "Chi2 Graph Errors Fit Failed " << std::endl;
       return -1; 
    }
+
+   // fit using error on X
+   std::cout << "\n\nTest Same Fit from a TGraphErrors - use coord errors" << std::endl; 
+   ROOT::Fit::BinData dger; 
+   ROOT::Fit::FillData(dger,&gr, true);
+
+   f.SetParameters(p);   
+   ret = fitter.Fit(dger, f);
+   if (ret)  
+      fitter.Result().Print(std::cout); 
+   else {
+      std::cout << "Chi2 Graph Errors Fit Failed " << std::endl;
+      return -1; 
+   }
+
+   // compare with TGraph::Fit
+   std::cout << "\n******************************\n\t TGraph::Fit Result \n" << std::endl; 
+   func->SetParameters(p);   
+   gr.Fit(func); 
+
 
    // test graph fit (errors are 1) do a re-normalization
    std::cout << "\n\nTest Same Fit from a TGraph" << std::endl; 

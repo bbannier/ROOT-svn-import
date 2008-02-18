@@ -27,8 +27,10 @@ class TConfidenceLevel : public TObject {
    inline void SetTSD(Double_t in) { fTSD = in; } 
    void SetTSB(Double_t * in);
    void SetTSS(Double_t * in);
-   inline void SetLRS(Double_t * in) { fLRS = in; }
-   inline void SetLRB(Double_t * in) { fLRB = in; }
+   void SetLRS(Double_t * in);/* { fLRS = in; } */
+   void SetLRB(Double_t * in);/* { fLRB = in; } */
+//    inline void SetLRS(Double_t * in);/* { fLRS = in; } */
+//    inline void SetLRB(Double_t * in);/* { fLRB = in; } */
    inline void SetBtot(Double_t in) { fBtot = in; }
    inline void SetStot(Double_t in) { fStot = in; }
    inline void SetDtot(Int_t in) { fDtot = in; }
@@ -50,6 +52,9 @@ class TConfidenceLevel : public TObject {
    inline Int_t GetDtot() const { return fDtot; } 
    inline Double_t GetStot() const { return fStot; } 
    inline Double_t GetBtot() const { return fBtot; } 
+
+   void NewExpCL(bool draw=false); 
+
  private:
    // data members used for the limits calculation
    Int_t      fNNMC;

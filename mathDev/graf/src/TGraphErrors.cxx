@@ -207,6 +207,7 @@ TGraphErrors::TGraphErrors(const TH1 *h)
        : TGraph(h)
 {
    // TGraphErrors constructor importing its parameters from the TH1 object passed as argument
+   // the errors in X are set to zero and not the bin width 
 
    if (!CtorAllocate()) return;
 
