@@ -3689,6 +3689,13 @@ void G__set_globalcomp(const char *mode,const char *linkfilename,const char *dll
       fprintf(fp,"#endif\n");
       fprintf(fp,"\n");
 
+#ifdef __GNUC__
+      fprintf(fp,"#if defined(__GNUC__) && (__GNUC__ > 3) && (__GNUC_MINOR__ > 1)\n");
+      fprintf(fp,"#pragma GCC diagnostic ignored \"-Wstrict-aliasing\"\n");
+      fprintf(fp,"#endif\n");
+      fprintf(fp,"\n");
+#endif
+
       if(G__dicttype!=kFunctionSymbols)
          fprintf(fp,"extern \"C\" void G__cpp_reset_tagtable%s();\n",G__DLLID);
 
@@ -7343,7 +7350,6 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
  * Changed to return the page instead of just not null
  * (since 0 means not found then the index starts at 1)
  **************************************************************************/
-extern "C"
 int G__method_inbase(int ifn, G__ifunc_table_internal *ifunc)
 {
   // tagnum's Base Classes structure
@@ -7722,8 +7728,6 @@ void G__cppif_genfunc(FILE *fp, FILE * /* hfp */, int tagnum, int ifn, G__ifunc_
 #endif // G__SMALLOBJECT
 }
 
-int G__class_autoloading(int tagnum);
-
 /**************************************************************************
 * G__cppif_returntype()
 *
@@ -7870,7 +7874,7 @@ int G__cppif_returntype(FILE *fp, int ifn, G__ifunc_table_internal *ifunc, char 
     case 'u':
       switch (G__struct.type[tagnum]) {
         case 'a':
-           G__class_autoloading(tagnum);
+           G__class_autoloading(&tagnum);
 	case 'c':
 	case 's':
 	case 'u':
