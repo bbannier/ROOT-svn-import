@@ -458,22 +458,6 @@ void MapDependantTypesX()
 }
 
 //______________________________________________________________________________
-/*
-void MapDependantTypesTree()
-{
-
-  int more = 0;
-  char prompt[G__ONELINE];
-
-  // dependant type in libTree.so
-   
-  // 07/05/2007
-  // This class doesnt have a classdef so I dont know yet how to handle it
-  G__process_cmd("typedef struct {} TFriendLock", prompt, &more,0, 0);
-
-}
-*/
-//______________________________________________________________________________
 static std::list<TSymbol*>*
 G__symbol_list(const char* lib)
 {
