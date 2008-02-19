@@ -12,15 +12,19 @@
 #include "TEveProjections.h"
 #include "TEveUtil.h"
 
-//______________________________________________________________________________
+//==============================================================================
+//==============================================================================
 // TEveProjection
+//==============================================================================
+
+//______________________________________________________________________________
 //
 // Base-class for non-linear projections.
 //
 // Enables to define an external center of distortion and a scale to
 // fixate a bounding box of a projected point.
 
-ClassImp(TEveProjection)
+ClassImp(TEveProjection);
 
 Float_t TEveProjection::fgEps = 0.005f;
 
@@ -55,8 +59,8 @@ void TEveProjection::UpdateLimit()
    if (fDistortion == 0.0f)
       return;
 
-   Float_t lim =  1.0f/fDistortion + fFixedRadius;
-   Float_t* c = GetProjectedCenter();
+   Float_t  lim = 1.0f/fDistortion + fFixedRadius;
+   Float_t *c   = GetProjectedCenter();
    fUpLimit.Set(lim + c[0], lim + c[1], c[2]);
    fLowLimit.Set(-lim + c[0], -lim + c[1], c[2]);
 }
@@ -76,7 +80,7 @@ void TEveProjection::SetFixedRadius(Float_t r)
 {
    // Set fixed radius.
 
-   fFixedRadius=r;
+   fFixedRadius = r;
    fScale = 1 + fFixedRadius*fDistortion;
    UpdateLimit();
 }
@@ -88,7 +92,7 @@ void TEveProjection::SetDirectionalVector(Int_t screenAxis, TEveVector& vec)
 
    for (Int_t i=0; i<3; i++)
    {
-      vec[i] = (i==screenAxis) ? 1. : 0.;
+      vec[i] = (i==screenAxis) ? 1.0f : 0.0f;
    }
 }
 
@@ -161,8 +165,12 @@ Float_t TEveProjection::GetScreenVal(Int_t i, Float_t x)
 }
 
 
-//______________________________________________________________________________
+//==============================================================================
+//==============================================================================
 // TEveRhoZProjection
+//==============================================================================
+
+//______________________________________________________________________________
 //
 // Transformation from 3D to 2D. X axis represent Z coordinate. Y axis have value of
 // radius with a sign of Y coordinate.
@@ -175,9 +183,8 @@ TEveRhoZProjection::TEveRhoZProjection(TEveVector& center) :
 {
    // Constructor.
 
-   fType    = kPT_RhoZ;
-   // fGeoMode = kGM_Polygons; // Unknown from TEveProjection.
-   fName    = "RhoZ";
+   fType = kPT_RhoZ;
+   fName = "RhoZ";
 }
 
 //______________________________________________________________________________
@@ -195,19 +202,20 @@ void TEveRhoZProjection::SetCenter(TEveVector& v)
 }
 
 //______________________________________________________________________________
-void TEveRhoZProjection::ProjectPoint(Float_t& x, Float_t& y, Float_t& z,  EPProc_e proc )
+void TEveRhoZProjection::ProjectPoint(Float_t& x, Float_t& y, Float_t& z,
+                                      EPProc_e proc )
 {
    // Project point.
 
    using namespace TMath;
 
-   if(proc == kPP_Plane || proc == kPP_Full)
+   if (proc == kPP_Plane || proc == kPP_Full)
    {
       // project
       y = Sign((Float_t)Sqrt(x*x+y*y), y);
       x = z;
    }
-   if(proc == kPP_Distort || proc == kPP_Full)
+   if (proc == kPP_Distort || proc == kPP_Full)
    {
       // move to center
       x -= fProjectedCenter.fX;
@@ -230,13 +238,14 @@ void TEveRhoZProjection::SetDirectionalVector(Int_t screenAxis, TEveVector& vec)
    // This is virtual method from base-class TEveProjection.
 
    if(screenAxis == 0)
-      vec.Set(0., 0., 1);
+      vec.Set(0.0f, 0.0f, 1.0f);
    else if (screenAxis == 1)
-      vec.Set(0., 1., 0);
+      vec.Set(0.0f, 1.0f, 0.0f);
 
 }
 //______________________________________________________________________________
-Bool_t TEveRhoZProjection::AcceptSegment(TEveVector& v1, TEveVector& v2, Float_t tolerance)
+Bool_t TEveRhoZProjection::AcceptSegment(TEveVector& v1, TEveVector& v2,
+                                         Float_t tolerance)
 {
    // Check if segment of two projected points is valid.
 
@@ -262,8 +271,12 @@ Bool_t TEveRhoZProjection::AcceptSegment(TEveVector& v1, TEveVector& v2, Float_t
 }
 
 
-//______________________________________________________________________________
+//==============================================================================
+//==============================================================================
 // TEveRPhiProjection
+//==============================================================================
+
+//______________________________________________________________________________
 //
 // XY projection with distortion around given center.
 
@@ -282,7 +295,7 @@ TEveRPhiProjection::TEveRPhiProjection(TEveVector& center) :
 
 //______________________________________________________________________________
 void TEveRPhiProjection::ProjectPoint(Float_t& x, Float_t& y, Float_t& z,
-                                                 EPProc_e proc)
+                                      EPProc_e proc)
 {
    // Project point.
 
@@ -292,7 +305,7 @@ void TEveRPhiProjection::ProjectPoint(Float_t& x, Float_t& y, Float_t& z,
    {
       x -= fCenter.fX;
       y -= fCenter.fY;
-      Float_t phi = (x == 0.0 && y == 0.0) ? 0.0f : ATan2(y, x);
+      Float_t phi = (x == 0.0f && y == 0.0f) ? 0.0f : ATan2(y, x);
       Float_t r = Sqrt(x*x + y*y);
       // distort
       Float_t nR = (r*fScale) / (1.0f + r*fDistortion);
@@ -301,4 +314,3 @@ void TEveRPhiProjection::ProjectPoint(Float_t& x, Float_t& y, Float_t& z,
    }
    z = 0.0f;
 }
-

@@ -1158,6 +1158,17 @@ void TGLViewer::MouseOver(TGLPhysicalShape *shape)
 }
 
 //______________________________________________________________________________
+void TGLViewer::MouseOver(TGLPhysicalShape *shape, UInt_t state)
+{
+   // Emit MouseOver signal.
+
+   Long_t args[2];
+   args[0] = (Long_t)shape;
+   args[1] = state;
+   Emit("MouseOver(TGLPhysicalShape*,UInt_t)", args);
+}
+
+//______________________________________________________________________________
 void TGLViewer::Clicked(TObject *obj)
 {
    // Emit Clicked signal.

@@ -23,7 +23,7 @@
 class TEveProjection
 {
 public:
-   enum EPType_e   { kPT_Unknown, kPT_RPhi, kPT_RhoZ };        // type
+   enum EPType_e   { kPT_Unknown, kPT_RPhi, kPT_RhoZ };         // type
    enum EPProc_e   { kPP_Plane, kPP_Distort, kPP_Full };        // procedure
    enum EGeoMode_e { kGM_Unknown, kGM_Polygons, kGM_Segments }; // reconstruction of geometry
 

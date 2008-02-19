@@ -573,8 +573,8 @@ TEveTrackList::TEveTrackList(TEveTrackPropagator* rs) :
    TAttMarker(1, 20, 1),
    TAttLine(1,1,1),
 
-   fRecurse(kTRUE),
    fPropagator(0),
+   fRecurse(kTRUE),
    fRnrLine(kTRUE),
    fRnrPoints(kFALSE),
 
@@ -597,8 +597,8 @@ TEveTrackList::TEveTrackList(const Text_t* name, TEveTrackPropagator* rs) :
    TAttMarker(1, 20, 1),
    TAttLine(1,1,1),
 
-   fRecurse(kTRUE),
    fPropagator(0),
+   fRecurse(kTRUE),
    fRnrLine(kTRUE),
    fRnrPoints(kFALSE),
 
@@ -663,8 +663,6 @@ void TEveTrackList::MakeTracks(Bool_t recurse)
    fLimP  = RoundMomentumLimit(fLimP);
    if (fMaxPt == 0) fMaxPt = fLimPt;
    if (fMaxP  == 0) fMaxP  = fLimP;
-
-   gEve->Redraw3D();
 }
 
 //______________________________________________________________________________

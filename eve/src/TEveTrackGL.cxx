@@ -80,6 +80,8 @@ void TEveTrackGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    // GL rendering code.
    // Virtual from TGLLogicalShape.
 
+   TEveLineGL::DirectDraw(rnrCtx);
+
    // path-marks
    std::vector<TEvePathMark*>& pm = fTrack->fPathMarks;
    TEveTrackPropagator& rTP = *fTrack->GetPropagator();
@@ -125,6 +127,4 @@ void TEveTrackGL::DirectDraw(TGLRnrCtx & rnrCtx) const
       TGLUtil::RenderPolyMarkers(rTP.RefFVAtt(), fTrack->GetP(), 1,
                                  rnrCtx.GetPickRadius(),
                                  rnrCtx.Selection());
-
-   TEveLineGL::DirectDraw(rnrCtx);
 }

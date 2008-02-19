@@ -255,6 +255,7 @@ public:
    virtual void OverlayDragFinished(); // *SIGNAL*
    virtual void MouseIdle(TGLPhysicalShape*,UInt_t,UInt_t); // *SIGNAL*
    virtual void MouseOver(TGLPhysicalShape*); // *SIGNAL*
+   virtual void MouseOver(TGLPhysicalShape*, UInt_t state); // *SIGNAL*
    virtual void Activated() { Emit("Activated()"); } // *SIGNAL*
    virtual void Clicked(TObject *obj); //*SIGNAL*
    virtual void Clicked(TObject *obj, UInt_t button, UInt_t state); //*SIGNAL*

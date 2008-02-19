@@ -23,7 +23,7 @@
 //
 // GL-renderer for TEveQuadSet class.
 
-ClassImp(TEveQuadSetGL)
+ClassImp(TEveQuadSetGL);
 
 /******************************************************************************/
 
@@ -106,7 +106,11 @@ void TEveQuadSetGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    TEveQuadSet& mQ = * fM;
 
    if (mQ.fFrame != 0 && ! rnrCtx.SecSelection())
+   {
+      TGLUtil::LockColor(); // Keep color from TGLPhysicalShape.
       TEveFrameBoxGL::Render(mQ.fFrame);
+      TGLUtil::UnlockColor();
+   }
 
    if (mQ.fPlex.Size() == 0)
       return;

@@ -106,7 +106,8 @@ public:
    virtual void RemoveParent(TEveElement* re);
    virtual void CheckReferenceCount(const TEveException& eh="TEveElement::CheckReferenceCount ");
    virtual void CollectSceneParents(List_t& scenes);
-   virtual void CollectSceneParentsFromChildren(List_t& scenes, TEveElement* parent);
+   virtual void CollectSceneParentsFromChildren(List_t& scenes,
+                                                TEveElement* parent);
 
    List_i BeginParents() { return fParents.begin(); }
    List_i EndParents()   { return fParents.end();   }
@@ -276,6 +277,8 @@ public:
    void ClearStamps()         { fChangeBits = 0; }
    void SetStamp(UChar_t bits);
    void AddStamp(UChar_t bits);
+
+   UChar_t GetChangeBits() const { return fChangeBits; }
 
 
    // List-tree icons

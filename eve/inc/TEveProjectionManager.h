@@ -32,7 +32,8 @@ protected:
 
    List_t          fDependentEls;   // elements that depend on manager and need to be destroyed with it
 
-   virtual Bool_t  ShouldImport(TEveElement* rnr_el);
+   virtual Bool_t  ShouldImport(TEveElement* el);
+   virtual void    UpdateDependentElsAndScenes(TEveElement* root);
 
 public:
    TEveProjectionManager();
@@ -47,16 +48,20 @@ public:
    virtual void    UpdateName();
 
    void            SetCenter(Float_t x, Float_t y, Float_t z);
-   TEveVector&     GetCenter(){return fCenter;}
+   TEveVector&     GetCenter() {return fCenter;}
 
    void            SetCurrentDepth(Float_t d) { fCurrentDepth = d;      }
    Float_t         GetCurrentDepth()    const { return fCurrentDepth;   }
 
    virtual Bool_t  HandleElementPaste(TEveElement* el);
-   virtual void    ImportElementsRecurse(TEveElement* rnr_el, TEveElement* parent);
-   virtual void    ImportElements(TEveElement* rnr_el);
+
+   virtual TEveElement* ImportElementsRecurse(TEveElement* el,
+                                              TEveElement* parent);
+   virtual TEveElement* ImportElements(TEveElement* el,
+                                       TEveElement* ext_list=0);
+
    virtual void    ProjectChildren();
-   virtual void    ProjectChildrenRecurse(TEveElement* rnr_el);
+   virtual void    ProjectChildrenRecurse(TEveElement* el);
 
    virtual void    ComputeBBox();
 

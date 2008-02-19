@@ -12,8 +12,12 @@
 #include "TEvePolygonSetProjected.h"
 #include "TEveProjectionBases.h"
 
-//______________________________________________________________________________
+//==============================================================================
+//==============================================================================
 // TEveProjectable
+//==============================================================================
+
+//______________________________________________________________________________
 //
 // Abstract base-class for non-linear projectable objects.
 //
@@ -22,12 +26,12 @@
 //
 // See also TEveProjectionManager::ImportElements().
 
-ClassImp(TEveProjectable)
+ClassImp(TEveProjectable);
 
 //______________________________________________________________________________
 TEveProjectable::TEveProjectable()
 {
-   // Comstructor.
+   // Constructor.
 }
 
 //______________________________________________________________________________
@@ -49,18 +53,24 @@ void TEveProjectable::AddProjectedsToSet(std::set<TEveElement*>& set)
    // TEveElement.
 
    for (ProjList_i i=fProjectedList.begin(); i!=fProjectedList.end(); ++i)
+   {
       set.insert(dynamic_cast<TEveElement*>(*i));
+   }
 }
 
 
-//______________________________________________________________________________
+//==============================================================================
+//==============================================================================
 // TEveProjected
+//==============================================================================
+
+//______________________________________________________________________________
 //
 // Abstract base class for classes that hold results of a non-linear
 // projection transformation.
 //
 
-ClassImp(TEveProjected)
+ClassImp(TEveProjected);
 
 //______________________________________________________________________________
 TEveProjected::TEveProjected() :
@@ -110,5 +120,21 @@ void TEveProjected::UnRefProjectable(TEveProjectable* assumed_parent)
    if (fProjectable) {
       fProjectable->RemoveProjected(this);
       fProjectable = 0;
+   }
+}
+
+//______________________________________________________________________________
+void TEveProjected::SetDepthCommon(Float_t d, TEveElement* el, Float_t* bbox)
+{
+   // Utility function to update the z-values of the bounding-box.
+   // As this is an abstract interface, the element and bbox pointers
+   // must be passed from outside.
+
+   Float_t delta = d - fDepth;
+   fDepth = d;
+   if (bbox) {
+      bbox[4] += delta;
+      bbox[5] += delta;
+      el->StampTransBBox();
    }
 }

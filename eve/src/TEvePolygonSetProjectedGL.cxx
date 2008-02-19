@@ -17,10 +17,10 @@
 #include "TGLIncludes.h"
 
 
-/******************************************************************************/
-/******************************************************************************/
+//==============================================================================
+//==============================================================================
 // TEvePolygonSetProjectedGL
-/******************************************************************************/
+//==============================================================================
 
 //______________________________________________________________________________
 //
@@ -115,7 +115,8 @@ void TEvePolygonSetProjectedGL::DirectDraw(TGLRnrCtx & /*rnrCtx*/) const
    GLUtriangulatorObj *tessObj = GetTesselator();
 
    TEveVector* pnts = refPS.fPnts;
-   for (TEvePolygonSetProjected::vpPolygon_ci i = refPS.fPols.begin(); i!= refPS.fPols.end(); i++)
+   for (TEvePolygonSetProjected::vpPolygon_ci i = refPS.fPols.begin();
+        i != refPS.fPols.end(); ++i)
    {
       Int_t vi; //current vertex index of curent polygon
       Int_t pntsN = (*i).fNPnts; // number of points in current polygon

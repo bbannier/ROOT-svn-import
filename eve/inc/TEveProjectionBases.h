@@ -86,9 +86,11 @@ public:
    virtual void SetProjection(TEveProjectionManager* proj, TEveProjectable* model);
    virtual void UnRefProjectable(TEveProjectable* assumed_parent);
 
-   virtual void SetDepth(Float_t d) { fDepth = d; }
+   virtual void SetDepth(Float_t d) = 0;
 
    virtual void UpdateProjection() = 0;
+
+   void SetDepthCommon(Float_t d, TEveElement* el, Float_t* bbox);
 
    ClassDef(TEveProjected, 0); // Abstract base class for classes that hold results of a non-linear projection transformation.
 };

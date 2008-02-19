@@ -249,7 +249,8 @@ void TEveElement::CollectSceneParents(List_t& scenes)
 }
 
 //______________________________________________________________________________
-void TEveElement::CollectSceneParentsFromChildren(List_t& scenes, TEveElement* parent)
+void TEveElement::CollectSceneParentsFromChildren(List_t&      scenes,
+                                                  TEveElement* parent)
 {
    // Collect scene-parents from all children. This is needed to
    // automatically detect which scenes need to be updated during/after
@@ -600,7 +601,7 @@ void TEveElement::SetMainColor(Color_t color)
 
    if (fMainColorPtr) {
       *fMainColorPtr = color;
-      UpdateItems();
+      StampColorSelection();
    }
 }
 
@@ -611,7 +612,6 @@ void TEveElement::SetMainColor(Pixel_t pixel)
 
    SetMainColor(Color_t(TColor::GetColor(pixel)));
 }
-
 
 /******************************************************************************/
 

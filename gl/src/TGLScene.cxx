@@ -1339,9 +1339,7 @@ TGLLogicalShape * TGLScene::FindLogicalSmartRefresh(TObject* ID) const
       LogicalShapeMap_t* lsm = const_cast<LogicalShapeMap_t*>(&fLogicalShapes);
       lsm->insert(LogicalShapeMapValueType_t(l_shape->ID(), l_shape));
       l_shape->DLCacheClear();
-      TGLObject* globj = dynamic_cast<TGLObject*>(l_shape);
-      if (globj)
-        globj->SetBBox();
+      l_shape->UpdateBoundingBox();
       return l_shape;
    } else {
       return 0;

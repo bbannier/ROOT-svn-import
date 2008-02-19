@@ -33,9 +33,10 @@ typedef std::list<Seg_t>           LSeg_t;
 typedef std::list<Seg_t>::iterator LSegIt_t;
 }
 
-/******************************************************************************/
+//==============================================================================
+//==============================================================================
 // TEvePolygonSetProjected
-/******************************************************************************/
+//==============================================================================
 
 //______________________________________________________________________________
 //
@@ -116,6 +117,17 @@ void TEvePolygonSetProjected::SetProjection(TEveProjectionManager* proj,
 }
 
 //______________________________________________________________________________
+void TEvePolygonSetProjected::SetDepth(Float_t d)
+{
+   // Set depth (z-coordinate) of the projected points.
+
+   SetDepthCommon(d, this, fBBox);
+
+   for (Int_t i = 0; i < fNPnts; ++i)
+      fPnts[i].fZ = fDepth;
+}
+
+//______________________________________________________________________________
 void TEvePolygonSetProjected::UpdateProjection()
 {
    // This is virtual method from base-class TEveProjected.
@@ -153,7 +165,8 @@ void TEvePolygonSetProjected::ProjectAndReducePoints()
    for (Int_t i = 0; i<buffN; ++i)
    {
       pnts[i].Set(fBuff->fPnts[3*i],fBuff->fPnts[3*i+1], fBuff->fPnts[3*i+2]);
-      projection->ProjectPoint(pnts[i].fX, pnts[i].fY, pnts[i].fZ, TEveProjection::kPP_Plane);
+      projection->ProjectPoint(pnts[i].fX, pnts[i].fY, pnts[i].fZ,
+                               TEveProjection::kPP_Plane);
    }
    fIdxMap   = new Int_t[buffN];
    Int_t* ra = new Int_t[buffN];  // list of reduced vertices
@@ -182,7 +195,9 @@ void TEvePolygonSetProjected::ProjectAndReducePoints()
    for (Int_t idx = 0; idx < fNPnts; ++idx)
    {
       Int_t i = ra[idx];
-      projection->ProjectPoint(pnts[i].fX, pnts[i].fY, pnts[i].fZ, TEveProjection::kPP_Distort);
+      projection->ProjectPoint(pnts[i].fX, pnts[i].fY, pnts[i].fZ,
+                               TEveProjection::kPP_Distort);
+      pnts[i].fZ = fDepth;
       fPnts[idx].Set(pnts[i]);
    }
    delete [] ra;
@@ -411,7 +426,7 @@ void  TEvePolygonSetProjected::ProjectBuffer3D()
          break;
    }
 
-   delete []  fIdxMap;
+   delete [] fIdxMap;
    ResetBBox();
 }
 

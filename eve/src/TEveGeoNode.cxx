@@ -127,14 +127,6 @@ void TEveGeoNode::SetMainColor(Color_t color)
    UpdateItems();
 }
 
-//______________________________________________________________________________
-void TEveGeoNode::SetMainColor(Pixel_t pixel)
-{
-   // This one needed for proper calling via CINT (signals).
-
-   SetMainColor(Color_t(TColor::GetColor(pixel)));
-}
-
 /******************************************************************************/
 
 //______________________________________________________________________________

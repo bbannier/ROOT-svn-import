@@ -73,11 +73,13 @@ void TEveLineGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    TEveLine& q = *fM;
    if (q.Size() <= 0) return;
 
+   TGLUtil::LockColor(); // Keep color from TGLPhysicalShape.
+   if (q.fRnrLine)
+      TGLUtil::RenderPolyLine(q, q.GetP(), q.Size());
+   TGLUtil::UnlockColor();
+
    if (q.fRnrPoints)
       TGLUtil::RenderPolyMarkers(q, q.GetP(), q.Size(),
                                  rnrCtx.GetPickRadius(),
                                  rnrCtx.Selection());
-
-   if (q.fRnrLine)
-      TGLUtil::RenderPolyLine(q, q.GetP(), q.Size());
 }

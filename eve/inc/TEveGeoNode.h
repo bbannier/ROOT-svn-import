@@ -55,7 +55,6 @@ public:
 
    virtual Bool_t CanEditMainColor()  { return kTRUE; }
    virtual void   SetMainColor(Color_t color);
-   virtual void   SetMainColor(Pixel_t pixel);
 
    void UpdateNode(TGeoNode* node);
    void UpdateVolume(TGeoVolume* volume);

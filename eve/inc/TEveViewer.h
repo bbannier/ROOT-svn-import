@@ -63,21 +63,9 @@ public:
 
 class TEveViewerList : public TEveElementList
 {
-public:
-   enum EPickToSelect // How to convert GL picking events to selection:
-   {
-      kPS_Ignore,      // ignore GL picking
-      kPS_Element,     // select element
-      kPS_Projectable, // select projectable and all its projections (default)
-      kPS_Compound     // select compound and all its projections
-   };
-
 private:
    TEveViewerList(const TEveViewerList&);            // Not implemented
    TEveViewerList& operator=(const TEveViewerList&); // Not implemented
-
-protected:
-   Int_t        fPickToSelect;
 
 public:
    TEveViewerList(const Text_t* n="TEveViewerList", const Text_t* t="");
@@ -92,11 +80,7 @@ public:
 
    // --------------------------------
 
-   Int_t GetPickToSelect()   const { return fPickToSelect; }
-   void  SetPickToSelect(Int_t ps) { fPickToSelect = ps; }
-
-   TEveElement* MapPickedToSelected(TEveElement* el);
-   void OnMouseOver(TGLPhysicalShape* shape);
+   void OnMouseOver(TGLPhysicalShape* shape, UInt_t state);
    void OnClicked(TObject *obj, UInt_t button, UInt_t state);
 
    ClassDef(TEveViewerList, 0); // List of Viewers providing common operations on TEveViewer collections.
