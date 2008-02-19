@@ -61,7 +61,7 @@ TEveDigitSetEditor::TEveDigitSetEditor(const TGWindow *p, Int_t width, Int_t hei
 
    fPalette = new TEveRGBAPaletteSubEditor(this);
    AddFrame(fPalette, new TGLayoutHints(kLHintsTop | kLHintsExpandX, 2, 0, 0, 0));
-   fPalette->Connect("Changed", "TEveDigitSetEditor", this, "Update()");
+   fPalette->Connect("Changed()", "TEveDigitSetEditor", this, "Update()");
 
    CreateInfoTab();
 }

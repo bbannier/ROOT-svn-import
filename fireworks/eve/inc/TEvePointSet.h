@@ -73,8 +73,7 @@ public:
    void   SetPointIntIds(Int_t* ids);
    void   SetPointIntIds(Int_t n, Int_t* ids);
 
-   virtual void SetMarkerColor(Color_t col)
-   { SetMainColor(col); }
+   virtual void SetMarkerColor(Color_t col) { SetMainColor(col); }
 
    virtual void Paint(Option_t* option="");
 
@@ -171,7 +170,7 @@ public:
    virtual ~TEvePointSetProjected() {}
 
    virtual void SetProjection(TEveProjectionManager* proj, TEveProjectable* model);
-
+   virtual void SetDepth(Float_t d);
    virtual void UpdateProjection();
 
    ClassDef(TEvePointSetProjected, 1); // Projected copy of a TEvePointSet.

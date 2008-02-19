@@ -114,6 +114,7 @@ public:
    void             SetColorOnFamily(const Float_t rgba[17]);
    void             SetDiffuseColor(const Float_t rgba[4]);
    void             SetDiffuseColor(const UChar_t rgba[4]);
+   void             SetDiffuseColor(Color_t ci, UChar_t transparency);
 
    // Geometry
    TGLVector3       GetScale() const;

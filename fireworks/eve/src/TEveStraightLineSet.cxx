@@ -19,12 +19,17 @@
 #include "TRandom.h"
 #include "TEveProjectionManager.h"
 
-//______________________________________________________________________________
+
+//==============================================================================
+//==============================================================================
 // TEveStraightLineSet
+//==============================================================================
+
+//______________________________________________________________________________
 //
 // Set of straight lines with optional markers along the lines.
 
-ClassImp(TEveStraightLineSet)
+ClassImp(TEveStraightLineSet);
 
 //______________________________________________________________________________
 TEveStraightLineSet::TEveStraightLineSet(const Text_t* n, const Text_t* t):
@@ -130,12 +135,16 @@ TClass* TEveStraightLineSet::ProjectedClass() const
 }
 
 
-//______________________________________________________________________________
+//==============================================================================
+//==============================================================================
 // TEveStraightLineSetProjected
-//
-// Projected copy of a TEveStraightLineSet.
+//==============================================================================
 
-ClassImp(TEveStraightLineSetProjected)
+//______________________________________________________________________________
+//
+// Projected replica of a TEveStraightLineSet.
+
+ClassImp(TEveStraightLineSetProjected);
 
 //______________________________________________________________________________
 TEveStraightLineSetProjected::TEveStraightLineSetProjected() :
@@ -159,7 +168,21 @@ void TEveStraightLineSetProjected::SetProjection(TEveProjectionManager* proj,
    * (TAttLine*)  this = * dynamic_cast<TAttLine*>(fProjectable);
 }
 
-/******************************************************************************/
+//______________________________________________________________________________
+void TEveStraightLineSetProjected::SetDepth(Float_t d)
+{
+   // Set depth (z-coordinate) of the projected points.
+
+   SetDepthCommon(d, this, fBBox);
+
+   TEveChunkManager::iterator li(fLinePlex);
+   while (li.next())
+   {
+      TEveStraightLineSet::Line_t& l = * (TEveStraightLineSet::Line_t*) li();
+      l.fV1[2] = fDepth;
+      l.fV2[2] = fDepth;
+   }
+}
 
 //______________________________________________________________________________
 void TEveStraightLineSetProjected::UpdateProjection()
@@ -167,8 +190,8 @@ void TEveStraightLineSetProjected::UpdateProjection()
    // Callback that actually performs the projection.
    // Called when projection parameters have been updated.
 
-   TEveProjection&      proj  = * fManager->GetProjection();
-   TEveStraightLineSet& orig  = * dynamic_cast<TEveStraightLineSet*>(fProjectable);
+   TEveProjection&      proj = * fManager->GetProjection();
+   TEveStraightLineSet& orig = * dynamic_cast<TEveStraightLineSet*>(fProjectable);
 
    // Lines
    fLinePlex.Reset(sizeof(Line_t), orig.GetLinePlex().Size());
@@ -195,7 +218,7 @@ void TEveStraightLineSetProjected::UpdateProjection()
       p2[0] += x; p2[1] += y; p2[2] += z;
       proj.ProjectPointFv(p1);
       proj.ProjectPointFv(p2);
-      AddLine(p1[0], p1[1], p1[2], p2[0], p2[1], p2[2]);
+      AddLine(p1[0], p1[1], fDepth, p2[0], p2[1], fDepth);
    }
 
    // Markers
@@ -203,6 +226,7 @@ void TEveStraightLineSetProjected::UpdateProjection()
    TEveChunkManager::iterator mi(orig.GetMarkerPlex());
    while (mi.next())
    {
+      // !!!! Marker's relative position can shift due to distortion.
       Marker_t* m = (Marker_t*) mi();
       AddMarker(m->fLineID, m->fPos);
    }

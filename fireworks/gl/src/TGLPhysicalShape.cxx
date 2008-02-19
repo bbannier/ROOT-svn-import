@@ -18,6 +18,9 @@
 
 #include "TGLScene.h"
 
+#include "TColor.h"
+#include "TROOT.h"
+
 // For debug tracing
 #include "TClass.h"
 #include "TError.h"
@@ -260,6 +263,23 @@ void TGLPhysicalShape::SetDiffuseColor(const UChar_t rgba[4])
 
    for (Int_t i=0; i<4; ++i)
       fColor[i] = rgba[i]/255.0f;
+   Modified();
+}
+
+//______________________________________________________________________________
+void TGLPhysicalShape::SetDiffuseColor(Color_t ci, UChar_t transparency)
+{
+   // Set color from standard ROOT representation, that is color index
+   // + transparency in range [0, 100].
+
+   if (ci < 0) ci = 1;
+   TColor* c = gROOT->GetColor(ci);
+   if (c) {
+      fColor[0] = c->GetRed();
+      fColor[1] = c->GetGreen();
+      fColor[2] = c->GetBlue();
+      fColor[3] = 1.0f - 0.01*transparency;
+   }
    Modified();
 }
 

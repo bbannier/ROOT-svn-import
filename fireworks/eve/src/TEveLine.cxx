@@ -16,7 +16,7 @@
 //
 // An arbitrary polyline with fixed line and marker attributes.
 
-ClassImp(TEveLine)
+ClassImp(TEveLine);
 
 //______________________________________________________________________________
 TEveLine::TEveLine(Int_t n_points, ETreeVarType_e tv_type) :

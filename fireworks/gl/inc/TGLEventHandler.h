@@ -34,6 +34,7 @@ protected:
    TTimer    *fMouseTimer;     // mouse delay timer
    TPoint     fLastPos;
    UInt_t     fActiveButtonID;
+   UInt_t     fLastEventState;
 
 public:
    TGLEventHandler(const char *name, TGWindow *w, TObject *obj, const char *title="");

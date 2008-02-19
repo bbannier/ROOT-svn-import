@@ -110,6 +110,7 @@ public:
    TGListTree* GetListTree() { return fListTree; }
 
    void ItemChecked(TObject* obj, Bool_t state);
+   void ItemBelowMouse(TGListTreeItem *entry);
    void ItemClicked(TGListTreeItem *entry, Int_t btn, Int_t x, Int_t y);
    void ItemDblClicked(TGListTreeItem* item, Int_t btn);
    void ItemKeyPress(TGListTreeItem *entry, UInt_t keysym, UInt_t mask);

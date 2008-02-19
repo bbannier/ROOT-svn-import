@@ -124,10 +124,10 @@ private:
    TEveTrackList(const TEveTrackList&);            // Not implemented
    TEveTrackList& operator=(const TEveTrackList&); // Not implemented
 
-   Bool_t               fRecurse;    // Recurse when propagating marker/line attributes to tracks.
-
 protected:
    TEveTrackPropagator* fPropagator;   // Basic track rendering parameters, not enforced to elements.
+
+   Bool_t               fRecurse;    // Recurse when propagating marker/line/etc attributes to tracks.
 
    Bool_t               fRnrLine;    // Render track as line.
    Bool_t               fRnrPoints;  // Render track as points.
@@ -150,12 +150,12 @@ public:
    void  FindMomentumLimits(TEveElement* el, Bool_t recurse);
 
    void  SetPropagator(TEveTrackPropagator* rs);
-   TEveTrackPropagator*  GetPropagator(){return fPropagator;}
+   TEveTrackPropagator* GetPropagator() { return fPropagator; }
 
    //--------------------------------
 
    virtual void   SetMainColor(Color_t c);
-   virtual void   SetLineColor(Color_t c){SetMainColor(c);}
+   virtual void   SetLineColor(Color_t c) { SetMainColor(c); }
    virtual void   SetLineColor(Color_t c, TEveElement* el);
    virtual void   SetLineWidth(Width_t w);
    virtual void   SetLineWidth(Width_t w, TEveElement* el);

@@ -41,6 +41,8 @@ public:
 
    virtual void SetProjection(TEveProjectionManager* proj, TEveProjectable* model);
 
+   virtual void SetDepth(Float_t d);
+
    virtual void UpdateProjection();
    virtual void MakeTrack(Bool_t recurse=kTRUE);
 
@@ -68,7 +70,10 @@ public:
    virtual ~TEveTrackListProjected() {}
 
    virtual void SetProjection(TEveProjectionManager* proj, TEveProjectable* model);
-   virtual void UpdateProjection(){};
+   virtual void SetDepth(Float_t d);
+   virtual void UpdateProjection()  {}
+
+   virtual void SetDepth(Float_t d, TEveElement* el);
 
    ClassDef(TEveTrackListProjected, 1); // Specialization of TEveTrackList for holding TEveTrackProjected objects.
 };

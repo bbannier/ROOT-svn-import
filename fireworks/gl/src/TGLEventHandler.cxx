@@ -41,6 +41,8 @@ TGLEventHandler::TGLEventHandler(const char *name, TGWindow *w, TObject *obj,
 { 
    fGLViewer = (TGLViewer *)obj;
    fMouseTimer = new TTimer(this, 250);
+   fActiveButtonID = 0;
+   fLastEventState = 0;
 }
 
 //______________________________________________________________________________
@@ -339,7 +341,8 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
                   }
                } else if (event->fState & kKeyMod1Mask) {
                   fGLViewer->RequestSelect(event->fX, event->fY, kTRUE);
-                  if (fGLViewer->fSecSelRec.GetPhysShape() != 0) {
+                  if (fGLViewer->fSecSelRec.GetPhysShape() != 0)
+                  {
                      TGLLogicalShape& lshape = const_cast<TGLLogicalShape&>
                         (*fGLViewer->fSecSelRec.GetPhysShape()->GetLogical());
                      lshape.ProcessSelection(*fGLViewer->fRnrCtx, fGLViewer->fSecSelRec);
@@ -363,7 +366,8 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
             case kButton3:
             {
                // Shift + Right mouse - select+context menu
-               if (event->fState & kKeyShiftMask) {
+               if (event->fState & kKeyShiftMask)
+               {
                   fGLViewer->RequestSelect(event->fX, event->fY);
                   const TGLPhysicalShape * selected = fGLViewer->fSelRec.GetPhysShape();
                   if (selected) {
@@ -516,6 +520,8 @@ Bool_t TGLEventHandler::HandleExpose(Event_t * event)
 Bool_t TGLEventHandler::HandleKey(Event_t *event)
 {
    // Handle keyboard 'event'.
+
+   fLastEventState = event->fState;
 
    fGLViewer->MouseIdle(0, 0, 0);
    if (fGLViewer->IsLocked()) {
@@ -708,6 +714,7 @@ Bool_t TGLEventHandler::HandleTimer(TTimer *t)
          if (shape != fGLViewer->fSelRec.GetPhysShape()) {
             shape = fGLViewer->fSelRec.GetPhysShape();
             fGLViewer->MouseOver(shape);
+            fGLViewer->MouseOver(shape, fLastEventState);
          }
          oldx = (UInt_t)fLastPos.fX;
          oldy = (UInt_t)fLastPos.fY;

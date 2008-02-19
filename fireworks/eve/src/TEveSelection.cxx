@@ -10,9 +10,10 @@
  *************************************************************************/
 
 #include "TEveSelection.h"
+#include "TEveProjectionBases.h"
+#include "TEveManager.h"
 
 //______________________________________________________________________________
-// Description of TEveSelection
 //
 // Make sure there is a SINGLE running TEveSelection for each
 // selection type (select/highlight).
@@ -22,7 +23,9 @@ ClassImp(TEveSelection);
 //______________________________________________________________________________
 TEveSelection::TEveSelection(const Text_t* n, const Text_t* t) :
    TEveElementList(n, t),
-   fActive (kTRUE)
+   fPickToSelect  (kPS_Projectable),
+   fActive        (kTRUE),
+   fIsMaster      (kTRUE)
 {
    // Constructor.
 
@@ -33,6 +36,8 @@ TEveSelection::TEveSelection(const Text_t* n, const Text_t* t) :
 
 void TEveSelection::SetHighlightMode()
 {
+   fIsMaster = kFALSE;
+
    fSelElement       = &TEveElement::HighlightElement;
    fIncImpSelElement = &TEveElement::IncImpliedHighlighted;
    fDecImpSelElement = &TEveElement::DecImpliedHighlighted;
@@ -135,13 +140,7 @@ void TEveSelection::RemoveElementsLocal()
 // Activation / deactivation of selection
 /******************************************************************************/
 
-// These two need to be implemented once several selections are supported.
-//
-// Still, even when deactivated, someone should propagate
-// object-deletions to the selection.
-//
-// Ah, but it happens automatically, as selection is an element!
-
+//______________________________________________________________________________
 void TEveSelection::ActivateSelection()
 {
    for (SelMap_i i = fImpliedSelected.begin(); i != fImpliedSelected.end(); ++i)
@@ -149,9 +148,69 @@ void TEveSelection::ActivateSelection()
    fActive = kTRUE;
 }
 
+//______________________________________________________________________________
 void TEveSelection::DeactivateSelection()
 {
    fActive = kFALSE;
    for (SelMap_i i = fImpliedSelected.begin(); i != fImpliedSelected.end(); ++i)
       DoElementUnselect(i);
+}
+
+
+/******************************************************************************/
+// User input processing
+/******************************************************************************/
+
+//______________________________________________________________________________
+TEveElement* TEveSelection::MapPickedToSelected(TEveElement* el)
+{
+   if (el == 0 || el->GetPickable() == kFALSE)
+      return 0;
+
+   switch (fPickToSelect)
+   {
+      case kPS_Ignore:
+      {
+         return 0;
+      }
+      case kPS_Element:
+      {
+         return el;
+      }
+      case kPS_Projectable:
+      {
+         TEveProjected* p = dynamic_cast<TEveProjected*>(el);
+         if (p)
+            return dynamic_cast<TEveElement*>(p->GetProjectable());
+         else
+            return el;
+      }
+      case kPS_Compound:
+      {
+         Error("TEveSelection::MapPickedToSelected", "Compound pick-to-select mode not supported.");
+         return el;
+      }  
+   }
+   return el;
+}
+
+void TEveSelection::UserPickedElement(TEveElement* el, Bool_t multi)
+{
+   el = MapPickedToSelected(el);
+
+   if (el || GetNChildren() > 0)
+   {
+      if (!multi)
+         RemoveElements();
+      if (el)
+      {
+         if (HasChild(el))
+             RemoveElement(el);
+         else
+            AddElement(el);
+      }
+      if (fIsMaster)
+         gEve->ElementSelect(el);
+      gEve->Redraw3D();
+   }
 }

@@ -95,6 +95,7 @@ public:
    virtual ~TEvePolygonSetProjected();
 
    virtual void    SetProjection(TEveProjectionManager* proj, TEveProjectable* model);
+   virtual void    SetDepth(Float_t d);
    virtual void    UpdateProjection();
 
    void            ProjectBuffer3D();

@@ -59,20 +59,28 @@ void TEveTrackProjectedGL::DirectDraw(TGLRnrCtx& rnrCtx) const
       return;
 
    // lines
-   Int_t start = 0;
-   Float_t* p = fM->GetP();
-   for (std::vector<Int_t>::iterator bpi = fM->fBreakPoints.begin();
-        bpi != fM->fBreakPoints.end(); ++bpi)
+   if (fM->fRnrLine)
    {
-      Int_t size = *bpi - start;
-      if (fM->fRnrLine)
+      Int_t start = 0;
+      Float_t* p  = fM->GetP();
+      TGLUtil::LockColor(); // Keep color from TGLPhysicalShape.
+      for (std::vector<Int_t>::iterator bpi = fM->fBreakPoints.begin();
+           bpi != fM->fBreakPoints.end(); ++bpi)
+      {
+         Int_t size = *bpi - start;
          TGLUtil::RenderPolyLine(*fM, p, size);
-      if (fM->fRnrPoints)
-         TGLUtil::RenderPolyMarkers(*fM, p, size,
-                                    rnrCtx.GetPickRadius(),
-                                    rnrCtx.Selection());
-      p     += 3*size;
-      start +=   size;
+         p     += 3*size;
+         start +=   size;
+      }
+      TGLUtil::UnlockColor();
+   }
+
+   // markers on lines
+   if (fM->fRnrPoints)
+   {
+      TGLUtil::RenderPolyMarkers(*fM, fM->GetP(), fM->Size(),
+                                 rnrCtx.GetPickRadius(),
+                                 rnrCtx.Selection());
    }
 
    // path-marks

@@ -12,6 +12,7 @@
 #include "TEveScene.h"
 #include "TEveViewer.h"
 #include "TEveManager.h"
+#include "TEveTrans.h"
 
 #include "TList.h"
 #include "TGLScenePad.h"
@@ -231,7 +232,9 @@ void TEveSceneList::ProcessSceneChanges(Bool_t dropLogicals, Set_t& stampSet)
       }
       else
       {
-         Bool_t changed = kFALSE;
+         Bool_t updateViewers = kFALSE;
+         Bool_t incTimeStamp  = kFALSE;
+         s->GetGLScene()->BeginUpdate();
 
          // Process stamps.
          TGLScene::LogicalShapeMap_t& logs = s->GetGLScene()->RefLogicalShapes();
@@ -247,14 +250,37 @@ void TEveSceneList::ProcessSceneChanges(Bool_t dropLogicals, Set_t& stampSet)
 
             if (li->first == eobj)
             {
-               TGLPhysicalShape* pshp = const_cast<TGLPhysicalShape*>(li->second->GetFirstPhysical());
-               pshp->Select((*ei)->GetSelectedLevel());
+               if (li->second->Ref() != 1)
+                  Warning("TEveSceneList::ProcessSceneChanges",
+                          "Expect one physical, cnt=%u.", li->second->Ref());
 
-               // Should check stamps, set color, transf, drop DLs.
-               // But these are not emmited yet anyway, so it's ok.
+               TGLLogicalShape  *lshp = li->second;
+               TGLPhysicalShape *pshp = const_cast<TGLPhysicalShape*>(lshp->GetFirstPhysical());
+               TEveElement      *el   = *ei;
+               UChar_t           bits = el->GetChangeBits();
+
+               if (bits & kCBColorSelection)
+               {
+                  pshp->Select(el->GetSelectedLevel());
+                  pshp->SetDiffuseColor(el->GetMainColor(),
+                                        el->GetMainTransparency());
+               }
+
+               if (bits & kCBTransBBox)
+               {
+                  if (el->HasMainTrans())
+                     pshp->SetTransform(el->PtrMainTrans()->Array());
+                  lshp->UpdateBoundingBox();
+                  incTimeStamp = kTRUE;
+               }
+
+               if (bits & kCBObjProps)
+               {
+                  lshp->DLCacheClear();
+               }
 
                ++li; ++ei; eobj = 0;
-               changed = kTRUE;
+               updateViewers = kTRUE;
             }
             else if (li->first < eobj)
             {
@@ -266,8 +292,7 @@ void TEveSceneList::ProcessSceneChanges(Bool_t dropLogicals, Set_t& stampSet)
             }
          }
 
-         if (changed)
-            s->GetGLScene()->TagViewersChanged();
+         s->GetGLScene()->EndUpdate(incTimeStamp, updateViewers);
       }
    }
 }

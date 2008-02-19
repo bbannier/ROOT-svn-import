@@ -115,9 +115,8 @@ void TEveDigitSet::SetMainColor(Color_t color)
 
    if (fFrame) {
       fFrame->SetFrameColor(color);
-      fFrame->UpdateBackPtrItems();
+      fFrame->StampBackPtrElements(kCBColorSelection);
    }
-   gEve->Redraw3D();
 }
 
 /******************************************************************************/

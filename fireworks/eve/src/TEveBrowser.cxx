@@ -139,6 +139,7 @@ TEveGListTreeEditorFrame::TEveGListTreeEditorFrame(const Text_t* name, Int_t wid
    fListTree->Associate(fFrame);
    fListTree->SetColorMode(TGListTree::EColorMarkupMode(TGListTree::kColorUnderline | TGListTree::kColorBox));
    fListTree->SetAutoCheckBoxPic(kFALSE);
+   fListTree->SetUserControl(kTRUE);
    fLTCanvas->SetContainer(fListTree);
    fLTFrame->AddFrame(fLTCanvas, new TGLayoutHints
                       (kLHintsNormal | kLHintsExpandX | kLHintsExpandY, 1, 1, 1, 1));
@@ -178,6 +179,8 @@ TEveGListTreeEditorFrame::TEveGListTreeEditorFrame(const Text_t* name, Int_t wid
 
    fListTree->Connect("Checked(TObject*,Bool_t)", "TEveGListTreeEditorFrame",
                       this, "ItemChecked(TObject*, Bool_t)");
+   fListTree->Connect("OnMouseOver(TGListTreeItem*)", "TEveGListTreeEditorFrame",
+                      this, "ItemBelowMouse(TGListTreeItem*)");
    fListTree->Connect("Clicked(TGListTreeItem*, Int_t, Int_t, Int_t)", "TEveGListTreeEditorFrame",
                       this, "ItemClicked(TGListTreeItem*, Int_t, Int_t, Int_t)");
    fListTree->Connect("DoubleClicked(TGListTreeItem*, Int_t)", "TEveGListTreeEditorFrame",
@@ -310,6 +313,26 @@ void TEveGListTreeEditorFrame::ItemChecked(TObject* obj, Bool_t state)
    // state of the item, we need to ask for its negation.
    gEve->ElementChecked(el, !state);
    gEve->Redraw3D();
+}
+
+//______________________________________________________________________________
+void TEveGListTreeEditorFrame::ItemBelowMouse(TGListTreeItem *entry)
+{
+   // Different item is below mouse.
+
+   // !!!!!!!!
+
+   /*
+   if (entry)
+   {
+      TEveElement* el = (TEveElement*) entry->GetUserData();
+      
+   }
+   else
+   {
+
+   }
+   */
 }
 
 //______________________________________________________________________________

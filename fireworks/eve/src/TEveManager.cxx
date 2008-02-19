@@ -269,6 +269,8 @@ void TEveManager::DoRedraw3D()
    // Perform 3D redraw of scenes and viewers whose contents has
    // changed.
 
+   static const TEveException eh("TEveManager::DoRedraw3D ");
+
    // printf("TEveManager::DoRedraw3D redraw triggered\n");
 
    // fScenes ->RepaintChangedScenes (fDropLogicals);
@@ -277,10 +279,16 @@ void TEveManager::DoRedraw3D()
 
    for (TEveElement::Set_i i = fStampedElements.begin(); i != fStampedElements.end(); ++i)
    {
-      (*i)->UpdateItems(); // !!! maybe better just to redraw list-trees
+      if (fEditor->GetModel() == (*i)->GetEditorObject(eh))
+         fEditor->DisplayElement((*i));
+
+      // !!!! so far better just to redraw the list-tree;
+      // !!!! UpdateItems is obsolete, anyway.
+      // (*i)->UpdateItems();
       (*i)->ClearStamps();
    }
    fStampedElements.clear();
+   GetListTree()->ClearViewPort(); // !!!! see above.
 
    fResetCameras = kFALSE;
    fDropLogicals = kFALSE;

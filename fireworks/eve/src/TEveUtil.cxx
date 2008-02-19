@@ -449,3 +449,16 @@ void TEveRefBackPtr::UpdateBackPtrItems()
       ++i;
    }
 }
+
+//______________________________________________________________________________
+void TEveRefBackPtr::StampBackPtrElements(UChar_t stamps)
+{
+   // Add givem stamps to elements in the list of reverse references.
+
+   std::list<TEveElement*>::iterator i = fBackRefs.begin();
+   while (i != fBackRefs.end())
+   {
+      (*i)->AddStamp(stamps);
+      ++i;
+   }
+}
