@@ -360,6 +360,8 @@ TGListTree::TGListTree(TGWindow *p, UInt_t w, UInt_t h, UInt_t options,
    fAutoCheckBoxPic = kTRUE;
    fDisableOpen = kFALSE;
    fBdown       = kFALSE;
+   fUserControlled = kFALSE;
+   fCallback    = kFALSE;
 
    fGrayPixel   = GetGrayPixel();
    fFont        = GetDefaultFontStruct();
@@ -369,7 +371,7 @@ TGListTree::TGListTree(TGWindow *p, UInt_t w, UInt_t h, UInt_t options,
    fHighlightGC = GetHighlightGC()();
    fColorGC     = GetColorGC()();
 
-   fFirst = fSelected = 0;
+   fFirst = fSelected = fCurrent = 0;
    fDefw = fDefh = 1;
 
    fHspacing = 2;
@@ -417,6 +419,8 @@ TGListTree::TGListTree(TGCanvas *p,UInt_t options,ULong_t back) :
    fAutoCheckBoxPic = kTRUE;
    fDisableOpen = kFALSE;
    fBdown       = kFALSE;
+   fUserControlled = kFALSE;
+   fCallback    = kFALSE;
 
    fGrayPixel   = GetGrayPixel();
    fFont        = GetDefaultFontStruct();
@@ -426,7 +430,7 @@ TGListTree::TGListTree(TGCanvas *p,UInt_t options,ULong_t back) :
    fHighlightGC = GetHighlightGC()();
    fColorGC     = GetColorGC()();
 
-   fFirst = fSelected = 0;
+   fFirst = fSelected = fCurrent = 0;
    fDefw = fDefh = 1;
 
    fHspacing = 2;
@@ -572,17 +576,16 @@ Bool_t TGListTree::HandleButton(Event_t *event)
             if ((item->HasCheckBox()) && (event->fX < maxxchk) &&
                (event->fX > minxchk))
             {
-               fLastY = event->fY;
                ToggleItem(item);
                if (fCheckMode == kRecursive) {
                   CheckAllChildren(item, item->IsChecked());
                }
-               UpdateChecked(item, kTRUE); // !!!! should go inside if above?
+               UpdateChecked(item, kTRUE);
                Checked((TObject *)item->GetUserData(), item->IsChecked());
                return kTRUE;
             }
             if ((event->fX < maxx) && (event->fX > minx)) {
-               item->SetOpen( ! item->IsOpen()); // !!!!
+               item->SetOpen(!item->IsOpen());
                ClearViewPort();
                return kTRUE;
             }
@@ -593,14 +596,18 @@ Bool_t TGListTree::HandleButton(Event_t *event)
             fYDND = event->fY;
             fBdown = kTRUE;
          }
-         if (fSelected) fSelected->SetActive(kFALSE); // !!!! what was state before ?
-         fLastY = event->fY;
-         UnselectAll(kTRUE);
-         //item->fActive = kTRUE; // this is done below w/redraw
-         fSelected = item;
-         HighlightItem(item, kTRUE, kTRUE);
-         SendMessage(fMsgWindow, MK_MSG(kC_LISTTREE, kCT_ITEMCLICK),
-                     event->fCode, (event->fYRoot << 16) | event->fXRoot);
+         if (!fUserControlled) {
+            if (fSelected) fSelected->SetActive(kFALSE);
+            UnselectAll(kTRUE);
+            //item->fActive = kTRUE; // this is done below w/redraw
+            fCurrent = fSelected = item;
+            HighlightItem(item, kTRUE, kTRUE);
+            SendMessage(fMsgWindow, MK_MSG(kC_LISTTREE, kCT_ITEMCLICK),
+                        event->fCode, (event->fYRoot << 16) | event->fXRoot);
+         }
+         else {
+            fCurrent = fSelected = item;
+         }
          Clicked(item, event->fCode);
          Clicked(item, event->fCode, event->fXRoot, event->fYRoot);
       }
@@ -635,18 +642,21 @@ Bool_t TGListTree::HandleDoubleClick(Event_t *event)
    // Otherwise, just use default behaviour (open item).
    if (event->fCode == kButton1 && item) {
       ClearViewPort();
-      item->SetOpen( ! item->IsOpen()); // !!!!
-      if (item != fSelected) { // huh?!
-         if (fSelected) fSelected->SetActive(kFALSE); // !!!!
-         UnselectAll(kTRUE);
-         HighlightItem(item, kTRUE, kTRUE);
+      item->SetOpen(!item->IsOpen());
+      if (!fUserControlled) {
+         if (item != fSelected) { // huh?!
+            if (fSelected) fSelected->SetActive(kFALSE); // !!!!
+            UnselectAll(kTRUE);
+            HighlightItem(item, kTRUE, kTRUE);
+         }
       }
       SendMessage(fMsgWindow, MK_MSG(kC_LISTTREE, kCT_ITEMDBLCLICK),
                   event->fCode, (event->fYRoot << 16) | event->fXRoot);
       DoubleClicked(item, event->fCode);
       DoubleClicked(item, event->fCode, event->fXRoot, event->fYRoot);
    }
-   fSelected = item;
+   if (!fUserControlled)
+      fSelected = item;
    return kTRUE;
 }
 
@@ -743,6 +753,7 @@ Bool_t TGListTree::HandleMotion(Event_t *event)
    // Handle mouse motion event. Only used to set tool tip.
 
    TGListTreeItem *item;
+   static TGListTreeItem *below = 0;
    fOnMouseOver = kFALSE;
    TGPosition pos = GetPagePosition();
 
@@ -750,7 +761,21 @@ Bool_t TGListTree::HandleMotion(Event_t *event)
       gDNDManager->Drag(event->fXRoot, event->fYRoot,
                         TGDNDManager::GetDNDActionCopy(), event->fTime);
    } else if ((item = FindItem(event->fY)) != 0) {
-
+#if 1
+      if (!fUserControlled) {
+         if (fCurrent)
+            DrawOutline(fId, fCurrent, 0xffffff, kTRUE);
+         if (below)
+            DrawOutline(fId, below, 0xffffff, kTRUE);
+         DrawOutline(fId, item);
+         fCurrent = item;
+      }
+#endif
+      if (item != below) {
+         below = item;
+         OnMouseOver(below);
+      }
+      
       if (item->HasCheckBox()) {
          if ((event->fX < (item->fXtext - 4) &&
              (event->fX > (item->fXtext - (Int_t)item->GetCheckBoxPicture()->GetWidth()))))
@@ -797,7 +822,6 @@ Bool_t TGListTree::HandleMotion(Event_t *event)
                   fDNDData.fData = (void *)strdup(str.Data());
                   fDNDData.fDataLength = str.Length()+1;
                }
-               // !!! was item->fClosedPic
                SetDragPixmap(item->GetPicture());
                gDNDManager->StartDrag(this, event->fXRoot, event->fYRoot);
             }
@@ -808,7 +832,8 @@ Bool_t TGListTree::HandleMotion(Event_t *event)
                            TGDNDManager::GetDNDActionCopy(), event->fTime);
       } else {
          if (fTipItem == item) return kTRUE;
-         OnMouseOver(item);
+         if (!fUserControlled)
+            OnMouseOver(item);
          gVirtualX->SetCursor(fId, gVirtualX->CreateCursor(kHand));
       }
 
@@ -846,7 +871,6 @@ Bool_t TGListTree::HandleKey(Event_t *event)
    Int_t  n;
    UInt_t keysym;
    TGListTreeItem *item = 0;
-   TGListTreeItem *sel = fSelected;
 
    if (event->fType == kGKeyPress) {
       gVirtualX->LookupString(event, input, sizeof(input), keysym);
@@ -856,11 +880,15 @@ Bool_t TGListTree::HandleKey(Event_t *event)
          if (gDNDManager->IsDragging()) gDNDManager->EndDrag();
       }
 
-      item = FindItem(event->fY);
+      item = fCurrent;
       if (!item) return kFALSE;
 
-      KeyPressed(item, keysym, event->fState);
+      if (!fCallback) // avoid sending signal twice...
+         KeyPressed(item, keysym, event->fState);
 
+      if (fUserControlled && !fCallback)
+         return kTRUE;
+      
       switch ((EKeySym)keysym) {
          case kKey_Enter:
          case kKey_Return:
@@ -869,115 +897,66 @@ Bool_t TGListTree::HandleKey(Event_t *event)
 
             if (fSelected == item) {
                // treat 'Enter' and 'Return' as a double click
-               return HandleDoubleClick(event);
+               ClearViewPort();
+               item->SetOpen(!item->IsOpen());
+               DoubleClicked(item, 1);
             } else {
                // treat 'Enter' and 'Return' as a click
-               return HandleButton(event);
+               ClearViewPort();
+               if (fSelected) fSelected->SetActive(kFALSE);
+               fSelected = item;
+               fSelected->SetActive(kTRUE);
+               HighlightItem(item, kTRUE, kTRUE);
+               Clicked(item, 1);
             }
+            break;
+         case kKey_Space:
+            if (item->HasCheckBox()) {
+               ToggleItem(item);
+               if (fCheckMode == kRecursive) {
+                  CheckAllChildren(item, item->IsChecked());
+               }
+               UpdateChecked(item, kTRUE);
+               Checked((TObject *)item->GetUserData(), item->IsChecked());
+            }
+            break;
+         case kKey_F5:
+            Layout();
+            break;
+         case kKey_F7:
+            Search();
+            break;
+         case kKey_Left:
+            ClearViewPort();
+            item->SetOpen(kFALSE);
+            break;
+         case kKey_Right:
+            ClearViewPort();
+            item->SetOpen(kTRUE);
+            break;
+         case kKey_Up:
+            LineUp(event->fState & kKeyShiftMask);
+            break;
+         case kKey_Down:
+            LineDown(event->fState & kKeyShiftMask);
+            break;
+         case kKey_PageUp:
+            PageUp(event->fState & kKeyShiftMask);
+            break;
+         case kKey_PageDown:
+            PageDown(event->fState & kKeyShiftMask);
+            break;
+         case kKey_Home:
+            Home(event->fState & kKeyShiftMask);
+            break;
+         case kKey_End:
+            End(event->fState & kKeyShiftMask);
+            break;
          default:
-         break;
+            break;
       }
 
-      // new selected
-      fSelected = item;
-
-      if (event->fState & kKeyControlMask) {   // Cntrl key modifier pressed
-         switch((EKeySym)keysym & ~0x20) {   // treat upper and lower the same
-            case kKey_A:
-//               SelectAll();
-               break;
-            case kKey_B:
-//               LineLeft();
-               break;
-            case kKey_C:
-               return kTRUE;
-            case kKey_D:
-               break;
-            case kKey_E:
-               End();
-               break;
-            case kKey_F:
-               Search();
-               break;
-            case kKey_G:
-//               RepeatSearch();
-               break;
-            case kKey_H:
-//               LineLeft();
-               break;
-            case kKey_K:
-               End();
-               break;
-            case kKey_U:
-               Home();
-               break;
-            case kKey_V:
-            case kKey_Y:
-               return kTRUE;
-            case kKey_X:
-               return kTRUE;
-            default:
-               return kTRUE;
-         }
-      }
-      if (n && keysym >= 32 && keysym < 127 &&     // printable keys
-          !(event->fState & kKeyControlMask) &&
-          (EKeySym)keysym != kKey_Delete &&
-          (EKeySym)keysym != kKey_Backspace) {
-
-//         if (fKeyTimerActive) {
-//            fKeyInput += input;
-//         } else {
-//            fKeyInput = input;
-//            fKeyTimerActive = kTRUE;
-//            fKeyTimer->Reset();
-//            if (gSystem) gSystem->AddTimer(fKeyTimer);
-//         }
-      } else {
-
-         switch ((EKeySym)keysym) {
-            case kKey_F3:
-//               RepeatSearch();
-               break;
-            case kKey_F5:
-               Layout();
-               break;
-            case kKey_F7:
-               Search();
-               break;
-            case kKey_Left:
-//               LineLeft(event->fState & kKeyShiftMask);
-               break;
-            case kKey_Right:
-//               LineRight(event->fState & kKeyShiftMask);
-               break;
-            case kKey_Up:
-               LineUp(event->fState & kKeyShiftMask);
-               break;
-            case kKey_Down:
-               LineDown(event->fState & kKeyShiftMask);
-               break;
-            case kKey_PageUp:
-               PageUp(event->fState & kKeyShiftMask);
-               break;
-            case kKey_PageDown:
-               PageDown(event->fState & kKeyShiftMask);
-               break;
-            case kKey_Home:
-               Home(event->fState & kKeyShiftMask);
-               break;
-            case kKey_End:
-               End(event->fState & kKeyShiftMask);
-               break;
-            default:
-               break;
-         }
-      }
    }
-   // restore
-   fSelected = sel;
-
-//   fClient->NeedRedraw(this);
    return kTRUE;
 }
 
@@ -1145,23 +1124,25 @@ void TGListTree::LineUp(Bool_t /*select*/)
 {
    // Move content one item-size up.
 
-   if (!fCanvas || !fSelected) return;
-
    Int_t height;
-
-   const  TGPicture*pic1 = fSelected->GetPicture();
-
-   if (fSelected->HasCheckBox()){
-      const TGPicture *pic2 = fSelected->GetCheckBoxPicture();
-      height  = TMath::Max(pic1->GetHeight() + fVspacing, pic2->GetHeight() + fVspacing);
-   } else {
-      height = pic1->GetHeight() + fVspacing;
+   if (!fCurrent) return;
+   
+   TGDimension dim = GetPageDimension();
+   TGPosition pos = GetPagePosition();
+   const TGPicture *pic1 = fCurrent->GetPicture();
+   height = pic1->GetHeight() + fVspacing;
+   Int_t findy = (fCurrent->fY - height) + (fMargin - pos.fY);
+   TGListTreeItem *next = FindItem(findy);
+   if (next && (next != fCurrent)) {
+      DrawOutline(fId, fCurrent, 0xffffff, kTRUE);
+      if (findy <= 2*height) {
+         Int_t newpos = fCanvas->GetVsbPosition() - height;
+         if (newpos<0) newpos = 0;
+         fCanvas->SetVsbPosition(newpos);
+      }
+      DrawOutline(fId, next);
+      fCurrent = next;
    }
-
-   Int_t newpos = fCanvas->GetVsbPosition() - height;
-   if (newpos<0) newpos = 0;
-
-   fCanvas->SetVsbPosition(newpos);
 }
 
 //______________________________________________________________________________
@@ -1169,23 +1150,25 @@ void TGListTree::LineDown(Bool_t /*select*/)
 {
    // Move content one item-size down.
 
-   if (!fCanvas || !fSelected) return;
-
    Int_t height;
-
-   const  TGPicture*pic1 = fSelected->GetPicture();
-
-   if (fSelected->HasCheckBox()){
-      const TGPicture *pic2 = fSelected->GetCheckBoxPicture();
-      height  = TMath::Max(pic1->GetHeight() + fVspacing, pic2->GetHeight() + fVspacing);
-   } else {
-      height = pic1->GetHeight() + fVspacing;
+   if (!fCurrent) return;
+   
+   TGDimension dim = GetPageDimension();
+   TGPosition pos = GetPagePosition();
+   const TGPicture *pic1 = fCurrent->GetPicture();
+   height = pic1->GetHeight() + fVspacing;
+   Int_t findy = (fCurrent->fY + height) + (fMargin - pos.fY);
+   TGListTreeItem *next = FindItem(findy);
+   if (next && (next != fCurrent)) {
+      DrawOutline(fId, fCurrent, 0xffffff, kTRUE);
+      if (findy >= ((Int_t)dim.fHeight - 2*height)) {
+         Int_t newpos = fCanvas->GetVsbPosition() + height;
+         if (newpos<0) newpos = 0;
+         fCanvas->SetVsbPosition(newpos);
+      }
+      DrawOutline(fId, next);
+      fCurrent = next;
    }
-
-   Int_t newpos = fCanvas->GetVsbPosition() + height;
-   if (newpos<0) newpos = 0;
-
-   fCanvas->SetVsbPosition(newpos);
 }
 
 //______________________________________________________________________________
@@ -1405,7 +1388,7 @@ void TGListTree::DrawItem(Handle_t id, TGListTreeItem *item, Int_t x, Int_t y,
          ytext = y;
          ypic2 = y + (Int_t)((height - pic2->GetHeight()) >> 1);
       }
-      xpic2 = xpic1 + pic1->GetWidth() + 2;
+      xpic2 = xpic1 + pic1->GetWidth() + 1;
       xtext += pic2->GetWidth();
    } else {
       ypic1 = y;
@@ -1487,6 +1470,50 @@ void TGListTree::DrawItem(Handle_t id, TGListTreeItem *item, Int_t x, Int_t y,
 }
 
 //______________________________________________________________________________
+void TGListTree::DrawOutline(Handle_t id, TGListTreeItem *item, Pixel_t col, 
+                             Bool_t clear)
+{
+   // Draw a outline of color 'col' around an item.
+
+   Int_t posx;
+   TGPosition pos = GetPagePosition();
+   TGDimension dim = GetPageDimension();
+
+   posx = item->fXtext - item->GetPicWidth();
+   posx -= 5;
+   if (item->HasCheckBox())
+      posx -= item->GetCheckBoxPicture()->GetWidth();
+   if (clear) {
+      gVirtualX->SetForeground(fDrawGC, fCanvas->GetBackground());
+      ClearViewPort();
+   }
+   else
+      gVirtualX->SetForeground(fDrawGC, col);
+   gVirtualX->DrawRectangle(id, fDrawGC, posx, item->fYtext-pos.fY-2, 
+                            dim.fWidth-posx-2, FontHeight(fFont)+3);
+   gVirtualX->SetForeground(fDrawGC, fgBlackPixel);
+}
+
+//______________________________________________________________________________
+void TGListTree::DrawActive(Handle_t id, TGListTreeItem *item)
+{
+   // Draw active item with its active color.
+
+   UInt_t width;
+   TGPosition pos = GetPagePosition();
+   TGDimension dim = GetPageDimension();
+
+   width = FontTextWidth(fFont, item->GetText());
+   gVirtualX->SetForeground(fDrawGC, item->GetActiveColor());
+   gVirtualX->FillRectangle(id, fDrawGC, item->fXtext-1, 
+                    item->fYtext-pos.fY, width+2, FontHeight(fFont));
+   gVirtualX->SetForeground(fDrawGC, fgBlackPixel);
+   gVirtualX->DrawString(id, fHighlightGC, item->fXtext, 
+                         item->fYtext - pos.fY + FontAscent(fFont),
+                         item->GetText(), item->GetTextLength());
+}
+
+//______________________________________________________________________________
 void TGListTree::DrawItemName(Handle_t id, TGListTreeItem *item)
 {
    // Draw name of list tree item.
@@ -1495,23 +1522,18 @@ void TGListTree::DrawItemName(Handle_t id, TGListTreeItem *item)
    TGPosition pos = GetPagePosition();
 
    width = FontTextWidth(fFont, item->GetText());
-   // !!!! should make something different for selected.
-   if (item->IsActive() || item == fSelected) {
-      // bb: to be fixed!! Very strange behaviour...
-//      gVirtualX->SetForeground(fDrawGC, fgDefaultSelectedBackground);
-      gVirtualX->SetForeground(fDrawGC, item->GetActiveColor());
-      gVirtualX->FillRectangle(id, fDrawGC, item->fXtext, 
-                       item->fYtext-pos.fY, width, FontHeight(fFont));
-      gVirtualX->SetForeground(fDrawGC, fgBlackPixel);
-      gVirtualX->DrawString(id, fHighlightGC,
-                       item->fXtext, item->fYtext - pos.fY + FontAscent(fFont),
-                       item->GetText(), item->GetTextLength());
-   } else {
+   if (item->IsActive()) {
+      DrawActive(id, item);
+   }
+   else { // if (!item->IsActive() && (item != fSelected)) {
       gVirtualX->FillRectangle(id, fHighlightGC, item->fXtext, 
                        item->fYtext-pos.fY, width, FontHeight(fFont));
       gVirtualX->DrawString(id, fDrawGC,
                        item->fXtext, item->fYtext-pos.fY + FontAscent(fFont),
                        item->GetText(), item->GetTextLength());
+   }
+   if (item == fCurrent) {
+      DrawOutline(id, item);
    }
 
    if (fColorMode != 0 && item->HasColor()) {
@@ -1560,8 +1582,6 @@ void TGListTree::SetToolTipText(const char *text, Int_t x, Int_t y, Long_t delay
    // milliseconds (minimum 250). To remove tool tip call method with
    // delayms = 0. To change delayms you first have to call this method
    // with delayms=0.
-
-   // !!!! what's this all about?
 
    if (delayms == 0) {
       delete fTip;
@@ -1656,7 +1676,7 @@ void TGListTree::InsertChild(TGListTreeItem *parent, TGListTreeItem *item)
       }
 
    }
-   if (item->HasCheckBox()) // !!!! only for recursive mode
+   if (item->HasCheckBox())
       UpdateChecked(item);
 }
 
@@ -1707,8 +1727,6 @@ Int_t TGListTree::SearchChildren(TGListTreeItem *item, Int_t y, Int_t findy,
 {
    // Search child item.
 
-   // !!!! What is this doing?
-
    UInt_t height;
    const TGPicture *pic;
 
@@ -1727,7 +1745,7 @@ Int_t TGListTree::SearchChildren(TGListTreeItem *item, Int_t y, Int_t findy,
       }
 
       y += (Int_t)height + fVspacing;
-      if (item->fFirstchild && item->IsOpen()) { // !!!! why IsOpen? shouldn't we find all ...
+      if (item->fFirstchild && item->IsOpen()) {
          y = SearchChildren(item->fFirstchild, y, findy, finditem);
          if (*finditem) return -1;
       }
@@ -1765,7 +1783,7 @@ TGListTreeItem *TGListTree::FindItem(Int_t findy)
          return item;
 
       y += (Int_t)height + fVspacing;
-      if ((item->fFirstchild) && (item->IsOpen())) { // !!!! again, why IsOpen()
+      if ((item->fFirstchild) && (item->IsOpen())) {
          y = SearchChildren(item->fFirstchild, y, findy, &finditem);
          //if (finditem) return finditem;
       }
