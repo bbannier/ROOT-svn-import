@@ -4303,7 +4303,6 @@ int main(int argc, char **argv)
       }
    }
 
-
    if (!strcmp(argv[ic], "-f")) {
       force = 1;
       ic++;
@@ -4333,6 +4332,7 @@ int main(int argc, char **argv)
             return 1;
          }
       }
+      //string header( argv[ic] );
       header = argv[ic];
       int loc = strrchr(argv[ic],'.') - argv[ic];
       header[loc+1] = 'h';
@@ -4570,7 +4570,7 @@ int main(int argc, char **argv)
 #endif
          }
 #ifdef ROOTBUILD
-         argvv[argcc++] = (char *)"-DG__NOCINTDLL";
+         argvv[argcc++] = (char *)"-DG_NOCINTDLL";
 #endif
          argvv[argcc++] = (char *)"-DTRUE=1";
          argvv[argcc++] = (char *)"-DFALSE=0";
@@ -4768,7 +4768,7 @@ int main(int argc, char **argv)
          fclose(fpd);
       }
    }
-   G__setglobalcomp(0);  // G__NOLINK
+   G__setglobalcomp(0); // G__NOLINK
 #endif
 
    // We ran cint to load the in-memory database,
@@ -4855,7 +4855,7 @@ int main(int argc, char **argv)
        << "// Do NOT change. Changes will be lost next time file is generated" << std::endl
        << "//" << std::endl << std::endl
 
-       << "#include \"RConfig.h\"" << std::endl
+       << "#include \"RConfig.h\" //rootcint 4834" << std::endl
        << "#if !defined(R__ACCESS_IN_SYMBOL)" << std::endl
        << "//Break the privacy of classes -- Disabled for the moment" << std::endl
        << "#define private public" << std::endl

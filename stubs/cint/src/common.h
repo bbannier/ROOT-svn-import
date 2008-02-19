@@ -530,7 +530,7 @@ struct G__breakcontinue_list {
 *
 **************************************************************************/
 
-typedef enum { kCompleteDictionary, kShadowMembers, kFunctionSymbols, kNoWrappersDictionary} G__dictgenmode;
+typedef enum { kCompleteDictionary = 0, kShadowMembers = 1, kFunctionSymbols = 2, kNoWrappersDictionary = 3} G__dictgenmode;
 
 
 /**************************************************************************

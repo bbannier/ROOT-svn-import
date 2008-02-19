@@ -48,7 +48,6 @@ class TObjArray;
 class TEnv;
 class TVirtualMutex;
 
-
 R__EXTERN TVirtualMutex *gCINTMutex;
 
 class TCint : public TInterpreter {
