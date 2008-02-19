@@ -18,7 +18,7 @@
 #include "TMultiGraph.h" 
 #include "TF1.h" 
 #include "TList.h"
-#include "Terror.h"
+#include "TError.h"
 
 //#define DEBUG
 #ifdef DEBUG
