@@ -784,8 +784,8 @@ __asm__ __volatile__("movl $8, %eax");  \
  * only need to push them to the stack and make the function call
  **************************************************************************/
 #ifdef __x86_64__
-int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, void* this_ptr, G__param* rpara, G__value *result7)
-{
+int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, void* this_ptr, G__param* rpara, G__value *result7){
+
   void *vaddress = G__get_funcptr(ifunc, ifn);
   int paran = rpara->paran;
 
@@ -1065,7 +1065,7 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, void* thi
   }
   }
 
-  int type = result7->type;
+  int type = ifunc->type[ifn];
   int isref   = 0;
 
   if (reftype == G__PARAREFERENCE || isupper(type))
@@ -1303,8 +1303,8 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, void* thi
  * At this point the parameters have already been evaluated and we
  * only need to push them to the stack and make the function call
  **************************************************************************/
-int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, void* this_ptr, G__param* rpara, G__value *result7)
-{
+int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, void* this_ptr, G__param* rpara, G__value *result7){
+
    void *vaddress = G__get_funcptr(ifunc, ifn);
    int paran = rpara->paran;
 
@@ -1498,7 +1498,7 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, void* this_ptr, 
    if (this_ptr)
       __asm__ __volatile__("push %0" :: "g" ((void*) this_ptr));
 
-   int type = result7->type;
+   int type = ifunc->type[ifn];
    int isref   = 0;
 
    if (reftype == G__PARAREFERENCE || isupper(type))
