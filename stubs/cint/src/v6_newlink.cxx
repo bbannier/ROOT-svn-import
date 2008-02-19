@@ -2183,7 +2183,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
             para_del.para[0].tagnum = 0;      
       
             // We look for the "delete operator" ifunc in the current class and in its bases
-            if (arity)
+            if (arity > 1)
                del_oper = G__get_methodhandle4("operator delete[]", &para_del, ifunc, &pifn, &poffset,0,1,0,0);
             else 
                del_oper = G__get_methodhandle4("operator delete", &para_del, ifunc, &pifn, &poffset,0,1,0,0);
@@ -9723,7 +9723,7 @@ void G__cpplink_memfunc(FILE *fp)
 
             if (0 == isdestructor) isdestructor = G__isprivatedestructor(i);
             if ('n' == G__struct.type[i]) isdestructor = 1;
-            if ('n' != G__struct.type[i]) {
+            if (0 == isdestructor && 'n' != G__struct.type[i]) {
               sprintf(funcname, "~%s", G__struct.name[i]);
               G__hash(funcname, hash, k);
               fprintf(fp, "   // automatic destructor\n");
