@@ -230,11 +230,11 @@ public:
 protected:
    TGListTreeItem  *fFirst;          // pointer to first item in list
    TGListTreeItem  *fSelected;       // pointer to selected item in list
+   TGListTreeItem  *fCurrent;        // pointer to current item in list
    Int_t            fHspacing;       // horizontal spacing between items
    Int_t            fVspacing;       // vertical spacing between items
    Int_t            fIndent;         // number of pixels indentation
    Int_t            fMargin;         // number of pixels margin from left side
-   Int_t            fLastY;          // last used y position
    Pixel_t          fGrayPixel;      // gray draw color
    GContext_t       fDrawGC;         // icon drawing context
    GContext_t       fLineGC;         // dashed line drawing context
@@ -253,6 +253,8 @@ protected:
    Bool_t           fAutoTips;       // assume item->fUserData is TObject and use GetTitle() for tip text
    Bool_t           fAutoCheckBoxPic;// change check box picture if parent and children have diffrent state
    Bool_t           fDisableOpen;    // disable branch opening on double-clicks
+   Bool_t           fUserControlled; // let user decides what is the behaviour on events
+   Bool_t           fCallback;       // callback from user code (for default event handling)
 
    EColorMarkupMode fColorMode;      // if/how to render item's main color
    ECheckMode       fCheckMode;      // how to propagate check properties through the tree
@@ -327,6 +329,10 @@ public:
    virtual void SetCanvas(TGCanvas *canvas) { fCanvas = canvas; }
    virtual void DrawRegion(Int_t x, Int_t y, UInt_t w, UInt_t h);
 
+   virtual void DrawOutline(Handle_t id, TGListTreeItem *item, Pixel_t col=0xbbbbbb,
+                            Bool_t clear=kFALSE);
+   virtual void DrawActive(Handle_t id, TGListTreeItem *item);
+   
    virtual TGDimension GetDefaultSize() const
             { return TGDimension(fDefw, fDefh); }
 
@@ -405,6 +411,12 @@ public:
    virtual void DoubleClicked(TGListTreeItem *entry, Int_t btn, Int_t x, Int_t y);  //*SIGNAL*
    virtual void Checked(TObject *obj, Bool_t check);  //*SIGNAL*
    virtual void DataDropped(TGListTreeItem *item, TDNDData *data);  //*SIGNAL*
+
+   // User control
+   void         SetUserControl(Bool_t ctrl=kTRUE) { fUserControlled = ctrl; }
+   Bool_t       HasUserControl() const { return fUserControlled; }
+   void         SetCallback(Bool_t cb=kTRUE) { fCallback = cb; }
+   Bool_t       HasCallback() const { return fCallback; }
 
    Bool_t   HandleDNDDrop(TDNDData *data);
    Atom_t   HandleDNDPosition(Int_t x, Int_t y, Atom_t action,
