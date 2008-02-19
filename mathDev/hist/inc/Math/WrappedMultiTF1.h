@@ -27,7 +27,7 @@ namespace ROOT {
 
 
 /** 
-   Class to Wrap a ROOT Function class (like TF1)  in a IParamFunction interface
+   Class to Wrap a ROOT Function class (like TF1)  in a IParamMultiFunction interface
    of multi-dimensions to be used in the ROOT::Math numerical algorithm
    The parameter are stored in the WrappedFunction so we don't rely on the TF1 state values. 
    This allows for the copy of the wrapper function without the need to copy the TF1

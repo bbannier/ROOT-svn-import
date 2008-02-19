@@ -14,6 +14,8 @@
 #pragma link off all classes;
 #pragma link off all functions;
 
+#pragma link C++ namespace ROOT::Fit;
+
 
 //#pragma link C++ class ROOT::Fit::BinPoint;
 #pragma link C++ class ROOT::Fit::DataRange;
@@ -36,8 +38,6 @@
 #endif
 
 
-#pragma link C++ class ROOT::Math::WrappedTF1;
-#pragma link C++ class ROOT::Math::WrappedMultiTF1;
 
 //#pragma extra_include "Math/IParamFunction.h"
 
@@ -51,7 +51,6 @@
 
 
 
-#pragma link C++ namespace ROOT::Fit;
 
 
 #endif
