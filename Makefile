@@ -58,13 +58,13 @@ include $(MAKEFILEDEP)
 
 ##### Modules to build #####
 
-MODULES       = build cint metautils pcre utils base cont meta io net math mathcore \
+MODULES       = build cint metautils pcre utils base cont meta io net math fit mathcore \
                 zip clib matrix newdelete hist tree freetype graf gpad \
                 g3d gui minuit histpainter treeplayer ged treeviewer physics \
                 postscript rint thread html eg geom geompainter vmc fumili \
                 mlp quadp auth guibuilder xml foam splot smatrix sql tmva \
                 geombuilder spectrum spectrumpainter fitpanel proof \
-                proofplayer sessionviewer guihtml
+                proofplayer sessionviewer guihtml genvector
 
 ifeq ($(ARCH),win32)
 MODULES      += winnt win32gdk
@@ -407,11 +407,11 @@ ROOTMAP       = etc/system.rootmap
 ##### libCore #####
 
 COREL         = $(BASEL1) $(BASEL2) $(BASEL3) $(CONTL) $(METAL) \
-                $(SYSTEML) $(CLIBL) $(METAUTILSL) $(MATHL)
+                $(SYSTEML) $(CLIBL) $(METAUTILSL) 
 COREO         = $(BASEO) $(CONTO) $(METAO) $(SYSTEMO) $(ZIPO) $(CLIBO) \
-                $(METAUTILSO) $(MATHO)
+                $(METAUTILSO) 
 COREDO        = $(BASEDO) $(CONTDO) $(METADO) $(SYSTEMDO) $(CLIBDO) \
-                $(METAUTILSDO) $(MATHDO)
+                $(METAUTILSDO)
 
 CORELIB      := $(LPATH)/libCore.$(SOEXT)
 COREMAP      := $(CORELIB:.$(SOEXT)=.rootmap)

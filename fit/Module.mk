@@ -18,16 +18,16 @@ FITDO    := $(FITDS:.cxx=.o)
 FITDH    := $(FITDS:.cxx=.h)
 
 #FITAH    := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
-FITAH    := $(filter-out $(MODDIRI)/Fit/Chi2Grad%,$(wildcard $(MODDIRI)/Fit/*.h))
-FITBH    := $(MODDIR)/../mathmore/inc/Math/WrappedTF1.h \
-	    $(MODDIR)/../mathmore/inc/Math/WrappedMultiTF1.h  
+FITH    := $(filter-out $(MODDIRI)/Fit/Chi2Grad%,$(wildcard $(MODDIRI)/Fit/*.h))
+#FITBH    := $(MODDIR)/../mathmore/inc/Math/WrappedTF1.h \
+#	    $(MODDIR)/../mathmore/inc/Math/WrappedMultiTF1.h  
 # FITBH    := $(MODDIRI)/Fit/BinPoint.h \
 # 	    $(MODDIRI)/Fit/DataRange.h \
 # 	    $(MODDIRI)/Fit/DataOptions.h \
 # 	    $(MODDIRI)/Fit/DataVector.h  \
 # 	    $(MODDIRI)/Fit/WrappedTF1.h   
 
-FITH     := $(FITAH) $(FITBH)
+#FITH     := $(FITAH) $(FITBH)
 FITS     := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
 FITO     := $(FITS:.cxx=.o)
 
@@ -37,7 +37,7 @@ FITLIB   := $(LPATH)/libFit.$(SOEXT)
 
 # used in the main Makefile
 ALLHDRS      += $(patsubst $(MODDIRI)/%.h,include/%.h,$(FITH))
-ALLLIBS      += $(FITLIB)
+#ALLLIBS      += $(FITLIB)
 
 # include all dependency files
 INCLUDEFILES += $(FITDEP)
@@ -63,7 +63,7 @@ $(FITDS):   $(FITH) $(FITL) $(ROOTCINTTMPEXE)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(FITH) $(FITL)
 
-all-fit:    $(FITLIB)
+all-fit:    $(FITO) $(FITDO) 
 
 map-fit:    $(RLIBMAP)
 		$(RLIBMAP) -r $(ROOTMAP) -l $(FITLIB) \
