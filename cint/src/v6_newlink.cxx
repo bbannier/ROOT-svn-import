@@ -2749,6 +2749,7 @@ void G__gen_cpplink()
     G__cpp_initialize(fp);
 #endif
 
+  }
     fclose(fp);
     fclose(hfp);
 #ifdef G__GENWINDEF
@@ -2757,7 +2758,7 @@ void G__gen_cpplink()
 #endif
 
     G__ctordtor_destruct();
-  }
+  
 }
 
 /**************************************************************************

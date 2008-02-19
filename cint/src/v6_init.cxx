@@ -674,7 +674,7 @@ int G__main(int argc, char** argv)
          case 'j':
             G__multithreadlibcint = atoi(optarg);
             break;
-         // 03-07-07 new option to include the library name (it's actualli the .nm file)
+         // 03-07-07 new option to include the library name (it's actually the .nm file)
          case 'L':
             G__libname = optarg;
             break;
