@@ -14,6 +14,7 @@
 #include "TEveUtil.h"
 #include "TEveElement.h"
 #include "TEveManager.h"
+#include "TEveSelection.h"
 #include "TEveGedEditor.h"
 
 #include "TGFileBrowser.h"
@@ -121,8 +122,7 @@ ClassImp(TEveGListTreeEditorFrame);
 //______________________________________________________________________________
 TEveGListTreeEditorFrame::TEveGListTreeEditorFrame(const Text_t* name, Int_t width, Int_t height) :
    TGMainFrame(gClient->GetRoot(), width, height),
-   fCtxMenu     (0),
-   fNewSelected (0)
+   fCtxMenu     (0)
 {
    // Constructor.
 
@@ -179,10 +179,10 @@ TEveGListTreeEditorFrame::TEveGListTreeEditorFrame(const Text_t* name, Int_t wid
 
    fListTree->Connect("Checked(TObject*,Bool_t)", "TEveGListTreeEditorFrame",
                       this, "ItemChecked(TObject*, Bool_t)");
-   fListTree->Connect("OnMouseOver(TGListTreeItem*)", "TEveGListTreeEditorFrame",
-                      this, "ItemBelowMouse(TGListTreeItem*)");
-   fListTree->Connect("Clicked(TGListTreeItem*, Int_t, Int_t, Int_t)", "TEveGListTreeEditorFrame",
-                      this, "ItemClicked(TGListTreeItem*, Int_t, Int_t, Int_t)");
+   fListTree->Connect("MouseOver(TGListTreeItem*, UInt_t)", "TEveGListTreeEditorFrame",
+                      this, "ItemBelowMouse(TGListTreeItem*, UInt_t)");
+   fListTree->Connect("Clicked(TGListTreeItem*, Int_t, UInt_t, Int_t, Int_t)", "TEveGListTreeEditorFrame",
+                      this, "ItemClicked(TGListTreeItem*, Int_t, UInt_t, Int_t, Int_t)");
    fListTree->Connect("DoubleClicked(TGListTreeItem*, Int_t)", "TEveGListTreeEditorFrame",
                       this, "ItemDblClicked(TGListTreeItem*, Int_t)");
    fListTree->Connect("KeyPressed(TGListTreeItem*, ULong_t, ULong_t)", "TEveGListTreeEditorFrame",
@@ -316,27 +316,16 @@ void TEveGListTreeEditorFrame::ItemChecked(TObject* obj, Bool_t state)
 }
 
 //______________________________________________________________________________
-void TEveGListTreeEditorFrame::ItemBelowMouse(TGListTreeItem *entry)
+void TEveGListTreeEditorFrame::ItemBelowMouse(TGListTreeItem *entry, UInt_t /*mask*/)
 {
    // Different item is below mouse.
 
-   // !!!!!!!!
-
-   /*
-   if (entry)
-   {
-      TEveElement* el = (TEveElement*) entry->GetUserData();
-      
-   }
-   else
-   {
-
-   }
-   */
+   TEveElement* el = entry ? (TEveElement*) entry->GetUserData() : 0;
+   gEve->GetHighlight()->UserPickedElement(el, kFALSE);
 }
 
 //______________________________________________________________________________
-void TEveGListTreeEditorFrame::ItemClicked(TGListTreeItem *item, Int_t btn, Int_t x, Int_t y)
+void TEveGListTreeEditorFrame::ItemClicked(TGListTreeItem *item, Int_t btn, UInt_t mask, Int_t x, Int_t y)
 {
    // Item has been clicked, based on mouse button do:
    // M1 - select, show in editor;
@@ -348,18 +337,18 @@ void TEveGListTreeEditorFrame::ItemClicked(TGListTreeItem *item, Int_t btn, Int_
 
    static const TEveException eh("TEveGListTreeEditorFrame::ItemClicked ");
 
-   TEveElement* re = (TEveElement*)item->GetUserData();
-   if(re == 0) return;
-   TObject* obj = re->GetObject(eh);
+   TEveElement* el = (TEveElement*) item->GetUserData();
+   if (el == 0) return;
+   TObject* obj = el->GetObject(eh);
 
    switch (btn)
    {
       case 1:
-         gEve->ElementSelect(re);
+         gEve->GetSelection()->UserPickedElement(el, mask & kKeyControlMask);
          break;
 
       case 2:
-         if (gEve->ElementPaste(re))
+         if (gEve->ElementPaste(el))
             gEve->Redraw3D();
          break;
 
@@ -367,6 +356,7 @@ void TEveGListTreeEditorFrame::ItemClicked(TGListTreeItem *item, Int_t btn, Int_
          // If control pressed, show menu for render-element itself.
          // event->fState & kKeyControlMask
          // ??? how do i get current event?
+         // !!!!! Have this now ... fix.
          if (obj) fCtxMenu->Popup(x, y, obj);
          break;
 
@@ -384,12 +374,12 @@ void TEveGListTreeEditorFrame::ItemDblClicked(TGListTreeItem* item, Int_t btn)
 
    if (btn != 1) return;
 
-   TEveElement* re = (TEveElement*) item->GetUserData();
-   if (re == 0) return;
+   TEveElement* el = (TEveElement*) item->GetUserData();
+   if (el == 0) return;
 
-   re->ExpandIntoListTree(fListTree, item);
+   el->ExpandIntoListTree(fListTree, item);
 
-   TObject* obj = re->GetObject(eh);
+   TObject* obj = el->GetObject(eh);
    if (obj)
    {
       // Browse geonodes.
@@ -406,7 +396,7 @@ void TEveGListTreeEditorFrame::ItemDblClicked(TGListTreeItem* item, Int_t btn)
                           n->GetDaughter(i)->GetVolume()->GetName(),
                           n->GetDaughter(i)->GetNdaughters());
 
-               TGListTreeItem* child = fListTree->AddItem( item, title.Data());
+               TGListTreeItem* child = fListTree->AddItem(item, title.Data());
                child->SetUserData(n->GetDaughter(i));
             }
          }
@@ -415,76 +405,63 @@ void TEveGListTreeEditorFrame::ItemDblClicked(TGListTreeItem* item, Int_t btn)
 }
 
 //______________________________________________________________________________
-void TEveGListTreeEditorFrame::ItemKeyPress(TGListTreeItem *entry, UInt_t keysym, UInt_t /*mask*/)
+void TEveGListTreeEditorFrame::ItemKeyPress(TGListTreeItem *entry, UInt_t keysym, UInt_t mask)
 {
    // A key has been pressed for an item.
-   // Only <Delete> key is handled here.
+   //
+   // Only <Delete>, <Enter> and <Return> keys are handled here,
+   // otherwise the control is passed back to TGListTree.
 
    static const TEveException eh("TEveGListTreeEditorFrame::ItemKeyPress ");
 
-   // replace entry with selected!
-   entry = fListTree->GetSelected();
+   entry = fListTree->GetCurrent();
    if (entry == 0) return;
 
-   // !!! This is overly complex because TGListTree takes too much initiative.
-   if (keysym == kKey_Delete)
+   TEveElement* el = (TEveElement*) entry->GetUserData();
+
+   fListTree->SetEventHandled(); // Reset back to false in default case.
+
+   switch (keysym)
    {
-      TEveElement* rnr_el = dynamic_cast<TEveElement*>
-         ((TEveElement*) entry->GetUserData());
-      if (rnr_el == 0)
-         return;
-
-      if (entry->GetParent())
+      case kKey_Delete:
       {
-         if (rnr_el->GetDenyDestroy() > 0 && rnr_el->GetNItems() == 1)
-            throw(eh + "DestroyDenied set for this item.");
-
-         TEveElement* parent_re = dynamic_cast<TEveElement*>
-            ((TEveElement*) entry->GetParent()->GetUserData());
-
-         if (parent_re)
+         if (entry->GetParent())
          {
-            ResetSelectedTimer(entry);
-            gEve->RemoveElement(rnr_el, parent_re);
+            if (el->GetDenyDestroy() > 0 && el->GetNItems() == 1)
+               throw(eh + "DestroyDenied set for this item.");
+
+            TEveElement* parent = dynamic_cast<TEveElement*>
+               ((TEveElement*) entry->GetParent()->GetUserData());
+
+            if (parent)
+            {
+               gEve->RemoveElement(el, parent);
+               gEve->Redraw3D();
+            }
+         }
+         else
+         {
+            if (el->GetDenyDestroy() > 0)
+               throw(eh + "DestroyDenied set for this top-level item.");
+            gEve->RemoveFromListTree(el, fListTree, entry);
             gEve->Redraw3D();
          }
+         break;
       }
-      else
+
+      case kKey_Enter:
+      case kKey_Return:
       {
-         if (rnr_el->GetDenyDestroy() > 0)
-            throw(eh + "DestroyDenied set for this top-level item.");
-         ResetSelectedTimer(entry);
-         gEve->RemoveFromListTree(rnr_el, fListTree, entry);
-         gEve->Redraw3D();
+         gEve->GetSelection()->UserPickedElement(el, mask & kKeyControlMask);
+         break;
+      }
+
+      default:
+      {
+         fListTree->SetEventHandled(kFALSE);
+         break;
       }
    }
-}
-
-//______________________________________________________________________________
-void TEveGListTreeEditorFrame::ResetSelectedTimer(TGListTreeItem* lti)
-{
-   // Reset timer needed for proper re-selection after deletion of an
-   // item.
-
-   fNewSelected = lti->GetPrevSibling();
-   if (! fNewSelected) {
-      fNewSelected = lti->GetNextSibling();
-      if (! fNewSelected)
-         fNewSelected = lti->GetParent();
-   }
-
-   TTimer::SingleShot(0, IsA()->GetName(), this, "ResetSelected()");
-}
-
-//______________________________________________________________________________
-void TEveGListTreeEditorFrame::ResetSelected()
-{
-   // Callback for timer needed for proper re-selection after deletion
-   // of an item.
-
-   fListTree->HighlightItem(fNewSelected);
-   fListTree->SetSelected(fNewSelected);
-   fNewSelected = 0;
 }
 
 

@@ -83,7 +83,7 @@ Bool_t TEveSelection::AcceptElement(TEveElement* el)
    // Pre-addition check. Deny addition if el is already selected.
    // Virtual from TEveElement.
 
-   return fImpliedSelected.find(el) == fImpliedSelected.end();
+   return el != this && fImpliedSelected.find(el) == fImpliedSelected.end();
 }
 
 //______________________________________________________________________________
@@ -164,9 +164,6 @@ void TEveSelection::DeactivateSelection()
 //______________________________________________________________________________
 TEveElement* TEveSelection::MapPickedToSelected(TEveElement* el)
 {
-   if (el == 0 || el->GetPickable() == kFALSE)
-      return 0;
-
    switch (fPickToSelect)
    {
       case kPS_Ignore:
@@ -180,10 +177,12 @@ TEveElement* TEveSelection::MapPickedToSelected(TEveElement* el)
       case kPS_Projectable:
       {
          TEveProjected* p = dynamic_cast<TEveProjected*>(el);
-         if (p)
-            return dynamic_cast<TEveElement*>(p->GetProjectable());
-         else
-            return el;
+         if (p) {
+            TEveElement* pm = dynamic_cast<TEveElement*>(p->GetProjectable());
+            if (pm)
+               return pm;
+         }
+         return el;
       }
       case kPS_Compound:
       {
@@ -194,6 +193,7 @@ TEveElement* TEveSelection::MapPickedToSelected(TEveElement* el)
    return el;
 }
 
+//______________________________________________________________________________
 void TEveSelection::UserPickedElement(TEveElement* el, Bool_t multi)
 {
    el = MapPickedToSelected(el);

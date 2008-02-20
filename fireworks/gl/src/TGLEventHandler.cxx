@@ -549,6 +549,9 @@ Bool_t TGLEventHandler::HandleKey(Event_t *event)
    }
    else
    {
+      Bool_t mod1 = event->fState & kKeyControlMask;
+      Bool_t mod2 = event->fState & kKeyShiftMask;
+
       switch (keysym)
       {
          case kKey_R:
@@ -588,30 +591,24 @@ Bool_t TGLEventHandler::HandleKey(Event_t *event)
          case kKey_Plus:
          case kKey_J:
          case kKey_j:
-            redraw = fGLViewer->CurrentCamera().Dolly(10, event->fState & kKeyControlMask,
-                     event->fState & kKeyShiftMask); //TODO : val static const somewhere
+            redraw = fGLViewer->CurrentCamera().Dolly(10, mod1, mod2);
             break;
          case kKey_Minus:
          case kKey_K:
          case kKey_k:
-            redraw = fGLViewer->CurrentCamera().Dolly(-10, event->fState & kKeyControlMask,
-                     event->fState & kKeyShiftMask); //TODO : val static const somewhere
+            redraw = fGLViewer->CurrentCamera().Dolly(-10, mod1, mod2);
             break;
          case kKey_Up:
-            redraw = fGLViewer->CurrentCamera().Truck(fGLViewer->fViewport.CenterX(),
-                     fGLViewer->fViewport.CenterY(), 0, 5);
+            redraw = fGLViewer->CurrentCamera().Truck(0, 10, mod1, mod2);
             break;
          case kKey_Down:
-            redraw = fGLViewer->CurrentCamera().Truck(fGLViewer->fViewport.CenterX(),
-                     fGLViewer->fViewport.CenterY(), 0, -5);
+            redraw = fGLViewer->CurrentCamera().Truck(0, -10, mod1, mod2);
             break;
          case kKey_Left:
-            redraw = fGLViewer->CurrentCamera().Truck(fGLViewer->fViewport.CenterX(),
-                     fGLViewer->fViewport.CenterY(), -5, 0);
+            redraw = fGLViewer->CurrentCamera().Truck(-10, 0, mod1, mod2);
             break;
          case kKey_Right:
-            redraw = fGLViewer->CurrentCamera().Truck(fGLViewer->fViewport.CenterX(),
-                     fGLViewer->fViewport.CenterY(), 5, 0);
+            redraw = fGLViewer->CurrentCamera().Truck(10, 0, mod1, mod2);
             break;
          case kKey_Home:
             fGLViewer->ResetCurrentCamera();

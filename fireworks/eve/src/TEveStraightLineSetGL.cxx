@@ -87,11 +87,6 @@ void TEveStraightLineSetGL::DirectDraw(TGLRnrCtx& rnrCtx) const
       glPushAttrib(GL_LINE_BIT | GL_ENABLE_BIT);
 
       glDisable(GL_LIGHTING);
-      glColorMaterial(GL_FRONT_AND_BACK, GL_DIFFUSE);
-      glEnable(GL_COLOR_MATERIAL);
-      UChar_t color[4];
-      TEveUtil::ColorFromIdx(mL.GetLineColor(), color);
-      TGLUtil::Color4ubv(color);
       glLineWidth(mL.GetLineWidth());
       if (mL.GetLineStyle() > 1) {
          Int_t    fac = 1;

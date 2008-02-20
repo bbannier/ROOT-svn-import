@@ -262,7 +262,9 @@ void TEveViewerList::OnMouseOver(TGLPhysicalShape *pshape, UInt_t state)
       el  = dynamic_cast<TEveElement*>(obj);
    }
 
-   gEve->GetHighlight()->UserPickedElement(el, state & kKeyControlMask);
+   if (el && !el->IsPickable())
+      el = 0;
+   gEve->GetHighlight()->UserPickedElement(el, kFALSE);
 }
 
 //______________________________________________________________________________
@@ -272,5 +274,7 @@ void TEveViewerList::OnClicked(TObject *obj, UInt_t button, UInt_t state)
       return;
 
    TEveElement* el = dynamic_cast<TEveElement*>(obj);
+   if (el && !el->IsPickable())
+      el = 0;
    gEve->GetSelection()->UserPickedElement(el, state & kKeyControlMask);
 }

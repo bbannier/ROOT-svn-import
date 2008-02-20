@@ -361,7 +361,7 @@ TGListTree::TGListTree(TGWindow *p, UInt_t w, UInt_t h, UInt_t options,
    fDisableOpen = kFALSE;
    fBdown       = kFALSE;
    fUserControlled = kFALSE;
-   fCallback    = kFALSE;
+   fEventHandled   = kFALSE;
 
    fGrayPixel   = GetGrayPixel();
    fFont        = GetDefaultFontStruct();
@@ -371,7 +371,7 @@ TGListTree::TGListTree(TGWindow *p, UInt_t w, UInt_t h, UInt_t options,
    fHighlightGC = GetHighlightGC()();
    fColorGC     = GetColorGC()();
 
-   fFirst = fSelected = fCurrent = 0;
+   fFirst = fSelected = fCurrent = fBelowMouse = 0;
    fDefw = fDefh = 1;
 
    fHspacing = 2;
@@ -420,7 +420,7 @@ TGListTree::TGListTree(TGCanvas *p,UInt_t options,ULong_t back) :
    fDisableOpen = kFALSE;
    fBdown       = kFALSE;
    fUserControlled = kFALSE;
-   fCallback    = kFALSE;
+   fEventHandled   = kFALSE;
 
    fGrayPixel   = GetGrayPixel();
    fFont        = GetDefaultFontStruct();
@@ -430,7 +430,7 @@ TGListTree::TGListTree(TGCanvas *p,UInt_t options,ULong_t back) :
    fHighlightGC = GetHighlightGC()();
    fColorGC     = GetColorGC()();
 
-   fFirst = fSelected = fCurrent = 0;
+   fFirst = fSelected = fCurrent = fBelowMouse = 0;
    fDefw = fDefh = 1;
 
    fHspacing = 2;
@@ -607,9 +607,11 @@ Bool_t TGListTree::HandleButton(Event_t *event)
          }
          else {
             fCurrent = fSelected = item;
+            ClearViewPort();
          }
          Clicked(item, event->fCode);
          Clicked(item, event->fCode, event->fXRoot, event->fYRoot);
+         Clicked(item, event->fCode, event->fState, event->fXRoot, event->fYRoot);
       }
    }
    if (event->fType == kButtonRelease) {
@@ -750,32 +752,30 @@ void TGListTree::DataDropped(TGListTreeItem *item, TDNDData *data)
 //______________________________________________________________________________
 Bool_t TGListTree::HandleMotion(Event_t *event)
 {
-   // Handle mouse motion event. Only used to set tool tip.
+   // Handle mouse motion event. Used to set tool tip, to emit
+   // MouseOver() signal and for DND handling.
 
    TGListTreeItem *item;
-   static TGListTreeItem *below = 0;
-   fOnMouseOver = kFALSE;
    TGPosition pos = GetPagePosition();
 
    if (gDNDManager->IsDragging()) {
       gDNDManager->Drag(event->fXRoot, event->fYRoot,
                         TGDNDManager::GetDNDActionCopy(), event->fTime);
    } else if ((item = FindItem(event->fY)) != 0) {
-#if 1
       if (!fUserControlled) {
          if (fCurrent)
             DrawOutline(fId, fCurrent, 0xffffff, kTRUE);
-         if (below)
-            DrawOutline(fId, below, 0xffffff, kTRUE);
+         if (fBelowMouse)
+            DrawOutline(fId, fBelowMouse, 0xffffff, kTRUE);
          DrawOutline(fId, item);
          fCurrent = item;
       }
-#endif
-      if (item != below) {
-         below = item;
-         OnMouseOver(below);
+      if (item != fBelowMouse) {
+         fBelowMouse = item;
+         MouseOver(fBelowMouse);
+         MouseOver(fBelowMouse, event->fState);
       }
-      
+
       if (item->HasCheckBox()) {
          if ((event->fX < (item->fXtext - 4) &&
              (event->fX > (item->fXtext - (Int_t)item->GetCheckBoxPicture()->GetWidth()))))
@@ -832,8 +832,10 @@ Bool_t TGListTree::HandleMotion(Event_t *event)
                            TGDNDManager::GetDNDActionCopy(), event->fTime);
       } else {
          if (fTipItem == item) return kTRUE;
-         if (!fUserControlled)
-            OnMouseOver(item);
+         if (!fUserControlled) { // !!!! what is this? It was called above once?
+            MouseOver(item);
+            MouseOver(item, event->fState);
+         }
          gVirtualX->SetCursor(fId, gVirtualX->CreateCursor(kHand));
       }
 
@@ -856,6 +858,11 @@ Bool_t TGListTree::HandleMotion(Event_t *event)
       }
       fTipItem = item;
    } else {
+      if (fBelowMouse) {
+         fBelowMouse = 0;
+         MouseOver(fBelowMouse);
+         MouseOver(fBelowMouse, event->fState);
+      }
       gVirtualX->SetCursor(fId, gVirtualX->CreateCursor(kPointer));
    }
    return kTRUE;
@@ -872,6 +879,9 @@ Bool_t TGListTree::HandleKey(Event_t *event)
    UInt_t keysym;
    TGListTreeItem *item = 0;
 
+   fLastEventState = event->fState;
+   if (fTip) fTip->Hide();
+
    if (event->fType == kGKeyPress) {
       gVirtualX->LookupString(event, input, sizeof(input), keysym);
       n = strlen(input);
@@ -883,10 +893,10 @@ Bool_t TGListTree::HandleKey(Event_t *event)
       item = fCurrent;
       if (!item) return kFALSE;
 
-      if (!fCallback) // avoid sending signal twice...
-         KeyPressed(item, keysym, event->fState);
+      fEventHandled = kFALSE;
+      KeyPressed(item, keysym, event->fState);
 
-      if (fUserControlled && !fCallback)
+      if (fUserControlled && fEventHandled)
          return kTRUE;
       
       switch ((EKeySym)keysym) {
@@ -908,6 +918,8 @@ Bool_t TGListTree::HandleKey(Event_t *event)
                fSelected->SetActive(kTRUE);
                HighlightItem(item, kTRUE, kTRUE);
                Clicked(item, 1);
+               Clicked(item, 1, event->fXRoot, event->fYRoot);
+               Clicked(item, 1, event->fState, event->fXRoot, event->fYRoot);
             }
             break;
          case kKey_Space:
@@ -961,12 +973,22 @@ Bool_t TGListTree::HandleKey(Event_t *event)
 }
 
 //______________________________________________________________________________
-void TGListTree::OnMouseOver(TGListTreeItem *entry)
+void TGListTree::MouseOver(TGListTreeItem *entry)
 {
    // Signal emitted when pointer is over entry.
 
-   if (!fOnMouseOver) Emit("OnMouseOver(TGListTreeItem*)", (Long_t)entry);
-   fOnMouseOver = kTRUE;
+   Emit("MouseOver(TGListTreeItem*)", (Long_t)entry);
+}
+
+//______________________________________________________________________________
+void TGListTree::MouseOver(TGListTreeItem *entry, UInt_t mask)
+{
+   // Signal emitted when pointer is over entry.
+
+   Long_t args[2];
+   args[0] = (Long_t)entry;
+   args[1] = mask;
+   Emit("MouseOver(TGListTreeItem*,UInt_t)", args);
 }
 
 //______________________________________________________________________________
@@ -1006,19 +1028,6 @@ void TGListTree::ReturnPressed(TGListTreeItem *entry)
 }
 
 //______________________________________________________________________________
-void TGListTree::Clicked(TGListTreeItem *entry, Int_t btn)
-{
-   // Emit Clicked() signal.
-
-   Long_t args[2];
-
-   args[0] = (Long_t)entry;
-   args[1] = btn;
-
-   Emit("Clicked(TGListTreeItem*,Int_t)", args);
-}
-
-//______________________________________________________________________________
 void TGListTree::Checked(TObject *entry, Bool_t on)
 {
    // Emit Checked() signal.
@@ -1029,6 +1038,19 @@ void TGListTree::Checked(TObject *entry, Bool_t on)
    args[1] = on;
 
    Emit("Checked(TObject*,Bool_t)", args);
+}
+
+//______________________________________________________________________________
+void TGListTree::Clicked(TGListTreeItem *entry, Int_t btn)
+{
+   // Emit Clicked() signal.
+
+   Long_t args[2];
+
+   args[0] = (Long_t)entry;
+   args[1] = btn;
+
+   Emit("Clicked(TGListTreeItem*,Int_t)", args);
 }
 
 //______________________________________________________________________________
@@ -1044,6 +1066,22 @@ void TGListTree::Clicked(TGListTreeItem *entry, Int_t btn, Int_t x, Int_t y)
    args[3] = y;
 
    Emit("Clicked(TGListTreeItem*,Int_t,Int_t,Int_t)", args);
+}
+
+//______________________________________________________________________________
+void TGListTree::Clicked(TGListTreeItem *entry, Int_t btn, UInt_t mask, Int_t x, Int_t y)
+{
+   // Emit Clicked() signal.
+
+   Long_t args[5];
+
+   args[0] = (Long_t)entry;
+   args[1] = btn;
+   args[2] = mask;
+   args[3] = x;
+   args[4] = y;
+
+   Emit("Clicked(TGListTreeItem*,Int_t,UInt_t,Int_t,Int_t)", args);
 }
 
 //______________________________________________________________________________
@@ -1490,7 +1528,7 @@ void TGListTree::DrawOutline(Handle_t id, TGListTreeItem *item, Pixel_t col,
    else
       gVirtualX->SetForeground(fDrawGC, col);
    gVirtualX->DrawRectangle(id, fDrawGC, posx, item->fYtext-pos.fY-2, 
-                            dim.fWidth-posx-2, FontHeight(fFont)+3);
+                            dim.fWidth-posx-2, FontHeight(fFont)+4);
    gVirtualX->SetForeground(fDrawGC, fgBlackPixel);
 }
 
@@ -1868,6 +1906,19 @@ Int_t TGListTree::DeleteItem(TGListTreeItem *item)
 
    if (fSelected == item) {
       fSelected = 0;
+   }
+   if (fCurrent == item) {
+      fCurrent = item->GetPrevSibling();
+      if (! fCurrent) {
+         fCurrent = item->GetNextSibling();
+         if (! fCurrent)
+            fCurrent = item->GetParent();
+      }
+   }
+   if (fBelowMouse == item) {
+      fBelowMouse = 0;
+      MouseOver(0);
+      MouseOver(0,fLastEventState);
    }
 
    delete item;
