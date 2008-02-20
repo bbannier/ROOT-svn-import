@@ -684,6 +684,17 @@ void TEveElement::SetTransMatrix(const TGeoMatrix& mat)
 /******************************************************************************/
 
 //______________________________________________________________________________
+Bool_t TEveElement::AcceptElement(TEveElement* el)
+{
+   // Check if el can be added to this element.
+   //
+   // In the base-class version we only make sure the new child is not
+   // equal to this.
+
+   return el != this;
+}
+
+//______________________________________________________________________________
 void TEveElement::AddElement(TEveElement* el)
 {
    // Add el to the list of children.

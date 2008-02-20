@@ -176,7 +176,7 @@ public:
    void SpawnEditor();                          // *MENU*
    virtual void ExportToCINT(Text_t* var_name); // *MENU*
 
-   virtual Bool_t AcceptElement(TEveElement* /*el*/) { return kTRUE; }
+   virtual Bool_t AcceptElement(TEveElement* el);
 
    virtual void AddElement(TEveElement* el);
    virtual void RemoveElement(TEveElement* el);
@@ -236,7 +236,7 @@ public:
    typedef void (TEveElement::* Select_foo)      (Bool_t);
    typedef void (TEveElement::* ImplySelect_foo) ();
 
-   Bool_t GetPickable()   const { return fPickable; }
+   Bool_t IsPickable()    const { return fPickable; }
    void   SetPickable(Bool_t p) { fPickable = p; }
 
    void SelectElement(Bool_t state);

@@ -96,10 +96,6 @@ protected:
 
    TContextMenu     *fCtxMenu;
 
-   TGListTreeItem   *fNewSelected;
-
-   void ResetSelectedTimer(TGListTreeItem* lti);
-
 public:
    TEveGListTreeEditorFrame(const Text_t* name, Int_t width=250, Int_t height=700);
    virtual ~TEveGListTreeEditorFrame();
@@ -110,12 +106,10 @@ public:
    TGListTree* GetListTree() { return fListTree; }
 
    void ItemChecked(TObject* obj, Bool_t state);
-   void ItemBelowMouse(TGListTreeItem *entry);
-   void ItemClicked(TGListTreeItem *entry, Int_t btn, Int_t x, Int_t y);
+   void ItemBelowMouse(TGListTreeItem *entry, UInt_t mask);
+   void ItemClicked(TGListTreeItem *entry, Int_t btn, UInt_t mask, Int_t x, Int_t y);
    void ItemDblClicked(TGListTreeItem* item, Int_t btn);
    void ItemKeyPress(TGListTreeItem *entry, UInt_t keysym, UInt_t mask);
-
-   void ResetSelected();
 
    ClassDef(TEveGListTreeEditorFrame, 0); // Composite GUI frame for parallel display of a TGListTree and TEveGedEditor.
 };

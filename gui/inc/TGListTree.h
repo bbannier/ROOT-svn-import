@@ -231,6 +231,7 @@ protected:
    TGListTreeItem  *fFirst;          // pointer to first item in list
    TGListTreeItem  *fSelected;       // pointer to selected item in list
    TGListTreeItem  *fCurrent;        // pointer to current item in list
+   TGListTreeItem  *fBelowMouse;     // pointer to item below mouses cursor
    Int_t            fHspacing;       // horizontal spacing between items
    Int_t            fVspacing;       // vertical spacing between items
    Int_t            fIndent;         // number of pixels indentation
@@ -254,7 +255,8 @@ protected:
    Bool_t           fAutoCheckBoxPic;// change check box picture if parent and children have diffrent state
    Bool_t           fDisableOpen;    // disable branch opening on double-clicks
    Bool_t           fUserControlled; // let user decides what is the behaviour on events
-   Bool_t           fCallback;       // callback from user code (for default event handling)
+   Bool_t           fEventHandled;   // flag used from user code to bypass standard event handling
+   UInt_t           fLastEventState; // modifier state of the last keyboard event
 
    EColorMarkupMode fColorMode;      // if/how to render item's main color
    ECheckMode       fCheckMode;      // how to propagate check properties through the tree
@@ -388,8 +390,10 @@ public:
    void  GetCheckedChildren(TList *checked, TGListTreeItem *item);       
    void  CheckAllChildren(TGListTreeItem *item, Bool_t state);       
 
-   TGListTreeItem *GetFirstItem() const { return fFirst; }
-   TGListTreeItem *GetSelected() const { return fSelected; }
+   TGListTreeItem *GetFirstItem()  const { return fFirst; }
+   TGListTreeItem *GetSelected()   const { return fSelected; }
+   TGListTreeItem *GetCurrent()    const { return fCurrent; }
+   TGListTreeItem *GetBelowMouse() const { return fBelowMouse; }
    TGListTreeItem *FindSiblingByName(TGListTreeItem *item, const char *name);
    TGListTreeItem *FindSiblingByData(TGListTreeItem *item, void *userData);
    TGListTreeItem *FindChildByName(TGListTreeItem *item, const char *name);
@@ -402,11 +406,13 @@ public:
    Int_t DeleteSelected() { return (fSelected ? DeleteItem(fSelected) : 0); } //*MENU*
    void  RenameSelected(const char *string) { if (fSelected) RenameItem(fSelected, string); } //*MENU*
 
-   virtual void OnMouseOver(TGListTreeItem *entry);  //*SIGNAL*
+   virtual void MouseOver(TGListTreeItem *entry);  //*SIGNAL*
+   virtual void MouseOver(TGListTreeItem *entry, UInt_t mask);  //*SIGNAL*
    virtual void KeyPressed(TGListTreeItem *entry, UInt_t keysym, UInt_t mask);  //*SIGNAL*
    virtual void ReturnPressed(TGListTreeItem *entry);  //*SIGNAL*
    virtual void Clicked(TGListTreeItem *entry, Int_t btn);  //*SIGNAL*
    virtual void Clicked(TGListTreeItem *entry, Int_t btn, Int_t x, Int_t y);  //*SIGNAL*
+   virtual void Clicked(TGListTreeItem *entry, Int_t btn, UInt_t mask, Int_t x, Int_t y);  //*SIGNAL*
    virtual void DoubleClicked(TGListTreeItem *entry, Int_t btn);  //*SIGNAL*
    virtual void DoubleClicked(TGListTreeItem *entry, Int_t btn, Int_t x, Int_t y);  //*SIGNAL*
    virtual void Checked(TObject *obj, Bool_t check);  //*SIGNAL*
@@ -415,8 +421,8 @@ public:
    // User control
    void         SetUserControl(Bool_t ctrl=kTRUE) { fUserControlled = ctrl; }
    Bool_t       HasUserControl() const { return fUserControlled; }
-   void         SetCallback(Bool_t cb=kTRUE) { fCallback = cb; }
-   Bool_t       HasCallback() const { return fCallback; }
+   void         SetEventHandled(Bool_t eh=kTRUE) { fEventHandled = eh; }
+   Bool_t       IsEventHandled() const { return fEventHandled; }
 
    Bool_t   HandleDNDDrop(TDNDData *data);
    Atom_t   HandleDNDPosition(Int_t x, Int_t y, Atom_t action,

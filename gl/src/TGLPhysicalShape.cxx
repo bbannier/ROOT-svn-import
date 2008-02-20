@@ -380,11 +380,11 @@ void TGLPhysicalShape::Draw(TGLRnrCtx & rnrCtx) const
 
       // TGLCapabilitySwitch bs(GL_BLEND, kTRUE), lss(GL_LINE_SMOOTH, kTRUE);
 
-      glColor4ubv(rnrCtx.GetSSLColor(fSelected));
       TGLUtil::LockColor();
       for (int i = 0; i < 8; ++i)
       {
          glViewport(vp.X() + outer[i][0], vp.Y() + outer[i][1], vp.Width(), vp.Height());
+         glColor4ubv(rnrCtx.GetSSLColor(fSelected));
          fLogicalShape->DirectDraw(rnrCtx);
       }
       TGLUtil::UnlockColor();
@@ -394,6 +394,7 @@ void TGLPhysicalShape::Draw(TGLRnrCtx & rnrCtx) const
       for (int i = 0; i < 5; ++i)
       {
          glViewport(vp.X() + inner[i][0], vp.Y() + inner[i][1], vp.Width(), vp.Height());
+         glColor4fv(fColor);
          fLogicalShape->Draw(rnrCtx);
       }
       glViewport(vp.X(), vp.Y(), vp.Width(), vp.Height());

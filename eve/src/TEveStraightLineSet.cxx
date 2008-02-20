@@ -34,7 +34,7 @@ ClassImp(TEveStraightLineSet);
 //______________________________________________________________________________
 TEveStraightLineSet::TEveStraightLineSet(const Text_t* n, const Text_t* t):
    TEveElement (),
-   TNamed        (n, t),
+   TNamed      (n, t),
 
    fLinePlex      (sizeof(Line_t), 4),
    fMarkerPlex    (sizeof(Marker_t), 8),
