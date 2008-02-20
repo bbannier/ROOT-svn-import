@@ -4710,7 +4710,7 @@ int main(int argc, char **argv)
       }
    }
    if (use_preprocessor) {
-#ifndef ROOTBUILD
+#if defined (G__NOSTUBS) && !defined(ROOTBUILD)
       fprintf(bundle,"#endif\n");
 #endif
       fclose(bundle);
