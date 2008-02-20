@@ -669,6 +669,7 @@ void TEvePointSetProjected::UpdateProjection()
 
    Int_t n = ps.Size();
    Reset(n);
+   fLastPoint = n - 1;
    Float_t *o = ps.GetP(), *p = GetP();
    for (Int_t i = 0; i < n; ++i, o+=3, p+=3)
    {
