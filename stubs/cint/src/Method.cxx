@@ -261,23 +261,24 @@ G__InterfaceMethod Cint::G__MethodInfo::InterfaceMethod()
       G__UnlockCriticalSection();
 
       // 25-05-07
-      // We have a problem here (are we ever going to stop having them ;))
-      // I discovered the first time I removed the stubs from dictionaries.
-      // The thing is that if we get here it has to be a compiled class
-      // but if we are using the new algorithm then the InterfaceMethod
+      // Problem: it has to be a compiled class here, but if we
+      // are using the no-stub algorithm then the InterfaceMethod
       // is 0 (because we used our registered method in funcptr)
-      // so now we have to see how to deal with that situation in
+      // so now we have to deal with that situation in
       // TCint::GetInterfaceMethodWithPrototype
       //
-      // This happens only in Qt (TQObject) 
-      // static TMethod *GetMethod(TClass *cl, const char *method, const char *params)
+      // For ROOT, his happens only in
+      // static TMethod *TQObject::GetMethod(TClass *cl, const char *method, const char *params)
       // and I have seen that the address is not really used
       // they only want to know if the method can be executed...
-      // this is extreamly shady but for the moment just pass the funcptr
+      // this is extremely shady but for the moment just pass the funcptr
       // if the interface method is zero
       if((G__InterfaceMethod)ifunc->pentry[index]->p)
          return((G__InterfaceMethod)ifunc->pentry[index]->p);
-      else  // WARNING WARNING We are changing the semantics of this return. If there no stub function we return the address of the function. I don't know the consequences of this behaviour. We will have to recheck this point.
+      else
+         // WARNING We are changing the semantics of this return.
+         // If there no stub function we return the address of the function.
+         // I don't know the consequences of this behaviour. We will have to recheck this point.
          return((G__InterfaceMethod) G__get_funcptr(ifunc,index));
     }
     else {

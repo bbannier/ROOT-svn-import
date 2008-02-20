@@ -655,6 +655,7 @@ TetrisDict.$(SrcSuf): Tetris.h
 	@rootcint -f $@ -c $^
 
 TBench.$(ObjSuf): TBench.h
+TBenchDict.$(SrcSuf): TBench.h benchLinkDef.h
 	@echo "Generating dictionary $@..."
 	@rootcint -f $@ -c $^
 

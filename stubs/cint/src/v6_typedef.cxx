@@ -1056,9 +1056,8 @@ void G__define_type()
 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *
 * 05-02-2008
-* Changed to include an additional parameter "noerror", the only
-* problem for this is that we need to change all its callers
-* and pass this new option (0 guarantees the old behavior)
+* Changed to include an additional parameter "noerror"
+* (set to 0 for old behavior)
 ******************************************************************/
 int G__defined_typename_noerror(const char *type_name, int noerror)
 {

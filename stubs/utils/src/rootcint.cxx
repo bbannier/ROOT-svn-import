@@ -165,8 +165,10 @@
 #include <iostream>
 #include "cintdictversion.h"
 
+#if defined (G__NOSTUBS) && !defined(ROOTBUILD)
 #ifdef __APPLE__
 #include <libgen.h> // Needed for basename
+#endif
 #endif
 
 #ifdef fgets // in G__ci.h
@@ -4454,10 +4456,10 @@ int main(int argc, char **argv)
             // We want to separate the generation of the dictionary
             // source.
             // We need one that will be the real dictionary and
-            // another one with all the ShowMembers stuff.
+            // another one with ShowMembers etc.
             //
             // If we see the parameter -S then we want the ShowMembers
-            // rubbish, if not, we only want the dict (without showmembers)
+            // part, if not we only want the dict (without ShowMembers)
             if (!strcmp(argv[ic], "-.")) {
                ++ic;
                argvv[argcc++] = "-.";
@@ -4605,10 +4607,10 @@ int main(int argc, char **argv)
       // We want to separate the generation of the dictionary
       // source.
       // We need one that will be the real dictionary and
-      // another one with all the ShowMembers stuff.
+      // another one with ShowMembers etc.
       //
       // If we see the parameter -S then we want the ShowMembers
-      // rubbish, if not, we only want the dict (without showmembers)
+      // part, if not we only want the dict (without ShowMembers)
       if (!strcmp(argv[ic], "-.")) {
          ++ic;
          argvv[argcc++] = "-.";

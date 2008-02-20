@@ -147,15 +147,3 @@ $ROOTCINT $PREFIX $MODE $FILENAME $CFLAG $PFLAG -. 3 --symbols-file ${FILENAME%.
 
 # We don't need the symbols file anymore
 #rm ${FILENAME%.*}.nm
-
-
-
-
-
- 
-
-
-
-
-
- 
