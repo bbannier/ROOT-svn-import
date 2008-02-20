@@ -4599,97 +4599,110 @@ void G__write_dummy_param(FILE *fp, G__paramfunc *formal_param)
   if (!ispointer) {// By Value
     if (formal_param->reftype==1&&(formal_param->p_typetable!=-1||formal_param->p_tagtable!=-1)){
       if(formal_param->p_typetable==-1)
-        fprintf(fp,"*((%s*) 0x64)",G__fulltagname(formal_param->p_tagtable,0));   
+        fprintf(fp,"*(%s*) 0x64",G__fulltagname(formal_param->p_tagtable,0));   
       else  
-        fprintf(fp,"*((%s*) 0x64)",G__fulltypename(formal_param->p_typetable));   
+        fprintf(fp,"*(%s*) 0x64",G__fulltypename(formal_param->p_typetable));   
     }
     else {
+       
+       if (formal_param->reftype==1||para_type=='u'||para_type=='a')
+          fprintf(fp,"*");
+
+       fprintf(fp,"(");
+
       // Parameter's type
       switch(para_type) {
 
         // Double = Double Word
-      case 'a' : fprintf(fp,"*((%s*) 0x64)",G__fulltypename(formal_param->p_typetable)); 
+      case 'a' : fprintf(fp,"%s",G__fulltypename(formal_param->p_typetable)); 
         break;
 
         // Double = Double Word
-      case 'd' : fprintf(fp, "(double) 0");
+      case 'd' : fprintf(fp, "double");
         break;
                    
         // Integer = Single Word
       case 'i' :
       {
         if (formal_param->p_tagtable==-1)
-          fprintf(fp, " (int) 1");
+          fprintf(fp, "int");
         else  
-          fprintf(fp, " (%s) 1", G__fulltagname(formal_param->p_tagtable,0));
+          fprintf(fp, " %s ", G__fulltagname(formal_param->p_tagtable,0));
       }
       break;
 
       // Unsigned Char ????
-      case 'b' : fprintf(fp, " 'a'");
+      case 'b' : fprintf(fp, "unsigned char");
         break;
 
         // Char
-      case 'c' : fprintf(fp, " 'a'");
+      case 'c' : fprintf(fp, "char");
         break;
             
         // Short
-      case 's' : fprintf(fp, "(short) 0");
+      case 's' : fprintf(fp, "short");
         break;
 
         // Unsigned Short
-      case 'r' : fprintf(fp, "(unsigned short) 0");
+      case 'r' : fprintf(fp, "unsigned short");
         break;
 
         // Unsigned Int
-      case 'h' : fprintf(fp, "(unsigned int) 0");
+      case 'h' : fprintf(fp, "unsigned int");
         break;
 
         // Long
-      case 'l' : fprintf(fp, "(long) 0");                 
+      case 'l' : fprintf(fp, "long");                 
         break;
 
         // Unsigned Long
-      case 'k': fprintf(fp, "(unsigned long) 0");
+      case 'k': fprintf(fp, "unsigned long");
         break;
 
         // Float // Shouldnt it be treated as a double?
-      case 'f' : fprintf(fp, "(float) 0");
+      case 'f' : fprintf(fp, "float");
         break;
 
         // Long Long
-      case 'n' : fprintf(fp, "(long long) 0");
+      case 'n' : fprintf(fp, "long long");
         break;
 
         // unsigned Long Long
-      case 'm' : fprintf(fp, "(unsigned long long) 0");
+      case 'm' : fprintf(fp, "unsigned long long");
         break;
 
         // long double
-      case 'q' : fprintf(fp, "(long double) 0");
+      case 'q' : fprintf(fp, "long double");
         break;
 
         // bool 
-      case 'g' : fprintf(fp, " true");
+      case 'g' : fprintf(fp, "bool");
         break;
                
       case '1': // Function Pointer
       {
         if(formal_param->p_typetable==-1)
-          fprintf(fp, " (void*) 0x64");
+          fprintf(fp, "void");
         else
-          fprintf(fp,"(%s) 0x64",G__fulltypename(formal_param->p_typetable)); 
+          fprintf(fp,"%s",G__fulltypename(formal_param->p_typetable)); 
       }
       break;
 
       // a class... treat it as a reference
-      case 'u' : fprintf(fp,"*((%s*) 0x64)",G__fulltagname(formal_param->p_tagtable,0)); 
+      case 'u' : fprintf(fp,"%s",G__fulltagname(formal_param->p_tagtable,0)); 
         break;
 
       default:
         fprintf(fp, " Unkown: %c", formal_param->type);
         G__fprinterr(G__serr,"Type %c not known yet (methodcall)\n", para_type);
       }
+     
+
+      if (formal_param->reftype==1||para_type=='u'||para_type=='a')
+         fprintf(fp, "*) 0x64");
+      else     
+         fprintf(fp, ") 0");
+
     }
   }
   else {
