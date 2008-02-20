@@ -186,30 +186,11 @@ void G__asm_cast(int type, G__value* buf, int tagnum, int reftype)
    }
 }
 
-/* extern "C" */
-
-/*
- * Local Variables:
- * c-tab-always-indent:nil
- * c-indent-level:2
- * c-continued-statement-offset:2
- * c-brace-offset:-2
- * c-brace-imaginary-offset:0
- * c-argdecl-indent:0
- * c-label-offset:-2
- * compile-command:"make -k"
- * End:
- */
-
-/******************************************************************
-* G__value G__this_adjustment()
-*
-*
-******************************************************************/
-void G__this_adjustment(G__ifunc_table_internal *ifunc, int ifn)
+//______________________________________________________________________________
+void G__this_adjustment(G__ifunc_table_internal* ifunc, int ifn)
 {
-
-   if (ifunc && ifunc->pentry[ifn]){
+   // -- FIXME: Describe this function!
+   if (ifunc && ifunc->pentry[ifn]) {
       G__store_struct_offset += ifunc->pentry[ifn]->ptradjust;
    }
 }
