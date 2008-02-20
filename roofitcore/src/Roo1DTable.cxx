@@ -21,11 +21,13 @@
 #include "RooFit.h"
 
 #include "Riostream.h"
-#include "Riostream.h"
 #include <iomanip>
 #include "TString.h"
 #include "TMath.h"
 #include "Roo1DTable.h"
+#include "RooMsgService.h"
+
+using namespace std ;
 
 ClassImp(Roo1DTable)
 
@@ -168,7 +170,7 @@ Double_t Roo1DTable::get(const char* label, Bool_t silent) const
   TObject* cat = _types.FindObject(label) ;
   if (!cat) {
     if (!silent) {
-      cout << "Roo1DTable::get: ERROR: no such entry: " << label << endl ;
+      coutE(InputArguments) << "Roo1DTable::get: ERROR: no such entry: " << label << endl ;
     }
     return 0 ;
   }
@@ -191,7 +193,7 @@ Double_t Roo1DTable::getFrac(const char* label, Bool_t silent) const
   if (_total) {
     return get(label,silent) / _total ;
   } else {
-    if (!silent) cout << "Roo1DTable::getFrac: WARNING table empty, returning 0" << endl ;
+    if (!silent) coutW(Contents) << "Roo1DTable::getFrac: WARNING table empty, returning 0" << endl ;
     return 0. ;
   }
 }

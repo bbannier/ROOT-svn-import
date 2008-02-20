@@ -16,7 +16,7 @@
 #ifndef ROO_REAL_VAR
 #define ROO_REAL_VAR
 
-#include "Riostream.h"
+#include "Riosfwd.h"
 #include <math.h>
 #include <float.h>
 #include "TString.h"
@@ -75,9 +75,9 @@ public:
   RooAbsBinning& getBinning(const char* name=0, Bool_t verbose=kTRUE, Bool_t createOnTheFly=kFALSE) ; 
 
   // Set infinite fit range limits
-  inline void removeMin(const char* name=0) { getBinning(name).setMin(-RooNumber::infinity) ; }
-  inline void removeMax(const char* name=0) { getBinning(name).setMax(RooNumber::infinity) ; }
-  inline void removeRange(const char* name=0) { getBinning(name).setRange(-RooNumber::infinity,RooNumber::infinity) ; }
+  inline void removeMin(const char* name=0) { getBinning(name).setMin(-RooNumber::infinity()) ; }
+  inline void removeMax(const char* name=0) { getBinning(name).setMax(RooNumber::infinity()) ; }
+  inline void removeRange(const char* name=0) { getBinning(name).setRange(-RooNumber::infinity(),RooNumber::infinity()) ; }
  
   // Backward compatibility functions
   void setFitBins(Int_t nBins) ;
@@ -102,8 +102,8 @@ public:
   TString* format(const RooCmdArg& formatArg) const ;
   TString* format(Int_t sigDigits, const char *options) const ;
 
-  static void printScientific(Bool_t flag=kFALSE) { _printScientific = flag ; }
-  static void printSigDigits(Int_t ndig=5) { _printSigDigits = ndig>1?ndig:1 ; }
+  static void printScientific(Bool_t flag=kFALSE) ;
+  static void printSigDigits(Int_t ndig=5) ;
 
   using RooAbsRealLValue::operator= ;
 

@@ -9,18 +9,13 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-//////////////////////////////////////////////////////////////////////////
-//                                                                      //
-// TPostScript                                                          //
-//                                                                      //
-// Graphics interface to PostScript.                                    //
-//                                                                      //
-// This code was initially developed in the context of HIGZ and PAW     //
-// by Olivier Couet and Pierre Juillot.                                 //
-// It has been converted to a C++ class by Rene Brun.                   //
-//                                                                      //
-//Begin_Html
-/*
+
+//______________________________________________________________________________
+/* Begin_Html
+<center><h2>TPostScript: Graphics interface to PostScript</h2></center>
+This code was initially developed in the context of HIGZ and PAW
+by Olivier Couet and Pierre Juillot. It has been converted to a C++ class by
+Rene Brun.
 
 <P>To generate a Postscript (or encapsulated ps) file corresponding to
 a single image in a canvas, you can:
@@ -197,8 +192,7 @@ To change the color model use gStyle->SetColorModelPS(c).
 <li> c = 0 means TPostScript will use RGB color model (default)
 <li> c = 1 means TPostScript will use CMYK color model
 </ul>
-*/
-//End_Html
+End_Html */
 
 #ifdef WIN32
 #pragma optimize("",off)
@@ -1680,7 +1674,7 @@ void TPostScript::Initialize()
    PrintFast(15," .25 .25 scale ");
    if (fMode != 3) SaveRestore(1);
 
-   if (fMode != 3) PrintStr("%%Page: (number 1)@");
+   if (fMode != 3) PrintStr("%%Page: 1 1@");
    if (fMode != 3) SaveRestore(1);  //required
 
    //Check is user has defined a special header in the current style
@@ -1840,7 +1834,7 @@ void TPostScript::Range(Float_t xsize, Float_t ysize)
 {
    // Set the range for the paper in centimeters
 
-   Float_t xps, yps, xncm, yncm, dxwn, dywn, xwkwn, ywkwn, xymax;
+   Float_t xps=0, yps=0, xncm=0, yncm=0, dxwn=0, dywn=0, xwkwn=0, ywkwn=0, xymax=0;
 
    fXsize = xsize;
    fYsize = ysize;
@@ -2480,10 +2474,11 @@ void TPostScript::Text(Double_t xx, Double_t yy, const char *chars)
       if (chars[i]!='\n') {
          if (chars[i]=='(' || chars[i]==')') {
             sprintf(str,"\\%c",chars[i]);
+            PrintStr(str);
          } else {
             sprintf(str,"%c",chars[i]);
+            PrintFast(1,str);
          }
-         PrintStr(str);
       }
    }
 
@@ -2561,9 +2556,9 @@ void TPostScript::Zone()
          PrintStr("@showpage");
          SaveRestore(-1);
          fNpages++;
-         PrintStr("@%%Page: (number");
+         PrintStr("@%%Page:");
          WriteInteger(fNpages);
-         PrintStr(")");
+         WriteInteger(fNpages);
          PrintStr("@");
       } else {
          PrintFast(9," showpage");

@@ -6,6 +6,7 @@
 #include "PyRootType.h"
 #include "ObjectProxy.h"
 #include "MethodProxy.h"
+#include "TemplateProxy.h"
 #include "PropertyProxy.h"
 #include "RootWrapper.h"
 #include "Pythonize.h"
@@ -22,7 +23,7 @@
 #include "TROOT.h"
 #include "TSystem.h"
 #include "TMethod.h"
-#include "TMethodArg.h"
+#include "TDataMember.h"
 #include "TBaseClass.h"
 #include "TInterpreter.h"
 #include "TGlobal.h"
@@ -63,7 +64,7 @@ namespace {
       if ( ! pybases ) {
          pybases = PyTuple_New( 1 );
          Py_INCREF( &PyROOT::ObjectProxy_Type );
-         PyTuple_SET_ITEM( pybases, 0, (PyObject*)&PyROOT::ObjectProxy_Type );
+         PyTuple_SET_ITEM( pybases, 0, (PyObject*)(void*)&PyROOT::ObjectProxy_Type );
       }
 
       PyObject* pymetabases = PyTuple_New( PyTuple_GET_SIZE( pybases ) );
@@ -136,15 +137,13 @@ namespace {
 
    Bool_t LoadDictionaryForSTLType( const std::string& tname, void* klass )
    {
-   // if name is of a known STL class, load the appropriate CINT dll(s), always reset klass
+   // if name is of a known STL class, tell CINT to load the dll(s), always reset klass
 
       std::string sub = tname.substr( 0, tname.find( "<" ) );
       if ( gSTLTypes.find( sub ) != gSTLTypes.end() ) {
       // removal is required or the dictionary can't be updated properly
          if ( klass != 0 )
             TClass::RemoveClass( (TClass*)klass );
-
-         Bool_t result = kTRUE;
 
       // make sure to only load once
          if ( gLoadedSTLTypes.find( sub ) == gLoadedSTLTypes.end() ) {
@@ -153,37 +152,16 @@ namespace {
             if ( sub.substr( 0, 5 ) == "std::" )
                sub = sub.substr( 5, std::string::npos );
 
-         // attempt to load file (may not be built and therefore unavailable)
-            int loadOk = G__loadfile( (sub+".dll").c_str() );
-            if ( 0 <= loadOk ) {
-            // special case for map and multimap, which are spread over 2 files
-               if ( sub == "map" || sub == "multimap" ) {
-                  loadOk = G__loadfile( (sub+"2.dll").c_str() );
-               }
+         // tell CINT to go for it
+            gROOT->ProcessLine( (std::string( "#include <" ) + sub + ">").c_str() );
 
-            // success; prevent second attempt to load by erasing name
-               gLoadedSTLTypes.insert( sub );
-               gLoadedSTLTypes.insert( "std::" + sub );
-            }
-
-         // on success, synchronize gROOT and CINT, otherwise warn user of doom
-            if ( 0 <= loadOk ) {
-               gInterpreter->UpdateListOfTypes();
-            } else {
-               PyErr_Warn( PyExc_RuntimeWarning,
-                  const_cast< char* >( ( "could not load dict lib for " + sub ).c_str() ) );
-               result = kFALSE;
-            }
+         // prevent second attempt to load by erasing name
+            gLoadedSTLTypes.insert( sub );
+            gLoadedSTLTypes.insert( "std::" + sub );
 
          }
 
-      // verify that CINT understands the class, then add it for gROOT
-         if ( G__ClassInfo( tname.c_str() ).IsValid() ) {
-            TClass* cl = new TClass( tname.c_str() );
-            TClass::AddClass( cl );
-         }
-
-         return result;
+         return kTRUE;
       }
 
    // this point is only reached if this is not an STL class, but that's ok
@@ -246,6 +224,12 @@ int PyROOT::BuildRootClassDict( const T& klass, PyObject* pyclass ) {
       if ( 8 < mtName.size() && mtName.substr( 0, 8 ) == "operator" ) {
          std::string op = mtName.substr( 8, std::string::npos );
 
+      // stripping ...
+         std::string::size_type start = 0, end = op.size();
+         while ( start < end && isspace( op[ start ] ) ) ++start;
+         while ( start < end && isspace( op[ end-1 ] ) ) --end;
+         op = op.substr( start, end - start );
+
       // filter assignment operator for later use
          if ( op == "=" ) {
             continue;
@@ -264,29 +248,41 @@ int PyROOT::BuildRootClassDict( const T& klass, PyObject* pyclass ) {
             if ( cpd[ cpd.size() - 1 ] == '&' )
                setupSetItem = kTRUE;
          } else if ( op == "*" ) {
-            if ( method.FunctionParameterSize() == 0 )   // dereference
-               mtName = "__deref__";
-            else                                         // multiplier (is python equivalent)
-               mtName = "__mul__";
+         // dereference v.s. multiplication of two instances
+            mtName = method.FunctionParameterSize() ? "__mul__" : "__deref__";
+         } else if ( op == "+" ) {
+         // unary positive v.s. addition of two instances
+            mtName = method.FunctionParameterSize() ? "__add__" : "__pos__";
+         } else if ( op == "-" ) {
+         // unary negative v.s. subtraction of two instances
+            mtName = method.FunctionParameterSize() ? "__sub__" : "__neg__";
          } else if ( op == "++" ) {
-            if ( method.FunctionParameterSize() == 0 )   // prefix increment
-               mtName = "__preinc__"; 
-            else                                         // postfix increment
-               mtName = "__postinc__";
+         // prefix v.s. postfix increment
+            mtName = method.FunctionParameterSize() ? "__postinc__" : "__preinc__";
          } else if ( op == "--" ) {
-            if ( method.FunctionParameterSize() == 0 )   // prefix decrement
-               mtName = "__predec__";
-            else                                         // postfix decrement
-               mtName = "__postdec__";
+         // prefix v.s. postfix decrement
+            mtName = method.FunctionParameterSize() ? "__postdec__" : "__predec__";
          } else if ( op == "->" ) {                      // class member access
              mtName = "__follow__";
          } else {
             continue;                                    // not handled (new, delete, etc.)
          }
+
       }
 
    // decide on method type: member or static (which includes globals)
       Bool_t isStatic = isNamespace || method.IsStatic();
+
+   // template members; handled by adding a dispatcher to the class
+      if ( ! isStatic && mtName[mtName.size()-1] == '>' ) {
+         std::string tmplname = mtName.substr( 0, mtName.find('<') );
+         TemplateProxy* pytmpl = TemplateProxy_New( tmplname, pyclass );
+         PyObject_SetAttrString(
+            pyclass, const_cast< char* >( tmplname.c_str() ), (PyObject*)pytmpl );
+         Py_DECREF( pytmpl );
+
+      // note: need to continue here to actually add the method ...
+      }
 
    // public methods are normally visible, private methods are mangled python-wise
    // note the overload implications which are name based, and note that rootcint
@@ -399,7 +395,7 @@ PyObject* PyROOT::BuildRootClassBases( const T& klass )
 // build all the bases
    if ( nbases == 0 ) {
       Py_INCREF( &ObjectProxy_Type );
-      PyTuple_SET_ITEM( pybases, 0, (PyObject*)&ObjectProxy_Type );
+      PyTuple_SET_ITEM( pybases, 0, (PyObject*)(void*)&ObjectProxy_Type );
    } else {
       for ( std::vector< std::string >::size_type ibase = 0; ibase < nbases; ++ibase ) {
          PyObject* pyclass = MakeRootClassFromString< T, B, M >( uqb[ ibase ] );
@@ -596,7 +592,8 @@ PyObject* PyROOT::MakeRootClassFromString( const std::string& fullname, PyObject
       PyObject* pybases = BuildRootClassBases< T, B, M >( klass );
       if ( pybases != 0 ) {
       // create a fresh Python class, given bases, name, and empty dictionary
-         pyclass = CreateNewROOTPythonClass( klass.Name( ROOT::Reflex::SCOPED ), pybases );
+         pyclass = CreateNewROOTPythonClass(
+            klass.Name( ROOT::Reflex::FINAL | ROOT::Reflex::SCOPED ), pybases );
          Py_DECREF( pybases );
       }
 
@@ -750,7 +747,7 @@ PyObject* PyROOT::BindRootObject( void* address, TClass* klass, Bool_t isRef )
          } else {
             offset = clActual->GetBaseClassOffset( klass ); 
          }
-         (Long_t&)address -= offset;
+         address = (void*)((Long_t)address - offset);
          klass = clActual;
       }
    }

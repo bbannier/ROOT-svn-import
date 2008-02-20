@@ -10,12 +10,6 @@
 
 // Header file for class TUnuranContDist
 
-//////////////////////////////////////////////////////////////////////
-// 
-//   TUnuranContDistr class 
-//   wrapper class for one dimensional continuous distribution
-// 
-///////////////////////////////////////////////////////////////////////
 
 #ifndef ROOT_Math_TUnuranContDist
 #define ROOT_Math_TUnuranContDist
@@ -27,10 +21,24 @@
 
 class TF1;
 
-//////////////////////////////////////////////////////////////////////
+
+//______________________________________________________________
 /** 
-   TUnuranContDistr class 
-   wrapper class for one dimensional continous distribution
+   TUnuranContDist class describing one dimensional continous distribution. 
+   It is used by TUnuran to generate random numbers according to this distribution via 
+   TUnuran::Sample()
+   
+   The class can be constructed from a function (TF1) representing the probability density 
+   function of the distribution. Optionally the derivative of the pdf can also be passed. 
+
+   It provides a method to set the domain of the distribution ( SetDomain ) which will correspond to the range 
+   of the generated random numbers. By default the domain is (-inf, + inf), indipendently of the 
+   range set in the TF1 class used to construct the distribution. 
+
+   In addition, some UNURAN methods requires extra information (cdf function, distribution mode, 
+   area of pdf, etc...). This information can as well be set. 
+   Some methods require instead of the pdf the log of the pdf. 
+   This can also be controlled by setting a flag when constructing this class. 
 */ 
 ///////////////////////////////////////////////////////////////////////
 class TUnuranContDist : public TUnuranBaseDist {
@@ -49,7 +57,7 @@ public:
       In case an algorithm requires only the Cdf (no Pdf), an empty distribution can be constructed and then the user must 
       set afterwards the Cdf. 
    */ 
-   TUnuranContDist (const TF1 * pdf = 0, const TF1 * deriv = 0, bool isLogPdf = false );
+   TUnuranContDist (TF1 * pdf = 0, TF1 * deriv = 0, bool isLogPdf = false );
 
    /** 
       Destructor (no operations)
@@ -165,9 +173,9 @@ protected:
 
 private: 
 
-   const TF1 * fPdf;        //pointer to the pdf
-   const TF1 * fDPdf;       //pointer to the derivative of the pdf
-   const TF1 * fCdf;        //pointer to the cdf
+   mutable TF1 * fPdf;        //pointer to the pdf
+   mutable TF1 * fDPdf;       //pointer to the derivative of the pdf
+   mutable TF1 * fCdf;        //pointer to the cdf
    double fXmin;            //lower value of the domain 
    double fXmax;            //upper value of the domain
    double fMode;            //mode of the distribution
@@ -177,6 +185,7 @@ private:
    bool  fHasDomain;        //flag to control if distribution has a defined domain (otherwise is [-inf,+inf]
    bool  fHasMode;          //flag to control if distribution has a pre-computed mode
    bool  fHasArea;          //flag to control if distribution has a pre-computed area below the pdf
+   mutable double fX[1];         //! cached vector for using TF1::EvalPar
 
    ClassDef(TUnuranContDist,1)  //Wrapper class for one dimensional continuous distribution
 

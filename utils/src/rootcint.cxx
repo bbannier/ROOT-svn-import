@@ -159,12 +159,11 @@
 
 #ifndef __CINT__
 
-#ifdef R__HAVE_CONFIG
 #include "RConfigure.h"
-#endif
 #include "RConfig.h"
 #include "Shadow.h"
 #include <iostream>
+#include "cintdictversion.h"
 
 #ifdef fgets // in G__ci.h
 #  undef fgets
@@ -492,6 +491,12 @@ namespace {
    };
 }
 
+#ifndef R__USE_MKSTEMP
+# ifdef R__GLIBC
+#  define R__USE_MKSTEMP 1
+# endif
+#endif
+
 //______________________________________________________________________________
 string R__tmpnam()
 {
@@ -499,38 +504,48 @@ string R__tmpnam()
 
    static char filename[L_tmpnam+2];
    static string tmpdir;
+   static bool initialized = false;
    static list<R__tmpnamElement> tmpnamList;
 
-   if (tmpdir.length() == 0 && strlen(P_tmpdir) <= 2) {
-      // P_tmpdir will be prepended to the result of tmpnam
-      // if it is less that 2 character it is likely to
-      // just be '/' or '\\'.
-      // Let's add the temp directory.
-      char *tmp;
-      if ((tmp = getenv("CINTTMPDIR"))) tmpdir = tmp;
-      else if ((tmp=getenv("TEMP")))    tmpdir = tmp;
-      else if ((tmp=getenv("TMP")))     tmpdir = tmp;
-      else tmpdir = ".";
-      tmpdir += '/';
-   }
-#if 0 && defined(R__USE_MKSTEMP)
-   else {
-      tmpdir  = P_tmpdir;
-      tmpdir += '/';
+   
+   if (!initialized) {
+#if R__USE_MKSTEMP
+      // Unlike tmpnam mkstemp does not prepend anything
+      // to its result but must get the pattern as a 
+      // full pathname.
+      tmpdir = std::string(P_tmpdir) + "/";
+#endif
+ 
+      if (strlen(P_tmpdir) <= 2) {
+         // tmpnam (see man page) prepends the value of the
+         // P_tmpdir (defined in stdio.h) to its result.
+         // If P_tmpdir is less that 2 character it is likely to
+         // just be '/' or '\\' and we do not want to write in 
+         // the root directory, so let's add the temp directory. 
+         char *tmp;
+         if ((tmp = getenv("CINTTMPDIR"))) tmpdir = tmp;
+         else if ((tmp=getenv("TEMP")))    tmpdir = tmp;
+         else if ((tmp=getenv("TMP")))     tmpdir = tmp;
+         else tmpdir = ".";
+         tmpdir += '/';
+      }
+      initialized = true;
    }
 
-   static char pattern[L_tmpnam+2];
-   const char *radix = "XXXXXX";
-   const char *appendix = "_rootcint";
-   if (tmpdir.length() + strlen(radix) + strlen(appendix) + 2) {
+#if R__USE_MKSTEMP
+   static const char *radix = "XXXXXX";
+   static const char *prefix = "rootcint_";
+   if (tmpdir.length() + strlen(radix) + strlen(prefix) + 2 > L_tmpnam + 2) {
       // too long
-
+      std::cerr << "Temporary file name too long! Trying with /tmp..." << std::endl;
+      tmpdir = "/tmp/";
    }
-   sprintf(pattern,"%s%s",tmpdir.c_str(),radix);
-   strcpy(filename,pattern);
+   strcpy(filename, tmpdir.c_str());
+   strcat(filename, prefix);
+   strcat(filename, radix);
    close(mkstemp(filename));/*mkstemp not only generate file name but also opens the file*/
    remove(filename);
-   fprintf(stderr,"pattern is %s filename is %s\n",pattern,filename);
+   tmpnamList.push_back(R__tmpnamElement(filename));
    return filename;
 
 #else
@@ -588,13 +603,13 @@ void LoadLibraryMap() {
 #ifdef WIN32
       struct _stati64 finfo;
 
-      if (_stati64(filename.c_str(), &finfo) < 0 || 
+      if (_stati64(filename.c_str(), &finfo) < 0 ||
           finfo.st_mode & S_IFDIR) {
          continue;
       }
 #else
       struct stat finfo;
-      if (stat(filename.c_str(), &finfo) < 0 || 
+      if (stat(filename.c_str(), &finfo) < 0 ||
           S_ISDIR(finfo.st_mode)) {
          continue;
       }
@@ -649,7 +664,7 @@ void LoadLibraryMap() {
                               sbuffer = base.size()+20;
                            }
                            strcpy(buffer,base.c_str());
-                           G__set_class_autoloading_table(buffer,""); // We never load namespaces on their own.
+                           G__set_class_autoloading_table(buffer, (char*)""); // We never load namespaces on their own.
                         }
                         ++k;
                      }
@@ -684,7 +699,7 @@ extern "C" {
 }
 
 void EnableAutoLoading() {
-   G__set_class_autoloading_table("ROOT","libCore.so");
+   G__set_class_autoloading_table((char*)"ROOT", (char*)"libCore.so");
    LoadLibraryMap();
    G__set_class_autoloading_callback(&AutoLoadCallback);
 }
@@ -2514,18 +2529,17 @@ void WriteClassInit(G__ClassInfo &cl)
       //fprintf(stderr,"DEBUG: %s has value %d\n",classname.c_str(),(int)G__int(G__calc(temporary)));
    }
 
-   char *filename = (char*)cl.FileName();
-   if (filename) {
+   char *filename = cl.FileName() ? StrDup(cl.FileName()) : StrDup("");
+   if (strlen(filename) > 0) {
       for (unsigned int i=0; i<strlen(filename); i++) {
          if (filename[i]=='\\') filename[i]='/';
       }
-   } else {
-      filename = "";
    }
    (*dictSrcOut) << "\"" << filename << "\", " << cl.LineNumber() << "," << std::endl
        << "                  typeid(" << csymbol.c_str() << "), DefineBehavior(ptr, ptr)," << std::endl
    //   fprintf(fp, "                  (::ROOT::ClassInfo< %s >::ShowMembersFunc_t)&::ROOT::ShowMembers,%d);\n", classname.c_str(),cl.RootFlag());
        << "                  ";
+   delete [] filename;
    if (!NeedShadowClass(cl)) {
       if (!cl.HasMethod("ShowMembers")) (*dictSrcOut) << "0, ";
    } else {
@@ -3908,7 +3922,7 @@ char *Compress(const char *str)
 }
 
 //______________________________________________________________________________
-const char *CopyArg(const char *original) 
+const char *CopyArg(const char *original)
 {
    // If the argument starts with MODULE/inc, strip it
    // to make it the name we can use in #includes.
@@ -3922,8 +3936,8 @@ const char *CopyArg(const char *original)
    if (slash==0) {
       slash = (char *)strchr(original,'/');
    }
-   if (slash && strlen(slash+1)>4 && strncmp(slash+1,"inc",3)==0 && 
-       ( slash[4]=='/' || slash[4]=='\\') ) 
+   if (slash && strlen(slash+1)>4 && strncmp(slash+1,"inc",3)==0 &&
+       ( slash[4]=='/' || slash[4]=='\\') )
    {
       return slash+5;
    } else {
@@ -4413,11 +4427,11 @@ int main(int argc, char **argv)
       if (ifl) {
          char *s;
          ic++;
-         argvv[argcc++] = "-q0";
-         argvv[argcc++] = "-n";
+         argvv[argcc++] = (char *)"-q0";
+         argvv[argcc++] = (char *)"-n";
          argvv[argcc] = (char *)calloc(strlen(argv[ifl])+1, 1);
          strcpy(argvv[argcc], argv[ifl]); argcc++;
-         argvv[argcc++] = "-N";
+         argvv[argcc++] = (char *)"-N";
          s = strrchr(dictname,'.');
          argvv[argcc] = (char *)calloc(strlen(dictname), 1);
          strncpy(argvv[argcc], dictname, s-dictname); argcc++;
@@ -4429,23 +4443,28 @@ int main(int argc, char **argv)
                // break when we see positional options
                break;
             }
-            argvv[argcc++] = argv[ic++];
+	    if (strcmp("-pipe", argv[ic])!=0) {
+	       // filter out undesirable options
+	       argvv[argcc++] = argv[ic++];
+	    } else {
+	       ic++;
+	    }
          }
 
          for (i = 0; path[i][0]; i++)
             argvv[argcc++] = path[i];
 
 #ifdef __hpux
-         argvv[argcc++] = "-I/usr/include/X11R5";
+         argvv[argcc++] = (char *)"-I/usr/include/X11R5";
 #endif
          switch (gErrorIgnoreLevel) {
-            case kInfo:     argvv[argcc++] = "-J4"; break;
-            case kNote:     argvv[argcc++] = "-J3"; break;
-            case kWarning:  argvv[argcc++] = "-J2"; break;
-            case kError:    argvv[argcc++] = "-J1"; break;
+            case kInfo:     argvv[argcc++] = (char *)"-J4"; break;
+            case kNote:     argvv[argcc++] = (char *)"-J3"; break;
+            case kWarning:  argvv[argcc++] = (char *)"-J2"; break;
+            case kError:    argvv[argcc++] = (char *)"-J1"; break;
             case kSysError:
-            case kFatal:    argvv[argcc++] = "-J0"; break;
-            default:        argvv[argcc++] = "-J1"; break;
+            case kFatal:    argvv[argcc++] = (char *)"-J0"; break;
+            default:        argvv[argcc++] = (char *)"-J1"; break;
          }
 
          if (!use_preprocessor) {
@@ -4510,28 +4529,29 @@ int main(int argc, char **argv)
 #endif
          }
 #ifdef ROOTBUILD
-         argvv[argcc++] = "-DG__NOCINTDLL";
+         argvv[argcc++] = (char *)"-DG__NOCINTDLL";
 #endif
-         argvv[argcc++] = "-DTRUE=1";
-         argvv[argcc++] = "-DFALSE=0";
-         argvv[argcc++] = "-Dexternalref=extern";
-         argvv[argcc++] = "-DSYSV";
-         argvv[argcc++] = "-D__MAKECINT__";
-         argvv[argcc++] = "-V";        // include info on private members
+         argvv[argcc++] = (char *)"-DTRUE=1";
+         argvv[argcc++] = (char *)"-DFALSE=0";
+         argvv[argcc++] = (char *)"-Dexternalref=extern";
+         argvv[argcc++] = (char *)"-DSYSV";
+         argvv[argcc++] = (char *)"-D__MAKECINT__";
+         argvv[argcc++] = (char *)"-V";        // include info on private members
          if (dict_type==kDictTypeReflex) {
-            argvv[argcc++] = "-c-3";
+            argvv[argcc++] = (char *)"-c-3";
+         } else {
+            argvv[argcc++] = (char *)"-c-10";
          }
-         else argvv[argcc++] = "-c-10";
-         argvv[argcc++] = "+V";        // turn on class comment mode
+         argvv[argcc++] = (char *)"+V";        // turn on class comment mode
          if (!use_preprocessor) {
 #ifdef ROOTBUILD
-            argvv[argcc++] = "TObject.h";
-            argvv[argcc++] = "TMemberInspector.h";
-            //argvv[argcc++] = "base/inc/TObject.h";
-            //argvv[argcc++] = "base/inc/TMemberInspector.h";
+            argvv[argcc++] = (char *)"TObject.h";
+            argvv[argcc++] = (char *)"TMemberInspector.h";
+            //argvv[argcc++] = (char *)"base/inc/TObject.h";
+            //argvv[argcc++] = (char *)"base/inc/TMemberInspector.h";
 #else
-            argvv[argcc++] = "TObject.h";
-            argvv[argcc++] = "TMemberInspector.h";
+            argvv[argcc++] = (char *)"TObject.h";
+            argvv[argcc++] = (char *)"TMemberInspector.h";
 #endif
          }
       } else {
@@ -4566,7 +4586,7 @@ int main(int argc, char **argv)
             for (j = 0; path[j][0]; j++) {
                argvv[argcc++] = (char*)path[j];
             }
-            argvv[argcc++] = "+V";
+            argvv[argcc++] = (char *)"+V";
          }
          iv = argcc;
       }
@@ -4591,8 +4611,11 @@ int main(int argc, char **argv)
             insertedBundle = true;
          }
       } else {
-         argvv[argcc++] = (char*)calloc(strlen(argv[i])+1,1);
-         StrcpyArg(argvv[argcc-1],argv[i]);
+         if (strcmp("-pipe", argv[ic])!=0) {
+	   // filter out undesirable options
+	   argvv[argcc++] = (char*)calloc(strlen(argv[i])+1,1);
+	   StrcpyArg(argvv[argcc-1],argv[i]);
+	 }
       }
    }
    if (use_preprocessor) {
@@ -4622,7 +4645,7 @@ int main(int argc, char **argv)
       if (insertedBundle)
          ++argcc;
       argvv[argcc - 1] = bundle;
-      
+
       argvv[argcc++] = autold;
    }
    G__ShadowMaker::VetoShadow(); // we create them ourselves
@@ -4738,7 +4761,7 @@ int main(int argc, char **argv)
        << "//Break the privacy of classes -- Disabled for the moment" << std::endl
        << "#define private public" << std::endl
        << "#define protected public" << std::endl
-       << "#endif" << std::endl 
+       << "#endif" << std::endl
        << std::endl;
 #ifndef R__SOLARIS
    (*dictSrcOut) << "// Since CINT ignores the std namespace, we need to do so in this file." << std::endl

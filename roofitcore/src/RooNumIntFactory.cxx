@@ -20,10 +20,10 @@
 // use this class in the (normalization) integral configuration interface
 
 #include "TClass.h"
+#include "Riostream.h"
 
 #include "RooFit.h"
 
-#include "RooNumIntFactory.h"
 #include "RooNumIntFactory.h"
 #include "RooArgSet.h"
 #include "RooAbsFunc.h"
@@ -40,6 +40,9 @@
 #include "RooAdaptiveGaussKronrodIntegrator1D.h"
 #include "RooSentinel.h"
 
+#include "RooMsgService.h"
+
+using namespace std ;
 
 ClassImp(RooNumIntFactory)
 ;
@@ -164,8 +167,8 @@ RooAbsIntegrator* RooNumIntFactory::createIntegrator(RooAbsFunc& func, const Roo
 
   // Check that a method was defined for this case
   if (!method.CompareTo("N/A")) {
-    cout << "RooNumIntFactory::createIntegrator: No integration method has been defined for " 
-	 << (openEnded?"an open ended ":"a ") << ndim << "-dimensional integral" << endl ;
+    oocoutE((TObject*)0,Integration) << "RooNumIntFactory::createIntegrator: No integration method has been defined for " 
+				     << (openEnded?"an open ended ":"a ") << ndim << "-dimensional integral" << endl ;
     return 0 ;    
   }
 

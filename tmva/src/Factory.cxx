@@ -27,12 +27,14 @@
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
 
-//_______________________________________________________________________
-//                                                                      
-// This is the main MVA steering class: it creates all MVA methods,     
-// and guides them through the training, testing and evaluation         
-// phases
-//_______________________________________________________________________
+//________________________________________________________________________
+/*
+  Factory
+  
+  This is the main MVA steering class: it creates all MVA methods, and
+  guides them through the training, testing and evaluation phases
+*/
+//________________________________________________________________________
 
 #ifndef ROOT_TMVA_Factory
 #include "TMVA/Factory.h"
@@ -52,6 +54,7 @@
 #include "TMatrixDSym.h"
 #include "TPaletteAxis.h"
 #include "TPrincipal.h"
+#include "TPluginManager.h"
 
 #include "TMVA/Config.h"
 #include "TMVA/Tools.h"
@@ -74,8 +77,8 @@ TMVA::Factory::Factory( TString jobName, TFile* theTargetFile, TString theOption
      fDataSet              ( new DataSet ),
      fTargetFile           ( theTargetFile ),
      fVerbose              ( kFALSE ),
-     fJobName              ( jobName ),
-     fLogger               ( "Factory" )
+     fSilent               ( kFALSE ),
+     fJobName              ( jobName )
 {  
    // standard constructor
    //   jobname       : this name will appear in all weight file names produced by the MVAs
@@ -88,12 +91,14 @@ TMVA::Factory::Factory( TString jobName, TFile* theTargetFile, TString theOption
    // TH1::AddDirectory(kFALSE);
    DeclareOptionRef( fVerbose, "V", "verbose flag" );
    DeclareOptionRef( fColor=!gROOT->IsBatch(), "Color", "color flag (default on)" );
+   DeclareOptionRef( fSilent, "S", "boolean silent flag (default off)" );
 
    ParseOptions( kFALSE );
 
    fLogger.SetMinType( Verbose() ? kVERBOSE : kINFO );
 
    gConfig().SetUseColor( fColor );
+   gConfig().SetSilent( fSilent );
 
    Greetings();
 
@@ -117,6 +122,7 @@ TMVA::Factory::~Factory( void )
 {
    // default destructor
    this->DeleteAllMethods();
+   delete fDataSet;
 }
 
 //_______________________________________________________________________
@@ -229,6 +235,10 @@ Bool_t TMVA::Factory::SetInputTrees( TString datFileS, TString datFileB,
   
    signalTree->ReadFile( datFileS );
    backgTree->ReadFile( datFileB );
+
+   fLogger << kINFO << "Create TTree objects from ASCII input files ... \n- Signal file    : \""
+           << datFileS << "\" \n- Background file: \""
+           << datFileB << "\"" << Endl;
   
    ifstream in; 
    in.open(datFileS);
@@ -350,6 +360,9 @@ Bool_t TMVA::Factory::BookMethod( Types::EMVA theMethod, TString methodTitle, TS
               << Endl;
    }
 
+   TPluginManager *pluginManager(0);
+   TPluginHandler *pluginHandler(0);
+
    // initialize methods
    MethodBase *method = 0;
 
@@ -386,6 +399,24 @@ Bool_t TMVA::Factory::BookMethod( Types::EMVA theMethod, TString methodTitle, TS
       method = new MethodFDA            ( fJobName, methodTitle, Data(), theOption ); break;
    case Types::kSeedDistance:    
       method = new MethodSeedDistance   ( fJobName, methodTitle, Data(), theOption ); break;
+   case TMVA::Types::kPlugins:
+      pluginManager = gROOT->GetPluginManager();
+      pluginHandler = pluginManager->FindHandler("TMVA@@MethodBase", methodTitle);
+      if (pluginHandler) {
+         if (pluginHandler->LoadPlugin() == 0) {
+            method = (TMVA::MethodBase*) pluginHandler->ExecPlugin(4, &fJobName, &methodTitle, &Data(), &theOption);
+            if(method==0) {
+               fLogger << kFATAL << "Couldn't instantiate plugin for " << methodTitle << "." << Endl;
+            } else {
+               fLogger << kINFO << "Found plugin for " << methodTitle << "  " << method << Endl;
+            }
+         } else {
+            fLogger << kFATAL << "Couldn't load any plugin for " << methodTitle << "." << Endl; 
+         }
+      } else {
+         fLogger << kFATAL << "Couldn't find plugin handler for TMVA@@MethodBase and " << methodTitle << Endl; 
+      }
+      break;
    default:
       fLogger << kFATAL << "Method: " << theMethod << " does not exist" << Endl;
    }

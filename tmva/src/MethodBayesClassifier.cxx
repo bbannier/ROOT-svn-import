@@ -1,5 +1,5 @@
-// @(#)root/tmva $Id$    
-// Author: Marcin .... 
+// @(#)root/tmva $Id$
+// Author: Marcin ....
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -36,8 +36,8 @@
 ClassImp(TMVA::MethodBayesClassifier)
 
 //_______________________________________________________________________
-TMVA::MethodBayesClassifier::MethodBayesClassifier( TString jobName, TString methodTitle, DataSet& theData, 
-                                                    TString theOption, TDirectory* theTargetDir )
+TMVA::MethodBayesClassifier::MethodBayesClassifier( const TString& jobName, const TString& methodTitle, DataSet& theData, 
+                                                    const TString& theOption, TDirectory* theTargetDir )
    : TMVA::MethodBase( jobName, methodTitle, theData, theOption, theTargetDir )
 {
    // standard constructor
@@ -46,7 +46,7 @@ TMVA::MethodBayesClassifier::MethodBayesClassifier( TString jobName, TString met
 
 //_______________________________________________________________________
 TMVA::MethodBayesClassifier::MethodBayesClassifier( DataSet& theData, 
-                                                    TString theWeightFile,  
+                                                    const TString& theWeightFile,  
                                                     TDirectory* theTargetDir )
    : TMVA::MethodBase( theData, theWeightFile, theTargetDir ) 
 {
@@ -102,7 +102,7 @@ void  TMVA::MethodBayesClassifier::WriteWeightsToStream( ostream & o ) const
 void  TMVA::MethodBayesClassifier::ReadWeightsFromStream( istream & istr )
 {
    // read back the training results from a file (stream)
-   if (istr.eof());
+   if (istr.eof()) {}
 }
 
 //_______________________________________________________________________

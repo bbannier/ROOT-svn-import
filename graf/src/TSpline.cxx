@@ -35,7 +35,7 @@ ClassImp(TSpline5)
 ClassImp(TSpline)
 
 
-//____________________________________________________________________________
+//______________________________________________________________________________
 TSpline::TSpline(const TSpline &sp) :
   TNamed(sp),
   TAttLine(sp),
@@ -49,20 +49,21 @@ TSpline::TSpline(const TSpline &sp) :
   fHistogram(sp.fHistogram),
   fGraph(sp.fGraph),
   fNpx(sp.fNpx)
-{ 
+{
    //copy constructor
 }
 
-//____________________________________________________________________________
-TSpline::~TSpline() 
+
+//______________________________________________________________________________
+TSpline::~TSpline()
 {
    //destructor
-   if(fHistogram) delete fHistogram; 
-   if(fGraph) delete fGraph; 
+   if(fHistogram) delete fHistogram;
+   if(fGraph) delete fGraph;
 }
-  
 
-//____________________________________________________________________________
+
+//______________________________________________________________________________
 TSpline& TSpline::operator=(const TSpline &sp)
 {
    //assignment operator
@@ -79,11 +80,12 @@ TSpline& TSpline::operator=(const TSpline &sp)
       fHistogram=sp.fHistogram;
       fGraph=sp.fGraph;
       fNpx=sp.fNpx;
-   } 
+   }
    return *this;
 }
 
-//____________________________________________________________________________
+
+//______________________________________________________________________________
 void TSpline::Draw(Option_t *option)
 {
    // Draw this function with its current attributes.
@@ -105,7 +107,27 @@ void TSpline::Draw(Option_t *option)
 }
 
 
-//____________________________________________________________________________
+//______________________________________________________________________________
+Int_t TSpline::DistancetoPrimitive(Int_t px, Int_t py)
+{
+   // Compute distance from point px,py to a spline.
+
+   if (!fHistogram) return 999;
+   return fHistogram->DistancetoPrimitive(px, py);
+}
+
+
+//______________________________________________________________________________
+void TSpline::ExecuteEvent(Int_t event, Int_t px, Int_t py)
+{
+   // Execute action corresponding to one event.
+
+   if (!fHistogram) return;
+   fHistogram->ExecuteEvent(event, px, py);
+}
+
+
+//______________________________________________________________________________
 void TSpline::Paint(Option_t *option)
 {
    // Paint this function with its current attributes.
@@ -217,13 +239,13 @@ void TSpline::Streamer(TBuffer &R__b)
       if (R__v > 1) {
          R__b.ReadClassBuffer(TSpline::Class(), this, R__v, R__s, R__c);
          return;
-      } 
+      }
       //====process old versions before automatic schema evolution
       TNamed::Streamer(R__b);
       TAttLine::Streamer(R__b);
       TAttFill::Streamer(R__b);
       TAttMarker::Streamer(R__b);
-      
+
       fNp = 0;
       /*
       R__b >> fDelta;
@@ -237,7 +259,7 @@ void TSpline::Streamer(TBuffer &R__b)
       */
       R__b.CheckByteCount(R__s, R__c, TSpline::IsA());
       //====end of old versions
-      
+
    } else {
       R__b.WriteClassBuffer(TSpline::Class(),this);
    }
@@ -255,7 +277,7 @@ void TSpline::Streamer(TBuffer &R__b)
 //////////////////////////////////////////////////////////////////////////
 
 
-//____________________________________________________________________________
+//______________________________________________________________________________
 TSpline3::TSpline3(const char *title,
                    Double_t x[], Double_t y[], Int_t n, const char *opt,
                    Double_t valbeg, Double_t valend) :
@@ -284,7 +306,7 @@ TSpline3::TSpline3(const char *title,
 }
 
 
-//____________________________________________________________________________
+//______________________________________________________________________________
 TSpline3::TSpline3(const char *title,
                    Double_t xmin, Double_t xmax,
                    Double_t y[], Int_t n, const char *opt,
@@ -315,7 +337,7 @@ TSpline3::TSpline3(const char *title,
 }
 
 
-//____________________________________________________________________________
+//______________________________________________________________________________
 TSpline3::TSpline3(const char *title,
                    Double_t x[], const TF1 *func, Int_t n, const char *opt,
                    Double_t valbeg, Double_t valend) :
@@ -326,7 +348,7 @@ TSpline3::TSpline3(const char *title,
    // Third spline creator given an array of
    // arbitrary abscissas in increasing order and a function
    // to interpolate and possibly end point conditions
- 
+
    fName="Spline3";
 
    // Set endpoint conditions
@@ -345,7 +367,7 @@ TSpline3::TSpline3(const char *title,
 }
 
 
-//____________________________________________________________________________
+//______________________________________________________________________________
 TSpline3::TSpline3(const char *title,
                    Double_t xmin, Double_t xmax,
                    const TF1 *func, Int_t n, const char *opt,
@@ -377,7 +399,7 @@ TSpline3::TSpline3(const char *title,
 }
 
 
-//____________________________________________________________________________
+//______________________________________________________________________________
 TSpline3::TSpline3(const char *title,
                    const TGraph *g, const char *opt,
                    Double_t valbeg, Double_t valend) :
@@ -410,7 +432,37 @@ TSpline3::TSpline3(const char *title,
    BuildCoeff();
 }
 
-//____________________________________________________________________________
+
+//______________________________________________________________________________
+TSpline3::TSpline3(const TH1 *h, const char *opt,
+                   Double_t valbeg, Double_t valend) :
+  TSpline(h->GetTitle(),-1,0,0,h->GetNbinsX(),kFALSE),
+  fValBeg(valbeg), fValEnd(valend),
+  fBegCond(0), fEndCond(0)
+{
+   // Third spline creator given a TH1 
+
+   fName=h->GetName();
+
+   // Set endpoint conditions
+   if(opt) SetCond(opt);
+
+   // Create the plynomial terms and fill
+   // them with node information
+   fPoly = new TSplinePoly3[fNp];
+   for (Int_t i=0; i<fNp; ++i) {
+      fPoly[i].X()=h->GetXaxis()->GetBinCenter(i+1);
+      fPoly[i].Y()=h->GetBinContent(i+1);
+   }
+   fXmin = fPoly[0].X();
+   fXmax = fPoly[fNp-1].X();
+
+   // Build the spline coefficients
+   BuildCoeff();
+}
+
+
+//______________________________________________________________________________
 TSpline3::TSpline3(const TSpline3& sp3) :
   TSpline(sp3),
   fPoly(sp3.fPoly),
@@ -418,11 +470,12 @@ TSpline3::TSpline3(const TSpline3& sp3) :
   fValEnd(sp3.fValEnd),
   fBegCond(sp3.fBegCond),
   fEndCond(sp3.fEndCond)
-{ 
+{
    //copy constructor
 }
 
-//____________________________________________________________________________
+
+//______________________________________________________________________________
 TSpline3& TSpline3::operator=(const TSpline3& sp3)
 {
    //assignment operator
@@ -433,11 +486,12 @@ TSpline3& TSpline3::operator=(const TSpline3& sp3)
       fValEnd=sp3.fValEnd;
       fBegCond=sp3.fBegCond;
       fEndCond=sp3.fEndCond;
-   } 
+   }
    return *this;
 }
 
-//____________________________________________________________________________
+
+//______________________________________________________________________________
 void TSpline3::SetCond(const char *opt)
 {
    // Check the boundary conditions
@@ -457,7 +511,7 @@ void TSpline3::SetCond(const char *opt)
 }
 
 
-//___________________________________________________________________________
+//______________________________________________________________________________
 void TSpline3::Test()
 {
    // Test method for TSpline5
@@ -608,7 +662,7 @@ void TSpline3::Test()
 }
 
 
-//_____________________________________________________________________
+//______________________________________________________________________________
 Int_t TSpline3::FindX(Double_t x) const
 {
    // Find X
@@ -645,7 +699,7 @@ Int_t TSpline3::FindX(Double_t x) const
 }
 
 
-//____________________________________________________________________________
+//______________________________________________________________________________
 Double_t TSpline3::Eval(Double_t x) const
 {
    // Eval this spline at x
@@ -655,7 +709,7 @@ Double_t TSpline3::Eval(Double_t x) const
 }
 
 
-//____________________________________________________________________________
+//______________________________________________________________________________
 Double_t TSpline3::Derivative(Double_t x) const
 {
    // Derivative
@@ -665,19 +719,19 @@ Double_t TSpline3::Derivative(Double_t x) const
 }
 
 
-//____________________________________________________________________________
+//______________________________________________________________________________
 void TSpline3::SaveAs(const char *filename, Option_t * /*option*/) const
 {
    // write this spline as a C++ function that can be executed without ROOT
    // the name of the function is the name of the file up to the "." if any
-    
+
    //open the file
    ofstream *f = new ofstream(filename,ios::out);
    if (f == 0 || gSystem->AccessPathName(filename,kWritePermission)) {
       Error("SaveAs","Cannot open file:%s\n",filename);
       return;
    }
-   
+
    //write the function name and the spline constants
    char buffer[512];
    Int_t nch = strlen(filename);
@@ -693,7 +747,7 @@ void TSpline3::SaveAs(const char *filename, Option_t * /*option*/) const
 
    //write the spline coefficients
    //array fX
-   sprintf(buffer,"   const double fX[%d] = {",fNp);   
+   sprintf(buffer,"   const double fX[%d] = {",fNp);
    nch = strlen(buffer); f->write(buffer,nch);
    buffer[0] = 0;
    Int_t i;
@@ -711,7 +765,7 @@ void TSpline3::SaveAs(const char *filename, Option_t * /*option*/) const
    sprintf(buffer," };\n");
    nch = strlen(buffer); f->write(buffer,nch);
    //array fY
-   sprintf(buffer,"   const double fY[%d] = {",fNp);   
+   sprintf(buffer,"   const double fY[%d] = {",fNp);
    nch = strlen(buffer); f->write(buffer,nch);
    buffer[0] = 0;
    for (i=0;i<fNp;i++) {
@@ -727,7 +781,7 @@ void TSpline3::SaveAs(const char *filename, Option_t * /*option*/) const
    sprintf(buffer," };\n");
    nch = strlen(buffer); f->write(buffer,nch);
    //array fB
-   sprintf(buffer,"   const double fB[%d] = {",fNp);   
+   sprintf(buffer,"   const double fB[%d] = {",fNp);
    nch = strlen(buffer); f->write(buffer,nch);
    buffer[0] = 0;
    for (i=0;i<fNp;i++) {
@@ -743,7 +797,7 @@ void TSpline3::SaveAs(const char *filename, Option_t * /*option*/) const
    sprintf(buffer," };\n");
    nch = strlen(buffer); f->write(buffer,nch);
    //array fC
-   sprintf(buffer,"   const double fC[%d] = {",fNp);   
+   sprintf(buffer,"   const double fC[%d] = {",fNp);
    nch = strlen(buffer); f->write(buffer,nch);
    buffer[0] = 0;
    for (i=0;i<fNp;i++) {
@@ -759,7 +813,7 @@ void TSpline3::SaveAs(const char *filename, Option_t * /*option*/) const
    sprintf(buffer," };\n");
    nch = strlen(buffer); f->write(buffer,nch);
     //array fD
-   sprintf(buffer,"   const double fD[%d] = {",fNp);   
+   sprintf(buffer,"   const double fD[%d] = {",fNp);
    nch = strlen(buffer); f->write(buffer,nch);
    buffer[0] = 0;
    for (i=0;i<fNp;i++) {
@@ -774,7 +828,7 @@ void TSpline3::SaveAs(const char *filename, Option_t * /*option*/) const
    }
    sprintf(buffer," };\n");
    nch = strlen(buffer); f->write(buffer,nch);
-    
+
    //generate code for the spline evaluation
    sprintf(buffer,"   int klow=0;\n");
    nch = strlen(buffer); f->write(buffer,nch);
@@ -818,15 +872,15 @@ void TSpline3::SaveAs(const char *filename, Option_t * /*option*/) const
    nch = strlen(buffer); f->write(buffer,nch);
    sprintf(buffer,"   return (fY[klow]+dx*(fB[klow]+dx*(fC[klow]+dx*fD[klow])));\n");
    nch = strlen(buffer); f->write(buffer,nch);
-    
+
    //close file
    f->write("}\n",2);
-      
+
    if (f) { f->close(); delete f;}
 }
 
 
-//____________________________________________________________________________
+//______________________________________________________________________________
 void TSpline3::BuildCoeff()
 {
    //      subroutine cubspl ( tau, c, n, ibcbeg, ibcend )
@@ -991,7 +1045,7 @@ void TSpline3::Streamer(TBuffer &R__b)
       if (R__v > 1) {
          R__b.ReadClassBuffer(TSpline3::Class(), this, R__v, R__s, R__c);
          return;
-      } 
+      }
       //====process old versions before automatic schema evolution
       TSpline::Streamer(R__b);
       if (fNp > 0) {
@@ -1023,7 +1077,7 @@ void TSpline3::Streamer(TBuffer &R__b)
 //////////////////////////////////////////////////////////////////////////
 
 
-//____________________________________________________________________________
+//______________________________________________________________________________
 TSpline5::TSpline5(const char *title,
                    Double_t x[], Double_t y[], Int_t n,
                    const char *opt, Double_t b1, Double_t e1,
@@ -1057,7 +1111,7 @@ TSpline5::TSpline5(const char *title,
 }
 
 
-//____________________________________________________________________________
+//______________________________________________________________________________
 TSpline5::TSpline5(const char *title,
                    Double_t xmin, Double_t xmax,
                    Double_t y[], Int_t n,
@@ -1092,7 +1146,7 @@ TSpline5::TSpline5(const char *title,
 }
 
 
-//____________________________________________________________________________
+//______________________________________________________________________________
 TSpline5::TSpline5(const char *title,
                    Double_t x[], const TF1 *func, Int_t n,
                    const char *opt, Double_t b1, Double_t e1,
@@ -1126,7 +1180,7 @@ TSpline5::TSpline5(const char *title,
 }
 
 
-//____________________________________________________________________________
+//______________________________________________________________________________
 TSpline5::TSpline5(const char *title,
                    Double_t xmin, Double_t xmax,
                    const TF1 *func, Int_t n,
@@ -1162,7 +1216,7 @@ TSpline5::TSpline5(const char *title,
 }
 
 
-//____________________________________________________________________________
+//______________________________________________________________________________
 TSpline5::TSpline5(const char *title,
                    const TGraph *g,
                    const char *opt, Double_t b1, Double_t e1,
@@ -1199,26 +1253,62 @@ TSpline5::TSpline5(const char *title,
    BuildCoeff();
 }
 
-//____________________________________________________________________________
+
+//______________________________________________________________________________
+TSpline5::TSpline5(const TH1 *h,
+                   const char *opt, Double_t b1, Double_t e1,
+                   Double_t b2, Double_t e2) :
+  TSpline(h->GetTitle(),-1,0,0,h->GetNbinsX(),kFALSE)
+{
+   // Quintic natural spline creator given a TH1
+
+   Int_t beg, end;
+   const char *cb1, *ce1, *cb2, *ce2;
+   fName=h->GetName();
+
+   // Check endpoint conditions
+   BoundaryConditions(opt,beg,end,cb1,ce1,cb2,ce2);
+
+   // Create the plynomial terms and fill
+   // them with node information
+   fPoly = new TSplinePoly5[fNp];
+   for (Int_t i=0; i<fNp-beg; ++i) {
+      fPoly[i+beg].X()=h->GetXaxis()->GetBinCenter(i+1);
+      fPoly[i+beg].Y()=h->GetBinContent(i+1);
+   }
+
+   // Set the double knots at boundaries
+   SetBoundaries(b1,e1,b2,e2,cb1,ce1,cb2,ce2);
+   fXmin = fPoly[0].X();
+   fXmax = fPoly[fNp-1].X();
+
+   // Build the spline coefficients
+   BuildCoeff();
+}
+
+
+//______________________________________________________________________________
 TSpline5::TSpline5(const TSpline5& sp5) :
   TSpline(sp5),
   fPoly(sp5.fPoly)
-{ 
+{
    //copy constructor
 }
 
-//____________________________________________________________________________
+
+//______________________________________________________________________________
 TSpline5& TSpline5::operator=(const TSpline5& sp5)
 {
    //assignment operator
    if(this!=&sp5) {
       TSpline::operator=(sp5);
       fPoly=sp5.fPoly;
-   } 
+   }
    return *this;
 }
 
-//____________________________________________________________________________
+
+//______________________________________________________________________________
 void TSpline5::BoundaryConditions(const char *opt,Int_t &beg,Int_t &end,
                                   const char *&cb1,const char *&ce1,
                                   const char *&cb2,const char *&ce2)
@@ -1251,7 +1341,7 @@ void TSpline5::BoundaryConditions(const char *opt,Int_t &beg,Int_t &end,
 }
 
 
-//____________________________________________________________________________
+//______________________________________________________________________________
 void TSpline5::SetBoundaries(Double_t b1, Double_t e1, Double_t b2, Double_t e2,
                              const char *cb1, const char *ce1, const char *cb2,
                              const char *ce2)
@@ -1301,7 +1391,7 @@ void TSpline5::SetBoundaries(Double_t b1, Double_t e1, Double_t b2, Double_t e2,
 }
 
 
-//___________________________________________________________________________
+//______________________________________________________________________________
 Int_t TSpline5::FindX(Double_t x) const
 {
    // Find X
@@ -1338,7 +1428,7 @@ Int_t TSpline5::FindX(Double_t x) const
 }
 
 
-//___________________________________________________________________________
+//______________________________________________________________________________
 Double_t TSpline5::Eval(Double_t x) const
 {
    // Eval this spline at x
@@ -1348,7 +1438,7 @@ Double_t TSpline5::Eval(Double_t x) const
 }
 
 
-//____________________________________________________________________________
+//______________________________________________________________________________
 Double_t TSpline5::Derivative(Double_t x) const
 {
    // Derivative
@@ -1358,19 +1448,19 @@ Double_t TSpline5::Derivative(Double_t x) const
 }
 
 
-//____________________________________________________________________________
+//______________________________________________________________________________
 void TSpline5::SaveAs(const char *filename, Option_t * /*option*/) const
 {
-  // write this spline as a C++ function that can be executed without ROOT
-  // the name of the function is the name of the file up to the "." if any
-    
+   // write this spline as a C++ function that can be executed without ROOT
+   // the name of the function is the name of the file up to the "." if any
+
    //open the file
    ofstream *f = new ofstream(filename,ios::out);
    if (f == 0 || gSystem->AccessPathName(filename,kWritePermission)) {
       Error("SaveAs","Cannot open file:%s\n",filename);
       return;
    }
-   
+
    //write the function name and the spline constants
    char buffer[512];
    Int_t nch = strlen(filename);
@@ -1386,7 +1476,7 @@ void TSpline5::SaveAs(const char *filename, Option_t * /*option*/) const
 
    //write the spline coefficients
    //array fX
-   sprintf(buffer,"   const double fX[%d] = {",fNp);   
+   sprintf(buffer,"   const double fX[%d] = {",fNp);
    nch = strlen(buffer); f->write(buffer,nch);
    buffer[0] = 0;
    Int_t i;
@@ -1404,7 +1494,7 @@ void TSpline5::SaveAs(const char *filename, Option_t * /*option*/) const
    sprintf(buffer," };\n");
    nch = strlen(buffer); f->write(buffer,nch);
    //array fY
-   sprintf(buffer,"   const double fY[%d] = {",fNp);   
+   sprintf(buffer,"   const double fY[%d] = {",fNp);
    nch = strlen(buffer); f->write(buffer,nch);
    buffer[0] = 0;
    for (i=0;i<fNp;i++) {
@@ -1420,7 +1510,7 @@ void TSpline5::SaveAs(const char *filename, Option_t * /*option*/) const
    sprintf(buffer," };\n");
    nch = strlen(buffer); f->write(buffer,nch);
    //array fB
-   sprintf(buffer,"   const double fB[%d] = {",fNp);   
+   sprintf(buffer,"   const double fB[%d] = {",fNp);
    nch = strlen(buffer); f->write(buffer,nch);
    buffer[0] = 0;
    for (i=0;i<fNp;i++) {
@@ -1436,7 +1526,7 @@ void TSpline5::SaveAs(const char *filename, Option_t * /*option*/) const
    sprintf(buffer," };\n");
    nch = strlen(buffer); f->write(buffer,nch);
    //array fC
-   sprintf(buffer,"   const double fC[%d] = {",fNp);   
+   sprintf(buffer,"   const double fC[%d] = {",fNp);
    nch = strlen(buffer); f->write(buffer,nch);
    buffer[0] = 0;
    for (i=0;i<fNp;i++) {
@@ -1452,7 +1542,7 @@ void TSpline5::SaveAs(const char *filename, Option_t * /*option*/) const
    sprintf(buffer," };\n");
    nch = strlen(buffer); f->write(buffer,nch);
     //array fD
-   sprintf(buffer,"   const double fD[%d] = {",fNp);   
+   sprintf(buffer,"   const double fD[%d] = {",fNp);
    nch = strlen(buffer); f->write(buffer,nch);
    buffer[0] = 0;
    for (i=0;i<fNp;i++) {
@@ -1468,7 +1558,7 @@ void TSpline5::SaveAs(const char *filename, Option_t * /*option*/) const
    sprintf(buffer," };\n");
    nch = strlen(buffer); f->write(buffer,nch);
     //array fE
-   sprintf(buffer,"   const double fE[%d] = {",fNp);   
+   sprintf(buffer,"   const double fE[%d] = {",fNp);
    nch = strlen(buffer); f->write(buffer,nch);
    buffer[0] = 0;
    for (i=0;i<fNp;i++) {
@@ -1484,7 +1574,7 @@ void TSpline5::SaveAs(const char *filename, Option_t * /*option*/) const
    sprintf(buffer," };\n");
    nch = strlen(buffer); f->write(buffer,nch);
     //array fF
-   sprintf(buffer,"   const double fF[%d] = {",fNp);   
+   sprintf(buffer,"   const double fF[%d] = {",fNp);
    nch = strlen(buffer); f->write(buffer,nch);
    buffer[0] = 0;
    for (i=0;i<fNp;i++) {
@@ -1499,7 +1589,7 @@ void TSpline5::SaveAs(const char *filename, Option_t * /*option*/) const
    }
    sprintf(buffer," };\n");
    nch = strlen(buffer); f->write(buffer,nch);
-    
+
    //generate code for the spline evaluation
    sprintf(buffer,"   int klow=0;\n");
    nch = strlen(buffer); f->write(buffer,nch);
@@ -1543,15 +1633,15 @@ void TSpline5::SaveAs(const char *filename, Option_t * /*option*/) const
    nch = strlen(buffer); f->write(buffer,nch);
    sprintf(buffer,"   return (fY[klow]+dx*(fB[klow]+dx*(fC[klow]+dx*(fD[klow]+dx*(fE[klow]+dx*fF[klow])))));\n");
    nch = strlen(buffer); f->write(buffer,nch);
-    
+
    //close file
    f->write("}\n",2);
-      
+
    if (f) { f->close(); delete f;}
 }
 
 
-//____________________________________________________________________________
+//______________________________________________________________________________
 void TSpline5::BuildCoeff()
 {
    //     algorithm 600, collected algorithms from acm.
@@ -1773,7 +1863,7 @@ void TSpline5::BuildCoeff()
 }
 
 
-//___________________________________________________________________________
+//______________________________________________________________________________
 void TSpline5::Test()
 {
    // Test method for TSpline5
@@ -2210,7 +2300,7 @@ void TSpline5::Streamer(TBuffer &R__b)
       if (R__v > 1) {
          R__b.ReadClassBuffer(TSpline5::Class(), this, R__v, R__s, R__c);
          return;
-      } 
+      }
       //====process old versions before automatic schema evolution
       TSpline::Streamer(R__b);
       if (fNp > 0) {

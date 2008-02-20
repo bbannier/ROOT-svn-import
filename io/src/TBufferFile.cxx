@@ -429,7 +429,7 @@ void TBufferFile::WriteFloat16(Float_t *f, TStreamerElement *ele)
    //  [-10,100,16]
    //  [0,0,8]
    // if nbits is not specified, or nbits <2 or nbits>16 it is set to 16
-   // if (xmin==0 and xmax==0 and nbits <=16) the float word will have
+   // if (xmin==0 and xmax==0 and nbits <=14) the float word will have
    // its mantissa truncated to nbits significative bits.
    //
    // IMPORTANT NOTE
@@ -1395,7 +1395,7 @@ void TBufferFile::ReadFastArrayDouble32(Double_t *d, Int_t n, TStreamerElement *
 
 //______________________________________________________________________________
 void TBufferFile::ReadFastArray(void  *start, const TClass *cl, Int_t n,
-                            TMemberStreamer *streamer)
+                                TMemberStreamer *streamer)
 {
    // Read an array of 'n' objects from the I/O buffer.
    // Stores the objects read starting at the address 'start'.
@@ -1415,7 +1415,7 @@ void TBufferFile::ReadFastArray(void  *start, const TClass *cl, Int_t n,
 
 //______________________________________________________________________________
 void TBufferFile::ReadFastArray(void **start, const TClass *cl, Int_t n,
-                            Bool_t isPreAlloc, TMemberStreamer *streamer)
+                                Bool_t isPreAlloc, TMemberStreamer *streamer)
 {
    // Read an array of 'n' objects from the I/O buffer.
    // The objects read are stored starting at the address '*start'
@@ -1439,7 +1439,10 @@ void TBufferFile::ReadFastArray(void **start, const TClass *cl, Int_t n,
 
       for (Int_t j=0; j<n; j++){
          //delete the object or collection
-         if (start[j] && TStreamerInfo::CanDelete()
+         void *old = start[j];
+         start[j] = ReadObjectAny(cl);
+         if (old && old!=start[j] && 
+             TStreamerInfo::CanDelete()
              // There are some cases where the user may set up a pointer in the (default)
              // constructor but not mark this pointer as transient.  Sometime the value
              // of this pointer is the address of one of the object with just created
@@ -1450,8 +1453,14 @@ void TBufferFile::ReadFastArray(void **start, const TClass *cl, Int_t n,
              // && !CheckObject(start[j],cl)
              // However this can increase the read time significantly (10% in the case
              // of one TLine pointer in the test/Track and run ./Event 200 0 0 20 30000
-             ) ((TClass*)cl)->Destructor(start[j],kFALSE); // call delete and desctructor
-         start[j] = ReadObjectAny(cl);
+             //
+             // If ReadObjectAny returned the same value as we previous had, this means
+             // that when writing this object (start[j] had already been written and
+             // is indeed pointing to the same object as the object the user set up
+             // in the default constructor).
+             ) {
+            ((TClass*)cl)->Destructor(old,kFALSE); // call delete and desctructor
+         }
       }
 
    } else {	//case //-> in comment
@@ -1997,7 +2006,7 @@ void TBufferFile::WriteFastArrayDouble32(const Double_t *d, Int_t n, TStreamerEl
    } else {
       Int_t nbits = 0;
       //number of bits stored in fXmin (see TStreamerElement::GetRange)
-      if (ele) nbits = (UInt_t)ele->GetXmin();
+      if (ele) nbits = (Int_t)ele->GetXmin();
       Int_t i;
       if (!nbits) {
          //if no range and no bits specified, we convert from double to float
@@ -3200,14 +3209,15 @@ Int_t TBufferFile::ReadClassEmulated(TClass *cl, void *object)
    //We assume that the class was written with a standard streamer
    //We attempt to recover if a version count was not written
    Version_t v = ReadVersion(&start,&count);
+   void *ptr = &object;
    if (count) {
       TStreamerInfo *sinfo = (TStreamerInfo*)cl->GetStreamerInfo(v);
-      sinfo->ReadBuffer(*this,(char**)&object,-1);
+      sinfo->ReadBuffer(*this,(char**)ptr,-1);
       if (sinfo->IsRecovered()) count=0;
       CheckByteCount(start,count,cl);
    } else {
       SetBufferOffset(start);
-      ((TStreamerInfo*)cl->GetStreamerInfo())->ReadBuffer(*this,(char**)&object,-1);
+      ((TStreamerInfo*)cl->GetStreamerInfo())->ReadBuffer(*this,(char**)ptr,-1);
    }
    return 0;
 }
@@ -3226,7 +3236,7 @@ Int_t TBufferFile::ReadClassBuffer(TClass *cl, void *pointer, Int_t version, UIn
    //the StreamerInfo should exist at this point
    TObjArray *infos = cl->GetStreamerInfos();
    Int_t ninfos = infos->GetSize();
-   if (version < 0 || version >= ninfos) {
+   if (version < -1 || version >= ninfos) {
       Error("ReadBuffer1","class: %s, attempting to access a wrong version: %d",cl->GetName(),version);
       CheckByteCount(start,count,cl);
       return 0;
@@ -3245,7 +3255,8 @@ Int_t TBufferFile::ReadClassBuffer(TClass *cl, void *pointer, Int_t version, UIn
    }
 
    //deserialize the object
-   sinfo->ReadBuffer(*this, (char**)&pointer,-1);
+   void *ptr = &pointer;
+   sinfo->ReadBuffer(*this, (char**)ptr,-1);
    if (sinfo->IsRecovered()) count=0;
 
    //check that the buffer position corresponds to the byte count
@@ -3290,7 +3301,8 @@ Int_t TBufferFile::ReadClassBuffer(TClass *cl, void *pointer)
    }
 
    //deserialize the object
-   sinfo->ReadBuffer(*this, (char**)&pointer,-1);
+   void *ptr = &pointer;
+   sinfo->ReadBuffer(*this, (char**)ptr,-1);
    if (sinfo->IsRecovered()) R__c=0;
 
    //check that the buffer position corresponds to the byte count
@@ -3332,7 +3344,8 @@ Int_t TBufferFile::WriteClassBuffer(TClass *cl, void *pointer)
    UInt_t R__c = WriteVersion(cl, kTRUE);
 
    //serialize the object
-   sinfo->WriteBufferAux(*this,(char**)&pointer,-1,1,0,0); // NOTE: expanded
+   void *ptr = &pointer;
+   sinfo->WriteBufferAux(*this,(char**)ptr,-1,1,0,0); // NOTE: expanded
 
    //write the byte count at the start of the buffer
    SetByteCount(R__c, kTRUE);

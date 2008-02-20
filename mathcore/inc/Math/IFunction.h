@@ -1,10 +1,16 @@
 // @(#)root/mathcore:$Id$
-// Authors: L. Moneta, A. Zsenei   08/2005 
+// Authors: L. Moneta    11/2006 
 
+/**********************************************************************
+ *                                                                    *
+ * Copyright (c) 2006 , LCG ROOT MathLib Team                         *
+ *                                                                    *
+ *                                                                    *
+ **********************************************************************/
 
-// Header file for funciton interfaces 
+// Header file for function interfaces 
 // 
-// Generic interface for one or  multi-dimensional functions
+// Generic Interfaces for one or  multi-dimensional functions
 //
 // Created by: Lorenzo Moneta  : Wed Nov 13 2006
 // 
@@ -15,7 +21,7 @@
 /** 
 @defgroup CppFunctions Function Classes and Interfaces
 
- Interfaces and Base classes used in MathCore and MathMore numerical algorithms. 
+ Interfaces (abstract classes) and Base classes used in MathCore and MathMore numerical algorithms. 
  Included are also adapter classes, such as  functors, to wrap any generic callable C++ objects 
  in the desired interface. 
 */
@@ -30,37 +36,39 @@ namespace ROOT {
 namespace Math {
 
 
-
+//___________________________________________________________________________________
    /** 
-       Interface for generic functions objects: 
-       A template parameter, DimensionType specify the DimensionType  which can be
-       single-dimension or multi-dimension onother parameter specify the 
-       function capabilities. 
-       Default case is function with multidimension and default capability 
-       (no gradient calculation)
-       - 
+       Documentation for the abstract class IBaseFunctionMultiDim.
+       Interface (abstract class) for generic functions objects of multi-dimension 
+       Provides a method to evaluate the function given a vector of coordinate values, 
+       by implementing operator() (const double *).
+       In addition it defines the interface for copying functions via the pure virtual method Clone()  
+       and the interface for getting the function dimension via the NDim() method. 
+       Derived classes must implement the pure private virtual method DoEval(const double *) for the 
+       function evaluation in addition to NDim() and Clone(). 
+        
        @ingroup  CppFunctions
    */
-   template<class DimensionType = MultiDim> 
-   class IBaseFunction {
+
+   class IBaseFunctionMultiDim {
            
    public: 
 
-      typedef  IBaseFunction BaseFunc; 
+      typedef  IBaseFunctionMultiDim BaseFunc; 
 
 
-      IBaseFunction() {}
+      IBaseFunctionMultiDim() {}
 
       /**
          virtual destructor 
        */
-      virtual ~IBaseFunction() {}
+      virtual ~IBaseFunctionMultiDim() {}
 
       /** 
           Clone a function. 
-          Each derived class will implement his version of the Clone method
+          Each derived class must implement his version of the Clone method
       */
-      virtual IBaseFunction * Clone() const = 0;  
+      virtual IBaseFunctionMultiDim * Clone() const = 0;  
 
       /**
          Retrieve the dimension of the function
@@ -69,7 +77,7 @@ namespace Math {
 
       /** 
           Evaluate the function at a point x[]. 
-          Use the  a pure virtual private method Evaluate which must be implemented by sub-classes
+          Use the pure virtual private method DoEval which must be implemented by the sub-classes
       */      
       double operator() (const double* x) const { 
          return DoEval(x); 
@@ -89,7 +97,6 @@ namespace Math {
 
    private: 
 
-      // use private virtual inheritance 
 
       /**
          Implementation of the evaluation function. Must be implemented by derived classes
@@ -100,31 +107,37 @@ namespace Math {
   }; 
 
 
+//___________________________________________________________________________________
    /** 
-       Specialized Interface for one-dimensional generic functions with 
-       minimal capabilities (no gradient) 
+       Interface (abstract class) for generic functions objects of one-dimension 
+       Provides a method to evaluate the function given a value (simple double) 
+       by implementing operator() (const double ).
+       In addition it defines the interface for copying functions via the pure virtual method Clone(). 
+       Derived classes must implement the pure virtual private method DoEval(double ) for the 
+       function evaluation in addition to  Clone(). 
+       An interface for evaluating the function passing a vector (like for multidim functions) is also 
+       provided
         
        @ingroup  CppFunctions
    */
-   template <>
-   class IBaseFunction<ROOT::Math::OneDim> { 
+   class IBaseFunctionOneDim { 
 
    public: 
 
-      typedef  IBaseFunction BaseFunc; 
+      typedef  IBaseFunctionOneDim BaseFunc; 
 
-      IBaseFunction() {}
+      IBaseFunctionOneDim() {}
 
       /**
          virtual destructor 
        */
-      virtual ~IBaseFunction() {}
+      virtual ~IBaseFunctionOneDim() {}
 
       /** 
           Clone a function. 
           Each derived class will implement his version of the provate DoClone method
       */
-      virtual IBaseFunction * Clone() const = 0;  
+      virtual IBaseFunctionOneDim * Clone() const = 0;  
 
       /** 
           Evaluate the function at a point x 
@@ -155,18 +168,27 @@ namespace Math {
 
 
 //-------- GRAD  functions---------------------------
+
+//___________________________________________________________________________________
    /**
-      Gradient interface defining the signature for the functions to calculate the gradient
+      Gradient interface (abstract class) defining the signature for calculating the gradient of a 
+      multi-dimensional function. 
+      Three methods are provided: 
+      - Gradient(const double *x, double * grad) evaluate the full gradient vector at the vector value x
+      - Derivative(const double * x, int icoord) evaluate the partial derivative for the icoord coordinate
+      - FdF(const double *x, double &f, double * g) evaluate at the same time gradient and function/ 
+
+      Concrete classes should derive from ROOT::Math::IGradientFunctionMultiDim and not from this class.  
 
       @ingroup  CppFunctions
     */
-   template <class DimensionType = ROOT::Math::MultiDim> 
-   class IGradient { 
+
+   class IGradientMultiDim { 
 
       public: 
 
       /// virual destructor 
-      virtual ~IGradient() {}
+      virtual ~IGradientMultiDim() {}
 
       /** 
           Evaluate all the vector of function derivatives (gradient)  at a point x.
@@ -202,21 +224,25 @@ namespace Math {
 
    };
 
+//___________________________________________________________________________________
    /**
-      Specialized Gradient interface for one dimensional functions
+      Specialized Gradient interface(abstract class)  for one dimensional functions
+      It provides a method to evaluate the derivative of the function, Derivative and a 
+      method to evaluate at the same time the function and the derivative FdF 
+
+      Concrete classes should derive from ROOT::Math::IGradientFunctionOneDim and not from this class.  
 
       @ingroup  CppFunctions
     */
-   template <> 
-   class IGradient<ROOT::Math::OneDim> { 
+   class IGradientOneDim { 
 
    public: 
 
-      /// virual destructor 
-      virtual ~IGradient() {}
+      /// virtual destructor 
+      virtual ~IGradientOneDim() {}
 
       /**
-         Return the derivative of the funcition at a point x 
+         Return the derivative of the function at a point x 
          Use the private method DoDerivative 
       */
       double Derivative(double x ) const  { 
@@ -233,6 +259,27 @@ namespace Math {
       */
       virtual void FdF (double x, double & f, double & df) const = 0; 
 
+
+      /**
+         Compatibility method with multi-dimensional interface for partial derivative
+       */
+      double Derivative(const double * x) const  { 
+         return DoDerivative( *x); 
+      }
+
+      /**
+         Compatibility method with multi-dimensional interface for Gradient
+       */
+      void Gradient(const double * x, double *g) const  { 
+         g[0] = DoDerivative( *x); 
+      }
+
+      /**
+         Compatibility method with multi-dimensional interface for Gradient and function evaluation
+       */
+      void FdF(const double * x, double & f, double * df) const  {
+         FdF(*x, f, *df);
+      }
       
 
 
@@ -246,36 +293,36 @@ namespace Math {
 
    };
 
+//___________________________________________________________________________________
 /** 
-   Interface for multi-dimensional functions providing a gradient calculation. 
-   A method ROOT::Math::IFunction::Gradient provides the full gradient vector while 
-   ROOT::Math::IFunction::Derivative provides the partial derivatives. 
-   The latter bust be implemented (using ROOT::Math::IFunction::Derivative by the derived classes, 
-   while the former can be overloaded if for the particular function can be implemented more efficiently.  
+   Interface (abstract class) for multi-dimensional functions providing a gradient calculation. 
+   It implements both the ROOT::Math::IBaseFunctionMultiDim and  
+   ROOT::Math::IGradientMultiDim interfaces.
+   The method ROOT::Math::IFunction::Gradient calculates the full gradient vector, 
+   ROOT::Math::IFunction::Derivative calculates the partial derivative for each coordinate and 
+   ROOT::Math::Fdf calculates the gradient and the function value at the same time. 
+   The pure private virtual method DoDerivative() must be implemented by the derived classes, while 
+   Gradient and FdF are by default implemented using DoDerivative, butthey  can be overloaded by the 
+   derived classes to improve the efficiency in the derivative calculation. 
+
    @ingroup  CppFunctions
 */ 
-   template<class DimensionType = ROOT::Math::MultiDim> 
-   class IGradientFunction : 
-      virtual public IBaseFunction<DimensionType> , 
-      public IGradient<DimensionType> { 
+
+   class IGradientFunctionMultiDim : 
+      virtual public IBaseFunctionMultiDim , 
+      public IGradientMultiDim { 
      
 
    public: 
 
-      typedef IBaseFunction<DimensionType> BaseFunc; 
-      typedef IGradient<DimensionType> BaseGrad; 
-
-//       // need default constructor with initialization of parent classes
-//       IGradientFunction() : 
-//           BaseFunc(), 
-//           BaseGrad()
-//       {}
+      typedef IBaseFunctionMultiDim BaseFunc; 
+      typedef IGradientMultiDim BaseGrad; 
 
 
       /** 
           Virtual Destructor (no operations)
       */ 
-      virtual ~IGradientFunction () {}
+      virtual ~IGradientFunctionMultiDim () {}
 
       /** 
           Evaluate all the vector of function derivatives (gradient)  at a point x.
@@ -287,16 +334,6 @@ namespace Math {
             grad[icoord] = BaseGrad::Derivative(x,icoord); 
       }
       using  BaseFunc::NDim;
-
-      /**
-         Return the partial derivative with respect to the passed coordinate 
-      */
-//       double Derivative(const double * x, unsigned int icoord = 0) const  { 
-//          if (icoord < NDim() ) 
-//             return DoDerivative(x, icoord); 
-//          else 
-//             return 0; 
-//       }
 
  
       /** 
@@ -315,41 +352,41 @@ namespace Math {
    }; 
 
 
+//___________________________________________________________________________________
 /** 
-   Specialized Interface for one-dimensional functions providing a gradient calculation. 
-   A method ROOT::Math::IFunction::Gradient provides the full gradient vector while 
-   ROOT::Math::IFunction::Derivative provides the partial derivatives. 
-   The latter bust be implemented (using ROOT::Math::IFunction::Derivative by the derived classes, 
-   while the former can be overloaded if for the particular function can be implemented more efficiently.  
+   Interface (abstract class) for one-dimensional functions providing a gradient calculation. 
+   It implements both the ROOT::Math::IBaseFunctionOneDim and  
+   ROOT::Math::IGradientOneDim interfaces.
+   The method  ROOT::Math::IFunction::Derivative calculates the derivative  and 
+   ROOT::Math::Fdf calculates the derivative and the function values at the same time. 
+   The pure private virtual method DoDerivative() must be implemented by the derived classes, while 
+   FdF is by default implemented using DoDerivative, but it can be overloaded by the 
+   derived classes to improve the efficiency in the derivative calculation. 
+
+
    @ingroup  CppFunctions
 */ 
-   template <>
-   class IGradientFunction<ROOT::Math::OneDim> : 
-      virtual public IBaseFunction<ROOT::Math::OneDim> , 
-      public IGradient<OneDim> { 
+   //template <>
+   class IGradientFunctionOneDim : 
+      virtual public IBaseFunctionOneDim , 
+      public IGradientOneDim { 
      
 
    public: 
 
-      typedef IBaseFunction<ROOT::Math::OneDim> BaseFunc; 
-      typedef IGradient<ROOT::Math::OneDim> BaseGrad; 
-
-//       // need default constructor with initialization of parent classes
-//       IGradientFunction() : 
-//           BaseFunc(), 
-//           BaseGrad()
-//       {}
+      typedef IBaseFunctionOneDim BaseFunc; 
+      typedef IGradientOneDim BaseGrad; 
 
 
       /** 
           Virtual Destructor (no operations)
       */ 
-      virtual ~IGradientFunction () {}
+      virtual ~IGradientFunctionOneDim () {}
 
 
       /** 
           Optimized method to evaluate at the same time the function value and derivative at a point x.
-          Often both value and derivatives are needed and it is often more efficient to compute them at the same time.
+           Often both value and derivatives are needed and it is often more efficient to compute them at the same time.
           Derived class should implement this method if performances play an important role and if it is faster to 
           evaluate value and derivative at the same time
        

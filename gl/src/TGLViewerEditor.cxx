@@ -20,11 +20,11 @@
 #include "TGLClipSetEditor.h"
 #include "TGLUtil.h"
 
+//______________________________________________________________________________
+//
+// GUI editor for TGLViewer.
+
 ClassImp(TGLViewerEditor)
-
-
-//A lot of raw pointers/naked new-expressions - good way to discredit C++ (or C++ programmer :) ) :(
-//ROOT has system to cleanup - I'll try to use it
 
 //______________________________________________________________________________
 TGLViewerEditor::TGLViewerEditor(const TGWindow *p,  Int_t width, Int_t height, UInt_t options, Pixel_t back) :
@@ -37,6 +37,8 @@ TGLViewerEditor::TGLViewerEditor(const TGWindow *p,  Int_t width, Int_t height, 
    fResetCameraOnDoubleClick(0),
    fUpdateScene(0),
    fCameraHome(0),
+   fMaxSceneDrawTimeHQ(0),
+   fMaxSceneDrawTimeLQ(0),
    fCameraCenterExt(0),
    fCaptureCenter(0),
    fCameraCenterX(0),
@@ -85,6 +87,8 @@ void TGLViewerEditor::ConnectSignals2Slots()
    fResetCameraOnDoubleClick->Connect("Toggled(Bool_t)", "TGLViewerEditor", this, "DoResetCameraOnDoubleClick()");
    fUpdateScene->Connect("Pressed()", "TGLViewerEditor", this, "DoUpdateScene()");
    fCameraHome->Connect("Pressed()", "TGLViewerEditor", this, "DoCameraHome()");
+   fMaxSceneDrawTimeHQ->Connect("ValueSet(Long_t)", "TGLViewerEditor", this, "UpdateMaxDrawTimes()");
+   fMaxSceneDrawTimeLQ->Connect("ValueSet(Long_t)", "TGLViewerEditor", this, "UpdateMaxDrawTimes()");
    fCameraCenterExt->Connect("Clicked()", "TGLViewerEditor", this, "DoCameraCenterExt()");
    fCaptureCenter->Connect("Clicked()", "TGLViewerEditor", this, "DoCaptureCenter()");
    fDrawCameraCenter->Connect("Clicked()", "TGLViewerEditor", this, "DoDrawCameraCenter()");
@@ -138,6 +142,8 @@ void TGLViewerEditor::SetModel(TObject* obj)
    fIgnoreSizesOnUpdate->SetState(fViewer->GetIgnoreSizesOnUpdate() ? kButtonDown : kButtonUp);
    fResetCamerasOnUpdate->SetState(fViewer->GetResetCamerasOnUpdate() ? kButtonDown : kButtonUp);
    fResetCameraOnDoubleClick->SetState(fViewer->GetResetCameraOnDoubleClick() ? kButtonDown : kButtonUp);
+   fMaxSceneDrawTimeHQ->SetNumber(fViewer->GetMaxSceneDrawTimeHQ());
+   fMaxSceneDrawTimeLQ->SetNumber(fViewer->GetMaxSceneDrawTimeLQ());
    //camera look at
    TGLCamera & cam = fViewer->CurrentCamera();
    fCameraCenterExt->SetDown(cam.GetExternalCenter());
@@ -205,6 +211,15 @@ void TGLViewerEditor::DoCameraHome()
 
    fViewer->ResetCurrentCamera();
    ViewerRedraw();
+}
+
+//______________________________________________________________________________
+void TGLViewerEditor::UpdateMaxDrawTimes()
+{
+   // Slot for fMaxSceneDrawTimeHQ and fMaxSceneDrawTimeLQ.
+
+   fViewer->SetMaxSceneDrawTimeHQ(fMaxSceneDrawTimeHQ->GetNumber());
+   fViewer->SetMaxSceneDrawTimeLQ(fMaxSceneDrawTimeLQ->GetNumber());
 }
 
 //______________________________________________________________________________
@@ -295,13 +310,14 @@ void TGLViewerEditor::UpdateViewerReference()
 }
 
 //______________________________________________________________________________
-TGNumberEntry*  TGLViewerEditor::MakeLabeledNEntry(TGCompositeFrame* p, const char* name, Int_t labelw,Int_t nd, Int_t style)
+TGNumberEntry* TGLViewerEditor::MakeLabeledNEntry(TGCompositeFrame* p, const char* name,
+                                                  Int_t labelw,Int_t nd, Int_t style)
 {
    // Helper function to create fixed width TGLabel and TGNumberEntry in same row.
 
    TGHorizontalFrame *rfr   = new TGHorizontalFrame(p);
    TGHorizontalFrame *labfr = new TGHorizontalFrame(rfr, labelw, 20, kFixedSize);
-   TGLabel* lab =   new TGLabel(rfr,name);
+   TGLabel           *lab   = new TGLabel(labfr, name);
    labfr->AddFrame(lab, new TGLayoutHints(kLHintsLeft | kLHintsBottom, 0, 0, 0) );
    rfr->AddFrame(labfr, new TGLayoutHints(kLHintsLeft | kLHintsBottom, 0, 0, 0));
 
@@ -332,7 +348,13 @@ void TGLViewerEditor::CreateStyleTab()
    fUpdateScene = new TGTextButton(af, "Update Scene", 130);
    af->AddFrame(fUpdateScene, new TGLayoutHints(kLHintsLeft | kLHintsExpandX, 1, 1, 8, 1));
    fCameraHome = new TGTextButton(af, "Camera Home", 130);
-   af->AddFrame(fCameraHome, new TGLayoutHints(kLHintsLeft | kLHintsExpandX, 1, 1, 1, 1));
+   af->AddFrame(fCameraHome, new TGLayoutHints(kLHintsLeft | kLHintsExpandX, 1, 1, 1, 3));
+   fMaxSceneDrawTimeHQ = MakeLabeledNEntry(af, "Max HQ render time:", 120, 6, TGNumberFormat::kNESInteger);
+   fMaxSceneDrawTimeHQ->SetLimits(TGNumberFormat::kNELLimitMin, 0, 1e6);
+   fMaxSceneDrawTimeHQ->GetNumberEntry()->SetToolTipText("Maximum time spent in scene rendering\nin high-quality mode.");
+   fMaxSceneDrawTimeLQ = MakeLabeledNEntry(af, "Max LQ render time:", 120, 6, TGNumberFormat::kNESInteger);
+   fMaxSceneDrawTimeLQ->SetLimits(TGNumberFormat::kNELLimitMin, 0, 1e6);
+   fMaxSceneDrawTimeLQ->GetNumberEntry()->SetToolTipText("Maximum time spent in scene rendering\nin low-quality mode (during rotation etc).");
 
    TGHorizontalFrame* hf = new TGHorizontalFrame(this);
    TGLabel* lab = new TGLabel(hf, "Clear Color");
@@ -441,9 +463,9 @@ void TGLViewerEditor::SetGuides()
    for (Int_t i = 1; i < 4; i++) {
       TGButton * btn = fAxesContainer->GetButton(i);
       if (fAxesType+1 == i)
-          btn->SetDown(kTRUE);
+         btn->SetDown(kTRUE);
       else
-          btn->SetDown(kFALSE);
+         btn->SetDown(kFALSE);
    }
    fAxesContainer->GetButton(4)->SetOn(axesDepthTest, kFALSE);
 

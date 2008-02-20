@@ -24,6 +24,9 @@ PYROOTO      := $(PYROOTS:.cxx=.o)
 PYROOTDEP    := $(PYROOTO:.o=.d) $(PYROOTDO:.o=.d)
 
 PYROOTLIB    := $(LPATH)/libPyROOT.$(SOEXT)
+ifeq ($(ARCH),win32)
+PYROOTPYD    := bin/$(notdir $(PYROOTLIB:.$(SOEXT)=.pyd))
+endif
 PYROOTMAP    := $(PYROOTLIB:.$(SOEXT)=.rootmap)
 
 ROOTPYS      := $(wildcard $(MODDIR)/*.py)
@@ -60,8 +63,11 @@ $(PYROOTLIB):   $(PYROOTO) $(PYROOTDO) $(ROOTPY) $(ROOTPYC) $(ROOTPYO) \
 		  "$(ROOTULIBS) $(RPATH) $(ROOTLIBS) \
 		   $(PYTHONLIBDIR) $(PYTHONLIB) \
 		   $(OSTHREADLIBDIR) $(OSTHREADLIB)" "$(PYTHONLIBFLAGS)"
+ifeq ($(ARCH),win32)
+		cp -f bin/$(notdir $@) $(PYROOTPYD)
+endif
 
-$(PYROOTDS):    $(PYROOTH) $(PYROOTL) $(ROOTCINTTMPEXE)
+$(PYROOTDS):    $(PYROOTH) $(PYROOTL) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(PYROOTH) $(PYROOTL)
 
@@ -78,7 +84,8 @@ clean::         clean-pyroot
 
 distclean-pyroot: clean-pyroot
 		@rm -f $(PYROOTDEP) $(PYROOTDS) $(PYROOTDH) $(PYROOTLIB) \
-		   $(ROOTPY) $(ROOTPYC) $(ROOTPYO) $(PYROOTMAP)
+		   $(ROOTPY) $(ROOTPYC) $(ROOTPYO) $(PYROOTMAP) \
+		   $(PYROOTPYD)
 
 distclean::     distclean-pyroot
 

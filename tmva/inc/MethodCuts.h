@@ -72,14 +72,14 @@ namespace TMVA {
 
    public:
 
-      MethodCuts( TString jobName,
-                  TString methodTitle, 
+      MethodCuts( const TString& jobName,
+                  const TString& methodTitle, 
                   DataSet& theData,
-                  TString theOption = "MC:150:10000:",
+                  const TString& theOption = "MC:150:10000:",
                   TDirectory* theTargetFile = 0 );
 
       MethodCuts( DataSet& theData,
-                  TString theWeightFile,
+                  const TString& theWeightFile,
                   TDirectory* theTargetDir = NULL );
 
       virtual ~MethodCuts( void );
@@ -107,7 +107,7 @@ namespace TMVA {
      
       // also overwrite:
       Double_t GetSeparation  ( TH1*, TH1* ) const { return 0; }
-      Double_t GetSeparation  ( PDF* pdfS = 0, PDF* pdfB = 0 ) const { if (pdfS && pdfB); return 0; }
+      Double_t GetSeparation  ( PDF* pdfS = 0, PDF* pdfB = 0 ) const { if (pdfS && pdfB) { } return 0; }
       Double_t GetSignificance( void )       const { return 0; }
       Double_t GetmuTransform ( TTree *)           { return 0; }
       Double_t GetEfficiency  ( TString, TTree *, Double_t& );
@@ -124,7 +124,8 @@ namespace TMVA {
       void SetTestSignalEfficiency( Double_t effS ) { fTestSignalEff = effS; }
       
       // retrieve cut values for given signal efficiency
-      void GetCuts( Double_t effS, std::vector<Double_t>& cutMin, std::vector<Double_t>& cutMax ) const;
+      void PrintCuts( Double_t effS ) const;
+      void GetCuts  ( Double_t effS, std::vector<Double_t>& cutMin, std::vector<Double_t>& cutMax ) const;
 
       // ranking of input variables
       const Ranking* CreateRanking() { return 0; }

@@ -37,6 +37,12 @@
 #include "TString.h"
 #endif
 
+#ifndef OLDXRDLOCATE
+#ifndef ROOT_THashList
+#include "THashList.h"
+#endif
+#endif
+
 #include "XrdOuc/XrdOucString.hh"
 #include "XrdClient/XrdClientVector.hh"
 
@@ -47,6 +53,14 @@ class TXNetSystemConnectGuard;
 typedef XrdClientVector<XrdOucString> vecString;
 typedef XrdClientVector<bool>         vecBool;
 
+#ifndef OLDXRDLOCATE
+class TXrdClientAdminWrapper : public TNamed {
+public:
+   TXrdClientAdminWrapper(const char *key, XrdClientAdmin *ca) : TNamed(key,""), fXCA(ca) { }
+   virtual ~TXrdClientAdminWrapper();
+   XrdClientAdmin *fXCA;
+};
+#endif
 
 class TXNetSystem : public TNetSystem {
 
@@ -59,6 +73,7 @@ private:
    void           *fDirp;         // Directory pointer
    vecString       fDirList;      // Buffer for directory content
    Bool_t          fDirListValid; // fDirList content valid ?
+   TString         fDirEntry;     // Last dir entry 
    TString         fUrl;          // Initial url
 
    static Bool_t   fgInitDone;    // Avoid initializing more than once
@@ -67,6 +82,13 @@ private:
    XrdClientAdmin *Connect(const char *url); // Connect to server
    void           *GetDirPtr() const { return fDirp; }
    void            InitXrdClient();
+
+#ifndef OLDXRDLOCATE
+   static THashList fgAddrFQDN;   // Cross-table address<->FQDN
+   static THashList fgAdminHash;  // List of existing XrdClientAdmin
+   static XrdClientAdmin *GetClientAdmin(const char *url);
+   static TString GetKey(const char *url);
+#endif
 
 public:
    TXNetSystem(Bool_t owner = kTRUE);

@@ -199,13 +199,13 @@ public:
    const char       *FindFile(const char *search, TString& file, EAccessMode mode = kFileExists);
 
    //---- Standard Output redirection --------------------------
-   Int_t             RedirectOutput(const char *name, const char *mode = "a");
+   Int_t             RedirectOutput(const char *name, const char *mode = "a", RedirectHandle_t *h = 0);
 
    //---- Dynamic Loading --------------------------------------
    const char      *GetDynamicPath();
    void             SetDynamicPath(const char *lib);
    char             *DynamicPathName(const char *lib, Bool_t quiet = kFALSE);
-   int               Load(const char *module, const char *entry, Bool_t system);
+   int               Load(const char *module, const char *entry = "", Bool_t system = kFALSE);
    const char       *GetLibraries(const char *regexp = "",
                                   const char *option = "",
                                   Bool_t isRegexp = kTRUE);

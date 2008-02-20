@@ -20,9 +20,7 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#ifdef R__HAVE_CONFIG
 #include "RConfigure.h"
-#endif
 
 #include "TThread.h"
 #include "TThreadImp.h"
@@ -302,7 +300,7 @@ TThread::~TThread()
 }
 
 //______________________________________________________________________________
-Int_t TThread::Delete(TThread *th)
+Int_t TThread::Delete(TThread *&th)
 {
    // Static method to delete the specified thread.
 
@@ -618,7 +616,7 @@ Int_t TThread::Sleep(ULong_t secs, ULong_t nanos)
    // Static method to sleep the calling thread.
 
    UInt_t ms = UInt_t(secs * 1000) + UInt_t(nanos / 1000000);
-   gSystem->Sleep(ms);
+   if (gSystem) gSystem->Sleep(ms);
    return 0;
 }
 

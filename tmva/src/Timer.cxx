@@ -1,4 +1,4 @@
-// @(#)root/tmva $Id$   
+// @(#)root/tmva $Id$
 // Author: Andreas Hoecker, Joerg Stelzer, Helge Voss
 
 /**********************************************************************************
@@ -73,7 +73,7 @@ TMVA::Timer::Timer( const char* prefix, Bool_t colourfulOutput )
      fColourfulOutput( colourfulOutput )
 {
    // constructor
-   if (prefix == "") fPrefix = Timer::fgClassName;
+   if (!strcmp(prefix, "")) fPrefix = Timer::fgClassName;
    else              fPrefix = prefix;
 
    fLogger = new MsgLogger( fPrefix.Data() );
@@ -90,8 +90,8 @@ TMVA::Timer::Timer( Int_t ncounts, const char* prefix, Bool_t colourfulOutput  )
    // the loop will iterate through. At each call of the timer, the current
    // number of counts is provided by the user, so that the timer can obtain
    // the due time from linearly interpolating the spent time.
-   if (prefix == "") fPrefix = Timer::fgClassName;
-   else              fPrefix = prefix;
+   if (!strcmp(prefix, "")) fPrefix = Timer::fgClassName;
+   else                     fPrefix = prefix;
 
    fLogger = new MsgLogger( fPrefix.Data() );
 
@@ -149,6 +149,9 @@ TString TMVA::Timer::GetLeftTime( Int_t icounts )
 void TMVA::Timer::DrawProgressBar() 
 {
    // draws the progressbar
+
+   if(gConfig().Silent()) return;
+
    fNcounts++;
    if (fNcounts == 1) {
       clog << fLogger->GetPrintedSource();
@@ -162,6 +165,9 @@ void TMVA::Timer::DrawProgressBar()
 void TMVA::Timer::DrawProgressBar( TString theString ) 
 {
    // draws a string in the progress bar
+
+   if(gConfig().Silent()) return;
+
    clog << fLogger->GetPrintedSource();
 
    clog << Color("white_on_green") << Color("dyellow") << "[" << Color("reset");
@@ -178,6 +184,8 @@ void TMVA::Timer::DrawProgressBar( Int_t icounts )
 {
    // draws progress bar in color or B&W
    // caution: 
+
+   if(gConfig().Silent()) return;
 
    // sanity check:
    if (icounts > fNcounts-1) icounts = fNcounts-1;

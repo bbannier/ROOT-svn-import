@@ -82,6 +82,13 @@ private:
    TXNetFile& operator=(const TXNetFile&);  // Not implemented
    void    CreateXClient(const char *url, Option_t *option, Int_t netopt,
                          Bool_t parallelopen);
+
+   Int_t   ParseCacheOptions(const char *opts,
+                             Int_t &cachesz, Int_t &readaheadsz, Int_t &rmpolicy);
+   // Synchronizes the cache size in XrdClient
+   // XrdClient cannot have a cache size smaller than the one in TFile
+   void    SynchronizeCacheSize();
+
    void    Init(Bool_t create);
    Bool_t  Open(Option_t *option, Bool_t parallelopen);
    Int_t   SysStat(Int_t fd, Long_t *id, Long64_t *size, Long_t *flags,
@@ -104,9 +111,14 @@ public:
    virtual ~TXNetFile();
 
    virtual void     Close(const Option_t *opt ="");
+   virtual void     ResetCache();
    virtual void     Flush();
+   virtual Int_t    GetBytesToPrefetch() const;
+   virtual Bool_t   ReadBufferAsync(Long64_t offs, Int_t len);
    virtual TFile::EAsyncOpenStatus GetAsyncOpenStatus();
    virtual Bool_t   IsOpen() const;
+
+   virtual void     Print(Option_t *option="") const;
    virtual Bool_t   ReadBuffer(char *buf, Int_t len);
    virtual Bool_t   ReadBuffers(char *buf,  Long64_t *pos, Int_t *len, Int_t nbuf);
    virtual Int_t    ReOpen(const Option_t *mode);

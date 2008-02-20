@@ -45,6 +45,7 @@
 
 #include "TEntryList.h"
 
+#include <ctype.h>
 #include <stdio.h>
 #include <math.h>
 #ifdef R__SOLARIS
@@ -714,24 +715,33 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
 
    // Make a check to prevent problem with some corrupted files (missing TStreamerInfo).
    if (leaf && leaf->IsA()==TLeafElement::Class()) {
-      TBranchElement *br = ((TBranchElement*)branch);
+      TBranchElement *br = 0;
+      if( branch->IsA() ==  TBranchElement::Class() )
+      {
+         br = ((TBranchElement*)branch);
 
-      if ( br->GetInfo() == 0 ) {
-         Error("DefinedVariable","Missing StreamerInfo for %s.  We will be unable to read!",
-               name.Data());
-         return -2;
-      }
-      TBranchElement *mom = (TBranchElement*)br->GetMother();
-      if (mom!=br) {
-         if (mom->GetInfo()==0) {
-            Error("DefinedVariable","Missing StreamerInfo for %s."
-                  "  We will be unable to read!",
-                  mom->GetName());
+         if ( br->GetInfo() == 0 ) {
+            Error("DefinedVariable","Missing StreamerInfo for %s.  We will be unable to read!",
+                  name.Data());
             return -2;
          }
-         if ((mom->GetType()) < 0 && !mom->GetAddress()) {
-            Error("DefinedVariable", "Address not set when the type of the branch is negative for for %s.  We will be unable to read!", mom->GetName());
-            return -2;
+      }
+
+      TBranch *bmom = branch->GetMother();
+      if( bmom->IsA() == TBranchElement::Class() )
+      {
+         TBranchElement *mom = (TBranchElement*)br->GetMother();
+         if (mom!=br) {
+            if (mom->GetInfo()==0) {
+               Error("DefinedVariable","Missing StreamerInfo for %s."
+                     "  We will be unable to read!",
+                     mom->GetName());
+               return -2;
+            }
+            if ((mom->GetType()) < 0 && !mom->GetAddress()) {
+               Error("DefinedVariable", "Address not set when the type of the branch is negative for for %s.  We will be unable to read!", mom->GetName());
+               return -2;
+            }
          }
       }
    }
@@ -856,7 +866,7 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
             maininfo = clonesinfo;
 
             // We skip some cases because we can assume we have an object.
-            Int_t offset;
+            Int_t offset=0;
             info->GetStreamerElement(element->GetName(),offset);
             if (type == TStreamerInfo::kObjectp ||
                   type == TStreamerInfo::kObjectP ||
@@ -908,7 +918,7 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
             maininfo = collectioninfo;
 
             // We skip some cases because we can assume we have an object.
-            Int_t offset;
+            Int_t offset=0;
             info->GetStreamerElement(element->GetName(),offset);
             if (type == TStreamerInfo::kObjectp ||
                   type == TStreamerInfo::kObjectP ||
@@ -1123,7 +1133,7 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
             previnfo = multi->fNext;
          }
       }
-      Int_t offset;
+      Int_t offset=0;
       Int_t nchname = strlen(right);
       TFormLeafInfo *leafinfo = 0;
       TStreamerElement* element = 0;
@@ -1860,22 +1870,29 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
    TClass *objClass = EvalClass(code);
    if (IsLeafString(code) || objClass == TString::Class() || objClass == stdStringClass) {
 
+      TFormLeafInfo *last = 0;
       if ( SwitchToFormLeafInfo(code) ) {
 
-         TFormLeafInfo *last = (TFormLeafInfo*)fDataMembers.At(code);
-         // Improbable case
+         last = (TFormLeafInfo*)fDataMembers.At(code);
+
          if (!last) return action;
          while (last->fNext) { last = last->fNext; }
 
-         const char *funcname = 0;
-         if (objClass == TString::Class()) {
-            funcname = "Data";
-         } else if (objClass == stdStringClass) {
-            funcname = "c_str";
-         }
-         if (funcname) {
-            TMethodCall *method = new TMethodCall(objClass, funcname, "");
+      }
+      const char *funcname = 0;
+      if (objClass == TString::Class()) {
+         funcname = "Data";
+      } else if (objClass == stdStringClass) {
+         funcname = "c_str";
+      }
+      if (funcname) {
+         TMethodCall *method = new TMethodCall(objClass, funcname, "");
+         if (last) {
             last->fNext = new TFormLeafInfoMethod(objClass,method);
+         } else {
+            fDataMembers.AddAtAndExpand(new TFormLeafInfoMethod(objClass,method),code);
+            if (leaf) fLookupType[code] = kDataMember;
+            else fLookupType[code] = kTreeMember;
          }
       }
       return kDefinedString;
@@ -1884,30 +1901,50 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
    if (objClass) {
       TMethodCall *method = new TMethodCall(objClass, "AsDouble", "");
       if (method->IsValid()
-         && (method->ReturnType() == TMethodCall::kLong || method->ReturnType() == TMethodCall::kDouble)
-         && SwitchToFormLeafInfo(code) ) {
-
-         TFormLeafInfo *last = (TFormLeafInfo*)fDataMembers.At(code);
-         // Improbable case
-         if (!last) return action;
-         while (last->fNext) { last = last->fNext; }
-
-         last->fNext = new TFormLeafInfoMethod(objClass,method);
+          && (method->ReturnType() == TMethodCall::kLong || method->ReturnType() == TMethodCall::kDouble)) {
+         
+         TFormLeafInfo *last = 0;
+         if (SwitchToFormLeafInfo(code)) {
+            last = (TFormLeafInfo*)fDataMembers.At(code);
+            // Improbable case
+            if (!last) {
+               delete method;
+               return action;
+            }
+            while (last->fNext) { last = last->fNext; }
+         }
+         if (last) {
+            last->fNext = new TFormLeafInfoMethod(objClass,method);
+         } else {
+            fDataMembers.AddAtAndExpand(new TFormLeafInfoMethod(objClass,method),code);
+            if (leaf) fLookupType[code] = kDataMember;
+            else fLookupType[code] = kTreeMember;
+         }            
 
          return kDefinedVariable;
       }
       delete method;
       method = new TMethodCall(objClass, "AsString", "");
       if (method->IsValid()
-          && method->ReturnType() == TMethodCall::kString
-          && SwitchToFormLeafInfo(code) ) {
+          && method->ReturnType() == TMethodCall::kString) {
 
-         TFormLeafInfo *last = (TFormLeafInfo*)fDataMembers.At(code);
-         // Improbable case
-         if (!last) return action;
-         while (last->fNext) { last = last->fNext; }
-
-         last->fNext = new TFormLeafInfoMethod(objClass,method);
+         TFormLeafInfo *last = 0;
+         if (SwitchToFormLeafInfo(code)) {
+            last = (TFormLeafInfo*)fDataMembers.At(code);
+            // Improbable case
+            if (!last) {
+               delete method;
+               return action;
+            }
+            while (last->fNext) { last = last->fNext; }
+         }
+         if (last) {
+            last->fNext = new TFormLeafInfoMethod(objClass,method);
+         } else {
+            fDataMembers.AddAtAndExpand(new TFormLeafInfoMethod(objClass,method),code);
+            if (leaf) fLookupType[code] = kDataMember;
+            else fLookupType[code] = kTreeMember;
+         }            
 
          return kDefinedString;
       }
@@ -1917,16 +1954,28 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
          TClass *rcl = 0;
          TFunction *f = method->GetMethod();
          if (f) rcl = TClass::GetClass(gInterpreter->TypeName(f->GetReturnTypeName()));
-         if ((rcl == TString::Class() || rcl == stdStringClass)
-             && SwitchToFormLeafInfo(code) ) {
+         if ((rcl == TString::Class() || rcl == stdStringClass) ) {
 
-            TFormLeafInfo *last = (TFormLeafInfo*)fDataMembers.At(code);
-            // Improbable case
-            if (!last) return action;
-            while (last->fNext) { last = last->fNext; }
+            TFormLeafInfo *last = 0;
+            if (SwitchToFormLeafInfo(code)) {
+               last = (TFormLeafInfo*)fDataMembers.At(code);
+               // Improbable case
+               if (!last) {
+                  delete method;
+                  return action;
+               }
+               while (last->fNext) { last = last->fNext; }
+            }
+            if (last) {
+               last->fNext = new TFormLeafInfoMethod(objClass,method);
+               last = last->fNext;
+            } else {
+               last = new TFormLeafInfoMethod(objClass,method);
+               fDataMembers.AddAtAndExpand(last,code);
+               if (leaf) fLookupType[code] = kDataMember;
+               else fLookupType[code] = kTreeMember;
+            }
 
-            last->fNext = new TFormLeafInfoMethod(objClass,method);
-            last = last->fNext;
             objClass = rcl;
 
             const char *funcname = 0;
@@ -1964,6 +2013,10 @@ Int_t TTreeFormula::FindLeafForExpression(const char* expression, TLeaf*& leaf, 
 
    // Later on we will need to read one entry, let's make sure
    // it is a real entry.
+   if (fTree->GetTree()==0) {
+      fTree->LoadTree(0);
+      if (fTree->GetTree()==0) return -1;
+   }
    Long64_t readentry = fTree->GetTree()->GetReadEntry();
    if (readentry==-1) readentry=0;
    const char *cname = expression;
@@ -3659,10 +3712,10 @@ Double_t TTreeFormula::EvalInstance(Int_t instance, const char *stringStackArg[]
             case kStringNotEqual: pos2 -= 2; pos++;if (strcmp(stringStack[pos2+1],stringStack[pos2])) tab[pos-1]=1;
                                                    else tab[pos-1]=0; continue;
 
-            case kBitAnd    : pos--; tab[pos-1]= ((Int_t) tab[pos-1]) & ((Int_t) tab[pos]); continue;
-            case kBitOr     : pos--; tab[pos-1]= ((Int_t) tab[pos-1]) | ((Int_t) tab[pos]); continue;
-            case kLeftShift : pos--; tab[pos-1]= ((Int_t) tab[pos-1]) <<((Int_t) tab[pos]); continue;
-            case kRightShift: pos--; tab[pos-1]= ((Int_t) tab[pos-1]) >>((Int_t) tab[pos]); continue;
+            case kBitAnd    : pos--; tab[pos-1]= ((Long64_t) tab[pos-1]) & ((Long64_t) tab[pos]); continue;
+            case kBitOr     : pos--; tab[pos-1]= ((Long64_t) tab[pos-1]) | ((Long64_t) tab[pos]); continue;
+            case kLeftShift : pos--; tab[pos-1]= ((Long64_t) tab[pos-1]) <<((Long64_t) tab[pos]); continue;
+            case kRightShift: pos--; tab[pos-1]= ((Long64_t) tab[pos-1]) >>((Long64_t) tab[pos]); continue;
 
             case kStringConst: {
                // String
@@ -4324,28 +4377,47 @@ char *TTreeFormula::PrintValue(Int_t mode, Int_t instance, const char *decform) 
          Int_t real_instance = ((TTreeFormula*)this)->GetRealInstance(instance,-1);
          if (real_instance<fNdata[0]) {
             Ssiz_t len = strlen(decform);
-            Bool_t longer  = kFALSE;
-            Bool_t shorter = kFALSE;
+            Char_t outputSizeLevel = 1; 
             char *expo = 0;
             if (len>2) {
                switch (decform[len-2]) {
                   case 'l':
-                  case 'L': longer = kTRUE; break;
-                  case 'h': shorter = kTRUE; break;
+                  case 'L': {
+                     outputSizeLevel = 2; 
+                     if (len>3 && tolower(decform[len-3])=='l') {
+                        outputSizeLevel = 3;
+                     }
+                     break;
+                  }
+                  case 'h': outputSizeLevel = 0; break;
                }
             }
             switch(decform[len-1]) {
                case 'c':
                case 'd':
                case 'i':
-               case 'o':
+                  { 
+                     switch (outputSizeLevel) {
+                        case 0:  sprintf(value,Form("%%%s",decform),(Short_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
+                        case 2:  sprintf(value,Form("%%%s",decform),(Long_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
+                        case 3:  sprintf(value,Form("%%%s",decform),(Long64_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
+                        case 1:
+                        default: sprintf(value,Form("%%%s",decform),(Int_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
+                     }
+                     break;
+                  }
+               case 'o': 
                case 'x':
                case 'X':
                case 'u':
-                  {
-                     if (shorter) sprintf(value,Form("%%%s",decform),(short)((TTreeFormula*)this)->EvalInstance(instance));
-                     else if (longer) sprintf(value,Form("%%%s",decform),(int)((TTreeFormula*)this)->EvalInstance(instance));
-                     else sprintf(value,Form("%%%s",decform),(long)((TTreeFormula*)this)->EvalInstance(instance));
+                  { 
+                     switch (outputSizeLevel) {
+                        case 0:  sprintf(value,Form("%%%s",decform),(UShort_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
+                        case 2:  sprintf(value,Form("%%%s",decform),(ULong_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
+                        case 3:  sprintf(value,Form("%%%s",decform),(ULong64_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
+                        case 1:
+                        default: sprintf(value,Form("%%%s",decform),(UInt_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
+                     }
                      break;
                   }
                case 'f':
@@ -4354,8 +4426,11 @@ char *TTreeFormula::PrintValue(Int_t mode, Int_t instance, const char *decform) 
                case 'g':
                case 'G':
                   {
-                     if (longer) sprintf(value,Form("%%%s",decform),(long double)((TTreeFormula*)this)->EvalInstance(instance));
-                     else sprintf(value,Form("%%%s",decform),((TTreeFormula*)this)->EvalInstance(instance));
+                     switch (outputSizeLevel) {
+                        case 2:  sprintf(value,Form("%%%s",decform),(long double)((TTreeFormula*)this)->EvalInstance(instance)); break;
+                        case 1:
+                        default: sprintf(value,Form("%%%s",decform),((TTreeFormula*)this)->EvalInstance(instance)); break;
+                     }
                      expo = strchr(value,'e');
                      break;
                   }
@@ -5079,6 +5154,8 @@ Bool_t TTreeFormula::SwitchToFormLeafInfo(Int_t code)
             fDataMembers.AddAtAndExpand(collectioninfo,code);
             fLookupType[code]=kDataMember;
 
+         } else if (br->GetID()<0) { 
+            return kFALSE;
          } else {
             last = new TFormLeafInfoDirect(br);
             fDataMembers.AddAtAndExpand(last,code);

@@ -11,21 +11,26 @@ include $(ROOTSYS)/config/Makefile.config
 include $(ROOTSYS)/test/Makefile.arch
 
 #------------------------------------------------------------------------------
-CXXFLAGS += -g
+
 
 #CXXFLAGS += $(GSLFLAGS)
 
 
 ifeq ($(PLATFORM),win32)
 EXTRALIBS        = "$(ROOTSYS)/lib/libMathMore.lib" "$(ROOTSYS)/lib/libMathCore.lib" $(GSLLIBS)
+UNURANLIB        = "$(ROOTSYS)/lib/libUnuran.lib"
 else
 EXTRALIBS        = -lMathMore -lMathCore $(GSLLIBDIR) $(GSLLIBS)
-endif
+UNURANLIB        = -lUnuran
+CXXFLAGS += -g
 
 ifneq ($(CLHEPBASE),)
 CXXFLAGS+=  -I$(CLHEPBASE)/include -DHAVE_CLHEP
 EXTRALIBS+=  $(CLHEPBASE)/lib/libCLHEP.a
 endif
+
+endif
+
 
 CXXFLAGS += -DHAVE_ROOTLIBS
 
@@ -78,20 +83,23 @@ STATFUNCOBJ      = testStatFunc.$(ObjSuf)
 STATFUNCSRC      = testStatFunc.$(SrcSuf)
 STATFUNC         = testStatFunc$(ExeSuf)
 
-
-
 TESTFUNCTOROBJ      = testFunctor.$(ObjSuf)
 TESTFUNCTORSRC      = testFunctor.$(SrcSuf)
 TESTFUNCTOR         = testFunctor$(ExeSuf)
 
+SIMANTSPOBJ      = simanTSP.$(ObjSuf)
+SIMANTSPSRC      = simanTSP.$(SrcSuf)
+SIMANTSP         = simanTSP$(ExeSuf)
+
+
 
 OBJS          = $(CHEBYSHEVOBJ) $(DERIVATIONOBJ) $(INTEGRATIONOBJ) $(INTEGRATIONMDOBJ) $(ROOTFINDEROBJ) \
                   $(MINIMIZATION1DOBJ) $(INTERPOLATIONOBJ)  $(RANDOMOBJ) $(RANDOMDISTOBJ) \
-	          $(SPECFUNCOBJ) $(STATFUNCOBJ) $(TESTFUNCTOROBJ)
+	          $(SPECFUNCOBJ) $(STATFUNCOBJ) $(TESTFUNCTOROBJ) $(SIMANTSPOBJ)
 
 PROGRAMS      = $(CHEBYSHEV)  $(DERIVATION) $(INTEGRATION) $(INTEGRATIONMD) $(ROOTFINDER) \
                   $(MINIMIZATION1D) $(INTERPOLATION) $(RANDOM) $(RANDOMDIST)  \
-	          $(SPECFUNC) $(STATFUNC) $(TESTFUNCTOR)
+	          $(SPECFUNC) $(STATFUNC) $(TESTFUNCTOR) $(SIMANTSP)
 		  
 .SUFFIXES: .$(SrcSuf) .$(ObjSuf) $(ExeSuf)
 
@@ -135,7 +143,7 @@ testRandomDist.$(ObjSuf):       UnuRanDist.h
 
 
 $(RANDOMDIST):  $(RANDOMDISTOBJ)
-		$(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) -lUnuran $(OutPutOpt)$@
+		$(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) $(UNURANLIB) $(OutPutOpt)$@
 		@echo "$@ done"
 
 $(SPECFUNC):  	$(SPECFUNCOBJ)
@@ -152,6 +160,9 @@ $(TESTFUNCTOR): $(TESTFUNCTOROBJ)
 		$(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) $(OutPutOpt)$@
 		@echo "$@ done"
 
+$(SIMANTSP):  	$(SIMANTSPOBJ)
+		$(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) $(OutPutOpt)$@
+		@echo "$@ done"
 
 
 

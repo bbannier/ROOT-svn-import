@@ -407,6 +407,7 @@ void TSessionServerFrame::OnBtnDeleteClicked()
          fViewer->GetSessionHierarchy()->OpenItem(item);
          fViewer->GetSessionHierarchy()->HighlightItem(item);
          fViewer->GetSessionHierarchy()->SetSelected(item);
+         fViewer->GetSessionHierarchy()->ClearViewPort();
          fClient->NeedRedraw(fViewer->GetSessionHierarchy());
          fViewer->OnListTreeClicked(item, 1, 0, 0);
       }
@@ -564,6 +565,7 @@ void TSessionServerFrame::OnBtnConnectClicked()
       item->SetPictures(fViewer->GetProofConPict(), fViewer->GetProofConPict());
       // update viewer
       fViewer->OnListTreeClicked(item, 1, 0, 0);
+      fViewer->GetSessionHierarchy()->ClearViewPort();
       fClient->NeedRedraw(fViewer->GetSessionHierarchy());
       // connect to progress related signals
       fViewer->GetActDesc()->fProof->Connect("Progress(Long64_t,Long64_t)",
@@ -637,6 +639,7 @@ void TSessionServerFrame::OnBtnNewServerClicked()
    fViewer->GetSessionHierarchy()->HighlightItem(fViewer->GetSessionItem());
    fViewer->GetSessionHierarchy()->SetSelected(fViewer->GetSessionItem());
    fViewer->OnListTreeClicked(fViewer->GetSessionItem(), 1, 0, 0);
+   fViewer->GetSessionHierarchy()->ClearViewPort();
    fClient->NeedRedraw(fViewer->GetSessionHierarchy());
    fTxtName->SetText("");
    fTxtAddress->SetText("");
@@ -713,6 +716,7 @@ void TSessionServerFrame::OnBtnAddClicked()
       fViewer->GetSessionHierarchy()->OpenItem(item);
       fViewer->GetSessionHierarchy()->HighlightItem(item);
       fViewer->GetSessionHierarchy()->SetSelected(item);
+      fViewer->GetSessionHierarchy()->ClearViewPort();
       fClient->NeedRedraw(fViewer->GetSessionHierarchy());
       fViewer->OnListTreeClicked(item, 1, 0, 0);
    }
@@ -1787,6 +1791,7 @@ void TSessionFrame::OnBtnDisconnectClicked()
    // update viewer
    fViewer->OnListTreeClicked(fViewer->GetSessionHierarchy()->GetSelected(),
                               1, 0, 0);
+   fViewer->GetSessionHierarchy()->ClearViewPort();
    fClient->NeedRedraw(fViewer->GetSessionHierarchy());
    fViewer->GetStatusBar()->SetText("", 1);
 }
@@ -1872,6 +1877,7 @@ void TSessionFrame::OnBtnGetQueriesClicked()
       }
    }
    // at the end, update list tree
+   fViewer->GetSessionHierarchy()->ClearViewPort();
    fClient->NeedRedraw(fViewer->GetSessionHierarchy());
 }
 
@@ -2008,6 +2014,7 @@ void TSessionFrame::ShutdownSession()
     // update viewer
    fViewer->OnListTreeClicked(fViewer->GetSessionHierarchy()->GetSelected(),
                               1, 0, 0);
+   fViewer->GetSessionHierarchy()->ClearViewPort();
    fClient->NeedRedraw(fViewer->GetSessionHierarchy());
    fViewer->GetStatusBar()->SetText("", 1);
 }
@@ -2245,6 +2252,7 @@ void TEditQueryFrame::OnBtnSave()
    fViewer->GetSessionHierarchy()->RenameItem(item, newquery->fQueryName);
    item->SetUserData(newquery);
    // update list tree
+   fViewer->GetSessionHierarchy()->ClearViewPort();
    fClient->NeedRedraw(fViewer->GetSessionHierarchy());
    fTxtQueryName->SelectAll();
    fTxtQueryName->SetFocus();
@@ -2935,6 +2943,7 @@ void TSessionQueryFrame::OnBtnRetrieve()
          }
       }
       // update list tree, query frame informations, and buttons state
+      fViewer->GetSessionHierarchy()->ClearViewPort();
       fClient->NeedRedraw(fViewer->GetSessionHierarchy());
       UpdateInfos();
       UpdateButtons(fViewer->GetActDesc()->fActQuery);
@@ -3603,6 +3612,8 @@ void TSessionViewer::ReadConfiguration(const char *filename)
    localdesc->fActQuery = 0;
    localdesc->fProof = 0;
    localdesc->fProofMgr = 0;
+   localdesc->fAttached = kFALSE;
+   localdesc->fConnected = kFALSE;
    localdesc->fLocal = kTRUE;
    localdesc->fSync = kTRUE;
    localdesc->fAutoEnable = kFALSE;
@@ -3729,6 +3740,7 @@ void TSessionViewer::ReadConfiguration(const char *filename)
       fSessionHierarchy->HighlightItem(item);
       fSessionHierarchy->SetSelected(item);
    }
+   fSessionHierarchy->ClearViewPort();
    fClient->NeedRedraw(fSessionHierarchy);
 }
 
@@ -4442,7 +4454,6 @@ TSessionViewer::~TSessionViewer()
 {
    // Destructor.
 
-   Cleanup();
    delete fUserGroup;
    if (gSessionViewer == this)
       gSessionViewer = 0;
@@ -4768,6 +4779,7 @@ void TSessionViewer::CloseWindow()
    // Save configuration
    if (fAutoSave)
       WriteConfiguration();
+   Cleanup();
    fSessions->Delete();
    if (fSessionItem)
       fSessionHierarchy->DeleteChildren(fSessionItem);
@@ -4914,6 +4926,7 @@ void TSessionViewer::QueryResultReady(char *query)
                      fSessionHierarchy->AddItem(item2, "OutputList");
             }
             // update list tree, query frame informations, and buttons state
+            fSessionHierarchy->ClearViewPort();
             fClient->NeedRedraw(fSessionHierarchy);
             fQueryFrame->UpdateInfos();
             fQueryFrame->UpdateButtons(lquery);
@@ -4952,6 +4965,7 @@ void TSessionViewer::CleanupSession()
          WriteConfiguration();
    }
    // update list tree
+   fSessionHierarchy->ClearViewPort();
    fClient->NeedRedraw(fSessionHierarchy);
 }
 
@@ -4985,10 +4999,12 @@ void TSessionViewer::ResetSession()
       item->SetPictures(fProofDiscon, fProofDiscon);
 
       OnListTreeClicked(fSessionHierarchy->GetSelected(), 1, 0, 0);
+      fSessionHierarchy->ClearViewPort();
       fClient->NeedRedraw(fSessionHierarchy);
       fStatusBar->SetText("", 1);
    }
    // update list tree
+   fSessionHierarchy->ClearViewPort();
    fClient->NeedRedraw(fSessionHierarchy);
 }
 
@@ -5036,6 +5052,7 @@ void TSessionViewer::DeleteQuery()
       fSessionHierarchy->DeleteItem(item);
       delete query;
    }
+   fSessionHierarchy->ClearViewPort();
    fClient->NeedRedraw(fSessionHierarchy);
    if (fAutoSave)
       WriteConfiguration();

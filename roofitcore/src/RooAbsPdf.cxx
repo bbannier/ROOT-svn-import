@@ -204,8 +204,8 @@ Double_t RooAbsPdf::getVal(const RooArgSet* nset) const
   if (!nset) {
     Double_t val = evaluate() ;
     Bool_t error = traceEvalPdf(val) ;
-    if (_verboseEval>1) cout << IsA()->GetName() << "::getVal(" << GetName() 
-			     << "): value = " << val << " (unnormalized)" << endl ;
+    cxcoutD(Tracing) << IsA()->GetName() << "::getVal(" << GetName() 
+		     << "): value = " << val << " (unnormalized)" << endl ;
     if (error) {
       raiseEvalError() ;
       return 0 ;
@@ -231,7 +231,7 @@ Double_t RooAbsPdf::getVal(const RooArgSet* nset) const
     // Evaluate denominator
     Double_t normVal(_norm->getVal()) ;
 
-    cxcoutD(ChangeTracking) << "RooAbsPdf::getVal(" << GetName() << ") normalization integral is " << (_norm?_norm->GetName():"none") << endl ;
+    cxcoutD(Tracing) << "RooAbsPdf::getVal(" << GetName() << ") normalization integral is " << (_norm?_norm->GetName():"none") << endl ;
 
     Double_t normError(kFALSE) ;
     if (normVal==0.) normError=kTRUE ;
@@ -241,20 +241,20 @@ Double_t RooAbsPdf::getVal(const RooArgSet* nset) const
 
     _value = normError ? 0 : (rawVal / normVal) ;
 
-    if (_verboseEval>1) cout << IsA()->GetName() << "::getVal(" << GetName() 
-			     << "): value = " << _value << " (normalized)" << endl ;
-
-    cxcoutD(ChangeTracking) << "RooAbsPdf::getVal(" << GetName() << ") recalculating, new value = " << rawVal << "/" << normVal << " = " << _value << endl ;
+    if (_verboseEval>1) cxcoutD(Tracing) << IsA()->GetName() << "::getVal(" << GetName() 
+					 << "): value = " << _value << " (normalized)" << endl ;
+    
+    cxcoutD(Tracing) << "RooAbsPdf::getVal(" << GetName() << ") recalculating, new value = " << rawVal << "/" << normVal << " = " << _value << endl ;
 
     clearValueDirty() ; //setValueDirty(kFALSE) ;
     clearShapeDirty() ; //setShapeDirty(kFALSE) ;    
   } 
 
   if (_traceCount>0) {
-    cout << "[" << _traceCount << "] " ;
+    cxcoutD(Tracing) << "[" << _traceCount << "] " ;
     Int_t tmp = _traceCount ;
     _traceCount = 0 ;
-    Print() ;
+    printToStream(ccoutD(Tracing)) ;
     _traceCount = tmp-1  ;
   }
 
@@ -271,8 +271,7 @@ Double_t RooAbsPdf::analyticalIntegralWN(Int_t code, const RooArgSet* normSet, c
   // to return a normalized answer
 
   if (_verboseEval>1) {
-    cout << "RooAbsPdf::analyticalIntegralWN(" << GetName() << ") code = " << code << " normset = " ;
-    if (normSet) normSet->Print("1") ; else cout << "<none>" << endl ;
+    cxcoutD(Eval) << "RooAbsPdf::analyticalIntegralWN(" << GetName() << ") code = " << code << " normset = " << (normSet?*normSet:RooArgSet()) << endl ;
   }
 
   if (code==0) return getVal(normSet) ;
@@ -298,8 +297,8 @@ Bool_t RooAbsPdf::traceEvalPdf(Double_t value) const
 
   // otherwise, print out this evaluations input values and result
   if(++_errorCount <= 10) {
-    cout << "*** Evaluation Error " << _errorCount << " ";
-    if(_errorCount == 10) cout << "(no more will be printed) ";
+    cxcoutD(Tracing) << "*** Evaluation Error " << _errorCount << " ";
+    if(_errorCount == 10) cxcoutD(Tracing) << "(no more will be printed) ";
   }
   else {
     return error  ;
@@ -318,7 +317,7 @@ Double_t RooAbsPdf::getNorm(const RooArgSet* nset) const
   if (!nset) return 1 ;
 
   syncNormalization(nset,kTRUE) ;
-  if (_verboseEval>1) cout << IsA()->GetName() << "::getNorm(" << GetName() << "): norm(" << _norm << ") = " << _norm->getVal() << endl ;
+  if (_verboseEval>1) cxcoutD(Tracing) << IsA()->GetName() << "::getNorm(" << GetName() << "): norm(" << _norm << ") = " << _norm->getVal() << endl ;
 
   Double_t ret = _norm->getVal() ;
   if (ret==0.) {
@@ -394,11 +393,11 @@ Bool_t RooAbsPdf::syncNormalization(const RooArgSet* nset, Bool_t adjustProxies)
 
   if (_verboseEval>0) {
     if (!selfNormalized()) {
-      cout << IsA()->GetName() << "::syncNormalization(" << GetName() 
+      cxcoutD(Tracing) << IsA()->GetName() << "::syncNormalization(" << GetName() 
 	   << ") recreating normalization integral " << endl ;
-      if (depList) depList->printToStream(cout,OneLine) ; else cout << "<none>" << endl ;
+      if (depList) depList->printToStream(ccoutD(Tracing),OneLine) ; else ccoutD(Tracing) << "<none>" << endl ;
     } else {
-      cout << IsA()->GetName() << "::syncNormalization(" << GetName() << ") selfNormalized, creating unit norm" << endl;
+      cxcoutD(Tracing) << IsA()->GetName() << "::syncNormalization(" << GetName() << ") selfNormalized, creating unit norm" << endl;
     }
   }
 
@@ -437,11 +436,11 @@ Bool_t RooAbsPdf::traceEvalHook(Double_t value) const
 
   // otherwise, print out this evaluations input values and result
   if(error && ++_errorCount <= 10) {
-    cout << "*** Evaluation Error " << _errorCount << " ";
-    if(_errorCount == 10) cout << "(no more will be printed) ";
+    cxcoutD(Tracing) << "*** Evaluation Error " << _errorCount << " ";
+    if(_errorCount == 10) ccoutD(Tracing) << "(no more will be printed) ";
   }
   else if(_traceCount > 0) {
-    cout << '[' << _traceCount-- << "] ";
+    ccoutD(Tracing) << '[' << _traceCount-- << "] ";
   }
   else {
     return error ;
@@ -783,7 +782,6 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   }
   
   // Cleanup
-  cout << "deleting nll" << endl ;
   delete nll ;
   return ret ;
 }
@@ -844,7 +842,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooArgSet& projDeps, Opti
   oopt.ToLower() ;
 
   Bool_t extended = fopt.Contains("e") ;  
-  Bool_t saveRes  = fopt.Contains("r") ;
+  // Bool_t saveRes  = fopt.Contains("r") ;
   Bool_t cOpt     = oopt.Contains("p") || // for backward compatibility
                     oopt.Contains("c") ;
   Bool_t blindfit   = fopt.Contains("b") ;  
@@ -1997,4 +1995,31 @@ RooAbsPdf* RooAbsPdf::createProjection(const RooArgSet& iset)
   
   // Return projected p.d.f.
   return new RooProjectedPdf(name.Data(),name.Data(),*this,iset) ;
+}
+
+void RooAbsPdf::clearEvalError() 
+{ 
+  _evalError = kFALSE ; 
+}
+
+Bool_t RooAbsPdf::evalError() 
+{ 
+  return _evalError ; 
+}
+
+
+Bool_t RooAbsPdf::isSelectedComp() const 
+{ 
+  return _selectComp || _globalSelectComp ; 
+}
+
+
+void RooAbsPdf::globalSelectComp(Bool_t flag) 
+{ 
+  _globalSelectComp = flag ; 
+}
+
+void RooAbsPdf::raiseEvalError() 
+{ 
+  _evalError = kTRUE ; 
 }

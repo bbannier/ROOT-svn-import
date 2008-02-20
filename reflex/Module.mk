@@ -80,13 +80,15 @@ RFLX_REFLEXLL   += -ldemangle
 endif
 
 RFLX_TESTD      = $(REFLEXDIR)/test
+RFLX_TESTDL     = $(RFLX_TESTD)/lib
 RFLX_TESTLIBD1  = $(RFLX_TESTD)/testDict1
 RFLX_TESTLIBD2  = $(RFLX_TESTD)/testDict2
 RFLX_TESTLIBS1  = $(RFLX_TESTD)/Reflex_rflx.cpp
 RFLX_TESTLIBS2  = $(RFLX_TESTD)/Class2Dict_rflx.cpp
 RFLX_TESTLIBS   = $(RFLX_TESTLIBS1) $(RFLX_TESTLIBS2)
 RFLX_TESTLIBO   = $(subst .cpp,.o,$(RFLX_TESTLIBS))
-RFLX_TESTLIB    = $(subst $(RFLX_TESTD)/,lib/libtest_,$(subst _rflx.o,Rflx.$(SOEXT),$(RFLX_TESTLIBO)))
+RFLX_TESTLIB    = $(subst $(RFLX_TESTD)/,$(RFLX_TESTDL)/libtest_,$(subst _rflx.o,Rflx.$(SOEXT),$(RFLX_TESTLIBO)))
+.PRECIOUS: $(RFLX_TESTLIB) $(RFLX_TESTLIBO)
 
 RFLX_UNITTESTS = $(RFLX_TESTD)/test_Reflex_generate.cxx    \
                  $(RFLX_TESTD)/test_ReflexBuilder_unit.cxx \
@@ -148,7 +150,7 @@ $(REFLEXDICTLIB): $(REFLEXDO) $(ORDER_) $(MAINLIBS) $(REFLEXLIB)
 		"$(SOFLAGS)" libReflexDict.$(SOEXT) $@ "$(REFLEXDO)" \
 		"$(REFLEXDICTLIBEXTRA)"
 
-$(REFLEXDS): $(REFLEXAPIH) $(REFLEXL) $(ROOTCINTTMPEXE)
+$(REFLEXDS): $(REFLEXAPIH) $(REFLEXL) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c -p -Ireflex/inc $(REFLEXAPIH) $(REFLEXL)
 
@@ -159,11 +161,10 @@ $(REFLEXDICTMAP): $(RLIBMAP) $(MAKEFILEDEP) $(REFLEXL)
 all-reflex:     $(REFLEXLIB) $(REFLEXDICTLIB) $(REFLEXDICTMAP) $(RFLX_GRFLXPYC) $(RFLX_GRFLXPY)
 
 clean-genreflex:
-		@rm -f bin/genreflex*
 		@rm -rf lib/python/genreflex
 
 clean-check-reflex:
-		@rm -f $(RFLX_TESTLIBS) $(RFLX_TESTLIBO) $(RFLX_UNITTESTO) $(RFLX_UNITTESTX)
+		@rm -f $(RFLX_TESTLIB) $(RFLX_TESTLIBS) $(RFLX_TESTLIBO) $(RFLX_UNITTESTO) $(RFLX_UNITTESTX)
 
 clean-reflex: clean-genreflex clean-check-reflex
 		@rm -f $(RFLX_GENMAPX)
@@ -172,31 +173,27 @@ clean-reflex: clean-genreflex clean-check-reflex
 clean::         clean-reflex
 
 distclean-reflex: clean-reflex
-		@rm -f $(REFLEXDEP) $(REFLEXLIB) $(REFLEXDICTLIB) $(REFLEXDICTMAP)
+		@rm -f $(REFLEXDEP) $(REFLEXDS) $(REFLEXDH) $(REFLEXLIB) \
+		   $(REFLEXDICTLIB) $(REFLEXDICTMAP)
 		@rm -rf include/Reflex lib/python
 
 distclean::     distclean-reflex
 
 # test suite
 
-check-reflex: $(REFLEXLIB) $(RFLX_TESTLIB) $(RFLX_UNITTESTX)
 ifeq ($(PLATFORM),win32)
-		@export PATH="`pwd`/bin:$(CPPUNIT)/lib:$(PATH)"; \
-		$(RFLX_TESTD)/test_Reflex_generate; \
-		$(RFLX_TESTD)/test_Reflex_simple1; \
-		$(RFLX_TESTD)/test_Reflex_simple2; \
-		$(RFLX_TESTD)/test_Reflex_unit; \
-		$(RFLX_TESTD)/test_ReflexBuilder_unit
+RFLX_EXPORTTESTPATH := "$(RFLX_TESTDL):`pwd`/bin:$(CPPUNIT)/lib:$(PATH)"
 else
-		@export LD_LIBRARY_PATH=`pwd`/lib:$(CPPUNIT)/lib; \
-		$(RFLX_TESTD)/test_Reflex_generate; \
-		$(RFLX_TESTD)/test_Reflex_simple1; \
-		$(RFLX_TESTD)/test_Reflex_simple2; \
-		$(RFLX_TESTD)/test_Reflex_unit; \
-		$(RFLX_TESTD)/test_ReflexBuilder_unit
+RFLX_EXPORTTESTPATH := export LD_LIBRARY_PATH=$(RFLX_TESTDL):`pwd`/lib:$(CPPUNIT)/lib
 endif
 
-lib/libtest_%Rflx.$(SOEXT) : $(RFLX_TESTD)/%_rflx.o
+check-reflex-run%: $(RFLX_TESTD)/% $(REFLEXLIB) $(RFLX_TESTLIB)
+		$(RFLX_EXPORTTESTPATH); $(RFLX_TESTD)/$*
+
+check-reflex: $(addprefix check-reflex-run,$(notdir $(RFLX_UNITTESTX)))
+
+$(RFLX_TESTDL)/libtest_%Rflx.$(SOEXT) : $(RFLX_TESTD)/%_rflx.o
+		@mkdir -p $(dir $@)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" "$(SOFLAGS)" $(notdir $@) $@ $< $(RFLX_REFLEXLL)
 
 %_rflx.o : %_rflx.cpp
@@ -208,8 +205,8 @@ $(RFLX_TESTLIBS1) : $(REFLEXDIRI)/Reflex/Reflex.h $(RFLX_TESTLIBD1)/selection.xm
 $(RFLX_TESTLIBS2) : $(RFLX_TESTLIBD2)/Class2Dict.h $(RFLX_TESTLIBD2)/selection.xml $(wildcard $(RFLX_TESTLIBD2)/*.h)
 		cd $(RFLX_TESTD); ../../bin/genreflex testDict2/Class2Dict.h -s testDict2/selection.xml -I../../include --iocomments
 
-$(RFLX_UNITTESTO) : $(RFLX_TESTD)/test_Reflex%.o : $(RFLX_TESTD)/test_Reflex%.cxx
-		$(CXX) $(OPT) $(CXXFLAGS) -I$(RFLX_CPPUNITI) -Ireflex -c $< $(CXXOUT)$@
+$(RFLX_UNITTESTO) : $(RFLX_TESTD)/test_Reflex%.o : $(RFLX_TESTD)/test_Reflex%.cxx $(RFLX_TESTD)/CppUnit_testdriver.cpp
+		$(CXX) $(OPT) $(CXXFLAGS) -I$(RFLX_TESTD) -Ireflex -I$(RFLX_CPPUNITI) -c $< $(CXXOUT)$@
 
 $(RFLX_UNITTESTX) : $(RFLX_TESTD)/test_Reflex% : $(RFLX_TESTD)/test_Reflex%.o
 		$(LD) $(LDFLAGS) -o $@ $< $(RFLX_CPPUNITLL) $(RFLX_REFLEXLL)

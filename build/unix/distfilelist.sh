@@ -1,6 +1,7 @@
 #!/bin/sh
 
-# Script to produce list of files to be included in the binary distribution of ROOT.
+# Script to produce list of files to be included in the
+# binary distribution of ROOT.
 # Called by makedist.sh.
 #
 # Axel, 2006-05-16
@@ -29,18 +30,13 @@ find tutorials -name "*.so" -exec rm -rf {} \; >/dev/null 2>&1;true
 find tutorials -name "work.pc" -exec rm -rf {} \; >/dev/null 2>&1;true
 find tutorials -name "work.pcl" -exec rm -rf {} \; >/dev/null 2>&1;true
 
-# remove cintdll dictionary sources, dependencies, import libraries
-find cint -name 'G__c_*' -exec rm -f {} \; >/dev/null 2>&1;true
-find cint -name 'G__cpp_*' -exec rm -f {} \; >/dev/null 2>&1;true
-find cint -name 'rootcint_*' -exec rm -f {} \; >/dev/null 2>&1;true
-
 mv -f tutorials/gallery.root- tutorials/gallery.root
 mv -f tutorials/mlp/mlpHiggs.root- tutorials/mlp/mlpHiggs.root
 mv -f tutorials/quadp/stock.root- tutorials/quadp/stock.root
 
 # mixture of files, wildcards, and directories
 WILDCARDS="LICENSE README bin \
-   include lib cint/include tutorials \
+   include lib man cint/include tutorials \
    cint/lib cint/stl gdml/*.py \
    test/*.cxx test/*.h test/Makefile* test/README \
    test/*.C test/*.sh test/dt_Makefile test/linearIO.root \
@@ -80,4 +76,8 @@ echo `echo ${FILES} | tr ' ' '\n' | sed \
   -e 's,^.*.cvsignore$,,' \
   -e 's,^.*/CVS/.*$,,' \
   -e 's,^.*/.svn/.*$,,' \
+  -e 's,^.*/.*.dSYM/.*$,,' \
+  -e 's,^cint/.*/G__c_.*$',, \
+  -e 's,^cint/.*/G__cpp_.*$',, \
+  -e 's,^cint/.*/rootcint_.*$',, \
    | grep -v '^$'` ${HAVEPRECOMP} | tr ' ' '\n' | sort | uniq | sed -e 's,^,'${PREPENDDIR}','

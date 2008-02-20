@@ -21,12 +21,10 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#ifdef R__HAVE_CONFIG
 #include "RConfigure.h"
-#endif
-
 #include "Riostream.h"
 #include "TApplication.h"
+#include "TException.h"
 #include "TGuiFactory.h"
 #include "TVirtualX.h"
 #include "TROOT.h"
@@ -42,15 +40,10 @@
 #include "TEnv.h"
 #include "TColor.h"
 #include "TClassTable.h"
-#include "TSystemDirectory.h"
 #include "TPluginManager.h"
 #include "TClassTable.h"
 #include "TBrowser.h"
 #include "TUrl.h"
-
-#ifdef R__WIN32
-#include "TWinNTSystem.h"
-#endif
 
 TApplication *gApplication = 0;
 Bool_t TApplication::fgGraphNeeded = kFALSE;
@@ -160,9 +153,8 @@ TApplication::TApplication(const char *appClassName,
    if (fArgv)
       gSystem->SetProgname(fArgv[0]);
 
-#ifdef R__WIN32
-   ((TWinNTSystem*)gSystem)->NotifyApplicationCreated();
-#endif
+   // Tell TSystem the TApplication has been created
+   gSystem->NotifyApplicationCreated();
 
    fIdleTimer     = 0;
    fSigHandler    = 0;
@@ -314,6 +306,18 @@ void TApplication::GetOptions(Int_t *argc, char **argv)
    //    -h      : print usage
    //    --help  : print usage
    //    -config : print ./configure options
+   // In addition to the above options the arguments that are not options,
+   // i.e. they don't start with - or + are treated as follows:
+   //   <file>.root are considered ROOT files and added to the InputFiles() list
+   //   <macro>.C   are considered ROOT macros and also added to the InputFiles() list
+   //   <dir>       is considered the desired working directory and available
+   //               via WorkingDirectory(), if more than one dir is specified the
+   //               last one will prevail
+   // In TRint we set the working directory to the <dir>, the ROOT files are
+   // connected, and the macros are executed. If your main TApplication is not
+   // TRint you have to decide yourself what to do whith these options.
+
+   static char null[1] = { "" };
 
    fNoLog = kFALSE;
    fQuit  = kFALSE;
@@ -323,6 +327,7 @@ void TApplication::GetOptions(Int_t *argc, char **argv)
       return;
 
    int i, j;
+   TString pwd;
 
    for (i = 1; i < *argc; i++) {
       if (!strcmp(argv[i], "-?") || !strncmp(argv[i], "-h", 2) ||
@@ -346,21 +351,21 @@ void TApplication::GetOptions(Int_t *argc, char **argv)
          Terminate(0);
       } else if (!strcmp(argv[i], "-b")) {
          MakeBatch();
-         argv[i] = "";
+         argv[i] = null;
       } else if (!strcmp(argv[i], "-n")) {
          fNoLog = kTRUE;
-         argv[i] = "";
+         argv[i] = null;
       } else if (!strcmp(argv[i], "-q")) {
          fQuit = kTRUE;
-         argv[i] = "";
+         argv[i] = null;
       } else if (!strcmp(argv[i], "-l")) {
          // used by front-end program to not display splash screen
          fNoLogo = kTRUE;
-         argv[i] = "";
+         argv[i] = null;
       } else if (!strcmp(argv[i], "-splash")) {
          // used when started by front-end program to signal that
          // splash screen can be popped down (TRint::PrintLogo())
-         argv[i] = "";
+         argv[i] = null;
       } else if (argv[i][0] != '-' && argv[i][0] != '+') {
          Long64_t size;
          Long_t id, flags, modtime;
@@ -370,50 +375,55 @@ void TApplication::GetOptions(Int_t *argc, char **argv)
          if (arg) *arg = '(';
          if (!gSystem->GetPathInfo(dir, &id, &size, &flags, &modtime)) {
             if ((flags & 2)) {
-               // if directory make it working directory
-               gSystem->ChangeDirectory(dir);
-               TSystemDirectory *workdir = new TSystemDirectory("workdir", gSystem->WorkingDirectory());
-               TObject *w = gROOT->GetListOfBrowsables()->FindObject("workdir");
-               TObjLink *lnk = gROOT->GetListOfBrowsables()->FirstLink();
-               while (lnk) {
-                  if (lnk->GetObject() == w) {
-                     lnk->SetObject(workdir);
-                     lnk->SetOption(gSystem->WorkingDirectory());
-                     break;
-                  }
-                  lnk = lnk->Next();
+               // if directory set it in fWorkDir
+               if (pwd == "") {
+                  pwd = gSystem->WorkingDirectory();
+                  fWorkDir = dir;
+                  gSystem->ChangeDirectory(dir);
+                  argv[i] = null;
+               } else if (!strcmp(gROOT->GetName(), "Rint")) {
+                  Warning("GetOptions", "only one directory argument can be specified (%s)", dir);
                }
-               delete w;
             } else if (flags == 0 || flags == 1) {
                // if file add to list of files to be processed
                if (!fFiles) fFiles = new TObjArray;
                fFiles->Add(new TObjString(argv[i]));
+               argv[i] = null;
             }
-            argv[i] = "";
          } else {
-            char *mac, *s = strtok(dir, "+(");
-            if ((mac = gSystem->Which(TROOT::GetMacroPath(), s,
-                                      kReadPermission))) {
-               // if file add to list of files to be processed
-               if (!fFiles) fFiles = new TObjArray;
-               fFiles->Add(new TObjString(argv[i]));
-               argv[i] = "";
-               delete [] mac;
-            } else
-               // only warn if we're plain root,
-               // other progs might have their own params
-               if (!strcmp(GetName(),"Rint"))
-                  Warning("GetOptions", "Macro %s not found.", s);
+            if (TString(dir).EndsWith(".root") && !strcmp(gROOT->GetName(), "Rint")) {
+               // file ending on .root but does not exist, likely a typo, warn user...
+               Warning("GetOptions", "file %s not found", dir);
+            } else {
+               char *mac, *s = strtok(dir, "+(");
+               if ((mac = gSystem->Which(TROOT::GetMacroPath(), s,
+                                         kReadPermission))) {
+                  // if file add to list of files to be processed
+                  if (!fFiles) fFiles = new TObjArray;
+                  fFiles->Add(new TObjString(argv[i]));
+                  argv[i] = null;
+                  delete [] mac;
+               } else {
+                  // only warn if we're plain root,
+                  // other progs might have their own params
+                  if (!strcmp(gROOT->GetName(), "Rint"))
+                     Warning("GetOptions", "macro %s not found", s);
+               }
+            }
          }
          delete [] dir;
       }
       // ignore unknown options
    }
 
+   // go back to startup directory
+   if (pwd != "")
+      gSystem->ChangeDirectory(pwd);
+
    // remove handled arguments from argument array
    j = 0;
    for (i = 0; i < *argc; i++) {
-      if (strcmp(argv[i],"")) {
+      if (strcmp(argv[i], "")) {
          argv[j] = argv[i];
          j++;
       }
@@ -432,6 +442,23 @@ void TApplication::HandleIdleTimer()
       ProcessLine(GetIdleCommand());
 
    Emit("HandleIdleTimer()");
+}
+
+//______________________________________________________________________________
+void TApplication::HandleException(Int_t sig)
+{
+   // Handle exceptions (kSigBus, kSigSegmentationViolation,
+   // kSigIllegalInstruction and kSigFloatingException) trapped in TSystem.
+   // Specific TApplication implementations may want something different here.
+
+   if (TROOT::Initialized()) {
+      if (gException) {
+         gInterpreter->RewindDictionary();
+         gInterpreter->ClearFileBusy();
+      }
+      Throw(sig);
+   }
+   gSystem->Exit(sig);
 }
 
 //______________________________________________________________________________
@@ -528,13 +555,6 @@ Int_t TApplication::ParseRemoteLine(const char *ln,
    // The last argument 'script' allows to specify an alternative script to
    // be executed remotely to startup the session.
 
-   // Parse the content of a line starting with ".R" (already stripped-off)
-   // The format of teh remaining part is
-   //      hostdir [-l user] [-d dbg] [script]
-   // The variable 'hostdir' contains the host to connect to and the remote
-   // directory to be used as working dir.
-   // A username can also be included in hostdir in the usual form user@host.
-
    if (!ln || strlen(ln) <= 0)
       return 0;
 
@@ -571,10 +591,7 @@ Int_t TApplication::ParseRemoteLine(const char *ln,
             isScript = kTRUE;
          } else if (isScript) {
             // Add everything left
-            script = line;
-            Int_t itkn = script.Index(tkn);
-            if (itkn != kNPOS)
-               script.Remove(0, itkn);
+            script = tkn;
             script.Insert(0, "\"");
             script += "\"";
             isScript = kFALSE;
@@ -595,7 +612,7 @@ Long_t TApplication::ProcessRemote(const char *line, Int_t *)
 {
    // Process the content of a line starting with ".R" (already stripped-off)
    // The format is
-   //      [user@]host[:dir] [-l user] [-d dbg] [script]
+   //      [user@]host[:dir] [-l user] [-d dbg] [script] | [host] -close
    // The variable 'dir' is the remote directory to be used as working dir.
    // The username can be specified in two ways, "-l" having the priority
    // (as in ssh).
@@ -604,6 +621,27 @@ Long_t TApplication::ProcessRemote(const char *line, Int_t *)
    // be executed remotely to startup the session.
 
    if (!line) return 0;
+
+   if (!strncmp(line, "-?", 2) || !strncmp(line, "-h", 2) ||
+       !strncmp(line, "--help", 6)) {
+      Info("ProcessRemote", "remote session help:");
+      Printf(".R [user@]host[:dir] [-l user] [-d dbg] [[<]script] | [host] -close");
+      Printf("Create a ROOT session on the specified remote host.");
+      Printf("The variable \"dir\" is the remote directory to be used as working dir.");
+      Printf("The username can be specified in two ways, \"-l\" having the priority");
+      Printf("(as in ssh). A \"dbg\" value > 0 gives increasing verbosity.");
+      Printf("The last argument \"script\" allows to specify an alternative script to");
+      Printf("be executed remotely to startup the session, \"roots\" being");
+      Printf("the default. If the script is preceeded by a \"<\" the script will be");
+      Printf("sourced, after which \"roots\" is executed. The sourced script can be ");
+      Printf("used to change the PATH and other variables, allowing an alternative");
+      Printf("\"roots\" script to be found.");
+      Printf("To close down a session do \".R host -close\".");
+      Printf("To switch between sessions do \".R host\", to switch to the local");
+      Printf("session do \".R\".");
+      Printf("To list all open sessions do \"gApplication->GetApplications()->Print()\".");
+      return 0;
+   }
 
    TString hostdir, user, script;
    Int_t dbg = 0;
@@ -620,7 +658,7 @@ Long_t TApplication::ProcessRemote(const char *line, Int_t *)
       return 1;
    } else if (rc == 1) {
       // close an existing remote application
-      TApplication *ap = Open(hostdir, 0, 0);
+      TApplication *ap = TApplication::Open(hostdir, 0, 0);
       if (ap) {
          TApplication::Close(ap);
          delete ap;
@@ -630,7 +668,7 @@ Long_t TApplication::ProcessRemote(const char *line, Int_t *)
    if (user.Length() > 0)
       hostdir.Insert(0,Form("%s@", user.Data()));
    const char *sc = (script.Length() > 0) ? script.Data() : 0;
-   TApplication *ap = Open(hostdir, dbg, sc);
+   TApplication *ap = TApplication::Open(hostdir, dbg, sc);
    if (ap) {
       fAppRemote = ap;
    }
@@ -1011,7 +1049,7 @@ TApplication *TApplication::Open(const char *url,
                                   Int_t debug, const char *script)
 {
    // Static function used to attach to an existing remote application
-   // or to start one
+   // or to start one.
 
    TApplication *ap = 0;
    TUrl nu(url);

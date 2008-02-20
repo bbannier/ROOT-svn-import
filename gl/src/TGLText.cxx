@@ -8,6 +8,7 @@
  * For the licensing terms see $ROOTSYS/LICENSE.                         *
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
+
 #include "Riostream.h"
 #include "TROOT.h"
 #include "TError.h"
@@ -31,8 +32,14 @@
 #define FTGL_EXTRUDE 4
 #define FTGL_TEXTURE 5
 
-ClassImp(TGLText)
+//______________________________________________________________________________
+/* Begin_Html
+<center><h2>GL Text</h2></center>
+To draw a 3D text in a GL window. This class uses uses FTGL to render text.
+FTGL is a package making the interface between the Free Type fonts and GL.
+End_Html */
 
+ClassImp(TGLText)
 
 //______________________________________________________________________________
 TGLText::TGLText()
@@ -164,7 +171,7 @@ void TGLText::SetGLTextFont(Font_t fontnumber)
 {
    int fontid = fontnumber / 10;
 
-   char *fontname=0;
+   const char *fontname=0;
    if (fontid == 0)  fontname = "arialbd.ttf";
    if (fontid == 1)  fontname = "timesi.ttf";
    if (fontid == 2)  fontname = "timesbd.ttf";

@@ -15,6 +15,7 @@
 
 #include "common.h"
 #include "Api.h"
+#include <string>
 
 extern "C" {
 
@@ -28,9 +29,8 @@ int G__using_namespace();
 int G__get_envtagnum();
 int G__isenclosingclass(int enclosingtagnum, int env_tagnum);
 int G__isenclosingclassbase(int enclosingtagnum, int env_tagnum);
-char* G__find_first_scope_operator(char* name);
-char* G__find_last_scope_operator(char* name);
-int G__class_autoloading(int tagnum);
+const char* G__find_first_scope_operator(const char* name);
+const char* G__find_last_scope_operator(const char* name);
 void G__define_struct(char type);
 int G__callfunc0(G__value* result, G__ifunc_table* iref, int ifn, G__param* libp, void* p, int funcmatch);
 int G__calldtor(void* p, int tagnum, int isheap);
@@ -39,6 +39,7 @@ int G__calldtor(void* p, int tagnum, int isheap);
 int G__set_class_autoloading(int newvalue);
 void G__set_class_autoloading_callback(int (*p2f)(char*, char*));
 void G__set_class_autoloading_table(char* classname, char* libname);
+char* G__get_class_autoloading_table(char* classname);
 int G__defined_tagname(const char* tagname, int noerror);
 int G__search_tagname(const char* tagname, int type);
 
@@ -381,11 +382,11 @@ int G__isenclosingclassbase(int enclosingtagnum, int env_tagnum)
 }
 
 //______________________________________________________________________________
-char* G__find_first_scope_operator(char* name)
+const char* G__find_first_scope_operator(const char* name)
 {
    // -- Return a pointer to the first scope operator in name.
    // Only those at the outermost level of template nesting are considered.
-   char* p = name;
+   const char* p = name;
    int single_quote = 0;
    int double_quote = 0;
    int nest = 0;
@@ -414,11 +415,11 @@ char* G__find_first_scope_operator(char* name)
 }
 
 //______________________________________________________________________________
-char* G__find_last_scope_operator(char* name)
+const char* G__find_last_scope_operator(const char* name)
 {
    // -- Return a pointer to the last scope operator in name.
    // Only those at the outermost level of template nesting are considered.
-   char* p = name + strlen(name) - 1;
+   const char* p = name + strlen(name) - 1;
    int single_quote = 0;
    int double_quote = 0;
    int nest = 0;
@@ -447,9 +448,17 @@ char* G__find_last_scope_operator(char* name)
 }
 
 //______________________________________________________________________________
-int G__class_autoloading(int tagnum)
+int G__class_autoloading(int* ptagnum)
 {
-   // -- FIXME: Describe this function!
+   // Load the library containing the class tagnum, according to
+   // G__struct.libname[tagnum] set via G__set_class_autloading_table().
+   // As a request to load vector<Long64_t> can result in vector<long long>
+   // beging loaded, the requested tagnum and the loaded tagnum need not
+   // be identical, i.e. G__class_autolading can change the tagnum to
+   // point to the valid class with dictionary. The previous G__struct entry
+   // is marked as an "ex autoload entry" so no name lookup can find it anymore.
+
+   int& tagnum = *ptagnum;
    if ((tagnum < 0) || !G__enable_autoloading) {
       return 0;
    }
@@ -474,6 +483,40 @@ int G__class_autoloading(int tagnum)
       if (G__p_class_autoloading) {
          G__enable_autoloading = 0;
          int res = (*G__p_class_autoloading)(G__fulltagname(tagnum, 1), copyLibname);
+         if (G__struct.type[tagnum] == G__CLASS_AUTOLOAD) {
+            if (strstr(G__struct.name[tagnum],"<") != 0) {
+               // Kill this entry.
+               int store_def_tagnum = G__def_tagnum;
+               int store_tagdefining = G__tagdefining;
+               G__tagdefining = G__def_tagnum = G__struct.parent_tagnum[tagnum];
+               // "hide" tagnum's name: we want to check whether this auto-loading loaded
+               // another version of the same class, e.g. because of vector<Long64_t>
+               // being requested but vector<long long> being loaded:
+               std::string origName(G__struct.name[tagnum]);
+               if (G__struct.name[tagnum][0])
+                  G__struct.name[tagnum][0] = '@';
+               int found_tagnum = G__defined_tagname(origName.c_str(),3);
+               if (G__struct.name[tagnum][0])
+                  G__struct.name[tagnum][0] = origName[0];
+               G__def_tagnum = store_def_tagnum;
+               G__tagdefining = store_tagdefining;
+               if (found_tagnum != -1) {
+                  // The autoload has seemingly failed, yielding a different tagnum!
+                  // This can happens in 'normal' case if the string representation of the
+                  // type registered by the autoloading mechanism is actually a typedef
+                  // to the real type (aka mytemp<Long64_t> vs mytemp<long long> or the
+                  // stl containers with or without their (default) allocators.
+                  char *old = G__struct.name[tagnum];
+
+                  G__struct.name[tagnum] = (char*)malloc(strlen(old)+50);
+                  strcpy(G__struct.name[tagnum],"@@ ex autload entry @@");
+                  strcat(G__struct.name[tagnum],old);
+                  G__struct.type[tagnum] = 0;
+                  free(old);
+                  tagnum = found_tagnum;
+               }
+            }
+         }
          G__enable_autoloading = 1;
          delete[] copyLibname;
          return res;
@@ -1356,6 +1399,15 @@ void G__set_class_autoloading_callback(int (*p2f)(char*, char*))
 }
 
 //______________________________________________________________________________
+char* G__get_class_autoloading_table(char* classname)
+{
+   // Return the autoload entries for the class called classname.
+   int tagnum = G__defined_tagname(classname, 4);
+   if (tagnum < 0) return 0;
+   return G__struct.libname[tagnum];
+}
+
+//______________________________________________________________________________
 void G__set_class_autoloading_table(char* classname, char* libname)
 {
    // -- FIXME: Describe this function!
@@ -1423,6 +1475,7 @@ int G__defined_tagname(const char* tagname, int noerror)
    //               no error messages if template is not found
    //         = 2   if not found just return without trying template
    //         = 3   like 2, and no autoloading
+   //         = 4   like 3, and don't look for typedef
    //
    // CAUTION:
    // If template class with constant argument is given to this function,
@@ -1504,7 +1557,7 @@ int G__defined_tagname(const char* tagname, int noerror)
    else {
       strcpy(temp, tagname);
    }
-   p = G__find_last_scope_operator(temp);
+   p = (char*)G__find_last_scope_operator(temp);
    if (p) {
       strcpy(atom_tagname, p + 2);
       *p = '\0';
@@ -1540,7 +1593,7 @@ try_again:
       if ((len == G__struct.hash[i]) && !strcmp(atom_tagname, G__struct.name[i])) {
          if (!p && (G__struct.parent_tagnum[i] == -1) || (env_tagnum == G__struct.parent_tagnum[i])) {
             if (noerror < 3) {
-               G__class_autoloading(i);
+               G__class_autoloading(&i);
             }
             return i;
          }
@@ -1577,7 +1630,7 @@ try_again:
    }
    if (candidateTag != -1) {
       if (noerror < 3) {
-         G__class_autoloading(candidateTag);
+         G__class_autoloading(&candidateTag);
       }
       return candidateTag;
    }
@@ -1603,6 +1656,10 @@ try_again:
          return i;
       }
    }
+
+   if (noerror == 4)
+      return -1;
+
    // Search for typename.
    store_var_type = G__var_type;
    i = G__defined_typename(tagname);
@@ -1611,7 +1668,7 @@ try_again:
       i = G__newtype.tagnum[i];
       if (i != -1) {
          if (noerror < 3) {
-            G__class_autoloading(i);
+            G__class_autoloading(&i);
          }
          return i;
       }
@@ -1677,10 +1734,10 @@ int G__search_tagname(const char* tagname, int type)
       atom_tagname = (char*) malloc(strlen(tagname) + 10);
    }
 #endif // G__OLDIMPLEMENTATION1823
-   p = G__strrstr((char*) tagname, "::");
+   p = (char*)G__strrstr( tagname, "::");
    if (p && !strchr(p, '>')) {
       strcpy(atom_tagname, tagname);
-      p = G__strrstr(atom_tagname, "::");
+      p = (char*)G__strrstr(atom_tagname, "::");
       *p = 0;
       envtagnum = G__defined_tagname(atom_tagname, 1);
    }
@@ -1700,7 +1757,7 @@ int G__search_tagname(const char* tagname, int type)
          return -1;
       }
       strcpy(temp, tagname);
-      p = G__find_last_scope_operator(temp);
+      p = (char*)G__find_last_scope_operator(temp);
       if (p) {
          strcpy(atom_tagname, p + 2);
          *p = '\0';

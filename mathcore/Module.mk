@@ -26,11 +26,11 @@ MATHCOREDO   := $(MATHCOREDS:.cxx=.o)
 MATHCOREDO32 := $(MATHCOREDS32:.cxx=.o)
 MATHCOREDH   := $(MATHCOREDS:.cxx=.h)
 
-MATHCOREDH1  :=  $(MODDIRI)/Math/Vector3D.h \
+MATHCOREDH1  :=  $(MODDIRI)/Math/Vector2D.h \
+                 $(MODDIRI)/Math/Point2D.h \
+                 $(MODDIRI)/Math/Vector3D.h \
                  $(MODDIRI)/Math/Point3D.h \
                  $(MODDIRI)/Math/Vector4D.h \
-                 $(MODDIRI)/Math/Vector2D.h \
-                 $(MODDIRI)/Math/Point2D.h \
                  $(MODDIRI)/Math/Rotation3D.h \
                  $(MODDIRI)/Math/RotationZYX.h \
                  $(MODDIRI)/Math/RotationX.h \
@@ -52,11 +52,15 @@ MATHCOREDH1  :=  $(MODDIRI)/Math/Vector3D.h \
                  $(MODDIRI)/Math/DistFuncMathCore.h \
                  $(MODDIRI)/Math/IParamFunction.h \
                  $(MODDIRI)/Math/IFunction.h \
+                 $(MODDIRI)/Math/Functor.h \
                  $(MODDIRI)/Math/Minimizer.h \
                  $(MODDIRI)/Math/Integrator.h \
                  $(MODDIRI)/Math/VirtualIntegrator.h \
                  $(MODDIRI)/Math/AllIntegrationTypes.h \
-                 $(MODDIRI)/Math/IntegratorMultiDim.h 
+                 $(MODDIRI)/Math/AdaptiveIntegratorMultiDim.h \
+                 $(MODDIRI)/Math/IntegratorMultiDim.h \
+                 $(MODDIRI)/Math/Factory.h \
+                 $(MODDIRI)/Math/FitMethodFunction.h 
 
 
 MATHCOREDH132:=  $(MODDIRI)/Math/Vector2D.h \
@@ -99,13 +103,13 @@ $(MATHCORELIB): $(MATHCOREO) $(MATHCOREDO) $(MATHCOREDO32) $(ORDER_) $(MAINLIBS)
 		   "$(MATHCOREO) $(MATHCOREDO) $(MATHCOREDO32)"    \
 		   "$(MATHCORELIBEXTRA)"
 
-$(MATHCOREDS):  $(MATHCOREDH1) $(MATHCOREL) $(MATHCORELINC) $(ROOTCINTTMPEXE)
+$(MATHCOREDS):  $(MATHCOREDH1) $(MATHCOREL) $(MATHCORELINC) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
 		@echo "for files $(MATHCOREDH1)"
 		$(ROOTCINTTMP) -f $@ -c $(MATHCOREDH1) $(MATHCOREL)
 #		genreflex $(MATHCOREDIRS)/MathCoreDict.h  --selection_file=$(MATHCOREDIRS)/selection_MathCore.xml -o $(MATHCOREDIRS)/G__MathCore.cxx -I$(MATHCOREDIRI)
 
-$(MATHCOREDS32):$(MATHCOREDH132) $(MATHCOREL) $(MATHCORELINC) $(ROOTCINTTMPEXE)
+$(MATHCOREDS32):$(MATHCOREDH132) $(MATHCOREL) $(MATHCORELINC) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
 		@echo "for files $(MATHCOREDH132)"
 		$(ROOTCINTTMP) -f $@ -c $(MATHCOREDH132) $(MATHCOREL32)
@@ -131,4 +135,7 @@ distclean::     distclean-mathcore
 test-mathcore:	all-mathcore
 		@cd $(MATHCOREDIR)/test; make
 
+##### extra rules ######
+$(MATHCOREO): CXXFLAGS += -DUSE_ROOT_ERROR
+$(MATHCOREDO): CXXFLAGS += -DUSE_ROOT_ERROR
 

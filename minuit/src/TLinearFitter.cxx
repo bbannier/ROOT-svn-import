@@ -551,7 +551,7 @@ void TLinearFitter::AddToDesign(Double_t *x, Double_t y, Double_t e)
    Int_t i, j, ii;
    y/=e;
 
-   Double_t val[100];
+   Double_t val[1000];
 
    if ((fSpecial>100)&&(fSpecial<200)){
       //polynomial fitting
@@ -959,6 +959,16 @@ void TLinearFitter::ReleaseParameter(Int_t ipar)
 }
 
 //______________________________________________________________________________
+void TLinearFitter::GetAtbVector(TVectorD &v)
+{
+   //Get the Atb vector - a vector, used for internal computations
+   
+   if (v.GetNoElements()!=fAtb.GetNoElements())
+      v.ResizeTo(fAtb.GetNoElements());
+   v = fAtb;
+}
+
+//______________________________________________________________________________
 Double_t TLinearFitter::GetChisquare()
 {
    // Get the Chisquare.
@@ -988,7 +998,7 @@ void TLinearFitter::GetConfidenceIntervals(Int_t n, Int_t ndim, const Double_t *
       Double_t *sum_vector = new Double_t[fNfunctions];
       Double_t c=0;
       Int_t df = fNpoints-fNfunctions+fNfixed;
-      Double_t t = TMath::StudentQuantile(cl, df);
+      Double_t t = TMath::StudentQuantile(0.5 + cl/2, df);
       Double_t chidf = TMath::Sqrt(fChisquare/df);
 
       for (Int_t ipoint=0; ipoint<n; ipoint++){
@@ -1086,7 +1096,7 @@ void TLinearFitter::GetConfidenceIntervals(TObject *obj, Double_t cl)
       Double_t *sum_vector = new Double_t[fNfunctions];
       Double_t *x = gr2->GetX();
       Double_t *y = gr2->GetY();
-      Double_t t = TMath::StudentQuantile(cl, ((TF1*)(fInputFunction))->GetNDF());
+      Double_t t = TMath::StudentQuantile(0.5 + cl/2, ((TF1*)(fInputFunction))->GetNDF());
       Double_t chidf = TMath::Sqrt(fChisquare/((TF1*)(fInputFunction))->GetNDF());
       Double_t c = 0;
       for (Int_t ipoint=0; ipoint<np; ipoint++){
@@ -1145,7 +1155,7 @@ void TLinearFitter::GetConfidenceIntervals(TObject *obj, Double_t cl)
       TAxis *xaxis  = hfit->GetXaxis();
       TAxis *yaxis  = hfit->GetYaxis();
       TAxis *zaxis  = hfit->GetZaxis();
-      Double_t t = TMath::StudentQuantile(cl, ((TF1*)(fInputFunction))->GetNDF());
+      Double_t t = TMath::StudentQuantile(0.5 + cl/2, ((TF1*)(fInputFunction))->GetNDF());
       Double_t chidf = TMath::Sqrt(fChisquare/((TF1*)(fInputFunction))->GetNDF());
       Double_t c=0;
       for (Int_t binz=hzfirst; binz<=hzlast; binz++){
@@ -1199,6 +1209,16 @@ void TLinearFitter::GetCovarianceMatrix(TMatrixD &matr)
 }
 
 //______________________________________________________________________________
+void TLinearFitter::GetDesignMatrix(TMatrixD &matr)
+{
+//Returns the internal design matrix
+   if (matr.GetNrows()!=fNfunctions || matr.GetNcols()!=fNfunctions){
+      matr.ResizeTo(fNfunctions, fNfunctions);
+   }
+   matr = fDesign;
+}
+
+//______________________________________________________________________________
 void TLinearFitter::GetErrors(TVectorD &vpar)
 {
 //Returns parameter errors
@@ -1235,7 +1255,7 @@ Int_t TLinearFitter::GetParameter(Int_t ipar,char* name,Double_t& value,Double_t
    if (fInputFunction)
       strcpy(name, fInputFunction->GetParName(ipar));
    else
-      name = "";
+      name = 0;
    return 1;
 }
 

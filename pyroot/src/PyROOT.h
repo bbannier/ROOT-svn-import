@@ -49,17 +49,40 @@
 #if PY_VERSION_HEX < 0x02050000
 typedef int Py_ssize_t;
 #define PyInt_AsSsize_t PyInt_AsLong
+#define PyInt_FromSsize_t PyInt_FromLong
 # define PY_SSIZE_T_FORMAT "%d"
 # if !defined(PY_SSIZE_T_MIN)
 #  define PY_SSIZE_T_MAX INT_MAX
 #  define PY_SSIZE_T_MIN INT_MIN
 # endif
+#define ssizeobjargproc intobjargproc
+#define lenfunc         inquiry
+#define ssizeargfunc    intargfunc
 #else
 # ifdef R__MACOSX
-#  define PY_SSIZE_T_FORMAT "%uzd"
+#  if SIZEOF_SIZE_T == SIZEOF_INT
+#    if defined(MAC_OS_X_VERSION_10_4)
+#       define PY_SSIZE_T_FORMAT "%ld"
+#    else
+#       define PY_SSIZE_T_FORMAT "%d"
+#    endif
+#  elif SIZEOF_SIZE_T == SIZEOF_LONG
+#    define PY_SSIZE_T_FORMAT "%ld"
+#  endif
 # else
 #  define PY_SSIZE_T_FORMAT "%zd"
 # endif
+#endif
+
+// the following should quiet Solaris
+#ifdef Py_False
+#undef Py_False
+#define Py_False ( (PyObject*)(void*)&_Py_ZeroStruct )
+#endif
+
+#ifdef Py_True
+#undef Py_True
+#define Py_True ( (PyObject*)(void*)&_Py_TrueStruct )
 #endif
 
 #endif // !PYROOT_PYROOT_H

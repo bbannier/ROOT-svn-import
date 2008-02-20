@@ -76,8 +76,10 @@
 #include "TGeoShape.h"
 #include "TGeoVolume.h"
 #include "TVirtualGeoPainter.h"
+#include "TGeoVoxelFinder.h"
 #include "TGeoNode.h"
 #include "TMath.h"
+#include "TStopwatch.h"
 
 // statics and globals
 
@@ -162,10 +164,38 @@ void TGeoNode::Browse(TBrowser *b)
 }
 
 //_____________________________________________________________________________
+Int_t TGeoNode::CountDaughters(Bool_t unique_volumes)
+{
+// Returns the number of daughters. Nodes pointing to same volume counted
+// once if unique_volumes is set.
+   static Int_t icall = 0;   
+   Int_t counter = 0;
+   // Count this node
+   if (unique_volumes) {
+      if (!fVolume->IsSelected()) {
+         counter++;
+         fVolume->SelectVolume(kFALSE);
+      }
+   } else counter++;
+   icall++;
+   Int_t nd = fVolume->GetNdaughters();
+   // Count daughters recursively
+   for (Int_t i=0; i<nd; i++) counter += GetDaughter(i)->CountDaughters(unique_volumes);
+   icall--;
+   // Un-mark volumes
+   if (icall == 0) fVolume->SelectVolume(kTRUE);
+   return counter;
+}      
+
+//_____________________________________________________________________________
 void TGeoNode::CheckOverlaps(Double_t ovlp, Option_t *option)
 {
 // Check overlaps bigger than OVLP hierarchically, starting with this node.
    static Int_t icall = 0;
+   static Int_t icheck = 0;
+   static Int_t ncheck = 0;
+   static TStopwatch *timer;
+   static char msg[20];
    Int_t i, nd;
    Bool_t clear;
    Bool_t sampling = kFALSE;
@@ -183,16 +213,29 @@ void TGeoNode::CheckOverlaps(Double_t ovlp, Option_t *option)
    if (sampling) {
       Info("CheckOverlaps", "Checking overlaps by sampling can only be done per volume.");
       Info("=============", "Volume %s will be sampled", fVolume->GetName());
-      fVolume->SelectVolume(clear=kFALSE);
       fVolume->CheckOverlaps(ovlp, option);
       geom->SetCheckingOverlaps(kFALSE);
       return;
    }   
          
+   if (!icheck) {
+      ncheck = CountDaughters(kTRUE);
+      timer = new TStopwatch();
+   }   
+   if (!icall) {
+      timer->Start();
+      msg[19] = '\0';
+   }   
    icall++;
    if (!fVolume->IsSelected()) {
       // this branch was not checked -> check it
       fVolume->SelectVolume(clear=kFALSE);
+      icheck++;
+      for (i=0; i<18; i++) {
+         if (i<(Int_t)strlen(fVolume->GetName())) msg[i] = fVolume->GetName()[i];
+         else                              msg[i] = ' ';
+      }   
+      geom->GetGeomPainter()->OpProgress(msg,icheck,ncheck,timer,kFALSE);
       fVolume->CheckOverlaps(ovlp, option);
       nd = GetNdaughters();
       for (i=0; i<nd; i++) {
@@ -202,6 +245,11 @@ void TGeoNode::CheckOverlaps(Double_t ovlp, Option_t *option)
    }
    icall--;
    if (icall == 0) {
+      geom->GetGeomPainter()->OpProgress("Check overlaps:",icheck,ncheck,timer,kTRUE);
+      delete timer;
+      timer = 0;
+      icheck = 0;
+      ncheck = 0;
       // reset the selection for volumes
       fVolume->SelectVolume(clear=kTRUE);
       geom->SortOverlaps();
@@ -619,6 +667,25 @@ TGeoNodeMatrix::TGeoNodeMatrix(const TGeoVolume *vol, const TGeoMatrix *matrix) 
 }
 
 //_____________________________________________________________________________
+TGeoNodeMatrix::TGeoNodeMatrix(const TGeoNodeMatrix& gnm)
+               :TGeoNode(gnm), 
+                fMatrix(gnm.fMatrix)
+{
+// Copy ctor.
+}
+
+//_____________________________________________________________________________
+TGeoNodeMatrix& TGeoNodeMatrix::operator=(const TGeoNodeMatrix& gnm)
+{
+// Assignment.
+   if (this!=&gnm) {
+      TGeoNode::operator=(gnm); 
+      fMatrix=gnm.fMatrix;
+   }
+   return *this;
+}
+      
+//_____________________________________________________________________________
 TGeoNodeMatrix::~TGeoNodeMatrix()
 {
 // Destructor
@@ -672,6 +739,14 @@ TGeoNode *TGeoNodeMatrix::MakeCopyNode() const
    if (IsVirtual()) node->SetVirtual();
    return node;
 }
+
+//_____________________________________________________________________________
+void TGeoNodeMatrix::SetMatrix(const TGeoMatrix *matrix)
+{
+// Matrix setter.
+   fMatrix = (TGeoMatrix*)matrix;
+   if (!fMatrix) fMatrix = gGeoIdentity;
+}   
 
 /*************************************************************************
  * TGeoNodeOffset - node containing an offset

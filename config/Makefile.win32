@@ -32,9 +32,9 @@ else
   BLDF77FLAGS = -MD
 endif
 
-ifeq ($(VC_MAJOR),14)
-  BLDCXXFLAGS+= -EHa -W3 -wd4244
-  BLDCFLAGS  += -EHa -W3
+ifneq (,$(findstring $(VC_MAJOR),14 15))
+  BLDCXXFLAGS+= -EHsc- -W3 -wd4244
+  BLDCFLAGS  += -EHsc- -W3
   DEBUGFLAGS  = -Zi
 
   ifeq (yes,$(WINRTDEBUG))
@@ -43,8 +43,8 @@ ifeq ($(VC_MAJOR),14)
   endif
 else
 ifeq ($(VC_MINOR),10)
-  BLDCXXFLAGS+= -G5 -GX
-  BLDCFLAGS  += -G5 -GX
+  BLDCXXFLAGS+= -G5 -EHsc-
+  BLDCFLAGS  += -G5 -EHsc-
   BLDF77FLAGS+= -G5
 else
 ifeq ($(VC_MINOR),00)

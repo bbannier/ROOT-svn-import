@@ -24,6 +24,10 @@
 
 #define DFLT_CONNECTMAXTRY           10
 
+#ifdef OLDXRDOUC
+#  include "XrdSysToOuc.h"
+#endif
+
 #ifndef ROOT_XProofProtocol
 #include "XProofProtocol.h"
 #endif
@@ -110,7 +114,7 @@ private:
    XReqErrorType       LowWrite(XPClientRequest *, const void *, int);
    bool                MatchStreamID(struct ServerResponseHeader *resp);
    XrdClientMessage   *SendRecv(XPClientRequest *req,
-                                const void *reqData, void **answData);
+                                const void *reqData, char **answData);
    virtual void        SetAsync(XrdClientAbsUnsolMsgHandler *uh);
 
    void                SetInterrupt();
@@ -130,13 +134,13 @@ public:
    const char         *GetUrl() { return (const char *) fUrl.GetUrl().c_str(); }
    const char         *GetLastErr() { return fLastErrMsg.c_str(); }
 
-   bool                IsValid() const { return fConnected; }
+   bool                IsValid() const;
 
    // Send, Recv interfaces
    virtual int         ReadRaw(void *buf, int len);
    virtual XrdClientMessage *ReadMsg();
    XrdClientMessage   *SendReq(XPClientRequest *req, const void *reqData,
-                               void **answData, const char *CmdName);
+                               char **answData, const char *CmdName);
    void                SetSID(kXR_char *sid);
    virtual int         WriteRaw(const void *buf, int len);
 

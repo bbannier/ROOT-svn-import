@@ -1,6 +1,6 @@
 /*
 
-  This program will add histograms and Trees from a list of root files and write them
+  This program will add histograms (see note) and Trees from a list of root files and write them
   to a target root file. The target file is newly created and must not be
   identical to one of the source files.
          
@@ -48,6 +48,9 @@
   (i.e. direct copy of the raw byte on disk). The "fast" mode is typically
   5 times faster than the mode unzipping and unstreaming the baskets.
    
+  NOTE: By default histograms are added. However if histograms have their bit kIsAverage
+        set, the contents are averaged instead of being summed. See TH1::Add.
+        
   Authors: Rene Brun, Dirk Geppert, Sven A. Schmidt, sven.schmidt@cern.ch
          : rewritten from scratch by Rene Brun (30 November 2005)
             to support files with nested directories.
@@ -189,7 +192,11 @@ void MergeRootfile( TDirectory *target, TList *sourcelist, Int_t isdir )
    path.Remove( 0, 2 );
 
    TDirectory *first_source = (TDirectory*)sourcelist->First();
-   THashList allNames;
+   Int_t nguess = sourcelist->GetSize()+1000;
+   THashList allNames(nguess);
+   ((THashList*)target->GetList())->Rehash(nguess);
+   ((THashList*)target->GetListOfKeys())->Rehash(nguess);
+   TList listH;
    while(first_source) {
       TDirectory *current_sourcedir = first_source->GetDirectory(path);
       if (!current_sourcedir) {
@@ -208,18 +215,17 @@ void MergeRootfile( TDirectory *target, TList *sourcelist, Int_t isdir )
          if (current_sourcedir == target) break;
          //keep only the highest cycle number for each key
          if (oldkey && !strcmp(oldkey->GetName(),key->GetName())) continue;
+         if (!strcmp(key->GetClassName(),"TProcessID")) {key->ReadObj(); continue;}
          if (allNames.FindObject(key->GetName())) continue;
          allNames.Add(new TObjString(key->GetName()));
-            
          // read object from first source file
-         current_sourcedir->cd();
+         //current_sourcedir->cd();
          TObject *obj = key->ReadObj();
 
          if ( obj->IsA()->InheritsFrom( TH1::Class() ) ) {
             // descendant of TH1 -> merge it
 
             TH1 *h1 = (TH1*)obj;
-            TList listH;
 
             // loop over all source files and add the content of the
             // correspondant histogram to the one pointed to by "h1"
@@ -229,7 +235,7 @@ void MergeRootfile( TDirectory *target, TList *sourcelist, Int_t isdir )
                TDirectory *ndir = nextsource->GetDirectory(path);
                if (ndir) {
                   ndir->cd();
-                  TKey *key2 = (TKey*)gDirectory->GetListOfKeys()->FindObject(h1->GetName());
+                  TKey *key2 = (TKey*)gDirectory->GetListOfKeys()->FindObject(key->GetName());
                   if (key2) {
                      TObject *hobj = key2->ReadObj();
                      hobj->ResetBit(kMustCleanup);
@@ -288,9 +294,27 @@ void MergeRootfile( TDirectory *target, TList *sourcelist, Int_t isdir )
             MergeRootfile( newdir, sourcelist,1);
 
          } else {
-            // object is of no type that we know or can handle
-            cout << "Unknown object type, name: " 
+            // object is of no type that we can merge 
+            cout << "Cannot merge object type, name: " 
                  << obj->GetName() << " title: " << obj->GetTitle() << endl;
+
+            // loop over all source files and write similar objects directly to the output file
+            TFile *nextsource = (TFile*)sourcelist->After( first_source );
+            while ( nextsource ) {
+               // make sure we are at the correct directory level by cd'ing to path
+               TDirectory *ndir = nextsource->GetDirectory(path);
+               if (ndir) {
+                  ndir->cd();
+                  TKey *key2 = (TKey*)gDirectory->GetListOfKeys()->FindObject(key->GetName());
+                  if (key2) {
+                     TObject *nobj = key2->ReadObj();
+                     nobj->ResetBit(kMustCleanup);
+                     target->WriteTObject(nobj, key2->GetName(), "SingleKey" );
+                     delete nobj;
+                  }
+               }
+               nextsource = (TFile*)sourcelist->After( nextsource );
+            }
          }
 
          // now write the merged histogram (which is "in" obj) to the target file
@@ -311,7 +335,7 @@ void MergeRootfile( TDirectory *target, TList *sourcelist, Int_t isdir )
                   delete globChain;
                }
             } else {
-               obj->Write( key->GetName() );
+               obj->Write( key->GetName(), TObject::kSingleKey );
             }
          }
          oldkey = key;

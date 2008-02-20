@@ -61,7 +61,7 @@ int memcmp();
 void* memcpy();
 #endif
 #if !defined(G__NOMATHLIB) && !defined(floor) \
-   && defined(G__FUNCPOINTER) && (_MSC_VER == 1400)
+   && defined(G__FUNCPOINTER) && (_MSC_VER >= 1400)
    static double G__floor_MSVC8(double f) {return floor(f);}
 #endif
 
@@ -225,7 +225,7 @@ G__COMPLETIONLIST G__completionlist[] = {
 #if defined(floor) || !defined(G__FUNCPOINTER)
 	{"floor",NULL},
 #else
-#if _MSC_VER == 1400
+#if _MSC_VER >= 1400
 	{"floor",(void (*)())G__floor_MSVC8},
 #else
 	{"floor",(void (*)())floor},
@@ -855,7 +855,7 @@ extern struct G__input_file G__ifile;
 
 int G__compiled_func(result7,funcname,libp,hash)
 G__value *result7;
-char *funcname;
+const char *funcname;
 struct G__param *libp;
 int hash;
 {

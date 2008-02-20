@@ -122,10 +122,6 @@ XrdProofConn::XrdProofConn(const char *url, char m, int psid, char capver,
                     " connection" << " to server "<<URLTAG);
    }
 
-   // Garbage-collect the obsolete physical connections, if any
-   if (fgConnMgr)
-      fgConnMgr->GarbageCollect();
-
    return;
 }
 
@@ -156,14 +152,14 @@ bool XrdProofConn::Init(const char *url)
 
    // Init connection manager (only once)
    if (!fgConnMgr) {
-      // We do not want the garbage collector thread: we will garbage collect
-      // after each new (logical) connection
-      EnvPutInt(NAME_STARTGARBAGECOLLECTORTHREAD, 0);
       if (!(fgConnMgr = new XrdClientConnectionMgr())) {
          TRACE(REQ,"XrdProofConn::Init: error initializing connection manager");
          return 0;
       }
    }
+
+   // Mutex
+   fMutex = new XrdSysRecMutex();
 
    // Parse Url
    fUrl.TakeUrl(XrdOucString(url));
@@ -318,13 +314,9 @@ int XrdProofConn::Connect()
 }
 
 //_____________________________________________________________________________
-void XrdProofConn::Close(const char *opt)
+void XrdProofConn::Close(const char *)
 {
-   // Close connection. Available options are (case insensitive)
-   //   'P'   force closing of the underlying physical connection
-   //   'S'   shutdown remote session, is any
-   // A session ID can be given using #...# signature, e.g. "#1#".
-   // Default is opt = "".
+   // Close connection.
 
    // Cleanup mutex
    SafeDelete(fMutex);
@@ -333,15 +325,9 @@ void XrdProofConn::Close(const char *opt)
    if (!fConnected)
       return;
 
-   // Parse options
-   bool hard = (opt) ? (strchr(opt,'P') || strchr(opt,'p')) : 0;
-
    // Close connection
-   if (fgConnMgr) {
-      fgConnMgr->Disconnect(GetLogConnID(), hard);
-      if (hard)
-         fgConnMgr->GarbageCollect();
-   }
+   if (fgConnMgr)
+      fgConnMgr->Disconnect(GetLogConnID(), 0);
 
    // Flag this action
    fConnected = 0;
@@ -384,7 +370,7 @@ XrdClientMessage *XrdProofConn::ReadMsg()
 
 //_____________________________________________________________________________
 XrdClientMessage *XrdProofConn::SendRecv(XPClientRequest *req, const void *reqData,
-                                         void **answData)
+                                         char **answData)
 {
    // SendRecv sends a command to the server and to get a response.
    // The header of the last response is returned as pointer to a XrdClientMessage.
@@ -392,9 +378,6 @@ XrdClientMessage *XrdProofConn::SendRecv(XPClientRequest *req, const void *reqDa
    // the buffer is internally allocated and must be freed by the caller.
    // If (*answData != 0) the program assumes that the caller has allocated
    // enough bytes to contain the reply.
-   if (!fMutex)
-      fMutex = new XrdSysRecMutex();
-   XrdSysMutexHelper l(*fMutex);
 
    XrdClientMessage *xmsg = 0;
 
@@ -447,11 +430,11 @@ XrdClientMessage *XrdProofConn::SendRecv(XPClientRequest *req, const void *reqDa
       if ((xst == kXR_ok) || (xst == kXR_oksofar) || (xst == kXR_authmore)) {
          if (answData && xmsg->DataLen() > 0) {
             if (needalloc) {
-               *answData = realloc(*answData, dataRecvSize + xmsg->DataLen());
+               *answData = (char *) realloc(*answData, dataRecvSize + xmsg->DataLen());
                if (!(*answData)) {
                   // Memory resources exhausted
                   TRACE(REQ, "XrdProofConn::SendRecv: reallocating "<<dataRecvSize<<" bytes");
-                  free(*answData);
+                  free((void *) *answData);
                   *answData = 0;
                   SafeDelete(xmsg);
                   return xmsg;
@@ -459,7 +442,7 @@ XrdClientMessage *XrdProofConn::SendRecv(XPClientRequest *req, const void *reqDa
             }
             // Now we copy the content of the Xmsg to the buffer where
             // the data are needed
-            memcpy(((kXR_char *)(*answData))+dataRecvSize,
+            memcpy((*answData)+dataRecvSize,
                    xmsg->GetData(), xmsg->DataLen());
             //
             // Dump the buffer *answData, if requested
@@ -499,13 +482,17 @@ XrdClientMessage *XrdProofConn::SendRecv(XPClientRequest *req, const void *reqDa
 
 //_____________________________________________________________________________
 XrdClientMessage *XrdProofConn::SendReq(XPClientRequest *req, const void *reqData,
-                                        void **answData, const char *CmdName)
+                                        char **answData, const char *CmdName)
 {
    // SendReq tries to send a single command for a number of times
    XrdClientMessage *answMex = 0;
 
    int retry = 0;
    bool resp = 0, abortcmd = 0;
+
+   XrdSysMutexHelper l(*fMutex);
+
+   int maxTry = (fgMaxTry > -1) ? fgMaxTry : kXR_maxReqRetry;
 
    // We need the unmarshalled request for retries
    XPClientRequest reqsave;
@@ -528,7 +515,7 @@ XrdClientMessage *XrdProofConn::SendReq(XPClientRequest *req, const void *reqDat
       retry++;
       if (!answMex || answMex->IsError()) {
          TRACE(REQ,"XrdProofConn::SendReq: communication error detected with "<<URLTAG);
-         if (retry > kXR_maxReqRetry) {
+         if (retry > maxTry) {
             TRACE(REQ,"XrdProofConn::SendReq: max number of retries reached - Abort");
             abortcmd = 1;
          } else {
@@ -547,7 +534,7 @@ XrdClientMessage *XrdProofConn::SendReq(XPClientRequest *req, const void *reqDat
          if (!resp)
             abortcmd = CheckErrorStatus(answMex, retry, CmdName);
 
-         if (retry > kXR_maxReqRetry) {
+         if (retry > maxTry) {
             TRACE(REQ,"XrdProofConn::SendReq: max number of retries reached - Abort");
             abortcmd = 1;
          }
@@ -932,8 +919,11 @@ bool XrdProofConn::Login()
    reqhdr.login.capver[0] = (char)fCapVer;
 
    // We call SendReq, the function devoted to sending commands.
-   TRACE(REQ,"XrdProofConn::Login: logging into server "<<URLTAG<<
-         "; pid="<<reqhdr.login.pid<<"; uid=" << reqhdr.login.username);
+   if (TRACING(REQ)) {
+      XrdOucString usr((const char *)&reqhdr.login.username[0], 8);
+      TRACE(REQ,"XrdProofConn::Login: logging into server "<<URLTAG<<
+                "; pid="<<reqhdr.login.pid<<"; uid=" << usr);
+   }
 
    // Finish to fill up and ...
    SetSID(reqhdr.header.streamid);
@@ -959,7 +949,7 @@ bool XrdProofConn::Login()
       memcpy(&reqhdr, &reqsave, sizeof(XPClientRequest));
 
       XrdClientMessage *xrsp = SendReq(&reqhdr, buf,
-                                       (void **)&pltmp, "XrdProofConn::Login");
+                                       &pltmp, "XrdProofConn::Login");
 
       // If positive answer
       secp = 0;
@@ -1180,7 +1170,7 @@ XrdSecProtocol *XrdProofConn::Authenticate(char *plist, int plsiz)
          reqhdr.header.requestid = kXP_auth;
          reqhdr.header.dlen = credentials->size;
          xrsp = SendReq(&reqhdr, credentials->buffer,
-                               (void **)&srvans, "XrdProofConn::Authenticate");
+                                 &srvans, "XrdProofConn::Authenticate");
          SafeDelete(credentials);
          status = (xrsp) ? xrsp->HeaderStatus() : kXR_error;
          dlen = (xrsp) ? xrsp->DataLen() : 0;
@@ -1242,4 +1232,16 @@ void XrdProofConn::SetInterrupt()
 
    if (fPhyConn)
       fPhyConn->SetInterrupt();
+}
+
+//_____________________________________________________________________________
+bool XrdProofConn::IsValid() const
+{
+   // Test validity of this connection
+
+   if (fConnected)
+      if (fPhyConn && fPhyConn->IsValid())
+         return 1;
+   // Invalid
+   return 0;
 }

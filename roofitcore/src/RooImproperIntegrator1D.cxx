@@ -28,10 +28,13 @@
 #include "RooNumber.h"
 #include "RooNumIntFactory.h"
 #include "RooArgSet.h"
+#include "RooMsgService.h"
 
 #include "Riostream.h"
 #include <math.h>
 #include "TClass.h"
+
+
 
 ClassImp(RooImproperIntegrator1D)
 ;
@@ -102,7 +105,7 @@ RooAbsIntegrator* RooImproperIntegrator1D::clone(const RooAbsFunc& function, con
 void RooImproperIntegrator1D::initialize(const RooAbsFunc* function)
 {
   if(!isValid()) {
-    cout << "RooImproperIntegrator: cannot integrate invalid function" << endl;
+    oocoutE((TObject*)0,Integration) << "RooImproperIntegrator: cannot integrate invalid function" << endl;
     return;
   }
   // Create a new function object that uses the change of vars: x -> 1/x
@@ -176,7 +179,7 @@ Bool_t RooImproperIntegrator1D::setLimits(Double_t xmin, Double_t xmax) {
   // if this object was constructed to always use our integrand's limits.
 
   if(_useIntegrandLimits) {
-    cout << "RooIntegrator1D::setLimits: cannot override integrand's limits" << endl;
+    oocoutE((TObject*)0,Integration) << "RooIntegrator1D::setLimits: cannot override integrand's limits" << endl;
     return kFALSE;
   }
 

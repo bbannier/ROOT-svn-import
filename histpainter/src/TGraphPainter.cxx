@@ -134,7 +134,7 @@ TList *TGraphPainter::GetContourList(Double_t contour)
    Double_t x0, y0, z0;
    Double_t x1, y1, z1;
    Double_t x2, y2, z2;
-   Int_t t[3],it,i0,i1,i2;
+   Int_t t[3],i,it,i0,i1,i2;
 
    // Allocate space to store the segments. They cannot be more than the
    // number of triangles.
@@ -143,6 +143,12 @@ TList *TGraphPainter::GetContourList(Double_t contour)
    Double_t *ys0 = new Double_t[fNdt];
    Double_t *xs1 = new Double_t[fNdt];
    Double_t *ys1 = new Double_t[fNdt];
+   for (i=0;i<fNdt;i++) {
+      xs0[i] = 0.;
+      ys0[i] = 0.;
+      xs1[i] = 0.;
+      ys1[i] = 0.;
+   }
    Int_t nbSeg   = 0;
 
    // Loop over all the triangles in order to find all the line segments
@@ -611,6 +617,8 @@ void TGraphPainter::PaintPolyMarker(Option_t *option)
    Double_t *ym = new Double_t[fNpoints];
    Int_t    npd = 0;
    for (it=0; it<fNpoints; it++) {
+      xm[it] = 0;
+      ym[it] = 0;
       if(fX[it] < fXmin || fX[it] > fXmax) continue;
       if(fY[it] < fYmin || fY[it] > fYmax) continue;
       npd++;

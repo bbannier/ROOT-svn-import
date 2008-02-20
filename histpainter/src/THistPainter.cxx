@@ -59,17 +59,17 @@
 
 
 //______________________________________________________________________________
-//   The histogram painter class
-//   ===========================
-//
-//  Histograms are drawn via the THistPainter class. Each histogram has
-//  a pointer to its own painter (to be usable in a multithreaded program).
-//  When the canvas has to be redrawn, the Paint function of the objects
-//  in the pad is called. In case of histograms, TH1::Paint invokes directly
-//  THistPainter::Paint.
-//
-//    See THistPainter::Paint for the list of drawing options
-//    and examples.
+/* Begin_Html
+<center><h2>The histogram painter class</h2></center>
+
+Histograms are drawn via the THistPainter class. Each histogram has
+a pointer to its own painter (to be usable in a multithreaded program).
+When the canvas has to be redrawn, the Paint function of the objects
+in the pad is called. In case of histograms, TH1::Paint invokes directly
+THistPainter::Paint.
+<p>
+See THistPainter::Paint for the list of drawing options and examples.
+End_Html */
 
 TH1 *gCurrentHist = 0;
 
@@ -335,7 +335,7 @@ void THistPainter::DrawPanel()
    }
    TVirtualPadEditor *editor = TVirtualPadEditor::GetPadEditor();
    editor->Show();
-   gROOT->ProcessLine(Form("((TCanvas*)0x%x)->Selected((TVirtualPad*)0x%x,(TObject*)0x%x,1)",gPad->GetCanvas(),gPad,fH));
+   gROOT->ProcessLine(Form("((TCanvas*)0x%lx)->Selected((TVirtualPad*)0x%lx,(TObject*)0x%lx,1)",gPad->GetCanvas(),gPad,fH));
 }
 
 
@@ -467,7 +467,7 @@ void THistPainter::FitPanel()
    }
 
    if (!TClass::GetClass("TFitEditor")) gSystem->Load("libFitPanel");
-   gROOT->ProcessLine(Form("TFitEditor::Open((TVirtualPad*)0x%x,(TObject*)0x%x)",gPad,fH));
+   gROOT->ProcessLine(Form("TFitEditor::Open((TVirtualPad*)0x%lx,(TObject*)0x%lx)",gPad,fH));
 }
 
 
@@ -632,6 +632,8 @@ Int_t THistPainter::MakeChopt(Option_t *choptin)
 
    Hoption.HighRes  = 0;
 
+   Hoption.Zero     = 0;
+
    //check for graphical cuts
    MakeCuts(chopt);
 
@@ -690,8 +692,9 @@ Int_t THistPainter::MakeChopt(Option_t *choptin)
       Hoption.Lego = 1; strncpy(l,"    ",4);
       if (l[4] == '1') { Hoption.Lego = 11; l[4] = ' '; }
       if (l[4] == '2') { Hoption.Lego = 12; l[4] = ' '; }
-      l = strstr(chopt,"FB");   if (l) { Hoption.FrontBox = 0; strncpy(l,"  ",2); }
-      l = strstr(chopt,"BB");   if (l) { Hoption.BackBox = 0;  strncpy(l,"  ",2); }
+      l = strstr(chopt,"FB"); if (l) { Hoption.FrontBox = 0; strncpy(l,"  ",2); }
+      l = strstr(chopt,"BB"); if (l) { Hoption.BackBox = 0;  strncpy(l,"  ",2); }
+      l = strstr(chopt,"0");  if (l) { Hoption.Zero = 1;  strncpy(l," ",1); }
    }
 
    l = strstr(chopt,"SURF");
@@ -990,6 +993,8 @@ void THistPainter::Paint(Option_t *option)
    //               together with the required option (eg "hist same c").
    //               The "HIST" option can also be used to plot only the histogram
    //               and not the associated function(s).
+   //    "FUNC"   : When an histogram has a fitted function, this option allows
+   //               to draw the fit result only. 
    //    "SAME"   : Superimpose on previous picture in the same pad
    //    "CYL"    : Use Cylindrical coordinates. The X coordinate is mapped on
    //               the angle and the Y coordinate on the cylinder length.
@@ -1002,6 +1007,8 @@ void THistPainter::Paint(Option_t *option)
    //    "LEGO"   : Draw a lego plot with hidden line removal
    //    "LEGO1"  : Draw a lego plot with hidden surface removal
    //    "LEGO2"  : Draw a lego plot using colors to show the cell contents
+   //               When the option "0" is used with any LEGO option, the
+   //               empty bins are not drawn.
    //    "SURF"   : Draw a surface plot with hidden line removal
    //    "SURF1"  : Draw a surface plot with hidden surface removal
    //    "SURF2"  : Draw a surface plot using colors to show the cell contents
@@ -1053,6 +1060,9 @@ void THistPainter::Paint(Option_t *option)
    //               content's absolute value. A sunken button is drawn for negative values
    //               a raised one for positive.
    //    "COL"    : a box is drawn for each cell with a color scale varying with contents
+   //               All the none empty bins are painted. Empty bins are not painted
+   //               unless some bins have a negative content because in that case the null
+   //               bins might be not empty.
    //    "COLZ"   : same as "COL". In addition the color palette is also drawn
    //    "CONT"   : Draw a contour plot (same as CONT0)
    //    "CONT0"  : Draw a contour plot using surface colors to distinguish contours
@@ -1379,7 +1389,6 @@ void THistPainter::Paint(Option_t *option)
    //End_Html
    //
    //
-   //
    //  The LEGO options
    //  ================
    //    In a lego plot the cell contents are drawn as 3-d boxes, with
@@ -1392,8 +1401,11 @@ void THistPainter::Paint(Option_t *option)
    //    "LEGO1"  : Draw a lego plot with hidden surface removal
    //    "LEGO2"  : Draw a lego plot using colors to show the cell contents
    //
-   //      See TStyle::SeTPaletteAxis to change the color palette.
-   //      We suggest you use palette 1 with the call
+   //    When the option "0" is used with any LEGO option, the empty
+   //    bins are not drawn.
+   //
+   //    See TStyle::SeTPaletteAxis to change the color palette.
+   //    We suggest you use palette 1 with the call
    //        gStyle->SetColorPalette(1)
    //
    //Begin_Html
@@ -1504,6 +1516,152 @@ void THistPainter::Paint(Option_t *option)
    //   By default a 3-d scatter plot is drawn
    //   If option "BOX" is specified, a 3-D box with a volume proportional
    //   to the cell content is drawn.
+   //
+   // Drawing using OpenGL
+   // ====================
+   //
+   // The class TGLHistPainter allows to paint data set using the OpenGL 3D
+   // graphics library. The plotting options start with GL keyword.
+   //
+   //   General information: plot types and supported options
+   //   =====================================================
+   //
+   //   The following types of plots are provided:
+   //
+   //   * Lego:
+   //      The supported options are:
+   //         "GLLEGO"  : Draw a lego plot.
+   //         "GLLEGO2" : Bins with color levels.
+   //         "GLLEGO3" : Cylindrical bars.
+   //
+   //   Lego painter in cartesian supports logarithmic scales for X, Y, Z.
+   //   In polar only Z axis can be logarithmic, in cylindrical only Y.
+   //
+   //   * Surfaces: (TF2 and TH2 with "GLSURF" options)
+   //      The supported options are:
+   //         "GLSURF"  : Draw a surface.
+   //         "GLSURF1" : Surface with color levels
+   //         "GLSURF2" : The same as "GLSURF1" but without polygon outlines.
+   //         "GLSURF3" : Color level projection on top of plot (works only
+   //                     in cartesian coordinate system).
+   //         "GLSURF4" : Same as "GLSURF" but without polygon outlines.
+   //
+   //   The surface painting in cartesian coordinates supports logarithmic
+   //   scales along X, Y, Z axis.
+   //   In polar coordinates only the Z axis can be logarithmic, in cylindrical
+   //   coordinates only the Y axis.
+   //
+   //   Additional options to SURF and LEGO - Coordinate systems:
+   //      " "   : Default, cartesian coordinates system.
+   //      "POL" : Polar coordinates system.
+   //      "CYL" : Cylindrical coordinates system.
+   //      "SPH" : Spherical coordinates system.
+   //
+   //   TH3 as boxes (spheres)
+   //   ======================
+   //      The supported options are:
+   //         "GLBOX" : TH3 as a set of boxes, size of box is proportional to
+   //                   bin content.
+   //         "GLBOX1": the same as "glbox", but spheres are drawn instead of
+   //                   boxes.
+   //
+   //   TH3 as iso-surface(s)
+   //   =====================
+   //      The supported option is:
+   //         "GLISO" : TH3 is drawn using iso-surfaces.
+   //
+   //   TF3 (implicit function)
+   //   =======================
+   //      The supported option is:
+   //         "GLTF3" : Draw a TF3.
+   //
+   //   Parametric surfaces
+   //   ===================
+   //      $ROOTSYS/tutorials/gl/glparametric.C</tt> shows how to create
+   //      parametric equations and visualize the surface.
+   //
+   //   Interaction with the plots
+   //   ==========================
+   //
+   //   All the interactions are implemented via standard methods
+   //   DistancetoPrimitive and ExecuteEvent. That's why all the interactions
+   //   with the OpenGL plots are possible only when the mouse cursor is in the
+   //   plot's area (the plot's area is the part of a the pad occupied by
+   //   gl-produced picture). If the mouse cursor is not above gl-picture,
+   //   the standard pad interaction is performed.
+   //
+   //   Selectable parts
+   //   ================
+   //      Different parts of the plot can be selected:
+   //         xoz, yoz, xoy back planes:
+   //            When such a plane selected, it's highlighted in green if the
+   //            dynamic slicing by this plane is supported, and it's
+   //            highlighted in red, if the dynamic slicing is not supported.
+   //         The plot itself:
+   //            On surfaces, the selected surface is outlined in red. (TF3 and
+   //            ISO are not outlined). On lego plots, the selected bin is
+   //            highlihted. The bin number and content are displayed in pad's
+   //            status bar. In box plots, the box or sphere is highlighted and
+   //            the bin info is displayed in pad's status bar.
+   //
+   //   Rotation and zooming
+   //   ====================
+   //      Rotation:
+   //         When the plot is selected, it can be rotated by pressing and
+   //         holding the left mouse button and move the cursor.
+   //      Zoom/Unzoom:
+   //         Mouse wheel or 'j', 'J', 'k', 'K' keys.
+   //
+   //   Panning
+   //   =======
+   //      The selected plot can be moved in a pad's area by pressing and
+   //      holding the left mouse button and the shift key.
+   //
+   //   Box cut
+   //   =======
+   //      Surface, iso, box, TF3 and parametric painters support box cut by
+   //      pressing the 'c' or 'C' key when the mouse cursor is in a plot's
+   //      area. That will display a transparent box, cutting away part of the
+   //      surface (or boxes) in order to show internal part of plot. This box
+   //      can be moved inside the plot's area (the full size of the box is
+   //      equal to the plot's surrounding box) by selecting one of the box
+   //      cut axes and pressing the left mouse button to move it.
+   //
+   //   Plot specific interactions (dynamic slicing etc.)
+   //   =================================================
+   //      Currently, all gl-plots support some form of slicing. When back plane
+   //      is selected (and if it's highlighted in green) you can press and hold
+   //      left mouse button and shift key and move this back plane inside
+   //      plot's area, creating the slice. During this "slicing" plot becomes
+   //      semi-transparent. To remove all slices (and projected curves for
+   //      surfaces) double click with left mouse button in a plot's area.
+   //
+   //   Surface with option "GLSURF"
+   //   ============================
+   //      The surface profile is displayed on the slicing plane.
+   //      The profile projection is drawn on the back plane
+   //      by pressing 'p' or 'P' key.
+   //
+   //   TF3
+   //   ===
+   //      The contour plot is drawn on the slicing plane. For TF3 the color
+   //      scheme can be changed by pressing 's' or 'S'.
+   //
+   //   Box
+   //   ===
+   //      The contour plot corresponding to slice plane position is drawn in
+   //      real time.
+   //
+   //   Iso
+   //   ===
+   //      Slicing is similar to "GLBOX" option.
+   //
+   //   Parametric plot
+   //   ===============
+   //      No slicing. Additional keys: 's' or 'S' to change color scheme -
+   //      about 20 color schemes supported ('s' for "scheme"); 'l' or 'L' to
+   //      increase number of polygons ('l' for "level" of details), 'w' or 'W'
+   //      to show outlines ('w' for "wireframe").
 
    if (fH->GetBuffer()) fH->BufferEmpty(-1);
 
@@ -1520,7 +1678,7 @@ void THistPainter::Paint(Option_t *option)
    if (Hoption.Spec) {
       if (!TableInit()) return;
       if (!TClass::GetClass("TSpectrum2Painter")) gSystem->Load("libSpectrumPainter");
-      gROOT->ProcessLineFast(Form("TSpectrum2Painter::PaintSpectrum((TH2F*)0x%x,\"%s\")",fH,option));
+      gROOT->ProcessLineFast(Form("TSpectrum2Painter::PaintSpectrum((TH2F*)0x%lx,\"%s\")",fH,option));
       return;
    }
 
@@ -1627,7 +1785,7 @@ void THistPainter::Paint(Option_t *option)
 
    //          do not draw histogram if error bars required
    if (!Hoption.Error) {
-      if (Hoption.Hist) PaintHist(option);
+      if (Hoption.Hist && !Hoption.Bar) PaintHist(option);
    }
 
    //         test for error bars or option E
@@ -2205,8 +2363,8 @@ void THistPainter::PaintBoxes(Option_t *)
          return;
       }
    } else {
-      zmin = 0;
       zmax = TMath::Max(TMath::Abs(zmin),TMath::Abs(zmax));
+      zmin = 0;
    }
 
    // In case of option SAME, zmin and zmax values are taken from the
@@ -2372,10 +2530,16 @@ void THistPainter::PaintColorLevels(Option_t *)
 {
    // Control function to draw a table as a color plot.
    //
-   //       For each cell (i,j) a box is drawn with a color proportional
-   //       to the cell content.
-   //       The color table used is defined in the current style (gStyle).
-   //       The color palette in TStyle can be modified via TStyle::SeTPaletteAxis.
+   // For each cell (i,j) a box is drawn with a color proportional
+   // to the cell content.
+   //
+   // The color table used is defined in the current style (gStyle).
+   //
+   // The color palette in TStyle can be modified via TStyle::SeTPaletteAxis.
+   //
+   // All the none empty bins are painted. Empty bins are not painted unless
+   // some bins have a negative content because in that case the null bins
+   // might be not empty.
    //Begin_Html
    /*
    <img src="gif/PaintCol.gif">
@@ -2871,6 +3035,7 @@ theEND:
    fH->SetLineStyle(linesav);
    fH->SetLineColor(colorsav);
    fH->SetFillColor(fillsav);
+   if (np) delete [] np;
    delete [] xarr;
    delete [] yarr;
    delete [] itarr;
@@ -4204,20 +4369,23 @@ void THistPainter::PaintLego(Option_t *)
 {
    // Control function to draw a table as a lego plot.
    //
-   //      In a lego plot, cell contents are represented as 3-d boxes.
-   //      The height of the box is proportional to the cell content.
+   //   In a lego plot, cell contents are represented as 3-d boxes.
+   //   The height of the box is proportional to the cell content.
    //
-   //      A lego plot can be represented in several coordinate systems.
-   //      Default system is Cartesian coordinates.
-   //      Possible systems are CYL,POL,SPH,PSR.
+   //   A lego plot can be represented in several coordinate systems.
+   //   Default system is Cartesian coordinates.
+   //   Possible systems are CYL,POL,SPH,PSR.
    //
-   //      See THistPainter::Draw for the list of Lego options.
-   //      See TPainter3dAlgorithms for more examples of lego options.
+   //   "LEGO"   : Draw a lego plot with hidden line removal
+   //   "LEGO1"  : Draw a lego plot with hidden surface removal
+   //   "LEGO2"  : Draw a lego plot using colors to show the cell contents
    //
-   //      See TStyle::SeTPaletteAxis to change the color palette.
-   //      It is suggested to use palette 1 via the call
+   //   When the option "0" is used with any LEGO option, the empty
+   //   bins are not drawn.
+   //
+   //   See TStyle::SeTPaletteAxis to change the color palette.
+   //   It is suggested to use palette 1 via the call
    //      gStyle->SetColorPalette(1)
-   //
    //Begin_Html
    /*
    <img src="gif/PaintLego1.gif">

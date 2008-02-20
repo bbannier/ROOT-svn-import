@@ -42,7 +42,8 @@ if [ "$LIBDIR" = "$ROOTSYS/lib" ]; then
 fi
 
 EXPLLINKLIBS="\$LinkedLibs"
-if [ "$ARCH" = "macosx" ] || [ "$ARCH" = "macosxxlc" ]; then
+if [ "$ARCH" = "macosx" ] || [ "$ARCH" = "macosxxlc" ] || \
+   [ "$ARCH" = "macosx64" ] || [ "$ARCH" = "macosxicc" ]; then
    macosx_minor=`sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2`
    SOEXT="so"
    if [ $macosx_minor -ge 3 ]; then
@@ -85,7 +86,6 @@ fi
 
 rm -f __compiledata
 
-echo "Running $0"
 echo "/* This is file is automatically generated */" > __compiledata
 echo "#define BUILD_ARCH \"$ARCH\"" >> __compiledata
 echo "#define BUILD_NODE \""`uname -a`"\" " >> __compiledata
@@ -113,14 +113,15 @@ echo "#define SOEXT \"$SOEXT\" " >> __compiledata
 if [ -r $COMPILEDATA ]; then
    diff __compiledata $COMPILEDATA > /dev/null; status=$?;
    if [ "$status" -ne "0" ]; then
+      echo "Running $0"
       echo "Changing $COMPILEDATA"
       mv __compiledata $COMPILEDATA;
    else
       rm -f __compiledata; fi
 else
+   echo "Running $0"
    echo "Making $COMPILEDATA"
    mv __compiledata $COMPILEDATA; fi
 )
 
 exit 0
-

@@ -16,10 +16,7 @@
 #pragma link C++ namespace ROOT::Math;
 
 
-#include "LinkDef_SpecFunc.h" 
-#include "LinkDef_StatFunc.h" 
-
-
+#include "LinkDef_Func.h" 
 #include "LinkDef_RootFinding.h"
 
 
@@ -27,17 +24,16 @@
 // virtual inheritance gives problem when making dictionary on Windows 
 #pragma link C++ class ROOT::Math::ParamFunction+;
 #pragma link C++ class ROOT::Math::Polynomial+;
+#else 
+#pragma link C++ class ROOT::Math::ParamFunction-;
+#pragma link C++ class ROOT::Math::Polynomial-;
 #endif
 
 #pragma link C++ class ROOT::Math::Chebyshev+;
-
-
 #pragma link C++ class ROOT::Math::Derivator+;
 
 
-#pragma extra_include "TF1.h";
-
-// maybe idem with IGenFunction... to be seen after checking with Philippe
+//#pragma extra_include "TF1.h";
 
 
 #pragma link C++ namespace ROOT::Math::Integration;
@@ -46,10 +42,9 @@
 #pragma link C++ namespace ROOT::Math::Minim1D;
 #pragma link C++ class ROOT::Math::Minimizer1D+;
 
-
 #pragma link C++ class ROOT::Math::Interpolator+;
 
-
+// random  numbers
 #pragma link C++ class ROOT::Math::GSLRandomEngine+;
 
 #pragma link C++ class ROOT::Math::GSLRngMT+;
@@ -65,11 +60,19 @@
 
 #pragma link C++ class ROOT::Math::GSLMinimizer+;
 #pragma link C++ class ROOT::Math::GSLSimAnMinimizer+;
+#pragma link C++ class ROOT::Math::GSLSimAnFunc+;
+#pragma link C++ class ROOT::Math::GSLSimAnParams+;
+#pragma link C++ class ROOT::Math::GSLSimAnnealing+;
 
-#ifndef _WIN32  // exclude for same problem of virtual inheritance
-#pragma link C++ class ROOT::Math::GSLNLSMinimizer;
-#pragma link C++ class ROOT::Math::LSResidualFunc+;
-#endif
+//#pragma link C++ class std::vector<ROOT::Math::IGradientFunctionMultiDim *>+;
+#pragma link C++ class ROOT::Math::GSLNLSMinimizer-;
+#pragma link C++ class ROOT::Math::LSResidualFunc-;
+
+// #ifndef _WIN32  // exclude for same problem of virtual inheritance
+// #pragma link C++ class ROOT::Math::LSResidualFunc+;
+// #else
+// #pragma link C++ class ROOT::Math::LSResidualFunc-;
+// #endif
 
 #pragma link C++ class ROOT::Math::GSLMCIntegrator+;
 

@@ -94,11 +94,11 @@ public:
       Int_t fLast;
    };
    struct Mesh_t {
-      std::vector<Range_t>   fBoxRanges;
+      //std::vector<Range_t>   fBoxRanges;
       std::vector<TriFace_t> fMesh;
       void Swap(Mesh_t &rhs)
       {
-         std::swap(fBoxRanges, rhs.fBoxRanges);
+         //std::swap(fBoxRanges, rhs.fBoxRanges);
          std::swap(fMesh,      rhs.fMesh);
       }
    };
@@ -160,7 +160,7 @@ private:
    TGLIsoPainter(const TGLIsoPainter &);
    TGLIsoPainter &operator = (const TGLIsoPainter &);
 
-   ClassDef(TGLIsoPainter, 0) //Iso option for TH3
+   ClassDef(TGLIsoPainter, 0) // Iso option for TH3.
 };
 
 #endif

@@ -69,39 +69,39 @@ namespace Math {
    class GSLIntegrationWorkspace;
    class GSLFunctionWrapper;
    
-   
+   //_________________________________________________________________________
    /**
       
-    Class for performing numerical integration of a function in one dimension.
-    It uses the numerical integration algorithms of GSL, which reimplements the
-    algorithms used in the QUADPACK, a numerical integration package written in Fortran.
+   Class for performing numerical integration of a function in one dimension.
+   It uses the numerical integration algorithms of GSL, which reimplements the
+   algorithms used in the QUADPACK, a numerical integration package written in Fortran.
     
-    Various types of adaptive and non-adaptive integration are supported. These include
-    integration over infinite and semi-infinite ranges and singular integrals.
+   Various types of adaptive and non-adaptive integration are supported. These include
+   integration over infinite and semi-infinite ranges and singular integrals.
     
-    The integration type is selected using the Integration::type enumeration
-    in the class constructor.
-    The default type is adaptive integration with singularity
-    (ADAPTIVESINGULAR or QAGS in the QUADPACK convention) applying a Gauss-Kronrod 21-point integration rule.
-    In the case of ADAPTIVE type, the integration rule can also be specified via the
-    Integration::GKRule. The default rule is 31 points.
+   The integration type is selected using the Integration::type enumeration
+   in the class constructor.
+   The default type is adaptive integration with singularity
+   (ADAPTIVESINGULAR or QAGS in the QUADPACK convention) applying a Gauss-Kronrod 21-point integration rule.
+   In the case of ADAPTIVE type, the integration rule can also be specified via the
+   Integration::GKRule. The default rule is 31 points.
     
-    In the case of integration over infinite and semi-infinite ranges, the type used is always
-    ADAPTIVESINGULAR applying a transformation from the original interval into (0,1).
+   In the case of integration over infinite and semi-infinite ranges, the type used is always
+   ADAPTIVESINGULAR applying a transformation from the original interval into (0,1).
     
-    The ADAPTIVESINGULAR type is the most sophicticated type. When performances are
-    important, it is then recommened to use the NONADAPTIVE type in case of smooth functions or
-    ADAPTIVE with a lower Gauss-Kronrod rule.
+   The ADAPTIVESINGULAR type is the most sophicticated type. When performances are
+   important, it is then recommened to use the NONADAPTIVE type in case of smooth functions or
+   ADAPTIVE with a lower Gauss-Kronrod rule.
     
-    For detailed description on GSL integration algorithms see the
-    <A HREF="http://www.gnu.org/software/gsl/manual/html_node/Numerical-Integration.html">GSL Manual</A>.
+   For detailed description on GSL integration algorithms see the
+   <A HREF="http://www.gnu.org/software/gsl/manual/html_node/Numerical-Integration.html">GSL Manual</A>.
     
     
-    @ingroup Integration
-    */
+   @ingroup Integration
+   */
    
    
-   class GSLIntegrator : public VirtualIntegrator  {
+   class GSLIntegrator : public VirtualIntegratorOneDim  {
       
    public:
       
@@ -152,11 +152,12 @@ namespace Math {
           This is used by the plug-in manager (need a char * instead of enumerations)
          
          @param type type of integration. The possible types are defined in the Integration::Type enumeration
+         @param rule Gauss-Kronrod rule (from 1 to 6)
          @param absTol desired absolute Error
          @param relTol desired relative Error
          @param size maximum number of sub-intervals
          */            
-      GSLIntegrator(const char *  type, double absTol, double relTol, size_t size );
+      GSLIntegrator(const char *  type, int rule, double absTol, double relTol, size_t size );
       
       virtual ~GSLIntegrator();
       //~GSLIntegrator();
@@ -181,9 +182,10 @@ namespace Math {
          
          
       void SetFunction(const IGenFunction &f, bool copyFunc = false); 
-      using VirtualIntegrator::SetFunction;
 
-      
+      /**
+         Set function from a GSL pointer function type 
+       */
       void SetFunction( GSLFuncPointer f, void * p = 0); 
       
       // methods using IGenFunction
@@ -256,7 +258,7 @@ namespace Math {
        */
       
       double Integral(double a, double b);
-      using VirtualIntegrator::Integral;
+
       
       /**
          evaluate the Integral over the infinite interval (-inf,+inf) using the function previously set with GSLIntegrator::SetFunction method.

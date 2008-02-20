@@ -376,7 +376,7 @@ public:
    TestShutter(const TGWindow *p, const TGWindow *main, UInt_t w, UInt_t h);
    ~TestShutter();
 
-   void AddShutterItem(const char *name, shutterData_t data[]);
+   void AddShutterItem(const char *name, shutterData_t *data);
 
    // slots
    void CloseWindow();
@@ -632,7 +632,6 @@ TestMainFrame::TestMainFrame(const TGWindow *p, UInt_t w, UInt_t h)
    fCascadeMenu->AddEntry("ID = 5&3", 53);
    fCascadeMenu->AddSeparator();
    fCascadeMenu->AddPopup("&Cascaded 1", fCascade1Menu);
-   fCascadeMenu->AddPopup("C&ascaded 2", fCascade2Menu);
 
    fMenuTest = new TGPopupMenu(gClient->GetRoot());
    fMenuTest->AddLabel("Test different features...");
@@ -1230,6 +1229,9 @@ void TestDialog::DoOK()
 {
    fFillHistos = kFALSE;
    printf("\nTerminating dialog: OK pressed\n");
+   // Add protection against double-clicks
+   fOkButton->SetState(kButtonDisabled);
+   fCancelButton->SetState(kButtonDisabled);
 
    // Send a close message to the main frame. This will trigger the
    // emission of a CloseWindow() signal, which will then call
@@ -1252,6 +1254,9 @@ void TestDialog::DoCancel()
 {
    fFillHistos = kFALSE;
    printf("\nTerminating dialog: Cancel pressed\n");
+   // Add protection against double-clicks
+   fOkButton->SetState(kButtonDisabled);
+   fCancelButton->SetState(kButtonDisabled);
    TTimer::SingleShot(150, "TestDialog", this, "CloseWindow()");
    // Close the Ged editor if it was activated.
    if (TVirtualPadEditor::GetPadEditor(kFALSE) != 0)
@@ -1734,39 +1739,60 @@ void TestSliders::DoSlider(Int_t pos)
    char buf[32];
    sprintf(buf, "%d", pos);
 
+#ifdef CINT_FIXED
    switch (id) {
-      case HSId1:
-         fTbh1->Clear();
-         fTbh1->AddText(0, buf);
-         // Re-align the cursor with the characters.
-         fTeh1->SetCursorPosition(fTeh1->GetCursorPosition());
-         fTeh1->Deselect();
-         gClient->NeedRedraw(fTeh1);
-         break;
-      case VSId1:
-         fTbv1->Clear();
-         fTbv1->AddText(0, buf);
-         fTev1->SetCursorPosition(fTev1->GetCursorPosition());
-         fTev1->Deselect();
-         gClient->NeedRedraw(fTev1);
-         break;
-      case HSId2:
-         fTbh2->Clear();
-         fTbh2->AddText(0, buf);
-         fTeh2->SetCursorPosition(fTeh2->GetCursorPosition());
-         fTeh2->Deselect();
-         gClient->NeedRedraw(fTeh2);
-         break;
-      case VSId2:
-         sprintf(buf, "%f", fVslider2->GetMinPosition());
-         fTbv2->Clear();
-         fTbv2->AddText(0, buf);
-         fTev2->SetCursorPosition(fTev2->GetCursorPosition());
-         fTev2->Deselect();
-         gClient->NeedRedraw(fTev2);
-         break;
-      default:
-         break;
+   case HSId1:
+#else
+   if (id == HSId1) {
+#endif
+      fTbh1->Clear();
+      fTbh1->AddText(0, buf);
+      // Re-align the cursor with the characters.
+      fTeh1->SetCursorPosition(fTeh1->GetCursorPosition());
+      fTeh1->Deselect();
+      gClient->NeedRedraw(fTeh1);
+#ifdef CINT_FIXED
+      break;
+   case VSId1:
+#else
+   }
+   else if (id == VSId1) {
+#endif
+      fTbv1->Clear();
+      fTbv1->AddText(0, buf);
+      fTev1->SetCursorPosition(fTev1->GetCursorPosition());
+      fTev1->Deselect();
+      gClient->NeedRedraw(fTev1);
+#ifdef CINT_FIXED
+      break;
+   case HSId2:
+#else
+   }
+   else if (id == HSId2) {
+#endif
+      fTbh2->Clear();
+      fTbh2->AddText(0, buf);
+      fTeh2->SetCursorPosition(fTeh2->GetCursorPosition());
+      fTeh2->Deselect();
+      gClient->NeedRedraw(fTeh2);
+#ifdef CINT_FIXED
+      break;
+   case VSId2:
+#else
+   }
+   else if (id == VSId2) {
+#endif
+      sprintf(buf, "%f", fVslider2->GetMinPosition());
+      fTbv2->Clear();
+      fTbv2->AddText(0, buf);
+      fTev2->SetCursorPosition(fTev2->GetCursorPosition());
+      fTev2->Deselect();
+      gClient->NeedRedraw(fTev2);
+#ifdef CINT_FIXED
+      break;
+   default:
+      break;
+#endif
    }
 }
 
@@ -1805,7 +1831,7 @@ TestShutter::TestShutter(const TGWindow *p, const TGWindow *main,
    //gClient->WaitFor(fMain);
 }
 
-void TestShutter::AddShutterItem(const char *name, shutterData_t data[])
+void TestShutter::AddShutterItem(const char *name, shutterData_t *data)
 {
    TGShutterItem    *item;
    TGCompositeFrame *container;
@@ -2536,7 +2562,7 @@ void Editor::DoClose()
 
 void guitest()
 {
-   new TestMainFrame(0, 400, 220);
+   new TestMainFrame(gClient->GetRoot(), 400, 220);
 }
 
 //---- Main program ------------------------------------------------------------

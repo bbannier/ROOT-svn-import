@@ -13,17 +13,21 @@
 #include "TGLTF3Painter.h"
 #include "TGLIncludes.h"
 
+//______________________________________________________________________________
+//
+// Plot-painter implementing rendering of TF3 functions.
+
 ClassImp(TGLTF3Painter)
 
 //______________________________________________________________________________
 TGLTF3Painter::TGLTF3Painter(TF3 *fun, TH1 *hist, TGLOrthoCamera *camera,
-                             TGLPlotCoordinates *coord, TGLPaintDevice *dev)
-                  : TGLPlotPainter(hist, camera, coord, dev, kTRUE, kTRUE, kTRUE),
-                    fStyle(kDefault),
-                    fF3(fun),
-                    fXOZSlice("XOZ", (TH3 *)hist, fun, coord, &fBackBox, TGLTH3Slice::kXOZ),
-                    fYOZSlice("YOZ", (TH3 *)hist, fun, coord, &fBackBox, TGLTH3Slice::kYOZ),
-                    fXOYSlice("XOY", (TH3 *)hist, fun, coord, &fBackBox, TGLTH3Slice::kXOY)
+                             TGLPlotCoordinates *coord, TGLPaintDevice *dev) :
+   TGLPlotPainter(hist, camera, coord, dev, kTRUE, kTRUE, kTRUE),
+   fStyle(kDefault),
+   fF3(fun),
+   fXOZSlice("XOZ", (TH3 *)hist, fun, coord, &fBackBox, TGLTH3Slice::kXOZ),
+   fYOZSlice("YOZ", (TH3 *)hist, fun, coord, &fBackBox, TGLTH3Slice::kYOZ),
+   fXOYSlice("XOY", (TH3 *)hist, fun, coord, &fBackBox, TGLTH3Slice::kXOY)
 {
    // Constructor.
 }
@@ -32,7 +36,8 @@ TGLTF3Painter::TGLTF3Painter(TF3 *fun, TH1 *hist, TGLOrthoCamera *camera,
 char *TGLTF3Painter::GetPlotInfo(Int_t /*px*/, Int_t /*py*/)
 {
    //Coords for point on surface under cursor.
-   return "fun3";
+   static char mess[] = { "fun3" };
+   return mess;
 }
 
 namespace {
@@ -171,7 +176,7 @@ void TGLTF3Painter::ProcessEvent(Int_t event, Int_t /*px*/, Int_t py)
       fXOYSectionPos = frame[0].Z();
 
       if (!gVirtualX->IsCmdThread())
-         gROOT->ProcessLineFast(Form("((TGLPlotPainter *)0x%x)->Paint()", this));
+         gROOT->ProcessLineFast(Form("((TGLPlotPainter *)0x%lx)->Paint()", this));
       else
          Paint();
    }
@@ -417,6 +422,10 @@ void TGLTF3Painter::DrawSectionXOY()const
 }
 
 
+//______________________________________________________________________________
+//
+// Implements painting of TH3 with the "ISO" option.
+
 ClassImp(TGLIsoPainter)
 
 //______________________________________________________________________________
@@ -436,7 +445,9 @@ TGLIsoPainter::TGLIsoPainter(TH1 *hist, TGLOrthoCamera *camera, TGLPlotCoordinat
 char *TGLIsoPainter::GetPlotInfo(Int_t /*px*/, Int_t /*py*/)
 {
    //Return info for plot part under cursor.
-   return "iso";
+
+   static char mess[] = { "iso" };
+   return mess;
 }
 
 namespace {
@@ -620,7 +631,7 @@ void TGLIsoPainter::ProcessEvent(Int_t event, Int_t /*px*/, Int_t py)
       fXOYSectionPos = frame[0].Z();
 
       if (!gVirtualX->IsCmdThread())
-         gROOT->ProcessLineFast(Form("((TGLPlotPainter *)0x%x)->Paint()", this));
+         gROOT->ProcessLineFast(Form("((TGLPlotPainter *)0x%lx)->Paint()", this));
       else
          Paint();
    }
@@ -758,11 +769,9 @@ void TGLIsoPainter::SetMesh(Mesh_t &m, Double_t isoValue)
    const Double_t zMin      = fZAxis->GetBinCenter(fZAxis->GetFirst());
    const Double_t zStep     = (fZAxis->GetBinCenter(fZAxis->GetLast()) - zMin) / (nZ - 1);
    const Int_t    sliceSize = (nY + 2) * (nZ + 2);
-   std::vector<Range_t> &boxRanges = m.fBoxRanges;
+   std::vector<Range_t> boxRanges((nX + 2) * (nY + 2) * (nZ + 2), Range_t());
    std::vector<TriFace_t> &mesh = m.fMesh;
-
-   boxRanges.assign((nX + 2) * (nY + 2) * (nZ + 2), Range_t());
-
+   mesh.clear();
    //First, calculate full mesh and define "box ranges" - which
    //part of the full mesh is in current box.
    //Find flat normals.

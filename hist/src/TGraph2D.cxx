@@ -373,7 +373,7 @@ TGraph2D::~TGraph2D()
 
 
 //______________________________________________________________________________
-TGraph2D TGraph2D::operator=(const TGraph2D &g)
+TGraph2D& TGraph2D::operator=(const TGraph2D &g)
 {
    // Graph2D operator "="
 
@@ -387,7 +387,7 @@ TGraph2D TGraph2D::operator=(const TGraph2D &g)
       fY[n] = g.fY[n];
       fZ[n] = g.fZ[n];
    }
-   return g;
+   return *this;
 }
 
 
@@ -1355,20 +1355,20 @@ void TGraph2D::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
       out<<"   TGraph2D *";
    }
 
-   out<<"graph = new TGraph2D("<<fNpoints<<");"<<endl;
-   out<<"   graph->SetName("<<quote<<GetName()<<quote<<");"<<endl;
-   out<<"   graph->SetTitle("<<quote<<GetTitle()<<quote<<");"<<endl;
+   out<<"graph2d = new TGraph2D("<<fNpoints<<");"<<endl;
+   out<<"   graph2d->SetName("<<quote<<GetName()<<quote<<");"<<endl;
+   out<<"   graph2d->SetTitle("<<quote<<GetTitle()<<quote<<");"<<endl;
 
    if (fDirectory == 0) {
       out<<"   "<<GetName()<<"->SetDirectory(0);"<<endl;
    }
 
-   SaveFillAttributes(out,"graph",0,1001);
-   SaveLineAttributes(out,"graph",1,1,1);
-   SaveMarkerAttributes(out,"graph",1,1,1);
+   SaveFillAttributes(out,"graph2d",0,1001);
+   SaveLineAttributes(out,"graph2d",1,1,1);
+   SaveMarkerAttributes(out,"graph2d",1,1,1);
 
    for (Int_t i=0;i<fNpoints;i++) {
-      out<<"   graph->SetPoint("<<i<<","<<fX[i]<<","<<fY[i]<<","<<fZ[i]<<");"<<endl;
+      out<<"   graph2d->SetPoint("<<i<<","<<fX[i]<<","<<fY[i]<<","<<fZ[i]<<");"<<endl;
    }
 
    // save list of functions
@@ -1376,13 +1376,27 @@ void TGraph2D::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
    TObject *obj;
    while ((obj=next())) {
       obj->SavePrimitive(out,"nodraw");
-      out<<"   graph->GetListOfFunctions()->Add("<<obj->GetName()<<");"<<endl;
+      out<<"   graph2d->GetListOfFunctions()->Add("<<obj->GetName()<<");"<<endl;
       if (obj->InheritsFrom("TPaveStats")) {
-         out<<"   ptstats->SetParent(graph->GetListOfFunctions());"<<endl;
+         out<<"   ptstats->SetParent(graph2d->GetListOfFunctions());"<<endl;
       }
    }
 
-   out<<"   graph->Draw("<<quote<<option<<quote<<");"<<endl;
+   out<<"   graph2d->Draw("<<quote<<option<<quote<<");"<<endl;
+}
+
+
+//______________________________________________________________________________
+void TGraph2D::Set(Int_t n)
+{
+   // Set number of points in the 2D graph.
+   // Existing coordinates are preserved.
+   // New coordinates above fNpoints are preset to 0.
+
+   if (n < 0) n = 0;
+   if (n == fNpoints) return;
+   if (n >  fNpoints) SetPoint(n,0,0,0);
+   fNpoints = n;
 }
 
 

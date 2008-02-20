@@ -29,14 +29,16 @@
 
 namespace ROOT { 
 
-  namespace Math { 
+namespace Math { 
 
+//__________________________________________________________________________________________
   /** 
       Class describing a cylindrical coordinate system based on rho, z and phi.   
       The base coordinates are rho (transverse component) , z and phi
+      Phi is restricted to be in the range [-PI,PI)
   
       @ingroup GenVector
-   */ 
+  */ 
 
 template <class T> 
 class Cylindrical3D { 
@@ -108,7 +110,7 @@ public :
    {rho=fRho; z=fZ; phi=fPhi;}  				
 
 private:
-   inline static double pi() { return M_PI; } 
+   inline static Scalar pi() { return M_PI; } 
    inline void Restrict() {
       if ( fPhi <= -pi() || fPhi > pi() ) 
          fPhi = fPhi - std::floor( fPhi/(2*pi()) +.5 ) * 2*pi();
@@ -128,7 +130,7 @@ public:
    Scalar Mag2()  const { return fRho*fRho + fZ*fZ;   }
    Scalar R()     const { return std::sqrt( Mag2());  }
    Scalar Perp2() const { return fRho*fRho;           }
-   Scalar Theta() const { return (fRho==0 && fZ==0 ) ? 0.0 : atan2(fRho,fZ); }
+   Scalar Theta() const { return (fRho==0 && fZ==0 ) ? 0 : atan2(fRho,fZ); }
 
    // pseudorapidity - use same implementation as in Cartesian3D
    Scalar Eta() const {

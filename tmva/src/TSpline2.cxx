@@ -40,7 +40,7 @@ ClassImp(TMVA::TSpline2)
 
 //_______________________________________________________________________
 TMVA::TSpline2::TSpline2( TString title, TGraph* theGraph )
-   : fGraph( theGraph )
+   : fGraph( theGraph ) // not owned by TSpline2
 {
    // constructor from TGraph
    // TSpline is a TNamed object
@@ -51,7 +51,8 @@ TMVA::TSpline2::TSpline2( TString title, TGraph* theGraph )
 TMVA::TSpline2::~TSpline2( void )
 {
    // destructor
-   if (NULL != fGraph) delete fGraph;
+   // if (NULL != fGraph) delete fGraph; // ROOT's spline classes don't own the TGraph either
+   // so we will do the same
 }
 
 //_______________________________________________________________________
@@ -81,16 +82,17 @@ Double_t TMVA::TSpline2::Eval( const Double_t x ) const
                          fGraph->GetY()[ibin+2]);
     
    }
-   else if (ibin >= (fGraph->GetN()-1)) {
-    
-      retval = Quadrax( x, 
+   else if (ibin >= (fGraph->GetN()-2)) {
+      ibin = fGraph->GetN() - 1; // always fixed to last bin
+
+      retval = Quadrax( x,
                         fGraph->GetX()[ibin-2] + dx,
                         fGraph->GetX()[ibin-1] + dx,
                         fGraph->GetX()[ibin]   + dx,
                         fGraph->GetY()[ibin-2],
                         fGraph->GetY()[ibin-1],
                         fGraph->GetY()[ibin]);
-   }
+   } 
    else {  
     
       retval = ( Quadrax( x, 

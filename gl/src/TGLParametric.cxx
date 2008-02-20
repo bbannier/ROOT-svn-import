@@ -250,7 +250,9 @@ void TGLParametricEquation::ExecuteEvent(Int_t event, Int_t px, Int_t py)
 char *TGLParametricEquation::GetObjectInfo(Int_t /*px*/, Int_t /*py*/) const
 {
    //No object info yet.
-   return "parametric surface";
+
+   static char mess[] = { "parametric surface" };
+   return mess;
 }
 
 //______________________________________________________________________________
@@ -402,7 +404,9 @@ void TGLParametricPlot::Pan(Int_t px, Int_t py)
 char *TGLParametricPlot::GetPlotInfo(Int_t /*px*/, Int_t /*py*/)
 {
    //No object info yet.
-   return "parametric surface";
+
+   static char mess[] = { "parametric surface" };
+   return mess;
 }
 
 //______________________________________________________________________________
@@ -419,7 +423,7 @@ void TGLParametricPlot::ProcessEvent(Int_t event, Int_t /*px*/, Int_t py)
    if (event == kButton1Double && fBoxCut.IsActive()) {
       fBoxCut.TurnOnOff();
       if (!gVirtualX->IsCmdThread())
-         gROOT->ProcessLineFast(Form("((TGLPlotPainter *)0x%x)->Paint()", this));
+         gROOT->ProcessLineFast(Form("((TGLPlotPainter *)0x%lx)->Paint()", this));
       else
          Paint();
    } else if (event == kKeyPress) {

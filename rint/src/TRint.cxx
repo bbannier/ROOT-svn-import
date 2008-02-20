@@ -31,6 +31,7 @@
 #include "TSystem.h"
 #include "TEnv.h"
 #include "TSysEvtHandler.h"
+#include "TSystemDirectory.h"
 #include "TError.h"
 #include "TException.h"
 #include "TInterpreter.h"
@@ -302,6 +303,23 @@ void TRint::Run(Bool_t retrn)
    Int_t  error = 0;
    volatile Bool_t needGetlinemInit = kFALSE;
 
+   if (strlen(WorkingDirectory())) {
+      // if directory specified as argument make it the working directory
+      gSystem->ChangeDirectory(WorkingDirectory());
+      TSystemDirectory *workdir = new TSystemDirectory("workdir", gSystem->WorkingDirectory());
+      TObject *w = gROOT->GetListOfBrowsables()->FindObject("workdir");
+      TObjLink *lnk = gROOT->GetListOfBrowsables()->FirstLink();
+      while (lnk) {
+         if (lnk->GetObject() == w) {
+            lnk->SetObject(workdir);
+            lnk->SetOption(gSystem->WorkingDirectory());
+            break;
+         }
+         lnk = lnk->Next();
+      }
+      delete w;
+   }
+
    // Process shell command line input files
    if (InputFiles()) {
       // Make sure that calls into the event loop
@@ -519,6 +537,22 @@ Bool_t TRint::HandleTermInput()
       Getlinem(kInit, GetPrompt());
    }
    return kTRUE;
+}
+
+//______________________________________________________________________________
+void TRint::HandleException(Int_t sig)
+{
+   // Handle exceptions (kSigBus, kSigSegmentationViolation,
+   // kSigIllegalInstruction and kSigFloatingException) trapped in TSystem.
+   // Specific TApplication implementations may want something different here.
+
+   if (TROOT::Initialized()) {
+      if (gException) {
+         Getlinem(kCleanUp, 0);
+         Getlinem(kInit, "Root > ");
+      }
+   }
+   TApplication::HandleException(sig);
 }
 
 //______________________________________________________________________________

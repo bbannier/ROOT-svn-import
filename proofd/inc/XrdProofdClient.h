@@ -84,7 +84,7 @@ class XrdProofdClient {
    void                    SetValid(bool valid = 1) { fIsValid = valid; }
    void                    SetWorkdir(const char *wrk) { fUI.fWorkDir = wrk; }
 
-   int                     CreateUNIXSock(XrdSysError *edest, char *tmpdir);
+   int                     CreateUNIXSock(XrdSysError *edest, const char *tmpdir);
    XrdNet                 *UNIXSock() const { return fUNIXSock; }
    char                   *UNIXSockPath() const { return fUNIXSockPath; }
    void                    SaveUNIXPath(); // Save path in the sandbox
@@ -93,8 +93,8 @@ class XrdProofdClient {
    int                     AddNewSession(const char *tag);
    int                     GetSessionDirs(int opt, std::list<XrdOucString *> *sdirs,
                                           XrdOucString *tag = 0);
-   int                     GuessTag(XrdOucString &tag, int ridx = 1);
-   int                     MvOldSession(const char *tag);
+   int                     GuessTag(XrdOucString &tag, int ridx = 1, bool notify = 1);
+   int                     MvOldSession(const char *tag, bool notify = 1);
 
    static void             SetMaxOldLogs(int mx) { fgMaxOldLogs = mx; }
 

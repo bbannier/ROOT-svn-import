@@ -33,6 +33,13 @@
 #include "TGLFormat.h"
 #include "TGLUtil.h"
 
+#include "TFTGLManager.h"
+
+//______________________________________________________________________________
+//
+// This class encapsulates window-system specific information about a
+// GL-context and alows their proper management in ROOT.
+
 ClassImp(TGLContext)
 
 //______________________________________________________________________________
@@ -47,7 +54,7 @@ TGLContext::TGLContext(TGLWidget *wid)
    //Makes thread switching.
    const TGLContext *shareList = TGLContextIdentity::GetDefaultContextAny();
    if (!gVirtualX->IsCmdThread()) {
-      gROOT->ProcessLineFast(Form("((TGLContext *)0x%x)->SetContext((TGLWidget *)0x%x, (TGLContext *)0x%x)",
+      gROOT->ProcessLineFast(Form("((TGLContext *)0x%lx)->SetContext((TGLWidget *)0x%lx, (TGLContext *)0x%lx)",
                                   this, wid, shareList));
    } else
       SetContext(wid, shareList);
@@ -71,7 +78,7 @@ TGLContext::TGLContext(TGLWidget *wid, const TGLContext *shareList)
    //TGLContext ctor "from" TGLWidget. Specify shareList, can be null.
    //Makes thread switching.
    if (!gVirtualX->IsCmdThread()) {
-      gROOT->ProcessLineFast(Form("((TGLContext *)0x%x)->SetContext((TGLWidget *)0x%x, (TGLContext *)0x%x)",
+      gROOT->ProcessLineFast(Form("((TGLContext *)0x%lx)->SetContext((TGLWidget *)0x%lx, (TGLContext *)0x%lx)",
                                   this, wid, shareList));
    } else
       SetContext(wid, shareList);
@@ -93,7 +100,7 @@ TGLContext::TGLContext(TGLPBuffer *pbuff, const TGLContext *shareList)
                  fValid(kFALSE)
 {
    if (!gVirtualX->IsCmdThread()) {
-      gROOT->ProcessLineFast(Form("((TGLContext *)0x%x)->SetContextPB((TGLPBuffer *)0x%x, (TGLContext *)0x%x)",
+      gROOT->ProcessLineFast(Form("((TGLContext *)0x%lx)->SetContextPB((TGLPBuffer *)0x%lx, (TGLContext *)0x%lx)",
                                   this, pbuff, shareList));
    } else
       SetContextPB(pbuff, shareList);
@@ -200,7 +207,7 @@ Bool_t TGLContext::MakeCurrent()
    }
 
    if (!gVirtualX->IsCmdThread())
-      return Bool_t(gROOT->ProcessLineFast(Form("((TGLContext *)0x%x)->MakeCurrent()", this)));
+      return Bool_t(gROOT->ProcessLineFast(Form("((TGLContext *)0x%lx)->MakeCurrent()", this)));
    else {
       Bool_t rez = wglMakeCurrent(fPimpl->fHDC, fPimpl->fGLContext);
       if (rez)
@@ -220,7 +227,7 @@ void TGLContext::SwapBuffers()
    }
 
    if (!gVirtualX->IsCmdThread())
-      gROOT->ProcessLineFast(Form("((TGLContext *)0x%x)->SwapBuffers()", this));
+      gROOT->ProcessLineFast(Form("((TGLContext *)0x%lx)->SwapBuffers()", this));
    else {
       if (fPimpl->fHWND)
          wglSwapLayerBuffers(fPimpl->fHDC, WGL_SWAP_MAIN_PLANE);
@@ -235,7 +242,7 @@ void TGLContext::Release()
    //Make the context invalid and (do thread switch, if needed)
    //free resources.
    if (!gVirtualX->IsCmdThread()) {
-      gROOT->ProcessLineFast(Form("((TGLContext *)0x%x)->Release()", this));
+      gROOT->ProcessLineFast(Form("((TGLContext *)0x%lx)->Release()", this));
       return;
    }
 
@@ -385,7 +392,6 @@ TGLContext *TGLContext::GetCurrent()
 
 
 //______________________________________________________________________________
-// TGLContextIdentity
 //
 // Identifier of a shared GL-context.
 // Objects shared among GL-contexts include:
@@ -394,6 +400,22 @@ TGLContext *TGLContext::GetCurrent()
 ClassImp(TGLContextIdentity)
 
 TGLContextIdentity* TGLContextIdentity::fgDefaultIdentity = new TGLContextIdentity;
+
+//______________________________________________________________________________
+TGLContextIdentity::TGLContextIdentity():
+fFontManager(0), fCnt(0), fClientCnt(0)
+{
+   // Constructor.
+
+}
+
+//______________________________________________________________________________
+TGLContextIdentity::~TGLContextIdentity()
+{
+   // Destructor.
+
+   if (fFontManager) delete fFontManager;
+}
 
 //______________________________________________________________________________
 void TGLContextIdentity::AddRef(TGLContext* ctx)
@@ -463,6 +485,14 @@ TGLContext* TGLContextIdentity::GetDefaultContextAny()
    if (fgDefaultIdentity == 0 || fgDefaultIdentity->fCtxs.empty())
       return 0;
    return fgDefaultIdentity->fCtxs.front();
+}
+
+//______________________________________________________________________________
+TFTGLManager* TGLContextIdentity::GetFontManager()
+{
+   //Get the free-type font-manager associated with this context-identity.
+   if(!fFontManager) fFontManager = new TFTGLManager();
+   return fFontManager;
 }
 
 //______________________________________________________________________________

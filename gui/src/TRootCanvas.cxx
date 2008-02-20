@@ -18,9 +18,7 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#ifdef R__HAVE_CONFIG
 #include "RConfigure.h"
-#endif
 
 #include "TRootCanvas.h"
 #include "TRootApplication.h"
@@ -83,6 +81,7 @@ enum ERootCanvasCommands {
    kFileSaveAsPDF,
    kFileSaveAsGIF,
    kFileSaveAsJPG,
+   kFileSaveAsPNG,
    kFilePrint,
    kFileCloseCanvas,
    kFileQuit,
@@ -346,6 +345,7 @@ void TRootCanvas::CreateCanvas(const char *name)
    }
    if (img > 0) {
       fFileSaveMenu->AddEntry(Form("%s.&jpg",name),  kFileSaveAsJPG);
+      fFileSaveMenu->AddEntry(Form("%s.&png",name),  kFileSaveAsPNG);
    }
 
    fFileSaveMenu->AddEntry(Form("%s.&C",   name), kFileSaveAsC);
@@ -866,6 +866,9 @@ again:
                      break;
                   case kFileSaveAsJPG:
                      fCanvas->SaveAs(".jpg");
+                     break;
+                  case kFileSaveAsPNG:
+                     fCanvas->SaveAs(".png");
                      break;
                   case kFilePrint:
                      PrintCanvas();
@@ -1661,7 +1664,7 @@ Bool_t TRootCanvas::HandleContainerCrossing(Event_t *event)
 }
 
 //______________________________________________________________________________
-Bool_t TRootCanvas::HandleDNDdrop(TDNDdata *data)
+Bool_t TRootCanvas::HandleDNDDrop(TDNDData *data)
 {
    // Handle drop events.
 
@@ -1675,6 +1678,11 @@ Bool_t TRootCanvas::HandleDNDdrop(TDNDdata *data)
       gPad->Clear();
       if (obj->InheritsFrom("TGraph"))
          obj->Draw("ACP");
+      else if (obj->InheritsFrom("TKey")) {
+         TObject *object = (TObject *)gROOT->ProcessLine(Form("((TKey *)0x%lx)->ReadObj();", obj));
+         if (object && object->IsA()->GetMethodAllAny("Draw"))
+            object->Draw();
+      }
       else if (obj->IsA()->GetMethodAllAny("Draw"))
          obj->Draw();
       gPad->Modified();
@@ -1690,6 +1698,9 @@ Bool_t TRootCanvas::HandleDNDdrop(TDNDdata *data)
             sfname.EndsWith(".gif") ||
             sfname.EndsWith(".jpg") ||
             sfname.EndsWith(".png") ||
+            sfname.EndsWith(".ps")  ||
+            sfname.EndsWith(".eps") ||
+            sfname.EndsWith(".pdf") ||
             sfname.EndsWith(".tiff") ||
             sfname.EndsWith(".xpm")) {
             TImage *img = TImage::Open(uri.GetFile());
@@ -1706,7 +1717,7 @@ Bool_t TRootCanvas::HandleDNDdrop(TDNDdata *data)
 }
 
 //______________________________________________________________________________
-Atom_t TRootCanvas::HandleDNDposition(Int_t x, Int_t y, Atom_t action,
+Atom_t TRootCanvas::HandleDNDPosition(Int_t x, Int_t y, Atom_t action,
                                       Int_t /*xroot*/, Int_t /*yroot*/)
 {
    // Handle dragging position events.
@@ -1720,7 +1731,7 @@ Atom_t TRootCanvas::HandleDNDposition(Int_t x, Int_t y, Atom_t action,
 }
 
 //______________________________________________________________________________
-Atom_t TRootCanvas::HandleDNDenter(Atom_t *typelist)
+Atom_t TRootCanvas::HandleDNDEnter(Atom_t *typelist)
 {
    // Handle drag enter events.
 
@@ -1737,7 +1748,7 @@ Atom_t TRootCanvas::HandleDNDenter(Atom_t *typelist)
 }
 
 //______________________________________________________________________________
-Bool_t TRootCanvas::HandleDNDleave()
+Bool_t TRootCanvas::HandleDNDLeave()
 {
    // Handle drag leave events.
 

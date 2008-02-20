@@ -26,7 +26,8 @@ Bool_t  TColor::fgGrayscaleMode = kFALSE;
 Bool_t  TColor::fgInitDone = kFALSE;
 TArrayI TColor::fgPalette(0);
 
-//////////////////////////////////////////////////////////////////////////
+
+//______________________________________________________________________________
 /* Begin_Html
 <center><h2>TColor: Color Creation and Management</h2></center>
  Color defined by RGB or HLS.
@@ -172,6 +173,7 @@ TColor::~TColor()
    // Color destructor.
 
    gROOT->GetListOfColors()->Remove(this);
+   if (gROOT->GetListOfColors()->GetEntries() == 0) {fgPalette.Set(0); fgPalette=0;}
 }
 
 
@@ -303,7 +305,7 @@ void TColor::InitializeColors()
       // Create the ROOT Color Wheel
       TColor::CreateColorWheel();
    }
-   // If fgPalette.fN !=0 SetPalette has been called already 
+   // If fgPalette.fN !=0 SetPalette has been called already
    // (from rootlogon.C for instance)
    if (!fgPalette.fN) SetPalette(0,0);
 }
@@ -678,6 +680,7 @@ void TColor::RGB2HLS(Float_t rr, Float_t gg, Float_t bb,
    // [0,1], hue is between [0,360], light and satur are [0,1].
 
    Float_t rnorm, gnorm, bnorm, minval, maxval, msum, mdiff, r, g, b;
+   minval = maxval =0 ;
    r = g = b = 0;
    if (rr > 0) r = rr; if (r > 1) r = 1;
    if (gg > 0) g = gg; if (g > 1) g = 1;
@@ -1322,7 +1325,7 @@ void TColor::SetPalette(Int_t ncolors, Int_t *colors)
                         21,22,23,24,25,26,27,28,29,30, 8,
                         31,32,33,34,35,36,37,38,39,40, 9,
                         41,42,43,44,45,47,48,49,46,50, 2,
-                         7, 6, 5, 4, 3, 112,1};
+                         7, 6, 5, 4, 3, 2,1};
    // set default palette (pad type)
    if (ncolors <= 0) {
       ncolors = 50;
@@ -1342,13 +1345,14 @@ void TColor::SetPalette(Int_t ncolors, Int_t *colors)
    }
 
    // set DeepSea palette
-   if (colors == 0 && ncolors > 50) {
+   if (ncolors > 50 && colors == 0) {
+      TColor::InitializeColors();
       if (ncolors == fgPalette.fN && paletteType == 3) return;
       const Int_t nRGBs = 5;
       Double_t stops[nRGBs] = { 0.00, 0.34, 0.61, 0.84, 1.00 };
-      Double_t red[nRGBs] = { 0.00, 0.09, 0.18, 0.09, 0.00 };
+      Double_t red[nRGBs]   = { 0.00, 0.09, 0.18, 0.09, 0.00 };
       Double_t green[nRGBs] = { 0.01, 0.02, 0.39, 0.68, 0.97 };
-      Double_t blue[nRGBs] = { 0.17, 0.39, 0.62, 0.79, 0.97 };
+      Double_t blue[nRGBs]  = { 0.17, 0.39, 0.62, 0.79, 0.97 };
       TColor::CreateGradientColorTable(nRGBs, stops, red, green, blue, ncolors);
       paletteType = 3;
       return;

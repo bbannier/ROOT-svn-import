@@ -26,8 +26,8 @@
 // No references to the fitted PDF and dataset are stored
 
 #include "RooFit.h"
+#include "Riostream.h"
 
-#include <iomanip>
 #include <iomanip>
 #include "TMinuit.h"
 #include "TMath.h"
@@ -37,6 +37,7 @@
 #include "TGaxis.h"
 #include "TMatrix.h"
 #include "TVector.h"
+#include "TDirectory.h"
 #include "RooFitResult.h"
 #include "RooArgSet.h"
 #include "RooArgList.h"
@@ -45,6 +46,8 @@
 #include "RooEllipse.h"
 #include "RooRandom.h"
 #include "RooMsgService.h"
+
+
 
 ClassImp(RooFitResult) 
 ;
@@ -180,12 +183,12 @@ RooPlot *RooFitResult::plotOn(RooPlot *frame, const char *parName1, const char *
   // lookup the input parameters by name: we require that they were floated in our fit
   const RooRealVar *par1= dynamic_cast<const RooRealVar*>(floatParsFinal().find(parName1));
   if(0 == par1) {
-    cout << "RooFitResult::correlationPlot: parameter not floated in fit: " << parName1 << endl;
+    coutE(InputArguments) << "RooFitResult::correlationPlot: parameter not floated in fit: " << parName1 << endl;
     return 0;
   }
   const RooRealVar *par2= dynamic_cast<const RooRealVar*>(floatParsFinal().find(parName2));
   if(0 == par2) {
-    cout << "RooFitResult::correlationPlot: parameter not floated in fit: " << parName2 << endl;
+    coutE(InputArguments) << "RooFitResult::correlationPlot: parameter not floated in fit: " << parName2 << endl;
     return 0;
   }
 
@@ -326,7 +329,7 @@ Double_t RooFitResult::correlation(const char* parname1, const char* parname2) c
   if (!row) return 0. ;
   RooAbsArg* arg = _initPars->find(parname2) ;
   if (!arg) {
-    cout << "RooFitResult::correlation: variable " << parname2 << " not a floating parameter in fit" << endl ;
+    coutE(InputArguments) << "RooFitResult::correlation: variable " << parname2 << " not a floating parameter in fit" << endl ;
     return 0. ;
   }
   return ((RooRealVar*)row->at(_initPars->index(arg)))->getVal() ;
@@ -340,7 +343,7 @@ const RooArgList* RooFitResult::correlation(const char* parname) const
 
   RooAbsArg* arg = _initPars->find(parname) ;
   if (!arg) {
-    cout << "RooFitResult::correlation: variable " << parname << " not a floating parameter in fit" << endl ;
+    coutE(InputArguments) << "RooFitResult::correlation: variable " << parname << " not a floating parameter in fit" << endl ;
     return 0 ;
   }    
   return (RooArgList*)_corrMatrix.At(_initPars->index(arg)) ;
@@ -352,7 +355,7 @@ Double_t RooFitResult::globalCorr(const char* parname)
   // Return the global correlation of the named parameter
   RooAbsArg* arg = _initPars->find(parname) ;
   if (!arg) {
-    cout << "RooFitResult::globalCorr: variable " << parname << " not a floating parameter in fit" << endl ;
+    coutE(InputArguments) << "RooFitResult::globalCorr: variable " << parname << " not a floating parameter in fit" << endl ;
     return 0 ;
   }    
 
@@ -586,7 +589,7 @@ void RooFitResult::fillCorrMatrix()
 } 
 
 
-Bool_t RooFitResult::isIdentical(const RooFitResult& other, Double_t tol, Bool_t /*verbose*/) const 
+Bool_t RooFitResult::isIdentical(const RooFitResult& other, Double_t tol, Double_t tolCorr, Bool_t /*verbose*/) const 
 {
   Bool_t ret = kTRUE ;
 
@@ -643,7 +646,7 @@ Bool_t RooFitResult::isIdentical(const RooFitResult& other, Double_t tol, Bool_t
 	cout << "RooFitResult::isIdentical: cannot find global correlation coefficient " << _globalCorr->at(i)->GetName() << " in reference" << endl ;
 	ret = kFALSE ;
       }
-      if (fabs(static_cast<RooAbsReal*>(_globalCorr->at(i))->getVal()-ov->getVal())>=tol) {
+      if (fabs(static_cast<RooAbsReal*>(_globalCorr->at(i))->getVal()-ov->getVal())>=tolCorr) {
 	cout << "RooFitResult::isIdentical: global correlation coefficient " << _globalCorr->at(i)->GetName() 
 	     << " differs in value: " << static_cast<RooAbsReal*>(_globalCorr->at(i))->getVal() << " vs. " << ov->getVal() << endl ;
 	ret = kFALSE ;
@@ -659,7 +662,7 @@ Bool_t RooFitResult::isIdentical(const RooFitResult& other, Double_t tol, Bool_t
 	  cout << "RooFitResult::isIdentical: cannot find correlation coefficient " << row->at(i)->GetName() << " in reference" << endl ;
 	  ret = kFALSE ;
 	}
-	if (fabs(static_cast<RooAbsReal*>(row->at(i))->getVal()-ov->getVal())>=tol) {
+	if (fabs(static_cast<RooAbsReal*>(row->at(i))->getVal()-ov->getVal())>=tolCorr) {
 	  cout << "RooFitResult::isIdentical: correlation coefficient " << row->at(i)->GetName() 
 	       << " differs in value: " << static_cast<RooAbsReal*>(row->at(i))->getVal() << " vs. " << ov->getVal() << endl ;
 	  ret = kFALSE ;
@@ -677,8 +680,8 @@ RooFitResult* RooFitResult::lastMinuitFit(const RooArgList& varList)
 {
   // Verify length of supplied varList
   if (varList.getSize()>0 && varList.getSize()!=gMinuit->fNu) {
-    cout << "RooFitResult::lastMinuitFit: ERROR: supplied variable list must be either empty " << endl 
-	 << "                             or match the number of variables of the last fit (" << gMinuit->fNu << ")" << endl ;
+    oocoutE((TObject*)0,InputArguments) << "RooFitResult::lastMinuitFit: ERROR: supplied variable list must be either empty " << endl 
+					<< "                             or match the number of variables of the last fit (" << gMinuit->fNu << ")" << endl ;
     return 0 ;
   }
 
@@ -687,7 +690,7 @@ RooFitResult* RooFitResult::lastMinuitFit(const RooArgList& varList)
   RooAbsArg* arg  ;
   while((arg=(RooAbsArg*)iter->Next())) {
     if (!dynamic_cast<RooRealVar*>(arg)) {
-      cout << "RooFitResult::lastMinuitFit: ERROR: variable '" << arg->GetName() << "' is not of type RooRealVar" << endl ;
+      oocoutE((TObject*)0,InputArguments) << "RooFitResult::lastMinuitFit: ERROR: variable '" << arg->GetName() << "' is not of type RooRealVar" << endl ;
       return 0 ;
     }
   }
@@ -730,8 +733,8 @@ RooFitResult* RooFitResult::lastMinuitFit(const RooArgList& varList)
 	var->setRange(xlo,xhi) ;
       }
       if (varName.CompareTo(var->GetName())) {
-	cout << "RooFitResult::lastMinuitFit: fit parameter '" << varName 
-	     << "' stored in variable '" << var->GetName() << "'" << endl ;
+	oocoutI((TObject*)0,Eval) << "RooFitResult::lastMinuitFit: fit parameter '" << varName 
+				  << "' stored in variable '" << var->GetName() << "'" << endl ;
       }
 
     }
@@ -758,4 +761,19 @@ RooFitResult* RooFitResult::lastMinuitFit(const RooArgList& varList)
   r->fillCorrMatrix() ;
 
   return r ;
+}
+
+
+void RooFitResult::SetName(const char *name) 
+{
+  if (_dir) _dir->GetList()->Remove(this);
+  TNamed::SetName(name) ;
+  if (_dir) _dir->GetList()->Add(this);
+}
+
+void RooFitResult::SetNameTitle(const char *name, const char* title) 
+{
+  if (_dir) _dir->GetList()->Remove(this);
+  TNamed::SetNameTitle(name,title) ;
+  if (_dir) _dir->GetList()->Add(this);
 }

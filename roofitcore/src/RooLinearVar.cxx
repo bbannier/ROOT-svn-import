@@ -36,6 +36,7 @@
 //
 
 #include "RooFit.h"
+#include "Riostream.h"
 
 #include <math.h>
 #include <stdlib.h>
@@ -50,6 +51,9 @@
 #include "RooRealVar.h"
 #include "RooNumber.h"
 #include "RooBinning.h"
+#include "RooMsgService.h"
+
+
 
 ClassImp(RooLinearVar)
 
@@ -65,10 +69,10 @@ RooLinearVar::RooLinearVar(const char *name, const char *title, RooAbsRealLValue
 
   // Slope and offset may not depend on variable
   if (slope.dependsOn(variable) || offset.dependsOn(variable)) {
-    cout << "RooLinearVar::RooLinearVar(" << GetName() 
-	 << "): ERROR, slope(" << slope.GetName() << ") and offset(" 
-	 << offset.GetName() << ") may not depend on variable(" 
-	 << variable.GetName() << ")" << endl ;
+    coutE(InputArguments) << "RooLinearVar::RooLinearVar(" << GetName() 
+			  << "): ERROR, slope(" << slope.GetName() << ") and offset(" 
+			  << offset.GetName() << ") may not depend on variable(" 
+			  << variable.GetName() << ")" << endl ;
     assert(0) ;
   }
 
@@ -113,7 +117,7 @@ void RooLinearVar::setVal(Double_t value)
 
   // Prevent DIV0 problems
   if (_slope == 0.) {
-    cout << "RooLinearVar::setVal(" << GetName() << "): ERROR: slope is zero, cannot invert relation" << endl ;
+    coutE(Eval) << "RooLinearVar::setVal(" << GetName() << "): ERROR: slope is zero, cannot invert relation" << endl ;
     return ;
   }
 

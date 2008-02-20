@@ -6,7 +6,7 @@
 MODDIR     := xrootd
 MODDIRS    := $(MODDIR)/src
 
-XROOTDVERS := xrootd-20071001-0000
+XROOTDVERS := xrootd-20071116-0000
 XROOTDDIR  := $(MODDIR)
 XROOTDDIRS := $(MODDIRS)
 XROOTDDIRD := $(MODDIRS)/xrootd
@@ -17,7 +17,7 @@ XROOTDETAG := $(MODDIRS)/headers.d
 
 ##### Xrootd config options #####
 ifeq ($(PLATFORM),win32)
-ifeq (debug,$(findstring debug,$(ROOTBUILD)))
+ifeq (yes,$(WINRTDEBUG))
 XRDDBG      = "Win32 Debug"
 else
 XRDDBG      = "Win32 Release"
@@ -142,7 +142,8 @@ $(XRDPLUGINSA): $(XROOTDETAG)
 		linuxx8664icc:*) xopt="--ccflavour=iccx8664 --use-xrd-strlcpy";; \
 		linuxppc64gcc:*) xopt="--ccflavour=gccppc64 --use-xrd-strlcpy";; \
 		linux*:*)        xopt="--ccflavour=gcc --use-xrd-strlcpy";; \
-		macos*:*)        xopt="--ccflavour=macos";; \
+		macosx64:*)      xopt="--ccflavour=macos64";; \
+		macosx*:*)       xopt="--ccflavour=macos";; \
 		solaris*:*:i86pc:x86*) xopt="--ccflavour=sunCCamd --use-xrd-strlcpy";; \
 		solaris*:*:i86pc:*) xopt="--ccflavour=sunCCi86pc --use-xrd-strlcpy";; \
 		solarisgcc:5.8)  xopt="--ccflavour=gcc";; \
@@ -165,7 +166,7 @@ $(XRDPLUGINSA): $(XROOTDETAG)
 		   xopt="$$xopt --with-ssl-libdir=$$xlib"; \
 		fi; \
 		if [ ! "x$(SSLINCDIR)" = "x" ] ; then \
-		   xinc=`echo $(SSLINCDIR) | cut -c3-`; \
+		   xinc=`echo $(SSLINCDIR)`; \
 		   xopt="$$xopt --with-ssl-incdir=$$xinc"; \
 		fi; \
 		if [ ! "x$(SHADOWFLAGS)" = "x" ] ; then \
@@ -179,7 +180,7 @@ $(XRDPLUGINSA): $(XROOTDETAG)
 		   xopt="$$xopt --with-afs-libdir=$$xlib"; \
 		fi; \
 		if [ ! "x$(AFSINCDIR)" = "x" ] ; then \
-		   xinc=`echo $(AFSINCDIR) | cut -c3-`; \
+		   xinc=`echo $(AFSINCDIR)`; \
 		   xopt="$$xopt --with-afs-incdir=$$xinc"; \
 		fi; \
 		xopt="$$xopt --disable-krb4 --enable-echo --no-arch-subdirs --disable-mon"; \

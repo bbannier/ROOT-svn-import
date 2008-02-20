@@ -89,6 +89,26 @@ struct FontAttributes_t {
       fSlant     (kFontSlantRoman),
       fUnderline (0),
       fOverstrike(0) { }
+
+   FontAttributes_t(const FontAttributes_t& f): // copy constructor
+      fFamily    (f.fFamily),
+      fPointsize (f.fPointsize),
+      fWeight    (f.fWeight),
+      fSlant     (f.fSlant),
+      fUnderline (f.fUnderline),
+      fOverstrike(f.fOverstrike) { }
+
+   FontAttributes_t& operator=(const FontAttributes_t& f) // assignment operator
+   {
+      fFamily     = f.fFamily;
+      fPointsize  = f.fPointsize;
+      fWeight     = f.fWeight;
+      fSlant      = f.fSlant;
+      fUnderline  = f.fUnderline;
+      fOverstrike = f.fOverstrike;
+      return *this;
+   }
+
 };
 
 
@@ -218,7 +238,7 @@ protected:
    Bool_t      ParseXLFD(const char *string, XLFDAttributes_t *xa);
    TGFont     *GetFontFromAttributes(FontAttributes_t *fa, TGFont *fontPtr);
    int         FindStateNum(const FontStateMap_t *map, const char *strKey);
-   char       *FindStateString(const FontStateMap_t *map, int numKey);
+   const char *FindStateString(const FontStateMap_t *map, int numKey);
    Bool_t      FieldSpecified(const char *field);
    TGFont     *GetNativeFont(const char *name, Bool_t fixedDefault = kTRUE);
    TGFont     *MakeFont(TGFont *font, FontStruct_t fontStruct, const char *fontName);

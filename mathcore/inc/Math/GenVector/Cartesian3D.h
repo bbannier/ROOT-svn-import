@@ -37,14 +37,15 @@
 
 namespace ROOT { 
 
-  namespace Math { 
+namespace Math { 
 
+//__________________________________________________________________________________________
   /** 
       Class describing a 3D cartesian coordinate system
       (x, y, z coordinates) 
 
       @ingroup GenVector
-   */ 
+  */ 
 
 template <class T = double> 
 class Cartesian3D { 
@@ -119,8 +120,8 @@ public :
    Scalar Rho()   const { return std::sqrt( Perp2());}
    Scalar R()     const { return std::sqrt( Mag2());}
    Scalar Theta() const { return (fX==0 && fY==0 && fZ==0) ? 
-                             0.0 : atan2(Rho(),Z());}
-   Scalar Phi()   const { return (fX==0 && fY==0) ? 0.0 : atan2(fY,fX);}
+                             0 : atan2(Rho(),Z());}
+   Scalar Phi()   const { return (fX==0 && fY==0) ? 0 : atan2(fY,fX);}
  
    // pseudorapidity
    Scalar Eta() const { 
@@ -236,12 +237,9 @@ public :
 
 private:
 
-   /**
-      (Contiguous) data containing the coordinates values x,y,z
-   */
-   T fX;
-   T fY;
-   T fZ; 
+   T fX;  // x coordinate
+   T fY;  // y coordinate
+   T fZ;  // z coordinate
 };
 
 

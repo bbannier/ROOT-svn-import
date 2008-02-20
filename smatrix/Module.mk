@@ -20,6 +20,7 @@ SMATRIXDS32 := $(MODDIRS)/G__Smatrix32.cxx
 SMATRIXDO   := $(SMATRIXDS:.cxx=.o)
 SMATRIXDO32 := $(SMATRIXDS32:.cxx=.o)
 SMATRIXDH   := $(SMATRIXDS:.cxx=.h)
+SMATRIXDH32 := $(SMATRIXDS32:.cxx=.h)
 
 SMATRIXDH1  :=  $(MODDIRI)/Math/SMatrix.h \
 		$(MODDIRI)/Math/SVector.h
@@ -65,16 +66,16 @@ include/Math/%.icc: $(SMATRIXDIRI)/%.icc
 $(SMATRIXLIB): $(SMATRIXO) $(SMATRIXDO) $(SMATRIXDO32) $(ORDER_) $(MAINLIBS)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)"  \
 		   "$(SOFLAGS)" libSmatrix.$(SOEXT) $@     \
-		   "$(SMATRIXO) $(SMATRIXDO) $(SMATRIXDO32)"             \
+		   "$(SMATRIXO) $(SMATRIXDO) $(SMATRIXDO32)" \
 		   "$(SMATRIXLIBEXTRA)"
 
-$(SMATRIXDS):  $(SMATRIXDH1) $(SMATRIXL) $(SMATRIXLINC) $(ROOTCINTTMPEXE)
+$(SMATRIXDS):  $(SMATRIXDH1) $(SMATRIXL) $(SMATRIXLINC) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
 		@echo "for files $(SMATRIXDH1)"
 		$(ROOTCINTTMP) -f $@ -c $(SMATRIXDH1) $(SMATRIXL)
 #		python reflex/python/genreflex/genreflex.py $(SMATRIXDIRS)/Dict.h -I$(SMATRIXDIRI) --selection_file=$(SMATRIXDIRS)/Selection.xml -o $(SMATRIXDIRS)/G__Smatrix.cxx
 
-$(SMATRIXDS32): $(SMATRIXDH1) $(SMATRIXL32) $(SMATRIXLINC) $(ROOTCINTTMPEXE)
+$(SMATRIXDS32): $(SMATRIXDH1) $(SMATRIXL32) $(SMATRIXLINC) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
 		@echo "for files $(SMATRIXDH1)"
 		$(ROOTCINTTMP) -f $@ -c $(SMATRIXDH1) $(SMATRIXL32)
@@ -93,12 +94,13 @@ endif
 all-smatrix:   $(SMATRIXLIB) $(SMATRIXMAP)
 
 clean-smatrix:
-		@rm -f $(SMATRIXO) $(SMATRIXDO)
+		@rm -f $(SMATRIXO) $(SMATRIXDO) $(SMATRIXDO32)
 
 clean::         clean-smatrix
 
 distclean-smatrix: clean-smatrix
-		@rm -f $(SMATRIXDEP) $(SMATRIXDS) $(SMATRIXDH) $(SMATRIXLIB) $(SMATRIXMAP)
+		@rm -f $(SMATRIXDEP) $(SMATRIXDS) $(SMATRIXDS32) $(SMATRIXDH) \
+		   $(SMATRIXDH32) $(SMATRIXLIB) $(SMATRIXMAP)
 		@rm -rf include/Math
 		-@cd $(SMATRIXDIR)/test && $(MAKE) distclean
 

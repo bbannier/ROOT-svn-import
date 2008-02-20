@@ -46,7 +46,7 @@ class genDictionary(object) :
     self.iocomments     = opts.get('iocomments', False)
     self.no_membertypedefs  = opts.get('no_membertypedefs', False)
     self.generated_shadow_classes = []
-    self.selectionname      = 'ROOT::Reflex::Selection'
+    self.selectionname      = 'Reflex::Selection'
     self.unnamedNamespaces = []
     self.globalNamespaceID = ''
     # The next is to avoid a known problem with gccxml that it generates a
@@ -351,6 +351,8 @@ class genDictionary(object) :
     # Filter STL implementation specific classes
     classes =  filter( lambda c: self.genTypeName(c['id'])[:6] != 'std::_' ,classes)
     classes =  filter( lambda c: c['name'][:2] != '._' ,classes)  # unamed structs and unions
+    # Filter internal GCC classes
+    classes =  filter( lambda c: c['name'].find('_type_info_pseudo') == -1 ,classes)
     return self.autosel( classes )
  #----------------------------------------------------------------------------------
   def autosel(self, classes):
@@ -368,8 +370,18 @@ class genDictionary(object) :
     self.selector = sel  # remember the selector
     if self.selector :
       for f in self.functions :
-        funcname = self.genTypeName(f['id'])
-        if self.selector.selfunction( funcname ) and not self.selector.excfunction( funcname ) :
+        id = f['id']
+        funcname = self.genTypeName(id)
+        attrs = self.xref[id]['attrs']
+        context = self.genTypeName(attrs['context'])
+        demangled = attrs.get('demangled')
+        if demangled and len(demangled) :
+          lencontext = len(context)
+          if lencontext > 2:
+            demangled = demangled[lencontext + 2:]
+        else :
+          demangled = ""
+        if self.selector.selfunction( funcname, demangled ) and not self.selector.excfunction( funcname, demangled ) :
           selec.append(f)
         elif 'extra' in f and f['extra'].get('autoselect') and f not in selec:
           selec.append(f)
@@ -417,9 +429,20 @@ class genDictionary(object) :
         types.append(attrs['id'])
         if 'members' in attrs :
           for m in attrs['members'].split() :
-            if self.xref[m]['elem'] == 'Field' :
-              type = self.xref[m]['attrs']['type']
+            xref = self.xref[m]
+            if xref['elem'] in ['Field','Typedef'] and xref['attrs']['access']=="public":
+              type = xref['attrs']['type']
               self.getdependent(type, types)
+	    elif xref['elem'] in ['Method','OperatorMethod','Constructor'] \
+                     and self.isMethodReallyPublic(m):
+              if 'returns' in xref['attrs']:
+                type = xref['attrs']['returns']
+                self.getdependent(type, types)
+	      for arg in  xref['subelems']:
+		  type = arg['type']
+		  self.getdependent(type, types)
+	    else:
+	      pass #print "Doing nothing for element:", self.xref[m]['elem']
         if 'bases' in attrs :
           for b in attrs['bases'].split() :
             if b[:10] == 'protected:' : b = b[10:]
@@ -478,6 +501,10 @@ class genDictionary(object) :
 #----------------------------------------------------------------------------------
   def add_template_defaults (self, c, selection):
     tlist = []
+    klist= []
+    m = self.xref[selection['id']]
+    name = m['attrs']['name']
+    parent_args = getTemplateArgs (name)
     for f in self.get_fields (selection):
         tid = f['type']
         tname = self.genTypeName (tid)
@@ -490,15 +517,18 @@ class genDictionary(object) :
             if not arg:
               break
             if arg == nodefault_tid:
+              if tlist and tlist[-1] != '=':
+                break
               tlist.append ('=')
+              klist.append (normalizeClassAllTempl (parent_args[i-1]))
             else:
-              tlist.append (self.genTypeName (arg))
+              tlist.append (self.genTypeName (arg, alltempl=True))
             i += 1
     if tlist:
       name = self.xref[c['id']]['attrs']['name']
       i = name.find ('<')
       if i>=0 : name = name[:i]
-      stldeftab[name] = tuple (tlist)
+      stldeftab.setdefault(name, {})[tuple (klist)] = tuple (tlist)
     return
 #----------------------------------------------------------------------------------
   def isUnnamedType(self, name) :
@@ -539,10 +569,57 @@ class genDictionary(object) :
     if 'context' in attrs :
       if 'abstract' in self.xref[attrs['context']]['attrs'] : 
         if elem in ('Constructor',) : return 0
+
+    if elem in ['Method', 'Constructor', 'OperatorMethod']:
+      if self.hasNonPublicArgs(args):
+        print "censoring method:",attrs['name']
+        return 0
     #----Filter using the exclusion list in the selection file
     if self.selector and 'name' in attrs and  elem in ('Constructor','Destructor','Method','OperatorMethod','Converter') :
-      if self.selector.excmethod(self.genTypeName(attrs['context']), attrs['name'] ) : return 0
+      context = self.genTypeName(attrs['context'])
+      demangledMethod = attrs.get('demangled')
+      if demangledMethod: demangledMethod = demangledMethod[len(context) + 2:]
+      if self.selector.excmethod(self.genTypeName(attrs['context']), attrs['name'], demangledMethod ) : return 0
     return 1
+#----------------------------------------------------------------------------------
+  def isMethodReallyPublic(self,id):
+    """isMethodReallyPublic checks the accessibility of the method as well as the accessibility of the types
+    of arguments and return value. This is needed because C++ allows methods in a public section to be defined
+    from types defined in a private/protected section.
+    """
+    xref = self.xref[id]
+    attrs = xref['attrs']
+    return (attrs['access'] == "public"
+            and
+            (not self.hasNonPublicArgs(xref['subelems'])) 
+            and
+            (not 'returns' in attrs or self.isTypePublic(attrs['returns'])))
+#----------------------------------------------------------------------------------
+  def hasNonPublicArgs(self,args):
+    """hasNonPublicArgs will process a list of method arguments to check that all the referenced arguments in there are publically available (i.e not defined using protected or private types)."""
+    for arg in args:
+      type = arg["type"]
+      public = self.isTypePublic(type)
+      if public == 0:
+        return 1
+    return 0
+#----------------------------------------------------------------------------------
+  def isTypePublic(self, id):
+    type_dict = self.xref[id]
+
+    if type_dict['elem'] in ['PointerType','Typedef', 'ReferenceType', 'CvQualifiedType']:
+      return self.isTypePublic(type_dict['attrs']['type'])
+    elif type_dict['elem'] in ['FundamentalType']:
+      return 1
+    elif type_dict['elem'] in ['Class','Struct']:
+      access=type_dict['attrs'].get('access')
+      if access and access != 'public':
+        return 0
+      else:
+        return 1
+    else:
+      return 1
+      #raise "Unknown type category in isTypePublic",type_dict['elem']
 #----------------------------------------------------------------------------------
   def tmplclasses(self, local):
     result = []
@@ -631,11 +708,12 @@ class genDictionary(object) :
     if (gccxmlinfo) : c += '/*\n%s*/\n\n' % gccxmlinfo
     c += '#ifdef _WIN32\n'
     c += '#pragma warning ( disable : 4786 )\n'
+    c += '#pragma warning ( disable : 4345 )\n'
     c += '#endif\n'
     c += '#include "%s"\n' % self.hfile
     c += '#include "Reflex/Builder/ReflexBuilder.h"\n'
     c += '#include <typeinfo>\n'
-    c += 'using namespace ROOT::Reflex;\n\n'
+    c += 'using namespace ::Reflex;\n\n'
     return c
 #----------------------------------------------------------------------------------
   def genInstantiateDict( self, selclasses, selfunctions, selenums, selvariables) :
@@ -759,8 +837,8 @@ class genDictionary(object) :
         for b in bases :
           if b.get('virtual','') == '1' : acc = 'virtual ' + b['access']
           else                          : acc = b['access']
-	  bname = self.genTypeName(b['type'],colon=True)
-	  if self.xref[b['type']]['attrs'].get('access') in ('private','protected'):
+          bname = self.genTypeName(b['type'],colon=True)
+          if self.xref[b['type']]['attrs'].get('access') in ('private','protected'):
             bname = string.translate(str(bname),self.transtable)
             if not inner: c = self.genClassShadow(self.xref[b['type']]['attrs']) + c
           c += indent + '%s %s' % ( acc , bname )
@@ -772,6 +850,7 @@ class genDictionary(object) :
           c += indent + '  virtual ~%s() throw();\n' % ( clt )
       members = attrs.get('members','')
       memList = members.split()
+      # Inner class/struct/union/enum.
       for m in memList :
         member = self.xref[m]
         if member['elem'] in ('Class','Struct','Union','Enumeration') \
@@ -781,6 +860,25 @@ class genDictionary(object) :
           if cmem != cls and cmem not in inner_shadows :
             inner_shadows[cmem] = string.translate(str(cmem), self.transtable)
             c += self.genClassShadow(member['attrs'], inner + 1)
+      # Virtual methods.
+      # Shadow classes inherit from the same bases as the shadowed class; if a
+      # base is virtually inherited from at least two bases and it defines
+      # virtual methods then these virtual methods must be declared in the
+      # shadow class or the compiler will complain about ambiguous inheritance.
+      # Also, if the shadowed class defines a virtual method (that's not in the base)
+      # add our own virtual table by adding that method.
+      for m in memList :
+        member = self.xref[m]
+        if member['elem'] in ('Method','OperatorMethod') \
+               and member['attrs'].get('virtual') == '1' \
+               and self.isTypePublic(member['attrs']['returns']) \
+               and not self.hasNonPublicArgs(member['subelems']):
+          # Remove the class name and the scope operator from the demangled method name.
+          currentClassName = attrs['demangled']
+          demangledMethod = member['attrs'].get('demangled')[len(currentClassName) + 2:]
+          cmem = '  virtual %s %s throw();' % (self.genTypeName(member['attrs'].get('returns')), demangledMethod)
+          c += indent + cmem + '\n'
+      # Data members.
       for m in memList :
         member = self.xref[m]
         if member['elem'] in ('Field',) :
@@ -851,11 +949,11 @@ class genDictionary(object) :
     values = values[:-1]
     mod = self.genModifier(attrs, None)
     if self.isUnnamedType(name) :
-      s += '  .AddEnum("%s", "%s", &typeid(ROOT::Reflex::UnnamedEnum), %s)' % (name[name.rfind('::')+3:], values, mod) 
+      s += '  .AddEnum("%s", "%s", &typeid(::Reflex::UnnamedEnum), %s)' % (name[name.rfind('::')+3:], values, mod) 
     else :
       if attrs.get('access') in ('protected','private'):
         if not self.interpreter:
-          s += '  .AddEnum("%s", "%s", &typeid(ROOT::Reflex::UnknownType), %s)' % (name, values, mod)        
+          s += '  .AddEnum("%s", "%s", &typeid(::Reflex::UnknownType), %s)' % (name, values, mod)        
       else:
         s += '  .AddEnum("%s", "%s", &typeid(%s), %s)' % (name, values, name, mod)
     return s 
@@ -1051,7 +1149,10 @@ class genDictionary(object) :
       self.genTypeID(id)
       args = self.xref[id]['subelems']
       returns  = self.genTypeName(f['returns'], enum=True, const=True)
-      if not self.quiet : print  'function '+ name
+      demangled = self.xref[id]['attrs'].get('demangled')
+      if not demangled or not len(demangled):
+        demangled = name
+      if not self.quiet : print  'function '+ demangled
       s += 'static void* '
       if len(args) :
         s +=  'function%s( void*, const std::vector<void*>& arg, void*)\n{\n' % id 
@@ -1523,7 +1624,7 @@ class genDictionary(object) :
     clt      = string.translate(str(cl), self.transtable)
     t        = getTemplateArgs(cl)[0]
     s  = 'static void* method%s( void*, const std::vector<void*>&, void*)\n{\n' %( attrs['id'], )
-    s += '  return ROOT::Reflex::Proxy< %s >::Generate();\n' % (cl,)
+    s += '  return ::Reflex::Proxy< %s >::Generate();\n' % (cl,)
     s += '}\n'
     return s
 #----BasesMap stuff--------------------------------------------------------
@@ -1537,14 +1638,14 @@ class genDictionary(object) :
     cl       = self.genTypeName(cid, colon=True)
     clt      = string.translate(str(cl), self.transtable)
     s  = 'static void* method%s( void*, const std::vector<void*>&, void*)\n{\n' %( attrs['id'], )
-    s += '  static std::vector<std::pair<ROOT::Reflex::Base, int> > s_bases;\n'
+    s += '  static std::vector<std::pair< ::Reflex::Base, int> > s_bases;\n'
     s += '  if ( !s_bases.size() ) {\n'
     bases = []
     self.getAllBases( cid, bases ) 
     for b in bases :
       bname = self.genTypeName(b[0],colon=True)
       bname2 = self.genTypeName(b[0])
-      s += '    s_bases.push_back(std::make_pair(ROOT::Reflex::Base( ROOT::Reflex::TypeBuilder("%s"), ROOT::Reflex::BaseOffset< %s,%s >::Get(),%s), %d));\n' % (bname2, cl, bname, b[1], b[2])
+      s += '    s_bases.push_back(std::make_pair(::Reflex::Base( ::Reflex::TypeBuilder("%s"), ::Reflex::BaseOffset< %s,%s >::Get(),%s), %d));\n' % (bname2, cl, bname, b[1], b[2])
     s += '  }\n  return &s_bases;\n' 
     s += '}\n'
     return s
@@ -1725,6 +1826,7 @@ def normalizeFragment(name,alltempl=False) :
   name = name.strip()
   if name.find('<') == -1  : 
     nor =  name
+    if nor.find('int') == -1: return nor
     for e in [ ['long long unsigned int', 'unsigned long long'],
              ['long long int',          'long long'],
              ['unsigned short int',     'unsigned short'],
@@ -1739,17 +1841,31 @@ def normalizeFragment(name,alltempl=False) :
   if name.rfind('>') == -1 : suffix = ''
   else                     : suffix = name[name.rfind('>')+1:]
   args = getTemplateArgs(name)
-  if alltempl :
-    nor = clname + '<' + string.join(map(normalizeClassAllTempl,args),',')
-  else :     
-    if clname in stldeftab :
+  sargs = [normalizeClass(a, alltempl) for a in args]
+
+  if not alltempl :
+    defargs = stldeftab.get (clname)
+    if defargs and type(defargs) == type({}):
+      args = [normalizeClass(a, True) for a in args]
+      defargs_tup = None
+      for i in range (1, len (args)):
+        defargs_tup = defargs.get (tuple (args[:i]))
+        if defargs_tup:
+          lastdiff = i-1
+          for j in range (i, len(args)):
+            if defargs_tup[j] != args[j]:
+              lastdiff = j
+          sargs = args[:lastdiff+1]
+          break
+    elif defargs:
       # select only the template parameters different from default ones
+      args = sargs
       sargs = []
       for i in range(len(args)) :  
-        if args[i].find(stldeftab[clname][i]) == -1 : sargs.append(args[i])
-      nor = clname + '<' + string.join(map(normalizeClassNoDefTempl,sargs),',')
-    else :
-      nor = clname + '<' + string.join(map(normalizeClassNoDefTempl,args),',')
+        if args[i].find(defargs[i]) == -1 : sargs.append(args[i])
+      sargs = [normalizeClass(a, alltempl) for a in sargs]
+
+  nor = clname + '<' + string.join(sargs,',')
   if nor[-1] == '>' : nor += ' >' + suffix
   else              : nor += '>' + suffix
   return nor

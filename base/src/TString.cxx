@@ -19,6 +19,11 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
+// silence warning about gNullRef cast
+#if defined(__GNUC__) && __GNUC__ >= 4 && __GNUC_MINOR__ >= 2 && __GNUC_PATCHLEVEL__ >= 1
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#endif
+
 #include "RConfig.h"
 #include <stdlib.h>
 #include <ctype.h>
@@ -1339,7 +1344,7 @@ TSubString TString::operator()(Ssiz_t start, Ssiz_t len)
 {
    // Return sub-string of string starting at start with length len.
 
-   if (start < Length()) {
+   if (start < Length() && len > 0) {
       if (start+len > Length())
          len = Length() - start;
    } else {
@@ -1387,7 +1392,7 @@ TSubString TString::operator()(Ssiz_t start, Ssiz_t len) const
 {
    // Return sub-string of string starting at start with length len.
 
-   if (start < Length()) {
+   if (start < Length() && len > 0) {
       if (start+len > Length())
          len = Length() - start;
    } else {

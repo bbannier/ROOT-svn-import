@@ -19,9 +19,7 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#ifdef R__HAVE_CONFIG
 #include "RConfigure.h"
-#endif
 
 #include "TGApplication.h"
 #include "TROOT.h"
@@ -64,6 +62,9 @@ TGApplication::TGApplication(const char *appClassName,
    GetOptions(argc, argv);
    if (argv && argv[0])
       gSystem->SetProgname(argv[0]);
+
+   // Tell TSystem the TApplication has been created
+   gSystem->NotifyApplicationCreated();
 
    // Enable autoloading
    gInterpreter->EnableAutoLoading();

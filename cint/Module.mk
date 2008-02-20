@@ -267,7 +267,8 @@ clean::         clean-cint
 distclean-cint: clean-cint
 		@rm -f $(CINTALLDEP) $(CINTLIB) $(IOSENUM) $(CINTEXEDEP) \
 		   $(CINT) $(CINTTMP) $(MAKECINT) $(CINTDIRM)/*.exp \
-		   $(CINTDIRM)/*.lib $(CINTDIRS)/v6_loadfile_tmp.cxx
+		   $(CINTDIRM)/*.lib $(CINTDIRS)/v6_loadfile_tmp.cxx \
+		   $(CINTDIRDLLS)/sys/types.h $(CINTDIRDLLS)/systypes.h
 
 distclean::     distclean-cint
 
@@ -276,6 +277,9 @@ $(CINTDIRS)/libstrm.o:  CINTCXXFLAGS += -I$(CINTDIRL)/stream
 $(CINTDIRS)/sun5strm.o: CINTCXXFLAGS += -I$(CINTDIRL)/sunstrm
 $(CINTDIRS)/vcstrm.o:   CINTCXXFLAGS += -I$(CINTDIRL)/vcstream
 $(CINTDIRS)/%strm.o:    CINTCXXFLAGS += -I$(CINTDIRL)/$(notdir $(basename $@))
+ifeq ($(GCC_MAJOR),4)
+$(CINTDIRS)/gcc4strm.o:  CINTCXXFLAGS += -Wno-strict-aliasing
+endif
 
 $(MAKECINTO) $(CINTALLO): $(CINTCONF)
 

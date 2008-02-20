@@ -32,11 +32,42 @@ namespace ROOT {
 
    namespace Math { 
 
+/**
+   @defgroup MultiMin Multi-dimensional Minimization
+   @ingroup NumAlgo
 
+   Classes implementing algorithms for multi-dimensional minimization 
+ */
+
+
+
+//_______________________________________________________________________________
 /** 
-   Abstract Minimizer class, defining  interface for the various minimizer
-   (like TMinuit, Minuit2, Fumili, etc..)  
-*/ 
+   Abstract Minimizer class, defining  the interface for the various minimizer
+   (like Minuit2, Minuit, GSL, etc..) 
+   Plug-in's exist in ROOT to be able to instantiate the derived classes like 
+   ROOT::Math::GSLMinimizer or ROOT::Math::Minuit2Minimizer via the 
+   plug-in manager.
+
+   Provides interface for setting the function to be minimized. 
+   The function must  implemente the multi-dimensional generic interface
+   ROOT::Math::IBaseFunctionMultiDim. 
+   If the function provides gradient calculation 
+   (implements the ROOT::Math::IGradientFunctionMultiDim interface) this will be 
+   used by the Minimizer. 
+
+   It Defines also interface for setting the initial values for the function variables (which are the parameters in 
+   of the model function in case of solving for fitting) and especifying their limits. 
+
+   It defines the interface to set and retrieve basic minimization parameters 
+   (for specific Minimizer parameters one must use the derived classes). 
+
+   Then it defines the interface to retrieve the result of minimization ( minimum X values, function value, 
+   gradient, error on the mimnimum, etc...)
+
+   @ingroup MultiMin
+*/
+ 
 class Minimizer {
 
 public: 
@@ -53,6 +84,7 @@ public:
 #else
       fDebug(3),
 #endif 
+      fStrategy(1),
       fMaxCalls(0), 
       fMaxIter(0),
       fTol(1.E-6), 
@@ -63,6 +95,9 @@ public:
       Destructor (no operations)
    */ 
    virtual ~Minimizer ()  {}  
+
+
+
 
 private:
    // usually copying is non trivial, so we make this unaccessible
@@ -172,7 +207,7 @@ public:
    virtual unsigned int NFree() const = 0;  
 
    /// minimizer provides error and error matrix
-   virtual bool providesError() const = 0; 
+   virtual bool ProvidesError() const = 0; 
 
    /// return errors at the minimum 
    virtual const double * Errors() const = 0;
@@ -207,6 +242,9 @@ public:
    /// absolute tolerance 
    double Tolerance() const { return  fTol; }
 
+   /// strategy 
+   int Strategy() const { return fStrategy; }
+
    /// return the statistical scale used for calculate the error
    /// is typically 1 for Chi2 minimizetion and 0.5 for likelihood's
    double ErrorUp() const { return fUp; } 
@@ -223,6 +261,9 @@ public:
    /// set the tolerance
    void SetTolerance(double tol) { fTol = tol; }
 
+   ///set the strategy 
+   void SetStrategy(int strategyLevel) { fStrategy = strategyLevel; }  
+
    /// set scale for calculating the errors
    void SetErrorUp(double up) { fUp = up; }
 
@@ -233,14 +274,14 @@ protected:
 
 //private: 
 
-   // keep protected to be accessible to the derived classes 
+   // keep protected to be accessible by the derived classes 
  
-   // print level
-   int fDebug; 
-   unsigned int fMaxCalls; 
-   unsigned int fMaxIter; 
-   double fTol; 
-   double fUp; 
+   int fDebug;                  // print level
+   int fStrategy;               // minimizer strategy
+   unsigned int fMaxCalls;      // max number of funciton calls 
+   unsigned int fMaxIter;       // max number or iterations used to find the minimum
+   double fTol;                 // tolerance (absolute)
+   double fUp;                  // error scale 
 
 }; 
 

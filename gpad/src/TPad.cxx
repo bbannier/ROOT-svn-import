@@ -82,14 +82,14 @@ ClassImpQ(TPad)
 //  member function of the object classes.
 //  It is important to realize that the pad is a linked list of references
 //  to the original object.
-//  For example, in case of an histogram, the histogram.Draw() operation
+//  For example, in case of a histogram, the histogram.Draw() operation
 //  only stores a reference to the histogram object and not a graphical
 //  representation of this histogram.
 //  When the mouse is used to change (say the bin content), the bin content
 //  of the original histogram is changed !!
 //
 //  The convention used in ROOT is that a Draw operation only adds
-//  a reference to the object. The effective drawing is performed when
+//  a reference to the object. The effective drawing is performed
 //  when the canvas receives a signal to be painted.
 //  This signal is generally sent when typing carriage return in the
 //  command input or when a graphical operation has been performed on one
@@ -1407,8 +1407,12 @@ TH1F *TPad::DrawFrame(Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax
    //  Use services of TH1F class
 
    if (!IsEditable()) return 0;
-
    TPad *padsav = (TPad*)gPad;
+   if (this !=  padsav) {
+      Warning("DrawFrame","Drawframe must be called for the current pad only");
+      return padsav->DrawFrame(xmin,ymin,xmax,ymax,title);
+   }
+
    cd();
 
    TH1F *hframe = (TH1F*)FindObject("hframe");
@@ -1560,6 +1564,8 @@ void TPad::ExecuteEvent(Int_t event, Int_t px, Int_t py)
    }
 
    Int_t newcode = gROOT->GetEditorMode();
+   if (newcode)
+      pA = pB = pC = pD = pTop = pL = pR = pBot = pINSIDE = kFALSE;
    switch (newcode) {
       case kPad:
          TCreatePrimitives::Pad(event,px,py,0);
@@ -2914,12 +2920,7 @@ void TPad::PaintModified()
    cd();
    if (IsModified() || IsTransparent()) {
       if ((fFillStyle < 3026) && (fFillStyle > 3000)) {
-         Int_t px1 = XtoPixel(fX1);
-         Int_t px2 = XtoPixel(fX2);
-         Int_t py1 = YtoPixel(fY1);
-         Int_t py2 = YtoPixel(fY2);
-         gVirtualX->SetFillColor(10);
-         gVirtualX->DrawBox(px1,py1,px2,py2,TVirtualX::kFilled);
+         if (!gPad->IsBatch()) gVirtualX->ClearWindow();
       }
       PaintBorder(GetFillColor(), kTRUE);
    }
@@ -3729,6 +3730,7 @@ void TPad::PaintPolyLineNDC(Int_t n, Double_t *x, Double_t *y, Option_t *)
    // Paint polyline in CurrentPad NDC coordinates.
 
    TPoint *pxy;
+   Int_t i;
 
    // Create temporary array to store array in pixel coordinates
    if (n <=0) return;
@@ -3737,7 +3739,7 @@ void TPad::PaintPolyLineNDC(Int_t n, Double_t *x, Double_t *y, Option_t *)
       if (n <kPXY) pxy = &gPXY[0];
       else         pxy = new TPoint[n+1]; if (!pxy) return;
       // convert points from world to pixel coordinates
-      for (Int_t i=0;i<n;i++) {
+      for (i=0; i<n; i++) {
          pxy[i].fX = UtoPixel(x[i]);
          pxy[i].fY = VtoPixel(y[i]);
       }
@@ -3747,7 +3749,15 @@ void TPad::PaintPolyLineNDC(Int_t n, Double_t *x, Double_t *y, Option_t *)
    }
 
    if (gVirtualPS) {
-      gVirtualPS->DrawPS(n, x, y);
+      Double_t *xw = new Double_t[n];
+      Double_t *yw = new Double_t[n];
+      for (i=0; i<n; i++) {
+         xw[i] = fX1 + x[i]*(fX2 - fX1);
+         yw[i] = fY1 + y[i]*(fY2 - fY1);
+      }
+      gVirtualPS->DrawPS(n, xw, yw);
+      delete [] xw;
+      delete [] yw;
    }
    Modified();
 }
@@ -4169,9 +4179,11 @@ void TPad::Print(const char *filenam, Option_t *option)
    //    }// end loop
    //    c1.Print("file.ps]");   // No actual print, just close.
    //
-   // It's posiible to Print pad into an animated GIF file by specifying file name as
-   // "myfile.gif+" of "myfile.gif+NN" , where NN is delay of displaying subimages
-   // during animation in 10ms units. If NN is ommitted the delay between subimages is zero.
+   // It is possible to print a pad into an animated GIF file by specifying the
+   // file name as "myfile.gif+" or "myfile.gif+NN", where NN*10ms is delay
+   // between the subimages' display. If NN is ommitted the delay between
+   // subimages is zero. Each picture is added in the animation thanks to a loop
+   // similar to the following one:
    //
    //    for (int i=0; i<10; ++i) {
    //      // fill canvas for context i
@@ -4179,6 +4191,8 @@ void TPad::Print(const char *filenam, Option_t *option)
    //
    //      c1.Print("file.gif+5");  // print canvas to GIF file with 50ms delays
    //    }// end loop
+   //
+   // The delay between each frame must be specified in each Print() statement.
 
    TString psname, fs1, fs2;
    char *filename;
@@ -4221,6 +4235,8 @@ void TPad::Print(const char *filenam, Option_t *option)
       psname.Prepend("/");
       psname.Prepend(gEnv->GetValue("Canvas.PrintDirectory","."));
    }
+   if (!gPad->IsBatch() && fCanvas)
+      gVirtualX->SelectWindow(GetCanvasID());
 
    // Save pad/canvas in alternative formats
    TImage::EImageFileTypes gtype = TImage::kUnknown;
@@ -4360,10 +4376,14 @@ void TPad::Print(const char *filenam, Option_t *option)
    // is not on the screen, set batch mode
    Bool_t mustOpen  = kTRUE;
    Bool_t mustClose = kTRUE;
-   char *copen   = (char*)strstr(psname.Data(),"("); if (copen)   *copen   = 0;
-   char *cclose  = (char*)strstr(psname.Data(),")"); if (cclose)  *cclose  = 0;
-   char *copenb  = (char*)strstr(psname.Data(),"["); if (copenb)  *copenb  = 0;
-   char *ccloseb = (char*)strstr(psname.Data(),"]"); if (ccloseb) *ccloseb = 0;
+   char *copen=0, *cclose=0, *copenb=0, *ccloseb=0;
+   if (!image) {
+      // The parenthesis mechanism is only valid for PS files.
+      copen   = (char*)strstr(psname.Data(),"("); if (copen)   *copen   = 0;
+      cclose  = (char*)strstr(psname.Data(),")"); if (cclose)  *cclose  = 0;
+      copenb  = (char*)strstr(psname.Data(),"["); if (copenb)  *copenb  = 0;
+      ccloseb = (char*)strstr(psname.Data(),"]"); if (ccloseb) *ccloseb = 0;
+   }
    gVirtualPS = (TVirtualPS*)gROOT->GetListOfSpecials()->FindObject(psname);
    if (gVirtualPS) {mustOpen = kFALSE; mustClose = kFALSE;}
    if (copen  || copenb)  mustClose = kFALSE;
@@ -4546,8 +4566,8 @@ void TPad::RedrawAxis(Option_t *option)
    while ((obj = next())) {
       if (obj->InheritsFrom("TH1")) {
          TH1 *hobj = (TH1*)obj;
-         if (opt.Contains("g")) hobj->Draw("sameaxig");
-         else                   hobj->Draw("sameaxis");
+         if (opt.Contains("g")) hobj->DrawCopy("sameaxig");
+         else                   hobj->DrawCopy("sameaxis");
          return;
       }
       if (obj->InheritsFrom("TMultiGraph")) {
@@ -4933,10 +4953,10 @@ void TPad::SavePrimitive(ostream &out, Option_t * /*= ""*/)
       out<<"   "<<cname<<"->SetGridy();"<<endl;
    }
    if (GetTickx()) {
-      out<<"   "<<cname<<"->SetTickx();"<<endl;
+      out<<"   "<<cname<<"->SetTickx("<<GetTickx()<<");"<<endl;
    }
    if (GetTicky()) {
-      out<<"   "<<cname<<"->SetTicky();"<<endl;
+      out<<"   "<<cname<<"->SetTicky("<<GetTicky()<<");"<<endl;
    }
    if (GetTheta() != 30) {
       out<<"   "<<cname<<"->SetTheta("<<GetTheta()<<");"<<endl;
@@ -5653,12 +5673,15 @@ TObject *TPad::WaitPrimitive(const char *pname, const char *emode)
    TObject *oldlast = gPad->GetListOfPrimitives()->Last();
    TObject *obj = 0;
    Bool_t testlast = kFALSE;
+   Bool_t hasname = strlen(pname) > 0;
    if (strlen(pname) == 0 && strlen(emode) == 0) testlast = kTRUE;
    if (testlast) gROOT->SetEditorMode();
    while (!gSystem->ProcessEvents() && gROOT->GetSelectedPad()) {
       if (gROOT->GetEditorMode() == 0) {
-         obj = FindObject(pname);
-         if (obj) return obj;
+         if (hasname) {
+            obj = FindObject(pname);
+            if (obj) return obj;
+         }
          if (testlast) {
             obj = gPad->GetListOfPrimitives()->Last();
             if (obj != oldlast) return obj;

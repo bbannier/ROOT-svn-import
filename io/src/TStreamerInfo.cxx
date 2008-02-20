@@ -12,6 +12,22 @@
 
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
+// A TStreamerInfo object describes a persistent version of a class.    //
+// A ROOT file contains the list of TStreamerInfo objects for all the   //
+// class versions written to this file.                                 //
+// When reading a file, all the TStreamerInfo objects are read back in  //
+// memory and registered to the TClass list of TStreamerInfo.           //
+//                                                                      //
+// One can see the list and contents of the TStreamerInfo on a file     //
+// with, eg,                                                            //
+//    TFile f("myfile.root");                                           //
+//    f.ShowStreamerInfo();                                             //
+//                                                                      //
+// A TStreamerInfo is a list of TStreamerElement objects (one per data  //
+// member or base class).                                               //
+// When streaming an object, the system (TClass) loops on all the       //
+// TStreamerElement objects and calls teh appropriate function for each //
+// element type.                                                        //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -44,6 +60,8 @@
 #include "TVirtualCollectionProxy.h"
 #include "TInterpreter.h"
 
+#include "TMakeProject.h"
+
 TStreamerElement *TStreamerInfo::fgElement = 0;
 Int_t   TStreamerInfo::fgCount = 0;
 
@@ -72,6 +90,7 @@ TStreamerInfo::TStreamerInfo()
    fNdata    = 0;
    fSize     = 0;
    fClassVersion = 0;
+   fOnFileClassVersion = 0;
    fOptimized = kFALSE;
    fOldVersion = Class()->GetClassVersion();
    fIsBuilt  = kFALSE;
@@ -100,6 +119,7 @@ TStreamerInfo::TStreamerInfo(TClass *cl, const char *info)
    fOptimized = kFALSE;
    fIsBuilt  = kFALSE;
    fClassVersion = fClass->GetClassVersion();
+   fOnFileClassVersion = 0;
    fOldVersion = Class()->GetClassVersion();
 
    if (info) BuildUserInfo(info);
@@ -110,6 +130,7 @@ TStreamerInfo::TStreamerInfo(const TStreamerInfo& si) :
   TVirtualStreamerInfo(si),
   fCheckSum(si.fCheckSum),
   fClassVersion(si.fClassVersion),
+  fOnFileClassVersion(si.fOnFileClassVersion),
   fNumber(si.fNumber),
   fNdata(si.fNdata),
   fSize(si.fSize),
@@ -137,6 +158,7 @@ TStreamerInfo& TStreamerInfo::operator=(const TStreamerInfo& si)
       TVirtualStreamerInfo::operator=(si);
       fCheckSum=si.fCheckSum;
       fClassVersion=si.fClassVersion;
+      fOnFileClassVersion=si.fOnFileClassVersion;
       fNumber=si.fNumber;
       fNdata=si.fNdata;
       fSize=si.fSize;
@@ -420,7 +442,6 @@ void TStreamerInfo::BuildCheck()
    TObjArray* array = 0;
    fClass = TClass::GetClass(GetName());
    if (!fClass) {
-      // FIXME: Is this the proper version number?
       fClass = new TClass(GetName(), fClassVersion, 0, 0, -1, -1);
       fClass->SetBit(TClass::kIsEmulation);
       array = fClass->GetStreamerInfos();
@@ -430,35 +451,99 @@ void TStreamerInfo::BuildCheck()
       }
       array = fClass->GetStreamerInfos();
       TStreamerInfo* info = 0;
-      // If we have a foreign class, we need to search for
-      // a StreamerInfo with same checksum.
+
+      // If the user has not specified a class version (this _used to_
+      // always be the case when the class is Foreign) or if the user
+      // has specified a version to be explicitly 1. [We can not
+      // distringuish the two cases using the information in the "on
+      // file" StreamerInfo.]
+
       Bool_t searchOnChecksum = kFALSE;
-      if (fClass->IsLoaded()) {
-         if (fClass->IsForeign()) {
-            searchOnChecksum = kTRUE;
+      if (fClass->IsLoaded() && fClass->GetClassVersion() >= 2) {
+         // We know for sure that the user specified the version.
+
+         if (fOnFileClassVersion >= 2) {
+            // The class version was specified when the object was
+            // written
+
+            searchOnChecksum = kFALSE;
+
+         } else {
+            // The class version was not specified when the object was
+            // written OR it was specified to be 1.
+
+            searchOnChecksum = kTRUE;            
          }
+      } else if (fClass->IsLoaded() && !fClass->IsForeign()) {
+         // We are in the case where the class has a Streamer function.
+         // and fClass->GetClassVersion is 1, we still assume that the
+         // Class Version is specified (to be one).
+
+         searchOnChecksum = kFALSE;
+
+      } else if (fClass->IsLoaded() /* implied: && fClass->IsForeign() */ ) {
+         // We are in the case of a Foreign class with no specified
+         // class version.
+
+         searchOnChecksum = kTRUE;
+
       } else {
-         // When the class is not loaded the result of IsForeign()
-         // is not what we are looking for (technically it means
-         // IsLoaded() and there is no Streamer() method).
-         //
-         // A foreign class would have the ClassVersion equal to 1.
-         // Also we only care if a StreamerInfo has already been loaded.
-         if (fClassVersion == 1) {
+         // We are in the case of an 'emulated' class.
+
+         if (fOnFileClassVersion >= 2) {
+            // The class version was specified when the object was
+            // written
+
+            searchOnChecksum = kFALSE;
+
+         } else {
+            // The class version was not specified when the object was
+            // written OR it was specified to be 1.
+
+            searchOnChecksum = kTRUE;
+
             TStreamerInfo* v1 = (TStreamerInfo*) array->At(1);
             if (v1) {
-               // FIXME: This is crazy.
                if (fCheckSum != v1->GetCheckSum()) {
-                  searchOnChecksum = kTRUE;
                   fClassVersion = array->GetLast() + 1;
                }
             }
          }
       }
+            
+
+
+//       searchOnChecksum = kTRUE;
+
+//       // If we have a foreign class, we need to search for
+//       // a StreamerInfo with same checksum.
+//       Bool_t searchOnChecksum = kFALSE;
+//       if (fClass->IsLoaded()) {
+//          if (fClass->IsForeign()) {
+//             searchOnChecksum = kTRUE;
+//          }
+//       } else {
+//          // When the class is not loaded the result of IsForeign()
+//          // is not what we are looking for (technically it means
+//          // IsLoaded() and there is no Streamer() method).
+//          //
+//          // A foreign class would have the ClassVersion equal to 1.
+//          // Also we only care if a StreamerInfo has already been loaded.
+//          if (fClassVersion == 1) {
+//             TStreamerInfo* v1 = (TStreamerInfo*) array->At(1);
+//             if (v1) {
+//                if (fCheckSum != v1->GetCheckSum()) {
+//                   searchOnChecksum = kTRUE;
+//                   fClassVersion = array->GetLast() + 1;
+//                }
+//             }
+//          }
+//       }
+
       if (!searchOnChecksum) {
          info = (TStreamerInfo*) array->At(fClassVersion);
       } else {
-         Int_t ninfos = array->GetEntriesFast();
+         Int_t ninfos = array->GetEntriesFast() - 1;
          for (Int_t i = -1; i < ninfos; ++i) {
             info = (TStreamerInfo*) array->UncheckedAt(i);
             if (!info) {
@@ -470,7 +555,17 @@ void TStreamerInfo::BuildCheck()
             }
             info = 0;
          }
+         if (info==0) {
+            // Find an empty slot.
+            Int_t ninfos = array->GetEntriesFast() - 1;
+            Int_t slot = 1; // Start of Class version 1.
+            while ((slot < ninfos) && (array->UncheckedAt(slot) != 0)) {
+               ++slot;
+            }
+            fClassVersion = slot;
+         }
       }
+
       // NOTE: Should we check if the already existing info is the same as
       // the current one? Yes
       // In case a class (eg Event.h) has a TClonesArray of Tracks, it could be
@@ -480,8 +575,33 @@ void TStreamerInfo::BuildCheck()
          // We found an existing TStreamerInfo for our ClassVersion
          Bool_t match = kTRUE;
          Bool_t done = kFALSE;
+         Bool_t oldIsNonVersioned = kFALSE;
          if (!fClass->TestBit(TClass::kWarned) && (fClassVersion == info->GetClassVersion()) && (fCheckSum != info->GetCheckSum())) {
+
             match = kFALSE;
+            oldIsNonVersioned = info->fOnFileClassVersion==1 && info->fClassVersion != 1;
+
+            if (fClass->IsLoaded() && (fClassVersion == fClass->GetClassVersion()) && fClass->GetListOfDataMembers() && (fClass->GetClassInfo())) {
+               // In the case where the read-in TStreamerInfo does not
+               // match in the 'current' in memory TStreamerInfo for
+               // a non foreign class (we can not get here if this is
+               // a foreign class so we do not need to test it),
+               // we need to add this one more test since the CINT behaviour
+               // with enums changed over time, so verify the checksum ignoring
+               // members of type enum. We also used to not count the //[xyz] comment
+               // in the checksum, so test for that too.
+               if (  (fCheckSum == fClass->GetCheckSum() || fCheckSum == fClass->GetCheckSum(1) || fCheckSum == fClass->GetCheckSum(2))
+                   &&(info->GetCheckSum() == fClass->GetCheckSum() || info->GetCheckSum() == fClass->GetCheckSum(1) || info->GetCheckSum() == fClass->GetCheckSum(2))
+                  )
+               {
+                  match = kTRUE;
+               }
+               if (fOldVersion <= 2) {
+                  // Names of STL base classes was modified in vers==3. Allocators removed
+                  // (We could be more specific (see test for the same case below)
+                  match = kTRUE;
+               }
+            }
          }
          if (info->IsBuilt()) {
             SetBit(kCanDelete);
@@ -500,23 +620,6 @@ void TStreamerInfo::BuildCheck()
                   e2->SetTitle(e1->GetTitle());
                }
             }
-            if (!match && fClass->IsLoaded() && (fClassVersion == fClass->GetClassVersion()) && fClass->GetListOfDataMembers() && (fCheckSum != fClass->GetCheckSum()) && (fClass->GetClassInfo())) {
-               // In the case where the read-in TStreamerInfo does not
-               // match in the 'current' in memory TStreamerInfo for
-               // a non foreign class (we can get here if this is
-               // a foreign class so we do not need to test it),
-               // we need to add this one more test since the CINT behaviour
-               // with enums changed over time, so verify the checksum ignoring
-               // members of type enum
-               if (fCheckSum == fClass->GetCheckSum(1)) {
-                  match = kTRUE;
-               }
-               if (fOldVersion <= 2) {
-                  // Names of STL base classes was modified in vers==3. Allocators removed
-                  // (We could be more specific (see test for the same case below)
-                  match = kTRUE;
-               }
-            }
             done = kTRUE;
          } else {
             array->RemoveAt(fClassVersion);
@@ -524,16 +627,35 @@ void TStreamerInfo::BuildCheck()
             info = 0;
          }
          if (!match && !fClass->TestBit(TClass::kWarned)) {
-            if (done) {
+            if (oldIsNonVersioned) {
                Warning("BuildCheck", "\n\
+   The class %s transitioned from not having a specified class version\n\
+   to having a specified class version (the current class version is %d).\n\
+   However too many different non-versioned layouts of the class have been\n\
+   loaded so far.  This prevent the proper reading of objects written with\n\
+   the class layout version %d, in particular from the file:\n\
+   %s.\n\
+   To work around this issue, load fewer 'old' files in the same ROOT session.",
+                       GetName(),fClass->GetClassVersion(),fClassVersion,gDirectory->GetFile()->GetName());
+            } else {
+               if (done) {
+                  Warning("BuildCheck", "\n\
    The StreamerInfo for version %d of class %s read from file %s\n\
    has a different checksum than the previously loaded StreamerInfo.\n\
    Reading objects of type %s from the file %s \n\
    (and potentially other files) might not work correctly.\n\
    Most likely the version number of the class was not properly\n\
-   updated [See ClassDef(%s,%d)].\n", fClassVersion, GetName(), gDirectory->GetFile()->GetName(), GetName(), gDirectory->GetFile()->GetName(), GetName(), fClassVersion);
-            } else {
-               Warning("BuildCheck", "TStreamerInfo (WriteWarning) from %s does not match existing one (%s:%d)", gDirectory->GetFile()->GetName(), GetName(), fClassVersion);
+   updated [See ClassDef(%s,%d)].", 
+                          fClassVersion, GetName(), gDirectory->GetFile()->GetName(), GetName(), gDirectory->GetFile()->GetName(), GetName(), fClassVersion);
+               } else {
+                  Warning("BuildCheck", "\n\
+   The StreamerInfo from %s does not match existing one (%s:%d)\n\
+   The existing one has not been used yet and will be discarded.\n\
+   Reading the %s will work properly, however writing object of\n\
+   type %s will not work properly.  Most likely the version number\n\
+   of the class was not properly updated [See ClassDef(%s,%d)].", 
+                          gDirectory->GetFile()->GetName(), GetName(), fClassVersion,gDirectory->GetFile()->GetName(),GetName(), GetName(), fClassVersion);
+               }
             }
             fClass->SetBit(TClass::kWarned);
          }
@@ -541,40 +663,45 @@ void TStreamerInfo::BuildCheck()
             return;
          }
       }
-      if (fClass->GetListOfDataMembers() && (fClassVersion == fClass->GetClassVersion()) && (fCheckSum != fClass->GetCheckSum()) && (fClass->GetClassInfo())) {
-         // Give a last chance. Due to a new CINT behaviour with enums
-         //verify the checksum ignoring members of type enum
-         if (fCheckSum != fClass->GetCheckSum(1)) {
-            if (fClass->IsForeign()) {
-               // Find an empty slot.
-               Int_t ninfos = array->GetEntriesFast();
-               Int_t slot = 2; // Start of Class version 2.
-               while ((slot < ninfos) && (array->UncheckedAt(slot) != 0)) {
-                  ++slot;
-               }
-               fClassVersion = slot;
-            } else {
-               Bool_t warn = !fClass->TestBit(TClass::kWarned);
-               if (warn && (fOldVersion <= 2)) {
-                  // Names of STL base classes was modified in vers==3. Allocators removed
-                  //
-                  TIter nextBC(fClass->GetListOfBases());
-                  TBaseClass* bc = 0;
-                  while ((bc = (TBaseClass*) nextBC())) {
-                     if (TClassEdit::IsSTLCont(bc->GetName())) {
-                        warn = kFALSE;
-                     }
+      // The slot was free, however it might still be reversed for the current 
+      // loaded version of the class
+      if (fClass->GetListOfDataMembers() 
+          && (fClassVersion == fClass->GetClassVersion()) 
+          && (fCheckSum != fClass->GetCheckSum()) 
+          && (fClass->GetClassInfo())) {
+
+         // If the old TStreamerInfo matches the in-memory one when we either
+         //   - ignore the members of type enum
+         // or
+         //   - ignore the comments annotation (//[xyz])
+         // we can accept the old TStreamerInfo.
+         
+         if (fCheckSum != fClass->GetCheckSum(1) && fCheckSum != fClass->GetCheckSum(2)) {
+            
+            Bool_t warn = !fClass->TestBit(TClass::kWarned);
+            if (warn && (fOldVersion <= 2)) {
+               // Names of STL base classes was modified in vers==3. Allocators removed
+               //
+               TIter nextBC(fClass->GetListOfBases());
+               TBaseClass* bc = 0;
+               while ((bc = (TBaseClass*) nextBC())) {
+                  if (TClassEdit::IsSTLCont(bc->GetName())) {
+                     warn = kFALSE;
                   }
                }
-               if (warn) {
-                  Warning("BuildCheck", "\n\
+            }
+            if (warn) {
+               Warning("BuildCheck", "\n\
    The StreamerInfo of class %s read from file %s\n\
    has the same version (=%d) as the active class but a different checksum.\n\
    You should update the version to ClassDef(%s,%d).\n\
    Do not try to write objects with the current class definition,\n\
    the files will not be readable.\n", GetName(), gDirectory->GetFile()->GetName(), fClassVersion, GetName(), fClassVersion + 1);
-                  fClass->SetBit(TClass::kWarned);
-               }
+               fClass->SetBit(TClass::kWarned);
+            }
+         } else {
+            if (fClass->IsForeign()) {
+               R__ASSERT(0);
             }
          }
       } else {
@@ -591,7 +718,7 @@ void TStreamerInfo::BuildCheck()
    if (TestBit(kIgnoreTObjectStreamer)) {
       fClass->IgnoreTObjectStreamer();
    }
-   if ((fClassVersion < 0) || (fClassVersion > 65000)) {
+   if ((fClassVersion < -1) || (fClassVersion > 65000)) {
       printf("ERROR reading TStreamerInfo: %s fClassVersion=%d\n", GetName(), fClassVersion);
       SetBit(kCanDelete);
       fNumber = -1;
@@ -740,7 +867,7 @@ namespace {
       if (oldProxy->GetValueClass() == newProxy->GetValueClass()) {
          if ((oldProxy->GetValueClass() ==0 && oldProxy->GetType() == newProxy->GetType())
              ||(oldProxy->GetValueClass() && oldProxy->HasPointers() == newProxy->HasPointers())) {
-            // We have compatibles collections (they have the same content!
+            // We have compatibles collections (they have the same content)!
             return kTRUE;
          }
       }
@@ -755,10 +882,10 @@ namespace {
       TVirtualCollectionProxy *oldProxy = oldClass->GetCollectionProxy();
       TVirtualCollectionProxy *newProxy = newClass->GetCollectionProxy();
 
-      if (oldProxy->GetValueClass() == 0 && newProxy->GetValueClass() == 00
+      if (oldProxy->GetValueClass() == 0 && newProxy->GetValueClass() == 0
           && (oldProxy->GetType() == kFloat_t || oldProxy->GetType() == kFloat16_t)
           && (newProxy->GetType() == kFloat_t || newProxy->GetType() == kFloat16_t )) {
-            // We have compatibles collections (they have the same content!
+            // We have compatibles collections (they have the same content)!
          return (TClassEdit::IsSTLCont(oldClass->GetName()) == TClassEdit::IsSTLCont(newClass->GetName()));
       }
       return kFALSE;
@@ -772,10 +899,10 @@ namespace {
       TVirtualCollectionProxy *oldProxy = oldClass->GetCollectionProxy();
       TVirtualCollectionProxy *newProxy = newClass->GetCollectionProxy();
 
-      if (oldProxy->GetValueClass() == 0 && newProxy->GetValueClass() == 00
+      if (oldProxy->GetValueClass() == 0 && newProxy->GetValueClass() == 0
           && (oldProxy->GetType() == kDouble_t || oldProxy->GetType() == kDouble32_t)
           && (newProxy->GetType() == kDouble_t || newProxy->GetType() == kDouble32_t )) {
-            // We have compatibles collections (they have the same content!
+            // We have compatibles collections (they have the same content)!
          return (TClassEdit::IsSTLCont(oldClass->GetName()) == TClassEdit::IsSTLCont(newClass->GetName()));
       }
       return kFALSE;
@@ -819,10 +946,6 @@ void TStreamerInfo::BuildOld()
       //  Instead we force the creation of the main streamerInfo object
       //  before the creation of fRealData.
       fClass->GetStreamerInfo();
-   }
-
-   // FIXME: This is a little strange.
-   if (fClass->GetCollectionProxy() && (fElements->GetEntries() == 1) && !strcmp(fElements->At(0)->GetName(), "This")) {
    }
 
    TIter next(fElements);
@@ -1036,7 +1159,7 @@ void TStreamerInfo::BuildOld()
                TVirtualCollectionProxy *cp = newClass->GetCollectionProxy();
                TConvertClonesArrayToProxy *ms = new TConvertClonesArrayToProxy(cp, element->IsaPointer(), isPrealloc);
                element->SetStreamer(ms);
-               //element->SetStreamer(new TConvertClonesArrayToProxy(newClass->GetCollectionProxy(), element->IsaPointer(), isPrealloc));
+
                // When the type is kObject, the TObject::Streamer is used instead
                // of the TStreamerElement's streamer.  So let force the usage
                // of our streamer
@@ -1052,7 +1175,40 @@ void TStreamerInfo::BuildOld()
             }
          } else if (oldClass  && oldClass->GetCollectionProxy() && newClass->GetCollectionProxy()) {
             if (CollectionMatch(oldClass, newClass)) {
-               element->Update(oldClass, newClass.GetClass());
+               Int_t oldkind = TMath::Abs(TClassEdit::IsSTLCont( oldClass->GetName() ));
+               Int_t newkind = TMath::Abs(TClassEdit::IsSTLCont( newClass->GetName() ));
+               
+               if ( (oldkind==TClassEdit::kMap || oldkind==TClassEdit::kMultiMap) &&
+                    (newkind!=TClassEdit::kMap && newkind!=TClassEdit::kMultiMap) ) {
+
+                  Int_t elemType = element->GetType();
+                  Bool_t isPrealloc = (elemType == kObjectp) || (elemType == kAnyp) || (elemType == (kObjectp + kOffsetL)) || (elemType == (kAnyp + kOffsetL));
+
+                  TClassStreamer *streamer = newClass->GetStreamer();
+                  if (streamer) {
+                     TConvertMapToProxy *ms = new TConvertMapToProxy(streamer, element->IsaPointer(), isPrealloc);
+                     if (ms && ms->IsValid()) {
+                        element->SetStreamer(ms);
+                        switch( element->GetType() ) {
+                           //case TStreamerInfo::kSTLvarp:           // Variable size array of STL containers.
+                        case TStreamerInfo::kSTLp:                // Pointer to container with no virtual table (stl) and no comment
+                        case TStreamerInfo::kSTLp + TStreamerInfo::kOffsetL:     // array of pointers to container with no virtual table (stl) and no comment
+                           element->SetNewType(-2);                       
+                           break;
+                        case TStreamerInfo::kSTL:             // container with no virtual table (stl) and no comment
+                        case TStreamerInfo::kSTL + TStreamerInfo::kOffsetL:  // array of containers with no virtual table (stl) and no comment
+                           break;
+                        }
+                     }
+                  }
+                  element->Update(oldClass, newClass.GetClass());
+
+               } else if ( (newkind==TClassEdit::kMap || newkind==TClassEdit::kMultiMap) &&
+                           (oldkind!=TClassEdit::kMap && oldkind!=TClassEdit::kMultiMap) ) {
+                  element->SetNewType(-2); 
+               } else {                                    
+                  element->Update(oldClass, newClass.GetClass());
+               }
                // Is this needed ? : element->SetSTLtype(newelement->GetSTLtype());
                if (gDebug > 0) {
                   Warning("BuildOld","element: %s::%s %s has new type %s", GetName(), element->GetTypeName(), element->GetName(), newClass->GetName());
@@ -1311,6 +1467,7 @@ void TStreamerInfo::Compile()
    fMethod = new ULong_t[ndata];
 
    TStreamerElement* element;
+   TStreamerElement* previous = 0;
    Int_t keep = -1;
    Int_t i;
 
@@ -1345,7 +1502,25 @@ void TStreamerInfo::Compile()
       fElem[fNdata] = (ULong_t) element;
       fMethod[fNdata] = element->GetMethod();
       // try to group consecutive members of the same type
-      if (!TestBit(kCannotOptimize) && (keep >= 0) && (element->GetType() < 10) && (fType[fNdata] == fNewType[fNdata]) && (fMethod[keep] == 0) && (element->GetType() > 0) && (element->GetArrayDim() == 0) && (fType[keep] < kObject) && (fType[keep] != kCharStar) /* do not optimize char* */ && (element->GetType() == (fType[keep]%kRegrouped)) && ((element->GetOffset()-fOffset[keep]) == (fLength[keep])*asize)) {
+      if (!TestBit(kCannotOptimize) 
+          && (keep >= 0) 
+          && (element->GetType() < 10) 
+          && (fType[fNdata] == fNewType[fNdata]) 
+          && (fMethod[keep] == 0) 
+          && (element->GetType() > 0) 
+          && (element->GetArrayDim() == 0) 
+          && (fType[keep] < kObject) 
+          && (fType[keep] != kCharStar) /* do not optimize char* */ 
+          && (element->GetType() == (fType[keep]%kRegrouped)) 
+          && ((element->GetOffset()-fOffset[keep]) == (fLength[keep])*asize)
+          && ((fOldVersion<6) || !previous || /* In version of TStreamerInfo less than 6, the Double32_t were merged even if their annotation (aka factor) were different */
+              ((element->GetFactor() == previous->GetFactor())
+               && (element->GetXmin() == previous->GetXmin())
+               && (element->GetXmax() == previous->GetXmax())
+              )
+             )
+         ) 
+      {
          if (fLength[keep] == 0) {
             fLength[keep]++;
          }
@@ -1371,6 +1546,7 @@ void TStreamerInfo::Compile()
          }
          fNdata++;
       }
+      previous = element;
    }
 
    for (i = 0; i < fNdata; ++i) {
@@ -1450,37 +1626,328 @@ void TStreamerInfo::ForceWriteInfo(TFile *file, Bool_t force)
 }
 
 //______________________________________________________________________________
-Int_t TStreamerInfo::GenerateHeaderFile(const char *dirname)
+void TStreamerInfo::GenerateDeclaration(FILE *fp, FILE *sfp, const TList *subClasses, Bool_t top)
+{
+   // Write the Declaration of class.
+
+   TString protoname;
+   UInt_t numberOfNamespaces = TMakeProject::GenerateClassPrefix(fp, GetName(), top, protoname, 0);
+
+   // Generate class statement with base classes.
+   TStreamerElement *element;
+   TIter next(fElements);
+   Int_t nbase = 0;
+   while ((element = (TStreamerElement*)next())) {
+      if (element->IsA() != TStreamerBase::Class()) continue;
+      nbase++;
+      const char *ename = element->GetName();
+      if (nbase == 1) fprintf(fp," : public %s",ename);
+      else            fprintf(fp," , public %s",ename);
+   }
+   fprintf(fp," {\n");
+
+   // Generate nested classes.
+   if (subClasses && subClasses->GetEntries()) {
+      fprintf(fp,"\npublic:\n");
+
+      TIter subnext(subClasses);
+      TStreamerInfo *subinfo;
+      Int_t len = strlen(GetName());
+      while ((subinfo = (TStreamerInfo*)subnext())) {
+         if (strncmp(GetName(),subinfo->GetName(),len)==0) {
+            if (subinfo->GetName()[len+1]==':' && strstr(subinfo->GetName()+len+2,":")==0) {
+               subinfo->GenerateDeclaration(fp, sfp, subClasses, kFALSE);
+            }
+         }
+      }
+   }
+
+   // Generate data members.
+   fprintf(fp,"\npublic:\n");
+
+   char *line = new char[kMaxLen];
+   char name[128];
+   char cdim[8];
+   Int_t ltype = 10;
+   Int_t ldata = 10;
+   Int_t lt;
+   Int_t ld;
+
+   next.Reset();
+   while ((element = (TStreamerElement*)next())) {
+      for (int i=0;i < kMaxLen;i++) line[i] = ' ';
+      if (element->IsA() == TStreamerBase::Class()) continue;
+      const char *ename = element->GetName();
+
+      sprintf(name,ename);
+      for (Int_t i=0;i < element->GetArrayDim();i++) {
+         sprintf(cdim,"[%d]",element->GetMaxIndex(i));
+         strcat(name,cdim);
+      }
+      strcat(name,";");
+      ld = strlen(name);
+
+      TString enamebasic = element->GetTypeNameBasic();
+      if (element->IsA() == TStreamerSTL::Class()) {
+         // If we have a map, multimap, set or multiset,
+         // and the key is a class, we need to replace the
+         // container by a vector since we don't have the
+         // comparator function.
+         Int_t stltype = ((TStreamerSTL*)element)->GetSTLtype();
+         switch (stltype) {
+            case TStreamerElement::kSTLmap: 
+            case TStreamerElement::kSTLmultimap:
+            case TStreamerElement::kSTLset:
+            case TStreamerElement::kSTLmultiset:
+               {
+                  std::vector<std::string> inside;
+                  int nestedLoc;
+                  TClassEdit::GetSplit( enamebasic, inside, nestedLoc );
+                  Int_t stlkind =  TClassEdit::STLKind(inside[0].c_str());
+                  TClass *key = TClass::GetClass(inside[1].c_str());
+                  if (key) {
+                     std::string what;
+                     switch ( stlkind )  {
+                        case TClassEdit::kMap:
+                        case TClassEdit::kMultiMap: {
+                           what = "pair<";
+                           what += inside[1];
+                           what += ",";
+                           what += inside[2];
+                           what += " >";
+                           break;
+                        }
+                        case TClassEdit::kSet:
+                        case TClassEdit::kMultiSet:
+                           what = inside[1];
+                           break;
+                     }
+                     enamebasic = "vector< ";
+                     enamebasic.Append( what );
+                     enamebasic.Append( " >");
+                  }
+               }
+            default:
+               // nothing to do.
+               break;
+         }
+      } 
+
+      lt = enamebasic.Length();
+
+      strncpy(line+3,enamebasic.Data(),lt);
+      if (lt>=ltype) ltype = lt+1;
+
+      strncpy(line+3+ltype,name,ld);
+      if (element->IsaPointer() && !strchr(line,'*')) line[2+ltype] = '*';
+
+      if (ld>=ldata) ldata = ld+1;
+      sprintf(line+3+ltype+ldata,"   //%s",element->GetTitle());
+      fprintf(fp,"%s\n",line);
+   }
+
+   // Generate default functions, ClassDef and trailer.
+   fprintf(fp,"\n   %s();\n",protoname.Data());
+   fprintf(fp,"   virtual ~%s();\n\n",protoname.Data());
+
+   { 
+      // Add the implementations to the source.cxx file.
+      TString guard( TMakeProject::GetHeaderName( GetName(), kTRUE ) );
+      fprintf(sfp,"#ifndef %s_cxx\n",guard.Data());
+      fprintf(sfp,"#define %s_cxx\n",guard.Data());
+      fprintf(sfp,"%s::%s() {\n",GetName(),protoname.Data());
+      next.Reset();
+      while ((element = (TStreamerElement*)next())) {
+         if (element->GetType() == kObjectp || element->GetType() == kObjectP ||
+             element->GetType() == kAnyp || element->GetType() == kAnyP || 
+             element->GetType() == kCharStar) {
+            fprintf(sfp,"   %s = 0;\n",element->GetName());
+         }
+         if (kOffsetP <= element->GetType() && element->GetType() < kObject ) {
+            fprintf(sfp,"   %s = 0;\n",element->GetName());
+         }
+      }
+      fprintf(sfp,"}\n");
+
+      fprintf(sfp,"%s::~%s() {\n",GetName(),protoname.Data());
+      next.Reset();
+      while ((element = (TStreamerElement*)next())) {
+         if (element->GetType() == kObjectp || element->GetType() == kObjectP||
+            element->GetType() == kAnyp || element->GetType() == kAnyP
+            || element->GetType() == kAnyPnoVT) {
+               const char *ename = element->GetName();
+               const char *colon2 = strstr(ename,"::");
+               if (colon2) ename = colon2+2;
+               fprintf(sfp,"   delete %s;   %s = 0;\n",ename,ename);
+         }
+         if (element->GetType() == kCharStar) {
+            const char *ename = element->GetName();
+            fprintf(sfp,"   delete [] %s;   %s = 0;\n",ename,ename);
+         }
+         if (kOffsetP <= element->GetType() && element->GetType() < kObject ) { 
+            const char *ename = element->GetName();
+            if (element->HasCounter()) {
+               fprintf(sfp,"   delete %s;   %s = 0;\n",ename,ename);
+            } else {
+               fprintf(sfp,"   delete [] %s;   %s = 0;\n",ename,ename);
+            }
+         } 
+      }
+      fprintf(sfp,"}\n");
+      fprintf(sfp,"#endif // %s_cxx\n\n",guard.Data());
+   }
+
+   TClass *cl = gROOT->GetClass(GetName());
+   if (fClassVersion > 1 || (cl && cl->InheritsFrom(TObject::Class())) ) {
+      // add 1 to class version in case we didn't manage reproduce the class layout to 100%.
+      fprintf(fp,"   ClassDef(%s,%d); // Generated by MakeProject.\n",protoname.Data(),fClassVersion + 1);
+   }
+   fprintf(fp,"};\n");
+
+   for(UInt_t i=0;i<numberOfNamespaces;++i) {
+      fprintf(fp,"} // namespace\n");
+   }
+
+   delete [] line;
+}
+
+//______________________________________________________________________________
+UInt_t TStreamerInfo::GenerateIncludes(FILE *fp, char *inclist)
+{
+   // Add to the header file, the #include need for this class
+
+   UInt_t ninc = 0;
+
+   const char *clname = GetName();
+   if (strchr(clname,'<')) {
+      // This is a template, we need to check the template parameter.
+      ninc += TMakeProject::GenerateIncludeForTemplate(fp, clname, inclist, kFALSE);
+   }
+
+   char name[128];
+   char cdim[8];
+   Int_t ltype = 10;
+   Int_t ldata = 10;
+   Int_t lt;
+   Int_t ld;
+   TIter next(fElements);
+   TStreamerElement *element;
+   Bool_t incRiostream = kFALSE;
+   while ((element = (TStreamerElement*)next())) {
+      //if (element->IsA() == TStreamerBase::Class()) continue;
+      const char *ename = element->GetName();
+      const char *colon2 = strstr(ename,"::");
+      if (colon2) ename = colon2+2;
+      sprintf(name,ename);
+      for (Int_t i=0;i < element->GetArrayDim();i++) {
+         sprintf(cdim,"[%d]",element->GetMaxIndex(i));
+         strcat(name,cdim);
+      }
+      ld = strlen(name);
+      lt = strlen(element->GetTypeName());
+      if (ltype < lt) ltype = lt;
+      if (ldata < ld) ldata = ld;
+
+      //must include Riostream.h in case of an STL container
+      if (!incRiostream && element->InheritsFrom(TStreamerSTL::Class())) {
+         incRiostream = kTRUE;
+         TMakeProject::AddInclude( fp, "Riostream.h", kFALSE, inclist);
+      }
+      
+      //get include file name if any
+      const char *include = element->GetInclude();
+      if (strlen(include) == 0) continue;
+      
+      Bool_t greater = (include[0]=='<');
+      include++;
+
+      if (strncmp(include,"include/",8)==0) {
+         include += 8;
+      } 
+      if (strncmp(include,"include\\",9)==0) {
+         include += 9;
+      }
+      if (strncmp(element->GetTypeName(),"pair<",strlen("pair<"))==0) {
+         TMakeProject::AddInclude( fp, "utility", kTRUE, inclist);
+      } else {
+         TString incName( include, strlen(include)-1 );
+         incName = TMakeProject::GetHeaderName(incName);
+         TMakeProject::AddInclude( fp, incName.Data(), greater, inclist);
+      }
+
+      if (strchr(element->GetTypeName(),'<')) {
+         // This is a template, we need to check the template parameter.
+         ninc += TMakeProject::GenerateIncludeForTemplate(fp, element->GetTypeName(), inclist, kFALSE);
+      }
+   }
+   if (inclist[0]==0) {
+      TMakeProject::AddInclude( fp, "TNamed.h", kFALSE, inclist);
+   }
+   return ninc;
+}
+
+//______________________________________________________________________________
+Int_t TStreamerInfo::GenerateHeaderFile(const char *dirname, const TList *subClasses)
 {
    // Generate header file for the class described by this TStreamerInfo
    // the function is called by TFile::MakeProject for each class in the file
 
-   if (strstr(GetName(),"<")) return 0;
+   if (TClassEdit::IsSTLCont(GetName())) return 0;
+   if (strncmp(GetName(),"pair<",strlen("pair<"))==0) return 0;
+
    TClass *cl = TClass::GetClass(GetName());
    if (cl) {
       if (cl->GetClassInfo()) return 0; // skip known classes
    }
-   if (gDebug) printf("generating code for class %s\n",GetName());
-
-   //open the file
-   TString goodName = GetName();
-   const char *aname = goodName.Data();
-   const char *colon2 = strstr(aname,"::");
-   if (colon2) {
-      fName = colon2+2;
+   if (strchr(GetName(),':')) {
+      UInt_t len = strlen(GetName());
+      UInt_t nest = 0;
+      for(UInt_t i=len; i>0; --i) {
+         switch(GetName()[i]) {
+            case '>': ++nest; break;
+            case '<': --nest; break;
+            case ':': 
+               if (nest==0 && GetName()[i-1]==':') {
+                  // We have a scope
+                  TString nsname(GetName(), i-1);
+                  TClass *cl = gROOT->GetClass(nsname);
+                  if (cl && cl->Size()!=0) {
+                     // This class is actually nested.
+                     return 0;
+                  }
+               }
+               break;
+         }
+      }
    }
 
-   Int_t nch = strlen(dirname) + strlen(GetName()) + 4;
-   char *filename = new char[nch];
-   sprintf(filename,"%s/%s.h",dirname,GetName());
-   FILE *fp = fopen(filename,"w");
+   if (gDebug) printf("generating code for class %s\n",GetName());
+
+   // Open the file
+
+   TString headername( TMakeProject::GetHeaderName( GetName() ) );
+   TString filename;
+   filename.Form("%s/%s.h",dirname,headername.Data());
+
+   FILE *fp = fopen(filename.Data(),"w");
    if (!fp) {
-      printf("Cannot open output file:%s\n",filename);
-      delete [] filename;
+      Error("MakeProject","Cannot open output file:%s\n",filename.Data());
       return 0;
    }
 
-   // generate class header
+   filename.Form("%s/%sProjectHeaders.h",dirname,dirname);
+   FILE *allfp = fopen(filename.Data(),"a");
+   if (!allfp) {
+      Error("MakeProject","Cannot open output file:%s\n",filename.Data());
+      return 0;
+   }
+   fprintf(allfp,"#include \"%s.h\"\n", headername.Data());
+   fclose(allfp);
+
+   char *inclist = new char[50000];
+   inclist[0] = 0;
+
+   // Generate class header.
    TDatime td;
    fprintf(fp,"//////////////////////////////////////////////////////////\n");
    fprintf(fp,"//   This class has been generated by TFile::MakeProject\n");
@@ -1489,149 +1956,31 @@ Int_t TStreamerInfo::GenerateHeaderFile(const char *dirname)
    fprintf(fp,"//////////////////////////////////////////////////////////\n");
    fprintf(fp,"\n");
    fprintf(fp,"\n");
-   fprintf(fp,"#ifndef %s_h\n",GetName());
-   fprintf(fp,"#define %s_h\n",GetName());
+   fprintf(fp,"#ifndef %s_h\n",headername.Data());
+   fprintf(fp,"#define %s_h\n",headername.Data());
+   TMakeProject::GenerateForwardDeclaration(fp, GetName(), inclist);
    fprintf(fp,"\n");
 
-   // compute longest typename and member name
-   // in the same loop, generate list of include files
-   Int_t ltype = 10;
-   Int_t ldata = 10;
-   Int_t i,lt,ld;
-
-   char *line = new char[kMaxLen];
-   char name[128];
-   char cdim[8];
-   char *inclist = new char[5000];
-   inclist[0] = 0;
-
-   TIter next(fElements);
-   TStreamerElement *element;
-   Int_t ninc = 0;
-   Bool_t incRiostream = kFALSE;
-   while ((element = (TStreamerElement*)next())) {
-      //if (element->IsA() == TStreamerBase::Class()) continue;
-      const char *ename = element->GetName();
-      colon2 = strstr(ename,"::");
-      if (colon2) ename = colon2+2;
-      sprintf(name,ename);
-      for (i=0;i < element->GetArrayDim();i++) {
-         sprintf(cdim,"[%d]",element->GetMaxIndex(i));
-         strcat(name,cdim);
+   UInt_t ninc = 0;
+   ninc += GenerateIncludes(fp, inclist);
+   if (subClasses) {
+      TIter subnext(subClasses);
+      TStreamerInfo *subinfo;
+      while ((subinfo = (TStreamerInfo*)subnext())) {
+         ninc = subinfo->GenerateIncludes(fp, inclist);
       }
-      ld = strlen(name);
-      lt = strlen(element->GetTypeName());
-      if (ltype < lt) ltype = lt;
-      if (ldata < ld) ldata = ld;
-      //must include Riostream.h in case of an STL container
-      if (!incRiostream && element->InheritsFrom(TStreamerSTL::Class())) {
-         incRiostream = kTRUE;
-         fprintf(fp,"#include \"Riostream.h\"\n");
-      }
-      //get include file name if any
-      const char *include = element->GetInclude();
-      if (strlen(include) == 0) continue;
-      colon2 = strstr(include,"::");
-      if (colon2) include = colon2+2;
-      else        include++;
-      const char *slash = strrchr(include,'/');
-      if (slash) include = slash+1;
-      const char *greater = strstr(include,">");
-      // do not generate the include if already done
-      if (strstr(inclist,include)) continue;
-      ninc++;
-      strcat(inclist,include);
-      if (strstr(include,"include/") || strstr(include,"include\\"))
-         fprintf(fp,"#include \"%s\n",include+9);
-      else {
-         if (greater) fprintf(fp,"#include <%s\n",include);
-         else         fprintf(fp,"#include \"%s\n",include);
-      }
-   }
-   ltype += 2;
-   ldata++; // to take into account the semi colon
-   if (ninc == 0) fprintf(fp,"#include \"TNamed.h\"\n");
+   }   
+   fprintf(fp,"\n");
 
-   // generate class statement with base classes
-   fprintf(fp,"\nclass %s",GetName());
-   next.Reset();
-   Int_t nbase = 0;
-   while ((element = (TStreamerElement*)next())) {
-      if (element->IsA() != TStreamerBase::Class()) continue;
-      nbase++;
-      const char *ename = element->GetName();
-      colon2 = strstr(ename,"::");
-      if (colon2) ename = colon2+2;
-      if (nbase == 1) fprintf(fp," : public %s",ename);
-      else            fprintf(fp," , public %s",ename);
-   }
-   fprintf(fp," {\n");
+   TString sourcename; sourcename.Form( "%s/%sProjectSource.cxx", dirname, dirname );
+   FILE *sfp = fopen( sourcename.Data(), "a");
+   GenerateDeclaration(fp, sfp, subClasses);
 
-   // generate data members
-   fprintf(fp,"\npublic:\n");
-   next.Reset();
-   while ((element = (TStreamerElement*)next())) {
-      for (i=0;i < kMaxLen;i++) line[i] = ' ';
-      if (element->IsA() == TStreamerBase::Class()) continue;
-      const char *ename = element->GetName();
-      colon2 = strstr(ename,"::");
-      if (colon2) ename = colon2+2;
-      sprintf(name,ename);
-      for (Int_t i=0;i < element->GetArrayDim();i++) {
-         sprintf(cdim,"[%d]",element->GetMaxIndex(i));
-         strcat(name,cdim);
-      }
-      strcat(name,";");
-      ld = strlen(name);
-      const char *enamebasic = element->GetTypeNameBasic();
-      colon2 = strstr(enamebasic,"::");
-      if (strstr(enamebasic,"<")) colon2 = 0;
-      if (colon2) enamebasic = colon2+2;
-      lt = strlen(enamebasic);
-      strncpy(line+3,enamebasic,lt);
-      strncpy(line+3+ltype,name,ld);
-      if (element->IsaPointer() && !strchr(line,'*')) line[2+ltype] = '*';
-      sprintf(line+3+ltype+ldata,"   //%s",element->GetTitle());
-      fprintf(fp,"%s\n",line);
-   }
-
-   // generate default functions, ClassDef and trailer
-   fprintf(fp,"\n   %s();\n",GetName());
-   fprintf(fp,"   virtual ~%s();\n\n",GetName());
-   fprintf(fp,"   ClassDef(%s,%d) //\n",GetName(),fClassVersion);
-   fprintf(fp,"};\n");
-
-   //generate constructor code
-   fprintf(fp,"%s::%s() {\n",GetName(),GetName());
-   next.Reset();
-   while ((element = (TStreamerElement*)next())) {
-      if (element->GetType() == kObjectp || element->GetType() == kObjectP ||
-          element->GetType() == kAnyp || element->GetType() == kAnyP) {
-         fprintf(fp,"   %s = 0;\n",element->GetName());
-      }
-   }
-   fprintf(fp,"}\n\n");
-   //generate destructor code
-   fprintf(fp,"%s::~%s() {\n",GetName(),GetName());
-   next.Reset();
-   while ((element = (TStreamerElement*)next())) {
-      if (element->GetType() == kObjectp || element->GetType() == kObjectP||
-          element->GetType() == kAnyp || element->GetType() == kAnyP
-          || element->GetType() == kAnyPnoVT) {
-         const char *ename = element->GetName();
-         colon2 = strstr(ename,"::");
-         if (colon2) ename = colon2+2;
-         fprintf(fp,"   delete %s;   %s = 0;\n",ename,ename);
-      }
-   }
-   fprintf(fp,"}\n\n");
    fprintf(fp,"#endif\n");
 
-   fclose(fp);
-   delete [] filename;
    delete [] inclist;
-   delete [] line;
-   fName = goodName;
+   fclose(fp);
+   fclose(sfp);
    return 1;
 }
 
@@ -1981,13 +2330,29 @@ Double_t TStreamerInfo::GetValueSTL(TVirtualCollectionProxy *cont, Int_t i, Int_
 }
 
 //______________________________________________________________________________
+Double_t TStreamerInfo::GetValueSTLP(TVirtualCollectionProxy *cont, Int_t i, Int_t j, int k, Int_t eoffset) const
+{
+   //  return value of element i in object number j in a TClonesArray and eventually
+   // element k in a sub-array.
+   Int_t nc = cont->Size();
+
+   if (j >= nc) return 0;
+
+   char **ptr = (char**)cont->At(j);
+   char *pointer = *ptr;
+
+   char *ladd    = pointer + eoffset + fOffset[i];
+   return GetValueAux(fType[i],ladd,k,((TStreamerElement*)fElem[i])->GetArrayLength());
+}
+
+//______________________________________________________________________________
 void TStreamerInfo::ls(Option_t *option) const
 {
    //  List the TStreamerElement list and also the precomputed tables
-   if (fClass && fClass->IsForeign()) {
+   if (fClass && fClass->IsForeign() && fClass->GetClassVersion()<2) {
       Printf("\nStreamerInfo for class: %s, checksum=0x%x",GetName(),GetCheckSum());
    } else {
-      Printf("\nStreamerInfo for class: %s, version=%d",GetName(),fClassVersion);
+      Printf("\nStreamerInfo for class: %s, version=%d, checksum=0x%x",GetName(),fClassVersion,GetCheckSum());
    }
 
    if (fElements) fElements->ls(option);
@@ -2404,6 +2769,7 @@ void TStreamerInfo::Streamer(TBuffer &R__b)
          R__b >> fCheckSum;
          R__b.ClassMember("fClassVersion","Int_t");
          R__b >> fClassVersion;
+         fOnFileClassVersion = fClassVersion;
          R__b.ClassMember("fElements","TObjArray*");
          R__b >> fElements;
          R__b.ClassEnd(TStreamerInfo::Class());
@@ -2414,6 +2780,7 @@ void TStreamerInfo::Streamer(TBuffer &R__b)
       TNamed::Streamer(R__b);
       R__b >> fCheckSum;
       R__b >> fClassVersion;
+      fOnFileClassVersion = fClassVersion;
       R__b >> fElements;
       R__b.CheckByteCount(R__s, R__c, TStreamerInfo::IsA());
    } else {
@@ -2425,7 +2792,7 @@ void TStreamerInfo::Streamer(TBuffer &R__b)
       R__b.ClassMember("fCheckSum","UInt_t");
       R__b << fCheckSum;
       R__b.ClassMember("fClassVersion","Int_t");
-      R__b << fClassVersion;
+      R__b << ((fClassVersion > 0) ? fClassVersion : -fClassVersion);
       R__b.ClassMember("fElements","TObjArray*");
       R__b << fElements;
       R__b.ClassEnd(TStreamerInfo::Class());

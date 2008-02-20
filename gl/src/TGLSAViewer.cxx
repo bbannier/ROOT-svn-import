@@ -96,8 +96,8 @@ SHAPES COLOR AND MATERIAL\n\n\
    The surface SHININESS can also be modified.\n\n\
 SHAPES GEOMETRY\n\n\
    The selected shape's location and geometry can be modified in the Shapes-Geom\n\
-   tabs by entering desired values in respective number entry controls.\n\n"
-  "  SCENE CLIPPING\n\n\
+   tabs by entering desired values in respective number entry controls.\n\n\
+SCENE CLIPPING\n\n\
    In the Scene-Clipping tabs select a 'Clip Type': None, Plane, Box\n\n\
    For 'Plane' and 'Box' the lower pane shows the relevant parameters:\n\n\
 \tPlane: Equation coefficients of form aX + bY + cZ + d = 0\n\
@@ -107,8 +107,8 @@ SHAPES GEOMETRY\n\n\
    direct editing in viewer.\n\n\
 MANIPULATORS\n\n\
    A widget attached to the selected object - allowing direct manipulation\n\
-   of the object with respect to its local axes.\n\
-   There are three modes, toggled with keys:\n\
+   of the object with respect to its local axes.\n\n\
+   There are three modes, toggled with keys while manipulator is active:\n\
    \tMode\t\tWidget Component Style\t\tKey\n\
    \t----\t\t----------------------\t\t---\n\
    \tTranslation\tLocal axes with arrows\t\tv\n\
@@ -238,7 +238,6 @@ TGLSAViewer::~TGLSAViewer()
 
    fGedEditor->DisconnectFromCanvas();
 
-//   delete fGLArea;
    delete fHelpMenu;
    delete fCameraMenu;
    delete fFileSaveMenu;
@@ -285,6 +284,9 @@ void TGLSAViewer::CreateMenus()
    fCameraMenu->AddEntry("Orthographic (XOY)", kGLXOY);
    fCameraMenu->AddEntry("Orthographic (XOZ)", kGLXOZ);
    fCameraMenu->AddEntry("Orthographic (ZOY)", kGLZOY);
+   fCameraMenu->AddSeparator();
+   fCameraMenu->AddEntry("Ortho allow rotate", kGLOrthoRotate);
+   fCameraMenu->AddEntry("Ortho allow dolly",  kGLOrthoDolly);
    fCameraMenu->Associate(fFrame);
 
    fHelpMenu = new TGPopupMenu(fFrame->GetClient()->GetRoot());
@@ -414,25 +416,16 @@ Bool_t TGLSAViewer::ProcessFrameMessage(Long_t msg, Long_t parm1, Long_t)
          case kGLSaveEPS:
             fPictureFileName = "viewer.eps";
             if (!gVirtualX->IsCmdThread())
-               gROOT->ProcessLineFast(Form("((TGLSAViewer *)0x%x)->SavePicture()", this));
+               gROOT->ProcessLineFast(Form("((TGLSAViewer *)0x%lx)->SavePicture()", this));
             else
                SavePicture();
             break;
          case kGLSavePDF:
             fPictureFileName = "viewer.pdf";
             if (!gVirtualX->IsCmdThread())
-               gROOT->ProcessLineFast(Form("((TGLSAViewer *)0x%x)->SavePicture()", this));
+               gROOT->ProcessLineFast(Form("((TGLSAViewer *)0x%lx)->SavePicture()", this));
             else
                SavePicture();
-            break;
-         case kGLXOY:
-            SetCurrentCamera(TGLViewer::kCameraOrthoXOY);
-            break;
-         case kGLXOZ:
-            SetCurrentCamera(TGLViewer::kCameraOrthoXOZ);
-            break;
-         case kGLZOY:
-            SetCurrentCamera(TGLViewer::kCameraOrthoZOY);
             break;
          case kGLPerspYOZ:
             SetCurrentCamera(TGLViewer::kCameraPerspYOZ);
@@ -443,23 +436,38 @@ Bool_t TGLSAViewer::ProcessFrameMessage(Long_t msg, Long_t parm1, Long_t)
          case kGLPerspXOY:
             SetCurrentCamera(TGLViewer::kCameraPerspXOY);
             break;
+         case kGLXOY:
+            SetCurrentCamera(TGLViewer::kCameraOrthoXOY);
+            break;
+         case kGLXOZ:
+            SetCurrentCamera(TGLViewer::kCameraOrthoXOZ);
+            break;
+         case kGLZOY:
+            SetCurrentCamera(TGLViewer::kCameraOrthoZOY);
+            break;
+         case kGLOrthoRotate:
+            ToggleOrthoRotate();
+            break;
+         case kGLOrthoDolly:
+            ToggleOrthoDolly();
+            break;
          case kGLSaveGIF:
             fPictureFileName = "viewer.gif";
             if (!gVirtualX->IsCmdThread())
-               gROOT->ProcessLineFast(Form("((TGLSAViewer *)0x%x)->SavePicture()", this));
+               gROOT->ProcessLineFast(Form("((TGLSAViewer *)0x%lx)->SavePicture()", this));
             else
                SavePicture();
             break;
          case kGLSaveJPG:
             fPictureFileName = "viewer.jpg";
             if (!gVirtualX->IsCmdThread())
-               gROOT->ProcessLineFast(Form("((TGLSAViewer *)0x%x)->SavePicture()", this));
+               gROOT->ProcessLineFast(Form("((TGLSAViewer *)0x%lx)->SavePicture()", this));
             else
                SavePicture();
          case kGLSavePNG:
             fPictureFileName = "viewer.png";
             if (!gVirtualX->IsCmdThread())
-               gROOT->ProcessLineFast(Form("((TGLSAViewer *)0x%x)->SavePicture()", this));
+               gROOT->ProcessLineFast(Form("((TGLSAViewer *)0x%lx)->SavePicture()", this));
             else
                SavePicture();
             break;
@@ -489,7 +497,7 @@ Bool_t TGLSAViewer::ProcessFrameMessage(Long_t msg, Long_t parm1, Long_t)
                   }
 
                if (!gVirtualX->IsCmdThread())
-                  gROOT->ProcessLineFast(Form("((TGLSAViewer *)0x%x)->SavePicture()", this));
+                  gROOT->ProcessLineFast(Form("((TGLSAViewer *)0x%lx)->SavePicture()", this));
                else
                   SavePicture();
             }
@@ -577,7 +585,7 @@ void TGLSAViewer::SavePicture(const TString &fileName)
    // Save the current GL structure in various formats (eps,pdf, gif, jpg, png).
    fPictureFileName = fileName;
    if (!gVirtualX->IsCmdThread())
-      gROOT->ProcessLineFast(Form("((TGLSAViewer *)0x%x)->SavePicture()", this));
+      gROOT->ProcessLineFast(Form("((TGLSAViewer *)0x%lx)->SavePicture()", this));
    else
       SavePicture();
 }
@@ -585,11 +593,41 @@ void TGLSAViewer::SavePicture(const TString &fileName)
 //______________________________________________________________________________
 void TGLSAViewer::ToggleEditObject()
 {
-   // Toggle state of the 'Edit Object' manu entry.
+   // Toggle state of the 'Edit Object' menu entry.
 
    if (fFileMenu->IsEntryChecked(kGLEditObject))
       fFileMenu->UnCheckEntry(kGLEditObject);
    else
       fFileMenu->CheckEntry(kGLEditObject);
    SelectionChanged();
+}
+
+//______________________________________________________________________________
+void TGLSAViewer::ToggleOrthoRotate()
+{
+   // Toggle state of the 'Ortho allow rotate' menu entry.
+
+   if (fCameraMenu->IsEntryChecked(kGLOrthoRotate))
+      fCameraMenu->UnCheckEntry(kGLOrthoRotate);
+   else
+      fCameraMenu->CheckEntry(kGLOrthoRotate);
+   Bool_t state = fCameraMenu->IsEntryChecked(kGLOrthoRotate);
+   fOrthoXOYCamera.SetEnableRotate(state);
+   fOrthoXOZCamera.SetEnableRotate(state);
+   fOrthoZOYCamera.SetEnableRotate(state);
+}
+
+//______________________________________________________________________________
+void TGLSAViewer::ToggleOrthoDolly()
+{
+   // Toggle state of the 'Ortho allow dolly' menu entry.
+
+   if (fCameraMenu->IsEntryChecked(kGLOrthoDolly))
+      fCameraMenu->UnCheckEntry(kGLOrthoDolly);
+   else
+      fCameraMenu->CheckEntry(kGLOrthoDolly);
+   Bool_t state = ! fCameraMenu->IsEntryChecked(kGLOrthoDolly);
+   fOrthoXOYCamera.SetDollyToZoom(state);
+   fOrthoXOZCamera.SetDollyToZoom(state);
+   fOrthoZOYCamera.SetDollyToZoom(state);
 }

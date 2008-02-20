@@ -6,6 +6,7 @@
 #include "PyRootType.h"
 #include "ObjectProxy.h"
 #include "MethodProxy.h"
+#include "TemplateProxy.h"
 #include "PropertyProxy.h"
 #include "PyBufferFactory.h"
 #include "TCustomPyTypes.h"
@@ -142,7 +143,7 @@ namespace {
 //____________________________________________________________________________
    PyObject* MakeRootTemplateClass( PyObject*, PyObject* args )
    {
-   // args is class name + template arguments, build full instantiation
+   // args is class name + template arguments; build full instantiation
       Py_ssize_t nArgs = PyTuple_GET_SIZE( args );
       if ( nArgs < 2 ) {
          PyErr_Format( PyExc_TypeError, "too few arguments for template instantiation" );
@@ -153,45 +154,11 @@ namespace {
       PyObject* pyname = PyString_FromString(
          PyString_AS_STRING( PyTuple_GET_ITEM( args, 0 ) ) );
 
-   // build "< type, type, ... >" part of class name
-      PyString_ConcatAndDel( &pyname, PyString_FromString( "<" ) );
-      for ( int i = 1; i < nArgs; ++i ) {
-      // add type as string to name
-         PyObject* tn = PyTuple_GET_ITEM( args, i );
-         if ( PyString_Check( tn ) )
-            PyString_Concat( &pyname, tn );
-         else if ( PyObject_HasAttrString( tn, const_cast< char* >( "__name__" ) ) ) {
-         // this works for type objects
-            PyObject* tpName = PyObject_GetAttrString( tn, const_cast< char* >( "__name__" ) );
-
-         // special case for strings
-            if ( strcmp( PyString_AS_STRING( tpName ), "str" ) == 0 ) {
-               Py_DECREF( tpName );
-               tpName = PyString_FromString( "std::string" );
-            }
-
-            PyString_ConcatAndDel( &pyname, tpName );
-         } else {
-         // last ditch attempt, works for things like int values
-            PyObject* pystr = PyObject_Str( tn );
-            if ( ! pystr ) {
-               Py_DECREF( pyname );
-               return 0;
-            }
-
-            PyString_ConcatAndDel( &pyname, pystr );
-         }
-
-      // add a comma, as needed
-         if ( i != nArgs - 1 )
-            PyString_ConcatAndDel( &pyname, PyString_FromString( "," ) );
+   // build "< type, type, ... >" part of class name (modifies pyname)
+      if ( ! Utility::BuildTemplateName( pyname, args, 1 ) ) {
+         Py_DECREF( pyname );
+         return 0;
       }
-
-   // close template name; prevent '>>', which should be '> >'
-      if ( PyString_AsString( pyname )[ PyString_Size( pyname ) - 1 ] == '>' )
-         PyString_ConcatAndDel( &pyname, PyString_FromString( " >" ) );
-      else
-         PyString_ConcatAndDel( &pyname, PyString_FromString( ">" ) );
 
       std::string name = PyString_AS_STRING( pyname );
       Py_DECREF( pyname );
@@ -270,7 +237,7 @@ namespace {
    // helper to catch common code between MakeNullPointer and BindObject
 
       if ( ! PyString_Check( pyname ) ) {    // name given as string
-         PyObject* nattr = PyObject_GetAttrString( pyname, "__name__" );
+         PyObject* nattr = PyObject_GetAttrString( pyname, (char*)"__name__" );
          if ( nattr )                        // object is actually a class
             pyname = nattr;
          pyname = PyObject_Str( pyname );
@@ -381,7 +348,7 @@ namespace {
    {
       ObjectProxy* pyobj = 0; PyObject* pykeep = 0;
       if ( ! PyArg_ParseTuple( args, const_cast< char* >( "O!O!" ),
-                &ObjectProxy_Type, (PyObject*)&pyobj, &PyInt_Type, &pykeep ) )
+                &ObjectProxy_Type, (void*)&pyobj, &PyInt_Type, &pykeep ) )
          return 0;
 
       (Bool_t)PyLong_AsLong( pykeep ) ? pyobj->HoldOn() : pyobj->Release();
@@ -455,6 +422,10 @@ extern "C" void initlibPyROOT()
 
 // inject method proxy type
    if ( ! Utility::InitProxy( gRootModule, &MethodProxy_Type, "MethodProxy" ) )
+      return;
+
+// inject template proxy type
+   if ( ! Utility::InitProxy( gRootModule, &TemplateProxy_Type, "TemplateProxy" ) )
       return;
 
 // inject property proxy type

@@ -66,9 +66,9 @@ include/%.h:    $(GLDIRI)/%.h
 $(GLLIB):       $(GLO) $(GLO1) $(GLDO) $(ORDER_) $(MAINLIBS) $(GLLIBDEP)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
 		   "$(SOFLAGS)" libRGL.$(SOEXT) $@ "$(GLO) $(GLO1) $(GLDO)" \
-		   "$(GLLIBEXTRA) $(GLLIBS)"
+		   "$(GLLIBEXTRA) $(FTGLLIBDIR) $(FTGLLIBS) $(GLLIBS)"
 
-$(GLDS):	$(GLH2) $(GLL) $(ROOTCINTTMPEXE)
+$(GLDS):	$(GLH2) $(GLL) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(GLH2) $(GLL)
 
@@ -101,4 +101,14 @@ $(GLDIRS)/gl2ps.o: CFLAGS += $(OPENGLINCDIR:%=-I%)
 gl/src/TGLText.o: \
                 $(FREETYPEDEP)
 gl/src/TGLText.o: \
-                CXXFLAGS += $(FREETYPEINC)
+                CXXFLAGS += $(FREETYPEINC) $(FTGLINCDIR:%=-I%)
+
+gl/src/TGLContext.o: \
+                $(FREETYPEDEP)
+gl/src/TGLContext.o: \
+                CXXFLAGS += $(FREETYPEINC) $(FTGLINCDIR:%=-I%)
+
+gl/src/TFTGLManager.o: \
+                $(FREETYPEDEP)
+gl/src/TFTGLManager.o: \
+                CXXFLAGS += $(FREETYPEINC) $(FTGLINCDIR:%=-I%)

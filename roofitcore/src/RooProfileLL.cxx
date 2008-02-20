@@ -17,13 +17,17 @@
  // minimized w.r.t. all parameters. Note that this function is slow to evaluate
  // as a MIGRAD minimization step is executed for each function evaluation
 
-#include <iostream> 
+#include "Riostream.h" 
 
+#include "RooFit.h"
 #include "RooProfileLL.h" 
 #include "RooAbsReal.h" 
 #include "RooMinuit.h"
 #include "RooMsgService.h"
 #include "RooRealVar.h"
+#include "RooMsgService.h"
+
+using namespace std ;
 
 ClassImp(RooProfileLL) 
 
@@ -156,7 +160,7 @@ Double_t RooProfileLL::evaluate() const
   
   // Set all observables constant in the minimization
   const_cast<RooSetProxy&>(_obs).setAttribAll("Constant",kTRUE) ;  
-  cout << "." ; cout.flush() ;
+  ccoutW(Eval) << "." ; ccoutW(Eval).flush() ;
   _minuit->migrad() ;
 
   // Restore original values and constant status of observables

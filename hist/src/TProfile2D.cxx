@@ -488,12 +488,16 @@ void TProfile2D::Copy(TObject &obj) const
 
    TH2D::Copy(((TProfile2D&)obj));
    fBinEntries.Copy(((TProfile2D&)obj).fBinEntries);
+   for (int bin=0;bin<fNcells;bin++) {
+      ((TProfile2D&)obj).fArray[bin]        = fArray[bin];
+      ((TProfile2D&)obj).fSumw2.fArray[bin] = fSumw2.fArray[bin];
+   }
    ((TProfile2D&)obj).fZmin = fZmin;
    ((TProfile2D&)obj).fZmax = fZmax;
-   ((TProfile2D&)obj).fScaling = fScaling;
+   ((TProfile2D&)obj).fScaling   = fScaling;
    ((TProfile2D&)obj).fErrorMode = fErrorMode;
-   ((TProfile2D&)obj).fTsumwz  = fTsumwz;
-   ((TProfile2D&)obj).fTsumwz2 = fTsumwz2;
+   ((TProfile2D&)obj).fTsumwz    = fTsumwz;
+   ((TProfile2D&)obj).fTsumwz2   = fTsumwz2;
 }
 
 
@@ -1686,7 +1690,7 @@ void TProfile2D::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
 }
 
 //______________________________________________________________________________
-void TProfile2D::Scale(Double_t c1)
+void TProfile2D::Scale(Double_t c1, Option_t *)
 {
 //*-*-*-*-*Multiply this profile2D by a constant c1*-*-*-*-*-*-*-*-*
 //*-*      ========================================
@@ -1790,7 +1794,9 @@ void TProfile2D::Streamer(TBuffer &R__b)
       //====process old versions before automatic schema evolution
       TH2D::Streamer(R__b);
       fBinEntries.Streamer(R__b);
-      R__b >> (Int_t&)fErrorMode;
+      Int_t errorMode;
+      R__b >> errorMode;
+      fErrorMode = (EErrorType)errorMode;
       if (R__v < 2) {
          Float_t zmin,zmax;
          R__b >> zmin; fZmin = zmin;

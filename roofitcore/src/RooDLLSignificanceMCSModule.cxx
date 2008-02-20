@@ -26,12 +26,17 @@
 // to test that assumption.
 //
 
+#include "Riostream.h"
+
 #include "RooDataSet.h"
 #include "RooRealVar.h"
 #include "TString.h"
 #include "RooFit.h"
 #include "RooFitResult.h"
 #include "RooDLLSignificanceMCSModule.h"
+#include "RooMsgService.h"
+
+
 
 ClassImp(RooDLLSignificanceMCSModule)
   ;
@@ -81,7 +86,7 @@ Bool_t RooDLLSignificanceMCSModule::initializeInstance()
 
   // Check that parameter is also present in fit parameter list of RooMCStudy object
   if (!fitParams()->find(_parName.c_str())) {
-    cout << "RooDLLSignificanceMCSModule::initializeInstance:: ERROR: No parameter named " << _parName << " in RooMCStudy!" << endl ;
+    coutE(InputArguments) << "RooDLLSignificanceMCSModule::initializeInstance:: ERROR: No parameter named " << _parName << " in RooMCStudy!" << endl ;
     return kFALSE ;
   }
 

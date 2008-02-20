@@ -17,9 +17,7 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#ifdef R__HAVE_CONFIG
 #include "RConfigure.h"
-#endif
 #include "RConfig.h"
 #include "TUnixSystem.h"
 #include "TROOT.h"
@@ -79,6 +77,7 @@
    extern "C" int statfs(const char *file, struct statfs *buffer);
 #   endif
 #elif defined(R__MACOSX)
+#   include <mach-o/dyld.h>
 #   include <sys/mount.h>
    extern "C" int statfs(const char *file, struct statfs *buffer);
 #elif defined(R__LINUX) || defined(R__HPUX) || defined(R__HURD)
@@ -162,8 +161,18 @@
 #   define HAVE_UTMPX_H
 #   define UTMP_NO_ADDR
 #endif
+
+#if defined(MAC_OS_X_VERSION_10_5)
+#   define HAVE_UTMPX_H
+#   define UTMP_NO_ADDR
+#   ifndef ut_user
+#      define ut_user ut_name
+#   endif
+#endif
+
 #if defined(R__ALPHA) || defined(R__AIX) || defined(R__FBSD) || \
-    defined(R__OBSD) || defined(R__LYNXOS) || defined(R__MACOSX)
+    defined(R__OBSD) || defined(R__LYNXOS) || \
+    (defined(R__MACOSX) && !defined(MAC_OS_X_VERSION_10_5))
 #   define UTMP_NO_ADDR
 #endif
 
@@ -342,6 +351,43 @@ static void SigHandler(ESignals sig)
       ((TUnixSystem*)gSystem)->DispatchSignals(sig);
 }
 
+#if defined(R__MACOSX)
+static TString gLinkedDylibs;
+
+//______________________________________________________________________________
+static void DylibAdded(const struct mach_header *mh, intptr_t /* vmaddr_slide */)
+{
+   static int i = 0;
+   static Bool_t gotFirstSo = kFALSE;
+   static TString linkedDylibs;
+
+   // to copy the local linkedDylibs to the global gLinkedDylibs call this
+   // function with mh==0
+   if (!mh) {
+      gLinkedDylibs = linkedDylibs;
+      return;
+   }
+
+   TString lib = _dyld_get_image_name(i++);
+
+   //printf("%s %p\n", lib.Data(), mh);
+
+   // when libSystem.B.dylib is loaded we have finished loading all dylibs
+   // explicitly linked against the executable. Additional dylibs
+   // come when they are explicitly linked against loaded so's, currentky
+   // we are not interested in these
+   if (lib.EndsWith("/libSystem.B.dylib"))
+      gotFirstSo = kTRUE;
+
+   // add all libs loaded before libSystem.B.dylib
+   if (!gotFirstSo && (lib.EndsWith(".dylib") || lib.EndsWith(".so"))) {
+      if (i > 1)
+         linkedDylibs += " ";
+      linkedDylibs += lib;
+   }
+}
+#endif
+
 
 ClassImp(TUnixSystem)
 
@@ -395,6 +441,11 @@ Bool_t TUnixSystem::Init()
       gRootDir= "/usr/local/root";
 #else
    gRootDir = ROOTPREFIX;
+#endif
+
+#if defined(R__MACOSX)
+   // trap loading of all dylibs to register dylib name
+   _dyld_register_func_for_add_image(DylibAdded);
 #endif
 
    return kFALSE;
@@ -967,25 +1018,17 @@ void TUnixSystem::DispatchSignals(ESignals sig)
       break;
    case kSigChild:
       CheckChilds();
-      return;
+      break;
    case kSigBus:
    case kSigSegmentationViolation:
    case kSigIllegalInstruction:
    case kSigFloatingException:
       Break("TUnixSystem::DispatchSignals", UnixSigname(sig));
       StackTrace();
-      if (TROOT::Initialized()) {
-         if (gException) {
-            if (gApplication && gApplication->InheritsFrom("TRint")) {
-               Getlinem(kCleanUp, 0);
-               Getlinem(kInit, "Root > ");
-            }
-            gInterpreter->RewindDictionary();
-            gInterpreter->ClearFileBusy();
-         }
-         Throw(sig);
-      }
-      Exit(sig);
+      if (gApplication)
+         gApplication->HandleException(sig);
+      else
+         Exit(sig);
       break;
    case kSigSystem:
    case kSigPipe:
@@ -1288,17 +1331,19 @@ int TUnixSystem::CopyFile(const char *f, const char *t, Bool_t overwrite)
 {
    // Copy a file. If overwrite is true and file already exists the
    // file will be overwritten. Returns 0 when successful, -1 in case
-   // of failure, -2 in case the file already exists and overwrite was false.
+   // of file open failure, -2 in case the file already exists and overwrite
+   // was false and -3 in case of error during copy.
 
    if (!AccessPathName(t) && !overwrite)
       return -2;
 
-   FILE* from = fopen(f, "r");
+   FILE *from = fopen(f, "r");
    if (!from)
       return -1;
 
-   FILE* to   = fopen(t, "w");
-   if (!to) return -2;
+   FILE *to   = fopen(t, "w");
+   if (!to)
+      return -1;
 
    const int bufsize = 1024;
    char buf[bufsize];
@@ -2318,39 +2363,58 @@ void TUnixSystem::Closelog()
 //---- Standard output redirection ---------------------------------------------
 
 //______________________________________________________________________________
-Int_t TUnixSystem::RedirectOutput(const char *file, const char *mode)
+Int_t TUnixSystem::RedirectOutput(const char *file, const char *mode,
+                                  RedirectHandle_t *h)
 {
    // Redirect standard output (stdout, stderr) to the specified file.
    // If the file argument is 0 the output is set again to stderr, stdout.
    // The second argument specifies whether the output should be added to the
    // file ("a", default) or the file be truncated before ("w").
+   // This function saves internally the current state into a static structure.
+   // The call can be made reentrant by specifying the opaque structure pointed
+   // by 'h', which is filled with the relevant information. The handle 'h'
+   // obtained on the first call must then be used in any subsequent call,
+   // included ShowOutput, to display the redirected output.
    // Returns 0 on success, -1 in case of error.
 
-   static char stdoutsav[128] = {0};
-   static char stderrsav[128] = {0};
-   static Int_t stdoutdup = -1;
-   static Int_t stderrdup = -1;
+   // Instance to be used if the caller does not passes 'h'
+   static RedirectHandle_t loch;
+
    Int_t rc = 0;
+
+   // Which handle to use ?
+   RedirectHandle_t *xh = (h) ? h : &loch;
 
    if (file) {
       // Save the paths
-      if (!strlen(stdoutsav)) {
+      if (xh->fStdOutTty.IsNull()) {
          const char *tty = ttyname(STDOUT_FILENO);
          if (tty)
-            strcpy(stdoutsav, tty);
+            xh->fStdOutTty = tty;
          else
-            stdoutdup = dup(STDOUT_FILENO);
+            xh->fStdOutDup = dup(STDOUT_FILENO);
       }
-      if (!strlen(stderrsav)) {
+      if (xh->fStdErrTty.IsNull()) {
          const char *tty = ttyname(STDERR_FILENO);
          if (tty)
-            strcpy(stderrsav, tty);
+            xh->fStdErrTty = tty;
          else
-            stderrdup = dup(STDERR_FILENO);
+            xh->fStdErrDup = dup(STDERR_FILENO);
       }
 
       // Make sure mode makes sense; default "a"
       const char *m = (mode[0] == 'a' || mode[0] == 'w') ? mode : "a";
+
+      // Current file size
+      xh->fReadOffSet = 0;
+      if (m[0] == 'a') {
+         // If the file exists, save the current size
+         FileStat_t st;
+         if (!gSystem->GetPathInfo(file, st))
+            xh->fReadOffSet = (st.fSize > 0) ? st.fSize : xh->fReadOffSet;
+      }
+      xh->fFile = file;
+
       // Redirect stdout & stderr
       if (freopen(file, m, stdout) == 0) {
          SysError("RedirectOutput", "could not freopen stdout");
@@ -2358,35 +2422,40 @@ Int_t TUnixSystem::RedirectOutput(const char *file, const char *mode)
       }
       if (freopen(file, m, stderr) == 0) {
          SysError("RedirectOutput", "could not freopen stderr");
-         freopen(stderrsav, "a", stderr);
+         freopen(xh->fStdErrTty.Data(), "a", stderr);
          return -1;
       }
    } else {
       // Restore stdout & stderr
       fflush(stdout);
-      if (stdoutsav[0]) {
-         if (freopen(stdoutsav, "a", stdout) == 0) {
+      if (!(xh->fStdOutTty.IsNull())) {
+         if (freopen(xh->fStdOutTty.Data(), "a", stdout) == 0) {
             SysError("RedirectOutput", "could not restore stdout");
             rc = -1;
          }
+         xh->fStdOutTty = "";
       } else {
-         if (dup2(stdoutdup, STDOUT_FILENO) < 0) {
+         if (dup2(xh->fStdOutDup, STDOUT_FILENO) < 0) {
             SysError("RedirectOutput", "could not restore stdout (back to original redirected file)");
             rc = -1;
          }
       }
       fflush(stderr);
-      if (stderrsav[0]) {
-         if (freopen(stderrsav, "a", stderr) == 0) {
+      if (!(xh->fStdErrTty.IsNull())) {
+         if (freopen(xh->fStdErrTty.Data(), "a", stderr) == 0) {
             SysError("RedirectOutput", "could not restore stderr");
             rc = -1;
          }
+         xh->fStdErrTty = "";
       } else {
-         if (dup2(stderrdup, STDERR_FILENO) < 0) {
+         if (dup2(xh->fStdErrDup, STDERR_FILENO) < 0) {
             SysError("RedirectOutput", "could not restore stderr (back to original redirected file)");
             rc = -1;
          }
       }
+      // Reset the static instance, if using that
+      if (xh == &loch)
+         xh->Reset();
    }
    return rc;
 }
@@ -2462,7 +2531,9 @@ const char *TUnixSystem::GetLinkedLibraries()
    // Get list of shared libraries loaded at the start of the executable.
    // Returns 0 in case list cannot be obtained or in case of error.
 
+#if !defined(R__MACOSX)
    if (!gApplication) return 0;
+#endif
 
    static Bool_t once = kFALSE;
    static TString linkedLibs;
@@ -2475,14 +2546,20 @@ const char *TUnixSystem::GetLinkedLibraries()
    if (once)
       return 0;
 
+#if !defined(R__MACOSX)
    char *exe = gSystem->Which(Getenv("PATH"), gApplication->Argv(0),
                               kExecutePermission);
    if (!exe) {
       once = kTRUE;
       return 0;
    }
+#endif
 
 #if defined(R__MACOSX)
+   char *exe = 0;
+   DylibAdded(0, 0);
+   linkedLibs = gLinkedDylibs;
+#if 0
    FILE *p = OpenPipe(Form("otool -L %s", exe), "r");
    TString otool;
    while (otool.Gets(p)) {
@@ -2497,6 +2574,7 @@ const char *TUnixSystem::GetLinkedLibraries()
       delete tok;
    }
    ClosePipe(p);
+#endif
 #elif defined(R__LINUX) || defined(R__SOLARIS)
 #if defined(R__WINGCC )
    const char *cLDD="cygcheck";
@@ -3184,7 +3262,7 @@ static struct Signalmap_t {
    struct sigaction *fOldHandler;
    const char       *fSigName;
 } gSignalMap[kMAXSIGNALS] = {       // the order of the signals should be identical
-   { SIGBUS,   0, 0, "bus error" }, // to the one in SysEvtHandler.h
+   { SIGBUS,   0, 0, "bus error" }, // to the one in TSysEvtHandler.h
    { SIGSEGV,  0, 0, "segmentation violation" },
    { SIGSYS,   0, 0, "bad argument to system call" },
    { SIGPIPE,  0, 0, "write on a pipe with no one to read it" },
@@ -4004,6 +4082,11 @@ static const char *DynamicPath(const char *newpath = 0, Bool_t reset = kFALSE)
          dynpath = rdynpath; dynpath += ":"; dynpath += ldpath;
       }
 
+#ifdef CINTINCDIR
+         dynpath += ":"; dynpath += CINTINCDIR; dynpath += "/stl";
+#else
+         dynpath += ":"; dynpath += gRootDir; dynpath += "/cint/stl";
+#endif
 #ifdef ROOTLIBDIR
       if (!dynpath.Contains(ROOTLIBDIR)) {
          dynpath += ":"; dynpath += ROOTLIBDIR;

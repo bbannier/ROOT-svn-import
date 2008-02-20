@@ -38,6 +38,7 @@
 namespace ROOT {
 namespace Math {
 
+//_____________________________________________________________________________________
   /**
      Parametric Function class describing polynomials of order n.
 
@@ -45,7 +46,8 @@ namespace Math {
 
      The class implements also the derivatives, \a dP(x)/dx and the \a dP(x)/dp[i].
 
-     The class provides also the method to find the roots of the polynomial. 
+     The class provides also the method to find the roots of the polynomial.
+     It uses analytical methods up to quartic polynomials. 
      
 
      @ingroup CppFunctions
@@ -60,7 +62,7 @@ public:
       The number of Parameters is n+1. 
    */
 
-   Polynomial(unsigned int n); 
+   Polynomial(unsigned int n = 0); 
 
    /**
       Construct a Polynomial of degree  1 : a*x + b
@@ -83,7 +85,7 @@ public:
    Polynomial(double a, double b, double c, double d, double e);
 
 
-   virtual ~Polynomial(); 
+   virtual ~Polynomial() {}
 
 //    /**
 //       Copy constructor 
@@ -99,9 +101,8 @@ public:
     
    double operator() ( double x, const double * p ); 
 
+
    using ParamFunction::operator();
-
-
 
 
    /**

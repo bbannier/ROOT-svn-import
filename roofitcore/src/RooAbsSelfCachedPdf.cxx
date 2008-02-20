@@ -12,13 +12,16 @@
  // -- CLASS DESCRIPTION [PDF] -- 
  // Your description goes here... 
 
-#include <iostream> 
+#include "Riostream.h" 
 
+#include "RooFit.h"
 #include "RooAbsSelfCachedPdf.h" 
 #include "RooAbsReal.h" 
 #include "RooMsgService.h"
 #include "RooDataHist.h"
 #include "RooHistPdf.h"
+
+using namespace std ;
 
 ClassImp(RooAbsSelfCachedPdf) 
 

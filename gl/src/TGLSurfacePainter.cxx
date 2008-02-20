@@ -19,6 +19,10 @@
 #include "TGLOrthoCamera.h"
 #include "TGLIncludes.h"
 
+//______________________________________________________________________________
+//
+// Implements painting of TH2 with "SURF" option.
+
 ClassImp(TGLSurfacePainter)
 
 //______________________________________________________________________________
@@ -44,12 +48,14 @@ TGLSurfacePainter::TGLSurfacePainter(TH1 *hist, TGLOrthoCamera *camera, TGLPlotC
 char *TGLSurfacePainter::GetPlotInfo(Int_t px, Int_t py)
 {
    //Coords for point on surface under cursor.
+
+   static char null[] = { "" };
    if (fSelectedPart) {
       if (fHighColor)
          return fSelectedPart < fSelectionBase ? (char *)"TF2" : (char *)"Switch to true-color mode to obtain correct info";
       return fSelectedPart < fSelectionBase ? (char *)"TF2" : WindowPointTo3DPoint(px, py);
    }
-   return "";
+   return null;
 }
 
 //______________________________________________________________________________
@@ -172,7 +178,7 @@ void TGLSurfacePainter::ProcessEvent(Int_t event, Int_t /*px*/, Int_t py)
       if (fBoxCut.IsActive())
          fBoxCut.TurnOnOff();
       if (!gVirtualX->IsCmdThread())
-         gROOT->ProcessLineFast(Form("((TGLPlotPainter *)0x%x)->Paint()", this));
+         gROOT->ProcessLineFast(Form("((TGLPlotPainter *)0x%lx)->Paint()", this));
       else
          Paint();
    } else if (event == kKeyPress && (py == kKey_c || py == kKey_C)) {
@@ -1018,8 +1024,10 @@ void TGLSurfacePainter::ClampZ(Double_t &zVal)const
 char *TGLSurfacePainter::WindowPointTo3DPoint(Int_t px, Int_t py)const
 {
    //Find 3d coords using mouse cursor coords.
-   if (!MakeGLContextCurrent())
-      return "Apocalipshit!";
+   if (!MakeGLContextCurrent()) {
+      static char err[] = { "Apocalipshit!" };
+      return err;
+   }
 
    py = fCamera->GetHeight() - py;
 

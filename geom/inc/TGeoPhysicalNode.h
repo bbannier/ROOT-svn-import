@@ -31,11 +31,12 @@ class TGeoVolume;
 class TGeoNode;
 class TGeoShape;
 
-/*************************************************************************
- * TGeoPhysicalNode - class representing an unique object associated with a
- *   path.
- *
- *************************************************************************/
+//////////////////////////////////////////////////////////////////////////////
+//                                                                          //
+// TGeoPhysicalNode - class representing an unique object associated with a //
+//   path.                                                                  //
+//                                                                          //
+//////////////////////////////////////////////////////////////////////////////
 
 class TGeoPhysicalNode : public TNamed,
                          public TAttLine
@@ -97,11 +98,12 @@ public:
    ClassDef(TGeoPhysicalNode, 1)               // base class for physical nodes
 };
 
-/*************************************************************************
- * TGeoPNEntry - class representing phisical node entry having a unique name
- *   associated to a path.
- *
- *************************************************************************/
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// TGeoPNEntry - class representing phisical node entry having a unique name //
+//   associated to a path.                                                   //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
 
 class TGeoPNEntry : public TNamed
 {
@@ -111,7 +113,7 @@ private:
    };   
    TGeoPhysicalNode   *fNode;        // Physical node to which this applies
    const TGeoHMatrix  *fMatrix;      // Additional matrix
-   const TGeoMatrix   *fMatrixOrig;  // Original local matrix of the last TGeoNode in the branch
+   TGeoHMatrix        *fGlobalOrig;  // Original global matrix for the linked physical node
 
 protected:
    TGeoPNEntry(const TGeoPNEntry& pne) 
@@ -126,13 +128,14 @@ public:
    virtual ~TGeoPNEntry();
    
    inline const char   *GetPath() const {return GetTitle();}
-   const TGeoHMatrix   *GetMatrix()  const {return fMatrix;}
-   const TGeoMatrix    *GetMatrixOrig() const {return fMatrixOrig;}
+   const TGeoHMatrix   *GetMatrix() const {return fMatrix;}
+   TGeoHMatrix      *GetMatrixOrig() const {if (fNode) return fNode->GetOriginalMatrix(); else return NULL;};
+   TGeoHMatrix      *GetGlobalOrig() const {return fGlobalOrig;}
    TGeoPhysicalNode *GetPhysicalNode() const {return fNode;}
    void              SetMatrix(const TGeoHMatrix *matrix);
    void              SetPhysicalNode(TGeoPhysicalNode *node);
    
-   ClassDef(TGeoPNEntry, 3)                  // a physical node entry with unique name
+   ClassDef(TGeoPNEntry, 4)                  // a physical node entry with unique name
 };
 
 #endif

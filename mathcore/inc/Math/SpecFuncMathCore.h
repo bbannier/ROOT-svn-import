@@ -25,9 +25,15 @@ N1687=04-0127, September 10, 2004</A>
 
 */
 
+#if defined(__CINT__) && !defined(__MAKECINT__)
+// avoid to include header file when using CINT 
+#ifndef _WIN32
+#include "../lib/libMathCore.so"
+#else
+#include "../bin/libMathCore.dll"
+#endif
 
-
-
+#else
 
 #ifndef ROOT_Math_SpecFuncMathCore
 #define ROOT_Math_SpecFuncMathCore
@@ -115,7 +121,7 @@ namespace Math {
    /**
       Calculates the normalized (regularized) lower incomplete gamma function (lower integral) 
 
-      \f[ \gamma(a, x) = \frac{ 1} {\Gamma(a) } \int_{0}^{x} t^{a-1} e^{-t} dt  \f]
+      \f[ P(a, x) = \frac{ 1} {\Gamma(a) } \int_{0}^{x} t^{a-1} e^{-t} dt  \f]
 
 
       For a detailed description see 
@@ -130,7 +136,7 @@ namespace Math {
    /**
       Calculates the normalized (regularized) upper incomplete gamma function (upper integral)
 
-      \f[ \Gamma(a, x) = \frac{ 1} {\Gamma(a) } \int_{x}^{\infty} t^{a-1} e^{-t} dt  \f]
+      \f[ Q(a, x) = \frac{ 1} {\Gamma(a) } \int_{x}^{\infty} t^{a-1} e^{-t} dt  \f]
 
 
       For a detailed description see 
@@ -176,7 +182,7 @@ namespace Math {
    */
 
    double inc_beta( double x, double a, double b); 
-   
+
    
    
 
@@ -185,3 +191,5 @@ namespace Math {
 
 
 #endif // ROOT_Math_SpecFuncMathCore
+
+#endif // if defined (__CINT__) && !defined(__MAKECINT__)

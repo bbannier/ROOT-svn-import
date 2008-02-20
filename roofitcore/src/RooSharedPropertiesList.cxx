@@ -20,7 +20,8 @@
 #include "RooSharedPropertiesList.h"
 #include "RooSharedProperties.h"
 #include "TIterator.h"
-#include <iostream>
+#include "RooMsgService.h"
+#include "Riostream.h"
 using std::cout ;
 using std::endl ;
 
@@ -47,7 +48,7 @@ RooSharedPropertiesList::~RooSharedPropertiesList()
 } 
 
 
-RooSharedProperties* RooSharedPropertiesList::registerProperties(RooSharedProperties* prop) 
+RooSharedProperties* RooSharedPropertiesList::registerProperties(RooSharedProperties* prop, Bool_t canDeleteIncoming) 
 {
   // Register property into list and take ownership. 
   //
@@ -59,7 +60,7 @@ RooSharedProperties* RooSharedPropertiesList::registerProperties(RooSharedProper
   // as the object cannot be assumed to be live.
 
   if (prop==0) {
-    cout << "RooSharedPropertiesList::ERROR null pointer!:" << endl ;
+    oocoutE((TObject*)0,InputArguments) << "RooSharedPropertiesList::ERROR null pointer!:" << endl ;
     return 0 ;
   }
 
@@ -78,7 +79,7 @@ RooSharedProperties* RooSharedPropertiesList::registerProperties(RooSharedProper
 // 	cout << "incoming object to be deleted is in proplist!!" << endl ;
       } else {
 // 	cout << "deleting prop object " << prop << endl ;
-	//delete prop ;
+	if (canDeleteIncoming) delete prop ;
       }
 
       // delete prop ;

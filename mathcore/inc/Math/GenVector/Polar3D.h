@@ -30,13 +30,15 @@
  
 namespace ROOT { 
 
-  namespace Math { 
+namespace Math { 
 
 
-  /** 
-      Class describing a polar coordinate system based on r, theta and phi
-
-      @ingroup GenVector
+//__________________________________________________________________________________________
+   /** 
+       Class describing a polar coordinate system based on r, theta and phi
+       Phi is restricted to be in the range [-PI,PI)
+       
+       @ingroup GenVector
    */ 
 
 
@@ -156,7 +158,7 @@ public :
 
 
 private:
-   inline static double pi()  { return M_PI; } 
+   inline static Scalar pi()  { return M_PI; } 
    inline void Restrict() {
       if ( fPhi <= -pi() || fPhi > pi() ) 
          fPhi = fPhi - std::floor( fPhi/(2*pi()) +.5 ) * 2*pi();

@@ -88,6 +88,16 @@
 //         this function will create one subbranch for each data member of
 //         the object TTrack.
 //
+//  ==> Case D
+//      ======
+//     TBranch *branch = tree->Branch( branchname, STLcollection, buffsize, splitlevel );
+//         STLcollection is the address of a pointer to std::vector, std::list,
+//         std::deque, std::set or std::multiset containing pointers to objects.
+//         If the splitlevel is a value bigger than 100 then the collection
+//         will be written in split mode. Ie. if it contains objects of any
+//         types deriving from TTrack this function will sort the objects
+//         basing on their type and store them in separate branches in split
+//         mode.
 //
 //  ==> branch->SetAddress(Void *address)
 //      In case of dynamic structures changing with each entry for example, one must
@@ -299,6 +309,7 @@
 #include "TVirtualFitter.h"
 #include "TVirtualIndex.h"
 #include "TVirtualPad.h"
+#include "TBranchSTL.h"
 
 #include <cstddef>
 #include <fstream>
@@ -521,7 +532,7 @@ TTree::TTree(const char* name, const char* title, Int_t splitlevel /* = 99 */)
    // We become the current tree.
    gTree = this;
 
-   // if title starts with ":" and is a valid folder name, a superbranch
+   // if title starts with "/" and is a valid folder name, a superbranch
    // is created.
    // FIXME: Why?
    if (strlen(title) > 2) {
@@ -901,7 +912,7 @@ TBranch* TTree::BranchImp(const char* branchname, const char* classname, TClass*
       TClass* claim = TClass::GetClass(classname);
       if (claim && claim->GetCollectionProxy() && dynamic_cast<TEmulatedCollectionProxy*>(claim->GetCollectionProxy())) {
          Error("Branch", "The class requested (%s) for the branch \"%s\" refer to an stl collection and do not have a compiled CollectionProxy.  "
-               "Please generate the dictionary for this class (%s)", 
+               "Please generate the dictionary for this class (%s)",
                claim->GetName(), branchname, claim->GetName());
          return 0;
       }
@@ -917,25 +928,25 @@ TBranch* TTree::BranchImp(const char* branchname, const char* classname, TClass*
       if (!(claim->InheritsFrom(ptrClass) || ptrClass->InheritsFrom(claim))) {
          // Note we currently do not warn in case of splicing or over-expectation).
          if (claim->IsLoaded() && ptrClass->IsLoaded() && strcmp( claim->GetTypeInfo()->name(), ptrClass->GetTypeInfo()->name() ) == 0) {
-            // The type is the same according to the C++ type_info, we must be in the case of 
+            // The type is the same according to the C++ type_info, we must be in the case of
             // a template of Double32_t.  This is actually a correct case.
          } else {
-            Error("Branch", "The class requested (%s) for \"%s\" is different from the type of the pointer passed (%s)", 
+            Error("Branch", "The class requested (%s) for \"%s\" is different from the type of the pointer passed (%s)",
                   claim->GetName(), branchname, ptrClass->GetName());
          }
       } else if (actualClass && (claim != actualClass) && !actualClass->InheritsFrom(claim)) {
          if (claim->IsLoaded() && actualClass->IsLoaded() && strcmp( claim->GetTypeInfo()->name(), actualClass->GetTypeInfo()->name() ) == 0) {
-            // The type is the same according to the C++ type_info, we must be in the case of 
+            // The type is the same according to the C++ type_info, we must be in the case of
             // a template of Double32_t.  This is actually a correct case.
          } else {
-            Error("Branch", "The actual class (%s) of the object provided for the definition of the branch \"%s\" does not inherit from %s", 
+            Error("Branch", "The actual class (%s) of the object provided for the definition of the branch \"%s\" does not inherit from %s",
                   actualClass->GetName(), branchname, claim->GetName());
          }
       }
    }
    if (claim->GetCollectionProxy() && dynamic_cast<TEmulatedCollectionProxy*>(claim->GetCollectionProxy())) {
       Error("Branch", "The class requested (%s) for the branch \"%s\" refer to an stl collection and do not have a compiled CollectionProxy.  "
-            "Please generate the dictionary for this class (%s)", 
+            "Please generate the dictionary for this class (%s)",
             claim->GetName(), branchname, claim->GetName());
       return 0;
    }
@@ -969,7 +980,7 @@ TBranch* TTree::BranchImp(const char* branchname, TClass* ptrClass, void* addobj
    if (actualClass && actualClass->GetCollectionProxy() && dynamic_cast<TEmulatedCollectionProxy*>(actualClass->GetCollectionProxy())) {
       Error("Branch", "The class requested (%s) for the branch \"%s\" refer to an stl collection and do not have a compiled CollectionProxy.  "
             "Please generate the dictionary for this class (%s)",
-            actualClass->GetName(), branchname, actualClass->GetName());   
+            actualClass->GetName(), branchname, actualClass->GetName());
       return 0;
    }
    return Branch(branchname, actualClass->GetName(), (void*) addobj, bufsize, splitlevel);
@@ -1140,10 +1151,10 @@ TBranch* TTree::Branch(const char* name, void* address, const char* leaflist, In
 {
    // -- Create a new TTree Branch.
    //
-   //     This Branch constructor is provided to support non-objects in
-   //     a Tree. The variables described in leaflist may be simple variables
-   //     or structures.
-   //    See the two following constructors for writing objects in a Tree.
+   //    This Branch constructor is provided to support non-objects in
+   //    a Tree. The variables described in leaflist may be simple
+   //    variables or structures.  // See the two following
+   //    constructors for writing objects in a Tree.
    //
    //    By default the branch buffers are stored in the same file as the Tree.
    //    use TBranch::SetFile to specify a different file
@@ -1179,6 +1190,10 @@ TBranch* TTree::Branch(const char* name, void* address, const char* leaflist, In
    //             Y/I       : variable Y, type Int_t
    //             Y/I2      ; variable Y, type Int_t converted to a 16 bits integer
    //
+   //    Note that the TTree will assume that all the item are contiguous in memory.
+   //    On some platform, this is not always true of the member of a struct or a class,
+   //    due to padding and alignment.  Sorting your data member in order of decreasing
+   //    sizeof usually leads to their being contiguous in memory.
    //
    //       * bufsize is the buffer size in bytes for this branch
    //         The default value is 32000 bytes and should be ok for most cases.
@@ -1664,7 +1679,15 @@ TBranch* TTree::Bronch(const char* name, const char* classname, void* add, Int_t
             }
          }
       }
-      TBranchElement* branch = new TBranchElement(this, name, collProxy, bufsize, splitlevel);
+      //-------------------------------------------------------------------------
+      // If the splitting switch is enabled, the split level is big enough and
+      // the collection contains pointers we can split it
+      //-------------------------------------------------------------------------
+      TBranch *branch;
+      if( splitlevel > 100 && collProxy->HasPointers() )
+         branch = new TBranchSTL( this, name, collProxy, bufsize, splitlevel );
+      else
+         branch = new TBranchElement(this, name, collProxy, bufsize, splitlevel);
       fBranches.Add(branch);
       branch->SetAddress(add);
       return branch;
@@ -1693,7 +1716,7 @@ TBranch* TTree::Bronch(const char* name, const char* classname, void* add, Int_t
       // The streamer info is not rebuilt unoptimized.
       // No dummy top-level branch is created.
       // No splitting is attempted.
-      TBranchElement* branch = new TBranchElement(this, name, (TClonesArray*) *ppointer, bufsize, splitlevel);
+      TBranchElement* branch = new TBranchElement(this, name, (TClonesArray*) *ppointer, bufsize, splitlevel%100);
       fBranches.Add(branch);
       branch->SetAddress(add);
       return branch;
@@ -1717,6 +1740,7 @@ TBranch* TTree::Bronch(const char* name, const char* classname, void* add, Int_t
    //
 
    if ((splitlevel > 0) && !cl->CanSplit()) {
+      // FIXME: this doesn't make sense
       splitlevel = 0;
       if (splitlevel != 99) {
          Warning("Bronch", "%s cannot be split, resetting splitlevel to 0", cl->GetName());
@@ -1766,7 +1790,7 @@ TBranch* TTree::Bronch(const char* name, const char* classname, void* add, Int_t
    // Do splitting, if requested.
    //
 
-   if (splitlevel > 0) {
+   if (splitlevel%100 > 0) {
       // Loop on all public data members of the class and its base classes and create branches for each one.
       TObjArray* blist = branch->GetListOfBranches();
       TIter next(sinfo->GetElements());
@@ -1823,9 +1847,20 @@ TBranch* TTree::Bronch(const char* name, const char* classname, void* add, Int_t
             //       being the name of the base class.
             bname.Form("%s", element->GetFullName());
          }
-         TBranchElement* bre = new TBranchElement(branch, bname, sinfo, id, pointer, bufsize, splitlevel - 1);
-         bre->SetParentClass(cl);
-         blist->Add(bre);
+
+         if( splitlevel > 100 && element->GetClass() &&
+             element->GetClass()->GetCollectionProxy() &&
+             element->GetClass()->GetCollectionProxy()->HasPointers() )
+         {
+            TBranchSTL* brSTL = new TBranchSTL( branch, bname, element->GetClass()->GetCollectionProxy(), bufsize, splitlevel-1, sinfo, id );
+            blist->Add(brSTL);
+         }
+         else
+         {
+            TBranchElement* bre = new TBranchElement(branch, bname, sinfo, id, pointer, bufsize, splitlevel - 1);
+            bre->SetParentClass(cl);
+            blist->Add(bre);
+         }
       }
    }
 
@@ -2102,8 +2137,8 @@ Bool_t TTree::CheckBranchAddressType(TBranch* branch, TClass* ptrClass, EDataTyp
    if (expectedClass && expectedClass->GetCollectionProxy() && dynamic_cast<TEmulatedCollectionProxy*>(expectedClass->GetCollectionProxy())) {
       Error("SetBranchAddress", "The class requested (%s) for the branch \"%s\" refer to an stl collection and do not have a compiled CollectionProxy.  "
             "Please generate the dictionary for this class (%s)",
-            expectedClass->GetName(), branch->GetName(), expectedClass->GetName());   
-   } 
+            expectedClass->GetName(), branch->GetName(), expectedClass->GetName());
+   }
    return kTRUE;
 }
 
@@ -2128,8 +2163,8 @@ TTree* TTree::CloneTree(Long64_t nentries /* = -1 */, Option_t* option /* = "" *
    // is disabled, the clone will be done without unzipping or unstreaming
    // the baskets (i.e., a direct copy of the raw bytes on disk).
    //
-   // When 'fast' is specified, 'option' can also contains a 
-   // sorting order for the baskets in the output file.    
+   // When 'fast' is specified, 'option' can also contains a
+   // sorting order for the baskets in the output file.
    //
    // There is currently 3 supported sorting order:
    //    SortBasketsByOffset (the default)
@@ -2141,18 +2176,18 @@ TTree* TTree::CloneTree(Long64_t nentries /* = -1 */, Option_t* option /* = "" *
    // (i.e. the basket are sorted on their offset in the original
    // file; Usually this also means that the baskets are sorted
    // on the index/number of the _last_ entry they contain)
-   // 
-   // When using SortBasketsByBranch all the baskets of each 
-   // individual branches are stored contiguously.  This tends to 
-   // optimize reading speed when reading a small number (1->5) of 
-   // branches, since all their baskets will be clustered together 
+   //
+   // When using SortBasketsByBranch all the baskets of each
+   // individual branches are stored contiguously.  This tends to
+   // optimize reading speed when reading a small number (1->5) of
+   // branches, since all their baskets will be clustered together
    // instead of being spread across the file.  However it might
-   // decrease the performance when reading more branches (or the full 
+   // decrease the performance when reading more branches (or the full
    // entry).
-   // 
+   //
    // When using SortBasketsByEntry the baskets with the lowest
-   // starting entry are written first.  (i.e. the baskets are 
-   // sorted on the index/number of the first entry they contain). 
+   // starting entry are written first.  (i.e. the baskets are
+   // sorted on the index/number of the first entry they contain).
    // This means that on the file the baskets will be in the order
    // in which they will be needed when reading the whole tree
    // sequentially.
@@ -2449,9 +2484,9 @@ void TTree::CopyAddresses(TTree* tree, Bool_t undo)
       }
    }
 
-   if (undo && 
+   if (undo &&
        ( tree->IsA()->InheritsFrom("TNtuple") || tree->IsA()->InheritsFrom("TNtupleD") )
-       ) { 
+       ) {
       tree->ResetBranchAddresses();
    }
 }
@@ -2668,9 +2703,9 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //  and will be 0 otherwise.
    //
    //  The expressions can use all the operations and build-in functions
-   //  supported by TFormula (See TFormula::Analyze), including free 
+   //  supported by TFormula (See TFormula::Analyze), including free
    //  standing function taking numerical arguments (TMath::Bessel).
-   //  In addition, you can call member functions taking numerical 
+   //  In addition, you can call member functions taking numerical
    //  arguments. For example:
    //      - "TMath::BreitWigner(fPx,3,2)"
    //      - "event.GetHistogram().GetXaxis().GetXmax()"
@@ -2873,11 +2908,11 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //  AsString can return either a char*, a std::string or a TString.s
    //  For example, the following
    //     tree->Draw("event.myTTimeStamp");
-   //  will draw the same histogram as 
+   //  will draw the same histogram as
    //     tree->Draw("event.myTTimeStamp.AsDouble()");
    //  In addition, when the object is a type TString or std::string, TTree::Draw
    //  will call respectively TString::Data and std::string::c_str()
-   // 
+   //
    //  If the object is a TBits, the histogram will contain the index of the bit
    //  that are turned on.
    //
@@ -2885,7 +2920,7 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //     ============================================
    //
    //  You can refer to the tree (or chain) containing the data by using the
-   //  string 'This'.  
+   //  string 'This'.
    //  You can then could any TTree methods.  For example:
    //     tree->Draw("This->GetReadEntry()");
    //  will display the local entry numbers be read.
@@ -3018,7 +3053,7 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //      Using a TEventList or a TEntryList as Input
    //      ===========================
    //  Once a TEventList or a TEntryList object has been generated, it can be used as input
-   //  for TTree::Draw. Use TTree::SetEventList or TTree::SetEntryList to set the 
+   //  for TTree::Draw. Use TTree::SetEventList or TTree::SetEntryList to set the
    //  current event list
    //  Example1:
    //     TEventList *elist = (TEventList*)gDirectory->Get("yplus");
@@ -3761,7 +3796,7 @@ Int_t TTree::GetEntry(Long64_t entry, Int_t getall)
    //   branch->SetAutoDelete(kTRUE);
    //    for (Long64_t i=0;i<nentries;i++) {
    //       T.GetEntry(i);
-   //       // the objrect event has been filled at this point
+   //       // the object event has been filled at this point
    //    }
    //   In this case, at each iteration, the object event is deleted by GetEntry
    //   and a new instance of Event is created and filled.
@@ -3773,7 +3808,7 @@ Int_t TTree::GetEntry(Long64_t entry, Int_t getall)
    //       delete event;
    //       event = 0;  // EXTREMELY IMPORTANT
    //       T.GetEntry(i);
-   //       // the objrect event has been filled at this point
+   //       // the object event has been filled at this point
    //    }
    //
    //  It is strongly recommended to use the default option 1. It has the
@@ -4615,7 +4650,7 @@ Int_t TTree::MakeSelector(const char* selector)
    // where T is the name of the Tree in file myfile.root
    // and myselect.h, myselect.C the name of the files created by this function.
    // In a ROOT session, you can do:
-   //    root > T->Process("select.C")
+   //    root > T->Process("myselect.C")
 
    return MakeClass(selector, "selector");
 }
@@ -5024,7 +5059,7 @@ Long64_t TTree::ReadFile(const char* filename, const char* branchDescriptor)
    //  characters are considered to be blank, newline and tab).
    //
    // Lines in the input file starting with "#" are ignored.
-   // This function will read and ignore any whitespace characters 
+   // This function will read and ignore any whitespace characters
    // (this includes blank spaces and the newline and tab characters).
    //
    // A TBranch object is created for each variable in the expression.
@@ -5405,18 +5440,18 @@ void TTree::SetBranchStatus(const char* bname, Bool_t status, UInt_t* found)
    //    T.GetEntry(i);
    //
    //  WARNING! WARNING! WARNING!
-   //  SetBranchStatus is matching the branch based on regular expression match 
+   //  SetBranchStatus is matching the branch based on regular expression match
    //  of the branch 'name' and not on the branch hierarchy!
-   //  In order to be able to selectively enable a top level object that is 'split' 
-   //  you need to make sure the name of the top level branch is prefixed to the 
-   //  sub-branches' name(by adding a dot ('.') at the end of the Branch creation 
-   //  and use the corresponding regular expression. 
+   //  In order to be able to selectively enable a top level object that is 'split'
+   //  you need to make sure the name of the top level branch is prefixed to the
+   //  sub-branches' name(by adding a dot ('.') at the end of the Branch creation
+   //  and use the corresponding regular expression.
    //
    //  I.e If your Tree has been created in split mode with a parent branch "parent."
    //  (note the trailing dot).
    //     T.SetBranchStatus("parent",1);
    //  will not activate the sub-branches of "parent". You should do:
-   //     T.SetBranchStatus("parent*",1); 
+   //     T.SetBranchStatus("parent*",1);
    //
    //  Without the trailing dot in the branch creation you have no choice but to
    //  call SetBranchStatus explicitly for each of the sub branches.
@@ -5454,9 +5489,9 @@ void TTree::SetBranchStatus(const char* bname, Bool_t status, UInt_t* found)
       branch = (TBranch*)leaf->GetBranch();
       TString s = branch->GetName();
       if (strcmp(bname,"*")) { //Regexp gives wrong result for [] in name
-         TString longname; 
+         TString longname;
          longname.Form("%s.%s",GetName(),branch->GetName());
-         if (strcmp(bname,branch->GetName()) 
+         if (strcmp(bname,branch->GetName())
              && longname != bname
              && s.Index(re) == kNPOS) continue;
       }
@@ -5558,7 +5593,7 @@ void TTree::SetCacheSize(Long64_t cacheSize)
    // WARNING: Currently only ONE TTree object can be 'cached' per TFile object.
    // This call disable the cache for the other TTree objects read from the same
    // TFile object as this TTree (The SetCacheSize called __last__ wins).
-   // To cache multiple TTree objects in the same ROOT file, you must create 
+   // To cache multiple TTree objects in the same ROOT file, you must create
    // one TFile object per TTree object.
 
    TFile* file = GetCurrentFile();
@@ -5730,7 +5765,7 @@ Long64_t TTree::SetEntries(Long64_t n)
 void TTree::SetEntryList(TEntryList *enlist, Option_t * /*opt*/)
 {
    //Set an EntryList
-   
+
    if (fEntryList) {
       //check if the previous entry list is owned by the tree
       if (fEntryList->TestBit(kCanDelete)){
@@ -5753,7 +5788,7 @@ void TTree::SetEventList(TEventList *evlist)
 //This function transfroms the given TEventList into a TEntryList
 //The new TEntryList is owned by the TTree and gets deleted when the tree
 //is deleted. This TEntryList can be returned by GetEntryList() function, and after
-//GetEntryList() function is called, the TEntryList is not owned by the tree 
+//GetEntryList() function is called, the TEntryList is not owned by the tree
 //any more.
 
    fEventList = evlist;
@@ -6237,4 +6272,3 @@ Option_t* TTreeFriendLeafIter::GetOption() const
    if (fLeafIter) return fLeafIter->GetOption();
    return "";
 }
-

@@ -19,10 +19,12 @@
 #include "RooFit.h"
 
 #include "RooTrace.h"
-#include "RooTrace.h"
 #include "RooAbsArg.h"
+#include "Riostream.h"
 
 #include <iomanip>
+
+
 
 ClassImp(RooTrace)
 ;
@@ -32,6 +34,28 @@ Bool_t RooTrace::_active(kFALSE) ;
 Bool_t RooTrace::_verbose(kFALSE) ;
 RooLinkedList RooTrace::_list ;
 RooLinkedList RooTrace::_markList ;
+
+
+void RooTrace::create(const TObject* obj) 
+{ 
+  if (_active) create2(obj) ; 
+}
+
+void RooTrace::destroy(const TObject* obj) 
+{ 
+  if (_active) destroy2(obj) ; 
+}
+
+void RooTrace::active(Bool_t flag) 
+{ 
+  _active = flag ; 
+}
+
+void RooTrace::verbose(Bool_t flag) 
+{ 
+  _verbose = flag ; 
+}
+
 
 void RooTrace::create2(const TObject* obj) {
   
@@ -61,6 +85,10 @@ void RooTrace::mark()
   _markList = _list ;
 }
 
+
+void RooTrace::dump() {
+  dump(cout,kFALSE) ;
+}
 
 void RooTrace::dump(ostream& os, Bool_t sinceMarked) {
   os << "List of RooFit objects allocated while trace active:" << endl ;

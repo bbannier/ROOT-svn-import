@@ -20,6 +20,7 @@
 
 
 #include "RooFit.h"
+#include "Riostream.h"
 
 #include "TClass.h"
 #include "RooSegmentedIntegrator2D.h"
@@ -28,8 +29,11 @@
 #include "RooRealVar.h"
 #include "RooNumber.h"
 #include "RooNumIntFactory.h"
+#include "RooMsgService.h"
 
 #include <assert.h>
+
+
 
 ClassImp(RooSegmentedIntegrator2D)
 ;
@@ -83,7 +87,7 @@ Bool_t RooSegmentedIntegrator2D::checkLimits() const {
   }
   _range= _xmax - _xmin;
   if(_range <= 0) {
-    cout << "RooIntegrator1D::checkLimits: bad range with min >= max" << endl;
+    oocoutE((TObject*)0,InputArguments) << "RooIntegrator1D::checkLimits: bad range with min >= max" << endl;
     return kFALSE;
   }
   Bool_t ret =  (RooNumber::isInfinite(_xmin) || RooNumber::isInfinite(_xmax)) ? kFALSE : kTRUE;

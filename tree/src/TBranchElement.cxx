@@ -40,6 +40,7 @@
 #include "TTree.h"
 #include "TVirtualCollectionProxy.h"
 #include "TVirtualPad.h"
+#include "TBranchSTL.h"
 
 ClassImp(TBranchElement)
 
@@ -200,6 +201,12 @@ void TBranchElement::Init(TTree *tree, TBranch *parent,const char* bname, TStrea
 
    SetAutoDelete(kFALSE);
 
+   //---------------------------------------------------------------------------
+   // Handling the splitting of the STL collections of pointers
+   //---------------------------------------------------------------------------
+   Int_t splitSTLP = splitlevel - (splitlevel%100);
+   splitlevel %= 100;
+
    fCompress = -1;
    if (fTree->GetDirectory()) {
       TFile* bfile = fTree->GetDirectory()->GetFile();
@@ -333,7 +340,7 @@ void TBranchElement::Init(TTree *tree, TBranch *parent,const char* bname, TStrea
                // class part of the branch name from propagating downwards.
                // FIXME: We are eliding the base class here, creating a break in the branch heirarchy.
                // Note: We can use parent class (cltop) != branch class (elemClass) to detection elision.
-               Unroll("", fBranchClass.GetClass(), clOfElement, pointer, basketsize, splitlevel, 0);
+               Unroll("", fBranchClass.GetClass(), clOfElement, pointer, basketsize, splitlevel+splitSTLP, 0);
                return;
             }
             // If the branch's name is not the same as the base class name,
@@ -349,7 +356,7 @@ void TBranchElement::Init(TTree *tree, TBranch *parent,const char* bname, TStrea
             //       as part of the branch name, while those created by
             //       Unroll() do not, ouch!!!
             //
-            Unroll(name, clOfElement, clOfElement, pointer, basketsize, splitlevel, 0);
+            Unroll(name, clOfElement, clOfElement, pointer, basketsize, splitlevel+splitSTLP, 0);
             if (strchr(bname, '.')) {
                // FIXME: How can this happen?
                // FIXME: Answer: This is the case when using the new branch
@@ -396,9 +403,6 @@ void TBranchElement::Init(TTree *tree, TBranch *parent,const char* bname, TStrea
             if (!clOfClones) {
                return;
             }
-            // Create a basket for the leafcount
-            TBasket *basket2 = new TBasket(name,fTree->GetName(),this);
-            fBaskets.Add(basket2);
             fType = 3;
             // ===> create sub branches for each data member of a TClonesArray
             //check that the contained objects class name is part of the element title
@@ -417,7 +421,7 @@ void TBranchElement::Init(TTree *tree, TBranch *parent,const char* bname, TStrea
             SetTitle(branchname);
             leaf->SetName(branchname);
             leaf->SetTitle(branchname);
-            Unroll(name, clOfClones, clOfClones, pointer, basketsize, splitlevel, 31);
+            Unroll(name, clOfClones, clOfClones, pointer, basketsize, splitlevel+splitSTLP, 31);
             BuildTitle(name);
             return;
          } else if (((fSTLtype >= TClassEdit::kVector) && (fSTLtype <= TClassEdit::kMultiSet)) || ((fSTLtype >= -TClassEdit::kMultiSet) && (fSTLtype <= -TClassEdit::kVector))) {
@@ -431,9 +435,9 @@ void TBranchElement::Init(TTree *tree, TBranch *parent,const char* bname, TStrea
                cansplit = kFALSE;
             } else if ((valueClass == TString::Class()) || (valueClass == TClass::GetClass("string"))) {
                cansplit = kFALSE;
-            } else if (GetCollectionProxy()->HasPointers()) {
+            } else if (GetCollectionProxy()->HasPointers() && !splitSTLP ) {
                cansplit = kFALSE;
-            } else if (!valueClass->CanSplit()) {
+            } else if (!valueClass->CanSplit() && !(GetCollectionProxy()->HasPointers() && splitSTLP)) {
                cansplit = kFALSE;
             } else if (valueClass->GetCollectionProxy()) {
                // -- A collection was stored in a collection, we choose not to split it.
@@ -449,9 +453,6 @@ void TBranchElement::Init(TTree *tree, TBranch *parent,const char* bname, TStrea
                fNleaves = 1;
                fLeaves.Add(leaf);
                fTree->GetListOfLeaves()->Add(leaf);
-               // Create a basket for the master branch (the counter).
-               TBasket *basket2 = new TBasket(name,fTree->GetName(),this);
-               fBaskets.Add(basket2);
                // Check that the contained objects class name is part of the element title.
                // This name is mandatory when reading the tree later on and
                // the parent class with the pointer to the STL container is not available.
@@ -469,7 +470,7 @@ void TBranchElement::Init(TTree *tree, TBranch *parent,const char* bname, TStrea
                leaf->SetName(branchname);
                leaf->SetTitle(branchname);
                // Create sub branches for each data member of an STL container.
-               Unroll(name, valueClass, valueClass, pointer, basketsize, splitlevel, 41);
+               Unroll(name, valueClass, valueClass, pointer, basketsize, splitlevel+splitSTLP, 41);
                BuildTitle(name);
                return;
             }
@@ -481,7 +482,7 @@ void TBranchElement::Init(TTree *tree, TBranch *parent,const char* bname, TStrea
             //       calls us for an element of this type.
             fType = 2;
             TClass* clm = TClass::GetClass(elem_type);
-            Int_t err = Unroll(name, clm, clm, pointer, basketsize, splitlevel, 0);
+            Int_t err = Unroll(name, clm, clm, pointer, basketsize, splitlevel+splitSTLP, 0);
             if (err >= 0) {
                // Return on success.
                // FIXME: Why not on error too?
@@ -609,16 +610,13 @@ void TBranchElement::Init(TTree *tree, TBranch *parent, const char* bname, TClon
    SetAutoDelete(kFALSE);
 
    // create sub branches if requested by splitlevel
-   if (splitlevel > 0) {
+   if (splitlevel%100 > 0) {
       fType = 3;
       // ===> Create a leafcount
       TLeaf* leaf = new TLeafElement(this, name, fID, fStreamerType);
       fNleaves = 1;
       fLeaves.Add(leaf);
       fTree->GetListOfLeaves()->Add(leaf);
-      // Create a basket for the leafcount
-      TBasket* basket = new TBasket(name, fTree->GetName(), this);
-      fBaskets.Add(basket);
       // ===> create sub branches for each data member of a TClonesArray
       TClass* clonesClass = clones->GetClass();
       if (!clonesClass) {
@@ -744,16 +742,15 @@ void TBranchElement::Init(TTree *tree, TBranch *parent, const char* bname, TVirt
    SetAutoDelete(kFALSE);
 
    // create sub branches if requested by splitlevel
-   if ((splitlevel > 0) && fBranchClass.GetClass() && fBranchClass.GetClass()->CanSplit()) {
+   if ( (splitlevel%100 > 0 && fBranchClass.GetClass() && fBranchClass.GetClass()->CanSplit()) ||
+        (cont->HasPointers() && splitlevel > 100 && cont->GetValueClass() && cont->GetValueClass()->CanSplit() ) )
+   {
       fType = 4;
       // ===> Create a leafcount
       TLeaf* leaf = new TLeafElement(this, name, fID, fStreamerType);
       fNleaves = 1;
       fLeaves.Add(leaf);
       fTree->GetListOfLeaves()->Add(leaf);
-      // Create a basket for the leafcount
-      TBasket* basket = new TBasket(name, fTree->GetName(), this);
-      fBaskets.Add(basket);
       // ===> create sub branches for each data member of an STL container value class
       TClass* valueClass = cont->GetValueClass();
       if (!valueClass) {
@@ -1116,14 +1113,18 @@ void TBranchElement::FillLeaves(TBuffer& b)
    //        inherit from tobject are not handled correctly?
    //
 
-   if ((fType <= 2) && TestBit(kBranchObject)) {
+   if ((fType <= 2)) {
       // We are not a TClonesArray master/sub nor an STL container master/sub,
       // so we are either a top-level branch, a base class branch, a split class
       // branch, or a data member branch.
       // FIXME: We should probably only map data member branches.
       // FIXME: We should only map addresses we actually do i/o on.
       // FIXME: We should map fAddress instead for MakeClass() trees.
-      b.MapObject((TObject*) fObject);
+      if (TestBit(kBranchObject)) {
+         b.MapObject((TObject*) fObject);
+      } else {
+         b.MapObject(fObject, fBranchClass);
+      }
    }
 
    //
@@ -1294,7 +1295,10 @@ void TBranchElement::FillLeaves(TBuffer& b)
             Error("FillLeaves", "Cannot get streamer info for branch '%s'", GetName());
             return;
          }
-         si->WriteBufferSTL(b, GetCollectionProxy(), n, fID, fOffset);
+         if( fSplitLevel >= 100 )
+            si->WriteBufferSTLPtrs(b, GetCollectionProxy(), n, fID, fOffset );
+         else
+            si->WriteBufferSTL(b, GetCollectionProxy(), n, fID, fOffset );
       }
    }
 }
@@ -1362,6 +1366,8 @@ TBranch* TBranchElement::FindBranch(const char *name)
    if (!result) {
       // Look in base classes if any
       for(Int_t i = 0; i < GetListOfBranches()->GetEntries(); ++i) {
+         if( GetListOfBranches()->At(i)->IsA() != TBranchElement :: Class() )
+            continue;
          TBranchElement *br = (TBranchElement*)GetListOfBranches()->At(i);
          TVirtualStreamerInfo* si = br->GetInfo();
          if (br->GetID() >= 0) {
@@ -1383,7 +1389,11 @@ TLeaf* TBranchElement::FindLeaf(const char *name)
    TLeaf *leaf = TBranch::FindLeaf(name);
 
    if (leaf==0 && GetListOfLeaves()->GetEntries()==1) {
-      TBranchElement *parent = (TBranchElement*)GetMother()->GetSubBranch(this);
+      TBranch *br = GetMother()->GetSubBranch( this );
+      if( br->IsA() != TBranchElement::Class() )
+         return 0;
+
+      TBranchElement *parent = (TBranchElement*)br;
       if (parent==this || parent->GetID()<0 ) return 0;
 
       TVirtualStreamerInfo* si = parent->GetInfo();
@@ -1391,7 +1401,11 @@ TLeaf* TBranchElement::FindLeaf(const char *name)
 
       if (! se->IsBase() ) return 0;
 
-      TBranchElement *grand_parent = (TBranchElement*)GetMother()->GetSubBranch(parent);
+      br = GetMother()->GetSubBranch( parent );
+      if( br->IsA() != TBranchElement::Class() )
+         return 0;
+
+      TBranchElement *grand_parent = (TBranchElement*)br;
 
       std::string longname( grand_parent->GetName() );
       R__CleanName(longname);
@@ -1451,9 +1465,9 @@ void TBranchElement::InitInfo()
             // Try to compensate for a class that got unloaded on us.
             // Search through the streamer infos by checksum
             // and take the first match.
-            Int_t ninfos = cl->GetStreamerInfos()->GetEntriesFast();
-            for (Int_t i = 1; i < ninfos; ++i) {
-               TVirtualStreamerInfo* info = (TVirtualStreamerInfo*) cl->GetStreamerInfos()->At(i);
+            Int_t ninfos = cl->GetStreamerInfos()->GetEntriesFast() - 1;
+            for (Int_t i = -1; i < ninfos; ++i) {
+               TVirtualStreamerInfo* info = (TVirtualStreamerInfo*) cl->GetStreamerInfos()->UncheckedAt(i);
                if (!info) {
                   continue;
                }
@@ -1551,7 +1565,7 @@ TVirtualCollectionProxy* TBranchElement::GetCollectionProxy()
       }
    } else if (fType == 41) {
       // STL container sub-branch.
-      thiscast->fCollProxy = fBranchCount->fCollProxy;
+      thiscast->fCollProxy = fBranchCount->GetCollectionProxy();
    }
    return fCollProxy;
 }
@@ -1768,7 +1782,7 @@ const char* TBranchElement::GetTypeName() const
       "Bool_t",
       "Float16_t"
    };
-   Int_t itype = fStreamerType % 21;
+   Int_t itype = fStreamerType % 20;
    return types[itype];
 }
 
@@ -1829,10 +1843,19 @@ Double_t TBranchElement::GetValue(Int_t j, Int_t len, Bool_t subarr) const
       return GetInfo()->GetValueClones(clones, fID, j/len, j%len, fOffset);
    } else if (fType == 41) {
       TVirtualCollectionProxy::TPushPop helper(((TBranchElement*) this)->GetCollectionProxy(), fObject);
-      if (subarr) {
-         return GetInfo()->GetValueSTL(((TBranchElement*) this)->GetCollectionProxy(), fID, j, len, fOffset);
+      if( fSplitLevel < 100 )
+      {
+         if (subarr)
+            return GetInfo()->GetValueSTL(((TBranchElement*) this)->GetCollectionProxy(), fID, j, len, fOffset);
+       
+         return GetInfo()->GetValueSTL(((TBranchElement*) this)->GetCollectionProxy(), fID, j/len, j%len, fOffset);
       }
-      return GetInfo()->GetValueSTL(((TBranchElement*) this)->GetCollectionProxy(), fID, j/len, j%len, fOffset);
+      else
+      {
+         if (subarr)
+            return GetInfo()->GetValueSTLP(((TBranchElement*) this)->GetCollectionProxy(), fID, j, len, fOffset);
+         return GetInfo()->GetValueSTLP(((TBranchElement*) this)->GetCollectionProxy(), fID, j/len, j%len, fOffset);
+      }
    } else {
       if (GetInfo()) {
          return GetInfo()->GetValue(fObject, fID, j, -1);
@@ -1937,6 +1960,22 @@ void TBranchElement::InitializeOffsets()
          fInitOffsets = kTRUE;
          return;
       }
+
+
+      //------------------------------------------------------------------------
+      // Extract the name of the STL branch in case we're splitting the
+      // collection of pointers
+      //------------------------------------------------------------------------
+      TString stlParentName;
+      if( fType == 4 && fSplitLevel > 100 )
+      {
+         TBranch *br = GetMother()->GetSubBranch( this );
+         stlParentName = br->GetName();
+         stlParentName.Strip( TString::kTrailing, '.' );
+         //         stlParentName.Remove( stlParentName.Last( '.' ), stlParentName.Length() );
+         //        stlParentName.Remove( 0, stlParentName.Last( '.' ) );
+      }
+
       // Get the class we are a member of now (which is the
       // type of our containing subobject) and get our offset
       // inside of our containing subobject (our local offset).
@@ -2230,6 +2269,17 @@ void TBranchElement::InitializeOffsets()
                   //Warning("InitializeOffsets", "subBranch: '%s' has no parent class!  Assuming parent class is: '%s'.", subBranch->GetName(), pClass->GetName());
                }
             }
+
+            //------------------------------------------------------------------
+            // If we have the are the sub-branch of the TBranchSTL, we need
+            // to remove it's name to get the correct real data offsets
+            //-----------------------------------------------------------------
+            if( stlParentName.Length() )
+            {
+               if( !strncmp( stlParentName.Data(), dataName.Data(), stlParentName.Length()-1 ))
+                  dataName.Remove( 0, stlParentName.Length()+1 );
+            }
+
             // Find our offset in our parent class using
             // a lookup by name in the dictionary meta info
             // for our parent class.
@@ -2716,8 +2766,12 @@ void TBranchElement::ReadLeaves(TBuffer& b)
    // FIXME: Does this mean that pointers to objects which
    //        do not inherit from tobject are not handled correctly?
 
-   if ((fType <= 2) && TestBit(kBranchObject) && fBranchClass->IsLoaded()) {
-      b.MapObject((TObject*) fObject);
+   if ((fType <= 2) && fBranchClass->IsLoaded()) {
+      if (TestBit(kBranchObject)) {
+         b.MapObject((TObject*) fObject);
+      } else {
+         b.MapObject(fObject, fBranchClass);
+      }
    }
 
    if (fType == 4) {
@@ -2767,6 +2821,28 @@ void TBranchElement::ReadLeaves(TBuffer& b)
          default:
             break;
       }
+      //------------------------------------------------------------------------
+      // We have split this stuff, so we need to create the the pointers
+      //-----------------------------------------------------------------------
+      if( proxy->HasPointers() && fSplitLevel > 100 )
+      {
+         TClass *elClass = proxy->GetValueClass();
+
+         //--------------------------------------------------------------------
+         // The allocation is done in this strange way because ReadLeaves
+         // is being called many times by TFormula!!!
+         //--------------------------------------------------------------------
+         Int_t i = 0;
+         if( !fNdata || *(void**)proxy->At( 0 ) != 0 )
+            i = fNdata;
+
+         for( ; i < fNdata; ++i )
+         {
+            void **el = (void**)proxy->At( i );
+            *el = elClass->New();
+         }
+      }
+      
       proxy->Commit(env);
    } else if (fType == 41) {
       // STL container sub-branch (contains the elements).
@@ -2775,7 +2851,11 @@ void TBranchElement::ReadLeaves(TBuffer& b)
          return;
       }
       TVirtualCollectionProxy::TPushPop helper(GetCollectionProxy(), fObject);
-      GetInfo()->ReadBufferSTL(b, GetCollectionProxy(), fNdata, fID, fOffset);
+      if( fSplitLevel > 100 )
+         GetInfo()->ReadBufferSTLPtrs(b, GetCollectionProxy(), fNdata, fID, fOffset);
+      else
+         GetInfo()->ReadBufferSTL(b, GetCollectionProxy(), fNdata, fID, fOffset);
+
    } else if (fType == 3) {
       // TClonesArray master branch (has only the number of elements).
       Int_t n;
@@ -3441,6 +3521,29 @@ void TBranchElement::SetupAddresses()
       return;
    }
 
+   //--------------------------------------------------------------------------
+   // Check if we are splited STL collection of pointers
+   //--------------------------------------------------------------------------
+   if( fType == 41 && fSplitLevel >= 100 )
+   {
+      TBranchElement *parent = (TBranchElement *)GetMother()->GetSubBranch( this );
+
+      if (GetInfo() && GetInfo()->GetOffsets())
+      {
+         // If our streamer info has already been compiled,
+         // then we must try to deal with schema evolution here.
+         // FIXME: We must not optimize here or InitializeOffsets will crash!
+         GetInfo()->BuildOld();
+      }
+
+      if( !parent->GetAddress() )
+         parent->SetAddress( 0 );
+      return;
+   }
+
+   //--------------------------------------------------------------------------
+   // Any other case
+   //--------------------------------------------------------------------------
    TBranchElement* mother = (TBranchElement*) GetMother();
    TClass* cl = TClass::GetClass(mother->GetClassName());
 
@@ -3492,11 +3595,17 @@ void TBranchElement::Streamer(TBuffer& R__b)
       TDirectory *dirsav = fDirectory;
       fDirectory = 0;  // to avoid recursive calls
 
+      // Record only positive 'version number'
+      Int_t classVersion = fClassVersion;
+      if (fClassVersion < 0) fClassVersion = -fClassVersion;
+
       // FIXME: Should we clear the kDeleteObject bit before writing?
       //        If we did we would have to remember to old value and
       //        put it back, we wouldn't want to forget that we owned
       //        something just because we got written to disk.
       R__b.WriteClassBuffer(TBranchElement::Class(), this);
+      
+      fClassVersion = classVersion;
 
       // make sure that all TVirtualStreamerInfo objects referenced by
       // this class are written to the file
@@ -3568,6 +3677,13 @@ Int_t TBranchElement::Unroll(const char* name, TClass* clParent, TClass* cl, cha
    //       except for a TObject base class of a class which has the
    //       can ignore tobject streamer flag set.
 
+   //----------------------------------------------------------------------------
+   // Handling the case of STL collections of pointers
+   //----------------------------------------------------------------------------
+   Int_t splitSTLP = splitlevel - (splitlevel%100);
+   splitlevel %= 100;
+
+
    TString branchname;
 
    if ((cl == TObject::Class()) && clParent->CanIgnoreTObjectStreamer()) {
@@ -3581,7 +3697,6 @@ Int_t TBranchElement::Unroll(const char* name, TClass* clParent, TClass* cl, cha
    //  its own branch and thus be stored and queried
    //  independently in the tree.
    //
-
    Bool_t optim = TVirtualStreamerInfo::CanOptimize();
    if (splitlevel > 0) {
       TVirtualStreamerInfo::Optimize(kFALSE);
@@ -3631,7 +3746,7 @@ Int_t TBranchElement::Unroll(const char* name, TClass* clParent, TClass* cl, cha
             //       container which we are splitting.  It does not
             //       appear in the branch heirarchy either.
             // Note: We can use parent class (clParent) != branch class (elemClass) to detection elision.
-            Int_t unroll = Unroll(name, clParent, clOfBase, ptr + offset, basketsize, splitlevel-1, btype);
+            Int_t unroll = Unroll(name, clParent, clOfBase, ptr + offset, basketsize, splitlevel-1+splitSTLP, btype);
             if (unroll < 0) {
                // FIXME: We could not split because we are abstract, should we be doing this?
                if (strlen(name)) {
@@ -3652,7 +3767,7 @@ Int_t TBranchElement::Unroll(const char* name, TClass* clParent, TClass* cl, cha
                //       do not represent the full class heirarchy because we do
                //       this, however it does keep the branch names for the
                //       inherited data members simple.
-               TBranchElement* branch = new TBranchElement(this, name, sinfo, elemID, ptr + offset, basketsize, splitlevel, btype);
+               TBranchElement* branch = new TBranchElement(this, name, sinfo, elemID, ptr + offset, basketsize, splitlevel+splitSTLP, btype);
                // Then reset it to the proper name.
                branch->SetName(branchname);
                branch->SetTitle(branchname);
@@ -3660,7 +3775,7 @@ Int_t TBranchElement::Unroll(const char* name, TClass* clParent, TClass* cl, cha
                fBranches.Add(branch);
             } else {
                branchname.Form("%s", elem->GetFullName());
-               TBranchElement* branch = new TBranchElement(this, branchname, sinfo, elemID, ptr + offset, basketsize, splitlevel, btype);
+               TBranchElement* branch = new TBranchElement(this, branchname, sinfo, elemID, ptr + offset, basketsize, splitlevel+splitSTLP, btype);
                branch->SetParentClass(clParent);
                fBranches.Add(branch);
             }
@@ -3705,7 +3820,7 @@ Int_t TBranchElement::Unroll(const char* name, TClass* clParent, TClass* cl, cha
                // Note: clParent is the class which contains a data member of
                //       the class type which we are splitting.
                // Note: We can use parent class (clParent) != branch class (elemClass) to detection elision.
-               Int_t unroll = Unroll(branchname, clParent, elemClass, ptr + offset, basketsize, splitlevel-1, btype);
+               Int_t unroll = Unroll(branchname, clParent, elemClass, ptr + offset, basketsize, splitlevel-1+splitSTLP, btype);
                if (unroll < 0) {
                   // FIXME: We could not split because we are abstract, should we be doing this?
                   TBranchElement* branch = new TBranchElement(this, branchname, sinfo, elemID, ptr + offset, basketsize, 0, btype);
@@ -3713,7 +3828,20 @@ Int_t TBranchElement::Unroll(const char* name, TClass* clParent, TClass* cl, cha
                   fBranches.Add(branch);
                }
             }
-         } else if ((elem->IsA() == TStreamerSTL::Class()) && !elem->IsaPointer()) {
+         }
+         else if( elem->GetClassPointer() &&
+                  elem->GetClassPointer()->GetCollectionProxy() &&
+                  elem->GetClassPointer()->GetCollectionProxy()->HasPointers() &&
+                  splitSTLP && fType != 4 )
+         {
+
+            TBranchSTL* branch = new TBranchSTL( this, branchname,
+                                                 elem->GetClassPointer()->GetCollectionProxy(),
+                                                 basketsize, splitlevel - 1+splitSTLP, sinfo, elemID );
+            branch->SetAddress( ptr+offset );
+            fBranches.Add( branch );
+         }
+         else if ((elem->IsA() == TStreamerSTL::Class()) && !elem->IsaPointer()) {
             // -- We have an STL container.
             // FIXME: What if splitlevel == 0 here?
             Int_t subSplitlevel = splitlevel - 1;
@@ -3721,7 +3849,7 @@ Int_t TBranchElement::Unroll(const char* name, TClass* clParent, TClass* cl, cha
                // -- We split the sub-branches of a TClonesArray or an STL container only once.
                subSplitlevel = 0;
             }
-            TBranchElement* branch = new TBranchElement(this, branchname, sinfo, elemID, ptr + offset, basketsize, subSplitlevel, btype);
+            TBranchElement* branch = new TBranchElement(this, branchname, sinfo, elemID, ptr + offset, basketsize, subSplitlevel+splitSTLP, btype);
             branch->SetParentClass(clParent);
             fBranches.Add(branch);
          } else if (((btype != 31) && (btype != 41)) && ptr && ((elem->GetClassPointer() == TClonesArray::Class()) || ((elem->IsA() == TStreamerSTL::Class()) && !elem->CannotSplit()))) {
@@ -3730,12 +3858,12 @@ Int_t TBranchElement::Unroll(const char* name, TClass* clParent, TClass* cl, cha
             // FIXME: What if splitlevel == 0 here?
             // Note: ptr may be null in case of a TClonesArray inside another
             //       TClonesArray or STL container, see the else clause.
-            TBranchElement* branch = new TBranchElement(this, branchname, sinfo, elemID, ptr + offset, basketsize, splitlevel-1, btype);
+            TBranchElement* branch = new TBranchElement(this, branchname, sinfo, elemID, ptr + offset, basketsize, splitlevel-1+splitSTLP, btype);
             branch->SetParentClass(clParent);
             fBranches.Add(branch);
          } else {
             // -- We are not going to split this element any farther.
-            TBranchElement* branch = new TBranchElement(this, branchname, sinfo, elemID, 0, basketsize, 0, btype);
+            TBranchElement* branch = new TBranchElement(this, branchname, sinfo, elemID, 0, basketsize, splitSTLP, btype);
             branch->SetType(btype);
             branch->SetParentClass(clParent);
             fBranches.Add(branch);

@@ -20,15 +20,18 @@
 
 
 #include "RooFit.h"
+#include "Riostream.h"
 
-#include "RooRealBinding.h"
 #include "RooRealBinding.h"
 #include "RooAbsReal.h"
 #include "RooArgSet.h"
 #include "RooAbsRealLValue.h"
 #include "RooNameReg.h"
+#include "RooMsgService.h"
 
 #include <assert.h>
+
+
 
 ClassImp(RooRealBinding)
 ;
@@ -49,8 +52,7 @@ RooRealBinding::RooRealBinding(const RooAbsReal& func, const RooArgSet &vars, co
   while((var=(RooAbsArg*)iter->Next())) {
     _vars[index]= dynamic_cast<RooAbsRealLValue*>(var);
     if(0 == _vars[index]) {
-      cout << "RooRealBinding: cannot bind to ";
-      var->Print("1");
+      oocoutE((TObject*)0,InputArguments) << "RooRealBinding: cannot bind to " << var->GetName() << endl ;
       _valid= kFALSE;
     }
     index++ ;

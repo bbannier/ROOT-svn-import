@@ -36,6 +36,7 @@ ACLOCALDIR     := @aclocaldir@
 X11LIBDIR      := @x11libdir@
 XPMLIBDIR      := @xpmlibdir@
 XPMLIB         := @xpmlib@
+XFTLIB         := @enable_xft@
 
 EXCEPTIONS     := @exceptions@
 EXPLICITLINK   := @explicitlink@
@@ -99,6 +100,7 @@ BUILDQTGSI     := @buildqtgsi@
 QTLIBDIR       := @qtlibdir@
 QTLIB          := @qtlib@
 QTINCDIR       := $(filter-out /usr/include, @qtincdir@)
+QTVERS	       := @qtvers@
 QTMOCEXE       := @qtmocexe@
 
 BUILDRFIO      := @buildrfio@
@@ -118,6 +120,11 @@ DCAPLIBDIR     := @dcaplibdir@
 DCAPLIB        := @dcaplib@
 DCAPINCDIR     := $(filter-out /usr/include, @dcapincdir@)
 
+BUILDFTGL      := @buildftgl@
+FTGLLIBDIR     := @ftgllibdir@
+FTGLLIBS       := @ftgllibs@
+FTGLINCDIR     := $(filter-out /usr/include, @ftglincdir@)
+
 BUILDGFAL      := @buildgfal@
 GFALLIBDIR     := @gfallibdir@
 GFALCLILIB     := @gfallib@
@@ -127,6 +134,11 @@ BUILDG4ROOT    := @buildg4root@
 G4LIBDIR       := @g4libdir@
 G4INCDIR       := $(filter-out /usr/include, @g4incdir@)
 CLHEPINCDIR    := $(filter-out /usr/include, @clhepincdir@)
+
+BUILDGLITE     := @buildglite@
+GLITELIBDIR    := @glitelibdir@
+GAWLIB         := @glitelib@
+GAW_CPPFLAGS   := $(filter-out /usr/include, @gaw_cppflags@)
 
 BUILDCHIRP     := @buildchirp@
 CHIRPLIBDIR    := @chirplibdir@
@@ -154,6 +166,11 @@ BUILDFPYTHIA6    := @buildpythia6@
 FPYTHIA6LIBDIR   := @pythia6libdir@
 FPYTHIA6LIB      := @pythia6lib@
 FPYTHIA6CPPFLAGS := @pythia6cppflags@
+
+BUILDFPYTHIA8    := @buildpythia8@
+FPYTHIA8INCDIR   := @pythia8incdir@
+FPYTHIA8LIBDIR   := @pythia8libdir@
+FPYTHIA8LIB      := @pythia8lib@
 
 BUILDFFTW3     := @buildfftw3@
 FFTW3LIBDIR    := @fftw3libdir@
@@ -191,6 +208,7 @@ SRPUTILINCDIR  := $(filter-out /usr/include, @srputilincdir@)
 
 AFSLIB         := @afslib@
 AFSLIBDIR      := @afslibdir@
+AFSEXTRACFLAGS := @afsextracflags@
 
 BUILDKRB5      := @buildkrb5@
 KRB5LIB        := @krb5lib@

@@ -148,7 +148,7 @@ public:
 
    void Add(TDSetElement *elem)
    {
-      TFileStat *f = new TFileStat(this,elem);
+      TFileStat *f = new TFileStat(this, elem);
       fFiles->Add(f);
       if (fUnAllocFileNext == 0) fUnAllocFileNext = fFiles->First();
    }
@@ -336,12 +336,13 @@ private:
    TDSetElement  *fCurElem;      // TDSetElement currently being processed
    Long64_t       fProcessed;    // number of entries processed
    Float_t        fProcTime;     // sum of processing time of packets
-   Long64_t       fCurProcessed; // eventst processed in the current file
+   Long64_t       fCurProcessed; // events processed in the current file
    Float_t        fCurProcTime;  // proc time spent on the current file
+   TList         *fDSubSet;      // packets processed by this worker
 
 public:
    TSlaveStat(TSlave *slave);
-
+   ~TSlaveStat();
    TFileNode  *GetFileNode() const { return fFileNode; }
    const char *GetName() const { return fSlave->GetName(); }
    Long64_t    GetEntriesProcessed() const { return fProcessed; }
@@ -353,6 +354,8 @@ public:
       return (fCurProcTime?fCurProcessed/fCurProcTime:0); }
    Int_t       GetLocalEventsLeft() {
       return fFileNode?(fFileNode->GetEventsLeftPerSlave()):0; }
+   TList      *GetProcessedSubSet() { return fDSubSet; }
+   Int_t       AddProcessed();   // Add curent packet to the list of processed.
 };
 
 //______________________________________________________________________________
@@ -360,14 +363,26 @@ TPacketizerAdaptive::TSlaveStat::TSlaveStat(TSlave *slave)
    : fSlave(slave), fFileNode(0), fCurFile(0), fCurElem(0), fProcessed(0),
      fProcTime(0), fCurProcessed(0), fCurProcTime(0)
 {
-   //constructor
+   // Constructor
+
+   fDSubSet = new TList();
+   fDSubSet->SetOwner();
+}
+
+//______________________________________________________________________________
+TPacketizerAdaptive::TSlaveStat::~TSlaveStat()
+{
+   // Cleanup
+
+   SafeDelete(fDSubSet);
 }
 
 //______________________________________________________________________________
 void TPacketizerAdaptive::TSlaveStat::UpdateRates(Long64_t nEvents,
                                                   Float_t time)
 {
-   //Update packetizer rates
+   // Update packetizer rates
+
    if (fCurFile->IsDone()) {
       fCurProcTime = 0;
       fCurProcessed = 0;
@@ -379,6 +394,19 @@ void TPacketizerAdaptive::TSlaveStat::UpdateRates(Long64_t nEvents,
    fProcessed += nEvents;
    fCurFile->GetNode()->IncProcessed(nEvents);
 }
+
+//______________________________________________________________________________
+Int_t TPacketizerAdaptive::TSlaveStat::AddProcessed()
+{
+   // Add the current element to the fDSubSet (subset processed by this worker)
+
+   if (fDSubSet && fCurElem) {
+      fDSubSet->Add(fCurElem);
+      return 0;
+   } else
+      return -1;
+}
+
 //------------------------------------------------------------------------------
 
 ClassImp(TPacketizerAdaptive)
@@ -400,7 +428,6 @@ TPacketizerAdaptive::TPacketizerAdaptive(TDSet *dset, TList *slaves,
 
    // Init pointer members
    fSlaveStats = 0;
-   fPackets = 0;
    fSlaveStats = 0;
    fUnAllocated = 0;
    fActive = 0;
@@ -408,9 +435,19 @@ TPacketizerAdaptive::TPacketizerAdaptive(TDSet *dset, TList *slaves,
    fCumProcTime = 0;
    fMaxPerfIdx = 1;
 
-   Long_t maxSlaveCnt = 0;
-   if (TProof::GetParameter(input, "PROOF_MaxSlavesPerNode", maxSlaveCnt) == 0) {
-      fgMaxSlaveCnt = (Int_t) maxSlaveCnt;
+   Int_t maxSlaveCnt = 0;
+   if (TProof::GetParameter(input, "PROOF_MaxSlavesPerNode", maxSlaveCnt) == 0)
+      if (maxSlaveCnt < 1) {
+         Info("Process",
+              "The value of PROOF_MaxSlavesPerNode must be grater than 0");
+         maxSlaveCnt = 0;
+      }
+   if (!maxSlaveCnt)
+      maxSlaveCnt = gEnv->GetValue("Packetizer.MaxWorkersPerNode", 0);
+   if (maxSlaveCnt > 0) {
+      fgMaxSlaveCnt = maxSlaveCnt;
+      Info("Process", "Setting max number of workers per node to %d",
+           fgMaxSlaveCnt);
    } else {
       // Use number of CPUs as default
       SysInfo_t si;
@@ -419,17 +456,32 @@ TPacketizerAdaptive::TPacketizerAdaptive(TDSet *dset, TList *slaves,
          fgMaxSlaveCnt =  si.fCpus;
    }
 
+   // if forceLocal parameter is set to 1 then eliminate the cross-worker
+   // processing;
+   // This minimizes the network usage on the PROOF cluser at the expense of
+   // longer jobs processing times.
+   // To process successfully the session must have workers with all the data!
+   fForceLocal = kFALSE;
+   Int_t forceLocal = 0;
+   if (TProof::GetParameter(input, "PROOF_ForceLocal", forceLocal) == 0) {
+      if (forceLocal == 1)
+         fForceLocal = kTRUE;
+      else
+         Info("Process",
+            "The only accepted value of PROOF_ForceLocal parameter is 1 !");
+   }
+
    // Below we provide a possibility to change the way packet size is
    // calculated or define the packet time directly.
    // fPacketAsAFraction can be interpreted as follows:
    // packet time is (expected job proc. time) / fPacketSizeAsAFraction.
    // It substitutes 20 in the old formula to calculate the fPacketSize:
    // fPacketSize = fTotalEntries / (20 * nslaves)
-   Long_t packetAsAFraction = 0;
+   Int_t packetAsAFraction = 0;
    if (TProof::GetParameter(input, "PROOF_PacketAsAFraction",
                             packetAsAFraction) == 0) {
       if (packetAsAFraction > 0) {
-         fgPacketAsAFraction = (Int_t)packetAsAFraction;
+         fgPacketAsAFraction = packetAsAFraction;
          Info("Process",
               "using alternate fraction of query time as a packet size: %ld",
               packetAsAFraction);
@@ -452,9 +504,6 @@ TPacketizerAdaptive::TPacketizerAdaptive(TDSet *dset, TList *slaves,
    Double_t baseLocalPreference = 1.2;
    TProof::GetParameter(input, "PROOF_BaseLocalPreference", baseLocalPreference);
    fBaseLocalPreference = (Float_t)baseLocalPreference;
-
-   fPackets = new TList;
-   fPackets->SetOwner();
 
    fFileNodes = new TList;
    fFileNodes->SetOwner();
@@ -668,7 +717,6 @@ TPacketizerAdaptive::~TPacketizerAdaptive()
       fSlaveStats->DeleteValues();
    }
 
-   SafeDelete(fPackets);
    SafeDelete(fSlaveStats);
    SafeDelete(fUnAllocated);
    SafeDelete(fActive);
@@ -902,8 +950,8 @@ void TPacketizerAdaptive::ValidateFiles(TDSet *dset, TList *slaves)
                Info("ValidateFiles",
                     "sent to slave-%s (%s) via %p GETENTRIES on %s %s %s %s",
                     s->GetOrdinal(), s->GetName(), s->GetSocket(),
-                    dset->IsTree() ? "tree" : "objects",
-                    elem->GetFileName(), elem->GetDirectory(), elem->GetObjName());
+                    dset->IsTree() ? "tree" : "objects", elem->GetFileName(),
+                    elem->GetDirectory(), elem->GetObjName());
          }
       }
 
@@ -916,7 +964,8 @@ void TPacketizerAdaptive::ValidateFiles(TDSet *dset, TList *slaves)
          while (TSocket *s = (TSocket*) next()) {
             TSlave *sl = (TSlave *) slaves_by_sock.GetValue(s);
             if (sl)
-               Info("ValidateFiles", "   slave-%s (%s)", sl->GetOrdinal(), sl->GetName());
+               Info("ValidateFiles", "   slave-%s (%s)",
+                    sl->GetOrdinal(), sl->GetName());
          }
          delete act;
       }
@@ -958,7 +1007,8 @@ void TPacketizerAdaptive::ValidateFiles(TDSet *dset, TList *slaves)
          continue;
       } else if ( reply->What() != kPROOF_GETENTRIES ) {
          // Help! unexpected message type
-         Error("ValidateFiles", "unexpected message type (%d) from slave-%s (%s)",
+         Error("ValidateFiles",
+               "unexpected message type (%d) from slave-%s (%s)",
                reply->What(), slave->GetOrdinal(), slave->GetName());
          ((TProof*)gProof)->MarkBad(slave);
          fValid = kFALSE;
@@ -984,7 +1034,8 @@ void TPacketizerAdaptive::ValidateFiles(TDSet *dset, TList *slaves)
 
          if (!e->GetEntryList()) {
             if ( e->GetFirst() > entries ) {
-               Error("ValidateFiles", "first (%d) higher then number of entries (%d) in %d",
+               Error("ValidateFiles",
+                     "first (%d) higher then number of entries (%d) in %d",
                      e->GetFirst(), entries, e->GetFileName() );
 
                // disable element
@@ -1016,7 +1067,8 @@ void TPacketizerAdaptive::ValidateFiles(TDSet *dset, TList *slaves)
          //fValid = kFALSE; // all element must be readable!
          if (gProofServ) {
             TMessage m(kPROOF_MESSAGE);
-            m << TString(Form("Cannot get entries for file: %s - skipping", e->GetFileName()));
+            m << TString(Form("Cannot get entries for file: %s - skipping",
+                              e->GetFileName()));
             gProofServ->GetSocket()->Send(m);
          }
 
@@ -1130,7 +1182,7 @@ TDSetElement *TPacketizerAdaptive::GetNextPacket(TSlave *sl, TMessage *r)
 
       Long64_t numev = slstat->fCurElem->GetNum();
 
-      fPackets->Add(slstat->fCurElem);
+      slstat->AddProcessed();
       (*r) >> latency >> proctime >> proccpu;
       // only read new info if available
       if (r->BufferSize() > r->Length()) (*r) >> bytesRead;
@@ -1146,6 +1198,7 @@ TDSetElement *TPacketizerAdaptive::GetNextPacket(TSlave *sl, TMessage *r)
 
       // update processing rate
       slstat->UpdateRates(numev, proctime);
+
       fCumProcTime += proctime;
 
       PDB(kPacketizer,2)
@@ -1198,8 +1251,12 @@ TDSetElement *TPacketizerAdaptive::GetNextPacket(TSlave *sl, TMessage *r)
          // local file node exists and has more events to process.
          fUnAllocated->Sort();
          TFileNode* firstNonLocalNode = (TFileNode*)fUnAllocated->First();
-         Bool_t nonLocalNodePossible =
-            firstNonLocalNode?(firstNonLocalNode->GetExtSlaveCnt() < fgMaxSlaveCnt):0;
+         Bool_t nonLocalNodePossible;
+         if (fForceLocal)
+            nonLocalNodePossible = 0;
+         else
+            nonLocalNodePossible = firstNonLocalNode?
+               (firstNonLocalNode->GetExtSlaveCnt() < fgMaxSlaveCnt):0;
          openLocal = !nonLocalNodePossible;
          Float_t slaveRate = slstat->GetAvgRate();
          if ( nonLocalNodePossible ) {
@@ -1246,12 +1303,12 @@ TDSetElement *TPacketizerAdaptive::GetNextPacket(TSlave *sl, TMessage *r)
       }
 
       // try to find an unused filenode first
-      if(file == 0) {
+      if(file == 0 && !fForceLocal) {
          file = GetNextUnAlloc();
       }
 
       // then look at the active filenodes
-      if(file == 0) {
+      if(file == 0 && !fForceLocal) {
          file = GetNextActive();
       }
 
@@ -1300,4 +1357,66 @@ TDSetElement *TPacketizerAdaptive::GetNextPacket(TSlave *sl, TMessage *r)
       slstat->fCurElem->SetEntryList(base->GetEntryList(), first, num);
 
    return slstat->fCurElem;
+}
+
+//______________________________________________________________________________
+Int_t TPacketizerAdaptive::GetEstEntriesProcessed(Float_t t,
+                                                  Long64_t &ent, Long64_t &bytes)
+{
+   // Get estimation for the number of processed entries and bytes read at time t,
+   // based on the numbers already processed and the latests worker measured speeds.
+   // Only the estimation for the entries is currently implemented.
+   // This is needed to smooth the instantaneous rate plot.
+
+   // Default value
+   ent = fProcessed;
+   bytes = fBytesRead;
+
+   // Parse option
+   if (fUseEstOpt == kEstOff)
+      // Do not use estimation
+      return 0;
+   Bool_t current = (fUseEstOpt == kEstCurrent) ? kTRUE : kFALSE;
+
+   // Loop over the workers
+   Float_t trate = 0.;
+   if (fSlaveStats && fSlaveStats->GetSize() > 0) {
+      ent = 0;
+      TIter nxw(fSlaveStats);
+      TObject *key;
+      while ((key = nxw()) != 0) {
+         TSlaveStat *slstat = (TSlaveStat *) fSlaveStats->GetValue(key);
+         if (slstat) {
+            // Those surely processed
+            Long64_t e = slstat->fProcessed;
+            // Time elapsed since last update
+            Float_t dt = (t > slstat->fProcTime) ? t - slstat->fProcTime : 0;
+            // Add estimated entries processed since last update
+            Float_t rate = (current && slstat->GetCurRate() > 0) ? slstat->GetCurRate()
+                                                                 : slstat->GetAvgRate();
+            trate += rate;
+            // Add estimated entries processed since last update
+            e += (Long64_t) (dt * rate);
+            // Add to the total
+            ent += e;
+            // Notify
+            PDB(kPacketizer,3)
+               Info("GetEstEntriesProcessed","%s: e:%lld rate:%f dt:%f e:%lld",
+                                          slstat->fSlave->GetOrdinal(),
+                                          slstat->fProcessed, rate, dt, e);
+         }
+      }
+   }
+   // Notify
+   PDB(kPacketizer,2)
+      Info("GetEstEntriesProcessed",
+           "estimated entries: %lld, bytes read: %lld rate: %f", ent, bytes, trate);
+
+   // Check values
+   ent = (ent > 0) ? ent : fProcessed;
+   ent = (ent <= fTotalEntries) ? ent : fTotalEntries;
+   bytes = (bytes > 0) ? bytes : fBytesRead;
+
+   // Done
+   return 0;
 }

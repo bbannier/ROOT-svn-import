@@ -67,7 +67,7 @@ TCanvasImp *TGuiFactory::CreateCanvasImp(TCanvas *c, const char *title, Int_t x,
 }
 
 //______________________________________________________________________________
-TBrowserImp *TGuiFactory::CreateBrowserImp(TBrowser *b, const char *title, UInt_t width, UInt_t height)
+TBrowserImp *TGuiFactory::CreateBrowserImp(TBrowser *b, const char *title, UInt_t width, UInt_t height, Option_t *)
 {
    // Create a batch version of TBrowserImp.
 
@@ -75,7 +75,7 @@ TBrowserImp *TGuiFactory::CreateBrowserImp(TBrowser *b, const char *title, UInt_
 }
 
 //______________________________________________________________________________
-TBrowserImp *TGuiFactory::CreateBrowserImp(TBrowser *b, const char *title, Int_t x, Int_t y, UInt_t width, UInt_t height)
+TBrowserImp *TGuiFactory::CreateBrowserImp(TBrowser *b, const char *title, Int_t x, Int_t y, UInt_t width, UInt_t height, Option_t *)
 {
    // Create a batch version of TBrowserImp.
 
@@ -95,7 +95,7 @@ TControlBarImp *TGuiFactory::CreateControlBarImp(TControlBar *c, const char *tit
 {
    // Create a batch version of TControlBarImp.
 
-   return new TControlBarImp(c, title); 
+   return new TControlBarImp(c, title);
 }
 
 //______________________________________________________________________________
@@ -115,7 +115,7 @@ TInspectorImp *TGuiFactory::CreateInspectorImp(const TObject *obj, UInt_t width,
       return new TInspectorImp(obj, width, height);
    }
 
-   gROOT->ProcessLine(Form("TInspectCanvas::Inspector((TObject*)0x%x);",obj));
+   gROOT->ProcessLine(Form("TInspectCanvas::Inspector((TObject*)0x%lx);",obj));
    return 0;
 }
 

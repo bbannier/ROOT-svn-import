@@ -17,6 +17,9 @@
 //                                                                      //
 // TVirtualProofPlayer                                                  //
 //                                                                      //
+// Abstract interface for the PROOF player.                             //
+// See the concrete implementations under 'proofplayer' for details.    //
+//                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
 #ifndef ROOT_TObject
@@ -79,6 +82,9 @@ public:
    virtual void      Progress(TSlave *, Long64_t total, Long64_t processed) = 0;
    virtual void      Progress(Long64_t total, Long64_t processed, Long64_t bytesread,
                               Float_t initTime, Float_t procTime,
+                              Float_t evtrti, Float_t mbrti) = 0; // *SIGNAL*
+   virtual void      Progress(TSlave *, Long64_t total, Long64_t processed,
+                              Long64_t bytesread, Float_t initTime, Float_t procTime,
                               Float_t evtrti, Float_t mbrti) = 0; // *SIGNAL*
    virtual void      Feedback(TList *objs) = 0; // *SIGNAL*
 

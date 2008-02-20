@@ -81,13 +81,14 @@ public:
    const char    *GetLabelFormat() { return fLabelFormat.Data(); }
    Float_t        GetLabelsOffset() { return fLabelsOffset; }
    TLegend       *GetLegend();
+   Int_t          GetEntries() { return fNvals; }
    const char    *GetPercentFormat() { return fPercentFormat.Data(); }
    Double_t       GetRadius() { return fRadius;}
    TPieSlice     *GetSlice(Int_t i);
    const char    *GetValueFormat() { return fValueFormat.Data(); }
    Double_t       GetX() { return fX; }
    Double_t       GetY() { return fY; }
-   TLegend       *MakeLegend();
+   TLegend       *MakeLegend(Double_t x1=.65,Double_t y1=.65,Double_t x2=.95, Double_t y2=.95, const char *leg_header="");
    void           MakeSlices(Bool_t force=kFALSE);
    virtual void   Paint(Option_t *);
    void           SavePrimitive(ostream &out, Option_t *opts="");
@@ -113,6 +114,7 @@ public:
    void           SetValueFormat(const char *); // *MENU*
    void           SetX(Double_t); // *MENU*
    void           SetY(Double_t); // *MENU*
+   void           SortSlices(Bool_t amode=kTRUE,Float_t merge_thresold=.0);
 
    ClassDef(TPie,1) //Pie chart graphics class
 };

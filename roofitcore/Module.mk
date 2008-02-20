@@ -29,8 +29,8 @@ ROOFITCOREDH   := $(ROOFITCOREDS:.cxx=.h)
 ROOFITCOREH1   := Roo1DTable.h RooAbsArg.h RooAbsBinning.h RooAbsCategory.h \
                   RooAbsCategoryLValue.h RooAbsCollection.h \
                   RooAbsData.h RooAbsFunc.h RooAbsGenContext.h \
-                  RooAbsGoodnessOfFit.h RooAbsHiddenReal.h RooAbsIntegrator.h \
-                  RooAbsLValue.h RooAbsMCStudyModule.h RooAbsOptGoodnessOfFit.h \
+                  RooAbsTestStatistic.h RooAbsHiddenReal.h RooAbsIntegrator.h \
+                  RooAbsLValue.h RooAbsMCStudyModule.h RooAbsOptTestStatistic.h \
                   RooAbsPdf.h RooAbsProxy.h RooAbsReal.h \
                   RooAbsRealLValue.h RooAbsRootFinder.h RooAbsString.h \
                   RooAcceptReject.h RooAdaptiveGaussKronrodIntegrator1D.h \
@@ -48,18 +48,16 @@ ROOFITCOREH1   := Roo1DTable.h RooAbsArg.h RooAbsBinning.h RooAbsCategory.h \
 ROOFITCOREH2   := RooDouble.h RooEffGenContext.h RooEllipse.h RooErrorHandler.h \
                   RooErrorVar.h RooFit.h RooFitResult.h RooFormula.h \
                   RooFormulaVar.h RooGaussKronrodIntegrator1D.h RooGenCategory.h \
-                  RooGenContext.h RooGenericPdf.h RooGenProdProj.h \
-                  RooGlobalFunc.h RooGraphEdge.h RooGraphNode.h RooGraphSpring.h \
+                  RooGenContext.h RooGenericPdf.h RooGenProdProj.h RooGlobalFunc.h  \
                   RooGrid.h RooHashTable.h RooHistError.h \
-                  RooHist.h RooHtml.h RooImproperIntegrator1D.h \
+                  RooHist.h RooImproperIntegrator1D.h \
                   RooIntegrator1D.h RooIntegrator2D.h RooIntegratorBinding.h \
                   RooInt.h RooInvTransform.h RooLinearVar.h RooLinkedListElem.h \
                   RooLinkedList.h RooLinkedListIter.h RooLinTransBinning.h RooList.h \
                   RooListProxy.h RooMapCatEntry.h RooMappedCategory.h RooMath.h \
                   RooMCIntegrator.h RooMinuit.h RooMPSentinel.h \
                   RooMultiCategory.h RooMultiCatIter.h RooNameReg.h \
-                  RooNameSet.h RooNLLVar.h RooNormListManager.h \
-                  RooNormManager.h RooNormSetCache.h RooNumber.h \
+                  RooNameSet.h RooNLLVar.h RooNormSetCache.h RooNumber.h \
                   RooNumConvolution.h RooNumConvPdf.h RooNumIntConfig.h RooNumIntFactory.h \
                   RooPlotable.h RooPlot.h RooPolyVar.h RooPrintable.h \
                   RooProdGenContext.h RooProduct.h RooPullVar.h \
@@ -110,15 +108,15 @@ $(ROOFITCORELIB): $(ROOFITCOREO) $(ROOFITCOREDO) $(ORDER_) $(MAINLIBS) $(ROOFITC
 		   "$(SOFLAGS)" libRooFitCore.$(SOEXT) $@ "$(ROOFITCOREO) $(ROOFITCOREDO)" \
 		   "$(ROOFITCORELIBEXTRA)"
 
-$(ROOFITCOREDS1): $(ROOFITCOREH1) $(ROOFITCOREL1) $(ROOTCINTTMPEXE)
+$(ROOFITCOREDS1): $(ROOFITCOREH1) $(ROOFITCOREL1) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(ROOFITCOREH1) $(ROOFITCOREL1)
 
-$(ROOFITCOREDS2): $(ROOFITCOREH2) $(ROOFITCOREL2) $(ROOTCINTTMPEXE)
+$(ROOFITCOREDS2): $(ROOFITCOREH2) $(ROOFITCOREL2) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(ROOFITCOREH2) $(ROOFITCOREL2)
 
-$(ROOFITCOREDS3): $(ROOFITCOREH3) $(ROOFITCOREL3) $(ROOTCINTTMPEXE)
+$(ROOFITCOREDS3): $(ROOFITCOREH3) $(ROOFITCOREL3) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(ROOFITCOREH3) $(ROOFITCOREL3)
 

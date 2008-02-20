@@ -20,6 +20,7 @@
 #include <map>
 #include <vector>
 
+class TObject;
 class TGLCamera;
 class TGLLogicalShape;
 class TGLPhysicalShape;
@@ -103,9 +104,11 @@ protected:
    TGLContextIdentity * fGLCtxIdentity;
    void ReleaseGLCtxIdentity();
 
+   Bool_t                    fUpdateTimeouted;   //! Set if draw list update was interrupted.
+
    // Smart Refresh -- will go in this version
-   Bool_t                                          fInSmartRefresh;    //!
-   mutable LogicalShapeMap_t                       fSmartRefreshCache; //!
+   Bool_t                    fInSmartRefresh;    //!
+   mutable LogicalShapeMap_t fSmartRefreshCache; //!
 
 
    // ----------------------------------------------------------------

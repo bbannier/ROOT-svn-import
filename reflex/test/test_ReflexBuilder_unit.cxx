@@ -22,8 +22,16 @@
 #include <list>
 #include <map>
 
-using namespace ROOT::Reflex;
+using namespace Reflex;
 using namespace std;
+
+#if defined(_WIN32) && !defined(__CINT__)
+   typedef __int64 longlong;
+   typedef unsigned __int64 ulonglong;
+#else
+   typedef long long int longlong; /* */
+   typedef unsigned long long int /**/ ulonglong;
+#endif
 
 /** test_SealKenel_Properties.cpp
   *
@@ -46,6 +54,7 @@ class ReflexBuilderUnitTest : public CppUnit::TestFixture {
   CPPUNIT_TEST( freefunctionbuilder );
   CPPUNIT_TEST( freevariablebuilder );
   CPPUNIT_TEST( demangler );
+  CPPUNIT_TEST( normalizer );
   CPPUNIT_TEST( forwarddeclarations );
   CPPUNIT_TEST( subscopebuilder );
   CPPUNIT_TEST( type_equivalence );
@@ -72,6 +81,7 @@ public:
   void freefunctionbuilder();
   void freevariablebuilder();
   void demangler();
+  void normalizer();
   void forwarddeclarations();
   void subscopebuilder();
   void offset();
@@ -132,6 +142,55 @@ void ReflexBuilderUnitTest::demangler()
   CPPUNIT_ASSERT_EQUAL(string("a::b"), Tools::Demangle(typeid(a::b)));
   CPPUNIT_ASSERT_EQUAL(string("std::vector<bar,std::allocator<bar> >"), 
                               Tools::Demangle(typeid(vector<bar>)));
+}
+
+//==============================================================================================
+// Normalize test
+//==============================================================================================
+void ReflexBuilderUnitTest::normalizer()
+{
+   CPPUNIT_ASSERT_EQUAL(string(""), Tools::NormalizeName(""));
+   CPPUNIT_ASSERT_EQUAL(string(""), Tools::NormalizeName(" "));
+   CPPUNIT_ASSERT_EQUAL(string(""), Tools::NormalizeName("  "));
+   CPPUNIT_ASSERT_EQUAL(string("x"), Tools::NormalizeName("x"));
+   CPPUNIT_ASSERT_EQUAL(string("x"), Tools::NormalizeName(" x"));
+   CPPUNIT_ASSERT_EQUAL(string("int"), Tools::NormalizeName("int"));
+   CPPUNIT_ASSERT_EQUAL(string("int"), Tools::NormalizeName("   int"));
+   CPPUNIT_ASSERT_EQUAL(string("int"), Tools::NormalizeName("int  "));
+   CPPUNIT_ASSERT_EQUAL(string("int*"), Tools::NormalizeName("int *"));
+   CPPUNIT_ASSERT_EQUAL(string("int**"), Tools::NormalizeName("int **"));
+   CPPUNIT_ASSERT_EQUAL(string("int**"), Tools::NormalizeName("int **  "));
+   CPPUNIT_ASSERT_EQUAL(string("int*&"), Tools::NormalizeName("int *&"));
+   CPPUNIT_ASSERT_EQUAL(string("float (int)"), Tools::NormalizeName("float (int)"));
+   CPPUNIT_ASSERT_EQUAL(string("float* (int)"), Tools::NormalizeName("float *(int)"));
+   CPPUNIT_ASSERT_EQUAL(string("float* (int)"), Tools::NormalizeName("float * (int)"));
+   CPPUNIT_ASSERT_EQUAL(string("float* (int)"), Tools::NormalizeName("float*(int)"));
+   CPPUNIT_ASSERT_EQUAL(string("float** (int)"), Tools::NormalizeName("float **(int)"));
+   CPPUNIT_ASSERT_EQUAL(string("float*& (int)"), Tools::NormalizeName("float *&(int)"));
+   CPPUNIT_ASSERT_EQUAL(string("float*& (int)"), Tools::NormalizeName("float * & (int)"));
+   CPPUNIT_ASSERT_EQUAL(string("float*& (int)"), Tools::NormalizeName("float  *  &  (int)"));
+   CPPUNIT_ASSERT_EQUAL(string("float**& (int)"), Tools::NormalizeName("float **&(int)"));
+   CPPUNIT_ASSERT_EQUAL(string("float (*)(int)"), Tools::NormalizeName("float (*)(int)"));
+   CPPUNIT_ASSERT_EQUAL(string("float (*)(int)"), Tools::NormalizeName("float(*)(int)"));
+   CPPUNIT_ASSERT_EQUAL(string("float (*)(int)"), Tools::NormalizeName("  float  (  *  )  (  int  )  "));
+   CPPUNIT_ASSERT_EQUAL(string("float& (*)(int)"), Tools::NormalizeName("float& (*)(int)"));
+   CPPUNIT_ASSERT_EQUAL(string("float**& (*)(int)"), Tools::NormalizeName("float**& (*)(int)"));
+   CPPUNIT_ASSERT_EQUAL(string("a::b"), Tools::NormalizeName("a::b"));
+   CPPUNIT_ASSERT_EQUAL(string("std::vector<bar,std::allocator<bar> >"), Tools::NormalizeName("std::vector<bar,std::allocator<bar> >"));
+   CPPUNIT_ASSERT_EQUAL(string("std::vector<bar,std::allocator<bar> >"), Tools::NormalizeName("std::vector<bar, std::allocator<bar>>"));
+   CPPUNIT_ASSERT_EQUAL(string("std::vector<bar,std::vector<bar,std::allocator<bar> > >"), Tools::NormalizeName("std::vector<bar, std::vector<bar, std::allocator<bar>>>"));
+   CPPUNIT_ASSERT_EQUAL(string("float ()(int)"), Tools::NormalizeName("float ()(int)"));
+   CPPUNIT_ASSERT_EQUAL(string("float ()(int)"), Tools::NormalizeName("float ( )( int)"));
+   CPPUNIT_ASSERT_EQUAL(string("float ()(int)"), Tools::NormalizeName("float (  )( int)"));
+   CPPUNIT_ASSERT_EQUAL(string("float* ()(int)"), Tools::NormalizeName("float* ()(int)"));
+   CPPUNIT_ASSERT_EQUAL(string("float* ()(int)"), Tools::NormalizeName("float * () (int)"));
+   CPPUNIT_ASSERT_EQUAL(string("float* ()(int)"), Tools::NormalizeName("float* ( ) (int)"));
+   CPPUNIT_ASSERT_EQUAL(string("float* ()(int)"), Tools::NormalizeName("float * (   )   (   int   )"));
+   CPPUNIT_ASSERT_EQUAL(string("unsigned int"), Tools::NormalizeName("unsigned int"));
+   CPPUNIT_ASSERT_EQUAL(string("unsigned int"), Tools::NormalizeName("unsigned    int"));
+   CPPUNIT_ASSERT_EQUAL(string("unsigned int"), Tools::NormalizeName("   unsigned    int  "));
+   CPPUNIT_ASSERT_EQUAL(string("const char*"), Tools::NormalizeName("   const  char   *"));
+   CPPUNIT_ASSERT_EQUAL(string("volatile const char*"), Tools::NormalizeName(" volatile   const  char   *"));
 }
 
 //==============================================================================================
@@ -1021,16 +1080,16 @@ void ReflexBuilderUnitTest::bases() {
 void ReflexBuilderUnitTest::hiddentypes() {
 
    TypeBuilder("MyType",0);
-   const Type & t0 = Type::ByName("MyType");
+   Type t0 = Type::ByName("MyType");
    CPPUNIT_ASSERT( t0.Id() );
    CPPUNIT_ASSERT_EQUAL(std::string("MyType"), t0.Name());
    CPPUNIT_ASSERT( !t0 );
-   const Scope & s0 = Scope::ByName("MyType");
+   Scope s0 = Scope::ByName("MyType");
    CPPUNIT_ASSERT( !s0.Id());
    CPPUNIT_ASSERT( ! s0 );
 
    TypedefTypeBuilder("MyType", t0);
-   const Type & t1 = Type::ByName("MyType");
+   Type t1 = Type::ByName("MyType");
    CPPUNIT_ASSERT( t1 );
    CPPUNIT_ASSERT( t1.IsTypedef());
    CPPUNIT_ASSERT_EQUAL(std::string("MyType"), t1.Name());
@@ -1038,15 +1097,15 @@ void ReflexBuilderUnitTest::hiddentypes() {
    CPPUNIT_ASSERT( ! t1.FinalType() );
    CPPUNIT_ASSERT( t1.ToType() == t0 );
    CPPUNIT_ASSERT_EQUAL( std::string("MyType @HIDDEN@"), t0.Name());
-   const Scope & s1 = Scope::ByName("MyType");
+   Scope s1 = Scope::ByName("MyType");
    CPPUNIT_ASSERT( !s1 ); // should be different once a typedef is a scope
 
-   const Type & t2 = Type::ByName("MyType @HIDDEN@");
+   Type t2 = Type::ByName("MyType @HIDDEN@");
    CPPUNIT_ASSERT( t2.Id());
    CPPUNIT_ASSERT( t0 == t2);
-   const Scope & s2a = Scope::ByName("MyType");
+   Scope s2a = Scope::ByName("MyType");
    CPPUNIT_ASSERT( ! s2a );
-   const Scope & s2 = Scope::ByName("MyType @HIDDEN@");
+   Scope s2 = Scope::ByName("MyType @HIDDEN@");
    CPPUNIT_ASSERT( ! s2.Id());
    CPPUNIT_ASSERT( ! s2 );
 
@@ -1055,17 +1114,17 @@ void ReflexBuilderUnitTest::hiddentypes() {
    CPPUNIT_ASSERT_EQUAL(nt, Type::TypeSize());
 
    ClassBuilder("MyType", typeid(void), 0, 0 );
-   const Type & t3 = Type::ByName("MyType");
+   Type t3 = Type::ByName("MyType");
    CPPUNIT_ASSERT( t3 == t1 );
    CPPUNIT_ASSERT( t0 );
    CPPUNIT_ASSERT( t3.FinalType() == t0 );
    CPPUNIT_ASSERT( t3 == t1 );
    CPPUNIT_ASSERT( t3.FinalType() == t2 );
-   const Scope & s3 = Scope::ByName("MyType");
+   Scope s3 = Scope::ByName("MyType");
    CPPUNIT_ASSERT( s3 );
    CPPUNIT_ASSERT( s3.IsClass());
    CPPUNIT_ASSERT_EQUAL( std::string("MyType @HIDDEN@"), s3.Name());
-   const Scope & s4 = Scope::ByName("MyType @HIDDEN@");
+   Scope s4 = Scope::ByName("MyType @HIDDEN@");
    CPPUNIT_ASSERT( s4 );
    CPPUNIT_ASSERT( s4.IsClass());
 
@@ -1073,7 +1132,6 @@ void ReflexBuilderUnitTest::hiddentypes() {
 
 
 void ReflexBuilderUnitTest::shutdown() {
-   Reflex::Shutdown();
 }
 
 // Class registration on cppunit framework

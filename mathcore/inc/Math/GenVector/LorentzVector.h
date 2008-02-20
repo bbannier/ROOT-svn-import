@@ -36,6 +36,7 @@ namespace ROOT {
 
   namespace Math {
 
+//__________________________________________________________________________________________
     /**
         Class describing a generic LorentzVector in the 4D space-time,
         using the specified coordinate system for the spatial vector part.
@@ -475,7 +476,7 @@ namespace ROOT {
           //        We should then move the code to a .cpp file.
           Scalar e = E();
           Scalar pz = Pz();
-          return .5* std::log( (e+pz)/(e-pz) );
+          return .5f* std::log( (e+pz)/(e-pz) );
        }
 
        /**
@@ -486,7 +487,7 @@ namespace ROOT {
           //        mechanism or at least load a NAN if not.
           Scalar e = E();
           Scalar p = P();
-          return .5* std::log( (e+p)/(e-p) );
+          return .5f* std::log( (e+p)/(e-p) );
        }
 
        /**
@@ -608,7 +609,7 @@ namespace ROOT {
        } /* gamma */
 
 
-       // ---- Limited backward name compatibility with CLHEP ----
+       // Method providing limited backward name compatibility with CLHEP ----
 
        Scalar x()     const { return fCoordinates.Px();     }
        Scalar y()     const { return fCoordinates.Py();     }
@@ -631,14 +632,16 @@ namespace ROOT {
        Scalar mt2()   const { return fCoordinates.Mt2();    }
  
 
-       //---- requested by CMS ---
+       // Methods  requested by CMS ---
        Scalar energy() const { return fCoordinates.E();      }
        Scalar mass()   const { return fCoordinates.M();      }
        Scalar mass2()  const { return fCoordinates.M2();     }   
 
 
        /**
-          Single-component update
+          Methods setting a Single-component
+          Work only if the component is one of which the vector is represented. 
+          For example SetE will work for a PxPyPzE Vector but not for a PxPyPzM Vector.  
        */
        void  SetE  ( Scalar a )  { fCoordinates.SetE  (a); }
        void  SetEta( Scalar a )  { fCoordinates.SetEta(a); }
@@ -651,7 +654,7 @@ namespace ROOT {
 
     private:
 
-       CoordSystem  fCoordinates;
+       CoordSystem  fCoordinates;    // internal coordinate system
 
 
     };  // LorentzVector<>

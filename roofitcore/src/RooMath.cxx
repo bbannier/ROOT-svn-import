@@ -34,6 +34,27 @@ ClassImp(RooMath)
 ;
 
 
+RooComplex RooMath::FastComplexErrFunc(const RooComplex& z)
+{
+  return ITPComplexErrFunc(z,z.im()>0?3:4) ;
+}
+  
+Double_t RooMath::FastComplexErrFuncRe(const RooComplex& z) 
+{
+  return ITPComplexErrFuncRe(z,z.im()>0?3:4) ;
+}
+
+Double_t RooMath::FastComplexErrFuncIm(const RooComplex& z) 
+{
+  return ITPComplexErrFuncIm(z,z.im()>0?3:4) ;
+}
+
+void RooMath::cacheCERF(Bool_t flag) 
+{ 
+  _cacheTable = flag ; 
+}
+
+
 RooComplex RooMath::ComplexErrFunc(Double_t re, Double_t im) {
   // Return CERNlib complex error function for Z(re,im)
   return ComplexErrFunc(RooComplex(re,im));
@@ -144,7 +165,7 @@ void RooMath::initFastCERF(Int_t reBins, Double_t reMin, Double_t reMax, Int_t i
     // Allocate storage matrix for Im(cerf) and Re(cerf) and fill it using ComplexErrFunc()
     for (imIdx=0 ; imIdx<_imBins ; imIdx++) {
       if (imIdx % (_imBins/50) ==0) {
-	cout << ">" ; cout.flush() ;
+	ooccoutI((TObject*)0,Eval) << ">" ; cout.flush() ;
       }
       for (reIdx=0 ; reIdx<_reBins ; reIdx++) {
 	RooComplex val=ComplexErrFunc(_reMin+reIdx*_reStep,_imMin+imIdx*_imStep) ;
@@ -152,7 +173,7 @@ void RooMath::initFastCERF(Int_t reBins, Double_t reMin, Double_t reMax, Int_t i
 	_imCerfArray[imIdx][reIdx] = val.im() ;
       }
     }
-    cout << endl ;
+    ooccoutI((TObject*)0,Eval) << endl ;
   } 
 
   if (_cacheTable && !cacheLoaded) storeCache() ;
@@ -372,7 +393,7 @@ Double_t RooMath::interpolate(Double_t xa[], Double_t ya[], Int_t n, Double_t x)
       w=c[i+1]-d[i] ;
       den=ho-hp ;
       if (den==0.) {
-	cout << "RooMath::interpolate ERROR: zero distance between points not allowed" << endl ;
+	oocoutE((TObject*)0,Eval) << "RooMath::interpolate ERROR: zero distance between points not allowed" << endl ;
 	return 0 ;
       }
       den = w/den ;

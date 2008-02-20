@@ -239,6 +239,14 @@ TGTextEditor::TGTextEditor(const char *filename, const TGWindow *p, UInt_t w,
    // TGTextEditor constructor with file name as first argument.
 
    Build();
+   if (p && p != gClient->GetDefaultRoot()) {
+      // special case for TRootBrowser
+      // remove the command line combo box and its associated label
+      fComboCmd->UnmapWindow();
+      fLabel->UnmapWindow();
+      fToolBar->GetButton(kM_FILE_EXIT)->SetState(kButtonDisabled);
+      fToolBar->Layout();
+   }
    if (filename) {
       LoadFile((char *)filename);
    }
@@ -253,6 +261,14 @@ TGTextEditor::TGTextEditor(TMacro *macro, const TGWindow *p, UInt_t w, UInt_t h)
 
    char tmp[1024];
    Build();
+   if (p && p != gClient->GetDefaultRoot()) {
+      // special case for TRootBrowser
+      // remove the command line combo box and its associated label
+      fComboCmd->UnmapWindow();
+      fLabel->UnmapWindow();
+      fToolBar->GetButton(kM_FILE_EXIT)->SetState(kButtonDisabled);
+      fToolBar->Layout();
+   }
    if (macro) {
       fMacro = macro;
       TIter next(macro->GetListOfLines());
@@ -381,7 +397,6 @@ void TGTextEditor::Build()
       fToolBar->AddButton(this, &fTbData[i], spacing);
       spacing = 0;
    }
-   fCommandBuf = new TGTextBuffer(256);
    fComboCmd   = new TGComboBox(fToolBar, "");
    fCommand    = fComboCmd->GetTextEntry();
    fCommandBuf = fCommand->GetBuffer();
@@ -390,7 +405,7 @@ void TGTextEditor::Build()
    fToolBar->AddFrame(fComboCmd, new TGLayoutHints(kLHintsCenterY |
             kLHintsRight, 5, 5, 1, 1));
 
-   fToolBar->AddFrame(new TGLabel(fToolBar, "Command :"),
+   fToolBar->AddFrame(fLabel = new TGLabel(fToolBar, "Command :"),
             new TGLayoutHints(kLHintsCenterY | kLHintsRight, 5, 5, 1, 1));
    AddFrame(fToolBar, new TGLayoutHints(kLHintsTop | kLHintsExpandX,
             0, 0, 0, 0));
@@ -555,14 +570,17 @@ Int_t TGTextEditor::IsSaved()
 
    Int_t ret;
    char tmp[1024];
-
+   Int_t opt = (kMBYes | kMBNo);
+   
    sprintf(tmp, "The text has been modified. Do you want to save the changes?");
 
    if (!fTextChanged) {
       return kMBNo;
    } else {
+      if (fParent == gClient->GetDefaultRoot())
+         opt |= kMBCancel;
       new TGMsgBox(fClient->GetRoot(), this, "TGTextEditor",
-                   tmp, kMBIconExclamation, kMBYes | kMBNo | kMBCancel, &ret);
+                   tmp, kMBIconExclamation, opt, &ret);
       return ret;
    }
 }
@@ -597,14 +615,15 @@ void TGTextEditor::CloseWindow()
    }
    fExiting = kTRUE;
    switch (IsSaved()) {
-      case kMBCancel:
-         break;
       case kMBYes:
          if (!fFilename.CompareTo("Untitled"))
             SaveFileAs();
          else
             SaveFile(fFilename.Data());
-         if (fTextChanged)
+         if ((fTextChanged) && (fParent == gClient->GetDefaultRoot()))
+            break;
+      case kMBCancel:
+         if (fParent == gClient->GetDefaultRoot())
             break;
       case kMBNo:
          TGMainFrame::CloseWindow();

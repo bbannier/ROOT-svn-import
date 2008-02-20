@@ -42,7 +42,7 @@ BASEH3       := GuiTypes.h KeySymbols.h Buttons.h TTimeStamp.h TVirtualMutex.h \
                 TVirtualPerfStats.h TVirtualX.h TParameter.h \
                 TVirtualAuth.h TFileInfo.h TFileCollection.h \
                 TRedirectOutputGuard.h TVirtualMonitoring.h TObjectSpy.h \
-                TUrl.h TInetAddress.h
+                TUri.h TUrl.h TInetAddress.h
 BASEH3       := $(patsubst %,$(MODDIRI)/%,$(BASEH3))
 BASEH1       := $(filter-out $(BASEH3),$(BASEH1))
 BASEH        := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
@@ -71,13 +71,13 @@ include/%.h:    $(BASEDIRI)/%.h
 # rmkdepend does not pick it up if $(COMPILEDATA) doesn't exist yet.
 base/src/TSystem.d base/src/TSystem.o: $(COMPILEDATA)
 
-$(BASEDS1):     $(BASEH1) $(BASEL1) $(ROOTCINTTMPEXE)
+$(BASEDS1):     $(BASEH1) $(BASEL1) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(BASEH1) $(BASEL1)
-$(BASEDS2):     $(BASEH1) $(BASEL2) $(ROOTCINTTMPEXE)
+$(BASEDS2):     $(BASEH1) $(BASEL2) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(BASEH1) $(BASEL2)
-$(BASEDS3):     $(BASEH3) $(BASEL3) $(ROOTCINTTMPEXE)
+$(BASEDS3):     $(BASEH3) $(BASEL3) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(BASEH3) $(BASEL3)
 # pre-requisites intentionally not specified... should be called only
@@ -111,6 +111,13 @@ ifeq ($(ARCH),alphacxx6)
 $(BASEDIRS)/TRandom.o: OPT = $(NOOPT)
 endif
 
+ifeq ($(GCC_MAJOR),4)
+ifeq ($(GCC_MINOR),1)
+$(BASEDIRS)/TString.o: CXXFLAGS += -Wno-strict-aliasing
+$(BASEDIRS)/TContextMenu.o: CXXFLAGS += -Wno-strict-aliasing
+endif
+endif
+
 $(BASEDO1) $(BASEDO2): $(PCREDEP)
 $(BASEDO1) $(BASEDO2): CXXFLAGS += $(PCREINC)
 ifeq ($(ARCH),linuxicc)
@@ -118,3 +125,4 @@ $(BASEDO3):     CXXFLAGS += -wd191
 endif
 $(BASEDO4): OPT = $(NOOPT)
 $(BASEDO4): CXXFLAGS += -I.
+$(BASEDO4): PCHCXXFLAGS =

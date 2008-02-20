@@ -15,6 +15,7 @@
 //
 //Author: Lorenzo Moneta
 
+
 #include "TStopwatch.h"
 
 #include "TUnuran.h"
@@ -35,8 +36,10 @@
 #include "TApplication.h"
 #include "TCanvas.h"
 
+#ifndef __CINT__  // need to exclude to avoid CINT re-defining them
 #include "Math/ProbFunc.h"
 #include "Math/DistFunc.h"
+#endif
 
 #include <iostream> 
 #include <cassert>
@@ -103,7 +106,7 @@ double distr(double *x, double *p) {
 }
 
 double cdf(double *x, double *p) { 
-   return ROOT::Math::breitwigner_quant(x[0],p[0],p[1]); 
+   return ROOT::Math::breitwigner_cdf(x[0],p[0],p[1]); 
 }
  
 // test of unuran passing as input a distribution object( a BreitWigner) distribution 
@@ -284,8 +287,9 @@ void testDiscDistr() {
    TUnuranDiscrDist dist2 = TUnuranDiscrDist(f);
    TUnuran unr;
 
-   // dari method (needs also the mode)
+   // dari method (needs also the mode and pmf sum)
    dist2.SetMode(int(mu) );
+   dist2.SetProbSum(1.0);
    bool ret = unr.Init(dist2,"dari");
    if (!ret) return;
 
@@ -338,7 +342,8 @@ void testEmpDistr() {
    }
 
    TH1D * h0 = new TH1D("h0Ref","Starting data",100,-10,10);
-   TH1D * h1 = new TH1D("h1Unr","Unuran Generated data",100,-10,10);
+   TH1D * h1 = new TH1D("h1Unr","Unuran unbin Generated data",100,-10,10);
+   TH1D * h1b = new TH1D("h1bUnr","Unuran bin Generated data",100,-10,10);
    TH1D * h2 = new TH1D("h2GR","Data from TH1::GetRandom",100,-10,10);
 
    h0->FillN(Ndata,x,0,1); // fill histogram with starting data
@@ -346,18 +351,28 @@ void testEmpDistr() {
    TUnuran unr; 
    TUnuranEmpDist dist(x,x+Ndata,1);
 
-   if (!unr.Init(dist)) return;
 
    TStopwatch w; 
-   w.Start(); 
-
    int n = NGEN;
+
+   w.Start(); 
+   if (!unr.Init(dist)) return;
    for (int i = 0; i < n; ++i) {
       h1->Fill( unr.Sample() ); 
    }
 
    w.Stop(); 
-   cout << "Time using Unuran  " << unr.MethodName() << "\t=\t\t " << w.CpuTime() << endl;
+   cout << "Time using Unuran unbin  " << unr.MethodName() << "\t=\t\t " << w.CpuTime() << endl;
+
+   TUnuranEmpDist binDist(h0);
+
+   w.Start(); 
+   if (!unr.Init(binDist)) return;
+   for (int i = 0; i < n; ++i) {
+      h1b->Fill( unr.Sample() ); 
+   }
+   w.Stop(); 
+   cout << "Time using Unuran bin  " << unr.MethodName() << "\t=\t\t " << w.CpuTime() << endl;
 
    w.Start();
    for (int i = 0; i < n; ++i) {
@@ -370,6 +385,8 @@ void testEmpDistr() {
    h2->Draw();
    h1->SetLineColor(kRed);
    h1->Draw("same");
+   h1b->SetLineColor(kBlue);
+   h1b->Draw("same");
 
    
 }

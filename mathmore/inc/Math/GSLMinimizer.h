@@ -50,43 +50,50 @@
    @defgroup MultiMin Multi-dimensional Minimization
    @ingroup NumAlgo
 
-   Classes implementing algorith for multi-dimensional minimization 
+   Classes implementing algorithms for multi-dimensional minimization 
  */
 
 
 
 namespace ROOT { 
 
-   namespace Math { 
+namespace Math { 
 
 
-      /**
-         enumeration specifying the types of GSL minimizers
-         @ingroup Min1D
-      */
-      enum EGSLMinimizerType { 
-         kConjugateFR, 
-         kConjugatePR, 
-         kVectorBFGS, 
-         kVectorBFGS2, 
-         kSteepestDescent
-      };
+   /**
+      enumeration specifying the types of GSL minimizers
+      @ingroup Min1D
+   */
+   enum EGSLMinimizerType { 
+      kConjugateFR, 
+      kConjugatePR, 
+      kVectorBFGS, 
+      kVectorBFGS2, 
+      kSteepestDescent
+   };
 
 
-      class GSLMultiMinimizer; 
+   class GSLMultiMinimizer; 
 
-   }
+}
 
-   namespace Math { 
+namespace Math { 
 
+//_____________________________________________________________________________________
 /** 
-   GSLMinimizer class
-   Implementation of ROOT::Math::Minimizer based on the GSL multi-dimensional 
-   minimization algorithms
-   See <A HREF="http://www.gnu.org/software/gsl/manual/html_node/Multidimensional-Minimization.html>"GSL doc</A> 
-   from more info on the algorithms. 
+   GSLMinimizer class. 
+   Implementation of the ROOT::Math::Minimizer interface using the GSL multi-dimensional 
+   minimization algorithms.
 
-   @ingroup Min1D
+   See <A HREF="http://www.gnu.org/software/gsl/manual/html_node/Multidimensional-Minimization.html">GSL doc</A> 
+   from more info on the GSL minimization algorithms. 
+
+   The class implements the ROOT::Math::Minimizer interface and can be instantiated using the 
+   ROOT plugin manager (plugin name is "GSLMultiMin"). The varius minimization algorithms 
+   (conjugatefr, conjugatepr, bfgs, etc..) can be passed as enumerations and also as a string. 
+   The default algorithm is conjugatefr (Fletcher-Reeves conjugate gradient algorithm).  
+
+   @ingroup MultiMin
 */ 
 class GSLMinimizer : public ROOT::Math::Minimizer {
 
@@ -172,7 +179,7 @@ public:
    virtual unsigned int NFree() const { return fDim; }  
 
    /// minimizer provides error and error matrix
-   virtual bool providesError() const { return true; } 
+   virtual bool ProvidesError() const { return true; } 
 
    /// return errors at the minimum 
    virtual const double * Errors() const { 

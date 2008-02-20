@@ -52,6 +52,7 @@ End_Macro */
 #include "TEllipse.h"
 #include "TH1.h"
 #include "TMath.h"
+#include "Riostream.h"
 
 
 ClassImp(TGraphPolar);
@@ -879,7 +880,7 @@ void TGraphPolargram::PaintPolarDivisions(Bool_t optionLabels)
          textangular->SetTextColor(GetPolarColorLabel());
          textangular->SetTextFont(GetPolarLabelFont());
 
-         char* form = " ";
+         const char* form = (char *)" ";
          TGaxis axis;
          if (TestBit(TGraphPolargram::kLabelOrtho)) {
             // Polar numbers are aligned with their axis.
@@ -997,7 +998,7 @@ void TGraphPolargram::PaintPolarDivisions(Bool_t optionLabels)
          textangular->SetTextColor(GetPolarColorLabel());
          textangular->SetTextFont(GetPolarLabelFont());
 
-         char* form = " ";
+         const char* form = (char *)" ";
          TGaxis axis;
 
          if (TestBit(TGraphPolargram::kLabelOrtho)) {

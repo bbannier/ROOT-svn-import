@@ -8,16 +8,27 @@
  * For the licensing terms see $ROOTSYS/LICENSE.                         *
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
-////////////////////////////////////////////////////////////////////////////////
+ 
+//_____________________________________________________________________________
 // TGeoNavigator
-// --------------------
+//===============
 //
 //   Class providing navigation API for TGeo geometries. Several instances are 
 // allowed for a single geometry.
+// A default navigator is provided for any geometry but one may add several 
+// others for parallel navigation:
+//	
+//	TGeoNavigator *navig = new TGeoNavigator(gGeoManager);
+//	Int_t inav = gGeoManager->AddNavigator(navig);
+//	gGeoManager->SetCurrentNavigator(inav);
 //
-////////////////////////////////////////////////////////////////////////////////
+//	.... and then switch back to the default navigator:
+//
+//	gGeoManager->SetCurrentNavigator(0);
+//_____________________________________________________________________________
 
 #include "TGeoManager.h"
+#include "TGeoMatrix.h"
 #include "TGeoNode.h"
 #include "TGeoVolume.h"
 #include "TGeoPatternFinder.h"
@@ -25,6 +36,7 @@
 
 #include "TGeoNavigator.h"
 
+static Double_t gTolerance = TGeoShape::Tolerance();
 const char *kGeoOutsidePath = " ";
 const Int_t kN3 = 3*sizeof(Double_t);
 
@@ -60,6 +72,7 @@ TGeoNavigator::TGeoNavigator()
                fNextNode(0),
                fBackupState(0),
                fCurrentMatrix(0),
+               fGlobalMatrix(0),
                fPath()
                 
 {
@@ -96,6 +109,7 @@ TGeoNavigator::TGeoNavigator(TGeoManager* geom)
                fNextNode(0),
                fBackupState(0),
                fCurrentMatrix(0),
+               fGlobalMatrix(0),
                fPath()
                 
 {
@@ -144,6 +158,7 @@ TGeoNavigator::TGeoNavigator(const TGeoNavigator& gm)
                fNextNode(gm.fNextNode),
                fBackupState(gm.fBackupState),
                fCurrentMatrix(gm.fCurrentMatrix),
+               fGlobalMatrix(gm.fGlobalMatrix),
                fPath(gm.fPath)               
 {
 // Copy constructor.
@@ -191,6 +206,7 @@ TGeoNavigator& TGeoNavigator::operator=(const TGeoNavigator& gm)
       fNextNode = gm.fNextNode;
       fBackupState = gm.fBackupState;
       fCurrentMatrix = gm.fCurrentMatrix;
+      fGlobalMatrix = gm.fGlobalMatrix;
       fPath = gm.fPath;
       for (Int_t i=0; i<3; i++) {
          fNormal[i] = gm.fNormal[i];
@@ -228,6 +244,7 @@ void TGeoNavigator::BuildCache(Bool_t /*dummy*/, Bool_t nodeid)
       }   
       // build cache
       fCache = new TGeoNodeCache(fGeometry->GetTopNode(), nodeid, nlevel+1);
+      fGlobalMatrix = fCache->GetCurrentMatrix();
       fBackupState = new TGeoCacheState(nlevel+1);
    }
    first = kFALSE;
@@ -322,7 +339,10 @@ void TGeoNavigator::CdNode(Int_t nodeid)
 {
 // Change current path to point to the node having this id.
 // Node id has to be in range : 0 to fNNodes-1 (no check for performance reasons)
-   if (fCache) fCache->CdNode(nodeid);
+   if (fCache) {
+      fCache->CdNode(nodeid);
+      fGlobalMatrix = fCache->GetCurrentMatrix();
+   }   
 }
 
 //_____________________________________________________________________________
@@ -339,6 +359,7 @@ void TGeoNavigator::CdDown(Int_t index)
       fCurrentOverlapping = node->IsOverlapping();
    fCache->CdDown(index);
    fCurrentNode = node;
+   fGlobalMatrix = fCache->GetCurrentMatrix();
    if (fCurrentOverlapping) fNmany++;
    fLevel++;
 }
@@ -361,6 +382,7 @@ void TGeoNavigator::CdUp()
       fNmany--;
    }   
    fCurrentNode = fCache->GetNode();
+   fGlobalMatrix = fCache->GetCurrentMatrix();
    if (!fCurrentNode->IsOffset()) {
       fCurrentOverlapping = fCurrentNode->IsOverlapping();
    } else {
@@ -386,6 +408,7 @@ void TGeoNavigator::CdTop()
    if (fCurrentOverlapping) fLastNode = fCurrentNode;
    fCurrentNode = fGeometry->GetTopNode();
    fCache->CdTop();
+   fGlobalMatrix = fCache->GetCurrentMatrix();
    fCurrentOverlapping = fCurrentNode->IsOverlapping();
    if (fCurrentOverlapping) fNmany++;
 }
@@ -446,7 +469,7 @@ TGeoNode *TGeoNavigator::CrossBoundaryAndLocate(Bool_t downwards, TGeoNode *skip
 // The current point must be on the boundary of fCurrentNode.
 
 // Extrapolate current point with shape tolerance.
-   Double_t extra = 100.*TGeoShape::Tolerance();
+   Double_t extra = 100.*gTolerance;
    fPoint[0] += extra*fDirection[0];
    fPoint[1] += extra*fDirection[1];
    fPoint[2] += extra*fDirection[2];
@@ -518,7 +541,7 @@ TGeoNode *TGeoNavigator::FindNextBoundary(Double_t stepmax, const char *path, Bo
          fSafety = TMath::Abs(fSafety);
          memcpy(fLastPoint, fPoint, kN3);
          fLastSafety = fSafety;
-         if (fSafety<TGeoShape::Tolerance()) fIsOnBoundary = kTRUE;
+         if (fSafety<gTolerance) fIsOnBoundary = kTRUE;
          else fIsOnBoundary = kFALSE;
          fStep = stepmax;
          if (stepmax<fSafety) {
@@ -527,7 +550,7 @@ TGeoNode *TGeoNavigator::FindNextBoundary(Double_t stepmax, const char *path, Bo
          }
 //      }   
    }
-   if (computeGlobal) *fCurrentMatrix = GetCurrentMatrix();
+   if (computeGlobal) fCurrentMatrix->CopyFrom(fGlobalMatrix);
    Double_t snext  = TGeoShape::Big();
    Double_t safe;
    Double_t point[3];
@@ -538,11 +561,11 @@ TGeoNode *TGeoNavigator::FindNextBoundary(Double_t stepmax, const char *path, Bo
          PopPath();
          return 0;
       }
-      if (computeGlobal) *fCurrentMatrix = GetCurrentMatrix();
+      if (computeGlobal) fCurrentMatrix->CopyFrom(fGlobalMatrix);
       fNextNode = fCurrentNode;
       TGeoVolume *tvol=fCurrentNode->GetVolume();
-      fCache->MasterToLocal(fPoint, &point[0]);
-      fCache->MasterToLocalVect(fDirection, &dir[0]);
+      fGlobalMatrix->MasterToLocal(fPoint, &point[0]);
+      fGlobalMatrix->MasterToLocalVect(fDirection, &dir[0]);
       if (tvol->Contains(&point[0])) {
          fStep=tvol->GetShape()->DistFromInside(&point[0], &dir[0], iact, fStep, &safe);
       } else {
@@ -557,7 +580,7 @@ TGeoNode *TGeoNavigator::FindNextBoundary(Double_t stepmax, const char *path, Bo
    if (fIsOutside) {
       snext = top_volume->GetShape()->DistFromOutside(fPoint, fDirection, iact, fStep, &safe);
       fNextNode = top_node;
-      if (snext < fStep) {
+      if (snext < fStep-gTolerance) {
          fIsStepEntering = kTRUE;
          fStep = snext;
          Int_t indnext = fNextNode->GetVolume()->GetNextNodeIndex();
@@ -571,12 +594,12 @@ TGeoNode *TGeoNavigator::FindNextBoundary(Double_t stepmax, const char *path, Bo
       }
       return 0;
    }
-   fCache->MasterToLocal(fPoint, &point[0]);
-   fCache->MasterToLocalVect(fDirection, &dir[0]);
+   fGlobalMatrix->MasterToLocal(fPoint, &point[0]);
+   fGlobalMatrix->MasterToLocalVect(fDirection, &dir[0]);
    TGeoVolume *vol = fCurrentNode->GetVolume();
    // find distance to exiting current node
    snext = vol->GetShape()->DistFromInside(&point[0], &dir[0], iact, fStep, &safe);
-   if (snext < fStep) {
+   if (snext < fStep-gTolerance) {
       fNextNode = fCurrentNode;
       fNextDaughterIndex = -1;
       fIsStepExiting  = kTRUE;
@@ -605,16 +628,16 @@ TGeoNode *TGeoNavigator::FindNextBoundary(Double_t stepmax, const char *path, Bo
          Int_t *ovlps = fCurrentNode->GetOverlaps(novlps);
          CdUp();
          mother = fCurrentNode->GetVolume();
-         fCache->MasterToLocal(fPoint, &mothpt[0]);
-         fCache->MasterToLocalVect(fDirection, &vecpt[0]);
+         fGlobalMatrix->MasterToLocal(fPoint, &mothpt[0]);
+         fGlobalMatrix->MasterToLocalVect(fDirection, &vecpt[0]);
          // check distance to out
          snext = TGeoShape::Big();
          if (!mother->IsAssembly()) snext = mother->GetShape()->DistFromInside(&mothpt[0], &vecpt[0], iact, fStep, &safe);
-         if (snext<fStep) {
+         if (snext<fStep-gTolerance) {
             fIsStepExiting  = kTRUE;
             fIsStepEntering = kFALSE;
             fStep = snext;
-            if (computeGlobal) *fCurrentMatrix = GetCurrentMatrix();
+            if (computeGlobal) fCurrentMatrix->CopyFrom(fGlobalMatrix);
             fNextNode = fCurrentNode;
             fNextDaughterIndex = -3;
             DoBackupState();
@@ -626,10 +649,13 @@ TGeoNode *TGeoNavigator::FindNextBoundary(Double_t stepmax, const char *path, Bo
                current->cd();
                current->MasterToLocal(&mothpt[0], &dpt[0]);
                current->MasterToLocalVect(&vecpt[0], &dvec[0]);
-               snext = current->GetVolume()->GetShape()->DistFromOutside(&dpt[0], &dvec[0], iact, fStep, &safe);
-               if (snext<fStep) {
+               // Current point may be inside the other node - geometry error that we ignore
+               snext = TGeoShape::Big();
+               if (!current->GetVolume()->Contains(dpt))
+                  snext = current->GetVolume()->GetShape()->DistFromOutside(&dpt[0], &dvec[0], iact, fStep, &safe);
+               if (snext<fStep-gTolerance) {
                   if (computeGlobal) {
-                     *fCurrentMatrix = GetCurrentMatrix();
+                     fCurrentMatrix->CopyFrom(fGlobalMatrix);
                      fCurrentMatrix->Multiply(current->GetMatrix());
                   }
                   fIsStepExiting  = kTRUE;
@@ -654,7 +680,7 @@ TGeoNode *TGeoNavigator::FindNextBoundary(Double_t stepmax, const char *path, Bo
                      dnode = FindNextDaughterBoundary(dpt,dvec,idovlp,computeGlobal);
                      if (dnode) {
                         if (computeGlobal) {
-                           *fCurrentMatrix = GetCurrentMatrix();
+                           fCurrentMatrix->CopyFrom(fGlobalMatrix);
                            fCurrentMatrix->Multiply(dnode->GetMatrix());
                         }   
                         fNextNode = dnode;
@@ -678,9 +704,9 @@ TGeoNode *TGeoNavigator::FindNextBoundary(Double_t stepmax, const char *path, Bo
                   }   
                } else {
                   snext = current->GetVolume()->GetShape()->DistFromOutside(&dpt[0], &dvec[0], iact, fStep, &safe);
-                  if (snext<fStep) {
+                  if (snext<fStep-gTolerance) {
                      if (computeGlobal) {
-                        *fCurrentMatrix = GetCurrentMatrix();
+                        fCurrentMatrix->CopyFrom(fGlobalMatrix);
                         fCurrentMatrix->Multiply(current->GetMatrix());
                      }
                      fIsStepExiting  = kTRUE;
@@ -731,13 +757,13 @@ TGeoNode *TGeoNavigator::FindNextBoundary(Double_t stepmax, const char *path, Bo
                matrix->MasterToLocalVect(fDirection,dvec);
                snext = TGeoShape::Big();
                if (!mother->GetVolume()->IsAssembly()) snext = mother->GetVolume()->GetShape()->DistFromInside(dpt,dvec,iact,fStep);
-               if (snext<fStep) {
+               if (snext<fStep-gTolerance) {
                   fIsStepEntering  = kFALSE;
                   fIsStepExiting  = kTRUE;
                   fStep = snext;
                   fNextNode = mother;
                   fNextDaughterIndex = -3;
-                  if (computeGlobal) *fCurrentMatrix = matrix;
+                  if (computeGlobal) fCurrentMatrix->CopyFrom(matrix);
                   while (up--) CdUp();
                   DoBackupState();
                   up = 1;
@@ -776,46 +802,59 @@ TGeoNode *TGeoNavigator::FindNextDaughterBoundary(Double_t *point, Double_t *dir
    TGeoNode *current = 0;
    Int_t i=0;
    // if current volume is divided, we are in the non-divided region. We
-   // check only the first and the last cell
+   // check first if we are inside a cell in which case compute distance to next cell
    TGeoPatternFinder *finder = vol->GetFinder();
    if (finder) {
       Int_t ifirst = finder->GetDivIndex();
-      current = vol->GetNode(ifirst);
-      current->cd();
-      current->MasterToLocal(&point[0], lpoint);
-      current->MasterToLocalVect(&dir[0], ldir);
-      snext = current->GetVolume()->GetShape()->DistFromOutside(lpoint, ldir, 3, fStep);
-      if (snext<fStep) {
-         if (compmatrix) {
-            *fCurrentMatrix = GetCurrentMatrix();
-            fCurrentMatrix->Multiply(current->GetMatrix());
-         }
-         fIsStepExiting  = kFALSE;
-         fIsStepEntering = kTRUE;
-         fStep=snext;
-         fNextNode = current;
-         nodefound = current;
-         idaughter = ifirst;
-      }
       Int_t ilast = ifirst+finder->GetNdiv()-1;
-      if (ilast==ifirst) return fNextNode;
-      current = vol->GetNode(ilast);
-      current->cd();
-      current->MasterToLocal(&point[0], lpoint);
-      current->MasterToLocalVect(&dir[0], ldir);
-      snext = current->GetVolume()->GetShape()->DistFromOutside(lpoint, ldir, 3, fStep);
-      if (snext<fStep) {
-         if (compmatrix) {
-            *fCurrentMatrix = GetCurrentMatrix();
-            fCurrentMatrix->Multiply(current->GetMatrix());
-         }
-         fIsStepExiting  = kFALSE;
-         fIsStepEntering = kTRUE;
-         fStep=snext;
-         fNextNode = current;
-         nodefound = current;
-         idaughter = ilast;
+      current = finder->FindNode(point);
+      if (current) {
+         // Point inside a cell: find distance to next cell
+         Int_t index = current->GetIndex();
+         if ((index-1) >= ifirst) ifirst = index-1;
+         else                     ifirst = -1;
+         if ((index+1) <= ilast)  ilast  = index+1;
+         else                     ilast  = -1;
       }
+      if (ifirst>=0) {   
+         current = vol->GetNode(ifirst);
+         current->cd();
+         current->MasterToLocal(&point[0], lpoint);
+         current->MasterToLocalVect(&dir[0], ldir);
+         snext = current->GetVolume()->GetShape()->DistFromOutside(lpoint, ldir, 3, fStep);
+         if (snext<fStep-gTolerance) {
+            if (compmatrix) {
+               fCurrentMatrix->CopyFrom(fGlobalMatrix);
+               fCurrentMatrix->Multiply(current->GetMatrix());
+            }
+            fIsStepExiting  = kFALSE;
+            fIsStepEntering = kTRUE;
+            fStep=snext;
+            fNextNode = current;
+            nodefound = current;
+            idaughter = ifirst;
+         }
+      }   
+      if (ilast==ifirst) return nodefound;
+      if (ilast>=0) { 
+         current = vol->GetNode(ilast);
+         current->cd();
+         current->MasterToLocal(&point[0], lpoint);
+         current->MasterToLocalVect(&dir[0], ldir);
+         snext = current->GetVolume()->GetShape()->DistFromOutside(lpoint, ldir, 3, fStep);
+         if (snext<fStep-gTolerance) {
+            if (compmatrix) {
+               fCurrentMatrix->CopyFrom(fGlobalMatrix);
+               fCurrentMatrix->Multiply(current->GetMatrix());
+            }
+            fIsStepExiting  = kFALSE;
+            fIsStepEntering = kTRUE;
+            fStep=snext;
+            fNextNode = current;
+            nodefound = current;
+            idaughter = ilast;
+         }
+      }   
       return nodefound;
    }
    // if only few daughters, check all and exit
@@ -831,10 +870,10 @@ TGeoNode *TGeoNavigator::FindNextDaughterBoundary(Double_t *point, Double_t *dir
          current->MasterToLocalVect(dir, ldir);
          if (current->IsOverlapping() && current->GetVolume()->Contains(lpoint)) continue;
          snext = current->GetVolume()->GetShape()->DistFromOutside(lpoint, ldir, 3, fStep);
-         if (snext<fStep) {
+         if (snext<fStep-gTolerance) {
             indnext = current->GetVolume()->GetNextNodeIndex();
             if (compmatrix) {
-               *fCurrentMatrix = GetCurrentMatrix();
+               fCurrentMatrix->CopyFrom(fGlobalMatrix);
                fCurrentMatrix->Multiply(current->GetMatrix());
             }    
             fIsStepExiting  = kFALSE;
@@ -870,10 +909,10 @@ TGeoNode *TGeoNavigator::FindNextDaughterBoundary(Double_t *point, Double_t *dir
          snext = current->GetVolume()->GetShape()->DistFromOutside(lpoint, ldir, 3, fStep);
          sumchecked++;
 //         printf("checked %d from %d : snext=%g\n", sumchecked, nd, snext);
-         if (snext<fStep) {
+         if (snext<fStep-gTolerance) {
             indnext = current->GetVolume()->GetNextNodeIndex();
             if (compmatrix) {
-               *fCurrentMatrix = GetCurrentMatrix();
+               fCurrentMatrix->CopyFrom(fGlobalMatrix);
                fCurrentMatrix->Multiply(current->GetMatrix());
             }
             fIsStepExiting  = kFALSE;
@@ -916,16 +955,16 @@ TGeoNode *TGeoNavigator::FindNextBoundaryAndStep(Double_t stepmax, Bool_t compsa
       fIsOnBoundary = kFALSE;
       Safety();
    }   
-   Double_t extra = (fIsOnBoundary)?TGeoShape::Tolerance():0.0;
+   Double_t extra = (fIsOnBoundary)?gTolerance:0.0;
    fIsOnBoundary = kFALSE;
    fPoint[0] += extra*fDirection[0];
    fPoint[1] += extra*fDirection[1];
    fPoint[2] += extra*fDirection[2];
-   *fCurrentMatrix = GetCurrentMatrix();
+   fCurrentMatrix->CopyFrom(fGlobalMatrix);
    
    if (fIsOutside) {
       snext = fGeometry->GetTopVolume()->GetShape()->DistFromOutside(fPoint, fDirection, iact, fStep);
-      if (snext < fStep) {
+      if (snext < fStep-gTolerance) {
          if (snext<=0) {
             snext = 0.0;
             fStep = snext;
@@ -942,7 +981,7 @@ TGeoNode *TGeoNavigator::FindNextBoundaryAndStep(Double_t stepmax, Bool_t compsa
             CdDown(nextindex);
             fNextNode = fCurrentNode;
             nextindex = fNextNode->GetVolume()->GetNextNodeIndex();
-            if (nextindex<0) *fCurrentMatrix = GetCurrentMatrix();
+            if (nextindex<0) fCurrentMatrix->CopyFrom(fGlobalMatrix);
          }   
          // Update global point
          fPoint[0] += snext*fDirection[0];
@@ -967,14 +1006,14 @@ TGeoNode *TGeoNavigator::FindNextBoundaryAndStep(Double_t stepmax, Bool_t compsa
    }
    Double_t point[3],dir[3];
    Int_t icrossed = -2;
-   fCache->MasterToLocal(fPoint, &point[0]);
-   fCache->MasterToLocalVect(fDirection, &dir[0]);
+   fGlobalMatrix->MasterToLocal(fPoint, &point[0]);
+   fGlobalMatrix->MasterToLocalVect(fDirection, &dir[0]);
    TGeoVolume *vol = fCurrentNode->GetVolume();
    // find distance to exiting current node
    snext = vol->GetShape()->DistFromInside(point, dir, iact, fStep);
    fNextNode = fCurrentNode;
-   if (snext <= TGeoShape::Tolerance()) {
-      snext = TGeoShape::Tolerance();
+   if (snext <= gTolerance) {
+      snext = gTolerance;
       fStep = snext;
       fIsOnBoundary = kTRUE;
       fIsStepEntering = kFALSE;
@@ -990,7 +1029,7 @@ TGeoNode *TGeoNavigator::FindNextBoundaryAndStep(Double_t stepmax, Bool_t compsa
       return CrossBoundaryAndLocate(kFALSE, skip);
    }   
 
-   if (snext < fStep) {
+   if (snext < fStep-gTolerance) {
       icrossed = -1;
       fStep = snext;
       fIsStepEntering = kFALSE;
@@ -1019,12 +1058,12 @@ TGeoNode *TGeoNavigator::FindNextBoundaryAndStep(Double_t stepmax, Bool_t compsa
          Int_t *ovlps = fCurrentNode->GetOverlaps(novlps);
          CdUp();
          mother = fCurrentNode->GetVolume();
-         fCache->MasterToLocal(fPoint, &mothpt[0]);
-         fCache->MasterToLocalVect(fDirection, &vecpt[0]);
+         fGlobalMatrix->MasterToLocal(fPoint, &mothpt[0]);
+         fGlobalMatrix->MasterToLocalVect(fDirection, &vecpt[0]);
          // check distance to out
          snext = TGeoShape::Big();
          if (!mother->IsAssembly()) snext = mother->GetShape()->DistFromInside(mothpt, vecpt, iact, fStep);
-         if (snext<fStep) {
+         if (snext<fStep-gTolerance) {
             // exiting mother first (extrusion)
             icrossed = -1;
             PopDummy();
@@ -1032,7 +1071,7 @@ TGeoNode *TGeoNavigator::FindNextBoundaryAndStep(Double_t stepmax, Bool_t compsa
             fIsStepEntering = kFALSE;
             fIsStepExiting = kTRUE;
             fStep = snext;
-            *fCurrentMatrix = GetCurrentMatrix();
+            fCurrentMatrix->CopyFrom(fGlobalMatrix);
             fNextNode = fCurrentNode;
          }
          // check overlapping nodes
@@ -1042,11 +1081,14 @@ TGeoNode *TGeoNavigator::FindNextBoundaryAndStep(Double_t stepmax, Bool_t compsa
                current->cd();
                current->MasterToLocal(&mothpt[0], &dpt[0]);
                current->MasterToLocalVect(&vecpt[0], &dvec[0]);
-               snext = current->GetVolume()->GetShape()->DistFromOutside(dpt, dvec, iact, fStep);
-               if (snext<fStep) {
+               // Current point may be inside the other node - geometry error that we ignore
+               snext = TGeoShape::Big();
+               if (!current->GetVolume()->Contains(dpt))
+                  snext = current->GetVolume()->GetShape()->DistFromOutside(dpt, dvec, iact, fStep);
+               if (snext<fStep-gTolerance) {
                   PopDummy();
                   PushPath(safelevel+1);
-                 *fCurrentMatrix = GetCurrentMatrix();
+                  fCurrentMatrix->CopyFrom(fGlobalMatrix);
                   fCurrentMatrix->Multiply(current->GetMatrix());
                   fIsStepEntering = kFALSE;
                   fIsStepExiting = kTRUE;
@@ -1064,7 +1106,7 @@ TGeoNode *TGeoNavigator::FindNextBoundaryAndStep(Double_t stepmax, Bool_t compsa
                      CdDown(ovlps[i]);
                      dnode = FindNextDaughterBoundary(dpt,dvec,idaughter,kFALSE);
                      if (dnode) {
-                        *fCurrentMatrix = GetCurrentMatrix();
+                        fCurrentMatrix->CopyFrom(fGlobalMatrix);
                         fCurrentMatrix->Multiply(dnode->GetMatrix());
                         icrossed = idaughter;
                         PopDummy();
@@ -1077,8 +1119,8 @@ TGeoNode *TGeoNavigator::FindNextBoundaryAndStep(Double_t stepmax, Bool_t compsa
                   }   
                } else {
                   snext = current->GetVolume()->GetShape()->DistFromOutside(dpt, dvec, iact, fStep);
-                  if (snext<fStep) {
-                     *fCurrentMatrix = GetCurrentMatrix();
+                  if (snext<fStep-gTolerance) {
+                     fCurrentMatrix->CopyFrom(fGlobalMatrix);
                      fCurrentMatrix->Multiply(current->GetMatrix());
                      fIsStepEntering = kFALSE;
                      fIsStepExiting = kTRUE;
@@ -1129,9 +1171,9 @@ TGeoNode *TGeoNavigator::FindNextBoundaryAndStep(Double_t stepmax, Bool_t compsa
                if (!mother->GetVolume()->IsAssembly()) snext = mother->GetVolume()->GetShape()->DistFromInside(dpt,dvec,iact,fStep);
                   fIsStepEntering = kFALSE;
                   fIsStepExiting  = kTRUE;
-               if (snext<fStep) {
+               if (snext<fStep-gTolerance) {
                   fNextNode = mother;
-                  *fCurrentMatrix = matrix;
+                  fCurrentMatrix->CopyFrom(matrix);
                   fStep = snext;
                   while (up--) CdUp();
                   PopDummy();
@@ -1304,21 +1346,21 @@ Double_t TGeoNavigator::Safety(Bool_t inside)
    if (!inside) fSafety = TGeoShape::Big();
    if (fIsOutside) {
       fSafety = fGeometry->GetTopVolume()->GetShape()->Safety(fPoint,kFALSE);
-      if (fSafety < TGeoShape::Tolerance()) {
+      if (fSafety < gTolerance) {
          fSafety = 0;
          fIsOnBoundary = kTRUE;
       }   
       return fSafety;
    }
    //---> convert point to local reference frame of current node
-   fCache->MasterToLocal(fPoint, point);
+   fGlobalMatrix->MasterToLocal(fPoint, point);
 
    //---> compute safety to current node
    TGeoVolume *vol = fCurrentNode->GetVolume();
    if (!inside) {
       fSafety = vol->GetShape()->Safety(point, kTRUE);
       //---> if we were just entering, return this safety
-      if (fSafety < TGeoShape::Tolerance()) {
+      if (fSafety < gTolerance) {
          fSafety = 0;
          fIsOnBoundary = kTRUE;
          return fSafety;
@@ -1343,7 +1385,7 @@ Double_t TGeoNavigator::Safety(Bool_t inside)
       node = (TGeoNode*)nodes->UncheckedAt(ifirst);
       node->cd();
       safe = node->Safety(point, kFALSE);
-      if (safe < TGeoShape::Tolerance()) {
+      if (safe < gTolerance) {
          fSafety=0;
          fIsOnBoundary = kTRUE;
          return fSafety;
@@ -1354,7 +1396,7 @@ Double_t TGeoNavigator::Safety(Bool_t inside)
       node = (TGeoNode*)nodes->UncheckedAt(ilast);
       node->cd();
       safe = node->Safety(point, kFALSE);
-      if (safe < TGeoShape::Tolerance()) {
+      if (safe < gTolerance) {
          fSafety=0;
          fIsOnBoundary = kTRUE;
          return fSafety;
@@ -1370,7 +1412,7 @@ Double_t TGeoNavigator::Safety(Bool_t inside)
       for (id=0; id<nd; id++) {
          node = (TGeoNode*)nodes->UncheckedAt(id);
          safe = node->Safety(point, kFALSE);
-         if (safe < TGeoShape::Tolerance()) {
+         if (safe < gTolerance) {
             fSafety=0;
             fIsOnBoundary = kTRUE;
             return fSafety;
@@ -1398,7 +1440,7 @@ Double_t TGeoNavigator::Safety(Bool_t inside)
       if (dxyz >= fSafety*fSafety) continue;
       node = (TGeoNode*)nodes->UncheckedAt(id);
       safe = node->Safety(point, kFALSE);
-      if (safe<TGeoShape::Tolerance()) {
+      if (safe<gTolerance) {
          fSafety=0;
          fIsOnBoundary = kTRUE;
          return fSafety;
@@ -1475,7 +1517,7 @@ void TGeoNavigator::SafetyOverlaps()
       }      
    }
    PopPath();
-   if (fSafety < TGeoShape::Tolerance()) {
+   if (fSafety < gTolerance) {
       fSafety = 0.;
       fIsOnBoundary = kTRUE;
    }   
@@ -1502,7 +1544,7 @@ TGeoNode *TGeoNavigator::SearchNode(Bool_t downwards, const TGeoNode *skipnode)
       if (vol->IsAssembly()) inside_current=kTRUE;
       // If the current node is not to be skipped
       if (!inside_current) {
-         fCache->MasterToLocal(fPoint, point);
+         fGlobalMatrix->MasterToLocal(fPoint, point);
          inside_current = vol->Contains(point);
       }   
       // Point might be inside an overlapping node
@@ -1523,7 +1565,7 @@ TGeoNode *TGeoNavigator::SearchNode(Bool_t downwards, const TGeoNode *skipnode)
       }
    }
    vol = fCurrentNode->GetVolume();
-   fCache->MasterToLocal(fPoint, point);
+   fGlobalMatrix->MasterToLocal(fPoint, point);
    if (!inside_current && downwards) {
    // we are looking downwards
       inside_current = vol->Contains(point);
@@ -1550,7 +1592,7 @@ TGeoNode *TGeoNavigator::SearchNode(Bool_t downwards, const TGeoNode *skipnode)
       CdDown(crtindex);
       vol = fCurrentNode->GetVolume();
       crtindex = vol->GetCurrentNodeIndex();
-      if (crtindex<0) fCache->MasterToLocal(fPoint, point);
+      if (crtindex<0) fGlobalMatrix->MasterToLocal(fPoint, point);
    }   
       
    Int_t nd = vol->GetNdaughters();
@@ -1842,7 +1884,7 @@ Bool_t TGeoNavigator::GotoSafeLevel()
 // Go upwards the tree until a non-overlaping node
    while (fCurrentOverlapping && fLevel) CdUp();
    Double_t point[3];
-   fCache->MasterToLocal(fPoint, point);
+   fGlobalMatrix->MasterToLocal(fPoint, point);
    if (!fCurrentNode->GetVolume()->Contains(point)) return kFALSE;
    if (fNmany) {
    // We still have overlaps on the branch
@@ -2056,6 +2098,7 @@ void TGeoNavigator::DoRestoreState()
    if (fBackupState && fCache) {
       fCurrentOverlapping = fCache->RestoreState(fNmany, fBackupState);
       fCurrentNode=fCache->GetNode();
+      fGlobalMatrix = fCache->GetCurrentMatrix();
       fLevel=fCache->GetLevel();
    }   
 }

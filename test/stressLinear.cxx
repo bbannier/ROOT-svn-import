@@ -204,7 +204,7 @@ void stressLinear(Int_t maxSizeReq,Int_t verbose)
 
   gVerbose = verbose;
 
-  gBenchmark->Start("stress");
+  gBenchmark->Start("stressLinear");
 
   gNrLoop = nrSize-1;
   while (gNrLoop > 0 && maxSizeReq < gSizeA[gNrLoop])
@@ -286,7 +286,7 @@ void stressLinear(Int_t maxSizeReq,Int_t verbose)
     cout << "******************************************************************" <<endl;
   }
 
-  gBenchmark->Stop("stress");
+  gBenchmark->Stop("stressLinear");
 
   //Print table with results
   Bool_t UNIX = strcmp(gSystem->GetName(), "Unix") == 0;
@@ -295,22 +295,22 @@ void stressLinear(Int_t maxSizeReq,Int_t verbose)
     FILE *fp = gSystem->OpenPipe("uname -a", "r");
     Char_t line[60];
     fgets(line,60,fp); line[59] = 0;
-    printf("*  %s\n",line);
+    printf("*  SYS: %s\n",line);
     gSystem->ClosePipe(fp);
   } else {
     const Char_t *os = gSystem->Getenv("OS");
-    if (!os) printf("*  Windows 95\n");
-    else     printf("*  %s %s \n",os,gSystem->Getenv("PROCESSOR_IDENTIFIER"));
+    if (!os) printf("*  SYS: Windows 95\n");
+    else     printf("*  SYS: %s %s \n",os,gSystem->Getenv("PROCESSOR_IDENTIFIER"));
   }
 
   printf("******************************************************************\n");
-  gBenchmark->Print("stress");
+  gBenchmark->Print("stressLinear");
   const Int_t nr = 7;
   const Double_t x_b12[] = { 10.,   30.,   50.,   100.,  300.,  500.,    700.};
   const Double_t y_b12[] = {10.74, 15.72, 20.00, 35.79, 98.77, 415.34, 1390.33};
 
   TGraph gr(nr,x_b12,y_b12);
-  Double_t ct = gBenchmark->GetCpuTime("stress");
+  Double_t ct = gBenchmark->GetCpuTime("stressLinear");
   const Double_t rootmarks = 600*gr.Eval(maxSize)/ct;
 
   printf("******************************************************************\n");
@@ -2338,6 +2338,27 @@ void spstress_matrix_fill(Int_t rsize,Int_t csize)
       m6.SetSub(-1,2,m_part3);
       m6.SetSub(-1,1,m_part4);
       ok &= VerifyMatrixIdentity(m,m6,gVerbose,EPSILON);
+    }
+  }
+
+  {
+    if (gVerbose)
+      cout << "Check insertion/extraction of rows" << endl;
+
+    TMatrixDSparse m1 = m;
+    TVectorD v1(1,csize);
+    TVectorD v2(1,csize);
+    for (Int_t i = m.GetRowLwb(); i <= m.GetRowUpb(); i++) {
+      v1 = TMatrixDSparseRow(m,i);
+      m1.InsertRow(i,1,v1.GetMatrixArray());
+      ok &= VerifyMatrixIdentity(m,m1,gVerbose,EPSILON);
+      m1.InsertRow(i,3,v1.GetMatrixArray()+2,v1.GetNrows()-2);
+      ok &= VerifyMatrixIdentity(m,m1,gVerbose,EPSILON);
+
+      m1.ExtractRow(i,1,v2.GetMatrixArray());
+      ok &= VerifyVectorIdentity(v1,v2,gVerbose,EPSILON);
+      m1.ExtractRow(i,3,v2.GetMatrixArray()+2,v1.GetNrows()-2);
+      ok &= VerifyVectorIdentity(v1,v2,gVerbose,EPSILON);
     }
   }
 

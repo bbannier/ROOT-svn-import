@@ -25,7 +25,7 @@
 #include <demangle.h>
 #endif
 
-using namespace ROOT::Reflex;
+using namespace Reflex;
 
 namespace FTypes {
    static const std::type_info & Char()       { static const std::type_info & t = Type::ByName("char").TypeInfo();               return t; }
@@ -160,28 +160,103 @@ std::vector<std::string> Tools::GenTemplateArgVec( const std::string & Name ) {
 
 
 //-------------------------------------------------------------------------------
-size_t Tools::GetBasePosition( const std::string & name ) {
-//------------------------------------------------------------------------------
-// Get the position of the base part of a scoped name.
-   // remove the template part of the name <...>
+size_t Tools::GetBasePosition(const std::string& name) {
+//-------------------------------------------------------------------------------
+// -- Get the position of the base part of a scoped name.
+   //
+   // Remove the template part of the name <...>,
+   // but we must be careful of:
+   //
+   //       operator<,   operator>,
+   //       operator<=,  operator>=,
+   //       operator<<,  operator>>,
+   //       operator<<=, operator>>=
+   //       operator->,  operator->*,
+   //       operator()
+   //
    int ab = 0;
    int rb = 0;
-   int i = 0;
    size_t pos = 0;
-   for ( i = name.size()-1; i >= 0; --i) {
+   for (int i = name.size() - 1; (i >= 0) && !pos; --i) {
       switch (name[i]) {
-      case '>' : ab++; break;
-      case '<' : ab--; break;
-      case ')' : rb++; break;
-      case '(' : rb--; break;
-      case ':' : 
-         if ( ab == 0 && rb == 0 && name[i-1] == ':' ) {
-            pos = i + 1;
-            break; 
-         }
-      default: continue;
+         case '>':
+            {
+              int j = i - 1;
+              if (j > -1) {
+                 if ((name[j] == '-') || (name[j] == '>')) {
+                    --j;
+                 }
+              }
+              for (; (j > -1) && (name[j] == ' '); --j);
+              if ((j > -1) && (name[j] == 'r') && ((j - 7) > -1)) {
+                 // -- We may have an operator name.
+                 if (name.substr(j - 7, 8) == "operator") {
+                    i = j - 8;
+                    break;
+                 }
+              }
+              ab++;
+            }
+            break;
+         case '<':
+            {
+              int j = i - 1;
+              if (j > -1) {
+                 if (name[j] == '<') {
+                    --j;
+                 }
+              }
+              for (; (j > -1) && (name[j] == ' '); --j);
+              if ((j > -1) && (name[j] == 'r') && ((j - 7) > -1)) {
+                 // -- We may have an operator name.
+                 if (name.substr(j - 7, 8) == "operator") {
+                    i = j - 8;
+                    break;
+                 }
+              }
+            }
+            ab--;
+            break;
+         case ')':
+            {
+              int j = i - 1;
+              for (; (j > -1) && (name[j] == ' '); --j);
+              if (j > -1) {
+                 if (name[j] == '(') {
+                    --j;
+                    for (; (j > -1) && (name[j] == ' '); --j);
+                    if ((j > -1) && (name[j] == 'r') && ((j - 7) > -1)) {
+                       // -- We may have an operator name.
+                       if (name.substr(j - 7, 8) == "operator") {
+                          i = j - 8;
+                          break;
+                       }
+                    }
+                 }
+              }
+            }
+            rb++;
+            break;
+         case '(':
+            {
+              int j = i - 1;
+              for (; (j > -1) && (name[j] == ' '); --j);
+              if ((j > -1) && (name[j] == 'r') && ((j - 7) > -1)) {
+                 // -- We may have an operator name.
+                 if (name.substr(j - 7, 8) == "operator") {
+                    i = j - 8;
+                    break;
+                 }
+              }
+            }
+            rb--;
+            break;
+         case ':':
+            if (!ab && !rb && i && (name[i-1] == ':')) {
+               pos = i + 1;
+            }
+            break;
       }
-      if ( pos ) break;
    }
    return pos;
 }
@@ -388,24 +463,28 @@ std::string Tools::Demangle( const std::type_info & ti ) {
 
 #elif defined(__SUNPRO_CC)
 
-   std::string mangled = ti.name();
+   const char* mangled = ti.name();
    size_t buffer = 1024;
-   char * c_demangled = new char(buffer);
-   int ret = cplus_demangle( mangled.c_str(), c_demangled, buffer);
+   char * c_demangled = new char[buffer];
+   int ret = cplus_demangle( mangled, c_demangled, buffer);
    while ( ret == -1 ) {
       buffer = buffer*2;
-      delete c_demangled;
-      c_demangled = new char(buffer);
-      ret = cplus_demangle( mangled.c_str(), c_demangled, buffer);
+      delete[] c_demangled;
+      c_demangled = new char[buffer];
+      ret = cplus_demangle( mangled, c_demangled, buffer);
    }
    if ( ret == 1 ) {
       throw RuntimeError(std::string("Symbol ") + mangled + " not mangled correctly");
    }
    else {
-      std::string demangled = c_demangled;
-      delete c_demangled;
+      std::string demangled = Tools::NormalizeName(c_demangled);
+      delete[] c_demangled;
       return demangled;
    }
+
+#elif defined(__IBMCPP__)
+
+   return Tools::NormalizeName(ti.name());
 
 #endif
    return "";
@@ -476,84 +555,33 @@ bool isalphanum(int i) {
 
 
 //-------------------------------------------------------------------------------
-std::string Tools::NormalizeName( const std::string & nam ) {
+std::string Tools::NormalizeName( const char * nam ) {
 //-------------------------------------------------------------------------------
 // Normalize a type name.
-   std::string norm_name = "";
-   //char lchar = ' ';
-   unsigned int nlen = nam.length();
-   unsigned int par = 0;
-   bool first_word = true;
-   char cprev = ' ';
-   char cnext = ' ';
-
-   for (unsigned int i = 0; i < nlen; ++i ) {
-
-      switch (nam[i]) {
-
-      case ' ':
-         // are we at the beginning of the name
-         //bool fist_pos = i ? false : true;
-
-         // consume all spaces
-         while (i < nlen && nam[i+1] == ' ') ++i;
-      
-         // if only white spaces at the beginning break or
-         // spaces at the end of the name then break
-         if ( first_word || ( i = nlen -1) ) break;
-
-         // if the last pos and the next pos is char 
-         // or we are at the closing of angular braces 
-         // then insert a space and the next position
-         cprev = nam[i-1];
-         cnext = nam[i+1];
-         if ( ( isalphanum(cprev) &&  isalpha(cnext) ) ||
-              ( cprev == '>' && cnext == '>' ) ) norm_name += ' ' + nam[i+1];
-         // otherwise only add the next pos
-         else norm_name += nam[i+1];
-         // increase counter by consumed pos
-         ++i;
-         break;
-
-      case '(':
-      case '<':
-         ++par;
-         norm_name += nam[i];
-         ++i;
-         break;
-
-      case ')':
-      case '>':
-         --par;
-         norm_name += nam[i];
-         ++i;
-         break;
-
-      case '*':
-      case '&':
-         first_word = false;
-         norm_name += nam[i];
-         ++i;
-         break;
-
-      case 'c':
-         norm_name += nam[i];
-         ++i;
-         break;
-
-      case 'v':
-         norm_name += nam[i];
-         ++i;
-         break;
-
-      default:
-         norm_name += nam[i];
-         ++i;
-         break;
-
+   std::string norm_name;
+   char prev = 0;
+   for (size_t i = 0; nam[i] != 0; i++) {
+      char curr = nam[i];
+      if (curr == ' ') {
+         char next = 0;
+         while (nam[i] != 0 && (next = nam[i + 1]) == ' ') {
+            ++i;
+         }
+         if (!isalphanum(prev) || !isalpha(next)) {
+            continue; // continue on non-word boundaries
+         }
+      } else if (curr == '>' && prev == '>' || curr == '(' && prev != ')') {
+         norm_name += ' ';
       }
-
+      norm_name += (prev = curr);
    }
 
    return norm_name;
+}
+
+
+//-------------------------------------------------------------------------------
+std::string Tools::NormalizeName( const std::string & nam ) {
+//-------------------------------------------------------------------------------
+   return Tools::NormalizeName(nam.c_str());
 }

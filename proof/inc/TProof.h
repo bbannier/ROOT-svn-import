@@ -18,9 +18,9 @@
 // TProof                                                               //
 //                                                                      //
 // This class controls a Parallel ROOT Facility, PROOF, cluster.        //
-// It fires the slave servers, it keeps track of how many slaves are    //
-// running, it keeps track of the slaves running status, it broadcasts  //
-// messages to all slaves, it collects results, etc.                    //
+// It fires the worker servers, it keeps track of how many workers are  //
+// running, it keeps track of the workers running status, it broadcasts //
+// messages to all workers, it collects results, etc.                   //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -116,10 +116,10 @@ const char* const kPROOF_CacheDir        = "cache";       // file cache dir, und
 const char* const kPROOF_PackDir         = "packages";    // package dir, under WorkDir
 const char* const kPROOF_QueryDir        = "queries";     // query dir, under WorkDir
 const char* const kPROOF_DataSetDir      = "datasets";    // dataset dir, under WorkDir
-const char* const kPROOF_CacheLockFile   = "/tmp/proof-cache-lock-";   // cache lock file
-const char* const kPROOF_PackageLockFile = "/tmp/proof-package-lock-"; // package lock file
-const char* const kPROOF_QueryLockFile   = "/tmp/proof-query-lock-";   // query lock file
-const char* const kPROOF_DataSetLockFile = "/tmp/proof-dataset-lock-"; // dataset lock file
+const char* const kPROOF_CacheLockFile   = "proof-cache-lock-";   // cache lock file
+const char* const kPROOF_PackageLockFile = "proof-package-lock-"; // package lock file
+const char* const kPROOF_QueryLockFile   = "proof-query-lock-";   // query lock file
+const char* const kPROOF_DataSetLockFile = "proof-dataset-lock-"; // dataset lock file
 
 #ifndef R__WIN32
 const char* const kCP     = "/bin/cp -fp";
@@ -273,6 +273,11 @@ public:
       kUntar               = 0x0,  //Untar over existing dir [default]
       kRemoveOld           = 0x1   //Remove existing dir with same name
    };
+   enum ERunStatus {
+      kRunning             = 0,    // Normal status
+      kStopped             = 1,    // After the stop button has been pressed
+      kAborted             = 2     // After the abort button has been pressed
+   };
 
 private:
    enum EUrgent {
@@ -368,6 +373,7 @@ private:
 
    Bool_t          fIdle;            //on clients, true if no PROOF jobs running
    Bool_t          fSync;            //true if type of currently processed query is sync
+   ERunStatus      fRunStatus;       //run status 
 
    Bool_t          fRedirLog;        //redirect received log info
    TString         fLogFileName;     //name of the temp file for redirected logs
@@ -409,6 +415,8 @@ protected:
    Long64_t        fTotalBytes;     //number of bytes to be analyzed
    TList          *fAvailablePackages; //list of available packages
    TList          *fEnabledPackages;   //list of enabled packages
+
+   Int_t           fCollectTimeout; // Timeout for (some) collect actions
 
    TString         fDataPoolUrl;    // default data pool entry point URL
    TProofMgr::EServType fServType;  // type of server: proofd, XrdProofd
@@ -460,7 +468,7 @@ private:
    Int_t    Broadcast(const char *mess, Int_t kind = kMESS_STRING, ESlaves list = kActive);
    Int_t    Broadcast(Int_t kind, TList *slaves) { return Broadcast(0, kind, slaves); }
    Int_t    Broadcast(Int_t kind, ESlaves list = kActive) { return Broadcast(0, kind, list); }
-   Int_t    BroadcastGroupPriority(const char *grp, Int_t priority, ESlaves list = kActive);
+   Int_t    BroadcastGroupPriority(const char *grp, Int_t priority, ESlaves list = kAllUnique);
    Int_t    BroadcastGroupPriority(const char *grp, Int_t priority, TList *workers);
    Int_t    BroadcastObject(const TObject *obj, Int_t kind, TList *slaves);
    Int_t    BroadcastObject(const TObject *obj, Int_t kind = kMESS_OBJECT, ESlaves list = kActive);
@@ -469,6 +477,7 @@ private:
    Int_t    Collect(const TSlave *sl, Long_t timeout = -1);
    Int_t    Collect(TMonitor *mon, Long_t timeout = -1);
    Int_t    CollectInputFrom(TSocket *s);
+   void     SetMonitor(TMonitor *mon = 0, Bool_t on = kTRUE);
 
    void     FindUniqueSlaves();
    TSlave  *FindSlave(TSocket *s) const;
@@ -487,6 +496,8 @@ private:
 
    Bool_t   IsSync() const { return fSync; }
    void     InterruptCurrentMonitor();
+
+   void     SetRunStatus(ERunStatus rst) { fRunStatus = rst; }
 
    void     MarkBad(TSlave *sl);
    void     MarkBad(TSocket *s);
@@ -649,8 +660,11 @@ public:
    Bool_t      IsParallel() const { return GetParallel() > 0 ? kTRUE : kFALSE; }
    Bool_t      IsIdle() const { return fIdle; }
 
+   ERunStatus  GetRunStatus() const { return fRunStatus; }
+
    //-- input list parameter handling
    void        SetParameter(const char *par, const char *value);
+   void        SetParameter(const char *par, Int_t value);
    void        SetParameter(const char *par, Long_t value);
    void        SetParameter(const char *par, Long64_t value);
    void        SetParameter(const char *par, Double_t value);
@@ -745,6 +759,7 @@ public:
 
    // Input/output list utilities
    static Int_t         GetParameter(TCollection *c, const char *par, TString &value);
+   static Int_t         GetParameter(TCollection *c, const char *par, Int_t &value);
    static Int_t         GetParameter(TCollection *c, const char *par, Long_t &value);
    static Int_t         GetParameter(TCollection *c, const char *par, Long64_t &value);
    static Int_t         GetParameter(TCollection *c, const char *par, Double_t &value);

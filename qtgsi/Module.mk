@@ -22,12 +22,15 @@ QTGSIS        := $(filter-out $(MODDIRS)/moc_%,\
                  $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx)))
 QTGSIO        := $(QTGSIS:.cxx=.o)
 
-QTGSIMOC      := $(subst $(MODDIRI)/,$(MODDIRS)/moc_,$(patsubst %.h,%.cxx,$(QTGSIH)))
+QTGSIMOCH     := $(MODDIRI)/TQCanvasMenu.h $(MODDIRI)/TQRootApplication.h \
+                 $(MODDIRI)/TQRootCanvas.h $(MODDIRI)/TQRootDialog.h
+
+QTGSIMOC      := $(subst $(MODDIRI)/,$(MODDIRS)/moc_,$(patsubst %.h,%.cxx,$(QTGSIMOCH)))
 QTGSIMOCO     := $(QTGSIMOC:.cxx=.o)
 
 QTGSIDEP      := $(QTGSIO:.o=.d) $(QTGSIDO:.o=.d) $(QTGSIMOCO:.o=.d)
 
-QTGSICXXFLAGS := -DQT_DLL -DQT_THREAD_SUPPORT -I. $(QTINCDIR:%=-I%)
+QTGSICXXFLAGS := -DQT3_SUPPORT -DQT_DLL -DQT_THREAD_SUPPORT -I. $(QTINCDIR:%=-I%)
 
 QTGSILIB      := $(LPATH)/libQtGSI.$(SOEXT)
 QTGSIMAP      := $(QTGSILIB:.$(SOEXT)=.rootmap)
@@ -56,9 +59,9 @@ $(QTGSILIB):    $(QTGSIO) $(QTGSIDO) $(QTGSIMOCO) $(ORDER_) $(MAINLIBS) $(QTGSIL
 		   "$(QTGSIO) $(QTGSIDO) $(QTGSIMOCO)" \
 		   "$(QTGSILIBEXTRA) $(QTLIBDIR) $(QTLIB)"
 
-$(QTGSIDS):     $(QTGSIH) $(QTGSIL) $(ROOTCINTTMPEXE)
+$(QTGSIDS):     $(QTGSIH) $(QTGSIL) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -c $(QTGSIH) $(QTGSIL)
+		$(ROOTCINTTMP) -f $@ -c -DQTVERS=$(QTVERS) $(QTGSIH) $(QTGSIL)
 
 $(QTGSIMAP):    $(RLIBMAP) $(MAKEFILEDEP) $(QTGSIL)
 		$(RLIBMAP) -o $(QTGSIMAP) -l $(QTGSILIB) \

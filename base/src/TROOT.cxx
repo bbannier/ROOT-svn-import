@@ -62,6 +62,7 @@
 
 #include "RConfig.h"
 #include "RConfigure.h"
+#include "RConfigOptions.h"
 
 #include <string>
 #include <map>
@@ -102,7 +103,6 @@
 #include "TPluginManager.h"
 #include "TMap.h"
 #include "TObjString.h"
-#include "TAuthenticate.h"
 #include "TVirtualMutex.h"
 
 #include <string>
@@ -882,6 +882,10 @@ TObject *TROOT::GetFunction(const char *name) const
 {
    // Return pointer to function with name.
 
+   if (name == 0 || name[0] == 0) {
+      return 0;
+   }
+
    TObject *f1 = fFunctions->FindObject(name);
    if (f1) return f1;
 
@@ -1289,8 +1293,9 @@ Int_t TROOT::LoadClass(const char *classname, const char *libname,
    if (err == 0 && !check)
       GetListOfTypes(kTRUE);
 
-   if (err == -1)
-      ;  //Error("LoadClass", "library %s could not be loaded", libname);
+   if (err == -1) {
+      //Error("LoadClass", "library %s could not be loaded", libname);
+   }
 
    if (err == 1) {
       //Error("LoadClass", "library %s already loaded, but class %s unknown",
@@ -1499,8 +1504,9 @@ void TROOT::ReadSvnInfo()
 #endif
 
    TString svninfo = "svninfo.txt";
+   char *filename = 0;
 #ifdef ROOTETCDIR
-   char *s = gSystem->ConcatFileName(ROOTETCDIR, svninfo);
+   filename = gSystem->ConcatFileName(ROOTETCDIR, svninfo);
 #else
    TString etc = gRootDir;
 #ifdef WIN32
@@ -1508,10 +1514,10 @@ void TROOT::ReadSvnInfo()
 #else
    etc += "/etc";
 #endif
-   char *s = gSystem->ConcatFileName(etc, svninfo);
+   filename = gSystem->ConcatFileName(etc, svninfo);
 #endif
 
-   FILE *fp = fopen(s, "r");
+   FILE *fp = fopen(filename, "r");
    if (fp) {
       TString s;
       // read branch name
@@ -1527,6 +1533,7 @@ void TROOT::ReadSvnInfo()
       fSvnDate = s;
       fclose(fp);
    }
+   delete [] filename;
 }
 
 //______________________________________________________________________________

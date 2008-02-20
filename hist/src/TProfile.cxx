@@ -474,12 +474,17 @@ void TProfile::Copy(TObject &obj) const
 
    TH1D::Copy(((TProfile&)obj));
    fBinEntries.Copy(((TProfile&)obj).fBinEntries);
+   for (int bin=0;bin<fNcells;bin++) {
+      ((TProfile&)obj).fArray[bin]        = fArray[bin];
+      ((TProfile&)obj).fSumw2.fArray[bin] = fSumw2.fArray[bin];
+   }
+
    ((TProfile&)obj).fYmin = fYmin;
    ((TProfile&)obj).fYmax = fYmax;
-   ((TProfile&)obj).fScaling = fScaling;
+   ((TProfile&)obj).fScaling   = fScaling;
    ((TProfile&)obj).fErrorMode = fErrorMode;
-   ((TProfile&)obj).fTsumwy      = fTsumwy;
-   ((TProfile&)obj).fTsumwy2     = fTsumwy2;
+   ((TProfile&)obj).fTsumwy    = fTsumwy;
+   ((TProfile&)obj).fTsumwy2   = fTsumwy2;
 }
 
 
@@ -1732,7 +1737,7 @@ void TProfile::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
 }
 
 //______________________________________________________________________________
-void TProfile::Scale(Double_t c1)
+void TProfile::Scale(Double_t c1, Option_t *)
 {
 //*-*-*-*-*Multiply this profile by a constant c1*-*-*-*-*-*-*-*-*
 //*-*      ======================================
@@ -1848,7 +1853,9 @@ void TProfile::Streamer(TBuffer &R__b)
       //====process old versions before automatic schema evolution
       TH1D::Streamer(R__b);
       fBinEntries.Streamer(R__b);
-      R__b >> (Int_t&)fErrorMode;
+      Int_t errorMode;
+      R__b >> errorMode;
+      fErrorMode = (EErrorType)errorMode;
       if (R__v < 2) {
          Float_t ymin,ymax;
          R__b >> ymin; fYmin = ymin;

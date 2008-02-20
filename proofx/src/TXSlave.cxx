@@ -42,16 +42,14 @@ ClassImp(TXSlave)
 //---- Hook to the constructor -------------------------------------------------
 //---- This is needed to avoid using the plugin manager which may create -------
 //---- problems in multi-threaded environments. --------------------------------
-
-extern "C" {
-   TSlave *GetTXSlave(const char *url, const char *ord, Int_t perf,
-                      const char *image, TProof *proof, Int_t stype,
-                      const char *workdir, const char *msd)
-   {
-      return ((TSlave *)(new TXSlave(url, ord, perf, image,
-                                     proof, stype, workdir, msd)));
-   }
+TSlave *GetTXSlave(const char *url, const char *ord, Int_t perf,
+                     const char *image, TProof *proof, Int_t stype,
+                     const char *workdir, const char *msd)
+{
+   return ((TSlave *)(new TXSlave(url, ord, perf, image,
+                                    proof, stype, workdir, msd)));
 }
+
 class XSlaveInit {
  public:
    XSlaveInit() {
@@ -508,7 +506,8 @@ Bool_t TXSlave::HandleError(const void *)
 {
    // Handle error on the input socket
 
-   Info("HandleError", "%p: got called ... fProof: %p", this, fProof);
+   Info("HandleError", "%p:%s:%s got called ... fProof: %p, fSocket: %p",
+                       this, fName.Data(), fOrdinal.Data(), fProof, fSocket);
 
    // Interrupt underlying socket operations
    if (fSocket)
@@ -526,13 +525,11 @@ Bool_t TXSlave::HandleError(const void *)
       // Attach to the monitor instance, if any
       TMonitor *mon = fProof->fCurrentMonitor;
 
-      if (gDebug > 2)
-         Info("HandleError", "%p: proof: %p, mon: %p", this, fProof, mon);
+      Info("HandleError", "%p: proof: %p, mon: %p", this, fProof, mon);
 
       if (mon && fSocket && mon->GetListOfActives()->FindObject(fSocket)) {
          // Synchronous collection in TProof
-         if (gDebug > 2)
-            Info("HandleError", "%p: deactivating from monitor %p", this, mon);
+         Info("HandleError", "%p: deactivating from monitor %p", this, mon);
          mon->DeActivate(fSocket);
       }
       // Update lists:
@@ -573,8 +570,7 @@ Bool_t TXSlave::HandleError(const void *)
          sem->Post();
    }
 
-   if (gDebug > 0)
-      Info("HandleError", "%p: DONE ... ", this);
+   Info("HandleError", "%p: DONE ... ", this);
 
    // We are done
    return kTRUE;
