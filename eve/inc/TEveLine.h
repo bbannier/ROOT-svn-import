@@ -17,6 +17,10 @@
 
 #include "TAttLine.h"
 
+//------------------------------------------------------------------------------
+// TEveLine
+//------------------------------------------------------------------------------
+
 class TEveLine : public TEvePointSet,
                  public TAttLine
 {
@@ -46,7 +50,32 @@ public:
    Bool_t GetRnrPoints() const { return fRnrPoints; }
    void SetRnrPoints(Bool_t r) { fRnrPoints = r;    }
 
+   virtual TClass* ProjectedClass() const;
+
    ClassDef(TEveLine, 1); // An arbitrary polyline with fixed line and marker attributes.
+};
+
+
+//------------------------------------------------------------------------------
+// TEveLineProjected
+//------------------------------------------------------------------------------
+
+class TEveLineProjected : public TEveLine,
+                          public TEveProjected
+{
+private:
+   TEveLineProjected(const TEveLineProjected&);            // Not implemented
+   TEveLineProjected& operator=(const TEveLineProjected&); // Not implemented
+
+public:
+   TEveLineProjected();
+   virtual ~TEveLineProjected() {}
+
+   virtual void SetProjection(TEveProjectionManager* proj, TEveProjectable* model);
+   virtual void SetDepth(Float_t d);
+   virtual void UpdateProjection();
+
+   ClassDef(TEveLineProjected, 1); // Projected replica of a TEveLine.
 };
 
 #endif

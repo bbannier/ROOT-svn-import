@@ -193,6 +193,8 @@
 #pragma link C++ class TEveProjectionAxesEditor+;
 #pragma link C++ class TEveProjectionAxesGL+;
 
+#pragma link C++ class TEvePointSetProjected+;
+#pragma link C++ class TEveLineProjected+;
 #pragma link C++ class TEveTrackProjected+;
 #pragma link C++ class TEveTrackProjectedGL+;
 #pragma link C++ class TEveTrackListProjected+;
@@ -200,6 +202,3 @@
 #pragma link C++ class TEvePolygonSetProjected+;
 #pragma link C++ class TEvePolygonSetProjectedEditor+;
 #pragma link C++ class TEvePolygonSetProjectedGL+;
-
-#pragma link C++ class TEvePointSetProjected+;
-#pragma link C++ class TEvePointSetProjectedGL+;
