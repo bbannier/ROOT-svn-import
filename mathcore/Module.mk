@@ -65,6 +65,10 @@ ALLMAPS      += $(MATHCOREMAP)
 # include all dependency files
 INCLUDEFILES += $(MATHCOREDEP)
 
+#all link def used for libMathCore
+ALLMATHCOREL := $(MATHCOREL) $(MATHCORELINC) $(MATHL) $(FITL)
+
+
 ##### local rules #####
 include/Math/%.h: $(MATHCOREDIRI)/Math/%.h
 		@(if [ ! -d "include/Math" ]; then   \
@@ -85,9 +89,9 @@ $(MATHCOREDS):  $(MATHCOREDH1) $(MATHCOREL) $(MATHCORELINC) $(ROOTCINTTMPDEP)
 #		genreflex $(MATHCOREDIRS)/MathCoreDict.h  --selection_file=$(MATHCOREDIRS)/selection_MathCore.xml -o $(MATHCOREDIRS)/G__MathCore.cxx -I$(MATHCOREDIRI)
 
 
-$(MATHCOREMAP): $(RLIBMAP) $(MAKEFILEDEP) $(MATHCOREL) $(MATHCORELINC) 
+$(MATHCOREMAP): $(RLIBMAP) $(MAKEFILEDEP) $(ALLMATHCOREL) 
 		$(RLIBMAP) -o $(MATHCOREMAP) -l $(MATHCORELIB) \
-		   -d $(MATHCORELIBDEPM) -c $(MATHCOREL) $(MATHCORELINC) 
+		   -d $(MATHCORELIBDEPM) -c $(ALLMATHCOREL) 
 
 all-mathcore:   $(MATHCORELIB) $(MATHCOREMAP)
 
