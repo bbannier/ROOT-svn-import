@@ -32,7 +32,11 @@
 #include "RooAbsData.h"
 #include "RooCmdConfig.h"
 #include "RooMsgService.h"
-// #include "RooModelView.h"
+#include "TInterpreter.h"
+#include "TClassTable.h"
+#include "TBaseClass.h"
+#include "TSystem.h"
+#include "TRegexp.h"
 #include <map>
 #include <string>
 #include <list>
@@ -45,14 +49,54 @@ using namespace std ;
 
 ClassImp(RooWorkspace)
 ;
+ClassImp(RooWorkspace::CodeRepo)
+;
+ClassImp(RooWorkspace::WSDir)
+;
 
-RooWorkspace::RooWorkspace(const char* name, const char* title) : TNamed(name,title?title:name)
+list<string> RooWorkspace::_classDeclDirList ;
+list<string> RooWorkspace::_classImplDirList ;
+string RooWorkspace::_classFileExportDir = ".wscode.%s" ;
+Bool_t RooWorkspace::_autoClass = kFALSE ;
+
+void RooWorkspace::addClassDeclImportDir(const char* dir) 
+{
+  _classDeclDirList.push_back(dir) ;
+}
+
+void RooWorkspace::addClassImplImportDir(const char* dir) 
+{
+  _classImplDirList.push_back(dir) ;
+}
+
+void RooWorkspace::setClassFileExportDir(const char* dir) 
+{
+  if (dir) {
+    _classFileExportDir = dir ;
+  } else {
+    _classFileExportDir = ".wscode.%s" ;
+  }
+}
+
+void RooWorkspace::autoImportClassCode(Bool_t flag) 
+{
+  _autoClass = flag ; 
+}
+
+
+RooWorkspace::RooWorkspace() : _classes(this), _dir(0)
+{
+  // Default constructor
+}
+
+
+RooWorkspace::RooWorkspace(const char* name, const char* title) : TNamed(name,title?title:name), _classes(this), _dir(0)
 // Empty workspace constructor
 {
 }
 
 
-RooWorkspace::RooWorkspace(const RooWorkspace& other) : TNamed(other)
+RooWorkspace::RooWorkspace(const RooWorkspace& other) : TNamed(other), _classes(this), _dir(0)
 {
   // Workspace copy constructor
   other._allOwnedNodes.snapshot(_allOwnedNodes,kTRUE) ;
@@ -69,6 +113,9 @@ RooWorkspace::~RooWorkspace()
 {
   // Workspace destructor
   _dataList.Delete() ;
+  if (_dir) {
+    delete _dir ;
+  }
 }
 
 
@@ -255,6 +302,13 @@ Bool_t RooWorkspace::import(const RooAbsArg& arg, const RooCmdArg& arg1, const R
   RooArgSet recycledNodes ;
   while((node=(RooAbsArg*)iter->Next())) {
 
+    if (_autoClass) {
+      if (!_classes.autoImportClass(node->IsA())) {
+	coutW(ObjectHandling) << "RooWorkspace::import(" << GetName() << ") WARNING: problems import class code of object " 
+			      << node->IsA()->GetName() << "::" << node->GetName() << ", reading of workspace will require external definition of class" << endl ;
+      }
+    }
+
     // Check if node is already in workspace (can only happen for variables)
     if (_allOwnedNodes.find(node->GetName())) {
       // Do not import node, add not to list of nodes that require reconnection
@@ -268,6 +322,9 @@ Bool_t RooWorkspace::import(const RooAbsArg& arg, const RooCmdArg& arg1, const R
       coutI(ObjectHandling) << "RooWorkspace::import(" << GetName() << ") importing " << node->IsA()->GetName() << "::" 
 			 << node->GetName() << endl ;
       _allOwnedNodes.addOwned(*node) ;
+      if (_dir) {
+	_dir->InternalAppend(node) ;
+      }
     }
   }
 
@@ -367,18 +424,42 @@ Bool_t RooWorkspace::import(RooAbsData& data, const RooCmdArg& arg1, const RooCm
     }
   }
 
-  // Now import the dataset observables that are not already imported
+  // Now import the dataset observables
   TIterator* iter = clone->get()->createIterator() ;
   RooAbsArg* arg ;
   while((arg=(RooAbsArg*)iter->Next())) {
-    if (!_allOwnedNodes.find(arg->GetName())) {
-      import(*arg) ;
-    }
+    import(*arg) ;
   }
   delete iter ;
     
   _dataList.Add(clone) ;
   return kFALSE ;
+}
+
+
+Bool_t RooWorkspace::importClassCode(TClass* theClass, Bool_t doReplace) 
+{
+  return _classes.autoImportClass(theClass,doReplace) ;
+}
+
+
+Bool_t RooWorkspace::importClassCode(const char* pat, Bool_t doReplace)  
+{
+  Bool_t ret(kTRUE) ;
+
+  TRegexp re(pat,kTRUE) ;
+  TIterator* iter = componentIterator() ;
+  RooAbsArg* arg ;
+  while((arg=(RooAbsArg*)iter->Next())) {
+    TString className = arg->IsA()->GetName() ;
+    if (className.Index(re)>=0 && !_classes.autoImportClass(arg->IsA(),doReplace)) {
+      coutW(ObjectHandling) << "RooWorkspace::import(" << GetName() << ") WARNING: problems import class code of object " 
+			    << arg->IsA()->GetName() << "::" << arg->GetName() << ", reading of workspace will require external definition of class" << endl ;
+      ret = kFALSE ;
+    }
+  }  
+  delete iter ;
+  return ret ;
 }
 
 
@@ -443,6 +524,229 @@ RooAbsData* RooWorkspace::data(const char* name)
 // void RooWorkspace::removeView(const char* /*name*/) 
 // {
 // }
+
+
+Bool_t RooWorkspace::CodeRepo::autoImportClass(TClass* tc, Bool_t doReplace) 
+{
+  oocxcoutD(_wspace,ObjectHandling) << "RooWorkspace::CodeRepo(" << _wspace->GetName() << ") request to import code of class " << tc->GetName() << endl ;
+
+  // Check if we already have the class
+  if (!doReplace && _map.find(tc->GetName())!=_map.end()) {
+    oocxcoutD(_wspace,ObjectHandling) << "RooWorkspace::CodeRepo(" << _wspace->GetName() << ") code of class " << tc->GetName() << " already imported, skipping" << endl ;
+    return kTRUE ;
+  }
+
+  string implfile = tc->GetImplFileName() ;
+  string declfile = tc->GetDeclFileName() ;
+
+  TString rootsys = gSystem->Getenv("ROOTSYS") ;
+  char* implpath = gSystem->ConcatFileName(rootsys.Data(),implfile.c_str()) ;
+  if (!gSystem->AccessPathName(implpath)) {
+    oocxcoutD(_wspace,ObjectHandling) << "RooWorkspace::CodeRepo(" << _wspace->GetName() << ") code of class " << tc->GetName() << "is in ROOT distribution, skipping " << endl ;
+    delete[] implpath ;
+    return kTRUE ;
+  }
+  delete[] implpath ;
+  implpath=0 ;
+
+  if (!tc->HasDefaultConstructor()) {
+      oocoutW(_wspace,ObjectHandling) << "RooWorkspace::autoImportClass(" << _wspace->GetName() << ") WARNING cannot import class " 
+				      << tc->GetName() << " : it cannot be persisted because it doesn't have a default constructor. Please fix " << endl ;
+      return kFALSE ;      
+  }
+
+  char* declpath = 0 ;
+  if (gSystem->AccessPathName(declfile.c_str())) {
+
+    // Check list of additional declaration paths
+    list<string>::iterator diter = RooWorkspace::_classDeclDirList.begin() ;
+    while(diter!= RooWorkspace::_classDeclDirList.end()) {
+      
+      declpath = gSystem->ConcatFileName(diter->c_str(),declfile.c_str()) ;      
+      if (!gSystem->AccessPathName(declpath)) {
+	// found declaration file
+	break ;
+      }
+      // cleanup and continue ;
+      delete[] declpath ;
+      declpath=0 ;
+
+      ++diter ;
+    }
+    
+    if (!declpath) {
+      oocoutW(_wspace,ObjectHandling) << "RooWorkspace::autoImportClass(" << _wspace->GetName() << ") WARNING Cannot access code of class " 
+				      << tc->GetName() << " because header file " << declfile << " is not found in current directory nor in $ROOTSYS" ;
+      if (_classDeclDirList.size()>0) {
+	ooccoutW(_wspace,ObjectHandling) << ", nor in the search path " ;
+	diter = RooWorkspace::_classDeclDirList.begin() ;
+	while(diter!= RooWorkspace::_classDeclDirList.end()) {
+	  if (diter!=RooWorkspace::_classDeclDirList.begin()) {
+	    ooccoutW(_wspace,ObjectHandling) << "," ;
+	  }
+	  ooccoutW(_wspace,ObjectHandling) << diter->c_str() ;
+	  ++diter ;
+	}
+      }
+      ooccoutW(_wspace,ObjectHandling) << ". To fix this problem add the required directory to the search "
+				       << "path using RooWorkspace::addClassDeclDir(const char* dir)" << endl ;
+      
+      return kFALSE ;
+    }
+  }
+  
+  if (gSystem->AccessPathName(implfile.c_str())) {
+
+    // Check list of additional declaration paths
+    list<string>::iterator iiter = RooWorkspace::_classImplDirList.begin() ;
+    while(iiter!= RooWorkspace::_classImplDirList.end()) {
+      
+      implpath = gSystem->ConcatFileName(iiter->c_str(),implfile.c_str()) ;      
+      if (!gSystem->AccessPathName(implpath)) {
+	// found implementation file
+	break ;
+      }
+      // cleanup and continue ;
+      delete[] implpath ;
+      implpath=0 ;
+
+      ++iiter ;
+    }
+     
+    if (!implpath) {
+      oocoutW(_wspace,ObjectHandling) << "RooWorkspace::autoImportClass(" << _wspace->GetName() << ") WARNING Cannot access code of class " 
+				      << tc->GetName() << " because implementation file " << implfile << " is not found in current directory nor in $ROOTSYS" ;
+      if (_classDeclDirList.size()>0) {
+	ooccoutW(_wspace,ObjectHandling) << ", nor in the search path " ;
+	iiter = RooWorkspace::_classImplDirList.begin() ;
+	while(iiter!= RooWorkspace::_classImplDirList.end()) {
+	  if (iiter!=RooWorkspace::_classImplDirList.begin()) {
+	    ooccoutW(_wspace,ObjectHandling) << "," ;
+	  }
+	  ooccoutW(_wspace,ObjectHandling) << iiter->c_str() ;
+	  ++iiter ;
+	}
+      }
+      ooccoutW(_wspace,ObjectHandling) << ". To fix this problem add the required directory to the search "
+				       << "path using RooWorkspace::addClassImplDir(const char* dir)" << endl ;    
+      return kFALSE ;
+    }
+  }
+  
+  char buf[1024] ;
+  
+  fstream fdecl(declpath?declpath:declfile.c_str()) ;
+  if (!fdecl) {
+    oocoutE(_wspace,ObjectHandling) << "RooWorkspace::autoImportClass(" << _wspace->GetName() 
+				    << ") ERROR opening declaration file " <<  declfile << endl ;
+    return kFALSE ;      
+  }
+
+  oocoutI(_wspace,ObjectHandling) << "RooWorkspace::autoImportClass(" << _wspace->GetName() 
+				  << ") importing code of class " << tc->GetName() 
+				  << " from " << (implpath?implpath:implfile.c_str()) 
+				  << " and " << (declpath?declpath:declfile.c_str()) << endl ;
+  
+  
+  string decl ;
+  while(fdecl.getline(buf,1023)) {
+    if (strstr(buf,"#include")) {
+      // Process #include statements here
+      char tmp[1024] ;
+      strcpy(tmp,buf) ;
+      strtok(tmp," <\"") ;
+      //char* incfile = strtok(0," <\"") ;
+    }
+    decl += buf ;
+    decl += '\n' ;
+  }
+  
+  fstream fimpl(implpath?implpath:implfile.c_str()) ;
+  if (!fimpl) {
+    oocoutE(_wspace,ObjectHandling) << "RooWorkspace::autoImportClass(" << _wspace->GetName() 
+				    << ") ERROR opening implementation file " <<  implfile << endl ;
+    return kFALSE ;      
+  }
+  
+  string impl ;
+  while(fimpl.getline(buf,1023)) {
+    // Process #include statements here
+
+    // Look for include state of self
+    Bool_t foundSelfInclude=kFALSE ;
+    if (strstr(buf,"#include")) {
+      // Process #include statements here
+      char tmp[1024] ;
+      strcpy(tmp,buf) ;
+      strtok(tmp," <\"") ;
+      char* incfile = strtok(0," <\"") ;
+
+      if (strstr(incfile,tc->GetName())) {
+	foundSelfInclude=kTRUE ;
+      }
+    } 
+
+    if (foundSelfInclude) {
+      // If include of self is found, substitute original include 
+      // which may have directory structure with a plain include
+      impl += Form("#include \"%s.h\"\n",tc->GetName()) ;
+    } else {
+      impl += buf ;
+      impl += '\n' ;
+    }
+  }
+  
+  TString baseNameList ;
+  TList* bl = tc->GetListOfBases() ;
+  TIterator* iter = bl->MakeIterator() ;
+  TBaseClass* base ;
+  list<TClass*> bases ;
+  while((base=(TBaseClass*)iter->Next())) {
+    if (baseNameList.Length()>0) {
+      baseNameList += "," ;
+    }
+    baseNameList += base->GetClassPointer()->GetName() ;
+    bases.push_back(base->GetClassPointer()) ;
+  }
+  
+  _map[tc->GetName()]._baseName = baseNameList ;
+  _map[tc->GetName()]._hfile = decl ;
+  _map[tc->GetName()]._cxxfile = impl ;   
+  
+  // Recursive store all base classes as well
+  list<TClass*>::iterator biter = bases.begin() ;
+  while(biter!=bases.end()) {
+    autoImportClass(*biter,doReplace) ;
+    ++biter ;
+  }
+
+
+  if (implpath) {
+    delete[] implpath ;
+  }
+  if (declpath) {
+    delete[] declpath ;
+  }
+
+  return kTRUE ;
+}
+
+Bool_t RooWorkspace::makeDir() 
+{
+  if (_dir) return kTRUE ;
+
+  TString name = Form("%sDir",GetName()) ;
+  TString title= Form("TDirectory representation of RooWorkspace %s",GetName()) ;
+  _dir = new WSDir(name.Data(),title.Data(),this) ;
+
+  TIterator* iter = componentIterator() ;
+  RooAbsArg* arg ;
+  while((arg=(RooAbsArg*)iter->Next())) {
+    _dir->InternalAppend(arg) ;
+  }
+
+  return kTRUE ;
+}
 
 
 void RooWorkspace::Print(Option_t* /*opts*/) const 
@@ -523,6 +827,14 @@ void RooWorkspace::Print(Option_t* /*opts*/) const
     cout << endl ;
   }
 
+  if (_classes.listOfClassNames().size()>0) {
+    cout << "embedded class code" << endl ;
+    cout << "-------------------" << endl ;
+    cout << _classes.listOfClassNames() << endl ;
+    cout << endl ;
+  }
+
+
 
 //   if (_views.GetSize()>0) {
 //     cout << "views" << endl ;
@@ -538,3 +850,195 @@ void RooWorkspace::Print(Option_t* /*opts*/) const
   return ;
 }
 
+void RooWorkspace::CodeRepo::Streamer(TBuffer &R__b)
+{
+  typedef ::RooWorkspace::CodeRepo thisClass;
+
+   // Stream an object of class RooWorkspace::CodeRepo.
+   if (R__b.IsReading()) {
+
+     UInt_t R__s, R__c;
+     R__b.ReadVersion(&R__s, &R__c); 
+     
+     // Stream contents of ClassCode map
+     Int_t count(0) ;
+     R__b >> count ;
+     while(count--) {
+       TString name,hfile,cxxfile ;
+       name.Streamer(R__b) ;       
+       _map[name]._baseName.Streamer(R__b) ;
+       _map[name]._hfile.Streamer(R__b) ;
+       _map[name]._cxxfile.Streamer(R__b) ;    
+     }     
+     R__b.CheckByteCount(R__s, R__c, thisClass::IsA());
+ 
+     // Instantiate any classes that are not defined in current session
+     _compiledOK = !compileClasses() ;
+
+   } else {
+     
+     UInt_t R__c;
+     R__c = R__b.WriteVersion(thisClass::IsA(), kTRUE);
+     
+     // Stream contents of ClassCode map
+     R__b << _map.size() ;
+     map<TString,ClassCode>::iterator iter = _map.begin() ;
+     while(iter!=_map.end()) {
+       TString key_copy(iter->first) ;
+       key_copy.Streamer(R__b) ;
+       iter->second._baseName.Streamer(R__b) ;
+       iter->second._hfile.Streamer(R__b);
+       iter->second._cxxfile.Streamer(R__b);
+
+       ++iter ;
+     }
+     R__b.SetByteCount(R__c, kTRUE);
+     
+   }
+}
+
+
+std::string RooWorkspace::CodeRepo::listOfClassNames() const 
+{
+  string ret ;
+  map<TString,ClassCode>::const_iterator iter = _map.begin() ;
+  while(iter!=_map.end()) {
+    if (ret.size()>0) {
+      ret += ", " ;
+    }
+    ret += iter->first ;    
+    ++iter ;
+  }  
+  
+  return ret ;
+}
+
+
+Bool_t RooWorkspace::CodeRepo::compileClasses() 
+{
+
+  Bool_t haveDir=kFALSE ;
+  string dirName = Form(_classFileExportDir.c_str(),_wspace->GetName()) ;
+
+  // Process all class entries in repository
+  map<TString,ClassCode>::iterator iter = _map.begin() ;
+  while(iter!=_map.end()) {
+
+    // If class is already known, don't load
+    if (gClassTable->GetDict(iter->first.Data())) {
+      oocoutI(_wspace,ObjectHandling) << "RooWorkspace::CodeRepo::compileClasses() Embedded class " 
+				      << iter->first << " already in ROOT class table, skipping" << endl ;
+      ++iter ;
+      continue ;
+    }
+
+    if (!haveDir) {
+      // Make local directory to extract files 
+      if (!gSystem->AccessPathName(dirName.c_str())) {
+	oocoutI(_wspace,ObjectHandling) << "RooWorkspace::CodeRepo::compileClasses() reusing code export directory " << dirName.c_str() 
+					<< " to extract coded embedded in workspace" << endl ;
+      } else {
+	if (gSystem->MakeDirectory(dirName.c_str())==0) { 
+	  oocoutI(_wspace,ObjectHandling) << "RooWorkspace::CodeRepo::compileClasses() creating code export directory " << dirName.c_str() 
+					  << " to extract coded embedded in workspace" << endl ;
+	} else {
+	  oocoutE(_wspace,ObjectHandling) << "RooWorkspace::CodeRepo::compileClasses() ERROR creating code export directory " << dirName.c_str() 
+					  << " to extract coded embedded in workspace" << endl ;
+	  return kFALSE ;
+	}
+      }
+      haveDir=kTRUE ;
+    }
+
+    // Check if identical declaration file (header) is already written
+    Bool_t needDeclWrite=kTRUE ;
+    ifstream ifdecl(Form("%s/%s.h",dirName.c_str(),iter->first.Data())) ;
+    if (ifdecl) {
+      TString contents ;
+      char buf[1024] ;
+      while(ifdecl.getline(buf,1024)) {
+	contents += buf ;
+	contents += "\n" ;
+      }      
+      UInt_t crcFile = RooAbsArg::crc32(contents.Data()) ;
+      UInt_t crcWS   = RooAbsArg::crc32(iter->second._hfile.Data()) ;
+      needDeclWrite = (crcFile!=crcWS) ;
+    }
+  
+    // Write declaration file if required 
+    if (needDeclWrite) {
+      oocoutI(_wspace,ObjectHandling) << "RooWorkspace::CodeRepo::compileClasses() Extracting declaration code of class" << iter->first << endl ;
+      ofstream fdecl(Form("%s/%s.h",dirName.c_str(),iter->first.Data())) ;
+      if (!fdecl) {
+	oocoutE(_wspace,ObjectHandling) << "RooWorkspace::CodeRepo::compileClasses() ERROR opening file" 
+					<< Form("%s.h",iter->first.Data()) << " for writing" << endl ;
+	return kFALSE ;
+      }
+      fdecl << iter->second._hfile ;
+      fdecl.close() ;
+    }
+
+    // Check if identical implementation file is already written
+    Bool_t needImplWrite=kTRUE ;
+    ifstream ifimpl(Form("%s/%s.cxx",dirName.c_str(),iter->first.Data())) ;
+    if (ifimpl) {
+      TString contents ;
+      char buf[1024] ;
+      while(ifimpl.getline(buf,1024)) {
+	contents += buf ;
+	contents += "\n" ;
+      }      
+      UInt_t crcFile = RooAbsArg::crc32(contents.Data()) ;
+      UInt_t crcWS   = RooAbsArg::crc32(iter->second._cxxfile.Data()) ;
+      needImplWrite = (crcFile!=crcWS) ;
+    }
+  
+    // Write implementation file if required
+    if (needImplWrite) {
+      oocoutI(_wspace,ObjectHandling) << "RooWorkspace::CodeRepo::compileClasses() Extracting implementation code of class " << iter->first << endl ;
+      ofstream fimpl(Form("%s/%s.cxx",dirName.c_str(),iter->first.Data())) ;
+      if (!fimpl) {
+	oocoutE(_wspace,ObjectHandling) << "RooWorkspace::CodeRepo::compileClasses() ERROR opening file" 
+					<< Form("%s.cxx",iter->first.Data()) << " for writing" << endl ;
+	return kFALSE ;
+      }
+      fimpl << iter->second._cxxfile ;
+      fimpl.close() ;
+    }
+
+    // Compile class
+    oocoutI(_wspace,ObjectHandling) << "RooWorkspace::CodeRepo::compileClasses() Compiling code of class " << iter->first << endl ;
+    Bool_t ok = gSystem->CompileMacro(Form("%s/%s.cxx",dirName.c_str(),iter->first.Data()),"k") ;
+    
+    if (!ok) {
+      oocoutE(_wspace,ObjectHandling) << "RooWorkspace::CodeRepo::compileClasses() ERROR compiling class " << iter->first.Data() << ", to fix this you can do the following: " << endl 
+				      << "  1) Fix extracted source code files in directory " << dirName.c_str() << "/" << endl 
+				      << "  2) In clean ROOT session compiled fixed classes by hand using '.x " << dirName.c_str() << "/ClassName.cxx+'" << endl
+				      << "  3) Reopen file with RooWorkspace with broken source code in UPDATE mode. Access RooWorkspace to force loading of class" << endl
+				      << "     Broken instances in workspace will _not_ be compiled, instead precompiled fixed instances will be used." << endl
+				      << "  4) Reimport fixed code in workspace using 'RooWorkspace::importClassCode(\"*\",kTRUE)' method, Write() updated workspace to file and close file" << endl
+				      << "  5) Reopen file in clean ROOT session to confirm that problems are fixed" << endl ;
+	return kFALSE ;
+    }
+    
+    ++iter ;
+  }
+
+  return kTRUE ;
+}
+
+
+void RooWorkspace::WSDir::InternalAppend(TObject* obj) 
+{
+  TDirectory::Append(obj) ; 
+}
+
+void RooWorkspace::WSDir::Add(TObject*) 
+{
+  coutE(ObjectHandling) << "RooWorkspace::WSDir::Add(" << GetName() << ") ERROR: Directory is read-only representation of a RooWorkspace, use RooWorkspace::import() to add objects" << endl ;
+} 
+
+void RooWorkspace::WSDir::Append(TObject*) 
+{
+  coutE(ObjectHandling) << "RooWorkspace::WSDir::Add(" << GetName() << ") ERROR: Directory is read-only representation of a RooWorkspace, use RooWorkspace::import() to add objects" << endl ;
+}

@@ -75,6 +75,7 @@ RooAbsReal::RooAbsReal(const char *name, const char *title, const char *unit) :
   // Constructor with unit label
   setValueDirty() ;
   setShapeDirty() ;
+
 }
 
 RooAbsReal::RooAbsReal(const char *name, const char *title, Double_t minVal,
@@ -85,6 +86,7 @@ RooAbsReal::RooAbsReal(const char *name, const char *title, Double_t minVal,
   // Constructor with plot range and unit label
   setValueDirty() ;
   setShapeDirty() ;
+
 }
 
 
