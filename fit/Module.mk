@@ -65,9 +65,9 @@ $(FITDS):   $(FITH) $(FITL) $(ROOTCINTTMPEXE)
 
 all-fit:    $(FITO) $(FITDO) 
 
-map-fit:    $(RLIBMAP)
-		$(RLIBMAP) -r $(ROOTMAP) -l $(FITLIB) \
-		   -d $(FITLIBDEP) -c $(FITL)
+$(FITMAP):    	$(RLIBMAP) $(MAKEFILEDEP) $(FITL)
+	 	$(RLIBMAP) -o $(FITMAP) -l $(FITLIB) \
+		   -d $(FITLIBDEPM) -c $(FITL)
 
 map::           map-fit
 
