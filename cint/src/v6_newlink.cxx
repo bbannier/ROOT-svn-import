@@ -285,6 +285,7 @@ void G__CurrentCall(int call_type, void* call_ifunc, long *ifunc_idx)
 #define G__CTORDTOR_NOPRIVATEASSIGN   0x00002000
 static int* G__ctordtor_status;
 
+
 /**************************************************************************
 * G__cpplink file name
 **************************************************************************/
@@ -4365,7 +4366,7 @@ void G__if_ary_union_constructor(FILE *fp, int ifn, G__ifunc_table_internal *ifu
  * We have some problems to create the tmp dictionaries of certain classes.
  * Here we create an artificial condition telling us if the passed tagnum
  * is one of this classes...
- * This should be avoided, what we need is a more general conditions for
+ * This should be avoided, what we need is a more precise condition for
  * the cases where we fail creating the dictionary
  **************************************************************************/
 bool G__is_tagnum_safe(int i)
@@ -4456,7 +4457,7 @@ void G__write_postface(FILE *fp, struct G__ifunc_table_internal *ifunc, int i)
 }
 
 /**************************************************************************
- * G__cppif_geninlin
+ * G__cppif_geninline
  *
  * 29-05-06
  * Rem we have to deal with inlined functions.
@@ -5314,11 +5315,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
             if(0==ifunc->hash[j]) continue;
 #ifndef G__OLDIMPLEMENTATION1656
             // 08-10-07
-            // Dont try to evaluate this condition in case we have the new scheme...
-            // the automatic methods are created with size<0 by default so it
-            // mmesses it up.
-            // And by this condition I mean the inside the following if
-            // i.e (ifunc->pentry[j]->size < 0)
+            // With no-stubs (ifunc->pentry[j]->size < 0) by default.
             if (G__dicttype==kCompleteDictionary || !G__is_tagnum_safe(i)){
               if (ifunc->pentry[j]->size < 0) {
                 // already precompiled, skip it
@@ -5489,14 +5486,14 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
           ){
 
           // 21-06-07
-          // for the stats dont generate default memebers
+          // for the stubs don't generate default memebers
           // Note: we don't want neither constructor nor copyconstructor 
           // nor destructor nor asign. operator stubs       
 
           // 06-07-07
-          // With the new scheme of mangled names in the dicitionary we need wrappers
-          // for the default functions (constructor and assignment operator)...
-          // except for the destructor but deal with that in G__cppif_gendefault
+          // We need wrappers for default functions (constructor and assignment operator...)
+          // except for the destructor because of mangled names in the dicitionary,
+          // but deal with that in G__cppif_gendefault
           if(  G__dicttype==kCompleteDictionary || G__dicttype==kNoWrappersDictionary ||
                (( G__dicttype==kFunctionSymbols || G__dicttype==kNoWrappersDictionary)
                 && G__is_tagnum_safe(i)) ||
@@ -9447,10 +9444,10 @@ void G__cpplink_memfunc(FILE *fp)
               fprintf(fp, "%d ", ifunc->param[j][k]->reftype + ifunc->param[j][k]->isconst*10);
               if (ifunc->param[j][k]->def) {
 #ifdef G__NOSTUBS
-                // 15-02-08: Here we find a nasty problem. When we want to evaluate a default
-                // parameter in the stub-less calls, the experssion (of this parameters) must
-                // be known to CInt, which migth not be true at run-time. To fix this, we will
-                // try to convert macros, to actual values when generating the dictionary
+                // 15-02-08: When evaluating a default parameter in the stub-less calls,
+                // its expression must be known to CInt, which migth not be true at run-time
+                // for CPP defines. So replace macros with their actual values when generating
+                // the dictionary
                 char res[G__ONELINE]; // possible overflow
                 char tmp[G__ONELINE]; // possible overflow
                 char *str = ifunc->param[j][k]->def;
@@ -9547,7 +9544,7 @@ void G__cpplink_memfunc(FILE *fp)
               }
               fprintf(fp, "))(&%s::%s)", G__fulltagname(ifunc->tagnum, 1), ifunc->funcname[j]);
             }
-            else
+            else 
               fprintf(fp, ", (void*) NULL");
 
             int virtflag = 0;

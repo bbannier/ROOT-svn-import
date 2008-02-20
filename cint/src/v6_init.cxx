@@ -18,7 +18,7 @@
 #include <typeinfo>
 #include <string>
 
-#ifdef __APPLE__
+#if defined(G__NOSTUBS) && defined(__APPLE__)
 #include <libgen.h> //needed for basename
 #endif
 

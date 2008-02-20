@@ -419,7 +419,7 @@ const char* G__find_last_scope_operator(const char* name)
 {
    // -- Return a pointer to the last scope operator in name.
    // Only those at the outermost level of template nesting are considered.
-   const char* p = (char*)name + strlen(name) - 1;
+   const char* p = name + strlen(name) - 1;
    int single_quote = 0;
    int double_quote = 0;
    int nest = 0;

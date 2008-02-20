@@ -5122,11 +5122,10 @@ int G__interpret_func(G__value* result7, const char* funcname, G__param* libp, i
    }
    
    // 24-05-07
-   // We had a check in ifunc to verify that this function had a pointer
-   // to the stub. In the new algorith this pointer may be null in case
-   // we dont create the stub. Now it has to check that that and that 
-   // the function has not been register yet
-   // Error if body not defined.
+   // We had a check in ifunc to verify that it has a stub pointer.
+   // For stub-less funcs this pointer may be null.
+   // So check that and that the function has not been register yet;
+   // error if body not defined.
    if (
       //
 #ifdef G__ASM_WHOLEFUNC

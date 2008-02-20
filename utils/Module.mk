@@ -53,7 +53,7 @@ clean-utils:
 clean::         clean-utils
 
 distclean-utils: clean-utils
-		@rm -f $(ROOTCINTDEP) $(ROOTCINTTMPDEP) $(ROOTCINTEXE) \
+		@rm -f $(ROOTCINTDEP) $(ROOTCINTTMPEXE) $(ROOTCINTEXE) \
 		   $(RLIBMAPDEP) $(RLIBMAP) \
 		   $(UTILSDIRS)/*.exp $(UTILSDIRS)/*.lib $(UTILSDIRS)/*_tmp.cxx
 
