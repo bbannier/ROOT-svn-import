@@ -370,8 +370,18 @@ class genDictionary(object) :
     self.selector = sel  # remember the selector
     if self.selector :
       for f in self.functions :
-        funcname = self.genTypeName(f['id'])
-        if self.selector.selfunction( funcname ) and not self.selector.excfunction( funcname ) :
+        id = f['id']
+        funcname = self.genTypeName(id)
+        attrs = self.xref[id]['attrs']
+        context = self.genTypeName(attrs['context'])
+        demangled = attrs.get('demangled')
+        if demangled and len(demangled) :
+          lencontext = len(context)
+          if lencontext > 2:
+            demangled = demangled[lencontext + 2:]
+        else :
+          demangled = ""
+        if self.selector.selfunction( funcname, demangled ) and not self.selector.excfunction( funcname, demangled ) :
           selec.append(f)
         elif 'extra' in f and f['extra'].get('autoselect') and f not in selec:
           selec.append(f)
@@ -550,7 +560,10 @@ class genDictionary(object) :
         if elem in ('Constructor',) : return 0
     #----Filter using the exclusion list in the selection file
     if self.selector and 'name' in attrs and  elem in ('Constructor','Destructor','Method','OperatorMethod','Converter') :
-      if self.selector.excmethod(self.genTypeName(attrs['context']), attrs['name'] ) : return 0
+      context = self.genTypeName(attrs['context'])
+      demangledMethod = attrs.get('demangled')
+      if demangledMethod: demangledMethod = demangledMethod[len(context) + 2:]
+      if self.selector.excmethod(self.genTypeName(attrs['context']), attrs['name'], demangledMethod ) : return 0
     return 1
 #----------------------------------------------------------------------------------
   def tmplclasses(self, local):
@@ -769,8 +782,8 @@ class genDictionary(object) :
         for b in bases :
           if b.get('virtual','') == '1' : acc = 'virtual ' + b['access']
           else                          : acc = b['access']
-	  bname = self.genTypeName(b['type'],colon=True)
-	  if self.xref[b['type']]['attrs'].get('access') in ('private','protected'):
+          bname = self.genTypeName(b['type'],colon=True)
+          if self.xref[b['type']]['attrs'].get('access') in ('private','protected'):
             bname = string.translate(str(bname),self.transtable)
             if not inner: c = self.genClassShadow(self.xref[b['type']]['attrs']) + c
           c += indent + '%s %s' % ( acc , bname )
@@ -782,6 +795,7 @@ class genDictionary(object) :
           c += indent + '  virtual ~%s() throw();\n' % ( clt )
       members = attrs.get('members','')
       memList = members.split()
+      # Inner class/struct/union/enum.
       for m in memList :
         member = self.xref[m]
         if member['elem'] in ('Class','Struct','Union','Enumeration') \
@@ -791,6 +805,23 @@ class genDictionary(object) :
           if cmem != cls and cmem not in inner_shadows :
             inner_shadows[cmem] = string.translate(str(cmem), self.transtable)
             c += self.genClassShadow(member['attrs'], inner + 1)
+      # Virtual methods.
+      # Shadow classes inherit from the same bases as the shadowed class; if a
+      # base is virtually inherited from at least two bases and it defines
+      # virtual methods then these virtual methods must be declared in the
+      # shadow class or the compiler will complain about ambiguous inheritance.
+      # Also, if the shadowed class defines a virtual method (that's not in the base)
+      # add our own virtual table by adding that method.
+      for m in memList :
+        member = self.xref[m]
+        if member['elem'] in ('Method','OperatorMethod') \
+               and member['attrs'].get('virtual') == '1':
+          # Remove the class name and the scope operator from the demangled method name.
+          currentClassName = attrs['demangled']
+          demangledMethod = member['attrs'].get('demangled')[len(currentClassName) + 2:]
+          cmem = '  virtual %s %s throw();' % (self.genTypeName(member['attrs'].get('returns')), demangledMethod)
+          c += indent + cmem + '\n'
+      # Data members.
       for m in memList :
         member = self.xref[m]
         if member['elem'] in ('Field',) :
@@ -1061,7 +1092,10 @@ class genDictionary(object) :
       self.genTypeID(id)
       args = self.xref[id]['subelems']
       returns  = self.genTypeName(f['returns'], enum=True, const=True)
-      if not self.quiet : print  'function '+ name
+      demangled = self.xref[id]['attrs'].get('demangled')
+      if not demangled or not len(demangled):
+        demangled = name
+      if not self.quiet : print  'function '+ demangled
       s += 'static void* '
       if len(args) :
         s +=  'function%s( void*, const std::vector<void*>& arg, void*)\n{\n' % id 

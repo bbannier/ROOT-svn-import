@@ -4062,10 +4062,11 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
 * G__method_inbase()
 * This function search for the method ifn (index in ifunc) in the ifunc->tagnum's
 * base classes
-* RETURN -> NULL Method not found
-*           NOT NULL Method Found. Method's ifunc table pointer
+* RETURN -> 0: method not found in any base
+*           1: method found in a base
 **************************************************************************/
 
+extern "C"
 int G__method_inbase(int ifn, G__ifunc_table_internal *ifunc)
 {
 
@@ -4392,8 +4393,6 @@ void G__cppif_genfunc(FILE *fp, FILE * /* hfp */, int tagnum, int ifn, G__ifunc_
 #endif // G__SMALLOBJECT
 }
 
-int G__class_autoloading(int tagnum);
-
 /**************************************************************************
 * G__cppif_returntype()
 *
@@ -4535,7 +4534,7 @@ int G__cppif_returntype(FILE *fp, int ifn, G__ifunc_table_internal *ifunc, char 
     case 'u':
       switch (G__struct.type[tagnum]) {
         case 'a':
-           G__class_autoloading(tagnum);
+           G__class_autoloading(&tagnum);
 	case 'c':
 	case 's':
 	case 'u':
