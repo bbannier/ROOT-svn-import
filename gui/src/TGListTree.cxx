@@ -1802,7 +1802,8 @@ void TGListTree::AddItem(TGListTreeItem *parent, TGListTreeItem *item)
 
    InsertChild(parent, item);
 
-   DoRedraw();
+   if ((parent == 0) || (parent && parent->IsOpen()))
+      DoRedraw();
 }
 
 //______________________________________________________________________________
@@ -1817,7 +1818,8 @@ TGListTreeItem *TGListTree::AddItem(TGListTreeItem *parent, const char *string,
    item = new TGListTreeItemStd(fClient, string, open, closed, checkbox);
    InsertChild(parent, item);
 
-   DoRedraw();
+   if ((parent == 0) || (parent && parent->IsOpen()))
+      DoRedraw();
    return item;
 }
 
