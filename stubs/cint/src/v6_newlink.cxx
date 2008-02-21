@@ -1972,7 +1972,6 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
       result7->ref = (long) pobject;
       // Object's Type
       result7->type = 'u';
-
    }
    else{// Not Constructor
       char * finalclass = 0;
@@ -2077,7 +2076,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
                   parfunc = parfunc->next;
                }
                new_ifunc = G__struct.memfunc[tagnum];
-               new_ifunc = G__get_methodhandle4(ifunc->funcname[ifn], &fpara, new_ifunc, &pifn, &poffset, 1, 1, 0, 0);
+               new_ifunc = G__get_methodhandle4(new_ifunc->funcname[ifn], &fpara, new_ifunc, &pifn, &poffset, 1, 1, 0, 0);
             }
         
             if(new_ifunc && (ifunc!=new_ifunc)){
