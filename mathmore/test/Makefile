@@ -17,10 +17,10 @@ include $(ROOTSYS)/test/Makefile.arch
 
 
 ifeq ($(PLATFORM),win32)
-EXTRALIBS        = "$(ROOTSYS)/lib/libMathMore.lib" "$(ROOTSYS)/lib/libMathCore.lib" $(GSLLIBS)
+EXTRALIBS        = "$(ROOTSYS)/lib/libMathMore.lib"  $(GSLLIBS)
 UNURANLIB        = "$(ROOTSYS)/lib/libUnuran.lib"
 else
-EXTRALIBS        = -lMathMore -lMathCore $(GSLLIBDIR) $(GSLLIBS)
+EXTRALIBS        = -lMathMore  $(GSLLIBDIR) $(GSLLIBS)
 UNURANLIB        = -lUnuran
 CXXFLAGS += -g
 
