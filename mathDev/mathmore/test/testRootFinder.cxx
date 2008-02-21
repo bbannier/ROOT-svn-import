@@ -15,13 +15,20 @@ int myfuncCalls = 0;
 const double absTol = 1E-3; 
 const double relTol = 1E-6; 
 
-double myfunc ( double x, void * params = 0) {
+double myfunc ( double x) {
   myfuncCalls += 1;
   return x*x - 5; 
 }
+// required for GSL type func
+double myfunc_gsl(double x, void *) { 
+  return myfunc(x);
+}
 
-double myfunc_deriv ( double x, void * /*params*/) { 
+double myfunc_deriv ( double x ) { 
   return 2.0*x; 
+}
+double myfunc_deriv_gsl ( double x, void * /*params*/) { 
+  return myfunc_deriv(x);
 }
 
 void myfunc_fdf( double x, void * /*params*/, double *y, double *dy) { 
@@ -72,13 +79,13 @@ void testRootFinder() {
   polyf.SetParameters(&p[0]); 
 
   //ROOT::Math::IGenFunction *func = &polyf;
-  ROOT::Math::Functor1D    *func = new ROOT::Math::Functor1D (&myfunc);
+  ROOT::Math::Functor1D    func (&myfunc);
 
   ROOT::Math::RootFinder *rf1 = new ROOT::Math::RootFinder(ROOT::Math::RootFinder::GSL_BISECTION);
   timer.Reset(); timer.Start(); myfuncCalls = 0;
   for (int i = 0; i < iterTest; ++i)
   {
-     rf1->SetFunction( *func, 0, 5); 
+     rf1->SetFunction( func, 0, 5); 
      status = findRoot(rf1);
   }
   timer.Stop();
@@ -89,7 +96,7 @@ void testRootFinder() {
   timer.Reset(); timer.Start(); myfuncCalls = 0;
   for (int i = 0; i < iterTest; ++i)
   {
-     rf2->SetFunction( *func, 0, 5); 
+     rf2->SetFunction( func, 0, 5); 
      status = findRoot(rf2); 
   }
   timer.Stop();
@@ -97,11 +104,13 @@ void testRootFinder() {
 
   // methods using derivatives 
 
+
   ROOT::Math::RootFinder *rf3 = new ROOT::Math::RootFinder(ROOT::Math::RootFinder::GSL_SECANT);
+  ROOT::Math::GradFunctor1D gfunc( &myfunc, &myfunc_deriv); 
   timer.Reset(); timer.Start(); myfuncCalls = 0;
   for (int i = 0; i < iterTest; ++i)
   {
-     rf3->SetFunction( polyf, 1); 
+     rf3->SetFunction( gfunc, 1); 
      status = findRoot(rf3); 
   }
   timer.Stop();
@@ -112,7 +121,7 @@ void testRootFinder() {
   timer.Reset(); timer.Start(); myfuncCalls = 0;
   for (int i = 0; i < iterTest; ++i)
   {
-     rf4->SetFunction( polyf, 1); 
+     rf4->SetFunction( gfunc, 1); 
      status = findRoot(rf4); 
   }
   timer.Stop();
@@ -124,7 +133,7 @@ void testRootFinder() {
   timer.Reset(); timer.Start(); myfuncCalls = 0;
   for (int i = 0; i < iterTest; ++i)
   {
-     rf5->SetFunction(myfunc, myfunc_deriv, myfunc_fdf, ptr2, 5.); 
+     rf5->SetFunction(myfunc_gsl, myfunc_deriv_gsl, myfunc_fdf, ptr2, 5.); 
      status = findRoot(rf5); 
   }
   timer.Stop();
@@ -134,7 +143,7 @@ void testRootFinder() {
 
   // the following two examples won't work when interpreted CINT
   //const FP funcPtr = &myfunc;
-  ROOT::Math::GSLRootFinder::GSLFuncPointer funcPtr = &myfunc;
+  ROOT::Math::GSLRootFinder::GSLFuncPointer funcPtr = &myfunc_gsl;
   void * ptr1 = 0; 
   ROOT::Math::Roots::Brent *rf6 = new ROOT::Math::Roots::Brent();
   //ROOT::Math::RootFinder<ROOT::Math::Roots::Brent> *rf6 = new ROOT::Math::RootFinder<ROOT::Math::Roots::Brent>;
