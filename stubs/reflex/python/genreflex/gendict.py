@@ -372,8 +372,16 @@ class genDictionary(object) :
       for f in self.functions :
         id = f['id']
         funcname = self.genTypeName(id)
-        args = self.xref[id]['subelems']
-        if self.selector.selfunction( funcname, args ) and not self.selector.excfunction( funcname, args ) :
+        attrs = self.xref[id]['attrs']
+        context = self.genTypeName(attrs['context'])
+        demangled = attrs.get('demangled')
+        if demangled and len(demangled) :
+          lencontext = len(context)
+          if lencontext > 2:
+            demangled = demangled[lencontext + 2:]
+        else :
+          demangled = ""
+        if self.selector.selfunction( funcname, demangled ) and not self.selector.excfunction( funcname, demangled ) :
           selec.append(f)
         elif 'extra' in f and f['extra'].get('autoselect') and f not in selec:
           selec.append(f)
@@ -421,9 +429,20 @@ class genDictionary(object) :
         types.append(attrs['id'])
         if 'members' in attrs :
           for m in attrs['members'].split() :
-            if self.xref[m]['elem'] == 'Field' :
-              type = self.xref[m]['attrs']['type']
+            xref = self.xref[m]
+            if xref['elem'] in ['Field','Typedef'] and xref['attrs']['access']=="public":
+              type = xref['attrs']['type']
               self.getdependent(type, types)
+	    elif xref['elem'] in ['Method','OperatorMethod','Constructor'] \
+                     and self.isMethodReallyPublic(m):
+              if 'returns' in xref['attrs']:
+                type = xref['attrs']['returns']
+                self.getdependent(type, types)
+	      for arg in  xref['subelems']:
+		  type = arg['type']
+		  self.getdependent(type, types)
+	    else:
+	      pass #print "Doing nothing for element:", self.xref[m]['elem']
         if 'bases' in attrs :
           for b in attrs['bases'].split() :
             if b[:10] == 'protected:' : b = b[10:]
@@ -550,10 +569,57 @@ class genDictionary(object) :
     if 'context' in attrs :
       if 'abstract' in self.xref[attrs['context']]['attrs'] : 
         if elem in ('Constructor',) : return 0
+
+    if elem in ['Method', 'Constructor', 'OperatorMethod']:
+      if self.hasNonPublicArgs(args):
+        print "censoring method:",attrs['name']
+        return 0
     #----Filter using the exclusion list in the selection file
     if self.selector and 'name' in attrs and  elem in ('Constructor','Destructor','Method','OperatorMethod','Converter') :
-      if self.selector.excmethod(self.genTypeName(attrs['context']), attrs['name'], args ) : return 0
+      context = self.genTypeName(attrs['context'])
+      demangledMethod = attrs.get('demangled')
+      if demangledMethod: demangledMethod = demangledMethod[len(context) + 2:]
+      if self.selector.excmethod(self.genTypeName(attrs['context']), attrs['name'], demangledMethod ) : return 0
     return 1
+#----------------------------------------------------------------------------------
+  def isMethodReallyPublic(self,id):
+    """isMethodReallyPublic checks the accessibility of the method as well as the accessibility of the types
+    of arguments and return value. This is needed because C++ allows methods in a public section to be defined
+    from types defined in a private/protected section.
+    """
+    xref = self.xref[id]
+    attrs = xref['attrs']
+    return (attrs['access'] == "public"
+            and
+            (not self.hasNonPublicArgs(xref['subelems'])) 
+            and
+            (not 'returns' in attrs or self.isTypePublic(attrs['returns'])))
+#----------------------------------------------------------------------------------
+  def hasNonPublicArgs(self,args):
+    """hasNonPublicArgs will process a list of method arguments to check that all the referenced arguments in there are publically available (i.e not defined using protected or private types)."""
+    for arg in args:
+      type = arg["type"]
+      public = self.isTypePublic(type)
+      if public == 0:
+        return 1
+    return 0
+#----------------------------------------------------------------------------------
+  def isTypePublic(self, id):
+    type_dict = self.xref[id]
+
+    if type_dict['elem'] in ['PointerType','Typedef', 'ReferenceType', 'CvQualifiedType']:
+      return self.isTypePublic(type_dict['attrs']['type'])
+    elif type_dict['elem'] in ['FundamentalType']:
+      return 1
+    elif type_dict['elem'] in ['Class','Struct']:
+      access=type_dict['attrs'].get('access')
+      if access and access != 'public':
+        return 0
+      else:
+        return 1
+    else:
+      return 1
+      #raise "Unknown type category in isTypePublic",type_dict['elem']
 #----------------------------------------------------------------------------------
   def tmplclasses(self, local):
     result = []
@@ -771,8 +837,8 @@ class genDictionary(object) :
         for b in bases :
           if b.get('virtual','') == '1' : acc = 'virtual ' + b['access']
           else                          : acc = b['access']
-	  bname = self.genTypeName(b['type'],colon=True)
-	  if self.xref[b['type']]['attrs'].get('access') in ('private','protected'):
+          bname = self.genTypeName(b['type'],colon=True)
+          if self.xref[b['type']]['attrs'].get('access') in ('private','protected'):
             bname = string.translate(str(bname),self.transtable)
             if not inner: c = self.genClassShadow(self.xref[b['type']]['attrs']) + c
           c += indent + '%s %s' % ( acc , bname )
@@ -784,6 +850,7 @@ class genDictionary(object) :
           c += indent + '  virtual ~%s() throw();\n' % ( clt )
       members = attrs.get('members','')
       memList = members.split()
+      # Inner class/struct/union/enum.
       for m in memList :
         member = self.xref[m]
         if member['elem'] in ('Class','Struct','Union','Enumeration') \
@@ -793,6 +860,25 @@ class genDictionary(object) :
           if cmem != cls and cmem not in inner_shadows :
             inner_shadows[cmem] = string.translate(str(cmem), self.transtable)
             c += self.genClassShadow(member['attrs'], inner + 1)
+      # Virtual methods.
+      # Shadow classes inherit from the same bases as the shadowed class; if a
+      # base is virtually inherited from at least two bases and it defines
+      # virtual methods then these virtual methods must be declared in the
+      # shadow class or the compiler will complain about ambiguous inheritance.
+      # Also, if the shadowed class defines a virtual method (that's not in the base)
+      # add our own virtual table by adding that method.
+      for m in memList :
+        member = self.xref[m]
+        if member['elem'] in ('Method','OperatorMethod') \
+               and member['attrs'].get('virtual') == '1' \
+               and self.isTypePublic(member['attrs']['returns']) \
+               and not self.hasNonPublicArgs(member['subelems']):
+          # Remove the class name and the scope operator from the demangled method name.
+          currentClassName = attrs['demangled']
+          demangledMethod = member['attrs'].get('demangled')[len(currentClassName) + 2:]
+          cmem = '  virtual %s %s throw();' % (self.genTypeName(member['attrs'].get('returns')), demangledMethod)
+          c += indent + cmem + '\n'
+      # Data members.
       for m in memList :
         member = self.xref[m]
         if member['elem'] in ('Field',) :
@@ -1063,7 +1149,10 @@ class genDictionary(object) :
       self.genTypeID(id)
       args = self.xref[id]['subelems']
       returns  = self.genTypeName(f['returns'], enum=True, const=True)
-      if not self.quiet : print  'function '+ name
+      demangled = self.xref[id]['attrs'].get('demangled')
+      if not demangled or not len(demangled):
+        demangled = name
+      if not self.quiet : print  'function '+ demangled
       s += 'static void* '
       if len(args) :
         s +=  'function%s( void*, const std::vector<void*>& arg, void*)\n{\n' % id 
@@ -1737,6 +1826,7 @@ def normalizeFragment(name,alltempl=False) :
   name = name.strip()
   if name.find('<') == -1  : 
     nor =  name
+    if nor.find('int') == -1: return nor
     for e in [ ['long long unsigned int', 'unsigned long long'],
              ['long long int',          'long long'],
              ['unsigned short int',     'unsigned short'],
