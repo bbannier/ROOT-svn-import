@@ -35,6 +35,7 @@
 #include "TGSplitFrame.h"
 #include "TGLEmbeddedViewer.h"
 #include "TGShapedFrame.h"
+#include "TGButton.h"
 
 #include "TFormula.h"
 #include "TF1.h"
@@ -149,7 +150,6 @@ public:
    void           ItemClicked(TGListTreeItem *item, Int_t btn, Int_t x, Int_t y);
    void           HandleMenu(Int_t id);
    void           OnClicked(TObject *obj);
-   void           OnDoubleClick();
    void           OnMouseIdle(TGLPhysicalShape *shape, UInt_t posx, UInt_t posy);
    void           OnMouseOver(TGLPhysicalShape *shape);
    void           OnViewerActivated();
@@ -157,6 +157,7 @@ public:
    void           ToggleOrthoRotate();
    void           ToggleOrthoDolly();
    void           UpdateSummary();
+   void           SwapToMainView();
 
    TEveProjectionManager *GetRPhiMgr() const { return fRPhiMgr; }
    TEveProjectionManager *GetRhoZMgr() const { return fRhoZMgr; }
@@ -379,6 +380,8 @@ SplitGLView::SplitGLView(const TGWindow *p, UInt_t w, UInt_t h, Bool_t embed) :
 
    TGSplitFrame *frm;
    TEveScene *s;
+   TGHorizontalFrame *hfrm;
+   TGPictureButton *button;
 
    // create the "file" popup menu
    fMenuFile = new TGPopupMenu(gClient->GetRoot());
@@ -472,8 +475,6 @@ SplitGLView::SplitGLView(const TGWindow *p, UInt_t w, UInt_t h, Bool_t embed) :
    fViewer0->Connect("MouseIdle(TGLPhysicalShape*,UInt_t,UInt_t)", 
                       "SplitGLView", this, 
                       "OnMouseIdle(TGLPhysicalShape*,UInt_t,UInt_t)");
-   fViewer0->Connect("DoubleClicked()", "SplitGLView", this, 
-                      "OnDoubleClick()");
    fViewer0->Connect("Clicked(TObject*)", "SplitGLView", this, 
                       "OnClicked(TObject*)");
    fViewer[0] = new TEveViewer("SplitGLViewer[0]");
@@ -493,10 +494,19 @@ SplitGLView::SplitGLView(const TGWindow *p, UInt_t w, UInt_t h, Bool_t embed) :
 
    // get bottom left split frame
    frm = fSplitFrame->GetSecond()->GetFirst();
+
+   hfrm = new TGHorizontalFrame(frm);
+   button= new TGPictureButton(hfrm, gClient->GetPicture("swap.png"));
+   button->SetToolTipText("Swap to big view");
+   hfrm->AddFrame(button);
+   button->Connect("Clicked()","SplitGLView",this,"SwapToMainView()");
+
    // create (embed) a GL viewer inside
-   fViewer1 = new TGLEmbeddedViewer(frm, fPad);
-   frm->AddFrame(fViewer1->GetFrame(), new TGLayoutHints(kLHintsExpandX | 
-                 kLHintsExpandY));
+   fViewer1 = new TGLEmbeddedViewer(hfrm, fPad);
+   hfrm->AddFrame(fViewer1->GetFrame(), new TGLayoutHints(kLHintsExpandX | 
+                  kLHintsExpandY));
+   frm->AddFrame(hfrm, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+
    // set the camera to orthographic (XOY) for this viewer
    fViewer1->SetCurrentCamera(TGLViewer::kCameraOrthoXOY);
    // connect signal we are interested to
@@ -507,8 +517,6 @@ SplitGLView::SplitGLView(const TGWindow *p, UInt_t w, UInt_t h, Bool_t embed) :
    fViewer1->Connect("MouseIdle(TGLPhysicalShape*,UInt_t,UInt_t)", 
                       "SplitGLView", this, 
                       "OnMouseIdle(TGLPhysicalShape*,UInt_t,UInt_t)");
-   fViewer1->Connect("DoubleClicked()", "SplitGLView", this, 
-                     "OnDoubleClick()");
    fViewer1->Connect("Clicked(TObject*)", "SplitGLView", this, 
                       "OnClicked(TObject*)");
    fViewer[1] = new TEveViewer("SplitGLViewer[1]");
@@ -532,9 +540,18 @@ SplitGLView::SplitGLView(const TGWindow *p, UInt_t w, UInt_t h, Bool_t embed) :
    // get bottom center split frame
    frm = fSplitFrame->GetSecond()->GetSecond()->GetFirst();
    // create (embed) a GL viewer inside
-   fViewer2 = new TGLEmbeddedViewer(frm, fPad);
-   frm->AddFrame(fViewer2->GetFrame(), new TGLayoutHints(kLHintsExpandX | 
-                 kLHintsExpandY));
+   hfrm = new TGHorizontalFrame(frm);
+   button= new TGPictureButton(hfrm, gClient->GetPicture("swap.png"));
+   button->SetToolTipText("Swap to big view");
+   hfrm->AddFrame(button);
+   button->Connect("Clicked()","SplitGLView",this,"SwapToMainView()");
+
+   // create (embed) a GL viewer inside
+   fViewer2 = new TGLEmbeddedViewer(hfrm, fPad);
+   hfrm->AddFrame(fViewer2->GetFrame(), new TGLayoutHints(kLHintsExpandX | 
+                  kLHintsExpandY));
+   frm->AddFrame(hfrm, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+
    // set the camera to orthographic (XOY) for this viewer
    fViewer2->SetCurrentCamera(TGLViewer::kCameraOrthoXOY);
    // connect signal we are interested to
@@ -545,8 +562,6 @@ SplitGLView::SplitGLView(const TGWindow *p, UInt_t w, UInt_t h, Bool_t embed) :
    fViewer2->Connect("MouseIdle(TGLPhysicalShape*,UInt_t,UInt_t)", 
                       "SplitGLView", this, 
                       "OnMouseIdle(TGLPhysicalShape*,UInt_t,UInt_t)");
-   fViewer2->Connect("DoubleClicked()", "SplitGLView", this, 
-                     "OnDoubleClick()");
    fViewer2->Connect("Clicked(TObject*)", "SplitGLView", this, 
                       "OnClicked(TObject*)");
    fViewer[2] = new TEveViewer("SplitGLViewer[2]");
@@ -563,10 +578,16 @@ SplitGLView::SplitGLView(const TGWindow *p, UInt_t w, UInt_t h, Bool_t embed) :
 
    // get bottom right split frame
    frm = fSplitFrame->GetSecond()->GetSecond()->GetSecond();
-   // generate HTML summary table
+
+   hfrm = new TGHorizontalFrame(frm);
+   button= new TGPictureButton(hfrm, gClient->GetPicture("swap.png"));
+   button->SetToolTipText("Swap to big view");
+   hfrm->AddFrame(button);
+   button->Connect("Clicked()","SplitGLView",this,"SwapToMainView()");
    fHtmlSummary = new HtmlSummary("Alice Event Display Summary Table");
-   fHtml = new TGHtml(frm, 100, 100, -1);
-   frm->AddFrame(fHtml, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+   fHtml = new TGHtml(hfrm, 100, 100, -1);
+   hfrm->AddFrame(fHtml, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+   frm->AddFrame(hfrm, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
 
    if (fIsEmbedded && gEve) {
       gEve->GetListTree()->Connect("Clicked(TGListTreeItem*, Int_t, Int_t, Int_t)",
@@ -927,30 +948,6 @@ void SplitGLView::OnClicked(TObject *obj)
 }
 
 //______________________________________________________________________________
-void SplitGLView::OnDoubleClick()
-{
-   // Handle double-clicks in GL viewer
-
-   // get the origin (sender) of the signal
-   TGLEmbeddedViewer *sourceview = dynamic_cast<TGLEmbeddedViewer*>((TQObject*)gTQSender);
-   if (sourceview == 0) return;
-
-   // target: top (main) GL View frame
-   TGSplitFrame *dest = fSplitFrame->GetFirst();
-   // source frame
-   TGCompositeFrame *source = (TGCompositeFrame *)sourceview->GetFrame();
-   // get its parent frame (its container)
-   TGCompositeFrame *sourceframe = (TGCompositeFrame *)source->GetParent();
-   // skip if source and target are the same
-   if (sourceframe == dest) return;
-   // get the pointer to the frame that has to be exchanged with the 
-   // source one (the one actually in the destination)
-   TGCompositeFrame *prev = (TGCompositeFrame *)dest->GetFrame();
-   // finally swith the frames
-   TGSplitFrame::SwitchFrames(sourceview->GetFrame(), dest, prev);
-}
-
-//______________________________________________________________________________
 void SplitGLView::UpdateSummary()
 {
    // Update summary of current event.
@@ -1006,6 +1003,22 @@ void SplitGLView::UpdateSummary()
       fHtml->ParseText((char*)fHtmlSummary->Html().Data());
       fHtml->Layout();
    }
+}
+
+//______________________________________________________________________________
+void SplitGLView::SwapToMainView()
+{
+   TGPictureButton *src = (TGPictureButton*)gTQSender;
+   TGCompositeFrame *parent = (TGCompositeFrame *)(src->GetParent());
+   TGFrame *source = dynamic_cast<TGFrameElement*>(parent->GetList()->Last())->fFrame;
+   if (!source) return;
+
+   TGSplitFrame *dest = fSplitFrame->GetFirst();
+   
+   TGFrame *prev = (TGFrame *)(dest->GetFrame());
+   
+   if ((source != prev) && (source != dest))
+      TGSplitFrame::SwitchFrames(source, dest, prev);
 }
 
 // Linkdef
