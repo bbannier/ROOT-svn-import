@@ -158,7 +158,7 @@ private:
 #ifdef ROOT_FIT_PARALLEL
       return FitUtilParallel::EvaluateChi2(fFunc, fData, x, fNEffPoints); 
 #else 
-      if (!fData.UseCoordErrors() ) 
+      if (!fData.HaveCoordErrors() ) 
          return FitUtil::EvaluateChi2(fFunc, fData, x, fNEffPoints); 
       else 
          return FitUtil::EvaluateChi2Effective(fFunc, fData, x, fNEffPoints); 

@@ -278,7 +278,7 @@ double FitUtil::EvaluateChi2Effective(IModelFunction & func, const BinData & dat
    std::cout << "evaluate chi2 using function " << &func << "  " << p << std::endl; 
 #endif
 
-   assert(data.UseCoordErrors() ); 
+   assert(data.HaveCoordErrors() ); 
 
    double chi2 = 0;
    int nRejected = 0; 
@@ -299,11 +299,21 @@ double FitUtil::EvaluateChi2Effective(IModelFunction & func, const BinData & dat
 
       double fval = func( x );
 
-
+      double delta_y_func = y - fval; 
 
 
       double ey = 0;
-      const double * ex = data.GetPointError(i, ey); 
+      const double * ex = 0; 
+      if (!data.HaveAsymErrors() )
+         ex = data.GetPointError(i, ey); 
+      else { 
+         double eylow, eyhigh = 0; 
+         ex = data.GetPointError(i, eylow, eyhigh); 
+         if ( delta_y_func < 0) 
+            ey = eylow; 
+         else
+            ey = eyhigh; 
+      }
       double e2 = ey * ey; 
       // before calculating the gradient check that all error in x are not zero
       unsigned int icoord = 0; 
@@ -355,7 +365,7 @@ double FitUtil::EvaluateChi2Residual(IModelFunction & func, const BinData & data
    //  integral option is also not yet implemented
    //  one can use in that case normal chi2 method
   
-   if (data.UseCoordErrors()) 
+   if (data.Opt().fCoordErrors ) 
       MATH_ERROR_MSG("FitUtil::EvaluateChi2Residual","Error on the coordinates are not used in calculating Chi2 residual");
 
    if (data.Opt().fIntegral )
@@ -413,7 +423,7 @@ void FitUtil::EvaluateChi2Gradient(IModelFunction & f, const BinData & data, con
    if (data.Opt().fIntegral )
       MATH_WARN_MSG("FitUtil::EvaluateChi2Residual","Bin integral is not used in calculating Chi2 gradient");
 
-   if (data.UseCoordErrors()) 
+   if (data.Opt().fCoordErrors ) 
       MATH_ERROR_MSG("FitUtil::EvaluateChi2Residual","Error on the coordinates are not used in calculating Chi2 gradient");
 
    unsigned int nRejected = 0; 
