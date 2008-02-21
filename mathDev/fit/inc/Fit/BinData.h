@@ -37,10 +37,11 @@ namespace ROOT {
    BinData : class describing the binned data : 
               vectors of  x coordinates, y values and optionally error on y values and error on coordinates 
               The dimension of the coordinate is free
-              There are three different options: 
-              - only coordinates and values  (for binned likelihood fits) 
-              - coordinate, values and error on  values (for normal least square fits) 
-              - coordinate, values, error on values and coordinates (for effective least square fits)
+              There are 4 different options: 
+              - only coordinates and values  (for binned likelihood fits)  : kNoError 
+              - coordinate, values and error on  values (for normal least square fits)  : kValueError
+              - coordinate, values, error on values and coordinates (for effective least square fits) : kCoordError
+              - corrdinate, values, error on coordinates and asymmettric error on valyes : kAsymError
 
               In addition there is the option to construct Bindata copying the data in (using the DataVector class) 
               or using pointer to external data (DataWrapper) class. 
@@ -59,12 +60,13 @@ class BinData  : public FitData  {
 
 public : 
 
-   enum ErrorType { kNoError, kValueError, kCoordError };
+   enum ErrorType { kNoError, kValueError, kCoordError, kAsymmError };
 
    static unsigned int GetPointSize(ErrorType err, unsigned int dim) { 
       if (err == kNoError) return dim + 1;   // no errors
       if (err == kValueError) return dim + 2;  // error only on the value
-      return 2 * (dim + 1);   // error on value and coordinate
+      if (err == kCoordError) return 2 * dim + 2 ;  // error on value and coordinate
+      return 2 * dim + 3;   // error on value (low and high)  and error on coordinate
     }
 
       
@@ -103,6 +105,7 @@ public :
 
    /**
       constructor from options and range
+      efault is 1D and value errors
     */
    BinData (const DataOptions & opt, const DataRange & range, unsigned int maxpoints = 0, unsigned int dim = 1, ErrorType err = kValueError ) : 
       //DataVector( opt, range, (dim+2)*maxpoints ), 
@@ -118,7 +121,9 @@ public :
 
    /** constructurs using external data */
    
-
+   /**
+      constructor from external data for 1D with errors on  coordinate and value
+    */
    BinData(unsigned int n, const double * dataX, const double * val, const double * ex , const double * eval ) : 
       fDim(1), 
       fPointSize(0),
@@ -129,6 +134,9 @@ public :
    } 
 
    
+   /**
+      constructor from external data for 2D with errors on  coordinate and value
+    */
    BinData(unsigned int n, const double * dataX, const double * dataY, const double * val, const double * ex , const double * ey, const double * eval  ) : 
       fDim(2), 
       fPointSize(0),
@@ -138,6 +146,9 @@ public :
       fDataWrapper  = new DataWrapper(dataX, dataY, val, eval, ex, ey);
    } 
 
+   /**
+      constructor from external data for 3D with errors on  coordinate and value
+    */
    BinData(unsigned int n, const double * dataX, const double * dataY, const double * dataZ, const double * val, const double * ex , const double * ey , const double * ez , const double * eval   ) : 
       fDim(3), 
       fPointSize(0),
@@ -208,8 +219,13 @@ public:
       return 0; 
    }
 
-   bool UseCoordErrors() const { 
+   bool HaveCoordErrors() const { 
       if (fPointSize > fDim +2) return true; 
+      return false;
+   }
+
+   bool HaveAsymErrors() const { 
+      if (fPointSize > 2 * fDim +2) return true; 
       return false;
    }
 
@@ -249,6 +265,7 @@ public:
 
       fNPoints++;
    }
+
    /**
       add one dim data with  error in x
       in this case store the y error and not the inverse 
@@ -265,6 +282,27 @@ public:
       *itr++ = y; 
       *itr++ = ex; 
       *itr++ = ey; 
+
+      fNPoints++;
+   }
+
+   /**
+      add one dim data with  error in x and asymmetric errors in y
+      in this case store the y errors and not the inverse 
+   */
+   void Add(double x, double y, double ex, double eyl , double eyh) { 
+      int index = fNPoints*PointSize(); 
+      assert (fDataVector != 0);
+      assert( fDim == 1);
+      assert (PointSize() == 4 ); 
+      assert (index + PointSize() <= DataSize() ); 
+
+      double * itr = &((fDataVector->Data())[ index ]);
+      *itr++ = x; 
+      *itr++ = y; 
+      *itr++ = ex; 
+      *itr++ = eyl; 
+      *itr++ = eyh; 
 
       fNPoints++;
    }
@@ -430,6 +468,7 @@ public:
       return fDataWrapper->Coords(ipoint);
    }
 
+   /// Get errors on the point (coordinate and value) 
    const double * GetPointError(unsigned int ipoint, double & errvalue) const {
 // to be called only when coord errors are stored
       if (fDataVector) { 
@@ -442,6 +481,21 @@ public:
       } 
       errvalue = fDataWrapper->Error(ipoint);
       return fDataWrapper->CoordErrors(ipoint);
+   }
+
+   /// Get errors on the point (coordinates and value with  the asymmetric errors) 
+   const double * GetPointError(unsigned int ipoint, double & errlow, double & errhigh) const {
+// to be called only when coord errors are stored
+      // external data is not supported for asymmetric errors
+      assert(fDataVector); 
+
+      assert(fPointSize > 2 * fDim + 2); 
+      unsigned int j = ipoint*fPointSize;
+      const std::vector<double> & v = (fDataVector->Data());
+      const double * ex = &v[j+fDim+1];
+      errlow  = v[j + 2*fDim +1];
+      errhigh = v[j + 2*fDim +2];
+      return ex;
    }
 
 

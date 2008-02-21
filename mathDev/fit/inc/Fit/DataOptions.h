@@ -31,15 +31,19 @@ struct DataOptions {
    DataOptions () : 
       fIntegral(false), 
       fUseEmpty(false), 
+      fUseRange(false), 
       fError1(false),
-      fUseRange(false)
+      fCoordErrors(false),
+      fAsymErrors(false)
    {}
 
 
    bool fIntegral; 
    bool fUseEmpty; 
-   bool fError1; 
    bool fUseRange; 
+   bool fError1; 
+   bool fCoordErrors;
+   bool fAsymErrors; 
 
 
 }; 
