@@ -14,7 +14,8 @@ const unsigned int NUMTEST = 500;
 //#define DEBUG
 
 template <typename T> T randD() {
-   return (T) (1000 * drand48() - 500);
+   static TRandom2 r( time( 0 ) );
+   return (T) r.Uniform(-500,500);
 }
 
 template <typename T> double stressVector(const char* type)
@@ -119,8 +120,6 @@ void stressTMath()
 
 int main()
 {
-   srand48(time(0));
-
    stressTMath();
 
    return 0;

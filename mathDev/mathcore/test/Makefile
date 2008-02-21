@@ -50,6 +50,21 @@ TESTTMATHOBJ     = testTMath.$(ObjSuf)
 TESTTMATHSRC     = testTMath.$(SrcSuf)
 TESTTMATH        = testTMath$(ExeSuf)
 
+SPECFUNERFOBJ     = testSpecFuncErf.$(ObjSuf)
+SPECFUNERFSRC     = testSpecFuncErf.$(SrcSuf)
+SPECFUNERF        = testSpecFuncErf$(ExeSuf)
+
+SPECFUNGAMMAOBJ     = testSpecFuncGamma.$(ObjSuf)
+SPECFUNGAMMASRC     = testSpecFuncGamma.$(SrcSuf)
+SPECFUNGAMMA        = testSpecFuncGamma$(ExeSuf)
+
+SPECFUNBETAOBJ     = testSpecFuncBeta.$(ObjSuf)
+SPECFUNBETASRC     = testSpecFuncBeta.$(SrcSuf)
+SPECFUNBETA        = testSpecFuncBeta$(ExeSuf)
+
+SPECFUNBETAIOBJ     = testSpecFuncBetaI.$(ObjSuf)
+SPECFUNBETAISRC     = testSpecFuncBetaI.$(SrcSuf)
+SPECFUNBETAI        = testSpecFuncBetaI$(ExeSuf)
 
 STRESSTMATHOBJ     = stressTMath.$(ObjSuf)
 STRESSTMATHSRC     = stressTMath.$(SrcSuf)
@@ -73,10 +88,10 @@ ROOTFINDEROBJ      = testRootFinder.$(ObjSuf)
 ROOTFINDERSRC      = testRootFinder.$(SrcSuf)
 ROOTFINDER         = testRootFinder$(ExeSuf)
 
-OBJS          = $(TESTTMATHOBJ) $(STRESSTMATHOBJ) $(STRESSTF1OBJ)  $(INTEGRATIONOBJ) $(INTEGRATIONMULTIOBJ) $(ROOTFINDEROBJ)
+OBJS          = $(SPECFUNBETAOBJ) $(SPECFUNBETAIOBJ) $(SPECFUNGAMMAOBJ) $(SPECFUNERFOBJ) $(TESTTMATHOBJ) $(STRESSTMATHOBJ) $(STRESSTF1OBJ)  $(INTEGRATIONOBJ) $(INTEGRATIONMULTIOBJ) $(ROOTFINDEROBJ)
 
 
-PROGRAMS      = $(TESTTMATH) $(STRESSTMATH) $(STRESSTF1) $(ITERATOR)  $(INTEGRATION) $(INTEGRATIONMULTI) $(ROOTFINDER)
+PROGRAMS      =$(SPECFUNBETA) $(SPECFUNBETAI)  $(SPECFUNGAMMA) $(SPECFUNERF) $(TESTTMATH) $(STRESSTMATH) $(STRESSTF1) $(ITERATOR)  $(INTEGRATION) $(INTEGRATIONMULTI) $(ROOTFINDER)
 
 
 		  
@@ -96,6 +111,22 @@ $(STRESSTMATH):     $(STRESSTMATHOBJ)
 		    @echo "$@ done"
 
 $(TESTTMATH):      $(TESTTMATHOBJ)
+		    $(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) $(OutPutOpt)$@
+		    @echo "$@ done"
+
+$(SPECFUNERF):      $(SPECFUNERFOBJ)
+		    $(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) $(OutPutOpt)$@
+		    @echo "$@ done"
+
+$(SPECFUNGAMMA):    $(SPECFUNGAMMAOBJ)
+		    $(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) $(OutPutOpt)$@
+		    @echo "$@ done"
+
+$(SPECFUNBETA):    $(SPECFUNBETAOBJ)
+		    $(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) $(OutPutOpt)$@
+		    @echo "$@ done"
+
+$(SPECFUNBETAI):    $(SPECFUNBETAIOBJ)
 		    $(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) $(OutPutOpt)$@
 		    @echo "$@ done"
 
