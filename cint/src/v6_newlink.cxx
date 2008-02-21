@@ -1755,7 +1755,13 @@ int G__evaluate_libp(G__param* rpara, G__param *libp, G__ifunc_table_internal *i
       G__paramfunc *formal_param = ifunc->param[ifn][counter];
 
       if((G__value *)(-1)==formal_param->pdefault) {
-        rpara->para[rpara->paran] = G__getexpr(formal_param->def);
+	if(formal_param->type=='n' && G__tagnum>-1) {
+	  char tmp[G__ONELINE];
+	  sprintf(tmp,"%s::%s", G__struct.name[G__tagnum], formal_param->def);
+	  rpara->para[rpara->paran] = G__getexpr(tmp);
+	}
+	else
+	  rpara->para[rpara->paran] = G__getexpr(formal_param->def);
         rpara->paran++;
       }
       else if((G__value *)(0)==formal_param->pdefault){
@@ -9543,7 +9549,7 @@ void G__cpplink_memfunc(FILE *fp)
               }
               fprintf(fp, "))(&%s::%s)", G__fulltagname(ifunc->tagnum, 1), ifunc->funcname[j]);
             }
-            else 
+            else
               fprintf(fp, ", (void*) NULL");
 
             int virtflag = 0;
