@@ -25,6 +25,8 @@
 #include "Riostream.h"
 #include "TString.h"
 
+#include <Math/SpecFuncMathCore.h>
+
 //const Double_t
 //   TMath::Pi = 3.14159265358979323846,
 //   TMath::E  = 2.7182818284590452354;
@@ -232,9 +234,7 @@ Double_t TMath::Erf(Double_t x)
    // Computation of the error function erf(x).
    // Erf(x) = (2/sqrt(pi)) Integral(exp(-t^2))dt between 0 and x
 
-   //--- NvE 14-nov-1998 UU-SAP Utrecht
-
-   return (1-Erfc(x));
+   return ::ROOT::Math::erf(x);
 }
 
 //______________________________________________________________________________
@@ -243,27 +243,8 @@ Double_t TMath::Erfc(Double_t x)
    // Compute the complementary error function erfc(x).
    // Erfc(x) = (2/sqrt(pi)) Integral(exp(-t^2))dt between x and infinity
    //
-   //--- Nve 14-nov-1998 UU-SAP Utrecht
 
-   // The parameters of the Chebyshev fit
-   const Double_t a1 = -1.26551223,   a2 = 1.00002368,
-                  a3 =  0.37409196,   a4 = 0.09678418,
-                  a5 = -0.18628806,   a6 = 0.27886807,
-                  a7 = -1.13520398,   a8 = 1.48851587,
-                  a9 = -0.82215223,  a10 = 0.17087277;
-
-   Double_t v = 1; // The return value
-   Double_t z = Abs(x);
-
-   if (z <= 0) return v; // erfc(0)=1
-
-   Double_t t = 1/(1+0.5*z);
-
-   v = t*Exp((-z*z) +a1+t*(a2+t*(a3+t*(a4+t*(a5+t*(a6+t*(a7+t*(a8+t*(a9+t*a10)))))))));
-
-   if (x < 0) v = 2-v; // erfc(-x)=2-erfc(x)
-
-   return v;
+   return ::ROOT::Math::erfc(x);
 }
 
 //______________________________________________________________________________
@@ -400,16 +381,12 @@ Double_t TMath::Freq(Double_t x)
 //______________________________________________________________________________
 Double_t TMath::Gamma(Double_t z)
 {
-   // Computation of gamma(z) for all z>0.
+   // Computation of gamma(z) for all z.
    //
    // C.Lanczos, SIAM Journal of Numerical Analysis B1 (1964), 86.
    //
-   //--- Nve 14-nov-1998 UU-SAP Utrecht
 
-   if (z<=0) return 0;
-
-   Double_t v = LnGamma(z);
-   return Exp(v);
+   return ::ROOT::Math::tgamma(z);
 }
 
 //______________________________________________________________________________
@@ -422,14 +399,8 @@ Double_t TMath::Gamma(Double_t a,Double_t x)
    //  Begin_Latex
    //  P(a, x) = #frac{1}{#Gamma(a) } #int_{0}^{x} t^{a-1} e^{-t} dt
    //   End_Latex
-   //
-   //
-   //--- Nve 14-nov-1998 UU-SAP Utrecht
 
-   if (a <= 0 || x <= 0) return 0;
-
-   if (x < (a+1)) return GamSer(a,x);
-   else           return GamCf(a,x);
+   return ::ROOT::Math::inc_gamma(a, x);
 }
 
 //______________________________________________________________________________
@@ -592,7 +563,7 @@ Double_t TMath::Landau(Double_t x, Double_t mpv, Double_t sigma, Bool_t norm)
 //______________________________________________________________________________
 Double_t TMath::LnGamma(Double_t z)
 {
-   // Computation of ln[gamma(z)] for all z>0.
+   // Computation of ln[gamma(z)] for all z.
    //
    // C.Lanczos, SIAM Journal of Numerical Analysis B1 (1964), 86.
    //
@@ -600,24 +571,7 @@ Double_t TMath::LnGamma(Double_t z)
    //
    //--- Nve 14-nov-1998 UU-SAP Utrecht
 
-   if (z<=0) return 0;
-
-   // Coefficients for the series expansion
-   static Double_t c[7] = { 2.5066282746310005, 76.18009172947146, -86.50532032941677
-                          ,24.01409824083091,  -1.231739572450155, 0.1208650973866179e-2
-                          ,-0.5395239384953e-5};
-
-   Double_t x   = z;
-   Double_t y   = x;
-   Double_t tmp = x+5.5;
-   tmp = (x+0.5)*Log(tmp)-tmp;
-   Double_t ser = 1.000000000190015;
-   for (Int_t i=1; i<7; i++) {
-      y   += 1;
-      ser += c[i]/y;
-   }
-   Double_t v = tmp+Log(c[0]*ser/x);
-   return v;
+   return ::ROOT::Math::lgamma(z);
 }
 
 //______________________________________________________________________________
@@ -2112,7 +2066,7 @@ Double_t TMath::Beta(Double_t p, Double_t q)
 {
    // Calculates Beta-function Gamma(p)*Gamma(q)/Gamma(p+q).
 
-   return TMath::Exp(TMath::LnGamma(p)+TMath::LnGamma(q)-TMath::LnGamma(p+q));
+   return ::ROOT::Math::beta(p, q);
 }
 
 //______________________________________________________________________________
@@ -2202,24 +2156,8 @@ Double_t TMath::BetaDistI(Double_t x, Double_t p, Double_t q)
 Double_t TMath::BetaIncomplete(Double_t x, Double_t a, Double_t b)
 {
    // Calculates the incomplete Beta-function.
-   //  -- implementation by Anna Kreshuk
 
-   Double_t bt;
-   if ((x<0.0)||(x>1.0)) {
-      Error("TMath::BetaIncomplete", "X must between 0 and 1");
-      return 0.0;
-   }
-   if ((x==0.0)||(x==1.0)) {
-      bt=0.0;
-   } else {
-      bt = TMath::Power(x, a)*TMath::Power(1-x, b)/Beta(a, b);
-   }
-   if (x<(a+1)/(a+b+2)) {
-      return bt*BetaCf(x, a, b)/a;
-   }
-   else {
-      return (1 - bt*BetaCf(1-x, b, a)/b);
-   }
+   return ::ROOT::Math::inc_beta(x, a, b);
 }
 
 //______________________________________________________________________________
