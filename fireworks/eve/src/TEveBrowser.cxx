@@ -487,40 +487,70 @@ void TEveBrowser::CalculateReparentXY(TGObject* parent, Int_t& x, Int_t& y)
 
 namespace
 {
-enum EReveMenu_e {
+enum EEveMenu_e {
    kNewViewer,  kNewScene,  kNewProjector,
    kNewBrowser, kNewCanvas, kNewCanvasExt, kNewTextEditor, kNewHtmlBrowser,
-   kVerticalBrowser
+   kVerticalBrowser,
+   kSel_PS_Ignore, kSel_PS_Element, kSel_PS_Projectable, kSel_PS_Compound,
+   kHil_PS_Ignore, kHil_PS_Element, kHil_PS_Projectable, kHil_PS_Compound,
 };
+
 }
 
 //______________________________________________________________________________
 TEveBrowser::TEveBrowser(UInt_t w, UInt_t h) :
    TRootBrowser(0, "Eve Main Window", w, h, "", kFALSE),
-   fFileBrowser(0)
+   fFileBrowser(0),
+   fEvePopup   (0),
+   fSelPopup   (0),
+   fHilPopup   (0)
 {
    // Constructor.
 
    // Construct Eve menu.
 
-   fRevePopup = new TGPopupMenu(gClient->GetRoot());
-   fRevePopup->AddEntry("New &Viewer",      kNewViewer);
-   fRevePopup->AddEntry("New &Scene",       kNewScene);
-   fRevePopup->AddEntry("New &Projector",   kNewProjector);
-   fRevePopup->AddSeparator();
-   fRevePopup->AddEntry("New &Browser",     kNewBrowser);
-   fRevePopup->AddEntry("New &Canvas",      kNewCanvas);
-   fRevePopup->AddEntry("New Canvas Ext",   kNewCanvasExt);
-   fRevePopup->AddEntry("New Text Editor",  kNewTextEditor);
-   // fRevePopup->AddEntry("New HTML Browser", kNewHtmlBrowser);
-   fRevePopup->AddSeparator();
-   fRevePopup->AddEntry("Vertical browser", kVerticalBrowser);
-   fRevePopup->CheckEntry(kVerticalBrowser);
+   fEvePopup = new TGPopupMenu(gClient->GetRoot());
+   fEvePopup->AddEntry("New &Viewer",      kNewViewer);
+   fEvePopup->AddEntry("New &Scene",       kNewScene);
+   fEvePopup->AddEntry("New &Projector",   kNewProjector);
+   fEvePopup->AddSeparator();
+   fEvePopup->AddEntry("New &Browser",     kNewBrowser);
+   fEvePopup->AddEntry("New &Canvas",      kNewCanvas);
+   fEvePopup->AddEntry("New Canvas Ext",   kNewCanvasExt);
+   fEvePopup->AddEntry("New Text Editor",  kNewTextEditor);
+   // fEvePopup->AddEntry("New HTML Browser", kNewHtmlBrowser);
+   fEvePopup->AddSeparator();
 
-   fRevePopup->Connect("Activated(Int_t)", "TEveBrowser",
-                       this, "ReveMenu(Int_t)");
+   {
+      fSelPopup = new TGPopupMenu(gClient->GetRoot());
+      fSelPopup->AddEntry("Ignore",      kSel_PS_Ignore);
+      fSelPopup->AddEntry("Element",     kSel_PS_Element);
+      fSelPopup->AddEntry("Projectable", kSel_PS_Projectable);
+      fSelPopup->AddEntry("Compound",    kSel_PS_Compound);
+      fSelPopup->RCheckEntry(kSel_PS_Ignore + gEve->GetSelection()->GetPickToSelect(),
+                             kSel_PS_Ignore, kSel_PS_Compound);
+      fEvePopup->AddPopup("Selection", fSelPopup);
+   }
+   {
+      fHilPopup = new TGPopupMenu(gClient->GetRoot());
+      fHilPopup->AddEntry("Ignore",      kHil_PS_Ignore);
+      fHilPopup->AddEntry("Element",     kHil_PS_Element);
+      fHilPopup->AddEntry("Projectable", kHil_PS_Projectable);
+      fHilPopup->AddEntry("Compound",    kHil_PS_Compound);
+      fHilPopup->RCheckEntry(kHil_PS_Ignore + gEve->GetHighlight()->GetPickToSelect(),
+                             kHil_PS_Ignore, kHil_PS_Compound);
+      fEvePopup->AddPopup("Highlight", fHilPopup);
+   }
 
-   fMenuBar->AddPopup("&Eve", fRevePopup, new TGLayoutHints(kLHintsTop | kLHintsLeft, 0, 4, 0, 0));
+   fEvePopup->AddSeparator();
+   fEvePopup->AddEntry("Vertical browser", kVerticalBrowser);
+   fEvePopup->CheckEntry(kVerticalBrowser);
+
+
+   fEvePopup->Connect("Activated(Int_t)", "TEveBrowser",
+                       this, "EveMenu(Int_t)");
+
+   fMenuBar->AddPopup("&Eve", fEvePopup, new TGLayoutHints(kLHintsTop | kLHintsLeft, 0, 4, 0, 0));
 
    fPreMenuFrame->ChangeOptions(fPreMenuFrame->GetOptions() | kRaisedFrame);
    fTopMenuFrame->Layout();
@@ -530,7 +560,7 @@ TEveBrowser::TEveBrowser(UInt_t w, UInt_t h) :
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveBrowser::ReveMenu(Int_t id)
+void TEveBrowser::EveMenu(Int_t id)
 {
    // Handle events from Eve menu.
 
@@ -584,15 +614,35 @@ void TEveBrowser::ReveMenu(Int_t id)
          }
          break;
 
+      case kSel_PS_Ignore:
+      case kSel_PS_Element:
+      case kSel_PS_Projectable:
+      case kSel_PS_Compound:
+         gEve->GetSelection()->SetPickToSelect(id - kSel_PS_Ignore);
+         fSelPopup->RCheckEntry(kSel_PS_Ignore + gEve->GetSelection()->GetPickToSelect(),
+                                kSel_PS_Ignore, kSel_PS_Compound);
+         break;
+
+      case kHil_PS_Ignore:
+      case kHil_PS_Element:
+      case kHil_PS_Projectable:
+      case kHil_PS_Compound:
+         gEve->GetHighlight()->SetPickToSelect(id - kHil_PS_Ignore);
+         fHilPopup->RCheckEntry(kHil_PS_Ignore + gEve->GetHighlight()->GetPickToSelect(),
+                                kHil_PS_Ignore, kHil_PS_Compound);
+         break;
+
       case kVerticalBrowser:
-         if (fRevePopup->IsEntryChecked(kVerticalBrowser)) {
+         if (fEvePopup->IsEntryChecked(kVerticalBrowser)) {
             gEve->GetLTEFrame()->ReconfToHorizontal();
-            fRevePopup->UnCheckEntry(kVerticalBrowser);
+            fEvePopup->UnCheckEntry(kVerticalBrowser);
          } else {
             gEve->GetLTEFrame()->ReconfToVertical();
-            fRevePopup->CheckEntry(kVerticalBrowser);
+            fEvePopup->CheckEntry(kVerticalBrowser);
          }
          break;
+
+
 
       default:
          break;

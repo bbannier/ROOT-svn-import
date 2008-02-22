@@ -25,7 +25,7 @@ ClassImp(TEveSelection);
 //______________________________________________________________________________
 TEveSelection::TEveSelection(const Text_t* n, const Text_t* t) :
    TEveElementList(n, t),
-   fPickToSelect  (kPS_Projectable),
+   fPickToSelect  (kPS_Element),
    fActive        (kTRUE),
    fIsMaster      (kTRUE)
 {
@@ -38,7 +38,8 @@ TEveSelection::TEveSelection(const Text_t* n, const Text_t* t) :
 
 void TEveSelection::SetHighlightMode()
 {
-   fIsMaster = kFALSE;
+   fPickToSelect = kPS_Projectable;
+   fIsMaster     = kFALSE;
 
    fSelElement       = &TEveElement::HighlightElement;
    fIncImpSelElement = &TEveElement::IncImpliedHighlighted;

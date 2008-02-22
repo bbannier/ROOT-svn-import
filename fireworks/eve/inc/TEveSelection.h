@@ -22,8 +22,8 @@ public:
    enum EPickToSelect // How to convert picking events to selection:
    {
       kPS_Ignore,      // ignore picking
-      kPS_Element,     // select element
-      kPS_Projectable, // select projectable and all its projections (default)
+      kPS_Element,     // select element (default for selection)
+      kPS_Projectable, // select projectable and all its projections (default for highlight)
       kPS_Compound     // select compound and all its projections
    };
 
