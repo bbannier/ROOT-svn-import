@@ -68,8 +68,6 @@ STRESSGO      = stressGraphics.$(ObjSuf)
 STRESSGS      = stressGraphics.$(SrcSuf)
 STRESSG       = stressGraphics$(ExeSuf)
 
-ROOTCINT ?= rootcint_nostubs.sh
-
 ifeq ($(shell $(ROOTCONFIG) --has-mathcore),yes)
 STRESSVECO   = stressVector.$(ObjSuf)
 STRESSVECS   = stressVector.$(SrcSuf)
