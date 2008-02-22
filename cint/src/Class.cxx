@@ -947,7 +947,7 @@ void* Cint::G__ClassInfo::New(int n)
 void* Cint::G__ClassInfo::New(void *arena)
 {
   if(IsValid()) {
-    void *p;
+    void *p = 0;
     G__value buf=G__null;
     if (!class_property) Property();
     if(class_property&G__BIT_ISCPPCOMPILED) {
