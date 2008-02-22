@@ -2281,6 +2281,8 @@ void* G__get_funcptr(G__ifunc_table_internal *ifunc, int ifn)
   ifunc->funcptr[ifn] = G__get_symbol_address(ifunc->mangled_name[ifn]);
   return ifunc->funcptr[ifn];
 #else
+  (void) ifunc;
+  (void) ifn;
   return 0;
 #endif
 }
@@ -4388,6 +4390,7 @@ bool G__is_tagnum_safe(int i)
           strncmp(G__fulltagname(i,0),"multimap", strlen("multimap"))!=0 &&
           strncmp(G__fulltagname(i,0),"complex", strlen("complex"))!=0 );
 #else
+  (void) i;
   return true;
 #endif
 }
@@ -6837,7 +6840,10 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
     isconstructor = G__isprivateconstructor(tagnum, 0);
   }
 
+#ifdef G__NOSTUBS
   int isconstused = 0;
+#endif
+
   if (!isconstructor && !G__struct.isabstract[tagnum] && !isnonpublicnew) {
 #ifdef G__NOSTUBS
     if(G__dicttype==kNoWrappersDictionary){

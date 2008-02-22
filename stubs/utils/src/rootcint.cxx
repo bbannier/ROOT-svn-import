@@ -4226,7 +4226,6 @@ int main(int argc, char **argv)
    string dictpathname;
    string libfilename;
    const char *env_dict_type=getenv("ROOTDICTTYPE");
-   const char *libname;
    int dicttype = 0; // 09-07-07 -- 0 for dict, 1 for ShowMembers
 #ifdef G__NOSTUBS
    G__setisfilebundled(0);
