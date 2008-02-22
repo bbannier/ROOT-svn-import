@@ -12,6 +12,7 @@
 #include "TEveElement.h"
 #include "TEveTrans.h"
 #include "TEveManager.h"
+#include "TEveSelection.h"
 #include "TEveProjectionBases.h"
 
 #include "TGeoMatrix.h"
@@ -75,7 +76,8 @@ TEveElement::TEveElement() :
    fHighlighted         (kFALSE),
    fImpliedSelected     (0),
    fImpliedHighlighted  (0),
-   fChangeBits          (0)
+   fChangeBits          (0),
+   fDestructing         (kFALSE)
 {
    // Default contructor.
 }
@@ -97,7 +99,8 @@ TEveElement::TEveElement(Color_t& main_color) :
    fHighlighted         (kFALSE),
    fImpliedSelected     (0),
    fImpliedHighlighted  (0),
-   fChangeBits          (0)
+   fChangeBits          (0),
+   fDestructing         (kFALSE)
 {
    // Constructor.
 }
@@ -106,6 +109,8 @@ TEveElement::TEveElement(Color_t& main_color) :
 TEveElement::~TEveElement()
 {
    // Destructor.
+
+   fDestructing = kTRUE;
 
    RemoveElementsInternal();
 
@@ -225,8 +230,20 @@ void TEveElement::CheckReferenceCount(const TEveException& eh)
    // Check external references to this and eventually auto-destruct
    // the render-element.
 
-   if(fParents.empty()   &&  fItems.empty()         &&
-      fDenyDestroy <= 0  &&  fDestroyOnZeroRefCnt)
+   UInt_t parent_cnt = 0, item_cnt = 0;
+   if (fSelected)
+   {
+      ++parent_cnt;
+      item_cnt += gEve->GetSelection()->GetNItems();
+   }
+   if (fHighlighted)
+   {
+      ++parent_cnt;
+      item_cnt += gEve->GetHighlight()->GetNItems();
+   }
+
+   if(fParents.size() <= parent_cnt && fItems.size() <= item_cnt &&
+      fDenyDestroy    <= 0          && fDestroyOnZeroRefCnt)
    {
       if (gDebug > 0)
          Info(eh, Form("auto-destructing '%s' on zero reference count.", GetElementName()));
@@ -1076,7 +1093,7 @@ void TEveElement::SetStamp(UChar_t bits)
    // Register this element to gEve as stamped.
 
    fChangeBits = bits;
-   gEve->ElementStamped(this); 
+   if (!fDestructing) gEve->ElementStamped(this); 
 }
 
 //______________________________________________________________________________
@@ -1086,7 +1103,7 @@ void TEveElement::AddStamp(UChar_t bits)
    // Register this element to gEve as stamped.
 
    fChangeBits |= bits;
-   gEve->ElementStamped(this);
+   if (!fDestructing) gEve->ElementStamped(this);
 }
 
 /******************************************************************************/

@@ -187,7 +187,6 @@ public:
 
    void   ElementSelect(TEveElement* element);
    Bool_t ElementPaste(TEveElement* element);
-   void   ElementChecked(TEveElement* element, Bool_t state);
 
    // Geometry management.
    TGeoManager* GetGeometry(const TString& filename);

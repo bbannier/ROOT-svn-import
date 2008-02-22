@@ -13,6 +13,8 @@
 #include "TEveProjectionBases.h"
 #include "TEveManager.h"
 
+#include "TClass.h"
+
 //______________________________________________________________________________
 //
 // Make sure there is a SINGLE running TEveSelection for each
@@ -83,7 +85,8 @@ Bool_t TEveSelection::AcceptElement(TEveElement* el)
    // Pre-addition check. Deny addition if el is already selected.
    // Virtual from TEveElement.
 
-   return el != this && fImpliedSelected.find(el) == fImpliedSelected.end();
+   return el != this && fImpliedSelected.find(el) == fImpliedSelected.end() &&
+          el->IsA()->InheritsFrom(TEveSelection::Class()) == kFALSE;
 }
 
 //______________________________________________________________________________

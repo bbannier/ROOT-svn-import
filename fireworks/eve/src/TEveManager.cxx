@@ -154,7 +154,7 @@ TEveManager::TEveManager(UInt_t w, UInt_t h) :
    /**************************************************************************/
    /**************************************************************************/
 
-   fEditor->DisplayObject(GetGLViewer());
+   EditElement(fViewer);
 
    gSystem->ProcessEvents();
 }
@@ -280,7 +280,7 @@ void TEveManager::DoRedraw3D()
    for (TEveElement::Set_i i = fStampedElements.begin(); i != fStampedElements.end(); ++i)
    {
       if (fEditor->GetModel() == (*i)->GetEditorObject(eh))
-         fEditor->DisplayElement((*i));
+         EditElement((*i));
 
       // !!!! so far better just to redraw the list-tree;
       // !!!! UpdateItems is obsolete, anyway.
@@ -316,7 +316,7 @@ void TEveManager::ElementChanged(TEveElement* element, Bool_t update_scenes, Boo
    static const TEveException eh("TEveElement::ElementChanged ");
 
    if (fEditor->GetModel() == element->GetEditorObject(eh))
-      fEditor->DisplayElement(element);
+      EditElement(element);
 
    if (update_scenes) {
       TEveElement::List_t scenes;
@@ -437,12 +437,12 @@ void TEveManager::PreDeleteElement(TEveElement* element)
    // framework components (like object editor) can unreference it.
 
    if (fEditor->GetEveElement() == element)
-      fEditor->DisplayObject(0);
+      EditElement(0);
 
    fScenes->DestroyElementRenderers(element);
 
-   TEveElement::Set_i sei;
-   if ((sei = fStampedElements.find(element)) != fStampedElements.end())
+   TEveElement::Set_i sei = fStampedElements.find(element);
+   if (sei != fStampedElements.end())
       fStampedElements.erase(sei);
 }
 
@@ -453,7 +453,8 @@ void TEveManager::ElementSelect(TEveElement* element)
 {
    // Select an element.
 
-   EditElement(element);
+   if (element != 0)
+      EditElement(element);
 }
 
 //______________________________________________________________________________
@@ -468,15 +469,6 @@ Bool_t TEveManager::ElementPaste(TEveElement* element)
    if (src)
       return element->HandleElementPaste(src);
    return kFALSE;
-}
-
-//______________________________________________________________________________
-void TEveManager::ElementChecked(TEveElement* element, Bool_t state)
-{
-   // An element has been checked in the list-tree.
-
-   element->SetRnrState(state);
-   element->ElementChanged();
 }
 
 /******************************************************************************/

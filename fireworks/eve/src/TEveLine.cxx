@@ -25,7 +25,7 @@ ClassImp(TEveLine);
 
 //______________________________________________________________________________
 TEveLine::TEveLine(Int_t n_points, ETreeVarType_e tv_type) :
-   TEvePointSet(n_points, tv_type),
+   TEvePointSet("Line", n_points, tv_type),
    fRnrLine   (kTRUE),
    fRnrPoints (kFALSE)
 {

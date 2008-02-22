@@ -30,12 +30,16 @@
 #include "TGeoMatrix.h"
 #include "TVirtualGeoPainter.h"
 
-//______________________________________________________________________________
+//==============================================================================
+//==============================================================================
 // TEveGeoNode
+//==============================================================================
+
+//______________________________________________________________________________
 //
 // Wrapper for TGeoNode that allows it to be shown in GUI and controlled as a TEveElement.
 
-ClassImp(TEveGeoNode)
+ClassImp(TEveGeoNode);
 
 //______________________________________________________________________________
 TEveGeoNode::TEveGeoNode(TGeoNode* node) :
@@ -285,8 +289,12 @@ do_dump:
 }
 
 
-//______________________________________________________________________________
+//==============================================================================
+//==============================================================================
 // TEveGeoTopNode
+//==============================================================================
+
+//______________________________________________________________________________
 //
 // A wrapper over a TGeoNode, possibly displaced with a global
 // trasformation stored in TEveElement.
@@ -294,7 +302,7 @@ do_dump:
 // It holds a pointer to TGeoManager and controls for steering of
 // TGeoPainter.
 
-ClassImp(TEveGeoTopNode)
+ClassImp(TEveGeoTopNode);
 
 //______________________________________________________________________________
 TEveGeoTopNode::TEveGeoTopNode(TGeoManager* manager, TGeoNode* node,
@@ -346,9 +354,25 @@ void TEveGeoTopNode::SetVisLevel(Int_t vislvl)
 //______________________________________________________________________________
 void TEveGeoTopNode::SetRnrSelf(Bool_t rnr)
 {
-   // Revert from GeoNode to back to standard behaviour.
+   // Revert from GeoNode back to standard behaviour.
 
    TEveElement::SetRnrSelf(rnr);
+}
+
+//______________________________________________________________________________
+void TEveGeoTopNode::SetRnrChildren(Bool_t rnr)
+{
+   // Revert from GeoNode back to standard behaviour.
+
+   TEveElement::SetRnrChildren(rnr);
+}
+
+//______________________________________________________________________________
+void TEveGeoTopNode::SetRnrState(Bool_t rnr)
+{
+   // Revert from GeoNode back to standard behaviour.
+
+   TEveElement::SetRnrState(rnr);
 }
 
 /******************************************************************************/
@@ -420,15 +444,19 @@ void TEveGeoTopNode::NodeVisChanged(TGeoNode* node)
 }
 
 
-//______________________________________________________________________________
+//==============================================================================
+//==============================================================================
 // TEveGeoShape
+//==============================================================================
+
+//______________________________________________________________________________
 //
 // Wrapper for TGeoShape with absolute positioning and color
 // attributes allowing display of extracted TGeoShape's (without an
 // active TGeoManager) and simplified geometries (needed for NLT
 // projections).
 
-ClassImp(TEveGeoShape)
+ClassImp(TEveGeoShape);
 
 //______________________________________________________________________________
 TEveGeoShape::TEveGeoShape(const Text_t* name, const Text_t* title) :

@@ -56,14 +56,14 @@ public:
 
    virtual const TGPicture*GetPicture()         const { return fElement->GetListTreeIcon(fOpen); }
    virtual const TGPicture*GetCheckBoxPicture() const { return fElement->GetListTreeCheckBoxIcon(); }
-   virtual UInt_t          GetPicWidth()        const;
+
    virtual void            SetPictures(const TGPicture*, const TGPicture*) { NotSupported("SetUserData"); }
    virtual void            SetCheckBoxPictures(const TGPicture*, const TGPicture*) { NotSupported("SetUserData"); }
 
    virtual void            SetCheckBox(Bool_t=kTRUE) { NotSupported("SetCheckBox"); }
    virtual Bool_t          HasCheckBox()       const { return kTRUE; }
    virtual void            CheckItem(Bool_t=kTRUE)   { printf("TEveListTreeItem::CheckItem - to be ignored ... all done via signal Checked().\n"); }
-   virtual void            Toggle()                  { NotSupported("Toggle"); }
+   virtual void            Toggle();
    virtual Bool_t          IsChecked()         const { return fElement->GetRnrState(); }
 
    // Propagation of checked-state form children to parents. Not needed, ignore.
@@ -105,7 +105,6 @@ public:
 
    TGListTree* GetListTree() { return fListTree; }
 
-   void ItemChecked(TObject* obj, Bool_t state);
    void ItemBelowMouse(TGListTreeItem *entry, UInt_t mask);
    void ItemClicked(TGListTreeItem *entry, Int_t btn, UInt_t mask, Int_t x, Int_t y);
    void ItemDblClicked(TGListTreeItem* item, Int_t btn);

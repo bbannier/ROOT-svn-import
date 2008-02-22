@@ -108,6 +108,13 @@ TGListTreeItem::TGListTreeItem(TGClient *client) :
    // Constructor.
 }
 
+//______________________________________________________________________________
+UInt_t TGListTreeItem::GetPicWidth() const
+{
+   // Return width of item's icon.
+
+   return GetPicture()->GetWidth();
+}
 
 /******************************************************************************/
 /******************************************************************************/
@@ -142,8 +149,6 @@ TGListTreeItemStd::TGListTreeItemStd(TGClient *client, const char *name,
 
    fCheckedPic   = fClient->GetPicture("checked_t.xpm");
    fUncheckedPic = fClient->GetPicture("unchecked_t.xpm");
-
-   fPicWidth  = TMath::Max(fOpenPic->GetWidth(), fClosedPic->GetWidth());
 
    fActive = kFALSE;
 
@@ -287,7 +292,6 @@ void TGListTreeItemStd::SetCheckBox(Bool_t on)
    // Set a check box on the tree node.
 
    fCheckBox = on;
-   fPicWidth  = TMath::Max(fOpenPic->GetWidth(), fClosedPic->GetWidth());
 }
 
 //___________________________________________________________________________

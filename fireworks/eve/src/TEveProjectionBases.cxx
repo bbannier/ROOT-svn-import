@@ -9,8 +9,8 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#include "TEvePolygonSetProjected.h"
 #include "TEveProjectionBases.h"
+#include "TEveManager.h"
 
 //==============================================================================
 //==============================================================================
@@ -38,11 +38,18 @@ TEveProjectable::TEveProjectable()
 TEveProjectable::~TEveProjectable()
 {
    // Destructor.
-   // Force projected replicas to unreference *this.
+   // Force projected replicas to unreference *this, then destroy them.
 
    while ( ! fProjectedList.empty())
    {
-      fProjectedList.front()->UnRefProjectable(this);
+      TEveProjected* p = fProjectedList.front();
+      p->UnRefProjectable(this);
+      TEveElement* el = dynamic_cast<TEveElement*>(p);
+      if (el)
+      {
+         gEve->PreDeleteElement(el);
+         delete el;
+      }
    }
 }
 
@@ -111,16 +118,10 @@ void TEveProjected::UnRefProjectable(TEveProjectable* assumed_parent)
 
    static const TEveException eH("TEveProjected::UnRefProjectable ");
 
-   if (fProjectable != assumed_parent) {
-      Warning(eH, "mismatch between assumed and real model. This is a bug.");
-      assumed_parent->RemoveProjected(this);
-      return;
-   }
+   assert(fProjectable == assumed_parent);
 
-   if (fProjectable) {
-      fProjectable->RemoveProjected(this);
-      fProjectable = 0;
-   }
+   fProjectable->RemoveProjected(this);
+   fProjectable = 0;
 }
 
 //______________________________________________________________________________

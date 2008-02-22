@@ -226,8 +226,16 @@ void TEveStraightLineSetProjected::UpdateProjection()
    TEveChunkManager::iterator mi(orig.GetMarkerPlex());
    while (mi.next())
    {
-      // !!!! Marker's relative position can shift due to distortion.
-      Marker_t* m = (Marker_t*) mi();
-      AddMarker(m->fLineID, m->fPos);
+      Marker_t *m = (Marker_t*) mi();
+      Line_t  *lo = (Line_t*) orig.GetLinePlex().Atom(m->fLineID);
+      Line_t  *lp = (Line_t*) fLinePlex.Atom(m->fLineID);
+
+      TEveVector t1, d, x;
+
+      t1.Set(lo->fV1); x.Set(lo->fV2); x -= t1; x *= m->fPos; x += t1;
+      proj.ProjectVector(x);
+      t1.Set(lp->fV1); d.Set(lp->fV2); d -= t1; x -= t1;
+
+      AddMarker(m->fLineID, d.Dot(x) / d.Mag2());
    }
 }
