@@ -4922,6 +4922,8 @@ sed -e "s|@architecture@|$arch|"           \
     -e "s|@altcxx@|$altcxx|"               \
     -e "s|@altf77@|$altf77|"               \
     -e "s|@altld@|$altld|"                 \
+    -e "s|@no_stubs@|$no_stubs|"           \
+    -e "s|@no_stubs_test@|$no_stubs_test|" \
    < root-config.tmp > $RCONFOUT
 rm -f root-config.tmp
 chmod 755 $RCONFOUT
