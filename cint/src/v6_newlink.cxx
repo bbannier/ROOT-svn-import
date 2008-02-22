@@ -4414,7 +4414,7 @@ void G__write_preface(FILE *fp, struct G__ifunc_table_internal *ifunc, int i)
 {
   // Write the prototype of the function
   // Let's keep it simple G__funtion_class
-  char *dllid;
+  const char *dllid;
   if(G__DLLID[0]) dllid=G__DLLID;
   else if(G__PROJNAME[0]) dllid=G__PROJNAME;
   else dllid="";

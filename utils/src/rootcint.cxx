@@ -4461,7 +4461,7 @@ int main(int argc, char **argv)
             // part, if not we only want the dict (without ShowMembers)
             if (!strcmp(argv[ic], "-.")) {
                ++ic;
-               argvv[argcc++] = "-.";
+               argvv[argcc++] = (char*)"-.";
                dicttype = atoi(argv[ic]);
                argvv[argcc++] = argv[ic]; 
                ++ic;
@@ -4473,7 +4473,7 @@ int main(int argc, char **argv)
             // the easiest way is to get it as a parameter
             if (!strcmp(argv[ic], "-L") ||  !strcmp(argv[ic], "--symbols-file")) {
                ++ic;
-               argvv[argcc++] = "-L";
+               argvv[argcc++] = (char*)"-L";
                argvv[argcc++] = argv[ic]; 
                ++ic;
                continue;
@@ -4612,7 +4612,7 @@ int main(int argc, char **argv)
       // part, if not we only want the dict (without ShowMembers)
       if (!strcmp(argv[ic], "-.")) {
          ++ic;
-         argvv[argcc++] = "-.";
+         argvv[argcc++] = (char*)"-.";
          dicttype = atoi(argv[ic]);
          argvv[argcc++] = argv[ic]; 
          ++ic;
@@ -4623,7 +4623,7 @@ int main(int argc, char **argv)
       // the easiest way is to get it as a parameter
       if (!strcmp(argv[ic], "-L") ||  !strcmp(argv[ic], "--symbols-file")) {
          ++ic;
-         argvv[argcc++] = "-L";
+         argvv[argcc++] = (char*)"-L";
          argvv[argcc++] = argv[ic]; 
          ++ic;
       }
