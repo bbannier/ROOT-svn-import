@@ -329,8 +329,7 @@ struct G__ifunc_table_internal *G__get_methodhandle4(char *funcname
                                            ,struct G__ifunc_table_internal *p_ifunc
                                            ,long *pifn,long *poffset
                                            ,int withConversion
-                                           ,int withInheritance
-                                           ,int noerror,int isconst);
+                                           ,int withInheritance,int isconst);
 #endif //G__NOSTUBS
 
 int G__separate_parameter(char *original,int *pos,char *param);
