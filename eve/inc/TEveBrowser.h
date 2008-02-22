@@ -125,7 +125,9 @@ protected:
    void CalculateReparentXY(TGObject* parent, Int_t& x, Int_t& y);
 
    TGFileBrowser    *fFileBrowser;
-   TGPopupMenu      *fRevePopup;
+   TGPopupMenu      *fEvePopup;
+   TGPopupMenu      *fSelPopup;
+   TGPopupMenu      *fHilPopup;
 
 public:
    TEveBrowser(UInt_t w, UInt_t h);
@@ -138,9 +140,9 @@ public:
    TGFileBrowser* MakeFileBrowser();
    TGFileBrowser* GetFileBrowser() const { return fFileBrowser; }
 
-   void ReveMenu(Int_t id);
+   void EveMenu(Int_t id);
 
-   ClassDef(TEveBrowser, 0); // Specialization of TRootBrowser for Reve.
+   ClassDef(TEveBrowser, 0); // Specialization of TRootBrowser for Eve.
 };
 
 #endif
