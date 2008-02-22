@@ -57,14 +57,14 @@ TEveGeoNode::TEveGeoNode(TGeoNode* node) :
 }
 
 //______________________________________________________________________________
-const Text_t* TEveGeoNode::GetName()  const
+const Text_t* TEveGeoNode::GetElementName()  const
 {
    // Return name, taken from geo-node.
 
    return fNode->GetName();
 }
 
-const Text_t* TEveGeoNode::GetTitle() const
+const Text_t* TEveGeoNode::GetElementTitle() const
 {
    // Return title, taken from geo-node.
 
