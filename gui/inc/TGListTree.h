@@ -102,7 +102,7 @@ public:
    virtual void            SetPictures(const TGPicture*, const TGPicture*) {}
    virtual const TGPicture*GetCheckBoxPicture() const = 0;
    virtual void            SetCheckBoxPictures(const TGPicture*, const TGPicture*) {}
-   virtual UInt_t          GetPicWidth() const = 0;
+   virtual UInt_t          GetPicWidth() const;
 
    virtual void            SetCheckBox(Bool_t=kTRUE) {}
    virtual Bool_t          HasCheckBox() const = 0;
@@ -151,7 +151,6 @@ private:
    Bool_t           fOwnsData;     // true if user data has to be deleted
    TString          fText;         // item text
    TString          fTipText;      // tooltip text
-   UInt_t           fPicWidth;     // width of item icon
    const TGPicture *fOpenPic;      // icon for open state
    const TGPicture *fClosedPic;    // icon for closed state
    const TGPicture *fCheckedPic;   // icon for checked item
@@ -188,7 +187,6 @@ public:
    virtual const TGPicture*GetCheckBoxPicture() const { return fCheckBox ? (fChecked ? fCheckedPic : fUncheckedPic) : 0; }
    virtual void            SetPictures(const TGPicture *opened, const TGPicture *closed);
    virtual void            SetCheckBoxPictures(const TGPicture *checked, const TGPicture *unchecked);
-   virtual UInt_t          GetPicWidth() const { return fPicWidth; }
 
    virtual void            SetCheckBox(Bool_t on = kTRUE);
    virtual Bool_t          HasCheckBox() const { return fCheckBox; }

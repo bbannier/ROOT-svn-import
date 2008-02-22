@@ -80,6 +80,9 @@ TEvePointSet::TEvePointSet(const Text_t* name, Int_t n_points, ETreeVarType_e tv
 
    fMarkerStyle = 20;
    SetName(name);
+
+   // Override from TEveElement.
+   fPickable = kTRUE;
 }
 
 //______________________________________________________________________________

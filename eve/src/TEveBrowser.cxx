@@ -55,10 +55,10 @@
 #include "TGeoNode.h"
 
 
-/******************************************************************************/
-/******************************************************************************/
+//==============================================================================
+//==============================================================================
 // TEveListTreeItem
-/******************************************************************************/
+//==============================================================================
 
 //______________________________________________________________________________
 //
@@ -97,20 +97,20 @@ Pixel_t TEveListTreeItem::GetActiveColor() const
 }
 
 //______________________________________________________________________________
-UInt_t TEveListTreeItem::GetPicWidth() const
+void TEveListTreeItem::Toggle()
 {
-   // Return positioning offset for magick in TGListTree::DrawItem().
-   // !!!! Needs to be fixed there ...
+   // Item's check-box state has been toggled ... forward to element's
+   // render-state.
 
-//   return GetPicture()->GetWidth() + GetCheckBoxPicture()->GetWidth();
-   return GetPicture()->GetWidth();
+   fElement->SetRnrState(!IsChecked());
+   fElement->ElementChanged(kTRUE, kTRUE);
 }
 
 
-/******************************************************************************/
-/******************************************************************************/
+//==============================================================================
+//==============================================================================
 // TEveGListTreeEditorFrame
-/******************************************************************************/
+//==============================================================================
 
 //______________________________________________________________________________
 //
@@ -177,8 +177,6 @@ TEveGListTreeEditorFrame::TEveGListTreeEditorFrame(const Text_t* name, Int_t wid
 
    fCtxMenu = new TContextMenu("", "");
 
-   fListTree->Connect("Checked(TObject*,Bool_t)", "TEveGListTreeEditorFrame",
-                      this, "ItemChecked(TObject*, Bool_t)");
    fListTree->Connect("MouseOver(TGListTreeItem*, UInt_t)", "TEveGListTreeEditorFrame",
                       this, "ItemBelowMouse(TGListTreeItem*, UInt_t)");
    fListTree->Connect("Clicked(TGListTreeItem*, Int_t, UInt_t, Int_t, Int_t)", "TEveGListTreeEditorFrame",
@@ -301,21 +299,6 @@ void TEveGListTreeEditorFrame::ReconfToVertical()
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveGListTreeEditorFrame::ItemChecked(TObject* obj, Bool_t state)
-{
-   // Item has been checked, propagate state change and redraw.
-
-   // Item's user-data was blindly casted into TObject in the caller.
-   // We recast it blindly back into the TEveElement.
-   TEveElement* el = (TEveElement*) obj;
-
-   // We refuse the old state Toggle, so the passed state is the old
-   // state of the item, we need to ask for its negation.
-   gEve->ElementChecked(el, !state);
-   gEve->Redraw3D();
-}
-
-//______________________________________________________________________________
 void TEveGListTreeEditorFrame::ItemBelowMouse(TGListTreeItem *entry, UInt_t /*mask*/)
 {
    // Different item is below mouse.
@@ -430,8 +413,7 @@ void TEveGListTreeEditorFrame::ItemKeyPress(TGListTreeItem *entry, UInt_t keysym
             if (el->GetDenyDestroy() > 0 && el->GetNItems() == 1)
                throw(eh + "DestroyDenied set for this item.");
 
-            TEveElement* parent = dynamic_cast<TEveElement*>
-               ((TEveElement*) entry->GetParent()->GetUserData());
+            TEveElement* parent = (TEveElement*) entry->GetParent()->GetUserData();
 
             if (parent)
             {
@@ -465,10 +447,10 @@ void TEveGListTreeEditorFrame::ItemKeyPress(TGListTreeItem *entry, UInt_t keysym
 }
 
 
-/******************************************************************************/
-/******************************************************************************/
+//==============================================================================
+//==============================================================================
 // TEveBrowser
-/******************************************************************************/
+//==============================================================================
 
 //______________________________________________________________________________
 //

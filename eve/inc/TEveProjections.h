@@ -47,7 +47,7 @@ public:
    virtual ~TEveProjection(){}
 
    virtual   void      ProjectPoint(Float_t&, Float_t&, Float_t&, EPProc_e p = kPP_Full ) = 0;
-   virtual   void      ProjectPointFv(Float_t* v){ ProjectPoint(v[0], v[1], v[2]); }
+   virtual   void      ProjectPointFv(Float_t* v) { ProjectPoint(v[0], v[1], v[2]); }
    virtual   void      ProjectVector(TEveVector& v);
 
    const     char*     GetName() { return fName.Data(); }
