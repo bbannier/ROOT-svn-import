@@ -32,7 +32,7 @@ struct DataOptions {
       fIntegral(false), 
       fUseEmpty(false), 
       fUseRange(false), 
-      fError1(false),
+      fErrors1(false),
       fCoordErrors(false),
       fAsymErrors(false)
    {}
@@ -41,9 +41,9 @@ struct DataOptions {
    bool fIntegral; 
    bool fUseEmpty; 
    bool fUseRange; 
-   bool fError1; 
-   bool fCoordErrors;
-   bool fAsymErrors; 
+   bool fErrors1;      // use all errors equal to 1 (fit without errors)
+   bool fCoordErrors; // use errors on the coordinates when available 
+   bool fAsymErrors;  // use asymmetric errors in the value when available (depending on sign of residual)
 
 
 }; 

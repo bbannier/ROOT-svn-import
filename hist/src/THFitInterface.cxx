@@ -42,7 +42,7 @@ bool IsPointOutOfRange(const TF1 * func, const double * x) {
 bool AdjustError(const DataOptions & option, double & error) {
    // adjust the given error accoring to the option
    //  if false is returned bin must be skipped 
-   if (option.fError1) error = 1;
+   if (option.fErrors1) error = 1;
    if (error <= 0 ) { 
       if (option.fUseEmpty) 
          error = 1.; // set error to 1 for empty bins 
@@ -234,7 +234,7 @@ void FillData ( BinData  & dv, const TGraph2D * gr, TF1 * func ) {
    double *gz = gr->GetZ();
    
    // if all errors are zero set option of using errors to 1
-   if ( gr->GetEZ() == 0) fitOpt.fError1 = true;
+   if ( gr->GetEZ() == 0) fitOpt.fErrors1 = true;
    
    double x[2]; 
    dv.Initialize(nPoints,2); 

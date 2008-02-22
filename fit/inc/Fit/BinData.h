@@ -60,7 +60,7 @@ class BinData  : public FitData  {
 
 public : 
 
-   enum ErrorType { kNoError, kValueError, kCoordError, kAsymmError };
+   enum ErrorType { kNoError, kValueError, kCoordError, kAsymError };
 
    static unsigned int GetPointSize(ErrorType err, unsigned int dim) { 
       if (err == kNoError) return dim + 1;   // no errors
