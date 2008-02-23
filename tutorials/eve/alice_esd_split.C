@@ -271,6 +271,7 @@ void load_event()
    gEve->Redraw3D(kFALSE, kTRUE);
    gTextEntry->SetTextColor(0x000000);
    gTextEntry->SetText(Form("Event %d loaded",esd_event_id));
+   gROOT->ProcessLine("SplitGLView::UpdateSummary()");
 }
 
 //______________________________________________________________________________
@@ -360,7 +361,7 @@ void make_gui()
       b = new TGPictureButton(hf, gClient->GetPicture(icondir + "GoForward.gif"));
       hf->AddFrame(b, new TGLayoutHints(kLHintsLeft | kLHintsCenterY, 2, 10, 10, 10));
       b->Connect("Clicked()", "EvNavHandler", fh, "Fwd()");
-      
+
       gTextEntry = new TGTextEntry(hf);
       gTextEntry->SetEnabled(kFALSE);
       hf->AddFrame(gTextEntry, new TGLayoutHints(kLHintsLeft | kLHintsCenterY  | 
