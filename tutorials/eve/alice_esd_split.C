@@ -119,6 +119,8 @@ Int_t esd_event_id       = 0; // Current event id.
 
 TEveTrackList *track_list = 0;
 
+TGTextEntry *gTextEntry;
+      
 /******************************************************************************/
 // Initialization and steering functions
 /******************************************************************************/
@@ -255,6 +257,9 @@ void load_event()
    // The contents of previous event are removed.
 
    printf("Loading event %d.\n", esd_event_id);
+   gTextEntry->SetTextColor(0xff0000);
+   gTextEntry->SetText(Form("Loading event %d...",esd_event_id));
+   gSystem->ProcessEvents();
 
    if (track_list)
       track_list->DestroyElements();
@@ -264,6 +269,8 @@ void load_event()
    alice_esd_read();
 
    gEve->Redraw3D(kFALSE, kTRUE);
+   gTextEntry->SetTextColor(0x000000);
+   gTextEntry->SetText(Form("Event %d loaded",esd_event_id));
 }
 
 //______________________________________________________________________________
@@ -303,6 +310,8 @@ public:
          load_event();
          update_projections();
       } else {
+         gTextEntry->SetTextColor(0xff0000);
+         gTextEntry->SetText("Already at last event");
          printf("Already at last event.\n");
       }
    }
@@ -313,6 +322,8 @@ public:
          load_event();
          update_projections();
       } else {
+         gTextEntry->SetTextColor(0xff0000);
+         gTextEntry->SetText("Already at first event");
          printf("Already at first event.\n");
       }
    }
@@ -343,14 +354,19 @@ void make_gui()
       EvNavHandler    *fh = new EvNavHandler;
 
       b = new TGPictureButton(hf, gClient->GetPicture(icondir + "GoBack.gif"));
-      hf->AddFrame(b);
+      hf->AddFrame(b, new TGLayoutHints(kLHintsLeft | kLHintsCenterY, 10, 2, 10, 10));
       b->Connect("Clicked()", "EvNavHandler", fh, "Bck()");
 
       b = new TGPictureButton(hf, gClient->GetPicture(icondir + "GoForward.gif"));
-      hf->AddFrame(b);
+      hf->AddFrame(b, new TGLayoutHints(kLHintsLeft | kLHintsCenterY, 2, 10, 10, 10));
       b->Connect("Clicked()", "EvNavHandler", fh, "Fwd()");
+      
+      gTextEntry = new TGTextEntry(hf);
+      gTextEntry->SetEnabled(kFALSE);
+      hf->AddFrame(gTextEntry, new TGLayoutHints(kLHintsLeft | kLHintsCenterY  | 
+                   kLHintsExpandX, 2, 10, 10, 10));
    }
-   frmMain->AddFrame(hf);
+   frmMain->AddFrame(hf, new TGLayoutHints(kLHintsTop | kLHintsExpandX,0,0,20,0));
 
    frmMain->MapSubwindows();
    frmMain->Resize();
