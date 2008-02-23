@@ -53,16 +53,16 @@ const char *filetypes[] = {
 
 ////////////////////////////////////////////////////////////////////////////////
 class HtmlObjTable : public TObject {
-public:                    // make them public for shorter code
+public:                     // make them public for shorter code
 
-   TString  fName;
-   Int_t    fNValues;      // number of values
-   Int_t    fNFields;      // number of fields
+   TString   fName;
+   Int_t     fNValues;      // number of values
+   Int_t     fNFields;      // number of fields
    TArrayF  *fValues;
    TString  *fLabels;
-   Bool_t   fExpand;
+   Bool_t    fExpand;
 
-   TString  fHtml;         // HTML output code
+   TString   fHtml;         // HTML output code
 
    void Build();
    void BuildTitle();
@@ -82,13 +82,13 @@ public:
 
 ////////////////////////////////////////////////////////////////////////////////
 class HtmlSummary {
-public:                          // make them public for shorter code
-   Int_t          fNTables;
+public:                           // make them public for shorter code
+   Int_t           fNTables;
    TOrdCollection *fObjTables;    // ->array of object tables
-   TString        fHtml;         // output HTML string
-   TString        fTitle;        // page title
-   TString        fHeader;       // HTML header
-   TString        fFooter;       // HTML footer
+   TString         fHtml;         // output HTML string
+   TString         fTitle;        // page title
+   TString         fHeader;       // HTML header
+   TString         fFooter;       // HTML footer
 
    void     MakeHeader();
    void     MakeFooter();
@@ -122,24 +122,24 @@ public:
    };
 
 private:
-   TEvePad           *fPad;         // pad used as geometry container
-   TGSplitFrame      *fSplitFrame;  // main (first) split frame
-   TGLEmbeddedViewer *fViewer0;     // main GL viewer
-   TGLEmbeddedViewer *fViewer1;     // first GL viewer
-   TGLEmbeddedViewer *fViewer2;     // second GL viewer
-   TGLEmbeddedViewer *fActViewer;   // actual (active) GL viewer
-   HtmlSummary       *fHtmlSummary; // summary HTML table
-   TGHtml            *fHtml;
-   TGMenuBar         *fMenuBar;     // main menu bar
-   TGPopupMenu       *fMenuFile;    // 'File' popup menu
-   TGPopupMenu       *fMenuHelp;    // 'Help' popup menu
-   TGPopupMenu       *fMenuCamera;  // 'Camera' popup menu
-   TGPopupMenu       *fMenuScene;   // 'Scene' popup menu
-   TGStatusBar       *fStatusBar;   // status bar
-   TGShapedToolTip   *fShapedToolTip;   // shaped tooltip
-   Bool_t             fIsEmbedded;
+   TEvePad               *fPad;           // pad used as geometry container
+   TGSplitFrame          *fSplitFrame;    // main (first) split frame
+   TGLEmbeddedViewer     *fViewer0;       // main GL viewer
+   TGLEmbeddedViewer     *fViewer1;       // first GL viewer
+   TGLEmbeddedViewer     *fViewer2;       // second GL viewer
+   TGLEmbeddedViewer     *fActViewer;     // actual (active) GL viewer
+   static HtmlSummary    *fgHtmlSummary;  // summary HTML table
+   static TGHtml         *fgHtml;
+   TGMenuBar             *fMenuBar;       // main menu bar
+   TGPopupMenu           *fMenuFile;      // 'File' popup menu
+   TGPopupMenu           *fMenuHelp;      // 'Help' popup menu
+   TGPopupMenu           *fMenuCamera;    // 'Camera' popup menu
+   TGPopupMenu           *fMenuScene;     // 'Scene' popup menu
+   TGStatusBar           *fStatusBar;     // status bar
+   TGShapedToolTip       *fShapedToolTip; // shaped tooltip
+   Bool_t                 fIsEmbedded;
 
-   TEveViewer        *fViewer[3];
+   TEveViewer            *fViewer[3];
    TEveProjectionManager *fRPhiMgr;
    TEveProjectionManager *fRhoZMgr;
 
@@ -156,7 +156,7 @@ public:
    void           OpenFile(const char *fname);
    void           ToggleOrthoRotate();
    void           ToggleOrthoDolly();
-   void           UpdateSummary();
+   static void    UpdateSummary();
    void           SwapToMainView();
 
    TEveProjectionManager *GetRPhiMgr() const { return fRPhiMgr; }
@@ -171,6 +171,9 @@ TEveProjectionManager *gRhoZMgr = 0;
 ClassImp(HtmlObjTable)
 ClassImp(HtmlSummary)
 ClassImp(SplitGLView)
+
+HtmlSummary *SplitGLView::fgHtmlSummary = 0;
+TGHtml *SplitGLView::fgHtml = 0;
 
 //______________________________________________________________________________
 HtmlObjTable::HtmlObjTable(const char *name, Int_t nfields, Int_t nvals, Bool_t exp) : 
@@ -584,9 +587,9 @@ SplitGLView::SplitGLView(const TGWindow *p, UInt_t w, UInt_t h, Bool_t embed) :
    button->SetToolTipText("Swap to big view");
    hfrm->AddFrame(button);
    button->Connect("Clicked()","SplitGLView",this,"SwapToMainView()");
-   fHtmlSummary = new HtmlSummary("Alice Event Display Summary Table");
-   fHtml = new TGHtml(hfrm, 100, 100, -1);
-   hfrm->AddFrame(fHtml, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+   fgHtmlSummary = new HtmlSummary("Alice Event Display Summary Table");
+   fgHtml = new TGHtml(hfrm, 100, 100, -1);
+   hfrm->AddFrame(fgHtml, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
    frm->AddFrame(hfrm, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
 
    if (fIsEmbedded && gEve) {
@@ -959,7 +962,7 @@ void SplitGLView::UpdateSummary()
    HtmlObjTable *table;
    TEveEventManager *mgr = gEve->GetCurrentEvent();
    if (mgr) {
-      fHtmlSummary->Clear("D");
+      fgHtmlSummary->Clear("D");
       for (i=mgr->BeginChildren(); i!=mgr->EndChildren(); ++i) {
          el = ((TEveElement*)(*i));
          if (el->IsA() == TEvePointSet::Class()) {
@@ -969,13 +972,13 @@ void SplitGLView::UpdateSummary()
             ename.Remove(ename.First('\''));
             etitle.Remove(0, 2);
             Int_t nel = atoi(etitle.Data());
-            table = fHtmlSummary->AddTable(ename, 0, nel);
+            table = fgHtmlSummary->AddTable(ename, 0, nel);
          }
          else if (el->IsA() == TEveTrackList::Class()) {
             TEveTrackList *tracks = (TEveTrackList *)el;
             TString ename  = tracks->GetElementName();
             ename.Remove(ename.First('\''));
-            table = fHtmlSummary->AddTable(ename.Data(), 5, 
+            table = fgHtmlSummary->AddTable(ename.Data(), 5, 
                      tracks->GetNChildren(), kTRUE, "first");
             table->SetLabel(0, "Momentum");
             table->SetLabel(1, "P_t");
@@ -998,10 +1001,10 @@ void SplitGLView::UpdateSummary()
             }
          }
       }
-      fHtmlSummary->Build();
-      fHtml->Clear();
-      fHtml->ParseText((char*)fHtmlSummary->Html().Data());
-      fHtml->Layout();
+      fgHtmlSummary->Build();
+      fgHtml->Clear();
+      fgHtml->ParseText((char*)fgHtmlSummary->Html().Data());
+      fgHtml->Layout();
    }
 }
 
