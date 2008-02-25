@@ -15,7 +15,7 @@ ALTCXX       := $(shell $(ROOTCONFIG) --cxx)
 ALTF77       := $(shell $(ROOTCONFIG) --f77)
 ALTLD        := $(shell $(ROOTCONFIG) --ld)
 
-CXX           =
+#CXX           =
 ObjSuf        = o
 SrcSuf        = cxx
 ExeSuf        =
