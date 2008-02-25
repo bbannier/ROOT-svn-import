@@ -3573,7 +3573,7 @@ Bool_t TFile::Cp(const char *src, const char *dst, Bool_t progressbar,
 
    success = kTRUE;
 
-   if (sfile->GetBytesRead() != dfile->GetBytesWritten()) {
+   if ((sfile->GetBytesRead() - b00) != dfile->GetBytesWritten()) {
       ::Error("TFile::Cp", "read and written bytes differ (%lld != %lld)",
                            sfile->GetBytesRead(), dfile->GetBytesWritten());
       success = kFALSE;
