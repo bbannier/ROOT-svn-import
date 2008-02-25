@@ -1778,6 +1778,69 @@ int G__evaluate_libp(G__param* rpara, G__param *libp, G__ifunc_table_internal *i
 }
 
 /**************************************************************************
+ * G__execute_call
+ *
+ * Method/Function call final execution
+ *
+ * This function will execute a function via either the stub or the assembler call
+ *
+ * result7  = Method's return
+ * libp     = Method's Parameters
+ * ifunc    = Interpreted Functions Table
+ * ifn      = Method's index in ifunc
+ *
+ * See: common.h and G__c.h for types information
+ **************************************************************************/
+int G__execute_call(G__value *result7,G__param *libp,G__ifunc_table_internal *ifunc,int ifn){
+
+   G__InterfaceMethod cppfunc = (G__InterfaceMethod)ifunc->pentry[ifn]->p;
+
+#ifdef G__NOSTUBS
+    /* 15/03/2007 */
+    // 1 Parameter && Registered Method in ifunc && Neither static method nor function
+    // (G__tagnum > -1) is not needed because G__tagnum can be -1 when we have free
+    // standing functions
+    if ( ((libp->paran>=0) &&
+          G__get_funcptr(ifunc, ifn) &&
+          /*!(G__struct.type[ifunc->tagnum] == 'n') &&*/
+          !G__wrappers && !cppfunc) || // DMS Use the stub if there is one
+         ifunc->ispurevirtual[ifn]) {
+      // Registered Method in ifunc. Then We Can Call the method without the stub function
+      G__stub_method_calling(result7, libp, ifunc, ifn);
+    }
+    else 
+#endif
+    if (cppfunc) {
+      /* 15/03/2007 */
+      // this-pointer adjustment
+      G__this_adjustment(ifunc, ifn);
+#ifdef G__EXCEPTIONWRAPPER
+      G__ExceptionWrapper((G__InterfaceMethod)cppfunc,result7,(char*)ifunc,libp,ifn);
+#else
+      // Stub calling
+      (*cppfunc)(result7,(char*)ifunc,libp,ifn);
+#endif
+    }
+    else if (!cppfunc && !G__get_funcptr(ifunc, ifn)) {
+      G__fprinterr(G__serr,"Error in G__call_cppfunc: There is no stub nor mangled name for function: %s \n", ifunc->funcname[ifn]);
+
+      if(ifunc->tagnum != -1)
+        G__fprinterr(G__serr,"Error in G__call_cppfunc: For class: %s \n", G__struct.name[ifunc->tagnum]);   
+
+      return -1;
+    }
+    else {
+      // It shouldn't be here
+      G__fprinterr(G__serr,"Error in G__call_cppfunc: Function %s could not be called. \n", ifunc->funcname[ifn]);
+      return -1;
+    }
+    
+    return 1;
+
+}
+
+
+/**************************************************************************
  * G__stub_method_calling
  *
  * Non Dictionariy (Stub functions) Assembler Method Calling
@@ -1914,9 +1977,9 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
 
       // We look for the "new operator" ifunc in the current class and in its bases
       if (arity)
-         new_oper = G__get_methodhandle4("operator new[]", &para_new, ifunc, &pifn, &poffset, 0, 1,0,0);
+         new_oper = G__get_methodhandle4("operator new[]", &para_new, ifunc, &pifn, &poffset, 0, 1,0);
       else 
-         new_oper = G__get_methodhandle4("operator new", &para_new, ifunc, &pifn, &poffset, 0, 1,0,0);
+         new_oper = G__get_methodhandle4("operator new", &para_new, ifunc, &pifn, &poffset, 0, 1,0);
 
       // is the new operator overriden?
       if (!new_oper) { // No, it's not
@@ -2082,7 +2145,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
                   parfunc = parfunc->next;
                }
                new_ifunc = G__struct.memfunc[tagnum];
-               new_ifunc = G__get_methodhandle4(new_ifunc->funcname[ifn], &fpara, new_ifunc, &pifn, &poffset, 1, 1, 0, 0);
+               new_ifunc = G__get_methodhandle4(new_ifunc->funcname[ifn], &fpara, new_ifunc, &pifn, &poffset, 1, 1, 0);
             }
         
             if(new_ifunc && (ifunc!=new_ifunc)){
@@ -2107,10 +2170,10 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
                old_tag = G__tagnum;
                G__tagnum = tagnum;
 
-               if(G__get_funcptr(new_ifunc, ifn)&&G__wrappers)
+               if(G__get_funcptr(new_ifunc, ifn))
                   intres = G__stub_method_calling(result7, &rpara, new_ifunc, ifn); // Default params already evaluated
                else
-                  intres = G__call_cppfunc(result7, &rpara, new_ifunc, ifn); // Default params already evaluated
+                  intres = G__execute_call(result7, &rpara, new_ifunc, ifn); // Default params already evaluated
 
                G__tagnum = old_tag;
                // change back the this pointer
@@ -2190,9 +2253,9 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
       
             // We look for the "delete operator" ifunc in the current class and in its bases
             if (arity > 1)
-               del_oper = G__get_methodhandle4("operator delete[]", &para_del, ifunc, &pifn, &poffset,0,1,0,0);
+               del_oper = G__get_methodhandle4("operator delete[]", &para_del, ifunc, &pifn, &poffset,0,1,0);
             else 
-               del_oper = G__get_methodhandle4("operator delete", &para_del, ifunc, &pifn, &poffset,0,1,0,0);
+               del_oper = G__get_methodhandle4("operator delete", &para_del, ifunc, &pifn, &poffset,0,1,0);
       
             // Setting up parameter
             G__letint(&para_del.para[0],(int) 'Y', (long) soff);
@@ -2286,6 +2349,9 @@ void* G__get_funcptr(G__ifunc_table_internal *ifunc, int ifn)
   return 0;
 #endif
 }
+
+
+
 
 
 /**************************************************************************
@@ -2397,45 +2463,9 @@ int G__call_cppfunc(G__value *result7,G__param *libp,G__ifunc_table_internal *if
     // We store the this-pointer
     long save_offset = G__store_struct_offset;
 
-#ifdef G__NOSTUBS
-    /* 15/03/2007 */
-    // 1 Parameter && Registered Method in ifunc && Neither static method nor function
-    // (G__tagnum > -1) is not needed because G__tagnum can be -1 when we have free
-    // standing functions
-    if ( ((libp->paran>=0) &&
-          G__get_funcptr(ifunc, ifn) &&
-          /*!(G__struct.type[ifunc->tagnum] == 'n') &&*/
-          !G__wrappers && !cppfunc) || // DMS Use the stub if there is one
-         ifunc->ispurevirtual[ifn]) {
-      // Registered Method in ifunc. Then We Can Call the method without the stub function
-      G__stub_method_calling(result7, libp, ifunc, ifn);
-    }
-    else 
-#endif
-    if (cppfunc) {
-      /* 15/03/2007 */
-      // this-pointer adjustment
-      G__this_adjustment(ifunc, ifn);
-#ifdef G__EXCEPTIONWRAPPER
-      G__ExceptionWrapper((G__InterfaceMethod)cppfunc,result7,(char*)ifunc,libp,ifn);
-#else
-      // Stub calling
-      (*cppfunc)(result7,(char*)ifunc,libp,ifn);
-#endif
-    }
-    else if (!cppfunc && !G__get_funcptr(ifunc, ifn)) {
-      G__fprinterr(G__serr,"Error in G__call_cppfunc: There is no stub nor mangled name for function: %s \n", ifunc->funcname[ifn]);
-
-      if(ifunc->tagnum != -1)
-        G__fprinterr(G__serr,"Error in G__call_cppfunc: For class: %s \n", G__struct.name[ifunc->tagnum]);   
-
-      return -1;
-    }
-    else {
-      // It shouldn't be here
-      G__fprinterr(G__serr,"Error in G__call_cppfunc: Function %s could not be called. \n", ifunc->funcname[ifn]);
-      return -1;
-    }
+    // We launch the method/function here!!! Either stubs or wrappers (via G__ExceptionWrapper) or direct call
+    if (!G__execute_call(result7,libp,ifunc,ifn))
+       return -1;
 
     // This-pointer restoring
     G__store_struct_offset = save_offset;
@@ -6856,7 +6886,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
       para_cons.paran = 0;
 
       // We look for the "new operator" ifunc in the current class and in its bases
-      G__ifunc_table_internal * cons_oper = G__get_methodhandle4(G__struct.name[tagnum], &para_cons, G__struct.memfunc[tagnum], &pifn, &poffset, 0, 1,0,0);
+      G__ifunc_table_internal * cons_oper = G__get_methodhandle4(G__struct.name[tagnum], &para_cons, G__struct.memfunc[tagnum], &pifn, &poffset, 0, 1,0);
 
       // Look for it in the ifunc table is it was already create in make_default_ifunc
       if(cons_oper && !(!cons_oper->mangled_name[pifn] /*&& cons_oper->funcptr[pifn]!=(void*)-1*/))
@@ -6887,7 +6917,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
           para_new.paran = 0; 	 
 	  	 
           // We look for the "new operator" ifunc in the current class and in its bases 	 
-          G__ifunc_table_internal* new_oper = G__get_methodhandle4(G__struct.name[tagnum], &para_new, G__struct.memfunc[tagnum], &pifn, &poffset, 0, 1,0,0);
+          G__ifunc_table_internal* new_oper = G__get_methodhandle4(G__struct.name[tagnum], &para_new, G__struct.memfunc[tagnum], &pifn, &poffset, 0, 1,0);
       
           if(new_oper && (!isconstructor && !G__struct.isabstract[tagnum] && !isnonpublicnew))
             isconstused = 1;
@@ -7036,7 +7066,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
       para_cons.para[0].tagnum = tagnum;
 
       // We look for the "new operator" ifunc in the current class and in its bases
-      G__ifunc_table_internal * cons_oper = G__get_methodhandle4(G__struct.name[tagnum], &para_cons, G__struct.memfunc[tagnum], &pifn, &poffset, 0, 1,0,0);
+      G__ifunc_table_internal * cons_oper = G__get_methodhandle4(G__struct.name[tagnum], &para_cons, G__struct.memfunc[tagnum], &pifn, &poffset, 0, 1,0);
 
       if(cons_oper && !(!cons_oper->mangled_name[pifn] /*&& cons_oper->funcptr[pifn]!=(void*)-1*/))
         page = cons_oper->page;
@@ -7066,7 +7096,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
           para_new.paran = 0; 	 
 	  	 
           // We look for the "new operator" ifunc in the current class and in its bases 	 
-          G__ifunc_table_internal* new_oper = G__get_methodhandle4(G__struct.name[tagnum], &para_new, G__struct.memfunc[tagnum], &pifn, &poffset, 0, 1,0,0);
+          G__ifunc_table_internal* new_oper = G__get_methodhandle4(G__struct.name[tagnum], &para_new, G__struct.memfunc[tagnum], &pifn, &poffset, 0, 1,0);
       
           if(!isconstused && new_oper && (!isconstructor && !G__struct.isabstract[tagnum] && !isnonpublicnew)){
             fprintf(fp, "  %s G__cons_%s;\n", G__fulltagname(tagnum, 0),  G__map_cpp_funcname(tagnum, funcname, ifn, page));
@@ -7145,7 +7175,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
       para_des.paran = 0;
 
       // We look for the "new operator" ifunc in the current class and in its bases
-      G__ifunc_table_internal * des_oper = G__get_methodhandle4(funcname, &para_des, G__struct.memfunc[tagnum], &pifn, &poffset, 0, 1,0,0);
+      G__ifunc_table_internal * des_oper = G__get_methodhandle4(funcname, &para_des, G__struct.memfunc[tagnum], &pifn, &poffset, 0, 1,0);
 
       // Look for it in the ifunc table is it was already create in make_default_ifunc
       if(des_oper && !(!des_oper->mangled_name[pifn] /*&& des_oper->funcptr[pifn]!=(void*)-1*/) )
@@ -7283,7 +7313,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
       para_op.para[0].tagnum = tagnum;
       
       // We look for the "new operator" ifunc in the current class and in its bases
-      G__ifunc_table_internal * op_oper = G__get_methodhandle4("operator=", &para_op, G__struct.memfunc[tagnum], &pifn, &poffset, 0, 1,0,0);
+      G__ifunc_table_internal * op_oper = G__get_methodhandle4("operator=", &para_op, G__struct.memfunc[tagnum], &pifn, &poffset, 0, 1,0);
 
       if(op_oper && !(!op_oper->mangled_name[pifn] /*&& op_oper->funcptr[pifn]!=(void*)-1*/))
         page = op_oper->page;

@@ -319,6 +319,9 @@ G__value G__default_parameter;
 #define G__ASM_IFUNC
 
 
+// TEST REMOVE IT REMOVE IT REMOVE IT DMS
+#define G__ASM_DBG 1 
+
 /*********************************************
 * loop compile debug mode
 *  Not defined usually. Needed only when
