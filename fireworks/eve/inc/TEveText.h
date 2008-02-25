@@ -66,7 +66,7 @@ public:
    Float_t GetExtrude() const    { return fExtrude; }
    void    SetExtrude(Float_t x) { fExtrude = x;    }
 
-   virtual Bool_t CanEditMainColor() { return kTRUE; }
+   virtual Bool_t CanEditMainColor() const { return kTRUE; }
    virtual void   Paint(Option_t* option="");
    virtual void   ComputeBBox();
 

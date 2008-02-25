@@ -53,7 +53,7 @@ public:
    virtual void   SetRnrChildren(Bool_t rnr);
    virtual void   SetRnrState(Bool_t rnr);
 
-   virtual Bool_t CanEditMainColor()  { return kTRUE; }
+   virtual Bool_t CanEditMainColor() const { return kTRUE; }
    virtual void   SetMainColor(Color_t color);
 
    void UpdateNode(TGeoNode* node);
@@ -131,23 +131,23 @@ public:
    TEveGeoShape(const Text_t* name="TEveGeoShape", const Text_t* title=0);
    virtual ~TEveGeoShape();
 
-   virtual Bool_t CanEditMainColor() { return kTRUE; }
+   virtual Bool_t CanEditMainColor() const { return kTRUE; }
 
-   virtual Bool_t  CanEditMainTransparency()      { return kTRUE; }
-   virtual UChar_t GetMainTransparency() const    { return fTransparency; }
-   virtual void    SetMainTransparency(UChar_t t) { fTransparency = t; }
+   virtual Bool_t  CanEditMainTransparency() const { return kTRUE; }
+   virtual UChar_t GetMainTransparency()     const { return fTransparency; }
+   virtual void    SetMainTransparency(UChar_t t)  { fTransparency = t; }
 
-   Color_t     GetColor()        { return fColor; }
+   Color_t     GetColor() const  { return fColor; }
    TGeoShape*  GetShape()        { return fShape; }
 
    virtual void Paint(Option_t* option="");
 
    void Save(const char* file, const char* name="Extract");
-   static TEveGeoShape*        ImportShapeExtract(TEveGeoShapeExtract* gse, TEveElement* parent);
+   static TEveGeoShape* ImportShapeExtract(TEveGeoShapeExtract* gse, TEveElement* parent);
 
    // GeoProjectable
-   virtual TBuffer3D*           MakeBuffer3D();
-   virtual TClass*              ProjectedClass() const;
+   virtual TBuffer3D*   MakeBuffer3D();
+   virtual TClass*      ProjectedClass() const;
 
    ClassDef(TEveGeoShape, 1); // Wrapper for TGeoShape with absolute positioning and color attributes allowing display of extracted TGeoShape's (without an active TGeoManager) and simplified geometries (needed for NLT projections).
 };
