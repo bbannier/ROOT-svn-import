@@ -44,7 +44,7 @@ while true ; do
         case "$1" in
                 -v)  shift ;;
                 --v0|--v1|--v2|--v3|--v4) shift ;;
-                --tmp) ROOTCINT=utils/src/rootcint_tmp; shift;;
+                --tmp) ROOTCINT=$ROOTSYS/utils/src/rootcint_tmp; shift;;
                 --cint) MODE=$1; shift ;;
                 --reflex) MODE=$1; shift ;;
                 --gccxml) MODE=$1; shift ;;

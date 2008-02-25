@@ -55,7 +55,7 @@ ifeq ($(NOSTUBS),yes)
  ifeq ($(GCC_MAJOR),3)
 	# allow 3.2, 3.3, and 3.4:
   ifneq ($(findstring $(GCC_MINOR),2 3 4),)
-	 ROOTCINT = export CXXFLAGS="$(CXXFLAGS)"; utils/src/rootcint_nostubs_tmp.sh -$(ROOTDICTTYPE)
+	 ROOTCINT = export CXXFLAGS="$(CXXFLAGS)"; $(ROOTSYS)/utils/src/rootcint_nostubs.sh -$(ROOTDICTTYPE)
  else
 	NOSTUBS := "no"
 	NOSTUBSTEST := "no"	

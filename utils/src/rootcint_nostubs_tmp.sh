@@ -1,2 +1,2 @@
 #! /bin/bash
-utils/src/rootcint_nostubs.sh -tmp "$@"
+$ROOTSYS/utils/src/rootcint_nostubs.sh -tmp "$@"
