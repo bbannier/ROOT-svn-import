@@ -3,6 +3,7 @@
 #include "TF1.h"
 #include "TF2.h"
 #include "TGraphErrors.h"
+#include "TGraphAsymmErrors.h"
 #include "TGraph2D.h"
 #include "TSystem.h"
 #include "TRandom3.h"
@@ -25,8 +26,23 @@
 
 // print the data
 void printData(const ROOT::Fit::BinData & data) {
+   std::cout << "Bin data, point  size is " << data.PointSize() << " data dimension is " << data.NDim() << " type is " << data.GetErrorType() << std::endl;
    for (unsigned int i = 0; i < data.Size(); ++i) { 
-      std::cout << data.Coords(i)[0] << "   " << data.Value(i) << "   " << data.Error(i) << std::endl; 
+      if (data.GetErrorType() == ROOT::Fit::BinData::kNoError) 
+         std::cout << data.Coords(i)[0] << "   " << data.Value(i) << std::endl; 
+      else if (data.GetErrorType() == ROOT::Fit::BinData::kValueError) 
+         std::cout << data.Coords(i)[0] << "   " << data.Value(i) << " +/-  " << data.Error(i) << std::endl; 
+      else if (data.GetErrorType() == ROOT::Fit::BinData::kCoordError) {
+         double ey = 0; 
+         const double * ex = data.GetPointError(i,ey); 
+         std::cout << data.Coords(i)[0] <<  " +/-  " << ex[0] <<  "   " << data.Value(i) << " +/-  " << ey << std::endl; 
+      }
+      else if (data.GetErrorType() == ROOT::Fit::BinData::kAsymError) { 
+         double eyl = 0; double eyh = 0;  
+         const double * ex = data.GetPointError(i,eyl,eyh); 
+         std::cout << data.Coords(i)[0] <<  " +/-  " << ex[0] <<  "   " << data.Value(i) << " -  " << eyl << " + " << eyh << std::endl; 
+      }
+
    }
    std::cout << "\ndata size is " << data.Size() << std::endl;
 }    
@@ -165,7 +181,7 @@ int testHisto1DFit() {
    std::cout << "\n\nTest Same Fit from a TGraphErrors - no coord errors" << std::endl; 
    TGraphErrors gr(h1); 
    ROOT::Fit::BinData dg; 
-   ROOT::Fit::FillData(dg,&gr, false);
+   ROOT::Fit::FillData(dg,&gr);
 
    f.SetParameters(p);   
    ret = fitter.Fit(dg, f);
@@ -179,7 +195,8 @@ int testHisto1DFit() {
    // fit using error on X
    std::cout << "\n\nTest Same Fit from a TGraphErrors - use coord errors" << std::endl; 
    ROOT::Fit::BinData dger; 
-   ROOT::Fit::FillData(dger,&gr, true);
+   dger.Opt().fCoordErrors = true;  // use coordinate errors
+   ROOT::Fit::FillData(dger,&gr);
 
    f.SetParameters(p);   
    ret = fitter.Fit(dger, f);
@@ -190,10 +207,11 @@ int testHisto1DFit() {
       return -1; 
    }
 
-   // compare with TGraph::Fit
-   std::cout << "\n******************************\n\t TGraph::Fit Result \n" << std::endl; 
+   // compare with TGraphErrors::Fit
+   std::cout << "\n******************************\n\t TGraphErrors::Fit Result \n" << std::endl; 
    func->SetParameters(p);   
    gr.Fit(func); 
+   std::cout << "Ndf of TGraphErrors::Fit  = " << func->GetNDF() << std::endl;
 
 
    // test graph fit (errors are 1) do a re-normalization
@@ -201,7 +219,7 @@ int testHisto1DFit() {
    fitter.Config().SetNormErrors(true);
    TGraph gr2(h1); 
    ROOT::Fit::BinData dg2; 
-   ROOT::Fit::FillData(dg2,&gr2,func);
+   ROOT::Fit::FillData(dg2,&gr2);
 
    f.SetParameters(p);   
    ret = fitter.Fit(dg2, f);
@@ -211,6 +229,13 @@ int testHisto1DFit() {
       std::cout << "Chi2 Graph Fit Failed " << std::endl;
       return -1; 
    }
+
+
+   // compare with TGraph::Fit (no errors)
+   std::cout << "\n******************************\n\t TGraph::Fit Result \n" << std::endl; 
+   func->SetParameters(p);   
+   gr2.Fit(func); 
+   std::cout << "Ndf of TGraph::Fit = " << func->GetNDF() << std::endl;
 
 
    // reddo chi2fit using Fumili
@@ -506,6 +531,111 @@ int testUnBin1DFit() {
    return iret; 
 }
 
+int testGraphFit() { 
+   
+   int iret = 0; 
+
+   // simple test of fitting a Tgraph 
+
+   double x[5] = {1,2,3,4,5}; 
+   double y[5] = {2.1, 3.5, 6.5, 8.8, 9.5};
+   double ex[5] = {.3,.3,.3,.3,.3};
+   double ey[5] = {.5,.5,.5,.5,.5};
+   double eyl[5] = {.2,.2,.2,.2,.2};
+   double eyh[5] = {.8,.8,.8,.8,.8};
+
+   std::cout << "\n********************************************************\n";
+   std::cout << "Test simple fit of Tgraph of 5 points" << std::endl;
+   std::cout << "\n********************************************************\n";
+
+
+   double p[2] = {1,1}; 
+   TF1 * func = new TF1("f","pol1",0,10);
+   func->SetParameters(p);
+
+   ROOT::Math::WrappedMultiTF1 f(*func); 
+   f.SetParameters(p); 
+
+   ROOT::Fit::Fitter fitter; 
+   fitter.SetFunction(f);
+
+      
+   std::cout <<"\ntest TGraph (no errors) " << std::endl;
+   TGraph gr(5, x,y);  
+
+   ROOT::Fit::BinData dgr; 
+   ROOT::Fit::FillData(dgr,&gr);
+
+   //printData(dgr);
+
+   f.SetParameters(p);   
+   bool ret = fitter.Fit(dgr, f);
+   if (ret)  
+      fitter.Result().Print(std::cout); 
+   else {
+      std::cout << "Chi2 Graph Fit Failed " << std::endl;
+      return -1; 
+   }
+
+   // compare with TGraph::Fit
+   std::cout << "\n******************************\n\t TGraph::Fit Result \n" << std::endl; 
+   func->SetParameters(p);   
+   gr.Fit(func,"F"); // use Minuit  
+
+
+   std::cout <<"\ntest TGraphErrors  " << std::endl;
+   TGraphErrors grer(5, x,y,ex,ey);  
+
+   ROOT::Fit::BinData dgrer; 
+   dgrer.Opt().fCoordErrors = true; 
+   ROOT::Fit::FillData(dgrer,&grer);
+   
+   //printData(dgrer);
+
+   f.SetParameters(p);   
+   ret = fitter.Fit(dgrer, f);
+   if (ret)  
+      fitter.Result().Print(std::cout); 
+   else {
+      std::cout << "Chi2 Graph Fit Failed " << std::endl;
+      return -1; 
+   }
+
+   // compare with TGraph::Fit
+   std::cout << "\n******************************\n\t TGraphErrors::Fit Result \n" << std::endl; 
+   func->SetParameters(p);   
+   grer.Fit(func,"F"); // use Minuit  
+
+   std::cout <<"\ntest TGraphAsymmErrors  " << std::endl;
+   TGraphAsymmErrors graer(5, x,y,ex,ex,eyl, eyh);  
+
+   ROOT::Fit::BinData dgraer; 
+   // option error on coordinate and asymmetric on values
+   dgraer.Opt().fCoordErrors = true; 
+   dgraer.Opt().fAsymErrors = true; 
+   ROOT::Fit::FillData(dgraer,&graer);
+   //printData(dgraer);
+
+   f.SetParameters(p);   
+   ret = fitter.Fit(dgraer, f);
+   if (ret)  
+      fitter.Result().Print(std::cout); 
+   else {
+      std::cout << "Chi2 Graph Fit Failed " << std::endl;
+      return -1; 
+   }
+
+   // compare with TGraph::Fit
+   std::cout << "\n******************************\n\t TGraphAsymmErrors::Fit Result \n" << std::endl; 
+   func->SetParameters(p);   
+   graer.Fit(func,"F"); // use Minuit  
+
+
+
+   return iret; 
+}
+
+
 template<typename Test> 
 int testFit(Test t, std::string name) { 
    std::cout << name << "\n\t\t";  
@@ -525,6 +655,7 @@ int main() {
    iret |= testFit( testHisto1DPolFit, "Histogram1D Polynomial Fit");
    iret |= testFit( testHisto2DFit, "Histogram2D Gradient Fit");
    iret |= testFit( testUnBin1DFit, "Unbin 1D Fit");
+   iret |= testFit( testGraphFit, "Graph 1D Fit");
    return iret; 
 }
    
