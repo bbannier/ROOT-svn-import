@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <vector>
 
 #include <TMath.h>
 #include <Math/SpecFunc.h>
@@ -20,7 +21,7 @@ inline int arrayindex(double i) { return ARRAYSIZE - (int) ( (MAX - i) / INCREME
 
 using namespace std;
 
-void drawPoints(Double_t x[ARRAYSIZE], Double_t y[ARRAYSIZE], int color, int style = 1)
+void drawPoints(Double_t x[], Double_t y[], int color, int style = 1)
 {
    TGraph* g = new TGraph(ARRAYSIZE, x, y);
    g->SetLineColor(color);
@@ -31,14 +32,14 @@ void drawPoints(Double_t x[ARRAYSIZE], Double_t y[ARRAYSIZE], int color, int sty
 
 void testSpecFuncErf() 
 {
-   Double_t x[ ARRAYSIZE ];
-   Double_t yerf[ ARRAYSIZE ];
-   Double_t ymerf[ ARRAYSIZE ];
-   Double_t yerfc[ ARRAYSIZE ];
-   Double_t ymerfc[ ARRAYSIZE ];
-   Double_t yierf[ ARRAYSIZE ];
-   Double_t yierfc[ ARRAYSIZE ];
-//    Double_t yndtri[ ARRAYSIZE ];
+   vector<Double_t> x( ARRAYSIZE );
+   vector<Double_t> yerf( ARRAYSIZE );
+   vector<Double_t> ymerf( ARRAYSIZE );
+   vector<Double_t> yerfc( ARRAYSIZE );
+   vector<Double_t> ymerfc( ARRAYSIZE );
+   vector<Double_t> yierf( ARRAYSIZE );
+   vector<Double_t> yierfc( ARRAYSIZE );
+//    vector<Double_t> yndtri( ARRAYSIZE );
 
    ofstream outputFile ("values.txt");
 
@@ -70,13 +71,13 @@ void testSpecFuncErf()
    hpx->SetStats(kFALSE);
    hpx->Draw();
 
-   drawPoints(x, yerf, 14);
-   drawPoints(x, ymerf, 5, 7);
-   drawPoints(x, yerfc, 2);
-   drawPoints(x, ymerfc, 3, 7);
-//   drawPoints(x, yierf, 21);
-//   drawPoints(x, yierfc, 28);
-//   drawPoints(x, yndtri, 9);
+   drawPoints(&x[0], &yerf[0], 14);
+   drawPoints(&x[0], &ymerf[0], 5, 7);
+   drawPoints(&x[0], &yerfc[0], 2);
+   drawPoints(&x[0], &ymerfc[0], 3, 7);
+//   drawPoints(&x[0], &yierf[0], 21);
+//   drawPoints(&x[0], &yierfc[0], 28);
+//   drawPoints(&x[0], &yndtri[0], 9);
 
    c1->Show();
 

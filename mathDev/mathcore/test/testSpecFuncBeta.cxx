@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <vector>
 
 #include <TMath.h>
 #include <Math/SpecFunc.h>
@@ -18,7 +19,7 @@ inline int arrayindex(double i) { return ARRAYSIZE - (int) ( (MAX - i) / INCREME
 
 using namespace std;
 
-void drawPoints(Double_t x[ARRAYSIZE], Double_t y[ARRAYSIZE], int color, int style = 1)
+void drawPoints(Double_t x[], Double_t y[], int color, int style = 1)
 {
    TGraph* g = new TGraph(ARRAYSIZE, x, y);
    g->SetLineColor(color);
@@ -29,11 +30,9 @@ void drawPoints(Double_t x[ARRAYSIZE], Double_t y[ARRAYSIZE], int color, int sty
 
 void testSpecFuncBeta() 
 {
-   Double_t x[ ARRAYSIZE ];
-   Double_t yb[ ARRAYSIZE ];
-   Double_t ymb[ ARRAYSIZE ];
-
-//    ofstream outputFile ("values.txt");
+   vector<Double_t> x( ARRAYSIZE );
+   vector<Double_t> yb( ARRAYSIZE );
+   vector<Double_t> ymb( ARRAYSIZE );
 
    TCanvas* c1 = new TCanvas("c1", "Two Graphs", 600, 400); 
    TH2F* hpx = new TH2F("hpx", "Two Graphs(hpx)", ARRAYSIZE, MIN, MAX, ARRAYSIZE, 0, 5);
@@ -58,8 +57,8 @@ void testSpecFuncBeta()
          ymb[arrayindex(i)] = ROOT::Math::beta(i,b);
       }
       
-      drawPoints(x, yb, color++);
-      drawPoints(x, ymb, color++, 7);
+      drawPoints(&x[0], &yb[0], color++);
+      drawPoints(&x[0], &ymb[0], color++, 7);
    }
 
    c1->Show();
