@@ -31,11 +31,14 @@
 #include "TEveGeoNode.h"
 #include "TEveEventManager.h"
 #include "TEveTrack.h"
+#include "TEveSelection.h"
 
 #include "TGSplitFrame.h"
 #include "TGLEmbeddedViewer.h"
 #include "TGShapedFrame.h"
 #include "TGButton.h"
+#include "TGTab.h"
+#include "TEnv.h"
 
 #include "TFormula.h"
 #include "TF1.h"
@@ -47,6 +50,11 @@
 
 const char *filetypes[] = { 
    "ROOT files",    "*.root",
+   "All files",     "*",
+   0,               0 
+};
+
+const char *rcfiletypes[] = { 
    "All files",     "*",
    0,               0 
 };
@@ -113,12 +121,10 @@ class SplitGLView : public TGMainFrame {
 
 public:
    enum EMyCommands {
-      kFileOpen, kFileExit, kHelpAbout,
-      kGLPerspYOZ, kGLPerspXOZ, kGLPerspXOY,
-      kGLXOY, kGLXOZ, kGLZOY,
-      kGLOrthoRotate, kGLOrthoDolly,
-      kSceneUpdate, kSceneUpdateAll,
-      kSummaryUpdate
+      kFileOpen, kFileExit, kFileLoadConfig, kFileSaveConfig,
+      kHelpAbout, kGLPerspYOZ, kGLPerspXOZ, kGLPerspXOY, kGLXOY,
+      kGLXOZ, kGLZOY, kGLOrthoRotate, kGLOrthoDolly, kSceneUpdate, 
+      kSceneUpdateAll, kSummaryUpdate
    };
 
 private:
@@ -156,8 +162,10 @@ public:
    void           OpenFile(const char *fname);
    void           ToggleOrthoRotate();
    void           ToggleOrthoDolly();
-   static void    UpdateSummary();
    void           SwapToMainView();
+   void           LoadConfig(const char *fname);
+   void           SaveConfig(const char *fname);
+   static void    UpdateSummary();
 
    TEveProjectionManager *GetRPhiMgr() const { return fRPhiMgr; }
    TEveProjectionManager *GetRhoZMgr() const { return fRhoZMgr; }
@@ -392,6 +400,9 @@ SplitGLView::SplitGLView(const TGWindow *p, UInt_t w, UInt_t h, Bool_t embed) :
    fMenuFile->AddSeparator();
    fMenuFile->AddEntry( "&Update Summary", kSummaryUpdate);
    fMenuFile->AddSeparator();
+   fMenuFile->AddEntry("&Load Config...", kFileLoadConfig);
+   fMenuFile->AddEntry("&Save Config...", kFileSaveConfig);
+   fMenuFile->AddSeparator();
    fMenuFile->AddEntry("E&xit", kFileExit);
 
    // create the "camera" popup menu
@@ -602,6 +613,7 @@ SplitGLView::SplitGLView(const TGWindow *p, UInt_t w, UInt_t h, Bool_t embed) :
    Resize(GetDefaultSize());
    MapSubwindows();
    MapWindow();
+   LoadConfig(".everc");
 }
 
 //______________________________________________________________________________
@@ -657,6 +669,9 @@ void SplitGLView::HandleMenu(Int_t id)
 {
    // Handle menu items.
 
+   static TString rcdir(".");
+   static TString rcfile(".everc");
+
    switch (id) {
 
       case kFileOpen:
@@ -669,6 +684,36 @@ void SplitGLView::HandleMenu(Int_t id)
             if (fi.fFilename)
                OpenFile(fi.fFilename);
             dir = fi.fIniDir;
+         }
+         break;
+
+      case kFileLoadConfig:
+         {
+            TGFileInfo fi;
+            fi.fFileTypes = rcfiletypes;
+            fi.fIniDir    = StrDup(rcdir);
+            fi.fFilename  = StrDup(rcfile);
+            new TGFileDialog(gClient->GetRoot(), this, kFDOpen, &fi);
+            if (fi.fFilename) {
+               rcfile = fi.fFilename;
+               LoadConfig(fi.fFilename);
+            }
+            rcdir = fi.fIniDir;
+         }
+         break;
+
+      case kFileSaveConfig:
+         {
+            TGFileInfo fi;
+            fi.fFileTypes = rcfiletypes;
+            fi.fIniDir    = StrDup(rcdir);
+            fi.fFilename  = StrDup(rcfile);
+            new TGFileDialog(gClient->GetRoot(), this, kFDSave, &fi);
+            if (fi.fFilename) {
+               rcfile = fi.fFilename;
+               SaveConfig(fi.fFilename);
+            }
+            rcdir = fi.fIniDir;
          }
          break;
 
@@ -756,6 +801,17 @@ void SplitGLView::HandleMenu(Int_t id)
 }
 
 //______________________________________________________________________________
+void SplitGLView::OnClicked(TObject *obj)
+{
+   // Handle click events in GL viewer
+
+   if (obj)
+      fStatusBar->SetText(Form("User clicked on: \"%s\"", obj->GetName()), 1);
+   else
+      fStatusBar->SetText("", 1);
+}
+
+//______________________________________________________________________________
 void SplitGLView::OnMouseIdle(TGLPhysicalShape *shape, UInt_t posx, UInt_t posy)
 {
    // Slot used to handle "OnMouseIdle" signal coming from any GL viewer.
@@ -818,9 +874,8 @@ void SplitGLView::OnViewerActivated()
    // Used to know which GL viewer is active.
 
    static Pixel_t green = 0;
-
    // set the actual GL viewer frame to default color
-   if (fActViewer)
+   if (fActViewer && fActViewer->GetFrame())
       fActViewer->GetFrame()->ChangeBackground(GetDefaultFrameBackground());
 
    // change the actual GL viewer to the one who emitted the signal
@@ -837,7 +892,8 @@ void SplitGLView::OnViewerActivated()
       gClient->GetColorByName("green", green);
    }
    // set the new actual GL viewer frame to highlight color
-   fActViewer->GetFrame()->ChangeBackground(green);
+   if (fActViewer->GetFrame())
+      fActViewer->GetFrame()->ChangeBackground(green);
 
    // update menu entries to match actual viewer's options
    if (fActViewer->GetOrthoXOYCamera()->GetDollyToZoom() &&
@@ -940,14 +996,103 @@ void SplitGLView::ItemClicked(TGListTreeItem *item, Int_t, Int_t, Int_t)
 }
 
 //______________________________________________________________________________
-void SplitGLView::OnClicked(TObject *obj)
+void SplitGLView::LoadConfig(const char *fname)
 {
-   // Handle click events in GL viewer
 
-   if (obj)
-      fStatusBar->SetText(Form("User clicked on: \"%s\"", obj->GetName()), 1);
-   else
-      fStatusBar->SetText("", 1);
+   Int_t height, width;
+   TEnv *env = new TEnv(fname);
+
+   Int_t mainheight = env->GetValue("MainView.Height", 434);
+   Int_t blwidth    = env->GetValue("Bottom.Left.Width", 266);
+   Int_t bcwidth    = env->GetValue("Bottom.Center.Width", 266);
+   Int_t brwidth    = env->GetValue("Bottom.Right.Width", 266);
+   Int_t top_height = env->GetValue("Right.Tab.Height", 0);
+   Int_t bottom_height = env->GetValue("Bottom.Tab.Height", 0);
+
+   Int_t sel = env->GetValue("Eve.Selection", gEve->GetSelection()->GetPickToSelect());
+   Int_t hi = env->GetValue("Eve.Highlight", gEve->GetHighlight()->GetPickToSelect());
+   gEve->GetBrowser()->EveMenu(9+sel);
+   gEve->GetBrowser()->EveMenu(13+hi);
+
+   width  = env->GetValue("Eve.Width", (Int_t)gEve->GetBrowser()->GetWidth());
+   height = env->GetValue("Eve.Height", (Int_t)gEve->GetBrowser()->GetHeight());
+   gEve->GetBrowser()->Resize(width, height);
+      
+   // top (main) split frame
+   width = fSplitFrame->GetFirst()->GetWidth();
+   fSplitFrame->GetFirst()->Resize(width, mainheight);
+   // bottom left split frame
+   height = fSplitFrame->GetSecond()->GetFirst()->GetHeight();
+   fSplitFrame->GetSecond()->GetFirst()->Resize(blwidth, height);
+   // bottom center split frame
+   height = fSplitFrame->GetSecond()->GetSecond()->GetFirst()->GetHeight();
+   fSplitFrame->GetSecond()->GetSecond()->GetFirst()->Resize(bcwidth, height);
+   // bottom right split frame
+   height = fSplitFrame->GetSecond()->GetSecond()->GetSecond()->GetHeight();
+   fSplitFrame->GetSecond()->GetSecond()->GetSecond()->Resize(brwidth, height);
+
+   fSplitFrame->Layout();
+
+   width = ((TGCompositeFrame *)gEve->GetBrowser()->GetTabBottom()->GetParent())->GetWidth();
+   ((TGCompositeFrame *)gEve->GetBrowser()->GetTabBottom()->GetParent())->Resize(width, bottom_height);
+   width = ((TGCompositeFrame *)gEve->GetBrowser()->GetTabRight()->GetParent())->GetWidth();
+   ((TGCompositeFrame *)gEve->GetBrowser()->GetTabRight()->GetParent())->Resize(width, top_height);
+}
+
+//______________________________________________________________________________
+void SplitGLView::SaveConfig(const char *fname)
+{
+
+   Int_t bottom_height = 0;
+   Int_t top_height = 0;
+   TGSplitFrame *frm;
+   TEnv *env = new TEnv(fname);
+
+   env->SetValue("Eve.Width", (Int_t)gEve->GetBrowser()->GetWidth());
+   env->SetValue("Eve.Height", (Int_t)gEve->GetBrowser()->GetHeight());
+   // get top (main) split frame
+   frm = fSplitFrame->GetFirst();
+   env->SetValue("MainView.Height", (Int_t)frm->GetHeight());
+   // get bottom left split frame
+   frm = fSplitFrame->GetSecond()->GetFirst();
+   env->SetValue("Bottom.Left.Width", (Int_t)frm->GetWidth());
+   // get bottom center split frame
+   frm = fSplitFrame->GetSecond()->GetSecond()->GetFirst();
+   env->SetValue("Bottom.Center.Width", (Int_t)frm->GetWidth());
+   // get bottom right split frame
+   frm = fSplitFrame->GetSecond()->GetSecond()->GetSecond();
+   env->SetValue("Bottom.Right.Width", (Int_t)frm->GetWidth());
+   top_height = (Int_t)((TGCompositeFrame *)gEve->GetBrowser()->GetTabRight()->GetParent())->GetHeight();
+   env->SetValue("Right.Tab.Height", top_height);
+   bottom_height = (Int_t)((TGCompositeFrame *)gEve->GetBrowser()->GetTabBottom()->GetParent())->GetHeight();
+   env->SetValue("Bottom.Tab.Height", bottom_height);
+
+   env->SetValue("Eve.Selection", gEve->GetSelection()->GetPickToSelect());
+   env->SetValue("Eve.Highlight", gEve->GetHighlight()->GetPickToSelect());
+
+   env->SaveLevel(kEnvLocal);
+#ifdef R__WIN32
+   if (!gSystem->AccessPathName(Form("%s.new", fname))) {
+      gSystem->Exec(Form("del %s", fname));
+      gSystem->Rename(Form("%s.new", fname), fname);
+   }
+#endif
+}
+
+//______________________________________________________________________________
+void SplitGLView::SwapToMainView()
+{
+   TGPictureButton *src = (TGPictureButton*)gTQSender;
+   TGCompositeFrame *parent = (TGCompositeFrame *)(src->GetParent());
+   TGFrame *source = dynamic_cast<TGFrameElement*>(parent->GetList()->Last())->fFrame;
+   if (!source) return;
+
+   TGSplitFrame *dest = fSplitFrame->GetFirst();
+   
+   TGFrame *prev = (TGFrame *)(dest->GetFrame());
+   
+   if ((source != prev) && (source != dest))
+      TGSplitFrame::SwitchFrames(source, dest, prev);
 }
 
 //______________________________________________________________________________
@@ -1006,22 +1151,6 @@ void SplitGLView::UpdateSummary()
       fgHtml->ParseText((char*)fgHtmlSummary->Html().Data());
       fgHtml->Layout();
    }
-}
-
-//______________________________________________________________________________
-void SplitGLView::SwapToMainView()
-{
-   TGPictureButton *src = (TGPictureButton*)gTQSender;
-   TGCompositeFrame *parent = (TGCompositeFrame *)(src->GetParent());
-   TGFrame *source = dynamic_cast<TGFrameElement*>(parent->GetList()->Last())->fFrame;
-   if (!source) return;
-
-   TGSplitFrame *dest = fSplitFrame->GetFirst();
-   
-   TGFrame *prev = (TGFrame *)(dest->GetFrame());
-   
-   if ((source != prev) && (source != dest))
-      TGSplitFrame::SwitchFrames(source, dest, prev);
 }
 
 // Linkdef
