@@ -69,6 +69,14 @@ public :
       return 2 * dim + 3;   // error on value (low and high)  and error on coordinate
     }
 
+   ErrorType GetErrorType() const { 
+      if (fPointSize == fDim + 1) return kNoError; 
+      if (fPointSize == fDim + 2) return kValueError; 
+      if (fPointSize == 2 * fDim + 2) return kCoordError; 
+      assert( fPointSize == 2 * fDim + 3 ) ; 
+      return kAsymError; 
+   }
+
       
 
    /**
@@ -294,7 +302,7 @@ public:
       int index = fNPoints*PointSize(); 
       assert (fDataVector != 0);
       assert( fDim == 1);
-      assert (PointSize() == 4 ); 
+      assert (PointSize() == 5 ); 
       assert (index + PointSize() <= DataSize() ); 
 
       double * itr = &((fDataVector->Data())[ index ]);

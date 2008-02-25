@@ -192,6 +192,7 @@ double FitUtil::EvaluateChi2(IModelFunction & func, const BinData & data, const 
    // optionally intergal of function in the bin is used 
    
    unsigned int n = data.Size();
+
  
 #ifdef DEBUG
    std::cout << "\n\nFit data size = " << n << std::endl;
@@ -219,7 +220,13 @@ double FitUtil::EvaluateChi2(IModelFunction & func, const BinData & data, const 
 #else 
 
       double y, invError; 
-      const double * x = data.GetPoint(i,y, invError);
+      const double * x = 0; 
+      if (!fitOpt.fErrors1) 
+         x = data.GetPoint(i,y, invError);
+      else { 
+         x = data.GetPoint(i,y);
+         invError = 1.;
+      }
 
 #endif 
 
@@ -258,6 +265,7 @@ double FitUtil::EvaluateChi2(IModelFunction & func, const BinData & data, const 
    std::cout << "chi2 = " << chi2 << " n = " << nRejected << std::endl;
 #endif
 
+
    return chi2;
 }
 
@@ -272,7 +280,6 @@ double FitUtil::EvaluateChi2Effective(IModelFunction & func, const BinData & dat
    
    unsigned int n = data.Size();
 
- 
 #ifdef DEBUG
    std::cout << "\n\nFit data size = " << n << std::endl;
    std::cout << "evaluate chi2 using function " << &func << "  " << p << std::endl; 
@@ -310,9 +317,9 @@ double FitUtil::EvaluateChi2Effective(IModelFunction & func, const BinData & dat
          double eylow, eyhigh = 0; 
          ex = data.GetPointError(i, eylow, eyhigh); 
          if ( delta_y_func < 0) 
-            ey = eylow; 
+            ey = eyhigh; // function is higher than points 
          else
-            ey = eyhigh; 
+            ey = eylow; 
       }
       double e2 = ey * ey; 
       // before calculating the gradient check that all error in x are not zero
@@ -330,10 +337,10 @@ double FitUtil::EvaluateChi2Effective(IModelFunction & func, const BinData & dat
       double resval = w2 * ( y - fval ) *  ( y - fval); 
 
 #ifdef DEBUG      
-      std::cout << x[0] << "  " << y << "  " << ey << " params : "; 
+      std::cout << x[0] << "  " << y << "  " << e2 << " ey  " << ey << " params : "; 
       for (int ipar = 0; ipar < func.NPar(); ++ipar) 
          std::cout << p[ipar] << "\t";
-      std::cout << "\tfval = " << fval << std::endl; 
+      std::cout << "\tfval = " << fval << "\tresval = " << resval << std::endl; 
 #endif
       
       // avoid (infinity and nan ) in the chi2 sum 

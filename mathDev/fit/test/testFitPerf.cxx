@@ -56,7 +56,7 @@
 
 #include "MinimizerTypes.h"
 
-#define DEBUG
+//#define DEBUG
 
 int nfit;
 const int N = 20; 
@@ -1034,6 +1034,13 @@ int testFitPerf() {
    int iret = 0; 
 
 
+
+#ifndef DEBUG
+   nfit = 10; 
+#endif
+  iret |= testGausFit(); 
+
+
 #ifdef DEBUG
    nfit = 1; 
 #else 
@@ -1050,11 +1057,6 @@ int testFitPerf() {
    iret |= testPolyFit(); 
 
 
-
-#ifndef DEBUG
-   nfit = 10; 
-#endif
-  iret |= testGausFit(); 
 
 
   nfit = 1;
