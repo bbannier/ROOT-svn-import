@@ -1,6 +1,7 @@
 #include <iostream>
 #include <algorithm>
 #include <ctime>
+#include <vector>
 
 #include "TStopwatch.h"
 #include "TMath.h"
@@ -35,11 +36,11 @@ struct Compare {
    const T * fData; 
 };
 
-template <typename T> void testSort(const int n, double& tTMath, double& tStd)
+template <typename T> void testSort(const int n, double* tTMath, double* tStd)
 {
-   T k[n];
+   vector<T> k(n);
 
-   T index[n];
+   vector<T> index(n);
    TStopwatch t; 
 
    TRandom2 r( time( 0 ) );
@@ -51,10 +52,10 @@ template <typename T> void testSort(const int n, double& tTMath, double& tStd)
    t.Start(); 
    for (int j = 0; j < npass; ++j) { 
 //    for(Int_t i = 0; i < n; i++) { index[i] = i; }
-      TMath::Sort(n,k,index,kTRUE);  
+      TMath::Sort(n,&k[0],&index[0],kTRUE);  
    }
    t.Stop(); 
-   tTMath = t.RealTime();
+   *tTMath = t.RealTime();
    cout << "\nTMath Sort\n";
    cout << "TMath::Sort time :\t\t " << t.RealTime() << endl;
 
@@ -63,24 +64,24 @@ template <typename T> void testSort(const int n, double& tTMath, double& tStd)
    t.Start(); 
    for (int j = 0; j < npass; ++j) { 
       for(Int_t i = 0; i < n; i++) { index[i] = i; }
-      std::sort(index,index+n, Compare<T>(k) );
+      std::sort(&index[0],&index[n], Compare<T>(&k[0]) );
    }
    t.Stop(); 
-   tStd = t.RealTime();
+   *tStd = t.RealTime();
    std::cout << "std::sort using indices:\t " << t.RealTime() << std::endl;
 }
 
 void stdsort() 
 {
-   double tM[ arraysize ];
-   double tS[ arraysize ];
-   double index[ arraysize ];
+   vector<double> tM( arraysize );
+   vector<double> tS( arraysize );
+   vector<double> index( arraysize );
 
    //cout << (maxsize-minsize)/10 + 1 << endl;
 
    for ( int i = minsize; i <= maxsize; i += increment)
    {
-      testSort<Int_t>(i, tM[(i-minsize)/10], tS[(i-minsize)/10]);
+      testSort<Int_t>(i, &tM[(i-minsize)/10], &tS[(i-minsize)/10]);
       index[(i-minsize)/10] = i;
    }
 
@@ -92,13 +93,13 @@ void stdsort()
    hpx->SetStats(kFALSE);
    hpx->Draw();
    
-   TGraph* gM = new TGraph(arraysize, index, tM);
+   TGraph* gM = new TGraph(arraysize, &index[0], &tM[0]);
    gM->SetLineColor(2);
    gM->SetLineWidth(3);
    gM->SetTitle("TMath::Sort()");
    gM->Draw("SAME");
 
-   TGraph* gS = new TGraph(arraysize, index, tS);
+   TGraph* gS = new TGraph(arraysize, &index[0], &tS[0]);
    gS->SetLineColor(3);
    gS->SetLineWidth(3);
    gS->SetTitle("std::sort()");
