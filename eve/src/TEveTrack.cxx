@@ -183,7 +183,7 @@ TEveTrack::~TEveTrack()
 const TGPicture* TEveTrack::GetListTreeIcon(Bool_t)
 {
    // Returns list-tree icon for TEveTrack.
-   
+
    return fgListTreeIcons[4];
 }
 

@@ -101,13 +101,13 @@ TEveProjected::~TEveProjected()
 }
 
 //______________________________________________________________________________
-void TEveProjected::SetProjection(TEveProjectionManager* proj, TEveProjectable* model)
+void TEveProjected::SetProjection(TEveProjectionManager* mng, TEveProjectable* model)
 {
    // Sets projection manager and reference in the projectable object. Method called
    // immediately after default constructor.
    // See also TEveProjectionManager::ImportElements().
 
-   fManager   = proj;
+   fManager   = mng;
    if (fProjectable) fProjectable->RemoveProjected(this);
    fProjectable = model;
    if (fProjectable) fProjectable->AddProjected(this);

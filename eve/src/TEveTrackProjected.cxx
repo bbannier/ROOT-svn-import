@@ -37,11 +37,11 @@ TEveTrackProjected::TEveTrackProjected() :
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveTrackProjected::SetProjection(TEveProjectionManager* proj, TEveProjectable* model)
+void TEveTrackProjected::SetProjection(TEveProjectionManager* mng, TEveProjectable* model)
 {
    // This is virtual method from base-class TEveProjected.
-  
-   TEveProjected::SetProjection(proj, model);
+
+   TEveProjected::SetProjection(mng, model);
    TEveTrack* origTrack = dynamic_cast<TEveTrack*>(fProjectable);
 
    SetTrackParams(*origTrack);

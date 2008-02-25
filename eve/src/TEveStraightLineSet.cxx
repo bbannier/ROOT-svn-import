@@ -156,12 +156,12 @@ TEveStraightLineSetProjected::TEveStraightLineSetProjected() :
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveStraightLineSetProjected::SetProjection(TEveProjectionManager* proj,
+void TEveStraightLineSetProjected::SetProjection(TEveProjectionManager* mng,
                                                  TEveProjectable* model)
 {
    // Set projection manager and model object.
 
-   TEveProjected::SetProjection(proj, model);
+   TEveProjected::SetProjection(mng, model);
 
    // copy line and marker attributes
    * (TAttMarker*)this = * dynamic_cast<TAttMarker*>(fProjectable);

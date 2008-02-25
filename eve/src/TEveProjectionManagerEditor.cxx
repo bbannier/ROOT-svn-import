@@ -126,7 +126,7 @@ TEveProjectionManagerEditor::TEveProjectionManagerEditor(const TGWindow *p,
    fCenterZ->Connect("ValueSet(Double_t)", "TEveProjectionManagerEditor",
                      this, "DoCenter()");
    fCenterFrame->AddFrame(fCenterZ, new TGLayoutHints(kLHintsTop, 1, 1, 1, 1));
-   
+
    AddFrame(fCenterFrame, new TGLayoutHints(kLHintsTop, 1, 1, 1, 0));
 }
 
@@ -136,7 +136,7 @@ void TEveProjectionManagerEditor::SetModel(TObject* obj)
    // Set model object.
 
    fM = dynamic_cast<TEveProjectionManager*>(obj);
-   
+
    fType->Select(fM->GetProjection()->GetType(), kFALSE);
    fDistortion->SetValue(1000.0f * fM->GetProjection()->GetDistortion());
    fFixedRadius->SetValue(fM->GetProjection()->GetFixedRadius());

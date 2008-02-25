@@ -250,7 +250,7 @@ Color_t* TEveUtil::FindColorVar(TObject* obj, const Text_t* varname)
 /******************************************************************************/
 
 //______________________________________________________________________________
-// 
+//
 // Exception class thrown by TEve classes and macros.
 
 ClassImp(TEveException)

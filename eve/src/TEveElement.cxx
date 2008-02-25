@@ -1093,7 +1093,7 @@ void TEveElement::SetStamp(UChar_t bits)
    // Register this element to gEve as stamped.
 
    fChangeBits = bits;
-   if (!fDestructing) gEve->ElementStamped(this); 
+   if (!fDestructing) gEve->ElementStamped(this);
 }
 
 //______________________________________________________________________________

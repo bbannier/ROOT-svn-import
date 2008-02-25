@@ -94,7 +94,7 @@ public:
    TEvePolygonSetProjected(const Text_t* n="TEvePolygonSetProjected", const Text_t* t="");
    virtual ~TEvePolygonSetProjected();
 
-   virtual void    SetProjection(TEveProjectionManager* proj, TEveProjectable* model);
+   virtual void    SetProjection(TEveProjectionManager* mng, TEveProjectable* model);
    virtual void    SetDepth(Float_t d);
    virtual void    UpdateProjection();
 

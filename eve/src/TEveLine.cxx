@@ -73,13 +73,13 @@ TEveLineProjected::TEveLineProjected() :
 }
 
 //______________________________________________________________________________
-void TEveLineProjected::SetProjection(TEveProjectionManager* proj,
+void TEveLineProjected::SetProjection(TEveProjectionManager* mng,
                                       TEveProjectable* model)
 {
    // Set projection manager and projection model.
    // Virtual from TEveProjected.
 
-   TEveProjected::SetProjection(proj, model);
+   TEveProjected::SetProjection(mng, model);
    * (TAttMarker*)this = * dynamic_cast<TAttMarker*>(fProjectable);
    * (TAttLine*)  this = * dynamic_cast<TAttLine*>  (fProjectable);
 }
