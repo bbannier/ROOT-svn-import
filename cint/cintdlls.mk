@@ -196,7 +196,7 @@ $(CINTDIRL)/posix/exten.o: $(CINTDIRL)/posix/exten.c
 	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- $(CINTCFLAGS) -- $<
 	$(CC) $(OPT) $(CINTCFLAGS) -I. $(CXXOUT)$@ -c $<
 
-$(CINTDIRL)/G__c_posix.c: $(CINTDIRDLLS)/sys/types.h cint/lib/posix/exten.h cint/lib/posix/posix.h
+$(CINTDIRL)/G__c_posix.c: $(CINTDIRDLLS)/sys/types.h $(CINTDIRL)/posix/exten.h $(CINTDIRL)/posix/posix.h
 
 $(CINTDIRDLLS)/posix.dll: $(CINTDIRL)/G__c_posix.o $(CINTDIRL)/posix/exten.o
 
