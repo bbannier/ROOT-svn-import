@@ -359,6 +359,7 @@ static int G__isprivatedestructorifunc(int tagnum);
 int G__isprivatedestructor(int tagnum);
 int G__isprivateassignopr(int tagnum);
 
+int  G__execute_call(G__value *result7,G__param *libp,G__ifunc_table_internal *ifunc,int ifn);
 void G__cppif_change_globalcomp();
 
 /**************************************************************************
@@ -1778,69 +1779,6 @@ int G__evaluate_libp(G__param* rpara, G__param *libp, G__ifunc_table_internal *i
 }
 
 /**************************************************************************
- * G__execute_call
- *
- * Method/Function call final execution
- *
- * This function will execute a function via either the stub or the assembler call
- *
- * result7  = Method's return
- * libp     = Method's Parameters
- * ifunc    = Interpreted Functions Table
- * ifn      = Method's index in ifunc
- *
- * See: common.h and G__c.h for types information
- **************************************************************************/
-int G__execute_call(G__value *result7,G__param *libp,G__ifunc_table_internal *ifunc,int ifn){
-
-   G__InterfaceMethod cppfunc = (G__InterfaceMethod)ifunc->pentry[ifn]->p;
-
-#ifdef G__NOSTUBS
-    /* 15/03/2007 */
-    // 1 Parameter && Registered Method in ifunc && Neither static method nor function
-    // (G__tagnum > -1) is not needed because G__tagnum can be -1 when we have free
-    // standing functions
-    if ( ((libp->paran>=0) &&
-          G__get_funcptr(ifunc, ifn) &&
-          /*!(G__struct.type[ifunc->tagnum] == 'n') &&*/
-          !G__wrappers && !cppfunc) || // DMS Use the stub if there is one
-         ifunc->ispurevirtual[ifn]) {
-      // Registered Method in ifunc. Then We Can Call the method without the stub function
-      G__stub_method_calling(result7, libp, ifunc, ifn);
-    }
-    else 
-#endif
-    if (cppfunc) {
-      /* 15/03/2007 */
-      // this-pointer adjustment
-      G__this_adjustment(ifunc, ifn);
-#ifdef G__EXCEPTIONWRAPPER
-      G__ExceptionWrapper((G__InterfaceMethod)cppfunc,result7,(char*)ifunc,libp,ifn);
-#else
-      // Stub calling
-      (*cppfunc)(result7,(char*)ifunc,libp,ifn);
-#endif
-    }
-    else if (!cppfunc && !G__get_funcptr(ifunc, ifn)) {
-      G__fprinterr(G__serr,"Error in G__call_cppfunc: There is no stub nor mangled name for function: %s \n", ifunc->funcname[ifn]);
-
-      if(ifunc->tagnum != -1)
-        G__fprinterr(G__serr,"Error in G__call_cppfunc: For class: %s \n", G__struct.name[ifunc->tagnum]);   
-
-      return -1;
-    }
-    else {
-      // It shouldn't be here
-      G__fprinterr(G__serr,"Error in G__call_cppfunc: Function %s could not be called. \n", ifunc->funcname[ifn]);
-      return -1;
-    }
-    
-    return 1;
-
-}
-
-
-/**************************************************************************
  * G__stub_method_calling
  *
  * Non Dictionariy (Stub functions) Assembler Method Calling
@@ -2313,10 +2251,69 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
    G__tagnum = store_tagnum;
    return 0;
 }
-
-
 #endif // defined G__NOSTUBS
 
+/**************************************************************************
+ * G__execute_call
+ *
+ * Method/Function call final execution
+ *
+ * This function will execute a function via either the stub or the assembler call
+ *
+ * result7  = Method's return
+ * libp     = Method's Parameters
+ * ifunc    = Interpreted Functions Table
+ * ifn      = Method's index in ifunc
+ *
+ * See: common.h and G__c.h for types information
+ **************************************************************************/
+int G__execute_call(G__value *result7,G__param *libp,G__ifunc_table_internal *ifunc,int ifn)
+{
+   G__InterfaceMethod cppfunc = (G__InterfaceMethod)ifunc->pentry[ifn]->p;
+
+#ifdef G__NOSTUBS
+    /* 15/03/2007 */
+    // 1 Parameter && Registered Method in ifunc && Neither static method nor function
+    // (G__tagnum > -1) is not needed because G__tagnum can be -1 when we have free
+    // standing functions
+    if ( ((libp->paran>=0) &&
+          G__get_funcptr(ifunc, ifn) &&
+          /*!(G__struct.type[ifunc->tagnum] == 'n') &&*/
+          !G__wrappers && !cppfunc) || // DMS Use the stub if there is one
+         ifunc->ispurevirtual[ifn]) {
+      // Registered Method in ifunc. Then We Can Call the method without the stub function
+      G__stub_method_calling(result7, libp, ifunc, ifn);
+    }
+    else 
+#endif
+    if (cppfunc) {
+      /* 15/03/2007 */
+      // this-pointer adjustment
+      G__this_adjustment(ifunc, ifn);
+#ifdef G__EXCEPTIONWRAPPER
+      G__ExceptionWrapper((G__InterfaceMethod)cppfunc,result7,(char*)ifunc,libp,ifn);
+#else
+      // Stub calling
+      (*cppfunc)(result7,(char*)ifunc,libp,ifn);
+#endif
+    }
+    else if (!cppfunc && !G__get_funcptr(ifunc, ifn)) {
+      G__fprinterr(G__serr,"Error in G__call_cppfunc: There is no stub nor mangled name for function: %s \n", ifunc->funcname[ifn]);
+
+      if(ifunc->tagnum != -1)
+        G__fprinterr(G__serr,"Error in G__call_cppfunc: For class: %s \n", G__struct.name[ifunc->tagnum]);   
+
+      return -1;
+    }
+    else {
+      // It shouldn't be here
+      G__fprinterr(G__serr,"Error in G__call_cppfunc: Function %s could not be called. \n", ifunc->funcname[ifn]);
+      return -1;
+    }
+    
+    return 1;
+
+}
 
 /**************************************************************************
  * G__get_funcptr()
@@ -2349,10 +2346,6 @@ void* G__get_funcptr(G__ifunc_table_internal *ifunc, int ifn)
   return 0;
 #endif
 }
-
-
-
-
 
 /**************************************************************************
  * G__call_cppfunc()
