@@ -159,9 +159,6 @@ endif
 ifeq ($(BUILDMATHMORE),yes)
 MODULES      += mathmore
 endif
-ifeq ($(BUILDREFLEX),yes)
-MODULES      += reflex
-endif
 ifeq ($(BUILDMINUIT2),yes)
 MODULES      += minuit2
 endif
@@ -235,7 +232,7 @@ MODULES      += unix winnt x11 x11ttf win32gdk gl ftgl rfio castor \
                 rootx rootd proofd dcache chirp hbook asimage \
                 ldap mlp krb5auth rpdutils globusauth pyroot ruby gfal \
                 qt qtroot qtgsi xrootd netx proofx alien clarens peac oracle \
-                xmlparser mathcore mathmore reflex cintex roofitcore roofit \
+                xmlparser mathcore mathmore cintex roofitcore roofit \
                 minuit2 monalisa fftw odbc unuran gdml eve g4root cint7 glite
 MODULES      := $(sort $(MODULES))   # removes duplicates
 endif
