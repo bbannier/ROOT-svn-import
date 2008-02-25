@@ -3,7 +3,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := reflex
+MODDIR       := cint/reflex
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
