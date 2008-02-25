@@ -199,7 +199,7 @@ public:
    virtual void   SetRnrChildren(Bool_t rnr);
    virtual void   SetRnrState(Bool_t rnr);
 
-   virtual Bool_t CanEditMainColor()        { return kFALSE; }
+   virtual Bool_t CanEditMainColor() const  { return kFALSE; }
    Color_t* GetMainColorPtr()               { return fMainColorPtr; }
    void     SetMainColorPtr(Color_t* color) { fMainColorPtr = color; }
 
@@ -208,12 +208,12 @@ public:
    virtual void    SetMainColor(Color_t color);
    void            SetMainColor(Pixel_t pixel);
 
-   virtual Bool_t  CanEditMainTransparency()    { return kFALSE; }
-   virtual UChar_t GetMainTransparency() const  { return 0; }
+   virtual Bool_t  CanEditMainTransparency() const { return kFALSE; }
+   virtual UChar_t GetMainTransparency()     const { return 0; }
    virtual void    SetMainTransparency(UChar_t) {}
 
-   virtual Bool_t     CanEditMainTrans() { return  fCanEditMainTrans; }
-   virtual Bool_t     HasMainTrans()     { return  fMainTrans != 0;   }
+   virtual Bool_t     CanEditMainTrans() const { return fCanEditMainTrans; }
+   virtual Bool_t     HasMainTrans()     const { return fMainTrans != 0;   }
    virtual TEveTrans* PtrMainTrans();
    virtual TEveTrans& RefMainTrans();
    virtual void       InitMainTrans(Bool_t can_edit=kTRUE);
@@ -349,7 +349,7 @@ public:
    virtual void SetElementNameTitle(const Text_t* name, const Text_t* title)
    { TNamed::SetNameTitle(name, title); }
 
-   virtual Bool_t CanEditMainColor()  { return fDoColor; }
+   virtual Bool_t CanEditMainColor() const { return fDoColor; }
 
    TClass* GetChildClass() const { return fChildClass; }
    void SetChildClass(TClass* c) { fChildClass = c; }

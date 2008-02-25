@@ -69,7 +69,7 @@ public:
    TEveDigitSet(const Text_t* n="TEveDigitSet", const Text_t* t="");
    virtual ~TEveDigitSet();
 
-   virtual Bool_t CanEditMainColor() { return kTRUE; }
+   virtual Bool_t CanEditMainColor() const { return kTRUE; }
    virtual void   SetMainColor(Color_t color);
 
    // Implemented in sub-classes:

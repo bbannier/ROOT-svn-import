@@ -49,10 +49,10 @@ protected:
    UShort_t fTransp;
 
 public:
-   TEveTriangleSet(Int_t nv, Int_t nt, Bool_t norms=false, Bool_t cols=false);
+   TEveTriangleSet(Int_t nv, Int_t nt, Bool_t norms=kFALSE, Bool_t cols=kFALSE);
    ~TEveTriangleSet();
 
-   virtual Bool_t CanEditMainColor() { return kTRUE; }
+   virtual Bool_t CanEditMainColor() const { return kTRUE; }
 
    Float_t* Vertex(Int_t i)         { return &(fVerts[3*i]);      }
    Int_t*   Triangle(Int_t i)       { return &(fTrings[3*i]);     }
