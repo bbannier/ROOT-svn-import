@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <vector>
 
 #include <TMath.h>
 #include <Math/SpecFuncMathCore.h>
@@ -18,7 +19,7 @@ inline int arrayindex(double i) { return ARRAYSIZE - (int) ( (MAX - i) / INCREME
 
 using namespace std;
 
-void drawPoints(Double_t x[ARRAYSIZE], Double_t y[ARRAYSIZE], int color, int style = 1)
+void drawPoints(Double_t x[], Double_t y[], int color, int style = 1)
 {
    TGraph* g = new TGraph(ARRAYSIZE, x, y);
    g->SetLineColor(color);
@@ -29,13 +30,13 @@ void drawPoints(Double_t x[ARRAYSIZE], Double_t y[ARRAYSIZE], int color, int sty
 
 void testSpecFuncGamma() 
 {
-   Double_t x[ ARRAYSIZE ];
-   Double_t yg[ ARRAYSIZE ];
-   Double_t ymtg[ ARRAYSIZE ];
-   Double_t yga[ ARRAYSIZE ];
-   Double_t ymga[ ARRAYSIZE ];
-   Double_t ylng[ ARRAYSIZE ];
-   Double_t ymlng[ ARRAYSIZE ];
+   vector<Double_t> x( ARRAYSIZE );
+   vector<Double_t> yg( ARRAYSIZE );
+   vector<Double_t> ymtg( ARRAYSIZE );
+   vector<Double_t> yga( ARRAYSIZE );
+   vector<Double_t> ymga( ARRAYSIZE );
+   vector<Double_t> ylng( ARRAYSIZE );
+   vector<Double_t> ymlng( ARRAYSIZE );
 
    Double_t a = 0.56;
 
@@ -67,12 +68,12 @@ void testSpecFuncGamma()
    hpx->SetStats(kFALSE);
    hpx->Draw();
 
-   drawPoints(x, yg, 1);
-   drawPoints(x, ymtg, 2, 7);
-   drawPoints(x, yga, 3);
-   drawPoints(x, ymga, 4, 7);
-   drawPoints(x, ylng, 5);
-   drawPoints(x, ymlng, 6, 7);
+   drawPoints(&x[0], &yg[0], 1);
+   drawPoints(&x[0], &ymtg[0], 2, 7);
+   drawPoints(&x[0], &yga[0], 3);
+   drawPoints(&x[0], &ymga[0], 4, 7);
+   drawPoints(&x[0], &ylng[0], 5);
+   drawPoints(&x[0], &ymlng[0], 6, 7);
 
    c1->Show();
 
