@@ -97,12 +97,12 @@ void TEvePolygonSetProjected::ClearPolygonSet()
 }
 
 //______________________________________________________________________________
-void TEvePolygonSetProjected::SetProjection(TEveProjectionManager* proj,
+void TEvePolygonSetProjected::SetProjection(TEveProjectionManager* mng,
                                             TEveProjectable* model)
 {
    // This is virtual method from base-class TEveProjected.
 
-   TEveProjected::SetProjection(proj, model);
+   TEveProjected::SetProjection(mng, model);
    TEveGeoShape* gre = dynamic_cast<TEveGeoShape*>(model);
 
    fBuff = gre->MakeBuffer3D();
@@ -135,8 +135,8 @@ void TEvePolygonSetProjected::UpdateProjection()
    if (fBuff == 0) return;
 
    // drop polygons, and projected/reduced points
-   ClearPolygonSet(); 
-   fPnts  = 0; 
+   ClearPolygonSet();
+   fPnts  = 0;
    fNPnts = 0;
    fSurf  = 0;
    ProjectBuffer3D();

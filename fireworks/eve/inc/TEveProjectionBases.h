@@ -83,7 +83,7 @@ public:
 
    TEveProjectable* GetProjectable() const { return fProjectable; }
 
-   virtual void SetProjection(TEveProjectionManager* proj, TEveProjectable* model);
+   virtual void SetProjection(TEveProjectionManager* mng, TEveProjectable* model);
    virtual void UnRefProjectable(TEveProjectable* assumed_parent);
 
    virtual void SetDepth(Float_t d) = 0;

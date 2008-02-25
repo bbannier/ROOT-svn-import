@@ -105,9 +105,9 @@ protected:
    // propagation, state of current track
 
    Int_t                    fCharge;        // particle charge
-   Float_t                  fVelocity;      // particle velocity 
+   Float_t                  fVelocity;      // particle velocity
    std::vector<Vertex4D_t>  fPoints;        // calculated point
-   Vertex4D_t               fV;             // current vertex 
+   Vertex4D_t               fV;             // current vertex
    Int_t                    fN;             // current step number;
    Int_t                    fNLast;         // last step
    Int_t                    fNMax;          // max steps
@@ -122,7 +122,7 @@ protected:
 
    Bool_t  LineToVertex (TEveVector& v);
    void    LineToBounds (TEveVector& p);
-   
+
 public:
    TEveTrackPropagator();
    virtual ~TEveTrackPropagator() {}

@@ -202,3 +202,12 @@
 #pragma link C++ class TEvePolygonSetProjected+;
 #pragma link C++ class TEvePolygonSetProjectedEditor+;
 #pragma link C++ class TEvePolygonSetProjectedGL+;
+
+#pragma link C++ class TEveCaloData+;
+#pragma link C++ class TEveCaloDataHist+;
+#pragma link C++ class TEveCaloViz+;
+#pragma link C++ class TEveCaloVizEditor+;
+#pragma link C++ class TEveCalo3D+;
+#pragma link C++ class TEveCalo3DGL+;
+#pragma link C++ class TEveCalo2D+;
+#pragma link C++ class TEveCalo2DGL+;

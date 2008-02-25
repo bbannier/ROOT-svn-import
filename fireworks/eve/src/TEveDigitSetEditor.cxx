@@ -13,7 +13,7 @@
 #include "TEveDigitSet.h"
 
 #include "TEveGValuators.h"
-#include "TEveTransEditor.h"
+//#include "TEveTransEditor.h"
 #include "TEveRGBAPaletteEditor.h"
 #include "TEveGedEditor.h"
 
@@ -41,21 +41,12 @@ TEveDigitSetEditor::TEveDigitSetEditor(const TGWindow *p, Int_t width, Int_t hei
                                        UInt_t options, Pixel_t back) :
    TGedFrame(p, width, height, options | kVerticalFrame, back),
    fM       (0),
-   fTrans   (0),
    fPalette (0),
 
    fHistoButtFrame(0),
    fInfoFrame(0)
 {
    // Constructor.
-
-   MakeTitle("Transformation matrix");
-
-   fTrans = new TEveTransSubEditor(this);
-   AddFrame(fTrans, new TGLayoutHints(kLHintsTop | kLHintsExpandX, 2, 0, 0, 0));
-   fTrans->Connect("UseTrans()",     "TEveDigitSetEditor", this, "Update()");
-   fTrans->Connect("TransChanged()", "TEveDigitSetEditor", this, "Update()");
-
 
    MakeTitle("Palette controls");
 
@@ -110,8 +101,6 @@ void TEveDigitSetEditor::SetModel(TObject* obj)
    // Set model object.
 
    fM = dynamic_cast<TEveDigitSet*>(obj);
-
-   fTrans->SetModel(fM->PtrMainTrans());
 
    if (fM->fValueIsColor || fM->fPalette == 0) {
       fPalette->UnmapWindow();

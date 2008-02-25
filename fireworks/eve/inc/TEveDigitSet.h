@@ -22,7 +22,6 @@
 #include "TEveFrameBox.h"
 #include "TEveRGBAPalette.h"
 #include "TEveChunkManager.h"
-#include "TEveTrans.h"
 
 #include "TObject.h"
 

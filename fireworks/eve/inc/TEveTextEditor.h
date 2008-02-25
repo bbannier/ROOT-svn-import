@@ -53,11 +53,11 @@ public:
    void DoFontSize();
    void DoFontFile();
    void DoFontMode();
-  
+
    void DoLighting();
    void DoAutoLighting();
    void DoExtrude();
-   
+
    ClassDef(TEveTextEditor, 0); // GUI editor for TEveText.
 };
 

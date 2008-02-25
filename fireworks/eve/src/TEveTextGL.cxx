@@ -86,7 +86,7 @@ void TEveTextGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    static const TEveException eH("TEveTextGL::DirectDraw ");
 
    SetFont(rnrCtx);
-  
+
    //  bbox initialisation
    if (fBoundingBox.IsEmpty() && fFont.GetMode() > TGLFont::kPixmap)
    {

@@ -10,8 +10,9 @@
  *************************************************************************/
 
 #include "TEveDigitSet.h"
-
 #include "TEveManager.h"
+#include "TEveTrans.h"
+
 
 #include "TColor.h"
 

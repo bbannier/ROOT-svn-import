@@ -150,11 +150,11 @@ void TEveScene::DestroyElementRenderers(TObject* rnrObj)
 /******************************************************************************/
 
 //______________________________________________________________________________
-const TGPicture* TEveScene::GetListTreeIcon(Bool_t) 
-{ 
+const TGPicture* TEveScene::GetListTreeIcon(Bool_t)
+{
    // Return icon for scene.
 
-   return TEveElement::fgListTreeIcons[2]; 
+   return TEveElement::fgListTreeIcons[2];
 }
 
 

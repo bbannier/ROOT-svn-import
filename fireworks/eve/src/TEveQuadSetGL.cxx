@@ -397,7 +397,7 @@ void TEveQuadSetGL::RenderQuads(TGLRnrCtx & rnrCtx) const
 void TEveQuadSetGL::RenderLines(TGLRnrCtx & rnrCtx) const
 {
    // GL rendering for line-types.
- 
+
    static const TEveException eH("TEveQuadSetGL::RenderLines ");
 
    TEveQuadSet& mQ = * fM;

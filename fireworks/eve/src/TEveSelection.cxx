@@ -192,7 +192,7 @@ TEveElement* TEveSelection::MapPickedToSelected(TEveElement* el)
       {
          Error("TEveSelection::MapPickedToSelected", "Compound pick-to-select mode not supported.");
          return el;
-      }  
+      }
    }
    return el;
 }

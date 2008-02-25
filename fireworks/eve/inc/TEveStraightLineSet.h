@@ -119,7 +119,7 @@ public:
    TEveStraightLineSetProjected();
    virtual ~TEveStraightLineSetProjected() {}
 
-   virtual void SetProjection(TEveProjectionManager* proj, TEveProjectable* model);
+   virtual void SetProjection(TEveProjectionManager* mng, TEveProjectable* model);
    virtual void SetDepth(Float_t d);
    virtual void UpdateProjection();
 

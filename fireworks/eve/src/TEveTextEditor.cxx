@@ -98,49 +98,36 @@ TEveTextEditor::TEveTextEditor(const TGWindow *p, Int_t width, Int_t height,
    fExtrude->SetToolTip("Extrusion depth.");
    fExtrude->Connect("ValueSet(Double_t)", "TEveTextEditor", this, "DoExtrude()");
    AddFrame(fExtrude, new TGLayoutHints(kLHintsTop, 4, 1, 1, 1));
-   
+
    // GLConfig
    TGCompositeFrame *f1 = new TGCompositeFrame(this, 145, 10, kHorizontalFrame | kFitWidth | kFixedWidth );
    f1->AddFrame(new TGLabel(f1, "GLConfig"), new TGLayoutHints(kLHintsLeft, 1, 1, 0, 0));
    f1->AddFrame(new TGHorizontal3DLine(f1), new TGLayoutHints(kLHintsExpandX, 5, 5, 7, 7));
    AddFrame(f1, new TGLayoutHints(kLHintsTop, 0, 0, 8, 0));
 
-   
    TGCompositeFrame *alf = new TGCompositeFrame(this, 145, 10, kHorizontalFrame );
    fAutoLighting  = new TGCheckButton(alf, "AutoLighting");
    alf->AddFrame(fAutoLighting, new TGLayoutHints(kLHintsLeft, 1,2,0,0));
    fAutoLighting->Connect("Toggled(Bool_t)", "TEveTextEditor", this, "DoAutoLighting()");
    fLighting  = new TGCheckButton(alf, "Lighting");
    alf->AddFrame(fLighting, new TGLayoutHints(kLHintsLeft, 1,2,0,0));
-   fLighting->Connect("Toggled(Bool_t)", "TEveTextEditor", this, "DoLighting()"); 
+   fLighting->Connect("Toggled(Bool_t)", "TEveTextEditor", this, "DoLighting()");
    AddFrame(alf, new TGLayoutHints(kLHintsTop, 0, 0, 0, 0));
 }
 
 //______________________________________________________________________________
 TGComboBox* TEveTextEditor::MakeLabeledCombo(const char* name)
 {
-   // Helper function. Creates TGComboBox with fixed size TGLabel. 
+   // Helper function. Creates TGComboBox with fixed size TGLabel.
 
-   Bool_t alignRight = kFALSE;
    UInt_t labelW = 45;
    UInt_t labelH = 20;
-
    TGHorizontalFrame* hf = new TGHorizontalFrame(this);
-
    // label
-   TGLayoutHints *labh, *labfrh;
-   if(alignRight) {
-      labh   = new TGLayoutHints(kLHintsRight | kLHintsBottom);
-      labfrh = new TGLayoutHints(kLHintsRight);
-   } else {
-      labh   = new TGLayoutHints(kLHintsLeft  | kLHintsBottom);
-      labfrh = new TGLayoutHints(kLHintsLeft);
-   }
    TGCompositeFrame *labfr = new TGHorizontalFrame(hf, labelW, labelH, kFixedSize);
    TGLabel* label = new TGLabel(labfr, name);
-   labfr->AddFrame(label, labh);
-   hf->AddFrame(labfr, labfrh);
-
+   labfr->AddFrame(label, new TGLayoutHints(kLHintsLeft  | kLHintsBottom));
+   hf->AddFrame(labfr, new TGLayoutHints(kLHintsLeft));
    // combo
    TGLayoutHints*  clh =  new TGLayoutHints(kLHintsLeft, 0,0,0,0);
    TGComboBox* combo = new TGComboBox(hf);

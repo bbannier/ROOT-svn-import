@@ -96,11 +96,11 @@ TEvePointSet::~TEvePointSet()
 /******************************************************************************/
 
 //______________________________________________________________________________
-const TGPicture* TEvePointSet::GetListTreeIcon(Bool_t) 
-{ 
+const TGPicture* TEvePointSet::GetListTreeIcon(Bool_t)
+{
    // Return pointset icon.
 
-   return TEveElement::fgListTreeIcons[3]; 
+   return TEveElement::fgListTreeIcons[3];
 }
 
 //______________________________________________________________________________
@@ -327,7 +327,7 @@ TClass* TEvePointSet::ProjectedClass() const
 //______________________________________________________________________________
 void TEvePointSet::PointSelected(Int_t id)
 {
-   // Virtual method of base class TPointSet3D. The fuction call is invoked with secondary selection 
+   // Virtual method of base class TPointSet3D. The fuction call is invoked with secondary selection
    // in TPointSet3DGL.
 
    Emit("PointSelected(Int_t)", id);

@@ -105,7 +105,7 @@ TEveTrackPropagator::TEveTrackPropagator() :
 //______________________________________________________________________________
 void TEveTrackPropagator::InitTrack(TEveVector &v, TEveVector &p,
                                     Float_t beta,  Int_t charge)
-{ 
+{
    // Initialize internal data-members for given particle parameters.
 
    fV.fX = v.fX;
@@ -125,7 +125,7 @@ void TEveTrackPropagator::ResetTrack()
    // Reset cache holding particle trajectory.
 
    fPoints.clear();
-   fN     = 0; 
+   fN     = 0;
    fNLast = 0;
 }
 
@@ -228,7 +228,7 @@ void TEveTrackPropagator::HelixToBounds(TEveVector& p)
          {
             Float_t t = (fMaxR - fV.R()) / (forw.R() - fV.R());
             assert(t >= 0 && t <= 1);
-            fPoints.push_back(fV + (forw-fV)*t); 
+            fPoints.push_back(fV + (forw-fV)*t);
             ++fN;
             return;
          }
