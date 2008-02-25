@@ -1537,7 +1537,7 @@ int G__loadfile(const char *filenamein)
        **********************************************/
       G__getcintsysdir();
       if('\0'!=G__cintsysdir[0]) {
-        sprintf(G__ifile.name,"%s%sinclude%s%s%s",G__cintsysdir,G__psep
+        sprintf(G__ifile.name,"%s%soldcore/include%s%s%s",G__cintsysdir,G__psep
                 ,G__psep,filename,addpost[i2]);
 #ifndef G__WIN32
         G__ifile.fp = fopen(G__ifile.name,"r");
@@ -1558,7 +1558,7 @@ int G__loadfile(const char *filenamein)
        **********************************************/
       G__getcintsysdir();
       if('\0'!=G__cintsysdir[0]) {
-        sprintf(G__ifile.name,"%s%sstl%s%s%s",G__cintsysdir,G__psep
+        sprintf(G__ifile.name,"%s%soldcore/stl%s%s%s",G__cintsysdir,G__psep
                 ,G__psep,filename,addpost[i2]);
 #ifndef G__WIN32
         G__ifile.fp = fopen(G__ifile.name,"r");
@@ -1579,7 +1579,7 @@ int G__loadfile(const char *filenamein)
        **********************************************/
       /* G__getcintsysdir(); */
       if('\0'!=G__cintsysdir[0]) {
-        sprintf(G__ifile.name,"%s%slib%s%s%s",G__cintsysdir,G__psep
+        sprintf(G__ifile.name,"%s%soldcore/lib%s%s%s",G__cintsysdir,G__psep
                 ,G__psep,filename,addpost[i2]);
 #ifndef G__WIN32
         G__ifile.fp = fopen(G__ifile.name,"r");

@@ -5,13 +5,15 @@
 
 include cint/reflex/Module.mk
 
-MODDIR       := cint/oldcore
+MODDIRBASE   := cint
+MODDIR       := $(MODDIRBASE)/oldcore
 MODDIRS      := $(MODDIR)/src
 MODDIRSD     := $(MODDIRS)/dict
 MODDIRI      := $(MODDIR)/inc
 
 CINTDIR      := $(MODDIR)
 CINTDIRS     := $(CINTDIR)/src
+CINTDIRSD    := $(CINTDIRS)/dict
 CINTDIRI     := $(CINTDIR)/inc
 CINTDIRM     := $(CINTDIR)/main
 CINTDIRT     := $(CINTDIR)/tool
@@ -19,12 +21,13 @@ CINTDIRL     := $(CINTDIR)/lib
 CINTDIRDLLS  := $(CINTDIR)/include
 CINTDIRSTL   := $(CINTDIR)/stl
 CINTDIRDLLSTL:= $(CINTDIRL)/dll_stl
+CINTDIRIOSEN := $(MODDIRBASE)/iosenum
 
 ##### libCint #####
 CINTH        := $(wildcard $(MODDIRI)/*.h)
 CINTS1       := $(wildcard $(MODDIRS)/*.c)
 CINTS2       := $(wildcard $(MODDIRS)/*.cxx) \
-	$(MODDIRSD)/longif.cxx $(MODDIRSD)/Apiif.cxx
+	$(MODDIRSD)/longif.cxx $(MODDIRSD)/Apiif.cxx $(MODDIRSD)/stdstrct.cxx
 
 CINTS1       += $(CINTDIRM)/G__setup.c
 
@@ -195,21 +198,21 @@ MAKECINT     := bin/makecint$(EXEEXT)
 
 ##### iosenum.h #####
 IOSENUM      := $(MODDIR)/include/iosenum.h
-IOSENUMC     := $(MODDIR)/iosenum/iosenum.cxx
+IOSENUMC     := $(CINTDIRIOSEN)/iosenum.cxx
 ifeq ($(GCC_MAJOR),4)
-IOSENUMA     := $(MODDIR)/iosenum/iosenum.$(ARCH)3
+IOSENUMA     := $(CINTDIRIOSEN)/iosenum.$(ARCH)3
 else
 ifeq ($(GCC_MAJOR),3)
-IOSENUMA     := $(MODDIR)/iosenum/iosenum.$(ARCH)3
+IOSENUMA     := $(CINTDIRIOSEN)/iosenum.$(ARCH)3
 else
-IOSENUMA     := $(MODDIR)/iosenum/iosenum.$(ARCH)
+IOSENUMA     := $(CINTDIRIOSEN)/iosenum.$(ARCH)
 endif
 endif
 
 # used in the main Makefile
 ALLHDRS     += $(patsubst $(MODDIRI)/%.h,include/%.h,$(CINTH)) $(CINTCONF)
 
-CINTCXXFLAGS += -DG__HAVE_CONFIG -DG__NOMAKEINFO -DG__CINTBODY -I$(CINTDIRS)
+CINTCXXFLAGS += -DG__HAVE_CONFIG -DG__NOMAKEINFO -DG__CINTBODY -I$(CINTDIRS) -I$(CINTDIRSD)
 
 # include all dependency files
 INCLUDEFILES += $(CINTDEP) $(CINTEXEDEP)
@@ -261,17 +264,17 @@ distclean-cint: clean-cint
 distclean::     distclean-cint
 
 ##### extra rules ######
-$(CINTDIRS)/libstrm.o:  CINTCXXFLAGS += -I$(CINTDIRL)/stream
-$(CINTDIRS)/sun5strm.o: CINTCXXFLAGS += -I$(CINTDIRL)/sunstrm
-$(CINTDIRS)/vcstrm.o:   CINTCXXFLAGS += -I$(CINTDIRL)/vcstream
-$(CINTDIRS)/%strm.o:    CINTCXXFLAGS += -I$(CINTDIRL)/$(notdir $(basename $@))
+$(CINTDIRSD)/libstrm.o:  CINTCXXFLAGS += -I$(CINTDIRL)/stream
+$(CINTDIRSD)/sun5strm.o: CINTCXXFLAGS += -I$(CINTDIRL)/sunstrm
+$(CINTDIRSD)/vcstrm.o:   CINTCXXFLAGS += -I$(CINTDIRL)/vcstream
+$(CINTDIRSD)/%strm.o:    CINTCXXFLAGS += -I$(CINTDIRL)/$(notdir $(basename $@))
 ifeq ($(GCC_MAJOR),4)
-$(CINTDIRS)/gcc4strm.o:  CINTCXXFLAGS += -Wno-strict-aliasing
+$(CINTDIRSD)/gcc4strm.o:  CINTCXXFLAGS += -Wno-strict-aliasing
 endif
 
 $(MAKECINTO) $(CINTALLO): $(CINTCONF)
 
-$(CINTDIRS)/stdstrct.o:     CINTCXXFLAGS += -I$(CINTDIRL)/stdstrct
+$(CINTDIRSD)/stdstrct.o:     CINTCXXFLAGS += -I$(CINTDIRL)/stdstrct
 $(CINTDIRS)/loadfile_tmp.o: CINTCXXFLAGS += -UR__HAVE_CONFIG -DROOTBUILD
 
 $(CINTDIRS)/loadfile_tmp.cxx: $(CINTDIRS)/loadfile.cxx
