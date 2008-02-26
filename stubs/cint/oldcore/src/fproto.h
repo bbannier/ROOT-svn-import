@@ -320,7 +320,6 @@ struct G__ifunc_table *G__get_methodhandle_noerror(const char *funcname,const ch
                                            ,int noerror,int isconst);
 #ifdef G__NOSTUBS
 int   G__stub_method_calling (G__value *result7, struct G__param *libp, struct G__ifunc_table_internal *ifunc, int ifn);
-int   G__method_inbase2(int ifn, struct G__ifunc_table_internal *ifunc);
 void  G__register_class(const char *libname, const char *clstr);
 void  MapDependantTypes();
 
