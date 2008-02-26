@@ -28,7 +28,7 @@ CXXAPIH    = $(addsuffix .h,$(addprefix $(G__CFG_COREVERSION)/inc/,\
 
 ifeq ($(G__CFG_COREVERSION),core)
 CXXAPIO   += Dict
-CXXAPIH   += $(addsuffix .h,$(addprefix src/,\
+CXXAPIH   += $(addsuffix .h,$(addprefix $(G__CFG_COREVERSION)/src/,\
               Dict))
 endif
 

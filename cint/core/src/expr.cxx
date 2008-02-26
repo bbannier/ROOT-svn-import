@@ -14,7 +14,7 @@
  ************************************************************************/
 
 #include "common.h"
-#include "v6_value.h"
+#include "value.h"
 #include "Dict.h"
 
 using namespace Cint::Internal;

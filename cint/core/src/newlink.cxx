@@ -17,7 +17,7 @@
 #include "Api.h"
 #include "Dict.h"
 #include "dllrev.h"
-#include "v6_value.h"
+#include "value.h"
 
 #ifndef G__TESTMAIN
 #include <sys/stat.h>

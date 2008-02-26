@@ -8,7 +8,7 @@
 #ifndef BC_EXEC_ASM_H
 #define BC_EXEC_ASM_H
 
-#include "v6_pcode.h"
+#include "pcode.h"
 
 namespace Cint {
 namespace Internal {

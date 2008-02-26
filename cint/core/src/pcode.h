@@ -1,5 +1,5 @@
 #include "Reflex/Builder/TypeBuilder.h"
-#include "v6_value.h"
+#include "value.h"
 
 namespace Cint {
    namespace Internal {
