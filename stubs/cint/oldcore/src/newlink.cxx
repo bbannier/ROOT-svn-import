@@ -1756,10 +1756,10 @@ int G__evaluate_libp(G__param* rpara, G__param *libp, G__ifunc_table_internal *i
       G__paramfunc *formal_param = ifunc->param[ifn][counter];
 
       if((G__value *)(-1)==formal_param->pdefault) {
-         G__var_array* store_varlocal = G__p_local;
-         G__p_local = 0;
+         G__dictgenmode store_dicttype = G__dicttype;
+         G__dicttype = (G__dictgenmode) -1;
          rpara->para[rpara->paran] = G__getexpr(formal_param->def);
-         G__p_local = store_varlocal;
+         G__dicttype = store_dicttype;
          rpara->paran++;
       }
       else if((G__value *)(0)==formal_param->pdefault){

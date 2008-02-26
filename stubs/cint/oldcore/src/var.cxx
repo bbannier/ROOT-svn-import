@@ -7320,7 +7320,11 @@ struct G__var_array* G__searchvariable(char* varname, int varhash, G__var_array*
       scope_tagnum = G__tagnum;
       // 25-02-08 ... unknown side effects.
       // We want to be able to specify the class before calling getexpr in newlink.
-      if(G__tagnum>-1 && !varlocal)
+      // We need a way to trigger this from G__evaluate_libp() in newlink.cxx, and since
+      // I don't want to create more global variables. I'm using G__dicttype, which
+      // is only used when generating the dictionary (it shouldnt have any meaning
+      // when running the code)
+      if(G__dicttype == (G__dictgenmode)-1)
          ilg = G__MEMBER;
    }
    //--
