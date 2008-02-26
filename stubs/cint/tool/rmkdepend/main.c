@@ -49,6 +49,8 @@ in this Software without prior written authorization from the X Consortium.
 #include <stdarg.h>
 #ifndef WIN32
 #include <unistd.h>
+#else
+#include <io.h>
 #endif
 #if !defined(__hpux)
 #if defined(__APPLE__)
@@ -718,7 +720,7 @@ redirect(line, makefile)
 #endif
         }
 	if ((fdout = freopen(makefile, "w", stdout)) == NULL)
-		fatalerr("cannot open \"%s\"\n", backup);
+		fatalerr("cannot open \"%s\"\n", makefile);
         if (!rootBuild) {
 	   len = strlen(line);
 	   while (!found && fgets(buf, BUFSIZ, fdin)) {

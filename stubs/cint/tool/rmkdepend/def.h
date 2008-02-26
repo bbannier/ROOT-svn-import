@@ -41,10 +41,6 @@ in this Software without prior written authorization from the X Consortium.
 #include <fcntl.h>
 #include <sys/stat.h>
 
-#ifdef G__WIN32
-#define WIN32
-#endif
-
 #define MAXDEFINES	512
 #define MAXFILES	4096
 #define MAXDIRS		256
