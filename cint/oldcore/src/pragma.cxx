@@ -261,7 +261,11 @@ int G__pragma()
     struct G__input_file store_ifile = G__ifile;
     G__ifile.filenum = -1;
     G__ifile.line_number = -1;
+#ifndef G__BUILDING_CINTTMP
     G__cpp_setupG__API();
+#else
+    G__fprinterr(G__serr,"ERROR: You cannot invoke the pragma setertti when running cint_tmp!");
+#endif
     G__ifile = store_ifile;
   }
 

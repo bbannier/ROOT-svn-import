@@ -32,11 +32,17 @@ CXXAPIH   += $(addsuffix .h,$(addprefix src/,\
               Dict))
 endif
 
+RFLXO      = $(addsuffix $(G__CFG_OBJEXT),$(addprefix $(G__CFG_COREVERSION)/src/,\
+              rflx_gendict rflx_gensrc rflx_tools))
+
 BCO        = $(addsuffix $(G__CFG_OBJEXT),$(addprefix $(G__CFG_COREVERSION)/src/,\
               bc_autoobj bc_cfunc bc_inst bc_item bc_parse \
               bc_reader bc_type bc_exec bc_vtbl bc_eh bc_debug \
               bc_assign))
-COREO        = $(subst .cxx,$(G__CFG_OBJEXT),\
+
+COREO        = $(filter-out $(CXXAPIO),\
+	      $(filter-out $(RFLXO),\
+	      $(subst .cxx,$(G__CFG_OBJEXT),\
 	      $(filter-out $(G__CFG_COREVERSION)/src/dmy%,\
 	      $(filter-out $(G__CFG_COREVERSION)/src/bc_%,\
 	      $(filter-out $(G__CFG_COREVERSION)/src/stdstrct.cxx,\
@@ -44,10 +50,10 @@ COREO        = $(subst .cxx,$(G__CFG_OBJEXT),\
 	      $(filter-out $(G__CFG_COREVERSION)/src/winnt.cxx,\
 	      $(filter-out $(PRAGMATMPCXX),\
 	      $(filter-out $(LOADFILETMPCXX),\
-	      $(wildcard $(G__CFG_COREVERSION)/src/*.cxx)))))))))
-RFLXO      = $(addsuffix $(G__CFG_OBJEXT),$(addprefix $(G__CFG_COREVERSION)/src/,\
-              rflx_gendict rflx_gensrc rflx_tools))
+	      $(wildcard $(G__CFG_COREVERSION)/src/*.cxx)))))))))))
+
 STREAMO    = $(G__CFG_COREVERSION)/src/dict/$(G__CFG_STREAMDIR)$(G__CFG_OBJEXT)
+
 STDSTRCTO  = $(G__CFG_COREVERSION)/src/dict/stdstrct$(G__CFG_OBJEXT)
 
 LIBOBJECTS = $(CXXAPIO) $(APIDICTO) $(BCO) $(STREAMO) $(RFLXO) $(COREO) $(G__CFG_COREVERSION)/src/g__cfunc$(G__CFG_OBJEXT) \
@@ -118,10 +124,11 @@ $(IOSENUMH): $(ORDER_) $(CINTTMP) $(G__CFG_COREVERSION)/include/stdio.h $(MAKECI
 		touch $(IOSENUMH); \
 	else \
 		(echo Generating $(IOSENUMH). This might take a while...; \
-		( cd $(G__CFG_COREVERSION)/include;$(G__CFG_RM) stdfunc$(G__CFG_SOEXT) );\
-		unset VS_UNICODE_OUTPUT; \
-		LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:. ./$(CINTTMP) $(G__CFG_INCP)$(G__CFG_COREVERSION)/inc $(G__CFG_COREVERSION)/include/iosenum.cxx; \
-		mv -f $(G__CFG_COREVERSION)/iosenum.h $(G__CFG_COREVERSION)/include/iosenum.h); \
+		( cd $(G__CFG_COREVERSION)/include;$(G__CFG_RM) stdfunc$(G__CFG_SOEXT) ) && \
+		unset VS_UNICODE_OUTPUT && \
+		cd $(G__CFG_COREVERSION) && \
+		  LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:.. ../$(CINTTMP) $(G__CFG_INCP)inc include/iosenum.cxx && \
+		  mv -f iosenum.h include/iosenum.h); \
 	fi)
 
 ############################################################################
