@@ -34,6 +34,7 @@ $(CINTCONF): config/Makefile.$(ARCH) config/Makefile.comp $(CINTCONFMK)
 	    echo '#define G__CFG_PLATFORMO ""' >> __configcint && \
 	    echo '#define G__CFG_AR "ar qcs"' >> __configcint ;; \
 	esac && \
+	echo '#define G__CFG_COREVERSION "oldcore"' >> __configcint && \
 	echo '#define G__CFG_CC "$(CC)"' >> __configcint && \
 	echo '#define G__CFG_CFLAGS "$(CINTCFLAGS)"' >> __configcint && \
 	echo '#define G__CFG_CMACROS "$(filter -D%,$(CINTCFLAGS))"' >> __configcint && \
