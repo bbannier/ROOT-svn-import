@@ -38,6 +38,8 @@ protected:
    TGVerticalFrame            *fTower;
    TEveRGBAPaletteSubEditor   *fPalette;        // Palette sub-editor.x
 
+   TEveGValuator              *fTowerHeight;
+
    void CreateTowerTab();
 
 public:
@@ -49,6 +51,8 @@ public:
 
    void DoEtaRange();
    void DoPhi();
+
+   void DoTowerHeight();
 
    ClassDef(TEveCaloVizEditor, 0); // GUI editor for TEveCaloVizEditor.
 };
