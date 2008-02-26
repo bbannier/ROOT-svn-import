@@ -3,10 +3,6 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-ifneq ($(BUILDREFLEX),no)
-include cint/reflex/Module.mk
-endif
-
 MODDIRBASE   := cint
 MODDIR       := $(MODDIRBASE)/oldcore
 MODDIRS      := $(MODDIR)/src
