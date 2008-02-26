@@ -1756,14 +1756,12 @@ int G__evaluate_libp(G__param* rpara, G__param *libp, G__ifunc_table_internal *i
       G__paramfunc *formal_param = ifunc->param[ifn][counter];
 
       if((G__value *)(-1)==formal_param->pdefault) {
-	if(formal_param->type=='n' && G__tagnum>-1) {
-	  char tmp[G__ONELINE];
-	  sprintf(tmp,"%s::%s", G__struct.name[G__tagnum], formal_param->def);
-	  rpara->para[rpara->paran] = G__getexpr(tmp);
-	}
-	else
-	  rpara->para[rpara->paran] = G__getexpr(formal_param->def);
-        rpara->paran++;
+         G__var_array* store_varlocal = G__p_local;
+         G__p_local = 0;
+         rpara->para[rpara->paran] = G__getexpr(formal_param->def);
+         rpara->paran++;
+         G__p_local = store_varlocal;
+         rpara->paran++;
       }
       else if((G__value *)(0)==formal_param->pdefault){
         G__fprinterr(G__serr,"Error in G__evaluate_libp: default param not found\n");

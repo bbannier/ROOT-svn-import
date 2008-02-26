@@ -1,3 +1,4 @@
+
 #! /bin/sh
 #
 # A (not so) simple configure script.
@@ -1137,7 +1138,7 @@ if test $# -gt 0 ; then
       --nohowto)               nohowto="yes"         ;;
       --fail-on-missing)       fail_on_missing="yes" ;;
       --no-stubs)              no_stubs="yes";;
-      --no-stubs-test)         no_stubs_test="yes";;
+      --no-stubs-test)         no_stubs="yes"; no_stubs_test="yes";;
       --with-afs=*)            afsdir=$optarg        ; enable_afs="yes"     ;;
       --with-alien-incdir=*)   alienincdir=$optarg   ; enable_alien="yes"   ;;
       --with-alien-libdir=*)   alienlibdir=$optarg   ; enable_alien="yes"   ;;
