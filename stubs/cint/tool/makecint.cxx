@@ -512,7 +512,7 @@ void G__outputmakefile(int argc,char **argv)
       << G__COMPFLAGS << " " << cintexCompFlags << std::endl
       << "CXXFLAGS    := " << G__CFG_CXXFLAGS << " " 
       << G__COMPFLAGS << " " << cintexCompFlags << std::endl;
-  out << "CINTIPATH   := "<< G__CFG_INCP << "$(CINTSYSDIRW)/inc" << std::endl
+  out << "CINTIPATH   := "<< G__CFG_INCP << "$(CINTSYSDIRW)/" << G__CFG_COREVERSION << "/inc" << std::endl
       << "OBJECT      := " << G__object << std::endl
 
       << "LINKSPEC    := ";
@@ -676,7 +676,7 @@ TODO!
    out << "$(CXX) $(LINKSPEC) $(CINTIPATH) -o $(SETUPOBJ) -c G__main.cxx" << std::endl;
 #else
     out << "# Compile dictionary setup routine #######################" << std::endl;
-    out << "$(SETUPOBJ): $(CINTSYSDIRU)/main/G__setup.c $(CINTSYSDIRU)/inc/G__ci.h" << std::endl
+    out << "$(SETUPOBJ): $(CINTSYSDIRU)/main/G__setup.c $(CINTSYSDIRU)/" << G__CFG_COREVERSION << "/inc/G__ci.h" << std::endl
         << "\t";
    if (G__quiet) out << "@";
    out << "$(CC) $(LINKSPEC) $(CINTIPATH) $(CMACRO) $(CFLAGS) " 
