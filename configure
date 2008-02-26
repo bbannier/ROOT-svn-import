@@ -4096,7 +4096,7 @@ if test ! "x$enable_reflex" = "xno"; then
     enable_reflex="yes"
     result "yes"
 else
-    enable_reflex=""
+    enable_reflex="no"
     result "no"
 fi
 
