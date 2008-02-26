@@ -41,6 +41,7 @@ public:
    TGLViewer* GetGLViewer() const { return fGLViewer; }
    void SetGLViewer(TGLViewer* s);
    void SpawnGLViewer(const TGWindow* parent, TGedEditor* ged);
+   void Redraw(Bool_t resetCameras=kFALSE);
 
    virtual void AddScene(TEveScene* scene);
 
