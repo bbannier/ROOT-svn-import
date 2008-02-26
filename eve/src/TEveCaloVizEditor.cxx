@@ -38,7 +38,8 @@ TEveCaloVizEditor::TEveCaloVizEditor(const TGWindow *p, Int_t width, Int_t heigh
    fPhi(0),
    fPhiRng(0),
    fTower(0),
-   fPalette(0)
+   fPalette(0),
+   fTowerHeight(0)
 {
    // Constructor.
 
@@ -79,22 +80,38 @@ TEveCaloVizEditor::TEveCaloVizEditor(const TGWindow *p, Int_t width, Int_t heigh
 //______________________________________________________________________________
 void TEveCaloVizEditor::CreateTowerTab()
 {
-  fTower = CreateEditorTabSubFrame("Tower");
+   fTower = CreateEditorTabSubFrame("Tower");
 
-  TGCompositeFrame *title1 = new TGCompositeFrame(fTower, 145, 10,
-						  kHorizontalFrame |
-						  kLHintsExpandX   |
-						  kFixedWidth      |
-						  kOwnBackground);
-  title1->AddFrame(new TGLabel(title1, "Tower"),
-		   new TGLayoutHints(kLHintsLeft, 1, 1, 0, 0));
-  title1->AddFrame(new TGHorizontal3DLine(title1),
-		   new TGLayoutHints(kLHintsExpandX, 5, 5, 7, 7));
-  fTower->AddFrame(title1, new TGLayoutHints(kLHintsTop, 0, 0, 2, 0));
+   TGHorizontalFrame *title1 = new TGHorizontalFrame(fTower, 145, 10, 
+                                                     kLHintsExpandX | kFixedWidth);
+   title1->AddFrame(new TGLabel(title1, "Tower"),
+                    new TGLayoutHints(kLHintsLeft, 1, 1, 0, 0));
+   title1->AddFrame(new TGHorizontal3DLine(title1),
+                    new TGLayoutHints(kLHintsExpandX, 5, 5, 7, 7));
+   fTower->AddFrame(title1, new TGLayoutHints(kLHintsTop, 0, 0, 2, 0));
 
-  fPalette = new TEveRGBAPaletteSubEditor(fTower);
-  fTower->AddFrame(fPalette, new TGLayoutHints(kLHintsTop | kLHintsExpandX, 2, 0, 0, 0));
-  fPalette->Connect("Changed()", "TEveCaloVizEditor", this, "Update()");
+
+
+   Int_t  labelW = 45;
+   fTowerHeight = new TEveGValuator(fTower, "Height:", 90, 0);
+   fTowerHeight->SetLabelWidth(labelW);
+   fTowerHeight->SetNELength(6);
+   fTowerHeight->Build();
+   fTowerHeight->SetLimits(0, 1, 100, TGNumberFormat::kNESRealTwo);
+   fTowerHeight->Connect("ValueSet(Double_t)", "TEveCaloVizEditor", this, "DoTowerHeight()");
+   fTower->AddFrame(fTowerHeight, new TGLayoutHints(kLHintsTop, 1, 1, 1, 1));
+
+   TGHorizontalFrame *title2 = new TGHorizontalFrame(fTower, 145, 10, kLHintsExpandX| kFixedWidth);
+   title2->AddFrame(new TGLabel(title2, "Palette Controls"),
+                    new TGLayoutHints(kLHintsLeft, 1, 1, 0, 0));
+   title2->AddFrame(new TGHorizontal3DLine(title2),
+                    new TGLayoutHints(kLHintsExpandX, 5, 5, 7, 7));
+   fTower->AddFrame(title2, new TGLayoutHints(kLHintsTop, 0, 0, 5, 0));
+
+   fPalette = new TEveRGBAPaletteSubEditor(fTower);
+   fTower->AddFrame(fPalette, new TGLayoutHints(kLHintsTop | kLHintsExpandX, 2, 0, 0, 0));
+   fPalette->Connect("Changed()", "TEveCaloVizEditor", this, "Update()");
+
 
 }
 
@@ -111,6 +128,9 @@ void TEveCaloVizEditor::SetModel(TObject* obj)
    fPhiRng->SetValue(fM->fPhiRng*TMath::RadToDeg());
 
    fPalette->SetModel(fM->fPalette);
+
+   fTowerHeight->SetValue(fM->fTowerHeight);
+
 }
 
 //______________________________________________________________________________
@@ -129,3 +149,10 @@ void TEveCaloVizEditor::DoPhi()
    Update();
 }
 
+
+//______________________________________________________________________________
+void TEveCaloVizEditor::DoTowerHeight()
+{
+   fM->fTowerHeight = fTowerHeight->GetValue();
+   Update();
+}

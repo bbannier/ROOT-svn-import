@@ -44,12 +44,16 @@ TEveCaloViz::TEveCaloViz(const Text_t* n, const Text_t* t) :
    fPhi(0.),
    fPhiRng(TMath::Pi()),
 
+   fThreshold(0.001f),
+
    fBarrelRadius(-1.f),
    fEndCapPos(-1.f),
 
-   fBarrelExtend(0.5),
-   fEndCapExtend(0.5)
+   fTowerHeight(0.2),
 
+   fDefaultValue(5),
+   fValueIsColor(kTRUE),
+   fPalette(0)
 {
    // Constructor.
 
@@ -68,11 +72,12 @@ TEveCaloViz::TEveCaloViz(TEveCaloData* data, const Text_t* n, const Text_t* t) :
    fPhi(0.),
    fPhiRng(TMath::Pi()),
 
+   fThreshold(0.001f),
+
    fBarrelRadius(-1.f),
    fEndCapPos(-1.f),
 
-   fBarrelExtend(0.5),
-   fEndCapExtend(0.5),
+   fTowerHeight(0.2),
 
    fDefaultValue(5),
    fValueIsColor(kTRUE),
@@ -105,23 +110,25 @@ Float_t TEveCaloViz::GetTransitionEta() const
 }
 
 //______________________________________________________________________________
-void TEveCaloViz::AssignCaloVizParameters(TEveCaloViz* cv)
+void TEveCaloViz::AssignCaloVizParameters(TEveCaloViz* m)
 {
-   fData = cv->fData;
+   fData = m->fData;
 
-   fEtaMin = cv->fEtaMin;
-   fEtaMax = cv->fEtaMax;
-   fPhi    = cv->fPhi;
-   fPhiRng = cv->fPhiRng;
+   fEtaMin    = m->fEtaMin;
+   fEtaMax    = m->fEtaMax;
+   fPhi       = m->fPhi;
+   fPhiRng    = m->fPhiRng;
+   fThreshold = m->fThreshold;
 
-   fBarrelRadius = cv->fBarrelRadius;
-   fEndCapPos = cv->fEndCapPos;
+   fBarrelRadius = m->fBarrelRadius;
+   fEndCapPos    = m->fEndCapPos;
+   // fTowerHeight  = m->fTowerHeight;
 
-   fBarrelExtend = cv->fBarrelExtend;
-   fEndCapExtend = cv->fEndCapExtend;
-
-   fPalette = cv->fPalette;
-   if (fPalette) fPalette->IncRefCount();
+   TEveRGBAPalette& mp = * m->fPalette;
+   TEveRGBAPalette* p = new TEveRGBAPalette(mp.GetMinVal(), mp.GetMaxVal(),
+                                          mp.GetInterpolate());
+   p->SetDefaultColor(mp.GetDefaultColor());
+   SetPalette(p);
 }
 
 
@@ -130,7 +137,7 @@ void TEveCaloViz::SetPalette(TEveRGBAPalette* p)
 {
    // Set TEveRGBAPalette pointer.
 
-   if (fPalette == 0 && fPalette == p) return;
+   if ( fPalette == p) return;
    if (fPalette) fPalette->DecRefCount();
    fPalette = p;
    if (fPalette) fPalette->IncRefCount();
@@ -183,13 +190,13 @@ void TEveCaloViz::ComputeBBox()
 
    BBoxInit();
 
-   fBBox[1] =  fBarrelRadius*(1+fBarrelExtend);
+   fBBox[1] =  fBarrelRadius*(1+fTowerHeight);
    fBBox[0] = -fBBox[1] ;
 
    fBBox[3] =  fBBox[1];
    fBBox[2] =  fBBox[0];
 
-   fBBox[5] =  fEndCapPos *(1+fEndCapExtend);
+   fBBox[5] =  fEndCapPos + fBarrelRadius*fTowerHeight;
    fBBox[4] = -fBBox[5];
 
    // printf("ComputeBBox (%f, %f, %f) (%f, %f, %f)\n",
@@ -256,10 +263,10 @@ void TEveCalo2D::ComputeBBox()
    TEveProjection& proj = *fManager->GetProjection();
 
    Float_t x1, y1, z1, x2, y2, z2;
-   x1 = y1 = -fBarrelRadius*(1+fBarrelExtend);
-   x2 = y2  = fBarrelRadius*(1+fBarrelExtend);
-   z1  = -fEndCapPos *(1+fEndCapExtend);
-   z2 = fEndCapPos *(1+fEndCapExtend);
+   x1 = y1 = -fBarrelRadius*(1+fTowerHeight);
+   x2 = y2  = fBarrelRadius*(1+fTowerHeight);
+   z1  = -fEndCapPos - fBarrelRadius*fTowerHeight;
+   z2 =   fEndCapPos + fBarrelRadius*fTowerHeight;
 
    proj.ProjectPoint(x1, y1, z1);
    proj.ProjectPoint(x2, y2, z2);

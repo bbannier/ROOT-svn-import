@@ -43,11 +43,12 @@ protected:
    Float_t      fPhi;
    Float_t      fPhiRng;
 
+   Float_t      fThreshold;
+
    Float_t      fBarrelRadius;
    Float_t      fEndCapPos;
 
-   Float_t      fBarrelExtend;
-   Float_t      fEndCapExtend;
+   Float_t      fTowerHeight;;
 
    Int_t             fDefaultValue;   // Default signal value.
    Bool_t            fValueIsColor;   // Interpret signal value as RGBA color.
@@ -71,6 +72,7 @@ public:
 
    void SetBarrelRadius(Float_t r) { fBarrelRadius = r; }
    void SetEndCapPos   (Float_t z) { fEndCapPos = z; }
+   void SetTowerHeight (Float_t h) { fTowerHeight = h;}
 
    void AssignCaloVizParameters(TEveCaloViz* cv);
 
