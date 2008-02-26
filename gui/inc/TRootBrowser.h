@@ -108,6 +108,7 @@ public:
    void              CloseWindow();
    void              DoTab(Int_t id);
    TGFrame          *GetActFrame() const { return (TGFrame *)fEditFrame; }
+   TGFrame          *GetToolbarFrame() const { return (TGFrame *)fToolbarFrame; }
    TGStatusBar      *GetStatusBar() const { return fStatusBar; }
    TGTab            *GetTabLeft() const { return fTabLeft; }
    TGTab            *GetTabRight() const { return fTabRight; }
