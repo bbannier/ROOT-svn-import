@@ -27,7 +27,7 @@ ifeq ($(subst msvc,,$(G__CFG_ARCH)),$(G__CFG_ARCH))
   ALLDLLS += longlong.cintdll ipc.cintdll posix.cintdll
 endif
 
-BUILDDLL = chmod a+x setup; PATH=../..:$$PATH LD_LIBRARY_PATH=../..:$$LD_LIBRARY_PATH ./setup
+BUILDDLL = chmod a+x setup; PATH=../../..:$$PATH LD_LIBRARY_PATH=../../..:$$LD_LIBRARY_PATH ./setup
 MKTYPES  = $(G__CFG_COREVERSION)/lib/posix/mktypes$(G__CFG_EXEEXT)
 MAKEINCL = $(G__CFG_COREVERSION)/include/mkincld$(G__CFG_EXEEXT)
 IOSENUMH = $(G__CFG_COREVERSION)/include/iosenum.h
@@ -42,7 +42,7 @@ dlls: $(ALLDLLS)
 ipc.cintdll posix.cintdll: $(G__CFG_COREVERSION)/include/sys/types.h
 
 %.cintdll: $(MAKECINT) $(CINTLIBSTATIC) $(CINT)
-	(cd lib/$*; $(BUILDDLL))
+	(cd $(G__CFG_COREVERSION)/lib/$*; $(BUILDDLL))
 
 $(G__CFG_COREVERSION)/include/systypes.h: $(MKTYPES)
 	cd $(dir $(MKTYPES)) \
