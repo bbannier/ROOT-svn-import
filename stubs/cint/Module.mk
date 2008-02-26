@@ -16,12 +16,12 @@ CINTDIRS     := $(CINTDIR)/src
 CINTDIRSD    := $(CINTDIRS)/dict
 CINTDIRI     := $(CINTDIR)/inc
 CINTDIRM     := $(CINTDIR)/main
-CINTDIRT     := $(CINTDIR)/tool
 CINTDIRL     := $(CINTDIR)/lib
 CINTDIRDLLS  := $(CINTDIR)/include
 CINTDIRSTL   := $(CINTDIR)/stl
 CINTDIRDLLSTL:= $(CINTDIRL)/dll_stl
 CINTDIRIOSEN := $(MODDIRBASE)/iosenum
+CINTDIRT     := $(MODDIRBASE)/tool
 
 ##### libCint #####
 CINTH        := $(wildcard $(MODDIRI)/*.h)

@@ -185,9 +185,9 @@ static int G__setline(char* statement, int c, int* piout)
                // -- We have #<line> "<filename>".
                G__getcintsysdir();
                char sysinclude[G__MAXFILENAME];
-               sprintf(sysinclude, "%s%sinclude%s", G__cintsysdir, G__psep, G__psep);
+               sprintf(sysinclude, "%s%soldcore%sinclude%s", G__cintsysdir, G__psep, G__psep, G__psep);
                char sysstl[G__MAXFILENAME];
-               sprintf(sysstl, "%s%sstl%s", G__cintsysdir, G__psep, G__psep);
+               sprintf(sysstl, "%s%soldcore%sstl%s", G__cintsysdir, G__psep, G__psep, G__psep);
                int len = strlen(sysinclude);
                int lenstl = strlen(sysstl);
 #ifdef G__WIN32

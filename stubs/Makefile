@@ -165,9 +165,6 @@ endif
 ifeq ($(BUILDUNURAN),yes)
 MODULES      += unuran
 endif
-ifeq ($(BUILDCINT7),yes)
-MODULES      += cint7
-endif
 ifeq ($(BUILDCINTEX),yes)
 MODULES      += cintex
 endif
@@ -233,7 +230,7 @@ MODULES      += unix winnt x11 x11ttf win32gdk gl ftgl rfio castor \
                 ldap mlp krb5auth rpdutils globusauth pyroot ruby gfal \
                 qt qtroot qtgsi xrootd netx proofx alien clarens peac oracle \
                 xmlparser mathcore mathmore cintex roofitcore roofit \
-                minuit2 monalisa fftw odbc unuran gdml eve g4root cint7 glite
+                minuit2 monalisa fftw odbc unuran gdml eve g4root glite
 MODULES      := $(sort $(MODULES))   # removes duplicates
 endif
 
@@ -464,14 +461,6 @@ cint/%.o: cint/%.c
 	$(MAKEDEP) -R -fcint/$*.d -Y -w 1000 -- $(CINTCFLAGS) -- $<
 	$(CC) $(OPT) $(CINTCFLAGS) $(CXXOUT)$@ -c $<
 
-cint7/%.o: cint7/%.cxx
-	$(MAKEDEP) -R -fcint7/$*.d -Y -w 1000 -- $(CINT7CXXFLAGS) -D__cplusplus -- $<
-	$(CXX) $(OPT) $(CINT7CXXFLAGS) $(CXXOUT)$@ -c $<
-
-cint7/%.o: cint7/%.c
-	$(MAKEDEP) -R -fcint7/$*.d -Y -w 1000 -- $(CINT7CFLAGS) -- $<
-	$(CC) $(OPT) $(CINT7CFLAGS) $(CXXOUT)$@ -c $<
-
 build/%.o: build/%.cxx
 	$(CXX) $(OPT) $(CXXFLAGS) $(CXXOUT)$@ -c $<
 
@@ -521,7 +510,7 @@ include cint/cintdlls.mk
 -include MyRules.mk            # allow local rules
 
 ifeq ($(findstring $(MAKECMDGOALS),clean distclean maintainer-clean dist \
-      distsrc version importcint importcint7 install uninstall showbuild \
+      distsrc version install uninstall showbuild \
       changelog html debian redhat),)
 ifeq ($(findstring clean-,$(MAKECMDGOALS)),)
 ifeq ($(findstring skip,$(MAKECMDGOALS))$(findstring fast,$(MAKECMDGOALS)),)
@@ -794,12 +783,6 @@ version: $(CINTTMP)
 static: rootlibs
 	@$(MAKESTATIC) $(PLATFORM) "$(CXX)" "$(CC)" "$(LD)" "$(LDFLAGS)" \
 	   "$(XLIBS)" "$(SYSLIBS)"
-
-importcint: distclean-cint
-	@$(IMPORTCINT)
-
-importcint7: distclean-cint7
-	@$(IMPORTCINT) cint7
 
 changelog:
 	@$(MAKECHANGELOG)

@@ -339,9 +339,9 @@ const char *G__getmakeinfo(const char *item)
   /* Get $CINTSYSDIR/MAKEINFO file name */
   if(G__getcintsysdir()) return(buf);
 #ifdef G__VMS
-  sprintf(makeinfo,"%sMAKEINFO.txt",G__cintsysdir);
+  sprintf(makeinfo,"%soldcore/MAKEINFO.txt",G__cintsysdir);
 #else
-  sprintf(makeinfo,"%s/MAKEINFO",G__cintsysdir);
+  sprintf(makeinfo,"%s/oldcore/MAKEINFO",G__cintsysdir);
 #endif
 
   /* Open MAKEINFO file */
@@ -2389,7 +2389,7 @@ int G__preprocessor(      char *outname,const char *inname,int cppflag
      * preprocessor statement for Symantec C++
      ***************************************************************/
     if(G__cintsysdir[0]) {
-      sprintf(temp,"%s %s %s -I. %s %s -D__CINT__ -I%s/include -I%s/stl -I%s/lib %s -o%s"
+      sprintf(temp,"%s %s %s -I. %s %s -D__CINT__ -I%s/oldcore/include -I%s/oldcore/stl -I%s/oldcore/lib %s -o%s"
               ,G__ccom ,macros,undeflist,ppopt ,includepath
               ,G__cintsysdir,G__cintsysdir,G__cintsysdir,tmpfile,outname);
     }
@@ -2404,7 +2404,7 @@ int G__preprocessor(      char *outname,const char *inname,int cppflag
      ***************************************************************/
     strcat(outname,".i");
     if(G__cintsysdir[0]) {
-      sprintf(temp,"%s %s %s -I. %s %s -D__CINT__ -I%s/include -I%s/stl -I%s/lib -o%s %s"
+      sprintf(temp,"%s %s %s -I. %s %s -D__CINT__ -I%s/oldcore/include -I%s/oldcore/stl -I%s/oldcore/lib -o%s %s"
               ,G__ccom ,macros,undeflist,ppopt ,includepath
               ,G__cintsysdir,G__cintsysdir,G__cintsysdir,outname,tmpfile);
     }
@@ -2421,7 +2421,7 @@ int G__preprocessor(      char *outname,const char *inname,int cppflag
      * preprocessor statement for UNIX
      ***************************************************************/
    if(G__cintsysdir[0]) {
-      sprintf(temp,"%s %s %s -I. %s %s -D__CINT__ -I%s/include -I%s/stl -I%s/lib %s > %s"
+      sprintf(temp,"%s %s %s -I. %s %s -D__CINT__ -I%s/oldcore/include -I%s/oldcore/stl -I%s/oldcore/lib %s > %s"
               ,G__ccom ,macros,undeflist,ppopt ,includepath
               ,G__cintsysdir,G__cintsysdir,G__cintsysdir,tmpfile,outname);
     }
