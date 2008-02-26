@@ -49,9 +49,9 @@ LINKSTATIC = no
 
 .PHONY: test clean help distclean install uninstall
 
-include Cint.mk
-include libReflex.mk
-include libCint.mk
+include build/Cint.mk
+include build/libReflex.mk
+include build/libCint.mk
 
 ############################################################################
 # Common rules

@@ -35,7 +35,7 @@ CINTALLO     := $(CINTS1:.c=.o) $(CINTS2:.cxx=.o)
 CINTALLDEP   := $(CINTALLO:.o=.d)
 
 CINTCONF     := include/configcint.h
-CINTCONFMK   := cint/configcint.mk
+CINTCONFMK   := cint/ROOT/configcint.mk
 
 CINTS1       := $(filter-out $(MODDIRS)/dlfcn.%,$(CINTS1))
 
