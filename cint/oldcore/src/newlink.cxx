@@ -1759,7 +1759,6 @@ int G__evaluate_libp(G__param* rpara, G__param *libp, G__ifunc_table_internal *i
          G__var_array* store_varlocal = G__p_local;
          G__p_local = 0;
          rpara->para[rpara->paran] = G__getexpr(formal_param->def);
-         rpara->paran++;
          G__p_local = store_varlocal;
          rpara->paran++;
       }
