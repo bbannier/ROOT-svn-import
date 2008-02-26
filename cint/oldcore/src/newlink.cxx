@@ -7437,8 +7437,10 @@ int G__method_inbase(int ifn, G__ifunc_table_internal *ifunc)
  * -1 now means than it was found in two or more parents...
  * the association can not be done here... we have to
  * do it at runtime
+ * if "onlyparents" then we will check only the direct ascendants, not
+ * the full hierarchy
  **************************************************************************///
-int G__method_inbase2(int ifn, G__ifunc_table_internal *ifunc)
+int G__method_inbase2(int ifn, G__ifunc_table_internal *ifunc, int onlyparents)
 {
   int page_base = 0; // the result... 0 if not found (the index otehrwise)
   int found = 0;
@@ -7454,7 +7456,7 @@ int G__method_inbase2(int ifn, G__ifunc_table_internal *ifunc)
       int basetagnum=cbases->herit[idx]->basetagnum;
 
       // Do it only for its parents
-      if(cbases->herit[idx]->property&G__ISDIRECTINHERIT) {
+      if( (onlyparents && cbases->herit[idx]->property&G__ISDIRECTINHERIT) || !onlyparents) {
         // Current tagnum's ifunc table
         G__ifunc_table_internal * ifunct = G__struct.memfunc[basetagnum];
 
@@ -7467,24 +7469,31 @@ int G__method_inbase2(int ifn, G__ifunc_table_internal *ifunc)
 
           //If the number of default parameters numbers is different between the base and the derived
           //class we generete the stub
-          if (base!=-1 && ifunct){
-            if(ifunct->page_base==0)
-              ifunct->page_base = ifunct->page+1;
-
-            page_base = ifunct->page_base;
-            ++found;
+          if (base!=-1 && ifunct) {
+	    page_base = G__method_inbase2(ifn, ifunct, onlyparents);
+	    if(page_base>0)
+	      ++found;
           }
         }
       }
     }
   }
 
-  if(!found)
-    return 0; // not found
-  else if (found==1)
-    return page_base; // found in one parent
+  if(!found) {
+    if(onlyparents)
+      page_base = G__method_inbase2(ifn, ifunc, 0);
+    
+    if(!page_base) {
+      ifunc->page_base = ifunc->page+1;
+      page_base = ifunc->page_base;
+    }
+    return page_base; // not found
+  }
+  
+  if (found>1 && onlyparents)
+    return -1; // found in multiple parents
 
-  return -1; // found in multiple parents
+  return page_base;   
 }
 
 /**************************************************************************
@@ -9591,20 +9600,23 @@ void G__cpplink_memfunc(FILE *fp)
                 // We are going to print ifunc page for a method that has been inherithed
                 int page_base = ifunc->page_base;
                 if(!page_base) {
-                  int page_base = G__method_inbase2(j, ifunc);
+                  // Look for it only in the parents, to check if we have the
+		  // same method in both of them
+		  page_base = G__method_inbase2(j, ifunc, 1);
+		  
+		  // If we don't find it in its parents and it's not ambiguous (not -1)
+		  // look for it in the whole hierarchy
+		  if(!page_base)
+		    page_base = G__method_inbase2(j, ifunc, 0);
 
-                  if(page_base==0){
+		  // If not found... start a page sequence
+                  // This shouldn't be needed now that we do it
+		  // inside G__method_inbase2
+		  if(page_base==0) {
                     ifunc->page_base = ifunc->page+1;
                     page_base = ifunc->page_base;
                   }
                 }
-                // 09-08-07
-                // The last steps were useful to set up the page_base,
-                // now let's try to solve the ambiguity problem
-                int page_base_amb = G__ifunc_exist_base(j, ifunc);
-                if(page_base==-1 || page_base_amb==-1)
-                  if(page_base>-1)
-                    page_base *= -1;
 
                 // put "ispurevirtual" in the less significant bit and shift the rest to the left
                 virtflag = 2*page_base + ifunc->ispurevirtual[j];
