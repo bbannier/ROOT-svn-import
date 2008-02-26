@@ -7318,6 +7318,10 @@ struct G__var_array* G__searchvariable(char* varname, int varhash, G__var_array*
    }
    else {
       scope_tagnum = G__tagnum;
+      // 25-02-08 ... unknown side effects.
+      // We want to be able to specify the class before calling getexpr in newlink.
+      if(G__tagnum>-1 && !varlocal)
+         ilg = G__MEMBER;
    }
    //--
    switch (G__scopeoperator(varname, &varhash, &scope_struct_offset, &scope_tagnum)) {

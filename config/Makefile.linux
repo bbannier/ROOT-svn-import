@@ -62,11 +62,15 @@ ifeq ($(NOSTUBS),yes)
 endif
 
 ifeq ($(NOSTUBS),yes)
-	ifeq ($(NOSTUBSTEST),no)
-		CXXFLAGS += -DG__NOSTUBS
-		CINTCXXFLAGS += -DG__NOSTUBS
-	endif
+	CXXFLAGS += -DG__NOSTUBS
+	CINTCXXFLAGS += -DG__NOSTUBS
 endif
+
+ifeq ($(NOSTUBSTEST),yes)
+	CXXFLAGS += -DG__NOSTUBSTEST
+	CINTCXXFLAGS += -DG__NOSTUBSTEST
+endif
+
 
 # Fortran:
 F77           =

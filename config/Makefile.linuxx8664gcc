@@ -42,19 +42,10 @@ XLIBS         = $(XPMLIBDIR) $(XPMLIB) $(X11LIBDIR) -lXext -lX11
 CILIBS        = -lm -ldl -rdynamic
 CRYPTLIBS     = -lcrypt
 
-
 # Stub Functions Generation
 ifeq ($(NOSTUBS),yes)
 	GCC_MAJOR     := $(shell $(CXX) -dumpversion 2>&1 | cut -d'.' -f1)
 	GCC_MINOR     := $(shell $(CXX) -dumpversion 2>&1 | cut -d'.' -f2)
-endif
-
-
-ifeq ($(NOSTUBS),yes)
-	ifeq ($(NOSTUBSTEST),no)
-		CXXFLAGS += -DG__NOSTUBS
-		CINTCXXFLAGS += -DG__NOSTUBS
-	endif
 endif
 
 ifeq ($(NOSTUBS),yes)
@@ -67,6 +58,16 @@ ifeq ($(NOSTUBS),yes)
 	NOSTUBSTEST := "no"	
   endif
  endif
+endif
+
+ifeq ($(NOSTUBS),yes)
+	CXXFLAGS += -DG__NOSTUBS
+	CINTCXXFLAGS += -DG__NOSTUBS
+endif
+
+ifeq ($(NOSTUBSTEST),yes)
+	CXXFLAGS += -DG__NOSTUBSTEST
+	CINTCXXFLAGS += -DG__NOSTUBSTEST
 endif
 
 # Fortran:

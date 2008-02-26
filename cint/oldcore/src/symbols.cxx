@@ -1200,8 +1200,10 @@ void G__register_class(const char *libname, const char *clstr)
     delete [] tmpstr;
 
     ++list_iter;
-    demangled->remove(symbol);
-    delete symbol;
+    // REMOVE IT!!! We found a collision in the hash function for classes and symbols and we cannot remove the symbol from the list
+    // Please get a better hash function and restore this deletion
+    //demangled->remove(symbol);
+    //delete symbol;
   }
   if (gDebug > 0)
     cerr << "****************************************" << endl << endl;
