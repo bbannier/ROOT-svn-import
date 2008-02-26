@@ -21,5 +21,6 @@
 #pragma link C++ class TLinearFitter+;
 
 #pragma link C++ class TMinuitMinimizer+;
+#pragma link C++ class TLinearMinimizer+;
 
 #endif
