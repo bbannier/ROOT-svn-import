@@ -132,6 +132,13 @@ public:
 
    using BaseGradFunc::operator();
 
+   /// evaluate the derivative of the function with respect to the parameters
+   void  ParameterGradient(double x, double * grad ) const { 
+      // use stored params values
+      fFunc->SetParameters(&fParams.front() );
+      static const double kEps = 0.001;
+      fFunc->GradientPar(&x,grad,kEps); 
+   }
 
 
 private: 
@@ -154,11 +161,11 @@ private:
    }
 
    /// evaluate the derivative of the function with respect to the parameters
-   void  DoParameterGradient(double x, double * grad ) const { 
-      // use stored params values
-      fFunc->SetParameters(&fParams.front() );
-      static const double kEps = 0.001;
-      fFunc->GradientPar(&x,grad,kEps); 
+   double  DoParameterDerivative(double x, unsigned int ipar ) const { 
+      // not very efficient - use ParameterGradient
+      std::vector<double> grad(NPar());
+      ParameterGradient(x, &grad[0] ); 
+      return grad[ipar]; 
    }
 
 

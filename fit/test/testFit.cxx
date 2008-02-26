@@ -285,16 +285,18 @@ public:
    };
    unsigned int NDim() const { return 2; }
    unsigned int NPar() const { return 5; }
-private:
-   double DoEval( const double *x) const { 
-      return fp[0]*x[0]*x[0] + fp[1]*x[0] + fp[2]*x[1]*x[1] + fp[3]*x[1] + fp[4]; 
-   }
-   void DoParameterGradient( const double * x, double * grad) const { 
+
+   void ParameterGradient( const double * x, double * grad) const { 
       grad[0] = x[0]*x[0]; 
       grad[1] = x[0];
       grad[2] = x[1]*x[1]; 
       grad[3] = x[1];
       grad[4] = 1; 
+   }
+
+private:
+   double DoEval( const double *x) const { 
+      return fp[0]*x[0]*x[0] + fp[1]*x[0] + fp[2]*x[1]*x[1] + fp[3]*x[1] + fp[4]; 
    }
    double DoDerivative(const double *x, unsigned int icoord = 0) const { 
       assert(icoord <= 1); 
@@ -303,6 +305,12 @@ private:
       else 
          return 2. * fp[2] * x[1] + fp[3];
    }
+   double DoParameterDerivative(const double * x, unsigned int ipar) const { 
+      std::vector<double> grad(NPar());
+      ParameterGradient(x, &grad[0] ); 
+      return grad[ipar]; 
+   }
+
    double fp[5];
    
 };
@@ -333,7 +341,6 @@ int testHisto1DPolFit() {
    printData(d);
 
    // create the function
-   //ROOT::Math::Polynomial f(100,0,3); 
    Func1D f; 
 
    //ROOT::Math::WrappedTF1 f(*func); 
@@ -342,7 +349,8 @@ int testHisto1DPolFit() {
 
 
    // create the fitter 
-   std::cout << "Fit parameter 2  " << f.Parameters()[2] << std::endl;
+   //std::cout << "Fit parameter 2  " << f.Parameters()[2] << std::endl;
+   std::cout << "\n\nTest histo polynomial fit (Minuit2)" << std::endl; 
 
    ROOT::Fit::Fitter fitter; 
    bool ret = fitter.Fit(d, f);
@@ -352,6 +360,33 @@ int testHisto1DPolFit() {
       std::cout << " Fit Failed " << std::endl;
       return -1; 
    }
+
+   // compare with TH1::Fit
+   std::cout << "\n******************************\n\t TH1::Fit(pol2) Result with TMinuit \n" << std::endl; 
+   func->SetParameters(p);   
+   h2->Fit(func,"F"); 
+
+   std::cout << "\n\nTest histo polynomial linear fit " << std::endl; 
+
+   //ROOT::Math::Polynomial pf(2); 
+   f.SetParameters(p);
+
+   fitter.Config().SetMinimizer("Linear");
+   ret = fitter.Fit(d, f);
+   if (ret)  
+      fitter.Result().Print(std::cout); 
+   else {
+      std::cout << " Fit Failed " << std::endl;
+      return -1; 
+   }
+
+   // compare with TH1::Fit
+   std::cout << "\n******************************\n\t TH1::Fit(pol2) Result with TLinearFitter \n" << std::endl; 
+   func->SetParameters(p);   
+   h2->Fit(func); 
+
+   
+
    return 0; 
 }
 
@@ -423,6 +458,18 @@ int testHisto2DFit() {
       return -1; 
    }
 
+   // test with linear fitter 
+   std::cout <<"\ntest result using linear fitter" << std::endl;
+   fitter.Config().SetMinimizer("Linear");
+   f.SetParameters(p); 
+   ret = fitter.Fit(d, f);
+   if (ret)  
+      fitter.Result().Print(std::cout); 
+   else {
+      std::cout << "Linear 2D Fit Failed " << std::endl;
+      return -1; 
+   }
+
    // test fitting using TGraph2D
    TGraph2D g2(h2);
 
@@ -433,6 +480,7 @@ int testHisto2DFit() {
    std::cout << "data size from graph " << d2.Size() <<  std::endl; 
 
    f2.SetParameters(p); 
+   fitter.Config().SetMinimizer("Minuit2");
    ret = fitter.Fit(d2, f2);
    if (ret)  
       fitter.Result().Print(std::cout); 
@@ -454,6 +502,7 @@ int testHisto2DFit() {
       std::cout << " TGraph2D Grad Fit Failed " << std::endl;
       return -1; 
    }
+
 
 
    return 0; 

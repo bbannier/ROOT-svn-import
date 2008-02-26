@@ -50,6 +50,17 @@ namespace ROOT {
    namespace Fit { 
 
 
+template<class FunType> 
+struct ModelFunctionTrait { 
+   typedef  ROOT::Math::IParamMultiFunction ModelFunc;
+};
+template<>      
+struct ModelFunctionTrait<ROOT::Math::IMultiGradFunction>  { 
+   typedef  ROOT::Math::IParamMultiGradFunction ModelFunc;
+};
+
+
+
 /** 
    Chi2FCN class for binnned fits using the least square methods 
 
@@ -61,10 +72,11 @@ class Chi2FCN : public ROOT::Math::BasicFitMethodFunction<FunType> {
 public: 
 
 
+
    typedef  ROOT::Math::BasicFitMethodFunction<FunType> BaseObjFunction; 
    typedef typename  BaseObjFunction::BaseFunction BaseFunction; 
 
-   typedef  ROOT::Math::IParamMultiFunction IModelFunction;
+   typedef  typename ModelFunctionTrait<FunType>::ModelFunc IModelFunction;
    typedef typename BaseObjFunction::Type Type;
 
    /** 
@@ -139,11 +151,15 @@ public:
    /// get type of fit method function
    virtual  typename BaseObjFunction::Type GetType() const { return BaseObjFunction::kLeastSquare; }
 
+   /// access to const reference to the data 
+   virtual const BinData & Data() const { return fData; }
+
+   /// access to const reference to the model function
+   virtual const IModelFunction & ModelFunction() const { return fFunc; }
+
 
 protected: 
 
-   /// access to reference to the data 
-   virtual const BinData & Data() const { return fData; }
 
    /// set number of fit points (need to be called in const methods, make it const) 
    virtual void SetNFitPoints(unsigned int n) const { fNEffPoints = n; }
