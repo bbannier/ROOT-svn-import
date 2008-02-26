@@ -1,7 +1,7 @@
 # -*- sh -*-
 ##############################################################
 #
-# Copyright(c) 1995~2007  Masaharu Goto (cint@pcroot.cern.ch)
+# Copyright(c) 1995~2008  Masaharu Goto (cint@pcroot.cern.ch)
 #
 # For the licensing terms see the file COPYING
 #
@@ -21,7 +21,7 @@ shift
 
 # configure settings to build CINT
 
-ARCHS=(linux linuxicc macos macosx64 djgpp cygwin mingw mwerks hpux aix msvc7 msvc8 solaris solarisgcc freebsd)
+ARCHS=(linux linuxicc macos macosx64 djgpp cygwin mingw mwerks hpux aix msvc7 msvc8 msvc9 solaris solarisgcc freebsd)
 
 #############################################################
 ###
@@ -30,13 +30,14 @@ ARCHS=(linux linuxicc macos macosx64 djgpp cygwin mingw mwerks hpux aix msvc7 ms
 #############################################################
 
 # These are the variables that can be set by the different architectures.
-# They are prepended by "G__CFG_" when writing out to Makefile.conf and configcint.h.
+# They are prepended by "G__CFG_" when writing out to Makefile.conf and $COREVERSION/inc/configcint.h.
 
-EXPORTS=(ARCH CC CFLAGS CMACROS COMP CPP COUT COUTEXE INCP CXX CXXFLAGS CXXMACROS \
+EXPORTS=(ARCH COREVERSION CC CFLAGS CMACROS COMP CPP COUT COUTEXE INCP CXX CXXFLAGS CXXMACROS \
     LD LDFLAGS LDOUT LIBP LIBL SOFLAGS SOOUT OBJEXT EXEEXT \
-    SOEXT LIBEXT IMPLIBEXT DEBUG DEFAULTLIBS CINTEXINCDIR CINTEXLIBDIR REFLEXINCDIR \
-    REFLEXLIBDIR MANGLEPATHS STREAMDIR PLATFORMO EXPLLINK \
-    READLINELIB CURSESLIB LINK_READLINELIB LINK_CURSESLIB RM MV PREFIX \
+    SOEXT LIBEXT IMPLIBEXT DEBUG DEFAULTLIBS \
+    MANGLEPATHS STREAMDIR PLATFORMO EXPLLINK \
+    READLINELIB CURSESLIB LINK_READLINELIB LINK_CURSESLIB READLINELIB4SHLIB CURSESLIB4SHLIB RM MV PREFIX \
+    EPREFIX BINDIR LIBDIR INCLUDEDIR INCLUDEDIRCINT DATADIR DATADIRCINT \
     INPUTMODE INPUTMODELOCK AR EXTRACTSYMBOLS MAKEIMPLIB )
 unset ${EXPORTS[*]}
 
@@ -76,7 +77,7 @@ function config_GCC_defaults {
     SOFLAGS=-shared
     SODBGFLAGS=-g
 
-    RM="rm -f"
+    RM="rm -rf"
     MV="mv -f"
 
     OBJEXT=.o
@@ -84,16 +85,16 @@ function config_GCC_defaults {
     SOEXT=.so
     LIBEXT=.a
     IMPLIBEXT=.a
-    AR="ar qcs"
+    AR="ar qcs "
     [ "x$TAILOPT" = "x" ] && TAILOPT=-n
 
     GCCVER=`echo __GNUC__ __GNUC_MINOR__ __GNUC_PATCHLEVEL__|$CC -E -|tail ${TAILOPT}1`
     if [ ${GCCVER%% *} -gt 3 ]; then 
-	STREAMDIR=gcc4strm
+        STREAMDIR=gcc4strm
     elif [ ${GCCVER%% *} -gt 2 ]; then 
-	STREAMDIR=gcc3strm
+        STREAMDIR=gcc3strm
     else
-	STREAMDIR=stream
+        STREAMDIR=stream
     fi
 
     INPUTMODE=cint
@@ -141,12 +142,15 @@ function config_macos {
     SOFLAGS="-dynamiclib -single_module"
     CMACROS="$CMACROS -DG__MACOSX__ -DG__APPLE"
 
+    EXTRA_LIB_DIR="/sw/lib/ncurses"
+
 #    PLATFORMO=v6_macos
 
-    AR="ar -q -cs"
+    AR="ar -q -cs "
     IMPLIBEXT=.dylib
 
     MAKEIMPLIB="ln -sf @so@ @imp@"
+
     EXPLLINK=1
 
     MACOSX_MINOR=`sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2`
@@ -159,11 +163,10 @@ function config_macos {
 
 function config_macosx64 {
     config_macos
-    CPP="gcc -E -C -m64"
-    CFLAGS="-m64 ${CFLAGS}"
-    CXXFLAGS="-m64 ${CXXFLAGS}"
-    LDFLAGS="-m64 ${LDFLAGS}"
-    SOFLAGS="-m64 ${SOFLAGS}"
+    CFLAGS="${CFLAGS} -m64"
+    CXXFLAGS="${CXXFLAGS} -m64"
+    LDFLAGS="${LDFLAGS} -m64"
+    SOFLAGS="${SOFLAGS -m64}"
 }
 
 function config_djgpp {
@@ -220,15 +223,15 @@ function config_msvc7 {
     IMPLIBEXT=.lib
 
     CC=cl
-    CFLAGS="-G5 -MD -nologo -wd4996 -GX"
-    CMACROS="-DG__REDIRECTIO -DG__SHAREDLIB -DG__UNIX -DG__WIN32 -DVISUAL_CPLUSPLUS -DG__NEWSTDHEADER"
+    CFLAGS="-G5 -nologo -wd4996 -GX"
+    CMACROS="-DG__REDIRECTIO -DG__SHAREDLIB -DG__UNIX -DG__WIN32 -DWIN32 -D_WIN32 -DVISUAL_CPLUSPLUS -DG__NEWSTDHEADER"
     COMP=-c
     CPP="cl -E -C -nologo"
     COUT=-Fo
     COUTEXE=-Fe
     INCP=-I
-    COPTFLAGS=-O2
-    CDBGFLAGS=-Zi
+    COPTFLAGS="-O2 -MD"
+    CDBGFLAGS="-Zi -MDd"
 
     CXX=cl
     CXXFLAGS="$CXXFLAGS $CFLAGS -GR -wd4181"
@@ -248,7 +251,7 @@ function config_msvc7 {
 
     # hack to get the implib and def in
     SOFLAGS="$LDFLAGS -DLL -implib:@so@$LIBEXT"
-	SODBGFLAGS="-debug"
+    SODBGFLAGS="-debug"
     SOOUT=-out:
     EXTRACTSYMBOLS="dumpbin.exe /SYMBOLS @obj@ | grep -e ' notype ()[[:space:]]\{4\}External '| grep -v ' UNDEF ' | grep -v 'AEPAXI@Z ('| sed 's!^[[:xdigit:]]\{3,\}[[:space:]]\+\([[:xdigit:]]\{8\}\)[[:space:]]\+.*\+External[[:space:]]\+|[[:space:]]\+\([^(]\+\).*\$!\1 \2!'| cut -d' ' -f2"
 
@@ -264,6 +267,16 @@ function config_msvc7 {
 }
 
 function config_msvc8 {
+    config_msvc7
+    CFLAGS="${CFLAGS/-G5/}"
+    CXXFLAGS="${CXXFLAGS/-G5/}"
+    CFLAGS="${CFLAGS/-GX/-EHs}"
+    CMACROS="$CMACROS -D_CRT_SECURE_NO_DEPRECATE=1 -D_SECURE_SCL=0 -D_HAS_ITERATOR_DEBUGGING=0"
+    CXXFLAGS="${CXXFLAGS/-GX/-EHs}"
+    CXXMACROS="$CXXMACROS -D_CRT_SECURE_NO_DEPRECATE=1 -D_SECURE_SCL=0 -D_HAS_ITERATOR_DEBUGGING=0"
+}
+
+function config_msvc9 {
     config_msvc7
     CFLAGS="${CFLAGS/-G5/}"
     CXXFLAGS="${CXXFLAGS/-G5/}"
@@ -317,12 +330,31 @@ function add_opt {
 
 add_opt "--help -h" 'Show this help.'
 add_opt "--arch=" "Architecture, one of ${ARCHS[*]}"
-add_opt "--prefix=" "where to put Cint for install target "$'\n\t'"(defaults to /usr/local)"
-add_opt "--readline=" "Readline library "$'\n\t'"(defaults to /usr/(local)/lib/libreadline.a if it exists)"
-add_opt "--reflex-incdir=" "Reflex header directory "$'\n\t'"(defaults to ../reflex/inc if it exists)"
-add_opt "--reflex-libdir=" "Reflex library directory "$'\n\t'"(defaults to ../reflex/lib if it exists)"
-add_opt "--cintex-incdir=" "Cintex header directory "$'\n\t'"(defaults to ../cintex/inc if reflex-incdir==../reflex/inc, or to reflex-incdir)"
-add_opt "--cintex-libdir=" "Cintex library directory "$'\n\t'"(defaults to ../cintex/lib if reflex-libdir==../reflex/lib, or to reflex-libdir)"
+add_opt "--coreversion=" "CINT core version, one of old, new"
+add_opt "--prefix=" 'Topdir for architecture-independent files [/usr/local]'
+add_opt "--exec-prefix=" 'Topdir for architecture-dependent files [$PREFIX]'
+add_opt "--bindir=" 'where to put user executables [$EPREFIX/bin]'
+add_opt "--libdir=" 'where to put object code libraries [$EPREFIX/lib]'
+add_opt "--includedir=" 'where to put header files [$PREFIX/include]'
+add_opt "--datadir=" 'read-only architecture-independent data [$PREFIX/share]'
+
+add_opt "--sbindir=" 'ignored'
+add_opt "--libexecdir=" 'ignored'
+add_opt "--sysconfdir=" 'ignored'
+add_opt "--sharedstatedir=" 'ignored'
+add_opt "--localstatedir=" 'ignored'
+add_opt "--oldincludedir=" 'ignored'
+add_opt "--datarootdir=" 'ignored'
+add_opt "--infodir=" 'ignored'
+add_opt "--localedir=" 'ignored'
+add_opt "--mandir=" 'ignored'
+add_opt "--docdir=" 'ignored'
+add_opt "--htmldir=" 'ignored'
+add_opt "--dvidir=" 'ignored'
+add_opt "--pdfdir=" 'ignored'
+add_opt "--psdir=" 'ignored'
+
+add_opt "--readlinelib=" "Readline library "$'\n\t'"(defaults to /usr/(local)/lib/libreadline.a if it exists)"
 add_opt "--debug" "Build non-optimized Cint with debug symbols"
 add_opt "--pedantic" "Warn on everything that the compielr allows (only supported for GCC)"
 
@@ -330,11 +362,11 @@ function processflag_help {
     echo CINT configure options:
     let iopt=0
     while [ $iopt -lt $numopts ]; do
-	arg=""
-	opts=${OPTS_AVAIL[$iopt]}
-	[ "${opts/=/}" != "$opts" ] && arg='<argument>'
-	echo "  "${OPTS_AVAIL[$iopt]}"$arg": "${OPTS_DESCR[$iopt]}"
-	let iopt=$iopt+1
+        arg=""
+        opts=${OPTS_AVAIL[$iopt]}
+        [ "${opts/=/}" != "$opts" ] && arg='<argument>'
+        echo "  "${OPTS_AVAIL[$iopt]}"$arg": "${OPTS_DESCR[$iopt]}"
+        let iopt=$iopt+1
     done
     exit 0
 }
@@ -384,7 +416,9 @@ function guess_arch {
     elif [ "x`uname -a|grep -i freebsd`" != "x" ]; then
         GUESSEDARCH=$arch
     elif cl.exe >/dev/null 2>&1; then
-        if [ "x`cl 2>&1|grep 'Version 14'`" != "x" ]; then
+        if [ "x`cl 2>&1|grep 'Version 15'`" != "x" ]; then
+            GUESSEDARCH=msvc9
+        elif [ "x`cl 2>&1|grep 'Version 14'`" != "x" ]; then
             GUESSEDARCH=msvc8
         else
             GUESSEDARCH=msvc7
@@ -412,17 +446,57 @@ function guess_arch {
 
 function processflag_arch {
     if [ "${ARCHS[*]/$1/}" = "${ARCHS[*]}" ]; then
-	echo "Error: invalid architecture. Choose one out of"
-	echo "  "${ARCHS[*]}
-	exit 1
+        echo "Error: invalid architecture. Choose one out of"
+        echo "  "${ARCHS[*]}
+        exit 1
     fi
 
     ARCH=$1
     config_$ARCH
 }
 
+function processflag_coreversion {
+    COREVERSION=$1
+    if [ "x$COREVERSION" = "xnew" ]; then
+        COREVERSION=core
+    elif [ "x$COREVERSION" = "xold" ]; then
+        COREVERSION=oldcore
+    else
+        echo "Error: --coreversion must be one of old, new, not \"$1\"."
+        exit 1
+    fi
+}
+
 function processflag_prefix {
-    PREFIX=$1
+    pathtoabs $1
+    PREFIX=$ABSPATH
+}
+
+function processflag_exec_prefix {
+    pathtoabs $1
+    EPREFIX=$ABSPATH
+}
+
+function processflag_bindir {
+    pathtoabs $1
+    BINDIR=$ABSPATH
+}
+
+function processflag_libdir {
+    pathtoabs $1
+    LIBDIR=$ABSPATH
+}
+
+function processflag_includedir {
+    pathtoabs $1
+    INCLUDEDIR=$ABSPATH
+    INCLUDEDIRCINT=$ABSPATH/cint
+}
+
+function processflag_datadir {
+    pathtoabs $1
+    DATADIR=$ABSPATH
+    DATADIRCINT=$ABSPATH/cint
 }
 
 function processflag_debug {
@@ -436,21 +510,7 @@ function processflag_pedantic {
 # too much noise in system headers: -Wunreachable-code 
 }
 
-function processflag_reflex_incdir {
-    REFLEXINCDIR=$1
-}
-function processflag_reflex_libdir {
-    REFLEXLIBDIR=$1
-}
-
-function processflag_cintex_incdir {
-    CINTEXINCDIR=$1
-}
-function processflag_cintex_libdir {
-    CINTEXLIBDIR=$1
-}
-
-function processflag_readline {
+function processflag_readlinelib {
     READLINELIB=$1
 }
 
@@ -461,32 +521,32 @@ while [ "$1" != "" ]; do
     let iopt=0;
     found=0
     while [ $found = 0 -a $iopt -lt $numopts ]; do
-	flags=( ${OPTS_AVAIL[$iopt]} )
-	let numflags=${#flags[*]}
-	let iflag=0
-	while [ $iflag -lt $numflags ]; do
-	    flag=${flags[$iflag]}
-	    if [ "${1#$flag}" != "$1" ]; then
-		found=1
+        flags=( ${OPTS_AVAIL[$iopt]} )
+        let numflags=${#flags[*]}
+        let iflag=0
+        while [ $iflag -lt $numflags ]; do
+            flag=${flags[$iflag]}
+            if [ "${1#$flag}" != "$1" ]; then
+                found=1
                 # remove leading "-"s, trailing =, replace "-" by "_"
-		func=`echo start ${flags[0]}|sed -e 's,start ,,' -e 's,^-*,,' -e 's,=$,,' -e 's,-,_,g'`
-		if [ ${flag/=/} = $flag ]; then
-		    # simple flag without value
-		    processflag_$func
-		else
-		    value=${1#$flag}
-		    processflag_$func "$value"
-		fi
-		break
-	    fi
-	    let iflag=$iflag+1
-	done
-	let iopt=$iopt+1
+                func=`echo start ${flags[0]}|sed -e 's,start ,,' -e 's,^-*,,' -e 's,=$,,' -e 's,-,_,g'`
+                if [ ${flag/=/} = $flag ]; then
+                    # simple flag without value
+                    processflag_$func
+                else
+                    value=${1#$flag}
+                    processflag_$func "$value"
+                fi
+                break
+            fi
+            let iflag=$iflag+1
+        done
+        let iopt=$iopt+1
     done
     if [ $found = 0 ]; then
-	echo "Unknown argument $1."
-	echo ""
-	processflag_help
+        echo "Unknown argument $1."
+        echo ""
+        processflag_help
     fi
     shift
 done
@@ -495,6 +555,11 @@ if [ "$ARCH" = "" ]; then
     guess_arch
     ARCH=$GUESSEDARCH
     config_$ARCH
+fi
+
+if [ "$COREVERSION" = "" ]; then
+    COREVERSION=oldcore
+    echo Using old CINT core
 fi
 
 if [ "$DEBUG" = "1" ]; then
@@ -512,35 +577,10 @@ fi
 CMACROS="$CMACROS -DG__HAVE_CONFIG -DG__NOMAKEINFO"
 CXXMACROS="$CXXMACROS -DG__HAVE_CONFIG -DG__NOMAKEINFO"
 
-if [ "$REFLEXINCDIR" = "" -a -d ../reflex ]; then 
-	REFLEXINCDIR=$PWD/../reflex/inc
-	echo Setting reflex-incdir=../reflex/inc
-fi
-if [ "$REFLEXLIBDIR" = "" -a -d ../reflex ]; then
-	REFLEXLIBDIR=$PWD/../reflex/lib
-	echo Setting reflex-libdir=../reflex/lib
-fi
-if [ "$CINTEXINCDIR" = "" -a "$REFLEXINCDIR" = "$PWD/../reflex/inc" ]; then 
-	CINTEXINCDIR=$PWD/../cintex/inc
-	echo Setting cintex-incdir=../cintex/inc
-fi
-if [ "$CINTEXLIBDIR" = "" -a "$REFLEXLIBDIR" = "$PWD/../reflex/lib" ]; then 
-	CINTEXLIBDIR=$PWD/../cintex/lib
-	echo Setting cintex-libdir=../cintex/lib
-fi
-if [ "$REFLEXINCDIR" != "" -a "$CINTEXINCDIR" = "" ]; then
-	CINTEXINCDIR=$REFLEXINCDIR
-	echo Setting cintex-incdir=$REFLEXINCDIR
-fi
-if [ "$REFLEXLIBDIR" != "" -a "$CINTEXLIBDIR" = "" ]; then
-	CINTEXLIBDIR=$REFLEXLIBDIR
-	echo Setting cintex-incdir=$REFLEXLIBDIR
-fi
-
 if [ "$READLINELIB" = "" ]; then
     for d in $EXTRA_LIB_DIR /usr/local/lib /usr/lib /sw/lib; do 
         if [ -f ${d}/libreadline$IMPLIBEXT ]; then
-            READLINELIB=$d/libreadline$IMPLIBEXT
+            READLINELIB=${d}/libreadline$IMPLIBEXT
             break
         fi
     done
@@ -550,19 +590,24 @@ if [ "$READLINELIB" = "" ]; then
     fi
     LINK_READLINELIB="$LIBP`dirname $READLINELIB` ${LIBL/@imp@/readline} "
 fi
+# want readline?
 if [ "$READLINELIB" != "" ]; then
     CXXFLAGS="$CXXFLAGS -DG__GNUREADLINE"
     echo "Using $READLINELIB"
+
+    if [ "$EXPLLINK" = "1" ]; then 
+       READLINELIB4SHLIB=$READLINELIB
+    fi
 
     # look for curses
     if [ "$CURSESLIB" = "" ]; then
         for d in $EXTRA_LIB_DIR /usr/local/lib /usr/lib /sw/lib /sw/lib/ncurses; do 
             if [ -f ${d}/libncurses$IMPLIBEXT ]; then
-                CURSESLIB=$d/libncurses$IMPLIBEXT
+                CURSESLIB=${d}/libncurses$IMPLIBEXT
                 NCURSES=n
                 break
             elif [ -f ${d}/libcurses$IMPLIBEXT ]; then
-                CURSESLIB=$d/libcurses$IMPLIBEXT
+                CURSESLIB=${d}/libcurses$IMPLIBEXT
                 NCURSES=
                 break
             fi
@@ -570,6 +615,9 @@ if [ "$READLINELIB" != "" ]; then
     fi
     if [ "$CURSESLIB" != "" ]; then
         LINK_CURSESLIB="$LIBP`dirname $CURSESLIB` ${LIBL/@imp@/${NCURSES}curses}"
+        if [ "$EXPLLINK" = "1" ]; then 
+           CURSESLIB4SHLIB=$CURSESLIB
+        fi
         echo "Using $CURSESLIB"
     fi
 fi
@@ -578,17 +626,19 @@ fi
 [ "$STREAMDIR" = "" ]   && STREAMDIR=stream
 [ "$MANGLEPATHS" = "" ] && MANGLEPATHS="echo "
 
-# do path name mangling to windows, if requested by $MANGLEPATHS
-#if [ "$MANGLEPATHS" = "1" ]; then
-#    [ $CINTEXINCDIR ] && CINTEXINCDIR=`cygpath -w $CINTEXINCDIR`
-#    [ $CINTEXLIBDIR ] && CINTEXLIBDIR=`cygpath -w $CINTEXLIBDIR`
-#    [ $REFLEXINCDIR ] && REFLEXINCDIR=`cygpath -w $REFLEXINCDIR`
-#    [ $REFLEXLIBDIR ] && REFLEXLIBDIR=`cygpath -w $REFLEXLIBDIR`
-#fi
-
 HAVE_CONFIG=1
 
 EXPORTS=(${EXPORTS[*]} HAVE_CONFIG)
+
+# now set the default values of the installation directories, if
+# they were not set explicitely by the user
+
+[ "$PREFIX" = "" ]  && PREFIX=/usr/local
+[ "$EPREFIX" = "" ] && EPREFIX=$PREFIX
+[ "$BINDIR" = "" ]  && BINDIR=$EPREFIX/bin
+[ "$LIBDIR" = "" ]  && LIBDIR=$EPREFIX/lib
+[ "$INCLUDEDIR" = "" ] && INCLUDEDIR=$PREFIX/include && INCLUDEDIRCINT=$PREFIX/include/cint
+[ "$DATADIR" = "" ] && DATADIR=$PREFIX/share && DATADIRCINT=$PREFIX/share/cint
 
 echo ""
 # generate Makefile.conf
@@ -605,7 +655,7 @@ for exp in ${EXPORTS[*]}; do
 done
 
 # Now do the same for configcint.h - but here we need to write _all_ vars
-file=inc/configcint.h
+file=${COREVERSION}/inc/configcint.h
 echo Writing $file...
 echo "/* configcint.h for Cint */" > $file
 echo "/* generated by configure with options */" >> $file
@@ -618,8 +668,54 @@ for exp in ${EXPORTS[*]}; do
     echo '#define 'G__CFG_$exp \""$value"\" >> $file
 done
 
+# now write the cint-config script
+
+# get actual cint version from int/G__ci.h
+CINTVERSION=`grep '#define *G__CINTVERSIONSTR ' ${COREVERSION}/inc/G__ci.h | sed 's/#define *G__CINTVERSIONSTR *"//g' | sed 's/,.*//g'`
+
+$RM cint-config
+echo Writing cint-config...
+cat >> cint-config << ___EOF
+
+function help {
+cat <<_EOF
+
+Usage: cint-config [options]
+
+  --incdir         print the directory of cint header files
+  --cflags         print the necessary flags for the compiler
+  --libs           print the necessary libs for linking 
+  --datadir        print the location of cint data files
+  -v|--version     print cint version
+  -h|--help        print this help
+
+_EOF
+}
+
+if [ \$# -eq 0 ]; then
+   help
+   exit 1
+fi
+
+while [ \$# -gt 0 ] ; do
+  case \$1 in
+    --incdir) echo "${INCLUDEDIR}/cint" ;;
+    --cflags) echo "${INCP}${INCLUDEDIR}/cint" ;;
+    --libs)   echo "${LIBP}${LIBDIR} -lcint -lReflex" ;;
+    --datadir) echo "${DATADIR}/cint" ;;
+    --version|-v) echo "$CINTVERSION" ;;
+    -h|--help) help;;
+    *)        echo "Unknown option: \$1"; exit 1;;
+  esac
+  shift
+done
+
+___EOF
+chmod +x cint-config
+
 echo ${ALLOPTIONS[*]} > config.status
 echo Done.
+echo ""
 echo Run \"make\" to build cint.
 echo Run \"make help\" to see the available build targets.
 
