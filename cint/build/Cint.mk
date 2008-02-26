@@ -35,7 +35,7 @@ IOSENUMH = $(G__CFG_COREVERSION)/include/iosenum.h
 ##############################################################
 # CINT dlls
 ##############################################################
-.PHONY: dlls all
+.PHONY: dlls all $(ALLDLLS)
 all: $(CINT) $(ALLDLLS) $(IOSENUM) $(MAKECINT)
 
 dlls: $(ALLDLLS)
