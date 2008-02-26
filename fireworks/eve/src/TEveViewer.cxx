@@ -75,6 +75,15 @@ void TEveViewer::SpawnGLViewer(const TGWindow* parent, TGedEditor* ged)
    SetGLViewer(v);
 }
 
+//______________________________________________________________________________
+void TEveViewer::Redraw(Bool_t resetCameras)
+{
+   // Redraw viewer immediately.
+
+   if (resetCameras) fGLViewer->PostSceneBuildSetup(kTRUE);
+   fGLViewer->RequestDraw(TGLRnrCtx::kLODHigh);
+}
+
 /******************************************************************************/
 
 //______________________________________________________________________________
