@@ -56,10 +56,6 @@ $(CINTCONF): config/Makefile.$(ARCH) config/Makefile.comp $(CINTCONFMK)
 	echo '#define G__CFG_DEBUG "$(DEBUG)"' >> __configcint && \
 	echo '#define G__CFG_DEFAULTLIBS "$(SYSLIBS)"' >> __configcint && \
 	echo '#define G__CFG_DEFAULTLIBS "$(SYSLIBS)"' >> __configcint && \
-	echo '#define G__CFG_CINTEXINCDIR "./"' >> __configcint && \
-	echo '#define G__CFG_CINTEXLIBDIR "lib/"' >> __configcint && \
-	echo '#define G__CFG_REFLEXINCDIR "./"' >> __configcint && \
-	echo '#define G__CFG_REFLEXLIBDIR "lib"' >> __configcint && \
 	echo '#define G__CFG_STREAMDIR "$(patsubst $(MODDIRS)/%strm.cxx,%,$(filter $(MODDIRS)/%strm.cxx, $(CINTS2)))"' >> __configcint && \
 	echo '#define G__CFG_EXPLLINK "$(EXPLICITLINK)"' >> __configcint && \
 	echo '#define G__CFG_BUILDREADLINE ""' >> __configcint && \
