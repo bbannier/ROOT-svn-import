@@ -12,6 +12,7 @@
 #include <TCanvas.h>
 #include <TH2F.h>
 #include <TGraph.h>
+#include <TLegend.h>
 
 const double MIN = -2.5;
 const double MAX = +2.5;
@@ -21,13 +22,15 @@ inline int arrayindex(double i) { return ARRAYSIZE - (int) ( (MAX - i) / INCREME
 
 using namespace std;
 
-void drawPoints(Double_t x[], Double_t y[], int color, int style = 1)
+TGraph* drawPoints(Double_t x[], Double_t y[], int color, int style = 1)
 {
    TGraph* g = new TGraph(ARRAYSIZE, x, y);
    g->SetLineColor(color);
    g->SetLineStyle(style);
    g->SetLineWidth(3);
    g->Draw("SAME");
+
+   return g;
 }
 
 void testSpecFuncErf() 
@@ -71,13 +74,20 @@ void testSpecFuncErf()
    hpx->SetStats(kFALSE);
    hpx->Draw();
 
-   drawPoints(&x[0], &yerf[0], 14);
-   drawPoints(&x[0], &ymerf[0], 5, 7);
-   drawPoints(&x[0], &yerfc[0], 2);
-   drawPoints(&x[0], &ymerfc[0], 3, 7);
+   TGraph* gerf   = drawPoints(&x[0], &yerf[0], 14);
+   TGraph* gmerf  = drawPoints(&x[0], &ymerf[0], 5, 7);
+   TGraph* gerfc  = drawPoints(&x[0], &yerfc[0], 2);
+   TGraph* gmerfc = drawPoints(&x[0], &ymerfc[0], 3, 7);
 //   drawPoints(&x[0], &yierf[0], 21);
 //   drawPoints(&x[0], &yierfc[0], 28);
 //   drawPoints(&x[0], &yndtri[0], 9);
+
+   TLegend* legend = new TLegend(0.61,0.62,0.86,0.86);
+   legend->AddEntry(gerf,   "TMath::Erf()");
+   legend->AddEntry(gmerf,  "ROOT:Math::erf()");
+   legend->AddEntry(gerfc,  "TMath::Erfc()");
+   legend->AddEntry(gmerfc, "ROOT::Math::erfInverse()");
+   legend->Draw();
 
    c1->Show();
 

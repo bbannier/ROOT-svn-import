@@ -10,6 +10,7 @@
 #include <TCanvas.h>
 #include <TH2F.h>
 #include <TGraph.h>
+#include <TLegend.h>
 
 const double MIN = -2.5;
 const double MAX = +2.5;
@@ -19,13 +20,15 @@ inline int arrayindex(double i) { return ARRAYSIZE - (int) ( (MAX - i) / INCREME
 
 using namespace std;
 
-void drawPoints(Double_t x[], Double_t y[], int color, int style = 1)
+TGraph* drawPoints(Double_t x[], Double_t y[], int color, int style = 1)
 {
    TGraph* g = new TGraph(ARRAYSIZE, x, y);
    g->SetLineColor(color);
    g->SetLineStyle(style);
    g->SetLineWidth(3);
    g->Draw("SAME");
+
+   return g;
 }
 
 void testSpecFuncBeta() 
@@ -34,13 +37,14 @@ void testSpecFuncBeta()
    vector<Double_t> yb( ARRAYSIZE );
    vector<Double_t> ymb( ARRAYSIZE );
 
-   TCanvas* c1 = new TCanvas("c1", "Two Graphs", 600, 400); 
-   TH2F* hpx = new TH2F("hpx", "Two Graphs(hpx)", ARRAYSIZE, MIN, MAX, ARRAYSIZE, 0, 5);
+   TCanvas* c1 = new TCanvas("c1", "BetaFunction", 600, 400); 
+   TH2F* hpx = new TH2F("hpx", "BetaFunction(p,b)", ARRAYSIZE, MIN, MAX, ARRAYSIZE, 0, 5);
    hpx->SetStats(kFALSE);
    hpx->Draw();
 
    int color = 2;
 
+   TGraph *gb, *gmb;
    for ( double b = 0.9; b < 2; b+=0.4)
    {
       cout << "** b = " << b << " **" << endl;
@@ -57,9 +61,14 @@ void testSpecFuncBeta()
          ymb[arrayindex(i)] = ROOT::Math::beta(i,b);
       }
       
-      drawPoints(&x[0], &yb[0], color++);
-      drawPoints(&x[0], &ymb[0], color++, 7);
+      gb = drawPoints(&x[0], &yb[0], color++);
+      gmb = drawPoints(&x[0], &ymb[0], color++, 7);
    }
+
+   TLegend* legend = new TLegend(0.61,0.72,0.86,0.86);
+   legend->AddEntry(gb, "TMath::Beta()");
+   legend->AddEntry(gmb, "ROOT::Math::beta()");
+   legend->Draw();
 
    c1->Show();
 

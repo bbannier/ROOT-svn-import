@@ -10,6 +10,7 @@
 #include <TCanvas.h>
 #include <TH2F.h>
 #include <TGraph.h>
+#include <TLegend.h>
 
 const double MIN = 0;
 const double MAX = 1;
@@ -19,13 +20,15 @@ inline int arrayindex(double i) { return ARRAYSIZE - (int) ( (MAX - i) / INCREME
 
 using namespace std;
 
-void drawPoints(Double_t x[], Double_t y[], int color, int style = 1)
+TGraph* drawPoints(Double_t x[], Double_t y[], int color, int style = 1)
 {
    TGraph* g = new TGraph(ARRAYSIZE, x, y);
    g->SetLineColor(color);
    g->SetLineStyle(style);
    g->SetLineWidth(3);
    g->Draw("SAME");
+
+   return g;
 }
 
 void testSpecFuncBetaI() 
@@ -43,6 +46,7 @@ void testSpecFuncBetaI()
 
    int color = 2;
 
+   TGraph *gb, *gmb;
    double b = 0.2, a= 0.9;
    cout << "** b = " << b << " **" << endl;
    for ( double i = MIN; i < MAX; i += INCREMENT )
@@ -58,8 +62,13 @@ void testSpecFuncBetaI()
       ymb[arrayindex(i)] = ROOT::Math::inc_beta(i,a,b);
    }
    
-   drawPoints(&x[0], &yb[0], color++);
-   drawPoints(&x[0], &ymb[0], color++, 7);
+   gb = drawPoints(&x[0], &yb[0], color++);
+   gmb = drawPoints(&x[0], &ymb[0], color++, 7);
+
+   TLegend* legend = new TLegend(0.61,0.72,0.86,0.86);
+   legend->AddEntry(gb, "TMath::BetaIncomplete()");
+   legend->AddEntry(gmb, "ROOT::Math::inc_beta()");
+   legend->Draw();
 
    c1->Show();
 

@@ -10,6 +10,7 @@
 #include <TCanvas.h>
 #include <TH2F.h>
 #include <TGraph.h>
+#include <TLegend.h>
 
 const double MIN = -2.5;
 const double MAX = +2.5;
@@ -19,13 +20,15 @@ inline int arrayindex(double i) { return ARRAYSIZE - (int) ( (MAX - i) / INCREME
 
 using namespace std;
 
-void drawPoints(Double_t x[], Double_t y[], int color, int style = 1)
+TGraph* drawPoints(Double_t x[], Double_t y[], int color, int style = 1)
 {
    TGraph* g = new TGraph(ARRAYSIZE, x, y);
    g->SetLineColor(color);
    g->SetLineStyle(style);
    g->SetLineWidth(3);
    g->Draw("SAME");
+
+   return g;
 }
 
 void testSpecFuncGamma() 
@@ -68,12 +71,21 @@ void testSpecFuncGamma()
    hpx->SetStats(kFALSE);
    hpx->Draw();
 
-   drawPoints(&x[0], &yg[0], 1);
-   drawPoints(&x[0], &ymtg[0], 2, 7);
-   drawPoints(&x[0], &yga[0], 3);
-   drawPoints(&x[0], &ymga[0], 4, 7);
-   drawPoints(&x[0], &ylng[0], 5);
-   drawPoints(&x[0], &ymlng[0], 6, 7);
+   TGraph* gg    = drawPoints(&x[0], &yg[0], 1);
+   TGraph* gmtg  = drawPoints(&x[0], &ymtg[0], 2, 7);
+   TGraph* gga   = drawPoints(&x[0], &yga[0], 3);
+   TGraph* gmga  = drawPoints(&x[0], &ymga[0], 4, 7);
+   TGraph* glng  = drawPoints(&x[0], &ylng[0], 5);
+   TGraph* gmlng = drawPoints(&x[0], &ymlng[0], 6, 7);
+
+   TLegend* legend = new TLegend(0.61,0.52,0.86,0.86);
+   legend->AddEntry(gg,    "TMath::Gamma()");
+   legend->AddEntry(gmtg,  "ROOT::Math::tgamma()");
+   legend->AddEntry(gga,   "TMath::GammaI()");
+   legend->AddEntry(gmga,  "ROOT::Math::inc_gamma()");
+   legend->AddEntry(glng,  "TMath::LnGamma()");
+   legend->AddEntry(gmlng, "ROOT::Math::lgamma()");
+   legend->Draw();
 
    c1->Show();
 
