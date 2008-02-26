@@ -19,14 +19,18 @@ CINTTMP       = cint_tmp$(G__CFG_EXEEXT)
 CINTLIBIMPORT = libcint$(G__CFG_IMPLIBEXT)
 
 CXXAPIO    = $(addsuffix $(G__CFG_OBJEXT),$(addprefix $(G__CFG_COREVERSION)/src/,\
-	      Api Dict Class BaseCls Type DataMbr Method MethodAr \
+	      Api Class BaseCls Type DataMbr Method MethodAr \
               CallFunc Typedf Token Shadow))
 
 CXXAPIH    = $(addsuffix .h,$(addprefix $(G__CFG_COREVERSION)/inc/,\
 	      Api Class BaseCls Type DataMbr Method MethodAr \
-              CallFunc Typedf Token Shadow)) \
-             $(addsuffix .h,$(addprefix src/,\
+              CallFunc Typedf Token Shadow))
+
+ifeq ($(G__CFG_COREVERSION),core)
+CXXAPIO   += Dict
+CXXAPIH   += $(addsuffix .h,$(addprefix src/,\
               Dict))
+endif
 
 BCO        = $(addsuffix $(G__CFG_OBJEXT),$(addprefix $(G__CFG_COREVERSION)/src/,\
               bc_autoobj bc_cfunc bc_inst bc_item bc_parse \
@@ -55,10 +59,10 @@ CINTTMPOBJ = $(filter-out $(LOADFILEO) $(PRAGMAO) $(APIDICTO),$(LIBOBJECTS)) $(P
 
 STREAMCXX  = $(G__CFG_COREVERSION)/src/dict/$(subst stream,libstrm,$(G__CFG_STREAMDIR)).cxx
 
-PRAGMACXX  = $(G__CFG_COREVERSION)/src/v6_pragma.cxx
-PRAGMATMPCXX= $(G__CFG_COREVERSION)/src/v6_pragma_tmp.cxx
-LOADFILECXX= $(G__CFG_COREVERSION)/src/v6_loadfile.cxx
-LOADFILETMPCXX= $(G__CFG_COREVERSION)/src/v6_loadfile_tmp.cxx
+PRAGMACXX  = $(G__CFG_COREVERSION)/src/pragma.cxx
+PRAGMATMPCXX= $(G__CFG_COREVERSION)/src/pragma_tmp.cxx
+LOADFILECXX= $(G__CFG_COREVERSION)/src/loadfile.cxx
+LOADFILETMPCXX= $(G__CFG_COREVERSION)/src/loadfile_tmp.cxx
 APIDICTCXX = $(G__CFG_COREVERSION)/src/dict/Apiif.cxx
 PRAGMAO    = $(PRAGMACXX:.cxx=$(G__CFG_OBJEXT))
 PRAGMATMPO = $(PRAGMATMPCXX:.cxx=$(G__CFG_OBJEXT))

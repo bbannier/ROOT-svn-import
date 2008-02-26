@@ -88,7 +88,8 @@ clean::
 	  $(MAKECINTO) $(MAKECINTO:$(G__CFG_OBJEXT)=.d) \
 	  $(CINT) $(MAKECINT) $(MAKEINCL) \
 	  $(G__CFG_COREVERSION)/include/stdio.h $(G__CFG_COREVERSION)/include/iosenum.h \
-	  libcint.* libcint_static.* done core
+	  libcint.* libcint_static.* done
+# NEVER ever remove "core"! It's our src subdir!
 
 
 ##############################################################
