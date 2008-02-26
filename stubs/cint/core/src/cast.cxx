@@ -15,7 +15,7 @@
 
 #include "Dict.h"
 #include "common.h"
-#include "v6_value.h"
+#include "value.h"
 
 #include "Reflex/Builder/TypeBuilder.h"
 

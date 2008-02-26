@@ -14,8 +14,8 @@
  ************************************************************************/
 
 #include "common.h"
-#include "v6_pcode.h"
-#include "v6_value.h"
+#include "pcode.h"
+#include "value.h"
 
 #include "Dict.h"
 #include "Reflex/Tools.h"

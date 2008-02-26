@@ -16,7 +16,7 @@
 
 #include "bc_inst.h"
 #include "bc_cfunc.h"
-#include "v6_pcode.h"
+#include "pcode.h"
 #include "Api.h"
 #include "Property.h"
 #include "global.h"
