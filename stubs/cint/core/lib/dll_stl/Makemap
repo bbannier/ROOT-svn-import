@@ -15,7 +15,7 @@ CMACRO      :=  -DG__SHAREDLIB -DG__OSFDLL -DG__ANSI -DG__ERRORCALLBACK -DG__SIG
 CXXMACRO    :=   -DG__SHAREDLIB -DG__OSFDLL -DG__ANSI -DG__ERRORCALLBACK -DG__SIGNEDCHAR -DG__NEWSTDHEADER -DG__CINT_VER6 -DG__NATIVELONGLONG -DG__P2FCAST -DG__STD_EXCEPTION -DG__HAVE_CONFIG -DG__NOMAKEINFO  -DG__NOALGORITHM
 CFLAGS      := -g -m64  -fPIC   
 CXXFLAGS    := -g -m64  -fPIC  -DG__GNUREADLINE  
-CINTIPATH   := -I$(CINTSYSDIRW)/inc
+CINTIPATH   := -I$(CINTSYSDIRW)/core/inc
 OBJECT      := map.dll
 LINKSPEC    :=  -DG__CXXLINK_ON
 
@@ -69,5 +69,5 @@ clean :
 
 # re-makecint ##############################################
 makecint :
-	makecint  --builddir /build/axel/cint/merge_reflex -mk Makemap -dl map.dll -DG__NOALGORITHM -H mp.h -cint -Z0
+	makecint  --builddir /build/axel/cint/newrootsvn -mk Makemap -dl map.dll -DG__NOALGORITHM -H mp.h -cint -Z0
 

@@ -27,7 +27,8 @@ CXXAPIH    = $(addsuffix .h,$(addprefix $(G__CFG_COREVERSION)/inc/,\
               CallFunc Typedf Token Shadow))
 
 ifeq ($(G__CFG_COREVERSION),core)
-CXXAPIO   += Dict
+CXXAPIO   += $(addsuffix $(G__CFG_OBJEXT),$(addprefix $(G__CFG_COREVERSION)/src/,\
+	      Dict))
 CXXAPIH   += $(addsuffix .h,$(addprefix $(G__CFG_COREVERSION)/src/,\
               Dict))
 endif
@@ -112,6 +113,9 @@ $(G__CFG_COREVERSION)/src/dict/stdstrct$(G__CFG_OBJEXT): CXXFLAGS += $(G__CFG_IN
 ##############################################################
 # Generate standard header files
 ##############################################################
+$(MAKEINCL): $(MAKEINCL:$(G__CFG_EXEEXT)=).c
+	$(G__CFG_CC) $< $(G__CFG_COUT)$@ $(CFLAGS)
+
 $(G__CFG_COREVERSION)/include/stdio.h : $(MAKEINCL)
 	(cd $(dir $(MAKEINCL)) && ./$(notdir $(MAKEINCL)))
 
