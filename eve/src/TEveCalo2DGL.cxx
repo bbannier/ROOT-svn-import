@@ -32,9 +32,7 @@ ClassImp(TEveCalo2DGL);
 TEveCalo2DGL::TEveCalo2DGL() :
    TGLObject(),
    fM(0),
-   fProjection(0),
-   fMinVal(0),
-   fMaxVal(0)
+   fProjection(0)
 {
    // Constructor.
 
@@ -70,9 +68,9 @@ void TEveCalo2DGL::SetBBox()
 
 
 //______________________________________________________________________________
-Float_t TEveCalo2DGL::MakeRPhiCell(Float_t phiMin, Float_t phiMax, Float_t value, Float_t offset) const
+Float_t TEveCalo2DGL::MakeRPhiCell(Float_t phiMin, Float_t phiMax, Float_t towerH, Float_t offset) const
 {
-   Float_t towerH =  fM->fBarrelRadius*fM->fTowerHeight*(value -fMinVal)/(fMaxVal-fMinVal);
+   // Float_t towerH =  fM->fBarrelRadius*fM->fTowerHeight*(value -fMinVal)/(fMaxVal-fMinVal);
    Float_t r1 = fM->fBarrelRadius + offset;
    Float_t r2 = r1 + towerH;
 
@@ -138,6 +136,7 @@ void TEveCalo2DGL::DrawRPhi() const
    if (data->SupportsPhiBinning()) {
       const TAxis* ax = data->GetPhiBins();
       Int_t nBins = ax->GetNbins();
+      Float_t ht;
       for (Int_t ibin=0; ibin<nBins; ibin++) {
          if ( (   ax->GetBinLowEdge(ibin)>=pr[0] && ax->GetBinUpEdge(ibin)<pr[1])
               || (ax->GetBinLowEdge(ibin)>=pr[2] && ax->GetBinUpEdge(ibin)<pr[3])) {
@@ -153,27 +152,24 @@ void TEveCalo2DGL::DrawRPhi() const
                }
                Float_t off = 0;
                for (Int_t s=0; s<nSlices; s++) {
-                  if (SetupColor(sliceVal[s], s))
-                  {
-                     off = MakeRPhiCell(ax->GetBinLowEdge(ibin),
-                                        ax->GetBinUpEdge(ibin),
-                                        sliceVal[s], off);
-                  }
+                  if (fM->SetupColorHeight(sliceVal[s], s, ht))
+                     off = MakeRPhiCell(ax->GetBinLowEdge(ibin), ax->GetBinUpEdge(ibin), ht, off);
                }
                cids.clear();
             }
          }
       }
    }
+   delete [] sliceVal;
 }
 /**************************************************************************/
 /**************************************************************************/
 /**************************************************************************/
 
 //______________________________________________________________________________
-Float_t TEveCalo2DGL::MakeRhoZBarrelCell(Float_t thetaMin, Float_t thetaMax, Int_t phiSign, Float_t value, Float_t offset) const
+Float_t TEveCalo2DGL::MakeRhoZBarrelCell(Float_t thetaMin, Float_t thetaMax, Int_t phiSign, Float_t towerH, Float_t offset) const
 {
-   Float_t towerH = fM->fBarrelRadius*fM->fTowerHeight*(value -fMinVal)/(fMaxVal-fMinVal);
+   //   Float_t towerH = fM->fBarrelRadius*fM->fTowerHeight*(value -fMinVal)/(fMaxVal-fMinVal);
    Float_t theta  = (thetaMin+thetaMax)*0.5;
    Float_t r1 = fM->fBarrelRadius/Sin(theta) + offset;
    Float_t r2 = r1 + towerH;
@@ -213,10 +209,10 @@ Float_t TEveCalo2DGL::MakeRhoZBarrelCell(Float_t thetaMin, Float_t thetaMax, Int
 }
 
 //______________________________________________________________________________
-Float_t TEveCalo2DGL::MakeRhoZEndCapCell(Float_t thetaMin, Float_t thetaMax, Int_t phiSign, Float_t value, Float_t offset) const
+Float_t TEveCalo2DGL::MakeRhoZEndCapCell(Float_t thetaMin, Float_t thetaMax, Int_t phiSign, Float_t towerH, Float_t offset) const
 {
+   //   Float_t towerH =  fM->fEndCapPos*fM->fTowerHeight*(value - fMinVal)/(fMaxVal-fMinVal);
    Float_t theta  = (thetaMin+thetaMax)*0.5;
-   Float_t towerH =  fM->fEndCapPos*fM->fTowerHeight*(value - fMinVal)/(fMaxVal-fMinVal);
    Float_t r1 =Abs( fM->GetEndCapPos()/Cos(theta)) + offset;
    Float_t r2 = r1 + towerH;
    Float_t pnts[12];
@@ -284,27 +280,27 @@ void TEveCalo2DGL::DrawRhoZ() const
             Float_t offUp  = 0;
             Float_t offLow = 0;
             data->GetCellData(cids.front(), cellData);
+            Float_t ht;
             for (Int_t s=0; s<nSlices; s++) {
-               if (SetupColor(cellData.Value(), s))
-               {
-                  if (cellData.Theta()>transTheta) {
-                     if( sliceValsUp[s] > fMinVal)
-                        offUp  = MakeRhoZBarrelCell(cellData.ThetaMin(kTRUE), cellData.ThetaMax(kTRUE),  1, sliceValsUp[s],  offUp);
-                     if( sliceValsLow[s] > fMinVal)
-                        offLow = MakeRhoZBarrelCell(cellData.ThetaMin(kTRUE), cellData.ThetaMax(kTRUE), -1, sliceValsLow[s], offLow);
-                  }
-                  else {
-                     if( sliceValsUp[s] > fMinVal)
-                        offUp  = MakeRhoZEndCapCell(cellData.ThetaMin(kTRUE), cellData.ThetaMax(kTRUE),  1, sliceValsUp[s],  offUp);
-                     if( sliceValsLow[s] > fMinVal)
-                        offLow = MakeRhoZEndCapCell(cellData.ThetaMin(kTRUE), cellData.ThetaMax(kTRUE), -1, sliceValsLow[s], offLow);
-                  }
-                  sliceValsUp[s]  = 0;
-                  sliceValsLow[s] = 0;
+               if (cellData.Theta()>transTheta) {
+                  if (fM->SetupColorHeight(sliceValsUp[s], s, ht))
+                     offUp  = MakeRhoZBarrelCell(cellData.ThetaMin(kTRUE), cellData.ThetaMax(kTRUE),  1, ht,  offUp);
+                  if (fM->SetupColorHeight(sliceValsLow[s], s, ht))
+                     offLow = MakeRhoZBarrelCell(cellData.ThetaMin(kTRUE), cellData.ThetaMax(kTRUE), -1, ht,  offLow);
+               }
+               else {
+                  if (fM->SetupColorHeight(sliceValsUp[s], s, ht))
+                     offUp  = MakeRhoZEndCapCell(cellData.ThetaMin(kTRUE), cellData.ThetaMax(kTRUE),  1, ht,  offUp);
+                  if (fM->SetupColorHeight(sliceValsLow[s], s, ht))
+                     offLow = MakeRhoZEndCapCell(cellData.ThetaMin(kTRUE), cellData.ThetaMax(kTRUE), -1, ht, offLow);
                }
             }
             // clear
             cids.clear();
+            for (Int_t s=0; s<nSlices; s++) {
+               sliceValsUp[s]  = 0;
+               sliceValsLow[s] = 0;
+            }
          }
       }
       delete [] sliceValsUp;
@@ -327,9 +323,6 @@ void TEveCalo2DGL::DirectDraw(TGLRnrCtx & /*rnrCtx*/) const
    glBegin(GL_QUADS);
 
    fM->AssertPalette();
-   fMinVal = fM->fPalette->GetMinVal();
-   fMaxVal = fM->fPalette->GetMaxVal();
-
    if (fProjection->GetType() == TEveProjection::kPT_RhoZ) {
       DrawRhoZ();
    }
@@ -341,28 +334,4 @@ void TEveCalo2DGL::DirectDraw(TGLRnrCtx & /*rnrCtx*/) const
    glPopAttrib();
 }
 
-//______________________________________________________________________________
-inline Bool_t TEveCalo2DGL::SetupColor(Float_t value, Int_t slice) const
-{
-   Int_t val =  (Int_t)value;
-   Bool_t visible = kFALSE;
 
-   if(fM->fPalette->GetShowDefValue())
-   {
-      if( value >=fM->fPalette->GetMinVal() && value < fM->fPalette->GetMaxVal())
-      {
-         Color_t c = fM->fPalette->GetDefaultColor()+slice;
-         TGLUtil::Color(c);
-         visible = kTRUE;
-      }
-   }
-   else if (fM->fPalette->WithinVisibleRange(val)) {
-      UChar_t c[4];
-      c[4] = 255;
-      fM->fPalette->ColorFromValue(val, c);
-      TGLUtil::Color4ubv(c);
-      visible = kTRUE;
-   }
-
-   return visible;
-}

@@ -1,7 +1,6 @@
 #include "TEveProjections.h"
 
 const char* histFile = "http://amraktad.web.cern.ch/amraktad/cms_calo_hist.root";
-const char* geom_file_name = "http://root.cern.ch/files/alice_ESDgeometry.root";
 
 void cms_calo()
 {
@@ -9,16 +8,8 @@ void cms_calo()
    TEveManager::Create();
    gEve->GetSelection()->SetPickToSelect(1);
    gEve->GetHighlight()->SetPickToSelect(0);
-
-   // geom
-   TFile* geom = TFile::Open(geom_file_name, "CACHEREAD");
-   if (!geom)
-      return;
-   TEveGeoShapeExtract* gse = (TEveGeoShapeExtract*) geom->Get("Gentle");
-   TEveGeoShape* gsre = TEveGeoShape::ImportShapeExtract(gse, 0);
-   geom->Close();
-   delete geom;
-
+   TGLViewer* v1 = gEve->GetGLViewer();
+   v1->SetGuideState(TGLUtil::kAxesOrigin, kTRUE, kFALSE, 0);
    // palette
    gStyle->SetPalette(1, 0);
    TEveRGBAPalette* pal = new TEveRGBAPalette(0, 100);
@@ -37,26 +28,25 @@ void cms_calo()
    calo->SetBarrelRadius(129);
    calo->SetEndCapPos(300);
    calo->SetPalette(pal);
-   calo->SetTowerHeight(0.05);
    gEve->AddElement(calo);
 
    // projections
-   TEveViewer* nv = gEve->SpawnNewViewer("NLT Projected");
+   TEveViewer* nv = gEve->SpawnNewViewer("Projected");
    TEveScene*  ns = gEve->SpawnNewScene("Projected Event");
    nv->AddScene(ns);
    TGLViewer* v = nv->GetGLViewer();
    v->SetCurrentCamera(TGLViewer::kCameraOrthoXOY);
    TGLCameraMarkupStyle* mup = v->GetCameraMarkup();
    if(mup) mup->SetShow(kFALSE);
+   v->SetGuideState(TGLUtil::kAxesOrigin, kTRUE, kFALSE, 0);
+   v->SetClearColor(kBlue + 4);
 
    TEveProjectionManager* mng = new TEveProjectionManager();
    mng->SetProjection(TEveProjection::kPT_RhoZ);
    gEve->AddElement(mng, ns);
    gEve->AddToListTree(mng, kTRUE);
 
-   mng->ImportElements(gsre);
    mng->ImportElements(calo);
 
    gEve->Redraw3D(1);
 }
-

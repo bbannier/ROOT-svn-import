@@ -115,7 +115,7 @@ Int_t TEveCaloDataHist::GetCellList(Float_t eta, Float_t etaD,
    Float_t pr[4];
    Float_t phi1  = phi - phiD;
    Float_t phi2  = phi + phiD;
-   if (phi2 >TMath::Pi() && phi1<-Pi()) {
+   if (phi2 >TMath::Pi() && phi1>-Pi()) {
       pr[0] =  phi1;
       pr[1] =  Pi();
       pr[2] =  -Pi();
@@ -149,18 +149,18 @@ Int_t TEveCaloDataHist::GetCellList(Float_t eta, Float_t etaD,
                 && ax->GetBinUpEdge(ieta) <  etaMax
                 && ((ay->GetBinLowEdge(iphi)>=pr[0] && ay->GetBinUpEdge(iphi)<pr[1])
                     || (ay->GetBinLowEdge(iphi)>=pr[2] && ay->GetBinUpEdge(iphi)<pr[3])))
-            {
+         {
 
-               Int_t bin = hist0->GetBin(ieta, iphi);
-               TIter next(fHStack);
-               Int_t slice = 0;
-               while ((hist = (TH2F*) next()) != 0) {
-                  // printf("add cell %d %d \n",bin, slice);
-                  if (hist->GetBinContent(bin) > threshold)
-                     out.push_back(TEveCaloData::CellId_t(bin, slice));
-                  slice++;
-               }
+            Int_t bin = hist0->GetBin(ieta, iphi);
+            TIter next(fHStack);
+            Int_t slice = 0;
+            while ((hist = (TH2F*) next()) != 0) {
+               // printf("add cell %d %d \n",bin, slice);
+               if (hist->GetBinContent(bin) > threshold)
+                  out.push_back(TEveCaloData::CellId_t(bin, slice));
+               slice++;
             }
+         }
       }
    }
    return out.size();
@@ -194,7 +194,7 @@ void TEveCaloDataHist::AddHistogram(TH2F* h)
 //______________________________________________________________________________
 Int_t TEveCaloDataHist::GetNSlices() const
 {
-   // Get nu,ber of tower slices.
+   // Get number of tower slices.
 
    return fHStack->GetEntriesFast();
 }
