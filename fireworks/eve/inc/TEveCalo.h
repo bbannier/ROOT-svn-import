@@ -48,11 +48,15 @@ protected:
    Float_t      fBarrelRadius;
    Float_t      fEndCapPos;
 
-   Float_t      fTowerHeight;;
+   Float_t      fTowerHeight;
 
    Int_t             fDefaultValue;   // Default signal value.
    Bool_t            fValueIsColor;   // Interpret signal value as RGBA color.
    TEveRGBAPalette*  fPalette;        // Pointer to signal-color palette.
+
+   void AssignCaloVizParameters(TEveCaloViz* cv);
+
+   virtual Bool_t    SetupColorHeight(Float_t value, Int_t slice, Float_t& height) const;
 
 public:
    TEveCaloViz(const Text_t* n="TEveCaloViz", const Text_t* t="");
@@ -61,24 +65,24 @@ public:
    virtual ~TEveCaloViz();
 
    TEveCaloData* GetData() const { return fData; }
+
    Float_t GetBarrelRadius() const { return fBarrelRadius; }
+   void SetBarrelRadius(Float_t r) { fBarrelRadius = r; }
    Float_t GetEndCapPos   () const { return fEndCapPos; }
+   void SetEndCapPos   (Float_t z) { fEndCapPos = z; }
+
    Float_t GetTransitionEta() const;
    Float_t GetTransitionTheta() const;
-
-   void SetEta(Float_t l, Float_t u){ fEtaMin=l; fEtaMax =u;}
-   void SetPhi(Float_t x){ fPhi= x; }
-   void SetPhiRng(Float_t r){ fPhiRng = r;}
-
-   void SetBarrelRadius(Float_t r) { fBarrelRadius = r; }
-   void SetEndCapPos   (Float_t z) { fEndCapPos = z; }
-   void SetTowerHeight (Float_t h) { fTowerHeight = h;}
-
-   void AssignCaloVizParameters(TEveCaloViz* cv);
 
    TEveRGBAPalette* GetPalette() const { return fPalette; }
    void             SetPalette(TEveRGBAPalette* p);
    TEveRGBAPalette* AssertPalette();
+
+   virtual void SetTowerHeight (Float_t h);
+
+   void SetEta(Float_t l, Float_t u){ fEtaMin=l; fEtaMax =u;}
+   void SetPhi(Float_t x){ fPhi= x; }
+   void SetPhiRng(Float_t r){ fPhiRng = r;}
 
    virtual void Paint(Option_t* option="");
 

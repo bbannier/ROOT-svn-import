@@ -153,6 +153,6 @@ void TEveCaloVizEditor::DoPhi()
 //______________________________________________________________________________
 void TEveCaloVizEditor::DoTowerHeight()
 {
-   fM->fTowerHeight = fTowerHeight->GetValue();
+   fM->SetTowerHeight(fTowerHeight->GetValue());
    Update();
 }

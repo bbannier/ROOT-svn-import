@@ -130,20 +130,14 @@ void  TEveCalo3DGL::RenderBox(Float_t pnts[8]) const
 }
 
 //______________________________________________________________________________
-Float_t TEveCalo3DGL::RenderBarrelCell(const TEveCaloData::CellData_t &cellData, Float_t offset ) const
+Float_t TEveCalo3DGL::RenderBarrelCell(const TEveCaloData::CellData_t &cellData, Int_t slice, Float_t offset ) const
 {
    using namespace TMath;
 
    //   printf("RenderBarrel "); cellData.Dump();
-
-
-   Float_t val = (cellData.Value() > fMaxVal) ?  fMaxVal : cellData.Value();
-
    Float_t towerH;
-   if(fM->fPalette->GetShowDefValue())
-      towerH =  fM->fEndCapPos*fM->fTowerHeight*(val -fMinVal)/(fMaxVal-fMinVal);
-   else
-      towerH =  fM->fEndCapPos*fM->fTowerHeight;
+   if (fM->SetupColorHeight(cellData.Value(), slice, towerH) == kFALSE)
+      return offset;
 
    Float_t r1 = fM->GetBarrelRadius() + offset;
    Float_t r2 = r1 + towerH*Sin(cellData.ThetaMin());
@@ -218,19 +212,14 @@ Float_t TEveCalo3DGL::RenderBarrelCell(const TEveCaloData::CellData_t &cellData,
 }// end RenderBarrelCell
 
 //______________________________________________________________________________
-Float_t TEveCalo3DGL::RenderEndCapCell(const TEveCaloData::CellData_t &cellData, Float_t offset ) const
+Float_t TEveCalo3DGL::RenderEndCapCell(const TEveCaloData::CellData_t &cellData, Int_t slice, Float_t offset ) const
 {
    using namespace TMath;
 
    //   printf("render endcap %f, %f ", z1, z2); cellData.Dump();
-
-   Float_t val = (cellData.Value() > fMaxVal) ?  fMaxVal : cellData.Value();
    Float_t towerH;
-   if(fM->fPalette->GetShowDefValue())
-      towerH =  fM->fEndCapPos*fM->fTowerHeight*(val -fMinVal)/(fMaxVal-fMinVal);
-   else
-      towerH =  fM->fEndCapPos*fM->fTowerHeight;
-
+   if (fM->SetupColorHeight(cellData.Value(), slice, towerH) == kFALSE)
+      return offset;
 
    Float_t z1, r1In, r1Out, z2, r2In, r2Out;
    if (cellData.ZSideSign() == 1)
@@ -308,20 +297,19 @@ Float_t TEveCalo3DGL::RenderEndCapCell(const TEveCaloData::CellData_t &cellData,
    return offset+towerH*Cos(cellData.ThetaMin());
 } // end RenderEndCapCell
 
-//______________________________________________________________________________
+ //______________________________________________________________________________
 void TEveCalo3DGL::DirectDraw(TGLRnrCtx & /*rnrCtx*/) const
 {
-   // printf("TEveCalo3DGL::DirectDraw\n");
+   // printf("TEveCalo3D::DirectDraw\n");
 
    TEveCaloData::vCellId_t cids;
    TEveCaloData* data = fM->GetData();
 
    fM->AssertPalette();
-   fMinVal = fM->fPalette->GetMinVal();
-   fMaxVal = fM->fPalette->GetMaxVal();
 
    if (data->GetCellList((fM->fEtaMin+fM->fEtaMax)*0.5f, fM->fEtaMax -fM->fEtaMin,
-                         fM->fPhi, fM->fPhiRng, fM->fThreshold, cids)) {
+                         fM->fPhi, fM->fPhiRng, fM->fThreshold, cids)) 
+   {
       glPushAttrib(GL_ENABLE_BIT | GL_POLYGON_BIT);
       glEnable(GL_NORMALIZE);
 
@@ -336,40 +324,12 @@ void TEveCalo3DGL::DirectDraw(TGLRnrCtx & /*rnrCtx*/) const
             offset = 0;
             prevTower = (*it).fTower;
          }
-         if (SetupColor(cellData.Value(), (*it).fSlice))
-         {
-            if(cellData.ThetaMax() > transTheta )
-               offset = RenderBarrelCell(cellData, offset);
-            else
-               offset = RenderEndCapCell(cellData, offset);
-         }
+
+         if(cellData.ThetaMax() > transTheta )
+            offset = RenderBarrelCell(cellData, (*it).fSlice, offset);
+         else
+            offset = RenderEndCapCell(cellData, (*it).fSlice, offset);
       }
    }
    glPopAttrib();
-}
-
-//______________________________________________________________________________
-inline Bool_t TEveCalo3DGL::SetupColor(Float_t value, Int_t slice) const
-{
-   Int_t val =  (Int_t)value;
-   Bool_t visible = kFALSE;
-
-   if(fM->fPalette->GetShowDefValue())
-   {
-      if( value >=fM->fPalette->GetMinVal() && value < fM->fPalette->GetMaxVal())
-      {
-         Color_t c = fM->fPalette->GetDefaultColor()+slice;
-         TGLUtil::Color(c);
-         visible = kTRUE;
-      }
-   }
-   else if (fM->fPalette->WithinVisibleRange(val)) {
-      UChar_t c[4];
-      c[4] = 255;
-      fM->fPalette->ColorFromValue(val, c);
-      TGLUtil::Color4ubv(c);
-      visible = kTRUE;
-   }
-
-   return visible;
 }

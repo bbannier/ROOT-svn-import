@@ -30,19 +30,15 @@ private:
 protected:
    TEveCalo2D             *fM;  // Model object.
    TEveProjection         *fProjection;
-   mutable Float_t                 fMinVal;
-   mutable Float_t                 fMaxVal;
 
+   Float_t   MakeRhoZBarrelCell(Float_t thetaMin, Float_t thetaMax, Int_t phiSign, Float_t height, Float_t offset) const;
+   Float_t   MakeRhoZEndCapCell(Float_t thetaMin, Float_t thetaMax, Int_t phiSign, Float_t height, Float_t offset) const;
 
-   Float_t   MakeRhoZBarrelCell(Float_t thetaMin, Float_t thetaMax, Int_t phiSign, Float_t value, Float_t offset) const;
-   Float_t   MakeRhoZEndCapCell(Float_t thetaMin, Float_t thetaMax, Int_t phiSign, Float_t value, Float_t offset) const;
-
-   Float_t   MakeRPhiCell(Float_t phiMin, Float_t phiMax, Float_t offset, Float_t value) const;
+   Float_t   MakeRPhiCell(Float_t phiMin, Float_t phiMax, Float_t offset, Float_t height) const;
 
    void      DrawRPhi() const;
    void      DrawRhoZ() const;
 
-   Bool_t    SetupColor(Float_t value, Int_t slice) const;
 public:
    TEveCalo2DGL();
    virtual ~TEveCalo2DGL() {}
