@@ -885,10 +885,18 @@ void G__register_class(const char *libname, const char *clstr)
       continue;
     }
 
+    // 27-02-08
+    // Since there might be collision with the hash function used
+    // we can't realy on the hash only... check the name too
+    if( !isFreeFunc && (classname != classstr) ){
+      ++list_iter;
+      continue;
+    }
+
     // 10/05/07
     // this is small hack (yes... again). Let's ignore all the functions
     // that belong to std and start with __ (why? they are weird)
-    if (symbol->fClassHash==hash("std") && protostr.at(0)=='_'){
+    if ((symbol->fClassHash==hash("std") && classstr=="std") && protostr.at(0)=='_'){
       ++list_iter;
       continue;
     }
@@ -1200,10 +1208,8 @@ void G__register_class(const char *libname, const char *clstr)
     delete [] tmpstr;
 
     ++list_iter;
-    // REMOVE IT!!! We found a collision in the hash function for classes and symbols and we cannot remove the symbol from the list
-    // Please get a better hash function and restore this deletion
-    //demangled->remove(symbol);
-    //delete symbol;
+    demangled->remove(symbol);
+    delete symbol;
   }
   if (gDebug > 0)
     cerr << "****************************************" << endl << endl;
