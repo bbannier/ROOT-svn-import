@@ -822,7 +822,7 @@ void* Cint::G__ClassInfo::New()
           /* If we have a function pointer */
           G__ifunc_table_internal* internalifuncconst 
              = G__get_ifunc_internal(G__struct.rootspecial[tagnum]->defaultconstructorifunc);
-          if(internalifuncconst->funcptr[0]){
+          if(internalifuncconst && internalifuncconst->funcptr[0]){
              G__CurrentCall(G__DELETEFREE, this, &tagnum);
              G__stub_method_calling(&buf, &para, internalifuncconst, 0);
              G__CurrentCall(G__NOP, 0, 0);

@@ -4463,7 +4463,7 @@ void G__write_dummy_ptr(FILE *fp, struct G__ifunc_table_internal *ifunc, int i)
   // be sure to rem the name
   (void) ifunc;
   if(G__struct.type[i]!='n'){  // This is only for classes (we can't have an object of a namespace)
-     fprintf(fp,"  %s* ptr_%d;\n",G__fulltagname(i,0), i);
+     fprintf(fp,"  %s* ptr_%d=0;\n",G__fulltagname(i,0), i);
   }
 }
 
