@@ -98,6 +98,7 @@ void TLinearMinimizer::SetFunction(const  IGradObjFunction & objfunc) {
    typedef  Chi2Func::IModelFunction ModelFunc; 
    const ModelFunc & modfunc =  chi2func->ModelFunction(); 
    fDim = chi2func->NDim();
+   fNFree = fDim;
 
    // get the basis functions (derivatives of the modelfunc)
    TObjArray flist; 
@@ -121,14 +122,11 @@ void TLinearMinimizer::SetFunction(const  IGradObjFunction & objfunc) {
    // add the data but not store them 
    for (unsigned int i = 0; i < data.Size(); ++i) { 
       double y = 0; 
-      const double * x = 0; 
+      const double * x = data.GetPoint(i,y); 
       double ey = 1;
-      if (data.Opt().fErrors1) { 
-         x = data.GetPoint(i, y); 
+      if (! data.Opt().fErrors1) { 
+         ey = data.Error(i); 
       } 
-      else {
-         x = data.GetPoint(i, y, ey); 
-      }
       // interface should take a double *
       fFitter->AddPoint( const_cast<double *>(x) , y, ey); 
    }

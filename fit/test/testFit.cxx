@@ -368,11 +368,11 @@ int testHisto1DPolFit() {
 
    std::cout << "\n\nTest histo polynomial linear fit " << std::endl; 
 
-   //ROOT::Math::Polynomial pf(2); 
-   f.SetParameters(p);
+   ROOT::Math::Polynomial pf(2); 
+   pf.SetParameters(p);
 
    fitter.Config().SetMinimizer("Linear");
-   ret = fitter.Fit(d, f);
+   ret = fitter.Fit(d, pf);
    if (ret)  
       fitter.Result().Print(std::cout); 
    else {

@@ -134,7 +134,6 @@ public:
 
    /// evaluate the derivative of the function with respect to the parameters
    void  ParameterGradient(double x, double * grad ) const { 
-      // use stored params values
       fFunc->SetParameters(&fParams.front() );
       static const double kEps = 0.001;
       fFunc->GradientPar(&x,grad,kEps); 
@@ -163,9 +162,18 @@ private:
    /// evaluate the derivative of the function with respect to the parameters
    double  DoParameterDerivative(double x, unsigned int ipar ) const { 
       // not very efficient - use ParameterGradient
-      std::vector<double> grad(NPar());
-      ParameterGradient(x, &grad[0] ); 
-      return grad[ipar]; 
+      if (! fFunc->IsLinear() || fFunc->GetLinearPart(ipar) == 0 ) {  
+         std::vector<double> grad(NPar());
+         ParameterGradient(x, &grad[0] ); 
+         return grad[ipar]; 
+      }
+      else { 
+         const TFormula * df = dynamic_cast<const TFormula*>( fFunc->GetLinearPart(ipar) );
+         assert(df != 0); 
+         fX[0] = x; 
+         // hack since evalpar is not const
+         return (const_cast<TFormula*> ( df) )->EvalPar( fX ) ; // derivatives should not depend on parameters since func is linear 
+      }
    }
 
 

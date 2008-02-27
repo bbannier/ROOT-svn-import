@@ -18,12 +18,13 @@
 #include "Math/Minimizer.h"
 #include "Fit/BinData.h"
 #include "Fit/UnBinData.h"
+#include "Math/Error.h"
 
 #include <memory> 
 
 #include "Math/IParamFunction.h" 
 
-#include "Math/WrappedParamFunction.h"
+#include "Math/MultiDimParamFunctionAdapter.h"
 
 namespace ROOT { 
 
@@ -57,9 +58,11 @@ Fitter & Fitter::operator = (const Fitter &rhs)
 }
 
 void Fitter::SetFunction(const IModelFunction & func) 
-{ 
+{
+   fUseGradient = false;
+ 
    //  set the fit model function (clone the given one and keep a copy ) 
-   //std::cout << "set a non-grad function" << std::endl; 
+   std::cout << "set a non-grad function" << std::endl; 
 
    fFunc = dynamic_cast<IModelFunction *> ( func.Clone() ); 
 
@@ -71,21 +74,43 @@ void Fitter::SetFunction(const IModelFunction & func)
    fConfig.SetParamsSettings(*fFunc); 
 }
 
+
 void Fitter::SetFunction(const IModel1DFunction & func) 
 { 
+   fUseGradient = false;
    std::cout << "set a 1d function" << std::endl; 
-   //  set the fit model function from 1D func (clone the given one and keep a copy ) 
-   // need to wrap the 1D func in a multim func
-   std::auto_ptr<IModel1DFunction> fPtr( dynamic_cast<IModel1DFunction *> ( func.Clone() ) );
-   assert (fPtr.get() != 0); 
-   fFunc = new ROOT::Math::WrappedParamFunction<std::auto_ptr<IModel1DFunction> > 
-      (fPtr, 1, fPtr->Parameters(), fPtr->Parameters() + fPtr->NPar() ); 
+   IModel1DFunction & fcopy = dynamic_cast<IModel1DFunction & > (*( func.Clone()) );
+   fFunc = new ROOT::Math::MultiDimParamFunctionAdapter(fcopy);
 
    // creates the parameter  settings 
    fConfig.SetParamsSettings(*fFunc); 
 }
 
-      bool Fitter::FitFCN(const BaseFunc & fcn, const double * params, unsigned int dataSize) { 
+void Fitter::SetFunction(const IGradModelFunction & func) 
+{ 
+   fUseGradient = true;
+   std::cout << "set a grad function" << std::endl; 
+   //  set the fit model function (clone the given one and keep a copy ) 
+   fFunc = dynamic_cast<IModelFunction *> ( func.Clone() ); 
+
+   // creates the parameter  settings 
+   fConfig.SetParamsSettings(*fFunc); 
+}
+
+
+void Fitter::SetFunction(const IGradModel1DFunction & func) 
+{ 
+   std::cout << "set a 1d grad function" << std::endl; 
+   fUseGradient = true;
+   IGradModel1DFunction & fcopy = dynamic_cast<IGradModel1DFunction & > (*( func.Clone()) );
+   fFunc = new ROOT::Math::MultiDimParamGradFunctionAdapter(fcopy);
+
+   // creates the parameter  settings 
+   fConfig.SetParamsSettings(*fFunc); 
+}
+
+
+bool Fitter::FitFCN(const BaseFunc & fcn, const double * params, unsigned int dataSize) { 
    // fit a user provided FCN function
    // create fit parameter settings
    unsigned int npar  = fcn.NDim(); 
@@ -125,19 +150,99 @@ bool Fitter::DoLeastSquareFit(const BinData & data) {
 
 
    // check if fFunc provides gradient
-   IGradModelFunction * gradFun = dynamic_cast<IGradModelFunction *>(fFunc); 
-   if (gradFun == 0) { 
+   if (!fUseGradient) { 
       // do minimzation without using the gradient
       Chi2FCN<BaseFunc> chi2(data,*fFunc); 
       return DoMinimization<BaseFunc> (*minimizer, chi2, data.Size()); 
    } 
    else { 
       // use gradient 
-      Chi2FCN<BaseGradFunc> chi2(data,*gradFun); 
-      return DoMinimization<BaseGradFunc> (*minimizer, chi2, data.Size()); 
+      IGradModelFunction * gradFun = dynamic_cast<IGradModelFunction *>(fFunc); 
+      if (gradFun != 0) { 
+         Chi2FCN<BaseGradFunc> chi2(data,*gradFun); 
+         return DoMinimization<BaseGradFunc> (*minimizer, chi2, data.Size()); 
+      }
+      MATH_ERROR_MSG("Fitter::DoLeastSquareFit","wrong type of function - it does not provide gradient");
    }
    return false; 
 }
+
+bool Fitter::DoLikelihoodFit(const BinData & data) { 
+
+   // perform a likelihood fit on a set of binned data 
+
+   // create Minimizer  
+   std::auto_ptr<ROOT::Math::Minimizer> minimizer = std::auto_ptr<ROOT::Math::Minimizer> ( fConfig.CreateMinimizer() );
+   if (minimizer.get() == 0) return false; 
+   if (fFunc == 0) return false; 
+
+   // logl fit (error is 0.5)
+   minimizer->SetErrorUp(0.5);
+
+   // create a chi2 function to be used for the equivalent chi-square
+   Chi2FCN<BaseFunc> chi2(data,*fFunc); 
+
+   if (!fUseGradient) { 
+      // do minimzation without using the gradient
+      PoissonLikelihoodFCN<BaseFunc> logl(data,*fFunc); 
+      return DoMinimization<BaseFunc> (*minimizer, logl, data.Size(), &chi2); 
+   } 
+   else { 
+      // check if fFunc provides gradient
+      IGradModelFunction * gradFun = dynamic_cast<IGradModelFunction *>(fFunc); 
+      if (gradFun != 0) { 
+         // use gradient 
+         PoissonLikelihoodFCN<BaseGradFunc> logl(data,*gradFun); 
+         return DoMinimization<BaseGradFunc> (*minimizer, logl, data.Size(), &chi2); 
+      }
+      MATH_ERROR_MSG("Fitter::DoLikelihoodFit","wrong type of function - it does not provide gradient");
+
+   }
+   return false; 
+}
+
+bool Fitter::DoLikelihoodFit(const UnBinData & data) { 
+   // perform a likelihood fit on a set of unbinned data 
+
+   // create Minimizer  
+   std::auto_ptr<ROOT::Math::Minimizer> minimizer = std::auto_ptr<ROOT::Math::Minimizer> ( fConfig.CreateMinimizer() );
+
+   if (minimizer.get() == 0) return false; 
+   
+   if (fFunc == 0) return false; 
+
+#ifdef DEBUG
+   int ipar = 0;
+   std::cout << "Fitter ParamSettings " << Config().ParamsSettings()[ipar].IsBound() << " lower limit " <<  Config().ParamsSettings()[ipar].LowerLimit() << " upper limit " <<  Config().ParamsSettings()[ipar].UpperLimit() << std::endl;
+#endif
+
+   // logl fit (error is 0.5)
+   minimizer->SetErrorUp(0.5);
+
+   if (!fUseGradient) { 
+      // do minimzation without using the gradient
+      LogLikelihoodFCN<BaseFunc> logl(data,*fFunc); 
+      return DoMinimization<BaseFunc> (*minimizer, logl, data.Size()); 
+   } 
+   else { 
+      // use gradient : check if fFunc provides gradient
+      IGradModelFunction * gradFun = dynamic_cast<IGradModelFunction *>(fFunc); 
+      if (gradFun != 0) { 
+         LogLikelihoodFCN<BaseGradFunc> logl(data,*gradFun); 
+         return DoMinimization<BaseGradFunc> (*minimizer, logl, data.Size()); 
+      }
+      MATH_ERROR_MSG("Fitter::DoLikelihoodFit","wrong type of function - it does not provide gradient");
+   }      
+   return false; 
+}
+
+      bool Fitter::DoLinearFit(const BinData & /* data */) { 
+
+   // perform a linear fit on a set of binned data 
+   return true; 
+}
+
+
 
 template<class ObjFunc> 
 bool Fitter::DoMinimization(ROOT::Math::Minimizer & minimizer, const ObjFunc & objFunc, unsigned int dataSize, const ROOT::Math::IMultiGenFunction * chi2func) { 
@@ -161,77 +266,6 @@ bool Fitter::DoMinimization(ROOT::Math::Minimizer & minimizer, const ObjFunc & o
    fResult = FitResult(minimizer,*fFunc, ret, dataSize, chi2func );
    if (fConfig.NormalizeErrors() ) fResult.NormalizeErrors(); 
    return ret; 
-}
-
-
-
-bool Fitter::DoLikelihoodFit(const BinData & data) { 
-
-   // perform a likelihood fit on a set of binned data 
-
-   // create Minimizer  
-   std::auto_ptr<ROOT::Math::Minimizer> minimizer = std::auto_ptr<ROOT::Math::Minimizer> ( fConfig.CreateMinimizer() );
-   if (minimizer.get() == 0) return false; 
-   if (fFunc == 0) return false; 
-
-   // logl fit (error is 0.5)
-   minimizer->SetErrorUp(0.5);
-
-   // create a chi2 function to be used for the equivalent chi-square
-   Chi2FCN<BaseFunc> chi2(data,*fFunc); 
-
-   // check if fFunc provides gradient
-   IGradModelFunction * gradFun = dynamic_cast<IGradModelFunction *>(fFunc); 
-   if (gradFun == 0) { 
-      // do minimzation without using the gradient
-      PoissonLikelihoodFCN<BaseFunc> logl(data,*fFunc); 
-      return DoMinimization<BaseFunc> (*minimizer, logl, data.Size(), &chi2); 
-   } 
-   else { 
-      // use gradient 
-      PoissonLikelihoodFCN<BaseGradFunc> logl(data,*gradFun); 
-      return DoMinimization<BaseGradFunc> (*minimizer, logl, data.Size(), &chi2); 
-   }
-   return false; 
-}
-
-bool Fitter::DoLikelihoodFit(const UnBinData & data) { 
-   // perform a likelihood fit on a set of unbinned data 
-
-   // create Minimizer  
-   std::auto_ptr<ROOT::Math::Minimizer> minimizer = std::auto_ptr<ROOT::Math::Minimizer> ( fConfig.CreateMinimizer() );
-
-   if (minimizer.get() == 0) return false; 
-   
-   if (fFunc == 0) return false; 
-
-#ifdef DEBUG
-   int ipar = 0;
-   std::cout << "Fitter ParamSettings " << Config().ParamsSettings()[ipar].IsBound() << " lower limit " <<  Config().ParamsSettings()[ipar].LowerLimit() << " upper limit " <<  Config().ParamsSettings()[ipar].UpperLimit() << std::endl;
-#endif
-
-   // logl fit (error is 0.5)
-   minimizer->SetErrorUp(0.5);
-
-   // check if fFunc provides gradient
-   IGradModelFunction * gradFun = dynamic_cast<IGradModelFunction *>(fFunc); 
-   if (gradFun == 0) { 
-      // do minimzation without using the gradient
-      LogLikelihoodFCN<BaseFunc> logl(data,*fFunc); 
-      return DoMinimization<BaseFunc> (*minimizer, logl, data.Size()); 
-   } 
-   else { 
-//       // use gradient 
-      LogLikelihoodFCN<BaseGradFunc> logl(data,*gradFun); 
-      return DoMinimization<BaseGradFunc> (*minimizer, logl, data.Size()); 
-   }
-   return false; 
-}
-
-      bool Fitter::DoLinearFit(const BinData & /* data */) { 
-
-   // perform a linear fit on a set of binned data 
-   return true; 
 }
 
 
