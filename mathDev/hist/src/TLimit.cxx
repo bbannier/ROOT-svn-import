@@ -43,8 +43,6 @@
 #include "TClassTable.h"
 #include "Riostream.h"
 
-
-
 ClassImp(TLimit)
 
 TArrayD *TLimit::fgTable = new TArrayD(0);
@@ -88,7 +86,7 @@ TConfidenceLevel *TLimit::ComputeLimit(TLimitDataSource * data,
    <p>Supposing that there is a plotfile.root file containing 3 histograms
            (signal, background and data), you can imagine doing things like:</p>
    <p>
-   <BLOCKQUOT><PRE>
+   <BLOCKQUOTE><PRE>
     TFile* infile=new TFile("plotfile.root","READ");
     infile->cd();
     TH1* sh=(TH1*)infile->Get("signal");
@@ -193,10 +191,6 @@ TConfidenceLevel *TLimit::ComputeLimit(TLimitDataSource * data,
                Double_t rate = (Double_t) ((TH1 *) (fluctuated->GetSignal()->At(channel)))->GetBinContent(bin) +
                                (Double_t) ((TH1 *) (fluctuated->GetBackground()->At(channel)))->GetBinContent(bin);
                Double_t rand = myrandom->Poisson(rate);
-#ifdef DEBUG
-               std::cout <<"signal bin " << bin << " s = " << ((TH1 *) (fluctuated->GetSignal()->At(channel)))->GetBinContent(bin) 
-                         << "  d(s+b)  =  " << rate << " fluct:  " << rand; 
-#endif
                tss[i] += rand * fgTable->At((channel * maxbins) + bin);
                Double_t s = (Double_t) ((TH1 *) (fluctuated->GetSignal()->At(channel)))->GetBinContent(bin);
                Double_t s2= (Double_t) ((TH1 *) (fluctuated2->GetSignal()->At(channel)))->GetBinContent(bin);
@@ -209,21 +203,11 @@ TConfidenceLevel *TLimit::ComputeLimit(TLimitDataSource * data,
                // b hypothesis
                rate = (Double_t) ((TH1 *) (fluctuated->GetBackground()->At(channel)))->GetBinContent(bin);
                rand = myrandom->Poisson(rate);
-#ifdef DEBUG
-               std::cout << "  d(b ) = " << rate << " fluct:  " << rand << std::endl; 
-
-               std::cout << " s, s2, b, b2 " << s << "  " << s2 << "  " << b << "  " << b2 << std::endl;
-#endif
-
                tsb[i] += rand * fgTable->At((channel * maxbins) + bin);
                if ((s2 > 0) && (b > 0))
                   lrb[i] += LogLikelihood(s2, b2, b, rand) - s2 - b2 + b;
                else if ((s > 0) && (b == 0))
                   lrb[i] += 20 * rand - s;
-#ifdef DEBUG
-               std::cout << "TSS - TSB " << tss[i] << "   " << tsb[i] << std::endl; 
-               std::cout << "LRS - LRB " << lrs[i] << "   " << lrb[i] << std::endl; 
-#endif
             }
          }
       }
@@ -271,7 +255,6 @@ bool TLimit::Fluctuate(TLimitDataSource * input, TLimitDataSource * output,
    output = (TLimitDataSource*)(input->Clone());
    // if there are no systematics, just returns the input as "fluctuated" output
    if ((fgSystNames->GetSize() <= 0)&&(!stat)) {
-//      std::cout << "finish to fluctuate - 0" << std::endl;
       return 0;
    }
    // if there are only stat, just fluctuate stats.
@@ -283,24 +266,15 @@ bool TLimit::Fluctuate(TLimitDataSource * input, TLimitDataSource * output,
          if(stat)
             for(int i=1; i<=newsignal->GetNbinsX(); i++) {
                newsignal->SetBinContent(i,oldsignal->GetBinContent(i)+generator->Gaus(0,oldsignal->GetBinError(i)));
-#ifdef DEBUG
-               std::cout << "bin s" << i << " from " << oldsignal->GetBinContent(i) << " to " << newsignal->GetBinContent(i) << std::endl;
-#endif
             }
             newsignal->SetDirectory(0);
             TH1 *newbackground = (TH1*)(output->GetBackground()->At(channel));
             TH1 *oldbackground = (TH1*)(input->GetBackground()->At(channel));
             if(stat)
-               for(int i=1; i<=newbackground->GetNbinsX(); i++) { 
+               for(int i=1; i<=newbackground->GetNbinsX(); i++)
                   newbackground->SetBinContent(i,oldbackground->GetBinContent(i)+generator->Gaus(0,oldbackground->GetBinError(i)));
-#ifdef DEBUG
-                  std::cout << "bin b" << i << " from " << oldsignal->GetBinContent(i) << " to " << newsignal->GetBinContent(i) << std::endl;
-#endif
-
-               }
             newbackground->SetDirectory(0);
       }
-//      std::cout << "finish to fluctuate - 1" << std::endl;
       return 1;
    }
    // Find a choice for the random variation and
@@ -365,7 +339,6 @@ bool TLimit::Fluctuate(TLimitDataSource * input, TLimitDataSource * output,
    }
    delete[] serrf;
    delete[] berrf;
-   //std::cout << "completed the fluctuations - return 1 " << std::endl;
    return 1;
 }
 

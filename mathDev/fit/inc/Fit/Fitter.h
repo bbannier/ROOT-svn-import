@@ -65,6 +65,7 @@ public:
    typedef ROOT::Math::IParamMultiFunction       IModelFunction; 
    typedef ROOT::Math::IParamMultiGradFunction   IGradModelFunction;
    typedef ROOT::Math::IParamFunction            IModel1DFunction; 
+   typedef ROOT::Math::IParamGradFunction        IGradModel1DFunction; 
 
 //    typedef IModelFunction::BaseFunc BaseFunc; 
 //    typedef IGradModelFunction::BaseGradFunc BaseGradFunc; 
@@ -162,9 +163,18 @@ public:
    */ 
    void  SetFunction(const IModelFunction & func); 
    /**
-      Set the fitted function from 1D parametric function interface
+      Set the fitted function from a parametric 1D function interface
     */
    void  SetFunction(const IModel1DFunction & func); 
+
+   /** 
+       Set the fitted function (model function) from a parametric gradient function interface
+   */ 
+   void  SetFunction(const IGradModelFunction & func); 
+   /**
+      Set the fitted function from 1D gradient parametric function interface
+    */
+   void  SetFunction(const IGradModel1DFunction & func); 
 
 //    /** 
 //        Set the fitted function from a generic callable object
@@ -198,6 +208,9 @@ protected:
    bool DoMinimization(ROOT::Math::Minimizer & min, const ObjFunc & f, unsigned int dataSize, const ROOT::Math::IMultiGenFunction * chifunc = 0); 
 
 private: 
+
+   ///flag to indicate if using gradient or not
+   bool fUseGradient;
 
    /// copy of the fitted  function which will contain on output the fit result
    IModelFunction * fFunc; 

@@ -401,14 +401,22 @@ public:
 //#ifdef LATER
    /**
       return error on the value
+      safe (but slower) method returning correctly the error on the value 
+      in case of asymm errors return the average 0.5(eu + el)
     */ 
    double Error(unsigned int ipoint) const { 
       if (fDataVector) { 
+         ErrorType type = GetErrorType(); 
+         if (type == kNoError ) return 1; 
          // error on the value is the last element in the point structure
          double eval =  (fDataVector->Data())[ (ipoint+1)*fPointSize - 1];
-         //if (fWithCoordError) return eval; 
-         // when error in the coordinate is not stored, need to invert it 
-         return eval != 0 ? 1.0/eval : 0; 
+         if (type == kValueError ) // need to invert (inverror is stored) 
+            return eval != 0 ? 1.0/eval : 0; 
+         else if (type == kAsymError) {  // return 1/2(el + eh) 
+            double el = (fDataVector->Data())[ (ipoint+1)*fPointSize - 2];
+            return 0.5 * (el+eval); 
+         }
+         return eval; // case of coord errors
       }
 
       return fDataWrapper->Error(ipoint);
@@ -460,9 +468,10 @@ public:
       return fDataWrapper->Coords(ipoint);
    }
 
-
+   // get coordinate value and error. To be used only when type is kValueError otherwise inverse error is returned
    const double * GetPoint(unsigned int ipoint, double & value, double & invError) const {
       if (fDataVector) { 
+         assert(fPointSize == fDim +2); // value error
          unsigned int j = ipoint*fPointSize;
          const std::vector<double> & v = (fDataVector->Data());
          const double * x = &v[j];
