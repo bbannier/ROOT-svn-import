@@ -53,6 +53,7 @@ public:
    void DoPhi();
 
    void DoTowerHeight();
+   void DoPalette();
 
    ClassDef(TEveCaloVizEditor, 0); // GUI editor for TEveCaloVizEditor.
 };

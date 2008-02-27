@@ -18,9 +18,9 @@
 
 #include "TAtt3D.h"
 #include "TAttBBox.h"
+#include "TEveCaloData.h"
 
 class TClass;
-class TEveCaloData;
 class TEveRGBAPalette;
 
 class TEveCaloViz : public TEveElement,
@@ -54,6 +54,8 @@ protected:
    Bool_t            fValueIsColor;   // Interpret signal value as RGBA color.
    TEveRGBAPalette*  fPalette;        // Pointer to signal-color palette.
 
+   Bool_t            fCacheOK;
+
    void AssignCaloVizParameters(TEveCaloViz* cv);
 
    virtual Bool_t    SetupColorHeight(Float_t value, Int_t slice, Float_t& height) const;
@@ -84,6 +86,8 @@ public:
    void SetPhi(Float_t x){ fPhi= x; }
    void SetPhiRng(Float_t r){ fPhiRng = r;}
 
+   virtual void ResetCache(){}
+
    virtual void Paint(Option_t* option="");
 
    virtual void ComputeBBox();
@@ -102,11 +106,15 @@ private:
    TEveCalo3D(const TEveCalo3D&);            // Not implemented
    TEveCalo3D& operator=(const TEveCalo3D&); // Not implemented
 
+protected:
+   TEveCaloData::vCellId_t fCellList;
+
 public:
    TEveCalo3D(const Text_t* n="TEveCalo3D", const Text_t* t="");
    TEveCalo3D(TEveCaloData* data, const Text_t* n="TEveCalo3D", const Text_t* t="");
    virtual ~TEveCalo3D() {}
 
+   virtual void ResetCache();
 
    ClassDef(TEveCalo3D, 0); // 3D calorimeter class.
 };
@@ -122,6 +130,9 @@ private:
    TEveCalo2D(const TEveCalo2D&);            // Not implemented
    TEveCalo2D& operator=(const TEveCalo2D&); // Not implemented
 
+protected: 
+   std::vector<TEveCaloData::vCellId_t>   fCellLists;
+
 public:
    TEveCalo2D(const Text_t* n="TEveCalo2D", const Text_t* t="");
    virtual ~TEveCalo2D(){}
@@ -129,6 +140,8 @@ public:
    virtual void SetProjection(TEveProjectionManager* proj, TEveProjectable* model);
    virtual void UpdateProjection();
    virtual void SetDepth(Float_t x){fDepth = x;}
+
+   virtual void ResetCache();
 
    virtual void ComputeBBox();
 

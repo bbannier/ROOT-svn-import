@@ -16,6 +16,7 @@
 #include "TEveRGBAPalette.h"
 
 #include "TGLRnrCtx.h"
+#include "TGLSelectRecord.h"
 #include "TGLIncludes.h"
 #include "TGLUtil.h"
 #include "TAxis.h"
@@ -335,3 +336,13 @@ void TEveCalo2DGL::DirectDraw(TGLRnrCtx & /*rnrCtx*/) const
 }
 
 
+//______________________________________________________________________________
+void TEveCalo2DGL::ProcessSelection(TGLRnrCtx & /*rnrCtx*/, TGLSelectRecord & rec)
+{
+   // Processes secondary selection from TGLViewer.
+
+   if (rec.GetN() < 2) return;
+   Int_t vecID = rec.GetItem(1);
+
+   printf("process selection cell vector idx %d \n", vecID);
+}

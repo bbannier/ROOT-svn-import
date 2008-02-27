@@ -301,14 +301,17 @@ Float_t TEveCalo3DGL::RenderEndCapCell(const TEveCaloData::CellData_t &cellData,
 void TEveCalo3DGL::DirectDraw(TGLRnrCtx & /*rnrCtx*/) const
 {
    // printf("TEveCalo3D::DirectDraw\n");
+   fM->AssertPalette();  
 
-   TEveCaloData::vCellId_t cids;
-   TEveCaloData* data = fM->GetData();
+   if (fM->fCacheOK == kFALSE)
+   {
+      fM->ResetCache();
+      fM->fData->GetCellList((fM->fEtaMin+fM->fEtaMax)*0.5f, fM->fEtaMax -fM->fEtaMin,
+                             fM->fPhi, fM->fPhiRng, fM->fThreshold, fM->fCellList);
+      fM->fCacheOK= kTRUE;
+   }
 
-   fM->AssertPalette();
-
-   if (data->GetCellList((fM->fEtaMin+fM->fEtaMax)*0.5f, fM->fEtaMax -fM->fEtaMin,
-                         fM->fPhi, fM->fPhiRng, fM->fThreshold, cids)) 
+   if(fM->fCellList.size())
    {
       glPushAttrib(GL_ENABLE_BIT | GL_POLYGON_BIT);
       glEnable(GL_NORMALIZE);
@@ -317,9 +320,9 @@ void TEveCalo3DGL::DirectDraw(TGLRnrCtx & /*rnrCtx*/) const
       Float_t offset = 0;
       Int_t   prevTower = -1;
       TEveCaloData::CellData_t cellData;
-      for(TEveCaloData::vCellId_i it = cids.begin(); it != cids.end(); it++)
+      for(TEveCaloData::vCellId_i it = fM->fCellList.begin(); it != fM->fCellList.end(); it++)
       {
-         data->GetCellData(*it, cellData);
+         fM->fData->GetCellData(*it, cellData);
          if ((*it).fTower != prevTower) {
             offset = 0;
             prevTower = (*it).fTower;
@@ -330,6 +333,17 @@ void TEveCalo3DGL::DirectDraw(TGLRnrCtx & /*rnrCtx*/) const
          else
             offset = RenderEndCapCell(cellData, (*it).fSlice, offset);
       }
+      glPopAttrib();
    }
-   glPopAttrib();
+}
+
+//______________________________________________________________________________
+void TEveCalo3DGL::ProcessSelection(TGLRnrCtx & /*rnrCtx*/, TGLSelectRecord & rec)
+{
+   // Processes secondary selection from TGLViewer.
+
+   if (rec.GetN() < 2) return;
+   Int_t cellID = rec.GetItem(1);
+
+   printf("process selection cellId %d \n", cellID);
 }

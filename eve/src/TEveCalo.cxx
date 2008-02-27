@@ -53,7 +53,9 @@ TEveCaloViz::TEveCaloViz(const Text_t* n, const Text_t* t) :
 
    fDefaultValue(5),
    fValueIsColor(kTRUE),
-   fPalette(0)
+   fPalette(0),
+
+   fCacheOK(kFALSE)
 {
    // Constructor.
 
@@ -81,7 +83,9 @@ TEveCaloViz::TEveCaloViz(TEveCaloData* data, const Text_t* n, const Text_t* t) :
 
    fDefaultValue(5),
    fValueIsColor(kTRUE),
-   fPalette(0)
+   fPalette(0),
+
+   fCacheOK(kFALSE)
 {
    // Constructor.
 
@@ -262,6 +266,12 @@ TEveCalo3D::TEveCalo3D(TEveCaloData* data, const Text_t* n, const Text_t* t):
 {
 }
 
+//______________________________________________________________________________
+void TEveCalo3D::ResetCache()
+{
+   fCellList.clear();
+ 
+}
 
 ClassImp(TEveCalo2D);
 
@@ -287,6 +297,16 @@ void TEveCalo2D::SetProjection(TEveProjectionManager* mng, TEveProjectable* mode
    TEveProjected::SetProjection(mng, model);
    TEveCaloViz* viz = dynamic_cast<TEveCaloViz*>(model);
    AssignCaloVizParameters(viz);
+}
+
+//______________________________________________________________________________
+void TEveCalo2D::ResetCache()
+{
+   for (std::vector<TEveCaloData::vCellId_t>::iterator it = fCellLists.begin(); it != fCellLists.end(); it++) 
+   {
+      fCellLists.clear(); 
+   }
+   fCellLists.clear();
 }
 
 //______________________________________________________________________________

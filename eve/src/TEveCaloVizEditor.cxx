@@ -110,7 +110,7 @@ void TEveCaloVizEditor::CreateTowerTab()
 
    fPalette = new TEveRGBAPaletteSubEditor(fTower);
    fTower->AddFrame(fPalette, new TGLayoutHints(kLHintsTop | kLHintsExpandX, 2, 0, 0, 0));
-   fPalette->Connect("Changed()", "TEveCaloVizEditor", this, "Update()");
+   fPalette->Connect("Changed()", "TEveCaloVizEditor", this, "DoPalette()");
 
 
 }
@@ -138,6 +138,7 @@ void TEveCaloVizEditor::DoEtaRange()
 {
    fM->fEtaMin = fEtaRng->GetMin();
    fM->fEtaMax = fEtaRng->GetMax();
+   fM->fCacheOK = kFALSE;
    Update();
 }
 
@@ -146,6 +147,7 @@ void TEveCaloVizEditor::DoPhi()
 {
    fM->fPhi    = fPhi->GetValue()*TMath::DegToRad();
    fM->fPhiRng = fPhiRng->GetValue()*TMath::DegToRad();
+   fM->fCacheOK = kFALSE;
    Update();
 }
 
@@ -154,5 +156,12 @@ void TEveCaloVizEditor::DoPhi()
 void TEveCaloVizEditor::DoTowerHeight()
 {
    fM->SetTowerHeight(fTowerHeight->GetValue());
+   Update();
+}
+
+//______________________________________________________________________________
+void TEveCaloVizEditor::DoPalette()
+{
+   fM->fCacheOK = kFALSE;
    Update();
 }
