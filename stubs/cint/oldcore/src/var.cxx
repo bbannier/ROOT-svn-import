@@ -7318,6 +7318,8 @@ struct G__var_array* G__searchvariable(char* varname, int varhash, G__var_array*
    }
    else {
       scope_tagnum = G__tagnum;
+
+#ifdef G__NOSTUBS
       // 25-02-08 ... unknown side effects.
       // We want to be able to specify the class before calling getexpr in newlink.
       // We need a way to trigger this from G__evaluate_libp() in newlink.cxx, and since
@@ -7326,6 +7328,7 @@ struct G__var_array* G__searchvariable(char* varname, int varhash, G__var_array*
       // when running the code)
       if(G__dicttype == (G__dictgenmode)-1)
          ilg = G__MEMBER;
+#endif
    }
    //--
    switch (G__scopeoperator(varname, &varhash, &scope_struct_offset, &scope_tagnum)) {
