@@ -2649,6 +2649,10 @@ void G__gen_cpplink()
   G__nostubs = 1;
 #endif
 
+#ifdef G__NOSTUBSTEST
+  G__nostubs = 0;
+#endif
+
   {
     int algoflag=0;
     int filen;
