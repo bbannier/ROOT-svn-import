@@ -658,7 +658,7 @@ void Cint::Internal::G__gen_cpplink()
       char *sysstl;
       G__getcintsysdir();
       sysstl = (char*)malloc(strlen(G__cintsysdir) + 10);
-      sprintf(sysstl, "%s%sstl%s", G__cintsysdir, G__psep, G__psep);
+      sprintf(sysstl, "%s%score%sstl%s", G__cintsysdir, G__psep, G__psep, G__psep);
       lenstl = strlen(sysstl);
       for (filen = 0;filen < G__nfile;filen++) {
          fname = G__srcfile[filen].filename;
@@ -696,9 +696,9 @@ void Cint::Internal::G__gen_cpplink()
    if (G__CPPLINK == G__globalcomp && -1 != G__defined_tagname("G__longlong", 2)) {
 #if defined(__hpux) && !defined(G__ROOT)
       G__getcintsysdir();
-      fprintf(hfp, "\n#include \"%s%slib/longlong/longlong.h\"\n", G__cintsysdir, G__psep);
+      fprintf(hfp, "\n#include \"%s%score%slib/longlong/longlong.h\"\n", G__cintsysdir, G__psep, G__psep);
 #else
-      fprintf(hfp, "\n#include \"lib/longlong/longlong.h\"\n");
+      fprintf(hfp, "\n#include \"core/lib/longlong/longlong.h\"\n");
 #endif
    }
 #endif /* G__ROOT */
@@ -843,7 +843,7 @@ void Cint::Internal::G__clink_header(FILE* fp)
 #endif
 #if defined(__hpux) && !defined(G__ROOT)
    G__getcintsysdir();
-   fprintf(fp, "#include \"%s%sG__ci.h\"\n", G__cintsysdir, G__psep);
+   fprintf(fp, "#include \"%s%score%sinc%sG__ci.h\"\n", G__cintsysdir, G__psep, G__psep, G__psep);
 #else
    fprintf(fp, "#include \"G__ci.h\"\n");
 #endif
@@ -895,7 +895,7 @@ void Cint::Internal::G__cpplink_header(FILE* fp)
 #endif
 #if defined(__hpux) && !defined(G__ROOT)
    G__getcintsysdir();
-   fprintf(fp, "#include \"%s%sG__ci.h\"\n", G__cintsysdir, G__psep);
+   fprintf(fp, "#include \"%s%score%sinc%sG__ci.h\"\n", G__cintsysdir, G__psep, G__psep, G__psep);
 #else
    fprintf(fp, "#include \"G__ci.h\"\n");
 #endif

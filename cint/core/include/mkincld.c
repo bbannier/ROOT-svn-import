@@ -635,5 +635,5 @@ int main()
   gen_locale();
   gen_stddef();
   gen_signal();
-  exit(EXIT_SUCCESS);
+  return 0;
 }

@@ -35,13 +35,13 @@ IOSENUMH = $(G__CFG_COREVERSION)/include/iosenum.h
 ##############################################################
 # CINT dlls
 ##############################################################
-.PHONY: dlls all $(ALLDLLS)
+.PHONY: dlls all $(ALLDLLS) %.cintdll
 all: $(CINT) $(ALLDLLS) $(IOSENUM) $(MAKECINT)
 
 dlls: $(ALLDLLS)
 ipc.cintdll posix.cintdll: $(G__CFG_COREVERSION)/include/sys/types.h
 
-%.cintdll: $(MAKECINT) $(CINTLIBSTATIC) $(CINT)
+$(ALLDLLS): %.cintdll: $(MAKECINT) $(CINTLIBSTATIC) $(CINT)
 	(cd $(G__CFG_COREVERSION)/lib/$*; $(BUILDDLL))
 
 $(G__CFG_COREVERSION)/include/systypes.h: $(MKTYPES)

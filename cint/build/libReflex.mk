@@ -22,7 +22,7 @@ REFLEXLIB    = libReflex_static$(G__CFG_LIBEXT)
 REFLEXSO     = libReflex$(G__CFG_SOEXT)
 REFLEXIMPLIB = libReflex$(G__CFG_IMPLIBEXT)
 
-ifeq ($(COREVERSION),core)
+ifeq ($(G__CFG_COREVERSION),core)
 ifeq ($(LINKSTATIC),yes)
   REFLEXLINK   = $(G__CFG_LIBP). $(subst @imp@,Reflex_static,$(G__CFG_LIBL))
   REFLEXLIBDEP = $(REFLEXLIB)
