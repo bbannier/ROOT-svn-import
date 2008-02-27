@@ -120,13 +120,17 @@ void TEveListTreeItem::Toggle()
 ClassImp(TEveGListTreeEditorFrame);
 
 //______________________________________________________________________________
-TEveGListTreeEditorFrame::TEveGListTreeEditorFrame(const Text_t* name, Int_t width, Int_t height) :
-   TGMainFrame(gClient->GetRoot(), width, height),
-   fCtxMenu     (0)
+TEveGListTreeEditorFrame::TEveGListTreeEditorFrame(const TGWindow* p, Int_t width, Int_t height) :
+   TGMainFrame (p ? p : gClient->GetRoot(), width, height),
+   fFrame      (0),
+   fLTFrame    (0),
+   fListTree   (0),
+   fSplitter   (0),
+   fEditor     (0),
+   fCtxMenu    (0)
 {
    // Constructor.
 
-   SetWindowName(name);
    SetCleanup(kNoCleanup);
 
    fFrame = new TGCompositeFrame(this, width, height, kVerticalFrame);

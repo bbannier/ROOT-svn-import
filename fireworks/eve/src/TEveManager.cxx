@@ -106,10 +106,9 @@ TEveManager::TEveManager(UInt_t w, UInt_t h) :
 
    // ListTreeEditor
    fBrowser->StartEmbedding(0);
-   fLTEFrame = new TEveGListTreeEditorFrame("Eve list-tree/editor");
-   fBrowser->StopEmbedding();
-   fBrowser->SetTabTitle("Eve", 0);
-   fEditor   = fLTEFrame->fEditor;
+   fLTEFrame = new TEveGListTreeEditorFrame;
+   fBrowser->StopEmbedding("Eve");
+   fEditor = fLTEFrame->fEditor;
 
    // GL viewer
    fBrowser->StartEmbedding(1);
