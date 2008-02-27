@@ -657,7 +657,7 @@ void Cint::Internal::G__gen_cpplink()
       int lenstl;
       char *sysstl;
       G__getcintsysdir();
-      sysstl = (char*)malloc(strlen(G__cintsysdir) + 10);
+      sysstl = (char*)malloc(strlen(G__cintsysdir) + 20);
       sprintf(sysstl, "%s%score%sstl%s", G__cintsysdir, G__psep, G__psep, G__psep);
       lenstl = strlen(sysstl);
       for (filen = 0;filen < G__nfile;filen++) {
