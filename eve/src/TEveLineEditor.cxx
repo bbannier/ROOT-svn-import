@@ -21,12 +21,16 @@
 #include "TGColorSelect.h"
 #include "TGDoubleSlider.h"
 
-//______________________________________________________________________________
+//==============================================================================
+//==============================================================================
 // TEveLineEditor
+//==============================================================================
+
+//______________________________________________________________________________
 //
 // Editor for TEveLine class.
 
-ClassImp(TEveLineEditor)
+ClassImp(TEveLineEditor);
 
 //______________________________________________________________________________
 TEveLineEditor::TEveLineEditor(const TGWindow *p, Int_t width, Int_t height,
@@ -46,7 +50,7 @@ TEveLineEditor::TEveLineEditor(const TGWindow *p, Int_t width, Int_t height,
       f->AddFrame(fRnrPoints, new TGLayoutHints(kLHintsLeft, 2,1,0,0));
       fRnrPoints->Connect("Toggled(Bool_t)"," TEveLineEditor", this, "DoRnrPoints()");
 
-      fRnrLine  = new TGCheckButton(f, "Draw TEveLine");
+      fRnrLine  = new TGCheckButton(f, "Draw Line");
       f->AddFrame(fRnrLine, new TGLayoutHints(kLHintsLeft, 1,2,0,0));
       fRnrLine->Connect("Toggled(Bool_t)", "TEveLineEditor", this, "DoRnrLine()");
 

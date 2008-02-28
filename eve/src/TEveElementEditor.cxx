@@ -56,7 +56,7 @@ TEveElementEditor::TEveElementEditor(const TGWindow *p,
 
    fHFrame = new TGHorizontalFrame(this);
 
-   fPreLabel = new TGLabel(fHFrame, "Show");
+   fPreLabel = new TGLabel(fHFrame, "Show:");
    fHFrame->AddFrame(fPreLabel, new TGLayoutHints(kLHintsLeft, 1, 6, 2, 0));
    fRnrSelf = new TGCheckButton(fHFrame, "Self");
    fHFrame->AddFrame(fRnrSelf, new TGLayoutHints(kLHintsLeft, 0, 2, 1, 1));
