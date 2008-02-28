@@ -23,7 +23,7 @@
 
 ClassImp(TEveCaloData);
 
-TEveCaloData::TEveCaloData()
+TEveCaloData::TEveCaloData():TEveRefCnt()
 {
    // Constructor.
 
@@ -67,11 +67,12 @@ Float_t TEveCaloData::CellData_t::ThetaMax(Bool_t sig) const
 //______________________________________________________________________________
 void TEveCaloData::CellData_t::Dump() const
 {
-   // Print info to stdout.
-
-   Float_t f = TMath::RadToDeg();
-   printf("theta(%f, %f) phi(%f, %f) val %f \n",fThetaMin*f, fThetaMax*f, fPhiMin*f, fPhiMax*f, fValue );
+   printf(">> theta %2.1f phi %2.1f val %2.2f \n",
+          Theta(kTRUE)*TMath::RadToDeg(),
+          Phi()*TMath::RadToDeg(),
+          Value());
 }
+
 //______________________________________________________________________________
 // Description of TEveCaloDataHist
 //

@@ -67,7 +67,7 @@ TEveCaloViz::TEveCaloViz(TEveCaloData* data, const Text_t* n, const Text_t* t) :
    TEveElement(),
    TNamed(n, t),
 
-   fData(data),
+   fData(0),
 
    fEtaMin(-5.),
    fEtaMax(5.),
@@ -89,6 +89,7 @@ TEveCaloViz::TEveCaloViz(TEveCaloData* data, const Text_t* n, const Text_t* t) :
 {
    // Constructor.
 
+   SetData(data);
 }
 
 //______________________________________________________________________________
@@ -96,7 +97,8 @@ TEveCaloViz::~TEveCaloViz()
 {
    // Destructor.
 
-   SetPalette(0);
+   if (fPalette) fPalette->DecRefCount();
+   if (fData) fData->DecRefCount();
 }
 
 //______________________________________________________________________________
@@ -114,9 +116,18 @@ Float_t TEveCaloViz::GetTransitionEta() const
 }
 
 //______________________________________________________________________________
+void TEveCaloViz::SetData(TEveCaloData* data)
+{
+   if (data == fData) return;
+   if (fData) fData->DecRefCount();
+   fData = data;
+   if (fData) fData->IncRefCount();
+}
+
+//______________________________________________________________________________
 void TEveCaloViz::AssignCaloVizParameters(TEveCaloViz* m)
 {
-   fData = m->fData;
+   SetData(m->fData);
 
    fEtaMin    = m->fEtaMin;
    fEtaMax    = m->fEtaMax;
@@ -228,7 +239,7 @@ inline Bool_t TEveCaloViz::SetupColorHeight(Float_t value, Int_t slice, Float_t 
       {
          TGLUtil::Color(fPalette->GetDefaultColor()+slice);
          out *= ((value -fPalette->GetMinVal())
-                 /(fPalette->GetMaxVal() -fPalette->GetMinVal()));
+                 /(fPalette->GetHighLimit() -fPalette->GetLowLimit()));
          return kTRUE;
       }
    }
@@ -270,7 +281,6 @@ TEveCalo3D::TEveCalo3D(TEveCaloData* data, const Text_t* n, const Text_t* t):
 void TEveCalo3D::ResetCache()
 {
    fCellList.clear();
- 
 }
 
 ClassImp(TEveCalo2D);
@@ -278,15 +288,19 @@ ClassImp(TEveCalo2D);
 //______________________________________________________________________________
 TEveCalo2D::TEveCalo2D(const Text_t* n, const Text_t* t):
    TEveCaloViz(n, t),
-   TEveProjected()
+   TEveProjected(),
+   fOldProjectionType(TEveProjection::kPT_Unknown)
 {
 }
 
 //______________________________________________________________________________
 void TEveCalo2D::UpdateProjection()
 {
-   ComputeBBox();
-   ElementChanged(kTRUE, kTRUE);
+   if (fManager->GetProjection()->GetType() != fOldProjectionType)
+   {
+      fCacheOK=kFALSE;
+      fOldProjectionType = fManager->GetProjection()->GetType();
+   }
 }
 
 //______________________________________________________________________________
@@ -302,9 +316,9 @@ void TEveCalo2D::SetProjection(TEveProjectionManager* mng, TEveProjectable* mode
 //______________________________________________________________________________
 void TEveCalo2D::ResetCache()
 {
-   for (std::vector<TEveCaloData::vCellId_t>::iterator it = fCellLists.begin(); it != fCellLists.end(); it++) 
+   for (std::vector<TEveCaloData::vCellId_t*>::iterator it = fCellLists.begin(); it != fCellLists.end(); it++) 
    {
-      fCellLists.clear(); 
+      delete *it; 
    }
    fCellLists.clear();
 }
@@ -316,8 +330,6 @@ void TEveCalo2D::ComputeBBox()
    // If member 'TEveFrameBox* fFrame' is set, frame's corners are used as bbox.
 
    BBoxZero();
-   TEveProjection& proj = *fManager->GetProjection();
-
    Float_t th = fTowerHeight*fData->GetNSlices()*fBarrelRadius; 
 
    Float_t x1, y1, z1, x2, y2, z2;
@@ -326,8 +338,11 @@ void TEveCalo2D::ComputeBBox()
    z1 = -fEndCapPos - th;
    z2 =  fEndCapPos + th;
 
-   proj.ProjectPoint(x1, y1, z1);
-   proj.ProjectPoint(x2, y2, z2);
+   if (fManager->GetProjection())
+   {
+      fManager->GetProjection()->ProjectPoint(x1, y1, z1);
+      fManager->GetProjection()->ProjectPoint(x2, y2, z2);
+   }
 
    fBBox[0] = x1;
    fBBox[1] = x2;
