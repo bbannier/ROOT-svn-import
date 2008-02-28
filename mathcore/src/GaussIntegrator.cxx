@@ -287,5 +287,5 @@ double GaussIntegratorOneDim::IntegralCauchy (double /*a*/, double /*b*/, double
 }
 
 
-};
-};
+}
+}

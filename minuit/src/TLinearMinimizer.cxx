@@ -97,7 +97,7 @@ void TLinearMinimizer::SetFunction(const  IGradObjFunction & objfunc) {
    // get model function
    typedef  Chi2Func::IModelFunction ModelFunc; 
    const ModelFunc & modfunc =  chi2func->ModelFunction(); 
-   fDim = chi2func->NDim();
+   fDim = chi2func->NDim(); // number of parameters
    fNFree = fDim;
 
    // get the basis functions (derivatives of the modelfunc)
@@ -112,7 +112,7 @@ void TLinearMinimizer::SetFunction(const  IGradObjFunction & objfunc) {
 
    // create TLinearFitter (do it now because olny now now the coordinate dimensions)
    if (fFitter) delete fFitter; // reset by deleting previous copy
-   fFitter = new TLinearFitter( modfunc.NDim() ); 
+   fFitter = new TLinearFitter( static_cast<const ModelFunc::BaseFunc&>(modfunc).NDim() ); 
    fFitter->StoreData(false); 
 
    fFitter->SetBasisFunctions(&flist); 

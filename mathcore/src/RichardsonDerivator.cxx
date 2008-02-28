@@ -220,5 +220,5 @@ double RichardsonDerivator::Derivative3 (double x)
    return deriv;
 }
 
-};
-};
+}
+}

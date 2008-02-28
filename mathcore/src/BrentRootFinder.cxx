@@ -92,5 +92,5 @@ int BrentRootFinder::Solve(int, double, double /*double xmin, double xmax*/)
    return 1;
 }
 
-};
-};
+}
+}

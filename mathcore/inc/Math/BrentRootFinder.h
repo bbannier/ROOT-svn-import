@@ -41,7 +41,7 @@ namespace Math {
       double fRoot;
    };
    
-};
-};
+}
+}
 
 #endif

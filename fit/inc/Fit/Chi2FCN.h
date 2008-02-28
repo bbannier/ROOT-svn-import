@@ -52,11 +52,11 @@ namespace ROOT {
 
 template<class FunType> 
 struct ModelFunctionTrait { 
-   typedef  ROOT::Math::IParamMultiFunction ModelFunc;
+   typedef  ::ROOT::Math::IParamMultiFunction ModelFunc;
 };
 template<>      
 struct ModelFunctionTrait<ROOT::Math::IMultiGradFunction>  { 
-   typedef  ROOT::Math::IParamMultiGradFunction ModelFunc;
+   typedef  ::ROOT::Math::IParamMultiGradFunction ModelFunc;
 };
 
 
@@ -67,13 +67,13 @@ struct ModelFunctionTrait<ROOT::Math::IMultiGradFunction>  {
    @ingroup  FitMethodFunc   
 */ 
 template<class FunType> 
-class Chi2FCN : public ROOT::Math::BasicFitMethodFunction<FunType> {
+class Chi2FCN : public ::ROOT::Math::BasicFitMethodFunction<FunType> {
 
 public: 
 
 
 
-   typedef  ROOT::Math::BasicFitMethodFunction<FunType> BaseObjFunction; 
+   typedef  ::ROOT::Math::BasicFitMethodFunction<FunType> BaseObjFunction; 
    typedef typename  BaseObjFunction::BaseFunction BaseFunction; 
 
    typedef  typename ModelFunctionTrait<FunType>::ModelFunc IModelFunction;

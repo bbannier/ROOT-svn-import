@@ -243,5 +243,5 @@ void GaussLegendreIntegrator::CalcGaussLegendreSamplingPoints()
 }
 
 
-};
-};
+}
+}

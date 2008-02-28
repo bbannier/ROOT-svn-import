@@ -49,16 +49,16 @@ namespace ROOT {
    @ingroup  FitMethodFunc   
 */ 
 template<class FunType> 
-class LogLikelihoodFCN : public ROOT::Math::BasicFitMethodFunction<FunType>  {
+class LogLikelihoodFCN : public ::ROOT::Math::BasicFitMethodFunction<FunType>  {
 
 public: 
 
 
 
-   typedef  ROOT::Math::BasicFitMethodFunction<FunType> BaseObjFunction; 
+   typedef  ::ROOT::Math::BasicFitMethodFunction<FunType> BaseObjFunction; 
    typedef typename  BaseObjFunction::BaseFunction BaseFunction; 
 
-   typedef  ROOT::Math::IParamMultiFunction IModelFunction;
+   typedef  ::ROOT::Math::IParamMultiFunction IModelFunction;
 
 
    /** 
