@@ -96,9 +96,14 @@ protected:
 
    TContextMenu     *fCtxMenu;
 
+   Bool_t            fSignalsConnected;
+
 public:
    TEveGListTreeEditorFrame(const TGWindow* p=0, Int_t width=250, Int_t height=700);
    virtual ~TEveGListTreeEditorFrame();
+
+   void ConnectSignals();
+   void DisconnectSignals();
 
    void ReconfToHorizontal();
    void ReconfToVertical();
