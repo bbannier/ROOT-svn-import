@@ -14,12 +14,13 @@
 
 #include <vector>
 #include "Rtypes.h"
+#include "TEveUtil.h"
 
 class TH2F;
 class TAxis;
 class TObjArray;
 
-class TEveCaloData
+class TEveCaloData: public TEveRefCnt
 {
 public:
    struct CellId_t

@@ -29,15 +29,14 @@ private:
 
 protected:
    TEveCalo2D             *fM;  // Model object.
-   TEveProjection         *fProjection;
 
    Float_t   MakeRhoZBarrelCell(Float_t thetaMin, Float_t thetaMax, Int_t phiSign, Float_t height, Float_t offset) const;
    Float_t   MakeRhoZEndCapCell(Float_t thetaMin, Float_t thetaMax, Int_t phiSign, Float_t height, Float_t offset) const;
 
-   Float_t   MakeRPhiCell(Float_t phiMin, Float_t phiMax, Float_t offset, Float_t height) const;
+   Float_t   MakeRPhiCell(Float_t phiMin, Float_t phiMax, Float_t towerH, Float_t offset) const;
 
-   void      DrawRPhi() const;
-   void      DrawRhoZ() const;
+   void      DrawRPhi(TGLRnrCtx & rnrCtx) const;
+   void      DrawRhoZ(TGLRnrCtx & rnrCtx) const;
 
 public:
    TEveCalo2DGL();

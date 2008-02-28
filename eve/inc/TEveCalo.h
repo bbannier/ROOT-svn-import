@@ -67,6 +67,7 @@ public:
    virtual ~TEveCaloViz();
 
    TEveCaloData* GetData() const { return fData; }
+   virtual void  SetData(TEveCaloData* d);
 
    Float_t GetBarrelRadius() const { return fBarrelRadius; }
    void SetBarrelRadius(Float_t r) { fBarrelRadius = r; }
@@ -130,8 +131,9 @@ private:
    TEveCalo2D(const TEveCalo2D&);            // Not implemented
    TEveCalo2D& operator=(const TEveCalo2D&); // Not implemented
 
+   TEveProjection::EPType_e  fOldProjectionType;
 protected: 
-   std::vector<TEveCaloData::vCellId_t>   fCellLists;
+   std::vector<TEveCaloData::vCellId_t*>   fCellLists;
 
 public:
    TEveCalo2D(const Text_t* n="TEveCalo2D", const Text_t* t="");
