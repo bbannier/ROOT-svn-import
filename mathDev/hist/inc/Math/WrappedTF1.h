@@ -20,6 +20,7 @@
 
 
 #include "TF1.h"
+#include <cmath>
 
 namespace ROOT { 
 
@@ -30,6 +31,7 @@ namespace ROOT {
    Class to Wrap a ROOT Function class (like TF1)  in a IParamFunction interface
    of one dimensions to be used in the ROOT::Math numerical algorithms
    The parameter are stored in the WrappedFunction so we don't rely on the TF1 state values. 
+   We use TF1 only for the function evaluation
    This allows for the copy of the wrapper function without the need to copy the TF1. 
    The wrapper does not own the TF1 pointer, so it assumes it exists during the wrapper lifetime
 
@@ -48,11 +50,29 @@ public:
       constructor from a function pointer. 
    */ 
    WrappedTF1 ( TF1 & f  )  : 
+      fLinear(false), 
+      fPolynomial(false),
       fFunc(&f), 
       fParams(f.GetParameters(),f.GetParameters()+f.GetNpar())
 
    {
+      // init the pointers for CINT
       fFunc->InitArgs(fX, &fParams.front() );
+      // distinguish case of polynomial functions and linear functions
+      if (fFunc->GetNumber() >= 300 && fFunc->GetNumber() < 310) { 
+         fLinear = true; 
+         fPolynomial = true; 
+      }
+      // check that in case function is linear the linear terms are not zero
+      if (fFunc->IsLinear() ) { 
+         unsigned int ip = 0; 
+         fLinear = true;
+         while (fLinear)  { 
+            fLinear &= (fFunc->GetLinearPart(ip) != 0) ; 
+            ip++;
+         }
+      }
+
    }
 
    /** 
@@ -66,6 +86,8 @@ public:
    WrappedTF1(const WrappedTF1 & rhs) :
       BaseFunc(),
       BaseGradFunc(),
+      fLinear(rhs.fLinear), 
+      fPolynomial(rhs.fPolynomial),
       fFunc(rhs.fFunc), 
       fParams(rhs.fParams)
    {
@@ -77,6 +99,8 @@ public:
    */ 
    WrappedTF1 & operator = (const WrappedTF1 & rhs) { 
       if (this == &rhs) return *this;  // time saving self-test
+      fLinear = rhs.fLinear;  
+      fPolynomial = rhs.fPolynomial; 
       fFunc = rhs.fFunc; 
       fFunc->InitArgs(fX, &fParams.front() );
       fParams = rhs.fParams;
@@ -134,9 +158,16 @@ public:
 
    /// evaluate the derivative of the function with respect to the parameters
    void  ParameterGradient(double x, double * grad ) const { 
-      fFunc->SetParameters(&fParams.front() );
-      static const double kEps = 0.001;
-      fFunc->GradientPar(&x,grad,kEps); 
+      if (!fLinear) { 
+         fFunc->SetParameters(&fParams.front() );
+         static const double kEps = 0.001;
+         fFunc->GradientPar(&x,grad,kEps);
+      }
+      else { 
+         unsigned int np = NPar();
+         for (unsigned int i = 0; i < np; ++i) 
+            grad[i] = DoParameterDerivative(x, i);
+      }
    }
 
 
@@ -162,12 +193,17 @@ private:
    /// evaluate the derivative of the function with respect to the parameters
    double  DoParameterDerivative(double x, unsigned int ipar ) const { 
       // not very efficient - use ParameterGradient
-      if (! fFunc->IsLinear() || fFunc->GetLinearPart(ipar) == 0 ) {  
+      if (! fLinear ) {  
          std::vector<double> grad(NPar());
          ParameterGradient(x, &grad[0] ); 
          return grad[ipar]; 
       }
+      else if (fPolynomial) { 
+         // case of polynomial function 
+         return std::pow(x, static_cast<int>(ipar) );  
+      }
       else { 
+         // case of general linear function (bbuilt with ++ )
          const TFormula * df = dynamic_cast<const TFormula*>( fFunc->GetLinearPart(ipar) );
          assert(df != 0); 
          fX[0] = x; 
@@ -178,6 +214,8 @@ private:
 
 
    // pointer to ROOT function
+   bool fLinear;      // linear function 
+   bool fPolynomial;    // polynomial function
    TF1 * fFunc; 
    mutable double fX[1]; 
    std::vector<double> fParams;
