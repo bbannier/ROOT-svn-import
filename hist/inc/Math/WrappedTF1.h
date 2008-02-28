@@ -114,7 +114,7 @@ public:
        Clone the wrapper but not the original function
    */
    ROOT::Math::IGenFunction * Clone() const { 
-      return new WrappedTF1(*fFunc); 
+      return  new WrappedTF1(*this); 
    } 
 
 

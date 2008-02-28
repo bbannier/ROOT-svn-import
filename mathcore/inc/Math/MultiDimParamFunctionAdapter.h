@@ -41,8 +41,7 @@ namespace Math {
    and ROOT::Math::GradFunctor for gradient functions
 
    This class differs from WrappedParamFunction in the fact that the parameters are not stored in 
-   the adapter class and copying this adapter class copies also the own class. 
-   So it is a copy with ownership
+   the adapter class and optionally it keeps a cloned and managed copy of the adapter class.
 
    @ingroup  CppFunctions
    
@@ -55,12 +54,23 @@ public:
 
   
    /** 
-      Constructor from a param one dim function interface
+      Constructor from a parametric one dim function interface from a const reference
+      Own the function in this case
    */ 
-   MultiDimParamFunctionAdapter (IParamFunction & f, bool ownFunc = true) : 
-      fOwn(ownFunc),
+   MultiDimParamFunctionAdapter (const IParamFunction & f ) : 
+      fOwn(true)
+   {  
+      fFunc = dynamic_cast<IParamFunction *>( f.Clone() ); 
+   }  
+
+   /** 
+      Constructor from a parametric one dim function interface from a non-const reference
+      Do not own the function in this case
+   */ 
+   MultiDimParamFunctionAdapter (IParamFunction & f ) : 
+      fOwn(false),
       fFunc(&f)
-   {  }  
+   { }
 
 
    /**
@@ -70,7 +80,7 @@ public:
       BaseFunc(),
       IParamMultiFunction(),
       fOwn(rhs.fOwn), 
-      fFunc(rhs.fFunc)
+      fFunc(0)
    {  
       if (fOwn) 
          fFunc = dynamic_cast<IParamFunction *>( (rhs.fFunc)->Clone() ); 
@@ -79,7 +89,9 @@ public:
    /** 
       Destructor (no operations)
    */ 
-   virtual ~MultiDimParamFunctionAdapter ()  { if (fOwn) delete fFunc; }  
+   virtual ~MultiDimParamFunctionAdapter ()  { 
+      if (fOwn && fFunc != 0) delete fFunc; 
+   }  
 
 
    /**
@@ -150,6 +162,8 @@ private:
    The parameters are not stored in the adapter class and by default the pointer to the 1D function is owned. 
    This means that deleteing the class deletes also the 1D function and copying the class copies also the 
    1D function 
+   This class differs from WrappedParamFunction in the fact that the parameters are not stored in 
+   the adapter class and optionally it keeps a cloned and managed copy of the adapter class.
 
    @ingroup  CppFunctions
    
@@ -162,12 +176,23 @@ public:
 
   
    /** 
-      Constructor from a param one dim function interface
+      Constructor from a param one dim function interface from a const reference
+      Copy and manage the own function pointer
    */ 
-   MultiDimParamGradFunctionAdapter (IParamGradFunction & f, bool ownFunc = true) : 
-      fOwn(ownFunc),
+   MultiDimParamGradFunctionAdapter (const IParamGradFunction & f) : 
+      fOwn(true)
+   { 
+      fFunc = dynamic_cast<IParamGradFunction *>( f.Clone() ); 
+   }  
+
+   /** 
+      Constructor from a param one dim function interface from a non const reference
+      Do not  own the function pointer in this case
+   */ 
+   MultiDimParamGradFunctionAdapter (IParamGradFunction & f) : 
+      fOwn(false),
       fFunc(&f)
-   {  }  
+   { }  
 
 
    /**
@@ -186,7 +211,7 @@ public:
    /** 
       Destructor (no operations)
    */ 
-   virtual ~MultiDimParamGradFunctionAdapter ()  { if (fOwn) delete fFunc; }  
+   virtual ~MultiDimParamGradFunctionAdapter ()  { if (fOwn && fFunc != 0) delete fFunc; }  
 
 
    /**

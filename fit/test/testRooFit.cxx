@@ -116,7 +116,7 @@ class MultiGaussRooPdf {
          //assert(n >= 2);
 
          // create the gaussians
-         for (int j = 0; j < n; ++j) { 
+         for (unsigned int j = 0; j < n; ++j) { 
             
             std::string xname = "x_" + ROOT::Math::Util::ToString(j);
             x[j] = new RooRealVar(xname.c_str(),xname.c_str(),-10000,10000) ;
@@ -220,7 +220,7 @@ int  FitUsingRooFit(TTree & tree, RooAbsPdf & pdf, RooArgSet & xvars) {
       std::cout << " Roofit status " << result->status() << std::endl; 
       result->Print();
 #endif
-
+      iret |= (result == 0);
 
    }
 
