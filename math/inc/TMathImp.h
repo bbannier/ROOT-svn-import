@@ -2,6 +2,30 @@
 #ifndef __TMATHIMP__
 #define __TMATHIMP__
 
+template<typename T> 
+struct CompareDesc { 
+
+   CompareDesc(const T *  d) : fData(d) {}
+
+   bool operator()(int i1, int i2) { 
+      return fData[i1] > fData[i2];
+   }
+
+   const T * fData; 
+};
+
+template<typename T> 
+struct CompareAsc { 
+
+   CompareAsc(const T *  d) : fData(d) {}
+
+   bool operator()(int i1, int i2) { 
+      return fData[i1] < fData[i2];
+   }
+
+   const T * fData; 
+};
+
 template <typename T> Double_t TMath::Mean(Long64_t n, const T *a, const Double_t *w)
 {
    // Return the weighted mean of an array a with length n.
@@ -99,16 +123,11 @@ template <typename T> Long64_t TMath::BinarySearch(Long64_t n, const T  *array, 
    // If match is found, function returns position of element.
    // If no match found, function gives nearest element smaller than value.
 
-   Long64_t nabove, nbelow, middle;
-   nabove = n+1;
-   nbelow = 0;
-   while(nabove-nbelow > 1) {
-      middle = (nabove+nbelow)/2;
-      if (value == array[middle-1]) return middle-1;
-      if (value  < array[middle-1]) nabove = middle;
-      else                          nbelow = middle;
-   }
-   return nbelow-1;
+   const T* pind;
+   pind = std::lower_bound(array, array + n, value);
+   Long64_t index = ((*pind == value)? (pind - array): ( pind - array - 1));
+
+   return index;
 }
 
 template <typename T> Long64_t TMath::BinarySearch(Long64_t n, const T **array, T value)
@@ -119,16 +138,11 @@ template <typename T> Long64_t TMath::BinarySearch(Long64_t n, const T **array, 
    // If match is found, function returns position of element.
    // If no match found, function gives nearest element smaller than value.
 
-   Long64_t nabove, nbelow, middle;
-   nabove = n+1;
-   nbelow = 0;
-   while(nabove-nbelow > 1) {
-      middle = (nabove+nbelow)/2;
-      if (value == *array[middle-1]) return middle-1;
-      if (value  < *array[middle-1]) nabove = middle;
-      else                           nbelow = middle;
-   }
-   return nbelow-1;
+   const T* pind;
+   pind = std::lower_bound(*array, *array + n, value);
+   Long64_t index = ((*pind == value)? (pind - *array): ( pind - *array - 1));
+
+   return index;
 }
 
 template <typename Element, typename Index, typename Size> void TMath::Sort(Size n, const Element* a, Index* index, Bool_t down)
@@ -295,66 +309,17 @@ void TMath::SortImp(Size n1, const Element *a,
    // Sort the n1 elements of the array a.of Element
    // In output the array index contains the indices of the sorted array.
    // If down is false sort in increasing order (default is decreasing order).
-   // This is a translation of the CERNLIB routine sortzv (M101)
-   // based on the quicksort algorithm.
+   //
    // NOTE that the array index must be created with a length >= n1
    // before calling this function.
    //
    // See also the declarations at the top of this file.
 
-   Size i,i1,n,i2,i3,i33,i222,iswap,n2;
-   Size i22 = 0;
-   Element ai;
-   n = n1;
-   if (n <= 0 || !a) return;
-   if (n == 1) {index[0] = 0; return;}
-   for (i=0;i<n;i++) index[i] = i+1;
-   for (i1=2;i1<=n;i1++) {
-      i3 = i1;
-      i33 = index[i3-1];
-      ai  = a[i33-1];
-      while(1) {
-         i2 = i3/2;
-         if (i2 <= 0) break;
-         i22 = index[i2-1];
-         if (ai <= a[i22-1]) break;
-         index[i3-1] = i22;
-         i3 = i2;
-      }
-      index[i3-1] = i33;
-   }
-
-   while(1) {
-      i3 = index[n-1];
-      index[n-1] = index[0];
-      ai = a[i3-1];
-      n--;
-      if( n < 1) {index[0] = i3; break;}
-      i1 = 1;
-      while(2) {
-         i2 = i1+i1;
-         if (i2 <= n) i22 = index[i2-1];
-         if (i2-n > 0) {index[i1-1] = i3; break;}
-         if (i2 < n) {
-            i222 = index[i2];
-            if (a[i22-1] - a[i222-1] < 0) {
-               i2++;
-               i22 = i222;
-            }
-         }
-         if (ai - a[i22-1] > 0) {index[i1-1] = i3; break;}
-         index[i1-1] = i22;
-         i1 = i2;
-      }
-   }
-   for (i=0;i<n1;i++) index[i]--;
-   if (!down) return;
-   n2 = n1/2;
-   for (i=0;i<n2;i++) {
-      iswap         = index[i];
-      index[i]      = index[n1-i-1];
-      index[n1-i-1] = iswap;
-   }
+    for(Size i = 0; i < n1; i++) { index[i] = i; }
+    if ( down )
+       std::sort(index, index + n1, CompareDesc<Element>(a) );
+    else
+       std::sort(index, index + n1, CompareAsc<Element>(a) );
 }
 
 template <class Element, typename Size>
