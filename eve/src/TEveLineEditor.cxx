@@ -38,7 +38,8 @@ TEveLineEditor::TEveLineEditor(const TGWindow *p, Int_t width, Int_t height,
    TGedFrame(p, width, height, options | kVerticalFrame, back),
    fM(0),
    fRnrLine   (0),
-   fRnrPoints (0)
+   fRnrPoints (0),
+   fSmooth (0)
 {
    // Constructor.
 
@@ -56,6 +57,9 @@ TEveLineEditor::TEveLineEditor(const TGWindow *p, Int_t width, Int_t height,
 
       AddFrame(f, new TGLayoutHints(kLHintsTop, 0,0,2,1));
    }
+   fSmooth  = new TGCheckButton(this, "Smooth line");
+   AddFrame(fSmooth, new TGLayoutHints(kLHintsNormal, 2,1,2,1));
+   fSmooth->Connect("Toggled(Bool_t)", "TEveLineEditor", this, "DoSmooth()");
 }
 
 /******************************************************************************/
@@ -69,6 +73,7 @@ void TEveLineEditor::SetModel(TObject* obj)
 
    fRnrLine  ->SetState(fM->fRnrLine  ? kButtonDown : kButtonUp);
    fRnrPoints->SetState(fM->fRnrPoints ? kButtonDown : kButtonUp);
+   fSmooth->SetState(fM->fSmooth ? kButtonDown : kButtonUp);
 }
 
 /******************************************************************************/
@@ -88,5 +93,14 @@ void TEveLineEditor::DoRnrPoints()
    // Slot for RnrPoints.
 
    fM->SetRnrPoints(fRnrPoints->IsOn());
+   Update();
+}
+
+//______________________________________________________________________________
+void TEveLineEditor::DoSmooth()
+{
+   // Slot for anti-alias.
+
+   fM->SetSmooth(fSmooth->IsOn());
    Update();
 }

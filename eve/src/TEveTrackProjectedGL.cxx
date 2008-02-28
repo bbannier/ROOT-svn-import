@@ -61,6 +61,8 @@ void TEveTrackProjectedGL::DirectDraw(TGLRnrCtx& rnrCtx) const
    // lines
    if (fM->fRnrLine)
    {
+      TGLCapabilitySwitch sw_smooth(GL_LINE_SMOOTH, fM->fSmooth);
+      TGLCapabilitySwitch sw_blend(GL_BLEND, fM->fSmooth);
       Int_t start = 0;
       Float_t* p  = fM->GetP();
       TGLUtil::LockColor(); // Keep color from TGLPhysicalShape.

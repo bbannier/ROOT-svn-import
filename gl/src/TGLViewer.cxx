@@ -352,6 +352,9 @@ void TGLViewer::InitGL()
    glLightModelfv(GL_LIGHT_MODEL_AMBIENT, lmodelAmb);
    glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_FALSE);
 
+   glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);
+   glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+
    TGLUtil::CheckError("TGLViewer::InitGL");
    fInitGL = kTRUE;
 }
