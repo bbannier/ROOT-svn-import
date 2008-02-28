@@ -602,7 +602,8 @@ TEveGeoShape* TEveGeoShape::SubImportShapeExtract(TEveGeoShapeExtract* gse,
    if (gsre->fShape)
       gsre->fShape->SetUniqueID(gsre->fShape->GetUniqueID() + 1);
 
-   gEve->AddGlobalElement(gsre, parent);
+   if (parent)
+      parent->AddElement(gsre);
 
    if (gse->HasElements())
    {

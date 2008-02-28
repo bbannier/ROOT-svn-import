@@ -22,9 +22,10 @@
 
 #include <list>
 
-/******************************************************************************/
+//==============================================================================
+//==============================================================================
 // TEveProjectionManager
-/******************************************************************************/
+//==============================================================================
 
 //______________________________________________________________________________
 //
@@ -204,6 +205,7 @@ TEveElement* TEveProjectionManager::ImportElementsRecurse(TEveElement* el,
       new_el->SetElementTitle(Form("Projected replica.\n%s", el->GetElementTitle()));
       new_el->SetRnrSelf     (el->GetRnrSelf());
       new_el->SetRnrChildren (el->GetRnrChildren());
+      new_el->SetPickable    (el->IsPickable());
       parent->AddElement(new_el);
 
       for (List_i i=el->BeginChildren(); i!=el->EndChildren(); ++i)

@@ -33,6 +33,7 @@ void projection_test()
    TEveGeoShape* gsre = TEveGeoShape::ImportShapeExtract(gse, 0);
    geom->Close();
    delete geom;
+   gEve->AddGlobalElement(gsre);
    mng->ImportElements(gsre);
    gsre->SetRnrState(kFALSE);
 

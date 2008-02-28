@@ -143,7 +143,7 @@ public:
    virtual void Paint(Option_t* option="");
 
    void Save(const char* file, const char* name="Extract");
-   static TEveGeoShape* ImportShapeExtract(TEveGeoShapeExtract* gse, TEveElement* parent);
+   static TEveGeoShape* ImportShapeExtract(TEveGeoShapeExtract* gse, TEveElement* parent=0);
 
    // GeoProjectable
    virtual TBuffer3D*   MakeBuffer3D();

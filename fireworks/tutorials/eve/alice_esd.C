@@ -183,6 +183,7 @@ void alice_esd()
       TEveGeoShape* gsre = TEveGeoShape::ImportShapeExtract(gse, 0);
       geom->Close();
       delete geom;
+      gEve->AddGlobalElement(gsre);
    }
 
    make_gui();
