@@ -481,6 +481,7 @@ TQObject::TQObject()
 
    fListOfSignals     = 0;
    fListOfConnections = 0;
+   fSignalsBlocked    = kFALSE;
 }
 
 //______________________________________________________________________________
@@ -646,6 +647,8 @@ void TQObject::Emit(const char *signal_name)
    // Example:
    //          theButton->Emit("Clicked()");
 
+   if (fSignalsBlocked) return;
+
    TList classSigLists;
    CollectClassSignalLists(classSigLists, IsA());
 
@@ -699,6 +702,8 @@ void TQObject::EmitVA(const char *signal_name, Int_t nargs, va_list ap)
    // Activate signal with variable argument list.
    // For internal use and for var arg EmitVA() in RQ_OBJECT.h.
 
+   if (fSignalsBlocked) return;
+
    TList classSigLists;
    CollectClassSignalLists(classSigLists, IsA());
 
@@ -737,6 +742,8 @@ void TQObject::Emit(const char *signal_name, Long_t param)
    // Activate signal with single parameter.
    // Example:
    //          theButton->Emit("Clicked(int)",id)
+
+   if (fSignalsBlocked) return;
 
    TList classSigLists;
    CollectClassSignalLists(classSigLists, IsA());
@@ -777,6 +784,8 @@ void TQObject::Emit(const char *signal_name, Long64_t param)
    // Example:
    //          theButton->Emit("Progress(Long64_t)",processed)
 
+   if (fSignalsBlocked) return;
+
    TList classSigLists;
    CollectClassSignalLists(classSigLists, IsA());
 
@@ -816,6 +825,8 @@ void TQObject::Emit(const char *signal_name, Double_t param)
    // Example:
    //          theButton->Emit("Scale(float)",factor)
 
+   if (fSignalsBlocked) return;
+
    TList classSigLists;
    CollectClassSignalLists(classSigLists, IsA());
 
@@ -854,6 +865,8 @@ void TQObject::Emit(const char *signal_name, const char *params)
    // Activate signal with parameter text string.
    // Example:
    //          myObject->Emit("Error(char*)","Fatal error");
+
+   if (fSignalsBlocked) return;
 
    TList classSigLists;
    CollectClassSignalLists(classSigLists, IsA());
@@ -905,6 +918,8 @@ void TQObject::Emit(const char *signal_name, Long_t *paramArr)
    //    args[1] = (Long_t)processor->GetValue(2);
    //
    //    processor->Emit("Evaluated(Float_t,Float_t)",args);
+
+   if (fSignalsBlocked) return;
 
    TList classSigLists;
    CollectClassSignalLists(classSigLists, IsA());

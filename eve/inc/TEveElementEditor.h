@@ -17,6 +17,7 @@
 class TGCheckButton;
 class TGNumberEntry;
 class TGColorSelect;
+class TGLabel;
 
 class TEveElement;
 class TEveTransSubEditor;
@@ -30,6 +31,7 @@ protected:
    TEveElement         *fRE; // Model object.
 
    TGHorizontalFrame   *fHFrame;
+   TGLabel             *fPreLabel;
    TGCheckButton       *fRnrSelf;
    TGCheckButton       *fRnrChildren;
    TGCheckButton       *fRnrState;

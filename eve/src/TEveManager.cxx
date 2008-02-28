@@ -108,6 +108,7 @@ TEveManager::TEveManager(UInt_t w, UInt_t h) :
    fBrowser->StartEmbedding(0);
    fLTEFrame = new TEveGListTreeEditorFrame;
    fBrowser->StopEmbedding("Eve");
+   fLTEFrame->ConnectSignals();
    fEditor = fLTEFrame->fEditor;
 
    // GL viewer

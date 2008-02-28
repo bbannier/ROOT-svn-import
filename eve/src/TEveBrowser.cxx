@@ -127,7 +127,8 @@ TEveGListTreeEditorFrame::TEveGListTreeEditorFrame(const TGWindow* p, Int_t widt
    fListTree   (0),
    fSplitter   (0),
    fEditor     (0),
-   fCtxMenu    (0)
+   fCtxMenu    (0),
+   fSignalsConnected (kFALSE)
 {
    // Constructor.
 
@@ -181,15 +182,6 @@ TEveGListTreeEditorFrame::TEveGListTreeEditorFrame(const TGWindow* p, Int_t widt
 
    fCtxMenu = new TContextMenu("", "");
 
-   fListTree->Connect("MouseOver(TGListTreeItem*, UInt_t)", "TEveGListTreeEditorFrame",
-                      this, "ItemBelowMouse(TGListTreeItem*, UInt_t)");
-   fListTree->Connect("Clicked(TGListTreeItem*, Int_t, UInt_t, Int_t, Int_t)", "TEveGListTreeEditorFrame",
-                      this, "ItemClicked(TGListTreeItem*, Int_t, UInt_t, Int_t, Int_t)");
-   fListTree->Connect("DoubleClicked(TGListTreeItem*, Int_t)", "TEveGListTreeEditorFrame",
-                      this, "ItemDblClicked(TGListTreeItem*, Int_t)");
-   fListTree->Connect("KeyPressed(TGListTreeItem*, ULong_t, ULong_t)", "TEveGListTreeEditorFrame",
-                      this, "ItemKeyPress(TGListTreeItem*, UInt_t, UInt_t)");
-
    Layout();
    MapSubwindows();
    MapWindow();
@@ -199,6 +191,8 @@ TEveGListTreeEditorFrame::TEveGListTreeEditorFrame(const TGWindow* p, Int_t widt
 TEveGListTreeEditorFrame::~TEveGListTreeEditorFrame()
 {
    // Destructor.
+
+   DisconnectSignals();
 
    delete fCtxMenu;
 
@@ -210,6 +204,42 @@ TEveGListTreeEditorFrame::~TEveGListTreeEditorFrame()
    delete fLTCanvas;
    delete fLTFrame;
    delete fFrame;
+}
+
+//______________________________________________________________________________
+void TEveGListTreeEditorFrame::ConnectSignals()
+{
+   // Connect list-tree signals.
+
+   fListTree->Connect("MouseOver(TGListTreeItem*, UInt_t)", "TEveGListTreeEditorFrame",
+                      this, "ItemBelowMouse(TGListTreeItem*, UInt_t)");
+   fListTree->Connect("Clicked(TGListTreeItem*, Int_t, UInt_t, Int_t, Int_t)", "TEveGListTreeEditorFrame",
+                      this, "ItemClicked(TGListTreeItem*, Int_t, UInt_t, Int_t, Int_t)");
+   fListTree->Connect("DoubleClicked(TGListTreeItem*, Int_t)", "TEveGListTreeEditorFrame",
+                      this, "ItemDblClicked(TGListTreeItem*, Int_t)");
+   fListTree->Connect("KeyPressed(TGListTreeItem*, ULong_t, ULong_t)", "TEveGListTreeEditorFrame",
+                      this, "ItemKeyPress(TGListTreeItem*, UInt_t, UInt_t)");
+
+   fSignalsConnected = kTRUE;
+}
+
+//______________________________________________________________________________
+void TEveGListTreeEditorFrame::DisconnectSignals()
+{
+   // Disconnect list-tree signals.
+
+   if (!fSignalsConnected) return;
+
+   fListTree->Disconnect("MouseOver(TGListTreeItem*, UInt_t)",
+                      this, "ItemBelowMouse(TGListTreeItem*, UInt_t)");
+   fListTree->Disconnect("Clicked(TGListTreeItem*, Int_t, UInt_t, Int_t, Int_t)",
+                      this, "ItemClicked(TGListTreeItem*, Int_t, UInt_t, Int_t, Int_t)");
+   fListTree->Disconnect("DoubleClicked(TGListTreeItem*, Int_t)",
+                      this, "ItemDblClicked(TGListTreeItem*, Int_t)");
+   fListTree->Disconnect("KeyPressed(TGListTreeItem*, ULong_t, ULong_t)",
+                      this, "ItemKeyPress(TGListTreeItem*, UInt_t, UInt_t)");
+
+   fSignalsConnected = kFALSE;
 }
 
 /******************************************************************************/
