@@ -34,6 +34,9 @@ private:
 protected:
    Bool_t  fRnrLine;
    Bool_t  fRnrPoints;
+   Bool_t  fSmooth;
+
+   static Bool_t fgDefaultSmooth;
 
 public:
    TEveLine(Int_t n_points=0, ETreeVarType_e tv_type=kTVT_XYZ);
@@ -49,10 +52,15 @@ public:
    void SetRnrLine(Bool_t r)   { fRnrLine = r;      }
    Bool_t GetRnrPoints() const { return fRnrPoints; }
    void SetRnrPoints(Bool_t r) { fRnrPoints = r;    }
+   Bool_t GetSmooth() const    { return fSmooth;    }
+   void SetSmooth(Bool_t r)    { fSmooth = r;       }
 
    virtual TClass* ProjectedClass() const;
 
-   ClassDef(TEveLine, 1); // An arbitrary polyline with fixed line and marker attributes.
+   static Bool_t GetDefaultSmooth()       { return fgDefaultSmooth; }
+   static void SetDefaultSmooth(Bool_t r) { fgDefaultSmooth = r;    }
+
+   ClassDef(TEveLine, 0); // An arbitrary polyline with fixed line and marker attributes.
 };
 
 
@@ -75,7 +83,7 @@ public:
    virtual void SetDepth(Float_t d);
    virtual void UpdateProjection();
 
-   ClassDef(TEveLineProjected, 1); // Projected replica of a TEveLine.
+   ClassDef(TEveLineProjected, 0); // Projected replica of a TEveLine.
 };
 
 #endif

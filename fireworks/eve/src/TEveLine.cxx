@@ -23,11 +23,14 @@
 
 ClassImp(TEveLine);
 
+Bool_t TEveLine::fgDefaultSmooth = kFALSE;
+
 //______________________________________________________________________________
 TEveLine::TEveLine(Int_t n_points, ETreeVarType_e tv_type) :
    TEvePointSet("Line", n_points, tv_type),
    fRnrLine   (kTRUE),
-   fRnrPoints (kFALSE)
+   fRnrPoints (kFALSE),
+   fSmooth    (fgDefaultSmooth)
 {
    // Constructor.
 
@@ -38,7 +41,8 @@ TEveLine::TEveLine(Int_t n_points, ETreeVarType_e tv_type) :
 TEveLine::TEveLine(const Text_t* name, Int_t n_points, ETreeVarType_e tv_type) :
    TEvePointSet(name, n_points, tv_type),
    fRnrLine   (kTRUE),
-   fRnrPoints (kFALSE)
+   fRnrPoints (kFALSE),
+   fSmooth    (fgDefaultSmooth)
 {
    // Constructor.
 
@@ -69,7 +73,7 @@ TEveLineProjected::TEveLineProjected() :
    TEveLine      (),
    TEveProjected ()
 {
-   // Default contructor.
+   // Default constructor.
 }
 
 //______________________________________________________________________________
