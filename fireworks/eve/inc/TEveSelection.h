@@ -14,12 +14,15 @@
 
 #include "TEveElement.h"
 
+#include "TQObject.h"
+
 #include <map>
 
-class TEveSelection : public TEveElementList
+class TEveSelection : public TEveElementList,
+                      public TQObject
 {
 public:
-   enum EPickToSelect // How to convert picking events to selection:
+   enum EPickToSelect  // How to convert picking events to selection:
    {
       kPS_Ignore,      // ignore picking
       kPS_Element,     // select element (default for selection)
@@ -63,8 +66,14 @@ public:
    virtual Bool_t AcceptElement(TEveElement* el);
 
    virtual void AddElement(TEveElement* el);
+   virtual void RemoveElement(TEveElement* el);
    virtual void RemoveElementLocal(TEveElement* el);
+   virtual void RemoveElements();
    virtual void RemoveElementsLocal();
+
+   void SelectionAdded(TEveElement* el);   // *SIGNAL*
+   void SelectionRemoved(TEveElement* el); // *SIGNAL*
+   void SelectionCleared();                // *SIGNAL*
 
    // ----------------------------------------------------------------
    // Interface to make selection active/non-active.

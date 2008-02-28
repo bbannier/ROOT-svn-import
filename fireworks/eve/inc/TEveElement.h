@@ -74,20 +74,22 @@ public:
 protected:
    // TRef     fSource;
 
-   List_t     fParents;              // List of parents.
-   List_t     fChildren;             // List of children.
+   List_t     fParents;              //  List of parents.
+   List_t     fChildren;             //  List of children.
 
-   Bool_t     fDestroyOnZeroRefCnt;  // Auto-destruct when ref-count reaches zero.
-   Int_t      fDenyDestroy;          // Deny-destroy count.
+   Bool_t     fDestroyOnZeroRefCnt;  //  Auto-destruct when ref-count reaches zero.
+   Int_t      fDenyDestroy;          //  Deny-destroy count.
 
-   Bool_t     fRnrSelf;              // Render this element.
-   Bool_t     fRnrChildren;          // Render children of this element.
-   Bool_t     fCanEditMainTrans;     // Allow editing of main transformation.
+   Bool_t     fRnrSelf;              //  Render this element.
+   Bool_t     fRnrChildren;          //  Render children of this element.
+   Bool_t     fCanEditMainTrans;     //  Allow editing of main transformation.
 
-   Color_t   *fMainColorPtr;         // Pointer to main-color variable.
-   TEveTrans *fMainTrans;            // Pointer to main transformation matrix.
+   Color_t   *fMainColorPtr;         //  Pointer to main-color variable.
+   TEveTrans *fMainTrans;            //  Pointer to main transformation matrix.
 
-   sLTI_t     fItems;                // Set of list-tree-items.
+   sLTI_t     fItems;                //! Set of list-tree-items.
+
+   void      *fUserData;             //! Externally assigned and controlled user data.
 
    virtual void RemoveElementsInternal();
 
@@ -222,6 +224,8 @@ public:
    virtual void SetTransMatrix(Double_t* carr);
    virtual void SetTransMatrix(const TGeoMatrix& mat);
 
+   void* GetUserData() const { return fUserData; }
+   void  SetUserData(void* ud) { fUserData = ud; }
 
    // Selection state and management
    //--------------------------------
@@ -266,8 +270,8 @@ public:
    };
 
 protected:
-   UChar_t fChangeBits;
-   Bool_t  fDestructing;
+   UChar_t      fChangeBits;
+   Bool_t       fDestructing;
 
 public:
    void StampColorSelection() { AddStamp(kCBColorSelection); }

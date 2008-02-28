@@ -93,8 +93,7 @@ Bool_t TEveSelection::AcceptElement(TEveElement* el)
 //______________________________________________________________________________
 void TEveSelection::AddElement(TEveElement* el)
 {
-   // Add an element into selection.
-   // Virtual from TEveElement.
+   // Add an element into selection, virtual from TEveElement.
 
    TEveElementList::AddElement(el);
 
@@ -103,6 +102,17 @@ void TEveSelection::AddElement(TEveElement* el)
    {
       DoElementSelect(i);
    }
+   SelectionAdded(el);
+}
+
+//______________________________________________________________________________
+void TEveSelection::RemoveElement(TEveElement* el)
+{
+   // Add an element into selection, virtual from TEveElement.
+   // Overriden here just so that a signal can be emitted.
+
+   TEveElementList::RemoveElement(el);
+   SelectionRemoved(el);
 }
 
 //______________________________________________________________________________
@@ -127,6 +137,16 @@ void TEveSelection::RemoveElementLocal(TEveElement* el)
 }
 
 //______________________________________________________________________________
+void TEveSelection::RemoveElements()
+{
+   // Add an element into selection, virtual from TEveElement.
+   // Overriden here just so that a signal can be emitted.
+
+   TEveElementList::RemoveElements();
+   SelectionCleared();
+}
+
+//______________________________________________________________________________
 void TEveSelection::RemoveElementsLocal()
 {
    // Virtual from TEveElement.
@@ -139,6 +159,29 @@ void TEveSelection::RemoveElementsLocal()
    fImpliedSelected.clear();
 }
 
+//______________________________________________________________________________
+void TEveSelection::SelectionAdded(TEveElement* el)
+{
+   // Emit SelectionAdded signal.
+
+   Emit("SelectionAdded(TEveElement*)", (Long_t)el);
+}
+
+//______________________________________________________________________________
+void TEveSelection::SelectionRemoved(TEveElement* el)
+{
+   // Emit SelectionRemoved signal.
+
+   Emit("SelectionRemoved(TEveElement*)", (Long_t)el);
+}
+
+//______________________________________________________________________________
+void TEveSelection::SelectionCleared()
+{
+   // Emit SelectionCleared signal.
+
+   Emit("SelectionCleared()");
+}
 
 /******************************************************************************/
 // Activation / deactivation of selection

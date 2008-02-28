@@ -71,6 +71,7 @@ TEveElement::TEveElement() :
    fMainColorPtr        (0),
    fMainTrans           (0),
    fItems               (),
+   fUserData            (0),
    fPickable            (kFALSE),
    fSelected            (kFALSE),
    fHighlighted         (kFALSE),
@@ -94,6 +95,7 @@ TEveElement::TEveElement(Color_t& main_color) :
    fMainColorPtr        (&main_color),
    fMainTrans           (0),
    fItems               (),
+   fUserData            (0),
    fPickable            (kFALSE),
    fSelected            (kFALSE),
    fHighlighted         (kFALSE),
@@ -776,9 +778,9 @@ void TEveElement::RemoveElementsInternal()
 //______________________________________________________________________________
 void TEveElement::RemoveElements()
 {
-   // Remove all elements. This assumes removing of all elements can be
-   // done more efficiently then looping over them and removing one by
-   // one.
+   // Remove all elements. This assumes removing of all elements can
+   // be done more efficiently then looping over them and removing
+   // them one by one.
 
    if ( ! fChildren.empty())
    {
