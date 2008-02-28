@@ -347,7 +347,7 @@ int main() {
    // in case of N = 1 do also a simple gauss fit
    // using TF1 gausN
    if (N == 1) { 
-      ROOT::Math::WrappedParamFunction<> gausn(gausnorm,2,iniPar,iniPar+1);       
+      ROOT::Math::WrappedParamFunction<> gausn(&gausnorm,2,iniPar,iniPar+1);       
       FitUsingNewFitter<TMINUIT>(&tree,gausn);
    }
 
