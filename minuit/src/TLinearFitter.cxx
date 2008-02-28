@@ -846,9 +846,6 @@ Int_t TLinearFitter::Eval()
       }
    }
 
-   fDesign.Print();
-   fAtb.Print();
-
    TDecompChol chol(fDesign);
    Bool_t ok;
    TVectorD coef(fNfunctions);

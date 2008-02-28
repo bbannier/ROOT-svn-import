@@ -18,14 +18,13 @@
 #include "Math/WrappedTF1.h"
 #include "Math/WrappedMultiTF1.h"
 #include "Math/WrappedParamFunction.h"
+#include "Math/MultiDimParamFunctionAdapter.h"
 
 #include "TGraphErrors.h"
 
 #include "TStyle.h"
 
-#ifdef USE_MATHMORE_FUNC
-#include "Math/WrappedParamFunction.h"
-#endif
+#include "TSeqCollection.h"
 
 #include "Math/Polynomial.h"
 #include "Math/DistFunc.h"
@@ -80,7 +79,9 @@ ROOT::Fit::UnBinData * FillUnBinData(TTree * tree, bool copyData = true, unsigne
       d = new ROOT::Fit::UnBinData();
       // large tree 
       unsigned int n = tree->GetEntries(); 
+#ifdef DEBUG
       std::cout << "number of unbin data is " << n << " of dim " << N << std::endl;
+#endif
       d->Initialize(n,N);
       TBranch * bx = tree->GetBranch("x"); 
       double vx[N];
@@ -92,10 +93,13 @@ ROOT::Fit::UnBinData * FillUnBinData(TTree * tree, bool copyData = true, unsigne
          for (int j = 0; j < N; ++j) 
             m[j] += vx[j];
       }
+
+#ifdef DEBUG
       std::cout << "average values of means :\n"; 
       for (int j = 0; j < N; ++j) 
          std::cout << m[j]/n << "  ";
       std::cout << "\n";
+#endif
       
       return d; 
    }
@@ -358,19 +362,6 @@ int FitUsingNewFitter(FitObj * fitobj, Func & func, bool useGrad=false) {
 
 //------------old fit methods 
 
-template<class MinType> 
-void SetTFitter( MinType  ) { 
-   TVirtualFitter::SetDefaultFitter(MinType::name().c_str());
-}
-// void SetTFitter( FUMILI2  ) { 
-//    TVirtualFitter::SetDefaultFitter(MinType::name().c_str()););
-// }
-// void SetTFitter( TFUMILI  ) { 
-//    TVirtualFitter::SetFitter(new TFumili(25));
-// }
-
-
-
 // fit using Fit method
 template <class T, class MinType>
 int FitUsingTFit(T * hist, TF1 * func) { 
@@ -379,15 +370,25 @@ int FitUsingTFit(T * hist, TF1 * func) {
    std::cout << "\tFit using " << hist->ClassName() << "::Fit\n";
    std::cout << "\tMinimizer is " << MinType::name() << std::endl; 
 
-      
+   std::string opt = "BFQ0"; 
+   if (MinType::name() == "Linear")
+      opt = "Q0"; 
+
+   // check gminuit
+//    TSeqCollection * l = gROOT->GetListOfSpecials();
+//    for (int i = 0; i < l->GetEntries(); ++i)  { 
+//       TObject * obj = l->At(i); 
+//       std::cout << " entries for i " << i << " of " << l->GetEntries() << " is " << obj << std::endl;      
+//       if (obj != 0)     std::cout << " object name is " <<  obj->GetName() << std::endl; 
+//    }
 
    int iret = 0;
-   SetTFitter(MinType());
+   TVirtualFitter::SetDefaultFitter(MinType::name().c_str());
 
    TStopwatch w; w.Start(); 
    for (int i = 0; i < nfit; ++i) { 
       func->SetParameters(iniPar);
-      iret |= hist->Fit(func,"BFQ0");
+      iret |= hist->Fit(func,opt.c_str());
       if (iret != 0) return iret; 
    }
    // std::cout << "iret " << iret << std::endl;
@@ -400,7 +401,10 @@ int FitUsingTFit(T * hist, TF1 * func) {
 //       assert (minuit2 != 0); 
 //       minuit2->SetPrintLevel(3);
 //    }
-   iret |= hist->Fit(func,"BFV0");
+   if (MinType::name() != "Linear") 
+      iret |= hist->Fit(func,"BFV0");
+   else 
+      iret |= hist->Fit(func,"V0");
    // get precice value of minimum
    int pr = std::cout.precision(18);
    std::cout << "Chi2 value = " << func->GetChisquare() << std::endl; 
@@ -427,7 +431,7 @@ int FitUsingTTreeFit(TTree * tree, TF1 * func, const std::string & vars = "x") {
    std::string sel = "";
 
    int iret = 0;
-   SetTFitter(MinType());
+   TVirtualFitter::SetDefaultFitter(MinType::name().c_str());
 
    TStopwatch w; w.Start(); 
    for (int i = 0; i < nfit; ++i) { 
@@ -708,7 +712,7 @@ int testPolyFit() {
 
 
    // fill an histogram 
-   TH1D * h1 = new TH1D("h1","h1",5,-5.,5.);
+   TH1D * h1 = new TH1D("h1","h1",500,-5.,5.);
 //      h1->FillRandom(fname.c_str(),100);
    for (int i = 0; i <100; ++i) 
       h1->Fill( f1->GetRandom() );
@@ -730,6 +734,13 @@ int testPolyFit() {
    // if Minuit2 is later than TMinuit on Interl is much slower , why ??
    iret |= FitUsingNewFitter<MINUIT2>(h1,f2);
    iret |= FitUsingNewFitter<TMINUIT>(h1,f2);
+
+   // test with linear fitter 
+   // for this test need to pass a multi-dim function
+   ROOT::Math::WrappedTF1 wf(*f1); 
+   ROOT::Math::MultiDimParamGradFunctionAdapter lfunc(wf); 
+   iret |= FitUsingNewFitter<LINEAR>(h1,lfunc,true);
+   iret |= FitUsingTFit<TH1,LINEAR>(h1,f1);
 
    // test with a graph 
 
@@ -1052,7 +1063,7 @@ int testFitPerf() {
  //return iret; 
 
 #ifndef DEBUG
-   nfit = 10000; 
+   nfit = 1000; 
 #endif
    iret |= testPolyFit(); 
 

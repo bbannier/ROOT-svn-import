@@ -60,6 +60,7 @@ TMinuitMinimizer::TMinuitMinimizer(const char *  type ) :
 TMinuitMinimizer::~TMinuitMinimizer() 
 {
    // Destructor implementation.
+   if (fMinuit) delete fMinuit; 
 }
 
 TMinuitMinimizer::TMinuitMinimizer(const TMinuitMinimizer &) : 
@@ -79,7 +80,7 @@ TMinuitMinimizer & TMinuitMinimizer::operator = (const TMinuitMinimizer &rhs)
 
 void TMinuitMinimizer::SetFunction(const  IObjFunction & func) { 
    // set function to be minimized. 
-   // Here a TMinuit instance is created since only now we know  about the parameters 
+   // Here a TMinuit instance is created since only now when we know  about the parameters 
 
    fDim = func.NDim(); 
 
@@ -87,7 +88,10 @@ void TMinuitMinimizer::SetFunction(const  IObjFunction & func) {
    if (fgMinuit == 0) fgMinuit =  new TMinuit(fDim);
    fMinuit = fgMinuit; 
 #else
-   if (fMinuit) delete fMinuit;  
+   if (fMinuit) { 
+      //std::cout << "delete previously existing TMinuit " << (int) fMinuit << std::endl; 
+      delete fMinuit;  
+   }
    fMinuit =  new TMinuit(fDim);
 #endif
    

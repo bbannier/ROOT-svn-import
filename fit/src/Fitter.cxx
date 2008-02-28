@@ -62,13 +62,9 @@ void Fitter::SetFunction(const IModelFunction & func)
    fUseGradient = false;
  
    //  set the fit model function (clone the given one and keep a copy ) 
-   std::cout << "set a non-grad function" << std::endl; 
+   //std::cout << "set a non-grad function" << std::endl; 
 
    fFunc = dynamic_cast<IModelFunction *> ( func.Clone() ); 
-
-   // function parameters
-//    for (int i = 0; i < fFunc->NPar(); ++i) 
-//       std::cout << "Func params " << fFunc->Parameters()[i] << std::endl; 
    
    // creates the parameter  settings 
    fConfig.SetParamsSettings(*fFunc); 
@@ -78,7 +74,7 @@ void Fitter::SetFunction(const IModelFunction & func)
 void Fitter::SetFunction(const IModel1DFunction & func) 
 { 
    fUseGradient = false;
-   std::cout << "set a 1d function" << std::endl; 
+   //std::cout << "set a 1d function" << std::endl; 
    IModel1DFunction & fcopy = dynamic_cast<IModel1DFunction & > (*( func.Clone()) );
    fFunc = new ROOT::Math::MultiDimParamFunctionAdapter(fcopy);
 
@@ -89,7 +85,7 @@ void Fitter::SetFunction(const IModel1DFunction & func)
 void Fitter::SetFunction(const IGradModelFunction & func) 
 { 
    fUseGradient = true;
-   std::cout << "set a grad function" << std::endl; 
+   //std::cout << "set a grad function" << std::endl; 
    //  set the fit model function (clone the given one and keep a copy ) 
    fFunc = dynamic_cast<IModelFunction *> ( func.Clone() ); 
 
@@ -100,7 +96,7 @@ void Fitter::SetFunction(const IGradModelFunction & func)
 
 void Fitter::SetFunction(const IGradModel1DFunction & func) 
 { 
-   std::cout << "set a 1d grad function" << std::endl; 
+   //std::cout << "set a 1d grad function" << std::endl; 
    fUseGradient = true;
    IGradModel1DFunction & fcopy = dynamic_cast<IGradModel1DFunction & > (*( func.Clone()) );
    fFunc = new ROOT::Math::MultiDimParamGradFunctionAdapter(fcopy);
