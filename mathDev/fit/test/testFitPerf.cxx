@@ -728,7 +728,7 @@ int testPolyFit() {
 
    // use simply TF1 wrapper 
    //ROOT::Math::WrappedMultiTF1 f2(*f1); 
-   ROOT::Math::WrappedParamFunction<> f2(poly2,1,iniPar,iniPar+3); 
+   ROOT::Math::WrappedParamFunction<> f2(&poly2,1,iniPar,iniPar+3); 
 
 
    // if Minuit2 is later than TMinuit on Interl is much slower , why ??
@@ -816,7 +816,7 @@ int testGausFit() {
 
    // use simply TF1 wrapper 
    //ROOT::Math::WrappedMultiTF1 f2(*f1); 
-   ROOT::Math::WrappedParamFunction<> f2(gaussian,1,iniPar,iniPar+3); 
+   ROOT::Math::WrappedParamFunction<> f2(&gaussian,1,iniPar,iniPar+3); 
 
 
    iret |= FitUsingNewFitter<MINUIT2>(h2,f2);
@@ -907,8 +907,8 @@ int testTreeFit() {
    TF1 * f1 = new TF1("gausnorm", gausnorm, -10,10, 2);
    TF2 * f2 = new TF2("gausnorm2D", gausnorm2D, -10,10, -10,10, 4); 
 
-   ROOT::Math::WrappedParamFunction<> wf1(gausnorm,1,iniPar,iniPar+2); 
-   ROOT::Math::WrappedParamFunction<> wf2(gausnorm2D,2,iniPar,iniPar+4); 
+   ROOT::Math::WrappedParamFunction<> wf1(&gausnorm,1,iniPar,iniPar+2); 
+   ROOT::Math::WrappedParamFunction<> wf2(&gausnorm2D,2,iniPar,iniPar+4); 
 
  
    iniPar[0] = 0; 
@@ -988,7 +988,7 @@ int testLargeTreeFit() {
 
    // use simply TF1 wrapper 
    //ROOT::Math::WrappedMultiTF1 f2(*f1); 
-   ROOT::Math::WrappedParamFunction<> f2(gausnormN,N,2*N,iniPar); 
+   ROOT::Math::WrappedParamFunction<> f2(&gausnormN,N,2*N,iniPar); 
 
    int iret = 0; 
    iret |= FitUsingNewFitter<MINUIT2>(&t1,f2);
