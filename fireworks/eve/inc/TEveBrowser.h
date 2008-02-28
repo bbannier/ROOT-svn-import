@@ -108,7 +108,8 @@ public:
    void ReconfToHorizontal();
    void ReconfToVertical();
 
-   TGListTree* GetListTree() { return fListTree; }
+   TGListTree*    GetListTree() const { return fListTree; }
+   TEveGedEditor* GetEditor()   const { return fEditor; }
 
    void ItemBelowMouse(TGListTreeItem *entry, UInt_t mask);
    void ItemClicked(TGListTreeItem *entry, Int_t btn, UInt_t mask, Int_t x, Int_t y);
