@@ -32,7 +32,7 @@ namespace ROOT {
          kMigrad, 
          kSimplex, 
          kCombined, 
-         kScan,
+         kScan
       };
 
    }

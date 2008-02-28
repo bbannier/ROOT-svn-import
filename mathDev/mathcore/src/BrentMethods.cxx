@@ -10,6 +10,7 @@
 
 #include "Math/BrentMethods.h"
 #include <cmath>
+#include <algorithm>
 
 #ifndef ROOT_Math_Error
 #include "Math/Error.h"
@@ -18,7 +19,7 @@
 namespace ROOT {
 namespace Math {
 
-double MinimStep(const IGenFunction* fFunction, int type, double &xmin, double &xmax, double fy, int fNpx)
+double MinimStep(const IGenFunction* function, int type, double &xmin, double &xmax, double fy, int fNpx)
 {
    //   Grid search implementation, used to bracket the minimum and later
    //   use Brent's method with the bracketed interval
@@ -34,20 +35,20 @@ double MinimStep(const IGenFunction* fFunction, int type, double &xmin, double &
    double xxmin = xmin;
    double yymin;
    if (type < 2)
-      yymin = (*fFunction)(xmin);
+      yymin = (*function)(xmin);
    else if (type < 4)
-      yymin = -(*fFunction)(xmin);
+      yymin = -(*function)(xmin);
    else
-      yymin = fabs((*fFunction)(xmin)-fy);
+      yymin = fabs((*function)(xmin)-fy);
 
    for (Int_t i=1; i<=fNpx-1; i++) {
       x = xmin + i*dx;
       if (type < 2)
-         y = (*fFunction)(x);
+         y = (*function)(x);
       else if (type < 4)
-         y = -(*fFunction)(x);
+         y = -(*function)(x);
       else
-         y = fabs((*fFunction)(x)-fy);
+         y = fabs((*function)(x)-fy);
       if (y < yymin) {xxmin = x; yymin = y;}
    }
 
@@ -57,7 +58,7 @@ double MinimStep(const IGenFunction* fFunction, int type, double &xmin, double &
    return std::min(xxmin, xmax);
 }
 
-double MinimBrent(const IGenFunction* fFunction, int type, double &xmin, double &xmax, double xmiddle, double fy, bool &ok)
+double MinimBrent(const IGenFunction* function, int type, double &xmin, double &xmax, double xmiddle, double fy, bool &ok)
 {
    //Finds a minimum of a function, if the function is unimodal  between xmin and xmax
    //This method uses a combination of golden section search and parabolic interpolation
@@ -84,11 +85,11 @@ double MinimBrent(const IGenFunction* fFunction, int type, double &xmin, double 
    Double_t a=xmin;
    Double_t b=xmax;
    if (type < 2)
-      fv = fw = fx = (*fFunction)(x);
+      fv = fw = fx = (*function)(x);
    else if (type < 4)
-      fv = fw = fx = -(*fFunction)(x);
+      fv = fw = fx = -(*function)(x);
    else
-      fv = fw = fx = fabs((*fFunction)(x)-fy);
+      fv = fw = fx = fabs((*function)(x)-fy);
 
    for (Int_t i=0; i<itermax; i++){
       m=0.5*(a + b);
@@ -133,11 +134,11 @@ double MinimBrent(const IGenFunction* fFunction, int type, double &xmin, double 
       }
       u = (fabs(d)>=tol ? x+d : x+ ((d >= 0) ? fabs(tol) : -fabs(tol)) );
       if (type < 2)
-         fu = (*fFunction)(u);
+         fu = (*function)(u);
       else if (type < 4)
-         fu = -(*fFunction)(u);
+         fu = -(*function)(u);
       else
-         fu = fabs((*fFunction)(u)-fy);
+         fu = fabs((*function)(u)-fy);
       //update a, b, v, w and x
       if (fu<=fx){
          if (u<x) b=x;
