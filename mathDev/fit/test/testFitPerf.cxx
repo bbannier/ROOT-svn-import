@@ -575,10 +575,9 @@ int  FitUsingRooFit(TTree * tree, TF1 * func) {
       std::cout << " Roofit status " << result->status() << std::endl; 
       result->Print();
 #endif
+      iret |= (result == 0);
 
-
-//      if (iret != 0) return iret; 
-      assert(iret == 0); 
+      if (iret != 0) return iret; 
 
    }
 
@@ -667,8 +666,7 @@ int  FitUsingRooFit2(TTree * tree) {
 #endif
 
 
-//      if (iret != 0) return iret; 
-      assert(iret == 0); 
+      iret |= (result == 0);
 
       // free
       for (int j = 0; j < N; ++j) { 
@@ -678,6 +676,9 @@ int  FitUsingRooFit2(TTree * tree) {
          delete g[j];
          delete pdf[j]; 
       }
+
+      if (iret != 0) return iret; 
+      //assert(iret == 0); 
 
 
    }

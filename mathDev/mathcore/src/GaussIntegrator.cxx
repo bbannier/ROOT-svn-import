@@ -31,7 +31,7 @@ GaussIntegratorOneDim::~GaussIntegratorOneDim()
 {
    // Deletes the function if it was previously copied.
 
-   if ( fFunction != 0 && fFunctionCopied )
+   if ( fFunctionCopied && fFunction != 0   )
       delete fFunction;
 }
 

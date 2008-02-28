@@ -75,8 +75,9 @@ void Fitter::SetFunction(const IModel1DFunction & func)
 { 
    fUseGradient = false;
    //std::cout << "set a 1d function" << std::endl; 
-   IModel1DFunction & fcopy = dynamic_cast<IModel1DFunction & > (*( func.Clone()) );
-   fFunc = new ROOT::Math::MultiDimParamFunctionAdapter(fcopy);
+
+   // function is cloned when creating the adapter
+   fFunc = new ROOT::Math::MultiDimParamFunctionAdapter(func);
 
    // creates the parameter  settings 
    fConfig.SetParamsSettings(*fFunc); 
@@ -98,8 +99,8 @@ void Fitter::SetFunction(const IGradModel1DFunction & func)
 { 
    //std::cout << "set a 1d grad function" << std::endl; 
    fUseGradient = true;
-   IGradModel1DFunction & fcopy = dynamic_cast<IGradModel1DFunction & > (*( func.Clone()) );
-   fFunc = new ROOT::Math::MultiDimParamGradFunctionAdapter(fcopy);
+   // function is cloned when creating the adapter
+   fFunc = new ROOT::Math::MultiDimParamGradFunctionAdapter(func);
 
    // creates the parameter  settings 
    fConfig.SetParamsSettings(*fFunc); 
