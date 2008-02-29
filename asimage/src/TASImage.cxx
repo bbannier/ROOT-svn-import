@@ -4783,6 +4783,14 @@ void TASImage::CopyArea(TImage *dst, Int_t xsrc, Int_t ysrc, UInt_t w,  UInt_t h
    h = ysrc + h > fImage->height ? fImage->height - ysrc : h;
    UInt_t yy = (ysrc + y)*fImage->width;
 
+   if (!fImage->alt.argb32) {
+      BeginPaint();
+   }
+   if (!out->alt.argb32) {
+      dst->BeginPaint();
+      out = ((TASImage*)dst)->GetImage();
+   }
+
    if (fImage->alt.argb32 && out->alt.argb32) {
       for (y = 0; y < (int)h; y++) {
          for (x = 0; x < (int)w; x++) {
@@ -6192,6 +6200,7 @@ void TASImage::DrawCircle(Int_t x, Int_t y, Int_t r, const char *col, Int_t thic
    // Draw circle. If thick < 0 - draw filled circle
 
    thick = !thick ? 1 : thick;
+   if (thick<=1) thick=2;
    Int_t sz = thick*thick;
    CARD32 *matrix;
    Bool_t use_cache = (thick > 0) && ((UInt_t)thick < kBrushCacheSize);
@@ -6214,7 +6223,6 @@ void TASImage::DrawCircle(Int_t x, Int_t y, Int_t r, const char *col, Int_t thic
    brush.width = thick > 0 ? thick : 1;
    brush.height = thick > 0 ? thick : 1;
    brush.center_y = brush.center_x = thick > 0 ? thick/2 : 0;
-
    ASDrawContext *ctx = create_draw_context_argb32(fImage, &brush);
    asim_circle(ctx, x,  y, r, thick < 0);
 

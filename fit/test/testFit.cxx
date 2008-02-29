@@ -343,7 +343,6 @@ int testHisto1DPolFit() {
    // create the function
    Func1D f; 
 
-   //ROOT::Math::WrappedTF1 f(*func); 
    double p[3] = {100,0,3.}; 
    f.SetParameters(p); 
 
@@ -368,7 +367,8 @@ int testHisto1DPolFit() {
 
    std::cout << "\n\nTest histo polynomial linear fit " << std::endl; 
 
-   ROOT::Math::Polynomial pf(2); 
+   ROOT::Math::WrappedTF1 pf(*func); 
+   //ROOT::Math::Polynomial pf(2); 
    pf.SetParameters(p);
 
    fitter.Config().SetMinimizer("Linear");
