@@ -278,6 +278,10 @@ $(CINTDIRS)/loadfile_tmp.o: CINTCXXFLAGS += -UR__HAVE_CONFIG -DROOTBUILD
 $(CINTDIRS)/loadfile_tmp.cxx: $(CINTDIRS)/loadfile.cxx
 	cp -f $< $@
 
+ifeq ($(NOSTUBS),yes)
+$(CINTDIRS)/newlink.o: OPT = $(NOOPT)
+endif
+
 ##### configcint.h
 ifeq ($(CPPPREP),)
 # cannot use "CPPPREP?=", as someone might set "CPPPREP="
