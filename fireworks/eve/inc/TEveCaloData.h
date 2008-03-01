@@ -72,8 +72,8 @@ public:
    virtual ~TEveCaloData(){}
 
    virtual Int_t GetCellList(Float_t etaMin, Float_t etaMax,
-                            Float_t phi, Float_t phiRng,
-                            Float_t threshold, vCellId_t &out) = 0;
+                             Float_t phi, Float_t phiRng,
+                             Float_t threshold, vCellId_t &out) = 0;
 
    virtual void  GetCellData(const CellId_t &id, CellData_t& data) = 0;
 
@@ -84,7 +84,7 @@ public:
    virtual const TAxis* GetEtaBins(){ return 0 ;}
    virtual const TAxis* GetPhiBins(){ return 0 ;}
 
-   ClassDef(TEveCaloData, 0); // Short description.
+   ClassDef(TEveCaloData, 0); // Manages calorimeter event data.
 };
 
 /**************************************************************************/
@@ -120,7 +120,7 @@ public:
    const TAxis* GetEtaBins();
    const TAxis* GetPhiBins();
 
-   ClassDef(TEveCaloDataHist, 0); // Short description.
+   ClassDef(TEveCaloDataHist, 0); // Manages calorimeter TH2F event data. 
 };
 
 #endif

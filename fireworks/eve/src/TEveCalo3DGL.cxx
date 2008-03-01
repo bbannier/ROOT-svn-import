@@ -130,14 +130,11 @@ void  TEveCalo3DGL::RenderBox(Float_t pnts[8]) const
 }
 
 //______________________________________________________________________________
-Float_t TEveCalo3DGL::RenderBarrelCell(const TEveCaloData::CellData_t &cellData, Int_t slice, Float_t offset ) const
+Float_t TEveCalo3DGL::RenderBarrelCell(const TEveCaloData::CellData_t &cellData, Float_t towerH, Float_t offset ) const
 {
    using namespace TMath;
 
    //   printf("RenderBarrel "); cellData.Dump();
-   Float_t towerH;
-   if (fM->SetupColorHeight(cellData.Value(), slice, towerH) == kFALSE)
-      return offset;
 
    Float_t r1 = fM->GetBarrelRadius() + offset;
    Float_t r2 = r1 + towerH*Sin(cellData.ThetaMin());
@@ -212,14 +209,11 @@ Float_t TEveCalo3DGL::RenderBarrelCell(const TEveCaloData::CellData_t &cellData,
 }// end RenderBarrelCell
 
 //______________________________________________________________________________
-Float_t TEveCalo3DGL::RenderEndCapCell(const TEveCaloData::CellData_t &cellData, Int_t slice, Float_t offset ) const
+Float_t TEveCalo3DGL::RenderEndCapCell(const TEveCaloData::CellData_t &cellData, Float_t towerH, Float_t offset ) const
 {
    using namespace TMath;
 
    //   printf("render endcap %f, %f ", z1, z2); cellData.Dump();
-   Float_t towerH;
-   if (fM->SetupColorHeight(cellData.Value(), slice, towerH) == kFALSE)
-      return offset;
 
    Float_t z1, r1In, r1Out, z2, r2In, r2Out;
    if (cellData.ZSideSign() == 1)
@@ -311,30 +305,37 @@ void TEveCalo3DGL::DirectDraw(TGLRnrCtx &rnrCtx) const
       fM->fCacheOK= kTRUE;
    }
 
-   if (rnrCtx.SecSelection()) glPushName(0);
-
    glPushAttrib(GL_ENABLE_BIT | GL_POLYGON_BIT);
    glEnable(GL_NORMALIZE);
 
    TEveCaloData::CellData_t cellData;  
    Float_t transTheta = fM->GetTransitionTheta();
+   Float_t towerH;
+   Bool_t  visible;
    Int_t   prevTower;
    Float_t offset = 0;
-   for(UInt_t i=0; i<fM->fCellList.size(); i++) {
+
+   if (rnrCtx.SecSelection()) glPushName(0);
+   for(UInt_t i=0; i<fM->fCellList.size(); i++) 
+   {
       fM->fData->GetCellData(fM->fCellList[i], cellData);
+
       if (fM->fCellList[i].fTower != prevTower) 
       {
          offset = 0;
          prevTower = fM->fCellList[i].fTower;
       }
-      if (rnrCtx.SecSelection()) glLoadName(i);
+      fM->SetupColorHeight(cellData.Value(), fM->fCellList[i].fSlice, towerH, visible);
 
-      if (cellData.ThetaMax() > transTheta )
-         offset = RenderBarrelCell(cellData, fM->fCellList[i].fSlice, offset);
-      else
-         offset = RenderEndCapCell(cellData, fM->fCellList[i].fSlice, offset);
+      if (visible)
+      {
+         if (rnrCtx.SecSelection()) glLoadName(i);
+         if (cellData.ThetaMax() > transTheta)
+            offset = RenderBarrelCell(cellData, towerH, offset);
+         else
+            offset = RenderEndCapCell(cellData, towerH, offset);
+      }
    }
-
    if (rnrCtx.SecSelection()) glPopName();
 
    glPopAttrib();
@@ -343,14 +344,14 @@ void TEveCalo3DGL::DirectDraw(TGLRnrCtx &rnrCtx) const
 //______________________________________________________________________________
 void TEveCalo3DGL::ProcessSelection(TGLRnrCtx & /*rnrCtx*/, TGLSelectRecord & rec)
 {
-  // Processes secondary selection from TGLViewer.
+   // Processes secondary selection from TGLViewer.
 
-  if (rec.GetN() < 2) return;
+   if (rec.GetN() < 2) return;
 
-  Int_t cellID = rec.GetItem(1);
-  TEveCaloData::CellData_t cellData;  
-  fM->fData->GetCellData(fM->fCellList[cellID], cellData);
+   Int_t cellID = rec.GetItem(1);
+   TEveCaloData::CellData_t cellData;  
+   fM->fData->GetCellData(fM->fCellList[cellID], cellData);
 
-  printf("Tower selected in slice %d \n",fM->fCellList[cellID].fSlice);
-  cellData.Dump();
+   printf("Tower selected in slice %d \n",fM->fCellList[cellID].fSlice);
+   cellData.Dump();
 }
