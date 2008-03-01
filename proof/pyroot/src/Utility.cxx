@@ -89,6 +89,44 @@ namespace {
 
 
 //- public functions ---------------------------------------------------------
+ULong_t PyROOT::PyLongOrInt_AsULong( PyObject* pyobject )
+{
+// convert <pybject> to C++ unsigned long, with bounds checking, allow int -> ulong
+   ULong_t ul = PyLong_AsUnsignedLong( pyobject );
+   if ( PyErr_Occurred() && PyInt_Check( pyobject ) ) {
+      PyErr_Clear();
+      Long_t i = PyInt_AS_LONG( pyobject );
+      if ( 0 <= i ) {
+         ul = (ULong_t)i;
+      } else {
+         PyErr_SetString( PyExc_ValueError,
+            "can\'t convert negative value to unsigned long" );
+      }
+   }
+
+   return ul;
+}
+
+//____________________________________________________________________________
+ULong64_t PyROOT::PyLongOrInt_AsULong64( PyObject* pyobject )
+{
+// convert <pyobject> to C++ unsigned long long, with bounds checking
+   ULong64_t ull = PyLong_AsUnsignedLongLong( pyobject );
+   if ( PyErr_Occurred() && PyInt_Check( pyobject ) ) {
+      PyErr_Clear();
+      Long_t i = PyInt_AS_LONG( pyobject );
+      if ( 0 <= i ) {
+         ull = (ULong64_t)i;
+      } else {
+         PyErr_SetString( PyExc_ValueError,
+            "can\'t convert negative value to unsigned long long" );
+      }
+   }
+
+   return ull;
+}
+
+//____________________________________________________________________________
 Bool_t PyROOT::Utility::SetMemoryPolicy( EMemoryPolicy e )
 {
    if ( kHeuristics <= e && e <= kStrict ) {
@@ -265,8 +303,19 @@ int PyROOT::Utility::GetBuffer( PyObject* pyobject, char tc, int size, void*& bu
          } else if ( (int)(buflen / (*(seqmeths->sq_length))( pyobject )) == size ) {
          // this is a gamble ... may or may not be ok, but that's for the user
             PyErr_Clear();
-         } else
+         } else {
             buf = 0;                      // not compatible
+
+         // clarify error message
+            PyObject* pytype = 0, *pyvalue = 0, *pytrace = 0;
+            PyErr_Fetch( &pytype, &pyvalue, &pytrace );
+            PyObject* pyvalue2 = PyString_FromFormat(
+               (char*)"%s and given element size (%d) does not match needed (%d)",
+               PyString_AS_STRING( pyvalue ),
+               (int)(buflen / (*(seqmeths->sq_length))( pyobject )), size );
+            Py_DECREF( pyvalue );
+            PyErr_Restore( pytype, pyvalue2, pytrace );
+         }
       }
 
       return buflen;
