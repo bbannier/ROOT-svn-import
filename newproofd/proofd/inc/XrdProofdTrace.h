@@ -68,6 +68,8 @@ R__EXTERN XrdOucTrace *XrdProofdTrace;
 
 #define TRACE(act, x) if (TRACING(act)) XPDPRT(x)
 
+
+#if 0
 #define TRACEI(act, x) \
    if (TRACING(act)) \
       {XrdProofdTrace->Beg(TRACEID,TRACELINK->ID); cerr <<x; XrdProofdTrace->End();}
@@ -76,6 +78,30 @@ R__EXTERN XrdOucTrace *XrdProofdTrace;
    if (TRACING(act)) \
       {XrdProofdTrace->Beg(TRACEID,TRACELINK->ID,RESPONSE.ID()); cerr <<x; \
        XrdProofdTrace->End();}
+#else
+
+#if 1
+#define TRACEI(p, act, x) \
+   if (TRACING(act)) { \
+      if (p && p->Link()) {\
+         XrdProofdTrace->Beg(TRACEID, p->Link()->ID); cerr <<x; XrdProofdTrace->End(); \
+      } else {XPDPRT(x);}\
+   }
+#else
+#define TRACEI(p, act, x)
+#endif
+
+#define TRACEP(p, id, act, x) \
+   if (TRACING(act)) { \
+      if (p && p->Link() && id) {\
+         XrdProofdTrace->Beg(TRACEID,p->Link()->ID, id); cerr <<x; \
+         XrdProofdTrace->End(); \
+      } else { \
+         XPDPRT(x); \
+      }\
+   }
+
+#endif
 
 #define TRACES(act, x) \
    if (TRACING(act)) \

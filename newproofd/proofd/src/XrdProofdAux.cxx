@@ -24,17 +24,22 @@
 #include "XrdSys/XrdSysPriv.hh"
 
 #include "XrdProofdAux.h"
+#include "XrdProofdConfig.h"
 #include "XrdProofdProtocol.h"
 
 // Tracing
 #include "XrdProofdTrace.h"
+static const char *gTraceID = "";
 extern XrdOucTrace *XrdProofdTrace;
+#define TRACEID gTraceID
 
 // Local definitions
 #ifdef XPD_LONG_MAX
 #undefine XPD_LONG_MAX
 #endif
 #define XPD_LONG_MAX 2147483647
+
+XrdSysRecMutex XrdProofdAux::fgFormMutex;
 
 //______________________________________________________________________________
 char *XrdProofdAux::Expand(char *p)
@@ -281,7 +286,7 @@ int XrdProofdAux::AssertDir(const char *path, XrdProofUI ui, bool changeown)
    // If changeown is TRUE it tries to acquire the privileges before.
    // Return 0 in case of success, -1 in case of error
 
-   MTRACE(ACT, MHEAD, "AssertDir: enter");
+   TRACE(ACT, "AssertDir: enter");
 
    if (!path || strlen(path) <= 0)
       return -1;
@@ -292,24 +297,24 @@ int XrdProofdAux::AssertDir(const char *path, XrdProofUI ui, bool changeown)
 
          {  XrdSysPrivGuard pGuard((uid_t)0, (gid_t)0);
             if (XpdBadPGuard(pGuard, ui.fUid) && changeown) {
-               MERROR(MHEAD, "AsserDir: could not get privileges");
+               TRACE(XERR, "AsserDir: could not get privileges to create dir");
                return -1;
             }
 
             if (mkdir(path, 0755) != 0) {
-               MERROR(MHEAD, "AssertDir: unable to create dir: "<<path<<
+               TRACE(XERR, "AssertDir: unable to create dir: "<<path<<
                              " (errno: "<<errno<<")");
                return -1;
             }
          }
          if (stat(path,&st) != 0) {
-            MERROR(MHEAD, "AssertDir: unable to stat dir: "<<path<<
+            TRACE(XERR, "AssertDir: unable to stat dir: "<<path<<
                           " (errno: "<<errno<<")");
             return -1;
          }
       } else {
          // Failure: stop
-         MERROR(MHEAD, "AssertDir: unable to stat dir: "<<path<<
+         TRACE(XERR, "AssertDir: unable to stat dir: "<<path<<
                        " (errno: "<<errno<<")");
          return -1;
       }
@@ -321,13 +326,13 @@ int XrdProofdAux::AssertDir(const char *path, XrdProofUI ui, bool changeown)
 
       XrdSysPrivGuard pGuard((uid_t)0, (gid_t)0);
       if (XpdBadPGuard(pGuard, ui.fUid)) {
-         MERROR(MHEAD, "AsserDir: could not get privileges");
+         TRACE(XERR, "AsserDir: could not get privileges to change ownership");
          return -1;
       }
 
       // Set ownership of the path to the client
       if (chown(path, ui.fUid, ui.fGid) == -1) {
-         MERROR(MHEAD, "AssertDir: cannot set user ownership"
+         TRACE(XERR, "AssertDir: cannot set user ownership"
                        " on path (errno: "<<errno<<")");
          return -1;
       }
@@ -344,7 +349,7 @@ int XrdProofdAux::ChangeToDir(const char *dir, XrdProofUI ui, bool changeown)
    // If changeown is TRUE it tries to acquire the privileges before.
    // Return 0 in case of success, -1 in case of error
 
-   MTRACE(ACT, MHEAD, "ChangeToDir: enter: changing to " << ((dir) ? dir : "**undef***"));
+   TRACE(ACT, "ChangeToDir: enter: changing to " << ((dir) ? dir : "**undef***"));
 
    if (!dir || strlen(dir) <= 0)
       return -1;
@@ -377,19 +382,19 @@ int XrdProofdAux::SymLink(const char *path, const char *link)
    // Create a symlink 'link' to 'path'
    // Return 0 in case of success, -1 in case of error
 
-   MTRACE(ACT, MHEAD, "SymLink: enter");
+   TRACE(ACT, "SymLink: enter");
 
    if (!path || strlen(path) <= 0 || !link || strlen(link) <= 0)
       return -1;
 
    // Remove existing link, if any
    if (unlink(link) != 0 && errno != ENOENT) {
-      MERROR(MHEAD, "SymLink: problems unlinking existing symlink "<< link<<
+      TRACE(XERR, "SymLink: problems unlinking existing symlink "<< link<<
                     " (errno: "<<errno<<")");
       return -1;
    }
    if (symlink(path, link) != 0) {
-      MERROR(MHEAD, "SymLink: problems creating symlink " << link<<
+      TRACE(XERR, "SymLink: problems creating symlink " << link<<
                     " (errno: "<<errno<<")");
       return -1;
    }
@@ -420,12 +425,12 @@ int XrdProofdAux::CheckIf(XrdOucStream *s, const char *host)
       return -1;
 
    // Deprecate
-   MPRINT(MHEAD, ">>> Warning: 'if' conditions at the end of the directive are deprecated ");
-   MPRINT(MHEAD, ">>> Please use standard Scalla/Xrootd 'if-else-fi' constructs");
-   MPRINT(MHEAD, ">>> (see http://xrootd.slac.stanford.edu/doc/xrd_config/xrd_config.htm)");
+   XPDPRT( ">>> Warning: 'if' conditions at the end of the directive are deprecated ");
+   XPDPRT( ">>> Please use standard Scalla/Xrootd 'if-else-fi' constructs");
+   XPDPRT( ">>> (see http://xrootd.slac.stanford.edu/doc/xrd_config/xrd_config.htm)");
 
    // Notify
-   MTRACE(DBG, MHEAD, "CheckIf: <pattern>: " <<val);
+   TRACE(DBG, "CheckIf: <pattern>: " <<val);
 
    // Return number of chars matching
    XrdOucString h(host);
@@ -451,13 +456,13 @@ int XrdProofdAux::GetNumCPUs()
    FILE *fc = fopen(fcpu.c_str(), "r");
    if (!fc) {
       if (errno == ENOENT) {
-         MPRINT(MHEAD, "GetNumCPUs: /proc/cpuinfo missing!!! Something very bad going on");
+         XPDPRT( "GetNumCPUs: /proc/cpuinfo missing!!! Something very bad going on");
       } else {
          XrdOucString emsg("GetNumCPUs: cannot open ");
          emsg += fcpu;
          emsg += ": errno: ";
          emsg += errno;
-         MPRINT(MHEAD, emsg.c_str());
+         XPDPRT( emsg.c_str());
       }
       return -1;
    }
@@ -493,7 +498,7 @@ int XrdProofdAux::GetNumCPUs()
    }
 #endif
 
-   MPRINT(MHEAD, "GetNumCPUs: # of cores found: "<<ncpu);
+   XPDPRT( "GetNumCPUs: # of cores found: "<<ncpu);
 
    // Done
    return (ncpu <= 0) ? (int)(-1) : ncpu ;
@@ -519,7 +524,7 @@ int XrdProofdAux::GetMacProcList(kinfo_proc **plist, int &nproc)
    bool done = 0;
    static const int name[] = {CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0};
 
-   MTRACE(ACT, MHEAD, "GetMacProcList: enter ");
+   TRACE(ACT, "GetMacProcList: enter ");
 
    // Declaring name as const requires us to cast it when passing it to
    // sysctl because the prototype doesn't include the const modifier.
@@ -588,18 +593,309 @@ int XrdProofdAux::GetMacProcList(kinfo_proc **plist, int &nproc)
 }
 #endif
 
+//______________________________________________________________________________
+int XrdProofdAux::VerifyProcessByID(int pid, const char *pname)
+{
+   // Check if a process named 'pname' and process 'pid' is still
+   // in the process table.
+   // For {linux, sun, macosx} it uses the system info; for other systems it
+   // invokes the command shell 'ps ax' via popen.
+   // Return 1 if running, 0 if not running, -1 if the check could not be run.
+
+   int rc = 0;
+
+   TRACE(ACT, "VerifyProcessByID: enter: pid: "<<pid);
+
+   // Check input consistency
+   if (pid < 0) {
+      TRACE(XERR, "VerifyProcessByID: invalid pid");
+      return -1;
+   }
+
+   // Name
+   const char *pn = (pname && strlen(pname) > 0) ? pname : "proofserv";
+
+#if defined(linux)
+   // Look for the relevant /proc dir
+   XrdOucString fn("/proc/");
+   fn += pid;
+   fn += "/stat";
+   FILE *ffn = fopen(fn.c_str(), "r");
+   if (!ffn) {
+      if (errno == ENOENT) {
+         TRACE(DBG, "VerifyProcessByID: process does not exists anymore");
+         return 0;
+      } else {
+         XrdOucString emsg("VerifyProcessByID: cannot open ");
+         emsg += fn;
+         emsg += ": errno: ";
+         emsg += errno;
+         TRACE(XERR, emsg.c_str());
+         return -1;
+      }
+   }
+   // Read status line
+   char line[2048] = { 0 };
+   if (fgets(line, sizeof(line), ffn)) {
+      if (strstr(line, pn))
+         // Still there
+         rc = 1;
+   } else {
+      XrdOucString emsg("VerifyProcessByID: cannot read ");
+      emsg += fn;
+      emsg += ": errno: ";
+      emsg += errno;
+      TRACE(XERR, emsg.c_str());
+      fclose(ffn);
+      return -1;
+   }
+   // Close the file
+   fclose(ffn);
+
+#elif defined(__sun)
+
+   // Look for the relevant /proc dir
+   XrdOucString fn("/proc/");
+   fn += pid;
+   fn += "/psinfo";
+   int ffd = open(fn.c_str(), O_RDONLY);
+   if (ffd <= 0) {
+      if (errno == ENOENT) {
+         TRACE(DBG, "VerifyProcessByID: process does not exists anymore");
+         return 0;
+      } else {
+         XrdOucString emsg("VerifyProcessByID: cannot open ");
+         emsg += fn;
+         emsg += ": errno: ";
+         emsg += errno;
+         TRACE(XERR, emsg.c_str());
+         return -1;
+      }
+   }
+   // Get the information
+   psinfo_t psi;
+   if (read(ffd, &psi, sizeof(psinfo_t)) != sizeof(psinfo_t)) {
+      XrdOucString emsg("VerifyProcessByID: cannot read ");
+      emsg += fn;
+      emsg += ": errno: ";
+      emsg += errno;
+      TRACE(XERR, emsg.c_str());
+      close(ffd);
+      return -1;
+   }
+
+   // Verify now
+   if (strstr(psi.pr_fname, pn))
+      // The process is still there
+      rc = 1;
+
+   // Close the file
+   close(ffd);
+
+#elif defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
+
+   // Get the proclist
+   kinfo_proc *pl = 0;
+   int np;
+   int ern = 0;
+   if ((ern = XrdProofdAux::GetMacProcList(&pl, np)) != 0) {
+      XrdOucString emsg("VerifyProcessByID: cannot get the process list: errno: ");
+      emsg += ern;
+      TRACE(XERR, emsg.c_str());
+      return -1;
+   }
+
+   // Loop over the list
+   while (np--) {
+      if (pl[np].kp_proc.p_pid == pid &&
+          strstr(pl[np].kp_proc.p_comm, pn)) {
+         // Process still exists
+         rc = 1;
+         break;
+      }
+   }
+   // Cleanup
+   free(pl);
+#else
+   // Use the output of 'ps ax' as a backup solution
+   XrdOucString cmd = "ps ax | grep proofserv 2>/dev/null";
+   if (pname && strlen(pname))
+      cmd.replace("proofserv", pname);
+   FILE *fp = popen(cmd.c_str(), "r");
+   if (fp != 0) {
+      char line[2048] = { 0 };
+      while (fgets(line, sizeof(line), fp)) {
+         if (pid == XrdProofdAux::GetLong(line)) {
+            // Process still running
+            rc = 1;
+            break;
+         }
+      }
+      pclose(fp);
+   } else {
+      // Error executing the command
+      return -1;
+   }
+#endif
+   // Done
+   return rc;
+}
+
+//______________________________________________________________________________
+int XrdProofdAux::KillProcess(int pid, bool forcekill, XrdProofUI ui, bool changeown)
+{
+   // Kill the process 'pid'.
+   // A SIGTERM is sent, unless 'kill' is TRUE, in which case a SIGKILL is used.
+   // If add is TRUE (default) the pid is added to the list of processes
+   // requested to terminate.
+   // Return 0 on success, -1 if not allowed or other errors occured.
+
+   TRACE(ACT, "KillProcess: enter: pid: "<<pid<< ", forcekill: "<< forcekill);
+
+   if (pid > 0) {
+      // We need the right privileges to do this
+      XrdSysPrivGuard pGuard((uid_t)0, (gid_t)0);
+      if (XpdBadPGuard(pGuard, ui.fUid) && changeown) {
+         XrdOucString msg = "KillProcess: could not get privileges";
+         TRACE(XERR, msg.c_str());
+         return -1;
+      } else {
+         bool signalled = 1;
+         if (forcekill)
+            // Hard shutdown via SIGKILL
+            if (kill(pid, SIGKILL) != 0) {
+               if (errno != ESRCH) {
+                  XrdOucString msg = "KillProcess: kill(pid,SIGKILL) failed for process: ";
+                  msg += pid;
+                  msg += " - errno: ";
+                  msg += errno;
+                  TRACE(XERR, msg.c_str());
+                  return -1;
+               }
+               signalled = 0;
+            }
+         else
+            // Softer shutdown via SIGTERM
+            if (kill(pid, SIGTERM) != 0) {
+               if (errno != ESRCH) {
+                  XrdOucString msg = "KillProcess: kill(pid,SIGTERM) failed for process: ";
+                  msg += pid;
+                  msg += " - errno: ";
+                  msg += errno;
+                  TRACE(XERR, msg.c_str());
+                  return -1;
+               }
+               signalled = 0;
+            }
+         // Add to the list of termination attempts
+         if (!signalled) {
+            TRACE(DBG, "KillProcess: process ID "<<pid<<" not found in the process table");
+         }
+      }
+   } else {
+      return -1;
+   }
+
+   // Done
+   return 0;
+}
+
+//______________________________________________________________________________
+char *XrdProofdAux::ReadMsg(int fd)
+{
+   // Read a meassage from descriptor 'fd'
+
+   char *buf = 0;
+
+   // Read message length
+   int len = 0;
+   if (read(fd, &len, sizeof(len)) != sizeof(len)) {
+      TRACE(XERR, "readMsg: problems receiving message length");
+      return buf;
+   }
+
+   // Read message
+   buf = new char[len + 1];
+   int n, nr = 0;
+   for (n = 0; n < len; n += nr) {
+      while ((nr = read(fd, buf + n, len - n)) == -1 && errno == EINTR)
+         errno = 0;   // probably a SIGCLD that was caught
+      if (nr <= 0)
+         break;       // EOF or failure
+   }
+   if (nr < 0)
+      SafeDelArray(buf);
+   // Done
+   return buf;
+}
+
+//______________________________________________________________________________
+int XrdProofdAux::Form(XrdOucString &str, const char *fmt, ...)
+{
+   // Format a string in 'str' according to 'fmt' and the arguments
+
+   static int buf_size = 2048;
+   static char *buf = 0;
+
+   XrdSysMutexHelper mh(fgFormMutex);
+
+   va_list ap;
+   va_start(ap, fmt);
+
+again:
+   if (!buf)
+      buf = new char[buf_size];
+
+   int n = vsnprintf(buf, buf_size, fmt, ap);
+   // old vsnprintf's return -1 if string is truncated new ones return
+   // total number of characters that would have been written
+   if (n == -1 || n >= buf_size) {
+      if (n == -1)
+         buf_size *= 2;
+      else
+         buf_size = n+1;
+      delete [] buf;
+      buf = 0;
+      va_end(ap);
+      va_start(ap, fmt);
+      goto again;
+   }
+   va_end(ap);
+
+   str = buf;
+
+   // Done
+   return n;
+}
+
 //
 // Functions to process directives for integer and strings
 //
 
 //______________________________________________________________________________
-int DoDirectiveInt(XrdProofdDirective *d, char *val, XrdOucStream *cfg, bool)
+int DoDirectiveClass(XrdProofdDirective *d, char *val, XrdOucStream *cfg, bool rcf)
+{
+   // Generic class directive processor
+
+   if (!d || !(d->fVal))
+      // undefined inputs
+      return -1;
+
+   return ((XrdProofdConfig *)d->fVal)->DoDirective(d, val, cfg, rcf);
+}
+
+//______________________________________________________________________________
+int DoDirectiveInt(XrdProofdDirective *d, char *val, XrdOucStream *cfg, bool rcf)
 {
    // Process directive for an integer
 
    if (!d || !(d->fVal) || !val)
       // undefined inputs
       return -1;
+
+   if (rcf && !d->fRcf)
+      // Not re-configurable: do nothing
+      return 0;
 
    // Check deprecated 'if' directive
    if (d->fHost && cfg)
@@ -609,19 +905,23 @@ int DoDirectiveInt(XrdProofdDirective *d, char *val, XrdOucStream *cfg, bool)
    int v = strtol(val,0,10);
    *((int *)d->fVal) = v;
 
-   MTRACE(DBG,MHEAD,"DoDirectiveInt: set "<<d->fName<<" to "<<*((int *)d->fVal));
+   TRACE(DBG, "DoDirectiveInt: set "<<d->fName<<" to "<<*((int *)d->fVal));
 
    return 0;
 }
 
 //______________________________________________________________________________
-int DoDirectiveString(XrdProofdDirective *d, char *val, XrdOucStream *cfg, bool)
+int DoDirectiveString(XrdProofdDirective *d, char *val, XrdOucStream *cfg, bool rcf)
 {
    // Process directive for a string
 
    if (!d || !(d->fVal) || !val)
       // undefined inputs
       return -1;
+
+   if (rcf && !d->fRcf)
+      // Not re-configurable: do nothing
+      return 0;
 
    // Check deprecated 'if' directive
    if (d->fHost && cfg)
@@ -630,7 +930,7 @@ int DoDirectiveString(XrdProofdDirective *d, char *val, XrdOucStream *cfg, bool)
 
    *((XrdOucString *)d->fVal) = val;
 
-   MTRACE(DBG,MHEAD,"DoDirectiveString: set "<<d->fName<<" to "<<*((XrdOucString *)d->fVal));
+   TRACE(DBG, "DoDirectiveString: set "<<d->fName<<" to "<<*((XrdOucString *)d->fVal));
    return 0;
 }
 

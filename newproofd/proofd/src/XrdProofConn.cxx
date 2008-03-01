@@ -115,6 +115,11 @@ XrdProofConn::XrdProofConn(const char *url, char m, int psid, char capver,
    // login. In case of need, internally it is overwritten with a token
    // needed during redirection.
 
+#if 1
+   // Mutex
+   fMutex = new XrdSysRecMutex();
+#endif
+
    // Initialization
    if (url && !Init(url)) {
       if (GetServType() != kSTProofd)
@@ -158,8 +163,10 @@ bool XrdProofConn::Init(const char *url)
       }
    }
 
+#if 0
    // Mutex
    fMutex = new XrdSysRecMutex();
+#endif
 
    // Parse Url
    fUrl.TakeUrl(XrdOucString(url));
@@ -181,6 +188,7 @@ bool XrdProofConn::Init(const char *url)
    fHost = fUrl.Host.c_str();
    fPort = fUrl.Port;
 
+#if 0
    // Max number of tries and timeout
    int maxTry = (fgMaxTry > -1) ? fgMaxTry : EnvGetLong(NAME_FIRSTCONNECTMAXCNT);
    int timeWait = (fgTimeWait > -1) ? fgTimeWait : EnvGetLong(NAME_CONNECTTIMEOUT);
@@ -190,7 +198,7 @@ bool XrdProofConn::Init(const char *url)
    for (; (i < maxTry) && (!fConnected); i++) {
 
       // Try connection
-      logid = Connect();
+      logid = TryConnect();
 
       // We are connected to a host. Let's handshake with it.
       if (fConnected) {
@@ -244,9 +252,84 @@ bool XrdProofConn::Init(const char *url)
       }
 
    } //for connect try
+#else
+   // Run the connection attempts: the result is stored in fConnected
+   Connect();
+#endif
 
    // We are done
    return fConnected;
+}
+
+//_____________________________________________________________________________
+void XrdProofConn::Connect()
+{
+   // Run the connection attempts: the result is stored in fConnected
+
+   // Max number of tries and timeout
+   int maxTry = (fgMaxTry > -1) ? fgMaxTry : EnvGetLong(NAME_FIRSTCONNECTMAXCNT);
+   int timeWait = (fgTimeWait > -1) ? fgTimeWait : EnvGetLong(NAME_CONNECTTIMEOUT);
+
+   fConnected = 0;
+   int logid = -1;
+   int i = 0;
+   for (; (i < maxTry) && (!fConnected); i++) {
+
+      // Try connection
+      logid = TryConnect();
+
+      // We are connected to a host. Let's handshake with it.
+      if (fConnected) {
+
+         // Set the port used
+         fPort = fUrl.Port;
+
+         if (fPhyConn->IsLogged() == kNo) {
+            // Now the have the logical Connection ID, that we can use as streamid for
+            // communications with the server
+            TRACE(REQ,"XrdProofConn::Connect: new logical connection ID: "<<logid);
+
+            // Get access to server
+            if (!GetAccessToSrv()) {
+               fConnected = 0;
+               if (GetServType() == kSTProofd)
+                  return;
+               if (fLastErr == kXR_NotAuthorized || fLastErr == kXR_InvalidRequest) {
+                  // Auth error or iunvalid request: does not make much sense to retry
+                  Close("P");
+                  XrdOucString msg = fLastErrMsg;
+                  msg.erase(msg.rfind(":"));
+                  TRACE(REQ,"XrdProofConn::Connect: failure: " << msg);
+                  return;
+               } else {
+                  TRACE(REQ,"XrdProofConn::Connect: access to server failed (" << fLastErrMsg << ")");
+               }
+               continue;
+            } else {
+
+               // Manager call in client: no need to create or attach: just notify
+               TRACE(REQ,"XrdProofConn::Connect: access to server granted.");
+               break;
+            }
+         }
+
+         // Notify
+         TRACE(REQ,"XrdProofConn::Connect: session create / attached successfully.");
+         break;
+
+      }
+
+      // We force a physical disconnection in this special case
+      TRACE(REQ,"XrdProofConn::Connect: disconnecting.");
+      Close("P");
+
+      // And we wait a bit before retrying
+      if (i < maxTry - 1) {
+         TRACE(REQ,"XrdProofConn::Connect: connection attempt failed: sleep " << timeWait << " secs");
+         sleep(timeWait);
+      }
+
+   } //for connect try
 }
 
 //_____________________________________________________________________________
@@ -258,10 +341,14 @@ XrdProofConn::~XrdProofConn()
    // responsible of the underlying physical connection, so we do not
    // force its closing)
    Close();
+#if 1
+   // Cleanup mutex
+   SafeDelete(fMutex);
+#endif
 }
 
 //_____________________________________________________________________________
-int XrdProofConn::Connect()
+int XrdProofConn::TryConnect()
 {
    // Connect to remote server
 
@@ -279,7 +366,7 @@ int XrdProofConn::Connect()
       // Name
       fUrl.Host = (const char *) hname[i];
       // Notify
-      TRACE(REQ,"XrdProofConn::Connect: found host "<<fUrl.Host<<
+      TRACE(REQ,"XrdProofConn::TryConnect: found host "<<fUrl.Host<<
                 " with addr " << fUrl.HostAddr);
    }
 
@@ -293,12 +380,12 @@ int XrdProofConn::Connect()
 
    // Connect
    if ((logid = fgConnMgr->Connect(fUrl)) < 0) {
-      TRACE(REQ,"XrdProofConn::Connect: creating logical connection to " <<URLTAG);
+      TRACE(REQ,"XrdProofConn::TryConnect: creating logical connection to " <<URLTAG);
       fLogConnID = logid;
       fConnected = 0;
       return -1;
    }
-   TRACE(REQ,"XrdProofConn::Connect: connect to "<<URLTAG<<" returned "<<logid );
+   TRACE(REQ,"XrdProofConn::TryConnect: connect to "<<URLTAG<<" returned "<<logid );
 
    // Set some vars
    fLogConnID = logid;
@@ -318,8 +405,10 @@ void XrdProofConn::Close(const char *)
 {
    // Close connection.
 
+#if 0
    // Cleanup mutex
    SafeDelete(fMutex);
+#endif
 
    // Make sure we are connected
    if (!fConnected)
@@ -490,7 +579,7 @@ XrdClientMessage *XrdProofConn::SendReq(XPClientRequest *req, const void *reqDat
    int retry = 0;
    bool resp = 0, abortcmd = 0;
 
-   XrdSysMutexHelper l(*fMutex);
+   XrdSysMutexHelper l(fMutex);
 
    int maxTry = (fgMaxTry > -1) ? fgMaxTry : kXR_maxReqRetry;
 
@@ -916,7 +1005,7 @@ bool XrdProofConn::Login()
    memcpy(&reqhdr.login.reserved[0], &sessID, 2);
 
    // Send also a capability (protocol) version number
-   reqhdr.login.capver[0] = (char)fCapVer;
+   reqhdr.login.capver[0] = fCapVer;
 
    // We call SendReq, the function devoted to sending commands.
    if (TRACING(REQ)) {

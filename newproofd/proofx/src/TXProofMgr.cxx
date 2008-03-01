@@ -389,6 +389,28 @@ Bool_t TXProofMgr::HandleError(const void *)
 
    Printf("TXProofMgr::HandleError: %p: got called ...", this);
 
+   // Try reconnection
+   if (fSocket && !fSocket->IsValid()) {
+
+#if 0
+      // Delete current socket
+      SafeDelete(fSocket);
+
+      // Initialize
+      if (Init(0) != 0) {
+         // Failure: make sure the socket is deleted so that its lack of
+         // validity is correctly transmitted
+         SafeDelete(fSocket);
+      }
+#else
+      fSocket->Reconnect();
+      if (fSocket && fSocket->IsValid()) {
+         Printf("TXProofMgr::HandleError: %p: connection re-established ... ", this);
+         return kTRUE;
+      }
+#endif
+   }
+
    // Interrupt any PROOF session in Collect
    if (fSessions && fSessions->GetSize() > 0) {
       TIter nxd(fSessions);

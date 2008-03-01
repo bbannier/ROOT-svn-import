@@ -361,13 +361,13 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
    // responses are asynchronous by nature.
    UnsolRespProcResult rc = kUNSOL_KEEP;
 
-   if (gDebug > 2)
+//   if (gDebug > 2)
       Info("ProcessUnsolicitedMsg", "Processing unsolicited msg: %p", m);
    if (!m) {
       // Some one is perhaps interested in empty messages
       return kUNSOL_CONTINUE;
    } else {
-      if (gDebug > 2)
+//      if (gDebug > 2)
          Info("ProcessUnsolicitedMsg", "status: %d, len: %d bytes",
               m->GetStatusCode(), m->DataLen());
    }
@@ -416,7 +416,7 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
    // Update pointer to data
    void *pdata = (void *)((char *)(m->GetData()) + sizeof(kXR_int32));
    len -= sizeof(kXR_int32);
-   if (gDebug > 1)
+//   if (gDebug > 1)
       Info("ProcessUnsolicitedMsg", "%p: got action: %d (%d bytes) (ID: %d)",
            this, acod, len, m->HeaderSID());
 
@@ -1103,6 +1103,8 @@ Bool_t TXSocket::Ping(Bool_t)
 
    TSystem::ResetErrno();
 
+   Info("Ping"," sid: %d", fSessionID);
+
    // Make sure we are connected
    if (!IsValid()) {
       Error("Ping","not connected: nothing to do");
@@ -1122,27 +1124,40 @@ Bool_t TXSocket::Ping(Bool_t)
    Request.sendrcv.dlen = 0;
 
    // Send request
-   char *pans = 0;
-   XrdClientMessage *xrsp =
-      fConn->SendReq(&Request, (const void *)0, &pans, "Ping");
-   kXR_int32 *pres = (kXR_int32 *) pans;
-
-   // Get the result
    Bool_t res = kFALSE;
-   if (xrsp && xrsp->HeaderStatus() == kXR_ok) {
-      *pres = net2host(*pres);
-      res = (*pres == 1);
+   if (fMode != 'i') {
+      char *pans = 0;
+      XrdClientMessage *xrsp =
+         fConn->SendReq(&Request, (const void *)0, &pans, "Ping");
+      kXR_int32 *pres = (kXR_int32 *) pans;
+
+      // Get the result
+      if (xrsp && xrsp->HeaderStatus() == kXR_ok) {
+         *pres = net2host(*pres);
+         res = (*pres == 1);
+      } else {
+         // Print error mag, if any
+         if (fConn->GetLastErr())
+            Printf("%s: %s", fHost.Data(), fConn->GetLastErr());
+      }
+
+      // Cleanup
+      SafeDelete(xrsp);
+
    } else {
-      // Print error mag, if any
-      if (fConn->GetLastErr())
-         Printf("%s: %s", fHost.Data(), fConn->GetLastErr());
+      if (XPD::clientMarshall(&Request) == 0) {
+         XReqErrorType e = fConn->LowWrite(&Request, 0, 0);
+         res = (e == kOK) ? kTRUE : kFALSE;
+      } else {
+         Error("Ping", "problems marshalling request");
+      }
    }
 
-   // Cleanup
-   SafeDelete(xrsp);
-
    // Failure notification (avoid using the handler: we may be exiting)
-   Error("Ping", "problems sending ping to server");
+   if (!res)
+      Error("Ping", "problems sending ping to server");
+   else 
+      Info("Ping"," sid: %d OK", fSessionID);
 
    return res;
 }
@@ -1802,6 +1817,21 @@ void TXSocket::InitEnvs()
    fgInitDone = kTRUE;
 }
 
+//______________________________________________________________________________
+Int_t TXSocket::Reconnect()
+{
+   // Try reconnection after failure
+
+   Info("Reconnect","Trying to reconnect ... %p, %d",
+        fConn, (fConn ? fConn->IsValid() : 0));
+
+   if (fConn && !fConn->IsValid()) {
+      fConn->Close();
+      fConn->Connect();
+   }
+
+   return 1;
+}
 
 //_____________________________________________________________________________
 TXSockBuf::TXSockBuf(Char_t *bp, Int_t sz, Bool_t own)

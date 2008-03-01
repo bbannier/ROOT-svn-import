@@ -22,12 +22,15 @@
 #include "XrdProofdPlatform.h"
 
 #include "XrdROOT.h"
+#include "XrdProofdManager.h"
 #include "XrdProofdProtocol.h"
+#include "XrdProofdProofServMgr.h"
+#include "XrdOuc/XrdOucStream.hh"
 #include "XrdSys/XrdSysPriv.hh"
 
 // Tracing
 #include "XrdProofdTrace.h"
-static const char *gTraceID = " ";
+static const char *gTraceID = "";
 extern XrdOucTrace *XrdProofdTrace;
 #define TRACEID gTraceID
 
@@ -85,29 +88,25 @@ XrdROOT::XrdROOT(const char *dir, const char *tag)
 }
 
 //__________________________________________________________________________
-bool XrdROOT::Validate()
+void XrdROOT::SetValid(kXR_int16 vers)
 {
-   // Validates 'dir' (temporarly stored in fExport) and makes sure the
-   // associated 'proofserv' can be started
+   // Set valid, save protocol and finalize the export string
 
-   if (IsInvalid()) {
-      // Cannot be validated
-      XPDERR("XrdROOT::Validate: invalid instance - cannot be validated");
-      return 0;
-   }
-
-   // Validate it, retrieving at the same time the PROOF protocol run by it
-   if (ValidatePrgmSrv() == -1) {
-      XPDERR("XrdROOT:Validate: unable to validate "<< fPrgmSrv);
-      return 0;
-   }
-
-   // Finalize export string
-   fExport += " "; fExport += (int)fSrvProtVers;
-
-   // The instance has been validated
    fStatus = 1;
-   return 1;
+
+   if (vers > 0) {
+      // Cleanup export, if needed
+      if (fSrvProtVers > 0) {
+         XrdOucString vs(" ");
+         vs += fSrvProtVers;
+         fExport.replace(vs,XrdOucString(""));
+      }
+      fSrvProtVers = vers;
+
+      // Finalize export string
+      fExport += " ";
+      fExport += (int)fSrvProtVers;
+   }
 }
 
 //__________________________________________________________________________
@@ -149,47 +148,210 @@ int XrdROOT::GetROOTVersion(const char *dir, XrdOucString &version)
    return rc;
 }
 
+//
+// Manager
+
+//______________________________________________________________________________
+XrdROOTMgr::XrdROOTMgr(XrdProofdManager *mgr,
+                       XrdProtocol_Config *pi, XrdSysError *e)
+          : XrdProofdConfig(pi->ConfigFN, e)
+{
+   // Constructor
+
+   fMgr = mgr;
+   fSched = pi->Sched;
+   fROOT.clear();
+
+   // Configuration directives
+   RegisterDirectives();
+}
+
 //__________________________________________________________________________
-int XrdROOT::ValidatePrgmSrv()
+int XrdROOTMgr::Config(bool rcf)
+{
+   // Run configuration and parse the entered config directives.
+   // Return 0 on success, -1 on error
+
+   // Run first the configurator
+   if (XrdProofdConfig::Config(rcf) != 0) {
+      fEDest->Say(0, "xpd: Config: ROOTMgr: problems parsing file ");
+      return -1;
+   }
+
+   XrdOucString msg;
+   msg = (rcf) ? "xpd: Config: ROOTMgr: re-configuring"
+               : "xpd: Config: ROOTMgr: configuring";
+   fEDest->Say(0, msg.c_str());
+
+   // ROOT dirs
+   if (rcf) {
+      // Remove parked ROOT sys entries
+      std::list<XrdROOT *>::iterator tri;
+      if (fROOT.size() > 0) {
+         for (tri = fROOT.begin(); tri != fROOT.end();) {
+            if ((*tri)->IsParked()) {
+               delete (*tri);
+               tri = fROOT.erase(tri);
+            } else {
+               tri++;
+            }
+         }
+      }
+   } else {
+      // Check the ROOT dirs
+      if (fROOT.size() <= 0) {
+         // None defined: use ROOTSYS as default, if any; otherwise we fail
+         if (getenv("ROOTSYS")) {
+            XrdROOT *rootc = new XrdROOT(getenv("ROOTSYS"), "");
+            msg = "ROOTMgr : Config: ROOT dist: \"";
+            msg += rootc->Export();
+            if (Validate(rootc, fSched) == 0) {
+               msg += "\" validated";
+               fROOT.push_back(rootc);
+            } else {
+               msg += "\" could not be validated";
+            }
+            fEDest->Say(0, msg.c_str());
+        }
+         if (fROOT.size() <= 0) {
+            fEDest->Say(0, "ROOTMgr : Config: no ROOT dir defined;"
+                           " ROOTSYS location missing - unloading");
+            return 0;
+         }
+      }
+   }
+
+   // Done
+   return 0;
+}
+
+//__________________________________________________________________________
+void XrdROOTMgr::RegisterDirectives()
+{
+   // Register directives for configuration
+
+   Register("rootsys", new XrdProofdDirective("rootsys", this, &DoDirectiveClass));
+}
+
+//______________________________________________________________________________
+int XrdROOTMgr::DoDirective(XrdProofdDirective *d,
+                            char *val, XrdOucStream *cfg, bool rcf)
+{
+   // Update the priorities of the active sessions.
+
+   if (!d)
+      // undefined inputs
+      return -1;
+
+   if (d->fName == "rootsys") {
+      return DoDirectiveRootSys(val, cfg, rcf);
+   }
+   TRACE(XERR,"DoDirective: unknown directive: "<<d->fName);
+   return -1;
+}
+
+//______________________________________________________________________________
+int XrdROOTMgr::DoDirectiveRootSys(char *val, XrdOucStream *cfg, bool)
+{
+   // Process 'rootsys' directive
+
+   if (!val || !cfg)
+      // undefined inputs
+      return -1;
+
+   // Two tokens may be meaningful
+   XrdOucString dir = val;
+   val = cfg->GetToken();
+   XrdOucString tag = val;
+   bool ok = 1;
+   if (tag == "if") {
+      tag = "";
+      // Conditional
+      cfg->RetToken();
+      ok = (XrdProofdAux::CheckIf(cfg, fMgr->Host()) > 0) ? 1 : 0;
+   }
+   if (ok) {
+      XrdROOT *rootc = new XrdROOT(dir.c_str(), tag.c_str());
+      // Check if already validated
+      std::list<XrdROOT *>::iterator ori;
+      for (ori = fROOT.begin(); ori != fROOT.end(); ori++) {
+         if ((*ori)->Match(rootc->Dir(), rootc->Tag())) {
+            if ((*ori)->IsParked()) {
+               (*ori)->SetValid();
+               SafeDelete(rootc);
+               break;
+            }
+         }
+      }
+      // If not, try validation
+      if (rootc) {
+         if (Validate(rootc, fSched) == 0) {
+            XPDPRT("DoDirectiveRootSys: validation OK for: "<<rootc->Export());
+            // Add to the list
+            fROOT.push_back(rootc);
+         } else {
+            XPDPRT("DoDirectiveRootSys: could not validate "<<rootc->Export());
+            SafeDelete(rootc);
+         }
+      }
+   }
+   return 0;
+}
+
+//__________________________________________________________________________
+int XrdROOTMgr::Validate(XrdROOT *r, XrdScheduler *sched)
 {
    // Start a trial server application to test forking and get the version
    // of the protocol run by the PROOF server.
-   // Return 0 if everything goes well, -1 in cse of any error.
+   // Return 0 if everything goes well, -1 in case of any error.
 
-   XPDPRT("XrdROOT::ValidatePrgmSrv: forking test and protocol retrieval");
+   XPDPRT("XrdROOTMgr::Validate: forking test and protocol retrieval");
+
+   if (r->IsInvalid()) {
+      // Cannot be validated
+      XPDERR("XrdROOTMgr::Validate: invalid instance - cannot be validated");
+      return -1;
+   }
 
    // Make sure the application path has been defined
-   if (fPrgmSrv.length() <= 0) {
-      XPDERR("XrdROOT::ValidatePrgmSrv: "
+   if (!r->PrgmSrv() || strlen(r->PrgmSrv()) <= 0) {
+      XPDERR("XrdROOTMgr::Validate: "
             " path to PROOF server application undefined - exit");
+      return -1;
+   }
+
+   // Make sure the scheduler is defined
+   if (!sched) {
+      XPDERR("XrdROOTMgr::Validate: "
+            " scheduler undefined - exit");
       return -1;
    }
 
    // Pipe to communicate the protocol number
    int fp[2];
    if (pipe(fp) != 0) {
-      XPDERR("XrdROOT::ValidatePrgmSrv: unable to generate pipe for"
+      XPDERR("XrdROOTMgr::Validate: unable to generate pipe for"
             " PROOT protocol number communication");
       return -1;
    }
 
    // Fork a test agent process to handle this session
-   TRACE(FORK,"XrdROOT::ValidatePrgmSrv: forking external proofsrv");
+   TRACE(FORK,"XrdROOTMgr::Validate: forking external proofsrv");
    int pid = -1;
-   if (!(pid = XrdProofdProtocol::fgSched->Fork("proofsrv"))) {
+   if (!(pid = sched->Fork("proofsrv"))) {
 
       char *argvv[5] = {0};
 
       // start server
-      argvv[0] = (char *)fPrgmSrv.c_str();
+      argvv[0] = (char *)r->PrgmSrv();
       argvv[1] = (char *)"proofserv";
       argvv[2] = (char *)"xpd";
       argvv[3] = (char *)"test";
       argvv[4] = 0;
 
       // Set basic environment for proofserv
-      if (XrdProofdProtocol::SetProofServEnv(this) != 0) {
-         TRACE(XERR, "XrdROOT::ValidatePrgmSrv:"
+      if (XrdProofdProofServMgr::SetProofServEnv(fMgr, r) != 0) {
+         TRACE(XERR, "XrdROOTMgr::Validate:"
                        " SetProofServEnv did not return OK - EXIT");
          exit(1);
       }
@@ -204,14 +366,14 @@ int XrdROOT::ValidatePrgmSrv()
       if (!getuid()) {
          XrdProofUI ui;
          if (XrdProofdAux::GetUserInfo(geteuid(), ui) != 0) {
-            TRACE(XERR, "XrdROOT::ValidatePrgmSrv:"
+            TRACE(XERR, "XrdROOTMgr::Validate:"
                           " could not get info for user-id: "<<geteuid());
             exit(1);
          }
 
          // acquire permanently target user privileges
          if (XrdSysPriv::ChangePerm((uid_t)ui.fUid, (gid_t)ui.fGid) != 0) {
-            TRACE(XERR, "XrdROOT::ValidatePrgmSrv: can't acquire "<<
+            TRACE(XERR, "XrdROOTMgr::Validate: can't acquire "<<
                           ui.fUser <<" identity");
             exit(1);
          }
@@ -219,24 +381,24 @@ int XrdROOT::ValidatePrgmSrv()
       }
 
       // Run the program
-      execv(fPrgmSrv.c_str(), argvv);
+      execv(r->PrgmSrv(), argvv);
 
       // We should not be here!!!
-      TRACE(XERR, "XrdROOT::ValidatePrgmSrv:"
+      TRACE(XERR, "XrdROOTMgr::Validate:"
                     " returned from execv: bad, bad sign !!!");
       exit(1);
    }
 
    // parent process
    if (pid < 0) {
-      XPDERR("XrdROOT::ValidatePrgmSrv: forking failed - exit");
+      XPDERR("XrdROOTMgr::Validate: forking failed - exit");
       close(fp[0]);
       close(fp[1]);
       return -1;
    }
 
    // now we wait for the callback to be (successfully) established
-   TRACE(FORK, "XrdROOT::ValidatePrgmSrv:"
+   TRACE(FORK, "XrdROOTMgr::Validate:"
                " test server launched: wait for protocol ");
 
    // Read protocol
@@ -252,28 +414,28 @@ int XrdROOT::ValidatePrgmSrv()
       while ((pollRet = poll(&fds_r, 1, 2000)) < 0 &&
              (errno == EINTR)) { }
       if (pollRet == 0)
-         TRACE(DBG,"XrdROOT::ValidatePrgmSrv: "
+         TRACE(DBG,"XrdROOTMgr::Validate: "
                    "receiving PROOF server protocol number: waiting 2 s ...");
    }
    if (pollRet > 0) {
       if (read(fp[0], &proto, sizeof(proto)) != sizeof(proto)) {
-         XPDERR("ValidatePrgmSrv: "
+         XPDERR("Validate: "
                " XrdROOT::problems receiving PROOF server protocol number");
          return -1;
       }
    } else {
       if (pollRet == 0) {
-         XPDERR("XrdROOT::ValidatePrgmSrv: "
+         XPDERR("XrdROOTMgr::Validate: "
                " timed-out receiving PROOF server protocol number");
       } else {
-         XPDERR("XrdROOT::ValidatePrgmSrv: "
+         XPDERR("XrdROOTMgr::Validate: "
                " failed to receive PROOF server protocol number");
       }
       return -1;
    }
 
-   // Record protocol
-   fSrvProtVers = (kXR_int16) ntohl(proto);
+   // Set valid, record protocol and update export string
+   r->SetValid((kXR_int16) ntohl(proto));
 
    // Cleanup
    close(fp[0]);
@@ -281,4 +443,48 @@ int XrdROOT::ValidatePrgmSrv()
 
    // We are done
    return 0;
+}
+
+//______________________________________________________________________________
+XrdOucString XrdROOTMgr::ExportVersions(XrdROOT *def)
+{
+   // Return a string describing the available versions, with the default
+   // version 'def' markde with a '*'
+
+   XrdOucString out;
+
+   // Generic info about all known sessions
+   std::list<XrdROOT *>::iterator ip;
+   for (ip = fROOT.begin(); ip != fROOT.end(); ++ip) {
+      // Flag the default one
+      if (def == *ip)
+         out += "  * ";
+      else
+         out += "    ";
+      out += (*ip)->Export();
+      out += "\n";
+   }
+
+   // Over
+   return out;
+}
+
+//______________________________________________________________________________
+XrdROOT *XrdROOTMgr::GetVersion(const char *tag)
+{
+   // Return pointer to the ROOT version corresponding to 'tag'
+   // or 0 if not found.
+
+   XrdROOT *r = 0;
+
+   std::list<XrdROOT *>::iterator ip;
+   for (ip = fROOT.begin(); ip != fROOT.end(); ++ip) {
+      if ((*ip)->MatchTag(tag)) {
+         r = (*ip);
+         break;
+      }
+   }
+
+   // Over
+   return r;
 }
