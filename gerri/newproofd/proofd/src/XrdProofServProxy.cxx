@@ -9,23 +9,12 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#include <string.h>
-#include <unistd.h>
-#include <sys/uio.h>
-#include <sys/time.h>
-#include <sys/resource.h>
-
-#include <list>
-#include <map>
-
-#include "XrdNet/XrdNet.hh"
-#include "XrdSys/XrdSysPriv.hh"
 #include "XrdProofServProxy.h"
 #include "XrdProofWorker.h"
 
 // Tracing utils
 #include "XrdProofdTrace.h"
-static const char *TraceID = " ";
+static const char *TraceID = "";
 #define TRACEID TraceID
 #ifndef SafeDelete
 #define SafeDelete(x) { if (x) { delete x; x = 0; } }
@@ -40,33 +29,31 @@ XrdProofServProxy::XrdProofServProxy()
    // Constructor
 
    fMutex = new XrdSysRecMutex;
-   fLink = 0;
+   fConn = 0;
    fParent = 0;
    fPingSem = 0;
    fQueryNum = 0;
    fStartMsg = 0;
    fStatus = kXPD_idle;
-   fSrvID = -1;
+   fSrvPID = -1;
    fSrvType = kXPD_AnyServer;
    fID = -1;
    fIsShutdown = false;
    fIsValid = true;  // It is created for a valid server ...
    fProtVer = -1;
-   fFileout = 0;
-   fClient = 0;
-   fTag = 0;
-   fAlias = 0;
-   fOrdinal = 0;
-   fUserEnvs = 0;
+   fNClients = 0;
    fClients.reserve(10);
+   fDisconnectTime = -1;
+   fSetIdleTime = time(0);
    fROOT = 0;
-   fRequirements = 0;
-   fGroup = 0;
-   fInflate = 1000;
-   fSched = -1;
-   fDefSched = -1;
-   fDefSchedPriority = -99999;
-   fFracEff = 0.;
+   // Strings
+   fAlias = "";
+   fClient = "";
+   fFileout = "";
+   fGroup = "";
+   fOrdinal = "";
+   fTag = "";
+   fUserEnvs = "";
 }
 
 //__________________________________________________________________________
@@ -76,7 +63,6 @@ XrdProofServProxy::~XrdProofServProxy()
 
    SafeDelete(fQueryNum);
    SafeDelete(fStartMsg);
-   SafeDelete(fRequirements);
    SafeDelete(fPingSem);
 
    std::vector<XrdClientID *>::iterator i;
@@ -88,13 +74,7 @@ XrdProofServProxy::~XrdProofServProxy()
    // Cleanup worker info
    ClearWorkers();
 
-   SafeDelArray(fClient);
-   SafeDelArray(fFileout);
-   SafeDelArray(fTag);
-   SafeDelArray(fAlias);
-   SafeDelArray(fOrdinal);
    SafeDelete(fMutex);
-   SafeDelArray(fUserEnvs);
 }
 
 //__________________________________________________________________________
@@ -118,35 +98,33 @@ void XrdProofServProxy::Reset()
    // Reset this instance
    XrdSysMutexHelper mhp(fMutex);
 
-   fLink = 0;
+   fConn = 0;
    fParent = 0;
    SafeDelete(fQueryNum);
-   SafeDelete(fRequirements);
    SafeDelete(fStartMsg);
    SafeDelete(fPingSem);
    fStatus = kXPD_idle;
-   fSrvID = -1;
+   fSrvPID = -1;
    fSrvType = kXPD_AnyServer;
    fID = -1;
    fIsShutdown = false;
    fIsValid = 0;
    fProtVer = -1;
-   SafeDelArray(fClient);
-   SafeDelArray(fFileout);
-   SafeDelArray(fTag);
-   SafeDelArray(fAlias);
-   SafeDelArray(fOrdinal);
-   SafeDelArray(fUserEnvs);
+   fNClients = 0;
    fClients.clear();
+   fDisconnectTime = -1;
+   fSetIdleTime = -1;
    fROOT = 0;
-   fGroup = 0;
-   fInflate = 1000;
-   fSched = -1;
-   fDefSched = -1;
-   fDefSchedPriority = -99999;
-   fFracEff = 0.;
    // Cleanup worker info
    ClearWorkers();
+   // Strings
+   fAlias = "";
+   fClient = "";
+   fFileout = "";
+   fGroup = "";
+   fOrdinal = "";
+   fTag = "";
+   fUserEnvs = "";
 }
 
 //__________________________________________________________________________
@@ -165,6 +143,9 @@ XrdClientID *XrdProofServProxy::GetClientID(int cid)
       TRACE(XERR,"XrdProofServProxy::GetClientID: negative ID: protocol error!");
       return csid;
    }
+
+   // Count new attached client
+   fNClients++;
 
    // If in the allocate range reset the corresponding instance and
    // return it
@@ -191,137 +172,118 @@ XrdClientID *XrdProofServProxy::GetClientID(int cid)
 }
 
 //__________________________________________________________________________
-int XrdProofServProxy::GetFreeID()
+int XrdProofServProxy::FreeClientID(XrdProofdProtocol *p)
 {
-   // Get next free client ID. If none is found, increase the vector size
-   // and get the first new one
+   // Free instance corresponding to protocol 'p'
+   //
 
    XrdSysMutexHelper mhp(fMutex);
 
-   int ic = 0;
-   // Search for free places in the existing vector
-   for (ic = 0; ic < (int)fClients.size() ; ic++) {
-      if (fClients[ic] && (fClients[ic]->P() == 0))
-         return ic;
+   TRACE(ACT,"ProofServ::FreeClientID: p: "<<p<<", session status: "<<
+              fStatus<<", # clients: "<< fClients.size());
+
+   if (!p) {
+      TRACE(XERR,"ProofServ::FreeClientID: undefined protocol!");
+      return -1;
    }
 
-   // We need to resize (double it)
-   if (ic >= (int)fClients.capacity())
-      fClients.reserve(2*fClients.capacity());
-
-   // Allocate new element
-   fClients.push_back(new XrdClientID());
-
-   // We are done
-   return ic;
-}
-
-//__________________________________________________________________________
-int XrdProofServProxy::GetNClients()
-{
-   // Get number of attached clients.
-
-   XrdSysMutexHelper mhp(fMutex);
-
-   int nc = 0;
-   // Search for free places in the existing vector
-   int ic = 0;
-   for (ic = 0; ic < (int)fClients.size() ; ic++)
-      if (fClients[ic] && fClients[ic]->IsValid())
-         nc++;
-
-   // We are done
-   return nc;
-}
-
-//__________________________________________________________________________
-const char *XrdProofServProxy::StatusAsString() const
-{
-   // Return a string describing the status
-
-   const char *sst[] = { "idle", "running", "shutting-down", "unknown" };
-
-   XrdSysMutexHelper mhp(fMutex);
-
-   // Check status range
-   int ist = fStatus;
-   ist = (ist > kXPD_unknown) ? kXPD_unknown : ist;
-   ist = (ist < kXPD_idle) ? kXPD_unknown : ist;
-
-   // Done
-   return sst[ist];
-}
-
-//__________________________________________________________________________
-void XrdProofServProxy::SetCharValue(char **carr, const char *v, int l)
-{
-   // Store null-terminated string at v in *carr
-
-   if (carr) {
-      // Reset first
-      SafeDelArray(*carr);
-      // Store value, if any
-      int len = 0;
-      if (v && (len = (l > 0) ? l : strlen(v)) > 0) {
-         *carr = new char[len+1];
-         memcpy(*carr, v, len);
-         (*carr)[len] = 0;
+   // Remove this from the list of clients
+   std::vector<XrdClientID *>::iterator i;
+   for (i = fClients.begin(); i != fClients.end(); ++i) {
+      if ((*i) && (*i)->P() == p) {
+         (*i)->Reset();
+         fNClients--;
+         // Record time of last disconnection
+         if (fNClients <= 0)
+            fDisconnectTime = time(0);
+         return 0;
       }
    }
+
+   // Out of range
+   return -1;
+}
+
+//__________________________________________________________________________
+int XrdProofServProxy::DisconnectTime()
+{
+   // Return the time (in secs) all clients have been disconnected.
+   // Return -1 if the session is running
+
+   XrdSysMutexHelper mhp(fMutex);
+
+   int disct = -1;
+   if (fDisconnectTime > 0)
+      disct = time(0) - fDisconnectTime;
+   return ((disct > 0) ? disct : -1);
+}
+
+//__________________________________________________________________________
+int XrdProofServProxy::IdleTime()
+{
+   // Return the time (in secs) the session has been idle.
+   // Return -1 if the session is running
+
+   XrdSysMutexHelper mhp(fMutex);
+
+   int idlet = -1;
+   if (fStatus == kXPD_idle)
+      idlet = time(0) - fSetIdleTime;
+   return ((idlet > 0) ? idlet : -1);
+}
+
+//__________________________________________________________________________
+void XrdProofServProxy::SetIdle()
+{
+   // Set status to idle and update the related time stamp
+   //
+
+   XrdSysMutexHelper mhp(fMutex);
+
+   fStatus = kXPD_idle;
+   fSetIdleTime = time(0);
+}
+
+//__________________________________________________________________________
+void XrdProofServProxy::SetRunning()
+{
+   // Set status to running and reset the related time stamp
+   //
+
+   XrdSysMutexHelper mhp(fMutex);
+
+   fStatus = kXPD_running;
+   fSetIdleTime = -1;
 }
 
 //______________________________________________________________________________
-int XrdProofServProxy::SetShutdownTimer(int opt, int delay, bool on)
+void XrdProofServProxy::Broadcast(const char *msg)
 {
-   // Start (on = TRUE) or stop (on = FALSE) the shutdown timer for the session.
-   // Return 0 on success, -1 in case of error.
-   int rc = -1;
+   // Broadcast message 'msg' to the attached clients
 
-   TRACE(ACT, "XrdProofServProxy::SetShutdownTimer: enter: on/off: "<<on);
+   XrdSysMutexHelper mhp(fMutex);
 
-   // Prepare buffer
-   int len = 2 *sizeof(kXR_int32);
-   char *buf = new char[len];
-   // Option
-   kXR_int32 itmp = (on) ? (kXR_int32)opt : -1;
-   itmp = static_cast<kXR_int32>(htonl(itmp));
-   memcpy(buf, &itmp, sizeof(kXR_int32));
-   // Delay
-   itmp = (on) ? (kXR_int32)delay : 0;
-   itmp = static_cast<kXR_int32>(htonl(itmp));
-   memcpy(buf + sizeof(kXR_int32), &itmp, sizeof(kXR_int32));
-   // Send over
-   if (ProofSrv()->Send(kXR_attn, kXPD_timer, buf, len) != 0) {
-      TRACE(XERR, "XrdProofServProxy::SetShutdownTimer: "
-                  "could not send shutdown info to proofsrv");
-   } else {
-      rc = 0;
-      XrdOucString msg = "XrdProofServProxy::SetShutdownTimer: ";
-      if (on) {
-         if (delay > 0) {
-            msg += "delayed (";
-            msg += delay;
-            msg += " secs) ";
+   int len = 0;
+   if (msg && (len = strlen(msg)) > 0) {
+
+      int ic = 0;
+      XrdProofdProtocol *p = 0;
+      for (ic = 0; ic < (int) fClients.size(); ic++) {
+         // Send message
+         if ((p = fClients.at(ic)->P())) {
+#if 0
+            unsigned short sid;
+            p->Response()->GetSID(sid);
+            p->Response()->Set(fClients.at(ic)->Sid());
+            p->Response()->Send(kXR_attn, kXPD_errmsg, (void *)msg, len);
+            p->Response()->Set(sid);
+#else
+            XrdProofdResponse *response = p ? p->Response(fClients.at(ic)->Sid()) : 0;
+            response->Send(kXR_attn, kXPD_errmsg, (void *)msg, len);
+#endif
          }
-         msg += "shutdown notified to process ";
-         msg += SrvID();
-         if (opt == 1)
-            msg += "; action: when idle";
-         else if (opt == 2)
-            msg += "; action: immediate";
-         SetShutdown(1);
-      } else {
-         msg += "cancellation of shutdown action notified to process ";
-         msg += SrvID();
-         SetShutdown(0);
       }
-      TRACE(DBG, msg.c_str());
    }
-   // Cleanup
-   delete[] buf;
-
-   // Done
-   return rc;
 }
 
 //______________________________________________________________________________
@@ -334,14 +296,14 @@ int XrdProofServProxy::TerminateProofServ()
    // Return the pid of tyhe terminated process on success, -1 if not allowed
    // or other errors occured.
 
-   TRACE(ACT, "XrdProofServProxy::TerminateProofServ: enter: " << Ordinal());
+   TRACE(ACT, "ProofServ::TerminateProofServ: ord: " << Ordinal() << ", pid: " << fSrvPID);
 
    // Send a terminate signal to the proofserv
-   int pid = SrvID();
+   int pid = fSrvPID;
    if (pid > -1) {
 
       int type = 3;
-      if (ProofSrv()->Send(kXR_attn, kXPD_interrupt, type) != 0)
+      if (Response()->Send(kXR_attn, kXPD_interrupt, type) != 0)
          // Could not send: signal failure
          return -1;
       // For registration/monitoring purposes
@@ -361,27 +323,28 @@ int XrdProofServProxy::VerifyProofServ(int timeout)
    // internal timeout, -1 in case of error.
    int rc = -1;
 
-   TRACE(ACT, "XrdProofServProxy::VerifyProofServ: enter");
+   TRACE(ACT, "ProofServ::VerifyProofServ: ord: " << Ordinal()<< ", pid: " << fSrvPID);
 
    // Create semaphore
    CreatePingSem();
 
    // Propagate the ping request
-   if (ProofSrv()->Send(kXR_attn, kXPD_ping, 0, 0) != 0) {
-      TRACE(XERR, "XrdProofServProxy::VerifyProofServ: could not propagate ping to proofsrv");
+   if (Response()->Send(kXR_attn, kXPD_ping, 0, 0) != 0) {
+      TRACE(XERR, "ProofServ::VerifyProofServ: could not propagate ping to proofsrv");
       DeletePingSem();
       return rc;
    }
 
    // Wait for reply
    rc = 1;
-   if (PingSem()->Wait(timeout) != 0) {
-      XrdOucString msg = "XrdProofServProxy::VerifyProofServ: did not receive ping reply after ";
+   if (fPingSem && fPingSem->Wait(timeout) != 0) {
+      XrdOucString msg = "ProofServ::VerifyProofServ: did not receive ping reply after ";
       msg += timeout;
       msg += " secs";
       TRACE(XERR, msg.c_str());
       rc = 0;
    }
+   TRACE(ACT, "ProofServ::VerifyProofServ: " << fSrvPID << " ping: "<<rc);
 
    // Cleanup
    DeletePingSem();
@@ -390,13 +353,14 @@ int XrdProofServProxy::VerifyProofServ(int timeout)
    return rc;
 }
 
+#if 0
 //__________________________________________________________________________
 int XrdProofServProxy::GetDefaultProcessPriority()
 {
    // Get the default nice value for a process
 
    if (fDefSchedPriority == -99999)
-      fDefSchedPriority = getpriority(PRIO_PROCESS, fSrvID);
+      fDefSchedPriority = getpriority(PRIO_PROCESS, fSrvPID);
    return fDefSchedPriority;
 }
 
@@ -407,7 +371,7 @@ int XrdProofServProxy::SetProcessPriority(int priority)
    // If 'priority' is -99999 restore the default value.
    // Returns 0 in case of success, -errno in case of error.
 
-   TRACE(SCHED, "SetProcessPriority: enter: pid: " << fSrvID <<
+   TRACE(SCHED, "SetProcessPriority: enter: pid: " << fSrvPID <<
               ", priority: " << priority);
 
    int newpriority = priority;
@@ -426,7 +390,7 @@ int XrdProofServProxy::SetProcessPriority(int priority)
       }
       TRACE(SCHED, "SetProcessPriority: got privileges ");
       errno = 0;
-      if (setpriority(PRIO_PROCESS, fSrvID, newpriority) != 0) {
+      if (setpriority(PRIO_PROCESS, fSrvPID, newpriority) != 0) {
          TRACE(XERR, "SetProcessPriority:"
                      " setpriority: errno: " << errno);
          return ((errno != 0) ? -errno : -1);
@@ -436,7 +400,7 @@ int XrdProofServProxy::SetProcessPriority(int priority)
 
    // Check that it worked out
    errno = 0;
-   if ((priority = getpriority(PRIO_PROCESS, fSrvID)) == -1 && errno != 0) {
+   if ((priority = getpriority(PRIO_PROCESS, fSrvPID)) == -1 && errno != 0) {
       TRACE(XERR, "SetProcessPriority:"
                  " getpriority: errno: " << errno);
       return -errno;
@@ -449,7 +413,7 @@ int XrdProofServProxy::SetProcessPriority(int priority)
       return -errno;
    }
 
-   TRACE(SCHED, "SetProcessPriority: done: pid: " << fSrvID <<
+   TRACE(SCHED, "SetProcessPriority: done: pid: " << fSrvPID <<
               ", priority: " << priority);
 
    // We are done
@@ -476,7 +440,7 @@ int XrdProofServProxy::SetInflate(int inflate, bool sendover)
       itmp = static_cast<kXR_int32>(htonl(itmp));
       memcpy(buf, &itmp, sizeof(kXR_int32));
       // Send over
-      if (fProofSrv.Send(kXR_attn, kXPD_inflate, buf, len) != 0) {
+      if (fResponse.Send(kXR_attn, kXPD_inflate, buf, len) != 0) {
          // Failure
          TRACE(XERR,"XrdProofServProxy::SetInflate: problems telling proofserv");
          return -1;
@@ -486,6 +450,7 @@ int XrdProofServProxy::SetInflate(int inflate, bool sendover)
    // Done
    return 0;
 }
+#endif
 
 //__________________________________________________________________________
 int XrdProofServProxy::BroadcastPriority(int priority)
@@ -502,7 +467,7 @@ int XrdProofServProxy::BroadcastPriority(int priority)
    itmp = static_cast<kXR_int32>(htonl(itmp));
    memcpy(buf, &itmp, sizeof(kXR_int32));
    // Send over
-   if (fProofSrv.Send(kXR_attn, kXPD_priority, buf, len) != 0) {
+   if (Response()->Send(kXR_attn, kXPD_priority, buf, len) != 0) {
       // Failure
       TRACE(XERR,"XrdProofServProxy::BroadcastPriorities: problems telling proofserv");
       return -1;
@@ -520,110 +485,94 @@ void XrdProofServProxy::SetSrv(int pid)
    XrdSysMutexHelper mhp(fMutex);
 
    // The PID
-   fSrvID = pid;
-
-#if !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined(__APPLE__)
-   // The scheduling policy
-   fSched = sched_getscheduler(pid);
-   fDefSched = fSched;
-#endif
+   fSrvPID = pid;
 
    // Done
    return;
 }
 
-//__________________________________________________________________________
-int XrdProofServProxy::SetSchedRoundRobin(bool on)
+//______________________________________________________________________________
+int XrdProofServProxy::SendData(int cid, void *buff, int len)
 {
-   // Set the scheduling policy for process 'pid' to SCHED_RR (Round Robin)
-   // if on is TRUE, or to the original one if on is FALSE.
-   // Round Robin is needed to control the exact CPU time assigned to a
-   // process. This is needed when the priority-based worker level load
-   // balancing is enabled. Under Linux, the default policy SCHED_OTHER increases
-   // dynamically the priority of sleeping processes so that load balancing
-   // based on the slowdown of low priority sessions does not work.
-   // Return 0 on success, -1 if any problem occured.
+   // Send data to client cid.
 
-   TRACE(ACT, "SetSchedRoundRobin: enter: pid: " << fSrvID<<", ON: "<<on);
-#if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
-   TRACE(ACT, "SetSchedRoundRobin: functionality unsupported on this platform");
-#else
+   TRACE(HDBG, "XrdProofServProxy::SendData: enter: length: "<<len<<" bytes");
 
-   // Next depends on 'on'
-   if (on) {
-
-      const char *lab = "SetSchedRoundRobin: ON: ";
-
-      // Nothing to do if already Round Robin
-      if ((fDefSched = sched_getscheduler(fSrvID)) == SCHED_RR) {
-         TRACE(DBG, lab << "current policy is already SCHED_RR - do nothing");
-         return 0;
-      }
-
-      // Save current parameters
-      sched_getparam(fSrvID, &fDefSchedParam);
-
-      // Min RoundRobin priorities
-      int pr_min = sched_get_priority_min(SCHED_RR);
-      if (pr_min < 0) {
-         TRACE(XERR, lab << "sched_get_priority_min: errno: "<<errno);
-         return -1;
-      }
-
-      // Retrieve the privileges
-      XrdSysPrivGuard pGuard((uid_t)0, (gid_t)0);
-
-      // Set new schema with minimal priority
-      struct sched_param par;
-      par.sched_priority = pr_min;
-      if (sched_setscheduler(fSrvID, SCHED_RR, &par) != 0) {
-         TRACE(XERR, lab << "sched_setscheduler: errno: "<<errno);
-         return -1;
-      }
-
-      // We increase the nice level to avoid overloading the machine
-      fDefSchedPriority = getpriority(PRIO_PROCESS, fSrvID);
-      if (setpriority(PRIO_PROCESS, fSrvID, fDefSchedPriority + 5) != 0) {
-         TRACE(XERR, lab << "setpriority: errno: "<<errno);
-      }
-
-      // Current policy
-      fSched = fDefSched;
-
-//         TRACE(DBG, lab << "scheduling policy set to SCHED_RR for process "<<fSrvID);
-      XPDPRT(lab << "scheduling policy set to SCHED_RR for process "<<fSrvID);
-
-   } else {
-
-      const char *lab = "SetSchedRoundRobin: OFF: ";
-
-      // Nothing to do if already done
-      if ((fSched = sched_getscheduler(fSrvID)) == fDefSched) {
-         TRACE(DBG, lab << "current policy the default one - do nothing");
-         return 0;
-      }
-
-      // Retrieve the privileges
-      XrdSysPrivGuard pGuard((uid_t)0, (gid_t)0);
-
-      // Set default policy and params
-      if (sched_setscheduler(fSrvID, fDefSched, &fDefSchedParam) != 0) {
-         TRACE(XERR, lab << "sched_setscheduler: errno: "<<errno);
-         return -1;
-      }
-
-      // Reset initial scheduling priority
-      if (setpriority(PRIO_PROCESS, fSrvID, fDefSchedPriority) != 0) {
-         TRACE(XERR, lab << "setpriority: errno: "<<errno);
-      }
-
-      // Current policy
-      fSched = fDefSched;
-
-//         TRACE(DBG, lab << "scheduling policy set to "<<fSched<<" for process "<<fSrvID);
-      XPDPRT(lab << "scheduling policy set to  "<<fSched<<" for process "<<fSrvID);
+   // Get corresponding instance
+   XrdClientID *csid = 0;
+   if (cid < 0 || cid > (int)(fClients.size() - 1) || !(csid = fClients.at(cid))) {
+      TRACE(XERR, "XrdProofServProxy::SendData: client ID not found (cid: "<<cid<<
+                  ", size: "<<fClients.size()<<")");
+      return -1;
    }
+   if (!(csid->P())) {
+      TRACE(XERR, "XrdProofServProxy::SendData: client not connected: csid: "<<csid<<
+                  ", cid: "<<cid<<", fSid: " << csid->Sid());
+      return -1;
+   }
+
+   //
+   // The message is strictly for the client requiring it
+#if 0
+   int rs = 0;
+   {  XrdSysMutexHelper mhp(csid->P()->Response()->fMutex);
+      unsigned short sid;
+      csid->P()->Response()->GetSID(sid);
+      TRACE(HDBG, "XrdProofServProxy::SendData: this sid: "<<sid<<
+                  ", client sid: "<<csid->Sid());
+      csid->P()->Response()->Set(csid->Sid());
+      if (csid->P()->Response()->Send(kXR_attn, kXPD_msg, buff, len))
+         rs = -1;
+      csid->P()->Response()->Set(sid);
+   }
+#else
+   int rs = -1;
+   XrdProofdResponse *response = csid->P() ? csid->P()->Response(csid->Sid()) : 0;
+   if (response)
+      if (!response->Send(kXR_attn, kXPD_msg, buff, len))
+         rs = 0;
 #endif
+
+   // Done
+   return rs;
+}
+
+//______________________________________________________________________________
+int XrdProofServProxy::SendDataN(void *buff, int len)
+{
+   // Send data over the open client links of this session.
+   // Used when all the connected clients are eligible to receive the message.
+
+   TRACE(HDBG, "SendDataN: enter: length: "<<len<<" bytes");
+
+   // Send to connected clients
+   XrdClientID *csid = 0;
+   int ic = 0;
+   for (ic = 0; ic < (int) fClients.size(); ic++) {
+      if ((csid = fClients.at(ic)) && csid->P()) {
+#if 0
+         XrdProofdResponse *resp = csid->P()->Response();
+         int rs = 0;
+         {  XrdSysMutexHelper mhp(resp->fMutex);
+            unsigned short sid;
+            resp->GetSID(sid);
+            TRACE(HDBG, "SendDataN: INTERNAL: this sid: "<<sid<<
+                           "; client sid:"<<csid->Sid());
+            resp->Set(csid->Sid());
+            rs = resp->Send(kXR_attn, kXPD_msg, buff, len);
+            resp->Set(sid);
+         }
+#else
+         XrdProofdResponse *resp = csid->P()->Response(csid->Sid());
+         int rs = 0;
+         TRACE(HDBG, "SendDataN: INTERNAL: client sid:"<<csid->Sid());
+         rs = resp->Send(kXR_attn, kXPD_msg, buff, len);
+#endif
+         if (rs)
+            return 1;
+      }
+   }
+
    // Done
    return 0;
 }

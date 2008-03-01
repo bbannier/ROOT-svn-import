@@ -82,7 +82,8 @@ Bool_t TXProofServInterruptHandler::Notify()
 class TXProofServSigPipeHandler : public TSignalHandler {
    TXProofServ  *fServ;
 public:
-   TXProofServSigPipeHandler(TXProofServ *s) : TSignalHandler(kSigPipe, kFALSE)
+//   TXProofServSigPipeHandler(TXProofServ *s) : TSignalHandler(kSigPipe, kFALSE)
+   TXProofServSigPipeHandler(TXProofServ *s) : TSignalHandler(kSigInterrupt, kFALSE)
       { fServ = s; }
    Bool_t  Notify();
 };
@@ -438,7 +439,7 @@ void TXProofServ::HandleUrgentData()
       return;
    }
 
-   PDB(kGlobal, 5)
+//   PDB(kGlobal, 5)
       Info("HandleUrgentData", "got interrupt: %d\n", iLev);
 
    if (fProof)
@@ -450,20 +451,24 @@ void TXProofServ::HandleUrgentData()
          PDB(kGlobal, 5)
             Info("HandleUrgentData", "*** Ping");
 
+#if 1
          // If master server, propagate interrupt to slaves
          if (IsMaster()) {
-            Int_t nbad = fProof->fActiveSlaves->GetSize()-fProof->Ping();
+            Int_t nbad = fProof->fActiveSlaves->GetSize() - fProof->Ping();
             if (nbad > 0) {
                Info("HandleUrgentData","%d slaves did not reply to ping",nbad);
             }
          }
+#endif
 
          // Reply to ping
          ((TXSocket *)fSocket)->Ping();
 
+#if 0
          // Send log with result of ping
          if (IsMaster())
             SendLogFile();
+#endif
 
          break;
 
@@ -500,7 +505,7 @@ void TXProofServ::HandleUrgentData()
       case TProof::kShutdownInterrupt:
          Info("HandleUrgentData", "Shutdown Interrupt");
 
-         // When retuning for here connection are closed
+         // When returning for here connection are closed
          HandleTermination();
 
          break;
@@ -520,7 +525,9 @@ void TXProofServ::HandleSigPipe()
    // Called when the client is not alive anymore; terminate the session.
 
    // Real-time notification of messages
-   TProofServLogHandlerGuard hg(fLogFile, fSocket, "", fRealTimeLog);
+//   TProofServLogHandlerGuard hg(fLogFile, fSocket, "", fRealTimeLog);
+
+   Info("HandleSigPipe","got sigpipe ...");
 
    // If master server, propagate interrupt to slaves
    // (shutdown interrupt send internally).

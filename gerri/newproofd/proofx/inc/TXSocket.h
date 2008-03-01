@@ -231,6 +231,9 @@ public:
    void                DisableTimeout() { fDontTimeout = kTRUE; }
    void                EnableTimeout() { fDontTimeout = kFALSE; }
 
+   // Try reconnection after error
+   Int_t               Reconnect();
+
    ClassDef(TXSocket, 0) //A high level connection class for PROOF
 };
 

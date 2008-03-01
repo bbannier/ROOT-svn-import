@@ -42,16 +42,21 @@ enum XProofRequestTypes {
    kXP_readbuf      = 3117     // read a buffer from a file
 };
 
-// XPROOFD VERSION  (0xMMmnpp : MM major, mm minor, pp patch)
-#define XPD_VERSION  0x010000
+// XPROOFD VERSION  (0xMMmmpp : MM major, mm minor, pp patch)
+#define XPD_VERSION  0x010500
 
-// KINDS of SERVERS (modes)
+// KINDS of connections (modes)
 #define kXPD_Admin        4
 #define kXPD_Internal     3
+#define kXPD_ClientMaster 2
+#define kXPD_MasterMaster 1
+#define kXPD_MasterWorker 0
+#define kXPD_AnyConnect  -1
+
+// KINDS of servers
 #define kXPD_TopMaster    2
-#define kXPD_MasterServer 1
-#define kXPD_SlaveServer  0
-#define kXPD_WorkerServer 0
+#define kXPD_Master       1
+#define kXPD_Worker       0
 #define kXPD_AnyServer   -1
 
 // Operations modes

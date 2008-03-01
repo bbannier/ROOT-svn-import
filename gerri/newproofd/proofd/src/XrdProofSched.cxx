@@ -39,11 +39,13 @@
 #include <list>
 
 #include "XProofProtocol.h"
-#include "XrdProofSched.h"
 #include "XrdProofdManager.h"
-#include "XrdProofWorker.h"
-#include "XrdProofServProxy.h"
+#include "XrdProofdNetMgr.h"
+#include "XrdProofdProofServMgr.h"
 #include "XrdProofGroup.h"
+#include "XrdProofSched.h"
+#include "XrdProofServProxy.h"
+#include "XrdProofWorker.h"
 
 #include "XrdOuc/XrdOucString.hh"
 #include "XrdOuc/XrdOucStream.hh"
@@ -56,7 +58,7 @@
 
 // Tracing
 #include "XrdProofdTrace.h"
-static const char *gTraceID = " ";
+static const char *gTraceID = "";
 extern XrdOucTrace *XrdProofdTrace;
 #define TRACEID gTraceID
 
@@ -162,7 +164,7 @@ int XrdProofSched::Config(const char *cfn)
    // Open and attach the config file
    int cfgFD = 0;
    if ((cfgFD = open(cfn, O_RDONLY, 0)) < 0) {
-      XrdOucString msg("XrdProofSched::Config: error open config file: ");
+      XrdOucString msg("Config: ProofSched: error open config file: ");
       msg += cfn;
       TRACE(XERR, msg.c_str());
       return -1;
@@ -188,7 +190,7 @@ int XrdProofSched::Config(const char *cfn)
    }
 
    // Notify
-   XrdOucString msg("XrdProofSched::Config: maxsess: ") ; msg += fMaxSessions;
+   XrdOucString msg("Config: ProofSched: maxsess: ") ; msg += fMaxSessions;
    msg += ", maxwrks: " ; msg += fWorkerMax;
    msg += ", selopt: " ; msg += fWorkerSel;
    TRACE(DBG, msg.c_str());
@@ -204,29 +206,35 @@ int XrdProofSched::GetNumWorkers(XrdProofServProxy *xps)
 
    // Go through the list of hosts and see how many CPUs are not used.
    int nFreeCPUs = 0;
-   std::list<XrdProofWorker *> *wrks = fMgr->GetActiveWorkers();
+   std::list<XrdProofWorker *> *wrks = fMgr->NetMgr()->GetActiveWorkers();
    std::list<XrdProofWorker *>::iterator iter;
    for (iter = wrks->begin(); iter != wrks->end(); ++iter) {
       TRACE(DBG, "GetNumWorkers: "<< (*iter)->fImage<<
                  " : # act: "<<(*iter)->fProofServs.size());
       if ((*iter)->fType != 'M'
-         && (*iter)->fProofServs.size() < fOptWrksPerUnit)
+         && (int) (*iter)->fProofServs.size() < fOptWrksPerUnit)
          nFreeCPUs++;
    }
 
    float priority = 1;
-   if (xps->Group()) {
-      std::list<XrdProofServProxy *> *sessions = fMgr->GetActiveSessions();
+   XrdProofGroup *grp = 0;
+   if (xps->Group())
+      grp = fGrpMgr->GetGroup(xps->Group());
+   if (grp) {
+      std::list<XrdProofServProxy *> *sessions = fMgr->SessionMgr()->ActiveSessions();
       std::list<XrdProofServProxy *>::iterator sesIter;
       float summedPriority = 0;
       for (sesIter = sessions->begin(); sesIter != sessions->end(); ++sesIter) {
-         if ((*sesIter)->Group())
-            summedPriority += (*sesIter)->Group()->Priority();
+         if ((*sesIter)->Group()) {
+            XrdProofGroup *g = fGrpMgr->GetGroup((*sesIter)->Group());
+            if (grp)
+               summedPriority += g->Priority();
+         }
       }
       if (summedPriority > 0)
-         priority = (xps->Group()->Priority() * sessions->size()) / summedPriority;
-
+         priority = (grp->Priority() * sessions->size()) / summedPriority;
    }
+
    int nWrks = (int)(nFreeCPUs * fNodesFraction * priority) + fMinForQuery;
    nWrks = (nWrks >= (int) wrks->size()) ? wrks->size() - 1 : nWrks;
    TRACE(DBG,"GetNumWorkers: "<< nFreeCPUs<<" : "<< nWrks);
@@ -245,11 +253,11 @@ int XrdProofSched::GetWorkers(XrdProofServProxy *xps,
    if (!wrks)
       return -1;
 
-   if (!fMgr || !(fMgr->GetActiveWorkers()))
+   if (!fMgr || !(fMgr->NetMgr()->GetActiveWorkers()))
       return -1;
 
    // The current, full list
-   std::list<XrdProofWorker *> *acws = fMgr->GetActiveWorkers();
+   std::list<XrdProofWorker *> *acws = fMgr->NetMgr()->GetActiveWorkers();
 
    // Point to the master element
    XrdProofWorker *mst = acws->front();
@@ -417,7 +425,7 @@ int XrdProofSched::ExportInfo(XrdOucString &sbuf)
    }
 
    // The full list
-   std::list<XrdProofWorker *> *acws = fMgr->GetActiveWorkers();
+   std::list<XrdProofWorker *> *acws = fMgr->NetMgr()->GetActiveWorkers();
    std::list<XrdProofWorker *>::iterator iw;
    for (iw = acws->begin(); iw != acws->end(); ++iw) {
       sbuf += (*iw)->fType;

@@ -78,7 +78,6 @@
     defined(_AIX) || defined(__FreeBSD__) || defined(__OpenBSD__) || \
     defined(__APPLE__) || defined(__MACH__) || defined(cygwingcc)
 #include <grp.h>
-#include <sys/types.h>
 #endif
 
 // For process info
@@ -101,5 +100,9 @@
 #else
 #define XPD_LIBPATH "LD_LIBRARY_PATH"
 #endif
+
+// Time related
+#include <sys/time.h>
+#include <utime.h>
 
 #endif

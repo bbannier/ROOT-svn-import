@@ -21,6 +21,14 @@
 // Small auxilliary classes used in XrdProof                            //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
+#include <stdarg.h>
+
+#ifdef OLDXRDOUC
+#  include "XrdSysToOuc.h"
+#  include "XrdOuc/XrdOucSemWait.hh"
+#else
+#  include "XrdSys/XrdSysSemWait.hh"
+#endif
 
 #include "Xrd/XrdProtocol.hh"
 #include "XProofProtocol.h"
@@ -32,20 +40,20 @@
 //
 class XrdProofUI {
 public:
-   XrdOucString fUser;
-   XrdOucString fHomeDir;
-   XrdOucString fWorkDir;
-   int          fUid;
-   int          fGid;
+   XrdOucString fUser;       // User name
+   XrdOucString fGroup;      // PROOF group name
+   XrdOucString fHomeDir;    // Unix home
+   int          fUid;        // Unix user ID
+   int          fGid;        // Unix group ID
 
    XrdProofUI() { fUid = -1; fGid = -1; }
    XrdProofUI(const XrdProofUI &ui) { fUser = ui.fUser;
+                                      fGroup = ui.fGroup;
                                       fHomeDir = ui.fHomeDir;
-                                      fWorkDir = ui.fWorkDir;
                                       fUid = ui.fUid; fGid = ui.fGid; }
    ~XrdProofUI() { }
 
-   void Reset() { fUser = ""; fHomeDir = ""; fWorkDir = ""; fUid = -1; fGid = -1; }
+   void Reset() { fUser = ""; fHomeDir = ""; fGroup = ""; fUid = -1; fGid = -1; }
 };
 
 //
@@ -90,15 +98,17 @@ public:
    void              *fVal;
    XrdOucString       fName;
    XrdFunDirective_t  fFun;
+   bool               fRcf;
    const char        *fHost; // needed to support old 'if' construct
 
-   XrdProofdDirective(const char *n, void *v, XrdFunDirective_t f) :
-                      fVal(v), fName(n), fFun(f) { }
+   XrdProofdDirective(const char *n, void *v, XrdFunDirective_t f, bool rcf = 1) :
+                      fVal(v), fName(n), fFun(f), fRcf(rcf) { }
 
    int DoDirective(char *val, XrdOucStream *cfg, bool reconfig)
                       { return (*fFun)(this, val, cfg, reconfig); }
 };
 // Function of general interest
+int DoDirectiveClass(XrdProofdDirective *, char *val, XrdOucStream *cfg, bool rcf);
 int DoDirectiveInt(XrdProofdDirective *, char *val, XrdOucStream *cfg, bool rcf);
 int DoDirectiveString(XrdProofdDirective *, char *val, XrdOucStream *cfg, bool rcf);
 // To set the host field in a loop over the hash list
@@ -112,6 +122,7 @@ typedef struct kinfo_proc kinfo_proc;
 #endif
 class XrdOucStream;
 class XrdProofdAux {
+   static XrdSysRecMutex fgFormMutex;
 public:
    XrdProofdAux() { }
 
@@ -120,6 +131,7 @@ public:
    static int CheckIf(XrdOucStream *s, const char *h);
    static char *Expand(char *p);
    static void Expand(XrdOucString &path);
+   static int Form(XrdOucString &str, const char *fmt, ...);
    static long int GetLong(char *str);
 #if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
    static int GetMacProcList(kinfo_proc **plist, int &nproc);
@@ -127,7 +139,10 @@ public:
    static int GetNumCPUs();
    static int GetUserInfo(const char *usr, XrdProofUI &ui);
    static int GetUserInfo(int uid, XrdProofUI &ui);
+   static int KillProcess(int pid, bool forcekill, XrdProofUI ui, bool changeown);
+   static char *ReadMsg(int fd);
    static int SymLink(const char *path, const char *link);
+   static int VerifyProcessByID(int pid, const char *pname = "proofserv");
    static int Write(int fd, const void *buf, size_t nb);
 };
 

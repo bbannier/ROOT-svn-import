@@ -55,6 +55,9 @@ XrdProofPhyConn::XrdProofPhyConn(const char *url, int psid, char capver,
 
    fTcp = tcp;
 
+   // Mutex
+   fMutex = new XrdSysRecMutex();
+
    // Initialization
    if (url && !Init(url)) {
       TRACE(REQ, "XrdProofPhyConn: severe error occurred while"
@@ -67,9 +70,6 @@ XrdProofPhyConn::XrdProofPhyConn(const char *url, int psid, char capver,
 bool XrdProofPhyConn::Init(const char *url)
 {
    // Initialization
-
-   // Mutex
-   fMutex = new XrdSysRecMutex();
 
    // Save url
    fUrl.TakeUrl(XrdOucString(url));
@@ -117,6 +117,7 @@ bool XrdProofPhyConn::Init(const char *url)
       }
    }
 
+#if 0
    // Max number of tries and timeout
    int maxTry = EnvGetLong(NAME_FIRSTCONNECTMAXCNT);
    int timeOut = EnvGetLong(NAME_CONNECTTIMEOUT);
@@ -126,7 +127,7 @@ bool XrdProofPhyConn::Init(const char *url)
    for (; (i < maxTry) && (!fConnected); i++) {
 
       // Try connection
-      logid = Connect();
+      logid = TryConnect();
 
       // We are connected to a host. Let's handshake with it.
       if (fConnected) {
@@ -170,13 +171,77 @@ bool XrdProofPhyConn::Init(const char *url)
 #endif
 
    } //for connect try
+#else
+   // Run the connection attempts: the result is stored in fConnected
+   Connect();
+#endif
 
    // We are done
    return fConnected;
 }
 
 //_____________________________________________________________________________
-int XrdProofPhyConn::Connect()
+void XrdProofPhyConn::Connect()
+{
+   // Run the connection attempts: the result is stored in fConnected
+
+   // Max number of tries and timeout
+   int maxTry = EnvGetLong(NAME_FIRSTCONNECTMAXCNT);
+   int timeOut = EnvGetLong(NAME_CONNECTTIMEOUT);
+
+   int logid = -1;
+   int i = 0;
+   for (; (i < maxTry) && (!fConnected); i++) {
+
+      // Try connection
+      logid = TryConnect();
+
+      // We are connected to a host. Let's handshake with it.
+      if (fConnected) {
+
+         // Now the have the logical Connection ID, that we can use as streamid for
+         // communications with the server
+         TRACE(REQ,"XrdProofPhyConn::Init: new logical connection ID: "<<logid);
+
+         // Get access to server
+         if (!GetAccessToSrv()) {
+            if (fLastErr == kXR_NotAuthorized) {
+               // Authentication error: does not make much sense to retry
+               Close("P");
+               XrdOucString msg = fLastErrMsg;
+               msg.erase(msg.rfind(":"));
+               TRACE(REQ,"XrdProofPhyConn::Init: authentication failure: " << msg);
+               return;
+            } else {
+               TRACE(REQ,"XrdProofPhyConn::Init: access to server failed (" <<
+                         fLastErrMsg << ")");
+            }
+            continue;
+         } else {
+
+            // Manager call in client: no need to create or attach: just notify
+            TRACE(REQ,"XrdProofPhyConn::Init: access to server granted.");
+            break;
+         }
+      }
+
+      // We force a physical disconnection in this special case
+      TRACE(REQ,"XrdProofPhyConn::Init: disconnecting.");
+      Close("P");
+
+      // And we wait a bit before retrying
+      TRACE(REQ,"XrdProofPhyConn::Init: connection attempt failed: sleep " << timeOut << " secs");
+#ifndef WIN32
+      sleep(timeOut);
+#else
+      Sleep(timeOut * 1000);
+#endif
+
+   } //for connect try
+}
+
+//_____________________________________________________________________________
+int XrdProofPhyConn::TryConnect()
 {
    // Connect to remote server
    const char *ctype[2] = {"UNIX", "TCP"};
@@ -191,13 +256,13 @@ int XrdProofPhyConn::Connect()
    // Connect
    bool isUnix = (fTcp) ? 0 : 1;
    if (!(fPhyConn->Connect(fUrl, isUnix))) {
-      TRACE(REQ,"XrdProofPhyConn::Connect: creating "<<ctype[fTcp]<<
+      TRACE(REQ,"XrdProofPhyConn::TryConnect: creating "<<ctype[fTcp]<<
                 " connection to "<<URLTAG);
       fLogConnID = -1;
       fConnected = 0;
       return -1;
    }
-   TRACE(REQ,"XrdProofPhyConn::Connect: "<<ctype[fTcp]<<"-connected to "<<URLTAG);
+   TRACE(REQ,"XrdProofPhyConn::TryConnect: "<<ctype[fTcp]<<"-connected to "<<URLTAG);
 
    // Set some vars
    fLogConnID = 0;

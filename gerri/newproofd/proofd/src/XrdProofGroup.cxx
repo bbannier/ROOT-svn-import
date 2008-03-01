@@ -23,7 +23,7 @@
 #include "XrdProofGroup.h"
 #include "XrdProofdTrace.h"
 
-static const char *gTraceID = " ";
+static const char *gTraceID = "";
 extern XrdOucTrace *XrdProofdTrace;
 
 // Local definitions
@@ -107,7 +107,6 @@ XrdProofGroup::XrdProofGroup(const char *n, const char *m)
    // Constructor
 
    fSize = 0;
-   fActive = 0;
    fPriority = -1;
    fFraction = -1;
    fFracEff = 0;
@@ -141,6 +140,7 @@ void XrdProofGroup::Print()
    }
 }
 
+#if 0
 //__________________________________________________________________________
 void XrdProofGroup::Count(const char *usr, int n)
 { 
@@ -181,6 +181,55 @@ void XrdProofGroup::Count(const char *usr, int n)
    // Count
    fActive += n;
 }
+#else
+//__________________________________________________________________________
+void XrdProofGroup::Count(const char *usr, int n)
+{ 
+   // Modify the active count
+
+   // A username must be defined and an action required
+   if (!usr || strlen(usr) == 0 || n == 0)
+      return;
+
+   XrdSysMutexHelper mhp(fMutex);
+
+   XrdProofGroupMember *m = fActives.Find(usr);
+   if (!m) {
+      // Create a new active user
+      m = new XrdProofGroupMember(usr);
+      fActives.Add(usr, m);
+   }
+
+   // Count
+   if (m) {
+      m->Count(n);
+      // If no active sessions left, remove from active
+      if (m->Active() <= 0) {
+         fActives.Del(usr);
+         delete m;
+      }
+   }
+}
+
+//__________________________________________________________________________
+int XrdProofGroup::Active(const char *usr)
+{
+   // Return the number of active groups (usr = 0) or the number of
+   // active sessions for user 'usr'
+
+   XrdSysMutexHelper mhp(fMutex);
+
+   int na = 0;
+   if (!usr || strlen(usr) == 0) {
+      na = fActives.Num();
+   } else {
+      XrdProofGroupMember *m = fActives.Find(usr);
+      if (m) na = m->Active();
+   }
+   // Done
+   return na;
+}
+#endif
 
 //__________________________________________________________________________
 bool XrdProofGroup::HasMember(const char *usr)
@@ -262,8 +311,10 @@ XrdProofGroup *XrdProofGroupMgr::GetGroup(const char *grp)
    // Return 0 in the case the group does not exist
 
    // If the group is defined and exists, check it 
-   if (grp && strlen(grp) > 0)
+   if (grp && strlen(grp) > 0) {
+      XrdSysMutexHelper mhp(fMutex);
       return fGroups.Find(grp);
+   }
    return (XrdProofGroup *)0;
 }
 
@@ -281,6 +332,8 @@ XrdProofGroup *XrdProofGroupMgr::GetUserGroup(const char *usr, const char *grp)
    // Check inputs
    if (!usr || strlen(usr) <= 0)
       return g;
+
+   XrdSysMutexHelper mhp(fMutex);
 
    // If the group is defined and exists, check it 
    if (grp && strlen(grp) > 0) {
@@ -340,7 +393,7 @@ int XrdProofGroupMgr::Config(const char *fn)
    struct stat st;
    if (stat(fCfgFile.fName.c_str(), &st) != 0)
       return -1;
-   TRACE(DBG, "Config: enter: time of last modification: " << st.st_mtime);
+   TRACE(DBG, "xpd: Config: GroupMgr: enter: time of last modification: " << st.st_mtime);
 
    // File should be loaded only once
    if (st.st_mtime <= fCfgFile.fMtime)
@@ -352,7 +405,7 @@ int XrdProofGroupMgr::Config(const char *fn)
    // Open the defined path.
    FILE *fin = 0;
    if (!(fin = fopen(fCfgFile.fName.c_str(), "r"))) {
-      TRACE(XERR, "Config: cannot open file: "<<fCfgFile.fName<<" (errno:"<<errno<<")");
+      TRACE(XERR, "xpd: Config: GroupMgr: cannot open file: "<<fCfgFile.fName<<" (errno:"<<errno<<")");
       return -1;
    }
 
@@ -392,7 +445,7 @@ int XrdProofGroupMgr::Config(const char *fn)
       // Check consistency
       if (!gotkey || !gotgrp) {
          // Insufficient info
-         TRACE(DBG, "Config: incomplete line: " << lin);
+         TRACE(DBG, "xpd: Config: GroupMgr: incomplete line: " << lin);
          continue;
       }
 
@@ -437,7 +490,7 @@ int XrdProofGroupMgr::Config(const char *fn)
          }
          if (!gotname || !gotnom) {
             // Insufficient info
-            TRACE(DBG, "Config: incomplete property line: " << lin);
+            TRACE(DBG, "xpd: Config: GroupMgr: incomplete property line: " << lin);
             continue;
          }
          if (!g)
@@ -517,6 +570,116 @@ int XrdProofGroupMgr::ReadPriorities()
          value += '.';
       // Save it
       g->SetPriority((float)strtod(value.c_str(),0));
+   }
+
+   // Done
+   return 0;
+}
+
+//__________________________________________________________________________
+static int GetGroupsInfo(const char *, XrdProofGroup *g, void *s)
+{
+   // Fill the global group structure
+
+   XpdGroupGlobal_t *glo = (XpdGroupGlobal_t *)s;
+
+   if (glo) {
+      if (g->Active() > 0) {
+         // Set the min/max priorities
+         if (glo->prmin == -1 || g->Priority() < glo->prmin)
+            glo->prmin = g->Priority();
+         if (glo->prmax == -1 || g->Priority() > glo->prmax)
+            glo->prmax = g->Priority();
+         // Set the draft fractions
+         if (g->Fraction() > 0) {
+            g->SetFracEff((float)(g->Fraction()));
+            glo->totfrac += (float)(g->Fraction());
+         } else {
+            glo->nofrac += 1;
+         }
+      }
+   } else {
+      // Not enough info: stop
+      return 1;
+   }
+
+   // Check next
+   return 0;
+}
+
+//__________________________________________________________________________
+static int SetGroupFracEff(const char *, XrdProofGroup *g, void *s)
+{
+   // Check if user 'u' is memmebr of group 'grp'
+
+   XpdGroupEff_t *eff = (XpdGroupEff_t *)s;
+
+   if (eff && eff->glo) {
+      XpdGroupGlobal_t *glo = eff->glo;
+      if (g->Active() > 0) {
+         if (eff->opt == 0) {
+            float ef = g->Priority() / glo->prmin;
+            g->SetFracEff(ef);
+         } else if (eff->opt == 1) {
+            if (g->Fraction() < 0) {
+               float ef = ((100. - glo->totfrac) / glo->nofrac);
+               g->SetFracEff(ef);
+            }
+         } else if (eff->opt == 2) {
+            if (g->FracEff() < 0) {
+               // Share eff->cut (default 5%) between those with undefined fraction
+               float ef = (eff->cut / glo->nofrac);
+               g->SetFracEff(ef);
+            } else {
+               // renormalize
+               float ef = g->FracEff() * eff->norm;
+               g->SetFracEff(ef);
+            }
+         }
+      }
+   } else {
+      // Not enough info: stop
+      return 1;
+   }
+
+   // Check next
+   return 0;
+}
+
+//______________________________________________________________________________
+int XrdProofGroupMgr::SetEffectiveFractions(bool opri)
+{
+   // Go through the list of active groups (those having at least a non-idle
+   // member) and determine the effective resource fraction on the base of
+   // the scheduling option and of priorities or nominal fractions.
+   // Return 0 in case of success, -1 in case of error, 1 if every group
+   // has the same priority so that the system scheduler should do the job.
+
+   // Loop over groupd
+   XpdGroupGlobal_t glo = {-1., -1., 0, 0.};
+   Apply(GetGroupsInfo, &glo);
+
+   XpdGroupEff_t eff = {0, &glo, 0.5, 1.};
+   if (opri) {
+      // Set effective fractions
+      ResetIter();
+      eff.opt = 0;
+      Apply(SetGroupFracEff, &eff);
+
+   } else {
+      // In the fraction scheme we need to fill up with the remaining resources
+      // if at least one lower bound was found. And of course we need to restore
+      // unitarity, if it was broken
+
+      if (glo.totfrac < 100. && glo.nofrac > 0) {
+         eff.opt = 1;
+         Apply(SetGroupFracEff, &eff);
+      } else if (glo.totfrac > 100) {
+         // Leave 5% for unnamed or low priority groups
+         eff.opt = 2;
+         eff.norm = (glo.nofrac > 0) ? (100. - eff.cut)/glo.totfrac : 100./glo.totfrac ;
+         Apply(SetGroupFracEff, &eff);
+      }
    }
 
    // Done
