@@ -148,6 +148,8 @@ void TEveCalo2DGL::DrawRPhi(TGLRnrCtx & rnrCtx) const
    Float_t *sliceVal = new Float_t[nSlices];
    TEveCaloData::CellData_t cellData;
    Float_t towerH;
+   Bool_t visible;
+   if (rnrCtx.SecSelection()) glPushName(0);
    for(UInt_t vi=0; vi<fM->fCellLists.size(); vi++) {
       // reset values
       Float_t off = 0;
@@ -165,25 +167,30 @@ void TEveCalo2DGL::DrawRPhi(TGLRnrCtx & rnrCtx) const
          glPushName(0);
       }
       for (Int_t s=0; s<nSlices; s++) {
-         if (rnrCtx.SecSelection()) glLoadName(s);
-         if (fM->SetupColorHeight(sliceVal[s], s, towerH))
+         fM->SetupColorHeight(sliceVal[s], s, towerH, visible);
+         if (visible)
          {
+            if (rnrCtx.SecSelection()) glLoadName(s);
             glBegin(GL_QUADS);
             off = MakeRPhiCell(cellData.PhiMin(), cellData.PhiMax(), towerH, off);
             glEnd();
          }
       }
-      if (rnrCtx.SecSelection()) glPopName();
+      if (rnrCtx.SecSelection()) glPopName(); // slice
    } 
+   if (rnrCtx.SecSelection()) glPopName(); // etha bin
 }
 
+
+/*******************************************************************************/
+/*******************************************************************************/
 //______________________________________________________________________________
-Float_t TEveCalo2DGL::MakeRhoZBarrelCell(Float_t thetaMin, Float_t thetaMax, Int_t phiSign, Float_t towerH, Float_t offset) const
+Float_t TEveCalo2DGL::MakeRhoZBarrelCell(Float_t thetaMin, Float_t thetaMax, Bool_t phiPlus, Float_t towerH, Float_t offset) const
 {
    //   Float_t towerH = fM->fBarrelRadius*fM->fTowerHeight*(value -fMinVal)/(fMaxVal-fMinVal);
 
    Float_t theta  = (thetaMin+thetaMax)*0.5;
-   Float_t r1 = fM->fBarrelRadius/Sin(theta) + offset;
+   Float_t r1 = fM->fBarrelRadius/TMath::Abs(Sin(theta)) + offset;
    Float_t r2 = r1 + towerH;
 
    Float_t pnts[12];
@@ -210,18 +217,18 @@ Float_t TEveCalo2DGL::MakeRhoZBarrelCell(Float_t thetaMin, Float_t thetaMax, Int
 
    Float_t x, y, z;
    for (Int_t i=0; i<4; i++) {
-      x = pnts[3*i];
-      y = pnts[3*i+1]*phiSign;
+      x = 0.f;
+      y = phiPlus ? pnts[3*i+1] : -pnts[3*i+1];
       z = pnts[3*i+2];
+      //      printf()
       fM->fManager->GetProjection()->ProjectPoint(x, y, z);
-      //printf("MakeRhoZBarrelCell (%f, %f, %f)-> (%f, %f, %f)\n", pnts[3*i], pnts[3*i+1]*phiSign,  pnts[3*i+2], x, y, z);
       glVertex3f(x, y, fM->fDepth);
    }
    return offset+towerH;
 }
 
 //______________________________________________________________________________
-Float_t TEveCalo2DGL::MakeRhoZEndCapCell(Float_t thetaMin, Float_t thetaMax, Int_t phiSign, Float_t towerH, Float_t offset) const
+Float_t TEveCalo2DGL::MakeRhoZEndCapCell(Float_t thetaMin, Float_t thetaMax, Bool_t phiPlus, Float_t towerH, Float_t offset) const
 {
    //   Float_t towerH =  fM->fEndCapPos*fM->fTowerHeight*(value - fMinVal)/(fMaxVal-fMinVal);
    Float_t theta  = (thetaMin+thetaMax)*0.5;
@@ -252,12 +259,27 @@ Float_t TEveCalo2DGL::MakeRhoZEndCapCell(Float_t thetaMin, Float_t thetaMax, Int
    Float_t x, y, z;
    for (Int_t i=0; i<4; i++) {
       x = pnts[3*i];
-      y = pnts[3*i+1]*phiSign;
+      y = phiPlus ? pnts[3*i+1] : -pnts[3*i+1];
       z = pnts[3*i+2];
       fM->fManager->GetProjection()->ProjectPoint(x, y, z);
       glVertex3f(x, y, fM->fDepth);
    }
    return offset+towerH;
+}
+
+//______________________________________________________________________________
+Float_t TEveCalo2DGL::MakeRhoZCell(Float_t thetaMin, Float_t thetaMax, Bool_t phiPlus, Float_t towerH, Float_t offset) const
+{
+   Float_t off;
+   glBegin(GL_QUADS);
+   {
+      if (thetaMin>fM->GetTransitionTheta() && thetaMax<(TMath::Pi() - fM->GetTransitionTheta()))
+         off = MakeRhoZBarrelCell(thetaMin, thetaMax, phiPlus, towerH, offset);
+      else 
+         off = MakeRhoZEndCapCell(thetaMin, thetaMax, phiPlus, towerH, offset);
+   }
+   glEnd();
+   return off;
 }
 
 //______________________________________________________________________________
@@ -284,10 +306,13 @@ void TEveCalo2DGL::DrawRhoZ(TGLRnrCtx & rnrCtx) const
 
    TEveCaloData::CellData_t cellData;
    Float_t towerH;
+   Bool_t visible;
    Int_t nSlices = data->GetNSlices();
    Float_t *sliceValsUp  = new Float_t[nSlices];
    Float_t *sliceValsLow = new Float_t[nSlices];
-   Float_t transTheta = fM->GetTransitionTheta();
+
+
+   if (rnrCtx.SecSelection()) glPushName(0);
    for (UInt_t vi=0; vi<fM->fCellLists.size(); vi++) {
       // clear
       Float_t offUp  = 0;
@@ -296,40 +321,46 @@ void TEveCalo2DGL::DrawRhoZ(TGLRnrCtx & rnrCtx) const
          sliceValsUp[s]  = 0;
          sliceValsLow[s] = 0;
       }
+
       // RhoZ values
       for (TEveCaloData::vCellId_i it = fM->fCellLists[vi]->begin(); it !=  fM->fCellLists[vi]->end(); it++) {
          data->GetCellData(*it, cellData);
-         if (cellData.PhiMin() >= 0)
+         if (cellData.Phi() > 0)
             sliceValsUp[(*it).fSlice]  += cellData.Value();
          else
             sliceValsLow[(*it).fSlice] += cellData.Value();
       }
+
       // draw
       if (rnrCtx.SecSelection())
       {
-         glLoadName(vi);
-         glPushName(0);
+         glLoadName(vi); // phi bin
+         glPushName(0); // slice
       }
-      for (Int_t s=0; s<nSlices; s++) {
-         if (rnrCtx.SecSelection()) glLoadName(s);
-         glBegin(GL_QUADS);
-         if (cellData.Theta()>transTheta) {
-            if (fM->SetupColorHeight(sliceValsUp[s], s, towerH))
-               offUp  = MakeRhoZBarrelCell(cellData.ThetaMin(kTRUE), cellData.ThetaMax(kTRUE),  1, towerH, offUp);
-            if (fM->SetupColorHeight(sliceValsLow[s], s, towerH))
-               offLow = MakeRhoZBarrelCell(cellData.ThetaMin(kTRUE), cellData.ThetaMax(kTRUE), -1, towerH, offLow);
-         }
-         else {
-            if (fM->SetupColorHeight(sliceValsUp[s], s, towerH))
-               offUp  = MakeRhoZEndCapCell(cellData.ThetaMin(kTRUE), cellData.ThetaMax(kTRUE),  1, towerH, offUp);
-            if (fM->SetupColorHeight(sliceValsLow[s], s, towerH))
-               offLow = MakeRhoZEndCapCell(cellData.ThetaMin(kTRUE), cellData.ThetaMax(kTRUE), -1, towerH, offLow);
-         }
-         glEnd();
-      }
-      if (rnrCtx.SecSelection()) glPopName();
-   }
 
+      for (Int_t s=0; s<nSlices; s++) {
+         if (rnrCtx.SecSelection())glLoadName(s); 
+         // render phi positive slices
+         fM->SetupColorHeight(sliceValsUp[s], s, towerH, visible);
+         if (visible)
+         {
+            if (rnrCtx.SecSelection()) glPushName(kTRUE); // phi plus true    
+            offUp = MakeRhoZCell(cellData.ThetaMin(kTRUE), cellData.ThetaMax(kTRUE), kTRUE , towerH, offUp);
+            if (rnrCtx.SecSelection()) glPopName();
+         }
+         
+         // render phi negative slices
+         fM->SetupColorHeight(sliceValsLow[s], s, towerH, visible);
+         if (visible)
+         {
+            if (rnrCtx.SecSelection()) glPushName(kFALSE); // phi plus false    
+            offLow = MakeRhoZCell(cellData.ThetaMin(kTRUE), cellData.ThetaMax(kTRUE), kFALSE, towerH, offLow);
+            if (rnrCtx.SecSelection()) glPopName();
+         }
+      }
+      if (rnrCtx.SecSelection()) glPopName(); // slice
+   }
+   if (rnrCtx.SecSelection()) glPopName(); // phi bin
    delete [] sliceValsUp;
    delete [] sliceValsLow;
 }
@@ -338,7 +369,7 @@ void TEveCalo2DGL::DrawRhoZ(TGLRnrCtx & rnrCtx) const
 void TEveCalo2DGL::DirectDraw(TGLRnrCtx & rnrCtx) const
 {
    // Render with OpenGL.
-   //  printf("TEveCalo2DGL::DirectDraw \n");
+   // printf("TEveCalo2DGL::DirectDraw \n");
 
    glPushAttrib(GL_ENABLE_BIT | GL_LINE_BIT | GL_POINT_BIT | GL_POLYGON_BIT);
    glDisable(GL_LIGHTING);
@@ -348,13 +379,11 @@ void TEveCalo2DGL::DirectDraw(TGLRnrCtx & rnrCtx) const
 
    fM->AssertPalette();
 
-   if (rnrCtx.SecSelection()) glPushName(0);
    TEveProjection::EPType_e pt = fM->fManager->GetProjection()->GetType();
    if (pt == TEveProjection::kPT_RhoZ) 
       DrawRhoZ(rnrCtx);
    else if (pt == TEveProjection::kPT_RPhi)
       DrawRPhi(rnrCtx);
-   if (rnrCtx.SecSelection()) glPopName();
 
    glPopAttrib();
 }
@@ -364,7 +393,7 @@ void TEveCalo2DGL::ProcessSelection(TGLRnrCtx & /*rnrCtx*/, TGLSelectRecord & re
 {
    // Processes secondary selection from TGLViewer.
 
-   if (rec.GetN() != 3) return;
+   if (rec.GetN() < 2) return;
 
    Int_t id = rec.GetItem(1);
    Int_t slice = rec.GetItem(2);
@@ -378,19 +407,32 @@ void TEveCalo2DGL::ProcessSelection(TGLRnrCtx & /*rnrCtx*/, TGLSelectRecord & re
    }
 
    printf("Tower selected in slice %d number of hits: %2d \n", slice, n);
-
-
-   Int_t agg = 0;
    for (TEveCaloData::vCellId_i it =fM->fCellLists[id]->begin(); it!=fM->fCellLists[id]->end(); it++) 
    {
       if ((*it).fSlice == slice)
       {
          fM->fData->GetCellData(*it, cellData);
          cellData.Dump();
-         agg++;
+         
       }
    }
 
-  
+   // rho Z
+   if (rec.GetN() == 4)
+   {
+      if(rec.GetItem(3))
+      printf("Cell in selected positive phi half \n");
+      else 
+      printf("Cell in selected negative phi half \n");
 
+      for (TEveCaloData::vCellId_i it =fM->fCellLists[id]->begin(); it!=fM->fCellLists[id]->end(); it++) 
+      {
+         fM->fData->GetCellData(*it, cellData);
+         if ((*it).fSlice == slice) {
+            if ( (rec.GetItem(3) && cellData.Phi()> 0)
+                 || (rec.GetItem(3)== kFALSE && cellData.Phi()<0) )
+               cellData.Dump();
+         }
+      }
+   }
 }

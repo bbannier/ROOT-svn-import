@@ -18,7 +18,9 @@
 
 
 //______________________________________________________________________________
-// Description of TEveCaloData
+//
+//  A central manager for calorimeter event data. It provides a list of
+//  cells within requested phi and etha rng. 
 //
 
 ClassImp(TEveCaloData);
@@ -69,12 +71,13 @@ void TEveCaloData::CellData_t::Dump() const
 {
    printf(">> theta %2.1f phi %2.1f val %2.2f \n",
           Theta(kTRUE)*TMath::RadToDeg(),
-          Phi()*TMath::RadToDeg(),
-          Value());
+          Phi()*TMath::RadToDeg(), Value());
 }
 
 //______________________________________________________________________________
-// Description of TEveCaloDataHist
+//
+// A central manager for calorimeter data of an event written in TH2F.
+// X axis present eta bin, Y axis phi bin.
 //
 
 ClassImp(TEveCaloDataHist);
@@ -100,9 +103,6 @@ Int_t TEveCaloDataHist::GetCellList(Float_t eta, Float_t etaD,
                                     Float_t threshold, TEveCaloData::vCellId_t &out)
 
 {
-   // hold one hist to get quickly histogram indices
-
-   // printf("Cell list %f, %f, %f, %f \n", etaMin,etaMax,  phiMin, phiMax);
    using namespace TMath;
 
    etaD *= 1.01f;
@@ -135,8 +135,6 @@ Int_t TEveCaloDataHist::GetCellList(Float_t eta, Float_t etaD,
       pr[1] = pr[3] = phi2;
       // printf("natural \n");
    }
-   // printf("phi1 %f  phi2 %f  (%f,%f)(%f, %f)\n", phi1*t, phi2*t, pr[0]*t, pr[1]*t, pr[2]*t, pr[3]*t);
-
 
    TH2F *hist0 = (TH2F*)fHStack->At(0);
    TAxis *ax = hist0->GetXaxis();

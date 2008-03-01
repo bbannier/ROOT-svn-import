@@ -26,8 +26,8 @@ private:
    inline  void   CrossProduct(const Float_t a[3], const Float_t b[3], const Float_t c[3], Float_t out[3]) const;
 
    void    RenderBox(Float_t pnts[8]) const;
-   Float_t RenderBarrelCell(const TEveCaloData::CellData_t &cell, Int_t slice, Float_t offset) const;
-   Float_t RenderEndCapCell(const TEveCaloData::CellData_t &cell, Int_t slice, Float_t offset) const;
+   Float_t RenderBarrelCell(const TEveCaloData::CellData_t &cell, Float_t towerH, Float_t offset) const;
+   Float_t RenderEndCapCell(const TEveCaloData::CellData_t &cell, Float_t towerH, Float_t offset) const;
 
 protected:
    TEveCalo3D     *fM;  // Model object.

@@ -26,8 +26,9 @@
 #include "TGLUtil.h"
 
 //______________________________________________________________________________
-// Description of calorimeter.
 //
+// Base class for calorimeter data visualization.
+// See TEveCalo2D and TEveCalo3D for concrete implementations.
 
 ClassImp(TEveCaloViz);
 
@@ -221,67 +222,54 @@ void TEveCaloViz::ComputeBBox()
    fBBox[3] =  fBBox[1];
    fBBox[4] = -fEndCapPos - th;
    fBBox[5] =  fEndCapPos + th;
-
-   // printf("EveCaloVIZ ComputeBBox (%f, %f, %f) (%f, %f, %f)\n",
-   //        fBBox[0],  fBBox[1],  fBBox[2], fBBox[3], fBBox[4], fBBox[5]);
 }
 
 
 //______________________________________________________________________________
-inline Bool_t TEveCaloViz::SetupColorHeight(Float_t value, Int_t slice, Float_t &out) const
+void TEveCaloViz::SetupColorHeight(Float_t value, Int_t slice, Float_t &outH, Bool_t &viz) const
 {
-   Int_t val =  (Int_t)value;
-   out = fBarrelRadius*fTowerHeight;
+  Int_t val =  (Int_t)value;
+  outH = fBarrelRadius*fTowerHeight;
 
-   if(fPalette->GetShowDefValue())
-   {
-      if( value >=fPalette->GetMinVal() && value < fPalette->GetMaxVal())
-      {
-         TGLUtil::Color(fPalette->GetDefaultColor()+slice);
-         out *= ((value -fPalette->GetMinVal())
-                 /(fPalette->GetHighLimit() -fPalette->GetLowLimit()));
-         return kTRUE;
-      }
-   }
-   else if (fPalette->WithinVisibleRange(val)) 
-   {
-      UChar_t c[4]; //c[4] = 255;
-      fPalette->ColorFromValue(val, c);
-      TGLUtil::Color4ubv(c);
-      return kTRUE;
-   }
+  Bool_t visible = kFALSE;
 
-   return kFALSE;
+  if(fPalette->GetShowDefValue())
+  {
+    if( value > fPalette->GetMinVal() && value < fPalette->GetMaxVal())
+    {
+      TGLUtil::Color(fPalette->GetDefaultColor()+slice);
+      outH *= ((value -fPalette->GetMinVal())
+              /(fPalette->GetHighLimit() -fPalette->GetLowLimit()));
+      visible = kTRUE;
+    }
+  }
+
+  if (fPalette->GetShowDefValue() == kFALSE &&  fPalette->WithinVisibleRange(val)) 
+  {
+    UChar_t c[4];
+    fPalette->ColorFromValue(val, c);
+    TGLUtil::Color4ubv(c);
+    visible = kTRUE;
+  }
+  viz = visible;
 }
 
-/**************************************************************************/
-/**************************************************************************/
-/**************************************************************************/
-/**************************************************************************/
+
+//______________________________________________________________________________
+//
+// Visualization of a calorimeter event data in 3D.
 
 ClassImp(TEveCalo3D);
-
-/**************************************************************************/
-/**************************************************************************/
-/**************************************************************************/
-/**************************************************************************/
-//______________________________________________________________________________
-TEveCalo3D::TEveCalo3D(const Text_t* n, const Text_t* t):
-   TEveCaloViz(n, t)
-{
-}
-
-//______________________________________________________________________________
-TEveCalo3D::TEveCalo3D(TEveCaloData* data, const Text_t* n, const Text_t* t):
-   TEveCaloViz(data, n, t)
-{
-}
 
 //______________________________________________________________________________
 void TEveCalo3D::ResetCache()
 {
    fCellList.clear();
 }
+
+//______________________________________________________________________________
+//
+// Visualization of a calorimeter event data in 2D.
 
 ClassImp(TEveCalo2D);
 
@@ -352,6 +340,4 @@ void TEveCalo2D::ComputeBBox()
    fBBox[5] = fDepth;
 
    AssertBBoxExtents(0.1);
-   // printf("EveCalo2D ComputeBBox (%f, %f, %f) (%f, %f, %f)\n",
-   //      fBBox[0],  fBBox[2],  fBBox[4], fBBox[1], fBBox[3], fBBox[5]);
 }

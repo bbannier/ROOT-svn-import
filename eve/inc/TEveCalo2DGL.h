@@ -30,8 +30,9 @@ private:
 protected:
    TEveCalo2D             *fM;  // Model object.
 
-   Float_t   MakeRhoZBarrelCell(Float_t thetaMin, Float_t thetaMax, Int_t phiSign, Float_t height, Float_t offset) const;
-   Float_t   MakeRhoZEndCapCell(Float_t thetaMin, Float_t thetaMax, Int_t phiSign, Float_t height, Float_t offset) const;
+   Float_t   MakeRhoZBarrelCell(Float_t thetaMin, Float_t thetaMax, Bool_t phiPlus, Float_t height, Float_t offset) const;
+   Float_t   MakeRhoZEndCapCell(Float_t thetaMin, Float_t thetaMax, Bool_t phiPlus, Float_t height, Float_t offset) const;
+   Float_t   MakeRhoZCell      (Float_t thetaMin, Float_t thetaMax, Bool_t phiPlus, Float_t height, Float_t offset) const;
 
    Float_t   MakeRPhiCell(Float_t phiMin, Float_t phiMax, Float_t towerH, Float_t offset) const;
 

@@ -58,7 +58,7 @@ protected:
 
    void AssignCaloVizParameters(TEveCaloViz* cv);
 
-   virtual Bool_t    SetupColorHeight(Float_t value, Int_t slice, Float_t& height) const;
+   void SetupColorHeight(Float_t value, Int_t slice, Float_t& height, Bool_t &viz) const;
 
 public:
    TEveCaloViz(const Text_t* n="TEveCaloViz", const Text_t* t="");
@@ -94,7 +94,7 @@ public:
    virtual void ComputeBBox();
    virtual TClass* ProjectedClass() const;
 
-   ClassDef(TEveCaloViz, 0); // Calorimeter class.
+   ClassDef(TEveCaloViz, 0); // Base-class for visualization of calorimeter eventdata.
 };
 
 /**************************************************************************/
@@ -111,17 +111,18 @@ protected:
    TEveCaloData::vCellId_t fCellList;
 
 public:
-   TEveCalo3D(const Text_t* n="TEveCalo3D", const Text_t* t="");
-   TEveCalo3D(TEveCaloData* data, const Text_t* n="TEveCalo3D", const Text_t* t="");
+   TEveCalo3D(const Text_t* n="TEveCalo3D", const Text_t* t=""):TEveCaloViz(n, t){}
+   TEveCalo3D(TEveCaloData* data): TEveCaloViz(data) { SetElementName("TEveCalo3D");}
+
    virtual ~TEveCalo3D() {}
 
    virtual void ResetCache();
 
-   ClassDef(TEveCalo3D, 0); // 3D calorimeter class.
+   ClassDef(TEveCalo3D, 0); // Class for 3D visualization of calorimeter event data.
 };
 
 /**************************************************************************/
- /**************************************************************************/
+/**************************************************************************/
 
 class TEveCalo2D : public TEveCaloViz,
                    public TEveProjected
@@ -147,6 +148,6 @@ public:
 
    virtual void ComputeBBox();
 
-   ClassDef(TEveCalo2D, 0); // 2D projected calorimeter class.
+   ClassDef(TEveCalo2D, 0); // Class for visualization of projected calorimeter event data.
 };
 #endif
