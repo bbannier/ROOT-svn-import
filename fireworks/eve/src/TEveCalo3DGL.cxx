@@ -312,7 +312,7 @@ void TEveCalo3DGL::DirectDraw(TGLRnrCtx &rnrCtx) const
    Float_t transTheta = fM->GetTransitionTheta();
    Float_t towerH;
    Bool_t  visible;
-   Int_t   prevTower;
+   Int_t   prevTower = 0;
    Float_t offset = 0;
 
    if (rnrCtx.SecSelection()) glPushName(0);
