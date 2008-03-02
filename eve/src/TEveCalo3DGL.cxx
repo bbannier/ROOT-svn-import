@@ -21,8 +21,8 @@
 #include "TEveRGBAPalette.h"
 
 //______________________________________________________________________________
-// OpenGL renderer class for TEveCalo.
 //
+// OpenGL renderer class for TEveCalo3D.
 
 ClassImp(TEveCalo3DGL);
 
@@ -31,7 +31,6 @@ TEveCalo3DGL::TEveCalo3DGL() :
    TGLObject(), fM(0)
 {
    // Constructor.
-
 }
 
 //______________________________________________________________________________
@@ -57,8 +56,10 @@ void TEveCalo3DGL::SetBBox()
 
 //______________________________________________________________________________
 inline void TEveCalo3DGL::CrossProduct(const Float_t a[3], const Float_t b[3],
-                                      const Float_t c[3], Float_t out[3]) const
+                                       const Float_t c[3], Float_t out[3]) const
 {
+   // Calculate cross-product.
+
    const Float_t v1[3] = { a[0] - c[0], a[1] - c[1], a[2] - c[2] };
    const Float_t v2[3] = { b[0] - c[0], b[1] - c[1], b[2] - c[2] };
 
@@ -68,9 +69,11 @@ inline void TEveCalo3DGL::CrossProduct(const Float_t a[3], const Float_t b[3],
 }
 
 //______________________________________________________________________________
-void  TEveCalo3DGL::RenderBox(Float_t pnts[8]) const
+void TEveCalo3DGL::RenderBox(const Float_t pnts[8]) const
 {
-   Float_t *p = pnts;
+   // Render a calo box given by vertices in pnts.
+
+   const Float_t *p = pnts;
    Float_t cross[3];
 
    // bottom: 0123
@@ -132,6 +135,8 @@ void  TEveCalo3DGL::RenderBox(Float_t pnts[8]) const
 //______________________________________________________________________________
 Float_t TEveCalo3DGL::RenderBarrelCell(const TEveCaloData::CellData_t &cellData, Float_t towerH, Float_t offset ) const
 {
+   // Render a barrel cell.
+
    using namespace TMath;
 
    //   printf("RenderBarrel "); cellData.Dump();
@@ -142,7 +147,7 @@ Float_t TEveCalo3DGL::RenderBarrelCell(const TEveCaloData::CellData_t &cellData,
 
    Float_t z1In, z1Out, z2In, z2Out;
 
-   if(cellData.ZSideSign() == 1)
+   if (cellData.ZSideSign() == 1)
    {
       z1In  = r1/Tan(cellData.ThetaMax());
       z1Out = r2/Tan(cellData.ThetaMax());
@@ -205,12 +210,14 @@ Float_t TEveCalo3DGL::RenderBarrelCell(const TEveCaloData::CellData_t &cellData,
    pnts[2] = z2Out;
 
    RenderBox(box);
-   return offset+towerH*Sin(cellData.ThetaMin());
+   return offset + towerH*Sin(cellData.ThetaMin());
 }// end RenderBarrelCell
 
 //______________________________________________________________________________
 Float_t TEveCalo3DGL::RenderEndCapCell(const TEveCaloData::CellData_t &cellData, Float_t towerH, Float_t offset ) const
 {
+   // Render an endcap cell.
+
    using namespace TMath;
 
    //   printf("render endcap %f, %f ", z1, z2); cellData.Dump();
@@ -225,7 +232,8 @@ Float_t TEveCalo3DGL::RenderEndCapCell(const TEveCaloData::CellData_t &cellData,
       z2    = z1 + towerH;
       r2In  = z2*Tan(cellData.ThetaMin());
       r2Out = z2*Tan(cellData.ThetaMax());
-   } else
+   }
+   else
    {
       z2    = fM->fEndCapPos + offset;
       r2In  = z2*Tan(cellData.ThetaMin());
@@ -291,13 +299,15 @@ Float_t TEveCalo3DGL::RenderEndCapCell(const TEveCaloData::CellData_t &cellData,
    return offset+towerH*Cos(cellData.ThetaMin());
 } // end RenderEndCapCell
 
- //______________________________________________________________________________
+//______________________________________________________________________________
 void TEveCalo3DGL::DirectDraw(TGLRnrCtx &rnrCtx) const
 {
-   // printf("TEveCalo3D::DirectDraw\n");
-   fM->AssertPalette();  
+   // GL rendering.
 
-   if (fM->fCacheOK == kFALSE) 
+   // printf("TEveCalo3D::DirectDraw\n");
+   fM->AssertPalette();
+
+   if (fM->fCacheOK == kFALSE)
    {
       fM->ResetCache();
       fM->fData->GetCellList((fM->fEtaMin+fM->fEtaMax)*0.5f, fM->fEtaMax -fM->fEtaMin,
@@ -308,7 +318,7 @@ void TEveCalo3DGL::DirectDraw(TGLRnrCtx &rnrCtx) const
    glPushAttrib(GL_ENABLE_BIT | GL_POLYGON_BIT);
    glEnable(GL_NORMALIZE);
 
-   TEveCaloData::CellData_t cellData;  
+   TEveCaloData::CellData_t cellData;
    Float_t transTheta = fM->GetTransitionTheta();
    Float_t towerH;
    Bool_t  visible;
@@ -316,11 +326,11 @@ void TEveCalo3DGL::DirectDraw(TGLRnrCtx &rnrCtx) const
    Float_t offset = 0;
 
    if (rnrCtx.SecSelection()) glPushName(0);
-   for(UInt_t i=0; i<fM->fCellList.size(); i++) 
+   for(UInt_t i=0; i<fM->fCellList.size(); i++)
    {
       fM->fData->GetCellData(fM->fCellList[i], cellData);
 
-      if (fM->fCellList[i].fTower != prevTower) 
+      if (fM->fCellList[i].fTower != prevTower)
       {
          offset = 0;
          prevTower = fM->fCellList[i].fTower;
@@ -349,9 +359,9 @@ void TEveCalo3DGL::ProcessSelection(TGLRnrCtx & /*rnrCtx*/, TGLSelectRecord & re
    if (rec.GetN() < 2) return;
 
    Int_t cellID = rec.GetItem(1);
-   TEveCaloData::CellData_t cellData;  
+   TEveCaloData::CellData_t cellData;
    fM->fData->GetCellData(fM->fCellList[cellID], cellData);
 
-   printf("Tower selected in slice %d \n",fM->fCellList[cellID].fSlice);
+   printf("Tower selected in slice %d \n", fM->fCellList[cellID].fSlice);
    cellData.Dump();
 }
