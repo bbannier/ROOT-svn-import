@@ -233,6 +233,11 @@ bool TMinuitMinimizer::Minimize() {
 
    }
 
+   // check if Hesse needs to be run 
+   if (ierr == 0 && IsValidError() ) { 
+      fMinuit->mnexcm("HESSE",arglist,0,ierr);
+   }
+
 
    int ntot; 
    int istat;
