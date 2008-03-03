@@ -33,7 +33,9 @@ public:
       fDebug(0), 
       fMaxCalls(0),  // 0 means leave to the minimizer to decide  
       fMaxIter(0), 
-      fTol(0.001)
+      fTol(0.001),
+      fParabErrors(false), // ensure that in any case correct parabolic errors are estimated
+      fMinosErrors(false)    // do full Minos error analysis for all parameters
    {}
 
    /** 
@@ -55,6 +57,12 @@ public:
    /// absolute tolerance 
    double Tolerance() const { return  fTol; }
 
+   ///do analysis for parabolic errors
+   bool ParabErrors() const { return fParabErrors; }
+
+   ///do minos errros analysis
+   bool MinosErrors() const { return fMinosErrors; }
+
    /// set print level
    void SetPrintLevel(int level) { fDebug = level; }
 
@@ -67,6 +75,11 @@ public:
    /// set the tolerance
    void SetTolerance(double tol) { fTol = tol; }
 
+   ///set parabolic erros
+   void SetParabErrors(bool on) { fParabErrors = on; } 
+
+   ///set Minos erros
+   void SetMinosErrors(bool on) { fMinosErrors = on; } 
 
 
 private: 
@@ -75,6 +88,8 @@ private:
    unsigned int fMaxCalls; 
    unsigned int fMaxIter; 
    double fTol; 
+   bool fParabErrors; 
+   bool fMinosErrors;
   
 
 }; 

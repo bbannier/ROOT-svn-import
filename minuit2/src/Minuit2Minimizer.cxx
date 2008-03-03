@@ -23,6 +23,7 @@
 #include "Minuit2/MinosError.h"
 #include "Minuit2/MnHesse.h"
 #include "Minuit2/MinuitParameter.h"
+#include "Minuit2/MnUserFcn.h"
 #include "Minuit2/MnPrint.h"
 #include "Minuit2/FunctionMinimum.h"
 #include "Minuit2/VariableMetricMinimizer.h"
@@ -260,14 +261,23 @@ bool Minuit2Minimizer::Minimize() {
    }
 
 
+   // check if Hesse needs to be run 
+   if (fMinimum->IsValid() && IsValidError() && fMinimum->State().Error().Dcovar() != 0 ) {
+      // run Hesse
+      ROOT::Minuit2::MnHesse hesse(strategy );
+      ROOT::Minuit2::MnUserFcn mfcn(*GetFCN(), fMinimum->UserState().Trafo() );
+      ROOT::Minuit2::MinimumState st = hesse( *GetFCN(), fMinimum->State(), fMinimum->UserState().Trafo(), maxfcn); 
+      fMinimum->Add(st); 
+   }
+
+
+
 #ifdef USE_ROOT_ERROR
 //restore previous printing level
    if (PrintLevel() ==0)  
       gErrorIgnoreLevel = prevErrorIgnoreLevel;
 #endif 
 
-//    //fMinimum = new ROOT::Minuit2::FunctionMinimum (min);    
-//    fMinimum = &min;    
    
    fState = fMinimum->UserState(); 
    bool ok =  ExamineMinimum(*fMinimum);

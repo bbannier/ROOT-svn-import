@@ -22,9 +22,11 @@ DataRange::DataRange(double xmin, double xmax) :
    fRanges( std::vector<RangeSet> (1) )
 {
    // construct a range for [xmin, xmax] 
-   RangeSet rx(1); 
-   rx[0] = std::make_pair(xmin, xmax); 
-   fRanges[0] = rx; 
+   if (xmin < xmax) { 
+      RangeSet rx(1); 
+      rx[0] = std::make_pair(xmin, xmax); 
+      fRanges[0] = rx; 
+   }
 }
 
 
@@ -32,34 +34,44 @@ DataRange::DataRange(double xmin, double xmax, double ymin, double ymax) :
    fRanges( std::vector<RangeSet> (2) )
 {
    // construct a range for [xmin, xmax] , [ymin, ymax] 
-   RangeSet rx(1); 
-   rx[0] = std::make_pair(xmin, xmax); 
-   fRanges[0] = rx; 
+   if (xmin < xmax) { 
+      RangeSet rx(1); 
+      rx[0] = std::make_pair(xmin, xmax); 
+      fRanges[0] = rx; 
+   }
    
-   RangeSet ry(1); 
-   ry[0] = std::make_pair(ymin, ymax); 
-   fRanges[1] = ry; 
+   if (ymin < ymax) { 
+      RangeSet ry(1); 
+      ry[0] = std::make_pair(ymin, ymax); 
+      fRanges[1] = ry; 
+   }
 }
 
 DataRange::DataRange(double xmin, double xmax, double ymin, double ymax, double zmin, double zmax) : 
    fRanges( std::vector<RangeSet> (3) )
 {
    // construct a range for [xmin, xmax] , [ymin, ymax] , [zmin, zmax] 
-   RangeSet rx(1); 
-   rx[0] = std::make_pair(xmin, xmax); 
-   fRanges[0] = rx; 
-   
-   RangeSet ry(1); 
-   ry[0] = std::make_pair(ymin, ymax); 
-   fRanges[1] = ry; 
-   
-   RangeSet rz(1); 
-   ry[0] = std::make_pair(zmin, zmax); 
-   fRanges[2] = rz; 
+   if (xmin < xmax) { 
+      RangeSet rx(1); 
+      rx[0] = std::make_pair(xmin, xmax); 
+      fRanges[0] = rx; 
+   }
+   if (ymin < ymax) {    
+      RangeSet ry(1); 
+      ry[0] = std::make_pair(ymin, ymax); 
+      fRanges[1] = ry; 
+   }
+   if (zmin < zmax) {    
+      RangeSet rz(1); 
+      rz[0] = std::make_pair(zmin, zmax); 
+      fRanges[2] = rz; 
+   }
 }
 
 void DataRange::AddRange(double xmin, double xmax, unsigned  int  icoord  ) { 
    // add a range [xmin,xmax] for the new coordinate icoord 
+
+   if (xmin >= xmax) return;  // no op in case of bad values
 
    // case the  coordinate is larger than the current dimension 
    if (icoord >= fRanges.size() ) { 

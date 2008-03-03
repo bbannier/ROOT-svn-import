@@ -29,7 +29,7 @@ FitResult::FitResult()
    // Default constructor implementation.
 }
 
-FitResult::FitResult(const ROOT::Math::Minimizer & min, const IModelFunction & func, bool isValid,  unsigned int sizeOfData, const  ROOT::Math::IMultiGenFunction * chi2func ) : 
+      FitResult::FitResult(ROOT::Math::Minimizer & min, const IModelFunction & func, bool isValid,  unsigned int sizeOfData, const  ROOT::Math::IMultiGenFunction * chi2func, bool minosErr ) : 
    fValid(isValid),
    fNormalized(false),
    fVal (min.MinValue()),  
@@ -52,11 +52,11 @@ FitResult::FitResult(const ROOT::Math::Minimizer & min, const IModelFunction & f
       fChi2 = (*chi2func)(&fParams[0]); 
    }
 
+   unsigned int n  = min.NDim(); 
       
 //    // fill error matrix
    // cov matrix rank 
    if (fValid) { 
-      unsigned int n  = min.NDim(); 
       unsigned int r = n * (  n + 1 )/2;  
       fCovMatrix.reserve(r);
       for (unsigned int i = 0; i < n; ++i) 
@@ -65,7 +65,18 @@ FitResult::FitResult(const ROOT::Math::Minimizer & min, const IModelFunction & f
       
       assert (fCovMatrix.size() == r ); 
    }
-                              
+
+   // minos errors 
+   if (minosErr) { 
+      fMinosErrors.reserve(n);
+      for (unsigned int i = 0; i < n; ++i) { 
+         double elow, eup; 
+         bool ret = min.GetMinosError(0, elow, eup); 
+         if (ret) fMinosErrors.push_back(std::make_pair(elow,eup) );
+         else fMinosErrors.push_back(std::make_pair(0.,0.) );
+      }
+   }
+
                               
 }
 

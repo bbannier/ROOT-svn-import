@@ -86,6 +86,18 @@ public:
      return Size(icoord) >  0 ? fRanges[icoord].front() : std::make_pair<double,double>(0,0);     
    }  
 
+   /**
+      get the first range for given coordinate
+    */
+   void GetRange(unsigned int icoord, double & xmin, double & xmax) const { 
+      if (Size(icoord) == 0) { 
+         xmin = 0; 
+         xmax = 0; 
+         return;
+      }
+      xmin = fRanges[icoord].front().first; 
+      xmax = fRanges[icoord].front().second; 
+   }
 
    /** 
       Destructor (no operations)
