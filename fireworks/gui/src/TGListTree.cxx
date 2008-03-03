@@ -71,28 +71,6 @@ ClassImp(TGListTreeItem)
 ClassImp(TGListTreeItemStd)
 ClassImp(TGListTree)
 
-
-//--- Some utility functions ---------------------------------------------------
-static Int_t FontHeight(FontStruct_t f)
-{
-   int max_ascent, max_descent;
-   gVirtualX->GetFontProperties(f, max_ascent, max_descent);
-   return max_ascent + max_descent;
-}
-
-static Int_t FontAscent(FontStruct_t f)
-{
-   int max_ascent, max_descent;
-   gVirtualX->GetFontProperties(f, max_ascent, max_descent);
-   return max_ascent;
-}
-
-static Int_t FontTextWidth(FontStruct_t f, const char *c)
-{
-   return gVirtualX->TextWidth(f, c, strlen(c));
-}
-
-
 /******************************************************************************/
 /******************************************************************************/
 // TGListTreeItem
@@ -488,6 +466,38 @@ TGListTree::~TGListTree()
       delete item;
       item = sibling;
    }
+}
+
+//--- text utility functions
+
+//______________________________________________________________________________
+Int_t TGListTree::FontHeight(FontStruct_t f)
+{
+   static int max_ascent = 0, max_descent = 0;
+   if ((max_ascent == 0) && (max_descent == 0))
+      gVirtualX->GetFontProperties(f, max_ascent, max_descent);
+   return max_ascent + max_descent;
+}
+
+//______________________________________________________________________________
+Int_t TGListTree::FontAscent(FontStruct_t f)
+{
+   static int max_ascent = 0, max_descent = 0;
+   if (max_ascent == 0)
+      gVirtualX->GetFontProperties(f, max_ascent, max_descent);
+   return max_ascent;
+}
+
+//______________________________________________________________________________
+Int_t TGListTree::FontTextWidth(FontStruct_t f, const char *c)
+{
+   static int width = 0;
+   static int slen = 0;
+   if ((width == 0) || (slen != strlen(c))) {
+      slen = strlen(c);
+      width = gVirtualX->TextWidth(f, c, slen);
+   }
+   return width;
 }
 
 //---- highlighting utilities

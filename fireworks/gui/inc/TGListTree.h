@@ -416,6 +416,11 @@ public:
    virtual void Checked(TObject *obj, Bool_t check);  //*SIGNAL*
    virtual void DataDropped(TGListTreeItem *item, TDNDData *data);  //*SIGNAL*
 
+   // Utility functions
+   Int_t        FontHeight(FontStruct_t f);
+   Int_t        FontAscent(FontStruct_t f);
+   Int_t        FontTextWidth(FontStruct_t f, const char *c);
+
    // User control
    void         SetUserControl(Bool_t ctrl=kTRUE) { fUserControlled = ctrl; }
    Bool_t       HasUserControl() const { return fUserControlled; }
