@@ -259,8 +259,12 @@ bool Fitter::DoMinimization(ROOT::Math::Minimizer & minimizer, const ObjFunc & o
 //    } 
 //    return false; 
 
+   // if requested parabolic error ansure correct analysis by the minimizer
+   if (fConfig.MinimizerOptions().ParabErrors()) minimizer.SetValidError(true);
+
+
    bool ret = minimizer.Minimize(); 
-   fResult = FitResult(minimizer,*fFunc, ret, dataSize, chi2func );
+   fResult = FitResult(minimizer,*fFunc, ret, dataSize, chi2func, fConfig.MinimizerOptions().MinosErrors() );
    if (fConfig.NormalizeErrors() ) fResult.NormalizeErrors(); 
    return ret; 
 }
