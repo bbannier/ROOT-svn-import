@@ -87,40 +87,38 @@ void FillData(BinData & dv, const TH1 * hfit, TF1 * func)
    if (range.Size(0) != 0) { 
       double xlow   = range(0).first; 
       double xhigh  = range(0).second; 
+#ifdef DEBUG
+      std::cout << "xlow " << xlow << " xhigh = " << xhigh << std::endl;
+#endif
       hxfirst =  hfit->GetXaxis()->FindBin(xlow);
-      hxlast  =  hfit->GetYaxis()->FindBin(xhigh);
+      hxlast  =  hfit->GetXaxis()->FindBin(xhigh);
       if (range.Size(0) > 1  ) 
-         Warning("ROOT::Fit::TH1Interface","support only one range interval for X coordinate"); 
+         Warning("ROOT::Fit::THFitInterface","support only one range interval for X coordinate"); 
    }
 
-   if (range.Size(1) != 0) { 
+   if (hfit->GetDimension() > 1 && range.Size(1) != 0) { 
       double ylow   = range(1).first; 
       double yhigh  = range(1).second; 
       hyfirst =  hfit->GetYaxis()->FindBin(ylow);
       hylast  =  hfit->GetYaxis()->FindBin(yhigh);
       if (range.Size(0) > 1  ) 
-         Warning("ROOT::Fit::TH1Interface","support only one range interval for Y coordinate"); 
+         Warning("ROOT::Fit::THFitInterface","support only one range interval for Y coordinate"); 
    }
 
-   if (range.Size(2) != 0) { 
+   if (hfit->GetDimension() > 2 && range.Size(2) != 0) { 
       double zlow   = range(2).first; 
       double zhigh  = range(2).second; 
-      hzfirst =  hfit->GetXaxis()->FindBin(zlow);
-      hzlast  =  hfit->GetYaxis()->FindBin(zhigh);
+      hzfirst =  hfit->GetZaxis()->FindBin(zlow);
+      hzlast  =  hfit->GetZaxis()->FindBin(zhigh);
       if (range.Size(0) > 1  ) 
-         Warning("ROOT::Fit::TH1Interface","support only one range interval for Z coordinate"); 
+         Warning("ROOT::Fit::THFitInterface","support only one range interval for Z coordinate"); 
    }
-
-
-   TAxis *xaxis  = hfit->GetXaxis();
-   TAxis *yaxis  = hfit->GetYaxis();
-   TAxis *zaxis  = hfit->GetZaxis();
    
    
    int n = (hxlast-hxfirst+1)*(hylast-hyfirst+1)*(hzlast-hzfirst+1); 
    
 #ifdef DEBUG
-   std::cout << "TH1Interface: ifirst = " << hxfirst << " ilast =  " << hxlast 
+   std::cout << "THFitInterface: ifirst = " << hxfirst << " ilast =  " << hxlast 
              << " total bins  " << hxlast-hxfirst+1  
              << std::endl; 
 #endif
@@ -138,6 +136,11 @@ void FillData(BinData & dv, const TH1 * hfit, TF1 * func)
    int binx = 0; 
    int biny = 0; 
    int binz = 0; 
+
+   TAxis *xaxis  = hfit->GetXaxis();
+   TAxis *yaxis  = hfit->GetYaxis();
+   TAxis *zaxis  = hfit->GetZaxis();
+
    
    for ( binx = hxfirst; binx <= hxlast; ++binx) {
       if (fitOpt.fIntegral) {

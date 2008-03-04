@@ -50,7 +50,7 @@ public:
    /**
       Construct from a Minimizer instance 
     */
-   FitResult(ROOT::Math::Minimizer & min, const IModelFunction & f, bool isValid, unsigned int sizeOfData = 0, const ROOT::Math::IMultiGenFunction * chi2func = 0, bool minosErr = false);
+   FitResult(ROOT::Math::Minimizer & min, const IModelFunction & f, bool isValid, unsigned int sizeOfData = 0, const ROOT::Math::IMultiGenFunction * chi2func = 0, bool minosErr = false, unsigned int ncalls = 0);
 
    /** 
       Destructor (no operations)

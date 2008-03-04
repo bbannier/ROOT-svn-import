@@ -23,16 +23,20 @@
 #include <string> 
 #include <sstream> 
 
-#include <iostream>
+#include "Math/Error.h"
 
 //#define DEBUG
+#ifdef DEBUG
+#include <iostream>
+#endif
 
 namespace ROOT { 
 
 namespace Fit { 
 
 
-
+   static std::string fgDefaultMinimizer = "Minuit2";
+   static std::string fgDefaultMinimAlgo = "Migrad";
 
 
 FitConfig::FitConfig(unsigned int npar) : 
@@ -41,11 +45,10 @@ FitConfig::FitConfig(unsigned int npar) :
 {
    // constructor implementation
 
-   // default minimizer type 
-   fMinimizerType = "Minuit2"; // default 
-   fMinimAlgoType = "Migrad";  // default i
+   // default minimizer type (ue static default values) 
+   fMinimizerType = fgDefaultMinimizer; 
+   fMinimAlgoType = fgDefaultMinimAlgo; 
 }
-
 
 
 FitConfig::~FitConfig() 
@@ -108,14 +111,27 @@ void FitConfig::SetParamsSettings(const ROOT::Math::IParamMultiFunction & func) 
 }
 
 ROOT::Math::Minimizer * FitConfig::CreateMinimizer() { 
-   // create minimizer according to the chosen configuration usinng the 
+   // create minimizer according to the chosen configuration using the 
    // plug-in manager
 
    ROOT::Math::Minimizer * min = ROOT::Math::Factory::CreateMinimizer(fMinimizerType, fMinimAlgoType); 
 
    if (min == 0) { 
-      std::cout << "FitConfig: Could not create Minimizer " << fMinimizerType << std::endl;
-      return 0;
+      std::string minim2 = "Minuit2";
+      if (fMinimizerType != minim2 ) {
+         std::string msg = "Could not create Minimizer " + fMinimizerType + " trying using minimizer " + minim2; 
+         MATH_WARN_MSG("FitConfig::CreateMinimizer",msg);
+         min = ROOT::Math::Factory::CreateMinimizer(minim2); 
+         if (min == 0) { 
+            MATH_ERROR_MSG("FitConfig::CreateMinimizer","Could not create the Minuit2 minimizer");
+            return 0; 
+         }
+      }
+      else {
+         std::string msg = "Could not create the Minimizer " + fMinimizerType; 
+         MATH_ERROR_MSG("FitConfig::CreateMinimizer",msg);
+         return 0;
+      }
    } 
 
    // set default max of function calls according to the number of parameters
@@ -132,13 +148,17 @@ ROOT::Math::Minimizer * FitConfig::CreateMinimizer() {
    min->SetMaxFunctionCalls( fMinimizerOpts.MaxFunctionCalls() ); 
    min->SetMaxIterations( fMinimizerOpts.MaxIterations() ); 
    min->SetTolerance( fMinimizerOpts.Tolerance() ); 
-
+   min->SetValidError( fMinimizerOpts.ParabErrors() );
 
 
    return min; 
 } 
 
-
+void FitConfig::SetDefaultMinimizer(const std::string & type, const std::string & algo ) { 
+   // set the default minimizer type and algorithm
+   if (type != "") fgDefaultMinimizer = type; 
+   if (algo != "") fgDefaultMinimAlgo = algo;
+} 
 
    } // end namespace Fit
 

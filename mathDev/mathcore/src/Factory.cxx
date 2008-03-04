@@ -65,6 +65,10 @@ ROOT::Math::Minimizer * ROOT::Math::Factory::CreateMinimizer(const std::string &
       minim = s1.c_str();
       algo =  s2.c_str();
    }
+   if (minimizerType == "TMinuit") { 
+      s1 = "Minuit"; 
+      minim = s1.c_str();
+   }
 
    // create Minimizer using the PM
    TPluginHandler *h; 

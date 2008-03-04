@@ -24,12 +24,13 @@ namespace ROOT {
    namespace Fit { 
 
 
-FitResult::FitResult() 
+FitResult::FitResult() : 
+   fValid(false), fNormalized(false), fVal(0), fEdm(0), fChi2(0), fNdf(0), fNCalls(0), fDataSize(0), fFitFunc(0)
 {
    // Default constructor implementation.
 }
 
-      FitResult::FitResult(ROOT::Math::Minimizer & min, const IModelFunction & func, bool isValid,  unsigned int sizeOfData, const  ROOT::Math::IMultiGenFunction * chi2func, bool minosErr ) : 
+      FitResult::FitResult(ROOT::Math::Minimizer & min, const IModelFunction & func,  bool isValid,  unsigned int sizeOfData, const  ROOT::Math::IMultiGenFunction * chi2func, bool minosErr, unsigned int ncalls ) : 
    fValid(isValid),
    fNormalized(false),
    fVal (min.MinValue()),  
@@ -51,6 +52,9 @@ FitResult::FitResult()
       // compute chi2 equivalent
       fChi2 = (*chi2func)(&fParams[0]); 
    }
+
+   // replace ncalls if given (they are taken from the FitMethodFunction)
+   if (ncalls !=0) fNCalls = ncalls;
 
    unsigned int n  = min.NDim(); 
       
@@ -104,6 +108,13 @@ int FitResult::Index(const std::string & name) const {
 
 void FitResult::Print(std::ostream & os) const { 
    // print the result in the given stream 
+   if (!fValid) { 
+      os << "\n****************************************\n";
+      os << "            Invalid FitResult            ";
+      os << "\n****************************************\n";
+      return; 
+   }
+
    os << "\n****************************************\n";
    os << "            FitResult                   \n\n";
    unsigned int npar = fParams.size(); 

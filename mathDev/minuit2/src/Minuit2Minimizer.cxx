@@ -260,7 +260,6 @@ bool Minuit2Minimizer::Minimize() {
       fMinimum = new ROOT::Minuit2::FunctionMinimum (min);    
    }
 
-
    // check if Hesse needs to be run 
    if (fMinimum->IsValid() && IsValidError() && fMinimum->State().Error().Dcovar() != 0 ) {
       // run Hesse
@@ -269,7 +268,6 @@ bool Minuit2Minimizer::Minimize() {
       ROOT::Minuit2::MinimumState st = hesse( *GetFCN(), fMinimum->State(), fMinimum->UserState().Trafo(), maxfcn); 
       fMinimum->Add(st); 
    }
-
 
 
 #ifdef USE_ROOT_ERROR

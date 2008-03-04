@@ -79,6 +79,7 @@ public:
       Default constructor
    */ 
    Minimizer () : 
+      fValidError(false),
 #ifndef DEBUG
       fDebug(0), 
 #else

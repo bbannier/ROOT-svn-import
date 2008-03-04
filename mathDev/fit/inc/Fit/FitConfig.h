@@ -93,12 +93,22 @@ public:
       if (algo != "") fMinimAlgoType = algo; 
    } 
 
-   const std::string & MinimizerType() { return fMinimizerType; } 
+   /// return type of minimizer package
+   const std::string & MinimizerType() const { return fMinimizerType; } 
+
+   /// return type of minimizer algorithms 
+   const std::string & MinimizerAlgoType() const { return fMinimAlgoType; } 
 
    /// flag to check if errors needs to be normalized according to chi2/ndf 
    bool NormalizeErrors(){ return fNormErrors; } 
 
    void SetNormErrors(bool on) { fNormErrors= on; }
+
+
+   // static function to cnotrol default parameters
+
+   static void SetDefaultMinimizer(const std::string & type, const std::string & algo = ""); 
+
 
 protected: 
 
