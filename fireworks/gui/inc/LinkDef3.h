@@ -85,7 +85,6 @@
 
 #pragma link C++ class TGSplitFrame;
 #pragma link C++ class TGShapedFrame;
-#pragma link C++ class TGShapedToolTip;
 #pragma link C++ class TGEventHandler;
 
 #endif
