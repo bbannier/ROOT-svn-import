@@ -471,33 +471,29 @@ TGListTree::~TGListTree()
 //--- text utility functions
 
 //______________________________________________________________________________
-Int_t TGListTree::FontHeight(FontStruct_t f)
+Int_t TGListTree::FontHeight()
 {
-   static int max_ascent = 0, max_descent = 0;
-   if ((max_ascent == 0) && (max_descent == 0))
-      gVirtualX->GetFontProperties(f, max_ascent, max_descent);
-   return max_ascent + max_descent;
+   if (!fgDefaultFont)
+      fgDefaultFont = gClient->GetResourcePool()->GetIconFont();
+   return fgDefaultFont->TextHeight();
 }
 
 //______________________________________________________________________________
-Int_t TGListTree::FontAscent(FontStruct_t f)
+Int_t TGListTree::FontAscent()
 {
-   static int max_ascent = 0, max_descent = 0;
-   if (max_ascent == 0)
-      gVirtualX->GetFontProperties(f, max_ascent, max_descent);
-   return max_ascent;
+   FontMetrics_t m;
+   if (!fgDefaultFont)
+      fgDefaultFont = gClient->GetResourcePool()->GetIconFont();
+   fgDefaultFont->GetFontMetrics(&m);
+   return m.fAscent;
 }
 
 //______________________________________________________________________________
-Int_t TGListTree::FontTextWidth(FontStruct_t f, const char *c)
+Int_t TGListTree::TextWidth(const char *c)
 {
-   static int width = 0;
-   static int slen = 0;
-   if ((width == 0) || (slen != strlen(c))) {
-      slen = strlen(c);
-      width = gVirtualX->TextWidth(f, c, slen);
-   }
-   return width;
+   if (!fgDefaultFont)
+      fgDefaultFont = gClient->GetResourcePool()->GetIconFont();
+   return fgDefaultFont->TextWidth(c);
 }
 
 //---- highlighting utilities
@@ -1350,8 +1346,8 @@ void TGListTree::Draw(Handle_t id, Int_t yevent, Int_t hevent)
 
    // Overestimate the expose region to be sure to draw an item that gets
    // cut by the region
-   fExposeTop = yevent - FontHeight(fFont);
-   fExposeBottom = yevent + hevent + FontHeight(fFont);
+   fExposeTop = yevent - FontHeight();
+   fExposeBottom = yevent + hevent + FontHeight();
    old_width  = fDefw;
    old_height = fDefh;
    fDefw = fDefh = 1;
@@ -1427,7 +1423,7 @@ void TGListTree::DrawItem(Handle_t id, TGListTreeItem *item, Int_t x, Int_t y,
    const TGPicture *pic2 = item->GetCheckBoxPicture();
 
    // Compute the height of this line
-   height = FontHeight(fFont);
+   height = FontHeight();
    xline = 0;
    xpic1 = x;
    xtext = x + fHspacing + (Int_t)item->GetPicWidth();
@@ -1517,7 +1513,7 @@ void TGListTree::DrawItem(Handle_t id, TGListTreeItem *item, Int_t x, Int_t y,
    }
 
    *xroot = xbranch;
-   *retwidth  = FontTextWidth(fFont, item->GetText()) + item->GetPicWidth();
+   *retwidth  = TextWidth(item->GetText()) + item->GetPicWidth();
    *retheight = height;
 }
 
@@ -1542,7 +1538,7 @@ void TGListTree::DrawOutline(Handle_t id, TGListTreeItem *item, Pixel_t col,
    else
       gVirtualX->SetForeground(fDrawGC, col);
    gVirtualX->DrawRectangle(id, fDrawGC, posx, item->fYtext-pos.fY-2, 
-                            dim.fWidth-posx-2, FontHeight(fFont)+4);
+                            dim.fWidth-posx-2, FontHeight()+4);
    gVirtualX->SetForeground(fDrawGC, fgBlackPixel);
 }
 
@@ -1555,13 +1551,13 @@ void TGListTree::DrawActive(Handle_t id, TGListTreeItem *item)
    TGPosition pos = GetPagePosition();
    TGDimension dim = GetPageDimension();
 
-   width = FontTextWidth(fFont, item->GetText());
+   width = TextWidth(item->GetText());
    gVirtualX->SetForeground(fDrawGC, item->GetActiveColor());
    gVirtualX->FillRectangle(id, fDrawGC, item->fXtext-1, 
-                    item->fYtext-pos.fY, width+2, FontHeight(fFont));
+                    item->fYtext-pos.fY, width+2, FontHeight());
    gVirtualX->SetForeground(fDrawGC, fgBlackPixel);
    gVirtualX->DrawString(id, fHighlightGC, item->fXtext, 
-                         item->fYtext - pos.fY + FontAscent(fFont),
+                         item->fYtext - pos.fY + FontAscent(),
                          item->GetText(), item->GetTextLength());
 }
 
@@ -1573,15 +1569,15 @@ void TGListTree::DrawItemName(Handle_t id, TGListTreeItem *item)
    UInt_t width;
    TGPosition pos = GetPagePosition();
 
-   width = FontTextWidth(fFont, item->GetText());
+   width = TextWidth(item->GetText());
    if (item->IsActive()) {
       DrawActive(id, item);
    }
    else { // if (!item->IsActive() && (item != fSelected)) {
       gVirtualX->FillRectangle(id, fHighlightGC, item->fXtext, 
-                       item->fYtext-pos.fY, width, FontHeight(fFont));
+                       item->fYtext-pos.fY, width, FontHeight());
       gVirtualX->DrawString(id, fDrawGC,
-                       item->fXtext, item->fYtext-pos.fY + FontAscent(fFont),
+                       item->fXtext, item->fYtext-pos.fY + FontAscent(),
                        item->GetText(), item->GetTextLength());
    }
    if (item == fCurrent) {
@@ -1591,13 +1587,13 @@ void TGListTree::DrawItemName(Handle_t id, TGListTreeItem *item)
    if (fColorMode != 0 && item->HasColor()) {
       gVirtualX->SetForeground(fColorGC, TColor::Number2Pixel(item->GetColor()));
       if (fColorMode & kColorUnderline) {
-         Int_t y = item->fYtext-pos.fY + FontAscent(fFont) + 2;
+         Int_t y = item->fYtext-pos.fY + FontAscent() + 2;
          gVirtualX->DrawLine(id, fColorGC, item->fXtext, y, item->fXtext + width, y);
       }
       if (fColorMode & kColorBox) {
          Int_t x = item->fXtext + width + 4;
          Int_t y = item->fYtext - pos.fY  + 3;
-         Int_t h = FontAscent(fFont)    - 4;
+         Int_t h = FontAscent()    - 4;
          gVirtualX->FillRectangle(id, fColorGC, x, y, h, h);
          gVirtualX->DrawRectangle(id, fDrawGC,  x, y, h, h);
       }
@@ -1787,7 +1783,7 @@ Int_t TGListTree::SearchChildren(TGListTreeItem *item, Int_t y, Int_t findy,
       pic = item->GetPicture();
 
       // Compute the height of this line
-      height = FontHeight(fFont);
+      height = FontHeight();
       if (pic->GetHeight() > height)
          height = pic->GetHeight();
 
@@ -1827,7 +1823,7 @@ TGListTreeItem *TGListTree::FindItem(Int_t findy)
       pic = item->GetPicture();
 
       // Compute the height of this line
-      height = FontHeight(fFont);
+      height = FontHeight();
       if (pic && (pic->GetHeight() > height))
          height = pic->GetHeight();
 
