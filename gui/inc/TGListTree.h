@@ -417,9 +417,9 @@ public:
    virtual void DataDropped(TGListTreeItem *item, TDNDData *data);  //*SIGNAL*
 
    // Utility functions
-   Int_t        FontHeight(FontStruct_t f);
-   Int_t        FontAscent(FontStruct_t f);
-   Int_t        FontTextWidth(FontStruct_t f, const char *c);
+   Int_t        FontHeight();
+   Int_t        FontAscent();
+   Int_t        TextWidth(const char *c);
 
    // User control
    void         SetUserControl(Bool_t ctrl=kTRUE) { fUserControlled = ctrl; }
