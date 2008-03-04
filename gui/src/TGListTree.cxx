@@ -80,7 +80,7 @@ ClassImp(TGListTree)
 TGListTreeItem::TGListTreeItem(TGClient *client) :
    fClient(client),
    fParent    (0), fFirstchild(0), fPrevsibling(0), fNextsibling(0),
-   fOpen (kFALSE), fDNDState  (0),
+   fLastchild (0), fOpen (kFALSE), fDNDState   (0),
    fY         (0), fXtext     (0), fYtext(0), fHeight(0)
 {
    // Constructor.
@@ -353,7 +353,7 @@ TGListTree::TGListTree(TGWindow *p, UInt_t w, UInt_t h, UInt_t options,
    fHighlightGC = GetHighlightGC()();
    fColorGC     = GetColorGC()();
 
-   fFirst = fSelected = fCurrent = fBelowMouse = 0;
+   fFirst = fLast = fSelected = fCurrent = fBelowMouse = 0;
    fDefw = fDefh = 1;
 
    fHspacing = 2;
@@ -412,7 +412,7 @@ TGListTree::TGListTree(TGCanvas *p,UInt_t options,ULong_t back) :
    fHighlightGC = GetHighlightGC()();
    fColorGC     = GetColorGC()();
 
-   fFirst = fSelected = fCurrent = fBelowMouse = 0;
+   fFirst = fLast = fSelected = fCurrent = fBelowMouse = 0;
    fDefw = fDefh = 1;
 
    fHspacing = 2;
@@ -1704,25 +1704,36 @@ void TGListTree::InsertChild(TGListTreeItem *parent, TGListTreeItem *item)
    if (parent) {
 
       if (parent->fFirstchild) {
-         i = parent->fFirstchild;
-         while (i->fNextsibling) i = i->fNextsibling;
+         if (parent->fLastchild) {
+            i = parent->fLastchild;
+         }
+         else {
+            i = parent->fFirstchild;
+            while (i->fNextsibling) i = i->fNextsibling;
+         }
          i->fNextsibling = item;
          item->fPrevsibling = i;
       } else {
          parent->fFirstchild = item;
       }
+      parent->fLastchild = item;
 
    } else {  // if parent == 0, this is a top level entry
 
       if (fFirst) {
-         i = fFirst;
-         while (i->fNextsibling) i = i->fNextsibling;
+         if (fLast) {
+            i = fLast;
+         }
+         else {
+            i = fFirst;
+            while (i->fNextsibling) i = i->fNextsibling;
+         }
          i->fNextsibling = item;
          item->fPrevsibling = i;
       } else {
          fFirst = item;
       }
-
+      fLast = item;
    }
    if (item->HasCheckBox())
       UpdateChecked(item);
@@ -1851,7 +1862,7 @@ void TGListTree::AddItem(TGListTreeItem *parent, TGListTreeItem *item)
    InsertChild(parent, item);
 
    if ((parent == 0) || (parent && parent->IsOpen()))
-      DoRedraw();
+      ClearViewPort();
 }
 
 //______________________________________________________________________________
@@ -1867,7 +1878,7 @@ TGListTreeItem *TGListTree::AddItem(TGListTreeItem *parent, const char *string,
    InsertChild(parent, item);
 
    if ((parent == 0) || (parent && parent->IsOpen()))
-      DoRedraw();
+      ClearViewPort();
    return item;
 }
 
@@ -1944,6 +1955,7 @@ void TGListTree::OpenItem(TGListTreeItem *item)
 
    if (item) {
       item->SetOpen(kTRUE);
+      DoRedraw(); // force layout
       AdjustPosition(item);
    }
 }
@@ -1955,6 +1967,7 @@ void TGListTree::CloseItem(TGListTreeItem *item)
 
    if (item) {
       item->SetOpen(kFALSE);
+      DoRedraw(); // force layout
       AdjustPosition(item);
    }
 }
