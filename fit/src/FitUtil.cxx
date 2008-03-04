@@ -230,6 +230,7 @@ double FitUtil::EvaluateChi2(IModelFunction & func, const BinData & data, const 
 
 #endif 
 
+
       double fval = 0;
 
       if (!fitOpt.fIntegral )

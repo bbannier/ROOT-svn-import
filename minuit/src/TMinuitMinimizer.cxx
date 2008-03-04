@@ -213,9 +213,13 @@ bool TMinuitMinimizer::Minimize() {
    arglist[0] = ErrorUp(); 
    fMinuit->mnexcm("SET Err",arglist,1,ierr);
 
-   arglist[0] = PrintLevel() - 1;
+   int printlevel = PrintLevel(); 
+   arglist[0] = printlevel - 1;
    fMinuit->mnexcm("SET PRINT",arglist,1,ierr);
-   
+
+   // suppress warning in case Printlevel() == 0
+   if (printlevel == 0)    fMinuit->mnexcm("SET NOW",arglist,0,ierr);
+
 
    arglist[0] = MaxFunctionCalls(); 
    arglist[1] = Tolerance(); 

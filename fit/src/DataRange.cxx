@@ -73,16 +73,16 @@ void DataRange::AddRange(double xmin, double xmax, unsigned  int  icoord  ) {
 
    if (xmin >= xmax) return;  // no op in case of bad values
 
-   // case the  coordinate is larger than the current dimension 
+   // case the  coordinate is larger than the current allocated vector size
    if (icoord >= fRanges.size() ) { 
       RangeSet rx(1); 
       rx[0] = std::make_pair(xmin, xmax); 
-      fRanges[0] = rx; 
-      fRanges.push_back(rx); 
+      fRanges.resize(icoord+1);
+      fRanges[icoord] = rx; 
       return;
    } 
    RangeSet & rs = fRanges[icoord]; 
-   // case the vector is empty in the given coordinate
+   // case the vector  of the ranges is empty in the given coordinate
    if ( rs.size() == 0) { 
       rs.push_back(std::make_pair(xmin,xmax) ); 
       return;
