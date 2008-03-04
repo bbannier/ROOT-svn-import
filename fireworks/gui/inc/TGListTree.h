@@ -58,6 +58,7 @@ protected:
    TGClient        *fClient;       // pointer to TGClient
    TGListTreeItem  *fParent;       // pointer to parent
    TGListTreeItem  *fFirstchild;   // pointer to first child item
+   TGListTreeItem  *fLastchild;    // pointer to last child item
    TGListTreeItem  *fPrevsibling;  // pointer to previous sibling
    TGListTreeItem  *fNextsibling;  // pointer to next sibling
 
@@ -227,6 +228,7 @@ public:
 
 protected:
    TGListTreeItem  *fFirst;          // pointer to first item in list
+   TGListTreeItem  *fLast;           // pointer to last item in list
    TGListTreeItem  *fSelected;       // pointer to selected item in list
    TGListTreeItem  *fCurrent;        // pointer to current item in list
    TGListTreeItem  *fBelowMouse;     // pointer to item below mouses cursor
