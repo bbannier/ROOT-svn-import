@@ -33,6 +33,7 @@
 #include "TEveTrack.h"
 #include "TEveSelection.h"
 
+#include "TRootEmbeddedCanvas.h"
 #include "TGSplitFrame.h"
 #include "TGLEmbeddedViewer.h"
 #include "TGShapedFrame.h"
@@ -40,6 +41,7 @@
 #include "TGTab.h"
 #include "TEnv.h"
 
+#include "TCanvas.h"
 #include "TFormula.h"
 #include "TF1.h"
 #include "TH1F.h"
@@ -57,6 +59,44 @@ const char *filetypes[] = {
 const char *rcfiletypes[] = { 
    "All files",     "*",
    0,               0 
+};
+
+////////////////////////////////////////////////////////////////////////////////
+class TGShapedToolTip : public TGShapedFrame {
+
+private:
+   TGShapedToolTip(const TGShapedToolTip&); // Not implemented
+   TGShapedToolTip& operator=(const TGShapedToolTip&); // Not implemented
+
+protected:
+   Int_t                 fTextX, fTextY, fTextH;
+   TString               fTextCol;
+
+   TRootEmbeddedCanvas  *fEc;       // embedded canvas for histogram
+   TH1                  *fHist;     // user histogram
+   TString               fText;     // info (as tool tip) text
+
+   virtual void          DoRedraw() {}
+
+public:
+   TGShapedToolTip(const char *picname, Int_t cx=0, Int_t cy=0, Int_t cw=0, 
+                   Int_t ch=0, Int_t tx=0, Int_t ty=0, Int_t th=0, 
+                   const char *col="#ffffff");
+   virtual ~TGShapedToolTip();
+
+   virtual void   CloseWindow();
+   void           CreateCanvas(Int_t cx, Int_t cy, Int_t cw, Int_t ch);
+   void           CreateCanvas(Int_t cw, Int_t ch, TGLayoutHints *hints);
+   TH1           *GetHisto() const { return fHist; }
+   const char    *GetText() const { return fText.Data(); }
+   void           Refresh();
+   void           SetHisto(TH1 *hist);
+   void           SetText(const char *text);
+   void           SetTextColor(const char *col);
+   void           SetTextAttributes(Int_t tx, Int_t ty, Int_t th, const char *col=0);
+   void           Show(Int_t x, Int_t y, const char *text = 0, TH1 *hist = 0);
+
+   ClassDef(TGShapedToolTip, 0) // Shaped composite frame
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -176,12 +216,197 @@ public:
 TEveProjectionManager *gRPhiMgr = 0;
 TEveProjectionManager *gRhoZMgr = 0;
 
+ClassImp(TGShapedToolTip)
 ClassImp(HtmlObjTable)
 ClassImp(HtmlSummary)
 ClassImp(SplitGLView)
 
 HtmlSummary *SplitGLView::fgHtmlSummary = 0;
 TGHtml *SplitGLView::fgHtml = 0;
+
+//______________________________________________________________________________
+TGShapedToolTip::TGShapedToolTip(const char *pname, Int_t cx, Int_t cy, Int_t cw, 
+                             Int_t ch, Int_t tx, Int_t ty, Int_t th, 
+                             const char *col) : 
+   TGShapedFrame(pname, gClient->GetDefaultRoot(), 400, 300, kTempFrame | 
+                 kHorizontalFrame), fEc(0), fHist(0)
+{
+   // Shaped window constructor
+
+   fTextX = tx; fTextY = ty; fTextH = th;
+   if (col)
+      fTextCol = col;
+   else
+      fTextCol = "0x000000";
+
+   // create the embedded canvas
+   if ((cx > 0) && (cy > 0) && (cw > 0) && (ch > 0)) {
+      Int_t lhRight  = fWidth-cx-cw;
+      Int_t lhBottom = fHeight-cy-ch;
+      fEc = new TRootEmbeddedCanvas("ec", this, cw, ch, 0);
+      AddFrame(fEc, new TGLayoutHints(kLHintsTop | kLHintsLeft, cx, 
+                                      lhRight, cy, lhBottom));
+   }
+   MapSubwindows();
+   Resize();
+   Resize(fBgnd->GetWidth(), fBgnd->GetHeight());
+}
+
+//______________________________________________________________________________
+TGShapedToolTip::~TGShapedToolTip() 
+{
+   // Destructor.
+
+   if (fHist)
+      delete fHist;
+   if (fEc)
+      delete fEc;
+}
+
+//______________________________________________________________________________
+void TGShapedToolTip::CloseWindow() 
+{
+   // Close shaped window.
+   
+   DeleteWindow();
+}
+
+//______________________________________________________________________________
+void TGShapedToolTip::Refresh()
+{
+   // Redraw the window with current attributes.
+
+   const char *str = fText.Data();
+   char *string = strdup(str);
+   Int_t nlines = 0, size = fTextH;
+   TString fp = gEnv->GetValue("Root.TTFontPath", "");
+   TString ar = fp + "/arial.ttf";
+   char *s = strtok((char *)string, "\n");
+   TImage *img = (TImage*)fImage->Clone("img");
+   img->DrawText(fTextX, fTextY+(nlines*size), s, size, fTextCol, ar);
+   while ((s = strtok(0, "\n"))) {
+      nlines++;
+      img->DrawText(fTextX, fTextY+(nlines*size), s, size, fTextCol, ar);
+   }
+   img->PaintImage(fId, 0, 0, 0, 0, 0, 0, "opaque");
+   free(string);
+   delete img;
+   gVirtualX->Update();
+}
+
+//______________________________________________________________________________
+void TGShapedToolTip::CreateCanvas(Int_t cx, Int_t cy, Int_t cw, Int_t ch)
+{
+
+   // create the embedded canvas
+   Int_t lhRight  = fWidth-cx-cw;
+   Int_t lhBottom = fHeight-cy-ch;
+   fEc = new TRootEmbeddedCanvas("ec", this, cw, ch, 0);
+   AddFrame(fEc, new TGLayoutHints(kLHintsTop | kLHintsLeft, cx, 
+                                   lhRight, cy, lhBottom));
+   MapSubwindows();
+   Resize();
+   Resize(fBgnd->GetWidth(), fBgnd->GetHeight());
+   if (IsMapped()) {
+      Refresh();
+   }
+}
+
+//______________________________________________________________________________
+void TGShapedToolTip::CreateCanvas(Int_t cw, Int_t ch, TGLayoutHints *hints)
+{
+   // Create the embedded canvas.
+
+   fEc = new TRootEmbeddedCanvas("ec", this, cw, ch, 0);
+   AddFrame(fEc, hints);
+   MapSubwindows();
+   Resize();
+   Resize(fBgnd->GetWidth(), fBgnd->GetHeight());
+   if (IsMapped()) {
+      Refresh();
+   }
+}
+
+//______________________________________________________________________________
+void TGShapedToolTip::SetHisto(TH1 *hist)
+{
+   // Set which histogram has to be displayed in the embedded canvas.
+
+   if (hist) {
+      if (fHist) {
+         delete fHist;
+         if (fEc)
+            fEc->GetCanvas()->Clear();
+      }
+      fHist = (TH1 *)hist->Clone();
+      if (fEc) {
+         fEc->GetCanvas()->SetBorderMode(0);
+         fEc->GetCanvas()->SetFillColor(10);
+         fEc->GetCanvas()->cd();
+         fHist->Draw();
+         fEc->GetCanvas()->Update();
+      }
+   }
+}
+
+//______________________________________________________________________________
+void TGShapedToolTip::SetText(const char *text)
+{
+   // Set which text has to be displayed.
+
+   if (text) {
+      fText = text;
+   }
+   if (IsMapped())
+      Refresh();
+}
+
+//______________________________________________________________________________
+void TGShapedToolTip::SetTextColor(const char *col)
+{
+   // Set text color.
+
+   fTextCol = col;
+   if (IsMapped())
+      Refresh();
+}
+
+//______________________________________________________________________________
+void TGShapedToolTip::SetTextAttributes(Int_t tx, Int_t ty, Int_t th, 
+                                        const char *col)
+{
+   // Set text attributes (position, size and color).
+
+   fTextX = tx; fTextY = ty; fTextH = th;
+   if (col)
+      fTextCol = col;
+   if (IsMapped())
+      Refresh();
+}
+
+//______________________________________________________________________________
+void TGShapedToolTip::Show(Int_t x, Int_t y, const char *text, TH1 *hist)
+{
+   // Show (popup) the shaped window at location x,y and possibly
+   // set the text and histogram to be displayed.
+
+   Move(x, y);
+   MapWindow();
+
+   if (text)
+      SetText(text);
+   if (hist)
+      SetHisto(hist);
+   // end of demo code -------------------------------------------
+   if (fHist) {
+      fEc->GetCanvas()->SetBorderMode(0);
+      fEc->GetCanvas()->SetFillColor(10);
+      fEc->GetCanvas()->cd();
+      fHist->Draw();
+      fEc->GetCanvas()->Update();
+   }
+   Refresh();
+}
 
 //______________________________________________________________________________
 HtmlObjTable::HtmlObjTable(const char *name, Int_t nfields, Int_t nvals, Bool_t exp) : 
