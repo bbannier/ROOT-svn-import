@@ -548,10 +548,14 @@ Bool_t TGListTree::HandleButton(Event_t *event)
    Int_t page = 0;
    if (event->fCode == kButton4 || event->fCode == kButton5) {
       if (!fCanvas) return kTRUE;
-      if (fCanvas->GetContainer()->GetHeight())
-         page = Int_t(Float_t(fCanvas->GetViewPort()->GetHeight() *
-                              fCanvas->GetViewPort()->GetHeight()) /
-                              fCanvas->GetContainer()->GetHeight());
+      if (fCanvas->GetContainer()->GetHeight()) {
+//         page = Int_t(Float_t(fCanvas->GetViewPort()->GetHeight() *
+//                              fCanvas->GetViewPort()->GetHeight()) /
+//                              fCanvas->GetContainer()->GetHeight());
+         // choose page size either 1/5 of viewport or 5 lines (90)
+         Int_t r = fCanvas->GetViewPort()->GetHeight() / 5;
+         page = TMath::Max(r, 90);
+      }
    }
 
    if (event->fCode == kButton4) {
