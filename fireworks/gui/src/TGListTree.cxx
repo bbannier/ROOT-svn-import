@@ -554,7 +554,7 @@ Bool_t TGListTree::HandleButton(Event_t *event)
 //                              fCanvas->GetContainer()->GetHeight());
          // choose page size either 1/5 of viewport or 5 lines (90)
          Int_t r = fCanvas->GetViewPort()->GetHeight() / 5;
-         page = TMath::Max(r, 90);
+         page = TMath::Min(r, 90);
       }
    }
 
