@@ -28,8 +28,8 @@ ifeq ($(LINKSTATIC),yes)
 else
   REFLEXLINK   = $(G__CFG_LIBP). $(subst @imp@,Reflex,$(G__CFG_LIBL))
 endif
+ REFLEXLIBDEP = $(REFLEXSO) $(REFLEXLIB)
 endif
-REFLEXLIBDEP = $(REFLEXSO) $(REFLEXLIB)
 
 
 ##############################################################
