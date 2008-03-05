@@ -21,6 +21,7 @@
 #endif
 
 #include <vector>
+#include <string>
 
 namespace ROOT { 
 
@@ -30,6 +31,8 @@ namespace ROOT {
 
 
    namespace Fit { 
+
+   class FitConfig; 
 
 /** 
    FitResult class containg the result of the fit.  
@@ -50,7 +53,7 @@ public:
    /**
       Construct from a Minimizer instance 
     */
-   FitResult(ROOT::Math::Minimizer & min, const IModelFunction & f, bool isValid, unsigned int sizeOfData = 0, const ROOT::Math::IMultiGenFunction * chi2func = 0, bool minosErr = false, unsigned int ncalls = 0);
+   FitResult(ROOT::Math::Minimizer & min, const FitConfig & fconfig, const IModelFunction & f, bool isValid, unsigned int sizeOfData = 0, const ROOT::Math::IMultiGenFunction * chi2func = 0, bool minosErr = false, unsigned int ncalls = 0);
 
    /** 
       Destructor (no operations)
@@ -159,6 +162,8 @@ private:
 
    unsigned int fDataSize; 
    const IModelFunction * fFitFunc; 
+   std::string fMinimType; 
+
 }; 
 
    } // end namespace Fit
