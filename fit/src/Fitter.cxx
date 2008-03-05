@@ -292,7 +292,7 @@ bool Fitter::DoMinimization(ROOT::Math::Minimizer & minimizer, const ObjFunc & o
 #endif
    
    unsigned int ncalls = ObjFuncTrait<ObjFunc>::NCalls(objFunc);
-   fResult = FitResult(minimizer,*fFunc, ret, dataSize, chi2func, fConfig.MinimizerOptions().MinosErrors(), ncalls );
+   fResult = FitResult(minimizer,fConfig, *fFunc, ret, dataSize, chi2func, fConfig.MinimizerOptions().MinosErrors(), ncalls );
    if (fConfig.NormalizeErrors() ) fResult.NormalizeErrors(); 
    return ret; 
 }

@@ -12,6 +12,8 @@
 
 #include "Fit/FitResult.h"
 
+#include "Fit/FitConfig.h"
+
 #include "Math/Minimizer.h"
 
 #include "Math/IParamFunction.h"
@@ -30,7 +32,7 @@ FitResult::FitResult() :
    // Default constructor implementation.
 }
 
-      FitResult::FitResult(ROOT::Math::Minimizer & min, const IModelFunction & func,  bool isValid,  unsigned int sizeOfData, const  ROOT::Math::IMultiGenFunction * chi2func, bool minosErr, unsigned int ncalls ) : 
+      FitResult::FitResult(ROOT::Math::Minimizer & min, const FitConfig & fconfig, const IModelFunction & func,  bool isValid,  unsigned int sizeOfData, const  ROOT::Math::IMultiGenFunction * chi2func, bool minosErr, unsigned int ncalls ) : 
    fValid(isValid),
    fNormalized(false),
    fVal (min.MinValue()),  
@@ -81,7 +83,8 @@ FitResult::FitResult() :
       }
    }
 
-                              
+   fMinimType = fconfig.MinimizerType();
+   if (fconfig.MinimizerAlgoType() != "") fMinimType += " / " + fconfig.MinimizerAlgoType(); 
 }
 
 void FitResult::NormalizeErrors() { 
@@ -117,6 +120,7 @@ void FitResult::Print(std::ostream & os) const {
 
    os << "\n****************************************\n";
    os << "            FitResult                   \n\n";
+   os << "Minimizer is " << fMinimType << std::endl;
    unsigned int npar = fParams.size(); 
    os << "Chi2/Likelihood  =\t" << fVal << std::endl;
    if (fVal != fChi2) 

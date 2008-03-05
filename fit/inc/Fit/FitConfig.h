@@ -90,7 +90,7 @@ public:
    /// set minimizer type 
    void SetMinimizer(const std::string & type, std::string algo = "") { 
       fMinimizerType = type; 
-      if (algo != "") fMinimAlgoType = algo; 
+      fMinimAlgoType = algo; 
    } 
 
    /// return type of minimizer package
