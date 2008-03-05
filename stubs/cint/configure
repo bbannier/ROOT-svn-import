@@ -584,14 +584,19 @@ CMACROS="$CMACROS -DG__HAVE_CONFIG -DG__NOMAKEINFO"
 CXXMACROS="$CXXMACROS -DG__HAVE_CONFIG -DG__NOMAKEINFO"
 
 if [ "$READLINELIB" = "" ]; then
-    for d in $EXTRA_LIB_DIR /usr/local/lib /usr/lib /sw/lib; do 
-        if [ -f ${d}/libreadline$IMPLIBEXT ]; then
-            READLINELIB=${d}/libreadline$IMPLIBEXT
-            break
-        fi
+    for ext in AXELDEBUG$IMPLIBEXT $SOEXT; do
+        for d in $EXTRA_LIB_DIR /usr/local/lib /usr/lib /sw/lib; do 
+            if [ -f ${d}/libreadline$ext ]; then
+                READLINELIB=${d}/libreadline$ext
+                if [ "${ext}" = "${SOEXT}" ]; then
+                    READLINELIBSHARED=1
+                fi
+                break 2
+            fi
+        done
     done
     if [ "x$READLINELIB" = "x" ]; then
-        echo 'Please install the package "libreadline-dev"!'
+        echo 'Please install the package "libreadline or [lib]readline-dev[el]"!'
         exit 1
     fi
     LINK_READLINELIB="$LIBP`dirname $READLINELIB` ${LIBL/@imp@/readline} "
@@ -605,18 +610,21 @@ if [ "$READLINELIB" != "" ]; then
        READLINELIB4SHLIB=$READLINELIB
     fi
 
+
     # look for curses
-    if [ "$CURSESLIB" = "" ]; then
-        for d in $EXTRA_LIB_DIR /usr/local/lib /usr/lib /sw/lib /sw/lib/ncurses; do 
-            if [ -f ${d}/libncurses$IMPLIBEXT ]; then
-                CURSESLIB=${d}/libncurses$IMPLIBEXT
-                NCURSES=n
-                break
-            elif [ -f ${d}/libcurses$IMPLIBEXT ]; then
-                CURSESLIB=${d}/libcurses$IMPLIBEXT
-                NCURSES=
-                break
-            fi
+    if [ "x${CURSESLIB}" = "x" ]; then
+        for ext in $IMPLIBEXT $SOEXT; do
+            for d in $EXTRA_LIB_DIR /usr/local/lib /usr/lib /sw/lib /sw/lib/ncurses; do 
+                if [ -f ${d}/libncurses$ext ]; then
+                    CURSESLIB=${d}/libncurses$ext
+                    NCURSES=n
+                    break 2
+                elif [ -f ${d}/libcurses$ext ]; then
+                    CURSESLIB=${d}/libcurses$ext
+                    NCURSES=
+                    break 2
+                fi
+            done
         done
     fi
     if [ "$CURSESLIB" != "" ]; then
