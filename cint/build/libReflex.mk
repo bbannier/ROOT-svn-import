@@ -25,12 +25,11 @@ REFLEXIMPLIB = libReflex$(G__CFG_IMPLIBEXT)
 ifeq ($(G__CFG_COREVERSION),core)
 ifeq ($(LINKSTATIC),yes)
   REFLEXLINK   = $(G__CFG_LIBP). $(subst @imp@,Reflex_static,$(G__CFG_LIBL))
-  REFLEXLIBDEP = $(REFLEXLIB)
 else
   REFLEXLINK   = $(G__CFG_LIBP). $(subst @imp@,Reflex,$(G__CFG_LIBL))
-  REFLEXLIBDEP = $(REFLEXSO)
 endif
 endif
+REFLEXLIBDEP = $(REFLEXSO) $(REFLEXLIB)
 
 
 ##############################################################

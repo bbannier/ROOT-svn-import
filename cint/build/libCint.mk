@@ -86,11 +86,15 @@ ALLDEPO    += $(LIBOBJECTS) $(PRAGMATMPO) $(LOADFILETMPO)
 ############################################################################
 
 # Cint core as static library
+static: $(CINTLIBSTATIC)
+
 $(CINTLIBSTATIC): $(LIBOBJECTS) $(SETUPO)
 	$(G__CFG_AR)$(shell $(G__CFG_MANGLEPATHS) $@) \
 	  $^ $(G__CFG_READLINELIB) $(G__CFG_CURSESLIB)
 
 # Cint core as shared library
+shared: $(CINTLIBSHARED)
+
 $(CINTLIBSHARED): $(LIBOBJECTS) $(SETUPO) $(REFLEXLIBDEP)
 	$(G__CFG_LD) $(subst @so@,libcint,$(G__CFG_SOFLAGS)) \
 	  $(G__CFG_SOOUT)$@ $(LIBOBJECTS) $(SETUPO) \
