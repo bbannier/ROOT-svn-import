@@ -467,6 +467,12 @@ function processflag_coreversion {
     fi
 }
 
+function pathtoabs {
+    if [ "${1:0:1}" != "/" ]; then
+        ABSPATH=$(cd `dirname $0`; pwd)/$1
+    fi
+}
+
 function processflag_prefix {
     pathtoabs $1
     PREFIX=$ABSPATH
