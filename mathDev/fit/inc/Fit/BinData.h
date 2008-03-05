@@ -84,131 +84,51 @@ public :
       Give a zero value and then use Initialize later one if the size is not known
     */
 
-   explicit BinData(unsigned int maxpoints = 0, unsigned int dim = 1, ErrorType err = kValueError) : 
-//      DataVector( opt, GetPointSize(useErrorX,dim)*maxpoints ), 
-      FitData(),
-      fDim(dim),
-      fPointSize(GetPointSize(err,dim) ),
-      fNPoints(0),
-      fDataVector(0),
-      fDataWrapper(0)
-   { 
-      if (maxpoints > 0) fDataVector = new DataVector(fPointSize*maxpoints);
-   } 
+   explicit BinData(unsigned int maxpoints = 0, unsigned int dim = 1, ErrorType err = kValueError); 
 
    /**
       constructor from option and default range
     */
-   explicit BinData (const DataOptions & opt, unsigned int maxpoints = 0, unsigned int dim = 1, ErrorType err = kValueError) : 
-      // DataVector( opt, (dim+2)*maxpoints ), 
-      FitData(opt),
-      fDim(dim),
-      fPointSize(GetPointSize(err,dim) ),
-      fNPoints(0),
-      fDataVector(0),
-      fDataWrapper(0)
-   { 
-      if (maxpoints > 0) fDataVector = new DataVector(fPointSize*maxpoints);
-   } 
+   explicit BinData (const DataOptions & opt, unsigned int maxpoints = 0, unsigned int dim = 1, ErrorType err = kValueError);
 
    /**
       constructor from options and range
       efault is 1D and value errors
     */
-   BinData (const DataOptions & opt, const DataRange & range, unsigned int maxpoints = 0, unsigned int dim = 1, ErrorType err = kValueError ) : 
-      //DataVector( opt, range, (dim+2)*maxpoints ), 
-      FitData(opt,range),
-      fDim(dim),
-      fPointSize(GetPointSize(err,dim) ),
-      fNPoints(0),
-      fDataVector(0),
-      fDataWrapper(0)
-   { 
-      if (maxpoints > 0) fDataVector = new DataVector(fPointSize*maxpoints);
-   } 
+   BinData (const DataOptions & opt, const DataRange & range, unsigned int maxpoints = 0, unsigned int dim = 1, ErrorType err = kValueError ); 
 
    /** constructurs using external data */
    
    /**
       constructor from external data for 1D with errors on  coordinate and value
     */
-   BinData(unsigned int n, const double * dataX, const double * val, const double * ex , const double * eval ) : 
-      fDim(1), 
-      fPointSize(0),
-      fNPoints(n),
-      fDataVector(0)
-   { 
-      fDataWrapper  = new DataWrapper(dataX, val, eval, ex);
-   } 
-
+   BinData(unsigned int n, const double * dataX, const double * val, const double * ex , const double * eval ); 
    
    /**
       constructor from external data for 2D with errors on  coordinate and value
     */
-   BinData(unsigned int n, const double * dataX, const double * dataY, const double * val, const double * ex , const double * ey, const double * eval  ) : 
-      fDim(2), 
-      fPointSize(0),
-      fNPoints(n),
-      fDataVector(0)
-   { 
-      fDataWrapper  = new DataWrapper(dataX, dataY, val, eval, ex, ey);
-   } 
+   BinData(unsigned int n, const double * dataX, const double * dataY, const double * val, const double * ex , const double * ey, const double * eval  ); 
 
    /**
       constructor from external data for 3D with errors on  coordinate and value
     */
-   BinData(unsigned int n, const double * dataX, const double * dataY, const double * dataZ, const double * val, const double * ex , const double * ey , const double * ez , const double * eval   ) : 
-      fDim(3), 
-      fPointSize(0),
-      fNPoints(n),
-      fDataVector(0)
-   { 
-      fDataWrapper  = new DataWrapper(dataX, dataY, dataZ, val, eval, ex, ey, ez);
-   } 
+   BinData(unsigned int n, const double * dataX, const double * dataY, const double * dataZ, const double * val, const double * ex , const double * ey , const double * ez , const double * eval   );
 
-private: 
-   /// copy constructor (private) 
-   BinData(const BinData &) : FitData() {}
+   /// copy constructor  
+   BinData(const BinData &);
+
    /// assignment operator  (private) 
-   BinData & operator= (const BinData &) { return *this; } 
-public:  
+   BinData & operator= (const BinData &);
 
 
-//    /**
-//       Create from a compatible BinData set
-//     */
-   
-//    BinData (const BinData & data , const DataOptions & opt, const DataRange & range) : 
-//       DataVector(opt,range, data.DataSize() ), 
-//       fDim(data.fDim),
-//       fNPoints(data.fNPoints) 
-//    {
-// //       for (Iterator itr = begin; itr != end; ++itr) 
-// //          if (itr->IsInRange(range) )
-// //             Add(*itr); 
-//    } 
-
-   ~BinData() {
-      if (fDataVector) delete fDataVector; 
-      if (fDataWrapper) delete fDataWrapper; 
-   }
+   /// destructor
+   ~BinData(); 
 
    /**
       preallocate a data set given size and dimension
       need to be initialized with the with the right dimension before
     */
-   void Initialize(unsigned int maxpoints, unsigned int dim = 1, ErrorType err = kValueError ) { 
-      if (fDataWrapper) delete fDataWrapper;
-      fDataWrapper = 0; 
-      fDim = dim; 
-      fPointSize = GetPointSize(err,dim);  
-      if (fDataVector) { 
-         // resize vector by adding the extra points on top of the previously existing ones 
-         (fDataVector->Data()).resize( fDataVector->Size() + maxpoints * fPointSize );
-      }
-      else 
-         fDataVector = new DataVector(fPointSize*maxpoints);
-   }
+   void Initialize(unsigned int maxpoints, unsigned int dim = 1, ErrorType err = kValueError ); 
 
 //    /**
 //       re-initialize adding some additional set of points keeping the previous ones
@@ -241,148 +161,40 @@ public:
    /**
       add one dim data with only coordinate and values
    */
-   void Add(double x, double y ) { 
-      int index = fNPoints*PointSize();
-      assert (fDataVector != 0);
-      assert (PointSize() == 2 ); 
-      assert (index + PointSize() <= DataSize() ); 
+   void Add(double x, double y ); 
 
-      double * itr = &((fDataVector->Data())[ index ]);
-      *itr++ = x; 
-      *itr++ = y; 
-
-      fNPoints++;
-   }
-   
    /**
       add one dim data with no error in x
       in this case store the inverse of the error in y
    */
-   void Add(double x, double y, double ey) { 
-      int index = fNPoints*PointSize(); 
-      //std::cout << "this = " << this << " index " << index << " fNPoints " << fNPoints << "  ds   " << DataSize() << std::endl; 
-      assert( fDim == 1);
-      assert (fDataVector != 0);
-      assert (PointSize() == 3 ); 
-      assert (index + PointSize() <= DataSize() ); 
-
-      double * itr = &((fDataVector->Data())[ index ]);
-      *itr++ = x; 
-      *itr++ = y; 
-      *itr++ =  (ey!= 0) ? 1.0/ey : 0; 
-
-      fNPoints++;
-   }
+   void Add(double x, double y, double ey);
 
    /**
       add one dim data with  error in x
       in this case store the y error and not the inverse 
    */
-   void Add(double x, double y, double ex, double ey) { 
-      int index = fNPoints*PointSize(); 
-      assert (fDataVector != 0);
-      assert( fDim == 1);
-      assert (PointSize() == 4 ); 
-      assert (index + PointSize() <= DataSize() ); 
-
-      double * itr = &((fDataVector->Data())[ index ]);
-      *itr++ = x; 
-      *itr++ = y; 
-      *itr++ = ex; 
-      *itr++ = ey; 
-
-      fNPoints++;
-   }
+   void Add(double x, double y, double ex, double ey);
 
    /**
       add one dim data with  error in x and asymmetric errors in y
       in this case store the y errors and not the inverse 
    */
-   void Add(double x, double y, double ex, double eyl , double eyh) { 
-      int index = fNPoints*PointSize(); 
-      assert (fDataVector != 0);
-      assert( fDim == 1);
-      assert (PointSize() == 5 ); 
-      assert (index + PointSize() <= DataSize() ); 
-
-      double * itr = &((fDataVector->Data())[ index ]);
-      *itr++ = x; 
-      *itr++ = y; 
-      *itr++ = ex; 
-      *itr++ = eyl; 
-      *itr++ = eyh; 
-
-      fNPoints++;
-   }
-
+   void Add(double x, double y, double ex, double eyl , double eyh);
 
    /**
       add multi dim data with only value (no errors)
    */
-   void Add(const double *x, double val) { 
-      int index = fNPoints*PointSize(); 
-      assert (fDataVector != 0);
-      assert (PointSize() == fDim + 1 ); 
-
-      if (index + PointSize() > DataSize()) 
-         std::cout << "Error - index is " << index << " point size is " << PointSize()  << "  allocated size = " << DataSize() << std::endl;
-      assert (index + PointSize() <= DataSize() ); 
-
-      double * itr = &((fDataVector->Data())[ index ]);
-
-      for (unsigned int i = 0; i < fDim; ++i) 
-         *itr++ = x[i]; 
-      *itr++ = val; 
-
-      fNPoints++;
-   }
+   void Add(const double *x, double val); 
 
    /**
       add multi dim data with only error in value 
    */
-   void Add(const double *x, double val, double  eval) { 
-      int index = fNPoints*PointSize(); 
-      assert (fDataVector != 0);
-      assert (PointSize() == fDim + 2 ); 
-
-      if (index + PointSize() > DataSize()) 
-         std::cout << "Error - index is " << index << " point size is " << PointSize()  << "  allocated size = " << DataSize() << std::endl;
-      assert (index + PointSize() <= DataSize() ); 
-
-      double * itr = &((fDataVector->Data())[ index ]);
-
-      for (unsigned int i = 0; i < fDim; ++i) 
-         *itr++ = x[i]; 
-      *itr++ = val; 
-      *itr++ =  (eval!= 0) ? 1.0/eval : 0; 
-
-      fNPoints++;
-   }
-
+   void Add(const double *x, double val, double  eval); 
 
    /**
       add multi dim data with error in coordinates and value 
    */
-   void Add(const double *x, double val, const double * ex, double  eval) { 
-      int index = fNPoints*PointSize(); 
-      assert (fDataVector != 0);
-      assert (PointSize() == 2*fDim + 2 ); 
-
-      if (index + PointSize() > DataSize()) 
-         std::cout << "Error - index is " << index << " point size is " << PointSize()  << "  allocated size = " << DataSize() << std::endl;
-      assert (index + PointSize() <= DataSize() ); 
-
-      double * itr = &((fDataVector->Data())[ index ]);
-
-      for (unsigned int i = 0; i < fDim; ++i) 
-         *itr++ = x[i]; 
-      *itr++ = val; 
-      for (unsigned int i = 0; i < fDim; ++i) 
-         *itr++ = ex[i]; 
-      *itr++ = eval; 
-
-      fNPoints++;
-   }
+   void Add(const double *x, double val, const double * ex, double  eval); 
 
    const double * Coords(unsigned int ipoint) const { 
       if (fDataVector) 
@@ -587,6 +399,15 @@ public:
    }
 
    unsigned int NDim() const { return fDim; } 
+
+   /**
+      apply a Log transformation of the data values 
+      can be used for example when fitting an exponential or gaussian
+      Transform the data in place need to copy if want to preserve original data
+      The data sets must not contain negative values. IN case it does, 
+      an empty data set is returned
+    */
+   BinData & LogTransform();
 
 protected: 
 

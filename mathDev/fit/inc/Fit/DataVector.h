@@ -106,8 +106,6 @@ public:
 
 
    typedef std::vector<double>      FData;
-   typedef  FData::const_iterator const_iterator;
-   typedef  FData::iterator iterator;
 
    /** 
       default constructor for a vector of N -data
@@ -119,42 +117,31 @@ public:
    } 
 
 
-   /**
-      Create from a compatible DataPoint iterator
-    */
-//    template<class Iterator> 
-//    DataVector (Iterator begin, Iterator end, const DataOptions & opt, const DataRange & range) : 
-//       fOptions(opt), 
-//       fRange(range)
-//    {
-//       for (Iterator itr = begin; itr != end; ++itr) 
-//          if (itr->IsInRange(range) )
-//             Add(*itr); 
-//    } 
-
-
-
    /** 
       Destructor (no operations)
    */ 
    ~DataVector ()  {}  
 
-   // use default copy constructor and destructor
+   // use default copy constructor and assignment operator
    
 
    /**
       const access to underlying vector 
     */
-   const std::vector<double> & Data() const { return fData; }
+   const FData & Data() const { return fData; }
 
    /**
       non-const access to underlying vector (in case of insertion/deletion) and iterator
     */
-   std::vector<double> & Data()  { return fData; }
+   FData & Data()  { return fData; }
 
+#ifndef __CINT__
    /**
       const iterator access 
    */ 
+   typedef FData::const_iterator const_iterator;
+   typedef FData::iterator iterator;
+
    const_iterator begin() const { return fData.begin(); }
    const_iterator end() const { return fData.begin()+fData.size(); }
 
@@ -164,6 +151,7 @@ public:
    iterator begin() { return fData.begin(); }
    iterator end()   { return fData.end(); }
 
+#endif
    /**
       access to the point
     */ 
@@ -179,7 +167,7 @@ public:
 
 private: 
 
-      std::vector<double> fData; 
+      FData fData; 
 }; 
 
 
@@ -296,11 +284,14 @@ public:
       fErr(std::vector<double>(dim) )
    { }
 
+   // use default copy constructor and assignment operator
+   // copy the pointer of the data not the data
 
 
    const double * Coords(unsigned int ipoint) const { 
       for (unsigned int i = 0; i < fDim; ++i) { 
          const double * x = fCoords[i];
+         assert (x != 0);
          fX[i] = x[ipoint];
       } 
       return &fX.front();
@@ -310,6 +301,7 @@ public:
    const double * CoordErrors(unsigned int ipoint) const { 
       for (unsigned int i = 0; i < fDim; ++i) { 
          const double * err = fErrCoords[i];
+         if (err == 0) return 0; 
          fErr[i] = err[ipoint];
       } 
       return &fErr.front();
@@ -320,8 +312,8 @@ public:
       return fValues[ipoint];
    }
 
-   double Error(unsigned int ipoint) const { 
-      return fErrors[ipoint];
+   double Error(unsigned int ipoint) const {       
+      return (fErrors) ?  fErrors[ipoint]  : 0. ;
    } 
 
 

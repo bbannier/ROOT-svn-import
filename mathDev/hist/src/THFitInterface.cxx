@@ -28,6 +28,8 @@
 #include "TError.h"
 #include "TGraph2D.h"
 
+#include <cmath>
+
 namespace ROOT { 
 
    namespace Fit { 
@@ -116,6 +118,7 @@ void FillData(BinData & dv, const TH1 * hfit, TF1 * func)
    
    
    int n = (hxlast-hxfirst+1)*(hylast-hyfirst+1)*(hzlast-hzfirst+1); 
+   if (fitOpt.fIntegral) n += 1;
    
 #ifdef DEBUG
    std::cout << "THFitInterface: ifirst = " << hxfirst << " ilast =  " << hxlast 
@@ -255,6 +258,77 @@ void FillData ( BinData  & dv, const TGraph2D * gr, TF1 * func ) {
 
 #ifdef DEBUG
    std::cout << "THFitInterface::FillData Graph FitData size is " << dv.Size() << std::endl;
+#endif
+
+}
+
+
+//______________________________________________________________________________
+void InitGaus(const ROOT::Fit::BinData & data, TF1 * f1)
+{
+   //   -*-*-*-*Compute Initial values of parameters for a gaussian
+   //           derivaed from function H1InitGaus defined in TH1.cxx  
+   //           ===================================================
+
+
+   static const double sqrtpi = 2.506628;
+
+   //   - Compute mean value and RMS of the data
+   unsigned int n = data.Size();
+   if (n == 0) return; 
+   double sumx = 0; 
+   double sumx2 = 0; 
+   double allcha = 0;
+   double valmax = 0; 
+   for (unsigned int i = 0; i < n; ++ i) { 
+      double val; 
+      double x = *(data.GetPoint(i,val) );
+      sumx  += val*x; 
+      sumx2 += val*x*x; 
+      allcha += val; 
+      if (val > valmax) valmax = val; 
+   }
+
+   if (allcha <= 0) return;
+   double mean = sumx/allcha;
+   double rms  = sumx2/allcha - mean*mean;
+
+   double rangex = *(data.Coords(n-1)) - *(data.Coords(0));
+
+   if (rms > 0) 
+      rms  = std::sqrt(rms);
+   else
+      rms  = rangex/4;
+
+
+    //if the distribution is really gaussian, the best approximation
+   //is binwidx*allcha/(sqrtpi*rms)
+   //However, in case of non-gaussian tails, this underestimates
+   //the normalisation constant. In this case the maximum value
+   //is a better approximation.
+   //We take the average of both quantities
+   double constant = 0.5*(valmax+ rangex/(sqrtpi*rms));
+
+
+   //In case the mean value is outside the histo limits and
+   //the RMS is bigger than the range, we take
+   //  mean = center of bins
+   //  rms  = half range
+//    Double_t xmin = curHist->GetXaxis()->GetXmin();
+//    Double_t xmax = curHist->GetXaxis()->GetXmax();
+//    if ((mean < xmin || mean > xmax) && rms > (xmax-xmin)) {
+//       mean = 0.5*(xmax+xmin);
+//       rms  = 0.5*(xmax-xmin);
+//    }
+
+   f1->SetParameter(0,constant);
+   f1->SetParameter(1,mean);
+   f1->SetParameter(2,rms);
+   f1->SetParLimits(2,0,10*rms);
+
+
+#ifdef DEBUG
+   std::cout << "Gaussian initial par values" << constant << "   " << mean << "  " << rms << std::endl;
 #endif
 
 }
