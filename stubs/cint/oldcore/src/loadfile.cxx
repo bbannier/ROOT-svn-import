@@ -443,6 +443,9 @@ int G__getcintsysdir()
 # ifdef CINTSYSDIR
     if(!env || !env[0]) env = CINTSYSDIR;
 # endif
+# ifdef G__CFG_DATADIRCINT
+    if(!env || !env[0]) env = G__CFG_DATADIRCINT;
+# endif
 #endif
     if(env) {
 #ifdef G__ROOT

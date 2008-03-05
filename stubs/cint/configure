@@ -677,7 +677,7 @@ $RM cint-config
 echo Writing cint-config...
 cat >> cint-config << ___EOF
 
-function help {
+printhelp() {
 cat <<_EOF
 
 Usage: cint-config [options]
@@ -693,7 +693,7 @@ _EOF
 }
 
 if [ \$# -eq 0 ]; then
-   help
+   printhelp
    exit 1
 fi
 
@@ -704,7 +704,7 @@ while [ \$# -gt 0 ] ; do
     --libs)   echo "${LIBP}${LIBDIR} -lcint -lReflex" ;;
     --datadir) echo "${DATADIR}/cint" ;;
     --version|-v) echo "$CINTVERSION" ;;
-    -h|--help) help;;
+    -h|--help) printhelp;;
     *)        echo "Unknown option: \$1"; exit 1;;
   esac
   shift
