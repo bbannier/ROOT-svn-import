@@ -40,6 +40,13 @@ namespace ROOT {
       */ 
       void FillData ( BinData  & dv, const TGraph2D * gr, TF1 * func = 0); 
       
+
+      /** 
+          compute initial parameter for gaussian function given the fit data
+          Set the sigma limits for zero top 10* initial rms values 
+          Set the initial parameter values in the TF1
+       */ 
+      void InitGaus(const ROOT::Fit::BinData & data, TF1 * f1 ); 
       
 
    } // end namespace Fit
