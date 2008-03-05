@@ -117,64 +117,8 @@ bool XrdProofPhyConn::Init(const char *url)
       }
    }
 
-#if 0
-   // Max number of tries and timeout
-   int maxTry = EnvGetLong(NAME_FIRSTCONNECTMAXCNT);
-   int timeOut = EnvGetLong(NAME_CONNECTTIMEOUT);
-
-   int logid = -1;
-   int i = 0;
-   for (; (i < maxTry) && (!fConnected); i++) {
-
-      // Try connection
-      logid = TryConnect();
-
-      // We are connected to a host. Let's handshake with it.
-      if (fConnected) {
-
-         // Now the have the logical Connection ID, that we can use as streamid for
-         // communications with the server
-         TRACE(REQ,"XrdProofPhyConn::Init: new logical connection ID: "<<logid);
-
-         // Get access to server
-         if (!GetAccessToSrv()) {
-            if (fLastErr == kXR_NotAuthorized) {
-               // Authentication error: does not make much sense to retry
-               Close("P");
-               XrdOucString msg = fLastErrMsg;
-               msg.erase(msg.rfind(":"));
-               TRACE(REQ,"XrdProofPhyConn::Init: authentication failure: " << msg);
-               return 0;
-            } else {
-               TRACE(REQ,"XrdProofPhyConn::Init: access to server failed (" <<
-                         fLastErrMsg << ")");
-            }
-            continue;
-         } else {
-
-            // Manager call in client: no need to create or attach: just notify
-            TRACE(REQ,"XrdProofPhyConn::Init: access to server granted.");
-            break;
-         }
-      }
-
-      // We force a physical disconnection in this special case
-      TRACE(REQ,"XrdProofPhyConn::Init: disconnecting.");
-      Close("P");
-
-      // And we wait a bit before retrying
-      TRACE(REQ,"XrdProofPhyConn::Init: connection attempt failed: sleep " << timeOut << " secs");
-#ifndef WIN32
-      sleep(timeOut);
-#else
-      Sleep(timeOut * 1000);
-#endif
-
-   } //for connect try
-#else
    // Run the connection attempts: the result is stored in fConnected
    Connect();
-#endif
 
    // We are done
    return fConnected;

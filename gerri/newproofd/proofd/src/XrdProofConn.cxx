@@ -115,10 +115,8 @@ XrdProofConn::XrdProofConn(const char *url, char m, int psid, char capver,
    // login. In case of need, internally it is overwritten with a token
    // needed during redirection.
 
-#if 1
    // Mutex
    fMutex = new XrdSysRecMutex();
-#endif
 
    // Initialization
    if (url && !Init(url)) {
@@ -163,11 +161,6 @@ bool XrdProofConn::Init(const char *url)
       }
    }
 
-#if 0
-   // Mutex
-   fMutex = new XrdSysRecMutex();
-#endif
-
    // Parse Url
    fUrl.TakeUrl(XrdOucString(url));
    fUser = fUrl.User.c_str();
@@ -188,74 +181,8 @@ bool XrdProofConn::Init(const char *url)
    fHost = fUrl.Host.c_str();
    fPort = fUrl.Port;
 
-#if 0
-   // Max number of tries and timeout
-   int maxTry = (fgMaxTry > -1) ? fgMaxTry : EnvGetLong(NAME_FIRSTCONNECTMAXCNT);
-   int timeWait = (fgTimeWait > -1) ? fgTimeWait : EnvGetLong(NAME_CONNECTTIMEOUT);
-
-   int logid = -1;
-   int i = 0;
-   for (; (i < maxTry) && (!fConnected); i++) {
-
-      // Try connection
-      logid = TryConnect();
-
-      // We are connected to a host. Let's handshake with it.
-      if (fConnected) {
-
-         // Set the port used
-         fPort = fUrl.Port;
-
-         if (fPhyConn->IsLogged() == kNo) {
-            // Now the have the logical Connection ID, that we can use as streamid for
-            // communications with the server
-            TRACE(REQ,"XrdProofConn::Init: new logical connection ID: "<<logid);
-
-            // Get access to server
-            if (!GetAccessToSrv()) {
-               fConnected = 0;
-               if (GetServType() == kSTProofd)
-                  return fConnected;
-               if (fLastErr == kXR_NotAuthorized || fLastErr == kXR_InvalidRequest) {
-                  // Auth error or iunvalid request: does not make much sense to retry
-                  Close("P");
-                  XrdOucString msg = fLastErrMsg;
-                  msg.erase(msg.rfind(":"));
-                  TRACE(REQ,"XrdProofConn::Init: failure: " << msg);
-                  return fConnected;
-               } else {
-                  TRACE(REQ,"XrdProofConn::Init: access to server failed (" << fLastErrMsg << ")");
-               }
-               continue;
-            } else {
-
-               // Manager call in client: no need to create or attach: just notify
-               TRACE(REQ,"XrdProofConn::Init: access to server granted.");
-               break;
-            }
-         }
-
-         // Notify
-         TRACE(REQ,"XrdProofConn::Init: session create / attached successfully.");
-         break;
-
-      }
-
-      // We force a physical disconnection in this special case
-      TRACE(REQ,"XrdProofConn::Init: disconnecting.");
-      Close("P");
-
-      // And we wait a bit before retrying
-      if (i < maxTry - 1) {
-         TRACE(REQ,"XrdProofConn::Init: connection attempt failed: sleep " << timeWait << " secs");
-         sleep(timeWait);
-      }
-
-   } //for connect try
-#else
    // Run the connection attempts: the result is stored in fConnected
    Connect();
-#endif
 
    // We are done
    return fConnected;
@@ -341,10 +268,9 @@ XrdProofConn::~XrdProofConn()
    // responsible of the underlying physical connection, so we do not
    // force its closing)
    Close();
-#if 1
+
    // Cleanup mutex
    SafeDelete(fMutex);
-#endif
 }
 
 //_____________________________________________________________________________
@@ -404,11 +330,6 @@ int XrdProofConn::TryConnect()
 void XrdProofConn::Close(const char *)
 {
    // Close connection.
-
-#if 0
-   // Cleanup mutex
-   SafeDelete(fMutex);
-#endif
 
    // Make sure we are connected
    if (!fConnected)
@@ -576,11 +497,10 @@ XrdClientMessage *XrdProofConn::SendReq(XPClientRequest *req, const void *reqDat
    // SendReq tries to send a single command for a number of times
    XrdClientMessage *answMex = 0;
 
+   TRACE(REQ,"XrdProofConn::SendReq: len: "<<req->sendrcv.dlen);
+
    int retry = 0;
    bool resp = 0, abortcmd = 0;
-
-   XrdSysMutexHelper l(fMutex);
-
    int maxTry = (fgMaxTry > -1) ? fgMaxTry : kXR_maxReqRetry;
 
    // We need the unmarshalled request for retries
@@ -589,6 +509,15 @@ XrdClientMessage *XrdProofConn::SendReq(XPClientRequest *req, const void *reqDat
 
    while (!abortcmd && !resp) {
 
+      // If reconnecting we wait here ...
+      XrdSysMutexHelper l(fMutex);
+      // ... and we continue only if successful
+      if (!IsValid()) {
+         TRACE(XERR,"XrdProofConn::SendReq: not connected: nothing to do");
+         break;
+      }
+
+      // Ok, now we can try
       abortcmd = 0;
 
       // Make sure we have the unmarshalled request
@@ -628,9 +557,15 @@ XrdClientMessage *XrdProofConn::SendReq(XPClientRequest *req, const void *reqDat
             abortcmd = 1;
          }
       }
-      if (abortcmd)
+      if (abortcmd) {
          // Cleanup if failed
          SafeDelete(answMex);
+      } else if (!resp) {
+         // Sleep a while before retrying
+         int sleeptime = 1;
+         TRACE(REQ,"XrdProofConn::SendReq: sleep "<<sleeptime<<" secs ...");
+         sleep(sleeptime);
+      }
    }
 
    // We are done
@@ -735,8 +670,14 @@ bool XrdProofConn::CheckErrorStatus(XrdClientMessage *mex, int &Retry,
          fLastErr = (XErrorCode)ntohl(body_err->errnum);
          fLastErrMsg = body_err->errmsg;
          // Print out the error information, as received by the server
-         TRACE(ALL,"XrdProofConn::CheckErrorStatus: error "<<fLastErr<<": '"<<fLastErrMsg<<"'");
+         if (fLastErr == (XErrorCode)kXP_reconnecting) {
+            TRACE(ALL,"XrdProofConn::CheckErrorStatus: "<<fLastErrMsg);
+         } else {
+            TRACE(ALL,"XrdProofConn::CheckErrorStatus: error "<<fLastErr<<": '"<<fLastErrMsg<<"'");
+         }
       }
+      if (fLastErr == (XErrorCode)kXP_reconnecting)
+         return 0;
       return 1;
    }
 

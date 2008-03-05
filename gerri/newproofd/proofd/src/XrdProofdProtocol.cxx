@@ -32,7 +32,6 @@
 #include "XrdVersion.hh"
 #include "Xrd/XrdBuffer.hh"
 #include "XrdNet/XrdNetDNS.hh"
-#include "XrdOuc/XrdOucReqID.hh"
 
 #include "XrdProofdClient.h"
 #include "XrdProofdClientMgr.h"
@@ -41,15 +40,12 @@
 #include "XrdProofdProofServMgr.h"
 #include "XrdProofdProtocol.h"
 #include "XrdProofdResponse.h"
-#include "XrdProofServProxy.h"
+#include "XrdProofdProofServ.h"
 
 // Tracing utils
 #include "XrdProofdTrace.h"
 XrdOucTrace          *XrdProofdTrace = 0;
 static const char    *gTraceID = "";
-
-// Static variables
-static XrdOucReqID   *XrdProofdReqID = 0;
 
 // Loggers: we need two to avoid deadlocks
 static XrdSysLogger   gMainLogger;
@@ -330,6 +326,15 @@ int XrdProofdProtocol::Configure(char *, XrdProtocol_Config *pi)
    fgBPool        = pi->BPool;
    fgReadWait     = pi->readWait;
 
+   // Pre-initialize some i/o values
+   fgMaxBuffsz = fgBPool->MaxSize();
+
+   // Schedule protocol object cleanup; the maximum number of objects
+   // and the max age are taken from XrdXrootdProtocol: this may need
+   // some optimization in the future.
+   fgProtStack.Set(pi->Sched, XrdProofdTrace, TRACE_MEM);
+   fgProtStack.Set((pi->ConnMax/3 ? pi->ConnMax/3 : 30), 60*60);
+
    // Debug flag
    TRACESET(XERR, 1);
    if (pi->DebugON)
@@ -358,19 +363,6 @@ int XrdProofdProtocol::Configure(char *, XrdProtocol_Config *pi)
    sprintf(msgs,"Proofd : Configure: mgr: %p", &fgMgr);
    fgEDest.Say(0, msgs);
 
-   // Pre-initialize some i/o values
-   fgMaxBuffsz = fgBPool->MaxSize();
-
-   // Schedule protocol object cleanup; the maximum number of objects
-   // and the max age are taken from XrdXrootdProtocol: this may need
-   // some optimization in the future.
-   fgProtStack.Set(pi->Sched, XrdProofdTrace, TRACE_MEM);
-   fgProtStack.Set((pi->ConnMax/3 ? pi->ConnMax/3 : 30), 60*60);
-
-   // Initialize the request ID generation object
-   XrdProofdReqID = new XrdOucReqID((int)fgMgr->Port(), pi->myName,
-                                    XrdNetDNS::IPAddr(pi->myAddr));
-
    // Indicate we configured successfully
    fgEDest.Say(0, "XProofd protocol version " XPROOFD_VERSION
                " build " XrdVERSION " successfully loaded.");
@@ -397,14 +389,7 @@ int XrdProofdProtocol::Process(XrdLink *)
    fRequest.header.requestid = ntohs(fRequest.header.requestid);
    fRequest.header.dlen      = ntohl(fRequest.header.dlen);
 
-#if 0
-   // We keep the Response instance until we are done
-   XrdSysMutexHelper mh(fResponse.fMutex);
-
-   // Set the stream ID for the reply
-   fResponse.Set(fRequest.header.streamid);
-   fResponse.Set(fLink);
-#else
+   // Get response object
    kXR_unt16 rid;
    memcpy((void *)&rid, (const void *)&(fRequest.header.streamid[0]), 2);
    XrdProofdResponse *response = 0;
@@ -417,7 +402,6 @@ int XrdProofdProtocol::Process(XrdLink *)
       response->Set(fRequest.header.streamid);
       response->Set(fLink);
    }
-#endif
 
    unsigned short sid;
    memcpy((void *)&sid, (const void *)&(fRequest.header.streamid[0]), 2);
@@ -463,6 +447,8 @@ int XrdProofdProtocol::Process2()
 
    // If the user is logged in check if the wanted action is to be done by us
    if (fStatus && (fStatus & XPD_LOGGEDIN)) {
+      // Record time of the last action
+      TouchClientPath();
       // We must have a client instance if here
       if (!fPClient) {
          TRACEP(this, respid, XERR, "Process2: client undefined!!! ");
@@ -534,13 +520,13 @@ void XrdProofdProtocol::Recycle(XrdLink *, int, const char *)
 
          // Internal connection: we need to remove this instance from the list
          // of proxy servers and to notify the attached clients.
-         XrdProofServProxy *psrv = pmgr->GetServer(this);
+         XrdProofdProofServ *psrv = pmgr->GetServer(this);
 
          if (psrv) {
             // Tell other attached clients, if any, that this session is gone
             XrdOucString msg("Recycle: session: ");
             msg += psrv->Tag();
-            msg += "terminated by peer";
+            msg += " terminated by peer";
             psrv->Broadcast(msg.c_str());
             TRACEI(this,DBG, msg);
 
@@ -634,7 +620,7 @@ int XrdProofdProtocol::GetData(const char *dtype, char *buff, int blen)
 }
 
 //______________________________________________________________________________
-int XrdProofdProtocol::SendData(XrdProofServProxy *xps,
+int XrdProofdProtocol::SendData(XrdProofdProofServ *xps,
                                 kXR_int32 sid, XrdSrvBuffer **buf)
 {
    // Send data over the open link. Segmentation is done here, if required.
@@ -664,13 +650,14 @@ int XrdProofdProtocol::SendData(XrdProofServProxy *xps,
          *buf = new XrdSrvBuffer(fArgp->buff, quantum, 1);
       // Send
       if (sid > -1) {
+         TRACEI(this, DBG, "SendData: EXT: server ID: "<<sid<<", sending: "<<quantum<<" bytes");
          if (xps->Response()->Send(kXR_attn, kXPD_msgsid, sid, fArgp->buff, quantum))
             return 1;
       } else {
 
          // Get ID of the client
          int cid = ntohl(fRequest.sendrcv.cid);
-         TRACEI(this, DBG, "SendMsg: INT: client ID: "<<cid);
+         TRACEI(this, DBG, "SendData: INT: client ID: "<<cid<<", sending: "<<quantum<<" bytes");
          if (xps->SendData(cid, fArgp->buff, quantum))
             return 1;
       }
@@ -685,7 +672,7 @@ int XrdProofdProtocol::SendData(XrdProofServProxy *xps,
 }
 
 //______________________________________________________________________________
-int XrdProofdProtocol::SendDataN(XrdProofServProxy *xps,
+int XrdProofdProtocol::SendDataN(XrdProofdProofServ *xps,
                                  XrdSrvBuffer **buf)
 {
    // Send data over the open client links of session 'xps'.
@@ -746,7 +733,7 @@ int XrdProofdProtocol::SendMsg()
    bool external = !(opt & kXPD_internal);
 
    // Find server session
-   XrdProofServProxy *xps = 0;
+   XrdProofdProofServ *xps = 0;
    if (!fPClient || !(xps = fPClient->GetProofServ(psid))) {
       TRACEP(this, respid, XERR, "SendMsg: session ID not found: "<< psid);
       response->Send(kXR_InvalidRequest,"session ID not found");
@@ -772,11 +759,11 @@ int XrdProofdProtocol::SendMsg()
 
       // Send to proofsrv our client ID
       if (fCID == -1) {
-         response->Send(kXR_ServerError,"EXT: getting clientSID");
+         response->Send(kXP_ServerError,"EXT: getting clientSID");
          return rc;
       }
       if (SendData(xps, fCID)) {
-         response->Send(kXR_ServerError,"EXT: sending message to proofserv");
+         response->Send(kXP_ServerError,"EXT: sending message to proofserv");
          return rc;
       }
       // Notify to user
@@ -819,17 +806,24 @@ int XrdProofdProtocol::SendMsg()
          // The message is strictly for the client requiring it
          int rs = SendData(xps, -1, &savedBuf);
          if (rs != 0) {
-            response->Send(kXR_ServerError,
-                           "SendMsg: INT: sending message to client"
-                           " or master proofserv");
+            if (fgMgr->SessionMgr() && fgMgr->SessionMgr()->IsReconnecting()) {
+               response->Send(kXP_reconnecting, "SendMsg: INT: session is reconnecting: retry later");
+            } else {
+               response->Send(kXP_ServerError,
+                              "SendMsg: INT: sending message to client"
+                              " or master proofserv");
+            }
             return rc;
          }
       } else {
          // Send to all connected clients
          if (SendDataN(xps, &savedBuf)) {
-            response->Send(kXR_ServerError,
-                           "SendMsg: INT: sending message to client"
-                           " or master proofserv");
+            if (fgMgr->SessionMgr() && fgMgr->SessionMgr()->IsReconnecting()) {
+               response->Send(kXP_reconnecting, "SendMsg: INT: session is reconnecting: retry later");
+            } else {
+               response->Send(kXP_ServerError,
+                              "SendMsg: INT: sending message to all connected clients");
+            }
             return rc;
          }
       }
@@ -864,7 +858,7 @@ int XrdProofdProtocol::Urgent()
    TRACEP(this, respid, REQ, "Urgent: enter: psid: "<<psid<<", type: "<< type);
 
    // Find server session
-   XrdProofServProxy *xps = 0;
+   XrdProofdProofServ *xps = 0;
    if (!fPClient || !(xps = fPClient->GetProofServ(psid))) {
       TRACEP(this, respid, XERR, "Urgent: session ID not found");
       response->Send(kXR_InvalidRequest,"Urgent: session ID not found");
@@ -921,7 +915,7 @@ int XrdProofdProtocol::Interrupt()
    TRACEP(this, respid, REQ, "Interrupt: psid: "<<psid<<", type:"<<type);
 
    // Find server session
-   XrdProofServProxy *xps = 0;
+   XrdProofdProofServ *xps = 0;
    if (!fPClient || !(xps = fPClient->GetProofServ(psid))) {
       TRACEP(this, respid, XERR, "Interrupt: session ID not found");
       response->Send(kXR_InvalidRequest,"nterrupt: session ID not found");
@@ -970,7 +964,7 @@ int XrdProofdProtocol::Ping()
    TRACEP(this, respid, REQ, "Ping: psid: "<<psid<<", opt: "<<opt);
 
    // Find server session
-   XrdProofServProxy *xps = 0;
+   XrdProofdProofServ *xps = 0;
    if (!fPClient || !(xps = fPClient->GetProofServ(psid))) {
       TRACEP(this, respid,  XERR, "Ping: session ID not found");
       response->Send(kXR_InvalidRequest,"session ID not found");
@@ -979,18 +973,17 @@ int XrdProofdProtocol::Ping()
 
    kXR_int32 pingres = 0;
    if (xps) {
-      TRACEP(this, respid,  DBG, "Ping: xps: "<<xps<<", status: "<<xps->Status());
 
       // Type of connection
       bool external = !(opt & kXPD_internal);
 
       if (external) {
-         TRACEP(this, respid,  DBG, "Ping: EXT: psid: "<<psid);
+         TRACEP(this, respid,  DBG, "Ping: EXT: psid: "<<psid<<", status: "<<xps->Status());
 
          // Send the request
          if ((pingres = (kXR_int32) xps->VerifyProofServ(fgMgr->SessionMgr()->InternalWait())) == -1) {
             TRACEP(this, respid,  XERR, "Ping: EXT: could not verify proofsrv");
-            response->Send(kXR_ServerError, "EXT: could not verify proofsrv");
+            response->Send(kXP_ServerError, "EXT: could not verify proofsrv");
             return rc;
          }
 
@@ -1005,12 +998,6 @@ int XrdProofdProtocol::Ping()
          // If a semaphore is waiting, post it
          xps->PingSem();
 
-#if 0
-         // Just notify to user
-         pingres = 1;
-         TRACEP(this, respid, DBG, "Ping: INT: ping notified to client");
-         fResponse.Send(kXR_ok, pingres);
-#endif
          return rc;
       }
    }
@@ -1053,7 +1040,7 @@ void XrdProofdProtocol::PostSessionRemoval(int pid)
 {
    // Post removal of session 'pid'
 
-   TRACE(DBG, "PostClientDisconnection: posting session removal to socket "<<fgProofServMgrFd);
+   TRACE(DBG, "PostSessionRemoval: posting session removal to socket "<<fgProofServMgrFd);
 
    if (fgProofServMgrFd > 0) {
       int type = 0;
@@ -1082,6 +1069,24 @@ void XrdProofdProtocol::PostClientDisconnection()
       if (write(fgProofServMgrFd, &type, sizeof(type)) !=  sizeof(type)) {
          TRACE(XERR, "PostClientDisconnection: problem sending message type on the pipe");
          return;
+      }
+   }
+   // Done
+   return;
+}
+
+//___________________________________________________________________________
+void XrdProofdProtocol::TouchClientPath()
+{
+   // Post disconnection of a client
+
+   TRACE(HDBG, "TouchClientPath: recording time of the last client request");
+
+   if (fAdminPath.length() > 0) {
+      XrdOucString cidpath(fAdminPath);
+      cidpath += "/cid";
+      if (XrdProofdAux::Touch(cidpath.c_str()) != 0) {
+         TRACE(XERR, "TouchClientPath: problems touching "<<cidpath);
       }
    }
    // Done

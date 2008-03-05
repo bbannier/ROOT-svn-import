@@ -58,10 +58,12 @@ private:
    std::list<XrdProofWorker *> fNodes;                 // List of worker unique nodes
 
    void               CreateDefaultPROOFcfg();
-   int                ReadPROOFcfg();
+   int                ReadPROOFcfg(bool reset = 1);
+   int                FindUniqueNodes();
 
    int                DoDirectiveAdminReqTO(char *, XrdOucStream *, bool);
    int                DoDirectiveResource(char *, XrdOucStream *, bool);
+   int                DoDirectiveWorker(char *, XrdOucStream *, bool);
 
 public:
    XrdProofdNetMgr(XrdProofdManager *mgr, XrdProtocol_Config *pi, XrdSysError *e);

@@ -1,4 +1,4 @@
-// @(#)root/proofd:$Id:$
+// @(#)root/proofd:$Id$
 // Author: G. Ganis Feb 2008
 
 /*************************************************************************
@@ -33,7 +33,7 @@
 #include "XrdProofdProtocol.h"
 #include "XrdProofGroup.h"
 #include "XrdProofSched.h"
-#include "XrdProofServProxy.h"
+#include "XrdProofdProofServ.h"
 #include "XrdROOT.h"
 
 // Tracing utilities
@@ -250,7 +250,7 @@ int XrdProofdAdmin::GetWorkers(XrdProofdProtocol *p)
    int psid = ntohl(p->Request()->proof.sid);
 
    // Find server session
-   XrdProofServProxy *xps = 0;
+   XrdProofdProofServ *xps = 0;
    if (!p->Client() || !(xps = p->Client()->GetProofServ(psid))) {
       TRACEP(p, respid, XERR, "Admin::GetWorkers: session ID not found");
       response->Send(kXR_InvalidRequest,"session ID not found");
@@ -672,59 +672,19 @@ int XrdProofdAdmin::CleanupSessions(XrdProofdProtocol *p)
    }
 
    // Send a termination request to client sessions
-   std::list<int> signalledpid;
    XrdOucString msg = "CleanupSessions: cleaning up client: requested by: ";
    msg += p->Link()->ID;
    int srvtype = ntohl(p->Request()->proof.int2);
-   fMgr->ClientMgr()->TerminateSessions(tgtclnt, msg.c_str(), srvtype, signalledpid);
+   fMgr->ClientMgr()->TerminateSessions(tgtclnt, msg.c_str(), srvtype);
+   time_t tterm = time(0);
 
-   // Asynchronous notification to requester
+   // Forward down the tree only if not leaf
    if (fMgr->SrvType() != kXPD_Worker) {
-      cmsg = "CleanupSessions: verifying termination status (may take up to 10 seconds)";
-      response->Send(kXR_attn, kXPD_srvmsg, 0, (char *) cmsg.c_str(), cmsg.length());
-   }
 
-   // Now we give sometime to sessions to terminate (10 sec).
-   // We check the status every second
-   int nw = 10;
-   int nleft = signalledpid.size();
-   while (nw-- && nleft > 0) {
-
-      // Loop over the list of processes requested to terminate
-      std::list<int>::iterator ii;
-      for (ii = signalledpid.begin(); ii != signalledpid.end(); )
-         if (XrdProofdAux::VerifyProcessByID(*ii) == 0) {
-            nleft--;
-            ii = signalledpid.erase(ii);
-         } else
-            ++ii;
-
-      // Wait a bit before retrying
-      sleep(1);
-   }
-
-   // Lock the interested client mutexes (no action is allowed while
-   // doing this
-   fMgr->ClientMgr()->SetLock(1,tgtclnt);
-
-   // Asynchronous notification to requester
-   if (fMgr->SrvType() != kXPD_Worker) {
-      cmsg = "CleanupSessions: terminating the remaining sessions ...";
-      response->Send(kXR_attn, kXPD_srvmsg, 0, (char *) cmsg.c_str(), cmsg.length());
-   }
-
-   // Now we cleanup what left (any zombies or super resistent processes)
-   int ncln = fMgr->SessionMgr()->CleanupProofServ(all, usr);
-   if (ncln > 0) {
       // Asynchronous notification to requester
-      cmsg = "CleanupSessions: wait 5 seconds for completion ...";
+      cmsg = "CleanupSessions: wait 5 seconds for completion before forwarding ...";
       response->Send(kXR_attn, kXPD_srvmsg, 0, (char *) cmsg.c_str(), cmsg.length());
       sleep(5);
-   }
-
-   // Cleanup all possible sessions around
-   // (forward down the tree only if not leaf)
-   if (fMgr->SrvType() != kXPD_Worker) {
 
       // Asynchronous notification to requester
       cmsg = "CleanupSessions: forwarding the reset request to next tier(s) ";
@@ -734,8 +694,12 @@ int XrdProofdAdmin::CleanupSessions(XrdProofdProtocol *p)
       fMgr->NetMgr()->Broadcast(type, usr,response, 1);
    }
 
-   // Unlock the locked client mutexes
-   fMgr->ClientMgr()->SetLock(0,tgtclnt);
+   // Asynchronous notification to requester
+   int twait = fMgr->SessionMgr()->CheckFrequency() - (time(0) - tterm) ;
+   XrdProofdAux::Form(cmsg, "CleanupSessions: waiting %d secs for the session"
+                            " manager to verify session termination", twait);
+   response->Send(kXR_attn, kXPD_srvmsg, 0, (char *) cmsg.c_str(), cmsg.length());
+   sleep(twait);
 
    // Cleanup usr
    SafeDelArray(usr);
@@ -758,7 +722,7 @@ int XrdProofdAdmin::SetSessionAlias(XrdProofdProtocol *p)
    //
    // Specific info about a session
    int psid = ntohl(p->Request()->proof.sid);
-   XrdProofServProxy *xps = 0;
+   XrdProofdProofServ *xps = 0;
    if (!p->Client() || !(xps = p->Client()->GetProofServ(psid))) {
       TRACEP(p, respid, XERR, "Admin::SetSessionAlias: session ID not found");
       response->Send(kXR_InvalidRequest,"SetSessionAlias: session ID not found");
@@ -796,7 +760,7 @@ int XrdProofdAdmin::SetSessionTag(XrdProofdProtocol *p)
    //
    // Specific info about a session
    int psid = ntohl(p->Request()->proof.sid);
-   XrdProofServProxy *xps = 0;
+   XrdProofdProofServ *xps = 0;
    if (!p->Client() || !(xps = p->Client()->GetProofServ(psid))) {
       TRACEP(p, respid, XERR, "Admin::SetSessionTag: session ID not found");
       response->Send(kXR_InvalidRequest,"SetSessionTag: session ID not found");

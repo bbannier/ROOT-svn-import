@@ -158,7 +158,7 @@ public:
    virtual ~TXSocket();
 
    virtual void        Close(Option_t *opt = "");
-   Bool_t              Create();
+   Bool_t              Create(Bool_t attach = kFALSE);
    void                DisconnectSession(Int_t id, Option_t *opt = "");
 
    void                DoError(int level,
@@ -232,7 +232,7 @@ public:
    void                EnableTimeout() { fDontTimeout = kFALSE; }
 
    // Try reconnection after error
-   Int_t               Reconnect();
+   virtual Int_t       Reconnect();
 
    ClassDef(TXSocket, 0) //A high level connection class for PROOF
 };

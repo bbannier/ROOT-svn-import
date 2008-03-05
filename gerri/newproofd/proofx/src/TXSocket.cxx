@@ -186,7 +186,7 @@ TXSocket::TXSocket(const char *url, Char_t m, Int_t psid, Char_t capver,
 
       // Create connection (for managers the type of the connection is the same
       // as for top masters)
-      char md = (m != 'A' && m != 'C') ? m : 'M';
+      char md = (fMode !='A' && fMode !='C') ? fMode : 'M';
       fConn = new XrdProofConn(url, md, psid, capver, this, fBuffer.Data());
       if (!fConn || !(fConn->IsValid())) {
          if (fConn->GetServType() != XrdProofConn::kSTProofd)
@@ -197,7 +197,7 @@ TXSocket::TXSocket(const char *url, Char_t m, Int_t psid, Char_t capver,
       }
 
       // Create new proofserv if not client manager or administrator or internal mode
-      if (m == 'm' || m == 's' || m == 'M' || m == 'A') {
+      if (fMode == 'm' || fMode == 's' || fMode == 'M' || fMode == 'A') {
          // We attach or create
          if (!Create()) {
             // Failure
@@ -212,7 +212,7 @@ TXSocket::TXSocket(const char *url, Char_t m, Int_t psid, Char_t capver,
       fUser = fConn->fUser.c_str();
       fHost = fConn->fHost.c_str();
       fPort = fConn->fPort;
-      if (m == 'C') {
+      if (fMode == 'C') {
          fXrdProofdVersion = fConn->fRemoteProtocol;
          fRemoteProtocol = fConn->fRemoteProtocol;
       }
@@ -361,13 +361,13 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
    // responses are asynchronous by nature.
    UnsolRespProcResult rc = kUNSOL_KEEP;
 
-//   if (gDebug > 2)
+   if (gDebug > 2)
       Info("ProcessUnsolicitedMsg", "Processing unsolicited msg: %p", m);
    if (!m) {
       // Some one is perhaps interested in empty messages
       return kUNSOL_CONTINUE;
    } else {
-//      if (gDebug > 2)
+      if (gDebug > 2)
          Info("ProcessUnsolicitedMsg", "status: %d, len: %d bytes",
               m->GetStatusCode(), m->DataLen());
    }
@@ -377,12 +377,11 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
       if (m->GetStatusCode() != XrdClientMessage::kXrdMSC_timeout) {
          if (gDebug > 0)
             Info("ProcessUnsolicitedMsg","got error from underlying connection");
-         if (fHandler)
-            fHandler->HandleError();
-         else
-            Error("ProcessUnsolicitedMsg","handler undefined");
-         // Avoid to contact the server any more
-         fSessionID = -1;
+         if (!fHandler || fHandler->HandleError()) {
+            Error("ProcessUnsolicitedMsg","handler undefined or recovery failed");
+            // Avoid to contact the server any more
+            fSessionID = -1;
+         }
       } else {
          // Time out
          if (gDebug > 2)
@@ -416,7 +415,7 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
    // Update pointer to data
    void *pdata = (void *)((char *)(m->GetData()) + sizeof(kXR_int32));
    len -= sizeof(kXR_int32);
-//   if (gDebug > 1)
+   if (gDebug > 1)
       Info("ProcessUnsolicitedMsg", "%p: got action: %d (%d bytes) (ID: %d)",
            this, acod, len, m->HeaderSID());
 
@@ -897,7 +896,7 @@ Int_t TXSocket::Flush()
 }
 
 //_____________________________________________________________________________
-Bool_t TXSocket::Create()
+Bool_t TXSocket::Create(Bool_t attach)
 {
    // This method sends a request for creation of (or attachment to) a remote
    // server application.
@@ -920,7 +919,7 @@ Bool_t TXSocket::Create()
       fConn->SetSID(reqhdr.header.streamid);
 
       // This will be a kXP_attach or kXP_create request
-      if (fMode == 'A') {
+      if (fMode == 'A' || attach) {
          reqhdr.header.requestid = kXP_attach;
          reqhdr.proof.sid = fSessionID;
       } else {
@@ -1041,12 +1040,6 @@ Int_t TXSocket::SendRaw(const void *buffer, Int_t length, ESendRecvOptions opt)
    // Returns the number of bytes sent or -1 in case of error.
 
    TSystem::ResetErrno();
-
-   // Make sure we are connected
-   if (!IsValid()) {
-      Error("SendRaw","not connected: nothing to do");
-      return -1;
-   }
 
    // Options and request ID
    fSendOpt = (opt == kDontBlock) ? (kXPD_async | fSendOpt)
@@ -1370,12 +1363,6 @@ Int_t TXSocket::SendInterrupt(Int_t type)
 
    TSystem::ResetErrno();
 
-   // Make sure we are connected
-   if (!IsValid()) {
-      Error("SendInterrupt","not connected: nothing to do");
-      return -1;
-   }
-
    // Prepare request
    XPClientRequest Request;
    memset(&Request, 0, sizeof(Request) );
@@ -1414,11 +1401,6 @@ Int_t TXSocket::Send(const TMessage &mess)
    // that were sent and -1 in case of error.
 
    TSystem::ResetErrno();
-
-   if (!IsValid()) {
-      Error("Send","not connected: nothing to do");
-      return -1;
-   }
 
    if (mess.IsReading()) {
       Error("Send", "cannot send a message used for reading");
@@ -1631,12 +1613,6 @@ void TXSocket::SendUrgent(Int_t type, Int_t int1, Int_t int2)
 
    TSystem::ResetErrno();
 
-   // Make sure we are connected
-   if (!IsValid()) {
-      Error("SendUrgent","not connected: nothing to do");
-      return;
-   }
-
    // Prepare request
    XPClientRequest Request;
    memset(&Request, 0, sizeof(Request) );
@@ -1822,15 +1798,47 @@ Int_t TXSocket::Reconnect()
 {
    // Try reconnection after failure
 
-   Info("Reconnect","Trying to reconnect ... %p, %d",
-        fConn, (fConn ? fConn->IsValid() : 0));
+   Info("Reconnect","%p:%p:%d: trying to reconnect to ", this,
+                    fConn, (fConn ? fConn->IsValid() : 0), fUrl.Data());
 
-   if (fConn && !fConn->IsValid()) {
-      fConn->Close();
-      fConn->Connect();
+   if (fXrdProofdVersion < 1005) {
+      Info("Reconnect","%p: server does not support reconnections (protocol: %d < 1005)",
+                       this, fXrdProofdVersion);
+      return -1;
    }
 
-   return 1;
+   if (fConn && !fConn->IsValid()) {
+
+      // Block any other attempt to use this connection
+      XrdSysMutexHelper l(fConn->fMutex);
+
+      fConn->Close();
+      int maxtry, timewait;
+      XrdProofConn::GetRetryParam(maxtry, timewait);
+      XrdProofConn::SetRetryParam(300, 5);
+      fConn->Connect();
+      XrdProofConn::SetRetryParam();
+
+      if (fConn->IsValid()) {
+         // Create new proofserv if not client manager or administrator or internal mode
+         if (fMode == 'm' || fMode == 's' || fMode == 'M' || fMode == 'A') {
+            // We attach or create
+            if (!Create(kTRUE)) {
+               // Failure
+               Error("TXSocket", "create or attach failed (%s)",
+                     ((fConn->fLastErrMsg.length() > 0) ? fConn->fLastErrMsg.c_str() : "-"));
+               Close();
+               return -1;
+            }
+         }
+      }
+   }
+
+   Info("Reconnect", "%p: attempt %s", this,
+                     ((fConn && fConn->IsValid()) ? "succeeded!" : "failed"));
+
+   // Done
+   return ((fConn && fConn->IsValid()) ? 0 : -1);
 }
 
 //_____________________________________________________________________________

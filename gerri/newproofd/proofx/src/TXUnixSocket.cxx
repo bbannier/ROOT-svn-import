@@ -17,6 +17,12 @@
 // Used for the internal connection between coordinator and proofserv.  //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
+#ifdef OLDXRDOUC
+#  include "XrdSysToOuc.h"
+#  include "XrdOuc/XrdOucPthread.hh"
+#else
+#  include "XrdSys/XrdSysPthread.hh"
+#endif
 
 #include "TXUnixSocket.h"
 #include "XrdProofPhyConn.h"
@@ -52,4 +58,39 @@ TXUnixSocket::TXUnixSocket(const char *url,
       // This is needed for the reader thread to signal an interrupt
       fPid = gSystem->GetPid();
    }
+}
+
+//______________________________________________________________________________
+Int_t TXUnixSocket::Reconnect()
+{
+   // Try reconnection after failure
+
+   Info("Reconnect", "%p:%p:%d: trying to reconnect on %s", this,
+                     fConn, (fConn ? fConn->IsValid() : 0), fUrl.Data());
+
+   if (fXrdProofdVersion < 1005) {
+      Info("Reconnect","%p: server does not support reconnections (protocol: %d < 1005)",
+                       this, fXrdProofdVersion);
+      return -1;
+   }
+
+
+   if (fConn && !fConn->IsValid()) {
+
+      // Block any other attempt to use this connection
+      XrdSysMutexHelper l(fConn->fMutex);
+
+      fConn->Close();
+      int maxtry, timewait;
+      XrdProofConn::GetRetryParam(maxtry, timewait);
+      XrdProofConn::SetRetryParam(300, 5);
+      fConn->Connect();
+      XrdProofConn::SetRetryParam();
+   }
+
+   Info("Reconnect","%p: attempt %s", this,
+          ((fConn && fConn->IsValid()) ? "succeeded!" : "failed"));
+
+   // Done
+   return ((fConn && fConn->IsValid()) ? 0 : -1);
 }

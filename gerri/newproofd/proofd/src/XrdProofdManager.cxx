@@ -45,7 +45,7 @@
 #include "XrdProofdProtocol.h"
 #include "XrdProofGroup.h"
 #include "XrdProofSched.h"
-#include "XrdProofServProxy.h"
+#include "XrdProofdProofServ.h"
 #include "XrdProofWorker.h"
 #include "XrdROOT.h"
 
@@ -373,7 +373,7 @@ XrdProofSched *XrdProofdManager::LoadScheduler()
 }
 
 //__________________________________________________________________________
-int XrdProofdManager::GetWorkers(XrdOucString &lw, XrdProofServProxy *xps)
+int XrdProofdManager::GetWorkers(XrdOucString &lw, XrdProofdProofServ *xps)
 {
    // Get a list of workers from the available resource broker
    int rc = 0;
@@ -616,18 +616,6 @@ int XrdProofdManager::Config(bool rcf)
       fGroupsMgr->Apply(CreateGroupDataSetDir, (void *)fDataSetDir.c_str());
    }
 
-   // Config the session manager
-   if (fSessionMgr && fSessionMgr->Config(rcf) != 0) {
-      fEDest->Say(0, "xpd: Config: Manager: problems configuring the session manager");
-      return -1;
-   }
-
-   // Config the client manager
-   if (fClientMgr && fClientMgr->Config(rcf) != 0) {
-      fEDest->Say(0, "xpd: Config: Manager: problems configuring the client manager");
-      return -1;
-   }
-
    // Config the network manager
    if (fNetMgr && fNetMgr->Config(rcf) != 0) {
       fEDest->Say(0, "xpd: Config: Manager: problems configuring the network manager");
@@ -643,6 +631,18 @@ int XrdProofdManager::Config(bool rcf)
    // Config the ROOT versions manager
    if (fROOTMgr && fROOTMgr->Config(rcf) != 0) {
       fEDest->Say(0, "xpd: Config: Manager: problems configuring the ROOT versions manager");
+      return -1;
+   }
+
+   // Config the client manager
+   if (fClientMgr && fClientMgr->Config(rcf) != 0) {
+      fEDest->Say(0, "xpd: Config: Manager: problems configuring the client manager");
+      return -1;
+   }
+
+   // Config the session manager
+   if (fSessionMgr && fSessionMgr->Config(rcf) != 0) {
+      fEDest->Say(0, "xpd: Config: Manager: problems configuring the session manager");
       return -1;
    }
 
@@ -912,71 +912,6 @@ int XrdProofdManager::DoDirectiveAllowedUsers(char *val, XrdOucStream *cfg, bool
    fOperationMode = kXPD_OpModeControlled;
    return 0;
 }
-
-#if 0
-//______________________________________________________________________________
-int XrdProofdManager::DoDirectiveSchedOpt(char *val, XrdOucStream *cfg, bool)
-{
-   // Process 'schedopt' directive
-
-   if (!val || !cfg)
-      // undefined inputs
-      return -1;
-
-   float of = -1.;
-   int pmin = -1;
-   int pmax = -1;
-   int opt = -1;
-   // Defines scheduling options
-   while (val && val[0]) {
-      XrdOucString o = val;
-      if (o.beginswith("overall:")) {
-         // The overall inflating factor
-         o.replace("overall:","");
-         sscanf(o.c_str(), "%f", &of);
-      } else if (o.beginswith("min:")) {
-         // The overall inflating factor
-         o.replace("min:","");
-         sscanf(o.c_str(), "%d", &pmin);
-      } else if (o.beginswith("max:")) {
-         // The overall inflating factor
-         o.replace("max:","");
-         sscanf(o.c_str(), "%d", &pmax);
-      } else {
-         if (o == "central")
-            opt = kXPD_sched_central;
-         else if (o == "local")
-            opt = kXPD_sched_local;
-      }
-      // Check deprecated 'if' directive
-      if (Host() && cfg)
-         if (XrdProofdAux::CheckIf(cfg, Host()) == 0)
-            return 0;
-      // Next
-      val = cfg->GetToken();
-   }
-
-   // Set the values (we need to do it here to avoid setting wrong values
-   // when a non-matching 'if' condition is found)
-   if (of > -1.)
-      fOverallInflate = (of >= 1.) ? of : fOverallInflate;
-   if (pmin > -1)
-      fPriorityMin = (pmin >= 1 && pmin <= 40) ? pmin : fPriorityMin;
-   if (pmax > -1)
-      fPriorityMax = (pmax >= 1 && pmax <= 40) ? pmax : fPriorityMax;
-   if (opt > -1)
-      fSchedOpt = opt;
-
-   // Make sure that min is <= max
-   if (fPriorityMin > fPriorityMax) {
-      TRACE(XERR, "DoDirectiveSchedOpt: inconsistent value for fPriorityMin (> fPriorityMax) ["<<
-                  fPriorityMin << ", "<<fPriorityMax<<"] - correcting");
-      fPriorityMin = fPriorityMax;
-   }
-
-   return 0;
-}
-#endif
 
 //______________________________________________________________________________
 int XrdProofdManager::DoDirectiveRole(char *val, XrdOucStream *cfg, bool)

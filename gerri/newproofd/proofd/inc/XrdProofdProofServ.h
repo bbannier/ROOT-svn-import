@@ -9,8 +9,8 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#ifndef ROOT_XrdProofServProxy
-#define ROOT_XrdProofServProxy
+#ifndef ROOT_XrdProofdProofServ
+#define ROOT_XrdProofdProofServ
 
 #include <string.h>
 #include <unistd.h>
@@ -102,7 +102,7 @@ public:
 
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
-// XrdProofServProxy                                                    //
+// XrdProofdProofServ                                                    //
 //                                                                      //
 // Authors: G. Ganis, CERN, 2005                                        //
 //                                                                      //
@@ -116,14 +116,12 @@ class XrdProofGroup;
 class XrdProofWorker;
 class XrdSysSemWait;
 
-class XrdProofServProxy
+class XrdProofdProofServ
 {
 
 public:
-   XrdProofServProxy();
-   ~XrdProofServProxy();
-
-public:
+   XrdProofdProofServ();
+   ~XrdProofdProofServ();
 
    void                AddWorker(XrdProofWorker *w) { XrdSysMutexHelper mhp(fMutex); fWorkers.push_back(w); }
    inline const char  *Alias() const { XrdSysMutexHelper mhp(fMutex); return fAlias.c_str(); }
@@ -136,18 +134,18 @@ public:
    inline const char  *Fileout() const { XrdSysMutexHelper mhp(fMutex); return fFileout.c_str(); }
    int                 FreeClientID(XrdProofdProtocol *p);
    XrdClientID        *GetClientID(int cid);
-   int                 GetNClients() { XrdSysMutexHelper mhp(fMutex); return fNClients;}
+   inline int          GetNClients() { XrdSysMutexHelper mhp(fMutex); return fNClients;}
    inline const char  *Group() const { XrdSysMutexHelper mhp(fMutex); return fGroup.c_str(); }
    int                 IdleTime();
    inline short int    ID() const { XrdSysMutexHelper mhp(fMutex); return fID; }
-   bool                IsShutdown() const { XrdSysMutexHelper mhp(fMutex); return fIsShutdown; }
-   bool                IsValid() const { XrdSysMutexHelper mhp(fMutex); return fIsValid; }
+   inline bool         IsShutdown() const { XrdSysMutexHelper mhp(fMutex); return fIsShutdown; }
+   inline bool         IsValid() const { XrdSysMutexHelper mhp(fMutex); return fIsValid; }
    inline XrdLink     *Link() const { XrdSysMutexHelper mhp(fMutex); return (fConn ? fConn->Link() : 0); }
    inline bool         Match(short int id) const { XrdSysMutexHelper mhp(fMutex); return (id == fID); }
    inline XrdSysRecMutex *Mutex() const { return fMutex; }
    inline const char  *Ordinal() const { XrdSysMutexHelper mhp(fMutex); return fOrdinal.c_str(); }
    inline XrdClientID *Parent() const { XrdSysMutexHelper mhp(fMutex); return fParent; }
-   inline void         PingSem() const { XrdSysMutexHelper mhp(fMutex); if (fPingSem) fPingSem->Post(); }
+   inline void         PingSem() const { if (fPingSem) fPingSem->Post(); }
    inline XrdSrvBuffer *QueryNum() const { XrdSysMutexHelper mhp(fMutex); return fQueryNum; }
 
    void                Reset();
@@ -169,7 +167,7 @@ public:
    inline void         SetProtVer(int pv) { XrdSysMutexHelper mhp(fMutex); fProtVer = pv; }
    inline void         SetROOT(XrdROOT *r) { XrdSysMutexHelper mhp(fMutex); fROOT = r; }
    void                SetRunning();
-   void                SetSrv(int id);
+   void                SetSrvPID(int pid) { XrdSysMutexHelper mhp(fMutex); fSrvPID = pid; }
    inline void         SetSrvType(int id) { XrdSysMutexHelper mhp(fMutex); fSrvType = id; }
    inline void         SetStartMsg(XrdSrvBuffer *sm) { XrdSysMutexHelper mhp(fMutex); fStartMsg = sm; }
    inline void         SetStatus(int st) { XrdSysMutexHelper mhp(fMutex); fStatus = st; }
@@ -212,8 +210,8 @@ public:
    char                      fProtVer;
    XrdOucString              fFileout;
 
-   bool                      fIsValid;   // Validity flag
    bool                      fIsShutdown; // Whether asked to shutdown
+   bool                      fIsValid;   // Validity flag
 
    XrdOucString              fAlias;     // Session alias
    XrdOucString              fClient;    // Client name

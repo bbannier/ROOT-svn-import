@@ -140,51 +140,9 @@ void XrdProofGroup::Print()
    }
 }
 
-#if 0
 //__________________________________________________________________________
 void XrdProofGroup::Count(const char *usr, int n)
-{ 
-   // Modify the active count
-
-   // A username must be defined and an action required
-   if (!usr || strlen(usr) == 0 || n == 0)
-      return;
-
-   // Reference string
-   XrdOucString u(usr);
-   u += ",";
-
-   XrdSysMutexHelper mhp(fMutex);
-
-   // If we are named, the user must be a member
-   if (fName != "unnamed" && fMembers.find(u) == STR_NPOS)
-      return;
-
-   if (n > 0) {
-
-      // Don't count it if already done
-      if (fActives.find(u) != STR_NPOS)
-         return;
-
-      fActives += u;
-
-
-   } else {
-
-      // Don't remove it if not active
-      if (fActives.find(u) == STR_NPOS)
-         return;
-
-      fActives.replace(u,"");
-   }
-
-   // Count
-   fActive += n;
-}
-#else
-//__________________________________________________________________________
-void XrdProofGroup::Count(const char *usr, int n)
-{ 
+{
    // Modify the active count
 
    // A username must be defined and an action required
@@ -229,7 +187,6 @@ int XrdProofGroup::Active(const char *usr)
    // Done
    return na;
 }
-#endif
 
 //__________________________________________________________________________
 bool XrdProofGroup::HasMember(const char *usr)

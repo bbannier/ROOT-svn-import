@@ -49,7 +49,7 @@ XrdProofdNetMgr::XrdProofdNetMgr(XrdProofdManager *mgr,
    // Constructor
 
    fMgr = mgr;
-   fResourceType = kRTStatic;
+   fResourceType = kRTNone;
    fPROOFcfg.fName = "";
    fPROOFcfg.fMtime = 0;
    fWorkers.clear();
@@ -69,6 +69,7 @@ void XrdProofdNetMgr::RegisterDirectives()
 
    Register("adminreqto", new XrdProofdDirective("adminreqto", this, &DoDirectiveClass));
    Register("resource", new XrdProofdDirective("resource", this, &DoDirectiveClass));
+   Register("worker", new XrdProofdDirective("worker", this, &DoDirectiveClass));
    Register("localwrks", new XrdProofdDirective("localwrks", (void *)&fNumLocalWrks, &DoDirectiveInt));
 }
 
@@ -92,6 +93,17 @@ int XrdProofdNetMgr::Config(bool rcf)
    // Run configuration and parse the entered config directives.
    // Return 0 on success, -1 on error
 
+   // Cleanup the worker list
+   std::list<XrdProofWorker *>::iterator w = fWorkers.begin();
+   while (w != fWorkers.end()) {
+      delete *w;
+      w = fWorkers.erase(w);
+   }
+   // Create a default master line
+   XrdOucString mm("master ",128);
+   mm += fMgr->Host();
+   fWorkers.push_back(new XrdProofWorker(mm.c_str()));
+
    // Run first the configurator
    if (XrdProofdConfig::Config(rcf) != 0) {
       fEDest->Say(0, "xpd: Config: NetMgr: problems parsing file ");
@@ -107,7 +119,6 @@ int XrdProofdNetMgr::Config(bool rcf)
       fEDest->Say(0, "xpd: Config: NetMgr: PROOF config file: ",
                     ((fPROOFcfg.fName.length() > 0) ? fPROOFcfg.fName.c_str()
                                                     : "none"));
-
       if (fResourceType == kRTStatic) {
          // Initialize the list of workers if a static config has been required
          // Default file path, if none specified
@@ -122,7 +133,15 @@ int XrdProofdNetMgr::Config(bool rcf)
                return 0;
             }
          }
+      } else if (fResourceType == kRTNone && fWorkers.size() <= 0) {
+         // Nothign defined: use default
+         CreateDefaultPROOFcfg();
       }
+      XrdProofdAux::Form(msg, "xpd: Config: NetMgr: %d worker nodes defined", fWorkers.size() - 1);
+      fEDest->Say(0, msg.c_str());
+
+      // Find unique nodes
+      FindUniqueNodes();
    }
 
    if (fPROOFcfg.fName.length() <= 0)
@@ -147,6 +166,8 @@ int XrdProofdNetMgr::DoDirective(XrdProofdDirective *d,
       return DoDirectiveResource(val, cfg, rcf);
    } else if (d->fName == "adminreqto") {
       return DoDirectiveAdminReqTO(val, cfg, rcf);
+   } else if (d->fName == "worker") {
+      return DoDirectiveWorker(val, cfg, rcf);
    }
    TRACE(XERR,"DoDirective: unknown directive: "<<d->fName);
    return -1;
@@ -207,6 +228,42 @@ int XrdProofdNetMgr::DoDirectiveResource(char *val, XrdOucStream *cfg, bool)
                fPROOFcfg.fMtime = 0;
             }
          }
+      }
+   }
+   return 0;
+}
+
+//______________________________________________________________________________
+int XrdProofdNetMgr::DoDirectiveWorker(char *val, XrdOucStream *cfg, bool)
+{
+   // Process 'worker' directive
+
+   if (!val || !cfg)
+      // undefined inputs
+      return -1;
+
+   // Get the full line (w/o heading keyword)
+   cfg->RetToken();
+   char *rest = 0;
+   val = cfg->GetToken(&rest);
+   if (val) {
+      // Build the line
+      XrdOucString line;
+      XrdProofdAux::Form(line, "%s %s", val, rest);
+      // Parse it now
+      if (!strcmp(val, "master") || !strcmp(val, "node")) {
+         // Init a master instance
+         XrdProofWorker *pw = new XrdProofWorker(line.c_str());
+         if (pw->fHost == "localhost" ||
+             pw->Matches(fMgr->Host())) {
+            // Replace the default line (the first with what found in the file)
+            XrdProofWorker *fw = fWorkers.front();
+            fw->Reset(line.c_str());
+         }
+         SafeDelete(pw);
+      } else {
+         // Build the worker object
+         fWorkers.push_back(new XrdProofWorker(line.c_str()));
       }
    }
    return 0;
@@ -611,7 +668,6 @@ char *XrdProofdNetMgr::ReadBufferLocal(const char *file, kXR_int64 ofs, int &len
    do {
       while ((nr = read(fd, buf + pos, left)) < 0 && errno == EINTR)
          errno = 0;
-      TRACE(HDBG, "ReadBufferLocal: read "<<nr<<" bytes: "<< buf);
       if (nr < 0) {
          TRACE(XERR, "ReadBufferLocal: error reading from file: errno: "<< errno);
          break;
@@ -625,6 +681,7 @@ char *XrdProofdNetMgr::ReadBufferLocal(const char *file, kXR_int64 ofs, int &len
 
    // Termination
    buf[len] = 0;
+   TRACE(HDBG, "ReadBufferLocal: read "<<nr<<" bytes: "<< buf);
 
    // Close file
    close(fd);
@@ -866,11 +923,7 @@ void XrdProofdNetMgr::CreateDefaultPROOFcfg()
 
    TRACE(ACT, "CreateDefaultPROOFcfg: enter");
 
-   // Create a default master line
-   XrdOucString mm("master ",128);
-   mm += fMgr->Host();
-   fWorkers.push_back(new XrdProofWorker(mm.c_str()));
-   TRACE(DBG, "CreateDefaultPROOFcfg: added line: " << mm);
+   XrdOucString mm;
 
    // Create 'localhost' lines for each worker
    int nwrk = fNumLocalWrks;
@@ -881,8 +934,6 @@ void XrdProofdNetMgr::CreateDefaultPROOFcfg()
          fWorkers.push_back(new XrdProofWorker(mm.c_str()));
          TRACE(DBG, "CreateDefaultPROOFcfg: added line: " << mm);
       }
-      // One line for the nodes
-      fNodes.push_back(new XrdProofWorker(mm.c_str()));
    }
 
    XPDPRT("CreateDefaultPROOFcfg: done: "<<fWorkers.size()-1<<" workers");
@@ -901,7 +952,7 @@ std::list<XrdProofWorker *> *XrdProofdNetMgr::GetActiveWorkers()
 
    if (fResourceType == kRTStatic && fPROOFcfg.fName.length() > 0) {
       // Check if there were any changes in the config file
-      if (ReadPROOFcfg() != 0) {
+      if (ReadPROOFcfg(1) != 0) {
          TRACE(XERR, "GetActiveWorkers: unable to read the configuration file");
          return (std::list<XrdProofWorker *> *)0;
       }
@@ -921,7 +972,7 @@ std::list<XrdProofWorker *> *XrdProofdNetMgr::GetNodes()
 
    if (fResourceType == kRTStatic && fPROOFcfg.fName.length() > 0) {
       // Check if there were any changes in the config file
-      if (ReadPROOFcfg() != 0) {
+      if (ReadPROOFcfg(1) != 0) {
          TRACE(XERR, "GetNodes: unable to read the configuration file");
          return (std::list<XrdProofWorker *> *)0;
       }
@@ -932,7 +983,7 @@ std::list<XrdProofWorker *> *XrdProofdNetMgr::GetNodes()
 }
 
 //__________________________________________________________________________
-int XrdProofdNetMgr::ReadPROOFcfg()
+int XrdProofdNetMgr::ReadPROOFcfg(bool reset)
 {
    // Read PROOF config file and load the information in fWorkers.
    // NB: 'master' information here is ignored, because it is passed
@@ -955,27 +1006,29 @@ int XrdProofdNetMgr::ReadPROOFcfg()
    if (st.st_mtime <= fPROOFcfg.fMtime)
       return 0;
 
-   // Cleanup the worker list
-   std::list<XrdProofWorker *>::iterator w = fWorkers.begin();
-   while (w != fWorkers.end()) {
-      delete *w;
-      w = fWorkers.erase(w);
-   }
-   // Cleanup the nodes list
-   fNodes.clear();
-
    // Save the modification time
    fPROOFcfg.fMtime = st.st_mtime;
+
+   if (reset) {
+      // Cleanup the worker list
+      std::list<XrdProofWorker *>::iterator w = fWorkers.begin();
+      while (w != fWorkers.end()) {
+         delete *w;
+         w = fWorkers.erase(w);
+      }
+   }
 
    // Open the defined path.
    FILE *fin = 0;
    if (!(fin = fopen(fPROOFcfg.fName.c_str(), "r")))
       return -1;
 
-   // Create a default master line
-   XrdOucString mm("master ",128);
-   mm += fMgr->Host();
-   fWorkers.push_back(new XrdProofWorker(mm.c_str()));
+   if (reset) {
+      // Create a default master line
+      XrdOucString mm("master ",128);
+      mm += fMgr->Host();
+      fWorkers.push_back(new XrdProofWorker(mm.c_str()));
+   }
 
    // Read now the directives
    int nw = 1;
@@ -1009,7 +1062,7 @@ int XrdProofdNetMgr::ReadPROOFcfg()
             fw->Reset(lin);
          }
          SafeDelete(pw);
-     } else {
+      } else {
          // Build the worker object
          fWorkers.push_back(new XrdProofWorker(lin));
          nw++;
@@ -1019,9 +1072,30 @@ int XrdProofdNetMgr::ReadPROOFcfg()
    // Close files
    fclose(fin);
 
+   // Find unique nodes
+   if (reset)
+      FindUniqueNodes();
+
+   // We are done
+   return ((nw == 0) ? -1 : 0);
+}
+
+//__________________________________________________________________________
+int XrdProofdNetMgr::FindUniqueNodes()
+{
+   // Scan fWorkers for unique nodes (stored in fNodes).
+   // Return the number of unque nodes.
+   // NB: 'master' information here is ignored, because it is passed
+   //     via the 'xpd.workdir' and 'xpd.image' config directives
+
+   TRACE(ACT, "FindUniqueNodes: enter: # workers: " << fWorkers.size());
+
+   // Cleanup the nodes list
+   fNodes.clear();
+
    // Build the list of unique nodes (skip the master line);
    if (fWorkers.size() > 0) {
-      w = fWorkers.begin();
+      std::list<XrdProofWorker *>::iterator w = fWorkers.begin();
       w++;
       for ( ; w != fWorkers.end(); w++) {
          bool add = 1;
@@ -1036,8 +1110,8 @@ int XrdProofdNetMgr::ReadPROOFcfg()
             fNodes.push_back(*w);
       }
    }
-   TRACE(DBG, "ReadPROOFcfg: found " << fNodes.size() <<" unique nodes");
+   TRACE(DBG, "FindUniqueNodes: found " << fNodes.size() <<" unique nodes");
 
    // We are done
-   return ((nw == 0) ? -1 : 0);
+   return fNodes.size();
 }

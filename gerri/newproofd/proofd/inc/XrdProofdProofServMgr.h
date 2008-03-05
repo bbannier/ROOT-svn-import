@@ -1,4 +1,4 @@
-// @(#)root/proofd:$Id:$
+// @(#)root/proofd:$Id$
 // Author: G. Ganis Jan 2008
 
 /*************************************************************************
@@ -35,23 +35,43 @@
 #include "XrdOuc/XrdOucString.hh"
 
 #include "XrdProofdConfig.h"
-#include "XrdProofServProxy.h"
+#include "XrdProofdProofServ.h"
 
 class XrdOucStream;
 class XrdProtocol_Config;
 class XrdProofdManager;
+class XrdROOTMgr;
 class XrdScheduler;
+
+class XpdClientSessions {
+public:
+   XrdProofdClient *fClient;
+   std::list<XrdProofdProofServ *> fProofServs;
+   XpdClientSessions(XrdProofdClient *c) : fClient(c) { }
+};
 
 class XrdProofSessionInfo {
 public:
    time_t         fLastAccess;
+   int            fPid;
+   int            fID;
+   int            fSrvType;
+   int            fStatus;
    XrdOucString   fUser;
    XrdOucString   fGroup;
    XrdOucString   fUnixPath;
-   XrdProofSessionInfo(const char *u, const char *g, const char *p) :
-                       fLastAccess(0), fUser(u), fGroup(g), fUnixPath(p) { }
+   XrdOucString   fTag;
+   XrdOucString   fAlias;
+   XrdOucString   fLogFile;
+   XrdOucString   fOrdinal;
+   XrdOucString   fUserEnvs;
+   XrdOucString   fROOTTag;
+   int            fSrvProtVers;
+
+   XrdProofSessionInfo(XrdProofdClient *c, XrdProofdProofServ *s);
    XrdProofSessionInfo(const char *file) { ReadFromFile(file); }
 
+   void FillProofServ(XrdProofdProofServ &s, XrdROOTMgr *rmgr);
    int ReadFromFile(const char *file);
    void Reset();
    int SaveToFile(const char *file);
@@ -74,22 +94,27 @@ class XrdProofdProofServMgr : public XrdProofdConfig {
    int                fCheckFrequency;
    int                fTerminationTimeOut;
    int                fVerifyTimeOut;
+   int                fReconnectTime;
+   int                fReconnectTimeOut;
+   int                fRecoverTimeOut;
 
    XrdOucString       fActiAdminPath; // Active sessions admin area
    XrdOucString       fTermAdminPath; // Terminated sessions admin area
 
-   XrdOucHash<XrdProofServProxy> fSessions; // List of sessions
-   std::list<XrdProofServProxy *> fActiveSessions;     // List of active sessions (non-idle)
+   XrdOucHash<XrdProofdProofServ> fSessions; // List of sessions
+   std::list<XrdProofdProofServ *> fActiveSessions;     // List of active sessions (non-idle)
 
    int                DoDirectiveProofServMgr(char *, XrdOucStream *, bool);
    int                DoDirectivePutEnv(char *, XrdOucStream *, bool);
    int                DoDirectivePutRc(char *, XrdOucStream *, bool);
    int                DoDirectiveShutdown(char *, XrdOucStream *, bool);
 
+   int                RecoverActiveSessions();
+   int                ResolveSession(int pid, std::list<XpdClientSessions> *cls);
+
    // Session Admin path management
-   XrdOucString       GetSessionPath(const char *root, int pid);
    int                GetSessionInfo(int pid, XrdProofSessionInfo &info);
-   int                AddSession(int pid, XrdProofdClient *c);
+   int                AddSession(XrdProofdClient *c, XrdProofdProofServ *s);
    int                RmSession(int pid);
    int                TouchSession(int pid, const char *path = 0);
 
@@ -105,23 +130,22 @@ public:
    int               CheckFrequency() const { return fCheckFrequency; }
    int               InternalWait() const { return fInternalWait; }
 
+   bool              IsReconnecting();
+   void              SetReconnectTime(bool on = 1);
+
    int               Process(XrdProofdProtocol *p);
 
-   int               Accept(XrdProofdProtocol *p, XrdProofServProxy *xps);
+   XrdProofdProofServ *Accept(XrdProofdClient *c, int to, XrdOucString &e);
    int               Attach(XrdProofdProtocol *p);
    int               Create(XrdProofdProtocol *p);
    int               Destroy(XrdProofdProtocol *p);
    int               Detach(XrdProofdProtocol *p);
+   int               Recover(XpdClientSessions *cl);
 
    int               BroadcastPriorities();
 
-#if 0
-   void              AddActiveSession(XrdProofServProxy *p) { fActiveSessions.push_back(p); }
-   void              RemoveActiveSession(XrdProofServProxy *p) { fActiveSessions.remove(p); }
-#else
-   std::list<XrdProofServProxy *> *ActiveSessions() { return &fActiveSessions; }
-   XrdProofServProxy *GetActiveSession(int pid);
-#endif
+   std::list<XrdProofdProofServ *> *ActiveSessions() { return &fActiveSessions; }
+   XrdProofdProofServ *GetActiveSession(int pid);
 
    int               CleanupProofServ(bool all = 0, const char *usr = 0);
 
