@@ -140,8 +140,11 @@ public:
    static int GetUserInfo(const char *usr, XrdProofUI &ui);
    static int GetUserInfo(int uid, XrdProofUI &ui);
    static int KillProcess(int pid, bool forcekill, XrdProofUI ui, bool changeown);
+   static int MvDir(const char *oldpath, const char *newpath);
    static char *ReadMsg(int fd);
+   static int RmDir(const char *path);
    static int SymLink(const char *path, const char *link);
+   static int Touch(const char *path, int opt = 0);
    static int VerifyProcessByID(int pid, const char *pname = "proofserv");
    static int Write(int fd, const void *buf, size_t nb);
 };

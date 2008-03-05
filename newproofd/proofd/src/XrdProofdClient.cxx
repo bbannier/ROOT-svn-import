@@ -24,7 +24,7 @@
 
 #include "XrdProofdClient.h"
 #include "XrdProofdProtocol.h"
-#include "XrdProofServProxy.h"
+#include "XrdProofdProofServ.h"
 
 #include "XrdProofdTrace.h"
 static const char *gTraceID = "";
@@ -33,7 +33,7 @@ extern XrdOucTrace *XrdProofdTrace;
 
 //__________________________________________________________________________
 XrdProofdClient::XrdProofdClient(XrdProofUI ui, bool master, bool changeown,
-                                 XrdSysError *edest, const char *tmp)
+                                 XrdSysError *edest, const char *adminpath)
                 : fSandbox(ui, master, changeown)
 {
    // Constructor
@@ -42,22 +42,26 @@ XrdProofdClient::XrdProofdClient(XrdProofUI ui, bool master, bool changeown,
    fClients.reserve(10);
    fUI = ui;
    fUNIXSock = 0;
-   fUNIXSockPath = 0;
    fUNIXSockSaved = 0;
-   if (tmp && !strncmp(tmp, "sock:", 5)) {
-      // Using previously defined socket path
-      fUNIXSockPath = new char[strlen(tmp)-4];
-      sprintf(fUNIXSockPath,"%s", tmp + 5);
-      fUNIXSockSaved = 1;
-   }
    fROOT = 0;
    fIsValid = 0;
    fRefSid = 0;
    fChangeOwn = changeown;
 
+   // Make sure the admin path exists
+   XrdProofdAux::Form(fAdminPath, "%s/%s.%s",
+                      adminpath, ui.fUser.c_str(), ui.fGroup.c_str());
+   struct stat st;
+   if (stat(adminpath, &st) != 0)
+      return;
+   XrdProofUI effui;
+   XrdProofdAux::GetUserInfo(st.st_uid, effui);
+   if (XrdProofdAux::AssertDir(fAdminPath.c_str(), effui, 1) != 0)
+      return;
+
    // Create the UNIX socket
    if (fSandbox.IsValid())
-      if (CreateUNIXSock(edest, tmp, changeown) == 0)
+      if (CreateUNIXSock(edest) == 0)
          fIsValid = 1;
 }
 
@@ -68,7 +72,6 @@ XrdProofdClient::~XrdProofdClient()
 
    // Unix socket
    SafeDel(fUNIXSock);
-   SafeDelArray(fUNIXSockPath);
 }
 
 //__________________________________________________________________________
@@ -78,7 +81,7 @@ bool XrdProofdClient::Match(const char *id, const char *grp)
 
    bool rc = (id && !strcmp(id, User())) ? 1 : 0;
    if (rc && grp && strlen(grp) > 0)
-      rc = (grp && !strcmp(grp, Group())) ? 1 : 0;
+      rc = (grp && Group() && !strcmp(grp, Group())) ? 1 : 0;
 
    return rc;
 }
@@ -114,41 +117,54 @@ int XrdProofdClient::GetClientID(XrdProofdProtocol *p)
 }
 
 //__________________________________________________________________________
-int XrdProofdClient::CreateUNIXSock(XrdSysError *edest,
-                                    const char *tmpdir, bool changeown)
+int XrdProofdClient::ReserveClientID(int cid)
+{
+   // Reserve a client ID. If none is found, increase the vector size
+   // and performe the needed initializations
+
+   XrdSysMutexHelper mh(fMutex);
+
+   if (cid < 0)
+      return -1;
+
+   if (cid < (int)fClients.size())
+      return 0;
+
+   // We need to resize (double it)
+   if (cid >= (int)fClients.capacity()) {
+      int newsz = 2 * fClients.capacity();
+      newsz = (cid < newsz) ? newsz : cid + 1;
+      fClients.reserve(newsz);
+   }
+
+   // Fill in new elements
+   while (cid >= (int)fClients.size())
+      fClients.push_back(new XrdProofdProtocol());
+
+   TRACE(DBG, "XrdProofdClient::GetClientID: cid: "<<cid<<", size: "<<fClients.size());
+
+   // We are done
+   return 0;
+}
+
+//__________________________________________________________________________
+int XrdProofdClient::CreateUNIXSock(XrdSysError *edest)
 {
    // Create UNIX socket for internal connections
 
    TRACE(ACT, "CreateUNIXSock: enter");
 
-#if 0
+
    // Make sure we do not have already a socket
-   if (fUNIXSock && fUNIXSockPath) {
+   if (fUNIXSock) {
        TRACE(DBG,"CreateUNIXSock: UNIX socket exists already! (" <<
              fUNIXSockPath<<")");
        return 0;
    }
 
-   // Make sure we do not have inconsistencies
-   if (fUNIXSock || fUNIXSockPath) {
-       TRACE(XERR,"CreateUNIXSock: inconsistent values: corruption? (sock: " <<
-                 fUNIXSock<<", path: "<< fUNIXSockPath);
-       return -1;
-   }
-#else
-
-   // Make sure we do not have inconsistencies
-   if (fUNIXSock || !fUNIXSockPath) {
-       TRACE(XERR,"CreateUNIXSock: inconsistent values: corruption? (sock: " <<
-                 fUNIXSock<<", path: "<< fUNIXSockPath);
-       return -1;
-   }
-#endif
-
    // Inputs must make sense
-   if (!edest || !tmpdir) {
-       TRACE(XERR,"CreateUNIXSock: invalid inputs: edest: " <<
-                 (int *)edest <<", tmpdir: "<< (int *)tmpdir);
+   if (!edest) {
+       TRACE(XERR,"CreateUNIXSock: invalid input: edest: " << (int *)edest);
        return -1;
    }
 
@@ -156,15 +172,36 @@ int XrdProofdClient::CreateUNIXSock(XrdSysError *edest,
    fUNIXSock = new XrdNet(edest);
 
    // Create path if needed
+   XrdProofdAux::Form(fUNIXSockPath, "%s/xpdsock", fAdminPath.c_str());
+   fUNIXSockPath.replace("//", "/");
+   bool rm = 0, ok = 0;
+   struct stat st;
+   if (stat(fUNIXSockPath.c_str(), &st) == 0) {
+      if (!S_ISSOCK(st.st_mode))
+         rm = 1;
+      else
+         ok = 1;
+   } else {
+      if (errno != ENOENT)
+         rm = 1;
+   }
+   if (rm  && unlink(fUNIXSockPath.c_str()) != 0) {
+      TRACE(XERR,"CreateUNIXSock: non-socket path exists: unable to delete it: "
+                  <<fUNIXSockPath);
+      return -1;
+   }
+
+   // Create the path
    int fd = 0;
-   if (!fUNIXSockPath) {
-      fUNIXSockPath = new char[strlen(tmpdir)+strlen("/xpdsock_XXXXXX")+2];
-      sprintf(fUNIXSockPath,"%s/xpdsock_XXXXXX", tmpdir);
-      if ((fd = mkstemp(fUNIXSockPath)) > -1)
-         close(fd);
+   if (!ok) {
+      if ((fd = open(fUNIXSockPath.c_str(), O_EXCL | O_RDWR | O_CREAT)) < 0) {
+         TRACE(XERR,"CreateUNIXSock: unable to create path: " <<fUNIXSockPath);
+         return -1;
+      }
+      close(fd);
    }
    if (fd > -1) {
-      if (fUNIXSock->Bind(fUNIXSockPath)) {
+      if (fUNIXSock->Bind((char *)fUNIXSockPath.c_str())) {
          TRACE(XERR,"CreateUNIXSock: warning:"
                    " problems binding to UNIX socket; path: " <<fUNIXSockPath);
          return -1;
@@ -178,19 +215,19 @@ int XrdProofdClient::CreateUNIXSock(XrdSysError *edest,
 
    // Set ownership of the socket file to the client
    XrdSysPrivGuard pGuard((uid_t)0, (gid_t)0);
-   if (XpdBadPGuard(pGuard, fUI.fUid) && changeown) {
+   if (XpdBadPGuard(pGuard, fUI.fUid) && fChangeOwn) {
       TRACE(XERR, "CreateUNIXSock: could not get privileges");
       return -1;
    }
-   if (changeown) {
-      if (chown(fUNIXSockPath, fUI.fUid, fUI.fGid) == -1) {
+   if (fChangeOwn) {
+      if (chown(fUNIXSockPath.c_str(), fUI.fUid, fUI.fGid) == -1) {
          TRACE(XERR, "CreateUNIXSock: cannot set user ownership"
                       " on UNIX socket (errno: "<<errno<<")");
          return -1;
       }
       // Make sure that it worked out
       struct stat st;
-      if ((stat(fUNIXSockPath, &st) != 0) || 
+      if ((stat(fUNIXSockPath.c_str(), &st) != 0) || 
             (int) st.st_uid != fUI.fUid || (int) st.st_gid != fUI.fGid) {
          TRACE(XERR, "CreateUNIXSock: problems setting user ownership"
                       " on UNIX socket");
@@ -216,7 +253,7 @@ void XrdProofdClient::SaveUNIXPath()
    }
 
    // Make sure we do not have already a socket
-   if (!fUNIXSockPath) {
+   if (fUNIXSockPath.length() <= 0) {
        TRACE(XERR,"SaveUNIXPath: UNIX path undefined!");
        return;
    }
@@ -260,13 +297,6 @@ void XrdProofdClient::SaveUNIXPath()
       if ((vrc = XrdProofdAux::VerifyProcessByID(pid, "xrootd")) != 0) {
          // Still there
          actln.push_back(new XrdOucString(ln));
-      } else if (vrc == 0) {
-         // Not running: remove the socket path
-         TRACE(DBG, "SaveUNIXPath: unlinking socket path "<< path);
-         if (unlink(path) != 0 && errno != ENOENT) {
-            TRACE(XERR, "SaveUNIXPath: problems unlinking socket path "<< path<<
-                    " (errno: "<<errno<<")");
-         }
       }
    }
 
@@ -291,7 +321,7 @@ void XrdProofdClient::SaveUNIXPath()
 
    // Append the path and our process ID
    lseek(fileno(fup), 0, SEEK_END);
-   fprintf(fup, "%d %s\n", getppid(), fUNIXSockPath);
+   fprintf(fup, "%d %s\n", getppid(), fUNIXSockPath.c_str());
 
    // Unlock the file
    lseek(fileno(fup), 0, SEEK_SET);
@@ -306,47 +336,8 @@ void XrdProofdClient::SaveUNIXPath()
    fUNIXSockSaved = 1;
 }
 
-#if 0
 //__________________________________________________________________________
-int XrdProofdClient::GetFreeServID()
-{
-   // Get next free server ID. If none is found, increase the vector size
-   // and get the first new one
-
-   TRACE(ACT,"GetFreeServID: enter");
-
-   XrdSysMutexHelper mh(fMutex);
-
-   TRACE(DBG,"GetFreeServID: size = "<<fProofServs.size()<<
-              "; capacity = "<<fProofServs.capacity());
-   int ic = 0;
-   // Search for free places in the existing vector
-   for (ic = 0; ic < (int)fProofServs.size() ; ic++) {
-      if (fProofServs[ic] && !(fProofServs[ic]->IsValid())) {
-         fProofServs[ic]->SetValid();
-         return ic;
-      }
-   }
-
-   // We may need to resize (double it)
-   if (ic >= (int)fProofServs.capacity()) {
-      int newsz = 2 * fProofServs.capacity();
-      fProofServs.reserve(newsz);
-   }
-
-   // Allocate new element
-   fProofServs.push_back(new XrdProofServProxy());
-
-   TRACE(DBG,"GetFreeServID: size = "<<fProofServs.size()<<
-              "; new capacity = "<<fProofServs.capacity()<<"; ic = "<<ic);
-
-   // We are done
-   return ic;
-}
-#else
-
-//__________________________________________________________________________
-XrdProofServProxy *XrdProofdClient::GetFreeServObj()
+XrdProofdProofServ *XrdProofdClient::GetFreeServObj()
 {
    // Get next free server ID. If none is found, increase the vector size
    // and get the first new one
@@ -371,27 +362,72 @@ XrdProofServProxy *XrdProofdClient::GetFreeServObj()
       int newsz = 2 * fProofServs.capacity();
       fProofServs.reserve(newsz);
 
-      TRACE(DBG,"GetFreeServID: new capacity = "<<fProofServs.capacity());
+      TRACE(DBG,"GetFreeServObj: new capacity = "<<fProofServs.capacity());
    }
 
    // Allocate new element
-   fProofServs.push_back(new XrdProofServProxy());
+   fProofServs.push_back(new XrdProofdProofServ());
 
-   XrdProofServProxy *xps = fProofServs[ic];
+   XrdProofdProofServ *xps = fProofServs[ic];
    xps->SetValid();
    xps->SetID(ic);
 
-   TRACE(DBG,"GetFreeServID: size = "<<fProofServs.size()<<"; ic = "<<ic);
+   TRACE(DBG,"GetFreeServObj: size = "<<fProofServs.size()<<"; ic = "<<ic);
 
    // We are done
    return xps;
 }
 
+//__________________________________________________________________________
+XrdProofdProofServ *XrdProofdClient::GetServObj(int id)
+{
+   // Get server at 'id'. If needed, increase the vector size
 
-#endif
+   TRACE(ACT,"GetServObj: enter: id: "<< id);
+
+   if (id < 0) {
+      TRACE(XERR, "GetServObj: invalid input: id: "<< id);
+      return (XrdProofdProofServ *)0;
+   }
+
+   XrdSysMutexHelper mh(fMutex);
+
+   TRACE(DBG,"GetServObj: size = "<<fProofServs.size()<<
+              "; capacity = "<<fProofServs.capacity());
+
+   if (id < (int)fProofServs.size()) {
+      if (fProofServs[id]) {
+         fProofServs[id]->SetValid();
+         return fProofServs[id];
+      } else {
+         TRACE(XERR, "GetServObj: instance in use or undefined! protocol error");
+         return (XrdProofdProofServ *)0;
+      }
+   }
+
+   // If we did not find it, we first resize the vector if needed (double it)
+   if (id >= (int)fProofServs.capacity()) {
+      int newsz = 2 * fProofServs.capacity();
+      newsz = (id < newsz) ? newsz : id+1;
+      fProofServs.reserve(newsz);
+      TRACE(DBG,"GetServObj: new capacity = "<<fProofServs.capacity());
+   }
+   int nnew = id - fProofServs.size() + 1;
+   while (nnew--)
+      fProofServs.push_back(new XrdProofdProofServ());
+
+   XrdProofdProofServ *xps = fProofServs[id];
+   xps->SetValid();
+   xps->SetID(id);
+
+   TRACE(DBG,"GetServObj: size = "<<fProofServs.size()<<"; id = "<<id);
+
+   // We are done
+   return xps;
+}
 
 //______________________________________________________________________________
-XrdProofServProxy *XrdProofdClient::GetServer(int psid)
+XrdProofdProofServ *XrdProofdClient::GetServer(int psid)
 {
    // Get from the vector server instance with id psid
 
@@ -399,8 +435,8 @@ XrdProofServProxy *XrdProofdClient::GetServer(int psid)
 
    XrdSysMutexHelper mh(fMutex);
 
-   XrdProofServProxy *xps = 0;
-   std::vector<XrdProofServProxy *>::iterator ip;
+   XrdProofdProofServ *xps = 0;
+   std::vector<XrdProofdProofServ *>::iterator ip;
    for (ip = fProofServs.begin(); ip != fProofServs.end(); ++ip) {
       xps = *ip;
       if (xps && xps->Match(psid))
@@ -412,7 +448,7 @@ XrdProofServProxy *XrdProofdClient::GetServer(int psid)
 }
 
 //______________________________________________________________________________
-XrdProofServProxy *XrdProofdClient::GetServer(XrdProofdProtocol *p)
+XrdProofdProofServ *XrdProofdClient::GetServer(XrdProofdProtocol *p)
 {
    // Get server instance connected via 'p'
 
@@ -420,8 +456,8 @@ XrdProofServProxy *XrdProofdClient::GetServer(XrdProofdProtocol *p)
 
    XrdSysMutexHelper mh(fMutex);
 
-   XrdProofServProxy *xps = 0;
-   std::vector<XrdProofServProxy *>::iterator ip;
+   XrdProofdProofServ *xps = 0;
+   std::vector<XrdProofdProofServ *>::iterator ip;
    for (ip = fProofServs.begin(); ip != fProofServs.end(); ++ip) {
       xps = (*ip);
       if (xps->Link() == p->Link())
@@ -433,14 +469,14 @@ XrdProofServProxy *XrdProofdClient::GetServer(XrdProofdProtocol *p)
 }
 
 //______________________________________________________________________________
-XrdProofServProxy *XrdProofdClient::GetProofServ(int psid)
+XrdProofdProofServ *XrdProofdClient::GetProofServ(int psid)
 {
    // Get from the vector server instance with ID psid
 
    if (psid > -1 && psid < (int) fProofServs.size())
       return fProofServs.at(psid);
    // Done
-   return (XrdProofServProxy *)0;
+   return (XrdProofdProofServ *)0;
 }
 
 //______________________________________________________________________________
@@ -452,8 +488,8 @@ void XrdProofdClient::EraseServer(int psid)
 
    XrdSysMutexHelper mh(fMutex);
 
-   XrdProofServProxy *xps = 0;
-   std::vector<XrdProofServProxy *>::iterator ip;
+   XrdProofdProofServ *xps = 0;
+   std::vector<XrdProofdProofServ *>::iterator ip;
    for (ip = fProofServs.begin(); ip != fProofServs.end(); ++ip) {
       xps = *ip;
       if (xps && xps->Match(psid)) {
@@ -472,7 +508,7 @@ void XrdProofdClient::DisconnectFromProofServ(XrdProofdProtocol *p)
 
    XrdSysMutexHelper mh(fMutex);
 
-   std::vector<XrdProofServProxy *>::iterator ip;
+   std::vector<XrdProofdProofServ *>::iterator ip;
    for (ip = fProofServs.begin(); ip != fProofServs.end(); ++ip)
       (*ip)->FreeClientID(p);
 
@@ -503,7 +539,27 @@ int XrdProofdClient::ResetClientSlot(XrdProofdProtocol *p)
 }
 
 //______________________________________________________________________________
-void XrdProofdClient::Broadcast(const char *msg,  bool closelink)
+int XrdProofdClient::SetClientID(int cid, XrdProofdProtocol *p)
+{
+   // Set slot cid to instance 'p'
+
+   TRACE(ACT,"SetClientID: cid: "<< cid <<", p: " << p);
+
+   XrdSysMutexHelper mh(fMutex);
+
+   if (cid >= 0 && cid < (int) fClients.size()) {
+      if (fClients[cid])
+         delete fClients[cid];
+      fClients[cid] = p;
+      return 0;
+   }
+
+   // Not found
+   return -1;
+}
+
+//______________________________________________________________________________
+void XrdProofdClient::Broadcast(const char *msg)
 {
    // Broadcast message 'msg' to the connected clients
 
@@ -515,56 +571,13 @@ void XrdProofdClient::Broadcast(const char *msg,  bool closelink)
       XrdProofdProtocol *p = 0;
       for (ic = 0; ic < (int) fClients.size(); ic++) {
          if ((p = fClients.at(ic)) && p->ConnType() == kXPD_ClientMaster) {
-#if 0
-            unsigned short sid;
-            p->Response()->GetSID(sid);
-            p->Response()->Set(fRefSid);
-            p->Response()->Send(kXR_attn, kXPD_srvmsg, (char *) msg, len);
-            p->Response()->Set(sid);
-#else
             XrdProofdResponse *response = p ? p->Response(fRefSid) : 0;
             if (response)
                response->Send(kXR_attn, kXPD_srvmsg, (char *) msg, len);
-#endif
-            if (closelink)
-               // Close the link, so that the associated protocol instance can be recycled
-               p->Link()->Close();
          }
       }
    }
 }
-
-#if 0
-//______________________________________________________________________________
-int XrdProofdClient::StopShutdownTimers(XrdOucString &emsg)
-{
-   // Stop shutdown timers on sessions, if any
-
-   int rc = 0;
-   emsg = "StopShutdownTimers: could not stop shutdown timer in proofsrv";
-   if (fProofServs.size() > 0) {
-      XrdProofServProxy *psrv = 0;
-      int is = 0;
-      for (is = 0; is < (int) fProofServs.size(); is++) {
-         if ((psrv = fProofServs.at(is)) &&
-              psrv->IsValid() && (psrv->SrvType() == kXPD_TopMaster) &&
-              psrv->IsShutdown()) {
-            if (psrv->SetShutdownTimer(-1, 0, 0) != 0) {
-               emsg += ": ";
-               emsg += psrv->SrvPID();
-               emsg += "; status: ";
-               emsg += psrv->StatusAsString();
-               rc = -1;
-            }
-         }
-      }
-   }
-   if (!rc)
-      emsg = "";
-   // Done
-   return rc;
-}
-#endif
 
 //______________________________________________________________________________
 XrdOucString XrdProofdClient::ExportSessions()
@@ -573,9 +586,9 @@ XrdOucString XrdProofdClient::ExportSessions()
 
    XrdOucString out;
 
-   XrdProofServProxy *xps = 0;
+   XrdProofdProofServ *xps = 0;
    int ns = 0;
-   std::vector<XrdProofServProxy *>::iterator ip;
+   std::vector<XrdProofdProofServ *>::iterator ip;
    for (ip = fProofServs.begin(); ip != fProofServs.end(); ++ip)
       if ((xps = *ip) && xps->IsValid() && (xps->SrvType() == kXPD_TopMaster))
          ns++;
@@ -598,15 +611,15 @@ XrdOucString XrdProofdClient::ExportSessions()
 }
 
 //______________________________________________________________________________
-void XrdProofdClient::TerminateSessions(bool kill, int srvtype,
-                                        XrdProofServProxy *ref,
-                                        const char *msg, std::list<int> &sigpid)
+void XrdProofdClient::TerminateSessions(int srvtype,
+                                        XrdProofdProofServ *ref,
+                                        const char *msg, int wfd)
 {
    // Terminate client sessions; IDs of signalled processes are added to sigpid.
 
    // Loop over client sessions and terminated them
    int is = 0;
-   XrdProofServProxy *s = 0;
+   XrdProofdProofServ *s = 0;
    for (is = 0; is < (int) fProofServs.size(); is++) {
       if ((s = fProofServs.at(is)) && s->IsValid() && (!ref || ref == s) &&
           (s->SrvType() == srvtype || (srvtype == kXPD_AnyServer))) {
@@ -616,23 +629,43 @@ void XrdProofdClient::TerminateSessions(bool kill, int srvtype,
             // Tell other attached clients, if any, that this session is gone
             Broadcast(msg);
 
-         bool siged = 1;
-         if (s->TerminateProofServ() < 0)
-            if (XrdProofdAux::KillProcess(s->SrvPID(), kill, fUI, fChangeOwn) != 0)
-               siged = 0;
-         // Add to the list
-         if (siged) {
-            sigpid.push_back(s->SrvPID());
-            // Record this session in the sandbox as old session
-            XrdOucString tag = "-";
-            tag += s->SrvPID();
-            if (fSandbox.GuessTag(tag, 1) == 0)
-               fSandbox.RemoveSession(tag.c_str());
-         }
-         // Reset session proxy
+         // Sendout a termination signal
+         s->TerminateProofServ();
+
+         // Record this session in the sandbox as old session
+         XrdOucString tag = "-";
+         tag += s->SrvPID();
+         if (fSandbox.GuessTag(tag, 1) == 0)
+            fSandbox.RemoveSession(tag.c_str());
+
+         // Tell the session manager that the session is gone
+         PostSessionRemoval(wfd, s->SrvPID());
+
+         // Reset this session
          s->Reset();
       }
    }
 }
 
+//___________________________________________________________________________
+void XrdProofdClient::PostSessionRemoval(int fd, int pid)
+{
+   // Post removal of session 'pid'
+
+   TRACE(DBG, "PostSessionRemoval: posting session removal to socket "<<fd);
+
+   if (fd > 0) {
+      int type = 0;
+      if (write(fd, &type, sizeof(type)) !=  sizeof(type)) {
+         TRACE(XERR, "PostSessionRemoval: problem sending message type on the pipe");
+         return;
+      }
+      if (write(fd, &pid, sizeof(pid)) !=  sizeof(pid)) {
+         TRACE(XERR, "PostSessionRemoval: problem sending pid on the pipe: "<<pid);
+         return;
+      }
+   }
+   // Done
+   return;
+}
 

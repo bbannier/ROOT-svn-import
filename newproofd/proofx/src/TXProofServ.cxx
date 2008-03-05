@@ -439,7 +439,7 @@ void TXProofServ::HandleUrgentData()
       return;
    }
 
-//   PDB(kGlobal, 5)
+   PDB(kGlobal, 5)
       Info("HandleUrgentData", "got interrupt: %d\n", iLev);
 
    if (fProof)
@@ -451,7 +451,6 @@ void TXProofServ::HandleUrgentData()
          PDB(kGlobal, 5)
             Info("HandleUrgentData", "*** Ping");
 
-#if 1
          // If master server, propagate interrupt to slaves
          if (IsMaster()) {
             Int_t nbad = fProof->fActiveSlaves->GetSize() - fProof->Ping();
@@ -459,16 +458,9 @@ void TXProofServ::HandleUrgentData()
                Info("HandleUrgentData","%d slaves did not reply to ping",nbad);
             }
          }
-#endif
 
          // Reply to ping
          ((TXSocket *)fSocket)->Ping();
-
-#if 0
-         // Send log with result of ping
-         if (IsMaster())
-            SendLogFile();
-#endif
 
          break;
 
@@ -525,16 +517,8 @@ void TXProofServ::HandleSigPipe()
    // Called when the client is not alive anymore; terminate the session.
 
    // Real-time notification of messages
-//   TProofServLogHandlerGuard hg(fLogFile, fSocket, "", fRealTimeLog);
 
-   Info("HandleSigPipe","got sigpipe ...");
-
-   // If master server, propagate interrupt to slaves
-   // (shutdown interrupt send internally).
-   if (IsMaster())
-      fProof->Close("S");
-
-   Terminate(0);  // will not return from here....
+   Info("HandleSigPipe","got sigpipe ... do nothing");
 }
 
 //______________________________________________________________________________
@@ -799,6 +783,16 @@ Bool_t TXProofServ::HandleError(const void *)
 
    Printf("TXProofServ::HandleError: %p: got called ...", this);
 
+   // Try reconnection
+   if (fSocket && !fSocket->IsValid()) {
+
+      ((TXSocket *)fSocket)->Reconnect();
+      if (fSocket && fSocket->IsValid()) {
+         Printf("TXProofServ::HandleError: %p: connection re-established ... ", this);
+         return kFALSE;
+      }
+   }
+
    // If master server, propagate interrupt to slaves
    // (shutdown interrupt send internally).
    if (IsMaster())
@@ -975,12 +969,6 @@ void TXProofServ::Terminate(Int_t status)
    // activity on this socket; this fake activity will make it return and
    // eventually exit the loop.
    TXSocket::PostPipe((TXSocket *)fSocket);
-
-   // Try commenting this out
-#if 0
-   // Avoid communicating back anything to the coordinator (it is gone)
-   ((TXSocket *)fSocket)->SetSessionID(-1);
-#endif
 
    // Notify
    Printf("Terminate: termination operations ended: quitting!");

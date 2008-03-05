@@ -1,4 +1,4 @@
-// @(#)root/proofd:$Id:$
+// @(#)root/proofd:$Id$
 // Author: G. Ganis Jan 2008
 
 /*************************************************************************
@@ -37,7 +37,8 @@
 #include "XrdProofdManager.h"
 #include "XrdProofdProtocol.h"
 #include "XrdProofGroup.h"
-#include "XrdProofServProxy.h"
+#include "XrdProofdProofServ.h"
+#include "XrdProofdProofServMgr.h"
 #include "XrdROOT.h"
 
 // Tracing utilities
@@ -58,6 +59,8 @@ XrdProofdClientMgr::XrdProofdClientMgr(XrdProofdManager *mgr,
 
    fMgr = mgr;
    fCIA = 0;
+   fNDisconnected = 0;
+   fReconnectTimeOut = 300;
 }
 
 //__________________________________________________________________________
@@ -67,6 +70,8 @@ void XrdProofdClientMgr::RegisterDirectives()
 
    Register("seclib", new XrdProofdDirective("seclib",
                                    (void *)&fSecLib, &DoDirectiveString, 0));
+   Register("reconnto", new XrdProofdDirective("reconnto",
+                               (void *)&fReconnectTimeOut, &DoDirectiveInt));
 }
 
 //__________________________________________________________________________
@@ -86,7 +91,7 @@ int XrdProofdClientMgr::Config(bool rcf)
                : "xpd: Config: ClientMgr: configuring";
    fEDest->Say(0, msg.c_str());
 
-   // Admin path
+   // Admin paths
    fClntAdminPath = fMgr->AdminPath();
    fClntAdminPath += "/clients";
 
@@ -94,12 +99,18 @@ int XrdProofdClientMgr::Config(bool rcf)
    XrdProofUI ui;
    XrdProofdAux::GetUserInfo(fMgr->EffectiveUser(), ui);
    if (XrdProofdAux::AssertDir(fClntAdminPath.c_str(), ui, 1) != 0) {
-      fEDest->Say(0, "xpd: Config: ClientMgr: unable to assert the admin path: ",
+      fEDest->Say(0, "xpd: Config: ClientMgr: unable to assert the clients admin path: ",
                      fClntAdminPath.c_str());
       fClntAdminPath = "";
       return -1;
    }
    fEDest->Say(0, "xpd: Config: ClientMgr: clients admin path set to: ", fClntAdminPath.c_str());
+
+   // Init place holders for previous active clients, if any
+   if (ParsePreviousClients(msg) != 0) {
+      fEDest->Say(0, "xpd: Config: ClientMgr: problems parsing previous active"
+                     " clients: ", msg.c_str());
+   }
 
    // Initialize the security system if this is wanted
    if (!rcf) {
@@ -130,7 +141,6 @@ int XrdProofdClientMgr::Config(bool rcf)
    // Done
    return 0;
 }
-
 
 //______________________________________________________________________________
 int XrdProofdClientMgr::Login(XrdProofdProtocol *p)
@@ -418,7 +428,7 @@ int XrdProofdClientMgr::MapClient(XrdProofdProtocol *p, bool all)
 
    // If proofsrv, locate the target session
    if (proofsrv) {
-      XrdProofServProxy *psrv = p->Client()->GetServer(psid);
+      XrdProofdProofServ *psrv = p->Client()->GetServer(psid);
       if (!psrv) {
          TRACEP(p, respid, XERR, "MapClient: proofsrv callback:"
                      " wrong target session: protocol error");
@@ -435,7 +445,7 @@ int XrdProofdClientMgr::MapClient(XrdProofdProtocol *p, bool all)
          tid += psrv->Ordinal();
          tid += " ";
          psrv->Response()->Set(tid.c_str());
-         TRACEP(p, respid, DBG,"MapClient: proofsrv callback:"
+         TRACEP(p, psrv->Response()->ID(), DBG,"MapClient: proofsrv callback:"
                      " link assigned to target session "<<psid);
       }
    } else {
@@ -444,27 +454,39 @@ int XrdProofdClientMgr::MapClient(XrdProofdProtocol *p, bool all)
       // was run before this may still be -1 on workers)
       p->ProofProtocol(clientvers);
 
-      // The index of the next free slot will be the unique ID
-      p->SetCID(p->Client()->GetClientID(p));
-
-      // Create the client directory in the admin path
+      // Check if we have already an ID for this client from a previous connection
       XrdOucString cpath;
-      if (CreateAdminPath(p, cpath, msg) != 0) {
-#if 0
-
-      XrdProofdAux::Form(cpath, "%s/%s", fClntAdminPath.c_str(), p->Link()->ID);
-      XrdProofUI ui;
-      XrdProofdAux::GetUserInfo(fMgr->EffectiveUser(), ui);
-      if (XrdProofdAux::AssertDir(cpath.c_str(), ui, 1) != 0) {
-         XrdProofdAux::Form(msg, "MapClient: error creating client admin path: %s", cpath.c_str());
-         TRACEP(p, respid, XERR, msg.c_str());
-#endif
-         TRACEP(p, respid, XERR, msg.c_str());
-         // Remove from the list
-         fProofdClients.remove(p->Client());
-         delete p->Client();
-         p->SetClient(0);
-         response->Send(kXP_ServerError, msg.c_str());
+      int cid = -1;
+      if ((cid = CheckAdminPath(p, cpath, msg)) >= 0) {
+         // Assign the slot
+         p->Client()->SetClientID(cid, p);
+         // The index of the next free slot will be the unique ID
+         p->SetCID(cid);
+         // Remove the file indicating that this client was still disconnected
+         cpath.replace("/cid", "/disconnected");
+         if (unlink(cpath.c_str()) != 0) {
+            XrdProofdAux::Form(msg, "MapClient: warning: could not remove %s (errno: %d)",
+                                    cpath.c_str(), errno);
+            TRACEP(p, respid, XERR, msg.c_str());
+         }
+         cpath.replace("/disconnected", "");
+         // Update counters
+         fNDisconnected--;
+         // Notify and of reconnection time if so
+         if (fNDisconnected <= 0)
+            PostEndOfReconnection();
+      } else {
+         // The index of the next free slot will be the unique ID
+         p->SetCID(p->Client()->GetClientID(p));
+         // Create the client directory in the admin path
+         if (CreateAdminPath(p, cpath, msg) != 0) {
+            TRACEP(p, respid, XERR, msg.c_str());
+            // Remove from the list
+            fProofdClients.remove(p->Client());
+            delete p->Client();
+            p->SetClient(0);
+            response->Send(kXP_ServerError, msg.c_str());
+         }
       }
       p->SetAdminPath(cpath.c_str());
       XrdProofdAux::Form(msg, "MapClient: client admin path created: %s", cpath.c_str());
@@ -482,18 +504,45 @@ int XrdProofdClientMgr::MapClient(XrdProofdProtocol *p, bool all)
    return rc;
 }
 
+//___________________________________________________________________________
+void XrdProofdClientMgr::PostEndOfReconnection()
+{
+   // Post end of reconnection phase
+
+   int sock = fMgr->SessionMgr() ? fMgr->SessionMgr()->WriteFd() : -1;
+   TRACE(DBG, "PostEndOfReconnection: socket "<<sock);
+
+   if (sock > 0) {
+      int type = 2;
+      if (write(sock, &type, sizeof(type)) !=  sizeof(type)) {
+         TRACE(XERR, "PostEndOfReconnection: problem sending message type on the pipe");
+         return;
+      }
+   }
+   // Done
+   return;
+}
+
 //_____________________________________________________________________________
 int XrdProofdClientMgr::CreateAdminPath(XrdProofdProtocol *p,
                                         XrdOucString &cpath, XrdOucString &emsg)
 {
    // Create the client directory in the admin path
 
-   XrdProofdAux::Form(cpath, "%s/%s", fClntAdminPath.c_str(), p->Link()->ID);
+   if (!p) {
+      XrdProofdAux::Form(emsg, "CreateAdminPath: invalid inputs (p: %p)", p);
+      return -1;
+   }
+
+   // Create link ID
+   XrdOucString lid(p->Link()->ID);
    XrdOucString sid;
-   // Remove the socket FD information
    XrdProofdAux::Form(sid, ":%d", p->Link()->FDnum());
-   cpath.replace(sid, "");
+   lid.replace(sid, "");
+   lid.erase(0, lid.find('.') + 1);
+
    // Create the path now
+   XrdProofdAux::Form(cpath, "%s/%s", p->Client()->AdminPath(), lid.c_str());
    XrdProofUI ui;
    XrdProofdAux::GetUserInfo(fMgr->EffectiveUser(), ui);
    if (XrdProofdAux::AssertDir(cpath.c_str(), ui, 1) != 0) {
@@ -501,6 +550,195 @@ int XrdProofdClientMgr::CreateAdminPath(XrdProofdProtocol *p,
                                cpath.c_str());
       return -1;
    }
+   // Save client ID for full recovery
+   XrdOucString cidpath;
+   XrdProofdAux::Form(cidpath, "%s/cid", cpath.c_str());
+   FILE *fcid = fopen(cidpath.c_str(), "w");
+   if (fcid) {
+      fprintf(fcid, "%d", p->CID());
+      fclose(fcid);
+   } else {
+      XrdProofdAux::Form(emsg, "CreateAdminPath: error creating file for client id: %s",
+                               cidpath.c_str());
+      return -1;
+   }
+   // Done
+   return 0;
+}
+
+//_____________________________________________________________________________
+int XrdProofdClientMgr::CheckAdminPath(XrdProofdProtocol *p,
+                                       XrdOucString &cidpath, XrdOucString &emsg)
+{
+   // Check the old-clients admin for an existing entry for this client and
+   // read the client ID;
+
+   emsg = "";
+
+   if (!p) {
+      XrdProofdAux::Form(emsg, "CheckAdminPath: invalid inputs (p: %p)", p);
+      return -1;
+   }
+
+   // Create link ID
+   XrdOucString lid(p->Link()->ID);
+   XrdOucString sid;
+   XrdProofdAux::Form(sid, ":%d", p->Link()->FDnum());
+   lid.replace(sid, "");
+   lid.erase(0, lid.find('.') + 1);
+
+   // Create the path now
+   XrdProofdAux::Form(cidpath, "%s/%s/cid", p->Client()->AdminPath(), lid.c_str());
+
+   // Check last access time
+   struct stat st;
+   if (stat(cidpath.c_str(), &st) != 0 ||
+      (int)(time(0) - st.st_atime) > fReconnectTimeOut) {
+      cidpath.replace("/cid", "");
+      XrdProofdAux::Form(emsg, "CheckAdminPath: reconnection timeout"
+                               " expired: remove %s ", cidpath.c_str());
+      if (XrdProofdAux::RmDir(cidpath.c_str()) != 0)
+         emsg += ": failure!";
+      return -1;
+   }
+
+   // Get the client ID for full recovery
+   return GetIDFromAdminPath(cidpath.c_str(), emsg);
+}
+
+//_____________________________________________________________________________
+int XrdProofdClientMgr::GetIDFromAdminPath(const char *cidpath, XrdOucString &emsg)
+{
+   // Check the old-clients admin for an existing entry for this client and
+   // read the client ID;
+
+   emsg = "";
+   // Get the client ID for full recovery
+   int cid = -1;
+   FILE *fcid = fopen(cidpath, "r");
+   if (fcid) {
+      char line[64];
+      if (fgets(line, sizeof(line), fcid))
+         sscanf(line, "%d", &cid);
+      fclose(fcid);
+   } else if (errno != ENOENT) {
+      XrdProofdAux::Form(emsg, "GetIDFromAdminPath: error reading client id"
+                               " from: %s (errno: %d)", cidpath, errno);
+   }
+   // Done
+   return cid;
+}
+
+//_____________________________________________________________________________
+int XrdProofdClientMgr::ParsePreviousClients(XrdOucString &emsg)
+{
+   // Client entries for the clients still connected when the daemon terminated
+
+   emsg = "";
+
+   // Open dir
+   DIR *dir = opendir(fClntAdminPath.c_str());
+   if (!dir) {
+      TRACE(XERR, "ParsePreviousClients: cannot open dir "<<fClntAdminPath<<
+                  " ; error: "<<errno);
+      return -1;
+   }
+   TRACE(DBG, "ParsePreviousClients: creating holders for active clients ...");
+
+   // <adminpath>/usr.grp/xpdsock
+   // <adminpath>/usr.grp/<pid>@<host>/cid
+   // <adminpath>/usr.grp/<pid>@<host>/disconnected
+
+   // Scan the active sessions admin path
+   XrdOucString usrpath, cidpath, discpath, usr, grp;
+   struct dirent *ent = 0;
+   while ((ent = (struct dirent *)readdir(dir))) {
+      // Skip the basic entries
+      if (!strcmp(ent->d_name, ".") || !strcmp(ent->d_name, "..")) continue;
+      XrdProofdAux::Form(usrpath, "%s/%s", fClntAdminPath.c_str(), ent->d_name);
+      bool rm = 0;
+      struct stat st;
+      if (stat(usrpath.c_str(), &st) == 0) {
+         usr = ent->d_name;
+         grp = usr;
+         usr.erase(usr.find('.'));
+         grp.erase(0, grp.find('.')+1);
+         TRACE(DBG, "ParsePreviousClients: found usr: "<<usr<<", grp: "<<grp);
+         // Get client instance
+         XrdProofdClient *c = GetClient(usr.c_str(), grp.c_str());
+         if (!c) {
+            XrdProofdAux::Form(emsg, "ParsePreviousClients: could not get client instance"
+                                     " for {%s, %s}", usr.c_str(), grp.c_str());
+            rm = 1;
+         }
+         // Open user sub-dir
+         DIR *subdir = 0;
+         if (!rm && !(subdir = opendir(usrpath.c_str()))) {
+            TRACE(XERR, "ParsePreviousClients: cannot open dir "<<usrpath<<
+                        " ; error: "<<errno);
+            rm = 1;
+         }
+         if (!rm) {
+            bool xrm = 0;
+            struct dirent *sent = 0;
+            while ((sent = (struct dirent *)readdir(subdir))) {
+               // Skip the basic entries
+               if (!strcmp(sent->d_name, ".") || !strcmp(sent->d_name, "..")) continue;
+               if (!strcmp(sent->d_name, "xpdsock")) continue;
+               XrdProofdAux::Form(cidpath, "%s/%s/cid", usrpath.c_str(), sent->d_name);
+               // Check last access time
+               if (stat(cidpath.c_str(), &st) != 0 ||
+                  (int)(time(0) - st.st_atime) > fReconnectTimeOut) {
+                  xrm = 1;
+               }
+               // Read the client ID and and reserve an entry in the related vector
+               int cid = (!xrm) ? GetIDFromAdminPath(cidpath.c_str(), emsg) : -1;
+               if (cid < 0)
+                  xrm = 1;
+               // Reserve an entry in the related vector
+               if (!xrm && c->ReserveClientID(cid) != 0)
+                  xrm = 1;
+               // Flag this as disconnected
+               if (!xrm) {
+                  XrdProofdAux::Form(discpath, "%s/%s/disconnected", usrpath.c_str(), sent->d_name);
+                  int fd = 0;
+                  if ((fd = open(discpath.c_str(), O_EXCL | O_RDWR | O_CREAT)) < 0) {
+                     TRACE(XERR,"ParsePreviousClients: unable to create path: " <<discpath);
+                     xrm = 1;
+                  }
+                  close(fd);
+                  if (!xrm)
+                     fNDisconnected++;
+               }
+               // If it did not work remove the entry
+               if (xrm) {
+                  TRACE(DBG,"ParsePreviousClients: removing path: " <<cidpath);
+                  cidpath.replace("/cid", "");
+                  XrdProofdAux::Form(emsg, "ParsePreviousClients: failure: remove %s ", cidpath.c_str());
+                  if (XrdProofdAux::RmDir(cidpath.c_str()) != 0)
+                     emsg += ": failure!";
+               }
+            }
+         }
+         if (subdir)
+            closedir(subdir);
+      } else
+         rm = 1;
+      // If it did not work remove the entry
+      if (rm) {
+         TRACE(DBG,"ParsePreviousClients: removing path: " <<cidpath);
+         cidpath.replace("/cid", "");
+         XrdProofdAux::Form(emsg, "ParsePreviousClients: failure: remove %s ", cidpath.c_str());
+         if (XrdProofdAux::RmDir(cidpath.c_str()) != 0)
+            emsg += ": failure!";
+      }
+   }
+   // Close the directory
+   closedir(dir);
+
+   // Notify the number of previously active clients now offline
+   TRACE(DBG, "ParsePreviousClients: found "<<fNDisconnected<<" active clients");
+
    // Done
    return 0;
 }
@@ -568,7 +806,7 @@ int XrdProofdClientMgr::Auth(XrdProofdProtocol *p)
          p->SetAuthProt(0);
       }
       TRACEP(p, respid, XERR,"Auth: security requested additional auth w/o parms!");
-      response->Send(kXR_ServerError,"invalid authentication exchange");
+      response->Send(kXP_ServerError,"invalid authentication exchange");
       return -EACCES;
    }
 
@@ -739,16 +977,22 @@ XrdProofdClient *XrdProofdClientMgr::GetClient(const char *usr,
          // Yes: create an (invalid) instance of XrdProofdClient:
          // It would be validated on the first valid login
          ui.fUser = usr;
+         ui.fGroup = grp;
          bool full = (fMgr->SrvType() != kXPD_Worker)  ? 1 : 0;
          XrdOucString tmp(fMgr->TMPdir());
          if (sock)
             // Use existing unix socket
             XrdProofdAux::Form(tmp, "sock:%s", sock);
-         c = new XrdProofdClient(ui, full, fMgr->ChangeOwn(), fEDest, tmp.c_str());
+         c = new XrdProofdClient(ui, full, fMgr->ChangeOwn(), fEDest, fClntAdminPath.c_str());
          if (c && c->IsValid()) {
             // Locate and set the group, if any
-            if (fMgr->GroupsMgr() && fMgr->GroupsMgr()->Num() > 0)
-               c->SetGroup(fMgr->GroupsMgr()->GetUserGroup(usr, grp)->Name());
+            if (fMgr->GroupsMgr() && fMgr->GroupsMgr()->Num() > 0) {
+               XrdProofGroup *g = fMgr->GroupsMgr()->GetUserGroup(usr, grp);
+               if (g)
+                  c->SetGroup(g->Name());
+               else
+                  TRACE(XERR, "XrdProofdClientMgr::GetClient: group = "<<grp<<" nor found");
+            }
             // Add to the list
             fProofdClients.push_back(c);
             TRACE(DBG, "XrdProofdClientMgr::GetClient: instance for {client, group} = {"<<usr<<", "<<
@@ -769,8 +1013,7 @@ XrdProofdClient *XrdProofdClientMgr::GetClient(const char *usr,
 }
 
 //______________________________________________________________________________
-void XrdProofdClientMgr::Broadcast(XrdProofdClient *clnt,
-                                   const char *msg,  bool closelink)
+void XrdProofdClientMgr::Broadcast(XrdProofdClient *clnt, const char *msg)
 {
    // Broadcast message 'msg' to the connected instances of client 'clnt' or to all
    // connected instances if clnt == 0.
@@ -790,7 +1033,7 @@ void XrdProofdClientMgr::Broadcast(XrdProofdClient *clnt,
    std::list<XrdProofdClient *>::iterator i;
    for (i = clnts->begin(); i != clnts->end(); ++i) {
       if ((c = *i))
-         c->Broadcast(msg, closelink);
+         c->Broadcast(msg);
    }
 
    // Cleanup, if needed
@@ -799,7 +1042,7 @@ void XrdProofdClientMgr::Broadcast(XrdProofdClient *clnt,
 
 //______________________________________________________________________________
 void XrdProofdClientMgr::TerminateSessions(XrdProofdClient *clnt, const char *msg,
-                                           int srvtype, std::list<int> &sigpid)
+                                           int srvtype)
 {
    // Terminate sessions of client 'clnt' or to of all clients if clnt == 0.
    // The list of process IDs having been signalled is returned.
@@ -814,9 +1057,10 @@ void XrdProofdClientMgr::TerminateSessions(XrdProofdClient *clnt, const char *ms
       clnts->push_back(clnt);
    }
 
+   int wfd = fMgr->SessionMgr() ? fMgr->SessionMgr()->WriteFd() : -1;
+
    // Loop over them
    XrdProofdClient *c = 0;
-   sigpid.clear();
    std::list<XrdProofdClient *>::iterator i;
    for (i = clnts->begin(); i != clnts->end(); ++i) {
       if ((c = *i)) {
@@ -825,10 +1069,10 @@ void XrdProofdClientMgr::TerminateSessions(XrdProofdClient *clnt, const char *ms
          XrdSysMutexHelper mh(c->Mutex());
 
          // Notify the attached clients that we are going to cleanup
-         c->Broadcast(msg, 1);
+         c->Broadcast(msg);
 
          // Loop over client sessions and terminate cliant sessions
-         c->TerminateSessions(0, srvtype, 0, 0, sigpid);
+         c->TerminateSessions(srvtype, 0, 0, wfd);
       }
    }
 

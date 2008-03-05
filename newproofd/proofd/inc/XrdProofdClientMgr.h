@@ -1,4 +1,4 @@
-// @(#)root/proofd:$Id:$
+// @(#)root/proofd:$Id$
 // Author: G. Ganis Jan 2008
 
 /*************************************************************************
@@ -49,11 +49,19 @@ class XrdProofdClientMgr : public XrdProofdConfig {
    XrdSecService     *fCIA;            // Authentication Server
 
    XrdOucString       fClntAdminPath;  // Client admin area
+   int                fNDisconnected;  // Clients previously connected still offline
+   int                fReconnectTimeOut;
 
    std::list<XrdProofdClient *> fProofdClients;        // keeps track of all users
 
+   int                CheckAdminPath(XrdProofdProtocol *p,
+                                     XrdOucString &cidpath, XrdOucString &emsg);
    int                CreateAdminPath(XrdProofdProtocol *p,
                                       XrdOucString &path, XrdOucString &e);
+   int                GetIDFromAdminPath(const char *cidpath, XrdOucString &emsg);
+   int                RestoreAdminPath(XrdOucString &cpath, XrdOucString &emsg);
+   int                ParsePreviousClients(XrdOucString &emsg);
+   void               PostEndOfReconnection();
    int                MapClient(XrdProofdProtocol *xp, bool all = 1);
    char              *FilterSecConfig(int &nd);
    void               RegisterDirectives();
@@ -68,10 +76,10 @@ public:
    int               Config(bool rcf = 0);
 
    XrdProofdClient  *GetClient(const char *usr, const char *grp = 0, const char *sock = 0);
+   int               GetNClients() const { return fProofdClients.size(); }
 
-   void              Broadcast(XrdProofdClient *c, const char *msg, bool closelink = 0);
-   void              TerminateSessions(XrdProofdClient *c,
-                                       const char *msg, int srvtype, std::list<int> &sigpid);
+   void              Broadcast(XrdProofdClient *c, const char *msg);
+   void              TerminateSessions(XrdProofdClient *c, const char *msg, int srvtype);
 
    void              SetLock(bool on = 1, XrdProofdClient *c = 0);
 

@@ -1,4 +1,4 @@
-// @(#)root/proofd:$Id:$
+// @(#)root/proofd:$Id$
 // Author: G. Ganis Feb 2008
 
 /*************************************************************************
@@ -350,47 +350,9 @@ int XrdProofdPriorityMgr::SetNiceValues(int opt)
 
    // Now create a list of active sessions sorted by decreasing effective fraction
    TRACE(SCHED,"--> creating a list of active sessions sorted by decreasing effective fraction ");
-#if 0
-   float tf = 0.;
-   std::list<XrdProofdSessionEntry>::iterator asvi, ssvi;
-   std::list<XrdProofdSessionEntry> sorted;
-   for (asvi = fSessions.begin(); asvi != fSessions.end(); asvi++) {
-      XrdProofdSessionEntry &ent = *asvi;
-      XrdProofGroup *g = fMgr->GroupsMgr()->GetGroup(ent.fGroup.c_str());
-      if (g) {
-         float ef = g->FracEff() / g->Active();
-         int nsrv = g->Active(ent.fUser.c_str());
-         if (nsrv > 0) {
-            ef /= nsrv;
-            ent.fFracEff = ef;
-            tf += ef;
-            bool pushed = 0;
-            for (ssvi = sorted.begin() ; ssvi != sorted.end(); ssvi++) {
-               if (ef >= (*ssvi).fFracEff) {
-                  sorted.insert(ssvi, (*asvi));
-                  pushed = 1;
-                  break;
-               }
-            }
-            if (!pushed)
-               sorted.push_back((*asvi));
-         } else {
-            TRACE(XERR,"SetNiceValues: "<< ent.fUser <<
-                        ": no srv sessions for active client !!!"
-                        " ===> Protocol error");
-         }
-      } else {
-         TRACE(XERR,"SetNiceValues: "<<ent.fUser<<
-                     ": undefined group for active session !!!"
-                     " ===> Protocol error");
-      }
-   }
-#else
    std::list<XrdProofdSessionEntry *> sorted;
    XpdCreateActiveList_t cal = { fMgr->GroupsMgr(), &sorted };
    fSessions.Apply(CreateActiveList, (void *)&cal);
-
-#endif
 
    // Notify
    int i = 0;

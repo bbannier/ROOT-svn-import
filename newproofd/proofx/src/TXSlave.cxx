@@ -514,7 +514,7 @@ Bool_t TXSlave::HandleError(const void *)
       ((TXSocket *)fSocket)->Reconnect();
       if (fSocket && fSocket->IsValid()) {
          Printf("TXProofMgr::HandleError: %p: connection re-established ... ", this);
-         return kTRUE;
+         return kFALSE;
       }
    }
 

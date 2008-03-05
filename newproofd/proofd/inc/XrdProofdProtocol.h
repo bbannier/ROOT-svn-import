@@ -44,7 +44,7 @@ class XrdBuffer;
 class XrdProofdClient;
 class XrdProofdManager;
 class XrdProofdResponse;
-class XrdProofServProxy;
+class XrdProofdProofServ;
 class XrdSrvBuffer;
 
 class XrdProofdProtocol : XrdProtocol {
@@ -69,11 +69,7 @@ public:
    inline short int ProofProtocol() const { return fProofProtocol; }
    inline bool   SuperUser() const { return fSuperUser; }
 
-#if 0
-   inline XrdProofdResponse *Response() const { return (XrdProofdResponse *)&fResponse; }
-#else
    XrdProofdResponse *Response(kXR_unt16 rid);
-#endif
    inline XPClientRequest *Request() const { return (XPClientRequest *)&fRequest; }
    inline XrdBuffer *Argp() const { return fArgp; }
    inline XrdLink *Link() const { return fLink; }
@@ -103,9 +99,10 @@ public:
    int           Ping();
    int           Process2();
    void          Reset();
-   int           SendData(XrdProofServProxy *xps, kXR_int32 sid = -1, XrdSrvBuffer **buf = 0);
-   int           SendDataN(XrdProofServProxy *xps, XrdSrvBuffer **buf = 0);
+   int           SendData(XrdProofdProofServ *xps, kXR_int32 sid = -1, XrdSrvBuffer **buf = 0);
+   int           SendDataN(XrdProofdProofServ *xps, XrdSrvBuffer **buf = 0);
    int           SendMsg();
+   void          TouchClientPath();
    int           Urgent();
 
    //
@@ -138,11 +135,7 @@ public:
    int                           fhalfBSize;
    //
    XPClientRequest               fRequest;  // handle client requests
-#if 0
-   XrdProofdResponse             fResponse; // Response to incoming request
-#else
    std::vector<XrdProofdResponse *> fResponses; // One per each logical connection
-#endif
    XrdSysRecMutex                fMutex;    // Local mutex
 
    //

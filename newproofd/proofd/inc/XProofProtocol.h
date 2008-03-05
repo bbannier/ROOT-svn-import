@@ -65,8 +65,9 @@ enum XProofRequestTypes {
 
 // Type of resources
 enum EResourceType {
-   kRTStatic,
-   kRTDynamic
+   kRTNone    = -1,
+   kRTStatic  = 0,
+   kRTDynamic = 1
 };
 
 // Worker selection options
@@ -177,7 +178,8 @@ enum XPErrorCode {
    kXP_Unsupported,
    kXP_noserver,
    kXP_nosession,
-   kXP_nomanager
+   kXP_nomanager,
+   kXP_reconnecting
 };
 
 

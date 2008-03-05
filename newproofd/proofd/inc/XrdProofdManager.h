@@ -48,7 +48,7 @@ class XrdProofdProofServMgr;
 class XrdProofdProtocol;
 class XrdProofGroupMgr;
 class XrdProofSched;
-class XrdProofServProxy;
+class XrdProofdProofServ;
 class XrdProofWorker;
 class XrdROOT;
 class XrdROOTMgr;
@@ -69,7 +69,7 @@ class XrdProofdManager : public XrdProofdConfig {
 
    int               ResolveKeywords(XrdOucString &s, XrdProofdClient *pcl);
 
-   int               GetWorkers(XrdOucString &workers, XrdProofServProxy *);
+   int               GetWorkers(XrdOucString &workers, XrdProofdProofServ *);
 
    const char       *AdminPath() const { return fAdminPath.c_str(); }
    const char       *BareLibPath() const { return fBareLibPath.c_str(); }

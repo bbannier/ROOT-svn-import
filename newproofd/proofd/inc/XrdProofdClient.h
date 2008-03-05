@@ -40,7 +40,7 @@
 
 class XrdNet;
 class XrdProofdProtocol;
-class XrdProofServProxy;
+class XrdProofdProofServ;
 class XrdROOT;
 
 class XrdProofdClient {
@@ -61,22 +61,25 @@ class XrdProofdClient {
    inline XrdProofdSandbox *Sandbox() const { return (XrdProofdSandbox *)&fSandbox; }
    inline XrdProofUI       UI() const { return fUI; }
 
-   XrdProofServProxy      *GetServer(int psid);
-   XrdProofServProxy      *GetServer(XrdProofdProtocol *p);
+   XrdProofdProofServ      *GetServer(int psid);
+   XrdProofdProofServ      *GetServer(XrdProofdProtocol *p);
    void                    EraseServer(int psid);
-   XrdProofServProxy      *GetProofServ(int psid);
+   XrdProofdProofServ      *GetProofServ(int psid);
 
    void                    DisconnectFromProofServ(XrdProofdProtocol *p);
    int                     ResetClientSlot(XrdProofdProtocol *p);
 
    int                     GetClientID(XrdProofdProtocol *p);
-   XrdProofServProxy      *GetFreeServObj();
+   int                     ReserveClientID(int cid);
+   int                     SetClientID(int cid, XrdProofdProtocol *p);
+   XrdProofdProofServ     *GetFreeServObj();
+   XrdProofdProofServ     *GetServObj(int id);
 
-   void                    Broadcast(const char *msg, bool closelink = 0);
+   void                    Broadcast(const char *msg);
 
    XrdOucString            ExportSessions();
-   void                    TerminateSessions(bool kill, int srvtype, XrdProofServProxy *ref,
-                                             const char *msg, std::list<int> &sigpid);
+   void                    TerminateSessions(int srvtype, XrdProofdProofServ *ref,
+                                             const char *msg, int wfd);
 
    void                    SetGroup(const char *g) { fUI.fGroup = g; }
    void                    SetROOT(XrdROOT *r) { fROOT = r; }
@@ -86,12 +89,13 @@ class XrdProofdClient {
 
    int                     Size() const { return fClients.size(); }
 
-   int                     CreateUNIXSock(XrdSysError *edest,
-                                          const char *tmpdir, bool changeown);
+   int                     CreateUNIXSock(XrdSysError *edest);
    XrdNet                 *UNIXSock() const { return fUNIXSock; }
-   char                   *UNIXSockPath() const { return fUNIXSockPath; }
+   const char             *UNIXSockPath() const { return fUNIXSockPath.c_str(); }
    void                    SaveUNIXPath(); // Save path in the sandbox
    void                    SetUNIXSockSaved() { fUNIXSockSaved = 1;}
+
+   const char             *AdminPath() const { return fAdminPath.c_str(); }
 
  private:
 
@@ -107,12 +111,15 @@ class XrdProofdClient {
    XrdProofdSandbox        fSandbox;     // Clients sandbox
 
    XrdNet                 *fUNIXSock;     // UNIX server socket for internal connections
-   char                   *fUNIXSockPath; // UNIX server socket path
+   XrdOucString            fUNIXSockPath; // UNIX server socket path
    bool                    fUNIXSockSaved; // TRUE if the socket path has been saved
 
+   XrdOucString            fAdminPath;    // Admin path for this client
 
-   std::vector<XrdProofServProxy *> fProofServs; // Allocated ProofServ sessions
+   std::vector<XrdProofdProofServ *> fProofServs; // Allocated ProofServ sessions
    std::vector<XrdProofdProtocol *> fClients;    // Attached Client sessions
+
+   void                    PostSessionRemoval(int fd, int pid);
 };
 
 #endif

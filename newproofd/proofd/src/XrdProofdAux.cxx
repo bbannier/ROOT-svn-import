@@ -286,7 +286,7 @@ int XrdProofdAux::AssertDir(const char *path, XrdProofUI ui, bool changeown)
    // If changeown is TRUE it tries to acquire the privileges before.
    // Return 0 in case of success, -1 in case of error
 
-   TRACE(ACT, "AssertDir: enter");
+   TRACE(ACT, "AssertDir: enter: "<<path);
 
    if (!path || strlen(path) <= 0)
       return -1;
@@ -866,6 +866,180 @@ again:
 
    // Done
    return n;
+}
+
+//______________________________________________________________________________
+int XrdProofdAux::RmDir(const char *path)
+{
+   // Remove directory at path and its content.
+   // Returns 0 on success, -errno of the last error on failure
+
+   int rc = 0;
+
+   TRACE(DBG, "RmDir: dir: "<<path);
+
+   // Open dir
+   DIR *dir = opendir(path);
+   if (!dir) {
+      TRACE(XERR, "RmDir: cannot open dir "<<path<<" ; error: "<<errno);
+      return -errno;
+   }
+
+   // Scan the directory
+   XrdOucString entry;
+   struct stat st;
+   struct dirent *ent = 0;
+   while ((ent = (struct dirent *)readdir(dir))) {
+      // Skip the basic entries
+      if (!strcmp(ent->d_name, ".") || !strcmp(ent->d_name, "..")) continue;
+      // Get info about the entry
+      XrdProofdAux::Form(entry, "%s/%s", path, ent->d_name);
+      if (stat(entry.c_str(), &st) != 0) {
+         TRACE(XERR, "RmDir: cannot stat entry "<<entry<<" ; error: "<<errno);
+         rc = -errno;
+         break;
+      }
+      // Remove directories recursively
+      if (S_ISDIR(st.st_mode)) {
+         rc = XrdProofdAux::RmDir(entry.c_str());
+         if (rc != 0) {
+            TRACE(XERR, "RmDir: problems removing"<<entry<<" ; error: "<<-rc);
+            break;
+         }
+      } else {
+         // Remove the entry
+         if (unlink(entry.c_str()) != 0) {
+            rc = -errno;
+            TRACE(XERR, "RmDir: problems removing"<<entry<<" ; error: "<<-rc);
+            break;
+         }
+      }
+   }
+   // Close the directory
+   closedir(dir);
+
+   // If successful, remove the directory
+   if (!rc && rmdir(path) != 0) {
+      rc = -errno;
+      TRACE(XERR, "RmDir: problems removing"<<path<<" ; error: "<<-rc);
+   }
+
+   // Done
+   return rc;
+}
+
+//______________________________________________________________________________
+int XrdProofdAux::MvDir(const char *oldpath, const char *newpath)
+{
+   // Move content of directory at oldpath to newpath.
+   // The destination path 'newpath' must exist.
+   // Returns 0 on success, -errno of the last error on failure
+
+   int rc = 0;
+
+   TRACE(DBG, "MvDir: oldpath "<<oldpath<<", newpath: "<<newpath);
+
+   // Open existing dir
+   DIR *dir = opendir(oldpath);
+   if (!dir) {
+      TRACE(XERR, "MvDir: cannot open dir "<<oldpath<<" ; error: "<<errno);
+      return -errno;
+   }
+
+   // Assert destination dir
+   struct stat st;
+   if (stat(newpath, &st) != 0 || !S_ISDIR(st.st_mode)) {
+      TRACE(XERR, "MvDir: destination dir "<<newpath<<
+                  " does nto exists of is nto a directory; errno: "<<errno);
+      return -ENOENT;
+   }
+
+   // Scan the source directory
+   XrdOucString srcentry, dstentry;
+   struct dirent *ent = 0;
+   while ((ent = (struct dirent *)readdir(dir))) {
+      // Skip the basic entries
+      if (!strcmp(ent->d_name, ".") || !strcmp(ent->d_name, "..")) continue;
+      // Get info about the entry
+      XrdProofdAux::Form(srcentry, "%s/%s", oldpath, ent->d_name);
+      if (stat(srcentry.c_str(), &st) != 0) {
+         TRACE(XERR, "MvDir: cannot stat entry "<<srcentry<<" ; error: "<<errno);
+         rc = -errno;
+         break;
+      }
+      // Destination entry
+      XrdProofdAux::Form(dstentry, "%s/%s", newpath, ent->d_name);
+      // Mv directories recursively
+      if (S_ISDIR(st.st_mode)) {
+         mode_t srcmode = st.st_mode;
+         // Create dest sub-dir
+         if (stat(dstentry.c_str(), &st) == 0) {
+            if (!S_ISDIR(st.st_mode)) {
+               TRACE(XERR, "MvDir: destination path already exists and is not a directory: "<<dstentry);
+               rc = -ENOTDIR;
+               break;
+            }
+         } else {
+            if (mkdir(dstentry.c_str(), srcmode) != 0) {
+               TRACE(XERR, "MvDir: cannot create entry "<<dstentry<<" ; error: "<<errno);
+               rc = -errno;
+               break;
+            }
+         }
+         if ((rc = XrdProofdAux::MvDir(srcentry.c_str(), dstentry.c_str())) != 0) {
+            TRACE(XERR, "MvDir: problems moving "<<srcentry<<" to "<<dstentry<<"; error: "<<-rc);
+            break;
+         }
+         if ((rc = XrdProofdAux::RmDir(srcentry.c_str())) != 0) {
+            TRACE(XERR, "MvDir: problems removing "<<srcentry<<"; error: "<<-rc);
+            break;
+         }
+      } else {
+         // Move the entry
+         if (rename(srcentry.c_str(), dstentry.c_str()) != 0) {
+            rc = -errno;
+            TRACE(XERR, "MvDir: problems moving "<<srcentry<<" to "<<dstentry<<"; error: "<<-rc);
+            break;
+         }
+      }
+   }
+   // Close the directory
+   closedir(dir);
+
+   // Done
+   return rc;
+}
+
+//______________________________________________________________________________
+int XrdProofdAux::Touch(const char *path, int opt)
+{
+   // Set access (opt == 1), modify (opt =2 ) or access&modify (opt = 0, default)
+   // times of path to current time.
+   // Returns 0 on success, -errno on failure
+
+   if (opt == 0) {
+      if (utime(path, 0) != 0)
+         return -errno;
+   } else if (opt <= 2) {
+      struct stat st;
+      if (stat(path, &st) != 0)
+         return -errno;
+      struct utimbuf ut;
+      if (opt == 1) {
+         ut.actime = time(0);
+         ut.modtime = st.st_mtime;
+      } else if (opt == 2) {
+         ut.modtime = time(0);
+         ut.actime = st.st_atime;
+      }
+      if (utime(path, &ut) != 0)
+         return -errno;
+   } else {
+      // Unknown option
+      return -1;
+   }
+   // Done
+   return 0;
 }
 
 //
