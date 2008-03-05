@@ -95,12 +95,16 @@ cintreflextest: REFLEXTESTFLAGS = -m -r
 
 debugtest: TESTDEBUG = -DDEBUG
 
+ifeq ($(G__CFG_COREVERSION),oldcore)
+  TESTFLAGS ?= --ignore-diff-errors -k
+endif
+
 test debugtest cintreflextest:
 	(cd test && \
 	PATH=..:.:$$PATH \
 	LD_LIBRARY_PATH=..:.:$$LD_LIBRARY_PATH \
 	DYLD_LIBRARY_PATH=..:.:$$DYLD_LIBRARY_PATH \
-	cint$(G__CFG_EXEEXT) $(TESTDEBUG) testall.cxx $(TEST) $(REFLEXTESTFLAGS) )
+	cint$(G__CFG_EXEEXT) $(TESTDEBUG) testall.cxx $(TEST) $(TESTFLAGS) $(REFLEXTESTFLAGS) )
 
 ifeq ($(findstring clean,$(MAKECMDGOALS)),)
 Makefile: $(RMKDEPEND)

@@ -9427,10 +9427,7 @@ void G__cpplink_memfunc(FILE *fp)
             fprintf(fp, "%d, ", ifunc->type[j]);
 
             if (-1 != ifunc->p_tagtable[j]) {
-              if(ifunc->p_tagtable[j]) //25-07-07 fix problem with default functions
                 fprintf(fp, "G__get_linked_tagnum(&%s), ", G__mark_linked_tagnum(ifunc->p_tagtable[j]));
-              else
-                fprintf(fp, "G__get_linked_tagnum(&%s), ", G__mark_linked_tagnum(i));                 
             }
             else
               fprintf(fp, "-1, ");
