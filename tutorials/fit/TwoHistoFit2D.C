@@ -84,6 +84,14 @@ void FillHisto(TH2D * h, int n, double * p) {
 
 int TwoHistoFit2D(bool global = true) { 
 
+#if defined(__CINT__) && !defined(__MAKECINT__) 
+
+  cout << "This tutorial can run only using ACliC, compiling it by doing: " << endl;
+  cout << "\t  .x tutorials/fit/TwoHistoFit2D.C+" << endl; 
+  return;
+
+#endif
+
   // create two histograms 
 
   int nbx1 = 50;
