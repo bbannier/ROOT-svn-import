@@ -49,8 +49,12 @@ public:
    */ 
    WrappedMultiTF1 (TF1 & f )  : 
       fFunc(&f),
-      fParams(f.GetParameters(),f.GetParameters()+f.GetNpar())
-   { }
+      fParams(f.GetParameters(),f.GetParameters()+f.GetNpar()),
+      fX(std::vector<double>(f.GetNdim() ) )
+   {
+      // init the args
+      fFunc->InitArgs(&fX.front(), &fParams.front() );
+   }
 
    /** 
       Destructor (no operations). Function pointer is not owned
@@ -64,8 +68,12 @@ public:
       BaseFunc(),
       BaseParamFunc(),
       fFunc(rhs.fFunc),
-      fParams(rhs.fParams)
-   {}
+      fParams(rhs.fParams), 
+      fX(rhs.fX)
+   {
+      // init the args
+      fFunc->InitArgs(&fX.front(), &fParams.front() );
+   }
 
    /** 
       Assignment operator
@@ -74,6 +82,7 @@ public:
       if (this == &rhs) return *this;  // time saving self-test
       fFunc = rhs.fFunc; 
       fParams = rhs.fParams;
+      fX = rhs.fX; 
       return *this;
    } 
 
@@ -136,8 +145,9 @@ private:
 
    /// evaluate function using parameter values cached in the TF1 
    double DoEval (const double * x) const { 
-      fFunc->InitArgs(x, &fParams.front() );
-      return fFunc->EvalPar(x,&fParams.front()); 
+      int n = fX.size(); 
+      std::copy(x,x+n,fX.begin() );
+      return fFunc->EvalPar(&fX.front(),&fParams.front()); 
    }
 
 //    /// return the function derivatives w.r.t. x 
@@ -155,6 +165,7 @@ private:
    // pointer to ROOT function
    TF1 * fFunc; 
    std::vector<double> fParams;
+   mutable std::vector<double> fX;
 
 }; 
 

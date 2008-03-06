@@ -73,10 +73,14 @@ BinData::BinData (const DataOptions & opt, const DataRange & range, unsigned int
 BinData::BinData(unsigned int n, const double * dataX, const double * val, const double * ex , const double * eval ) : 
 //      constructor from external data for 1D with errors on  coordinate and value
    fDim(1), 
-   fPointSize(0),
+   fPointSize(2),
    fNPoints(n),
    fDataVector(0)
 { 
+   if (eval != 0) { 
+      fPointSize++;
+      if (ex != 0) fPointSize++;
+   }
    fDataWrapper  = new DataWrapper(dataX, val, eval, ex);
 } 
 
@@ -85,11 +89,16 @@ BinData::BinData(unsigned int n, const double * dataX, const double * val, const
 
     */
 BinData::BinData(unsigned int n, const double * dataX, const double * dataY, const double * val, const double * ex , const double * ey, const double * eval  ) : 
-//      constructor from external data for 2D with errors on  coordinate and value      fDim(2), 
-   fPointSize(0),
+//      constructor from external data for 2D with errors on  coordinate and value      
+   fDim(2), 
+   fPointSize(3),
    fNPoints(n),
    fDataVector(0)
 { 
+   if (eval != 0) { 
+      fPointSize++;
+      if (ex != 0 && ey != 0 ) fPointSize += 2;
+   }
    fDataWrapper  = new DataWrapper(dataX, dataY, val, eval, ex, ey);
 } 
 
@@ -98,10 +107,14 @@ BinData::BinData(unsigned int n, const double * dataX, const double * dataY, con
 BinData::BinData(unsigned int n, const double * dataX, const double * dataY, const double * dataZ, const double * val, const double * ex , const double * ey , const double * ez , const double * eval   ) : 
 //      constructor from external data for 3D with errors on  coordinate and value
    fDim(3), 
-   fPointSize(0),
+   fPointSize(4),
    fNPoints(n),
    fDataVector(0)
 { 
+   if (eval != 0) { 
+      fPointSize++;
+      if (ex != 0 && ey != 0 && ez != 0) fPointSize += 3;
+   }
    fDataWrapper  = new DataWrapper(dataX, dataY, dataZ, val, eval, ex, ey, ez);
 } 
 
@@ -359,10 +372,8 @@ BinData & BinData::LogTransform() {
          } 
          else {
             // other case (error in value is stored) : new error = old_error/value 
-            for (unsigned int j = 1; j <= fDim+1; ++j)  
-               *(itr+fDim+j) /= val;  
-            if (type == kAsymError) 
-               *(itr+fDim+fDim + 2) /= val;  
+            for (unsigned int j = fDim + 1; j < fPointSize; ++j)  
+               *(itr+j) /= val;  
          }
          itr += fPointSize; 
          ip++;
@@ -374,16 +385,35 @@ BinData & BinData::LogTransform() {
    if (fDataWrapper == 0) return *this; 
 
    // asym errors are not supported for data wrapper 
-   ErrorType type = kCoordError; 
-   if (fDataWrapper->CoordErrors(0) == 0 ) type = kValueError; 
+   ErrorType type = kValueError; 
+   std::vector<double> errx; 
+   if (fDataWrapper->CoordErrors(0) != 0 ) { 
+      type = kCoordError; 
+      errx.resize(fDim);  // allocate vector to store errors 
+   }
 
    BinData tmpData(fNPoints, fDim, type); 
    for (unsigned int i = 0; i < fNPoints; ++i ) { 
-      double val = fDataWrapper->Value(i); 
+      double val = fDataWrapper->Value(i);
+      if (val <= 0) { 
+         MATH_ERROR_MSG("BinData::TransformLog","Some points have negative values - cannot apply a log transformation");
+         // return an empty data-sets
+         Resize(0);
+         return *this; 
+      } 
       double err = fDataWrapper->Error(i); 
       if (err <= 0) err = 1;
-      if (type == kValueError )  tmpData.Add(fDataWrapper->Coords(i), std::log(val), err/val);
-      else if (type == kCoordError) tmpData.Add(fDataWrapper->Coords(i), std::log(val), fDataWrapper->CoordErrors(i),  err/val);                                             
+      if (type == kValueError ) 
+         tmpData.Add(fDataWrapper->Coords(i), std::log(val), err/val);
+      else if (type == kCoordError) { 
+         const double * exold = fDataWrapper->CoordErrors(i);
+         assert(exold != 0);
+         for (unsigned int j = 0; j < fDim; ++j) { 
+            std::cout << " j " << j << " val " << val << " " << errx.size() <<  std::endl;
+            errx[j] = exold[j]/val; 
+         }
+         tmpData.Add(fDataWrapper->Coords(i), std::log(val), &errx.front(),  err/val); 
+      }                                            
    }
    delete fDataWrapper;
    fDataWrapper = 0; // no needed anymore

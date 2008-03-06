@@ -111,7 +111,8 @@ TF1 *langaufit(TH1F *his, Double_t *fitrange, Double_t *startvalues, Double_t *p
       ffit->SetParLimits(i, parlimitslo[i], parlimitshi[i]);
    }
 
-   his->Fit(FunName,"RB0");   // fit within specified range, use ParLimits, do not plot
+   printf("fitting Landau function %x  \n",ffit); 
+   his->Fit(FunName,"RBV0");   // fit within specified range, use ParLimits, do not plot
 
    ffit->GetParameters(fitparams);    // obtain fit parameters
    for (i=0; i<4; i++) {

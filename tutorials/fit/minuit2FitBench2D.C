@@ -18,7 +18,7 @@
 #include "TVirtualFitter.h"
 #include "TPaveLabel.h"
 #include "TStyle.h"
-
+#include "Fit/FitConfig.h"
 
 TF2 *fitFcn;
 TH2D *histo;
@@ -47,7 +47,8 @@ void fillHisto(int n =10000) {
 
 void DoFit(const char* fitter, TVirtualPad *pad, Int_t npass) {   
    TStopwatch timer;
-   TVirtualFitter::SetDefaultFitter(fitter);
+   //TVirtualFitter::SetDefaultFitter(fitter);
+   ROOT::Fit::FitConfig::SetDefaultMinimizer(fitter);
    pad->SetGrid();
    fitFcn->SetParameters(100,0,0,2,7);
    fitFcn->Update();
