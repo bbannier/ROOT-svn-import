@@ -13,6 +13,12 @@
 #pragma link C++ namespace ROOT;
 #pragma link C++ namespace ROOT::Math;
 
+// for automatic loading
+#ifdef MAKE_MAPS
+#pragma link C++ class TMath;
+#pragma link C++ class ROOT::Math;
+#endif
+
 
 #pragma link C++ typedef ROOT::Math::IGenFunction;
 #pragma link C++ typedef ROOT::Math::IMultiGenFunction;
