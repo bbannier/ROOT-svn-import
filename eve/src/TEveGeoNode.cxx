@@ -57,16 +57,31 @@ TEveGeoNode::TEveGeoNode(TGeoNode* node) :
 }
 
 //______________________________________________________________________________
+const Text_t* TEveGeoNode::GetName()  const
+{
+   // Return name, taken from geo-node. Used via TObject.
+
+   return fNode->GetName();
+}
+
+const Text_t* TEveGeoNode::GetTitle() const
+{
+   // Return title, taken from geo-node. Used via TObject.
+
+   return fNode->GetTitle();
+}
+
+//______________________________________________________________________________
 const Text_t* TEveGeoNode::GetElementName()  const
 {
-   // Return name, taken from geo-node.
+   // Return name, taken from geo-node. Used via TEveElement.
 
    return fNode->GetName();
 }
 
 const Text_t* TEveGeoNode::GetElementTitle() const
 {
-   // Return title, taken from geo-node.
+   // Return title, taken from geo-node. Used via TEveElement.
 
    return fNode->GetTitle();
 }
