@@ -68,6 +68,7 @@ MODULES       = build cint/oldcore metautils pcre utils base cont meta io net ma
 
 ifeq ($(ARCH),win32)
 MODULES      += winnt win32gdk
+MODULES      := $(filter-out newdelete,$(MODULES))
 SYSTEML       = $(WINNTL)
 SYSTEMO       = $(WINNTO)
 SYSTEMDO      = $(WINNTDO)
