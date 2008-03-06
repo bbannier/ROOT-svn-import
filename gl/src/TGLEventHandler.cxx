@@ -1,4 +1,4 @@
-// @(#)root/gl:$Id: TGLEventHandler.cxx
+// @(#)root/gl:$Id$
 // Author: Bertrand Bellenot   29/01/2008
 
 /*************************************************************************
