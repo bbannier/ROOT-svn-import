@@ -1,6 +1,10 @@
 #include "TF2.h"
 #include "TH2.h"
 #include "TMath.h"
+#include "TStopwatch.h"
+#include <iostream>
+#include <TRandom.h>
+#include <TROOT.h>
 
 // This tutorial illustrates :
 //  - how to create a 2-d function
@@ -13,6 +17,8 @@
 //   root > .x fit2.C++
 //Author: Rene Brun
          
+int gncalls;
+
 Double_t g2(Double_t *x, Double_t *par) {
    Double_t r1 = Double_t((x[0]-par[1])/par[2]);
    Double_t r2 = Double_t((x[1]-par[3])/par[4]);
@@ -23,6 +29,7 @@ Double_t fun2(Double_t *x, Double_t *par) {
    Double_t *p2 = &par[5];
    Double_t *p3 = &par[10];
    Double_t result = g2(x,p1) + g2(x,p2) + g2(x,p3);
+   gncalls++;
    return result;
 }
 
@@ -35,6 +42,7 @@ void fit2() {
    //Create an histogram and fill it randomly with f2
    TH2F *h2 = new TH2F("h2","from f2",40,-10,10,40,-10,10);
    Int_t nentries = 100000;
+   gRandom->SetSeed(111);
    h2->FillRandom("f2",nentries);
    //Fit h2 with original function f2
    Float_t ratio = 4*nentries/100000;
@@ -42,6 +50,14 @@ void fit2() {
    f2params[ 5] *= ratio;
    f2params[10] *= ratio;
    f2->SetParameters(f2params);
-   h2->Fit("f2");
+   std::cout << f2 << "f2 params[0] " << f2->GetParameter(0)  << std::endl;
+   std::cout << gROOT->GetFunction("f2") << "f2 params[0] " << ((TF1*)gROOT->GetFunction("f2"))->GetParameter(0) << std::endl;
+   gncalls = 0; 
+   TStopwatch w; w.Start();
+   h2->Fit(f2,"V");
+   std::cout << "Fit Time is " << w.RealTime() << "  " << w.CpuTime() << std::endl;
+   std::cout << "ncalls = " << gncalls << std::endl;
+   std::cout << "f2params[0] " << f2params[0] << "  " << ratio << std::endl;
+
    f2->Draw("cont1 same");
 }

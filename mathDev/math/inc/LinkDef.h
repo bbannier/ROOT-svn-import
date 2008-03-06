@@ -20,6 +20,7 @@
 // from base/inc/LinkDef2.h
 #pragma link C++ namespace TMath;
 
+
 #pragma link C++ function operator*(Double_t, const TComplex&);
 #pragma link C++ function operator+(Double_t, const TComplex&);
 #pragma link C++ function operator/(Double_t, const TComplex&);

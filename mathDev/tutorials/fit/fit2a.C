@@ -2,6 +2,8 @@
 #include "TH2.h"
 #include "TCutG.h"
 #include "TMath.h"
+#include "TStopwatch.h"
+#include <iostream>
 
 // This tutorial illustrates :
 //  - how to create a 2-d function
@@ -44,8 +46,10 @@ void fit2a() {
    f2params[ 5] *= ratio;
    f2params[10] *= ratio;
    f2->SetParameters(f2params);
+   TStopwatch w; w.Start();
    h2->Fit("f2","N");
    TCutG *cutg = new TCutG("cutg",5);
+   std::cout << "Fit Time is " << w.RealTime() << "  " << w.CpuTime() << std::endl;
    cutg->SetPoint(0,-7,-7);
    cutg->SetPoint(1, 2,-7);
    cutg->SetPoint(2, 2, 2);

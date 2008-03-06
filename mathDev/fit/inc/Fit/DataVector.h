@@ -297,6 +297,12 @@ public:
       return &fX.front();
    }
 
+   double Coord(unsigned int ipoint, unsigned int icoord) const { 
+         const double * x = fCoords[icoord];
+         assert (x != 0);
+         return  x[ipoint]; 
+   }
+
 
    const double * CoordErrors(unsigned int ipoint) const { 
       for (unsigned int i = 0; i < fDim; ++i) { 
@@ -305,6 +311,11 @@ public:
          fErr[i] = err[ipoint];
       } 
       return &fErr.front();
+   }
+
+   double CoordError(unsigned int ipoint, unsigned int icoord) const { 
+         const double * err = fErrCoords[icoord];
+         return  (err != 0) ? err[ipoint] : 0; 
    }
 
 
