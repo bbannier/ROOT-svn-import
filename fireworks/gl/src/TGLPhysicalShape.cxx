@@ -372,7 +372,7 @@ void TGLPhysicalShape::Draw(TGLRnrCtx & rnrCtx) const
    glPushMatrix();
    glMultMatrixd(fTransform.CArr());
    if (fInvertedWind)  glFrontFace(GL_CW);
-   if (fSelected)
+   if (fSelected && !rnrCtx.Selection())
    {
       const TGLRect& vp = rnrCtx.RefCamera().RefViewport();
       Int_t inner[5][2] = { {0,-1}, {1,0}, {0,1}, {-1,0}, {0,0} };
