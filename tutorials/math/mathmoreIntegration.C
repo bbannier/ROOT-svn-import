@@ -185,6 +185,15 @@ void  DrawCumulative(double x1, double x2, int n = 100){
 void mathmoreIntegration(double a = -2, double b = 2)
 {
 
+#if defined(__CINT__) && !defined(__MAKECINT__) 
+
+  cout << "This tutorial can run only using ACliC, compiling it by doing: " << endl;
+  cout << "\t  .x tutorials/math/mathmoreIntegration.C+" << endl; 
+  return;
+
+#endif
+
+
    DrawCumulative(a, b);
    testIntegPerf(a, b);
 }
