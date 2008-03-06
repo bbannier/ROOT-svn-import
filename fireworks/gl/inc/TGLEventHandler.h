@@ -26,15 +26,18 @@
 #endif
 
 class TGLViewer;
+class TGLPhysicalShape;
 
 class TGLEventHandler : public TGEventHandler {
 
 protected:
-   TGLViewer *fGLViewer;
-   TTimer    *fMouseTimer;     // mouse delay timer
-   TPoint     fLastPos;
-   UInt_t     fActiveButtonID;
-   UInt_t     fLastEventState;
+   TGLViewer        *fGLViewer;
+   TTimer           *fMouseTimer;     // mouse delay timer
+   TPoint            fLastPos;
+   TPoint            fLastMouseOverPos;
+   TGLPhysicalShape *fLastMouseOverShape;
+   UInt_t            fActiveButtonID;
+   UInt_t            fLastEventState;
 
 public:
    TGLEventHandler(const char *name, TGWindow *w, TObject *obj, const char *title="");

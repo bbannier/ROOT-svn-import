@@ -37,17 +37,24 @@ ClassImp(TGLEventHandler)
 
 //______________________________________________________________________________
 TGLEventHandler::TGLEventHandler(const char *name, TGWindow *w, TObject *obj, 
-                     const char *title) : TGEventHandler(name, w, obj, title)
-{ 
-   fGLViewer = (TGLViewer *)obj;
-   fMouseTimer = new TTimer(this, 250);
-   fActiveButtonID = 0;
-   fLastEventState = 0;
+                                 const char *title) :
+   TGEventHandler(name, w, obj, title),
+   fGLViewer           ((TGLViewer *)obj),
+   fMouseTimer         (new TTimer(this, 250)),
+   fLastPos            (-1, -1),
+   fLastMouseOverPos   (-1, -1),
+   fLastMouseOverShape (0),
+   fActiveButtonID     (0),
+   fLastEventState     (0)
+{
+   // Constructor.
 }
 
 //______________________________________________________________________________
 TGLEventHandler::~TGLEventHandler()
-{ 
+{
+   // Destructor.
+
    delete fMouseTimer;
 }
 
@@ -352,6 +359,10 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
                if ( ! handled) {
                   fGLViewer->fAction = TGLViewer::kDragCameraRotate;
                   grabPointer = kTRUE;
+                  if (fMouseTimer) {
+                     fMouseTimer->TurnOff();
+                     fMouseTimer->Reset();
+                  }
                }
                break;
             }
@@ -446,6 +457,10 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
          eventSt.fCode = 0;
          eventSt.fState = 0;
       }
+      if (event->fCode == kButton1 && fMouseTimer) {
+         fMouseTimer->TurnOn();
+      }
+
    }
 
    return kTRUE;
@@ -703,18 +718,15 @@ Bool_t TGLEventHandler::HandleTimer(TTimer *t)
    // If mouse delay timer times out emit signal.
 
    if (t != fMouseTimer) return kTRUE;
-   static UInt_t oldx = 0, oldy = 0;
-   static TGLPhysicalShape *shape = 0;
    if (fGLViewer->fAction == TGLViewer::kDragNone) {
-      if (oldx != (UInt_t)fLastPos.fX || oldy != (UInt_t)fLastPos.fY) {
+      if (fLastMouseOverPos != fLastPos) {
          fGLViewer->RequestSelect(fLastPos.fX, fLastPos.fY, kFALSE);
-         if (shape != fGLViewer->fSelRec.GetPhysShape()) {
-            shape = fGLViewer->fSelRec.GetPhysShape();
-            fGLViewer->MouseOver(shape);
-            fGLViewer->MouseOver(shape, fLastEventState);
+         if (fLastMouseOverShape != fGLViewer->fSelRec.GetPhysShape()) {
+            fLastMouseOverShape = fGLViewer->fSelRec.GetPhysShape();
+            fGLViewer->MouseOver(fLastMouseOverShape);
+            fGLViewer->MouseOver(fLastMouseOverShape, fLastEventState);
          }
-         oldx = (UInt_t)fLastPos.fX;
-         oldy = (UInt_t)fLastPos.fY;
+         fLastMouseOverPos = fLastPos;
       }
    }
    return kTRUE;
