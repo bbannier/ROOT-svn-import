@@ -22,6 +22,7 @@
 #include "TROOT.h"
 #include "TSocket.h"
 #include "Bytes.h"
+#include <stdlib.h>
 
 static const char *gUserAgent = "User-Agent: ROOT-TWebFile/1.0";
 
@@ -122,18 +123,20 @@ void TWebFile::Init(Bool_t)
       return;
    }
 
-   Seek(0);
-   if (ReadBuffer(buf, 4)) {
-      MakeZombie();
-      gDirectory = gROOT;
-      return;
-   }
+   if (fIsRootFile) {
+      Seek(0);
+      if (ReadBuffer(buf, 4)) {
+         MakeZombie();
+         gDirectory = gROOT;
+         return;
+      }
 
-   if (fIsRootFile && strncmp(buf, "root", 4) && strncmp(buf, "PK", 2)) {  // PK is zip file
-      Error("TWebFile", "%s is not a ROOT file", fUrl.GetUrl());
-      MakeZombie();
-      gDirectory = gROOT;
-      return;
+      if (strncmp(buf, "root", 4) && strncmp(buf, "PK", 2)) {  // PK is zip file
+         Error("TWebFile", "%s is not a ROOT file", fUrl.GetUrl());
+         MakeZombie();
+         gDirectory = gROOT;
+         return;
+      }
    }
 
    TFile::Init(kFALSE);

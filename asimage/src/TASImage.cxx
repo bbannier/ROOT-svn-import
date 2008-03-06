@@ -3499,12 +3499,11 @@ void TASImage::FillRectangleInternal(UInt_t col, Int_t x, Int_t y, UInt_t width,
 {
    // Fills rectangle of size (width, height) at position (x,y)
    // within the existing image with specified color.
-   //
 
    ARGB32 color = (ARGB32)col;
 
-   width = !width ? fImage->width : width;
-   height = !height ? fImage->height : height;
+   if (width  == 0) width = 1;
+   if (height == 0) height = 1;
 
    if (x < 0) {
       width += x;
@@ -4782,6 +4781,14 @@ void TASImage::CopyArea(TImage *dst, Int_t xsrc, Int_t ysrc, UInt_t w,  UInt_t h
    w = xsrc + w > fImage->width ? fImage->width - xsrc : w;
    h = ysrc + h > fImage->height ? fImage->height - ysrc : h;
    UInt_t yy = (ysrc + y)*fImage->width;
+
+   if (!fImage->alt.argb32) {
+      BeginPaint();
+   }
+   if (!out->alt.argb32) {
+      dst->BeginPaint();
+      out = ((TASImage*)dst)->GetImage();
+   }
 
    if (fImage->alt.argb32 && out->alt.argb32) {
       for (y = 0; y < (int)h; y++) {
