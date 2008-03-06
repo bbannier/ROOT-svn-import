@@ -44,7 +44,7 @@ extern int add_history(const char* str);
 *
 *  command history with file store
 *************************************************************/
-void G__input_history(int *state,char *string)
+void G__input_history(int *state,const char *string)
 {
   char G__oneline[G__LONGLINE*2];
   char G__argbuf[G__LONGLINE*2];
@@ -60,7 +60,7 @@ void G__input_history(int *state,char *string)
   
   static char prevstring[G__LONGLINE];
   static char histfile[G__ONELINE];
-  char *homehist=".cint_hist";
+  const char *homehist=".cint_hist";
   int line=0;
   
   FILE *fp,*tmp;
@@ -279,7 +279,7 @@ char **G__funcname_completion(const char *text,int /* start */,int /* end */)
 
 #ifdef G__GNUREADLINE
 extern char **(*rl_attempted_completion_function)(const char*,int,int);
-extern char *rl_basic_word_break_characters;
+extern const char *rl_basic_word_break_characters;
 
 int G__init_readline()
 {
