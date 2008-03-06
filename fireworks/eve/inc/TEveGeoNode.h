@@ -79,17 +79,21 @@ protected:
    TGeoManager* fManager;
    Int_t        fVisOption;
    Int_t        fVisLevel;
+   Int_t        fMaxVisNodes;
 
 public:
-   TEveGeoTopNode(TGeoManager* manager, TGeoNode* node, Int_t visopt=1, Int_t vislvl=3);
+   TEveGeoTopNode(TGeoManager* manager, TGeoNode* node, Int_t visopt=1,
+                  Int_t vislvl=3, Int_t maxvisnds=10000);
    virtual ~TEveGeoTopNode() {}
 
    void         UseNodeTrans();
 
-   Int_t GetVisOption() const { return fVisOption; }
-   void  SetVisOption(Int_t visopt);
-   Int_t GetVisLevel()  const { return fVisLevel; }
-   void  SetVisLevel(Int_t vislvl);
+   Int_t GetVisOption()      const { return fVisOption; }
+   void  SetVisOption(Int_t vo)    { fVisOption = vo;   }
+   Int_t GetVisLevel()       const { return fVisLevel;  }
+   void  SetVisLevel(Int_t vl)     { fVisLevel = vl;    }
+   Int_t GetMaxVisNodes()    const { return fMaxVisNodes; }
+   void  SetMaxVisNodes(Int_t mvn) { fMaxVisNodes = mvn;  }
 
    virtual Bool_t CanEditElement() const { return kTRUE; }
    virtual Bool_t SingleRnrState() const { return kTRUE; }

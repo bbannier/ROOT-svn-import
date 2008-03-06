@@ -142,12 +142,15 @@ class TEvePathMark
 public:
    enum EType_e   { kReference, kDaughter, kDecay };
 
+   EType_e     fType; // Mark-type.
    TEveVector  fV;    // Vertex.
    TEveVector  fP;    // Momentum.
    Float_t     fTime; // Time.
-   EType_e     fType; // Mark-type.
 
-   TEvePathMark(EType_e t=kReference) : fV(), fP(), fTime(0), fType(t) {}
+   TEvePathMark(EType_e type=kReference) : fType(type), fV(), fP(), fTime(0) {}
+   TEvePathMark(EType_e type, const TEveVector& v, const TEveVector& p, Float_t time=0) :
+      fType(type), fV(v), fP(p), fTime(time) {}
+
    virtual ~TEvePathMark() {}
 
    const char* TypeName();

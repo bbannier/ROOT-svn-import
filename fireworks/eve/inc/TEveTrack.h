@@ -35,8 +35,9 @@ private:
    TEveTrack& operator=(const TEveTrack&); // Not implemented
 
 public:
-   typedef std::vector<TEvePathMark*>           vpPathMark_t;
-   typedef std::vector<TEvePathMark*>::iterator vpPathMark_i;
+   typedef std::vector<TEvePathMark>    vPathMark_t;
+   typedef vPathMark_t::iterator        vPathMark_i;
+   typedef vPathMark_t::const_iterator  vPathMark_ci;
 
 protected:
    TEveVector         fV;          // Starting vertex
@@ -46,7 +47,7 @@ protected:
    Int_t              fCharge;     // Charge in units of e0
    Int_t              fLabel;      // Simulation label
    Int_t              fIndex;      // Reconstruction index
-   vpPathMark_t       fPathMarks;  // TEveVector of known points along the track
+   vPathMark_t        fPathMarks;  // TEveVector of known points along the track
 
    TEveTrackPropagator *fPropagator;   // Pointer to shared render-style
 
@@ -81,10 +82,10 @@ public:
    Int_t GetIndex()  const   { return fIndex; }
    void  SetIndex(Int_t idx) { fIndex = idx;  }
 
-   void          AddPathMark(TEvePathMark* pm) { fPathMarks.push_back(pm); }
-   vpPathMark_t& GetPathMarksRef()               { return fPathMarks; }
-   const vpPathMark_t& GetPathMarksRef() const   { return fPathMarks; }
-   void          SortPathMarksByTime();
+   void  AddPathMark(const TEvePathMark& pm) { fPathMarks.push_back(pm); }
+   void  SortPathMarksByTime();
+         vPathMark_t& RefPathMarks()       { return fPathMarks; }
+   const vPathMark_t& RefPathMarks() const { return fPathMarks; }
 
    //--------------------------------
 

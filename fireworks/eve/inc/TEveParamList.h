@@ -13,6 +13,7 @@
 #define ROOT_TEveParamList
 
 #include "TEveElement.h"
+#include "TQObject.h"
 #include <vector>
 
 //==============================================================================
@@ -21,7 +22,8 @@
 //==============================================================================
 
 class TEveParamList : public TEveElement,
-                      public TNamed
+                      public TNamed,
+                      public TQObject
 {
    friend class TEveParamListEditor;
 
@@ -91,6 +93,8 @@ public:
    FloatConfig_t    GetFloatParameter(const TString& name);
    IntConfig_t      GetIntParameter  (const TString& name);
    Bool_t           GetBoolParameter (const TString& name);
+
+   void ParamChanged(const char* name); // *SIGNAL*
 
    ClassDef(TEveParamList, 0); // Eve element to store generic configuration information.
 };

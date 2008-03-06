@@ -315,17 +315,19 @@ do_dump:
 // trasformation stored in TEveElement.
 //
 // It holds a pointer to TGeoManager and controls for steering of
-// TGeoPainter.
+// TGeoPainter, fVisOption, fVisLevel and fMaxVisNodes. They have the
+// same meaning as in TGeoManager/TGeoPainter.
 
 ClassImp(TEveGeoTopNode);
 
 //______________________________________________________________________________
 TEveGeoTopNode::TEveGeoTopNode(TGeoManager* manager, TGeoNode* node,
-                               Int_t visopt, Int_t vislvl) :
+                               Int_t visopt, Int_t vislvl, Int_t maxvisnds) :
    TEveGeoNode  (node),
    fManager     (manager),
    fVisOption   (visopt),
-   fVisLevel    (vislvl)
+   fVisLevel    (vislvl),
+   fMaxVisNodes (maxvisnds)
 {
    // Constructor.
 
@@ -342,26 +344,6 @@ void TEveGeoTopNode::UseNodeTrans()
    // Warning: this is local transformation of the node!
 
    RefMainTrans().SetFrom(*fNode->GetMatrix());
-}
-
-/******************************************************************************/
-
-//______________________________________________________________________________
-void TEveGeoTopNode::SetVisOption(Int_t visopt)
-{
-   // Set visibility option, see TGeoPainter.
-
-   fVisOption = visopt;
-   gEve->Redraw3D();
-}
-
-//______________________________________________________________________________
-void TEveGeoTopNode::SetVisLevel(Int_t vislvl)
-{
-   // Set visibility level, see TGeoPainter.
-
-   fVisLevel = vislvl;
-   gEve->Redraw3D();
 }
 
 /******************************************************************************/
@@ -413,7 +395,10 @@ void TEveGeoTopNode::Paint(Option_t* option)
       gPad = 0;
       TGeoVolume* top_volume = fManager->GetTopVolume();
       fManager->SetVisOption(fVisOption);
-      fManager->SetVisLevel(fVisLevel);
+      if (fVisLevel > 0)
+         fManager->SetVisLevel(fVisLevel);
+      else
+         fManager->SetMaxVisNodes(fMaxVisNodes);
       fManager->SetTopVolume(fNode->GetVolume());
       gPad = pad;
       TVirtualGeoPainter* vgp = fManager->GetGeomPainter();
