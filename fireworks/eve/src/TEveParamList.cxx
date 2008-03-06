@@ -126,6 +126,7 @@ void TEveParamListEditor::InitModel(TObject* obj)
    if (fParamFrame) {
       fParamFrame->UnmapWindow();
       RemoveFrame(fParamFrame);
+      fParamFrame->DestroyWindow();
       delete fParamFrame;
    }
    fParamFrame = new TGVerticalFrame(this);
@@ -136,7 +137,7 @@ void TEveParamListEditor::InitModel(TObject* obj)
    for (UInt_t i = 0; i < fM->fIntParameters.size(); ++i)
    {
       TGCompositeFrame* frame = new TGHorizontalFrame(fParamFrame);
-	
+
       // number entry widget
       TGNumberEntry* widget = new TGNumberEntry
          (frame, fM->fIntParameters[i].fValue,
@@ -147,13 +148,13 @@ void TEveParamListEditor::InitModel(TObject* obj)
           TGNumberFormat::kNELLimitMinMax,   // specify limits
           fM->fIntParameters[i].fMin,        // min value
           fM->fIntParameters[i].fMax);       // max value
-      frame->AddFrame(widget, new TGLayoutHints(kLHintsLeft, 0,8,0,0));
+      frame->AddFrame(widget, new TGLayoutHints(kLHintsLeft|kLHintsCenterY, 2,8,2,2));
       widget->Connect("ValueSet(Long_t)", "TEveParamListEditor", this, "DoIntUpdate()");
       fIntParameters.push_back(widget);
-		
+
       // label
       frame->AddFrame(new TGLabel(frame,fM->fIntParameters[i].fName.Data()),
-                      new TGLayoutHints(kLHintsLeft, 0,0,3,0));
+                      new TGLayoutHints(kLHintsLeft|kLHintsCenterY));
 
       fParamFrame->AddFrame(frame, new TGLayoutHints(kLHintsTop));
    }
@@ -164,7 +165,7 @@ void TEveParamListEditor::InitModel(TObject* obj)
    for (UInt_t i = 0; i < fM->fFloatParameters.size(); ++i)
    {
       TGCompositeFrame* frame = new TGHorizontalFrame(fParamFrame);
-	
+
       // number entry widget
       TGNumberEntry* widget = new TGNumberEntry
          (frame, fM->fFloatParameters[i].fValue,
@@ -175,13 +176,13 @@ void TEveParamListEditor::InitModel(TObject* obj)
           TGNumberFormat::kNELLimitMinMax,  // specify limits
           fM->fFloatParameters[i].fMin,     // min value
           fM->fFloatParameters[i].fMax);    // max value
-      frame->AddFrame(widget, new TGLayoutHints(kLHintsLeft, 0,8,0,0));
+      frame->AddFrame(widget, new TGLayoutHints(kLHintsLeft|kLHintsCenterY, 2,8,2,2));
       widget->Connect("ValueSet(Long_t)", "TEveParamListEditor", this, "DoFloatUpdate()");
       fFloatParameters.push_back( widget );
-	
+
       // label
       frame->AddFrame(new TGLabel(frame,fM->fFloatParameters[i].fName.Data()),
-                      new TGLayoutHints(kLHintsLeft, 0,0,3,0) );
+                      new TGLayoutHints(kLHintsLeft|kLHintsCenterY) );
 
       fParamFrame->AddFrame(frame, new TGLayoutHints(kLHintsTop));
    }
@@ -196,7 +197,7 @@ void TEveParamListEditor::InitModel(TObject* obj)
       widget->Connect("Clicked()", "TEveParamListEditor", this, "DoBoolUpdate()");
       fBoolParameters.push_back(widget);
 
-      fParamFrame->AddFrame(widget, new TGLayoutHints(kLHintsTop));
+      fParamFrame->AddFrame(widget, new TGLayoutHints(kLHintsTop,2,0,1,1));
    }
    MapSubwindows();
 }
