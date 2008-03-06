@@ -685,7 +685,12 @@ done
 # now write the cint-config script
 
 # get actual cint version from int/G__ci.h
-CINTVERSION=`grep '#define *G__CINTVERSIONSTR ' ${COREVERSION}/inc/G__ci.h | sed 's/#define *G__CINTVERSIONSTR *"//g' | sed 's/,.*//g'`
+if [ "x${COREVERSION}" = "xoldcore" ]; then
+  CINTVERSIONTAG=G__CINTVERSIONSTR_V5
+else
+  CINTVERSIONTAG=G__CINTVERSIONSTR
+fi
+CINTVERSION=`grep '#define *'${CINTVERSIONTAG}' ' ${COREVERSION}/inc/G__ci.h | sed 's/^.*"\([^,]\+\),.*$/\1/'`
 
 $RM cint-config
 echo Writing cint-config...
