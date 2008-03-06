@@ -65,7 +65,7 @@ GENVECTORO    := $(GENVECTORS:.cxx=.o)
 
 GENVECTORDEP  := $(GENVECTORO:.o=.d)  $(GENVECTORDO:.o=.d) $(GENVECTORDO32:.o=.d)
 
-GENVECTORLIB  := $(LPATH)/libGenvector.$(SOEXT)
+GENVECTORLIB  := $(LPATH)/libGenVector.$(SOEXT)
 GENVECTORMAP  := $(GENVECTORLIB:.$(SOEXT)=.rootmap)
 
 # used in the main Makefile

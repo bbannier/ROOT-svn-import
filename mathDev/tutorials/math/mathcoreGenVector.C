@@ -987,11 +987,11 @@ int testRotation() {
   return ok;
 }
 
-
 void mathcoreGenVector() {
 
 #ifdef __CINT__
   gSystem->Load("libMathCore");
+  gSystem->Load("libGenVector");
   using namespace ROOT::Math;
 #endif
  
