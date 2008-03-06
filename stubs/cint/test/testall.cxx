@@ -809,7 +809,11 @@ int main(int argc, char** argv)
    ret += ci(kLangCXX, "t910.cxx", difffile);
    ret += ci(kLangCXX, "t916.cxx", difffile);
 #if !defined(G__VISUAL) || defined(FORCEWIN32)
+#if G__CINTVERSION < 70000000
+   ret += io("t927.cxx","t927.ref5",difffile);
+#else
    ret += io("t927.cxx","t927.ref",difffile);
+#endif
 #endif // !G__VISUAL || FORCEWIN32
 #if !defined(G__WIN32) || defined(FORCEWIN32)
    ret += mkciN(kLangCXX, "t928.cxx", "t928.h", difffile, "", "t928a.h", "t928b.h");
