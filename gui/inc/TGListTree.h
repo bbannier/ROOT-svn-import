@@ -262,12 +262,16 @@ protected:
    ECheckMode       fCheckMode;      // how to propagate check properties through the tree
    GContext_t       fColorGC;        // drawing context for main item color
 
-   static Pixel_t        fgGrayPixel;
-   static const TGFont  *fgDefaultFont;
-   static TGGC          *fgDrawGC;
-   static TGGC          *fgLineGC;
-   static TGGC          *fgHighlightGC;
-   static TGGC          *fgColorGC;
+   static Pixel_t          fgGrayPixel;
+   static const TGFont    *fgDefaultFont;
+   static TGGC            *fgDrawGC;
+   static TGGC            *fgLineGC;
+   static TGGC            *fgHighlightGC;
+   static TGGC            *fgColorGC;
+   static const TGPicture *fgOpenPic;    // icon for open item
+   static const TGPicture *fgClosedPic;  // icon for closed item
+   static const TGPicture *fgCheckedPic;    // icon for checked item
+   static const TGPicture *fgUncheckedPic;  // icon for unchecked item
 
    static Pixel_t       GetGrayPixel();
    static FontStruct_t  GetDefaultFontStruct();
@@ -422,6 +426,11 @@ public:
    Int_t        FontHeight();
    Int_t        FontAscent();
    Int_t        TextWidth(const char *c);
+
+   static const TGPicture *GetOpenPic();
+   static const TGPicture *GetClosedPic();
+   static const TGPicture *GetCheckedPic();
+   static const TGPicture *GetUncheckedPic();
 
    // User control
    void         SetUserControl(Bool_t ctrl=kTRUE) { fUserControlled = ctrl; }

@@ -59,17 +59,57 @@
 #include "Riostream.h"
 
 
-Pixel_t        TGListTree::fgGrayPixel = 0;
-const TGFont  *TGListTree::fgDefaultFont = 0;
-TGGC          *TGListTree::fgDrawGC = 0;
-TGGC          *TGListTree::fgLineGC = 0;
-TGGC          *TGListTree::fgHighlightGC = 0;
-TGGC          *TGListTree::fgColorGC = 0;
+Pixel_t          TGListTree::fgGrayPixel = 0;
+const TGFont    *TGListTree::fgDefaultFont = 0;
+TGGC            *TGListTree::fgDrawGC = 0;
+TGGC            *TGListTree::fgLineGC = 0;
+TGGC            *TGListTree::fgHighlightGC = 0;
+TGGC            *TGListTree::fgColorGC = 0;
+const TGPicture *TGListTree::fgOpenPic = 0;
+const TGPicture *TGListTree::fgClosedPic = 0;
+const TGPicture *TGListTree::fgCheckedPic = 0;
+const TGPicture *TGListTree::fgUncheckedPic = 0;
 
 
 ClassImp(TGListTreeItem)
 ClassImp(TGListTreeItemStd)
 ClassImp(TGListTree)
+
+//______________________________________________________________________________
+inline const TGPicture *TGListTree::GetOpenPic()
+{
+   if (!fgOpenPic)
+      fgOpenPic = gClient->GetPicture("ofolder_t.xpm");
+   ((TGPicture *)fgOpenPic)->AddReference();
+   return fgOpenPic;
+}
+
+//______________________________________________________________________________
+inline const TGPicture *TGListTree::GetClosedPic()
+{
+   if (!fgClosedPic)
+      fgClosedPic = gClient->GetPicture("folder_t.xpm");
+   ((TGPicture *)fgClosedPic)->AddReference();
+   return fgClosedPic;
+}
+
+//______________________________________________________________________________
+inline const TGPicture *TGListTree::GetCheckedPic()
+{
+   if (!fgCheckedPic)
+      fgCheckedPic = gClient->GetPicture("checked_t.xpm");
+   ((TGPicture *)fgCheckedPic)->AddReference();
+   return fgCheckedPic;
+}
+
+//______________________________________________________________________________
+inline const TGPicture *TGListTree::GetUncheckedPic()
+{
+   if (!fgUncheckedPic)
+      fgUncheckedPic = gClient->GetPicture("unchecked_t.xpm");
+   ((TGPicture *)fgUncheckedPic)->AddReference();
+   return fgUncheckedPic;
+}
 
 /******************************************************************************/
 /******************************************************************************/
@@ -113,20 +153,20 @@ TGListTreeItemStd::TGListTreeItemStd(TGClient *client, const char *name,
    fChecked = kTRUE;
 
    if (!opened)
-      opened = fClient->GetPicture("ofolder_t.xpm");
+      opened = TGListTree::GetOpenPic();
    else
       ((TGPicture *)opened)->AddReference();
 
    if (!closed)
-      closed = fClient->GetPicture("folder_t.xpm");
+      closed = TGListTree::GetClosedPic();
    else
       ((TGPicture *)closed)->AddReference();
 
    fOpenPic   = opened;
    fClosedPic = closed;
 
-   fCheckedPic   = fClient->GetPicture("checked_t.xpm");
-   fUncheckedPic = fClient->GetPicture("unchecked_t.xpm");
+   fCheckedPic   = TGListTree::GetCheckedPic();
+   fUncheckedPic = TGListTree::GetUncheckedPic();
 
    fActive = kFALSE;
 
@@ -466,6 +506,14 @@ TGListTree::~TGListTree()
       delete item;
       item = sibling;
    }
+   if (fgOpenPic)
+      fClient->FreePicture(fgOpenPic);
+   if (fgClosedPic)
+      fClient->FreePicture(fgClosedPic);
+   if (fgCheckedPic)
+      fClient->FreePicture(fgCheckedPic);
+   if (fgUncheckedPic)
+      fClient->FreePicture(fgUncheckedPic);
 }
 
 //--- text utility functions
@@ -1536,8 +1584,8 @@ void TGListTree::DrawOutline(Handle_t id, TGListTreeItem *item, Pixel_t col,
    if (item->HasCheckBox())
       posx -= item->GetCheckBoxPicture()->GetWidth();
    if (clear) {
-      gVirtualX->SetForeground(fDrawGC, fCanvas->GetBackground());
-      ClearViewPort();
+      gVirtualX->SetForeground(fDrawGC, fCanvas->GetContainer()->GetBackground());
+      //ClearViewPort();  // time consuming!!!
    }
    else
       gVirtualX->SetForeground(fDrawGC, col);
@@ -1570,16 +1618,16 @@ void TGListTree::DrawItemName(Handle_t id, TGListTreeItem *item)
 {
    // Draw name of list tree item.
 
-   UInt_t width;
    TGPosition pos = GetPagePosition();
+   TGDimension dim = GetPageDimension();
 
-   width = TextWidth(item->GetText());
    if (item->IsActive()) {
       DrawActive(id, item);
    }
    else { // if (!item->IsActive() && (item != fSelected)) {
       gVirtualX->FillRectangle(id, fHighlightGC, item->fXtext, 
-                       item->fYtext-pos.fY, width, FontHeight());
+                       item->fYtext-pos.fY, dim.fWidth-item->fXtext-2,
+                       FontHeight());
       gVirtualX->DrawString(id, fDrawGC,
                        item->fXtext, item->fYtext-pos.fY + FontAscent(),
                        item->GetText(), item->GetTextLength());
@@ -1589,6 +1637,7 @@ void TGListTree::DrawItemName(Handle_t id, TGListTreeItem *item)
    }
 
    if (fColorMode != 0 && item->HasColor()) {
+      UInt_t width = TextWidth(item->GetText());
       gVirtualX->SetForeground(fColorGC, TColor::Number2Pixel(item->GetColor()));
       if (fColorMode & kColorUnderline) {
          Int_t y = item->fYtext-pos.fY + FontAscent() + 2;
