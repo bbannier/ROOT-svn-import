@@ -76,6 +76,13 @@ Bool_t TEveParamList::GetBoolParameter(const TString& name)
    return kFALSE;
 }
 
+//______________________________________________________________________________
+void TEveParamList::ParamChanged(const char* name)
+{
+   // Emit ParamChanged() signal.
+
+   Emit("ParamChanged(char*)", name);
+}
 
 //==============================================================================
 //==============================================================================
@@ -85,12 +92,21 @@ Bool_t TEveParamList::GetBoolParameter(const TString& name)
 //______________________________________________________________________________
 // GUI editor for TEveParamList.
 //
+// Slot methods from this object do not call Update, instead they call
+// their model's ParamChanged(const char* name) function which emits a
+// corresponding signal.
+// 
+// This helps in handling of parameter changes as they are probably
+// related to displayed objects in a more complicated way. Further,
+// the TGCheckButton::HandleButton() emits more signal after the
+// Clicked() signal and if model is reset in the editor, its contents
+// is removed. This results in a crash.
 
 ClassImp(TEveParamListEditor);
 
 //______________________________________________________________________________
 TEveParamListEditor::TEveParamListEditor(const TGWindow *p, Int_t width, Int_t height,
-             UInt_t options, Pixel_t back) :
+                                         UInt_t options, Pixel_t back) :
    TGedFrame(p, width, height, options | kVerticalFrame, back),
    fM          (0),
    fParamFrame (0)
@@ -122,21 +138,22 @@ void TEveParamListEditor::InitModel(TObject* obj)
       TGCompositeFrame* frame = new TGHorizontalFrame(fParamFrame);
 	
       // number entry widget
-      TGNumberEntry* widget = new TGNumberEntry(frame, fM->fIntParameters[i].fValue,
-                                                5,                                 // number of digits 
-                                                i,                                 // widget ID
-                                                TGNumberFormat::kNESInteger,       // style
-                                                TGNumberFormat::kNEAAnyNumber,     // input value filter
-                                                TGNumberFormat::kNELLimitMinMax,   // specify limits
-                                                fM->fIntParameters[i].fMin,        // min value
-                                                fM->fIntParameters[i].fMax);       // max value
-      frame->AddFrame(widget, new TGLayoutHints(kLHintsLeft | kLHintsBottom, 0,8,0,0));
+      TGNumberEntry* widget = new TGNumberEntry
+         (frame, fM->fIntParameters[i].fValue,
+          5,                                 // number of digits 
+          i,                                 // widget ID
+          TGNumberFormat::kNESInteger,       // style
+          TGNumberFormat::kNEAAnyNumber,     // input value filter
+          TGNumberFormat::kNELLimitMinMax,   // specify limits
+          fM->fIntParameters[i].fMin,        // min value
+          fM->fIntParameters[i].fMax);       // max value
+      frame->AddFrame(widget, new TGLayoutHints(kLHintsLeft, 0,8,0,0));
       widget->Connect("ValueSet(Long_t)", "TEveParamListEditor", this, "DoIntUpdate()");
       fIntParameters.push_back(widget);
 		
       // label
       frame->AddFrame(new TGLabel(frame,fM->fIntParameters[i].fName.Data()),
-                      new TGLayoutHints(kLHintsLeft, 0,4,0,0));
+                      new TGLayoutHints(kLHintsLeft, 0,0,3,0));
 
       fParamFrame->AddFrame(frame, new TGLayoutHints(kLHintsTop));
    }
@@ -149,21 +166,22 @@ void TEveParamListEditor::InitModel(TObject* obj)
       TGCompositeFrame* frame = new TGHorizontalFrame(fParamFrame);
 	
       // number entry widget
-      TGNumberEntry* widget = new TGNumberEntry(frame, fM->fFloatParameters[i].fValue,
-                                                5,                                // number of digits 
-                                                i,                                // widget ID
-                                                TGNumberFormat::kNESReal,         // style
-                                                TGNumberFormat::kNEAAnyNumber,    // input value filter
-                                                TGNumberFormat::kNELLimitMinMax,  // specify limits
-                                                fM->fFloatParameters[i].fMin,     // min value
-                                                fM->fFloatParameters[i].fMax);    // max value
-      frame->AddFrame(widget, new TGLayoutHints(kLHintsLeft | kLHintsBottom, 0,8,0,0));
+      TGNumberEntry* widget = new TGNumberEntry
+         (frame, fM->fFloatParameters[i].fValue,
+          5,                                // number of digits 
+          i,                                // widget ID
+          TGNumberFormat::kNESReal,         // style
+          TGNumberFormat::kNEAAnyNumber,    // input value filter
+          TGNumberFormat::kNELLimitMinMax,  // specify limits
+          fM->fFloatParameters[i].fMin,     // min value
+          fM->fFloatParameters[i].fMax);    // max value
+      frame->AddFrame(widget, new TGLayoutHints(kLHintsLeft, 0,8,0,0));
       widget->Connect("ValueSet(Long_t)", "TEveParamListEditor", this, "DoFloatUpdate()");
       fFloatParameters.push_back( widget );
 	
       // label
       frame->AddFrame(new TGLabel(frame,fM->fFloatParameters[i].fName.Data()),
-                      new TGLayoutHints(kLHintsLeft  | kLHintsBottom, 0,4,0,0) );
+                      new TGLayoutHints(kLHintsLeft, 0,0,3,0) );
 
       fParamFrame->AddFrame(frame, new TGLayoutHints(kLHintsTop));
    }
@@ -172,15 +190,15 @@ void TEveParamListEditor::InitModel(TObject* obj)
    fBoolParameters.clear();
    for (UInt_t i = 0; i < fM->fBoolParameters.size(); ++i)
    {
-      TGCheckButton* widget = new TGCheckButton(fParamFrame, fM->fBoolParameters[i].fName.Data(), i);
-      AddFrame(widget, new TGLayoutHints(kLHintsLeft, 0,0,0,0) );
+      TGCheckButton* widget = new TGCheckButton(fParamFrame,
+                                                fM->fBoolParameters[i].fName.Data(),
+                                                i);
       widget->Connect("Clicked()", "TEveParamListEditor", this, "DoBoolUpdate()");
       fBoolParameters.push_back(widget);
 
       fParamFrame->AddFrame(widget, new TGLayoutHints(kLHintsTop));
    }
    MapSubwindows();
-   Layout();
 }
 
 /******************************************************************************/
@@ -213,7 +231,9 @@ void TEveParamListEditor::DoIntUpdate()
    Int_t id = widget->WidgetId();
    if (id < 0 || id >= (int) fM->fIntParameters.size()) return;
    fM->fIntParameters[id].fValue = widget->GetNumberEntry()->GetIntNumber();
-   Update();
+
+   fM->ParamChanged(fM->fIntParameters[id].fName);
+   gTQSender = (void*) widget;
 }
 
 //______________________________________________________________________________
@@ -225,17 +245,21 @@ void TEveParamListEditor::DoFloatUpdate()
    Int_t id = widget->WidgetId();
    if (id < 0 || id >= (int) fM->fFloatParameters.size()) return;
    fM->fFloatParameters[id].fValue = widget->GetNumberEntry()->GetNumber();
-   Update();
+
+   fM->ParamChanged(fM->fFloatParameters[id].fName);
+   gTQSender = (void*) widget;
 }
 
 //______________________________________________________________________________
 void TEveParamListEditor::DoBoolUpdate()
 {
    // Slot for bool parameter update.
-   
+
    TGCheckButton *widget = (TGCheckButton*) gTQSender;
    Int_t id = widget->WidgetId();
    if (id < 0 || id >= (int) fM->fBoolParameters.size()) return;
    fM->fBoolParameters[id].fValue = widget->IsOn();
-   Update();
+
+   fM->ParamChanged(fM->fBoolParameters[id].fName);
+   gTQSender = (void*) widget;
 }

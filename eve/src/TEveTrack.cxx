@@ -174,8 +174,6 @@ TEveTrack::~TEveTrack()
    // Destructor.
 
    SetPropagator(0);
-   for (vpPathMark_i i=fPathMarks.begin(); i!=fPathMarks.end(); ++i)
-      delete *i;
 }
 
 
@@ -234,11 +232,9 @@ void TEveTrack::SetPathMarks(const TEveTrack& t)
 {
    // Copy path-marks from t.
 
-   const std::vector<TEvePathMark*>& refs = t.GetPathMarksRef();
-   for (std::vector<TEvePathMark*>::const_iterator i=refs.begin(); i!=refs.end(); ++i)
-   {
-      fPathMarks.push_back(new TEvePathMark(**i));
-   }
+   const vPathMark_t& tpms = t.RefPathMarks();
+   std::copy(t.RefPathMarks().begin(), t.RefPathMarks().end(),
+             std::back_insert_iterator<vPathMark_t>(fPathMarks));
 }
 
 /******************************************************************************/
@@ -293,9 +289,8 @@ void TEveTrack::MakeTrack(Bool_t recurse)
       TEveVector currP = fP;
       Bool_t decay = kFALSE;
       fPropagator->InitTrack(fV, fP, fBeta, fCharge);
-      for (std::vector<TEvePathMark*>::iterator i=fPathMarks.begin(); i!=fPathMarks.end(); ++i)
+      for (vPathMark_i pm = fPathMarks.begin(); pm != fPathMarks.end(); ++pm)
       {
-         TEvePathMark* pm = *i;
          if (rTP.GetFitReferences() && pm->fType == TEvePathMark::kReference)
          {
             if (TMath::Abs(pm->fV.fZ) > rTP.GetMaxZ() ||
@@ -365,8 +360,8 @@ namespace {
 
 struct Cmp_pathmark_t
 {
-   bool operator()(TEvePathMark* const & a, TEvePathMark* const & b)
-   { return a->fTime < b->fTime; }
+   bool operator()(TEvePathMark const & a, TEvePathMark const & b)
+   { return a.fTime < b.fTime; }
 };
 
 }
@@ -511,10 +506,8 @@ void TEveTrack::PrintPathMarks()
    printf("TEveTrack '%s', number of path marks %d, label %d\n",
           GetName(), (Int_t)fPathMarks.size(), fLabel);
 
-   TEvePathMark* pm;
-   for (vpPathMark_i i=fPathMarks.begin(); i!=fPathMarks.end(); i++)
+   for (vPathMark_i pm = fPathMarks.begin(); pm != fPathMarks.end(); ++pm)
    {
-      pm = *i;
       printf("  %-9s  p: %8f %8f %8f Vertex: %8e %8e %8e %g \n",
              pm->TypeName(),
              pm->fP.fX,  pm->fP.fY, pm->fP.fZ,

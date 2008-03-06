@@ -86,18 +86,18 @@ void TEveTrackProjectedGL::DirectDraw(TGLRnrCtx& rnrCtx) const
    }
 
    // path-marks
-   std::vector<TEvePathMark*>& pm = fM->fPathMarks;
+   const TEveTrack::vPathMark_t& pms = fTrack->RefPathMarks();
    TEveTrackPropagator& rTP = *fM->GetPropagator();
-   if (pm.size())
+   if (pms.size())
    {
-      Float_t* pnts = new Float_t[3*pm.size()]; // maximum
+      Float_t* pnts = new Float_t[3*pms.size()]; // maximum
       Float_t*  pnt = pnts;
       Int_t   pntsN = 0;
       Bool_t accept;
-      for (std::vector<TEvePathMark*>::iterator i=pm.begin(); i!=pm.end(); ++i)
+      for (TEveTrack::vPathMark_ci pm = pms.begin(); pm != pms.end(); ++pm)
       {
          accept = kFALSE;
-         switch ((*i)->fType)
+         switch (pm->fType)
          {
             case TEvePathMark::kDaughter:
                if (rTP.GetRnrDaughters())  accept = kTRUE;
@@ -111,11 +111,11 @@ void TEveTrackProjectedGL::DirectDraw(TGLRnrCtx& rnrCtx) const
          }
          if (accept)
          {
-            if ((TMath::Abs((*i)->fV.fZ) < rTP.GetMaxZ()) && ((*i)->fV.Perp() < rTP.GetMaxR()))
+            if ((TMath::Abs(pm->fV.fZ) < rTP.GetMaxZ()) && (pm->fV.Perp() < rTP.GetMaxR()))
             {
-               pnt[0] =(*i)->fV.fX;
-               pnt[1] =(*i)->fV.fY;
-               pnt[2] =(*i)->fV.fZ;
+               pnt[0] = pm->fV.fX;
+               pnt[1] = pm->fV.fY;
+               pnt[2] = pm->fV.fZ;
                fM->fProjection->ProjectPointFv(pnt);
                pnt   += 3;
                ++pntsN;
