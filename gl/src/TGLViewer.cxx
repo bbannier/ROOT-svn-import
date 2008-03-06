@@ -986,9 +986,9 @@ void TGLViewer::SetCurrentCamera(ECameraType cameraType)
 
 //______________________________________________________________________________
 void TGLViewer::SetOrthoCamera(ECameraType camera,
-                                     Double_t zoom, Double_t dolly,
-                                     Double_t center[3],
-                                     Double_t hRotate, Double_t vRotate)
+                               Double_t zoom, Double_t dolly,
+                               Double_t center[3],
+                               Double_t hRotate, Double_t vRotate)
 {
    // Set an orthographic camera to supplied configuration - note this
    // does not need to be the current camera - though you will not see
