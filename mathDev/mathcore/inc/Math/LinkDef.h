@@ -16,7 +16,7 @@
 // for automatic loading
 #ifdef MAKE_MAPS
 #pragma link C++ class TMath;
-#pragma link C++ class ROOT::Math;
+//#pragma link C++ class ROOT::Math;
 #endif
 
 
