@@ -41,6 +41,8 @@ protected:
 public:
    TEveGeoNode(TGeoNode* node);
 
+   virtual const Text_t* GetName()  const;
+   virtual const Text_t* GetTitle() const;
    virtual const Text_t* GetElementName()  const;
    virtual const Text_t* GetElementTitle() const;
 
