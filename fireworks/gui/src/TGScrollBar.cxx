@@ -693,7 +693,8 @@ Bool_t TGVScrollBar::HandleButton(Event_t *event)
          fPos = TMath::Max(fPos, 0);
          fPos = TMath::Min(fPos, fRange-fPsize);
 
-         fY0 = fgScrollBarWidth + fPos * fSliderRange / TMath::Max(fRange-fPsize, 1);
+         ULong_t y0 = fgScrollBarWidth + fPos * fSliderRange / TMath::Max(fRange-fPsize, 1);
+         fY0 = (Int_t)y0;
 
          fY0 = TMath::Max(fY0, fgScrollBarWidth);
          fY0 = TMath::Min(fY0, fgScrollBarWidth + fSliderRange);
@@ -774,7 +775,8 @@ void TGVScrollBar::SetRange(Int_t range, Int_t page_size)
    fSliderRange = TMath::Max(fHeight - (fgScrollBarWidth << 1) - fSliderSize,
                              (UInt_t)1);
 
-   fY0 = fgScrollBarWidth + fPos * fSliderRange / TMath::Max(fRange-fPsize, 1);
+   ULong_t y0 = fgScrollBarWidth + fPos * fSliderRange / TMath::Max(fRange-fPsize, 1);
+   fY0 = (Int_t)y0;
    fY0 = TMath::Max(fY0, fgScrollBarWidth);
    fY0 = TMath::Min(fY0, fgScrollBarWidth + fSliderRange);
 
@@ -798,7 +800,8 @@ void TGVScrollBar::SetPosition(Int_t pos)
    fPos = TMath::Max(pos, 0);
    fPos = TMath::Min(pos, fRange-fPsize);
 
-   fY0 = fgScrollBarWidth + fPos * fSliderRange / TMath::Max(fRange-fPsize, 1);
+   ULong_t y0 = fgScrollBarWidth + fPos * fSliderRange / TMath::Max(fRange-fPsize, 1);
+   fY0 = (Int_t)y0;
    fY0 = TMath::Max(fY0, fgScrollBarWidth);
    fY0 = TMath::Min(fY0, fgScrollBarWidth + fSliderRange);
 
