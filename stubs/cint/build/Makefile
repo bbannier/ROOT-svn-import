@@ -165,7 +165,7 @@ install:
 	  cp $$f $$d/; done
 	if [ ! -d $(DESTDIR)$(G__CFG_DATADIRCINT) ] ; then mkdir -p $(DESTDIR)$(G__CFG_DATADIRCINT) ; fi
 	$(G__CFG_RM) $(DESTDIR)$(G__CFG_DATADIRCINT)/*
-	for f in `find include stl main lib $(FINDALLBUTCVS)`; do \
+	for f in `cd $(G__CFG_COREVERSION); find include stl main lib $(FINDALLBUTCVS)`; do \
 	  d=$(DESTDIR)$(G__CFG_DATADIRCINT)/`dirname $$f`;\
 	  if [ ! -d $$d ]; then mkdir -p $$d; fi; \
 	  cp $(G__CFG_COREVERSION)/$$f $$d/; done
