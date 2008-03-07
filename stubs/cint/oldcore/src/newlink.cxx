@@ -5153,12 +5153,12 @@ void G__make_default_ifunc(G__ifunc_table_internal *ifunc_copy)
         ifunc = G__p_ifunc;
 #ifdef G__TRUEP2F
         G__memfunc_setup(funcname, hash, (G__InterfaceMethod) NULL
-                         ,(int) ('i') , 0
+                         ,(int) ('i') , i
                          ,-1,0,0,1,G__PUBLIC,0
                          , "", (char*) NULL, (void*) NULL, 0);
 #else
         G__memfunc_setup(funcname, hash, (G__InterfaceMethod) NULL
-                         ,(int) ('i') , 0
+                         ,(int) ('i') , i
                          ,-1,0,0,1,G__PUBLIC,0
                          , "", (char*) NULL);
 #endif
@@ -5184,12 +5184,12 @@ void G__make_default_ifunc(G__ifunc_table_internal *ifunc_copy)
         ifunc = G__p_ifunc;
 #ifdef G__TRUEP2F
         G__memfunc_setup(funcname, hash, (G__InterfaceMethod) NULL
-                         ,(int) ('i') ,0
+                         ,(int) ('i') ,i
                          ,-1,0,1,1,G__PUBLIC,0
                          , paras, (char*) NULL, (void*) NULL, 0);
 #else
         G__memfunc_setup(funcname, hash, (G__InterfaceMethod) NULL
-                         ,(int) ('i') ,0
+                         ,(int) ('i') ,i
                          ,-1,0,1,1,G__PUBLIC,0
                          , paras, (char*) NULL);
 #endif
@@ -5250,12 +5250,12 @@ void G__make_default_ifunc(G__ifunc_table_internal *ifunc_copy)
         ifunc = G__p_ifunc;
 #ifdef G__TRUEP2F
         G__memfunc_setup(funcname, hash, (G__InterfaceMethod) NULL
-                         ,(int) ('u'),0
+                         ,(int) ('u'),i
                          ,-1,1,1,1,G__PUBLIC,0
                          , paras, (char*) NULL, (void*) NULL, 0);
 #else
         G__memfunc_setup(funcname, hash, (G__InterfaceMethod) NULL
-                         ,(int) ('u'),0
+                         ,(int) ('u'),i
                          ,-1,1,1,1,G__PUBLIC,0
                          , paras, (char*) NULL);
 #endif
