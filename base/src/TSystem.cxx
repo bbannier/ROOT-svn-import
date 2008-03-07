@@ -2254,6 +2254,12 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    if (! IsAbsoluteFileName(library) ) {
       AssignAndDelete( library , ConcatFileName( WorkingDirectory(), library ) );
    }
+   { // Remove multiple '/' characters, rootcint treats them as comments.
+      Ssiz_t pos = 0;
+      while ((pos = library.Index("//", 2, pos, TString::kExact)) != kNPOS) {
+         library.Remove(pos, 1);
+      }
+   }
    TString filename_fullpath = library;
 
    TString file_dirname = DirName( filename_fullpath );
@@ -2795,9 +2801,10 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    }
 
    Int_t dictResult = gSystem->Exec(rcint);
-   if (dictResult)
+   if (dictResult) {
       if (dictResult==139) ::Error("ACLiC","Dictionary generation failed with a core dump!");
       else ::Error("ACLiC","Dictionary generation failed!");
+   }
 
    Bool_t result = !dictResult;
 
