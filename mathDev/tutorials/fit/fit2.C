@@ -50,14 +50,12 @@ void fit2() {
    f2params[ 5] *= ratio;
    f2params[10] *= ratio;
    f2->SetParameters(f2params);
-   std::cout << f2 << "f2 params[0] " << f2->GetParameter(0)  << std::endl;
-   std::cout << gROOT->GetFunction("f2") << "f2 params[0] " << ((TF1*)gROOT->GetFunction("f2"))->GetParameter(0) << std::endl;
+
    gncalls = 0; 
    TStopwatch w; w.Start();
-   h2->Fit(f2,"V");
+   h2->Fit(f2);
    std::cout << "Fit Time is " << w.RealTime() << "  " << w.CpuTime() << std::endl;
    std::cout << "ncalls = " << gncalls << std::endl;
-   std::cout << "f2params[0] " << f2params[0] << "  " << ratio << std::endl;
 
    f2->Draw("cont1 same");
 }
