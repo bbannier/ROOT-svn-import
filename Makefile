@@ -65,7 +65,7 @@ MODULES       = build cint metautils pcre utils base cont meta io \
                 postscript rint thread html eg geom geompainter vmc fumili \
                 mlp quadp auth guibuilder xml foam splot smatrix sql tmva \
                 geombuilder spectrum spectrumpainter fitpanel proof \
-                proofplayer sessionviewer guihtml genvector
+                proofplayer sessionviewer guihtml 
 
 ifeq ($(ARCH),win32)
 MODULES      += winnt win32gdk
@@ -155,9 +155,9 @@ endif
 ifeq ($(BUILDQTGSI),yes)
 MODULES      += qtgsi
 endif
-#ifeq ($(BUILDMATHCORE),yes)
-#MODULES      += mathcore
-#endif
+ifeq ($(BUILDGENVECTOR),yes)
+MODULES      += genvector
+endif
 ifeq ($(BUILDMATHMORE),yes)
 MODULES      += mathmore
 endif
