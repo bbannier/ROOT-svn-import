@@ -679,7 +679,7 @@ class TGWin32RefreshTimer : public TTimer {
 
 public:
    TGWin32RefreshTimer() : TTimer(100, kTRUE) { if (gSystem) gSystem->AddTimer(this); }
-   ~TGWin32RefreshTimer() {}
+   ~TGWin32RefreshTimer() { if (gSystem) gSystem->RemoveTimer(this); }
    Bool_t Notify()
    {
       Reset();
