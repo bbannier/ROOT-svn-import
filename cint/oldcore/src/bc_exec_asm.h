@@ -630,7 +630,6 @@ int G__exec_asm(int start, int stack, G__value* presult, long localmem)
             }
             // This-pointer adjustment in the case of multiple inheritance.
             //G__store_struct_offset += G__asm_inst[pc+5];
-            ifunc = (G__ifunc_table_internal*) G__asm_inst[pc+6];
             //
             //  Execute the function now.
             //
@@ -643,7 +642,7 @@ int G__exec_asm(int start, int stack, G__value* presult, long localmem)
               G__store_struct_offset -= G__asm_inst[pc+5];
             }
             else
-              dtorfreeoffset = G__call_cppfunc(result, &fpara, ifunc, 0); // Bet on ifn=0
+              dtorfreeoffset = G__call_cppfunc(result, &fpara, (G__ifunc_table_internal*) G__asm_inst[pc+6], 0); // Bet on ifn=0
             
             G__asm_exec=1;
 #else // G__EXCEPTIONWRAPPER
@@ -653,7 +652,7 @@ int G__exec_asm(int start, int stack, G__value* presult, long localmem)
               G__store_struct_offset -= G__asm_inst[pc+5];
             }
             else
-              dtorfreeoffset = G__call_cppfunc(result, &fpara, ifunc, 0); // Bet on ifn=0
+              dtorfreeoffset = G__call_cppfunc(result, &fpara, (G__ifunc_table_internal*) G__asm_inst[pc+6], 0); // Bet on ifn=0
 #endif // G__EXCEPTIONWRAPPER
 
             // restore previous G__store_struct_offset
