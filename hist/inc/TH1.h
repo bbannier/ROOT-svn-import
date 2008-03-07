@@ -108,6 +108,10 @@ private:
    Int_t   AxisChoice(Option_t *axis) const;
    void    Build();
    Int_t   FitOptionsMake(Option_t *option, Foption_t &Foption);
+   
+   // new fitting functions
+   Int_t TH1::DoNewFit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xxmin, Double_t xxmax);
+   Int_t TH1::DoCheckFitFunction(TF1 * f1);
 
    TH1& operator=(const TH1&); // Not implemented
 

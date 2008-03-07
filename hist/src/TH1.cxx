@@ -3064,6 +3064,10 @@ Int_t TH1::Fit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xxmin, Dou
 //
 //   -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
+#ifndef OLD
+   return DoNewFit(f1, option, goption, xxmin, xxmax); 
+#else 
+
    Int_t fitResult = 0;
    Int_t i, npar,nvpar,nparx;
    Double_t par, we, al, bl;
@@ -3102,21 +3106,6 @@ Int_t TH1::Fit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xxmin, Dou
    // called at some point, resetting the function created by this function
    if (fBuffer) BufferEmpty(1);
 
-   hxfirst = fXaxis.GetFirst();
-   hxlast  = fXaxis.GetLast();
-   binwidx = fXaxis.GetBinWidth(hxlast);
-   xmin    = fXaxis.GetBinLowEdge(hxfirst);
-   xmax    = fXaxis.GetBinLowEdge(hxlast) +binwidx;
-   hyfirst = fYaxis.GetFirst();
-   hylast  = fYaxis.GetLast();
-   binwidy = fYaxis.GetBinWidth(hylast);
-   ymin    = fYaxis.GetBinLowEdge(hyfirst);
-   ymax    = fYaxis.GetBinLowEdge(hylast) +binwidy;
-   hzfirst = fZaxis.GetFirst();
-   hzlast  = fZaxis.GetLast();
-   binwidz = fZaxis.GetBinWidth(hzlast);
-   zmin    = fZaxis.GetBinLowEdge(hzfirst);
-   zmax    = fZaxis.GetBinLowEdge(hzlast) +binwidz;
 
 //   - Decode list of options into fitOption
    Foption_t fitOption;
@@ -3130,12 +3119,6 @@ Int_t TH1::Fit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xxmin, Dou
 //   - Check if Minuit is initialized and create special functions
 
 
-   Int_t special = f1->GetNumber();
-   Bool_t linear = f1->IsLinear();
-   if (special==299+npar)
-      linear = kTRUE;
-   if (fitOption.Bound || fitOption.Like || fitOption.Errors || fitOption.Gradient || fitOption.More || fitOption.User|| fitOption.Integral || fitOption.Minuit)
-      linear = kFALSE;
 
    char l[] ="TLinearFitter";
    Int_t strdiff = 0;
@@ -3295,17 +3278,7 @@ Int_t TH1::Fit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xxmin, Dou
       for (i=0;i<npar;i++) {
          par = f1->GetParameter(i);
          f1->GetParLimits(i,al,bl);
-         if (al*bl != 0 && al >= bl) {
-            al = bl = 0;
-            arglist[nfixed] = i+1;
-            nfixed++;
-         }
-         we = 0.1*TMath::Abs(bl-al);
-         if (we == 0) we = 0.3*TMath::Abs(par);
-         if (we == 0) we = binwidx;
-         hFitter->SetParameter(i,f1->GetParName(i),par,we,al,bl);
-      }
-      if(nfixed > 0)hFitter->ExecuteCommand("FIX",arglist,nfixed); // Otto
+         if (al*bl 
 
       //   - Set Gradient
       if (fitOption.Gradient) {
@@ -3423,6 +3396,7 @@ Int_t TH1::Fit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xxmin, Dou
       if (!fitOption.Nograph && GetDimension() < 3) Draw(goption);
    }
    return fitResult;
+#endif
 }
 
 //______________________________________________________________________________
