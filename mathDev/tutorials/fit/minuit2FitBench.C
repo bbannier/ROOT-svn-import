@@ -61,14 +61,13 @@ void DoFit(const char* fitter, TVirtualPad *pad, Int_t npass) {
       for (Int_t i=0;i<5000;i++) {
          histo->Fill(fitFcn->GetRandom());
       }
-      histo->Fit("fitFcn","");
+      if (std::string(fitter) == "Fumili2") 
+         histo->Fit(fitFcn,"V");
+      else 
+         histo->Fit(fitFcn,"Q0");
    }
 
-   if (std::string(fitter) != "Fumili2") 
-      histo->Fit("fitFcn","EV");
-   else {
-      // histo->Fit("fitFcn","");
-   }
+   histo->Fit(fitFcn,"EV");
    timer.Stop();
 
    (histo->GetFunction("fitFcn"))->SetLineColor(kRed+3);
