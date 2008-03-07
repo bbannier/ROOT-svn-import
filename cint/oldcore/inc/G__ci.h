@@ -16,11 +16,6 @@
 #ifndef G__CI_H
 #define G__CI_H
 
-// TEST REMOVE IT REMOVE IT REMOVE IT
-#ifndef G__ASM_DBG
-#define G__ASM_DBG 1
-#endif 
-
 #ifndef G__CINT_VER6
 #define G__CINT_VER6  1
 #endif
