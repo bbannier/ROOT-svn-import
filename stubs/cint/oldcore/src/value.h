@@ -14,6 +14,9 @@ inline T G__convertT(const G__value* buf)
    //           (double)(buf->obj.i) );
  
    switch(buf->type) {
+   case 'i': return (T) buf->obj.in;
+   case 'c': return (T) buf->obj.ch;
+   case 's': return (T) buf->obj.sh;
    case 'd': /* double */
       // return (T) buf->obj.d;
    case 'f': /* float */
@@ -33,9 +36,6 @@ inline T G__convertT(const G__value* buf)
    case 'n': return (T) buf->obj.ll;
    case 'm': return (T) buf->obj.ull;
    case 'q': return (T) buf->obj.ld;
-   case 'i': return (T) buf->obj.in;
-   case 'c': return (T) buf->obj.ch;
-   case 's': return (T) buf->obj.sh;
    default: ;
    }
    return (T) buf->obj.i;
