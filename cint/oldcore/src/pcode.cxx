@@ -246,12 +246,12 @@ void G__asm_tovalue_U(G__value *result)
 template <typename T>
 void G__ASM_GET_INT(G__value* pbuf, int* psp, long offset, G__var_array* var, long ig15) 
 {
-  G__value *buf= &pbuf[(*psp)++];
-  buf->tagnum = -1;
-  buf->type = G__gettypechar<T>();
-  buf->typenum = var->p_typetable[ig15];
-  buf->ref = var->p[ig15]+offset;
-  G__setvalue(buf, *(T*)buf->ref);
+  pbuf+= (*psp)++;
+  pbuf->tagnum = -1;
+  pbuf->type = G__gettypechar<T>();
+  pbuf->typenum = var->p_typetable[ig15];
+  pbuf->ref = var->p[ig15]+offset;
+  G__setvalue(pbuf, *(T*)pbuf->ref);
 }
 
 

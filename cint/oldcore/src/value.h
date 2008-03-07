@@ -13,8 +13,12 @@ inline T G__convertT(const G__value* buf)
    //           ('n'==buf->type) ? (double)(buf->obj.ll) :
    //           (double)(buf->obj.i) );
  
-   switch(buf->type) {
-   case 'i': return (T) buf->obj.in;
+   const char buftype = buf->type;
+   // this is by far the most common case; move in front of expensive switch:
+   if (buftype == 'i') return (T) buf->obj.in;
+
+   switch(buftype) {
+   //case 'i': return (T) buf->obj.in;
    case 'c': return (T) buf->obj.ch;
    case 's': return (T) buf->obj.sh;
    case 'd': /* double */
