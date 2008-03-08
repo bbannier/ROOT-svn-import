@@ -20,10 +20,10 @@ CINT7DIRDLLSTL:= $(CINT7DIRL)/dll_stl
 CINT7DIRSD    := $(CINT7DIRS)/dict
 
 ##### libCint #####
-CINT7H1       := $(wildcard $(CINT7DIRS)/*.h)
-CINT7H2       := $(wildcard $(CINT7DIR)/G__ci.h $(CINT7DIR)/G__ci_fproto.h $(CINT7DIR)/G__security.h)
-CINT7H1T      := $(patsubst $(CINT7DIRS)/%.h,include/%.h,$(CINT7H1))
-CINT7H2T      := $(patsubst $(CINT7DIR)/%.h,include/%.h,$(CINT7H2))
+CINT7CONF     := $(CINT7DIRI)/configcint.h
+CINTCONF      := $(CINT7CONF)
+CINT7H        := $(filter-out $(CINT7CONF),$(wildcard $(CINT7DIRI)/*.h))
+CINT7HT       := $(patsubst $(CINT7DIRI)/%.h,include/%.h,$(CINT7H))
 CINT7S1       := $(wildcard $(MODDIRS)/*.c)
 CINT7S2       := $(wildcard $(CINT7DIRS)/*.cxx) $(CINT7DIRSD)/longif.cxx $(CINT7DIRSD)/Apiif.cxx $(CINT7DIRSD)/stdstrct.o
 
@@ -32,8 +32,6 @@ CINT7S1       += $(CINT7DIRM)/G__setup.c
 CINT7ALLO     := $(CINT7S1:.c=.o) $(CINT7S2:.cxx=.o)
 CINT7ALLDEP   := $(CINT7ALLO:.o=.d)
 
-CINT7CONF     := $(CINT7DIRI)/configcint.h
-CINTCONF      := $(CINT7CONF)
 CINT7CONFMK   := $(MODDIRBASE)/ROOT/configcint.mk
 
 CINT7S1       := $(filter-out $(MODDIRS)/dlfcn.%,$(CINT7S1))
@@ -221,9 +219,8 @@ CINT7_MKINCLDS := $(MODDIR)/include/mkincld.c
 CINT7_MKINCLDO := $(MODDIR)/include/mkincld.o
 
 # used in the main Makefile
-#ALLHDRS     += $(patsubst $(CINT7DIRS)/%.h,include/%.h,$(CINT7H1))
-#ALLHDRS     += $(patsubst $(CINT7DIR)/%.h,include/%.h,$(CINT7H2))
-#ALLHDRS     += $(CINT7CONF)
+ALLHDRS     += $(CINT7HT)
+ALLHDRS     += $(CINT7CONF)
 
 ALLLIBS      += $(CINT7LIB)
 ALLEXECS     += $(CINT7) $(MAKECINT7) $(CINT7TMP)
@@ -257,6 +254,9 @@ endif
 endif
 
 ##### local rules #####
+include/%.h:    $(CINT7DIRI)/%.h
+	cp $< $@
+
 $(CINT7LIB): $(CINT7O) $(CINT7LIBDEP) $(REFLEXLIB)
 	$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" "$(SOFLAGS)" \
 	   libCint.$(SOEXT) $@ "$(CINT7O)" "$(CINT7LIBEXTRA) $(REFLEXLL)"
@@ -310,7 +310,8 @@ distclean-cint7 : clean-cint7
 	@rm -rf $(CINT7ALLDEP) $(CINT7LIB) $(IOSENUM7) $(CINT7EXEDEP) \
           $(CINT7) $(CINT7TMP) $(MAKECINT7) $(CINT7DIRM)/*.exp \
           $(CINT7DIRM)/*.lib $(CINT7DIRS)/loadfile_tmp.cxx \
-	  $(CINT7DIRS)/pragma_tmp.cxx
+	  $(CINT7DIRS)/pragma_tmp.cxx \
+	  $(CINT7HT) $(CINTCONF)
 
 distclean :: distclean-cint7
 
@@ -332,16 +333,6 @@ $(CINT7DIRS)/loadfile_tmp.cxx : $(CINT7DIRS)/loadfile.cxx
 
 $(CINT7DIRS)/pragma_tmp.cxx : $(CINT7DIRS)/pragma.cxx
 	cp -f $< $@
-
-#$(CINT7H1T) : include/% : $(CINT7DIRS)/%
-#	cp $< $@
-#	@if test ! -d $(CINT7DIR)/inc; then mkdir $(CINT7DIR)/inc; fi
-#	cp $< $(CINT7DIR)/inc/$(notdir $<)
-
-#$(CINT7H2T) : include/% : $(CINT7DIR)/%
-#	cp $< $@
-#	@if test ! -d $(CINT7DIR)/inc; then mkdir $(CINT7DIR)/inc; fi
-#	cp $< $(CINT7DIR)/inc/$(notdir $<)
 
 ##### configcint.h
 ifeq ($(CPPPREP),)

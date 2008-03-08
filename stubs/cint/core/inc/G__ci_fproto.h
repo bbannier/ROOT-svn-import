@@ -323,6 +323,8 @@ G__DECL_API(217, int, G__close_inputfiles, (void));
 G__DECL_API(218, int, G__const_resetnoerror, (void));
 G__DECL_API(219, int, G__const_setnoerror, (void));
 G__DECL_API(220, int, G__const_whatnoerror, (void));
+G__DECL_API(260, void, G__enable_wrappers, (int set));
+G__DECL_API(261, int, G__wrappers_enabled, ());
 G__DECL_API(222, void, G__scratch_globals_upto, (struct G__dictposition *dictpos));
 G__DECL_API(223, int, G__scratch_upto, (struct G__dictposition *dictpos));
 G__DECL_API(224, void, G__store_dictposition, (struct G__dictposition* dictpos));
@@ -379,5 +381,5 @@ G__DECL_API(255, FILE*, FOpenAndSleep, (const char *filename, const char *mode))
 #endif
 G__DECL_API(256, void, G__letbool, (G__value* buf,int type,long value));
 
-#define G__NUMBER_OF_API_FUNCTIONS 260
+#define G__NUMBER_OF_API_FUNCTIONS 262
 G__DUMMYTOCHECKFORDUPLICATES(G__NUMBER_OF_API_FUNCTIONS)

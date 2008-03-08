@@ -63,6 +63,12 @@ extern "C" FILE* FOpenAndSleep(const char* filename, const char* mode)
 
 #endif // _WIN32
 
+extern "C" {
+   // dummy implementation
+   void G__enable_wrappers(int) {};
+   int G__wrappers_enabled() {return 1;};
+}
+
 //______________________________________________________________________________
 using namespace Cint::Internal;
 

@@ -421,7 +421,7 @@ int Cint::Internal::G__getcintsysdir()
 #if defined(G__ROOT)
 # if defined(ROOTBUILD) 
     env = getenv("CINTSYSDIR");
-    if (!env) env = "cint7/extsrc";
+    if (!env) env = "cint";
 # else
 #  ifdef CINTINCDIR
     env = CINTINCDIR;
