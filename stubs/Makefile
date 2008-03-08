@@ -170,6 +170,9 @@ endif
 ifeq ($(BUILDUNURAN),yes)
 MODULES      += unuran
 endif
+ifeq ($(BUILDCINT7),yes)
+MODULES      := $(subst cint/oldcore,cint/core,$(MODULES))
+endif
 ifeq ($(BUILDCINTEX),yes)
 MODULES      += cintex
 endif
@@ -235,7 +238,7 @@ MODULES      += unix winnt x11 x11ttf win32gdk gl ftgl rfio castor \
                 ldap mlp krb5auth rpdutils globusauth pyroot ruby gfal \
                 qt qtroot qtgsi xrootd netx proofx alien clarens peac oracle \
                 xmlparser mathmore cint/reflex cintex roofitcore roofit \
-                minuit2 monalisa fftw odbc unuran gdml eve g4root glite
+                minuit2 monalisa fftw odbc unuran gdml eve g4root cint/core glite
 MODULES      := $(sort $(MODULES))   # removes duplicates
 endif
 
@@ -248,7 +251,7 @@ LPATH         = lib
 ifneq ($(PLATFORM),win32)
 RPATH        := -L$(LPATH)
 CINTLIBS     := -lCint
-CINT7LIBS    := -lCint7 -lReflex
+CINT7LIBS    := -lCint -lReflex
 NEWLIBS      := -lNew
 ROOTLIBS     := -lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad \
                 -lTree -lMatrix -lMathCore
@@ -260,7 +263,7 @@ endif
 RINTLIBS     := -lRint
 else
 CINTLIBS     := $(LPATH)/libCint.lib
-CINT7LIBS    := $(LPATH)/libCint7.lib $(LPATH)/libReflex.lib
+CINT7LIBS    := $(LPATH)/libCint.lib $(LPATH)/libReflex.lib
 NEWLIBS      := $(LPATH)/libNew.lib
 ROOTLIBS     := $(LPATH)/libCore.lib $(LPATH)/libCint.lib \
                 $(LPATH)/libRIO.lib $(LPATH)/libNet.lib \
@@ -385,7 +388,6 @@ MAKELIB       = build/unix/makelib.sh $(MKLIBOPTIONS)
 MAKEDIST      = build/unix/makedist.sh
 MAKEDISTSRC   = build/unix/makedistsrc.sh
 MAKEVERSION   = build/unix/makeversion.sh
-IMPORTCINT    = build/unix/importcint.sh
 MAKECOMPDATA  = build/unix/compiledata.sh
 MAKECHANGELOG = build/unix/makechangelog.sh
 MAKEHTML      = build/unix/makehtml.sh
@@ -491,7 +493,7 @@ endif
 
 ##### TARGETS #####
 .PHONY:         all fast config rootcint rootlibs rootexecs dist distsrc \
-                clean distclean maintainer-clean compiledata importcint \
+                clean distclean maintainer-clean compiledata \
                 version html changelog install uninstall showbuild \
                 static map debian redhat skip postbin \
                 $(patsubst %,all-%,$(MODULES)) \
@@ -737,7 +739,7 @@ endif
 distclean:: clean
 	-@mv -f include/RConfigure.h include/RConfigure.h-
 	-@mv -f include/RConfigOptions.h include/RConfigOptions.h-
-	@rm -f include/*.h $(ROOTMAP) $(CORELIB) $(COREDICTLIB) $(COREMAP) $(COREDICTMAP)
+	@rm -f include/*.h $(ROOTMAP) $(CORELIB) $(COREMAP)
 	-@mv -f include/RConfigure.h- include/RConfigure.h
 	-@mv -f include/RConfigOptions.h- include/RConfigOptions.h
 	@rm -f bin/*.dll bin/*.exp bin/*.lib bin/*.pdb \
@@ -1087,7 +1089,6 @@ showbuild:
 	@echo "MAKEDIST           = $(MAKEDIST)"
 	@echo "MAKEDISTSRC        = $(MAKEDISTSRC)"
 	@echo "MAKEVERSION        = $(MAKEVERSION)"
-	@echo "IMPORTCINT         = $(IMPORTCINT)"
 	@echo ""
 	@echo "The list of modules to be built:"
 	@echo "--------------------------------"
