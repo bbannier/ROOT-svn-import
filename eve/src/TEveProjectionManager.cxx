@@ -13,6 +13,7 @@
 #include "TEveManager.h"
 #include "TEveProjectionBases.h"
 
+#include "TAttBBox.h"
 #include "TBuffer3D.h"
 #include "TBuffer3DTypes.h"
 #include "TVirtualPad.h"
