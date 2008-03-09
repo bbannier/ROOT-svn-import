@@ -73,6 +73,13 @@ SYSLIBS       = -lm $(EXTRA_LDFLAGS) $(FINK_LDFLAGS) $(OSTHREADLIBDIR) \
 XLIBS         = $(XPMLIBDIR) $(XPMLIB) $(X11LIBDIR) -lXext -lX11
 CILIBS        = -lm $(EXTRA_LDFLAGS) $(FINK_LDFLAGS) -ldl
 
+# Stub Functions Generation
+# it's completely disable in the mac (for the moment)
+ifeq ($(NOSTUBS),yes)
+	NOSTUBS := "no"
+	NOSTUBSTEST := "no"
+endif
+
 # Fortran:
 F77           =
 ifeq ($(subst $(MACOSX_MINOR),,123),123)
