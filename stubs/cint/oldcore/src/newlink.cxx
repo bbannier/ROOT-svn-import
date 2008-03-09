@@ -752,9 +752,7 @@ void* G__get_symbol_address(const char* mangled_name)
   return address;
 }
 
-
-typedef union unld { G__int64 lval; double dval; } UNLD;
-
+#ifdef __x86_64__
 #define ASM_X86_64_ARGS_PASSING(dval, lval) { \
 __asm__ __volatile__("movlpd %0, %%xmm0"  :: "m" (dval[0]) : "%xmm0"); \
 __asm__ __volatile__("movlpd %0, %%xmm1"  :: "m" (dval[1]) : "%xmm1"); \
@@ -772,7 +770,7 @@ __asm__ __volatile__("movq %0, %%r8"  :: "m" (lval[4]) : "%r8"); \
 __asm__ __volatile__("movq %0, %%r9"  :: "m" (lval[5]) : "%r9"); \
 __asm__ __volatile__("movl $8, %eax");  \
 }
-
+#endif //__x86_64__
 
 /**************************************************************************
  * G__stub_method_asm_x86_64
@@ -795,14 +793,11 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, void* thi
   G__params *fpara = &ifunc->param[ifn];
   int ansi = ifunc->ansi[ifn];
 
-  const int imax = 6, dmax = 8, umax = 20;
-  int objsize, i, icnt = 0, dcnt = 0, ucnt = 0;
+  const int imax = 6, dmax = 8;
+  int objsize, i, icnt = 0, dcnt = 0;
   G__value *pval;
   G__int64 lval[imax];
   double dval[dmax];
-  //union { G__int64 lval; double dval; } u[umax];
-  //UNLD utmp;
-  //std::vector<UNLD> u;
   int isextra[rpara->paran];
 
   if (this_ptr) {
@@ -948,7 +943,7 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, void* thi
            long iparam = (long) G__int(param);
            G__value otype;
            otype.type   = 'u';
-           otype.tagnum = gtagnum;
+           otype.tagnum = G__tagnum;
            __asm__ __volatile__("push %0" :: "g" (iparam));
         }
 
@@ -1003,7 +998,7 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, void* thi
       }
       break;
 
-      case 'k': case 'b': // Unsigned Long
+      case 'k': // Unsigned Long
       {
         long valuekb = G__uint(param);
         __asm__ __volatile__("push %0" :: "g" (valuekb));
@@ -1091,7 +1086,7 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, void* thi
       else{
         G__value otype;
         otype.type   = 'u';
-        otype.tagnum = gtagnum;
+        otype.tagnum = G__tagnum;
 
         ASM_X86_64_ARGS_PASSING(dval, lval)
         __asm__ __volatile__("call *%1" : "=t" (result7->obj.d) : "g" (vaddress));
@@ -1162,7 +1157,7 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, void* thi
     }
     break;
 
-    case 'k': case 'b': // Unsigned Long
+    case 'k': // Unsigned Long
     {
       unsigned long return_val;
       ASM_X86_64_ARGS_PASSING(dval, lval)
