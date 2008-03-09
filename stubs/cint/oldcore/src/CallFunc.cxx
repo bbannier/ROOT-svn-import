@@ -415,7 +415,7 @@ G__value Cint::G__CallFunc::Execute(void *pobject)
   struct G__ifunc_table_internal *ifunc = G__get_ifunc_internal(method.ifunc());
   int ifn = method.Index();
 
-  if(G__get_funcptr(ifunc, ifn)) {
+  if(!G__wrappers_enabled() && G__get_funcptr(ifunc, ifn)) {
 #ifdef G__NOSTUBS
      if ((method.MemberOf())->Tagnum() > -1)
         G__tagnum = (method.MemberOf())->Tagnum();

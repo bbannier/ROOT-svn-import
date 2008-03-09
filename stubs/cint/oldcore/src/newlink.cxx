@@ -36,6 +36,19 @@
 #endif
 #include <string>
 
+
+extern "C"
+void G__enable_wrappers(int set) {
+   // enable wrappers
+   G__wrappers = set;
+}
+
+extern "C"
+int G__wrappers_enabled() {
+   // whether wrappers are enabled
+   return G__wrappers;
+}
+
 #ifdef G__NOSTUBS
 
 // 03-08-08
@@ -54,20 +67,6 @@ void* G__get_struct_map()
   return &structmap;
 }
 #endif
-
-
-extern "C"
-void G__enable_wrappers(int set) {
-   // enable wrappers
-   G__wrappers = set;
-}
-
-extern "C"
-int G__wrappers_enabled() {
-   // whether wrappers are enabled
-   return G__wrappers;
-}
-
 
 #ifdef _WIN32
 #include "windows.h"
@@ -2271,7 +2270,7 @@ int G__execute_call(G__value *result7,G__param *libp,G__ifunc_table_internal *if
     if ( ((libp->paran>=0) &&
           G__get_funcptr(ifunc, ifn) &&
           /*!(G__struct.type[ifunc->tagnum] == 'n') &&*/
-          !G__wrappers && !cppfunc) || // DMS Use the stub if there is one
+          !G__wrappers_enabled() && !cppfunc) || // DMS Use the stub if there is one
          ifunc->ispurevirtual[ifn]) {
       // Registered Method in ifunc. Then We Can Call the method without the stub function
       G__stub_method_calling(result7, libp, ifunc, ifn);
