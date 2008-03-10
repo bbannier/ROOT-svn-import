@@ -99,7 +99,7 @@ void TEveCaloVizEditor::CreateTowerTab()
    fCellZScale->SetLabelWidth(labelW);
    fCellZScale->SetNELength(6);
    fCellZScale->Build();
-   fCellZScale->SetLimits(0, 1, 100, TGNumberFormat::kNESRealTwo);
+   fCellZScale->SetLimits(0, 5, 100, TGNumberFormat::kNESRealTwo);
    fCellZScale->Connect("ValueSet(Double_t)", "TEveCaloVizEditor", this, "DoCellZScale()");
    fTower->AddFrame(fCellZScale, new TGLayoutHints(kLHintsTop, 1, 1, 1, 1));
 

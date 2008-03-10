@@ -178,7 +178,6 @@ void TEveCaloLegoGL::DrawTitle(TGLRnrCtx & rnrCtx ) const
 {
    if (fTitleFont.GetMode() == TGLFont::kUndef) 
    {
-      printf("create font \n");
       TObjArray* farr = TGLFontManager::GetFontFileArray();
       TIter next(farr);
       TObjString* os;
@@ -207,8 +206,8 @@ void TEveCaloLegoGL::DrawTitle(TGLRnrCtx & rnrCtx ) const
 
    Float_t bbox[6];
    fTitleFont.BBox(fM->GetTitle(), bbox[0], bbox[1], bbox[2], bbox[3], bbox[4], bbox[5]);
-   bbox[3] += 4;
-   bbox[4] += 4;
+   bbox[3] += fTitleFont.GetSize();
+   bbox[4] += fTitleFont.GetSize();
    Float_t xf = (vp[2]-bbox[3])/(vp[2]-vp[0]);
    Float_t yf = (vp[3]-bbox[4])/(vp[3]-vp[1]);
    glPushMatrix();

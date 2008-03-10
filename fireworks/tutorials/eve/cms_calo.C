@@ -20,7 +20,6 @@ void cms_calo()
   Double_t etaLimLow  = hcalHist->GetXaxis()->GetXmin();
   Double_t etaLimHigh = hcalHist->GetXaxis()->GetXmax();
 
-
   // palette
   gStyle->SetPalette(1, 0);
   TEveRGBAPalette* pal = new TEveRGBAPalette(0, 100);
@@ -37,7 +36,7 @@ void cms_calo()
   gEve->AddElement(calo3d);
 
   // calo 2D
-  TEveViewer* v1 = gEve->SpawnNewViewer("Viewer  Projected");
+  TEveViewer* v1 = gEve->SpawnNewViewer("Projected 2D");
   TEveScene*  s1 = gEve->SpawnNewScene("Projected Event");
   v1->AddScene(s1);
   TGLViewer* v = v1->GetGLViewer();
@@ -58,7 +57,7 @@ void cms_calo()
   TEveRGBAPalette* pal = new TEveRGBAPalette(0, 100);
   pal->SetLimits(0, data->GetMaxVal());
   pal->SetDefaultColor((Color_t)4);
-  TEveViewer* v2 = gEve->SpawnNewViewer("Viewer Lego ");
+  TEveViewer* v2 = gEve->SpawnNewViewer("Lego ");
   v2->GetGLViewer()->SetCurrentCamera(TGLViewer::kCameraPerspXOY);
   TEveScene*  s2 = gEve->SpawnNewScene("Lego");
   v2->AddScene(s2);
