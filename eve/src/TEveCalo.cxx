@@ -14,6 +14,7 @@
 #include "TEveProjections.h"
 #include "TEveProjectionManager.h"
 #include "TEveRGBAPalette.h"
+#include "TEveText.h"
 
 #include "TClass.h"
 #include "TMathBase.h"
@@ -40,8 +41,11 @@ TEveCaloViz::TEveCaloViz(const Text_t* n, const Text_t* t) :
 
    fData(0),
 
-   fEtaMin(-5.),
-   fEtaMax(5.),
+   fEtaLowLimit(-5.f),
+   fEtaHighLimit(5.f),
+   fEtaMin(fEtaLowLimit),
+   fEtaMax(fEtaHighLimit),
+
    fPhi(0.),
    fPhiRng(TMath::Pi()),
 
@@ -50,7 +54,7 @@ TEveCaloViz::TEveCaloViz(const Text_t* n, const Text_t* t) :
    fBarrelRadius(-1.f),
    fEndCapPos(-1.f),
 
-   fTowerHeight(0.2),
+   fCellZScale(1.),
 
    fDefaultValue(5),
    fValueIsColor(kTRUE),
@@ -70,8 +74,11 @@ TEveCaloViz::TEveCaloViz(TEveCaloData* data, const Text_t* n, const Text_t* t) :
 
    fData(0),
 
-   fEtaMin(-5.),
-   fEtaMax(5.),
+   fEtaLowLimit(-5.f),
+   fEtaHighLimit(5.f),
+   fEtaMin(fEtaLowLimit),
+   fEtaMax(fEtaHighLimit),
+
    fPhi(0.),
    fPhiRng(TMath::Pi()),
 
@@ -80,7 +87,7 @@ TEveCaloViz::TEveCaloViz(TEveCaloData* data, const Text_t* n, const Text_t* t) :
    fBarrelRadius(-1.f),
    fEndCapPos(-1.f),
 
-   fTowerHeight(0.2),
+   fCellZScale(1.),
 
    fDefaultValue(5),
    fValueIsColor(kTRUE),
@@ -140,6 +147,9 @@ void TEveCaloViz::AssignCaloVizParameters(TEveCaloViz* m)
 
    fEtaMin    = m->fEtaMin;
    fEtaMax    = m->fEtaMax;
+   fEtaLowLimit = m->fEtaLowLimit;
+   fEtaHighLimit = m->fEtaHighLimit;
+
    fPhi       = m->fPhi;
    fPhiRng    = m->fPhiRng;
    fThreshold = m->fThreshold;
@@ -205,33 +215,6 @@ TClass* TEveCaloViz::ProjectedClass() const
    return TEveCalo2D::Class();
 }
 
-//______________________________________________________________________________
-void TEveCaloViz::SetTowerHeight(Float_t x)
-{
-   // Set height of calorimeter tower.
-
-   fTowerHeight = x;
-   ComputeBBox();
-}
-
-//______________________________________________________________________________
-void TEveCaloViz::ComputeBBox()
-{
-   // Fill bounding-box information of the base-class TAttBBox (virtual method).
-   // If member 'TEveFrameBox* fFrame' is set, frame's corners are used as bbox.
-
-   BBoxInit();
-
-   Float_t th = fBarrelRadius*fTowerHeight*fData->GetNSlices();
-
-   fBBox[0] = -fBarrelRadius - th;
-   fBBox[1] =  fBarrelRadius + th;
-   fBBox[2] =  fBBox[0];
-   fBBox[3] =  fBBox[1];
-   fBBox[4] = -fEndCapPos - th;
-   fBBox[5] =  fEndCapPos + th;
-}
-
 
 //______________________________________________________________________________
 void TEveCaloViz::SetupColorHeight(Float_t value, Int_t slice, Float_t &outH, Bool_t &viz) const
@@ -239,8 +222,7 @@ void TEveCaloViz::SetupColorHeight(Float_t value, Int_t slice, Float_t &outH, Bo
    // Set color and height for a given value and slice using TEveRGBAPalette.
 
    Int_t val =  (Int_t)value;
-   outH = fBarrelRadius*fTowerHeight;
-
+   outH = GetDefaultCellHeight();
    Bool_t visible = kFALSE;
 
    if(fPalette->GetShowDefValue())
@@ -264,7 +246,6 @@ void TEveCaloViz::SetupColorHeight(Float_t value, Int_t slice, Float_t &outH, Bo
    viz = visible;
 }
 
-
 //______________________________________________________________________________
 //
 // Visualization of a calorimeter event data in 3D.
@@ -277,6 +258,24 @@ void TEveCalo3D::ResetCache()
    // Clear list of drawn cell IDs. See TEveCalo3DGL::DirectDraw().
 
    fCellList.clear();
+}
+
+//______________________________________________________________________________
+void TEveCalo3D::ComputeBBox()
+{
+   // Fill bounding-box information of the base-class TAttBBox (virtual method).
+   // If member 'TEveFrameBox* fFrame' is set, frame's corners are used as bbox.
+
+   BBoxInit();
+
+   Float_t th = GetDefaultCellHeight()*fData->GetNSlices();
+   
+   fBBox[0] = -fBarrelRadius - th;
+   fBBox[1] =  fBarrelRadius + th;
+   fBBox[2] =  fBBox[0];
+   fBBox[3] =  fBBox[1];
+   fBBox[4] = -fEndCapPos - th;
+   fBBox[5] =  fEndCapPos + th;
 }
 
 //______________________________________________________________________________
@@ -336,7 +335,7 @@ void TEveCalo2D::ComputeBBox()
    // If member 'TEveFrameBox* fFrame' is set, frame's corners are used as bbox.
 
    BBoxZero();
-   Float_t th = fTowerHeight*fData->GetNSlices()*fBarrelRadius;
+   Float_t th = GetDefaultCellHeight()*fData->GetNSlices(); 
 
    Float_t x1, y1, z1, x2, y2, z2;
    x1 = y1 = -fBarrelRadius - th;
@@ -359,3 +358,64 @@ void TEveCalo2D::ComputeBBox()
 
    AssertBBoxExtents(0.1);
 }
+
+//______________________________________________________________________________
+//
+// Visualization of a calorimeter eta, phi histogram
+
+
+ClassImp(TEveCaloLego);
+
+//______________________________________________________________________________
+TEveCaloLego::TEveCaloLego(const Text_t* n, const Text_t* t):
+   TEveCaloViz(n, t)
+{
+   // Constructor.
+
+}
+
+//______________________________________________________________________________
+TEveCaloLego::TEveCaloLego(TEveCaloData* data):
+   TEveCaloViz(data)
+{
+   // Constructor.
+
+   SetElementName("TEveCaloLego");
+}
+
+//______________________________________________________________________________
+Float_t TEveCaloLego::GetDefaultCellHeight() const
+{
+
+   // Get default cell height.
+
+   return TMath::TwoPi()/fData->GetNSlices();
+}
+
+//______________________________________________________________________________
+void TEveCaloLego::ResetCache()
+{
+   // Clear list of drawn cell IDs. For more information see TEveCaloLegoGL:DirectDraw().
+
+   fCellList.clear();
+}
+
+//______________________________________________________________________________
+void TEveCaloLego::ComputeBBox()
+{
+   // Fill bounding-box information of the base-class TAttBBox (virtual method).
+   // If member 'TEveFrameBox* fFrame' is set, frame's corners are used as bbox.
+
+   BBoxInit();
+   
+   fBBox[0] =  fEtaMin*1.2;
+   fBBox[1] =  fEtaMax*1.2;
+
+   fBBox[2] =  fPhi - fPhiRng*1.2;
+   fBBox[3] =  fPhi + fPhiRng*1.2;
+
+   fBBox[4] =  0;
+   fBBox[5] =  GetDefaultCellHeight()*fData->GetNSlices();
+}
+
+

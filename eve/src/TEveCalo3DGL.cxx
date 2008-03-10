@@ -310,8 +310,10 @@ void TEveCalo3DGL::DirectDraw(TGLRnrCtx &rnrCtx) const
       fM->fCacheOK= kTRUE;
    }
 
+
    glPushAttrib(GL_ENABLE_BIT | GL_POLYGON_BIT);
    glEnable(GL_NORMALIZE);
+   glEnable(GL_LIGHTING);
 
    TEveCaloData::CellData_t cellData;
    Float_t transTheta = fM->GetTransitionTheta();
