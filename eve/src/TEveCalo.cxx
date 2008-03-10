@@ -389,7 +389,7 @@ Float_t TEveCaloLego::GetDefaultCellHeight() const
 
    // Get default cell height.
 
-   return TMath::TwoPi()/fData->GetNSlices();
+   return TMath::TwoPi()/fData->GetNSlices()*fCellZScale;
 }
 
 //______________________________________________________________________________
