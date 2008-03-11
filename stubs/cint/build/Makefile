@@ -31,10 +31,10 @@ ORDER_ := $(shell test $(MAKE_VERSION_MAJOR) -gt 3 || \
                   test $(MAKE_VERSION_MINOR) -ge 80 && echo '|')
 
 # libraries
-CINTLIBSHARED = libcint$(G__CFG_SOEXT)
-CINTIMPLIB    = libcint$(G__CFG_IMPLIBEXT)
-CINTLIBSTATIC = libcint_static$(G__CFG_LIBEXT)
-CINT          = cint$(G__CFG_EXEEXT)
+CINTLIBSHARED = lib/libcint$(G__CFG_SOEXT)
+CINTIMPLIB    = lib/libcint$(G__CFG_IMPLIBEXT)
+CINTLIBSTATIC = lib/libcint_static$(G__CFG_LIBEXT)
+CINT          = bin/cint$(G__CFG_EXEEXT)
 RMKDEPEND     = tool/rmkdepend/rmkdepend$(G__CFG_EXEEXT)
 CONFIGCINTH   = $(G__CFG_COREVERSION)/inc/configcint.h
 
@@ -52,6 +52,9 @@ LINKSTATIC = no
 include build/Cint.mk
 include build/libReflex.mk
 include build/libCint.mk
+
+Makefile: build/Makefile
+	cp -f $< $@
 
 ############################################################################
 # Common rules
@@ -101,9 +104,9 @@ endif
 
 test debugtest cintreflextest:
 	(cd test && \
-	PATH=..:.:$$PATH \
-	LD_LIBRARY_PATH=..:.:$$LD_LIBRARY_PATH \
-	DYLD_LIBRARY_PATH=..:.:$$DYLD_LIBRARY_PATH \
+	PATH=../bin:.:$$PATH \
+	LD_LIBRARY_PATH=../lib:.:$$LD_LIBRARY_PATH \
+	DYLD_LIBRARY_PATH=../lib:.:$$DYLD_LIBRARY_PATH \
 	cint$(G__CFG_EXEEXT) $(TESTDEBUG) testall.cxx $(TEST) $(TESTFLAGS) $(REFLEXTESTFLAGS) )
 
 ifeq ($(findstring clean,$(MAKECMDGOALS)),)
@@ -122,10 +125,10 @@ help:
 	@echo CINT Makefile targets:
 	@echo '  make:			Build default targets (marked by * below)'
 	@echo '  make install:		Install CINT into directories specified to configure'
-	@echo '  make cint'$(G__CFG_EXEEXT)':	Build CINT executable [*]'
+	@echo '  make bin/cint'$(G__CFG_EXEEXT)':	Build CINT executable [*]'
 	@echo '  make static:	Build static cint library [*]'
 	@echo '  make shared:	Build cint library'
-	@echo '  make makecint'$(G__CFG_EXEEXT)':	Build CINT Makefile generator [*]'
+	@echo '  make bin/makecint'$(G__CFG_EXEEXT)':	Build CINT Makefile generator [*]'
 	@echo '  make dlls:		Build STL dlls (you should do this at least once)'
 	@echo '  make reflex:           Build the Reflex shared library'
 	@echo '  make MAKEINFO:	Write (deprecated) MAKEINFO file'

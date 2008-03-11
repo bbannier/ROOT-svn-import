@@ -655,6 +655,11 @@ EXPORTS=(${EXPORTS[*]} HAVE_CONFIG)
 [ "$DATADIR" = "" ] && DATADIR=$PREFIX/share && DATADIRCINT=$PREFIX/share/cint
 
 echo ""
+echo Creating build dirs...
+[ -d bin ] || mkdir -p bin
+[ -d lib ] || mkdir -p lib
+[ -d include ] || mkdir -p include
+
 # generate Makefile.conf
 file=Makefile.conf
 echo Writing $file...
@@ -692,9 +697,9 @@ else
 fi
 CINTVERSION=`grep '#define *'${CINTVERSIONTAG}' ' ${COREVERSION}/inc/G__ci.h | sed 's/^.*"\([^,]\+\),.*$/\1/'`
 
-$RM cint-config
-echo Writing cint-config...
-cat >> cint-config << ___EOF
+$RM bin/cint-config
+echo Writing bin/cint-config...
+cat >> bin/cint-config << ___EOF
 
 printhelp() {
 cat <<_EOF
@@ -730,7 +735,7 @@ while [ \$# -gt 0 ] ; do
 done
 
 ___EOF
-chmod +x cint-config
+chmod +x bin/cint-config
 
 echo Writing config.status...
 echo ${ALLOPTIONS[*]} > config.status

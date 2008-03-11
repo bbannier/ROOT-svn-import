@@ -15,8 +15,8 @@
 # VARIABLES
 ############################################################################
 
-CINTTMP       = cint_tmp$(G__CFG_EXEEXT)
-CINTLIBIMPORT = libcint$(G__CFG_IMPLIBEXT)
+CINTTMP       = bin/cint_tmp$(G__CFG_EXEEXT)
+CINTLIBIMPORT = lib/libcint$(G__CFG_IMPLIBEXT)
 
 CXXAPIO    = $(addsuffix $(G__CFG_OBJEXT),$(addprefix $(G__CFG_COREVERSION)/src/,\
 	      Api Class BaseCls Type DataMbr Method MethodAr \
