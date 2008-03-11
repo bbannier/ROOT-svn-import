@@ -19,23 +19,23 @@ rm -f ../../stl/*.dll G__*
 #make -f Makeiter
 #mv iterator.dll ../../stl/iterator.dll
 
-../../../makecint --builddir $CINTSYSDIR -mk Makestr -dl string.dll -H str.h -cint -Z0
+../../../bin/makecint --builddir $CINTSYSDIR -mk Makestr -dl string.dll -H str.h -cint -Z0
 make -f Makestr
 mv string.dll ../../stl/string.dll
 
-../../../makecint --builddir $CINTSYSDIR -mk Makevec -dl vector.dll $ALGO -H vec.h  -cint -Z0
+../../../bin/makecint --builddir $CINTSYSDIR -mk Makevec -dl vector.dll $ALGO -H vec.h  -cint -Z0
 make -f Makevec
 mv vector.dll ../../stl/vector.dll
 
-../../../makecint --builddir $CINTSYSDIR -mk Makevecbool -dl vectorbool.dll $ALGO -H vecbool.h  -cint -Z0
+../../../bin/makecint --builddir $CINTSYSDIR -mk Makevecbool -dl vectorbool.dll $ALGO -H vecbool.h  -cint -Z0
 make -f Makevecbool
 mv vectorbool.dll ../../stl/vectorbool.dll
 
-../../../makecint --builddir $CINTSYSDIR -mk Makelist -dl list.dll $ALGO -H lst.h  -cint -Z0
+../../../bin/makecint --builddir $CINTSYSDIR -mk Makelist -dl list.dll $ALGO -H lst.h  -cint -Z0
 make -f Makelist 
 mv list.dll ../../stl/list.dll
 
-../../../makecint --builddir $CINTSYSDIR -mk Makedeque -dl deque.dll $ALGO -H dqu.h  -cint -Z0
+../../../bin/makecint --builddir $CINTSYSDIR -mk Makedeque -dl deque.dll $ALGO -H dqu.h  -cint -Z0
 make -f Makedeque
 mv deque.dll ../../stl/deque.dll
 
@@ -45,55 +45,55 @@ mv deque.dll ../../stl/deque.dll
 #mv pair.dll ../../stl/pair.dll
 ###
 
-../../../makecint --builddir $CINTSYSDIR -mk Makemap -dl map.dll $ALGO -H mp.h  -cint -Z0
+../../../bin/makecint --builddir $CINTSYSDIR -mk Makemap -dl map.dll $ALGO -H mp.h  -cint -Z0
 make -f Makemap 
 mv map.dll ../../stl/map.dll
 
-../../../makecint --builddir $CINTSYSDIR -mk Makemap2 -dl map2.dll $ALGO -DG__MAP2 -H mp.h  -cint -Z0
+../../../bin/makecint --builddir $CINTSYSDIR -mk Makemap2 -dl map2.dll $ALGO -DG__MAP2 -H mp.h  -cint -Z0
 make -f Makemap2 
 mv map2.dll ../../stl/map2.dll
 
-../../../makecint --builddir $CINTSYSDIR -mk Makeset -dl set.dll $ALGO -H st.h  -cint -Z0
+../../../bin/makecint --builddir $CINTSYSDIR -mk Makeset -dl set.dll $ALGO -H st.h  -cint -Z0
 make -f Makeset
 mv set.dll ../../stl/set.dll
 
-../../../makecint --builddir $CINTSYSDIR -mk Makemmap -dl multimap.dll $ALGO -H multmp.h  -cint -Z0
+../../../bin/makecint --builddir $CINTSYSDIR -mk Makemmap -dl multimap.dll $ALGO -H multmp.h  -cint -Z0
 make -f Makemmap 
 mv multimap.dll ../../stl/multimap.dll
 
-../../../makecint --builddir $CINTSYSDIR -mk Makemmap2 -dl multimap2.dll $ALGO -DG__MAP2 -H multmp.h  -cint -Z0
+../../../bin/makecint --builddir $CINTSYSDIR -mk Makemmap2 -dl multimap2.dll $ALGO -DG__MAP2 -H multmp.h  -cint -Z0
 make -f Makemmap2
 mv multimap2.dll ../../stl/multimap2.dll
 
-../../../makecint --builddir $CINTSYSDIR -mk Makemset -dl multiset.dll $ALGO -H multst.h  -cint -Z0
+../../../bin/makecint --builddir $CINTSYSDIR -mk Makemset -dl multiset.dll $ALGO -H multst.h  -cint -Z0
 make -f Makemset
 mv multiset.dll ../../stl/multiset.dll
 
-../../../makecint --builddir $CINTSYSDIR -mk Makestk -dl stack.dll -H stk.h  -cint -Z0
+../../../bin/makecint --builddir $CINTSYSDIR -mk Makestk -dl stack.dll -H stk.h  -cint -Z0
 make -f Makestk
 mv stack.dll ../../stl/stack.dll
 
-../../../makecint --builddir $CINTSYSDIR -mk Makeque -dl queue.dll -H que.h  -cint -Z0
+../../../bin/makecint --builddir $CINTSYSDIR -mk Makeque -dl queue.dll -H que.h  -cint -Z0
 make -f Makeque
 mv queue.dll ../../stl/queue.dll
 
-../../../makecint --builddir $CINTSYSDIR -mk Makevary -dl valarray.dll -H vary.h  -cint -Z0
+../../../bin/makecint --builddir $CINTSYSDIR -mk Makevary -dl valarray.dll -H vary.h  -cint -Z0
 make -f Makevary
 mv valarray.dll ../../stl/valarray.dll
 
-../../../makecint --builddir $CINTSYSDIR -mk Makeeh -dl exception.dll -H cinteh.h -cint -Z0
+../../../bin/makecint --builddir $CINTSYSDIR -mk Makeeh -dl exception.dll -H cinteh.h -cint -Z0
 make -f Makeeh
 mv exception.dll ../../stl/exception.dll
 
-../../../makecint --builddir $CINTSYSDIR -mk Makese -dl stdexcept.dll -H se.h -cint -Z0
+../../../bin/makecint --builddir $CINTSYSDIR -mk Makese -dl stdexcept.dll -H se.h -cint -Z0
 make -f Makese
 mv stdexcept.dll ../../stl/stdexcept.dll
 
-../../../makecint --builddir $CINTSYSDIR -mk Makeclimits -dl climits.dll -H clim.h -cint -Z1
+../../../bin/makecint --builddir $CINTSYSDIR -mk Makeclimits -dl climits.dll -H clim.h -cint -Z1
 make -f Makeclimits
 mv climits.dll ../../stl/climits.dll
 
-../../../makecint --builddir $CINTSYSDIR -mk Makecomplex -dl complex.dll -H cmplx.h -cint -Z1
+../../../bin/makecint --builddir $CINTSYSDIR -mk Makecomplex -dl complex.dll -H cmplx.h -cint -Z1
 make -f Makecomplex
 mv complex.dll ../../stl/complex.dll
 

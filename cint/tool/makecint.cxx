@@ -502,11 +502,11 @@ void G__outputmakefile(int argc,char **argv)
       << "CC          := " << G__CFG_CC << std::endl
       << "LD          := " << G__CFG_LD << std::endl
       << "CINT        := $(shell which cint" << G__CFG_EXEEXT << ")" << std::endl
-      << "CINTSYSDIRU := $(dir $(CINT))" << std::endl
+      << "CINTSYSDIRU := $(patsubst %/bin/,%/,$(dir $(CINT)))" << std::endl
       << "CINTSYSDIRW := $(shell " << G__CFG_MANGLEPATHS << " $(CINTSYSDIRU) )" << std::endl
-      << "CINTLIB     := $(CINTSYSDIRU)/libcint" << G__CFG_SOEXT;
-  if (!strcmp(G__CFG_COREVERSION,"core"))
-    out << " $(CINTSYSDIRU)/libReflex" << G__CFG_SOEXT;
+      << "CINTLIB     := $(CINTSYSDIRU)/lib/libcint" << G__CFG_SOEXT;
+  if (!strcmp(G__CFG_COREVERSION,"cint7"))
+    out << " $(CINTSYSDIRU)/lib/libReflex" << G__CFG_SOEXT;
   out << std::endl
       << "IPATH       := " << G__IPATH << " ";
   out << std::endl;
@@ -550,8 +550,8 @@ void G__outputmakefile(int argc,char **argv)
   out << std::endl;
 
   out << "LIBS        := ";
-  out << G__CFG_LIBP << "$(CINTSYSDIRW) $(subst @imp@,cint," << G__CFG_LIBL << ") ";
-  if (!strcmp(G__CFG_COREVERSION,"core"))
+  out << G__CFG_LIBP << "$(CINTSYSDIRW)/lib $(subst @imp@,cint," << G__CFG_LIBL << ") ";
+  if (!strcmp(G__CFG_COREVERSION,"cint7"))
     out << " $(subst @imp@,Reflex," << G__CFG_LIBL << ") ";
   out << G__CFG_DEFAULTLIBS << " " << G__LIB << " " << std::endl
       << std::endl;

@@ -12,7 +12,7 @@
 ############################################################################
 # VARIABLES
 ############################################################################
-MAKECINT      = makecint$(G__CFG_EXEEXT)
+MAKECINT      = bin/makecint$(G__CFG_EXEEXT)
 SETUPO        = $(G__CFG_COREVERSION)/main/G__setup$(G__CFG_OBJEXT)
 MAINO         = $(G__CFG_COREVERSION)/main/cppmain$(G__CFG_OBJEXT)
 MAKECINTO     = tool/makecint$(G__CFG_OBJEXT)
@@ -27,7 +27,7 @@ ifeq ($(subst msvc,,$(G__CFG_ARCH)),$(G__CFG_ARCH))
   ALLDLLS += longlong.cintdll ipc.cintdll posix.cintdll
 endif
 
-BUILDDLL = chmod a+x setup; PATH=../../..:$$PATH LD_LIBRARY_PATH=../../..:$$LD_LIBRARY_PATH ./setup
+BUILDDLL = chmod a+x setup; PATH=../../../bin:$$PATH LD_LIBRARY_PATH=../../../lib:$$LD_LIBRARY_PATH ./setup
 MKTYPES  = $(G__CFG_COREVERSION)/lib/posix/mktypes$(G__CFG_EXEEXT)
 MAKEINCL = $(G__CFG_COREVERSION)/include/mkincld$(G__CFG_EXEEXT)
 IOSENUMH = $(G__CFG_COREVERSION)/include/iosenum.h
@@ -62,10 +62,10 @@ $(MAKECINT): $(MAKECINTO)
 ##############################################################
 ifeq ($(LINKSTATIC),yes)
 $(CINT) : $(CINTLIBSTATIC)
-LINKCINTLIB=$(G__CFG_LIBP). $(subst @imp@,cint_static,$(G__CFG_LIBL))
+LINKCINTLIB=$(G__CFG_LIBP)lib $(subst @imp@,cint_static,$(G__CFG_LIBL))
 else
 $(CINT) : $(CINTLIBSHARED)
-LINKCINTLIB=$(G__CFG_LIBP). $(subst @imp@,cint,$(G__CFG_LIBL))
+LINKCINTLIB=$(G__CFG_LIBP)lib $(subst @imp@,cint,$(G__CFG_LIBL))
 endif
 
 $(CINT): $(SETUPO) $(MAINO) $(G__CFG_READLINELIB) $(REFLEXLIBDEP)
