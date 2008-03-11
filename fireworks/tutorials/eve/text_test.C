@@ -1,5 +1,5 @@
 // @(#)root/eve:$Id$
-// Author: Pedro Gonzales
+// Author: Alja Mrak-Tadel
 
 TEveText* text_test()
 {
