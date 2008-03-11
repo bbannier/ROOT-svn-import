@@ -1,3 +1,6 @@
+// @(#)root/eve:$Id$
+// Author: Pedro Gonzales
+
 TEveText* text_test()
 {
    gSystem->IgnoreSignal(kSigSegmentationViolation, true);
