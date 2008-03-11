@@ -18,6 +18,7 @@
 
 
 #include "common.h"
+#include "configcint.h"
 #include "value.h"
 #include "dllrev.h"
 #include "Api.h"
@@ -2655,7 +2656,7 @@ void G__gen_cpplink()
     char *sysstl;
     G__getcintsysdir();
     sysstl=(char*)malloc(strlen(G__cintsysdir)+20);
-    sprintf(sysstl,"%s%soldcore%sstl%s",G__cintsysdir,G__psep,G__psep,G__psep);
+    sprintf(sysstl,"%s/%s/stl/",G__cintsysdir,G__CFG_COREVERSION);
     lenstl=strlen(sysstl);
     for(filen=0;filen<G__nfile;filen++) {
       fname = G__srcfile[filen].filename;
@@ -2693,9 +2694,9 @@ void G__gen_cpplink()
   if(G__CPPLINK==G__globalcomp&&-1!=G__defined_tagname("G__longlong",2)) {
 #if defined(__hpux) && !defined(G__ROOT)
     G__getcintsysdir();
-    fprintf(hfp,"\n#include \"%s%soldcore%slib/longlong/longlong.h\"\n",G__cintsysdir,G__psep,G__psep);
+    fprintf(hfp,"\n#include \"%s/%s/lib/longlong/longlong.h\"\n",G__cintsysdir,G__CFG_COREVERSION);
 #else
-    fprintf(hfp,"\n#include \"oldcore/lib/longlong/longlong.h\"\n");
+    fprintf(hfp,"\n#include \"%s/lib/longlong/longlong.h\"\n",G__CFG_COREVERSION);
 #endif
   }
 #endif /* G__ROOT */
@@ -2854,7 +2855,7 @@ void G__clink_header(FILE *fp)
 #endif
 #if defined(__hpux) && !defined(G__ROOT)
   G__getcintsysdir();
-  fprintf(fp,"#include \"%s%soldcore%sinc%sG__ci.h\"\n",G__cintsysdir,G__psep, G__psep, G__psep);
+  fprintf(fp,"#include \"%s/%s/inc/G__ci.h\"\n",G__cintsysdir, G__CFG_COREVERSION);
 #else
   fprintf(fp,"#include \"G__ci.h\"\n");
 #endif
@@ -2944,7 +2945,7 @@ void G__cpplink_header(FILE *fp)
 #endif
 #if defined(__hpux) && !defined(G__ROOT)
   G__getcintsysdir();
-  fprintf(fp,"#include \"%s%soldcore%sinc%sG__ci.h\"\n",G__cintsysdir,G__psep, G__psep, G__psep);
+  fprintf(fp,"#include \"%s/%s/inc/G__ci.h\"\n",G__cintsysdir, G__CFG_COREVERSION);
 #else
   fprintf(fp,"#include \"G__ci.h\"\n");
 #endif

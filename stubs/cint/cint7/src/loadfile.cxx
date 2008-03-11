@@ -456,7 +456,7 @@ int Cint::Internal::G__getcintsysdir()
       sprintf(G__cintsysdir, "%s", CINTINCDIR);
 #  else
       if(G__UseCINTSYSDIR) strcpy(G__cintsysdir,env);
-      else                 sprintf(G__cintsysdir, "%s%score%sextsrc", env, G__psep, G__psep);
+      else                 sprintf(G__cintsysdir, "%s/%s/extsrc", env, G__CFG_COREVERSION);
 #  endif
 # endif /* ROOTBUILD */
 
@@ -1523,8 +1523,8 @@ extern "C" int G__loadfile(const char *filenamein)
        **********************************************/
       G__getcintsysdir();
       if('\0'!=G__cintsysdir[0]) {
-        sprintf(G__ifile.name,"%s%score%sinclude%s%s%s",G__cintsysdir,G__psep,G__psep
-                ,G__psep,filename,addpost[i2]);
+        sprintf(G__ifile.name,"%s/%s/include/%s%s",G__cintsysdir,G__CFG_COREVERSION
+                ,filename,addpost[i2]);
 #ifndef G__WIN32
         G__ifile.fp = fopen(G__ifile.name,"r");
 #else
@@ -1544,8 +1544,8 @@ extern "C" int G__loadfile(const char *filenamein)
        **********************************************/
       G__getcintsysdir();
       if('\0'!=G__cintsysdir[0]) {
-        sprintf(G__ifile.name,"%s%score%sstl%s%s%s",G__cintsysdir,G__psep,G__psep
-                ,G__psep,filename,addpost[i2]);
+        sprintf(G__ifile.name,"%s/%s/stl/%s%s",G__cintsysdir,G__CFG_COREVERSION
+                ,filename,addpost[i2]);
 #ifndef G__WIN32
         G__ifile.fp = fopen(G__ifile.name,"r");
 #else
@@ -1565,8 +1565,8 @@ extern "C" int G__loadfile(const char *filenamein)
        **********************************************/
       /* G__getcintsysdir(); */
       if('\0'!=G__cintsysdir[0]) {
-        sprintf(G__ifile.name,"%s%score%slib%s%s%s",G__cintsysdir,G__psep,G__psep
-                ,G__psep,filename,addpost[i2]);
+        sprintf(G__ifile.name,"%s/%s/lib/%s%s",G__cintsysdir,G__CFG_COREVERSION
+                ,filename,addpost[i2]);
 #ifndef G__WIN32
         G__ifile.fp = fopen(G__ifile.name,"r");
 #else

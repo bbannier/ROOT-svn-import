@@ -95,7 +95,7 @@ cintreflextest: REFLEXTESTFLAGS = -m -r
 
 debugtest: TESTDEBUG = -DDEBUG
 
-ifeq ($(G__CFG_COREVERSION),oldcore)
+ifeq ($(G__CFG_COREVERSION),cint)
   TESTFLAGS ?= --ignore-diff-errors -k
 endif
 
