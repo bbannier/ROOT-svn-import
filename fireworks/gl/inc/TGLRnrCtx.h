@@ -197,8 +197,8 @@ public:
    TGLContextIdentity* GetGLCtxIdentity()   const { return fGLCtxIdentity; }
    void SetGLCtxIdentity(TGLContextIdentity* cid) { fGLCtxIdentity = cid; }
 
-   const TGLFont& GetFont(Int_t size, Int_t file, Int_t mode);
-   Bool_t   ReleaseFont(const TGLFont& font);
+   void  RegisterFont(Int_t size, Int_t file, Int_t mode, TGLFont& out);
+   void  ReleaseFont(TGLFont& font);
 
    GLUquadric* GetGluQuadric() { return fQuadric; }
 

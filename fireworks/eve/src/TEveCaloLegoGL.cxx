@@ -16,7 +16,6 @@
 #include "TGLRnrCtx.h"
 #include "TGLSelectRecord.h"
 #include "TGLIncludes.h"
-#include "TGLFontManager.h"
 #include "TGLCamera.h"
 
 #include "TAxis.h"
@@ -35,8 +34,6 @@ TEveCaloLegoGL::TEveCaloLegoGL() :
 {
    // Constructor.
    fDLCache = kFALSE;
-   
-   printf("constructor ::TEveCaloLegoGL() \n");
 }
 
 //______________________________________________________________________________
@@ -188,7 +185,7 @@ void TEveCaloLegoGL::DrawTitle(TGLRnrCtx & rnrCtx ) const
             break;
          cnt++;
       } 
-      fTitleFont = rnrCtx.GetFont(22, cnt, TGLFont::kPixmap);      
+      rnrCtx.RegisterFont(22, cnt, TGLFont::kPixmap, fTitleFont);      
    }
 
    glMatrixMode(GL_PROJECTION);
@@ -206,8 +203,8 @@ void TEveCaloLegoGL::DrawTitle(TGLRnrCtx & rnrCtx ) const
 
    Float_t bbox[6];
    fTitleFont.BBox(fM->GetTitle(), bbox[0], bbox[1], bbox[2], bbox[3], bbox[4], bbox[5]);
-   bbox[3] += fTitleFont.GetSize();
-   bbox[4] += fTitleFont.GetSize();
+   bbox[3] += fTitleFont.GetSize()*2;
+   bbox[4] += fTitleFont.GetSize()*2;
    Float_t xf = (vp[2]-bbox[3])/(vp[2]-vp[0]);
    Float_t yf = (vp[3]-bbox[4])/(vp[3]-vp[1]);
    glPushMatrix();
@@ -240,7 +237,7 @@ void TEveCaloLegoGL::DrawAxis(TGLRnrCtx & rnrCtx,
             break;
          cnt++;
       } 
-      fNumFont = rnrCtx.GetFont(18, cnt, TGLFont::kPixmap);      
+      rnrCtx.RegisterFont(12, cnt, TGLFont::kPixmap, fNumFont);   
    }
 
    // get corner closest to projected plane

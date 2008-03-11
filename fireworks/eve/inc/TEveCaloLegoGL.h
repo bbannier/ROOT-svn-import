@@ -13,11 +13,10 @@
 #define ROOT_TEveCaloLegoGL
 
 #include "TGLObject.h"
-#include "TGLFontManager.h"
 #include "TEveCaloData.h"
 #include "TGLIncludes.h"
+#include "TGLFontManager.h"
 
-//class TGLFont;
 class TEveCaloLego;
 
 

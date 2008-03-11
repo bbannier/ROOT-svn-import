@@ -24,30 +24,51 @@
 ClassImp(TGLFont);
 
 //______________________________________________________________________________
-TGLFont::TGLFont(Int_t size, Int_t font, EMode mode, const FTFont* f):
-   fSize(size), fFile(font), fMode(mode), fFont(f), fDepth(1)
+TGLFont::TGLFont():
+   fFont(0), fManager(0), fDepth(0), fSize(0), fFile(0), fMode(kUndef)
 {
    // Constructor.
 }
 
 //______________________________________________________________________________
-TGLFont::TGLFont(const TGLFont& o) :
-   fSize(o.fSize), fFile(o.fFile), fMode(o.fMode), fFont(o.fFont), fDepth(o.fDepth)
+TGLFont::TGLFont(Int_t size, Int_t font, EMode mode, FTFont* f, TGLFontManager* mng):
+  fFont(f), fManager(mng), fDepth(0), fSize(size), fFile(font), fMode(mode)
 {
-   // Copy constructor.
+   // Constructor.
 }
 
 //______________________________________________________________________________
-TGLFont& TGLFont::operator=(const TGLFont& o)
+TGLFont::TGLFont(const TGLFont &o):
+   fFont(0), fManager(0), fDepth(0)
 {
    // Assignment operator.
+   fFont = (FTFont*)o.GetFont();
 
    fSize  = o.fSize;
    fFile  = o.fFile;
    fMode  = o.fMode;
-   fFont  = o.fFont;
-   fDepth = o.fDepth;
-   return *this;
+}
+
+//______________________________________________________________________________
+TGLFont::~TGLFont()
+{
+   //Destructor
+
+   if (fManager) fManager->ReleaseFont(*this);
+}
+
+//______________________________________________________________________________
+void TGLFont::CopyAttributes(const TGLFont &o)
+{
+   // Assignment operator.
+   SetFont(o.fFont);
+   SetManager(o.fManager);
+
+   SetDepth(o.fDepth);
+
+   fSize  = o.fSize;
+   fFile  = o.fFile;
+   fMode  = o.fMode;
 }
 
 
@@ -161,7 +182,7 @@ TGLFontManager::~TGLFontManager()
 }
 
 //______________________________________________________________________________
-const TGLFont& TGLFontManager::GetFont(Int_t size, Int_t fileID, TGLFont::EMode mode)
+void TGLFontManager::RegisterFont(Int_t size, Int_t fileID, TGLFont::EMode mode, TGLFont &out)
 {
    // Provide font with given size, file and FTGL class.
 
@@ -206,17 +227,19 @@ const TGLFont& TGLFontManager::GetFont(Int_t size, Int_t fileID, TGLFont::EMode 
             break;
       }
       ftfont->FaceSize(size);
-      return fFontMap.insert(std::make_pair(TGLFont(size, fileID, mode, ftfont), 1)).first->first;
+      const TGLFont &mf = fFontMap.insert(std::make_pair(TGLFont(size, fileID, mode, ftfont, 0), 1)).first->first;
+      out.CopyAttributes(mf);
    }
    else
    {
-      it->second = it->second;
-      return it->first;
+      it->second ++;
+      out.CopyAttributes(it->first);
    }
+   out.SetManager(this);
 }
 
 //______________________________________________________________________________
-Bool_t TGLFontManager::ReleaseFont(const TGLFont& font)
+void TGLFontManager::ReleaseFont(TGLFont& font)
 {
    // Release font with given attributes. Returns false if font has
    // not been found in the managers font set.
@@ -229,9 +252,9 @@ Bool_t TGLFontManager::ReleaseFont(const TGLFont& font)
          delete it->first.GetFont();
          fFontMap.erase(it);
       }
-      return kTRUE;
+      return;
    }
-   return kFALSE;
+   return;
 }
 
 //______________________________________________________________________________
