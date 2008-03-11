@@ -458,9 +458,9 @@ function processflag_arch {
 function processflag_coreversion {
     COREVERSION=$1
     if [ "x$COREVERSION" = "xnew" ]; then
-        COREVERSION=core
+        COREVERSION=cint7
     elif [ "x$COREVERSION" = "xold" ]; then
-        COREVERSION=oldcore
+        COREVERSION=cint
     else
         echo "Error: --coreversion must be one of old, new, not \"$1\"."
         exit 1
@@ -564,7 +564,7 @@ if [ "$ARCH" = "" ]; then
 fi
 
 if [ "$COREVERSION" = "" ]; then
-    COREVERSION=oldcore
+    COREVERSION=cint
     echo Using old CINT core
 fi
 
@@ -685,7 +685,7 @@ done
 # now write the cint-config script
 
 # get actual cint version from int/G__ci.h
-if [ "x${COREVERSION}" = "xoldcore" ]; then
+if [ "x${COREVERSION}" = "xcint" ]; then
   CINTVERSIONTAG=G__CINTVERSIONSTR_V5
 else
   CINTVERSIONTAG=G__CINTVERSIONSTR

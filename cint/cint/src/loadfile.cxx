@@ -339,9 +339,9 @@ const char *G__getmakeinfo(const char *item)
   /* Get $CINTSYSDIR/MAKEINFO file name */
   if(G__getcintsysdir()) return(buf);
 #ifdef G__VMS
-  sprintf(makeinfo,"%soldcore/MAKEINFO.txt",G__cintsysdir);
+  sprintf(makeinfo,"%s%s/MAKEINFO.txt",G__cintsysdir);
 #else
-  sprintf(makeinfo,"%s/oldcore/MAKEINFO",G__cintsysdir);
+  sprintf(makeinfo,"%s/%s/MAKEINFO",G__cintsysdir, G__CFG_COREVERSION);
 #endif
 
   /* Open MAKEINFO file */
@@ -1540,8 +1540,8 @@ int G__loadfile(const char *filenamein)
        **********************************************/
       G__getcintsysdir();
       if('\0'!=G__cintsysdir[0]) {
-        sprintf(G__ifile.name,"%s%soldcore/include%s%s%s",G__cintsysdir,G__psep
-                ,G__psep,filename,addpost[i2]);
+        sprintf(G__ifile.name,"%s/%s/include/%s%s",G__cintsysdir,G__CFG_COREVERSION
+                ,filename,addpost[i2]);
 #ifndef G__WIN32
         G__ifile.fp = fopen(G__ifile.name,"r");
 #else
@@ -1561,8 +1561,8 @@ int G__loadfile(const char *filenamein)
        **********************************************/
       G__getcintsysdir();
       if('\0'!=G__cintsysdir[0]) {
-        sprintf(G__ifile.name,"%s%soldcore/stl%s%s%s",G__cintsysdir,G__psep
-                ,G__psep,filename,addpost[i2]);
+        sprintf(G__ifile.name,"%s/%s/stl/%s%s",G__cintsysdir,G__CFG_COREVERSION
+                ,filename,addpost[i2]);
 #ifndef G__WIN32
         G__ifile.fp = fopen(G__ifile.name,"r");
 #else
@@ -1582,8 +1582,8 @@ int G__loadfile(const char *filenamein)
        **********************************************/
       /* G__getcintsysdir(); */
       if('\0'!=G__cintsysdir[0]) {
-        sprintf(G__ifile.name,"%s%soldcore/lib%s%s%s",G__cintsysdir,G__psep
-                ,G__psep,filename,addpost[i2]);
+        sprintf(G__ifile.name,"%s/%s/lib/%s%s",G__cintsysdir,G__CFG_COREVERSION
+                ,filename,addpost[i2]);
 #ifndef G__WIN32
         G__ifile.fp = fopen(G__ifile.name,"r");
 #else
@@ -2392,9 +2392,10 @@ int G__preprocessor(      char *outname,const char *inname,int cppflag
      * preprocessor statement for Symantec C++
      ***************************************************************/
     if(G__cintsysdir[0]) {
-      sprintf(temp,"%s %s %s -I. %s %s -D__CINT__ -I%s/oldcore/include -I%s/oldcore/stl -I%s/oldcore/lib %s -o%s"
-              ,G__ccom ,macros,undeflist,ppopt ,includepath
-              ,G__cintsysdir,G__cintsysdir,G__cintsysdir,tmpfile,outname);
+      sprintf(temp,"%s %s %s -I. %s %s -D__CINT__ -I%s/%s/include -I%s/%s/stl -I%s/%s/lib %s -o%s"
+              ,G__ccom ,macros,undeflist,ppopt ,includepath,
+              ,G__cintsysdir, G__CFG_COREVERSION, G__cintsysdir,G__CFG_COREVERSION
+              ,G__cintsysdir, G__CFG_COREVERSION, tmpfile,outname);
     }
     else {
       sprintf(temp,"%s %s %s %s -I. %s -D__CINT__ %s -o%s" ,G__ccom
@@ -2407,9 +2408,10 @@ int G__preprocessor(      char *outname,const char *inname,int cppflag
      ***************************************************************/
     strcat(outname,".i");
     if(G__cintsysdir[0]) {
-      sprintf(temp,"%s %s %s -I. %s %s -D__CINT__ -I%s/oldcore/include -I%s/oldcore/stl -I%s/oldcore/lib -o%s %s"
+      sprintf(temp,"%s %s %s -I. %s %s -D__CINT__ -I%s/%s/include -I%s/%s/stl -I%s/%s/lib -o%s %s"
               ,G__ccom ,macros,undeflist,ppopt ,includepath
-              ,G__cintsysdir,G__cintsysdir,G__cintsysdir,outname,tmpfile);
+              ,G__cintsysdir,G__CFG_COREVERSION,G__cintsysdir,G__CFG_COREVERSION,
+              G__cintsysdir,G__CFG_COREVERSION,outname,tmpfile);
     }
     else {
       sprintf(temp,"%s %s %s %s -I. %s -D__CINT__ -o%s %s" ,G__ccom
@@ -2424,9 +2426,10 @@ int G__preprocessor(      char *outname,const char *inname,int cppflag
      * preprocessor statement for UNIX
      ***************************************************************/
    if(G__cintsysdir[0]) {
-      sprintf(temp,"%s %s %s -I. %s %s -D__CINT__ -I%s/oldcore/include -I%s/oldcore/stl -I%s/oldcore/lib %s > %s"
+      sprintf(temp,"%s %s %s -I. %s %s -D__CINT__ -I%s/%s/include -I%s/%s/stl -I%s/%s/lib %s > %s"
               ,G__ccom ,macros,undeflist,ppopt ,includepath
-              ,G__cintsysdir,G__cintsysdir,G__cintsysdir,tmpfile,outname);
+              ,G__cintsysdir,G__CFG_COREVERSION,G__cintsysdir,G__CFG_COREVERSION,
+              G__cintsysdir,G__CFG_COREVERSION,tmpfile,outname);
     }
     else {
       sprintf(temp,"%s %s %s %s -I. %s -D__CINT__ %s > %s" ,G__ccom

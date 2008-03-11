@@ -4,7 +4,7 @@
 # Author: Fons Rademakers, 29/2/2000
 
 MODDIRBASE   := cint
-MODDIR       := $(MODDIRBASE)/oldcore
+MODDIR       := $(MODDIRBASE)/cint
 MODDIRS      := $(MODDIR)/src
 MODDIRSD     := $(MODDIRS)/dict
 MODDIRI      := $(MODDIR)/inc
@@ -22,7 +22,7 @@ CINTDIRIOSEN := $(MODDIRBASE)/iosenum
 CINTDIRT     := $(MODDIRBASE)/tool
 
 ##### libCint #####
-CINTH        := $(wildcard $(MODDIRI)/*.h)
+CINTH        := $(wildcard $(CINTDIRI)/*.h)
 CINTS1       := $(wildcard $(MODDIRS)/*.c)
 CINTS2       := $(wildcard $(MODDIRS)/*.cxx) \
 	$(MODDIRSD)/longif.cxx $(MODDIRSD)/Apiif.cxx $(MODDIRSD)/stdstrct.cxx
@@ -208,7 +208,7 @@ endif
 endif
 
 # used in the main Makefile
-ALLHDRS     += $(patsubst $(MODDIRI)/%.h,include/%.h,$(CINTH)) $(CINTCONF)
+ALLHDRS     += $(subst $(CINTDIRI)/,include/,$(CINTH)) $(CINTCONF)
 
 CINTCXXFLAGS += -DG__HAVE_CONFIG -DG__NOMAKEINFO -DG__CINTBODY -I$(CINTDIRS) -I$(CINTDIRSD)
 
@@ -258,7 +258,7 @@ distclean-cint: clean-cint
 		   $(CINT) $(CINTTMP) $(MAKECINT) $(CINTDIRM)/*.exp \
 		   $(CINTDIRM)/*.lib $(CINTDIRS)/loadfile_tmp.cxx \
 		   $(CINTDIRDLLS)/sys/types.h $(CINTDIRDLLS)/systypes.h \
-		   $(patsubst $(MODDIRI)/%.h,include/%.h,$(CINTH)) $(CINTCONF)
+		   $(subst $(CINTDIRI)/,include/,$(CINTH)) $(CINTCONF)
 
 distclean::     distclean-cint
 

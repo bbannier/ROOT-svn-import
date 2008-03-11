@@ -4,7 +4,7 @@
 # Author: Fons Rademakers, 29/2/2000
 
 MODDIRBASE   := cint
-MODDIR       := $(MODDIRBASE)/core
+MODDIR       := $(MODDIRBASE)/cint7
 MODDIRS       := $(MODDIR)/src
 MODDIRI       := $(MODDIR)/inc
 

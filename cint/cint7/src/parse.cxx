@@ -7,53 +7,35 @@
  * Description:
  *  Cint parser functions
  ************************************************************************
- * Copyright(c) 1995~2002  Masaharu Goto
+ * Copyright(c) 1995~2002  Masaharu Goto 
  *
  * For the licensing terms see the file COPYING
  *
  ************************************************************************/
 
 #include "common.h"
+#include "configcint.h"
+#include "Dict.h"
+#include "bc_exec.h"
+#include <deque>
 #include <stack>
-#include <vector>
 
-using namespace std;
-
-#if 0
-class G__breakcontinue {
-private:
-   bool isbreak;
-   int pc;
-public:
-   G__breakcontinue() : isbreak(false), pc(-1) {}
-   G__breakcontinue(const G__breakcontinue& rhs) : isbreak(rhs.isbreak), pc(rhs.pc) {}
-   G__breakcontinue& operator=(const G__breakcontinue& rhs) : isbreak(rhs.isbreak), pc(rhs.pc) {}
-   ~G__breakcontinue() {}
-   bool isbreak() { return isbreak; }
-   void isbreak(bool flag) { isbreak = flag; }
-   int pc() { return pc; }
-   void pc(int val) { pc = val; }
-   void setdest
-};
-#endif
-
-extern "C" {
+using namespace Cint::Internal;
 
 //______________________________________________________________________________
-//
-//  External functions.  (FIXME: These should be in fproto.h.)
-//
+static const int G__IFDEF_NORMAL = 1;
+static const int G__IFDEF_EXTERNBLOCK = 2;
+static const int G__IFDEF_ENDBLOCK = 4;
 
-extern int G__const_setnoerror(); // v6_error.cxx, in the C interface
-extern int G__const_resetnoerror(); // v6_error.cxx, in the C interface
-extern void G__CMP2_equal(G__value*, G__value*); // v6_pcode.cxx
+static int G__externblock_iscpp = 0;
 
 //______________________________________________________________________________
-//
-//  Function table.
-//
+static const int G__NONBLOCK = 0;
+static const int G__IFSWITCH = 1;
+static const int G__DOWHILE = 8;
 
-// statics
+static int G__ifswitch = G__NONBLOCK;
+
 #ifdef G__WIN32
 static void G__toUniquePath(char* s);
 #endif // G__WIN32
@@ -76,7 +58,7 @@ static G__value G__exec_do();
 static G__value G__exec_for();
 static G__value G__exec_while();
 static G__value G__exec_loop(char* forinit, char* condition, int naction, char** foraction);
-static G__value G__return_value(const char* statement);
+static G__value G__return_value(char* statement);
 static int G__search_gotolabel(char* label, fpos_t* pfpos, int line, int* pmparen);
 static int G__label_access_scope(char* statement, int* piout, int* pspaceflag, int mparen);
 static int G__IsFundamentalDecl();
@@ -89,56 +71,91 @@ static int G__keyword_anytime_7(char* statement);
 static int G__keyword_anytime_8(char* statement);
 static int G__defined_type(char* type_name, int len);
 
-// externally visible
-G__value G__alloc_exceptionbuffer(int tagnum);
-int G__free_exceptionbuffer();
-void G__display_tempobject(const char* action);
-int G__defined_macro(const char* macro);
-int G__pp_command();
-void G__pp_skip(int elifskip);
-int G__pp_if();
-int G__pp_ifdef(int def);
-int G__exec_catch(char* statement);
-int G__skip_comment();
-int G__skip_comment_peek();
-G__value G__exec_statement(int* mparen);
+#ifndef G__SECURITY
+/**************************************************************************
+* G__DEFVAR()
+*
+*  Variable allocation
+**************************************************************************/
+#define G__DEFVAR(TYPE)                            \
+         G__var_type=TYPE + G__unsigned;           \
+         G__define_var(-1,::Reflex::Type()); \
+         spaceflag = -1;                           \
+         iout=0;                                   \
+         if(mparen==0) return(G__null)
+/**************************************************************************
+* G__DEFREFVAR()
+*
+*  Variable allocation
+**************************************************************************/
+#define G__DEFREFVAR(TYPE)                         \
+         G__var_type=TYPE + G__unsigned;           \
+         G__reftype=G__PARAREFERENCE;              \
+         G__define_var(-1,::Reflex::Type()); \
+         G__reftype=G__PARANORMAL;                 \
+         spaceflag = -1;                           \
+         iout=0;                                   \
+         if(mparen==0) return(G__null)
+/**************************************************************************
+* G__DEFSTR()
+*
+*  Variable allocation
+**************************************************************************/
+#define G__DEFSTR(STRTYPE)                      \
+         G__var_type='u';                       \
+         G__define_struct(STRTYPE);             \
+         spaceflag = -1;                        \
+         iout=0;                                \
+         if(mparen==0) return(G__null)
+#else
+/**************************************************************************
+* G__DEFVAR()
+*
+*  Variable allocation
+**************************************************************************/
+#define G__DEFVAR(TYPE)                                     \
+         G__var_type=TYPE + G__unsigned;                    \
+         G__define_var(-1,::Reflex::Type());                \
+         spaceflag = -1; /* Flag that any following whitespace does not trigger any semantic action. */ \
+         iout=0;         /* Reset the statement buffer. */  \
+         if(!*mparen||G__return>G__RETURN_NORMAL) return(G__null)
+/**************************************************************************
+* G__DEFREFVAR()
+*
+*  Variable allocation
+**************************************************************************/
+#define G__DEFREFVAR(TYPE)                         \
+         G__var_type=TYPE + G__unsigned;           \
+         G__reftype=G__PARAREFERENCE;              \
+         G__define_var(-1,::Reflex::Type()); \
+         G__reftype=G__PARANORMAL;                 \
+         spaceflag = -1;                           \
+         iout=0;                                   \
+         if(!*mparen||G__return>G__RETURN_NORMAL) return(G__null)
+/**************************************************************************
+* G__DEFSTR()
+*
+*  Variable allocation
+**************************************************************************/
+#define G__DEFSTR(STRTYPE)                      \
+         G__var_type='u';                       \
+         G__define_struct(STRTYPE);             \
+         spaceflag = -1;                        \
+         iout=0;                                \
+         if(!*mparen||G__return>G__RETURN_NORMAL) return(G__null)
+#endif
 
-// in the C interface
-void G__alloc_tempobject(int tagnum, int typenum);
-void G__free_tempobject();
-void G__store_tempobject(G__value reg);
-static int G__pop_tempobject_imp(bool delobj);
-int G__pop_tempobject();
-int G__pop_tempobject_nodel();
-void G__settemplevel(int val);
-void G__clearstack();
 
-//______________________________________________________________________________
-static const int G__IFDEF_NORMAL = 1;
-static const int G__IFDEF_EXTERNBLOCK = 2;
-static const int G__IFDEF_ENDBLOCK = 4;
-
-static int G__externblock_iscpp = 0;
-
-//______________________________________________________________________________
-static const int G__NONBLOCK = 0;
-static const int G__IFSWITCH = 1;
-static const int G__DOWHILE = 8;
-
-static int G__ifswitch = G__NONBLOCK;
-
-//______________________________________________________________________________
-static int G__prevcase = 0; // Communication between G__exec_switch() and G__exec_statement()
-
-//______________________________________________________________________________
-//______________________________________________________________________________
-//
-//  Preprocessor commands.
-//
+/***********************************************************************
+* switch statement jump buffer
+***********************************************************************/
+static int G__prevcase=0; // Communication between G__exec_switch() and G__exec_statement()
 
 #ifdef G__WIN32
-//______________________________________________________________________________
-static void G__toUniquePath(char* s)
+/***********************************************************************
+* G__toUniquePath
+***********************************************************************/
+static void G__toUniquePath(char *s)
 {
    // -- FIXME: Describe this function!
    if (!s) {
@@ -156,7 +173,7 @@ static void G__toUniquePath(char* s)
    strcpy(s, d);
    free(d);
 }
-#endif // G__WIN32
+#endif
 
 //______________________________________________________________________________
 static int G__setline(char* statement, int c, int* piout)
@@ -185,9 +202,9 @@ static int G__setline(char* statement, int c, int* piout)
                // -- We have #<line> "<filename>".
                G__getcintsysdir();
                char sysinclude[G__MAXFILENAME];
-               sprintf(sysinclude, "%s%soldcore%sinclude%s", G__cintsysdir, G__psep, G__psep, G__psep);
+               sprintf(sysinclude, "%s/%s/include/", G__cintsysdir, G__CFG_COREVERSION);
                char sysstl[G__MAXFILENAME];
-               sprintf(sysstl, "%s%soldcore%sstl%s", G__cintsysdir, G__psep, G__psep, G__psep);
+               sprintf(sysstl, "%s/%s/stl/", G__cintsysdir, G__CFG_COREVERSION);
                int len = strlen(sysinclude);
                int lenstl = strlen(sysstl);
 #ifdef G__WIN32
@@ -315,123 +332,135 @@ static int G__setline(char* statement, int c, int* piout)
    return 0;
 }
 
-//______________________________________________________________________________
+/***********************************************************************
+* G__pp_ifdefextern()
+*
+*   #ifdef __cplusplus
+*   extern "C" {       ^
+*   #endif
+*
+*   #ifdef __cplusplus ^
+*   }
+*   #endif
+***********************************************************************/
 static int G__pp_ifdefextern(char* temp)
 {
-   // -- FIXME: Describe this function!
-   fpos_t pos;
-   fgetpos(G__ifile.fp, &pos);
-   int linenum = G__ifile.line_number;
-   int cin = G__fgetname(temp, "\"}#");
-   if (cin == '}') {
-      // -- 
-      //
-      //   #ifdef __cplusplus
-      //   {}
-      //   #endif
-      //
-      G__fignoreline();
+  int cin;
+  fpos_t pos;
+  int linenum = G__ifile.line_number;
+  fgetpos(G__ifile.fp,&pos);
+
+  cin = G__fgetname(temp,"\"}#");
+
+  if('}'==cin) {
+    /******************************
+     *   #ifdef __cplusplus
+     *   }
+     *   #endif
+     *****************************/
+    G__fignoreline();
+    do {
+      cin = G__fgetstream(temp,"#");
+      cin = G__fgetstream(temp,"\n\r");
+    } while(strcmp(temp,"endif")!=0); 
+    return(G__IFDEF_ENDBLOCK);
+  }
+
+  if('#'!=cin && strcmp(temp,"extern")==0) {
+    /******************************
+     *   #ifdef __cplusplus
+     *   extern "C" {
+     *   #endif
+     *****************************/
+    /******************************
+     *   #ifdef __cplusplus
+     *   extern "C" {  ...  }
+     *   #endif
+     *****************************/
+    
+    G__var_type='p';
+    if('{'!=cin) cin = G__fgetspace();
+    if('"'==cin) {
+      /* extern "C" {  } */
+      int flag=0;
+      int store_iscpp=G__iscpp;
+      int store_externblock_iscpp=G__externblock_iscpp;
+      char fname[G__MAXFILENAME];
+      cin = G__fgetstream(fname,"\"");
+
+      temp[0] = 0;
       do {
-         cin = G__fgetstream(temp, "#");
-         cin = G__fgetstream(temp, "\n\r");
+      cin = G__fgetstream(temp,"{\r\n");
+      } while (0==temp[0] && (cin == '\r' || cin == '\n'));
+      if(0!=temp[0] || '{'!=cin)  goto goback;
+
+      cin = G__fgetstream(temp,"\n\r");
+      if (cin=='}' && 0==strcmp(fname,"C")) {
+        goto goback;
       }
-      while (strcmp(temp, "endif"));
-      return G__IFDEF_ENDBLOCK;
-   }
-   if ((cin != '#') && !strcmp(temp, "extern")) {
-      //
-      //   #ifdef __cplusplus
-      //   extern "C" { ... }
-      //   #endif
-      //
-      //
-      //   #ifdef __cplusplus
-      //   extern "C" {  ...  }
-      //   #endif
-      //
-      G__var_type = 'p';
-      if (cin != '{') {
-         cin = G__fgetspace();
+      cin = G__fgetstream(temp,"#\n\r");
+      if ( (cin=='\n'||cin=='\r') && temp[0]==0) {
+         cin = G__fgetstream(temp,"#\n\r");
       }
-      if (cin == '"') {
-         // -- extern "C" {...}
-         int flag = 0;
-         int store_iscpp = G__iscpp;
-         int store_externblock_iscpp = G__externblock_iscpp;
-         char fname[G__MAXFILENAME];
-         cin = G__fgetstream(fname, "\"");
-         temp[0] = 0;
-         do {
-            cin = G__fgetstream(temp, "{\r\n");
-         }
-         while (!temp[0] && ((cin == '\r') || (cin == '\n')));
-         if (temp[0] || (cin != '{')) {
-            goto goback;
-         }
-         cin = G__fgetstream(temp, "\n\r");
-         if ((cin == '}') && !strcmp(fname, "C")) {
-            goto goback;
-         }
-         cin = G__fgetstream(temp, "#\n\r");
-         if (((cin == '\n') || (cin == '\r')) && !temp[0]) {
-            cin = G__fgetstream(temp, "#\n\r");
-         }
-         if (cin != '#') {
-            goto goback;
-         }
-         cin = G__fgetstream(temp, "\n\r");
-         if (((cin == '\n') || (cin == '\r')) && !temp[0]) {
-            cin = G__fgetstream(temp, "#\n\r");
-         }
-         if (strcmp(temp, "endif")) {
-            goto goback;
-         }
-         if (!strcmp(fname, "C")) {
-            G__externblock_iscpp = (G__iscpp || G__externblock_iscpp);
-            G__iscpp = 0;
-         }
-         else {
-            G__loadfile(fname);
-            G__SetShlHandle(fname);
-            flag = 1;
-         }
-         int brace_level = 1;
-         G__exec_statement(&brace_level);
-         G__iscpp = store_iscpp;
-         G__externblock_iscpp = store_externblock_iscpp;
-         if (flag) {
-            G__ResetShlHandle();
-         }
-         return G__IFDEF_EXTERNBLOCK;
+      if('#'!=cin) goto goback;
+      cin = G__fgetstream(temp,"\n\r");
+      if ( (cin=='\n'||cin=='\r') && temp[0]==0) {
+         cin = G__fgetstream(temp,"#\n\r");
       }
-   }
-   goback:
-   fsetpos(G__ifile.fp, &pos);
-   G__ifile.line_number = linenum;
-   return G__IFDEF_NORMAL;
+      if(strcmp(temp,"endif")!=0) goto goback;
+
+      if(0==strcmp(fname,"C")) {
+        G__externblock_iscpp = (G__iscpp||G__externblock_iscpp);
+        G__iscpp=0; 
+      }
+      else {
+        G__loadfile(fname);
+        G__SetShlHandle(fname);
+        flag=1;
+      }
+      int brace_level = 1;
+      G__exec_statement(&brace_level);
+      G__iscpp=store_iscpp;
+      G__externblock_iscpp = store_externblock_iscpp;
+      if(flag) G__ResetShlHandle();
+      return(G__IFDEF_EXTERNBLOCK);
+    }
+  }
+
+ goback:
+  fsetpos(G__ifile.fp,&pos);
+  G__ifile.line_number = linenum;
+  return(G__IFDEF_NORMAL);
 }
 
-//______________________________________________________________________________
+/***********************************************************************
+* G__pp_undef()
+*
+* Called by
+*   G__exec_statement(&brace_level);   '#undef'
+*
+*   #undef
+***********************************************************************/
 static void G__pp_undef()
 {
-   // -- FIXME: Describe this function!
    char temp[G__MAXNAME];
-   G__fgetname(temp, "\n\r");
-   struct G__var_array* var = &G__global;
-   while (var) {
-      for (int i = 0; i < var->allvar; ++i) {
-         if (
-            // --
-            var->varnamebuf[i] &&
-            (temp[0] == var->varnamebuf[i][0]) &&
-            !strcmp(temp, var->varnamebuf[i]) &&
-            (var->type[i] == 'p')
-         ) {
-            var->hash[i] = 0;
-            var->varnamebuf[i][0] = '\0';
-         }
+   G__fgetname(temp,"\n\r");
+
+   typedef std::deque< ::Reflex::Member> rlist;
+   rlist toberemoved;
+   ::Reflex::Scope varscope ( ::Reflex::Scope::GlobalScope() );
+   for(::Reflex::Member_Iterator i = varscope.DataMember_Begin();
+       i != varscope.DataMember_End(); ++i )
+   {
+      if(i->Name() == temp && G__get_type(i->TypeOf())=='p') //CHECKME =='p' seems to restrictive shouldn't it be tolower(type)=='p' ?
+      {
+         toberemoved.push_back(*i);
       }
-      var = var->next;
+   }
+   for(rlist::const_iterator j = toberemoved.begin();
+      j != toberemoved.end(); ++j)
+   {
+      varscope.RemoveDataMember(*j);
    }
 }
 
@@ -460,116 +489,98 @@ static int G__exec_try(char* statement)
    return 0;
 }
 
-//______________________________________________________________________________
+/***********************************************************************
+* G__ignore_catch()
+*
+***********************************************************************/
 static int G__ignore_catch()
 {
-   // -- FIXME: Describe this function!
-   if (G__asm_noverflow) {
-      // -- We are generating bytecode.
+   if(G__asm_noverflow) {
       fpos_t fpos1;
-      fseek(G__ifile.fp, -1, SEEK_CUR);
-      fseek(G__ifile.fp, -1, SEEK_CUR);
-      while (fgetc(G__ifile.fp) != 'a') {
-         fseek(G__ifile.fp, -1, SEEK_CUR);
-         fseek(G__ifile.fp, -1, SEEK_CUR);
+      fseek(G__ifile.fp,-1,SEEK_CUR);
+      fseek(G__ifile.fp,-1,SEEK_CUR);
+      while(fgetc(G__ifile.fp)!='a') {
+         fseek(G__ifile.fp,-1,SEEK_CUR);
+         fseek(G__ifile.fp,-1,SEEK_CUR);
       }
-      while (fgetc(G__ifile.fp) != 'c') {
-         fseek(G__ifile.fp, -1, SEEK_CUR);
-         fseek(G__ifile.fp, -1, SEEK_CUR);
+      while(fgetc(G__ifile.fp)!='c') {
+         fseek(G__ifile.fp,-1,SEEK_CUR);
+         fseek(G__ifile.fp,-1,SEEK_CUR);
       }
-      fseek(G__ifile.fp, -1, SEEK_CUR);
-      fgetpos(G__ifile.fp, &fpos1);
+      fseek(G__ifile.fp,-1,SEEK_CUR);
+      fgetpos(G__ifile.fp,&fpos1);
 #ifdef G__ASM_DBG
-      if (G__asm_dbg) G__fprinterr(G__serr, "%3x: CATCH\n", G__asm_cp);
-#endif // G__ASM_DBG
-      G__asm_inst[G__asm_cp] = G__CATCH;
-      G__asm_inst[G__asm_cp+1] = G__ifile.filenum;
-      G__asm_inst[G__asm_cp+2] = G__ifile.line_number;
+      if(G__asm_dbg) G__fprinterr(G__serr,"%3x: CATCH\n",G__asm_cp);
+#endif
+      G__asm_inst[G__asm_cp]=G__CATCH;
+      G__asm_inst[G__asm_cp+1]=G__ifile.filenum;
+      G__asm_inst[G__asm_cp+2]=G__ifile.line_number;
 #if defined(G__NONSCALARFPOS2)
-      G__asm_inst[G__asm_cp+3] = (long) fpos1.__pos;
+      G__asm_inst[G__asm_cp+3]=(long)fpos1.__pos;
 #elif defined(G__NONSCALARFPOS_QNX)
-      G__asm_inst[G__asm_cp+3] = (long) fpos1._Off;
-#else // defined(G__NONSCALARFPOS_QNX)
-      G__asm_inst[G__asm_cp+3] = (long) fpos1;
-#endif // defined(G__NONSCALARFPOS_QNX)
-      G__inc_cp_asm(5, 0);
+      G__asm_inst[G__asm_cp+3]=(long)fpos1._Off;
+#else
+      G__asm_inst[G__asm_cp+3]=(long)fpos1;
+#endif
+      G__inc_cp_asm(5,0);
       G__fignorestream("(");
    }
-   // Ignore the exception clause.
+
    G__fignorestream(")");
-   // And skip the rest of the catch clause.
    G__no_exec = 1;
    int brace_level = 0;
    G__exec_statement(&brace_level);
    G__no_exec = 0;
-   return 0;
+   return(0);
 }
 
-//______________________________________________________________________________
+/***********************************************************************
+* G__exec_throw()
+*
+***********************************************************************/
 static int G__exec_throw(char* statement)
 {
-   // -- Handle the "throw" expression.
-   int iout = 0;
+   int iout;
    char buf[G__ONELINE];
-   G__fgetstream(buf, ";");
-   if (isdigit(buf[0]) || (buf[0] == '.')) {
-      strcpy(statement, buf);
-      iout = 5;
+   G__fgetstream(buf,";");
+   if(isdigit(buf[0])||'.'==buf[0]) {
+      strcpy(statement,buf);
+      iout=5;
    }
    else {
-      sprintf(statement, "new %s", buf);
-      iout = strlen(statement);
+      sprintf(statement,"new %s",buf);
+      iout=strlen(statement);
    }
-   G__exceptionbuffer = G__null;
-   if (iout > 4) {
-      int largestep = 0;
-      if (G__breaksignal) {
-         int stat = G__beforelargestep(statement, &iout, &largestep);
-         if (stat > 0) {
-            return 1;
-         }
-      }
-      //
-      //  Evaluate the throw expression.
-      //
+   if(iout>4) {
+      int largestep=0;
+      if(G__breaksignal && G__beforelargestep(statement,&iout,&largestep)>=1)
+         return(1);
       G__exceptionbuffer = G__getexpr(statement);
-      if (G__asm_noverflow) {
+      if(G__asm_noverflow) {
 #ifdef G__ASM_DBG
-         if (G__asm_dbg) {
-            G__fprinterr(G__serr, "%3x: THROW\n", G__asm_cp);
-         }
-#endif // G__ASM_DBG
-         G__asm_inst[G__asm_cp] = G__THROW;
-         G__inc_cp_asm(1, 0);
+         if(G__asm_dbg) G__fprinterr(G__serr,"%3x: THROW\n",G__asm_cp);
+#endif
+         G__asm_inst[G__asm_cp]=G__THROW;
+         G__inc_cp_asm(1,0);
       }
-      if (largestep) {
-         G__afterlargestep(&largestep);
-      }
-      //
-      //  Change the thrown value to be by reference
-      //  instead of by pointer.
-      //
+      if(largestep) G__afterlargestep(&largestep);
       G__exceptionbuffer.ref = G__exceptionbuffer.obj.i;
-      if (G__exceptionbuffer.type == 'U') {
-         G__exceptionbuffer.type = 'u';
-      }
+      if('U'==G__get_type(G__exceptionbuffer)) G__value_typenum(G__exceptionbuffer) = G__deref(G__value_typenum(G__exceptionbuffer));
    }
-   if (!G__no_exec_compile) {
-      // Flag that we should stop executing.
-      G__no_exec = 1;
-      // Flag that we need to go to the catch clauses
-      // at the bottom of the nearest enclosing try block.
-      G__return = G__RETURN_TRY;
+   else {
+      G__exceptionbuffer = G__null;
    }
-   return 0;
+   if(0==G__no_exec_compile) {
+      G__no_exec=1;
+      G__return=G__RETURN_TRY;
+   }
+   return(0);
 }
 
-//______________________________________________________________________________
-//
-//  Expressions.   Function call.
-//
-
-//______________________________________________________________________________
+/***********************************************************************
+* G__exec_function()
+*
+***********************************************************************/
 static int G__exec_function(char* statement, int* pc, int* piout, int* plargestep, G__value* presult)
 {
    // -- Function call.
@@ -671,26 +682,24 @@ static int G__exec_function(char* statement, int* pc, int* piout, int* plargeste
    return 0;
 }
 
-//______________________________________________________________________________
-//______________________________________________________________________________
-//
-//  The breakcontine_list structure.  (Used to make a break/continue destination stack.)
-//
-
-//______________________________________________________________________________
 #ifdef G__ASM
-static struct G__breakcontinue_list* G__alloc_breakcontinue_list()
+/***********************************************************************
+* G__alloc_breakcontinue_list
+*
+***********************************************************************/
+static G__breakcontinue_list* G__alloc_breakcontinue_list()
 {
-   // -- FIXME: Describe this function!
-   struct G__breakcontinue_list* oldlist = G__pbreakcontinue;
-   G__pbreakcontinue = 0;
-   return oldlist;
+  struct G__breakcontinue_list *p;
+  p = G__pbreakcontinue;
+  G__pbreakcontinue = (struct G__breakcontinue_list*)NULL;
+  return(p);
 }
-#endif // G__ASM
 
-//______________________________________________________________________________
-#ifdef G__ASM
-static void G__store_breakcontinue_list(int idx, int isbreak)
+/***********************************************************************
+* G__store_breakcontinue_list
+*
+***********************************************************************/
+static void G__store_breakcontinue_list(int idx,int isbreak)
 {
    // -- FIXME: Describe this function!
    struct G__breakcontinue_list* p = (struct G__breakcontinue_list*) malloc(sizeof(struct G__breakcontinue_list));
@@ -699,11 +708,12 @@ static void G__store_breakcontinue_list(int idx, int isbreak)
    p->idx = idx;
    G__pbreakcontinue = p;
 }
-#endif // G__ASM
 
-//______________________________________________________________________________
-#ifdef G__ASM
-static void G__free_breakcontinue_list(G__breakcontinue_list* oldlist)
+/***********************************************************************
+* G__free_breakcontinue_list
+*
+***********************************************************************/
+static void G__free_breakcontinue_list(G__breakcontinue_list *oldlist)
 {
    // -- FIXME: Describe this function!
    while (G__pbreakcontinue) {
@@ -713,13 +723,14 @@ static void G__free_breakcontinue_list(G__breakcontinue_list* oldlist)
    }
    G__pbreakcontinue = oldlist;
 }
-#endif // G__ASM
 
-//______________________________________________________________________________
-#ifdef G__ASM
+/***********************************************************************
+* G__set_breakcontinue_destination
+*
+***********************************************************************/
 static void G__set_breakcontinue_destination(int break_destidx, int continue_destidx, G__breakcontinue_list* oldlist)
 {
-   // -- FIXME: Describe this function!
+    // -- FIXME: Describe this function!
    while (G__pbreakcontinue) {
       if (G__pbreakcontinue->isbreak) {
          // -- This entry in the list is for a break statement.
@@ -746,10 +757,8 @@ static void G__set_breakcontinue_destination(int break_destidx, int continue_des
    }
    G__pbreakcontinue = oldlist;
 }
-#endif // G__ASM
 
 //______________________________________________________________________________
-#ifdef G__ASM
 static void G__set_breakcontinue_breakdestination(int break_destidx, G__breakcontinue_list* oldlist)
 {
    // -- FIXME: Describe this function!
@@ -777,20 +786,15 @@ static void G__set_breakcontinue_breakdestination(int break_destidx, G__breakcon
    }
    G__pbreakcontinue = oldlist;
 }
-#endif // G__ASM
+#endif /* G__ASM */
 
-//______________________________________________________________________________
-//______________________________________________________________________________
-//
-//  More statements.
-//
-
-//______________________________________________________________________________
-//
-//  Selection statements.  if, switch
-//
-
-//______________________________________________________________________________
+/***********************************************************************
+* G__exec_switch()
+*
+* Called by
+*   G__exec_statement(&brace_level); 
+*
+***********************************************************************/
 static G__value G__exec_switch()
 {
    // -- Handle switch.
@@ -927,8 +931,8 @@ static G__value G__exec_switch()
       // FIXME: We must find it first, remember where it is, then
       // FIXME: come back to it if nothing else matches.
       while (
-         (result.type != G__null.type) && // not the end of the switch block, and
-         (result.type != G__default.type) && // not the default case, and
+         (G__value_typenum(result) != G__value_typenum(G__null)) && // not the end of the switch block, and
+         (G__value_typenum(result) != G__value_typenum(G__default)) && // not the default case, and
          !isequal // not a case expression match
       ) {
          //fprintf(stderr, "G__exec_switch: Parsing next case clause during search.\n");
@@ -947,7 +951,7 @@ static G__value G__exec_switch()
       G__no_exec = 0;
       G__no_exec_compile = store_no_exec_compile;
       //fprintf(stderr, "G__exec_switch: after case search: G__asm_noverflow: %d G__no_exec_compile: %d\n", G__asm_noverflow, G__no_exec_compile);
-      if (result.type != G__null.type) {
+      if (G__value_typenum(result) != G__value_typenum(G__null)) {
          // -- Case is a match or is the default case..
          // FIXME: This is wrong if the default case is not at the end!
          //fprintf(stderr, "G__exec_switch: We have matched a case.\n");
@@ -1001,7 +1005,7 @@ static G__value G__exec_switch()
             return result;
          }
          // Check for a break, continue, or goto.
-         if (result.type == G__block_break.type) {
+         if (G__value_typenum(result) == G__value_typenum(G__block_break)) {
             // -- The case ended with a break, continue, or goto.
             //fprintf(stderr, "G__exec_switch: Case ended with a break, continue, or goto.\n");
             // Check for goto.
@@ -1112,7 +1116,7 @@ static G__value G__exec_switch()
       // consume the break return status and return
       // null instead, but do return to caller now.
       //
-      if ((result.type == G__block_break.type) && (result.obj.i == G__BLOCK_BREAK)) {
+      if(G__value_typenum(result)==G__value_typenum(G__block_break) && result.obj.i==G__BLOCK_BREAK) {
          // -- Case did a break, return now.
          //fprintf(stderr, "G__exec_switch: Last statement executed was a break.\n");
          //fprintf(stderr, "G__exec_switch: End.\n");
@@ -1127,7 +1131,7 @@ static G__value G__exec_switch()
       // return that fact to the enclosing statement,
       // it must handle it.
       //
-      if ((result.type == G__block_break.type) && (result.obj.i == G__BLOCK_CONTINUE)) {
+      if ((G__value_typenum(result) == G__value_typenum(G__block_break)) && (result.obj.i == G__BLOCK_BREAK)) {
          // -- Case did a continue, return now.
          //fprintf(stderr, "G__exec_switch: Last statement executed was a continue.\n");
          //fprintf(stderr, "G__exec_switch: End.\n");
@@ -1384,7 +1388,7 @@ static G__value G__exec_if()
       //  Check if the then clause terminated early due
       //  to a break, continue, or goto statement.
       //
-      if (result.type == G__block_break.type) {
+      if (G__value_typenum(result) == G__value_typenum(G__block_break)) {
          // -- Statement block was exited by break, continue, or goto.
          if (result.ref == G__block_goto.ref) {
             // -- Exited by goto.
@@ -1647,7 +1651,7 @@ static G__value G__exec_if()
          //  Check if the else clause terminated early due
          //  to a break, continue, or goto statement.
          //
-         if (result.type == G__block_break.type) {
+         if (G__value_typenum(result) == G__value_typenum(G__block_break)) {
             // -- Statement block was exited by break, continue, or goto.
             if (result.ref == G__block_goto.ref) {
                // -- Exited by goto.
@@ -1787,11 +1791,18 @@ static G__value G__exec_if()
    //   G__fgetstream_peek(buf, 10);
    //   fprintf(stderr, "G__exec_if: peek ahead: '%s'\n", buf);
    //}
-   //fprintf(stderr, "---end if ne: %d nec: %d ty: '%c'\n", G__no_exec, G__no_exec_compile, result.type);
+   //fprintf(stderr, "---end if ne: %d nec: %d ty: '%c'\n", G__no_exec, G__no_exec_compile, G__value_typenum(result));
    return result;
 }
 
-//______________________________________________________________________________
+
+/***********************************************************************
+* G__exec_else_if()
+*
+* Called by
+*   G__exec_statement(&brace_level); 
+*
+***********************************************************************/
 static G__value G__exec_else_if()
 {
    // -- Skip an if statement during the parse.
@@ -1904,6 +1915,14 @@ static G__value G__exec_else_if()
 //  Iteration statements.  while, do, for
 //
 
+/***********************************************************************
+* G__exec_do()
+*
+* Called by
+*   G__exec_statement(&brace_level);   'do { } while();'
+*
+*  do { statement list } while(condition);
+***********************************************************************/
 //______________________________________________________________________________
 static G__value G__exec_do()
 {
@@ -2005,7 +2024,7 @@ static G__value G__exec_do()
    int brace_level = 0;
    // Call the parser.
    G__value result = G__exec_statement(&brace_level);
-   //fprintf(stderr, "G__exec_do: Just finished body.  result.type: %d isbreak: %d\n", result.type, result.type == G__block_break.type);
+   //fprintf(stderr, "G__exec_do: Just finished body.  G__value_typenum(result): %d isbreak: %d\n", G__value_typenum(result), G__value_typenum(result) == G__value_typenum(G__block_break));
    //
    //  Finished, check return code.
    //
@@ -2035,7 +2054,7 @@ static G__value G__exec_do()
    //
    int executed_break = 0;
    int executed_continue = 0;
-   if (result.type == G__block_break.type) {
+   if (G__value_typenum(result) == G__value_typenum(G__block_break)) {
       // -- The body did a goto, break, or continue.
       //fprintf(stderr, "G__exec_do: Body exited with a break or continue.\n");
       if (result.ref == G__block_goto.ref) {
@@ -2414,7 +2433,7 @@ static G__value G__exec_do()
             //
             //  Check if the body terminated early due to a break, continue, or goto.
             //
-            if (result.type == G__block_break.type) {
+            if (G__value_typenum(result) == G__value_typenum(G__block_break)) {
                // -- The body executed a goto, break, or continue.
                //fprintf(stderr, "G__exec_do: Body exited with a break or continue on second or greater iteration.\n");
                if (result.ref == G__block_goto.ref) {
@@ -2567,7 +2586,14 @@ static G__value G__exec_do()
    return result;
 }
 
-//______________________________________________________________________________
+
+/***********************************************************************
+* G__exec_for()
+*
+* Called by
+*   G__exec_statement(&brace_level); 
+*
+***********************************************************************/
 static G__value G__exec_for()
 {
    // -- Handle the for (...; ...; ...) statement.
@@ -2649,7 +2675,13 @@ static G__value G__exec_for()
    return result;
 }
 
-//______________________________________________________________________________
+/***********************************************************************
+* G__exec_while()
+*
+* Called by
+*   G__exec_statement(&brace_level); 
+*
+***********************************************************************/
 static G__value G__exec_while()
 {
    // -- Handle the while (...) do {...} statement.
@@ -2686,9 +2718,12 @@ static G__value G__exec_while()
    return result;
 }
 
-//______________________________________________________________________________
-static G__value G__exec_loop(char* forinit, char* condition, int naction, char** foraction)
-{
+/***********************************************************************
+* G__exec_loop()
+*
+*
+***********************************************************************/
+static G__value G__exec_loop(char *forinit,char *condition,int naction,char **foraction)   {
    // -- Execute a loop, handles most of for, and while.
    //
    // Note: G__no_exec is always zero when we are entered.
@@ -2718,9 +2753,7 @@ static G__value G__exec_loop(char* forinit, char* condition, int naction, char**
    //
    //  Allow a single bytecode error message.
    //
-#ifdef G__ASM_DBG
    int dispstat = 0;
-#endif
    //
    //  Remember old if/switch state, change to dowhile state.
    //
@@ -2936,7 +2969,7 @@ static G__value G__exec_loop(char* forinit, char* condition, int naction, char**
          //  Check to see if the body was exited
          //  by a flow control statement.
          //
-         if (result.type == G__block_break.type) {
+         if (G__value_typenum(result) == G__value_typenum(G__block_break)) {
             switch (result.obj.i) {
                case G__BLOCK_BREAK:
                   // -- Body exited by either a break or a goto statement.
@@ -3268,8 +3301,16 @@ static G__value G__exec_loop(char* forinit, char* condition, int naction, char**
 //  Jump statements.  return, goto
 //
 
-//______________________________________________________________________________
-static G__value G__return_value(const char* statement)
+/***********************************************************************
+* G__return_value()
+*
+* Called by
+*    G__exec_statement   'return;'
+*    G__exec_statement   'return(result);'
+*    G__exec_statement   'return result;'
+*
+***********************************************************************/
+static G__value G__return_value(char* statement)
 {
    // -- Handle the return statement.
    G__value buf;
@@ -3351,14 +3392,15 @@ static G__value G__return_value(const char* statement)
    return buf;
 }
 
-//______________________________________________________________________________
-//______________________________________________________________________________
-//
-//  Parsing.
-//
-
-//______________________________________________________________________________
-static int G__search_gotolabel(char* label, fpos_t* pfpos, int line, int* pmparen)
+/**************************************************************************
+* G__search_gotolabel()
+*
+*    Searches for goto label from given fpos and line_number. If label is
+*    found, it returns label of {} nesting as mparen. fpos and line_numbers
+*    are set inside this function. If label is not found 0 is returned.
+**************************************************************************/
+static int G__search_gotolabel(char *label,fpos_t *pfpos,int line,int *pmparen)
+    /* label: NULL if upper level call */
 {
    // -- Searches for goto label from given fpos and line_number.
    //
@@ -3462,7 +3504,7 @@ static int G__label_access_scope(char* statement, int* piout, int* pspaceflag, i
    static int memfunc_def_flag = 0;
    int ispntr;
    int line;
-   int store_tagdefining;
+   ::Reflex::Scope store_tagdefining;
    fpos_t pos;
    char temp[G__ONELINE];
    // Look ahead to see if we have a "::".
@@ -3473,15 +3515,16 @@ static int G__label_access_scope(char* statement, int* piout, int* pspaceflag, i
       // -- Member function definition.
       if (
             G__prerun &&
-            (G__func_now == -1) &&
+            (!G__func_now) &&
             (
-             ((G__def_tagnum == -1) || (G__struct.type[G__def_tagnum] == 'n')) ||
+             !G__def_tagnum ||
+             ((G__def_tagnum.IsTopScope()) || (G__struct.type[G__get_tagnum(G__def_tagnum)] == 'n')) ||
              memfunc_def_flag ||
-             (G__tmplt_def_tagnum != -1)
+             (G__tmplt_def_tagnum)
             )
          ) {
          // --
-         int store_def_tagnum = G__def_tagnum;
+         ::Reflex::Scope store_def_tagnum = G__def_tagnum;
          int store_def_struct_member = G__def_struct_member;
          // X<T>::TYPE X<T>::f()
          //      ^
@@ -3532,7 +3575,7 @@ static int G__label_access_scope(char* statement, int* piout, int* pspaceflag, i
          else {
             ispntr = 0;
          }
-         G__def_tagnum = G__defined_tagname(statement + ispntr, 0);
+         G__def_tagnum = G__Dict::GetDict().GetScope(G__defined_tagname(statement+ispntr,0));
          store_tagdefining = G__tagdefining;
          G__tagdefining = G__def_tagnum;
          memfunc_def_flag = 1;
@@ -3609,172 +3652,119 @@ static int G__label_access_scope(char* statement, int* piout, int* pspaceflag, i
    return 0;
 }
 
-//______________________________________________________________________________
+/***********************************************************************
+ * G__IsFundamentalDecl()
+ ***********************************************************************/
 static int G__IsFundamentalDecl()
 {
-   // -- FIXME: Describe this function!
-   // -- Used only by G__keyword_anytime_5.
-   // -- FIXME: We don't check for float, double, or long double!
-   // -- FIXME: We don't accept a macro which expands to a fundamental type.
-   char type_name[G__ONELINE];
-   // Store file position.
-   int linenum = G__ifile.line_number;
-   fpos_t pos;
-   fgetpos(G__ifile.fp, &pos);
-   G__disp_mask = 1000;
-   /*int c =*/ G__fgetname_template(type_name, "(");
-   int result = 1;
-   if (!strcmp(type_name, "class") || !strcmp(type_name, "struct") || !strcmp(type_name, "union")) {
-      result = 0;
-   }
-   else {
-      int tagnum = G__defined_tagname(type_name, 1);
-      if (tagnum != -1) {
-         result = 0;
+  char type_name[G__ONELINE];
+  int c;
+  fpos_t pos;
+  int result=1;
+  int tagnum;
+
+  /* store file position */
+  int linenum = G__ifile.line_number;
+  fgetpos(G__ifile.fp,&pos);
+  G__disp_mask = 1000;
+
+  c=G__fgetname_template(type_name,"(");
+  if(strcmp(type_name,"struct")==0 || strcmp(type_name,"class")==0 ||
+     strcmp(type_name,"union")==0) {
+    result=0;
+  }
+  else {
+    tagnum = G__defined_tagname(type_name,1);
+    if(-1!=tagnum) result = 0;
+    else {
+       ::Reflex::Type typenum = G__find_typedef(type_name);        
+      if(typenum) {
+        switch(G__get_type(typenum)) {
+        case 'c':
+        case 's':
+        case 'i':
+        case 'l':
+        case 'b':
+        case 'r':
+        case 'h':
+        case 'k':
+          result=1;
+          break;
+        default:
+          result=0;
+        }
       }
       else {
-         int typenum = G__defined_typename(type_name);
-         if (typenum != -1) {
-            switch (G__newtype.type[typenum]) {
-               case 'b': // unsigned char
-               case 'c': // char
-               case 'r': // unsigned short
-               case 's': // short
-               case 'h': // unsigned int
-               case 'i': // int
-               case 'k': // unsigned long
-               case 'l': // long
-                  result = 1;
-                  break;
-               default:
-                  result = 0;
-            }
-         }
-         else {
-            if (
-                  !strcmp(type_name, "unsigned") ||
-                  !strcmp(type_name, "char") ||
-                  !strcmp(type_name, "short") ||
-                  !strcmp(type_name, "int") ||
-                  !strcmp(type_name, "long")
-               ) {
-               result = 1;
-            }
-            else {
-               result = 0;
-            }
-         }
+        if(strcmp(type_name,"unsigned")==0 ||
+           strcmp(type_name,"char")==0 ||
+           strcmp(type_name,"short")==0 ||
+           strcmp(type_name,"int")==0 ||
+           strcmp(type_name,"long")==0) result=1;
+        else result=0;
       }
-   }
-   // Restore file position.
-   G__ifile.line_number = linenum;
-   fsetpos(G__ifile.fp, &pos);
-   G__disp_mask = 0;
-   return result;
+    }
+  }
+
+  /* restore file position */
+  G__ifile.line_number = linenum;
+  fsetpos(G__ifile.fp,&pos);
+  G__disp_mask = 0;
+  return result;
 }
 
 //______________________________________________________________________________
 static void G__unsignedintegral()
 {
    // -- FIXME: Describe this function!
-   // Remember the current file position.
-   fpos_t pos;
-   fgetpos(G__ifile.fp, &pos);
-   G__unsigned = -1;
-   // Scan the next identifier token in.
    char name[G__MAXNAME];
+   fpos_t pos;
+   G__unsigned = -1;
+   fgetpos(G__ifile.fp, &pos);
    G__fgetname(name, "");
-   //
-   //  And compare against the integral types.
-   //
-   if (!strcmp(name, "int")) {
-      G__var_type = 'i' - 1;
-   }
-   else if (!strcmp(name, "char")) {
-      G__var_type = 'c' - 1;
-   }
-   else if (!strcmp(name, "short")) {
-      G__var_type = 's' - 1;
-   }
-   else if (!strcmp(name, "long")) {
-      G__var_type = 'l' - 1;
-   }
-   else if (!strcmp(name, "int*")) {
-      G__var_type = 'I' - 1;
-   }
-   else if (!strcmp(name, "char*")) {
-      G__var_type = 'C' - 1;
-   }
-   else if (!strcmp(name, "short*")) {
-      G__var_type = 'S' - 1;
-   }
-   else if (!strcmp(name, "long*")) {
-      G__var_type = 'L' - 1;
-   }
-   else if (!strcmp(name, "int&")) {
-      G__var_type = 'i' - 1;
+   if (strcmp(name, "int") == 0)         G__var_type = 'i' -1;
+   else if (strcmp(name, "char") == 0)   G__var_type = 'c' -1;
+   else if (strcmp(name, "short") == 0)  G__var_type = 's' -1;
+   else if (strcmp(name, "long") == 0)   G__var_type = 'l' -1;
+   else if (strcmp(name, "int*") == 0)   G__var_type = 'I' -1;
+   else if (strcmp(name, "char*") == 0)  G__var_type = 'C' -1;
+   else if (strcmp(name, "short*") == 0) G__var_type = 'S' -1;
+   else if (strcmp(name, "long*") == 0)  G__var_type = 'L' -1;
+   else if (strcmp(name, "int&") == 0) {
+      G__var_type = 'i' -1;
       G__reftype = G__PARAREFERENCE;
    }
-   else if (!strcmp(name, "char&")) {
-      G__var_type = 'c' - 1;
+   else if (strcmp(name, "char&") == 0) {
+      G__var_type = 'c' -1;
       G__reftype = G__PARAREFERENCE;
    }
-   else if (!strcmp(name, "short&")) {
-      G__var_type = 's' - 1;
+   else if (strcmp(name, "short&") == 0) {
+      G__var_type = 's' -1;
       G__reftype = G__PARAREFERENCE;
    }
-   else if (!strcmp(name, "long&")) {
-      G__var_type = 'l' - 1;
+   else if (strcmp(name, "long&") == 0) {
+      G__var_type = 'l' -1;
       G__reftype = G__PARAREFERENCE;
    }
    else if (strchr(name, '*')) {
-      // -- May have been a pointer.
-      if (!strncmp(name, "int*", 4)) {
-         G__var_type = 'I' - 1;
-      }
-      else if (!strncmp(name, "char*", 5)) {
-         G__var_type = 'C' - 1;
-      }
-      else if (!strncmp(name, "short*", 6)) {
-         G__var_type = 'S' -1;
-      }
-      else if (!strncmp(name, "long*", 5)) {
-         G__var_type = 'L' -1;
-      }
-      if (strstr(name, "******")) {
-         G__reftype = G__PARAP2P + 4;
-      }
-      else if (strstr(name, "*****")) {
-         G__reftype = G__PARAP2P + 3;
-      }
-      else if (strstr(name, "****")) {
-         G__reftype = G__PARAP2P + 2;
-      }
-      else if (strstr(name, "***")) {
-         G__reftype = G__PARAP2P + 1;
-      }
-      else if (strstr(name, "**")) {
-         G__reftype = G__PARAP2P;
-      }
+      if (strncmp(name, "int*", 4) == 0)        G__var_type = 'I' -1;
+      else if (strncmp(name, "char*", 5) == 0)  G__var_type = 'C' -1;
+      else if (strncmp(name, "short*", 6) == 0) G__var_type = 'S' -1;
+      else if (strncmp(name, "long*", 5) == 0)  G__var_type = 'L' -1;
+      if (strstr(name, "******")) G__reftype = G__PARAP2P + 4;
+      else if (strstr(name, "*****")) G__reftype = G__PARAP2P + 3;
+      else if (strstr(name, "****")) G__reftype = G__PARAP2P + 2;
+      else if (strstr(name, "***")) G__reftype = G__PARAP2P + 1;
+      else if (strstr(name, "**")) G__reftype = G__PARAP2P;
    }
    else {
-      // -- Just plain unsigned is an unsigned int.
-      G__var_type = 'i' - 1;
-      // Undo the scan of the next identifier token.
-      // FIXME: The line number, dispmask, and macro expansion state could be wrong now.
+      G__var_type = 'i' -1;
       fsetpos(G__ifile.fp, &pos);
    }
-   //
-   //  Declare or define the variable.
-   //
-   G__define_var(-1, -1);
-   //
-   //  And reset the parse state.
-   //
-   // Note: We do *not* reset G__var_type here.
+   G__define_var(-1, ::Reflex::Type());
    G__reftype = G__PARANORMAL;
    G__unsigned = 0;
 }
+
 
 //______________________________________________________________________________
 static void G__externignore()
@@ -3819,12 +3809,13 @@ static void G__externignore()
    }
 }
 
+
+
 #ifdef G__FRIEND
 //______________________________________________________________________________
 static void G__parse_friend()
 {
-   // -- Handle a friend declaration.
-   //
+   // -- FIXME: Describe me!
    // friend class A;
    // friend type func(param);
    // friend type operator<<(param);
@@ -3860,64 +3851,62 @@ static void G__parse_friend()
          }
       }
    }
-   int envtagnum = G__get_envtagnum();
-   if (envtagnum == -1) {
+   ::Reflex::Scope envtagnum = G__get_envtagnum();
+   if (!envtagnum) {
       G__genericerror("Error: friend keyword appears outside class definition");
    }
-   int store_tagnum = G__tagnum;
-   int store_def_tagnum = G__def_tagnum;
+
+   ::Reflex::Scope store_tagnum = G__tagnum;
+   ::Reflex::Scope store_def_tagnum = G__def_tagnum;
    int store_def_struct_member = G__def_struct_member;
-   int store_tagdefining = G__tagdefining;
+   ::Reflex::Scope store_tagdefining = G__tagdefining;
    int store_access = G__access;
+
    G__friendtagnum = envtagnum;
-   if (G__tagnum != -1) {
-      G__tagnum = G__struct.parent_tagnum[G__tagnum];
+
+   if (!G__tagnum.IsTopScope()) {
+      G__tagnum = G__tagnum.DeclaringScope();
    }
-   if (G__def_tagnum != -1) {
-      G__def_tagnum = G__struct.parent_tagnum[G__def_tagnum];
+   if (!G__def_tagnum.IsTopScope()) {
+      G__def_tagnum = G__def_tagnum.DeclaringScope();
    }
-   if (G__tagdefining != -1) {
-      G__tagdefining = G__struct.parent_tagnum[G__tagdefining];
+   if (!G__tagdefining.IsTopScope()) {
+      G__tagdefining = G__tagdefining.DeclaringScope();
    }
-   if ((G__tagdefining != -1) || (G__def_tagnum != -1)) {
+   if (!G__tagdefining.IsTopScope() || !G__def_tagnum.IsTopScope()) {
       G__def_struct_member = 1;
-   }
-   else {
+   } else {
       G__def_struct_member = 0;
    }
    G__access = G__PUBLIC;
    G__var_type = 'p';
+
    if (tagtype) {
       while (classname[0]) {
-         int def_tagnum = G__def_tagnum;
+         ::Reflex::Scope def_tagnum = G__def_tagnum;
          G__def_tagnum = store_def_tagnum;
          G__tagdefining = store_tagdefining;
-         int tagdefining = G__tagdefining;
-         int friendtagnum = G__defined_tagname(classname, 2);
+         ::Reflex::Scope tagdefining = G__tagdefining;
+         ::Reflex::Scope friendtagnum = G__Dict::GetDict().GetScope(G__defined_tagname(classname, 2));
          G__def_tagnum = def_tagnum;
          G__tagdefining = tagdefining;
-         if (friendtagnum == -1) {
-            friendtagnum = G__search_tagname(classname, tagtype);
-         }
-         // friend class ...;
-         if (envtagnum != -1) {
-            struct G__friendtag* friendtag = G__struct.friendtag[friendtagnum];
+         if (!friendtagnum || friendtagnum.IsTopScope())
+            friendtagnum = G__Dict::GetDict().GetScope(G__search_tagname(classname, tagtype));
+         if (friendtagnum.IsTopScope())
+            friendtagnum = Reflex::Dummy::Scope();
+         /* friend class ... ; */
+         if (envtagnum) {
+            G__friendtag *friendtag = G__struct.friendtag[G__get_tagnum(friendtagnum)];
             if (friendtag) {
-               while (friendtag->next) {
-                  friendtag = friendtag->next;
-               }
-               friendtag->next = (struct G__friendtag*) malloc(sizeof(struct G__friendtag));
-               friendtag->next->next = 0;
-               friendtag->next->tagnum = envtagnum;
+               while (friendtag->next) friendtag = friendtag->next;
+               friendtag->next = G__new_friendtag(G__get_tagnum(envtagnum));
             }
             else {
-               G__struct.friendtag[friendtagnum] = (struct G__friendtag*) malloc(sizeof(struct G__friendtag));
-               friendtag = G__struct.friendtag[friendtagnum];
-               friendtag->next = 0;
-               friendtag->tagnum = envtagnum;
+               G__struct.friendtag[G__get_tagnum(friendtagnum)] = G__new_friendtag(G__get_tagnum(envtagnum));
+               friendtag = G__struct.friendtag[G__get_tagnum(friendtagnum)];
             }
          }
-         if (c != ';') {
+         if (';' != c) {
             c = G__fgetstream(classname, ";,");
          }
          else {
@@ -3926,22 +3915,26 @@ static void G__parse_friend()
       }
    }
    else {
-      // friend type f() {...};
+      /* friend type f() {  } ; */
       fsetpos(G__ifile.fp, &pos);
       G__ifile.line_number = line_number;
-      // friend function belongs to the inner-most namespace
-      // not the parent class! In fact, this fix is not perfect, because
-      // a friend function can also be a member function. This fix works
-      // better only because there is no strict checking for non-member
-      // function.
-      if ((G__globalcomp != G__NOLINK) && (G__def_tagnum != -1) && (G__struct.type[G__def_tagnum] != 'n')) {
+      /* friend function belongs to the inner-most namespace
+       * not the parent class! In fact, this fix is not perfect, because
+       * a friend function can also be a member function. This fix works
+       * better only because there is no strict checking for non-member
+       * function. */
+      if (
+         G__NOLINK != G__globalcomp &&
+         G__def_tagnum &&
+         !G__def_tagnum.IsNamespace()
+      ) {
          if (G__dispmsg >= G__DISPWARN) {
             G__fprinterr(G__serr, "Warning: This friend declaration may cause creation of wrong stub function in dictionary. Use '#pragma link off function ...;' to avoid it.");
             G__printlinenum();
          }
       }
-      while ((G__def_tagnum != -1) && (G__struct.type[G__def_tagnum] != 'n')) {
-         G__def_tagnum = G__struct.parent_tagnum[G__def_tagnum];
+      while (G__def_tagnum && !G__def_tagnum.IsNamespace()) {
+         G__def_tagnum = G__def_tagnum.DeclaringScope();
          G__tagdefining = G__def_tagnum;
          G__tagnum = G__def_tagnum;
       }
@@ -3953,36 +3946,39 @@ static void G__parse_friend()
    G__def_struct_member = store_def_struct_member;
    G__def_tagnum = store_def_tagnum;
    G__tagnum = store_tagnum;
-   G__friendtagnum = -1;
+   G__friendtagnum = ::Reflex::Scope();
    // Restore the autoload flag.
    G__set_class_autoloading(autoload_old);
 }
 #endif // G__FRIEND
 
-//______________________________________________________________________________
-static int G__keyword_anytime_5(char* statement)
+/***********************************************************************
+* G__keyword_anytime_5()
+*
+***********************************************************************/
+static int G__keyword_anytime_5(char *statement)
 {
-   // -- Handle a function-local const declaration, or #else, #elif, and #line
-   int c = 0;
-   int iout = 0;
-   if (
-      (G__globalcomp == G__NOLINK) && // we are not making a dictionary, and
-      (G__func_now >= 0) && // we are parsing a function body, and
-      (
-         G__prerun || // not running, or
-         ((G__asm_wholefunction == G__ASM_FUNC_COMPILE) && !G__ansiheader) // compiling whole function and not currently in the (ansi) function header,
-      ) && // and,
-      !strcmp(statement, "const") && // we are the "const" keyword, and
-      G__IsFundamentalDecl() // the following type is a fundamental type
-   ) {
+  int c=0;
+  int iout=0;
+
+  if((G__prerun||(G__ASM_FUNC_COMPILE==G__asm_wholefunction&&0==G__ansiheader))
+     && G__NOLINK == G__globalcomp
+#ifdef G__OLDIMPLEMENTATION1083_YET
+     && (G__func_now>=0 || G__def_struct_member )
+#else
+     && G__func_now 
+#endif
+     && strcmp(statement,"const")==0
+     && G__IsFundamentalDecl()
+     ) {
       // -- We have a function-local const of non-class type.
       G__constvar = G__CONSTVAR;
       G__const_setnoerror();
       // FIXME: Pretend a function-local const is a static, why?
       //int rslt = G__keyword_anytime_6("static");
-      struct G__var_array* store_local = G__p_local;
-      if (G__prerun && (G__func_now != -1)) {
-         G__p_local = 0;
+      ::Reflex::Scope store_local = G__p_local;
+      if (G__prerun && G__p_local && (!G__func_now)) {
+         G__p_local = ::Reflex::Scope();
       }
       int store_no_exec = G__no_exec;
       G__no_exec = 0;
@@ -3997,11 +3993,10 @@ static int G__keyword_anytime_5(char* statement)
       G__return = G__RETURN_NON;
       //return rslt;
       return 1;
-   }
-   if (statement[0] != '#') {
-      // -- Reject anything that is not a preprocessor directive.
-      return 0;
-   }
+  }
+
+  if(statement[0]!='#') return(0);
+
    //
    // Either we are here:
    //
@@ -4034,8 +4029,11 @@ static int G__keyword_anytime_5(char* statement)
    return 0;
 }
 
-//______________________________________________________________________________
-static int G__keyword_anytime_6(char* statement)
+/***********************************************************************
+* G__keyword_anytime_6()
+*
+***********************************************************************/
+static int G__keyword_anytime_6(char *statement)
 {
    // -- Handle "static", "return", "#ifdef", "#endif", "#undef", and "#ident"
    if (!strcmp(statement, "static")) {
@@ -4045,10 +4043,10 @@ static int G__keyword_anytime_6(char* statement)
       // other wise are executing, so get
       // preallocated memory.
       //
-      struct G__var_array* store_local = G__p_local;
-      if (G__prerun && (G__func_now != -1)) {
+      ::Reflex::Scope store_local = G__p_local;
+      if (G__prerun && G__func_now) {
          // -- Function local static during prerun, put into global variable array.
-         G__p_local = 0;
+         G__p_local = ::Reflex::Scope();
       }
       // Never skip a static variable declaration,
       // even during if/then/else, switch, goto,
@@ -4116,657 +4114,466 @@ static int G__keyword_anytime_6(char* statement)
    return 0;
 }
 
-//______________________________________________________________________________
-static int G__keyword_anytime_7(char* statement)
+/***********************************************************************
+* G__keyword_anytime_7()
+*
+***********************************************************************/
+static int G__keyword_anytime_7(char *statement)
 {
-   // -- Handle "#define", "#ifndef", and "#pragma".
    /***********************************
-    * 1)
-    *  #ifndef macro   <---
-    *  #endif
-    * 2)
-    *  #ifndef macro   <---
-    *  #else
-    *  #endif
-    ***********************************/
-   if (!strcmp(statement, "#define")) {
-      // -- Handle #define.
-      // Save state.
-      int store_tagnum = G__tagnum;
-      int store_typenum = G__typenum;
-      struct G__var_array* store_local = G__p_local;
+   * 1)
+   *  #ifndef macro   <---
+   *  #endif 
+   * 2)
+   *  #ifndef macro   <---
+   *  #else
+   *  #endif
+   ***********************************/
+   if(strcmp(statement,"#define")==0){
+      ::Reflex::Scope store_tagnum=G__tagnum;
+      ::Reflex::Type store_typenum=G__typenum;
+      ::Reflex::Scope store_local=G__p_local;
       //
       //  Parse the macro definition.
       //
-      G__p_local = 0;
-      G__var_type = 'p';
-      G__definemacro = 1;
+      G__p_local=::Reflex::Scope();
+      G__var_type='p';
+      G__definemacro=1;
       G__define();
       //
       //  Restore state.
       //
-      G__definemacro = 0;
-      G__p_local = store_local;
-      G__tagnum = store_tagnum;
-      G__typenum = store_typenum;
-      // And return success.
-      return 1;
+      G__definemacro=0;
+      G__p_local=store_local;
+      G__tagnum=store_tagnum;
+      G__typenum=store_typenum;
+      return(1);
    }
-   if (!strcmp(statement, "#ifndef")) {
+   if(strcmp(statement,"#ifndef")==0){
       int stat = G__pp_ifdef(0);
       return(stat);
    }
-   if (!strcmp(statement, "#pragma")) {
+   if(strcmp(statement,"#pragma")==0){
       G__pragma();
       return(1);
    }
-   return 0;
-}
-
-//______________________________________________________________________________
-static int G__keyword_anytime_8(char* statement)
-{
-   // -- Handle "template" and "explicit" keywords.
-   //
-   // template  <class T> class A { ... };
-   // template  A<int>;
-   // template  class A<int>;
-   //          ^
-   //
-   if (!strcmp(statement, "template")) {
-      int c;
-      fpos_t pos;
-      int line_number;
-      char tcname[G__ONELINE];
-      line_number = G__ifile.line_number;
-      fgetpos(G__ifile.fp, &pos);
-      c = G__fgetspace();
-      if ('<' == c) {
-         /* if '<' comes, this is an ordinary template declaration */
-         G__ifile.line_number = line_number;
-         fsetpos(G__ifile.fp, &pos);
-         return(0);
-      }
-      /* template  A<int>; this is a template instantiation */
-      tcname[0] = c;
-      fseek(G__ifile.fp, -1, SEEK_CUR);
-      G__disp_mask = 1;
-      c = G__fgetname_template(tcname, ";");
-      if (strcmp(tcname, "class") == 0 ||
-            strcmp(tcname, "struct") == 0) {
-         c = G__fgetstream_template(tcname, ";");
-      }
-      else if (isspace(c)) {
-         int len = strlen(tcname);
-         int store_c;
-         while (len && ('&' == tcname[len-1] || '*' == tcname[len-1])) --len;
-         store_c = tcname[len];
-         tcname[len] = 0;
-         if (G__istypename(tcname)) {
-            G__ifile.line_number = line_number;
-            fsetpos(G__ifile.fp, &pos);
-            int brace_level = 0;
-            G__exec_statement(&brace_level);
-            return(1);
-         }
-         else {
-            tcname[len] = store_c;
-            c = G__fgetstream_template(tcname + strlen(tcname), ";");
-         }
-      }
-      if (!G__defined_templateclass(tcname)) {
-         G__instantiate_templateclass(tcname, 0);
-      }
-      return 1;
-   }
-   if (!strcmp(statement, "explicit")) {
-      G__isexplicit = 1;
-      return 1;
-   }
-   return 0;
-}
-
-static int G__defined_type(char* type_name, int len)
-{
-   // -- Handle a possible declaration, return 0 if not, return 1 if good.
-   //
-   //  Note: This routine is part of the parser proper.
-   //
-   int refrewind = -2;
-   //
-   //  Check for a destructor declaration.
-   //
-   if (G__prerun && (type_name[0] == '~')) {
-      // -- We have found a destructor declaration in prerun.
-      G__var_type = 'y';
-      int cin = G__fignorestream("(");
-      type_name[len++] = cin;
-      type_name[len] = '\0';
-      G__make_ifunctable(type_name);
-      return 1;
-   }
-   //
-   //  Check for a single non-printable character.
-   //
-   if (!isprint(type_name[0]) && (len == 1)) {
-      // -- We found a single non-printable character followed by a space, just accept it and continue.
-      return 1;
-   }
-   //
-   //  Remember the current position in case we fail.
-   //
-   fpos_t pos;
-   fgetpos(G__ifile.fp, &pos);
-   int line = G__ifile.line_number;
-   // Remember the passed type_name in case we fail.
-   char store_typename[G__LONGLINE];
-   strcpy(store_typename, type_name);
-   // Remember tagnum and typenum in case we fail.
-   int store_tagnum = G__tagnum;
-   int store_typenum = G__typenum;
-   // Skip any leading whitespace.
-   int cin = G__fgetspace();
-   //
-   // check if this is a declaration or not
-   // declaration:
-   //     type varname... ; type *varname
-   //          ^ must be alphabet '_' , '*' or '('
-   // else
-   //   if not alphabet, return
-   //     type (param);   function name
-   //     type = expr ;   variable assignment
-   //
-   //--
-   switch (cin) {
-      case '*':
-      case '&':
-         cin = G__fgetc();
-         fseek(G__ifile.fp, -2, SEEK_CUR);
-         if (G__dispsource) {
-            G__disp_mask = 2;
-         }
-         if (cin == '=') {
-            return 0;
-         }
-         break;
-      case '(':
-      case '_':
-         fseek(G__ifile.fp, -1, SEEK_CUR);
-         if (G__dispsource) {
-            G__disp_mask = 1;
-         }
-         break;
-      default:
-         fseek(G__ifile.fp, -1, SEEK_CUR);
-         if (G__dispsource) {
-            G__disp_mask = 1;
-         }
-         if (!isalpha(cin)) {
-            return 0;
-         }
-         break;
-   }
-   if (type_name[len-1] == '&') {
-      G__reftype = G__PARAREFERENCE;
-      type_name[--len] = '\0';
-      --refrewind;
-   }
-   //
-   if ((len > 2) && (type_name[len-1] == '*') && (type_name[len-2] == '*')) {
-      // -- We have a pointer to pointer.
-      len -= 2;
-      type_name[len] = '\0';
-      // type** a;
-      //     ^<<^
-      fsetpos(G__ifile.fp, &pos);
-      G__ifile.line_number = line;
-      fseek(G__ifile.fp, -1, SEEK_CUR);
-      cin = G__fgetc();
-      if (cin == '*') {
-         // -- We have a fake space.
-         fseek(G__ifile.fp, refrewind, SEEK_CUR);
-      }
-      else {
-         fseek(G__ifile.fp, refrewind - 1, SEEK_CUR);
-      }
-      if (G__dispsource) {
-        G__disp_mask = 2;
-      }
-   }
-   else if ((len > 1) && (type_name[len-1] == '*')) {
-      int cin2;
-      len -= 1;
-      type_name[len] = '\0';
-      fsetpos(G__ifile.fp, &pos);
-      G__ifile.line_number = line;
-      // To know how much to rewind we need to know if there is a fakespace.
-      fseek(G__ifile.fp, -1, SEEK_CUR);
-      cin = G__fgetc();
-      if (cin == '*') {
-         // -- We have a fake space.
-         fseek(G__ifile.fp, refrewind + 1, SEEK_CUR);
-      }
-      else {
-         fseek(G__ifile.fp, refrewind, SEEK_CUR);
-      }
-      if (G__dispsource) {
-         G__disp_mask = 1;
-      }
-      cin2 = G__fgetc();
-      if (!isalnum(cin2) && (cin2 != '>')) {
-         fseek(G__ifile.fp, -1, SEEK_CUR);
-         if (G__dispsource) {
-            G__disp_mask = 1;
-         }
-      }
-   }
-   //
-   //  Check for a typedef name.
-   //
-   G__typenum = G__defined_typename(type_name);
-   if (G__typenum == -1) {
-      // -- It was not a typedef name.
-      //
-      //  Check for a class, enum, namespace, struct, or union name.
-      //
-      G__tagnum = G__defined_tagname(type_name, 1);
-      if (G__tagnum == -1) {
-         // -- Nope, it was not a class, enum, namespace, struct, or union name.
-         if (G__fpundeftype && (cin != '(') && ((G__func_now == -1) || (G__def_tagnum != -1))) {
-            // -- We have been asked to make a list of undefined type names.
-            // Declare the undefined name as a class.
-            G__tagnum = G__search_tagname(type_name, 'c');
-            // Output the info to the given file.
-            fprintf(G__fpundeftype, "class %s; /* %s %d */\n", type_name , G__ifile.name, G__ifile.line_number);
-            fprintf(G__fpundeftype, "#pragma link off class %s;\n\n", type_name);
-            G__struct.globalcomp[G__tagnum] = G__NOLINK;
-         }
-         else {
-            // -- Was not a known type, return.
-            fsetpos(G__ifile.fp, &pos);
-            G__ifile.line_number = line;
-            strcpy(type_name, store_typename);
-            G__tagnum = store_tagnum;
-            G__typenum = store_typenum;
-            G__reftype = G__PARANORMAL;
-            return 0;
-         }
-      }
-      else {
-         // -- Ok, we found it, now check again as a typedef name (FIXME: Why???).
-         G__typenum = G__defined_typename(type_name);
-         if (G__typenum != -1) {
-            G__reftype += G__newtype.reftype[G__typenum];
-            G__typedefnindex = G__newtype.nindex[G__typenum];
-            G__typedefindex = G__newtype.index[G__typenum];
-         }
-      }
-      G__var_type = 'u';
-   }
-   else {
-      // -- We have a typedef name.
-      G__tagnum = G__newtype.tagnum[G__typenum];
-      G__reftype += G__newtype.reftype[G__typenum];
-      G__typedefnindex = G__newtype.nindex[G__typenum];
-      G__typedefindex = G__newtype.index[G__typenum];
-   }
-   //
-   //  Hack an enumerator.
-   //
-   if ((G__tagnum != -1) && (G__struct.type[G__tagnum] == 'e')) {
-      // -- We have an enumerator.
-      G__var_type = 'i';
-   }
-   //
-   //  Define a variable.
-   //
-   G__define_var(G__tagnum, G__typenum);
-   //
-   //  Restore state.
-   //
-   G__typedefnindex = 0;
-   G__typedefindex = 0;
-   G__tagnum = store_tagnum;
-   G__typenum = store_typenum;
-   G__reftype = G__PARANORMAL;
-   // And return success.
-   return 1;
-}
-
-//______________________________________________________________________________
-//______________________________________________________________________________
-//
-//  Externally visible functions.
-//
-
-//______________________________________________________________________________
-G__value G__alloc_exceptionbuffer(int tagnum)
-{
-   // -- FIXME: Describe this function!
-   G__value buf;
-   /* create class object */
-   buf.obj.i = (long)malloc((size_t)G__struct.size[tagnum]);
-   buf.obj.reftype.reftype = G__PARANORMAL;
-   buf.type = 'u';
-   buf.tagnum = tagnum;
-   buf.typenum = -1;
-   buf.ref = G__p_tempbuf->obj.obj.i;
-   return(buf);
-}
-
-//______________________________________________________________________________
-int G__free_exceptionbuffer()
-{
-   // -- FIXME: Describe this function!
-   if ('u' == G__exceptionbuffer.type && G__exceptionbuffer.obj.i &&
-         -1 != G__exceptionbuffer.tagnum) {
-      char destruct[G__ONELINE];
-      int store_tagnum = G__tagnum;
-      int store_struct_offset = G__store_struct_offset;
-      int dmy = 0;
-      G__tagnum = G__exceptionbuffer.tagnum;
-      G__store_struct_offset = G__exceptionbuffer.obj.i;
-      if (G__CPPLINK == G__struct.iscpplink[G__tagnum]) {
-         G__globalvarpointer = G__store_struct_offset;
-      }
-      else G__globalvarpointer = G__PVOID;
-      sprintf(destruct, "~%s()", G__fulltagname(G__tagnum, 1));
-      if (G__dispsource) {
-         G__fprinterr(G__serr, "!!!Destructing exception buffer %s %lx"
-                      , destruct, G__exceptionbuffer.obj.i);
-         G__printlinenum();
-      }
-      G__getfunction(destruct, &dmy , G__TRYDESTRUCTOR);
-      if (G__CPPLINK != G__struct.iscpplink[G__tagnum])
-         free((void*)G__store_struct_offset);
-      /* do nothing here, exception object shouldn't be stored in legacy temp buf */
-      G__tagnum = store_tagnum;
-      G__store_struct_offset = store_struct_offset;
-      G__globalvarpointer = G__PVOID;
-   }
-   G__exceptionbuffer = G__null;
    return(0);
 }
 
-//______________________________________________________________________________
-void G__display_tempobject(const char* action)
+/***********************************************************************
+* G__keyword_anytime_8()
+*
+***********************************************************************/
+static int G__keyword_anytime_8(char* statement)
 {
-   // -- FIXME: Describe this function!
-   struct G__tempobject_list *ptempbuf = G__p_tempbuf;
-   G__fprinterr(G__serr, "\n%s ", action);
-   while (ptempbuf) {
-      if (ptempbuf->obj.type) {
-         G__fprinterr(G__serr, "%d:(%s)0x%p ", ptempbuf->level
-                      , G__type2string(ptempbuf->obj.type, ptempbuf->obj.tagnum
-                                       , ptempbuf->obj.typenum
-                                       , ptempbuf->obj.obj.reftype.reftype
-                                       , ptempbuf->obj.isconst)
-                      , (void*)ptempbuf->obj.obj.i);
+  /***********************************
+   * template  <class T> class A { ... };
+   * template  A<int>;
+   * template  class A<int>;
+   *          ^
+   ***********************************/
+  if(strcmp(statement,"template")==0){
+    int c;
+    fpos_t pos;
+    int line_number;
+    char tcname[G__ONELINE];
+    line_number = G__ifile.line_number;
+    fgetpos(G__ifile.fp,&pos);
+    c=G__fgetspace();
+    if('<'==c) {
+      /* if '<' comes, this is an ordinary template declaration */
+      G__ifile.line_number = line_number;
+      fsetpos(G__ifile.fp,&pos);
+      return(0);
+    }
+    /* template  A<int>; this is a template instantiation */
+    tcname[0] = c;
+    fseek(G__ifile.fp,-1,SEEK_CUR);
+    G__disp_mask=1;
+    c=G__fgetname_template(tcname,";");
+    if(strcmp(tcname,"class")==0 ||
+       strcmp(tcname,"struct")==0) {
+      c=G__fgetstream_template(tcname,";");
+    }
+    else if(isspace(c)) {
+      int len = strlen(tcname);
+      int store_c;
+      while(len && ('&'==tcname[len-1] || '*'==tcname[len-1])) --len;
+      store_c = tcname[len];
+      tcname[len] = 0;
+      if(G__istypename(tcname)) {
+        G__ifile.line_number = line_number;
+        fsetpos(G__ifile.fp,&pos);
+        int brace_level = 0;
+        G__exec_statement(&brace_level); 
+        return(1);
       }
       else {
-         G__fprinterr(G__serr, "%d:(%s)0x%p ", ptempbuf->level, "NULL", (void*)0);
+        tcname[len] = store_c;
+        c=G__fgetstream_template(tcname+strlen(tcname),";");
       }
-      ptempbuf = ptempbuf->prev;
-   }
-   G__fprinterr(G__serr, "\n");
+    }
+    if(!G__defined_templateclass(tcname)) {
+      G__instantiate_templateclass(tcname,0);
+    }
+    return(1);
+  }
+  if(strcmp(statement,"explicit")==0){
+    G__isexplicit = 1;
+    return(1);
+  }
+  return(0);
 }
 
-//______________________________________________________________________________
-int G__defined_macro(const char* macro)
+/***********************************************************************
+* G__alloc_exceptionbuffer
+*
+***********************************************************************/
+G__value Cint::Internal::G__alloc_exceptionbuffer(int tagnum) 
 {
-   // -- Check if a macro is defined.
-   int hash = 0;
-   int iout = 0;
-   G__hash(macro, hash, iout);
-   struct G__var_array* var = 0;
-   for (var = &G__global; var; var = var->next) {
-      for (iout = 0; iout < var->allvar; ++iout) {
-         if (
-            ((tolower(var->type[iout]) == 'p') || (var->type[iout] == 'T')) &&
-            (hash == var->hash[iout]) &&
-            !strcmp(macro, var->varnamebuf[iout])
-         ) {
-            // -- Found.
-            return 1;
+  G__value buf = G__null;
+
+  /* create class object */
+  buf.obj.i = (long)malloc((size_t)G__struct.size[tagnum]);
+  G__value_typenum(buf) = G__Dict::GetDict().GetType(tagnum);
+  buf.ref = G__p_tempbuf->obj.obj.i;
+
+  return(buf);
+}
+
+/***********************************************************************
+* G__free_exceptionbuffer
+*
+***********************************************************************/
+int Cint::Internal::G__free_exceptionbuffer()
+{
+  if(G__get_type(G__exceptionbuffer)=='u' && G__exceptionbuffer.obj.i) {
+    char destruct[G__ONELINE];
+    ::Reflex::Scope store_tagnum=G__tagnum;
+    char *store_struct_offset = G__store_struct_offset;
+    int dmy=0;
+    G__set_G__tagnum(G__exceptionbuffer);
+    G__store_struct_offset = (char*)G__exceptionbuffer.obj.i;
+    if(G__CPPLINK==G__struct.iscpplink[G__get_tagnum(G__tagnum)]) {
+      G__globalvarpointer = G__store_struct_offset;
+    }
+    else G__globalvarpointer = G__PVOID;
+    sprintf(destruct,"~%s()",G__tagnum.Name(::Reflex::SCOPED).c_str());
+    if(G__dispsource) {
+      G__fprinterr(G__serr,"!!!Destructing exception buffer %s %lx"
+                   ,destruct,G__exceptionbuffer.obj.i);
+      G__printlinenum();
+    }
+    G__getfunction(destruct,&dmy ,G__TRYDESTRUCTOR);
+    if(G__CPPLINK!=G__struct.iscpplink[G__get_tagnum(G__tagnum)]) 
+      free((void*)G__store_struct_offset);
+    /* do nothing here, exception object shouldn't be stored in legacy temp buf */
+    G__tagnum = store_tagnum;
+    G__store_struct_offset = store_struct_offset;
+    G__globalvarpointer = G__PVOID;
+  }
+  G__exceptionbuffer = G__null;
+  return(0);
+}
+
+/***********************************************************************
+ * G__display_tempobject()
+ ***********************************************************************/
+void Cint::Internal::G__display_tempobject(const char* action)
+{
+  struct G__tempobject_list *ptempbuf = G__p_tempbuf;
+  G__fprinterr(G__serr,"\n%s ",action);
+  while(ptempbuf) {
+    if(G__value_typenum(ptempbuf->obj)) {
+      G__fprinterr(G__serr,"%d:(%s)0x%p ",ptempbuf->level
+                   ,G__value_typenum(ptempbuf->obj).Name(::Reflex::SCOPED).c_str()
+                   ,(void*)ptempbuf->obj.obj.i);
+    }
+    else {
+      G__fprinterr(G__serr,"%d:(%s)0x%p ",ptempbuf->level,"NULL",(void*)0);
+    }
+    ptempbuf = ptempbuf->prev;
+  }
+  G__fprinterr(G__serr,"\n");
+}
+/***********************************************************************
+* G__defined_macro()
+*
+* Search for macro symbol
+*
+***********************************************************************/
+int Cint::Internal::G__defined_macro(char *macro)
+{
+   int hash,iout;
+   G__hash(macro,hash,iout);
+
+   if(682==hash && strcmp(macro,"__CINT__")==0) return(1);
+   if(!G__cpp && 1704==hash && strcmp(macro,"__CINT_INTERNAL_CPP__")==0) return(1);
+   if(
+      (G__iscpp || G__externblock_iscpp)
+      && 1193==hash && strcmp(macro,"__cplusplus")==0) return(1);
+
+   {
+      ::Reflex::Scope varscope( ::Reflex::Scope::GlobalScope() );
+      for(::Reflex::Member_Iterator iout = varscope.DataMember_Begin();
+          iout != varscope.DataMember_End(); ++iout) 
+      {
+         char type = G__get_type(iout->TypeOf());
+         if((tolower(type)=='p' || 'T'==type) &&
+            /* hash == var->hash[iout] && */
+            iout->Name() == macro) 
+         {
+            return(1); /* found */
          }
       }
    }
-   if ((hash == 682) && !strcmp(macro, "__CINT__")) {
-      return 1;
-   }
-   if (!G__cpp && (hash == 1704) && !strcmp(macro, "__CINT_INTERNAL_CPP__")) {
-      return 1;
-   }
-   if ((G__iscpp || G__externblock_iscpp) && (hash == 1193) && !strcmp(macro, "__cplusplus")) {
-      return 1;
-   }
+
 #ifndef G__OLDIMPLEMENTATION869
-   {
-      // Following fix is not completely correct. It confuses typedef names as macro.
-      // Look for typedef names defined by '#define foo int'.
-      int save_tagnum = G__def_tagnum;
-      G__def_tagnum = -1;
-      int stat = G__defined_typename(macro);
+   { /* Following fix is not completely correct. It confuses typedef names
+     * as macro */
+      /* look for typedef names defined by '#define foo int' */
+      ::Reflex::Type stat;
+      ::Reflex::Scope save_tagnum = G__def_tagnum;
+      G__def_tagnum = ::Reflex::Scope() ;
+      stat = G__find_typedef(macro);
       G__def_tagnum = save_tagnum;
-      if (stat >= 0) {
-         return 1;
-      }
+      if(stat) return(1);
    }
 #endif
-   // Search symbol macro table.
-   if (macro != G__replacesymbol(macro)) {
-      return 1;
-   }
-   // Search function macro table.
+   /* search symbol macro table */
+   if(macro!=G__replacesymbol(macro)) return(1);
+   /* search  function macro table */
    {
-      struct G__Deffuncmacro* deffuncmacro = 0;
-      for (deffuncmacro = &G__deffuncmacro; deffuncmacro; deffuncmacro = deffuncmacro->next) {
-         if (deffuncmacro->name && !strcmp(macro, deffuncmacro->name)) {
-            return 1;
+      struct G__Deffuncmacro *deffuncmacro;
+      deffuncmacro = &G__deffuncmacro;
+      while(deffuncmacro->next) {
+         if(deffuncmacro->name && strcmp(macro,deffuncmacro->name)==0) {
+            return(1);
          }
+         deffuncmacro=deffuncmacro->next;
       }
    }
-   // Not found.
-   return 0;
+   return(0); /* not found */
 }
 
-//______________________________________________________________________________
-int G__pp_command()
+
+/***********************************************************************
+* G__pp_command()
+*
+*  # if      COND
+*  # ifdef   MACRO
+*  # ifndef  MACRO
+*
+*  # elif    COND
+*  # else
+*
+*  # endif
+*   ^
+*
+* to be added
+*  # num
+*  # define MACRO
+*
+***********************************************************************/
+int Cint::Internal::G__pp_command()
 {
-   // -- FIXME: Describe this function!
-   char condition[G__ONELINE];
-   int c = G__fgetname(condition, "\n\r");
-   if (isdigit(condition[0])) {
-      if ((c != '\n') && (c != '\r')) {
-         G__fignoreline();
+  int c;
+  char condition[G__ONELINE];
+  c=G__fgetname(condition,"\n\r");
+  if(isdigit(condition[0])) {
+    if('\n'!=c && '\r'!=c) G__fignoreline();
+    G__ifile.line_number=atoi(condition);
+  }
+  else if(strncmp(condition,"el",2)==0)     G__pp_skip(1);
+  else if(strncmp(condition,"ifdef",5)==0)  G__pp_ifdef(1);
+  else if(strncmp(condition,"ifndef",6)==0) G__pp_ifdef(0);
+  else if(strncmp(condition,"if",2)==0)     G__pp_if();
+  else if('\n'!=c && '\r'!=c)               G__fignoreline();
+  return(0);
+}
+
+/***********************************************************************
+* G__pp_skip()
+*
+* Called by
+*   G__pp_if              if condition is faulse
+*   G__pp_ifdef           if condition is faulse
+*   G__exec_statement     '#else'
+*   G__exec_statement     '#elif'
+*
+*   #if [condition] , #ifdef, #ifndef
+*         // read through this block
+*   #else
+*   #endif
+***********************************************************************/
+void Cint::Internal::G__pp_skip(int elifskip)
+{
+  char oneline[G__LONGLINE*2];
+  char argbuf[G__LONGLINE*2];
+  char *arg[G__ONELINE];
+  int argn;
+  
+  FILE *fp;
+  int nest=1;
+  char condition[G__ONELINE];
+  char temp[G__ONELINE];
+  int i;
+  
+  fp=G__ifile.fp;
+  
+  /* elace traced mark */
+  if(0==G__nobreak && 0==G__disp_mask&&
+     G__srcfile[G__ifile.filenum].breakpoint&&
+     G__srcfile[G__ifile.filenum].maxline>G__ifile.line_number) {
+    G__srcfile[G__ifile.filenum].breakpoint[G__ifile.line_number]
+      &=G__NOTRACED;
+  }
+  
+  /********************************************************
+   * Read lines until end of conditional compilation
+   ********************************************************/
+  while(nest && G__readline(fp,oneline,argbuf,&argn,arg)!=0) {
+    /************************************************
+     *  If input line is "abcdefg hijklmn opqrstu"
+     *
+     *           arg[0]
+     *             |
+     *     +-------+-------+
+     *     |       |       |
+     *  abcdefg hijklmn opqrstu
+     *     |       |       |
+     *   arg[1]  arg[2]  arg[3]    argn=3
+     *
+     ************************************************/
+    ++G__ifile.line_number;
+    
+    if(argn>0 && arg[1][0]=='#') {
+      const char* directive = arg[1]+1; // with "#if" directive will point to "if"
+      int directiveArgI = 1;
+      if(arg[1][1]==0
+         || strcmp(arg[1],"#pragma")==0
+         ) {
+         directive = arg[2];
+         directiveArgI = 2;
       }
-      G__ifile.line_number = atoi(condition);
-   }
-   else if (!strncmp(condition, "el", 2)) {
-      G__pp_skip(1);
-   }
-   else if (!strncmp(condition, "ifdef", 5)) {
-      G__pp_ifdef(1);
-   }
-   else if (!strncmp(condition, "ifndef", 6)) {
-      G__pp_ifdef(0);
-   }
-   else if (!strncmp(condition, "if", 2)) {
-      G__pp_if();
-   }
-   else if ((c != '\n') && (c != '\r')) {
-      G__fignoreline();
-   }
-   return 0;
-}
 
-//______________________________________________________________________________
-void G__pp_skip(int elifskip)
-{
-   // -- FIXME: Describe this function!
-   char oneline[G__LONGLINE*2];
-   char argbuf[G__LONGLINE*2];
-   char *arg[G__ONELINE];
-   int argn;
-
-   FILE *fp;
-   int nest = 1;
-   char condition[G__ONELINE];
-   char temp[G__ONELINE];
-   int i;
-
-   fp = G__ifile.fp;
-
-   /* elace traced mark */
-   if (0 == G__nobreak && 0 == G__disp_mask &&
-         G__srcfile[G__ifile.filenum].breakpoint &&
-         G__srcfile[G__ifile.filenum].maxline > G__ifile.line_number) {
-      G__srcfile[G__ifile.filenum].breakpoint[G__ifile.line_number]
-      &= G__NOTRACED;
-   }
-
-   /********************************************************
-    * Read lines until end of conditional compilation
-    ********************************************************/
-   while (nest && G__readline(fp, oneline, argbuf, &argn, arg) != 0) {
-      /************************************************
-       *  If input line is "abcdefg hijklmn opqrstu"
-       *
-       *           arg[0]
-       *             |
-       *     +-------+-------+
-       *     |       |       |
-       *  abcdefg hijklmn opqrstu
-       *     |       |       |
-       *   arg[1]  arg[2]  arg[3]    argn=3
-       *
-       ************************************************/
-      ++G__ifile.line_number;
-
-      if (argn > 0 && arg[1][0] == '#') {
-         const char* directive = arg[1] + 1; // with "#if" directive will point to "if"
-         int directiveArgI = 1;
-         if (arg[1][1] == 0
-               || strcmp(arg[1], "#pragma") == 0
-            ) {
-            directive = arg[2];
-            directiveArgI = 2;
-         }
-
-         if (strncmp(directive, "if", 2) == 0) {
-            ++nest;
-         }
-         else if (strncmp(directive, "else", 4) == 0) {
-            if (nest == 1 && elifskip == 0) nest = 0;
-         }
-         else if (strncmp(directive, "endif", 5) == 0) {
-            --nest;
-         }
-         else if (strncmp(directive, "elif", 4) == 0) {
-            if (nest == 1 && elifskip == 0) {
-               int store_no_exec_compile = G__no_exec_compile;
-               int store_asm_wholefunction = G__asm_wholefunction;
-               int store_asm_noverflow = G__asm_noverflow;
-               G__no_exec_compile = 0;
-               G__asm_wholefunction = 0;
-               if (!G__xrefflag) {
-                  G__asm_noverflow = 0;
-               }
-               strcpy(condition, "");
-               for (i = directiveArgI + 1; i <= argn; i++) {
-                  strcat(condition, arg[i]);
-               }
-               i = strlen(oneline) - 1;
-               while (i >= 0 && (oneline[i] == '\n' || oneline[i] == '\r')) {
-                  --i;
-               }
-               if (oneline[i] == '\\') {
-                  int len = strlen(condition);
-                  while (1) {
-                     G__fgetstream(condition + len, "\n\r");
-                     if (condition[len] == '\\' && (condition[len+1] == '\n' ||
-                                                    condition[len+1] == '\r')) {
-                        char* p = condition + len;
-                        memmove(p, p + 2, strlen(p + 2) + 1);
-                     }
-                     len = strlen(condition) - 1;
-                     while (len > 0 && (condition[len] == '\n' || condition[len] == '\r'))
-                        --len;
-                     if (condition[len] != '\\') break;
-                  }
-               }
-
-               /* remove comments */
-               char* posComment = strstr(condition, "/*");
-               if (!posComment) posComment = strstr(condition, "//");
-               while (posComment) {
-                  if (posComment[1] == '*') {
-                     char* posCXXComment = strstr(condition, "//");
-                     if (posCXXComment && posCXXComment < posComment)
-                        posComment = posCXXComment;
-                  }
-                  if (posComment[1] == '*') {
-                     const char* posCommentEnd = strstr(posComment + 2, "*/");
-                     // we can have
-                     // #if A /*
-                     //   comment */ || B
-                     // #endif
-                     if (!posCommentEnd) {
-                        if (G__skip_comment())
-                           break;
-                        if (G__fgetstream(posComment, "\r\n") == EOF)
-                           break;
-                     }
-                     else {
-                        strcpy(temp, posCommentEnd + 2);
-                        strcpy(posComment, temp);
-                     }
-                     posComment = strstr(posComment, "/*");
-                     if (!posComment) posComment = strstr(condition, "//");
-                  }
-                  else {
-                     posComment[0] = 0;
-                     posComment = 0;
-                  }
-               }
-
-               G__noerr_defined = 1;
-               if (G__test(condition)) {
-                  nest = 0;
-               }
-               G__no_exec_compile = store_no_exec_compile;
-               G__asm_wholefunction = store_asm_wholefunction;
-               G__asm_noverflow = store_asm_noverflow;
-               G__noerr_defined = 0;
+      if(strncmp(directive,"if",2)==0) {
+        ++nest;
+      }
+      else if(strncmp(directive,"else",4)==0) {
+        if(nest==1 && elifskip==0) nest=0;
+      }
+      else if(strncmp(directive,"endif",5)==0) {
+        --nest;
+      }
+      else if(strncmp(directive,"elif",4)==0) {
+        if(nest==1 && elifskip==0) {
+          int store_no_exec_compile=G__no_exec_compile;
+          int store_asm_wholefunction=G__asm_wholefunction;
+          int store_asm_noverflow=G__asm_noverflow;
+          G__no_exec_compile=0;
+          G__asm_wholefunction=0;
+          G__abortbytecode();
+          strcpy(condition,"");
+          for(i=directiveArgI+1;i<=argn;i++) 
+            strcat(condition, arg[i]);
+          i = strlen (oneline) - 1;
+          while (i >= 0 && (oneline[i] == '\n' || oneline[i] == '\r'))
+            --i;
+          if (oneline[i] == '\\') {
+            int len = strlen (condition);
+            while (1) {
+              G__fgetstream (condition+len, "\n\r");
+              if (condition[len] == '\\' && (condition[len+1] == '\n' ||
+                                             condition[len+1] == '\r')) {
+                char* p = condition + len;
+                memmove (p, p+2, strlen (p+2) + 1);
+              }
+              len = strlen (condition) - 1;
+              while (len>0 && (condition[len]=='\n' || condition[len]=='\r'))
+                --len;
+              if (condition[len] != '\\') break;
             }
-         }
-      }
-   }
+          }
 
-   /* set traced mark */
-   if (!G__nobreak &&
-         !G__disp_mask && !G__no_exec_compile &&
-         G__srcfile[G__ifile.filenum].breakpoint &&
-         G__srcfile[G__ifile.filenum].maxline > G__ifile.line_number) {
-      G__srcfile[G__ifile.filenum].breakpoint[G__ifile.line_number]
-      |= (!G__no_exec);
-   }
+          /* remove comments */
+          char* posComment = strstr(condition, "/*");
+          if (!posComment) posComment = strstr(condition, "//");
+          while (posComment) {
+             if (posComment[1]=='*') {
+                char* posCXXComment = strstr(condition, "//");
+                if (posCXXComment && posCXXComment < posComment)
+                   posComment = posCXXComment;
+             }
+             if (posComment[1]=='*') {
+                const char* posCommentEnd = strstr(posComment+2,"*/");
+                // we can have
+                // #if A /*
+                //   comment */ || B
+                // #endif
+                if (!posCommentEnd) {
+                  if (G__skip_comment()) 
+                     break;
+                  if (G__fgetstream (posComment, "\r\n") == EOF)
+                     break;
+                } else {
+                   strcpy(temp, posCommentEnd+2);
+                   strcpy(posComment, temp);
+                }
+                posComment = strstr(posComment, "/*");
+                if (!posComment) posComment = strstr(condition, "//");
+             } else {
+                posComment[0]=0;
+                posComment=0;
+             }
+          }
 
-   if (G__dispsource) {
-      if ((G__debug || G__break || G__step
-          ) &&
-            ((G__prerun != 0) || (G__no_exec == 0)) &&
-            (G__disp_mask == 0)) {
-         G__fprinterr(G__serr, "# conditional interpretation, SKIPPED");
-         G__fprinterr(G__serr, "\n%-5d", G__ifile.line_number - 1);
-         G__fprinterr(G__serr, "%s", arg[0]);
-         G__fprinterr(G__serr, "\n%-5d", G__ifile.line_number);
+          G__noerr_defined=1;
+          if(G__test(condition)) {
+            nest=0;
+          }
+          G__no_exec_compile=store_no_exec_compile;
+          G__asm_wholefunction=store_asm_wholefunction;
+          G__asm_noverflow=store_asm_noverflow;
+          G__noerr_defined=0;
+        }
       }
-   }
+    }
+  }
+  
+  /* set traced mark */
+  if(0==G__nobreak && 
+     0==G__disp_mask&& 0==G__no_exec_compile &&
+     G__srcfile[G__ifile.filenum].breakpoint&&
+     G__srcfile[G__ifile.filenum].maxline>G__ifile.line_number) {
+    G__srcfile[G__ifile.filenum].breakpoint[G__ifile.line_number]
+      |=(!G__no_exec);
+  }
+  
+  if(G__dispsource) {
+    if((G__debug||G__break||G__step
+        )&&
+       ((G__prerun!=0)||(G__no_exec==0))&&
+       (G__disp_mask==0)){
+      G__fprinterr(G__serr, "# conditional interpretation, SKIPPED");
+      G__fprinterr(G__serr,"\n%-5d",G__ifile.line_number-1);
+      G__fprinterr(G__serr,"%s",arg[0]);
+      G__fprinterr(G__serr,"\n%-5d",G__ifile.line_number);
+    }
+  }
 }
 
-//______________________________________________________________________________
-int G__pp_if()
+/***********************************************************************
+* G__pp_if()
+*
+* Called by
+*   G__exec_statement(&brace_level);   '#if'
+*
+*   #if [condition]
+*   #else
+*   #endif
+***********************************************************************/
+int Cint::Internal::G__pp_if()
 {
    // -- FIXME: Describe this function!
    char condition[G__LONGLINE];
@@ -4849,7 +4656,7 @@ int G__pp_if()
 }
 
 //______________________________________________________________________________
-int G__pp_ifdef(int def)
+int Cint::Internal::G__pp_ifdef(int def)
 {
    // -- FIXME: Describe this function!
    // def: 1 for ifdef; 0 for ifndef
@@ -4876,29 +4683,30 @@ int G__pp_ifdef(int def)
    return(G__IFDEF_NORMAL);
 }
 
-//______________________________________________________________________________
-int G__exec_catch(char* statement)
+/***********************************************************************
+* G__exec_catch()
+*
+***********************************************************************/
+int Cint::Internal::G__exec_catch(char *statement)
 {
-   // -- Handle the "catch" statement.
    int c;
-   while (1) {
+   while(1) {
       fpos_t fpos;
       int line_number;
 
-      // catch (ehclass& obj) {  }
-      // ^^^^^^^
+      /* catch (ehclass& obj) {  } 
+      * ^^^^^^^ */
       do {
-         c = G__fgetstream(statement, "(};");
-      }
-      while ('}' == c);
-      if ((c != '(') || strcmp(statement, "catch")) {
-         return 1;
-      }
-      fgetpos(G__ifile.fp, &fpos);
-      line_number = G__ifile.line_number;
-      // catch (ehclass& obj) {  }
-      //        ^^^^^^^^
-      c = G__fgetname_template(statement, ")&*");
+         c=G__fgetstream(statement,"(};");
+      } while('}'==c);
+      if('('!=c||strcmp(statement,"catch")!=0) return(1);
+      fgetpos(G__ifile.fp,&fpos);
+      line_number=G__ifile.line_number;
+
+      /* catch (ehclass& obj) {  } 
+      *        ^^^^^^^^ */
+      c=G__fgetname_template(statement,")&*");
+
       if (statement[0] == '.') {
          // catch all exceptions
          // catch(...) {  }
@@ -4911,32 +4719,30 @@ int G__exec_catch(char* statement)
       }
       else {
          int tagnum;
-         tagnum = G__defined_tagname(statement, 2);
-         if (
-            (G__exceptionbuffer.tagnum == tagnum) ||
-            (G__ispublicbase(tagnum, G__exceptionbuffer.tagnum, G__exceptionbuffer.obj.i) != -1)
-         ) {
-            // catch(ehclass& obj) { match }
-            G__value store_ansipara = G__ansipara;
-            G__ansipara = G__exceptionbuffer;
-            G__ansiheader = 1;
-            G__funcheader = 1;
-            G__ifile.line_number = line_number;
-            fsetpos(G__ifile.fp, &fpos);
-            int brace_level = 0;
-            G__exec_statement(&brace_level); // declare exception handler object
-            G__globalvarpointer = G__PVOID;
-            G__ansiheader = 0;
-            G__funcheader = 0;
-            G__ansipara = store_ansipara;
-            brace_level = 0;
-            G__exec_statement(&brace_level); // exec catch block body
-            break;
+         tagnum=G__defined_tagname(statement,2);
+         if(G__get_tagnum(G__value_typenum(G__exceptionbuffer))==tagnum || 
+            -1!=G__ispublicbase(tagnum,G__get_tagnum(G__value_typenum(G__exceptionbuffer))
+            ,(void*)G__exceptionbuffer.obj.i)) {
+               /* catch(ehclass& obj) { match } */
+               G__value store_ansipara;
+               store_ansipara=G__ansipara;
+               G__ansipara=G__exceptionbuffer;
+               G__ansiheader=1;
+               G__funcheader=1;
+               G__ifile.line_number=line_number;
+               fsetpos(G__ifile.fp,&fpos);
+               int brace_level = 0;
+               G__exec_statement(&brace_level); // declare exception handler object
+               G__globalvarpointer=G__PVOID;
+               G__ansiheader=0;
+               G__funcheader=0;
+               G__ansipara=store_ansipara;
+               brace_level = 0;
+               G__exec_statement(&brace_level); /* exec catch block body */
+               break;
          }
-         // catch(ehclass& obj) { unmatch }
-         if (c != ')') {
-            c = G__fignorestream(")");
-         }
+         /* catch(ehclass& obj) { unmatch } */
+         if(')'!=c) c=G__fignorestream(")");
          G__no_exec = 1;
          int brace_level = 0;
          G__exec_statement(&brace_level);
@@ -4944,11 +4750,14 @@ int G__exec_catch(char* statement)
       }
    }
    G__free_exceptionbuffer();
-   return 0;
+   return(0);
 }
 
-//______________________________________________________________________________
-int G__skip_comment()
+/***********************************************************************
+* G__skip_comment()
+*
+***********************************************************************/
+int Cint::Internal::G__skip_comment()
 {
    // -- Skip a C-style comment, must be called immediately after '/*' is scanned.
    // Return value is either 0 or EOF.
@@ -4999,7 +4808,7 @@ int G__skip_comment()
 }
 
 //______________________________________________________________________________
-int G__skip_comment_peek()
+int Cint::Internal::G__skip_comment_peek()
 {
    // -- Skip a C-style comment during a peek, must be called immediately after '/*' is scanned.
    // Return value is either 0 or EOF.
@@ -5047,15 +4856,18 @@ int G__skip_comment_peek()
 }
 
 //______________________________________________________________________________
-//______________________________________________________________________________
 //
 //  The beginning of parsing and execution.
 //
 
-//______________________________________________________________________________
-G__value G__exec_statement(int* mparen)
+/***********************************************************************
+* G__value G__exec_statement(&brace_level);
+*
+*
+*  Execute statement list  { ... ; ... ; ... ; }
+***********************************************************************/
+G__value Cint::Internal::G__exec_statement(int *mparen)
 {
-   // -- Execute statement list  { ... ; ... ; ... ; }.
    int c = 0;
    char* conststring = 0;
    int iout = 0;
@@ -5092,21 +4904,15 @@ G__value G__exec_statement(int* mparen)
          c = G__fgetc();
       }
       discard_space = 0;
-      read_again:
+read_again:
       statement[iout] = '\0';
-      if (!G__prerun) {
-         //fprintf(stderr, "G__exec_statement: c: '%c' pr: %d ne: %d nec: %d ano: %d mp: %d io: %d st: '%s'\n", c, G__prerun, G__no_exec, G__no_exec_compile, G__asm_noverflow, *mparen, iout, statement);
-      }
-      switch (c) {
-         // --
-         // --
+    
+      switch( c ) {
+
 #ifdef G__OLDIMPLEMENTATIONxxxx_YET
-         case ',':
-            if (!G__ansiheader) {
-               break;
-            }
-            // --
-#endif // G__OLDIMPLEMENTATIONxxxx_YET
+         case ',' : /* column */
+            if(!G__ansiheader) break;
+#endif
          case '\n':
             // -- Handle a newline.
             if (*mparen != mparen_old) {
@@ -5123,19 +4929,17 @@ G__value G__exec_statement(int* mparen)
                }
             }
             // Intentionally fallthrough.
-         case ' ':
-         case '\t':
-         case '\r':
-         case '\f':
-            //fprintf(stderr, "G__exec_statement: Enter whitespace case. sf: %d\n", spaceflag);
-            // -- Handle whitespace.
-            commentflag = 0;
-            // ignore these character
-            if (single_quote || double_quote) {
-               statement[iout++] = c;
+         case ' ' : /* space */
+         case '\t' : /* tab */
+         case '\r': /* end of line */
+         case '\f': /* end of line */
+            commentflag=0;
+            /* ignore these character */
+            if(single_quote || double_quote!=0) {
+               statement[iout++] = c ;
             }
             else {
-               after_replacement:
+after_replacement:
                if (!fake_space) {
                   discard_space = 1;
                }
@@ -5143,7 +4947,7 @@ G__value G__exec_statement(int* mparen)
                   // -- Take action on space, even if skipping code.  Do preprocessing and look for declarations.
                   statement[iout] = '\0';
                   // search keyword
-                  G__preproc_again:
+G__preproc_again:
                   if ((statement[0] == '#') && isdigit(statement[1])) {
                      // -- Handle preprocessor directive "#<number> <filename>", a CINT extension to the standard.
                      // -- # [line] <[filename]>
@@ -5154,8 +4958,8 @@ G__value G__exec_statement(int* mparen)
                      spaceflag = 0;
                      iout = 0;
                   }
-                  //fprintf(stderr, "G__exec_statement: whitespace case, switch on iout. iout: %d\n", iout);
-                  switch (iout) {
+
+                  switch(iout) {
                      case 1:
                         // -- Handle preprocessor directive "#<number> <filename>", a CINT extension to the standard.
                         // -- # [line] <[filename]>
@@ -5234,7 +5038,7 @@ G__value G__exec_statement(int* mparen)
                            spaceflag = 0;
                         }
                         break;
-                     case 5:
+                    case 5:
                         // -- Handle a function-local const declaration, or #else, #elif, and #line.
                         {
                            int handled = G__keyword_anytime_5(statement);
@@ -5441,7 +5245,7 @@ G__value G__exec_statement(int* mparen)
                         G__disp_mask = 2;
                      }
                   }
-                  switch (iout) {
+                   switch (iout) {
                      case 2:
                         if (!strcmp(statement, "do")) {
                            // -- We have 'do stmt; while ();'.
@@ -5453,15 +5257,16 @@ G__value G__exec_statement(int* mparen)
                            if (!*mparen || (G__return > G__RETURN_NON)) {
                               return result;
                            }
-                           if ((result.type == G__block_goto.type) && (result.ref == G__block_goto.ref)) {
-                              int found = G__search_gotolabel(0, &start_pos, start_line, mparen);
-                              // If found, continue parsing, the input file is now
-                              // positioned immediately after the colon of the label.
-                              // Otherwise, return and let our caller try to find it.
-                              if (!found) {
-                                 // -- Not found, maybe our caller can find it.
-                                 return G__block_goto;
-                              }
+                           if(G__value_typenum(result)==G__value_typenum(G__block_goto)&&
+                              result.ref==G__block_goto.ref) {
+                                 int found = G__search_gotolabel(0, &start_pos, start_line, mparen);
+                                 // If found, continue parsing, the input file is now
+                                 // positioned immediately after the colon of the label.
+                                 // Otherwise, return and let our caller try to find it.
+                                 if (!found) {
+                                    // -- Not found, maybe our caller can find it.
+                                    return G__block_goto;
+                                 }
                            }
                            // Reset the statement buffer.
                            iout = 0;
@@ -5473,7 +5278,7 @@ G__value G__exec_statement(int* mparen)
                         // -- Handle int, new, and try.
                         if (!strcmp(statement, "int")) {
                            G__var_type = 'i' + G__unsigned;
-                           G__define_var(-1, -1);
+                           G__define_var(-1,::Reflex::Type());          
                            // Reset the statement buffer.
                            iout = 0;
                            // Flag that any following whitespace does not trigger any semantic action.
@@ -5520,113 +5325,43 @@ G__value G__exec_statement(int* mparen)
                         }
                         break;
                      case 4:
-                        // -- Handle char, FILE, long, void, bool, int*, int&, enum, auto, (new, goto.
-                        if (!strcmp(statement, "char")) {
-                           G__var_type = 'c' + G__unsigned;
-                           G__define_var(-1, -1);
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
-                           spaceflag = -1;
-                           if (!*mparen || (G__return > G__RETURN_NORMAL)) {
-                              return G__null;
-                           }
+                        if(strcmp(statement,"char")==0) {
+                           G__DEFVAR('c');
                            break;
                         }
-                        if (!strcmp(statement, "FILE")) {
-                           G__var_type = 'e' + G__unsigned;
-                           G__define_var(-1, -1);
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
-                           spaceflag = -1;
-                           if (!*mparen || (G__return > G__RETURN_NORMAL)) {
-                              return G__null;
-                           }
+                        if(strcmp(statement,"FILE")==0) {
+                           G__DEFVAR('e');
                            break;
                         }
-                        if (!strcmp(statement, "long")) {
-                           G__var_type = 'l' + G__unsigned;
-                           G__define_var(-1, -1);
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
-                           spaceflag = -1;
-                           if (!*mparen || (G__return > G__RETURN_NORMAL)) {
-                              return G__null;
-                           }
+                        if(strcmp(statement,"long")==0) {
+                           G__DEFVAR('l');
                            break;
                         }
-                        if (!strcmp(statement, "void")) {
-                           G__var_type = 'y' + G__unsigned;
-                           G__define_var(-1, -1);
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
-                           spaceflag = -1;
-                           if (!*mparen || (G__return > G__RETURN_NORMAL)) {
-                              return G__null;
-                           }
+                        if(strcmp(statement,"void")==0) {
+                           G__DEFVAR('y');
                            break;
                         }
-                        if (!strcmp(statement, "bool")) {
-                           G__var_type = 'g' + G__unsigned;
-                           G__define_var(-1, -1);
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
-                           spaceflag = -1;
-                           if (!*mparen || (G__return > G__RETURN_NORMAL)) {
-                              return G__null;
-                           }
+                        if(strcmp(statement,"bool")==0) {
+                           G__DEFVAR('g');
                            break;
                         }
-                        if (!strcmp(statement, "int*")) {
-                           G__typepdecl = 1;
-                           G__var_type = 'I' + G__unsigned;
-                           G__define_var(-1, -1);
-                           G__typepdecl = 0;
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
-                           spaceflag = -1;
-                           if (!*mparen || (G__return > G__RETURN_NORMAL)) {
-                              return G__null;
-                           }
+                        if(strcmp(statement,"int*")==0) {
+                           G__typepdecl=1;
+                           G__DEFVAR('I');
+                           G__typepdecl=0;
                            break;
                         }
-                        if (!strcmp(statement, "int&")) {
-                           G__var_type = 'i' + G__unsigned;
-                           G__reftype = G__PARAREFERENCE;
-                           G__define_var(-1, -1);
-                           G__reftype = G__PARANORMAL;
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
-                           spaceflag = -1;
-                           if (!*mparen || (G__return > G__RETURN_NORMAL)) {
-                              return G__null;
-                           }
+                        if(strcmp(statement,"int&")==0) {
+                           G__DEFREFVAR('i');
                            break;
                         }
-                        if (!strcmp(statement, "enum")) {
-                           G__var_type = 'u';
-                           G__define_struct('e');
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
-                           spaceflag = -1;
-                           if (!*mparen || (G__return > G__RETURN_NORMAL)) {
-                              return G__null;
-                           }
+                        if(strcmp(statement,"enum")==0) {
+                           G__DEFSTR('e');
                            break;
                         }
-                        if (!strcmp(statement, "auto")) {
-                           // -- Handle auto, we just ignore it.
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
+                        if(strcmp(statement,"auto")==0) {
                            spaceflag = -1;
+                           iout=0;
                            break;
                         }
                         if (!strcmp(statement, "(new")) {
@@ -5719,276 +5454,110 @@ G__value G__exec_statement(int* mparen)
                         break;
                      case 5:
                         // -- Handle short, float, char*, char&, bool&, FILE*, long*, bool*, long&, void*, class, union, using, throw, const.
-                        if (!strcmp(statement, "short")) {
-                           G__var_type = 's' + G__unsigned;
-                           G__define_var(-1, -1);
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
-                           spaceflag = -1;
-                           if (!*mparen || (G__return > G__RETURN_NORMAL)) {
-                              return G__null;
-                           }
+                        if(strcmp(statement,"short")==0) {
+                           G__DEFVAR('s');
                            break;
                         }
-                        if (!strcmp(statement, "float")) {
-                           G__var_type = 'f' + G__unsigned;
-                           G__define_var(-1, -1);
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
-                           spaceflag = -1;
-                           if (!*mparen || (G__return > G__RETURN_NORMAL)) {
-                              return G__null;
-                           }
+                        if(strcmp(statement,"float")==0) {
+                           G__DEFVAR('f');
                            break;
                         }
-                        if (!strcmp(statement, "char*")) {
-                           G__typepdecl = 1;
-                           G__var_type = 'C' + G__unsigned;
-                           G__define_var(-1, -1);
-                           G__typepdecl = 0;
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
-                           spaceflag = -1;
-                           if (!*mparen || (G__return > G__RETURN_NORMAL)) {
-                              return G__null;
-                           }
+                        if(strcmp(statement,"char*")==0) {
+                           G__typepdecl=1;
+                           G__DEFVAR('C');
+                           G__typepdecl=0;
                            break;
                         }
-                        if (!strcmp(statement, "char&")) {
-                           G__var_type = 'c' + G__unsigned;
-                           G__reftype = G__PARAREFERENCE;
-                           G__define_var(-1, -1);
-                           G__reftype = G__PARANORMAL;
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
-                           spaceflag = -1;
-                           if (!*mparen || (G__return > G__RETURN_NORMAL)) {
-                              return G__null;
-                           }
+                        if(strcmp(statement,"char&")==0) {
+                           G__DEFREFVAR('c');
                            break;
                         }
-                        if (!strcmp(statement, "bool&")) {
-                           G__var_type = 'g' + G__unsigned;
-                           G__reftype = G__PARAREFERENCE;
-                           G__define_var(-1, -1);
-                           G__reftype = G__PARANORMAL;
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
-                           spaceflag = -1;
-                           if (!*mparen || (G__return > G__RETURN_NORMAL)) {
-                              return G__null;
-                           }
+                        if(strcmp(statement,"bool&")==0) {
+                           G__DEFREFVAR('g');
                            break;
                         }
-                        if (!strcmp(statement, "FILE*")) {
-                           G__typepdecl = 1;
-                           G__var_type = 'E' + G__unsigned;
-                           G__define_var(-1, -1);
-                           G__typepdecl = 0;
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
-                           spaceflag = -1;
-                           if (!*mparen || (G__return > G__RETURN_NORMAL)) {
-                              return G__null;
-                           }
+                        if(strcmp(statement,"FILE*")==0) {
+                           G__typepdecl=1;
+                           G__DEFVAR('E');
+                           G__typepdecl=0;
                            break;
                         }
-                        if (!strcmp(statement, "long*")) {
-                           G__typepdecl = 1;
-                           G__var_type = 'L' + G__unsigned;
-                           G__define_var(-1, -1);
-                           G__typepdecl = 0;
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
-                           spaceflag = -1;
-                           if (!*mparen || (G__return > G__RETURN_NORMAL)) {
-                              return G__null;
-                           }
+                        if(strcmp(statement,"long*")==0) {
+                           G__typepdecl=1;
+                           G__DEFVAR('L');
+                           G__typepdecl=0;
                            break;
                         }
-                        if (!strcmp(statement, "bool*")) {
-                           G__typepdecl = 1;
-                           G__var_type = 'G' + G__unsigned;
-                           G__define_var(-1, -1);
-                           G__typepdecl = 0;
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
-                           spaceflag = -1;
-                           if (!*mparen || (G__return > G__RETURN_NORMAL)) {
-                              return G__null;
-                           }
+                        if(strcmp(statement,"bool*")==0) {
+                           G__typepdecl=1;
+                           G__DEFVAR('G');
+                           G__typepdecl=0;
                            break;
                         }
-                        if (!strcmp(statement, "long&")) {
-                           G__var_type = 'l' + G__unsigned;
-                           G__reftype = G__PARAREFERENCE;
-                           G__define_var(-1, -1);
-                           G__reftype = G__PARANORMAL;
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
-                           spaceflag = -1;
-                           if (!*mparen || (G__return > G__RETURN_NORMAL)) {
-                              return G__null;
-                           }
+                        if(strcmp(statement,"long&")==0) {
+                           G__DEFREFVAR('l');
                            break;
                         }
-                        if (!strcmp(statement, "void*")) {
-                           G__typepdecl = 1;
-                           G__var_type = 'Y' + G__unsigned;
-                           G__define_var(-1, -1);
-                           G__typepdecl = 0;
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
-                           spaceflag = -1;
-                           if (!*mparen || (G__return > G__RETURN_NORMAL)) {
-                              return G__null;
-                           }
+                        if(strcmp(statement,"void*")==0) {
+                           G__typepdecl=1;
+                           G__DEFVAR('Y');
+                           G__typepdecl=0;
                            break;
                         }
-                        if (!strcmp(statement, "class")) {
-                           G__var_type = 'u';
-                           G__define_struct('c');
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
-                           spaceflag = -1;
-                           if (!*mparen || (G__return > G__RETURN_NORMAL)) {
-                              return G__null;
-                           }
+                        if(strcmp(statement,"class")==0) {
+                           G__DEFSTR('c');
                            break;
                         }
-                        if (!strcmp(statement, "union")) {
-                           G__var_type = 'u';
-                           G__define_struct('u');
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
-                           spaceflag = -1;
-                           if (!*mparen || (G__return > G__RETURN_NORMAL)) {
-                              return G__null;
-                           }
+                        if(strcmp(statement,"union")==0) {
+                           G__DEFSTR('u');
                            break;
                         }
-                        if (!strcmp(statement, "using")) {
-                           // -- Handle 'using ...'.
-                           //                 ^
+                        if(strcmp(statement,"using")==0) {
                            G__using_namespace();
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
                            spaceflag = -1;
+                           iout=0;
                            break;
                         }
-                        if (!strcmp(statement, "throw")) {
-                           // -- Handle 'throw expr;'.
-                           //                 ^
+                        if(strcmp(statement,"throw")==0) {
                            G__exec_throw(statement);
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
                            spaceflag = -1;
+                           iout=0;
                         }
-                        if (!strcmp(statement, "const")) {
-                           // -- Handle 'const ...'.
-                           //                 ^
-                           // Set the 'const' seen flag.
+                        if(strcmp(statement,"const")==0) {
                            G__constvar = G__CONSTVAR;
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
                            spaceflag = -1;
+                           iout=0;
                         }
                         break;
+
                      case 6:
                         // -- Handle double, struct, short*, short&, float*, return, delete, friend, extern, EXTERN, signed, inline, #error
-                        if (!strcmp(statement, "double")) {
-                           G__var_type = 'd' + G__unsigned;
-                           G__define_var(-1, -1);
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
-                           spaceflag = -1;
-                           if (!*mparen || (G__return > G__RETURN_NORMAL)) {
-                              return G__null;
-                           }
+                        if(strcmp(statement,"double")==0) {
+                           G__DEFVAR('d');
                            break;
                         }
-                        if (!strcmp(statement, "struct")) {
-                           G__var_type = 'u';
-                           G__define_struct('s');
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
-                           spaceflag = -1;
-                           if (!*mparen || (G__return > G__RETURN_NORMAL)) {
-                              return G__null;
-                           }
+                        if(strcmp(statement,"struct")==0) {
+                           G__DEFSTR('s');
                            break;
                         }
-                        if (!strcmp(statement, "short*")) {
-                           G__typepdecl = 1;
-                           G__var_type = 'S' + G__unsigned;
-                           G__define_var(-1, -1);
-                           G__typepdecl = 0;
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
-                           spaceflag = -1;
-                           if (!*mparen || (G__return > G__RETURN_NORMAL)) {
-                              return G__null;
-                           }
+                        if(strcmp(statement,"short*")==0) {
+                           G__typepdecl=1;
+                           G__DEFVAR('S');
+                           G__typepdecl=0;
                            break;
                         }
-                        if (!strcmp(statement, "short&")) {
-                           G__var_type = 's' + G__unsigned;
-                           G__reftype = G__PARAREFERENCE;
-                           G__define_var(-1, -1);
-                           G__reftype = G__PARANORMAL;
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
-                           spaceflag = -1;
-                           if (!*mparen || (G__return > G__RETURN_NORMAL)) {
-                              return G__null;
-                           }
+                        if(strcmp(statement,"short&")==0) {
+                           G__DEFREFVAR('s');
                            break;
                         }
-                        if (!strcmp(statement, "float*")) {
-                           G__typepdecl = 1;
-                           G__var_type = 'F' + G__unsigned;
-                           G__define_var(-1, -1);
-                           G__typepdecl = 0;
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
-                           spaceflag = -1;
-                           if (!*mparen || (G__return > G__RETURN_NORMAL)) {
-                              return G__null;
-                           }
+                        if(strcmp(statement,"float*")==0) {
+                           G__typepdecl=1;
+                           G__DEFVAR('F');
+                           G__typepdecl=0;
                            break;
                         }
-                        if (!strcmp(statement, "float&")) {
-                           G__var_type = 'f' + G__unsigned;
-                           G__reftype = G__PARAREFERENCE;
-                           G__define_var(-1, -1);
-                           G__reftype = G__PARANORMAL;
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
-                           spaceflag = -1;
-                           if (!*mparen || (G__return > G__RETURN_NORMAL)) {
-                              return G__null;
-                           }
+                        if(strcmp(statement,"float&")==0) {
+                           G__DEFREFVAR('f');
                            break;
                         }
                         if (!strcmp(statement, "return")) {
@@ -6146,50 +5715,28 @@ G__value G__exec_statement(int* mparen)
                            spaceflag = -1;
                            break;
                         }
-                        if (!strcmp(statement, "double*")) {
-                           G__typepdecl = 1;
-                           G__var_type = 'D' + G__unsigned;
-                           G__define_var(-1, -1);
-                           G__typepdecl = 0;
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
-                           spaceflag = -1;
-                           if (!*mparen || (G__return > G__RETURN_NORMAL)) {
-                              return G__null;
-                           }
+                        if(strcmp(statement,"double*")==0) {
+                           G__typepdecl=1;
+                           G__DEFVAR('D');
+                           G__typepdecl=0;
                            break;
                         }
-                        if (!strcmp(statement, "double&")) {
-                           G__var_type = 'd' + G__unsigned;
-                           G__reftype = G__PARAREFERENCE;
-                           G__define_var(-1, -1);
-                           G__reftype = G__PARANORMAL;
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
-                           spaceflag = -1;
-                           if (!*mparen || (G__return > G__RETURN_NORMAL)) {
-                              return G__null;
-                           }
+                        if(strcmp(statement,"double&")==0) {
+                           G__DEFREFVAR('d');
                            break;
                         }
-                        if (!strcmp(statement, "virtual")) {
+                        if(strcmp(statement,"virtual")==0) {
                            G__virtual = 1;
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
                            spaceflag = -1;
+                           iout=0;
                            break;
                         }
-                        if (!strcmp(statement, "mutable")) {
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
+                        if (strcmp (statement, "mutable") == 0) {
                            spaceflag = -1;
+                           iout = 0;
                            break;
                         }
-                        break;
+                        break;          
                      case 8:
                         // -- Handle unsigned, volatile, register, delete[], operator, typename, #include
                         if (!strcmp(statement, "unsigned")) {
@@ -6249,7 +5796,7 @@ G__value G__exec_statement(int* mparen)
                         if (!strcmp(statement, "operator")) {
                            // -- Handle 'operator ...';
                            //                    ^
-                           int store_tagnum;
+                           ::Reflex::Scope store_tagnum;
                            do {
                               char oprbuf[G__ONELINE];
                               iout = strlen(statement);
@@ -6272,13 +5819,13 @@ G__value G__exec_statement(int* mparen)
                            statement[iout] = '\0';
                            result = G__string2type(statement + 9);
                            store_tagnum = G__tagnum;
-                           G__var_type = result.type;
-                           G__typenum = result.typenum;
-                           G__tagnum = result.tagnum;
+                           G__var_type = G__get_type(result);;
+                           G__typenum = G__value_typenum(result);
+                           G__set_G__tagnum(result);
                            int store_constvar = G__constvar;
-                           G__constvar = result.obj.i; // see G__string2type
+                           G__constvar = (short)result.obj.i; // see G__string2type
                            int store_reftype = G__reftype;
-                           G__reftype = result.obj.reftype.reftype;
+                           G__reftype = G__get_reftype(G__value_typenum(result));
                            statement[iout] = '(';
                            statement[iout+1] = '\0';
                            G__make_ifunctable(statement);
@@ -6334,22 +5881,14 @@ G__value G__exec_statement(int* mparen)
                         break;
                      case 9:
                         // -- Handle namespace, unsigned*, unsigned&, R__EXTERN.
-                        if (!strcmp(statement, "namespace")) {
-                           G__var_type = 'u';
-                           G__define_struct('n');
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
-                           spaceflag = -1;
-                           if (!*mparen || (G__return > G__RETURN_NORMAL)) {
-                              return G__null;
-                           }
+                        if(strcmp(statement,"namespace")==0) {
+                           G__DEFSTR('n');
                            break;
                         }
                         if (!strcmp(statement, "unsigned*")) {
                            G__var_type = 'I' - 1;
                            G__unsigned = -1;
-                           G__define_var(-1, -1);
+                           G__define_var(-1, ::Reflex::Type());
                            G__unsigned = 0;
                            // Reset the statement buffer.
                            iout = 0;
@@ -6360,7 +5899,7 @@ G__value G__exec_statement(int* mparen)
                            G__var_type = 'i' -1;
                            G__unsigned = -1;
                            G__reftype = G__PARAREFERENCE;
-                           G__define_var(-1, -1);
+                           G__define_var(-1, ::Reflex::Type());
                            G__reftype = G__PARANORMAL;
                            G__unsigned = 0;
                            // Reset the statement buffer.
@@ -6461,7 +6000,7 @@ G__value G__exec_statement(int* mparen)
                   }
                   // FIXME: Should probably test iout here, statement may be empty.
                   // FIXME: We may have already processed statement, this should be skipped in that case.
-                  {
+                   {
                      char* replace = (char*) G__replacesymbol(statement);
                      if (replace != statement) {
                         strcpy(statement, replace);
@@ -6479,7 +6018,7 @@ G__value G__exec_statement(int* mparen)
                return G__null;
             }
             break;
-
+      
          case ';':
             if (single_quote || double_quote) {
                statement[iout++] = c;
@@ -6713,7 +6252,6 @@ G__value G__exec_statement(int* mparen)
             if (single_quote || double_quote) {
                break;
             }
-            //fprintf(stderr, "G__exec_statement: Saw '('. c: '%c' pr: %d ne: %d nec: %d ano: %d io: %d st: '%s'\n", c, G__prerun, G__no_exec, G__no_exec_compile, G__asm_noverflow, iout, statement);
             if (!G__no_exec) {
                // -- We are not skipping code.
                // FIXME: These tests are weird, why is a function-style macro not allowed in a class declaration?
@@ -6779,7 +6317,8 @@ G__value G__exec_statement(int* mparen)
                         if (!*mparen || (G__return > G__RETURN_NON)) {
                            return result;
                         }
-                        if ((result.type == G__block_goto.type) && (result.ref == G__block_goto.ref)) {
+                        if(G__value_typenum(result)==G__value_typenum(G__block_goto) &&
+                           result.ref==G__block_goto.ref) {
                            int found = G__search_gotolabel(0, &start_pos, start_line, mparen);
                            // If found, continue parsing, the input file is now
                            // positioned immediately after the colon of the label.
@@ -6789,7 +6328,7 @@ G__value G__exec_statement(int* mparen)
                               return G__block_goto;
                            }
                         }
-                        else if (result.type == G__block_break.type) {
+                        if(G__value_typenum(result)==G__value_typenum(G__block_break)) {
                            if (result.obj.i == G__BLOCK_CONTINUE) {
                               // -- The body did a continue, return immediately.
                               //fprintf(stderr, "G__exec_statement: Switch body did a 'continue', returning now.\n");
@@ -6802,14 +6341,15 @@ G__value G__exec_statement(int* mparen)
                         spaceflag = 0;
                      }
                      break;
-                  case 6:
+                   case 6:
                      if (!strcmp(statement, "while(")) {
                         result = G__exec_while();
                         if ((G__return > G__RETURN_NON) || !*mparen) {
                            return result;
                         }
                         // Check for break, continue, or goto executed during statement.
-                        if ((result.type == G__block_goto.type) && (result.ref == G__block_goto.ref)) {
+                        if(G__value_typenum(result)==G__value_typenum(G__block_goto) &&
+                           result.ref==G__block_goto.ref) {
                            int found = G__search_gotolabel(0, &start_pos, start_line, mparen);
                            // If found, continue parsing, the input file is now
                            // positioned immediately after the colon of the label.
@@ -6891,7 +6431,8 @@ G__value G__exec_statement(int* mparen)
                            return result;
                         }
                         // Check for break, continue, or goto executed during statement.
-                        if ((result.type == G__block_goto.type) && (result.ref == G__block_goto.ref)) {
+                        if(G__value_typenum(result)==G__value_typenum(G__block_goto) &&
+                           result.ref==G__block_goto.ref) {
                            int found = G__search_gotolabel(0, &start_pos, start_line, mparen);
                            // If found, continue parsing, the input file is now
                            // positioned immediately after the colon of the label.
@@ -6914,7 +6455,14 @@ G__value G__exec_statement(int* mparen)
                            return result;
                         }
                         // Check for break, continue, or goto executed during statement.
-                        if (result.type == G__block_break.type) {
+                        /************************************
+                        * handling break statement
+                        * switch(),do,while(),for() {
+                        *    if(cond) break; or continue;
+                        *    if(cond) {break; or continue;}
+                        * } G__fignorestream() skips until here
+                        *************************************/
+                        if(G__value_typenum(result)==G__value_typenum(G__block_break)) {
                            // -- Statement block was exited by break, continue, or goto.
                            if (result.ref == G__block_goto.ref) {
                               // -- Exited by goto.
@@ -6953,7 +6501,6 @@ G__value G__exec_statement(int* mparen)
                //      a = b();        another case in the switch
                //
                if (
-                  // --
                   (iout > 1) && // Not handled above and is not empty, and
                   isalpha(statement[0]) && // First character is a letter (FIXME: We should allow underscore here!), and
                   !strchr(statement, '[') &&  // There is no subscript operator, and
@@ -7088,7 +6635,6 @@ G__value G__exec_statement(int* mparen)
                spaceflag = 0;
             }
             break;
-
          case '{':
             if (G__funcheader == 1) {
                // Return if called from G__interpret_func()
@@ -7136,15 +6682,8 @@ G__value G__exec_statement(int* mparen)
                         // -- Displaying source, do not display the next character, we have already shown it.
                         G__disp_mask = 1;
                      }
-                     G__var_type = 'u';
-                     G__define_struct(statement[0]);  // Note: The argument is one of 'c', 'e', 's'.
-                     if (!*mparen || (G__return > G__RETURN_NORMAL)) {
-                        return G__null;
-                     }
-                     // Reset the statement buffer.
-                     iout = 0;
-                     // Flag that any following whitespace does not trigger any semantic action.
-                     spaceflag = 0;
+                     G__DEFSTR(statement[0]);
+                     spaceflag=0;
                      break;
                   }
                   if ((iout == 8) && !strcmp(statement, "namespace")) {
@@ -7159,7 +6698,7 @@ G__value G__exec_statement(int* mparen)
                spaceflag = 0;
             }
             break;
-
+      
          case '}':
             if (single_quote || double_quote) {
                statement[iout++] = c;
@@ -7246,7 +6785,7 @@ G__value G__exec_statement(int* mparen)
                }
             }
             break;
-
+      
          case '\'':
             if (!double_quote) {
                single_quote ^= 1;
@@ -7273,7 +6812,7 @@ G__value G__exec_statement(int* mparen)
                spaceflag |= 1;
             }
             break;
-
+      
          case '*':
             if ((iout > 0) && !double_quote && (statement[iout-1] == '/') && commentflag) {
                // start commenting out
@@ -7316,7 +6855,7 @@ G__value G__exec_statement(int* mparen)
                add_fake_space = 1;
             }
             break;
-
+      
          case ':':
             statement[iout++] = c;
             // Flag that any following whitespace should trigger a semantic action.
@@ -7414,8 +6953,8 @@ G__value G__exec_statement(int* mparen)
                }
             }
             break;
-#endif // G__TEMPLATECLASS
-
+#endif /* G__TEMPLATECLASS */
+      
          case EOF:
             {
                statement[iout] = '\0';
@@ -7479,271 +7018,340 @@ G__value G__exec_statement(int* mparen)
             break;
       }
       discarded_space = discard_space;
-   }
+   }  
 }
 
-//______________________________________________________________________________
-//______________________________________________________________________________
-//
-//  Functions in the C interface.
-//
-
-//______________________________________________________________________________
-void G__alloc_tempobject(int tagnum, int typenum)
+/***********************************************************************
+* G__alloc_tempobject()
+*
+* Called by
+*    G__interpret_func
+*    G__param_match
+*
+*  Used for interpreted classes
+*
+***********************************************************************/
+extern "C" void G__alloc_tempobject(int tagnum,int typenum)
 {
-   // -- FIXME: Describe this function!
-   struct G__tempobject_list *store_p_tempbuf;
+  struct G__tempobject_list *store_p_tempbuf;
 
-   G__ASSERT(0 <= tagnum);
+  G__ASSERT( 0<=tagnum );
 
-   if (G__xrefflag) return;
+  if(G__xrefflag) return;
 
-   /* create temp object buffer */
-   store_p_tempbuf = G__p_tempbuf;
-   G__p_tempbuf = (struct G__tempobject_list *)malloc(
-                     sizeof(struct G__tempobject_list)
-                  );
-   G__p_tempbuf->prev = store_p_tempbuf;
-   G__p_tempbuf->level = G__templevel;
-   G__p_tempbuf->cpplink = 0;
-   G__p_tempbuf->no_exec = G__no_exec_compile;
-
-   /* create class object */
-   G__p_tempbuf->obj.obj.i = (long)malloc((size_t)G__struct.size[tagnum]);
-   G__p_tempbuf->obj.obj.reftype.reftype = G__PARANORMAL;
-   G__p_tempbuf->obj.type = 'u';
-   G__p_tempbuf->obj.tagnum = tagnum;
-   G__p_tempbuf->obj.typenum = typenum;
-   G__p_tempbuf->obj.ref = G__p_tempbuf->obj.obj.i;
+  /* create temp object buffer */
+  store_p_tempbuf = G__p_tempbuf;
+  G__p_tempbuf = (struct G__tempobject_list *)malloc(
+                                     sizeof(struct G__tempobject_list)
+                                                     );
+  G__p_tempbuf->prev = store_p_tempbuf;
+  G__p_tempbuf->level = G__templevel;
+  G__p_tempbuf->cpplink = 0;
+  G__p_tempbuf->no_exec = G__no_exec_compile;
+  
+  /* create class object */
+  G__p_tempbuf->obj.obj.i = (long)malloc((size_t)G__struct.size[tagnum]);
+  G__p_tempbuf->obj.ref = G__p_tempbuf->obj.obj.i;
+  G__value_typenum(G__p_tempbuf->obj) = G__Dict::GetDict().GetType(tagnum);
 
 #ifdef G__DEBUG
-   if (G__asm_dbg) {
-      G__fprinterr(G__serr, "alloc_tempobject(%d,%d)=0x%lx\n", tagnum, typenum,
-                   G__p_tempbuf->obj.obj.i);
-   }
+  if(G__asm_dbg) {
+    G__fprinterr(G__serr,"alloc_tempobject(%d,%d)=0x%lx\n",tagnum,typenum,
+            G__p_tempbuf->obj.obj.i);
+  }
 #endif
-   //
 #ifdef G__DEBUG
-   if (G__asm_dbg) G__display_tempobject("alloctemp");
+  if(G__asm_dbg) G__display_tempobject("alloctemp");
 #endif
-   //
 }
 
-//______________________________________________________________________________
-void G__free_tempobject()
+/***********************************************************************
+* G__free_tempobject()
+*
+* Called by
+*    G__exec_statement(&brace_level);     at ';'
+*    G__pause()              'p expr'
+*
+***********************************************************************/
+extern "C" void G__free_tempobject()
 {
-   // -- FIXME: Describe this function!
-   long store_struct_offset; /* used to be int */
-   int store_tagnum;
-   int iout = 0;
-   int store_return;
+  char *store_struct_offset; /* used to be int */
+  ::Reflex::Scope store_tagnum;
+  int iout=0;
+  int store_return;
    /* The only 2 potential risks of making this static are
     * - a destructor indirectly calls G__free_tempobject
     * - multi-thread application (but CINT is not multi-threadable anyway). */
-   static char statement[G__ONELINE];
-   struct G__tempobject_list *store_p_tempbuf;
+  static char statement[G__ONELINE];
+  struct G__tempobject_list *store_p_tempbuf;
 
-   if (
-      G__xrefflag || // Generating a variable cross-reference, or
-      (
-         G__command_eval && // Executing temporary code from the command line, and
-         (G__ifswitch != G__DOWHILE) // we are not in a do {} while (); construct.
-      )
-   ) {
-      return;
-   }
+  if(G__xrefflag
+     || (G__command_eval && G__DOWHILE!=G__ifswitch)
+     ) return;
 
 #ifdef G__ASM_DBG
-   if (G__asm_dbg) {
-      G__display_tempobject("freetemp");
-   }
-#endif // G__ASM_DBG
+  if(G__asm_dbg) G__display_tempobject("freetemp");
+#endif
 
-   /*****************************************************
-    * free temp object buffer
-    *****************************************************/
-   while (G__p_tempbuf->level >= G__templevel && G__p_tempbuf->prev) {
-      // --
+  /*****************************************************
+   * free temp object buffer
+   *****************************************************/
+  while(G__p_tempbuf->level >= G__templevel && G__p_tempbuf->prev) {
+
+
 #ifdef G__ASM_DBG
-      if (G__asm_dbg) {
-         G__fprinterr(G__serr, "free_tempobject(%d)=0x%lx\n"
-                      , G__p_tempbuf->obj.tagnum, G__p_tempbuf->obj.obj.i);
-      }
-#endif // G__ASM_DBG
-      store_p_tempbuf = G__p_tempbuf->prev;
-      // calling destructor
-      store_struct_offset = G__store_struct_offset;
-      G__store_struct_offset = G__p_tempbuf->obj.obj.i;
+    if(G__asm_dbg) {
+      G__fprinterr(G__serr,"free_tempobject(%s)=0x%lx\n"
+              ,G__value_typenum(G__p_tempbuf->obj).Name().c_str(),G__p_tempbuf->obj.obj.i);
+    }
+#endif
+    
+    store_p_tempbuf = G__p_tempbuf->prev;
+    
+    /* calling destructor */
+    store_struct_offset = G__store_struct_offset;
+    G__store_struct_offset = (char*)G__p_tempbuf->obj.obj.i;
+    
+    
 #ifdef G__ASM
-      if (G__asm_noverflow
+    if(G__asm_noverflow 
 #ifndef G__ASM_IFUNC
-            && G__p_tempbuf->cpplink
-#endif // G__ASM_IFUNC
-         ) {
+       && G__p_tempbuf->cpplink
+#endif
+       ) {
 #ifdef G__ASM_DBG
-         if (G__asm_dbg) {
-            G__fprinterr(G__serr, "%3x,%3x: SETTEMP  %s:%d\n", G__asm_cp, G__asm_dt, __FILE__, __LINE__);
-         }
-#endif // G__ASM_DBG
-         G__asm_inst[G__asm_cp] = G__SETTEMP;
-         G__inc_cp_asm(1, 0);
+      if(G__asm_dbg) G__fprinterr(G__serr,"%3x: SETTEMP\n" ,G__asm_cp);
+#endif
+      G__asm_inst[G__asm_cp] = G__SETTEMP;
+      G__inc_cp_asm(1,0);
+    }
+#endif
+    
+    store_tagnum = G__tagnum;
+    G__set_G__tagnum(G__p_tempbuf->obj);
+    
+    store_return=G__return;
+    G__return=G__RETURN_NON;
+    
+    if(0==G__p_tempbuf->no_exec
+       || 1==G__no_exec_compile
+       ) {
+      if(G__dispsource) {
+        G__fprinterr(G__serr,
+                     "!!!Destroy temp object (%s)0x%lx createlevel=%d destroylevel=%d\n"
+                     ,G__struct.name[G__get_tagnum(G__tagnum)]
+                     ,G__p_tempbuf->obj.obj.i
+                     ,G__p_tempbuf->level,G__templevel);
       }
-#endif // G__ASM
-      store_tagnum = G__tagnum;
-      G__tagnum = G__p_tempbuf->obj.tagnum;
-      store_return = G__return;
-      G__return = G__RETURN_NON;
-      if (!G__p_tempbuf->no_exec || G__no_exec_compile) {
-         if (G__dispsource) {
-            G__fprinterr(G__serr, "!!!Destroy temp object (%s)0x%lx createlevel=%d destroylevel=%d\n", G__struct.name[G__tagnum], G__p_tempbuf->obj.obj.i, G__p_tempbuf->level, G__templevel);
-         }
-         sprintf(statement, "~%s()", G__struct.name[G__tagnum]);
-         G__getfunction(statement, &iout, G__TRYDESTRUCTOR);
-      }
-      G__store_struct_offset = store_struct_offset;
-      G__tagnum = store_tagnum;
-      G__return = store_return;
+      
+      sprintf(statement,"~%s()",G__struct.name[G__get_tagnum(G__tagnum)]);
+      G__getfunction(statement,&iout,G__TRYDESTRUCTOR); 
+    }
+    
+    G__store_struct_offset = store_struct_offset;
+    G__tagnum = store_tagnum;
+    G__return=store_return;
+    
+    
+    
 #ifdef G__ASM
-      if (G__asm_noverflow
+    if(G__asm_noverflow 
 #ifndef G__ASM_IFUNC
-            && G__p_tempbuf->cpplink
-#endif // G__ASM_IFUNC
-         ) {
+       && G__p_tempbuf->cpplink
+#endif
+       ) {
 #ifdef G__ASM_DBG
-         if (G__asm_dbg) {
-            G__fprinterr(G__serr, "%3x,%3x: FREETEMP  %s:%d\n", G__asm_cp, G__asm_dt, __FILE__, __LINE__);
-         }
-#endif // G__ASM_DBG
-         G__asm_inst[G__asm_cp] = G__FREETEMP;
-         G__inc_cp_asm(1, 0);
+      if(G__asm_dbg) G__fprinterr(G__serr,"%3x: FREETEMP\n" ,G__asm_cp);
+#endif
+      G__asm_inst[G__asm_cp] = G__FREETEMP;
+      G__inc_cp_asm(1,0);
+    }
+#endif
+    
+    if(0==G__p_tempbuf->cpplink && G__p_tempbuf->obj.obj.i) {
+      free((void *)G__p_tempbuf->obj.obj.i);
+    }
+    
+    if(store_p_tempbuf) {
+      free((void*)G__p_tempbuf);
+      G__p_tempbuf = store_p_tempbuf;
+      if(G__dispsource) {
+        if(G__p_tempbuf->obj.obj.i==0) {
+          G__fprinterr(G__serr,"!!!No more temp object\n");
+        }
       }
-#endif // G__ASM
-      if (!G__p_tempbuf->cpplink && G__p_tempbuf->obj.obj.i) {
-         free((void*) G__p_tempbuf->obj.obj.i);
+    }
+    else {
+      if(G__dispsource) {
+        G__fprinterr(G__serr,"!!!no more temp object\n");
       }
-      if (store_p_tempbuf) {
-         free((void*)G__p_tempbuf);
-         G__p_tempbuf = store_p_tempbuf;
-         if (G__dispsource) {
-            if (!G__p_tempbuf->obj.obj.i) {
-               G__fprinterr(G__serr, "!!!No more temp object\n");
-            }
-         }
-      }
-      else {
-         if (G__dispsource) {
-            G__fprinterr(G__serr, "!!!no more temp object\n");
-         }
-      }
-   }
+    }
+  }
 }
 
-//______________________________________________________________________________
-void G__store_tempobject(G__value reg)
+/***********************************************************************
+* G__store_tempobject()
+*
+* Called by
+*    G__interpret_func
+*    G__param_match
+*
+*  Used for precompiled classes
+*
+***********************************************************************/
+extern "C" void G__store_tempobject(G__value reg)
 {
-   // -- FIXME: Describe this function!
-   struct G__tempobject_list *store_p_tempbuf;
+  struct G__tempobject_list *store_p_tempbuf;
 
-   /* G__ASSERT( 'u'==reg.type || '\0'==reg.type ); */
+  /* G__ASSERT( 'u'==reg.type || '\0'==reg.type ); */
 
-   if (G__xrefflag) return;
+  if(G__xrefflag) return;
 
 #ifdef G__NEVER
-   if ('u' != reg.type) {
-      G__fprinterr(G__serr, "%d %d %d %ld\n"
-                   , reg.type, reg.tagnum, reg.typenum, reg.obj.i);
-   }
+  if('u'!=reg.type) {
+    G__fprinterr(G__serr,"%d %d %d %ld\n"
+            ,reg.type,reg.tagnum,reg.typenum,reg.obj.i);
+  }
 #endif
 
-   /* create temp object buffer */
-   store_p_tempbuf = G__p_tempbuf;
-   G__p_tempbuf = (struct G__tempobject_list *)malloc(
-                     sizeof(struct G__tempobject_list)
-                  );
-   G__p_tempbuf->prev = store_p_tempbuf;
-   G__p_tempbuf->level = G__templevel;
-   G__p_tempbuf->cpplink = 1;
-   G__p_tempbuf->no_exec = G__no_exec_compile;
+  /* create temp object buffer */
+  store_p_tempbuf = G__p_tempbuf;
+  G__p_tempbuf = (struct G__tempobject_list *)malloc(
+                                     sizeof(struct G__tempobject_list)
+                                                     );
+  G__p_tempbuf->prev = store_p_tempbuf;
+  G__p_tempbuf->level = G__templevel;
+  G__p_tempbuf->cpplink = 1;
+  G__p_tempbuf->no_exec = G__no_exec_compile;
 
-   /* copy pointer to created class object */
-   G__p_tempbuf->obj = reg;
+  /* copy pointer to created class object */
+  G__p_tempbuf->obj = reg;
 
 #ifdef G__DEBUG
-   if (G__asm_dbg) {
-      G__fprinterr(G__serr, "store_tempobject(%d)=0x%lx\n", reg.tagnum, reg.obj.i);
-   }
+  if(G__asm_dbg) {
+    G__fprinterr(G__serr,"store_tempobject(%d)=0x%lx\n",reg.tagnum,reg.obj.i);
+  }
 #endif
-   //
 #ifdef G__DEBUG
-   if (G__asm_dbg) G__display_tempobject("storetemp");
+  if(G__asm_dbg) G__display_tempobject("storetemp");
 #endif
-   //
 }
 
-//______________________________________________________________________________
+/***********************************************************************
+* G__alloc_tempobject_val()
+*
+*
+***********************************************************************/
+extern "C" void G__alloc_tempobject_val(G__value* val)
+{
+  struct G__tempobject_list *store_p_tempbuf;
+
+  G__ASSERT( G__value_typenum(*val).IsClass() );
+
+  if(G__xrefflag) return;
+
+  /* create temp object buffer */
+  store_p_tempbuf = G__p_tempbuf;
+  G__p_tempbuf = (struct G__tempobject_list *)malloc(
+                                     sizeof(struct G__tempobject_list)
+                                                     );
+  G__p_tempbuf->prev = store_p_tempbuf;
+  G__p_tempbuf->level = G__templevel;
+  G__p_tempbuf->cpplink = 0;
+  G__p_tempbuf->no_exec = G__no_exec_compile;
+  
+  /* create class object */
+  G__p_tempbuf->obj.obj.i = (long)malloc((size_t)G__struct.size[G__get_tagnum(G__value_typenum(*val))]);
+  G__p_tempbuf->obj.ref = G__p_tempbuf->obj.obj.i;
+  G__value_typenum(G__p_tempbuf->obj) = G__value_typenum(*val).RawType();
+
+#ifdef G__DEBUG
+  if(G__asm_dbg) {
+    G__fprinterr(G__serr,"alloc_tempobject(%d,%d)=0x%lx\n",tagnum,typenum,
+            G__p_tempbuf->obj.obj.i);
+  }
+#endif
+#ifdef G__DEBUG
+  if(G__asm_dbg) G__display_tempobject("alloctemp");
+#endif
+}
+
+
+/***********************************************************************
+* G__pop_tempobject_imp()
+*
+* Called by
+*    G__pop_tempobj[_nodel]()
+*
+***********************************************************************/
 static int G__pop_tempobject_imp(bool delobj)
 {
-   // -- Used only by the following two functions, G__pop_tempobject() and G__pop_tempobject_nodel().
-   // -- FIXME: Describe this function!
-   struct G__tempobject_list *store_p_tempbuf;
+  struct G__tempobject_list *store_p_tempbuf;
 
-   if (G__xrefflag) return(0);
+  if(G__xrefflag) return(0);
 
 #ifdef G__DEBUG
-   if (G__asm_dbg) {
-      G__fprinterr(G__serr, "pop_tempobject(%d)=0x%lx\n"
-                   , G__p_tempbuf->obj.tagnum , G__p_tempbuf->obj.obj.i);
-   }
+  if(G__asm_dbg) {
+    G__fprinterr(G__serr,"pop_tempobject(%d)=0x%lx\n"
+            ,G__p_tempbuf->obj.tagnum ,G__p_tempbuf->obj.obj.i);
+  }
 #endif
 #ifdef G__DEBUG
-   if (G__asm_dbg) G__display_tempobject("poptemp");
+  if(G__asm_dbg) G__display_tempobject("poptemp");
 #endif
 
-   store_p_tempbuf = G__p_tempbuf->prev;
-   /* free the object buffer only if interpreted classes are stored */
-   if (delobj && -1 != G__p_tempbuf->cpplink && G__p_tempbuf->obj.obj.i) {
-      free((void *)G__p_tempbuf->obj.obj.i);
-   }
-   free((void *)G__p_tempbuf);
-   G__p_tempbuf = store_p_tempbuf;
-   return 0;
+  store_p_tempbuf = G__p_tempbuf->prev;
+  /* free the object buffer only if interpreted classes are stored */
+  if(delobj && -1!=G__p_tempbuf->cpplink && G__p_tempbuf->obj.obj.i) {
+    free((void *)G__p_tempbuf->obj.obj.i);
+  }
+  free((void *)G__p_tempbuf);
+  G__p_tempbuf = store_p_tempbuf;
+  return(0);
 }
 
-//______________________________________________________________________________
-int G__pop_tempobject()
+/***********************************************************************
+* G__pop_tempobject()
+*
+* Called by
+*    G__getfunction
+*
+***********************************************************************/
+extern "C" int G__pop_tempobject()
 {
-   // -- FIXME: Describe this function!
    return G__pop_tempobject_imp(true);
+   
 }
-
-//______________________________________________________________________________
+/***********************************************************************
+* G__pop_tempobject_nodel()
+*
+* Called by
+*    G__getfunction
+*
+***********************************************************************/
 int G__pop_tempobject_nodel()
 {
-   // -- FIXME: Describe this function!
    return G__pop_tempobject_imp(false);
+   
 }
 
-//______________________________________________________________________________
-void G__settemplevel(int val)
+extern "C" void G__settemplevel(int val)
 {
-   // -- FIXME: Describe this function!
    G__templevel += val;
 }
 
-//______________________________________________________________________________
-void G__clearstack()
+extern "C" void G__clearstack() 
 {
-   // -- FIXME: Describe this function!
    int store_command_eval = G__command_eval;
    ++G__templevel;
    G__command_eval = 0;
+
    G__free_tempobject();
-   --G__templevel;
+
    G__command_eval = store_command_eval;
+   --G__templevel;
 }
-
-} // extern "C"
-
+   
 /*
  * Local Variables:
  * c-tab-always-indent:nil

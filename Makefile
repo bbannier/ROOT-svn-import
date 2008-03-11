@@ -58,7 +58,7 @@ include $(MAKEFILEDEP)
 
 ##### Modules to build #####
 
-MODULES       = build cint/oldcore metautils pcre utils base cont meta io \
+MODULES       = build cint/cint metautils pcre utils base cont meta io \
                 math fit mathcore net zip clib matrix newdelete \
                 hist tree freetype graf gpad g3d gui minuit \
                 histpainter treeplayer ged treeviewer physics \
@@ -171,7 +171,7 @@ ifeq ($(BUILDUNURAN),yes)
 MODULES      += unuran
 endif
 ifeq ($(BUILDCINT7),yes)
-MODULES      := $(subst cint/oldcore,cint/core,$(MODULES))
+MODULES      := $(subst cint/cint,cint/cint7,$(MODULES))
 endif
 ifeq ($(BUILDCINTEX),yes)
 MODULES      += cintex
