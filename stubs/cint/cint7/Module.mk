@@ -159,7 +159,7 @@ endif
 ifeq ($(GCC_MAJOR),4)
 CINT7S2       := $(filter-out $(CINT7DIRSD)/libstrm.%,$(CINT7S2))
 CINT7S2       := $(filter-out $(CINT7DIRSD)/longif.%,$(CINT7S2))
-CINT7S2       += $(CINT7DIRSD)/gcc3strm.cxx
+CINT7S2       += $(CINT7DIRSD)/gcc4strm.cxx
 CINT7S2       += $(CINT7DIRSD)/longif3.cxx
 endif
 ifeq ($(CXXCMD),xlC)

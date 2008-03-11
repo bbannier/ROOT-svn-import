@@ -161,8 +161,9 @@ endif
 ifeq ($(BUILDMATHMORE),yes)
 MODULES      += mathmore
 endif
-ifeq ($(BUILDREFLEX),yes) 	 
-MODULES      += cint/reflex 	 
+ifeq ($(BUILDREFLEX),yes)
+# put reflex right in front of CINT; CINT needs it 
+MODULES      := $(subst cint/cint,cint/reflex cint/cint,$(MODULES))
 endif
 ifeq ($(BUILDMINUIT2),yes)
 MODULES      += minuit2
