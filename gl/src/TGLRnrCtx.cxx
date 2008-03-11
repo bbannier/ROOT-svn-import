@@ -260,19 +260,19 @@ void TGLRnrCtx::CloseDLCapture()
 /******************************************************************************/
 
 //______________________________________________________________________
-const TGLFont& TGLRnrCtx::GetFont(Int_t size, Int_t file, Int_t mode)
+void TGLRnrCtx::RegisterFont(Int_t size, Int_t file, Int_t mode, TGLFont& out)
 {
    // Get font in the GL rendering context.
 
-   return fGLCtxIdentity->GetFontManager()->GetFont(size, file, (TGLFont::EMode)mode);
+   fGLCtxIdentity->GetFontManager()->RegisterFont(size, file, (TGLFont::EMode)mode, out);
 }
 
 //______________________________________________________________________
-Bool_t TGLRnrCtx::ReleaseFont(const TGLFont& font)
+void TGLRnrCtx::ReleaseFont(TGLFont& font)
 {
    // Release font in the GL rendering context.
 
-   return fGLCtxIdentity->GetFontManager()->ReleaseFont(font);
+   fGLCtxIdentity->GetFontManager()->ReleaseFont(font);
 }
 
 

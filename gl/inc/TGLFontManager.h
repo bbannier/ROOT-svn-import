@@ -6,6 +6,7 @@
 #include <map>
 
 class FTFont;
+class TGLFontManager;
 
 class TGLFont
 {
@@ -18,30 +19,37 @@ public:
    }; // Font-types of FTGL.
 
 private:
+   TGLFont& operator=(const TGLFont& o); // Not implemented.
+
+   FTFont          *fFont;     // FTGL font.
+   TGLFontManager  *fManager;  // Font manager.
+
+   Float_t          fDepth;  // depth of extruded fonts, enforced at render time.
 
 protected:
-   Int_t         fSize;   // free-type face size
-   Int_t         fFile;   // free-type file name
-   EMode         fMode;   // free-type FTGL class id
-
-   const FTFont *fFont;   // FTGL font
-
-   Float_t       fDepth;  // depth of extruded fonts, enforced at render time.
+   Int_t            fSize;   // free-type face size
+   Int_t            fFile;   // free-type file name
+   EMode            fMode;   // free-type FTGL class id
 
 public:
-   TGLFont(): fSize(-1), fFile(-1), fMode(kUndef), fFont(0), fDepth(1) {}
-   TGLFont(Int_t size, Int_t font, EMode mode, const FTFont* f=0);
-   TGLFont(const TGLFont& o);
-   virtual ~TGLFont() {}
+   TGLFont();
+   TGLFont(Int_t size, Int_t font, EMode mode, FTFont *f=0, TGLFontManager *mng=0);
+   TGLFont(const TGLFont& o);            // Not implemented.
+   virtual ~TGLFont();
 
-   TGLFont& operator=(const TGLFont& o);
+   void CopyAttributes(const TGLFont &o);
 
+  
    Int_t GetSize() const { return fSize;}
    Int_t GetFile() const { return fFile;}
    EMode GetMode() const { return fMode;}
 
+   void SetFont(FTFont *f) { fFont =f;}
    const FTFont* GetFont() const { return fFont; }
+   void SetManager(TGLFontManager *mng) {fManager = mng;}
+   const TGLFontManager* GetManager() const { return fManager; }
 
+   Float_t GetDepth() const { return fDepth;}
    void SetDepth(Float_t d) { fDepth = d; }
 
    // FTGL wrapper functions
@@ -93,8 +101,8 @@ public:
    TGLFontManager(){}
    virtual ~TGLFontManager();
 
-   const TGLFont& GetFont(Int_t size, Int_t file, TGLFont::EMode mode);
-   Bool_t         ReleaseFont(const TGLFont& font);
+   void   RegisterFont(Int_t size, Int_t file, TGLFont::EMode mode, TGLFont& out);
+   void   ReleaseFont(TGLFont& font);
 
    static TObjArray*        GetFontFileArray();
    static FontSizeVec_t*    GetFontSizeArray();
