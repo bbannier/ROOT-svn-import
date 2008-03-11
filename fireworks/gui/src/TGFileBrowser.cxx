@@ -447,7 +447,7 @@ void TGFileBrowser::RecursiveRemove(TObject *obj)
    }
    if (!obj->InheritsFrom("TFile") && fRootDir)
       fListTree->RecursiveDeleteItem(fRootDir, obj);
-   fListTree->ClearViewPort();
+   //fListTree->ClearViewPort();
 }
 
 //______________________________________________________________________________
