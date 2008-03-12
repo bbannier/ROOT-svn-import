@@ -2,6 +2,8 @@
 #ifndef __TMATHIMP__
 #define __TMATHIMP__
 
+#define USE_NEW_STD_IMPL
+
 template<typename T> 
 struct CompareDesc { 
 
@@ -127,9 +129,10 @@ template <typename T> Long64_t TMath::BinarySearch(Long64_t n, const T  *array, 
 #ifdef USE_NEW_STD_IMPL
    const T* pind;
    pind = std::lower_bound(array, array + n, value);
-   Long64_t index = ((*pind == value)? (pind - array): ( pind - array - 1));
-
-   return index;
+   if ( (pind != array + n) && (*pind == value) )
+      return (pind - array);
+   else
+      return ( pind - array - 1);
 #else
 
    Long64_t nabove, nbelow, middle;
@@ -157,9 +160,10 @@ template <typename T> Long64_t TMath::BinarySearch(Long64_t n, const T **array, 
 #ifdef USE_NEW_STD_IMPL
    const T* pind;
    pind = std::lower_bound(*array, *array + n, value);
-   Long64_t index = ((*pind == value)? (pind - *array): ( pind - *array - 1));
-
-   return index;
+   if ( (pind != *array + n) && (*pind == value) )
+      return (pind - *array);
+   else
+      return ( pind - *array - 1);
 #else
    Long64_t nabove, nbelow, middle;
    nabove = n+1;
