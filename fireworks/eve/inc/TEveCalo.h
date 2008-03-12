@@ -139,6 +139,7 @@ private:
    TEveCalo2D& operator=(const TEveCalo2D&); // Not implemented
 
    TEveProjection::EPType_e  fOldProjectionType;
+
 protected:
    std::vector<TEveCaloData::vCellId_t*>   fCellLists;
 

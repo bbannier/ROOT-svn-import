@@ -230,7 +230,7 @@ void TEveCaloViz::SetupColorHeight(Float_t value, Int_t slice, Float_t &outH, Bo
       if( value > fPalette->GetMinVal() && value < fPalette->GetMaxVal())
       {
          TGLUtil::Color(fPalette->GetDefaultColor()+slice);
-         outH *= ((value -fPalette->GetMinVal())
+         outH *= ((value -fPalette->GetMinVal())*fData->GetNSlices()
                   /(fPalette->GetHighLimit() -fPalette->GetLowLimit()));
          visible = kTRUE;
       }
@@ -290,8 +290,8 @@ TEveCalo2D::TEveCalo2D(const Text_t* n, const Text_t* t):
    TEveProjected(),
    fOldProjectionType(TEveProjection::kPT_Unknown)
 {
-
    // Constructor.
+
 }
 
 //______________________________________________________________________________
@@ -304,6 +304,7 @@ void TEveCalo2D::UpdateProjection()
       fCacheOK=kFALSE;
       fOldProjectionType = fManager->GetProjection()->GetType();
    }
+   ComputeBBox();
 }
 
 //______________________________________________________________________________
@@ -335,26 +336,35 @@ void TEveCalo2D::ComputeBBox()
    // If member 'TEveFrameBox* fFrame' is set, frame's corners are used as bbox.
 
    BBoxZero();
-   Float_t th = GetDefaultCellHeight()*fData->GetNSlices(); 
 
-   Float_t x1, y1, z1, x2, y2, z2;
-   x1 = y1 = -fBarrelRadius - th;
-   x2 = y2  = fBarrelRadius + th;
-   z1 = -fEndCapPos - th;
-   z2 =  fEndCapPos + th;
+   Float_t x, y, z;
+   Float_t th = GetDefaultCellHeight()*fData->GetNSlices();
+   Float_t r = fBarrelRadius + th;
+   Float_t ze = fEndCapPos + th;
 
-   if (fManager->GetProjection())
-   {
-      fManager->GetProjection()->ProjectPoint(x1, y1, z1);
-      fManager->GetProjection()->ProjectPoint(x2, y2, z2);
-   }
+   x = r, y=0, z =0;
+   fManager->GetProjection()->ProjectPoint(x, y, z);
+   BBoxCheckPoint(x, y, z);
 
-   fBBox[0] = x1;
-   fBBox[1] = x2;
-   fBBox[2] = y1;
-   fBBox[3] = y2;
-   fBBox[4] = fDepth;
-   fBBox[5] = fDepth;
+   x = 0, y=0, z =0;
+   fManager->GetProjection()->ProjectPoint(x, y, z);
+   BBoxCheckPoint(x, y, z);
+
+   x = 0, y=0, z =ze;
+   fManager->GetProjection()->ProjectPoint(x, y, z);
+   BBoxCheckPoint(x, y, z);
+
+   x = 0, y=0, z = -ze;
+   fManager->GetProjection()->ProjectPoint(x, y, z);
+   BBoxCheckPoint(x, y, z);
+     
+    x = 0, y=r, z = 0;
+   fManager->GetProjection()->ProjectPoint(x, y, z);
+   BBoxCheckPoint(x, y, z);
+
+   x = 0, y=-r, z = 0;
+   fManager->GetProjection()->ProjectPoint(x, y, z);
+   BBoxCheckPoint(x, y, z);
 
    AssertBBoxExtents(0.1);
 }
