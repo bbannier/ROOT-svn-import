@@ -211,7 +211,7 @@ Bool_t TGLContext::MakeCurrent()
    else {
       Bool_t rez = wglMakeCurrent(fPimpl->fHDC, fPimpl->fGLContext);
       if (rez)
-         fIdentity->DeleteDisplayLists();
+         fIdentity->DeleteGLResources();
       return rez;
    }
 }
