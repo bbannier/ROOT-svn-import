@@ -89,6 +89,10 @@ Bool_t TGLBoxPainter::InitGeometry()
       }
    }
 
+   fXOYSlice.SetMinMax(fMinMaxVal);
+   fXOZSlice.SetMinMax(fMinMaxVal);
+   fYOZSlice.SetMinMax(fMinMaxVal);
+
    if (fCoord->Modified()) {
       fUpdateSelection = kTRUE;
       fXOZSectionPos = fBackBox.Get3DBox()[0].Y();
@@ -153,6 +157,7 @@ void TGLBoxPainter::AddOption(const TString &option)
       option[boxPos + 3] - '0' == 1 ? fType = kBox1 : fType = kBox;
    else
       fType = kBox;
+   option.Index("z") == kNPOS ? fDrawPalette = kFALSE : fDrawPalette = kTRUE;
 }
 
 //______________________________________________________________________________
@@ -199,11 +204,11 @@ namespace {
 
    //______________________________________________________________________________
    void DrawMinusSigns(Double_t xMin, Double_t xMax, Double_t yMin, Double_t yMax,
-                      Double_t zMin, Double_t zMax, Int_t fp, Bool_t onSphere)
+                       Double_t zMin, Double_t zMax, Int_t fp, Bool_t onSphere, Bool_t transp)
    {
       //
-      TGLDisableGuard depthTest(GL_DEPTH_TEST);
-      TGLDisableGuard cullFace(GL_CULL_FACE);
+      const TGLDisableGuard depthTest(GL_DEPTH_TEST);
+      const TGLDisableGuard cullFace(GL_CULL_FACE);
 
       const Double_t ratio  = onSphere ? 0.4 : 0.15;
       const Double_t leftX = xMin + ratio * (xMax - xMin), rightX = xMax - ratio * (xMax - xMin);
@@ -248,9 +253,12 @@ namespace {
       glColor4d(0., 0., 0., 0.25);
       glPolygonMode(GL_FRONT, GL_LINE);
 
-      const TGLEnableGuard blendGuard(GL_BLEND);
-      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-      const TGLEnableGuard smoothGuard(GL_LINE_SMOOTH);
+      if (!transp) {
+         glEnable(GL_BLEND);
+         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+      }
+
+      glEnable(GL_LINE_SMOOTH);
       glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
 
       verts = minusQuads[frontPlanes[fp][0]];
@@ -272,6 +280,9 @@ namespace {
       glEnd();      
 
       glPolygonMode(GL_FRONT, GL_FILL);
+
+      if (!transp)
+         glDisable(GL_BLEND);
    }
 
 }
@@ -357,7 +368,7 @@ void TGLBoxPainter::DrawPlot()const
             }
 
             if (binContent < 0. && !fSelectionPass)
-               DrawMinusSigns(xMin, xMax, yMin, yMax, zMin, zMax, frontPoint, fType != kBox);
+               DrawMinusSigns(xMin, xMax, yMin, yMax, zMin, zMax, frontPoint, fType != kBox, HasSections());
 
             if (!fSelectionPass && !fHighColor && fSelectedPart == binID)
                glMaterialfv(GL_FRONT, GL_EMISSION, Rgl::gNullEmission);
@@ -403,6 +414,9 @@ void TGLBoxPainter::DrawPlot()const
 
       glPolygonMode(GL_FRONT, GL_FILL);//3]
    }
+
+   if (!fSelectionPass && fDrawPalette && HasSections())
+      DrawPalette();
 }
 
 //______________________________________________________________________________
@@ -461,3 +475,38 @@ Bool_t TGLBoxPainter::HasSections()const
           fXOYSectionPos > fBackBox.Get3DBox()[0].Z();
 }
 
+//______________________________________________________________________________
+void TGLBoxPainter::DrawPalette()const
+{
+   //Draw. Palette.
+   const TGLLevelPalette * palette = 0;
+   const TGLVertex3 *frame = fBackBox.Get3DBox();
+
+   if (fXOZSectionPos > frame[0].Y())
+      palette = &fXOZSlice.GetPalette();
+   else if (fYOZSectionPos > frame[0].X())
+      palette = &fYOZSlice.GetPalette();
+   else if (fXOYSectionPos > frame[0].Z())
+      palette = &fXOYSlice.GetPalette();
+   
+   if (!palette || !palette->GetPaletteSize()) {
+      return;
+   }
+      
+   Rgl::DrawPalette(fCamera, *palette);
+
+   glFinish();   
+
+   fCamera->SetCamera();
+   fCamera->Apply();
+}
+
+//______________________________________________________________________________
+void TGLBoxPainter::DrawPaletteAxis()const
+{
+   //Draw. Palette. Axis.
+   if (HasSections()) {
+      gVirtualX->SetDrawMode(TVirtualX::kCopy);//TCanvas by default sets in kInverse
+      Rgl::DrawPaletteAxis(fCamera, fMinMaxVal, fCoord->GetCoordType() == kGLCartesian ? fCoord->GetZLog() : kFALSE);
+   }
+}

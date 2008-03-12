@@ -59,9 +59,9 @@ include $(MAKEFILEDEP)
 ##### Modules to build #####
 
 MODULES       = build cint metautils pcre utils base cont meta io \
-                math fit mathcore net \
-                zip clib matrix newdelete hist tree freetype graf gpad \
-                g3d gui minuit histpainter treeplayer ged treeviewer physics \
+                math fit mathcore net zip clib matrix newdelete \
+                hist tree freetype graf gpad g3d gui minuit \
+                histpainter treeplayer ged treeviewer physics \
                 postscript rint thread html eg geom geompainter vmc fumili \
                 mlp quadp auth guibuilder xml foam splot smatrix sql tmva \
                 geombuilder spectrum spectrumpainter fitpanel proof \
@@ -237,7 +237,7 @@ MODULES      += unix winnt x11 x11ttf win32gdk gl ftgl rfio castor \
                 rootx rootd proofd dcache chirp hbook asimage \
                 ldap mlp krb5auth rpdutils globusauth pyroot ruby gfal \
                 qt qtroot qtgsi xrootd netx proofx alien clarens peac oracle \
-                xmlparser mathcore mathmore reflex cintex roofitcore roofit \
+                xmlparser mathmore reflex cintex roofitcore roofit \
                 minuit2 monalisa fftw odbc unuran gdml eve g4root cint7 glite
 MODULES      := $(sort $(MODULES))   # removes duplicates
 endif
@@ -255,7 +255,7 @@ CINT7LIBS    := -lCint7 -lReflex
 NEWLIBS      := -lNew
 ROOTLIBS     := -lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad \
                 -lTree -lMatrix -lMathCore
-BOOTLIBS     := -lCore -lCint
+BOOTLIBS     := -lCore -lCint -lMathCore
 ifneq ($(ROOTDICTTYPE),cint)
 ROOTLIBS     += -lCintex -lReflex
 BOOTLIBS     += -lCintex -lReflex
@@ -269,8 +269,10 @@ ROOTLIBS     := $(LPATH)/libCore.lib $(LPATH)/libCint.lib \
                 $(LPATH)/libRIO.lib $(LPATH)/libNet.lib \
                 $(LPATH)/libHist.lib $(LPATH)/libGraf.lib \
                 $(LPATH)/libGraf3d.lib $(LPATH)/libGpad.lib \
-                $(LPATH)/libTree.lib $(LPATH)/libMatrix.lib $(LPATH)/libMathcore.lib
-BOOTLIBS     := $(LPATH)/libCore.lib $(LPATH)/libCint.lib
+                $(LPATH)/libTree.lib $(LPATH)/libMatrix.lib \
+                $(LPATH)/libMathcore.lib
+BOOTLIBS     := $(LPATH)/libCore.lib $(LPATH)/libCint.lib \
+                $(LPATH)/libMathcore.lib
 ifneq ($(ROOTDICTTYPE),cint)
 ROOTLIBS     += $(LPATH)/libCintex.lib $(LPATH)/libReflex.lib
 BOOTLIBS     += $(LPATH)/libCintex.lib $(LPATH)/libReflex.lib
@@ -280,8 +282,9 @@ endif
 
 # ROOTLIBSDEP is intended to match the content of ROOTLIBS
 ROOTLIBSDEP   = $(ORDER_) $(CORELIB) $(CINTLIB) $(IOLIB) $(NETLIB) $(HISTLIB) \
-                $(GRAFLIB) $(G3DLIB) $(GPADLIB) $(TREELIB) $(MATRIXLIB)
-BOOTLIBSDEP   = $(ORDER_) $(CORELIB) $(CINTLIB)
+                $(GRAFLIB) $(G3DLIB) $(GPADLIB) $(TREELIB) $(MATRIXLIB) \
+                $(MATHCORELIB)
+BOOTLIBSDEP   = $(ORDER_) $(CORELIB) $(CINTLIB) $(MATHCORELIB)
 ifneq ($(ROOTDICTTYPE),cint)
 ROOTLIBSDEP  += $(CINTEXLIB) $(REFLEXLIB)
 BOOTLIBSDEP  += $(CINTEXLIB) $(REFLEXLIB)
@@ -298,6 +301,7 @@ ROOTULIBS    := -Wl,-u,.G__cpp_setupG__Net      \
                 -Wl,-u,.G__cpp_setupG__GPad     \
                 -Wl,-u,.G__cpp_setupG__Tree     \
                 -Wl,-u,.G__cpp_setupG__Matrix
+BOOTULIBS    := -Wl,-u,.G__cpp_setupG__MathCore
 else
 ROOTULIBS    := -Wl,-u,_G__cpp_setupG__Net      \
                 -Wl,-u,_G__cpp_setupG__IO       \
@@ -307,6 +311,7 @@ ROOTULIBS    := -Wl,-u,_G__cpp_setupG__Net      \
                 -Wl,-u,_G__cpp_setupG__GPad     \
                 -Wl,-u,_G__cpp_setupG__Tree     \
                 -Wl,-u,_G__cpp_setupG__Matrix
+BOOTULIBS    := -Wl,-u,_G__cpp_setupG__MathCore
 endif
 endif
 ifeq ($(PLATFORM),win32)
@@ -318,6 +323,7 @@ ROOTULIBS    := -include:_G__cpp_setupG__Net    \
                 -include:_G__cpp_setupG__GPad   \
                 -include:_G__cpp_setupG__Tree   \
                 -include:_G__cpp_setupG__Matrix
+BOOTULIBS    := -include:_G__cpp_setupG__MathCore
 endif
 
 ##### Compiler output option #####
