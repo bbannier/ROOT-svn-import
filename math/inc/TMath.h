@@ -417,7 +417,6 @@ template <typename T> inline T TMath::NormCross(const T v1[3],const T v2[3],T ou
    return Normalize(Cross(v1,v2,out));
 }
 
-// Min, Max of an array
 template <typename T> 
 T TMath::MinElement(Long64_t n, const T *a) {
    // Return minimum of array a of length n.
