@@ -22,6 +22,7 @@
 
 #include "TMathBase.h"
 #include "TMath.h"
+
 //______________________________________________________________________________
 // GUI editor for TEveCaloEditor.
 //
@@ -93,7 +94,6 @@ void TEveCaloVizEditor::CreateTowerTab()
    fTower->AddFrame(title1, new TGLayoutHints(kLHintsTop, 0, 0, 2, 0));
 
 
-
    Int_t  labelW = 45;
    fCellZScale = new TEveGValuator(fTower, "ZScale:", 90, 0);
    fCellZScale->SetLabelWidth(labelW);
@@ -113,8 +113,6 @@ void TEveCaloVizEditor::CreateTowerTab()
    fPalette = new TEveRGBAPaletteSubEditor(fTower);
    fTower->AddFrame(fPalette, new TGLayoutHints(kLHintsTop | kLHintsExpandX, 2, 0, 0, 0));
    fPalette->Connect("Changed()", "TEveCaloVizEditor", this, "DoPalette()");
-
-
 }
 
 //______________________________________________________________________________
@@ -133,7 +131,6 @@ void TEveCaloVizEditor::SetModel(TObject* obj)
    fPalette->SetModel(fM->fPalette);
 
    fCellZScale->SetValue(fM->fCellZScale);
-
 }
 
 //______________________________________________________________________________
@@ -141,10 +138,7 @@ void TEveCaloVizEditor::DoEtaRange()
 {
    // Slot for setting eta range.
 
-   fM->fEtaMin = fEtaRng->GetMin();
-   fM->fEtaMax = fEtaRng->GetMax();
-   fM->fCacheOK = kFALSE;
-   fM->ComputeBBox();
+   fM->SetEta(fEtaRng->GetMin(), fEtaRng->GetMax());
    Update();
 }
 
@@ -153,13 +147,9 @@ void TEveCaloVizEditor::DoPhi()
 {
   // Slot for setting phi range.
 
-   fM->fPhi    = fPhi->GetValue()*TMath::DegToRad();
-   fM->fPhiRng = fPhiRng->GetValue()*TMath::DegToRad();
-   fM->fCacheOK = kFALSE;
-   fM->ComputeBBox();
+   fM->SetPhiWithRng(fPhi->GetValue()*TMath::DegToRad(), fPhiRng->GetValue()*TMath::DegToRad());
    Update();
 }
-
 
 //______________________________________________________________________________
 void TEveCaloVizEditor::DoCellZScale()
@@ -167,7 +157,6 @@ void TEveCaloVizEditor::DoCellZScale()
   // Slot for setting tower height.
 
    fM->SetCellZScale(fCellZScale->GetValue());
-   fM->ComputeBBox();
    Update();
 }
 
@@ -176,6 +165,6 @@ void TEveCaloVizEditor::DoPalette()
 {
    // Slot for palette changed.
 
-   fM->fCacheOK = kFALSE;
+   fM->InvalidateCache();
    Update();
 }

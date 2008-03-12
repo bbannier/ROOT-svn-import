@@ -32,7 +32,7 @@ private:
 
    void    DrawAxis(TGLRnrCtx &rnrCtx, Float_t x0, Float_t x1, Float_t y0, Float_t y1) const;
    void    DrawTitle(TGLRnrCtx &rnrCtx) const;
-   
+
 protected:
    TEveCaloLego             *fM;  // Model object.
    mutable TGLFont          fNumFont;

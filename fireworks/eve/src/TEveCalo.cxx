@@ -136,6 +136,7 @@ void TEveCaloViz::SetData(TEveCaloData* data)
    if (fData) fData->DecRefCount();
    fData = data;
    if (fData) fData->IncRefCount();
+   InvalidateCache();
 }
 
 //______________________________________________________________________________
@@ -269,7 +270,7 @@ void TEveCalo3D::ComputeBBox()
    BBoxInit();
 
    Float_t th = GetDefaultCellHeight()*fData->GetNSlices();
-   
+
    fBBox[0] = -fBarrelRadius - th;
    fBBox[1] =  fBarrelRadius + th;
    fBBox[2] =  fBBox[0];
@@ -339,7 +340,7 @@ void TEveCalo2D::ComputeBBox()
 
    Float_t x, y, z;
    Float_t th = GetDefaultCellHeight()*fData->GetNSlices();
-   Float_t r = fBarrelRadius + th;
+   Float_t r  = fBarrelRadius + th;
    Float_t ze = fEndCapPos + th;
 
    x = r, y=0, z =0;
@@ -357,7 +358,7 @@ void TEveCalo2D::ComputeBBox()
    x = 0, y=0, z = -ze;
    fManager->GetProjection()->ProjectPoint(x, y, z);
    BBoxCheckPoint(x, y, z);
-     
+
     x = 0, y=r, z = 0;
    fManager->GetProjection()->ProjectPoint(x, y, z);
    BBoxCheckPoint(x, y, z);
@@ -369,10 +370,10 @@ void TEveCalo2D::ComputeBBox()
    AssertBBoxExtents(0.1);
 }
 
+
 //______________________________________________________________________________
 //
 // Visualization of a calorimeter eta, phi histogram
-
 
 ClassImp(TEveCaloLego);
 
@@ -417,15 +418,13 @@ void TEveCaloLego::ComputeBBox()
    // If member 'TEveFrameBox* fFrame' is set, frame's corners are used as bbox.
 
    BBoxInit();
-   
-   fBBox[0] =  fEtaMin*1.2;
-   fBBox[1] =  fEtaMax*1.2;
 
-   fBBox[2] =  fPhi - fPhiRng*1.2;
-   fBBox[3] =  fPhi + fPhiRng*1.2;
+   fBBox[0] = 1.2f*fEtaMin;
+   fBBox[1] = 1.2f*fEtaMax;
 
-   fBBox[4] =  0;
-   fBBox[5] =  GetDefaultCellHeight()*fData->GetNSlices();
+   fBBox[2] = fPhi - 1.2f*fPhiRng;
+   fBBox[3] = fPhi + 1.2f*fPhiRng;
+
+   fBBox[4] = 0;
+   fBBox[5] = GetDefaultCellHeight()*fData->GetNSlices();
 }
-
-
