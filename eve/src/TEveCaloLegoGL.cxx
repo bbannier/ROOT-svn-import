@@ -285,50 +285,60 @@ void TEveCaloLegoGL::DrawAxis(TGLRnrCtx & rnrCtx,
    }
 
    // labels
-   Int_t ntm = 10;
-   Float_t xs = (x1-x0)/ntm;
-   Float_t ys = (y1-y0)/ntm;
+   Int_t ntmX = 2;
+   Float_t xs = 2;
+   Int_t nX = ntmX*2+1;
+   Float_t* vX = new Float_t[nX];
+   for(Int_t i=0; i<nX; i++)
+      vX[i] = -xs*ntmX + i*xs;
+
+   Int_t ntmY = 3;
+   Float_t ys = 1;
+   Int_t nY = ntmY*2+1;
+   Float_t* vY = new Float_t[nY];
+   for(Int_t i=0; i<nY; i++)
+      vY[i] = -ys*ntmY + i*ys;
+
+   
+
    Float_t tms = 0.1;
    Float_t tmOff = 1.5*tms; 
+
    fNumFont.PreRender(kFALSE);
    glPushMatrix();
    glTranslatef(0, 0, -tms -tmOff);
-   Float_t v = x0;
-   for(Int_t i=0; i<=ntm; i++)
-   {      
-      RnrText(Form("%.1f", v), v, axY, pm);
-      v += xs;
-   }
-   v = y0;
-   for(Int_t i=0; i<=ntm; i++)
-   {   
-      RnrText(Form("%.1f", v), ayX, v, pm);
-      v += ys;
-   }
+
+
+   for(Int_t i=0; i<nX; i++)
+      RnrText(Form("%.0f", vX[i]), vX[i], axY, pm);
+
+   for(Int_t i=0; i<nY; i++)
+      RnrText(Form("%.0f", vY[i]), ayX, vY[i], pm);
+
    glPopMatrix();
    fNumFont.PostRender();
+   
 
    // tickmarks
    glBegin(GL_LINES);
-   v = x0;
    glVertex3f(x0, axY, 0);
    glVertex3f(x1, axY, 0);
-   for(Int_t i=0; i<=ntm; i++)
+   for(Int_t i=0; i<nX; i++)
    {
-      glVertex3f(v, axY, 0);
-      glVertex3f(v, axY, -tms);
-      v += xs;
+      glVertex3f(vX[i], axY, 0);
+      glVertex3f(vX[i], axY, -tms);
    } 
    glVertex3f(ayX, y0, 0);
    glVertex3f(ayX, y1, 0);
-   v = y0;      
-   for(Int_t i=0; i<=ntm; i++)
+   for(Int_t i=0; i<nY; i++)
    {
-      glVertex3f(ayX, v, 0);
-      glVertex3f(ayX, v, -tms);
-      v += ys;
+      glVertex3f(ayX, vY[i], 0);
+      glVertex3f(ayX, vY[i], -tms);
    }
    glEnd();
+
+   delete [] vX;
+   delete [] vY;
 }
 
 //______________________________________________________________________________
