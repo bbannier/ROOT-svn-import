@@ -17,10 +17,13 @@
 #include "Math/Minimizer.h"
 #endif
 
+#ifndef ROOT_Rtypes
+#include "Rtypes.h"
+#endif
+
 #include <vector>
 
 class TLinearFitter; 
-
 
 
  
@@ -129,6 +132,8 @@ private:
 
    const ROOT::Math::Minimizer::IGradObjFunction * fObjFunc;
    TLinearFitter * fFitter; 
+
+   ClassDef(TLinearMinimizer,1)  //Implementation of the Minimizer interface using TLinearFitter 
 
 }; 
 

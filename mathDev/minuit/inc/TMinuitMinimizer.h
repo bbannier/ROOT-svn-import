@@ -1,4 +1,4 @@
-// @(#)root/minuit:$Id$
+// @(#)root/minuit:$Id: TMinuitMinimizer.h 22564 2008-03-10 14:01:37Z moneta $
 // Author: L. Moneta Wed Oct 25 16:28:55 2006
 
 /**********************************************************************
@@ -17,6 +17,9 @@
 #include "Math/Minimizer.h"
 #endif
 
+#ifndef ROOT_Rtypes
+#include "Rtypes.h"
+#endif
 
 class TMinuit; 
 
@@ -32,7 +35,7 @@ namespace ROOT {
          kMigrad, 
          kSimplex, 
          kCombined, 
-         kScan
+         kMigradImproved
       };
 
    }
@@ -177,6 +180,7 @@ private:
 
    static TMinuit * fgMinuit; 
 
+   ClassDef(TMinuitMinimizer,1)  //Implementation of Minimizer interface using TMinuit 
 
 }; 
 

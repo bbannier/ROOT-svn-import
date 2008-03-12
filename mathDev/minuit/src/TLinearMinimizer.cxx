@@ -22,6 +22,8 @@
 #include <algorithm>
 #include <functional>
 
+
+
 // namespace ROOT { 
 
 //    namespace Fit { 
@@ -43,6 +45,22 @@ struct BasisFunction {
    unsigned int fKPar; // param component
    Func * fFunc; 
 };
+
+
+//______________________________________________________________________________
+//
+//  TLinearMinimizer, simple class implementing the ROOT::Math::Minimizer interface using 
+//  TLinearFitter. 
+//  This class uses TLinearFitter to find directly (by solving a system of linear equations) 
+//  the minimum of a 
+//  least-square function which has a linear dependence in the fit parameters. 
+//  This class is not used directly, but via the ROOT::Fitter class, when calling the 
+//  LinearFit method. It is instantiates using the plug-in manager (plug-in name is "Linear")
+//  
+//__________________________________________________________________________________________
+
+
+ClassImp(TLinearMinimizer)
 
 
 TLinearMinimizer::TLinearMinimizer(int ) : 
@@ -76,16 +94,16 @@ TLinearMinimizer & TLinearMinimizer::operator = (const TLinearMinimizer &rhs)
 
 
 void TLinearMinimizer::SetFunction(const  IObjFunction & ) { 
-   // set function to be minimized. 
-   // in a linear fit we need the basis funciton which are the derivatives so a gradient function is needed
+   // Set function to be minimized. Flag an error since only support Gradient objective functions
+
    Error("SetFunction1","Wrong type of function used for Linear fitter");
 }
 
 
 void TLinearMinimizer::SetFunction(const  IGradObjFunction & objfunc) { 
+   // Set the function to be minimized. The function must be a Chi2 gradient function 
+   // When performing a linear fit we need the basis functions, which are the partial derivatives with respect to the parameters of the model function.
 
-
-   // function must be a chi2 gradient function 
    typedef ROOT::Fit::Chi2FCN<ROOT::Math::IMultiGradFunction> Chi2Func; 
    const Chi2Func * chi2func = dynamic_cast<const Chi2Func *>(&objfunc); 
    if (chi2func ==0) { 
@@ -143,7 +161,7 @@ bool TLinearMinimizer::SetFixedVariable(unsigned int ivar, const std::string & /
 
 bool TLinearMinimizer::Minimize() { 
    // find directly the minimum of the chi2 function 
-   // solving the linear equation
+   // solving the linear equation. Use  TVirtualFitter::Eval. 
 
    if (fFitter == 0 || fObjFunc == 0) return false;
 
