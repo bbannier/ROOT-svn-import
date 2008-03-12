@@ -13,6 +13,8 @@ usage: $BINNAME <module> <class-base>
        $BINNAME gedsubed MyNewClass  # create Editor with SubEditor
 Should be in module (eve/ or gl/).
 Note that GL and Editor suffixes are not present in the command!
+If inc/ and src/ directories exist the files will be put there, otherwise
+they will reside in current directory.
 fnord
   exit 1;
 }
@@ -23,7 +25,7 @@ my $MODULE = $ARGV[0];
 
 %suff = ( 'base' => '', 'gl' => 'GL', 'ged' => 'Editor', 'gedsubed' => 'Editor');
 
-my $STEM  = $ARGV[1];
+my $STEM  = $ARGV[1]; chomp $STEM;
 my $CLASS = $STEM . $suff{$MODULE};
 
 if ($MODULE eq 'gedsubed') {
@@ -37,11 +39,17 @@ if ($MODULE eq 'gedsubed') {
 my $H_NAME = "$CLASS.h";
 my $C_NAME = "$CLASS.cxx";
 
-my $H_FILE = "inc/$H_NAME";
-my $C_FILE = "src/$C_NAME";
+my $H_FILE;
+my $C_FILE;
 
-die "Expect inc/ and src/ directories in working dir"
-  unless -d "inc" and -d "src";
+if (-d "inc" and -d "src") {
+  $H_FILE = "inc/$H_NAME";
+  $C_FILE = "src/$C_NAME";
+} else {
+  $H_FILE = "$H_NAME";
+  $C_FILE = "$C_NAME";
+}
+
 die "File '$H_FILE' already exists" if -e $H_FILE;
 die "File '$C_FILE' already exists" if -e $C_FILE;
 
@@ -91,4 +99,4 @@ print H $skel_c;
 close H;
 
 print "Now you should also edit the link-def file:\n" .
-  "pragma link C++ class $CLASS+\n;" if ($DUMPINFO);
+  "#pragma link C++ class $CLASS+;\n" if ($DUMPINFO);
