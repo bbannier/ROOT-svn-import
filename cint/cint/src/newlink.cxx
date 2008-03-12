@@ -7167,7 +7167,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
       G__ifunc_table_internal * des_oper = G__get_methodhandle4(funcname, &para_des, G__struct.memfunc[tagnum], &pifn, &poffset, 0, 1,0);
 
       // Look for it in the ifunc table is it was already create in make_default_ifunc
-      if(des_oper && !(!des_oper->mangled_name[pifn] /*&& des_oper->funcptr[pifn]!=(void*)-1*/) )
+      if(des_oper && !(!des_oper->mangled_name[pifn] /*&& des_oper->funcptr[pifn]!=(void*)-1*/) && G__is_tagnum_safe(tagnum))
         page = des_oper->page;
     }
 #endif
