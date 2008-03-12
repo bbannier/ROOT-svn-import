@@ -167,6 +167,7 @@ void TEveCaloVizEditor::DoCellZScale()
   // Slot for setting tower height.
 
    fM->SetCellZScale(fCellZScale->GetValue());
+   fM->ComputeBBox();
    Update();
 }
 
