@@ -19,6 +19,15 @@ CINT7DIRSTL   := $(CINT7DIR)/stl
 CINT7DIRDLLSTL:= $(CINT7DIRL)/dll_stl
 CINT7DIRSD    := $(CINT7DIRS)/dict
 
+# for configcint:
+CINTDIR       := $(CINT7DIR)
+# for cintdlls:
+CINTDIRSTL    := $(CINT7DIRSTL)
+CINTDIRDLLS   := $(CINT7DIRDLLS)
+CINTDIRDLLSTL := $(CINT7DIRDLLSTL)
+CINTDIRL      := $(CINT7DIRL)
+
+
 ##### libCint #####
 CINT7CONF     := $(CINT7DIRI)/configcint.h
 CINTCONF      := $(CINT7CONF)
@@ -33,6 +42,7 @@ CINT7ALLO     := $(CINT7S1:.c=.o) $(CINT7S2:.cxx=.o)
 CINT7ALLDEP   := $(CINT7ALLO:.o=.d)
 
 CINT7CONFMK   := $(MODDIRBASE)/ROOT/configcint.mk
+CINTCONFMK    := $(CINT7CONFMK)
 
 CINT7S1       := $(filter-out $(MODDIRS)/dlfcn.%,$(CINT7S1))
 
