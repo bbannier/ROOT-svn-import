@@ -184,12 +184,8 @@
 #pragma link C++ function R__H(Int_t);
 #pragma link C++ function R__H(const char*);
 
-#pragma link C++ class ROOT::Math::WrappedFunction<TF1 &>;
-#pragma link C++ class ROOT::Math::WrappedMultiFunction<TF1 &>;
-
 #pragma link C++ class ROOT::Math::WrappedTF1;
 #pragma link C++ class ROOT::Math::WrappedMultiTF1;
-
 
 #pragma link C++ namespace ROOT::Fit; 
 #pragma link C++ function ROOT::Fit::FillData(ROOT::Fit::BinData &, const TH1 *, TF1 * );

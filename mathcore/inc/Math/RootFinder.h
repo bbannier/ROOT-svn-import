@@ -31,9 +31,6 @@
 #ifndef ROOT_Math_RootFinder
 #define ROOT_Math_RootFinder
 
-#ifndef ROOT_Math_GSLRootHelper
-#include "Math/GSLRootHelper.h"
-#endif
 
 #ifndef ROOT_Math_IFunctionfwd
 #include "Math/IFunctionfwd.h"

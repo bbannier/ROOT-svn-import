@@ -1,4 +1,4 @@
-// @(#)root/minuit:$Id$
+// @(#)root/minuit:$Id: TMinuitMinimizer.cxx 22564 2008-03-10 14:01:37Z moneta $
 // Author: L. Moneta Wed Oct 25 16:28:55 2006
 
 /**********************************************************************
@@ -20,14 +20,23 @@
 #include <algorithm>
 #include <functional>
 
-// namespace ROOT { 
-
-//    namespace Fit { 
-
+//______________________________________________________________________________
+//
+//  TMinuitMinimizer class implementing the ROOT::Math::Minimizer interface using 
+//  TMinuit. 
+//  This class is normally instantiates using the plug-in manager 
+//  (plug-in with name Minuit or TMinuit)
+//  In addition the user can choose the minimizer algorithm: Migrad (the default one), Simplex, or Minimize (combined Migrad + Simplex)
+//  
+//__________________________________________________________________________________________
 
 // initialize the static instances
+
 ROOT::Math::Minimizer::IObjFunction * TMinuitMinimizer::fgFunc = 0; 
 TMinuit * TMinuitMinimizer::fgMinuit = 0; 
+
+ClassImp(TMinuitMinimizer)
+
 
 TMinuitMinimizer::TMinuitMinimizer(ROOT::Minuit::EMinimizerType type ) : 
    fDim(0),
@@ -52,7 +61,7 @@ TMinuitMinimizer::TMinuitMinimizer(const char *  type ) :
    ROOT::Minuit::EMinimizerType algoType = ROOT::Minuit::kMigrad; 
    if (algoname == "simplex")   algoType = ROOT::Minuit::kSimplex; 
    if (algoname == "minimize" ) algoType = ROOT::Minuit::kCombined; 
-   if (algoname == "scan" )     algoType = ROOT::Minuit::kScan; 
+   if (algoname == "migrad_imp" ) algoType = ROOT::Minuit::kMigradImproved; 
 
    fType = algoType; 
 }
@@ -71,7 +80,7 @@ TMinuitMinimizer::TMinuitMinimizer(const TMinuitMinimizer &) :
 
 TMinuitMinimizer & TMinuitMinimizer::operator = (const TMinuitMinimizer &rhs) 
 {
-   // Implementation of assignment operator.
+   // Implementation of assignment operator 
    if (this == &rhs) return *this;  // time saving self-test
    return *this;
 }
@@ -79,8 +88,10 @@ TMinuitMinimizer & TMinuitMinimizer::operator = (const TMinuitMinimizer &rhs)
 
 
 void TMinuitMinimizer::SetFunction(const  IObjFunction & func) { 
-   // set function to be minimized. 
-   // Here a TMinuit instance is created since only now when we know  about the parameters 
+   // Set the objective function to be minimized 
+
+   // Here a TMinuit instance is created since only at this point we know the number of parameters 
+   // needed to create TMinuit
 
    fDim = func.NDim(); 
 
@@ -177,7 +188,7 @@ bool TMinuitMinimizer::SetLimitedVariable(unsigned int ivar, const std::string &
 }
 #ifdef LATER
 bool Minuit2Minimizer::SetLowerLimitedVariable(unsigned int ivar , const std::string & name , double val , double step , double lower ) {
-    // add a lower bounded variable as a double bound one
+    // add a lower bounded variable as a double bound one, using a very large number for the upper limit
    double s = val-lower; 
    double upper = s*1.0E15; 
    if (s != 0)  upper = 1.0E15;
@@ -199,8 +210,8 @@ bool TMinuitMinimizer::SetFixedVariable(unsigned int ivar, const std::string & n
 }
 
 bool TMinuitMinimizer::Minimize() { 
-   // perform the minimization
-   // default is using Migrad 
+   // perform the minimization using the chosen algorithm. By default Migrad is used. 
+   // return true if the found minimum is valid. 
 
    assert(fMinuit != 0 );
 
@@ -231,15 +242,27 @@ bool TMinuitMinimizer::Minimize() {
       // case of Migrad 
       fMinuit->mnexcm("MIGRAD",arglist,nargs,ierr);
       break; 
+   case ROOT::Minuit::kCombined: 
+      // case of combined (Migrad+ simplex)
+      fMinuit->mnexcm("MINIMIZE",arglist,nargs,ierr);
+      break; 
+   case ROOT::Minuit::kSimplex: 
+      // case of Simlex
+      fMinuit->mnexcm("SIMPLEX",arglist,nargs,ierr);
+      break; 
    default: 
-      // case of Migrad 
+      // default: use Migrad 
       fMinuit->mnexcm("MIGRAD",arglist,nargs,ierr);
 
    }
 
+   // run improved if needed
+   if (ierr == 0 && fType == ROOT::Minuit::kMigradImproved) 
+      fMinuit->mnexcm("IMPROVE",arglist,1,ierr);
+
    // check if Hesse needs to be run 
    if (ierr == 0 && IsValidError() ) { 
-      fMinuit->mnexcm("HESSE",arglist,0,ierr);
+      fMinuit->mnexcm("HESSE",arglist,1,ierr);
    }
 
 
@@ -280,7 +303,7 @@ bool TMinuitMinimizer::Minimize() {
 }
 
 bool TMinuitMinimizer::GetMinosError(unsigned int i, double & errLow, double & errUp) { 
-   // get the Minos errors 
+   // Perform Minos analysis for the given parameter 
 
    // if Minos is not run run it 
    if (!fMinosRun) { 

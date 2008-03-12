@@ -399,6 +399,9 @@ Double_t TMath::Gamma(Double_t a,Double_t x)
    //  Begin_Latex
    //  P(a, x) = #frac{1}{#Gamma(a) } #int_{0}^{x} t^{a-1} e^{-t} dt
    //   End_Latex
+   //
+   //
+   //--- Nve 14-nov-1998 UU-SAP Utrecht
 
    return ::ROOT::Math::inc_gamma(a, x);
 }

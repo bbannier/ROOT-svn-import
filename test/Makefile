@@ -68,7 +68,7 @@ STRESSGO      = stressGraphics.$(ObjSuf)
 STRESSGS      = stressGraphics.$(SrcSuf)
 STRESSG       = stressGraphics$(ExeSuf)
 
-ifeq ($(shell $(ROOTCONFIG) --has-mathcore),yes)
+ifeq ($(shell $(ROOTCONFIG) --has-genvector),yes)
 STRESSVECO   = stressVector.$(ObjSuf)
 STRESSVECS   = stressVector.$(SrcSuf)
 STRESSVEC    = stressVector$(ExeSuf)

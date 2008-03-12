@@ -103,7 +103,7 @@ using namespace ROOT::Math;
 
 bool debug = true;  // print out reason of test failures
 bool debugTime = false; // print out separate timings for vectors 
-bool removeFiles = false; // remove Output root files 
+bool removeFiles = true; // remove Output root files 
 
 void PrintTest(std::string name) { 
    std::cout << std::left << std::setw(40) << name; 

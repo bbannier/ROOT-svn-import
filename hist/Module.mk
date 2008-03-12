@@ -19,8 +19,9 @@ HISTDH       := $(HISTDS:.cxx=.h)
 
 HISTH        := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 HISTHMAT     := $(filter-out $(MODDIRI)/Math/LinkDef%,$(wildcard $(MODDIRI)/Math/*.h))
-HISTHMAT     += mathcore/inc/Math/WrappedFunction.h
+#HISTHMAT     += mathcore/inc/Math/WrappedFunction.h
 HISTHH       := $(HISTH) $(HISTHMAT) 
+
 HISTS        := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
 HISTO        := $(HISTS:.cxx=.o)
 
