@@ -69,15 +69,17 @@ public:
 
    virtual ~TEveCaloViz();
 
+   void InvalidateCache() { fCacheOK = kFALSE; ResetBBox(); }
+
    TEveCaloData* GetData() const { return fData; }
    virtual void  SetData(TEveCaloData* d);
 
    Float_t GetBarrelRadius() const { return fBarrelRadius; }
-   void SetBarrelRadius(Float_t r) { fBarrelRadius = r; }
+   void SetBarrelRadius(Float_t r) { fBarrelRadius = r; ResetBBox(); }
    Float_t GetEndCapPos   () const { return fEndCapPos; }
-   void SetEndCapPos   (Float_t z) { fEndCapPos = z; }
+   void SetEndCapPos   (Float_t z) { fEndCapPos = z; ResetBBox(); }
 
-   virtual void    SetCellZScale(Float_t s) { fCellZScale=s; }
+   virtual void    SetCellZScale(Float_t s) { fCellZScale = s; ResetBBox(); }
    virtual Float_t GetDefaultCellHeight() const { return fBarrelRadius*fCellZScale; }
 
    Float_t GetTransitionEta() const;
@@ -88,11 +90,13 @@ public:
    TEveRGBAPalette* AssertPalette();
 
 
-   void SetEta(Float_t l, Float_t u){ fEtaMin=l; fEtaMax =u;}
-   void SetEtaLimits(Float_t l, Float_t h) { fEtaLowLimit=l; fEtaHighLimit =h;}
+   void SetEta(Float_t l, Float_t u) { fEtaMin=l; fEtaMax=u; InvalidateCache(); }
+   void SetEtaLimits(Float_t l, Float_t h) { fEtaLowLimit=l; fEtaHighLimit =h; InvalidateCache(); }
 
-   void SetPhi(Float_t x){ fPhi= x; }
-   void SetPhiRng(Float_t r){ fPhiRng = r;}
+   void SetPhi(Float_t x)    { fPhi    = x; InvalidateCache(); }
+   void SetPhiRng(Float_t r) { fPhiRng = r; InvalidateCache(); }
+   void SetPhiWithRng(Float_t x, Float_t r) { fPhi = x; fPhiRng = r; InvalidateCache(); }
+
 
    virtual void ResetCache() = 0;
 
@@ -161,14 +165,16 @@ public:
 /**************************************************************************/
 
 class TEveCaloLego : public TEveCaloViz
-{ 
+{
    friend class TEveCaloLegoGL;
+
 private:
    TEveCaloLego(const TEveCaloLego&);            // Not implemented
    TEveCaloLego& operator=(const TEveCaloLego&); // Not implemented
+
 protected:
    TEveCaloData::vCellId_t fCellList;
-  
+
 public:
    TEveCaloLego(const Text_t* n="TEveCaloLego", const Text_t* t="");
    TEveCaloLego(TEveCaloData* data);

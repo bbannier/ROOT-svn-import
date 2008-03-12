@@ -50,7 +50,7 @@ public:
       void Configure(Float_t v, Float_t e1, Float_t e2, Float_t p1, Float_t p2);
 
       Float_t Value()    const { return fValue;    }
-   
+
       Float_t EtaMin()   const { return fEtaMin; }
       Float_t EtaMax()   const { return fEtaMax; }
       Float_t Eta()      const { return (fEtaMin+fEtaMax)*0.5f; }
@@ -60,7 +60,7 @@ public:
       Float_t ThetaMax(Bool_t isSigned = kFALSE) const;
       Float_t Theta(Bool_t a = kFALSE) const { return (ThetaMax(a)+ThetaMin(a))*0.5f; }
       Float_t ThetaDelta() const { return fThetaMax-fThetaMin; }
-     
+
       Float_t PhiMin()   const { return fPhiMin; }
       Float_t PhiMax()   const { return fPhiMax; }
       Float_t Phi()      const { return (fPhiMin+fPhiMax)*0.5f; }
