@@ -413,37 +413,16 @@ G__get_cache()
 //______________________________________________________________________________
 
 //______________________________________________________________________________
-void MapDependantTypes()
-{
-  int more = 0;
-  char prompt[G__ONELINE];
-
-  // There is problem with types ( well many :) ).
-  // We can declare something like "FILE *fp" in our
-  // normal ROOT classes but when gcc creates the symbols
-  // it will use an internal type like "_IO_FILE".
-  // This mapping is completely dependant of the compiler
-  // so we have to be very careful about it.
-  // 12-02-08
-  // The non-use of this  mapping won't present any errors anymore,
-  // the only problem is that stubs with this kind of type will be
-  // generated (all the code related to MapDependantTypes could be removed)
-
-  G__process_cmd ("typedef FILE _IO_FILE", prompt, &more,0, 0);
-
-  // gui/inc/WidgetMessageTypes.h
-  // All the enums could be treated as ints
-  G__process_cmd ("typedef int EWidgetMessageTypes", prompt, &more,0, 0);
-  G__process_cmd ("typedef void* istream", prompt, &more,0, 0);
-  G__process_cmd ("typedef void* istream&", prompt, &more,0, 0);
-  G__process_cmd ("typedef void* std::istream&", prompt, &more,0, 0);
-  G__process_cmd ("typedef int __false_type", prompt, &more,0, 0);
-  G__process_cmd ("typedef int __true_type", prompt, &more,0, 0);
-}
-
-//______________________________________________________________________________
 void MapDependantTypesX()
 {
+  // When we demangled the symbols at registering time, we might find certain 
+  // strange types. This is because CInt doesn't know them as such and
+  // gcc/abi reports them in a different way.
+  // This is not needed anymore since with the current algorithm we will just
+  // ignore a function with that type (generating the stub).
+  // This function should probably be erased. It's not good to hard code
+  // defines.
+
   int more = 0;
   char prompt[G__ONELINE];
 

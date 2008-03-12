@@ -1284,7 +1284,6 @@ int G__main(int argc, char** argv)
    // (although we used the all here so it's a bit silly)
    if(G__dicttype==kCompleteDictionary || G__dicttype==kFunctionSymbols || G__dicttype==kNoWrappersDictionary) {
       G__init_process_cmd();
-      MapDependantTypes();
       G__gen_extra_include();
    }
 #else

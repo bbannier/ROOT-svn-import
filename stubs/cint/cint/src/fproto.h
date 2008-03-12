@@ -321,7 +321,6 @@ struct G__ifunc_table *G__get_methodhandle_noerror(const char *funcname,const ch
 #ifdef G__NOSTUBS
 int   G__stub_method_calling (G__value *result7, struct G__param *libp, struct G__ifunc_table_internal *ifunc, int ifn);
 void  G__register_class(const char *libname, const char *clstr);
-void  MapDependantTypes();
 
 struct G__ifunc_table_internal *G__get_methodhandle4(char *funcname
                                            ,struct G__param* libp
