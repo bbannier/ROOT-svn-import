@@ -108,19 +108,26 @@ void testGSLPermute(Int_t n, double* tGSL)
 {
    TStopwatch t; 
 
+   gsl_permutation *original = gsl_permutation_alloc(n);
    gsl_permutation *p = gsl_permutation_alloc(n);
 
-   gsl_permutation_init(p);
+   gsl_permutation_init(original);
 
    t.Start();
-   while ( gsl_permutation_next(p) == GSL_SUCCESS )
-   {
-//       gsl_permutation_fprintf(stdout, p, " %u");
-//       fprintf(stdout, "\n");
+   for (int j = 0; j < npass; ++j) { 
+      gsl_permutation_memcpy(p, original);
+      while ( gsl_permutation_next(p) == GSL_SUCCESS )
+      {
+//          gsl_permutation_fprintf(stdout, p, " %u");
+//          fprintf(stdout, "\n");
+      }
    }
    t.Stop();
    *tGSL = t.RealTime();
    cout << "  gsl_permutation_next time :\t " << t.RealTime();
+
+   gsl_permutation_free(p);
+   gsl_permutation_free(original);
 }
 
 void testPermute() 
