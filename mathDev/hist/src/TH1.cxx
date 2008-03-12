@@ -572,7 +572,7 @@ TH1::~TH1()
       // have been added to the list of functions of several histograms
       //and may have been already deleted.
       while ((obj  = fFunctions->First())) {
-         while(fFunctions->Remove(obj));
+         while(fFunctions->Remove(obj)) { }
          if (!obj->TestBit(kNotDeleted)) {
             break;
          }
@@ -5936,7 +5936,7 @@ void TH1::Reset(Option_t *option)
    //drawing modes
    TObject *obj;
    while ((obj  = fFunctions->First())) {
-      while(fFunctions->Remove(obj));
+      while(fFunctions->Remove(obj)) { }
       delete obj;
    }
    if(stats) fFunctions->Add(stats);
@@ -6197,7 +6197,7 @@ Double_t TH1::GetMean(Int_t axis) const
    //  call the static function TH1::StatOverflows(kTRUE) before filling
    //  the histogram.
 
-   if (axis<1 || axis>3&&axis<11 || axis>13) return 0;
+   if (axis<1 || (axis>3 && axis<11) || axis>13) return 0;
    Double_t stats[kNstat];
    for (Int_t i=4;i<kNstat;i++) stats[i] = 0;
    GetStats(stats);
@@ -6250,7 +6250,7 @@ Double_t TH1::GetRMS(Int_t axis) const
    //  The name "RMS" was introduced many years ago (Hbook/PAW times).
    //  We kept the name for continuity.
 
-   if (axis<1 || axis>3&&axis<11 || axis>13) return 0;
+   if (axis<1 || (axis>3 && axis<11) || axis>13) return 0;
 
    Double_t x, rms2, stats[kNstat];
    for (Int_t i=4;i<kNstat;i++) stats[i] = 0;
