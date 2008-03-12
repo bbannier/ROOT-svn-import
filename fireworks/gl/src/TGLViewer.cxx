@@ -399,7 +399,7 @@ void TGLViewer::PreRender()
    if (fGLDevice != -1)
    {
       fRnrCtx->SetGLCtxIdentity(fGLCtxId);
-      fGLCtxId->DeleteDisplayLists();
+      fGLCtxId->DeleteGLResources();
    }
    TGLViewerBase::PreRender();
    // Setup lighting
