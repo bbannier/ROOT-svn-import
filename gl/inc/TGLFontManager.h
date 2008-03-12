@@ -2,6 +2,7 @@
 #define ROOT_TGLFontManager
 
 #include "TObjArray.h"
+#include <list>
 #include <vector>
 #include <map>
 
@@ -44,19 +45,19 @@ public:
    Int_t GetFile() const { return fFile;}
    EMode GetMode() const { return fMode;}
 
-   void SetFont(FTFont *f) { fFont =f;}
+   void  SetFont(FTFont *f) { fFont =f;}
    const FTFont* GetFont() const { return fFont; }
-   void SetManager(TGLFontManager *mng) {fManager = mng;}
+   void  SetManager(TGLFontManager *mng) {fManager = mng;}
    const TGLFontManager* GetManager() const { return fManager; }
 
    Float_t GetDepth() const { return fDepth;}
-   void SetDepth(Float_t d) { fDepth = d; }
+   void  SetDepth(Float_t d) { fDepth = d; }
 
    // FTGL wrapper functions
-   void   BBox(const Text_t* txt,
+   void  BBox(const Text_t* txt,
                Float_t& llx, Float_t& lly, Float_t& llz,
                Float_t& urx, Float_t& ury, Float_t& urz) const;
-   void   Render(const Text_t* txt) const;
+   void  Render(const Text_t* txt) const;
 
    // helper gl draw functions
    virtual void PreRender(Bool_t autoLight=kTRUE, Bool_t lightOn=kFALSE) const;
@@ -91,6 +92,7 @@ private:
    TGLFontManager& operator=(const TGLFontManager&); // Not implemented
 
    std::map<TGLFont, Int_t>  fFontMap;        // map of created fonts
+  std::list<const FTFont*>   fFontTrash;      // fonts to purge  
 
    static TObjArray     fgFontFileArray;      // map font-id to ttf-font-file
    static FontSizeVec_t fgFontSizeArray;      // map of valid font-size
@@ -106,6 +108,8 @@ public:
 
    static TObjArray*        GetFontFileArray();
    static FontSizeVec_t*    GetFontSizeArray();
+
+   void   ClearFontTrash();
 
    ClassDef(TGLFontManager, 0); // A FreeType GL font manager.
 };

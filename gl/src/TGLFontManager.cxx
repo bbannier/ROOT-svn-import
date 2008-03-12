@@ -249,7 +249,7 @@ void TGLFontManager::ReleaseFont(TGLFont& font)
    if (it != fFontMap.end()) {
       it->second = it->second -1;
       if (it->second == 0) {
-         delete it->first.GetFont();
+         fFontTrash.push_back(it->first.GetFont());
          fFontMap.erase(it);
       }
       return;
@@ -312,3 +312,14 @@ void TGLFontManager::InitStatics()
    fgStaticInitDone = kTRUE;
 }
 
+//______________________________________________________________________________
+void TGLFontManager::ClearFontTrash()
+{
+  // Delete FTFFont objects registered for destruction.
+
+  for(std::list<const FTFont*>::iterator it=fFontTrash.begin(); it!=fFontTrash.end(); it++)
+  {
+     delete *it;
+  }
+  fFontTrash.clear();
+}
