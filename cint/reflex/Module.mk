@@ -154,7 +154,7 @@ $(REFLEXDS): $(REFLEXAPIH) $(REFLEXL) utils/src/rootcint_tmp.o $(ORDER_) utils/s
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c -p -Ireflex/inc $(REFLEXAPIH) $(REFLEXL)
 
-$(REFLEXDICTMAP): $(RLIBMAP) $(MAKEFILEDEP) $(REFLEXL)
+$(REFLEXDICTMAP): bin/rlibmap$(EXEEXT) $(MAKEFILEDEP) $(REFLEXL)
 		$(RLIBMAP) -o $(REFLEXDICTMAP) -l $(REFLEXDICTLIB) \
 		   -d $(REFLEXDICTLIBDEPM) -c $(REFLEXL)
 

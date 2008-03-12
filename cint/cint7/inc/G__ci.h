@@ -714,6 +714,8 @@ typedef int (*G__IgnoreInclude)();
 * Other parameters can be changed while keeping DLL binary compatibility.
 *
 **************************************************************************/
+#define G__LONGBUF /* needed e.g. for configcint.h */
+
 #ifdef G__LONGBUF
 #define G__LONGLINE    4096  /* Length of expression */
 #define G__ONELINE     4096  /* Length of subexpression,parameter,argument */
