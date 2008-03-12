@@ -10,6 +10,7 @@
 
 #include "Math/GaussLegendreIntegrator.h"
 #include <cmath>
+#include <string.h>
 
 namespace ROOT {
 namespace Math {
@@ -32,6 +33,7 @@ GaussLegendreIntegrator::GaussLegendreIntegrator(int num, double eps)
 
 GaussLegendreIntegrator::~GaussLegendreIntegrator()
 {
+   // destructor
    if ( fFunction != 0 && fFunctionCopied )
       delete fFunction;
 

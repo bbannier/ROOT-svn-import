@@ -39,8 +39,6 @@ ALLMAPS     += $(HISTMAP)
 INCLUDEFILES += $(HISTDEP)
 
 ##### local rules #####
-
-
 include/Math/%.h: $(HISTDIRI)/Math/%.h
 		@(if [ ! -d "include/Math" ]; then     \
 		   mkdir -p include/Math;              \
@@ -49,7 +47,6 @@ include/Math/%.h: $(HISTDIRI)/Math/%.h
 
 include/%.h:    $(HISTDIRI)/%.h
 		cp $< $@
-
 
 $(HISTLIB):     $(HISTO) $(HISTDO) $(ORDER_) $(MAINLIBS) $(HISTLIBDEP)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
