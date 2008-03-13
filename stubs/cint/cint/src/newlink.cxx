@@ -2271,8 +2271,7 @@ int G__execute_call(G__value *result7,G__param *libp,G__ifunc_table_internal *if
     if ( ((libp->paran>=0) &&
           G__get_funcptr(ifunc, ifn) &&
           /*!(G__struct.type[ifunc->tagnum] == 'n') &&*/
-          !G__wrappers_enabled() && !cppfunc) || // DMS Use the stub if there is one
-         ifunc->ispurevirtual[ifn]) {
+          !G__wrappers_enabled())){ // DMS Use the stub if there is one
       // Registered Method in ifunc. Then We Can Call the method without the stub function
       G__stub_method_calling(result7, libp, ifunc, ifn);
     }
@@ -5366,7 +5365,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
                   // No Constructor Stub
                   if(((!ifunc->mangled_name[j] || /*if there is no symbol*/
                        !G__is_tagnum_safe(i) )
-                      && !ifunc->ispurevirtual[j] && G__dicttype==kNoWrappersDictionary) 
+                      && G__dicttype==kNoWrappersDictionary) 
                      || G__dicttype==kCompleteDictionary || G__dicttype==kNoWrappersDictionary ) {
                     if( !ifunc->mangled_name[j] /*|| ifunc->funcptr[j]>0*/ || !G__nostubs) /* if there no is a symbol or the no stubs flag is not activated */
                       G__cppif_genconstructor(fp,hfp,i,j,ifunc);
@@ -5385,7 +5384,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
             else if('~'==ifunc->funcname[j][0]) { // Destructor?
               /* destructor is created in gendefault later */
               if(G__PUBLIC==ifunc->access[j]){
-                if((G__dicttype==kNoWrappersDictionary) && !ifunc->ispurevirtual[j]){
+                if((G__dicttype==kNoWrappersDictionary)){
                   if(G__is_tagnum_safe(i)) {
                     if( !ifunc->mangled_name[j] /*|| ifunc->funcptr[j]>0*/ || !G__nostubs ) /* if there no is a symbol or the no stubs flag is not activated */
                       G__cppif_gendefault(fp,hfp,i,j,ifunc,1,1,isdestructor,1,1);
@@ -5427,7 +5426,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
               // generate the inline code
 
               // 14-02-08 When ifunc->funcptr[j]==(void*)-2 we have to force the creation of the stub
-              if(!ifunc->ispurevirtual[j] && G__dicttype==kFunctionSymbols && ifunc->funcptr[j]!=(void*)-2){
+              if(G__dicttype==kFunctionSymbols && ifunc->funcptr[j]!=(void*)-2){
                 if (G__is_tagnum_safe(i)) {
                   if(G__struct.isabstract[ifunc->tagnum]) {
                     G__cppif_geninline(fp, ifunc, i, j);
@@ -5454,7 +5453,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
               // we can't write the stubs for the operator=.
               // 14-02-08 When ifunc->funcptr[j]==(void*)-2 we have to force the creation of the stub
               if((ifunc->funcptr[j]==(void*)-2) || !ifunc->mangled_name[j] || !G__nostubs){
-                if(!ifunc->ispurevirtual[j] && G__dicttype==kNoWrappersDictionary){
+                if(G__dicttype==kNoWrappersDictionary){
                   // Now we have no symbol but we are in the third or fourth
                   // dictionary... which means that the second one already tried to create it...
                   // If that's the case we have no other choice but to generate the stub
@@ -9297,7 +9296,7 @@ void G__cpplink_memfunc(FILE *fp)
             // if that is the case and we are writing the final dictionary (kCompleteDictionary),
             // we can't write the stubs for the operator=
             if(/*!(ifunc->funcptr[j]==(void*)-1) &&*/ (!ifunc->mangled_name[j] || !G__nostubs)){
-              if(!ifunc->ispurevirtual[j] && G__dicttype==kNoWrappersDictionary){
+              if(G__dicttype==kNoWrappersDictionary){
                 // Now we have no symbol but we are in the third or fourth
                 // dictionary... which means that the second one already tried to create it...
                 // If that's the case we have no other choice but to generate the stub
@@ -9307,7 +9306,7 @@ void G__cpplink_memfunc(FILE *fp)
             }
 
             if(/*!(ifunc->funcptr[j]==(void*)-1) &&*/ (!ifunc->mangled_name[j] || !G__nostubs)){
-              if(!ifunc->ispurevirtual[j] && G__dicttype==kNoWrappersDictionary){
+              if(G__dicttype==kNoWrappersDictionary){
                 // Now we have no symbol but we are in the third or fourth
                 // dictionary... which means that the second one already tried to create it...
                 // If that's the case we have no other choice but to generate the stub
@@ -9366,7 +9365,7 @@ void G__cpplink_memfunc(FILE *fp)
 
 		// If they werent generated automatically...
 		if(/*!(ifunc->funcptr[j]==(void*)-1) && */ (!ifunc->mangled_name[j] || !G__nostubs)){
-		  if(!ifunc->ispurevirtual[j] && G__dicttype==kNoWrappersDictionary){
+		  if(G__dicttype==kNoWrappersDictionary){
 		    if(strcmp(ifunc->funcname[j],G__struct.name[i])==0) {
 		      // constructor need special handling
 		      if(0==G__struct.isabstract[i]&&0==isnonpublicnew) {
