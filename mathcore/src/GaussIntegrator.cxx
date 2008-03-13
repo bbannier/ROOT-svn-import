@@ -14,9 +14,9 @@
 namespace ROOT {
 namespace Math {
 
-bool GaussIntegratorOneDim::fgAbsValue = false;
+bool GaussIntegrator::fgAbsValue = false;
 
-GaussIntegratorOneDim::GaussIntegratorOneDim()
+GaussIntegrator::GaussIntegrator()
 {
    // Default Constructor.
 
@@ -27,7 +27,7 @@ GaussIntegratorOneDim::GaussIntegratorOneDim()
    fFunction = 0;
 }
 
-GaussIntegratorOneDim::~GaussIntegratorOneDim()
+GaussIntegrator::~GaussIntegrator()
 {
    // Deletes the function if it was previously copied.
 
@@ -35,7 +35,7 @@ GaussIntegratorOneDim::~GaussIntegratorOneDim()
       delete fFunction;
 }
 
-void GaussIntegratorOneDim::AbsValue(bool flag)
+void GaussIntegrator::AbsValue(bool flag)
 {
    // Static function: set the fgAbsValue flag.
    // By default TF1::Integral uses the original function value to compute the integral
@@ -45,7 +45,7 @@ void GaussIntegratorOneDim::AbsValue(bool flag)
    fgAbsValue = flag;
 }
 
-double GaussIntegratorOneDim::Integral(double a, double b)
+double GaussIntegrator::Integral(double a, double b)
 {
    // Return Integral of function between a and b.
    //
@@ -200,21 +200,21 @@ CASE2:
 }
    
 
-void GaussIntegratorOneDim::SetRelTolerance (double eps)
+void GaussIntegrator::SetRelTolerance (double eps)
 {
    // Set the desired relative Error
 
    fEpsilon = eps;
 }
 
-void GaussIntegratorOneDim::SetAbsTolerance (double)
+void GaussIntegrator::SetAbsTolerance (double)
 {
    // This method is not implemented.
 
    MATH_ERROR_MSG("ROOT::Math::GausIntegratorOneDim", "There is no Absolute Tolerance!");
 }
 
-double GaussIntegratorOneDim::Result () const
+double GaussIntegrator::Result () const
 {
    // Return  the Result of the last Integral calculation.
 
@@ -224,21 +224,21 @@ double GaussIntegratorOneDim::Result () const
    return fLastResult;
 }
 
-double GaussIntegratorOneDim::Error() const
+double GaussIntegrator::Error() const
 {
    // Return the estimate of the absolute Error of the last Integral calculation.
 
    return fLastError;
 }
 
-int GaussIntegratorOneDim::Status() const
+int GaussIntegrator::Status() const
 {
    // This method is not implemented.
 
    return 0;
 }
 
-void GaussIntegratorOneDim::SetFunction (const IGenFunction & function, bool copy)
+void GaussIntegrator::SetFunction (const IGenFunction & function, bool copy)
 {
    // Set integration function (flag control if function must be copied inside)
 
@@ -251,35 +251,35 @@ void GaussIntegratorOneDim::SetFunction (const IGenFunction & function, bool cop
 }
 
 
-double GaussIntegratorOneDim::Integral ()
+double GaussIntegrator::Integral ()
 {
    // This method is not implemented.
 
    return 0.0;
 }
 
-double GaussIntegratorOneDim::IntegralUp (double /*a*/)
+double GaussIntegrator::IntegralUp (double /*a*/)
 {
    // This method is not implemented.
 
    return 0.0;
 }
 
-double GaussIntegratorOneDim::IntegralLow (double /*b*/)
+double GaussIntegrator::IntegralLow (double /*b*/)
 {
    // This method is not implemented.
 
    return 0.0;
 }
 
-double GaussIntegratorOneDim::Integral (const std::vector< double > &/*pts*/)
+double GaussIntegrator::Integral (const std::vector< double > &/*pts*/)
 {
    // This method is not implemented.
 
    return 0.0;
 }
 
-double GaussIntegratorOneDim::IntegralCauchy (double /*a*/, double /*b*/, double /*c*/)
+double GaussIntegrator::IntegralCauchy (double /*a*/, double /*b*/, double /*c*/)
 {
    // This method is not implemented.
 

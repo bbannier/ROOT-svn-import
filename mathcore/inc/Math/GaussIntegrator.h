@@ -19,10 +19,10 @@
 namespace ROOT {
 namespace Math {
 
-class GaussIntegratorOneDim: public VirtualIntegratorOneDim {
+class GaussIntegrator: public VirtualIntegratorOneDim {
 public:
-   ~GaussIntegratorOneDim();
-   GaussIntegratorOneDim();
+   ~GaussIntegrator();
+   GaussIntegrator();
    
    void AbsValue(bool flag);
 
