@@ -60,5 +60,5 @@ void CLASS::DirectDraw(TGLRnrCtx & rnrCtx) const
 {
    // Render with OpenGL.
 
-   // printf("CLASS::DirectDraw Style %d, LOD %d\n", flags.Style(), flags.LOD());
+   // printf("CLASS::DirectDraw Style %d, LOD %d\n", rnrCtx.ViewerStyle(), rnrCtx.ViewerLOD());
 }
