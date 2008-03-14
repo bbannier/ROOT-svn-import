@@ -168,7 +168,7 @@ CINTS2       += $(MODDIRSD)/longif3.cxx
 endif
 endif
 
-ifeq ($(NOSTUBS),yes)
+ifneq ($(findstring -DG__NOSTUBS,$(CINTCXXFLAGS)),)
 CINTS2       += $(MODDIRS)/symbols.cxx
 endif
 
