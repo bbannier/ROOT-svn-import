@@ -2075,7 +2075,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
                   parfunc = parfunc->next;
                }
                new_ifunc = G__struct.memfunc[tagnum];
-               new_ifunc = G__get_methodhandle4(new_ifunc->funcname[ifn], &fpara, new_ifunc, &pifn, &poffset, 1, 1, 0);
+               new_ifunc = G__get_methodhandle4(ifunc->funcname[ifn], &fpara, new_ifunc, &pifn, &poffset, 1, 1, 0);
             }
         
             if(new_ifunc && (ifunc!=new_ifunc)){
@@ -7468,7 +7468,7 @@ int G__method_inbase2(int ifn, G__ifunc_table_internal *ifunc, int onlyparents)
           //class we generete the stub
           if (base!=-1 && ifunct) {
 	    page_base = G__method_inbase2(ifn, ifunct, onlyparents);
-	    if(page_base>0)
+	    if(page_base!=0) // if page_base==-1 it means it found the same method in different parents
 	      ++found;
           }
         }
