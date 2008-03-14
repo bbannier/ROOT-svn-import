@@ -144,7 +144,7 @@ help:
 # stage, without effecting the hardcoded (during ./configure) paths
 # This is useful (or even required) when building packages like .deb or .rpm
 
-FINDALLBUTCVS=-type f \! -path '*/CVS/*' \! -name .cvsignore \! -name SConscript \! -name Makefile.am
+FINDALLBUTSVN=-type f \! -path '*/.svn/*' \! -name SConscript \! -name Makefile.am
 
 install:
 	if [ ! -d $(DESTDIR)$(G__CFG_BINDIR) ]; then mkdir -p $(DESTDIR)$(G__CFG_BINDIR); fi
@@ -162,13 +162,13 @@ install:
 	if [ ! -d $(DESTDIR)$(G__CFG_INCLUDEDIRCINT) ] ; then mkdir -p $(DESTDIR)$(G__CFG_INCLUDEDIRCINT) ; fi
 	$(G__CFG_RM) $(DESTDIR)$(G__CFG_INCLUDEDIRCINT)/*
 	cp $(G__CFG_COREVERSION)/inc/*.h $(DESTDIR)$(G__CFG_INCLUDEDIRCINT)/
-	for f in `find reflex/inc $(FINDALLBUTCVS)`; do \
+	for f in `find reflex/inc $(FINDALLBUTSVN)`; do \
 	  d=$(DESTDIR)$(G__CFG_INCLUDEDIRCINT)/`dirname $$f | sed 's,^reflex/inc,,'`;\
 	  if [ ! -d $$d ]; then mkdir -p $$d; fi; \
 	  cp $$f $$d/; done
 	if [ ! -d $(DESTDIR)$(G__CFG_DATADIRCINT) ] ; then mkdir -p $(DESTDIR)$(G__CFG_DATADIRCINT) ; fi
 	$(G__CFG_RM) $(DESTDIR)$(G__CFG_DATADIRCINT)/*
-	for f in `cd $(G__CFG_COREVERSION); find include stl main lib $(FINDALLBUTCVS)`; do \
+	for f in `cd $(G__CFG_COREVERSION); find include stl main lib $(FINDALLBUTSVN)`; do \
 	  d=$(DESTDIR)$(G__CFG_DATADIRCINT)/$(G__CFG_COREVERSION)/`dirname $$f`;\
 	  if [ ! -d $$d ]; then mkdir -p $$d; fi; \
 	  cp $(G__CFG_COREVERSION)/$$f $$d/; done
