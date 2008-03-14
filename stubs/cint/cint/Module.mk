@@ -279,7 +279,7 @@ $(CINTDIRS)/loadfile_tmp.o: CINTCXXFLAGS += -UR__HAVE_CONFIG -DROOTBUILD
 $(CINTDIRS)/loadfile_tmp.cxx: $(CINTDIRS)/loadfile.cxx
 	cp -f $< $@
 
-ifeq ($(NOSTUBS),yes)
+ifneq ($(findstring -DG__NOSTUBS,$(CINTCXXFLAGS)),)
 $(CINTDIRS)/newlink.o: OPT = $(NOOPT)
 endif
 
