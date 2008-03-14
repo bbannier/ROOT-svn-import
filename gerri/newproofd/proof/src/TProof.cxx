@@ -7264,7 +7264,7 @@ TProof *TProof::Open(const char *cluster, const char *conffile,
             else
                d = (TProofDesc *) mgr->GetProofDesc(locid);
             if (d) {
-               proof = (TProof*) mgr->AttachSession(d->GetLocalId());
+               proof = (TProof*) mgr->AttachSession(d);
                if (!proof || !proof->IsValid()) {
                   if (locid)
                      ::Error(pn, "new session could not be attached");
@@ -7300,14 +7300,14 @@ TProofMgr *TProof::Mgr(const char *url)
 }
 
 //_____________________________________________________________________________
-void TProof::Reset(const char *url)
+void TProof::Reset(const char *url, Bool_t hard)
 {
-   // Wrapper around TProofMgr::Reset().
+   // Wrapper around TProofMgr::Reset(...).
 
    if (url) {
       TProofMgr *mgr = TProof::Mgr(url);
       if (mgr && mgr->IsValid())
-         mgr->Reset();
+         mgr->Reset(hard);
       else
          ::Error("TProof::Reset",
                  "unable to initialize a valid manager instance");

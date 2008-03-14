@@ -774,7 +774,7 @@ public:
    static TProof       *Open(const char *url = 0, const char *conffile = 0,
                              const char *confdir = 0, Int_t loglevel = 0);
    static TProofMgr    *Mgr(const char *url);
-   static void          Reset(const char *url);
+   static void          Reset(const char *url, Bool_t hard = kFALSE);
 
    static void          AddEnvVar(const char *name, const char *value);
    static void          DelEnvVar(const char *name);

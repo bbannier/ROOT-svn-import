@@ -23,12 +23,6 @@
 #include "XrdProofGroup.h"
 #include "XrdProofdTrace.h"
 
-static const char *gTraceID = "";
-extern XrdOucTrace *XrdProofdTrace;
-
-// Local definitions
-#define TRACEID gTraceID
-
 // Functions used in scanning hash tables
 
 //__________________________________________________________________________
@@ -126,17 +120,18 @@ XrdProofGroup::~XrdProofGroup()
 void XrdProofGroup::Print()
 {
    // Dump group content
+   XPDLOC(GMGR, "")
 
    XrdSysMutexHelper mhp(fMutex); 
 
    if (fName != "default") {
-      XPDPRT("+++ Group: "<<fName<<", size "<<fSize<<" member(s) ("<<fMembers<<")");
-      XPDPRT("+++ Priority: "<<fPriority<<", fraction: "<<fFraction);
-      XPDPRT("+++ End of Group: "<<fName);
+      TRACE(ALL, "+++ Group: "<<fName<<", size "<<fSize<<" member(s) ("<<fMembers<<")");
+      TRACE(ALL, "+++ Priority: "<<fPriority<<", fraction: "<<fFraction);
+      TRACE(ALL, "+++ End of Group: "<<fName);
    } else {
-      XPDPRT("+++ Group: "<<fName);
-      XPDPRT("+++ Priority: "<<fPriority<<", fraction: "<<fFraction);
-      XPDPRT("+++ End of Group: "<<fName);
+      TRACE(ALL, "+++ Group: "<<fName);
+      TRACE(ALL, "+++ Priority: "<<fPriority<<", fraction: "<<fFraction);
+      TRACE(ALL, "+++ End of Group: "<<fName);
    }
 }
 
@@ -327,6 +322,7 @@ int XrdProofGroupMgr::Config(const char *fn)
 {
    // (Re-)configure the group info using the file 'fn'.
    // Return the number of active groups or -1 in case of error.
+   XPDLOC(GMGR, "GroupMgr::Config")
 
    if (!fn || strlen(fn) <= 0) {
       // This call is to reset existing info and remain with
@@ -350,7 +346,7 @@ int XrdProofGroupMgr::Config(const char *fn)
    struct stat st;
    if (stat(fCfgFile.fName.c_str(), &st) != 0)
       return -1;
-   TRACE(DBG, "xpd: Config: GroupMgr: enter: time of last modification: " << st.st_mtime);
+   TRACE(DBG, "enter: time of last modification: " << st.st_mtime);
 
    // File should be loaded only once
    if (st.st_mtime <= fCfgFile.fMtime)
@@ -362,7 +358,7 @@ int XrdProofGroupMgr::Config(const char *fn)
    // Open the defined path.
    FILE *fin = 0;
    if (!(fin = fopen(fCfgFile.fName.c_str(), "r"))) {
-      TRACE(XERR, "xpd: Config: GroupMgr: cannot open file: "<<fCfgFile.fName<<" (errno:"<<errno<<")");
+      TRACE(XERR, "cannot open file: "<<fCfgFile.fName<<" (errno:"<<errno<<")");
       return -1;
    }
 
@@ -402,7 +398,7 @@ int XrdProofGroupMgr::Config(const char *fn)
       // Check consistency
       if (!gotkey || !gotgrp) {
          // Insufficient info
-         TRACE(DBG, "xpd: Config: GroupMgr: incomplete line: " << lin);
+         TRACE(DBG, "incomplete line: " << lin);
          continue;
       }
 
@@ -447,7 +443,7 @@ int XrdProofGroupMgr::Config(const char *fn)
          }
          if (!gotname || !gotnom) {
             // Insufficient info
-            TRACE(DBG, "xpd: Config: GroupMgr: incomplete property line: " << lin);
+            TRACE(DBG, "incomplete property line: " << lin);
             continue;
          }
          if (!g)
@@ -470,16 +466,17 @@ int XrdProofGroupMgr::ReadPriorities()
    // Read update priorities from the file defined at configuration time.
    // Return 1 if the file did not change, 0 if the file has been read
    // correctly, or -1 in case of error.
+   XPDLOC(GMGR, "GroupMgr::ReadPriorities")
 
    // Get the modification time
    struct stat st;
    if (stat(fPriorityFile.fName.c_str(), &st) != 0)
       return -1;
-   TRACE(DBG, "ReadPriorities: enter: time of last modification: " << st.st_mtime);
+   TRACE(DBG, "time of last modification: " << st.st_mtime);
 
    // File should be loaded only once
    if (st.st_mtime <= fPriorityFile.fMtime) {
-      TRACE(DBG, "ReadPriorities: file unchanged since last reading - do nothing ");
+      TRACE(DBG, "file unchanged since last reading - do nothing ");
       return 1;
    }
 
@@ -489,8 +486,7 @@ int XrdProofGroupMgr::ReadPriorities()
    // Open the defined path.
    FILE *fin = 0;
    if (!(fin = fopen(fPriorityFile.fName.c_str(), "r"))) {
-      TRACE(XERR, "ReadPriorities: cannot open file: "<<fPriorityFile.fName<<
-                  " (errno:"<<errno<<")");
+      TRACE(XERR, "cannot open file: "<<fPriorityFile.fName<<" (errno:"<<errno<<")");
       return -1;
    }
 
@@ -513,13 +509,12 @@ int XrdProofGroupMgr::ReadPriorities()
       // Get linked to the group, if any
       XrdProofGroup *g = fGroups.Find(group.c_str());
       if (!g) {
-         TRACE(XERR, "ReadPriorities: WARNING: found info for unknown group: "<<
-                     group<<" - ignoring");
+         TRACE(XERR, "found info for unknown group: "<<group<<" - ignoring");
          continue;
       }
       gl.tokenize(value, from, '=');
       if (value.length() <= 0) {
-         TRACE(XERR, "ReadPriorities: WARNING: value missing: read line is: '"<<gl<<"'");
+         TRACE(XERR, "value missing: read line is: '"<<gl<<"'");
          continue;
       }
       // Transform it in a usable value 

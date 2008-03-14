@@ -51,42 +51,6 @@
 
 // Tracing utilities
 #include "XrdProofdTrace.h"
-static const char *gTraceID = "";
-extern XrdOucTrace *XrdProofdTrace;
-#define TRACEID gTraceID
-
-//--------------------------------------------------------------------------
-//
-// XrdProofdCron
-//
-// Function run in separate thread to run periodic checks, ... at a tunable
-// frequency
-//
-//--------------------------------------------------------------------------
-void *XrdProofdCron(void *p)
-{
-   // This is an endless loop to periodically check the system
-
-   XrdProofdManager *mgr = (XrdProofdManager *)p;
-   if (!(mgr)) {
-      TRACE(REQ, "XrdProofdCron: undefined manager: cannot start");
-      return (void *)0;
-   }
-
-   TRACE(REQ, "XrdProofdCron: started with frequency "<<mgr->CronFrequency()<<" sec");
-
-   while(1) {
-      // Wait a while
-      XrdSysTimer::Wait(mgr->CronFrequency() * 1000);
-      // Do something here
-      TRACE(REQ, "XrdProofdCron: running periodical checks");
-      // Reconfigure the manager
-      mgr->Config(1);
-   }
-
-   // Should never come here
-   return (void *)0;
-}
 
 //__________________________________________________________________________
 XrdProofdManager::XrdProofdManager(XrdProtocol_Config *pi, XrdSysError *edest)
@@ -169,6 +133,7 @@ XrdProofdManager::~XrdProofdManager()
 static int CreateGroupDataSetDir(const char *, XrdProofGroup *g, void *rd)
 {
    // Create dataset dir for group 'g' under the root dataset dir 'rd'
+   XPDLOC(ALL, "CreateGroupDataSetDir")
 
    const char *dsetroot = (const char *)rd;
 
@@ -184,7 +149,7 @@ static int CreateGroupDataSetDir(const char *, XrdProofGroup *g, void *rd)
    XrdProofdAux::GetUserInfo(geteuid(), ui);
 
    if (XrdProofdAux::AssertDir(gdsetdir.c_str(), ui, 1) != 0) {
-      MERROR(MHEAD, "CreateGroupDataSetDir: could not assert " << gdsetdir);
+      TRACE(XERR, "could not assert " << gdsetdir);
    }
 
    // Process next
@@ -288,9 +253,10 @@ int XrdProofdManager::CheckUser(const char *usr,
 XrdProofSched *XrdProofdManager::LoadScheduler()
 {
    // Load PROOF scheduler
+   XPDLOC(ALL, "Manager::LoadScheduler")
 
    XrdProofSched *sched = 0;
-   XrdOucString name, lib;
+   XrdOucString name, lib, m;
 
    const char *cfn = CfgFile();
 
@@ -319,10 +285,8 @@ XrdProofSched *XrdProofdManager::LoadScheduler()
             }
          }
       } else {
-         XrdOucString m("failure opening config file (errno:");
-         m += errno;
-         m += "): ";
-         TRACE(XERR, "LoadScheduler: "<< m);
+         m.form("failure opening config file; errno: %d", errno);
+         TRACE(XERR, m);
       }
    }
 
@@ -330,14 +294,10 @@ XrdProofSched *XrdProofdManager::LoadScheduler()
    if (name == "default" || !(name.length() > 0 && lib.length() > 0)) {
       if ((name.length() <= 0 && lib.length() > 0) ||
           (name.length() > 0 && lib.length() <= 0)) {
-         XrdOucString m("LoadScheduler: missing or incomplete info (name:");
-         m += name;
-         m += ", lib:";
-         m += lib;
-         m += ")";
-         TRACE(DBG, m.c_str());
+         m.form("missing or incomplete info (name: %s, lib: %s)", name.c_str(), lib.c_str());
+         TRACE(DBG, m);
       }
-      TRACE(DBG,"LoadScheduler: instantiating default scheduler");
+      TRACE(DBG, "instantiating default scheduler");
       sched = new XrdProofSched("default", this, fGroupsMgr, cfn, fEDest);
    } else {
       // Load the required plugin
@@ -354,19 +314,18 @@ XrdProofSched *XrdProofdManager::LoadScheduler()
       }
       // Get the scheduler object
       if (!(sched = (*ep)(cfn, this, fGroupsMgr, fEDest))) {
-         TRACE(XERR, "LoadScheduler: unable to create scheduler object from " << lib);
+         TRACE(XERR, "unable to create scheduler object from " << lib);
          return (XrdProofSched *)0;
       }
    }
    // Check result
    if (!(sched->IsValid())) {
-      TRACE(XERR, "LoadScheduler:"
-                  " unable to instantiate the "<<sched->Name()<<" scheduler using "<< cfn);
+      TRACE(XERR, " unable to instantiate the "<<sched->Name()<<" scheduler using "<< cfn);
       delete sched;
       return (XrdProofSched *)0;
    }
    // Notify
-   XPDPRT("LoadScheduler: scheduler loaded: type: " << sched->Name());
+   TRACE(ALL, "scheduler loaded: type: " << sched->Name());
 
    // All done
    return sched;
@@ -376,20 +335,21 @@ XrdProofSched *XrdProofdManager::LoadScheduler()
 int XrdProofdManager::GetWorkers(XrdOucString &lw, XrdProofdProofServ *xps)
 {
    // Get a list of workers from the available resource broker
-   int rc = 0;
+   XPDLOC(ALL, "Manager::GetWorkers")
 
-   TRACE(ACT, "GetWorkers: enter");
+   int rc = 0;
+   TRACE(REQ, "enter");
 
    // We need the scheduler at this point
    if (!fProofSched) {
-      fEDest->Emsg("GetWorkers", "Scheduler undefined");
+      TRACE(XERR, "scheduler undefined");
       return -1;
    }
 
    // Query the scheduler for the list of workers
    std::list<XrdProofWorker *> wrks;
    fProofSched->GetWorkers(xps, &wrks);
-   TRACE(DBG, "GetWorkers: list size: " << wrks.size());
+   TRACE(DBG, "list size: " << wrks.size());
 
    // The full list
    std::list<XrdProofWorker *>::iterator iw;
@@ -414,27 +374,26 @@ int XrdProofdManager::Config(bool rcf)
 {
    // Run configuration and parse the entered config directives.
    // Return 0 on success, -1 on error
+   XPDLOC(ALL, "Manager::Config")
 
    XrdSysMutexHelper mtxh(fMutex);
 
    // Run first the configurator
    if (XrdProofdConfig::Config(rcf) != 0) {
-      fEDest->Say(0, "xpd: Config: Manager: problems parsing file ");
+      XPDERR("problems parsing file ");
       return -1;
    }
 
    XrdOucString msg;
-   msg = (rcf) ? "xpd: Config: Manager: re-configuring"
-               : "xpd: Config: Manager: configuring";
-   fEDest->Say(0, msg.c_str());
+   msg = (rcf) ? "re-configuring" : "configuring";
+   TRACE(ALL, msg);
 
    // Change/DonotChange ownership when logging clients
    fChangeOwn = (fMultiUser && getuid()) ? 0 : 1;
 
    // Notify port
-   msg = "xpd: Config: Manager: listening on port ";
-   msg += fPort;
-   fEDest->Say(0, msg.c_str());
+   msg.form("listening on port %d",fPort);
+   TRACE(ALL, msg);
 
    XrdProofUI ui;
    if (!rcf) {
@@ -442,10 +401,8 @@ int XrdProofdManager::Config(bool rcf)
       if (XrdProofdAux::GetUserInfo(geteuid(), ui) == 0) {
          fEffectiveUser = ui.fUser;
       } else {
-         msg = "xpd: Config: Manager: could not resolve effective user (getpwuid, errno: ";
-         msg += errno;
-         msg += ")";
-         fEDest->Say(0, msg.c_str());
+         msg.form("could not resolve effective user (getpwuid, errno: %d)",errno);
+         XPDERR(msg);
          return -1;
       }
 
@@ -455,39 +412,34 @@ int XrdProofdManager::Config(bool rcf)
       SafeFree(host);
 
       // Notify temporary directory
-      fEDest->Say(0, "xpd: Config: Manager: using temp dir: ", fTMPdir.c_str());
+      TRACE(ALL, "using temp dir: "<<fTMPdir);
 
       // Notify role
       const char *roles[] = { "any", "worker", "submaster", "master" };
-      fEDest->Say(0, "xpd: Config: Manager: role set to: ", roles[fSrvType+1]);
+      TRACE(ALL, "role set to: "<<roles[fSrvType+1]);
 
       // Admin path
       fAdminPath += fPort;
       if (XrdProofdAux::AssertDir(fAdminPath.c_str(), ui, fChangeOwn) != 0) {
-         fEDest->Say(0, "xpd: Config: Manager: unable to assert the admin path: ",
-                        fAdminPath.c_str());
+         XPDERR("unable to assert the admin path: "<<fAdminPath);
          return -1;
       }
-      fEDest->Say(0, "xpd: Config: Manager: admin path set to: ", fAdminPath.c_str());
+      TRACE(ALL, "admin path set to: "<<fAdminPath);
 
       // Create / Update the process ID file under the admin path
       XrdOucString pidfile(fAdminPath);
       pidfile += "/xrootd.pid";
       FILE *fpid = fopen(pidfile.c_str(), "w");
       if (!fpid) {
-         msg = "xpd: Config: Manager: unable to open pid file: ";
-         msg += pidfile.c_str();
-         msg = " ; errno: ";
-         msg += errno;
-         fEDest->Say(0, msg.c_str());
+         msg.form("unable to open pid file: %s; errno: %d", pidfile.c_str(), errno);
+         XPDERR(msg);
          return -1;
       }
       fprintf(fpid, "%d", getpid());
       fclose(fpid);
    } else {
       if (XrdProofdAux::GetUserInfo(fEffectiveUser.c_str(), ui) == 0) {
-         fEDest->Say(0, "xpd: Config: Manager: unable to get user info for ",
-                        fEffectiveUser.c_str());
+         XPDERR("unable to get user info for "<<fEffectiveUser);
       }
    }
 
@@ -495,12 +447,10 @@ int XrdProofdManager::Config(bool rcf)
    if (fWorkDir.length() > 0) {
       // Make sure it exists
       if (XrdProofdAux::AssertDir(fWorkDir.c_str(), ui, fChangeOwn) != 0) {
-         fEDest->Say(0, "xpd: Config: Manager: unable to assert working dir: ",
-                        fWorkDir.c_str());
+         XPDERR("unable to assert working dir: "<<fWorkDir);
          return -1;
       }
-      fEDest->Say(0, "xpd: Config: Manager: working directories under: ",
-                     fWorkDir.c_str());
+      TRACE(ALL, "working directories under: "<<fWorkDir);
       // Communicate it to the sandbox service
       XrdProofdSandbox::SetWorkdir(fWorkDir.c_str());
    }
@@ -509,12 +459,10 @@ int XrdProofdManager::Config(bool rcf)
    if (fDataSetDir.length() > 0) {
       // Make sure it exists
       if (XrdProofdAux::AssertDir(fDataSetDir.c_str(), ui, fChangeOwn) != 0) {
-         fEDest->Say(0, "xpd: Config: Manager: unable to assert dataset dir: ",
-                        fDataSetDir.c_str());
+         XPDERR("unable to assert dataset dir: "<<fDataSetDir);
          return -1;
       }
-      fEDest->Say(0, "xpd: Config: Manager: dataset directories under: ",
-                     fDataSetDir.c_str());
+      TRACE(ALL, "dataset directories under: "<<fDataSetDir);
       // Communicate it to the sandbox service
       XrdProofdSandbox::SetDSetdir(fDataSetDir.c_str());
    }
@@ -524,9 +472,9 @@ int XrdProofdManager::Config(bool rcf)
       if (fMastersAllowed.size() > 0) {
          std::list<XrdOucString *>::iterator i;
          for (i = fMastersAllowed.begin(); i != fMastersAllowed.end(); ++i)
-            fEDest->Say(0, "xpd: Config: Manager: masters allowed to connect: ", (*i)->c_str());
+            TRACE(ALL, "masters allowed to connect: "<<(*i)->c_str());
       } else {
-            fEDest->Say(0, "xpd: Config: Manager: masters allowed to connect: any");
+            TRACE(ALL, "masters allowed to connect: any");
       }
    }
 
@@ -536,36 +484,35 @@ int XrdProofdManager::Config(bool rcf)
       fPoolURL = "root://";
       fPoolURL += fHost;
    }
-   fEDest->Say(0, "xpd: Config: Manager: PROOF pool: ", fPoolURL.c_str());
-   fEDest->Say(0, "xpd: Config: Manager: PROOF pool namespace: ", fNamespace.c_str());
+   TRACE(ALL, "PROOF pool: "<<fPoolURL);
+   TRACE(ALL, "PROOF pool namespace: "<<fNamespace);
 
    // Initialize resource broker (if not worker)
    if (fSrvType != kXPD_Worker) {
 
       // Scheduler instance
       if (!(fProofSched = LoadScheduler())) {
-         fEDest->Say(0, "xpd: Config: Manager: scheduler initialization failed");
+         XPDERR("scheduler initialization failed");
          return 0;
       }
       const char *st[] = { "disabled", "enabled" };
-      fEDest->Say(0, "xpd: Config: Manager: user config files are ", st[fNetMgr->WorkerUsrCfg()]);
+      TRACE(ALL, "user config files are "<<st[fNetMgr->WorkerUsrCfg()]);
    }
 
    // Superusers: add default
    if (fSuperUsers.length() > 0)
       fSuperUsers += ",";
    fSuperUsers += fEffectiveUser;
-   msg = "xpd: Config: Manager: list of superusers: ";
-   msg += fSuperUsers;
-   fEDest->Say(0, msg.c_str());
+   msg.form("list of superusers: %s", fSuperUsers.c_str());
+   TRACE(ALL, msg);
 
    // Notify controlled mode, if such
    if (fOperationMode == kXPD_OpModeControlled) {
       fAllowedUsers += ',';
       fAllowedUsers += fSuperUsers;
-      msg = "xpd: Config: Manager: running in controlled access mode: users allowed: ";
-      msg += fAllowedUsers;
-      fEDest->Say(0, msg.c_str());
+      msg.form("running in controlled access mode: users allowed: %s",
+               fAllowedUsers.c_str());
+      TRACE(ALL, msg);
    }
 
    // Bare lib path
@@ -598,8 +545,7 @@ int XrdProofdManager::Config(bool rcf)
             }
          }
       }
-      fEDest->Say(0, "xpd: Config: Manager: bare lib path for proofserv: ",
-                     fBareLibPath.c_str());
+      TRACE(ALL, "bare lib path for proofserv: "<<fBareLibPath);
    }
 
    // Groups
@@ -618,43 +564,32 @@ int XrdProofdManager::Config(bool rcf)
 
    // Config the network manager
    if (fNetMgr && fNetMgr->Config(rcf) != 0) {
-      fEDest->Say(0, "xpd: Config: Manager: problems configuring the network manager");
+      XPDERR("problems configuring the network manager");
       return -1;
    }
 
    // Config the priority manager
    if (fPriorityMgr && fPriorityMgr->Config(rcf) != 0) {
-      fEDest->Say(0, "xpd: Config: Manager: problems configuring the priority manager");
+      XPDERR("problems configuring the priority manager");
       return -1;
    }
 
    // Config the ROOT versions manager
    if (fROOTMgr && fROOTMgr->Config(rcf) != 0) {
-      fEDest->Say(0, "xpd: Config: Manager: problems configuring the ROOT versions manager");
+      XPDERR("problems configuring the ROOT versions manager");
       return -1;
    }
 
    // Config the client manager
    if (fClientMgr && fClientMgr->Config(rcf) != 0) {
-      fEDest->Say(0, "xpd: Config: Manager: problems configuring the client manager");
+      XPDERR("problems configuring the client manager");
       return -1;
    }
 
    // Config the session manager
    if (fSessionMgr && fSessionMgr->Config(rcf) != 0) {
-      fEDest->Say(0, "xpd: Config: Manager: problems configuring the session manager");
+      XPDERR("problems configuring the session manager");
       return -1;
-   }
-
-   // Start cron thread, if required
-   if (fCron == 1) {
-      pthread_t tid;
-      if (XrdSysThread::Run(&tid, XrdProofdCron,
-                            (void *)this, 0, "Proof Manager cron thread") != 0) {
-         fEDest->Say(0, "xpd: Config: Manager: could not start cron thread");
-         return 0;
-      }
-      fEDest->Say(0, "xpd: Config: Manager: cron thread started");
    }
 
    // Done
@@ -696,29 +631,30 @@ int XrdProofdManager::ResolveKeywords(XrdOucString &s, XrdProofdClient *pcl)
    //     <host>             local host name
    //     <user>             user name
    // Return the number of keywords resolved.
+   XPDLOC(ALL, "Manager::ResolveKeywords")
 
    int nk = 0;
 
-   TRACE(HDBG,"ResolveKeywords: enter: "<<s<<" - WorkDir(): "<<WorkDir());
+   TRACE(HDBG,"enter: "<<s<<" - WorkDir(): "<<WorkDir());
 
    // Parse <workdir>
    if (s.replace("<workdir>", WorkDir()))
       nk++;
 
-   TRACE(HDBG,"ResolveKeywords: after <workdir>: "<<s);
+   TRACE(HDBG,"after <workdir>: "<<s);
 
    // Parse <host>
    if (s.replace("<host>", Host()))
       nk++;
 
-   TRACE(HDBG,"ResolveKeywords: after <host>: "<<s);
+   TRACE(HDBG,"after <host>: "<<s);
 
    // Parse <user>
    if (pcl)
       if (s.replace("<user>", pcl->User()))
          nk++;
 
-   TRACE(HDBG,"ResolveKeywords: exit: "<<s);
+   TRACE(HDBG,"exit: "<<s);
 
    // We are done
    return nk;
@@ -732,6 +668,7 @@ int XrdProofdManager::DoDirective(XrdProofdDirective *d,
                                   char *val, XrdOucStream *cfg, bool rcf)
 {
    // Update the priorities of the active sessions.
+   XPDLOC(ALL, "Manager::DoDirective")
 
    if (!d)
       // undefined inputs
@@ -756,7 +693,7 @@ int XrdProofdManager::DoDirective(XrdProofdDirective *d,
    } else if (d->fName == "xrd.protocol") {
       return DoDirectivePort(val, cfg, rcf);
    }
-   TRACE(XERR,"DoDirective: unknown directive: "<<d->fName);
+   TRACE(XERR, "unknown directive: "<<d->fName);
    return -1;
 }
 
@@ -764,23 +701,36 @@ int XrdProofdManager::DoDirective(XrdProofdDirective *d,
 int XrdProofdManager::DoDirectiveTrace(char *val, XrdOucStream *cfg, bool)
 {
    // Scan the config file for tracing settings
+   XPDLOC(ALL, "Manager::DoDirectiveTrace")
 
    if (!val || !cfg)
    // undefined inputs
    return -1;
 
-   // Specifies tracing options. Valid keywords are:
+   // Specifies tracing options. This works by levels and domains.
+   //
+   // Valid keyword levels are:
+   //   err            trace errors                        [on]
    //   req            trace protocol requests             [on]*
-   //   login          trace details about login requests  [on]*
-   //   act            trace internal actions              [off]
-   //   rsp            trace server replies                [off]
-   //   fork           trace proofserv forks               [on]*
    //   dbg            trace details about actions         [off]
    //   hdbg           trace more details about actions    [off]
-   //   err            trace errors                        [on]
-   //   sched          trace details about scheduling      [off]
-   //   admin          trace admin requests                [on]*
-   //   all            trace everything
+   // Special forms of 'dbg' (always on if 'dbg' is required) are:
+   //   login          trace details about login requests  [on]*
+   //   fork           trace proofserv forks               [on]*
+   //   mem            trace mem buffer manager            [off]
+   //
+   // Valid keyword domains are:
+   //   rsp            server replies                      [on]
+   //   aux            aux functions                       [on]
+   //   cmgr           client manager                      [on]
+   //   smgr           session manager                     [on]
+   //   nmgr           network manager                     [on]
+   //   pmgr           priority manager                    [on]
+   //   gmgr           group manager                       [on]
+   //   sched          details about scheduling            [on]
+   //
+   // Global switches:
+   //   all or dump    full tracing of everything
    //
    // Defaults are shown in brackets; '*' shows the default when the '-d'
    // option is passed on the command line. Each option may be
@@ -794,36 +744,52 @@ int XrdProofdManager::DoDirectiveTrace(char *val, XrdOucStream *cfg, bool)
          on = 0;
          val++;
       }
-      if (!strcmp(val,"req")) {
+      if (!strcmp(val,"err")) {
+         TRACESET(XERR, on);
+      } else if (!strcmp(val,"req")) {
          TRACESET(REQ, on);
-      } else if (!strcmp(val,"login")) {
-         TRACESET(LOGIN, on);
-      } else if (!strcmp(val,"act")) {
-         TRACESET(ACT, on);
-      } else if (!strcmp(val,"rsp")) {
-         TRACESET(RSP, on);
-      } else if (!strcmp(val,"fork")) {
-         TRACESET(FORK, on);
       } else if (!strcmp(val,"dbg")) {
          TRACESET(DBG, on);
+         TRACESET(LOGIN, on);
+         TRACESET(FORK, on);
+         TRACESET(MEM, on);
+      } else if (!strcmp(val,"login")) {
+         TRACESET(LOGIN, on);
+      } else if (!strcmp(val,"fork")) {
+         TRACESET(FORK, on);
+      } else if (!strcmp(val,"mem")) {
+         TRACESET(MEM, on);
       } else if (!strcmp(val,"hdbg")) {
          TRACESET(HDBG, on);
-      } else if (!strcmp(val,"err")) {
-         TRACESET(XERR, on);
+         TRACESET(DBG, on);
+         TRACESET(LOGIN, on);
+         TRACESET(FORK, on);
+         TRACESET(MEM, on);
+      } else if (!strcmp(val,"rsp")) {
+         TRACESET(RSP, on);
+      } else if (!strcmp(val,"aux")) {
+         TRACESET(AUX, on);
+      } else if (!strcmp(val,"cmgr")) {
+         TRACESET(CMGR, on);
+      } else if (!strcmp(val,"smgr")) {
+         TRACESET(SMGR, on);
+      } else if (!strcmp(val,"nmgr")) {
+         TRACESET(NMGR, on);
+      } else if (!strcmp(val,"pmgr")) {
+         TRACESET(PMGR, on);
+      } else if (!strcmp(val,"gmgr")) {
+         TRACESET(GMGR, on);
       } else if (!strcmp(val,"sched")) {
          TRACESET(SCHED, on);
-      } else if (!strcmp(val,"admin")) {
-         TRACESET(ADMIN, on);
-      } else if (!strcmp(val,"all")) {
+      } else if (!strcmp(val,"all") || !strcmp(val,"dump")) {
          // Everything
-         XPDPRT("Setting trace: "<<on);
+         TRACE(ALL, "Setting trace: "<<on);
          XrdProofdTrace->What = (on) ? TRACE_ALL : 0;
       }
+
       // Next
       val = cfg->GetToken();
    }
-         bool dbg = TRACING(DBG);
-         XPDPRT("dbg trace: "<<dbg);
 
    return 0;
 }
@@ -832,6 +798,7 @@ int XrdProofdManager::DoDirectiveTrace(char *val, XrdOucStream *cfg, bool)
 int XrdProofdManager::DoDirectiveGroupfile(char *val, XrdOucStream *cfg, bool rcf)
 {
    // Process 'groupfile' directive
+   XPDLOC(ALL, "Manager::DoDirectiveGroupfile")
 
    if (!val)
       // undefined inputs
@@ -846,7 +813,7 @@ int XrdProofdManager::DoDirectiveGroupfile(char *val, XrdOucStream *cfg, bool rc
    if (rcf) {
       SafeDelete(fGroupsMgr);
    } else if (fGroupsMgr) {
-      TRACE(XERR,"DoDirectiveGroupfile: groups manager already initialized: ignoring ");
+      TRACE(XERR, "groups manager already initialized: ignoring ");
       return -1;
    }
    fGroupsMgr = new XrdProofGroupMgr;
@@ -986,6 +953,7 @@ int XrdProofdManager::DoDirectiveMultiUser(char *val, XrdOucStream *cfg, bool)
 int XrdProofdManager::DoDirectiveCron(char *val, XrdOucStream *, bool)
 {
    // Process 'cron' directive
+   XPDLOC(ALL, "Manager::DoDirectiveCron")
 
    if (!val)
       // undefined inputs
@@ -994,7 +962,7 @@ int XrdProofdManager::DoDirectiveCron(char *val, XrdOucStream *, bool)
    // Cron frequency
    int freq = strtol(val, 0, 10);
    if (freq > 0) {
-      XPDPRT("DoDirectiveCron: setting frequency to "<<freq<<" sec");
+      TRACE(ALL, "setting frequency to "<<freq<<" sec");
       fCronFrequency = freq;
    }
 
@@ -1005,14 +973,13 @@ int XrdProofdManager::DoDirectiveCron(char *val, XrdOucStream *, bool)
 int XrdProofdManager::Process(XrdProofdProtocol *p)
 {
    // Process manager request
+   XPDLOC(ALL, "Manager::Process")
 
    int rc = 1;
    XPD_SETRESP(p, "Process");
 
-   TRACEP(p, respid, REQ, "Process: enter: req id: " << p->Request()->header.requestid);
-
-   // Atomic
-   XrdSysMutexHelper mhp(fMutex);
+   TRACEP(p, REQ, "req id: " << p->Request()->header.requestid << " (" <<
+             XrdProofdAux::ProofRequestTypes(p->Request()->header.requestid) << ")");
 
    // If the user is not yet logged in, restrict what the user can do
    if (!p->Status() || !(p->Status() & XPD_LOGGEDIN)) {
@@ -1022,7 +989,7 @@ int XrdProofdManager::Process(XrdProofdProtocol *p)
       case kXP_login:
          return fClientMgr->Login(p);
       default:
-         TRACEP(p, respid, XERR,"Process: invalid request: " <<p->Request()->header.requestid);
+         TRACEP(p, XERR, "invalid request: " <<p->Request()->header.requestid);
          response->Send(kXR_InvalidRequest,"Invalid request; user not logged in");
          return p->Link()->setEtext("protocol sequence error 1");
       }

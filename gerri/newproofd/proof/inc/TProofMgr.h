@@ -69,6 +69,7 @@ public:
 
 
    virtual TProof     *AttachSession(Int_t, Bool_t = kFALSE);
+   virtual TProof     *AttachSession(TProofDesc *, Bool_t = kFALSE);
    virtual TProof     *CreateSession(const char * = 0, const char * = 0, Int_t = -1);
    virtual void        DetachSession(Int_t, Option_t * = "");
    virtual TProofDesc *GetProofDesc(Int_t id);
@@ -83,7 +84,7 @@ public:
                                         { return (TObjString *)0; }
    virtual TObjString *ReadBuffer(const char *, const char *)
                                         { return (TObjString *)0; }
-   virtual Int_t       Reset(const char *usr = 0);
+   virtual Int_t       Reset(Bool_t hard = kFALSE, const char *usr = 0);
    virtual void        ShowWorkers();
    virtual Int_t       SendMsgToUsers(const char *, const char * = 0);
    virtual void        SetAlias(const char *alias="") { TNamed::SetTitle(alias); }

@@ -1,4 +1,4 @@
-// @(#)root/proofd:$Id:$
+// @(#)root/proofd:$Id$
 // Author: G. Ganis Jan 2008
 
 /*************************************************************************
@@ -36,9 +36,6 @@
 
 // Tracing utilities
 #include "XrdProofdTrace.h"
-static const char *gTraceID = "";
-extern XrdOucTrace *XrdProofdTrace;
-#define TRACEID gTraceID
 
 XrdOucString XrdProofdConfig::fgHost;
 
@@ -69,10 +66,11 @@ bool XrdProofdConfig::ReadFile()
 {
    // Return true if the file has never been read or did change since last
    // reading, false otherwise.
+   XPDLOC(ALL, "Config::ReadFile")
 
    // Must have a file
    if (fCfgFile.fName.length() <= 0) {
-      XPDPRT("ReadFile: no config file!");
+      TRACE(XERR, "no config file!");
       return -1;
    }
 
@@ -80,8 +78,8 @@ bool XrdProofdConfig::ReadFile()
    struct stat st;
    if (stat(fCfgFile.fName.c_str(), &st) != 0)
       return -1;
-   TRACE(DBG, "ReadFile: file: " << fCfgFile.fName);
-   TRACE(DBG, "ReadFile: time of last modification: " << st.st_mtime);
+   TRACE(DBG, "file: " << fCfgFile.fName);
+   TRACE(DBG, "time of last modification: " << st.st_mtime);
 
    // File should be loaded only once
    if (st.st_mtime <= fCfgFile.fMtime)
@@ -100,12 +98,13 @@ int XrdProofdConfig::ParseFile(bool rcf)
    // Parse config file for the registered directives. The flag 'rcf' is 0
    // on the first call, 1 on successive calls.
    // Returns 0 on success, -1 otherwise
+   XPDLOC(ALL, "Config::ParseFile")
 
    XrdOucString mp;
 
    // Check if the config file changed since last read, if any
    if (!ReadFile()) {
-      TRACE(DBG, "ParseFile: config file already parsed ");
+      TRACE(DBG, "config file already parsed ");
       return 0;
    }
 
@@ -124,7 +123,7 @@ int XrdProofdConfig::ParseFile(bool rcf)
    int cfgFD;
    const char *cfn = fCfgFile.fName.c_str();
    if ((cfgFD = open(cfn, O_RDONLY, 0)) < 0) {
-      XPDPRT("ParseFile: unable to open : " << cfn);
+      TRACE(XERR, "unable to open : " << cfn);
       return -1;
    }
 

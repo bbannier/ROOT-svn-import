@@ -37,9 +37,6 @@
 
 // Tracing utilities
 #include "XrdProofdTrace.h"
-static const char *gTraceID = "";
-extern XrdOucTrace *XrdProofdTrace;
-#define TRACEID gTraceID
 
 //______________________________________________________________________________
 XrdProofdNetMgr::XrdProofdNetMgr(XrdProofdManager *mgr,
@@ -92,6 +89,7 @@ int XrdProofdNetMgr::Config(bool rcf)
 {
    // Run configuration and parse the entered config directives.
    // Return 0 on success, -1 on error
+   XPDLOC(NMGR, "NetMgr::Config")
 
    // Cleanup the worker list
    std::list<XrdProofWorker *>::iterator w = fWorkers.begin();
@@ -106,19 +104,17 @@ int XrdProofdNetMgr::Config(bool rcf)
 
    // Run first the configurator
    if (XrdProofdConfig::Config(rcf) != 0) {
-      fEDest->Say(0, "xpd: Config: NetMgr: problems parsing file ");
+      XPDERR("problems parsing file ");
       return -1;
    }
 
    XrdOucString msg;
-   msg = (rcf) ? "xpd: Config: NetMgr: re-configuring"
-               : "xpd: Config: NetMgr: configuring";
-   fEDest->Say(0, msg.c_str());
+   msg = (rcf) ? "re-configuring" : "configuring";
+   TRACE(ALL, msg);
 
    if (fMgr->SrvType() != kXPD_Worker || fMgr->SrvType() == kXPD_AnyServer) {
-      fEDest->Say(0, "xpd: Config: NetMgr: PROOF config file: ",
-                    ((fPROOFcfg.fName.length() > 0) ? fPROOFcfg.fName.c_str()
-                                                    : "none"));
+      TRACE(ALL, "PROOF config file: " << 
+            ((fPROOFcfg.fName.length() > 0) ? fPROOFcfg.fName.c_str() : "none"));
       if (fResourceType == kRTStatic) {
          // Initialize the list of workers if a static config has been required
          // Default file path, if none specified
@@ -127,8 +123,8 @@ int XrdProofdNetMgr::Config(bool rcf)
          } else {
             // Load file content in memory
             if (ReadPROOFcfg() != 0) {
-               fEDest->Say(0, "xpd: Config: NetMgr: unable to find valid information"
-                              "in PROOF config file ", fPROOFcfg.fName.c_str());
+               XPDERR("unable to find valid information in PROOF config file "<<
+                      fPROOFcfg.fName);
                fPROOFcfg.fMtime = 0;
                return 0;
             }
@@ -137,8 +133,8 @@ int XrdProofdNetMgr::Config(bool rcf)
          // Nothign defined: use default
          CreateDefaultPROOFcfg();
       }
-      XrdProofdAux::Form(msg, "xpd: Config: NetMgr: %d worker nodes defined", fWorkers.size() - 1);
-      fEDest->Say(0, msg.c_str());
+      msg.form("%d worker nodes defined", fWorkers.size() - 1);
+      TRACE(ALL, msg);
 
       // Find unique nodes
       FindUniqueNodes();
@@ -157,6 +153,7 @@ int XrdProofdNetMgr::DoDirective(XrdProofdDirective *d,
                                        char *val, XrdOucStream *cfg, bool rcf)
 {
    // Update the priorities of the active sessions.
+   XPDLOC(NMGR, "NetMgr::DoDirective")
 
    if (!d)
       // undefined inputs
@@ -169,7 +166,7 @@ int XrdProofdNetMgr::DoDirective(XrdProofdDirective *d,
    } else if (d->fName == "worker") {
       return DoDirectiveWorker(val, cfg, rcf);
    }
-   TRACE(XERR,"DoDirective: unknown directive: "<<d->fName);
+   TRACE(XERR,"unknown directive: "<<d->fName);
    return -1;
 }
 
@@ -198,6 +195,7 @@ int XrdProofdNetMgr::DoDirectiveAdminReqTO(char *val, XrdOucStream *cfg, bool)
 int XrdProofdNetMgr::DoDirectiveResource(char *val, XrdOucStream *cfg, bool)
 {
    // Process 'resource' directive
+   XPDLOC(NMGR, "NetMgr::DoDirectiveResource")
 
    if (!val || !cfg)
       // undefined inputs
@@ -222,8 +220,8 @@ int XrdProofdNetMgr::DoDirectiveResource(char *val, XrdOucStream *cfg, bool)
             XrdProofdAux::Expand(fPROOFcfg.fName);
             // Make sure it exists and can be read
             if (access(fPROOFcfg.fName.c_str(), R_OK)) {
-               TRACE(XERR,"DoDirectiveResource: configuration file cannot be read: "<<
-                          fPROOFcfg.fName.c_str());
+               TRACE(XERR,"configuration file cannot be read: "<<
+                          fPROOFcfg.fName);
                fPROOFcfg.fName = "";
                fPROOFcfg.fMtime = 0;
             }
@@ -249,7 +247,7 @@ int XrdProofdNetMgr::DoDirectiveWorker(char *val, XrdOucStream *cfg, bool)
    if (val) {
       // Build the line
       XrdOucString line;
-      XrdProofdAux::Form(line, "%s %s", val, rest);
+      line.form("%s %s", val, rest);
       // Parse it now
       if (!strcmp(val, "master") || !strcmp(val, "node")) {
          // Init a master instance
@@ -275,9 +273,10 @@ int XrdProofdNetMgr::Broadcast(int type, const char *msg,
 {
    // Broadcast request to known potential sub-nodes.
    // Return 0 on success, -1 on error
-   int rc = 0;
+   XPDLOC(NMGR, "NetMgr::Broadcast")
 
-   TRACE(ACT, "Broadcast: enter: type: "<<type);
+   int rc = 0;
+   TRACE(REQ, "type: "<<type);
 
    // Loop over unique nodes
    std::list<XrdProofWorker *>::iterator iw = fNodes.begin();
@@ -301,10 +300,10 @@ int XrdProofdNetMgr::Broadcast(int type, const char *msg,
             // Type of server
             int srvtype = (w->fType != 'W') ? (kXR_int32) kXPD_Master
                                             : (kXR_int32) kXPD_Worker;
-            TRACE(HDBG,"Broadcast: sending request to "<<u);
+            TRACE(HDBG, "sending request to "<<u);
             // Send request
             if (!(xrsp = Send(u.c_str(), type, msg, srvtype, r, notify))) {
-               TRACE(XERR,"Broadcast: problems sending request to "<<u);
+               TRACE(XERR, "problems sending request to "<<u);
             }
             // Cleanup answer
             SafeDelete(xrsp);
@@ -322,6 +321,7 @@ int XrdProofdNetMgr::Broadcast(int type, const char *msg,
 XrdProofConn *XrdProofdNetMgr::GetProofConn(const char *url)
 {
    // Get a XrdProofConn for url; create a new one if not available
+   XPDLOC(NMGR, "NetMgr::GetProofConn")
 
    XrdSysMutexHelper mhp(fMutex);
 
@@ -329,7 +329,7 @@ XrdProofConn *XrdProofdNetMgr::GetProofConn(const char *url)
    if (fProofConnHash.Num() > 0) {
       if ((p = fProofConnHash.Find(url)) && (p->IsValid())) {
          // Valid connection exists
-         TRACE(DBG,"GetProofConn: foudn valid connection for "<<url);
+         TRACE(DBG, "found valid connection for "<<url);
          return p;
       }
       // If the connection is invalid connection clean it up
@@ -373,9 +373,10 @@ XrdClientMessage *XrdProofdNetMgr::Send(const char *url, int type,
 {
    // Broadcast request to known potential sub-nodes.
    // Return 0 on success, -1 on error
-   XrdClientMessage *xrsp = 0;
+   XPDLOC(NMGR, "NetMgr::Send")
 
-   TRACE(ACT, "Send: enter: type: "<<type);
+   XrdClientMessage *xrsp = 0;
+   TRACE(REQ, "type: "<<type);
 
    if (!url || strlen(url) <= 0)
       return xrsp;
@@ -424,7 +425,7 @@ XrdClientMessage *XrdProofdNetMgr::Send(const char *url, int type,
             break;
          default:
             ok = 0;
-            TRACE(XERR,"Send: invalid request type "<<type);
+            TRACE(XERR, "invalid request type "<<type);
             break;
       }
 
@@ -434,7 +435,7 @@ XrdClientMessage *XrdProofdNetMgr::Send(const char *url, int type,
 
       // Send over
       if (ok)
-         xrsp = conn->SendReq(&reqhdr, buf, vout, "XrdProofdNetMgr::Send");
+         xrsp = conn->SendReq(&reqhdr, buf, vout, "NetMgr::Send");
 
       // Print error msg, if any
       if (r && !xrsp && conn->GetLastErr()) {
@@ -445,7 +446,7 @@ XrdClientMessage *XrdProofdNetMgr::Send(const char *url, int type,
       }
 
    } else {
-      TRACE(XERR,"Send: could not open connection to "<<url);
+      TRACE(XERR, "could not open connection to "<<url);
       if (r) {
          XrdOucString cmsg = "failure attempting connection to ";
          cmsg += url;
@@ -465,6 +466,7 @@ XrdClientMessage *XrdProofdNetMgr::Send(const char *url, int type,
 int XrdProofdNetMgr::ReadBuffer(XrdProofdProtocol *p)
 {
    // Process a readbuf request
+   XPDLOC(NMGR, "NetMgr::ReadBuffer")
 
    int rc = 1;
    XPD_SETRESP(p, "ReadBuffer");
@@ -492,8 +494,8 @@ int XrdProofdNetMgr::ReadBuffer(XrdProofdProtocol *p)
       memcpy(file, p->Argp()->buff+offs, flen);
       file[flen] = 0;
    } else {
-      emsg = "ReadBuffer: file name not not found";
-      TRACEP(p, respid, XERR, emsg);
+      emsg = "file name not not found";
+      TRACEP(p, XERR, emsg);
       response->Send(kXR_InvalidRequest, emsg.c_str());
       return rc;
    }
@@ -502,7 +504,7 @@ int XrdProofdNetMgr::ReadBuffer(XrdProofdProtocol *p)
    //
    kXR_int64 ofs = ntohll(p->Request()->readbuf.ofs);
    int len = ntohl(p->Request()->readbuf.len);
-   TRACEP(p, respid, REQ, "ReadBuffer: file: "<<file<<", ofs: "<<ofs<<", len: "<<len);
+   TRACEP(p, REQ, "file: "<<file<<", ofs: "<<ofs<<", len: "<<len);
 
    // Check if local
    bool local = 0;
@@ -518,7 +520,7 @@ int XrdProofdNetMgr::ReadBuffer(XrdProofdProtocol *p)
          file[ui.File.length()] = 0;
          blen = ui.File.length();
          local = 1;
-         TRACEP(p, respid, DBG, "ReadBuffer: file is LOCAL");
+         TRACEP(p, DBG, "file is LOCAL");
       }
       SafeFree(fqn);
    }
@@ -539,7 +541,7 @@ int XrdProofdNetMgr::ReadBuffer(XrdProofdProtocol *p)
       pattern[i] = 0;
       filen = strdup(file);
       filen[blen - len] = 0;
-      TRACEP(p, respid, DBG, "ReadBuffer: grep operation "<<grep<<", pattern:"<<pattern);
+      TRACEP(p, DBG, "grep operation "<<grep<<", pattern:"<<pattern);
    }
    if (local) {
       if (grep > 0) {
@@ -559,28 +561,24 @@ int XrdProofdNetMgr::ReadBuffer(XrdProofdProtocol *p)
       if (lout > 0) {
          if (grep > 0) {
             if (TRACING(DBG)) {
-               emsg = "ReadBuffer: nothing found by 'grep' in ";
-               emsg += filen;
-               emsg += ", pattern: ";
-               emsg += pattern;
-               TRACEP(p, respid, DBG, emsg);
+               emsg.form("nothing found by 'grep' in %s, pattern: %s", filen, pattern);
+               TRACEP(p, DBG, emsg);
             }
             response->Send();
             return rc;
          } else {
-            emsg = "ReadBuffer: could not read buffer from ";
-            emsg += (local) ? "local file " : "remote file ";
-            emsg += file;
-            TRACEP(p, respid, XERR, emsg);
+            emsg.form("could not read buffer from %s %s",
+                     (local) ? "local file " : "remote file ", file);
+            TRACEP(p, XERR, emsg);
             response->Send(kXR_InvalidRequest, emsg.c_str());
             return rc;
          }
       } else {
          // Just got an empty buffer
          if (TRACING(DBG)) {
-            emsg = "ReadBuffer: nothing found in ";
+            emsg = "nothing found in ";
             emsg += file;
-            TRACEP(p, respid, DBG, emsg);
+            TRACEP(p, DBG, emsg);
          }
       }
    }
@@ -604,20 +602,21 @@ char *XrdProofdNetMgr::ReadBufferLocal(const char *file, kXR_int64 ofs, int &len
    // Read a buffer of length 'len' at offset 'ofs' of local file 'file'; the
    // returned buffer must be freed by the caller.
    // Returns 0 in case of error.
+   XPDLOC(NMGR, "NetMgr::ReadBufferLocal")
 
    XrdOucString emsg;
-   TRACE(ACT, "ReadBufferLocal: file: "<<file<<", ofs: "<<ofs<<", len: "<<len);
+   TRACE(REQ, "file: "<<file<<", ofs: "<<ofs<<", len: "<<len);
 
    // Check input
    if (!file || strlen(file) <= 0) {
-      TRACE(XERR, "ReadBufferLocal: file path undefined!");
+      TRACE(XERR, "file path undefined!");
       return (char *)0;
    }
 
    // Open the file in read mode
    int fd = open(file, O_RDONLY);
    if (fd < 0) {
-      emsg = "ReadBufferLocal: could not open ";
+      emsg = "could not open ";
       emsg += file;
       TRACE(XERR, emsg);
       return (char *)0;
@@ -626,7 +625,7 @@ char *XrdProofdNetMgr::ReadBufferLocal(const char *file, kXR_int64 ofs, int &len
    // Size of the output
    struct stat st;
    if (fstat(fd, &st) != 0) {
-      emsg = "ReadBufferLocal: could not get size of file with stat: errno: ";
+      emsg = "could not get size of file with stat: errno: ";
       emsg += (int)errno;
       TRACE(XERR, emsg);
       close(fd);
@@ -642,8 +641,7 @@ char *XrdProofdNetMgr::ReadBufferLocal(const char *file, kXR_int64 ofs, int &len
    // End at ...
    kXR_int64 end = fst + len;
    off_t lst = (end >= ltot) ? ltot : ((end > fst) ? end  : ltot);
-   TRACE(DBG, "ReadBufferLocal: file size: "<<ltot<<
-               ", read from: "<<fst<<" to "<<lst);
+   TRACE(DBG, "file size: "<<ltot<<", read from: "<<fst<<" to "<<lst);
 
    // Number of bytes to be read
    len = lst - fst;
@@ -651,7 +649,7 @@ char *XrdProofdNetMgr::ReadBufferLocal(const char *file, kXR_int64 ofs, int &len
    // Output buffer
    char *buf = (char *)malloc(len + 1);
    if (!buf) {
-      emsg = "ReadBufferLocal: could not allocate enough memory on the heap: errno: ";
+      emsg = "could not allocate enough memory on the heap: errno: ";
       emsg += (int)errno;
       XPDERR(emsg);
       close(fd);
@@ -669,7 +667,7 @@ char *XrdProofdNetMgr::ReadBufferLocal(const char *file, kXR_int64 ofs, int &len
       while ((nr = read(fd, buf + pos, left)) < 0 && errno == EINTR)
          errno = 0;
       if (nr < 0) {
-         TRACE(XERR, "ReadBufferLocal: error reading from file: errno: "<< errno);
+         TRACE(XERR, "error reading from file: errno: "<< errno);
          break;
       }
 
@@ -681,7 +679,7 @@ char *XrdProofdNetMgr::ReadBufferLocal(const char *file, kXR_int64 ofs, int &len
 
    // Termination
    buf[len] = 0;
-   TRACE(HDBG, "ReadBufferLocal: read "<<nr<<" bytes: "<< buf);
+   TRACE(HDBG, "read "<<nr<<" bytes: "<< buf);
 
    // Close file
    close(fd);
@@ -697,20 +695,21 @@ char *XrdProofdNetMgr::ReadBufferLocal(const char *file,
    // Grep lines matching 'pat' form 'file'; the returned buffer (length in 'len')
    // must be freed by the caller.
    // Returns 0 in case of error.
+   XPDLOC(NMGR, "NetMgr::ReadBufferLocal")
 
    XrdOucString emsg;
-   TRACE(ACT, "ReadBufferLocal: file: "<<file<<", pat: "<<pat<<", len: "<<len);
+   TRACE(REQ, "file: "<<file<<", pat: "<<pat<<", len: "<<len);
 
    // Check input
    if (!file || strlen(file) <= 0) {
-      TRACE(XERR, "ReadBufferLocal: file path undefined!");
+      TRACE(XERR, "file path undefined!");
       return (char *)0;
    }
 
    // Size of the output
    struct stat st;
    if (stat(file, &st) != 0) {
-      emsg = "ReadBufferLocal: could not get size of file with stat: errno: ";
+      emsg = "could not get size of file with stat: errno: ";
       emsg += (int)errno;
       TRACE(XERR, emsg);
       return (char *)0;
@@ -720,7 +719,7 @@ char *XrdProofdNetMgr::ReadBufferLocal(const char *file,
    // Open the file in read mode
    FILE *fp = fopen(file, "r");
    if (!fp) {
-      emsg = "ReadBufferLocal: could not open ";
+      emsg = "could not open ";
       emsg += file;
       TRACE(XERR, emsg);
       return (char *)0;
@@ -735,7 +734,7 @@ char *XrdProofdNetMgr::ReadBufferLocal(const char *file,
       // '-v' functionality
       keep = 0;
    } else if (opt != 1 ) {
-      emsg = "ReadBufferLocal: unknown option: ";
+      emsg = "unknown option: ";
       emsg += opt;
       TRACE(XERR, emsg);
       return (char *)0;
@@ -765,7 +764,7 @@ char *XrdProofdNetMgr::ReadBufferLocal(const char *file,
          left += dsiz;
       }
       if (!buf) {
-         emsg = "ReadBufferLocal: could not allocate enough memory on the heap: errno: ";
+         emsg = "could not allocate enough memory on the heap: errno: ";
          emsg += (int)errno;
          XPDERR(emsg);
          fclose(fp);
@@ -803,14 +802,15 @@ char *XrdProofdNetMgr::ReadBufferRemote(const char *url, const char *file,
    // Send a read buffer request of length 'len' at offset 'ofs' for remote file
    // defined by 'url'; the returned buffer must be freed by the caller.
    // Returns 0 in case of error.
+   XPDLOC(NMGR, "NetMgr::ReadBufferRemote")
 
-   TRACE(ACT, "ReadBufferRemote: url: "<<(url ? url : "undef")<<
+   TRACE(REQ, "url: "<<(url ? url : "undef")<<
                ", file: "<<(file ? file : "undef")<<", ofs: "<<ofs<<
                ", len: "<<len<<", grep: "<<grep);
 
    // Check input
    if (!file || strlen(file) <= 0) {
-      TRACE(XERR, "ReadBufferRemote: file undefined!");
+      TRACE(XERR, "file undefined!");
       return (char *)0;
    }
    if (!url || strlen(url) <= 0) {
@@ -839,7 +839,7 @@ char *XrdProofdNetMgr::ReadBufferRemote(const char *url, const char *file,
       char **vout = &buf;
       // Send over
       XrdClientMessage *xrsp =
-         conn->SendReq(&reqhdr, btmp, vout, "XrdProofdNetMgr::ReadBufferRemote");
+         conn->SendReq(&reqhdr, btmp, vout, "NetMgr::ReadBufferRemote");
 
       // If positive answer
       if (xrsp && buf && (xrsp->DataLen() > 0)) {
@@ -864,13 +864,14 @@ char *XrdProofdNetMgr::ReadLogPaths(const char *url, const char *msg, int isess)
 {
    // Get log paths from next tier; used in multi-master setups
    // Returns 0 in case of error.
+   XPDLOC(NMGR, "NetMgr::ReadLogPaths")
 
-   TRACE(ACT, "ReadLogPaths: url: "<<(url ? url : "undef")<<
-               ", msg: "<<(msg ? msg : "undef")<<", isess: "<<isess);
+   TRACE(REQ, "url: "<<(url ? url : "undef")<<
+              ", msg: "<<(msg ? msg : "undef")<<", isess: "<<isess);
 
    // Check input
    if (!url || strlen(url) <= 0) {
-      TRACE(XERR, "ReadLogPaths: url undefined!");
+      TRACE(XERR, "url undefined!");
       return (char *)0;
    }
 
@@ -895,7 +896,7 @@ char *XrdProofdNetMgr::ReadLogPaths(const char *url, const char *msg, int isess)
       char **vout = &buf;
       // Send over
       XrdClientMessage *xrsp =
-         conn->SendReq(&reqhdr, btmp, vout, "XrdProofdNetMgr::ReadLogPaths");
+         conn->SendReq(&reqhdr, btmp, vout, "NetMgr::ReadLogPaths");
 
       // If positive answer
       if (xrsp && buf && (xrsp->DataLen() > 0)) {
@@ -920,8 +921,9 @@ void XrdProofdNetMgr::CreateDefaultPROOFcfg()
 {
    // Fill-in fWorkers for a localhost based on the number of
    // workers fNumLocalWrks.
+   XPDLOC(NMGR, "NetMgr::CreateDefaultPROOFcfg")
 
-   TRACE(ACT, "CreateDefaultPROOFcfg: enter");
+   TRACE(REQ, "enter");
 
    XrdOucString mm;
 
@@ -932,11 +934,11 @@ void XrdProofdNetMgr::CreateDefaultPROOFcfg()
       mm += fMgr->Port();
       while (nwrk--) {
          fWorkers.push_back(new XrdProofWorker(mm.c_str()));
-         TRACE(DBG, "CreateDefaultPROOFcfg: added line: " << mm);
+         TRACE(DBG, "added line: " << mm);
       }
    }
 
-   XPDPRT("CreateDefaultPROOFcfg: done: "<<fWorkers.size()-1<<" workers");
+   TRACE(DBG, "done: "<<fWorkers.size()-1<<" workers");
 
    // We are done
    return;
@@ -947,17 +949,18 @@ std::list<XrdProofWorker *> *XrdProofdNetMgr::GetActiveWorkers()
 {
    // Return the list of workers after having made sure that the info is
    // up-to-date
+   XPDLOC(NMGR, "NetMgr::GetActiveWorkers")
 
    XrdSysMutexHelper mhp(fMutex);
 
    if (fResourceType == kRTStatic && fPROOFcfg.fName.length() > 0) {
       // Check if there were any changes in the config file
       if (ReadPROOFcfg(1) != 0) {
-         TRACE(XERR, "GetActiveWorkers: unable to read the configuration file");
+         TRACE(XERR, "unable to read the configuration file");
          return (std::list<XrdProofWorker *> *)0;
       }
    }
-   XPDPRT( "GetActiveWorkers: returning list with "<<fWorkers.size()<<" entries");
+   TRACE(DBG,  "returning list with "<<fWorkers.size()<<" entries");
 
    return &fWorkers;
 }
@@ -967,17 +970,18 @@ std::list<XrdProofWorker *> *XrdProofdNetMgr::GetNodes()
 {
    // Return the list of unique nodes after having made sure that the info is
    // up-to-date
+   XPDLOC(NMGR, "NetMgr::GetNodes")
 
    XrdSysMutexHelper mhp(fMutex);
 
    if (fResourceType == kRTStatic && fPROOFcfg.fName.length() > 0) {
       // Check if there were any changes in the config file
       if (ReadPROOFcfg(1) != 0) {
-         TRACE(XERR, "GetNodes: unable to read the configuration file");
+         TRACE(XERR, "unable to read the configuration file");
          return (std::list<XrdProofWorker *> *)0;
       }
    }
-   XPDPRT( "GetNodes: returning list with "<<fNodes.size()<<" entries");
+   TRACE(DBG, "returning list with "<<fNodes.size()<<" entries");
 
    return &fNodes;
 }
@@ -988,9 +992,9 @@ int XrdProofdNetMgr::ReadPROOFcfg(bool reset)
    // Read PROOF config file and load the information in fWorkers.
    // NB: 'master' information here is ignored, because it is passed
    //     via the 'xpd.workdir' and 'xpd.image' config directives
+   XPDLOC(NMGR, "NetMgr::ReadPROOFcfg")
 
-   TRACE(ACT, "ReadPROOFcfg: enter: saved time of last modification: " <<
-              fPROOFcfg.fMtime);
+   TRACE(REQ, "saved time of last modification: " <<fPROOFcfg.fMtime);
 
    // Check inputs
    if (fPROOFcfg.fName.length() <= 0)
@@ -1000,7 +1004,7 @@ int XrdProofdNetMgr::ReadPROOFcfg(bool reset)
    struct stat st;
    if (stat(fPROOFcfg.fName.c_str(), &st) != 0)
       return -1;
-   TRACE(DBG, "ReadPROOFcfg: enter: time of last modification: " << st.st_mtime);
+   TRACE(DBG, "time of last modification: " << st.st_mtime);
 
    // File should be loaded only once
    if (st.st_mtime <= fPROOFcfg.fMtime)
@@ -1048,7 +1052,7 @@ int XrdProofdNetMgr::ReadPROOFcfg(bool reset)
       if (lin[strlen(lin)-1] == '\n')
          lin[strlen(lin)-1] = '\0';
 
-      TRACE(DBG, "ReadPROOFcfg: found line: " << lin);
+      TRACE(DBG, "found line: " << lin);
 
       const char *pfx[2] = { "master", "node" };
       if (!strncmp(lin, pfx[0], strlen(pfx[0])) ||
@@ -1087,8 +1091,9 @@ int XrdProofdNetMgr::FindUniqueNodes()
    // Return the number of unque nodes.
    // NB: 'master' information here is ignored, because it is passed
    //     via the 'xpd.workdir' and 'xpd.image' config directives
+   XPDLOC(NMGR, "NetMgr::FindUniqueNodes")
 
-   TRACE(ACT, "FindUniqueNodes: enter: # workers: " << fWorkers.size());
+   TRACE(REQ, "# workers: " << fWorkers.size());
 
    // Cleanup the nodes list
    fNodes.clear();
@@ -1110,7 +1115,7 @@ int XrdProofdNetMgr::FindUniqueNodes()
             fNodes.push_back(*w);
       }
    }
-   TRACE(DBG, "FindUniqueNodes: found " << fNodes.size() <<" unique nodes");
+   TRACE(DBG, "found " << fNodes.size() <<" unique nodes");
 
    // We are done
    return fNodes.size();

@@ -26,9 +26,9 @@
 
 #ifdef OLDXRDOUC
 #  include "XrdSysToOuc.h"
-#  include "XrdOuc/XrdOucSemWait.hh"
+#  include "XrdOuc/XrdOucPthread.hh"
 #else
-#  include "XrdSys/XrdSysSemWait.hh"
+#  include "XrdSys/XrdSysPthread.hh"
 #endif
 
 #include "XrdOuc/XrdOucHash.hh"
@@ -42,6 +42,7 @@ class XrdProtocol_Config;
 class XrdProofdManager;
 class XrdROOTMgr;
 class XrdScheduler;
+class XrdSysLogger;
 
 class XpdClientSessions {
 public:
@@ -66,6 +67,7 @@ public:
    XrdOucString   fOrdinal;
    XrdOucString   fUserEnvs;
    XrdOucString   fROOTTag;
+   XrdOucString   fAdminPath;
    int            fSrvProtVers;
 
    XrdProofSessionInfo(XrdProofdClient *c, XrdProofdProofServ *s);
@@ -80,8 +82,10 @@ public:
 class XrdProofdProofServMgr : public XrdProofdConfig {
 
    XrdProofdManager  *fMgr;
+   XrdSysRecMutex     fMutex;
    XrdSysSemWait      fForkSem;   // To serialize fork requests
    XrdScheduler      *fSched;     // System scheduler
+   XrdSysLogger      *fLogger;    // Error logger
    int                fInternalWait;   // Timeout on replies from proofsrv
    XrdOucString       fProofServEnvs;  // Additional envs to be exported before proofserv
    XrdOucString       fProofServRCs;   // Additional rcs to be passed to proofserv
@@ -89,7 +93,7 @@ class XrdProofdProofServMgr : public XrdProofdConfig {
    int                fShutdownOpt;    // What to do when a client disconnects
    int                fShutdownDelay;  // Delay shutdown by this (if enabled)
 
-   int                fPipe[2]; // pipe for the poller
+   XrdProofdPipe      fPipe;
 
    int                fCheckFrequency;
    int                fTerminationTimeOut;
@@ -97,6 +101,8 @@ class XrdProofdProofServMgr : public XrdProofdConfig {
    int                fReconnectTime;
    int                fReconnectTimeOut;
    int                fRecoverTimeOut;
+
+   int                fNextSessionsCheck; // Time of next sessions check
 
    XrdOucString       fActiAdminPath; // Active sessions admin area
    XrdOucString       fTermAdminPath; // Terminated sessions admin area
@@ -110,17 +116,22 @@ class XrdProofdProofServMgr : public XrdProofdConfig {
    int                DoDirectiveShutdown(char *, XrdOucStream *, bool);
 
    int                RecoverActiveSessions();
-   int                ResolveSession(int pid, std::list<XpdClientSessions> *cls);
+   int                ResolveSession(const char *fpid, std::list<XpdClientSessions> *cls);
 
    // Session Admin path management
-   int                GetSessionInfo(int pid, XrdProofSessionInfo &info);
-   int                AddSession(XrdProofdClient *c, XrdProofdProofServ *s);
-   int                RmSession(int pid);
-   int                TouchSession(int pid, const char *path = 0);
+   int                AddSession(XrdProofdProtocol *p, XrdProofdProofServ *s);
+   int                RmSession(const char *fpid);
+   int                TouchSession(const char *fpid, const char *path = 0);
+   int                VerifySession(const char *fpid, int to = -1, const char *path = 0);
 
 public:
    XrdProofdProofServMgr(XrdProofdManager *mgr, XrdProtocol_Config *pi, XrdSysError *e);
    virtual ~XrdProofdProofServMgr() { }
+
+   enum PSMProtocol { kSessionRemoval = 0, kClientDisconnect = 1, kAllReconnected = 2,
+                      kCleanSessions = 3} ;
+
+   XrdSysRecMutex   *Mutex() { return &fMutex; }
 
    int               Config(bool rcf = 0);
    int               DoDirective(XrdProofdDirective *d,
@@ -129,6 +140,12 @@ public:
 
    int               CheckFrequency() const { return fCheckFrequency; }
    int               InternalWait() const { return fInternalWait; }
+   int               VerifyTimeOut() const { return fVerifyTimeOut; }
+
+   inline int        NextSessionsCheck()
+                        { XrdSysMutexHelper mhp(fMutex); return fNextSessionsCheck; }
+   inline void       SetNextSessionsCheck(int t)
+                        { XrdSysMutexHelper mhp(fMutex); fNextSessionsCheck = t; }
 
    bool              IsReconnecting();
    void              SetReconnectTime(bool on = 1);
@@ -143,6 +160,7 @@ public:
    int               Recover(XpdClientSessions *cl);
 
    int               BroadcastPriorities();
+   void              DisconnectFromProofServ(int pid);
 
    std::list<XrdProofdProofServ *> *ActiveSessions() { return &fActiveSessions; }
    XrdProofdProofServ *GetActiveSession(int pid);
@@ -158,14 +176,13 @@ public:
 
    static int        SetProofServEnv(XrdProofdManager *m, XrdROOT *r);
 
-   int               ReadFd() const { return fPipe[0]; }
-   int               WriteFd() const { return fPipe[1]; }
+   inline XrdProofdPipe *Pipe() { return &fPipe; }
 
    // Checks run periodically by the cron job
-   int               DeleteFromSessions(int pid);
-   int               MvSession(int pid);
+   int               DeleteFromSessions(const char *pid);
+   int               MvSession(const char *fpid);
    int               CheckActiveSessions();
    int               CheckTerminatedSessions();
-
+   int               CleanClientSessions(const char *usr, int srvtype);
 };
 #endif

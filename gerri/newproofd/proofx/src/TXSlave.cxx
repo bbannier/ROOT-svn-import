@@ -182,7 +182,7 @@ void TXSlave::Init(const char *host, Int_t stype)
       alias = Form("session-%s|ord:%s", fProof->GetName(), fOrdinal.Data());
    } else if (!fProof->IsMaster() && stype == kMaster) {
       iam = "Local Client";
-      mode = 'M';
+      mode = (attach) ? 'A' : 'M';
    } else {
       Error("Init","Impossible PROOF <-> SlaveType Configuration Requested");
       R__ASSERT(0);
@@ -506,8 +506,8 @@ Bool_t TXSlave::HandleError(const void *)
 {
    // Handle error on the input socket
 
-   Info("HandleError", "%p:%s:%s got called ... fProof: %p, fSocket: %p",
-                       this, fName.Data(), fOrdinal.Data(), fProof, fSocket);
+   Info("HandleError", "%p:%s:%s got called ... fProof: %p, fSocket: %p (valid: %d)",
+                       this, fName.Data(), fOrdinal.Data(), fProof, fSocket, fSocket->IsValid());
    // Try reconnection
    if (fSocket && !fSocket->IsValid()) {
 

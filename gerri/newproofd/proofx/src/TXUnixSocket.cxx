@@ -51,6 +51,8 @@ TXUnixSocket::TXUnixSocket(const char *url,
       fUser = fConn->fUser.c_str();
       fHost = fConn->fHost.c_str();
       fPort = fConn->fPort;
+      fXrdProofdVersion = fConn->fRemoteProtocol;
+      fRemoteProtocol = fConn->fRemoteProtocol;
 
       // Save also updated url
       TSocket::fUrl = fConn->fUrl.GetUrl().c_str();

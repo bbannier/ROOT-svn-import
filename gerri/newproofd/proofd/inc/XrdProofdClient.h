@@ -66,8 +66,7 @@ class XrdProofdClient {
    void                    EraseServer(int psid);
    XrdProofdProofServ      *GetProofServ(int psid);
 
-   void                    DisconnectFromProofServ(XrdProofdProtocol *p);
-   int                     ResetClientSlot(XrdProofdProtocol *p);
+   int                     ResetClientSlot(int ic);
 
    int                     GetClientID(XrdProofdProtocol *p);
    int                     ReserveClientID(int cid);
@@ -79,7 +78,7 @@ class XrdProofdClient {
 
    XrdOucString            ExportSessions();
    void                    TerminateSessions(int srvtype, XrdProofdProofServ *ref,
-                                             const char *msg, int wfd);
+                                             const char *msg, XrdProofdPipe *pipe, bool changeown);
 
    void                    SetGroup(const char *g) { fUI.fGroup = g; }
    void                    SetROOT(XrdROOT *r) { fROOT = r; }

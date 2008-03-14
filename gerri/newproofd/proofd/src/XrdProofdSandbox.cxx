@@ -25,9 +25,6 @@
 
 // Tracing utilities
 #include "XrdProofdTrace.h"
-static const char *gTraceID = " ";
-extern XrdOucTrace *XrdProofdTrace;
-#define TRACEID gTraceID
 
 // Modified via config directives by the manager
 XrdOucString XrdProofdSandbox::fgDSetdir = "";
@@ -50,6 +47,7 @@ XrdProofdSandbox::XrdProofdSandbox(XrdProofUI ui, bool full, bool changeown)
    // sandbox; directories corresponding to terminated sessions are
    // removed if the total number of session directories is larger than
    // fgMaxOldSessions .
+   XPDLOC(CMGR, "XrdProofdSandbox")
 
    fValid = 0;
 
@@ -80,11 +78,11 @@ XrdProofdSandbox::XrdProofdSandbox(XrdProofUI ui, bool full, bool changeown)
          fDir += ui.fUser;
       }
    }
-   TRACE(LOGIN,"Sandbox: work dir = " << fDir);
+   TRACE(REQ, "work dir = " << fDir);
 
    // Make sure the directory exists
    if (XrdProofdAux::AssertDir(fDir.c_str(), ui, changeown) == -1) {
-      fErrMsg += "Sandbox: unable to create work dir: ";
+      fErrMsg += "unable to create work dir: ";
       fErrMsg += fDir;
       TRACE(XERR, fErrMsg);
       return;
@@ -98,7 +96,7 @@ XrdProofdSandbox::XrdProofdSandbox(XrdProofUI ui, bool full, bool changeown)
       XrdOucString dir = fDir;
       dir += basicdirs[i];
       if (XrdProofdAux::AssertDir(dir.c_str(), ui, changeown) == -1) {
-         fErrMsg += "Sandbox: unable to create dir: ";
+         fErrMsg += "unable to create dir: ";
          fErrMsg += dir;
          TRACE(XERR, fErrMsg);
          return;
@@ -118,7 +116,7 @@ XrdProofdSandbox::XrdProofdSandbox(XrdProofUI ui, bool full, bool changeown)
          fDSetDir += "/datasets";
       }
       if (XrdProofdAux::AssertDir(fDSetDir.c_str(), ui, changeown) == -1) {
-         fErrMsg += "Sandbox: unable to assert dataset dir: ";
+         fErrMsg += "unable to assert dataset dir: ";
          fErrMsg += fDSetDir;
          fDSetDir = "";
          TRACE(XERR, fErrMsg);
@@ -237,23 +235,23 @@ int XrdProofdSandbox::GetSessionDirs(int opt, std::list<XrdOucString *> *sdirs,
    // Returns -1 otherwise in case of failure.
    // In case of success returns 0 for opt < 3, 1 if found or 0 if not
    // found for opt == 3.
+   XPDLOC(CMGR, "Sandbox::GetSessionDirs")
 
    // If unknown take all
    opt = (opt >= 0 && opt <= 3) ? opt : 0;
 
    // Check inputs
    if ((opt < 3 && !sdirs) || (opt == 3 && !tag)) {
-      TRACE(XERR, "GetSessionDirs: invalid inputs");
+      TRACE(XERR, "invalid inputs");
       return -1;
    }
 
-   TRACE(ACT, "GetSessionDirs: enter: opt: "<<opt<<", dir: "<<fDir);
+   TRACE(DBG, "opt: "<<opt<<", dir: "<<fDir);
 
    // Open dir
    DIR *dir = opendir(fDir.c_str());
    if (!dir) {
-      TRACE(XERR, "GetSessionDirs: cannot open dir "<<fDir<<
-            " (errno: "<<errno<<")");
+      TRACE(XERR, "cannot open dir "<<fDir<< " (errno: "<<errno<<")");
       return -1;
    }
 
@@ -280,7 +278,7 @@ int XrdProofdSandbox::GetSessionDirs(int opt, std::list<XrdOucString *> *sdirs,
                   keep = 0;
             }
          }
-         TRACE(HDBG, "GetSessionDirs: found entry "<<ent->d_name<<", keep: "<<keep);
+         TRACE(HDBG, "found entry "<<ent->d_name<<", keep: "<<keep);
          if (sdirs && keep)
             sdirs->push_back(new XrdOucString(ent->d_name));
       }
@@ -307,17 +305,18 @@ int XrdProofdSandbox::AddSession(const char *tag)
    // Record entry for new proofserv session tagged 'tag' in the active
    // sessions file (<SandBox>/.sessions). The file is created if needed.
    // Return 0 on success, -1 on error.
+   XPDLOC(CMGR, "Sandbox::AddSession")
 
    // Check inputs
    if (!tag) {
-      XPDPRT("AddNewSession: invalid input");
+      XPDPRT("invalid input");
       return -1;
    }
-   TRACE(ACT, "AddNewSession: enter: tag:"<<tag);
+   TRACE(DBG, "tag:"<<tag);
 
    XrdSysPrivGuard pGuard((uid_t)0, (gid_t)0);
    if (XpdBadPGuard(pGuard, fUI.fUid) && fChangeOwn) {
-      TRACE(XERR, "AddSession: could not get privileges");
+      TRACE(XERR, "could not get privileges");
       return -1;
    }
 
@@ -328,16 +327,14 @@ int XrdProofdSandbox::AddSession(const char *tag)
    // Open the file for appending
    FILE *fact = fopen(fn.c_str(), "a+");
    if (!fact) {
-      TRACE(XERR, "AddNewSession: cannot open file "<<fn<<
-                 " for appending (errno: "<<errno<<")");
+      TRACE(XERR, "cannot open file "<<fn<<" for appending (errno: "<<errno<<")");
       return -1;
    }
 
    // Lock the file
    lseek(fileno(fact), 0, SEEK_SET);
    if (lockf(fileno(fact), F_LOCK, 0) == -1) {
-      TRACE(XERR, "AddNewSession: cannot lock file "<<fn<<
-                 " (errno: "<<errno<<")");
+      TRACE(XERR, "cannot lock file "<<fn<<" (errno: "<<errno<<")");
       fclose(fact);
       return -1;
    }
@@ -368,8 +365,7 @@ int XrdProofdSandbox::AddSession(const char *tag)
    // Unlock the file
    lseek(fileno(fact), 0, SEEK_SET);
    if (lockf(fileno(fact), F_ULOCK, 0) == -1)
-      TRACE(XERR, "AddNewSession: cannot unlock file "<<fn<<
-                 " (errno: "<<errno<<")");
+      TRACE(XERR, "cannot unlock file "<<fn<<" (errno: "<<errno<<")");
 
    // Close the file
    fclose(fact);
@@ -385,8 +381,9 @@ int XrdProofdSandbox::GuessTag(XrdOucString &tag, int ridx)
    // active session file or the session dir.
    // In case of success, tag is filled with the full tag and 0 is returned.
    // In case of failure, -1 is returned.
+   XPDLOC(CMGR, "Sandbox::GuessTag")
 
-   TRACE(ACT, "GuessTag: enter: tag: "<<tag);
+   TRACE(DBG, "tag: "<<tag);
 
    bool found = 0;
    bool last = (tag == "last") ? 1 : 0;
@@ -420,18 +417,18 @@ int XrdProofdSandbox::GuessTag(XrdOucString &tag, int ridx)
             // Unlock the file
             lseek(fileno(fact), 0, SEEK_SET);
             if (lockf(fileno(fact), F_ULOCK, 0) == -1)
-               TRACE(DBG, "GuessTag: cannot unlock file "<<fn<<" ; fact: "<<fact<<
+               TRACE(DBG, "cannot unlock file "<<fn<<" ; fact: "<<fact<<
                           ", fd: "<< fileno(fact) << " (errno: "<<errno<<")");
 
          } else {
-            TRACE(DBG, "GuessTag: cannot lock file: "<<fn<<" ; fact: "<<fact<<
+            TRACE(DBG, "cannot lock file: "<<fn<<" ; fact: "<<fact<<
                        ", fd: "<< fileno(fact) << " (errno: "<<errno<<")");
          }
          // Close the file
          fclose(fact);
 
       } else {
-         TRACE(DBG, "GuessTag: cannot open file "<<fn<<
+         TRACE(DBG, "cannot open file "<<fn<<
                     " for reading (errno: "<<errno<<")");
       }
    }
@@ -443,7 +440,7 @@ int XrdProofdSandbox::GuessTag(XrdOucString &tag, int ridx)
       staglst.clear();
       int rc = GetSessionDirs(3, &staglst, &tag);
       if (rc < 0) {
-         TRACE(XERR, "GuessTag: cannot scan dir "<<fDir);
+         TRACE(XERR, "cannot scan dir "<<fDir);
          return -1;
       }
       found = (rc == 1) ? 1 : 0;
@@ -475,7 +472,7 @@ int XrdProofdSandbox::GuessTag(XrdOucString &tag, int ridx)
       if (found) {
          tag.replace("session-", "");
       } else {
-         TRACE(DBG, "GuessTag: tag "<<tag<<" not found in dir");
+         TRACE(DBG, "tag "<<tag<<" not found in dir");
       }
    }
 
@@ -490,19 +487,20 @@ int XrdProofdSandbox::RemoveSession(const char *tag)
    // sessions file (<SandBox>/.sessions). The active file is removed if
    // empty after the operation. The old sessions file is created if needed.
    // Return 0 on success, -1 on error.
+   XPDLOC(CMGR, "Sandbox::RemoveSession")
 
    char ln[1024];
 
    // Check inputs
    if (!tag) {
-      TRACE(XERR, "RemoveSession: invalid input");
+      TRACE(XERR, "invalid input");
       return -1;
    }
-   TRACE(ACT, "RemoveSession: enter: tag:"<<tag);
+   TRACE(DBG, "tag:"<<tag);
 
    XrdSysPrivGuard pGuard((uid_t)0, (gid_t)0);
    if (XpdBadPGuard(pGuard, fUI.fUid) && fChangeOwn) {
-      TRACE(XERR, "RemoveSession: could not get privileges");
+      TRACE(XERR, "could not get privileges");
       return -1;
    }
 
@@ -513,15 +511,13 @@ int XrdProofdSandbox::RemoveSession(const char *tag)
    // Open the file
    FILE *fact = fopen(fna.c_str(), "a+");
    if (!fact) {
-      TRACE(DBG, "RemoveSession: cannot open file "<<fna<<
-                  " (errno: "<<errno<<")");
+      TRACE(XERR, "cannot open file "<<fna<<" (errno: "<<errno<<")");
       return -1;
    }
 
    // Lock the file
    if (lockf(fileno(fact), F_LOCK, 0) == -1) {
-      TRACE(DBG, "RemoveSession: cannot lock file "<<fna<<
-                 " (errno: "<<errno<<")");
+      TRACE(XERR, "cannot lock file "<<fna<<" (errno: "<<errno<<")");
       fclose(fact);
       return -1;
    }
@@ -542,8 +538,7 @@ int XrdProofdSandbox::RemoveSession(const char *tag)
 
    // Truncate the file
    if (ftruncate(fileno(fact), 0) == -1) {
-      TRACE(DBG, "RemoveSession: cannot truncate file "<<fna<<
-                 " (errno: "<<errno<<")");
+      TRACE(XERR, "cannot truncate file "<<fna<<" (errno: "<<errno<<")");
       lseek(fileno(fact), 0, SEEK_SET);
       lockf(fileno(fact), F_ULOCK, 0);
       fclose(fact);
@@ -564,8 +559,7 @@ int XrdProofdSandbox::RemoveSession(const char *tag)
    // Unlock the file
    lseek(fileno(fact), 0, SEEK_SET);
    if (lockf(fileno(fact), F_ULOCK, 0) == -1)
-      TRACE(DBG, "RemoveSession: cannot unlock file "<<fna<<
-                 " (errno: "<<errno<<")");
+      TRACE(DBG, "cannot unlock file "<<fna<<" (errno: "<<errno<<")");
 
    // Close the file
    fclose(fact);
@@ -573,8 +567,7 @@ int XrdProofdSandbox::RemoveSession(const char *tag)
    // Unlink the file if empty
    if (unlk)
       if (unlink(fna.c_str()) == -1) 
-         TRACE(DBG, "RemoveSession: cannot unlink file "<<fna<<
-                    " (errno: "<<errno<<")");
+         TRACE(DBG, "cannot unlink file "<<fna<<" (errno: "<<errno<<")");
 
    // Flag the session as closed
    XrdOucString fterm = fDir;
@@ -584,8 +577,7 @@ int XrdProofdSandbox::RemoveSession(const char *tag)
    // Create the file
    FILE *ft = fopen(fterm.c_str(), "w");
    if (!ft) {
-      TRACE(DBG, "RemoveSession: cannot open file "<<fterm<<
-                 " (errno: "<<errno<<")");
+      TRACE(XERR, "cannot open file "<<fterm<<" (errno: "<<errno<<")");
       return -1;
    }
    fclose(ft);
@@ -602,8 +594,9 @@ int XrdProofdSandbox::TrimSessionDirs()
    // By default logs for the last 10 sessions are kept; the limit can be changed
    // via the static method XrdProofdClient::SetMaxOldLogs.
    // Return 0 on success, -1 on error.
+   XPDLOC(CMGR, "Sandbox::TrimSessionDirs")
 
-   TRACE(ACT, "TrimSessionDirs: enter: maxold:"<<fgMaxOldSessions);
+   TRACE(DBG, "maxold:"<<fgMaxOldSessions);
 
    // To avoid dead locks we must close the file and do the mv actions after
    XrdOucString tobemv, fnact = fDir;
@@ -628,7 +621,7 @@ int XrdProofdSandbox::TrimSessionDirs()
 
    XrdSysPrivGuard pGuard((uid_t)0, (gid_t)0);
    if (XpdBadPGuard(pGuard, fUI.fUid) && fChangeOwn) {
-      TRACE(XERR, "TrimSessionDirs: could not get privileges to trim directories");
+      TRACE(XERR, "could not get privileges to trim directories");
       return -1;
    }
 
@@ -639,7 +632,7 @@ int XrdProofdSandbox::TrimSessionDirs()
       int from = 0;
       while ((from = tobemv.tokenize(tag, from, del)) != -1) {
          if (RemoveSession(tag.c_str()) == -1)
-            TRACE(XERR, "TrimSessionDirs: problems tagging session as old in sandbox");
+            TRACE(XERR, "problems tagging session as old in sandbox");
       }
    }
 
@@ -650,15 +643,15 @@ int XrdProofdSandbox::TrimSessionDirs()
       std::list<XrdOucString *> staglst;
       staglst.clear();
       if (GetSessionDirs(2, &staglst) != 0) {
-         TRACE(XERR, "TrimSessionDirs: cannot get list of dirs ");
+         TRACE(XERR, "cannot get list of dirs ");
          return -1;
       }
-      TRACE(DBG, "TrimSessionDirs: number of working dirs: "<<staglst.size());
+      TRACE(DBG, "number of working dirs: "<<staglst.size());
 
       if (TRACING(HDBG)) {
          std::list<XrdOucString *>::iterator i;
          for (i = staglst.begin(); i != staglst.end(); ++i) {
-            TRACE(HDBG, "TrimSessionDirs: found "<<(*i)->c_str());
+            TRACE(HDBG, "found "<<(*i)->c_str());
          }
       }
 
@@ -666,7 +659,7 @@ int XrdProofdSandbox::TrimSessionDirs()
       while ((int)staglst.size() > fgMaxOldSessions) {
          XrdOucString *s = staglst.back();
          if (s) {
-            TRACE(HDBG, "TrimSessionDirs: removing "<<s->c_str());
+            TRACE(HDBG, "removing "<<s->c_str());
             // Remove associated workdir
             XrdOucString rmcmd = "/bin/rm -rf ";
             rmcmd += fDir;

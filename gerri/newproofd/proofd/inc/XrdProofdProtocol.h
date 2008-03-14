@@ -33,6 +33,12 @@
 #define XPROOFD_VERSBIN 0x000003ED
 #define XPROOFD_VERSION "0.5"
 
+#ifdef OLDXRDOUC
+#  include "XrdSysToOuc.h"
+#  include "XrdOuc/XrdOucPthread.hh"
+#else
+#  include "XrdSys/XrdSysPthread.hh"
+#endif
 #include "Xrd/XrdLink.hh"
 #include "Xrd/XrdObject.hh"
 #include "Xrd/XrdProtocol.hh"
@@ -65,6 +71,9 @@ public:
    inline kXR_int32 CID() const { return fCID; }
    inline XrdProofdClient *Client() const { return fPClient; }
    inline int    ConnType() const { return fConnType; }
+   inline const char *TraceID() const { return fTraceID.c_str(); }
+   inline bool   Internal() { return (fConnType == kXPD_Internal) ? 1 : 0; }
+   inline int    Pid() const { return fPid; }
    inline char   Status() const { return fStatus; }
    inline short int ProofProtocol() const { return fProofProtocol; }
    inline bool   SuperUser() const { return fSuperUser; }
@@ -76,7 +85,7 @@ public:
    inline XrdSecProtocol *AuthProt() const { return fAuthProt; }
 
    // Setters
-   inline void   SetAdminPath(const char *p) { fAdminPath = p; }
+   inline void   SetAdminPath(const char *p) { XrdSysMutexHelper mhp(fMutex); fAdminPath = p; }
    inline void   SetAuthEntity(XrdSecEntity *se = 0) { fSecEntity.tident = fLink->ID;
                                                        fSecClient = (se) ? se : &fSecEntity; }
    inline void   SetAuthProt(XrdSecProtocol *p) { fAuthProt = p; }
@@ -84,7 +93,9 @@ public:
    inline void   SetClntCapVer(unsigned char c) { fClntCapVer = c; }
    inline void   SetCID(kXR_int32 cid) { fCID = cid; }
    inline void   SetConnType(int ct) { fConnType = ct; }
-   inline void   ProofProtocol(short int pp) { fProofProtocol = pp; }
+   inline void   SetTraceID() { if (fLink) fTraceID.form("%s: ", fLink->ID); }
+   inline void   SetPid(int pid) { fPid = pid; }
+   inline void   SetProofProtocol(short int pp) { fProofProtocol = pp; }
    inline void   SetStatus(char s) { fStatus = s; }
    inline void   SetSuperUser(bool su = 1) { fSuperUser = su; }
 
@@ -102,15 +113,17 @@ public:
    int           SendData(XrdProofdProofServ *xps, kXR_int32 sid = -1, XrdSrvBuffer **buf = 0);
    int           SendDataN(XrdProofdProofServ *xps, XrdSrvBuffer **buf = 0);
    int           SendMsg();
-   void          TouchClientPath();
+   void          TouchAdminPath();
    int           Urgent();
 
    //
    // Local area
    //
    XrdObject<XrdProofdProtocol>  fProtLink;
-   XrdLink                      *fLink;
    XrdBuffer                    *fArgp;
+
+   XrdLink                      *fLink;
+   int                           fPid;             // Remote ID of the connected process
 
    char                          fStatus;
 
@@ -123,6 +136,8 @@ public:
    XrdProofdClient              *fPClient;         // Our reference XrdProofdClient
    kXR_int32                     fCID;             // Reference ID of this client
    XrdOucString                  fAdminPath;       // Admin path for this client
+   //
+   XrdOucString                  fTraceID;          // Tracing ID
    //
    XrdSecEntity                 *fSecClient;
    XrdSecProtocol               *fAuthProt;
@@ -148,19 +163,15 @@ public:
    static int                    fgMaxBuffsz;    // Maximum buffer size we can have
 
    static XrdSysError            fgEDest;     // Error message handler
-   static XrdSysLogger           fgMainLogger; // Error logger
+   static XrdSysLogger          *fgLogger;    // Error logger
 
 
    //
    // Static area: protocol configuration section
-   static int                    fgPriorityMgrFd; // communication to priority manager
-   static int                    fgProofServMgrFd; // communication to proofserv manager
    static int                    fgReadWait;
    static XrdProofdManager      *fgMgr;       // Cluster manager
 
    static void                   PostSession(int on, const char *u, const char *g, int pid);
-   static void                   PostSessionRemoval(int pid);
-   static void                   PostClientDisconnection();
 };
 
 #define XPD_SETRESP(p, x) \
@@ -168,9 +179,17 @@ public:
    memcpy((void *)&rid, (const void *)&(p->Request()->header.streamid[0]), 2); \
    XrdProofdResponse *response = p->Response(rid); \
    if (!response) { \
-      TRACEI(p, XERR, x << ": could not get Response instance for requid:"<< rid); \
+      TRACEP(p, XERR, x << ": could not get Response instance for requid:"<< rid); \
       return rc; \
-   } \
-   const char *respid = response->ID();
+   }
+
+#define XPD_SETRESPV(p, x) \
+   kXR_unt16 rid; \
+   memcpy((void *)&rid, (const void *)&(p->Request()->header.streamid[0]), 2); \
+   XrdProofdResponse *response = p->Response(rid); \
+   if (!response) { \
+      TRACEP(p, XERR, x << ": could not get Response instance for requid:"<< rid); \
+      return; \
+   }
 
 #endif

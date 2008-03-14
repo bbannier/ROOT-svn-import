@@ -361,15 +361,15 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
    // responses are asynchronous by nature.
    UnsolRespProcResult rc = kUNSOL_KEEP;
 
-   if (gDebug > 2)
-      Info("ProcessUnsolicitedMsg", "Processing unsolicited msg: %p", m);
    if (!m) {
+      if (gDebug > 2)
+         Info("ProcessUnsolicitedMsg", "%p: got empty message: skipping", this);
       // Some one is perhaps interested in empty messages
       return kUNSOL_CONTINUE;
    } else {
       if (gDebug > 2)
-         Info("ProcessUnsolicitedMsg", "status: %d, len: %d bytes",
-              m->GetStatusCode(), m->DataLen());
+         Info("ProcessUnsolicitedMsg", "%p: got message with status: %d, len: %d bytes",
+              this, m->GetStatusCode(), m->DataLen());
    }
 
    // Error notification
@@ -1096,7 +1096,8 @@ Bool_t TXSocket::Ping(Bool_t)
 
    TSystem::ResetErrno();
 
-   Info("Ping"," sid: %d", fSessionID);
+   if (gDebug > 0)
+      Info("Ping","%p: %c: sid: %d", this, fMode, fSessionID);
 
    // Make sure we are connected
    if (!IsValid()) {
@@ -1142,15 +1143,16 @@ Bool_t TXSocket::Ping(Bool_t)
          XReqErrorType e = fConn->LowWrite(&Request, 0, 0);
          res = (e == kOK) ? kTRUE : kFALSE;
       } else {
-         Error("Ping", "problems marshalling request");
+         Error("Ping", "%p: i: problems marshalling request", this);
       }
    }
 
    // Failure notification (avoid using the handler: we may be exiting)
-   if (!res)
-      Error("Ping", "problems sending ping to server");
-   else 
-      Info("Ping"," sid: %d OK", fSessionID);
+   if (!res) {
+      Error("Ping", "%p: %c: problems sending ping to server", this, fMode);
+   } else if (gDebug > 0) {
+      Info("Ping","%p: %c: sid: %d OK", this, fMode, fSessionID);
+   }
 
    return res;
 }
@@ -1535,6 +1537,7 @@ TObjString *TXSocket::SendCoordinator(Int_t kind, const char *msg, Int_t int2,
          break;
       case kCleanupSessions:
          reqhdr.proof.int2 = (kXR_int32) kXPD_TopMaster;
+         reqhdr.proof.int3 = int2;
          reqhdr.proof.sid = fSessionID;
          reqhdr.header.dlen = (msg) ? strlen(msg) : 0;
          buf = (msg) ? (const void *)msg : buf;

@@ -30,14 +30,12 @@
 
 // Tracing
 #include "XrdProofdTrace.h"
-static const char *gTraceID = "";
-extern XrdOucTrace *XrdProofdTrace;
-#define TRACEID gTraceID
 
 //__________________________________________________________________________
 XrdROOT::XrdROOT(const char *dir, const char *tag)
 {
    // Constructor: validates 'dir', gets the version and defines the tag.
+   XPDLOC(SMGR, "XrdROOT")
 
    fStatus = -1;
    fSrvProtVers = -1;
@@ -54,12 +52,12 @@ XrdROOT::XrdROOT(const char *dir, const char *tag)
    // The path should exist and be statable
    struct stat st;
    if (stat(dir, &st) == -1) {
-      XPDERR("XrdROOT: unable to stat path "<<dir);
+      TRACE(XERR, "unable to stat path "<<dir);
       return;
    }
    // ... and be a directory
    if (!S_ISDIR(st.st_mode)) {
-      XPDERR("XrdROOT: path "<<dir<<" is not a directory");
+      TRACE(XERR, "path "<<dir<<" is not a directory");
       return;
    }
    fDir = dir;
@@ -67,7 +65,7 @@ XrdROOT::XrdROOT(const char *dir, const char *tag)
    // Get the version
    XrdOucString version;
    if (GetROOTVersion(dir, version) == -1) {
-      XPDERR("XrdROOT: unable to extract ROOT version from path "<<dir);
+      TRACE(XERR, "unable to extract ROOT version from path "<<dir);
       return;
    }
 
@@ -113,6 +111,7 @@ void XrdROOT::SetValid(kXR_int16 vers)
 int XrdROOT::GetROOTVersion(const char *dir, XrdOucString &version)
 {
    // Get ROOT version associated with 'dir'.
+   XPDLOC(SMGR, "GetROOTVersion")
 
    int rc = -1;
 
@@ -122,7 +121,7 @@ int XrdROOT::GetROOTVersion(const char *dir, XrdOucString &version)
    // Open file
    FILE *fv = fopen(versfile.c_str(), "r");
    if (!fv) {
-      XPDERR("XrdROOT::GetROOTVersion: unable to open "<<versfile);
+      TRACE(XERR, "unable to open "<<versfile);
       return rc;
    }
 
@@ -171,17 +170,17 @@ int XrdROOTMgr::Config(bool rcf)
 {
    // Run configuration and parse the entered config directives.
    // Return 0 on success, -1 on error
+   XPDLOC(SMGR, "ROOTMgr::Config")
 
    // Run first the configurator
    if (XrdProofdConfig::Config(rcf) != 0) {
-      fEDest->Say(0, "xpd: Config: ROOTMgr: problems parsing file ");
+      TRACE(XERR, "problems parsing file ");
       return -1;
    }
 
    XrdOucString msg;
-   msg = (rcf) ? "xpd: Config: ROOTMgr: re-configuring"
-               : "xpd: Config: ROOTMgr: configuring";
-   fEDest->Say(0, msg.c_str());
+   msg = (rcf) ? "re-configuring" : "configuring";
+   TRACE(ALL, msg);
 
    // ROOT dirs
    if (rcf) {
@@ -203,19 +202,18 @@ int XrdROOTMgr::Config(bool rcf)
          // None defined: use ROOTSYS as default, if any; otherwise we fail
          if (getenv("ROOTSYS")) {
             XrdROOT *rootc = new XrdROOT(getenv("ROOTSYS"), "");
-            msg = "ROOTMgr : Config: ROOT dist: \"";
-            msg += rootc->Export();
+            msg.form("ROOT dist: '%s'", rootc->Export());
             if (Validate(rootc, fSched) == 0) {
-               msg += "\" validated";
+               msg += " validated";
                fROOT.push_back(rootc);
+               TRACE(ALL, msg);
             } else {
-               msg += "\" could not be validated";
+               msg += " could not be validated";
+               TRACE(XERR, msg);
             }
-            fEDest->Say(0, msg.c_str());
         }
          if (fROOT.size() <= 0) {
-            fEDest->Say(0, "ROOTMgr : Config: no ROOT dir defined;"
-                           " ROOTSYS location missing - unloading");
+            TRACE(XERR, "no ROOT dir defined; ROOTSYS location missing - unloading");
             return 0;
          }
       }
@@ -238,6 +236,7 @@ int XrdROOTMgr::DoDirective(XrdProofdDirective *d,
                             char *val, XrdOucStream *cfg, bool rcf)
 {
    // Update the priorities of the active sessions.
+   XPDLOC(SMGR, "ROOTMgr::DoDirective")
 
    if (!d)
       // undefined inputs
@@ -246,7 +245,7 @@ int XrdROOTMgr::DoDirective(XrdProofdDirective *d,
    if (d->fName == "rootsys") {
       return DoDirectiveRootSys(val, cfg, rcf);
    }
-   TRACE(XERR,"DoDirective: unknown directive: "<<d->fName);
+   TRACE(XERR, "unknown directive: "<<d->fName);
    return -1;
 }
 
@@ -254,6 +253,7 @@ int XrdROOTMgr::DoDirective(XrdProofdDirective *d,
 int XrdROOTMgr::DoDirectiveRootSys(char *val, XrdOucStream *cfg, bool)
 {
    // Process 'rootsys' directive
+   XPDLOC(SMGR, "ROOTMgr::DoDirectiveRootSys")
 
    if (!val || !cfg)
       // undefined inputs
@@ -286,11 +286,11 @@ int XrdROOTMgr::DoDirectiveRootSys(char *val, XrdOucStream *cfg, bool)
       // If not, try validation
       if (rootc) {
          if (Validate(rootc, fSched) == 0) {
-            XPDPRT("DoDirectiveRootSys: validation OK for: "<<rootc->Export());
+            TRACE(REQ, "validation OK for: "<<rootc->Export());
             // Add to the list
             fROOT.push_back(rootc);
          } else {
-            XPDPRT("DoDirectiveRootSys: could not validate "<<rootc->Export());
+            TRACE(XERR, "could not validate "<<rootc->Export());
             SafeDelete(rootc);
          }
       }
@@ -304,34 +304,32 @@ int XrdROOTMgr::Validate(XrdROOT *r, XrdScheduler *sched)
    // Start a trial server application to test forking and get the version
    // of the protocol run by the PROOF server.
    // Return 0 if everything goes well, -1 in case of any error.
+   XPDLOC(SMGR, "ROOTMgr::Validate")
 
-   XPDPRT("XrdROOTMgr::Validate: forking test and protocol retrieval");
+   TRACE(REQ, "forking test and protocol retrieval");
 
    if (r->IsInvalid()) {
       // Cannot be validated
-      XPDERR("XrdROOTMgr::Validate: invalid instance - cannot be validated");
+      TRACE(XERR, "invalid instance - cannot be validated");
       return -1;
    }
 
    // Make sure the application path has been defined
    if (!r->PrgmSrv() || strlen(r->PrgmSrv()) <= 0) {
-      XPDERR("XrdROOTMgr::Validate: "
-            " path to PROOF server application undefined - exit");
+      TRACE(XERR, "path to PROOF server application undefined - exit");
       return -1;
    }
 
    // Make sure the scheduler is defined
    if (!sched) {
-      XPDERR("XrdROOTMgr::Validate: "
-            " scheduler undefined - exit");
+      TRACE(XERR, "scheduler undefined - exit");
       return -1;
    }
 
    // Pipe to communicate the protocol number
    int fp[2];
    if (pipe(fp) != 0) {
-      XPDERR("XrdROOTMgr::Validate: unable to generate pipe for"
-            " PROOT protocol number communication");
+      TRACE(XERR, "PROOT protocol number communication");
       return -1;
    }
 
@@ -351,8 +349,7 @@ int XrdROOTMgr::Validate(XrdROOT *r, XrdScheduler *sched)
 
       // Set basic environment for proofserv
       if (XrdProofdProofServMgr::SetProofServEnv(fMgr, r) != 0) {
-         TRACE(XERR, "XrdROOTMgr::Validate:"
-                       " SetProofServEnv did not return OK - EXIT");
+         TRACE(XERR, " SetProofServEnv did not return OK - EXIT");
          exit(1);
       }
 
@@ -366,15 +363,13 @@ int XrdROOTMgr::Validate(XrdROOT *r, XrdScheduler *sched)
       if (!getuid()) {
          XrdProofUI ui;
          if (XrdProofdAux::GetUserInfo(geteuid(), ui) != 0) {
-            TRACE(XERR, "XrdROOTMgr::Validate:"
-                          " could not get info for user-id: "<<geteuid());
+            TRACE(XERR, "could not get info for user-id: "<<geteuid());
             exit(1);
          }
 
          // acquire permanently target user privileges
          if (XrdSysPriv::ChangePerm((uid_t)ui.fUid, (gid_t)ui.fGid) != 0) {
-            TRACE(XERR, "XrdROOTMgr::Validate: can't acquire "<<
-                          ui.fUser <<" identity");
+            TRACE(XERR, "can't acquire "<<ui.fUser <<" identity");
             exit(1);
          }
 
@@ -384,22 +379,20 @@ int XrdROOTMgr::Validate(XrdROOT *r, XrdScheduler *sched)
       execv(r->PrgmSrv(), argvv);
 
       // We should not be here!!!
-      TRACE(XERR, "XrdROOTMgr::Validate:"
-                    " returned from execv: bad, bad sign !!!");
+      TRACE(XERR, "returned from execv: bad, bad sign !!!");
       exit(1);
    }
 
    // parent process
    if (pid < 0) {
-      XPDERR("XrdROOTMgr::Validate: forking failed - exit");
+      TRACE(XERR, "forking failed - exit");
       close(fp[0]);
       close(fp[1]);
       return -1;
    }
 
    // now we wait for the callback to be (successfully) established
-   TRACE(FORK, "XrdROOTMgr::Validate:"
-               " test server launched: wait for protocol ");
+   TRACE(FORK, "test server launched: wait for protocol ");
 
    // Read protocol
    int proto = -1;
@@ -414,22 +407,18 @@ int XrdROOTMgr::Validate(XrdROOT *r, XrdScheduler *sched)
       while ((pollRet = poll(&fds_r, 1, 2000)) < 0 &&
              (errno == EINTR)) { }
       if (pollRet == 0)
-         TRACE(DBG,"XrdROOTMgr::Validate: "
-                   "receiving PROOF server protocol number: waiting 2 s ...");
+         TRACE(DBG, "receiving PROOF server protocol number: waiting 2 s ...");
    }
    if (pollRet > 0) {
       if (read(fp[0], &proto, sizeof(proto)) != sizeof(proto)) {
-         XPDERR("Validate: "
-               " XrdROOT::problems receiving PROOF server protocol number");
+         TRACE(XERR, "problems receiving PROOF server protocol number");
          return -1;
       }
    } else {
       if (pollRet == 0) {
-         XPDERR("XrdROOTMgr::Validate: "
-               " timed-out receiving PROOF server protocol number");
+         TRACE(XERR, "timed-out receiving PROOF server protocol number");
       } else {
-         XPDERR("XrdROOTMgr::Validate: "
-               " failed to receive PROOF server protocol number");
+         TRACE(XERR, "failed to receive PROOF server protocol number");
       }
       return -1;
    }

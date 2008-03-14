@@ -30,9 +30,6 @@
 
 // Tracing utilities
 #include "XrdProofdTrace.h"
-static const char *gTraceID = "";
-extern XrdOucTrace *XrdProofdTrace;
-#define TRACEID gTraceID
 
 // Aux structures for scan through operations
 typedef struct {
@@ -42,68 +39,72 @@ typedef struct {
 
 //--------------------------------------------------------------------------
 //
-// XrdProofdPriorityPoller
+// XrdProofdPriorityCron
 //
 // Function run in separate thread watching changes in session status
 // frequency
 //
 //--------------------------------------------------------------------------
-void *XrdProofdPriorityPoller(void *p)
+void *XrdProofdPriorityCron(void *p)
 {
    // This is an endless loop to periodically check the system
+   XPDLOC(PMGR, "PriorityCron")
 
    XrdProofdPriorityMgr *mgr = (XrdProofdPriorityMgr *)p;
    if (!(mgr)) {
-      TRACE(REQ, "XrdProofdPriorityPoller: undefined manager: cannot start");
+      TRACE(REQ, "undefined manager: cannot start");
       return (void *)0;
    }
 
-   // Read protocol
-   struct pollfd fds_r;
-   fds_r.fd = mgr->ReadFd();
-   fds_r.events = POLLIN;
-
    while(1) {
       // We wait for processes to communicate a session status change
-      int pollRet = 0;
-      while ((pollRet = poll(&fds_r, 1, -1)) < 0 &&
-            (errno == EINTR)) { }
+      int pollRet = mgr->Pipe()->Poll(-1);
       if (pollRet > 0) {
-         // Read message type
-         int type = 0;
-         if (read(mgr->ReadFd(), &type, sizeof(type)) != sizeof(type)) {
-            XPDERR("XrdProofdPriorityPoller: problems receiving message type");
+         int rc = 0;
+         XpdMsg msg;
+         if ((rc = mgr->Pipe()->Recv(msg)) != 0) {
+            XPDERR("problems receiving message; errno: "<<-rc);
             continue;
          }
-         // Read message
-         char *buf = XrdProofdAux::ReadMsg(mgr->ReadFd());
-         if (buf) {
-            char user[64], group[64];
-            // Parse the buffer
-            if (type == 0) {
-               // Change session status
-               int opt = 0, pid= -1;
-               sscanf(buf, "%d %s %s %d", &opt, user, group, &pid);
-               if (opt < 0)
-                  // Remove
-                  mgr->RemoveSession(pid);
-               else if (opt > 0)
-                  // Add
-                  mgr->AddSession(user, group, pid);
-            } else if (type == 1) {
-               // Change group priority
-               int prio = -1;
-               sscanf(buf, "%s %d", group, &prio);
-               mgr->SetGroupPriority(group, prio);
+         // Parse type
+         if (msg.Type() == XrdProofdPriorityMgr::kChangeStatus) {
+            XrdOucString usr, grp;
+            int opt, pid, rc = 0;
+            rc = msg.Get(opt);
+            rc = (rc == 0) ? msg.Get(usr) : rc;
+            rc = (rc == 0) ? msg.Get(grp) : rc;
+            rc = (rc == 0) ? msg.Get(pid) : rc;
+            if (rc != 0) {
+               XPDERR("kChangeStatus: problems parsing message; errno: "<<-rc);
+               continue;
+            }
+            if (opt < 0) {
+               // Remove
+               mgr->RemoveSession(pid);
+            } else if (opt > 0) {
+               // Add
+               mgr->AddSession(usr.c_str(), grp.c_str(), pid);
             } else {
-               XPDERR("XrdProofdPriorityPoller: unknown message type: "<< type);
+               XPDERR("kChangeStatus: invalid opt: "<< opt);
             }
-            // Communicate new priorities
-            if (mgr->SetNiceValues() != 0) {
-               XPDERR("XrdProofdPriorityPoller: problem setting nice values ");
+         } else if (msg.Type() == XrdProofdPriorityMgr::kSetGroupPriority) {
+            XrdOucString grp;
+            int prio = -1, rc = 0;
+            rc = msg.Get(grp);
+            rc = (rc == 0) ? msg.Get(prio) : rc;
+            if (rc != 0) {
+               XPDERR("kSetGroupPriority: problems parsing message; errno: "<<-rc);
+               continue;
             }
+            // Change group priority
+            mgr->SetGroupPriority(grp.c_str(), prio);
+         } else {
+            XPDERR("unknown message type: "<< msg.Type());
          }
-         delete [] buf;
+         // Communicate new priorities
+         if (mgr->SetNiceValues() != 0) {
+            XPDERR("problem setting nice values ");
+         }
       }
    }
 
@@ -117,14 +118,14 @@ XrdProofdPriorityMgr::XrdProofdPriorityMgr(XrdProofdManager *mgr,
                     : XrdProofdConfig(pi->ConfigFN, e)
 {
    // Constructor
+   XPDLOC(PMGR, "XrdProofdPriorityMgr")
 
    fMgr = mgr;
    fSchedOpt = kXPD_sched_off;
 
    // Init pipe for the poller
-   if (pipe(fPipe) != 0) {
-      XPDERR("XrdProofdPriorityMgr: unable to generate pipe for"
-            " the priority poller");
+   if (!fPipe.IsValid()) {
+      TRACE(XERR, "unable to generate pipe for the priority poller");
       return;
    }
 
@@ -136,15 +137,15 @@ XrdProofdPriorityMgr::XrdProofdPriorityMgr(XrdProofdManager *mgr,
 static int DumpPriorityChanges(const char *, XrdProofdPriority *p, void *s)
 {
    // Reset the priority on entries
+   XPDLOC(PMGR, "PriorityMgr::Config")
 
    XrdSysError *e = (XrdSysError *)s;
 
    if (p && e) {
-      XrdOucString msg("priority will be changed by ");
-      msg += p->fDeltaPriority;
-      msg += " for user(s): ";
-      msg += p->fUser;
-      e->Say(0, "xpd: Config: PriorityMgr: ", msg.c_str());
+      XrdOucString msg;
+      msg.form("priority will be changed by %d for user(s): %s",
+                p->fDeltaPriority, p->fUser.c_str());
+      TRACE(ALL, msg);
       // Check next
       return 0;
    }
@@ -158,41 +159,42 @@ int XrdProofdPriorityMgr::Config(bool rcf)
 {
    // Run configuration and parse the entered config directives.
    // Return 0 on success, -1 on error
+   XPDLOC(PMGR, "PriorityMgr::Config")
 
    // Run first the configurator
    if (XrdProofdConfig::Config(rcf) != 0) {
-      fEDest->Say(0, "xpd: Config: PriorityMgr: problems parsing file ");
+      XPDERR("problems parsing file ");
       return -1;
    }
 
    XrdOucString msg;
-   msg = (rcf) ? "xpd: Config: PriorityMgr: re-configuring"
-               : "xpd: Config: PriorityMgr: configuring";
-   fEDest->Say(0, msg.c_str());
+   msg = (rcf) ? "re-configuring" : "configuring";
+   TRACE(ALL, msg);
 
    // Notify change priority rules
    if (fPriorities.Num() > 0) {
       fPriorities.Apply(DumpPriorityChanges, (void *)fEDest);
    } else {
-      fEDest->Say(0, "xpd: Config: PriorityMgr: no priority changes requested");
+      TRACE(ALL, "no priority changes requested");
    }
 
    // Scheduling option
    if (fMgr->GroupsMgr() && fMgr->GroupsMgr()->Num() > 1 && fSchedOpt != kXPD_sched_off) {
-      msg = "xpd: Config: PriorityMgr: worker sched based on: ";
-      msg += (fSchedOpt == kXPD_sched_central) ? "central" : "local";
-      msg += " priorities";
-      fEDest->Say(0, msg.c_str());
+      msg.form("worker sched based on '%s' priorities",
+               (fSchedOpt == kXPD_sched_central) ? "central" : "local");
+      TRACE(ALL, msg);
    }
 
-   // Start poller thread
-   pthread_t tid;
-   if (XrdSysThread::Run(&tid, XrdProofdPriorityPoller,
-                           (void *)this, 0, "PriorityMgr poller thread") != 0) {
-      fEDest->Say(0, "xpd: Config: PriorityMgr: could not start poller thread");
-      return 0;
+   if (!rcf) {
+      // Start poller thread
+      pthread_t tid;
+      if (XrdSysThread::Run(&tid, XrdProofdPriorityCron,
+                              (void *)this, 0, "PriorityMgr poller thread") != 0) {
+         XPDERR("could not start poller thread");
+         return 0;
+      }
+      TRACE(ALL, "poller thread started");
    }
-   fEDest->Say(0, "xpd: Config: PriorityMgr: poller thread started");
 
    // Done
    return 0;
@@ -212,6 +214,7 @@ int XrdProofdPriorityMgr::DoDirective(XrdProofdDirective *d,
                                   char *val, XrdOucStream *cfg, bool rcf)
 {
    // Update the priorities of the active sessions.
+   XPDLOC(PMGR, "PriorityMgr::DoDirective")
 
    if (!d)
       // undefined inputs
@@ -222,7 +225,7 @@ int XrdProofdPriorityMgr::DoDirective(XrdProofdDirective *d,
    } else if (d->fName == "schedopt") {
       return DoDirectiveSchedOpt(val, cfg, rcf);
    }
-   TRACE(XERR,"DoDirective: unknown directive: "<<d->fName);
+   TRACE(XERR, "unknown directive: "<<d->fName);
    return -1;
 }
 
@@ -261,6 +264,7 @@ static int ResetEntryPriority(const char *, XrdProofdSessionEntry *e, void *)
 static int CreateActiveList(const char *, XrdProofdSessionEntry *e, void *s)
 {
    // Run thorugh entries to create the sorted list of active entries
+   XPDLOC(PMGR, "CreateActiveList")
 
    XpdCreateActiveList_t *cal = (XpdCreateActiveList_t *)s;
 
@@ -304,7 +308,7 @@ static int CreateActiveList(const char *, XrdProofdSessionEntry *e, void *s)
    }
 
    // Some problem
-   TRACE(XERR,"CreateActiveList: "<< (e ? e->fUser : "---") << ": Protocol error: "<<emsg);
+   TRACE(XERR, (e ? e->fUser : "---") << ": protocol error: "<<emsg);
    return 1;
 }
 
@@ -318,8 +322,11 @@ int XrdProofdPriorityMgr::SetNiceValues(int opt)
    //    1          master sessions
    //    2          worker sessionsg21
    // Return 0 on success, -1 otherwise.
+   XPDLOC(PMGR, "PriorityMgr::SetNiceValues")
 
-   TRACE(SCHED,"---------------- SetNiceValues ("<<opt<<") ---------------------------");
+   TRACE(REQ, "------------------- Start ----------------------");
+
+   TRACE(REQ, "opt: "<<opt);
 
    if (!fMgr->GroupsMgr() || fMgr->GroupsMgr()->Num() <= 1 || !IsSchedOn())
       // Nothing to do
@@ -327,13 +334,13 @@ int XrdProofdPriorityMgr::SetNiceValues(int opt)
 
    // At least two active session
    int nact = fSessions.Num();
-   TRACE(SCHED,"enter: "<< fMgr->GroupsMgr()->Num()<<" groups, " << nact<<" active sessions");
+   TRACE(DBG,  fMgr->GroupsMgr()->Num()<<" groups, " << nact<<" active sessions");
    if (nact <= 1) {
       // Restore default values
       if (nact == 1)
          fSessions.Apply(ResetEntryPriority, 0);
       // Nothing else to do
-      TRACE(SCHED,"------------ End of SetNiceValues ------------------------");
+      TRACE(REQ, "------------------- End ------------------------");
       return 0;
    }
 
@@ -343,13 +350,12 @@ int XrdProofdPriorityMgr::SetNiceValues(int opt)
    int rc = 0;
    if ((rc = fMgr->GroupsMgr()->SetEffectiveFractions(IsSchedOn())) != 0) {
       // Failure
-      TRACE(XERR,"SetNiceValues: failure from SetEffectiveFractions");
-      TRACE(SCHED,"------------ End of SetNiceValues ------------------------");
+      TRACE(XERR, "failure from SetEffectiveFractions");
       return -1;
    }
 
    // Now create a list of active sessions sorted by decreasing effective fraction
-   TRACE(SCHED,"--> creating a list of active sessions sorted by decreasing effective fraction ");
+   TRACE(DBG,  "creating a list of active sessions sorted by decreasing effective fraction ");
    std::list<XrdProofdSessionEntry *> sorted;
    XpdCreateActiveList_t cal = { fMgr->GroupsMgr(), &sorted };
    fSessions.Apply(CreateActiveList, (void *)&cal);
@@ -357,18 +363,18 @@ int XrdProofdPriorityMgr::SetNiceValues(int opt)
    // Notify
    int i = 0;
    std::list<XrdProofdSessionEntry *>::iterator ssvi;
-   if (TRACING(SCHED) && TRACING(HDBG)) {
+   if (TRACING(HDBG)) {
       for (ssvi = sorted.begin() ; ssvi != sorted.end(); ssvi++)
-         XPDPRT("SetNiceValues: "<< i++ <<" eff: "<< (*ssvi)->fFracEff);
+         TRACE(HDBG, i++ <<" eff: "<< (*ssvi)->fFracEff);
    }
 
-   TRACE(SCHED,"SetNiceValues: calculating nice values");
+   TRACE(DBG,  "calculating nice values");
 
    // The first has the max priority
    ssvi = sorted.begin();
    float xmax = (*ssvi)->fFracEff;
    if (xmax <= 0.) {
-      TRACE(XERR,"SetNiceValues: negative or null max effective fraction: "<<xmax);
+      TRACE(XERR, "negative or null max effective fraction: "<<xmax);
       return -1;
    }
    // This is for Unix
@@ -380,11 +386,11 @@ int XrdProofdPriorityMgr::SetNiceValues(int opt)
       int xpri = (int) ((*ssvi)->fFracEff / xmax * (fPriorityMax - fPriorityMin))
                                                  + fPriorityMin;
       nice = 20 - xpri;
-      TRACE(SCHED, "    --> nice value for client "<< (*ssvi)->fUser<<" is "<<nice);
+      TRACE(DBG,  "    --> nice value for client "<< (*ssvi)->fUser<<" is "<<nice);
       (*ssvi)->SetPriority(nice);
       ssvi++;
    }
-   TRACE(SCHED,"------------ End of SetNiceValues ------------------------");
+   TRACE(REQ, "------------------- End ------------------------");
 
    // Done
    return 0;
@@ -417,6 +423,7 @@ int XrdProofdPriorityMgr::DoDirectivePriority(char *val, XrdOucStream *cfg, bool
 int XrdProofdPriorityMgr::DoDirectiveSchedOpt(char *val, XrdOucStream *cfg, bool)
 {
    // Process 'schedopt' directive
+   XPDLOC(PMGR, "PriorityMgr::DoDirectiveSchedOpt")
 
    if (!val || !cfg)
       // undefined inputs
@@ -468,7 +475,7 @@ int XrdProofdPriorityMgr::DoDirectiveSchedOpt(char *val, XrdOucStream *cfg, bool
 
    // Make sure that min is <= max
    if (fPriorityMin > fPriorityMax) {
-      TRACE(XERR, "DoDirectiveSchedOpt: inconsistent value for fPriorityMin (> fPriorityMax) ["<<
+      TRACE(XERR, "inconsistent value for fPriorityMin (> fPriorityMax) ["<<
                   fPriorityMin << ", "<<fPriorityMax<<"] - correcting");
       fPriorityMin = fPriorityMax;
    }
@@ -511,6 +518,7 @@ int XrdProofdPriorityMgr::SetProcessPriority(int pid, const char *user, int &dp)
 {
    // Change priority of process pid belonging to user, if needed.
    // Return 0 on success, -errno in case of error
+   XPDLOC(PMGR, "PriorityMgr::SetProcessPriority")
 
    // Change child process priority, if required
    if (fPriorities.Num() > 0) {
@@ -521,7 +529,7 @@ int XrdProofdPriorityMgr::SetProcessPriority(int pid, const char *user, int &dp)
          errno = 0;
          int priority = XPPM_NOPRIORITY;
          if ((priority = getpriority(PRIO_PROCESS, pid)) == -1 && errno != 0) {
-            TRACE(XERR, "SetProcessPriority: getpriority: errno: " << errno);
+            TRACE(XERR, "getpriority: errno: " << errno);
             return -errno;
          }
          // Set the priority
@@ -530,17 +538,17 @@ int XrdProofdPriorityMgr::SetProcessPriority(int pid, const char *user, int &dp)
          XrdProofdAux::GetUserInfo(geteuid(), ui);
          XrdSysPrivGuard pGuard((uid_t)0, (gid_t)0);
          if (XpdBadPGuard(pGuard, ui.fUid)) {
-            TRACE(XERR, "SetProcessPriority: could not get privileges");
+            TRACE(XERR, "could not get privileges");
             return -1;
          }
-         TRACE(SCHED, "SetProcessPriority: got privileges ");
+         TRACE(REQ, "got privileges ");
          errno = 0;
          if (setpriority(PRIO_PROCESS, pid, newp) != 0) {
-            TRACE(XERR, "SetProcessPriority: setpriority: errno: " << errno);
+            TRACE(XERR, "setpriority: errno: " << errno);
             return ((errno != 0) ? -errno : -1);
          }
          if ((getpriority(PRIO_PROCESS, pid)) != newp && errno != 0) {
-            TRACE(XERR, "SetProcessPriority: did not succeed: errno: " << errno);
+            TRACE(XERR, "did not succeed: errno: " << errno);
             return -errno;
          }
       }
@@ -558,14 +566,14 @@ XrdProofdSessionEntry::XrdProofdSessionEntry(const char *u, const char *g, int p
                      : fUser(u), fGroup(g), fPid(pid)
 {
    // Constructor
+   XPDLOC(PMGR, "XrdProofdSessionEntry")
 
    fPriority = XPPM_NOPRIORITY;
    fDefaultPriority = XPPM_NOPRIORITY;
    errno = 0;
    int prio = getpriority(PRIO_PROCESS, pid);
    if (errno != 0) {
-      TRACE(XERR, "XrdProofdSessionEntry:"
-                  " getpriority: errno: " << errno);
+      TRACE(XERR, " getpriority: errno: " << errno);
       return;
    }
    fDefaultPriority = prio;
@@ -583,6 +591,7 @@ XrdProofdSessionEntry::~XrdProofdSessionEntry()
 int XrdProofdSessionEntry::SetPriority(int priority)
 {
    // Change process priority
+   XPDLOC(PMGR, "SessionEntry::SetPriority")
 
    if (priority != XPPM_NOPRIORITY)
       priority = fDefaultPriority;
@@ -593,13 +602,12 @@ int XrdProofdSessionEntry::SetPriority(int priority)
       XrdProofdAux::GetUserInfo(geteuid(), ui);
       XrdSysPrivGuard pGuard((uid_t)0, (gid_t)0);
       if (XpdBadPGuard(pGuard, ui.fUid)) {
-         TRACE(XERR, "SetPriority: could not get privileges");
+         TRACE(XERR, "could not get privileges");
          return -1;
       }
       errno = 0;
       if (setpriority(PRIO_PROCESS, fPid, priority) != 0) {
-         TRACE(XERR, "SetPriority:"
-                     " setpriority: errno: " << errno);
+         TRACE(XERR, "setpriority: errno: " << errno);
          return -1;
       }
       fPriority = priority;

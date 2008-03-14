@@ -115,6 +115,49 @@ int DoDirectiveString(XrdProofdDirective *, char *val, XrdOucStream *cfg, bool r
 int SetHostInDirectives(const char *, XrdProofdDirective *d, void *h);
 
 //
+// Class to handle message buffers received via a pipe
+//
+class XpdMsg {
+   int          fType;
+   XrdOucString fBuf;
+   int          fFrom;
+public:
+   XpdMsg(const char *buf = 0) { Init(buf); }
+   virtual ~XpdMsg() { }
+
+   int Init(const char *buf);
+   void Reset() { fFrom = 0; }
+
+   int Get(int &i);
+   int Get(XrdOucString &s);
+   int Get(void **p);
+
+   int Type() const { return fType; }
+};
+
+//
+// Class describing a pipe
+//
+class XrdProofdPipe {
+   XrdSysRecMutex fRdMtx;   // Mutex for read operations
+   XrdSysRecMutex fWrMtx;   // Mutex for write operations
+   int            fPipe[2]; // pipe descriptors
+public:
+   XrdProofdPipe();
+   virtual ~XrdProofdPipe();
+
+   bool IsValid() const { return (fPipe[0] > 0 && fPipe[1] > 0) ? 1 : 0; }
+
+   int Poll(int to = -1);
+
+   int Post(int type, const char *msg);
+   int Recv(XpdMsg &msg);
+
+   void SetFd(void *fds);
+};
+
+
+//
 // Static methods
 //
 #if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
@@ -126,12 +169,12 @@ class XrdProofdAux {
 public:
    XrdProofdAux() { }
 
+   static const char *AdminMsgType(int type);
    static int AssertDir(const char *path, XrdProofUI ui, bool changeown);
    static int ChangeToDir(const char *dir, XrdProofUI ui, bool changeown);
    static int CheckIf(XrdOucStream *s, const char *h);
    static char *Expand(char *p);
    static void Expand(XrdOucString &path);
-   static int Form(XrdOucString &str, const char *fmt, ...);
    static long int GetLong(char *str);
 #if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
    static int GetMacProcList(kinfo_proc **plist, int &nproc);
@@ -141,7 +184,10 @@ public:
    static int GetUserInfo(int uid, XrdProofUI &ui);
    static int KillProcess(int pid, bool forcekill, XrdProofUI ui, bool changeown);
    static int MvDir(const char *oldpath, const char *newpath);
-   static char *ReadMsg(int fd);
+   static int ParsePidPath(const char *path, XrdOucString &rest);
+   static int ParseUsrGrp(const char *path, XrdOucString &usr, XrdOucString &grp);
+   static const char *ProofRequestTypes(int type);
+   static int ReadMsg(int fd, XrdOucString &msg);
    static int RmDir(const char *path);
    static int SymLink(const char *path, const char *link);
    static int Touch(const char *path, int opt = 0);

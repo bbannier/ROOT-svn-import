@@ -9,13 +9,13 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
+#include "XrdProofdAux.h"
 #include "XrdProofdProofServ.h"
 #include "XrdProofWorker.h"
 
 // Tracing utils
 #include "XrdProofdTrace.h"
-static const char *TraceID = "";
-#define TRACEID TraceID
+
 #ifndef SafeDelete
 #define SafeDelete(x) { if (x) { delete x; x = 0; } }
 #endif
@@ -29,7 +29,8 @@ XrdProofdProofServ::XrdProofdProofServ()
    // Constructor
 
    fMutex = new XrdSysRecMutex;
-   fConn = 0;
+   fResponse = 0;
+   fProtocol = 0;
    fParent = 0;
    fPingSem = 0;
    fQueryNum = 0;
@@ -40,6 +41,7 @@ XrdProofdProofServ::XrdProofdProofServ()
    fID = -1;
    fIsShutdown = false;
    fIsValid = true;  // It is created for a valid server ...
+   fSkipCheck = false;
    fProtVer = -1;
    fNClients = 0;
    fClients.reserve(10);
@@ -47,6 +49,7 @@ XrdProofdProofServ::XrdProofdProofServ()
    fSetIdleTime = time(0);
    fROOT = 0;
    // Strings
+   fAdminPath = "";
    fAlias = "";
    fClient = "";
    fFileout = "";
@@ -98,7 +101,8 @@ void XrdProofdProofServ::Reset()
    // Reset this instance
    XrdSysMutexHelper mhp(fMutex);
 
-   fConn = 0;
+   fResponse = 0;
+   fProtocol = 0;
    fParent = 0;
    SafeDelete(fQueryNum);
    SafeDelete(fStartMsg);
@@ -108,7 +112,8 @@ void XrdProofdProofServ::Reset()
    fSrvType = kXPD_AnyServer;
    fID = -1;
    fIsShutdown = false;
-   fIsValid = 0;
+   fIsValid = false;
+   fSkipCheck = false;
    fProtVer = -1;
    fNClients = 0;
    fClients.clear();
@@ -118,6 +123,7 @@ void XrdProofdProofServ::Reset()
    // Cleanup worker info
    ClearWorkers();
    // Strings
+   fAdminPath = "";
    fAlias = "";
    fClient = "";
    fFileout = "";
@@ -128,76 +134,98 @@ void XrdProofdProofServ::Reset()
 }
 
 //__________________________________________________________________________
-XrdClientID *XrdProofdProofServ::GetClientID(int cid)
+bool XrdProofdProofServ::SkipCheck()
 {
-   // Get instance corresponding to cid
-   //
+   // Return the value of fSkipCheck and reset it to false
 
    XrdSysMutexHelper mhp(fMutex);
 
+   bool rc = fSkipCheck;
+   fSkipCheck = false;
+   return rc;
+}
+
+//__________________________________________________________________________
+XrdClientID *XrdProofdProofServ::GetClientID(int cid)
+{
+   // Get instance corresponding to cid
+   XPDLOC(SMGR, "ProofServ::GetClientID")
+
    XrdClientID *csid = 0;
-   TRACE(ACT,"XrdProofdProofServ::GetClientID: cid: "<<cid<<
-             ", size: "<<fClients.size());
+   TRACE(DBG, "cid: "<<cid<<", size: "<<fClients.size());
 
    if (cid < 0) {
-      TRACE(XERR,"XrdProofdProofServ::GetClientID: negative ID: protocol error!");
+      TRACE(XERR, "negative ID: protocol error!");
       return csid;
    }
 
-   // Count new attached client
-   fNClients++;
+   XrdOucString msg;
+   {  XrdSysMutexHelper mhp(fMutex);
 
-   // If in the allocate range reset the corresponding instance and
-   // return it
-   if (cid < (int)fClients.size()) {
-      csid = fClients.at(cid);
-      csid->Reset();
-      return csid;
+      // Count new attached client
+      fNClients++;
+
+      // If in the allocate range reset the corresponding instance and
+      // return it
+      if (cid < (int)fClients.size()) {
+         csid = fClients.at(cid);
+         csid->Reset();
+         return csid;
+      }
+
+      // If not, allocate a new one; we need to resize (double it)
+      if (cid >= (int)fClients.capacity())
+         fClients.reserve(2*fClients.capacity());
+
+      // Allocate new elements (for fast access we need all of them)
+      int ic = (int)fClients.size();
+      for (; ic <= cid; ic++)
+         fClients.push_back((csid = new XrdClientID()));
+
+      // Notification message
+      if (TRACING(DBG)) {
+         msg.form("cid: %d, new size: %d", cid, fClients.size());
+      }
    }
-
-   // If not, allocate a new one; we need to resize (double it)
-   if (cid >= (int)fClients.capacity())
-      fClients.reserve(2*fClients.capacity());
-
-   // Allocate new elements (for fast access we need all of them)
-   int ic = (int)fClients.size();
-   for (; ic <= cid; ic++)
-      fClients.push_back((csid = new XrdClientID()));
-
-   TRACE(DBG,"XrdProofdProofServ::GetClientID: cid: "<<cid<<
-             ", new size: "<<fClients.size());
+   TRACE(DBG, msg);
 
    // We are done
    return csid;
 }
 
 //__________________________________________________________________________
-int XrdProofdProofServ::FreeClientID(XrdProofdProtocol *p)
+int XrdProofdProofServ::FreeClientID(int pid)
 {
-   // Free instance corresponding to protocol 'p'
-   //
+   // Free instance corresponding to protocol connecting process 'pid'
+   XPDLOC(SMGR, "ProofServ::FreeClientID")
 
-   XrdSysMutexHelper mhp(fMutex);
-
-   TRACE(ACT,"ProofServ::FreeClientID: p: "<<p<<", session status: "<<
+   TRACE(DBG, "pid: "<<pid<<", session status: "<<
               fStatus<<", # clients: "<< fClients.size());
-
-   if (!p) {
-      TRACE(XERR,"ProofServ::FreeClientID: undefined protocol!");
-      return -1;
+   int rc = -1;
+   if (pid <= 0) {
+      TRACE(XERR, "undefined pid!");
+      return rc;
    }
 
-   // Remove this from the list of clients
-   std::vector<XrdClientID *>::iterator i;
-   for (i = fClients.begin(); i != fClients.end(); ++i) {
-      if ((*i) && (*i)->P() == p) {
-         (*i)->Reset();
-         fNClients--;
-         // Record time of last disconnection
-         if (fNClients <= 0)
-            fDisconnectTime = time(0);
-         return 0;
+   {  XrdSysMutexHelper mhp(fMutex);
+
+      // Remove this from the list of clients
+      std::vector<XrdClientID *>::iterator i;
+      for (i = fClients.begin(); i != fClients.end(); ++i) {
+         if ((*i) && (*i)->P() && (*i)->P()->Pid() == pid) {
+            (*i)->Reset();
+            fNClients--;
+            // Record time of last disconnection
+            if (fNClients <= 0)
+               fDisconnectTime = time(0);
+            rc = 0;
+            break;
+         }
       }
+   }
+   if (TRACING(REQ)) {
+      int spid = SrvPID();
+      TRACE(REQ, spid<<": slot for client pid: "<<pid<<" has been reset");
    }
 
    // Out of range
@@ -261,25 +289,28 @@ void XrdProofdProofServ::Broadcast(const char *msg)
 {
    // Broadcast message 'msg' to the attached clients
 
-   XrdSysMutexHelper mhp(fMutex);
 
    int len = 0;
    if (msg && (len = strlen(msg)) > 0) {
-
-      int ic = 0;
       XrdProofdProtocol *p = 0;
-      for (ic = 0; ic < (int) fClients.size(); ic++) {
+      int ic = 0, ncz = 0, sid = -1;
+      { XrdSysMutexHelper mhp(fMutex); ncz = (int) fClients.size(); }
+      for (ic = 0; ic < ncz; ic++) {
+         {  XrdSysMutexHelper mhp(fMutex);
+            p = fClients.at(ic)->P();
+            sid = fClients.at(ic)->Sid(); }
          // Send message
-         if ((p = fClients.at(ic)->P())) {
-            XrdProofdResponse *response = p ? p->Response(fClients.at(ic)->Sid()) : 0;
-            response->Send(kXR_attn, kXPD_errmsg, (void *)msg, len);
+         if (p) {
+            XrdProofdResponse *response = p->Response(sid);
+            if (response)
+               response->Send(kXR_attn, kXPD_srvmsg, (void *)msg, len);
          }
       }
    }
 }
 
 //______________________________________________________________________________
-int XrdProofdProofServ::TerminateProofServ()
+int XrdProofdProofServ::TerminateProofServ(bool changeown)
 {
    // Terminate the associated process.
    // A shutdown interrupt message is forwarded.
@@ -287,19 +318,20 @@ int XrdProofdProofServ::TerminateProofServ()
    // requested to terminate.
    // Return the pid of tyhe terminated process on success, -1 if not allowed
    // or other errors occured.
+   XPDLOC(SMGR, "ProofServ::TerminateProofServ")
 
-   TRACE(ACT, "ProofServ::TerminateProofServ: ord: " << Ordinal() << ", pid: " << fSrvPID);
+   TRACE(DBG, "ord: " << Ordinal() << ", pid: " << fSrvPID);
 
    // Send a terminate signal to the proofserv
-   int pid = fSrvPID;
+   int pid = SrvPID();
    if (pid > -1) {
-
-      int type = 3;
-      if (Response()->Send(kXR_attn, kXPD_interrupt, type) != 0)
-         // Could not send: signal failure
-         return -1;
-      // For registration/monitoring purposes
-      return pid;
+      XrdProofUI ui;
+      XrdProofdAux::GetUserInfo(fClient.c_str(), ui);
+      if (XrdProofdAux::KillProcess(pid, 0, ui, changeown) != 0) {
+         TRACE(XERR, "ord: problems signalling process: "<<fSrvPID);
+      }
+      XrdSysMutexHelper mhp(fMutex);
+      fIsShutdown = true;
    }
 
    // Failed
@@ -307,44 +339,29 @@ int XrdProofdProofServ::TerminateProofServ()
 }
 
 //______________________________________________________________________________
-int XrdProofdProofServ::VerifyProofServ(int timeout)
+int XrdProofdProofServ::VerifyProofServ()
 {
    // Check if the associated proofserv process is alive.
    // A ping message is sent and the reply waited for the internal timeout.
-   // Return 1 if successful, 0 if reply was not received within the
-   // internal timeout, -1 in case of error.
-   int rc = -1;
+   // Return 0 if successful, -1 in case of error.
+   XPDLOC(SMGR, "ProofServ::VerifyProofServ")
 
-   TRACE(ACT, "ProofServ::VerifyProofServ: ord: " << Ordinal()<< ", pid: " << fSrvPID);
+   TRACE(DBG, "ord: " << fOrdinal<< ", pid: " << fSrvPID);
 
-   XrdSysMutexHelper mhp(fMutex);
+   XrdOucString msg;
+   {  XrdSysMutexHelper mhp(fMutex);
 
-   // Create semaphore
-   CreatePingSem();
-
-   // Propagate the ping request
-   if (Response()->Send(kXR_attn, kXPD_ping, 0, 0) != 0) {
-      TRACE(XERR, "ProofServ::VerifyProofServ: could not propagate ping to proofsrv");
-      DeletePingSem();
-      return rc;
+      // Propagate the ping request
+      if (Response()->Send(kXR_attn, kXPD_ping, 0, 0) != 0) {
+         msg = "could not propagate ping to proofsrv";
+         return -1;
+      }
    }
-
-   // Wait for reply
-   rc = 1;
-   if (fPingSem && fPingSem->Wait(timeout) != 0) {
-      XrdOucString msg = "ProofServ::VerifyProofServ: did not receive ping reply after ";
-      msg += timeout;
-      msg += " secs";
-      TRACE(XERR, msg.c_str());
-      rc = 0;
-   }
-   TRACE(ACT, "ProofServ::VerifyProofServ: " << fSrvPID << " ping: "<<rc);
-
-   // Cleanup
-   DeletePingSem();
+   if (msg.length() > 0)
+      TRACE(XERR, msg);
 
    // Done
-   return rc;
+   return 0;
 }
 
 //__________________________________________________________________________
@@ -352,6 +369,7 @@ int XrdProofdProofServ::BroadcastPriority(int priority)
 {
    // Broadcast a new group priority value to the worker servers.
    // Called by masters.
+   XPDLOC(SMGR, "ProofServ::BroadcastPriority")
 
    XrdSysMutexHelper mhp(fMutex);
 
@@ -364,10 +382,10 @@ int XrdProofdProofServ::BroadcastPriority(int priority)
    // Send over
    if (Response()->Send(kXR_attn, kXPD_priority, buf, len) != 0) {
       // Failure
-      TRACE(XERR,"XrdProofdProofServ::BroadcastPriorities: problems telling proofserv");
+      TRACE(XERR,"problems telling proofserv");
       return -1;
    }
-   TRACE(DBG,"XrdProofdProofServ::BroadcastPriorities: priority "<<priority<<" sent over");
+   TRACE(DBG, "priority "<<priority<<" sent over");
    // Done
    return 0;
 }
@@ -376,30 +394,39 @@ int XrdProofdProofServ::BroadcastPriority(int priority)
 int XrdProofdProofServ::SendData(int cid, void *buff, int len)
 {
    // Send data to client cid.
+   XPDLOC(SMGR, "ProofServ::SendData")
 
-   TRACE(HDBG, "XrdProofdProofServ::SendData: length: "<<len<<" bytes (cid: "<<cid<<
-                  ", size: "<<fClients.size()<<")");
+   TRACE(HDBG, "length: "<<len<<" bytes (cid: "<<cid<<")");
+
+   int rs = 0;
+   XrdOucString msg;
 
    // Get corresponding instance
    XrdClientID *csid = 0;
-   if (cid < 0 || cid > (int)(fClients.size() - 1) || !(csid = fClients.at(cid))) {
-      TRACE(XERR, "XrdProofdProofServ::SendData: client ID not found (cid: "<<cid<<
-                  ", size: "<<fClients.size()<<")");
-      return -1;
-   }
-   if (!(csid->P())) {
-      TRACE(XERR, "XrdProofdProofServ::SendData: client not connected: csid: "<<csid<<
-                  ", cid: "<<cid<<", fSid: " << csid->Sid());
-      return -1;
+   {  XrdSysMutexHelper mhp(fMutex);
+      if (cid < 0 || cid > (int)(fClients.size() - 1) || !(csid = fClients.at(cid))) {
+         msg.form("client ID not found (cid: %d, size: %d)", cid, fClients.size());
+         rs = -1;
+      }
+      if (!rs && !(csid->R())) {
+         msg.form("client not connected: csid: %p, cid: %d, fSid: %d",
+                  csid, cid, csid->Sid());
+         rs = -1;
+      }
    }
 
    //
    // The message is strictly for the client requiring it
-   int rs = -1;
-   XrdProofdResponse *response = csid->P() ? csid->P()->Response(csid->Sid()) : 0;
-   if (response)
-      if (!response->Send(kXR_attn, kXPD_msg, buff, len))
-         rs = 0;
+   if (!rs) {
+      rs = -1;
+      XrdProofdResponse *response = csid->R() ? csid->R() : 0;
+      if (response)
+         if (!response->Send(kXR_attn, kXPD_msg, buff, len))
+            rs = 0;
+   } else {
+      // Notify error
+      TRACE(XERR, msg);
+   }
 
    // Done
    return rs;
@@ -410,20 +437,63 @@ int XrdProofdProofServ::SendDataN(void *buff, int len)
 {
    // Send data over the open client links of this session.
    // Used when all the connected clients are eligible to receive the message.
+   XPDLOC(SMGR, "ProofServ::SendDataN")
 
-   TRACE(HDBG, "SendDataN: enter: length: "<<len<<" bytes");
+   TRACE(HDBG, "length: "<<len<<" bytes");
+
+   XrdOucString msg;
+
+   XrdSysMutexHelper mhp(fMutex);
 
    // Send to connected clients
    XrdClientID *csid = 0;
    int ic = 0;
    for (ic = 0; ic < (int) fClients.size(); ic++) {
       if ((csid = fClients.at(ic)) && csid->P()) {
-         XrdProofdResponse *resp = csid->P()->Response(csid->Sid());
-         int rs = 0;
-         TRACE(HDBG, "SendDataN: INTERNAL: client sid:"<<csid->Sid());
-         rs = resp->Send(kXR_attn, kXPD_msg, buff, len);
-         if (rs)
+         XrdProofdResponse *resp = csid->R();
+         if (!resp || resp->Send(kXR_attn, kXPD_msg, buff, len))
             return 1;
+      }
+   }
+
+   // Done
+   return 0;
+}
+
+//______________________________________________________________________________
+void XrdProofdProofServ::ExportBuf(XrdOucString &buf)
+{
+   // Fill buf with relevant info about this session
+   XPDLOC(SMGR, "ProofServ::ExportBuf")
+
+   buf = "";
+   int id, status, nc;
+   XrdOucString tag, alias;
+   {  XrdSysMutexHelper mhp(fMutex);
+      id = fID;
+      status = fStatus;
+      nc = fNClients;
+      tag = fTag;
+      alias = fAlias; }
+   buf.form(" | %d %s %s %d %d", id, tag.c_str(), alias.c_str(), status, nc);
+   TRACE(HDBG, "buf: "<< buf);
+
+   // Done
+   return;
+}
+
+//______________________________________________________________________________
+bool XrdProofdProofServ::IsValid()
+{
+   // Returns true if the session is valid, i.e. active an not shutdown
+
+   XrdSysMutexHelper mhp(fMutex);
+
+   if (fIsValid) {
+      struct stat st;
+      if (!fIsShutdown && stat(fAdminPath.c_str(), &st) == 0) {
+         // Look good
+         return 1;
       }
    }
 
