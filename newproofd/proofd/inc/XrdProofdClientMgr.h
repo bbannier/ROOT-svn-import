@@ -23,6 +23,13 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include <list>
+#ifdef OLDXRDOUC
+#  include "XrdSysToOuc.h"
+#  include "XrdOuc/XrdOucSemWait.hh"
+#  include "XrdOuc/XrdOucPthread.hh"
+#else
+#  include "XrdSys/XrdSysPthread.hh"
+#endif
 
 #include "XrdProofdConfig.h"
 
@@ -44,9 +51,13 @@ class XrdSecService;
 
 class XrdProofdClientMgr : public XrdProofdConfig {
 
+   XrdSysRecMutex    *fMutex;
    XrdProofdManager  *fMgr;
    XrdOucString       fSecLib;
    XrdSecService     *fCIA;            // Authentication Server
+
+   int                fCheckFrequency;
+   XrdProofdPipe      fPipe;
 
    XrdOucString       fClntAdminPath;  // Client admin area
    int                fNDisconnected;  // Clients previously connected still offline
@@ -71,21 +82,25 @@ class XrdProofdClientMgr : public XrdProofdConfig {
 
 public:
    XrdProofdClientMgr(XrdProofdManager *mgr, XrdProtocol_Config *pi, XrdSysError *e);
-   virtual ~XrdProofdClientMgr() { }
+   virtual ~XrdProofdClientMgr() { SafeDel(fMutex); }
+
+   enum CMProtocol { kClientDisconnect = 0 };
 
    int               Config(bool rcf = 0);
+   int               CheckClients();
 
    XrdProofdClient  *GetClient(const char *usr, const char *grp = 0, const char *sock = 0);
-   int               GetNClients() const { return fProofdClients.size(); }
+   int               GetNClients() const { XrdSysMutexHelper mh(fMutex); return fProofdClients.size(); }
 
    void              Broadcast(XrdProofdClient *c, const char *msg);
    void              TerminateSessions(XrdProofdClient *c, const char *msg, int srvtype);
-
-   void              SetLock(bool on = 1, XrdProofdClient *c = 0);
 
    int               Process(XrdProofdProtocol *p);
 
    int               Auth(XrdProofdProtocol *xp);
    int               Login(XrdProofdProtocol *xp);
+
+   int               CheckFrequency() const { return fCheckFrequency; }
+   inline XrdProofdPipe *Pipe() { return &fPipe; }
 };
 #endif

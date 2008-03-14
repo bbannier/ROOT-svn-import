@@ -1,4 +1,4 @@
-// @(#)root/proofd:$Id:$
+// @(#)root/proofd:$Id$
 // Author: G. Ganis Feb 2008
 
 /*************************************************************************
@@ -64,7 +64,7 @@ class XrdProofdPriorityMgr : public XrdProofdConfig {
    XrdOucHash<XrdProofdSessionEntry> fSessions; // list of active sessions (keyed by "pid")
    XrdOucHash<XrdProofdPriority> fPriorities; // list of {users, priority change}
 
-   int               fPipe[2]; // pipe for the poller
+   XrdProofdPipe     fPipe;
 
    float             fOverallInflate; // Overall inflate factor
    int               fSchedOpt;       // Worker sched option
@@ -79,12 +79,13 @@ public:
    XrdProofdPriorityMgr(XrdProofdManager *mgr, XrdProtocol_Config *pi, XrdSysError *e);
    virtual ~XrdProofdPriorityMgr() { }
 
+   enum PMProtocol { kChangeStatus = 0, kSetGroupPriority = 1 };
+
    int               Config(bool rcf = 0);
    int               DoDirective(XrdProofdDirective *d,
                                  char *val, XrdOucStream *cfg, bool rcf);
 
-   int               ReadFd() const { return fPipe[0]; }
-   int               WriteFd() const { return fPipe[1]; }
+   inline XrdProofdPipe *Pipe() { return &fPipe; }
 
    int               AddSession(const char *u, const char *g, int pid);
    int               RemoveSession(int pid);

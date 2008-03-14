@@ -23,7 +23,8 @@
 //
 // These are used by TXProofMgr to interact with its image on
 // the server side and the sessions
-//
+// Changes should be propagated to the related strings
+// for notification in XrdProofdAux::ProofRequestTypes(...)//
 //______________________________________________
 //
 enum XProofRequestTypes {
@@ -39,7 +40,9 @@ enum XProofRequestTypes {
    kXP_interrupt    = 3114,    // urgent message
    kXP_ping         = 3115,    // ping request
    kXP_cleanup      = 3116,    // clean-up a session-ctx or a client section
-   kXP_readbuf      = 3117     // read a buffer from a file
+   kXP_readbuf      = 3117,    // read a buffer from a file
+//
+   kXP_Undef        = 3118    // This should always be last: do not touch it
 };
 
 // XPROOFD VERSION  (0xMMmmpp : MM major, mm minor, pp patch)
@@ -77,7 +80,8 @@ enum EStaticSelOpt {
    kSSOLoadBased  = 2
 };
 
-// Should be the same as in proofx/inc/TXSocket.h
+// Should be the same as in proofx/inc/TXSocket.h and consistent with the related strings
+// for notification in XrdProofdAux::AdminMsgType(...)
 enum EAdminMsgType {
    kQuerySessions     = 1000,
    kSessionTag        = 1001,
@@ -90,7 +94,9 @@ enum EAdminMsgType {
    kQueryROOTVersions = 1008,
    kROOTVersion       = 1009,
    kGroupProperties   = 1010,
-   kSendMsgToUser     = 1011
+   kSendMsgToUser     = 1011,
+//
+   kUndef             = 1012    // This should always be last: do not touch it
 };
 
 // XPROOFD Worker CPU load sharing options

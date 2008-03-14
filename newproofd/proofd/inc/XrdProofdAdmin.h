@@ -1,4 +1,4 @@
-// @(#)root/proofd:$Id:$
+// @(#)root/proofd:$Id$
 // Author: G. Ganis Feb 2008
 
 /*************************************************************************
@@ -29,8 +29,6 @@ class XrdProofdProtocol;
 class XrdProofdAdmin {
 
    XrdProofdManager *fMgr;
-
-   int               fPriorityMgrFd; // communication to priority manager
 
 public:
    XrdProofdAdmin(XrdProofdManager *mgr);

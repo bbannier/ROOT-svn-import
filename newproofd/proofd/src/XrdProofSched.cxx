@@ -58,9 +58,6 @@
 
 // Tracing
 #include "XrdProofdTrace.h"
-static const char *gTraceID = "";
-extern XrdOucTrace *XrdProofdTrace;
-#define TRACEID gTraceID
 
 //
 // Example of scheduler loader for an implementation called XrdProofSchedDyn
@@ -152,6 +149,7 @@ int XrdProofSched::Config(const char *cfn)
    // Configure this instance using the content of file 'cfn'.
    // Return 0 on success, -1 in case of failure (file does not exists
    // or containing incoherent information).
+   XPDLOC(SCHED, "Sched::Config")
 
    int rc = 0;
 
@@ -159,14 +157,15 @@ int XrdProofSched::Config(const char *cfn)
    if (!cfn || strlen(cfn) <= 0)
       return rc;
 
+   XrdOucString msg;
+
    XrdOucStream cfg(fEDest, getenv("XRDINSTANCE"));
 
    // Open and attach the config file
    int cfgFD = 0;
    if ((cfgFD = open(cfn, O_RDONLY, 0)) < 0) {
-      XrdOucString msg("Config: ProofSched: error open config file: ");
-      msg += cfn;
-      TRACE(XERR, msg.c_str());
+      msg.form("error open config file: %s", cfn);
+      TRACE(XERR, msg);
       return -1;
    }
    cfg.Attach(cfgFD);
@@ -190,10 +189,8 @@ int XrdProofSched::Config(const char *cfn)
    }
 
    // Notify
-   XrdOucString msg("Config: ProofSched: maxsess: ") ; msg += fMaxSessions;
-   msg += ", maxwrks: " ; msg += fWorkerMax;
-   msg += ", selopt: " ; msg += fWorkerSel;
-   TRACE(DBG, msg.c_str());
+   msg.form("maxsess: %d, maxwrks: %d, selopt: %d", fMaxSessions, fWorkerMax, fWorkerSel);
+   TRACE(DBG, msg);
 
    // Done
    return rc;
@@ -203,14 +200,14 @@ int XrdProofSched::Config(const char *cfn)
 int XrdProofSched::GetNumWorkers(XrdProofdProofServ *xps)
 {
    // Calculate the number of workers to be used given the state of the cluster
+   XPDLOC(SCHED, "Sched::GetNumWorkers")
 
    // Go through the list of hosts and see how many CPUs are not used.
    int nFreeCPUs = 0;
    std::list<XrdProofWorker *> *wrks = fMgr->NetMgr()->GetActiveWorkers();
    std::list<XrdProofWorker *>::iterator iter;
    for (iter = wrks->begin(); iter != wrks->end(); ++iter) {
-      TRACE(DBG, "GetNumWorkers: "<< (*iter)->fImage<<
-                 " : # act: "<<(*iter)->fProofServs.size());
+      TRACE(DBG, (*iter)->fImage<<" : # act: "<<(*iter)->fProofServs.size());
       if ((*iter)->fType != 'M'
          && (int) (*iter)->fProofServs.size() < fOptWrksPerUnit)
          nFreeCPUs++;
@@ -237,7 +234,7 @@ int XrdProofSched::GetNumWorkers(XrdProofdProofServ *xps)
 
    int nWrks = (int)(nFreeCPUs * fNodesFraction * priority) + fMinForQuery;
    nWrks = (nWrks >= (int) wrks->size()) ? wrks->size() - 1 : nWrks;
-   TRACE(DBG,"GetNumWorkers: "<< nFreeCPUs<<" : "<< nWrks);
+   TRACE(DBG, nFreeCPUs<<" : "<< nWrks);
 
    return nWrks;
 }
@@ -247,6 +244,8 @@ int XrdProofSched::GetWorkers(XrdProofdProofServ *xps,
                               std::list<XrdProofWorker *> *wrks)
 {
    // Get a list of workers that can be used by session 'xps'.
+   XPDLOC(SCHED, "Sched::GetWorkers")
+
    int rc = 0;
 
    // The caller must provide a list where to store the result
@@ -360,7 +359,7 @@ int XrdProofSched::GetWorkers(XrdProofdProofServ *xps,
                wrks->push_back(vwrk[iw]);
             } else {
                // Unable to generate the right number
-               TRACE(XERR, "XrdProofSched::GetWorkers: random generation failed");
+               TRACE(XERR, "random generation failed");
                rc = -1;
                break;
             }
@@ -402,7 +401,7 @@ int XrdProofSched::GetWorkers(XrdProofdProofServ *xps,
 
    // Make sure that something has been found
    if (acws->size() <= 1) {
-      TRACE(XERR, "XrdProofSched::GetWorkers: no worker found: do nothing");
+      TRACE(XERR, "no worker found: do nothing");
       rc = -1;
    }
 
@@ -447,6 +446,7 @@ int XrdProofSched::ProcessDirective(XrdProofdDirective *d,
                                     char *val, XrdOucStream *cfg, bool rcf)
 {
    // Update the priorities of the active sessions.
+   XPDLOC(SCHED, "Sched::ProcessDirective")
 
    if (!d)
       // undefined inputs
@@ -457,7 +457,7 @@ int XrdProofSched::ProcessDirective(XrdProofdDirective *d,
    } else if (d->fName == "resource") {
       return DoDirectiveResource(val, cfg, rcf);
    }
-   TRACE(XERR,"ProcessDirective: unknown directive: "<<d->fName);
+   TRACE(XERR, "unknown directive: "<<d->fName);
    return -1;
 }
 

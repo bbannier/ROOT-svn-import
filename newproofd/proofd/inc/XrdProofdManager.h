@@ -169,4 +169,10 @@ class XrdProofdManager : public XrdProofdConfig {
    XrdProofSched    *LoadScheduler();
 };
 
+// Aux structures
+typedef struct {
+   XrdProofdClientMgr    *fClientMgr;
+   XrdProofdProofServMgr *fSessionMgr;
+} XpdManagerCron_t;
+
 #endif

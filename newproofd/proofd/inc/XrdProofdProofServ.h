@@ -84,19 +84,22 @@ class XrdROOT;
 class XrdClientID {
 private:
    XrdProofdProtocol *fP;
+   XrdProofdResponse *fR;
    unsigned short     fSid;
 
+   void               SetR() { fR = (fP && fSid > 0) ? fP->Response(fSid) : 0;}
 public:
    XrdClientID(XrdProofdProtocol *pt = 0, unsigned short id = 0)
-            { fP = pt; fSid = id; }
+            { fP = pt; fSid = id; SetR();}
    ~XrdClientID() { }
 
    XrdProofdClient   *C() const { return fP->Client(); }
    bool               IsValid() const { return (fP != 0); }
    XrdProofdProtocol *P() const { return fP; }
+   XrdProofdResponse *R() const { return fR; }
    void               Reset() { fP = 0; fSid = 0; }
-   void               SetP(XrdProofdProtocol *p) { fP = p; }
-   void               SetSid(unsigned short sid) { fSid = sid; }
+   void               SetP(XrdProofdProtocol *p) { fP = p; SetR();}
+   void               SetSid(unsigned short sid) { fSid = sid; SetR();}
    unsigned short     Sid() const { return fSid; }
 };
 
@@ -124,6 +127,7 @@ public:
    ~XrdProofdProofServ();
 
    void                AddWorker(XrdProofWorker *w) { XrdSysMutexHelper mhp(fMutex); fWorkers.push_back(w); }
+   inline const char  *AdminPath() const { XrdSysMutexHelper mhp(fMutex); return fAdminPath.c_str(); }
    inline const char  *Alias() const { XrdSysMutexHelper mhp(fMutex); return fAlias.c_str(); }
    void                Broadcast(const char *msg);
    int                 BroadcastPriority(int priority);
@@ -131,32 +135,33 @@ public:
    void                DeleteStartMsg()
                        { XrdSysMutexHelper mhp(fMutex); if (fStartMsg) delete fStartMsg; fStartMsg = 0;}
    int                 DisconnectTime();
+   void                ExportBuf(XrdOucString &buf);
    inline const char  *Fileout() const { XrdSysMutexHelper mhp(fMutex); return fFileout.c_str(); }
-   int                 FreeClientID(XrdProofdProtocol *p);
+   int                 FreeClientID(int pid);
    XrdClientID        *GetClientID(int cid);
    inline int          GetNClients() { XrdSysMutexHelper mhp(fMutex); return fNClients;}
    inline const char  *Group() const { XrdSysMutexHelper mhp(fMutex); return fGroup.c_str(); }
    int                 IdleTime();
    inline short int    ID() const { XrdSysMutexHelper mhp(fMutex); return fID; }
    inline bool         IsShutdown() const { XrdSysMutexHelper mhp(fMutex); return fIsShutdown; }
-   inline bool         IsValid() const { XrdSysMutexHelper mhp(fMutex); return fIsValid; }
-   inline XrdLink     *Link() const { XrdSysMutexHelper mhp(fMutex); return (fConn ? fConn->Link() : 0); }
+   bool                IsValid();
    inline bool         Match(short int id) const { XrdSysMutexHelper mhp(fMutex); return (id == fID); }
    inline XrdSysRecMutex *Mutex() const { return fMutex; }
    inline const char  *Ordinal() const { XrdSysMutexHelper mhp(fMutex); return fOrdinal.c_str(); }
    inline XrdClientID *Parent() const { XrdSysMutexHelper mhp(fMutex); return fParent; }
-   inline void         PingSem() const { if (fPingSem) fPingSem->Post(); }
+   inline void         PingSem() const { XrdSysMutexHelper mhp(fMutex); if (fPingSem) fPingSem->Post(); }
+   inline XrdProofdProtocol *Protocol() const { XrdSysMutexHelper mhp(fMutex); return fProtocol; }
    inline XrdSrvBuffer *QueryNum() const { XrdSysMutexHelper mhp(fMutex); return fQueryNum; }
 
    void                Reset();
    inline XrdROOT     *ROOT() const { XrdSysMutexHelper mhp(fMutex); return fROOT; }
-   inline XrdProofdResponse *Response() const
-                      { XrdSysMutexHelper mhp(fMutex); return (fConn ? fConn->Response(1) : 0);}
+   inline XrdProofdResponse *Response() const { XrdSysMutexHelper mhp(fMutex); return fResponse; }
    int                 SendData(int cid, void *buff, int len);
    int                 SendDataN(void *buff, int len);
+   void                SetAdminPath(const char *a) { XrdSysMutexHelper mhp(fMutex); fAdminPath = a; }
    void                SetAlias(const char *a) { XrdSysMutexHelper mhp(fMutex); fAlias = a; }
    void                SetClient(const char *c) { XrdSysMutexHelper mhp(fMutex); fClient = c; }
-   inline void         SetConnection(XrdProofdProtocol *p) { XrdSysMutexHelper mhp(fMutex); fConn = p;}
+   inline void         SetConnection(XrdProofdResponse *r) { XrdSysMutexHelper mhp(fMutex); fResponse = r;}
 
    void                SetFileout(const char *f) { XrdSysMutexHelper mhp(fMutex); fFileout = f; }
    inline void         SetGroup(const char *g) { XrdSysMutexHelper mhp(fMutex); fGroup = g; }
@@ -164,9 +169,12 @@ public:
    inline void         SetID(short int id) { XrdSysMutexHelper mhp(fMutex); fID = id;}
    void                SetOrdinal(const char *o) { XrdSysMutexHelper mhp(fMutex); fOrdinal = o; }
    inline void         SetParent(XrdClientID *cid) { XrdSysMutexHelper mhp(fMutex); fParent = cid; }
+   inline void         SetProtocol(XrdProofdProtocol *p) { XrdSysMutexHelper mhp(fMutex); fProtocol = p; }
    inline void         SetProtVer(int pv) { XrdSysMutexHelper mhp(fMutex); fProtVer = pv; }
    inline void         SetROOT(XrdROOT *r) { XrdSysMutexHelper mhp(fMutex); fROOT = r; }
    void                SetRunning();
+   inline void         SetShutdown() { XrdSysMutexHelper mhp(fMutex); fIsShutdown = true; }
+   inline void         SetSkipCheck() { XrdSysMutexHelper mhp(fMutex); fSkipCheck = true; }
    void                SetSrvPID(int pid) { XrdSysMutexHelper mhp(fMutex); fSrvPID = pid; }
    inline void         SetSrvType(int id) { XrdSysMutexHelper mhp(fMutex); fSrvType = id; }
    inline void         SetStartMsg(XrdSrvBuffer *sm) { XrdSysMutexHelper mhp(fMutex); fStartMsg = sm; }
@@ -174,24 +182,26 @@ public:
    void                SetTag(const char *t) { XrdSysMutexHelper mhp(fMutex); fTag = t; }
    void                SetUserEnvs(const char *t) { XrdSysMutexHelper mhp(fMutex); fUserEnvs = t; }
    inline void         SetValid(bool valid = 1) { XrdSysMutexHelper mhp(fMutex); fIsValid = valid; }
+   bool                SkipCheck();
    inline int          SrvPID() const { XrdSysMutexHelper mhp(fMutex); return fSrvPID; }
    inline int          SrvType() const { XrdSysMutexHelper mhp(fMutex); return fSrvType; }
    inline XrdSrvBuffer *StartMsg() const { XrdSysMutexHelper mhp(fMutex); return fStartMsg; }
    inline int          Status() const { XrdSysMutexHelper mhp(fMutex); return fStatus;}
    inline const char  *Tag() const { XrdSysMutexHelper mhp(fMutex); return fTag.c_str(); }
-   int                 TerminateProofServ();
+   int                 TerminateProofServ(bool changeown);
    inline const char  *UserEnvs() const { XrdSysMutexHelper mhp(fMutex); return fUserEnvs.c_str(); }
-   int                 VerifyProofServ(int timeout);
+   int                 VerifyProofServ();
    inline std::list<XrdProofWorker *> *Workers() const
                       { XrdSysMutexHelper mhp(fMutex); return (std::list<XrdProofWorker *> *)&fWorkers; }
 
  private:
 
    XrdSysRecMutex           *fMutex;
-   XrdProofdProtocol        *fConn;      // Protocol instance attached to this session
+   XrdProofdProtocol        *fProtocol;  // Protocol instance attached to this session
+   XrdProofdResponse        *fResponse;  // Response instance attached to this session
 
    XrdClientID              *fParent;    // Parent creating this session
-   int                      fNClients;   // Number of attached clients
+   int                       fNClients;   // Number of attached clients
    std::vector<XrdClientID *> fClients;  // Attached clients stream ids
    std::list<XrdProofWorker *> fWorkers; // Workers assigned to the session
 
@@ -211,13 +221,15 @@ public:
    XrdOucString              fFileout;
 
    bool                      fIsShutdown; // Whether asked to shutdown
-   bool                      fIsValid;   // Validity flag
+   bool                      fIsValid;    // Validity flag
+   bool                      fSkipCheck;  // Skip next validity check
 
    XrdOucString              fAlias;     // Session alias
    XrdOucString              fClient;    // Client name
    XrdOucString              fTag;       // Session unique tag
    XrdOucString              fOrdinal;   // Session ordinal number
    XrdOucString              fUserEnvs;  // List of envs received from the user
+   XrdOucString              fAdminPath; // Admin file in the form "<active-sessions>/<usr>.<grp>.<pid>" 
 
    XrdROOT                  *fROOT;      // ROOT version run by this session
 

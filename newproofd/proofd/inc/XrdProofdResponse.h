@@ -43,17 +43,10 @@ class XrdProofdResponse
    XrdProofdResponse() { fLink = 0; *fTrsid = '\0'; fSID = 0;
                          fRespIO[0].iov_base = (caddr_t)&fResp;
                          fRespIO[0].iov_len  = sizeof(fResp); }
-   XrdProofdResponse(XrdProofdResponse &rhs) { Set(rhs.fLink);
-                                               Set(rhs.fResp.streamid); }
    virtual ~XrdProofdResponse() {}
 
-   XrdProofdResponse &operator =(const XrdProofdResponse &rhs) {
-                                               Set(rhs.fLink);
-                                               Set((unsigned char *)rhs.fResp.streamid);
-                                               return *this; }
-
-   const  char          *STRID() { return (const char *)fTrsid;}
-   const  char          *ID() { return fTraceID.c_str();}
+   inline const  char   *STRID() { return (const char *)fTrsid;}
+   inline const char    *TraceID() const { return fTraceID.c_str(); }
 
    int                   Send(void);
    int                   Send(const char *msg);
@@ -74,8 +67,9 @@ class XrdProofdResponse
    int                   Send(kXR_int32 int1, kXR_int32 int2, void *data = 0, int dlen = 0);
    int                   Send(kXR_int32 int1, void *data = 0, int dlen = 0);
 
-   inline void           Set(XrdLink *lp) { fLink = lp; GetSID(fSID);}
-   void                  Set(const char *tid);
+   void                  Set(XrdLink *l);
+   inline void           SetTag(const char *tag) { fTag = tag; }
+   void                  SetTraceID();
    void                  Set(unsigned char *stream);
    void                  Set(unsigned short streamid);
 
@@ -96,7 +90,6 @@ class XrdProofdResponse
    unsigned short       fSID;
 
    XrdOucString         fTraceID;
-
-   static const char   *fgTraceID;
+   XrdOucString         fTag;
 };
 #endif
