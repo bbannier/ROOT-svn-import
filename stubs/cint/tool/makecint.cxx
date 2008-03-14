@@ -504,11 +504,21 @@ void G__outputmakefile(int argc,char **argv)
       << "CINT        := $(shell which cint" << G__CFG_EXEEXT << ")" << std::endl
       << "CINTSYSDIRU := $(patsubst %/bin/,%/,$(dir $(CINT)))" << std::endl
       << "CINTSYSDIRW := $(shell " << G__CFG_MANGLEPATHS << " $(CINTSYSDIRU) )" << std::endl
-      << "CINTLIB     := $(CINTSYSDIRU)/lib/libcint" << G__CFG_SOEXT;
+#ifdef G__CFG_INCLUDEDIRCINT
+      << "CINTINCDIRU := " << G__CFG_INCLUDEDIRCINT << std::endl
+      << "CINTINCDIRW := " << G__CFG_INCLUDEDIRCINT << std::endl
+#else
+      << "CINTINCDIRU := $(CINTSYSDIRU)/" << G__CFG_COREVERSION << "/inc" << std::endl
+      << "CINTINCDIRW := $(CINTSYSDIRW)/" << G__CFG_COREVERSION << "/inc" << std::endl
+#endif
+#ifdef G__CFG_LIBDIR
+      << "CINTLIB     := " << G__CFG_LIBDIR << "/libcint" << G__CFG_SOEXT << std::endl;
+#else
+      << "CINTLIB     := $(CINTSYSDIRU)/lib/libcint" << G__CFG_SOEXT << std::endl;
+#endif
   if (!strcmp(G__CFG_COREVERSION,"cint7"))
-    out << " $(CINTSYSDIRU)/lib/libReflex" << G__CFG_SOEXT;
-  out << std::endl
-      << "IPATH       := " << G__IPATH << " ";
+    out << "CINTLIB     := $(CINTLIB) $(subst libcint,libReflex,$(CINTLIB))" << std::endl;
+  out << "IPATH       := " << G__IPATH;
   out << std::endl;
 
   out << "CMACRO      := " << G__CFG_CMACROS << " " << G__MACRO << std::endl
@@ -517,7 +527,7 @@ void G__outputmakefile(int argc,char **argv)
       << G__COMPFLAGS << " " << cintexCompFlags << std::endl
       << "CXXFLAGS    := " << G__CFG_CXXFLAGS << " " 
       << G__COMPFLAGS << " " << cintexCompFlags << std::endl;
-  out << "CINTIPATH   := "<< G__CFG_INCP << "$(CINTSYSDIRW)/" << G__CFG_COREVERSION << "/inc" << std::endl
+  out << "CINTIPATH   := "<< G__CFG_INCP << "$(CINTINCDIRW)" << std::endl
       << "OBJECT      := " << G__object << std::endl
 
       << "LINKSPEC    := ";
@@ -588,11 +598,22 @@ void G__outputmakefile(int argc,char **argv)
 
 #if defined(G__CYGWIN) || defined(_MSC_VER) || \
   defined(__BORLANDC__) || defined(__BCPLUSPLUS__) || defined(G__BORLANDCC5)
-  out << "MAINOBJ    := " << "G__main" << G__CFG_OBJEXT << std::endl;
+  out << "MAINDIRU    := ./" << std::endl;
+  out << "MAINDIRW    := ./" << std::endl;
 #else
-  out << "MAINOBJ    := " << "$(CINTSYSDIRW)/main/G__main" << G__CFG_OBJEXT << std::endl;
+# ifdef G__CFG_DATADIRCINT
+  std::string maindiru(G__CFG_DATADIRCINT);
+  std::string maindirw(G__CFG_DATADIRCINT);
+# else
+  std::string maindiru("$(CINTSYSDIRU)");
+  std::string maindirw("$(CINTSYSDIRW)");
+# endif
+  std::string maindir2("/");
+  maindir2 += G__CFG_COREVERSION;
+  maindir2 += "/main/";
+  out << "MAINDIRU    := " << maindiru << maindir2 << std::endl;
+  out << "MAINDIRW    := " << maindirw << maindir2 << std::endl;
 #endif
-  out << "SETUPOBJ    := " << "G__setup" << G__CFG_OBJEXT << std::endl;
 
 #if !defined(G__CFG_EXPLLINK)
 #define G__CFG_EXPLLINK 0
@@ -627,37 +648,37 @@ void G__outputmakefile(int argc,char **argv)
   else if(G__flags & G__ismain) {
 #ifdef _AIX
 TODO!
-  cout << "$(OBJECT) : $(CINTLIB) $(READLINEA) $(DLFCN) $(SETUPOBJ) $(COFILES) $(CXXOFILES) $(CIFO) $(CXXIFO)";
+  cout << "$(OBJECT) : $(CINTLIB) $(READLINEA) $(DLFCN) G__setup" << G__CFG_OBJEXT << " $(COFILES) $(CXXOFILES) $(CIFO) $(CXXIFO)";
  out << "\t";
    if (G__quiet) out << "@";
-   out << "$(LD) $(IPATH) $(MACRO) $(CCOPT) -o $(OBJECT) $(CIFO) $(CXXIFO) $(COFILES) $(CXXOFILES) $(SETUPOBJ) $(READLINEA) $(DLFCN) $(LIBS)" 
+   out << "$(LD) $(IPATH) $(MACRO) $(CCOPT) -o $(OBJECT) $(CIFO) $(CXXIFO) $(COFILES) $(CXXOFILES) G__setup" << G__CFG_OBJEXT << " $(READLINEA) $(DLFCN) $(LIBS)" 
      << std::endl;
 #else
-  out << "$(OBJECT) : $(CINTLIB) $(READLINEA) $(SETUPOBJ)"
+  out << "$(OBJECT) : $(CINTLIB) $(READLINEA) G__setup" << G__CFG_OBJEXT
       << " $(COFILES) $(CXXOFILES) $(CIFO) $(CXXIFO)" << std::endl
       << "\t";
    if (G__quiet) out << "@";
    out << "$(LD) " << G__CFG_LDFLAGS << " $(CCOPT) " 
-      << G__CFG_LDOUT << "$(OBJECT) $(CIFO) $(CXXIFO) $(COFILES) $(CXXOFILES) $(SETUPOBJ) $(LIBS) $(READLINEA)"  << std::endl;
+      << G__CFG_LDOUT << "$(OBJECT) $(CIFO) $(CXXIFO) $(COFILES) $(CXXOFILES) G__setup" << G__CFG_OBJEXT << " $(LIBS) $(READLINEA)"  << std::endl;
 #endif
   }
   else {
 #ifdef _AIX
     TODO!
-    out << "$(OBJECT) : $(MAINOBJ) $(CINTLIB) $(READLINEA) $(DLFCN) $(SETUPOBJ) $(COFILES) $(CXXOFILES) $(CIFO) $(CXXIFO) \n";
+    out << "$(OBJECT) : G__main" << G__CFG_OBJEXT << " $(CINTLIB) $(READLINEA) $(DLFCN) G__setup" << G__CFG_OBJEXT << " $(COFILES) $(CXXOFILES) $(CIFO) $(CXXIFO) \n";
     out << "\trm -f shr.o $(OBJECT).nm $(OBJECT).exp\n";
-    out << "\t$(NM) $(MAINOBJ) $(CIFO) $(CXXIFO) $(COFILES) $(CXXOFILES) $(SETUPOBJ) $(READLINEA) $(DLFCN) $(LIBS) $(NMOPT)\n";
+    out << "\t$(NM) G__main" << G__CFG_OBJEXT << " $(CIFO) $(CXXIFO) $(COFILES) $(CXXOFILES) G__setup" << G__CFG_OBJEXT << " $(READLINEA) $(DLFCN) $(LIBS) $(NMOPT)\n";
     out << "\trm -f shr.o\n";
     out << "\techo \"#!\" > $(OBJECT).exp ; cat $(OBJECT).nm >> $(OBJECT).exp\n";
     out << "\trm -f $(OBJECT).nm\n";
-    out << "\t$(LD) -bE:$(OBJECT).exp -bM:SRE  $(IPATH) $(MACRO) $(CCOPT) -o $(OBJECT) $(MAINOBJ) $(CIFO) $(CXXIFO) $(COFILES) $(CXXOFILES) $(SETUPOBJ) $(READLINEA) $(DLFCN) $(LIBS)\n";
+    out << "\t$(LD) -bE:$(OBJECT).exp -bM:SRE  $(IPATH) $(MACRO) $(CCOPT) -o $(OBJECT) G__main" << G__CFG_OBJEXT << " $(CIFO) $(CXXIFO) $(COFILES) $(CXXOFILES) G__setup" << G__CFG_OBJEXT << " $(READLINEA) $(DLFCN) $(LIBS)\n";
 #else
-    out << "$(OBJECT) : $(MAINOBJ) $(CINTLIB) $(READLINEA) $(SETUPOBJ) "
+    out << "$(OBJECT) : G__main" << G__CFG_OBJEXT << " $(CINTLIB) $(READLINEA) G__setup" << G__CFG_OBJEXT << " "
         << " $(COFILES) $(CXXOFILES) $(CIFO) $(CXXIFO)" << std::endl
         << "\t";
    if (G__quiet) out << "@";
    out << "$(LD) $(CCOPT) " << G__CFG_LDFLAGS << " " 
-        << G__CFG_LDOUT << "$(OBJECT) $(MAINOBJ) $(CIFO) $(CXXIFO) $(COFILES) $(CXXOFILES) $(SETUPOBJ) $(LIBS) $(READLINEA)" << std::endl;
+        << G__CFG_LDOUT << "$(OBJECT) G__main" << G__CFG_OBJEXT << " $(CIFO) $(CXXIFO) $(COFILES) $(CXXOFILES) G__setup" << G__CFG_OBJEXT << " $(LIBS) $(READLINEA)" << std::endl;
 #endif
   }
   out << std::endl;
@@ -667,31 +688,37 @@ TODO!
    ***************************************************************************/
   out << "# Compile User source files ##############################" << std::endl;
   G__printsourcecompile(out);
-
+  out << std::endl;
+    
   /***************************************************************************
    * Compile Initialization routine
    ***************************************************************************/
-  if(! (G__flags & G__isDLL)) {
+  out << "# Compile main function  #################################" << std::endl;
+  out << "G__main" << G__CFG_OBJEXT << ": ";
 #if defined(G__CYGWIN) || defined(_MSC_VER) || \
   defined(__BORLANDC__) || defined(__BCPLUSPLUS__) || defined(G__BORLANDCC5)
-     out << std::endl;
-     out << "# Compile main function  #################################" << std::endl;
-     out << "$(SETUPOBJ): G__main.cxx" << std::endl;
-     out << "\t";
-   if (G__quiet) out << "@";
-   out << "$(CXX) $(LINKSPEC) $(CINTIPATH) -o $(SETUPOBJ) -c G__main.cxx" << std::endl;
+  out << "G__main.cxx" << std::endl;
 #else
-    out << "# Compile dictionary setup routine #######################" << std::endl;
-    out << "$(SETUPOBJ): $(CINTSYSDIRU)/main/G__setup.c $(CINTSYSDIRU)/" << G__CFG_COREVERSION << "/inc/G__ci.h" << std::endl
-        << "\t";
-   if (G__quiet) out << "@";
-   out << "$(CC) $(LINKSPEC) $(CINTIPATH) $(CMACRO) $(CFLAGS) " 
-        << G__CFG_COUT << "$(SETUPOBJ) " 
-        << G__CFG_COMP << " $(CINTSYSDIRW)/main/G__setup.c" << std::endl;
+  out << "$(MAINDIRU)/G__main.c" << std::endl;
 #endif
-  }
-  out << std::endl;
-    
+  out << "\t";
+  if (G__quiet) out << "@";
+#if defined(G__CYGWIN) || defined(_MSC_VER) || \
+  defined(__BORLANDC__) || defined(__BCPLUSPLUS__) || defined(G__BORLANDCC5)
+  out << "$(CXX) "
+#else
+  out << "$(CC) "
+#endif
+      << "$(LINKSPEC) $(CINTIPATH) -o $@ -c $<" << std::endl;
+
+  out << "# Compile dictionary setup routine #######################" << std::endl;
+  out << "G__setup" << G__CFG_OBJEXT << ": $(MAINDIRU)/G__setup.c $(CINTINCDIRU)/G__ci.h" << std::endl
+      << "\t";
+  if (G__quiet) out << "@";
+  out << "$(CC) $(LINKSPEC) $(CINTIPATH) $(CMACRO) $(CFLAGS) "
+      << G__CFG_COUT << "$@ " 
+      << G__CFG_COMP << " $(MAINDIRW)/G__setup.c" << std::endl;
+
   /***************************************************************************
    * Interface routine
    ***************************************************************************/
@@ -755,7 +782,7 @@ TODO!
 #ifdef _AIX
     out << "\t";
    if (G__quiet) out << "@";
-   out << "$(RM) $(OBJECT) $(OBJECT).exp $(OBJECT).nm shr.o core $(CIFO) $(CIFC) $(CIFH) $(CXXIFO) $(CXXIFC) $(CXXIFH) $(COFILES) $(CXXOFILES) $(SETUPOBJ)" << std::endl;
+   out << "$(RM) $(OBJECT) $(OBJECT).exp $(OBJECT).nm shr.o core $(CIFO) $(CIFC) $(CIFH) $(CXXIFO) $(CXXIFC) $(CXXIFH) $(COFILES) $(CXXOFILES) G__setup" << G__CFG_OBJEXT << std::endl;
 #else
     out << "\t";
    if (G__quiet) out << "@";

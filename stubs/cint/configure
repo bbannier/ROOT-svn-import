@@ -468,8 +468,10 @@ function processflag_coreversion {
 }
 
 function pathtoabs {
+    ABSPATH=$1
     if [ "${1:0:1}" != "/" ]; then
-        ABSPATH=$(cd `dirname $0`; pwd)/$1
+        ABSPATH="`dirname $0`/`dirname $1`"
+        ABSPATH="`cd ABSPATH; pwd`/`basename $1`"
     fi
 }
 

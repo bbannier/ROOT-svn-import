@@ -149,14 +149,14 @@ FINDALLBUTCVS=-type f \! -path '*/CVS/*' \! -name .cvsignore \! -name SConscript
 install:
 	if [ ! -d $(DESTDIR)$(G__CFG_BINDIR) ]; then mkdir -p $(DESTDIR)$(G__CFG_BINDIR); fi
 	cp $(CINT) $(MAKECINT) $(DESTDIR)$(G__CFG_BINDIR)/
-	if [ -f cint-config ] ; then cp cint-config $(DESTDIR)$(G__CFG_BINDIR)/ ; fi
+	if [ -f bin/cint-config ] ; then cp bin/cint-config $(DESTDIR)$(G__CFG_BINDIR)/ ; fi
 
 	if [ ! -d $(DESTDIR)$(G__CFG_LIBDIR) ]; then mkdir -p $(DESTDIR)$(G__CFG_LIBDIR); fi
 	cp $(CINTLIBSHARED) $(DESTDIR)$(G__CFG_LIBDIR)/
-	if [ -f $(CINTIMPLIB) ] ; then cp $(CINTIMPLIB)   $(DESTDIR)$(G__CFG_LIBDIR)/ ; fi
+	if [ -f $(CINTIMPLIB) ] ;   then cp $(CINTIMPLIB)    $(DESTDIR)$(G__CFG_LIBDIR)/ ; fi
 	cp $(CINTLIBSTATIC) $(DESTDIR)$(G__CFG_LIBDIR)/
-	if [ -f $(REFLEXLIB) ] ; then cp $(REFLEXLIB)     $(DESTDIR)$(G__CFG_LIBDIR)/ ; fi
-	cp $(REFLEXSO)      $(DESTDIR)$(G__CFG_LIBDIR)/
+	if [ -f $(REFLEXLIB) ] ;    then cp $(REFLEXLIB)     $(DESTDIR)$(G__CFG_LIBDIR)/ ; fi
+	if [ -f $(REFLEXSO) ] ;     then cp $(REFLEXSO)      $(DESTDIR)$(G__CFG_LIBDIR)/ ; fi
 	if [ -f $(REFLEXIMPLIB) ] ; then cp $(REFLEXIMPLIB)  $(DESTDIR)$(G__CFG_LIBDIR)/ ; fi
 
 	if [ ! -d $(DESTDIR)$(G__CFG_INCLUDEDIRCINT) ] ; then mkdir -p $(DESTDIR)$(G__CFG_INCLUDEDIRCINT) ; fi
@@ -169,7 +169,7 @@ install:
 	if [ ! -d $(DESTDIR)$(G__CFG_DATADIRCINT) ] ; then mkdir -p $(DESTDIR)$(G__CFG_DATADIRCINT) ; fi
 	$(G__CFG_RM) $(DESTDIR)$(G__CFG_DATADIRCINT)/*
 	for f in `cd $(G__CFG_COREVERSION); find include stl main lib $(FINDALLBUTCVS)`; do \
-	  d=$(DESTDIR)$(G__CFG_DATADIRCINT)/`dirname $$f`;\
+	  d=$(DESTDIR)$(G__CFG_DATADIRCINT)/$(G__CFG_COREVERSION)/`dirname $$f`;\
 	  if [ ! -d $$d ]; then mkdir -p $$d; fi; \
 	  cp $(G__CFG_COREVERSION)/$$f $$d/; done
 
