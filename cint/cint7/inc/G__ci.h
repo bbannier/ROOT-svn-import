@@ -714,8 +714,6 @@ typedef int (*G__IgnoreInclude)();
 * Other parameters can be changed while keeping DLL binary compatibility.
 *
 **************************************************************************/
-#define G__LONGBUF /* needed e.g. for configcint.h */
-
 #ifdef G__LONGBUF
 #define G__LONGLINE    4096  /* Length of expression */
 #define G__ONELINE     4096  /* Length of subexpression,parameter,argument */
@@ -723,7 +721,7 @@ typedef int (*G__IgnoreInclude)();
 #define G__MAXNAME     4096  /* Variable name */
 #else
 #define G__LONGLINE    1024  /* Length of expression */
-#define G__ONELINE      256  /* Length of subexpression,parameter,argument */
+#define G__ONELINE      512  /* Length of subexpression,parameter,argument */
 #define G__MAXNAME      256  /* Variable name */
 #define G__ONELINEDICT    8  /* Length of subexpression,parameter,argument */
 #endif
@@ -733,22 +731,22 @@ typedef int (*G__IgnoreInclude)();
 #define G__MAXPARA      100  /* Number of argument for G__main(argc,argv)   */
 #define G__MAXARG       100  /* Number of argument for G__init_cint(char *) */
 #define G__MAXFUNCPARA   40  /* Function argument */
-#define G__MAXVARDIM     10  /* Array dimention */
+#define G__MAXVARDIM     10  /* Array dimension */
 #define G__LENPOST       10  /* length of file name extention */
 #define G__MAXBASE       50  /* maximum inheritable class */
 #define G__TAGNEST       20  /* depth of nested class */
 
 #ifdef G__WIN32
 #if defined(_MSC_VER) && (_MSC_VER>1300)
-#define G__MAXSTRUCT  16000  /* struct table */
-#define G__MAXTYPEDEF 12000  /* typedef table */
+#define G__MAXSTRUCT  24000  /* struct table */
+#define G__MAXTYPEDEF 24000  /* typedef table */
 #else
 #define G__MAXSTRUCT   4000  /* struct table */
 #define G__MAXTYPEDEF  8000  /* typedef table */
 #endif
 #else
-#define G__MAXSTRUCT  12000  /* struct table */
-#define G__MAXTYPEDEF 12000  /* typedef table */
+#define G__MAXSTRUCT  24000  /* struct table */
+#define G__MAXTYPEDEF 24000  /* typedef table */
 #endif
 
 /* G__MAXIFUNC and G__MEMDEPTH are not real limit
