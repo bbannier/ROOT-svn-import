@@ -4935,7 +4935,7 @@ void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,in
     G__if_ary_union_constructor(fp, 0, ifunc);
 
     // Print the object class and name
-    fprintf(fp, "  %s obj_%s(",G__fulltagname(ifunc->tagnum,0), G__map_cpp_funcname(ifunc->tagnum, ifunc->funcname[j], j, ifunc->page));
+    fprintf(fp, "  %s *obj_%s = new %s(",G__fulltagname(ifunc->tagnum,0), G__map_cpp_funcname(ifunc->tagnum, ifunc->funcname[j], j, ifunc->page), G__fulltagname(ifunc->tagnum,0));
 
     int k = 0;
     for (int counter=paran-1; counter>-1; counter--) {
