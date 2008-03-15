@@ -122,12 +122,12 @@ MODE=${MODE/--/-}
 # Generate the first dictionary.. i.e the one with the shadow classes
 #echo -++- Generating the first dictionary: "${FILENAME%.*}""Tmp1".cxx
 #echo "$ROOTCINT" $PREFIX $MODE "${FILENAME%.*}""Tmp1".cxx $CFLAG $PFLAG -. 1 "${ROOTCINTARGS[@]}"
-"$ROOTCINT" $PREFIX $MODE "${FILENAME%.*}""Tmp1".cxx $CFLAG $PFLAG -. 1 "${ROOTCINTARGS[@]}"
+"$ROOTCINT" $PREFIX $MODE "${FILENAME%.*}""Tmp1.cxx" $CFLAG $PFLAG -. 1 "${ROOTCINTARGS[@]}"
 
 # Temporary dictionaries compilation
 #echo -++- Compiling the first dictionary: "${FILENAME%.*}""Tmp1".cxx
 #echo g++ "$CXXFLAGS" -pthread -Ipcre/src/pcre-6.4 -I"$ROOTSYS"/include/ -I. -o "${FILENAME%.*}""Tmp1".o -c "${FILENAME%.*}""Tmp1".cxx
-g++ $CXXFLAGS -pthread -Ipcre/src/pcre-6.4 -I"$ROOTSYS"/include/ -I. -o "${FILENAME%.*}""Tmp1".o -c "${FILENAME%.*}""Tmp1".cxx
+g++ $CXXFLAGS -pthread -Ipcre/src/pcre-6.4 -I"$ROOTSYS"/include/ -I. -o "${FILENAME%.*}""Tmp1".o -c "${FILENAME%.*}""Tmp1".cxx &> /dev/null 
 
 # Put all the symbols of the .o in the nm file
 #echo -++- Putting the symbols of the .o files in : "${FILENAME%.*}".nm
@@ -138,26 +138,26 @@ g++ $CXXFLAGS -pthread -Ipcre/src/pcre-6.4 -I"$ROOTSYS"/include/ -I. -o "${FILEN
 # Put the symbols of the first dicionary in the nm file too
 #echo -++- Putting the symbols of the dictionary "${FILENAME%.*}""Tmp1".cxx in : "${FILENAME%.*}".nm
 #echo nm -g -p --defined-only "${FILENAME%.*}""Tmp1".o | awk '{printf("%s\n", $3)}' >> "${FILENAME%.*}".nm
-nm -g -p --defined-only "${FILENAME%.*}""Tmp1".o | awk '{printf("%s\n", $3)}' > "${FILENAME%.*}".nm
-nm -g -p --undefined-only "${FILENAME%.*}""Tmp1".o | awk '{printf("%s\n", $2)}' >> "${FILENAME%.*}".nm
+nm -g -p --defined-only "${FILENAME%.*}""Tmp1".o 2> /dev/null | awk '{printf("%s\n", $3)}' > "${FILENAME%.*}".nm 
+nm -g -p --undefined-only "${FILENAME%.*}""Tmp1".o 2> /dev/null | awk '{printf("%s\n", $2)}' >> "${FILENAME%.*}".nm 
 
 # Now we need the symbols for the second dictionary too (another safeguard)
 # Generate the second dictionary passing it the symbols of the .o files plus
 # those of the first dictionary
 #echo -++- Generating the second dictionary: "${FILENAME%.*}""Tmp2".cxx
 #echo "$ROOTCINT" $PREFIX $MODE "${FILENAME%.*}""Tmp2".cxx  $CFLAG $PFLAG -. 2 --symbols-file "${FILENAME%.*}"".nm" "${ROOTCINTARGS[@]}"
-"$ROOTCINT" $PREFIX $MODE "${FILENAME%.*}""Tmp2".cxx $CFLAG $PFLAG -. 2 --symbols-file "${FILENAME%.*}"".nm" "${ROOTCINTARGS[@]}"
+$ROOTCINT $PREFIX $MODE "${FILENAME%.*}""Tmp2".cxx $CFLAG $PFLAG -. 2 --symbols-file "${FILENAME%.*}"".nm" "${ROOTCINTARGS[@]}" &> /dev/null
 
 # Compile the second dictionary (should have only inline functions)
 #echo -++- Compiling the second dictionary: "${FILENAME%.*}""Tmp2".cxx
 #echo g++ "$CXXFLAGS" -Iinclude -pthread -Ipcre/src/pcre-6.4 -I"$ROOTSYS"/include/ -I. -o "${FILENAME%.*}""Tmp2".o -c "${FILENAME%.*}""Tmp2".cxx
-g++ $CXXFLAGS -Iinclude -pthread -Ipcre/src/pcre-6.4 -I"$ROOTSYS"/include/ -I. -o "${FILENAME%.*}""Tmp2".o -c "${FILENAME%.*}""Tmp2".cxx
+g++ $CXXFLAGS -Iinclude -pthread -Ipcre/src/pcre-6.4 -I"$ROOTSYS"/include/ -I. -o "${FILENAME%.*}""Tmp2".o -c "${FILENAME%.*}""Tmp2".cxx &> /dev/null
 
 # Add the symbols of the second dictionary to the .nm file
 #echo -++- Putting the symbols of the dictionary "${FILENAME%.*}""Tmp2".cxx in : "${FILENAME%.*}".nm
 #echo nm -g -p --defined-only "${FILENAME%.*}""Tmp2".o | awk '{printf("%s\n", $3)}' >> "${FILENAME%.*}".nm
-nm -g -p --defined-only "${FILENAME%.*}""Tmp2".o | awk '{printf("%s\n", $3)}' >> "${FILENAME%.*}".nm
-nm -g -p --undefined-only "${FILENAME%.*}""Tmp2".o | awk '{printf("%s\n", $2)}' >> "${FILENAME%.*}".nm
+nm -g -p --defined-only "${FILENAME%.*}""Tmp2".o 2> /dev/null | awk '{printf("%s\n", $3)}' >> "${FILENAME%.*}".nm 
+nm -g -p --undefined-only "${FILENAME%.*}""Tmp2".o 2> /dev/null  | awk '{printf("%s\n", $2)}' >> "${FILENAME%.*}".nm 
 
 # Final Dictionary Generation
 #echo -++- Generating the real dictionary: "${FILENAME}"

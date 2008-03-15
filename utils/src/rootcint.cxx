@@ -714,7 +714,7 @@ void EnableAutoLoading() {
 }
 
 //______________________________________________________________________________
-bool CheckInputOperator(G__ClassInfo &cl)
+bool CheckInputOperator(G__ClassInfo &cl, int dicttype)
 {
    // Check if the operator>> has been properly declared if the user has
    // resquested a custom version.
@@ -742,11 +742,15 @@ bool CheckInputOperator(G__ClassInfo &cl)
         strstr(methodinfo.FileName(),"TBuffer.h")!=0 ||
         strstr(methodinfo.FileName(),"Rtypes.h" )!=0) {
 
-      Error(0,
-            "in this version of ROOT, the option '!' used in a linkdef file\n"
-            "       implies the actual existence of customized operators.\n"
-            "       The following declaration is now required:\n"
-            "   TBuffer &operator>>(TBuffer &,%s *&);\n",cl.Fullname());
+     if (dicttype==0||dicttype==1){
+     // We don't want to generate duplicated error messages in several dictionaries (when generating temporaries)
+	 Error(0,
+	       "in this version of ROOT, the option '!' used in a linkdef file\n"
+	       "       implies the actual existence of customized operators.\n"
+	       "       The following declaration is now required:\n"
+	       "   TBuffer &operator>>(TBuffer &,%s *&);\n",cl.Fullname());
+
+     }
 
       has_input_error = true;
    } else {
@@ -764,11 +768,13 @@ bool CheckInputOperator(G__ClassInfo &cl)
         strstr(methodinfo.FileName(),"TBuffer.h")!=0 ||
         strstr(methodinfo.FileName(),"Rtypes.h" )!=0) {
 
+     if (dicttype==0||dicttype==1){
       Error(0,
             "in this version of ROOT, the option '!' used in a linkdef file\n"
             "       implies the actual existence of customized operator.\n"
             "       The following declaration is now required:\n"
             "   TBuffer &operator<<(TBuffer &,const %s *);\n",cl.Fullname());
+     }
 
       has_input_error = true;
    } else {
@@ -4474,6 +4480,15 @@ int main(int argc, char **argv)
             // the easiest way is to get it as a parameter
             if (!strcmp(argv[ic], "-L") ||  !strcmp(argv[ic], "--symbols-file")) {
                ++ic;
+	       
+	       FILE *fpsym = fopen(argv[ic],"r");
+	       if (fpsym) // File exists
+		 fclose(fpsym);
+	       else{ // File doesn't exist
+		 Error(0, "--symbols-file: %s: No such file\n", argv[ic]);
+		 return 1;
+	       }
+
                argvv[argcc++] = (char*)"-L";
                argvv[argcc++] = argv[ic]; 
                ++ic;
@@ -4623,6 +4638,15 @@ int main(int argc, char **argv)
       // We need the library path in the dictionary generation
       // the easiest way is to get it as a parameter
       if (!strcmp(argv[ic], "-L") ||  !strcmp(argv[ic], "--symbols-file")) {
+
+	FILE *fpsym = fopen(argv[ic],"r");
+	if (fpsym) // File exists
+	  fclose(fpsym);
+	else{ // File doesn't exist
+	  Error(0, "--symbols-file: %s: No such file\n", argv[ic]);
+	  return 1;
+	}
+
          ++ic;
          argvv[argcc++] = (char*)"-L";
          argvv[argcc++] = argv[ic]; 
@@ -4899,10 +4923,79 @@ int main(int argc, char **argv)
       (*dictSrcOut) << std::endl;
    }
 
+//    if(dicttype==3){ 
+//      G__ClassInfo cl;
+//      cl.Init();
+//      bool has_input_error = false;
+//      while (cl.Next()) {
+//        if ((cl.Property() & (G__BIT_ISCLASS|G__BIT_ISSTRUCT)) && cl.Linkage() == G__CPPLINK) {
+// 	 if (!cl.IsLoaded()) {
+// 	   continue;
+// 	 }
+// 	 if (cl.HasMethod("Streamer")) {
+// 	   if ((cl.RootFlag() & G__NOINPUTOPERATOR)) {
+// 	     int version = GetClassVersion(cl);
+// 	     if (version!=0) {
+// 	       // Only Check for input operator is the object is I/O has
+// 	       // been requested.
+// 	       has_input_error |= CheckInputOperator(cl,dicttype);
+// 	     }
+// 	   }
+// 	   has_input_error |= !CheckClassDef(cl);
+// 	 }
+//        }
+//      }
+
+//      if (has_input_error) {
+//        // Be a little bit makefile friendly and remove the dictionary in case of error.
+//        // We could add an option -k to keep the file even in case of error.
+//        CleanupOnExit(1);
+//        exit(1);
+//      }     
+//    }
+
+   G__ClassInfo cl;
+   cl.Init();
+   bool has_input_error = false;
+   while (cl.Next()) {
+     if ((cl.Property() & (G__BIT_ISCLASS|G__BIT_ISSTRUCT)) && cl.Linkage() == G__CPPLINK) {
+       if (!cl.IsLoaded()) {
+	 continue;
+       }
+       if (cl.HasMethod("Streamer")) {
+	 if (!(cl.RootFlag() & G__NOINPUTOPERATOR)) {
+	   // We do not write out the input operator anymore, it is a template
+#if defined R__CONCRETE_INPUT_OPERATOR
+	   WriteInputOperator(cl);
+#endif
+	 } else {
+	   int version = GetClassVersion(cl);
+	   if (version!=0) {
+	     // Only Check for input operator is the object is I/O has
+	     // been requested.
+	     has_input_error |= CheckInputOperator(cl,dicttype);
+	   }
+	 }
+       }
+       bool res = CheckConstructor(cl);
+       if (!res) {
+	 // has_input_error = true;
+       }
+       has_input_error |= !CheckClassDef(cl);
+     }
+   }
+
+   if (has_input_error) {
+     // Be a little bit makefile friendly and remove the dictionary in case of error.
+     // We could add an option -k to keep the file even in case of error.
+     CleanupOnExit(1);
+     exit(1);
+   }
+
    // 26-07-07
    // dont generate the showmembers if we only want 
    // all the memfunc_setup stuff (stub-less calls)
-   if(dicttype==0 || dicttype==1 || dicttype==4) {   
+   if(dicttype==0 || dicttype==1) {   
       //
       // We will loop over all the classes several times.
       // In order we will call
@@ -4917,7 +5010,6 @@ int main(int argc, char **argv)
       //
       // Loop over all classes and write the Shadow class if needed
       //
-
       // Open LinkDef file for reading, so that we can process classes
       // in order of appearence in this file (STK)
       FILE *fpld = 0;
@@ -5000,43 +5092,6 @@ int main(int argc, char **argv)
          } else if (((cl.Property() & (G__BIT_ISNAMESPACE)) && cl.Linkage() == G__CPPLINK)) {
             WriteNamespaceInit(cl);
          }
-      }
-
-      cl.Init();
-      bool has_input_error = false;
-      while (cl.Next()) {
-         if ((cl.Property() & (G__BIT_ISCLASS|G__BIT_ISSTRUCT)) && cl.Linkage() == G__CPPLINK) {
-            if (!cl.IsLoaded()) {
-               continue;
-            }
-            if (cl.HasMethod("Streamer")) {
-               if (!(cl.RootFlag() & G__NOINPUTOPERATOR)) {
-                  // We do not write out the input operator anymore, it is a template
-#if defined R__CONCRETE_INPUT_OPERATOR
-                  WriteInputOperator(cl);
-#endif
-               } else {
-                  int version = GetClassVersion(cl);
-                  if (version!=0) {
-                     // Only Check for input operator is the object is I/O has
-                     // been requested.
-                     has_input_error |= CheckInputOperator(cl);
-                  }
-               }
-            }
-            bool res = CheckConstructor(cl);
-            if (!res) {
-               // has_input_error = true;
-            }
-            has_input_error |= !CheckClassDef(cl);
-         }
-      }
-
-      if (has_input_error) {
-         // Be a little bit makefile friendly and remove the dictionary in case of error.
-         // We could add an option -k to keep the file even in case of error.
-         CleanupOnExit(1);
-         exit(1);
       }
 
       //
