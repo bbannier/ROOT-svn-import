@@ -152,7 +152,8 @@ enum XProofActionCode {
    kXPD_urgent,    // 5108     // Urgent message to be processed in the reader thread
    kXPD_flush,     // 5109     // Server request to flush stdout (before retrieving logs)
    kXPD_inflate,   // 5110     // Server request to inflate processing times
-   kXPD_priority   // 5111     // Server request to propagate a group priority
+   kXPD_priority,  // 5111     // Server request to propagate a group priority
+   kXPD_wrkmortem  // 5112     // A worker just died or terminated
 };
 
 //_______________________________________________

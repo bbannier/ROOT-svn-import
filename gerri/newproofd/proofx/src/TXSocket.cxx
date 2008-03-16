@@ -92,7 +92,7 @@ public:
 Bool_t TXSocketPingHandler::Notify()
 {
    // Ping the socket
-   fSocket->Ping(kTRUE);
+   fSocket->Ping("ping handler");
 
    return kTRUE;
 }
@@ -368,8 +368,8 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
       return kUNSOL_CONTINUE;
    } else {
       if (gDebug > 2)
-         Info("ProcessUnsolicitedMsg", "%p: got message with status: %d, len: %d bytes",
-              this, m->GetStatusCode(), m->DataLen());
+         Info("ProcessUnsolicitedMsg", "%p: got message with status: %d, len: %d bytes (ID: %d)",
+              this, m->GetStatusCode(), m->DataLen(), m->HeaderSID());
    }
 
    // Error notification
@@ -713,12 +713,73 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
          }
 
          break;
+      case kXPD_wrkmortem:
+         //
+         // A worker died
+         Printf(" ");
+         Printf("| %.*s", len, (char *)pdata);
+         // Handle error
+         if (fHandler)
+            fHandler->HandleError();
+         else
+            Error("ProcessUnsolicitedMsg","handler undefined");
+         break;
      default:
          Error("ProcessUnsolicitedMsg","unknown action code: %d", acod);
    }
 
    // We are done
    return rc;
+}
+
+//_______________________________________________________________________
+void TXSocket::PostFatal()
+{
+   // Post a kPROOF_FATAL message to force the main thread to mark this
+   // socket as bad. This is needed to avoid race condition when a worker
+   // dies while in processing state.
+
+   // Create the message
+   TMessage m(kPROOF_FATAL);
+
+   // Get pointer to the message buffer
+   char *mbuf = m.Buffer();
+   Int_t mlen = m.Length();
+   if (m.CompBuffer()) {
+      mbuf = m.CompBuffer();
+      mlen = m.CompLength();
+   }
+
+   //
+   // Data message
+   R__LOCKGUARD(fAMtx);
+
+   // Get a spare buffer
+   TXSockBuf *b = PopUpSpare(mlen);
+   if (!b) {
+      Error("PostFatal", "could allocate spare buffer");
+      return;
+   }
+
+   // Fill the pipe buffer
+   memcpy(b->fBuf, mbuf, mlen);
+   b->fLen = mlen;
+
+   // Update counters
+   fBytesRecv += mlen;
+
+   // Produce the message
+   fAQue.push_back(b);
+
+   // Post the global pipe
+   PostPipe(this);
+
+   // Signal it and release the mutex
+   Info("PostFatal","%p: posting semaphore: %p (%d bytes)", this, &fASem, mlen);
+   fASem.Post();
+
+   // Done
+   return;
 }
 
 //_______________________________________________________________________
@@ -1086,7 +1147,7 @@ Int_t TXSocket::SendRaw(const void *buffer, Int_t length, ESendRecvOptions opt)
 }
 
 //______________________________________________________________________________
-Bool_t TXSocket::Ping(Bool_t)
+Bool_t TXSocket::Ping(const char *ord)
 {
    // Ping functionality: contact the server and get an acknowledgement.
    // If external, the server waits for a reply from the server
@@ -1097,7 +1158,7 @@ Bool_t TXSocket::Ping(Bool_t)
    TSystem::ResetErrno();
 
    if (gDebug > 0)
-      Info("Ping","%p: %c: sid: %d", this, fMode, fSessionID);
+      Info("Ping","%p: %s: sid: %d", this, ord ? ord : "int", fSessionID);
 
    // Make sure we are connected
    if (!IsValid()) {
@@ -1143,15 +1204,15 @@ Bool_t TXSocket::Ping(Bool_t)
          XReqErrorType e = fConn->LowWrite(&Request, 0, 0);
          res = (e == kOK) ? kTRUE : kFALSE;
       } else {
-         Error("Ping", "%p: i: problems marshalling request", this);
+         Error("Ping", "%p: int: problems marshalling request", this);
       }
    }
 
    // Failure notification (avoid using the handler: we may be exiting)
    if (!res) {
-      Error("Ping", "%p: %c: problems sending ping to server", this, fMode);
+      Error("Ping", "%p: %s: problems sending ping to server", this, ord ? ord : "int");
    } else if (gDebug > 0) {
-      Info("Ping","%p: %c: sid: %d OK", this, fMode, fSessionID);
+      Info("Ping","%p: %s: sid: %d OK", this, ord ? ord : "int", fSessionID);
    }
 
    return res;

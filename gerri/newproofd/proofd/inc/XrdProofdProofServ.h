@@ -33,6 +33,7 @@
 
 #include "Xrd/XrdLink.hh"
 
+#include "XProofProtocol.h"
 #include "XrdProofdProtocol.h"
 #include "XrdProofdResponse.h"
 
@@ -129,7 +130,7 @@ public:
    void                AddWorker(XrdProofWorker *w) { XrdSysMutexHelper mhp(fMutex); fWorkers.push_back(w); }
    inline const char  *AdminPath() const { XrdSysMutexHelper mhp(fMutex); return fAdminPath.c_str(); }
    inline const char  *Alias() const { XrdSysMutexHelper mhp(fMutex); return fAlias.c_str(); }
-   void                Broadcast(const char *msg);
+   void                Broadcast(const char *msg, int type = kXPD_srvmsg);
    int                 BroadcastPriority(int priority);
    inline const char  *Client() const { XrdSysMutexHelper mhp(fMutex); return fClient.c_str(); }
    void                DeleteStartMsg()

@@ -351,7 +351,7 @@ Int_t TXSlave::Ping()
 
    if (!IsValid()) return -1;
 
-   return ((TXSocket *)fSocket)->Ping();
+   return ((TXSocket *)fSocket)->Ping(GetOrdinal());
 }
 
 //______________________________________________________________________________
@@ -506,8 +506,6 @@ Bool_t TXSlave::HandleError(const void *)
 {
    // Handle error on the input socket
 
-   Info("HandleError", "%p:%s:%s got called ... fProof: %p, fSocket: %p (valid: %d)",
-                       this, fName.Data(), fOrdinal.Data(), fProof, fSocket, fSocket->IsValid());
    // Try reconnection
    if (fSocket && !fSocket->IsValid()) {
 
@@ -518,11 +516,13 @@ Bool_t TXSlave::HandleError(const void *)
       }
    }
 
-   // Interrupt underlying socket operations
-   if (fSocket)
-      ((TXSocket *)fSocket)->SetInterrupt();
+   // This seems a real error: notify the interested parties
+   Info("HandleError", "%p:%s:%s got called ... fProof: %p, fSocket: %p (valid: %d)",
+                       this, fName.Data(), fOrdinal.Data(), fProof, fSocket,
+                       fSocket->IsValid());
 
-   // Remove signal handler
+   // Remove interrupt handler (avoid affecting other clients of the underlying physical
+   // connection)
    SetInterruptHandler(kFALSE);
 
    if (fProof) {
@@ -531,19 +531,18 @@ Bool_t TXSlave::HandleError(const void *)
       if (fProof->fIntHandler)
          fProof->fIntHandler->Remove();
 
-      // Attach to the monitor instance, if any
-      TMonitor *mon = fProof->fCurrentMonitor;
+      Info("HandleError", "%p: proof: %p", this, fProof);
 
-      Info("HandleError", "%p: proof: %p, mon: %p", this, fProof, mon);
-
-      if (mon && fSocket && mon->GetListOfActives()->FindObject(fSocket)) {
-         // Synchronous collection in TProof
-         Info("HandleError", "%p: deactivating from monitor %p", this, mon);
-         mon->DeActivate(fSocket);
+      if (fSocket) {
+         // This is need to skip contacting the remote server upon close
+         ((TXSocket *)fSocket)->SetSessionID(-1);
+         // Synchronous collection in TProof: post fatal message; this will
+         // mark the worker as bad and update the internal lists accordingly
+         ((TXSocket *)fSocket)->PostFatal();
       }
-      // Update lists:
+
+      // On masters we notify clients of the problem occured
       if (fProof->IsMaster()) {
-         // On masters we have to update the lists
          TString msg(Form("Worker '%s-%s' has been removed from the active list",
                           fName.Data(), fOrdinal.Data()));
          TMessage m(kPROOF_MESSAGE);
@@ -552,31 +551,9 @@ Bool_t TXSlave::HandleError(const void *)
             gProofServ->GetSocket()->Send(m);
          else
             Warning("HandleError", "%p: global reference to TProofServ missing");
-         // The session is gone
-         if (fSocket)
-            ((TXSocket *)fSocket)->SetSessionID(-1);
-         fProof->MarkBad(this);
-      } else {
-         // On clients the proof session should be removed from the lists
-         // and deleted, since it is not valid anymore
-         fProof->GetListOfSlaves()->Remove(this);
-         TProofMgr *mgr= fProof->GetManager();
-         if (mgr)
-            mgr->ShutdownSession(fProof);
-         Close("P");
-         SafeDelete(fSocket);
-         fValid = kFALSE;
       }
    } else {
       Warning("HandleError", "%p: reference to PROOF missing", this);
-   }
-
-   // Post semaphore to wake up anybody waiting; send as many posts as needed
-   if (fSocket) {
-      R__LOCKGUARD(((TXSocket *)fSocket)->fAMtx);
-      TSemaphore *sem = &(((TXSocket *)fSocket)->fASem);
-      while (sem->TryWait() != 1)
-         sem->Post();
    }
 
    Info("HandleError", "%p: DONE ... ", this);

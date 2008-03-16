@@ -167,10 +167,13 @@ public:
 
    int               CleanupProofServ(bool all = 0, const char *usr = 0);
 
-   int               SetProofServEnv(XrdProofdProtocol *p,
-                                     int psid = -1, int loglevel = -1, const char *cfg = 0);
-   int               SetProofServEnvOld(XrdProofdProtocol *p,
-                                        int psid = -1, int loglevel = -1, const char *cfg = 0);
+   void              GetTagDirs(XrdProofdProtocol *p, XrdProofdProofServ *xps,
+                                XrdOucString &sesstag, XrdOucString &topsesstag,
+                                XrdOucString &sessiondir, XrdOucString &sesswrkdir);
+
+   int               SetProofServEnv(XrdProofdProtocol *p, void *in);
+   int               SetProofServEnvOld(XrdProofdProtocol *p, void *in);
+
    int               SaveAFSkey(XrdSecCredentials *c, const char *fn);
    int               SetUserEnvironment(XrdProofdProtocol *p);
 

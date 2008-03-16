@@ -120,7 +120,7 @@ XrdProofGroup::~XrdProofGroup()
 void XrdProofGroup::Print()
 {
    // Dump group content
-   XPDLOC(GMGR, "")
+   XPDLOC(GMGR, "Group::Print")
 
    XrdSysMutexHelper mhp(fMutex); 
 

@@ -260,7 +260,7 @@ int XrdProofdClientMgr::Login(XrdProofdProtocol *p)
    int rc = 1;
    XPD_SETRESP(p, "Login");
 
-   TRACEP(p, REQ, "enter");
+   TRACEP(p, HDBG, "enter");
 
    // If this server is explicitely required to be a worker node or a
    // submaster, check whether the requesting host is allowed to connect
@@ -397,7 +397,9 @@ int XrdProofdClientMgr::Login(XrdProofdProtocol *p)
    if (su) {
       // Update superuser flag
       p->SetSuperUser(su);
-      TRACEP(p, DBG, uname<<" is a privileged user ");
+      TRACEP(p, DBG, "request from entity: "<<uname<<":"<<gname<<" (privileged)");
+   } else {
+      TRACEP(p, DBG, "request from entity: "<<uname<<":"<<gname);
    }
 
    // Check if user belongs to a group
@@ -464,17 +466,17 @@ int XrdProofdClientMgr::Login(XrdProofdProtocol *p)
    if (needauth && fCIA) {
       const char *pp = fCIA->getParms(i, p->Link()->Name());
       if (pp && i ) {
-         response->Send((kXR_int32)XPROOFD_VERSBIN, (void *)pp, i);
+         response->SendI((kXR_int32)XPROOFD_VERSBIN, (void *)pp, i);
          p->SetStatus((XPD_NEED_MAP | XPD_NEED_AUTH));
          return rc;
       } else {
-         response->Send((kXR_int32)XPROOFD_VERSBIN);
+         response->SendI((kXR_int32)XPROOFD_VERSBIN);
          p->SetStatus(XPD_LOGGEDIN);
          if (pp)
             p->SetAuthEntity();
       }
    } else {
-      rc = response->Send((kXR_int32)XPROOFD_VERSBIN);
+      rc = response->SendI((kXR_int32)XPROOFD_VERSBIN);
       p->SetStatus(XPD_LOGGEDIN);
    }
 
@@ -493,7 +495,7 @@ int XrdProofdClientMgr::MapClient(XrdProofdProtocol *p, bool all)
 
    XrdOucString msg;
 
-   TRACEP(p, REQ, "all: "<< all);
+   TRACEP(p, HDBG, "all: "<< all);
 
    // Map the existing session, if found
    if (!p->Client() || !p->Client()->IsValid()) {
@@ -860,7 +862,7 @@ int XrdProofdClientMgr::CheckClients()
 
    // Scan the active sessions admin path
    int rc = 0;
-   XrdOucString usrpath, cidpath;
+   XrdOucString usrpath, cidpath, discpath;
    struct dirent *ent = 0;
    while ((ent = (struct dirent *)readdir(dir))) {
       // Skip the basic entries
@@ -882,18 +884,22 @@ int XrdProofdClientMgr::CheckClients()
                // Skip the basic entries
                if (!strcmp(sent->d_name, ".") || !strcmp(sent->d_name, "..")) continue;
                if (!strcmp(sent->d_name, "xpdsock")) continue;
-               cidpath.form("%s/%s/cid", usrpath.c_str(), sent->d_name);
-               // Check last access time
-               if (stat(cidpath.c_str(), &st) != 0 ||
-                  (int)(time(0) - st.st_atime) > fReconnectTimeOut) {
-                  xrm = 1;
+               discpath.form("%s/%s/disconnected", usrpath.c_str(), sent->d_name);
+               // If in disconnected state, check if it needs to be cleaned
+               if (stat(discpath.c_str(), &st) == 0) {
+                  cidpath.form("%s/%s/cid", usrpath.c_str(), sent->d_name);
+                  // Check last access time
+                  if (stat(cidpath.c_str(), &st) != 0 ||
+                     (int)(time(0) - st.st_atime) > fReconnectTimeOut) {
+                     xrm = 1;
+                  }
                }
                // If too old remove the entry
                if (xrm) {
-                  cidpath.replace("/cid", "");
-                  TRACE(DBG, "removing path "<<cidpath);
-                  if ((rc = XrdProofdAux::RmDir(cidpath.c_str())) != 0) {
-                     TRACE(XERR, "problems removing "<<cidpath<<"; error: "<<-rc);
+                  discpath.replace("/disconnected", "");
+                  TRACE(DBG, "removing path "<<discpath);
+                  if ((rc = XrdProofdAux::RmDir(discpath.c_str())) != 0) {
+                     TRACE(XERR, "problems removing "<<discpath<<"; error: "<<-rc);
                   }
                }
             }
