@@ -134,6 +134,7 @@ TXSocket::TXSocket(const char *url, Char_t m, Int_t psid, Char_t capver,
    // The buffer 'logbuf' is a null terminated string to be sent over at
    // login.
 
+   fUrl = url;
    // Enable tracing in the XrdProof client. if not done already
    eDest.logger(&eLogger);
    if (!XrdProofdTrace)
@@ -317,33 +318,37 @@ void TXSocket::Close(Option_t *opt)
    // Remove any reference in the global pipe and ready-sock queue
    TXSocket::FlushPipe(this);
 
-   // Make sure we are connected
-   if (!IsValid()) {
+   // Make sure we have a connection
+   if (!fConn) {
       if (gDebug > 0)
-         Info("Close","not connected: nothing to do");
+         Info("Close","no connection: nothing to do");
       return;
-   }
-
-   // Parse options
-   TString o(opt);
-   Int_t sessID = fSessionID;
-   if (o.Index("#") != kNPOS) {
-      o.Remove(0,o.Index("#")+1);
-      if (o.Index("#") != kNPOS) {
-         o.Remove(o.Index("#"));
-         sessID = o.IsDigit() ? o.Atoi() : sessID;
-      }
    }
 
    // Disconnect the asynchronous requests handler
    fConn->SetAsync(0);
 
-   if (sessID > -1) {
-      // Warn the remote session, if any (after destroy the session is gone)
-      DisconnectSession(sessID, opt);
-   } else {
-      // We are the manager: close underlying connection
-      fConn->Close(opt);
+   // If we are connected we disconnect
+   if (IsValid()) {
+
+      // Parse options
+      TString o(opt);
+      Int_t sessID = fSessionID;
+      if (o.Index("#") != kNPOS) {
+         o.Remove(0,o.Index("#")+1);
+         if (o.Index("#") != kNPOS) {
+            o.Remove(o.Index("#"));
+            sessID = o.IsDigit() ? o.Atoi() : sessID;
+         }
+      }
+
+      if (sessID > -1) {
+         // Warn the remote session, if any (after destroy the session is gone)
+         DisconnectSession(sessID, opt);
+      } else {
+         // We are the manager: close underlying connection
+         fConn->Close(opt);
+      }
    }
 
    // Delete the connection module
@@ -377,7 +382,8 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
       if (m->GetStatusCode() != XrdClientMessage::kXrdMSC_timeout) {
          if (gDebug > 0)
             Info("ProcessUnsolicitedMsg","got error from underlying connection");
-         if (!fHandler || fHandler->HandleError()) {
+         XHandleErr_t herr = {1, 0};
+         if (!fHandler || fHandler->HandleError((const void *)&herr)) {
             Error("ProcessUnsolicitedMsg","handler undefined or recovery failed");
             // Avoid to contact the server any more
             fSessionID = -1;
@@ -1726,11 +1732,15 @@ void TXSocket::InitEnvs()
    // Init environment variables for XrdClient
 
    // Set debug level
-   EnvPutInt(NAME_DEBUG, gEnv->GetValue("XProof.Debug", 0));
-   if (gEnv->GetValue("XProof.Debug", 0) > 0)
+   EnvPutInt(NAME_DEBUG, gEnv->GetValue("XProof.Debug", -1));
+   if (gEnv->GetValue("XProof.Debug", 0) > 0) {
       XrdProofdTrace->What = TRACE_REQ;
-      if (gEnv->GetValue("XProof.Debug", 0) > 1)
-         XrdProofdTrace->What = TRACE_ALL;
+      if (gEnv->GetValue("XProof.Debug", 0) > 1) {
+         XrdProofdTrace->What = TRACE_DBG;
+         if (gEnv->GetValue("XProof.Debug", 0) > 2)
+            XrdProofdTrace->What = TRACE_ALL;
+      }
+   }
 
    // List of domains where connection is allowed
    TString allowCO = gEnv->GetValue("XProof.ConnectDomainAllowRE", "");
@@ -1862,8 +1872,11 @@ Int_t TXSocket::Reconnect()
 {
    // Try reconnection after failure
 
-   Info("Reconnect","%p:%p:%d: trying to reconnect to ", this,
-                    fConn, (fConn ? fConn->IsValid() : 0), fUrl.Data());
+   if (gDebug > 0) {
+      Info("Reconnect", "%p (c:%p, v:%d): trying to reconnect to %s (logid: %d)",
+                        this, fConn, (fConn ? fConn->IsValid() : 0),
+                        fUrl.Data(), fConn->GetLogConnID());
+   }
 
    if (fXrdProofdVersion < 1005) {
       Info("Reconnect","%p: server does not support reconnections (protocol: %d < 1005)",
@@ -1871,15 +1884,18 @@ Int_t TXSocket::Reconnect()
       return -1;
    }
 
-   if (fConn && !fConn->IsValid()) {
+   if (fConn) {
+
+      if (gDebug > 0)
+         Info("Reconnect", "%p: locking phyconn: %p", this, fConn->fPhyConn);
 
       // Block any other attempt to use this connection
-      XrdSysMutexHelper l(fConn->fMutex);
+      XrdClientPhyConnLocker pcl(fConn->fPhyConn);
 
       fConn->Close();
       int maxtry, timewait;
       XrdProofConn::GetRetryParam(maxtry, timewait);
-      XrdProofConn::SetRetryParam(300, 5);
+      XrdProofConn::SetRetryParam(300, 1);
       fConn->Connect();
       XrdProofConn::SetRetryParam();
 
@@ -1898,8 +1914,11 @@ Int_t TXSocket::Reconnect()
       }
    }
 
-   Info("Reconnect", "%p: attempt %s", this,
-                     ((fConn && fConn->IsValid()) ? "succeeded!" : "failed"));
+   if (gDebug > 0) {
+      Info("Reconnect", "%p (c:%p): attempt %s (logid: %d)", this, fConn,
+                        ((fConn && fConn->IsValid()) ? "succeeded!" : "failed"),
+                        fConn->GetLogConnID() );
+   }
 
    // Done
    return ((fConn && fConn->IsValid()) ? 0 : -1);

@@ -789,7 +789,9 @@ Bool_t TXProofServ::HandleError(const void *)
 
       ((TXSocket *)fSocket)->Reconnect();
       if (fSocket && fSocket->IsValid()) {
-         Printf("TXProofServ::HandleError: %p: connection re-established ... ", this);
+         if (gDebug > 0)
+            Info("HandleError",
+               "%p: connection to local coordinator re-established", this);
          return kFALSE;
       }
    }

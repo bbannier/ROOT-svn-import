@@ -381,16 +381,19 @@ TList *TXProofMgr::QuerySessions(Option_t *opt)
 }
 
 //_____________________________________________________________________________
-Bool_t TXProofMgr::HandleError(const void *)
+Bool_t TXProofMgr::HandleError(const void *in)
 {
    // Handle error on the input socket
 
-   // Try reconnection
-   if (fSocket && !fSocket->IsValid()) {
+   XHandleErr_t *herr = in ? (XHandleErr_t *)in : 0;
 
+   // Try reconnection
+   if (fSocket && herr && (herr->fOpt == 1)) {
       fSocket->Reconnect();
       if (fSocket && fSocket->IsValid()) {
-         Printf("TXProofMgr::HandleError: %p: connection re-established ... ", this);
+         if (gDebug > 0)
+            Printf("ProofMgr: connection to coordinator at %s re-established",
+                   fUrl.GetUrl());
          return kFALSE;
       }
    }

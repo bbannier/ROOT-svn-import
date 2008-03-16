@@ -502,16 +502,26 @@ Int_t TXSlave::SendGroupPriority(const char *grp, Int_t priority)
 }
 
 //_____________________________________________________________________________
-Bool_t TXSlave::HandleError(const void *)
+Bool_t TXSlave::HandleError(const void *in)
 {
    // Handle error on the input socket
 
+   XHandleErr_t *herr = in ? (XHandleErr_t *)in : 0;
+
    // Try reconnection
-   if (fSocket && !fSocket->IsValid()) {
+   if (fSocket && herr && (herr->fOpt == 1)) {
 
       ((TXSocket *)fSocket)->Reconnect();
       if (fSocket && fSocket->IsValid()) {
-         Printf("TXProofMgr::HandleError: %p: connection re-established ... ", this);
+         if (gDebug > 0) {
+            if (!strcmp(GetOrdinal(), "0")) {
+               Printf("Proof: connection to master at %s:%d re-established",
+                     GetName(), GetPort());
+            } else {
+               Printf("Proof: connection to node '%s' at %s:%d re-established",
+                     GetOrdinal(), GetName(), GetPort());
+            }
+         }
          return kFALSE;
       }
    }

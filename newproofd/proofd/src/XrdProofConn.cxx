@@ -237,14 +237,14 @@ void XrdProofConn::Connect()
          }
 
          // Notify
-         TRACE(DBG, "session create / attached successfully.");
+         TRACE(DBG, "connection successfully created");
          break;
 
       }
 
-      // We force a physical disconnection in this special case
-      TRACE(DBG, "disconnecting");
-      Close("P");
+      // Reset
+      TRACE(REQ, "disconnecting");
+      Close();
 
       // And we wait a bit before retrying
       if (i < maxTry - 1) {
@@ -253,6 +253,11 @@ void XrdProofConn::Connect()
       }
 
    } //for connect try
+
+   // Notify failure
+   if (!fConnected) {
+      TRACE(XERR, "failed to connect to " << fUrl.GetUrl());
+   }
 }
 
 //_____________________________________________________________________________
@@ -302,7 +307,7 @@ int XrdProofConn::TryConnect()
 
    // Connect
    if ((logid = fgConnMgr->Connect(fUrl)) < 0) {
-      TRACE(XERR, "creating logical connection to " <<URLTAG);
+      TRACE(DBG, "failure creating logical connection to " <<URLTAG);
       fLogConnID = logid;
       fConnected = 0;
       return -1;
@@ -509,8 +514,10 @@ XrdClientMessage *XrdProofConn::SendReq(XPClientRequest *req, const void *reqDat
 
    while (!abortcmd && !resp) {
 
+      TRACE(HDBG, this << " locking phyconn: "<<fPhyConn);
+
       // If reconnecting we wait here ...
-      XrdSysMutexHelper l(fMutex);
+      XrdClientPhyConnLocker pcl(fPhyConn);
       // ... and we continue only if successful
       if (!IsValid()) {
          TRACE(XERR,"not connected: nothing to do");

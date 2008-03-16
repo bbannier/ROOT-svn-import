@@ -46,9 +46,11 @@ class XrdSysLogger;
 
 class XpdClientSessions {
 public:
+   XrdSysRecMutex   fMutex;
    XrdProofdClient *fClient;
    std::list<XrdProofdProofServ *> fProofServs;
-   XpdClientSessions(XrdProofdClient *c) : fClient(c) { }
+   XpdClientSessions(XrdProofdClient *c = 0) : fClient(c) { }
+   int operator==(const XpdClientSessions c) { return (c.fClient == fClient) ? 1 : 0; }
 };
 
 class XrdProofSessionInfo {
@@ -83,6 +85,7 @@ class XrdProofdProofServMgr : public XrdProofdConfig {
 
    XrdProofdManager  *fMgr;
    XrdSysRecMutex     fMutex;
+   XrdSysRecMutex     fRecoverMutex;
    XrdSysSemWait      fForkSem;   // To serialize fork requests
    XrdScheduler      *fSched;     // System scheduler
    XrdSysLogger      *fLogger;    // Error logger
@@ -101,6 +104,7 @@ class XrdProofdProofServMgr : public XrdProofdConfig {
    int                fReconnectTime;
    int                fReconnectTimeOut;
    int                fRecoverTimeOut;
+   int                fRecoverDeadline;
 
    int                fNextSessionsCheck; // Time of next sessions check
 
@@ -109,14 +113,15 @@ class XrdProofdProofServMgr : public XrdProofdConfig {
 
    XrdOucHash<XrdProofdProofServ> fSessions; // List of sessions
    std::list<XrdProofdProofServ *> fActiveSessions;     // List of active sessions (non-idle)
+   std::list<XpdClientSessions *> *fRecoverClients; // List of client potentially recovering
 
    int                DoDirectiveProofServMgr(char *, XrdOucStream *, bool);
    int                DoDirectivePutEnv(char *, XrdOucStream *, bool);
    int                DoDirectivePutRc(char *, XrdOucStream *, bool);
    int                DoDirectiveShutdown(char *, XrdOucStream *, bool);
 
-   int                RecoverActiveSessions();
-   int                ResolveSession(const char *fpid, std::list<XpdClientSessions> *cls);
+   int                PrepareSessionRecovering();
+   int                ResolveSession(const char *fpid);
 
    // Session Admin path management
    int                AddSession(XrdProofdProtocol *p, XrdProofdProofServ *s);
@@ -128,8 +133,7 @@ public:
    XrdProofdProofServMgr(XrdProofdManager *mgr, XrdProtocol_Config *pi, XrdSysError *e);
    virtual ~XrdProofdProofServMgr() { }
 
-   enum PSMProtocol { kSessionRemoval = 0, kClientDisconnect = 1, kAllReconnected = 2,
-                      kCleanSessions = 3} ;
+   enum PSMProtocol { kSessionRemoval = 0, kClientDisconnect = 1, kCleanSessions = 2} ;
 
    XrdSysRecMutex   *Mutex() { return &fMutex; }
 
@@ -148,6 +152,7 @@ public:
                         { XrdSysMutexHelper mhp(fMutex); fNextSessionsCheck = t; }
 
    bool              IsReconnecting();
+   bool              IsClientRecovering(const char *usr, const char *grp, int &deadline);
    void              SetReconnectTime(bool on = 1);
 
    int               Process(XrdProofdProtocol *p);
@@ -187,5 +192,6 @@ public:
    int               CheckActiveSessions();
    int               CheckTerminatedSessions();
    int               CleanClientSessions(const char *usr, int srvtype);
+   int               RecoverActiveSessions();
 };
 #endif

@@ -74,7 +74,7 @@ static XpdManagerCron_t fManagerCron;
 
 //--------------------------------------------------------------------------
 //
-// XrdProofdSessionPoller
+// XrdProofdProofServCron
 //
 // Function run in separate thread watching changes in session status
 // frequency
@@ -128,22 +128,15 @@ void *XrdProofdProofServCron(void *p)
          } else if (msg.Type() == XrdProofdProofServMgr::kClientDisconnect) {
             // A client just disconnected: we free the slots in the proofserv sesssions and
             // we check the sessions status to see if any of them must be terminated
-            TRACE(REQ, "kClientDisconnect: a client just disconnected");
             // read process id
             int pid = 0;
             if ((rc = msg.Get(pid)) != 0) {
                TRACE(XERR, "kClientDisconnect: problems receiving process ID; errno: "<<-rc);
                continue;
             }
+            TRACE(REQ, "kClientDisconnect: a client just disconnected: "<<pid);
             // Free slots in the proof serv instances
             mgr->DisconnectFromProofServ(pid);
-
-        } else if (msg.Type() == XrdProofdProofServMgr::kAllReconnected) {
-            // All disconnected clients have reconnected: force termination 
-            // of the reconnecting phase
-            mgr->SetReconnectTime(0);
-            // Notify action
-            TRACE(REQ, "kAllReconnected: all clients have reconnected: end reconnection phase");
 
         } else if (msg.Type() == XrdProofdProofServMgr::kCleanSessions) {
             // Request for cleanup all sessions of a client (or all clients) 
@@ -179,6 +172,42 @@ void *XrdProofdProofServCron(void *p)
    return (void *)0;
 }
 
+//--------------------------------------------------------------------------
+//
+// XrdProofdProofServRecover
+//
+// Function run in a separate thread waiting for session to recover after
+// an abrupt shutdown
+//
+//--------------------------------------------------------------------------
+void *XrdProofdProofServRecover(void *p)
+{
+   // Waiting for session to recover after an abrupt shutdown
+   XPDLOC(SMGR, "ProofServRecover")
+
+   XpdManagerCron_t *mc = (XpdManagerCron_t *)p;
+   XrdProofdProofServMgr *mgr = mc->fSessionMgr;
+   if (!(mgr)) {
+      TRACE(XERR,  "undefined session manager: cannot start");
+      return (void *)0;
+   }
+
+   // Recover active sessions
+   int rc = mgr->RecoverActiveSessions();
+
+   // Notify end of recovering
+   if (rc > 0) {
+      TRACE(ALL, "timeout recovering sessions: "<<rc<<" sessions not recovered");
+   } else if (rc < 0) {
+      TRACE(XERR, "some problem occured while recovering sessions");
+   } else {
+      TRACE(ALL, "recovering successfully terminated");
+   }
+
+   // Should never come here
+   return (void *)0;
+}
+
 //______________________________________________________________________________
 XrdProofdProofServMgr::XrdProofdProofServMgr(XrdProofdManager *mgr,
                                              XrdProtocol_Config *pi, XrdSysError *e)
@@ -202,6 +231,10 @@ XrdProofdProofServMgr::XrdProofdProofServMgr(XrdProofdManager *mgr,
    fTerminationTimeOut = fCheckFrequency - 5;
    fVerifyTimeOut = 3 * fCheckFrequency;
    fRecoverTimeOut = 10;
+
+   // Recover-related quantities
+   fRecoverClients = 0;
+   fRecoverDeadline = -1;
 
    // Init pipe for the poller
    if (!fPipe.IsValid()) {
@@ -265,16 +298,16 @@ int XrdProofdProofServMgr::Config(bool rcf)
    }
    XPDPRT("terminated sessions admin path set to "<<fTermAdminPath);
 
-   // Try to recover active session previously started
-   int nr = -1;
-   if ((nr = RecoverActiveSessions()) < 0) {
-      TRACE(XERR, "problems trying to recover active sessions");
-   } else if (nr > 0) {
-      msg.form("%d active sessions have been recovered", nr);
-      XPDPRT(msg);
-   }
-
    if (!rcf) {
+      // Try to recover active session previously started
+      int nr = -1;
+      if ((nr = PrepareSessionRecovering()) < 0) {
+         TRACE(XERR, "problems trying to recover active sessions");
+      } else if (nr > 0) {
+         msg.form("%d active sessions have been recovered", nr);
+         XPDPRT(msg);
+      }
+
       // Start cron thread
       pthread_t tid;
       // Fill manager pointers structure
@@ -506,11 +539,12 @@ int XrdProofdProofServMgr::DeleteFromSessions(const char *fpid)
 }
 
 //______________________________________________________________________________
-int XrdProofdProofServMgr::RecoverActiveSessions()
+int XrdProofdProofServMgr::PrepareSessionRecovering()
 {
-   // Go through the active sessions admin path and reconnect those still alive.
+   // Go through the active sessions admin path and prepare reconnection of those
+   // still alive.
    // Called at start-up.
-   XPDLOC(SMGR, "ProofServMgr::RecoverActiveSessions")
+   XPDLOC(SMGR, "ProofServMgr::PrepareSessionRecovering")
 
    // Open dir
    DIR *dir = opendir(fActiAdminPath.c_str());
@@ -518,10 +552,10 @@ int XrdProofdProofServMgr::RecoverActiveSessions()
       TRACE(XERR, "cannot open dir "<<fActiAdminPath<<" ; error: "<<errno);
       return -1;
    }
-   TRACE(REQ, "recovering active sessions ...");
+   TRACE(REQ, "preparing recovering of active sessions ...");
 
    // Scan the active sessions admin path
-   std::list<XpdClientSessions> cls;
+   fRecoverClients = new std::list<XpdClientSessions *>;
    struct dirent *ent = 0;
    while ((ent = (struct dirent *)readdir(dir))) {
       // Get the session instance (skip non-digital entries)
@@ -531,7 +565,7 @@ int XrdProofdProofServMgr::RecoverActiveSessions()
       bool rmsession = 1;
       // Check if the process is still alive
       if (XrdProofdAux::VerifyProcessByID(pid) != 0) {
-         if (ResolveSession(ent->d_name, &cls) == 0) {
+         if (ResolveSession(ent->d_name) == 0) {
             TRACE(DBG, "found active session: "<<pid);
             rmsession = 0;
          }
@@ -543,31 +577,146 @@ int XrdProofdProofServMgr::RecoverActiveSessions()
    // Close the directory
    closedir(dir);
 
-   // Now accept connections
-   int nr = 0;
-   std::list<XpdClientSessions>::iterator ii = cls.begin();
-   while (ii != cls.end()) {
-      SetReconnectTime();
-      int i = Recover(&(*ii));
-      if (i > 0)
-         nr += i;
-      // Remove non-reconnected sessions
-      if ((*ii).fProofServs.size() > 0) {
-         std::list<XrdProofdProofServ *>::iterator ps = (*ii).fProofServs.begin();
-         while (ps != (*ii).fProofServs.end()) {
-            MvSession((*ps)->AdminPath());
-            ps++;
-         }
+   // Start the recovering thread, if needed
+   int nrc = 0;
+   { XrdSysMutexHelper mhp(fRecoverMutex); nrc = fRecoverClients->size(); }
+   if (nrc > 0) {
+      // Start recovering thread
+      pthread_t tid;
+      // Fill manager pointers structure
+      fManagerCron.fClientMgr = fMgr->ClientMgr();
+      fManagerCron.fSessionMgr = this;
+      if (XrdSysThread::Run(&tid, XrdProofdProofServRecover, (void *)&fManagerCron,
+                            0, "ProofServMgr session recover thread") != 0) {
+         TRACE(XERR, "could not start session recover thread");
+         return 0;
       }
-      // Get to next
-      ii++;
+      XPDPRT("session recover thread started");
+   } else {
+      // End reconnect state if there is nothing to reconnect
+      if (fMgr->ClientMgr() && fMgr->ClientMgr()->GetNClients() <= 0)
+         SetReconnectTime(0);
    }
-   // End reconnect state if there is nothing to reconnect
-   if (nr <= 0 || (fMgr->ClientMgr() && fMgr->ClientMgr()->GetNClients() <= 0))
-      SetReconnectTime(0);
 
    // Done
-   return nr;
+   return 0;
+}
+
+
+//______________________________________________________________________________
+int XrdProofdProofServMgr::RecoverActiveSessions()
+{
+   // Accept connections from sessions still alive. This is run in a dedicated
+   // thread.
+   // Returns -1 in case of failure, 0 if all alive sessions reconnected or the
+   // numer of sessions not reconnected if the timeout (fRecoverTimeOut per client)
+   // expired.
+   XPDLOC(SMGR, "ProofServMgr::RecoverActiveSessions")
+
+   int rc = 0;
+
+   if (!fRecoverClients) {
+      // Invalid input
+      TRACE(XERR, "recovering clients list undefined");
+      return -1;
+   }
+
+   int nrc = 0;
+   { XrdSysMutexHelper mhp(fRecoverMutex); nrc = fRecoverClients->size(); }
+   TRACE(REQ, "start recovering of "<<nrc<<" clients");
+
+   // Recovering deadline
+   { XrdSysMutexHelper mhp(fRecoverMutex);
+     fRecoverDeadline = time(0) + fRecoverTimeOut * nrc; }
+
+   // Respect the deadline
+   int nr = 0;
+   XpdClientSessions *cls = 0;
+   bool go = true;
+   while (go) {
+
+      // Pickup the first one in the list
+      { XrdSysMutexHelper mhp(fRecoverMutex); cls = fRecoverClients->front(); }
+      if (cls) {
+         SetReconnectTime();
+         nr += Recover(cls);
+
+         // If all client sessions reconnected remove the client from the list
+         {  XrdSysMutexHelper mhp(cls->fMutex);
+            if (cls->fProofServs.size() <= 0) {
+               XrdSysMutexHelper mhp(fRecoverMutex);
+               fRecoverClients->remove(cls);
+               // We may be over
+               if ((nrc = fRecoverClients->size()) <= 0)
+                  break;
+            }
+         }
+      }
+      TRACE(REQ, nrc<<" clients still to recover");
+
+      // Check the deadline
+      {  XrdSysMutexHelper mhp(fRecoverMutex);
+         go = (time(0) < fRecoverDeadline) ? true : false; }
+   }
+   // End reconnect state
+   SetReconnectTime(0);
+
+   // If we reached the deadline, calculate the number of sessions not reconnected
+   rc = 0;
+   {  XrdSysMutexHelper mhp(fRecoverMutex);
+      if (fRecoverClients->size() > 0) {
+         std::list<XpdClientSessions* >::iterator ii = fRecoverClients->begin();
+         for (; ii != fRecoverClients->end(); ii++) {
+            rc += (*ii)->fProofServs.size();
+         }
+      }
+   }
+
+   // Delete the recovering clients list
+   {  XrdSysMutexHelper mhp(fRecoverMutex);
+      fRecoverClients->clear();
+      delete fRecoverClients;
+      fRecoverClients = 0;
+      fRecoverDeadline = -1;
+   }
+
+   // Done
+   return rc;
+}
+
+//______________________________________________________________________________
+bool XrdProofdProofServMgr::IsClientRecovering(const char *usr, const char *grp,
+                                               int &deadline)
+{
+   // Returns true (an the recovering deadline) if the client has sessions in
+   // recovering state; returns false otherwise.
+   // Called during for attach requests.
+   XPDLOC(SMGR, "ProofServMgr::IsClientRecovering")
+
+   if (!usr || !grp) {
+      TRACE(XERR, "invalid inputs: usr: "<<usr<<", grp:"<<grp<<" ...");
+      return false;
+   }
+
+   deadline = -1;
+   int rc = false;
+   {  XrdSysMutexHelper mhp(fRecoverMutex);
+      if (fRecoverClients && fRecoverClients->size() > 0) {
+         std::list<XpdClientSessions *>::iterator ii = fRecoverClients->begin();
+         for (; ii != fRecoverClients->end(); ii++) {
+            if ((*ii)->fClient && (*ii)->fClient->Match(usr, grp)) {
+               rc = true;
+               deadline = fRecoverDeadline;
+               break;
+            }
+         }
+      }
+   }
+   TRACE(DBG, "checking usr: "<<usr<<", grp:"<<grp<<" ... recovering? "<<
+              rc<<", until: "<<deadline);
+
+   // Done
+   return rc;
 }
 
 //______________________________________________________________________________
@@ -610,7 +759,7 @@ int XrdProofdProofServMgr::CheckActiveSessions()
       // If somebody is interested in this session, we give her/him some
       // more time by skipping the connected clients check this time
       int nc = -1;
-      if (!xps->SkipCheck()) {
+      if (!rmsession && !xps->SkipCheck()) {
          // Check if we need to shutdown it
          if (!rmsession) {
             XrdSysMutexHelper mh(xps->Mutex());
@@ -1041,9 +1190,41 @@ int XrdProofdProofServMgr::Attach(XrdProofdProtocol *p)
    psid = ntohl(p->Request()->proof.sid);
    TRACEP(p, REQ, "psid: "<<psid<<", CID = "<<p->CID());
 
-   // Find server session
+   // The client instance must be defined
+   XrdProofdClient *c = p->Client();
+   if (!c) {
+      TRACEP(p, XERR, "client instance undefined");
+      response->Send(kXR_ServerError,"client instance undefined");
+      return rc;
+   }
+
+   // Find server session; sessions maybe recovering, so we need to take
+   // that into account
    XrdProofdProofServ *xps = 0;
-   if (!p->Client() || !(xps = p->Client()->GetProofServ(psid))) {
+   int now = time(0);
+   int deadline = -1, defdeadline = now + fRecoverTimeOut;
+   while ((deadline < 0) || (now < deadline)) {
+      if (!(xps = c->GetProofServ(psid)) || !xps->IsValid()) {
+         // If the client is recovering start regular checks
+         if (!IsClientRecovering(c->User(), c->Group(), deadline)) {
+            // Failure
+            TRACEP(p, XERR, "session ID not found: "<<psid);
+            response->Send(kXR_InvalidRequest,"session ID not found");
+            return rc;
+         } else {
+            // Make dure we do not enter an infinite loop
+            deadline = (deadline > 0) ? deadline : defdeadline;
+            // Wait until deadline in 1 sec steps
+            sleep(1);
+            now++;
+         }
+      } else {
+         // Found
+         break;
+      }
+   }
+   // If we deadline we should fail now
+   if (!xps || !xps->IsValid()) {
       TRACEP(p, XERR, "session ID not found");
       response->Send(kXR_InvalidRequest,"session ID not found");
       return rc;
@@ -1457,8 +1638,7 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
 }
 
 //_________________________________________________________________________________
-int XrdProofdProofServMgr::ResolveSession(const char *fpid,
-                                          std::list<XpdClientSessions> *cls)
+int XrdProofdProofServMgr::ResolveSession(const char *fpid)
 {
    // Handle a request to recover a session after stop&restart
    XPDLOC(SMGR, "ProofServMgr::ResolveSession")
@@ -1466,8 +1646,9 @@ int XrdProofdProofServMgr::ResolveSession(const char *fpid,
    TRACE(REQ,  "resolving "<< fpid<<" ...");
 
    // Check inputs
-   if (!fpid || strlen(fpid)<= 0 || !cls || !(fMgr->ClientMgr())) {
-      TRACE(XERR, "invalid inputs: "<<fpid<<", "<<cls<<", "<<fMgr->ClientMgr());
+   if (!fpid || strlen(fpid)<= 0 || !(fMgr->ClientMgr()) || !fRecoverClients) {
+      TRACE(XERR, "invalid inputs: "<<fpid<<", "<<fMgr->ClientMgr()<<
+                  ", "<<fRecoverClients);
       return -1;
    }
 
@@ -1504,19 +1685,23 @@ int XrdProofdProofServMgr::ResolveSession(const char *fpid,
    // Fill info for this session
    si.FillProofServ(*xps, fMgr->ROOTMgr());
 
+   // Set invalid as we are not yet connected
+   xps->SetValid(0);
+
    // Add to the lists
-   std::list<XpdClientSessions>::iterator ii = cls->begin();
-   while (ii != cls->end()) {
-      if ((*ii).fClient == c)
+   XrdSysMutexHelper mhp(fRecoverMutex);
+   std::list<XpdClientSessions *>::iterator ii = fRecoverClients->begin();
+   while (ii != fRecoverClients->end()) {
+      if ((*ii)->fClient == c)
          break;
       ii++;
    }
-   if (ii != cls->end()) {
-      (*ii).fProofServs.push_back(xps);
+   if (ii != fRecoverClients->end()) {
+      (*ii)->fProofServs.push_back(xps);
    } else {
-      XpdClientSessions cl(c);
-      cl.fProofServs.push_back(xps);
-      cls->push_back(cl);
+      XpdClientSessions *cl = new XpdClientSessions(c);
+      cl->fProofServs.push_back(xps);
+      fRecoverClients->push_back(cl);
    }
 
    // Done
@@ -1529,28 +1714,45 @@ int XrdProofdProofServMgr::Recover(XpdClientSessions *cl)
    // Handle a request to recover a session after stop&restart for a specific client
    XPDLOC(SMGR, "ProofServMgr::Recover")
 
-   TRACE(REQ,  "client: "<< cl->fClient->User());
+   if (!cl) {
+      TRACE(XERR, "invalid input!");
+      return 0;
+   }
+
+   TRACE(DBG,  "client: "<< cl->fClient->User());
 
    int nr = 0;
    XrdOucString emsg;
    XrdProofdProofServ *xps = 0;
-   int nps = cl->fProofServs.size();
+   int nps = 0, npsref = 0;
+   { XrdSysMutexHelper mhp(cl->fMutex); nps = cl->fProofServs.size(), npsref = nps; }
    while (nps--) {
 
-      if (!(xps = Accept(cl->fClient, fRecoverTimeOut, emsg))) {
-         TRACE(XERR, "problems accepting callback: "<<emsg);
+      // Short steps of 1 sec
+      if (!(xps = Accept(cl->fClient, 1, emsg))) {
+         if (emsg == "timeout") {
+            TRACE(DBG, "timeout while accepting callback");
+         } else {
+            TRACE(XERR, "problems accepting callback: "<<emsg);
+         }
       } else {
-         TRACE(DBG, "session for : "<<cl->fClient->User()<<
-                    " successfully recovered; pid: "<<xps->SrvPID());
          // Update the global session handlers
          XrdOucString key; key += xps->SrvPID();
          fSessions.Add(key.c_str(), xps, 0, Hash_keepdata);
          fActiveSessions.push_back(xps);
          xps->Protocol()->SetAdminPath(xps->AdminPath());
          // Remove from the temp list
-         cl->fProofServs.remove(xps);
+         { XrdSysMutexHelper mhp(cl->fMutex); cl->fProofServs.remove(xps); }
          // Count
          nr++;
+         // Notify
+         if (TRACING(REQ)) {
+            int pid = xps->SrvPID();
+            int left = -1;
+            { XrdSysMutexHelper mhp(cl->fMutex); left = cl->fProofServs.size(); }
+            XPDPRT("session for "<<cl->fClient->User()<<"."<<cl->fClient->Group()<<
+                   " successfully recovered ("<<left<<" left); pid: "<<pid);
+         }
       }
    }
 
@@ -1588,7 +1790,7 @@ XrdProofdProofServ *XrdProofdProofServMgr::Accept(XrdProofdClient *c,
 
    // Perform regular accept
    if (go && !(c->UNIXSock()->Accept(peerpsrv, XRDNET_NODNTRIM, to))) {
-      msg = "did not receive callback: ";
+      msg = "timeout";
       go = 0;
    }
    if (go) {

@@ -67,8 +67,10 @@ Int_t TXUnixSocket::Reconnect()
 {
    // Try reconnection after failure
 
-   Info("Reconnect", "%p:%p:%d: trying to reconnect on %s", this,
-                     fConn, (fConn ? fConn->IsValid() : 0), fUrl.Data());
+   if (gDebug > 0) {
+      Info("Reconnect", "%p: %p: %d: trying to reconnect on %s", this,
+                        fConn, (fConn ? fConn->IsValid() : 0), fUrl.Data());
+   }
 
    if (fXrdProofdVersion < 1005) {
       Info("Reconnect","%p: server does not support reconnections (protocol: %d < 1005)",
@@ -85,13 +87,15 @@ Int_t TXUnixSocket::Reconnect()
       fConn->Close();
       int maxtry, timewait;
       XrdProofConn::GetRetryParam(maxtry, timewait);
-      XrdProofConn::SetRetryParam(300, 5);
+      XrdProofConn::SetRetryParam(300, 1);
       fConn->Connect();
       XrdProofConn::SetRetryParam();
    }
 
-   Info("Reconnect","%p: attempt %s", this,
-          ((fConn && fConn->IsValid()) ? "succeeded!" : "failed"));
+   if (gDebug > 0) {
+      Info("Reconnect", "%p: %p: attempt %s", this, fConn,
+                        ((fConn && fConn->IsValid()) ? "succeeded!" : "failed"));
+   }
 
    // Done
    return ((fConn && fConn->IsValid()) ? 0 : -1);

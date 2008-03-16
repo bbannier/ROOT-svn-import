@@ -62,6 +62,10 @@ typedef struct {
    Int_t   fInt3;
    Int_t   fInt4;
 } XHandleIn_t;
+typedef struct {
+   Int_t   fOpt;
+   const char *fMsg;
+} XHandleErr_t;
 
 class TXSocket  : public TSocket, public XrdClientAbsUnsolMsgHandler {
 
