@@ -293,6 +293,10 @@ int XrdProofdClientMgr::Login(XrdProofdProtocol *p)
    bool needauth = 0;
    bool ismaster = (fMgr->SrvType() == kXPD_TopMaster || fMgr->SrvType() == kXPD_Master) ? 1 : 0;
    switch (p->Request()->login.role[0]) {
+   case 'A':
+      p->SetConnType(kXPD_Admin);
+      response->SetTag("adm");
+      break;
    case 'i':
       p->SetConnType(kXPD_Internal);
       response->SetTag("int");
