@@ -72,7 +72,6 @@ class XrdProofdClientMgr : public XrdProofdConfig {
    int                GetIDFromAdminPath(const char *cidpath, XrdOucString &emsg);
    int                RestoreAdminPath(XrdOucString &cpath, XrdOucString &emsg);
    int                ParsePreviousClients(XrdOucString &emsg);
-   void               PostEndOfReconnection();
    int                MapClient(XrdProofdProtocol *xp, bool all = 1);
    char              *FilterSecConfig(int &nd);
    void               RegisterDirectives();

@@ -2660,6 +2660,9 @@ void TProof::MarkBad(TSlave *sl)
    // Add a bad slave server to the bad slave list and remove it from
    // the active list and from the two monitor objects.
 
+   Info("MarkBad", "marking %s:%d (%s) as bad",
+                   sl->GetName(), sl->GetPort(), sl->GetOrdinal());
+
    fActiveSlaves->Remove(sl);
    FindUniqueSlaves();
    fBadSlaves->Add(sl);

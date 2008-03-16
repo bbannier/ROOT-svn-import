@@ -155,7 +155,7 @@ XrdProofdClientMgr::XrdProofdClientMgr(XrdProofdManager *mgr,
    fCIA = 0;
    fNDisconnected = 0;
    fReconnectTimeOut = 300;
-   fCheckFrequency = 20;
+   fCheckFrequency = 60;
 
    // Init pipe for manager thread
    if (!fPipe.IsValid()) {
@@ -548,6 +548,7 @@ int XrdProofdClientMgr::MapClient(XrdProofdProtocol *p, bool all)
          // Assign this link to it
          XrdProofdResponse *resp = p->Response(1);
          psrv->SetConnection(resp);
+         psrv->SetValid(1);
          // Set Trace ID
          XrdOucString tid;
          tid.form("xrd->%s", psrv->Ordinal());
@@ -579,9 +580,7 @@ int XrdProofdClientMgr::MapClient(XrdProofdProtocol *p, bool all)
          }
          // Update counters
          fNDisconnected--;
-         // Notify and of reconnection time if so
-         if (fNDisconnected <= 0)
-            PostEndOfReconnection();
+
       } else {
          // The index of the next free slot will be the unique ID
          p->SetCID(p->Client()->GetClientID(p));
@@ -612,23 +611,6 @@ int XrdProofdClientMgr::MapClient(XrdProofdProtocol *p, bool all)
    }
 
    return rc;
-}
-
-//___________________________________________________________________________
-void XrdProofdClientMgr::PostEndOfReconnection()
-{
-   // Post end of reconnection phase
-   XPDLOC(CMGR, "ClientMgr::PostEndOfReconnection")
-
-   if (fMgr && fMgr->SessionMgr()) {
-      int rc = fMgr->SessionMgr()->Pipe()->Post(XrdProofdProofServMgr::kAllReconnected, 0);
-      if (rc != 0) {
-         TRACE(XERR, "problem sending message type on the pipe");
-         return;
-      }
-   }
-   // Done
-   return;
 }
 
 //_____________________________________________________________________________
