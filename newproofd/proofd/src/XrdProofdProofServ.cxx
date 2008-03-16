@@ -152,7 +152,6 @@ XrdClientID *XrdProofdProofServ::GetClientID(int cid)
    XPDLOC(SMGR, "ProofServ::GetClientID")
 
    XrdClientID *csid = 0;
-   TRACE(DBG, "cid: "<<cid<<", size: "<<fClients.size());
 
    if (cid < 0) {
       TRACE(XERR, "negative ID: protocol error!");
@@ -170,21 +169,27 @@ XrdClientID *XrdProofdProofServ::GetClientID(int cid)
       if (cid < (int)fClients.size()) {
          csid = fClients.at(cid);
          csid->Reset();
-         return csid;
+
+         // Notification message
+         if (TRACING(DBG)) {
+            msg.form("cid: %d, size: %d", cid, fClients.size());
+         }
       }
 
-      // If not, allocate a new one; we need to resize (double it)
-      if (cid >= (int)fClients.capacity())
-         fClients.reserve(2*fClients.capacity());
+      if (!csid) {
+         // If not, allocate a new one; we need to resize (double it)
+         if (cid >= (int)fClients.capacity())
+            fClients.reserve(2*fClients.capacity());
 
-      // Allocate new elements (for fast access we need all of them)
-      int ic = (int)fClients.size();
-      for (; ic <= cid; ic++)
-         fClients.push_back((csid = new XrdClientID()));
+         // Allocate new elements (for fast access we need all of them)
+         int ic = (int)fClients.size();
+         for (; ic <= cid; ic++)
+            fClients.push_back((csid = new XrdClientID()));
 
-      // Notification message
-      if (TRACING(DBG)) {
-         msg.form("cid: %d, new size: %d", cid, fClients.size());
+         // Notification message
+         if (TRACING(DBG)) {
+            msg.form("cid: %d, new size: %d", cid, fClients.size());
+         }
       }
    }
    TRACE(DBG, msg);
@@ -285,12 +290,13 @@ void XrdProofdProofServ::SetRunning()
 }
 
 //______________________________________________________________________________
-void XrdProofdProofServ::Broadcast(const char *msg)
+void XrdProofdProofServ::Broadcast(const char *msg, int type)
 {
-   // Broadcast message 'msg' to the attached clients
+   // Broadcast message 'msg' at 'type' to the attached clients
+   XPDLOC(SMGR, "ProofServ::Broadcast")
 
-
-   int len = 0;
+   XrdOucString m;
+   int len = 0, nc = 0;
    if (msg && (len = strlen(msg)) > 0) {
       XrdProofdProtocol *p = 0;
       int ic = 0, ncz = 0, sid = -1;
@@ -302,10 +308,21 @@ void XrdProofdProofServ::Broadcast(const char *msg)
          // Send message
          if (p) {
             XrdProofdResponse *response = p->Response(sid);
-            if (response)
-               response->Send(kXR_attn, kXPD_srvmsg, (void *)msg, len);
+            if (response) {
+               response->Send(kXR_attn, (XProofActionCode)type, (void *)msg, len);
+               nc++;
+            } else {
+               m.form("response instance for sid: %d not found", sid);
+            }
          }
+         if (m.length() > 0)
+            TRACE(XERR, m);
+         m = "";
       }
+   }
+   if (TRACING(DBG)) {
+      m.form("type: %d, message: '%s' notified to %d clients", type, msg, nc);
+      XPDPRT(m);
    }
 }
 

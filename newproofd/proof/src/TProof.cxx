@@ -2671,8 +2671,16 @@ void TProof::MarkBad(TSlave *sl)
 
    fSendGroupView = kTRUE;
 
-   // Update session workers files
-   SaveWorkerInfo();
+   if (IsMaster()) {
+      // Update session workers files
+      SaveWorkerInfo();
+   } else {
+      // On clients the proof session should be removed from the lists
+      // and deleted, since it is not valid anymore
+      fSlaves->Remove(sl);
+      if (fManager)
+         fManager->ShutdownSession(this);
+   }
 }
 
 //______________________________________________________________________________

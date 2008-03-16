@@ -56,7 +56,7 @@ int XrdProofdAdmin::Process(XrdProofdProtocol *p, int type)
    int rc = 1;
    XPD_SETRESP(p, "Process");
 
-   TRACEP(p, REQ, "enter: req id: " << type << " ("<<
+   TRACEP(p, REQ, "req id: " << type << " ("<<
                   XrdProofdAux::AdminMsgType(type) << ")");
 
    XrdOucString emsg;

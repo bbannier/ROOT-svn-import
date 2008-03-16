@@ -299,11 +299,11 @@ int XrdProofdResponse::Send(XResponseType rcode, XProofActionCode acode,
 }
 
 //______________________________________________________________________________
-int XrdProofdResponse::Send(kXR_int32 int1, kXR_int16 int2, kXR_int16 int3,
+int XrdProofdResponse::SendI(kXR_int32 int1, kXR_int16 int2, kXR_int16 int3,
                             void *data, int dlen )
 {
    // Auxilliary Send method
-   XPDLOC(RSP, "Response::Send")
+   XPDLOC(RSP, "Response::SendI")
 
    if (!fLink || (fLink->FDnum() <= 0)) {
       TRACE(XERR, "link is undefined! ");
@@ -346,10 +346,10 @@ int XrdProofdResponse::Send(kXR_int32 int1, kXR_int16 int2, kXR_int16 int3,
 }
 
 //______________________________________________________________________________
-int XrdProofdResponse::Send(kXR_int32 int1, kXR_int32 int2, void *data, int dlen )
+int XrdProofdResponse::SendI(kXR_int32 int1, kXR_int32 int2, void *data, int dlen )
 {
    // Auxilliary Send method
-   XPDLOC(RSP, "Response::Send")
+   XPDLOC(RSP, "Response::SendI")
 
    if (!fLink || (fLink->FDnum() <= 0)) {
       TRACE(XERR, "link is undefined! ");
@@ -389,10 +389,10 @@ int XrdProofdResponse::Send(kXR_int32 int1, kXR_int32 int2, void *data, int dlen
 }
 
 //______________________________________________________________________________
-int XrdProofdResponse::Send(kXR_int32 int1, void *data, int dlen )
+int XrdProofdResponse::SendI(kXR_int32 int1, void *data, int dlen )
 {
    // Auxilliary Send method
-   XPDLOC(RSP, "Response::Send")
+   XPDLOC(RSP, "Response::SendI")
 
    if (!fLink || (fLink->FDnum() <= 0)) {
       TRACE(XERR, "link is undefined! ");

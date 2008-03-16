@@ -194,6 +194,9 @@ Int_t TXProofServ::CreateServer()
          Error("CreateServer", "resolving the log file description number");
          return -1;
       }
+      // Hide the session start-up logs unless we are in verbose mode 
+      if (gProofDebugLevel <= 0)
+         lseek(fLogFileDes, (off_t) 0, SEEK_END);
    }
 
    // Global location string in TXSocket
@@ -781,8 +784,6 @@ Bool_t TXProofServ::HandleError(const void *)
 {
    // Handle error on the input socket
 
-   Printf("TXProofServ::HandleError: %p: got called ...", this);
-
    // Try reconnection
    if (fSocket && !fSocket->IsValid()) {
 
@@ -792,6 +793,7 @@ Bool_t TXProofServ::HandleError(const void *)
          return kFALSE;
       }
    }
+   Printf("TXProofServ::HandleError: %p: got called ...", this);
 
    // If master server, propagate interrupt to slaves
    // (shutdown interrupt send internally).

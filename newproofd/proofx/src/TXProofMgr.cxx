@@ -385,8 +385,6 @@ Bool_t TXProofMgr::HandleError(const void *)
 {
    // Handle error on the input socket
 
-   Printf("TXProofMgr::HandleError: %p: got called ...", this);
-
    // Try reconnection
    if (fSocket && !fSocket->IsValid()) {
 
@@ -396,6 +394,7 @@ Bool_t TXProofMgr::HandleError(const void *)
          return kFALSE;
       }
    }
+   Printf("TXProofMgr::HandleError: %p: got called ...", this);
 
    // Interrupt any PROOF session in Collect
    if (fSessions && fSessions->GetSize() > 0) {

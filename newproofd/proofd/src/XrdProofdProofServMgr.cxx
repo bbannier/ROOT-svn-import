@@ -20,6 +20,14 @@
 //////////////////////////////////////////////////////////////////////////
 #include "XrdProofdPlatform.h"
 
+#ifdef OLDXRDOUC
+#  include "XrdOuc/XrdOucError.hh"
+#  include "XrdOuc/XrdOucLogger.hh"
+#else
+#  include "XrdSys/XrdSysError.hh"
+#  include "XrdSys/XrdSysLogger.hh"
+#endif
+
 #include "Xrd/XrdBuffer.hh"
 #include "Xrd/XrdPoll.hh"
 #include "XrdNet/XrdNet.hh"
@@ -49,6 +57,18 @@ typedef struct {
 
 // Tracing utilities
 #include "XrdProofdTrace.h"
+
+// Aux structure for session set env inputs
+typedef struct {
+   int          fPsid;
+   int          fLogLevel;
+   XrdOucString fCfg;
+   XrdOucString fLogFile;
+   XrdOucString fSessionTag;
+   XrdOucString fTopSessionTag;
+   XrdOucString fSessionDir;
+   XrdOucString fWrkDir;
+} ProofServEnv_t;
 
 static XpdManagerCron_t fManagerCron;
 
@@ -475,7 +495,7 @@ int XrdProofdProofServMgr::DeleteFromSessions(const char *fpid)
       // Tell other attached clients, if any, that this session is gone
       XrdOucString msg;
       msg.form("session: %s terminated by peer", fpid);
-      xps->Broadcast(msg.c_str());
+      xps->Broadcast(msg.c_str(), kXPD_wrkmortem);
       TRACE(DBG, msg);
       // Reset instance
       xps->Reset();
@@ -983,7 +1003,8 @@ int XrdProofdProofServMgr::Process(XrdProofdProtocol *p)
    int rc = 1;
    XPD_SETRESP(p, "Process");
 
-   TRACEP(p, REQ, "enter: req id: " << p->Request()->header.requestid);
+   TRACEP(p, REQ, "enter: req id: " << p->Request()->header.requestid << " (" <<
+                XrdProofdAux::ProofRequestTypes(p->Request()->header.requestid) << ")");
 
    // Once logged-in, the user can request the real actions
    XrdOucString emsg("Invalid request code: ");
@@ -1050,10 +1071,10 @@ int XrdProofdProofServMgr::Attach(XrdProofdProtocol *p)
       if (!dpu.endswith('/'))
          dpu += '/';
       dpu += fMgr->NameSpace();
-      response->Send(psid, xps->ROOT()->SrvProtVers(), (kXR_int16)XPROOFD_VERSBIN,
-                         (void *) dpu.c_str(), dpu.length());
+      response->SendI(psid, xps->ROOT()->SrvProtVers(), (kXR_int16)XPROOFD_VERSBIN,
+                           (void *) dpu.c_str(), dpu.length());
    } else
-      response->Send(psid, xps->ROOT()->SrvProtVers(), (kXR_int16)XPROOFD_VERSBIN);
+      response->SendI(psid, xps->ROOT()->SrvProtVers(), (kXR_int16)XPROOFD_VERSBIN);
 
    // Send saved query num message
    if (xps->QueryNum()) {
@@ -1081,7 +1102,7 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
    int psid = -1, rc = 1;
    XPD_SETRESP(p, "Create");
 
-   TRACEP(p, REQ, "enter");
+   TRACEP(p, DBG, "enter");
 
    // Allocate next free server ID and fill in the basic stuff
    XrdProofdProofServ *xps = p->Client()->GetFreeServObj();
@@ -1196,6 +1217,15 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
 
       p->Client()->Mutex()->UnLock();
 
+      // Get unique tag and relevant dirs for this session
+      ProofServEnv_t in = {psid, loglevel, cffile.c_str(), "", "", "", "", ""};
+      GetTagDirs(p, xps, in.fSessionTag, in.fTopSessionTag, in.fSessionDir, in.fWrkDir);
+      in.fLogFile.form("%s.log", in.fWrkDir.c_str());
+      TRACE(DBG, "log file: "<<in.fLogFile);
+
+      // Log to the session log file from now on
+      if (fLogger) fLogger->Bind(in.fLogFile.c_str());
+
       int setupOK = 0;
 
       XrdOucString pmsg = "child process ";
@@ -1231,7 +1261,7 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
       argvv[5] = 0;
 
       // Set environment for proofserv
-      if (SetProofServEnv(p, psid, loglevel, cffile.c_str()) != 0) {
+      if (SetProofServEnv(p, (void *)&in) != 0) {
          TRACE(XERR, "SetProofServEnv did not return OK - EXIT");
          write(fp[1], &setupOK, sizeof(setupOK));
          close(fp[0]);
@@ -1359,10 +1389,10 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
          if (!dpu.endswith('/'))
             dpu += '/';
          dpu += fMgr->NameSpace();
-         response->Send(psid, xps->ROOT()->SrvProtVers(), (kXR_int16)XPROOFD_VERSBIN,
-                             (void *) dpu.c_str(), dpu.length());
+         response->SendI(psid, xps->ROOT()->SrvProtVers(), (kXR_int16)XPROOFD_VERSBIN,
+                              (void *) dpu.c_str(), dpu.length());
       } else
-         response->Send(psid, xps->ROOT()->SrvProtVers(), (kXR_int16)XPROOFD_VERSBIN);
+         response->SendI(psid, xps->ROOT()->SrvProtVers(), (kXR_int16)XPROOFD_VERSBIN);
    } else {
       // Failure
       emsg += ": failure setting up proofserv" ;
@@ -1691,8 +1721,7 @@ int XrdProofdProofServMgr::Destroy(XrdProofdProtocol *p)
 }
 
 //______________________________________________________________________________
-int XrdProofdProofServMgr::SetProofServEnvOld(XrdProofdProtocol *p,
-                                              int psid, int loglevel, const char *cfg)
+int XrdProofdProofServMgr::SetProofServEnvOld(XrdProofdProtocol *p, void *input)
 {
    // Set environment for proofserv; old version preparing the environment for
    // proofserv protocol version <= 13. Needed for backward compatibility.
@@ -1700,13 +1729,14 @@ int XrdProofdProofServMgr::SetProofServEnvOld(XrdProofdProtocol *p,
 
    char *ev = 0;
 
-   TRACE(REQ,  "psid: "<<psid<<", log: "<<loglevel);
-
-   // Make sure the principal client is defined
-   if (!p->Client()) {
-      TRACE(XERR, "client undefined - cannot continue");
+   // Check inputs
+   if (!p || !p->Client() || !input) {
+      TRACE(XERR, "at leat one input is invalid - cannot continue");
       return -1;
    }
+
+   ProofServEnv_t *in = (ProofServEnv_t *)input;
+   TRACE(REQ,  "psid: "<<in->fPsid<<", log: "<<in->fLogLevel);
 
    // Set basic environment for proofserv
    if (SetProofServEnv(fMgr, p->Client()->ROOT()) != 0) {
@@ -1715,7 +1745,7 @@ int XrdProofdProofServMgr::SetProofServEnvOld(XrdProofdProtocol *p,
    }
 
    // Session proxy
-   XrdProofdProofServ *xps = p->Client()->GetProofServ(psid);
+   XrdProofdProofServ *xps = p->Client()->GetProofServ(in->fPsid);
    if (!xps) {
       TRACE(XERR, "unable to get instance of proofserv proxy");
       return -1;
@@ -1725,51 +1755,14 @@ int XrdProofdProofServMgr::SetProofServEnvOld(XrdProofdProtocol *p,
    XrdOucString udir = p->Client()->Sandbox()->Dir();
    TRACE(DBG, "working dir for "<<p->Client()->User()<<" is: "<<udir);
 
-   // Session tag
-   char hn[64], stag[512];
-#if defined(XPD__SUNCC)
-   sysinfo(SI_HOSTNAME, hn, sizeof(hn));
-#else
-   gethostname(hn, sizeof(hn));
-#endif
-   XrdOucString host = hn;
-   if (host.find(".") != STR_NPOS)
-      host.erase(host.find("."));
-   sprintf(stag,"%s-%d-%d",host.c_str(),(int)time(0),getpid());
-
-   // Session dir
-   XrdOucString logdir = udir;
-   if (p->ConnType() == kXPD_ClientMaster) {
-      logdir += "/session-";
-      logdir += stag;
-      xps->SetTag(stag);
-   } else {
-      logdir += "/";
-      logdir += xps->Tag();
-   }
-   TRACE(DBG, "log dir "<<logdir);
-   // Make sure the directory exists
-   if (XrdProofdAux::AssertDir(logdir.c_str(), p->Client()->UI(), fMgr->ChangeOwn()) == -1) {
-      TRACE(XERR, "unable to create log dir: "<<logdir);
-      return -1;
-   }
-   // The session dir (sandbox) depends on the role
-   XrdOucString sessdir = logdir;
-   if (p->ConnType() == kXPD_MasterWorker)
-      sessdir += "/worker-";
-   else
-      sessdir += "/master-";
-   sessdir += xps->Ordinal();
-   sessdir += "-";
-   sessdir += stag;
-   ev = new char[strlen("ROOTPROOFSESSDIR=")+sessdir.length()+2];
-   sprintf(ev, "ROOTPROOFSESSDIR=%s", sessdir.c_str());
+   ev = new char[strlen("ROOTPROOFSESSDIR=") + in->fWrkDir.length() + 2];
+   sprintf(ev, "ROOTPROOFSESSDIR=%s", in->fWrkDir.c_str());
    putenv(ev);
    TRACE(DBG, ev);
 
    // Log level
    ev = new char[strlen("ROOTPROOFLOGLEVEL=")+5];
-   sprintf(ev, "ROOTPROOFLOGLEVEL=%d", loglevel);
+   sprintf(ev, "ROOTPROOFLOGLEVEL=%d", in->fLogLevel);
    putenv(ev);
    TRACE(DBG, ev);
 
@@ -1787,7 +1780,7 @@ int XrdProofdProofServMgr::SetProofServEnvOld(XrdProofdProtocol *p,
 
    // Create the env file
    TRACE(DBG, "creating env file");
-   XrdOucString envfile = sessdir;
+   XrdOucString envfile = in->fWrkDir;
    envfile += ".env";
    FILE *fenv = fopen(envfile.c_str(), "w");
    if (!fenv) {
@@ -1869,7 +1862,7 @@ int XrdProofdProofServMgr::SetProofServEnvOld(XrdProofdProtocol *p,
    fprintf(fenv, "ROOTPROOFWORKDIR=%s\n", udir.c_str());
 
    // Session tag
-   fprintf(fenv, "ROOTPROOFSESSIONTAG=%s\n", stag);
+   fprintf(fenv, "ROOTPROOFSESSIONTAG=%s\n", in->fSessionTag.c_str());
 
    // Whether user specific config files are enabled
    if (fMgr->NetMgr()->WorkerUsrCfg())
@@ -1882,7 +1875,7 @@ int XrdProofdProofServMgr::SetProofServEnvOld(XrdProofdProtocol *p,
    fprintf(fenv, "ROOTENTITY=%s@%s\n", p->Client()->User(), p->Link()->Host());
 
    // Session ID
-   fprintf(fenv, "ROOTSESSIONID=%d\n", psid);
+   fprintf(fenv, "ROOTSESSIONID=%d\n", in->fPsid);
 
    // Client ID
    fprintf(fenv, "ROOTCLIENTID=%d\n", p->CID());
@@ -1898,14 +1891,12 @@ int XrdProofdProofServMgr::SetProofServEnvOld(XrdProofdProtocol *p,
       fprintf(fenv, "ROOTVERSIONTAG=%s\n", getenv("ROOTVERSIONTAG"));
 
    // Config file
-   if (cfg && strlen(cfg) > 0)
-      fprintf(fenv, "ROOTPROOFCFGFILE=%s\n", cfg);
+   if (in->fCfg.length() > 0)
+      fprintf(fenv, "ROOTPROOFCFGFILE=%s\n", in->fCfg.c_str());
 
    // Log file in the log dir
-   XrdOucString logfile = sessdir;
-   logfile += ".log";
-   fprintf(fenv, "ROOTPROOFLOGFILE=%s\n", logfile.c_str());
-   xps->SetFileout(logfile.c_str());
+   fprintf(fenv, "ROOTPROOFLOGFILE=%s\n", in->fLogFile.c_str());
+   xps->SetFileout(in->fLogFile.c_str());
 
    // Additional envs (xpd.putenv directive)
    if (fProofServEnvs.length() > 0) {
@@ -1966,7 +1957,7 @@ int XrdProofdProofServMgr::SetProofServEnvOld(XrdProofdProtocol *p,
       syml += "/last-worker-session";
    else
       syml += "/last-master-session";
-   if (XrdProofdAux::SymLink(logdir.c_str(), syml.c_str()) != 0) {
+   if (XrdProofdAux::SymLink(in->fSessionDir.c_str(), syml.c_str()) != 0) {
       TRACE(XERR, "problems creating symlink to last session (errno: "<<errno<<")");
    }
 
@@ -2023,30 +2014,78 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdManager *mgr, XrdROOT *r)
 }
 
 //______________________________________________________________________________
-int XrdProofdProofServMgr::SetProofServEnv(XrdProofdProtocol *p,
-                                           int psid, int loglevel, const char *cfg)
+void XrdProofdProofServMgr::GetTagDirs(XrdProofdProtocol *p, XrdProofdProofServ *xps,
+                                       XrdOucString &sesstag, XrdOucString &topsesstag,
+                                       XrdOucString &sessiondir, XrdOucString &sesswrkdir)
+{
+   // Detarmine the unique tag and relevant dirs for this session
+
+   // Client sandbox
+   XrdOucString udir = p->Client()->Sandbox()->Dir();
+
+   // Create the unique tag identify this session
+   XrdOucString host = fMgr->Host();
+   if (host.find(".") != STR_NPOS)
+      host.erase(host.find("."));
+   sesstag.form("%s-%d-%d", host.c_str(), (int)time(0), getpid());
+
+   // Session dir
+   topsesstag = sesstag;
+   sessiondir = udir;
+   if (p->ConnType() == kXPD_ClientMaster) {
+      sessiondir += "/session-";
+      sessiondir += sesstag;
+      xps->SetTag(sesstag.c_str());
+   } else {
+      sessiondir += "/";
+      sessiondir += xps->Tag();
+      topsesstag = xps->Tag();
+      topsesstag.replace("session-","");
+   }
+
+   // Make sure the directory exists ...
+   if (XrdProofdAux::AssertDir(sessiondir.c_str(), p->Client()->UI(),
+                               fMgr->ChangeOwn()) == -1) {
+      return;
+   }
+
+   // The session working dir depends on the role
+   sesswrkdir = sessiondir;
+   if (p->ConnType() == kXPD_MasterWorker) {
+      sesswrkdir.form("%s/worker-%s-%s", sessiondir.c_str(), xps->Ordinal(), sesstag.c_str());
+   } else {
+      sesswrkdir.form("%s/master-%s-%s", sessiondir.c_str(), xps->Ordinal(), sesstag.c_str());
+   }
+
+   // Done
+   return;
+}
+
+//______________________________________________________________________________
+int XrdProofdProofServMgr::SetProofServEnv(XrdProofdProtocol *p, void *input)
 {
    // Set environment for proofserv
    XPDLOC(SMGR, "ProofServMgr::SetProofServEnv")
 
    char *ev = 0;
 
-   TRACE(REQ,  "psid: "<<psid<<", log: "<<loglevel);
-
-   // Make sure the principal client is defined
-   if (!p->Client()) {
-      TRACE(XERR, "client undefined - cannot continue");
+   // Check inputs
+   if (!p || !p->Client() || !input) {
+      TRACE(XERR, "at leat one input is invalid - cannot continue");
       return -1;
    }
+
+   ProofServEnv_t *in = (ProofServEnv_t *)input;
+   TRACE(REQ,  "psid: "<<in->fPsid<<", log: "<<in->fLogLevel);
 
    // Old proofservs expect different settings
    int rootvers = p->Client()->ROOT() ? p->Client()->ROOT()->SrvProtVers() : -1;
    TRACE(DBG, "rootvers: "<< rootvers);
    if (rootvers < 14 && rootvers > -1)
-      return SetProofServEnvOld(p, psid, loglevel, cfg);
+      return SetProofServEnvOld(p, input);
 
    // Session proxy
-   XrdProofdProofServ *xps = p->Client()->GetProofServ(psid);
+   XrdProofdProofServ *xps = p->Client()->GetProofServ(in->fPsid);
    if (!xps) {
       TRACE(XERR, "unable to get instance of proofserv proxy");
       return -1;
@@ -2055,43 +2094,14 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdProtocol *p,
    // Client sandbox
    XrdOucString udir = p->Client()->Sandbox()->Dir();
    TRACE(DBG, "sandbox for "<<p->Client()->User()<<" is: "<<udir);
+   TRACE(DBG, "session unique tag "<<in->fSessionTag);
+   TRACE(DBG, "session dir " << in->fSessionDir);
+   TRACE(DBG, "session working dir:" << in->fWrkDir);
 
-   // Create and log into the directory reserved to this session:
-   // the unique tag will identify it
-   char hn[64], stag[512];
-#if defined(XPD__SUNCC)
-   sysinfo(SI_HOSTNAME, hn, sizeof(hn));
-#else
-   gethostname(hn, sizeof(hn));
-#endif
-   XrdOucString host = hn;
-   if (host.find(".") != STR_NPOS)
-      host.erase(host.find("."));
-   sprintf(stag,"%s-%d-%d",host.c_str(),(int)time(0),getpid());
-
-   // Session dir
-   XrdOucString topstag = stag;
-   XrdOucString sessiondir = udir;
-   if (p->ConnType() == kXPD_ClientMaster) {
-      sessiondir += "/session-";
-      sessiondir += stag;
-      xps->SetTag(stag);
-   } else {
-      sessiondir += "/";
-      sessiondir += xps->Tag();
-      topstag = xps->Tag();
-      topstag.replace("session-","");
-   }
-   TRACE(DBG, "session dir "<<sessiondir);
-   // Make sure the directory exists ...
-   if (XrdProofdAux::AssertDir(sessiondir.c_str(), p->Client()->UI(), fMgr->ChangeOwn()) == -1) {
-      TRACE(XERR, "unable to create log dir: "<<sessiondir);
-      return -1;
-   }
-   // ... and log into it
-   if (XrdProofdAux::ChangeToDir(sessiondir.c_str(), p->Client()->UI(), fMgr->ChangeOwn()) != 0) {
-      TRACE(XERR, "couldn't change directory to "<<
-                  sessiondir);
+   // Log into the session it
+   if (XrdProofdAux::ChangeToDir(in->fSessionDir.c_str(), p->Client()->UI(),
+                                 fMgr->ChangeOwn()) != 0) {
+      TRACE(XERR, "couldn't change directory to " << in->fSessionDir);
       return -1;
    }
 
@@ -2101,19 +2111,9 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdProtocol *p,
       return -1;
    }
 
-   // The session working dir depends on the role
-   XrdOucString swrkdir = sessiondir;
-   if (p->ConnType() == kXPD_MasterWorker)
-      swrkdir += "/worker-";
-   else
-      swrkdir += "/master-";
-   swrkdir += xps->Ordinal();
-   swrkdir += "-";
-   swrkdir += stag;
-
    // Create the rootrc and env files
    TRACE(DBG, "creating env file");
-   XrdOucString rcfile = swrkdir;
+   XrdOucString rcfile = in->fWrkDir;
    rcfile += ".rootrc";
    FILE *frc = fopen(rcfile.c_str(), "w");
    if (!frc) {
@@ -2122,8 +2122,7 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdProtocol *p,
    }
    // Symlink to session.rootrc
    if (XrdProofdAux::SymLink(rcfile.c_str(), "session.rootrc") != 0) {
-      TRACE(XERR, "problems creating symlink to"
-                  "'session.rootrc' (errno: "<<errno<<")");
+      TRACE(XERR, "problems creating symlink to 'session.rootrc' (errno: "<<errno<<")");
    }
    TRACE(DBG, "session rootrc file: "<< rcfile);
 
@@ -2148,11 +2147,11 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdProtocol *p,
 
    // The session working dir depends on the role
    fprintf(frc, "# The session working dir\n");
-   fprintf(frc, "ProofServ.SessionDir: %s\n", swrkdir.c_str());
+   fprintf(frc, "ProofServ.SessionDir: %s\n", in->fWrkDir.c_str());
 
    // Log / Debug level
    fprintf(frc, "# Proof Log/Debug level\n");
-   fprintf(frc, "Proof.DebugLevel: %d\n", loglevel);
+   fprintf(frc, "Proof.DebugLevel: %d\n", in->fLogLevel);
 
    // Ordinal number
    fprintf(frc, "# Ordinal number\n");
@@ -2198,7 +2197,7 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdProtocol *p,
 
    // Session tag
    fprintf(frc, "# Session tag\n");
-   fprintf(frc, "ProofServ.SessionTag: %s\n", topstag.c_str());
+   fprintf(frc, "ProofServ.SessionTag: %s\n", in->fTopSessionTag.c_str());
 
    // Whether user specific config files are enabled
    if (fMgr->NetMgr()->WorkerUsrCfg()) {
@@ -2219,7 +2218,7 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdProtocol *p,
 
    // Session ID
    fprintf(frc, "# Session ID\n");
-   fprintf(frc, "ProofServ.SessionID: %d\n", psid);
+   fprintf(frc, "ProofServ.SessionID: %d\n", in->fPsid);
 
    // Client ID
    fprintf(frc, "# Client ID\n");
@@ -2230,10 +2229,10 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdProtocol *p,
    fprintf(frc, "ProofServ.ClientVersion: %d\n", p->ProofProtocol());
 
    // Config file
-   if (cfg && strlen(cfg) > 0) {
+   if (in->fCfg.length() > 0) {
       fprintf(frc, "# Config file\n");
       // User defined
-      fprintf(frc, "ProofServ.ProofConfFile: %s\n", cfg);
+      fprintf(frc, "ProofServ.ProofConfFile: %s\n", in->fCfg.c_str());
    } else {
       fprintf(frc, "# Config file\n");
       if (fMgr->IsSuperMst()) {
@@ -2260,7 +2259,7 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdProtocol *p,
    fclose(frc);
 
    // Now save the exported env variables, for the record
-   XrdOucString envfile = swrkdir;
+   XrdOucString envfile = in->fWrkDir;
    envfile += ".env";
    FILE *fenv = fopen(envfile.c_str(), "w");
    if (!fenv) {
@@ -2344,13 +2343,11 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdProtocol *p,
    fprintf(fenv, "%s\n", ev);
 
    // Log file in the log dir
-   XrdOucString logfile = swrkdir;
-   logfile += ".log";
-   ev = new char[strlen("ROOTPROOFLOGFILE=")+logfile.length()+2];
-   sprintf(ev, "ROOTPROOFLOGFILE=%s", logfile.c_str());
+   ev = new char[strlen("ROOTPROOFLOGFILE=") + in->fLogFile.length() + 2];
+   sprintf(ev, "ROOTPROOFLOGFILE=%s", in->fLogFile.c_str());
    putenv(ev);
    fprintf(fenv, "%s\n", ev);
-   xps->SetFileout(logfile.c_str());
+   xps->SetFileout(in->fLogFile.c_str());
 
    // Xrootd config file
    ev = new char[strlen("XRDCF=")+strlen(CfgFile())+2];
@@ -2417,7 +2414,7 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdProtocol *p,
       syml += "/last-worker-session";
    else
       syml += "/last-master-session";
-   if (XrdProofdAux::SymLink(sessiondir.c_str(), syml.c_str()) != 0) {
+   if (XrdProofdAux::SymLink(in->fSessionDir.c_str(), syml.c_str()) != 0) {
       TRACE(XERR, "problems creating symlink to "
                   " last session (errno: "<<errno<<")");
    }

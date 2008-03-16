@@ -36,8 +36,8 @@ XrdProofdClient::XrdProofdClient(XrdProofUI ui, bool master, bool changeown,
 {
    // Constructor
 
-   fProofServs.reserve(10);
-   fClients.reserve(10);
+   fProofServs.clear();
+   fClients.clear();
    fUI = ui;
    fUNIXSock = 0;
    fUNIXSockSaved = 0;
@@ -72,11 +72,11 @@ XrdProofdClient::~XrdProofdClient()
 }
 
 //__________________________________________________________________________
-bool XrdProofdClient::Match(const char *id, const char *grp)
+bool XrdProofdClient::Match(const char *usr, const char *grp)
 {
    // return TRUE if this instance matches 'id' (and 'grp', if defined) 
 
-   bool rc = (id && !strcmp(id, User())) ? 1 : 0;
+   bool rc = (usr && !strcmp(usr, User())) ? 1 : 0;
    if (rc && grp && strlen(grp) > 0)
       rc = (grp && Group() && !strcmp(grp, Group())) ? 1 : 0;
 
@@ -90,25 +90,26 @@ int XrdProofdClient::GetClientID(XrdProofdProtocol *p)
    // and get the first new one
    XPDLOC(CMGR, "Client::GetClientID")
 
-   XrdSysMutexHelper mh(fMutex);
-
-   int ic = 0;
-   // Search for free places in the existing vector
-   for (ic = 0; ic < (int)fClients.size() ; ic++) {
-      if (!fClients[ic]) {
-         fClients[ic] = p;
-         return ic;
+   int ic = 0, sz = 0;
+   {  XrdSysMutexHelper mh(fMutex);
+      // Search for free places in the existing vector
+      for (ic = 0; ic < (int)fClients.size() ; ic++) {
+         if (!fClients[ic]) {
+            fClients[ic] = p;
+            return ic;
+         }
       }
+
+      // We need to resize (double it)
+      if (ic >= (int)fClients.capacity())
+         fClients.reserve(2*fClients.capacity());
+
+      // Fill in new element
+      fClients.push_back(p);
+      sz = fClients.size();
    }
 
-   // We need to resize (double it)
-   if (ic >= (int)fClients.capacity())
-      fClients.reserve(2*fClients.capacity());
-
-   // Fill in new element
-   fClients.push_back(p);
-
-   TRACE(DBG, "size: "<<fClients.size());
+   TRACE(DBG, "size = "<<sz<<", ic = "<<ic);
 
    // We are done
    return ic;
@@ -121,26 +122,29 @@ int XrdProofdClient::ReserveClientID(int cid)
    // and performe the needed initializations
    XPDLOC(CMGR, "Client::ReserveClientID")
 
-   XrdSysMutexHelper mh(fMutex);
-
    if (cid < 0)
       return -1;
 
-   if (cid < (int)fClients.size())
-      return 0;
+   int sz = 0, newsz = 0;
+   {  XrdSysMutexHelper mh(fMutex);
+      if (cid >= (int)fClients.size()) {
 
-   // We need to resize (double it)
-   if (cid >= (int)fClients.capacity()) {
-      int newsz = 2 * fClients.capacity();
-      newsz = (cid < newsz) ? newsz : cid + 1;
-      fClients.reserve(newsz);
+         // We need to resize (double it)
+         newsz = fClients.capacity();
+         if (cid >= (int)fClients.capacity()) {
+            newsz = 2 * fClients.capacity();
+            newsz = (cid < newsz) ? newsz : cid + 1;
+            fClients.reserve(newsz);
+         }
+
+         // Fill in new elements
+         while (cid >= (int)fClients.size())
+            fClients.push_back(0);
+      }
+      sz = fClients.size();
    }
 
-   // Fill in new elements
-   while (cid >= (int)fClients.size())
-      fClients.push_back(new XrdProofdProtocol());
-
-   TRACE(DBG, "cid: "<<cid<<", size: "<<fClients.size());
+   TRACE(DBG, "cid = "<<cid<<", size = "<<sz<<", capacity = "<<newsz);
 
    // We are done
    return 0;
@@ -335,36 +339,44 @@ XrdProofdProofServ *XrdProofdClient::GetFreeServObj()
    // and get the first new one
    XPDLOC(CMGR, "Client::GetFreeServObj")
 
-   TRACE(DBG, "enter");
+   int ic = 0, newsz = 0, sz = 0;
+   XrdProofdProofServ *xps = 0;
+   XrdOucString msg;
+   {  XrdSysMutexHelper mh(fMutex);
 
-   XrdSysMutexHelper mh(fMutex);
-
-   TRACE(DBG, "size = "<<fProofServs.size()<<"; capacity = "<<fProofServs.capacity());
-   int ic = 0;
-   // Search for free places in the existing vector
-   for (ic = 0; ic < (int)fProofServs.size() ; ic++) {
-      if (fProofServs[ic] && !(fProofServs[ic]->IsValid())) {
-         fProofServs[ic]->SetValid();
-         break;
+      // Search for free places in the existing vector
+      for (ic = 0; ic < (int)fProofServs.size() ; ic++) {
+         if (fProofServs[ic] && !(fProofServs[ic]->IsValid())) {
+            fProofServs[ic]->SetValid();
+            break;
+         }
       }
+
+      // If we did not find it, we resize the vector (double it)
+      if (ic >= (int)fProofServs.capacity()) {
+         newsz = 2 * fProofServs.capacity();
+         fProofServs.reserve(newsz);
+      }
+
+      // Allocate new element
+      fProofServs.push_back(new XrdProofdProofServ());
+      sz = fProofServs.size();
+
+      xps = fProofServs[ic];
+      xps->SetValid();
+      xps->SetID(ic);
    }
 
-   // If we did not find it, we resize the vector (double it)
-   if (ic >= (int)fProofServs.capacity()) {
-      int newsz = 2 * fProofServs.capacity();
-      fProofServs.reserve(newsz);
-
-      TRACE(DBG, "new capacity = "<<fProofServs.capacity());
+   // Notify
+   if (TRACING(DBG)) {
+      if (newsz > 0) {
+         msg.form("new capacity = %d, size = %d, ic = %d, xps = %p",
+                   newsz, sz, ic, xps);
+      } else {
+         msg.form("size = %d, ic = %d, xps = %p", sz, ic, xps);
+      }
+      XPDPRT(msg);
    }
-
-   // Allocate new element
-   fProofServs.push_back(new XrdProofdProofServ());
-
-   XrdProofdProofServ *xps = fProofServs[ic];
-   xps->SetValid();
-   xps->SetID(ic);
-
-   TRACE(DBG, "size = "<<fProofServs.size()<<"; ic = "<<ic);
 
    // We are done
    return xps;

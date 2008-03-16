@@ -54,7 +54,7 @@ class XrdProofdClient {
    inline const char      *Group() const { return fUI.fGroup.c_str(); }
    inline const char      *User() const { return fUI.fUser.c_str(); }
    inline bool             IsValid() const { return fIsValid; }
-   bool                    Match(const char *id, const char *grp = 0);
+   bool                    Match(const char *usr, const char *grp = 0);
    inline XrdSysRecMutex  *Mutex() const { return (XrdSysRecMutex *)&fMutex; }
    inline unsigned short   RefSid() const { return fRefSid; }
    inline XrdROOT         *ROOT() const { return fROOT; }

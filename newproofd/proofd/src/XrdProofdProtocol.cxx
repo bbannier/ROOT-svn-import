@@ -168,9 +168,8 @@ XrdProofdResponse *XrdProofdProtocol::GetNewResponse(kXR_unt16 sid)
    // Create new response instance for stream ID 'sid'
    XPDLOC(ALL, "Protocol::GetNewResponse")
 
-   TRACE(DBG, "sid: "<<sid);
-
    XrdOucString msg;
+   msg.form("sid: %d", sid);
    if (sid > 0) {
       // Atomic
       XrdSysMutexHelper mh(fMutex);
@@ -178,14 +177,18 @@ XrdProofdResponse *XrdProofdProtocol::GetNewResponse(kXR_unt16 sid)
          if (sid > fResponses.capacity()) {
             int newsz = (sid < 2 * fResponses.capacity()) ? 2 * fResponses.capacity() : sid+1 ;
             fResponses.reserve(newsz);
-            if (TRACING(DBG))
-               msg.form("%s new capacity: %d;", msg.c_str(), fResponses.capacity());
-         }
+            if (TRACING(DBG)) {
+               msg += " new capacity: ";
+               msg += (int) fResponses.capacity();
+            }
+        }
          int nnew = sid - fResponses.size();
          while (nnew--)
             fResponses.push_back(new XrdProofdResponse());
-         if (TRACING(DBG))
-            msg.form("%s new size: %d", msg.c_str(), fResponses.size());
+         if (TRACING(DBG)) {
+            msg += "; new size: ";
+            msg += (int) fResponses.size();
+         }
       }
    } else {
       TRACE(XERR,"wrong sid: "<<sid);
@@ -369,12 +372,12 @@ int XrdProofdProtocol::Process(XrdLink *)
    XPDLOC(ALL, "Protocol::Process")
 
    int rc = 0;
-   TRACEP(this, REQ, "instance: " << this);
+   TRACEP(this, DBG, "instance: " << this);
 
    // Read the next request header
    if ((rc = GetData("request", (char *)&fRequest, sizeof(fRequest))) != 0)
       return rc;
-   TRACEP(this, DBG, "after GetData: rc: " << rc);
+   TRACEP(this, HDBG, "after GetData: rc: " << rc);
 
    // Deserialize the data
    fRequest.header.requestid = ntohs(fRequest.header.requestid);
@@ -396,7 +399,7 @@ int XrdProofdProtocol::Process(XrdLink *)
 
    unsigned short sid;
    memcpy((void *)&sid, (const void *)&(fRequest.header.streamid[0]), 2);
-   TRACEP(this, DBG, "sid: " << sid << ", req id: " << fRequest.header.requestid <<
+   TRACEP(this, REQ, "sid: " << sid << ", req id: " << fRequest.header.requestid <<
                 " (" << XrdProofdAux::ProofRequestTypes(fRequest.header.requestid)<<
                 ")" << ", dlen: " <<fRequest.header.dlen);
 
@@ -985,7 +988,7 @@ int XrdProofdProtocol::Ping()
    }
 
    kXR_int32 pingres = 0;
-   if (xps) {
+   if (xps && xps->IsValid()) {
 
       TRACEP(this,  DBG, "EXT: psid: "<<psid);
 

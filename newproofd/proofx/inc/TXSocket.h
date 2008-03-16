@@ -125,6 +125,9 @@ private:
    TXSockBuf          *PopUpSpare(Int_t sz);
    void                PushBackSpare();
 
+   // Post kPROOF_FATAL to remove this socket
+   void                PostFatal();
+
    // Auxilliary
    Int_t               GetLowSocket() const { return (fConn ? fConn->GetLowSocket() : -1); }
 
@@ -222,7 +225,7 @@ public:
    Int_t               Flush();
 
    // Ping the counterpart
-   Bool_t              Ping(Bool_t cleanpipe = kFALSE);
+   Bool_t              Ping(const char *ord = 0);
 
    // Standard options cannot be set
    Int_t               SetOption(ESockOptions, Int_t) { return 0; }
