@@ -103,7 +103,7 @@ public:
 
  private:
 
-   int           GetBuff(int quantum);
+   XrdBuffer    *GetBuff(int quantum, XrdBuffer *argp = 0);
    int           GetData(const char *dtype, char *buff, int blen);
    XrdProofdResponse *GetNewResponse(kXR_unt16 rid);
    int           Interrupt();
@@ -143,12 +143,6 @@ public:
    XrdSecProtocol               *fAuthProt;
    XrdSecEntity                  fSecEntity;
    //
-   int                           fhcPrev;
-   int                           fhcMax;
-   int                           fhcNext;
-   int                           fhcNow;
-   int                           fhalfBSize;
-   //
    XPClientRequest               fRequest;  // handle client requests
    std::vector<XrdProofdResponse *> fResponses; // One per each logical connection
    XrdSysRecMutex                fMutex;    // Local mutex
@@ -161,6 +155,7 @@ public:
    static XrdObjectQ<XrdProofdProtocol> fgProtStack;
    static XrdBuffManager        *fgBPool;     // Buffer manager
    static int                    fgMaxBuffsz;    // Maximum buffer size we can have
+   static XrdSysRecMutex         fgBMutex;    // Buffer management mutex
 
    static XrdSysError            fgEDest;     // Error message handler
    static XrdSysLogger          *fgLogger;    // Error logger

@@ -55,6 +55,7 @@ int                   XrdProofdProtocol::fgCount    = 0;
 XrdObjectQ<XrdProofdProtocol>
                       XrdProofdProtocol::fgProtStack("ProtStack",
                                                      "xproofd protocol anchor");
+XrdSysRecMutex        XrdProofdProtocol::fgBMutex;    // Buffer management mutex
 XrdBuffManager       *XrdProofdProtocol::fgBPool    = 0;
 int                   XrdProofdProtocol::fgMaxBuffsz= 0;
 XrdSysError           XrdProofdProtocol::fgEDest(0, "xpd");
@@ -297,12 +298,6 @@ void XrdProofdProtocol::Reset()
    }
    memset(&fSecEntity, 0, sizeof(fSecEntity));
    fResponses.clear();
-   // Magic numbers cut & pasted from Xrootd
-   fhcPrev    = 13;
-   fhcMax     = 28657;
-   fhcNext    = 21;
-   fhcNow     = 13;
-   fhalfBSize = 0;
 }
 
 //______________________________________________________________________________
@@ -414,7 +409,7 @@ int XrdProofdProtocol::Process(XrdLink *)
    // a buffer: the argument may have to be segmented and we're not prepared to do
    // that here.
    if (fRequest.header.requestid != kXP_sendmsg && fRequest.header.dlen) {
-      if (GetBuff(fRequest.header.dlen+1) != 1) {
+      if ((fArgp = GetBuff(fRequest.header.dlen+1, fArgp)) == 0) {
          response->Send(kXR_ArgTooLong, "fRequest.argument is too long");
          return 0;
       }
@@ -529,44 +524,36 @@ void XrdProofdProtocol::Recycle(XrdLink *, int, const char *)
 }
 
 //______________________________________________________________________________
-int XrdProofdProtocol::GetBuff(int quantum)
+XrdBuffer *XrdProofdProtocol::GetBuff(int quantum, XrdBuffer *argp)
 {
-   // Allocate a buffer to handle quantum bytes
+   // Allocate a buffer to handle quantum bytes; if argp points to an existing
+   // buffer, its size is checked and re-allocated if needed
    XPDLOC(ALL, "Protocol::GetBuff")
 
    TRACE(HDBG, "len: "<<quantum);
 
-   // The current buffer may be sufficient for the current needs
-   if (!fArgp || quantum > fArgp->bsize)
-      fhcNow = fhcPrev;
-   else if (quantum >= fhalfBSize || fhcNow-- > 0)
-      return 1;
-   else if (fhcNext >= fhcMax)
-      fhcNow = fhcMax;
-   else {
-      int tmp = fhcPrev;
-      fhcNow = fhcNext;
-      fhcPrev = fhcNext;
-      fhcNext = tmp + fhcNext;
+   // If we are given an existing buffer, we keep it if we use at least half
+   // of it; otherwise we take a smaller one
+   if (argp) {
+      if (quantum >= argp->bsize / 2 && quantum <= argp->bsize)
+         return argp;
    }
 
-   // We need a new buffer
-   if (fArgp)
-      fgBPool->Release(fArgp);
-   if ((fArgp = fgBPool->Obtain(quantum)))
-      fhalfBSize = fArgp->bsize >> 1;
-   else {
-      XrdProofdResponse *response = Response(fRequest.header.requestid);
-      if (!response) {
-         TRACEP(this, XERR, "could not get Response instance for requid:"
-                           << fRequest.header.requestid);
-         return 1;
-      }
-      return response->Send(kXR_NoMemory, "insufficient memory for requested buffer");
-   }
+   // Release the buffer if too small
+   XrdSysMutexHelper mh(fgBMutex);
+   if (argp)
+      fgBPool->Release(argp);
 
-   // Success
-   return 1;
+   // Obtain a new one
+   if ((argp = fgBPool->Obtain(quantum)) == 0) {
+      TRACEP(this, XERR, "could not get requested buffer (size: "<<quantum<<
+                         ") = insufficient memory");
+   }
+   TRACEP(this, HDBG, "quantum: "<<quantum<<
+                      ", buff: "<<(void *)(argp->buff)<<", bsize:"<<argp->bsize);
+
+   // Done
+   return argp;
 }
 
 //______________________________________________________________________________
@@ -619,36 +606,42 @@ int XrdProofdProtocol::SendData(XrdProofdProofServ *xps,
    // Quantum size
    int quantum = (len > fgMaxBuffsz ? fgMaxBuffsz : len);
 
-   // Make sure we have a large enough buffer
-   if (!fArgp || quantum < fhalfBSize || quantum > fArgp->bsize) {
-      if ((rc = GetBuff(quantum)) <= 0)
-         return rc;
-   } else if (fhcNow < fhcNext)
-      fhcNow++;
+   // Get a buffer
+   XrdBuffer *argp = GetBuff(quantum);
+   if (!argp)
+      return rc;
 
    // Now send over all of the data as unsolicited messages
    XrdOucString msg;
    while (len > 0) {
-      XrdProofdResponse *response = xps->Response();
-      {  XrdSysMutexHelper mh(fMutex);
-         if ((rc = GetData("data", fArgp->buff, quantum)))
-            return rc;
-         if (buf && !(*buf))
-            *buf = new XrdSrvBuffer(fArgp->buff, quantum, 1);
-         // Send
-         if (sid > -1) {
-            if (TRACING(HDBG))
-               msg.form("EXT: server ID: %d, sending: %d bytes", sid, quantum);
-            if (response->Send(kXR_attn, kXPD_msgsid, sid, fArgp->buff, quantum))
-               return 1;
-         } else {
 
-            // Get ID of the client
-            int cid = ntohl(fRequest.sendrcv.cid);
-            if (TRACING(HDBG))
-               msg.form("INT: client ID: %d, sending: %d bytes", cid, quantum);
-            if (xps->SendData(cid, fArgp->buff, quantum))
-               return 1;
+      XrdProofdResponse *response = (sid > -1) ? xps->Response() : 0;
+
+      if ((rc = GetData("data", argp->buff, quantum))) {
+         { XrdSysMutexHelper mh(fgBMutex); fgBPool->Release(argp); }
+         return rc;
+      }
+      if (buf && !(*buf))
+         *buf = new XrdSrvBuffer(argp->buff, quantum, 1);
+      // Send
+      if (sid > -1) {
+         if (TRACING(HDBG))
+            msg.form("EXT: server ID: %d, sending: %d bytes", sid, quantum);
+         if (!response ||
+               response->Send(kXR_attn, kXPD_msgsid, sid,
+                              argp->buff, quantum) != 0) {
+            { XrdSysMutexHelper mh(fgBMutex); fgBPool->Release(argp); }
+            return 1;
+         }
+      } else {
+
+         // Get ID of the client
+         int cid = ntohl(fRequest.sendrcv.cid);
+         if (TRACING(HDBG))
+            msg.form("INT: client ID: %d, sending: %d bytes", cid, quantum);
+         if (xps->SendData(cid, argp->buff, quantum) != 0) {
+            { XrdSysMutexHelper mh(fgBMutex); fgBPool->Release(argp); }
+            return 1;
          }
       }
       TRACEP(this, HDBG, msg);
@@ -657,6 +650,9 @@ int XrdProofdProtocol::SendData(XrdProofdProofServ *xps,
       if (len < quantum)
          quantum = len;
    }
+
+   // Release the buffer
+   { XrdSysMutexHelper mh(fgBMutex); fgBPool->Release(argp); }
 
    // Done
    return 0;
@@ -681,28 +677,34 @@ int XrdProofdProtocol::SendDataN(XrdProofdProofServ *xps,
    // Quantum size
    int quantum = (len > fgMaxBuffsz ? fgMaxBuffsz : len);
 
-   // Make sure we have a large enough buffer
-   if (!fArgp || quantum < fhalfBSize || quantum > fArgp->bsize) {
-      if ((rc = GetBuff(quantum)) <= 0)
-         return rc;
-   } else if (fhcNow < fhcNext)
-      fhcNow++;
+   // Get a buffer
+   XrdBuffer *argp = GetBuff(quantum);
+   if (!argp)
+      return rc;
 
    // Now send over all of the data as unsolicited messages
    while (len > 0) {
-      if ((rc = GetData("data", fArgp->buff, quantum)))
+      if ((rc = GetData("data", argp->buff, quantum))) {
+         { XrdSysMutexHelper mh(fgBMutex); fgBPool->Release(argp); }
          return rc;
+      }
       if (buf && !(*buf))
-         *buf = new XrdSrvBuffer(fArgp->buff, quantum, 1);
+         *buf = new XrdSrvBuffer(argp->buff, quantum, 1);
 
       // Send to connected clients
-      xps->SendDataN(fArgp->buff, quantum);
+      if (xps->SendDataN(argp->buff, quantum) != 0) {
+         { XrdSysMutexHelper mh(fgBMutex); fgBPool->Release(argp); }
+         return 1;
+      }
 
       // Next segment
       len -= quantum;
       if (len < quantum)
          quantum = len;
    }
+
+   // Release the buffer
+   { XrdSysMutexHelper mh(fgBMutex); fgBPool->Release(argp); }
 
    // Done
    return 0;
