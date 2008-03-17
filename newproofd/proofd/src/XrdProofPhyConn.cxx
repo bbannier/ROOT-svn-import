@@ -130,9 +130,11 @@ void XrdProofPhyConn::Connect()
    // Run the connection attempts: the result is stored in fConnected
    XPDLOC(ALL, "PhyConn::Connect")
 
-   // Max number of tries and timeout
-   int maxTry = EnvGetLong(NAME_FIRSTCONNECTMAXCNT);
-   int timeOut = EnvGetLong(NAME_CONNECTTIMEOUT);
+   int maxTry = -1, timeWait = -1;
+   // Max number of tries and timeout; use current settings, if any
+   XrdProofConn::GetRetryParam(maxTry, timeWait);
+   maxTry = (maxTry > -1) ? maxTry : EnvGetLong(NAME_FIRSTCONNECTMAXCNT);
+   timeWait = (timeWait > -1) ? timeWait : EnvGetLong(NAME_CONNECTTIMEOUT);
 
    int logid = -1;
    int i = 0;
@@ -174,11 +176,11 @@ void XrdProofPhyConn::Connect()
       Close("P");
 
       // And we wait a bit before retrying
-      TRACE(DBG, "connection attempt failed: sleep " << timeOut << " secs");
+      TRACE(DBG, "connection attempt failed: sleep " << timeWait << " secs");
 #ifndef WIN32
-      sleep(timeOut);
+      sleep(timeWait);
 #else
-      Sleep(timeOut * 1000);
+      Sleep(timeWait * 1000);
 #endif
 
    } //for connect try
