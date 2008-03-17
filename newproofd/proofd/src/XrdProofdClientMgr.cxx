@@ -75,10 +75,11 @@ void *XrdProofdClientCron(void *p)
    }
 
    // Time of last session check
-   int lastcheck = time(0);
+   int lastcheck = time(0), ckfreq = mgr->CheckFrequency(), deltat = 0;
    while(1) {
       // We wait for processes to communicate a session status change
-      int deltat = mgr->CheckFrequency() - (time(0) - lastcheck);
+      if ((deltat = ckfreq - (time(0) - lastcheck)) <= 0)
+         deltat = ckfreq;
       int pollRet = mgr->Pipe()->Poll(deltat);
 
       if (pollRet > 0) {
