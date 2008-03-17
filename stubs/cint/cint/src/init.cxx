@@ -1135,6 +1135,19 @@ int G__main(int argc, char** argv)
    std::string linkfilename_h;
 #endif //G__NOSTUBS
 
+  // 15-01-08
+  // Translate an ifdef into a normal global variable..
+  // sligthly more convenient.
+  // This is the variable used to check if the stubs must be 
+  // written in the dictionary (can only be changed in conf. time)
+#ifdef G__NOSTUBS
+  G__nostubs = 1;
+#endif
+
+#ifdef G__NOSTUBSTEST
+  G__nostubs = 0;
+#endif
+
    if (G__globalcomp < G__NOLINK) {
       G__gen_cppheader(0);
    }

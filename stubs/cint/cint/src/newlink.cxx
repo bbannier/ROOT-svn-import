@@ -2271,7 +2271,8 @@ int G__execute_call(G__value *result7,G__param *libp,G__ifunc_table_internal *if
     if ( ((libp->paran>=0) &&
           G__get_funcptr(ifunc, ifn) &&
           /*!(G__struct.type[ifunc->tagnum] == 'n') &&*/
-          !G__wrappers_enabled())){ // DMS Use the stub if there is one
+          ((!G__wrappers_enabled() && !G__nostubs) || (!cppfunc && G__nostubs))
+	  )){ // DMS Use the stub if there is one
       // Registered Method in ifunc. Then We Can Call the method without the stub function
       G__stub_method_calling(result7, libp, ifunc, ifn);
     }
@@ -2633,19 +2634,6 @@ void G__gen_cpplink()
 
   hfp=fopen(G__CPPLINK_H,"a");
   if(!hfp) G__fileerror(G__CPPLINK_H);
-
-  // 15-01-08
-  // Translate an ifdef into a normal global variable..
-  // sligthly more convenient.
-  // This is the variable used to check if the stubs must be 
-  // written in the dictionary (can only be changed in conf. time)
-#ifdef G__NOSTUBS
-  G__nostubs = 1;
-#endif
-
-#ifdef G__NOSTUBSTEST
-  G__nostubs = 0;
-#endif
 
   {
     int algoflag=0;
@@ -5452,7 +5440,12 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
               // if that is the case and we are writing the final dictionary (kCompleteDictionary),
               // we can't write the stubs for the operator=.
               // 14-02-08 When ifunc->funcptr[j]==(void*)-2 we have to force the creation of the stub
-              if((ifunc->funcptr[j]==(void*)-2) || !ifunc->mangled_name[j] || !G__nostubs){
+              if((ifunc->funcptr[j]==(void*)-2) || !ifunc->mangled_name[j] || 
+                // 26-10-07
+                // Generate the stubs for those function needing a pointer to a reference (see TCLonesArray "virtual TObject*&	operator[](Int_t idx)")
+                // Is this condition correct and/or sufficient?
+                ((ifunc->reftype[j] == G__PARAREFERENCE) && isupper(ifunc->type[j])) ||
+		 !G__nostubs){
                 if(G__dicttype==kNoWrappersDictionary){
                   // Now we have no symbol but we are in the third or fourth
                   // dictionary... which means that the second one already tried to create it...
@@ -9364,7 +9357,13 @@ void G__cpplink_memfunc(FILE *fp)
 		// we shouldnt get any difference between the stubs and the memfuns
 
 		// If they werent generated automatically...
-		if(/*!(ifunc->funcptr[j]==(void*)-1) && */ (!ifunc->mangled_name[j] || !G__nostubs)){
+		if(/*!(ifunc->funcptr[j]==(void*)-1) && */ 
+		   (!ifunc->mangled_name[j] || 
+		    // 26-10-07
+		    // Generate the stubs for those function needing a pointer to a reference (see TCLonesArray "virtual TObject*&	operator[](Int_t idx)")
+		    // Is this condition correct and/or sufficient?
+		    ((ifunc->reftype[j] == G__PARAREFERENCE) && isupper(ifunc->type[j])) ||
+		    !G__nostubs)){
 		  if(G__dicttype==kNoWrappersDictionary){
 		    if(strcmp(ifunc->funcname[j],G__struct.name[i])==0) {
 		      // constructor need special handling
