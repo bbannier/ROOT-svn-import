@@ -485,8 +485,8 @@ int XrdProofdProofServ::SendDataN(void *buff, int len)
    for (ic = 0; ic < (int) fClients.size(); ic++) {
       if ((csid = fClients.at(ic)) && csid->P()) {
          XrdProofdResponse *resp = csid->R();
-         if (!resp || resp->Send(kXR_attn, kXPD_msg, buff, len))
-            return 1;
+         if (!resp || resp->Send(kXR_attn, kXPD_msg, buff, len) != 0)
+            return -1;
       }
    }
 
