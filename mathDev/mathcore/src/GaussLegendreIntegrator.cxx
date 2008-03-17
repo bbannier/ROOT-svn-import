@@ -17,8 +17,6 @@ namespace Math {
 
 GaussLegendreIntegrator::GaussLegendreIntegrator(int num, double eps)
 {
-   // Basic contructor of GaussLegendreIntegrator.
-
    fEpsilon = eps;
    fNum = num;
    fX = 0;
@@ -113,10 +111,7 @@ double GaussLegendreIntegrator::Result () const
 
 double GaussLegendreIntegrator::Error() const
 {
-   // This method is not implemented.
-
    return fLastError;
-   // TODO
 }
 
 int GaussLegendreIntegrator::Status() const
@@ -247,3 +242,5 @@ void GaussLegendreIntegrator::CalcGaussLegendreSamplingPoints()
 
 }
 }
+
+#endif /* ROOT_Math_GaussLegendreIntegrator */
