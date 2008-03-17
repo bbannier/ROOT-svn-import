@@ -19,6 +19,8 @@
 #include "Dict.h"
 #include "dllrev.h"
 #include "value.h"
+#include "../../reflex/src/FunctionMember.h"
+#include "Reflex/internal/MemberBase.h"
 
 #ifndef G__TESTMAIN
 #include <sys/stat.h>
@@ -2146,9 +2148,58 @@ static int G__isnonpublicnew(int tagnum)
 }
 
 //______________________________________________________________________________
+static int G__method_inbase(const Reflex::Member& mbr)
+{
+   // This function search for the method ifunc in the base classes.
+   // RETURN -> NULL Method not found
+   //          NOT NULL Method Found. Method's ifunc table pointer
+   // tagnum's Base Classes structure
+   char name[4096];
+   strcpy(name, mbr.Name(Reflex::SCOPED).c_str());
+   Reflex::FunctionMember* fm = dynamic_cast<Reflex::FunctionMember*>(static_cast<Reflex::MemberBase*>(mbr.Id()));
+   if (!fm) { // Passed member is not a Reflex::FunctionMember, quit.
+      //fprintf(stderr, "G__method_inbase: %s: invalid function member, skipping ...\n", name);
+      return 0;
+   }
+   G__inheritance* bases = G__struct.baseclass[G__get_tagnum(fm->DeclaringScope())];
+   if (!bases) { // Declaring class has no bases, quit.
+      //fprintf(stderr, "G__method_inbase: %s: class of member has no base classes, done.\n", name);
+      return 0;
+   }
+   for (int i = 0; i < bases->basen; ++i) { // loop over all base classes
+      Reflex::Type base_type = G__Dict::GetDict().GetType(bases->basetagnum[i]);
+      if (!base_type) { // invalid base, skip it
+         //fprintf(stderr, "G__method_inbase: %s: invalid base, skipping ...\n", name);
+         continue;
+      }
+      Reflex::Member base_mbr = G__ifunc_exist(*fm, base_type, true);
+      if (!base_mbr) { // method not found in base, next base
+         //fprintf(stderr, "G__method_inbase: %s: method not in base '%s', next base.\n", name, base_type.Name(Reflex::SCOPED).c_str());
+         continue;
+      }
+      Reflex::FunctionMember* baseFunc = dynamic_cast<Reflex::FunctionMember*>(static_cast<Reflex::MemberBase*>(base_mbr.Id()));
+      if (!baseFunc) { // base member is not a Reflex::FunctionMember, next base
+         //fprintf(stderr, "G__method_inbase: %s: invalid base member function, skipping ...\n", name);
+         continue;
+      }
+      //
+      //  If the number of default parameters is the same in the
+      //  base class version of the method then we have a match.
+      //
+      int base_def_cnt = baseFunc->FunctionParameterSize() - baseFunc->FunctionParameterSize(true);
+      int derived_def_cnt = fm->FunctionParameterSize() - fm->FunctionParameterSize(true);
+      if (base_def_cnt == derived_def_cnt) {
+         //fprintf(stderr, "G__method_inbase: %s: method found in base '%s'.\n", name, base_type.Name(Reflex::SCOPED).c_str());
+         return 1;
+      }
+   }
+   return 0;
+}
+
+//______________________________________________________________________________
 void Cint::Internal::G__cppif_memfunc(FILE* fp, FILE* hfp)
 {
-   // -- FIXME: Describe this function!
+   // -- TODO: Describe this function!
 #ifndef G__SMALLOBJECT
    fprintf(fp, "\n/*********************************************************\n");
    fprintf(fp, "* Member function Interface Method\n");
@@ -2159,7 +2210,7 @@ void Cint::Internal::G__cppif_memfunc(FILE* fp, FILE* hfp)
    for (int i = 0; i < G__struct.alltag; ++i) {
       // -- Loop over all known classes, enums, namespaces, structs and unions.
       // Only generate dictionary info for marked classes.
-      if (
+      if ( // class is marked, and passes nesting test, not an enum, is valid, and we have source info
          (
             (G__struct.globalcomp[i] == G__CPPLINK) || // class is marked for C++ link, or
             (G__struct.globalcomp[i] == G__CLINK) || // class is marked for C link, or
@@ -2171,8 +2222,8 @@ void Cint::Internal::G__cppif_memfunc(FILE* fp, FILE* hfp)
          ) && // and,
          (G__struct.line_number[i] != -1) && // we have a line number for the class declaration (ClassDef macro), and
          G__struct.hash[i] && // the class has a non-empty name, and
-         (G__struct.name[i][0] != '$') && // not a special name, and (FIXME: We probably do not need this anymore!)
-         (G__struct.type[i] != 'e') // not an enum (FIXME: This is wrong, enums are allowed to have member functions!)
+         (G__struct.name[i][0] != '$') && // class is not an unnamed enum
+         (G__struct.type[i] != 'e') // class is not an enum
       ) {
          int isconstructor = 0;
          int iscopyconstructor = 0;
@@ -2186,56 +2237,63 @@ void Cint::Internal::G__cppif_memfunc(FILE* fp, FILE* hfp)
          //
          //  Loop over all of the member functions.
          //
-         for (
+         for ( // loop over all member functions of the class
             ::Reflex::Member_Iterator ifunc = scope.FunctionMember_Begin();
             ifunc != scope.FunctionMember_End();
             ++ifunc
          ) {
-            //  -- Loop over all of the member functions.
-            if (
+            // -- Loop over all of the member functions.
+            //fprintf(stderr, "-----> %s\n", ifunc->Name(Reflex::SCOPED).c_str());
+            if ( // member function is accessible
                G__test_access(*ifunc, G__PUBLIC) || // function is marked public, or
                (
                   G__test_access(*ifunc, G__PROTECTED) && // function is marked protected, and
                   (G__struct.protectedaccess[i] & G__PROTECTEDACCESS) // #pragma link C++ class+protected MyClass;
-               ) ||
+               ) || // or,
                (G__struct.protectedaccess[i] & G__PRIVATEACCESS) // #pragma link C++ class+private MyClass;
             ) {
                // -- Public member function, or selected by pragma on protected or private.
-               if (
+               if ( // only linking explicitly marked methods and not marked, then skip it
                   (G__struct.globalcomp[i] == G__ONLYMETHODLINK) && // linking only explicitly marked functions, and
                   (G__get_funcproperties(*ifunc)->globalcomp != G__METHODLINK) // function is not marked
                ) {
                   // -- Skip this function, we are only linking marked ones, and this one is not marked.
+                  //fprintf(stderr, " -- skipped onlymethodlink\n");
                   continue;
                }
                if (G__get_funcproperties(*ifunc)->entry.size < 0) {
                   // -- Skip this function, it is precompiled.
+                  //fprintf(stderr, " -- skipped negativepentrysize\n");
                   continue;
                }
-               if (ifunc->Name() == G__struct.name[i]) {
+               if (ifunc->Name() == G__struct.name[i]) { // constructor
                   // -- Constructor needs special handling.
                   if (!G__struct.isabstract[i] && !isnonpublicnew) {
+                     //fprintf(stderr, " -- ok, is constructor, or is copy constructor\n");
                      G__cppif_genconstructor(fp, hfp, i, *ifunc);
+                  } else {
+                     //fprintf(stderr, " -- skipped, is constructor, or is copy constructor, abstract class or non-public new\n");
                   }
                   ++isconstructor;
-                  if ((ifunc->FunctionParameterSize() >= 1) && ifunc->IsCopyConstructor()) {
+                  if ((ifunc->FunctionParameterSize() >= 1) && ifunc->IsCopyConstructor()) { // copy constructor
                      ++iscopyconstructor;
                   }
                }
-               else if (ifunc->Name()[0] == '~') {
-                  // -- Destructor is created in gendefault later.
+               else if (ifunc->Name()[0] == '~') { // destructor, skip it, handle it later
+                  // -- The destructor is created in gendefault later.
                   if (G__test_access(*ifunc, G__PUBLIC)) {
                      isdestructor = -1;
                   }
                   else {
                      ++isdestructor;
                   }
+                  //fprintf(stderr, " -- skipped destructor\n");
                   continue;
                }
                else {
                   // -- Normal function, or operator=.
 #ifdef G__DEFAULTASSIGNOPR
-                  if (
+                  if ( // operator=
                      (ifunc->Name() == "operator=") &&
                      (ifunc->TypeOf().FunctionParameterAt(0).RawType() == (::Reflex::Type) scope) &&
                      (G__get_type(ifunc->TypeOf().FunctionParameterAt(0)) == 'u')
@@ -2243,25 +2301,34 @@ void Cint::Internal::G__cppif_memfunc(FILE* fp, FILE* hfp)
                      ++isassignmentoperator;
                   }
 #endif // G__DEFAULTASSIGNOPR
-                  G__cppif_genfunc(fp, hfp, i, *ifunc);
+                  if (ifunc->IsVirtual() && G__method_inbase(*ifunc)) {
+                     //fprintf(stderr, " -- skipped implementedinbase\n");
+                  } else if (!ifunc->IsVirtual()) {
+                     //fprintf(stderr, " -- ok, not virtual\n");
+                     G__cppif_genfunc(fp, hfp, i, *ifunc);
+                  } else {
+                     //fprintf(stderr, " -- ok, virtual and not in base class\n");
+                     G__cppif_genfunc(fp, hfp, i, *ifunc);
+                  }
                }
             }
-            else {
+            else { // member function is not accessible, just accumulate flags
                // -- No access.
-               if (ifunc->Name() == G__struct.name[i]) {
+               //fprintf(stderr, " -- skipped noaccess\n");
+               if (ifunc->Name() == G__struct.name[i]) { // constructor
                   ++isconstructor;
-                  if (ifunc->IsCopyConstructor()) {
+                  if (ifunc->IsCopyConstructor()) { // copy constructor
                      ++iscopyconstructor;
                   }
                }
-               else if (ifunc->Name()[0] == '~') {
+               else if (ifunc->Name()[0] == '~') { // destructor
                   ++isdestructor;
                }
-               else if (ifunc->Name() == "operator new") {
+               else if (ifunc->Name() == "operator new") { // operator new
                   ++isconstructor;
                   ++iscopyconstructor;
                }
-               else if (ifunc->Name() == "operator delete") {
+               else if (ifunc->Name() == "operator delete") { // operator delete
                   ++isdestructor;
                }
 #ifdef G__DEFAULTASSIGNOPR
@@ -2269,7 +2336,7 @@ void Cint::Internal::G__cppif_memfunc(FILE* fp, FILE* hfp)
                   (ifunc->Name() == "operator=") &&
                   (ifunc->TypeOf().FunctionParameterAt(0).RawType() == (::Reflex::Type) scope) &&
                   (G__get_type(ifunc->TypeOf().FunctionParameterAt(0)) == 'u')
-               ) {
+               ) { // operator=
                   ++isassignmentoperator;
                }
 #endif // G__DEFAULTASSIGNOPR
@@ -3152,86 +3219,86 @@ void Cint::Internal::G__cppif_genconstructor(FILE* fp, FILE* /*hfp*/, int tagnum
 }
 
 //______________________________________________________________________________
+#ifndef __CINT__
+static int G__isprivateconstructorifunc(int tagnum, int iscopy);
+static int G__isprivateconstructorifunc(int tagnum, int iscopy);
+static int G__isprivateconstructorclass(int tagnum, int iscopy);
+#endif
+
+//______________________________________________________________________________
 static int G__isprivateconstructorifunc(int tagnum, int iscopy)
 {
    ::Reflex::Scope scope = G__Dict::G__Dict().GetScope(tagnum);
-   for (::Reflex::Member_Iterator ifunc = scope.FunctionMember_Begin();
-         ifunc != scope.FunctionMember_End();
-         ++ifunc) {
-
-      //if(strcmp(G__struct.name[tagnum],ifunc->Name().c_str())==0) {
+   for (
+      ::Reflex::Member_Iterator ifunc = scope.FunctionMember_Begin();
+      ifunc != scope.FunctionMember_End();
+      ++ifunc
+   ) {
       if (ifunc->IsConstructor()) {
-         if (iscopy) { /* Check copy constructor */
+         if (iscopy) { // Check copy constructor
             if (ifunc->IsCopyConstructor() && ifunc->IsPrivate()) {
                return 1;
             }
-            //if((1<=ifunc.FunctionParameterSize()&&'u'==ifunc->para_type[ifn][0]&&
-            //   tagnum==ifunc->para_p_tagtable[ifn][0]) &&
-            //   (1==ifunc.FunctionParameterSize()||ifunc->para_default[ifn][1])
-            //   && G__PRIVATE==ifunc->access[ifn]
-            //) {
-            //   return(1);
-            //}
          }
-         else { /* Check default constructor */
-            if ((0 == ifunc->FunctionParameterSize() || ifunc->FunctionParameterDefaultAt(0).c_str()[0])
-                  && ifunc->IsPrivate()
-               ) {
-               return(1);
+         else { // Check default constructor
+            if (
+               (
+                  !ifunc->FunctionParameterSize() ||
+                  ifunc->FunctionParameterDefaultAt(0).c_str()[0]
+               ) &&
+               ifunc->IsPrivate()
+            ) {
+               return 1;
             }
-            /* Following solution may not be perfect */
+            // Following solution may not be perfect
             if (ifunc->IsCopyConstructor() && ifunc->IsPrivate()) {
                return 1;
-               //if((1<=ifunc.FunctionParameterSize()&&'u'==ifunc->para_type[ifn][0]&&
-               //   tagnum==ifunc->para_p_tagtable[ifn][0]) &&
-               //   (1==ifunc.FunctionParameterSize()||ifunc->para_default[ifn][1])
-               //   &&G__PRIVATE==ifunc->access[ifn]
-               //) {
-               //   return(1);
             }
          }
       }
-      else if (strcmp("operator new", ifunc->Name().c_str()) == 0) {
-         if (ifunc->IsPrivate() || ifunc->IsProtected())
-            return(1);
+      else if (!strcmp("operator new", ifunc->Name().c_str())) {
+         if (ifunc->IsPrivate() || ifunc->IsProtected()) {
+            return 1;
+         }
       }
    }
-   return(0);
+   return 0;
 }
-
-//______________________________________________________________________________
-#ifndef __CINT__
-static int G__isprivateconstructorclass(int tagnum, int iscopy);
-static int G__isprivateconstructorclass(const ::Reflex::Type& tagnum, int iscopy);
-#endif
 
 //______________________________________________________________________________
 static int G__isprivateconstructorvar(int tagnum, int iscopy)
 {
    // -- Check if private constructor exists in this particular class.
    ::Reflex::Scope scope = G__Dict::G__Dict().GetScope(tagnum);
-   for (::Reflex::Member_Iterator var = scope.DataMember_Begin();
-         var != scope.DataMember_End();
-         ++var) {
-      if (var->TypeOf().FinalType().IsClass()
-          && var->TypeOf().FinalType() != scope
-          && !var->TypeOf().FinalType().IsReference() // this is probably redundant
-
-            //if('u'==var->type[ig15] && -1!=(memtagnum=var->p_tagtable[ig15]) &&
-            //   'e'!=G__struct.type[memtagnum]
-            //   && memtagnum!=tagnum
-         ) {
-         if (G__isprivateconstructorclass(var->TypeOf().FinalType(), iscopy)) return(1);
+   for (
+      ::Reflex::Member_Iterator var = scope.DataMember_Begin();
+      var != scope.DataMember_End();
+      ++var
+   ) {
+      ::Reflex::Type var_type = var->TypeOf();
+      ::Reflex::Type var_rawtype = var_type.RawType();
+      if (
+         (G__get_type(var_type) == 'u') && // Note: This means we do not follow pointers.
+         var_rawtype &&
+         !var_rawtype.IsEnum() &&
+         (var_rawtype != scope) &&
+         !var_type.FinalType().IsReference()
+      ) {
+         int tagnum = G__get_tagnum(var_rawtype);
+         if (G__isprivateconstructorclass(tagnum, iscopy)) {
+            return 1;
+         }
       }
    }
-   return(0);
+   return 0;
 }
 
 //______________________________________________________________________________
 static int G__isprivateconstructorclass(int tagnum, int iscopy)
 {
    // -- Check if private constructor exists in this particular class.
-   int t, f;
+   int t = 0;
+   int f = 0;
    if (iscopy) {
       t = G__CTORDTOR_PRIVATECOPYCTOR;
       f = G__CTORDTOR_NOPRIVATECOPYCTOR;
@@ -3240,183 +3307,173 @@ static int G__isprivateconstructorclass(int tagnum, int iscopy)
       t = G__CTORDTOR_PRIVATECTOR;
       f = G__CTORDTOR_NOPRIVATECTOR;
    }
-   if (G__ctordtor_status[tagnum]&t) return(1);
-   if (G__ctordtor_status[tagnum]&f) return(0);
-   if (G__isprivateconstructorifunc(tagnum, iscopy) ||
-         G__isprivateconstructor(tagnum, iscopy)
-      ) {
+   if (G__ctordtor_status[tagnum] & t) {
+      return 1;
+   }
+   if (G__ctordtor_status[tagnum] & f) {
+      return 0;
+   }
+   if (G__isprivateconstructorifunc(tagnum, iscopy) || G__isprivateconstructor(tagnum, iscopy)) {
       G__ctordtor_status[tagnum] |= t;
-      return(1);
+      return 1;
    }
    G__ctordtor_status[tagnum] |= f;
-   return(0);
-}
-
-//______________________________________________________________________________
-static int G__isprivateconstructorclass(const ::Reflex::Type& tagnum, int iscopy)
-{
-   return G__isprivateconstructorclass(G__get_tagnum(tagnum), iscopy);
+   return 0;
 }
 
 //______________________________________________________________________________
 int Cint::Internal::G__isprivateconstructor(int tagnum, int iscopy)
 {
    // -- Check if private constructor exists in base class or class of member obj.
-   int basen;
-   int basetagnum;
-   struct G__inheritance *baseclass;
-   baseclass = G__struct.baseclass[tagnum];
-   /* Check base class private constructor */
-   for (basen = 0;basen < baseclass->basen;basen++) {
-      basetagnum = baseclass->basetagnum[basen];
-      if (G__isprivateconstructorclass(basetagnum, iscopy)) return(1);
-   }
-   /* Check Data member object */
-   if (G__isprivateconstructorvar(tagnum, iscopy)) return(1);
-   return(0);
-}
-
-//______________________________________________________________________________
-static int G__isprivatedestructorifunc(int tagnum)
-{
-   char *dtorname = (char*)malloc(strlen(G__struct.name[tagnum]) + 2);
-   dtorname[0] = '~';
-   strcpy(dtorname + 1, G__struct.name[tagnum]);
-
-   ::Reflex::Scope scope = G__Dict::G__Dict().GetScope(tagnum);
-   for (::Reflex::Member_Iterator ifunc = scope.FunctionMember_Begin();
-         ifunc != scope.FunctionMember_End();
-         ++ifunc) {
-      if (ifunc->IsDestructor() || strcmp(dtorname, ifunc->Name().c_str()) == 0) {
-         if (ifunc->IsPrivate()) {
-            free((void*)dtorname);
-            return(1);
-         }
-      }
-      else if (strcmp("operator delete", ifunc->Name().c_str()) == 0) {
-         if (ifunc->IsPrivate() || ifunc->IsProtected()) {
-            free((void*)dtorname);
-            return(1);
-         }
+   // Check base class private constructor
+   struct G__inheritance* baseclass = G__struct.baseclass[tagnum];
+   for (int basen = 0; basen < baseclass->basen; ++basen) {
+      int basetagnum = baseclass->basetagnum[basen];
+      if (G__isprivateconstructorclass(basetagnum, iscopy)) {
+         return 1;
       }
    }
-   free((void*)dtorname);
-   return(0);
+   // Check Data member object
+   if (G__isprivateconstructorvar(tagnum, iscopy)) {
+      return 1;
+   }
+   return 0;
 }
 
 //______________________________________________________________________________
 #ifndef __CINT__
-static int G__isprivatedestructorclass(const ::Reflex::Type& tagnum);
-static int G__isprivatedestructor(const ::Reflex::Type& tagnum);
 static int G__isprivatedestructorclass(int tagnum);
 static int G__isprivatedestructor(int tagnum);
 #endif
+
+//______________________________________________________________________________
+static int G__isprivatedestructorifunc(int tagnum)
+{
+   int ret = 0;
+   char* dtorname = (char*) malloc(strlen(G__struct.name[tagnum]) + 2);
+   dtorname[0] = '~';
+   strcpy(dtorname + 1, G__struct.name[tagnum]);
+   ::Reflex::Scope scope = G__Dict::G__Dict().GetScope(tagnum);
+   for (
+      ::Reflex::Member_Iterator ifunc = scope.FunctionMember_Begin();
+      ifunc != scope.FunctionMember_End();
+      ++ifunc
+   ) {
+      if (ifunc->IsDestructor() || !strcmp(dtorname, ifunc->Name().c_str())) {
+         if (ifunc->IsPrivate()) {
+            ret = 1;
+            break;
+         }
+      }
+      else if (!strcmp("operator delete", ifunc->Name().c_str())) {
+         if (ifunc->IsPrivate() || ifunc->IsProtected()) {
+            ret = 1;
+            break;
+         }
+      }
+   }
+   free(dtorname);
+   return ret;
+}
 
 //______________________________________________________________________________
 static int G__isprivatedestructorvar(int tagnum)
 {
    // -- Check if private destructor exists in this particular class.
    ::Reflex::Scope scope = G__Dict::G__Dict().GetScope(tagnum);
-   for (::Reflex::Member_Iterator var = scope.DataMember_Begin();
-         var != scope.DataMember_End();
-         ++var) {
-      Reflex::Type vartype( var->TypeOf().FinalType() );
-      if (vartype.IsClass()
-          && !vartype.IsReference() // this is probably redundant
-          
-            //if('u'==var->type[ig15] && -1!=(memtagnum=var->p_tagtable[ig15]) &&
-            //   'e'!=G__struct.type[memtagnum]
-            //   && memtagnum!=tagnum
-         ) {
-         if (G__isprivatedestructorclass(var->TypeOf().FinalType())) return(1);
+   for (
+      ::Reflex::Member_Iterator var = scope.DataMember_Begin();
+      var != scope.DataMember_End();
+      ++var
+   ) {
+      ::Reflex::Type var_type = var->TypeOf();
+      ::Reflex::Type var_rawtype = var_type.RawType();
+      if (
+         (G__get_type(var_type) == 'u') && // Note: This means we do not follow pointers.
+         var_rawtype &&
+         !var_rawtype.IsEnum() &&
+         (var_rawtype != scope) &&
+         !var_type.FinalType().IsReference()
+      ) {
+         int tagnum = G__get_tagnum(var_rawtype);
+         if (G__isprivatedestructorclass(tagnum)) {
+            return 1;
+         }
       }
    }
-   return(0);
+   return 0;
 }
 
 //______________________________________________________________________________
 static int G__isprivatedestructorclass(int tagnum)
 {
    // -- Check if private destructor exists in this particular class.
-   int t, f;
-   t = G__CTORDTOR_PRIVATEDTOR;
-   f = G__CTORDTOR_NOPRIVATEDTOR;
-   if (G__ctordtor_status[tagnum]&t) return(1);
-   if (G__ctordtor_status[tagnum]&f) return(0);
-   if (G__isprivatedestructorifunc(tagnum) ||
-         G__isprivatedestructor(tagnum)
-      ) {
+   int t = G__CTORDTOR_PRIVATEDTOR;
+   int f = G__CTORDTOR_NOPRIVATEDTOR;
+   if (G__ctordtor_status[tagnum] & t) {
+      return 1;
+   }
+   if (G__ctordtor_status[tagnum] & f) {
+      return 0;
+   }
+   if (G__isprivatedestructorifunc(tagnum) || G__isprivatedestructor(tagnum)) {
       G__ctordtor_status[tagnum] |= t;
-      return(1);
+      return 1;
    }
    G__ctordtor_status[tagnum] |= f;
-   return(0);
-}
-
-//______________________________________________________________________________
-static int G__isprivatedestructorclass(const ::Reflex::Type& tagnum)
-{
-   return G__isprivatedestructorclass(G__get_tagnum(tagnum));
+   return 0;
 }
 
 //______________________________________________________________________________
 static int G__isprivatedestructor(int tagnum)
 {
    // -- Check if private destructor exists in base class or class of member obj.
-   int basen;
-   int basetagnum;
-   struct G__inheritance *baseclass;
-
-   baseclass = G__struct.baseclass[tagnum];
-
-   /* Check base class private destructor */
-   for (basen = 0;basen < baseclass->basen;basen++) {
-      basetagnum = baseclass->basetagnum[basen];
+   // Check base class private destructor
+   struct G__inheritance* baseclass = G__struct.baseclass[tagnum];
+   for (int basen = 0; basen < baseclass->basen; ++basen) {
+      int basetagnum = baseclass->basetagnum[basen];
       if (G__isprivatedestructorclass(basetagnum)) {
-         return(1);
+         return 1;
       }
    }
-
-   /* Check Data member object */
-   if (G__isprivatedestructorvar(tagnum)) return(1);
-
-   return(0);
+   // Check Data member object
+   if (G__isprivatedestructorvar(tagnum)) {
+      return 1;
+   }
+   return 0;
 }
 
 //______________________________________________________________________________
-static int G__isprivatedestructor(const ::Reflex::Type& tagnum)
-{
-   return G__isprivatedestructor(G__get_tagnum(tagnum));
-}
+#ifdef G__DEFAULTASSIGNOPR
+#ifndef __CINT__
+static int G__isprivateassignoprifunc(const ::Reflex::Type& scope);
+static int G__isprivateassignoprclass(int tagnum);
+static int G__isprivateassignopr(int tagnum);
+#endif // __CINT__
+#endif // G__DEFAULTASSIGNOPR
 
 #ifdef G__DEFAULTASSIGNOPR
 //______________________________________________________________________________
 static int G__isprivateassignoprifunc(const ::Reflex::Type& scope)
 {
-   for (::Reflex::Member_Iterator ifunc = scope.FunctionMember_Begin();
-         ifunc != scope.FunctionMember_End();
-         ++ifunc) {
-      if (strcmp("operator=", ifunc->Name().c_str()) == 0) {
-         if ((ifunc->IsPrivate() || ifunc->IsProtected())
-               && ifunc->TypeOf().FunctionParameterAt(0).IsClass()
-               && ifunc->TypeOf().FunctionParameterAt(0).RawType() == scope
-               //   && 'u'==ifunc->para_type[ifn][0]
-               //&& tagnum==ifunc->para_p_tagtable[ifn][0]
-            ) {
-            return(1);
+   for (
+      ::Reflex::Member_Iterator ifunc = scope.FunctionMember_Begin();
+      ifunc != scope.FunctionMember_End();
+      ++ifunc
+   ) {
+      if (!strcmp("operator=", ifunc->Name().c_str())) {
+         ::Reflex::Type func_type = ifunc->TypeOf();
+         if (
+            (ifunc->IsPrivate() || ifunc->IsProtected()) &&
+            func_type.FunctionParameterAt(0).RawType().IsClass() &&
+            (func_type.FunctionParameterAt(0).RawType() == scope)
+         ) {
+            return 1;
          }
       }
    }
-   return(0);
+   return 0;
 }
-#endif // G__DEFAULTASSIGNOPR
-
-//______________________________________________________________________________
-#ifdef G__DEFAULTASSIGNOPR
-#ifndef __CINT__
-static int G__isprivateassignoprclass(int tagnum);
-static int G__isprivateassignopr(int tagnum);
-#endif // __CINT__
 #endif // G__DEFAULTASSIGNOPR
 
 #ifdef G__DEFAULTASSIGNOPR
@@ -3425,27 +3482,33 @@ static int G__isprivateassignoprvar(int tagnum)
 {
    // -- Check if private assignopr exists in this particular class.
    ::Reflex::Scope scope = G__Dict::G__Dict().GetScope(tagnum);
-   for (::Reflex::Member_Iterator var = scope.DataMember_Begin();
-         var != scope.DataMember_End();
-         ++var) {
-      if (var->TypeOf().FinalType().IsClass()
-          && var->TypeOf().FinalType() != scope
-          && !var->TypeOf().FinalType().IsReference() // this is probably redundant
-            //if('u'==var->type[ig15] && -1!=(memtagnum=var->p_tagtable[ig15]) &&
-            //   'e'!=G__struct.type[memtagnum]
-            //   && memtagnum!=tagnum
-         ) {
-         if (G__isprivateassignoprclass(G__get_tagnum(var->TypeOf().FinalType().RawType()))) return(1);
+   for (
+      ::Reflex::Member_Iterator var = scope.DataMember_Begin();
+      var != scope.DataMember_End();
+      ++var
+   ) {
+      ::Reflex::Type var_type = var->TypeOf();
+      ::Reflex::Type var_rawtype = var_type.RawType();
+      ::Reflex::Type var_finaltype = var_type.FinalType();
+      if (
+         (G__get_type(var_type) == 'u') && // Note: This means we do not follow pointers.
+         var_rawtype &&
+         !var_rawtype.IsEnum() &&
+         (var_rawtype != scope) &&
+         !var_finaltype.IsReference()
+      ) {
+         if (G__isprivateassignoprclass(G__get_tagnum(var_rawtype))) {
+            return 1;
+         }
       }
-      if (var->TypeOf().FinalType().IsReference()
-            && !var->IsStatic()) {
-         return(1);
+      if (var_finaltype.IsReference() && !var->IsStatic()) {
+         return 1;
       }
-      if (var->IsConst() && !var->IsStatic()) {
-         return(1);
+      if (var_finaltype.IsConst() && !var->IsStatic()) {
+         return 1;
       }
    }
-   return(0);
+   return 0;
 }
 #endif // G__DEFAULTASSIGNOPR
 
@@ -3454,18 +3517,21 @@ static int G__isprivateassignoprvar(int tagnum)
 static int G__isprivateassignoprclass(int tagnum)
 {
    // -- Check if private assignopr exists in this particular class.
-   int t, f;
-   t = G__CTORDTOR_PRIVATEASSIGN;
-   f = G__CTORDTOR_NOPRIVATEASSIGN;
-   if (G__ctordtor_status[tagnum]&t) return(1);
-   if (G__ctordtor_status[tagnum]&f) return(0);
+   int t = G__CTORDTOR_PRIVATEASSIGN;
+   int f = G__CTORDTOR_NOPRIVATEASSIGN;
+   if (G__ctordtor_status[tagnum] & t) {
+      return 1;
+   }
+   if (G__ctordtor_status[tagnum] & f) {
+      return 0;
+   }
    ::Reflex::Type type(G__Dict::GetDict().GetType(tagnum));
    if (G__isprivateassignoprifunc(type) || G__isprivateassignopr(tagnum)) {
       G__ctordtor_status[tagnum] |= t;
-      return(1);
+      return 1;
    }
    G__ctordtor_status[tagnum] |= f;
-   return(0);
+   return 0;
 }
 #endif // G__DEFAULTASSIGNOPR
 
@@ -3474,24 +3540,19 @@ static int G__isprivateassignoprclass(int tagnum)
 static int G__isprivateassignopr(int tagnum)
 {
    // -- Check if private assignopr exists in base class or class of member obj.
-   int basen;
-   int basetagnum;
-   struct G__inheritance *baseclass;
-
-   baseclass = G__struct.baseclass[tagnum];
-
-   /* Check base class private assignopr */
-   for (basen = 0;basen < baseclass->basen;basen++) {
-      basetagnum = baseclass->basetagnum[basen];
+   // Check base class private assignopr
+   struct G__inheritance* baseclass = G__struct.baseclass[tagnum];
+   for (int basen = 0; basen < baseclass->basen; ++basen) {
+      int basetagnum = baseclass->basetagnum[basen];
       if (G__isprivateassignoprclass(basetagnum)) {
-         return(1);
+         return 1;
       }
    }
-
-   /* Check Data member object */
-   if (G__isprivateassignoprvar(tagnum)) return(1);
-
-   return(0);
+   // Check Data member object
+   if (G__isprivateassignoprvar(tagnum)) {
+      return 1;
+   }
+   return 0;
 }
 #endif // G__DEFAULTASSIGNOPR
 
@@ -3851,61 +3912,6 @@ void Cint::Internal::G__cppif_gendefault(FILE* fp, FILE* /*hfp*/, int tagnum, in
 #endif // G__SMALLOBJECT
    // --
 }
-//G__method_inbase()
-//This function search for the method ifn (index in ifunc) in the ifunc->tagnum's
-//base classes
-//RETURN -> NULL Method not found
-//          NOT NULL Method Found. Method's ifunc table pointer
-static int G__method_inbase(const Reflex::Member &ifunc)
-{
-
-   // tagnum's Base Classes structure
-   int numerical_tagnum = G__get_tagnum(ifunc.DeclaringScope());
-   G__inheritance* cbases = G__struct.baseclass[numerical_tagnum];
-
-   // If there are still base classes
-   if (cbases){
-
-     // Go through the base tagnums (tagnum = index in G__struct structure)
-     for (int idx=0; idx < cbases->basen; ++idx){
-
-        // Current tagnum
-        int basetagnum=cbases->basetagnum[idx];
-
-        // Current tagnum's ifunc table
-        Reflex::Type basetype = G__Dict::GetDict().GetType(basetagnum);
-
-        // Continue if there are still ifuncs and the method 'ifn' is not found yet
-        if (basetype){
-
-           // Does the Method 'ifn' (in ifunc) exist in the current ifunct?
-           Reflex::Member baseFunc = G__ifunc_exist(ifunc, basetype, 0xffff);
-
-           //If the number of default parameters numbers is different between the base and the derived
-           //class we generate the stub
-           if (baseFunc){
-              int derived_def_n = -1;
-
-              // Counting derived class default parameters
-              int end = ifunc.FunctionParameterSize(true);
-              for(int i = ifunc.FunctionParameterSize() - 1; i >= end; --i) {
-                 if (ifunc.FunctionParameterDefaultAt(i).c_str()[0])
-                    derived_def_n = i;
-                 else break;
-
-                 //Counting base class default parameters
-                 if (derived_def_n != -1
-                    && !baseFunc.FunctionParameterDefaultAt(i).c_str()[0])
-                    return 0;
-                 return 1;
-              }
-           }
-        }
-     }
-   }
-
-   return 0;
-}
 
 //______________________________________________________________________________
 void Cint::Internal::G__cppif_genfunc(FILE* fp, FILE* /*hfp*/, int tagnum, const ::Reflex::Member& ifunc)
@@ -3913,13 +3919,6 @@ void Cint::Internal::G__cppif_genfunc(FILE* fp, FILE* /*hfp*/, int tagnum, const
    // -- Output the stub for a function.
    //
 #ifndef G__SMALLOBJECT
-   //
-   // If the virtual method 'ifn' (in ifunc) exists in any Base Clase then we have
-   // an overridden virtual method,so the stub function for it is not generated
-   //
-   if (ifunc.IsVirtual() && G__method_inbase(ifunc)) {
-      return;
-   }
    int k = 0;
    int m = 0;
 #ifndef G__OLDIMPLEMENTATION1823

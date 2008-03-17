@@ -293,8 +293,8 @@ G__SIGNEDCHAR_T Cint::Internal::G__get_isconst(const ::Reflex::Type& in)
    // -- Is data type const qualified?
    ::Reflex::Type current = in; // .FinalType(); is currently buggy
    bool seen_first_pointer = false;
-   bool last_const = 0;
-   char isconst = 0;
+   bool last_const = false;
+   char isconst = '\0';
    do {
       if ((current.IsPointer() || current.IsReference())) {
          if (!seen_first_pointer) {
@@ -1361,249 +1361,39 @@ G__funcentry &G__funcentry::copy(const G__funcentry &orig)
 }
 
 //______________________________________________________________________________
-::Reflex::Member Cint::Internal::G__BuilderInfo::Build(const std::string &name) {
-   /****************************************************************
-   * if same function already exists       copy entry
-   * else if body exists or ansi header    increment ifunc
-   ****************************************************************/
+Cint::Internal::G__BuilderInfo::G__BuilderInfo()
+: baseoffset(0)
+, access(G__PUBLIC)
+, isconst(0)
+, isexplicit(0)
+, staticalloc(0)
+, isvirtual(-1)
+, ispurevirtual(0)
+{
+   // -- Used by: v6_newlink.cxx(G__memfunc_setup), and v6_ifunc.cxx(G__make_ifunctable).
+}
 
-   int modifiers = 0;
-
-   if (isconst) modifiers |= ::Reflex::CONST;
-
-   if (isexplicit) modifiers |= ::Reflex::EXPLICIT;
-   if (staticalloc) modifiers |= ::Reflex::STATIC;
-   if (isvirtual) modifiers |= ::Reflex::VIRTUAL;
-   if (ispurevirtual) modifiers |= ::Reflex::ABSTRACT;
-   //switch(access) {
-   //               case G__PUBLIC:    modifiers |= ::Reflex::PUBLIC; break;
-   //               case G__PROTECTED: modifiers |= ::Reflex::PROTECTED; break;
-   //               case G__PRIVATE:   modifiers |= ::Reflex::PRIVATE; break;
-   //};
-
-   ::Reflex::Type ftype = 
-      Reflex::FunctionTypeBuilder( returnType, params_type, typeid(::Reflex::UnknownType) );
-
-   ::Reflex::Type modftype( ::Reflex::Type( ftype, modifiers) );
-
-   unsigned int modifiers_mask = ::Reflex::PUBLIC | ::Reflex::PROTECTED | ::Reflex::PRIVATE | ::Reflex::EXPLICIT | ::Reflex::STATIC | ::Reflex::VIRTUAL | ::Reflex::ABSTRACT | ::Reflex::CONSTRUCTOR | ::Reflex::DESTRUCTOR | ::Reflex::COPYCONSTRUCTOR;
-   ::Reflex::Member m(G__p_ifunc.FunctionMemberByName(name, modftype, modifiers_mask));
-
-   if(isvirtual==0 && !m && G__tagdefining && !G__tagdefining.IsTopScope()) {
-      /***********************************************************************
-      * If this is a non-pure virtual member function declaration, decrement
-      * isabstract flag in G__struct.
-      ***********************************************************************/
-      // We might be virtual because one the base class declare this
-      // 'function' virtual.
-      isvirtual = 0;
-#ifdef G__NEWINHERIT
-      struct G__inheritance *baseclass = G__struct.baseclass[G__get_tagnum(G__tagdefining)];
-      for(int basen=0;basen<baseclass->basen;basen++) {
-         G__incsetup_memfunc(baseclass->basetagnum[basen]);
-         ::Reflex::Scope scope( G__Dict::GetDict().GetScope(baseclass->basetagnum[basen] ));
-         ::Reflex::Member parent_m( scope.FunctionMemberByName(name, modftype, modifiers_mask) );
-
-         if (parent_m) {
-            if (parent_m.IsAbstract() &&
-               G__struct.isabstract[G__get_tagnum(G__tagdefining)]) 
-            {
-               --G__struct.isabstract[G__get_tagnum(G__tagdefining)];
-            }
-            if (parent_m.IsVirtual())
-            {
-               isvirtual = 1;
-            }
-            break; /* revived by Scott Snyder */
-         }
+//______________________________________________________________________________
+std::string Cint::Internal::G__BuilderInfo::GetParamNames()
+{
+   // -- Internal, called only by G__BuilderInfo::Build().
+   std::string result;
+   for (names_t::const_iterator iter = params_name.begin(); iter != params_name.end(); ++iter) {
+      if (iter != params_name.begin()) {
+         result += ";";
       }
-#endif
-   }
-
-   if(G__ifile.filenum>=G__nfile) {
-      G__fprinterr(G__serr,"Limitation: Function can not be defined in a command line or a tempfile\n");
-      G__genericerror("You need to write it in a source file");
-   } else {
-      if (m) {
-#ifdef G__FRIEND
-         if(prop.entry.friendtag) {
-            struct G__friendtag *friendtag;
-            if(G__get_funcproperties(m)->entry.friendtag) {
-               friendtag = G__get_funcproperties(m)->entry.friendtag;
-               while(friendtag->next) friendtag = friendtag->next;
-               friendtag->next = prop.entry.friendtag;
-            }
-            else {
-               G__get_funcproperties(m)->entry.friendtag = prop.entry.friendtag;
-            }
-            prop.entry.friendtag = 0;
-         }
-#endif
-         // The old code was doing:
-         // Warn if the default parameter are being redefined
-         // Import ansi, explicit, return type, param char type and ref, 
-         // If there is a function body, change the parameter name
-         // otherwise leave them as is.
-         // Import concreteness (aka remove pure virtual)
-         // Copy the 'entry' fields.
-         // Avoid double counting pure virtual function
-
-         if(
-            ((FILE*)prop.entry.p!=(FILE*)NULL)
-            /* C++ precompiled member function must not be overridden  */
-            && (0==G__def_struct_member || 
-            G__CPPLINK!=G__struct.iscpplink[G__get_tagnum(G__def_tagnum)])
-            ) 
-         {
-            // Should we issue an error for one of the following condition?
-            // if (!m.IsExplicit() && isexplicit) 
-            // if (m.IsAbstract() != !ispurevirtual)
-            // if (m.IsConst() != isconst)
-
-            if (ispurevirtual & !m.IsAbstract())
-            {
-               if(G__tagdefining) --G__struct.isabstract[G__get_tagnum(G__tagdefining)];
-            }
-
-            struct G__friendtag *prev_friendtag = G__get_funcproperties(m)->entry.friendtag;
-            G__get_funcproperties(m)->entry.friendtag = 0;
-
-            std::vector<G__value*> prev_para_default = G__get_funcproperties(m)->entry.para_default;
-            G__get_funcproperties(m)->entry.para_default.clear();
-
-            G__get_funcproperties(m)->entry = prop.entry;
-            G__get_funcproperties(m)->entry.friendtag = prev_friendtag;
-            G__get_funcproperties(m)->entry.para_default = prev_para_default;
-
-#ifndef GNUC
-#pragma message(FIXME("tp2f need to move from char* to be an opaque member::Id"))
-#endif
-            G__get_funcproperties(m)->entry.for_tp2f = m.Name();
-            G__get_funcproperties(m)->entry.tp2f = (void*)G__get_funcproperties(m)->entry.for_tp2f.c_str();
-
-            for( unsigned int i=0; i<params_name.size();++i) {
-               if (params_name[i].second.size() != 0 ) {
-                  G__genericerror("Error: Redefinition of default argument");
-               }
-            }
-
-            //m.UpdateFunctionParameterNames( GetParamNames().c_str() );
-
-         }   /* of if(builder.prop.entry.p) */
-         else {
-            if(1==ispurevirtual) {
-               if(G__tagdefining) --G__struct.isabstract[G__get_tagnum(G__tagdefining)];
-            }
-         }
-
-         G__func_now = m;
-
-      } else if((prop.entry.p || prop.entry.ansi ||
-         G__nonansi_func || 
-         G__globalcomp<G__NOLINK || prop.entry.friendtag)
-         /* This block is skipped only when compicated template 
-         * instantiation is done during reading argument list 
-         * 'f(vector<int> &x) { }' */
-         /* with 1706, do not skip this block with template instantiation
-         * in function argument. Do not know exactly why... */
-         //            && (store_ifunc_tmp==G__p_ifunc && func_now==G__p_ifunc->allifunc) 
-#ifndef G__OLDIMPLEMENTATION2027
-         //               && '~'!=name.c_str()[0]
-#endif
-         ) {
-
-            int modifiers = 0;
-
-            if (isconst) modifiers |= ::Reflex::CONST;
-
-            if (isexplicit) modifiers |= ::Reflex::EXPLICIT;
-            if (staticalloc) modifiers |= ::Reflex::STATIC;
-            if (isvirtual) modifiers |= ::Reflex::VIRTUAL;
-            if (ispurevirtual) modifiers |= ::Reflex::ABSTRACT;
-            switch(access) {
-                  case G__PUBLIC:    modifiers |= ::Reflex::PUBLIC; break;
-                  case G__PROTECTED: modifiers |= ::Reflex::PROTECTED; break;
-                  case G__PRIVATE:   modifiers |= ::Reflex::PRIVATE; break;
-            };
-
-
-            switch( G__get_tagtype( G__p_ifunc ) ) {
-                  case 'c':
-                  case 's':
-                     // Mark as a Constructor or Desructor
-                     if (name[0]=='~') {
-                        modifiers |= ::Reflex::DESTRUCTOR;
-                     } else {
-                        if (name == G__p_ifunc.Name()) { // Is this correct for templated classes?
-                           modifiers |= ::Reflex::CONSTRUCTOR;
-                           if (ftype.FunctionParameterSize()==1) {
-                              // Get the type without any modifiers (aka Reference and Const)
-                              // and any typedefs.
-                              Reflex::Type argtype( ftype.FunctionParameterAt(0).FinalType().ToTypeBase()->ThisType() );
-                              if ( argtype == (Reflex::Type)(G__p_ifunc) ) {
-                                 modifiers |= ::Reflex::COPYCONSTRUCTOR;
-                              }
-                           }
-                        }
-                     }
-                     G__get_properties(G__p_ifunc)->builder.Class().AddFunctionMember(ftype, name.c_str(), 0 /* stubFP */,
-                        0 /* stubCtx */, GetParamNames().c_str(), modifiers);
-                     {
-                        modftype = ( ::Reflex::Type( ftype, modifiers) );
-                        m = G__p_ifunc.FunctionMemberByName(name, modftype, modifiers_mask);
-                     }
-                     break;
-                  case 'n':
-                     {
-                        std::string fullname = G__p_ifunc.Name(::Reflex::SCOPED);
-                        if (fullname.size()) fullname += "::";
-                        fullname += name;
-                        ::Reflex::FunctionBuilder funcBuilder(ftype, fullname.c_str(), 0 /* stubFP */,
-                           0 /* stubCtx */, GetParamNames().c_str(), modifiers);
-                        m = (funcBuilder.ToMember());
-                        break;
-                     }
-                  case 'u':
-                     G__genericerror("Union member function are not yet support by Reflex");
-                     //G__get_properties(G__p_ifunc)->builder.Union().AddFunctionMember(ftype, name.c_str(), 0 /* stubFP */,
-                     //   0 /* stubCtx */, GetParamNames().c_str(), modifiers);
-                     // m = G__p_ifunc.FunctionMemberByName(name, ftype);
-                     break;
-                  default:
-                     // Assume this means we want it in the global namespace
-                     ::Reflex::FunctionBuilder funcBuilder(ftype, name.c_str(), 0 /* stubFP */,
-                        0 /* stubCtx */, GetParamNames().c_str(), modifiers);
-                     m = (funcBuilder.ToMember());
-
-                     //int tag = G__get_tagtype( G__p_ifunc ) ;
-                     //fprintf(stderr,"value=%d\n",tag);
-                     //G__genericerror("Attempt to add a function to something that does not appear to be a scope");
-            }
-            //::Reflex::FunctionBuilder funcBuilder(ftype, fullname.c_str(), 0 /* stubFP */,
-            //   0 /* stubCtx */, GetParamNames().c_str(), modifiers);
-            //m = (funcBuilder.ToMember());
-
-            if (m) {
-               G__RflxFuncProperties * a = G__get_funcproperties(m);
-               *a = prop; // prop;
-               a->entry.para_default = default_vals;
-               if (a->entry.tp2f == 0) {
-                  a->entry.for_tp2f = m.Name();
-                  a->entry.tp2f = (void*)a->entry.for_tp2f.c_str();
-               }
-            } else {
-               fprintf(stderr,"something went creating entry for %s\n",name.c_str());
-               G__dumpreflex_function(G__p_ifunc,1);
-            }
+      result += iter->first;
+      if (iter->second.length()) {
+         result += "=" + iter->second;
       }
    }
-
-   return m;
+   return result;
 }
 
 //______________________________________________________________________________
 void Cint::Internal::G__BuilderInfo::ParseParameterLink(const char* paras)
 {
+   // -- Dictionary Interface, called by v6_newlink.cxx(G__memfunc_setup).
    int type;
    int tagnum;
    int reftype_const;
@@ -1616,12 +1406,9 @@ void Cint::Internal::G__BuilderInfo::ParseParameterLink(const char* paras)
    char c_default[G__MAXNAME*2];
    char c_paraname[G__MAXNAME*2];
    int os = 0;
-
    int store_loadingDLL = G__loadingDLL;
    G__loadingDLL = 1;
-
    int store_var_type = G__var_type;
-
    char ch = paras[0];
    for (int ifn = 0; ch != '\0'; ++ifn) {
       G__separate_parameter(paras, &os, c_type);
@@ -1680,7 +1467,7 @@ void Cint::Internal::G__BuilderInfo::ParseParameterLink(const char* paras)
          c_default[0] = '\0';
       }
       else {
-         para_default = (G__value*) -1;
+         para_default = (G__value*) - 1;
       }
       ch = G__separate_parameter(paras, &os, c_paraname);
       if (c_paraname[0] == '-') {
@@ -1693,11 +1480,9 @@ void Cint::Internal::G__BuilderInfo::ParseParameterLink(const char* paras)
 }
 
 //______________________________________________________________________________
-void Cint::Internal::G__BuilderInfo::AddParameter(int ifn,int type,int numerical_tagnum
-                                              ,int numerical_typenum
-                                              ,int reftype_const,G__value *para_default
-                                              ,char *para_def,char *para_name)
+void Cint::Internal::G__BuilderInfo::AddParameter(int ifn, int type, int numerical_tagnum, int numerical_typenum, int reftype_const, G__value* para_default, char* para_def, char* para_name)
 {
+   // -- Internal, called only by G__BuilderInfo::ParseParameterLink().
    ::Reflex::Type paramType;
    ::Reflex::Type tagnum = G__Dict::GetDict().GetScope(numerical_tagnum);
    ::Reflex::Type typenum = G__Dict::GetDict().GetTypedef(numerical_typenum);
@@ -1707,18 +1492,308 @@ void Cint::Internal::G__BuilderInfo::AddParameter(int ifn,int type,int numerical
       }
       if (isupper(type)) paramType = ::Reflex::PointerBuilder(tagnum);
       else paramType = tagnum;
-   } else if ((type=='Y' || type=='1') && typenum) {
+   }
+   else if ((type == 'Y' || type == '1') && typenum) {
       // (void*); since this is used of emulation of typedef to function
       // let's make sure to get the typedef name
       paramType = typenum;
-   } else {
-      paramType = G__get_from_type(type,1);
    }
-   int isconst = (reftype_const/10)%10;
-   int reftype = reftype_const-(reftype_const/10%10*10);
-   paramType = G__modify_type(paramType,0,reftype,isconst,0,0);
+   else {
+      paramType = G__get_from_type(type, 1);
+   }
+   int isconst = (reftype_const / 10) % 10;
+   int reftype = reftype_const - (reftype_const / 10 % 10 * 10);
+   paramType = G__modify_type(paramType, 0, reftype, isconst, 0, 0);
    params_type.push_back(paramType);
    default_vals.push_back(para_default);
-   params_name.push_back( std::make_pair(para_name,para_def) );
+   params_name.push_back(std::make_pair(para_name, para_def));
+}
+
+//______________________________________________________________________________
+::Reflex::Member Cint::Internal::G__BuilderInfo::Build(const std::string& name)
+{
+   // -- Create the reflex database entries for function name.
+   //
+   //  Make the entry into the reflex database.
+   //
+   //  Note: The Reflex::TypeBase constructor explicitly does not
+   //        add the created function type as a member of any Reflex::Scope.
+   //
+   ::Reflex::Type ftype = Reflex::FunctionTypeBuilder(returnType, params_type, typeid(::Reflex::UnknownType));
+   //fprintf(stderr, "G__BuilderInfo::Build: processing function '%s' type '%s'.\n", name.c_str(), ftype.Name(Reflex::SCOPED | Reflex::QUALIFIED).c_str());
+   //fprintf(stderr, "G__Builderinfo::Build: isconst: %d\n", isconst);
+   //fprintf(stderr, "G__Builderinfo::Build: isexplicit: %d\n", isexplicit);
+   //fprintf(stderr, "G__Builderinfo::Build: staticalloc: %d\n", (int) staticalloc);
+   //fprintf(stderr, "G__Builderinfo::Build: isvirtual: %d\n", isvirtual);
+   //fprintf(stderr, "G__Builderinfo::Build: ispurvirtual: %d\n", ispurevirtual);
+   for (
+      std::vector<Reflex::Type>::iterator iter = params_type.begin();
+      iter != params_type.end();
+      ++iter
+   ) {
+      //fprintf(stderr, "G__Builderinfo::Build: param type: %s\n", iter->Name(Reflex::SCOPED | Reflex::QUALIFIED).c_str());
+   }
+   //fprintf(stderr, "G__Builderinfo::Build:\n");
+   //
+   //  Fetch any previously seen declaration of this function in the defining class or namespace.
+   //
+   //  Note: The name lookup is done without regard to the accessibility of the member.
+   //
+   //--
+   //
+   //  Build the reflex modifiers.  // FIXME: Name lookup should be done without regard to modifiers!
+   //
+   int modifiers = 0;
+   if (isconst) {
+      modifiers |= ::Reflex::CONST;
+   }
+   if (isexplicit) {
+      modifiers |= ::Reflex::EXPLICIT;
+   }
+   if (staticalloc) {
+      modifiers |= ::Reflex::STATIC;
+   }
+   if (isvirtual) {
+      modifiers |= ::Reflex::VIRTUAL;
+   }
+   if (ispurevirtual) {
+      modifiers |= ::Reflex::ABSTRACT;
+   }
+   //
+   //  Do the access part of the reflex modifiers.
+   //
+   //switch(access) {
+   //   case G__PUBLIC:     modifiers |= ::Reflex::PUBLIC; break;
+   //   case G__PROTECTED:  modifiers |= ::Reflex::PROTECTED; break;
+   //   case G__PRIVATE:    modifiers |= ::Reflex::PRIVATE; break;
+   //};
+   ::Reflex::Type modftype(::Reflex::Type(ftype, modifiers));
+   unsigned int modifiers_mask = ::Reflex::PUBLIC | ::Reflex::PROTECTED | ::Reflex::PRIVATE | ::Reflex::EXPLICIT | ::Reflex::STATIC | ::Reflex::VIRTUAL | ::Reflex::ABSTRACT | ::Reflex::CONSTRUCTOR | ::Reflex::DESTRUCTOR | ::Reflex::COPYCONSTRUCTOR;
+   ::Reflex::Member m(G__p_ifunc.FunctionMemberByName(name, modftype, modifiers_mask));
+   //
+   //  If we implement a pure virtual function from
+   //  a base class, decrement the pure virtual count
+   //  of our defining class.
+   //
+   //  Check if we should be virtual because we
+   //  are declared virtual in a base class.
+   //
+   if ( // not previously declared, and is not virtual, and is a member function
+      !m && // not previous declared, and
+      !isvirtual && // is not virtual, and
+      (G__tagdefining && !G__tagdefining.IsTopScope()) // is a member function
+      // TODO: Add: && (G__tagdefining && !G__tagdefining.IsNamespace()) if we can call for non-class members.
+   ) {
+      struct G__inheritance* baseclass = G__struct.baseclass[G__get_tagnum(G__tagdefining)];
+      for (int basen = 0; basen < baseclass->basen; ++basen) {
+         G__incsetup_memfunc(baseclass->basetagnum[basen]);
+         ::Reflex::Scope scope(G__Dict::GetDict().GetScope(baseclass->basetagnum[basen]));
+         ::Reflex::Member base_m(scope.FunctionMemberByName(name, modftype, modifiers_mask));
+         if (base_m) {
+            int tagnum_tagdefining  = G__get_tagnum(G__tagdefining);
+            if (base_m.IsAbstract() && G__struct.isabstract[tagnum_tagdefining]) {
+               --G__struct.isabstract[tagnum_tagdefining]; // We now have one less pure virtual member function.
+            }
+            if (base_m.IsVirtual()) {
+               isvirtual = 1; // FIXME: We need to update the reflex entry immediately, we may return in the next block.
+               //fprintf(stderr, "G__Builderinfo::Build: changed isvirtual to: %d\n", isvirtual);
+            }
+            break;
+         }
+      }
+   }
+   //
+   //  Return early if we are in the command line, or a temp file.
+   //
+   if (G__ifile.filenum >= G__nfile) { // in a command line or a temp file
+      G__fprinterr(G__serr, "Limitation: Function can not be defined in a command line or a tempfile\n");
+      G__genericerror("You need to write it in a source file");
+      return m;
+   }
+   if (m) { // function was previously declared
+      // -- Now handle the parts which go into the function property.
+      //
+      // Consume the friendtag, put it into the function properties friendtag list.
+      if (prop.entry.friendtag) {
+         if (!G__get_funcproperties(m)->entry.friendtag) {
+            G__get_funcproperties(m)->entry.friendtag = prop.entry.friendtag;
+         }
+         else {
+            struct G__friendtag* friendtag = G__get_funcproperties(m)->entry.friendtag;
+            while (friendtag->next) {
+               friendtag = friendtag->next;
+            }
+            friendtag->next = prop.entry.friendtag;
+         }
+         prop.entry.friendtag = 0;
+      }
+      // The old code was doing:
+      // 
+      //      - Warn if any default parameter is redefined.
+      //      - Import ansi, explicit, return type, param char type
+      //        and ref, and if there is a function body, change the parameter
+      //        names, otherwise leave them as is.
+      //      - Import concreteness (aka remove pure virtual).
+      //      - Copy the 'entry' fields.
+      //      - Avoid double counting pure virtual function.
+      //
+      if (
+         (FILE*) prop.entry.p && // we have file pointer to text of body, and
+         (
+            !G__def_struct_member || // not a class member, or
+            (G__struct.iscpplink[G__get_tagnum(G__def_tagnum)] != G__CPPLINK) // is not precompiled
+         )
+      ) {
+         // Should we issue an error for one of the following condition?
+         // if (!m.IsExplicit() && isexplicit)
+         // if (m.IsAbstract() != !ispurevirtual)
+         // if (m.IsConst() != isconst)
+         if (ispurevirtual & !m.IsAbstract()) {
+            if (G__tagdefining) {
+               --G__struct.isabstract[G__get_tagnum(G__tagdefining)];
+            }
+         }
+         struct G__friendtag* prev_friendtag = G__get_funcproperties(m)->entry.friendtag;
+         G__get_funcproperties(m)->entry.friendtag = 0;
+         std::vector<G__value*> prev_para_default = G__get_funcproperties(m)->entry.para_default;
+         G__get_funcproperties(m)->entry.para_default.clear();
+         G__get_funcproperties(m)->entry = prop.entry;
+         G__get_funcproperties(m)->entry.friendtag = prev_friendtag;
+         G__get_funcproperties(m)->entry.para_default = prev_para_default;
+#ifndef GNUC
+#pragma message(FIXME("tp2f need to move from char* to be an opaque member::Id"))
+#endif
+         G__get_funcproperties(m)->entry.for_tp2f = m.Name();
+         G__get_funcproperties(m)->entry.tp2f = (void*) G__get_funcproperties(m)->entry.for_tp2f.c_str();
+         for (unsigned int i = 0; i < params_name.size(); ++i) {
+            if (params_name[i].second.size()) {
+               G__genericerror("Error: Redefinition of default argument");
+            }
+         }
+         //m.UpdateFunctionParameterNames( GetParamNames().c_str() );
+      }
+      else {
+         if (ispurevirtual && G__tagdefining) {
+            --G__struct.isabstract[G__get_tagnum(G__tagdefining)];
+         }
+      }
+      G__func_now = m;
+   }
+   else if ( // function not seen before, and ok to process
+      (
+         prop.entry.p || // we have a file pointer to the function body (definition), or
+         prop.entry.ansi || // ansi-style declaration, or
+         G__nonansi_func || // not ansi-style declaration, or // FIXME: What???  Combined with previous clause is always true???
+         (G__globalcomp < G__NOLINK) || // is precompiled, or
+         prop.entry.friendtag // is a friend
+      )
+      // This block is skipped only when compicated template
+      // instantiation is done during reading argument list
+      // 'f(vector<int> &x) { }'
+      //
+      // with 1706, do not skip this block with template instantiation
+      // in function argument. Do not know exactly why...
+      //
+      // && ((store_ifunc_tmp == G__p_ifunc) && (func_now == G__p_ifunc->allifunc))
+#ifndef G__OLDIMPLEMENTATION2027
+      // && (name.c_str()[0] != '~')
+#endif // G__OLDIMPLEMENTATION2027
+      // --
+   ) {
+      int modifiers = 0;
+      if (isconst) {
+         modifiers |= ::Reflex::CONST;
+      }
+      if (isexplicit) {
+         modifiers |= ::Reflex::EXPLICIT;
+      }
+      if (staticalloc) {
+         modifiers |= ::Reflex::STATIC;
+      }
+      if (isvirtual) {
+         modifiers |= ::Reflex::VIRTUAL;
+      }
+      if (ispurevirtual) {
+         modifiers |= ::Reflex::ABSTRACT;
+      }
+      switch (access) {
+         case G__PUBLIC:
+            modifiers |= ::Reflex::PUBLIC;
+            break;
+         case G__PROTECTED:
+            modifiers |= ::Reflex::PROTECTED;
+            break;
+         case G__PRIVATE:
+            modifiers |= ::Reflex::PRIVATE;
+            break;
+      };
+      switch (G__get_tagtype(G__p_ifunc)) {
+         case 'c':
+         case 's':
+            // -- Class or struct.
+            //
+            //  Do special processing for a constructor/destructor.
+            //
+            if (name[0] == '~') {
+               modifiers |= ::Reflex::DESTRUCTOR;
+            }
+            else if (name == G__p_ifunc.Name()) { // FIXME: Is this correct for templated classes?
+               modifiers |= ::Reflex::CONSTRUCTOR;
+               if (ftype.FunctionParameterSize() == 1) {
+                  // Get the type without any modifiers
+                  // (i.e., reference and const) nor any typedefs.
+                  Reflex::Type argtype(ftype.FunctionParameterAt(0).FinalType().ToTypeBase()->ThisType());
+                  if (argtype == (Reflex::Type) G__p_ifunc) {
+                     modifiers |= ::Reflex::COPYCONSTRUCTOR;
+                  }
+               }
+            }
+            G__get_properties(G__p_ifunc)->builder.Class().AddFunctionMember(ftype, name.c_str(), 0 /*stubFP*/, 0 /*stubCtx*/, GetParamNames().c_str(), modifiers);
+            modftype = ::Reflex::Type(ftype, modifiers);
+            m = G__p_ifunc.FunctionMemberByName(name, modftype, modifiers_mask);
+            //fprintf(stderr, "G__BuilderInfo::Build: added member function '%s'.\n", m.Name(Reflex::SCOPED | Reflex::QUALIFIED).c_str());
+            break;
+         case 'n':
+            // -- Namespace.
+            {
+               std::string fullname = G__p_ifunc.Name(::Reflex::SCOPED);
+               if (fullname.size()) {
+                  fullname += "::";
+               }
+               fullname += name;
+               ::Reflex::FunctionBuilder funcBuilder(ftype, fullname.c_str(), 0 /*stubFP*/, 0 /*stubCtx*/, GetParamNames().c_str(), modifiers);
+               m = funcBuilder.ToMember();
+               break;
+            }
+         case 'u':
+            // -- Union.
+            G__genericerror("Union member functions are not yet supported by Reflex");
+            //G__get_properties(G__p_ifunc)->builder.Union().AddFunctionMember(ftype, name.c_str(), 0 /*stubFP*/, 0 /*stubCtx*/, GetParamNames().c_str(), modifiers);
+            //m = G__p_ifunc.FunctionMemberByName(name, ftype);
+            break;
+         default:
+            // -- Assume this means we want it in the global namespace.
+            ::Reflex::FunctionBuilder funcBuilder(ftype, name.c_str(), 0 /*stubFP*/, 0 /*stubCtx*/, GetParamNames().c_str(), modifiers);
+            m = (funcBuilder.ToMember());
+            //int tag = G__get_tagtype( G__p_ifunc ) ;
+            //fprintf(stderr,"value=%d\n",tag);
+            //G__genericerror("Attempt to add a function to something that does not appear to be a scope");
+      }
+      //::Reflex::FunctionBuilder funcBuilder(ftype, fullname.c_str(), 0 /*stubFP*/, 0 /*stubCtx*/, GetParamNames().c_str(), modifiers);
+      //m = funcBuilder.ToMember();
+      if (!m) {
+         fprintf(stderr, "G__BuilderInfo::Build: Something went creating entry for '%s' in '%s'\n", name.c_str(), G__p_ifunc.Name(::Reflex::SCOPED | ::Reflex::QUALIFIED).c_str());
+         G__dumpreflex_function(G__p_ifunc, 1);
+         return m;
+      }
+      G__RflxFuncProperties* a = G__get_funcproperties(m);
+      *a = prop;
+      a->entry.para_default = default_vals;
+      if (!a->entry.tp2f) {
+         a->entry.for_tp2f = m.Name();
+         a->entry.tp2f = (void*) a->entry.for_tp2f.c_str();
+      }
+   }
+   return m;
 }
 

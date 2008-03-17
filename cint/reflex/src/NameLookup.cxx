@@ -122,8 +122,10 @@ Reflex::NameLookup::LookupInScope() {
       if ( base ) {
          size_t pos;
          const std::string &name( base->SimpleName(pos) );
+         //fprintf(stderr, "Reflex::NameLookup::LookupInScope<T>: looking up '%s', considering subscope '%s' ...\n", fLookupName.c_str(), name.c_str());
          if (fLookupName[fPosNamePart]==name[pos] &&
              0 == fLookupName.compare(fPosNamePart, fPosNamePartLen, name, pos, name.length() ) ) {
+            //fprintf(stderr, "Reflex::NameLookup::LookupInScope<T>: lookup up '%s', partial success with subscope '%s' ...\n", fLookupName.c_str(), name.c_str());
             fPartialSuccess = true;
             fLookedAtUsingDir.clear();
             FindNextScopePos();

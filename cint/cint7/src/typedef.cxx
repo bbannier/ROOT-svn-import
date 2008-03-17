@@ -280,6 +280,7 @@ static void G__define_struct_in_typedef(fpos_t fpos
 void Cint::Internal::G__define_type()
 /* struct G__input_file *fin; */
 {
+   //fprintf(stderr, "G__define_type: Begin.\n");
    fpos_t rewind_fpos;
    int c;
    char type1[G__LONGLINE],tagname[G__LONGLINE],type_name[G__LONGLINE];
@@ -928,6 +929,7 @@ next_name:
       }
    }
 
+   //fprintf(stderr, "G__define_type: checking for existence of typedef '%s'\n", type_name);
    /*
    * check if typedef hasn't been defined
    */
@@ -937,6 +939,7 @@ next_name:
       /*
       *  return if the type is already defined
       */
+      //fprintf(stderr, "G__define_type: The typdef '%s' already existed!\n", type_name);
       if(';'!=c) G__fignorestream(";");
       return;
    }
@@ -1051,6 +1054,7 @@ next_name:
          newType.TypeTypeAsString().c_str(), newType.Name(Reflex::SCOPED).c_str());
       //G__dumpreflex();
    }
+   //fprintf(stderr, "G__define_type: calling Reflex::TypedefTypeBuilder for '%s'\n", fullname.c_str());
    ::Reflex::Type result = 
       ::Reflex::TypedefTypeBuilder(fullname.c_str(),newType);
    G__RflxProperties *prop = G__get_properties(result);
@@ -1119,6 +1123,7 @@ int G__defined_typename(const char *type_name)
    return G__get_typenum(result);
 }
 
+/*******************************************************************/
 ::Reflex::Type Cint::Internal::G__find_typedef(const char *type_name)
 {
   int ispointer = 0;
@@ -1140,6 +1145,7 @@ int G__defined_typename(const char *type_name)
         scope = scope.DeclaringScope();
   }
 
+  //fprintf(stderr, "G__find_typedef: seaching for '%s' in scope '%s'\n", type_name, scope.Name(::Reflex::SCOPED | ::Reflex::QUALIFIED).c_str());
   ::Reflex::Type result = scope.LookupType(type_name);
 
   if (!result && strstr(type_name,"<")!=0) {
