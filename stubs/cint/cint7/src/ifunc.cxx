@@ -868,6 +868,7 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
       fsetpos(G__ifile.fp, &temppos);
       G__ifile.line_number = store_line_number;
       // Parse the parameter declarations.
+      //fprintf(stderr, "G__make_ifunctable: calling G__readansiproto for '%s'\n", funcheader);
       G__readansiproto(builder.params_type, builder.params_name, builder.default_vals, builder.prop.entry.ansi);
       cin = ')';
       if (G__dispsource) {
@@ -1258,6 +1259,7 @@ int Cint::Internal::G__readansiproto(std::vector<Reflex::Type> &i_params_type, s
 
    i_ansi = 1;
    while (')' != c) {
+      // --
 #ifndef G__OLDIMPLEMENTATION824
       if (G__MAXFUNCPARA == iin) {
          G__fprinterr(G__serr,
@@ -1300,6 +1302,7 @@ int Cint::Internal::G__readansiproto(std::vector<Reflex::Type> &i_params_type, s
             namespace_tagnum = G__defined_tagname(paraname, 2);
          }
       }
+      //fprintf(stderr, "G__readansiproto: paraname: '%s'\n", paraname);
 
       /* check const and unsigned keyword */
       if (strcmp(paraname, "...") == 0) {
@@ -1313,6 +1316,7 @@ int Cint::Internal::G__readansiproto(std::vector<Reflex::Type> &i_params_type, s
          if (strcmp(paraname, "const") == 0)
             isconst |= G__CONSTVAR;
          c = G__fgetname_template(paraname, ",)&*[(=");
+         //fprintf(stderr, "G__readansiproto: paraname: '%s'\n", paraname);
       }
       if (strcmp(paraname, "unsigned") == 0 || strcmp(paraname, "signed") == 0) {
          if ('u' == paraname[0]) isunsigned = -1;
@@ -1325,22 +1329,26 @@ int Cint::Internal::G__readansiproto(std::vector<Reflex::Type> &i_params_type, s
             case '(':
             case '=':
             case '*':
-               strcpy(paraname, "int");
+               strcpy(paraname, "int"); // FIXME: We destroy the real typename here!
+               //fprintf(stderr, "G__readansiproto: paraname: '%s'\n", paraname);
                break;
             default:
                if (isspace(c)) {
-                  c = G__fgetname(paraname, ",)&*[(=");
+                  c = G__fgetname(paraname, ",)&*[(="); // FIXME: Change to G__getname_template???
+                  //fprintf(stderr, "G__readansiproto: paraname: '%s'\n", paraname);
                }
                else {
                   fpos_t pos;
                   int store_line = G__ifile.line_number;
                   fgetpos(G__ifile.fp, &pos);
                   c = G__fgetname(paraname, ",)&*[(=");
+                  //fprintf(stderr, "G__readansiproto: paraname: '%s'\n", paraname);
                   if (strcmp(paraname, "int") != 0 && strcmp(paraname, "long") != 0 &&
                         strcmp(paraname, "short") != 0) {
                      G__ifile.line_number = store_line;
                      fsetpos(G__ifile.fp, &pos);
-                     strcpy(paraname, "int");
+                     strcpy(paraname, "int"); // FIXME: We destroy the real typename here!
+                     //fprintf(stderr, "G__readansiproto: paraname: '%s'\n", paraname);
                      c = ' ';
                   }
                }
@@ -1351,21 +1359,25 @@ int Cint::Internal::G__readansiproto(std::vector<Reflex::Type> &i_params_type, s
       /* determine type */
       if (strcmp(paraname, "struct") == 0) {
          c = G__fgetname_template(paraname, ",)&*[(=");
+         //fprintf(stderr, "G__readansiproto: paraname: '%s'\n", paraname);
          tagnum = G__Dict::GetDict().GetScope(G__search_tagname(paraname, 's'));
          type = 'u';
       }
       else if (strcmp(paraname, "class") == 0) {
          c = G__fgetname_template(paraname, ",)&*[(=");
+         //fprintf(stderr, "G__readansiproto: paraname: '%s'\n", paraname);
          tagnum = G__Dict::GetDict().GetScope(G__search_tagname(paraname, 'c'));
          type = 'u';
       }
       else if (strcmp(paraname, "union") == 0) {
          c = G__fgetname_template(paraname, ",)&*[(=");
+         //fprintf(stderr, "G__readansiproto: paraname: '%s'\n", paraname);
          tagnum = G__Dict::GetDict().GetScope(G__search_tagname(paraname, 'u'));
          type = 'u';
       }
       else if (strcmp(paraname, "enum") == 0) {
          c = G__fgetname_template(paraname, ",)&*[(=");
+         //fprintf(stderr, "G__readansiproto: paraname: '%s'\n", paraname);
          tagnum = G__Dict::GetDict().GetScope(G__search_tagname(paraname, 'e'));
          type = 'i';
       }
@@ -1380,7 +1392,8 @@ int Cint::Internal::G__readansiproto(std::vector<Reflex::Type> &i_params_type, s
             int store_line = G__ifile.line_number;
             int store_c = c;
             fgetpos(G__ifile.fp, &pos);
-            c = G__fgetname(paraname, ",)&*[(=");
+            c = G__fgetname(paraname, ",)&*[(="); // FIXME: Change to G__fgetname_template???
+            //fprintf(stderr, "G__readansiproto: paraname: '%s'\n", paraname);
             if (strcmp(paraname, "long") == 0 || strcmp(paraname, "double") == 0) {
                if (strcmp(paraname, "long") == 0) {
                   tagnum = ::Reflex::Scope();
@@ -1422,11 +1435,19 @@ int Cint::Internal::G__readansiproto(std::vector<Reflex::Type> &i_params_type, s
             G__tagdefining = G__friendtagnum;
             G__def_tagnum = G__friendtagnum;
          }
+         //::Reflex::Scope definer = G__get_envtagnum();
+         //fprintf(stderr, "G__readansiproto: definer: '%s'\n", definer.Name(Reflex::SCOPED | Reflex::QUALIFIED).c_str());
+         //fprintf(stderr, "G__readansiproto: search for typedef named: '%s' ... \n", paraname);
          typenum = G__find_typedef(paraname);
+         //if (!typenum) {
+         //   fprintf(stderr, "G__readansiproto: search for typedef named: '%s' failed.\n", paraname);
+         //}
          if (!typenum) {
+            //fprintf(stderr, "G__readansiproto: search for tagname: '%s' ... \n", paraname);
             int numerical_tagnum = G__defined_tagname(paraname, 1);
             tagnum = G__Dict::GetDict().GetScope(numerical_tagnum);
             if (numerical_tagnum == -1) {
+               //fprintf(stderr, "G__readansiproto: failed to find tagname: '%s' ... \n", paraname);
                tagnum = ::Reflex::Scope();
                if (G__fpundeftype) {
                   tagnum = G__Dict::GetDict().GetScope(G__search_tagname(paraname, 'c'));
@@ -1439,18 +1460,17 @@ int Cint::Internal::G__readansiproto(std::vector<Reflex::Type> &i_params_type, s
                else {
                   /* In case of f(unsigned x,signed y) */
                   type = 'i' + isunsigned;
-                  if (!isdigit(paraname[0]) && 0 == isunsigned) {
+                  if (!isdigit(paraname[0]) && !isunsigned) {
                      if (G__dispmsg >= G__DISPWARN) {
-                        G__fprinterr(G__serr,
-                                     "Warning: Unknown type '%s' in function argument handled as int"
-                                     , paraname);
+                        G__fprinterr(G__serr, "Warning: Unknown type '%s' in function argument handled as int", paraname);
                         G__printlinenum();
                      }
                   }
                }
             }
-            else if ('e' == G__struct.type[numerical_tagnum]) {
-               type = 'i';
+            else if ('e' == G__struct.type[numerical_tagnum]) { // FIXME: Enumerators are not ints!
+               //fprintf(stderr, "G__readansiproto: found enumerator: '%s' ... \n", paraname);
+               type = 'u';
             }
             else {
                /* re-evaluate typedef name in case of template class */
@@ -1459,6 +1479,7 @@ int Cint::Internal::G__readansiproto(std::vector<Reflex::Type> &i_params_type, s
             }
          }
          else {
+            //fprintf(stderr, "G__readansiproto: search for typedef named: '%s' found.\n", paraname);
             useTypenum = true;
             //{
             //   ::Reflex::Type in = typenum.FinalType();
@@ -1552,6 +1573,7 @@ int Cint::Internal::G__readansiproto(std::vector<Reflex::Type> &i_params_type, s
                c = G__fdumpstream(paraname + ip, ",)=");
                ip = strlen(paraname);
                paraname[ip++] = '\0';
+               //fprintf(stderr, "G__readansiproto: paraname: '%s'\n", paraname);
 #ifndef G__OLDIMPLEMENTATION2191
                typenum = G__declare_typedef(paraname, '1', -1, 0, 0, G__NOLINK, -1, true);
                type = '1';
@@ -1564,6 +1586,7 @@ int Cint::Internal::G__readansiproto(std::vector<Reflex::Type> &i_params_type, s
             case '=':
                isdefault = 1;
                c = G__fgetstream_template(paraname, ",)");
+               //fprintf(stderr, "G__readansiproto: paraname: '%s'\n", paraname);
                break;
             case '.':
                i_ansi = 2; // ifunc->ansi[func_now] = 2;
@@ -1611,6 +1634,7 @@ int Cint::Internal::G__readansiproto(std::vector<Reflex::Type> &i_params_type, s
                      }
                      if ('=' == c) {
                         c = G__fgetstream_template(paraname, ",)");
+                        //fprintf(stderr, "G__readansiproto: paraname: '%s'\n", paraname);
                         isdefault = 1;
                      }
                   }
@@ -1643,6 +1667,7 @@ int Cint::Internal::G__readansiproto(std::vector<Reflex::Type> &i_params_type, s
                int ix;
                for (ix = 1;ix < paranamelen - 3;ix++) paraname[ix-1] = paraname[ix];
                strcpy(paraname + ix - 1, "()");
+               //fprintf(stderr, "G__readansiproto: paraname: '%s'\n", paraname);
             }
          }
          if (G__NOLINK == G__globalcomp) {
@@ -1729,6 +1754,10 @@ int Cint::Internal::G__readansiproto(std::vector<Reflex::Type> &i_params_type, s
       }
 
       paramType = G__modify_type(paramType, 0, reftype, 0, 0, 0);
+      
+      //fprintf(stderr, "G__readansiproto: paramType: '%s'\n", paramType.Name(::Reflex::SCOPED | ::Reflex::QUALIFIED).c_str());
+      //fprintf(stderr, "G__readansiproto: name: '%s'\n", name);
+      //fprintf(stderr, "G__readansiproto: default_str: '%s'\n", default_str.c_str());
       i_params_type.push_back(paramType);
       i_params_names.push_back(std::make_pair(name, default_str));
       i_params_default.push_back(default_val);
@@ -2554,7 +2583,8 @@ static int G__param_match(char formal_type, const ::Reflex::Scope& formal_tagnum
 #define G__PROMOTIONMATCH 0x00000100
 #define G__STDCONVMATCH   0x00010000
 #define G__USRCONVMATCH   0x01000000
-#define G__CVCONVMATCH    0x00000001
+//#define G__CVCONVMATCH    0x00000001
+#define G__CVCONVMATCH    0x00000000
 #define G__BASECONVMATCH  0x00000001
 #define G__C2P2FCONVMATCH 0x00000001
 #define G__I02PCONVMATCH  0x00000002

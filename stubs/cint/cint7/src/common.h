@@ -1353,44 +1353,50 @@ public:
 };
 
 namespace Cint {
-   namespace Internal {
-      struct G__BuilderInfo {
-         G__BuilderInfo() : access(G__PUBLIC),isexplicit(0),staticalloc(0),baseoffset(0),isvirtual(-1),ispurevirtual(0),
-            isconst(0) {}
-         ::Reflex::Type returnType;
-         int access;
-         int isexplicit;
-         char staticalloc;
-         int baseoffset;
-         int isvirtual;
-         int ispurevirtual;
-         int isconst;
-         std::vector<Reflex::Type> params_type;
-         typedef std::vector<std::pair<std::string,std::string> > names_t;
-         names_t params_name;
-         std::vector<G__value*> default_vals;
-         std::string GetParamNames() {
-            std::string result;
-            for(names_t::const_iterator iter = params_name.begin();
-               iter != params_name.end();
-               ++iter) {
-                  if (iter != params_name.begin()) result += ";";
-                  result += iter->first;
-                  if (iter->second.length()) result += "=" + iter->second;
-            }
-            return result;
-         }
-         void ParseParameterLink(const char *paras);
-         void AddParameter(int ifn,int type,int tagnum,int typenum
-            ,int reftype_const,G__value *para_default
-            ,char *para_def,char *para_name);
-         G__RflxFuncProperties prop;
-         ::Reflex::Scope basetagnum;
+namespace Internal {
 
-         ::Reflex::Member Build(const std::string &name);
-      };
-   }
-}
+class G__BuilderInfo {
+public:
+   typedef std::vector<std::pair<std::string, std::string> > names_t;
+public:
+   // -- The containing class of this member, despite the name.
+   ::Reflex::Scope basetagnum; // This is our containing class, despite the name.
+   // -- Offset of data member in most derived class.
+   int baseoffset; // beginning of this data member's class in most derived class
+   // -- Access.
+   int access; // public, protected, private
+   // -- Modifiers.
+   int isconst; // int f() const;
+   int isexplicit; // explict MyClass();
+   char staticalloc; // static f();
+   int isvirtual; // virtual f();
+   int ispurevirtual; // virtual f() = 0;
+   // -- Type of return value.
+   ::Reflex::Type returnType; // type of return value
+   //
+   //  Function parameter names, parameter types,
+   //  parameter default texts, and parameter default values
+   //
+   //  Note: Set by G__readansiproto().
+   //
+   std::vector<Reflex::Type> params_type; // [ type1, type2, ... ]
+   names_t params_name; // [ (nm1, def1), (nm2, def2), ... ]
+   std::vector<G__value*> default_vals; // [ def_val1, def_val2, ... ]
+   //
+   //  Extended properties beyond what Reflex supports.
+   //
+   G__RflxFuncProperties prop;
+public:
+   G__BuilderInfo();
+   std::string GetParamNames(); // "p1=val1; p2=val2", Internal, called by Build().
+   void ParseParameterLink(const char* paras); // Dictionary Interface, called by v6_newlink.cxx(G__memfunc_setup)
+   void AddParameter(int ifn, int type, int tagnum, int typenum, int reftype_const, G__value* para_default, char* para_def, char* para_name); // Internal, called by ParseParameterLink()
+// called by v6_ifunc.cxx(G__make_ifunctable)
+   ::Reflex::Member Build(const std::string& name); // Called by v6_newlink.cxx(G__memfunc_setup), v6_ifunc.cxx(G__make_ifunctable).
+};
+
+} // namespace Internal
+} // namespace Cint
 
 
 /*********************************************************************

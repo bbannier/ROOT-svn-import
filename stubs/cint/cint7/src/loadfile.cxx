@@ -2387,9 +2387,13 @@ int Cint::Internal::G__preprocessor(char *outname,char *inname,int cppflag
      ***************************************************************/
     strcat(outname,".i");
     if(G__cintsysdir[0]) {
+      std::string corecintsysdir(G__cintsysdir);
+      corecintsysdir += "/";
+      corecintsysdir += G__CFG_COREVERSION;
+      corecintsysdir += "/";
       sprintf(temp,"%s %s %s -I. %s %s -D__CINT__ -I%s/include -I%s/stl -I%s/lib -o%s %s"
               ,G__ccom ,macros,undeflist,ppopt ,includepath
-              ,G__cintsysdir,G__cintsysdir,G__cintsysdir,outname,tmpfilen);
+              ,corecintsysdir.c_str(),corecintsysdir.c_str(),corecintsysdir.c_str(),outname,tmpfilen);
     }
     else {
       sprintf(temp,"%s %s %s %s -I. %s -D__CINT__ -o%s %s" ,G__ccom
@@ -2404,9 +2408,13 @@ int Cint::Internal::G__preprocessor(char *outname,char *inname,int cppflag
      * preprocessor statement for UNIX
      ***************************************************************/
    if(G__cintsysdir[0]) {
-      sprintf(temp,"%s %s %s -I. %s %s -D__CINT__ -I%s/include -I%s/stl -I%s/lib %s > %s"
+      std::string corecintsysdir(G__cintsysdir);
+      corecintsysdir += "/";
+      corecintsysdir += G__CFG_COREVERSION;
+      corecintsysdir += "/";
+      sprintf(temp,"%s %s %s -I. %s %s -D__CINT__ -I%s/include -I%s/%s/stl -I%s/%s/lib %s > %s"
               ,G__ccom ,macros,undeflist,ppopt ,includepath
-              ,G__cintsysdir,G__cintsysdir,G__cintsysdir,tmpfilen,outname);
+              ,corecintsysdir.c_str(),corecintsysdir.c_str(),corecintsysdir.c_str(),tmpfilen,outname);
     }
     else {
       sprintf(temp,"%s %s %s %s -I. %s -D__CINT__ %s > %s" ,G__ccom
