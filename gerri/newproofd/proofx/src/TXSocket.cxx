@@ -157,6 +157,7 @@ TXSocket::TXSocket(const char *url, Char_t m, Int_t psid, Char_t capver,
       return;
    }
    fILev = -1;
+   fIForward = kFALSE;
 
    // Init some variables
    fByteLeft = 0;
@@ -430,23 +431,38 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
 
    // Case by case
    kXR_int32 ilev = -1;
+   const char *lab = 0;
 
    switch (acod) {
       case kXPD_ping:
          //
          // Special interrupt
          ilev = TProof::kPing;
+         lab = "kXPD_ping";
       case kXPD_interrupt:
          //
          // Interrupt
+         lab = !lab ? "kXPD_interrupt" : lab;
          { R__LOCKGUARD(fIMtx);
             if (acod == kXPD_interrupt) {
                memcpy(&ilev, pdata, sizeof(kXR_int32));
                ilev = net2host(ilev);
+               // Update pointer to data
+               pdata = (void *)((char *)pdata + sizeof(kXR_int32));
+               len -= sizeof(kXR_int32);
+            }
+            // The next 4 bytes contain the forwarding option
+            kXR_int32 ifw = 0;
+            if (len > 0) {
+               memcpy(&ifw, pdata, sizeof(kXR_int32));
+               ifw = net2host(ifw);
+               if (gDebug > 1)
+                  Info("ProcessUnsolicitedMsg","%s: forwarding option: %d", lab, ifw);
             }
             //
             // Save the interrupt
             fILev = ilev;
+            fIForward = (ifw == 1) ? kTRUE : kFALSE;
 
             // Handle this input in this thread to avoid queuing on the
             // main thread
@@ -909,20 +925,34 @@ Bool_t TXSocket::IsServProofd()
 }
 
 //_____________________________________________________________________________
-Int_t TXSocket::GetInterrupt()
+Int_t TXSocket::GetInterrupt(Bool_t &forward)
 {
-   // Get highest interrupt level in the queue
+   // Get latest interrupt level and reset it; if the interrupt has to be
+   // propagated to lower stages forward will be kTRUE after the call
 
    if (gDebug > 2)
       Info("GetInterrupt","%p: waiting to lock mutex %p", fIMtx);
 
    R__LOCKGUARD(fIMtx);
 
+   // Reset values
+   Int_t ilev = -1;
+   forward = kFALSE;
+
+   // Check if filled
    if (fILev == -1)
       Error("GetInterrupt","value is unset (%d) - protocol error",fILev);
 
+   // Fill output
+   ilev = fILev;
+   forward = fIForward;
+
+   // Reset values (we process it only once)
+   fILev = -1;
+   fIForward = kFALSE;
+
    // Return what we got
-   return fILev;
+   return ilev;
 }
 
 //_____________________________________________________________________________
@@ -1155,11 +1185,9 @@ Int_t TXSocket::SendRaw(const void *buffer, Int_t length, ESendRecvOptions opt)
 //______________________________________________________________________________
 Bool_t TXSocket::Ping(const char *ord)
 {
-   // Ping functionality: contact the server and get an acknowledgement.
+   // Ping functionality: contact the server to check its vitality.
    // If external, the server waits for a reply from the server
-   // Use opt = kDontBlock to ask xproofd to push the message into the proofsrv.
-   // (by default is appended to a queue waiting for a request from proofsrv).
-   // Returns the number of bytes sent or -1 in case of error.
+   // Returns kTRUE if OK or kFALSE in case of error.
 
    TSystem::ResetErrno();
 
@@ -1195,7 +1223,7 @@ Bool_t TXSocket::Ping(const char *ord)
       // Get the result
       if (xrsp && xrsp->HeaderStatus() == kXR_ok) {
          *pres = net2host(*pres);
-         res = (*pres == 1);
+         res = (*pres == 1) ? kTRUE : kFALSE;
       } else {
          // Print error mag, if any
          if (fConn->GetLastErr())

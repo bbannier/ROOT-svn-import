@@ -102,6 +102,7 @@ private:
    // Interrupts
    TMutex             *fIMtx;          // To protect interrupt queue
    kXR_int32           fILev;          // Highest received interrupt
+   Bool_t              fIForward;      // Wheter the interrupt should be propagated
 
    // Process ID of the instatiating process (to signal interrupts)
    Int_t               fPid;
@@ -216,7 +217,7 @@ public:
 
    // Interrupts
    Int_t               SendInterrupt(Int_t type);
-   Int_t               GetInterrupt();
+   Int_t               GetInterrupt(Bool_t &forward);
 
    // Urgent message
    void                SendUrgent(Int_t type, Int_t int1, Int_t int2);

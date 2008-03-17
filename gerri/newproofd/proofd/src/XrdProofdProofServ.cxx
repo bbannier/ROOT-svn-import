@@ -356,29 +356,46 @@ int XrdProofdProofServ::TerminateProofServ(bool changeown)
 }
 
 //______________________________________________________________________________
-int XrdProofdProofServ::VerifyProofServ()
+int XrdProofdProofServ::VerifyProofServ(bool forward)
 {
-   // Check if the associated proofserv process is alive.
-   // A ping message is sent and the reply waited for the internal timeout.
-   // Return 0 if successful, -1 in case of error.
+   // Check if the associated proofserv process is alive. This is done
+   // asynchronously by asking the process to callback and proof its vitality.
+   // We do not block here: the caller may setup a waiting structure if
+   // required.
+   // If forward is true, the process will forward the request to the following
+   // tiers.
+   // Return 0 if the request was send successfully, -1 in case of error.
    XPDLOC(SMGR, "ProofServ::VerifyProofServ")
 
    TRACE(DBG, "ord: " << fOrdinal<< ", pid: " << fSrvPID);
 
+   int rc = 0;
    XrdOucString msg;
-   {  XrdSysMutexHelper mhp(fMutex);
 
+   // Prepare buffer
+   int len = sizeof(kXR_int32);
+   char *buf = new char[len];
+   // Option
+   kXR_int32 ifw = (forward) ? (kXR_int32)1 : (kXR_int32)0;
+   ifw = static_cast<kXR_int32>(htonl(ifw));
+   memcpy(buf, &ifw, sizeof(kXR_int32));
+
+   {  XrdSysMutexHelper mhp(fMutex);
       // Propagate the ping request
-      if (Response()->Send(kXR_attn, kXPD_ping, 0, 0) != 0) {
+      if (Response()->Send(kXR_attn, kXPD_ping, buf, len) != 0) {
          msg = "could not propagate ping to proofsrv";
-         return -1;
+         rc = -1;
       }
    }
-   if (msg.length() > 0)
+   // Cleanup
+   delete[] buf;
+
+   // Notify errors, if any
+   if (rc != 0)
       TRACE(XERR, msg);
 
    // Done
-   return 0;
+   return rc;
 }
 
 //__________________________________________________________________________

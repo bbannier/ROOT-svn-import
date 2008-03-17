@@ -57,32 +57,11 @@
 // debug hook
 static volatile Int_t gProofServDebug = 1;
 
-//----- Interrupt signal handler -----------------------------------------------
-//______________________________________________________________________________
-class TXProofServInterruptHandler : public TSignalHandler {
-   TXProofServ  *fServ;
-public:
-   TXProofServInterruptHandler(TXProofServ *s)
-      : TSignalHandler(kSigUrgent, kFALSE) { fServ = s; }
-   Bool_t  Notify();
-};
-
-//______________________________________________________________________________
-Bool_t TXProofServInterruptHandler::Notify()
-{
-   fServ->HandleUrgentData();
-   if (TROOT::Initialized()) {
-      Throw(GetSignal());
-   }
-   return kTRUE;
-}
-
 //----- SigPipe signal handler -------------------------------------------------
 //______________________________________________________________________________
 class TXProofServSigPipeHandler : public TSignalHandler {
    TXProofServ  *fServ;
 public:
-//   TXProofServSigPipeHandler(TXProofServ *s) : TSignalHandler(kSigPipe, kFALSE)
    TXProofServSigPipeHandler(TXProofServ *s) : TSignalHandler(kSigInterrupt, kFALSE)
       { fServ = s; }
    Bool_t  Notify();
@@ -252,9 +231,7 @@ Int_t TXProofServ::CreateServer()
    // Get socket descriptor
    Int_t sock = fSocket->GetDescriptor();
 
-   // Install interrupt and message input handlers
-   fInterruptHandler = new TXProofServInterruptHandler(this);
-   gSystem->AddSignalHandler(fInterruptHandler);
+   // Install message input handlers
    fInputHandler =
       TXSocketHandler::GetSocketHandler(new TXProofServInputHandler(this, sock), fSocket);
    gSystem->AddFileHandler(fInputHandler);
@@ -436,7 +413,8 @@ void TXProofServ::HandleUrgentData()
    TProofServLogHandlerGuard hg(fLogFile, fSocket, "", fRealTimeLog);
 
    // Get interrupt
-   Int_t iLev = ((TXSocket *)fSocket)->GetInterrupt();
+   Bool_t fw = kFALSE;
+   Int_t iLev = ((TXSocket *)fSocket)->GetInterrupt(fw);
    if (iLev < 0) {
       Error("HandleUrgentData", "error receiving interrupt");
       return;
@@ -455,7 +433,7 @@ void TXProofServ::HandleUrgentData()
             Info("HandleUrgentData", "*** Ping");
 
          // If master server, propagate interrupt to slaves
-         if (IsMaster()) {
+         if (fw && IsMaster()) {
             Int_t nbad = fProof->fActiveSlaves->GetSize() - fProof->Ping();
             if (nbad > 0) {
                Info("HandleUrgentData","%d slaves did not reply to ping",nbad);
@@ -471,7 +449,7 @@ void TXProofServ::HandleUrgentData()
          Info("HandleUrgentData", "*** Hard Interrupt");
 
          // If master server, propagate interrupt to slaves
-         if (IsMaster())
+         if (fw && IsMaster())
             fProof->Interrupt(TProof::kHardInterrupt);
 
          // Flush input socket
@@ -486,7 +464,7 @@ void TXProofServ::HandleUrgentData()
          Info("HandleUrgentData", "Soft Interrupt");
 
          // If master server, propagate interrupt to slaves
-         if (IsMaster())
+         if (fw && IsMaster())
             fProof->Interrupt(TProof::kSoftInterrupt);
 
          Interrupt();
@@ -506,7 +484,7 @@ void TXProofServ::HandleUrgentData()
          break;
 
       default:
-         Error("HandleUrgentData", "unexpected type");
+         Error("HandleUrgentData", "unexpected type: %d", iLev);
          break;
    }
 
@@ -964,7 +942,6 @@ void TXProofServ::Terminate(Int_t status)
    // Remove input and signal handlers to avoid spurious "signals"
    // for closing activities executed upon exit()
    gSystem->RemoveFileHandler(fInputHandler);
-   gSystem->RemoveSignalHandler(fInterruptHandler);
 
    // Stop processing events (set a flag to exit the event loop)
    gSystem->ExitLoop();

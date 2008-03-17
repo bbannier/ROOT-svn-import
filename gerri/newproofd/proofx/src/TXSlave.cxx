@@ -347,11 +347,11 @@ void TXSlave::Close(Option_t *opt)
 Int_t TXSlave::Ping()
 {
    // Ping the remote master or slave servers.
-   // Returns 0 if ok, -1 in case of error
+   // Returns 0 if ok, -1 if it did not ping or in case of error
 
    if (!IsValid()) return -1;
 
-   return ((TXSocket *)fSocket)->Ping(GetOrdinal());
+   return (((TXSocket *)fSocket)->Ping(GetOrdinal()) ? 0 : -1);
 }
 
 //______________________________________________________________________________
