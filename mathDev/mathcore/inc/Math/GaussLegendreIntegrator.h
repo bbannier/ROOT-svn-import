@@ -140,3 +140,4 @@ protected:
    
 } // end namespace ROOT
 
+#endif /* ROOT_Math_GaussLegendreIntegrator */
