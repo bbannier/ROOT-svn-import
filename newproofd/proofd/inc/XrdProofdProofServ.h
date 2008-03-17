@@ -191,7 +191,7 @@ public:
    inline const char  *Tag() const { XrdSysMutexHelper mhp(fMutex); return fTag.c_str(); }
    int                 TerminateProofServ(bool changeown);
    inline const char  *UserEnvs() const { XrdSysMutexHelper mhp(fMutex); return fUserEnvs.c_str(); }
-   int                 VerifyProofServ();
+   int                 VerifyProofServ(bool fw);
    inline std::list<XrdProofWorker *> *Workers() const
                       { XrdSysMutexHelper mhp(fMutex); return (std::list<XrdProofWorker *> *)&fWorkers; }
 

@@ -1017,8 +1017,8 @@ int XrdProofdProtocol::Ping()
       if (XrdProofdAux::VerifyProcessByID(pid) != 0) {
          // If it as not touched during the last 5 secs we ask for a refresh
          if ((now - st0.st_mtime) > 5) {
-            // Send the request
-            if (xps->VerifyProofServ() != 0) {
+            // Send the request (asking for further propagation)
+            if (xps->VerifyProofServ(1) != 0) {
                TRACEP(this,  XERR, "EXT: could not send verify request to proofsrv");
                response->Send(kXP_ServerError, "EXT: could not verify reuqest to proofsrv");
                return rc;

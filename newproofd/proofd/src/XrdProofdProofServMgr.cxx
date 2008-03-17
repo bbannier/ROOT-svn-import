@@ -775,9 +775,10 @@ int XrdProofdProofServMgr::CheckActiveSessions()
 
       // Verify the session: this just sends a request to the session
       // to touch the session file; all this will be done asynchronously;
-      // the result will be checked next time
+      // the result will be checked next time.
+      // We do not want further propagation at this stage.
       if (!rmsession) {
-         if (xps->VerifyProofServ() != 0) {
+         if (xps->VerifyProofServ(0) != 0) {
             // This means that the connection is already gone
             rmsession = 1;
          }
