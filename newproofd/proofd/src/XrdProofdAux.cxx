@@ -1379,3 +1379,318 @@ int XpdMsg::Get(void **p)
    // Done
    return 0;
 }
+
+
+//
+// Class to handle condensed multi-string specification, e.g <head>[01-25]<tail>
+//
+
+//__________________________________________________________________________
+void XrdProofdMultiStr::Init(const char *s)
+{
+   // Init the multi-string handler.
+   // Supported formats:
+   //    <head>[1-4]<tail>   for  <head>1<tail>, ..., <head>4<tail> (4 items)
+   //    <head>[a,b]<tail>   for  <head>a<tail>, <head>b<tail> (2 items)
+   //    <head>[a,1-3]<tail> for  <head>a<tail>, <head>1<tail>, <head>2<tail>,
+   //                             <head>3<tail> (4 items)
+   //    <head>[01-15]<tail> for  <head>01<tail>, ..., <head>15<tail> (15 items)
+   //
+   // A dashed is possible only between numerically treatable values, i.e.
+   // single letters ([a-Z] will take all tokens between 'a' and 'Z') or n-field
+   // numbers ([001-999] will take all numbers 1 to 999 always using 3 spaces).
+   // Mixed values (e.g. [a-034]) are not allowed.
+
+   fN = 0;
+   if (s && strlen(s)) {
+      XrdOucString kernel(s);
+      // Find begin of kernel
+      int ib = kernel.find('[');
+      if (ib == STR_NPOS) return;
+      // Find end of kernel
+      int ie = kernel.find(']', ib + 1);
+      if (ie == STR_NPOS) return;
+      // Check kernel length (it must not be empty)
+      if (ie == ib + 1) return;
+      // Fill head and tail
+      fHead.assign(kernel, 0, ib -1);
+      fTail.assign(kernel, ie + 1);
+      // The rest is the kernel
+      XrdOucString tkns(kernel, ib + 1, ie - 1);
+      // Tokenize the kernel filling the list
+      int from = 0;
+      XrdOucString tkn;
+      while ((from = tkns.tokenize(tkn, from, ',')) != -1) {
+         if (tkn.length() > 0) {
+            XrdProofdMultiStrToken t(tkn.c_str());
+            if (t.IsValid()) {
+               fN += t.N();
+               fTokens.push_back(t);
+            }
+         }
+      }
+      // Reset everything if nothing found
+      if (!IsValid()) {
+         fHead = "";
+         fTail = "";
+      }
+   }
+}
+
+//__________________________________________________________________________
+bool XrdProofdMultiStr::Matches(const char *s)
+{
+   // Return true if 's' is compatible with this multi-string 
+
+   if (s && strlen(s)) {
+      XrdOucString str(s);
+      if (fHead.length() <= 0 || str.beginswith(fHead)) {
+         if (fTail.length() <= 0 || str.endswith(fTail)) {
+            str.replace(fHead,"");
+            str.replace(fTail,"");
+            std::list<XrdProofdMultiStrToken>::iterator it = fTokens.begin();
+            for (; it != fTokens.end(); it++) {
+               if ((*it).Matches(str.c_str()))
+                  return 1;
+            }
+         }
+      }
+   }
+   // Done
+   return 0;
+}
+
+//__________________________________________________________________________
+XrdOucString XrdProofdMultiStr::Export()
+{
+   // Return a string with comma-separated elements
+
+   XrdOucString str(fN * (fHead.length() + fTail.length() + 4)) ;
+   str = "";
+   if (fN > 0) {
+      std::list<XrdProofdMultiStrToken>::iterator it = fTokens.begin();
+      for (; it != fTokens.end(); it++) {
+         int n = (*it).N(), j = -1;
+         while (n--) {
+            str += fHead;
+            str += (*it).Export(j);
+            str += fTail;
+            str += ",";
+         }
+      }
+   }
+   // Remove last ','
+   if (str.endswith(','))
+      str.erase(str.rfind(','));
+   // Done
+   return str;
+}
+
+//__________________________________________________________________________
+XrdOucString XrdProofdMultiStr::Get(int i)
+{
+   // Return i-th combination (i : 0 -> fN-1)
+
+   XrdOucString str;
+
+   if (i >= 0) {
+      std::list<XrdProofdMultiStrToken>::iterator it = fTokens.begin();
+      for (; it != fTokens.end(); it++) {
+         int n = (*it).N(), j = -1;
+         if ((i + 1) > n) {
+            i -= n;
+         } else {
+            j = i;
+            str = fHead;
+            str += (*it).Export(j);
+            str += fTail;
+            break;
+         }
+      }
+   }
+
+   // Done
+   return str;
+}
+
+//__________________________________________________________________________
+void XrdProofdMultiStrToken::Init(const char *s)
+{
+   // Init the multi-string token.
+   // Supported formats:
+   //    [1-4]   for  1, ..., 4 (4 items)
+   //    [a,b]   for  a, b<tail> (2 items)
+   //    [a,1-3] for  a, 1, 2, 3 (4 items)
+   //    [01-15] for  01, ..., 15 (15 items)
+   //
+   // A dashed is possible only between numerically treatable values, i.e.
+   // single letters ([a-Z] will take all tokens between 'a' and 'Z') or n-field
+   // numbers ([001-999] will take all numbers 1 to 999 always using 3 spaces).
+   // Mixed values (e.g. [a-034]) are not allowed.
+   XPDLOC(AUX, "MultiStrToken::Init")
+
+   fIa = LONG_MAX;
+   fIb = LONG_MAX;
+   fType = kUndef;
+   fN = 0;
+   bool bad = 0;
+   XrdOucString emsg;
+   if (s && strlen(s)) {
+      fA = s;
+      // Find the dash, if any
+      int id = fA.find('-');
+      if (id == STR_NPOS) {
+         // Simple token, nothing much to do
+         fN = 1;
+         fType = kSimple;
+         return;
+      }
+      // Define the extremes
+      fB.assign(fA, id + 1);
+      fA.erase(id);
+      if (fB.length() <= 0) {
+         if (fA.length() > 0) {
+            // Simple token, nothing much to do
+            fN = 1;
+            fType = kSimple;
+         }
+         // Invalid
+         return;
+      }
+      // Check validity
+      char *a = (char *)fA.c_str();
+      char *b = (char *)fB.c_str();
+      if (fA.length() == 1 && fB.length() == 1) {
+         LETTOIDX(*a, fIa);
+         if (fIa != LONG_MAX) {
+            LETTOIDX(*b, fIb);
+            if (fIb != LONG_MAX && fIa <= fIb) {
+               // Ordered single-letter extremes: OK
+               fType = kLetter;
+               fN = fIb - fIa + 1;
+               return;
+            }
+         } else if (DIGIT(*a) && DIGIT(*b) &&
+                   (fIa = *a) <= (fIb = *b)) {
+            // Ordered single-digit extremes: OK
+            fType = kDigit;
+            fN = fIb - fIa + 1;
+            return;
+         }
+         // Not-supported single-field extremes
+         emsg = "not-supported single-field extremes";
+         bad = 1;
+      }
+      if (!bad) {
+         fIa = fA.atoi();
+         if (fIa != LONG_MAX && fIa != LONG_MIN) {
+            fIb = fB.atoi();
+            if (fIb != LONG_MAX && fIb != LONG_MIN && fIb >= fIa) {
+               fType = kDigits;
+               fN = fIb - fIa + 1;
+               return;
+            }
+            // Not-supported single-field extremes
+            emsg = "non-digit or wrong-ordered extremes";
+            bad = 1;
+         } else {
+            // Not-supported single-field extremes
+            emsg = "non-digit extremes";
+            bad = 1;
+         }
+      }
+   }
+   // Print error message, if any
+   if (bad) {
+      TRACE(XERR, emsg);
+      fA = "";
+      fB = "";
+      fIa = LONG_MAX;
+      fIb = LONG_MAX;
+   }
+   // Done
+   return;
+}
+
+//__________________________________________________________________________
+bool XrdProofdMultiStrToken::Matches(const char *s)
+{
+   // Return true if 's' is compatible with this token
+
+   if (s && strlen(s)) {
+      if (fType == kSimple)
+         return ((fA == s) ? 1 : 0);
+      // Multiple one: parse it
+      XrdOucString str(s);
+      long ls;
+      if (fType != kDigits) {
+         if (str.length() > 1)
+            return 0;
+         char *ps = (char *)s;
+         if (fType == kDigit) {
+            if (!DIGIT(*ps) || *ps < fIa || *ps > fIb)
+               return 0;
+         } else if (fType == kLetter) {
+            LETTOIDX(*ps, ls);
+            if (ls == LONG_MAX || ls < fIa || ls > fIb)
+               return 0;
+         }
+      } else {
+         ls = str.atoi();
+         if (ls == LONG_MAX || ls < fIa || ls > fIb)
+            return 0;
+      }
+      // OK
+      return 1;
+   }
+   // Undefined
+   return 0;
+}
+
+//__________________________________________________________________________
+XrdOucString XrdProofdMultiStrToken::Export(int &next)
+{
+   // Export 'next' token; use next < 0 start from the first
+
+   XrdOucString tkn(fA.length());
+
+   // If simple, return the one we have
+   if (fType == kSimple)
+      return (tkn = fA);
+
+   // Check if we still have something
+   if (next > fIb - fIa)
+      return tkn;
+
+   // Check where we are
+   if (next == -1)
+      next = 0;
+
+   // If letters we need to found the right letter
+   if (fType == kLetter) {
+      char c;
+      IDXTOLET(fIa + next, c);
+      next++;
+      return (tkn = c);
+   }
+
+   // If single digit, add the offset
+   if (fType == kDigit) {
+      tkn = (char)(fIa + next);
+      next++;
+      return tkn;
+   }
+
+   // If digits, check if we need to pad 0's
+   XrdOucString tmp(fA.length());
+   tmp.form("%ld", fIa + next);
+   next++;
+   int dl = fA.length() - tmp.length();
+   if (dl <= 0) return tmp;
+   // Add padding 0's
+   tkn = "";
+   while (dl--) tkn += "0";
+   tkn += tmp;
+   return tkn;
+}
+
