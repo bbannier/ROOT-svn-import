@@ -4907,6 +4907,13 @@ void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,in
     if (G__struct.isabstract[ifunc->tagnum])
       return;
 
+    // We can't create a dummy object if its destructor is private...
+    // we tried by creating the object in the heap instead of the heap (with new)
+    // but it doesn't work. It seems the compiler is smart enough to ignore the
+    // object if it isnt used
+    if (G__isprivatedestructorifunc(ifunc->tagnum))
+      return;
+
     int paran = ifunc->para_nu[j];
     // our flag for globalfunctions
     int globalfunc = 0;
@@ -4923,7 +4930,7 @@ void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,in
     G__if_ary_union_constructor(fp, 0, ifunc);
 
     // Print the object class and name
-    fprintf(fp, "  %s *obj_%s = new %s(",G__fulltagname(ifunc->tagnum,0), G__map_cpp_funcname(ifunc->tagnum, ifunc->funcname[j], j, ifunc->page), G__fulltagname(ifunc->tagnum,0));
+    fprintf(fp, "  %s obj_%s(",G__fulltagname(ifunc->tagnum,0), G__map_cpp_funcname(ifunc->tagnum, ifunc->funcname[j], j, ifunc->page));
 
     int k = 0;
     for (int counter=paran-1; counter>-1; counter--) {
