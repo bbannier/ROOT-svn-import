@@ -21,6 +21,7 @@
 // Small auxilliary classes used in XrdProof                            //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
+#include <list>
 #include <stdarg.h>
 
 #ifdef OLDXRDOUC
@@ -113,6 +114,51 @@ int DoDirectiveInt(XrdProofdDirective *, char *val, XrdOucStream *cfg, bool rcf)
 int DoDirectiveString(XrdProofdDirective *, char *val, XrdOucStream *cfg, bool rcf);
 // To set the host field in a loop over the hash list
 int SetHostInDirectives(const char *, XrdProofdDirective *d, void *h);
+
+//
+// Class to handle condensed multi-string specification, e.g <head>[01-25]<tail>
+//
+class XrdProofdMultiStrToken {
+private:
+   long         fIa;
+   long         fIb;
+   XrdOucString fA;
+   XrdOucString fB;
+   int          fType;
+   int          fN;     // Number of combinations
+
+   void Init(const char *s);
+public:
+   enum ETokenType { kUndef, kSimple, kLetter, kDigit, kDigits };
+
+   XrdProofdMultiStrToken(const char *s = 0) { Init(s); }
+   virtual ~XrdProofdMultiStrToken() { }
+
+   XrdOucString Export(int &next);
+   bool IsValid() const { return (fType == kUndef) ? 0 : 1; }
+   bool Matches(const char *s);
+   int  N() const { return fN; }
+};
+
+class XrdProofdMultiStr {
+private:
+   XrdOucString fHead;
+   XrdOucString fTail;
+   std::list<XrdProofdMultiStrToken> fTokens;
+   int          fN;     // Number of combinations
+
+   void Init(const char *s);
+public:
+   XrdProofdMultiStr(const char *s) { Init(s); }
+   virtual ~XrdProofdMultiStr() { }
+
+   XrdOucString Get(int i);
+   bool IsValid() const { return (fTokens.size() > 0 ? 1 : 0); }
+   bool Matches(const char *s);
+   int  N() const { return fN; }
+
+   XrdOucString Export();
+};
 
 //
 // Class to handle message buffers received via a pipe
@@ -212,6 +258,17 @@ public:
 
 #ifndef DIGIT
 #define DIGIT(x) (x >= 48 && x <= 57)
+#endif
+
+#ifndef LETTOIDX
+#define LETTOIDX(x, ilet) \
+        if (x >= 97 && x <= 122) ilet = x - 96; \
+        if (x >= 65 && x <= 90) ilet = x - 38;
+#endif
+#ifndef IDXTOLET
+#define IDXTOLET(ilet, x) \
+        if ((ilet) >= 1 && (ilet) <= 26) x = (ilet) + 96; \
+        if ((ilet) >= 27 && (ilet) <= 52) x = (ilet) + 38;
 #endif
 
 #ifndef XPDSWAP
