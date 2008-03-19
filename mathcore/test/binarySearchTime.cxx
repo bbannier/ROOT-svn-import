@@ -40,7 +40,7 @@ template <typename T> void testBinarySearch(const int n, double* tTMath, double*
    t.Start(); 
    for (int j = 0; j < npass; ++j) { 
       for ( T elem = 0; elem < maxint; ++elem ) {
-         /*Long_t index = */TMath::BinarySearch((Long_t) m, &k[0], elem);
+         /*Long_t index = */TMath::BinarySearch((Long_t) n, &k[0], elem);
       }
    }
    t.Stop(); 
