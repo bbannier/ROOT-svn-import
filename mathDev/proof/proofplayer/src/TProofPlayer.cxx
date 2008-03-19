@@ -814,7 +814,6 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
          // sleeping times
          SetProcessing(kTRUE);
 
-         Bool_t ok = kTRUE;
          if (version == 0) {
             PDB(kLoop,3)
                Info("Process","Call ProcessCut(%lld)", entry);
@@ -830,7 +829,7 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
             if (fSelector->GetAbort() == TSelector::kAbortProcess) break;
          }
 
-         if (ok) {
+         if (fSelStatus->IsOk()) {
             fEventsProcessed++;
             if (gMonitoringWriter)
                gMonitoringWriter->SendProcessingProgress(fEventsProcessed,
@@ -841,7 +840,7 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
             gSystem->DispatchOneEvent(kTRUE);
             ResetBit(TProofPlayer::kDispatchOneEvent);
          }
-         if (!ok || gROOT->IsInterrupted()) break;
+         if (!fSelStatus->IsOk() || gROOT->IsInterrupted()) break;
          SetProcessing(kFALSE);
       }
 
@@ -891,7 +890,7 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
          // Special treatment for files
          if (o->IsA() == TProofFile::Class()) {
             ((TProofFile *)o)->SetWorkerOrdinal(gProofServ->GetOrdinal());
-            if (!strcmp(((TProofFile *)o)->GetDir(),"")) 
+            if (!strcmp(((TProofFile *)o)->GetDir(),""))
                ((TProofFile *)o)->SetDir(gProofServ->GetSessionDir());
          }
       }
