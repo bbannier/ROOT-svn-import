@@ -26,7 +26,7 @@ private:
    TEveCaloLegoGL(const TEveCaloLegoGL&);            // Not implemented
    TEveCaloLegoGL& operator=(const TEveCaloLegoGL&); // Not implemented
 
-   void   RnrText(const char* txt, Float_t x, Float_t y, const GLdouble *pm) const;
+   void    RnrText(const char* txt, Float_t x, Float_t y, const GLdouble *pm, Bool_t isNum) const;
 
    Float_t RenderCell(const TEveCaloData::CellData_t &cell, Float_t towerH, Float_t offset) const;
 
@@ -36,6 +36,7 @@ private:
 protected:
    TEveCaloLego             *fM;  // Model object.
    mutable TGLFont          fNumFont;
+   mutable TGLFont          fSymbolFont;
    mutable TGLFont          fTitleFont;
    mutable Double_t         fX[4][3];  // 3D position of font
 

@@ -40,7 +40,7 @@ TEveCaloLegoGL::TEveCaloLegoGL() :
 TEveCaloLegoGL::~TEveCaloLegoGL()
 {
    // Destructor.
-   printf("~xTEveCaloLegoGL() \n");
+
 }
 
 /******************************************************************************/
@@ -121,71 +121,13 @@ Float_t TEveCaloLegoGL::RenderCell(const TEveCaloData::CellData_t &cellData, Flo
 }
 
 //______________________________________________________________________________
-inline void TEveCaloLegoGL::RnrText(const char* txt, Float_t xa, Float_t ya, const GLdouble *pm) const
-{
-   GLdouble mm[16];
-   GLint    vp[4];
-   glGetDoublev(GL_MODELVIEW_MATRIX,  mm);
-   glGetIntegerv(GL_VIEWPORT, vp);
-
-   fX[0][0] = xa;
-   fX[0][1] = ya;
-   fX[0][2] = 0;
-   GLdouble x, y, z;
-   gluProject(fX[0][0], fX[0][1], fX[0][2], mm, pm, vp, &x, &y, &z);
-   Float_t bbox[6];
-   fNumFont.BBox(txt, bbox[0], bbox[1], bbox[2], bbox[3], bbox[4], bbox[5]);
-   if (txt[0] == '-')
-   {
-      Float_t off = 0.5f * (bbox[3]-bbox[0]) / strlen(txt);
-      bbox[0] -= off;
-      bbox[3] -= off;
-   }
-   gluUnProject(x + bbox[0], y + bbox[1], z, mm, pm, vp, &fX[0][0], &fX[0][1], &fX[0][2]);
-   gluUnProject(x + bbox[3], y + bbox[1], z, mm, pm, vp, &fX[1][0], &fX[1][1], &fX[1][2]);
-   gluUnProject(x + bbox[3], y + bbox[4], z, mm, pm, vp, &fX[2][0], &fX[2][1], &fX[2][2]);
-   gluUnProject(x + bbox[0], y + bbox[4], z, mm, pm, vp, &fX[3][0], &fX[3][1], &fX[3][2]);
-
-   glPushMatrix();
-   // down for height
-   glTranslatef(fX[1][0]-fX[2][0], fX[1][1]-fX[2][1], fX[1][2]-fX[2][2]);
-   // left for the middle of tick mark
-   glTranslatef((fX[0][0]-fX[1][0])*0.5f, (fX[0][1]-fX[1][1])*0.5f, (fX[0][2]-fX[1][2])*0.5f);
-
-   // debug
-   if (0)
-   {
-      glBegin(GL_LINE_LOOP);
-      glVertex3dv(fX[0]);
-      glVertex3dv(fX[1]);
-      glVertex3dv(fX[2]);
-      glVertex3dv(fX[3]);
-      glEnd();
-   }
-   // translate to locatio
-   glTranslatef(fX[0][0], fX[0][1], fX[0][2]);
-
-   glRasterPos3i(0, 0, 0);
-   fNumFont.Render(txt);
-   glPopMatrix();
-}
-
-//______________________________________________________________________________
 void TEveCaloLegoGL::DrawTitle(TGLRnrCtx & rnrCtx ) const
 {
    if (fTitleFont.GetMode() == TGLFont::kUndef)
    {
       TObjArray* farr = TGLFontManager::GetFontFileArray();
       TIter next(farr);
-      TObjString* os;
-      Int_t cnt = 0;
-      while ((os = (TObjString*) next()) != 0)
-      {
-         if (os->GetString() == "comic")
-            break;
-         cnt++;
-      }
-      rnrCtx.RegisterFont(22, cnt, TGLFont::kPixmap, fTitleFont);
+      rnrCtx.RegisterFont(22, 2, TGLFont::kPixmap, fTitleFont);
    }
 
    glMatrixMode(GL_PROJECTION);
@@ -221,6 +163,54 @@ void TEveCaloLegoGL::DrawTitle(TGLRnrCtx & rnrCtx ) const
 }
 
 //______________________________________________________________________________
+inline void TEveCaloLegoGL::RnrText(const char* txt, Float_t xa, Float_t ya, const GLdouble *pm, Bool_t isNum) const
+{
+   GLdouble mm[16];
+   GLint    vp[4];
+   glGetDoublev(GL_MODELVIEW_MATRIX,  mm);
+   glGetIntegerv(GL_VIEWPORT, vp);
+
+   fX[0][0] = xa;
+   fX[0][1] = ya;
+   fX[0][2] = 0;
+   GLdouble x, y, z;
+   gluProject(fX[0][0], fX[0][1], fX[0][2], mm, pm, vp, &x, &y, &z);
+   Float_t llx, lly, llz, urx, ury, urz;
+   if (isNum)
+      fNumFont.BBox(txt, llx, lly, llz, urx, ury, urz);
+   else 
+      fSymbolFont.BBox(txt, llx, lly, llz, urx, ury, urz);
+
+   gluUnProject(x + llx, y + lly, z, mm, pm, vp, &fX[0][0], &fX[0][1], &fX[0][2]);
+   gluUnProject(x + urx, y + lly, z, mm, pm, vp, &fX[1][0], &fX[1][1], &fX[1][2]);
+   gluUnProject(x + urx, y + ury, z, mm, pm, vp, &fX[2][0], &fX[2][1], &fX[2][2]);
+   gluUnProject(x + llx, y + ury, z, mm, pm, vp, &fX[3][0], &fX[3][1], &fX[3][2]);
+
+   glPushMatrix();
+   // down for height
+   glTranslatef(fX[1][0]-fX[2][0], fX[1][1]-fX[2][1], fX[1][2]-fX[2][2]);
+   // translate to location
+   glTranslatef(fX[0][0], fX[0][1], fX[0][2]);
+
+   if (isNum)
+   {
+       // center at tick mark
+      glTranslatef((fX[0][0]-fX[1][0])*0.5f, (fX[0][1]-fX[1][1])*0.5f, (fX[0][2]-fX[1][2])*0.5f);
+      glRasterPos3i(0, 0, 0);
+      fNumFont.Render(txt);
+   }
+   else
+   {
+      if ((fX[0][0]<0 && fX[0][0]>=fX[1][0])|| (fX[0][0]>0 && fX[0][0]<=fX[1][0]))
+            glTranslatef(fX[0][0]-fX[1][0], fX[0][1]-fX[1][1], fX[0][2]-fX[1][2]);
+
+      glRasterPos3i(0, 0, 0);
+      fSymbolFont.Render(txt);
+   }
+   glPopMatrix();
+}
+
+//______________________________________________________________________________
 void TEveCaloLegoGL::DrawAxis(TGLRnrCtx & rnrCtx,
                               Float_t x0, Float_t x1,
                               Float_t y0, Float_t y1) const
@@ -233,21 +223,20 @@ void TEveCaloLegoGL::DrawAxis(TGLRnrCtx & rnrCtx,
       Int_t cnt = 0;
       while ((os = (TObjString*) next()) != 0)
       {
-         if (os->GetString() == "comic")
+         if (os->GetString() == "symbol")
             break;
          cnt++;
       }
       rnrCtx.RegisterFont(12, cnt, TGLFont::kPixmap, fNumFont);
+      rnrCtx.RegisterFont(20, cnt, TGLFont::kPixmap, fSymbolFont);
    }
 
    // get corner closest to projected plane
-
    const GLdouble *pm = rnrCtx.RefCamera().RefLastNoPickProjM().CArr();
    GLdouble mm[16];
    GLint    vp[4];
    glGetDoublev(GL_MODELVIEW_MATRIX,  mm);
    glGetIntegerv(GL_VIEWPORT, vp);
-   Float_t axY, ayX;
    GLdouble x, y;
    GLdouble z[4];
    gluProject(x0, y0, 0, mm, pm, vp, &x, &y, &z[0]);
@@ -266,45 +255,63 @@ void TEveCaloLegoGL::DrawAxis(TGLRnrCtx & rnrCtx,
       }
    }
 
-   switch (idx)
-   {
-      case 0:  axY = y0;  ayX = x0;  break;
-      case 1:  ayX = x1;  axY = y0;  break;
-      case 2:  ayX = x1;  axY = y1;  break;
-      case 3:  ayX = x0;  axY = y1;  break;
-   }
-
-   // labels
    Int_t ntmX = 2;
    Float_t xs = 2;
+   Float_t tms = 0.1;
+   Float_t tmOff = 1.5*tms;
+   Float_t axY, ayX;
+   Float_t axtX, aytY;
+   switch (idx)
+   {
+      case 0:  
+      {
+         axY  = y0;  ayX = x0;
+         axtX = x1; aytY = y1;
+         break;
+      }
+      case 1: 
+      {
+         ayX  = x1;  axY  = y0;
+         axtX = x0;  aytY = y1;  
+         break;
+      }
+      case 2: 
+      {
+         ayX  = x1;  axY  = y1;
+         axtX = x0;  aytY = y0;    
+         break;
+      }
+      case 3:
+      { 
+         ayX  = x0;  axY = y1;
+         axtX = x1;  aytY= y0;  
+         break;
+      }
+   }
+
    Int_t nX = ntmX*2+1;
    Float_t* vX = new Float_t[nX];
    for (Int_t i=0; i<nX; ++i)
       vX[i] = -xs*ntmX + i*xs;
 
-   Int_t ntmY = 3;
+   Int_t ntmY = 2;
    Float_t ys = 1;
    Int_t nY = ntmY*2+1;
    Float_t* vY = new Float_t[nY];
    for (Int_t i=0; i<nY; ++i)
       vY[i] = -ys*ntmY + i*ys;
 
-
-
-   Float_t tms = 0.1;
-   Float_t tmOff = 1.5*tms;
-
    fNumFont.PreRender(kFALSE);
    glPushMatrix();
    glTranslatef(0, 0, -tms -tmOff);
 
+   RnrText("h", axtX, axY , pm, kFALSE);
+   RnrText("f", ayX,  aytY, pm, kFALSE);
 
    for (Int_t i=0; i<nX; ++i)
-      RnrText(Form("%.0f", vX[i]), vX[i], axY, pm);
-
+      RnrText(Form("%.0f", vX[i]), vX[i], axY, pm, kTRUE);
    for (Int_t i=0; i<nY; ++i)
-      RnrText(Form("%.0f", vY[i]), ayX, vY[i], pm);
-
+      RnrText(Form("%.0f", vY[i]), ayX, vY[i], pm, kTRUE);
    glPopMatrix();
    fNumFont.PostRender();
 
@@ -344,7 +351,7 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    Float_t x0 = ax->GetBinLowEdge(0);
    Float_t x1 = ax->GetBinUpEdge(ax->GetNbins());
    {
-      Float_t a = 0.2;
+      Float_t a = 0.5;
       TGLUtil::Color3f(a, a, a);
       TGLCapabilitySwitch lights_on(GL_LIGHTING, kTRUE);
 
