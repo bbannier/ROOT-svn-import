@@ -383,6 +383,7 @@ TEveCaloLego::TEveCaloLego(const Text_t* n, const Text_t* t):
 {
    // Constructor.
 
+   fCellZScale =0.5;
 }
 
 //______________________________________________________________________________
@@ -392,6 +393,7 @@ TEveCaloLego::TEveCaloLego(TEveCaloData* data):
    // Constructor.
 
    SetElementName("TEveCaloLego");
+   fCellZScale =0.5;
 }
 
 //______________________________________________________________________________
