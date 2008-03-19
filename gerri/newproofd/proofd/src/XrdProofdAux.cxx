@@ -1308,7 +1308,7 @@ int XpdMsg::Init(const char *buf)
          return -1;
       }
       fType = strtol(ctyp.c_str(), 0, 10);
-      if (fType >= LONG_MAX || fType <= LONG_MIN) {
+      if (!XPD_LONGOK(fType)) {
          fBuf = "";
          fFrom = -1;
          return -1;
@@ -1336,7 +1336,7 @@ int XpdMsg::Get(int &i)
    if ((fFrom = fBuf.tokenize(tkn, fFrom, ' ')) == -1 || tkn.length() <= 0)
       return -1;
    i = strtol(tkn.c_str(), 0, 10);
-   if (i >= LONG_MAX || i <= LONG_MIN) {
+   if (!XPD_LONGOK(i)) {
       i = iold;
       return -1;
    }
