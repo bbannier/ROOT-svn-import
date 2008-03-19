@@ -37,6 +37,7 @@
 #include "Getline.h"
 #include <time.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "TGFileBrowser.h"
 #include "TRootBrowser.h"
@@ -447,7 +448,7 @@ void TGFileBrowser::RecursiveRemove(TObject *obj)
    }
    if (!obj->InheritsFrom("TFile") && fRootDir)
       fListTree->RecursiveDeleteItem(fRootDir, obj);
-   fListTree->ClearViewPort();
+   //fListTree->ClearViewPort();
 }
 
 //______________________________________________________________________________

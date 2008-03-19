@@ -68,6 +68,7 @@
 #include "TKeyMapFile.h"
 #include "TGDNDManager.h"
 #include "Riostream.h"
+#include <stdlib.h>
 
 
 TGGC *TGContainer::fgLineGC = 0;
@@ -296,6 +297,7 @@ TGContainer::TGContainer(const TGWindow *p, UInt_t w, UInt_t h,
    // all the list items. It will be shown through a TGViewPort (which is
    // created by the TGCanvas).
 
+   fViewPort = 0;
    fBdown = kFALSE;
    fMsgWindow  = p;
    fDragging   = kFALSE;
@@ -336,6 +338,7 @@ TGContainer::TGContainer(TGCanvas *p, UInt_t options, ULong_t back) :
    // all the list items. It will be shown through a TGViewPort (which is
    // created by the TGCanvas).
 
+   fViewPort = 0;
    fBdown = kFALSE;
    fMsgWindow  = p->GetViewPort();
    fCanvas = p;
@@ -735,6 +738,7 @@ void TGContainer::SetPagePosition(const TGPosition& pos)
 {
    // Set page position.
 
+   if (!fViewPort) return;
    fViewPort->SetPos(pos.fX, pos.fY);
 }
 
@@ -743,6 +747,7 @@ void TGContainer::SetPagePosition(Int_t x, Int_t y)
 {
    // Set page position.
 
+   if (!fViewPort) return;
    fViewPort->SetPos(x, y);
 }
 
@@ -751,6 +756,7 @@ void TGContainer::SetPageDimension(const TGDimension& dim)
 {
    // Set page dimension.
 
+   if (!fViewPort) return;
    fViewPort->Resize(dim);
 }
 
@@ -759,6 +765,7 @@ void TGContainer::SetPageDimension(UInt_t w, UInt_t h)
 {
    // Set page dimension.
 
+   if (!fViewPort) return;
    fViewPort->Resize(w, h);
 }
 
@@ -785,6 +792,7 @@ void TGContainer::DrawRegion(Int_t x, Int_t y, UInt_t w, UInt_t h)
    static GContext_t gcBg = 0;
    Pixmap_t pixmap = 0;
 
+   if (!fViewPort) return;
    // sanity checks
    if ((x > (Int_t)fViewPort->GetWidth()) || (y > (Int_t)fViewPort->GetHeight())) {
       return;
@@ -853,6 +861,7 @@ void TGContainer::ClearViewPort()
 {
    // Clear view port and redraw full content
 
+   if (!fViewPort) return;
    fExposedRegion.fW = fViewPort->GetWidth();
    fExposedRegion.fH = fViewPort->GetHeight();
    fExposedRegion.fX = fExposedRegion.fY = 0;
@@ -1683,6 +1692,7 @@ void TGContainer::SetVsbPosition(Int_t newPos)
 {
    // Set position of vertical scrollbar.
 
+   if (!fViewPort) return;
    TGVScrollBar *vb = GetVScrollbar();
 
    if (vb && vb->IsMapped()) {
@@ -1698,6 +1708,7 @@ void TGContainer::SetHsbPosition(Int_t newPos)
 {
    // set new hor. position
 
+   if (!fViewPort) return;
    TGHScrollBar *hb = GetHScrollbar();
 
    if (hb && hb->IsMapped()) {
@@ -1713,6 +1724,7 @@ void TGContainer::AdjustPosition()
 {
    // Move content to position of highlighted/activated frame.
 
+   if (!fViewPort) return;
    if (!fLastActiveEl) return;
    TGFrame *f = fLastActiveEl->fFrame;
 

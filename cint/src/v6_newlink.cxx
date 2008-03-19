@@ -26,6 +26,8 @@
 #include <sys/stat.h>
 #endif
 #include <string>
+#include <string.h>
+#include <stdlib.h>
 
 #ifdef _WIN32
 #include "windows.h"
@@ -6695,6 +6697,12 @@ int G__tagtable_setup(int tagnum,int size,int cpplink,int isabstract,const char 
   if(0!=G__struct.size[tagnum]
      && 'n'!=G__struct.type[tagnum]
      ) {
+     if (G__struct.filenum[tagnum]!=-1 &&
+	!G__struct.incsetup_memvar[tagnum]->empty() &&
+	strcmp(G__srcfile[G__struct.filenum[tagnum]].filename,"{CINTEX dictionary translator}")==0) {
+        // Something was already registered by Cintex, let's not add more
+        return 0;
+     }
 #ifndef G__OLDIMPLEMENTATION1656
 
      char found = G__incsetup_exist(G__struct.incsetup_memvar[tagnum],setup_memvar);
@@ -7423,7 +7431,7 @@ int G__parse_parameter_link(char* paras)
     }
     else {
       if (type_name[0] == '\'') {
-        type_name[std::strlen(type_name)-1] = '\0';
+        type_name[strlen(type_name)-1] = '\0';
         typenum = G__defined_typename(type_name + 1);
       }
       else {
@@ -7431,7 +7439,7 @@ int G__parse_parameter_link(char* paras)
       }
     }
     G__separate_parameter(paras, &os, c_reftype_const);
-    reftype_const = std::atoi(c_reftype_const);
+    reftype_const = atoi(c_reftype_const);
 #ifndef G__OLDIMPLEMENTATION1861
     //if (typenum != -1) {
     // NO - this is already taken into account when writing the dictionary

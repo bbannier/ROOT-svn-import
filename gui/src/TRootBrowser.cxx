@@ -1,4 +1,4 @@
-// @(#)root/gui:$Id: TRootBrowser.cxx 20516 2007-10-26 16:17:33Z rdm $
+// @(#)root/gui:$Id$
 // Author: Bertrand Bellenot   26/09/2007
 
 /*************************************************************************
@@ -347,6 +347,8 @@ void TRootBrowser::Add(TObject *obj, const char *name, Int_t check)
    // called by a browser. If check < 0 (default) no check box is drawn,
    // if 0 then unchecked checkbox is added, if 1 checked checkbox is added.
 
+   if (obj->InheritsFrom("TObjectSpy"))
+      return;
    if (fActBrowser)
       fActBrowser->Add(obj, name, check);
 }
@@ -461,6 +463,7 @@ void TRootBrowser::CloseWindow()
       }
    }
    fPlugins.Delete();
+   Emit("CloseWindow()");
    DeleteWindow();
 }
 

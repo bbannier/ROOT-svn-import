@@ -429,7 +429,7 @@ std::pair<Bool_t, TGLVertex3> Intersection(const TGLPlane & plane, const TGLLine
    Double_t factor = num/denom;
 
    // If not extending (projecting) line is length from start enough to reach plane?
-   if (!extend && factor < 0.0 || factor > 1.0) {
+   if (!extend && (factor < 0.0 || factor > 1.0)) {
       return std::make_pair(kFALSE, TGLVertex3(0.0, 0.0, 0.0));
    }
 
@@ -1164,8 +1164,6 @@ void TGLUtil::RenderPolyMarkers(const TAttMarker& marker, Float_t* p, Int_t n,
    glPushAttrib(GL_ENABLE_BIT | GL_POINT_BIT | GL_LINE_BIT);
 
    glDisable(GL_LIGHTING);
-   glColorMaterial(GL_FRONT_AND_BACK, GL_DIFFUSE);
-   glEnable(GL_COLOR_MATERIAL);
    TGLUtil::Color(marker.GetMarkerColor());
 
    Int_t s = marker.GetMarkerStyle();
@@ -1185,8 +1183,8 @@ void TGLUtil::RenderPoints(const TAttMarker& marker, Float_t* op, Int_t n,
    // Render markers as circular or square points.
    // Color is never changed.
 
-   Int_t style = marker.GetMarkerStyle();
-   Float_t size = 5*marker.GetMarkerSize();
+   Int_t   style = marker.GetMarkerStyle();
+   Float_t size  = 5*marker.GetMarkerSize();
    if (style == 4 || style == 20 || style == 24)
    {
       glEnable(GL_POINT_SMOOTH);
@@ -1206,12 +1204,9 @@ void TGLUtil::RenderPoints(const TAttMarker& marker, Float_t* op, Int_t n,
    glPointSize(size);
 
    // During selection extend picking region for large point-sizes.
-   Bool_t changePM = kFALSE;
-   if (selection && size > pick_radius)
-   {
-      changePM = kTRUE;
+   Bool_t changePM = selection && size > pick_radius;
+   if (changePM)
       BeginExtendPickRegion((Float_t) pick_radius / size);
-   }
 
    Float_t* p = op;
    if (sec_selection)
@@ -1269,7 +1264,7 @@ void TGLUtil::RenderCrosses(const TAttMarker& marker, Float_t* op, Int_t n,
    }
 
    // cross dim
-   const Float_t  d = 2*marker.GetMarkerSize();
+   const Float_t d = 2*marker.GetMarkerSize();
    Float_t* p = op;
    if (sec_selection)
    {
@@ -1309,8 +1304,6 @@ void TGLUtil::RenderPolyLine(const TAttLine& aline, Float_t* p, Int_t n,
    glPushAttrib(GL_ENABLE_BIT | GL_LINE_BIT);
 
    glDisable(GL_LIGHTING);
-   glColorMaterial(GL_FRONT_AND_BACK, GL_DIFFUSE);
-   glEnable(GL_COLOR_MATERIAL);
    TGLUtil::Color(aline.GetLineColor());
    glLineWidth(aline.GetLineWidth());
    if (aline.GetLineStyle() > 1) {
@@ -1333,12 +1326,9 @@ void TGLUtil::RenderPolyLine(const TAttLine& aline, Float_t* p, Int_t n,
    }
 
    // During selection extend picking region for large line-widths.
-   Bool_t changePM = kFALSE;
-   if (selection && aline.GetLineWidth() > pick_radius)
-   {
-      changePM = kTRUE;
+   Bool_t changePM = selection && aline.GetLineWidth() > pick_radius;
+   if (changePM)
       BeginExtendPickRegion((Float_t) pick_radius / aline.GetLineWidth());
-   }
 
    Float_t* tp = p;
    glBegin(GL_LINE_STRIP);
@@ -2652,8 +2642,6 @@ namespace Rgl {
                                              * gPad->GetWh() + vp[1]));
       Draw2DAxis(zAxis, xLeft, yLeft, xUp, yUp, coord->GetZRange().first,
                  coord->GetZRange().second, coord->GetZLog(), kTRUE);
-
-      gVirtualX->SelectWindow(gPad->GetPixmapID());
    }
 
    void SetZLevels(TAxis *zAxis, Double_t zMin, Double_t zMax,
@@ -3059,8 +3047,8 @@ void TGLLevelPalette::EnableTexture(Int_t mode)const
    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
    glBindTexture(GL_TEXTURE_1D, fTexture);
    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-   glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-   glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+   glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+   glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
    glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA, fTexels.size() / 4, 0,
                 GL_RGBA, GL_UNSIGNED_BYTE, &fTexels[0]);
    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GLint(mode));
@@ -3075,12 +3063,21 @@ void TGLLevelPalette::DisableTexture()const
 }
 
 //______________________________________________________________________________
+Int_t TGLLevelPalette::GetPaletteSize()const
+{
+   //Get. Palette. Size.
+   return Int_t(fPaletteSize);
+}
+
+//______________________________________________________________________________
 Double_t TGLLevelPalette::GetTexCoord(Double_t z)const
 {
    //Get tex coordinate
    if (!fContours)
       return (z - fZRange.first) / (fZRange.second - fZRange.first) * fPaletteSize / (fTexels.size() / 4);
 
+   /*
+   //This part is wrong. To be fixed.
    std::vector<Double_t>::size_type i = 0, e = fContours->size();
 
    if (!e)
@@ -3090,6 +3087,7 @@ Double_t TGLLevelPalette::GetTexCoord(Double_t z)const
       if (z >= (*fContours)[i] && z <= (*fContours)[i + 1])
          return i / Double_t(fTexels.size() / 4);
    }
+   */
 
    return 1.;
 }

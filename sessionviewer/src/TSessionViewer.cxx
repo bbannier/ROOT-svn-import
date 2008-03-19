@@ -67,6 +67,7 @@
 #ifdef WIN32
 #include "TWin32SplashThread.h"
 #endif
+#include <stdlib.h>
 
 TSessionViewer *gSessionViewer = 0;
 
@@ -3783,9 +3784,9 @@ void TSessionViewer::UpdateListOfProofs()
                while ((desc = (TSessionDescription *)nexts())) {
                   if (desc->fConnected && desc->fAttached)
                      continue;
-                  if (p && (exists && ((desc->fTag == d->GetName()) ||
+                  if (p && (exists && (((desc->fTag == d->GetName()) ||
                       (desc->fName == d->GetTitle())) ||
-                      (!exists && (desc->fAddress == p->GetMaster())))) {
+                      (!exists && (desc->fAddress == p->GetMaster()))))) {
                      desc->fConnected  = kTRUE;
                      desc->fAttached   = kTRUE;
                      desc->fProof      = p;

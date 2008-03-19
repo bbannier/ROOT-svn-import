@@ -143,6 +143,8 @@ TFile::TFile() : TDirectoryFile(), fInfoCache(0)
    fCacheWrite      = 0;
    fArchiveOffset   = 0;
    fReadCalls       = 0;
+   fInfoCache       = 0;
+   fOpenPhases      = 0;
    fNoAnchorInName  = kFALSE;
    fIsRootFile      = kTRUE;
    fIsArchive       = kFALSE;
@@ -158,7 +160,7 @@ TFile::TFile() : TDirectoryFile(), fInfoCache(0)
 
 //_____________________________________________________________________________
 TFile::TFile(const char *fname1, Option_t *option, const char *ftitle, Int_t compress)
-           : TDirectoryFile(), fUrl(fname1,kTRUE), fInfoCache(0)
+           : TDirectoryFile(), fUrl(fname1,kTRUE), fInfoCache(0), fOpenPhases(0)
 {
    // Opens or creates a local ROOT file whose name is fname1. It is
    // recommended to specify fname1 as "<file>.root". The suffix ".root"
@@ -459,6 +461,7 @@ TFile::~TFile()
    SafeDelete(fFree);
    SafeDelete(fArchive);
    SafeDelete(fInfoCache);
+   SafeDelete(fOpenPhases);
    SafeDelete(fAsyncHandle);
    SafeDelete(fCacheRead);
    SafeDelete(fCacheWrite);
@@ -1545,9 +1548,9 @@ Int_t TFile::Recover()
       char *classname = 0;
       if (nwhc <= 0 || nwhc > 100) break;
       classname = new char[nwhc+1];
-      int i;
+      int i, nwhci = nwhc;
       for (i = 0;i < nwhc; i++) frombuf(buffer, &classname[i]);
-      classname[nwhc] = '\0';
+      classname[nwhci] = '\0';
       TDatime::GetDateTime(datime, date, time);
       if (seekpdir == fSeekDir && strcmp(classname,"TFile") && strcmp(classname,"TBasket")) {
          key = new TKey(this);
@@ -2128,7 +2131,8 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
       Int_t len = strlen(info->GetName());
       while ((subinfo = (TStreamerInfo*)subnext())) {
          if (strncmp(info->GetName(),subinfo->GetName(),len)==0) {
-            if (subinfo->GetName()[len+1]==':') {
+            const Int_t sublen = strlen(subinfo->GetName());
+            if ( (sublen > len) && subinfo->GetName()[len+1]==':') {
                subClasses.Add(subinfo);
             }
          }
@@ -2256,11 +2260,12 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
    gSystem->ChangeDirectory(dirname);
 #ifndef WIN32
    gSystem->Exec("chmod +x MAKEP");
+   int res = !gSystem->Exec("./MAKEP");
 #else
    // not really needed for Windows but it would work both both Unix and NT
-   chmod("make.cmd",00700);
-#endif
+   chmod("makep.cmd",00700);
    int res = !gSystem->Exec("MAKEP");
+#endif
    gSystem->ChangeDirectory(path);
    sprintf(path,"%s/%s.%s",dirname,dirname,gSystem->GetSoExt());
    if (res) printf("Shared lib %s has been generated\n",path);
@@ -2749,9 +2754,13 @@ TFile *TFile::Open(const char *url, Option_t *option, const char *ftitle,
                f = (TFile*) h->ExecPlugin(5, name.Data(), option, ftitle, compress, netopt);
             else
                f = (TFile*) h->ExecPlugin(4, name.Data(), option, ftitle, compress);
-         } else
-            // just try to open it locally
-            f = new TFile(name.Data(), option, ftitle, compress);
+         } else {
+            // Just try to open it locally but via TFile::Open, so that we pick-up the correct
+            // plug-in in the case file name contains information about a special backend (e.g.
+            // "srm://srm.cern.ch//castor/cern.ch/grid/..." should be considered a castor file
+            // /castor/cern.ch/grid/...").
+            f = TFile::Open(urlname.GetFileAndOptions(), option, ftitle, compress);
+         }
       }
 
       if (f && f->IsZombie()) {
@@ -3370,11 +3379,12 @@ TFile::EAsyncOpenStatus TFile::GetAsyncOpenStatus(TFileOpenHandle *handle)
 {
    // Get status of the async open request related to 'handle'.
 
-   if (handle && handle->fFile)
+   if (handle && handle->fFile) {
       if (!handle->fFile->IsZombie())
          return handle->fFile->GetAsyncOpenStatus();
       else
          return TFile::kAOSFailure;
+   }
 
    // Default is synchronous mode
    return TFile::kAOSNotAsync;

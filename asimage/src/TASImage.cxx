@@ -141,7 +141,7 @@ typedef struct {
    if (!aa) {\
       *bot = *top;\
    } else { \
-      b->a = (b->a*aa)>>8 + t->a;\
+      b->a = ((b->a*aa)>>8) + t->a;\
       b->r = (b->r*aa + t->r*t->a)>>8;\
       b->g = (b->g*aa + t->g*t->a)>>8;\
       b->b = (b->b*aa + t->b*t->a)>>8;\
@@ -2824,22 +2824,22 @@ void TASImage::Gradient(UInt_t angle, const char *colors, const char *offsets,
       gradient.type = GRADIENT_BottomLeft2TopRight;
    }
 
-   for (p = (char*)colors; isspace((int)*p); p++);
+   for (p = (char*)colors; isspace((int)*p); p++) { }
 
    for (npoints1 = 0; *p; npoints1++) {
       if (*p) {
-         for ( ; *p && !isspace((int)*p); p++);
+         for ( ; *p && !isspace((int)*p); p++) { }
       }
-      for ( ; isspace((int)*p); p++);
+      for ( ; isspace((int)*p); p++) { }
    }
    if (offsets) {
-      for (p = (char*)offsets; isspace((int)*p); p++);
+      for (p = (char*)offsets; isspace((int)*p); p++) { }
 
       for (npoints2 = 0; *p; npoints2++) {
          if (*p) {
-            for ( ; *p && !isspace((int)*p); p++);
+            for ( ; *p && !isspace((int)*p); p++) { }
          }
-         for ( ; isspace((int)*p); p++);
+         for ( ; isspace((int)*p); p++) { }
       }
    }
    if (npoints1 > 1) {
@@ -2856,15 +2856,15 @@ void TASImage::Gradient(UInt_t angle, const char *colors, const char *offsets,
       gradient.color = new ARGB32[npoints1];
       gradient.offset = new double[npoints1];
 
-      for (p = (char*)colors; isspace((int)*p); p++);
+      for (p = (char*)colors; isspace((int)*p); p++) { }
 
       for (npoints1 = 0; *p; ) {
          pb = p;
 
          if (*p) {
-            for ( ; *p && !isspace((int)*p); p++);
+            for ( ; *p && !isspace((int)*p); p++) { }
          }
-         for ( ; isspace((int)*p); p++);
+         for ( ; isspace((int)*p); p++) { }
 
          col = str(pb - colors, p - pb);
 
@@ -2876,20 +2876,20 @@ void TASImage::Gradient(UInt_t angle, const char *colors, const char *offsets,
       }
 
       if (offsets) {
-         for (p = (char*)offsets; isspace((int)*p); p++);
+         for (p = (char*)offsets; isspace((int)*p); p++) { }
 
          for (npoints2 = 0; *p; ) {
             pb = p;
 
             if (*p) {
-               for ( ; *p && !isspace((int)*p); p++);
+               for ( ; *p && !isspace((int)*p); p++) { }
             }
             ch = *p; *p = '\0';
             gradient.offset[npoints2] = strtod(pb, &pb);
 
             if (pb == p) npoints2++;
             *p = ch;
-            for ( ; isspace((int)*p); p++);
+            for ( ; isspace((int)*p); p++) { }
          }
       } else {
          for (npoints2 = 0; npoints2 < npoints1; npoints2++) {
@@ -3499,12 +3499,11 @@ void TASImage::FillRectangleInternal(UInt_t col, Int_t x, Int_t y, UInt_t width,
 {
    // Fills rectangle of size (width, height) at position (x,y)
    // within the existing image with specified color.
-   //
 
    ARGB32 color = (ARGB32)col;
 
-   width = !width ? fImage->width : width;
-   height = !height ? fImage->height : height;
+   if (width  == 0) width = 1;
+   if (height == 0) height = 1;
 
    if (x < 0) {
       width += x;
