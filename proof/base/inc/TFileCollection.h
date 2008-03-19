@@ -50,14 +50,14 @@ private:
 
 public:
    enum EStatusBits {
-     kRemoteCollection = BIT(15)   // the collection is not staged
+      kRemoteCollection = BIT(15)   // the collection is not staged
    };
-
-   TFileCollection(const char *name = 0, const char *title = 0, const char *file = 0);
+   TFileCollection(const char *name = 0, const char *title = 0,
+                   const char *file = 0, Int_t nfiles = -1, Int_t firstfile = 1);
    virtual ~TFileCollection();
 
    void            Add(TFileInfo *info);
-   void            AddFromFile(const char *file);
+   void            AddFromFile(const char *file, Int_t nfiles = -1, Int_t firstfile = 1);
    void            AddFromDirectory(const char *dir);
    THashList      *GetList() { return fList; }
    void            SetList(THashList* list) { fList = list; }

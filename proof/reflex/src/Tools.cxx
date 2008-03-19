@@ -24,6 +24,7 @@
 #elif defined(__SUNPRO_CC)
 #include <demangle.h>
 #endif
+#include <string.h>
 
 using namespace Reflex;
 
@@ -570,7 +571,7 @@ std::string Tools::NormalizeName( const char * nam ) {
          if (!isalphanum(prev) || !isalpha(next)) {
             continue; // continue on non-word boundaries
          }
-      } else if (curr == '>' && prev == '>' || curr == '(' && prev != ')') {
+      } else if ((curr == '>' && prev == '>') || (curr == '(' && prev != ')')) {
          norm_name += ' ';
       }
       norm_name += (prev = curr);

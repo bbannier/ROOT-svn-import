@@ -18,6 +18,7 @@
 #include "TVirtualFitter.h"
 #include "TClass.h"
 #include "TMath.h"
+#include <stdlib.h>
 
 #include <ctype.h>
 
@@ -131,7 +132,7 @@ TMultiGraph::~TMultiGraph()
       //drawing modes
       TObject *obj;
       while ((obj  = fFunctions->First())) {
-         while(fFunctions->Remove(obj));
+         while(fFunctions->Remove(obj)) { }
          delete obj;
       }
       delete fFunctions;

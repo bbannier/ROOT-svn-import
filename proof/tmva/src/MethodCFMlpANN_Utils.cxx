@@ -58,6 +58,7 @@
 //_______________________________________________________________________
 
 #include <iostream>
+#include <stdlib.h>
 
 #include "TMVA/MethodCFMlpANN_Utils.h"
 #include "TMVA/Timer.h"
@@ -557,7 +558,7 @@ void TMVA::MethodCFMlpANN_Utils::Innit( char *det, Double_t *tout2, Double_t *ti
 
    for (i1 = 1; i1 <= i__3; ++i1) {
 
-      if ( num>0 && (i1-1)%num == 0 || i1 == i__3) timer.DrawProgressBar( i1-1 );
+      if ( (num>0 && (i1-1)%num == 0) || i1 == i__3) timer.DrawProgressBar( i1-1 );
 
       i__2 = fParam_1.nevl;
       for (i__ = 1; i__ <= i__2; ++i__) {

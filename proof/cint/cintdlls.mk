@@ -122,6 +122,9 @@ CINTDLLINCDIRS := -I. -I$(CINTDIRDLLSTL) $(FAVOR_SYSINC)
 ifeq ($(GCC_MAJOR),4)
   CINTDLLINCDIRS := -iquote. -iquote$(CINTDIRDLLSTL)
 endif
+ifeq ($(ICC_MAJOR),10)
+  CINTDLLINCDIRS := -iquote. -iquote$(CINTDIRDLLSTL)
+endif
 $(CINTDLLS): CINTCXXFLAGS += $(CINTDLLINCDIRS)
 
 ##### all cintdlls end on .dll
@@ -254,7 +257,7 @@ distclean-cintdlls: clean-cintdlls
 	  $(CINTDIRDLLSTL)/G__cpp_$${cintdll}.* \
 	  $(CINTDIRL)/G__c_$${cintdll}.* \
 	  metautils/src/stlLoader_$${cintdll}.*; done)
-	@rm -f $(ALLCINTDLLS) \
+	@rm -f $(ALLCINTDLLS) $(CINTDICTMAPS) \
 	  $(CINTDIRL)/posix/mktypes$(EXEEXT)
 ifeq ($(PLATFORM),macosx)
 	@rm -f  $(CINTDIRSTL)/*.so

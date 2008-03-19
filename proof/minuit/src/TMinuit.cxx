@@ -637,16 +637,22 @@ TObject *TMinuit::Contour(Int_t npoints, Int_t pa1, Int_t pa2)
       fStatus= 2;
       return (TObject *)0;
    }
-   Int_t    error;
+   Int_t    npfound;
    Double_t *xcoor = new Double_t[npoints+1];
    Double_t *ycoor = new Double_t[npoints+1];
-   mncont(pa1,pa2,npoints,xcoor,ycoor,error);
-   if (error!=npoints) {
+   mncont(pa1,pa2,npoints,xcoor,ycoor,npfound);
+   if (npfound<4) {
       // mncont did go wrong
-      fStatus= (error==0 ? 1 : error);
+      Warning("Contour","Cannot find more than 4 points, no TGraph returned");
+      fStatus= (npfound==0 ? 1 : npfound);
       delete [] xcoor;
       delete [] ycoor;
       return (TObject *)0;
+   }
+   if (npfound!=npoints) {
+      // mncont did go wrong
+      Warning("Contour","Returning a TGraph with %d points only",npfound);
+      npoints = npfound;
    }
    fStatus=0;
    // create graph via the  PluginManager
@@ -2853,7 +2859,7 @@ L400:
    return;
 //*-*-                                       . . . . . . . . . . minos
 L500:
-   nsuper = fNfcn + (fNpar + 1 << 1)*fNfcnmx;
+   nsuper = fNfcn + ((fNpar + 1) << 1)*fNfcnmx;
 //*-*-         possible loop over new minima
    fEpsi = fUp*.1;
 L510:
@@ -4883,8 +4889,12 @@ void TMinuit::mnline(Double_t *start, Double_t fstart, Double_t *step, Double_t 
             if (slam > xvmin + slamax) slam = xvmin + slamax;
             if (slam < xvmin - slamax) slam = xvmin - slamax;
          }
-         if (slam > 0) if (slam > overal) slam = overal;
-         else          if (slam < undral) slam = undral;
+         if (slam > 0) {
+            if (slam > overal)
+               slam = overal;
+            else if (slam < undral)
+               slam = undral;
+         }
 
 //*-*-              come here if step was cut below
          do {
@@ -5270,7 +5280,7 @@ L81:
    }
 //*-*-                           print information about this iteration
    ++iter;
-   if (iswtr >= 3 || iswtr == 2 && iter % 10 == 1) {
+   if (iswtr >= 3 || (iswtr == 2 && iter % 10 == 1)) {
       mnwerr();
       mnprin(3, fAmin);
    }
@@ -6567,7 +6577,7 @@ void TMinuit::mnpsdf()
       if (fPstar[ip-1] > pmax) pmax = fPstar[ip-1];
    }
    pmax = TMath::Max(TMath::Abs(pmax),Double_t(1));
-   if (pmin <= 0 && fLwarn || fISW[4] >= 2) {
+   if ((pmin <= 0 && fLwarn) || fISW[4] >= 2) {
       Printf(" EIGENVALUES OF SECOND-DERIVATIVE MATRIX:");
       ctemp = "       ";
       for (ip = 1; ip <= fNpar; ++ip) {
