@@ -31,16 +31,10 @@
 #include "XrdProofdTrace.h"
 
 // Local definitions
-#ifdef XPD_LONG_MAX
-#undefine XPD_LONG_MAX
-#endif
 #ifdef XPD_MAXLEN
 #undefine XPD_MAXLEN
 #endif
-#define XPD_LONG_MAX 2147483647
 #define XPD_MAXLEN 1024
-
-#define LONGOK(x) (x >= 0 && x < LONG_MAX)
 
 XrdSysRecMutex XrdProofdAux::fgFormMutex;
 
@@ -207,7 +201,7 @@ long int XrdProofdAux::GetLong(char *str)
    while ((*p < 48 || *p > 57) && (*p) != '\0')
       p++;
    if (*p == '\0')
-      return XPD_LONG_MAX;
+      return LONG_MAX;
 
    // Find the last digit
    int j = 0;
@@ -1066,7 +1060,7 @@ int XrdProofdAux::ParsePidPath(const char *path, XrdOucString &rest)
          rest.erase(rest.rfind('.'));
          // Get pid
          pid = strtol(pp+1, 0, 10);
-         if (!LONGOK(pid)) {
+         if (!XPD_LONGOK(pid)) {
             // Failure converting string to pid
             pid = -1;
          }

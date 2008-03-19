@@ -53,8 +53,6 @@ typedef struct {
    int *fNBroadcast;
 } XpdBroadcastPriority_t;
 
-#define LONGOK(x) (x >= 0 && x < LONG_MAX)
-
 // Tracing utilities
 #include "XrdProofdTrace.h"
 
@@ -562,7 +560,7 @@ int XrdProofdProofServMgr::PrepareSessionRecovering()
       // Get the session instance (skip non-digital entries)
       XrdOucString rest;
       int pid = XrdProofdAux::ParsePidPath(ent->d_name, rest);
-      if (!LONGOK(pid) || pid == 0) continue;
+      if (!XPD_LONGOK(pid) || pid <= 0) continue;
       bool rmsession = 1;
       // Check if the process is still alive
       if (XrdProofdAux::VerifyProcessByID(pid) != 0) {
@@ -742,7 +740,7 @@ int XrdProofdProofServMgr::CheckActiveSessions()
       // Get the session instance (skip non-digital entries)
       XrdOucString rest, key;
       int pid = XrdProofdAux::ParsePidPath(ent->d_name, rest);
-      if (!LONGOK(pid) || pid == 0) continue;
+      if (!XPD_LONGOK(pid) || pid <= 0) continue;
       key += pid;
       //
       XrdProofdProofServ *xps = 0;
@@ -820,7 +818,7 @@ int XrdProofdProofServMgr::CheckTerminatedSessions()
       // Get the session instance (skip non-digital entries)
       XrdOucString rest;
       int pid = XrdProofdAux::ParsePidPath(ent->d_name, rest);
-      if (!LONGOK(pid) || pid == 0) continue;
+      if (!XPD_LONGOK(pid) || pid <= 0) continue;
 
       // Current time
       now = (now > 0) ? now : time(0);
@@ -884,7 +882,7 @@ int XrdProofdProofServMgr::CleanClientSessions(const char *usr, int srvtype)
          if (!strcmp(ent->d_name, ".") || !strcmp(ent->d_name, "..")) continue;
          // Get the session instance
          int pid = XrdProofdAux::ParsePidPath(ent->d_name, rest);
-         if (!LONGOK(pid) || pid == 0) continue;
+         if (!XPD_LONGOK(pid) || pid <= 0) continue;
          // Read info from file and check that we are interested in this session
          path.form("%s/%s", fTermAdminPath.c_str(), ent->d_name);
          XrdProofSessionInfo info(path.c_str());
@@ -922,7 +920,7 @@ int XrdProofdProofServMgr::CleanClientSessions(const char *usr, int srvtype)
       if (!strcmp(ent->d_name, ".") || !strcmp(ent->d_name, "..")) continue;
       // Get the session instance
       int pid = XrdProofdAux::ParsePidPath(ent->d_name, rest);
-      if (!LONGOK(pid) || pid == 0) continue;
+      if (!XPD_LONGOK(pid) || pid <= 0) continue;
       // Read info from file and check that we are intersted in this session
       path.form("%s/%s", fActiAdminPath.c_str(), ent->d_name);
       XrdProofSessionInfo info(path.c_str());
@@ -1039,11 +1037,11 @@ int XrdProofdProofServMgr::DoDirectiveProofServMgr(char *val, XrdOucStream *cfg,
          return 0;
 
    // Set the values
-   fCheckFrequency = LONGOK(checkfq) ? checkfq : fCheckFrequency;
-   fTerminationTimeOut = LONGOK(termto) ? termto : fTerminationTimeOut;
-   fVerifyTimeOut = (LONGOK(verifyto) && (verifyto > fCheckFrequency + 1))
+   fCheckFrequency = (XPD_LONGOK(checkfq) && checkfq > 0) ? checkfq : fCheckFrequency;
+   fTerminationTimeOut = (XPD_LONGOK(termto) && termto > 0) ? termto : fTerminationTimeOut;
+   fVerifyTimeOut = (XPD_LONGOK(verifyto) && (verifyto > fCheckFrequency + 1))
                   ? verifyto : fVerifyTimeOut;
-   fRecoverTimeOut = LONGOK(recoverto) ? recoverto : fRecoverTimeOut;
+   fRecoverTimeOut = (XPD_LONGOK(recoverto) && recoverto > 0) ? recoverto : fRecoverTimeOut;
 
    if (TRACING(DBG)) {
       XrdOucString msg;
