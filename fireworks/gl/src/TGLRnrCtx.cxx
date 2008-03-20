@@ -268,6 +268,13 @@ void TGLRnrCtx::RegisterFont(Int_t size, Int_t file, Int_t mode, TGLFont& out)
 }
 
 //______________________________________________________________________
+void TGLRnrCtx::RegisterFont(Int_t size, const Text_t* name, Int_t mode, TGLFont& out)
+{
+   // Get font in the GL rendering context.
+
+   fGLCtxIdentity->GetFontManager()->RegisterFont(size, name, (TGLFont::EMode)mode, out);
+}
+//______________________________________________________________________
 void TGLRnrCtx::ReleaseFont(TGLFont& font)
 {
    // Release font in the GL rendering context.

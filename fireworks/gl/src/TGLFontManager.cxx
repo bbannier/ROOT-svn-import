@@ -239,6 +239,26 @@ void TGLFontManager::RegisterFont(Int_t size, Int_t fileID, TGLFont::EMode mode,
 }
 
 //______________________________________________________________________________
+void TGLFontManager::RegisterFont(Int_t size, const Text_t* name, TGLFont::EMode mode, TGLFont &out)
+{ 
+   TObjArray* farr = GetFontFileArray();
+   TIter next(farr);
+   TObjString* os;
+   Int_t cnt = 0;
+   while ((os = (TObjString*) next()) != 0)
+   {
+      if (os->GetString() == name)
+         break;
+      cnt++;
+   }
+
+   if (cnt < farr->GetSize())
+      RegisterFont(size, cnt, mode, out);
+   else
+      Error("TGLFontManager::GetFont", "unknown font name %s", name);
+}
+
+//______________________________________________________________________________
 void TGLFontManager::ReleaseFont(TGLFont& font)
 {
    // Release font with given attributes. Returns false if font has
