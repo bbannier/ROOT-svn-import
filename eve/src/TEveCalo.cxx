@@ -218,32 +218,34 @@ TClass* TEveCaloViz::ProjectedClass() const
 
 
 //______________________________________________________________________________
-void TEveCaloViz::SetupColorHeight(Float_t value, Int_t slice, Float_t &outH, Bool_t &viz) const
+void TEveCaloViz::SetupColorHeight(Float_t value, Int_t slice,
+                                   Float_t &outH, Bool_t &viz) const
 {
    // Set color and height for a given value and slice using TEveRGBAPalette.
 
-   Int_t val =  (Int_t)value;
+   Int_t val = (Int_t) value;
    outH = GetDefaultCellHeight();
    Bool_t visible = kFALSE;
 
-   if(fPalette->GetShowDefValue())
+   if (fPalette->GetShowDefValue())
    {
-      if( value > fPalette->GetMinVal() && value < fPalette->GetMaxVal())
+      if (value > fPalette->GetMinVal() && value < fPalette->GetMaxVal())
       {
-         TGLUtil::Color(fPalette->GetDefaultColor()+slice);
+         TGLUtil::Color(fPalette->GetDefaultColor() + slice);
          outH *= ((value -fPalette->GetMinVal())*fData->GetNSlices()
-                  /(fPalette->GetHighLimit() -fPalette->GetLowLimit()));
+                  / (fPalette->GetHighLimit() - fPalette->GetLowLimit()));
          visible = kTRUE;
       }
    }
 
-   if (fPalette->GetShowDefValue() == kFALSE &&  fPalette->WithinVisibleRange(val))
+   if (fPalette->GetShowDefValue() == kFALSE && fPalette->WithinVisibleRange(val))
    {
       UChar_t c[4];
       fPalette->ColorFromValue(val, c);
       TGLUtil::Color4ubv(c);
       visible = kTRUE;
    }
+
    viz = visible;
 }
 
@@ -343,27 +345,27 @@ void TEveCalo2D::ComputeBBox()
    Float_t r  = fBarrelRadius + th;
    Float_t ze = fEndCapPos + th;
 
-   x = r, y=0, z =0;
+   x = r, y = 0, z = 0;
    fManager->GetProjection()->ProjectPoint(x, y, z);
    BBoxCheckPoint(x, y, z);
 
-   x = 0, y=0, z =0;
+   x = 0, y = 0, z = 0;
    fManager->GetProjection()->ProjectPoint(x, y, z);
    BBoxCheckPoint(x, y, z);
 
-   x = 0, y=0, z =ze;
+   x = 0, y = 0, z = ze;
    fManager->GetProjection()->ProjectPoint(x, y, z);
    BBoxCheckPoint(x, y, z);
 
-   x = 0, y=0, z = -ze;
+   x = 0, y = 0, z = -ze;
    fManager->GetProjection()->ProjectPoint(x, y, z);
    BBoxCheckPoint(x, y, z);
 
-    x = 0, y=r, z = 0;
+   x = 0, y = r, z = 0;
    fManager->GetProjection()->ProjectPoint(x, y, z);
    BBoxCheckPoint(x, y, z);
 
-   x = 0, y=-r, z = 0;
+   x = 0, y = -r, z = 0;
    fManager->GetProjection()->ProjectPoint(x, y, z);
    BBoxCheckPoint(x, y, z);
 
