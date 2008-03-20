@@ -127,7 +127,7 @@ void TEveCaloLegoGL::DrawTitle(TGLRnrCtx & rnrCtx ) const
    {
       TObjArray* farr = TGLFontManager::GetFontFileArray();
       TIter next(farr);
-      rnrCtx.RegisterFont(22, 2, TGLFont::kPixmap, fTitleFont);
+      rnrCtx.RegisterFont(22, "arial", TGLFont::kPixmap, fTitleFont);
    }
 
    glMatrixMode(GL_PROJECTION);
@@ -194,7 +194,13 @@ inline void TEveCaloLegoGL::RnrText(const char* txt, Float_t xa, Float_t ya, con
 
    if (isNum)
    {
-       // center at tick mark
+      // center at tick mark
+      if (txt[0] == '-') 	 
+      { 	 
+         Float_t off = 0.5f * (urx-llx) / strlen(txt); 	 
+         llx -= off; 	 
+         urx -= off; 	 
+      }
       glTranslatef((fX[0][0]-fX[1][0])*0.5f, (fX[0][1]-fX[1][1])*0.5f, (fX[0][2]-fX[1][2])*0.5f);
       glRasterPos3i(0, 0, 0);
       fNumFont.Render(txt);
@@ -202,7 +208,7 @@ inline void TEveCaloLegoGL::RnrText(const char* txt, Float_t xa, Float_t ya, con
    else
    {
       if ((fX[0][0]<0 && fX[0][0]>=fX[1][0])|| (fX[0][0]>0 && fX[0][0]<=fX[1][0]))
-            glTranslatef(fX[0][0]-fX[1][0], fX[0][1]-fX[1][1], fX[0][2]-fX[1][2]);
+         glTranslatef(fX[0][0]-fX[1][0], fX[0][1]-fX[1][1], fX[0][2]-fX[1][2]);
 
       glRasterPos3i(0, 0, 0);
       fSymbolFont.Render(txt);
@@ -216,20 +222,10 @@ void TEveCaloLegoGL::DrawAxis(TGLRnrCtx & rnrCtx,
                               Float_t y0, Float_t y1) const
 {
    if (fNumFont.GetMode() == TGLFont::kUndef)
-   {
-      TObjArray* farr = TGLFontManager::GetFontFileArray();
-      TIter next(farr);
-      TObjString* os;
-      Int_t cnt = 0;
-      while ((os = (TObjString*) next()) != 0)
-      {
-         if (os->GetString() == "symbol")
-            break;
-         cnt++;
-      }
-      rnrCtx.RegisterFont(12, cnt, TGLFont::kPixmap, fNumFont);
-      rnrCtx.RegisterFont(20, cnt, TGLFont::kPixmap, fSymbolFont);
-   }
+      rnrCtx.RegisterFont(12, "arial", TGLFont::kPixmap, fNumFont);
+   if (fSymbolFont.GetMode() == TGLFont::kUndef)
+      rnrCtx.RegisterFont(20, "symbol", TGLFont::kPixmap, fSymbolFont);
+
 
    // get corner closest to projected plane
    const GLdouble *pm = rnrCtx.RefCamera().RefLastNoPickProjM().CArr();
