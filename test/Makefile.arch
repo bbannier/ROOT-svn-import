@@ -42,32 +42,11 @@ ROOTGLIBS    := $(shell $(ROOTCONFIG) --glibs)
 HASTHREAD    := $(shell $(ROOTCONFIG) --has-thread)
 ROOTDICTTYPE := $(shell $(ROOTCONFIG) --dicttype)
 NOSTUBS      := $(shell $(ROOTCONFIG) --nostubs)
-NOSTUBSTEST  := $(shell $(ROOTCONFIG) --nostubstest)
 ROOTCINT     := rootcint
 
 # Stub Functions Generation
 ifeq ($(NOSTUBS),yes)
-	GCC_MAJOR     := $(shell $(CXX) -dumpversion 2>&1 | cut -d'.' -f1)
-	GCC_MINOR     := $(shell $(CXX) -dumpversion 2>&1 | cut -d'.' -f2)
-endif
-
-ifeq ($(NOSTUBS),yes)
- ifeq ($(GCC_MAJOR),3)
-	# allow 3.2, 3.3, and 3.4:
-  ifneq ($(findstring $(GCC_MINOR),2 3 4),)
-	 ROOTCINT = export CXXFLAGS="$(CXXFLAGS)"; $(ROOTSYS)/utils/src/rootcint_nostubs.sh -$(ROOTDICTTYPE)
- else
-	NOSTUBS := "no"
-	NOSTUBSTEST := "no"	
-	endif	
- endif
-endif
-
-ifeq ($(NOSTUBS),yes)
-	ifeq ($(NOSTUBSTEST),no)
-		CXXFLAGS += -DG__NOSTUBS
-		CINTCXXFLAGS += -DG__NOSTUBS
-	endif
+	ROOTCINT = export CXXFLAGS="$(CXXFLAGS)"; $(ROOTSYS)/utils/src/rootcint_nostubs.sh -$(ROOTDICTTYPE)
 endif
 
 ifeq ($(ARCH),hpuxacc)

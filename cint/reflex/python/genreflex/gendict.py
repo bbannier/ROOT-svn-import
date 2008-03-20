@@ -320,7 +320,8 @@ class genDictionary(object) :
             catt = c['attrs']
             catt['extra'] = match[0]
             if catt not in selec :
-              print '--->> genreflex: INFO: Using typedef %s to select class %s' % (self.genTypeName(t['id']), self.genTypeName(catt['id']))
+              if not self.quiet:
+                print '--->> genreflex: INFO: Using typedef %s to select class %s' % (self.genTypeName(t['id']), self.genTypeName(catt['id']))
               selec.append(catt)
       if self.resolvettd :
         newselector = self.resolveSelectorTypedefs( self.selector.sel_classes )
@@ -336,8 +337,7 @@ class genDictionary(object) :
               if c not in selec : selec.append(c)
               if n == 'name' : self.genFakeTypedef(c['id'], match[0]['o_name'])
       # Filter STL implementation specific classes
-      selec =  filter( lambda c: self.genTypeName(c['id'])[:6] != 'std::_' ,selec)
-      selec =  filter( lambda c: c['name'][:2] != '._' ,selec)  # unamed structs and unions
+      selec =  filter( lambda c: c.has_key('name') ,selec)  # unamed structs and unions
       # Filter internal GCC classes
       selec =  filter( lambda c: c['name'].find('_type_info_pseudo') == -1 ,selec)
       return self.autosel (selec)
@@ -355,7 +355,7 @@ class genDictionary(object) :
       classes =  clean( local + typed + templ )
     # Filter STL implementation specific classes
     classes =  filter( lambda c: self.genTypeName(c['id'])[:6] != 'std::_' ,classes)
-    classes =  filter( lambda c: c['name'][:2] != '._' ,classes)  # unamed structs and unions
+    classes =  filter( lambda c: c.has_key('name') ,selec)  # unamed structs and unions
     # Filter internal GCC classes
     classes =  filter( lambda c: c['name'].find('_type_info_pseudo') == -1 ,classes)
     return self.autosel( classes )
@@ -627,14 +627,16 @@ class genDictionary(object) :
       #raise "Unknown type category in isTypePublic",type_dict['elem']
 #----------------------------------------------------------------------------------
   def tmplclasses(self, local):
+    import re
     result = []
+    lc_patterns = map(lambda lc: re.compile("\\b%s\\b" % lc['name']) , local)
     for c in self.classes :
       if not 'name' in c: continue
       name = c['name']
       if name.find('<') == -1 : continue
       temp = name[name.find('<')+1:name.rfind('>')]
-      for lc in local :
-        if temp.find(lc['name']) != -1 : result.append(c)
+      for lc_pattern in lc_patterns :
+        if lc_pattern.match(temp) : result.append(c)
     return result
 #----------------------------------------------------------------------------------
   def typedefclasses(self):

@@ -11,7 +11,7 @@
 #ifdef __CINT__
 
 #ifndef G__KCC 	 
-// in cint/[old]core/lib:
+// in cint/cint[7]/lib:
 #include "dll_stl/str.h" 	 
 #endif 	 
 

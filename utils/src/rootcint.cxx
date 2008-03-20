@@ -4587,7 +4587,7 @@ int main(int argc, char **argv)
 #endif
          }
 #ifdef ROOTBUILD
-         argvv[argcc++] = (char *)"-DG_NOCINTDLL";
+         argvv[argcc++] = (char *)"-DG__NOCINTDLL";
 #endif
          argvv[argcc++] = (char *)"-DTRUE=1";
          argvv[argcc++] = (char *)"-DFALSE=0";

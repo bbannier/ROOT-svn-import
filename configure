@@ -1,4 +1,3 @@
-
 #! /bin/sh
 #
 # A (not so) simple configure script.
@@ -865,7 +864,7 @@ FIRST argument one of the architecures given at the end of this message.
    --mandir        Manpages installation dir (<prefix>/share/man/man1)
    --no-create     Do not create output files, dry run
    --no-stubs      Remove Stubs from dictionaries (Direct call mechanism)
-   --no-stubs-test Remove Stubs from dictionaries (Keep the stubs in the dictionary for test purpose. We can switch from the old behaviour to the new behaviour - function direct call - in runtime)
+   --no-stubs-test Remove Stubs from dictionaries (Direct call mechanism, can be switched off in rootrc)
    --prefix        Installation prefix       (/usr/local)
    --srcdir        Sources installation dir  (<datadir>/src)
    --testdir       Tests                     (<docdir>/test)
@@ -4131,7 +4130,7 @@ if test ! "x$enable_reflex" = "xno"; then
     enable_reflex="yes"
     result "yes"
 else
-    enable_reflex="no"
+    enable_reflex=""
     result "no"
 fi
 
@@ -4274,6 +4273,37 @@ check_explicit "$enable_peac" "$enable_peac_explicit" \
 
 ######################################################################
 #
+### echo %%% Check for Stub removal support
+#
+
+if test "x$no_stubs" = "xyes" || test "x$no_stubs_test" = "xyes"; then
+    message "Checking for CINT support of function calls via symbols"
+    no_stubs="yes"
+
+    # Now check whether the platform is supported at all:
+    if test "x${arch}" = "xlinux"; then
+        gccmajor="`gcc -dumpversion 2>&1 | cut -d'.' -f1`"
+        gccminor="`gcc -dumpversion 2>&1 | cut -d'.' -f2`"
+        gccminorOK="`echo 234 | grep ${gccminor}`"
+        if test ! "x$gccmajor" = "x3" || test ! "x$gccminorOK" = "x234"; then
+            no_stubs="no"
+            no_stubs_test="no"
+            result "$no_stubs"
+            echo "WARNING: symbol-based calls are not supported with your compiler version"'!'
+        else
+            result "$no_stubs"
+        fi
+    else
+        no_stubs="no"
+        no_stubs_test="no"
+        result "$no_stubs"
+        echo "WARNING: symbol-based calls are not supported on ${arch}"'!'
+    fi
+fi
+
+
+######################################################################
+#
 ### echo %%% What dictionaries to build
 #
 # Can be either cint (default), reflex, or gccxml.
@@ -4312,18 +4342,6 @@ if test ! "x$dicttype" = "xcint" \
      -o ! "x$dicttype" = "x$ROOTDICTTYPE"; then
     result "Generating $dicttype dictionaries."
 fi
-
-######################################################################
-#
-### echo %%% Check for Stub removal support
-#
-
-message "Checking whether to activate symbol function call mechanism (aka stubs/wrappers removal)"
-if test "x$no_stubs" = "xyes" || test "x$no_stubs_test" = "xyes"; then
-    no_stubs="yes"
-fi
-
-result "$no_stubs"
 
 ######################################################################
 #

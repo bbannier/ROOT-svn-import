@@ -53,19 +53,18 @@ std::string G__makefile;
 std::string G__object;
 bool G__quiet = false;
 
-
 enum G__C_OR_CXX { G__unknown_MODE, G__C_MODE, G__CXX_MODE };
 
-enum G__SOMEFLAGS { G__ismain = 1, 
+enum G__SOMEFLAGS { G__ismain = 1,
                     G__isDLL = 2,
                     G__genReflexCode = 4 };
+
 int G__flags; // bit pattern of G__SOMEFLAGS
 
 enum G__MODE { G__IDLE, G__CHEADER, G__CSOURCE, G__CXXHEADER, G__CXXSOURCE
 	     , G__LIBRARY , G__CSTUBFILE , G__CXXSTUBFILE
 	     , G__COMPILEROPT, G__CINTOPT
 };
-
 
 class G__SourceFile {
 public:
@@ -75,7 +74,7 @@ public:
   bool               IsCxx()     const { return fCOrCxx==G__CXX_MODE; }
   operator bool() { return !fObject.empty() && fCOrCxx!=G__unknown_MODE; }
 
-  static const std::string& GetAllObjects(G__C_OR_CXX mode) { 
+  static const std::string& GetAllObjects(G__C_OR_CXX mode) {
     return mode==G__C_MODE?fgAllCObjects:fgAllCxxObjects; }
 
 private:
@@ -105,7 +104,7 @@ G__SourceFile::G__SourceFile(const std::string& source, G__C_OR_CXX mode): fSour
     if (ext=="c") mode=G__C_MODE; // not extup - .C can be C++!
     else mode=G__CXX_MODE;
   else if ((ext == "c") != (mode == G__C_MODE))
-    std::cerr << "WARNING in G__SourceFile::G__SourceFile: " <<  (mode==G__C_MODE?"C":"CXX") 
+    std::cerr << "WARNING in G__SourceFile::G__SourceFile: " <<  (mode==G__C_MODE?"C":"CXX")
               << " mode does not match source file " << source << std::endl;
 
   fObject=source.substr(0, extpos);
@@ -212,13 +211,11 @@ void G__printsourcecompile(std::ostream& out)
       out << " $(CXXHEADER)" << std::endl
           << "\t $(CXX) $(IPATH) $(CXXMACRO) " << G__CFG_CXXFLAGS;
 
-    out << " " << G__CFG_COUT << iSource->GetObject() << " " 
+    out << " " << G__CFG_COUT << iSource->GetObject() << " "
         << G__CFG_COMP << " " << iSource->GetSource() << std::endl;
   }
 }
 
-
-  
 /******************************************************************
 * G__readargument
 ******************************************************************/
@@ -246,7 +243,7 @@ void G__readargument(int argc, char **argv)
       G__CIOPT += argv[++i];
       mode = G__IDLE;
     }
-    else if(strncmp(argv[i],"-u",2) == 0 || 
+    else if(strncmp(argv[i],"-u",2) == 0 ||
             strncmp(argv[i],"-U",2) == 0 ||
             strncmp(argv[i],"-Y",2) == 0 ||
             strncmp(argv[i],"-Z",2) == 0) {
@@ -290,7 +287,7 @@ void G__readargument(int argc, char **argv)
       G__IPATH += argv[++i];
       mode = G__IDLE;
     }
-    else if(strncmp(argv[i],"-I",2)==0 
+    else if(strncmp(argv[i],"-I",2)==0
             && G__COMPILEROPT!=mode && G__CINTOPT!=mode
             ) {
       G__IPATH += space + argv[i];
@@ -311,7 +308,7 @@ void G__readargument(int argc, char **argv)
       size_t pos_slash = G__object.rfind('/');
       size_t pos_backslash = G__object.rfind('\\');
       size_t posfile=pos_slash;
-      if (posfile == std::string::npos 
+      if (posfile == std::string::npos
           || pos_backslash != std::string::npos && pos_backslash > pos_slash)
         posfile = pos_backslash;
 
@@ -324,7 +321,7 @@ void G__readargument(int argc, char **argv)
       G__flags |= !G__isDLL;
       mode = G__IDLE;
 #ifdef G__DJGPP
-      if(G__object.find(".EXE")==std::string::npos && 
+      if(G__object.find(".EXE")==std::string::npos &&
          G__object.find(".exe")==std::string::npos) {
         G__object+=".exe";
       }
@@ -338,7 +335,7 @@ void G__readargument(int argc, char **argv)
       size_t pos_slash = G__object.rfind('/');
       size_t pos_backslash = G__object.rfind('\\');
       size_t posfile=pos_slash;
-      if (posfile == std::string::npos 
+      if (posfile == std::string::npos
           || pos_backslash != std::string::npos && pos_backslash > pos_slash)
         posfile = pos_backslash;
 
@@ -430,7 +427,6 @@ void G__readargument(int argc, char **argv)
     ++i;
   } // while args
 }
-
 
 void G__remove_cintopts(std::string& opts) {
   size_t pos=0;
@@ -620,7 +616,7 @@ void G__outputmakefile(int argc,char **argv)
 #endif
   if (!G__CFG_EXPLLINK || !strlen(G__CFG_EXPLLINK)) {
     // if the libs are not linked against readline then the executable needs to
-    out << "READLINEA   := " 
+    out << "READLINEA   := "
 #ifdef G__CFG_READLINELIB
         << G__CFG_READLINELIB << " "
 #endif
@@ -630,19 +626,18 @@ void G__outputmakefile(int argc,char **argv)
         << std::endl;
   }
 
-
   /***************************************************************************
    * Link Object
    ***************************************************************************/
   out << "# Link Object #############################################" << std::endl;
   if(G__flags & G__isDLL) {
-    out << "$(OBJECT) : $(CINTLIB) $(COFILES) $(CXXOFILES) $(CIFO) $(CXXIFO)" 
+    out << "$(OBJECT) : $(CINTLIB) $(COFILES) $(CXXOFILES) $(CIFO) $(CXXIFO)"
         << std::endl
         << "\t";
     if (G__quiet) out << "@";
     out << "$(LD) $(subst @so@,$(OBJECT:" << G__CFG_SOEXT << "=),"
-        << G__CFG_SOFLAGS << ") "<< G__CFG_SOOUT 
-        << "$(OBJECT) $(COFILES) $(CIFO) $(CXXIFO) $(CXXOFILES) $(LIBS)" 
+        << G__CFG_SOFLAGS << ") "<< G__CFG_SOOUT
+        << "$(OBJECT) $(COFILES) $(CIFO) $(CXXIFO) $(CXXOFILES) $(LIBS)"
         << std::endl;
   }
   else if(G__flags & G__ismain) {
@@ -733,16 +728,16 @@ TODO!
         << "# Create C Interface routine #############################" << std::endl
         << "$(CIFC) : $(CHEADER) $(CSTUB) $(CINTSYSDIRU)/cint" << G__CFG_EXEEXT << std::endl;
 
-    /* Following line needs explanation. -K is used at the beginning and 
+    /* Following line needs explanation. -K is used at the beginning and
      * later again $(KRMODE) may be set to -K. When -K is given after -c-2
-     * it will set G__clock flags so that it will create K&R compatible 
+     * it will set G__clock flags so that it will create K&R compatible
      * function headers. This is not a good manner but -K -c-2 and -c-2 -K
      * has different meaning. */
     out << "\t";
     if (G__quiet) out << "@";
     out << "$(CINT) " << G__INITFUNC << " -K -w" << (int)(G__flags & G__isDLL) << " -z" << G__DLLID 
         << " -n$(CIFC) $(DLLSPEC) -D__MAKECINT__ -DG__MAKECINT "
-        << G__preprocess 
+        << G__preprocess
         << " -c-2 $(KRMODE) $(CINTIPATH) $(IPATH) $(CMACRO) $(CINTOPT) $(CHEADERCINT)" ;
     if(!G__CSTUB.empty()) out << " +STUB $(CSTUBCINT) -STUB";
   }
@@ -762,14 +757,13 @@ TODO!
    if (G__quiet) out << "@";
    out << "$(CINT) " << G__INITFUNC << " -w" << (int)(G__flags & G__isDLL) << " -z" << G__DLLID 
         << " -n$(CXXIFC) $(DLLSPEC) -D__MAKECINT__ -DG__MAKECINT "
-        << G__preprocess << " -c-" << minusCOption 
+        << G__preprocess << " -c-" << minusCOption
         << " -A $(CINTIPATH) $(IPATH) $(CXXMACRO) $(CINTOPT) $(CXXHEADERCINT)";
     if(!G__CXXSTUB.empty())
       out << " +STUB $(CXXSTUBCINT) -STUB";
   }
-  out << std::endl 
+  out << std::endl
       << std::endl;
-
 
   out << "# Clean up #################################################\n" << std::endl;
   out << "clean :" << std::endl;
@@ -883,7 +877,6 @@ int G__makecint(int argc, char **argv)
   return(EXIT_SUCCESS);
 }
 
-
 /******************************************************************
 * main
 ******************************************************************/
@@ -891,7 +884,6 @@ int main(int argc, char **argv)
 {
   return(G__makecint(argc,argv));
 }
-
 
 /* *-*-
  * Local Variables:

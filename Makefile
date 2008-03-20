@@ -240,7 +240,7 @@ MODULES      += unix winnt x11 x11ttf win32gdk gl ftgl rfio castor \
                 qt qtroot qtgsi xrootd netx alien \
                 proof/proofd proof/proofx proof/clarens proof/peac \
                 oracle xmlparser mathmore cint/reflex cintex roofitcore roofit \
-                minuit2 monalisa fftw odbc unuran gdml eve g4root cint/cint7 glite
+                minuit2 monalisa fftw odbc unuran gdml eve g4root glite
 MODULES      := $(sort $(MODULES))   # removes duplicates
 endif
 
@@ -340,6 +340,18 @@ GCC_MINOR     := $(shell $(CXX) -dumpversion 2>&1 | cut -d'.' -f2)
 GCC_PATCH     := $(shell $(CXX) -dumpversion 2>&1 | cut -d'.' -f3)
 GCC_VERS      := gcc-$(GCC_MAJOR).$(GCC_MINOR)
 GCC_VERS_FULL := gcc-$(GCC_MAJOR).$(GCC_MINOR).$(GCC_PATCH)
+
+##### CINT Stub Functions Generation #####
+ifeq ($(NOSTUBS),yes)
+ROOTCINTTMP   = export CXXFLAGS="$(CXXFLAGS)"; utils/src/rootcint_nostubs_tmp.sh -$(ROOTDICTTYPE)
+CXXFLAGS     += -DG__NOSTUBS
+CINTCXXFLAGS += -DG__NOSTUBS
+ifeq ($(NOSTUBSTEST),yes)
+CXXFLAGS     += -DG__NOSTUBSTEST
+CINTCXXFLAGS += -DG__NOSTUBSTEST
+endif
+endif
+
 
 # Precompiled headers for gcc
 ifeq ($(GCC_MAJOR),4)

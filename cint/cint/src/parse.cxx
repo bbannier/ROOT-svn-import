@@ -3780,18 +3780,18 @@ static void G__unsignedintegral()
 //______________________________________________________________________________
 static void G__externignore()
 {
-   // -- Handle extern "...", EXTERN "...", and R__EXTERN "...".
+   // -- Handle extern "...", EXTERN "..."
    int flag = 0;
    char fname[G__MAXFILENAME];
    int c = G__fgetstream(fname, "\"");
    int store_iscpp = G__iscpp;
    // FIXME: We should handle "C++" as well!
    if (!strcmp(fname, "C")) {
-      // -- Handle extern "C", EXTERN "C", and R__EXTERN "C".
+      // -- Handle extern "C", EXTERN "C"
       G__iscpp = 0;
    }
    else {
-      // -- Handle extern "filename", EXTERN "filename", and R__EXTERN "filename".
+      // -- Handle extern "filename", EXTERN "filename".
       // FIXME: This is a CINT extension to the standard (ok, the standard says "implementation defined")!
       G__loadfile(fname);
       G__SetShlHandle(fname);
@@ -6334,7 +6334,7 @@ G__value G__exec_statement(int* mparen)
                         }
                         break;
                      case 9:
-                        // -- Handle namespace, unsigned*, unsigned&, R__EXTERN.
+                        // -- Handle namespace, unsigned*, unsigned&
                         if (!strcmp(statement, "namespace")) {
                            G__var_type = 'u';
                            G__define_struct('n');
@@ -6368,40 +6368,6 @@ G__value G__exec_statement(int* mparen)
                            iout = 0;
                            // Flag that any following whitespace does not trigger any semantic action.
                            spaceflag = -1;
-                        }
-                        if (!strcmp(statement, "R__EXTERN")) {
-                           // -- Handle 'R__EXTERN ...'.
-                           //                     ^
-                           G__var_type = 'p';
-                           int c = G__fgetspace();
-                           if (c != '"') {
-                              // -- Handle 'R__EXTERN var...'.
-                              // We just ignore it.
-                              fseek(G__ifile.fp, -1, SEEK_CUR);
-                              if (c == '\n') {
-                                 --G__ifile.line_number;
-                              }
-                              if (G__dispsource) {
-                                 G__disp_mask = 1;
-                              }
-                              if ((G__globalcomp == G__NOLINK) && !G__parseextern) {
-                                 G__fignorestream(";");
-                              }
-                              if (!*mparen) {
-                                 return G__null;
-                              }
-                              // Reset the statement buffer.
-                              iout = 0;
-                              // Flag that any following whitespace does not trigger any semantic action.
-                              spaceflag = -1;
-                              break;
-                           }
-                           G__externignore();
-                           // Reset the statement buffer.
-                           iout = 0;
-                           // Flag that any following whitespace does not trigger any semantic action.
-                           spaceflag = -1;
-                           break;
                         }
                      case 13:
                         // -- Handle __extension__.

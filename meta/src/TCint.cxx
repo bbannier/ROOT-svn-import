@@ -115,10 +115,14 @@ TCint::TCint(const char *name, const char *title) : TInterpreter(name, title)
    optind = 1;  // make sure getopt() works in the main program
 #endif
 
-#if defined(G__NOSTUBS) && !defined(G__NOSTUBSTEST)
-   G__enable_wrappers(gEnv->GetValue("Cint.EnableWrappers",0));
+#if defined(G__NOSTUBS)
+# if defined(G__NOSTUBSTEST)
+   EnableWrappers(gEnv->GetValue("Cint.EnableWrappers",1));
+# else
+   EnableWrappers(0);
+# endif
 #else
-   G__enable_wrappers(gEnv->GetValue("Cint.EnableWrappers",1));
+   EnableWrappers(1);
 #endif
 
    // Make sure that ALL macros are seen as C++.
