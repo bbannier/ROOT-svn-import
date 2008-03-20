@@ -932,6 +932,7 @@ public:
    static Bool_t IsColorLocked();
 
    static void Color(Color_t color_index, Float_t alpha=1);
+   static void ColorTransparency(Color_t color_index, UChar_t transparency=0);
    static void Color3ub(UChar_t r, UChar_t g, UChar_t b);
    static void Color4ub(UChar_t r, UChar_t g, UChar_t b, UChar_t a);
    static void Color3ubv(const UChar_t* rgb);

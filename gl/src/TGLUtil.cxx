@@ -1056,7 +1056,7 @@ UInt_t TGLUtil::UnlockColor()
 //______________________________________________________________________________
 void TGLUtil::Color(Color_t color_index, Float_t alpha)
 {
-   // Set color from color_index.
+   // Set color from color_index and GL-style alpha (default 1).
 
    if (fgColorLockCount == 0) {
       if (color_index < 0)
@@ -1064,6 +1064,20 @@ void TGLUtil::Color(Color_t color_index, Float_t alpha)
       TColor* c = gROOT->GetColor(color_index);
       if (c)
          glColor4f(c->GetRed(), c->GetGreen(), c->GetBlue(), alpha);
+   }
+}
+
+//______________________________________________________________________________
+void TGLUtil::ColorTransparency(Color_t color_index, UChar_t transparency)
+{
+   // Set color from color_index and ROOT-style transparency (default 0).
+
+   if (fgColorLockCount == 0) {
+      if (color_index < 0)
+         color_index = 1;
+      TColor* c = gROOT->GetColor(color_index);
+      if (c)
+         glColor4f(c->GetRed(), c->GetGreen(), c->GetBlue(), 1.0f - 0.01f*transparency);
    }
 }
 
