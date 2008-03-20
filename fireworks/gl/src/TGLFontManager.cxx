@@ -114,7 +114,7 @@ void TGLFont::PreRender(Bool_t autoLight, Bool_t lightOn) const
    {
       case kBitmap:
       case kPixmap:
-         glPushAttrib(GL_CURRENT_BIT | GL_ENABLE_BIT);
+         glPushAttrib(GL_CURRENT_BIT | GL_COLOR_BUFFER_BIT | GL_ENABLE_BIT);
          glEnable(GL_ALPHA_TEST);
          glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
          glAlphaFunc(GL_GEQUAL, 0.0625);

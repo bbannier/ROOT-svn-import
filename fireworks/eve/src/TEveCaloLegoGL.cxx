@@ -30,10 +30,17 @@ ClassImp(TEveCaloLegoGL);
 
 //______________________________________________________________________________
 TEveCaloLegoGL::TEveCaloLegoGL() :
-   TGLObject(), fM(0)
+   TGLObject(), fM(0),
+   fMinBinWidth(4),fNBinSteps(3), fBinSteps(0)
 {
    // Constructor.
+
    fDLCache = kFALSE;
+
+   fBinSteps = new Int_t[fNBinSteps];
+   fBinSteps[0] = 1;
+   fBinSteps[1] = 2;
+   fBinSteps[2] = 5;
 }
 
 //______________________________________________________________________________
@@ -41,6 +48,7 @@ TEveCaloLegoGL::~TEveCaloLegoGL()
 {
    // Destructor.
 
+   delete [] fBinSteps;
 }
 
 /******************************************************************************/
@@ -316,9 +324,9 @@ void TEveCaloLegoGL::DrawAxis(TGLRnrCtx & rnrCtx,
    glPopMatrix();
    fNumFont.PostRender();
 
-
    // tickmarks
    glBegin(GL_LINES);
+   TGLUtil::Color(fM->fGridColor);
    glVertex3f(x0, axY, 0);
    glVertex3f(x1, axY, 0);
    for (Int_t i=0; i<nX; ++i)
@@ -340,43 +348,83 @@ void TEveCaloLegoGL::DrawAxis(TGLRnrCtx & rnrCtx,
 }
 
 //______________________________________________________________________________
+Int_t TEveCaloLegoGL::GetGridStep(Int_t axId,  const TAxis* ax,  TGLRnrCtx &rnrCtx) const
+{ 
+   GLdouble xp0, yp0, zp0, xp1, yp1, zp1;
+   GLdouble mm[16];
+   GLint    vp[4];
+   glGetDoublev(GL_MODELVIEW_MATRIX,  mm);
+   glGetIntegerv(GL_VIEWPORT, vp);
+   const GLdouble *pm = rnrCtx.RefCamera().RefLastNoPickProjM().CArr();
+
+   for(Int_t idx =0; idx<fNBinSteps; idx++)
+   {
+      if (axId == 0)
+      {
+         gluProject(ax->GetBinLowEdge(0), 0, 0, mm, pm, vp, &xp0, &yp0, &zp0);
+         gluProject(ax->GetBinLowEdge(fBinSteps[idx]), 0, 0, mm, pm, vp, &xp1, &yp1, &zp1);
+      }
+      else 
+      {
+         gluProject(0, ax->GetBinLowEdge(0), 0, mm, pm, vp, &xp0, &yp0, &zp0);
+         gluProject(0, ax->GetBinLowEdge(fBinSteps[idx]), 0, mm, pm, vp, &xp1, &yp1, &zp1);
+      }
+
+      Float_t  gap = TMath::Sqrt((xp0-xp1)*(xp0-xp1) + (yp0-yp1)*(yp0-yp1));
+      if (gap>fMinBinWidth) 
+      {
+         return  fBinSteps[idx];
+      }
+   }
+   return  fBinSteps[fNBinSteps-1];
+}
+
+//______________________________________________________________________________
 void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
 {
    // Render the calo lego-plot with OpenGL.
 
-   // grid lines
-   const TAxis* ax = fM->GetData()->GetEtaBins();
-   const TAxis* ay = fM->GetData()->GetPhiBins();
-   Float_t y0 = ay->GetBinLowEdge(0);
-   Float_t y1 = ay->GetBinUpEdge(ay->GetNbins());
-   Float_t x0 = ax->GetBinLowEdge(0);
-   Float_t x1 = ax->GetBinUpEdge(ax->GetNbins());
+   // axis & grid
    {
-      Float_t a = 0.5;
-      TGLUtil::Color3f(a, a, a);
       TGLCapabilitySwitch lights_off(GL_LIGHTING, kFALSE);
+      TGLCapabilitySwitch sw_blend(GL_BLEND, kTRUE);
 
+      const TAxis* ax = fM->GetData()->GetEtaBins();
+      const TAxis* ay = fM->GetData()->GetPhiBins();
+      Float_t y0 = ay->GetBinLowEdge(0);
+      Float_t y1 = ay->GetBinUpEdge(ay->GetNbins());
+      Float_t x0 = ax->GetBinLowEdge(0);
+      Float_t x1 = ax->GetBinUpEdge(ax->GetNbins());
+      Int_t xs = GetGridStep(0, ax, rnrCtx);
+      Int_t ys = GetGridStep(1, ay, rnrCtx);
+ 
+      TGLUtil::Color(fM->fGridColor);
       glBegin(GL_LINES);
       glVertex2f(ax->GetBinLowEdge(0), y0);
       glVertex2f(ax->GetBinLowEdge(0), y1);
-      for (Int_t i=0; i<=ax->GetNbins(); ++i)
+      for (Int_t i=0; i<=ax->GetNbins(); i+=xs)
       {
          glVertex2f(ax->GetBinUpEdge(i), y0);
          glVertex2f(ax->GetBinUpEdge(i), y1);
       }
+
       glVertex2f(x0, ay->GetBinLowEdge(0));
       glVertex2f(x1, ay->GetBinLowEdge(0));
-      for (Int_t i=0; i<=ay->GetNbins(); ++i)
+      for (Int_t i=0; i<=ay->GetNbins(); i+=ys)
       {
          glVertex2f(x0, ay->GetBinUpEdge(i));
          glVertex2f(x1, ay->GetBinUpEdge(i));
       }
       glEnd();
+
+      if (! rnrCtx.SecSelection())
+      {
+         DrawAxis(rnrCtx, x0, x1, y0, y1);
+         TGLUtil::Color3f(1, 1, 1);
+         DrawTitle(rnrCtx);
+      }
    }
 
-   TGLUtil::Color3f(1, 1, 1);
-   DrawTitle(rnrCtx);
-   DrawAxis(rnrCtx, x0, x1, y0, y1);
 
    // cells
    fM->AssertPalette();
@@ -387,7 +435,6 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
                              fM->fPhi, fM->fPhiRng, fM->fThreshold, fM->fCellList);
       fM->fCacheOK = kTRUE;
    }
-
    TEveCaloData::CellData_t cellData;
    Float_t towerH = 0;
    Bool_t  visible = kFALSE;
@@ -411,15 +458,14 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
       }
    }
    if (rnrCtx.SecSelection()) glPopName();
+
 }
 
 //______________________________________________________________________________
 void TEveCaloLegoGL::ProcessSelection(TGLRnrCtx & /*rnrCtx*/, TGLSelectRecord & rec)
 {
    // Processes secondary selection from TGLViewer.
-
    if (rec.GetN() < 2) return;
-
    Int_t cellID = rec.GetItem(1);
    TEveCaloData::CellData_t cellData;
    fM->fData->GetCellData(fM->fCellList[cellID], cellData);

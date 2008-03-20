@@ -16,15 +16,22 @@
 #include "TEveCaloData.h"
 #include "TGLIncludes.h"
 #include "TGLFontManager.h"
+// #include <list>
 
 class TEveCaloLego;
-
 
 class TEveCaloLegoGL : public TGLObject
 {
 private:
    TEveCaloLegoGL(const TEveCaloLegoGL&);            // Not implemented
    TEveCaloLegoGL& operator=(const TEveCaloLegoGL&); // Not implemented
+
+protected:
+   struct Box_t
+   {
+     Float_t pnts[24];
+     UChar_t color[4];
+   };
 
    void    RnrText(const char* txt, Float_t x, Float_t y, const GLdouble *pm, Bool_t isNum) const;
 
@@ -33,11 +40,19 @@ private:
    void    DrawAxis(TGLRnrCtx &rnrCtx, Float_t x0, Float_t x1, Float_t y0, Float_t y1) const;
    void    DrawTitle(TGLRnrCtx &rnrCtx) const;
 
-protected:
-   TEveCaloLego            *fM;          // Model object.
+   Int_t   GetGridStep(Int_t axId, const TAxis* ax, TGLRnrCtx &rnrCtx) const;
+
+   TEveCaloLego            *fM;  // Model object.
+
+   //   std::list<Box_t>         fBoxList;
+
    mutable TGLFont          fNumFont;
    mutable TGLFont          fSymbolFont;
    mutable TGLFont          fTitleFont;
+
+   Float_t                  fMinBinWidth;
+   Int_t                    fNBinSteps;
+   Int_t*                   fBinSteps;
 
 public:
    TEveCaloLegoGL();

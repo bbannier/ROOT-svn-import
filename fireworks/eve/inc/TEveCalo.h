@@ -174,6 +174,7 @@ private:
 
 protected:
    TEveCaloData::vCellId_t fCellList;
+   Color_t                 fGridColor;
 
 public:
    TEveCaloLego(const Text_t* n="TEveCaloLego", const Text_t* t="");
@@ -184,6 +185,8 @@ public:
    virtual Float_t GetDefaultCellHeight() const;
 
    virtual void ResetCache();
+
+   virtual Bool_t  CanEditMainColor() const { return kTRUE; }
 
    virtual void ComputeBBox();
 

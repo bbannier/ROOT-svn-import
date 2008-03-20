@@ -381,20 +381,24 @@ ClassImp(TEveCaloLego);
 
 //______________________________________________________________________________
 TEveCaloLego::TEveCaloLego(const Text_t* n, const Text_t* t):
-   TEveCaloViz(n, t)
+   TEveCaloViz(n, t),
+   fGridColor(kGray+2)
 {
    // Constructor.
 
+   fMainColorPtr = &fGridColor;
    fCellZScale =0.5;
 }
 
 //______________________________________________________________________________
 TEveCaloLego::TEveCaloLego(TEveCaloData* data):
-   TEveCaloViz(data)
+   TEveCaloViz(data),
+   fGridColor(kGray+2)
 {
    // Constructor.
 
    SetElementName("TEveCaloLego");
+   fMainColorPtr = &fGridColor;
    fCellZScale =0.5;
 }
 
