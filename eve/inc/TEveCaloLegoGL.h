@@ -34,14 +34,12 @@ private:
    void    DrawTitle(TGLRnrCtx &rnrCtx) const;
 
 protected:
-   TEveCaloLego             *fM;  // Model object.
+   TEveCaloLego            *fM;          // Model object.
    mutable TGLFont          fNumFont;
    mutable TGLFont          fSymbolFont;
    mutable TGLFont          fTitleFont;
-   mutable Double_t         fX[4][3];  // 3D position of font
 
 public:
-
    TEveCaloLegoGL();
    virtual ~TEveCaloLegoGL();
 

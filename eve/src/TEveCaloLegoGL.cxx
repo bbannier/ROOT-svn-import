@@ -170,27 +170,28 @@ inline void TEveCaloLegoGL::RnrText(const char* txt, Float_t xa, Float_t ya, con
    glGetDoublev(GL_MODELVIEW_MATRIX,  mm);
    glGetIntegerv(GL_VIEWPORT, vp);
 
-   fX[0][0] = xa;
-   fX[0][1] = ya;
-   fX[0][2] = 0;
+   Double_t ptb[4][3]; // 3D positions of projected text bounding-box corners.
+   ptb[0][0] = xa;
+   ptb[0][1] = ya;
+   ptb[0][2] = 0;
    GLdouble x, y, z;
-   gluProject(fX[0][0], fX[0][1], fX[0][2], mm, pm, vp, &x, &y, &z);
+   gluProject(ptb[0][0], ptb[0][1], ptb[0][2], mm, pm, vp, &x, &y, &z);
    Float_t llx, lly, llz, urx, ury, urz;
    if (isNum)
       fNumFont.BBox(txt, llx, lly, llz, urx, ury, urz);
    else 
       fSymbolFont.BBox(txt, llx, lly, llz, urx, ury, urz);
 
-   gluUnProject(x + llx, y + lly, z, mm, pm, vp, &fX[0][0], &fX[0][1], &fX[0][2]);
-   gluUnProject(x + urx, y + lly, z, mm, pm, vp, &fX[1][0], &fX[1][1], &fX[1][2]);
-   gluUnProject(x + urx, y + ury, z, mm, pm, vp, &fX[2][0], &fX[2][1], &fX[2][2]);
-   gluUnProject(x + llx, y + ury, z, mm, pm, vp, &fX[3][0], &fX[3][1], &fX[3][2]);
+   gluUnProject(x + llx, y + lly, z, mm, pm, vp, &ptb[0][0], &ptb[0][1], &ptb[0][2]);
+   gluUnProject(x + urx, y + lly, z, mm, pm, vp, &ptb[1][0], &ptb[1][1], &ptb[1][2]);
+   gluUnProject(x + urx, y + ury, z, mm, pm, vp, &ptb[2][0], &ptb[2][1], &ptb[2][2]);
+   gluUnProject(x + llx, y + ury, z, mm, pm, vp, &ptb[3][0], &ptb[3][1], &ptb[3][2]);
 
    glPushMatrix();
    // down for height
-   glTranslatef(fX[1][0]-fX[2][0], fX[1][1]-fX[2][1], fX[1][2]-fX[2][2]);
+   glTranslatef(ptb[1][0]-ptb[2][0], ptb[1][1]-ptb[2][1], ptb[1][2]-ptb[2][2]);
    // translate to location
-   glTranslatef(fX[0][0], fX[0][1], fX[0][2]);
+   glTranslatef(ptb[0][0], ptb[0][1], ptb[0][2]);
 
    if (isNum)
    {
@@ -201,15 +202,19 @@ inline void TEveCaloLegoGL::RnrText(const char* txt, Float_t xa, Float_t ya, con
          llx -= off; 	 
          urx -= off; 	 
       }
-      glTranslatef((fX[0][0]-fX[1][0])*0.5f, (fX[0][1]-fX[1][1])*0.5f, (fX[0][2]-fX[1][2])*0.5f);
+      glTranslatef(0.5f * (ptb[0][0] - ptb[1][0]),
+                   0.5f * (ptb[0][1] - ptb[1][1]),
+                   0.5f * (ptb[0][2] - ptb[1][2]));
       glRasterPos3i(0, 0, 0);
       fNumFont.Render(txt);
    }
    else
    {
-      if ((fX[0][0]<0 && fX[0][0]>=fX[1][0])|| (fX[0][0]>0 && fX[0][0]<=fX[1][0]))
-         glTranslatef(fX[0][0]-fX[1][0], fX[0][1]-fX[1][1], fX[0][2]-fX[1][2]);
-
+      if ((ptb[0][0] < 0 && ptb[0][0] >= ptb[1][0]) ||
+          (ptb[0][0] > 0 && ptb[0][0] <= ptb[1][0]))
+      {
+         glTranslatef(ptb[0][0]-ptb[1][0], ptb[0][1]-ptb[1][1], ptb[0][2]-ptb[1][2]);
+      }
       glRasterPos3i(0, 0, 0);
       fSymbolFont.Render(txt);
    }
@@ -349,7 +354,7 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    {
       Float_t a = 0.5;
       TGLUtil::Color3f(a, a, a);
-      TGLCapabilitySwitch lights_on(GL_LIGHTING, kTRUE);
+      TGLCapabilitySwitch lights_off(GL_LIGHTING, kFALSE);
 
       glBegin(GL_LINES);
       glVertex2f(ax->GetBinLowEdge(0), y0);
@@ -380,9 +385,9 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
       fM->ResetCache();
       fM->fData->GetCellList((fM->fEtaMin+fM->fEtaMax)*0.5f, fM->fEtaMax -fM->fEtaMin,
                              fM->fPhi, fM->fPhiRng, fM->fThreshold, fM->fCellList);
-      fM->fCacheOK= kTRUE;
+      fM->fCacheOK = kTRUE;
    }
-   TGLCapabilitySwitch lights_on(GL_LIGHTING, kTRUE);
+
    TEveCaloData::CellData_t cellData;
    Float_t towerH = 0;
    Bool_t  visible = kFALSE;
