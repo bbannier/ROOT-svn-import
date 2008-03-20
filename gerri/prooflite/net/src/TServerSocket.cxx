@@ -82,17 +82,29 @@ TServerSocket::TServerSocket(const char *service, Bool_t reuse, Int_t backlog,
 
    fSecContext = 0;
    fSecContexts = new TList;
-   int port = gSystem->GetServiceByName(service);
-   fService = service;
 
-   if (port != -1) {
-      fSocket = gSystem->AnnounceTcpService(port, reuse, backlog, tcpwindowsize);
+   // If this is a local path, try announcing a UNIX socket service
+   if (service && (!gSystem->AccessPathName(service) || service[0] == '/')) {
+      fService = unix;
+      fSocket = gSystem->AnnounceUnixService(service, backlog);
       if (fSocket >= 0) {
          R__LOCKGUARD2(gROOTMutex);
          gROOT->GetListOfSockets()->Add(this);
       }
-   } else
-      fSocket = -1;
+   } else {
+      // TCP / UDP socket
+      fService = service;
+      int port = gSystem->GetServiceByName(service);
+      if (port != -1) {
+         fSocket = gSystem->AnnounceTcpService(port, reuse, backlog, tcpwindowsize);
+         if (fSocket >= 0) {
+            R__LOCKGUARD2(gROOTMutex);
+            gROOT->GetListOfSockets()->Add(this);
+         }
+      } else {
+         fSocket = -1;
+      }
+   }
 }
 
 //______________________________________________________________________________
