@@ -593,6 +593,7 @@ Double_t TGLScene::RenderAllPasses(TGLRnrCtx & rnrCtx,
 
       if (pass == TGLRnrCtx::kPassOutlineFill)
       {
+         // First pass - filled polygons
          glEnable(GL_POLYGON_OFFSET_FILL);
          glPolygonOffset(1.f, 1.f);
       }
