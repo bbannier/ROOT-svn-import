@@ -174,6 +174,8 @@ private:
 
 protected:
    TEveCaloData::vCellId_t fCellList;
+
+   Color_t                 fFontColor;
    Color_t                 fGridColor;
 
 public:
@@ -182,11 +184,15 @@ public:
 
    virtual ~TEveCaloLego(){}
 
+   Color_t  GetFontColor() const { return fFontColor; }
+   Color_t  GetGridColor() const { return fGridColor; }
+
+   void   SetFontColor(Color_t ci) { fFontColor=ci; }
+   void   SetGridColor(Color_t ci) { fGridColor=ci; }
+
    virtual Float_t GetDefaultCellHeight() const;
 
    virtual void ResetCache();
-
-   virtual Bool_t  CanEditMainColor() const { return kTRUE; }
 
    virtual void ComputeBBox();
 

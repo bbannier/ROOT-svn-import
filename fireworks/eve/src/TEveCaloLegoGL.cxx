@@ -151,6 +151,9 @@ void TEveCaloLegoGL::DrawTitle(TGLRnrCtx & rnrCtx ) const
    glGetDoublev(GL_MODELVIEW_MATRIX,  mm);
    glGetIntegerv(GL_VIEWPORT, vp);
 
+
+   TGLUtil::Color(fM->fFontColor);
+
    Float_t bbox[6];
    fTitleFont.BBox(fM->GetTitle(), bbox[0], bbox[1], bbox[2], bbox[3], bbox[4], bbox[5]);
    bbox[3] += fTitleFont.GetSize()*2;
@@ -314,6 +317,7 @@ void TEveCaloLegoGL::DrawAxis(TGLRnrCtx & rnrCtx,
    glPushMatrix();
    glTranslatef(0, 0, -tms -tmOff);
 
+   TGLUtil::Color(fM->fFontColor);
    RnrText("h", axtX, axY , pm, kFALSE);
    RnrText("f", ayX,  aytY, pm, kFALSE);
 
@@ -384,13 +388,15 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
 {
    // Render the calo lego-plot with OpenGL.
 
+   if (fM->fData == 0) return;
+
    // axis & grid
    {
       TGLCapabilitySwitch lights_off(GL_LIGHTING, kFALSE);
       TGLCapabilitySwitch sw_blend(GL_BLEND, kTRUE);
 
-      const TAxis* ax = fM->GetData()->GetEtaBins();
-      const TAxis* ay = fM->GetData()->GetPhiBins();
+      const TAxis* ax = fM->fData->GetEtaBins();
+      const TAxis* ay = fM->fData->GetPhiBins();
       Float_t y0 = ay->GetBinLowEdge(0);
       Float_t y1 = ay->GetBinUpEdge(ay->GetNbins());
       Float_t x0 = ax->GetBinLowEdge(0);
@@ -417,7 +423,7 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
       }
       glEnd();
 
-      if (! rnrCtx.SecSelection())
+      if (! rnrCtx.Selection())
       {
          DrawAxis(rnrCtx, x0, x1, y0, y1);
          TGLUtil::Color3f(1, 1, 1);
