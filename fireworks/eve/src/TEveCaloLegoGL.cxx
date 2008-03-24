@@ -388,8 +388,6 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
 {
    // Render the calo lego-plot with OpenGL.
 
-   if (fM->fData == 0) return;
-
    // axis & grid
    {
       TGLCapabilitySwitch lights_off(GL_LIGHTING, kFALSE);
