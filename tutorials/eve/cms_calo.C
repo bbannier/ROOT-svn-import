@@ -7,7 +7,7 @@ void cms_calo()
   TFile::SetCacheFileDir(".");
   TEveManager::Create();
   gEve->GetSelection()->SetPickToSelect(1);
-  gEve->GetHighlight()->SetPickToSelect(0);
+  //  gEve->GetHighlight()->SetPickToSelect(0);
   
   // event data
   TFile* hf = TFile::Open(histFile, "CACHEREAD");

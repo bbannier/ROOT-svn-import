@@ -196,6 +196,11 @@ void TEveCaloViz::Paint(Option_t* /*option*/)
 
    static const TEveException eH("TEvecaloViz::Paint ");
 
+   if ( ! fData ) {
+      throw(eH, "data uninitialized.");
+      return;
+   }
+
    TBuffer3D buff(TBuffer3DTypes::kGeneric);
 
    // Section kCore
