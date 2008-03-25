@@ -2779,7 +2779,12 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    mapfileStream.close();
 
    // ======= Generate the rootcint command line
-   TString rcint = "rootcint --lib-list-prefix=";
+   TString rcint;
+#ifdef G__NOSTUBS
+   rcint = "rootcint_nostubs.sh --lib-list-prefix=";
+#else
+   rcint = "rootcint --lib-list-prefix=";
+#endif
    rcint += mapfile;
    rcint += " -f ";
    rcint.Append(dict).Append(" -c -p ").Append(GetIncludePath()).Append(" ");
@@ -2796,9 +2801,10 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    }
 
    Int_t dictResult = gSystem->Exec(rcint);
-   if (dictResult)
+   if (dictResult) {
       if (dictResult==139) ::Error("ACLiC","Dictionary generation failed with a core dump!");
       else ::Error("ACLiC","Dictionary generation failed!");
+   }
 
    Bool_t result = !dictResult;
 

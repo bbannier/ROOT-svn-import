@@ -27,6 +27,10 @@ altcxx=
 altf77=
 altld=
 
+deprecated_options="         \
+   enable_mathcore           \
+"
+
 options="                    \
    enable_afs                \
    enable_alien              \
@@ -54,7 +58,7 @@ options="                    \
    enable_globus             \
    enable_krb5               \
    enable_ldap               \
-   enable_mathcore           \
+   enable_genvector          \
    enable_mathmore           \
    enable_monalisa           \
    enable_mysql              \
@@ -87,6 +91,7 @@ options="                    \
    enable_xft                \
    enable_xml                \
    enable_xrootd             \
+   $deprecated_options       \
 "
 
 #
@@ -94,7 +99,7 @@ options="                    \
 # on per default explictly afterwards.
 #
 for c in $options ; do eval ${c}="yes" ; done
-for c in $options ; do eval ${c}_explicit="no" ; done
+for c in $options ; do eval ${c}_explicit="" ; done
 
 enable_afs=no
 enable_cint7=no
@@ -112,6 +117,8 @@ enable_shadowpw=
 enable_soversion=no
 enable_table=no
 enable_thread=yes        # cannot be disabled (not in above options list)
+no_stubs=no         # Complete Dictionaries by default (All stubs)
+no_stubs_test=no    # Complete Dictionaries by default (All stubs)
 enable_unuran=no
 enable_winrtdebug=
 enable_xrootd=           # must be set explicitely via --enable-xrootd
@@ -675,7 +682,7 @@ check_explicit()
     emsg=$1 ; shift
 
     if test "x$fail_on_missing" = "xno" ; then return 0 ; fi
-    if test "x$expl" = "xno" ; then return 0 ; fi
+    if test ! "x$expl" = "xyes" ; then return 0 ; fi
     if test ! "x$feat" = "xyes" ; then
 	result $emsg
 	exit 1
@@ -805,6 +812,8 @@ GENREFLEXROOTCINTSHIN=config/genreflex-rootcint.in
 GENREFLEXROOTCINTSHOUT=bin/genreflex-rootcint
 GENREFLEXROOTCINTBATIN=config/genreflex-rootcint.bat.in
 GENREFLEXROOTCINTBATOUT=bin/genreflex-rootcint.bat
+ROOTCINTSTUBSHIN=utils/src/rootcint_nostubs.sh
+ROOTCINTSTUBSHOUT=bin/rootcint_nostubs.sh
 
 ######################################################################
 #
@@ -854,6 +863,8 @@ FIRST argument one of the architecures given at the end of this message.
    --macrodir      Macro installation dir    (<datadir>/macros)
    --mandir        Manpages installation dir (<prefix>/share/man/man1)
    --no-create     Do not create output files, dry run
+   --no-stubs      Remove Stubs from dictionaries (Direct call mechanism)
+   --no-stubs-test Remove Stubs from dictionaries (Direct call mechanism, can be switched off in rootrc)
    --prefix        Installation prefix       (/usr/local)
    --srcdir        Sources installation dir  (<datadir>/src)
    --testdir       Tests                     (<docdir>/test)
@@ -892,7 +903,7 @@ enable/disable options, prefix with either --enable- or --disable-
   glite	             gLite support, requires libglite-api-wrapper v.3 from GSI (https://subversion.gsi.de/trac/dgrid/wiki)
   krb5               Kerberos5 support, requires Kerberos libs
   ldap               LDAP support, requires (Open)LDAP libs
-  mathcore           Build the new libMathCore math library
+  genvector          Build the new libGenVector library
   mathmore           Build the new libMathMore extended math library, requires GSL (vers. >= 1.8)
   minuit2            Build the new libMinuit2 minimizer library
   monalisa           Monalisa monitoring support, requires libapmoncpp
@@ -1071,12 +1082,6 @@ hpuxia64acc)
    checkhpux64="yes" ;;
 esac
 
-# check for (g)make
-case $platform in
-win32|linux|macosx) gnumake="make"  ;;
-*)                  gnumake="gmake" ;;
-esac
-
 # check for which
 case $platform in
 macosx) cwhich="type -path" ;;
@@ -1130,6 +1135,8 @@ if test $# -gt 0 ; then
       --no-create)             noact="yes"           ;;
       --nohowto)               nohowto="yes"         ;;
       --fail-on-missing)       fail_on_missing="yes" ;;
+      --no-stubs)              no_stubs="yes";;
+      --no-stubs-test)         no_stubs="yes"; no_stubs_test="yes";;
       --with-afs=*)            afsdir=$optarg        ; enable_afs="yes"     ;;
       --with-alien-incdir=*)   alienincdir=$optarg   ; enable_alien="yes"   ;;
       --with-alien-libdir=*)   alienlibdir=$optarg   ; enable_alien="yes"   ;;
@@ -1205,6 +1212,7 @@ if test $# -gt 0 ; then
       --with-x11-libdir=*)     x11libdir=$optarg     ;;
       --with-xpm-libdir=*)     xpmlibdir=$optarg     ;;
       --with-xrootd=*)         xrootddir=$optarg     ; enable_xrootd="yes"  ;;
+      --with-xrootd-opts=*)    xrdaddopts=$optarg    ; enable_xrootd="yes"  ;;
       --with-cc=*)             altcc=$optarg         ;;
       --with-cxx=*)            altcxx=$optarg        ;;
       --with-f77=*)            altf77=$optarg        ;;
@@ -1216,6 +1224,17 @@ if test $# -gt 0 ; then
       #
       --enable-*)
         f=`echo $1 | sed -e 's/--//' -e 's/-/_/g'`
+        eval prev='$'`echo ${f}`
+        eval prev_expl='$'`echo ${f}_explicit`
+        if test "${prev}:${prev_expl}" = "yes:"; then
+            echo "INFO: $1: already enabled by default."
+        fi
+        if test ! "x`echo ${deprecated_options} | grep ${f}`" = "x"; then
+            echo "WARNING: option $1 is deprecated and ignored"'!'
+        fi
+        if test "x${prev_expl}" = "xno"; then
+            echo "WARNING: conflicting --disable / $1, $1 wins"
+        fi
         eval ${f}=yes
         eval ${f}_explicit=yes
         for c in $options ; do
@@ -1229,6 +1248,14 @@ if test $# -gt 0 ; then
         ;;
       --disable-*)
         f=`echo $1 | sed -e 's/--disable/enable/' -e 's/-/_/g'`
+        eval prev='$'`echo ${f}`
+        eval prev_expl='$'`echo ${f}_explicit`
+        if test "${prev}:${prev_expl}" = "xno:"; then
+            echo "INFO: $1: already disabled by default."
+        fi
+        if test "x${prev_expl}" = "xyes"; then
+            echo "WARNING: conflicting --enable / $1, $1 wins"
+        fi
         eval ${f}=no
         eval ${f}_explicit=no
         for c in $options ; do
@@ -1321,6 +1348,35 @@ fi
 
 ######################################################################
 #
+### echo %%% check for GNU make >= 3.80 - Mandatory version of make
+#
+# Mandatory test, must succeed
+# Check for GNU make >= 3.80
+#
+message "Checking for GNU Make version >= 3.80"
+gnumake="make"
+gnu=`$gnumake -v | awk 'BEGIN { FS=" "} { if (NR==1) print $1 }'`
+if test ! "x$gnu" = "xGNU" ; then
+    gnumake="gmake"
+    gnu=`$gnumake -v | awk 'BEGIN { FS=" "} { if (NR==1) print $1 }'`
+    if test ! "x$gnu" = "xGNU" ; then
+        gnumake=""
+    fi
+fi
+if test ! "x$gnumake" = "x" ; then
+    gnuv=`$gnumake -v | tr '.' ' ' | awk 'BEGIN { FS=" "} { if (NR==1) printf "%d", $3*100+$4 }'`
+    if test $gnuv -lt 380 ; then
+        result "`basename $0`: GNU Make >= 3.80 MUST be installed, current version $gnuv is too old"
+        exit 1
+    fi
+    result "ok"
+else
+    result "`basename $0`: GNU Make >= 3.80 MUST be installed"
+    exit 1
+fi
+
+######################################################################
+#
 ### echo %%% X11 and XPM Library - Mandatory lib on Unix
 #
 # Mandatory test, must succeed
@@ -1379,7 +1435,6 @@ if test ! "$platform" = "win32"; then
         enable_xft="no"
     fi
 fi
-
 
 ######################################################################
 #
@@ -1938,7 +1993,7 @@ check_qtvers()
     if test $? -eq 0 ; then
 	logmsg " Got Qt version $qtverstr"
 	qtgot=`echo $qtverstr | \
-	    awk 'BEGIN {FS="."} {printf "%d", ((($1*2^8)+$2)*2^8)+$3; }'`;
+	    awk 'BEGIN {FS="."} {printf "%d", ((($1*2^8)+$2)*2^8)+$3; }'`
 	qtneed=`echo $qtverneed | \
 	    awk 'BEGIN {FS="."}{ printf "%d", (($1*2^8)+$2)*2^8+$3; }'`
 	qtnew=`echo $qttoonew | \
@@ -1952,7 +2007,7 @@ check_qtvers()
 	    res="no"
 	else
 	    res="$qtverstr"
-	    qtvers=`echo $qtverstr | awk 'BEGIN{FS="."}{print $1}'`
+	    qtvers=`echo $qtverstr | awk 'BEGIN {FS="."} {print $1}'`
 	fi
     else
 	res="no"
@@ -1964,9 +2019,14 @@ if test ! "x$enable_qt" = "xno" || \
    test ! "x$enable_qtgsi" = "xno"; then
     # Check for Qt include and library
     # Check for Qt 4 first
-    check_header "Qt/qglobal.h" "$qtincdir" $QTDIR/include \
+    if test ! "x$QTDIR" = "x"; then
+      # The user asked for a specific "QTDIR" ... search ONLY in there
+      check_header "Qt/qglobal.h" "$qtincdir" $QTDIR $QTDIR/include
+    else
+      check_header "Qt/qglobal.h" "$qtincdir" $QTDIR/include \
         /usr/local/include/  /usr/local/qt/include  \
         /usr/include /usr/include/qt4
+    fi
     qtvers=0
     if ! test "x$found_hdr" = "x"; then
 	qtvers=4
@@ -2022,9 +2082,15 @@ if test ! "x$enable_qt" = "xno" || \
 
     if test $qtvers -eq 0 ; then
 	logmsg "No Qt4 was found, let's try to find Qt3 instead"
-	check_header "qt.h" "$qtincdir" $QTDIR $QTDIR/include \
+        if test ! "x$QTDIR" = "x"; then
+        # The user asked for a specific "QTDIR" ... search ONLY in there
+          check_header "qt.h" "$qtincdir" $QTDIR $QTDIR/include
+        else
+        # Try to search in all system default subdirectories ...
+	  check_header "qt.h" "$qtincdir" $QTDIR $QTDIR/include \
             /usr/local/include  /usr/local/qt/include /usr/include \
             /usr/include/qt /usr/include/qt3
+        fi
 	qtinc=$found_hdr
 	qtincdir=$found_dir
 	if ! test "x$found_hdr" = "x" ; then
@@ -4038,18 +4104,18 @@ check_explicit "$enable_mathmore" "$enable_mathmore_explicit" \
 
 ######################################################################
 #
-### echo %%% MathCore Library - Contributed library
+### echo %%% GenVector Library - Contributed library
 #
-message "Checking whether to build libMathCore"
-if test ! "x$enable_mathcore" = "xno"; then
-    enable_mathcore="yes"
+message "Checking whether to build libGenVector"
+if test ! "x$enable_genvector" = "xno"; then
+    enable_genvector="yes"
     result "yes"
 else
-    enable_mathcore=""
+    enable_genvector=""
     result "no"
 fi
-check_explicit "$enable_mathmore" "$enable_mathmore_explicit" \
-     "Explicitly required MathMore dependencies not fulfilled"
+check_explicit "$enable_genvector" "$enable_genvector_explicit" \
+      "Explicitly required GenVector dependencies not fulfilled"
 
 ######################################################################
 #
@@ -4230,6 +4296,37 @@ check_explicit "$enable_peac" "$enable_peac_explicit" \
 
 ######################################################################
 #
+### echo %%% Check for Stub removal support
+#
+
+if test "x$no_stubs" = "xyes" || test "x$no_stubs_test" = "xyes"; then
+    message "Checking for CINT support of function calls via symbols"
+    no_stubs="yes"
+
+    # Now check whether the platform is supported at all:
+    if test "x${arch}" = "xlinux"; then
+        gccmajor="`gcc -dumpversion 2>&1 | cut -d'.' -f1`"
+        gccminor="`gcc -dumpversion 2>&1 | cut -d'.' -f2`"
+        gccminorOK="`echo 234 | grep ${gccminor}`"
+        if test ! "x$gccmajor" = "x3" || test ! "x$gccminorOK" = "x234"; then
+            no_stubs="no"
+            no_stubs_test="no"
+            result "$no_stubs"
+            echo "WARNING: symbol-based calls are not supported with your compiler version"'!'
+        else
+            result "$no_stubs"
+        fi
+    else
+        no_stubs="no"
+        no_stubs_test="no"
+        result "$no_stubs"
+        echo "WARNING: symbol-based calls are not supported on ${arch}"'!'
+    fi
+fi
+
+
+######################################################################
+#
 ### echo %%% What dictionaries to build
 #
 # Can be either cint (default), reflex, or gccxml.
@@ -4406,6 +4503,7 @@ rm -f lib/libRXML* bin/libRXML* bin/xproofd etc/system.rootmap
 rm -f lib/libProofGui* bin/libProofGui* bin/xrdgsiproxy
 rm -f lib/libMySQL* bin/libMySQL* lib/libGedOld* bin/libGedOld*
 rm -f lib/libASPluginGS.*
+rm -f xrootd/src/headers.d asimage/src/headers.d
 
 ######################################################################
 #
@@ -4586,7 +4684,7 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@dicttype@|$dicttype|"                \
     -e "s|@docdir@|$docdir|"                    \
     -e "s|@elispdir@|$elispdir|"                \
-    -e "s|@buildmathcore@|$enable_mathcore|"    \
+    -e "s|@buildgenvector@|$enable_genvector|"  \
     -e "s|@buildmathmore@|$enable_mathmore|"    \
     -e "s|@ftglincdir@|$ftglincdir|"            \
     -e "s|@ftgllibdir@|$ftgllibdir|"            \
@@ -4607,6 +4705,8 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@buildgdml@|$enable_gdml|"            \
     -e "s|@buildmonalisa@|$enable_monalisa|"    \
     -e "s|@enable_pch@|$enable_pch|"            \
+    -e "s|@no_stubs@|$no_stubs|"                \
+    -e "s|@no_stubs_test@|$no_stubs_test|"      \
     -e "s|@buildtable@|$enable_table|"          \
     -e "s|@enable_thread@|$enable_thread|"      \
     -e "s|@etcdir@|$etcdir|"                    \
@@ -4727,6 +4827,7 @@ sed -e "s|@srcdir@|$srcdir|"                    \
     -e "s|@x11libdir@|$x11libdir|"              \
     -e "s|@xpmlib@|$xpmlib|"                    \
     -e "s|@xpmlibdir@|$xpmlibdir|"              \
+    -e "s|@xrdaddopts@|$xrdaddopts|"            \
     -e "s|@xrootddir@|$xrootddir|"              \
     -e "s|@buildgl@|$enable_opengl|"            \
     -e "s|@buildhbook@|$enable_cern|"           \
@@ -4900,6 +5001,8 @@ sed -e "s|@architecture@|$arch|"           \
     -e "s|@altcxx@|$altcxx|"               \
     -e "s|@altf77@|$altf77|"               \
     -e "s|@altld@|$altld|"                 \
+    -e "s|@no_stubs@|$no_stubs|"           \
+    -e "s|@no_stubs_test@|$no_stubs_test|" \
    < root-config.tmp > $RCONFOUT
 rm -f root-config.tmp
 chmod 755 $RCONFOUT
@@ -5133,6 +5236,16 @@ if test "x$enable_reflex" = "xyes"; then
     fi
 else
     rm -f bin/genreflex*
+fi
+
+#---------------------------------------------------------------------
+# bin/rootcint_nostubs
+#
+if test "x$no_stubs" = "xyes"; then
+    message "Writing $ROOTCINTSTUBSHOUT"
+    cp -f  $ROOTCINTSTUBSHIN $ROOTCINTSTUBSHOUT
+    # force rootcint recompilation and thus regenerate dictionaries
+    touch utils/src/rootcint.cxx
 fi
 
 #---------------------------------------------------------------------

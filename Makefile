@@ -58,13 +58,14 @@ include $(MAKEFILEDEP)
 
 ##### Modules to build #####
 
-MODULES       = build cint metautils pcre utils base cont meta io net math \
-                zip clib matrix newdelete hist tree freetype graf gpad \
-                g3d gui minuit histpainter treeplayer ged treeviewer physics \
+MODULES       = build cint/cint metautils pcre utils base cont meta io \
+                math fit mathcore net zip clib matrix newdelete \
+                hist/hist tree freetype graf gpad g3d gui minuit \
+                hist/histpainter treeplayer ged treeviewer physics \
                 postscript rint thread html eg geom geompainter vmc fumili \
                 mlp quadp auth guibuilder xml foam splot smatrix sql tmva \
-                geombuilder spectrum spectrumpainter fitpanel proof \
-                proofplayer sessionviewer guihtml
+                geombuilder hist/spectrum hist/spectrumpainter \
+                fitpanel proof/proof proof/proofplayer sessionviewer guihtml
 
 ifeq ($(ARCH),win32)
 MODULES      += winnt win32gdk
@@ -154,14 +155,15 @@ endif
 ifeq ($(BUILDQTGSI),yes)
 MODULES      += qtgsi
 endif
-ifeq ($(BUILDMATHCORE),yes)
-MODULES      += mathcore
+ifeq ($(BUILDGENVECTOR),yes)
+MODULES      += genvector
 endif
 ifeq ($(BUILDMATHMORE),yes)
 MODULES      += mathmore
 endif
 ifeq ($(BUILDREFLEX),yes)
-MODULES      += reflex
+# put reflex right in front of CINT; CINT needs it 
+MODULES      := $(subst cint/cint,cint/reflex cint/cint,$(MODULES))
 endif
 ifeq ($(BUILDMINUIT2),yes)
 MODULES      += minuit2
@@ -170,7 +172,7 @@ ifeq ($(BUILDUNURAN),yes)
 MODULES      += unuran
 endif
 ifeq ($(BUILDCINT7),yes)
-MODULES      += cint7
+MODULES      := $(subst cint/cint,cint/cint7,$(MODULES))
 endif
 ifeq ($(BUILDCINTEX),yes)
 MODULES      += cintex
@@ -213,19 +215,19 @@ ifeq ($(BUILDALIEN),yes)
 MODULES      += alien
 endif
 ifeq ($(BUILDCLARENS),yes)
-MODULES      += clarens
+MODULES      += proof/clarens
 endif
 ifeq ($(BUILDPEAC),yes)
-MODULES      += peac
+MODULES      += proof/peac
 endif
 ifneq ($(ARCH),win32)
-MODULES      += rpdutils rootd proofd
+MODULES      += rpdutils rootd proof/proofd
 endif
 ifeq ($(BUILDXRD),yes)
 ifeq ($(ARCH),win32)
-MODULES      += proofd
+MODULES      += proof/proofd
 endif
-MODULES      += proofx
+MODULES      += proof/proofx
 endif
 
 -include MyModules.mk   # allow local modules
@@ -233,11 +235,12 @@ endif
 ifneq ($(findstring $(MAKECMDGOALS),distclean maintainer-clean),)
 MODULES      += unix winnt x11 x11ttf win32gdk gl ftgl rfio castor \
                 pythia6 table mysql pgsql sapdb srputils x3d \
-                rootx rootd proofd dcache chirp hbook asimage \
+                rootx rootd dcache chirp hbook asimage \
                 ldap mlp krb5auth rpdutils globusauth pyroot ruby gfal \
-                qt qtroot qtgsi xrootd netx proofx alien clarens peac oracle \
-                xmlparser mathcore mathmore reflex cintex roofitcore roofit \
-                minuit2 monalisa fftw odbc unuran gdml eve g4root cint7 glite
+                qt qtroot qtgsi xrootd netx alien \
+                proof/proofd proof/proofx proof/clarens proof/peac \
+                oracle xmlparser mathmore cint/reflex cintex roofitcore roofit \
+                minuit2 monalisa fftw odbc unuran gdml eve g4root glite
 MODULES      := $(sort $(MODULES))   # removes duplicates
 endif
 
@@ -250,11 +253,11 @@ LPATH         = lib
 ifneq ($(PLATFORM),win32)
 RPATH        := -L$(LPATH)
 CINTLIBS     := -lCint
-CINT7LIBS    := -lCint7 -lReflex
+CINT7LIBS    := -lCint -lReflex
 NEWLIBS      := -lNew
 ROOTLIBS     := -lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad \
-                -lTree -lMatrix
-BOOTLIBS     := -lCore -lCint
+                -lTree -lMatrix -lMathCore
+BOOTLIBS     := -lCore -lCint -lMathCore
 ifneq ($(ROOTDICTTYPE),cint)
 ROOTLIBS     += -lCintex -lReflex
 BOOTLIBS     += -lCintex -lReflex
@@ -262,14 +265,16 @@ endif
 RINTLIBS     := -lRint
 else
 CINTLIBS     := $(LPATH)/libCint.lib
-CINT7LIBS    := $(LPATH)/libCint7.lib $(LPATH)/libReflex.lib
+CINT7LIBS    := $(LPATH)/libCint.lib $(LPATH)/libReflex.lib
 NEWLIBS      := $(LPATH)/libNew.lib
 ROOTLIBS     := $(LPATH)/libCore.lib $(LPATH)/libCint.lib \
                 $(LPATH)/libRIO.lib $(LPATH)/libNet.lib \
                 $(LPATH)/libHist.lib $(LPATH)/libGraf.lib \
                 $(LPATH)/libGraf3d.lib $(LPATH)/libGpad.lib \
-                $(LPATH)/libTree.lib $(LPATH)/libMatrix.lib
-BOOTLIBS     := $(LPATH)/libCore.lib $(LPATH)/libCint.lib
+                $(LPATH)/libTree.lib $(LPATH)/libMatrix.lib \
+                $(LPATH)/libMathcore.lib
+BOOTLIBS     := $(LPATH)/libCore.lib $(LPATH)/libCint.lib \
+                $(LPATH)/libMathcore.lib
 ifneq ($(ROOTDICTTYPE),cint)
 ROOTLIBS     += $(LPATH)/libCintex.lib $(LPATH)/libReflex.lib
 BOOTLIBS     += $(LPATH)/libCintex.lib $(LPATH)/libReflex.lib
@@ -279,8 +284,9 @@ endif
 
 # ROOTLIBSDEP is intended to match the content of ROOTLIBS
 ROOTLIBSDEP   = $(ORDER_) $(CORELIB) $(CINTLIB) $(IOLIB) $(NETLIB) $(HISTLIB) \
-                $(GRAFLIB) $(G3DLIB) $(GPADLIB) $(TREELIB) $(MATRIXLIB)
-BOOTLIBSDEP   = $(ORDER_) $(CORELIB) $(CINTLIB)
+                $(GRAFLIB) $(G3DLIB) $(GPADLIB) $(TREELIB) $(MATRIXLIB) \
+                $(MATHCORELIB)
+BOOTLIBSDEP   = $(ORDER_) $(CORELIB) $(CINTLIB) $(MATHCORELIB)
 ifneq ($(ROOTDICTTYPE),cint)
 ROOTLIBSDEP  += $(CINTEXLIB) $(REFLEXLIB)
 BOOTLIBSDEP  += $(CINTEXLIB) $(REFLEXLIB)
@@ -297,6 +303,7 @@ ROOTULIBS    := -Wl,-u,.G__cpp_setupG__Net      \
                 -Wl,-u,.G__cpp_setupG__GPad     \
                 -Wl,-u,.G__cpp_setupG__Tree     \
                 -Wl,-u,.G__cpp_setupG__Matrix
+BOOTULIBS    := -Wl,-u,.G__cpp_setupG__MathCore
 else
 ROOTULIBS    := -Wl,-u,_G__cpp_setupG__Net      \
                 -Wl,-u,_G__cpp_setupG__IO       \
@@ -306,6 +313,7 @@ ROOTULIBS    := -Wl,-u,_G__cpp_setupG__Net      \
                 -Wl,-u,_G__cpp_setupG__GPad     \
                 -Wl,-u,_G__cpp_setupG__Tree     \
                 -Wl,-u,_G__cpp_setupG__Matrix
+BOOTULIBS    := -Wl,-u,_G__cpp_setupG__MathCore
 endif
 endif
 ifeq ($(PLATFORM),win32)
@@ -317,6 +325,7 @@ ROOTULIBS    := -include:_G__cpp_setupG__Net    \
                 -include:_G__cpp_setupG__GPad   \
                 -include:_G__cpp_setupG__Tree   \
                 -include:_G__cpp_setupG__Matrix
+BOOTULIBS    := -include:_G__cpp_setupG__MathCore
 endif
 
 ##### Compiler output option #####
@@ -331,6 +340,18 @@ GCC_MINOR     := $(shell $(CXX) -dumpversion 2>&1 | cut -d'.' -f2)
 GCC_PATCH     := $(shell $(CXX) -dumpversion 2>&1 | cut -d'.' -f3)
 GCC_VERS      := gcc-$(GCC_MAJOR).$(GCC_MINOR)
 GCC_VERS_FULL := gcc-$(GCC_MAJOR).$(GCC_MINOR).$(GCC_PATCH)
+
+##### CINT Stub Functions Generation #####
+ifeq ($(NOSTUBS),yes)
+ROOTCINTTMP   = export CXXFLAGS="$(CXXFLAGS)"; utils/src/rootcint_nostubs_tmp.sh -$(ROOTDICTTYPE)
+CXXFLAGS     += -DG__NOSTUBS
+CINTCXXFLAGS += -DG__NOSTUBS
+ifeq ($(NOSTUBSTEST),yes)
+CXXFLAGS     += -DG__NOSTUBSTEST
+CINTCXXFLAGS += -DG__NOSTUBSTEST
+endif
+endif
+
 
 # Precompiled headers for gcc
 ifeq ($(GCC_MAJOR),4)
@@ -380,13 +401,12 @@ endif
 
 ##### Utilities #####
 
-ROOTCINTTMP   = $(ROOTCINTTMPEXE) $(addprefix -,$(ROOTDICTTYPE))
+ROOTCINTTMP  ?= $(ROOTCINTTMPEXE) -$(ROOTDICTTYPE)
 MAKEDEP       = $(RMKDEP)
 MAKELIB       = build/unix/makelib.sh $(MKLIBOPTIONS)
 MAKEDIST      = build/unix/makedist.sh
 MAKEDISTSRC   = build/unix/makedistsrc.sh
 MAKEVERSION   = build/unix/makeversion.sh
-IMPORTCINT    = build/unix/importcint.sh
 MAKECOMPDATA  = build/unix/compiledata.sh
 MAKECHANGELOG = build/unix/makechangelog.sh
 MAKEHTML      = build/unix/makehtml.sh
@@ -408,11 +428,11 @@ ROOTMAP       = etc/system.rootmap
 ##### libCore #####
 
 COREL         = $(BASEL1) $(BASEL2) $(BASEL3) $(CONTL) $(METAL) \
-                $(SYSTEML) $(CLIBL) $(METAUTILSL) $(MATHL)
+                $(SYSTEML) $(CLIBL) $(METAUTILSL)
 COREO         = $(BASEO) $(CONTO) $(METAO) $(SYSTEMO) $(ZIPO) $(CLIBO) \
-                $(METAUTILSO) $(MATHO)
+                $(METAUTILSO)
 COREDO        = $(BASEDO) $(CONTDO) $(METADO) $(SYSTEMDO) $(CLIBDO) \
-                $(METAUTILSDO) $(MATHDO)
+                $(METAUTILSDO)
 
 CORELIB      := $(LPATH)/libCore.$(SOEXT)
 COREMAP      := $(CORELIB:.$(SOEXT)=.rootmap)
@@ -468,14 +488,6 @@ cint/%.o: cint/%.c
 	$(MAKEDEP) -R -fcint/$*.d -Y -w 1000 -- $(CINTCFLAGS) -- $<
 	$(CC) $(OPT) $(CINTCFLAGS) $(CXXOUT)$@ -c $<
 
-cint7/%.o: cint7/%.cxx
-	$(MAKEDEP) -R -fcint7/$*.d -Y -w 1000 -- $(CINT7CXXFLAGS) -D__cplusplus -- $<
-	$(CXX) $(OPT) $(CINT7CXXFLAGS) $(CXXOUT)$@ -c $<
-
-cint7/%.o: cint7/%.c
-	$(MAKEDEP) -R -fcint7/$*.d -Y -w 1000 -- $(CINT7CFLAGS) -- $<
-	$(CC) $(OPT) $(CINT7CFLAGS) $(CXXOUT)$@ -c $<
-
 build/%.o: build/%.cxx
 	$(CXX) $(OPT) $(CXXFLAGS) $(CXXOUT)$@ -c $<
 
@@ -500,7 +512,7 @@ endif
 
 ##### TARGETS #####
 .PHONY:         all fast config rootcint rootlibs rootexecs dist distsrc \
-                clean distclean maintainer-clean compiledata importcint \
+                clean distclean maintainer-clean compiledata \
                 version html changelog install uninstall showbuild \
                 static map debian redhat skip postbin \
                 $(patsubst %,all-%,$(MODULES)) \
@@ -520,12 +532,12 @@ skip:
 		@true;
 
 include $(patsubst %,%/Module.mk,$(MODULES))
-include cint/cintdlls.mk
+include cint/ROOT/cintdlls.mk
 
 -include MyRules.mk            # allow local rules
 
 ifeq ($(findstring $(MAKECMDGOALS),clean distclean maintainer-clean dist \
-      distsrc version importcint importcint7 install uninstall showbuild \
+      distsrc version install uninstall showbuild \
       changelog html debian redhat),)
 ifeq ($(findstring clean-,$(MAKECMDGOALS)),)
 ifeq ($(findstring skip,$(MAKECMDGOALS))$(findstring fast,$(MAKECMDGOALS)),)
@@ -798,12 +810,6 @@ version: $(CINTTMP)
 static: rootlibs
 	@$(MAKESTATIC) $(PLATFORM) "$(CXX)" "$(CC)" "$(LD)" "$(LDFLAGS)" \
 	   "$(XLIBS)" "$(SYSLIBS)"
-
-importcint: distclean-cint
-	@$(IMPORTCINT)
-
-importcint7: distclean-cint7
-	@$(IMPORTCINT) cint7
 
 changelog:
 	@$(MAKECHANGELOG)
@@ -1102,7 +1108,6 @@ showbuild:
 	@echo "MAKEDIST           = $(MAKEDIST)"
 	@echo "MAKEDISTSRC        = $(MAKEDISTSRC)"
 	@echo "MAKEVERSION        = $(MAKEVERSION)"
-	@echo "IMPORTCINT         = $(IMPORTCINT)"
 	@echo ""
 	@echo "The list of modules to be built:"
 	@echo "--------------------------------"
