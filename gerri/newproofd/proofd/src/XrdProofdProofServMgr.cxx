@@ -91,15 +91,24 @@ void *XrdProofdProofServCron(void *p)
       return (void *)0;
    }
 
-   // Time of last session check
-   int lastcheck = time(0), ckfreq = mgr->CheckFrequency(), deltat = 0;
+   // Quicj checks for client disconnections: frequency (5 secs) and
+   // flag for disconnections effectively occuring
+   bool clientdisc = 0;
+   int quickcheckfreq = 5;
+
+   // Time of last full sessions check
+   int lastcheck = time(0), ckfreq = mgr->CheckFrequency(), waitt = 0;
+   int deltat = ((int)(0.1*ckfreq) >= 1) ? (int)(0.1*ckfreq) : 1;
    mgr->SetNextSessionsCheck(lastcheck + ckfreq);
-   TRACE(ALL, "next sessions check in "<<ckfreq<<" secs");
+   TRACE(ALL, "next full sessions check in "<<ckfreq<<" secs");
    while(1) {
-      // We wait for processes to communicate a session status change
-      if ((deltat = ckfreq - (time(0) - lastcheck)) <= 0)
-         deltat = ckfreq;
-      int pollRet = mgr->Pipe()->Poll(deltat);
+      // We check for client disconnections every 'quickcheckfreq' secs; we do
+      // a full check every mgr->CheckFrequency() secs; we make sure that we
+      // do not pass a negative value (meaning no timeout)
+      waitt =  ckfreq - (time(0) - lastcheck);
+      if (waitt > quickcheckfreq || waitt <= 0)
+         waitt = quickcheckfreq;
+      int pollRet = mgr->Pipe()->Poll(waitt);
       if (pollRet > 0) {
          // Read message
          XpdMsg msg;
@@ -136,7 +145,8 @@ void *XrdProofdProofServCron(void *p)
             TRACE(REQ, "kClientDisconnect: a client just disconnected: "<<pid);
             // Free slots in the proof serv instances
             mgr->DisconnectFromProofServ(pid);
-
+            // Flag this case
+            clientdisc = 1;
         } else if (msg.Type() == XrdProofdProofServMgr::kCleanSessions) {
             // Request for cleanup all sessions of a client (or all clients) 
             XrdOucString usr;
@@ -156,14 +166,27 @@ void *XrdProofdProofServCron(void *p)
             continue;
          }
       } else {
-         // Run periodical checks
-         mgr->CheckActiveSessions();
-         mgr->CheckTerminatedSessions();
-         // Remember when ...
-         lastcheck = time(0);
-         mgr->SetNextSessionsCheck(lastcheck + mgr->CheckFrequency());
-         // Notify
-         TRACE(ALL, "next sessions check in "<<mgr->CheckFrequency()<<" secs");
+         // The current time
+         int now = time(0);
+         bool full = (now > mgr->NextSessionsCheck() - deltat) ? 1 : 0;
+         if (full) {
+            // Run periodical full checks
+            mgr->CheckActiveSessions();
+            mgr->CheckTerminatedSessions();
+            // Remember when ...
+            lastcheck = now;
+            mgr->SetNextSessionsCheck(lastcheck + mgr->CheckFrequency());
+            // Notify
+            TRACE(ALL, "next sessions check in "<<mgr->CheckFrequency()<<" secs");
+         } else if (clientdisc) {
+            TRACE(DBG, "quick check of active sessions; "<<now-lastcheck<<" secs to full check");
+            // Quick check of active sessions in case of disconnections
+            mgr->CheckActiveSessions(0);
+         } else {
+            TRACE(DBG, "nothing to do; "<<now-lastcheck<<" secs to full check");
+         }
+         // Reset the client disconnection flag
+         clientdisc = 0;
       }
    }
 
@@ -719,9 +742,11 @@ bool XrdProofdProofServMgr::IsClientRecovering(const char *usr, const char *grp,
 }
 
 //______________________________________________________________________________
-int XrdProofdProofServMgr::CheckActiveSessions()
+int XrdProofdProofServMgr::CheckActiveSessions(bool verify)
 {
    // Go through the active sessions admin path and make sure sessions are alive.
+   // If 'verify' is true also ask the session to proof that they are allowed
+   // via asynchronous ping (the result will be done at next check).
    // Move those not responding in the terminated sessions admin path.
    XPDLOC(SMGR, "ProofServMgr::CheckActiveSessions")
 
@@ -776,7 +801,7 @@ int XrdProofdProofServMgr::CheckActiveSessions()
       // to touch the session file; all this will be done asynchronously;
       // the result will be checked next time.
       // We do not want further propagation at this stage.
-      if (!rmsession) {
+      if (!rmsession && verify) {
          if (xps->VerifyProofServ(0) != 0) {
             // This means that the connection is already gone
             rmsession = 1;

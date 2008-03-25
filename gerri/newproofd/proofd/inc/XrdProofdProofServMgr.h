@@ -189,7 +189,7 @@ public:
    // Checks run periodically by the cron job
    int               DeleteFromSessions(const char *pid);
    int               MvSession(const char *fpid);
-   int               CheckActiveSessions();
+   int               CheckActiveSessions(bool verify = 1);
    int               CheckTerminatedSessions();
    int               CleanClientSessions(const char *usr, int srvtype);
    int               RecoverActiveSessions();
