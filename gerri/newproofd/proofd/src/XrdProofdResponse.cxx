@@ -31,6 +31,8 @@
 // Tracing utils
 #include "XrdProofdTrace.h"
 
+int XrdProofdResponse::fgMaxRetry = 5; // Max number of retries on send failures
+
 //______________________________________________________________________________
 int XrdProofdResponse::Send()
 {
@@ -50,9 +52,9 @@ int XrdProofdResponse::Send()
       fResp.dlen   = 0;
       tmsg.form("sending OK");
 
-      if (fLink->Send((char *)&fResp, sizeof(fResp)) < 0)
-         rc = fLink->setEtext("send failure");
-   }
+      // Send over
+      rc = LinkSend((char *)&fResp, sizeof(fResp));
+    }
    TRACER(this, DBG, tmsg.c_str());
    return rc;
 }
@@ -76,8 +78,8 @@ int XrdProofdResponse::Send(XResponseType rcode)
       fResp.dlen          = 0;
       tmsg.form("sending OK: status = %d", rcode);
 
-      if (fLink->Send((char *)&fResp, sizeof(fResp)) < 0)
-         rc = fLink->setEtext("send failure");
+      // Send over
+      rc = LinkSend((char *)&fResp, sizeof(fResp));
    }
    TRACER(this, DBG, tmsg.c_str());
    return rc;
@@ -104,8 +106,8 @@ int XrdProofdResponse::Send(const char *msg)
       fResp.dlen          = static_cast<kXR_int32>(htonl(fRespIO[1].iov_len));
       tmsg.form("sending OK: %s", msg);
 
-      if (fLink->Send(fRespIO, 2, sizeof(fResp) + fRespIO[1].iov_len) < 0)
-         rc = fLink->setEtext("send failure");
+      // Send over
+      rc = LinkSend(fRespIO, 2, sizeof(fResp) + fRespIO[1].iov_len);
    }
    TRACER(this, DBG, tmsg.c_str());
    return rc;
@@ -132,8 +134,8 @@ int XrdProofdResponse::Send(XResponseType rcode, void *data, int dlen)
       fResp.dlen          = static_cast<kXR_int32>(htonl(dlen));
       tmsg.form("sending %d data bytes; status=%d", dlen, rcode);
 
-      if (fLink->Send(fRespIO, 2, sizeof(fResp) + dlen) < 0)
-         rc = fLink->setEtext("send failure");
+      // Send over
+      rc = LinkSend(fRespIO, 2, sizeof(fResp) + dlen);
    }
    TRACER(this, DBG, tmsg.c_str());
    return rc;
@@ -172,8 +174,8 @@ int XrdProofdResponse::Send(XResponseType rcode, int info, char *data)
       }
       fResp.dlen          = static_cast<kXR_int32>(htonl((dlen+sizeof(xbuf))));
 
-      if (fLink->Send(fRespIO, nn, sizeof(fResp) + dlen) < 0)
-         rc = fLink->setEtext("send failure");
+      // Send over
+      rc = LinkSend(fRespIO, nn, sizeof(fResp) + dlen);
    }
    TRACER(this, DBG, tmsg.c_str());
    return rc;
@@ -212,8 +214,8 @@ int XrdProofdResponse::Send(XResponseType rcode, XProofActionCode acode,
       }
       fResp.dlen = static_cast<kXR_int32>(htonl((dlen+sizeof(xbuf))));
 
-      if (fLink->Send(fRespIO, nn, sizeof(fResp) + dlen) < 0)
-         rc = fLink->setEtext("send failure");
+      // Send over
+      rc = LinkSend(fRespIO, nn, sizeof(fResp) + dlen);
    }
    TRACER(this, DBG, tmsg.c_str());
    return rc;
@@ -256,8 +258,8 @@ int XrdProofdResponse::Send(XResponseType rcode, XProofActionCode acode,
       }
       fResp.dlen = static_cast<kXR_int32>(htonl((dlen+hlen)));
 
-      if (fLink->Send(fRespIO, nn, sizeof(fResp) + dlen) < 0)
-         rc = fLink->setEtext("send failure");
+      // Send over
+      rc = LinkSend(fRespIO, nn, sizeof(fResp) + dlen);
    }
    TRACER(this, DBG, tmsg.c_str());
    return rc;
@@ -291,8 +293,8 @@ int XrdProofdResponse::Send(XResponseType rcode, XProofActionCode acode,
       tmsg.form("sending info=%d; status=%d; action=%d", info, rcode, acode);
       fResp.dlen = static_cast<kXR_int32>(htonl((hlen)));
 
-      if (fLink->Send(fRespIO, 3, sizeof(fResp)) < 0)
-         rc = fLink->setEtext("send failure");
+      // Send over
+      rc = LinkSend(fRespIO, 3, sizeof(fResp));
    }
    TRACER(this, DBG, tmsg.c_str());
    return rc;
@@ -338,8 +340,8 @@ int XrdProofdResponse::SendI(kXR_int32 int1, kXR_int16 int2, kXR_int16 int3,
       }
       fResp.dlen = static_cast<kXR_int32>(htonl((dlen+ilen)));
 
-      if (fLink->Send(fRespIO, nn, sizeof(fResp) + dlen) < 0)
-         rc = fLink->setEtext("send failure");
+      // Send over
+      rc = LinkSend(fRespIO, nn, sizeof(fResp) + dlen);
    }
    TRACER(this, DBG, tmsg.c_str());
    return rc;
@@ -381,8 +383,8 @@ int XrdProofdResponse::SendI(kXR_int32 int1, kXR_int32 int2, void *data, int dle
       }
       fResp.dlen = static_cast<kXR_int32>(htonl((dlen+ilen)));
 
-      if (fLink->Send(fRespIO, nn, sizeof(fResp) + dlen) < 0)
-         rc = fLink->setEtext("send failure");
+      // Send over
+      rc = LinkSend(fRespIO, nn, sizeof(fResp) + dlen);
    }
    TRACER(this, DBG, tmsg.c_str());
    return rc;
@@ -420,8 +422,8 @@ int XrdProofdResponse::SendI(kXR_int32 int1, void *data, int dlen )
       }
       fResp.dlen          = static_cast<kXR_int32>(htonl((dlen+ilen)));
 
-      if (fLink->Send(fRespIO, nn, sizeof(fResp) + dlen) < 0)
-         rc = fLink->setEtext("send failure");
+      // Send over
+      rc = LinkSend(fRespIO, nn, sizeof(fResp) + dlen);
    }
    TRACER(this, DBG, tmsg.c_str());
    return rc;
@@ -448,8 +450,8 @@ int XrdProofdResponse::Send(void *data, int dlen)
       fResp.dlen          = static_cast<kXR_int32>(htonl(dlen));
       tmsg.form("sending %d data bytes; status=0", dlen);
 
-      if (fLink->Send(fRespIO, 2, sizeof(fResp) + dlen) < 0)
-         rc = fLink->setEtext("send failure");
+      // Send over
+      rc = LinkSend(fRespIO, 2, sizeof(fResp) + dlen);
    }
    TRACER(this, DBG, tmsg.c_str());
    return rc;
@@ -484,8 +486,8 @@ int XrdProofdResponse::Send(struct iovec *IOResp, int iornum, int iolen)
       fResp.dlen          = static_cast<kXR_int32>(htonl(dlen));
       tmsg.form("sending %d data bytes; status=0", dlen);
 
-      if (fLink->Send(IOResp, iornum, sizeof(fResp) + dlen) < 0)
-         rc = fLink->setEtext("send failure");
+      // Send over
+      rc = LinkSend(fRespIO, iornum, sizeof(fResp) + dlen);
    }
    TRACER(this, DBG, tmsg.c_str());
    return rc;
@@ -518,8 +520,8 @@ int XrdProofdResponse::Send(XErrorCode ecode, const char *msg)
       fResp.dlen          = static_cast<kXR_int32>(htonl(dlen));
       tmsg.form("sending err %d: %s", ecode, msg);
 
-      if (fLink->Send(fRespIO, 3, sizeof(fResp) + dlen) < 0)
-         rc = fLink->setEtext("send failure");
+      // Send over
+      rc = LinkSend(fRespIO, 3, sizeof(fResp) + dlen);
    }
    TRACER(this, DBG, tmsg.c_str());
    return rc;
@@ -552,11 +554,55 @@ int XrdProofdResponse::Send(XPErrorCode ecode, const char *msg)
       fResp.dlen          = static_cast<kXR_int32>(htonl(dlen));
       tmsg.form("sending err %d: %s", ecode, msg);
 
-      if (fLink->Send(fRespIO, 3, sizeof(fResp) + dlen) < 0)
-         rc = fLink->setEtext("send failure");
+      // Send over
+      rc = LinkSend(fRespIO, 3, sizeof(fResp) + dlen);
    }
    TRACER(this, DBG, tmsg.c_str());
    return rc;
+}
+
+//______________________________________________________________________________
+int XrdProofdResponse::LinkSend(const char *buff, int len)
+{
+   // Method actually sending the buffer(s) over the link.
+   // Sending is automatically re-tried in case of cancellation.
+   // Return 0 on success, -1 on failure.
+
+   // Number of attempts
+   int ntry = fgMaxRetry;
+
+   int rc = 0;
+   while (ntry--) {
+      if ((rc = fLink->Send(buff, len)) >= 0) {
+         // Success
+         break;
+      }
+      // Keep retrying ...
+   }
+   // Done
+   return ((rc < 0) ? fLink->setEtext("send failure") : 0);
+}
+
+//______________________________________________________________________________
+int XrdProofdResponse::LinkSend(const struct iovec *iov, int iocnt, int len)
+{
+   // Method actually sending the buffer(s) over the link.
+   // Sending is automatically re-tried in case of cancellation.
+   // Return 0 on success, -1 on failure.
+
+   // Number of attempts
+   int ntry = fgMaxRetry;
+
+   int rc = 0;
+   while (ntry--) {
+      if ((rc = fLink->Send(iov, iocnt, len)) >= 0) {
+         // Success
+         break;
+      }
+      // Keep retrying ...
+   }
+   // Done
+   return ((rc < 0) ? fLink->setEtext("send failure") : 0);
 }
 
 //______________________________________________________________________________

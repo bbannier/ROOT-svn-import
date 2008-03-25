@@ -48,6 +48,9 @@ class XrdProofdResponse
    inline const  char   *STRID() { return (const char *)fTrsid;}
    inline const char    *TraceID() const { return fTraceID.c_str(); }
 
+   int                   LinkSend(const char *buff, int len);
+   int                   LinkSend(const struct iovec *iov, int iocnt, int len);
+
    int                   Send(void);
    int                   Send(const char *msg);
    int                   Send(void *data, int dlen);
@@ -77,6 +80,8 @@ class XrdProofdResponse
    void                  GetSID(unsigned short &sid);
    void                  SetTrsid();
 
+   static void           SetMaxRetry(int mx) { fgMaxRetry = mx; }
+
    // To protect from concurrent use
    XrdSysRecMutex       fMutex;
 
@@ -92,5 +97,7 @@ class XrdProofdResponse
 
    XrdOucString         fTraceID;
    XrdOucString         fTag;
+
+   static int           fgMaxRetry; // Max number of retries on send failures
 };
 #endif
