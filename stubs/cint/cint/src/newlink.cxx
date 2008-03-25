@@ -2075,7 +2075,14 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
                   parfunc = parfunc->next;
                }
                new_ifunc = G__struct.memfunc[tagnum];
-               new_ifunc = G__get_methodhandle4(ifunc->funcname[ifn], &fpara, new_ifunc, &pifn, &poffset, 1, 1, 0);
+
+	       char funcname[G__MAXNAME];
+	       if(ifunc->funcname[ifn][0]=='~')
+                  sprintf(funcname, "~%s", G__struct.name[new_ifunc->tagnum]);
+	       else
+                  sprintf(funcname, "~%s", G__struct.name[ifunc->tagnum]);
+
+               new_ifunc = G__get_methodhandle4(funcname, &fpara, new_ifunc, &pifn, &poffset, 1, 1, 0);
             }
         
             if(new_ifunc && (ifunc!=new_ifunc)){
