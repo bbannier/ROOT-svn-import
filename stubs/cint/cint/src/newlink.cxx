@@ -1697,11 +1697,20 @@ int G__stub_method_asm(G__ifunc_table_internal *ifunc, int ifn, void* this_ptr, 
       //int parama = *paramref;
       long res=0;
       __asm__ __volatile__("call *%1" : "=a" (res): "g" (vaddress));
-      result7->obj.i = (long)res;
-
+      
       if(!isupper(type)) {
-         result7->ref = result7->obj.i;
-         result7->obj.reftype.reftype = G__PARAREFERENCE;
+         if(type=='u') {
+            result7->ref = (long) (res);
+            result7->obj.i = (long) (res);
+         }
+         else {
+            result7->ref = (long) (res);
+            G__letint(result7, result7->type, (*(long*)(res)));
+         }
+      }
+      else {
+         G__letint(result7, result7->type, res);
+	 result7->obj.reftype.reftype = reftype;
       }
    }
 
