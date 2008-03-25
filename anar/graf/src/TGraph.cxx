@@ -394,7 +394,7 @@ TGraph::~TGraph()
       //drawing modes
       TObject *obj;
       while ((obj  = fFunctions->First())) {
-         while(fFunctions->Remove(obj));
+         while(fFunctions->Remove(obj)) { }
          delete obj;
       }
       delete fFunctions;
@@ -3314,7 +3314,7 @@ void TGraph::PaintGrapHist(Int_t npoints, const Double_t *x, const Double_t *y, 
                }
                gywork[npt-1] = y[i-1];
                gywork[npt]   = y[i-1]; //new
-               if ((gywork[npt-1] < rwymin) || (gywork[npt-1] > rwymax) && !optionFill2) {
+               if ((gywork[npt-1] < rwymin) || ((gywork[npt-1] > rwymax) && !optionFill2)) {
                   if ((gywork[npt-1] < rwymin)) gywork[npt-1] = rwymin;
                   if ((gywork[npt-1] > rwymax)) gywork[npt-1] = rwymax;
                   if (npt > 2) {

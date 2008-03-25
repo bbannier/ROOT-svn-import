@@ -68,7 +68,7 @@ STRESSGO      = stressGraphics.$(ObjSuf)
 STRESSGS      = stressGraphics.$(SrcSuf)
 STRESSG       = stressGraphics$(ExeSuf)
 
-ifeq ($(shell $(ROOTCONFIG) --has-mathcore),yes)
+ifeq ($(shell $(ROOTCONFIG) --has-genvector),yes)
 STRESSVECO   = stressVector.$(ObjSuf)
 STRESSVECS   = stressVector.$(SrcSuf)
 STRESSVEC    = stressVector$(ExeSuf)
@@ -78,33 +78,30 @@ STRESSMATHS   = stressMathCore.$(SrcSuf)
 ifneq ($(USE_REFLEX),)
 CXXFLAGS += -DUSE_REFLEX
 ifeq ($(PLATFORM),win32)
-STRESSMATHLIBS = '$(ROOTSYS)/lib/libMathCore.lib' '$(ROOTSYS)/lib/libReflex.lib' '$(ROOTSYS)/lib/libCintex.lib' 
+STRESSMATHLIBS = '$(ROOTSYS)/lib/libGenVector.lib' '$(ROOTSYS)/lib/libReflex.lib' '$(ROOTSYS)/lib/libCintex.lib' 
 else
-STRESSMATHLIBS = -lMathCore -lReflex -lCintex
+STRESSMATHLIBS = -lGenVector -lReflex -lCintex
 endif
 
 TRACKMATHSRC = TrackMathCoreRflx.$(SrcSuf)
 TRACKMATHOBJ = TrackMathCoreRflx.$(ObjSuf)
 TRACKMATHLIB = libTrackMathCoreRflx.$(DllSuf)
 
-
 else 
 
 ifeq ($(PLATFORM),win32)
-STRESSMATHLIBS = '$(ROOTSYS)/lib/libMathCore.lib'
+STRESSMATHLIBS = '$(ROOTSYS)/lib/libGenVector.lib'
 else
-STRESSMATHLIBS = -lMathCore
+STRESSMATHLIBS = -lGenVector
 endif
 
-TRACKMATHSRC = TrackMathCoreCint.$(SrcSuf)
-TRACKMATHOBJ = TrackMathCoreCint.$(ObjSuf)
-TRACKMATHLIB = libTrackMathCoreCint.$(DllSuf)
+TRACKMATHSRC = TrackMathCoreDict.$(SrcSuf)
+TRACKMATHOBJ = TrackMathCoreDict.$(ObjSuf)
+TRACKMATHLIB = libTrackMathCoreDict.$(DllSuf)
  
 endif
 
 STRESSMATH    = stressMathCore$(ExeSuf)
-
-
 
 endif
 
@@ -112,9 +109,9 @@ ifeq ($(shell $(ROOTCONFIG) --has-mathmore),yes)
 STRESSMATHMOREO   = stressMathMore.$(ObjSuf) 
 STRESSMATHMORES   = stressMathMore.$(SrcSuf)  
 ifeq ($(PLATFORM),win32)
-STRESSMATHMORELIBS = '$(ROOTSYS)/lib/libMathCore.lib' '$(ROOTSYS)/lib/libMathMore.lib'  
+STRESSMATHMORELIBS = '$(ROOTSYS)/lib/libMathMore.lib'  
 else
-STRESSMATHMORELIBS = -lMathCore -lMathMore
+STRESSMATHMORELIBS = -lMathMore
 endif
 STRESSMATHMORE    = stressMathMore$(ExeSuf)
 endif
@@ -210,10 +207,10 @@ OBJS          = $(EVENTO) $(MAINEVENTO) $(HWORLDO) $(HSIMPLEO) $(MINEXAMO) \
                 $(HELLOO) $(ACLOCKO) $(STRESSO) $(TBENCHO) $(BENCHO) \
                 $(STRESSSHAPESO) $(TCOLLBMO) $(STRESSGEOMETRYO) $(STRESSLO) \
                 $(STRESSGO) $(STRESSSPO) $(TESTBITSO) $(STRESSTMVAO) \
-                $(CTORTUREO) $(QPRANDOMO) $(THREADO) $(STRESSVECO) $(STRESSMATHO) \
-                $(STRESSFITO) $(STRESSHEPIXO) $(STRESSENTRYLISTO) \
-                $(STRESSROOFITO) $(STRESSPROOFO) $(STRESSMATHMOREO)
-
+                $(CTORTUREO) $(QPRANDOMO) $(THREADSO) $(STRESSVECO) \
+                $(STRESSMATHO) $(STRESSFITO) $(STRESSHEPIXO) \
+                $(STRESSENTRYLISTO) $(STRESSROOFITO) $(STRESSPROOFO) \
+                $(STRESSMATHMOREO)
 
 PROGRAMS      = $(EVENT) $(HWORLD) $(HSIMPLE) $(MINEXAM) $(TSTRING) \
                 $(TCOLLEX) $(TCOLLBM) $(VVECTOR) $(VMATRIX) $(VLAZY) \
@@ -345,10 +342,10 @@ endif
 
 $(STRESSVEC):   $(STRESSVECO)
 ifeq ($(PLATFORM),win32)
-		$(LD) $(LDFLAGS) $^ $(LIBS) '$(ROOTSYS)/lib/libMathCore.lib' $(OutPutOpt)$@
+		$(LD) $(LDFLAGS) $^ $(LIBS) '$(ROOTSYS)/lib/libGenVector.lib' $(OutPutOpt)$@
 		$(MT_EXE)
 else
-		$(LD) $(LDFLAGS) $^ $(LIBS) -lMathCore $(OutPutOpt)$@
+		$(LD) $(LDFLAGS) $^ $(LIBS) -lGenVector $(OutPutOpt)$@
 endif
 		@echo "$@ done"
 
@@ -614,7 +611,6 @@ endif
 endif
 endif
 
-
 clean:
 		@rm -f $(OBJS) $(TRACKMATHSRC) core
 
@@ -637,37 +633,37 @@ MainEvent.$(ObjSuf): Event.h
 
 EventDict.$(SrcSuf): Event.h EventLinkDef.h
 	@echo "Generating dictionary $@..."
-	@rootcint -f $@ -c $^
+	$(ROOTCINT) -f $@ -c $^
 
 Hello.$(ObjSuf): Hello.h
 HelloDict.$(SrcSuf): Hello.h
 	@echo "Generating dictionary $@..."
-	@rootcint -f $@ -c $^
+	$(ROOTCINT) -f $@ -c $^
 
 Aclock.$(ObjSuf): Aclock.h
 AclockDict.$(SrcSuf): Aclock.h
 	@echo "Generating dictionary $@..."
-	@rootcint -f $@ -c $^
+	$(ROOTCINT) -f $@ -c $^
 
 Tetris.$(ObjSuf): Tetris.h
 TetrisDict.$(SrcSuf): Tetris.h
 	@echo "Generating dictionary $@..."
-	@rootcint -f $@ -c $^
+	$(ROOTCINT) -f $@ -c $^
 
 TBench.$(ObjSuf): TBench.h
 TBenchDict.$(SrcSuf): TBench.h benchLinkDef.h
 	@echo "Generating dictionary $@..."
-	@rootcint -f $@ -c $^
+	$(ROOTCINT) -f $@ -c $^
 
 guiviewer.$(ObjSuf): guiviewer.h
 guiviewerDict.$(SrcSuf): guiviewer.h guiviewerLinkDef.h
 	@echo "Generating dictionary $@..."
-	@rootcint -f $@ -c $^
+	$(ROOTCINT) -f $@ -c $^
 
 stressMathCore.$(ObjSuf): 	TrackMathCore.h
-TrackMathCoreCint.$(SrcSuf): 	TrackMathCore.h TrackMathCoreLinkDef.h
+TrackMathCoreDict.$(SrcSuf): 	TrackMathCore.h TrackMathCoreLinkDef.h
 	@echo "Generating dictionary $@ using rootcint ..."
-	@rootcint -f $@ -c $^	
+	$(ROOTCINT) -f $@ -c $^	
 
 TrackMathCoreRflx.$(SrcSuf): 	TrackMathCore.h TrackMathCoreRflx.xml
 			@echo "Generating dictionary $@ using gccxml ..."
@@ -677,3 +673,9 @@ TrackMathCoreRflx.$(SrcSuf): 	TrackMathCore.h TrackMathCoreRflx.xml
 
 .$(SrcSuf).$(ObjSuf):
 	$(CXX)  $(CXXFLAGS) -c $<
+
+ifeq ($(GCC_MAJOR),4)
+ifeq ($(GCC_MINOR),1)
+TBenchDict.o: CXXFLAGS += -Wno-strict-aliasing
+endif
+endif

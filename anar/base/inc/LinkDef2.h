@@ -11,7 +11,8 @@
 #ifdef __CINT__
 
 #ifndef G__KCC 	 
-#include "cint/lib/dll_stl/str.h" 	 
+// in cint/cint[7]/lib:
+#include "dll_stl/str.h" 	 
 #endif 	 
 
 #pragma extra_include "vector";
@@ -103,6 +104,7 @@
 #pragma link C++ class TString-!;
 #pragma link C++ class TStringRef-!;
 #pragma link C++ class TStringLong-;
+#pragma link C++ class TStringToken;
 #pragma link C++ class TSubString;
 #pragma link C++ class TSysEvtHandler;
 #pragma link C++ class TSystem+;

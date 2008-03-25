@@ -53,6 +53,9 @@ friend class TQConnection;
 protected:
    TList   *fListOfSignals;        //! list of signals from this object
    TList   *fListOfConnections;    //! list of connections to this object
+   Bool_t   fSignalsBlocked;       //! flag used for suppression of signals
+
+   static Bool_t fgAllSignalsBlocked;  // flag used for suppression of all signals
 
    virtual void       *GetSender() { return this; }
    virtual const char *GetSenderClassName() const { return ""; }
@@ -84,6 +87,12 @@ public:
    TList   *GetListOfClassSignals() const;
    TList   *GetListOfSignals() const { return fListOfSignals; }
    TList   *GetListOfConnections() const { return fListOfConnections; }
+
+   Bool_t   AreSignalsBlocked() const { return fSignalsBlocked; }
+   Bool_t   BlockSignals(Bool_t b)
+            { Bool_t ret = fSignalsBlocked; fSignalsBlocked = b; return ret; }
+
+   void  CollectClassSignalLists(TList& list, TClass* cls);
 
    void  EmitVA(const char *signal, Int_t nargs, ...);
    void  EmitVA(const char *signal, Int_t nargs, va_list va);
@@ -163,6 +172,9 @@ public:
                              const char *signal,
                              void *receiver = 0,
                              const char *slot = 0);
+
+   static Bool_t  AreAllSignalsBlocked();
+   static Bool_t  BlockAllSignals(Bool_t b);
 
    static void    LoadRQ_OBJECT();
 

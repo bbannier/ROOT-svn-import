@@ -18,13 +18,17 @@
 #include "TGLSelectRecord.h"
 #include "TGLContext.h"
 
-//______________________________________________________________________________
+//==============================================================================
+//==============================================================================
 // TEveBoxSetGL
+//==============================================================================
+
+//______________________________________________________________________________
 //
 // A GL rendering class for TEveBoxSet.
 //
 
-ClassImp(TEveBoxSetGL)
+ClassImp(TEveBoxSetGL);
 
 //______________________________________________________________________________
 TEveBoxSetGL::TEveBoxSetGL() : fM(0), fBoxDL(0)
@@ -227,12 +231,17 @@ void TEveBoxSetGL::DirectDraw(TGLRnrCtx & rnrCtx) const
 
    TEveBoxSet& mB = * fM;
    // printf("TEveBoxSetGL::DirectDraw N boxes %d\n", mB.fPlex.Size());
+
+   // !!!! Missing frame rendering (wire-frame, of course).
+
    if(mB.fPlex.Size() == 0)
       return;
+   if ( ! mB.fValueIsColor && mB.fPalette == 0)
+   {
+      mB.AssertPalette();
+   }
 
    glPushAttrib(GL_ENABLE_BIT | GL_POLYGON_BIT);
-   glColorMaterial(GL_FRONT_AND_BACK, GL_DIFFUSE);
-   glEnable(GL_COLOR_MATERIAL);
 
    if (mB.fRenderMode == TEveDigitSet::kRM_Fill)
       glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
