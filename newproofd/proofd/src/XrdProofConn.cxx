@@ -368,7 +368,7 @@ void XrdProofConn::SetAsync(XrdClientAbsUnsolMsgHandler *uh)
 {
    // Set handler of unsolicited responses
 
-   if (fgConnMgr)
+   if (fgConnMgr && fgConnMgr->GetConnection(fLogConnID))
       fgConnMgr->GetConnection(fLogConnID)->UnsolicitedMsgHandler = uh;
 }
 

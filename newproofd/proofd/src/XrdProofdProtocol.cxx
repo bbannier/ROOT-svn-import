@@ -631,6 +631,9 @@ int XrdProofdProtocol::SendData(XrdProofdProofServ *xps,
                response->Send(kXR_attn, kXPD_msgsid, sid,
                               argp->buff, quantum) != 0) {
             { XrdSysMutexHelper mh(fgBMutex); fgBPool->Release(argp); }
+            msg.form("EXT: server ID: %d, problems sending: %d bytes to server",
+                     sid, quantum);
+            TRACEP(this, XERR, msg);
             return 1;
          }
       } else {
@@ -641,6 +644,9 @@ int XrdProofdProtocol::SendData(XrdProofdProofServ *xps,
             msg.form("INT: client ID: %d, sending: %d bytes", cid, quantum);
          if (xps->SendData(cid, argp->buff, quantum) != 0) {
             { XrdSysMutexHelper mh(fgBMutex); fgBPool->Release(argp); }
+            msg.form("INT: client ID: %d, problems sending: %d bytes to client",
+                     cid, quantum);
+            TRACEP(this, XERR, msg);
             return 1;
          }
       }
@@ -809,9 +815,9 @@ int XrdProofdProtocol::SendMsg()
                response->Send(kXP_reconnecting,
                              "SendMsg: INT: session is reconnecting: retry later");
             } else {
-               response->Send(kXP_ServerError,
-                              "SendMsg: INT: sending message to client"
-                              " or master proofserv");
+               msg.form("SendMsg: INT: problems sending %d bytes to client or"
+                        " master proofserv", len);
+               response->Send(kXP_ServerError, msg.c_str());
             }
             return rc;
          }

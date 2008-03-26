@@ -28,6 +28,7 @@
 #endif
 #include <sys/types.h>
 #include <netinet/in.h>
+#include <utime.h>
 
 #include "TXProofServ.h"
 #include "TObjString.h"
@@ -440,8 +441,17 @@ void TXProofServ::HandleUrgentData()
             }
          }
 
-         // Reply to ping
-         ((TXSocket *)fSocket)->Ping();
+         // Touch the admin path to show we are alive
+         if (fAdminPath.IsNull())
+            fAdminPath = gEnv->GetValue("ProofServ.AdminPath", "");
+
+         if (!fAdminPath.IsNull()) {
+            // Update file time stamps
+            if (utime(fAdminPath.Data(), 0) != 0)
+               Info("HandleUrgentData", "problems touching path: %s", fAdminPath.Data());
+         } else {
+            Info("HandleUrgentData", "admin path undefined");
+         }
 
          break;
 
