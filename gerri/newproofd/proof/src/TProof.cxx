@@ -1925,12 +1925,12 @@ Int_t TProof::CollectInputFrom(TSocket *s)
    Bool_t    delete_mess = kTRUE;
 
    if (s->Recv(mess) < 0) {
-      MarkBad(s, "CollectInputFrom: problems receiving a message");
+      MarkBad(s, "problems receiving a message in TProof::CollectInputFrom(...)");
       return -1;
    }
    if (!mess) {
       // we get here in case the remote server died
-      MarkBad(s, "CollectInputFrom: undefined message");
+      MarkBad(s, "undefined message in TProof::CollectInputFrom(...)");
       return -1;
    }
 
@@ -2661,10 +2661,9 @@ void TProof::MarkBad(TSlave *sl, const char *reason)
    // the active list and from the two monitor objects.
 
    TString msg;
-   if (reason && strlen(reason))
-      msg += Form("%s: ", reason);
-   msg += Form("marking %s:%d (%s) as bad",
-               sl->GetName(), sl->GetPort(), sl->GetOrdinal());
+   msg += Form("marking %s:%d (%s) as bad; reason: %s",
+               sl->GetName(), sl->GetPort(), sl->GetOrdinal(),
+               (reason && strlen(reason)) ? reason : "unknown");
    Info("MarkBad", "%s", msg.Data());
    // Notify one level up, if the case
    if (gProofServ)
