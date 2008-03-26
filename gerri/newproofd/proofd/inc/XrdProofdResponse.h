@@ -81,8 +81,6 @@ class XrdProofdResponse
    void                  GetSID(unsigned short &sid);
    void                  SetTrsid();
 
-   static void           SetMaxRetry(int mx) { fgMaxRetry = mx; }
-
    // To protect from concurrent use
    XrdSysRecMutex       fMutex;
 
@@ -98,7 +96,5 @@ class XrdProofdResponse
 
    XrdOucString         fTraceID;
    XrdOucString         fTag;
-
-   static int           fgMaxRetry; // Max number of retries on send failures
 };
 #endif
