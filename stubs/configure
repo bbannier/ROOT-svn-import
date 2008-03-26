@@ -1082,12 +1082,6 @@ hpuxia64acc)
    checkhpux64="yes" ;;
 esac
 
-# check for (g)make
-case $platform in
-win32|linux|macosx) gnumake="make"  ;;
-*)                  gnumake="gmake" ;;
-esac
-
 # check for which
 case $platform in
 macosx) cwhich="type -path" ;;
@@ -1218,6 +1212,7 @@ if test $# -gt 0 ; then
       --with-x11-libdir=*)     x11libdir=$optarg     ;;
       --with-xpm-libdir=*)     xpmlibdir=$optarg     ;;
       --with-xrootd=*)         xrootddir=$optarg     ; enable_xrootd="yes"  ;;
+      --with-xrootd-opts=*)    xrdaddopts=$optarg    ; enable_xrootd="yes"  ;;
       --with-cc=*)             altcc=$optarg         ;;
       --with-cxx=*)            altcxx=$optarg        ;;
       --with-f77=*)            altf77=$optarg        ;;
@@ -1353,6 +1348,35 @@ fi
 
 ######################################################################
 #
+### echo %%% check for GNU make >= 3.79.1 - Mandatory version of make
+#
+# Mandatory test, must succeed
+# Check for GNU make >= 3.79.1
+#
+message "Checking for GNU Make version >= 3.79.1"
+gnumake="make"
+gnu=`$gnumake -v 2>&1 | awk 'BEGIN { FS=" "} { if (NR==1) print $1 }'`
+if test ! "x$gnu" = "xGNU" ; then
+    gnumake="gmake"
+    gnu=`$gnumake -v 2>&1 | awk 'BEGIN { FS=" "} { if (NR==1) print $1 }'`
+    if test ! "x$gnu" = "xGNU" ; then
+        gnumake=""
+    fi
+fi
+if test ! "x$gnumake" = "x" ; then
+    gnuv=`$gnumake -v | tr '.,' ' ' | awk 'BEGIN { FS=" "} { if (NR==1 && $3 == "version") printf "%d", ($4*1000)+($5*10)+$6; else printf "%d", ($3*1000)+($4*10)+$5 }'`
+    if test $gnuv -lt 3791 ; then
+        result "`basename $0`: GNU Make >= 3.79.1 MUST be installed, current version $gnuv is too old"
+        exit 1
+    fi
+    result "ok"
+else
+    result "`basename $0`: GNU Make >= 3.79.1 MUST be installed"
+    exit 1
+fi
+
+######################################################################
+#
 ### echo %%% X11 and XPM Library - Mandatory lib on Unix
 #
 # Mandatory test, must succeed
@@ -1411,7 +1435,6 @@ if test ! "$platform" = "win32"; then
         enable_xft="no"
     fi
 fi
-
 
 ######################################################################
 #
@@ -1970,7 +1993,7 @@ check_qtvers()
     if test $? -eq 0 ; then
 	logmsg " Got Qt version $qtverstr"
 	qtgot=`echo $qtverstr | \
-	    awk 'BEGIN {FS="."} {printf "%d", ((($1*2^8)+$2)*2^8)+$3; }'`;
+	    awk 'BEGIN {FS="."} {printf "%d", ((($1*2^8)+$2)*2^8)+$3; }'`
 	qtneed=`echo $qtverneed | \
 	    awk 'BEGIN {FS="."}{ printf "%d", (($1*2^8)+$2)*2^8+$3; }'`
 	qtnew=`echo $qttoonew | \
@@ -1984,7 +2007,7 @@ check_qtvers()
 	    res="no"
 	else
 	    res="$qtverstr"
-	    qtvers=`echo $qtverstr | awk 'BEGIN{FS="."}{print $1}'`
+	    qtvers=`echo $qtverstr | awk 'BEGIN {FS="."} {print $1}'`
 	fi
     else
 	res="no"
@@ -3988,6 +4011,12 @@ if test ! "x$enable_mathmore" = "xno"; then
 	    gslincdir=$found_dir
 	    gslflags=-I$gslincdir
 	    gslversion=$gsl_version
+	    gsllibflags=
+	    if test "x$platform" = "xwin32"; then
+	       if test "x$enable_winrtdebug" = "xyes"; then
+	           gsllibflags="-nodefaultlib:msvcrt.lib"
+	       fi
+	    fi
 	fi
     fi
 
@@ -4670,6 +4699,7 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@gsllibdir@|$gsllibdir|"              \
     -e "s|@gsllibs@|$gsllibs|"                  \
     -e "s|@gslversion@|$gslversion|"            \
+    -e "s|@gsllibflags@|$gsllibflags|"          \
     -e "s|@builtinzlib@|$enable_builtin_zlib|"  \
     -e "s|@zlibincdir@|$zlibincdir|"            \
     -e "s|@zliblib@|$zliblib|"                  \
@@ -4804,6 +4834,7 @@ sed -e "s|@srcdir@|$srcdir|"                    \
     -e "s|@x11libdir@|$x11libdir|"              \
     -e "s|@xpmlib@|$xpmlib|"                    \
     -e "s|@xpmlibdir@|$xpmlibdir|"              \
+    -e "s|@xrdaddopts@|$xrdaddopts|"            \
     -e "s|@xrootddir@|$xrootddir|"              \
     -e "s|@buildgl@|$enable_opengl|"            \
     -e "s|@buildhbook@|$enable_cern|"           \
