@@ -16,7 +16,7 @@
 #include "TEveCaloData.h"
 #include "TGLIncludes.h"
 #include "TGLFontManager.h"
-// #include <list>
+#include <map>
 
 class TEveCaloLego;
 
@@ -27,24 +27,20 @@ private:
    TEveCaloLegoGL& operator=(const TEveCaloLegoGL&); // Not implemented
 
 protected:
-   struct Box_t
-   {
-     Float_t pnts[24];
-     UChar_t color[4];
-   };
-
+   Int_t   GetGridStep(Int_t axId, const TAxis* ax, TGLRnrCtx &rnrCtx) const;
    void    RnrText(const char* txt, Float_t x, Float_t y, const GLdouble *pm, Bool_t isNum) const;
-
-   Float_t RenderCell(const TEveCaloData::CellData_t &cell, Float_t towerH, Float_t offset) const;
-
    void    DrawAxis(TGLRnrCtx &rnrCtx, Float_t x0, Float_t x1, Float_t y0, Float_t y1) const;
+   void    DrawHistBase(TGLRnrCtx &rnrCtx) const;
+
    void    DrawTitle(TGLRnrCtx &rnrCtx) const;
 
-   Int_t   GetGridStep(Int_t axId, const TAxis* ax, TGLRnrCtx &rnrCtx) const;
+   void    MakeQuad(Float_t x, Float_t y, Float_t z, 
+                    Float_t xw, Float_t yw, Float_t zh) const;
+   void    MakeDisplayList() const;
+  
+   mutable std::map< Int_t, UInt_t> fDLMap;
 
    TEveCaloLego            *fM;  // Model object.
-
-   //   std::list<Box_t>         fBoxList;
 
    mutable TGLFont          fNumFont;
    mutable TGLFont          fSymbolFont;
@@ -59,11 +55,15 @@ public:
    virtual ~TEveCaloLegoGL();
 
    virtual Bool_t SetModel(TObject* obj, const Option_t* opt=0);
-   virtual void   SetBBox();
 
-   virtual void DirectDraw(TGLRnrCtx & rnrCtx) const;
+   virtual void  SetBBox();
 
-   // To support two-level selection
+   virtual Bool_t ShouldDLCache(const TGLRnrCtx & rnrCtx) const;
+   virtual void   DLCacheDrop();
+   virtual void   DLCachePurge();
+
+   virtual void   DirectDraw(TGLRnrCtx & rnrCtx) const;
+
    virtual Bool_t SupportsSecondarySelect() const { return kTRUE; }
    virtual void ProcessSelection(TGLRnrCtx & rnrCtx, TGLSelectRecord & rec);
 
