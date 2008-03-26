@@ -1553,6 +1553,9 @@ Int_t TXSocket::Send(const TMessage &mess)
          break;
    }
 
+   if (gDebug > 2)
+      Info("Send", "sending type %d (%d bytes)", mess.What(), mlen);
+
    Int_t nsent = SendRaw(mbuf, mlen);
    fSendOpt = fSendOptDefault;
 
