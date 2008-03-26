@@ -579,32 +579,17 @@ int XrdProofdResponse::Send(XPErrorCode ecode, const char *msg)
 int XrdProofdResponse::LinkSend(const char *buff, int len, XrdOucString &emsg)
 {
    // Method actually sending the buffer(s) over the link.
-   // Sending is automatically re-tried in case of cancellation.
+   // The link is closed in case of error, because we cannot use it anymore
+   // and the counter part needs to reconnect.
    // Return 0 on success, -1 on failure.
 
-   // Number of attempts
-   int ntry = fgMaxRetry;
-
    int rc = 0;
-   while (ntry--) {
-      if ((rc = fLink->Send(buff, len)) >= 0) {
-         // Success
-         break;
-      } else {
-         // Keep retrying ...
-         if (emsg == "") {
-            emsg.form("problems sending %d bytes: attempt %d",
-                      len, fgMaxRetry - ntry);
-         } else {
-            emsg += " ";
-            emsg += fgMaxRetry - ntry;
-         }
-      }
-   }
 
    // If we fail we close the link, and ask the client to reconnect
-   if (rc != 0)
+   if ((rc = fLink->Send(buff, len)) < 0) {
+      emsg.form("problems sending %d bytes", len);
       fLink->Close();
+   }
 
    // Done
    return ((rc < 0) ? fLink->setEtext("send failure") : 0);
@@ -612,37 +597,22 @@ int XrdProofdResponse::LinkSend(const char *buff, int len, XrdOucString &emsg)
 
 //______________________________________________________________________________
 int XrdProofdResponse::LinkSend(const struct iovec *iov,
-                                int iocnt, int len, XrdOucString &emsg)
+                                int iocnt, int, XrdOucString &emsg)
 {
    // Method actually sending the buffer(s) over the link.
-   // Sending is automatically re-tried in case of cancellation.
+   // Functionality a la 'writev' is simulated by segmenting the sending.
+   // This allows to avoid a recovery problem with 'writev'.
    // Return 0 on success, -1 on failure.
 
-   // Number of attempts
-   int ntry = fgMaxRetry;
-
    int rc = 0;
-   while (ntry--) {
-      if ((rc = fLink->Send(iov, iocnt, len)) >= 0) {
-         // Success
+   int i = 0;
+   for (; i < iocnt; i++) {
+      if ((rc = LinkSend((const char *)iov[i].iov_base, iov[i].iov_len, emsg)) < 0)
          break;
-      } else {
-         // Keep retrying ...
-         if (emsg == "") {
-            emsg.form("problems sending %d bytes: attempt %d",
-                      len, fgMaxRetry - ntry);
-         } else {
-            emsg += " ";
-            emsg += fgMaxRetry - ntry;
-         }
-      }
    }
-   // If we fail we close the link, and ask the client to reconnect
-   if (rc != 0)
-      fLink->Close();
 
    // Done
-   return ((rc < 0) ? fLink->setEtext("send failure") : 0);
+   return rc;
 }
 
 //______________________________________________________________________________
