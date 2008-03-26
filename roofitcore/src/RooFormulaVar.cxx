@@ -131,14 +131,14 @@ Bool_t RooFormulaVar::redirectServersHook(const RooAbsCollection& newServerList,
 
 
 
-void RooFormulaVar::printToStream(ostream& os, PrintOption opt, TString indent) const
+void RooFormulaVar::printMultiline(ostream& os, Int_t contents, Bool_t verbose, TString indent) const
 {
   // Print info about this object to the specified stream.   
-  RooAbsReal::printToStream(os,opt,indent);
-  if(opt >= Verbose) {
+  RooAbsReal::printMultiline(os,contents,verbose,indent);
+  if(verbose) {
     indent.Append("  ");
     os << indent;
-    formula().printToStream(os,opt,indent);
+    formula().printMultiline(os,contents,verbose,indent);
   }
 }
 

@@ -37,6 +37,10 @@ class TH1F;
 class TH2F;
 class TH3F;
 
+#include <list>
+#include <string>
+#include <iostream>
+
 class RooAbsReal : public RooAbsArg {
 public:
   // Constructors, assignment etc
@@ -129,7 +133,7 @@ public:
 
   // Fill an existing histogram
   TH1 *fillHistogram(TH1 *hist, const RooArgList &plotVars,
-		     Double_t scaleFactor= 1, const RooArgSet *projectedVars= 0) const;
+		     Double_t scaleFactor= 1, const RooArgSet *projectedVars= 0, Bool_t scaling=kTRUE) const;
 
   // Create 1,2, and 3D histograms from and fill it
   TH1 *createHistogram(const char *name, const RooAbsRealLValue& xvar,
@@ -146,10 +150,19 @@ public:
   virtual void writeToStream(ostream& os, Bool_t compact) const ;
 
   // Printing interface (human readable)
-  virtual void printToStream(ostream& stream, PrintOption opt=Standard, TString indent= "") const ;
-
+  virtual void printValue(ostream& os) const ;
+  virtual void printMultiline(ostream& os, Int_t contents, Bool_t verbose=kFALSE, TString indent="") const ;
 
   static void setCacheCheck(Bool_t flag) ;
+
+  // Evaluation error logging 
+  static void enableEvalErrorLogging(Bool_t flag) { _doLogEvalError = flag ; }
+  void logEvalError(const char* message) const ;
+  static void printEvalErrors(ostream&os=std::cout) ;
+  static Int_t numEvalErrors() { return _evalErrorList.size() ; }
+  static std::list<std::pair<const RooAbsReal*,std::string> >::const_iterator evalErrorIter() { return _evalErrorList.begin() ; }
+
+  static void clearEvalErrorLog() ;
 
 protected:
 
@@ -189,6 +202,11 @@ protected:
 
   Bool_t matchArgs(const RooArgSet& allDeps, RooArgSet& numDeps, 
 		   const RooArgSet& set) const ;
+
+
+  RooAbsReal* createIntObj(const RooArgSet& iset, const RooArgSet* nset, const RooNumIntConfig* cfg, const char* rangeName) const ;
+  void findInnerMostIntegration(const RooArgSet& allObs, RooArgSet& innerObs, const char* rangeName) const ;
+
 
   // Internal consistency checking (needed by RooDataSet)
   virtual Bool_t isValid() const ;
@@ -262,6 +280,9 @@ protected:
   virtual RooPlot *plotAsymOn(RooPlot *frame, const RooAbsCategoryLValue& asymCat, PlotOpt o) const;
 
 private:
+
+  static Bool_t _doLogEvalError ;
+  static std::list<std::pair<const RooAbsReal*,std::string> > _evalErrorList ;
 
   Bool_t matchArgsByName(const RooArgSet &allArgs, RooArgSet &matchedArgs, const TList &nameList) const;
 

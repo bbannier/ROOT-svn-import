@@ -178,23 +178,16 @@ RooGenCategory::evaluate() const
 
 
 
-void RooGenCategory::printToStream(ostream& os, PrintOption opt, TString indent) const
+void RooGenCategory::printMultiline(ostream& os, Int_t content, Bool_t verbose, TString indent) const
 {
-  // Print info about this mapped category to the specified stream. In addition to the info
-  // from RooAbsCategory::printToStream() we add:
-  //
-  //  Standard : input category
-  //     Shape : default value
-  //   Verbose : list of mapping rules
+   RooAbsCategory::printMultiline(os,content,verbose,indent);
 
-   RooAbsCategory::printToStream(os,opt,indent);
-
-   if (opt>=Verbose) {     
+   if (verbose) {     
      os << indent << "--- RooGenCategory ---" << endl;
      os << indent << "  Input category list:" << endl ;
      TString moreIndent(indent) ;
      indent.Append("   ") ;
-     ((RooSuperCategory&)_superCatProxy.arg()).inputCatList().printToStream(os,OneLine) ;
+     ((RooSuperCategory&)_superCatProxy.arg()).inputCatList().printStream(os,kName|kClassName|kArgs,kSingleLine) ;
      os << indent << "  User mapping function is 'const char* " << _userFuncName << "(RooArgSet*)'" << endl ;
    }
 }

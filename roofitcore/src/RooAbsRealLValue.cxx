@@ -88,8 +88,8 @@ Bool_t RooAbsRealLValue::inRange(Double_t value, const char* rangeName, Double_t
   // test this value against our upper fit limit
   if(hasMax() && value > (getMax(rangeName)+1e-6)) {
     if (clippedValPtr) {
-      coutW(InputArguments) << "RooAbsRealLValue::inFitRange(" << GetName() << "): value " << value
-			    << " rounded down to max limit " << getMax(rangeName) << endl ;
+//       coutW(InputArguments) << "RooAbsRealLValue::inFitRange(" << GetName() << "): value " << value
+// 			    << " rounded down to max limit " << getMax(rangeName) << endl ;
     }
     clippedValue = getMax(rangeName);
     inRange = kFALSE ;
@@ -97,8 +97,8 @@ Bool_t RooAbsRealLValue::inRange(Double_t value, const char* rangeName, Double_t
   // test this value against our lower fit limit
   if(hasMin() && value < getMin(rangeName)-1e-6) {
     if (clippedValPtr) {
-      coutW(InputArguments) << "RooAbsRealLValue::inFitRange(" << GetName() << "): value " << value
-			    << " rounded up to min limit " << getMin(rangeName) << endl;
+//       coutW(InputArguments) << "RooAbsRealLValue::inFitRange(" << GetName() << "): value " << value
+// 			    << " rounded up to min limit " << getMin(rangeName) << endl;
     }
     clippedValue = getMin(rangeName);
     inRange = kFALSE ;
@@ -333,32 +333,25 @@ void RooAbsRealLValue::copyCache(const RooAbsArg* source)
   setVal(_value) ; // force back-propagation
 }
 
-
-
-void RooAbsRealLValue::printToStream(ostream& os, PrintOption opt, TString indent) const {
-  // Print info about this object to the specified stream. In addition to the info
-  // from RooAbsReal::printToStream() we add:
-  //
-  //   Verbose : fit range and error
-
-  RooAbsReal::printToStream(os,opt,indent);
-  if(opt >= Verbose) {
-    os << indent << "--- RooAbsRealLValue ---" << endl;
-    TString unit(_unit);
-    if(!unit.IsNull()) unit.Prepend(' ');
-    os << indent << "  Fit range is [ ";
-    if(hasMin()) {
-      os << getMin() << unit << " , ";
-    }
-    else {
-      os << "-INF , ";
-    }
-    if(hasMax()) {
-      os << getMax() << unit << " ]" << endl;
-    }
-    else {
-      os << "+INF ]" << endl;
-    }
+void RooAbsRealLValue::printMultiline(ostream& os, Int_t contents, Bool_t verbose, TString indent) const
+{
+  // Structure printing
+  RooAbsReal::printMultiline(os,contents,verbose,indent);
+  os << indent << "--- RooAbsRealLValue ---" << endl;
+  TString unit(_unit);
+  if(!unit.IsNull()) unit.Prepend(' ');
+  os << indent << "  Fit range is [ ";
+  if(hasMin()) {
+    os << getMin() << unit << " , ";
+  }
+  else {
+    os << "-INF , ";
+  }
+  if(hasMax()) {
+    os << getMax() << unit << " ]" << endl;
+  }
+  else {
+    os << "+INF ]" << endl;
   }
 }
 

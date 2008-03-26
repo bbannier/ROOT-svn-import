@@ -91,18 +91,25 @@ public:
 
     std::string listOfClassNames() const ;
 
-    class ClassCode {
+    class ClassRelInfo {
     public:
-      TString _baseName;
+      TString _baseName;      
+      TString _fileBase ;
+    } ;
+
+    class ClassFiles {
+    public:
+      ClassFiles() : _extracted(kFALSE) {}
+      TString _hext ;
       TString _hfile ;
       TString _cxxfile ;
+      Bool_t _extracted ; 
     } ;    
-
-    //const std::map<TString,ClassCode>& classMap() const { return _map ; }
     
   protected:
     RooWorkspace* _wspace ; // owning workspace
-    std::map<TString,ClassCode> _map ; // List of contained classes
+    std::map<TString,ClassRelInfo> _c2fmap ; // List of contained classes
+    std::map<TString,ClassFiles> _fmap ; // List of contained files
     Bool_t _compiledOK ; //! Flag indicating that classes compiled OK
 
     ClassDef(CodeRepo,1) ;

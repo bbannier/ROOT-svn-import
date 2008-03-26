@@ -48,7 +48,8 @@ public:
   enum State { Initialize,Client,Server,Inline } ;
   State _state ;
 
-  enum Message { SendReal, SendCat, Calculate, Retrieve, ReturnValue, Terminate, ConstOpt, Verbose } ;
+  enum Message { SendReal=0, SendCat=1, Calculate=2, Retrieve=3, ReturnValue=4, Terminate=5, 
+		 ConstOpt=6, Verbose=7, RetrieveErrors=8, SendError=9 } ;
   
   void initialize() ; 
   void initVars() ;

@@ -52,8 +52,8 @@ namespace {
 
 
 RooProduct::RooProduct() :
-  _compRIter (0),
-  _compCIter (0)
+  _compRIter( _compRSet.createIterator() ),
+  _compCIter( _compCSet.createIterator() )
 {
 }
 

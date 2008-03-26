@@ -551,7 +551,7 @@ void RooAddModel::updateCoefficients(CacheElem& cache, const RooArgSet* nset) co
 		    << "sn = " << sn->GetName() << endl 
 		    << "r1 = " << r1->GetName() << endl 
 		    << "r2 = " << r2->GetName() << endl ;
-      r1->printToStream(ccoutD(Eval)) ;
+      r1->printStream(ccoutD(Eval),kName|kArgs|kValue,kSingleLine) ;
       r1->printCompactTree(ccoutD(Eval)) ;
     }
 

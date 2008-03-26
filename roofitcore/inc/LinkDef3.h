@@ -57,6 +57,8 @@
 #pragma link C++ class RooAbsCacheElement+ ;
 #pragma link C++ class RooExtendedTerm+ ;
 #pragma link C++ class RooSentinel+ ;
+#pragma link C++ class RooParamBinning+ ;
+#pragma link C++ class RooConstraintSum+ ;
 #pragma link off class RooErrorHandler+ ;
 #pragma link off class RooNag+ ;
 #endif 

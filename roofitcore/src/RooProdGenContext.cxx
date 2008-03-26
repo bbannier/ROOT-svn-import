@@ -292,6 +292,15 @@ RooProdGenContext::~RooProdGenContext()
   _gcList.Delete() ;  
 }
 
+void RooProdGenContext::attach(const RooArgSet& args) 
+{
+  // Forward initGenerator call to all components
+  RooAbsGenContext* gc ;
+  _gcIter->Reset() ;
+  while((gc=(RooAbsGenContext*)_gcIter->Next())){
+    gc->attach(args) ;
+  }
+}
 
 void RooProdGenContext::initGenerator(const RooArgSet &theEvent)
 {
@@ -348,14 +357,19 @@ void RooProdGenContext::setProtoDataOrder(Int_t* lut)
 }
 
 
-void RooProdGenContext::printToStream(ostream &os, PrintOption opt, TString indent) const 
+void RooProdGenContext::printMultiline(ostream &os, Int_t content, Bool_t verbose, TString indent) const 
 {
-  RooAbsGenContext::printToStream(os,opt,indent) ;
+  RooAbsGenContext::printMultiline(os,content,verbose,indent) ;
+  os << indent << "--- RooProdGenContext ---" << endl ;
+  os << indent << "Using PDF ";
+  _pdf->printStream(os,kName|kArgs|kClassName,kSingleLine,indent);
+  os << indent << "List of component generators" << endl ;
+
   TString indent2(indent) ;
   indent2.Append("    ") ;
   RooAbsGenContext* gc ;
   _gcIter->Reset() ;
   while((gc=(RooAbsGenContext*)_gcIter->Next())) {
-    gc->printToStream(os,opt,indent2) ;
+    gc->printMultiline(os,content,verbose,indent2) ;
   }  
 }

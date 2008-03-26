@@ -615,20 +615,19 @@ RooArgSet* RooAbsAnaConvPdf::coefVars(Int_t /*coefIdx*/) const
 
 
 
-void RooAbsAnaConvPdf::printToStream(ostream& os, PrintOption opt, TString indent) const {
+void RooAbsAnaConvPdf::printMultiline(ostream& os, Int_t contents, Bool_t verbose, TString indent) const {
   // Print info about this object to the specified stream. In addition to the info
-  // from RooAbsPdf::printToStream() we add:
+  // from RooAbsPdf::printStream() we add:
   //
   //   Verbose : detailed information on convolution integrals
 
-  RooAbsPdf::printToStream(os,opt,indent);
-  if(opt >= Verbose) {
-    os << indent << "--- RooAbsAnaConvPdf ---" << endl;
-    TIterator* iter = _convSet.createIterator() ;
-    RooResolutionModel* conv ;
-    while (((conv=(RooResolutionModel*)iter->Next()))) {
-      conv->printToStream(os,Verbose,"    ") ;
-    }
+  RooAbsPdf::printMultiline(os,contents,verbose,indent);
+
+  os << indent << "--- RooAbsAnaConvPdf ---" << endl;
+  TIterator* iter = _convSet.createIterator() ;
+  RooResolutionModel* conv ;
+  while (((conv=(RooResolutionModel*)iter->Next()))) {
+    conv->printMultiline(os,contents,verbose,indent) ;
   }
 }
 

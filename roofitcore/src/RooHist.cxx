@@ -28,6 +28,7 @@
 #include "RooMsgService.h"
 
 #include "TH1.h"
+#include "TClass.h"
 #include "Riostream.h"
 #include <iomanip>
 #include <math.h>
@@ -392,35 +393,44 @@ Bool_t RooHist::isIdentical(const RooHist& other, Double_t tol) const
 
 
 
-void RooHist::printToStream(ostream& os, PrintOption opt, TString indent) const {
+void RooHist::printMultiline(ostream& os, Int_t contents, Bool_t verbose, TString indent) const {
   // Print info about this histogram to the specified output stream.
   //
   //   Standard: number of entries
   //      Shape: error CL and maximum value
   //    Verbose: print our bin contents and errors
-
-  oneLinePrint(os,*this);
-  RooPlotable::printToStream(os,opt,indent);
-  if(opt >= Standard) {
-    os << indent << "--- RooHist ---" << endl;
-    Int_t n= GetN();
-    os << indent << "  Contains " << n << " bins" << endl;
-    if(opt >= Shape) {
-      os << indent << "  Errors calculated at" << _nSigma << "-sigma CL" << endl;
-      if(opt >= Verbose) {
-	os << indent << "  Bin Contents:" << endl;
-	for(Int_t i= 0; i < n; i++) {
-	  os << indent << setw(3) << i << ") x= " <<  fX[i];
-	  if(fEXhigh[i] > 0 || fEXlow[i] > 0) {
-	    os << " +" << fEXhigh[i] << " -" << fEXlow[i];
-	  }
-	  os << " , y = " << fY[i] << " +" << fEYhigh[i] << " -" << fEYlow[i] << endl;
-	}
+  
+  RooPlotable::printMultiline(os,contents,verbose,indent);
+  os << indent << "--- RooHist ---" << endl;
+  Int_t n= GetN();
+  os << indent << "  Contains " << n << " bins" << endl;
+  if(verbose) {
+    os << indent << "  Errors calculated at" << _nSigma << "-sigma CL" << endl;
+    os << indent << "  Bin Contents:" << endl;
+    for(Int_t i= 0; i < n; i++) {
+      os << indent << setw(3) << i << ") x= " <<  fX[i];
+      if(fEXhigh[i] > 0 || fEXlow[i] > 0) {
+	os << " +" << fEXhigh[i] << " -" << fEXlow[i];
       }
+      os << " , y = " << fY[i] << " +" << fEYhigh[i] << " -" << fEYlow[i] << endl;
     }
   }
 }
 
+void RooHist::printName(ostream& os) const 
+{
+  os << GetName() ;
+}
+
+void RooHist::printTitle(ostream& os) const 
+{
+  os << GetTitle() ;
+}
+
+void RooHist::printClassName(ostream& os) const 
+{
+  os << IsA()->GetName() ;
+}
 
 
 RooHist* RooHist::makeResidHist(const RooCurve& curve,bool normalize) const {

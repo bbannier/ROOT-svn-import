@@ -43,7 +43,7 @@ public:
 
   Bool_t isValid() const { return _valid; }
 
-  virtual void printToStream(ostream& stream, PrintOption opt=Standard, TString indent="") const ;
+  void printMultiline(ostream& os, Int_t contents, Bool_t verbose=kFALSE, TString indent="") const ;
 
 protected:
 

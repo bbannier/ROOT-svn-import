@@ -209,10 +209,10 @@ RooProdPdf::RooProdPdf(const char* name, const char* title, const RooArgSet& ful
   // Constructor from named argument list
   //
   // fullPdf -- Set of 'regular' PDFS that are normalized over all their observables
-  // ConditionalPdf(pdfSet,depSet) -- Add PDF to product with condition that it
-  //                                  only be normalized over specified observables
-  //                                  any remaining observables will be conditional
-  //                                  observables
+  // Conditional(pdfSet,depSet) -- Add PDF to product with condition that it
+  //                               only be normalized over specified observables
+  //                               any remaining observables will be conditional
+  //                               observables
   //                               
   //
   // For example, given a PDF F(x,y) and G(y)
@@ -259,10 +259,10 @@ RooProdPdf::RooProdPdf(const char* name, const char* title,
   // Constructor from named argument list
   //
   // fullPdf -- Set of 'regular' PDFS that are normalized over all their observables
-  // ConditionalPdf(pdfSet,depSet) -- Add PDF to product with condition that it
-  //                                  only be normalized over specified observables
-  //                                  any remaining observables will be conditional
-  //                                  observables
+  // Conditional(pdfSet,depSet) -- Add PDF to product with condition that it
+  //                               only be normalized over specified observables
+  //                               any remaining observables will be conditional
+  //                               observables
   //                               
   //
   // For example, given a PDF F(x,y) and G(y)
@@ -442,10 +442,11 @@ Double_t RooProdPdf::calculate(const RooArgList* partIntList, const RooLinkedLis
     Double_t piVal = partInt->getVal(normSet->getSize()>0 ? normSet : 0) ;
     value *= piVal ;
 //     if (_verboseEval<0) {
-//       cout << "RPP:calc(" << GetName() << "): value *= " << piVal << " (" << partInt->GetName() << ") nset = " ; normSet->Print("1") ;
+//      cout << "RPP:calc(" << GetName() << "): value *= " << piVal << " (" << partInt->GetName() << ") nset = " ; normSet->Print("1") ;
+//      partInt->getVariables()->Print("v") ;
 //     }
     if (value<_cutOff) {
-      //cout << "RooProdPdf::calculate(" << GetName() << ") calculation cut off after " << partInt->GetName() << endl ; 
+//        cout << "RooProdPdf::calculate(" << GetName() << ") calculation cut off after " << partInt->GetName() << endl ; 
       break ;
     }
   }
@@ -1107,7 +1108,8 @@ Double_t RooProdPdf::analyticalIntegralWN(Int_t code, const RooArgSet* normSet, 
 
   Double_t val = calculate(partIntList,normList) ;
   
-  //cout << "RPP::aIWN(" << GetName() << ") value = " << val << endl ;
+//   cout << "RPP::aIWN(" << GetName() << ") ,code = " << code << ", value = " << val << endl ;
+//   partIntList->Print("v") ;
   return val ;
 }
 
@@ -1149,6 +1151,9 @@ RooAbsPdf::ExtendMode RooProdPdf::extendMode() const
 
 Double_t RooProdPdf::expectedEvents(const RooArgSet* nset) const 
 {
+  if (_extendedIndex<=0) {
+    coutE(Generation) << "ERROR: Requesting expected number of events from a RooProdPdf that does not contain an extended p.d.f" << endl ;
+  }
   assert(_extendedIndex>=0) ;
   return ((RooAbsPdf*)_pdfList.at(_extendedIndex))->expectedEvents(nset) ;
 }
@@ -1307,4 +1312,25 @@ RooArgSet* RooProdPdf::findPdfNSet(RooAbsPdf& pdf) const
   Int_t idx = _pdfList.index(&pdf) ;
   if (idx<0) return 0 ;
   return (RooArgSet*) _pdfNSetList.At(idx) ;
+}
+
+
+RooArgSet* RooProdPdf::getConstraints(const RooArgSet& observables, const RooArgSet& constrainedParams) const
+{
+  RooArgSet* ret = new RooArgSet("constraints") ;
+
+  // Loop over p.d.f. components
+  TIterator* piter = _pdfList.createIterator() ;
+  RooAbsPdf* pdf ;
+  while((pdf=(RooAbsPdf*)piter->Next())) {
+    // A constraint term is a p.d.f that does not depend on any of the listed observables
+    // but does depends on any of the parameters that should be constrained
+    if (!pdf->dependsOnValue(observables) && pdf->dependsOnValue(constrainedParams)) {
+      ret->add(*pdf) ;
+    }
+  }
+
+  delete piter ;
+
+  return ret ;
 }
