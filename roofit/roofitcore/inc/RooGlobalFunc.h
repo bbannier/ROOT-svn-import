@@ -114,6 +114,8 @@ RooCmdArg Minos(Bool_t flag=kTRUE) ;
 RooCmdArg Minos(const RooArgSet& minosArgs) ;
 RooCmdArg SplitRange(Bool_t flag=kTRUE) ;
 RooCmdArg SumCoefRange(const char* rangeName) ;
+RooCmdArg Constrain(const RooArgSet& params) ;
+RooCmdArg ExternalConstraints(const RooArgSet& constraintPdfs) ;
 
 // RooAbsPdf::paramOn arguments
 RooCmdArg Label(const char* str) ;
@@ -135,6 +137,7 @@ RooCmdArg NumEvents(Int_t numEvents) ;
 RooCmdArg YVar(const RooAbsRealLValue& var, const RooCmdArg& arg=RooCmdArg::none()) ;
 RooCmdArg ZVar(const RooAbsRealLValue& var, const RooCmdArg& arg=RooCmdArg::none()) ;
 RooCmdArg AxisLabel(const char* name) ;
+RooCmdArg Scaling(Bool_t flag) ; 
 
 // RooAbsReal::createIntegral arguments
 RooCmdArg NormSet(const RooArgSet& nset) ;

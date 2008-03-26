@@ -896,14 +896,14 @@ Bool_t RooDataSet::write(const char* filename)
 }
 
 
-void RooDataSet::printToStream(ostream& os, PrintOption opt, TString indent) const {
+void RooDataSet::printMultiline(ostream& os, Int_t contents, Bool_t verbose, TString indent) const {
   // Print info about this dataset to the specified output stream.
   //
   //   Standard: number of entries
   //      Shape: list of variables we define & were generated with
 
-  RooTreeData::printToStream(os,opt,indent) ;
-  if (opt>=Shape && _wgtVar) {
+  RooTreeData::printMultiline(os,contents,verbose,indent) ;
+  if (_wgtVar) {
     os << indent << "  Dataset variable \"" << _wgtVar->GetName() << "\" is interpreted as the event weight" << endl ;
   }
 }

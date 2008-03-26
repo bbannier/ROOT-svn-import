@@ -155,5 +155,5 @@ Bool_t RooListProxy::changePointer(const RooAbsCollection& newServerList, Bool_t
 
 void RooListProxy::print(ostream& os) const 
 { 
-  os << name() << "=" ; printToStream(os,InLine) ; 
+  os << name() << "=" ; printStream(os,kValue,kInline) ; 
 }

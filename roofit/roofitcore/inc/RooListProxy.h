@@ -49,7 +49,7 @@ public:
   virtual void print(ostream& os) const ;
   
 protected:
-
+    
   RooAbsArg* _owner ;
   Bool_t _defValueServer ;
   Bool_t _defShapeServer ;

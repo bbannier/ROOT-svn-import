@@ -110,9 +110,13 @@ public:
   void addTH1(TH1 *hist, Option_t* drawOptions= "", Bool_t invisible=kFALSE);
 
   // ascii printing
-  virtual void printToStream(ostream& os, PrintOption opt= Standard, TString indent= "") const;
+  virtual void printName(ostream& os) const ;
+  virtual void printTitle(ostream& os) const ;
+  virtual void printClassName(ostream& os) const ;
+  virtual void printMultiline(ostream& os, Int_t content, Bool_t verbose=kFALSE, TString indent="") const ;
+
   inline virtual void Print(Option_t *options= 0) const {
-    printToStream(defaultStream(),parseOptions(options));
+    printStream(defaultPrintStream(),defaultPrintContents(options),defaultPrintStyle(options));
   }
 
   // data member get/set methods

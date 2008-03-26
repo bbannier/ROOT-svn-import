@@ -144,7 +144,7 @@ RooSuperCategory::evaluate() const
   const RooCatType* ret = lookupType(currentLabel(),kTRUE) ;
   if (!ret) {
     coutE(Eval) << "RooSuperCat::evaluate(" << this << ") error: current state not defined: '" << currentLabel() << "'" << endl ;
-    printToStream(ccoutE(Eval),Verbose) ;
+    printStream(ccoutE(Eval),0,kVerbose) ;
   }
   return *ret ;
 }
@@ -217,18 +217,17 @@ Bool_t RooSuperCategory::setType(const RooCatType* type, Bool_t /*printError*/)
 
 
 
-void RooSuperCategory::printToStream(ostream& os, PrintOption opt, TString indent) const
+void RooSuperCategory::printMultiline(ostream& os, Int_t content, Bool_t verbose, TString indent) const
 {
   // Print the state of this object to the specified output stream.
 
-  RooAbsCategory::printToStream(os,opt,indent) ;
+  RooAbsCategory::printMultiline(os,content,verbose,indent) ;
   
-  if (opt>=Verbose) {     
+  if (verbose) {     
     os << indent << "--- RooSuperCategory ---" << endl;
     os << indent << "  Input category list:" << endl ;
     TString moreIndent(indent) ;
-    moreIndent.Append("   ") ;
-    _catSet.printToStream(os,Standard,moreIndent.Data()) ;
+    os << moreIndent << _catSet << endl ;
   }
 }
 

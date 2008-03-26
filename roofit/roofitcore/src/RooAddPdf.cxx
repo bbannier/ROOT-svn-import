@@ -552,7 +552,7 @@ void RooAddPdf::updateCoefficients(CacheElem& cache, const RooArgSet* nset) cons
 		     << "r1 = " << r1->GetName() << endl 
 		     << "r2 = " << r2->GetName() << endl ;
     if (dologD(Caching)) {
-      r1->printToStream(ccoutD(Caching),Verbose) ;
+      r1->printStream(ccoutD(Caching),0,kVerbose) ;
       r1->printCompactTree(ccoutD(Caching)) ;
     }
 
@@ -581,7 +581,6 @@ Double_t RooAddPdf::evaluate() const
   CacheElem* cache = getProjCache(nset) ;
 
   updateCoefficients(*cache,nset) ;
-
   
   // Do running sum of coef/pdf pairs, calculate lastCoef.
   _pdfIter->Reset() ;
@@ -598,8 +597,9 @@ Double_t RooAddPdf::evaluate() const
       // Double_t pdfNorm = pdf->getNorm(nset) ;
       if (pdf->isSelectedComp()) {
 	value += pdfVal*_coefCache[i]/snormVal ;
-// 	cxcoutD(Eval) << "RooAddPdf::evaluate(" << GetName() << ")  value += [" 
-// 			<< pdf->GetName() << "] " << pdfVal << " [N= " << pdfNorm << "] * " << _coefCache[i] << " / " << snormVal << endl ;
+	//cout << " pdfVal = " << pdfVal << "_coefCache[" << i << "] = " << _coefCache[i] << " snormVal = " << snormVal << endl ;
+//  	cxcoutD(Eval) << "RooAddPdf::evaluate(" << GetName() << ")  value += [" 
+//  			<< pdf->GetName() << "] " << pdfVal << " [N= " << pdfNorm << "] * " << _coefCache[i] << " / " << snormVal << endl ;
       }
     }
     i++ ;

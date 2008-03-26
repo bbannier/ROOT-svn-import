@@ -321,21 +321,21 @@ Double_t RooResolutionModel::getNorm(const RooArgSet* nset) const
 }
 
 
-void RooResolutionModel::printToStream(ostream& os, PrintOption opt, TString indent) const
+void RooResolutionModel::printMultiline(ostream& os, Int_t content, Bool_t verbose, TString indent) const
 {
   // Print info about this object to the specified stream. In addition to the info
-  // from RooAbsArg::printToStream() we add:
+  // from RooAbsArg::printStream() we add:
   //
   //     Shape : value, units, plot range
   //   Verbose : default binning and print label
 
-  RooAbsPdf::printToStream(os,opt,indent) ;
+  RooAbsPdf::printMultiline(os,content,verbose,indent) ;
 
-  if(opt >= Verbose) {
+  if(verbose) {
     os << indent << "--- RooResolutionModel ---" << endl;
     os << indent << "basis function = " ; 
     if (_basis) {
-      _basis->printToStream(os,opt,indent) ;
+      _basis->printStream(os,kName|kAddress|kTitle,kSingleLine,indent) ;
     } else {
       os << "<none>" << endl ;
     }

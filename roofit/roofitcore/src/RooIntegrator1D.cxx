@@ -219,8 +219,8 @@ Bool_t RooIntegrator1D::checkLimits() const {
     _xmax= integrand()->getMaxLimit(0);
   }
   _range= _xmax - _xmin;
-  if(_range <= 0) {
-    oocoutE((TObject*)0,Integration) << "RooIntegrator1D::checkLimits: bad range with min >= max" << endl;
+  if(_range < 0) {
+    oocoutE((TObject*)0,Integration) << "RooIntegrator1D::checkLimits: bad range with min >= max (_xmin = " << _xmin << " _xmax = " << _xmax << ")" << endl;
     return kFALSE;
   }
   return (RooNumber::isInfinite(_xmin) || RooNumber::isInfinite(_xmax)) ? kFALSE : kTRUE;

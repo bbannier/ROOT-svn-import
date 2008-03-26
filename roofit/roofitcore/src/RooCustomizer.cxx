@@ -126,6 +126,7 @@ ClassImp(RooCustomizer)
 RooCustomizer::RooCustomizer(const RooAbsArg& pdf, const RooAbsCategoryLValue& masterCat, RooArgSet& splitLeafs, RooArgSet* splitLeafsAll) :
   TNamed(pdf.GetName(),pdf.GetTitle()),
   _sterile(kFALSE),
+  _owning(kTRUE),
   _masterPdf((RooAbsArg*)&pdf), 
   _masterCat((RooAbsCategoryLValue*)&masterCat), 
   _masterBranchList("masterBranchList"), 
@@ -149,6 +150,7 @@ RooCustomizer::RooCustomizer(const RooAbsArg& pdf, const RooAbsCategoryLValue& m
 RooCustomizer::RooCustomizer(const RooAbsArg& pdf, const char* name) :
   TNamed(pdf.GetName(),pdf.GetTitle()),
   _sterile(kTRUE), 
+  _owning(kTRUE),
   _name(name),
   _masterPdf((RooAbsArg*)&pdf), 
   _masterCat(0), 
@@ -372,7 +374,11 @@ RooAbsArg* RooCustomizer::doBuild(const char* masterCatState, Bool_t verbose)
 
 	// Add to one-time use list and life-time use list
 	clonedMasterNodes.add(*clone) ;
-	_cloneNodeListOwned->addOwned(*clone) ;	
+	if (_owning) {
+	  _cloneNodeListOwned->addOwned(*clone) ;	
+	} else {
+	  _cloneNodeListOwned->add(*clone) ;	
+	}
 	if (_cloneNodeListAll) {
 	  _cloneNodeListAll->add(*clone) ;	
 	}	
@@ -401,7 +407,11 @@ RooAbsArg* RooCustomizer::doBuild(const char* masterCatState, Bool_t verbose)
   delete nIter ;
 
   if (!_sterile) {
-    _cloneNodeListOwned->addOwned(clonedMasterNodes) ;
+    if (_owning) {
+      _cloneNodeListOwned->addOwned(clonedMasterNodes) ;
+    } else {
+      _cloneNodeListOwned->add(clonedMasterNodes) ;
+    }
     if (_cloneNodeListAll) {
       _cloneNodeListAll->add(clonedMasterNodes) ;
     }
@@ -466,8 +476,12 @@ RooAbsArg* RooCustomizer::doBuild(const char* masterCatState, Bool_t verbose)
     if (branch==_masterPdf) cloneTopPdf=(RooAbsArg*)clone ;
   }
   delete iter ;
-  _cloneBranchList->addOwned(clonedMasterBranches) ;
-
+  if (_owning) {
+    _cloneBranchList->addOwned(clonedMasterBranches) ;
+  } else {
+    _cloneBranchList->add(clonedMasterBranches) ;
+  }
+    
   // Reconnect cloned branches to each other and to cloned nodess
   iter = clonedMasterBranches.createIterator() ;
   while((branch=(RooAbsArg*)iter->Next())) {
@@ -480,9 +494,32 @@ RooAbsArg* RooCustomizer::doBuild(const char* masterCatState, Bool_t verbose)
   return cloneTopPdf?cloneTopPdf:_masterPdf ;
 }
 
+void RooCustomizer::printName(ostream& os) const 
+{
+  os << GetName() ;
+}
+
+void RooCustomizer::printTitle(ostream& os) const 
+{
+  os << GetTitle() ;
+}
+
+void RooCustomizer::printClassName(ostream& os) const 
+{
+  os << IsA()->GetName() ;
+}
+
+void RooCustomizer::printArgs(ostream& os) const 
+{
+  os << "[ masterPdf=" << _masterPdf->GetName() ;
+  if (_masterCat) {
+    os << " masterCat=" << _masterCat->GetName() ;
+  }
+  os << " ]" ;
+}
 
 
-void RooCustomizer::printToStream(ostream& os, PrintOption /*opt*/, TString indent) const
+void RooCustomizer::printMultiline(ostream& os, Int_t /*content*/, Bool_t /*verbose*/, TString indent) const
 {
   os << indent << "RooCustomizer for " << _masterPdf->GetName() << (_sterile?" (sterile)":"") << endl ;
 

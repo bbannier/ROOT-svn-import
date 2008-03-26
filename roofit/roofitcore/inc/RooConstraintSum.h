@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: RooFit                                                           *
  * Package: RooFitCore                                                       *
- * @(#)root/roofitcore:$Id$
+ *    File: $Id$
  * Authors:                                                                  *
  *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu       *
  *   DK, David Kirkby,    UC Irvine,         dkirkby@uci.edu                 *
@@ -13,53 +13,33 @@
  * with or without modification, are permitted according to the terms        *
  * listed in LICENSE (http://roofit.sourceforge.net/license.txt)             *
  *****************************************************************************/
+#ifndef ROO_CONSTRAINT_SUM
+#define ROO_CONSTRAINT_SUM
 
-// -- CLASS DESCRIPTION [CAT] --
-// RooCatType is an auxilary class for RooAbsCategory and defines a 
-// a single category state. The class holds a string label and an integer 
-// index value which define the state
+#include "RooAbsReal.h"
+#include "RooListProxy.h"
 
-#include "RooFit.h"
+class RooRealVar;
+class RooArgList ;
 
-#include <stdlib.h>
-#include <stdlib.h>
-#include "TClass.h"
-#include "RooCatType.h"
+class RooConstraintSum : public RooAbsReal {
+public:
 
-#include "Riostream.h"
+  RooConstraintSum() ;
+  RooConstraintSum(const char *name, const char *title, const RooArgSet& constraintSet) ;
+  virtual ~RooConstraintSum() ;
 
+  RooConstraintSum(const RooConstraintSum& other, const char* name = 0);
+  virtual TObject* clone(const char* newname) const { return new RooConstraintSum(*this, newname); }
 
-ClassImp(RooCatType)
-;
+protected:
 
+  RooListProxy _set1 ;
+  TIterator* _setIter1 ;  //! do not persist
 
-void RooCatType::SetName(const Text_t* name) 
-{ 
-  if (strlen(name)>255) {
-    std::cout << "RooCatType::SetName warning: label '" << name << "' truncated at 255 chars" << std::endl ;
-    _label[255]=0 ;
-  }
-  strncpy(_label,name,255) ;
-}
+  Double_t evaluate() const;
 
+  ClassDef(RooConstraintSum,1) // Sum of RooAbsReal terms
+};
 
-void RooCatType::printName(ostream& os) const 
-{
-  os << GetName() ;
-}
-
-void RooCatType::printTitle(ostream& os) const 
-{
-  os << GetTitle() ;
-}
-
-void RooCatType::printClassName(ostream& os) const 
-{
-  os << IsA()->GetName() ;
-}
-
-void RooCatType::printValue(ostream& os) const
-{
-  os << getVal() ;
-}
-
+#endif

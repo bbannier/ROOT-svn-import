@@ -40,6 +40,7 @@
 #include "RooMsgService.h"
 
 #include "Riostream.h"
+#include "TClass.h"
 #include <iomanip>
 #include <math.h>
 #include <assert.h>
@@ -338,24 +339,31 @@ Double_t RooCurve::getFitRangeBinW() const {
   return 0 ;
 }
 
-void RooCurve::printToStream(ostream& os, PrintOption opt, TString indent) const {
-  // Print info about this histogram to the specified output stream.
-  //
-  //   Standard: number of entries
-  //    Verbose: print points on curve
 
-  oneLinePrint(os,*this);
-  RooPlotable::printToStream(os,opt,indent);
-  if(opt >= Standard) {
-    os << indent << "--- RooCurve ---" << endl;
-    Int_t n= GetN();
-    os << indent << "  Contains " << n << " points" << endl;
-    if(opt >= Verbose) {
-      os << indent << "  Graph points:" << endl;
-      for(Int_t i= 0; i < n; i++) {
-	os << indent << setw(3) << i << ") x = " << fX[i] << " , y = " << fY[i] << endl;
-      }
-    }
+void RooCurve::printName(ostream& os) const 
+{
+  os << GetName() ;
+}
+
+void RooCurve::printTitle(ostream& os) const 
+{
+  os << GetTitle() ;
+}
+
+void RooCurve::printClassName(ostream& os) const 
+{
+  os << IsA()->GetName() ;
+}
+
+
+void RooCurve::printMultiline(ostream& os, Int_t /*contents*/, Bool_t /*verbose*/, TString indent) const
+{
+  os << indent << "--- RooCurve ---" << endl ;
+  Int_t n= GetN();
+  os << indent << "  Contains " << n << " points" << endl;
+  os << indent << "  Graph points:" << endl;
+  for(Int_t i= 0; i < n; i++) {
+    os << indent << setw(3) << i << ") x = " << fX[i] << " , y = " << fY[i] << endl;
   }
 }
 

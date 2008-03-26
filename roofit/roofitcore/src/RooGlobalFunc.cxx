@@ -113,6 +113,8 @@ namespace RooFit {
   RooCmdArg ProjectedObservables(const RooArgSet& set)   { return RooCmdArg("ProjectedObservables",0,0,0,0,0,0,&set,0) ; }
   RooCmdArg SplitRange(Bool_t flag)                      { return RooCmdArg("SplitRange",flag,0,0,0,0,0,0,0) ; }
   RooCmdArg SumCoefRange(const char* rangeName)          { return RooCmdArg("SumCoefRange",0,0,0,0,rangeName,0,0,0) ; }
+  RooCmdArg Constrain(const RooArgSet& params)           { return RooCmdArg("Constrain",0,0,0,0,0,0,&params,0) ; }
+  RooCmdArg ExternalConstraints(const RooArgSet& cpdfs)  { return RooCmdArg("ExternalConstraints",0,0,0,0,0,0,&cpdfs,0) ; }
 
   
   // RooAbsPdf::paramOn arguments
@@ -136,6 +138,7 @@ namespace RooFit {
   RooCmdArg YVar(const RooAbsRealLValue& var, const RooCmdArg& arg)       { return RooCmdArg("YVar",0,0,0,0,0,0,&var,0,&arg) ; }
   RooCmdArg ZVar(const RooAbsRealLValue& var, const RooCmdArg& arg)       { return RooCmdArg("ZVar",0,0,0,0,0,0,&var,0,&arg) ; }
   RooCmdArg AxisLabel(const char* name)                                   { return RooCmdArg("AxisLabel",0,0,0,0,name,0,0,0) ; }
+  RooCmdArg Scaling(Bool_t flag)                                          { return RooCmdArg("Scaling",flag,0,0,0,0,0,0,0) ; }
 
   // RooAbsReal::createIntegral arguments
   RooCmdArg NormSet(const RooArgSet& nset)           { return RooCmdArg("NormSet",0,0,0,0,0,0,&nset,0) ; }
