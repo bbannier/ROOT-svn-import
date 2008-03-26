@@ -764,7 +764,7 @@ int XrdProofdProtocol::SendMsg()
          return rc;
       }
       if (SendData(xps, fCID)) {
-         response->Send(kXP_ServerError,"EXT: sending message to proofserv");
+         response->Send(kXP_reconnecting,"EXT: sending message to proofserv");
          return rc;
       }
       // Notify to user
@@ -811,25 +811,15 @@ int XrdProofdProtocol::SendMsg()
          // The message is strictly for the client requiring it
          int rs = SendData(xps, -1, &savedBuf);
          if (rs != 0) {
-            if (fgMgr->SessionMgr() && fgMgr->SessionMgr()->IsReconnecting()) {
-               response->Send(kXP_reconnecting,
-                             "SendMsg: INT: session is reconnecting: retry later");
-            } else {
-               msg.form("SendMsg: INT: problems sending %d bytes to client or"
-                        " master proofserv", len);
-               response->Send(kXP_ServerError, msg.c_str());
-            }
+            response->Send(kXP_reconnecting,
+                           "SendMsg: INT: session is reconnecting: retry later");
             return rc;
          }
       } else {
          // Send to all connected clients
          if (SendDataN(xps, &savedBuf)) {
-            if (fgMgr->SessionMgr() && fgMgr->SessionMgr()->IsReconnecting()) {
-               response->Send(kXP_reconnecting, "SendMsg: INT: session is reconnecting: retry later");
-            } else {
-               response->Send(kXP_ServerError,
-                              "SendMsg: INT: sending message to all connected clients");
-            }
+            response->Send(kXP_reconnecting,
+                           "SendMsg: INT: session is reconnecting: retry later");
             return rc;
          }
       }

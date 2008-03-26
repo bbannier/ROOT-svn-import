@@ -45,7 +45,7 @@
       } \
    }
 
-int XrdProofdResponse::fgMaxRetry = 5; // Max number of retries on send failures
+int XrdProofdResponse::fgMaxRetry = 1; // Max number of retries on send failures
 
 //______________________________________________________________________________
 int XrdProofdResponse::Send()
@@ -601,6 +601,11 @@ int XrdProofdResponse::LinkSend(const char *buff, int len, XrdOucString &emsg)
          }
       }
    }
+
+   // If we fail we close the link, and ask the client to reconnect
+   if (rc != 0)
+      fLink->Close();
+
    // Done
    return ((rc < 0) ? fLink->setEtext("send failure") : 0);
 }
@@ -632,6 +637,10 @@ int XrdProofdResponse::LinkSend(const struct iovec *iov,
          }
       }
    }
+   // If we fail we close the link, and ask the client to reconnect
+   if (rc != 0)
+      fLink->Close();
+
    // Done
    return ((rc < 0) ? fLink->setEtext("send failure") : 0);
 }
