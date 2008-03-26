@@ -20,7 +20,12 @@
 #  define GCC_HASCLASSVISIBILITY
 #endif
 
-#ifdef WIN32
+#if !defined(REFLEX_DLL_VETO) && !defined(REFLEX_DLL) && !defined(__CINT__)
+// we build Reflex as DLL by default, #define REFLEX_DLL_VETO to hide visibility / dllim/export code
+#  define REFLEX_DLL
+#endif
+
+#ifdef _WIN32
 #  define RFLX_IMPORT __declspec(dllimport)
 #  define RFLX_EXPORT __declspec(dllexport)
 #  define RFLX_DLLLOCAL
@@ -43,14 +48,14 @@
 #  ifdef REFLEX_BUILD
 #    define RFLX_API RFLX_EXPORT
 #  else
-#    define RFLX_API  RFLX_IMPORT
+#    define RFLX_API RFLX_IMPORT
 #  endif // REFLEX_BUILD
 #else
 #  define RFLX_API
 #endif // REFLEX_DLL
 
 // Throwable classes must always be visible on GCC in all binaries
-#ifdef WIN32
+#ifdef _WIN32
 #  define RFLX_EXCEPTIONAPI(api) api
 #elif defined(GCC_HASCLASSVISIBILITY)
 #  define RFLX_EXCEPTIONAPI(api) RFLX_EXPORT
@@ -194,7 +199,7 @@ namespace Reflex {
       RFLX_API const Member & Member();
       RFLX_API const MemberTemplate & MemberTemplate();
       RFLX_API const Scope & Scope();
-      template< class T > RFLX_API const T & Get() {
+      template< class T > inline const T & Get() {
          static T t;
          return t;
       }
@@ -217,7 +222,7 @@ namespace Reflex {
    }; // struct Reflex
 
    /** the Name of the package - used for messages */
-   const std::string & Argv0(); // returns "Reflex";
+   RFLX_API const std::string & Argv0(); // returns "Reflex";
 
    // these defines are used for the modifiers they are used in the following
    // classes
