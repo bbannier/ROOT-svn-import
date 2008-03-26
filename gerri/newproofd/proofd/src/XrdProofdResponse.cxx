@@ -567,6 +567,7 @@ int XrdProofdResponse::LinkSend(const char *buff, int len)
    // Method actually sending the buffer(s) over the link.
    // Sending is automatically re-tried in case of cancellation.
    // Return 0 on success, -1 on failure.
+   XPDLOC(RSP, "Response::LinkSend")
 
    // Number of attempts
    int ntry = fgMaxRetry;
@@ -576,8 +577,10 @@ int XrdProofdResponse::LinkSend(const char *buff, int len)
       if ((rc = fLink->Send(buff, len)) >= 0) {
          // Success
          break;
+      } else {
+         // Keep retrying ...
+         TRACER(this, DBG, "problems sending "<<len<<" bytes; retrying")
       }
-      // Keep retrying ...
    }
    // Done
    return ((rc < 0) ? fLink->setEtext("send failure") : 0);
@@ -589,6 +592,7 @@ int XrdProofdResponse::LinkSend(const struct iovec *iov, int iocnt, int len)
    // Method actually sending the buffer(s) over the link.
    // Sending is automatically re-tried in case of cancellation.
    // Return 0 on success, -1 on failure.
+   XPDLOC(RSP, "Response::LinkSend")
 
    // Number of attempts
    int ntry = fgMaxRetry;
@@ -598,8 +602,11 @@ int XrdProofdResponse::LinkSend(const struct iovec *iov, int iocnt, int len)
       if ((rc = fLink->Send(iov, iocnt, len)) >= 0) {
          // Success
          break;
+      } else {
+         // Keep retrying ...
+         TRACER(this, DBG, "problems sending "<<len<<" bytes ("<<
+                           strerror(errno)<<"); retrying")
       }
-      // Keep retrying ...
    }
    // Done
    return ((rc < 0) ? fLink->setEtext("send failure") : 0);

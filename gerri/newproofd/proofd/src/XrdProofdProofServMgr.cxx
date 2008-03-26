@@ -464,14 +464,6 @@ int XrdProofdProofServMgr::TouchSession(const char *fpid, const char *fpath)
    if (!fpath || strlen(fpath) == 0)
       path.form("%s/%s", fActiAdminPath.c_str(), fpid);
 
-   // Current settings
-   struct stat st;
-   if (stat(path.c_str(), &st)) {
-      TRACE(XERR, "session pid file cannot be stat'ed: "<<
-                  path<<"; error: "<<errno);
-      return -1;
-   }
-
    // Update file time stamps
    if (utime(path.c_str(), 0) == 0)
       return 0;
@@ -1428,6 +1420,12 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
       GetTagDirs(p, xps, in.fSessionTag, in.fTopSessionTag, in.fSessionDir, in.fWrkDir);
       in.fLogFile.form("%s.log", in.fWrkDir.c_str());
       TRACE(DBG, "log file: "<<in.fLogFile);
+
+      // Path
+      XrdOucString path;
+      path.form("%s/%s.%s.%d", fActiAdminPath.c_str(),
+                               p->Client()->User(), p->Client()->Group(), getpid());
+      xps->SetAdminPath(path.c_str());
 
       // Log to the session log file from now on
       if (fLogger) fLogger->Bind(in.fLogFile.c_str());
@@ -2426,6 +2424,10 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdProtocol *p, void *input)
    fprintf(frc, "# Session tag\n");
    fprintf(frc, "ProofServ.SessionTag: %s\n", in->fTopSessionTag.c_str());
 
+   // Session admin path
+   fprintf(frc, "# Session admin path\n");
+   fprintf(frc, "ProofServ.AdminPath: %s\n", xps->AdminPath());
+
    // Whether user specific config files are enabled
    if (fMgr->NetMgr()->WorkerUsrCfg()) {
       fprintf(frc, "# Whether user specific config files are enabled\n");
@@ -3286,7 +3288,7 @@ int XrdProofSessionInfo::SaveToFile(const char *file)
    }
 
    // Create the file
-   FILE *fpid = fopen(file,"w");
+   FILE *fpid = fopen(file, "w");
    if (fpid) {
       fprintf(fpid, "%s %s\n", fUser.c_str(), fGroup.c_str());
       fprintf(fpid, "%s\n", fUnixPath.c_str());
@@ -3297,6 +3299,14 @@ int XrdProofSessionInfo::SaveToFile(const char *file)
       if (fUserEnvs.length() > 0)
          fprintf(fpid, "\n%s", fUserEnvs.c_str());
       fclose(fpid);
+
+      // Make it writable by anyone (to allow the corresponding proofserv
+      // to touch it for the asynchronous ping request)
+      if (chmod(file, 0666) != 0) {
+         TRACE(XERR, "could not change mode to 0666 on file "<<
+                     file<<"; error: "<<errno);
+      }
+
       return 0;
    }
 

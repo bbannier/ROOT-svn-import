@@ -1177,8 +1177,8 @@ Int_t TXSocket::SendRaw(const void *buffer, Int_t length, ESendRecvOptions opt)
    }
 
    // Failure notification (avoid using the handler: we may be exiting)
-   Error("SendRaw", "%s: problems sending data to server", fHost.Data());
-
+   Error("SendRaw", "%s: problems sending %d bytes to server",
+                    fHost.Data(), Request.sendrcv.dlen);
    return -1;
 }
 
