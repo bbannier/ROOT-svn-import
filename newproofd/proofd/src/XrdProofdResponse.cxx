@@ -31,6 +31,20 @@
 // Tracing utils
 #include "XrdProofdTrace.h"
 
+// Notification macro
+#define XPRNOTIFY(m,e) \
+   if (rc != 0) { \
+      TRACER(this, XERR, m << ": " << e); \
+   } else { \
+      if (TRACING(DBG)) { \
+         if (e.length() > 0) { \
+            TRACER(this, DBG, m << " (" << e <<")"); \
+         } else { \
+            TRACER(this, DBG, m); \
+         } \
+      } \
+   }
+
 int XrdProofdResponse::fgMaxRetry = 5; // Max number of retries on send failures
 
 //______________________________________________________________________________
@@ -45,7 +59,7 @@ int XrdProofdResponse::Send()
    }
 
    int rc = 0;
-   XrdOucString tmsg;
+   XrdOucString tmsg, emsg;
    {  XrdSysMutexHelper mh(fMutex);
 
       fResp.status = static_cast<kXR_unt16>(htons(kXR_ok));
@@ -53,9 +67,9 @@ int XrdProofdResponse::Send()
       tmsg.form("sending OK");
 
       // Send over
-      rc = LinkSend((char *)&fResp, sizeof(fResp));
-    }
-   TRACER(this, DBG, tmsg.c_str());
+      rc = LinkSend((char *)&fResp, sizeof(fResp), emsg);
+   }
+   XPRNOTIFY(tmsg, emsg);
    return rc;
 }
 
@@ -71,7 +85,7 @@ int XrdProofdResponse::Send(XResponseType rcode)
    }
 
    int rc = 0;
-   XrdOucString tmsg;
+   XrdOucString tmsg, emsg;
    {  XrdSysMutexHelper mh(fMutex);
 
       fResp.status        = static_cast<kXR_unt16>(htons(rcode));
@@ -79,9 +93,9 @@ int XrdProofdResponse::Send(XResponseType rcode)
       tmsg.form("sending OK: status = %d", rcode);
 
       // Send over
-      rc = LinkSend((char *)&fResp, sizeof(fResp));
+      rc = LinkSend((char *)&fResp, sizeof(fResp), emsg);
    }
-   TRACER(this, DBG, tmsg.c_str());
+   XPRNOTIFY(tmsg, emsg);
    return rc;
 }
 
@@ -97,7 +111,7 @@ int XrdProofdResponse::Send(const char *msg)
    }
 
    int rc = 0;
-   XrdOucString tmsg;
+   XrdOucString tmsg, emsg;
    {  XrdSysMutexHelper mh(fMutex);
 
       fResp.status        = static_cast<kXR_unt16>(htons(kXR_ok));
@@ -107,9 +121,9 @@ int XrdProofdResponse::Send(const char *msg)
       tmsg.form("sending OK: %s", msg);
 
       // Send over
-      rc = LinkSend(fRespIO, 2, sizeof(fResp) + fRespIO[1].iov_len);
+      rc = LinkSend(fRespIO, 2, sizeof(fResp) + fRespIO[1].iov_len, emsg);
    }
-   TRACER(this, DBG, tmsg.c_str());
+   XPRNOTIFY(tmsg, emsg);
    return rc;
 }
 
@@ -125,7 +139,7 @@ int XrdProofdResponse::Send(XResponseType rcode, void *data, int dlen)
    }
 
    int rc = 0;
-   XrdOucString tmsg;
+   XrdOucString tmsg, emsg;
    {  XrdSysMutexHelper mh(fMutex);
 
       fResp.status        = static_cast<kXR_unt16>(htons(rcode));
@@ -135,9 +149,9 @@ int XrdProofdResponse::Send(XResponseType rcode, void *data, int dlen)
       tmsg.form("sending %d data bytes; status=%d", dlen, rcode);
 
       // Send over
-      rc = LinkSend(fRespIO, 2, sizeof(fResp) + dlen);
+      rc = LinkSend(fRespIO, 2, sizeof(fResp) + dlen, emsg);
    }
-   TRACER(this, DBG, tmsg.c_str());
+   XPRNOTIFY(tmsg, emsg);
    return rc;
 }
 
@@ -153,7 +167,7 @@ int XrdProofdResponse::Send(XResponseType rcode, int info, char *data)
    }
 
    int rc = 0;
-   XrdOucString tmsg;
+   XrdOucString tmsg, emsg;
    {  XrdSysMutexHelper mh(fMutex);
 
       kXR_int32 xbuf = static_cast<kXR_int32>(htonl(info));
@@ -175,9 +189,9 @@ int XrdProofdResponse::Send(XResponseType rcode, int info, char *data)
       fResp.dlen          = static_cast<kXR_int32>(htonl((dlen+sizeof(xbuf))));
 
       // Send over
-      rc = LinkSend(fRespIO, nn, sizeof(fResp) + dlen);
+      rc = LinkSend(fRespIO, nn, sizeof(fResp) + dlen, emsg);
    }
-   TRACER(this, DBG, tmsg.c_str());
+   XPRNOTIFY(tmsg, emsg);
    return rc;
 }
 
@@ -194,7 +208,7 @@ int XrdProofdResponse::Send(XResponseType rcode, XProofActionCode acode,
    }
 
    int rc = 0;
-   XrdOucString tmsg;
+   XrdOucString tmsg, emsg;
    {  XrdSysMutexHelper mh(fMutex);
 
       kXR_int32 xbuf = static_cast<kXR_int32>(htonl(acode));
@@ -215,9 +229,9 @@ int XrdProofdResponse::Send(XResponseType rcode, XProofActionCode acode,
       fResp.dlen = static_cast<kXR_int32>(htonl((dlen+sizeof(xbuf))));
 
       // Send over
-      rc = LinkSend(fRespIO, nn, sizeof(fResp) + dlen);
+      rc = LinkSend(fRespIO, nn, sizeof(fResp) + dlen, emsg);
    }
-   TRACER(this, DBG, tmsg.c_str());
+   XPRNOTIFY(tmsg, emsg);
    return rc;
 }
 
@@ -234,7 +248,7 @@ int XrdProofdResponse::Send(XResponseType rcode, XProofActionCode acode,
    }
 
    int rc = 0;
-   XrdOucString tmsg;
+   XrdOucString tmsg, emsg;
    {  XrdSysMutexHelper mh(fMutex);
 
       kXR_int32 xbuf = static_cast<kXR_int32>(htonl(acode));
@@ -259,9 +273,9 @@ int XrdProofdResponse::Send(XResponseType rcode, XProofActionCode acode,
       fResp.dlen = static_cast<kXR_int32>(htonl((dlen+hlen)));
 
       // Send over
-      rc = LinkSend(fRespIO, nn, sizeof(fResp) + dlen);
+      rc = LinkSend(fRespIO, nn, sizeof(fResp) + dlen, emsg);
    }
-   TRACER(this, DBG, tmsg.c_str());
+   XPRNOTIFY(tmsg, emsg);
    return rc;
 }
 
@@ -278,7 +292,7 @@ int XrdProofdResponse::Send(XResponseType rcode, XProofActionCode acode,
    }
 
    int rc = 0;
-   XrdOucString tmsg;
+   XrdOucString tmsg, emsg;
    {  XrdSysMutexHelper mh(fMutex);
 
       kXR_int32 xbuf = static_cast<kXR_int32>(htonl(acode));
@@ -294,9 +308,9 @@ int XrdProofdResponse::Send(XResponseType rcode, XProofActionCode acode,
       fResp.dlen = static_cast<kXR_int32>(htonl((hlen)));
 
       // Send over
-      rc = LinkSend(fRespIO, 3, sizeof(fResp));
+      rc = LinkSend(fRespIO, 3, sizeof(fResp), emsg);
    }
-   TRACER(this, DBG, tmsg.c_str());
+   XPRNOTIFY(tmsg, emsg);
    return rc;
 }
 
@@ -313,7 +327,7 @@ int XrdProofdResponse::SendI(kXR_int32 int1, kXR_int16 int2, kXR_int16 int3,
    }
 
    int rc = 0;
-   XrdOucString tmsg;
+   XrdOucString tmsg, emsg;
    {  XrdSysMutexHelper mh(fMutex);
 
       kXR_int32 i1 = static_cast<kXR_int32>(htonl(int1));
@@ -341,9 +355,9 @@ int XrdProofdResponse::SendI(kXR_int32 int1, kXR_int16 int2, kXR_int16 int3,
       fResp.dlen = static_cast<kXR_int32>(htonl((dlen+ilen)));
 
       // Send over
-      rc = LinkSend(fRespIO, nn, sizeof(fResp) + dlen);
+      rc = LinkSend(fRespIO, nn, sizeof(fResp) + dlen, emsg);
    }
-   TRACER(this, DBG, tmsg.c_str());
+   XPRNOTIFY(tmsg, emsg);
    return rc;
 }
 
@@ -359,7 +373,7 @@ int XrdProofdResponse::SendI(kXR_int32 int1, kXR_int32 int2, void *data, int dle
    }
 
    int rc = 0;
-   XrdOucString tmsg;
+   XrdOucString tmsg, emsg;
    {  XrdSysMutexHelper mh(fMutex);
 
       kXR_int32 i1 = static_cast<kXR_int32>(htonl(int1));
@@ -384,9 +398,9 @@ int XrdProofdResponse::SendI(kXR_int32 int1, kXR_int32 int2, void *data, int dle
       fResp.dlen = static_cast<kXR_int32>(htonl((dlen+ilen)));
 
       // Send over
-      rc = LinkSend(fRespIO, nn, sizeof(fResp) + dlen);
+      rc = LinkSend(fRespIO, nn, sizeof(fResp) + dlen, emsg);
    }
-   TRACER(this, DBG, tmsg.c_str());
+   XPRNOTIFY(tmsg, emsg);
    return rc;
 }
 
@@ -402,7 +416,7 @@ int XrdProofdResponse::SendI(kXR_int32 int1, void *data, int dlen )
    }
 
    int rc = 0;
-   XrdOucString tmsg;
+   XrdOucString tmsg, emsg;
    {  XrdSysMutexHelper mh(fMutex);
 
       kXR_int32 i1 = static_cast<kXR_int32>(htonl(int1));
@@ -423,9 +437,9 @@ int XrdProofdResponse::SendI(kXR_int32 int1, void *data, int dlen )
       fResp.dlen          = static_cast<kXR_int32>(htonl((dlen+ilen)));
 
       // Send over
-      rc = LinkSend(fRespIO, nn, sizeof(fResp) + dlen);
+      rc = LinkSend(fRespIO, nn, sizeof(fResp) + dlen, emsg);
    }
-   TRACER(this, DBG, tmsg.c_str());
+   XPRNOTIFY(tmsg, emsg);
    return rc;
 }
 
@@ -441,7 +455,7 @@ int XrdProofdResponse::Send(void *data, int dlen)
    }
 
    int rc = 0;
-   XrdOucString tmsg;
+   XrdOucString tmsg, emsg;
    {  XrdSysMutexHelper mh(fMutex);
 
       fResp.status        = static_cast<kXR_unt16>(htons(kXR_ok));
@@ -451,9 +465,9 @@ int XrdProofdResponse::Send(void *data, int dlen)
       tmsg.form("sending %d data bytes; status=0", dlen);
 
       // Send over
-      rc = LinkSend(fRespIO, 2, sizeof(fResp) + dlen);
+      rc = LinkSend(fRespIO, 2, sizeof(fResp) + dlen, emsg);
    }
-   TRACER(this, DBG, tmsg.c_str());
+   XPRNOTIFY(tmsg, emsg);
    return rc;
 }
 
@@ -469,7 +483,7 @@ int XrdProofdResponse::Send(struct iovec *IOResp, int iornum, int iolen)
    }
 
    int rc = 0;
-   XrdOucString tmsg;
+   XrdOucString tmsg, emsg;
    {  XrdSysMutexHelper mh(fMutex);
 
       int i, dlen = 0;
@@ -487,9 +501,9 @@ int XrdProofdResponse::Send(struct iovec *IOResp, int iornum, int iolen)
       tmsg.form("sending %d data bytes; status=0", dlen);
 
       // Send over
-      rc = LinkSend(fRespIO, iornum, sizeof(fResp) + dlen);
+      rc = LinkSend(fRespIO, iornum, sizeof(fResp) + dlen, emsg);
    }
-   TRACER(this, DBG, tmsg.c_str());
+   XPRNOTIFY(tmsg, emsg);
    return rc;
 }
 
@@ -505,7 +519,7 @@ int XrdProofdResponse::Send(XErrorCode ecode, const char *msg)
    }
 
    int rc = 0;
-   XrdOucString tmsg;
+   XrdOucString tmsg, emsg;
    {  XrdSysMutexHelper mh(fMutex);
 
       int dlen;
@@ -521,9 +535,9 @@ int XrdProofdResponse::Send(XErrorCode ecode, const char *msg)
       tmsg.form("sending err %d: %s", ecode, msg);
 
       // Send over
-      rc = LinkSend(fRespIO, 3, sizeof(fResp) + dlen);
+      rc = LinkSend(fRespIO, 3, sizeof(fResp) + dlen, emsg);
    }
-   TRACER(this, DBG, tmsg.c_str());
+   XPRNOTIFY(tmsg, emsg);
    return rc;
 }
 
@@ -539,7 +553,7 @@ int XrdProofdResponse::Send(XPErrorCode ecode, const char *msg)
    }
 
    int rc = 0;
-   XrdOucString tmsg;
+   XrdOucString tmsg, emsg;
    {  XrdSysMutexHelper mh(fMutex);
 
       int dlen;
@@ -555,19 +569,18 @@ int XrdProofdResponse::Send(XPErrorCode ecode, const char *msg)
       tmsg.form("sending err %d: %s", ecode, msg);
 
       // Send over
-      rc = LinkSend(fRespIO, 3, sizeof(fResp) + dlen);
+      rc = LinkSend(fRespIO, 3, sizeof(fResp) + dlen, emsg);
    }
-   TRACER(this, DBG, tmsg.c_str());
+   XPRNOTIFY(tmsg, emsg);
    return rc;
 }
 
 //______________________________________________________________________________
-int XrdProofdResponse::LinkSend(const char *buff, int len)
+int XrdProofdResponse::LinkSend(const char *buff, int len, XrdOucString &emsg)
 {
    // Method actually sending the buffer(s) over the link.
    // Sending is automatically re-tried in case of cancellation.
    // Return 0 on success, -1 on failure.
-   XPDLOC(RSP, "Response::LinkSend")
 
    // Number of attempts
    int ntry = fgMaxRetry;
@@ -579,7 +592,13 @@ int XrdProofdResponse::LinkSend(const char *buff, int len)
          break;
       } else {
          // Keep retrying ...
-         TRACER(this, DBG, "problems sending "<<len<<" bytes; retrying")
+         if (emsg == "") {
+            emsg.form("problems sending %d bytes: attempt %d",
+                      len, fgMaxRetry - ntry);
+         } else {
+            emsg += " ";
+            emsg += fgMaxRetry - ntry;
+         }
       }
    }
    // Done
@@ -587,12 +606,12 @@ int XrdProofdResponse::LinkSend(const char *buff, int len)
 }
 
 //______________________________________________________________________________
-int XrdProofdResponse::LinkSend(const struct iovec *iov, int iocnt, int len)
+int XrdProofdResponse::LinkSend(const struct iovec *iov,
+                                int iocnt, int len, XrdOucString &emsg)
 {
    // Method actually sending the buffer(s) over the link.
    // Sending is automatically re-tried in case of cancellation.
    // Return 0 on success, -1 on failure.
-   XPDLOC(RSP, "Response::LinkSend")
 
    // Number of attempts
    int ntry = fgMaxRetry;
@@ -604,8 +623,13 @@ int XrdProofdResponse::LinkSend(const struct iovec *iov, int iocnt, int len)
          break;
       } else {
          // Keep retrying ...
-         TRACER(this, DBG, "problems sending "<<len<<" bytes ("<<
-                           strerror(errno)<<"); retrying")
+         if (emsg == "") {
+            emsg.form("problems sending %d bytes: attempt %d",
+                      len, fgMaxRetry - ntry);
+         } else {
+            emsg += " ";
+            emsg += fgMaxRetry - ntry;
+         }
       }
    }
    // Done
