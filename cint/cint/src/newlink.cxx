@@ -2089,7 +2089,7 @@ int G__stub_method_calling(G__value *result7, G__param *libp,
 	       if(ifunc->funcname[ifn][0]=='~')
                   sprintf(funcname, "~%s", G__struct.name[new_ifunc->tagnum]);
 	       else
-                  sprintf(funcname, "~%s", G__struct.name[ifunc->tagnum]);
+                  sprintf(funcname, "%s", ifunc->funcname[ifn]);
 
                new_ifunc = G__get_methodhandle4(funcname, &fpara, new_ifunc, &pifn, &poffset, 1, 1, 0);
             }
