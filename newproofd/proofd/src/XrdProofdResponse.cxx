@@ -45,8 +45,6 @@
       } \
    }
 
-int XrdProofdResponse::fgMaxRetry = 1; // Max number of retries on send failures
-
 //______________________________________________________________________________
 int XrdProofdResponse::Send()
 {
