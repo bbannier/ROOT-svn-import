@@ -210,7 +210,6 @@ void testPlane()
 
 }
 
-
 void testTMath() 
 {
    cout << "Starting tests on TMath..." << endl;

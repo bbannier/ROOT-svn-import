@@ -85,7 +85,7 @@ include/Math/%.h: $(GENVECTORDIRI)/Math/%.h
 # build lib genvector: use also obj  from math and fit directory 
 $(GENVECTORLIB): $(GENVECTORO) $(GENVECTORDO) $(GENVECTORDO32) $(ORDER_) $(MAINLIBS)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)"  \
-		   "$(SOFLAGS)" libGenvector.$(SOEXT) $@     \
+		   "$(SOFLAGS)" libGenVector.$(SOEXT) $@     \
 		   "$(GENVECTORO) $(GENVECTORDO) $(GENVECTORDO32)"    \
 		   "$(GENVECTORLIBEXTRA)"
 
