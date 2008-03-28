@@ -56,7 +56,6 @@ TEveCaloViz::TEveCaloViz(const Text_t* n, const Text_t* t) :
 
    fCellZScale(1.),
 
-   fDefaultValue(5),
    fValueIsColor(kTRUE),
    fPalette(0),
 
@@ -89,7 +88,6 @@ TEveCaloViz::TEveCaloViz(TEveCaloData* data, const Text_t* n, const Text_t* t) :
 
    fCellZScale(1.),
 
-   fDefaultValue(5),
    fValueIsColor(kTRUE),
    fPalette(0),
 
@@ -196,10 +194,8 @@ void TEveCaloViz::Paint(Option_t* /*option*/)
 
    static const TEveException eH("TEvecaloViz::Paint ");
 
-   if ( ! fData ) {
+   if (!fData) 
       throw(eH, "data uninitialized.");
-      return;
-   }
 
    TBuffer3D buff(TBuffer3DTypes::kGeneric);
 
@@ -392,6 +388,7 @@ TEveCaloLego::TEveCaloLego(const Text_t* n, const Text_t* t):
 {
    // Constructor.
 
+   SetElementNameTitle("TEveCaloLego", "TEveCaloLego");
    fCellZScale =0.5;
 }
 
@@ -403,9 +400,8 @@ TEveCaloLego::TEveCaloLego(TEveCaloData* data):
 {
    // Constructor.
 
-   SetElementName("TEveCaloLego");
-   fMainColorPtr = &fGridColor;
-   fCellZScale =0.5;
+   SetElementNameTitle("TEveCaloLego", "TEveCaloLego");
+   fCellZScale = 0.5;
 }
 
 //______________________________________________________________________________
@@ -414,7 +410,7 @@ Float_t TEveCaloLego::GetDefaultCellHeight() const
 
    // Get default cell height.
 
-   return TMath::TwoPi()/fData->GetNSlices();
+   return TMath::TwoPi();
 }
 
 //______________________________________________________________________________
@@ -439,6 +435,6 @@ void TEveCaloLego::ComputeBBox()
    fBBox[2] = fPhi - 1.2f*fPhiRng;
    fBBox[3] = fPhi + 1.2f*fPhiRng;
 
-   fBBox[4] = 0;
-   fBBox[5] = GetDefaultCellHeight()*fData->GetNSlices();
+   fBBox[4] = -GetDefaultCellHeight()*fCellZScale*0.2;
+   fBBox[5] = GetDefaultCellHeight()*fCellZScale*1.2;
 }
