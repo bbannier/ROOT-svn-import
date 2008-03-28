@@ -115,6 +115,16 @@ TCint::TCint(const char *name, const char *title) : TInterpreter(name, title)
    optind = 1;  // make sure getopt() works in the main program
 #endif
 
+#if defined(G__NOSTUBS)
+# if defined(G__NOSTUBSTEST)
+   EnableWrappers(gEnv->GetValue("Cint.EnableWrappers",1));
+# else
+   EnableWrappers(0);
+# endif
+#else
+   EnableWrappers(1);
+#endif
+
    // Make sure that ALL macros are seen as C++.
    G__LockCpp();
 }
@@ -166,6 +176,15 @@ Int_t TCint::InitializeDictionaries()
    R__LOCKGUARD(gCINTMutex);
    
    return G__call_setup_funcs();
+}
+
+//______________________________________________________________________________
+void TCint::EnableWrappers(bool value)
+{
+   // Enable call wrappers (also known as stubs) if value is true;
+   // disable if value is false.
+
+   G__enable_wrappers((int) value);
 }
 
 //______________________________________________________________________________
@@ -371,7 +390,7 @@ Long_t TCint::ProcessLineSynch(const char *line, EErrorCode *error)
    // Let CINT process a command line synchronously, i.e we are waiting
    // it will be finished.
 
-   R__LOCKGUARD(gCINTMutex);
+   R__LOCKGUARD(fLockProcessLine ? gCINTMutex : 0);
 
    if (gApplication) {
       if (gApplication->IsCmdThread())
