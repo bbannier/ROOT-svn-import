@@ -54,6 +54,7 @@
 #include "RooRealConstant.h"
 #include "RooNameReg.h"
 #include "RooMsgService.h"
+#include "RooRecursiveFraction.h"
 
 #include "Riostream.h"
 
@@ -125,7 +126,7 @@ RooAddPdf::RooAddPdf(const char *name, const char *title,
 }
 
 
-RooAddPdf::RooAddPdf(const char *name, const char *title, const RooArgList& pdfList, const RooArgList& coefList) :
+RooAddPdf::RooAddPdf(const char *name, const char *title, const RooArgList& pdfList, const RooArgList& coefList, Bool_t recursiveFractions) :
   RooAbsPdf(name,title),
   _refCoefNorm("!refCoefNorm","Reference coefficient normalization set",this,kFALSE,kFALSE),
   _refCoefRangeName(0),
@@ -144,11 +145,17 @@ RooAddPdf::RooAddPdf(const char *name, const char *title, const RooArgList& pdfL
   //
   // All PDFs must inherit from RooAbsPdf. All coefficients must inherit from RooAbsReal
 
-  if (pdfList.getSize()>coefList.getSize()+1) {
+  if (pdfList.getSize()>coefList.getSize()+1 || pdfList.getSize()<coefList.getSize()) {
     coutE(InputArguments) << "RooAddPdf::RooAddPdf(" << GetName() 
 			  << ") number of pdfs and coefficients inconsistent, must have Npdf=Ncoef or Npdf=Ncoef+1" << endl ;
     assert(0) ;
   }
+
+  if (recursiveFractions && pdfList.getSize()!=coefList.getSize()+1) {
+    coutW(InputArguments) << "RooAddPdf::RooAddPdf(" << GetName() 
+			  << ") WARNING inconsistent input: recursive fractions options can only be used if Npdf=Ncoef+1, ignoring recursive fraction setting" << endl ;
+  }
+
 
   _pdfIter  = _pdfList.createIterator() ;
   _coefIter = _coefList.createIterator() ;
@@ -158,6 +165,8 @@ RooAddPdf::RooAddPdf(const char *name, const char *title, const RooArgList& pdfL
   TIterator* coefIter = coefList.createIterator() ;
   RooAbsPdf* pdf ;
   RooAbsReal* coef ;
+
+  RooArgList partCoefList ;
 
   while((coef = (RooAbsPdf*)coefIter->Next())) {
     pdf = (RooAbsPdf*) pdfIter->Next() ;
@@ -175,7 +184,15 @@ RooAddPdf::RooAddPdf(const char *name, const char *title, const RooArgList& pdfL
       continue ;
     }
     _pdfList.add(*pdf) ;
-    _coefList.add(*coef) ;    
+
+    if (recursiveFractions) {
+      partCoefList.add(*coef) ;
+      RooAbsReal* rfrac = new RooRecursiveFraction(Form("%s_recursive_fraction_%s",GetName(),pdf->GetName()),"Recursive Fraction",partCoefList) ;
+      addOwnedComponents(*rfrac) ;
+      _coefList.add(*rfrac) ;
+    } else {
+      _coefList.add(*coef) ;    
+    }
   }
 
   pdf = (RooAbsPdf*) pdfIter->Next() ;
