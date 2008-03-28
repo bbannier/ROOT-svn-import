@@ -226,88 +226,30 @@ void TEveCaloLegoGL::MakeDisplayList() const
 
 //______________________________________________________________________________
 inline void TEveCaloLegoGL::RnrText(const char* txt, Float_t xa, Float_t ya, Float_t za, 
-                                    const GLdouble *pm, const TGLFont &font, Int_t mode) const
+                                    const TGLFont &font, Int_t mode) const
 {
-   //  3 ----- 2
-   //  |       |   
-   //  0 ----- 1
-
    glPushMatrix();
    glTranslatef(xa, ya, za);
 
-
-   GLdouble mm[16];
-   GLint    vp[4];
-   glGetDoublev(GL_MODELVIEW_MATRIX,  mm);
-   glGetIntegerv(GL_VIEWPORT, vp);
-
-   GLdouble x, y, z;
-   gluProject(0, 0, 0, mm, pm, vp, &x, &y, &z);
    Float_t llx, lly, llz, urx, ury, urz;
    font.BBox(txt, llx, lly, llz, urx, ury, urz);
 
-   Double_t ptb[4][3]; // 3D positions of projected text bounding-box corners.
-   gluUnProject(x + llx, y + lly, z, mm, pm, vp, &ptb[0][0], &ptb[0][1], &ptb[0][2]);
-   gluUnProject(x + urx, y + lly, z, mm, pm, vp, &ptb[1][0], &ptb[1][1], &ptb[1][2]);
-   gluUnProject(x + urx, y + ury, z, mm, pm, vp, &ptb[2][0], &ptb[2][1], &ptb[2][2]);
-   gluUnProject(x + llx, y + ury, z, mm, pm, vp, &ptb[3][0], &ptb[3][1], &ptb[3][2]);
-
-   if (mode == 0) {
-      // down for height
-      glTranslatef(ptb[1][0]-ptb[2][0], ptb[1][1]-ptb[2][1], ptb[1][2]-ptb[2][2]);
-      if ((ptb[0][0] < 0 && ptb[0][0] >= ptb[1][0]) ||
-          (ptb[0][0] > 0 && ptb[0][0] <= ptb[1][0]))
-      {
-         glTranslatef(ptb[0][0]-ptb[1][0], ptb[0][1]-ptb[1][1], ptb[0][2]-ptb[1][2]);
-      }
-   }
-   else if (mode == 1)
+   glRasterPos2i(0, 0);
+   switch (mode)
    {
-      // down for height
-      glTranslatef(ptb[1][0]-ptb[2][0], ptb[1][1]-ptb[2][1], ptb[1][2]-ptb[2][2]);
-      // center at tick mark
-      if (txt[0] == '-') 	 
-      { 	 
-         Float_t off = 0.5f * (urx-llx) / strlen(txt); 	 
-         llx -= off; 	 
-         urx -= off; 	 
-      }
-      glTranslatef(0.5f * (ptb[0][0] - ptb[1][0]),
-                   0.5f * (ptb[0][1] - ptb[1][1]),
-                   0.5f * (ptb[0][2] - ptb[1][2]));
+      case 0: // xy axis title interior
+         glBitmap(0, 0, 0, 0, 0, -ury*0.5f, 0);
+         break;
+      case 1: // xy axis title exterior
+         glBitmap(0, 0, 0, 0, -urx, -ury*0.5f, 0);
+         break;
+      case 2: // xy labels
+         glBitmap(0, 0, 0, 0, -urx*0.5f, -ury*0.5f, 0);
+         break;
+      case 3:  // z labels
+         glBitmap(0, 0, 0, 0, -urx, -ury*0.5f, 0);
+         break;
    }
-   else
-   {
-      // down for height
-      {
-         if(0){
-            glBegin(GL_LINE_LOOP);
-            glVertex3f( ptb[0][0] + (ptb[1][0]-ptb[2][0])*0.5 + ptb[0][0]-ptb[1][0], 
-                        ptb[0][1] + (ptb[1][1]-ptb[2][1])*0.5 + ptb[0][1]-ptb[1][1], 
-                        ptb[0][2] + (ptb[1][2]-ptb[2][2])*0.5 + ptb[0][2]-ptb[1][2]);
-
-            glVertex3f( ptb[1][0] + (ptb[1][0]-ptb[2][0])*0.5 + ptb[0][0]-ptb[1][0],
-                        ptb[1][1] + (ptb[1][1]-ptb[2][1])*0.5 + ptb[0][1]-ptb[1][1],
-                        ptb[1][2] + (ptb[1][2]-ptb[2][2])*0.5 + ptb[0][2]-ptb[1][2]);
-
-            glVertex3f( ptb[2][0] + (ptb[1][0]-ptb[2][0])*0.5 + ptb[0][0]-ptb[1][0], 
-                        ptb[2][1] + (ptb[1][1]-ptb[2][1])*0.5 + ptb[0][1]-ptb[1][1], 
-                        ptb[2][2] + (ptb[1][2]-ptb[2][2])*0.5 + ptb[0][2]-ptb[1][2]);
-
-            glVertex3f( ptb[3][0] + (ptb[1][0]-ptb[2][0])*0.5 + ptb[0][0]-ptb[1][0],
-                        ptb[3][1] + (ptb[1][1]-ptb[2][1])*0.5 + ptb[0][1]-ptb[1][1],
-                        ptb[3][2] + (ptb[1][2]-ptb[2][2])*0.5 + ptb[0][2]-ptb[1][2]);
-
-            glEnd();
-         }
-      }
-
-      glTranslatef((ptb[1][0]-ptb[2][0])*0.5 + ptb[0][0]-ptb[1][0],
-                   (ptb[1][1]-ptb[2][1])*0.5 + ptb[0][1]-ptb[1][1],
-                   (ptb[1][2]-ptb[2][2])*0.5 + ptb[0][2]-ptb[1][2]);
-   }
-
-   glRasterPos3i(0, 0, 0);
    font.Render(txt);
    glPopMatrix();
 }
@@ -359,29 +301,21 @@ void TEveCaloLegoGL::DrawAxis(TGLRnrCtx & rnrCtx,
    switch (idx)
    {
       case 0:  
-      {
          axY  = y0;  ayX = x0;
          axtX = x1; aytY = y1;
          break;
-      }
       case 1: 
-      {
          ayX  = x1;  axY  = y0;
          axtX = x0;  aytY = y1;  
          break;
-      }
       case 2: 
-      {
          ayX  = x1;  axY  = y1;
          axtX = x0;  aytY = y0;    
          break;
-      }
       case 3:
-      { 
          ayX  = x0;  axY = y1;
          axtX = x1;  aytY= y0;  
          break;
-      }
    }
 
    // fill array of label locations
@@ -399,13 +333,14 @@ void TEveCaloLegoGL::DrawAxis(TGLRnrCtx & rnrCtx,
       glTranslatef(0, 0, -tms*2.5);
       TGLUtil::Color(fM->fFontColor);
 
-      RnrText("h", axtX, axY, 0, pm, fSymbolFont);
+      //  RnrText("h", axtX, axY, 0, pm, fSymbolFont, 0);
+      RnrText("h", axtX, axY, 0, fSymbolFont, axY>0&&ayX>0 || axY<0&&ayX<0 );
       for (Int_t i=0; i<nX; i++)
-         RnrText(Form("%.0f", lx0 + 2*i), lx0 + 2*i, axY, 0, pm, fNumFont, 1);
+         RnrText(Form("%.0f", lx0 + 2*i), lx0 + 2*i, axY, 0, fNumFont, 2);
 
-      RnrText("F", ayX,  aytY, 0, pm, fSymbolFont);
+      RnrText("F", ayX,  aytY, 0, fSymbolFont, ayX>0&&axY<0 || ayX<0&&axY>0 );
       for (Int_t i=0; i<nY; ++i)
-         RnrText(Form("%.0f", ly0 + i), ayX, ly0 + i, 0, pm, fNumFont, 1);
+         RnrText(Form("%.0f", ly0 + i), ayX, ly0 + i, 0, fNumFont, 2);
 
       glPopMatrix();
       fNumFont.PostRender();
@@ -483,34 +418,34 @@ void TEveCaloLegoGL::DrawAxis(TGLRnrCtx & rnrCtx,
    Float_t zfac = fM->fCellZScale*fM->GetDefaultCellHeight()/fM->fData->GetMaxVal();
    Float_t off = 1.9;
 
-   for(Int_t i=1; i<=zmax; i++)
-      RnrText(Form("%d",i*10), azX + aztX*off, azY + aztY*off, i*10*zfac, pm, fNumFont, 2);
-
-   RnrText("Et[GeV]", azX + aztX*off, azY + aztY*off, (zmax+1)*10*zfac, pm, fNumFont, 2);
+   // z axis title
+   RnrText("Et[GeV]", azX + aztX*off, azY + aztY*off, (zmax+1)*10*zfac, fNumFont, 3);
    fNumFont.PostRender();
 
+   // z axis labels
+   for(Int_t i=1; i<=zmax; i++)
+      RnrText(Form("%d",i*10), azX + aztX*off, azY + aztY*off, i*10*zfac, fNumFont, 3);
 
-   TGLUtil::Color(fM->fGridColor);
-
-   glBegin(GL_LINES);
-   glVertex3f(azX, azY, 0);
-   glVertex3f(azX, azY, (zmax+1)*10*zfac);
-
-   // z axis tick-marks
-   zmax++;
-   for (Int_t i=1; i<=zmax; i++)
    {
-      glVertex3f(azX, azY, i*10*zfac);
-      glVertex3f(azX+aztX, azY+aztY, i*10*zfac);
-   }
+      // z axis tick-marks
+      TGLUtil::Color(fM->fGridColor);
+      glBegin(GL_LINES);
+      glVertex3f(azX, azY, 0);
+      glVertex3f(azX, azY, (zmax+1)*10*zfac);
+      zmax++;
+      for (Int_t i=1; i<=zmax; i++)
+      {
+         glVertex3f(azX, azY, i*10*zfac);
+         glVertex3f(azX+aztX, azY+aztY, i*10*zfac);
+      }
 
-   for (Int_t i=1; i<=zmax*10; i+=2)
-   {
-      glVertex3f(azX, azY, i*zfac);
-      glVertex3f(azX+aztX/2, azY+aztY/2, i*zfac);
+      for (Int_t i=1; i<=zmax*10; i+=2)
+      {
+         glVertex3f(azX, azY, i*zfac);
+         glVertex3f(azX+aztX/2, azY+aztY/2, i*zfac);
+      }
+      glEnd();
    }
-
-   glEnd();
 }
 
 //______________________________________________________________________________
@@ -587,7 +522,7 @@ void TEveCaloLegoGL::DrawHistBase(TGLRnrCtx &rnrCtx) const
       glEnd();
    }
 
-  DrawAxis(rnrCtx, x0, x1, y0, y1);
+   DrawAxis(rnrCtx, x0, x1, y0, y1);
 }
 
 //______________________________________________________________________________
@@ -595,7 +530,7 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
 {
    // Render the calo lego-plot with OpenGL.
 
-    DrawHistBase(rnrCtx);
+   DrawHistBase(rnrCtx);
  
    glPushAttrib(GL_ENABLE_BIT | GL_POLYGON_BIT);
    glPushMatrix();
