@@ -154,7 +154,7 @@ TFile::TFile() : TDirectoryFile(), fInfoCache(0)
    fAsyncOpenStatus = kAOSNotAsync;
    SetBit(kBinaryFile, kTRUE);
 
-   if (gDebug)
+   if (gDebug > 0)
       Info("TFile", "default ctor");
 }
 
@@ -470,7 +470,7 @@ TFile::~TFile()
    gROOT->GetListOfFiles()->Remove(this);
    gROOT->GetUUIDs()->RemoveUUID(GetUniqueID());
 
-   if (gDebug)
+   if (gDebug > 0)
       Info("~TFile", "dtor called for %s [%d]", GetName(),this);
 }
 
@@ -842,7 +842,7 @@ void TFile::Delete(const char *namecycle)
    //     *;*   : delete all objects from memory and file
    //    T*;*   : delete all objects from memory and file and all subdirectories
 
-   if (gDebug)
+   if (gDebug > 0)
       Info("Delete", "deleting name = %s", namecycle);
 
    TDirectoryFile::Delete(namecycle);
@@ -1812,7 +1812,7 @@ Int_t TFile::Write(const char *, Int_t opt, Int_t bufsiz)
    TDirectory *cursav = gDirectory;
    cd();
 
-   if (gDebug) {
+   if (gDebug > 0) {
       if (!GetTitle() || strlen(GetTitle()) == 0)
          Info("Write", "writing name = %s", GetName());
       else

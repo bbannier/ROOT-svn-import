@@ -131,6 +131,12 @@ void TFileCacheRead::Prefetch(Long64_t pos, Int_t len)
 
    fIsSorted = kFALSE;
    if (pos <= 0) {
+      for(Int_t i=0;i<fNseek;i++) {
+         fSeekSort[i]    = 0;
+         fSeekSortLen[i] = 0;
+         fSeekPos[i]     = 0;;
+      }
+      
       fNseek = 0;
       fNtot  = 0;
       return;
