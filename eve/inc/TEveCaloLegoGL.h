@@ -28,11 +28,10 @@ private:
 
 protected:
    Int_t   GetGridStep(Int_t axId, const TAxis* ax, TGLRnrCtx &rnrCtx) const;
-   void    RnrText(const char* txt, Float_t x, Float_t y, const GLdouble *pm, Bool_t isNum) const;
+   void    RnrText(const char* txt, Float_t x, Float_t y, Float_t z, 
+                   const GLdouble *pm, const TGLFont &font, Int_t mode = 0) const;
    void    DrawAxis(TGLRnrCtx &rnrCtx, Float_t x0, Float_t x1, Float_t y0, Float_t y1) const;
    void    DrawHistBase(TGLRnrCtx &rnrCtx) const;
-
-   void    DrawTitle(TGLRnrCtx &rnrCtx) const;
 
    void    MakeQuad(Float_t x, Float_t y, Float_t z, 
                     Float_t xw, Float_t yw, Float_t zh) const;

@@ -53,7 +53,6 @@ protected:
 
    Float_t      fCellZScale;
 
-   Int_t             fDefaultValue;   // Default signal value.
    Bool_t            fValueIsColor;   // Interpret signal value as RGBA color.
    TEveRGBAPalette*  fPalette;        // Pointer to signal-color palette.
 
