@@ -12,11 +12,14 @@
 #include <TGraph.h>
 #include <TLegend.h>
 
+const double ERRORLIMIT = 1E-8;
 const double MIN = 0;
 const double MAX = 1;
 const double INCREMENT = 0.01;
 const int ARRAYSIZE = (int) (( MAX - MIN ) / INCREMENT);
 inline int arrayindex(double i) { return ARRAYSIZE - (int) ( (MAX - i) / INCREMENT ) -1 ; };
+
+bool showGraphics = true;
 
 using namespace std;
 
@@ -31,22 +34,14 @@ TGraph* drawPoints(Double_t x[], Double_t y[], int color, int style = 1)
    return g;
 }
 
-void testSpecFuncBetaI() 
+int testSpecFuncBetaI() 
 {
    vector<Double_t> x( ARRAYSIZE );
    vector<Double_t> yb( ARRAYSIZE );
    vector<Double_t> ymb( ARRAYSIZE );
 
-//    ofstream outputFile ("values.txt");
+   int status = 0;
 
-   TCanvas* c1 = new TCanvas("c1", "Two Graphs", 600, 400); 
-   TH2F* hpx = new TH2F("hpx", "Two Graphs(hpx)", ARRAYSIZE, MIN, MAX, ARRAYSIZE, 0, 5);
-   hpx->SetStats(kFALSE);
-   hpx->Draw();
-
-   int color = 2;
-
-   TGraph *gb, *gmb;
    double b = 0.2, a= 0.9;
    cout << "** b = " << b << " **" << endl;
    for ( double i = MIN; i < MAX; i += INCREMENT )
@@ -58,30 +53,75 @@ void testSpecFuncBetaI()
            << endl;
       
       x[arrayindex(i)] = i;
+
       yb[arrayindex(i)] = TMath::BetaIncomplete(i,a,b);
       ymb[arrayindex(i)] = ROOT::Math::inc_beta(i,a,b);
+      if ( fabs( yb[arrayindex(i)] - ymb[arrayindex(i)] ) > ERRORLIMIT )
+      {
+         cout << "i " << i   
+              << " yb[arrayindex(i)] " << yb[arrayindex(i)]
+              << " ymb[arrayindex(i)] " << ymb[arrayindex(i)]
+              << " " << fabs( yb[arrayindex(i)] - ymb[arrayindex(i)] )
+              << endl;
+         status += 1;
+      }
    }
-   
-   gb = drawPoints(&x[0], &yb[0], color++);
-   gmb = drawPoints(&x[0], &ymb[0], color++, 7);
 
-   TLegend* legend = new TLegend(0.61,0.72,0.86,0.86);
-   legend->AddEntry(gb, "TMath::BetaIncomplete()");
-   legend->AddEntry(gmb, "ROOT::Math::inc_beta()");
-   legend->Draw();
+   if ( showGraphics )
+   {
 
-   c1->Show();
+      TCanvas* c1 = new TCanvas("c1", "Two Graphs", 600, 400); 
+      TH2F* hpx = new TH2F("hpx", "Two Graphs(hpx)", ARRAYSIZE, MIN, MAX, ARRAYSIZE, 0, 5);
+      hpx->SetStats(kFALSE);
+      hpx->Draw();
+      
+      int color = 2;
+      
+      TGraph *gb, *gmb;
+      gb = drawPoints(&x[0], &yb[0], color++);
+      gmb = drawPoints(&x[0], &ymb[0], color++, 7);
+      
+      TLegend* legend = new TLegend(0.61,0.72,0.86,0.86);
+      legend->AddEntry(gb, "TMath::BetaIncomplete()");
+      legend->AddEntry(gmb, "ROOT::Math::inc_beta()");
+      legend->Draw();
+      
+      c1->Show();
+   }
 
    cout << "Test Done!" << endl;
 
-   return;
+   return status;
 }
 
 int main(int argc, char **argv) 
 {
-   TApplication theApp("App",&argc,argv);
-   testSpecFuncBetaI();
-   theApp.Run();
+   if ( argc > 1 && argc != 2 )
+   {
+      cerr << "Usage: " << argv[0] << " [-ng]\n";
+      cerr << "  where:\n";
+      cerr << "     -ng : no graphics mode";
+      cerr << endl;
+      exit(1);
+   }
 
-   return 0;
+   if ( argc == 2 && strcmp( argv[1], "-ng") == 0 ) 
+   {
+      showGraphics = false;
+   }
+
+   TApplication* theApp = 0;
+   if ( showGraphics )
+      theApp = new TApplication("App",&argc,argv);
+
+   int status = testSpecFuncBetaI();
+
+   if ( showGraphics )
+   {
+      theApp->Run();
+      delete theApp;
+      theApp = 0;
+   }
+
+   return status;
 }
