@@ -14,11 +14,14 @@
 #include <TGraph.h>
 #include <TLegend.h>
 
+const double ERRORLIMIT = 1E-8;
 const double MIN = -2.5;
 const double MAX = +2.5;
 const double INCREMENT = 0.01;
 const int ARRAYSIZE = (int) (( MAX - MIN ) / INCREMENT);
 inline int arrayindex(double i) { return ARRAYSIZE - (int) ( (MAX - i) / INCREMENT ) -1 ; };
+
+bool showGraphics = true;
 
 using namespace std;
 
@@ -33,7 +36,7 @@ TGraph* drawPoints(Double_t x[], Double_t y[], int color, int style = 1)
    return g;
 }
 
-void testSpecFuncErf() 
+int testSpecFuncErf() 
 {
    vector<Double_t> x( ARRAYSIZE );
    vector<Double_t> yerf( ARRAYSIZE );
@@ -43,6 +46,8 @@ void testSpecFuncErf()
    vector<Double_t> yierf( ARRAYSIZE );
    vector<Double_t> yierfc( ARRAYSIZE );
 //    vector<Double_t> yndtri( ARRAYSIZE );
+
+   int status = 0;
 
    ofstream outputFile ("values.txt");
 
@@ -60,48 +65,113 @@ void testSpecFuncErf()
            << endl;
 
       x[arrayindex(i)] = i;
+
       yerf[arrayindex(i)] = TMath::Erf(i);
       ymerf[arrayindex(i)] = ROOT::Math::erf(i);
+      if ( fabs( yerf[arrayindex(i)] - ymerf[arrayindex(i)] ) > ERRORLIMIT )
+      {
+         cout << "i " << i   
+              << " yerf[arrayindex(i)] " << yerf[arrayindex(i)]
+              << " ymerf[arrayindex(i)] " << ymerf[arrayindex(i)]
+              << " " << fabs( yerf[arrayindex(i)] - ymerf[arrayindex(i)] )
+              << endl;
+         status += 1;
+      }
+
       yerfc[arrayindex(i)] = TMath::Erfc(i);
       ymerfc[arrayindex(i)] = ROOT::Math::erfc(i);
-      yierf[arrayindex(i)] = TMath::ErfInverse(i);
-      yierfc[arrayindex(i)] = TMath::ErfcInverse(i);
+      if ( fabs( yerfc[arrayindex(i)] - ymerfc[arrayindex(i)] ) > ERRORLIMIT )
+      {
+         cout << "i " << i 
+              << " yerfc[arrayindex(i)] " << yerfc[arrayindex(i)]
+              << " ymerfc[arrayindex(i)] " << ymerfc[arrayindex(i)]
+              << " " << fabs( yerfc[arrayindex(i)] - ymerfc[arrayindex(i)] )
+              << endl;
+         status += 1;
+      }
+
+      yierf[arrayindex(i)] = TMath::ErfInverse(yerf[arrayindex(i)]);
+      if ( fabs( yierf[arrayindex(i)] - i ) > ERRORLIMIT )
+      {
+         cout << "i " << i 
+              << " yierf[arrayindex(i)] " << yierf[arrayindex(i)]
+              << " " << fabs( yierf[arrayindex(i)] - i )
+              << endl;
+         status += 1;
+      }
+
+      yierfc[arrayindex(i)] = TMath::ErfcInverse(yerfc[arrayindex(i)]);
+      if ( fabs( yierfc[arrayindex(i)] - i ) > ERRORLIMIT )
+      {
+         cout << "i " << i 
+              << " yierfc[arrayindex(i)] " << yierfc[arrayindex(i)]
+              << " " << fabs( yierfc[arrayindex(i)] - i )
+              << endl;
+         status += 1;
+      }
+
 //       yndtri[arrayindex(i)] = ROOT::Math::Cephes::ndtri(i);
    }
 
-   TCanvas* c1 = new TCanvas("c1", "Two Graphs", 600, 400); 
-   TH2F* hpx = new TH2F("hpx", "Two Graphs(hpx)", ARRAYSIZE, MIN, MAX, ARRAYSIZE, -1,2);
-   hpx->SetStats(kFALSE);
-   hpx->Draw();
+   if ( showGraphics )
+   {
 
-   TGraph* gerf   = drawPoints(&x[0], &yerf[0], 14);
-   TGraph* gmerf  = drawPoints(&x[0], &ymerf[0], 5, 7);
-   TGraph* gerfc  = drawPoints(&x[0], &yerfc[0], 2);
-   TGraph* gmerfc = drawPoints(&x[0], &ymerfc[0], 3, 7);
+      TCanvas* c1 = new TCanvas("c1", "Two Graphs", 600, 400); 
+      TH2F* hpx = new TH2F("hpx", "Two Graphs(hpx)", ARRAYSIZE, MIN, MAX, ARRAYSIZE, -1,2);
+      hpx->SetStats(kFALSE);
+      hpx->Draw();
+      
+      TGraph* gerf   = drawPoints(&x[0], &yerf[0], 14);
+      TGraph* gmerf  = drawPoints(&x[0], &ymerf[0], 5, 7);
+      TGraph* gerfc  = drawPoints(&x[0], &yerfc[0], 2);
+      TGraph* gmerfc = drawPoints(&x[0], &ymerfc[0], 3, 7);
 //   drawPoints(&x[0], &yierf[0], 21);
 //   drawPoints(&x[0], &yierfc[0], 28);
 //   drawPoints(&x[0], &yndtri[0], 9);
 
-   TLegend* legend = new TLegend(0.61,0.62,0.86,0.86);
-   legend->AddEntry(gerf,   "TMath::Erf()");
-   legend->AddEntry(gmerf,  "ROOT:Math::erf()");
-   legend->AddEntry(gerfc,  "TMath::Erfc()");
-   legend->AddEntry(gmerfc, "ROOT::Math::erfInverse()");
-   legend->Draw();
-
-   c1->Show();
-
+      TLegend* legend = new TLegend(0.61,0.62,0.86,0.86);
+      legend->AddEntry(gerf,   "TMath::Erf()");
+      legend->AddEntry(gmerf,  "ROOT:Math::erf()");
+      legend->AddEntry(gerfc,  "TMath::Erfc()");
+      legend->AddEntry(gmerfc, "ROOT::Math::erfInverse()");
+      legend->Draw();
+      
+      c1->Show();
+   }
+      
    cout << "Test Done!" << endl;
 
-   return;
+   return status;
 }
-
 
 int main(int argc, char **argv)
 {
-   TApplication theApp("App",&argc,argv);
-   testSpecFuncErf();
-   theApp.Run();
+   if ( argc > 1 && argc != 2 )
+   {
+      cerr << "Usage: " << argv[0] << " [-ng]\n";
+      cerr << "  where:\n";
+      cerr << "     -ng : no graphics mode";
+      cerr << endl;
+      exit(1);
+   }
 
-   return 0;
+   if ( argc == 2 && strcmp( argv[1], "-ng") == 0 ) 
+   {
+      showGraphics = false;
+   }
+
+   TApplication* theApp = 0;
+   if ( showGraphics )
+      theApp = new TApplication("App",&argc,argv);
+
+   int status = testSpecFuncErf();
+
+   if ( showGraphics )
+   {
+      theApp->Run();
+      delete theApp;
+      theApp = 0;
+   }
+
+   return status;
 }

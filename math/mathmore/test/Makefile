@@ -19,7 +19,6 @@ CXXFLAGS += $(GSLFLAGS)
 ifeq ($(PLATFORM),win32)
 EXTRALIBS        = "$(ROOTSYS)/lib/libMathMore.lib" "$(ROOTSYS)/lib/libMathCore.lib"  $(GSLLIBS)
 UNURANLIB        = "$(ROOTSYS)/lib/libUnuran.lib"
-UNURANLIB        = "$(ROOTSYS)/lib/libUnuran.lib"
 else
 EXTRALIBS        = -lMathMore -lMathCore $(GSLLIBDIR) $(GSLLIBS)
 UNURANLIB        = -lUnuran
