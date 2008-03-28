@@ -10,7 +10,8 @@ include Makefile.arch
 -include ../MyConfig.mk
 
 #------------------------------------------------------------------------------
-
+LIBS         += -lThread
+GLIBS        += -lThread
 EVENTO        = Event.$(ObjSuf) EventDict.$(ObjSuf)
 EVENTS        = Event.$(SrcSuf) EventDict.$(SrcSuf)
 EVENTSO       = libEvent.$(DllSuf)

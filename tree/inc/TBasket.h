@@ -56,6 +56,7 @@ public:
    
    virtual void    AdjustSize(Int_t newsize);
    virtual void    DeleteEntryOffset();
+           void    DeleteFromBranch();
    virtual Int_t   DropBuffers();
    TBranch        *GetBranch() const {return fBranch;}
            Int_t   GetBufferSize() const {return fBufferSize;}

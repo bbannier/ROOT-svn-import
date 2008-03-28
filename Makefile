@@ -256,7 +256,7 @@ CINTLIBS     := -lCint
 CINT7LIBS    := -lCint -lReflex
 NEWLIBS      := -lNew
 ROOTLIBS     := -lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad \
-                -lTree -lMatrix -lMathCore
+                -lTree -lMatrix -lMathCore -lThread
 BOOTLIBS     := -lCore -lCint -lMathCore
 ifneq ($(ROOTDICTTYPE),cint)
 ROOTLIBS     += -lCintex -lReflex

@@ -110,7 +110,7 @@ TDirectory::~TDirectory()
       mom->GetList()->Remove(this);
    }
 
-   if (gDebug) {
+   if (gDebug > 0) {
       Info("~TDirectory", "dtor called for %s", GetName());
    }
 }
@@ -484,7 +484,7 @@ void TDirectory::Delete(const char *namecycle)
 //    T*;*   : delete all objects from memory and file and all subdirectories
 //
 
-   if (gDebug)
+   if (gDebug > 0)
      Info("Delete","Call for this = %s namecycle = %s",
                GetName(), (namecycle ? namecycle : "null"));
 

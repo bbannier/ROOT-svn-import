@@ -1019,7 +1019,7 @@ void TKey::ReadFile()
 #else
    f->ReadBuffer(fBuffer,nsize);
 #endif
-   if (gDebug) {
+   if (gDebug > 0) {
       cout << "TKey Reading "<<nsize<< " bytes at address "<<fSeekKey<<endl;
    }
 }
@@ -1151,7 +1151,7 @@ Int_t TKey::WriteFile(Int_t cycle, TFile* f)
 #endif
    //f->Flush(); Flushing takes too much time.
    //            Let user flush the file when he wants.
-   if (gDebug) {
+   if (gDebug > 0) {
       cout <<"   TKey Writing "<<nsize<< " bytes at address "<<fSeekKey
            <<" for ID= " <<GetName()<<" Title= "<<GetTitle()<<endl;
    }
