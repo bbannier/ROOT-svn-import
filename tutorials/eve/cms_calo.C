@@ -24,7 +24,7 @@ void cms_calo()
   gStyle->SetPalette(1, 0);
   TEveRGBAPalette* pal = new TEveRGBAPalette(0, 100);
   pal->SetLimits(0, data->GetMaxVal());
-  pal->SetDefaultColor((Color_t)8);
+  pal->SetDefaultColor((Color_t)4);
   pal->SetShowDefValue(kFALSE);
 
   // calo 3D
