@@ -195,7 +195,7 @@ void TEveCaloViz::Paint(Option_t* /*option*/)
    static const TEveException eH("TEvecaloViz::Paint ");
 
    if (!fData) 
-      throw(eH, "data uninitialized.");
+      return;
 
    TBuffer3D buff(TBuffer3DTypes::kGeneric);
 
@@ -384,7 +384,9 @@ ClassImp(TEveCaloLego);
 TEveCaloLego::TEveCaloLego(const Text_t* n, const Text_t* t):
    TEveCaloViz(n, t),
    fFontColor(0),
-   fGridColor(kGray+3)
+   fGridColor(kGray+3),
+   fFontSize(10),
+   fNZStep(5)
 {
    // Constructor.
 
@@ -396,7 +398,9 @@ TEveCaloLego::TEveCaloLego(const Text_t* n, const Text_t* t):
 TEveCaloLego::TEveCaloLego(TEveCaloData* data):
    TEveCaloViz(data),
    fFontColor(0),
-   fGridColor(kGray+3)
+   fGridColor(kGray+3),
+   fFontSize(10),
+   fNZStep(5)
 {
    // Constructor.
 

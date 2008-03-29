@@ -29,10 +29,12 @@ private:
 protected:
    Int_t   GetGridStep(Int_t axId, const TAxis* ax, TGLRnrCtx &rnrCtx) const;
 
+   //   Int_T   GetFontSize();
    void    RnrText(const char* txt, Float_t x, Float_t y, Float_t z, 
                    const TGLFont &font, Int_t mode) const;
 
-   void    DrawAxis(TGLRnrCtx &rnrCtx, Float_t x0, Float_t x1, Float_t y0, Float_t y1) const;
+   void    DrawZAxis(TGLRnrCtx &rnrCtx, Float_t x0, Float_t x1, Float_t y0, Float_t y1) const;
+   void    DrawXYAxis(TGLRnrCtx &rnrCtx, Float_t x0, Float_t x1, Float_t y0, Float_t y1) const;
    void    DrawHistBase(TGLRnrCtx &rnrCtx) const;
 
    void    MakeQuad(Float_t x, Float_t y, Float_t z, 
@@ -45,8 +47,11 @@ protected:
 
    mutable TGLFont          fNumFont;
    mutable TGLFont          fSymbolFont;
-   mutable TGLFont          fTitleFont;
+   mutable Int_t            fFontSize; // font size in pixels
 
+   const   Float_t            fTMSize; // tick mark size
+
+   // grid density modes
    Float_t                  fMinBinWidth;
    Int_t                    fNBinSteps;
    Int_t*                   fBinSteps;
