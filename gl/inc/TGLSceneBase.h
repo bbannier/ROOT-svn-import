@@ -87,10 +87,15 @@ public:
    virtual void          LodifySceneInfo(TGLRnrCtx& ctx);
 
    // Rendering
-   virtual void FullRender(TGLRnrCtx & rnrCtx);
+   virtual void PreDraw   (TGLRnrCtx & rnrCtx);
    virtual void PreRender (TGLRnrCtx & rnrCtx);
    virtual void Render    (TGLRnrCtx & rnrCtx);
+   virtual void RenderOpaque    (TGLRnrCtx & rnrCtx);
+   virtual void RenderTransp    (TGLRnrCtx & rnrCtx);
+   virtual void RenderSelOpaque (TGLRnrCtx & rnrCtx);
+   virtual void RenderSelTransp (TGLRnrCtx & rnrCtx);
    virtual void PostRender(TGLRnrCtx & rnrCtx);
+   virtual void PostDraw  (TGLRnrCtx & rnrCtx);
 
    // Selection interface
    virtual Bool_t ResolveSelectRecord(TGLSelectRecord& rec, Int_t curIdx);

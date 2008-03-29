@@ -42,6 +42,7 @@ protected:
    typedef std::list<TGLSceneInfo*>::iterator   SceneInfoList_i;
 
    typedef std::vector<TGLSceneInfo*>           SceneInfoVec_t;
+   typedef std::vector<TGLSceneInfo*>::iterator SceneInfoVec_i;
 
    typedef std::vector<TGLOverlayElement*>      OverlayElmVec_t;
 
