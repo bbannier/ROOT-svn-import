@@ -142,11 +142,21 @@ public:
    TIter(const TIter &iter);
    TIter &operator=(const TIter &rhs);
    virtual            ~TIter() { SafeDelete(fIterator) }
-   TObject           *operator()() { return fIterator ? fIterator->Next() : 0; }
+   TObject           *operator()() { return Next(); }
    TObject           *Next() { return fIterator ? fIterator->Next() : 0; }
    const TCollection *GetCollection() const { return fIterator ? fIterator->GetCollection() : 0; }
    Option_t          *GetOption() const { return fIterator ? fIterator->GetOption() : ""; }
    void               Reset() { if (fIterator) fIterator->Reset(); }
+   TIter &operator ++() {
+         Next();
+         return *this;
+      }
+   TObject* operator*() const {
+         return dynamic_cast<TObject*>(fIterator);
+      }
+   bool operator !=(const TIter &_iter) {
+         return (fIterator != _iter.fIterator);
+      }
 
    ClassDef(TIter,0)  //Iterator wrapper
 };
