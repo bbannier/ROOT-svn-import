@@ -394,6 +394,9 @@ void TGLViewer::RequestDraw(Short_t LOD)
 //______________________________________________________________________________
 void TGLViewer::PreRender()
 {
+   // Initialize objects that influence rendering.
+   // Called before every render.
+
    fCamera = fCurrentCamera;
    fClip   = fClipSet->GetCurrentClip();
    if (fGLDevice != -1)
@@ -401,7 +404,9 @@ void TGLViewer::PreRender()
       fRnrCtx->SetGLCtxIdentity(fGLCtxId);
       fGLCtxId->DeleteGLResources();
    }
+
    TGLViewerBase::PreRender();
+
    // Setup lighting
    fLightSet->StdSetupLights(fOverallBoundingBox, *fCamera, fDebugMode);
    fClipSet->SetupClips(fOverallBoundingBox);
@@ -438,9 +443,10 @@ void TGLViewer::DoDraw()
    }
 
    // Setup scene draw time
-   fRnrCtx->SetRenderTimeout(fLOD == TGLRnrCtx::kLODHigh ?
+   fRnrCtx->SetRenderTimeOut(fLOD == TGLRnrCtx::kLODHigh ?
                              fMaxSceneDrawTimeHQ :
                              fMaxSceneDrawTimeLQ);
+   fRnrCtx->StartStopwatch();
 
    // GL pre draw setup
    if (!fIsPrinting) PreDraw();
@@ -457,6 +463,8 @@ void TGLViewer::DoDraw()
 
    PostRender();
    PostDraw();
+
+   fRnrCtx->StopStopwatch();
 
    ReleaseLock(kDrawLock);
 

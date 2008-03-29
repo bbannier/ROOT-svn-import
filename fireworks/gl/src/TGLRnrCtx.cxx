@@ -69,8 +69,12 @@ TGLRnrCtx::TGLRnrCtx(TGLViewerBase* viewer) :
    fClip         (0),
    fDrawPass     (kPassUndef),
 
-   fRenderTimeout(0.0),
+   fStopwatch    (),
+   fRenderTimeOut(0.0),
+   fIsRunning    (kFALSE),
+   fHasTimedOut  (kFALSE),
 
+   fHighlight    (kFALSE),
    fSelection    (kFALSE),
    fSecSelection (kFALSE),
    fPickRadius   (0),
@@ -138,6 +142,43 @@ Bool_t TGLRnrCtx::IsDrawPassFilled() const
    // Returns true if current render-pass uses filled polygon style.
 
    return fDrawPass == kPassFill || fDrawPass == kPassOutlineFill;
+}
+
+
+/******************************************************************************/
+// Stopwatch
+/******************************************************************************/
+
+//______________________________________________________________________________
+void TGLRnrCtx:: StartStopwatch()
+{
+   // Start the stopwatch.
+
+   if (fIsRunning)
+      return;
+
+   fStopwatch.Start();
+   fIsRunning   = kTRUE;
+   fHasTimedOut = kFALSE;
+}
+
+//______________________________________________________________________________
+void TGLRnrCtx:: StopStopwatch()
+{
+   // Stop the stopwatch.
+
+   fIsRunning = kFALSE; 
+}
+
+//______________________________________________________________________________
+Bool_t TGLRnrCtx::HasStopwatchTimedOut()
+{
+   // Check if the stopwatch went beyond the render time limit.
+
+   if (fHasTimedOut) return kTRUE;
+   if (fIsRunning && fStopwatch.Lap() > fRenderTimeOut)
+      fHasTimedOut = kTRUE;
+   return fHasTimedOut;
 }
 
 
