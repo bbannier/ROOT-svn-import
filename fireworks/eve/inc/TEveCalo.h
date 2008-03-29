@@ -177,6 +177,9 @@ protected:
    Color_t                 fFontColor;
    Color_t                 fGridColor;
 
+   Int_t                   fFontSize; // font size in % of projected y axis
+   Int_t                   fNZStep; // Z axis label step in GeV
+
 public:
    TEveCaloLego(const Text_t* n="TEveCaloLego", const Text_t* t="");
    TEveCaloLego(TEveCaloData* data);
@@ -185,9 +188,15 @@ public:
 
    Color_t  GetFontColor() const { return fFontColor; }
    Color_t  GetGridColor() const { return fGridColor; }
+  
+   Int_t  GetFontSize() const { return fFontSize; }
+   Int_t  GetNZStep() const { return fNZStep; }
 
    void   SetFontColor(Color_t ci) { fFontColor=ci; }
    void   SetGridColor(Color_t ci) { fGridColor=ci; }
+
+   void   SetFontSize(Int_t fs) { fFontSize = fs; }
+   void   SetNZStep(Int_t s) { fNZStep = s;}
 
    virtual Float_t GetDefaultCellHeight() const;
 

@@ -18,6 +18,7 @@ class TGButton;
 class TGCheckButton;
 class TGNumberEntry;
 class TGColorSelect;
+class TEveGValuator;
 
 class TEveCaloLego;
 
@@ -30,8 +31,12 @@ private:
 protected:
    TEveCaloLego            *fM; // Model object.
 
-   TGColorSelect*    fFontColor;
    TGColorSelect*    fGridColor;
+
+   TGColorSelect*     fFontColor;
+   TEveGValuator     *fFontSize;
+   TEveGValuator     *fNZStep
+;
 public:
    TEveCaloLegoEditor(const TGWindow* p=0, Int_t width=170, Int_t height=30,
          UInt_t options=kChildFrame, Pixel_t back=GetDefaultFrameBackground());
@@ -42,6 +47,9 @@ public:
    // Declare callback/slot methods
    void DoFontColor(Pixel_t color);
    void DoGridColor(Pixel_t color);
+
+   void DoFontSize();
+   void DoNZStep();
 
    ClassDef(TEveCaloLegoEditor, 0); // GUI editor for TEveCaloLego.
 };
