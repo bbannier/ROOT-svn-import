@@ -133,29 +133,29 @@ private:
    TIterator    *fIterator;         //collection iterator
 
 protected:
-   TIter() : fIterator(0) { }
-
+   TIter() : fIterator(NULL) { }
+   
 public:
    TIter(const TCollection *col, Bool_t dir = kIterForward)
-        : fIterator(col ? col->MakeIterator(dir) : 0) { }
+        : fIterator(col ? col->MakeIterator(dir) : NULL) { }
    TIter(TIterator *it) : fIterator(it) { }
    TIter(const TIter &iter);
    TIter &operator=(const TIter &rhs);
    virtual            ~TIter() { SafeDelete(fIterator) }
    TObject           *operator()() { return Next(); }
-   TObject           *Next() { return fIterator ? fIterator->Next() : 0; }
-   const TCollection *GetCollection() const { return fIterator ? fIterator->GetCollection() : 0; }
+   TObject           *Next() { return fIterator ? fIterator->Next() : NULL; }
+   const TCollection *GetCollection() const { return fIterator ? fIterator->GetCollection() : NULL; }
    Option_t          *GetOption() const { return fIterator ? fIterator->GetOption() : ""; }
    void               Reset() { if (fIterator) fIterator->Reset(); }
    TIter &operator ++() {
          Next();
          return *this;
       }
-   TObject* operator*() const {
-         return dynamic_cast<TObject*>(fIterator);
+   bool operator !=(const TIter &_iter) const {
+         return ( (*fIterator) != *(_iter.fIterator));
       }
-   bool operator !=(const TIter &_iter) {
-         return (fIterator != _iter.fIterator);
+   TObject* operator*() const {
+     return *(*fIterator);
       }
 
    ClassDef(TIter,0)  //Iterator wrapper

@@ -142,6 +142,26 @@ public:
    const TCollection *GetCollection() const { return fMap; }
    TObject           *Next();
    void               Reset();
+   bool operator !=(const TIterator &aIter) const
+   {
+     if(NULL == (&aIter))
+       return fCursor;
+     
+     if ( aIter.IsA() == TMapIter::Class() ) {
+       const TMapIter &iter( dynamic_cast<const TMapIter &>(aIter) );
+       return (fCursor != iter.fCursor);
+       }
+       return false; // for base class we don't implement a comparison
+   }
+   bool operator !=(const TMapIter &aIter) const
+   {
+     if(NULL == (&aIter))
+       return fCursor;
+     return (fCursor != aIter.fCursor);
+   }
+   TObject* operator*() const {
+         return (fCursor? ((TPair *)(fCursor->operator*()))->Key(): NULL);
+      }
 
    ClassDef(TMapIter,0)  //Map iterator
 };

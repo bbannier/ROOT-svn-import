@@ -119,6 +119,27 @@ public:
    const TCollection *GetCollection() const { return fArray; }
    TObject           *Next();
    void              Reset();
+   bool operator !=(const TIterator &aIter) const
+   {
+     if(NULL == (&aIter))
+       return fCursor;
+     
+     if ( aIter.IsA() == TObjArrayIter::Class() ) {
+       const TObjArrayIter &iter( dynamic_cast<const TObjArrayIter &>(aIter) );
+       return (fCursor != iter.fCursor);
+       }
+       return false; // for base class we don't implement a comparison
+   }
+   bool operator !=(const TObjArrayIter &aIter) const
+   {
+     if(NULL == (&aIter))
+       return fCursor;
+     
+     return (fCursor != aIter.fCursor);
+   }
+   TObject* operator*() const {
+         return ( ((fCursor >= 0) && (fCursor < fArray->Capacity()))? fArray->fCont[fCursor]: NULL);
+      }
 
    ClassDef(TObjArrayIter,0)  //Object array iterator
 };

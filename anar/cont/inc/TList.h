@@ -167,6 +167,7 @@ public:
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
+
 class TListIter : public TIterator {
 
 protected:
@@ -191,6 +192,11 @@ public:
    void               SetOption(Option_t *option);
    TObject           *Next();
    void               Reset() { fStarted = kFALSE; }
+   bool operator !=(const TIterator &aIter) const;
+   bool operator !=(const TListIter &aIter) const;
+   TObject* operator*() const {
+         return (fCurCursor? fCurCursor->GetObject(): NULL);
+      }
 
    ClassDef(TListIter,0)  //Linked list iterator
 };

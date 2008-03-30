@@ -874,6 +874,29 @@ void TListIter::SetOption(Option_t *option)
    if (fCurCursor) fCurCursor->SetOption(option);
 }
 
+#include <iostream>
+//______________________________________________________________________________
+bool TListIter::operator !=(const TIterator &aIter) const
+{
+  if(NULL == (&aIter))
+    return fCurCursor;
+    
+  if ( (aIter.IsA() == TListIter::Class()) ) {
+    const TListIter &iter( dynamic_cast<const TListIter &>(aIter) );
+    return (fCurCursor != iter.fCurCursor);       
+    }
+    return false; // for base class we don't implement a comparison
+}
+
+//______________________________________________________________________________
+bool TListIter::operator !=(const TListIter &aIter) const
+{
+  if(NULL == (&aIter))
+    return (!fCurCursor);
+  
+  return (fCurCursor != aIter.fCurCursor);
+}
+
 //_______________________________________________________________________
 void TList::Streamer(TBuffer &b)
 {

@@ -426,6 +426,27 @@ public:
    Option_t          *GetOption() const;
    TObject           *Next();
    void               Reset() { SafeDelete(fLeafIter); SafeDelete(fTreeIter); }
+   bool operator !=(const TIterator &aIter) const
+   {
+     if(NULL == (&aIter))
+       return fLeafIter;
+     
+     if ( aIter.IsA() == TTreeFriendLeafIter::Class() ) {
+       const TTreeFriendLeafIter &iter( dynamic_cast<const TTreeFriendLeafIter &>(aIter) );
+       return (fLeafIter != iter.fLeafIter); // TODO: do we need to check fTreeIter as well?
+       }
+       return false; // for base class we don't implement a comparison
+   }
+   bool operator !=(const TTreeFriendLeafIter &aIter) const
+   {
+     if(NULL == (&aIter))
+       return fLeafIter;
+     
+     return (fLeafIter != aIter.fLeafIter);
+   }
+   TObject* operator*() const {
+         return NULL; // TODO: Needs to be implemented
+      }
 
    ClassDef(TTreeFriendLeafIter,0)  //Linked list iterator
  };
