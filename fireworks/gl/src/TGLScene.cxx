@@ -405,7 +405,7 @@ void TGLScene::UpdateSceneInfo(TGLRnrCtx& rnrCtx)
    // planes done in base-class.
    TGLSceneBase::UpdateSceneInfo(rnrCtx);
 
-   if (not sinfo->IsVisible())
+   if (!sinfo->IsVisible())
       return;
 
    sinfo->fVisibleElements.clear();
@@ -569,7 +569,7 @@ void TGLScene::RenderOpaque(TGLRnrCtx & rnrCtx)
    // Render opaque elements.
 
    TSceneInfo* sinfo = dynamic_cast<TSceneInfo*>(rnrCtx.GetSceneInfo());
-   if (not sinfo->fOpaqueElements.empty())
+   if (!sinfo->fOpaqueElements.empty())
        RenderAllPasses(rnrCtx, sinfo->fOpaqueElements, kTRUE);
 }
 
@@ -579,7 +579,7 @@ void TGLScene::RenderTransp(TGLRnrCtx & rnrCtx)
    // Render transparent elements.
 
    TSceneInfo* sinfo = dynamic_cast<TSceneInfo*>(rnrCtx.GetSceneInfo());
-   if (not sinfo->fTranspElements.empty())
+   if (!sinfo->fTranspElements.empty())
        RenderAllPasses(rnrCtx, sinfo->fTranspElements, kTRUE);
 }
 
@@ -589,7 +589,7 @@ void TGLScene::RenderSelOpaque(TGLRnrCtx & rnrCtx)
    // Render selected opaque elements.
 
    TSceneInfo* sinfo = dynamic_cast<TSceneInfo*>(rnrCtx.GetSceneInfo());
-   if (not sinfo->fSelOpaqueElements.empty())
+   if (!sinfo->fSelOpaqueElements.empty())
        RenderAllPasses(rnrCtx, sinfo->fSelOpaqueElements, kFALSE);
 }
 
@@ -599,7 +599,7 @@ void TGLScene::RenderSelTransp(TGLRnrCtx & rnrCtx)
    // Render selected transparent elements.
 
    TSceneInfo* sinfo = dynamic_cast<TSceneInfo*>(rnrCtx.GetSceneInfo());
-   if (not sinfo->fSelTranspElements.empty())
+   if (!sinfo->fSelTranspElements.empty())
        RenderAllPasses(rnrCtx, sinfo->fSelTranspElements, kFALSE);
 }
 

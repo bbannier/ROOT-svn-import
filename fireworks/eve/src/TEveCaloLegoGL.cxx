@@ -574,7 +574,7 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
 {
    // Render the calo lego-plot with OpenGL.
 
-   if (not rnrCtx.Selection() && not rnrCtx.Highlight())
+   if (!rnrCtx.Selection() && !rnrCtx.Highlight())
       DrawHistBase(rnrCtx);
  
    glPushAttrib(GL_ENABLE_BIT | GL_POLYGON_BIT);
