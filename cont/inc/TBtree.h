@@ -349,6 +349,26 @@ public:
    const TCollection  *GetCollection() const { return fTree; }
    TObject            *Next();
    void                Reset();
+   bool operator !=(const TIterator &aIter) const
+   {
+     if(NULL == (&aIter))
+       return fCursor;
+     
+     if ( aIter.IsA() == TBtreeIter::Class() ) {
+       const TBtreeIter &iter( dynamic_cast<const TBtreeIter &>(aIter) );
+       return (fCursor != iter.fCursor);
+       }
+       return false; // for base class we don't implement a comparison
+   }
+   bool operator !=(const TBtreeIter &aIter) const
+   {
+     if(NULL == (&aIter))
+       return fCursor;
+     return (fCursor != aIter.fCursor);
+   }
+   TObject* operator*() const {
+         return ( ((fCursor >= 0) && (fCursor < fTree->GetSize()))? (*fTree)[fCursor]: NULL );
+      }
 
    ClassDef(TBtreeIter,0)  //B-tree iterator
 };

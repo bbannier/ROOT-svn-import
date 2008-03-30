@@ -465,3 +465,30 @@ void THashTableIter::Reset()
       fCursor = fTable->Capacity() - 1;
    SafeDelete(fListCursor);
 }
+
+//______________________________________________________________________________
+bool THashTableIter::operator !=(const TIterator &aIter) const
+{
+  if(NULL == (&aIter))
+    return fListCursor;
+  
+  if ( aIter.IsA() == THashTableIter::Class() ) {
+    const THashTableIter &iter( dynamic_cast<const THashTableIter &>(aIter) );
+    return (fListCursor != iter.fListCursor);
+    }
+    return false; // for base class we don't implement a comparison
+}
+
+//______________________________________________________________________________
+bool THashTableIter::operator !=(const THashTableIter &aIter) const
+{
+  if(NULL == (&aIter))
+    return fListCursor;
+  
+  return (fListCursor != aIter.fListCursor);
+}
+
+//______________________________________________________________________________
+TObject* THashTableIter::operator*() const {
+      return (fListCursor? fListCursor->operator*() : NULL);
+}
