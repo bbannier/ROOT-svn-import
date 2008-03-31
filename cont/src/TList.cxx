@@ -29,14 +29,29 @@
 //         while ((TObject *obj = next()))                              //
 //            obj->Draw(next.GetOption());                              //
 //                                                                      //
-//    3) Using the TObjLink list entries (that wrap the TObject*):      //
+//    3) Using the TList iterator TListIter and std::for_each           //
+//       algorithm:                                                     //
+//         // A function object, which will be applied to each element  //
+//         // of the given range.                                       //
+//         struct STestFunctor {                                        //
+//            bool operator()(TObject *aObj) {                          //
+//               ...                                                    //
+//               return true;                                           //
+//            }                                                         //
+//        }                                                             //
+//        ...                                                           //
+//        ...                                                           //
+//        TIter iter(mylist);                                           //
+//        for_each( iter.Begin(), TIter::End(), STestFunctor() );       //
+//                                                                      //
+//    4) Using the TObjLink list entries (that wrap the TObject*):      //
 //         TObjLink *lnk = GetListOfPrimitives()->FirstLink();          //
 //         while (lnk) {                                                //
 //            lnk->GetObject()->Draw(lnk->GetOption());                 //
 //            lnk = lnk->Next();                                        //
 //         }                                                            //
 //                                                                      //
-//    4) Using the TList's After() and Before() member functions:       //
+//    5) Using the TList's After() and Before() member functions:       //
 //         TFree *idcur = this;                                         //
 //         while (idcur) {                                              //
 //            ...                                                       //
@@ -276,7 +291,7 @@ TObject *TList::After(const TObject *obj) const
    } else {
       Int_t idx;
       t = FindLink(obj, idx);
-      if (t) ((TList*)this)->fCache = t->Next();
+      if (t)((TList*)this)->fCache = t->Next();
    }
 
    if (t && t->Next())
@@ -309,7 +324,7 @@ TObject *TList::Before(const TObject *obj) const
    } else {
       Int_t idx;
       t = FindLink(obj, idx);
-      if (t) ((TList*)this)->fCache = t->Prev();
+      if (t)((TList*)this)->fCache = t->Prev();
    }
 
    if (t && t->Prev())
@@ -342,7 +357,7 @@ void TList::Clear(Option_t *option)
       // delete only heap objects marked OK to clear
       if (!nodel && tlk->GetObject() && tlk->GetObject()->IsOnHeap()) {
          if (tlk->GetObject()->TestBit(kCanDelete)) {
-            if(tlk->GetObject()->TestBit(kNotDeleted)) {
+            if (tlk->GetObject()->TestBit(kNotDeleted)) {
                TCollection::GarbageCollect(tlk->GetObject());
             }
          }
@@ -702,7 +717,7 @@ Bool_t TList::LnkCompare(TObjLink *l1, TObjLink *l2)
 
    Int_t cmp = l1->GetObject()->Compare(l2->GetObject());
 
-   if ((IsAscending() && cmp <=0) || (!IsAscending() && cmp > 0))
+   if ((IsAscending() && cmp <= 0) || (!IsAscending() && cmp > 0))
       return kTRUE;
    return kFALSE;
 }
@@ -761,7 +776,7 @@ TObjLink **TList::DoSort(TObjLink **head, Int_t n)
 
 //______________________________________________________________________________
 TObjLink::TObjLink(TObject *obj, TObjLink *prev)
-          : fNext(prev->fNext), fPrev(prev), fObject(obj)
+      : fNext(prev->fNext), fPrev(prev), fObject(obj)
 {
    // Create a new TObjLink.
 
@@ -781,7 +796,7 @@ ClassImp(TListIter)
 
 //______________________________________________________________________________
 TListIter::TListIter(const TList *l, Bool_t dir)
-        : fList(l), fCurCursor(0), fCursor(0), fDirection(dir), fStarted(kFALSE)
+      : fList(l), fCurCursor(0), fCursor(0), fDirection(dir), fStarted(kFALSE)
 {
    // Create a new list iterator. By default the iteration direction
    // is kIterForward. To go backward use kIterBackward.
@@ -800,7 +815,7 @@ TListIter::TListIter(const TListIter &iter) : TIterator(iter)
 }
 
 //______________________________________________________________________________
-TIterator &TListIter::operator=(const TIterator &rhs)
+TIterator &TListIter::operator=(const TIterator & rhs)
 {
    // Overridden assignment operator.
 
@@ -816,7 +831,7 @@ TIterator &TListIter::operator=(const TIterator &rhs)
 }
 
 //______________________________________________________________________________
-TListIter &TListIter::operator=(const TListIter &rhs)
+TListIter &TListIter::operator=(const TListIter & rhs)
 {
    // Overloaded assignment operator.
 
@@ -874,27 +889,30 @@ void TListIter::SetOption(Option_t *option)
    if (fCurCursor) fCurCursor->SetOption(option);
 }
 
-#include <iostream>
 //______________________________________________________________________________
 bool TListIter::operator !=(const TIterator &aIter) const
 {
-  if(NULL == (&aIter))
-    return fCurCursor;
-    
-  if ( (aIter.IsA() == TListIter::Class()) ) {
-    const TListIter &iter( dynamic_cast<const TListIter &>(aIter) );
-    return (fCurCursor != iter.fCurCursor);       
-    }
-    return false; // for base class we don't implement a comparison
+   // This operator compares two TIterator objects
+
+   if (NULL == (&aIter))
+      return fCurCursor;
+
+   if ((aIter.IsA() == TListIter::Class())) {
+      const TListIter &iter(dynamic_cast<const TListIter &>(aIter));
+      return (fCurCursor != iter.fCurCursor);
+   }
+   return false; // for base class we don't implement a comparison
 }
 
 //______________________________________________________________________________
 bool TListIter::operator !=(const TListIter &aIter) const
 {
-  if(NULL == (&aIter))
-    return (!fCurCursor);
-  
-  return (fCurCursor != aIter.fCurCursor);
+   // This operator compares two TListIter objects
+
+   if (NULL == (&aIter))
+      return fCurCursor;
+
+   return (fCurCursor != aIter.fCurCursor);
 }
 
 //_______________________________________________________________________
@@ -923,15 +941,15 @@ void TList::Streamer(TBuffer &b)
             } else {
                nbig = nch;
             }
-            readOption.resize(nbig,'\0');
-            b.ReadFastArray((char*) readOption.data(),nbig);
+            readOption.resize(nbig, '\0');
+            b.ReadFastArray((char*) readOption.data(), nbig);
             if (nch) {
-               Add(obj,readOption.c_str());
+               Add(obj, readOption.c_str());
             } else {
                Add(obj);
             }
          }
-         b.CheckByteCount(R__s, R__c,TList::IsA());
+         b.CheckByteCount(R__s, R__c, TList::IsA());
          return;
       }
 
@@ -945,7 +963,7 @@ void TList::Streamer(TBuffer &b)
          b >> obj;
          Add(obj);
       }
-      b.CheckByteCount(R__s, R__c,TList::IsA());
+      b.CheckByteCount(R__s, R__c, TList::IsA());
 
    } else {
       R__c = b.WriteVersion(TList::IsA(), kTRUE);
@@ -968,7 +986,7 @@ void TList::Streamer(TBuffer &b)
             nch = UChar_t(nbig);
             b << nch;
          }
-         b.WriteFastArray(lnk->GetAddOption(),nbig);
+         b.WriteFastArray(lnk->GetAddOption(), nbig);
 
          lnk = lnk->Next();
       }

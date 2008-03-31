@@ -37,9 +37,10 @@ class TMapIter;
 class TBrowser;
 
 
-class TMap : public TCollection {
+class TMap : public TCollection
+{
 
-friend class  TMapIter;
+   friend class  TMapIter;
 
 private:
    THashTable   *fTable;     //Hash table used to store TPair's
@@ -54,28 +55,38 @@ public:
    void              Add(TObject *key, TObject *value);
    Float_t           AverageCollisions() const;
    Int_t             Capacity() const;
-   void              Clear(Option_t *option="");
+   void              Clear(Option_t *option = "");
    Int_t             Collisions(const char *keyname) const;
    Int_t             Collisions(TObject *key) const;
-   void              Delete(Option_t *option="");
-   void              DeleteKeys() { Delete(); }
+   void              Delete(Option_t *option = "");
+   void              DeleteKeys() {
+      Delete();
+   }
    void              DeleteValues();
    void              DeleteAll();
    TObject          *FindObject(const char *keyname) const;
    TObject          *FindObject(const TObject *key) const;
-   TObject         **GetObjectRef(const TObject *obj) const { return fTable->GetObjectRef(obj); }
-   const THashTable *GetTable() const { return fTable; }
+   TObject         **GetObjectRef(const TObject *obj) const {
+      return fTable->GetObjectRef(obj);
+   }
+   const THashTable *GetTable() const {
+      return fTable;
+   }
    TObject          *GetValue(const char *keyname) const;
    TObject          *GetValue(const TObject *key) const;
-   TObject          *operator()(const char *keyname) const { return GetValue(keyname); }
-   TObject          *operator()(const TObject *key) const { return GetValue(key); }
+   TObject          *operator()(const char *keyname) const {
+      return GetValue(keyname);
+   }
+   TObject          *operator()(const TObject *key) const {
+      return GetValue(key);
+   }
    TIterator        *MakeIterator(Bool_t dir = kIterForward) const;
-   void              Print(Option_t *wildcard="") const;
+   void              Print(Option_t *wildcard = "") const;
    void              Print(Option_t *wildcard, Option_t *option) const;
    void              Rehash(Int_t newCapacity, Bool_t checkObjValidity = kTRUE);
    TObject          *Remove(TObject *key);
 
-   ClassDef(TMap,3)  //A (key,value) map
+   ClassDef(TMap, 3) //A (key,value) map
 };
 
 
@@ -87,7 +98,8 @@ public:
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-class TPair : public TObject {
+class TPair : public TObject
+{
 
 private:
    TObject  *fKey;
@@ -99,17 +111,33 @@ public:
    TPair(TObject *key, TObject *value) : fKey(key), fValue(value) { }
    TPair(const TPair &a) : TObject(), fKey(a.fKey), fValue(a.fValue) { }
    virtual               ~TPair() { }
-   Bool_t                IsFolder() const { return kTRUE;}
+   Bool_t                IsFolder() const {
+      return kTRUE;
+   }
    virtual void          Browse(TBrowser *b);
-   const char           *GetName() const { return fKey->GetName(); }
-   const char           *GetTitle() const { return fKey->GetTitle(); }
-   ULong_t               Hash() const { return fKey->Hash(); }
-   Bool_t                IsEqual(const TObject *obj) const { return fKey->IsEqual(obj); }
-   TObject              *Key() const { return fKey; }
-   TObject              *Value() const { return fValue; }
-   void                  SetValue(TObject *val) { fValue = val; }
+   const char           *GetName() const {
+      return fKey->GetName();
+   }
+   const char           *GetTitle() const {
+      return fKey->GetTitle();
+   }
+   ULong_t               Hash() const {
+      return fKey->Hash();
+   }
+   Bool_t                IsEqual(const TObject *obj) const {
+      return fKey->IsEqual(obj);
+   }
+   TObject              *Key() const {
+      return fKey;
+   }
+   TObject              *Value() const {
+      return fValue;
+   }
+   void                  SetValue(TObject *val) {
+      fValue = val;
+   }
 
-   ClassDef(TPair,0); // Pair TObject*, TObject*
+   ClassDef(TPair, 0); // Pair TObject*, TObject*
 };
 
 typedef TPair   TAssoc;     // for backward compatibility
@@ -123,7 +151,8 @@ typedef TPair   TAssoc;     // for backward compatibility
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-class TMapIter : public TIterator {
+class TMapIter : public TIterator
+{
 
 private:
    const TMap       *fMap;         //map being iterated
@@ -139,31 +168,16 @@ public:
    TIterator &operator=(const TIterator &rhs);
    TMapIter  &operator=(const TMapIter &rhs);
 
-   const TCollection *GetCollection() const { return fMap; }
+   const TCollection *GetCollection() const {
+      return fMap;
+   }
    TObject           *Next();
    void               Reset();
-   bool operator !=(const TIterator &aIter) const
-   {
-     if(NULL == (&aIter))
-       return fCursor;
-     
-     if ( aIter.IsA() == TMapIter::Class() ) {
-       const TMapIter &iter( dynamic_cast<const TMapIter &>(aIter) );
-       return (fCursor != iter.fCursor);
-       }
-       return false; // for base class we don't implement a comparison
-   }
-   bool operator !=(const TMapIter &aIter) const
-   {
-     if(NULL == (&aIter))
-       return fCursor;
-     return (fCursor != aIter.fCursor);
-   }
-   TObject* operator*() const {
-         return (fCursor? ((TPair *)(fCursor->operator*()))->Key(): NULL);
-      }
+   bool operator !=(const TIterator &aIter) const;
+   bool operator !=(const TMapIter &aIter) const;
+   TObject* operator*() const;
 
-   ClassDef(TMapIter,0)  //Map iterator
+   ClassDef(TMapIter, 0) //Map iterator
 };
 
 #endif

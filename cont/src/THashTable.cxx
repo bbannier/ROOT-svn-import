@@ -55,7 +55,7 @@ THashTable::THashTable(Int_t capacity, Int_t rehashlevel)
    } else if (capacity == 0)
       capacity = TCollection::kInitHashTableCapacity;
 
-   fSize = (Int_t)TMath::NextPrime(TMath::Max(capacity,(int)TCollection::kInitHashTableCapacity));
+   fSize = (Int_t)TMath::NextPrime(TMath::Max(capacity, (int)TCollection::kInitHashTableCapacity));
    fCont = new TList* [fSize];
    memset(fCont, 0, fSize*sizeof(TList*));
 
@@ -106,18 +106,18 @@ void THashTable::AddAll(const TCollection *col)
    // Hashing after AddAll can be much more expensive than
    // hashing before, as we need to add more elements.
    // We assume an ideal hash, i.e. fUsedSlots==fSize.
-   Int_t sumEntries=fEntries+col->GetEntries();
-   Bool_t rehashBefore=fRehashLevel && (sumEntries > fSize*fRehashLevel);
+   Int_t sumEntries = fEntries + col->GetEntries();
+   Bool_t rehashBefore = fRehashLevel && (sumEntries > fSize * fRehashLevel);
    if (rehashBefore)
       Rehash(sumEntries);
 
    // prevent Add from Rehashing
-   Int_t saveRehashLevel=fRehashLevel;
-   fRehashLevel=0;
+   Int_t saveRehashLevel = fRehashLevel;
+   fRehashLevel = 0;
 
    TCollection::AddAll(col);
 
-   fRehashLevel=saveRehashLevel;
+   fRehashLevel = saveRehashLevel;
    // If we didn't Rehash before, we might have to do it
    // now, due to a non-perfect hash function.
    if (!rehashBefore && fRehashLevel && AverageCollisions() > fRehashLevel)
@@ -370,7 +370,7 @@ THashTableIter::THashTableIter(const THashTableIter &iter) : TIterator(iter)
 }
 
 //______________________________________________________________________________
-TIterator &THashTableIter::operator=(const TIterator &rhs)
+TIterator &THashTableIter::operator=(const TIterator & rhs)
 {
    // Overridden assignment operator.
 
@@ -388,7 +388,7 @@ TIterator &THashTableIter::operator=(const TIterator &rhs)
 }
 
 //______________________________________________________________________________
-THashTableIter &THashTableIter::operator=(const THashTableIter &rhs)
+THashTableIter &THashTableIter::operator=(const THashTableIter & rhs)
 {
    // Overloaded assignment operator.
 
@@ -437,15 +437,15 @@ Int_t THashTableIter::NextSlot()
    // Returns index of next slot in table containing list to be iterated.
 
    if (fDirection == kIterForward) {
-      for ( ; fCursor < fTable->Capacity() && fTable->fCont[fCursor] == 0;
-              fCursor++) { }
+      for (; fCursor < fTable->Capacity() && fTable->fCont[fCursor] == 0;
+            fCursor++) { }
 
       if (fCursor < fTable->Capacity())
          return fCursor++;
 
    } else {
-      for ( ; fCursor >= 0 && fTable->fCont[fCursor] == 0;
-              fCursor--) { }
+      for (; fCursor >= 0 && fTable->fCont[fCursor] == 0;
+            fCursor--) { }
 
       if (fCursor >= 0)
          return fCursor--;
@@ -469,26 +469,31 @@ void THashTableIter::Reset()
 //______________________________________________________________________________
 bool THashTableIter::operator !=(const TIterator &aIter) const
 {
-  if(NULL == (&aIter))
-    return fListCursor;
-  
-  if ( aIter.IsA() == THashTableIter::Class() ) {
-    const THashTableIter &iter( dynamic_cast<const THashTableIter &>(aIter) );
-    return (fListCursor != iter.fListCursor);
-    }
-    return false; // for base class we don't implement a comparison
+   // This operator compares two TIterator objects
+
+   if (NULL == (&aIter))
+      return fListCursor;
+
+   if (aIter.IsA() == THashTableIter::Class()) {
+      const THashTableIter &iter(dynamic_cast<const THashTableIter &>(aIter));
+      return (fListCursor != iter.fListCursor);
+   }
+   return false; // for base class we don't implement a comparison
 }
 
 //______________________________________________________________________________
 bool THashTableIter::operator !=(const THashTableIter &aIter) const
 {
-  if(NULL == (&aIter))
-    return fListCursor;
-  
-  return (fListCursor != aIter.fListCursor);
+   // This operator compares two THashTableIter objects
+
+   if (NULL == (&aIter))
+      return fListCursor;
+
+   return (fListCursor != aIter.fListCursor);
 }
 
 //______________________________________________________________________________
-TObject* THashTableIter::operator*() const {
-      return (fListCursor? fListCursor->operator*() : NULL);
+TObject* THashTableIter::operator*() const
+{
+   return (fListCursor ? fListCursor->operator*() : NULL);
 }

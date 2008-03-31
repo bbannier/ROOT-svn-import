@@ -27,10 +27,11 @@
 #endif
 
 
-class TObjArray : public TSeqCollection {
+class TObjArray : public TSeqCollection
+{
 
-friend class TObjArrayIter;
-friend class TClonesArray;
+   friend class TObjArrayIter;
+   friend class TClonesArray;
 
 protected:
    TObject     **fCont;        //!Array contents
@@ -47,18 +48,24 @@ public:
    TObjArray(const TObjArray &a);
    virtual          ~TObjArray();
    TObjArray& operator=(const TObjArray&);
-   virtual void     Clear(Option_t *option="");
+   virtual void     Clear(Option_t *option = "");
    virtual void     Compress();
-   virtual void     Delete(Option_t *option="");
+   virtual void     Delete(Option_t *option = "");
    virtual void     Expand(Int_t newSize);   // expand or shrink an array
    Int_t            GetEntries() const;
-   Int_t            GetEntriesFast() const {return GetAbsLast()+1;}  //only OK when no gaps
+   Int_t            GetEntriesFast() const {
+      return GetAbsLast() + 1;   //only OK when no gaps
+   }
    Int_t            GetLast() const;
    TObject        **GetObjectRef(const TObject *obj) const;
-   Bool_t           IsEmpty() const { return GetAbsLast() == -1; }
+   Bool_t           IsEmpty() const {
+      return GetAbsLast() == -1;
+   }
    TIterator       *MakeIterator(Bool_t dir = kIterForward) const;
 
-   void             Add(TObject *obj) { AddLast(obj); }
+   void             Add(TObject *obj) {
+      AddLast(obj);
+   }
    virtual void     AddFirst(TObject *obj);
    virtual void     AddLast(TObject *obj);
    virtual void     AddAt(TObject *obj, Int_t idx);
@@ -73,22 +80,26 @@ public:
    virtual void     RecursiveRemove(TObject *obj);
 
    TObject         *At(Int_t idx) const;
-   TObject         *UncheckedAt(Int_t i) const { return fCont[i-fLowerBound]; }
+   TObject         *UncheckedAt(Int_t i) const {
+      return fCont[i-fLowerBound];
+   }
    TObject         *Before(const TObject *obj) const;
    TObject         *After(const TObject *obj) const;
    TObject         *First() const;
    TObject         *Last() const;
    virtual TObject *&operator[](Int_t i);
    virtual TObject *operator[](Int_t i) const;
-   Int_t            LowerBound() const { return fLowerBound; }
+   Int_t            LowerBound() const {
+      return fLowerBound;
+   }
    Int_t            IndexOf(const TObject *obj) const;
    void             SetLast(Int_t last);
 
-   virtual void     Randomize(Int_t ntimes=1);
+   virtual void     Randomize(Int_t ntimes = 1);
    virtual void     Sort(Int_t upto = kMaxInt);
    virtual Int_t    BinarySearch(TObject *obj, Int_t upto = kMaxInt); // the TObjArray has to be sorted, -1 == not found !!
 
-   ClassDef(TObjArray,3)  //An array of objects
+   ClassDef(TObjArray, 3) //An array of objects
 };
 
 
@@ -100,7 +111,8 @@ public:
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-class TObjArrayIter : public TIterator {
+class TObjArrayIter : public TIterator
+{
 
 private:
    const TObjArray  *fArray;     //array being iterated
@@ -116,32 +128,16 @@ public:
    TIterator     &operator=(const TIterator &rhs);
    TObjArrayIter &operator=(const TObjArrayIter &rhs);
 
-   const TCollection *GetCollection() const { return fArray; }
+   const TCollection *GetCollection() const {
+      return fArray;
+   }
    TObject           *Next();
    void              Reset();
-   bool operator !=(const TIterator &aIter) const
-   {
-     if(NULL == (&aIter))
-       return fCursor;
-     
-     if ( aIter.IsA() == TObjArrayIter::Class() ) {
-       const TObjArrayIter &iter( dynamic_cast<const TObjArrayIter &>(aIter) );
-       return (fCursor != iter.fCursor);
-       }
-       return false; // for base class we don't implement a comparison
-   }
-   bool operator !=(const TObjArrayIter &aIter) const
-   {
-     if(NULL == (&aIter))
-       return fCursor;
-     
-     return (fCursor != aIter.fCursor);
-   }
-   TObject* operator*() const {
-         return ( ((fCursor >= 0) && (fCursor < fArray->Capacity()))? fArray->fCont[fCursor]: NULL);
-      }
+   bool operator !=(const TIterator &aIter) const;
+   bool operator !=(const TObjArrayIter &aIter) const;
+   TObject* operator*() const;
 
-   ClassDef(TObjArrayIter,0)  //Object array iterator
+   ClassDef(TObjArrayIter, 0) //Object array iterator
 };
 
 
@@ -149,15 +145,15 @@ public:
 
 inline Bool_t TObjArray::BoundsOk(const char *where, Int_t at) const
 {
-   return (at < fLowerBound || at-fLowerBound >= fSize)
-                  ? OutOfBoundsError(where, at)
-                  : kTRUE;
+   return (at < fLowerBound || at - fLowerBound >= fSize)
+          ? OutOfBoundsError(where, at)
+          : kTRUE;
 }
 
 inline TObject *TObjArray::At(Int_t i) const
 {
    // Return the object at position i. Returns 0 if i is out of bounds.
-   int j = i-fLowerBound;
+   int j = i - fLowerBound;
    if (j >= 0 && j < fSize) return fCont[j];
    BoundsOk("At", i);
    return 0;

@@ -31,9 +31,10 @@
 
 class TSystem;
 
-class TRefArray : public TSeqCollection {
+class TRefArray : public TSeqCollection
+{
 
-friend class TRefArrayIter;
+   friend class TRefArrayIter;
 
 protected:
    TProcessID   *fPID;         //Pointer to Process Unique Identifier
@@ -53,20 +54,28 @@ public:
    TRefArray(const TRefArray &a);
    TRefArray& operator=(const TRefArray &a);
    virtual          ~TRefArray();
-   virtual void     Clear(Option_t *option="");
+   virtual void     Clear(Option_t *option = "");
    virtual void     Compress();
-   virtual void     Delete(Option_t *option="");
+   virtual void     Delete(Option_t *option = "");
    virtual void     Expand(Int_t newSize);   // expand or shrink an array
    Int_t            GetEntries() const;
-   Int_t            GetEntriesFast() const {return GetAbsLast()+1;}  //only OK when no gaps
+   Int_t            GetEntriesFast() const {
+      return GetAbsLast() + 1;   //only OK when no gaps
+   }
    Int_t            GetLast() const;
    TObject        **GetObjectRef(const TObject *obj) const;
-   TProcessID      *GetPID() const {return fPID;}
+   TProcessID      *GetPID() const {
+      return fPID;
+   }
    UInt_t           GetUID(Int_t at) const;
-   Bool_t           IsEmpty() const { return GetAbsLast() == -1; }
+   Bool_t           IsEmpty() const {
+      return GetAbsLast() == -1;
+   }
    TIterator       *MakeIterator(Bool_t dir = kIterForward) const;
 
-   void             Add(TObject *obj) { AddLast(obj); }
+   void             Add(TObject *obj) {
+      AddLast(obj);
+   }
    virtual void     AddFirst(TObject *obj);
    virtual void     AddLast(TObject *obj);
    virtual void     AddAt(TObject *obj, Int_t idx);
@@ -83,14 +92,16 @@ public:
    TObject         *First() const;
    TObject         *Last() const;
    virtual TObject *operator[](Int_t i) const;
-   Int_t            LowerBound() const { return fLowerBound; }
+   Int_t            LowerBound() const {
+      return fLowerBound;
+   }
    Int_t            IndexOf(const TObject *obj) const;
    void             SetLast(Int_t last);
 
    virtual void     Sort(Int_t upto = kMaxInt);
    virtual Int_t    BinarySearch(TObject *obj, Int_t upto = kMaxInt); // the TRefArray has to be sorted, -1 == not found !!
 
-   ClassDef(TRefArray,1)  //An array of references to TObjects
+   ClassDef(TRefArray, 1) //An array of references to TObjects
 };
 
 
@@ -102,7 +113,8 @@ public:
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-class TRefArrayIter : public TIterator {
+class TRefArrayIter : public TIterator
+{
 
 private:
    const TRefArray  *fArray;      //array being iterated
@@ -118,32 +130,16 @@ public:
    TIterator     &operator=(const TIterator &rhs);
    TRefArrayIter &operator=(const TRefArrayIter &rhs);
 
-   const TCollection *GetCollection() const { return fArray; }
+   const TCollection *GetCollection() const {
+      return fArray;
+   }
    TObject           *Next();
    void              Reset();
-   bool operator !=(const TIterator &aIter) const
-   {
-     if(NULL == (&aIter))
-       return fCursor;
-     
-     if ( aIter.IsA() == TRefArrayIter::Class() ) {
-       const TRefArrayIter &iter( dynamic_cast<const TRefArrayIter &>(aIter) );
-       return (fCursor != iter.fCursor);
-       }
-       return false; // for base class we don't implement a comparison
-   }
-   bool operator !=(const TRefArrayIter &aIter) const
-   {
-     if(NULL == (&aIter))
-       return fCursor;
-     
-     return (fCursor != aIter.fCursor);
-   }
-   TObject* operator*() const {
-         return ( ((fCursor >= 0) && (fCursor < fArray->Capacity()))? fArray->At(fCursor): NULL );
-      }
+   bool operator !=(const TIterator &aIter) const;
+   bool operator !=(const TRefArrayIter &aIter) const;
+   TObject* operator*() const;
 
-   ClassDef(TRefArrayIter,0)  //Object array iterator
+   ClassDef(TRefArrayIter, 0) //Object array iterator
 };
 
 
@@ -151,18 +147,18 @@ public:
 
 inline Bool_t TRefArray::BoundsOk(const char *where, Int_t at) const
 {
-   return (at < fLowerBound || at-fLowerBound >= fSize)
-                  ? OutOfBoundsError(where, at)
-                  : kTRUE;
+   return (at < fLowerBound || at - fLowerBound >= fSize)
+          ? OutOfBoundsError(where, at)
+          : kTRUE;
 }
 
 inline TObject *TRefArray::operator[](Int_t at) const
 {
-   int j = at-fLowerBound;
+   int j = at - fLowerBound;
    if (j >= 0 && j < fSize) {
       if (!fPID) return 0;
       TObject *obj = fPID->GetObjectWithID(fUIDs[j]);
-      if (obj==0) obj = GetFromTable(j);
+      if (obj == 0) obj = GetFromTable(j);
       return obj;
    }
    BoundsOk("At", at);
@@ -172,11 +168,11 @@ inline TObject *TRefArray::operator[](Int_t at) const
 inline TObject *TRefArray::At(Int_t at) const
 {
    // Return the object at position i. Returns 0 if i is out of bounds.
-   int j = at-fLowerBound;
+   int j = at - fLowerBound;
    if (j >= 0 && j < fSize) {
       if (!fPID) return 0;
       TObject *obj = fPID->GetObjectWithID(fUIDs[j]);
-      if (obj==0) obj = GetFromTable(j);
+      if (obj == 0) obj = GetFromTable(j);
       return obj;
    }
    BoundsOk("At", at);
