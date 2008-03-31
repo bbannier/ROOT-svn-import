@@ -109,28 +109,10 @@ public:
    const TCollection *GetCollection() const { return fCol; }
    TObject           *Next();
    void              Reset();
-   bool operator !=(const TIterator &aIter) const
-   {
-     if(NULL == (&aIter))
-       return fCursor;
-     
-     if ( aIter.IsA() == TOrdCollectionIter::Class() ) {
-       const TOrdCollectionIter &iter( dynamic_cast<const TOrdCollectionIter &>(aIter) );
-       return (fCursor != iter.fCursor);
-       }
-       return false; // for base class we don't implement a comparison
-   }
-   bool operator !=(const TOrdCollectionIter &aIter) const
-   {
-     if(NULL == (&aIter))
-       return fCursor;
-     
-     return (fCursor != aIter.fCursor);
-   }
-   TObject* operator*() const {
-     return ( ((fCursor >= 0) && (fCursor < fCol->GetSize()))? fCol->At(fCursor): NULL);
-      }
-
+   bool operator !=(const TIterator &aIter) const;
+   bool operator !=(const TOrdCollectionIter &aIter) const;
+   TObject* operator*() const;
+   
    ClassDef(TOrdCollectionIter,0)  //Ordered collection iterator
 };
 

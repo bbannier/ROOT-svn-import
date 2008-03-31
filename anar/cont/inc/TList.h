@@ -36,9 +36,10 @@ class TObjLink;
 class TListIter;
 
 
-class TList : public TSeqCollection {
+class TList : public TSeqCollection
+{
 
-friend  class TListIter;
+   friend  class TListIter;
 
 protected:
    TObjLink  *fFirst;     //! pointer to first entry in linked list
@@ -50,8 +51,8 @@ protected:
    TObjLink          *FindLink(const TObject *obj, Int_t &idx) const;
    TObjLink         **DoSort(TObjLink **head, Int_t n);
    Bool_t             LnkCompare(TObjLink *l1, TObjLink *l2);
-   virtual TObjLink  *NewLink(TObject *obj, TObjLink *prev = 0);
-   virtual TObjLink  *NewOptLink(TObject *obj, Option_t *opt, TObjLink *prev = 0);
+   virtual TObjLink  *NewLink(TObject *obj, TObjLink *prev = NULL);
+   virtual TObjLink  *NewOptLink(TObject *obj, Option_t *opt, TObjLink *prev = NULL);
    virtual void       DeleteLink(TObjLink *lnk);
 
 private:
@@ -59,17 +60,21 @@ private:
    TList& operator=(const TList&);  // not implemented
 
 public:
-   TList() : fFirst(0), fLast(0), fCache(0), fAscending(kTRUE) { }
-   TList(TObject *) : fFirst(0), fLast(0), fCache(0), fAscending(kTRUE) { } // for backward compatibility, don't use
+   TList() : fFirst(NULL), fLast(NULL), fCache(NULL), fAscending(kTRUE) { }
+   TList(TObject *) : fFirst(NULL), fLast(NULL), fCache(NULL), fAscending(kTRUE) { } // for backward compatibility, don't use
    virtual           ~TList();
-   virtual void      Clear(Option_t *option="");
-   virtual void      Delete(Option_t *option="");
+   virtual void      Clear(Option_t *option = "");
+   virtual void      Delete(Option_t *option = "");
    virtual TObject  *FindObject(const char *name) const;
    virtual TObject  *FindObject(const TObject *obj) const;
    virtual TIterator *MakeIterator(Bool_t dir = kIterForward) const;
 
-   virtual void      Add(TObject *obj) { AddLast(obj); }
-   virtual void      Add(TObject *obj, Option_t *opt) { AddLast(obj, opt); }
+   virtual void      Add(TObject *obj) {
+      AddLast(obj);
+   }
+   virtual void      Add(TObject *obj, Option_t *opt) {
+      AddLast(obj, opt);
+   }
    virtual void      AddFirst(TObject *obj);
    virtual void      AddFirst(TObject *obj, Option_t *opt);
    virtual void      AddLast(TObject *obj);
@@ -87,15 +92,21 @@ public:
    virtual TObject  *After(const TObject *obj) const;
    virtual TObject  *Before(const TObject *obj) const;
    virtual TObject  *First() const;
-   virtual TObjLink *FirstLink() const { return fFirst; }
+   virtual TObjLink *FirstLink() const {
+      return fFirst;
+   }
    virtual TObject **GetObjectRef(const TObject *obj) const;
    virtual TObject  *Last() const;
-   virtual TObjLink *LastLink() const { return fLast; }
+   virtual TObjLink *LastLink() const {
+      return fLast;
+   }
 
    virtual void      Sort(Bool_t order = kSortAscending);
-   Bool_t            IsAscending() { return fAscending; }
+   Bool_t            IsAscending() {
+      return fAscending;
+   }
 
-   ClassDef(TList,5)  //Doubly linked list
+   ClassDef(TList, 5) //Doubly linked list
 };
 
 
@@ -106,9 +117,10 @@ public:
 // Wrapper around a TObject so it can be stored in a TList.             //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
-class TObjLink {
+class TObjLink
+{
 
-friend  class TList;
+   friend  class TList;
 
 private:
    TObjLink   *fNext;
@@ -119,21 +131,37 @@ private:
    TObjLink& operator=(const TObjLink&); // not implemented
 
 protected:
-   TObjLink() : fNext(0), fPrev(0), fObject(0) { fNext = fPrev = this; }
+   TObjLink() : fNext(NULL), fPrev(NULL), fObject(NULL) {
+      fNext = fPrev = this;
+   }
 
 public:
-   TObjLink(TObject *obj) : fNext(0), fPrev(0), fObject(obj) { }
+   TObjLink(TObject *obj) : fNext(NULL), fPrev(NULL), fObject(obj) { }
    TObjLink(TObject *obj, TObjLink *lnk);
    virtual ~TObjLink() { }
 
-   TObject                *GetObject() const { return fObject; }
-   TObject               **GetObjectRef() { return &fObject; }
-   void                    SetObject(TObject *obj) { fObject = obj; }
-   virtual Option_t       *GetAddOption() const { return ""; }
-   virtual Option_t       *GetOption() const { return fObject->GetOption(); }
+   TObject                *GetObject() const {
+      return fObject;
+   }
+   TObject               **GetObjectRef() {
+      return &fObject;
+   }
+   void                    SetObject(TObject *obj) {
+      fObject = obj;
+   }
+   virtual Option_t       *GetAddOption() const {
+      return "";
+   }
+   virtual Option_t       *GetOption() const {
+      return fObject->GetOption();
+   }
    virtual void            SetOption(Option_t *) { }
-   TObjLink               *Next() { return fNext; }
-   TObjLink               *Prev() { return fPrev; }
+   TObjLink               *Next() {
+      return fNext;
+   }
+   TObjLink               *Prev() {
+      return fPrev;
+   }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -144,7 +172,8 @@ public:
 // an option string.                                                    //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
-class TObjOptLink : public TObjLink {
+class TObjOptLink : public TObjLink
+{
 
 private:
    TString   fOption;
@@ -153,9 +182,15 @@ public:
    TObjOptLink(TObject *obj, Option_t *opt) : TObjLink(obj), fOption(opt) { }
    TObjOptLink(TObject *obj, TObjLink *lnk, Option_t *opt) : TObjLink(obj, lnk), fOption(opt) { }
    ~TObjOptLink() { }
-   Option_t        *GetAddOption() const { return fOption.Data(); }
-   Option_t        *GetOption() const { return fOption.Data(); }
-   void             SetOption(Option_t *option) { fOption = option; }
+   Option_t        *GetAddOption() const {
+      return fOption.Data();
+   }
+   Option_t        *GetOption() const {
+      return fOption.Data();
+   }
+   void             SetOption(Option_t *option) {
+      fOption = option;
+   }
 };
 
 
@@ -168,7 +203,8 @@ public:
 //////////////////////////////////////////////////////////////////////////
 
 
-class TListIter : public TIterator {
+class TListIter : public TIterator
+{
 
 protected:
    const TList       *fList;         //list being iterated
@@ -178,7 +214,7 @@ protected:
    Bool_t             fStarted;      //iteration started
 
    TListIter() : fList(0), fCurCursor(0), fCursor(0), fDirection(kTRUE),
-      fStarted(kFALSE) { }
+         fStarted(kFALSE) { }
 
 public:
    TListIter(const TList *l, Bool_t dir = kIterForward);
@@ -187,18 +223,22 @@ public:
    TIterator &operator=(const TIterator &rhs);
    TListIter &operator=(const TListIter &rhs);
 
-   const TCollection *GetCollection() const { return fList; }
+   const TCollection *GetCollection() const {
+      return fList;
+   }
    Option_t          *GetOption() const;
    void               SetOption(Option_t *option);
    TObject           *Next();
-   void               Reset() { fStarted = kFALSE; }
+   void               Reset() {
+      fStarted = kFALSE;
+   }
    bool operator !=(const TIterator &aIter) const;
    bool operator !=(const TListIter &aIter) const;
    TObject* operator*() const {
-         return (fCurCursor? fCurCursor->GetObject(): NULL);
-      }
+      return (fCurCursor ? fCurCursor->GetObject() : NULL);
+   }
 
-   ClassDef(TListIter,0)  //Linked list iterator
+   ClassDef(TListIter, 0) //Linked list iterator
 };
 
 #endif

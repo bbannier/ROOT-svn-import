@@ -97,7 +97,7 @@ TRefArray::TRefArray(const TRefArray &a) : TSeqCollection()
 }
 
 //______________________________________________________________________________
-TRefArray& TRefArray::operator=(const TRefArray &a)
+TRefArray& TRefArray::operator=(const TRefArray & a)
 {
    // Assignment operator.
 
@@ -151,7 +151,7 @@ void TRefArray::AddLast(TObject *obj)
    // Add object in the next empty slot in the array. Expand the array
    // if necessary.
 
-   AddAtAndExpand(obj, GetAbsLast()+1+fLowerBound);
+   AddAtAndExpand(obj, GetAbsLast() + 1 + fLowerBound);
 }
 
 //______________________________________________________________________________
@@ -174,7 +174,7 @@ void TRefArray::AddBefore(const TObject *before, TObject *obj)
          Error("AddBefore", "cannot add before lowerbound (%d)", fLowerBound);
          return;
       }
-      AddAt(obj, idx+fLowerBound-1);
+      AddAt(obj, idx + fLowerBound - 1);
    }
 }
 
@@ -194,7 +194,7 @@ void TRefArray::AddAfter(const TObject *after, TObject *obj)
          Error("AddAfter", "after not found, object not added");
          return;
       }
-      AddAtAndExpand(obj, idx+fLowerBound+1);
+      AddAtAndExpand(obj, idx + fLowerBound + 1);
    }
 }
 
@@ -209,11 +209,11 @@ void TRefArray::AddAtAndExpand(TObject *obj, Int_t idx)
       Error("AddAt", "out of bounds at %d in %lx", idx, this);
       return;
    }
-   if (idx-fLowerBound >= fSize)
-      Expand(TMath::Max(idx-fLowerBound+1, GrowBy(fSize)));
+   if (idx -fLowerBound >= fSize)
+      Expand(TMath::Max(idx - fLowerBound + 1, GrowBy(fSize)));
 
    fUIDs[idx-fLowerBound] = TProcessID::AssignID(obj);
-   fLast = TMath::Max(idx-fLowerBound, GetAbsLast());
+   fLast = TMath::Max(idx - fLowerBound, GetAbsLast());
    Changed();
 }
 
@@ -227,7 +227,7 @@ void TRefArray::AddAt(TObject *obj, Int_t idx)
    if (!BoundsOk("AddAt", idx)) return;
 
    fUIDs[idx-fLowerBound] = TProcessID::AssignID(obj);
-   fLast = TMath::Max(idx-fLowerBound, GetAbsLast());
+   fLast = TMath::Max(idx - fLowerBound, GetAbsLast());
    Changed();
 }
 
@@ -245,7 +245,7 @@ Int_t  TRefArray::AddAtFree(TObject *obj)
             fUIDs[i] = TProcessID::AssignID(obj);
             fLast = TMath::Max(i, GetAbsLast());
             Changed();
-            return i+fLowerBound;
+            return i + fLowerBound;
          }
    }
    AddLast(obj);
@@ -260,7 +260,7 @@ TObject *TRefArray::After(const TObject *obj) const
    if (!obj || !fPID) return 0;
 
    Int_t idx = IndexOf(obj) - fLowerBound;
-   if (idx == -1 || idx == fSize-1) return 0;
+   if (idx == -1 || idx == fSize - 1) return 0;
 
    return fPID->GetObjectWithID(fUIDs[idx+1]);
 }
@@ -286,7 +286,7 @@ void TRefArray::Clear(Option_t *)
 
    fLast = - 1;
 
-   for (Int_t j=0 ; j < fSize; j++) fUIDs[j] = 0;
+   for (Int_t j = 0 ; j < fSize; j++) fUIDs[j] = 0;
 
    Changed();
 }
@@ -307,7 +307,7 @@ void TRefArray::Compress()
 
    fLast = j - 1;
 
-   for ( ; j < fSize; j++) fUIDs[j] = 0;
+   for (; j < fSize; j++) fUIDs[j] = 0;
 }
 
 //______________________________________________________________________________
@@ -318,7 +318,10 @@ void TRefArray::Delete(Option_t *)
    fLast = -1;
 
    fSize = 0;
-   if (fUIDs) {delete [] fUIDs; fUIDs = 0;}
+   if (fUIDs) {
+      delete [] fUIDs;
+      fUIDs = 0;
+   }
 
    Changed();
 }
@@ -329,17 +332,17 @@ void TRefArray::Expand(Int_t newSize)
    // Expand or shrink the array to newSize elements.
 
    if (newSize < 0) {
-      Error ("Expand", "newSize must be positive (%d)", newSize);
+      Error("Expand", "newSize must be positive (%d)", newSize);
       return;
    }
    if (newSize == fSize) return;
    UInt_t *temp = fUIDs;
    if (newSize != 0) {
       fUIDs = new UInt_t[newSize];
-      if (newSize < fSize) memcpy(fUIDs,temp, newSize*sizeof(UInt_t));
+      if (newSize < fSize) memcpy(fUIDs, temp, newSize*sizeof(UInt_t));
       else {
-         memcpy(fUIDs,temp,fSize*sizeof(UInt_t));
-         memset(&fUIDs[fSize],0,(newSize-fSize)*sizeof(UInt_t));
+         memcpy(fUIDs, temp, fSize*sizeof(UInt_t));
+         memset(&fUIDs[fSize], 0, (newSize - fSize)*sizeof(UInt_t));
       }
    } else {
       fUIDs = 0;
@@ -380,33 +383,33 @@ void TRefArray::Streamer(TBuffer &R__b)
       R__b >> pidf;
       pidf += R__b.GetPidOffset();
       fPID = R__b.ReadProcessID(pidf);
-      if (gDebug > 1) printf("Reading TRefArray, pidf=%d, fPID=%lx, nobjects=%d\n",pidf,(Long_t)fPID,nobjects);
+      if (gDebug > 1) printf("Reading TRefArray, pidf=%d, fPID=%lx, nobjects=%d\n", pidf, (Long_t)fPID, nobjects);
       for (Int_t i = 0; i < nobjects; i++) {
          R__b >> fUIDs[i];
          if (fUIDs[i] != 0) fLast = i;
          if (gDebug > 1) {
-            printf(" %d",fUIDs[i]);
-            if ((i > 0 && i%10 == 0) || (i == nobjects-1)) printf("\n");
+            printf(" %d", fUIDs[i]);
+            if ((i > 0 && i % 10 == 0) || (i == nobjects - 1)) printf("\n");
          }
       }
       Changed();
-      R__b.CheckByteCount(R__s, R__c,TRefArray::IsA());
+      R__b.CheckByteCount(R__s, R__c, TRefArray::IsA());
    } else {
       R__c = R__b.WriteVersion(TRefArray::IsA(), kTRUE);
       TObject::Streamer(R__b);
       fName.Streamer(R__b);
-      nobjects = GetLast()+1;
+      nobjects = GetLast() + 1;
       R__b << nobjects;
       R__b << fLowerBound;
       pidf = R__b.WriteProcessID(fPID);
       R__b << pidf;
-      if (gDebug > 1) printf("Writing TRefArray, pidf=%d, fPID=%lx, nobjects=%d\n",pidf,(Long_t)fPID,nobjects);
+      if (gDebug > 1) printf("Writing TRefArray, pidf=%d, fPID=%lx, nobjects=%d\n", pidf, (Long_t)fPID, nobjects);
 
       for (Int_t i = 0; i < nobjects; i++) {
          R__b << fUIDs[i];
          if (gDebug > 1) {
-            printf(" %d",fUIDs[i]);
-            if ((i > 0 && i%10 == 0) || (i == nobjects-1)) printf("\n");
+            printf(" %d", fUIDs[i]);
+            if ((i > 0 && i % 10 == 0) || (i == nobjects - 1)) printf("\n");
          }
       }
       R__b.SetByteCount(R__c, kTRUE);
@@ -459,7 +462,7 @@ Int_t TRefArray::GetAbsLast() const
    // to cast const away. Ugly, but making GetAbsLast() not const breaks
    // many other const functions.
    if (fLast == -2) {
-      for (Int_t i = fSize-1; i >= 0; i--)
+      for (Int_t i = fSize - 1; i >= 0; i--)
          if (fUIDs[i]) {
             ((TRefArray*)this)->fLast = i;
             return fLast;
@@ -475,7 +478,7 @@ Int_t TRefArray::GetLast() const
    // Return index of last object in array. Returns lowerBound-1 in case
    // array is empty.
 
-   return fLowerBound+GetAbsLast();
+   return fLowerBound + GetAbsLast();
 }
 
 //______________________________________________________________________________
@@ -493,7 +496,7 @@ UInt_t TRefArray::GetUID(Int_t at) const
 {
    // Return UID of element at.
 
-   int j = at-fLowerBound;
+   int j = at - fLowerBound;
    if (j >= 0 && j < fSize) {
       if (!fPID) return 0;
       return fUIDs[j];
@@ -515,14 +518,14 @@ Int_t TRefArray::IndexOf(const TObject *obj) const
    if (obj) {
       for (i = 0; i < fSize; i++)
          if (fUIDs[i] && fPID->GetObjectWithID(fUIDs[i]) == obj)
-            return i+fLowerBound;
+            return i + fLowerBound;
    } else {    // Look for the first empty slot
       for (i = 0; i < fSize; i++)
          if (!fUIDs[i])
-            return i+fLowerBound;
+            return i + fLowerBound;
    }
 
-   return fLowerBound-1;
+   return fLowerBound -1;
 }
 
 //______________________________________________________________________________
@@ -539,7 +542,7 @@ void TRefArray::Init(Int_t s, Int_t lowerBound)
 
    if (fSize) {
       fUIDs = new UInt_t[fSize];
-      for (Int_t i=0;i<s;i++) fUIDs[i] = 0;
+      for (Int_t i = 0;i < s;i++) fUIDs[i] = 0;
    } else {
       fUIDs = 0;
    }
@@ -572,7 +575,7 @@ TObject *TRefArray::RemoveAt(Int_t idx)
 
    if (!BoundsOk("RemoveAt", idx)) return 0;
 
-   int i = idx-fLowerBound;
+   int i = idx - fLowerBound;
 
    TObject *obj = 0;
    if (fUIDs[i]) {
@@ -580,7 +583,9 @@ TObject *TRefArray::RemoveAt(Int_t idx)
       fUIDs[i] = 0;
       // recalculate array size
       if (i == fLast)
-         do { fLast--; } while (fLast >= 0 && fUIDs[fLast] == 0);
+         do {
+            fLast--;
+         } while (fLast >= 0 && fUIDs[fLast] == 0);
       Changed();
    }
 
@@ -602,7 +607,9 @@ TObject *TRefArray::Remove(TObject *obj)
    fUIDs[idx] = 0;
    // recalculate array size
    if (idx == fLast)
-      do { fLast--; } while (fLast >= 0 && fUIDs[fLast] == 0);
+      do {
+         fLast--;
+      } while (fLast >= 0 && fUIDs[fLast] == 0);
    Changed();
    return ob;
 }
@@ -628,22 +635,22 @@ void TRefArray::Sort(Int_t)
    // If objects in array are sortable (i.e. IsSortable() returns true
    // for all objects) then sort array.
 
-   Error("Sort","Function not yet implemented");
-/*
-   if (GetAbsLast() == -1 || fSorted) return;
-   for (Int_t i = 0; i < fSize; i++)
-      if (fUIDs[i]) {
-         if (!fUIDs[i]->IsSortable()) {
-            Error("Sort", "objects in array are not sortable");
-            return;
+   Error("Sort", "Function not yet implemented");
+   /*
+      if (GetAbsLast() == -1 || fSorted) return;
+      for (Int_t i = 0; i < fSize; i++)
+         if (fUIDs[i]) {
+            if (!fUIDs[i]->IsSortable()) {
+               Error("Sort", "objects in array are not sortable");
+               return;
+            }
          }
-      }
 
-   QSort(fUIDs, 0, TMath::Min(fSize, upto-fLowerBound));
+      QSort(fUIDs, 0, TMath::Min(fSize, upto-fLowerBound));
 
-   fLast   = -2;
-   fSorted = kTRUE;
-*/
+      fLast   = -2;
+      fSorted = kTRUE;
+   */
 }
 
 //______________________________________________________________________________
@@ -652,32 +659,32 @@ Int_t TRefArray::BinarySearch(TObject *, Int_t)
    // Find object using a binary search. Array must first have been sorted.
    // Search can be limited by setting upto to desired index.
 
-   Error("BinarySearch","Function not yet implemented");
-/*
-   Int_t   base, position, last, result = 0;
-   TObject *op2;
+   Error("BinarySearch", "Function not yet implemented");
+   /*
+      Int_t   base, position, last, result = 0;
+      TObject *op2;
 
-   if (!op) return -1;
+      if (!op) return -1;
 
-   if (!fSorted) {
-      Error("BinarySearch", "array must first be sorted");
-      return -1;
-   }
+      if (!fSorted) {
+         Error("BinarySearch", "array must first be sorted");
+         return -1;
+      }
 
-   base = 0;
-   last = TMath::Min(fSize, upto-fLowerBound) - 1;
+      base = 0;
+      last = TMath::Min(fSize, upto-fLowerBound) - 1;
 
-   while (last >= base) {
-      //position = (base+last) / 2;
-      //op2 = fCont[position];
-      //if (op2 && (result = op->Compare(op2)) == 0)
-      //   return position + fLowerBound;
-      //if (!op2 || result < 0)
-      //   last = position-1;
-      //else
-      //   base = position+1;
-   }
-*/
+      while (last >= base) {
+         //position = (base+last) / 2;
+         //op2 = fCont[position];
+         //if (op2 && (result = op->Compare(op2)) == 0)
+         //   return position + fLowerBound;
+         //if (!op2 || result < 0)
+         //   last = position-1;
+         //else
+         //   base = position+1;
+      }
+   */
    return -1;
 }
 
@@ -714,7 +721,7 @@ TRefArrayIter::TRefArrayIter(const TRefArrayIter &iter) : TIterator(iter)
 }
 
 //______________________________________________________________________________
-TIterator &TRefArrayIter::operator=(const TIterator &rhs)
+TIterator &TRefArrayIter::operator=(const TIterator & rhs)
 {
    // Overridden assignment operator.
 
@@ -728,7 +735,7 @@ TIterator &TRefArrayIter::operator=(const TIterator &rhs)
 }
 
 //______________________________________________________________________________
-TRefArrayIter &TRefArrayIter::operator=(const TRefArrayIter &rhs)
+TRefArrayIter &TRefArrayIter::operator=(const TRefArrayIter & rhs)
 {
    // Overloaded assignment operator.
 
@@ -746,14 +753,14 @@ TObject *TRefArrayIter::Next()
    // Return next object in array. Returns 0 when no more objects in array.
 
    if (fDirection == kIterForward) {
-      for ( ; fCursor < fArray->Capacity() && fArray->At(fCursor) == 0;
-              fCursor++) { }
+      for (; fCursor < fArray->Capacity() && fArray->At(fCursor) == 0;
+            fCursor++) { }
 
       if (fCursor < fArray->Capacity())
          return fArray->At(fCursor++);
    } else {
-      for ( ; fCursor >= 0 && fArray->At(fCursor) == 0;
-              fCursor--) { }
+      for (; fCursor >= 0 && fArray->At(fCursor) == 0;
+            fCursor--) { }
 
       if (fCursor >= 0)
          return fArray->At(fCursor--);
@@ -772,3 +779,34 @@ void TRefArrayIter::Reset()
       fCursor = fArray->Capacity() - 1;
 }
 
+//______________________________________________________________________________
+bool TRefArrayIter::operator !=(const TIterator &aIter) const
+{
+   // This operator compares two TIterator objects
+
+   if (NULL == (&aIter))
+      return fCursor;
+
+   if (aIter.IsA() == TRefArrayIter::Class()) {
+      const TRefArrayIter &iter(dynamic_cast<const TRefArrayIter &>(aIter));
+      return (fCursor != iter.fCursor);
+   }
+   return false; // for base class we don't implement a comparison
+}
+
+//______________________________________________________________________________
+bool TRefArrayIter::operator !=(const TRefArrayIter &aIter) const
+{
+   // This operator compares two TRefArrayIter objects
+
+   if (NULL == (&aIter))
+      return fCursor;
+
+   return (fCursor != aIter.fCursor);
+}
+
+//______________________________________________________________________________
+TObject* TRefArrayIter::operator*() const
+{
+   return (((fCursor >= 0) && (fCursor < fArray->Capacity())) ? fArray->At(fCursor) : NULL);
+}
