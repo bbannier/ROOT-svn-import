@@ -48,6 +48,10 @@ protected:
 
    SceneInfoList_i FindScene(TGLSceneBase* scene);
 
+   typedef void (TGLSceneBase::* SubRender_foo) (TGLRnrCtx &);
+
+   void SubRenderScenes(SubRender_foo render_foo);
+
    // Members
 
    TGLRnrCtx         *fRnrCtx;
