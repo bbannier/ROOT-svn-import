@@ -317,11 +317,9 @@ void TGLViewerBase::PreRender()
    }
 }
 
-//______________________________________________________________________
-void TGLViewerBase::Render()
+//______________________________________________________________________________
+void TGLViewerBase::SubRenderScenes(SubRender_foo render_foo)
 {
-   // Go through a list of scenes and render them in order.
-
    Int_t nScenes = fVisScenes.size();
 
    for (Int_t i = 0; i < nScenes; ++i)
@@ -331,63 +329,45 @@ void TGLViewerBase::Render()
       fRnrCtx->SetSceneInfo(sinfo);
       glPushName(i);
       scene->PreRender(*fRnrCtx);
-      scene->RenderOpaque(*fRnrCtx);
+      (scene->*render_foo)(*fRnrCtx);
       scene->PostRender(*fRnrCtx);
       glPopName();
       fRnrCtx->SetSceneInfo(0);
    }
+}
+
+//______________________________________________________________________
+void TGLViewerBase::Render()
+{
+   // Render all scenes. This is done in four passes:
+   // - render opaque objects from all scenes
+   // - render transparent objects from all scenes
+   // - clear depth buffer
+   // - render opaque selected objects from all scenes (with highlight)
+   // - render transparent selected objects from all scenes (with highlight)
+
+   SubRenderScenes(&TGLSceneBase::RenderOpaque);
+
+   Int_t nScenes = fVisScenes.size();
 
    glDepthMask(GL_FALSE);
    glEnable(GL_BLEND);
    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-   for (Int_t i = 0; i < nScenes; ++i)
-   {
-      TGLSceneInfo* sinfo = fVisScenes[i];
-      TGLSceneBase* scene = sinfo->GetScene();
-      fRnrCtx->SetSceneInfo(sinfo);
-      glPushName(i);
-      scene->PreRender(*fRnrCtx);
-      scene->RenderTransp(*fRnrCtx);
-      scene->PostRender(*fRnrCtx);
-      glPopName();
-      fRnrCtx->SetSceneInfo(0);
-   }
+   SubRenderScenes(&TGLSceneBase::RenderTransp);
 
    glDepthMask(GL_TRUE);
    glDisable(GL_BLEND);
 
    glClear(GL_DEPTH_BUFFER_BIT);
 
-   for (Int_t i = 0; i < nScenes; ++i)
-   {
-      TGLSceneInfo* sinfo = fVisScenes[i];
-      TGLSceneBase* scene = sinfo->GetScene();
-      fRnrCtx->SetSceneInfo(sinfo);
-      glPushName(i);
-      scene->PreRender(*fRnrCtx);
-      scene->RenderSelOpaque(*fRnrCtx);
-      scene->PostRender(*fRnrCtx);
-      glPopName();
-      fRnrCtx->SetSceneInfo(0);
-   }
+   SubRenderScenes(&TGLSceneBase::RenderSelOpaque);
 
    glDepthMask(GL_FALSE);
    glEnable(GL_BLEND);
    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-   for (Int_t i = 0; i < nScenes; ++i)
-   {
-      TGLSceneInfo* sinfo = fVisScenes[i];
-      TGLSceneBase* scene = sinfo->GetScene();
-      fRnrCtx->SetSceneInfo(sinfo);
-      glPushName(i);
-      scene->PreRender(*fRnrCtx);
-      scene->RenderSelTransp(*fRnrCtx);
-      scene->PostRender(*fRnrCtx);
-      glPopName();
-      fRnrCtx->SetSceneInfo(0);
-   }
+   SubRenderScenes(&TGLSceneBase::RenderSelTransp);
 
    glDepthMask(GL_TRUE);
    glDisable(GL_BLEND);
