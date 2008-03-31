@@ -161,23 +161,28 @@ namespace ROOT {
        /**
           Set internal data based on an array of 4 Scalar numbers
        */
-       void SetCoordinates( const Scalar src[] )
-       { fCoordinates.SetCoordinates(src);  }
+       LorentzVector<CoordSystem>& SetCoordinates( const Scalar src[] ) { 
+          fCoordinates.SetCoordinates(src);  
+          return *this;
+       }
 
        /**
           Set internal data based on 4 Scalar numbers
        */
-       void SetCoordinates( Scalar a, Scalar b, Scalar c, Scalar d )
-       { fCoordinates.SetCoordinates(a, b, c, d);  }
+       LorentzVector<CoordSystem>& SetCoordinates( Scalar a, Scalar b, Scalar c, Scalar d ) {
+          fCoordinates.SetCoordinates(a, b, c, d);  
+          return *this;
+       }
 
        /**
           Set internal data based on 4 Scalars at *begin to *end
        */
        template< class IT >
-       void SetCoordinates( IT begin, IT end  )
-       { IT a = begin; IT b = ++begin; IT c = ++begin; IT d = ++begin;
-       assert (++begin==end);
-       SetCoordinates (*a,*b,*c,*d);
+       LorentzVector<CoordSystem>& SetCoordinates( IT begin, IT end  ) {
+          IT a = begin; IT b = ++begin; IT c = ++begin; IT d = ++begin;
+          assert (++begin==end);
+          SetCoordinates (*a,*b,*c,*d);
+          return *this;
        }
 
        /**
@@ -220,11 +225,13 @@ namespace ROOT {
           (if the vector is held in another coordinates, like (Pt,eta,phi,m)
           then (x, y, z, t) are converted to that form)
        */
-       void SetXYZT (Scalar x, Scalar y, Scalar z, Scalar t) {
+       LorentzVector<CoordSystem>& SetXYZT (Scalar x, Scalar y, Scalar z, Scalar t) {
           fCoordinates.SetPxPyPzE(x,y,z,t);
+          return *this;
        }
-       void SetPxPyPzE (Scalar x, Scalar y, Scalar z, Scalar t) {
+       LorentzVector<CoordSystem>& SetPxPyPzE (Scalar x, Scalar y, Scalar z, Scalar t) {
           fCoordinates.SetPxPyPzE(x,y,z,t);
+          return *this;
        }
 
        // ------------------- Equality -----------------
