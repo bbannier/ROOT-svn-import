@@ -31,8 +31,11 @@ namespace RooFit {
   RooCmdArg DrawOption(const char* opt)            { return RooCmdArg("DrawOption",0,0,0,0,opt,0,0,0) ; }
   RooCmdArg Slice(const RooArgSet& sliceSet)       { return RooCmdArg("SliceVars",0,0,0,0,0,0,&sliceSet,0) ; }
   RooCmdArg Project(const RooArgSet& projSet)      { return RooCmdArg("Project",0,0,0,0,0,0,&projSet,0) ; }
-  RooCmdArg ProjWData(const RooArgSet& projSet, const RooAbsData& projData) { return RooCmdArg("ProjData",0,0,0,0,0,0,&projSet,&projData) ; }
-  RooCmdArg ProjWData(const RooAbsData& projData)  { return RooCmdArg("ProjData",0,0,0,0,0,0,0,&projData) ; }
+  RooCmdArg ProjWData(const RooArgSet& projSet, 
+                      const RooAbsData& projData,
+                      Bool_t binData)              { return RooCmdArg("ProjData",binData,0,0,0,0,0,&projSet,&projData) ; }
+  RooCmdArg ProjWData(const RooAbsData& projData,
+                      Bool_t binData)              { return RooCmdArg("ProjData",binData,0,0,0,0,0,0,&projData) ; }
   RooCmdArg Asymmetry(const RooCategory& cat)      { return RooCmdArg("Asymmetry",0,0,0,0,0,0,&cat,0) ; }
   RooCmdArg Precision(Double_t prec)               { return RooCmdArg("Precision",0,0,prec,0,0,0,0,0) ; }
   RooCmdArg ShiftToZero()                          { return RooCmdArg("ShiftToZero",1,0,0,0,0,0,0,0) ; }
@@ -73,7 +76,7 @@ namespace RooFit {
   // RooChi2Var::ctor arguments
   RooCmdArg Extended(Bool_t flag) { return RooCmdArg("Extended",flag,0,0,0,0,0,0,0) ; }
   RooCmdArg DataError(RooDataHist::ErrorType etype) { return RooCmdArg("DataError",(Int_t)etype,0,0,0,0,0,0,0) ; }
-  RooCmdArg NumCPU(Int_t nCPU) { return RooCmdArg("NumCPU",nCPU,0,0,0,0,0,0,0) ; }
+  RooCmdArg NumCPU(Int_t nCPU, Bool_t interleave)   { return RooCmdArg("NumCPU",nCPU,interleave,0,0,0,0,0,0) ; }
   
   // RooAbsCollection::printLatex arguments
   RooCmdArg Columns(Int_t ncol)                           { return RooCmdArg("Columns",ncol,0,0,0,0,0,0,0) ; }

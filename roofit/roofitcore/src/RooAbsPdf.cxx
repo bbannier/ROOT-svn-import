@@ -233,7 +233,7 @@ Double_t RooAbsPdf::getVal(const RooArgSet* nset) const
 
     // Evaluate denominator
     Double_t normVal(_norm->getVal()) ;
-
+    
     cxcoutD(Tracing) << "RooAbsPdf::getVal(" << GetName() << ") normalization integral is " << (_norm?_norm->GetName():"none") << endl ;
 
     Double_t normError(kFALSE) ;
@@ -247,9 +247,6 @@ Double_t RooAbsPdf::getVal(const RooArgSet* nset) const
 
     _value = normError ? 0 : (rawVal / normVal) ;
 
-    if (_verboseEval>1) cxcoutD(Tracing) << IsA()->GetName() << "::getVal(" << GetName() 
-					 << "): value = " << _value << " (normalized)" << endl ;
-    
     cxcoutD(Tracing) << "RooAbsPdf::getVal(" << GetName() << ") recalculating, new value = " << rawVal << "/" << normVal << " = " << _value << endl ;
 
     clearValueDirty() ; //setValueDirty(kFALSE) ;
@@ -1909,41 +1906,6 @@ RooPlot* RooAbsPdf::paramOn(RooPlot* frame, const RooArgSet& params, Bool_t show
 
 
 
-void RooAbsPdf::fixAddCoefNormalization(const RooArgSet& addNormSet, Bool_t force) 
-{
-  RooArgSet* compSet = getComponents() ;
-  TIterator* iter = compSet->createIterator() ;
-  RooAbsArg* arg ;
-  while((arg=(RooAbsArg*)iter->Next())) {
-    RooAbsPdf* pdf = dynamic_cast<RooAbsPdf*>(arg) ;
-    if (pdf) {
-      if (addNormSet.getSize()>0) {
-	pdf->selectNormalization(&addNormSet,force) ;
-      } else {
-	pdf->selectNormalization(0,force) ;
-      }
-    } 
-  }
-  delete iter ;
-  delete compSet ;  
-}
-
-void RooAbsPdf::fixAddCoefRange(const char* rangeName, Bool_t force) 
-{
-  RooArgSet* compSet = getComponents() ;
-  TIterator* iter = compSet->createIterator() ;
-  RooAbsArg* arg ;
-  while((arg=(RooAbsArg*)iter->Next())) {
-    RooAbsPdf* pdf = dynamic_cast<RooAbsPdf*>(arg) ;
-    if (pdf) {
-      pdf->selectNormalizationRange(rangeName,force) ;
-    }
-  }
-  delete iter ;
-  delete compSet ;    
-}
-
-
 RooPlot* RooAbsPdf::plotNLLOn(RooPlot* frame, RooDataSet* data, Bool_t extended, const RooArgSet& /*projDeps*/,
 			      Option_t* /*drawOptions*/, Double_t prec, Bool_t fixMinToZero) {
   
@@ -1975,6 +1937,11 @@ Int_t RooAbsPdf::verboseEval()
 { 
   // Return global level of verbosity for p.d.f. evaluations
   return _verboseEval ;
+}
+
+
+void RooAbsPdf::CacheElem::operModeHook(RooAbsArg::OperMode) 
+{
 }
 
 

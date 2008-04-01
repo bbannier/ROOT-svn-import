@@ -539,8 +539,14 @@ Bool_t RooCurve::isIdentical(const RooCurve& other, Double_t tol) const
 {
   Int_t n= GetN();
   for(Int_t i= 0; i < n; i++) {
-    if (fabs(fX[i]-other.fX[i])>tol) return kFALSE ;
-    if (fabs(fY[i]-other.fY[i])>tol) return kFALSE ;
+    if (fabs(fX[i]-other.fX[i])>tol) {
+//       cout << "fX[" << i << "] = " << fX[i] << " other.fX[" << i << "] = " << other.fX[i] << endl ;
+      return kFALSE ;
+    }
+    if (fabs(fY[i]-other.fY[i])>tol) {
+//       cout << "fY[" << i << "] = " << fY[i] << " other.fY[" << i << "] = " << other.fY[i] << endl ;
+      return kFALSE ;
+    }
   }
 
   return kTRUE ;

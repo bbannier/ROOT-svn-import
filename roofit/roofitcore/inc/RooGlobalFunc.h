@@ -37,8 +37,8 @@ RooCmdArg DrawOption(const char* opt) ;
 RooCmdArg Normalization(Double_t scaleFactor) ;
 RooCmdArg Slice(const RooArgSet& sliceSet) ;
 RooCmdArg Project(const RooArgSet& projSet) ;
-RooCmdArg ProjWData(const RooAbsData& projData) ;
-RooCmdArg ProjWData(const RooArgSet& projSet, const RooAbsData& projData) ;
+RooCmdArg ProjWData(const RooAbsData& projData, Bool_t binData=kFALSE) ;
+RooCmdArg ProjWData(const RooArgSet& projSet, const RooAbsData& projData, Bool_t binData=kFALSE) ;
 RooCmdArg Asymmetry(const RooCategory& cat) ;
 RooCmdArg Precision(Double_t prec) ;
 RooCmdArg ShiftToZero() ;
@@ -76,7 +76,7 @@ RooCmdArg RefreshNorm() ;
 // RooChi2Var::ctor arguments
 RooCmdArg Extended(Bool_t flag=kTRUE) ;
 RooCmdArg DataError(RooDataHist::ErrorType) ;
-RooCmdArg NumCPU(Int_t nCPU) ;
+RooCmdArg NumCPU(Int_t nCPU, Bool_t interleave=kFALSE) ;
 
 // RooAbsPdf::printLatex arguments
 RooCmdArg Columns(Int_t ncol) ;

@@ -90,5 +90,10 @@ void RooArgProxy::changeDataSet(const RooArgSet* newNormSet)
 
 void RooArgProxy::print(ostream& os) const 
 { 
-  os << name() << "=" << (_arg?_arg->GetName():"NULL") ; 
+  os << name() << "=" << (_arg?_arg->GetName():"NULL")  ;
+//   if (_arg) {
+//     os << "=" ;
+//     _arg->printStream(os,RooPrintable::kValue,RooPrintable::kInline) ;
+//   }
+  ; 
 }
