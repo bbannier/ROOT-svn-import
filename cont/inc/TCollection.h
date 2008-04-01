@@ -72,66 +72,40 @@ public:
    virtual void       AddAll(const TCollection *col);
    Bool_t             AssertClass(TClass *cl) const;
    void               Browse(TBrowser *b);
-   Int_t              Capacity() const {
-      return fSize;
-   }
+   Int_t              Capacity() const { return fSize; }
    virtual void       Clear(Option_t *option = "") = 0;
    Int_t              Compare(const TObject *obj) const;
-   Bool_t             Contains(const char *name) const {
-      return FindObject(name) != 0;
-   }
-   Bool_t             Contains(const TObject *obj) const {
-      return FindObject(obj) != 0;
-   }
+   Bool_t             Contains(const char *name) const { return FindObject(name) != 0; }
+   Bool_t             Contains(const TObject *obj) const { return FindObject(obj) != 0; }
    virtual void       Delete(Option_t *option = "") = 0;
    virtual void       Draw(Option_t *option = "");
-   virtual void       Dump() const ;
+   virtual void       Dump() const;
    virtual TObject   *FindObject(const char *name) const;
    TObject           *operator()(const char *name) const;
    virtual TObject   *FindObject(const TObject *obj) const;
-   virtual Int_t      GetEntries() const {
-      return GetSize();
-   }
+   virtual Int_t      GetEntries() const { return GetSize(); }
    virtual const char *GetName() const;
    virtual TObject  **GetObjectRef(const TObject *obj) const = 0;
-   virtual Int_t      GetSize() const {
-      return fSize;
-   }
+   virtual Int_t      GetSize() const { return fSize; }
    virtual Int_t      GrowBy(Int_t delta) const;
-   ULong_t            Hash() const {
-      return fName.Hash();
-   }
+   ULong_t            Hash() const { return fName.Hash(); }
    Bool_t             IsArgNull(const char *where, const TObject *obj) const;
-   virtual Bool_t     IsEmpty() const {
-      return GetSize() <= 0;
-   }
-   virtual Bool_t     IsFolder() const {
-      return kTRUE;
-   }
-   Bool_t             IsOwner() const {
-      return TestBit(kIsOwner);
-   }
-   Bool_t             IsSortable() const {
-      return kTRUE;
-   }
-   virtual void       ls(Option_t *option = "") const ;
+   virtual Bool_t     IsEmpty() const { return GetSize() <= 0; }
+   virtual Bool_t     IsFolder() const { return kTRUE; }
+   Bool_t             IsOwner() const { return TestBit(kIsOwner); }
+   Bool_t             IsSortable() const { return kTRUE; }
+   virtual void       ls(Option_t *option = "") const;
    virtual TIterator *MakeIterator(Bool_t dir = kIterForward) const = 0;
-   virtual TIterator *MakeReverseIterator() const {
-      return MakeIterator(kIterBackward);
-   }
+   virtual TIterator *MakeReverseIterator() const { return MakeIterator(kIterBackward); }
    virtual void       Paint(Option_t *option = "");
    virtual void       Print(Option_t *wildcard = "") const;
    virtual void       Print(Option_t *wildcard, Option_t *option) const;
    virtual void       RecursiveRemove(TObject *obj);
    virtual TObject   *Remove(TObject *obj) = 0;
    virtual void       RemoveAll(TCollection *col);
-   void               RemoveAll() {
-      Clear();
-   }
+   void               RemoveAll() { Clear(); }
    void               SetCurrentCollection();
-   void               SetName(const char *name) {
-      fName = name;
-   }
+   void               SetName(const char *name) { fName = name; }
    virtual void       SetOwner(Bool_t enable = kTRUE);
    virtual Int_t      Write(const char *name = 0, Int_t option = 0, Int_t bufsize = 0);
    virtual Int_t      Write(const char *name = 0, Int_t option = 0, Int_t bufsize = 0) const;
@@ -169,34 +143,18 @@ public:
    TIter(TIterator *it) : fIterator(it) { }
    TIter(const TIter &iter);
    TIter &operator=(const TIter &rhs);
-   virtual ~TIter() {
-      SafeDelete(fIterator)
-   }
-   TObject *operator()() {
-      return Next();
-   }
-   TObject *Next() {
-      return fIterator ? fIterator->Next() : NULL;
-   }
-   const TCollection *GetCollection() const {
-      return fIterator ? fIterator->GetCollection() : NULL;
-   }
-   Option_t *GetOption() const {
-      return fIterator ? fIterator->GetOption() : "";
-   }
-   void Reset() {
-      if (fIterator) fIterator->Reset();
-   }
+   virtual ~TIter() { SafeDelete(fIterator); }
+   TObject *operator()() { return Next(); }
+   TObject *Next() { return fIterator ? fIterator->Next() : NULL; }
+   const TCollection *GetCollection() const { return fIterator ? fIterator->GetCollection() : NULL; }
+   Option_t *GetOption() const { return fIterator ? fIterator->GetOption() : ""; }
+   void Reset() { if (fIterator) fIterator->Reset(); }
    TIter &operator ++() {
       Next();
       return *this;
    }
-   bool operator !=(const TIter &aIter) const {
-      return ((*fIterator) != *(aIter.fIterator));
-   }
-   TObject* operator*() const {
-      return *(*fIterator);
-   }
+   bool operator !=(const TIter &aIter) const { return ((*fIterator) != *(aIter.fIterator)); }
+   TObject* operator*() const { return *(*fIterator); }
    TIter &Begin();
    static TIter End();
 

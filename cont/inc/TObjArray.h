@@ -58,14 +58,10 @@ public:
    }
    Int_t            GetLast() const;
    TObject        **GetObjectRef(const TObject *obj) const;
-   Bool_t           IsEmpty() const {
-      return GetAbsLast() == -1;
-   }
+   Bool_t           IsEmpty() const { return GetAbsLast() == -1; }
    TIterator       *MakeIterator(Bool_t dir = kIterForward) const;
 
-   void             Add(TObject *obj) {
-      AddLast(obj);
-   }
+   void             Add(TObject *obj) { AddLast(obj); }
    virtual void     AddFirst(TObject *obj);
    virtual void     AddLast(TObject *obj);
    virtual void     AddAt(TObject *obj, Int_t idx);
@@ -80,18 +76,14 @@ public:
    virtual void     RecursiveRemove(TObject *obj);
 
    TObject         *At(Int_t idx) const;
-   TObject         *UncheckedAt(Int_t i) const {
-      return fCont[i-fLowerBound];
-   }
+   TObject         *UncheckedAt(Int_t i) const { return fCont[i-fLowerBound]; }
    TObject         *Before(const TObject *obj) const;
    TObject         *After(const TObject *obj) const;
    TObject         *First() const;
    TObject         *Last() const;
    virtual TObject *&operator[](Int_t i);
    virtual TObject *operator[](Int_t i) const;
-   Int_t            LowerBound() const {
-      return fLowerBound;
-   }
+   Int_t            LowerBound() const { return fLowerBound; }
    Int_t            IndexOf(const TObject *obj) const;
    void             SetLast(Int_t last);
 
@@ -128,9 +120,7 @@ public:
    TIterator     &operator=(const TIterator &rhs);
    TObjArrayIter &operator=(const TObjArrayIter &rhs);
 
-   const TCollection *GetCollection() const {
-      return fArray;
-   }
+   const TCollection *GetCollection() const { return fArray; }
    TObject           *Next();
    void              Reset();
    bool operator !=(const TIterator &aIter) const;

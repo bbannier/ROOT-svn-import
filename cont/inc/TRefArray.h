@@ -64,18 +64,12 @@ public:
    }
    Int_t            GetLast() const;
    TObject        **GetObjectRef(const TObject *obj) const;
-   TProcessID      *GetPID() const {
-      return fPID;
-   }
+   TProcessID      *GetPID() const { return fPID; }
    UInt_t           GetUID(Int_t at) const;
-   Bool_t           IsEmpty() const {
-      return GetAbsLast() == -1;
-   }
+   Bool_t           IsEmpty() const { return GetAbsLast() == -1; }
    TIterator       *MakeIterator(Bool_t dir = kIterForward) const;
 
-   void             Add(TObject *obj) {
-      AddLast(obj);
-   }
+   void             Add(TObject *obj) { AddLast(obj); }
    virtual void     AddFirst(TObject *obj);
    virtual void     AddLast(TObject *obj);
    virtual void     AddAt(TObject *obj, Int_t idx);
@@ -92,9 +86,7 @@ public:
    TObject         *First() const;
    TObject         *Last() const;
    virtual TObject *operator[](Int_t i) const;
-   Int_t            LowerBound() const {
-      return fLowerBound;
-   }
+   Int_t            LowerBound() const { return fLowerBound; }
    Int_t            IndexOf(const TObject *obj) const;
    void             SetLast(Int_t last);
 
@@ -130,9 +122,7 @@ public:
    TIterator     &operator=(const TIterator &rhs);
    TRefArrayIter &operator=(const TRefArrayIter &rhs);
 
-   const TCollection *GetCollection() const {
-      return fArray;
-   }
+   const TCollection *GetCollection() const { return fArray; }
    TObject           *Next();
    void              Reset();
    bool operator !=(const TIterator &aIter) const;

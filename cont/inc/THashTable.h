@@ -48,12 +48,8 @@ private:
    Int_t       fRehashLevel;   //Average collision rate which triggers rehash
 
    Int_t       GetHashValue(const TObject *obj) const;
-   Int_t       GetHashValue(TString &s) const {
-      return s.Hash() % fSize;
-   }
-   Int_t       GetHashValue(const char *str) const {
-      return ::Hash(str) % fSize;
-   }
+   Int_t       GetHashValue(TString &s) const { return s.Hash() % fSize; }
+   Int_t       GetHashValue(const char *str) const { return ::Hash(str) % fSize; }
 
    THashTable(const THashTable&);             // not implemented
    THashTable& operator=(const THashTable&);  // not implemented
@@ -73,19 +69,13 @@ public:
    TList        *GetListForObject(const char *name) const;
    TList        *GetListForObject(const TObject *obj) const;
    TObject     **GetObjectRef(const TObject *obj) const;
-   Int_t         GetRehashLevel() const {
-      return fRehashLevel;
-   }
-   Int_t         GetSize() const {
-      return fEntries;
-   }
+   Int_t         GetRehashLevel() const { return fRehashLevel; }
+   Int_t         GetSize() const { return fEntries; }
    TIterator    *MakeIterator(Bool_t dir = kIterForward) const;
    void          Rehash(Int_t newCapacity, Bool_t checkObjValidity = kTRUE);
    TObject      *Remove(TObject *obj);
    TObject      *RemoveSlow(TObject *obj);
-   void          SetRehashLevel(Int_t rehash) {
-      fRehashLevel = rehash;
-   }
+   void          SetRehashLevel(Int_t rehash) { fRehashLevel = rehash; }
 
    ClassDef(THashTable, 0) //A hash table
 };
@@ -132,9 +122,7 @@ public:
    TIterator      &operator=(const TIterator &rhs);
    THashTableIter &operator=(const THashTableIter &rhs);
 
-   const TCollection *GetCollection() const {
-      return fTable;
-   }
+   const TCollection *GetCollection() const { return fTable; }
    TObject           *Next();
    void               Reset();
    bool operator !=(const TIterator &aIter) const;

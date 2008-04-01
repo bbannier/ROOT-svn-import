@@ -69,12 +69,8 @@ public:
    virtual TObject  *FindObject(const TObject *obj) const;
    virtual TIterator *MakeIterator(Bool_t dir = kIterForward) const;
 
-   virtual void      Add(TObject *obj) {
-      AddLast(obj);
-   }
-   virtual void      Add(TObject *obj, Option_t *opt) {
-      AddLast(obj, opt);
-   }
+   virtual void      Add(TObject *obj) { AddLast(obj); }
+   virtual void      Add(TObject *obj, Option_t *opt) { AddLast(obj, opt); }
    virtual void      AddFirst(TObject *obj);
    virtual void      AddFirst(TObject *obj, Option_t *opt);
    virtual void      AddLast(TObject *obj);
@@ -92,19 +88,13 @@ public:
    virtual TObject  *After(const TObject *obj) const;
    virtual TObject  *Before(const TObject *obj) const;
    virtual TObject  *First() const;
-   virtual TObjLink *FirstLink() const {
-      return fFirst;
-   }
+   virtual TObjLink *FirstLink() const { return fFirst; }
    virtual TObject **GetObjectRef(const TObject *obj) const;
    virtual TObject  *Last() const;
-   virtual TObjLink *LastLink() const {
-      return fLast;
-   }
+   virtual TObjLink *LastLink() const { return fLast; }
 
    virtual void      Sort(Bool_t order = kSortAscending);
-   Bool_t            IsAscending() {
-      return fAscending;
-   }
+   Bool_t            IsAscending() { return fAscending; }
 
    ClassDef(TList, 5) //Doubly linked list
 };
@@ -131,37 +121,21 @@ private:
    TObjLink& operator=(const TObjLink&); // not implemented
 
 protected:
-   TObjLink() : fNext(NULL), fPrev(NULL), fObject(NULL) {
-      fNext = fPrev = this;
-   }
+   TObjLink() : fNext(NULL), fPrev(NULL), fObject(NULL) { fNext = fPrev = this; }
 
 public:
    TObjLink(TObject *obj) : fNext(NULL), fPrev(NULL), fObject(obj) { }
    TObjLink(TObject *obj, TObjLink *lnk);
    virtual ~TObjLink() { }
 
-   TObject                *GetObject() const {
-      return fObject;
-   }
-   TObject               **GetObjectRef() {
-      return &fObject;
-   }
-   void                    SetObject(TObject *obj) {
-      fObject = obj;
-   }
-   virtual Option_t       *GetAddOption() const {
-      return "";
-   }
-   virtual Option_t       *GetOption() const {
-      return fObject->GetOption();
-   }
+   TObject                *GetObject() const { return fObject; }
+   TObject               **GetObjectRef() { return &fObject; }
+   void                    SetObject(TObject *obj) { fObject = obj; }
+   virtual Option_t       *GetAddOption() const { return ""; }
+   virtual Option_t       *GetOption() const { return fObject->GetOption(); }
    virtual void            SetOption(Option_t *) { }
-   TObjLink               *Next() {
-      return fNext;
-   }
-   TObjLink               *Prev() {
-      return fPrev;
-   }
+   TObjLink               *Next() { return fNext; }
+   TObjLink               *Prev() { return fPrev; }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -182,15 +156,9 @@ public:
    TObjOptLink(TObject *obj, Option_t *opt) : TObjLink(obj), fOption(opt) { }
    TObjOptLink(TObject *obj, TObjLink *lnk, Option_t *opt) : TObjLink(obj, lnk), fOption(opt) { }
    ~TObjOptLink() { }
-   Option_t        *GetAddOption() const {
-      return fOption.Data();
-   }
-   Option_t        *GetOption() const {
-      return fOption.Data();
-   }
-   void             SetOption(Option_t *option) {
-      fOption = option;
-   }
+   Option_t        *GetAddOption() const { return fOption.Data(); }
+   Option_t        *GetOption() const { return fOption.Data(); }
+   void             SetOption(Option_t *option) { fOption = option; }
 };
 
 
@@ -213,7 +181,7 @@ protected:
    Bool_t             fDirection;    //iteration direction
    Bool_t             fStarted;      //iteration started
 
-   TListIter() : fList(0), fCurCursor(0), fCursor(0), fDirection(kTRUE),
+   TListIter() : fList(NULL), fCurCursor(NULL), fCursor(NULL), fDirection(kTRUE),
          fStarted(kFALSE) { }
 
 public:
@@ -223,20 +191,14 @@ public:
    TIterator &operator=(const TIterator &rhs);
    TListIter &operator=(const TListIter &rhs);
 
-   const TCollection *GetCollection() const {
-      return fList;
-   }
+   const TCollection *GetCollection() const { return fList; }
    Option_t          *GetOption() const;
    void               SetOption(Option_t *option);
    TObject           *Next();
-   void               Reset() {
-      fStarted = kFALSE;
-   }
+   void               Reset() { fStarted = kFALSE; }
    bool operator !=(const TIterator &aIter) const;
    bool operator !=(const TListIter &aIter) const;
-   TObject* operator*() const {
-      return (fCurCursor ? fCurCursor->GetObject() : NULL);
-   }
+   TObject* operator*() const { return (fCurCursor ? fCurCursor->GetObject() : NULL); }
 
    ClassDef(TListIter, 0) //Linked list iterator
 };
