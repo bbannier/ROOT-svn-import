@@ -50,6 +50,9 @@
 #include "KeySymbols.h"
 #include "TContextMenu.h"
 
+#ifndef GL_BGRA
+#define GL_BGRA GL_BGRA_EXT
+#endif
 
 //______________________________________________________________________
 // TGLViewer
