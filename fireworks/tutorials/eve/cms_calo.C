@@ -65,6 +65,7 @@ void cms_calo()
   lego->SetPalette(pal);
   lego->SetEtaLimits(etaLimLow, etaLimHigh);
   lego->SetTitle("caloTower Et distribution");
+  lego->SetGridColor(kOrange - 8);
   gEve->AddElement(lego, s2);
   gEve->AddToListTree(lego, kTRUE);
 
