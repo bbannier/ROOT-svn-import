@@ -201,7 +201,8 @@ TGLSAViewer::TGLSAViewer(const TGWindow *parent, TVirtualPad *pad, TGedEditor *g
    fGLArea(0),
    fLeftVerticalFrame(0),
    fGedEditor(ged),
-   fPShapeWrap(0)
+   fPShapeWrap(0),
+   fTypeIdx(0)
 {
    // Construct an embedded standalone viewer, bound to supplied 'pad'.
    //
