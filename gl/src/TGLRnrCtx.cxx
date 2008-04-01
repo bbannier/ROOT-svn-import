@@ -83,7 +83,10 @@ TGLRnrCtx::TGLRnrCtx(TGLViewerBase* viewer) :
 
    fDLCaptureOpen (kFALSE),
    fGLCtxIdentity (0),
-   fQuadric       (0)
+   fQuadric       (0),
+
+   fGrabImage     (kFALSE),
+   fGrabbedImage  (0)
 {
    // Constructor.
 
@@ -167,6 +170,7 @@ void TGLRnrCtx:: StopStopwatch()
 {
    // Stop the stopwatch.
 
+   fHasTimedOut = fStopwatch.End() > fRenderTimeOut;
    fIsRunning = kFALSE; 
 }
 

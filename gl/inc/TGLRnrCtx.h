@@ -121,6 +121,10 @@ protected:
 
    GLUquadric         *fQuadric;
 
+   // Picture grabbing
+   Bool_t           fGrabImage;    // Set to true to store the image.
+   UChar_t         *fGrabbedImage; // Buffer where image was stored after rendering.
+
 public:
    TGLRnrCtx(TGLViewerBase* viewer);
    virtual ~TGLRnrCtx();
@@ -209,6 +213,12 @@ public:
    void  ReleaseFont(TGLFont& font);
 
    GLUquadric* GetGluQuadric() { return fQuadric; }
+
+   // Picture grabbing
+   void     SetGrabImage(Bool_t gi) { fGrabImage = gi; }
+   Bool_t   GetGrabImage()    const { return fGrabImage; }
+   UChar_t* GetGrabbedImage() const { return fGrabbedImage; }
+   void     SetGrabbedImage(UChar_t* img) { fGrabbedImage = img; }
 
    ClassDef(TGLRnrCtx, 0); // Collection of objects and data passes along all rendering calls.
 };

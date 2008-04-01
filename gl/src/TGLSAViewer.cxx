@@ -571,9 +571,30 @@ void TGLSAViewer::SavePicture()
    else if (fPictureFileName.EndsWith(".pdf"))
       TGLOutput::Capture(*this, TGLOutput::kPDF_BSP, fPictureFileName.Data());
    else if (fPictureFileName.EndsWith(".gif") || fPictureFileName.Contains("gif+") ||
-            fPictureFileName.EndsWith(".jpg") || fPictureFileName.EndsWith(".png")) {
+            fPictureFileName.EndsWith(".jpg") || fPictureFileName.EndsWith(".png"))
+   {
+      if ( ! TakeLock(kDrawLock)) {
+         Error("TGLSAViewer::SavePicture", "viewer locked - try later.");
+         return;
+      }
+
       std::auto_ptr<TImage>gif(TImage::Create());
-      gif->FromWindow(fGLWindow->GetId());
+
+      fRnrCtx->SetGrabImage(kTRUE);
+
+      fLOD = TGLRnrCtx::kLODHigh;
+
+      if (!gVirtualX->IsCmdThread())
+         gROOT->ProcessLineFast(Form("((TGLViewer *)0x%x)->DoDraw()", this));
+      else
+         DoDraw();
+
+      gif->FromGLBuffer(fRnrCtx->GetGrabbedImage(), fViewport.Width(), fViewport.Height());
+
+      fRnrCtx->SetGrabImage(kFALSE);
+      delete [] fRnrCtx->GetGrabbedImage();
+      fRnrCtx->SetGrabbedImage(0);
+
       gif->WriteImage(fPictureFileName.Data());
    }
 }

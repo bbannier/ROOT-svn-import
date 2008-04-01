@@ -608,6 +608,16 @@ void TGLViewer::PostDraw()
 {
    // Perform GL work which must be done after each draw of scene
    glFlush();
+   if (fRnrCtx->GetGrabImage())
+   {
+      UChar_t* xx = new UChar_t[4 * fViewport.Width() * fViewport.Height()];
+      glReadBuffer(GL_BACK);
+      glPixelStorei(GL_PACK_ALIGNMENT,1); 
+      glReadPixels(0, 0, fViewport.Width(), fViewport.Height(),
+                   GL_BGRA, GL_UNSIGNED_BYTE, xx);
+
+      fRnrCtx->SetGrabbedImage(xx);
+   }
    SwapBuffers();
 
    // Flush everything in case picking starts
