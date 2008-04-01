@@ -451,11 +451,11 @@ void TEveCaloLegoGL::DrawXYAxis(TGLRnrCtx & rnrCtx,
       //  RnrText("h", axtX, axY, 0, pm, fSymbolFont, 0);
       RnrText("h", axtX, 1.1f*axY, 0, fSymbolFont, axY>0 && ayX>0 || axY<0 && ayX<0);
       for (Int_t i=0; i<nX; i++)
-         RnrText(Form("%.0f", lx0 + 2*i), lx0 + 2*i, 1.05f*axY, 0, fNumFont, 2);
+         RnrText(TEveUtil::FormAxisValue(lx0 + 2*i), lx0 + 2*i, 1.05f*axY, 0, fNumFont, 2);
 
       RnrText("f", 1.1f*ayX, aytY, 0, fSymbolFont, ayX>0 && axY<0 || ayX<0 && axY>0);
       for (Int_t i=0; i<nY; ++i)
-         RnrText(Form("%.0f", ly0 + i), 1.05f*ayX, ly0 + i, 0, fNumFont, 2);
+         RnrText(TEveUtil::FormAxisValue(ly0 + i), 1.05f*ayX, ly0 + i, 0, fNumFont, 2);
 
       glPopMatrix();
       fNumFont.PostRender();
