@@ -449,13 +449,13 @@ void TEveCaloLegoGL::DrawXYAxis(TGLRnrCtx & rnrCtx,
       TGLUtil::Color(fM->fFontColor);
 
       //  RnrText("h", axtX, axY, 0, pm, fSymbolFont, 0);
-      RnrText("h", axtX, axY, 0, fSymbolFont, axY>0&&ayX>0 || axY<0&&ayX<0 );
+      RnrText("h", axtX, 1.1f*axY, 0, fSymbolFont, axY>0 && ayX>0 || axY<0 && ayX<0);
       for (Int_t i=0; i<nX; i++)
-         RnrText(Form("%.0f", lx0 + 2*i), lx0 + 2*i, axY, 0, fNumFont, 2);
+         RnrText(Form("%.0f", lx0 + 2*i), lx0 + 2*i, 1.05f*axY, 0, fNumFont, 2);
 
-      RnrText("F", ayX,  aytY, 0, fSymbolFont, ayX>0&&axY<0 || ayX<0&&axY>0 );
+      RnrText("f", 1.1f*ayX, aytY, 0, fSymbolFont, ayX>0 && axY<0 || ayX<0 && axY>0);
       for (Int_t i=0; i<nY; ++i)
-         RnrText(Form("%.0f", ly0 + i), ayX, ly0 + i, 0, fNumFont, 2);
+         RnrText(Form("%.0f", ly0 + i), 1.05f*ayX, ly0 + i, 0, fNumFont, 2);
 
       glPopMatrix();
       fNumFont.PostRender();
@@ -473,7 +473,9 @@ void TEveCaloLegoGL::DrawXYAxis(TGLRnrCtx & rnrCtx,
       while (xt < x1)
       {
          glVertex3f(xt, axY, 0);
-         glVertex3f(xt, axY, ( Int_t(xt*10) % 5) ? -fTMSize/2 : -fTMSize);
+         glVertex3f(xt, axY, (Int_t(xt*10) % 5) ? -fTMSize/2 : -fTMSize);
+         glVertex3f(xt, axY, 0);
+         glVertex3f(xt, ((Int_t(xt*10) % 5) ? 1.0125f : 1.025f)*axY, 0);
          xt += xs;
       }
 
@@ -484,7 +486,9 @@ void TEveCaloLegoGL::DrawXYAxis(TGLRnrCtx & rnrCtx,
       while (yt < y1)
       {
          glVertex3f(ayX, yt, 0);
-         glVertex3f(ayX, yt, ( Int_t(yt*10) % 5) ? -fTMSize/2 : -fTMSize);
+         glVertex3f(ayX, yt, (Int_t(yt*10) % 5) ? -fTMSize/2 : -fTMSize);
+         glVertex3f(ayX, yt, 0);
+         glVertex3f(((Int_t(yt*10) % 5) ? 1.0125f : 1.025f)*ayX, yt, 0);
          yt += ys;
       }
       glEnd();
@@ -501,14 +505,14 @@ Int_t TEveCaloLegoGL::GetGridStep(Int_t axId,  const TAxis* ax,  TGLRnrCtx &rnrC
    glGetIntegerv(GL_VIEWPORT, vp);
    const GLdouble *pm = rnrCtx.RefCamera().RefLastNoPickProjM().CArr();
 
-   for(Int_t idx =0; idx<fNBinSteps; idx++)
+   for (Int_t idx =0; idx<fNBinSteps; ++idx)
    {
       if (axId == 0)
       {
          gluProject(ax->GetBinLowEdge(0), 0, 0, mm, pm, vp, &xp0, &yp0, &zp0);
          gluProject(ax->GetBinLowEdge(fBinSteps[idx]), 0, 0, mm, pm, vp, &xp1, &yp1, &zp1);
       }
-      else 
+      else
       {
          gluProject(0, ax->GetBinLowEdge(0), 0, mm, pm, vp, &xp0, &yp0, &zp0);
          gluProject(0, ax->GetBinLowEdge(fBinSteps[idx]), 0, mm, pm, vp, &xp1, &yp1, &zp1);
@@ -517,10 +521,10 @@ Int_t TEveCaloLegoGL::GetGridStep(Int_t axId,  const TAxis* ax,  TGLRnrCtx &rnrC
       Float_t  gap = TMath::Sqrt((xp0-xp1)*(xp0-xp1) + (yp0-yp1)*(yp0-yp1));
       if (gap>fMinBinWidth) 
       {
-         return  fBinSteps[idx];
+         return fBinSteps[idx];
       }
    }
-   return  fBinSteps[fNBinSteps-1];
+   return fBinSteps[fNBinSteps-1];
 }
 
 //______________________________________________________________________________
