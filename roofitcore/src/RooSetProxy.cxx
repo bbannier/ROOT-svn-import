@@ -202,5 +202,5 @@ Bool_t RooSetProxy::changePointer(const RooAbsCollection& newServerList, Bool_t 
 
 void RooSetProxy::print(ostream& os) const 
 { 
-  os << name() << "=" ; printStream(os,kValue,kSingleLine) ; 
+  os << name() << "=" ; printStream(os,kValue,kInline) ; 
 }

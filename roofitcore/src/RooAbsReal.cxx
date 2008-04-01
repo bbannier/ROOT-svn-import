@@ -40,13 +40,14 @@
 #include "RooCustomizer.h"
 #include "RooAbsData.h"
 #include "RooScaledFunc.h"
-#include "RooDataProjBinding.h"
 #include "RooAddPdf.h"
 #include "RooCmdConfig.h"
 #include "RooCategory.h"
 #include "RooNumIntConfig.h"
 #include "RooAddition.h"
+#include "RooDataSet.h"
 #include "RooDataHist.h"
+#include "RooDataWeightedAverage.h"
 
 #include "Riostream.h"
 
@@ -807,6 +808,8 @@ TH1 *RooAbsReal::fillHistogram(TH1 *hist, const RooArgList &plotVars,
   // Create a standalone projection object to use for calculating bin contents
   RooArgSet *cloneSet = 0;
   const RooAbsReal *projected= createPlotProjection(plotClones,projectedVars,cloneSet);
+  cxcoutD(Plotting) << "RooAbsReal::fillHistogram(" << GetName() << ") plot projection object is " << projected->GetName() << endl ;
+
 
   // Prepare to loop over the histogram bins
   Int_t xbins(0),ybins(1),zbins(1);
@@ -1037,6 +1040,7 @@ RooPlot* RooAbsReal::plotOn(RooPlot* frame, const RooCmdArg& arg1, const RooCmdA
   //           const RooAbsData& d)
   // ProjectionRange(const char* rn) -- Override default range of projection integrals to a different range speficied by given range name.
   //                                    This technique allows you to project a finite width slice in a real-valued observable
+  // NumCPU(Int_t ncpu)              -- Number of CPUs to use simultaneously to calculate data-weighted projections (only in combination with ProjWData)
   // 
   // Misc content control
   // --------------------
@@ -1094,6 +1098,7 @@ RooPlot* RooAbsReal::plotOn(RooPlot* frame, RooLinkedList& argList) const
   pc.defineInt("shiftToZero","ShiftToZero",0,0) ;  
   pc.defineObject("projDataSet","ProjData",0) ;
   pc.defineObject("projData","ProjData",1) ;
+  pc.defineInt("binProjData","ProjData",0,0) ;
   pc.defineDouble("rangeLo","Range",0,-999.) ;
   pc.defineDouble("rangeHi","Range",1,-999.) ;
   pc.defineInt("rangeAdjustNorm","Range",0,0) ;
@@ -1107,6 +1112,8 @@ RooPlot* RooAbsReal::plotOn(RooPlot* frame, RooLinkedList& argList) const
   pc.defineInt("fillStyle","FillStyle",0,-999) ;
   pc.defineString("curveName","Name",0,"") ;
   pc.defineInt("curveInvisible","Invisible",0,0) ;
+  pc.defineInt("numCPU","NumCPU",0,1) ;
+  pc.defineInt("interleave","NumCPU",1,0) ; 
   pc.defineString("addToCurveName","AddTo",0,"") ;
   pc.defineDouble("addToWgtSelf","AddTo",0,1.) ;
   pc.defineDouble("addToWgtOther","AddTo",1,1.) ;
@@ -1126,7 +1133,10 @@ RooPlot* RooAbsReal::plotOn(RooPlot* frame, RooLinkedList& argList) const
   o.drawOptions = pc.getString("drawOption") ;
   o.scaleFactor = pc.getDouble("scaleFactor") ;
   o.projData = (const RooAbsData*) pc.getObject("projData") ;
+  o.binProjData = pc.getInt("binProjData") ;
   o.projDataSet = (const RooArgSet*) pc.getObject("projDataSet") ;
+  o.numCPU = pc.getInt("numCPU") ;
+  o.interleave = pc.getInt("interleave") ;
 
   const RooArgSet* sliceSet = (const RooArgSet*) pc.getObject("sliceSet") ;
   const RooArgSet* projSet = (const RooArgSet*) pc.getObject("projSet") ;
@@ -1351,7 +1361,14 @@ RooPlot* RooAbsReal::plotOn(RooPlot *frame, PlotOpt o) const
     return frame ;
   }
 
-  RooAbsReal *projection = (RooAbsReal*) createPlotProjection(*deps, &projectedVars, projectionCompList, o.projectionRangeName) ;
+  RooArgSet normSet(*deps) ;
+  //normSet.add(projDataVars) ;
+
+  RooAbsReal *projection = (RooAbsReal*) createPlotProjection(normSet, &projectedVars, projectionCompList, o.projectionRangeName) ;
+  cxcoutD(Plotting) << "RooAbsReal::plotOn(" << GetName() << ") plot projection object is " << projection->GetName() << endl ;
+  if (dologD(Plotting)) {
+    projection->printStream(ccoutD(Plotting),0,kVerbose) ;
+  }
 
   // Always fix RooAddPdf normalizations
   RooArgSet fullNormSet(*deps) ;
@@ -1375,23 +1392,8 @@ RooPlot* RooAbsReal::plotOn(RooPlot *frame, PlotOpt o) const
   // Apply data projection, if requested
   if (o.projData && projDataNeededVars && projDataNeededVars->getSize()>0) {
 
-    // Disable dirty state propagation in projection    
-    RooArgSet branchList("branchList") ;
-    ((RooAbsReal*)projection)->setOperMode(RooAbsArg::ADirty) ;
-    projection->branchNodeServerList(&branchList) ;
-    TIterator* bIter = branchList.createIterator() ;
-    RooAbsArg* branch ;
-    while((branch=(RooAbsArg*)bIter->Next())) {
-      branch->setOperMode(RooAbsArg::ADirty) ;
-    }
-    delete bIter ;
-
     // If data set contains more rows than needed, make reduced copy first
     RooAbsData* projDataSel = (RooAbsData*)o.projData;
-
-//     cout << "projDataNeededVars = " ; projDataNeededVars->Print("1") ;
-//     cout << "projData vars      = " ; projData->get()->Print("1") ;
-//     cout << "sliceSet           = " ; sliceSet.Print("1") ;
 
     if (projDataNeededVars->getSize()<o.projData->get()->getSize()) {
       
@@ -1431,21 +1433,43 @@ RooPlot* RooAbsReal::plotOn(RooPlot *frame, PlotOpt o) const
 		      << ") only the following components of the projection data will be used: " << *projDataNeededVars << endl ;
     }
 
+    // Request binning of unbinned projection dataset that consists exclusively of category observables
+    if (!o.binProjData && dynamic_cast<RooDataSet*>(projDataSel)!=0) {
+      
+      // Determine if dataset contains only categories
+      TIterator* iter = projDataSel->get()->createIterator() ;
+      Bool_t allCat(kTRUE) ;
+      RooAbsArg* arg ;
+      while((arg=(RooAbsArg*)iter->Next())) {
+	if (!dynamic_cast<RooCategory*>(arg)) allCat = kFALSE ;
+      }
+      delete iter ;
+      if (allCat) {
+	o.binProjData = kTRUE ;
+	coutI(Plotting) << "RooAbsReal::plotOn(" << GetName() << ") unbinned projection dataset consist only of discrete variables,"
+			<< " performing projection with binned copy for optimization." << endl ;
+	
+      }
+    }
+
+    // Bin projection dataset if requested
+    if (o.binProjData) {
+      RooAbsData* tmp = new RooDataHist(Form("%s_binned",projDataSel->GetName()),"Binned projection data",*projDataSel->get(),*projDataSel) ;
+      if (projDataSel!=o.projData) delete projDataSel ;
+      projDataSel = tmp ;
+    }
+    
 
 
     // Attach dataset
     projection->getVal(projDataSel->get()) ;
-    
-    //cout << "RooAbsReal::plotOn(" << GetName() << ") start attachDataSet" << endl ;
     projection->attachDataSet(*projDataSel) ;
-    //cout << "RooAbsReal::plotOn(" << GetName() << ") end attachDataSet" << endl ;
+    
+    // Construct optimized data weighted average
+    RooDataWeightedAverage dwa(Form("%sDataWgtAvg",GetName()),"Data Weighted average",*projection,*projDataSel,o.numCPU,o.interleave,kTRUE) ;
+    dwa.constOptimizeTestStatistic(Activate) ;
 
-    RooDataProjBinding projBind(*projection,*projDataSel,*plotVar) ;
-
-//     // WVE -- Experimental, deactictivate for now
-//     projection->optimizeDirty(*projDataSel,deps) ;
-//     projection->doConstOpt(*projDataSel,deps);
-
+    RooRealBinding projBind(dwa,*plotVar) ;
     RooScaledFunc scaleBind(projBind,o.scaleFactor);
 
     // Set default range, if not specified
@@ -1744,8 +1768,13 @@ RooPlot* RooAbsReal::plotAsymOn(RooPlot *frame, const RooAbsCategoryLValue& asym
       coutI(Plotting) << "RooAbsReal::plotAsymOn(" << GetName() 
 		      << ") only the following components of the projection data will be used: " << *projDataNeededVars << endl ;
     }    
+    
 
-    RooDataProjBinding projBind(*funcAsym,*projDataSel,*plotVar) ;
+    RooDataWeightedAverage dwa(Form("%sDataWgtAvg",GetName()),"Data Weighted average",*funcAsym,*projDataSel,o.numCPU,o.interleave,kTRUE) ;
+    dwa.constOptimizeTestStatistic(Activate) ;
+
+    RooRealBinding projBind(dwa,*plotVar) ;
+
     ((RooAbsReal*)posProj)->attachDataSet(*projDataSel) ;
     ((RooAbsReal*)negProj)->attachDataSet(*projDataSel) ;
 
@@ -2254,3 +2283,40 @@ void RooAbsReal::printEvalErrors(ostream& os)
     os << " : " << iter->second << endl ;
   } 
 }
+
+
+void RooAbsReal::fixAddCoefNormalization(const RooArgSet& addNormSet, Bool_t force) 
+{
+  RooArgSet* compSet = getComponents() ;
+  TIterator* iter = compSet->createIterator() ;
+  RooAbsArg* arg ;
+  while((arg=(RooAbsArg*)iter->Next())) {
+    RooAbsPdf* pdf = dynamic_cast<RooAbsPdf*>(arg) ;
+    if (pdf) {
+      if (addNormSet.getSize()>0) {
+	pdf->selectNormalization(&addNormSet,force) ;
+      } else {
+	pdf->selectNormalization(0,force) ;
+      }
+    } 
+  }
+  delete iter ;
+  delete compSet ;  
+}
+
+void RooAbsReal::fixAddCoefRange(const char* rangeName, Bool_t force) 
+{
+  RooArgSet* compSet = getComponents() ;
+  TIterator* iter = compSet->createIterator() ;
+  RooAbsArg* arg ;
+  while((arg=(RooAbsArg*)iter->Next())) {
+    RooAbsPdf* pdf = dynamic_cast<RooAbsPdf*>(arg) ;
+    if (pdf) {
+      pdf->selectNormalizationRange(rangeName,force) ;
+    }
+  }
+  delete iter ;
+  delete compSet ;    
+}
+
+

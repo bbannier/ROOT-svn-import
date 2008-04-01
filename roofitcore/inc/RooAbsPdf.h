@@ -166,9 +166,6 @@ public:
 
   Bool_t isSelectedComp() const ;
 
-  virtual void fixAddCoefNormalization(const RooArgSet& addNormSet=RooArgSet(),Bool_t force=kTRUE) ;
-  virtual void fixAddCoefRange(const char* rangeName=0,Bool_t force=kTRUE) ;
-
   virtual Double_t extendedTerm(UInt_t observedEvents, const RooArgSet* nset=0) const ;
 
   static void clearEvalError() ;
@@ -227,7 +224,7 @@ protected:
   class CacheElem : public RooAbsCacheElement {
   public:
     CacheElem(RooAbsReal& norm) : _norm(&norm) {} ;
-    void operModeHook(RooAbsArg::OperMode) {} ;
+    void operModeHook(RooAbsArg::OperMode) ;
     virtual ~CacheElem() ; 
     virtual RooArgList containedArgs(Action) { return RooArgList(*_norm) ; }
     RooAbsReal* _norm ;

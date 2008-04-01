@@ -19,8 +19,8 @@
 #include "RooAbsArg.h"
 #include "RooCmdArg.h"
 #include "RooCurve.h"
+#include "RooArgSet.h"
 
-class RooArgSet ;
 class RooArgList ;
 class RooDataSet ;
 class RooPlot;
@@ -113,6 +113,9 @@ public:
   RooNumIntConfig* specialIntegratorConfig() const ;
   void setIntegratorConfig() ;
   void setIntegratorConfig(const RooNumIntConfig& config) ;
+
+  virtual void fixAddCoefNormalization(const RooArgSet& addNormSet=RooArgSet(),Bool_t force=kTRUE) ;
+  virtual void fixAddCoefRange(const char* rangeName=0,Bool_t force=kTRUE) ;
 
 
 public:
@@ -252,13 +255,15 @@ protected:
   friend class RooAbsOptGoodnessOfFit ;
   
   struct PlotOpt {
-   PlotOpt() : drawOptions("L"), scaleFactor(1.0), stype(Relative), projData(0), projSet(0), precision(1e-3), shiftToZero(kFALSE),
-               projDataSet(0),rangeLo(0),rangeHi(0),postRangeFracScale(kFALSE),wmode(RooCurve::Extended),projectionRangeName(0),
-               curveInvisible(kFALSE), curveName(0),addToCurveName(0),addToWgtSelf(1.),addToWgtOther(1.) {} ;
+   PlotOpt() : drawOptions("L"), scaleFactor(1.0), stype(Relative), projData(0), binProjData(kFALSE), projSet(0), precision(1e-3), 
+               shiftToZero(kFALSE),projDataSet(0),rangeLo(0),rangeHi(0),postRangeFracScale(kFALSE),wmode(RooCurve::Extended),
+               projectionRangeName(0),curveInvisible(kFALSE), curveName(0),addToCurveName(0),addToWgtSelf(1.),addToWgtOther(1.),
+               numCPU(1),interleave(kTRUE) {} ;
    Option_t* drawOptions ;
    Double_t scaleFactor ;	 
    ScaleType stype ;
    const RooAbsData* projData ;
+   Bool_t binProjData ;
    const RooArgSet* projSet ;
    Double_t precision ;
    Bool_t shiftToZero ;
@@ -273,6 +278,8 @@ protected:
    const char* addToCurveName ;
    Double_t addToWgtSelf ;
    Double_t addToWgtOther ;
+   Int_t    numCPU ;
+   Bool_t interleave ;
   } ;
 
   // Plot implementation functions

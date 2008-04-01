@@ -60,6 +60,7 @@
 #pragma link C++ class RooParamBinning+ ;
 #pragma link C++ class RooConstraintSum+ ;
 #pragma link C++ class RooRecursiveFraction+ ;
+#pragma link C++ class RooDataWeightedAverage+ ;
 #pragma link off class RooErrorHandler+ ;
 #pragma link off class RooNag+ ;
 #endif 
