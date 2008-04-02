@@ -27,8 +27,11 @@
 
 #include <algorithm>
 
-//______________________________________________________________________
+//==============================================================================
 // TGLScene::TSceneInfo
+//==============================================================================
+
+//______________________________________________________________________
 //
 // Extend TGLSceneInfo for needs of TGLScene:
 //
@@ -42,6 +45,7 @@
 //______________________________________________________________________________
 TGLScene::TSceneInfo::TSceneInfo(TGLViewerBase* view, TGLScene* scene) :
    TGLSceneInfo (view, scene),
+   fMinorStamp  (0),
    fOpaqueCnt   (0),
    fTranspCnt   (0),
    fAsPixelCnt  (0)
@@ -90,18 +94,30 @@ void TGLScene::TSceneInfo::ClearDrawElementPtrVec(DrawElementPtrVec_t& vec,
 //______________________________________________________________________________
 void TGLScene::TSceneInfo::ClearAfterRebuild()
 {
-   // Clear DrawElementVectors and optionally resize them so that they
-   // don't take more space then required by all the elements in the
-   // scene's draw-list.
+   // Clear DrawElementVector fVisibleElement and optionally resize it
+   // so that it doesn't take more space then required by all the
+   // elements in the scene's draw-list.
 
    Int_t maxSize = (Int_t) fShapesOfInterest.size();
 
    ClearDrawElementVec(fVisibleElements, maxSize);
+}
+
+//______________________________________________________________________________
+void TGLScene::TSceneInfo::ClearAfterUpdate()
+{
+   // Clear DrawElementPtrVectors and optionally resize them so that
+   // they don't take more space then required by all the elements in
+   // the scene's draw-list.
+
+   Int_t maxSize = (Int_t) fShapesOfInterest.size();
 
    ClearDrawElementPtrVec(fOpaqueElements, maxSize);
    ClearDrawElementPtrVec(fTranspElements, maxSize);
    ClearDrawElementPtrVec(fSelOpaqueElements, maxSize);
    ClearDrawElementPtrVec(fSelTranspElements, maxSize);
+
+   fMinorStamp = 0;
 }
 
 //______________________________________________________________________________
@@ -117,34 +133,38 @@ void TGLScene::TSceneInfo::Lodify(TGLRnrCtx& ctx)
 void TGLScene::TSceneInfo::PreDraw()
 {
    // Prepare for drawing - fill DrawElementPtrVectors from the
-   // contents of fVisibleElements.
+   // contents of fVisibleElements if there was some change.
 
-   for (DrawElementVec_i i = fVisibleElements.begin(); i != fVisibleElements.end(); ++i)
+   if (fMinorStamp < fScene->GetMinorStamp())
    {
-      if (i->fPhysical->IsSelected())
+      fOpaqueElements.clear();
+      fTranspElements.clear();
+      fSelOpaqueElements.clear();
+      fSelTranspElements.clear();   
+
+      for (DrawElementVec_i i = fVisibleElements.begin(); i != fVisibleElements.end(); ++i)
       {
-         if (i->fPhysical->IsTransparent())
-            fSelTranspElements.push_back(&*i);
-         else
-            fSelOpaqueElements.push_back(&*i);
-      } else {
-         if (i->fPhysical->IsTransparent())
-            fTranspElements.push_back(&*i);
-         else
-            fOpaqueElements.push_back(&*i);
+         if (i->fPhysical->IsSelected())
+         {
+            if (i->fPhysical->IsTransparent())
+               fSelTranspElements.push_back(&*i);
+            else
+               fSelOpaqueElements.push_back(&*i);
+         } else {
+            if (i->fPhysical->IsTransparent())
+               fTranspElements.push_back(&*i);
+            else
+               fOpaqueElements.push_back(&*i);
+         }
       }
+      fMinorStamp = fScene->GetMinorStamp();
    }
 }
 
 //______________________________________________________________________________
 void TGLScene::TSceneInfo::PostDraw()
 {
-   // Clean-up after drawing - clear DrawElementPtrVectors.
-
-   fOpaqueElements.clear();
-   fTranspElements.clear();
-   fSelOpaqueElements.clear();
-   fSelTranspElements.clear();   
+   // Clean-up after drawing, nothing to be done here.
 }
 
 //______________________________________________________________________________
@@ -220,8 +240,11 @@ void TGLScene::TSceneInfo::DumpDrawStats()
 }
 
 
-//______________________________________________________________________________
+//==============================================================================
 // TGLScene
+//==============================================================================
+
+//______________________________________________________________________________
 //
 // TGLScene provides managememnt and rendering of ROOT's default 3D
 // object representation as logical and physical shapes.
@@ -247,7 +270,7 @@ void TGLScene::TSceneInfo::DumpDrawStats()
 // efficiency and syncronisation reasons. Hence viewer variant objects
 // camera, clips etc being owned by viewer and passed at draw/select
 
-ClassImp(TGLScene)
+ClassImp(TGLScene);
 
 //______________________________________________________________________________
 TGLScene::TGLScene() :
@@ -489,8 +512,8 @@ void TGLScene::UpdateSceneInfo(TGLRnrCtx& rnrCtx)
       }
 
       // Terminate the traversal if over scene rendering limit.
-      // Only test every 1000 objects as this is somewhat costly.
-      if (timerp && (checkCount % 1000) == 0 && rnrCtx.HasStopwatchTimedOut())
+      // Only test every 5000 objects as this is somewhat costly.
+      if (timerp && (checkCount % 5000) == 0 && rnrCtx.HasStopwatchTimedOut())
       {
          fUpdateTimeouted = kTRUE;
          if (rnrCtx.ViewerLOD() == TGLRnrCtx::kLODHigh)
@@ -499,6 +522,8 @@ void TGLScene::UpdateSceneInfo(TGLRnrCtx& rnrCtx)
          break;
       }
    }
+
+   sinfo->ClearAfterUpdate();
 
    // !!! MT Transparents should be sorted by their eye z-coordinate.
    // Need combined matrices in scene-info to do this.
@@ -817,8 +842,8 @@ void TGLScene::RenderElements(TGLRnrCtx           & rnrCtx,
       }
 
       // Terminate the draw if over opaque fraction timeout.
-      // Only test every 500 objects as this is somewhat costly.
-      if (check_timeout && (drawCount % 500) == 0 &&
+      // Only test every 2000 objects as this is somewhat costly.
+      if (check_timeout && (drawCount % 2000) == 0 &&
           rnrCtx.HasStopwatchTimedOut())
       {
          if (rnrCtx.ViewerLOD() == TGLRnrCtx::kLODHigh)
@@ -1153,7 +1178,7 @@ Bool_t TGLScene::BeginUpdate()
 }
 
 //______________________________________________________________________________
-void TGLScene::EndUpdate(Bool_t sceneChanged, Bool_t updateViewers)
+void TGLScene::EndUpdate(Bool_t minorChange, Bool_t sceneChanged, Bool_t updateViewers)
 {
    // Exit scene update mode.
    //
@@ -1167,6 +1192,9 @@ void TGLScene::EndUpdate(Bool_t sceneChanged, Bool_t updateViewers)
    // will be tagged as changed. If sceneChanged is true the
    // updateViewers should be true as well, unless you take care of
    // the viewers elsewhere or in some other way.
+
+   if (minorChange)
+      IncMinorStamp();
 
    if (sceneChanged)
       IncTimeStamp();

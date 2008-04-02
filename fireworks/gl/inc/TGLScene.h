@@ -91,6 +91,7 @@ public:
 
       DrawElementVec_t    fVisibleElements;
 
+      UInt_t              fMinorStamp;
       DrawElementPtrVec_t fOpaqueElements;
       DrawElementPtrVec_t fTranspElements;
       DrawElementPtrVec_t fSelOpaqueElements;
@@ -100,6 +101,7 @@ public:
       virtual ~TSceneInfo();
 
       void ClearAfterRebuild();
+      void ClearAfterUpdate();
 
       void Lodify(TGLRnrCtx& ctx);
 
@@ -195,7 +197,7 @@ public:
    // Updates / removals of logical and physical shapes
 
    virtual Bool_t BeginUpdate();
-   virtual void   EndUpdate(Bool_t sceneChanged=kTRUE, Bool_t updateViewers=kTRUE);
+   virtual void   EndUpdate(Bool_t minorChange=kTRUE, Bool_t sceneChanged=kTRUE, Bool_t updateViewers=kTRUE);
 
    virtual void UpdateLogical(TObject* logid);
 

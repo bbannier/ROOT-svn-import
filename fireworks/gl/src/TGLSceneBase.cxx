@@ -22,8 +22,11 @@
 #include <string>
 #include <algorithm>
 
-//______________________________________________________________________
+//==============================================================================
 // TGLSceneBase
+//==============================================================================
+
+//______________________________________________________________________
 //
 // Scene base-class --  provides basic interface expected by the
 // TGLViewer or its sub-classes:
@@ -42,7 +45,7 @@
 // default all GL contexts must use shared display-lists etc).
 
 
-ClassImp(TGLSceneBase)
+ClassImp(TGLSceneBase);
 
 UInt_t TGLSceneBase::fgSceneIDSrc = 1;
 
@@ -51,6 +54,7 @@ TGLSceneBase::TGLSceneBase() :
    TGLLockable(),
 
    fTimeStamp        (1),
+   fMinorStamp       (1),
    fLOD              (TGLRnrCtx::kLODHigh),
    fStyle            (TGLRnrCtx::kStyleUndef),
    fClip             (0),
