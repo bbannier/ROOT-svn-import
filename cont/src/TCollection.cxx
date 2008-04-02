@@ -523,8 +523,7 @@ TIter &TIter::Begin()
 {
    // Pointing to the first element of the container
 
-   Reset();
-   Next();
+   fIterator->MoveFirst();
    return *this;
 }
 

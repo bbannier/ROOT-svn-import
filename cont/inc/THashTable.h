@@ -125,6 +125,7 @@ public:
    const TCollection *GetCollection() const { return fTable; }
    TObject           *Next();
    void               Reset();
+   void MoveFirst();
    bool operator !=(const TIterator &aIter) const;
    bool operator !=(const THashTableIter &aIter) const;
    TObject* operator*() const;

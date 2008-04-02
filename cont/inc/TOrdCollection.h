@@ -109,6 +109,7 @@ public:
    const TCollection *GetCollection() const { return fCol; }
    TObject           *Next();
    void              Reset();
+   void MoveFirst();
    bool operator !=(const TIterator &aIter) const;
    bool operator !=(const TOrdCollectionIter &aIter) const;
    TObject* operator*() const;

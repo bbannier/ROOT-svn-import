@@ -60,6 +60,8 @@ private:
    TList& operator=(const TList&);  // not implemented
 
 public:
+   typedef TListIter Iterator_t;
+
    TList() : fFirst(NULL), fLast(NULL), fCache(NULL), fAscending(kTRUE) { }
    TList(TObject *) : fFirst(NULL), fLast(NULL), fCache(NULL), fAscending(kTRUE) { } // for backward compatibility, don't use
    virtual           ~TList();
@@ -171,7 +173,10 @@ public:
 //////////////////////////////////////////////////////////////////////////
 
 
-class TListIter : public TIterator
+class TListIter : public TIterator,
+		          public std::iterator <std::bidirectional_iterator_tag, 
+		                                TObject*, std::ptrdiff_t,
+		                                const TObject**, const TObject*&>
 {
 
 protected:
@@ -196,6 +201,11 @@ public:
    void               SetOption(Option_t *option);
    TObject           *Next();
    void               Reset() { fStarted = kFALSE; }
+   void MoveFirst()
+   {
+     Reset();
+     Next();
+   }
    bool operator !=(const TIterator &aIter) const;
    bool operator !=(const TListIter &aIter) const;
    TObject* operator*() const { return (fCurCursor ? fCurCursor->GetObject() : NULL); }

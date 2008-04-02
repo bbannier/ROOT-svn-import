@@ -810,3 +810,9 @@ TObject* TRefArrayIter::operator*() const
 {
    return (((fCursor >= 0) && (fCursor < fArray->Capacity())) ? fArray->At(fCursor) : NULL);
 }
+
+//______________________________________________________________________________
+void TRefArrayIter::MoveFirst()
+{
+   Reset();
+}

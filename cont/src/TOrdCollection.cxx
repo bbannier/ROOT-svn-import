@@ -564,3 +564,9 @@ TObject* TOrdCollectionIter::operator*() const
 {
    return (((fCursor >= 0) && (fCursor < fCol->GetSize())) ? fCol->At(fCursor) : NULL);
 }
+
+//______________________________________________________________________________
+void TOrdCollectionIter::MoveFirst()
+{
+   Reset();
+}

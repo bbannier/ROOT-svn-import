@@ -808,7 +808,7 @@ bool TObjArrayIter::operator !=(const TIterator &aIter) const
    // This operator compares two TIterator objects
 
    if (NULL == (&aIter))
-      return fCursor;
+      return (fCursor < fArray->Capacity());
 
    if (aIter.IsA() == TObjArrayIter::Class()) {
       const TObjArrayIter &iter(dynamic_cast<const TObjArrayIter &>(aIter));
@@ -823,7 +823,7 @@ bool TObjArrayIter::operator !=(const TObjArrayIter &aIter) const
    // This operator compares two TObjArrayIter objects
 
    if (NULL == (&aIter))
-      return fCursor;
+      return (fCursor < fArray->Capacity());
 
    return (fCursor != aIter.fCursor);
 }

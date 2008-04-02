@@ -26,6 +26,7 @@
 #include "TSeqCollection.h"
 #endif
 
+class TObjArrayIter;
 
 class TObjArray : public TSeqCollection
 {
@@ -44,6 +45,8 @@ protected:
    Int_t         GetAbsLast() const;
 
 public:
+   typedef TObjArrayIter Iterator_t;
+  
    TObjArray(Int_t s = TCollection::kInitCapacity, Int_t lowerBound = 0);
    TObjArray(const TObjArray &a);
    virtual          ~TObjArray();
@@ -103,7 +106,11 @@ public:
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-class TObjArrayIter : public TIterator
+class TObjArrayIter : public TIterator,
+                      public std::iterator <std::bidirectional_iterator_tag, // TODO: ideally it should be a  randomaccess_iterator_tag
+                                            TObject*, std::ptrdiff_t,
+                                            const TObject**, const TObject*&>
+
 {
 
 private:
@@ -123,6 +130,10 @@ public:
    const TCollection *GetCollection() const { return fArray; }
    TObject           *Next();
    void              Reset();
+   void MoveFirst()
+   {
+     Reset();
+   }
    bool operator !=(const TIterator &aIter) const;
    bool operator !=(const TObjArrayIter &aIter) const;
    TObject* operator*() const;

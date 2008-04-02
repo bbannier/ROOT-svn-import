@@ -125,6 +125,7 @@ public:
    const TCollection *GetCollection() const { return fArray; }
    TObject           *Next();
    void              Reset();
+   void MoveFirst();
    bool operator !=(const TIterator &aIter) const;
    bool operator !=(const TRefArrayIter &aIter) const;
    TObject* operator*() const;

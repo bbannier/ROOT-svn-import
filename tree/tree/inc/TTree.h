@@ -426,6 +426,10 @@ public:
    Option_t          *GetOption() const;
    TObject           *Next();
    void               Reset() { SafeDelete(fLeafIter); SafeDelete(fTreeIter); }
+   void MoveFirst()
+   {
+     // TODO: Implement me
+   }
    bool operator !=(const TIterator&) const {
       // TODO: Implement me
       return false;

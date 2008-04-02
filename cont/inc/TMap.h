@@ -145,6 +145,7 @@ public:
    const TCollection *GetCollection() const { return fMap; }
    TObject           *Next();
    void               Reset();
+   void MoveFirst();
    bool operator !=(const TIterator &aIter) const;
    bool operator !=(const TMapIter &aIter) const;
    TObject* operator*() const;
