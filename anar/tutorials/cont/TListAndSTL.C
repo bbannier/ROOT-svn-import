@@ -15,7 +15,7 @@
 
 // A functor for the for_each algorithm
 struct SEnumFunctor {
-   bool operator()(TObject *aObj) throw(exception) {
+   bool operator()(TObject *aObj) {
       if (!aObj)
          return false;
 
@@ -23,14 +23,14 @@ struct SEnumFunctor {
       if (!str)
          return false;
 
-      cout << "Value: "<< str->String().Data() << endl;
+      cout << "Value: " << str->String().Data() << endl;
       return true;
    }
 };
 
 // A functor for the find_if algorithm
 struct SFind {
-  // using this ugly constructor, since there is problems with std::bindX in CINT 
+   // using this ugly constructor, since there is problems with std::bindX in CINT
    SFind(const TString &aStr): fToFind(aStr) {
    }
    bool operator()(TObject *aObj) {
@@ -42,11 +42,11 @@ private:
 };
 
 
-// The "main" function 
+// The "main" function
 void TListAndSTL()
 {
    const Int_t size(10);
-   
+
    // Initializing TList container
    TList list;
    ostringstream ss;
@@ -56,41 +56,42 @@ void TListAndSTL()
       list.Add(s);
       ss.str("");
    }
-   
-   
-   //->>>>>>> Example #1
+
+
+   //->>>>>>> Example #1 <<<<<<<-
    // running the std::for_each algorithm on the list
    TIter iter(&list);
    for_each(iter.Begin(), TIter::End(), SEnumFunctor());
-  
-   
-   // The following can only be processed with ACLiC.
-   // Cint still has some problem interpreting some of the STL containers.
-#ifndef __CINT__
-   //->>>>>>> Example #2
+
+
+   //->>>>>>> Example #2 <<<<<<<-
    // we can try to find something in the container
    // using the std::find_if algorithm on the list
    string strToFind("test string #4");
    SFind func(strToFind.c_str());
-   TIterCategory<TList> iter_cat(&list);
-   TIterCategory<TList> found(
-      find_if(iter_cat.Begin(), TIterCategory<TList>::End(), func)
+
+#ifdef __CINT__
+   TIter found(
+      find_if(iter.Begin(), TIter::End(), func)
    );
-   
+#else // in compilation mode you need to use TIterCategory as an iterator for such a algorithm like find_if
+   TIterCategory<TList> iter_cat(&list);
+      TIterCategory<TList> found(
+         find_if(iter_cat.Begin(), TIterCategory<TList>::End(), func)
+      );
+#endif
+
    // Checking the result
-   if (!(*found))
-   {
+   if (!(*found)) {
       cerr << "Can't find the string: \"" << strToFind << "\" in the container" << endl;
       return;
    }
 
    TObjString *str(dynamic_cast<TObjString*>(*found));
-   if (!str)
-   {
-     cerr << "Can't find the string: \"" << strToFind << "\" in the container" << endl;
-     return;
+   if (!str) {
+      cerr << "Can't find the string: \"" << strToFind << "\" in the container" << endl;
+      return;
    }
 
-   std::cout << "The string has been found: " << str->String().Data() << std::endl;
-#endif
+   cout << "The string has been found: " << str->String().Data() << endl;
 }
