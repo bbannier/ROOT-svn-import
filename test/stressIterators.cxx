@@ -159,7 +159,7 @@ void stressIterators() throw(exception)
 
    cout << "====================================" << endl;
    cout << "-----> " << "TestContainer_count_if<TObjArray>(obj_array, \"test string #3\")" << endl;
-   //TestContainer_count_if<TObjArray>(obj_array, "test string #3");
+   TestContainer_count_if<TObjArray>(obj_array, "test string #3");
 
 
 }
@@ -182,6 +182,6 @@ int main()
       return 1;
    }
 
-   cout << "Test successfully finished!" << endl;
+   cout << "\nTest successfully finished!" << endl;
    return 0;
 }
