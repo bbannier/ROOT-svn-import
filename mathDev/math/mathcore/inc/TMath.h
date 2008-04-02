@@ -163,16 +163,23 @@ namespace TMath {
 
    // Locate Min, Max element number in an array
    template <typename T> Long64_t  LocMin(Long64_t n, const T *a);
+   template <typename Iterator> Iterator LocMin(Iterator first, Iterator last);
    template <typename T> Long64_t  LocMax(Long64_t n, const T *a);
+   template <typename Iterator> Iterator LocMax(Iterator first, Iterator last);
 
    //Mean, Geometric Mean, Median, RMS
 
    template <typename T> Double_t Mean(Long64_t n, const T *a, const Double_t *w=0);
-   template <typename T> Double_t GeomMean(Long64_t n, const T *a);
-   template <typename T> Double_t RMS(Long64_t n, const T *a);
+   template <typename Iterator> Double_t Mean(Iterator first, Iterator last);
+   template <typename Iterator, typename WeightIterator> Double_t Mean(Iterator first, Iterator last, WeightIterator w);
 
-   template <class Element, class Index, class Size>  Double_t MedianImp(Size n, const Element *a, const Double_t *w=0, Index *work=0);
-   template <typename T> Double_t  Median(Long64_t n, const T *a,  const Double_t *w=0, Long64_t *work=0);
+   template <typename T> Double_t GeomMean(Long64_t n, const T *a);
+   template <typename Iterator> Double_t GeomMean(Iterator first, Iterator last);
+
+   template <typename T> Double_t RMS(Long64_t n, const T *a);
+   template <typename Iterator> Double_t RMS(Iterator first, Iterator last);
+
+   template <typename T> Double_t Median(Long64_t n, const T *a,  const Double_t *w=0, Long64_t *work=0);
 
    //k-th order statistic
    template <class Element, typename Size> Element KOrdStat(Size n, const Element *a, Size k, Size *work = 0);
@@ -184,6 +191,7 @@ namespace TMath {
    // Binary search
    template <typename T> Long64_t BinarySearch(Long64_t n, const T  *array, T value);
    template <typename T> Long64_t BinarySearch(Long64_t n, const T **array, T value);
+   template <typename Iterator, typename Element> Iterator BinarySearch(Iterator first, Iterator last, Element value);
 
    // Hashing
    ULong_t Hash(const void *txt, Int_t ntxt);
@@ -193,8 +201,11 @@ namespace TMath {
    template <typename T> Bool_t IsInside(T xp, T yp, Int_t np, T *x, T *y);
 
    // Sorting
-   template <class Element, class Index, class Size>  void SortImp(Size n, const Element*, Index* index, Bool_t down=kTRUE);
-   template <typename Element, typename Index, typename Size>  void Sort(Size n, const Element* a, Index* index, Bool_t down=kTRUE);
+   template <typename Element, typename Index>
+   void Sort(Long64_t n, const Element* a, Index* index, Bool_t down=kTRUE);
+   template <typename Iterator, typename IndexIterator>
+   void SortItr(Iterator first, Iterator last, IndexIterator index, Bool_t down=kTRUE);
+
    void BubbleHigh(Int_t Narr, Double_t *arr1, Int_t *arr2);
    void BubbleLow (Int_t Narr, Double_t *arr1, Int_t *arr2);
 
@@ -439,6 +450,13 @@ Long64_t TMath::LocMin(Long64_t n, const T *a) {
    return (Long64_t) (std::min_element(a, a+n) - a);
 }
 
+template <typename Iterator>
+Iterator TMath::LocMin(Iterator first, Iterator last) {
+   // Return index of array with the minimum element.
+   // If more than one element is minimum returns first found.
+   return std::min_element(first, last);
+}
+
 template <typename T>
 Long64_t TMath::LocMax(Long64_t n, const T *a) {
    // Return index of array with the maximum element.
@@ -447,88 +465,134 @@ Long64_t TMath::LocMax(Long64_t n, const T *a) {
    return (Long64_t) (std::max_element(a, a+n) - a);
 }
 
+template <typename Iterator> 
+Iterator TMath::LocMax(Iterator first, Iterator last)
+{
+   // Return index of array with the maximum element.
+   // If more than one element is maximum returns first found.
+
+   return std::max_element(first, last);
+}
+
 template<typename T> 
 struct CompareDesc { 
 
-   CompareDesc(const T *  d) : fData(d) {}
+   CompareDesc(T d) : fData(d) {}
 
    bool operator()(int i1, int i2) { 
-      return fData[i1] > fData[i2];
+      return *(fData + i1) > *(fData + i2);
    }
 
-   const T * fData; 
+   T fData;
 };
 
 template<typename T> 
 struct CompareAsc { 
 
-   CompareAsc(const T *  d) : fData(d) {}
+   //CompareAsc(const T *  d) : fData(d) {}
+   CompareAsc(T d) : fData(d) {}
 
    bool operator()(int i1, int i2) { 
-      return fData[i1] < fData[i2];
+      return *(fData + i1) < *(fData + i2);
    }
 
-   const T * fData; 
+   //const T * fData; 
+   T fData; 
 };
 
-template <typename T> Double_t TMath::Mean(Long64_t n, const T *a, const Double_t *w)
+template <typename Iterator> 
+Double_t TMath::Mean(Iterator first, Iterator last)
 {
    // Return the weighted mean of an array a with length n.
 
-   if (n <= 0 || !a) return 0;
-
    Double_t sum = 0;
    Double_t sumw = 0;
-   if (w) {
-      for (Long64_t i = 0; i < n; i++) {
-         if (w[i] < 0) {
-            ::Error("TMath::Mean","w[%d] = %.4e < 0 ?!",i,w[i]);
-            return 0;
-         }
-         sum  += w[i]*a[i];
-         sumw += w[i];
-      }
-      if (sumw <= 0) {
-         ::Error("TMath::Mean","sum of weights == 0 ?!");
-         return 0;
-      }
-   } else {
-      sumw = n;
-      for (Long64_t i = 0; i < n; i++)
-         sum += a[i];
+   while ( first != last )
+   {
+      sum += *first;
+      sumw += 1;
+      first++;
    }
 
    return sum/sumw;
 }
 
+template <typename Iterator, typename WeightIterator> 
+Double_t TMath::Mean(Iterator first, Iterator last, WeightIterator w)
+{
+   // Return the weighted mean of an array a with length n.
 
-template <typename T> Double_t TMath::GeomMean(Long64_t n, const T *a)
+   Double_t sum = 0;
+   Double_t sumw = 0;
+   int i = 0;
+   while ( first != last ) {
+      if ( *w < 0) {
+         ::Error("TMath::Mean","w[%d] = %.4e < 0 ?!",i,*w);
+         return 0;
+      }
+      sum  += (*w) * (*first);
+      sumw += (*w) ;
+      ++w;
+      ++first;
+      ++i;
+   }
+   if (sumw <= 0) {
+      ::Error("TMath::Mean","sum of weights == 0 ?!");
+      return 0;
+   }
+
+   return sum/sumw;  
+}
+
+template <typename T> 
+Double_t TMath::Mean(Long64_t n, const T *a, const Double_t *w)
+{
+   // Return the weighted mean of an array a with length n.
+
+   if (w) {
+      return TMath::Mean(a, a+n, w);
+   } else {
+      return TMath::Mean(a, a+n);
+   }
+}
+
+template <typename Iterator> 
+Double_t TMath::GeomMean(Iterator first, Iterator last)
 {
    // Return the geometric mean of an array a with length n.
    // geometric_mean = (Prod_i=0,n-1 |a[i]|)^1/n
 
-   if (n <= 0 || !a) return 0;
-
    Double_t logsum = 0.;
-   for (Long64_t i = 0; i < n; i++) {
-      if (a[i] == 0) return 0.;
-      Double_t absa = (Double_t) TMath::Abs(a[i]);
+   Long64_t n = 0;
+   while ( first != last ) {
+      if (*first == 0) return 0.;
+      Double_t absa = (Double_t) TMath::Abs(*first);
       logsum += TMath::Log(absa);
+      ++first;
+      ++n;
    }
 
    return TMath::Exp(logsum/n);
 }
 
-template <typename T> Double_t TMath::RMS(Long64_t n, const T *a)
+template <typename T> 
+Double_t TMath::GeomMean(Long64_t n, const T *a)
+{
+   return TMath::GeomMean(a, a+n);
+}
+
+template <typename Iterator> 
+Double_t TMath::RMS(Iterator first, Iterator last)
 {
    // Return the RMS of an array a with length n.
-
-   if (n <= 0 || !a) return 0;
+   Double_t n = 0;
 
    Double_t tot = 0, tot2 =0, adouble;
-   for (Long64_t i=0;i<n;i++) {
-      adouble=Double_t(a[i]);
+   while ( first != last ) {
+      adouble=Double_t(*first);
       tot += adouble; tot2 += adouble*adouble;
+      ++first;
+      ++n;
    }
    Double_t n1 = 1./n;
    Double_t mean = tot*n1;
@@ -536,28 +600,28 @@ template <typename T> Double_t TMath::RMS(Long64_t n, const T *a)
    return rms;
 }
 
-template <typename T> Double_t TMath::Median(Long64_t n, const T *a,  const Double_t *w, Long64_t *work)
+template <typename T> 
+Double_t TMath::RMS(Long64_t n, const T *a)
 {
-   // Return the median of the array a where each entry i has weight w[i] .
-   // Both arrays have a length of at least n . The median is a number obtained
-   // from the sorted array a through
-   //
-   // median = (a[jl]+a[jh])/2.  where (using also the sorted index on the array w)
-   //
-   // sum_i=0,jl w[i] <= sumTot/2
-   // sum_i=0,jh w[i] >= sumTot/2
-   // sumTot = sum_i=0,n w[i]
-   //
-   // If w=0, the algorithm defaults to the median definition where it is
-   // a number that divides the sorted sequence into 2 halves.
-   // When n is odd or n > 1000, the median is kth element k = (n + 1) / 2.
-   // when n is even and n < 1000the median is a mean of the elements k = n/2 and k = n/2 + 1.
-   //
-   // If work is supplied, it is used to store the sorting index and assumed to be
-   // >= n . If work=0, local storage is used, either on the stack if n < kWorkMax
-   // or on the heap for n >= kWorkMax .
+   return TMath::RMS(a, a+n);
+}
 
-   return MedianImp(n, a, w, work); 
+template <typename Iterator, typename Element>
+Iterator TMath::BinarySearch(Iterator first, Iterator last, Element value)
+{
+   // Binary search in an array of n values to locate value.
+   //
+   // The values in the iterators range are supposed to be sorted
+   // prior to this call.  If match is found, function returns
+   // position of element.  If no match found, function gives nearest
+   // element smaller than value.
+
+   Iterator pind;
+   pind = std::lower_bound(first, last, value);
+   if ( (pind != last) && (*pind == value) )
+      return pind;
+   else
+      return ( pind - 1);   
 }
 
 
@@ -569,28 +633,12 @@ template <typename T> Long64_t TMath::BinarySearch(Long64_t n, const T  *array, 
    // If match is found, function returns position of element.
    // If no match found, function gives nearest element smaller than value.
 
-
-#ifdef USE_NEW_STD_IMPL
    const T* pind;
    pind = std::lower_bound(array, array + n, value);
    if ( (pind != array + n) && (*pind == value) )
       return (pind - array);
    else
       return ( pind - array - 1);
-#else
-
-   Long64_t nabove, nbelow, middle;
-   nabove = n+1;
-   nbelow = 0;
-   while(nabove-nbelow > 1) {
-      middle = (nabove+nbelow)/2;
-      if (value == array[middle-1]) return middle-1;
-      if (value  < array[middle-1]) nabove = middle;
-      else                          nbelow = middle;
-   }
-   return nbelow-1;
-
-#endif
 }
 
 template <typename T> Long64_t TMath::BinarySearch(Long64_t n, const T **array, T value)
@@ -601,39 +649,53 @@ template <typename T> Long64_t TMath::BinarySearch(Long64_t n, const T **array, 
    // If match is found, function returns position of element.
    // If no match found, function gives nearest element smaller than value.
 
-#ifdef USE_NEW_STD_IMPL
    const T* pind;
    pind = std::lower_bound(*array, *array + n, value);
    if ( (pind != *array + n) && (*pind == value) )
       return (pind - *array);
    else
       return ( pind - *array - 1);
-#else
-   Long64_t nabove, nbelow, middle;
-   nabove = n+1;
-   nbelow = 0;
-   while(nabove-nbelow > 1) {
-      middle = (nabove+nbelow)/2;
-      if (value == *array[middle-1]) return middle-1;
-      if (value  < *array[middle-1]) nabove = middle;
-      else                           nbelow = middle;
-   }
-   return nbelow-1;
-#endif
-
 }
 
-template <typename Element, typename Index, typename Size> void TMath::Sort(Size n, const Element* a, Index* index, Bool_t down)
+template <typename Iterator, typename IndexIterator>
+void TMath::SortItr(Iterator first, Iterator last, IndexIterator index, Bool_t down)
 {
    // Sort the n1 elements of the Short_t array a.
    // In output the array index contains the indices of the sorted array.
    // If down is false sort in increasing order (default is decreasing order).
-   // This is a translation of the CERNLIB routine sortzv (M101)
-   // based on the quicksort algorithm.
+
    // NOTE that the array index must be created with a length >= n1
    // before calling this function.
 
-   SortImp(n,a,index,down);
+   int i = 0;
+
+   IndexIterator cindex = index;
+   for ( Iterator cfirst = first; cfirst != last; ++cfirst )
+   {
+      *cindex = i++;
+      ++cindex;
+   }
+   
+   if ( down )
+      std::sort(index, cindex, CompareDesc<Iterator>(first) );
+   else
+       std::sort(index, cindex, CompareAsc<Iterator>(first) );
+}
+
+template <typename Element, typename Index> void TMath::Sort(Long64_t n, const Element* a, Index* index, Bool_t down)
+{
+   // Sort the n1 elements of the Short_t array a.
+   // In output the array index contains the indices of the sorted array.
+   // If down is false sort in increasing order (default is decreasing order).
+
+   // NOTE that the array index must be created with a length >= n1
+   // before calling this function.
+
+   for(Long64_t i = 0; i < n; i++) { index[i] = i; }
+   if ( down )
+      std::sort(index, index + n, CompareDesc<const Element*>(a) );
+   else
+      std::sort(index, index + n, CompareAsc<const Element*>(a) );
 }
 
 template <typename T> T *TMath::Cross(const T v1[3],const T v2[3], T out[3])
@@ -693,9 +755,7 @@ template <typename T> Bool_t TMath::IsInside(T xp, T yp, Int_t np, T *x, T *y)
    return kFALSE;
 }
 
-
-template <class Element, class Index, class Size>
-Double_t TMath::MedianImp(Size n, const Element *a,const Double_t *w, Index *work)
+template <typename T> Double_t TMath::Median(Long64_t n, const T *a,  const Double_t *w, Long64_t *work)
 {
    // Return the median of the array a where each entry i has weight w[i] .
    // Both arrays have a length of at least n . The median is a number obtained
@@ -721,8 +781,8 @@ Double_t TMath::MedianImp(Size n, const Element *a,const Double_t *w, Index *wor
    if (n <= 0 || !a) return 0;
    Bool_t isAllocated = kFALSE;
    Double_t median;
-   Index *ind;
-   Index workLocal[kWorkMax];
+   Long64_t *ind;
+   Long64_t workLocal[kWorkMax];
 
    if (work) {
       ind = work;
@@ -730,7 +790,7 @@ Double_t TMath::MedianImp(Size n, const Element *a,const Double_t *w, Index *wor
       ind = workLocal;
       if (n > kWorkMax) {
          isAllocated = kTRUE;
-         ind = new Index[n];
+         ind = new Long64_t[n];
       }
    }
 
@@ -746,7 +806,7 @@ Double_t TMath::MedianImp(Size n, const Element *a,const Double_t *w, Index *wor
 
       sumTot2 /= 2.;
 
-      SortImp(n, a, ind, kFALSE);
+      Sort(n, a, ind, kFALSE);
 
       Double_t sum = 0.;
       Int_t jl;
@@ -778,27 +838,8 @@ Double_t TMath::MedianImp(Size n, const Element *a,const Double_t *w, Index *wor
    return median;
 }
 
-template <class Element, class Index, class Size>
-void TMath::SortImp(Size n1, const Element *a,
-                    Index *index, Bool_t down)
-{
-   // Templated version of the Sort.
-   //
-   // Sort the n1 elements of the array a.of Element
-   // In output the array index contains the indices of the sorted array.
-   // If down is false sort in increasing order (default is decreasing order).
-   //
-   // NOTE that the array index must be created with a length >= n1
-   // before calling this function.
-   //
-   // See also the declarations at the top of this file.
 
-    for(Size i = 0; i < n1; i++) { index[i] = i; }
-    if ( down )
-       std::sort(index, index + n1, CompareDesc<Element>(a) );
-    else
-       std::sort(index, index + n1, CompareAsc<Element>(a) );
-}
+
 
 template <class Element, typename Size>
 Element TMath::KOrdStat(Size n, const Element *a, Size k, Size *work)
