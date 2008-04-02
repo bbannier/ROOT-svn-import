@@ -623,9 +623,6 @@ void TGLViewer::PostDraw()
    }
    SwapBuffers();
 
-   // Flush everything in case picking starts
-   //   glFlush();
-
    TGLUtil::CheckError("TGLViewer::PostDraw");
 }
 
@@ -635,12 +632,8 @@ void TGLViewer::MakeCurrent() const
    // Make GL context current
    if (fGLDevice == -1)
       fGLWindow->MakeCurrent();
-   else gGLManager->MakeCurrent(fGLDevice);
-
-   // Don't call TGLUtil::CheckError() as we do not
-   // have to be in GL thread here - GL window will call
-   // via gVirtualGL. Again re-enable once TGLManager replaces
-   // TGLUtil::CheckError();
+   else
+      gGLManager->MakeCurrent(fGLDevice);
 }
 
 //______________________________________________________________________________
@@ -816,8 +809,8 @@ Bool_t TGLViewer::RequestOverlaySelect(Int_t x, Int_t y)
    // point (x,y).
    // Request is directed via cross thread gVirtualGL object
 
-   // Take select lock on scene immediately we enter here - it is released
-   // in the other (drawing) thread - see TGLViewer::Select()
+   // Take select lock on viewer immediately - it is released
+   // in the other (drawing) thread - see TGLViewer::Select().
    // Removed when gVirtualGL removed
 
    if ( ! TakeLock(kSelectLock)) {
