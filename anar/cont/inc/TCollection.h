@@ -158,7 +158,26 @@ public:
    TIter &Begin();
    static TIter End();
 
+
    ClassDef(TIter, 0) //Iterator wrapper
+};
+
+template <class T>
+class TIterCategory: public TIter,
+		public std::iterator_traits<typename T::Iterator_t>
+{
+ public:
+   TIterCategory(const TCollection *col, Bool_t dir = kIterForward)
+         : TIter(col, dir) { }
+   TIterCategory(TIterator *it) : TIter(it) { }
+   virtual ~TIterCategory() { }
+   TIterCategory &Begin()
+   {
+     TIter::Begin();
+     return *this;
+   }
+   static TIterCategory End() { return TIterCategory(static_cast<TIterator*>(NULL)); }
+   
 };
 
 

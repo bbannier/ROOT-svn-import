@@ -349,6 +349,7 @@ public:
    const TCollection  *GetCollection() const { return fTree; }
    TObject            *Next();
    void                Reset();
+   void MoveFirst();
    bool operator !=(const TIterator &aIter) const;
    bool operator !=(const TBtreeIter &aIter) const;
    TObject* operator*() const;

@@ -500,3 +500,10 @@ TObject* TMapIter::operator*() const
 {
    return (fCursor ? ((TPair *)(fCursor->operator*()))->Key() : NULL);
 }
+
+//______________________________________________________________________________
+void TMapIter::MoveFirst()
+{
+   Reset();
+   Next();
+}

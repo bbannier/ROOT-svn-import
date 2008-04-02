@@ -74,21 +74,24 @@ inline T __median(T a, T b, T c, Compare comp) {
 }
 
 template <class InputIterator, class Function>
-void for_each(InputIterator first, InputIterator last, Function f) {
+Function for_each(InputIterator first, InputIterator last, Function f) {
   for (; first != last; ++first)
     f(*first);
+  return f;
 }
 
 template <class InputIterator, class T>
 InputIterator find(InputIterator first, InputIterator last, const T& value) {
-    while (first != last && *first != value) ++first;
+    while (first != last && *first != value) 
+      ++first;
     return first;
 }
 
 template <class InputIterator, class Predicate>
 InputIterator find_if(InputIterator first, InputIterator last,
 		      Predicate pred) {
-    while (first != last && !pred(*first)) ++first;
+    while (first != last && !pred(*first)) 
+      ++first;
     return first;
 }
 

@@ -692,6 +692,11 @@ TObject* TBtreeIter::operator*() const
    return (((fCursor >= 0) && (fCursor < fTree->GetSize())) ? (*fTree)[fCursor] : NULL);
 }
 
+//______________________________________________________________________________
+void TBtreeIter::MoveFirst()
+{
+  Reset();
+}
 
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //

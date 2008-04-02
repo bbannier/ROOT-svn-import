@@ -42,6 +42,7 @@ public:
    virtual Option_t *GetOption() const { return ""; }
    virtual TObject *Next() = 0;
    virtual void Reset() = 0;
+   virtual void MoveFirst() = 0;
    TObject *operator()() { return Next(); }
    virtual bool operator !=(const TIterator &) const = 0;
    virtual TObject* operator*() const = 0;

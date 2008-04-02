@@ -497,3 +497,9 @@ TObject* THashTableIter::operator*() const
 {
    return (fListCursor ? fListCursor->operator*() : NULL);
 }
+
+//______________________________________________________________________________
+void THashTableIter::MoveFirst()
+{
+  Reset();
+}
