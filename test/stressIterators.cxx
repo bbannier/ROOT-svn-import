@@ -160,8 +160,6 @@ void stressIterators() throw(exception)
    cout << "====================================" << endl;
    cout << "-----> " << "TestContainer_count_if<TObjArray>(obj_array, \"test string #3\")" << endl;
    TestContainer_count_if<TObjArray>(obj_array, "test string #3");
-
-
 }
 
 //______________________________________________________________________________
