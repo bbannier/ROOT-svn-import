@@ -63,7 +63,7 @@ void TestContainer_for_each(const T &container, Int_t aSize) throw(exception)
    gCount = 0; // TODO: using gCount is a very bad method. Needs to be revised.
 
    TIter iter(&container);
-   for_each(iter.Begin(), TIter::End(), SEnumFunctor());   
+   for_each(iter.Begin(), TIter::End(), SEnumFunctor());
    if (aSize != gCount)
       throw runtime_error("Test case <TestList_for_each> has failed.");
    cout << "->> Ok." << endl;
