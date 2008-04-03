@@ -45,7 +45,7 @@ void testArrayFunctions()
 
    if ( showVector )
    {
-      cout << "\nVector a[] = {" << sa[0];
+      cout << "Vector a[] = {" << sa[0];
       for ( Int_t i = 1; i < n; ++i )
          cout << ", " << sa[i];
       cout << "}\n" << endl;
@@ -76,8 +76,7 @@ template <typename T>
 void testIteratorFunctions()
 {
    const Long64_t n = 10;
-   const Long64_t k = 3;
-   vector<Int_t> index[n];
+   vector<Int_t> index(n);
    Long64_t is;
 
    T tsa[n] = { 2, 55 ,23, 57, -9, 24, 6, 82, -4, 10};
@@ -93,20 +92,18 @@ void testIteratorFunctions()
       showVector = false;
    }
 
-   cout << "Min: a[" << LocMin(n, &sa[0]) << "] = " << MinElement(n, &sa[0])
-        << " Max: a[" << LocMax(n, &sa[0]) << "] = " << MaxElement(n, &sa[0])
-        << " Mean: " << Mean(n, &sa[0])
-        << " GeomMean: " << GeomMean(n, &sa[0])
-        << " RMS: " << RMS(n, &sa[0])
-        << " Median: " << Median(n, &sa[0])
-        << " KOrdStat(3): " << KOrdStat(n, &sa[0], k)
+   cout << "Min: " << *LocMin(sa.begin(), sa.end())
+        << " Max: " << *LocMax(sa.begin(), sa.end())
+        << " Mean: " << Mean(sa.begin(), sa.end())
+        << " GeomMean: " << GeomMean(sa.begin(), sa.end())
+        << " RMS: " << RMS(sa.begin(), sa.end())
         << endl;
 
-//    Sort(n, &sa[0], &index[0], kFALSE);
-//    cout << "Sorted a[] = {" << sa[ index[0] ];
-//    for ( Int_t i = 1; i < n; ++i )
-//       cout << ", " << sa[ index[i] ];
-//    cout << "}" << endl;
+   TMath::SortItr(sa.begin(), sa.end(), index.begin(), kFALSE);
+   cout << "Sorted a[] = {" << sa[ index[0] ];
+   for ( Int_t i = 1; i < n; ++i )
+      cout << ", " << sa[ index[i] ];
+   cout << "}" << endl;
 
    sort(&sa[0], &sa[n]);
    is = BinarySearch(n, &sa[0], (T) 57);
@@ -144,8 +141,12 @@ void testTMath()
 {
    cout << "Starting tests on TMath..." << endl;
 
+   cout << "\nNormCross tests: " << endl;
+
    testNormCross<Float_t>();
    testNormCross<Double_t>();
+
+   cout << "\nArray functions tests: " << endl;
 
    testArrayFunctions<Short_t>();
    testArrayFunctions<Int_t>();
@@ -154,11 +155,22 @@ void testTMath()
    testArrayFunctions<Long_t>();
    testArrayFunctions<Long64_t>();
 
+   cout << "\nIterator functions tests: " << endl;
+
    testIteratorFunctions<Short_t>();
+   testIteratorFunctions<Int_t>();
+   testIteratorFunctions<Float_t>();
+   testIteratorFunctions<Double_t>();
+   testIteratorFunctions<Long_t>();
+   testIteratorFunctions<Long64_t>();
+
+   cout << "\nPoint functions tests: " << endl;
 
    testPoints<Double_t>(1.3, 0.5);
    testPoints<Float_t>(-0.2, 1.7);
    testPoints<Int_t>(1, 1);
+
+   cout << "\nPLane functions tests: " << endl;
 
    testPlane<Double_t>();
    testPlane<Float_t>();

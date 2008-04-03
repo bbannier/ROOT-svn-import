@@ -489,14 +489,12 @@ struct CompareDesc {
 template<typename T> 
 struct CompareAsc { 
 
-   //CompareAsc(const T *  d) : fData(d) {}
    CompareAsc(T d) : fData(d) {}
 
    bool operator()(int i1, int i2) { 
       return *(fData + i1) < *(fData + i2);
    }
 
-   //const T * fData; 
    T fData; 
 };
 
