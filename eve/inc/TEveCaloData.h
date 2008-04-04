@@ -54,7 +54,7 @@ public:
       Float_t EtaMin()   const { return fEtaMin; }
       Float_t EtaMax()   const { return fEtaMax; }
       Float_t Eta()      const { return (fEtaMin+fEtaMax)*0.5f; }
-      Float_t EtaDelta() const { return fEtaMax-fEtaMax; }
+      Float_t EtaDelta() const { return fEtaMax-fEtaMin; }
 
       Float_t ThetaMin(Bool_t isSigned = kFALSE) const;
       Float_t ThetaMax(Bool_t isSigned = kFALSE) const;
@@ -64,7 +64,7 @@ public:
       Float_t PhiMin()   const { return fPhiMin; }
       Float_t PhiMax()   const { return fPhiMax; }
       Float_t Phi()      const { return (fPhiMin+fPhiMax)*0.5f; }
-      Float_t PhiDelta() const { return fPhiMax-fPhiMax; }
+      Float_t PhiDelta() const { return fPhiMax-fPhiMin; }
 
       Float_t ZSideSign()const { return fZSideSign;}
 

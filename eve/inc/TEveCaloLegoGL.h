@@ -22,6 +22,8 @@ class TEveCaloLego;
 
 class TEveCaloLegoGL : public TGLObject
 {
+public:
+   enum EMode { kDetailed, kSimplified };
 private:
    TEveCaloLegoGL(const TEveCaloLegoGL&);            // Not implemented
    TEveCaloLegoGL& operator=(const TEveCaloLegoGL&); // Not implemented
@@ -29,19 +31,23 @@ private:
 protected:
    Int_t   GetGridStep(Int_t axId, const TAxis* ax, TGLRnrCtx &rnrCtx) const;
 
-   //   Int_T   GetFontSize();
+   void    SetFont(Float_t l, TGLRnrCtx &rnrCtx) const;
    void    RnrText(const char* txt, Float_t x, Float_t y, Float_t z, 
                    const TGLFont &font, Int_t mode) const;
 
    void    DrawZAxis(TGLRnrCtx &rnrCtx, Float_t x0, Float_t x1, Float_t y0, Float_t y1) const;
+   void    DrawZAxisSimplified(TGLRnrCtx &rnrCtx, Float_t x0, Float_t y0) const;
    void    DrawXYAxis(TGLRnrCtx &rnrCtx, Float_t x0, Float_t x1, Float_t y0, Float_t y1) const;
    void    DrawHistBase(TGLRnrCtx &rnrCtx) const;
 
    void    MakeQuad(Float_t x, Float_t y, Float_t z, 
                     Float_t xw, Float_t yw, Float_t zh) const;
    void    MakeDisplayList() const;
-  
+
+   mutable Bool_t                   fDLCacheOK;
    mutable std::map< Int_t, UInt_t> fDLMap;
+
+   mutable EMode                    fMode;
 
    TEveCaloLego            *fM;  // Model object.
 
@@ -49,7 +55,7 @@ protected:
    mutable TGLFont          fSymbolFont;
    mutable Int_t            fFontSize; // font size in pixels
 
-   const   Float_t            fTMSize; // tick mark size
+   const   Float_t          fTMSize; // tick mark size
 
    // grid density modes
    Float_t                  fMinBinWidth;
@@ -69,6 +75,8 @@ public:
    virtual void   DLCachePurge();
 
    virtual void   DirectDraw(TGLRnrCtx & rnrCtx) const;
+   void  DrawDetailed(TGLRnrCtx & rnrCtx) const;
+   void  DrawSimplified(TGLRnrCtx & rnrCt) const;
 
    virtual Bool_t SupportsSecondarySelect() const { return kTRUE; }
    virtual void ProcessSelection(TGLRnrCtx & rnrCtx, TGLSelectRecord & rec);
