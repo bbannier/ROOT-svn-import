@@ -712,7 +712,7 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
                                Long64_t first)
 {
    // Process specified TDSet on PROOF worker.
-   // The return value is -1 in case of error and TSelector::GetStatus() in
+   // The return value is -1 in case of error and TSelector::GetStatus()
    // in case of success.
 
    PDB(kGlobal,1) Info("Process","Enter");
@@ -895,7 +895,7 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
          // Special treatment for files
          if (o->IsA() == TProofFile::Class()) {
             ((TProofFile *)o)->SetWorkerOrdinal(gProofServ->GetOrdinal());
-            if (!strcmp(((TProofFile *)o)->GetDir(),"")) 
+            if (!strcmp(((TProofFile *)o)->GetDir(),""))
                ((TProofFile *)o)->SetDir(gProofServ->GetSessionDir());
          }
       }
