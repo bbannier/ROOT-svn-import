@@ -127,14 +127,10 @@ TTreeCache::TTreeCache() : TFileCacheRead(),
    fNMissed(0)
 {
    // Default Constructor.
-   fMutexCache       = new TMutex(kTRUE);
+   fMutexCache       = new TMutex();
    fMutexUnzipBuffer = new TMutex();
    fMutexBuffer      = new TMutex();
-   fMutexList        = new TMutex(kTRUE);     
-   //fMutexCond      = new TMutex();
-   //fMutexSem       = new TMutex();
-   //fUnzipCondition = new TCondition(fMutexCond);
-   //fBufferCond     = new TCondition(fMutexSem);
+   fMutexList        = new TMutex();     
    fUnzipCondition   = new TCondition();
    fBufferCond       = new TCondition();
    
@@ -203,14 +199,10 @@ TTreeCache::TTreeCache(TTree *tree, Int_t buffersize) : TFileCacheRead(tree->Get
    Int_t nleaves = tree->GetListOfLeaves()->GetEntries();
    fBranches = new TObjArray(nleaves);
 
-   fMutexCache       = new TMutex(kTRUE);
+   fMutexCache       = new TMutex();
    fMutexUnzipBuffer = new TMutex();
    fMutexBuffer      = new TMutex();
-   fMutexList        = new TMutex(kTRUE);     
-   //fMutexCond      = new TMutex();
-   //fMutexSem       = new TMutex();
-   //fUnzipCondition = new TCondition(fMutexCond);
-   //fBufferCond     = new TCondition(fMutexSem);
+   fMutexList        = new TMutex();     
    fUnzipCondition   = new TCondition();
    fBufferCond       = new TCondition();
 
@@ -255,7 +247,6 @@ TTreeCache::~TTreeCache()
  if (fBrNames) {fBrNames->Delete(); delete fBrNames; fBrNames=0;}
 
    if (fUnzipCondition) { delete fUnzipCondition;  fUnzipCondition = 0;}
-   //if (fMutexCond) { delete fMutexCond;  fMutexCond = 0;}
 
    if (fUnzipBuffer) { delete [] fUnzipBuffer; fUnzipBuffer = 0;}
    if (fTmpBuffer  ) { delete [] fTmpBuffer;   fTmpBuffer = 0;}
@@ -269,7 +260,6 @@ TTreeCache::~TTreeCache()
    if (fMutexList       ) { delete fMutexList; fMutexList = 0;}
    
    if (fBufferCond       ) { delete fBufferCond; fBufferCond = 0;}
-   //if (fMutexSem) { delete fMutexSem;  fMutexSem = 0;}
 }
 
 //_____________________________________________________________________________
@@ -430,9 +420,11 @@ Bool_t TTreeCache::FillBuffer()
       }
    }
 
+   fMutexCache->UnLock();
    //clear cache buffer
    ResetCache();
    TFileCacheRead::Prefetch(0,0);
+   fMutexCache->Lock();
    //store baskets
    Bool_t mustBreak = kFALSE;
    for (Int_t i=0;i<fNbranches;i++) {
@@ -570,7 +562,7 @@ void TTreeCache::SetEntryRange(Long64_t emin, Long64_t emax)
    // don't do it if the user has specified the branches.
    if(fIsManual)
       return;
-   
+
    fEntryMin  = emin;
    fEntryMax  = emax;
    fEntryNext  = fEntryMin + fgLearnEntries;
@@ -601,7 +593,7 @@ void TTreeCache::StartLearningPhase()
    // the new learning phase.
    
    fIsLearning = kTRUE;
-   fIsManual = kFALSE;
+   fIsManual   = kFALSE;
    fNbranches  = 0;
    fZipBytes   = 0;
    if (fBrNames) fBrNames->Delete();
@@ -678,7 +670,7 @@ Bool_t TTreeCache::IsQueueEmpty()
    // it.
    R__LOCKGUARD(fMutexCache);
 
-   if ( fIsLearning ) 
+   if ( fIsLearning )
       return kTRUE;
 
    return kFALSE;
@@ -867,10 +859,18 @@ void TTreeCache::ResetCache()
    TIter next(fUnzipList);
    while ((ind = (TBufferInfo*)next())) {
       TBasket *basket=ind->GetBasket();
-      if(basket && !ind->GetRead())
-         basket->DeleteFromBranch();
+      if(basket && !ind->GetRead()) {
+	 // dont use basket->DeleteFromBranch to avoid a possible (although not probable)
+	 // deadlock since that function will call TBranch::DropBasket which will lock
+         // fgMutexBranch...
+         // and in a second thread we would lock the mutexes in the inverse order.
+         // this will work as an invalidation
+         // basket->DeleteFromBranch();
+         ind->SetRead(kTRUE);
+      }
    }
-   fUnzipList->Delete();
+   // dont delete the list either... trust in the invalidation
+   // fUnzipList->Delete();
    
    fLastPos     = 0;
    fPosRead     = 0;
@@ -891,15 +891,14 @@ Int_t TTreeCache::GetUnzipBuffer(char **buf, Long64_t pos, Int_t len, Bool_t *fr
    // to pass it to the creator of TBuffer
 
    if (fParallel){
-      // The modify the cache if it's in de middle of something (unzipping for example)
-      R__LOCKGUARD(fMutexCache);
-
       if ( fIsLearning ) {
          // We need to reset it for new transferences...
          ResetCache();
          TFileCacheRead::Prefetch(0,0); 
       }
-
+      // The modify the cache if it's in de middle of something (unzipping for example)
+      R__LOCKGUARD(fMutexCache);
+      
       // be careful.. can be -1
       Int_t loc = (Int_t)TMath::BinarySearch(fNseek,fSeekSort,pos);
 
@@ -988,13 +987,13 @@ Int_t TTreeCache::GetUnzipBuffer(char **buf, Long64_t pos, Int_t len, Bool_t *fr
    char *comp = new char[len];
    Bool_t found = kFALSE;
 
-   fMutexList->Lock();  // *** fMutexList  Lock
    if (fNseek > 0 && !fIsSorted) {
       if (gDebug > 0)
          Info("GetUnzipBuffer", "This is a new transfer... must clean things up fNSeek:%d", fNseek);
       ResetCache();
    }
 
+   //fMutexList->Lock();  // *** fMutexList  Lock
    if (TFileCacheRead::ReadBuffer(comp,pos,len) == 1){
       found = kTRUE;
    }
@@ -1005,10 +1004,10 @@ Int_t TTreeCache::GetUnzipBuffer(char **buf, Long64_t pos, Int_t len, Bool_t *fr
          if (TFileCacheRead::ReadBuffer(comp,pos,len) == 1){
             found = kTRUE;
          }
-         
       }
    }
 
+   //fMutexList->Lock();  // *** fMutexList  Lock
    if (!found) {
       fFile->Seek(pos);
       if(fFile->ReadBuffer(comp, len)){
@@ -1017,8 +1016,8 @@ Int_t TTreeCache::GetUnzipBuffer(char **buf, Long64_t pos, Int_t len, Bool_t *fr
          return -1;
       }
    }
-   fMutexList->UnLock();  // *** fMutexList  UnLock 
-   
+   //fMutexList->UnLock();  // *** fMutexList  UnLock 
+
    Int_t res = UnzipBuffer(buf, comp);
    *free = kTRUE;
    if (!fIsLearning) fNMissed++;
@@ -1034,6 +1033,7 @@ void TTreeCache::SetBufferRead(Long64_t pos, Int_t len, TBasket *basket)
    // and is ready to be reused... a kind of trcky algorithm to avoid
    R__LOCKGUARD(fMutexList);
 
+   (void) len;
    TBufferInfo *ind  = 0;
    TIter next(fUnzipList);
    while ((ind = (TBufferInfo*)next())) {
@@ -1086,7 +1086,7 @@ Int_t TTreeCache::UnzipBuffer(char **dest, char *src)
    // src is the original buffer with the record (header+compressed data)
    // *dest is the inflated buffer (including the header)
    R__LOCKGUARD(fMutexUnzipBuffer);
-   
+
    Int_t  uzlen = 0;
    Bool_t alloc = kFALSE; 
 
@@ -1212,7 +1212,7 @@ Int_t TTreeCache::UnzipCache()
       // creating a new buffer
       SetUnzipBufferSize((Long64_t)(fgRelBuffSize*fBufferSize)); 
 
-      fMutexBuffer->Lock();   //*** fMutexBuffer Lock 
+      fMutexBuffer->Lock();   //*** fMutexBuffer Lock
       fUnzipBuffer = new char[fUnzipBufferSize];
       fMutexBuffer->UnLock(); //*** fMutexBuffer Lock 
       if (gDebug > 0) 
@@ -1257,16 +1257,13 @@ Int_t TTreeCache::UnzipCache()
       // This must have this lock because UnzipBuffer can access GetRecordHeader also
       //Info("UnzipCache", "before fMutexUnzipBuffer->Lock()");
 
-      fMutexList->Lock();  // *** fMutexList  Lock
       fMutexUnzipBuffer->Lock();  //*** fMutexUnzipBuffer Lock
       const Int_t hlen=128;
       Int_t objlen=0, keylen=0;
       Int_t nbytes=0;
       GetRecordHeader(&fBuffer[fSeekPos[i]], hlen, nbytes, objlen, keylen);
       Int_t len = (objlen > nbytes-keylen)? keylen+objlen : nbytes;
-      //Info("UnzipCache", "before fMutexUnzipBuffer->UnLock()");
       fMutexUnzipBuffer->UnLock();  //*** fMutexUnzipBuffer UnLock
-      fMutexList->UnLock();  // *** fMutexList  UnLock
 
       // We need a protection here in case a buffer is bigger than
       // the whole unzipping cache... do it only at the first iteration 
@@ -1301,14 +1298,15 @@ Int_t TTreeCache::UnzipCache()
       }
 
       // I know this is very very ugly but I need the scope for the mutex
-      if(kTRUE){
+      {
          R__LOCKGUARD(fMutexList);
+
          TBufferInfo *ind = 0;
          TIter next(fUnzipList);
          while ( (fUnzipList->GetSize()>0) && (ind=(TBufferInfo*)next())) {
             if (!IsActiveThread() || !fNseek || fIsLearning || fNewTransfer)
-               return 0;
-         
+                   return 0;
+
             Int_t index = ind->GetNum();
          
             //delete if it was already read
@@ -1339,10 +1337,10 @@ Int_t TTreeCache::UnzipCache()
                   TThread::CancelPoint();
                   fBufferCond->Wait();
                   fMutexList->Lock();   //*** fMutexList Lock
-               
+
                   if (!IsActiveThread() || !fNseek || fIsLearning || fNewTransfer)
                      return 0;
-               
+
                   //delete if it was already read (while we were waiting)
                   Bool_t read = ind->GetRead();                 
                   TBasket *basket=ind->GetBasket();
@@ -1368,7 +1366,7 @@ Int_t TTreeCache::UnzipCache()
                      basket->DeleteFromBranch();
 
                      fMutexList->Lock();   //*** fMutexList Lock
-					
+
                      if (!IsActiveThread() || !fNseek || fIsLearning || fNewTransfer)
                         return 0;
                   }    
@@ -1376,7 +1374,7 @@ Int_t TTreeCache::UnzipCache()
             }
          }
       }
-      
+
       // Initially we had fBuffer with all the buffers to be unzipped... we took
       // one of then, we unzipped it and we put it in fUnzipBuffer. But the first
       // thread can start a transference at the same moment changing the content of fBuffer,
@@ -1393,11 +1391,12 @@ Int_t TTreeCache::UnzipCache()
       fMutexList->Lock();   //*** fMutexList Lock
       memcpy(fTmpBuffer, &fBuffer[fSeekPos[i]], fSeekSortLen[i]);
       fMutexList->UnLock(); //*** fMutexList UnLock
-      
+
       char *ptr = &fUnzipBuffer[locPos];
       locLen = UnzipBuffer(&ptr, fTmpBuffer);
       
       R__LOCKGUARD(fMutexList); //*** fMutexList LOCK until gong out of scope
+
       if (!IsActiveThread() || !fNseek || fIsLearning || fNewTransfer)
          return 0;
 
@@ -1420,6 +1419,8 @@ Int_t TTreeCache::UnzipCache()
       fNUnzip++;
       localLastPos = i;
    }
+   R__LOCKGUARD(fMutexList); //*** fMutexList LOCK until gong out of scope
+
    fLastPos = localLastPos;
 
    if(!badread) fUnzipped = kTRUE;
