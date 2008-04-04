@@ -202,6 +202,8 @@ void TEveCaloViz::Paint(Option_t* /*option*/)
    // Section kCore
    buff.fID           = this;
    buff.fTransparency = 0;
+   if (HasMainTrans())
+      RefMainTrans().SetBuffer3D(buff);
    buff.SetSectionsValid(TBuffer3D::kCore);
 
    Int_t reqSections = gPad->GetViewer3D()->AddObject(buff);
@@ -216,7 +218,6 @@ TClass* TEveCaloViz::ProjectedClass() const
 
    return TEveCalo2D::Class();
 }
-
 
 //______________________________________________________________________________
 void TEveCaloViz::SetupColorHeight(Float_t value, Int_t slice,
@@ -383,8 +384,8 @@ ClassImp(TEveCaloLego);
 //______________________________________________________________________________
 TEveCaloLego::TEveCaloLego(const Text_t* n, const Text_t* t):
    TEveCaloViz(n, t),
-   fFontColor(0),
    fGridColor(kGray+3),
+   fFontColor(0),
    fFontSize(10),
    fNZStep(5)
 {
@@ -397,8 +398,8 @@ TEveCaloLego::TEveCaloLego(const Text_t* n, const Text_t* t):
 //______________________________________________________________________________
 TEveCaloLego::TEveCaloLego(TEveCaloData* data):
    TEveCaloViz(data),
-   fFontColor(0),
    fGridColor(kGray+3),
+   fFontColor(0),
    fFontSize(10),
    fNZStep(5)
 {

@@ -139,6 +139,9 @@ public:
    TGLSceneBase  * GetScene();
    TGLSceneBase  & RefScene();
 
+   const TGLCamera & RefCamera() const { return *fCamera; }
+   const TGLCamera * GetCamera() const { return  fCamera; }
+
    // void SetViewer   (TGLViewerBase* v) { fViewer = v; }
    void SetCamera   (TGLCamera*     c) { fCamera = c; }
    void SetSceneInfo(TGLSceneInfo* si) { fSceneInfo = si; }

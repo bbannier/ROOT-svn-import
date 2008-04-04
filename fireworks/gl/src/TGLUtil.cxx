@@ -909,6 +909,30 @@ Double_t TGLMatrix::Invert()
 }
 
 //______________________________________________________________________________
+TGLVector3 TGLMatrix::Multiply(const TGLVector3& v, Double_t w) const
+{
+   // Multiply vector.
+   const Double_t* M = fVals;
+   TGLVector3 r;
+   r.X() = M[0]*v[0] + M[4]*v[1] +  M[8]*v[2] + M[12]*w;
+   r.Y() = M[1]*v[0] + M[5]*v[1] +  M[9]*v[2] + M[13]*w;
+   r.Z() = M[2]*v[0] + M[6]*v[1] + M[10]*v[2] + M[14]*w;
+   return r;
+}
+
+//______________________________________________________________________________
+TGLVector3 TGLMatrix::Rotate(const TGLVector3& v) const
+{
+   // Rotate vector. Translation is not applied.
+   const Double_t* M = fVals;
+   TGLVector3 r;
+   r.X() = M[0]*v[0] + M[4]*v[1] +  M[8]*v[2];
+   r.Y() = M[1]*v[0] + M[5]*v[1] +  M[9]*v[2];
+   r.Z() = M[2]*v[0] + M[6]*v[1] + M[10]*v[2];
+   return r;
+}
+
+//______________________________________________________________________________
 void TGLMatrix::MultiplyIP(TGLVector3& v, Double_t w) const
 {
    // Multiply vector in-place.

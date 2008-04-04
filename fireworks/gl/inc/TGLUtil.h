@@ -776,6 +776,8 @@ public:
    void       GetBaseVec(Int_t b, TGLVector3& v) const;
    void       GetBaseVec(Int_t b, Double_t* x) const;
 
+   TGLVector3 Multiply(const TGLVector3& v, Double_t w=1) const;
+   TGLVector3 Rotate(const TGLVector3& v) const;
    void       MultiplyIP(TGLVector3& v, Double_t w=1) const;
    void       RotateIP(TGLVector3& v) const;
 
