@@ -116,7 +116,7 @@ template <typename T> double stressVector(unsigned int size, const char* type)
    cout << "\nTotal Time: "      << totalTime << "\n"
         << "Total Unit Time: " << totalUnitTime << "\n" << endl;
 
-   delete vector;
+   delete [] vector;
 
    return totalUnitTime;
 }
