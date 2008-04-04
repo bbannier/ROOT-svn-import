@@ -2,6 +2,8 @@
 #include <fstream>
 #include <vector>
 
+#include <cmath>
+
 #include <TMath.h>
 #include <Math/SpecFunc.h>
 
@@ -68,44 +70,44 @@ int testSpecFuncErf()
 
       yerf[arrayindex(i)] = TMath::Erf(i);
       ymerf[arrayindex(i)] = ROOT::Math::erf(i);
-      if ( fabs( yerf[arrayindex(i)] - ymerf[arrayindex(i)] ) > ERRORLIMIT )
+      if ( std::fabs( yerf[arrayindex(i)] - ymerf[arrayindex(i)] ) > ERRORLIMIT )
       {
          cout << "i " << i   
               << " yerf[arrayindex(i)] " << yerf[arrayindex(i)]
               << " ymerf[arrayindex(i)] " << ymerf[arrayindex(i)]
-              << " " << fabs( yerf[arrayindex(i)] - ymerf[arrayindex(i)] )
+              << " " << std::fabs( yerf[arrayindex(i)] - ymerf[arrayindex(i)] )
               << endl;
          status += 1;
       }
 
       yerfc[arrayindex(i)] = TMath::Erfc(i);
       ymerfc[arrayindex(i)] = ROOT::Math::erfc(i);
-      if ( fabs( yerfc[arrayindex(i)] - ymerfc[arrayindex(i)] ) > ERRORLIMIT )
+      if ( std::fabs( yerfc[arrayindex(i)] - ymerfc[arrayindex(i)] ) > ERRORLIMIT )
       {
          cout << "i " << i 
               << " yerfc[arrayindex(i)] " << yerfc[arrayindex(i)]
               << " ymerfc[arrayindex(i)] " << ymerfc[arrayindex(i)]
-              << " " << fabs( yerfc[arrayindex(i)] - ymerfc[arrayindex(i)] )
+              << " " << std::fabs( yerfc[arrayindex(i)] - ymerfc[arrayindex(i)] )
               << endl;
          status += 1;
       }
 
       yierf[arrayindex(i)] = TMath::ErfInverse(yerf[arrayindex(i)]);
-      if ( fabs( yierf[arrayindex(i)] - i ) > ERRORLIMIT )
+      if ( std::fabs( yierf[arrayindex(i)] - i ) > ERRORLIMIT )
       {
          cout << "i " << i 
               << " yierf[arrayindex(i)] " << yierf[arrayindex(i)]
-              << " " << fabs( yierf[arrayindex(i)] - i )
+              << " " << std::fabs( yierf[arrayindex(i)] - i )
               << endl;
          status += 1;
       }
 
       yierfc[arrayindex(i)] = TMath::ErfcInverse(yerfc[arrayindex(i)]);
-      if ( fabs( yierfc[arrayindex(i)] - i ) > ERRORLIMIT )
+      if ( std::fabs( yierfc[arrayindex(i)] - i ) > ERRORLIMIT )
       {
          cout << "i " << i 
               << " yierfc[arrayindex(i)] " << yierfc[arrayindex(i)]
-              << " " << fabs( yierfc[arrayindex(i)] - i )
+              << " " << std::fabs( yierfc[arrayindex(i)] - i )
               << endl;
          status += 1;
       }
