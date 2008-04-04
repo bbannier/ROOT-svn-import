@@ -20,25 +20,25 @@ const int arraysize = (maxsize-minsize)/10 + 1;
 template<typename T> 
 struct CompareDesc { 
 
-   CompareDesc(const T *  d) : fData(d) {}
+   CompareDesc(T d) : fData(d) {}
 
    bool operator()(int i1, int i2) { 
-      return fData[i1] > fData[i2];
+      return *(fData + i1) > *(fData + i2);
    }
 
-   const T * fData; 
+   T fData;
 };
 
 template<typename T> 
 struct CompareAsc { 
 
-   CompareAsc(const T *  d) : fData(d) {}
+   CompareAsc(T d) : fData(d) {}
 
    bool operator()(int i1, int i2) { 
-      return fData[i1] < fData[i2];
+      return *(fData + i1) < *(fData + i2);
    }
 
-   const T * fData; 
+   T fData; 
 };
 
 #endif
@@ -69,7 +69,7 @@ template <typename T> bool testSort(const int n)
    cout << endl;
 
    for(Int_t i = 0; i < n; i++) { indexS[i] = i; }
-   std::sort(&indexS[0],&indexS[n], CompareDesc<T>(&k[0]) );
+   std::sort(&indexS[0],&indexS[n], CompareDesc<const T*>(&k[0]) );
 
    cout << "std::sort[CompareDesc]\n\tindex = ";
    for ( Int_t i = 0; i < n; ++i )
@@ -90,7 +90,7 @@ template <typename T> bool testSort(const int n)
    cout << endl;
 
    for(Int_t i = 0; i < n; i++) { indexS[i] = i; }
-   std::sort(&indexS[0],&indexS[n], CompareAsc<T>(&k[0]) );
+   std::sort(&indexS[0],&indexS[n], CompareAsc<const T*>(&k[0]) );
 
    cout << "std::sort[CompareAsc]\n\tindex = ";
    for ( Int_t i = 0; i < n; ++i )

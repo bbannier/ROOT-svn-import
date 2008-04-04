@@ -2,6 +2,8 @@
 #include <fstream>
 #include <vector>
 
+#include <cmath>
+
 #include <TMath.h>
 #include <Math/SpecFuncMathCore.h>
 
@@ -66,36 +68,36 @@ int testSpecFuncGamma()
       yg[arrayindex(i)] = TMath::Gamma(i);
       ymtg[arrayindex(i)] = ROOT::Math::tgamma(i);
       // take the infinity values out of the error checking!
-      if ( fabs(yg[arrayindex(i)]) < 1E+12 && fabs( yg[arrayindex(i)] - ymtg[arrayindex(i)] ) > ERRORLIMIT )
+      if ( std::fabs(yg[arrayindex(i)]) < 1E+12 && std::fabs( yg[arrayindex(i)] - ymtg[arrayindex(i)] ) > ERRORLIMIT )
       {
          cout << "i " << i   
               << " yg[arrayindex(i)] " << yg[arrayindex(i)]
               << " ymtg[arrayindex(i)] " << ymtg[arrayindex(i)]
-              << " " << fabs( yg[arrayindex(i)] - ymtg[arrayindex(i)] )
+              << " " << std::fabs( yg[arrayindex(i)] - ymtg[arrayindex(i)] )
               << endl;
          status += 1;
       }
 
       yga[arrayindex(i)] = TMath::Gamma(a, i);
       ymga[arrayindex(i)] = ROOT::Math::inc_gamma(a, i);
-      if ( fabs( yga[arrayindex(i)] - ymga[arrayindex(i)] ) > ERRORLIMIT )
+      if ( std::fabs( yga[arrayindex(i)] - ymga[arrayindex(i)] ) > ERRORLIMIT )
       {
          cout << "i " << i   
               << " yga[arrayindex(i)] " << yga[arrayindex(i)]
               << " ymga[arrayindex(i)] " << ymga[arrayindex(i)]
-              << " " << fabs( yga[arrayindex(i)] - ymga[arrayindex(i)] )
+              << " " << std::fabs( yga[arrayindex(i)] - ymga[arrayindex(i)] )
               << endl;
          status += 1;
       }
 
       ylng[arrayindex(i)] = TMath::LnGamma(i);
       ymlng[arrayindex(i)] = ROOT::Math::lgamma(i);
-      if ( fabs( ylng[arrayindex(i)] - ymlng[arrayindex(i)] ) > ERRORLIMIT )
+      if ( std::fabs( ylng[arrayindex(i)] - ymlng[arrayindex(i)] ) > ERRORLIMIT )
       {
          cout << "i " << i   
               << " ylng[arrayindex(i)] " << ylng[arrayindex(i)]
               << " ymlng[arrayindex(i)] " << ymlng[arrayindex(i)]
-              << " " << fabs( ylng[arrayindex(i)] - ymlng[arrayindex(i)] )
+              << " " << std::fabs( ylng[arrayindex(i)] - ymlng[arrayindex(i)] )
               << endl;
          status += 1;
       }

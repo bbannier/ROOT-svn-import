@@ -2,6 +2,8 @@
 #include <fstream>
 #include <vector>
 
+#include <cmath>
+
 #include <TMath.h>
 #include <Math/SpecFunc.h>
 
@@ -56,12 +58,12 @@ int testSpecFuncBetaI()
 
       yb[arrayindex(i)] = TMath::BetaIncomplete(i,a,b);
       ymb[arrayindex(i)] = ROOT::Math::inc_beta(i,a,b);
-      if ( fabs( yb[arrayindex(i)] - ymb[arrayindex(i)] ) > ERRORLIMIT )
+      if ( std::fabs( yb[arrayindex(i)] - ymb[arrayindex(i)] ) > ERRORLIMIT )
       {
          cout << "i " << i   
               << " yb[arrayindex(i)] " << yb[arrayindex(i)]
               << " ymb[arrayindex(i)] " << ymb[arrayindex(i)]
-              << " " << fabs( yb[arrayindex(i)] - ymb[arrayindex(i)] )
+              << " " << std::fabs( yb[arrayindex(i)] - ymb[arrayindex(i)] )
               << endl;
          status += 1;
       }

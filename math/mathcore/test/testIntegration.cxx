@@ -27,25 +27,25 @@ int testIntegration1D() {
    ig.SetFunction(wf);
    double val = ig.Integral(0,1);
    std::cout << "integral result is " << val << std::endl;
-   status += fabs(val-RESULT) > ERRORLIMIT;
+   status += std::fabs(val-RESULT) > ERRORLIMIT;
 
    ROOT::Math::Integrator ig2(ROOT::Math::IntegrationOneDim::NONADAPTIVE); 
    ig2.SetFunction(wf);
    val = ig2.Integral(0,1);
    std::cout << "integral result is " << val << std::endl;
-   status += fabs(val-RESULT) > ERRORLIMIT;
+   status += std::fabs(val-RESULT) > ERRORLIMIT;
 
    ROOT::Math::Integrator ig3(wf, ROOT::Math::IntegrationOneDim::ADAPTIVE); 
    val = ig3.Integral(0,1);
    std::cout << "integral result is " << val << std::endl;
-   status += fabs(val-RESULT) > ERRORLIMIT;
+   status += std::fabs(val-RESULT) > ERRORLIMIT;
 
    //ROOT::Math::GaussIntegrator ig4;
    ROOT::Math::Integrator ig4(ROOT::Math::IntegrationOneDim::GAUSS); 
    ig4.SetFunction(wf);
    val = ig4.Integral(0,1);
    std::cout << "integral result is " << val << std::endl;
-   status += fabs(val-RESULT) > ERRORLIMIT;
+   status += std::fabs(val-RESULT) > ERRORLIMIT;
 
    return status;
 }
@@ -63,23 +63,23 @@ int testIntegrationMultiDim() {
    ig.SetFunction(wf);
    double val = ig.Integral(a,b);
    std::cout << "integral result is " << val << std::endl;
-   status += fabs(val-RESULT) > ERRORLIMIT;
+   status += std::fabs(val-RESULT) > ERRORLIMIT;
 
    ROOT::Math::IntegratorMultiDim ig2(ROOT::Math::IntegrationMultiDim::VEGAS); 
    ig2.SetFunction(wf);
    val = ig2.Integral(a,b);
    std::cout << "integral result is " << val << std::endl;
-   status += fabs(val-RESULT) > ERRORLIMIT;
+   status += std::fabs(val-RESULT) > ERRORLIMIT;
 
    ROOT::Math::IntegratorMultiDim ig3(wf,ROOT::Math::IntegrationMultiDim::PLAIN); 
    val = ig3.Integral(a,b);
    std::cout << "integral result is " << val << std::endl;
-   status += fabs(val-RESULT) > ERRORLIMIT;
+   status += std::fabs(val-RESULT) > ERRORLIMIT;
 
    ROOT::Math::IntegratorMultiDim ig4(wf,ROOT::Math::IntegrationMultiDim::MISER); 
    val = ig4.Integral(a,b);
    std::cout << "integral result is " << val << std::endl;
-   status += fabs(val-RESULT) > ERRORLIMIT;
+   status += std::fabs(val-RESULT) > ERRORLIMIT;
 
    return status;
 }
