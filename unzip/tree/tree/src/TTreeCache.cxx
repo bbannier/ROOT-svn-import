@@ -855,8 +855,8 @@ void TTreeCache::ResetCache()
          ind->SetRead(kTRUE);
       }
    }
-   // dont delete the list either... trust in the invalidation
-   // fUnzipList->Delete();
+   // We invalidate the cache buffer but remove the pointers from the list
+   fUnzipList->Delete();
 
    fLastPos     = 0;
    fPosRead     = 0;
