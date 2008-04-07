@@ -41,6 +41,8 @@ BCO        = $(addsuffix $(G__CFG_OBJEXT),$(addprefix $(G__CFG_COREVERSION)/src/
               bc_reader bc_type bc_exec bc_vtbl bc_eh bc_debug \
               bc_assign))
 
+STUBSCXX     = $(addprefix $(G__CFG_COREVERSION)/src/,symbols.cxx)
+
 COREO        = $(filter-out $(CXXAPIO),\
 	      $(filter-out $(RFLXO),\
 	      $(subst .cxx,$(G__CFG_OBJEXT),\
@@ -49,9 +51,10 @@ COREO        = $(filter-out $(CXXAPIO),\
 	      $(filter-out $(G__CFG_COREVERSION)/src/stdstrct.cxx,\
 	      $(filter-out $(G__CFG_COREVERSION)/src/macos.cxx,\
 	      $(filter-out $(G__CFG_COREVERSION)/src/winnt.cxx,\
+              $(filter-out $(STUBSCXX), \
 	      $(filter-out $(PRAGMATMPCXX),\
 	      $(filter-out $(LOADFILETMPCXX),\
-	      $(wildcard $(G__CFG_COREVERSION)/src/*.cxx)))))))))))
+	      $(wildcard $(G__CFG_COREVERSION)/src/*.cxx))))))))))))
 
 STREAMO    = $(G__CFG_COREVERSION)/src/dict/$(G__CFG_STREAMDIR)$(G__CFG_OBJEXT)
 
@@ -101,7 +104,7 @@ $(CINTLIBSHARED): $(LIBOBJECTS) $(SETUPO) $(REFLEXLIBDEP)
 	  $(G__CFG_READLINELIB4SHLIB) $(G__CFG_CURSESLIB4SHLIB) $(G__CFG_DEFAULTLIBS) $(REFLEXLINK)
 ifneq ($(G__CFG_MAKEIMPLIB),)
 	$(subst @imp@,$(@:$(G__CFG_SOEXT)=$(G__CFG_IMPLIBEXT)),\
-	  $(subst @so@,$@,$(G__CFG_MAKEIMPLIB)))
+	  $(subst @so@,${PWD}/$@,$(G__CFG_MAKEIMPLIB)))
 endif
 
 ############################################################################

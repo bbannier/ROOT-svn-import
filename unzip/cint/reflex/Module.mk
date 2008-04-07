@@ -105,6 +105,9 @@ RFLX_GENMAPX   = bin/genmap$(EXEEXT)
 ALLEXECS += $(RFLX_GENMAPX)
 
 ##### local rules #####
+.PHONY:         all-reflex clean-reflex distclean-reflex clean-genreflex \
+                clean-check-reflex check-reflex
+
 POSTBIN += $(RFLX_GRFLXPYC) $(RFLX_GRFLXPY)
 
 include/Reflex/%.h: $(REFLEXDIRI)/Reflex/%.h
@@ -150,7 +153,7 @@ $(REFLEXDICTLIB): $(REFLEXDO) $(ORDER_) $(MAINLIBS) $(REFLEXLIB)
 		"$(SOFLAGS)" libReflexDict.$(SOEXT) $@ "$(REFLEXDO)" \
 		"$(REFLEXDICTLIBEXTRA)"
 
-$(REFLEXDS): $(REFLEXAPIH) $(REFLEXL) utils/src/rootcint_tmp.o $(ORDER_) utils/src/rootcint_tmp$(EXEEXT)
+$(REFLEXDS): $(REFLEXAPIH) $(REFLEXL) core/utils/src/rootcint_tmp.o $(ORDER_) core/utils/src/rootcint_tmp$(EXEEXT)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c -p -Icint/reflex/inc $(REFLEXAPIH) $(REFLEXL)
 
