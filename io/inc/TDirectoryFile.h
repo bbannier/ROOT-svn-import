@@ -59,12 +59,12 @@ public:
    TDirectoryFile();
    TDirectoryFile(const char *name, const char *title, Option_t *option="", TDirectory* motherDir = 0);
    virtual ~TDirectoryFile();
-   virtual void        Append(TObject *obj);
-           void        Add(TObject *obj) { Append(obj); }
+   virtual void        Append(TObject *obj, Bool_t replace = kFALSE);
+           void        Add(TObject *obj, Bool_t replace = kFALSE) { Append(obj,replace); }
            Int_t       AppendKey(TKey *key);
    virtual void        Browse(TBrowser *b);
            void        Build(TFile* motherFile = 0, TDirectory* motherDir = 0);
-   virtual TObject    *CloneObject(const TObject *obj);
+   virtual TObject    *CloneObject(const TObject *obj, Bool_t autoadd = kTRUE);
    virtual void        Close(Option_t *option="");
    virtual void        Copy(TObject &) const { MayNotUse("Copy(TObject &)"); }
    virtual Bool_t      cd(const char *path = 0);
@@ -108,7 +108,7 @@ public:
    virtual void        rmdir(const char *name);
    virtual void        Save();
    virtual void        SaveSelf(Bool_t force = kFALSE);
-   virtual Int_t       SaveObjectAs(const TObject *obj, const char *filename="", Option_t *option="");
+   virtual Int_t       SaveObjectAs(const TObject *obj, const char *filename="", Option_t *option="") const;
    virtual void        SetBufferSize(Int_t bufsize);
    void                SetModified() {fModified = kTRUE;}
    void                SetSeekDir(Long64_t v) { fSeekDir = v; }
@@ -127,4 +127,3 @@ public:
 };
 
 #endif
-

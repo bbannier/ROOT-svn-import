@@ -117,6 +117,8 @@ enable_shadowpw=
 enable_soversion=no
 enable_table=no
 enable_thread=yes        # cannot be disabled (not in above options list)
+no_stubs=no         # Complete Dictionaries by default (All stubs)
+no_stubs_test=no    # Complete Dictionaries by default (All stubs)
 enable_unuran=no
 enable_winrtdebug=
 enable_xrootd=           # must be set explicitely via --enable-xrootd
@@ -432,6 +434,7 @@ check_library() {
 	if (test "x$found_lib" = "x$flib" && test "x$shared" = "xno") || \
            test "x$maclib" = "xyes" ; then
 	    found_lib=${found_dir}/${found_lib}
+	    found_raw_dir=${found_dir}
 	    found_dir=""
 	else
 	    found_lib=`echo $found_lib | sed 's|^lib\(.*\)\..*|-l\1|'`
@@ -810,6 +813,8 @@ GENREFLEXROOTCINTSHIN=config/genreflex-rootcint.in
 GENREFLEXROOTCINTSHOUT=bin/genreflex-rootcint
 GENREFLEXROOTCINTBATIN=config/genreflex-rootcint.bat.in
 GENREFLEXROOTCINTBATOUT=bin/genreflex-rootcint.bat
+ROOTCINTSTUBSHIN=utils/src/rootcint_nostubs.sh
+ROOTCINTSTUBSHOUT=bin/rootcint_nostubs.sh
 
 ######################################################################
 #
@@ -859,6 +864,8 @@ FIRST argument one of the architecures given at the end of this message.
    --macrodir      Macro installation dir    (<datadir>/macros)
    --mandir        Manpages installation dir (<prefix>/share/man/man1)
    --no-create     Do not create output files, dry run
+   --no-stubs      Remove Stubs from dictionaries (Direct call mechanism)
+   --no-stubs-test Remove Stubs from dictionaries (Direct call mechanism, can be switched off in rootrc)
    --prefix        Installation prefix       (/usr/local)
    --srcdir        Sources installation dir  (<datadir>/src)
    --testdir       Tests                     (<docdir>/test)
@@ -1076,12 +1083,6 @@ hpuxia64acc)
    checkhpux64="yes" ;;
 esac
 
-# check for (g)make
-case $platform in
-win32|linux|macosx) gnumake="make"  ;;
-*)                  gnumake="gmake" ;;
-esac
-
 # check for which
 case $platform in
 macosx) cwhich="type -path" ;;
@@ -1092,7 +1093,7 @@ esac
 # and for sanity of source e.g. pcre-*.tar.gz must exist
 # which might not be the case if source was unpacked with StuffIt
 if test "x$platform" = "xmacosx" ; then
-   if test ! -f pcre/src/pcre-*.tar.gz ; then
+   if test ! -f core/pcre/src/pcre-*.tar.gz ; then
       echo "Source tree does not contain expected files, please unpack"
       echo "using tar and not StuffIt"
       exit 1
@@ -1135,6 +1136,8 @@ if test $# -gt 0 ; then
       --no-create)             noact="yes"           ;;
       --nohowto)               nohowto="yes"         ;;
       --fail-on-missing)       fail_on_missing="yes" ;;
+      --no-stubs)              no_stubs="yes";;
+      --no-stubs-test)         no_stubs="yes"; no_stubs_test="yes";;
       --with-afs=*)            afsdir=$optarg        ; enable_afs="yes"     ;;
       --with-alien-incdir=*)   alienincdir=$optarg   ; enable_alien="yes"   ;;
       --with-alien-libdir=*)   alienlibdir=$optarg   ; enable_alien="yes"   ;;
@@ -1210,6 +1213,7 @@ if test $# -gt 0 ; then
       --with-x11-libdir=*)     x11libdir=$optarg     ;;
       --with-xpm-libdir=*)     xpmlibdir=$optarg     ;;
       --with-xrootd=*)         xrootddir=$optarg     ; enable_xrootd="yes"  ;;
+      --with-xrootd-opts=*)    xrdaddopts=$optarg    ; enable_xrootd="yes"  ;;
       --with-cc=*)             altcc=$optarg         ;;
       --with-cxx=*)            altcxx=$optarg        ;;
       --with-f77=*)            altf77=$optarg        ;;
@@ -1345,6 +1349,35 @@ fi
 
 ######################################################################
 #
+### echo %%% check for GNU make >= 3.79.1 - Mandatory version of make
+#
+# Mandatory test, must succeed
+# Check for GNU make >= 3.79.1
+#
+message "Checking for GNU Make version >= 3.79.1"
+gnumake="make"
+gnu=`$gnumake -v 2>&1 | awk 'BEGIN { FS=" "} { if (NR==1) print $1 }'`
+if test ! "x$gnu" = "xGNU" ; then
+    gnumake="gmake"
+    gnu=`$gnumake -v 2>&1 | awk 'BEGIN { FS=" "} { if (NR==1) print $1 }'`
+    if test ! "x$gnu" = "xGNU" ; then
+        gnumake=""
+    fi
+fi
+if test ! "x$gnumake" = "x" ; then
+    gnuv=`$gnumake -v | tr '.,' ' ' | awk 'BEGIN { FS=" "} { if (NR==1 && $3 == "version") printf "%d", ($4*1000)+($5*10)+$6; else printf "%d", ($3*1000)+($4*10)+$5 }'`
+    if test $gnuv -lt 3791 ; then
+        result "`basename $0`: GNU Make >= 3.79.1 MUST be installed, current version $gnuv is too old"
+        exit 1
+    fi
+    result "ok"
+else
+    result "`basename $0`: GNU Make >= 3.79.1 MUST be installed"
+    exit 1
+fi
+
+######################################################################
+#
 ### echo %%% X11 and XPM Library - Mandatory lib on Unix
 #
 # Mandatory test, must succeed
@@ -1403,7 +1436,6 @@ if test ! "$platform" = "win32"; then
         enable_xft="no"
     fi
 fi
-
 
 ######################################################################
 #
@@ -1962,7 +1994,7 @@ check_qtvers()
     if test $? -eq 0 ; then
 	logmsg " Got Qt version $qtverstr"
 	qtgot=`echo $qtverstr | \
-	    awk 'BEGIN {FS="."} {printf "%d", ((($1*2^8)+$2)*2^8)+$3; }'`;
+	    awk 'BEGIN {FS="."} {printf "%d", ((($1*2^8)+$2)*2^8)+$3; }'`
 	qtneed=`echo $qtverneed | \
 	    awk 'BEGIN {FS="."}{ printf "%d", (($1*2^8)+$2)*2^8+$3; }'`
 	qtnew=`echo $qttoonew | \
@@ -1976,7 +2008,7 @@ check_qtvers()
 	    res="no"
 	else
 	    res="$qtverstr"
-	    qtvers=`echo $qtverstr | awk 'BEGIN{FS="."}{print $1}'`
+	    qtvers=`echo $qtverstr | awk 'BEGIN {FS="."} {print $1}'`
 	fi
     else
 	res="no"
@@ -2022,24 +2054,24 @@ if test ! "x$enable_qt" = "xno" || \
 	    if test "x$enable_winrtdebug" = "xyes"; then
 	        qt4suffix="d4"
 	    fi
-	    check_library "libQtCore QtCore QtCore$qt4suffix" "$enable_shared" \
+	    check_library "libQtCore QtCore QtCore$qt4suffix QtCore4" "$enable_shared" \
 		"$qtlibdir" $QTDIR $QTDIR/lib /usr/local/lib \
 		/usr/local/qt/lib /usr/lib /usr/qt/lib
 	    qtlib=$found_lib
 	    qtlibdir=$found_dir
-	    check_library "libQtGui QtGui QtGui$qt4suffix" "$enable_shared" \
+	    check_library "libQtGui QtGui QtGui$qt4suffix QtGui4" "$enable_shared" \
 		"$found_raw_dir"  ""
 	    qtlib="$qtlib $found_lib"
-	    check_library "libQt3Support Qt3Support Qt3Support$qt4suffix" \
+	    check_library "libQt3Support Qt3Support Qt3Support$qt4suffix Qt3Support4" \
 		"$enable_shared" "$found_raw_dir"  ""
 	    qtlib="$qtlib $found_lib"
-	    check_library "libQtOpenGL QtOpenGL QtOpenGL$qt4suffix" \
+	    check_library "libQtOpenGL QtOpenGL QtOpenGL$qt4suffix QtOpenGL4" \
 		"$enable_shared" "$found_raw_dir"  ""
 	    qtlib="$qtlib $found_lib"
-	    check_library "libQtSvg QtSvg QtSvg$qt4suffix" "$enable_shared" \
+	    check_library "libQtSvg QtSvg QtSvg$qt4suffix QtSvg4" "$enable_shared" \
 		"$found_raw_dir"  ""
 	    qtlib="$qtlib $found_lib"
-	    check_library "libQtXml QtXml QtXml$qt4suffix" "$enable_shared" \
+	    check_library "libQtXml QtXml QtXml$qt4suffix QtXml4" "$enable_shared" \
 		"$found_raw_dir"  ""
 	    qtlib="$qtlib $found_lib"
 	else
@@ -4264,6 +4296,37 @@ check_explicit "$enable_peac" "$enable_peac_explicit" \
 
 ######################################################################
 #
+### echo %%% Check for Stub removal support
+#
+
+if test "x$no_stubs" = "xyes" || test "x$no_stubs_test" = "xyes"; then
+    message "Checking for CINT support of function calls via symbols"
+    no_stubs="yes"
+
+    # Now check whether the platform is supported at all:
+    if test "x${arch}" = "xlinux"; then
+        gccmajor="`gcc -dumpversion 2>&1 | cut -d'.' -f1`"
+        gccminor="`gcc -dumpversion 2>&1 | cut -d'.' -f2`"
+        gccminorOK="`echo 234 | grep ${gccminor}`"
+        if test ! "x$gccmajor" = "x3" || test ! "x$gccminorOK" = "x234"; then
+            no_stubs="no"
+            no_stubs_test="no"
+            result "$no_stubs"
+            echo "WARNING: symbol-based calls are not supported with your compiler version"'!'
+        else
+            result "$no_stubs"
+        fi
+    else
+        no_stubs="no"
+        no_stubs_test="no"
+        result "$no_stubs"
+        echo "WARNING: symbol-based calls are not supported on ${arch}"'!'
+    fi
+fi
+
+
+######################################################################
+#
 ### echo %%% What dictionaries to build
 #
 # Can be either cint (default), reflex, or gccxml.
@@ -4440,7 +4503,9 @@ rm -f lib/libRXML* bin/libRXML* bin/xproofd etc/system.rootmap
 rm -f lib/libProofGui* bin/libProofGui* bin/xrdgsiproxy
 rm -f lib/libMySQL* bin/libMySQL* lib/libGedOld* bin/libGedOld*
 rm -f lib/libASPluginGS.*
-rm -f xrootd/src/headers.d asimage/src/headers.d
+rm -f math/mathcore/src/G__MathCore32.*
+rm -f xrootd/src/headers.d
+rm -f asimage/src/headers.d asimage/src/G__ASImageGS.*
 
 ######################################################################
 #
@@ -4642,6 +4707,8 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@buildgdml@|$enable_gdml|"            \
     -e "s|@buildmonalisa@|$enable_monalisa|"    \
     -e "s|@enable_pch@|$enable_pch|"            \
+    -e "s|@no_stubs@|$no_stubs|"                \
+    -e "s|@no_stubs_test@|$no_stubs_test|"      \
     -e "s|@buildtable@|$enable_table|"          \
     -e "s|@enable_thread@|$enable_thread|"      \
     -e "s|@etcdir@|$etcdir|"                    \
@@ -4762,6 +4829,7 @@ sed -e "s|@srcdir@|$srcdir|"                    \
     -e "s|@x11libdir@|$x11libdir|"              \
     -e "s|@xpmlib@|$xpmlib|"                    \
     -e "s|@xpmlibdir@|$xpmlibdir|"              \
+    -e "s|@xrdaddopts@|$xrdaddopts|"            \
     -e "s|@xrootddir@|$xrootddir|"              \
     -e "s|@buildgl@|$enable_opengl|"            \
     -e "s|@buildhbook@|$enable_cern|"           \
@@ -4901,11 +4969,13 @@ prefix2=$prefix
 bindir2=$bindir
 libdir2=$libdir
 incdir2=$incdir
+mandir2=$mandir
 if test "$prefix2" = "\$(ROOTSYS)" ; then
     prefix2=\$ROOTSYS
     bindir2=\$ROOTSYS/bin
     libdir2=\$ROOTSYS/lib
     incdir2=\$ROOTSYS/include
+    mandir2=\$ROOTSYS/man/man1
 fi
 
 features=""
@@ -4935,6 +5005,8 @@ sed -e "s|@architecture@|$arch|"           \
     -e "s|@altcxx@|$altcxx|"               \
     -e "s|@altf77@|$altf77|"               \
     -e "s|@altld@|$altld|"                 \
+    -e "s|@no_stubs@|$no_stubs|"           \
+    -e "s|@no_stubs_test@|$no_stubs_test|" \
    < root-config.tmp > $RCONFOUT
 rm -f root-config.tmp
 chmod 755 $RCONFOUT
@@ -5095,10 +5167,16 @@ result done
 # bin/thisroot.sh and bin/thisroot.csh
 #
 message "Writing $THISROOTSHOUT"
-cp -f $THISROOTSHIN $THISROOTSHOUT
+sed -e "s|@bindir@|$bindir2|"           \
+    -e "s|@libdir@|$libdir2|"           \
+    -e "s|@mandir@|$mandir2|"           \
+    < $THISROOTSHIN > $THISROOTSHOUT
 result "done"
 message "Writing $THISROOTCSHOUT"
-cp -f $THISROOTCSHIN $THISROOTCSHOUT
+sed -e "s|@bindir@|$bindir2|"           \
+    -e "s|@libdir@|$libdir2|"           \
+    -e "s|@mandir@|$mandir2|"           \
+    < $THISROOTCSHIN > $THISROOTCSHOUT
 result "done"
 if test "$platform" = "win32"; then
     message "Writing $THISROOTBATOUT"
@@ -5168,6 +5246,16 @@ if test "x$enable_reflex" = "xyes"; then
     fi
 else
     rm -f bin/genreflex*
+fi
+
+#---------------------------------------------------------------------
+# bin/rootcint_nostubs
+#
+if test "x$no_stubs" = "xyes"; then
+    message "Writing $ROOTCINTSTUBSHOUT"
+    cp -f  $ROOTCINTSTUBSHIN $ROOTCINTSTUBSHOUT
+    # force rootcint recompilation and thus regenerate dictionaries
+    touch utils/src/rootcint.cxx
 fi
 
 #---------------------------------------------------------------------

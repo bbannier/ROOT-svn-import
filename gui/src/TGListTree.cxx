@@ -456,6 +456,7 @@ TGListTree::~TGListTree()
 {
    // Delete list tree widget.
 
+   Int_t refcnt;
    TGListTreeItem *item, *sibling;
 
    delete [] fDNDTypeList;
@@ -470,14 +471,30 @@ TGListTree::~TGListTree()
       delete item;
       item = sibling;
    }
-   if (fgOpenPic)
+   if (fgOpenPic) {
+      refcnt = fgOpenPic->References();
       fClient->FreePicture(fgOpenPic);
-   if (fgClosedPic)
+      if (refcnt == 1)
+         fgOpenPic = 0;
+   }
+   if (fgClosedPic) {
+      refcnt = fgClosedPic->References();
       fClient->FreePicture(fgClosedPic);
-   if (fgCheckedPic)
+      if (refcnt == 1)
+         fgClosedPic = 0;
+   }
+   if (fgCheckedPic) {
+      refcnt = fgCheckedPic->References();
       fClient->FreePicture(fgCheckedPic);
-   if (fgUncheckedPic)
+      if (refcnt == 1)
+         fgCheckedPic = 0;
+   }
+   if (fgUncheckedPic) {
+      refcnt = fgUncheckedPic->References();
       fClient->FreePicture(fgUncheckedPic);
+      if (refcnt == 1)
+         fgUncheckedPic = 0;
+   }
 }
 
 //--- text utility functions
@@ -699,10 +716,17 @@ Bool_t TGListTree::HandleCrossing(Event_t *event)
 {
    // Handle mouse crossing event.
 
-   if (fTip) {
-      if (event->fType == kLeaveNotify) {
+   if (event->fType == kLeaveNotify) {
+      if (fTip) {
          fTip->Hide();
          fTipItem = 0;
+      }
+      if (!fUserControlled) {
+         if (fCurrent)
+            DrawOutline(fId, fCurrent, 0xffffff, kTRUE);
+         if (fBelowMouse)
+            DrawOutline(fId, fBelowMouse, 0xffffff, kTRUE);
+         fCurrent = fBelowMouse = 0;
       }
    }
    return kTRUE;
@@ -1966,6 +1990,7 @@ Int_t TGListTree::DeleteItem(TGListTreeItem *item)
       MouseOver(0);
       MouseOver(0,fLastEventState);
    }
+   fCurrent = fBelowMouse = 0;
 
    delete item;
    fClient->NeedRedraw(this);
@@ -2034,10 +2059,10 @@ Int_t TGListTree::DeleteChildren(TGListTreeItem *item)
    // Delete children of item from list.
 
    if (!fUserControlled) {
-      if (fCurrent)
-         DrawOutline(fId, fCurrent, 0xffffff, kTRUE);
-      if (fBelowMouse)
-         DrawOutline(fId, fBelowMouse, 0xffffff, kTRUE);
+      //if (fCurrent)
+      //   DrawOutline(fId, fCurrent, 0xffffff, kTRUE);
+      //if (fBelowMouse)
+      //   DrawOutline(fId, fBelowMouse, 0xffffff, kTRUE);
       fCurrent = fBelowMouse = 0;
    }
    if (item->fFirstchild) {

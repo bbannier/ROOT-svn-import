@@ -28,17 +28,59 @@ void TPySelector::SetupPySelf()
    if ( fPySelf && fPySelf != Py_None )
       return;                      // already created ...
 
-   TString pyfile = TString::Format( "execfile( \'%s\' )", (const char*)GetOption() );
+   TString impst = TString::Format( "import %s", GetOption() );
 
 // use TPython to ensure that the interpreter is initialized
-   TPython::Exec( (const char*)pyfile );
-   if ( PyErr_Occurred() ) {
-      Abort( 0 );
+   if ( ! TPython::Exec( (const char*)impst ) ) {
+      Abort( "failed to load provided script" );  // Exec already printed the real error
       return;
    }
 
-// call custom function (TODO: scan file for TSelector derived class)
-   PyObject* self = (PyObject*)TPython::Eval( "GetSelector()" );
+// get the TPySelector python class
+   PyObject* tpysel = PyObject_GetAttrString(
+      PyImport_AddModule( const_cast< char* >( "libPyROOT" ) ),
+      const_cast< char* >( "TPySelector" ) );
+
+// get handle to the module
+   PyObject* pymod = PyImport_AddModule( const_cast< char* >( GetOption() ) );
+
+// get the module dictionary to loop over
+   PyObject* dict = PyModule_GetDict( pymod );
+   Py_INCREF( dict );
+
+// locate the TSelector derived class
+   PyObject* allvalues = PyDict_Values( dict );
+
+   PyObject* pyclass = 0;
+   for ( int i = 0; i < PyList_GET_SIZE( allvalues ); ++i ) {
+      PyObject* value = PyList_GET_ITEM( allvalues, i );
+      Py_INCREF( value );
+
+      if ( PyType_Check( value ) && PyObject_IsSubclass( value, tpysel ) ) {
+         if ( PyObject_Compare(	value, tpysel ) ) {    // i.e., if not equal
+            pyclass = value;
+            break;
+         }
+      }
+
+      Py_DECREF( value );
+   }
+
+   Py_DECREF( allvalues );
+   Py_DECREF( dict );
+   Py_DECREF( tpysel );
+
+   if ( ! pyclass ) {
+      Abort( "no TSelector derived class available in provided module" );
+      return;
+   }
+
+   PyObject* args = PyTuple_New( 0 );
+   PyObject* self = PyObject_Call( pyclass, args, 0 );
+   Py_DECREF( args );
+   Py_DECREF( pyclass );
+
+// final check before declaring success ...
    if ( ! self || ! PyROOT::ObjectProxy_Check( self ) ) {
       if ( ! PyErr_Occurred() )
          PyErr_SetString( PyExc_RuntimeError, "could not create python selector" );
@@ -62,7 +104,8 @@ void TPySelector::CallSelf( const char* method )
    if ( ! fPySelf || fPySelf == Py_None )
       return;
 
-   PyObject* result = PyObject_CallMethod( fPySelf, (char*)method, (char*)"" );
+   PyObject* result = PyObject_CallMethod(
+      fPySelf, const_cast< char* >( method ), const_cast< char* >( "" ) );
    if ( ! result )
       Abort( 0 );
 
@@ -107,7 +150,8 @@ Int_t TPySelector::GetEntry( Long64_t entry, Int_t getall )
 //____________________________________________________________________________
 void TPySelector::Init( TTree* tree )
 {
-// Initialize with the current tree to be used; not forwarded.
+// Initialize with the current tree to be used; not forwarded (may be called
+// multiple times, and is called from Begin() and SlaveBegin() ).
    if ( ! tree )
       return;
 
@@ -140,10 +184,12 @@ void TPySelector::SlaveBegin( TTree* tree )
    PyObject* result = 0;
    if ( tree ) {
       PyObject* pyobject = PyROOT::BindRootObject( (void*)tree, tree->IsA() );
-      result = PyObject_CallMethod( fPySelf, (char*)"SlaveBegin", (char*)"O", pyobject );
+      result = PyObject_CallMethod( fPySelf,
+         const_cast< char* >( "SlaveBegin" ), const_cast< char* >( "O" ), pyobject );
       Py_DECREF( pyobject );
    } else {
-      result = PyObject_CallMethod( fPySelf, (char*)"SlaveBegin", (char*)"O", Py_None );
+      result = PyObject_CallMethod( fPySelf,
+         const_cast< char* >( "SlaveBegin" ), const_cast< char* >( "O" ), Py_None );
    }
 
    if ( ! result )
@@ -165,7 +211,8 @@ Bool_t TPySelector::Process( Long64_t entry )
       return kFALSE;
    }
 
-   PyObject* result = PyObject_CallMethod( fPySelf, (char*)"Process", (char*)"L", entry );
+   PyObject* result = PyObject_CallMethod( fPySelf,
+      const_cast< char* >( "Process" ), const_cast< char* >( "L" ), entry );
    if ( ! result ) {
       Abort( 0 );
       return kFALSE;
@@ -205,5 +252,5 @@ void TPySelector::Abort( const char* why, EAbort what )
 
       PyErr_Restore( pytype, pyvalue, pytrace );
    } else
-      TSelector::Abort( why ? "" : why, what );
+      TSelector::Abort( why ? why : "", what );
 }

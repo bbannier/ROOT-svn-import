@@ -58,29 +58,32 @@ include $(MAKEFILEDEP)
 
 ##### Modules to build #####
 
-MODULES       = build cint metautils pcre utils base cont meta io \
-                math fit mathcore net zip clib matrix newdelete \
-                hist/hist tree freetype graf gpad g3d gui minuit \
-                hist/histpainter treeplayer ged treeviewer physics \
-                postscript rint thread html eg geom geompainter vmc fumili \
-                mlp quadp auth guibuilder xml foam splot smatrix sql tmva \
-                geombuilder hist/spectrum hist/spectrumpainter \
+MODULES       = build cint/cint core/metautils core/pcre core/utils core/base \
+                core/cont core/meta io math/mathcore net core/zip \
+                core/clib math/matrix core/newdelete \
+                hist/hist tree/tree freetype graf gpad g3d gui math/minuit \
+                hist/histpainter tree/treeplayer ged tree/treeviewer \
+                math/physics postscript core/rint core/thread html eg \
+                geom/geom geom/geompainter vmc \
+                math/fumili math/mlp math/quadp auth guibuilder xml \
+                math/foam math/splot math/smatrix sql tmva \
+                geom/geombuilder hist/spectrum hist/spectrumpainter \
                 fitpanel proof/proof proof/proofplayer sessionviewer guihtml
 
 ifeq ($(ARCH),win32)
-MODULES      += winnt win32gdk
-MODULES      := $(filter-out newdelete,$(MODULES))
+MODULES      += core/winnt win32gdk
+MODULES      := $(filter-out core/newdelete,$(MODULES))
 SYSTEML       = $(WINNTL)
 SYSTEMO       = $(WINNTO)
 SYSTEMDO      = $(WINNTDO)
 else
 ifeq ($(ARCH),win32gcc)
-MODULES      += unix x11 x11ttf x3d rootx
+MODULES      += core/unix x11 x11ttf x3d rootx
 SYSTEML       = $(UNIXL)
 SYSTEMO       = $(UNIXO)
 SYSTEMDO      = $(UNIXDO)
 else
-MODULES      += unix x11 x11ttf x3d rootx
+MODULES      += core/unix x11 x11ttf x3d rootx
 SYSTEML       = $(UNIXL)
 SYSTEMO       = $(UNIXO)
 SYSTEMDO      = $(UNIXDO)
@@ -138,7 +141,7 @@ ifeq ($(BUILDFPYTHIA8),yes)
 MODULES      += pythia8
 endif
 ifeq ($(BUILDFFTW3),yes)
-MODULES      += fftw
+MODULES      += math/fftw
 endif
 ifeq ($(BUILDPYTHON),yes)
 MODULES      += pyroot
@@ -156,22 +159,23 @@ ifeq ($(BUILDQTGSI),yes)
 MODULES      += qtgsi
 endif
 ifeq ($(BUILDGENVECTOR),yes)
-MODULES      += genvector
+MODULES      += math/genvector
 endif
 ifeq ($(BUILDMATHMORE),yes)
-MODULES      += mathmore
+MODULES      += math/mathmore
 endif
 ifeq ($(BUILDREFLEX),yes)
-MODULES      += reflex
+# put reflex right in front of CINT; CINT needs it 
+MODULES      := $(subst cint/cint,cint/reflex cint/cint,$(MODULES))
 endif
 ifeq ($(BUILDMINUIT2),yes)
-MODULES      += minuit2
+MODULES      += math/minuit2
 endif
 ifeq ($(BUILDUNURAN),yes)
-MODULES      += unuran
+MODULES      += math/unuran
 endif
 ifeq ($(BUILDCINT7),yes)
-MODULES      += cint7
+MODULES      := $(subst cint/cint,cint/cint7,$(MODULES))
 endif
 ifeq ($(BUILDCINTEX),yes)
 MODULES      += cintex
@@ -180,7 +184,7 @@ ifeq ($(BUILDROOFIT),yes)
 MODULES      += roofitcore roofit
 endif
 ifeq ($(BUILDGDML),yes)
-MODULES      += gdml
+MODULES      += geom/gdml
 endif
 ifeq ($(BUILDTABLE),yes)
 MODULES      += table
@@ -232,14 +236,16 @@ endif
 -include MyModules.mk   # allow local modules
 
 ifneq ($(findstring $(MAKECMDGOALS),distclean maintainer-clean),)
-MODULES      += unix winnt x11 x11ttf win32gdk gl ftgl rfio castor \
+MODULES      += core/unix core/winnt x11 x11ttf win32gdk gl ftgl rfio castor \
                 pythia6 table mysql pgsql sapdb srputils x3d \
                 rootx rootd dcache chirp hbook asimage \
-                ldap mlp krb5auth rpdutils globusauth pyroot ruby gfal \
+                ldap krb5auth rpdutils globusauth pyroot ruby gfal \
                 qt qtroot qtgsi xrootd netx alien \
                 proof/proofd proof/proofx proof/clarens proof/peac \
-                oracle xmlparser mathmore reflex cintex roofitcore roofit \
-                minuit2 monalisa fftw odbc unuran gdml eve g4root cint7 glite
+                oracle xmlparser math/mathmore cint/reflex cintex \
+                roofitcore roofit \
+                math/minuit2 monalisa math/fftw odbc math/unuran \
+                geom/gdml eve g4root glite
 MODULES      := $(sort $(MODULES))   # removes duplicates
 endif
 
@@ -252,7 +258,7 @@ LPATH         = lib
 ifneq ($(PLATFORM),win32)
 RPATH        := -L$(LPATH)
 CINTLIBS     := -lCint
-CINT7LIBS    := -lCint7 -lReflex
+CINT7LIBS    := -lCint -lReflex
 NEWLIBS      := -lNew
 ROOTLIBS     := -lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad \
                 -lTree -lMatrix -lMathCore
@@ -264,7 +270,7 @@ endif
 RINTLIBS     := -lRint
 else
 CINTLIBS     := $(LPATH)/libCint.lib
-CINT7LIBS    := $(LPATH)/libCint7.lib $(LPATH)/libReflex.lib
+CINT7LIBS    := $(LPATH)/libCint.lib $(LPATH)/libReflex.lib
 NEWLIBS      := $(LPATH)/libNew.lib
 ROOTLIBS     := $(LPATH)/libCore.lib $(LPATH)/libCint.lib \
                 $(LPATH)/libRIO.lib $(LPATH)/libNet.lib \
@@ -340,6 +346,18 @@ GCC_PATCH     := $(shell $(CXX) -dumpversion 2>&1 | cut -d'.' -f3)
 GCC_VERS      := gcc-$(GCC_MAJOR).$(GCC_MINOR)
 GCC_VERS_FULL := gcc-$(GCC_MAJOR).$(GCC_MINOR).$(GCC_PATCH)
 
+##### CINT Stub Functions Generation #####
+ifeq ($(NOSTUBS),yes)
+ROOTCINTTMP   = export CXXFLAGS="$(CXXFLAGS)"; core/utils/src/rootcint_nostubs_tmp.sh -$(ROOTDICTTYPE)
+CXXFLAGS     += -DG__NOSTUBS
+CINTCXXFLAGS += -DG__NOSTUBS
+ifeq ($(NOSTUBSTEST),yes)
+CXXFLAGS     += -DG__NOSTUBSTEST
+CINTCXXFLAGS += -DG__NOSTUBSTEST
+endif
+endif
+
+
 # Precompiled headers for gcc
 ifeq ($(GCC_MAJOR),4)
 PCHSUPPORTED  := $(ENABLEPCH)
@@ -388,13 +406,12 @@ endif
 
 ##### Utilities #####
 
-ROOTCINTTMP   = $(ROOTCINTTMPEXE) $(addprefix -,$(ROOTDICTTYPE))
+ROOTCINTTMP  ?= $(ROOTCINTTMPEXE) -$(ROOTDICTTYPE)
 MAKEDEP       = $(RMKDEP)
 MAKELIB       = build/unix/makelib.sh $(MKLIBOPTIONS)
 MAKEDIST      = build/unix/makedist.sh
 MAKEDISTSRC   = build/unix/makedistsrc.sh
 MAKEVERSION   = build/unix/makeversion.sh
-IMPORTCINT    = build/unix/importcint.sh
 MAKECOMPDATA  = build/unix/compiledata.sh
 MAKECHANGELOG = build/unix/makechangelog.sh
 MAKEHTML      = build/unix/makehtml.sh
@@ -476,14 +493,6 @@ cint/%.o: cint/%.c
 	$(MAKEDEP) -R -fcint/$*.d -Y -w 1000 -- $(CINTCFLAGS) -- $<
 	$(CC) $(OPT) $(CINTCFLAGS) $(CXXOUT)$@ -c $<
 
-cint7/%.o: cint7/%.cxx
-	$(MAKEDEP) -R -fcint7/$*.d -Y -w 1000 -- $(CINT7CXXFLAGS) -D__cplusplus -- $<
-	$(CXX) $(OPT) $(CINT7CXXFLAGS) $(CXXOUT)$@ -c $<
-
-cint7/%.o: cint7/%.c
-	$(MAKEDEP) -R -fcint7/$*.d -Y -w 1000 -- $(CINT7CFLAGS) -- $<
-	$(CC) $(OPT) $(CINT7CFLAGS) $(CXXOUT)$@ -c $<
-
 build/%.o: build/%.cxx
 	$(CXX) $(OPT) $(CXXFLAGS) $(CXXOUT)$@ -c $<
 
@@ -508,11 +517,10 @@ endif
 
 ##### TARGETS #####
 .PHONY:         all fast config rootcint rootlibs rootexecs dist distsrc \
-                clean distclean maintainer-clean compiledata importcint \
+                clean distclean maintainer-clean compiledata \
                 version html changelog install uninstall showbuild \
                 static map debian redhat skip postbin \
                 $(patsubst %,all-%,$(MODULES)) \
-                $(patsubst %,map-%,$(MODULES)) \
                 $(patsubst %,clean-%,$(MODULES)) \
                 $(patsubst %,distclean-%,$(MODULES))
 
@@ -528,12 +536,12 @@ skip:
 		@true;
 
 include $(patsubst %,%/Module.mk,$(MODULES))
-include cint/cintdlls.mk
+include cint/ROOT/cintdlls.mk
 
 -include MyRules.mk            # allow local rules
 
 ifeq ($(findstring $(MAKECMDGOALS),clean distclean maintainer-clean dist \
-      distsrc version importcint importcint7 install uninstall showbuild \
+      distsrc version install uninstall showbuild \
       changelog html debian redhat),)
 ifeq ($(findstring clean-,$(MAKECMDGOALS)),)
 ifeq ($(findstring skip,$(MAKECMDGOALS))$(findstring fast,$(MAKECMDGOALS)),)
@@ -740,7 +748,7 @@ rootdrpm:
 	fi
 
 clean::
-	@rm -f __compiledata *~ core include/precompile.*
+	@rm -f __compiledata *~ core.* include/precompile.*
 
 ifeq ($(CXX),KCC)
 clean::
@@ -807,12 +815,6 @@ static: rootlibs
 	@$(MAKESTATIC) $(PLATFORM) "$(CXX)" "$(CC)" "$(LD)" "$(LDFLAGS)" \
 	   "$(XLIBS)" "$(SYSLIBS)"
 
-importcint: distclean-cint
-	@$(IMPORTCINT)
-
-importcint7: distclean-cint7
-	@$(IMPORTCINT) cint7
-
 changelog:
 	@$(MAKECHANGELOG)
 
@@ -861,11 +863,11 @@ install: all
 	   $(INSTALLDATA) include/*             $(DESTDIR)$(INCDIR); \
 	   echo "Installing main/src/rmain.cxx in $(DESTDIR)$(INCDIR)"; \
 	   $(INSTALLDATA) main/src/rmain.cxx    $(DESTDIR)$(INCDIR); \
-	   echo "Installing cint/include cint/lib and cint/stl in $(DESTDIR)$(CINTINCDIR)"; \
+	   echo "Installing cint/cint/include cint/cint/lib and cint/cint/stl in $(DESTDIR)$(CINTINCDIR)"; \
 	   $(INSTALLDIR)                        $(DESTDIR)$(CINTINCDIR); \
-	   $(INSTALLDATA) cint/include          $(DESTDIR)$(CINTINCDIR); \
-	   $(INSTALLDATA) cint/lib              $(DESTDIR)$(CINTINCDIR); \
-	   $(INSTALLDATA) cint/stl              $(DESTDIR)$(CINTINCDIR); \
+	   $(INSTALLDATA) cint/cint/include     $(DESTDIR)$(CINTINCDIR); \
+	   $(INSTALLDATA) cint/cint/lib         $(DESTDIR)$(CINTINCDIR); \
+	   $(INSTALLDATA) cint/cint/stl         $(DESTDIR)$(CINTINCDIR); \
 	   find $(DESTDIR)$(CINTINCDIR) -name CVS -exec rm -rf {} \; >/dev/null 2>&1; \
 	   find $(DESTDIR)$(CINTINCDIR) -name .svn -exec rm -rf {} \; >/dev/null 2>&1; \
 	   echo "Installing icons in $(DESTDIR)$(ICONPATH)"; \
@@ -917,7 +919,7 @@ install: all
 	   $(INSTALLDIR)                          $(DESTDIR)$(ELISPDIR); \
 	   $(INSTALLDATA) build/misc/root-help.el $(DESTDIR)$(ELISPDIR); \
 	   echo "Installing GDML conversion scripts in $(DESTDIR)$(LIBDIR)"; \
-	   $(INSTALLDATA) gdml/*.py               $(DESTDIR)$(LIBDIR); \
+	   $(INSTALLDATA) geom/gdml/*.py          $(DESTDIR)$(LIBDIR); \
 	   find $(DESTDIR)$(DATADIR) -name CVS -exec rm -rf {} \; >/dev/null 2>&1; \
 	   find $(DESTDIR)$(DATADIR) -name .svn -exec rm -rf {} \; >/dev/null 2>&1; \
 	fi
@@ -1110,7 +1112,6 @@ showbuild:
 	@echo "MAKEDIST           = $(MAKEDIST)"
 	@echo "MAKEDISTSRC        = $(MAKEDISTSRC)"
 	@echo "MAKEVERSION        = $(MAKEVERSION)"
-	@echo "IMPORTCINT         = $(IMPORTCINT)"
 	@echo ""
 	@echo "The list of modules to be built:"
 	@echo "--------------------------------"
