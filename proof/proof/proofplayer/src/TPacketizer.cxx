@@ -727,6 +727,7 @@ void TPacketizer::ValidateFiles(TDSet *dset, TList *slaves)
                                  entries, elem->GetFileName());
                         elem->SetNum(entries - elem->GetFirst());
                      }
+                     elem->SetValid();
                   }
                }
             }
@@ -858,6 +859,7 @@ void TPacketizer::ValidateFiles(TDSet *dset, TList *slaves)
                      e->GetNum(), e->GetFirst(), entries, e->GetFileName() );
                e->SetNum( entries - e->GetFirst() );
             }
+            e->SetValid();
          }
 
 
