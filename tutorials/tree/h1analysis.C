@@ -259,7 +259,6 @@ void h1analysis::Terminate()
    // with function f2 and make a histogram for each fit parameter
    // Note that the generated histograms are added to the list of objects
    // in the current directory.
-#if 1
    if (gROOT->GetListOfFunctions()->FindObject("f2"))
       delete gROOT->GetFunction("f2");
    TF1 *f2 = new TF1("f2",fdm2,0.139,0.17,2);
@@ -278,16 +277,4 @@ void h1analysis::Terminate()
       TFile efile("elist.root","recreate");
       elist->Write();
    }
-#else
-#if 1
-   TF1 *f2 = new TF1("f2",fdm2,0.139,0.17,2);
-   f2->SetParameters(10000, 10);
-   h2->FitSlicesX(f2,0,-1,1,"qln");
-   TH1D *h2_1 = (TH1D*)gDirectory->Get("h2_1");
-#else
-   TH1D *h2_1 = h2->ProjectionX();
-#endif
-   h2_1->Draw();
-
-#endif
 }
