@@ -1155,6 +1155,8 @@ Int_t TTreeCache::UnzipBuffer(char **dest, char *src)
       }
       uzlen += objlen;
    } else {
+      memcpy(*dest, src, keylen);
+      uzlen += keylen;
       memcpy(*dest + keylen, src + keylen, objlen);
       uzlen += objlen;
    }
