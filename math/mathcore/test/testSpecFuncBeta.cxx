@@ -19,7 +19,7 @@ const double MIN = -2.5;
 const double MAX = +2.5;
 const double INCREMENT = 0.01;
 const int ARRAYSIZE = (int) (( MAX - MIN ) / INCREMENT);
-inline int arrayindex(double i) { return ARRAYSIZE - (int) ( (MAX - i) / INCREMENT ) -1 ; };
+inline int arrayindex(double i) { return ARRAYSIZE - (int) ( (MAX - i) / INCREMENT ) ; };
 
 bool showGraphics = true;
 
@@ -65,6 +65,7 @@ int testSpecFuncBeta()
 //                     << " ROOT::Math::beta(p,b): "; cout.width(10); cout << ROOT::Math::beta(i,b)
 //                     << endl;
          
+         cout << arrayindex(i) << endl;
          x[arrayindex(i)] = i;
          yb[arrayindex(i)] = TMath::Beta(i,b);
          ymb[arrayindex(i)] = ROOT::Math::beta(i,b);

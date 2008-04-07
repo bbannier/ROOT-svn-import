@@ -19,7 +19,7 @@ const double MIN = 0;
 const double MAX = 1;
 const double INCREMENT = 0.01;
 const int ARRAYSIZE = (int) (( MAX - MIN ) / INCREMENT);
-inline int arrayindex(double i) { return ARRAYSIZE - (int) ( (MAX - i) / INCREMENT ) -1 ; };
+inline int arrayindex(double i) { return ARRAYSIZE - (int) ( (MAX - i) / INCREMENT ); };
 
 bool showGraphics = true;
 
