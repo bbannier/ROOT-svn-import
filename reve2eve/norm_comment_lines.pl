@@ -23,10 +23,10 @@ for $infile (@infiles)
   ### Text manipulation begin
 
   # Fix length of /****/ constructs to 80
-  #$text =~ s!^/\*{60,77}/$!$allstars!ogm;
+  $text =~ s!^/\*{54,77}/$!$allstars!ogm;
 
   # Fix length of //_____ to 80
-  #$text =~ s!^//_{60,77}$!$alluscores!ogm;
+  $text =~ s!^//_{54,77}$!$alluscores!ogm;
 
 
   # Place /____ in front of funcs that don't have it
