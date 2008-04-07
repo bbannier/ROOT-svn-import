@@ -635,14 +635,15 @@ public:
    Int_t       UploadDataSetFromFile(const char *dataset,
                                      const char *file,
                                      const char *dest = 0,
-                                     Int_t opt = kAskUser);
-   Bool_t       RegisterDataSet(const char *name,
-                                TFileCollection *dataset, const char* optStr = "");
-   TMap        *GetDataSets(const char *uri = 0, const char* optStr = "");
+                                     Int_t opt = kAskUser,
+                                     TList *skippedFiles = 0);
+   Bool_t      RegisterDataSet(const char *name,
+                               TFileCollection *dataset, const char* optStr = "");
+   TMap       *GetDataSets(const char *uri = 0, const char* optStr = "");
    void        ShowDataSets(const char *uri = 0, const char* optStr = "");
 
-   TMap        *GetQuota(const char* optStr = "");
-   void        ShowQuota(Option_t* opt = 0);
+   TMap       *GetDataSetQuota(const char* optStr = "");
+   void        ShowDataSetQuota(Option_t* opt = 0);
 
    void        ShowDataSet(const char *dataset, const char* opt = "M");
    Int_t       RemoveDataSet(const char *dataset, const char* optStr = "");
