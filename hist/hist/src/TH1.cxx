@@ -583,7 +583,7 @@ TH1::~TH1()
       fFunctions = 0;
    }
    if (fDirectory) {
-      fDirectory->GetList()->Remove(this);
+      fDirectory->Remove(this);
       fDirectory = 0;
    }
    delete fPainter;
@@ -730,20 +730,11 @@ void TH1::Build()
 
    UseCurrentStyle();
 
-   if (fgAddDirectory && gDirectory) {
-      if (!gDirectory->GetList()) {
-         Warning("Build","Current directory is not a valid directory");
-         return;
-      }
-      TH1 *hold = (TH1*)gDirectory->GetList()->FindObject(GetName());
-      if (hold) {
-         Warning("Build","Replacing existing histogram: %s (Potential memory leak).",GetName());
-         gDirectory->GetList()->Remove(hold);
-         hold->SetDirectory(0);
-         //  delete hold;
-      }
-      gDirectory->Append(this);
+   if (TH1::AddDirectoryStatus()) {
       fDirectory = gDirectory;
+      if (fDirectory) {
+         fDirectory->Append(this,kTRUE);
+      }
    }
 }
 
@@ -1921,7 +1912,7 @@ void TH1::Copy(TObject &obj) const
       // We are likely to change the hash value of this object
       // with TNamed::Copy, to keep things correct, we need to
       // clean up its existing entries.
-      ((TH1&)obj).fDirectory->GetList()->Remove(&obj);
+      ((TH1&)obj).fDirectory->Remove(&obj);
       ((TH1&)obj).fDirectory = 0;
    }
    TNamed::Copy(obj);
@@ -1967,6 +1958,22 @@ void TH1::Copy(TObject &obj) const
       gDirectory->Append(&obj);
       ((TH1&)obj).fDirectory = gDirectory;
    }
+}
+
+//______________________________________________________________________________
+void TH1::DirectoryAutoAdd(TDirectory *dir)
+{
+   // Perform the automatic addition of the histogram to the given directory
+   //
+   // Note this function is called in place when the semantic requires 
+   // this object to be added to a directory (I.e. when being read from
+   // a TKey or being Cloned)
+   // 
+
+   Bool_t addStatus = TH1::AddDirectoryStatus();
+   if (addStatus) {
+      SetDirectory(dir);
+   }  
 }
 
 //______________________________________________________________________________
@@ -5694,23 +5701,27 @@ void  TH1::SmoothArray(Int_t nn, Double_t *xx, Int_t ntimes)
 
 
 // ------------------------------------------------------------------------
-void  TH1::Smooth(Int_t ntimes, Int_t firstbin, Int_t lastbin)
+void  TH1::Smooth(Int_t ntimes, Option_t *option)
 {
-   // Smooth bin contents of this histogram between firstbin and lastbin.
-   // (if firstbin=1 and lastbin=-1 (default) all bins except for over- and
-   // undeflow are smoothed.
+   // Smooth bin contents of this histogram.
+   // if option contains "R" smoothing is applied only to the bins
+   // defined in the X axis range (default is to smooth all bins)
    // Bin contents are replaced by their smooth values.
    // Errors (if any) are not modified.
-   // The algorithm can only be applied to 1-d histograms
-
+   // the smoothing procedure is repeated ntimes (default=1)
+   
    if (fDimension != 1) {
       Error("Smooth","Smooth only supported for 1-d histograms");
       return;
    }
    Int_t nbins = fXaxis.GetNbins();
-   if (firstbin < 0) firstbin = 1;
-   if (lastbin  < 0) lastbin  = nbins;
-   if (lastbin  > nbins+1) lastbin  = nbins;
+   Int_t firstbin = 1, lastbin = nbins;
+   TString opt = option;
+   opt.ToLower();
+   if (opt.Contains("r")) {
+      firstbin= fXaxis.GetFirst();
+      lastbin  = fXaxis.GetLast();
+   }
    nbins = lastbin - firstbin + 1;
    Double_t *xx = new Double_t[nbins];
    Double_t nent = fEntries;
@@ -5749,17 +5760,15 @@ void TH1::Streamer(TBuffer &b)
    if (b.IsReading()) {
       UInt_t R__s, R__c;
       Version_t R__v = b.ReadVersion(&R__s, &R__c);
+      fDirectory = 0;
       if (R__v > 2) {
          b.ReadClassBuffer(TH1::Class(), this, R__v, R__s, R__c);
 
          fXaxis.SetParent(this);
          fYaxis.SetParent(this);
          fZaxis.SetParent(this);
-         if (fgAddDirectory && !gROOT->ReadingObject()) {
-            fDirectory = gDirectory;
-            if (!gDirectory->GetList()->FindObject(this)) gDirectory->Append(this);
-         }
          ResetBit(kCanDelete);
+         ResetBit(kMustCleanup);
          return;
       }
       //process old versions before automatic schema evolution
@@ -5801,10 +5810,6 @@ void TH1::Streamer(TBuffer &b)
       fOption.Streamer(b);
       fFunctions->Delete();
       fFunctions->Streamer(b);
-      if (!gROOT->ReadingObject()) {
-         fDirectory = gDirectory;
-         if (!gDirectory->GetList()->FindObject(this)) gDirectory->Append(this);
-      }
       b.CheckByteCount(R__s, R__c, TH1::IsA());
 
    } else {
@@ -6696,12 +6701,9 @@ Double_t TH1::KolmogorovTest(const TH1 *h2, Option_t *option) const
    }
    // X option. Pseudo-experiments post-processor to determine KS probability
    const Int_t nEXPT = 1000;
-   if (opt.Contains("X")) {
+   if (opt.Contains("X")) { 
       Double_t dSEXPT;
-      Bool_t addStatus = fgAddDirectory;
-      fgAddDirectory = kFALSE;
-      TH1 *hExpt = (TH1*)Clone();
-      fgAddDirectory = addStatus;
+      TH1 *hExpt = (TH1*)(gDirectory ? gDirectory->CloneObject(this,kFALSE) : gROOT->CloneObject(this,kFALSE));
       // make nEXPT experiments (this should be a parameter)
       prb3 = 0;
       for (Int_t i=0; i < nEXPT; i++) {
@@ -7183,9 +7185,9 @@ void TH1::SetDirectory(TDirectory *dir)
    // histogram does not belong to any directory.
 
    if (fDirectory == dir) return;
-   if (fDirectory) fDirectory->GetList()->Remove(this);
+   if (fDirectory) fDirectory->Remove(this);
    fDirectory = dir;
-   if (fDirectory) fDirectory->GetList()->Add(this);
+   if (fDirectory) fDirectory->Append(this);
 }
 
 
@@ -7210,9 +7212,9 @@ void TH1::SetName(const char *name)
 
    //  Histograms are named objects in a THashList.
    //  We must update the hashlist if we change the name
-   if (fDirectory) fDirectory->GetList()->Remove(this);
+   if (fDirectory) fDirectory->Remove(this);
    fName = name;
-   if (fDirectory) fDirectory->GetList()->Add(this);
+   if (fDirectory) fDirectory->Append(this);
 }
 
 //______________________________________________________________________________
@@ -7223,10 +7225,10 @@ void TH1::SetNameTitle(const char *name, const char *title)
 
    //  Histograms are named objects in a THashList.
    //  We must update the hashlist if we change the name
-   if (fDirectory) fDirectory->GetList()->Remove(this);
+   if (fDirectory) fDirectory->Remove(this);
    fName  = name;
    SetTitle(title);
-   if (fDirectory) fDirectory->GetList()->Add(this);
+   if (fDirectory) fDirectory->Append(this);
 }
 
 //______________________________________________________________________________
