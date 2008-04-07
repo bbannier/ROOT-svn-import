@@ -121,6 +121,7 @@ public:
    void             Validate(Bool_t isTree);
    void             Validate(TDSetElement *elem);
    void             Invalidate() { fValid = kFALSE; }
+   void             SetValid() { fValid = kTRUE; }
    Int_t            Compare(const TObject *obj) const;
    Bool_t           IsSortable() const { return kTRUE; }
    Int_t            Lookup(Bool_t force = kFALSE, Bool_t stagedonly = kTRUE);
