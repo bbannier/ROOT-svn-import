@@ -1117,6 +1117,99 @@ Bool_t TSystem::AccessPathName(const char *, EAccessMode)
 }
 
 //______________________________________________________________________________
+Bool_t TSystem::TestPermissions(FileStat_t st, EAccessMode mode)
+{
+   // Returns TRUE if one can access a file using the specified access mode.
+   // The information is taken from 'st' previously obtained via GetPathInfo.
+
+   if (st.fIno <= 0)
+      // The file does not exist
+      return kFALSE;
+
+   // Properties
+   Bool_t hasx = kTRUE, hasw = kTRUE, hasr = kTRUE;
+
+   // Required properties
+   Bool_t x = (mode & 0x7 & kExecutePermission) ? kTRUE : kFALSE;
+   Bool_t w = (mode & 0x7 & kWritePermission)   ? kTRUE : kFALSE;
+   Bool_t r = (mode & 0x7 & kReadPermission)    ? kTRUE : kFALSE;
+
+   // Ownership
+   Bool_t o = (GetUid() == st.fUid && GetGid() == st.fGid) ? kTRUE : kFALSE;
+   Bool_t g = (GetGid() == st.fGid)                        ? kTRUE : kFALSE;
+
+   // Check execution
+   if (x) {
+      hasx = kFALSE;
+      if (o)
+         hasx = (st.fMode & kS_IRWXU & kS_IXUSR) ? kTRUE : kFALSE;
+      else if (g)
+         hasx = (st.fMode & kS_IRWXG & kS_IXGRP) ? kTRUE : kFALSE;
+      else
+         hasx = (st.fMode & kS_IRWXO & kS_IXOTH) ? kTRUE : kFALSE;
+   }
+
+   // Check write
+   if (w) {
+      hasw = kFALSE;
+      if (o)
+         hasw = (st.fMode & kS_IRWXU & kS_IWUSR) ? kTRUE : kFALSE;
+      else if (g)
+         hasw = (st.fMode & kS_IRWXG & kS_IWGRP) ? kTRUE : kFALSE;
+      else
+         hasw = (st.fMode & kS_IRWXO & kS_IWOTH) ? kTRUE : kFALSE;
+   }
+
+   // Check read
+   if (r) {
+      hasr = kFALSE;
+      if (o)
+         hasr = (st.fMode & kS_IRWXU & kS_IRUSR) ? kTRUE : kFALSE;
+      else if (g)
+         hasr = (st.fMode & kS_IRWXG & kS_IRGRP) ? kTRUE : kFALSE;
+      else
+         hasr = (st.fMode & kS_IRWXO & kS_IROTH) ? kTRUE : kFALSE;
+   }
+
+   // Done
+   return ((hasx && hasw && hasr) ? kTRUE : kFALSE);
+}
+
+//______________________________________________________________________________
+Bool_t TSystem::IsPathLocal(const char *path)
+{
+   // Returns TRUE if the url in 'path' points to the local file system.
+   // This is used to avoid going through the NIC card for local operations.
+
+   Bool_t localPath = kTRUE;
+
+   TUrl url(path);
+   if (strlen(url.GetHost()) > 0) {
+      // Check locality
+      localPath = kFALSE;
+      TInetAddress a(gSystem->GetHostByName(url.GetHost()));
+      TInetAddress b(gSystem->GetHostByName(gSystem->HostName()));
+      if (!strcmp(a.GetHostName(), b.GetHostName()) ||
+          !strcmp(a.GetHostAddress(), b.GetHostAddress())) {
+         // Host OK
+         localPath = kTRUE;
+         // Check the user if specified
+         if (strlen(url.GetUser()) > 0) {
+            UserGroup_t *u = gSystem->GetUserInfo();
+            if (u) {
+               if (strcmp(u->fUser, url.GetUser()))
+                  // Requested a different user
+                  localPath = kFALSE;
+               delete u;
+            }
+         }
+      }
+   }
+   // Done
+   return localPath;
+}
+
+//______________________________________________________________________________
 int TSystem::CopyFile(const char *, const char *, Bool_t)
 {
    // Copy a file. If overwrite is true and file already exists the
@@ -2106,44 +2199,6 @@ void AssignAndDelete(TString& target, char *tobedeleted) {
    delete [] tobedeleted;
 }
 
-#ifdef WIN32
-
-static TString R__Exec(const char *cmd) 
-{
-   // Execute a command and return the stdout in a string.
-
-   FILE * f = gSystem->OpenPipe(cmd,"r");
-   if (!f) {
-      return "";
-   }
-   TString result;
-
-   char x;
-   while ((x = fgetc(f))!=EOF ) {
-      if (x=='\n' || x=='\r') break;
-      result += x;
-   }
-   
-   fclose(f);
-   return result;
-}
-
-static void R__FixLink(TString &cmd)
-{
-   // Replace the call to 'link' by a full path name call based on where cl.exe is.
-   // This prevents us from using inadvertently the link.exe provided by cygwin.
-
-   TString res = R__Exec("which cl.exe 2>&1|grep cl|sed 's,cl\\.exe$,link\\.exe,' 2>&1");
-   if (res.Length()) {
-        res = R__Exec(Form("cygpath -w '%s' 2>&1",res.Data()));
-        if (res.Length()) {
-           cmd.ReplaceAll(" link ",Form(" \"%s\" ",res.Data())); 
-        }
-   }
-}
-#endif
-
-
 //______________________________________________________________________________
 int TSystem::CompileMacro(const char *filename, Option_t *opt,
                           const char *library_specified,
@@ -2817,12 +2872,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    mapfileStream.close();
 
    // ======= Generate the rootcint command line
-   TString rcint;
-#ifdef G__NOSTUBS
-   rcint = "rootcint_nostubs.sh --lib-list-prefix=";
-#else
-   rcint = "rootcint --lib-list-prefix=";
-#endif
+   TString rcint = "rootcint --lib-list-prefix=";
    rcint += mapfile;
    rcint += " -f ";
    rcint.Append(dict).Append(" -c -p ").Append(GetIncludePath()).Append(" ");
@@ -2896,10 +2946,6 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    if (mode==kDebug) cmd.ReplaceAll("$Opt",fFlagsDebug);
    else cmd.ReplaceAll("$Opt",fFlagsOpt);
 
-#ifdef WIN32
-   R__FixLink(cmd);
-#endif
-
    TString testcmd = fMakeExe;
    TString fakeMain;
    AssignAndDelete( fakeMain, ConcatFileName( build_loc, BaseName( tmpnam(0) ) ) );
@@ -2927,10 +2973,6 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    testcmd.ReplaceAll("$BuildDir",build_loc);
    if (mode==kDebug) testcmd.ReplaceAll("$Opt",fFlagsDebug);
    else testcmd.ReplaceAll("$Opt",fFlagsOpt);
-
-#ifdef WIN32
-   R__FixLink(testcmd);
-#endif
 
    // ======= Build the library
    if (result) {
