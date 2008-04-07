@@ -46,6 +46,7 @@
 #pragma link C++ class TProofResourcesStatic;
 
 #pragma link C++ class TProofDataSetManager;
+#pragma link C++ class TProofDataSetManagerFile;
 
 // For backward compatibility with old client / masters
 #pragma link C++ class std::pair<TDSetElement*, TString>;

@@ -2869,6 +2869,8 @@ Long64_t TProof::Process(TFileCollection *fc, const char *selector,
                          Option_t *option, Long64_t nentries, Long64_t first)
 {
    // Process a data set (TFileCollection) using the specified selector (.C) file.
+   // The default tree is analyzed (i.e. the first one found). To specify another
+   // tree, the default tree can be changed using TFileCollection::SetDefaultMetaData .
    // The return value is -1 in case of error and TSelector::GetStatus() in
    // in case of success.
 
@@ -2897,15 +2899,12 @@ Long64_t TProof::Process(TFileCollection *fc, const char *selector,
    }
 
    Long64_t rv = -1;
-#if 0
-   // Attach the TFileCollection to an ad hoc TDset
 
-   Long64_t rv = fPlayer->Process(dset, selector, option, nentries, first);
-#else
-
-    Warning("Process", "processing of TFileCollection not implemented yet (%p)", fc);
-
-#endif
+   // We include the TFileCollection to the input list and we create a 
+   // fake TDSet with infor about it
+   TDSet *dset = new TDSet(Form("TFileCollection:%s", fc->GetName()));
+   fPlayer->AddInput(fc);
+   rv = fPlayer->Process(dset, selector, option, nentries, first);
 
    if (fSync) {
       // reactivate the default application interrupt handler
@@ -6517,7 +6516,6 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
    }
 
    Int_t fileCount = 0; // return value
-   TMessage *retMess;
    if (goodName == -1) { // -1 for undefined
       // First check whether this dataset already exists unless
       // kAppend or kOverWriteDataSet
@@ -6525,14 +6523,13 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
       nameMess << Int_t(kCheckDataSetName);
       nameMess << TString(dataSetName);
       Broadcast(nameMess);
-      master->Recv(retMess);
       Collect(kActive, fCollectTimeout); //after each call to HandleDataSets
-      if (retMess->What() == kMESS_NOTOK) {
+      if (fStatus == -1) {
          //We ask user to agree on overwriting the dataset name
          while (goodName == -1 && !overwriteNoDataSet) {
-            Printf("Dataset %s already exist. ",
+            Info("UploadDataSet", "dataset %s already exist. ",
                    dataSetName);
-            Printf("Do you want to overwrite it[Yes/No/Append]?");
+            Info("UploadDataSet", "do you want to overwrite it[Yes/No/Append]?");
             TString answer;
             answer.ReadToken(cin);
             if (!strncasecmp(answer.Data(), "y", 1)) {
@@ -6544,13 +6541,9 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
                appendToDataSet = kTRUE;
             }
          }
-      }
-      else if (retMess->What() == kMESS_OK)
+      } else {
          goodName = 1;
-      else
-         Error("UploadDataSet", "unrecongnized message type: %d!",
-            retMess->What());
-      delete retMess;
+      }
    } // if (goodName == -1)
    if (goodName == 1) {  //must be == 1 as -1 was used for a bad name!
       //Code for enforcing writing in user "home dir" only
@@ -6580,8 +6573,8 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
                   == kFALSE) {  //Destination file exists
                goodFileName = -1;
                while (goodFileName == -1 && !overwriteAll && !overwriteNone) {
-                  Printf("File %s already exists. ", Form("%s/%s", dest.Data(), ent));
-                  Printf("Do you want to overwrite it [Yes/No/all/none]?");
+                  Info("UploadDataSet", "file %s already exists. ", Form("%s/%s", dest.Data(), ent));
+                  Info("UploadDataSet", "do you want to overwrite it [Yes/No/all/none]?");
                   TString answer;
                   answer.ReadToken(cin);
                   if (!strncasecmp(answer.Data(), "y", 1))
@@ -6598,7 +6591,7 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
             // Copy the file to the redirector indicated
             if (goodFileName == 1 || overwriteAll) {
                //must be == 1 as -1 was meant for bad name!
-               Printf("Uploading %s to %s/%s",
+               Info("UploadDataSet", "Uploading %s to %s/%s",
                       fileUrl->GetUrl(), dest.Data(), ent);
                if (TFile::Cp(fileUrl->GetUrl(), Form("%s/%s", dest.Data(), ent))) {
                   fileList->GetList()->Add(new TFileInfo(Form("%s/%s", dest.Data(), ent)));
@@ -6616,17 +6609,17 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
       } //while
 
       if ((fileCount = fileList->GetList()->GetSize()) == 0) {
-         Printf("No files were copied. The dataset will not be saved");
+         Info("UploadDataSet", "no files were copied. The dataset will not be saved");
       } else {
          TString opt = (appendToDataSet) ? "" : "O";
          if (!RegisterDataSet(dataSetName, fileList, opt)) {
-            Error("UploadDataSet", "Error while saving dataset!");
+            Error("UploadDataSet", "Error while saving dataset: %s", dataSetName);
             fileCount = kError;
          }
       }
       delete fileList;
    } else if (overwriteNoDataSet) {
-      Printf("Dataset %s already exists", dataSetName);
+      Info("UploadDataSet", "dataset %s already exists", dataSetName);
       return kDataSetExists;
    } //if(goodName == 1)
 
@@ -6665,7 +6658,8 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
       return -1;
    }
 
-   TList *fileList = new TList();
+   TList fileList;
+   fileList.SetOwner();
    void *dataSetDir = gSystem->OpenDirectory(gSystem->DirName(files));
    const char* ent;
    TString filesExp(gSystem->BaseName(files));
@@ -6674,31 +6668,25 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
    while ((ent = gSystem->GetDirEntry(dataSetDir))) {
       TString entryString(ent);
       if (entryString.Index(rg) != kNPOS) {
-         //matching dir entry
-
-         // Creating the intermediate TUrl with kTRUE flag to make sure
-         // file:// is added for a local file
-         TUrl *url = new TUrl(Form("%s/%s",
-                                   gSystem->DirName(files), ent), kTRUE);
-         if (gSystem->AccessPathName(url->GetUrl(), kReadPermission) == kFALSE)
-            fileList->Add(new TFileInfo(url->GetUrl()));
-         delete url;
+         // Matching dir entry: add to the list
+         TString u(Form("file://%s/%s", gSystem->DirName(files), ent));
+         if (gSystem->AccessPathName(u, kReadPermission) == kFALSE)
+            fileList.Add(new TFileInfo(u));
       } //if matching dir entry
    } //while
    Int_t fileCount;
-   if ((fileCount = fileList->GetSize()) == 0)
+   if ((fileCount = fileList.GetSize()) == 0)
       Printf("No files match your selection. The dataset will not be saved");
    else
-      fileCount = UploadDataSet(dataSetName, fileList, desiredDest,
+      fileCount = UploadDataSet(dataSetName, &fileList, desiredDest,
                                 opt, skippedFiles);
-   fileList->SetOwner();
-   delete fileList;
    return fileCount;
 }
 
 //______________________________________________________________________________
 Int_t TProof::UploadDataSetFromFile(const char *dataset, const char *file,
-                                    const char *dest, Int_t opt)
+                                    const char *dest, Int_t opt,
+                                    TList *skippedFiles)
 {
    // Upload files listed in "file" to PROOF cluster.
    // Where file = name of file containing list of files and
@@ -6712,26 +6700,31 @@ Int_t TProof::UploadDataSetFromFile(const char *dataset, const char *file,
       return -1;
    }
 
-   //TODO: This method should use UploadDataSet(char *dataset, TList *l, ...)
-   Int_t fileCount = 0;
+   Int_t fileCount = -1;
+   // Create the list to feed UploadDataSet(char *dataset, TList *l, ...)
+   TList fileList;
+   fileList.SetOwner();
    ifstream f;
    f.open(gSystem->ExpandPathName(file), ifstream::out);
    if (f.is_open()) {
       while (f.good()) {
          TString line;
          line.ReadToDelim(f);
-         if (fileCount == 0) {
-            // when uploading the first file user may have to decide
-            fileCount += UploadDataSet(dataset, line.Data(), dest, opt);
-         } else // later - just append
-            fileCount += UploadDataSet(dataset, line.Data(), dest,
-                                       opt | kAppend);
+         line.Strip(TString::kTrailing, '\n');
+         if (gSystem->AccessPathName(line, kReadPermission) == kFALSE)
+            fileList.Add(new TFileInfo(line));
       }
       f.close();
+      if ((fileCount = fileList.GetSize()) == 0)
+         Info("UploadDataSetFromFile",
+              "no files match your selection. The dataset will not be saved");
+      else
+         fileCount = UploadDataSet(dataset, &fileList, dest,
+                                   opt, skippedFiles);
    } else {
       Error("UploadDataSetFromFile", "unable to open the specified file");
-      return -1;
    }
+   // Done
    return fileCount;
 }
 
@@ -6743,6 +6736,8 @@ Bool_t TProof::RegisterDataSet(const char *dataSetName,
    // user, group and the given 'dataSetName'.
    // Fails if a dataset named 'dataSetName' already exists, unless 'optStr'
    // contains 'O', in which case the old dataset is overwritten.
+   // If 'optStr' contains 'V' the dataset files are verified (default no
+   // verification).
    // Returns kTRUE on success.
 
    // Check TFileInfo compatibility
@@ -6978,7 +6973,7 @@ Int_t TProof::VerifyDataSet(const char *uri, const char* optStr)
 }
 
 //______________________________________________________________________________
-TMap *TProof::GetQuota(const char* optStr)
+TMap *TProof::GetDataSetQuota(const char* optStr)
 {
    // returns a map of the quotas of all groups
 
@@ -6986,7 +6981,7 @@ TMap *TProof::GetQuota(const char* optStr)
    if (fActiveSlaves->GetSize())
       master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
    else {
-      Error("GetQuota", "no connection to the master!");
+      Error("GetDataSetQuota", "no connection to the master!");
       return 0;
    }
 
@@ -6998,28 +6993,28 @@ TMap *TProof::GetQuota(const char* optStr)
    Collect(kActive, fCollectTimeout);
    TMap *groupQuotaMap = 0;
    if (fStatus < 0) {
-      Info("GetQuota", "could not receive quota");
+      Info("GetDataSetQuota", "could not receive quota");
    } else {
       // Look in the list
       TMessage *retMess = (TMessage *) fRecvMessages->First();
       if (retMess && retMess->What() == kMESS_OK) {
          if (!(groupQuotaMap = (TMap*)(retMess->ReadObject(TMap::Class()))))
-            Error("GetQuota", "error getting quotas");
+            Error("GetDataSetQuota", "error getting quotas");
       } else
-         Error("GetQuota", "message not found or wrong type (%p)", retMess);
+         Error("GetDataSetQuota", "message not found or wrong type (%p)", retMess);
    }
 
    return groupQuotaMap;
 }
 
 //_____________________________________________________________________________
-void TProof::ShowQuota(Option_t* opt)
+void TProof::ShowDataSetQuota(Option_t* opt)
 {
    // shows the quota and usage of all groups
    // if opt contains "U" shows also distribution of usage on user-level
 
    if (fProtocol < 15) {
-     Info("ShowQuota",
+     Info("ShowDataSetQuota",
           "functionality not available: the server does not have dataset support");
      return;
    }
@@ -7028,7 +7023,7 @@ void TProof::ShowQuota(Option_t* opt)
    if (fActiveSlaves->GetSize())
       master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
    else {
-      Error("ShowQuota", "no connection to the master!");
+      Error("ShowDataSetQuota", "no connection to the master!");
       return;
    }
 
@@ -7039,7 +7034,7 @@ void TProof::ShowQuota(Option_t* opt)
 
    Collect();
    if (fStatus != 0)
-      Error("ShowQuota", "error receiving quota information");
+      Error("ShowDataSetQuota", "error receiving quota information");
 }
 
 //_____________________________________________________________________________

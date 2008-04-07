@@ -165,6 +165,7 @@ protected:
    virtual void  HandleArchive(TMessage *mess);
    virtual Int_t HandleCache(TMessage *mess);
    virtual void  HandleCheckFile(TMessage *mess);
+   virtual Int_t HandleDataSets(TMessage *mess);
    virtual void  HandleLibIncPath(TMessage *mess);
    virtual void  HandleProcess(TMessage *mess);
    virtual void  HandleQueryList(TMessage *mess);
