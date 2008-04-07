@@ -31,6 +31,7 @@ class THashList;
 class TList;
 class TFileInfo;
 class TFileInfoMeta;
+class TObjString;
 
 
 class TFileCollection : public TNamed {
@@ -62,7 +63,9 @@ public:
    THashList      *GetList() { return fList; }
    void            SetList(THashList* list) { fList = list; }
 
-   void            Update();
+   TObjString     *ExportInfo(const char *name = 0);
+
+   Int_t           Update(Long64_t avgsize = -1);
    void            Sort();
    void            SetAnchor(const char *anchor);
    void            Print(Option_t *option = "") const;
@@ -82,6 +85,7 @@ public:
    const char     *GetDefaultTreeName() const;
    Long64_t        GetTotalEntries(const char *tree) const;
    TFileInfoMeta  *GetMetaData(const char *meta = 0) const;
+   void            SetDefaultMetaData(const char *meta);
    void            RemoveMetaData(const char *meta = 0);
 
    TFileCollection *GetStagedSubset();

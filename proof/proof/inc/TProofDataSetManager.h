@@ -25,29 +25,33 @@
 #include "TObject.h"
 #include "TString.h"
 #include "TMap.h"
+#include "TUri.h"
 
 class TFileCollection;
 class TMD5;
-class TMessage;
-class TSocket;
 class TVirtualMonitoringWriter;
 
 class TProofDataSetManager : public TObject
 {
 private:
-   Bool_t  fSilent;       // set flag to disable output
-   TString fDataSetDir;   // location of datasets
+
+   TProofDataSetManager(const TProofDataSetManager&);             // not implemented
+   TProofDataSetManager& operator=(const TProofDataSetManager&);  // not implemented
+
+protected:
+
    TString fGroup;        // Group to which the owner of this session belongs
    TString fUser;         // Owner of the session
-   TString fMSSUrl;       // URL for the Mass Storage System
    TString fCommonUser;   // user that stores the COMMON datasets
    TString fCommonGroup;  // group that stores the COMMON datasets
 
-   Bool_t  fCheckQuota;
-   TMap    fGroupQuota;   // group quotas (read from config file)
+   TUri    fBase;         // Base URI used to parse dataset names
 
+   TMap    fGroupQuota;   // group quotas (read from config file)
    TMap    fGroupUsed;    // <group> --> <used bytes> (TParameter)
    TMap    fUserUsed;     // <group> --> <map of users> --> <value>
+
+   Long64_t fAvgFileSize; // Average file size to be used to estimate the dataset size (in MB)
 
    Int_t   fNTouchedFiles; // number of files touched in the last ScanDataSet operation
    Int_t   fNOpenedFiles;  // number of files opened in the last ScanDataSet operation
@@ -56,61 +60,52 @@ private:
    TString fGroupConfigFile;  // Path to the group config file
    Long_t  fMTimeGroupConfig; // Last modification of the group config file
 
-   static TString fgDataSetLockFile;   // dataset lock file
-   static Int_t   fgLockFileTimeLimit; // limit in seconds after a lock automatically expires
    static TString fgCommonDataSetTag;  // name for common datasets, default: COMMON
 
-   Bool_t  ReadGroupConfig(const char *cf = 0);
-
-   TProofDataSetManager(const TProofDataSetManager&);             // not implemented
-   TProofDataSetManager& operator=(const TProofDataSetManager&);  // not implemented
-
-protected:
-   const char *GetDataSetPath(const char *group, const char *user, const char *dsName);
-   void GetQuota(const char *group, const char *user, const char *dsName, TFileCollection *dataset);
-   Bool_t BrowseDataSets(const char *group, const char *user, const char *option, TMap *target);
-
-public:
-   TProofDataSetManager(const char *dataSetDir,
-                        const char *group, const char *user, Bool_t silent = kFALSE);
-   virtual ~TProofDataSetManager() { }
-
-   TFileCollection *GetDataSet(const char *uri);
-   TFileCollection *GetDataSet(const char *group, const char *user, const char *dsName,
-                               const char *option = "", TMD5 **checksum = 0);
-   Int_t    WriteDataSet(const char *group, const char *user, const char *dsName,
-                         TFileCollection *dataset, const char *option = "", TMD5 *checksum = 0);
-   Bool_t   RemoveDataSet(const char *group, const char *user, const char *dsName);
-   Bool_t   ExistsDataSet(const char *group, const char *user, const char *dsName);
-   Int_t    ScanDataSet(TFileCollection *dataset, const char *option = "");
-   Int_t    ScanDataSet(const char *group,
-                        const char *user, const char *dsName, const char *option = "");
-
-   TMap    *GetDataSets(const char *group = 0, const char *user = 0, const char *option = "");
-
-   void     SetSilent(Bool_t flag) { fSilent = flag; }
-
-   void     PrintUsedSpace();
-   void     MonitorUsedSpace(TVirtualMonitoringWriter *monitoring);
-   void     UpdateUsedSpace();
-
-   TMap    *GetGroupUsedMap() { return &fGroupUsed; }
-   TMap    *GetUserUsedMap() { return &fUserUsed; }
-
-   Long64_t GetGroupUsed(const char *group);
-   Long64_t GetGroupQuota(const char *group);
-
-   TMap    *GetGroupQuotaMap() { return &fGroupQuota; }
-
+   virtual TMap *GetGroupUsedMap() { return &fGroupUsed; }
+   virtual TMap *GetUserUsedMap() { return &fUserUsed; }
    Int_t    GetNTouchedFiles() { return fNTouchedFiles; }
    Int_t    GetNOpenedFiles() { return fNOpenedFiles; }
    Int_t    GetNDisapparedFiles() { return fNDisappearedFiles; }
+   void     GetQuota(const char *group, const char *user, const char *dsName, TFileCollection *dataset);
+   void     PrintUsedSpace();
+   Bool_t   ReadGroupConfig(const char *cf = 0);
+   virtual void UpdateUsedSpace();
 
-   Bool_t   ParseDataSetUri(const char *uri, TString *dsGroup = 0, TString *dsUser = 0,
-                            TString *dsName = 0, TString *dsTree = 0,
-                            Bool_t onlyCurrent = kFALSE, Bool_t wildcards = kFALSE);
+public:
+   enum EDataSetStatusBits {
+      kCheckQuota    = BIT(15),   // quota checking enabled
+      kAllowRegister = BIT(16),   // allow registration of a new dataset
+      kAllowVerify   = BIT(17),   // allow verification of a dataset (requires registration permit)
+      kAllowStaging  = BIT(18),   // allow staging of missing files (requires verification permit)
+      kIsSandbox     = BIT(19),   // dataset dir is in the user sandbox (simplified naming)
+   };
 
-   Int_t    HandleRequest(TMessage *msg, TSocket *sock, FILE *flog);
+   enum EDataSetWorkOpts { // General (bits 1-8)
+                           kDebug = 1, kShowDefault = 2, kPrint = 4, kExport = 8,
+                           kQuotaUpdate = 16,
+                           // File-based specific (bits 9-16)
+                           kReopen = 256, kTouch = 512, kMaxFiles = 1024, kReadShort = 2048,
+                           kFileMustExist = 4096};
+
+   TProofDataSetManager(const char *group = 0, const char *user = 0, const char *options = 0);
+   virtual ~TProofDataSetManager();
+
+   virtual TFileCollection *GetDataSet(const char *uri);
+   virtual TMap *GetDataSets(const char *uri, UInt_t /*option*/ = 0);
+   virtual Long64_t GetGroupQuota(const char *group);
+   virtual TMap *GetGroupQuotaMap() { return &fGroupQuota; }
+   virtual Long64_t GetGroupUsed(const char *group);
+   virtual Bool_t ExistsDataSet(const char *uri);
+   virtual void MonitorUsedSpace(TVirtualMonitoringWriter *monitoring);
+   virtual void ParseInitOpts(const char *opts);
+   Bool_t  ParseDataSetUri(const char *uri, TString *dsGroup = 0, TString *dsUser = 0,
+                           TString *dsName = 0, TString *dsTree = 0,
+                           Bool_t onlyCurrent = kFALSE, Bool_t wildcards = kFALSE);
+   virtual Bool_t RemoveDataSet(const char *uri);
+   virtual Int_t RegisterDataSet(const char *uri, TFileCollection *dataSet, const char *opt);
+   virtual Int_t ScanDataSet(const char *uri, UInt_t /*option*/ = 0);
+   virtual void ShowQuota(const char *opt);
 
    ClassDef(TProofDataSetManager, 0)
 };

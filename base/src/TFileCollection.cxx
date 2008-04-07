@@ -24,6 +24,7 @@
 #include "THashList.h"
 #include "TFileInfo.h"
 #include "TIterator.h"
+#include "TObjString.h"
 #include "TUrl.h"
 #include "TSystem.h"
 #include "Riostream.h"
@@ -191,14 +192,20 @@ TFileCollection *TFileCollection::GetStagedSubset()
 }
 
 //______________________________________________________________________________
-void TFileCollection::Update()
+Int_t TFileCollection::Update(Long64_t avgsize)
 {
    // Update accumulated information about the elements of the collection
-   // (e.g. fTotalSize). Also updates the meta data information by summarizing
+   // (e.g. fTotalSize). If 'avgsize' > 0, use an average file size of 'avgsize'
+   // bytes when the size info is not available.
+   // Also updates the meta data information by summarizing
    // the meta data of the contained objects.
+   // Return -1 in case of any failure, 0 if the total size is exact, 1 if
+   // incomplete, 2 if complete but (at least partially) estimated.
 
    if (!fList)
-     return;
+     return -1;
+
+   Int_t rc = 0;
 
    fTotalSize = 0;
    fNStagedFiles = 0;
@@ -210,8 +217,16 @@ void TFileCollection::Update()
    TIter iter(fList);
    TFileInfo *fileInfo = 0;
    while ((fileInfo = dynamic_cast<TFileInfo*> (iter.Next()))) {
-      if (fileInfo->GetSize() > 0)
+
+      if (fileInfo->GetSize() > 0) {
          fTotalSize += fileInfo->GetSize();
+      } else {
+         rc = 1;
+         if (avgsize > 0) {
+            rc = 2;
+            fTotalSize += avgsize;
+         }
+      }
 
       if (fileInfo->TestBit(TFileInfo::kStaged) && !fileInfo->TestBit(TFileInfo::kCorrupted)) {
          fNStagedFiles++;
@@ -248,6 +263,9 @@ void TFileCollection::Update()
       if (fileInfo->TestBit(TFileInfo::kCorrupted))
          fNCorruptFiles++;
    }
+
+   // Done
+   return rc;
 }
 
 //______________________________________________________________________________
@@ -257,8 +275,10 @@ void TFileCollection::Print(Option_t *option) const
    // If option contains "M": prints meta data entries,
    // if option contains "F": prints all the files in the collection.
 
-   Printf("TFileCollection %s - %s contains: %lld files with a size of %lld bytes, %.1f %% staged",
-          GetName(), GetTitle(), fNFiles, fTotalSize, GetStagedPercentage());
+   Printf("TFileCollection %s - %s contains: %lld files with a size of"
+          " %lld bytes, %.1f %% staged - default tree name: '%s'",
+          GetName(), GetTitle(), fNFiles, fTotalSize, GetStagedPercentage(),
+          GetDefaultTreeName());
 
    if (TString(option).Contains("M", TString::kIgnoreCase)) {
       Printf("The files contain the following trees:");
@@ -375,6 +395,19 @@ TFileInfoMeta *TFileCollection::GetMetaData(const char *meta) const
 }
 
 //______________________________________________________________________________
+void TFileCollection::SetDefaultMetaData(const char *meta)
+{
+   // Moves the indicated meta data in the first position, so that
+   // it becomes efectively the default.
+
+   TFileInfoMeta *fim = GetMetaData(meta);
+   if (fim) {
+      fMetaDataList->Remove(fim);
+      fMetaDataList->AddFirst(fim);
+   }
+}
+
+//______________________________________________________________________________
 void TFileCollection::RemoveMetaData(const char *meta)
 {
    // Removes the indicated meta data object in all TFileInfos and this object
@@ -406,5 +439,49 @@ void TFileCollection::Sort()
      return;
 
    fList->Sort();
+}
+
+//______________________________________________________________________________
+TObjString *TFileCollection::ExportInfo(const char *name)
+{
+   // Export the relevant info as a string; use 'name' as collection name,
+   // if defined, else use GetName().
+   // The output object must be destroyed by the caller
+
+   TString treeInfo;
+   if (GetDefaultTreeName()) {
+      treeInfo = Form(" %s ", GetDefaultTreeName());
+      if (treeInfo.Length() < 14)
+         treeInfo.Resize(14);
+      TFileInfoMeta* meta = GetMetaData(GetDefaultTreeName());
+      if (meta)
+         treeInfo += Form("| %8lld ", meta->GetEntries());
+   } else {
+      treeInfo = "        N/A";
+   }
+   treeInfo.Resize(25);
+
+   // Renormalize the size to kB, MB or GB
+   const char *unit[4] = {"kB", "MB", "GB", "TB"};
+   Int_t k = 0;
+   Long64_t refsz = 1024;
+   Long64_t xsz = (Long64_t) (GetTotalSize() / refsz);
+   while (xsz > 1024 && k < 3) {
+      k++;
+      refsz *= 1024;
+      xsz = (Long64_t) (GetTotalSize() / refsz);
+   }
+
+   // The name
+   TString dsname(name);
+   if (dsname.IsNull()) dsname = GetName();
+
+   // Create the output string
+   TObjString *outs = 
+      new TObjString(Form("%s| %7lld |%s| %5lld %s |  %3d %%", dsname.Data(),
+                     GetNFiles(), treeInfo.Data(), xsz, unit[k],
+                     (Int_t)GetStagedPercentage()));
+   // Done
+   return outs;
 }
 
