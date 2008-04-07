@@ -189,7 +189,7 @@ Bool_t TProofDataSetManager::ReadGroupConfig(const char *cf)
          Error("ReadGroupConfig", "could not stat %s", cf);
          return kFALSE;
       }
-      if (!gSystem->TestPermissions(st, kReadPermission)) {
+      if (gSystem->AccessPathName(cf, kReadPermission)) {
          Error("ReadGroupConfig", "cannot read %s", cf);
          return kFALSE;
       }
