@@ -78,6 +78,7 @@
 #include "TFile.h"
 #include "TMath.h"
 #include "Bytes.h"
+#include "TEnv.h"
 
 extern "C" void R__unzip(Int_t *nin, UChar_t *bufin, Int_t *lout, char *bufout, Int_t *nout);
 
@@ -127,35 +128,8 @@ TTreeCache::TTreeCache() : TFileCacheRead(),
    fNMissed(0)
 {
    // Default Constructor.
-   fMutexCache       = new TMutex();
-   fMutexUnzipBuffer = new TMutex();
-   fMutexBuffer      = new TMutex();
-   fMutexList        = new TMutex();     
-   fUnzipCondition   = new TCondition();
-   fBufferCond       = new TCondition();
-   
-   fUnzipList = new TSortedList();
 
-   if (fgParallel.Contains("d")) {
-      fParallel = kFALSE;
-   }
-   else if(fgParallel.Contains("e") || fgParallel.IsNull() || fgParallel.Contains("f")){
-      SysInfo_t info;
-      gSystem->GetSysInfo(&info);
-      Int_t ncpus = info.fCpus;
-      
-      if(ncpus > 1 || fgParallel.Contains("f")) {
-         if(gDebug > 0)
-            Info("TTreeCache", "Enabling Parallel Unzipping, number of cpus:%d", ncpus);
-         fParallel = kTRUE;
-         StartThreadUnzip();
-      }
-      else 
-         fParallel = kFALSE;
-   }
-   else {
-      Warning("TTreeCache", "Parallel Option unknown");
-   }
+   Init();
 }
 
 //______________________________________________________________________________
@@ -198,6 +172,14 @@ TTreeCache::TTreeCache(TTree *tree, Int_t buffersize) : TFileCacheRead(tree->Get
    fEntryNext = fEntryMin + fgLearnEntries;
    Int_t nleaves = tree->GetListOfLeaves()->GetEntries();
    fBranches = new TObjArray(nleaves);
+
+   Init();
+}
+
+//______________________________________________________________________________
+void TTreeCache::Init()
+{
+   // Initialization procedure common to all the constructors
 
    fMutexCache       = new TMutex();
    fMutexUnzipBuffer = new TMutex();

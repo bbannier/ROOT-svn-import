@@ -159,6 +159,7 @@ public:
    Bool_t              FillBuffer();
    TTree              *GetOwner() const;
    TTree              *GetTree() const;
+   void                Init();
    Bool_t              IsLearning() const {return fIsLearning;}
    virtual Int_t       ReadBuffer(char *buf, Long64_t pos, Int_t len);
    void                SetEntryRange(Long64_t emin,   Long64_t emax);
