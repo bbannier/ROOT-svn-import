@@ -3341,8 +3341,7 @@ void TProofServ::HandleProcess(TMessage *mess)
 
       if ((!hasNoData) && dset->GetListOfElements()->GetSize() == 0) {
          TFileCollection* dataset = 0;
-         TString dsTree;
-         // The dataset maybe in the form of a TFileCollection in the input list
+         TString dsTree, lookupopt;         // The dataset maybe in the form of a TFileCollection in the input list
          TString dsname(dset->GetName());
          if (dsname.BeginsWith("TFileCollection:")) {
             // Isolate the real name
@@ -3360,7 +3359,6 @@ void TProofServ::HandleProcess(TMessage *mess)
             dsTree = dataset->GetDefaultTreeName();
             // Make sure we lookup everything (unless the client or the administartor
             // required something else)
-            TString lookupopt;
             if (TProof::GetParameter(input, "PROOF_LookupOpt", lookupopt) != 0) {
                lookupopt = gEnv->GetValue("Proof.LookupOpt", "all");
                input->Add(new TNamed("PROOF_LookupOpt", lookupopt.Data()));
@@ -3384,9 +3382,8 @@ void TProofServ::HandleProcess(TMessage *mess)
 
             // Apply the lookup option requested by the client or the administartor
             // (by default we trust the information in the dataset)
-            TString lookupopt;
             if (TProof::GetParameter(input, "PROOF_LookupOpt", lookupopt) != 0) {
-               lookupopt = gEnv->GetValue("Proof.LookupOpt", "stagedonly");
+               lookupopt = gEnv->GetValue("Proof.LookupOpt", "stageOnly");
                input->Add(new TNamed("PROOF_LookupOpt", lookupopt.Data()));
             }
          } else {
@@ -3397,8 +3394,10 @@ void TProofServ::HandleProcess(TMessage *mess)
 
          // Transfer the list now
          if (dataset) {
+            TList *missingFiles = new TList;
             TSeqCollection* files = dataset->GetList();
-            if (!dset->Add(files, dsTree)) {
+            Bool_t availableOnly = (lookupopt != "all") ? kTRUE : kFALSE;
+            if (!dset->Add(files, dsTree, availableOnly, missingFiles)) {
                SendAsynMessage(Form("HandleProcess on %s: error retrieving"
                                     " dataset: %s", fPrefix.Data(), dset->GetName()));
                Error("HandleProcess", "error retrieving dataset %s",
@@ -3407,14 +3406,14 @@ void TProofServ::HandleProcess(TMessage *mess)
                return;
             }
             delete dataset;
-         }
-      } else {
-         // Make sure we lookup everything (unless the client or the administartor
-         // required something else)
-         TString lookupopt;
-         if (TProof::GetParameter(input, "PROOF_LookupOpt", lookupopt) != 0) {
-            lookupopt = gEnv->GetValue("Proof.LookupOpt", "all");
-            input->Add(new TNamed("PROOF_LookupOpt", lookupopt.Data()));
+
+            // Make sure it will be sent back merged with other similar lists created
+            // during processing; this list will be transferred by the player to the
+            // output list, once the latter has been created (see TProofPlayerRemote::Process)
+            if (missingFiles && missingFiles->GetSize() > 0) {
+               missingFiles->SetName("MissingFiles");
+               input->Add(missingFiles);
+            }
          }
       }
 
