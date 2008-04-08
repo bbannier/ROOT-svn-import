@@ -72,9 +72,10 @@ class TMutex;
     Int_t    Compare(const TObject *obj) const { if (fNum > ((TBufferInfo*)obj)->GetNum())
                                                     return 1;
                                                  else if (fNum < ((TBufferInfo*)obj)->GetNum())
-												    return -1;
+                                                    return -1;
                                                  else
-                                                    return 0; }
+                                                    return 0; 
+                                               }
  };
  
 
@@ -106,8 +107,6 @@ protected:
    Bool_t      fNewTransfer;    // Used to indicate the second thread taht a new transfer is in progress
    Bool_t      fParallel;       // Indicate if we want to activate the parallelism (for this instance)
 
-   //TMutex      *fMutexCond;    // for the condition 
-   //TMutex      *fMutexSem;     // for the condition 
    TMutex      *fMutexUnzipBuffer; // Dont access the same method of the same object at the same time
    TMutex      *fMutexBuffer;      // Mutex to protect the unzipping buffer 'fUnzipBuffer'
    TMutex      *fMutexList;        // Mutex to protect the list of inflated buffer
@@ -143,7 +142,7 @@ private:
    TTreeCache(const TTreeCache &);            //this class cannot be copied
    TTreeCache& operator=(const TTreeCache &);
 
-   // Private methods
+   // Private methods related to the thread
    Int_t StartThreadUnzip();
    Int_t StopThreadUnzip();
 
@@ -193,8 +192,9 @@ public:
    Int_t  UnzipBuffer(char **dest, char *src);
    Int_t  UnzipCache();
    
-   // static members
+   // static members related to the thread
    static void* UnzipLoop(void *arg);
+
    ClassDef(TTreeCache,3)  //Specialization of TFileCacheRead for a TTree
 };
 
