@@ -49,6 +49,7 @@
 #include "TString.h"
 #include "TSystem.h"
 #include "TFile.h"
+#include "TFileInfo.h"
 #include "TFileMerger.h"
 #include "TProofDebug.h"
 #include "TTimer.h"
@@ -1211,12 +1212,17 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
 
          // Lookup - resolve the end-point urls to optmize the distribution.
          // The lookup was previously called in the packetizer's constructor.
-         Bool_t stagedOnly = kTRUE;
-         TString lookupopt;
-         if (TProof::GetParameter(fInput, "PROOF_LookupOpt", lookupopt) == 0)
-            // Check option
-            stagedOnly = (lookupopt == "all") ? kFALSE : kTRUE;
-         listOfMissingFiles = dset->Lookup(kTRUE, stagedOnly);
+         // A list for the missing files may already have been added to the
+         // output list; otherwise, if needed it will be created inside
+         TList *listOfMissingFiles = (TList *)fInput->FindObject("MissingFiles");
+         if (listOfMissingFiles) {
+            // Move it to the output list
+            fInput->Remove(listOfMissingFiles);
+            fOutput->Add(listOfMissingFiles);
+         } else {
+            listOfMissingFiles = new TList;
+         }
+         dset->Lookup(kTRUE, &listOfMissingFiles);
          if (fProof->GetRunStatus() != TProof::kRunning) {
             // We have been asked to stop
             Error("Process", "received stop/abort request");
@@ -1236,7 +1242,8 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
             fExitStatus = kAborted;
             if (listOfMissingFiles) {
                listOfMissingFiles->SetOwner();
-               delete listOfMissingFiles;
+               fOutput->Remove(listOfMissingFiles);
+               SafeDelete(listOfMissingFiles);
             }
             return -1;
          }
@@ -1296,7 +1303,7 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
             if (!elem->GetValid()) {
                if (!listOfMissingFiles)
                   listOfMissingFiles = new TList;
-               listOfMissingFiles->Add(elem);
+               listOfMissingFiles->Add(elem->GetFileInfo(dset->GetType()));
                dset->Remove(elem, kFALSE);
             }
          }
@@ -1310,8 +1317,11 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
          while ((elem = (TDSetElement*) missingFiles.Next()))
             gProofServ->SendAsynMessage(Form("File not found: %s - skipping!",
                                              elem->GetName()));
-         listOfMissingFiles->SetName("MissingFiles");
-         AddOutputObject(listOfMissingFiles);
+         // Make sure it will be sent back
+         if (!GetOutput("MissingFiles")) {
+            listOfMissingFiles->SetName("MissingFiles");
+            AddOutputObject(listOfMissingFiles);
+         }
          TStatus *tmpStatus = (TStatus *)GetOutput("PROOF_Status");
          if (!tmpStatus) {
             tmpStatus = new TStatus();
