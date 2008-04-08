@@ -158,6 +158,23 @@ TDSetElement::~TDSetElement()
 }
 
 //______________________________________________________________________________
+TFileInfo *TDSetElement::GetFileInfo(const char *type)
+{
+   // Return the content of this element in the form of a TFileInfo
+
+   // Create the TFileInfoMeta object
+   TFileInfoMeta *meta = 0;
+   if (!strcmp(type, "TTree")) {
+      meta = new TFileInfoMeta(GetTitle(), "TTree", fEntries, fFirst,
+                                fFirst + fEntries - 1);
+   } else {
+      meta = new TFileInfoMeta(GetTitle(), fDirectory, type, fEntries, fFirst,
+                                fFirst + fEntries - 1);
+   }
+   return new TFileInfo(GetName(), 0, 0, 0, meta);
+}
+
+//______________________________________________________________________________
 const char *TDSetElement::GetDirectory() const
 {
    // Return directory where to look for object.
@@ -443,7 +460,7 @@ Long64_t TDSetElement::GetEntries(Bool_t isTree, Bool_t openfile)
 }
 
 //______________________________________________________________________________
-Int_t TDSetElement::Lookup(Bool_t force, Bool_t stagedOnly)
+Int_t TDSetElement::Lookup(Bool_t force)
 {
    // Resolve end-point URL for this element
    // Return 0 on success and -1 otherwise
@@ -455,9 +472,6 @@ Int_t TDSetElement::Lookup(Bool_t force, Bool_t stagedOnly)
    // Check if required
    if (!force && HasBeenLookedUp())
       return retVal;
-
-   if (stagedOnly && !HasBeenLookedUp())
-      return -1;
 
    // Open the file as raw to avoid the (slow) initialization
    TUrl url(GetName());
@@ -900,13 +914,17 @@ Bool_t TDSet::Add(TDSet *dset)
 }
 
 //______________________________________________________________________________
-Bool_t TDSet::Add(TCollection *filelist, const char *meta)
+Bool_t TDSet::Add(TCollection *filelist, const char *meta, Bool_t availableOnly,
+                  TCollection *badlist)
 {
    // Add files passed as list of TFileInfo, TUrl or TObjString objects .
    // If TFileInfo, the first entry and the number of entries are also filled.
    // The argument 'meta' can be used to specify one of the subsets in the
    // file as described in the metadata of TFileInfo. By default the first one
    // is taken.
+   // If 'availableOnly' is true only files available ('staged' and non corrupted)
+   // are taken: those not satisfying this requirement are added to 'badlist', if
+   // the latter is defined. By default availableOnly is false.
 
    if (!filelist)
       return kFALSE;
@@ -916,7 +934,15 @@ Bool_t TDSet::Add(TCollection *filelist, const char *meta)
    while ((o = next())) {
       TString cn(o->ClassName());
       if (cn == "TFileInfo") {
-         Add((TFileInfo *)o, meta);
+         TFileInfo *fi = (TFileInfo *)o;
+         if (!availableOnly ||
+            (fi->TestBit(TFileInfo::kStaged) &&
+            !fi->TestBit(TFileInfo::kCorrupted))) {
+            Add(fi, meta);
+         } else if (badlist && fi) {
+            // Return list of non-usable files
+            badlist->Add(fi);
+         }
       } else if (cn == "TUrl") {
          Add(((TUrl *)o)->GetUrl());
       } else if (cn == "TObjString") {
@@ -1312,16 +1338,13 @@ void TDSet::Validate()
 }
 
 //______________________________________________________________________________
-TList *TDSet::Lookup(Bool_t removeMissing, Bool_t stagedOnly)
+void TDSet::Lookup(Bool_t removeMissing, TList **listOfMissingFiles)
 {
    // Resolve the end-point URL for the current elements of this data set
    // If the removeMissing option is set to kTRUE, remove the TDSetElements
-   // that can not be located. 
-   // The method returns the list of removed TDSetElements (if any) or NULL.
-   // The list of removed elements must be later deleted.
-   // If the stagedOnly option is set to kTRUE only the elements that are
-   // currently staged are considered; the others are added to the missing
-   // file lists; this is the default.
+   // that can not be located.
+   // The method returns the list of removed TDSetElements in *listOfMissingFiles
+   // if the latter is defined (the list must be created outside).
 
    // If an entry- or event- list has been given, assign the relevant portions
    // to each element; this allows to look-up only for the elements which have
@@ -1329,7 +1352,6 @@ TList *TDSet::Lookup(Bool_t removeMissing, Bool_t stagedOnly)
    // operations.
    SplitEntryList();
 
-   TList *listOfMissingFiles = 0;
    TString msg("Looking up for exact location of files");
    UInt_t n = 0;
    UInt_t ng = 0;
@@ -1341,13 +1363,12 @@ TList *TDSet::Lookup(Bool_t removeMissing, Bool_t stagedOnly)
       if (elem->GetNum() != 0) { // -1 means "all entries"
          ng++;
          if (!elem->GetValid())
-            if (elem->Lookup(kFALSE, stagedOnly))
+            if (elem->Lookup(kFALSE))
                if (removeMissing) {
                   if (Remove(elem, kFALSE))
                      Error("Lookup", "Error removing a missing file");
-                  if (!listOfMissingFiles)
-                     listOfMissingFiles = new TList;
-                  listOfMissingFiles->Add(elem);
+                  if (listOfMissingFiles)
+                   (*listOfMissingFiles)->Add(elem->GetFileInfo(fType));
                }
       }
       n++;
@@ -1364,7 +1385,8 @@ TList *TDSet::Lookup(Bool_t removeMissing, Bool_t stagedOnly)
       msg = Form("Files with entries to be processed: %d (out of %d)\n", ng, tot);
       gProofServ->SendAsynMessage(msg);
    }
-   return listOfMissingFiles;
+   // Done
+   return;
 }
 
 //______________________________________________________________________________

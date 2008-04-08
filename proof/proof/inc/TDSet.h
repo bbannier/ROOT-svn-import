@@ -124,8 +124,10 @@ public:
    void             SetValid() { fValid = kTRUE; }
    Int_t            Compare(const TObject *obj) const;
    Bool_t           IsSortable() const { return kTRUE; }
-   Int_t            Lookup(Bool_t force = kFALSE, Bool_t stagedonly = kTRUE);
+   Int_t            Lookup(Bool_t force = kFALSE);
    void             SetLookedUp() { SetBit(kHasBeenLookedUp); }
+   TFileInfo       *GetFileInfo(const char *type = "TTree");
+
 
    ClassDef(TDSetElement,6)  // A TDSet element
 };
@@ -171,7 +173,8 @@ public:
                              const char *dir = 0, Long64_t first = 0,
                              Long64_t num = -1, const char *msd = 0);
    virtual Bool_t        Add(TDSet *set);
-   virtual Bool_t        Add(TCollection *fileinfo, const char *meta = 0);
+   virtual Bool_t        Add(TCollection *fileinfo, const char *meta = 0,
+                             Bool_t availableOnly = kFALSE, TCollection *badlist = 0);
    virtual Bool_t        Add(TFileInfo *fileinfo, const char *meta = 0);
    virtual void          AddFriend(TDSet *friendset, const char *alias);
 
@@ -223,7 +226,7 @@ public:
    void                  Validate();
    void                  Validate(TDSet *dset);
 
-   TList                *Lookup(Bool_t removeMissing = kFALSE, Bool_t stagedonly = kTRUE);
+   void                  Lookup(Bool_t removeMissing = kFALSE, TList **missingFiles = 0);
    void                  SetLookedUp();
 
    void                  SetWriteV3(Bool_t on = kTRUE);
