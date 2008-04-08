@@ -4,6 +4,10 @@ $DUMPINFO = 1;
 
 my ($BINDIR, $BINNAME) = $0 =~ m!^(.*)/(.*)!;
 
+my ($PROJECT) = $BINNAME =~ m!(\w*)-!;
+
+$PROJECT="eve" unless -d "$BINDIR/$PROJECT";
+
 if ($#ARGV != 1) {
   print STDERR <<"fnord";
 usage: $BINNAME <module> <class-base>
@@ -65,10 +69,10 @@ sub find_skel
     join("', '", @$dirs) . "'\n";
 }
 
-my $SKEL_H_NAME = find_skel("SKEL-$MODULE.h",   [".", "inc", "$BINDIR"]);
-my $SKEL_C_NAME = find_skel("SKEL-$MODULE.cxx", [".", "src", "$BINDIR"]);
+my $SKEL_H_NAME = find_skel("SKEL-$MODULE.h",   [".", "inc", "$BINDIR/$PROJECT"]);
+my $SKEL_C_NAME = find_skel("SKEL-$MODULE.cxx", [".", "src", "$BINDIR/$PROJECT"]);
 
-print "Using skeleton files '$SKEL_H_NAME' and '$SKEL_C_NAME'\n" if ($DUMPINFO);
+print "PROJECT='$PROJECT', using skeleton files '$SKEL_H_NAME' and '$SKEL_C_NAME'\n" if ($DUMPINFO);
 
 my ($skel_h, $skel_c);
 {
