@@ -94,6 +94,8 @@
 // global proofserv handle
 TProofServ *gProofServ = 0;
 
+Bool_t TProofServ::fgLogToSysLog = kFALSE;      //true if logs should be sent to syslog too
+
 // debug hook
 static volatile Int_t gProofServDebug = 1;
 
@@ -383,6 +385,7 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
 
    fLogFile         = flog;
    fLogFileDes      = -1;
+   fgLogToSysLog    = (gEnv->GetValue("ProofServ.LogToSysLog", 0) != 0) ? kTRUE : kFALSE;
 
    fArchivePath     = "";
 
@@ -4877,7 +4880,8 @@ void TProofServ::ErrorHandler(Int_t level, Bool_t abort, const char *location,
    }
    fflush(stderr);
 
-   gSystem->Syslog(loglevel, buf);
+   if (fgLogToSysLog)
+     gSystem->Syslog(loglevel, buf);
 
    if (abort) {
 

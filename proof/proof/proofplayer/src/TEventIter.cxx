@@ -646,6 +646,8 @@ Long64_t TEventIterTree::GetNextEvent()
          } else {
             // Could not open this element: ask for another one
             SafeDelete(fElem);
+            // The current tree, if any, is not valid anymore
+            fTree = 0;
          }
       }
 
