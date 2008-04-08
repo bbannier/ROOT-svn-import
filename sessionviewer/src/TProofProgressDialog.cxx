@@ -449,7 +449,6 @@ void TProofProgressDialog::Progress(Long64_t total, Long64_t processed,
    char buf[256];
    static const char *cproc[] = { "running", "done",
                                   "STOPPED", "ABORTED", "***EVENTS SKIPPED***"};
-
    // Update title
    sprintf(buf, "Executing on PROOF cluster \"%s\" with %d parallel workers:",
            fProof ? fProof->GetMaster() : "<dummy>",
@@ -501,8 +500,22 @@ void TProofProgressDialog::Progress(Long64_t total, Long64_t processed,
    }
 
    if (over || (processed >= 0 && processed >= total)) {
+
+      // A negative value for process indicates that we are finished,
+      // no matter whether the processing was complete
+      Bool_t incomplete = (processed < 0 &&
+                          (fPrevProcessed < total || fPrevProcessed == 0))
+                        ? kTRUE : kFALSE;
+      TString st = "";
+      if (incomplete) {
+         fStatus = kIncomplete;
+         // We use a different color to highlight incompletion
+         fBar->SetBarColor("magenta");
+         st = Form(" %s", cproc[fStatus]);
+      }
+
       fProcessed->SetText("Processed:");
-      sprintf(buf, "%lld events (%.2f MBs) in %.1f sec", total, mbsproc, procTime);
+      sprintf(buf, "%lld events (%.2f MBs) in %.1f sec%s", total, mbsproc, procTime, st.Data());
       fTotal->SetText(buf);
       sprintf(buf, "%.1f evts/sec (%.1f MBs/sec)", fAvgRate, fAvgMBRate);
       fRate->SetText(buf);
@@ -536,44 +549,6 @@ void TProofProgressDialog::Progress(Long64_t total, Long64_t processed,
       fClose->SetState(kButtonUp);
       if (!fKeep)
          DoClose();
-   } else {
-      // A negative value for process indicates that we are finished,
-      // no matter whether the processing was complete
-      Bool_t incomplete = (processed < 0 &&
-                          (fPrevProcessed < total || fPrevProcessed == 0))
-                        ? kTRUE : kFALSE;
-      if (incomplete) {
-         fStatus = kIncomplete;
-         // We use a different color to highlight incompletion
-         fBar->SetBarColor("magenta");
-      }
-
-      if (fStatus > kDone) {
-         sprintf(buf, "%.1f sec (processed %lld events out of %lld - %.2f MBs of data) - %s",
-                      eta, evproc, total, mbsproc, cproc[fStatus]);
-      } else {
-         sprintf(buf, "%.1f sec (processed %lld events out of %lld - %.2f MBs of data)",
-                      eta, evproc, total, mbsproc);
-      }
-      fTotal->SetText(buf);
-
-      // Post
-      if (evtrti > 0.) {
-         sprintf(buf, "%.1f evts/sec (%.1f MBs/sec) - avg: %.1f evts/sec (%.1f MBs/sec)",
-                      evtrti, mbrti, fAvgRate, fAvgMBRate);
-         fRatePoints->Fill(procTime, evtrti, mbrti);
-         fRatePlot->SetState(kButtonUp);
-      } else {
-         sprintf(buf, "avg: %.1f evts/sec (%.1f MBs/sec)", fAvgRate, fAvgMBRate);
-      }
-      fRate->SetText(buf);
-
-      if (processed < 0) {
-         // And we disable the buttons
-         fStop->SetState(kButtonDisabled);
-         fAbort->SetState(kButtonDisabled);
-         fClose->SetState(kButtonUp);
-      }
    }
    fPrevProcessed = evproc;
 

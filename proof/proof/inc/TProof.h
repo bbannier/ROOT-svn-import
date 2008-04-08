@@ -537,6 +537,8 @@ protected:
    TVirtualProofPlayer         *GetPlayer() const { return fPlayer; }
    virtual TVirtualProofPlayer *MakePlayer(const char *player = 0, TSocket *s = 0);
 
+   void    UpdateDialog();
+
    TList  *GetListOfActiveSlaves() const { return fActiveSlaves; }
    TSlave *CreateSlave(const char *url, const char *ord,
                        Int_t perf, const char *image, const char *workdir);
