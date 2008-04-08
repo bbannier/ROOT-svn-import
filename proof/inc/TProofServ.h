@@ -136,6 +136,8 @@ private:
    Long64_t      fMaxBoxSize;       //Max size of the sandbox
    Long64_t      fHWMBoxSize;       //High-Water-Mark on the sandbox size
 
+   static Bool_t fgLogToSysLog;     //true if logs should be sent to syslog too
+
    void          RedirectOutput();
    Int_t         CatMotd();
    Int_t         UnloadPackage(const char *package);

@@ -2117,6 +2117,8 @@ Int_t TProof::CollectInputFrom(TSocket *s)
                   pq->SetInputList(fPlayer->GetInputList(), kFALSE);
                   // If the last object, notify the GUI that the result arrived
                   QueryResultReady(Form("%s:%s", pq->GetTitle(), pq->GetName()));
+                  // Processing is over
+                  UpdateDialog();
                }
             }
          }
@@ -2156,50 +2158,8 @@ Int_t TProof::CollectInputFrom(TSocket *s)
             }
 
             // On clients at this point processing is over
-            if (!IsMaster()) {
-
-               // Handle abort ...
-               if (fPlayer->GetExitStatus() == TVirtualProofPlayer::kAborted) {
-                  if (fSync)
-                     Info("CollectInputFrom",
-                          "processing was aborted - %lld events processed",
-                          fPlayer->GetEventsProcessed());
-
-                  if (GetRemoteProtocol() > 11) {
-                     // New format
-                     Progress(-1, fPlayer->GetEventsProcessed(), -1, -1., -1., -1., -1.);
-                  } else {
-                     Progress(-1, fPlayer->GetEventsProcessed());
-                  }
-                  Emit("StopProcess(Bool_t)", kTRUE);
-               }
-
-               // Handle stop ...
-               if (fPlayer->GetExitStatus() == TVirtualProofPlayer::kStopped) {
-                  if (fSync)
-                     Info("CollectInputFrom",
-                          "processing was stopped - %lld events processed",
-                          fPlayer->GetEventsProcessed());
-
-                  if (GetRemoteProtocol() > 11) {
-                     // New format
-                     Progress(-1, fPlayer->GetEventsProcessed(), -1, -1., -1., -1., -1.);
-                  } else {
-                     Progress(-1, fPlayer->GetEventsProcessed());
-                  }
-                  Emit("StopProcess(Bool_t)", kFALSE);
-               }
-
-               // Final update of the dialog box
-               if (GetRemoteProtocol() > 11) {
-                  // New format
-                  EmitVA("Progress(Long64_t,Long64_t,Long64_t,Float_t,Float_t,Float_t,Float_t,)",
-                          7, (Long64_t)(-1), (Long64_t)(-1), (Long64_t)(-1),
-                             (Float_t)(-1.),(Float_t)(-1.),(Float_t)(-1.),(Float_t)(-1.));
-               } else {
-                  EmitVA("Progress(Long64_t,Long64_t)", 2, (Long64_t)(-1), (Long64_t)(-1));
-               }
-            }
+            if (!IsMaster())
+               UpdateDialog();
          }
          break;
 
@@ -2596,6 +2556,56 @@ Int_t TProof::CollectInputFrom(TSocket *s)
 
    // We are done successfully
    return rc;
+}
+
+//______________________________________________________________________________
+void TProof::UpdateDialog()
+{
+   // Final update of the progress dialog
+
+   if (!fPlayer) return;
+
+   // Handle abort ...
+   if (fPlayer->GetExitStatus() == TVirtualProofPlayer::kAborted) {
+      if (fSync)
+         Info("CollectInputFrom",
+               "processing was aborted - %lld events processed",
+               fPlayer->GetEventsProcessed());
+
+      if (GetRemoteProtocol() > 11) {
+         // New format
+         Progress(-1, fPlayer->GetEventsProcessed(), -1, -1., -1., -1., -1.);
+      } else {
+         Progress(-1, fPlayer->GetEventsProcessed());
+      }
+      Emit("StopProcess(Bool_t)", kTRUE);
+   }
+
+   // Handle stop ...
+   if (fPlayer->GetExitStatus() == TVirtualProofPlayer::kStopped) {
+      if (fSync)
+         Info("CollectInputFrom",
+               "processing was stopped - %lld events processed",
+               fPlayer->GetEventsProcessed());
+
+      if (GetRemoteProtocol() > 11) {
+         // New format
+         Progress(-1, fPlayer->GetEventsProcessed(), -1, -1., -1., -1., -1.);
+      } else {
+         Progress(-1, fPlayer->GetEventsProcessed());
+      }
+      Emit("StopProcess(Bool_t)", kFALSE);
+   }
+
+   // Final update of the dialog box
+   if (GetRemoteProtocol() > 11) {
+      // New format
+      EmitVA("Progress(Long64_t,Long64_t,Long64_t,Float_t,Float_t,Float_t,Float_t)",
+               7, (Long64_t)(-1), (Long64_t)(-1), (Long64_t)(-1),
+                  (Float_t)(-1.),(Float_t)(-1.),(Float_t)(-1.),(Float_t)(-1.));
+   } else {
+      EmitVA("Progress(Long64_t,Long64_t)", 2, (Long64_t)(-1), (Long64_t)(-1));
+   }
 }
 
 //______________________________________________________________________________
