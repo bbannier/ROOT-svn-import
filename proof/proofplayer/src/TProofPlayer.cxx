@@ -1214,8 +1214,7 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
          // The lookup was previously called in the packetizer's constructor.
          // A list for the missing files may already have been added to the
          // output list; otherwise, if needed it will be created inside
-         TList *listOfMissingFiles = (TList *)fInput->FindObject("MissingFiles");
-         if (listOfMissingFiles) {
+         if ((listOfMissingFiles = (TList *)fInput->FindObject("MissingFiles"))) {
             // Move it to the output list
             fInput->Remove(listOfMissingFiles);
             fOutput->Add(listOfMissingFiles);
@@ -1314,9 +1313,17 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
       // Record the list of missing or invalid elements in the output list
       if (listOfMissingFiles) {
          TIter missingFiles(listOfMissingFiles);
-         while ((elem = (TDSetElement*) missingFiles.Next()))
-            gProofServ->SendAsynMessage(Form("File not found: %s - skipping!",
-                                             elem->GetName()));
+         TFileInfo *fi = 0;
+         while ((fi = (TFileInfo *) missingFiles.Next())) {
+            TString msg;
+            if (fi->GetCurrentUrl()) {
+               msg = Form("File not found: %s - skipping!",
+                                             fi->GetCurrentUrl()->GetUrl());
+            } else {
+               msg = Form("File not found: %s - skipping!", fi->GetName());
+            }
+            gProofServ->SendAsynMessage(msg.Data());
+         }
          // Make sure it will be sent back
          if (!GetOutput("MissingFiles")) {
             listOfMissingFiles->SetName("MissingFiles");
