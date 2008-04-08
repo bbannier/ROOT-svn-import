@@ -31,7 +31,7 @@ public:
    // If painting is needed:
    // virtual void Paint(Option_t* option="");
 
-   ClassDef(CLASS, 1); // Short description.
+   ClassDef(CLASS, 0); // Short description.
 };
 
 #endif
