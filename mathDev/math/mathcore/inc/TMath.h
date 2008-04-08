@@ -35,7 +35,10 @@
 
 namespace TMath {
 
-   // Fundamental constants
+   /* ************************* */
+   /* * Fundamental constants * */
+   /* ************************* */
+
    inline Double_t Pi()       { return 3.14159265358979323846; }
    inline Double_t TwoPi()    { return 2.0 * Pi(); }
    inline Double_t PiOver2()  { return Pi() / 2.0; }
@@ -120,7 +123,13 @@ namespace TMath {
    inline Double_t Qe()       { return 1.602176462e-19; }     // C
    inline Double_t QeUncertainty() { return 0.000000063e-19; }
 
-   // Trigo
+   /* ************************** */
+   /* * Mathematical Functions * */
+   /* ************************** */
+
+   /* ***************************** */
+   /* * Trigonometrical Functions * */
+   /* ***************************** */
    inline Double_t Sin(Double_t);
    inline Double_t Cos(Double_t);
    inline Double_t Tan(Double_t);
@@ -136,7 +145,10 @@ namespace TMath {
           Double_t ATanH(Double_t);
           Double_t Hypot(Double_t x, Double_t y);
 
-   // Misc
+   
+   /* ************************ */
+   /* * Elementary Functions * */
+   /* ************************ */
    inline Double_t Sqrt(Double_t x);
    inline Double_t Ceil(Double_t x);
    inline Int_t    CeilNint(Double_t x);
@@ -157,6 +169,10 @@ namespace TMath {
    // Some integer math
    Long_t   Hypot(Long_t x, Long_t y);     // sqrt(px*px + py*py)
 
+   /* ******************** */
+   /* * Array Algorithms * */
+   /* ******************** */
+
    // Min, Max of an array
    template <typename T> T MinElement(Long64_t n, const T *a);
    template <typename T> T MaxElement(Long64_t n, const T *a);
@@ -166,6 +182,89 @@ namespace TMath {
    template <typename Iterator> Iterator LocMin(Iterator first, Iterator last);
    template <typename T> Long64_t  LocMax(Long64_t n, const T *a);
    template <typename Iterator> Iterator LocMax(Iterator first, Iterator last);
+
+   // Binary search
+   template <typename T> Long64_t BinarySearch(Long64_t n, const T  *array, T value);
+   template <typename T> Long64_t BinarySearch(Long64_t n, const T **array, T value);
+   template <typename Iterator, typename Element> Iterator BinarySearch(Iterator first, Iterator last, Element value);
+
+   // Hashing
+   ULong_t Hash(const void *txt, Int_t ntxt);
+   ULong_t Hash(const char *str);
+
+   // Sorting
+   template <typename Element, typename Index>
+   void Sort(Long64_t n, const Element* a, Index* index, Bool_t down=kTRUE);
+   template <typename Iterator, typename IndexIterator>
+   void SortItr(Iterator first, Iterator last, IndexIterator index, Bool_t down=kTRUE);
+
+   void BubbleHigh(Int_t Narr, Double_t *arr1, Int_t *arr2);
+   void BubbleLow (Int_t Narr, Double_t *arr1, Int_t *arr2);
+
+   Bool_t   Permute(Int_t n, Int_t *a); // Find permutations
+
+   /* ************************* */
+   /* * Geometrical Functions * */
+   /* ************************* */
+
+   //Sample quantiles
+   void      Quantiles(Int_t n, Int_t nprob, Double_t *x, Double_t *quantiles, Double_t *prob, 
+                       Bool_t isSorted=kTRUE, Int_t *index = 0, Int_t type=7);
+
+   // IsInside
+   template <typename T> Bool_t IsInside(T xp, T yp, Int_t np, T *x, T *y);
+
+   // Calculate the Cross Product of two vectors
+   template <typename T> T *Cross(const T v1[3],const T v2[3], T out[3]); 
+
+   Float_t   Normalize(Float_t v[3]);  // Normalize a vector
+   Double_t  Normalize(Double_t v[3]); // Normalize a vector
+
+   //Calculate the Normalized Cross Product of two vectors
+   template <typename T> inline T NormCross(const T v1[3],const T v2[3],T out[3]); 
+
+   // Calculate a normal vector of a plane
+   template <typename T> T *Normal2Plane(const T v1[3],const T v2[3],const T v3[3], T normal[3]);
+
+   /* ************************ */
+   /* * Polinomial Functions * */
+   /* ************************ */
+   
+   Bool_t    RootsCubic(const Double_t coef[4],Double_t &a, Double_t &b, Double_t &c);
+
+   /* *********************** */
+   /* * Statistic Functions * */
+   /* *********************** */
+
+   Double_t Binomial(Int_t n,Int_t k);  // Calculate the binomial coefficient n over k
+   Double_t BinomialI(Double_t p, Int_t n, Int_t k);
+   Double_t BreitWigner(Double_t x, Double_t mean=0, Double_t gamma=1);
+   Double_t CauchyDist(Double_t x, Double_t t=0, Double_t s=1);
+   Double_t ChisquareQuantile(Double_t p, Double_t ndf);
+   Double_t FDist(Double_t F, Double_t N, Double_t M);
+   Double_t FDistI(Double_t F, Double_t N, Double_t M);
+   Double_t Gaus(Double_t x, Double_t mean=0, Double_t sigma=1, Bool_t norm=kFALSE);
+   Double_t KolmogorovProb(Double_t z);
+   Double_t KolmogorovTest(Int_t na, const Double_t *a, Int_t nb, const Double_t *b, Option_t *option);
+   Double_t Landau(Double_t x, Double_t mpv=0, Double_t sigma=1, Bool_t norm=kFALSE);
+   Double_t LandauI(Double_t x);
+   Double_t LaplaceDist(Double_t x, Double_t alpha=0, Double_t beta=1);
+   Double_t LaplaceDistI(Double_t x, Double_t alpha=0, Double_t beta=1);
+   Double_t LogNormal(Double_t x, Double_t sigma, Double_t theta=0, Double_t m=1);
+   Double_t NormQuantile(Double_t p);
+   Double_t Poisson(Double_t x, Double_t par);
+   Double_t PoissonI(Double_t x, Double_t par);
+   Double_t Prob(Double_t chi2,Int_t ndf);
+   Double_t Student(Double_t T, Double_t ndf);
+   Double_t StudentI(Double_t T, Double_t ndf);
+   Double_t StudentQuantile(Double_t p, Double_t ndf, Bool_t lower_tail=kTRUE);
+   Double_t Vavilov(Double_t x, Double_t kappa, Double_t beta2);
+   Double_t VavilovI(Double_t x, Double_t kappa, Double_t beta2);
+   Double_t Voigt(Double_t x, Double_t sigma, Double_t lg, Int_t R = 4);
+
+   /* ************************** */
+   /* * Statistics over arrays * */
+   /* ************************** */
 
    //Mean, Geometric Mean, Median, RMS
 
@@ -184,97 +283,42 @@ namespace TMath {
    //k-th order statistic
    template <class Element, typename Size> Element KOrdStat(Size n, const Element *a, Size k, Size *work = 0);
 
-   //Sample quantiles
-   void      Quantiles(Int_t n, Int_t nprob, Double_t *x, Double_t *quantiles, Double_t *prob, 
-                       Bool_t isSorted=kTRUE, Int_t *index = 0, Int_t type=7);
+   /* ******************* */
+   /* * Special Functions */
+   /* ******************* */
 
-   // Binary search
-   template <typename T> Long64_t BinarySearch(Long64_t n, const T  *array, T value);
-   template <typename T> Long64_t BinarySearch(Long64_t n, const T **array, T value);
-   template <typename Iterator, typename Element> Iterator BinarySearch(Iterator first, Iterator last, Element value);
-
-   // Hashing
-   ULong_t Hash(const void *txt, Int_t ntxt);
-   ULong_t Hash(const char *str);
-
-   // IsInside
-   template <typename T> Bool_t IsInside(T xp, T yp, Int_t np, T *x, T *y);
-
-   // Sorting
-   template <typename Element, typename Index>
-   void Sort(Long64_t n, const Element* a, Index* index, Bool_t down=kTRUE);
-   template <typename Iterator, typename IndexIterator>
-   void SortItr(Iterator first, Iterator last, IndexIterator index, Bool_t down=kTRUE);
-
-   void BubbleHigh(Int_t Narr, Double_t *arr1, Int_t *arr2);
-   void BubbleLow (Int_t Narr, Double_t *arr1, Int_t *arr2);
-
-   // Advanced
-   template <typename T> T *Cross(const T v1[3],const T v2[3], T out[3]); // Calculate the Cross Product of two vectors
-   Float_t   Normalize(Float_t v[3]);                              // Normalize a vector
-   Double_t  Normalize(Double_t v[3]);                             // Normalize a vector
-   template <typename T> inline T NormCross(const T v1[3],const T v2[3],T out[3]); //Calculate the Normalized Cross Product of two vectors
-   template <typename T> T *Normal2Plane(const T v1[3],const T v2[3],const T v3[3], T normal[3]); // Calculate a normal vector of a plane
-   Bool_t    RootsCubic(const Double_t coef[4],Double_t &a, Double_t &b, Double_t &c);
-   Double_t  BreitWigner(Double_t x, Double_t mean=0, Double_t gamma=1);
-   Double_t  Gaus(Double_t x, Double_t mean=0, Double_t sigma=1, Bool_t norm=kFALSE);
-   Double_t  Landau(Double_t x, Double_t mpv=0, Double_t sigma=1, Bool_t norm=kFALSE);
-   Double_t  Voigt(Double_t x, Double_t sigma, Double_t lg, Int_t R = 4);
+   Double_t Beta(Double_t p, Double_t q);
+   Double_t BetaCf(Double_t x, Double_t a, Double_t b);
+   Double_t BetaDist(Double_t x, Double_t p, Double_t q);
+   Double_t BetaDistI(Double_t x, Double_t p, Double_t q);
+   Double_t BetaIncomplete(Double_t x, Double_t a, Double_t b);
 
    // Bessel functions
-          Double_t BesselI(Int_t n,Double_t x);  // integer order modified Bessel function I_n(x)
-          Double_t BesselK(Int_t n,Double_t x);  // integer order modified Bessel function K_n(x)
-          Double_t BesselI0(Double_t x);         // modified Bessel function I_0(x)
-          Double_t BesselK0(Double_t x);         // modified Bessel function K_0(x)
-          Double_t BesselI1(Double_t x);         // modified Bessel function I_1(x)
-          Double_t BesselK1(Double_t x);         // modified Bessel function K_1(x)
-          Double_t BesselJ0(Double_t x);         // Bessel function J0(x) for any real x
-          Double_t BesselJ1(Double_t x);         // Bessel function J1(x) for any real x
-          Double_t BesselY0(Double_t x);         // Bessel function Y0(x) for positive x
-          Double_t BesselY1(Double_t x);         // Bessel function Y1(x) for positive x
-          Double_t StruveH0(Double_t x);         // Struve functions of order 0
-          Double_t StruveH1(Double_t x);         // Struve functions of order 1
-          Double_t StruveL0(Double_t x);         // Modified Struve functions of order 0
-          Double_t StruveL1(Double_t x);         // Modified Struve functions of order 1
-
-   // Statistics
-          Double_t Beta(Double_t p, Double_t q);
-          Double_t BetaCf(Double_t x, Double_t a, Double_t b);
-          Double_t BetaDist(Double_t x, Double_t p, Double_t q);
-          Double_t BetaDistI(Double_t x, Double_t p, Double_t q);
-          Double_t BetaIncomplete(Double_t x, Double_t a, Double_t b);
-          Double_t Binomial(Int_t n,Int_t k);  // Calculate the binomial coefficient n over k
-          Double_t BinomialI(Double_t p, Int_t n, Int_t k);
-          Double_t CauchyDist(Double_t x, Double_t t=0, Double_t s=1);
-          Double_t ChisquareQuantile(Double_t p, Double_t ndf);
-          Double_t DiLog(Double_t x);
-          Double_t Erf(Double_t x);
-          Double_t ErfInverse(Double_t x);
-          Double_t Erfc(Double_t x);
+   Double_t BesselI(Int_t n,Double_t x);  // integer order modified Bessel function I_n(x)
+   Double_t BesselK(Int_t n,Double_t x);  // integer order modified Bessel function K_n(x)
+   Double_t BesselI0(Double_t x);         // modified Bessel function I_0(x)
+   Double_t BesselK0(Double_t x);         // modified Bessel function K_0(x)
+   Double_t BesselI1(Double_t x);         // modified Bessel function I_1(x)
+   Double_t BesselK1(Double_t x);         // modified Bessel function K_1(x)
+   Double_t BesselJ0(Double_t x);         // Bessel function J0(x) for any real x
+   Double_t BesselJ1(Double_t x);         // Bessel function J1(x) for any real x
+   Double_t BesselY0(Double_t x);         // Bessel function Y0(x) for positive x
+   Double_t BesselY1(Double_t x);         // Bessel function Y1(x) for positive x
+   Double_t StruveH0(Double_t x);         // Struve functions of order 0
+   Double_t StruveH1(Double_t x);         // Struve functions of order 1
+   Double_t StruveL0(Double_t x);         // Modified Struve functions of order 0
+   Double_t StruveL1(Double_t x);         // Modified Struve functions of order 1
+   
+   Double_t DiLog(Double_t x);
+   Double_t Erf(Double_t x);
+   Double_t ErfInverse(Double_t x);
+   Double_t Erfc(Double_t x);
    inline Double_t ErfcInverse(Double_t x) {return TMath::ErfInverse(1-x);}
-          Double_t FDist(Double_t F, Double_t N, Double_t M);
-          Double_t FDistI(Double_t F, Double_t N, Double_t M);
-          Double_t Freq(Double_t x);
-          Double_t Gamma(Double_t z);
-          Double_t Gamma(Double_t a,Double_t x);
-          Double_t GammaDist(Double_t x, Double_t gamma, Double_t mu=0, Double_t beta=1);
-          Double_t KolmogorovProb(Double_t z);
-          Double_t KolmogorovTest(Int_t na, const Double_t *a, Int_t nb, const Double_t *b, Option_t *option);
-          Double_t LandauI(Double_t x);
-          Double_t LaplaceDist(Double_t x, Double_t alpha=0, Double_t beta=1);
-          Double_t LaplaceDistI(Double_t x, Double_t alpha=0, Double_t beta=1);
-          Double_t LnGamma(Double_t z);
-          Double_t LogNormal(Double_t x, Double_t sigma, Double_t theta=0, Double_t m=1);
-          Double_t NormQuantile(Double_t p);
-          Bool_t   Permute(Int_t n, Int_t *a); // Find permutations
-          Double_t Poisson(Double_t x, Double_t par);
-          Double_t PoissonI(Double_t x, Double_t par);
-          Double_t Prob(Double_t chi2,Int_t ndf);
-          Double_t Student(Double_t T, Double_t ndf);
-          Double_t StudentI(Double_t T, Double_t ndf);
-          Double_t StudentQuantile(Double_t p, Double_t ndf, Bool_t lower_tail=kTRUE);
-          Double_t Vavilov(Double_t x, Double_t kappa, Double_t beta2);
-          Double_t VavilovI(Double_t x, Double_t kappa, Double_t beta2);
+   Double_t Freq(Double_t x);
+   Double_t Gamma(Double_t z);
+   Double_t Gamma(Double_t a,Double_t x);
+   Double_t GammaDist(Double_t x, Double_t gamma, Double_t mu=0, Double_t beta=1);
+   Double_t LnGamma(Double_t z);
 }
 
 
