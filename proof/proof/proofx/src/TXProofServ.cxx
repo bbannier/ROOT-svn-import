@@ -973,11 +973,8 @@ void TXProofServ::Terminate(Int_t status)
    // eventually exit the loop.
    TXSocket::PostPipe((TXSocket *)fSocket);
 
-   // Try commenting this out
-#if 0
    // Avoid communicating back anything to the coordinator (it is gone)
    ((TXSocket *)fSocket)->SetSessionID(-1);
-#endif
 
    // Notify
    Printf("Terminate: termination operations ended: quitting!");

@@ -3291,7 +3291,7 @@ TFile::EFileType TFile::GetType(const char *name, Option_t *option, TString *pre
          // Generic locality test
          localFile = gSystem->IsPathLocal(name);
          if (localFile) {
-            // Loacl path including the prefix
+            // Local path including the prefix
             const char *fname = url.GetFileAndOptions();
             TString lfname;
             if (fname[0] == '/') {

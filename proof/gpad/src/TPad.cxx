@@ -90,7 +90,7 @@ ClassImpQ(TPad)
 //
 //  The convention used in ROOT is that a Draw operation only adds
 //  a reference to the object. The effective drawing is performed
-//  the canvas receives a signal to be painted.
+//  when the canvas receives a signal to be painted.
 //  This signal is generally sent when typing carriage return in the
 //  command input or when a graphical operation has been performed on one
 //  of the pads of this canvas.
