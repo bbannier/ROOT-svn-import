@@ -23,6 +23,7 @@
 #include "RConfigure.h"
 #include "TApplication.h"
 #include "TSlave.h"
+#include "TSlaveLite.h"
 #include "TProof.h"
 #include "TSystem.h"
 #include "TEnv.h"
@@ -428,6 +429,11 @@ TSlave *TSlave::Create(const char *url, const char *ord, Int_t perf,
    // server.
 
    TSlave *s = 0;
+
+   // Check if we are setting up a lite version
+   if (!strcmp(url, "lite")) {
+      return new TSlaveLite(ord, perf, image, proof, stype, workdir, msd);
+   }
 
    // No need to try a XPD connection in some well defined cases
    Bool_t tryxpd = kTRUE;
