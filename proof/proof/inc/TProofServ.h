@@ -47,6 +47,7 @@ class TDSet;
 class TProof;
 class TVirtualProofPlayer;
 class TProofLockPath;
+class TQueryResultManager;
 class TSocket;
 class THashList;
 class TList;
@@ -64,6 +65,7 @@ typedef Int_t (*OldProofServAuthSetup_t)(TSocket *, Bool_t, Int_t,
 
 class TProofServ : public TApplication {
 
+friend class TProofServLite;
 friend class TXProofServ;
 
 public:
@@ -110,11 +112,8 @@ private:
    TStopwatch    fLatency;          //measures latency of packet requests
    TStopwatch    fCompute;          //measures time spend processing a packet
 
-   Int_t         fSeqNum;           //sequential number of last processed query
-   Int_t         fDrawQueries;      //number of draw queries processed
-   Int_t         fKeptQueries;      //number of queries fully in memory and in dir
-   TList        *fQueries;          //list of TProofQueryResult objects
-   TList        *fPreviousQueries;  //list of TProofQueryResult objects from previous sections
+   TQueryResultManager *fQMgr;      //Query-result manager
+
    TList        *fWaitingQueries;   //list of TProofQueryResult wating to be processed
    Bool_t        fIdle;             //TRUE if idle
 
@@ -133,6 +132,8 @@ private:
    Long64_t      fMaxBoxSize;       //Max size of the sandbox
    Long64_t      fHWMBoxSize;       //High-Water-Mark on the sandbox size
 
+   static Bool_t fgLogToSysLog;      //true if logs should be sent to syslog too
+
    void          RedirectOutput();
    Int_t         CatMotd();
    Int_t         UnloadPackage(const char *package);
@@ -141,24 +142,11 @@ private:
    Int_t         GetPriority();
 
    // Query handlers
-   void          AddLogFile(TProofQueryResult *pq);
-   Int_t         ApplyMaxQueries();
-   Int_t         CleanupQueriesDir();
-   void          FinalizeQuery(TProofQueryResult *pq);
    TList        *GetDataSet(const char *name);
-
    TProofQueryResult *MakeQueryResult(Long64_t nentries, const char *opt,
                                       TList *inl, Long64_t first, TDSet *dset,
                                       const char *selec, TObject *elist);
-   TProofQueryResult *LocateQuery(TString queryref, Int_t &qry, TString &qdir);
-   void          RemoveQuery(TQueryResult *qr, Bool_t soft = kFALSE);
-   void          RemoveQuery(const char *queryref);
-   void          SaveQuery(TQueryResult *qr, const char *fout = 0);
    void          SetQueryRunning(TProofQueryResult *pq);
-
-   Int_t         LockSession(const char *sessiontag, TProofLockPath **lck);
-   Int_t         CleanupSession(const char *sessiontag);
-   void          ScanPreviousQueries(const char *dir);
 
 protected:
    virtual void  HandleArchive(TMessage *mess);

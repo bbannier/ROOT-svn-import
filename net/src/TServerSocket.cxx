@@ -84,7 +84,9 @@ TServerSocket::TServerSocket(const char *service, Bool_t reuse, Int_t backlog,
    fSecContexts = new TList;
 
    // If this is a local path, try announcing a UNIX socket service
+   ResetBit(TSocket::kIsUnix);
    if (service && (!gSystem->AccessPathName(service) || service[0] == '/')) {
+      SetBit(TSocket::kIsUnix);
       fService = unix;
       fSocket = gSystem->AnnounceUnixService(service, backlog);
       if (fSocket >= 0) {
@@ -208,7 +210,8 @@ TSocket *TServerSocket::Accept(UChar_t Opt)
    socket->fSocket  = soc;
    socket->fSecContext = 0;
    socket->fService = fService;
-   socket->fAddress = gSystem->GetPeerName(socket->fSocket);
+   if (!TestBit(TSocket::kIsUnix))
+      socket->fAddress = gSystem->GetPeerName(socket->fSocket);
    if (socket->fSocket >= 0) {
       R__LOCKGUARD2(gROOTMutex);
       gROOT->GetListOfSockets()->Add(socket);

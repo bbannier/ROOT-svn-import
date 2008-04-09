@@ -2871,7 +2871,6 @@ int TUnixSystem::ConnectService(const char *servername, int port,
 {
    // Connect to service servicename on server servername.
 
-    ::Info("TUnixSystem::ConnectService", "%s", servername);
    if (!strcmp(servername, "unix")) {
       return UnixUnixConnect(port);
    } else if (!gSystem->AccessPathName(servername) || servername[0] == '/') {
@@ -3830,7 +3829,6 @@ int TUnixSystem::UnixUnixConnect(const char *sockpath)
 {
    // Connect to a Unix domain socket.
 
-      ::Info("TUnixSystem::UnixUnixConnect", "socket path: %s", sockpath);
    if (!sockpath || strlen(sockpath) <= 0) {
       ::SysError("TUnixSystem::UnixUnixConnect", "socket path undefined");
       return -1;

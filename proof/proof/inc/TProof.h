@@ -111,7 +111,7 @@ const Int_t       kPROOF_Protocol        = 16;            // protocol version nu
 const Int_t       kPROOF_Port            = 1093;          // IANA registered PROOF port
 const char* const kPROOF_ConfFile        = "proof.conf";  // default config file
 const char* const kPROOF_ConfDir         = "/usr/local/root";  // default config dir
-const char* const kPROOF_WorkDir         = "~/proof";     // default working directory
+const char* const kPROOF_WorkDir         = ".proof";     // default working directory
 const char* const kPROOF_CacheDir        = "cache";       // file cache dir, under WorkDir
 const char* const kPROOF_PackDir         = "packages";    // package dir, under WorkDir
 const char* const kPROOF_QueryDir        = "queries";     // query dir, under WorkDir
@@ -252,13 +252,17 @@ class TProof : public TNamed, public TQObject {
 friend class TPacketizer;
 friend class TPacketizerDev;
 friend class TPacketizerAdaptive;
+friend class TProofLite;
 friend class TProofServ;
 friend class TProofInputHandler;
 friend class TProofInterruptHandler;
 friend class TProofPlayer;
+friend class TProofPlayerLite;
 friend class TProofPlayerRemote;
 friend class TProofProgressDialog;
 friend class TSlave;
+friend class TSlaveLite;
+friend class TVirtualPacketizer;
 friend class TXSlave;
 friend class TXSocket;        // to access kPing
 friend class TXSocketHandler; // to access fCurrentMonitor and CollectInputFrom
@@ -268,7 +272,9 @@ friend class TXProofServ;     // to access EUrgent
 public:
    // PROOF status bits
    enum EStatusBits {
-      kUsingSessionGui     = BIT(14)
+      kUsingSessionGui     = BIT(14),
+      kIsClient            = BIT(15),
+      kIsMaster            = BIT(16)
    };
    enum EQueryMode {
       kSync                = 0,
@@ -537,6 +543,8 @@ protected:
    TVirtualProofPlayer         *GetPlayer() const { return fPlayer; }
    virtual TVirtualProofPlayer *MakePlayer(const char *player = 0, TSocket *s = 0);
 
+   void    UpdateDialog();
+
    TList  *GetListOfActiveSlaves() const { return fActiveSlaves; }
    TSlave *CreateSlave(const char *url, const char *ord,
                        Int_t perf, const char *image, const char *workdir);
@@ -565,14 +573,14 @@ public:
 
    Int_t       Ping();
    Int_t       Exec(const char *cmd, Bool_t plusMaster = kFALSE);
-   Long64_t    Process(TDSet *dset, const char *selector,
-                       Option_t *option = "", Long64_t nentries = -1,
-                       Long64_t firstentry = 0);
-   Long64_t    Process(const char *dsetname, const char *selector,
-                       Option_t *option = "", Long64_t nentries = -1,
-                       Long64_t firstentry = 0, TObject *enl = 0);
-   Long64_t    Process(const char *selector, Long64_t nentries,
-                       Option_t *option = "");
+   virtual Long64_t Process(TDSet *dset, const char *selector,
+                            Option_t *option = "", Long64_t nentries = -1,
+                            Long64_t firstentry = 0);
+   virtual Long64_t Process(const char *dsetname, const char *selector,
+                            Option_t *option = "", Long64_t nentries = -1,
+                            Long64_t firstentry = 0, TObject *enl = 0);
+   virtual Long64_t Process(const char *selector, Long64_t nentries,
+                            Option_t *option = "");
    Long64_t    DrawSelect(TDSet *dset, const char *varexp,
                           const char *selection = "",
                           Option_t *option = "", Long64_t nentries = -1,
@@ -598,7 +606,7 @@ public:
    void        SetLogLevel(Int_t level, UInt_t mask = TProofDebug::kAll);
 
    void        Close(Option_t *option="");
-   void        Print(Option_t *option="") const;
+   virtual void Print(Option_t *option="") const;
 
    //-- cache and package management
    void        ShowCache(Bool_t all = kFALSE);
@@ -670,6 +678,7 @@ public:
    Float_t     GetRealTime() const { return fRealTime; }
    Float_t     GetCpuTime() const { return fCpuTime; }
 
+   Bool_t      IsLite() const { return (fServType == TProofMgr::kProofLite); }
    Bool_t      IsProofd() const { return (fServType == TProofMgr::kProofd); }
    Bool_t      IsFolder() const { return kTRUE; }
    Bool_t      IsMaster() const { return fMasterServ; }
