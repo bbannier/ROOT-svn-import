@@ -18,8 +18,7 @@ const double ERRORLIMIT = 1E-8;
 const double MIN = -2.5;
 const double MAX = +2.5;
 const double INCREMENT = 0.01;
-const int ARRAYSIZE = (int) (( MAX - MIN ) / INCREMENT);
-inline int arrayindex(double i) { return ARRAYSIZE - (int) ( (MAX - i) / INCREMENT ) ; };
+const int ARRAYSIZE = (int) (( MAX - MIN ) / INCREMENT) + 1;
 
 bool showGraphics = true;
 
@@ -57,28 +56,29 @@ int testSpecFuncBeta()
    for ( double b = 0.9; b < 2; b+=0.4)
    {
       cout << "** b = " << b << " **" << endl;
+      unsigned int index = 0;
       for ( double i = MIN; i < MAX; i += INCREMENT )
       {
 //          cout << "i:"; cout.width(5); cout << i 
-//                     << " index: "; cout.width(5); cout << arrayindex(i) 
+//                     << " index: "; cout.width(5); cout << index 
 //                     << " TMath::Beta(p,b): "; cout.width(10); cout << TMath::Beta(i,b)
 //                     << " ROOT::Math::beta(p,b): "; cout.width(10); cout << ROOT::Math::beta(i,b)
 //                     << endl;
          
-         cout << arrayindex(i) << endl;
-         x[arrayindex(i)] = i;
-         yb[arrayindex(i)] = TMath::Beta(i,b);
-         ymb[arrayindex(i)] = ROOT::Math::beta(i,b);
-         if ( std::fabs( yb[arrayindex(i)] - ymb[arrayindex(i)] ) > ERRORLIMIT )
+         x[index] = i;
+         yb[index] = TMath::Beta(i,b);
+         ymb[index] = ROOT::Math::beta(i,b);
+         if ( std::fabs( yb[index] - ymb[index] ) > ERRORLIMIT )
          {
             cout << "i " << i
                  << " b " << b
-                 << " yb[arrayindex(i)] " << yb[arrayindex(i)]
-                 << " ymb[arrayindex(i)] " << ymb[arrayindex(i)]
-                 << " " << std::fabs( yb[arrayindex(i)] - ymb[arrayindex(i)] )
+                 << " yb[index] " << yb[index]
+                 << " ymb[index] " << ymb[index]
+                 << " " << std::fabs( yb[index] - ymb[index] )
                  << endl;
             status += 1;
          }
+         index += 1;
       }
       
       gb = drawPoints(&x[0], &yb[0], color++);
