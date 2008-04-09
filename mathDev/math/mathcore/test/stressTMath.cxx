@@ -20,7 +20,7 @@ template <typename T> T randD() {
 template <typename T> double stressVector(unsigned int size, const char* type)
 {
    cout << "Generating random vector of '" 
-        << type << "'..." << endl;
+        << type << "' and size " << size << " ..." << endl << endl;
 
    double totalTime = 0;
    double totalUnitTime = 0;
@@ -35,68 +35,75 @@ template <typename T> double stressVector(unsigned int size, const char* type)
 
    TStopwatch w;
 
+   unsigned int ntest = 3 * NUMTEST;
    w.Start( kTRUE );
-   for ( unsigned int i = 0; i < NUMTEST; ++i )
+   for ( unsigned int i = 0; i < ntest; ++i )
       TMath::MinElement(size, vector);
    w.Stop();
-   cout << "MinMaxElement() Total Time: " << w.CpuTime() 
-        << " Time: " << w.CpuTime()/NUMTEST << endl;
-   totalUnitTime += w.CpuTime()/NUMTEST;
+   cout << "MinMaxElement() \tTotal Time: " << w.CpuTime() << "  (s)\t\t" 
+        << " Time/call: " << w.CpuTime()/(ntest)*1.E6 << " (micros)" << endl;
+   totalUnitTime += w.CpuTime()/ntest;
    totalTime += w.CpuTime();
 
+   ntest = 3 * NUMTEST;
    w.Start( kTRUE );
-   for ( unsigned int i = 0; i < NUMTEST; ++i )
+   for ( unsigned int i = 0; i < ntest; ++i )
       TMath::LocMin(size, vector);
    w.Stop();
-   cout << "LocMin/Max() Total Time: " << w.CpuTime() 
-        << " Time: " << w.CpuTime()/NUMTEST << endl;
-   totalUnitTime += w.CpuTime()/NUMTEST;
+   cout << "LocMin/Max() \t\tTotal Time: " << w.CpuTime() << "  (s)\t\t" 
+        << " Time/call: " << w.CpuTime()/(ntest)*1.E6 << " (micros)" << endl;
+   totalUnitTime += w.CpuTime()/ntest;
    totalTime += w.CpuTime();
 
+   ntest = 10 * NUMTEST;
    w.Start( kTRUE );
-   for ( unsigned int i = 0; i < NUMTEST; ++i )
+   for ( unsigned int i = 0; i < ntest; ++i )
       TMath::Mean(size, vector);
    w.Stop();
-   cout << "Mean() Total Time: " << w.CpuTime() 
-        << " Time: " << w.CpuTime()/NUMTEST << endl;
-   totalUnitTime += w.CpuTime()/NUMTEST;
+   cout << "Mean() \t\t\tTotal Time: " << w.CpuTime() << "  (s)\t\t" 
+        << " Time/call: " << w.CpuTime()/(ntest)*1.E6 << " (micros)" << endl;
+   totalUnitTime += w.CpuTime()/ntest;
    totalTime += w.CpuTime();
 
+   ntest = NUMTEST/2.5;
    w.Start( kTRUE );
-   for ( unsigned int i = 0; i < NUMTEST/2; ++i )
+   for ( unsigned int i = 0; i < ntest; ++i )
       TMath::Median(size, vector);
    w.Stop();
-   cout << "Median() Total Time: " << w.CpuTime() 
-        << " Time: " << w.CpuTime()/(NUMTEST/2) << endl;
-   totalUnitTime += w.CpuTime()/NUMTEST;
+   cout << "Median() \t\tTotal Time: " << w.CpuTime() << "  (s)\t\t" 
+        << " Time/call: " << w.CpuTime()/(ntest)*1.E6 << " (micros)" << endl;
+   totalUnitTime += w.CpuTime()/ntest;
    totalTime += w.CpuTime();
 
+   ntest = 10 * NUMTEST;
    w.Start( kTRUE );
-   for ( unsigned int i = 0; i < NUMTEST; ++i )
+   for ( unsigned int i = 0; i < ntest; ++i )
       TMath::RMS(size, vector);
    w.Stop();
-   cout << "RMS() Total Time: " << w.CpuTime() 
-        << " Time: " << w.CpuTime()/NUMTEST << endl;
-   totalUnitTime += w.CpuTime()/NUMTEST;
+   cout << "RMS() \t\t\tTotal Time: " << w.CpuTime() << "  (s)\t\t" 
+        << " Time/call: " << w.CpuTime()/(ntest)*1.E6 << " (micros)" << endl;
+   totalUnitTime += w.CpuTime()/ntest;
    totalTime += w.CpuTime();
 
+   ntest = NUMTEST/2.5;
    w.Start( kTRUE );
-   for ( unsigned int i = 0; i < NUMTEST/4; ++i )
+   for ( unsigned int i = 0; i < ntest; ++i )
       TMath::GeomMean(size, vector);
    w.Stop();
-   cout << "GeomMean() Total Time: " << w.CpuTime() 
-        << " Time: " << w.CpuTime()/(NUMTEST/4) << endl;
-   totalUnitTime += w.CpuTime()/NUMTEST;
+   cout << "GeomMean() \t\tTotal Time: " << w.CpuTime() << "  (s)\t\t" 
+        << " Time/call: " << w.CpuTime()/(ntest)*1.E6 << " (micros)" << endl;
+   totalUnitTime += w.CpuTime()/ntest;
    totalTime += w.CpuTime();
 
    Int_t index[size];
+   ntest = NUMTEST/10;
    w.Start( kTRUE );
-   for ( unsigned int i = 0; i < NUMTEST/5; ++i )
+   for ( unsigned int i = 0; i < ntest; ++i )
       TMath::Sort(size, vector, index, kFALSE);
    w.Stop();
-   cout << "Sort() Total Time: " << w.CpuTime() 
-        << " Time: " << w.CpuTime()/(NUMTEST/5) << endl;
-   totalUnitTime += w.CpuTime()/NUMTEST;
+   cout << "Sort() \t\t\tTotal Time: " << w.CpuTime() << "  (s)\t\t" 
+        << " Time/call: " << w.CpuTime()/(ntest)*1.E6 << " (micros)" << endl;
+   totalUnitTime += w.CpuTime()/ntest;
    totalTime += w.CpuTime();
 
    std::sort(vector, vector + size);
@@ -104,17 +111,18 @@ template <typename T> double stressVector(unsigned int size, const char* type)
    for ( unsigned int i = 0; i < size; ++i )
       cout << vector[i] << " " << endl;
 #endif
+   ntest = 10000*NUMTEST;
    w.Start( kTRUE );
-   for ( unsigned int i = 0; i < 100*NUMTEST; ++i )
+   for ( unsigned int i = 0; i < ntest; ++i )
       TMath::BinarySearch(size, vector, vector[ i % size ]);
    w.Stop();
-   cout << "BinarySearch() Total Time: " << w.CpuTime() 
-        << " Time: " << w.CpuTime()/(100*NUMTEST) << endl;
-   totalUnitTime += w.CpuTime()/NUMTEST;
+   cout << "BinarySearch() \t\tTotal Time: " << w.CpuTime() << "  (s)\t\t" 
+        << " Time/call: " << w.CpuTime()/(ntest)*1.E6 << " (micros)" << endl;
+   totalUnitTime += w.CpuTime()/ntest;
    totalTime += w.CpuTime();
 
-   cout << "\nTotal Time: "      << totalTime << "\n"
-        << "Total Unit Time: " << totalUnitTime << "\n" << endl;
+   cout << "\nTotal Time:  "      << totalTime << "  (s)\n";
+//        << "Total Unit Time: " << totalUnitTime << "\n" << endl;
 
    delete [] vector;
 
