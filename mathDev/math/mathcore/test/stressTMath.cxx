@@ -157,7 +157,7 @@ int main(int argc, char* argv[])
    if ( argc == 1 )
    {
       cout << "Usage: " << argv[0]
-           << " [SIZE OF ARRAY] [TYPE OF ARRAY]\n\n"
+           << " [TYPE OF ARRAY] [SIZE OF ARRAY]\n\n"
            << "where [TYPE OF ARRAY] is one of the following:\n"
            << "\t\"Short_t\"\n"
            << "\t\"Int_t\"\n"
@@ -168,11 +168,11 @@ int main(int argc, char* argv[])
            << endl;
    }
 
-   if ( argc > 1 )
-      size = (unsigned int) atoi(argv[1]);
-
    if ( argc > 2 )
-      type = argv[2];
+      size = (unsigned int) atoi(argv[2]);
+
+   if ( argc > 1 )
+      type = argv[1];
 
    stressTMath(size, type);
 
