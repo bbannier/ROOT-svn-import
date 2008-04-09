@@ -149,6 +149,7 @@ public:
    virtual Double_t Chi2TestX(const TH1* h2, Double_t &chi2, Int_t &ndf, Int_t &igood,Option_t *option = "UU",  Double_t *res = 0) const;
 
    virtual Double_t ComputeIntegral();
+   virtual void     DirectoryAutoAdd(TDirectory *);
    virtual Int_t    DistancetoPrimitive(Int_t px, Int_t py);
    virtual void     Divide(TF1 *f1, Double_t c1=1);
    virtual void     Divide(const TH1 *h1);
@@ -327,7 +328,7 @@ public:
    virtual void     SetZTitle(const char *title) {fZaxis.SetTitle(title);}
    virtual TH1     *ShowBackground(Int_t niter=20, Option_t *option="same"); // *MENU*
    virtual Int_t    ShowPeaks(Double_t sigma=2, Option_t *option="", Double_t threshold=0.05); // *MENU*
-   virtual void     Smooth(Int_t ntimes=1, Int_t firstbin=1, Int_t lastbin=-1); // *MENU*
+   virtual void     Smooth(Int_t ntimes=1, Option_t *option=""); // *MENU*
    static  void     SmoothArray(Int_t NN, Double_t *XX, Int_t ntimes=1);
    static  void     StatOverflows(Bool_t flag=kTRUE);
    virtual void     Sumw2();

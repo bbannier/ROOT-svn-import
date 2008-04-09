@@ -694,7 +694,6 @@ TObject *TKey::ReadObj()
 
    fBufferRef->SetBufferOffset(fKeylen);
    TObject *tobj = 0;
-   TDirectory *cursav = gDirectory;
    // Create an instance of this class
 
    char *pobj = (char*)cl->New();
@@ -745,18 +744,26 @@ TObject *TKey::ReadObj()
 
    if (gROOT->GetForceStyle()) tobj->UseCurrentStyle();
 
-   if (cl == TDirectoryFile::Class()) {
+   if (cl->InheritsFrom(TDirectoryFile::Class())) {
       TDirectory *dir = dynamic_cast<TDirectoryFile*>(tobj);
       dir->SetName(GetName());
       dir->SetTitle(GetTitle());
       dir->SetMother(fMotherDir);
       fMotherDir->Append(dir);
    }
+
+   // Append the object to the directory if requested:
+   { 
+      ROOT::DirAutoAdd_t addfunc = cl->GetDirectoryAutoAdd();
+      if (addfunc) {
+         addfunc(pobj, fMotherDir);
+      }
+   }
+
 CLEAR:
    delete fBufferRef;
    fBufferRef = 0;
    fBuffer    = 0;
-   gDirectory = cursav;
 
    return tobj;
 }
@@ -811,7 +818,6 @@ void *TKey::ReadObjectAny(const TClass* expectedClass)
    Version_t kvers = fBufferRef->ReadVersion();
 
    fBufferRef->SetBufferOffset(fKeylen);
-   TDirectory *cursav = gDirectory;
    TClass *cl = TClass::GetClass(fClassName.Data());
    if (!cl) {
       Error("ReadObjectAny", "Unknown class %s", fClassName.Data());
@@ -881,11 +887,20 @@ void *TKey::ReadObjectAny(const TClass* expectedClass)
       // See similar adjustments in ReadObj
       if (gROOT->GetForceStyle()) tobj->UseCurrentStyle();
 
-      if (cl == TDirectoryFile::Class()) {
+      if (cl->InheritsFrom(TDirectoryFile::Class())) {
          TDirectory *dir = dynamic_cast<TDirectoryFile*>(tobj);
          dir->SetName(GetName());
          dir->SetTitle(GetTitle());
-         gDirectory->Append(dir);
+         dir->SetMother(fMotherDir);
+         fMotherDir->Append(dir);
+      }
+   }
+
+   {
+      // Append the object to the directory if requested:
+      ROOT::DirAutoAdd_t addfunc = cl->GetDirectoryAutoAdd();
+      if (addfunc) {
+         addfunc(pobj, fMotherDir);
       }
    }
 
@@ -893,7 +908,6 @@ void *TKey::ReadObjectAny(const TClass* expectedClass)
    delete fBufferRef;
    fBufferRef = 0;
    fBuffer    = 0;
-   gDirectory = cursav;
 
    return ( ((char*)pobj) + baseOffset );
 }
@@ -924,7 +938,6 @@ Int_t TKey::Read(TObject *obj)
       ReadFile();                    //Read object structure from file
    }
    fBufferRef->SetBufferOffset(fKeylen);
-   TDirectory *cursav = gDirectory;
    if (fObjlen > fNbytes-fKeylen) {
       char *objbuf = fBufferRef->Buffer() + fKeylen;
       UChar_t *bufcur = (UChar_t *)&fBuffer[fKeylen];
@@ -948,7 +961,6 @@ Int_t TKey::Read(TObject *obj)
    delete fBufferRef;
    fBufferRef = 0;
    fBuffer    = 0;
-   gDirectory = cursav;
    return fNbytes;
 }
 

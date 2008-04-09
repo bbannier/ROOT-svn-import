@@ -19,12 +19,12 @@
 #include <vector>
 
 #if defined(__ICC)
-#define OffsetOf(c1,mem) (int(&(((c1*)0)->mem)))
+#define OffsetOf(c1,mem) (int(&((volatile const char&)((c1*)0)->mem)))
 #else
-#define OffsetOf(c1,mem) ((size_t)(&((c1*)64)->mem)-64)
+#define OffsetOf(c1,mem) ((size_t)(&reinterpret_cast<const volatile char&>(((c1*)64)->mem))-64)
 #endif
 
-namespace Reflex{
+namespace Reflex {
 
    RFLX_API Type TypeBuilder( const char * n,
       unsigned int modifiers = 0 );
@@ -338,7 +338,7 @@ namespace Reflex{
    */
    template < typename C, typename M >
    size_t offsetOf( M C::* member )  {
-      return (size_t) & (((C*)0)->*member); 
+      return (size_t) &((((C*)0)->*member));
    }
 
 

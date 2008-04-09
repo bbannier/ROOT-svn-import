@@ -164,13 +164,17 @@ TDirectoryFile::~TDirectoryFile()
 }
 
 //______________________________________________________________________________
-void TDirectoryFile::Append(TObject *obj)
+void TDirectoryFile::Append(TObject *obj, Bool_t replace /* = kFALSE */)
 {
    // Append object to this directory.
+   //
+   // If replace is true:
+   //   remove any existing objects with the same same (if the name is not ""
 
    if (obj == 0 || fList == 0) return;
-   fList->Add(obj);
-   obj->SetBit(kMustCleanup);
+
+   TDirectory::Append(obj,replace);
+   
    if (!fMother) return;
    if (fMother->IsA() == TMapFile::Class()) {
       TMapFile *mfile = (TMapFile*)fMother;
@@ -303,7 +307,7 @@ void TDirectoryFile::CleanTargets()
 
    TDirectory::CleanTargets();
 
-   // After CleanTargets either gFile was change appropriately
+   // After CleanTargets either gFile was changed appropriately
    // by a cd() or needs to be set to zero.
    if (gFile == this) {
       gFile = 0;
@@ -311,16 +315,31 @@ void TDirectoryFile::CleanTargets()
 }
 
 //______________________________________________________________________________
-TObject *TDirectoryFile::CloneObject(const TObject *obj)
+TObject *TDirectoryFile::CloneObject(const TObject *obj, Bool_t autoadd /* = kTRUE */)
 {
    // Make a clone of an object using the Streamer facility.
    // If the object derives from TNamed, this function is called
    // by TNamed::Clone. TNamed::Clone uses the optional argument newname to set
    // a new name to the newly created object.
+   // 
+   // If autoadd is true and if the object class has a
+   // DirectoryAutoAdd function, it will be called at the end of the
+   // function with the parameter gDirector.  This usually means that
+   // the object will be appended to the current ROOT directory.
 
    // if no default ctor return immediately (error issued by New())
-   TObject *newobj = (TObject *)obj->IsA()->New();
-   if (!newobj) return 0;
+   char *pobj = (char*)obj->IsA()->New();
+   if (!pobj) return 0;
+   
+   Int_t baseOffset = obj->IsA()->GetBaseClassOffset(TObject::Class());
+   if (baseOffset==-1) {
+      // cl does not inherit from TObject.
+      // Since this is not supported in this function, the only reason we could reach this code
+      // is because something is screwed up in the ROOT code.
+      Fatal("CloneObject","Incorrect detection of the inheritance from TObject for class %s.\n",
+            obj->IsA()->GetName());
+   }
+   TObject *newobj = (TObject*)(pobj+baseOffset);
 
    //create a buffer where the object will be streamed
    TFile *filsav = gFile;
@@ -328,7 +347,14 @@ TObject *TDirectoryFile::CloneObject(const TObject *obj)
    const Int_t bufsize = 10000;
    TBuffer *buffer = new TBufferFile(TBuffer::kWrite,bufsize);
    buffer->MapObject(obj);  //register obj in map to handle self reference
-   ((TObject*)obj)->Streamer(*buffer);
+   {
+      Bool_t isRef = obj->TestBit(kIsReferenced); 
+      ((TObject*)obj)->ResetBit(kIsReferenced);	
+      
+      ((TObject*)obj)->Streamer(*buffer);
+      
+      if (isRef) ((TObject*)obj)->SetBit(kIsReferenced);
+   }
 
    // read new object from buffer
    buffer->SetReadMode();
@@ -341,6 +367,13 @@ TObject *TDirectoryFile::CloneObject(const TObject *obj)
    gFile = filsav;
 
    delete buffer;
+
+   if (autoadd) {
+      ROOT::DirAutoAdd_t func = obj->IsA()->GetDirectoryAutoAdd();
+      if (func) {
+         func(newobj,this);
+      }  
+   }
    return newobj;
 }
 
@@ -1275,10 +1308,10 @@ void TDirectoryFile::Save()
 }
 
 //______________________________________________________________________________
-Int_t TDirectoryFile::SaveObjectAs(const TObject *obj, const char *filename, Option_t *option)
+Int_t TDirectoryFile::SaveObjectAs(const TObject *obj, const char *filename, Option_t *option) const
 {
-   // Save object in filename (static function)
-   // if filename is null or "", a file with "objectname.root" is created.
+   // Save object in filename,
+   // if filename is 0 or "", a file with "objectname.root" is created.
    // The name of the key is the object name.
    // If the operation is successful, it returns the number of bytes written to the file
    // otherwise it returns 0.
