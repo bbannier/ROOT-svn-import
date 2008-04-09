@@ -2140,6 +2140,44 @@ void AssignAndDelete(TString& target, char *tobedeleted) {
    delete [] tobedeleted;
 }
 
+#ifdef WIN32
+
+static TString R__Exec(const char *cmd) 
+{
+   // Execute a command and return the stdout in a string.
+
+   FILE * f = gSystem->OpenPipe(cmd,"r");
+   if (!f) {
+      return "";
+   }
+   TString result;
+
+   char x;
+   while ((x = fgetc(f))!=EOF ) {
+      if (x=='\n' || x=='\r') break;
+      result += x;
+   }
+   
+   fclose(f);
+   return result;
+}
+
+static void R__FixLink(TString &cmd)
+{
+   // Replace the call to 'link' by a full path name call based on where cl.exe is.
+   // This prevents us from using inadvertently the link.exe provided by cygwin.
+
+   TString res = R__Exec("which cl.exe 2>&1|grep cl|sed 's,cl\\.exe$,link\\.exe,' 2>&1");
+   if (res.Length()) {
+        res = R__Exec(Form("cygpath -w '%s' 2>&1",res.Data()));
+        if (res.Length()) {
+           cmd.ReplaceAll(" link ",Form(" \"%s\" ",res.Data())); 
+        }
+   }
+}
+#endif
+
+
 //______________________________________________________________________________
 int TSystem::CompileMacro(const char *filename, Option_t *opt,
                           const char *library_specified,
@@ -2813,7 +2851,12 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    mapfileStream.close();
 
    // ======= Generate the rootcint command line
-   TString rcint = "rootcint --lib-list-prefix=";
+   TString rcint;
+#ifdef G__NOSTUBS
+   rcint = "rootcint_nostubs.sh --lib-list-prefix=";
+#else
+   rcint = "rootcint --lib-list-prefix=";
+#endif
    rcint += mapfile;
    rcint += " -f ";
    rcint.Append(dict).Append(" -c -p ").Append(GetIncludePath()).Append(" ");
@@ -2887,6 +2930,10 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    if (mode==kDebug) cmd.ReplaceAll("$Opt",fFlagsDebug);
    else cmd.ReplaceAll("$Opt",fFlagsOpt);
 
+#ifdef WIN32
+   R__FixLink(cmd);
+#endif
+
    TString testcmd = fMakeExe;
    TString fakeMain;
    AssignAndDelete( fakeMain, ConcatFileName( build_loc, BaseName( tmpnam(0) ) ) );
@@ -2914,6 +2961,10 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    testcmd.ReplaceAll("$BuildDir",build_loc);
    if (mode==kDebug) testcmd.ReplaceAll("$Opt",fFlagsDebug);
    else testcmd.ReplaceAll("$Opt",fFlagsOpt);
+
+#ifdef WIN32
+   R__FixLink(testcmd);
+#endif
 
    // ======= Build the library
    if (result) {
