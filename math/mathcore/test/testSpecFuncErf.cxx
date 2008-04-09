@@ -20,8 +20,7 @@ const double ERRORLIMIT = 1E-8;
 const double MIN = -2.5;
 const double MAX = +2.5;
 const double INCREMENT = 0.01;
-const int ARRAYSIZE = (int) (( MAX - MIN ) / INCREMENT);
-inline int arrayindex(double i) { return ARRAYSIZE - (int) ( (MAX - i) / INCREMENT ) ; };
+const int ARRAYSIZE = (int) (( MAX - MIN ) / INCREMENT) + 1;
 
 bool showGraphics = true;
 
@@ -51,68 +50,71 @@ int testSpecFuncErf()
 
    int status = 0;
 
-   ofstream outputFile ("values.txt");
+//    ofstream outputFile ("values.txt");
 
+   unsigned int index = 0;
    for ( double i = MIN; i < MAX; i += INCREMENT )
    {
-      outputFile << "i:"; outputFile.width(5); outputFile << i 
-           << " index: "; outputFile.width(5); outputFile << arrayindex(i) 
-           << " TMath::Erf(x): "; outputFile.width(10); outputFile << TMath::Erf(i)
-           << " ROOT::Math::erf(x): "; outputFile.width(10); outputFile << ROOT::Math::erf(i)
-           << " TMath::Erfc(x): "; outputFile.width(10); outputFile << TMath::Erfc(i)
-           << " ROOT::Math::erfc(x): "; outputFile.width(10); outputFile << ROOT::Math::erfc(i)
-           << " TMath::ErfInverse(x): "; outputFile.width(10); outputFile << TMath::ErfInverse(i)
-           << " TMath::ErfcInverse(x): "; outputFile.width(10); outputFile << TMath::ErfcInverse(i)
-//            << " ROOT::Math::Cephes::ndtri(x): "; outputFile.width(10); outputFile << ROOT::Math::Cephes::ndtri(i)
-           << endl;
+//       outputFile << "i:"; outputFile.width(5); outputFile << i 
+//            << " index: "; outputFile.width(5); outputFile << index 
+//            << " TMath::Erf(x): "; outputFile.width(10); outputFile << TMath::Erf(i)
+//            << " ROOT::Math::erf(x): "; outputFile.width(10); outputFile << ROOT::Math::erf(i)
+//            << " TMath::Erfc(x): "; outputFile.width(10); outputFile << TMath::Erfc(i)
+//            << " ROOT::Math::erfc(x): "; outputFile.width(10); outputFile << ROOT::Math::erfc(i)
+//            << " TMath::ErfInverse(x): "; outputFile.width(10); outputFile << TMath::ErfInverse(i)
+//            << " TMath::ErfcInverse(x): "; outputFile.width(10); outputFile << TMath::ErfcInverse(i)
+// //            << " ROOT::Math::Cephes::ndtri(x): "; outputFile.width(10); outputFile << ROOT::Math::Cephes::ndtri(i)
+//            << endl;
 
-      x[arrayindex(i)] = i;
+      x[index] = i;
 
-      yerf[arrayindex(i)] = TMath::Erf(i);
-      ymerf[arrayindex(i)] = ROOT::Math::erf(i);
-      if ( std::fabs( yerf[arrayindex(i)] - ymerf[arrayindex(i)] ) > ERRORLIMIT )
+      yerf[index] = TMath::Erf(i);
+      ymerf[index] = ROOT::Math::erf(i);
+      if ( std::fabs( yerf[index] - ymerf[index] ) > ERRORLIMIT )
       {
          cout << "i " << i   
-              << " yerf[arrayindex(i)] " << yerf[arrayindex(i)]
-              << " ymerf[arrayindex(i)] " << ymerf[arrayindex(i)]
-              << " " << std::fabs( yerf[arrayindex(i)] - ymerf[arrayindex(i)] )
+              << " yerf[index] " << yerf[index]
+              << " ymerf[index] " << ymerf[index]
+              << " " << std::fabs( yerf[index] - ymerf[index] )
               << endl;
          status += 1;
       }
 
-      yerfc[arrayindex(i)] = TMath::Erfc(i);
-      ymerfc[arrayindex(i)] = ROOT::Math::erfc(i);
-      if ( std::fabs( yerfc[arrayindex(i)] - ymerfc[arrayindex(i)] ) > ERRORLIMIT )
+      yerfc[index] = TMath::Erfc(i);
+      ymerfc[index] = ROOT::Math::erfc(i);
+      if ( std::fabs( yerfc[index] - ymerfc[index] ) > ERRORLIMIT )
       {
          cout << "i " << i 
-              << " yerfc[arrayindex(i)] " << yerfc[arrayindex(i)]
-              << " ymerfc[arrayindex(i)] " << ymerfc[arrayindex(i)]
-              << " " << std::fabs( yerfc[arrayindex(i)] - ymerfc[arrayindex(i)] )
+              << " yerfc[index] " << yerfc[index]
+              << " ymerfc[index] " << ymerfc[index]
+              << " " << std::fabs( yerfc[index] - ymerfc[index] )
               << endl;
          status += 1;
       }
 
-      yierf[arrayindex(i)] = TMath::ErfInverse(yerf[arrayindex(i)]);
-      if ( std::fabs( yierf[arrayindex(i)] - i ) > ERRORLIMIT )
+      yierf[index] = TMath::ErfInverse(yerf[index]);
+      if ( std::fabs( yierf[index] - i ) > ERRORLIMIT )
       {
          cout << "i " << i 
-              << " yierf[arrayindex(i)] " << yierf[arrayindex(i)]
-              << " " << std::fabs( yierf[arrayindex(i)] - i )
+              << " yierf[index] " << yierf[index]
+              << " " << std::fabs( yierf[index] - i )
               << endl;
          status += 1;
       }
 
-      yierfc[arrayindex(i)] = TMath::ErfcInverse(yerfc[arrayindex(i)]);
-      if ( std::fabs( yierfc[arrayindex(i)] - i ) > ERRORLIMIT )
+      yierfc[index] = TMath::ErfcInverse(yerfc[index]);
+      if ( std::fabs( yierfc[index] - i ) > ERRORLIMIT )
       {
          cout << "i " << i 
-              << " yierfc[arrayindex(i)] " << yierfc[arrayindex(i)]
-              << " " << std::fabs( yierfc[arrayindex(i)] - i )
+              << " yierfc[index] " << yierfc[index]
+              << " " << std::fabs( yierfc[index] - i )
               << endl;
          status += 1;
       }
 
-//       yndtri[arrayindex(i)] = ROOT::Math::Cephes::ndtri(i);
+//       yndtri[index] = ROOT::Math::Cephes::ndtri(i);
+
+      index += 1;
    }
 
    if ( showGraphics )

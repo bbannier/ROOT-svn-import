@@ -18,8 +18,7 @@ const double ERRORLIMIT = 1E-8;
 const double MIN = -2.5;
 const double MAX = +2.5;
 const double INCREMENT = 0.01;
-const int ARRAYSIZE = (int) (( MAX - MIN ) / INCREMENT);
-inline int arrayindex(double i) { return ARRAYSIZE - (int) ( (MAX - i) / INCREMENT ) ; };
+const int ARRAYSIZE = (int) (( MAX - MIN ) / INCREMENT) + 1;
 
 bool showGraphics = true;
 
@@ -52,10 +51,11 @@ int testSpecFuncGamma()
 
    //ofstream cout ("values.txt");
 
+   unsigned int index = 0;
    for ( double i = MIN; i < MAX; i += INCREMENT )
    {
 //       cout << "i:"; cout.width(5); cout << i 
-//            << " index: "; cout.width(5); cout << arrayindex(i) 
+//            << " index: "; cout.width(5); cout << index 
 //            << " TMath::Gamma(x): "; cout.width(10); cout << TMath::Gamma(i)
 //            << " ROOT::Math::tgamma(x): "; cout.width(10); cout << ROOT::Math::tgamma(i)
 //            << " TMath::Gamma(a, x): "; cout.width(10); cout << TMath::Gamma(a, i)
@@ -64,45 +64,45 @@ int testSpecFuncGamma()
 //            << " ROOT::Math::lgamma(x): "; cout.width(10); cout << ROOT::Math::lgamma(i)
 //            << endl;
 
-      x[arrayindex(i)] = i;
-      yg[arrayindex(i)] = TMath::Gamma(i);
-      ymtg[arrayindex(i)] = ROOT::Math::tgamma(i);
+      x[index] = i;
+      yg[index] = TMath::Gamma(i);
+      ymtg[index] = ROOT::Math::tgamma(i);
       // take the infinity values out of the error checking!
-      if ( std::fabs(yg[arrayindex(i)]) < 1E+12 && std::fabs( yg[arrayindex(i)] - ymtg[arrayindex(i)] ) > ERRORLIMIT )
+      if ( std::fabs(yg[index]) < 1E+12 && std::fabs( yg[index] - ymtg[index] ) > ERRORLIMIT )
       {
          cout << "i " << i   
-              << " yg[arrayindex(i)] " << yg[arrayindex(i)]
-              << " ymtg[arrayindex(i)] " << ymtg[arrayindex(i)]
-              << " " << std::fabs( yg[arrayindex(i)] - ymtg[arrayindex(i)] )
+              << " yg[index] " << yg[index]
+              << " ymtg[index] " << ymtg[index]
+              << " " << std::fabs( yg[index] - ymtg[index] )
               << endl;
          status += 1;
       }
 
-      yga[arrayindex(i)] = TMath::Gamma(a, i);
-      ymga[arrayindex(i)] = ROOT::Math::inc_gamma(a, i);
-      if ( std::fabs( yga[arrayindex(i)] - ymga[arrayindex(i)] ) > ERRORLIMIT )
+      yga[index] = TMath::Gamma(a, i);
+      ymga[index] = ROOT::Math::inc_gamma(a, i);
+      if ( std::fabs( yga[index] - ymga[index] ) > ERRORLIMIT )
       {
          cout << "i " << i   
-              << " yga[arrayindex(i)] " << yga[arrayindex(i)]
-              << " ymga[arrayindex(i)] " << ymga[arrayindex(i)]
-              << " " << std::fabs( yga[arrayindex(i)] - ymga[arrayindex(i)] )
+              << " yga[index] " << yga[index]
+              << " ymga[index] " << ymga[index]
+              << " " << std::fabs( yga[index] - ymga[index] )
               << endl;
          status += 1;
       }
 
-      ylng[arrayindex(i)] = TMath::LnGamma(i);
-      ymlng[arrayindex(i)] = ROOT::Math::lgamma(i);
-      if ( std::fabs( ylng[arrayindex(i)] - ymlng[arrayindex(i)] ) > ERRORLIMIT )
+      ylng[index] = TMath::LnGamma(i);
+      ymlng[index] = ROOT::Math::lgamma(i);
+      if ( std::fabs( ylng[index] - ymlng[index] ) > ERRORLIMIT )
       {
          cout << "i " << i   
-              << " ylng[arrayindex(i)] " << ylng[arrayindex(i)]
-              << " ymlng[arrayindex(i)] " << ymlng[arrayindex(i)]
-              << " " << std::fabs( ylng[arrayindex(i)] - ymlng[arrayindex(i)] )
+              << " ylng[index] " << ylng[index]
+              << " ymlng[index] " << ymlng[index]
+              << " " << std::fabs( ylng[index] - ymlng[index] )
               << endl;
          status += 1;
       }
 
-
+      index += 1;
    }
 
    if ( showGraphics )

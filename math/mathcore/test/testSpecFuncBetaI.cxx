@@ -18,8 +18,7 @@ const double ERRORLIMIT = 1E-8;
 const double MIN = 0;
 const double MAX = 1;
 const double INCREMENT = 0.01;
-const int ARRAYSIZE = (int) (( MAX - MIN ) / INCREMENT);
-inline int arrayindex(double i) { return ARRAYSIZE - (int) ( (MAX - i) / INCREMENT ); };
+const int ARRAYSIZE = (int) (( MAX - MIN ) / INCREMENT) + 1;
 
 bool showGraphics = true;
 
@@ -46,27 +45,29 @@ int testSpecFuncBetaI()
 
    double b = 0.2, a= 0.9;
    cout << "** b = " << b << " **" << endl;
+   unsigned int index = 0;
    for ( double i = MIN; i < MAX; i += INCREMENT )
    {
-      cout << "i:"; cout.width(5); cout << i 
-           << " index: "; cout.width(5); cout << arrayindex(i) 
-           << " TMath::BetaIncomplete(x,a,b): "; cout.width(10); cout << TMath::BetaIncomplete(i,a,b)
-           << " ROOT::Math::inc_beta(a,a,b): "; cout.width(10); cout << ROOT::Math::inc_beta(i,a,b)
-           << endl;
+//       cout << "i:"; cout.width(5); cout << i 
+//            << " index: "; cout.width(5); cout << index 
+//            << " TMath::BetaIncomplete(x,a,b): "; cout.width(10); cout << TMath::BetaIncomplete(i,a,b)
+//            << " ROOT::Math::inc_beta(a,a,b): "; cout.width(10); cout << ROOT::Math::inc_beta(i,a,b)
+//            << endl;
       
-      x[arrayindex(i)] = i;
+      x[index] = i;
 
-      yb[arrayindex(i)] = TMath::BetaIncomplete(i,a,b);
-      ymb[arrayindex(i)] = ROOT::Math::inc_beta(i,a,b);
-      if ( std::fabs( yb[arrayindex(i)] - ymb[arrayindex(i)] ) > ERRORLIMIT )
+      yb[index] = TMath::BetaIncomplete(i,a,b);
+      ymb[index] = ROOT::Math::inc_beta(i,a,b);
+      if ( std::fabs( yb[index] - ymb[index] ) > ERRORLIMIT )
       {
          cout << "i " << i   
-              << " yb[arrayindex(i)] " << yb[arrayindex(i)]
-              << " ymb[arrayindex(i)] " << ymb[arrayindex(i)]
-              << " " << std::fabs( yb[arrayindex(i)] - ymb[arrayindex(i)] )
+              << " yb[index] " << yb[index]
+              << " ymb[index] " << ymb[index]
+              << " " << std::fabs( yb[index] - ymb[index] )
               << endl;
          status += 1;
       }
+      index += 1;
    }
 
    if ( showGraphics )
