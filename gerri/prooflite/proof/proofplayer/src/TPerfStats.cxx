@@ -58,7 +58,10 @@ TPerfEvent::TPerfEvent(TTimeStamp *offset)
    if (gProofServ != 0) {
       fEvtNode = gProofServ->GetOrdinal();
    } else {
-      fEvtNode = "-2"; // not on a PROOF server
+      if (gProof && gProof->IsLite())
+         fEvtNode = "0";
+      else
+         fEvtNode = "-2"; // not on a PROOF server
    }
 
    if (offset != 0) {
@@ -118,7 +121,12 @@ TPerfStats::TPerfStats(TList *input, TList *output)
 {
    // Normal constructor.
 
-   TProof *proof = gProofServ->GetProof();
+   TProof *proof = (gProofServ) ? gProofServ->GetProof() : gProof;
+
+   // Master flag
+   Bool_t isMaster = ((proof && proof->TestBit(TProof::kIsMaster)) ||
+                      (gProofServ && gProofServ->IsMaster())) ? kTRUE : kFALSE;
+
    TList *l = proof ? proof->GetListOfSlaveInfos() : 0 ;
    TIter nextslaveinfo(l);
    while (TSlaveInfo *si = dynamic_cast<TSlaveInfo*>(nextslaveinfo()))
@@ -131,8 +139,7 @@ TPerfStats::TPerfStats(TList *input, TList *output)
    fDoTraceRate = (input->FindObject("PROOF_RateTrace") != 0);
    fDoSlaveTrace = (input->FindObject("PROOF_SlaveStatsTrace") != 0);
 
-   if ((gProofServ->IsMaster() && (fDoTrace || fDoTraceRate)) ||
-       (!gProofServ->IsMaster() && fDoSlaveTrace)) {
+   if ((isMaster && (fDoTrace || fDoTraceRate)) || (!isMaster && fDoSlaveTrace)) {
       // Construct tree
       fTrace = new TTree("PROOF_PerfStats", "PROOF Statistics");
       fTrace->SetDirectory(0);
@@ -140,7 +147,7 @@ TPerfStats::TPerfStats(TList *input, TList *output)
       output->Add(fTrace);
    }
 
-   if (fDoHist && gProofServ->IsMaster()) {
+   if (fDoHist && isMaster) {
       // Make Histograms
       Double_t time_per_bin = 1e-3; // 10ms
       Double_t min_time = 0;
@@ -204,7 +211,7 @@ TPerfStats::TPerfStats(TList *input, TList *output)
       }
    }
 
-   if (gProofServ->IsMaster()) {
+   if (isMaster) {
       // Monitoring for query performances using SQL DB
       TString sqlserv = gEnv->GetValue("ProofServ.QueryLogDB", "");
       if (sqlserv != "") {
@@ -481,9 +488,11 @@ void TPerfStats::WriteQueryLog()
    if (fMonitoringWriter) {
       if (!gProofServ || !gProofServ->GetSessionTag() || !gProofServ->GetProof() ||
           !gProofServ->GetProof()->GetQueryResult()) {
-         Error("WriteQueryLog", "some require object are 0 (0x%lx 0x%lx 0x%lx 0x%lx)",
-               gProofServ, gProofServ->GetSessionTag(), gProofServ->GetProof(),
-               gProofServ->GetProof()->GetQueryResult());
+         Error("WriteQueryLog", "some required object are undefined (0x%lx 0x%lx 0x%lx 0x%lx)",
+               gProofServ, (gProofServ ? gProofServ->GetSessionTag() : 0),
+              (gProofServ ? gProofServ->GetProof() : 0),
+              ((gProofServ && gProofServ->GetProof()) ?
+                gProofServ->GetProof()->GetQueryResult() : 0));
          return;
       }
 
@@ -545,8 +554,11 @@ void TPerfStats::Start(TList *input, TList *output)
    }
 
    gPerfStats = new TPerfStats(input, output);
-
-   gPerfStats->SimpleEvent(TVirtualPerfStats::kStart);
+   if (gPerfStats && !gPerfStats->TestBit(TObject::kInvalidObject)) {
+      gPerfStats->SimpleEvent(TVirtualPerfStats::kStart);
+   } else {
+      SafeDelete(gPerfStats);
+   }
 }
 
 //______________________________________________________________________________

@@ -43,7 +43,7 @@ typedef TProofMgr *(*TProofMgr_t)(const char *, Int_t, const char *);
 class TProofMgr : public TNamed {
 
 public:
-   enum EServType { kProofd = 0, kXProofd = 1 };
+   enum EServType { kProofd = 0, kXProofd = 1, kProofLite = 2 };
 
 private:
    TProofMgr(const TProofMgr&); // Not implemented

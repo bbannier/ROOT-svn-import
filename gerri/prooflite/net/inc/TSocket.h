@@ -71,6 +71,10 @@ friend class TProofServ;   // to be able to call SetDescriptor(), RecvHostAuth()
 friend class TSlave;       // to be able to call SendHostAuth()
 
 public:
+   // PROOF status bits
+   enum EStatusBits {
+      kIsUnix       = BIT(16)
+   };
    enum EInterest { kRead = 1, kWrite = 2 };
    enum EServiceType { kSOCKD, kROOTD, kPROOFD };
 

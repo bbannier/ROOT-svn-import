@@ -40,6 +40,7 @@
 #include "TProof.h"
 #include "TProofPlayer.h"
 #include "TProofQueryResult.h"
+#include "TQueryResultManager.h"
 #include "TRegexp.h"
 #include "TClass.h"
 #include "TROOT.h"
@@ -612,7 +613,7 @@ Int_t TXProofServ::Setup()
       if (cf.Length() > 0)
          fConfFile = cf;
    }
-   fWorkDir = gEnv->GetValue("ProofServ.Sandbox", kPROOF_WorkDir);
+   fWorkDir = gEnv->GetValue("ProofServ.Sandbox", Form("~/%s", kPROOF_WorkDir));
 
    // Get Session tag
    if ((fSessionTag = gEnv->GetValue("ProofServ.SessionTag", "-1")) == "-1") {
@@ -640,6 +641,12 @@ Int_t TXProofServ::Setup()
       Error("Setup", "common setup failed");
       return -1;
    }
+
+   // Send packages off immediately to reduce latency
+   fSocket->SetOption(kNoDelay, 1);
+
+   // Check every two hours if client is still alive
+   fSocket->SetOption(kKeepAlive, 1);
 
    // Install SigPipe handler to handle kKeepAlive failure
    gSystem->AddSignalHandler(new TXProofServSigPipeHandler(this));
@@ -934,7 +941,7 @@ void TXProofServ::Terminate(Int_t status)
 
    // Cleanup queries directory if empty
    if (IsMaster()) {
-      if (!(fQueries->GetSize())) {
+      if (!(fQMgr && fQMgr->Queries() && fQMgr->Queries()->GetSize())) {
          // make sure we remain in a "connected" directory
          gSystem->ChangeDirectory("/");
          // needed in case fQueryDir is on NFS ?!

@@ -220,20 +220,21 @@ public:
 
 class TProofPlayerRemote : public TProofPlayer {
 
-private:
+protected:
    TProof             *fProof;         // link to associated PROOF session
    TList              *fOutputLists;   // results returned by slaves
    TList              *fFeedback;      // reference for use on master
    TList              *fFeedbackLists; // intermediate results
    TVirtualPacketizer *fPacketizer;    // transform TDSet into packets for slaves
-   TDSet              *fDSet;          //!tdset for current processing
    Bool_t              fMergeFiles;    // is True when merging output files centrally is needed
+   TDSet              *fDSet;          //!tdset for current processing
 
-   TList              *MergeFeedback();
-   Bool_t              MergeOutputFiles();
-
-protected:
    virtual Bool_t  HandleTimer(TTimer *timer);
+   Int_t           InitPacketizer(TDSet *dset, Long64_t nentries,
+                                  Long64_t first, const char *defpackunit,
+                                  const char *defpackdata);
+   TList          *MergeFeedback();
+   Bool_t          MergeOutputFiles();
    virtual Bool_t  SendSelector(const char *selector_file); //send selector to slaves
    TProof         *GetProof() const { return fProof; }
    void            SetupFeedback();  // specialized setup
@@ -244,11 +245,11 @@ public:
                                            fFeedbackLists(0), fPacketizer(0),
                                            fMergeFiles(kFALSE) {}
    virtual ~TProofPlayerRemote();   // Owns the fOutput list
-   Long64_t       Process(TDSet *set, const char *selector,
-                          Option_t *option = "", Long64_t nentries = -1,
-                          Long64_t firstentry = 0);
-   Long64_t       Finalize(Bool_t force = kFALSE, Bool_t sync = kFALSE);
-   Long64_t       Finalize(TQueryResult *qr);
+   virtual Long64_t Process(TDSet *set, const char *selector,
+                            Option_t *option = "", Long64_t nentries = -1,
+                            Long64_t firstentry = 0);
+   virtual Long64_t Finalize(Bool_t force = kFALSE, Bool_t sync = kFALSE);
+   virtual Long64_t Finalize(TQueryResult *qr);
    Long64_t       DrawSelect(TDSet *set, const char *varexp,
                              const char *selection, Option_t *option = "",
                              Long64_t nentries = -1, Long64_t firstentry = 0);
