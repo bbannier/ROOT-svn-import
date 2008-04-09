@@ -176,6 +176,7 @@ public:
    Int_t               GenerateHeaderFile(const char *dirname, const TList *subClasses = 0);
    TClass             *GetClass() const {return fClass;}
    UInt_t              GetCheckSum() const {return fCheckSum;}
+   UInt_t              GetCheckSum(UInt_t code) const;
    Int_t               GetClassVersion() const {return fClassVersion;}
    Int_t               GetDataMemberOffset(TDataMember *dm, TMemberStreamer *&streamer) const;
    TObjArray          *GetElements() const {return fElements;}
@@ -263,7 +264,7 @@ public:
 #endif
 
    //WARNING this class version must be the same as TVirtualStreamerInfo
-   ClassDef(TStreamerInfo,6)  //Streamer information for one class version
+   ClassDef(TStreamerInfo,7)  //Streamer information for one class version
 };
 
 

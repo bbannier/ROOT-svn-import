@@ -13,12 +13,16 @@
 //                                                                      //
 // TProofPlayer                                                         //
 //                                                                      //
-// This internal class steers processing in PROOF. One instance of this //
-// is created per each query. On the client it collects information     //
-// the inputs(dataset and selector), it invokes the Begin() method and  //
-// finalizes the query by calling Terminate(). On the master it checks  //
-// the dataset, it creates the packetizer and takes care of merging the //
-// results of the single workers.                                       //
+// This internal class and its subclasses steer the processing in PROOF.//
+// Instances of the TProofPlayer class are created on the worker nodes  //
+// per session and do the processing.                                   //
+// Instances of its subclass - TProofPlayerRemote are created per each  //
+// query on the master(s) and on the client. On the master(s),          //
+// TProofPlayerRemote coordinate processing, check the dataset, create  //
+// the packetizer and take care of merging the results of the workers.  //
+// The instance on the client collects information on the input         //
+// (dataset and selector), it invokes the Begin() method and finalizes  //
+// the query by calling Terminate().                                    //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -45,6 +49,7 @@
 #include "TString.h"
 #include "TSystem.h"
 #include "TFile.h"
+#include "TFileInfo.h"
 #include "TFileMerger.h"
 #include "TProofDebug.h"
 #include "TTimer.h"
@@ -212,6 +217,7 @@ TProofPlayer::~TProofPlayer()
 {
    // Destructor.
 
+   fInput->Clear("nodelete");
    SafeDelete(fInput);
    SafeDelete(fSelector);
    SafeDelete(fFeedbackTimer);
@@ -707,7 +713,7 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
                                Long64_t first)
 {
    // Process specified TDSet on PROOF worker.
-   // The return value is -1 in case of error and TSelector::GetStatus() in
+   // The return value is -1 in case of error and TSelector::GetStatus()
    // in case of success.
 
    PDB(kGlobal,1) Info("Process","Enter");
@@ -1307,6 +1313,53 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
          return -1;
       }
 
+      if (!fPacketizer->IsValid()) {
+         Error("Process", "instantiated packetizer object '%s' is invalid", cl->GetName());
+         fExitStatus = kAborted;
+         return -1;
+      }
+      // Add invalid elemnets to the list of missing elements
+      TDSetElement *elem = 0;
+      if (!noData && dset->TestBit(TDSet::kSomeInvalid)) {
+         TIter nxe(dset->GetListOfElements());
+         while ((elem = (TDSetElement *)nxe())) {
+            if (!elem->GetValid()) {
+               if (!listOfMissingFiles)
+                  listOfMissingFiles = new TList;
+               listOfMissingFiles->Add(elem->GetFileInfo(dset->GetType()));
+               dset->Remove(elem, kFALSE);
+            }
+         }
+         // The invalid elements have been removed
+         dset->ResetBit(TDSet::kSomeInvalid);
+      }
+
+      // Record the list of missing or invalid elements in the output list
+      if (listOfMissingFiles) {
+         TIter missingFiles(listOfMissingFiles);
+         TFileInfo *fi = 0;
+         while ((fi = (TFileInfo *) missingFiles.Next())) {
+            TString msg;
+            if (fi->GetCurrentUrl()) {
+               msg = Form("File not found: %s - skipping!",
+                                             fi->GetCurrentUrl()->GetUrl());
+            } else {
+               msg = Form("File not found: %s - skipping!", fi->GetName());
+            }
+            gProofServ->SendAsynMessage(msg.Data());
+         }
+         // Make sure it will be sent back
+         if (!GetOutput("MissingFiles")) {
+            listOfMissingFiles->SetName("MissingFiles");
+            AddOutputObject(listOfMissingFiles);
+         }
+         TStatus *tmpStatus = (TStatus *)GetOutput("PROOF_Status");
+         if (!tmpStatus) {
+            tmpStatus = new TStatus();
+            AddOutputObject(tmpStatus);
+         }
+         tmpStatus->Add("Some files were missing; check 'missingFiles' list");
+      }
       // reset start, this is now managed by the packetizer
       first = 0;
 
@@ -1565,7 +1618,8 @@ Long64_t TProofPlayerRemote::Finalize(TQueryResult *qr)
    PDB(kGlobal,1) Info("Finalize(TQueryResult *)","Enter");
 
    if (!IsClient()) {
-      Info("Finalize(TQueryResult *)","method to be executed only clients");
+      Info("Finalize(TQueryResult *)",
+           "method to be executed only on the clients");
       return -1;
    }
 

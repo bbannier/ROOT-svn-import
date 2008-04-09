@@ -983,8 +983,14 @@ void TASImage::FromPad(TVirtualPad *pad, Int_t x, Int_t y, UInt_t w, UInt_t h)
 
       TASImage *itmp = (TASImage*)gVirtualPS->GetStream();
 
-      if (itmp && itmp->fImage) itmp->BeginPaint();
+      if (itmp && itmp->fImage) {
+         itmp->BeginPaint();
+      }
+
+      TVirtualPad *sav = gPad;
+      gPad = pad;
       pad->Paint();
+      gPad = sav;
 
       if (itmp && itmp->fImage && (itmp != this)) {
          fImage = clone_asimage(itmp->fImage, SCL_DO_ALL);
@@ -6481,6 +6487,26 @@ void TASImage::FromWindow(Drawable_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h)
 }
 
 //______________________________________________________________________________
+void TASImage::FromGLBuffer(UChar_t* buf, UInt_t w, UInt_t h)
+{
+   // creates an image(screenshot) from a RGBA buffer
+
+   DestroyImage();
+   delete fScaledImage;
+   fScaledImage = 0;
+
+   UChar_t* xx = new UChar_t[4*w];
+   for (UInt_t i = 0; i < h/2; ++i) {
+      memcpy(xx, buf + 4*w*i, 4*w);
+      memcpy(buf + 4*w*i, buf + 4*w*(h-i-1), 4*w);
+      memcpy(buf + 4*w*(h-i-1), xx, 4*w);
+   }
+   delete [] xx;
+
+   fImage = bitmap2asimage(buf, w, h, 0, 0);
+}
+
+//_______________________________________________________________________
 void TASImage::SetPaletteEnabled(Bool_t on)
 {
    // switch on/off image palette. That also invokes calling vectorizasion of image
