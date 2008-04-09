@@ -11,10 +11,11 @@
 #include <iostream>
 using namespace std;
 
-int main() {
+int main() 
+{
 #if (G__CINTVERSION < 70000000))
-      // emulate Reflex's global namespace:
-      cout << endl;
+  // emulate Reflex's global namespace:
+  cout << endl;
 #endif
   G__ClassInfo c;
   G__DataMemberInfo m;
