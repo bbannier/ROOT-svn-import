@@ -29,7 +29,7 @@ namespace Reflex {
    */
    class RFLX_API PropertyListImpl {
 
-      friend std::ostream & operator << ( std::ostream & s,
+      friend RFLX_API std::ostream & operator << ( std::ostream & s,
          const PropertyListImpl & p );
    public:
 
@@ -266,7 +266,7 @@ namespace Reflex {
    * @param s the reference to the stream
    * @return the stream
    */
-   std::ostream & operator << ( std::ostream & s,
+   RFLX_API std::ostream & operator << ( std::ostream & s,
       const PropertyListImpl & p );
 
 } //namespace Reflex
@@ -284,13 +284,6 @@ inline Reflex::PropertyListImpl::PropertyListImpl( const PropertyListImpl & pl )
    : fProperties( pl.fProperties ) {}
 
   
-//-------------------------------------------------------------------------------
-inline Reflex::PropertyListImpl::~PropertyListImpl() {
-//-------------------------------------------------------------------------------
-   if ( fProperties ) delete fProperties;
-}
-
-
 //-------------------------------------------------------------------------------
 inline size_t Reflex::PropertyListImpl::AddProperty( const std::string & key,
                                                            const Any & value ) {

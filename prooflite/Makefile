@@ -58,29 +58,32 @@ include $(MAKEFILEDEP)
 
 ##### Modules to build #####
 
-MODULES       = build cint/cint metautils pcre utils base cont meta io \
-                math fit mathcore net zip clib matrix newdelete \
-                hist/hist tree freetype graf gpad g3d gui minuit \
-                hist/histpainter treeplayer ged treeviewer physics \
-                postscript rint thread html eg geom geompainter vmc fumili \
-                mlp quadp auth guibuilder xml foam splot smatrix sql tmva \
-                geombuilder hist/spectrum hist/spectrumpainter \
+MODULES       = build cint/cint core/metautils core/pcre core/utils core/base \
+                core/cont core/meta io math/mathcore net core/zip \
+                core/clib math/matrix core/newdelete \
+                hist/hist tree/tree freetype graf gpad g3d gui math/minuit \
+                hist/histpainter tree/treeplayer ged tree/treeviewer \
+                math/physics postscript core/rint core/thread html eg \
+                geom/geom geom/geompainter vmc \
+                math/fumili math/mlp math/quadp auth guibuilder xml \
+                math/foam math/splot math/smatrix sql tmva \
+                geom/geombuilder hist/spectrum hist/spectrumpainter \
                 fitpanel proof/proof proof/proofplayer sessionviewer guihtml
 
 ifeq ($(ARCH),win32)
-MODULES      += winnt win32gdk
-MODULES      := $(filter-out newdelete,$(MODULES))
+MODULES      += core/winnt win32gdk
+MODULES      := $(filter-out core/newdelete,$(MODULES))
 SYSTEML       = $(WINNTL)
 SYSTEMO       = $(WINNTO)
 SYSTEMDO      = $(WINNTDO)
 else
 ifeq ($(ARCH),win32gcc)
-MODULES      += unix x11 x11ttf x3d rootx
+MODULES      += core/unix x11 x11ttf x3d rootx
 SYSTEML       = $(UNIXL)
 SYSTEMO       = $(UNIXO)
 SYSTEMDO      = $(UNIXDO)
 else
-MODULES      += unix x11 x11ttf x3d rootx
+MODULES      += core/unix x11 x11ttf x3d rootx
 SYSTEML       = $(UNIXL)
 SYSTEMO       = $(UNIXO)
 SYSTEMDO      = $(UNIXDO)
@@ -138,7 +141,7 @@ ifeq ($(BUILDFPYTHIA8),yes)
 MODULES      += pythia8
 endif
 ifeq ($(BUILDFFTW3),yes)
-MODULES      += fftw
+MODULES      += math/fftw
 endif
 ifeq ($(BUILDPYTHON),yes)
 MODULES      += pyroot
@@ -156,32 +159,32 @@ ifeq ($(BUILDQTGSI),yes)
 MODULES      += qtgsi
 endif
 ifeq ($(BUILDGENVECTOR),yes)
-MODULES      += genvector
+MODULES      += math/genvector
 endif
 ifeq ($(BUILDMATHMORE),yes)
-MODULES      += mathmore
+MODULES      += math/mathmore
 endif
 ifeq ($(BUILDREFLEX),yes)
 # put reflex right in front of CINT; CINT needs it 
 MODULES      := $(subst cint/cint,cint/reflex cint/cint,$(MODULES))
 endif
 ifeq ($(BUILDMINUIT2),yes)
-MODULES      += minuit2
+MODULES      += math/minuit2
 endif
 ifeq ($(BUILDUNURAN),yes)
-MODULES      += unuran
+MODULES      += math/unuran
 endif
 ifeq ($(BUILDCINT7),yes)
 MODULES      := $(subst cint/cint,cint/cint7,$(MODULES))
 endif
 ifeq ($(BUILDCINTEX),yes)
-MODULES      += cintex
+MODULES      += cint/cintex
 endif
 ifeq ($(BUILDROOFIT),yes)
 MODULES      += roofitcore roofit
 endif
 ifeq ($(BUILDGDML),yes)
-MODULES      += gdml
+MODULES      += geom/gdml
 endif
 ifeq ($(BUILDTABLE),yes)
 MODULES      += table
@@ -233,14 +236,16 @@ endif
 -include MyModules.mk   # allow local modules
 
 ifneq ($(findstring $(MAKECMDGOALS),distclean maintainer-clean),)
-MODULES      += unix winnt x11 x11ttf win32gdk gl ftgl rfio castor \
+MODULES      += core/unix core/winnt x11 x11ttf win32gdk gl ftgl rfio castor \
                 pythia6 table mysql pgsql sapdb srputils x3d \
                 rootx rootd dcache chirp hbook asimage \
-                ldap mlp krb5auth rpdutils globusauth pyroot ruby gfal \
+                ldap krb5auth rpdutils globusauth pyroot ruby gfal \
                 qt qtroot qtgsi xrootd netx alien \
                 proof/proofd proof/proofx proof/clarens proof/peac \
-                oracle xmlparser mathmore cint/reflex cintex roofitcore roofit \
-                minuit2 monalisa fftw odbc unuran gdml eve g4root glite
+                oracle xmlparser math/mathmore cint/reflex cint/cintex \
+                roofitcore roofit \
+                math/minuit2 monalisa math/fftw odbc math/unuran \
+                geom/gdml eve g4root glite
 MODULES      := $(sort $(MODULES))   # removes duplicates
 endif
 
@@ -343,7 +348,7 @@ GCC_VERS_FULL := gcc-$(GCC_MAJOR).$(GCC_MINOR).$(GCC_PATCH)
 
 ##### CINT Stub Functions Generation #####
 ifeq ($(NOSTUBS),yes)
-ROOTCINTTMP   = export CXXFLAGS="$(CXXFLAGS)"; utils/src/rootcint_nostubs_tmp.sh -$(ROOTDICTTYPE)
+ROOTCINTTMP   = export CXXFLAGS="$(CXXFLAGS)"; core/utils/src/rootcint_nostubs_tmp.sh -$(ROOTDICTTYPE)
 CXXFLAGS     += -DG__NOSTUBS
 CINTCXXFLAGS += -DG__NOSTUBS
 ifeq ($(NOSTUBSTEST),yes)
@@ -516,7 +521,6 @@ endif
                 version html changelog install uninstall showbuild \
                 static map debian redhat skip postbin \
                 $(patsubst %,all-%,$(MODULES)) \
-                $(patsubst %,map-%,$(MODULES)) \
                 $(patsubst %,clean-%,$(MODULES)) \
                 $(patsubst %,distclean-%,$(MODULES))
 
@@ -744,7 +748,7 @@ rootdrpm:
 	fi
 
 clean::
-	@rm -f __compiledata *~ core include/precompile.*
+	@rm -f __compiledata *~ core.* include/precompile.*
 
 ifeq ($(CXX),KCC)
 clean::
@@ -859,11 +863,11 @@ install: all
 	   $(INSTALLDATA) include/*             $(DESTDIR)$(INCDIR); \
 	   echo "Installing main/src/rmain.cxx in $(DESTDIR)$(INCDIR)"; \
 	   $(INSTALLDATA) main/src/rmain.cxx    $(DESTDIR)$(INCDIR); \
-	   echo "Installing cint/include cint/lib and cint/stl in $(DESTDIR)$(CINTINCDIR)"; \
+	   echo "Installing cint/cint/include cint/cint/lib and cint/cint/stl in $(DESTDIR)$(CINTINCDIR)"; \
 	   $(INSTALLDIR)                        $(DESTDIR)$(CINTINCDIR); \
-	   $(INSTALLDATA) cint/include          $(DESTDIR)$(CINTINCDIR); \
-	   $(INSTALLDATA) cint/lib              $(DESTDIR)$(CINTINCDIR); \
-	   $(INSTALLDATA) cint/stl              $(DESTDIR)$(CINTINCDIR); \
+	   $(INSTALLDATA) cint/cint/include     $(DESTDIR)$(CINTINCDIR); \
+	   $(INSTALLDATA) cint/cint/lib         $(DESTDIR)$(CINTINCDIR); \
+	   $(INSTALLDATA) cint/cint/stl         $(DESTDIR)$(CINTINCDIR); \
 	   find $(DESTDIR)$(CINTINCDIR) -name CVS -exec rm -rf {} \; >/dev/null 2>&1; \
 	   find $(DESTDIR)$(CINTINCDIR) -name .svn -exec rm -rf {} \; >/dev/null 2>&1; \
 	   echo "Installing icons in $(DESTDIR)$(ICONPATH)"; \
@@ -915,7 +919,7 @@ install: all
 	   $(INSTALLDIR)                          $(DESTDIR)$(ELISPDIR); \
 	   $(INSTALLDATA) build/misc/root-help.el $(DESTDIR)$(ELISPDIR); \
 	   echo "Installing GDML conversion scripts in $(DESTDIR)$(LIBDIR)"; \
-	   $(INSTALLDATA) gdml/*.py               $(DESTDIR)$(LIBDIR); \
+	   $(INSTALLDATA) geom/gdml/*.py          $(DESTDIR)$(LIBDIR); \
 	   find $(DESTDIR)$(DATADIR) -name CVS -exec rm -rf {} \; >/dev/null 2>&1; \
 	   find $(DESTDIR)$(DATADIR) -name .svn -exec rm -rf {} \; >/dev/null 2>&1; \
 	fi

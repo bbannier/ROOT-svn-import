@@ -292,23 +292,17 @@ int Cint::Internal::G__Lsizeof(const char *type_name)
      )
     return(sizeof(double));
   if(strcmp(type_name,"longdouble")==0) {
-    int tagnum,typenum;
-    G__loadlonglong(&tagnum,&typenum,G__LONGDOUBLE);
-    return(G__struct.size[tagnum]);
+     return(sizeof(long double));
   }
   if(strcmp(type_name,"longlong")==0
      || strcmp(type_name,"longlongint")==0
      ) {
-    int tagnum,typenum;
-    G__loadlonglong(&tagnum,&typenum,G__LONGLONG);
-    return(G__struct.size[tagnum]);
+     return(sizeof(G__int64));
   }
   if(strcmp(type_name,"unsignedlonglong")==0
      || strcmp(type_name,"unsignedlonglongint")==0
      ) {
-    int tagnum,typenum;
-    G__loadlonglong(&tagnum,&typenum,G__ULONGLONG);
-    return(G__struct.size[tagnum]);
+     return(sizeof(G__uint64));
   }
   if(strcmp(type_name,"void")==0)
     return(sizeof(void*));
@@ -404,15 +398,6 @@ long *Cint::Internal::G__typeid(char *typenamein)
   /**********************************************************************
   * Search for typedef names
   **********************************************************************/
-  if(strcmp(type_name,"longlong")==0) {
-    strcpy(type_name,"G__longlong");
-  }
-  else if(strcmp(type_name,"unsignedlonglong")==0) {
-    strcpy(type_name,"G__ulonglong");
-  }
-  else if(strcmp(type_name,"longdouble")==0) {
-    strcpy(type_name,"G__longdouble");
-  }
   typenum = G__find_typedef(type_name);
   if(typenum) {
     type    = G__get_type(typenum);
@@ -528,6 +513,14 @@ long *Cint::Internal::G__typeid(char *typenamein)
         type = 'k';
         size = G__LONGALLOC;
       }
+      if((strcmp(type_name,"longlong")==0)) {
+        type='n';
+        size = G__LONGLONGALLOC;
+      }
+      if((strcmp(type_name,"unsignedlonglong")==0)) {
+        type='m';
+        size = G__LONGLONGALLOC;
+      }
       if((strcmp(type_name,"short")==0)||
          (strcmp(type_name,"shortint")==0)) {
         type = 's';
@@ -555,6 +548,11 @@ long *Cint::Internal::G__typeid(char *typenamein)
          ) {
         type = 'd';
         size = G__DOUBLEALLOC;
+      }
+      if((strcmp(type_name,"longdouble")==0)
+         ) {
+        type = 'q';
+        size = G__LONGDOUBLEALLOC;
       }
       if(strcmp(type_name,"void")==0) {
         type = 'y';
