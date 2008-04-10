@@ -304,6 +304,7 @@
 #include "TSystem.h"
 #include "TTreeCloner.h"
 #include "TTreeCache.h"
+#include "TTreeCacheUnzip.h"
 #include "TVirtualCollectionProxy.h"
 #include "TEmulatedCollectionProxy.h"
 #include "TVirtualFitter.h"
@@ -5634,7 +5635,11 @@ void TTree::SetCacheSize(Long64_t cacheSize)
    if (cacheSize <= 0) {
       return;
    }
-   new TTreeCache(this, cacheSize);
+   
+   if(TTreeCacheUnzip::IsParallelUnzip())
+      new TTreeCacheUnzip(this, cacheSize);
+   else
+      new TTreeCache(this, cacheSize);
 }
 
 //______________________________________________________________________________
