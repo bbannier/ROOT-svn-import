@@ -43,7 +43,7 @@
 //
 //  ==> Case A
 //      ======
-//     TBranch *branch = tree->Branch(branchname,address, leaflist, bufsize)
+//     TBranch *branch = tree->Branch(branchname, address, leaflist, bufsize)
 //       * address is the address of the first item of a structure
 //       * leaflist is the concatenation of all the variable names and types
 //         separated by a colon character :
@@ -67,8 +67,14 @@
 //
 //  ==> Case B
 //      ======
-//     TBranch *branch = tree->Branch(branchname,className,object, bufsize, splitlevel)
-//          object is the address of a pointer to an existing object (derived from TObject).
+//     TBranch *branch = tree->Branch(branchname, &p_object, bufsize, splitlevel)
+//     TBranch *branch = tree->Branch(branchname, className, &p_object, bufsize, splitlevel)
+//        p_object is a pointer to an object.
+//        If className is not specified, Branch uses the type of p_object to determine the
+//          type of the object.
+//        If className is used to specify explicitly the object type, the className must
+//          be of a type related to the one pointed to by the pointer.  It should be either 
+//          a parent or derived class.
 //        if splitlevel=0, the object is serialized in the branch buffer.
 //        if splitlevel=1 (default), this branch will automatically be split
 //          into subbranches, with one subbranch for each data member or object
@@ -78,6 +84,18 @@
 //          into subbranches, with one subbranch for each data member or object
 //          of the object itself. In case the object member is a TClonesArray,
 //          it is processed as a TObject*, only one branch.
+//
+//        Note: The pointer whose address is passed to TTree::Branch must not
+//        be destroyed (i.e. go out of scope) until the TTree is deleted or
+//        TTree::ResetBranchAddress is called.
+//
+//        Note: The pointer p_object must be initialized before calling TTree::Branch
+//          Do either: 
+//             MyDataClass* p_object = 0;
+//             tree->Branch(branchname, &p_object);
+//          Or 
+//             MyDataClass* p_object = new MyDataClass;
+//             tree->Branch(branchname, &p_object);
 //
 //  ==> Case C
 //      ======
