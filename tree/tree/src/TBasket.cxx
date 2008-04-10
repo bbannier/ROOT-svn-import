@@ -16,6 +16,7 @@
 #include "TBufferFile.h"
 #include "TMath.h"
 #include "TTreeCache.h"
+#include "TTreeCacheUnzip.h"
 
 extern "C" void R__zip (Int_t cxlevel, Int_t *nin, char *bufin, Int_t *lout, char *bufout, Int_t *nout);
 extern "C" void R__unzip(Int_t *nin, UChar_t *bufin, Int_t *lout, char *bufout, Int_t *nout);
@@ -186,13 +187,14 @@ Int_t TBasket::DropBuffers()
 
    if (!fBuffer && !fBufferRef) return 0;
    
-   TTreeCache *tpf = (TTreeCache*) GetFile()->GetCacheRead();
-      
-   // we must inform the cache that this buffer is being use in case
-   // it's not a real buffer but a ref to the cache (it's ignored)
-   // if it can not be found in the cache
-   if(tpf != 0) {
-      tpf->SetBufferRead(fSeekKey, fNbytes, this);
+   TFileCacheRead *pf = GetFile()->GetCacheRead();
+   if (pf && pf->InheritsFrom(TTreeCacheUnzip::Class())) {
+      TTreeCacheUnzip *tpfu = (TTreeCacheUnzip*)pf;
+
+     // we must inform the cache that this buffer is being use in case
+     // it's not a real buffer but a ref to the cache (it's ignored)
+     // if it can not be found in the cache
+      tpfu->SetBufferRead(fSeekKey, fNbytes, this);
    }
 
    //   delete [] fBuffer;
@@ -311,12 +313,12 @@ Int_t TBasket::ReadBasketBuffers(Long64_t pos, Int_t len, TFile *file)
 
    if (fBranch->GetTree()->MemoryFull(fBufferSize)) fBranch->DropBaskets();
 
-   TTreeCache *tpf = (TTreeCache*) GetFile()->GetCacheRead();
-
-   if(tpf != 0) {
+   TFileCacheRead *pf = file->GetCacheRead();
+   if (pf && pf->InheritsFrom(TTreeCacheUnzip::Class())) {
+      TTreeCacheUnzip *tpfu = (TTreeCacheUnzip*)pf;
       char *buffer = 0;
       Bool_t free = kTRUE; // Must we free this buffer or does it make part of the cache? 
-      Int_t res = tpf->GetUnzipBuffer(&buffer, pos, len, &free, this);
+      Int_t res = tpfu->GetUnzipBuffer(&buffer, pos, len, &free, this);
      
       // there was some error reading the buffer
 	  if (res == -1) {

@@ -34,8 +34,8 @@
 #include "TMath.h"
 #include "TTree.h"
 #include "TTreeCache.h"
+#include "TTreeCacheUnzip.h"
 #include "TVirtualPad.h"
-#include "TVirtualMutex.h"
 
 #include <cstddef>
 #include <string.h>
@@ -1011,10 +1011,15 @@ TBasket* TBranch::GetBasket(Int_t basketnumber)
    }
 
    //add branch to cache (if any)
-   TTreeCache *tpf = (TTreeCache*)file->GetCacheRead();
-   if (tpf) { 
-      if (fSkipZip) tpf->SetSkipZip();
+   TFileCacheRead *pf = GetFile()->GetCacheRead();
+   if (pf && pf->InheritsFrom(TTreeCache::Class())){
+      TTreeCache *tpf = (TTreeCache*)pf;
       tpf->AddBranch(this);
+   }
+   
+   if (pf && pf->InheritsFrom(TTreeCacheUnzip::Class())) {
+      TTreeCacheUnzip *tpfu = (TTreeCacheUnzip*)pf;
+      if (fSkipZip) tpfu->SetSkipZip();
    }
 
    //now read basket
