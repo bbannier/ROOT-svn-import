@@ -66,7 +66,7 @@ template <typename T> double stressVector(unsigned int size, const char* type)
    totalUnitTime += w.CpuTime()/ntest;
    totalTime += w.CpuTime();
 
-   ntest = NUMTEST/2.5;
+   ntest = (unsigned int) ( NUMTEST/2.5 );
    w.Start( kTRUE );
    for ( unsigned int i = 0; i < ntest; ++i )
       TMath::Median(size, vector);
@@ -76,7 +76,7 @@ template <typename T> double stressVector(unsigned int size, const char* type)
    totalUnitTime += w.CpuTime()/ntest;
    totalTime += w.CpuTime();
 
-   ntest = 10 * NUMTEST;
+   ntest = (unsigned int) ( 10 * NUMTEST );
    w.Start( kTRUE );
    for ( unsigned int i = 0; i < ntest; ++i )
       TMath::RMS(size, vector);
@@ -86,7 +86,7 @@ template <typename T> double stressVector(unsigned int size, const char* type)
    totalUnitTime += w.CpuTime()/ntest;
    totalTime += w.CpuTime();
 
-   ntest = NUMTEST/2.5;
+   ntest = (unsigned int) ( NUMTEST/2.5 );
    w.Start( kTRUE );
    for ( unsigned int i = 0; i < ntest; ++i )
       TMath::GeomMean(size, vector);
