@@ -11,10 +11,9 @@ include $(ROOTSYS)/test/Makefile.arch
 #------------------------------------------------------------------------------
 
 ifeq ($(PLATFORM),win32)
-EXTRALIBS        = -include:_G__cpp_setupG__MathCore  "$(ROOTSYS)/lib/libMathCore.lib" \
-"$(ROOTSYS)/lib/libMathMore.lib"
+EXTRALIBS        = -include:_G__cpp_setupG__MathCore  "$(ROOTSYS)/lib/libMathMore.lib"
 else
-EXTRALIBS        = -lMathCore -lMathMore
+EXTRALIBS        = -lMathMore
 CXXFLAGS += -g
 endif
 
@@ -119,55 +118,55 @@ all:            $(PROGRAMS)
 
 
 $(STRESSTF1):      $(STRESSTF1OBJ)
-		    $(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) $(OutPutOpt)$@
+		    $(LD) $(LDFLAGS) $^ $(LIBS)  $(OutPutOpt)$@
 		    @echo "$@ done"
 
 $(STRESSTMATH):     $(STRESSTMATHOBJ)
-		    $(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) $(OutPutOpt)$@
+		    $(LD) $(LDFLAGS) $^ $(LIBS)  $(OutPutOpt)$@
 		    @echo "$@ done"
 
 $(TESTTMATH):      $(TESTTMATHOBJ)
-		    $(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) $(OutPutOpt)$@
+		    $(LD) $(LDFLAGS) $^ $(LIBS)  $(OutPutOpt)$@
 		    @echo "$@ done"
 
 $(BSEARCHTIME):      $(BSEARCHTIMEOBJ)
-		    $(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) $(OutPutOpt)$@
+		    $(LD) $(LDFLAGS) $^ $(LIBS)  $(OutPutOpt)$@
 		    @echo "$@ done"
 
 $(TESTBSEARCH):      $(TESTBSEARCHOBJ)
-		    $(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) $(OutPutOpt)$@
+		    $(LD) $(LDFLAGS) $^ $(LIBS)  $(OutPutOpt)$@
 		    @echo "$@ done"
 
 $(TESTSORT):      $(TESTSORTOBJ)
-		    $(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) $(OutPutOpt)$@
+		    $(LD) $(LDFLAGS) $^ $(LIBS)  $(OutPutOpt)$@
 		    @echo "$@ done"
 
 $(TESTSORTORDER):      $(TESTSORTORDEROBJ)
-		    $(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) $(OutPutOpt)$@
+		    $(LD) $(LDFLAGS) $^ $(LIBS)  $(OutPutOpt)$@
 		    @echo "$@ done"
 
 $(SPECFUNERF):      $(SPECFUNERFOBJ)
-		    $(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) $(OutPutOpt)$@
+		    $(LD) $(LDFLAGS) $^ $(LIBS)  $(OutPutOpt)$@
 		    @echo "$@ done"
 
 $(SPECFUNGAMMA):    $(SPECFUNGAMMAOBJ)
-		    $(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) $(OutPutOpt)$@
+		    $(LD) $(LDFLAGS) $^ $(LIBS)  $(OutPutOpt)$@
 		    @echo "$@ done"
 
 $(SPECFUNBETA):    $(SPECFUNBETAOBJ)
-		    $(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) $(OutPutOpt)$@
+		    $(LD) $(LDFLAGS) $^ $(LIBS)  $(OutPutOpt)$@
 		    @echo "$@ done"
 
 $(SPECFUNBETAI):    $(SPECFUNBETAIOBJ)
-		    $(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) $(OutPutOpt)$@
+		    $(LD) $(LDFLAGS) $^ $(LIBS)  $(OutPutOpt)$@
 		    @echo "$@ done"
 
 $(INTEGRATION): $(INTEGRATIONOBJ)
-		$(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) $(OutPutOpt)$@
+		$(LD) $(LDFLAGS) $^ $(LIBS)  $(OutPutOpt)$@
 		@echo "$@ done"
 
 $(INTEGRATIONMULTI): $(INTEGRATIONMULTIOBJ)
-			$(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) $(OutPutOpt)$@
+			$(LD) $(LDFLAGS) $^ $(LIBS)  $(OutPutOpt)$@
 			@echo "$@ done"
 
 $(ROOTFINDER): $(ROOTFINDEROBJ)

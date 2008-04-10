@@ -34,6 +34,7 @@ template <typename T> double stressVector(unsigned int size, const char* type)
 #endif
 
    TStopwatch w;
+   std::cout.precision(6);
 
    unsigned int ntest = 3 * NUMTEST;
    w.Start( kTRUE );
@@ -41,7 +42,7 @@ template <typename T> double stressVector(unsigned int size, const char* type)
       TMath::MinElement(size, vector);
    w.Stop();
    cout << "MinMaxElement() \tTotal Time: " << w.CpuTime() << "  (s)\t\t" 
-        << " Time/call: " << w.CpuTime()/(ntest)*1.E6 << " (micros)" << endl;
+        << " Time/call: " << w.CpuTime()/(ntest)*1.E6 << "   (microsec)" << endl;
    totalUnitTime += w.CpuTime()/ntest;
    totalTime += w.CpuTime();
 
@@ -51,7 +52,7 @@ template <typename T> double stressVector(unsigned int size, const char* type)
       TMath::LocMin(size, vector);
    w.Stop();
    cout << "LocMin/Max() \t\tTotal Time: " << w.CpuTime() << "  (s)\t\t" 
-        << " Time/call: " << w.CpuTime()/(ntest)*1.E6 << " (micros)" << endl;
+        << " Time/call: " << w.CpuTime()/(ntest)*1.E6 << "   (microsec)" << endl;
    totalUnitTime += w.CpuTime()/ntest;
    totalTime += w.CpuTime();
 
@@ -61,7 +62,7 @@ template <typename T> double stressVector(unsigned int size, const char* type)
       TMath::Mean(size, vector);
    w.Stop();
    cout << "Mean() \t\t\tTotal Time: " << w.CpuTime() << "  (s)\t\t" 
-        << " Time/call: " << w.CpuTime()/(ntest)*1.E6 << " (micros)" << endl;
+        << " Time/call: " << w.CpuTime()/(ntest)*1.E6 << "   (microsec)" << endl;
    totalUnitTime += w.CpuTime()/ntest;
    totalTime += w.CpuTime();
 
@@ -71,7 +72,7 @@ template <typename T> double stressVector(unsigned int size, const char* type)
       TMath::Median(size, vector);
    w.Stop();
    cout << "Median() \t\tTotal Time: " << w.CpuTime() << "  (s)\t\t" 
-        << " Time/call: " << w.CpuTime()/(ntest)*1.E6 << " (micros)" << endl;
+        << " Time/call: " << w.CpuTime()/(ntest)*1.E6 << "   (microsec)" << endl;
    totalUnitTime += w.CpuTime()/ntest;
    totalTime += w.CpuTime();
 
@@ -81,7 +82,7 @@ template <typename T> double stressVector(unsigned int size, const char* type)
       TMath::RMS(size, vector);
    w.Stop();
    cout << "RMS() \t\t\tTotal Time: " << w.CpuTime() << "  (s)\t\t" 
-        << " Time/call: " << w.CpuTime()/(ntest)*1.E6 << " (micros)" << endl;
+        << " Time/call: " << w.CpuTime()/(ntest)*1.E6 << "   (microsec)" << endl;
    totalUnitTime += w.CpuTime()/ntest;
    totalTime += w.CpuTime();
 
@@ -91,7 +92,7 @@ template <typename T> double stressVector(unsigned int size, const char* type)
       TMath::GeomMean(size, vector);
    w.Stop();
    cout << "GeomMean() \t\tTotal Time: " << w.CpuTime() << "  (s)\t\t" 
-        << " Time/call: " << w.CpuTime()/(ntest)*1.E6 << " (micros)" << endl;
+        << " Time/call: " << w.CpuTime()/(ntest)*1.E6 << "   (microsec)" << endl;
    totalUnitTime += w.CpuTime()/ntest;
    totalTime += w.CpuTime();
 
@@ -102,7 +103,7 @@ template <typename T> double stressVector(unsigned int size, const char* type)
       TMath::Sort(size, vector, index, kFALSE);
    w.Stop();
    cout << "Sort() \t\t\tTotal Time: " << w.CpuTime() << "  (s)\t\t" 
-        << " Time/call: " << w.CpuTime()/(ntest)*1.E6 << " (micros)" << endl;
+        << " Time/call: " << w.CpuTime()/(ntest)*1.E6 << "   (microsec)" << endl;
    totalUnitTime += w.CpuTime()/ntest;
    totalTime += w.CpuTime();
 
@@ -111,13 +112,13 @@ template <typename T> double stressVector(unsigned int size, const char* type)
    for ( unsigned int i = 0; i < size; ++i )
       cout << vector[i] << " " << endl;
 #endif
-   ntest = 10000*NUMTEST;
+   ntest = 20000*NUMTEST;
    w.Start( kTRUE );
    for ( unsigned int i = 0; i < ntest; ++i )
       TMath::BinarySearch(size, vector, vector[ i % size ]);
    w.Stop();
    cout << "BinarySearch() \t\tTotal Time: " << w.CpuTime() << "  (s)\t\t" 
-        << " Time/call: " << w.CpuTime()/(ntest)*1.E6 << " (micros)" << endl;
+        << " Time/call: " << w.CpuTime()/(ntest)*1.E6 << "   (microsec)" << endl;
    totalUnitTime += w.CpuTime()/ntest;
    totalTime += w.CpuTime();
 
@@ -162,25 +163,26 @@ int main(int argc, char* argv[])
    unsigned int size = 100000;
    char* type = "Double_t";
       
-   if ( argc == 1 )
-   {
-      cout << "Usage: " << argv[0]
-           << " [TYPE OF ARRAY] [SIZE OF ARRAY]\n\n"
-           << "where [TYPE OF ARRAY] is one of the following:\n"
-           << "\t\"Short_t\"\n"
-           << "\t\"Int_t\"\n"
-           << "\t\"Float_t\"\n"
-           << "\t\"Long_t\"\n"
-           << "\t\"Long64_t\"\n"
-           << "\t \"Double_t\"\n"
-           << endl;
+   if ( argc > 1 ) { 
+      if (strcmp(argv[1], "-h") == 0) { 
+         cout << "Usage: " << argv[0]
+              << " [TYPE OF ARRAY] [SIZE OF ARRAY]\n\n"
+              << "where [TYPE OF ARRAY] is one of the following:\n"
+              << "\t\"Short_t\"\n"
+              << "\t\"Int_t\"\n"
+              << "\t\"Float_t\"\n"
+              << "\t\"Long_t\"\n"
+              << "\t\"Long64_t\"\n"
+              << "\t \"Double_t\"\n"
+              << endl;
+         return 1;
+      }
+      type = argv[1];
    }
+   
 
    if ( argc > 2 )
       size = (unsigned int) atoi(argv[2]);
-
-   if ( argc > 1 )
-      type = argv[1];
 
    stressTMath(size, type);
 

@@ -78,10 +78,11 @@ ALLMAPS      += $(MATHCOREMAP)
 # include all dependency files
 INCLUDEFILES += $(MATHCOREDEP)
 
+
 ##### local rules #####
 .PHONY:         all-mathcore clean-mathcore distclean-mathcore test-mathcore
 
-include/Math/%.h: $(MATHCOREDIRI)/Math/%.h
+ include/Math/%.h: $(MATHCOREDIRI)/Math/%.h
 		@(if [ ! -d "include/Math" ]; then    \
 		   mkdir -p include/Math;             \
 		fi)
@@ -140,4 +141,6 @@ test-mathcore:	all-mathcore
 
 ##### extra rules ######
 $(MATHCOREO): CXXFLAGS += -DUSE_ROOT_ERROR
-$(MATHCOREDO): CXXFLAGS += -DUSE_ROOT_ERROR
+$(MATHCOREDO): CXXFLAGS += -DUSE_ROOT_ERROR 
+# add optimization to G__Math compilation
+$(MATHCOREDO1) : NOOPT = $(OPT)
