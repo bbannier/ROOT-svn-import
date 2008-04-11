@@ -1182,16 +1182,7 @@ Int_t TProofPlayerRemote::InitPacketizer(TDSet *dset, Long64_t nentries,
 
       // Lookup - resolve the end-point urls to optmize the distribution.
       // The lookup was previously called in the packetizer's constructor.
-      // A list for the missing files may already have been added to the
-      // output list; otherwise, if needed it will be created inside
-      if ((listOfMissingFiles = (TList *)fInput->FindObject("MissingFiles"))) {
-         // Move it to the output list
-         fInput->Remove(listOfMissingFiles);
-         fOutput->Add(listOfMissingFiles);
-      } else {
-         listOfMissingFiles = new TList;
-      }
-      dset->Lookup(kTRUE, &listOfMissingFiles);
+      TList *listOfMissingFiles = dset->Lookup(kTRUE);
       if (fProof->GetRunStatus() != TProof::kRunning) {
          // We have been asked to stop
          Error("InitPacketizer", "received stop/abort request");
