@@ -721,6 +721,8 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
    fExitStatus = kFinished;
    fOutput = 0;
 
+   TCleanup clean(this);
+
    SafeDelete(fSelector);
    fSelectorClass = 0;
    Int_t version = -1;
@@ -742,9 +744,6 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
 
       fSelStatus = new TStatus;
       fOutput->Add(fSelStatus);
-
-      TCleanup clean(this);
-      SetupFeedback();
 
       fSelector->SetOption(option);
       fSelector->SetInputList(fInput);
@@ -787,6 +786,9 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
       Error("Process","exception %d caught", excode);
       return -1;
    } ENDTRY;
+
+   // Create feedback lists, if required
+   SetupFeedback();
 
    if (gMonitoringWriter)
       gMonitoringWriter->SendProcessingStatus("STARTED",kTRUE);
@@ -1178,7 +1180,6 @@ Int_t TProofPlayerRemote::InitPacketizer(TDSet *dset, Long64_t nentries,
 
    } else {
 
-
       // Lookup - resolve the end-point urls to optmize the distribution.
       // The lookup was previously called in the packetizer's constructor.
       // A list for the missing files may already have been added to the
@@ -1193,14 +1194,14 @@ Int_t TProofPlayerRemote::InitPacketizer(TDSet *dset, Long64_t nentries,
       dset->Lookup(kTRUE, &listOfMissingFiles);
       if (fProof->GetRunStatus() != TProof::kRunning) {
          // We have been asked to stop
-         Error("Process", "received stop/abort request");
+         Error("InitPacketizer", "received stop/abort request");
          fExitStatus = kAborted;
          return -1;
       }
 
       if (!(dset->GetListOfElements()) ||
             !(dset->GetListOfElements()->GetSize())) {
-	 if (gProofServ)
+         if (gProofServ)
             gProofServ->SendAsynMessage("InitPacketizer: No files from the data set were found - Aborting");
          Error("InitPacketizer", "No files from the data set were found - Aborting");
          fExitStatus = kAborted;
@@ -1213,19 +1214,19 @@ Int_t TProofPlayerRemote::InitPacketizer(TDSet *dset, Long64_t nentries,
          TIter missingFiles(listOfMissingFiles);
          TDSetElement *elem;
          while ((elem = (TDSetElement*) missingFiles.Next())) {
-           TString msg;
-           if (fi->GetCurrentUrl()) {
-              msg = Form("File not found: %s - skipping!",
-                                        fi->GetCurrentUrl()->GetUrl());
-           } else {
-              msg = Form("File not found: %s - skipping!", fi->GetName());
-           }
-	   if (gProofServ) {
-              gProofServ->SendAsynMessage(msg.Data());
-           } else {
-	      Info("InitPacketizer", msg.Data());
-	   }
-	 }
+            TString msg;
+            if (fi->GetCurrentUrl()) {
+               msg = Form("File not found: %s - skipping!",
+                                          fi->GetCurrentUrl()->GetUrl());
+            } else {
+               msg = Form("File not found: %s - skipping!", fi->GetName());
+            }
+            if (gProofServ) {
+               gProofServ->SendAsynMessage(msg.Data());
+            } else {
+               Info("InitPacketizer", msg.Data());
+            }
+         }
          // Make sure it will be sent back
          if (!GetOutput("MissingFiles")) {
             listOfMissingFiles->SetName("MissingFiles");
@@ -2487,9 +2488,13 @@ void TProofPlayerSlave::SetupFeedback()
    // Setup feedback.
 
    TList *fb = (TList*) fInput->FindObject("FeedbackList");
-
-   PDB(kFeedback,1) Info("SetupFeedback","\"FeedbackList\" %sfound",
-      fb == 0 ? "NOT ":"");
+   if (fb) {
+      PDB(kFeedback,1)
+        Info("SetupFeedback","\"FeedbackList\" found: %d objects", fb->GetSize());
+   } else {
+      PDB(kFeedback,1)
+        Info("SetupFeedback","\"FeedbackList\" NOT found");
+   }
 
    if (fb == 0 || fb->GetSize() == 0) return;
 
