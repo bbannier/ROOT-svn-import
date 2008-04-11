@@ -184,15 +184,22 @@ Int_t TProofLite::Init(const char *, const char *conffile,
    }
    fLogToWindowOnly = kFALSE;
 
+   fCacheLock = new TProofLockPath(Form("%s/%s%s", gSystem->TempDirectory(),
+                                   kPROOF_CacheLockFile,
+                                   TString(fCacheDir).ReplaceAll("/","%").Data()));
+
    // Create 'queries' locker instance and lock it
-   fQueryLock      = new TProofLockPath(Form("%s/%s%s-%s",
-                     gSystem->TempDirectory(),
-                     kPROOF_QueryLockFile, GetName(),
-                     TString(fQueryDir).ReplaceAll("/","%").Data()));
+   fQueryLock = new TProofLockPath(Form("%s/%s%s-%s", gSystem->TempDirectory(),
+                                   kPROOF_QueryLockFile, GetName(),
+                                   TString(fQueryDir).ReplaceAll("/","%").Data()));
    fQueryLock->Lock();
    // Create the query manager
    fQMgr = new TQueryResultManager(fQueryDir, GetName(), fWorkDir,
                                    fQueryLock, fLogFileW);
+
+   // Apply quotas, if any
+   if (fQMgr && fQMgr->ApplyMaxQueries(10) != 0)
+      Warning("Init", "problems applying fMaxQueries");
 
    // Status of cluster
    fIdle = kTRUE;
@@ -221,6 +228,9 @@ Int_t TProofLite::Init(const char *, const char *conffile,
    fFeedback->SetOwner();
    fFeedback->SetName("FeedbackList");
    AddInput(fFeedback);
+   // To get the number of events per worker
+   AddFeedback("PROOF_EventsHist");
+   gEnv->SetValue("Proof.StatsHist",1);
 
    // Sort workers by descending performance index
    fSlaves           = new TSortedList(kSortDescending);
@@ -553,28 +563,30 @@ Int_t TProofLite::SetProofServEnv(const char *ord)
 }
 
 //______________________________________________________________________________
-Int_t TProofLite::AssertPath(const char *path, Bool_t writable)
+Int_t TProofLite::AssertPath(const char *inpath, Bool_t writable)
 {
    // Make sure that 'path' exists; if 'writable' is kTRUE, make also sure
    // that the path is writable
 
-   if (!path || strlen(path) <= 0) {
+   if (!inpath || strlen(inpath) <= 0) {
       Error("AssertPath", "undefined input path");
       return -1;
    }
 
-   if (gSystem->AccessPathName(path)) {
+   TString path(inpath);
+   gSystem->ExpandPathName(path);
+
+   if (gSystem->AccessPathName(path, kFileExists)) {
       if (gSystem->mkdir(path, kTRUE) != 0) {
-         Error("AssertPath", "could not create path %s", path);
+         Error("AssertPath", "could not create path %s", path.Data());
          return -1;
       }
-   } else {
-      // It must be writable
-      if (gSystem->AccessPathName(path, kWritePermission) && writable) {
-         if (gSystem->Chmod(path, 0666) != 0) {
-            Error("AssertPath", "could not make path %s writable", path);
-            return -1;
-         }
+   }
+   // It must be writable
+   if (gSystem->AccessPathName(path, kWritePermission) && writable) {
+      if (gSystem->Chmod(path, 0666) != 0) {
+         Error("AssertPath", "could not make path %s writable", path.Data());
+         return -1;
       }
    }
 
@@ -807,17 +819,6 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
       fQMgr->SaveQuery(pq);
    }
 
-   // Expand selector files
-   if (pq->GetSelecImp()) {
-      gSystem->Exec(Form("%s %s", kRM, pq->GetSelecImp()->GetName()));
-      pq->GetSelecImp()->SaveSource(pq->GetSelecImp()->GetName());
-   }
-   if (pq->GetSelecHdr() &&
-         !strstr(pq->GetSelecHdr()->GetName(), "TProofDrawHist")) {
-      gSystem->Exec(Form("%s %s", kRM, pq->GetSelecHdr()->GetName()));
-      pq->GetSelecHdr()->SaveSource(pq->GetSelecHdr()->GetName());
-   }
-
    // Set in running state
    SetQueryRunning(pq);
 
@@ -919,4 +920,38 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
 
    // Done
    return rv;
+}
+
+//______________________________________________________________________________
+Int_t TProofLite::CreateSymLinks(TList *files)
+{
+   // Create in each worker sandbox symlinks to the files in the list
+   // Used to make the caceh information available to workers.
+
+   Int_t rc = 0;
+   if (files) {
+      TIter nxf(files);
+      TObjString *os = 0;
+      while ((os = (TObjString *) nxf())) {
+         // Expand target
+         TString tgt(os->GetName());
+         gSystem->ExpandPathName(tgt);
+         // Loop over active workers
+         TIter nxw(fActiveSlaves);
+         TSlave *wrk = 0;
+         while ((wrk = (TSlave *) nxw())) {
+            // Link name
+            TString lnk = Form("%s/%s", wrk->GetWorkDir(), gSystem->BaseName(os->GetName()));
+            gSystem->Unlink(lnk);
+            if (gSystem->Symlink(tgt, lnk) != 0) {
+               rc++;
+               Warning("CreateSymLinks", "problems creating sym link: %s", lnk.Data());
+            }
+         }
+      }
+   } else {
+      Warning("CreateSymLinks", "files list is undefined");
+   }
+   // Done
+   return rc;
 }

@@ -37,6 +37,8 @@ class TProofQueryResult;
 
 class TProofLite : public TProof {
 
+friend class TProofPlayerLite;
+
 private:
    Int_t    fNWorkers;    // Number of workers
    TString  fCacheDir;    // Directory containing cache of user files
@@ -44,6 +46,7 @@ private:
    TString  fDataSetDir;  // Directory containing info about known data sets
    TString  fSockPath;    // UNIX socket path for communication with workers
 
+   TProofLockPath *fCacheLock; //cache dir locker
    TProofLockPath *fQueryLock; // Query dir locker
    TQueryResultManager *fQMgr; // Query-result manager
 
@@ -57,6 +60,8 @@ private:
 
 protected:
    TProofLite() : TProof() { } // For derived classes to use
+
+   Int_t  CreateSymLinks(TList *files);
    TList *GetDataSet(const char *name);
    Int_t Init(const char *masterurl, const char *conffile,
                const char *confdir, Int_t loglevel,
@@ -81,8 +86,7 @@ public:
                     Long64_t nent = -1, Long64_t fst = 0)
                     { return TProof::Process(fc, sel, o, nent, fst); }
    Long64_t Process(const char *dsname, const char *sel, Option_t *o = "",
-                    Long64_t nent = -1, 
-Long64_t fst = 0, TObject *enl = 0)
+                    Long64_t nent = -1, Long64_t fst = 0, TObject *enl = 0)
                     { return TProof::Process(dsname, sel, o, nent, fst, enl); }
    Long64_t Process(const char *sel, Long64_t nent, Option_t *o = "")
                     { return TProof::Process(sel, nent, o); }

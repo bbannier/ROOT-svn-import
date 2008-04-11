@@ -1,4 +1,4 @@
-// @(#)root/proofplayer:$Id:$
+// @(#)root/proofplayer:$Id$
 // Author: G. Ganis Mar 2008
 
 /*************************************************************************
@@ -32,6 +32,9 @@ class TProofPlayerLite : public TProofPlayerRemote {
 protected:
    Bool_t  HandleTimer(TTimer *timer);
 
+   Int_t   MakeSelector(const char *selfile);
+   void    SetupFeedback();
+
 public:
    TProofPlayerLite(TProof *proof = 0) : TProofPlayerRemote(proof) { }
 
@@ -41,7 +44,10 @@ public:
                           Option_t *option = "", Long64_t nentries = -1,
                           Long64_t firstentry = 0);
    Long64_t       Finalize(Bool_t force = kFALSE, Bool_t sync = kFALSE);
-   Long64_t Finalize(TQueryResult *qr) { return TProofPlayerRemote::Finalize(qr); }
+   Long64_t       Finalize(TQueryResult *qr)
+                            { return TProofPlayerRemote::Finalize(qr); }
+
+   void           StoreFeedback(TObject *slave, TList *out); // Adopts the list
 
    ClassDef(TProofPlayerLite,0)  // PROOF player running in PROOF-Lite
 };
