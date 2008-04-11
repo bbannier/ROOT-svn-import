@@ -141,6 +141,7 @@ TPerfStats::TPerfStats(TList *input, TList *output)
 
    if ((isMaster && (fDoTrace || fDoTraceRate)) || (!isMaster && fDoSlaveTrace)) {
       // Construct tree
+      gDirectory->RecursiveRemove(gDirectory->FindObject("PROOF_PerfStats"));
       fTrace = new TTree("PROOF_PerfStats", "PROOF Statistics");
       fTrace->SetDirectory(0);
       fTrace->Bronch("PerfEvents", "TPerfEvent", &fPerfEvent, 64000, 0);
@@ -153,12 +154,14 @@ TPerfStats::TPerfStats(TList *input, TList *output)
       Double_t min_time = 0;
       Int_t ntime_bins = 1000;
 
+      gDirectory->RecursiveRemove(gDirectory->FindObject("PROOF_PacketsHist"));
       fPacketsHist = new TH1D("PROOF_PacketsHist", "Packets processed per Worker",
                               fSlaves, 0, fSlaves);
       fPacketsHist->SetDirectory(0);
       fPacketsHist->SetMinimum(0);
       output->Add(fPacketsHist);
 
+      gDirectory->RecursiveRemove(gDirectory->FindObject("PROOF_EventsHist"));
       fEventsHist = new TH1D("PROOF_EventsHist", "Events processed per Worker",
                              fSlaves, 0, fSlaves);
       fEventsHist->SetFillColor(kGreen);
@@ -166,6 +169,7 @@ TPerfStats::TPerfStats(TList *input, TList *output)
       fEventsHist->SetMinimum(0);
       output->Add(fEventsHist);
 
+      gDirectory->RecursiveRemove(gDirectory->FindObject("PROOF_NodeHist"));
       fNodeHist = new TH1D("PROOF_NodeHist", "Slaves per Fileserving Node",
                            fSlaves, 0, fSlaves);
       fNodeHist->SetDirectory(0);
@@ -173,6 +177,7 @@ TPerfStats::TPerfStats(TList *input, TList *output)
       fNodeHist->SetBit(TH1::kCanRebin);
       output->Add(fNodeHist);
 
+      gDirectory->RecursiveRemove(gDirectory->FindObject("PROOF_LatencyHist"));
       fLatencyHist = new TH2D("PROOF_LatencyHist", "GetPacket Latency per Worker",
                               fSlaves, 0, fSlaves,
                               ntime_bins, min_time, time_per_bin);
@@ -181,6 +186,7 @@ TPerfStats::TPerfStats(TList *input, TList *output)
       fLatencyHist->SetBit(TH1::kCanRebin);
       output->Add(fLatencyHist);
 
+      gDirectory->RecursiveRemove(gDirectory->FindObject("PROOF_ProcTimeHist"));
       fProcTimeHist = new TH2D("PROOF_ProcTimeHist", "Packet Processing Time per Worker",
                                fSlaves, 0, fSlaves,
                                ntime_bins, min_time, time_per_bin);
@@ -189,6 +195,7 @@ TPerfStats::TPerfStats(TList *input, TList *output)
       fProcTimeHist->SetBit(TH1::kCanRebin);
       output->Add(fProcTimeHist);
 
+      gDirectory->RecursiveRemove(gDirectory->FindObject("PROOF_CpuTimeHist"));
       fCpuTimeHist = new TH2D("PROOF_CpuTimeHist", "Packet CPU Time per Worker",
                               fSlaves, 0, fSlaves,
                               ntime_bins, min_time, time_per_bin);
@@ -203,6 +210,7 @@ TPerfStats::TPerfStats(TList *input, TList *output)
          if (si->fStatus == TSlaveInfo::kActive) {
             fPacketsHist->GetXaxis()->SetBinLabel(slavebin, si->GetOrdinal());
             fEventsHist->GetXaxis()->SetBinLabel(slavebin, si->GetOrdinal());
+            fNodeHist->GetXaxis()->SetBinLabel(slavebin, si->GetOrdinal());
             fLatencyHist->GetXaxis()->SetBinLabel(slavebin, si->GetOrdinal());
             fProcTimeHist->GetXaxis()->SetBinLabel(slavebin, si->GetOrdinal());
             fCpuTimeHist->GetXaxis()->SetBinLabel(slavebin, si->GetOrdinal());
