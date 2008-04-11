@@ -31,6 +31,7 @@
 class TDSet;
 class TList;
 class TQueryResultManager;
+class TProofDataSetManager;
 class TProofLockPath;
 class TProofMgr;
 class TProofQueryResult;
@@ -50,13 +51,17 @@ private:
    TProofLockPath *fQueryLock; // Query dir locker
    TQueryResultManager *fQMgr; // Query-result manager
 
+   TProofDataSetManager* fDataSetManager; // dataset manager
+
    TProofLite(const TProofLite &);        // not implemented
    void operator=(const TProofLite &);   // idem
 
    Int_t AssertPath(const char *path, Bool_t writable);
+   Int_t CleanupSandbox();
    Int_t CreateSandbox();
    void  NotifyStartUp(const char *action, Int_t done, Int_t tot);
    Int_t SetProofServEnv(const char *ord);
+   Int_t InitDataSetManager();
 
 protected:
    TProofLite() : TProof() { } // For derived classes to use
@@ -90,6 +95,10 @@ public:
                     { return TProof::Process(dsname, sel, o, nent, fst, enl); }
    Long64_t Process(const char *sel, Long64_t nent, Option_t *o = "")
                     { return TProof::Process(sel, nent, o); }
+
+   // Cache management
+   void ShowCache(Bool_t all = kFALSE);
+   void ClearCache();
 
    ClassDef(TProofLite,0)  //PROOF control class
 };

@@ -614,8 +614,8 @@ public:
    virtual void Print(Option_t *option="") const;
 
    //-- cache and package management
-   void        ShowCache(Bool_t all = kFALSE);
-   void        ClearCache();
+   virtual void ShowCache(Bool_t all = kFALSE);
+   virtual void ClearCache();
    TList      *GetListOfPackages();
    TList      *GetListOfEnabledPackages();
    void        ShowPackages(Bool_t all = kFALSE);

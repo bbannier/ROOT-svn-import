@@ -26,11 +26,14 @@
 #include "TEnv.h"
 #include "TError.h"
 #include "TFile.h"
+#include "TFileCollection.h"
+#include "TFileInfo.h"
 #include "THashList.h"
 #include "TMessage.h"
 #include "TMonitor.h"
 #include "TObjString.h"
 #include "TPluginManager.h"
+#include "TProofDataSetManager.h"
 #include "TProofQueryResult.h"
 #include "TProofServ.h"
 #include "TQueryResultManager.h"
@@ -161,6 +164,8 @@ Int_t TProofLite::Init(const char *, const char *conffile,
    fImage          = "<local>";
    fIntHandler     = 0;
    fStatus         = 0;
+   fRecvMessages   = new TList;
+   fRecvMessages->SetOwner(kTRUE);
    fSlaveInfo      = 0;
    fChains         = new TList;
    fAvailablePackages = 0;
@@ -200,6 +205,9 @@ Int_t TProofLite::Init(const char *, const char *conffile,
    // Apply quotas, if any
    if (fQMgr && fQMgr->ApplyMaxQueries(10) != 0)
       Warning("Init", "problems applying fMaxQueries");
+
+   if (InitDataSetManager() != 0)
+      Warning("Init", "problems initializing the dataset manager");
 
    // Status of cluster
    fIdle = kTRUE;
@@ -506,6 +514,14 @@ Int_t TProofLite::SetProofServEnv(const char *ord)
    fprintf(frc,"# Users sandbox\n");
    fprintf(frc, "ProofServ.Sandbox: %s\n", sandbox.Data());
 
+   // Cache dir
+   fprintf(frc,"# Users cache\n");
+   fprintf(frc, "ProofServ.CacheDir: %s\n", fCacheDir.Data());
+
+   // Package dir
+   fprintf(frc,"# Users packages\n");
+   fprintf(frc, "ProofServ.PackageDir: %s\n", fPackageDir.Data());
+
    // Image
    fprintf(frc,"# Server image\n");
    fprintf(frc, "ProofServ.Image: %s\n", fImage.Data());
@@ -606,6 +622,7 @@ Int_t TProofLite::CreateSandbox()
       sandbox = Form("~/%s", kPROOF_WorkDir);
       needsymlink = kTRUE;
    }
+   gSystem->ExpandPathName(sandbox);
    if (AssertPath(sandbox, kTRUE) != 0) return -1;
 
    // Package Dir
@@ -644,6 +661,9 @@ Int_t TProofLite::CreateSandbox()
    if (fQueryDir.IsNull())
       fQueryDir = Form("%s/%s/%s", gSystem->WorkingDirectory(), kPROOF_WorkDir, kPROOF_QueryDir);
    if (AssertPath(fQueryDir, kTRUE) != 0) return -1;
+
+   // CLeanup old sessions dirs
+   CleanupSandbox();
 
    // Done
    return 0;
@@ -795,18 +815,73 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
    // If just a name was given to identify the dataset, retrieve it from the
    // local files
    if ((!hasNoData) && dset->GetListOfElements()->GetSize() == 0) {
-      TList *files = GetDataSet(dset->GetName());
-      if (!files) {
-         Error("Process", "no such dataset: %s", dset->GetName());
+
+      TList *input = fPlayer->GetInputList();
+      TFileCollection* dataset = 0;
+      TString dsTree, lookupopt;
+      TString dsname(dset->GetName());
+      // The dataset maybe in the form of a TFileCollection in the input list
+      if (dsname.BeginsWith("TFileCollection:")) {
+         // Isolate the real name
+         dsname.ReplaceAll("TFileCollection:", "");
+         // Get the object
+         dataset = (TFileCollection *) input->FindObject(dset->GetName());
+         if (!dataset) {
+            Error("Process", "TFileCollection %s not found in input list",
+                             dset->GetName());
+            return -1;
+         }
+         dsTree = dataset->GetDefaultTreeName();
+         // Make sure we lookup everything (unless the client or the administartor
+         // required something else)
+         if (TProof::GetParameter(input, "PROOF_LookupOpt", lookupopt) != 0) {
+            lookupopt = gEnv->GetValue("Proof.LookupOpt", "all");
+            input->Add(new TNamed("PROOF_LookupOpt", lookupopt.Data()));
+         }
+      }
+
+      // The received message included an empty dataset, with only the name
+      // defined: assume that a dataset, stored on the PROOF master by that
+      // name, should be processed.
+      if (!dataset && fDataSetManager) {
+         dataset = fDataSetManager->GetDataSet(dset->GetName());
+         if (!dataset) {
+            Error("Process", "no such dataset on the master: %s", dset->GetName());
+            return -1;
+         }
+         if (!(fDataSetManager->ParseDataSetUri(dset->GetName(), 0, 0, 0, &dsTree)))
+            dsTree = "";
+         // Apply the lookup option requested by the client or the administartor
+         // (by default we trust the information in the dataset)
+         if (TProof::GetParameter(input, "PROOF_LookupOpt", lookupopt) != 0) {
+            lookupopt = gEnv->GetValue("Proof.LookupOpt", "stageOnly");
+            input->Add(new TNamed("PROOF_LookupOpt", lookupopt.Data()));
+         }
+      } else {
+         Error("Process", "no dataset manager: cannot proceed");
          return -1;
       }
-      files->SetOwner();
-      if (!dset->Add(files)) {
-         Error("Process", "Error retrieving dataset %s", dset->GetName());
-         delete files;
-         return -1;
+
+      // Transfer the list now
+      if (dataset) {
+         TList *missingFiles = new TList;
+         TSeqCollection* files = dataset->GetList();
+         Bool_t availableOnly = (lookupopt != "all") ? kTRUE : kFALSE;
+         if (!dset->Add(files, dsTree, availableOnly, missingFiles)) {
+            Error("Process", "error retrieving dataset %s", dset->GetName());
+            delete dataset;
+            return -1;
+         }
+         delete dataset;
+
+         // Make sure it will be sent back merged with other similar lists created
+         // during processing; this list will be transferred by the player to the
+         // output list, once the latter has been created (see TProofPlayerRemote::Process)
+         if (missingFiles && missingFiles->GetSize() > 0) {
+            missingFiles->SetName("MissingFiles");
+            input->Add(missingFiles);
+         }
       }
-      delete files;
    }
 
    // Create instance of query results
@@ -954,4 +1029,145 @@ Int_t TProofLite::CreateSymLinks(TList *files)
    }
    // Done
    return rc;
+}
+
+//______________________________________________________________________________
+Int_t TProofLite::InitDataSetManager()
+{
+   // Initialize the dataset manager from directives or from defaults
+   // Return 0 on success, -1 on failure
+
+   fDataSetManager = 0;
+
+   // Default user and group
+   TString user("???"), group("default");
+   UserGroup_t *pw = gSystem->GetUserInfo();
+   if (pw) {
+      user = pw->fUser;
+      delete pw;
+   }
+
+   // Dataset manager instance via plug-in
+   TPluginHandler *h = 0;
+   TString dsm = gEnv->GetValue("Proof.DataSetManager", "");
+   if (!dsm.IsNull()) {
+      // Get plugin manager to load the appropriate TProofDataSetManager
+      if (gROOT->GetPluginManager()) {
+         // Find the appropriate handler
+         h = gROOT->GetPluginManager()->FindHandler("TProofDataSetManager", dsm);
+         if (h && h->LoadPlugin() != -1) {
+            // make instance of the dataset manager
+            fDataSetManager =
+               reinterpret_cast<TProofDataSetManager*>(h->ExecPlugin(3, group.Data(),
+                                                         user.Data(), dsm.Data()));
+         }
+      }
+   }
+   if (fDataSetManager && fDataSetManager->TestBit(TObject::kInvalidObject)) {
+      Warning("InitDataSetManager", "dataset manager plug-in initialization failed");
+      SafeDelete(fDataSetManager);
+   }
+
+   // If no valid dataset manager has been created we instantiate the default one
+   if (!fDataSetManager) {
+      TString opts("As:");
+      TString dsetdir = gEnv->GetValue("ProofServ.DataSetDir", "");
+      if (dsetdir.IsNull()) {
+         // Use the default in the sandbox
+         dsetdir = Form("%s/%s", fWorkDir.Data(), kPROOF_DataSetDir);
+         if (gSystem->AccessPathName(fDataSetDir))
+            gSystem->MakeDirectory(fDataSetDir);
+         opts += "Sb:";
+      }
+      // Find the appropriate handler
+      if (!h) {
+         h = gROOT->GetPluginManager()->FindHandler("TProofDataSetManager", "file");
+         if (h && h->LoadPlugin() == -1) h = 0;
+      }
+      if (h) {
+         // make instance of the dataset manager
+         fDataSetManager = reinterpret_cast<TProofDataSetManager*>(h->ExecPlugin(3,
+                           group.Data(), user.Data(),
+                           Form("dir:%s opt:%s", dsetdir.Data(), opts.Data())));
+      }
+      if (fDataSetManager && fDataSetManager->TestBit(TObject::kInvalidObject)) {
+         Warning("InitDataSetManager", "default dataset manager plug-in initialization failed");
+         SafeDelete(fDataSetManager);
+      }
+   }
+
+   // Done
+   return (fDataSetManager ? 0 : -1);
+}
+
+//______________________________________________________________________________
+void TProofLite::ShowCache(Bool_t)
+{
+   // List contents of file cache. If all is true show all caches also on
+   // slaves. If everything is ok all caches are to be the same.
+
+   if (!IsValid()) return;
+
+   Printf("*** Local file cache %s ***", fCacheDir.Data());
+   gSystem->Exec(Form("%s %s", kLS, fCacheDir.Data()));
+}
+
+//______________________________________________________________________________
+void TProofLite::ClearCache()
+{
+    // Remove files from all file caches.
+
+   if (!IsValid()) return;
+
+   fCacheLock->Lock();
+   gSystem->Exec(Form("%s %s/*", kRM, fCacheDir.Data()));
+   fCacheLock->Unlock();
+}
+
+//______________________________________________________________________________
+Int_t TProofLite::CleanupSandbox()
+{
+   // Remove old sessions dirs keep at most 'Proof.MaxOldSessions' (default 10)
+
+   Int_t maxold = gEnv->GetValue("Proof.MaxOldSessions", 10);
+
+   if (maxold < 0) return 0;
+
+   TSortedList *olddirs = new TSortedList(kFALSE);
+
+   TString sandbox = gSystem->DirName(fWorkDir.Data());
+
+   void *dirp = gSystem->OpenDirectory(sandbox);
+   if (dirp) {
+      const char *e = 0;
+      while ((e = gSystem->GetDirEntry(dirp))) {
+         if (!strncmp(e, "session-", 8) && !strstr(e, GetName())) {
+            TString d(e);
+            Int_t i = d.Last('-');
+            if (i != kNPOS) d.Remove(i);
+            i = d.Last('-');
+            if (i != kNPOS) d.Remove(0,i+1);
+            TString path = Form("%s/%s", sandbox.Data(), e);
+            olddirs->Add(new TNamed(d, path));
+         }
+      }
+      gSystem->FreeDirectory(dirp);
+   }
+
+   // Clean it up, if required
+   Bool_t notify = kTRUE;
+   while (olddirs->GetSize() > maxold) {
+      if (notify && gDebug > 0)
+         Printf("Cleaning sandbox at: %s", sandbox.Data());
+      notify = kFALSE;
+      TNamed *n = (TNamed *) olddirs->Last();
+      if (n) {
+         gSystem->Exec(Form("%s %s/*", kRM, n->GetTitle()));
+         olddirs->Remove(n);
+         delete n;
+      }
+   }
+
+   // Done
+   return 0;
 }
