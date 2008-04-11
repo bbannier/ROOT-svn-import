@@ -1305,7 +1305,7 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
       }
 
       // Record the list of missing or invalid elements in the output list
-      if (listOfMissingFiles) {
+      if (listOfMissingFiles && listOfMissingFiles->GetSize() > 0) {
          TIter missingFiles(listOfMissingFiles);
          TFileInfo *fi = 0;
          while ((fi = (TFileInfo *) missingFiles.Next())) {
@@ -1329,6 +1329,9 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
             AddOutputObject(tmpStatus);
          }
          tmpStatus->Add("Some files were missing; check 'missingFiles' list");
+      } else if (listOfMissingFiles && listOfMissingFiles->GetSize() == 0) {
+         delete listOfMissingFiles;
+         listOfMissingFiles = 0;
       }
       // reset start, this is now managed by the packetizer
       first = 0;
