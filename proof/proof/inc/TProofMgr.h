@@ -67,6 +67,7 @@ public:
    TProofMgr(const char *url, Int_t loglevel = -1, const char *alias = "");
    virtual ~TProofMgr();
 
+   virtual Bool_t      IsLite() const { return (fServType == kProofLite); }
    virtual Bool_t      IsProofd() const { return (fServType == kProofd); }
    virtual Bool_t      IsValid() const { return kTRUE; }
 

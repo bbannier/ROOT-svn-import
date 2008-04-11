@@ -26,6 +26,7 @@
 #pragma link C++ class TDSetElement-;
 #pragma link C++ class TProofChain+;
 #pragma link C++ class TProofMgr;
+#pragma link C++ class TProofMgrLite;
 #pragma link C++ class TProofDesc;
 #pragma link C++ class TProof;
 #pragma link C++ class TProofCondor;

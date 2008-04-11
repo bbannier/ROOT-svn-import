@@ -7297,16 +7297,14 @@ TProof *TProof::Open(const char *cluster, const char *conffile,
       }
 
       // Find out if we are required to attach to a specific session
-      TString o(u.GetOptions());
       Int_t locid = -1;
       Bool_t create = kFALSE;
-      if (o.Length() > 0) {
-         if (o.BeginsWith("N",TString::kIgnoreCase)) {
+      if (opts.Length() > 0) {
+         if (opts.BeginsWith("N",TString::kIgnoreCase)) {
             create = kTRUE;
-         } else if (o.IsDigit()) {
-            locid = o.Atoi();
+         } else if (opts.IsDigit()) {
+            locid = opts.Atoi();
          }
-         u.SetOptions("");
       }
 
       // Attach-to or create the appropriate manager
@@ -7317,7 +7315,7 @@ TProof *TProof::Open(const char *cluster, const char *conffile,
 
          // If XProofd we always attempt an attach first (unless
          // explicitely not requested).
-         Bool_t attach = (create || mgr->IsProofd()) ? kFALSE : kTRUE;
+         Bool_t attach = (create || mgr->IsProofd() || mgr->IsLite()) ? kFALSE : kTRUE;
          if (attach) {
             TProofDesc *d = 0;
             if (locid < 0)
