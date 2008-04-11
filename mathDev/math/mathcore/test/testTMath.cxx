@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <string>
 
 #include <TMath.h>
 
@@ -26,10 +27,11 @@ void testNormCross()
       type = typeid(T).name();
 
    TMath::NormCross(fv1,fv2,fout);
+
    cout << "NormCross(const " << type << " v1[3],const " 
-        << type << " v2[3]," << type << " out[3]): out = [" 
-        << fout[0] << ", " << fout[1] << ", " << fout[2] << "]"
-        << endl;
+	<< type << " v2[3]," << type << " out[3]): out = [" 
+	<< fout[0] << ", " << fout[1] << ", " << fout[2] << "]"
+	<< endl;
 }
 
 
