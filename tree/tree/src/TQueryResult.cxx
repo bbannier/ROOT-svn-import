@@ -405,9 +405,10 @@ void TQueryResult::SetInputList(TList *in, Bool_t adopt)
    // The flag 'adopt' determines whether the list is adopted (default)
    // or cloned.
 
-   SafeDelete(fInputList);
+   if (!in || in != fInputList)
+      SafeDelete(fInputList);
 
-   if (in) {
+   if (in && in != fInputList) {
       if (!adopt) {
          fInputList = (TList *) (in->Clone());
          fInputList->SetOwner();
@@ -430,9 +431,10 @@ void TQueryResult::SetOutputList(TList *out, Bool_t adopt)
    // or cloned. The internal fOutputList will always be owner of its
    // objects.
 
-   SafeDelete(fOutputList);
+   if (!out || out != fOutputList)
+      SafeDelete(fOutputList);
 
-   if (out) {
+   if (out && out != fOutputList) {
       if (!adopt) {
          fOutputList = (TList *) (out->Clone());
          fOutputList->SetOwner();

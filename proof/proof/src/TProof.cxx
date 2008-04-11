@@ -2140,7 +2140,7 @@ Int_t TProof::CollectInputFrom(TSocket *s)
                   // Remove the object if it has been merged
                   SafeDelete(obj);
 
-               if (type > 1 && TestBit(TProof::kIsClient)) {
+               if (type > 1 && !TestBit(TProof::kIsMaster)) {
                   TQueryResult *pq = fPlayer->GetCurrentQuery();
                   pq->SetOutputList(fPlayer->GetOutputList(), kFALSE);
                   pq->SetInputList(fPlayer->GetInputList(), kFALSE);
@@ -2459,7 +2459,7 @@ Int_t TProof::CollectInputFrom(TSocket *s)
             } else if (TestBit(TProof::kIsMaster)) {
                fPlayer->StopProcess(kTRUE);
             }
-            if (TestBit(TProof::kIsClient))
+            if (!TestBit(TProof::kIsMaster))
                Emit("StopProcess(Bool_t)", abort);
             break;
          }
@@ -2597,9 +2597,9 @@ void TProof::UpdateDialog()
    // Handle abort ...
    if (fPlayer->GetExitStatus() == TVirtualProofPlayer::kAborted) {
       if (fSync)
-         Info("CollectInputFrom",
-               "processing was aborted - %lld events processed",
-               fPlayer->GetEventsProcessed());
+         Info("UpdateDialog",
+              "processing was aborted - %lld events processed",
+              fPlayer->GetEventsProcessed());
 
       if (GetRemoteProtocol() > 11) {
          // New format
@@ -2613,9 +2613,9 @@ void TProof::UpdateDialog()
    // Handle stop ...
    if (fPlayer->GetExitStatus() == TVirtualProofPlayer::kStopped) {
       if (fSync)
-         Info("CollectInputFrom",
-               "processing was stopped - %lld events processed",
-               fPlayer->GetEventsProcessed());
+         Info("UpdateDialog",
+              "processing was stopped - %lld events processed",
+              fPlayer->GetEventsProcessed());
 
       if (GetRemoteProtocol() > 11) {
          // New format
@@ -3498,7 +3498,7 @@ void TProof::RecvLogFile(TSocket *s, Int_t size)
    }
 
    // If idle restore logs to main session window
-   if (fRedirLog && IsIdle())
+   if (fRedirLog && IsIdle() && !TestBit(TProof::kIsMaster))
       fRedirLog = kFALSE;
 }
 
@@ -7183,7 +7183,7 @@ void TProof::ModifyWorkerLists(const char *ord, Bool_t add)
 
 //_____________________________________________________________________________
 TProof *TProof::Open(const char *cluster, const char *conffile,
-                                   const char *confdir, Int_t loglevel)
+                                          const char *confdir, Int_t loglevel)
 {
    // Start a PROOF session on a specific cluster. If cluster is 0 (the
    // default) then the PROOF Session Viewer GUI pops up and 0 is returned.

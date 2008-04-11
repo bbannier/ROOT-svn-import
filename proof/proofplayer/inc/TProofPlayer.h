@@ -256,7 +256,7 @@ public:
 
    void           StopProcess(Bool_t abort, Int_t timeout = -1);
    void           StoreOutput(TList *out);   // Adopts the list
-   void           StoreFeedback(TObject *slave, TList *out); // Adopts the list
+   virtual void   StoreFeedback(TObject *slave, TList *out); // Adopts the list
    Int_t          Incorporate(TObject *obj, TList *out, Bool_t &merged);
    Int_t          AddOutputObject(TObject *obj);
    void           AddOutput(TList *out);   // Incorporate a list
