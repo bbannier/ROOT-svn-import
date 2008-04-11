@@ -897,7 +897,7 @@ void TProofServ::HandleSocketInput()
          if (IsParallel()) {
             fProof->SendCommand(str);
          } else {
-//            PDB(kGlobal, 1)
+            PDB(kGlobal, 1)
                Info("HandleSocketInput:kMESS_CINT", "processing: %s...", str);
             ProcessLine(str);
          }
