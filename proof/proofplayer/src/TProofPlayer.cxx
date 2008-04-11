@@ -1217,7 +1217,6 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
          if ((listOfMissingFiles = (TList *)fInput->FindObject("MissingFiles"))) {
             // Move it to the output list
             fInput->Remove(listOfMissingFiles);
-            fOutput->Add(listOfMissingFiles);
          } else {
             listOfMissingFiles = new TList;
          }
@@ -1329,9 +1328,9 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
             AddOutputObject(tmpStatus);
          }
          tmpStatus->Add("Some files were missing; check 'missingFiles' list");
-      } else if (listOfMissingFiles && listOfMissingFiles->GetSize() == 0) {
-         delete listOfMissingFiles;
-         listOfMissingFiles = 0;
+      } else {
+         // Cleanup
+         SafeDelete(listOfMissingFiles);
       }
       // reset start, this is now managed by the packetizer
       first = 0;
