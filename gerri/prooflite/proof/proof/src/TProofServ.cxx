@@ -897,7 +897,7 @@ void TProofServ::HandleSocketInput()
          if (IsParallel()) {
             fProof->SendCommand(str);
          } else {
-            PDB(kGlobal, 1)
+//            PDB(kGlobal, 1)
                Info("HandleSocketInput:kMESS_CINT", "processing: %s...", str);
             ProcessLine(str);
          }
@@ -1788,10 +1788,6 @@ void TProofServ::SendLogFile(Int_t status, Int_t start, Int_t end)
 
    // Determine the number of bytes left to be read from the log file.
    fflush(stdout);
-
-   // Do not send logs to master
-   if (!IsMaster())
-      FlushLogFile();
 
    off_t ltot=0, lnow=0;
    Int_t left = -1;
