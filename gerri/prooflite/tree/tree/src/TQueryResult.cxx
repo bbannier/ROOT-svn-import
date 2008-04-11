@@ -245,7 +245,7 @@ void TQueryResult::RecordEnd(EQueryStatus status, TList *outlist)
    fStatus = (status < kAborted || status > kCompleted) ? kAborted : status;
 
    // Clone the results
-   if (outlist) {
+   if (outlist && fOutputList != outlist) {
       if (fOutputList) {
          fOutputList->Delete();
          SafeDelete(fOutputList);

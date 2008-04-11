@@ -145,13 +145,6 @@ private:
    Int_t         GetPriority();
 
    // Query handlers
-<<<<<<< .working
-=======
-   void          AddLogFile(TProofQueryResult *pq);
-   Int_t         ApplyMaxQueries();
-   Int_t         CleanupQueriesDir();
-   void          FinalizeQuery(TProofQueryResult *pq);
->>>>>>> .merge-right.r23091
    TProofQueryResult *MakeQueryResult(Long64_t nentries, const char *opt,
                                       TList *inl, Long64_t first, TDSet *dset,
                                       const char *selec, TObject *elist);
@@ -160,11 +153,7 @@ private:
 protected:
    virtual void  HandleArchive(TMessage *mess);
    virtual Int_t HandleCache(TMessage *mess);
-<<<<<<< .working
-=======
    virtual void  HandleCheckFile(TMessage *mess);
-   virtual Int_t HandleDataSets(TMessage *mess);
->>>>>>> .merge-right.r23091
    virtual Int_t HandleDataSets(TMessage *mess);
    virtual void  HandleLibIncPath(TMessage *mess);
    virtual void  HandleProcess(TMessage *mess);
