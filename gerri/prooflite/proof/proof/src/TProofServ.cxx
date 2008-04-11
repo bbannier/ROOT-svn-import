@@ -2156,8 +2156,8 @@ Int_t TProofServ::SetupCommon()
    }
 
    // check and make sure "cache" directory exists
-   fCacheDir = fWorkDir;
-   fCacheDir += TString("/") + kPROOF_CacheDir;
+   fCacheDir = gEnv->GetValue("ProofServ.CacheDir",
+                               Form("%s/%s", fWorkDir.Data(), kPROOF_CacheDir));
    if (gSystem->AccessPathName(fCacheDir))
       gSystem->MakeDirectory(fCacheDir);
    if (gProofDebugLevel > 0)
@@ -2168,8 +2168,8 @@ Int_t TProofServ::SetupCommon()
                          TString(fCacheDir).ReplaceAll("/","%").Data()));
 
    // check and make sure "packages" directory exists
-   fPackageDir = fWorkDir;
-   fPackageDir += TString("/") + kPROOF_PackDir;
+   fPackageDir = gEnv->GetValue("ProofServ.PackageDir",
+                                 Form("%s/%s", fWorkDir.Data(), kPROOF_WorkDir));
    if (gSystem->AccessPathName(fPackageDir))
       gSystem->MakeDirectory(fPackageDir);
    if (gProofDebugLevel > 0)

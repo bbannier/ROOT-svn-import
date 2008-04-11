@@ -4274,6 +4274,9 @@ void TProof::ShowPackages(Bool_t all)
       gSystem->Exec(Form("%s %s", kLS, fPackageDir.Data()));
    }
 
+   // Nothing more to do if we are a Lite-session
+   if (IsLite()) return;
+
    TMessage mess(kPROOF_CACHE);
    mess << Int_t(kShowPackages) << all;
    Broadcast(mess, kUnique);
@@ -4304,6 +4307,9 @@ void TProof::ShowEnabledPackages(Bool_t all)
       while (TObjString *str = (TObjString*) next())
          printf("%s\n", str->GetName());
    }
+
+   // Nothing more to do if we are a Lite-session
+   if (IsLite()) return;
 
    TMessage mess(kPROOF_CACHE);
    mess << Int_t(kShowEnabledPackages) << all;
@@ -4378,6 +4384,9 @@ Int_t TProof::DisablePackage(const char *package)
    if (DisablePackageOnClient(pac) == -1)
       return -1;
 
+   // Nothing more to do if we are a Lite-session
+   if (IsLite()) return 0;
+
    TMessage mess(kPROOF_CACHE);
    mess << Int_t(kDisablePackage) << pac;
    Broadcast(mess, kUnique);
@@ -4403,9 +4412,12 @@ Int_t TProof::DisablePackageOnClient(const char *package)
       gSystem->Exec(Form("%s %s/%s", kRM, fPackageDir.Data(), package));
       gSystem->Exec(Form("%s %s/%s.par", kRM, fPackageDir.Data(), package));
       fPackageLock->Unlock();
+      if (gSystem->AccessPathName(Form("%s/%s.par", fPackageDir.Data(), package))
+          && gSystem->AccessPathName(Form("%s/%s", fPackageDir.Data(), package)))
+         return 0;
    }
 
-   return 0;
+   return -1;
 }
 
 //______________________________________________________________________________
@@ -4422,6 +4434,9 @@ Int_t TProof::DisablePackages()
       gSystem->Exec(Form("%s %s/*", kRM, fPackageDir.Data()));
       fPackageLock->Unlock();
    }
+
+   // Nothing more to do if we are a Lite-session
+   if (IsLite()) return 0;
 
    TMessage mess(kPROOF_CACHE);
    mess << Int_t(kDisablePackages);
@@ -4467,7 +4482,7 @@ Int_t TProof::BuildPackage(const char *package, EBuildPackageOpt opt)
       opt = kBuildAll;
    }
 
-   if (opt <= kBuildAll) {
+   if (opt <= kBuildAll && !IsLite()) {
       TMessage mess(kPROOF_CACHE);
       mess << Int_t(kBuildPackage) << pac;
       Broadcast(mess, kUnique);
@@ -4484,7 +4499,9 @@ Int_t TProof::BuildPackage(const char *package, EBuildPackageOpt opt)
       if (buildOnClient)
          st = BuildPackageOnClient(pac);
 
-      Collect(kAllUnique);
+      fStatus = 0;
+      if (!IsLite())
+         Collect(kAllUnique);
 
       if (fStatus < 0 || st < 0)
          return -1;
@@ -4644,6 +4661,9 @@ Int_t TProof::LoadPackage(const char *package, Bool_t notOnClient)
       if (LoadPackageOnClient(pac) == -1)
          return -1;
 
+   // Nothing more to do if we are a Lite-session
+   if (IsLite()) return 0;
+
    TMessage mess(kPROOF_CACHE);
    mess << Int_t(kLoadPackage) << pac;
    Broadcast(mess);
@@ -4776,6 +4796,9 @@ Int_t TProof::UnloadPackage(const char *package)
    if (UnloadPackageOnClient(pac) == -1)
       return -1;
 
+   // Nothing more to do if we are a Lite-session
+   if (IsLite()) return 0;
+
    TMessage mess(kPROOF_CACHE);
    mess << Int_t(kUnloadPackage) << pac;
    Broadcast(mess);
@@ -4834,6 +4857,9 @@ Int_t TProof::UnloadPackages()
          if (UnloadPackageOnClient(objstr->String()) == -1 )
             return -1;
    }
+
+   // Nothing more to do if we are a Lite-session
+   if (IsLite()) return 0;
 
    TMessage mess(kPROOF_CACHE);
    mess << Int_t(kUnloadPackages);
@@ -4955,6 +4981,9 @@ Int_t TProof::UploadPackage(const char *pack, EUploadPackageOpt opt)
       delete md5;
       return -1;
    }
+
+   // Nothing more to do if we are a Lite-session
+   if (IsLite()) return 0;
 
    TMessage mess(kPROOF_CHECKFILE);
    mess << TString("+")+TString(gSystem->BaseName(par)) << (*md5);

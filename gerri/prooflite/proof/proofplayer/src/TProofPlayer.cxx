@@ -1182,7 +1182,18 @@ Int_t TProofPlayerRemote::InitPacketizer(TDSet *dset, Long64_t nentries,
 
       // Lookup - resolve the end-point urls to optmize the distribution.
       // The lookup was previously called in the packetizer's constructor.
-      TList *listOfMissingFiles = dset->Lookup(kTRUE);
+      // A list for the missing files may already have been added to the
+      // output list; otherwise, if needed it will be created inside
+      TList *listOfMissingFiles = 0;
+      if ((listOfMissingFiles = (TList *)fInput->FindObject("MissingFiles"))) {
+         // Move it to the output list
+         fInput->Remove(listOfMissingFiles);
+         fOutput->Add(listOfMissingFiles);
+      } else {
+         listOfMissingFiles = new TList;
+      }
+      dset->Lookup(kTRUE, &listOfMissingFiles);
+
       if (fProof->GetRunStatus() != TProof::kRunning) {
          // We have been asked to stop
          Error("InitPacketizer", "received stop/abort request");
@@ -1203,8 +1214,8 @@ Int_t TProofPlayerRemote::InitPacketizer(TDSet *dset, Long64_t nentries,
          return -1;
       } else if (listOfMissingFiles) {
          TIter missingFiles(listOfMissingFiles);
-         TDSetElement *elem;
-         while ((elem = (TDSetElement*) missingFiles.Next())) {
+         TFileInfo *fi;
+         while ((fi = (TFileInfo *) missingFiles.Next())) {
             TString msg;
             if (fi->GetCurrentUrl()) {
                msg = Form("File not found: %s - skipping!",
