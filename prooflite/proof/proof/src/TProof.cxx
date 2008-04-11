@@ -3693,12 +3693,16 @@ Int_t TProof::Exec(const char *cmd, ESlaves list, Bool_t plusMaster)
    }
 
    if (plusMaster) {
-      Int_t n = GetParallel();
-      SetParallelSilent(0);
-      Int_t res = SendCommand(cmd, list);
-      SetParallelSilent(n);
-      if (res < 0)
-         return res;
+      if (IsLite()) {
+         gROOT->ProcessLine(cmd);
+      } else {
+         Int_t n = GetParallel();
+         SetParallelSilent(0);
+         Int_t res = SendCommand(cmd, list);
+         SetParallelSilent(n);
+         if (res < 0)
+            return res;
+      }
    }
    return SendCommand(cmd, list);
 }
