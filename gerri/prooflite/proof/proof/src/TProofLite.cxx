@@ -1168,6 +1168,10 @@ Int_t TProofLite::CleanupSandbox()
       }
    }
 
+   // Cleanup
+   olddirs->SetOwner();
+   delete olddirs;
+
    // Done
    return 0;
 }

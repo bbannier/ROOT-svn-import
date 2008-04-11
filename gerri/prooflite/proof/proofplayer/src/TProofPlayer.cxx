@@ -1188,7 +1188,6 @@ Int_t TProofPlayerRemote::InitPacketizer(TDSet *dset, Long64_t nentries,
       if ((listOfMissingFiles = (TList *)fInput->FindObject("MissingFiles"))) {
          // Move it to the output list
          fInput->Remove(listOfMissingFiles);
-         fOutput->Add(listOfMissingFiles);
       } else {
          listOfMissingFiles = new TList;
       }
@@ -1212,34 +1211,39 @@ Int_t TProofPlayerRemote::InitPacketizer(TDSet *dset, Long64_t nentries,
             delete listOfMissingFiles;
          }
          return -1;
-      } else if (listOfMissingFiles) {
-         TIter missingFiles(listOfMissingFiles);
-         TFileInfo *fi;
-         while ((fi = (TFileInfo *) missingFiles.Next())) {
-            TString msg;
-            if (fi->GetCurrentUrl()) {
-               msg = Form("File not found: %s - skipping!",
-                                          fi->GetCurrentUrl()->GetUrl());
-            } else {
-               msg = Form("File not found: %s - skipping!", fi->GetName());
+      } else {
+         if (listOfMissingFiles && listOfMissingFiles->GetSize() > 0) {
+            TIter missingFiles(listOfMissingFiles);
+            TFileInfo *fi;
+            while ((fi = (TFileInfo *) missingFiles.Next())) {
+               TString msg;
+               if (fi->GetCurrentUrl()) {
+                  msg = Form("File not found: %s - skipping!",
+                                             fi->GetCurrentUrl()->GetUrl());
+               } else {
+                  msg = Form("File not found: %s - skipping!", fi->GetName());
+               }
+               if (gProofServ) {
+                  gProofServ->SendAsynMessage(msg.Data());
+               } else {
+                  Info("InitPacketizer", msg.Data());
+               }
             }
-            if (gProofServ) {
-               gProofServ->SendAsynMessage(msg.Data());
-            } else {
-               Info("InitPacketizer", msg.Data());
+            // Make sure it will be sent back
+            if (!GetOutput("MissingFiles")) {
+               listOfMissingFiles->SetName("MissingFiles");
+               AddOutputObject(listOfMissingFiles);
             }
+            TStatus *tmpStatus = (TStatus *)GetOutput("PROOF_Status");
+            if (!tmpStatus) {
+               tmpStatus = new TStatus();
+               AddOutputObject(tmpStatus);
+            }
+            tmpStatus->Add("Some files were missing; check 'missingFiles' list");
+         } else {
+            // Cleanup
+            SafeDelete(listOfMissingFiles);
          }
-         // Make sure it will be sent back
-         if (!GetOutput("MissingFiles")) {
-            listOfMissingFiles->SetName("MissingFiles");
-            AddOutputObject(listOfMissingFiles);
-         }
-         TStatus *tmpStatus = (TStatus *)GetOutput("PROOF_Status");
-         if (!tmpStatus) {
-            tmpStatus = new TStatus();
-            AddOutputObject(tmpStatus);
-         }
-         tmpStatus->Add("Some files were missing; check 'missingFiles' list");
       }
 
       if (TProof::GetParameter(fInput, "PROOF_Packetizer", packetizer) != 0)
