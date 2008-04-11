@@ -77,9 +77,12 @@ public:
 
    Long64_t Process(TDSet *dset, const char *sel, Option_t *o = "",
                     Long64_t nent = -1, Long64_t fst = 0);
-   Long64_t Process(const char *dsname, const char *sel,
-                    Option_t *o = "", Long64_t nent = -1,
-                    Long64_t fst = 0, TObject *enl = 0)
+   Long64_t Process(TFileCollection *fc, const char *sel, Option_t *o = "",
+                    Long64_t nent = -1, Long64_t fst = 0)
+                    { return TProof::Process(fc, sel, o, nent, fst); }
+   Long64_t Process(const char *dsname, const char *sel, Option_t *o = "",
+                    Long64_t nent = -1, 
+Long64_t fst = 0, TObject *enl = 0)
                     { return TProof::Process(dsname, sel, o, nent, fst, enl); }
    Long64_t Process(const char *sel, Long64_t nent, Option_t *o = "")
                     { return TProof::Process(sel, nent, o); }

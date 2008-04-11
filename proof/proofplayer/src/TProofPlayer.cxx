@@ -1178,18 +1178,30 @@ Int_t TProofPlayerRemote::InitPacketizer(TDSet *dset, Long64_t nentries,
 
    } else {
 
+
       // Lookup - resolve the end-point urls to optmize the distribution.
       // The lookup was previously called in the packetizer's constructor.
-      TList *listOfMissingFiles = dset->Lookup(kTRUE);
+      // A list for the missing files may already have been added to the
+      // output list; otherwise, if needed it will be created inside
+      if ((listOfMissingFiles = (TList *)fInput->FindObject("MissingFiles"))) {
+         // Move it to the output list
+         fInput->Remove(listOfMissingFiles);
+         fOutput->Add(listOfMissingFiles);
+      } else {
+         listOfMissingFiles = new TList;
+      }
+      dset->Lookup(kTRUE, &listOfMissingFiles);
       if (fProof->GetRunStatus() != TProof::kRunning) {
          // We have been asked to stop
-         Error("InitPacketizer", "received stop/abort request");
+         Error("Process", "received stop/abort request");
          fExitStatus = kAborted;
          return -1;
       }
+
       if (!(dset->GetListOfElements()) ||
             !(dset->GetListOfElements()->GetSize())) {
-         gProofServ->SendAsynMessage("InitPacketizer: No files from the data set were found - Aborting");
+	 if (gProofServ)
+            gProofServ->SendAsynMessage("InitPacketizer: No files from the data set were found - Aborting");
          Error("InitPacketizer", "No files from the data set were found - Aborting");
          fExitStatus = kAborted;
          if (listOfMissingFiles) {
@@ -1200,11 +1212,25 @@ Int_t TProofPlayerRemote::InitPacketizer(TDSet *dset, Long64_t nentries,
       } else if (listOfMissingFiles) {
          TIter missingFiles(listOfMissingFiles);
          TDSetElement *elem;
-         while ((elem = (TDSetElement*) missingFiles.Next()))
-            gProofServ->SendAsynMessage(Form("File not found: %s - skipping!",
-                                             elem->GetName()));
-         listOfMissingFiles->SetName("MissingFiles");
-         AddOutputObject(listOfMissingFiles);
+         while ((elem = (TDSetElement*) missingFiles.Next())) {
+           TString msg;
+           if (fi->GetCurrentUrl()) {
+              msg = Form("File not found: %s - skipping!",
+                                        fi->GetCurrentUrl()->GetUrl());
+           } else {
+              msg = Form("File not found: %s - skipping!", fi->GetName());
+           }
+	   if (gProofServ) {
+              gProofServ->SendAsynMessage(msg.Data());
+           } else {
+	      Info("InitPacketizer", msg.Data());
+	   }
+	 }
+         // Make sure it will be sent back
+         if (!GetOutput("MissingFiles")) {
+            listOfMissingFiles->SetName("MissingFiles");
+            AddOutputObject(listOfMissingFiles);
+         }
          TStatus *tmpStatus = (TStatus *)GetOutput("PROOF_Status");
          if (!tmpStatus) {
             tmpStatus = new TStatus();
@@ -1313,53 +1339,6 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
          return -1;
       }
 
-      if (!fPacketizer->IsValid()) {
-         Error("Process", "instantiated packetizer object '%s' is invalid", cl->GetName());
-         fExitStatus = kAborted;
-         return -1;
-      }
-      // Add invalid elemnets to the list of missing elements
-      TDSetElement *elem = 0;
-      if (!noData && dset->TestBit(TDSet::kSomeInvalid)) {
-         TIter nxe(dset->GetListOfElements());
-         while ((elem = (TDSetElement *)nxe())) {
-            if (!elem->GetValid()) {
-               if (!listOfMissingFiles)
-                  listOfMissingFiles = new TList;
-               listOfMissingFiles->Add(elem->GetFileInfo(dset->GetType()));
-               dset->Remove(elem, kFALSE);
-            }
-         }
-         // The invalid elements have been removed
-         dset->ResetBit(TDSet::kSomeInvalid);
-      }
-
-      // Record the list of missing or invalid elements in the output list
-      if (listOfMissingFiles) {
-         TIter missingFiles(listOfMissingFiles);
-         TFileInfo *fi = 0;
-         while ((fi = (TFileInfo *) missingFiles.Next())) {
-            TString msg;
-            if (fi->GetCurrentUrl()) {
-               msg = Form("File not found: %s - skipping!",
-                                             fi->GetCurrentUrl()->GetUrl());
-            } else {
-               msg = Form("File not found: %s - skipping!", fi->GetName());
-            }
-            gProofServ->SendAsynMessage(msg.Data());
-         }
-         // Make sure it will be sent back
-         if (!GetOutput("MissingFiles")) {
-            listOfMissingFiles->SetName("MissingFiles");
-            AddOutputObject(listOfMissingFiles);
-         }
-         TStatus *tmpStatus = (TStatus *)GetOutput("PROOF_Status");
-         if (!tmpStatus) {
-            tmpStatus = new TStatus();
-            AddOutputObject(tmpStatus);
-         }
-         tmpStatus->Add("Some files were missing; check 'missingFiles' list");
-      }
       // reset start, this is now managed by the packetizer
       first = 0;
 
