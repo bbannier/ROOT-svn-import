@@ -1,4 +1,4 @@
-// @(#)root/proofx:$Id:$
+// @(#)root/proofx:$Id$
 // Author: Gerardo Ganis Apr 2008
 
 /*************************************************************************
@@ -50,6 +50,36 @@ TProof *TProofMgrLite::CreateSession(const char *,
                                      const char *, Int_t loglevel)
 {
    // Create a new session
+
+   Int_t nwrk = -1;
+   TString o(fUrl.GetOptions());
+   Int_t in = o.Index("workers=");
+   if (in != kNPOS) {
+      o.Remove(0, in + strlen("workers="));
+      while (!o.IsDigit())
+         o.Remove(o.Length()-1);
+      nwrk = (!o.IsNull()) ? o.Atoi() : nwrk;
+   }
+   if (nwrk < 0) {
+      SysInfo_t si;
+      if (gSystem->GetSysInfo(&si) == 0) {
+         nwrk = si.fCpus + 1;
+      } else {
+         // Two workers by default
+         nwrk = 2;
+      }
+   }
+
+   // Check if we have already a running session
+   if (gProof && gProof->IsValid() && gProof->IsLite()) {
+      if (nwrk > 0 && gProof->GetParallel() != nwrk) {
+         delete gProof;
+         gProof = 0;
+      } else {
+         // We have already a running session
+         return gProof;
+      }
+   }
 
    // Create the instance
    TString u = (strlen(fUrl.GetOptions()) > 0) ? Form("lite/?%s", fUrl.GetOptions())
