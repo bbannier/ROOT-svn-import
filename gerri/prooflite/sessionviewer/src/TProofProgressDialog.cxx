@@ -453,6 +453,9 @@ void TProofProgressDialog::Progress(Long64_t total, Long64_t processed,
    char buf[256];
    static const char *cproc[] = { "running", "done",
                                   "STOPPED", "ABORTED", "***EVENTS SKIPPED***"};
+   if (gDebug > 0)
+      Info("Progress","%lld %lld %lld %f %f %f %f", total, processed, bytesread,
+                                initTime, procTime, evtrti, mbrti);
 
    // Update title
    sprintf(buf, "Executing on PROOF cluster \"%s\" with %d parallel workers:",
