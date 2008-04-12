@@ -2113,7 +2113,8 @@ Int_t TProof::CollectInputFrom(TSocket *s)
 
       case kPROOF_OUTPUTOBJECT:
          {
-            PDB(kGlobal,2) Info("CollectInputFrom","kPROOF_OUTPUTOBJECT: enter");
+            PDB(kGlobal,2)
+               Info("CollectInputFrom","kPROOF_OUTPUTOBJECT: enter");
             Int_t type = 0;
             (*mess) >> type;
             // If a query result header, add it to the player list
@@ -2155,7 +2156,8 @@ Int_t TProof::CollectInputFrom(TSocket *s)
 
       case kPROOF_OUTPUTLIST:
          {
-            PDB(kGlobal,2) Info("CollectInputFrom","kPROOF_OUTPUTLIST: enter");
+            PDB(kGlobal,2)
+               Info("CollectInputFrom","kPROOF_OUTPUTLIST: enter");
             TList *out = 0;
             if (TestBit(TProof::kIsMaster) || fProtocol < 7) {
                out = (TList *) mess->ReadObject(TList::Class());
@@ -5261,7 +5263,7 @@ Int_t TProof::Load(const char *macro, Bool_t notOnClient)
 }
 
 //______________________________________________________________________________
-Int_t TProof::AddDynamicPath(const char *libpath)
+Int_t TProof::AddDynamicPath(const char *libpath, Bool_t onClient)
 {
    // Add 'libpath' to the lib path search.
    // Multiple paths can be specified at once separating them with a comma or
@@ -5273,6 +5275,10 @@ Int_t TProof::AddDynamicPath(const char *libpath)
          Info("AddDynamicPath", "list is empty - nothing to do");
       return 0;
    }
+
+   // Do it also on clients, if required
+   if (onClient)
+      HandleLibIncPath("lib", kTRUE, libpath);
 
    TMessage m(kPROOF_LIB_INC_PATH);
    m << TString("lib") << (Bool_t)kTRUE;
@@ -5291,7 +5297,7 @@ Int_t TProof::AddDynamicPath(const char *libpath)
 }
 
 //______________________________________________________________________________
-Int_t TProof::AddIncludePath(const char *incpath)
+Int_t TProof::AddIncludePath(const char *incpath, Bool_t onClient)
 {
    // Add 'incpath' to the inc path search.
    // Multiple paths can be specified at once separating them with a comma or
@@ -5303,6 +5309,10 @@ Int_t TProof::AddIncludePath(const char *incpath)
          Info("AddIncludePath", "list is empty - nothing to do");
       return 0;
    }
+
+   // Do it also on clients, if required
+   if (onClient)
+      HandleLibIncPath("inc", kTRUE, incpath);
 
    TMessage m(kPROOF_LIB_INC_PATH);
    m << TString("inc") << (Bool_t)kTRUE;
@@ -5321,7 +5331,7 @@ Int_t TProof::AddIncludePath(const char *incpath)
 }
 
 //______________________________________________________________________________
-Int_t TProof::RemoveDynamicPath(const char *libpath)
+Int_t TProof::RemoveDynamicPath(const char *libpath, Bool_t onClient)
 {
    // Remove 'libpath' from the lib path search.
    // Multiple paths can be specified at once separating them with a comma or
@@ -5333,6 +5343,10 @@ Int_t TProof::RemoveDynamicPath(const char *libpath)
          Info("RemoveDynamicPath", "list is empty - nothing to do");
       return 0;
    }
+
+   // Do it also on clients, if required
+   if (onClient)
+      HandleLibIncPath("lib", kFALSE, libpath);
 
    TMessage m(kPROOF_LIB_INC_PATH);
    m << TString("lib") <<(Bool_t)kFALSE;
@@ -5351,7 +5365,7 @@ Int_t TProof::RemoveDynamicPath(const char *libpath)
 }
 
 //______________________________________________________________________________
-Int_t TProof::RemoveIncludePath(const char *incpath)
+Int_t TProof::RemoveIncludePath(const char *incpath, Bool_t onClient)
 {
    // Remove 'incpath' from the inc path search.
    // Multiple paths can be specified at once separating them with a comma or
@@ -5363,6 +5377,10 @@ Int_t TProof::RemoveIncludePath(const char *incpath)
          Info("RemoveIncludePath", "list is empty - nothing to do");
       return 0;
    }
+
+   // Do it also on clients, if required
+   if (onClient)
+      HandleLibIncPath("in", kFALSE, incpath);
 
    TMessage m(kPROOF_LIB_INC_PATH);
    m << TString("inc") << (Bool_t)kFALSE;
@@ -5378,6 +5396,114 @@ Int_t TProof::RemoveIncludePath(const char *incpath)
    Collect(kActive, fCollectTimeout);
 
    return 0;
+}
+
+//______________________________________________________________________________
+void TProof::HandleLibIncPath(const char *what, Bool_t add, const char *dirs)
+{
+   // Handle lib, inc search paths modification request
+
+   TString type(what);
+   TString path(dirs);
+
+   // Check type of action
+   if ((type != "lib") && (type != "inc")) {
+      Error("HandleLibIncPath","unknown action type: %s", type.Data());
+      return;
+   }
+
+   // Separators can be either commas or blanks
+   path.ReplaceAll(","," ");
+
+   // Decompose lists
+   TObjArray *op = 0;
+   if (path.Length() > 0 && path != "-") {
+      if (!(op = path.Tokenize(" "))) {
+         Error("HandleLibIncPath","decomposing path %s", path.Data());
+         return;
+      }
+   }
+
+   if (add) {
+
+      if (type == "lib") {
+
+         // Add libs
+         TIter nxl(op, kIterBackward);
+         TObjString *lib = 0;
+         while ((lib = (TObjString *) nxl())) {
+            // Expand path
+            TString xlib = lib->GetName();
+            gSystem->ExpandPathName(xlib);
+            // Add to the dynamic lib search path if it exists and can be read
+            if (!gSystem->AccessPathName(xlib, kReadPermission)) {
+               TString newlibpath = gSystem->GetDynamicPath();
+               // In the first position after the working dir
+               Int_t pos = 0;
+               if (newlibpath.BeginsWith(".:"))
+                  pos = 2;
+               if (newlibpath.Index(xlib) == kNPOS) {
+                  newlibpath.Insert(pos,Form("%s:", xlib.Data()));
+                  gSystem->SetDynamicPath(newlibpath);
+               }
+            } else {
+               Info("HandleLibIncPath",
+                    "libpath %s does not exist or cannot be read - not added", xlib.Data());
+            }
+         }
+
+      } else {
+
+         // Add incs
+         TIter nxi(op);
+         TObjString *inc = 0;
+         while ((inc = (TObjString *) nxi())) {
+            // Expand path
+            TString xinc = inc->GetName();
+            gSystem->ExpandPathName(xinc);
+            // Add to the dynamic lib search path if it exists and can be read
+            if (!gSystem->AccessPathName(xinc, kReadPermission)) {
+               TString curincpath = gSystem->GetIncludePath();
+               if (curincpath.Index(xinc) == kNPOS)
+                  gSystem->AddIncludePath(Form("-I%s", xinc.Data()));
+            } else
+               Info("HandleLibIncPath",
+                    "incpath %s does not exist or cannot be read - not added", xinc.Data());
+         }
+      }
+
+
+   } else {
+
+      if (type == "lib") {
+
+         // Remove libs
+         TIter nxl(op);
+         TObjString *lib = 0;
+         while ((lib = (TObjString *) nxl())) {
+            // Expand path
+            TString xlib = lib->GetName();
+            gSystem->ExpandPathName(xlib);
+            // Remove from the dynamic lib search path
+            TString newlibpath = gSystem->GetDynamicPath();
+            newlibpath.ReplaceAll(Form("%s:", xlib.Data()),"");
+            gSystem->SetDynamicPath(newlibpath);
+         }
+
+      } else {
+
+         // Remove incs
+         TIter nxi(op);
+         TObjString *inc = 0;
+         while ((inc = (TObjString *) nxi())) {
+            TString newincpath = gSystem->GetIncludePath();
+            newincpath.ReplaceAll(Form("-I%s", inc->GetName()),"");
+            // Remove the interpreter path (added anyhow internally)
+            newincpath.ReplaceAll(gInterpreter->GetIncludePath(),"");
+            gSystem->SetIncludePath(newincpath);
+         }
+      }
+   }
 }
 
 //______________________________________________________________________________
