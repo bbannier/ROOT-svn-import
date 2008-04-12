@@ -810,7 +810,7 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
    // Make sure that all enabled workers get some work, unless stated
    // differently 
    if (!fPlayer->GetInputList()->FindObject("PROOF_MaxSlavesPerNode"))
-      SetParameter("PROOF_MaxSlavesPerNode", fNWorkers);
+      SetParameter("PROOF_MaxSlavesPerNode", (Long_t)fNWorkers);
 
    Bool_t hasNoData = (dset->TestBit(TDSet::kEmpty)) ? kTRUE : kFALSE;
 
