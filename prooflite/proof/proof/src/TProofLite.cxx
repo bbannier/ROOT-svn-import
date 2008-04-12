@@ -236,9 +236,6 @@ Int_t TProofLite::Init(const char *, const char *conffile,
    fFeedback->SetOwner();
    fFeedback->SetName("FeedbackList");
    AddInput(fFeedback);
-   // To get the number of events per worker
-   AddFeedback("PROOF_EventsHist");
-   gEnv->SetValue("Proof.StatsHist",1);
 
    // Sort workers by descending performance index
    fSlaves           = new TSortedList(kSortDescending);
@@ -972,8 +969,11 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
 
    // Complete filling of the TQueryResult instance
    AskStatistics();
-   if (fQMgr->FinalizeQuery(pq, this, fPlayer))
-      fQMgr->SaveQuery(pq, -1);
+   if (fQMgr->FinalizeQuery(pq, this, fPlayer)) {
+      // Automatic saving is controlled by ProofLite.AutoSaveQueries
+      if (!strcmp(gEnv->GetValue("ProofLite.AutoSaveQueries", "off"), "on"))
+         fQMgr->SaveQuery(pq, -1);
+   }
 
    // Remove aborted queries from the list
    if (fPlayer->GetExitStatus() == TVirtualProofPlayer::kAborted) {
@@ -1162,7 +1162,7 @@ Int_t TProofLite::CleanupSandbox()
       notify = kFALSE;
       TNamed *n = (TNamed *) olddirs->Last();
       if (n) {
-         gSystem->Exec(Form("%s %s/*", kRM, n->GetTitle()));
+         gSystem->Exec(Form("%s %s", kRM, n->GetTitle()));
          olddirs->Remove(n);
          delete n;
       }
@@ -1174,4 +1174,63 @@ Int_t TProofLite::CleanupSandbox()
 
    // Done
    return 0;
+}
+
+//______________________________________________________________________________
+TList *TProofLite::GetListOfQueries(Option_t *opt)
+{
+   // Get the list of queries.
+
+   Bool_t all = ((strchr(opt,'A') || strchr(opt,'a'))) ? kTRUE : kFALSE;
+
+   TList *ql = new TList;
+   Int_t ntot = 0, npre = 0, ndraw= 0;
+   if (fQMgr) {
+      if (all) {
+         // Rescan
+         TString qdir = fQueryDir;
+         Int_t idx = qdir.Index("session-");
+         if (idx != kNPOS)
+            qdir.Remove(idx);
+         fQMgr->ScanPreviousQueries(qdir);
+         // Gather also information about previous queries, if any
+         if (fQMgr->PreviousQueries()) {
+            TIter nxq(fQMgr->PreviousQueries());
+            TProofQueryResult *pqr = 0;
+            while ((pqr = (TProofQueryResult *)nxq())) {
+               ntot++;
+               pqr->fSeqNum = ntot;
+               ql->Add(pqr);
+            }
+         }
+      }
+
+      npre = ntot;
+      if (fQMgr->Queries()) {
+         // Add info about queries in this session
+         TIter nxq(fQMgr->Queries());
+         TProofQueryResult *pqr = 0;
+         TQueryResult *pqm = 0;
+         while ((pqr = (TProofQueryResult *)nxq())) {
+            ntot++;
+            pqm = pqr->CloneInfo();
+            pqm->fSeqNum = ntot;
+            ql->Add(pqm);
+         }
+      }
+      // Number of draw queries
+      ndraw = fQMgr->DrawQueries();
+   }
+
+   fOtherQueries = npre;
+   fDrawQueries = ndraw;
+   if (fQueries) {
+      fQueries->Delete();
+      delete fQueries;
+      fQueries = 0;
+   }
+   fQueries = ql;
+
+   // This should have been filled by now
+   return fQueries;
 }

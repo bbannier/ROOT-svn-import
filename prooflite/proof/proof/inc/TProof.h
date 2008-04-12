@@ -545,6 +545,8 @@ protected:
 
    void    UpdateDialog();
 
+   void    HandleLibIncPath(const char *what, Bool_t add, const char *dirs);
+
    TList  *GetListOfActiveSlaves() const { return fActiveSlaves; }
    TSlave *CreateSlave(const char *url, const char *ord,
                        Int_t perf, const char *image, const char *workdir);
@@ -626,10 +628,10 @@ public:
    Int_t       UploadPackage(const char *par, EUploadPackageOpt opt = kUntar);
    Int_t       Load(const char *macro, Bool_t notOnClient = kFALSE);
 
-   Int_t       AddDynamicPath(const char *libpath);
-   Int_t       AddIncludePath(const char *incpath);
-   Int_t       RemoveDynamicPath(const char *libpath);
-   Int_t       RemoveIncludePath(const char *incpath);
+   Int_t       AddDynamicPath(const char *libpath, Bool_t onClient = kFALSE);
+   Int_t       AddIncludePath(const char *incpath, Bool_t onClient = kFALSE);
+   Int_t       RemoveDynamicPath(const char *libpath, Bool_t onClient = kFALSE);
+   Int_t       RemoveIncludePath(const char *incpath, Bool_t onClient = kFALSE);
 
    //-- dataset management
    Int_t       UploadDataSet(const char *dataset,
@@ -719,7 +721,7 @@ public:
    void        ShowFeedback() const;
    TList      *GetFeedbackList() const;
 
-   TList      *GetListOfQueries(Option_t *opt = "");
+   virtual TList *GetListOfQueries(Option_t *opt = "");
    Int_t       GetNumberOfQueries();
    Int_t       GetNumberOfDrawQueries() { return fDrawQueries; }
    TList      *GetQueryResults();
