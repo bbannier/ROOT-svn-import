@@ -47,6 +47,7 @@ friend class TTreePlayer;
 friend class TProofPlayerLite;
 friend class TProofPlayerRemote;
 friend class TProof;
+friend class TProofLite;
 friend class TProofServ;
 friend class TQueryResultManager;
 
