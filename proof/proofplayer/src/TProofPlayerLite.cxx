@@ -468,7 +468,7 @@ Long64_t TProofPlayerLite::Finalize(Bool_t force, Bool_t sync)
       SafeDelete(fSelector);
    }
 
-   PDB(kGlobal,1) Info("Process","exit");
+   PDB(kGlobal,1) Info("Finalize","exit");
    return rv;
 }
 
