@@ -1074,9 +1074,7 @@ Int_t TProofLite::InitDataSetManager()
       TString dsetdir = gEnv->GetValue("ProofServ.DataSetDir", "");
       if (dsetdir.IsNull()) {
          // Use the default in the sandbox
-         dsetdir = Form("%s/%s", fWorkDir.Data(), kPROOF_DataSetDir);
-         if (gSystem->AccessPathName(fDataSetDir))
-            gSystem->MakeDirectory(fDataSetDir);
+         dsetdir = fDataSetDir;
          opts += "Sb:";
       }
       // Find the appropriate handler
