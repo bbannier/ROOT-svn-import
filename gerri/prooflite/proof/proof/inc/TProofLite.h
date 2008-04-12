@@ -100,6 +100,9 @@ public:
    void ShowCache(Bool_t all = kFALSE);
    void ClearCache();
 
+   // List of queries
+   TList *GetListOfQueries(Option_t *opt = "");
+
    ClassDef(TProofLite,0)  //PROOF control class
 };
 
