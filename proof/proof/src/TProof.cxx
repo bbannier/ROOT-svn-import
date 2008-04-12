@@ -7260,8 +7260,12 @@ TProof *TProof::Open(const char *cluster, const char *conffile,
 
    } else {
 
+      TString clst(cluster);
+      if (clst.BeginsWith("workers=") || clst.BeginsWith("tunnel="))
+         clst.Insert(0, "/?");
+
       // Parse input URL
-      TUrl u(cluster);
+      TUrl u(clst);
 
       // Parse any tunning info ("<cluster>/?tunnel=[<tunnel_host>:]tunnel_port)
       TString opts(u.GetOptions());
