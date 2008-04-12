@@ -74,6 +74,7 @@ TVirtualPacketizer::TVirtualPacketizer(TList *input)
    TTime tnow = gSystem->Now();
    fStartTime = Long_t(tnow);
    SetBit(TVirtualPacketizer::kIsInitializing);
+   ResetBit(TVirtualPacketizer::kIsDone);
    fInitTime = 0;
    fProcTime = 0;
    fTimeUpdt = -1.;
@@ -222,7 +223,8 @@ Bool_t TVirtualPacketizer::HandleTimer(TTimer *)
 {
    // Send progress message to client.
 
-   if (fProgress == 0) return kFALSE; // timer stopped already
+   if (fProgress == 0 || TestBit(TVirtualPacketizer::kIsDone))
+      return kFALSE; // timer stopped already or reports completed
 
    // Prepare progress info
    TTime tnow = gSystem->Now();
@@ -264,9 +266,14 @@ Bool_t TVirtualPacketizer::HandleTimer(TTimer *)
                                  (Long64_t) (evts - ar[1]),
                                  (Long64_t) ((mbs - ar[2])*TMath::Power(2.,20.)));
       }
+
+      // Final report only once (to correctly determine the proc time)
+      if (fProcessed >= fTotalEntries)
+         SetBit(TVirtualPacketizer::kIsDone);
    }
 
    if (gProofServ) {
+
       // Message to be sent over
       TMessage m(kPROOF_PROGRESS);
       if (gProofServ->GetProtocol() > 11) {
