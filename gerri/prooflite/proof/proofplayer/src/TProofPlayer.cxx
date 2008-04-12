@@ -1849,7 +1849,7 @@ Int_t TProofPlayerRemote::AddOutputObject(TObject *obj)
    // one (so that its ownership has not been taken and can be deleted), and 0
    // otherwise.
 
-   PDB(kOutput,1) Info("AddOutputObject","Enter");
+   PDB(kOutput,1) Info("AddOutputObject","Enter: %p", obj);
 
    // We must something to process
    if (!obj) {
@@ -2050,6 +2050,8 @@ Int_t TProofPlayerRemote::Incorporate(TObject *newobj, TList *outlist, Bool_t &m
    // Return 0 on success, -1 on error.
 
    merged = kTRUE;
+
+   PDB(kOutput,1) Info("Incorporate", "enter: obj: %p, list: %p", newobj, outlist);
 
    // The object and list must exist
    if (!newobj || !outlist) {
