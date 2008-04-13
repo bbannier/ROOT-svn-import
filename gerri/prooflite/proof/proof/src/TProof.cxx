@@ -6661,6 +6661,11 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
       return -1;
    }
 
+   if (IsLite()) {
+      Info("UploadDataSet", "Lite-session: functionality not needed - do nothing");
+      return -1;
+   }
+
    // check if  dataSetName is not excluded
    if (strchr(dataSetName, '/')) {
       if (strstr(dataSetName, "public") != dataSetName) {
@@ -6944,6 +6949,11 @@ Bool_t TProof::RegisterDataSet(const char *dataSetName,
       return kFALSE;
    }
 
+   if (!dataSetName || strlen(dataSetName) <= 0) {
+      Info("RegisterDataSet", "specifying a dataset name is mandatory");
+      return kFALSE;
+   }
+
    TSocket *master;
    if (fActiveSlaves->GetSize())
       master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
@@ -7053,6 +7063,11 @@ TFileCollection *TProof::GetDataSet(const char *uri, const char* optStr)
       Info("GetDataSet", "functionality not available: the server has an"
                          " incompatible version of TFileInfo");
       return 0;
+   }
+
+   if (!uri || strlen(uri) <= 0) {
+      Info("GetDataSet", "specifying a dataset name is mandatory");
+      return kFALSE;
    }
 
    TSocket *master = 0;
@@ -7174,6 +7189,11 @@ TMap *TProof::GetDataSetQuota(const char* optStr)
 {
    // returns a map of the quotas of all groups
 
+   if (IsLite()) {
+      Info("UploadDataSet", "Lite-session: functionality not implemented");
+      return (TMap *)0;
+   }
+
    TSocket *master = 0;
    if (fActiveSlaves->GetSize())
       master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
@@ -7214,6 +7234,11 @@ void TProof::ShowDataSetQuota(Option_t* opt)
      Info("ShowDataSetQuota",
           "functionality not available: the server does not have dataset support");
      return;
+   }
+
+   if (IsLite()) {
+      Info("UploadDataSet", "Lite-session: functionality not implemented");
+      return;
    }
 
    TSocket *master = 0;

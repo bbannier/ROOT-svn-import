@@ -1237,3 +1237,147 @@ TList *TProofLite::GetListOfQueries(Option_t *opt)
    // This should have been filled by now
    return fQueries;
 }
+
+//______________________________________________________________________________
+Bool_t TProofLite::RegisterDataSet(const char *uri,
+                                   TFileCollection *dataSet, const char* optStr)
+{
+   // Register the 'dataSet' on the cluster under the current
+   // user, group and the given 'dataSetName'.
+   // Fails if a dataset named 'dataSetName' already exists, unless 'optStr'
+   // contains 'O', in which case the old dataset is overwritten.
+   // If 'optStr' contains 'V' the dataset files are verified (default no
+   // verification).
+   // Returns kTRUE on success.
+
+   if (!fDataSetManager) {
+      Info("RegisterDataSet", "dataset manager not available");
+      return kFALSE;
+   }
+
+   if (!uri || strlen(uri) <= 0) {
+      Info("RegisterDataSet", "specifying a dataset name is mandatory");
+      return kFALSE;
+   }
+
+   Bool_t result = kTRUE;
+   if (fDataSetManager->TestBit(TProofDataSetManager::kAllowRegister)) {
+      // Check the list
+      if (!dataSet || dataSet->GetList()->GetSize() == 0) {
+         Error("RegisterDataSet", "can not save an empty list.");
+         result = kFALSE;
+      }
+      // Register the dataset (quota checks are done inside here)
+      result = (fDataSetManager->RegisterDataSet(uri, dataSet, optStr) == 0)
+             ? kTRUE : kFALSE;
+   } else {
+      Info("RegisterDataSets", "dataset registration not allowed");
+      result = kFALSE;
+   }
+
+   if (!result)
+      Error("RegisterDataSet", "dataset was not saved");
+
+   // Done
+   return result;
+}
+
+//______________________________________________________________________________
+TMap *TProofLite::GetDataSets(const char *uri, const char *)
+{
+   // lists all datasets
+   // that match given uri
+
+   if (!fDataSetManager) {
+      Info("GetDataSets", "dataset manager not available");
+      return (TMap *)0;
+   }
+
+   // Get the datasets and return the map
+   UInt_t opt = (UInt_t)TProofDataSetManager::kExport;
+   return fDataSetManager->GetDataSets(uri, opt);
+}
+
+//______________________________________________________________________________
+void TProofLite::ShowDataSets(const char *uri, const char *)
+{
+   // Shows datasets in locations that match the uri
+   // By default shows the user's datasets and global ones
+
+   if (!fDataSetManager) {
+      Info("GetDataSet", "dataset manager not available");
+      return;
+   }
+
+   // Scan the existing datasets and print the content
+   UInt_t opt = (UInt_t)TProofDataSetManager::kPrint;
+   fDataSetManager->GetDataSets(uri, opt);
+}
+
+//______________________________________________________________________________
+TFileCollection *TProofLite::GetDataSet(const char *uri, const char *)
+{
+   // Get a list of TFileInfo objects describing the files of the specified
+   // dataset.
+
+   if (!fDataSetManager) {
+      Info("GetDataSet", "dataset manager not available");
+      return (TFileCollection *)0;
+   }
+
+   if (!uri || strlen(uri) <= 0) {
+      Info("GetDataSet", "specifying a dataset name is mandatory");
+      return kFALSE;
+   }
+
+   // Return the list
+   return fDataSetManager->GetDataSet(uri);
+}
+
+//______________________________________________________________________________
+Int_t TProofLite::RemoveDataSet(const char *uri, const char *)
+{
+   // Remove the specified dataset from the PROOF cluster.
+   // Files are not deleted.
+
+   if (!fDataSetManager) {
+      Info("RemoveDataSet", "dataset manager not available");
+      return -1;
+   }
+
+   if (fDataSetManager->TestBit(TProofDataSetManager::kAllowRegister)) {
+      if (!fDataSetManager->RemoveDataSet(uri)) {
+         // Failure
+         return -1;
+      }
+   } else {
+      Info("RemoveDataSet", "dataset creation / removal not allowed");
+      return -1;
+   }
+
+   // Done
+   return 0;
+}
+
+//______________________________________________________________________________
+Int_t TProofLite::VerifyDataSet(const char *uri, const char *)
+{
+   // Verify if all files in the specified dataset are available.
+   // Print a list and return the number of missing files.
+
+   if (!fDataSetManager) {
+      Info("VerifyDataSet", "dataset manager not available");
+      return -1;
+   }
+
+   Int_t rc = -1;
+   if (fDataSetManager->TestBit(TProofDataSetManager::kAllowVerify)) {
+      rc = fDataSetManager->ScanDataSet(uri);
+   } else {
+      Info("VerifyDataSet", "dataset verification not allowed");
+      return -1;
+   }
+
+   // Done
+   return rc;
+}

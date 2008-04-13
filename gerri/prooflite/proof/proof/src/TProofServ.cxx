@@ -4676,7 +4676,9 @@ Int_t TProofServ::HandleDataSets(TMessage *mess)
                   return -1;
                }
                // Register the dataset (quota checks are done inside here)
-               return fDataSetManager->RegisterDataSet(uri, dataSet, opt);
+               Int_t rc = fDataSetManager->RegisterDataSet(uri, dataSet, opt);
+               delete dataSet;
+               return rc;
             } else {
                Info("HandleDataSets", "dataset registration not allowed");
                return -1;
