@@ -474,6 +474,7 @@ Bool_t TXNetSystem::IsOnline(const char *path)
 {
    // Check if the file defined by 'path' is ready to be used
 
+#if 0
    TXNetSystemConnectGuard cg(this, path);
    if (cg.IsValid()) {
       vecBool vb;
@@ -509,6 +510,9 @@ Bool_t TXNetSystem::IsOnline(const char *path)
       }
    }
    return kFALSE;
+#else
+   return !AccessPathName(path, kReadPermission);
+#endif
 }
 
 //_____________________________________________________________________________
