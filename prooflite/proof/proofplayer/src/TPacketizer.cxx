@@ -703,10 +703,10 @@ void TPacketizer::ValidateFiles(TDSet *dset, TList *slaves)
                mon.Activate(s->GetSocket());
                PDB(kPacketizer,2)
                   Info("ValidateFiles",
-                     "sent to worker-%s (%s) via %p GETENTRIES on %s %s %s %s",
-                     s->GetOrdinal(), s->GetName(), s->GetSocket(),
-                     dset->IsTree() ? "tree" : "objects", elem->GetFileName(),
-                     elem->GetDirectory(), elem->GetObjName());
+                       "sent to worker-%s (%s) via %p GETENTRIES on %s %s %s %s",
+                       s->GetOrdinal(), s->GetName(), s->GetSocket(),
+                       dset->IsTree() ? "tree" : "objects", elem->GetFileName(),
+                       elem->GetDirectory(), elem->GetObjName());
             } else {
                // Fill the info
                elem->SetTDSetOffset(entries);
@@ -729,9 +729,18 @@ void TPacketizer::ValidateFiles(TDSet *dset, TList *slaves)
                                  entries, elem->GetFileName());
                         elem->SetNum(entries - elem->GetFirst());
                      }
+                     PDB(kPacketizer,2)
+                        Info("ValidateFiles",
+                             "found elem '%s' with %lld entries", elem->GetFileName(), entries);
                      elem->SetValid();
                   }
                }
+               // Notify the client
+               n++;
+               gProof->SendDataSetStatus(msg, n, tot, st);
+
+               // This worker is ready for the next validation
+               workers.Add(s);
             }
          }
       }
