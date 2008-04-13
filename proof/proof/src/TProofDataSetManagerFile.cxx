@@ -661,7 +661,6 @@ Int_t TProofDataSetManagerFile::RegisterDataSet(const char *uri,
    }
 
    Bool_t success = WriteDataSet(fGroup, fUser, dsName, dataSet);
-   delete dataSet;
    if (!success)
       Error("RegisterDataSet", "could not write dataset: %s", dsName.Data());
 
@@ -835,7 +834,7 @@ Int_t TProofDataSetManagerFile::ScanDataSet(TFileCollection *dataset,
       Bool_t result = kFALSE;
       if (stager) {
          result = stager->IsStaged(url.GetUrl());
-         if (notify)
+         if (gDebug > 0)
             Info("ScanDataSet", "IsStaged: %s: %d", url.GetUrl(), result);
          if (createStager)
             SafeDelete(stager);
@@ -898,8 +897,8 @@ Int_t TProofDataSetManagerFile::ScanDataSet(TFileCollection *dataset,
       TUrl urlDiskServer(*url);
       urlDiskServer.SetHost(file->GetEndpointUrl()->GetHost());
       fileInfo->AddUrl(urlDiskServer.GetUrl(), kTRUE);
-      if (notify)
-        Info("ScanDataSet", "added URL %s", urlDiskServer.GetUrl());
+      if (gDebug > 0)
+         Info("ScanDataSet", "added URL %s", urlDiskServer.GetUrl());
 
       if (file->GetSize() > 0)
           fileInfo->SetSize(file->GetSize());
@@ -941,7 +940,7 @@ Int_t TProofDataSetManagerFile::ScanDataSet(TFileCollection *dataset,
                metaData = new TFileInfoMeta(keyStr, key->GetClassName());
                fileInfo->AddMetaData(metaData);
 
-               if (notify)
+               if (gDebug > 0)
                   Info("ScanDataSet", "created meta data for tree %s", keyStr.Data());
             }
 
