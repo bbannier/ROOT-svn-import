@@ -1142,6 +1142,8 @@ Int_t TProofPlayerRemote::InitPacketizer(TDSet *dset, Long64_t nentries,
    // Init the packetizer
    // Return 0 on success (fPacketizer is correctly initialized), -1 on failure.
 
+   SafeDelete(fPacketizer);
+
    Bool_t noData = dset->TestBit(TDSet::kEmpty) ? kTRUE : kFALSE;
 
    TString packetizer;
