@@ -103,6 +103,14 @@ public:
    // List of queries
    TList *GetListOfQueries(Option_t *opt = "");
 
+   // Dataset handling
+   Bool_t   RegisterDataSet(const char *dsName, TFileCollection *ds, const char *opt = "");
+   TMap    *GetDataSets(const char *uri = "", const char * = 0);
+   void     ShowDataSets(const char *uri = "", const char * = 0);
+   TFileCollection *GetDataSet(const char *uri, const char * = 0);
+   Int_t    RemoveDataSet(const char *uri, const char * = 0);
+   Int_t    VerifyDataSet(const char *uri, const char * = 0);
+
    ClassDef(TProofLite,0)  //PROOF control class
 };
 
