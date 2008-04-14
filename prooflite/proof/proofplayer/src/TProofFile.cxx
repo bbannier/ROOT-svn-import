@@ -54,22 +54,25 @@ TProofFile::TProofFile(const char* path, const char* location, const char* mode)
       fDir.Remove(pos);
    if (fDir == "file:") {
       fIsLocal = kTRUE;
-      // The directory for the file will be the sandbox
-      TString pfx  = gEnv->GetValue("Path.Localroot","");
-      fDir = Form("root://%s",gSystem->HostName());
-      if (gSystem->Getenv("XRDPORT")) {
-         TString sp(gSystem->Getenv("XRDPORT"));
-         if (sp.IsDigit())
-            fDir += Form(":%s", sp.Data());
-      }
       TString dirPath = gSystem->WorkingDirectory();
-      if (!pfx.IsNull())
-         dirPath.Remove(0, pfx.Length());
+      if (gSystem->Getenv("XRDCF")) {
+         // The directory for the file will be the sandbox
+         TString pfx  = gEnv->GetValue("Path.Localroot","");
+         fDir = Form("root://%s",gSystem->HostName());
+         if (gSystem->Getenv("XRDPORT")) {
+            TString sp(gSystem->Getenv("XRDPORT"));
+            if (sp.IsDigit())
+               fDir += Form(":%s", sp.Data());
+         }
+         if (!pfx.IsNull())
+            dirPath.Remove(0, pfx.Length());
+      } else {
+         fDir += "/";
+      }
       fDir += Form("/%s", dirPath.Data());
    }
    // Notify
-   if (gDebug > 1)
-      Info("TProofFile", "dir: %s", fDir.Data());
+   Info("TProofFile", "dir: %s", fDir.Data());
 
    // Location
    fLocation = "REMOTE";
