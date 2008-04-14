@@ -225,7 +225,7 @@ TThread::TThread(Int_t id)
    fId = (id ? id : SelfId());
    fState = kRunningState;
 
-   if (gDebug > 0)
+   if (gDebug)
       Info("TThread::TThread", "TThread attached to running thread");
 }
 
@@ -281,7 +281,7 @@ TThread::~TThread()
 {
    // Cleanup the thread.
 
-   if (gDebug > 0)
+   if (gDebug)
       Info("TThread::~TThread", "thread deleted");
 
    // Disconnect thread instance
@@ -310,7 +310,7 @@ Int_t TThread::Delete(TThread *&th)
    if (th->fState == kRunningState) {     // Cancel if running
       th->fState = kDeletingState;
 
-      if (gDebug > 0)
+      if (gDebug)
          th->Info("TThread::Delete", "deleting thread");
 
       th->Kill();
@@ -453,7 +453,7 @@ Int_t TThread::Run(void *arg)
 
    fState = iret ? kInvalidState : kRunningState;
 
-   if (gDebug > 0)
+   if (gDebug)
       Info("TThread::Run", "thread run requested");
 
    UnLock();
@@ -467,7 +467,7 @@ Int_t TThread::Kill()
    // Kill this thread.
 
    if (fState != kRunningState && fState != kDeletingState) {
-      if (gDebug>0)
+      if (gDebug)
          Warning("TThread::Kill", "thread is not running");
       return 13;
    } else {
@@ -485,7 +485,7 @@ Int_t TThread::Kill(Long_t id)
    if (th) {
       return fgThreadImp->Kill(th);
    } else  {
-      if (gDebug > 0)
+      if (gDebug)
          ::Warning("TThread::Kill(Long_t)", "thread 0x%lx not found", id);
       return 13;
    }
@@ -500,7 +500,7 @@ Int_t TThread::Kill(const char *name)
    if (th) {
       return fgThreadImp->Kill(th);
    } else  {
-      if (gDebug > 0)
+      if (gDebug)
          ::Warning("TThread::Kill(const char*)", "thread %s not found", name);
       return 13;
    }
@@ -596,7 +596,7 @@ void TThread::AfterCancel(TThread *th)
 
    if (th) {
       th->fState = kCanceledState;
-      if (gDebug > 0)
+      if (gDebug)
          th->Info("TThread::AfterCancel", "thread is canceled");
    } else
       ::Error("TThread::AfterCancel", "zero thread pointer passed");
@@ -676,7 +676,7 @@ void *TThread::Function(void *ptr)
    SetCancelDeferred();
    CleanUpPush((void *)&AfterCancel, th);  // Enable standard cancelling function
 
-   if (gDebug > 0)
+   if (gDebug)
       th->Info("TThread::Function", "thread is running");
 
    arg = th->fThreadArg;
@@ -695,7 +695,7 @@ void *TThread::Function(void *ptr)
 
    CleanUpPop(1);     // Disable standard canceling function
 
-   if (gDebug > 0)
+   if (gDebug)
       th->Info("TThread::Function", "thread has finished");
 
    TThread::Exit(ret);
