@@ -33,50 +33,50 @@ class TSortedList;
 class TBasket;
 class TMutex;
 
- // TBufferInfo is a simple container to put the Info of each element in the
- // unzipping buffer.. it has nothing to do with TBuffer so I'm afraid the
- // name can be a bit misleading.
- class TBufferInfo : public TObject {
- private:
-    Int_t      fNum;       // This is like the id of the element
-    Bool_t     fRead;      // has it been already read? (to know if we can delete it)
-    Long64_t   fPos;       // the offset of the buffer in the file
-    Int_t      fLen;       // the len of the buffer in the file
-    TBasket    *fBasket;   // the ref to the basket that is related to this buffer element
-
- public:
-    TBufferInfo(Int_t i = 0) : fNum(i), fRead(kFALSE), fPos(0), fLen(0), fBasket(0) { }
-    ~TBufferInfo() {}
-    void     SetNum(Int_t i) { fNum = i; }
-    Int_t    GetNum() { return fNum; }
-
-    void     SetRead(Bool_t r) { fRead = r; }
-    Bool_t   GetRead() { return fRead; }
-
-    void     SetPos(Long64_t p) { fPos = p; }
-    Long64_t GetPos() { return fPos; }
-
-    void     SetLen(Int_t l) { fLen = l; }
-    Int_t    GetLen() { return fLen; }
-
-    void     SetBasket(TBasket *b) { fBasket = b; }
-    TBasket  *GetBasket() { return fBasket; }
-
-    void     Print(Option_t *) const { Info("TBufferInfo","fNum = %d, fPos:%lld, fLen:%d, fRead?:%d, fBasket:%p", fNum, fPos, fLen, fRead, fBasket); }
-    ULong_t  Hash() const { return fNum; }
-    Bool_t   IsEqual(const TObject *obj) const { return fNum == ((TBufferInfo*)obj)->GetNum(); }
-    Bool_t   IsSortable() const { return kTRUE; }
-    Int_t    Compare(const TObject *obj) const { if (fNum > ((TBufferInfo*)obj)->GetNum())
-                                                    return 1;
-                                                 else if (fNum < ((TBufferInfo*)obj)->GetNum())
-												    return -1;
-                                                 else
-                                                    return 0; }
- };
- 
-
 class TTreeCacheUnzip : public TTreeCache {
 
+   // TUnzipBufferInfo is a simple container to put the Info of each element in the
+   // unzipping buffer.. it has nothing to do with TBuffer so I'm afraid the
+   // name can be a bit misleading.
+   class TUnzipBufferInfo : public TObject {
+   private:
+      Int_t      fNum;       // This is like the id of the element
+      Bool_t     fRead;      // has it been already read? (to know if we can delete it)
+      Long64_t   fPos;       // the offset of the buffer in the file
+      Int_t      fLen;       // the len of the buffer in the file
+      TBasket    *fBasket;   // the ref to the basket that is related to this buffer element
+
+   public:
+      TUnzipBufferInfo(Int_t i = 0) : fNum(i), fRead(kFALSE), fPos(0), fLen(0), fBasket(0) { }
+      ~TUnzipBufferInfo() {}
+      void     SetNum(Int_t i) { fNum = i; }
+      Int_t    GetNum() { return fNum; }
+
+      void     SetRead(Bool_t r) { fRead = r; }
+      Bool_t   GetRead() { return fRead; }
+
+      void     SetPos(Long64_t p) { fPos = p; }
+      Long64_t GetPos() { return fPos; }
+
+      void     SetLen(Int_t l) { fLen = l; }
+      Int_t    GetLen() { return fLen; }
+
+      void     SetBasket(TBasket *b) { fBasket = b; }
+      TBasket  *GetBasket() { return fBasket; }
+
+      void     Print(Option_t *) const { Info("TUnzipBufferInfo","fNum = %d, fPos:%lld, fLen:%d, fRead?:%d, fBasket:%p", fNum, fPos, fLen, fRead, fBasket); }
+      ULong_t  Hash() const { return fNum; }
+      Bool_t   IsEqual(const TObject *obj) const { return fNum == ((TUnzipBufferInfo*)obj)->GetNum(); }
+      Bool_t   IsSortable() const { return kTRUE; }
+      Int_t    Compare(const TObject *obj) const { if (fNum > ((TUnzipBufferInfo*)obj)->GetNum())
+                                                      return 1;
+                                                   else if (fNum < ((TUnzipBufferInfo*)obj)->GetNum())
+                                                      return -1;
+                                                   else
+                                                      return 0; 
+                                                 }
+   };
+ 
 protected:
    TMutex         *fMutexCache;
 
@@ -153,15 +153,15 @@ public:
    Int_t  GetNMissed(){ return fNMissed; }
 
    // Unzipping related methods
-   Int_t  GetRecordHeader(char *buf, Int_t maxbytes, Int_t &nbytes, Int_t &objlen, Int_t &keylen);
-   Bool_t GetSkipZip() { return fSkipZip; }
-   void   ResetCache();
-   Int_t  GetUnzipBuffer(char **buf, Long64_t pos, Int_t len, Bool_t *free, TBasket *basRef);
-   void   SetBufferRead(Long64_t pos, Int_t len, TBasket *basket);
-   void   SetUnzipBufferSize(Long64_t bufferSize);
-   void   SetSkipZip(Bool_t skip = kTRUE) { fSkipZip = skip; }
-   Int_t  UnzipBuffer(char **dest, char *src);
-   Int_t  UnzipCache();
+   Int_t          GetRecordHeader(char *buf, Int_t maxbytes, Int_t &nbytes, Int_t &objlen, Int_t &keylen);
+   virtual Bool_t GetSkipZip() { return fSkipZip; }
+   virtual void   ResetCache();
+   Int_t          GetUnzipBuffer(char **buf, Long64_t pos, Int_t len, Bool_t *free, TBasket *basRef);
+   void           SetBufferRead(Long64_t pos, Int_t len, TBasket *basket);
+   void           SetUnzipBufferSize(Long64_t bufferSize);
+   virtual void   SetSkipZip(Bool_t skip = kTRUE) { fSkipZip = skip; }
+   Int_t          UnzipBuffer(char **dest, char *src);
+   Int_t          UnzipCache();
    
    // static members
    static void* UnzipLoop(void *arg);

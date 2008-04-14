@@ -582,56 +582,35 @@ void TBranch::DropBasket(TBasket *b)
          if (j < 0) continue;
          basket = (TBasket*)fBaskets.UncheckedAt(j);
          if (!basket) continue;
-         if (b == basket){
-            GetListOfBaskets()->RemoveAt(j);
+         if (b == basket) {
+	    fBaskets.RemoveAt(j); // this will set the basket to zero
             delete basket;
-            fNBasketRAM--;
-            fBasketRAM[fNBasketRAM] = -1;
             return;
-			//if (!fTree->MemoryFull(0)) break;
-          }
+	 }
       }
       if (fNBasketRAM < 0) {
          Error("DropBaskets", "fNBasketRAM =%d",fNBasketRAM);
          fNBasketRAM = 0;
       }
-      i = 0;
-      for (j=0;j<kMaxRAM;j++) {
-         if (fBasketRAM[j] < 0) continue;
-         fBasketRAM[i] = fBasketRAM[j];
-         i++;
-      }
+      // we assume we have walked through all the buffers and we are done
       return;
    }
 
    //general algorithm looping on the full baskets table.
    Int_t nbaskets = GetListOfBaskets()->GetEntriesFast();
-   fNBasketRAM = 0;
-    for (j=0;j<nbaskets-1;j++)  {
+   for (j=0;j<nbaskets-1;j++) {
       basket = (TBasket*)fBaskets.UncheckedAt(j);
       if (!basket) continue;
-      if (fNBasketRAM < kMaxRAM) fBasketRAM[fNBasketRAM] = j;
-      fNBasketRAM++;
-      
-      if (b == basket){
-         //Info("DropBasket","Branch:%s. Droping Basket %s j:%d, b:%p", GetName(), b->GetName(),j, b);
-         GetListOfBaskets()->RemoveAt(j);
+      if (b == basket) {
+         fBaskets.RemoveAt(j);
          delete basket;
-         fNBasketRAM--;
-         fBasketRAM[fNBasketRAM] = -1;
          return;
-		 //if (!fTree->MemoryFull(0)) break;
       }
    }
 
-   // process subbranches
-   TObjArray *lb = GetListOfBranches();
-   Int_t nb = lb->GetEntriesFast();
-   for (Int_t j = 0; j < nb; j++) {
-      TBranch* branch = (TBranch*) lb->UncheckedAt(j);
-      if (!branch) continue;
-      branch->DropBasket(b);
-   }
+   // There is no need to process the subbranches
+   // TBranch::DropBasket is called by TBasket::DeleteFromBranch()
+   // and we know exactly to what branch the basket belongs to
 }
 
 //______________________________________________________________________________
@@ -1014,11 +993,7 @@ TBasket* TBranch::GetBasket(Int_t basketnumber)
    if (pf && pf->InheritsFrom(TTreeCache::Class())){
       TTreeCache *tpf = (TTreeCache*)pf;
       tpf->AddBranch(this);
-   }
-   
-   if (pf && pf->InheritsFrom(TTreeCacheUnzip::Class())) {
-      TTreeCacheUnzip *tpfu = (TTreeCacheUnzip*)pf;
-      if (fSkipZip) tpfu->SetSkipZip();
+      if (fSkipZip) tpf->SetSkipZip();
    }
 
    //now read basket

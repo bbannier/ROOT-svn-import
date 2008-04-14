@@ -63,6 +63,7 @@ public:
    Double_t            GetEfficiency();
    Double_t            GetEfficiencyRel();
    static Int_t        GetLearnEntries();
+   virtual Bool_t      GetSkipZip() { return kFALSE; } // This function is only used by TTreeCacheUnzip (ignore it)
    virtual Bool_t      FillBuffer();
    TTree              *GetOwner() const;
    TTree              *GetTree() const;
@@ -71,6 +72,7 @@ public:
    virtual void        ResetCache();
    virtual void        SetEntryRange(Long64_t emin,   Long64_t emax);
    static void         SetLearnEntries(Int_t n = 100);
+   virtual void        SetSkipZip(Bool_t skip = kTRUE) { (void)skip; return; } // This function is only used by TTreeCacheUnzip (ignore it)
    void                StartLearningPhase();
    void                StopLearningPhase();
    virtual void        UpdateBranches(TTree *tree, Bool_t owner = kFALSE);
