@@ -35,6 +35,7 @@ class TMutex;
 
 class TTreeCacheUnzip : public TTreeCache {
 
+protected:
    // TUnzipBufferInfo is a simple container to put the Info of each element in the
    // unzipping buffer.. it has nothing to do with TBuffer so I'm afraid the
    // name can be a bit misleading.
@@ -77,7 +78,6 @@ class TTreeCacheUnzip : public TTreeCache {
                                                  }
    };
  
-protected:
    TMutex         *fMutexCache;
 
    // Members for paral. managing
@@ -165,7 +165,7 @@ public:
    
    // static members
    static void* UnzipLoop(void *arg);
-   ClassDef(TTreeCacheUnzip,1)  //Specialization of TTreeCache for parallel unzipping
+   ClassDef(TTreeCacheUnzip,2)  //Specialization of TTreeCache for parallel unzipping
 };
 
 #endif
