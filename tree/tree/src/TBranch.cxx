@@ -1062,7 +1062,6 @@ Long64_t TBranch::GetBasketSeek(Int_t basketnumber) const
 TList* TBranch::GetBrowsables() {
    // Returns (and, if 0, creates) browsable objects for this branch
    // See TVirtualBranchBrowsable::FillListOfBrowsables.
-
    if (fBrowsables) return fBrowsables;
    fBrowsables=new TList();
    TVirtualBranchBrowsable::FillListOfBrowsables(*fBrowsables, this);
@@ -1094,7 +1093,7 @@ Int_t TBranch::GetEntry(Long64_t entry, Int_t getall)
    //     branch->GetEntry(localEntry);
    //
    // The function returns the number of bytes read from the input buffer.
-   // If entry does not exist, the function return 0.
+   // If entry does not exist, the function returns 0.
    // If an I/O error occurs, the function returns -1.
    //
    // See IMPORTANT REMARKS in TTree::GetEntry.
@@ -1671,7 +1670,6 @@ void TBranch::ResetAddress()
       TLeaf* leaf = (TLeaf*) fLeaves.UncheckedAt(i);
       leaf->SetAddress(0);
    }
-
    Int_t nbranches = fBranches.GetEntriesFast();
    for (Int_t i = 0; i < nbranches; ++i)  {
       TBranch* abranch = (TBranch*) fBranches[i];
