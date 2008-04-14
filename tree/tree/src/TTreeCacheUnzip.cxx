@@ -530,9 +530,9 @@ void TTreeCacheUnzip::ResetCache()
    // delete the information about the unzipping buffers
    R__LOCKGUARD(fMutexList);
 
-   TBufferInfo *ind  = 0;
+   TUnzipBufferInfo *ind  = 0;
    TIter next(fUnzipList);
-   while ((ind = (TBufferInfo*)next())) {
+   while ((ind = (TUnzipBufferInfo*)next())) {
       TBasket *basket=ind->GetBasket();
       if(basket && !ind->GetRead()) {
 	 // dont use basket->DeleteFromBranch to avoid a possible (although not probable)
@@ -582,19 +582,19 @@ Int_t TTreeCacheUnzip::GetUnzipBuffer(char **buf, Long64_t pos, Int_t len, Bool_
          R__LOCKGUARD(fMutexList);
 
          // Look for the index in the list of unzipped buffers...
-         TBufferInfo *ind  = 0;
-         TBufferInfo *last = 0;
+         TUnzipBufferInfo *ind  = 0;
+         TUnzipBufferInfo *last = 0;
          Int_t i = 0;
          Int_t n = fUnzipList->GetSize();
          Bool_t oneLeft = kFALSE;
          TIter next(fUnzipList);
-         ind = (TBufferInfo*)next();
+         ind = (TUnzipBufferInfo*)next();
          while (ind) {
             // it was found in the list
             if (ind->GetNum() == loc)
                break;
 
-            ind = (TBufferInfo*)next();
+            ind = (TUnzipBufferInfo*)next();
             if ( i==n-3 ){
                if(( ind && (ind->GetNum() == loc) )) {
                   oneLeft = kTRUE;
@@ -625,7 +625,7 @@ Int_t TTreeCacheUnzip::GetUnzipBuffer(char **buf, Long64_t pos, Int_t len, Bool_
                n = fUnzipList->GetSize();
                oneLeft = kFALSE;
                TIter next2(fUnzipList);
-               while ((ind = (TBufferInfo*)next2())) {
+               while ((ind = (TUnzipBufferInfo*)next2())) {
                   // it was found in the list
                   if (ind->GetNum() == loc)
                      break;
@@ -708,9 +708,9 @@ void TTreeCacheUnzip::SetBufferRead(Long64_t pos, Int_t len, TBasket *basket)
    R__LOCKGUARD(fMutexList);
 
    (void) len;
-   TBufferInfo *ind  = 0;
+   TUnzipBufferInfo *ind  = 0;
    TIter next(fUnzipList);
-   while ((ind = (TBufferInfo*)next())) {
+   while ((ind = (TUnzipBufferInfo*)next())) {
       // it was found in the list
       if ((ind->GetPos()) == pos && (ind->GetBasket()) == basket){
          // mark as read and go out of the list
@@ -966,9 +966,9 @@ Int_t TTreeCacheUnzip::UnzipCache()
       {
          R__LOCKGUARD(fMutexList);
 
-         TBufferInfo *ind = 0;
+         TUnzipBufferInfo *ind = 0;
          TIter next(fUnzipList);
-         while ( (fUnzipList->GetSize()>0) && (ind=(TBufferInfo*)next())) {
+         while ( (fUnzipList->GetSize()>0) && (ind=(TUnzipBufferInfo*)next())) {
             if (!IsActiveThread() || !fNseek || fIsLearning || fNewTransfer)
                return 0;
 
@@ -1073,7 +1073,7 @@ Int_t TTreeCacheUnzip::UnzipCache()
               i, fUnzipPos[i], fUnzipLen[i]);
 
       // add it to the list of unzipped buffers
-      TBufferInfo *elem = new TBufferInfo(i);
+      TUnzipBufferInfo *elem = new TUnzipBufferInfo(i);
       elem->SetPos(fSeekSort[i]);
       elem->SetLen(fSeekSortLen[i]);
       fUnzipList->AddLast(elem);
