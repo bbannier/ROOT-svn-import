@@ -418,7 +418,7 @@ void TBranch::Init(const char* name, const char* leaflist, Int_t compress)
 TBranch::~TBranch()
 {
    // Destructor.
-   
+
    delete fBrowsables;
    fBrowsables = 0;
 
@@ -736,7 +736,7 @@ Int_t TBranch::Fill()
    // If no data are written, because e.g. the branch is disabled,
    // the number of bytes returned is 0.
    //
-   
+
    if (TestBit(kDoNotProcess)) {
       return 0;
    }
@@ -894,7 +894,7 @@ Int_t TBranch::Fill()
 void TBranch::FillLeaves(TBuffer& b)
 {
    // Fill each of the leaf of the branch.
-   
+
    for (Int_t i = 0; i < fNleaves; ++i) {
       TLeaf* leaf = (TLeaf*) fLeaves.UncheckedAt(i);
       leaf->FillBasket(b);
@@ -993,7 +993,7 @@ TBasket* TBranch::GetBasket(Int_t basketnumber)
 {
    //*-*-*-*-*Return pointer to basket basketnumber in this Branch*-*-*-*-*-*
    //*-*      ====================================================
-   
+
    static Int_t nerrors = 0;
 
       // reference to an existing basket in memory ?
@@ -1009,7 +1009,6 @@ TBasket* TBranch::GetBasket(Int_t basketnumber)
    if (fBasketBytes[basketnumber] == 0) {
       fBasketBytes[basketnumber] = basket->ReadBasketBytes(fBasketSeek[basketnumber],file);
    }
-
    //add branch to cache (if any)
    TFileCacheRead *pf = GetFile()->GetCacheRead();
    if (pf && pf->InheritsFrom(TTreeCache::Class())){
@@ -1063,7 +1062,7 @@ Long64_t TBranch::GetBasketSeek(Int_t basketnumber) const
 TList* TBranch::GetBrowsables() {
    // Returns (and, if 0, creates) browsable objects for this branch
    // See TVirtualBranchBrowsable::FillListOfBrowsables.
-   
+
    if (fBrowsables) return fBrowsables;
    fBrowsables=new TList();
    TVirtualBranchBrowsable::FillListOfBrowsables(*fBrowsables, this);
@@ -1115,13 +1114,11 @@ Int_t TBranch::GetEntry(Long64_t entry, Int_t getall)
    } else {
       last = fBasketEntry[fReadBasket+1] - 1;
    }
- 
    // Are we still in the same ReadBasket?
    if ((entry < first) || (entry > last)) {
       fReadBasket = TMath::BinarySearch(fWriteBasket + 1, fBasketEntry, entry);
       first = fBasketEntry[fReadBasket];
    }
-
    // We have found the basket containing this entry.
    // make sure basket buffers are in memory.
    TBasket* basket = (TBasket*) fBaskets.UncheckedAt(fReadBasket);
@@ -1488,7 +1485,7 @@ Int_t TBranch::LoadBaskets()
 void TBranch::Print(Option_t*) const
 {
    // Print TBranch parameters
- 
+
    const int kLINEND = 77;
    Float_t cx = 1;
 
@@ -1573,10 +1570,7 @@ void TBranch::ReadBasket(TBuffer&)
 void TBranch::ReadLeaves(TBuffer& b)
 {
    // Loop on all leaves of this branch to read Basket buffer.
-   
-   // This is only called by GetEntry and that locked the mutex already
-   // so it should be safe
-   
+
    for (Int_t i = 0; i < fNleaves; ++i) {
       TLeaf* leaf = (TLeaf*) fLeaves.UncheckedAt(i);
       leaf->ReadBasket(b);
@@ -1697,7 +1691,6 @@ void TBranch::ResetCount()
 void TBranch::SetAddress(void* addr)
 {
    // Set address of this branch.
-   //Info("SetAddress", "fgMutexBranch:%p", fgMutexBranch);
 
    if (TestBit(kDoNotProcess)) {
       return;
@@ -1743,7 +1736,7 @@ void TBranch::SetBasketSize(Int_t buffsize)
 {
    // Set the basket size
    // The function makes sure that the basket size is greater than fEntryOffsetlen
- 
+
    if (buffsize < 100+fEntryOffsetLen) buffsize = 100+fEntryOffsetLen;
    fBasketSize = buffsize;
 }
@@ -1868,7 +1861,6 @@ void TBranch::SetFile(const char* fname)
 void TBranch::Streamer(TBuffer& b)
 {
    // Stream a class object
-   ////Info("Streamer", "fgMutexBranch:%p", fgMutexBranch);
 
    if (b.IsReading()) {
       UInt_t R__s, R__c;
