@@ -1327,7 +1327,8 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
             tmpStatus = new TStatus();
             AddOutputObject(tmpStatus);
          }
-         tmpStatus->Add("Some files were missing; check 'missingFiles' list");
+         tmpStatus->Add("Some files were missing; check the 'MissingFiles'"
+                        " list in the output list");
       } else {
          // Cleanup
          SafeDelete(listOfMissingFiles);
@@ -1544,7 +1545,8 @@ Long64_t TProofPlayerRemote::Finalize(Bool_t force, Bool_t sync)
                   status = new TStatus();
                   AddOutputObject(status);
                }
-               status->Add("Some pakets failed. Check the FailedPackets in the output list");
+               status->Add("Some packets were not processed! Check the the"
+                           " 'FailedPackets' list in the output list");
             }
 
          // Some input parameters may be needed in Terminate
