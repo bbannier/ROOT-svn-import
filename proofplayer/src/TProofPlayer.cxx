@@ -1139,7 +1139,7 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
 {
    // Process specified TDSet on PROOF.
    // This method is called on client and on the PROOF master.
-   // The return value is -1 in case of error and TSelector::GetStatus() in
+   // The return value is -1 in case of an error and TSelector::GetStatus() in
    // in case of success.
 
    PDB(kGlobal,1) Info("Process","Enter");
@@ -1493,7 +1493,7 @@ Bool_t  TProofPlayerRemote::MergeOutputFiles()
 Long64_t TProofPlayerRemote::Finalize(Bool_t force, Bool_t sync)
 {
    // Finalize a query.
-   // Returns -1 in case error, 0 otherwise.
+   // Returns -1 in case of an error, 0 otherwise.
 
    if (IsClient()) {
       if (fOutputLists == 0) {
@@ -1532,6 +1532,20 @@ Long64_t TProofPlayerRemote::Finalize(Bool_t force, Bool_t sync)
                return -1;
             }
          }
+
+         if (fPacketizer)
+            if (TList *failedPackets = fPacketizer->GetFailedPackets()) {
+               fPacketizer->SetFailedPackets(0);
+               failedPackets->SetName("FailedPackets");
+               AddOutputObject(failedPackets);
+
+               TStatus *status = (TStatus *)GetOutput("PROOF_Status");
+               if (!status) {
+                  status = new TStatus();
+                  AddOutputObject(status);
+               }
+               status->Add("Some pakets failed. Check the FailedPackets in the output list");
+            }
 
          // Some input parameters may be needed in Terminate
          fSelector->SetInputList(fInput);

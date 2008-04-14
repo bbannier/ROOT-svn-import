@@ -69,6 +69,7 @@ TVirtualPacketizer::TVirtualPacketizer(TList *input)
    fTotalEntries = 0;
    fValid = kTRUE;
    fStop = kFALSE;
+   fFailedPackets = 0;
 
    // Performance monitoring
    TTime tnow = gSystem->Now();
@@ -92,7 +93,7 @@ TVirtualPacketizer::TVirtualPacketizer(TList *input)
    fProgress->Start(period, kFALSE);
 
    // Whether to send estimated values for the progress info
-   TString estopt; 
+   TString estopt;
    TProof::GetParameter(input, "PROOF_RateEstimation", estopt);
    if (estopt.IsNull()) {
       // Parse option from the env
@@ -112,6 +113,7 @@ TVirtualPacketizer::~TVirtualPacketizer()
 
    SafeDelete(fCircProg);
    SafeDelete(fProgress);
+   SafeDelete(fFailedPackets);
 }
 
 //______________________________________________________________________________
