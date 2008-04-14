@@ -165,7 +165,7 @@ public:
    
    // static members
    static void* UnzipLoop(void *arg);
-   ClassDef(TTreeCacheUnzip,2)  //Specialization of TTreeCache for parallel unzipping
+   ClassDef(TTreeCacheUnzip,0)  //Specialization of TTreeCache for parallel unzipping
 };
 
 #endif
