@@ -1232,9 +1232,8 @@ TDSetElement *TPacketizerAdaptive::GetNextPacket(TSlave *sl, TMessage *r)
       Long64_t bytesRead = -1;
       Long64_t totalEntries = -1;
 
-      Long64_t numev = slstat->fCurElem->GetNum();
+      Long64_t expectedNumEv = slstat->fCurElem->GetNum();
 
-      slstat->AddProcessed();
       (*r) >> latency >> proctime >> proccpu;
       // only read new info if available
       if (r->BufferSize() > r->Length()) (*r) >> bytesRead;
@@ -1242,16 +1241,33 @@ TDSetElement *TPacketizerAdaptive::GetNextPacket(TSlave *sl, TMessage *r)
       Long64_t totev = 0;
       if (r->BufferSize() > r->Length()) (*r) >> totev;
 
-      // Record
+      // Calculate the number of events processed in the last packet
+      Long64_t numev;
       if (totev > 0)
          numev = totev - slstat->fProcessed;
-      fProcessed += ((numev > 0) ? numev : 0);
-      fBytesRead += ((bytesRead > 0) ? bytesRead : 0);
+      else
+         numev = 0;
 
-      // update processing rate
-      slstat->UpdateRates(numev, proctime);
+      if (numev == expectedNumEv) {
+         // The last packet was sucessfully processed
+         slstat->AddProcessed();
+         fProcessed += ((numev > 0) ? numev : 0);
+         fBytesRead += ((bytesRead > 0) ? bytesRead : 0);
 
-      fCumProcTime += proctime;
+         // update processing rate
+         slstat->UpdateRates(numev, proctime);
+
+         fCumProcTime += proctime;
+
+      } else {
+         // The last packet was not processed properly.
+         // Add it to the failed packets list.
+
+         if (!fFailedPackets) {
+            fFailedPackets = new TList();
+         }
+         fFailedPackets->Add(slstat->fCurElem);
+      }
 
       PDB(kPacketizer,2)
          Info("GetNextPacket","worker-%s (%s): %lld %7.3lf %7.3lf %7.3lf %lld",
