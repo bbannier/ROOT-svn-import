@@ -87,7 +87,8 @@ TServerSocket::TServerSocket(const char *service, Bool_t reuse, Int_t backlog,
    ResetBit(TSocket::kIsUnix);
    if (service && (!gSystem->AccessPathName(service) || service[0] == '/')) {
       SetBit(TSocket::kIsUnix);
-      fService = unix;
+      fService = "unix:";
+      fService += service;
       fSocket = gSystem->AnnounceUnixService(service, backlog);
       if (fSocket >= 0) {
          R__LOCKGUARD2(gROOTMutex);
