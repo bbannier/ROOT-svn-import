@@ -574,6 +574,18 @@ Int_t TTreeCacheUnzip::GetUnzipBuffer(char **buf, Long64_t pos, Int_t len, Bool_
       // The modify the cache if it's in de middle of something (unzipping for example)
       R__LOCKGUARD(fMutexCache);
 
+      // If this is the first time we get here since the last FillBuffer
+      // it's probable that the information about the prefetched buffers is there
+      // but it hasn't actually been transfered... Is this the best place to put it??
+      if (fNseek > 0 && !fIsSorted) {
+         Sort();
+
+         // Then we use the vectored read to read everything now
+         if (fFile->ReadBuffers(fBuffer,fPos,fLen,fNb)) {
+	    return -1;
+         }
+      }
+
       // be careful.. can be -1
       Int_t loc = (Int_t)TMath::BinarySearch(fNseek,fSeekSort,pos);
 
