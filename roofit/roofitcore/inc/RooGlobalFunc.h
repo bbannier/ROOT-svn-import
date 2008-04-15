@@ -116,6 +116,7 @@ RooCmdArg SplitRange(Bool_t flag=kTRUE) ;
 RooCmdArg SumCoefRange(const char* rangeName) ;
 RooCmdArg Constrain(const RooArgSet& params) ;
 RooCmdArg ExternalConstraints(const RooArgSet& constraintPdfs) ;
+RooCmdArg PrintEvalErrors(Int_t numErrors) ;
 
 // RooAbsPdf::paramOn arguments
 RooCmdArg Label(const char* str) ;

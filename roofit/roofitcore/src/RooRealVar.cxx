@@ -535,15 +535,16 @@ void RooRealVar::writeToStream(ostream& os, Bool_t compact) const
 void RooRealVar::printValue(ostream& os) const 
 {
   os << getVal() ;
+}
+
+void RooRealVar::printExtras(ostream& os) const
+{
   if(hasError() && !hasAsymError()) {
     os << " +/- " << getError() ;
   } else if (hasAsymError()) {
     os << " +/- (" << getAsymErrorLo() << "," << getAsymErrorHi() << ")" ;
   }
-}
 
-void RooRealVar::printExtras(ostream& os) const
-{
   // Append limits if not constants
   if (isConstant()) {
     os << "C " ;

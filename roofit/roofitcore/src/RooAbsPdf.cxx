@@ -291,10 +291,15 @@ Bool_t RooAbsPdf::traceEvalPdf(Double_t value) const
   // If not, print an error, until the error counter reaches
   // its set maximum.
 
+  cxcoutD(Tracing) << "RooAbsPdf::traceEvalPdf(" << GetName() << ") value = " << value << endl ;
+
   // check for a math error or negative value
   Bool_t error= isnan(value) || (value < 0);
-  if (error) {
-    logEvalError("p.d.f value is NaN or negative") ;
+  if (isnan(value)) {
+    logEvalError(Form("p.d.f value is Not-a-Number (%f), forcing value to zero",value)) ;
+  }
+  if (value<0) {
+    logEvalError(Form("p.d.f value is less than zero (%f), forcing value to zero",value)) ;
   }
 
   // do nothing if we are no longer tracing evaluations and there was no error
@@ -501,7 +506,7 @@ Double_t RooAbsPdf::getLogVal(const RooArgSet* nset) const
   Double_t prob = getVal(nset) ;
   if(prob <= 0) {
 
-    logEvalError(" top-level p.d.f evaluates to zero or negative number ") ;
+    logEvalError("getLogVal() top-level p.d.f evaluates to zero or negative number") ;
 
     if (_negCount-- > 0) {     
 
@@ -605,6 +610,9 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, RooCmdArg arg1, RooCmdArg arg2,
   // Timer(Bool_t flag)             -- Time CPU and wall clock consumption of fit steps, off by default
   // PrintLevel(Int_t level)        -- Set Minuit print level (-1 through 3, default is 1). At -1 all RooFit informational 
   //                                   messages are suppressed as well
+  // PrintEvalErrors(Int_t numErr)  -- Control number of p.d.f evaluation errors printed per likelihood evaluation. A negative
+  //                                   value suppress output completely, a zero value will only print the error count per p.d.f component,
+  //                                   a positive value is will print details of each error up to numErr messages per p.d.f component.
   // 
   // 
   
@@ -648,6 +656,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   pc.defineInt("minos","Minos",0,1) ;
   pc.defineInt("ext","Extended",0,0) ;
   pc.defineInt("numcpu","NumCPU",0,1) ;
+  pc.defineInt("numee","PrintEvalErrors",0,10) ;
   pc.defineObject("projDepSet","ProjectedObservables",0,0) ;
   pc.defineObject("minosSet","Minos",0,0) ;
   pc.defineObject("cPars","Constrain",0,0) ;
@@ -683,6 +692,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   Int_t ext      = pc.getInt("ext") ;
   Int_t numcpu   = pc.getInt("numcpu") ;
   Int_t splitr   = pc.getInt("splitRange") ;
+  Int_t numee    = pc.getInt("numee") ;
   const RooArgSet* minosSet = static_cast<RooArgSet*>(pc.getObject("minosSet")) ;
   const RooArgSet* cPars = static_cast<RooArgSet*>(pc.getObject("cPars")) ;
   const RooArgSet* extCons = static_cast<RooArgSet*>(pc.getObject("extCons")) ;
@@ -713,7 +723,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   RooAbsReal* nll ;
   if (!rangeName || strchr(rangeName,',')==0) {
     // Simple case: default range, or single restricted range
-    nll = new RooNLLVar("nll","-log(likelihood)",*this,data,projDeps,ext,rangeName,addCoefRangeName,numcpu,plevel!=-1,splitr) ;
+    nll = new RooNLLVar("nll","-log(likelihood)",*this,data,projDeps,ext,rangeName,addCoefRangeName,numcpu,kFALSE,plevel!=-1,splitr) ;
   } else {
     // Composite case: multiple ranges
     RooArgList nllList ;
@@ -721,7 +731,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
     strcpy(buf,rangeName) ;
     char* token = strtok(buf,",") ;
     while(token) {
-      RooAbsReal* nllComp = new RooNLLVar(Form("nll_%s",token),"-log(likelihood)",*this,data,projDeps,ext,token,addCoefRangeName,numcpu,plevel!=-1,splitr) ;
+      RooAbsReal* nllComp = new RooNLLVar(Form("nll_%s",token),"-log(likelihood)",*this,data,projDeps,ext,token,addCoefRangeName,numcpu,kFALSE,plevel!=-1,splitr) ;
       nllList.add(*nllComp) ;
       token = strtok(0,",") ;
     }
@@ -754,7 +764,8 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
 
   // Instantiate MINUIT
   RooMinuit m(*nll) ;
-
+  
+  m.setPrintEvalErrors(numee) ;
   if (plevel!=1) {
     m.setPrintLevel(plevel) ;
   }
@@ -907,6 +918,14 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooArgSet& projDeps, Opti
   
 }
 
+void RooAbsPdf::printValue(ostream& os) const
+{
+  if (_norm) {
+    os << evaluate() << "/" << _norm->getVal() ;
+  } else {
+    os << evaluate() ;
+  }
+}
 
 
 void RooAbsPdf::printMultiline(ostream& os, Int_t contents, Bool_t verbose, TString indent) const

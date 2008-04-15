@@ -153,7 +153,24 @@ Bool_t RooListProxy::changePointer(const RooAbsCollection& newServerList, Bool_t
 }
 
 
-void RooListProxy::print(ostream& os) const 
+void RooListProxy::print(ostream& os, Bool_t addContents) const 
 { 
-  os << name() << "=" ; printStream(os,kValue,kInline) ; 
+  if (!addContents) {
+    os << name() << "=" ; printStream(os,kValue,kInline) ; 
+  } else {
+    os << name() << "=(" ;
+    TIterator* iter = createIterator() ;
+    RooAbsArg* arg ;
+    Bool_t first(kTRUE) ;
+    while ((arg=(RooAbsArg*)iter->Next())) {
+      if (first) {
+	first = kFALSE ;
+      } else {
+	os << "," ;
+      }
+      arg->printStream(os,kValue|kName,kInline) ;
+    }
+    os << ")" ;
+    delete iter ;
+  }
 }
