@@ -117,7 +117,7 @@ void TTreeCacheUnzip::Init()
 {
    // Initialization procedure common to all the constructors
 
-   fMutexCache       = new TMutex();
+   fMutexCache       = new TMutex(kTRUE);
    fMutexUnzipBuffer = new TMutex();
    fMutexBuffer      = new TMutex();
    fMutexList        = new TMutex();
