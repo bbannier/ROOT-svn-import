@@ -88,12 +88,11 @@ void RooArgProxy::changeDataSet(const RooArgSet* newNormSet)
   _arg->setProxyNormSet(newNormSet) ;
 }
 
-void RooArgProxy::print(ostream& os) const 
+void RooArgProxy::print(ostream& os, Bool_t addContents) const 
 { 
   os << name() << "=" << (_arg?_arg->GetName():"NULL")  ;
-//   if (_arg) {
-//     os << "=" ;
-//     _arg->printStream(os,RooPrintable::kValue,RooPrintable::kInline) ;
-//   }
-  ; 
+  if (_arg && addContents) {
+    os << "=" ;
+    _arg->printStream(os,RooPrintable::kValue,RooPrintable::kInline) ;
+  }
 }

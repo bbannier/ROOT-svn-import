@@ -22,6 +22,10 @@
 // This class holds in addition a unit and label string, as well
 // as a plot range and number of plot bins and plot creation methods.
 
+#include <sys/types.h>
+#include <unistd.h>
+
+
 #include "RooFit.h"
 #include "RooMsgService.h"
 
@@ -60,6 +64,8 @@
 #include "TLeaf.h"
 #include "TAttLine.h"
 
+#include <sstream>
+
 using namespace std ;
  
 ClassImp(RooAbsReal)
@@ -68,7 +74,7 @@ ClassImp(RooAbsReal)
 Bool_t RooAbsReal::_cacheCheck(kFALSE) ;
 
 Bool_t RooAbsReal::_doLogEvalError ;
-list<pair<const RooAbsReal*,string> > RooAbsReal::_evalErrorList ;
+map<const RooAbsArg*,list<RooAbsReal::EvalError> > RooAbsReal::_evalErrorList ;
 
 RooAbsReal::RooAbsReal() : _specIntegratorConfig(0), _treeVar(kFALSE)
 {
@@ -2260,30 +2266,82 @@ Double_t RooAbsReal::maxVal(Int_t /*code*/)
 }
 
 
-void RooAbsReal::logEvalError(const char* message) const
+void RooAbsReal::logEvalError(const char* message, const char* serverValueString) const
 {
-  if (!_doLogEvalError) return ;
+  if (!_doLogEvalError) {
+    return ;
+  }
 
-  _evalErrorList.push_back(make_pair(this,string(message))) ;
+  EvalError ee ;
+  ee.setMessage(message) ;
+
+  if (serverValueString) {
+    ee.setServerValues(serverValueString) ;
+  } else {
+    string srvval ;
+    ostringstream oss ;
+    Bool_t first(kTRUE) ;
+    for (Int_t i=0 ; i<numProxies() ; i++) {
+      RooAbsProxy* p = getProxy(i) ;
+      if (p->name()[0]=='!') continue ;
+      if (first) {
+	first=kFALSE ;
+      } else {
+	oss << ", " ;
+      }
+      getProxy(i)->print(oss,kTRUE) ;
+    }
+    ee.setServerValues(oss.str().c_str()) ;
+  }
+
+  _evalErrorList[this].push_back(ee) ;
+
+  //coutE(Tracing) << "RooAbsReal::logEvalError(" << GetName() << ") message = " << message << endl ;
 }
 
 void RooAbsReal::clearEvalErrorLog() 
 {
   if (!_doLogEvalError) return ;
-
   _evalErrorList.clear() ;
 }
 
-void RooAbsReal::printEvalErrors(ostream& os) 
+void RooAbsReal::printEvalErrors(ostream& os, Int_t maxPerNode) 
 {
-  list<pair<const RooAbsReal*,string> >::iterator iter = _evalErrorList.begin() ;
+  map<const RooAbsArg*,list<EvalError> >::iterator iter = _evalErrorList.begin() ;
 
   for(;iter!=_evalErrorList.end() ; ++iter) {
-    iter->first->printStream(os,kName|kClassName|kArgs,kInline) ;
-    os << " : " << iter->second << endl ;
-  } 
+    if (maxPerNode==0) {
+
+      // Only print node name with total number of errors
+      iter->first->printStream(os,kName|kClassName|kArgs,kInline)  ;
+      os << " has " << iter->second.size() << " errors" << endl ;      
+
+    } else {
+
+      // Print node name and details of 'maxPerNode' errors
+      iter->first->printStream(os,kName|kClassName|kArgs,kSingleLine) ;
+
+      Int_t i(0) ;
+      std::list<EvalError>::iterator iter2 = iter->second.begin() ;
+      for(;iter2!=iter->second.end() ; ++iter2, i++) {
+	os << "     " << iter2->_msg << " @ " << iter2->_srvval << endl ;
+	if (i>maxPerNode) {
+	  os << "    ... (remaining " << iter->second.size() - maxPerNode << " messages suppressed)" << endl ;
+	  break ;
+	}
+      } 
+    }
+  }
 }
 
+Int_t RooAbsReal::numEvalErrors() { 
+  Int_t ntot(0) ;
+  map<const RooAbsArg*,list<EvalError> >::iterator iter = _evalErrorList.begin() ;
+  for(;iter!=_evalErrorList.end() ; ++iter) {
+    ntot += iter->second.size() ;
+  }
+  return ntot ;
+}
 
 void RooAbsReal::fixAddCoefNormalization(const RooArgSet& addNormSet, Bool_t force) 
 {

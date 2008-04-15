@@ -94,6 +94,7 @@ RooMinuit::RooMinuit(RooAbsReal& function)
   _profile = kFALSE ;
   _handleLocalErrors = kFALSE ;
   _printLevel = 1 ;
+  _printEvalErrors = 10 ;
   _warnLevel = 0 ;
 
   // Examine parameter list
@@ -960,23 +961,26 @@ void RooMinuitGlue(Int_t& /*np*/, Double_t* /*gin*/,
   // Calculate the function for these parameters
   f= context->_func->getVal() ;
   if (f==0 || (context->_handleLocalErrors&&(RooAbsPdf::evalError()) || RooAbsReal::numEvalErrors()>0) ) {
-    oocoutW(context,Minimization) << "RooFitGlue: Minimized function has error status." << endl 
-				  << "Returning maximum FCN so far (" << maxFCN 
-				  << ") to force MIGRAD to back out of this region. Error log follows" << endl ;
 
-    TIterator* iter = context->_floatParamList->createIterator() ;
-    RooRealVar* var ;
-    Bool_t first(kTRUE) ;
-    ooccoutW(context,Minimization) << "Parameter values: " ;
-    while((var=(RooRealVar*)iter->Next())) {
-      if (first) { first = kFALSE ; } else ooccoutW(context,Minimization) << ", " ;
-      ooccoutW(context,Minimization) << var->GetName() << "=" << var->getVal() ;
+    if (context->_printEvalErrors>=0) {
+      oocoutW(context,Minimization) << "RooFitGlue: Minimized function has error status." << endl 
+				    << "Returning maximum FCN so far (" << maxFCN 
+				    << ") to force MIGRAD to back out of this region. Error log follows" << endl ;
+      
+      TIterator* iter = context->_floatParamList->createIterator() ;
+      RooRealVar* var ;
+      Bool_t first(kTRUE) ;
+      ooccoutW(context,Minimization) << "Parameter values: " ;
+      while((var=(RooRealVar*)iter->Next())) {
+	if (first) { first = kFALSE ; } else ooccoutW(context,Minimization) << ", " ;
+	ooccoutW(context,Minimization) << var->GetName() << "=" << var->getVal() ;
+      }
+      delete iter ;
+      ooccoutW(context,Minimization) << endl ;
+      
+      RooAbsReal::printEvalErrors(ooccoutW(context,Minimization),context->_printEvalErrors) ;
+      ooccoutW(context,Minimization) << endl ;
     }
-    delete iter ;
-    ooccoutW(context,Minimization) << endl ;
-
-    RooAbsReal::printEvalErrors(ooccoutW(context,Minimization)) ;
-    ooccoutW(context,Minimization) << endl ;
 
     f = maxFCN ;
     RooAbsPdf::clearEvalError() ;

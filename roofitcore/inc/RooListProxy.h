@@ -46,7 +46,7 @@ public:
 
   RooListProxy& operator=(const RooArgList& other) ;
 
-  virtual void print(ostream& os) const ;
+  virtual void print(ostream& os, Bool_t addContents=kFALSE) const ;
   
 protected:
     

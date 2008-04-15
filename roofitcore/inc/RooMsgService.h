@@ -148,6 +148,7 @@ public:
   MsgLevel globalKillBelow() const { return _globMinLevel ; }
 
   void Print(Option_t *options= 0) const ;
+  void showPid(Bool_t flag) { _showPid = flag ; }
 
   // Back end -- Send message or check if particular logging configuration is active
   ostream& log(const RooAbsArg* self, MsgLevel level, MsgTopic facility, Bool_t forceSkipPrefix=kFALSE) ;
@@ -180,8 +181,9 @@ protected:
   MsgLevel _globMinLevel ;
 
   Bool_t _silentMode ; 
+  Bool_t _showPid ;
 
-  Int_t _errorCount ; 
+  Int_t _errorCount ;  
 
   // Private ctor -- singleton class
   RooMsgService() ;

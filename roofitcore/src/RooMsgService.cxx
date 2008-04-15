@@ -39,6 +39,9 @@
 
 #define INST_MSG_SERVICE
 
+#include <sys/types.h>
+#include <unistd.h>
+
 #include "RooFit.h"
 #include "RooAbsArg.h"
 #include "TClass.h"
@@ -75,6 +78,7 @@ RooMsgService::RooMsgService()
 {
   // Constructor
   _silentMode = kFALSE ;
+  _showPid = kFALSE ;
   _globMinLevel = DEBUG ;
 
   _devnull = new ofstream("/dev/null") ;
@@ -395,6 +399,9 @@ ostream& RooMsgService::log(const RooAbsArg* self, MsgLevel level, MsgTopic topi
   (*_streams[as].os).flush() ;
     
   if (_streams[as].prefix && !skipPrefix) {
+    if (_showPid) {
+      (*_streams[as].os) << "pid" << getpid() << " " ;
+    }
     (*_streams[as].os) << "[#" << as << "] " << _levelNames[level] << ":" << _topicNames[topic]  << " -- " ;
   }
   return (*_streams[as].os) ;
@@ -417,6 +424,9 @@ ostream& RooMsgService::log(const TObject* self, MsgLevel level, MsgTopic topic,
   (*_streams[as].os).flush() ;
     
   if (_streams[as].prefix && !skipPrefix) {
+    if (_showPid) {
+      (*_streams[as].os) << "pid" << getpid() << " " ;
+    }
     (*_streams[as].os) << "[#" << as << "] " << _levelNames[level] << ":" << _topicNames[topic]  << " -- " ;
   }
   return (*_streams[as].os) ;

@@ -159,6 +159,7 @@ public:
   virtual Double_t expectedEvents(const RooArgSet& nset) const { return expectedEvents(&nset) ; }
 
   // Printing interface (human readable)
+  virtual void printValue(ostream& os) const ;
   virtual void printMultiline(ostream& os, Int_t contents, Bool_t verbose=kFALSE, TString indent="") const ;
 
   static void verboseEval(Int_t stat) ;
