@@ -437,6 +437,7 @@ Int_t TTreeCacheUnzip::StopThreadUnzip()
       fActiveThread = kFALSE;
       SendSignal();
       if (fUnzipThread->Exists()) {
+         SendSignal();
          fUnzipThread->Join();
       }
       fUnzipThread = 0;
