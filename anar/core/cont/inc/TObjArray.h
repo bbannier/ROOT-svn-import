@@ -26,13 +26,15 @@
 #include "TSeqCollection.h"
 #endif
 
+#include <iterator>
+
+
 class TObjArrayIter;
 
-class TObjArray : public TSeqCollection
-{
+class TObjArray : public TSeqCollection {
 
-   friend class TObjArrayIter;
-   friend class TClonesArray;
+friend class TObjArrayIter;
+friend class TClonesArray;
 
 protected:
    TObject     **fCont;        //!Array contents
@@ -46,14 +48,14 @@ protected:
 
 public:
    typedef TObjArrayIter Iterator_t;
-  
+
    TObjArray(Int_t s = TCollection::kInitCapacity, Int_t lowerBound = 0);
    TObjArray(const TObjArray &a);
    virtual          ~TObjArray();
    TObjArray& operator=(const TObjArray&);
-   virtual void     Clear(Option_t *option = "");
+   virtual void     Clear(Option_t *option="");
    virtual void     Compress();
-   virtual void     Delete(Option_t *option = "");
+   virtual void     Delete(Option_t *option="");
    virtual void     Expand(Int_t newSize);   // expand or shrink an array
    Int_t            GetEntries() const;
    Int_t            GetEntriesFast() const {
@@ -90,11 +92,11 @@ public:
    Int_t            IndexOf(const TObject *obj) const;
    void             SetLast(Int_t last);
 
-   virtual void     Randomize(Int_t ntimes = 1);
+   virtual void     Randomize(Int_t ntimes=1);
    virtual void     Sort(Int_t upto = kMaxInt);
    virtual Int_t    BinarySearch(TObject *obj, Int_t upto = kMaxInt); // the TObjArray has to be sorted, -1 == not found !!
 
-   ClassDef(TObjArray, 3) //An array of objects
+   ClassDef(TObjArray,3)  //An array of objects
 };
 
 
@@ -107,18 +109,17 @@ public:
 //////////////////////////////////////////////////////////////////////////
 
 class TObjArrayIter : public TIterator,
-                      public std::iterator <std::bidirectional_iterator_tag, // TODO: ideally it should be a  randomaccess_iterator_tag
-                                            TObject*, std::ptrdiff_t,
-                                            const TObject**, const TObject*&>
-
-{
+                      public std::iterator<std::bidirectional_iterator_tag, // TODO: ideally it should be a  randomaccess_iterator_tag
+                                           TObject*, std::ptrdiff_t,
+                                           const TObject**, const TObject*&> {
 
 private:
    const TObjArray  *fArray;     //array being iterated
-   Int_t             fCursor;    //current position in array
+   Int_t             fCurCursor; //current position in array
+   Int_t             fCursor;    //next position in array
    Bool_t            fDirection; //iteration direction
 
-   TObjArrayIter() : fArray(0), fCursor(0), fDirection(kTRUE) { }
+   TObjArrayIter() : fArray(0), fCurCursor(0), fCursor(0), fDirection(kIterForward) { }
 
 public:
    TObjArrayIter(const TObjArray *arr, Bool_t dir = kIterForward);
@@ -129,16 +130,12 @@ public:
 
    const TCollection *GetCollection() const { return fArray; }
    TObject           *Next();
-   void              Reset();
-   void MoveFirst()
-   {
-     Reset();
-   }
-   bool operator !=(const TIterator &aIter) const;
-   bool operator !=(const TObjArrayIter &aIter) const;
-   TObject* operator*() const;
+   void               Reset();
+   bool               operator!=(const TIterator &aIter) const;
+   bool               operator!=(const TObjArrayIter &aIter) const;
+   TObject           *operator*() const;
 
-   ClassDef(TObjArrayIter, 0) //Object array iterator
+   ClassDef(TObjArrayIter,0)  //Object array iterator
 };
 
 
@@ -146,15 +143,15 @@ public:
 
 inline Bool_t TObjArray::BoundsOk(const char *where, Int_t at) const
 {
-   return (at < fLowerBound || at - fLowerBound >= fSize)
-          ? OutOfBoundsError(where, at)
-          : kTRUE;
+   return (at < fLowerBound || at-fLowerBound >= fSize)
+                  ? OutOfBoundsError(where, at)
+                  : kTRUE;
 }
 
 inline TObject *TObjArray::At(Int_t i) const
 {
    // Return the object at position i. Returns 0 if i is out of bounds.
-   int j = i - fLowerBound;
+   int j = i-fLowerBound;
    if (j >= 0 && j < fSize) return fCont[j];
    BoundsOk("At", i);
    return 0;

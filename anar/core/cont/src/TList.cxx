@@ -291,7 +291,7 @@ TObject *TList::After(const TObject *obj) const
    } else {
       Int_t idx;
       t = FindLink(obj, idx);
-      if (t)((TList*)this)->fCache = t->Next();
+      if (t) ((TList*)this)->fCache = t->Next();
    }
 
    if (t && t->Next())
@@ -324,7 +324,7 @@ TObject *TList::Before(const TObject *obj) const
    } else {
       Int_t idx;
       t = FindLink(obj, idx);
-      if (t)((TList*)this)->fCache = t->Prev();
+      if (t) ((TList*)this)->fCache = t->Prev();
    }
 
    if (t && t->Prev())
@@ -357,7 +357,7 @@ void TList::Clear(Option_t *option)
       // delete only heap objects marked OK to clear
       if (!nodel && tlk->GetObject() && tlk->GetObject()->IsOnHeap()) {
          if (tlk->GetObject()->TestBit(kCanDelete)) {
-            if (tlk->GetObject()->TestBit(kNotDeleted)) {
+            if(tlk->GetObject()->TestBit(kNotDeleted)) {
                TCollection::GarbageCollect(tlk->GetObject());
             }
          }
@@ -717,7 +717,7 @@ Bool_t TList::LnkCompare(TObjLink *l1, TObjLink *l2)
 
    Int_t cmp = l1->GetObject()->Compare(l2->GetObject());
 
-   if ((IsAscending() && cmp <= 0) || (!IsAscending() && cmp > 0))
+   if ((IsAscending() && cmp <=0) || (!IsAscending() && cmp > 0))
       return kTRUE;
    return kFALSE;
 }
@@ -776,7 +776,7 @@ TObjLink **TList::DoSort(TObjLink **head, Int_t n)
 
 //______________________________________________________________________________
 TObjLink::TObjLink(TObject *obj, TObjLink *prev)
-      : fNext(prev->fNext), fPrev(prev), fObject(obj)
+          : fNext(prev->fNext), fPrev(prev), fObject(obj)
 {
    // Create a new TObjLink.
 
@@ -796,7 +796,7 @@ ClassImp(TListIter)
 
 //______________________________________________________________________________
 TListIter::TListIter(const TList *l, Bool_t dir)
-      : fList(l), fCurCursor(0), fCursor(0), fDirection(dir), fStarted(kFALSE)
+        : fList(l), fCurCursor(0), fCursor(0), fDirection(dir), fStarted(kFALSE)
 {
    // Create a new list iterator. By default the iteration direction
    // is kIterForward. To go backward use kIterBackward.
@@ -815,7 +815,7 @@ TListIter::TListIter(const TListIter &iter) : TIterator(iter)
 }
 
 //______________________________________________________________________________
-TIterator &TListIter::operator=(const TIterator & rhs)
+TIterator &TListIter::operator=(const TIterator &rhs)
 {
    // Overridden assignment operator.
 
@@ -831,7 +831,7 @@ TIterator &TListIter::operator=(const TIterator & rhs)
 }
 
 //______________________________________________________________________________
-TListIter &TListIter::operator=(const TListIter & rhs)
+TListIter &TListIter::operator=(const TListIter &rhs)
 {
    // Overloaded assignment operator.
 
@@ -890,11 +890,19 @@ void TListIter::SetOption(Option_t *option)
 }
 
 //______________________________________________________________________________
-bool TListIter::operator !=(const TIterator &aIter) const
+void TListIter::Reset()
 {
-   // This operator compares two TIterator objects
+   // Reset list iterator.
 
-   if (NULL == (&aIter))
+   fStarted = kFALSE;
+}
+
+//______________________________________________________________________________
+bool TListIter::operator!=(const TIterator &aIter) const
+{
+   // This operator compares two TIterator objects.
+
+   if (nullptr == (&aIter))
       return fCurCursor;
 
    if ((aIter.IsA() == TListIter::Class())) {
@@ -905,11 +913,11 @@ bool TListIter::operator !=(const TIterator &aIter) const
 }
 
 //______________________________________________________________________________
-bool TListIter::operator !=(const TListIter &aIter) const
+bool TListIter::operator!=(const TListIter &aIter) const
 {
-   // This operator compares two TListIter objects
+   // This operator compares two TListIter objects.
 
-   if (NULL == (&aIter))
+   if (nullptr == (&aIter))
       return fCurCursor;
 
    return (fCurCursor != aIter.fCurCursor);
@@ -941,15 +949,15 @@ void TList::Streamer(TBuffer &b)
             } else {
                nbig = nch;
             }
-            readOption.resize(nbig, '\0');
-            b.ReadFastArray((char*) readOption.data(), nbig);
+            readOption.resize(nbig,'\0');
+            b.ReadFastArray((char*) readOption.data(),nbig);
             if (nch) {
-               Add(obj, readOption.c_str());
+               Add(obj,readOption.c_str());
             } else {
                Add(obj);
             }
          }
-         b.CheckByteCount(R__s, R__c, TList::IsA());
+         b.CheckByteCount(R__s, R__c,TList::IsA());
          return;
       }
 
@@ -963,7 +971,7 @@ void TList::Streamer(TBuffer &b)
          b >> obj;
          Add(obj);
       }
-      b.CheckByteCount(R__s, R__c, TList::IsA());
+      b.CheckByteCount(R__s, R__c,TList::IsA());
 
    } else {
       R__c = b.WriteVersion(TList::IsA(), kTRUE);
@@ -986,7 +994,7 @@ void TList::Streamer(TBuffer &b)
             nch = UChar_t(nbig);
             b << nch;
          }
-         b.WriteFastArray(lnk->GetAddOption(), nbig);
+         b.WriteFastArray(lnk->GetAddOption(),nbig);
 
          lnk = lnk->Next();
       }

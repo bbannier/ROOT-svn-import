@@ -144,7 +144,7 @@ void TOrdCollection::AddAfter(const TObject *after, TObject *obj)
          Error("AddAfter", "after not found, object not added");
          return;
       }
-      AddAt(obj, idx + 1);
+      AddAt(obj, idx+1);
    }
 }
 
@@ -157,9 +157,9 @@ TObject *TOrdCollection::After(const TObject *obj) const
    if (!obj) return 0;
 
    Int_t idx = IndexOf(obj);
-   if (idx == -1 || idx == fSize - 1) return 0;
+   if (idx == -1 || idx == fSize-1) return 0;
 
-   return At(idx + 1);
+   return At(idx+1);
 }
 
 //______________________________________________________________________________
@@ -182,7 +182,7 @@ TObject *TOrdCollection::Before(const TObject *obj) const
    Int_t idx = IndexOf(obj);
    if (idx == -1 || idx == 0) return 0;
 
-   return At(idx -1);
+   return At(idx-1);
 }
 
 //______________________________________________________________________________
@@ -240,7 +240,7 @@ TObject *TOrdCollection::Last() const
    // Return the last object in the collection. Returns 0 when collection
    // is empty.
 
-   return At(fSize -1);
+   return At(fSize-1);
 }
 
 //______________________________________________________________________________
@@ -274,7 +274,7 @@ void TOrdCollection::Init(Int_t capacity)
    // Initialize ordered collection.
 
    fCapacity = capacity;
-   fCont = (TObject**) TStorage::Alloc(fCapacity * sizeof(TObject*)); //new TObject* [fCapacity];
+   fCont = (TObject**) TStorage::Alloc(fCapacity*sizeof(TObject*)); //new TObject* [fCapacity];
    memset(fCont, 0, fCapacity*sizeof(TObject*));
    fGapStart = 0;
    fGapSize  = capacity;
@@ -391,8 +391,8 @@ void TOrdCollection::SetCapacity(Int_t newCapacity)
 
    Int_t newGapSize = newCapacity - fSize;
    MoveGapTo(fCapacity - fGapSize);
-   fCont = (TObject**) TStorage::ReAlloc(fCont, newCapacity * sizeof(TObject*),
-           fCapacity * sizeof(TObject*));
+   fCont = (TObject**) TStorage::ReAlloc(fCont, newCapacity*sizeof(TObject*),
+                                         fCapacity*sizeof(TObject*));
    fGapSize  = newGapSize;
    fCapacity = newCapacity;
 }
@@ -480,7 +480,7 @@ TOrdCollectionIter::TOrdCollectionIter(const TOrdCollectionIter &iter) : TIterat
 }
 
 //______________________________________________________________________________
-TIterator &TOrdCollectionIter::operator=(const TIterator & rhs)
+TIterator &TOrdCollectionIter::operator=(const TIterator &rhs)
 {
    // Overridden assignment operator.
 
@@ -494,7 +494,7 @@ TIterator &TOrdCollectionIter::operator=(const TIterator & rhs)
 }
 
 //______________________________________________________________________________
-TOrdCollectionIter &TOrdCollectionIter::operator=(const TOrdCollectionIter & rhs)
+TOrdCollectionIter &TOrdCollectionIter::operator=(const TOrdCollectionIter &rhs)
 {
    // Overloaded assignment operator.
 
@@ -512,6 +512,7 @@ TObject *TOrdCollectionIter::Next()
    // Return next object in collection. Returns 0 when no more objects in
    // collection.
 
+   fCurCursor = fCursor;
    if (fDirection == kIterForward) {
       if (fCursor < fCol->GetSize())
          return fCol->At(fCursor++);
@@ -534,39 +535,36 @@ void TOrdCollectionIter::Reset()
 }
 
 //______________________________________________________________________________
-bool TOrdCollectionIter::operator !=(const TIterator &aIter) const
+bool TOrdCollectionIter::operator!=(const TIterator &aIter) const
 {
-   // This operator compares two TIterator objects
+   // This operator compares two TIterator objects.
 
-   if (NULL == (&aIter))
-      return fCursor;
+   if (nullptr == (&aIter))
+      return fCurCursor;
 
    if (aIter.IsA() == TOrdCollectionIter::Class()) {
       const TOrdCollectionIter &iter(dynamic_cast<const TOrdCollectionIter &>(aIter));
-      return (fCursor != iter.fCursor);
+      return (fCurCursor != iter.fCurCursor);
    }
    return false; // for base class we don't implement a comparison
 }
 
 //______________________________________________________________________________
-bool TOrdCollectionIter::operator !=(const TOrdCollectionIter &aIter) const
+bool TOrdCollectionIter::operator!=(const TOrdCollectionIter &aIter) const
 {
-   // This operator compares two TOrdCollectionIter objects
+   // This operator compares two TOrdCollectionIter objects.
 
-   if (NULL == (&aIter))
-      return fCursor;
+   if (nullptr == (&aIter))
+      return fCurCursor;
 
-   return (fCursor != aIter.fCursor);
+   return (fCurCursor != aIter.fCurCursor);
 }
 
 //______________________________________________________________________________
-TObject* TOrdCollectionIter::operator*() const
+TObject *TOrdCollectionIter::operator*() const
 {
-   return (((fCursor >= 0) && (fCursor < fCol->GetSize())) ? fCol->At(fCursor) : NULL);
-}
+   // Return current object or nullptr.
 
-//______________________________________________________________________________
-void TOrdCollectionIter::MoveFirst()
-{
-   Reset();
+   return (((fCurCursor >= 0) && (fCurCursor < fCol->GetSize())) ?
+           fCol->At(fCurCursor) : nullptr);
 }

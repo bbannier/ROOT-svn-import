@@ -49,8 +49,9 @@ protected:
    TObject      *GetFromTable(Int_t idx) const;
 
 public:
-   TRefArray();
-   TRefArray(Int_t s, Int_t lowerBound = 0);
+   TRefArray(TProcessID *pid = 0);
+   TRefArray(Int_t s, TProcessID *pid);
+   TRefArray(Int_t s, Int_t lowerBound = 0, TProcessID *pid = 0);
    TRefArray(const TRefArray &a);
    TRefArray& operator=(const TRefArray &a);
    virtual          ~TRefArray();
@@ -110,21 +111,25 @@ class TRefArrayIter : public TIterator
 
 private:
    const TRefArray  *fArray;      //array being iterated
-   Int_t             fCursor;     //current position in array
+   Int_t             fCurCursor;  //current position in array
+   Int_t             fCursor;     //next position in array
    Bool_t            fDirection;  //iteration direction
 
-   TRefArrayIter() : fArray(0), fCursor(0), fDirection(kIterForward) { }
+   TRefArrayIter() : fArray(0), fCurCursor(0), fCursor(0), fDirection(kIterForward) { }
 
 public:
    TRefArrayIter(const TRefArray *arr, Bool_t dir = kIterForward);
    TRefArrayIter(const TRefArrayIter &iter);
    ~TRefArrayIter() { }
-   TIterator     &operator=(const TIterator &rhs);
-   TRefArrayIter &operator=(const TRefArrayIter &rhs);
+   TIterator         &operator=(const TIterator &rhs);
+   TRefArrayIter     &operator=(const TRefArrayIter &rhs);
 
    const TCollection *GetCollection() const { return fArray; }
    TObject           *Next();
-   void              Reset();
+   void               Reset();
+   bool               operator!=(const TIterator &aIter) const;
+   bool               operator!=(const TRefArrayIter &aIter) const;
+   TObject           *operator*() const;
    void MoveFirst();
    bool operator !=(const TIterator &aIter) const;
    bool operator !=(const TRefArrayIter &aIter) const;

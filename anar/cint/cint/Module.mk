@@ -3,8 +3,9 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
+MODNAME      := cint
 MODDIRBASE   := cint
-MODDIR       := $(MODDIRBASE)/cint
+MODDIR       := $(MODDIRBASE)/$(MODNAME)
 MODDIRS      := $(MODDIR)/src
 MODDIRSD     := $(MODDIRS)/dict
 MODDIRI      := $(MODDIR)/inc
@@ -216,7 +217,7 @@ CINTCXXFLAGS += -DG__HAVE_CONFIG -DG__NOMAKEINFO -DG__CINTBODY -I$(CINTDIRS) -I$
 INCLUDEFILES += $(CINTDEP) $(CINTEXEDEP)
 
 ##### local rules #####
-.PHONY:         all-cint clean-cint distclean-cint
+.PHONY:         all-$(MODNAME) clean-$(MODNAME) distclean-$(MODNAME)
 
 include/%.h:    $(CINTDIRI)/%.h
 		cp $< $@
@@ -248,21 +249,21 @@ $(IOSENUMA):    $(CINTTMP)
 			touch $@; \
 		fi)
 
-all-cint:       $(CINTLIB) $(CINT) $(CINTTMP) $(MAKECINT) $(IOSENUM)
+all-$(MODNAME): $(CINTLIB) $(CINT) $(CINTTMP) $(MAKECINT) $(IOSENUM)
 
-clean-cint:
+clean-$(MODNAME):
 		@rm -f $(CINTTMPO) $(CINTALLO) $(CINTEXEO) $(MAKECINTO)
 
-clean::         clean-cint
+clean::         clean-$(MODNAME)
 
-distclean-cint: clean-cint
+distclean-$(MODNAME): clean-$(MODNAME)
 		@rm -f $(CINTALLDEP) $(CINTLIB) $(IOSENUM) $(CINTEXEDEP) \
 		   $(CINT) $(CINTTMP) $(MAKECINT) $(CINTDIRM)/*.exp \
 		   $(CINTDIRM)/*.lib $(CINTDIRS)/loadfile_tmp.cxx \
 		   $(CINTDIRDLLS)/sys/types.h $(CINTDIRDLLS)/systypes.h \
 		   $(subst $(CINTDIRI)/,include/,$(CINTH)) $(CINTCONF)
 
-distclean::     distclean-cint
+distclean::     distclean-$(MODNAME)
 
 ##### extra rules ######
 $(CINTDIRSD)/libstrm.o:  CINTCXXFLAGS += -I$(CINTDIRL)/stream
@@ -275,11 +276,13 @@ endif
 
 $(MAKECINTO) $(CINTALLO): $(CINTCONF)
 
+$(MAKECINTO): CXXFLAGS := $(CINTCXXFLAGS)
 $(CINTDIRSD)/stdstrct.o:     CINTCXXFLAGS += -I$(CINTDIRL)/stdstrct
 $(CINTDIRS)/loadfile_tmp.o: CINTCXXFLAGS += -UR__HAVE_CONFIG -DROOTBUILD
 
 $(CINTDIRS)/loadfile_tmp.cxx: $(CINTDIRS)/loadfile.cxx
 	cp -f $< $@
+
 
 ifneq ($(findstring -DG__NOSTUBS,$(CINTCXXFLAGS)),)
 $(CINTDIRS)/newlink.o: OPT = $(NOOPT)
@@ -290,5 +293,6 @@ ifeq ($(CPPPREP),)
 # cannot use "CPPPREP?=", as someone might set "CPPPREP="
   CPPPREP = $(CXX) -E -C
 endif
+
 include $(CINTCONFMK)
 ##### configcint.h - END

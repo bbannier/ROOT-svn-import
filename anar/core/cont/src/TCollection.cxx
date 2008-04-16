@@ -140,14 +140,14 @@ void TCollection::Draw(Option_t *option)
    // wildcarding supported, eg option="xxx*" draws only objects
    // with names xxx*
 
-   TRegexp re(option, kTRUE);
+   TRegexp re(option,kTRUE);
    TIter next(this);
    TObject *object;
    Int_t nch = (option ? strlen(option) : 0);
 
    while ((object = next())) {
       TString s = object->GetName();
-      if (nch && strcmp(option, object->GetName()) && s.Index(re) == kNPOS) continue;
+      if (nch && strcmp(option,object->GetName()) && s.Index(re) == kNPOS) continue;
       object->Draw(option);
    }
 }
@@ -183,7 +183,7 @@ TObject *TCollection::FindObject(const char *name) const
 //______________________________________________________________________________
 TObject *TCollection::operator()(const char *name) const
 {
-   // Find an object in this collection by name.
+  // Find an object in this collection by name.
 
    return FindObject(name);
 }
@@ -208,8 +208,8 @@ TObject *TCollection::FindObject(const TObject *obj) const
 //______________________________________________________________________________
 const char *TCollection::GetName() const
 {
-   // Return name of this collection.
-   // if no name, return the collection class name.
+  // Return name of this collection.
+  // if no name, return the collection class name.
 
    if (fName.Length() > 0) return fName.Data();
    return ClassName();
@@ -218,7 +218,7 @@ const char *TCollection::GetName() const
 //______________________________________________________________________________
 Int_t TCollection::GrowBy(Int_t delta) const
 {
-   // Increase the collection's capacity by delta slots.
+  // Increase the collection's capacity by delta slots.
 
    if (delta < 0) {
       Error("GrowBy", "delta < 0");
@@ -242,11 +242,11 @@ void TCollection::ls(Option_t *option) const
    // Wildcarding supported, eg option="xxx*" lists only objects
    // with names xxx*.
 
-   TRegexp re(option, kTRUE);
+   TRegexp re(option,kTRUE);
    TIter next(this);
    TObject *object;
    char *star = 0;
-   if (option) star = (char*)strchr(option, '*');
+   if (option) star = (char*)strchr(option,'*');
 
    while ((object = next())) {
       if (star) {
@@ -262,7 +262,7 @@ void TCollection::Paint(Option_t *option)
 {
    // Paint all objects in this collection.
 
-   this->R__FOR_EACH(TObject, Paint)(option);
+   this->R__FOR_EACH(TObject,Paint)(option);
 }
 
 //______________________________________________________________________________
@@ -359,7 +359,7 @@ void TCollection::Streamer(TBuffer &b)
          b >> obj;
          Add(obj);
       }
-      b.CheckByteCount(R__s, R__c, TCollection::IsA());
+      b.CheckByteCount(R__s, R__c,TCollection::IsA());
    } else {
       R__c = b.WriteVersion(TCollection::IsA(), kTRUE);
       TObject::Streamer(b);
@@ -410,7 +410,7 @@ Int_t TCollection::Write(const char *name, Int_t option, Int_t bsize)
    // objects using a single key specify a name and set option to
    // TObject::kSingleKey (i.e. 1).
 
-   return ((const TCollection*)this)->Write(name, option, bsize);
+   return ((const TCollection*)this)->Write(name,option,bsize);
 }
 
 // -------------------- Static data members access -----------------------------
@@ -503,7 +503,7 @@ TIter::TIter(const TIter &iter)
 }
 
 //______________________________________________________________________________
-TIter &TIter::operator=(const TIter & rhs)
+TIter &TIter::operator=(const TIter &rhs)
 {
    // Assigning an TIter to another. This involves allocatiing a new TIterator
    // of the right sub class and assigning it with the original.
@@ -521,16 +521,17 @@ TIter &TIter::operator=(const TIter & rhs)
 //______________________________________________________________________________
 TIter &TIter::Begin()
 {
-   // Pointing to the first element of the container
+   // Pointing to the first element of the container.
 
-   fIterator->MoveFirst();
+   fIterator->Reset();
+   fIterator->Next();
    return *this;
 }
 
 //______________________________________________________________________________
 TIter TIter::End()
 {
-   // Pointing to the element after the last - to a NULL value in our case
+   // Pointing to the element after the last - to a nullptr value in our case.
 
-   return TIter(static_cast<TIterator*>(NULL));
+   return TIter(static_cast<TIterator*>(nullptr));
 }

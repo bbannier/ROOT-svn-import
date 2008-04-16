@@ -452,7 +452,7 @@ int Cint::Internal::G__getcintsysdir()
       sprintf(G__cintsysdir, "%s", CINTINCDIR);
 #  else
       if(G__UseCINTSYSDIR) strcpy(G__cintsysdir,env);
-      else                 sprintf(G__cintsysdir, "%s/%s", env, G__CFG_COREVERSION);
+      else                 sprintf(G__cintsysdir, "%s/%s", env, "cint");
 #  endif
 # endif /* ROOTBUILD */
 
@@ -2582,9 +2582,19 @@ extern "C" char* G__tmpnam(char *name)
   /* After all, mkstemp creates more problem than a solution. */
   static char tempname[G__MAXFILENAME];
   const char *appendix="_cint";
+  static char tmpdir[G__MAXFILENAME];
+
+  char *tmp;
+  if('\0'==tmpdir[0]) {
+    if((tmp=getenv("CINTTMPDIR"))) strcpy(tmpdir,tmp);
+    else if((tmp=getenv("TEMP"))) strcpy(tmpdir,tmp);
+    else if((tmp=getenv("TMP"))) strcpy(tmpdir,tmp);
+    else strcpy(tmpdir,"/tmp");
+  }
 
   if (name==0) name = tempname;
-  strcpy(name,"/tmp/XXXXXX");
+  strcpy(name, tmpdir);
+  strcat(name,"/XXXXXX");
   close(mkstemp(name));/*mkstemp not only generate file name but also opens the file*/
   remove(name); /* mkstemp creates this file anyway. Delete it. questionable */
   if(strlen(name)<G__MAXFILENAME-6) strcat(name,appendix);

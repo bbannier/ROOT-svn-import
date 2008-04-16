@@ -37,10 +37,9 @@ class TMapIter;
 class TBrowser;
 
 
-class TMap : public TCollection
-{
+class TMap : public TCollection {
 
-   friend class  TMapIter;
+friend class  TMapIter;
 
 private:
    THashTable   *fTable;     //Hash table used to store TPair's
@@ -55,10 +54,10 @@ public:
    void              Add(TObject *key, TObject *value);
    Float_t           AverageCollisions() const;
    Int_t             Capacity() const;
-   void              Clear(Option_t *option = "");
+   void              Clear(Option_t *option="");
    Int_t             Collisions(const char *keyname) const;
    Int_t             Collisions(TObject *key) const;
-   void              Delete(Option_t *option = "");
+   void              Delete(Option_t *option="");
    void              DeleteKeys() { Delete(); }
    void              DeleteValues();
    void              DeleteAll();
@@ -71,12 +70,12 @@ public:
    TObject          *operator()(const char *keyname) const { return GetValue(keyname); }
    TObject          *operator()(const TObject *key) const { return GetValue(key); }
    TIterator        *MakeIterator(Bool_t dir = kIterForward) const;
-   void              Print(Option_t *wildcard = "") const;
+   void              Print(Option_t *wildcard="") const;
    void              Print(Option_t *wildcard, Option_t *option) const;
    void              Rehash(Int_t newCapacity, Bool_t checkObjValidity = kTRUE);
    TObject          *Remove(TObject *key);
 
-   ClassDef(TMap, 3) //A (key,value) map
+   ClassDef(TMap,3)  //A (key,value) map
 };
 
 
@@ -88,8 +87,7 @@ public:
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-class TPair : public TObject
-{
+class TPair : public TObject {
 
 private:
    TObject  *fKey;
@@ -101,7 +99,7 @@ public:
    TPair(TObject *key, TObject *value) : fKey(key), fValue(value) { }
    TPair(const TPair &a) : TObject(), fKey(a.fKey), fValue(a.fValue) { }
    virtual               ~TPair() { }
-   Bool_t                IsFolder() const { return kTRUE; }
+   Bool_t                IsFolder() const { return kTRUE;}
    virtual void          Browse(TBrowser *b);
    const char           *GetName() const { return fKey->GetName(); }
    const char           *GetTitle() const { return fKey->GetTitle(); }
@@ -111,7 +109,7 @@ public:
    TObject              *Value() const { return fValue; }
    void                  SetValue(TObject *val) { fValue = val; }
 
-   ClassDef(TPair, 0); // Pair TObject*, TObject*
+   ClassDef(TPair,0); // Pair TObject*, TObject*
 };
 
 typedef TPair   TAssoc;     // for backward compatibility
@@ -125,8 +123,7 @@ typedef TPair   TAssoc;     // for backward compatibility
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-class TMapIter : public TIterator
-{
+class TMapIter : public TIterator {
 
 private:
    const TMap       *fMap;         //map being iterated
@@ -145,12 +142,11 @@ public:
    const TCollection *GetCollection() const { return fMap; }
    TObject           *Next();
    void               Reset();
-   void MoveFirst();
-   bool operator !=(const TIterator &aIter) const;
-   bool operator !=(const TMapIter &aIter) const;
-   TObject* operator*() const;
+   bool               operator!=(const TIterator &aIter) const;
+   bool               operator!=(const TMapIter &aIter) const;
+   TObject           *operator*() const;
 
-   ClassDef(TMapIter, 0) //Map iterator
+   ClassDef(TMapIter,0)  //Map iterator
 };
 
 #endif

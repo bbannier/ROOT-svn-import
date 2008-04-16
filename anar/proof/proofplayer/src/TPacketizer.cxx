@@ -28,6 +28,7 @@
 
 #include "Riostream.h"
 #include "TDSet.h"
+#include "TEnv.h"
 #include "TError.h"
 #include "TEventList.h"
 #include "TEntryList.h"
@@ -256,9 +257,34 @@ TPacketizer::TPacketizer(TDSet *dset, TList *slaves, Long64_t first,
    fFileNodes = 0;
    fMaxPerfIdx = 1;
 
-   Long_t maxSlaveCnt = 4;
-   TProof::GetParameter(input, "PROOF_MaxSlavesPerNode", maxSlaveCnt);
-   fMaxSlaveCnt = (Int_t)maxSlaveCnt;
+   Long_t maxSlaveCnt = 0;
+   if (TProof::GetParameter(input, "PROOF_MaxSlavesPerNode", maxSlaveCnt) == 0) {
+      if (maxSlaveCnt < 1) {
+         Info("TPacketizer", "PROOF_MaxSlavesPerNode must be grater than 0");
+         maxSlaveCnt = 0;
+      }
+   } else {
+      // Try also with Int_t (recently supported in TProof::SetParameter)
+      Int_t mxslcnt = -1;
+      if (TProof::GetParameter(input, "PROOF_MaxSlavesPerNode", mxslcnt) == 0) {
+         if (mxslcnt < 1) {
+            Info("TPacketizer", "PROOF_MaxSlavesPerNode must be grater than 0");
+            mxslcnt = 0;
+         }
+         maxSlaveCnt = (Long_t) mxslcnt;
+      }
+   }
+   if (!maxSlaveCnt)
+      maxSlaveCnt = gEnv->GetValue("Packetizer.MaxWorkersPerNode", 4);
+   if (maxSlaveCnt > 0) {
+      fMaxSlaveCnt = maxSlaveCnt;
+      Info("TPacketizer", "setting max number of workers per node to %ld", fMaxSlaveCnt);
+   } else {
+      // Use number of CPUs as default cutting at 2
+      SysInfo_t si;
+      gSystem->GetSysInfo(&si);
+      fMaxSlaveCnt =  (si.fCpus > 2) ? si.fCpus : 2;
+   }
 
    fPackets = new TList;
    fPackets->SetOwner();
@@ -333,6 +359,11 @@ TPacketizer::TPacketizer(TDSet *dset, TList *slaves, Long64_t first,
    dset->Reset();
    Long64_t cur = 0;
    while (( e = (TDSetElement*)dset->Next())) {
+
+      // Skip invalid or missing file; It will be moved
+      // from the dset to the 'MissingFiles' list in the player.
+      if (!e->GetValid()) continue;
+
       TUrl url = e->GetFileName();
       Long64_t eFirst = e->GetFirst();
       Long64_t eNum = e->GetNum();
@@ -639,7 +670,9 @@ void TPacketizer::ValidateFiles(TDSet *dset, TList *slaves)
               slave->GetSocket(), slave->GetName());
       mon.Add(slave->GetSocket());
       slaves_by_sock.Add(slave->GetSocket(),slave);
-      Info("ValidateFiles", " mon: %p, wrk: %p, sck: %p", &mon, slave, slave->GetSocket());
+      PDB(kPacketizer,1)
+         Info("ValidateFiles",
+              "mon: %p, wrk: %p, sck: %p", &mon, slave, slave->GetSocket());
    }
 
    mon.DeActivateAll();
@@ -686,19 +719,60 @@ void TPacketizer::ValidateFiles(TDSet *dset, TList *slaves)
             RemoveActive(file);
 
             slstat->fCurFile = file;
-            file->GetNode()->IncSlaveCnt(slstat->GetName());
-            TMessage m(kPROOF_GETENTRIES);
             TDSetElement *elem = file->GetElement();
-            m << dset->IsTree()
-              << TString(elem->GetFileName())
-              << TString(elem->GetDirectory())
-              << TString(elem->GetObjName());
+            Long64_t entries = elem->GetEntries(kTRUE, kFALSE);
+            if (entries < 0 || strlen(elem->GetTitle()) <= 0) {
+               // This is decremented when we get the reply
+               file->GetNode()->IncSlaveCnt(slstat->GetName());
+               TMessage m(kPROOF_GETENTRIES);
+               m << dset->IsTree()
+               << TString(elem->GetFileName())
+               << TString(elem->GetDirectory())
+               << TString(elem->GetObjName());
 
-            s->GetSocket()->Send( m );
-            mon.Activate(s->GetSocket());
-            PDB(kPacketizer,2) Info("TPacketizer","sent to slave-%s (%s) via %p GETENTRIES on %s %s %s %s",
-                s->GetOrdinal(), s->GetName(), s->GetSocket(), dset->IsTree() ? "tree" : "objects",
-                elem->GetFileName(), elem->GetDirectory(), elem->GetObjName());
+               s->GetSocket()->Send( m );
+               mon.Activate(s->GetSocket());
+               PDB(kPacketizer,2)
+                  Info("ValidateFiles",
+                       "sent to worker-%s (%s) via %p GETENTRIES on %s %s %s %s",
+                       s->GetOrdinal(), s->GetName(), s->GetSocket(),
+                       dset->IsTree() ? "tree" : "objects", elem->GetFileName(),
+                       elem->GetDirectory(), elem->GetObjName());
+            } else {
+               // Fill the info
+               elem->SetTDSetOffset(entries);
+               if (entries > 0) {
+                  if (!elem->GetEntryList()) {
+                     if (elem->GetFirst() > entries) {
+                        Error("ValidateFiles",
+                              "first (%d) higher then number of entries (%d) in %d",
+                              elem->GetFirst(), entries, elem->GetFileName() );
+                        // disable element
+                        slstat->fCurFile->SetDone();
+                        elem->Invalidate();
+                        dset->SetBit(TDSet::kSomeInvalid);
+                     }
+                     if (elem->GetNum() == -1) {
+                        elem->SetNum(entries - elem->GetFirst());
+                     } else if (elem->GetFirst() + elem->GetNum() > entries) {
+                        Warning("ValidateFiles", "Num (%lld) + First (%lld) larger then number of"
+                                 " keys/entries (%lld) in %s", elem->GetNum(), elem->GetFirst(),
+                                 entries, elem->GetFileName());
+                        elem->SetNum(entries - elem->GetFirst());
+                     }
+                     PDB(kPacketizer,2)
+                        Info("ValidateFiles",
+                             "found elem '%s' with %lld entries", elem->GetFileName(), entries);
+                     elem->SetValid();
+                  }
+               }
+               // Notify the client
+               n++;
+               gProof->SendDataSetStatus(msg, n, tot, st);
+
+               // This worker is ready for the next validation
+               workers.Add(s);
+            }
          }
       }
 
@@ -719,11 +793,26 @@ void TPacketizer::ValidateFiles(TDSet *dset, TList *slaves)
       }
 
       TSocket *sock = mon.Select();
+      // If we have been interrupted break
+      if (!sock) {
+         Error("ValidateFiles", "selection has been interrupted - STOP");
+         mon.DeActivateAll();
+         fValid = kFALSE;
+         break;
+      }
       mon.DeActivate(sock);
 
       PDB(kPacketizer,3) Info("ValidateFiles", "select returned: %p", sock);
 
       TSlave *slave = (TSlave *) slaves_by_sock.GetValue( sock );
+      if (!sock->IsValid()) {
+         // A socket got invalid during validation
+         Error("ValidateFiles", "worker-%s (%s) got invalid - STOP",
+               slave->GetOrdinal(), slave->GetName());
+         ((TProof*)gProof)->MarkBad(slave);
+         fValid = kFALSE;
+         break;
+      }
 
       TMessage *reply;
 
@@ -731,7 +820,7 @@ void TPacketizer::ValidateFiles(TDSet *dset, TList *slaves)
          // Help! lost a slave?
          ((TProof*)gProof)->MarkBad(slave);
          fValid = kFALSE;
-         Error("ValidateFiles", "Recv failed! for slave-%s (%s)",
+         Error("ValidateFiles", "Recv failed! for worker-%s (%s)",
                slave->GetOrdinal(), slave->GetName());
          continue;
          }
@@ -798,9 +887,10 @@ void TPacketizer::ValidateFiles(TDSet *dset, TList *slaves)
                Error("ValidateFiles", "first (%d) higher then number of entries (%d) in %d",
                      e->GetFirst(), entries, e->GetFileName() );
 
-               // disable element
+               // Invalidate the element
                slavestat->fCurFile->SetDone();
-               fValid = kFALSE; // ???
+               e->Invalidate();
+               dset->SetBit(TDSet::kSomeInvalid);
             }
 
             if ( e->GetNum() == -1 ) {
@@ -811,6 +901,7 @@ void TPacketizer::ValidateFiles(TDSet *dset, TList *slaves)
                      e->GetNum(), e->GetFirst(), entries, e->GetFileName() );
                e->SetNum( entries - e->GetFirst() );
             }
+            e->SetValid();
          }
 
 
@@ -831,9 +922,9 @@ void TPacketizer::ValidateFiles(TDSet *dset, TList *slaves)
             gProofServ->GetSocket()->Send(m);
          }
 
-         // disable element
-         if (dset->Remove(e) == -1)
-            Error("ValidateFiles", "removing of not-registered element %p failed", e);
+         // Invalidate the element
+         e->Invalidate();
+         dset->SetBit(TDSet::kSomeInvalid);
       }
 
       workers.Add(slave); // Ready for the next job
@@ -916,7 +1007,7 @@ TDSetElement *TPacketizer::GetNextPacket(TSlave *sl, TMessage *r)
       fBytesRead += ((bytesRead > 0) ? bytesRead : 0);
 
       PDB(kPacketizer,2)
-         Info("GetNextPacket","slave-%s (%s): %lld %7.3lf %7.3lf %7.3lf %lld",
+         Info("GetNextPacket","worker-%s (%s): %lld %7.3lf %7.3lf %7.3lf %lld",
                               sl->GetOrdinal(), sl->GetName(),
                               numev, latency, proctime, proccpu, bytesRead);
 
