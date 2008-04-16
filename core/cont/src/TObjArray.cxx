@@ -78,7 +78,7 @@ TObjArray::~TObjArray()
 }
 
 //______________________________________________________________________________
-TObjArray& TObjArray::operator=(const TObjArray & a)
+TObjArray& TObjArray::operator=(const TObjArray &a)
 {
    // Assignment operator. Note, unsets the kIsOwner flag.
 
@@ -104,7 +104,7 @@ TObject *&TObjArray::operator[](Int_t i)
    // Return the object at position i. Returns address at position 0
    // if i is out of bounds. Result may be used as an lvalue.
 
-   int j = i - fLowerBound;
+   int j = i-fLowerBound;
    if (j >= 0 && j < fSize) {
       fLast = TMath::Max(j, GetAbsLast());
       Changed();
@@ -120,7 +120,7 @@ TObject *TObjArray::operator[](Int_t i) const
 {
    // Return the object at position at. Returns 0 if i is out of bounds.
 
-   int j = i - fLowerBound;
+   int j = i-fLowerBound;
    if (j >= 0 && j < fSize) return fCont[j];
    BoundsOk("operator[] const", i);
    return 0;
@@ -143,7 +143,7 @@ void TObjArray::AddLast(TObject *obj)
    // Add object in the next empty slot in the array. Expand the array
    // if necessary.
 
-   AddAtAndExpand(obj, GetAbsLast() + 1 + fLowerBound);
+   AddAtAndExpand(obj, GetAbsLast()+1+fLowerBound);
 }
 
 //______________________________________________________________________________
@@ -166,7 +166,7 @@ void TObjArray::AddBefore(const TObject *before, TObject *obj)
          Error("AddBefore", "cannot add before lowerbound (%d)", fLowerBound);
          return;
       }
-      AddAt(obj, idx + fLowerBound - 1);
+      AddAt(obj, idx+fLowerBound-1);
    }
 }
 
@@ -186,7 +186,7 @@ void TObjArray::AddAfter(const TObject *after, TObject *obj)
          Error("AddAfter", "after not found, object not added");
          return;
       }
-      AddAtAndExpand(obj, idx + fLowerBound + 1);
+      AddAtAndExpand(obj, idx+fLowerBound+1);
    }
 }
 
@@ -200,10 +200,10 @@ void TObjArray::AddAtAndExpand(TObject *obj, Int_t idx)
       Error("AddAt", "out of bounds at %d in %lx", idx, this);
       return;
    }
-   if (idx -fLowerBound >= fSize)
-      Expand(TMath::Max(idx - fLowerBound + 1, GrowBy(fSize)));
+   if (idx-fLowerBound >= fSize)
+      Expand(TMath::Max(idx-fLowerBound+1, GrowBy(fSize)));
    fCont[idx-fLowerBound] = obj;
-   fLast = TMath::Max(idx - fLowerBound, GetAbsLast());
+   fLast = TMath::Max(idx-fLowerBound, GetAbsLast());
    Changed();
 }
 
@@ -216,7 +216,7 @@ void TObjArray::AddAt(TObject *obj, Int_t idx)
    if (!BoundsOk("AddAt", idx)) return;
 
    fCont[idx-fLowerBound] = obj;
-   fLast = TMath::Max(idx - fLowerBound, GetAbsLast());
+   fLast = TMath::Max(idx-fLowerBound, GetAbsLast());
    Changed();
 }
 
@@ -233,7 +233,7 @@ Int_t  TObjArray::AddAtFree(TObject *obj)
             fCont[i] = obj;
             fLast = TMath::Max(i, GetAbsLast());
             Changed();
-            return i + fLowerBound;
+            return i+fLowerBound;
          }
    }
    AddLast(obj);
@@ -248,7 +248,7 @@ TObject *TObjArray::After(const TObject *obj) const
    if (!obj) return 0;
 
    Int_t idx = IndexOf(obj) - fLowerBound;
-   if (idx == -1 || idx == fSize - 1) return 0;
+   if (idx == -1 || idx == fSize-1) return 0;
 
    return fCont[idx+1];
 }
@@ -294,7 +294,7 @@ void TObjArray::Compress()
 
    fLast = j - 1;
 
-   for (; j < fSize; j++)
+   for ( ; j < fSize; j++)
       fCont[j] = 0;
 }
 
@@ -318,7 +318,7 @@ void TObjArray::Expand(Int_t newSize)
    // Expand or shrink the array to newSize elements.
 
    if (newSize < 0) {
-      Error("Expand", "newSize must be positive (%d)", newSize);
+      Error ("Expand", "newSize must be positive (%d)", newSize);
       return;
    }
    if (newSize == fSize)
@@ -327,12 +327,12 @@ void TObjArray::Expand(Int_t newSize)
       // if the array is shrinked check whether there are nonempty entries
       for (Int_t j = newSize; j < fSize; j++)
          if (fCont[j]) {
-            Error("Expand", "expand would cut off nonempty entries at %d", j);
+            Error ("Expand", "expand would cut off nonempty entries at %d", j);
             return;
          }
    }
    fCont = (TObject**) TStorage::ReAlloc(fCont, newSize * sizeof(TObject*),
-           fSize * sizeof(TObject*));
+                                         fSize * sizeof(TObject*));
    fSize = newSize;
 }
 
@@ -343,10 +343,10 @@ TObject *TObjArray::FindObject(const char *name) const
    // scan till the object has been found. Returns 0 if object with specified
    // name is not found.
 
-   Int_t nobjects = GetAbsLast() + 1;
+   Int_t nobjects = GetAbsLast()+1;
    for (Int_t i = 0; i < nobjects; ++i) {
       TObject *obj = fCont[i];
-      if (obj && 0 == strcmp(name, obj->GetName())) return obj;
+      if (obj && 0==strcmp(name, obj->GetName())) return obj;
    }
    return 0;
 }
@@ -360,7 +360,7 @@ TObject *TObjArray::FindObject(const TObject *iobj) const
    // Typically this function is overridden by a more efficient version
    // in concrete collection classes (e.g. THashTable).
 
-   Int_t nobjects = GetAbsLast() + 1;
+   Int_t nobjects = GetAbsLast()+1;
    for (Int_t i = 0; i < nobjects; ++i) {
       TObject *obj = fCont[i];
       if (obj && obj->IsEqual(iobj)) return obj;
@@ -397,12 +397,12 @@ void TObjArray::Streamer(TBuffer &b)
          }
       }
       Changed();
-      b.CheckByteCount(R__s, R__c, TObjArray::IsA());
+      b.CheckByteCount(R__s, R__c,TObjArray::IsA());
    } else {
       R__c = b.WriteVersion(TObjArray::IsA(), kTRUE);
       TObject::Streamer(b);
       fName.Streamer(b);
-      nobjects = GetAbsLast() + 1;
+      nobjects = GetAbsLast()+1;
       b << nobjects;
       b << fLowerBound;
 
@@ -459,7 +459,7 @@ Int_t TObjArray::GetAbsLast() const
    // to cast const away. Ugly, but making GetAbsLast() not const breaks
    // many other const functions.
    if (fLast == -2) {
-      for (Int_t i = fSize - 1; i >= 0; i--)
+      for (Int_t i = fSize-1; i >= 0; i--)
          if (fCont[i]) {
             ((TObjArray*)this)->fLast = i;
             return fLast;
@@ -475,7 +475,7 @@ Int_t TObjArray::GetLast() const
    // Return index of last object in array. Returns lowerBound-1 in case
    // array is empty.
 
-   return fLowerBound + GetAbsLast();
+   return fLowerBound+GetAbsLast();
 }
 
 //______________________________________________________________________________
@@ -503,14 +503,14 @@ Int_t TObjArray::IndexOf(const TObject *obj) const
    if (obj) {
       for (i = 0; i < fSize; i++)
          if (fCont[i] && fCont[i]->IsEqual(obj))
-            return i + fLowerBound;
+            return i+fLowerBound;
    } else {    // Look for the first empty slot
       for (i = 0; i < fSize; i++)
          if (!fCont[i])
-            return i + fLowerBound;
+            return i+fLowerBound;
    }
 
-   return fLowerBound -1;
+   return fLowerBound-1;
 }
 
 //______________________________________________________________________________
@@ -526,7 +526,7 @@ void TObjArray::Init(Int_t s, Int_t lowerBound)
    fSize = s;
 
    if (!fCont)
-      fCont = (TObject**) TStorage::Alloc(fSize * sizeof(TObject*)); //new TObject* [fSize];
+      fCont = (TObject**) TStorage::Alloc(fSize*sizeof(TObject*)); //new TObject* [fSize];
    memset(fCont, 0, fSize*sizeof(TObject*));
    fLowerBound = lowerBound;
    fLast = -1;
@@ -579,7 +579,7 @@ TObject *TObjArray::RemoveAt(Int_t idx)
 
    if (!BoundsOk("RemoveAt", idx)) return 0;
 
-   int i = idx - fLowerBound;
+   int i = idx-fLowerBound;
 
    TObject *obj = 0;
    if (fCont[i]) {
@@ -643,12 +643,12 @@ void TObjArray::Randomize(Int_t ntimes)
    // -the objects at j and k are swapped.
    // -this process is repeated ntimes (ntimes=1 by default)
 
-   for (Int_t i = 0;i < ntimes;i++) {
-      for (Int_t j = 0;j < fLast;j++) {
+   for (Int_t i=0;i<ntimes;i++) {
+      for (Int_t j=0;j<fLast;j++) {
 #ifdef R__WIN32
-         Int_t k = (Int_t)(fLast * rand() / (RAND_MAX + 1.0));
+         Int_t k = (Int_t)(fLast*rand()/(RAND_MAX+1.0));
 #else
-         Int_t k = (Int_t)(fLast * random() / (RAND_MAX + 1.0));
+         Int_t k = (Int_t)(fLast*random()/(RAND_MAX+1.0));
 #endif
          if (k == j) continue;
          TObject *obj = fCont[j];
@@ -673,7 +673,7 @@ void TObjArray::Sort(Int_t upto)
          }
       }
 
-   QSort(fCont, 0, TMath::Min(fSize, upto - fLowerBound));
+   QSort(fCont, 0, TMath::Min(fSize, upto-fLowerBound));
 
    fLast   = -2;
    fSorted = kTRUE;
@@ -696,17 +696,17 @@ Int_t TObjArray::BinarySearch(TObject *op, Int_t upto)
    }
 
    base = 0;
-   last = TMath::Min(fSize, upto - fLowerBound) - 1;
+   last = TMath::Min(fSize, upto-fLowerBound) - 1;
 
    while (last >= base) {
-      position = (base + last) / 2;
+      position = (base+last) / 2;
       op2 = fCont[position];
       if (op2 && (result = op->Compare(op2)) == 0)
          return position + fLowerBound;
       if (!op2 || result < 0)
-         last = position - 1;
+         last = position-1;
       else
-         base = position + 1;
+         base = position+1;
    }
    return -1;
 }
@@ -744,7 +744,7 @@ TObjArrayIter::TObjArrayIter(const TObjArrayIter &iter) : TIterator(iter)
 }
 
 //______________________________________________________________________________
-TIterator &TObjArrayIter::operator=(const TIterator & rhs)
+TIterator &TObjArrayIter::operator=(const TIterator &rhs)
 {
    // Overridden assignment operator.
 
@@ -758,7 +758,7 @@ TIterator &TObjArrayIter::operator=(const TIterator & rhs)
 }
 
 //______________________________________________________________________________
-TObjArrayIter &TObjArrayIter::operator=(const TObjArrayIter & rhs)
+TObjArrayIter &TObjArrayIter::operator=(const TObjArrayIter &rhs)
 {
    // Overloaded assignment operator.
 
@@ -776,17 +776,21 @@ TObject *TObjArrayIter::Next()
    // Return next object in array. Returns 0 when no more objects in array.
 
    if (fDirection == kIterForward) {
-      for (; fCursor < fArray->Capacity() && fArray->fCont[fCursor] == 0;
-            fCursor++) { }
+      for ( ; fCursor < fArray->Capacity() && fArray->fCont[fCursor] == 0;
+              fCursor++) { }
 
-      if (fCursor < fArray->Capacity())
+      fCurCursor = fCursor;
+      if (fCursor < fArray->Capacity()) {
          return fArray->fCont[fCursor++];
+      }
    } else {
-      for (; fCursor >= 0 && fArray->fCont[fCursor] == 0;
-            fCursor--) { }
+      for ( ; fCursor >= 0 && fArray->fCont[fCursor] == 0;
+              fCursor--) { }
 
-      if (fCursor >= 0)
+      fCurCursor = fCursor;
+      if (fCursor >= 0) {
          return fArray->fCont[fCursor--];
+      }
    }
    return 0;
 }
@@ -803,33 +807,36 @@ void TObjArrayIter::Reset()
 }
 
 //______________________________________________________________________________
-bool TObjArrayIter::operator !=(const TIterator &aIter) const
+bool TObjArrayIter::operator!=(const TIterator &aIter) const
 {
-   // This operator compares two TIterator objects
+   // This operator compares two TIterator objects.
 
-   if (NULL == (&aIter))
-      return (fCursor < fArray->Capacity());
+   if (nullptr == (&aIter))
+      return (fCurCursor < fArray->Capacity());
 
    if (aIter.IsA() == TObjArrayIter::Class()) {
       const TObjArrayIter &iter(dynamic_cast<const TObjArrayIter &>(aIter));
-      return (fCursor != iter.fCursor);
+      return (fCurCursor != iter.fCurCursor);
    }
    return false; // for base class we don't implement a comparison
 }
 
 //______________________________________________________________________________
-bool TObjArrayIter::operator !=(const TObjArrayIter &aIter) const
+bool TObjArrayIter::operator!=(const TObjArrayIter &aIter) const
 {
-   // This operator compares two TObjArrayIter objects
+   // This operator compares two TObjArrayIter objects.
 
-   if (NULL == (&aIter))
-      return (fCursor < fArray->Capacity());
+   if (nullptr == (&aIter))
+      return (fCurCursor < fArray->Capacity());
 
-   return (fCursor != aIter.fCursor);
+   return (fCurCursor != aIter.fCurCursor);
 }
 
 //______________________________________________________________________________
-TObject* TObjArrayIter::operator*() const
+TObject *TObjArrayIter::operator*() const
 {
-   return (((fCursor >= 0) && (fCursor < fArray->Capacity())) ? fArray->fCont[fCursor] : NULL);
+   // Return current object or nullptr.
+
+   return (((fCurCursor >= 0) && (fCurCursor < fArray->Capacity())) ?
+           fArray->fCont[fCurCursor] : nullptr);
 }

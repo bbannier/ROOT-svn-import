@@ -39,7 +39,6 @@
 #include "TProofDebug.h"
 #include "TProof.h"
 #include "TProofPlayer.h"
-#include "TProofQueryResult.h"
 #include "TRegexp.h"
 #include "TClass.h"
 #include "TROOT.h"
@@ -48,7 +47,6 @@
 #include "TXSocketHandler.h"
 #include "TXUnixSocket.h"
 #include "compiledata.h"
-#include "TProofResourcesStatic.h"
 #include "TProofNodeInfo.h"
 #include "XProofProtocol.h"
 
@@ -650,6 +648,9 @@ Int_t TXProofServ::Setup()
    // Install seg violation handler
    gSystem->AddSignalHandler(new TXProofServSegViolationHandler(this));
 
+   if (gProofDebugLevel > 0)
+      Info("Setup", "successfully completed");
+
    // Done
    return 0;
 }
@@ -948,6 +949,11 @@ void TXProofServ::Terminate(Int_t status)
       // Unlock the query dir owned by this session
       if (fQueryLock)
          fQueryLock->Unlock();
+   } else {
+      // Try to stop processing if any
+      if (!fIdle && fPlayer)
+         fPlayer->StopProcess(kTRUE,1);
+      gSystem->Sleep(2000);
    }
 
    // Remove input and signal handlers to avoid spurious "signals"

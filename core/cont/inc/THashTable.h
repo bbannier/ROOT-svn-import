@@ -36,10 +36,9 @@ class TListIter;
 class THashTableIter;
 
 
-class THashTable : public TCollection
-{
+class THashTable : public TCollection {
 
-   friend class  THashTableIter;
+friend class  THashTableIter;
 
 private:
    TList     **fCont;          //Hash table (table of lists)
@@ -60,10 +59,10 @@ public:
    void          Add(TObject *obj);
    virtual void  AddAll(const TCollection *col);
    Float_t       AverageCollisions() const;
-   void          Clear(Option_t *option = "");
+   void          Clear(Option_t *option="");
    Int_t         Collisions(const char *name) const;
    Int_t         Collisions(TObject *obj) const;
-   void          Delete(Option_t *option = "");
+   void          Delete(Option_t *option="");
    TObject      *FindObject(const char *name) const;
    TObject      *FindObject(const TObject *obj) const;
    TList        *GetListForObject(const char *name) const;
@@ -77,13 +76,13 @@ public:
    TObject      *RemoveSlow(TObject *obj);
    void          SetRehashLevel(Int_t rehash) { fRehashLevel = rehash; }
 
-   ClassDef(THashTable, 0) //A hash table
+   ClassDef(THashTable,0)  //A hash table
 };
 
 inline Float_t THashTable::AverageCollisions() const
 {
    if (fUsedSlots)
-      return ((Float_t)fEntries) / fUsedSlots;
+      return ((Float_t)fEntries)/fUsedSlots;
    else
       return 0.0;
 }
@@ -103,8 +102,7 @@ inline Int_t THashTable::GetHashValue(const TObject *obj) const
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-class THashTableIter : public TIterator
-{
+class THashTableIter : public TIterator {
 
 private:
    const THashTable *fTable;       //hash table being iterated
@@ -125,12 +123,11 @@ public:
    const TCollection *GetCollection() const { return fTable; }
    TObject           *Next();
    void               Reset();
-   void MoveFirst();
-   bool operator !=(const TIterator &aIter) const;
-   bool operator !=(const THashTableIter &aIter) const;
-   TObject* operator*() const;
+   bool               operator!=(const TIterator &aIter) const;
+   bool               operator!=(const THashTableIter &aIter) const;
+   TObject           *operator*() const;
 
-   ClassDef(THashTableIter, 0) //Hash table iterator
+   ClassDef(THashTableIter,0)  //Hash table iterator
 };
 
 #endif

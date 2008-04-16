@@ -29,6 +29,9 @@
 #include "TString.h"
 #endif
 
+#include <iterator>
+
+
 const Bool_t kSortAscending  = kTRUE;
 const Bool_t kSortDescending = !kSortAscending;
 
@@ -36,10 +39,9 @@ class TObjLink;
 class TListIter;
 
 
-class TList : public TSeqCollection
-{
+class TList : public TSeqCollection {
 
-   friend  class TListIter;
+friend  class TListIter;
 
 protected:
    TObjLink  *fFirst;     //! pointer to first entry in linked list
@@ -62,11 +64,11 @@ private:
 public:
    typedef TListIter Iterator_t;
 
-   TList() : fFirst(NULL), fLast(NULL), fCache(NULL), fAscending(kTRUE) { }
-   TList(TObject *) : fFirst(NULL), fLast(NULL), fCache(NULL), fAscending(kTRUE) { } // for backward compatibility, don't use
+   TList() : fFirst(0), fLast(0), fCache(0), fAscending(kTRUE) { }
+   TList(TObject *) : fFirst(0), fLast(0), fCache(0), fAscending(kTRUE) { } // for backward compatibility, don't use
    virtual           ~TList();
-   virtual void      Clear(Option_t *option = "");
-   virtual void      Delete(Option_t *option = "");
+   virtual void      Clear(Option_t *option="");
+   virtual void      Delete(Option_t *option="");
    virtual TObject  *FindObject(const char *name) const;
    virtual TObject  *FindObject(const TObject *obj) const;
    virtual TIterator *MakeIterator(Bool_t dir = kIterForward) const;
@@ -98,7 +100,7 @@ public:
    virtual void      Sort(Bool_t order = kSortAscending);
    Bool_t            IsAscending() { return fAscending; }
 
-   ClassDef(TList, 5) //Doubly linked list
+   ClassDef(TList,5)  //Doubly linked list
 };
 
 
@@ -109,10 +111,9 @@ public:
 // Wrapper around a TObject so it can be stored in a TList.             //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
-class TObjLink
-{
+class TObjLink {
 
-   friend  class TList;
+friend  class TList;
 
 private:
    TObjLink   *fNext;
@@ -140,6 +141,7 @@ public:
    TObjLink               *Prev() { return fPrev; }
 };
 
+
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // TObjOptLink                                                          //
@@ -148,8 +150,7 @@ public:
 // an option string.                                                    //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
-class TObjOptLink : public TObjLink
-{
+class TObjOptLink : public TObjLink {
 
 private:
    TString   fOption;
@@ -171,13 +172,10 @@ public:
 // Iterator of linked list.                                             //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
-
-
 class TListIter : public TIterator,
-		          public std::iterator <std::bidirectional_iterator_tag, 
-		                                TObject*, std::ptrdiff_t,
-		                                const TObject**, const TObject*&>
-{
+                  public std::iterator<std::bidirectional_iterator_tag,
+                                       TObject*, std::ptrdiff_t,
+                                       const TObject**, const TObject*&> {
 
 protected:
    const TList       *fList;         //list being iterated
@@ -186,8 +184,8 @@ protected:
    Bool_t             fDirection;    //iteration direction
    Bool_t             fStarted;      //iteration started
 
-   TListIter() : fList(NULL), fCurCursor(NULL), fCursor(NULL), fDirection(kTRUE),
-         fStarted(kFALSE) { }
+   TListIter() : fList(0), fCurCursor(0), fCursor(0), fDirection(kIterForward),
+                 fStarted(kFALSE) { }
 
 public:
    TListIter(const TList *l, Bool_t dir = kIterForward);
@@ -200,17 +198,12 @@ public:
    Option_t          *GetOption() const;
    void               SetOption(Option_t *option);
    TObject           *Next();
-   void               Reset() { fStarted = kFALSE; }
-   void MoveFirst()
-   {
-     Reset();
-     Next();
-   }
-   bool operator !=(const TIterator &aIter) const;
-   bool operator !=(const TListIter &aIter) const;
-   TObject* operator*() const { return (fCurCursor ? fCurCursor->GetObject() : NULL); }
+   void               Reset();
+   bool               operator!=(const TIterator &aIter) const;
+   bool               operator!=(const TListIter &aIter) const;
+   TObject           *operator*() const { return (fCurCursor ? fCurCursor->GetObject() : nullptr); }
 
-   ClassDef(TListIter, 0) //Linked list iterator
+   ClassDef(TListIter,0)  //Linked list iterator
 };
 
 #endif

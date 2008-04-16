@@ -319,12 +319,12 @@ void TMap::Streamer(TBuffer &b)
 {
    // Stream all key/value pairs in the map to or from the I/O buffer.
 
-   TObject *obj = 0;
+   TObject *obj=0;
    UInt_t R__s, R__c;
 
    if (b.IsReading()) {
       Int_t    nobjects;
-      TObject *value = 0;
+      TObject *value=0;
 
       Version_t v = b.ReadVersion(&R__s, &R__c);
       if (v > 2)
@@ -337,7 +337,7 @@ void TMap::Streamer(TBuffer &b)
          b >> value;
          if (obj) Add(obj, value);
       }
-      b.CheckByteCount(R__s, R__c, TMap::IsA());
+      b.CheckByteCount(R__s, R__c,TMap::IsA());
    } else {
       R__c = b.WriteVersion(TMap::IsA(), kTRUE);
       TObject::Streamer(b);
@@ -407,7 +407,7 @@ TMapIter::TMapIter(const TMapIter &iter) : TIterator(iter)
 }
 
 //______________________________________________________________________________
-TIterator &TMapIter::operator=(const TIterator & rhs)
+TIterator &TMapIter::operator=(const TIterator &rhs)
 {
    // Overridden assignment operator.
 
@@ -424,7 +424,7 @@ TIterator &TMapIter::operator=(const TIterator & rhs)
 }
 
 //______________________________________________________________________________
-TMapIter &TMapIter::operator=(const TMapIter & rhs)
+TMapIter &TMapIter::operator=(const TMapIter &rhs)
 {
    // Overloaded assignment operator.
 
@@ -470,11 +470,11 @@ void TMapIter::Reset()
 }
 
 //______________________________________________________________________________
-bool TMapIter::operator !=(const TIterator &aIter) const
+bool TMapIter::operator!=(const TIterator &aIter) const
 {
-   // This operator compares two TIterator objects
+   // This operator compares two TIterator objects.
 
-   if (NULL == (&aIter))
+   if (nullptr == (&aIter))
       return fCursor;
 
    if (aIter.IsA() == TMapIter::Class()) {
@@ -485,25 +485,20 @@ bool TMapIter::operator !=(const TIterator &aIter) const
 }
 
 //______________________________________________________________________________
-bool TMapIter::operator !=(const TMapIter &aIter) const
+bool TMapIter::operator!=(const TMapIter &aIter) const
 {
-   // This operator compares two TMapIter objects
+   // This operator compares two TMapIter objects.
 
-   if (NULL == (&aIter))
+   if (nullptr == (&aIter))
       return fCursor;
-   
+
    return (fCursor != aIter.fCursor);
 }
 
 //______________________________________________________________________________
-TObject* TMapIter::operator*() const
+TObject *TMapIter::operator*() const
 {
-   return (fCursor ? ((TPair *)(fCursor->operator*()))->Key() : NULL);
-}
+   // Return pointer to current object or nullptr.
 
-//______________________________________________________________________________
-void TMapIter::MoveFirst()
-{
-   Reset();
-   Next();
+   return (fCursor ? ((TPair *)(fCursor->operator*()))->Key() : nullptr);
 }
