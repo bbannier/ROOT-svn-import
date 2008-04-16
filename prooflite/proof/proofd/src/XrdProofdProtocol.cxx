@@ -1169,10 +1169,10 @@ int XrdProofdProtocol::Login()
          fUI.fWorkDir += "/";
       fUI.fWorkDir += fClientID;
    } else {
-      // Default: $HOME/proof
+      // Default: $HOME/.proof
       if (!fUI.fWorkDir.endswith('/'))
          fUI.fWorkDir += "/";
-      fUI.fWorkDir += "proof";
+      fUI.fWorkDir += ".proof";
       if (fUI.fUser != fClientID) {
          fUI.fWorkDir += "/";
          fUI.fWorkDir += fClientID;
