@@ -94,26 +94,7 @@ TProofLite::TProofLite(const char *url, const char *conffile, const char *confdi
    // Determine the number of workers giving priority to users request.
    // Otherwise use the system information, if available, or just start
    // the minimal number, i.e. 2 .
-   fNWorkers = -1;
-   if (url && strlen(url)) {
-      TString o(url);
-      Int_t in = o.Index("workers=");
-      if (in != kNPOS) {
-         o.Remove(0, in + strlen("workers="));
-         while (!o.IsDigit())
-            o.Remove(o.Length()-1);
-         fNWorkers = (!o.IsNull()) ? o.Atoi() : fNWorkers;
-      }
-   }
-   if (fNWorkers < 0) {
-      SysInfo_t si;
-      if (gSystem->GetSysInfo(&si) == 0) {
-         fNWorkers = si.fCpus + 1;
-      } else {
-         // Two workers by default
-         fNWorkers = 2;
-      }
-   }
+   fNWorkers = GetNumberOfWorkers();
    Printf(" +++ Starting PROOF-Lite with %d workers +++", fNWorkers);
 
    // Init the session now
@@ -330,6 +311,41 @@ TProofLite::~TProofLite()
       gSystem->Unlink(fQueryLock->GetName());
       fQueryLock->Unlock();
    }
+}
+
+//______________________________________________________________________________
+Int_t TProofLite::GetNumberOfWorkers(const char *url)
+{
+   // Static method to determine the number of workers giving priority to users request.
+   // Otherwise use the system information, if available, or just start
+   // the minimal number, i.e. 2 .
+
+   Int_t nWorkers = -1;
+   if (url && strlen(url)) {
+      TString o(url);
+      Int_t in = o.Index("workers=");
+      if (in != kNPOS) {
+         o.Remove(0, in + strlen("workers="));
+         while (!o.IsDigit())
+            o.Remove(o.Length()-1);
+         nWorkers = (!o.IsNull()) ? o.Atoi() : nWorkers;
+      }
+   }
+   if (nWorkers <= 0) {
+      nWorkers = gEnv->GetValue("ProofLite.Workers", -1);
+      if (nWorkers <= 0) {
+         SysInfo_t si;
+         if (gSystem->GetSysInfo(&si) == 0 && si.fCpus > 2) {
+            nWorkers = si.fCpus;
+         } else {
+            // Two workers by default
+            nWorkers = 2;
+         }
+      }
+   }
+
+   // Done
+   return nWorkers;
 }
 
 //______________________________________________________________________________

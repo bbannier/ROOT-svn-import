@@ -51,24 +51,7 @@ TProof *TProofMgrLite::CreateSession(const char *,
 {
    // Create a new session
 
-   Int_t nwrk = -1;
-   TString o(fUrl.GetOptions());
-   Int_t in = o.Index("workers=");
-   if (in != kNPOS) {
-      o.Remove(0, in + strlen("workers="));
-      while (!o.IsDigit())
-         o.Remove(o.Length()-1);
-      nwrk = (!o.IsNull()) ? o.Atoi() : nwrk;
-   }
-   if (nwrk < 0) {
-      SysInfo_t si;
-      if (gSystem->GetSysInfo(&si) == 0) {
-         nwrk = si.fCpus + 1;
-      } else {
-         // Two workers by default
-         nwrk = 2;
-      }
-   }
+   Int_t nwrk = TProofLite::GetNumberOfWorkers(fUrl.GetOptions());
 
    // Check if we have already a running session
    if (gProof && gProof->IsValid() && gProof->IsLite()) {
