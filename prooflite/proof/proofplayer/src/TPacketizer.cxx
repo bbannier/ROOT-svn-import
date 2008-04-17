@@ -28,6 +28,7 @@
 
 #include "Riostream.h"
 #include "TDSet.h"
+#include "TEnv.h"
 #include "TError.h"
 #include "TEventList.h"
 #include "TEntryList.h"
@@ -256,9 +257,34 @@ TPacketizer::TPacketizer(TDSet *dset, TList *slaves, Long64_t first,
    fFileNodes = 0;
    fMaxPerfIdx = 1;
 
-   Long_t maxSlaveCnt = 4;
-   TProof::GetParameter(input, "PROOF_MaxSlavesPerNode", maxSlaveCnt);
-   fMaxSlaveCnt = (Int_t)maxSlaveCnt;
+   Long_t maxSlaveCnt = 0;
+   if (TProof::GetParameter(input, "PROOF_MaxSlavesPerNode", maxSlaveCnt) == 0) {
+      if (maxSlaveCnt < 1) {
+         Info("TPacketizer", "PROOF_MaxSlavesPerNode must be grater than 0");
+         maxSlaveCnt = 0;
+      }
+   } else {
+      // Try also with Int_t (recently supported in TProof::SetParameter)
+      Int_t mxslcnt = -1;
+      if (TProof::GetParameter(input, "PROOF_MaxSlavesPerNode", mxslcnt) == 0) {
+         if (mxslcnt < 1) {
+            Info("TPacketizer", "PROOF_MaxSlavesPerNode must be grater than 0");
+            mxslcnt = 0;
+         }
+         maxSlaveCnt = (Long_t) mxslcnt;
+      }
+   }
+   if (!maxSlaveCnt)
+      maxSlaveCnt = gEnv->GetValue("Packetizer.MaxWorkersPerNode", 4);
+   if (maxSlaveCnt > 0) {
+      fMaxSlaveCnt = maxSlaveCnt;
+      Info("TPacketizer", "setting max number of workers per node to %ld", fMaxSlaveCnt);
+   } else {
+      // Use number of CPUs as default cutting at 2
+      SysInfo_t si;
+      gSystem->GetSysInfo(&si);
+      fMaxSlaveCnt =  (si.fCpus > 2) ? si.fCpus : 2;
+   }
 
    fPackets = new TList;
    fPackets->SetOwner();
@@ -333,6 +359,11 @@ TPacketizer::TPacketizer(TDSet *dset, TList *slaves, Long64_t first,
    dset->Reset();
    Long64_t cur = 0;
    while (( e = (TDSetElement*)dset->Next())) {
+
+      // Skip invalid or missing file; It will be moved
+      // from the dset to the 'MissingFiles' list in the player.
+      if (!e->GetValid()) continue;
+
       TUrl url = e->GetFileName();
       Long64_t eFirst = e->GetFirst();
       Long64_t eNum = e->GetNum();
@@ -641,7 +672,7 @@ void TPacketizer::ValidateFiles(TDSet *dset, TList *slaves)
       slaves_by_sock.Add(slave->GetSocket(),slave);
       PDB(kPacketizer,1)
          Info("ValidateFiles",
-              " mon: %p, wrk: %p, sck: %p", &mon, slave, slave->GetSocket());
+              "mon: %p, wrk: %p, sck: %p", &mon, slave, slave->GetSocket());
    }
 
    mon.DeActivateAll();

@@ -6320,7 +6320,8 @@ G__value Cint::Internal::G__getvariable(char* item, int* known, const ::Reflex::
                   if (G__var_type == 'v') {
                      G__value_typenum(result) = G__deref(G__value_typenum(result));
                   }
-                  varscope.AddDataMember(name.c_str(), G__value_typenum(result), (size_t)offset, 0);
+                  G__add_scopemember(varscope, name.c_str(), G__value_typenum(result), 0, (size_t)offset, 
+                                     offset, G__PUBLIC, 0);
                }
                switch (G__var_type) {
                   case 'p':
@@ -6417,7 +6418,7 @@ G__value Cint::Internal::G__getvariable(char* item, int* known, const ::Reflex::
 G__value Cint::Internal::G__getstructmem(int store_var_type, char* varname, char* membername, char* tagname, int* known2, const ::Reflex::Scope& varglobal, int objptr /* 1 : object, 2 : pointer */)
 {
    // -- FIXME: Describe me!
-   fprintf(stderr, "G__getstructmem: varname: '%s' membername: '%s' tagname: '%s' objptr: %d\n", varname, membername, tagname, objptr);
+   // fprintf(stderr, "G__getstructmem: varname: '%s' membername: '%s' tagname: '%s' objptr: %d\n", varname, membername, tagname, objptr);
    ::Reflex::Scope store_tagnum;
    char* store_struct_offset = 0;
    int flag = 0;
