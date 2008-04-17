@@ -36,7 +36,7 @@
 #include "TSocket.h"
 #include "TProofServ.h"
 #include "TProof.h"
-#include "TProofFile.h"
+#include "TProofOutputFile.h"
 #include "TProofSuperMaster.h"
 #include "TSlave.h"
 #include "TClass.h"
@@ -894,10 +894,10 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
       TObject *o = 0;
       while ((o = nxo())) {
          // Special treatment for files
-         if (o->IsA() == TProofFile::Class()) {
-            ((TProofFile *)o)->SetWorkerOrdinal(gProofServ->GetOrdinal());
-            if (!strcmp(((TProofFile *)o)->GetDir(),""))
-               ((TProofFile *)o)->SetDir(gProofServ->GetSessionDir());
+         if (o->IsA() == TProofOutputFile::Class()) {
+            ((TProofOutputFile *)o)->SetWorkerOrdinal(gProofServ->GetOrdinal());
+            if (!strcmp(((TProofOutputFile *)o)->GetDir(),""))
+               ((TProofOutputFile *)o)->SetDir(gProofServ->GetSessionDir());
          }
       }
 
@@ -1306,16 +1306,18 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
       // Record the list of missing or invalid elements in the output list
       if (listOfMissingFiles && listOfMissingFiles->GetSize() > 0) {
          TIter missingFiles(listOfMissingFiles);
-         TFileInfo *fi = 0;
-         while ((fi = (TFileInfo *) missingFiles.Next())) {
-            TString msg;
-            if (fi->GetCurrentUrl()) {
-               msg = Form("File not found: %s - skipping!",
-                                             fi->GetCurrentUrl()->GetUrl());
-            } else {
-               msg = Form("File not found: %s - skipping!", fi->GetName());
+         TString msg;
+         if (gDebug > 0) {
+            TFileInfo *fi = 0;
+            while ((fi = (TFileInfo *) missingFiles.Next())) {
+               if (fi->GetCurrentUrl()) {
+                  msg = Form("File not found: %s - skipping!",
+                                                fi->GetCurrentUrl()->GetUrl());
+               } else {
+                  msg = Form("File not found: %s - skipping!", fi->GetName());
+               }
+               gProofServ->SendAsynMessage(msg.Data());
             }
-            gProofServ->SendAsynMessage(msg.Data());
          }
          // Make sure it will be sent back
          if (!GetOutput("MissingFiles")) {
@@ -1327,7 +1329,18 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
             tmpStatus = new TStatus();
             AddOutputObject(tmpStatus);
          }
-         tmpStatus->Add("Some files were missing; check 'missingFiles' list");
+         // Estimate how much data are missing
+         Int_t ngood = dset->GetListOfElements()->GetSize();
+         Int_t nbad = listOfMissingFiles->GetSize();
+         Double_t xb = Double_t(nbad) / Double_t(ngood + nbad);
+         msg = Form(" About %.2f %c of the requested files (%d out of %d) were missing; details in"
+                    " the 'missingFiles' list", xb * 100., '%', nbad, nbad + ngood);
+         tmpStatus->Add(msg.Data());
+         msg = Form(" +++\n"
+                    " +++ About %.2f %c of the requested files (%d out of %d) are missing; details in"
+                    " the 'missingFiles' list\n"
+                    " +++", xb * 100., '%', nbad, nbad + ngood);
+         gProofServ->SendAsynMessage(msg.Data());
       } else {
          // Cleanup
          SafeDelete(listOfMissingFiles);
@@ -1462,7 +1475,7 @@ Bool_t  TProofPlayerRemote::MergeOutputFiles()
    // Merge output in files
 
    if (fMergeFiles) {
-      TFileMerger *filemerger = TProofFile::GetFileMerger();
+      TFileMerger *filemerger = TProofOutputFile::GetFileMerger();
       if (!filemerger) {
          Error("MergeOutputFiles", "file merger is null in gProofServ! Protocol error?");
          return kFALSE;
@@ -1902,7 +1915,7 @@ Int_t TProofPlayerRemote::AddOutputObject(TObject *obj)
    }
 
    // Check if we need to merge files
-   TProofFile *pf = dynamic_cast<TProofFile*>(obj);
+   TProofOutputFile *pf = dynamic_cast<TProofOutputFile*>(obj);
    if (pf) {
       if (!strcmp(pf->GetMode(),"CENTRAL"))
          fMergeFiles = kTRUE;
