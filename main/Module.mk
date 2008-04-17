@@ -3,7 +3,8 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := main
+MODNAME      := main
+MODDIR       := $(MODNAME)
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -93,17 +94,6 @@ ifeq ($(PLATFORM),win32)
 G2ROOT       :=
 endif
 
-##### g2rootold #####
-G2ROOTOLDS   := $(MODDIRS)/g2rootold.f
-G2ROOTOLDO   := $(G2ROOTOLDS:.f=.o)
-ifeq ($(PLATFORM),win32)
-G2ROOTOLDO   += $(H2ROOTS3:.c=.o) $(H2ROOTS4:.f=.o)
-endif
-G2ROOTOLD    := bin/g2rootold$(EXEEXT)
-ifeq ($(PLATFORM),win32)
-G2ROOTOLD    :=
-endif
-
 ##### ssh2rpd #####
 SSH2RPDS        := $(MODDIRS)/ssh2rpd.cxx
 SSH2RPDO        := $(SSH2RPDS:.cxx=.o)
@@ -116,8 +106,8 @@ endif
 # used in the main Makefile
 ALLEXECS     += $(ROOTEXE) $(ROOTNEXE) $(PROOFSERVEXE) $(PROOFSERVSH) \
                 $(HADD) $(SSH2RPD) $(ROOTSEXE) $(ROOTSSH)
-ifeq ($(BUILDHBOOK),yes)
-ALLEXECS     += $(H2ROOT) $(G2ROOT) $(G2ROOTOLD)
+ifneq ($(F77),)
+ALLEXECS     += $(H2ROOT) $(G2ROOT)
 endif
 
 # include all dependency files
@@ -125,6 +115,8 @@ INCLUDEFILES += $(ROOTEXEDEP) $(PROOFSERVDEP) $(HADDDEP) $(H2ROOTDEP) \
                 $(SSH2RPDDEP) $(ROOTSEXEDEP)
 
 ##### local rules #####
+.PHONY:         all-$(MODNAME) clean-$(MODNAME) distclean-$(MODNAME)
+
 $(ROOTEXE):     $(ROOTEXEO) $(BOOTLIBSDEP) $(RINTLIB)
 		$(LD) $(LDFLAGS) -o $@ $(ROOTEXEO) $(ROOTICON) $(BOOTULIBS) \
 		   $(RPATH) $(BOOTLIBS) $(RINTLIBS) $(SYSLIBS)
@@ -139,16 +131,16 @@ $(PROOFSERVEXE): $(PROOFSERVO) $(BOOTLIBSDEP)
 		$(LD) $(LDFLAGS) -o $@ $(PROOFSERVO) $(BOOTULIBS) \
 		   $(RPATH) $(BOOTLIBS) $(SYSLIBS)
 
-$(PROOFSERVSH): main/src/proofserv.sh
+$(PROOFSERVSH): $(MAINDIRS)/proofserv.sh
 		@echo "Install proofserv wrapper."
 		@cp $< $@
 		@chmod 0755 $@
 
-$(ROOTSEXE): $(ROOTSEXEO) $(BOOTLIBSDEP)
+$(ROOTSEXE):    $(ROOTSEXEO) $(BOOTLIBSDEP)
 		$(LD) $(LDFLAGS) -o $@ $(ROOTSEXEO) $(BOOTULIBS) \
 		   $(RPATH) $(BOOTLIBS) $(SYSLIBS)
 
-$(ROOTSSH): main/src/roots.sh
+$(ROOTSSH):     $(MAINDIRS)/roots.sh
 		@echo "Install roots wrapper."
 		@cp $< $@
 		@chmod 0755 $@
@@ -160,44 +152,38 @@ $(HADD):        $(HADDO) $(ROOTLIBSDEP)
 $(SSH2RPD):     $(SSH2RPDO) $(SNPRINTFO)
 		$(LD) $(LDFLAGS) -o $@ $(SSH2RPDO) $(SNPRINTFO) $(SYSLIBS)
 
-$(H2ROOT):      $(H2ROOTO) $(ROOTLIBSDEP)
+$(H2ROOT):      $(H2ROOTO) $(ROOTLIBSDEP) $(MINICERNLIB)
 		$(LD) $(LDFLAGS) -o $@ $(H2ROOTO) \
-		   $(RPATH) $(ROOTLIBS) \
-		   $(CERNLIBDIR) $(CERNLIBS) $(SHIFTLIBDIR) \
-		   $(SHIFTLIB) $(F77LIBS) $(SYSLIBS)
+		   $(RPATH) $(ROOTLIBS) $(MINICERNLIB) \
+		   $(F77LIBS) $(SYSLIBS)
 
-$(G2ROOT):      $(G2ROOTO)
+$(G2ROOT):      $(G2ROOTO) $(ORDER_) $(MINICERNLIB)
 		$(F77LD) $(F77LDFLAGS) -o $@ $(G2ROOTO) \
-		   $(CERNLIBDIR) $(CERNLIBS) $(SHIFTLIBDIR) \
-		   $(SHIFTLIB) $(F77LIBS) $(SYSLIBS)
+		   $(RPATH) $(MINICERNLIB) \
+		   $(F77LIBS) $(SYSLIBS)
 
-$(G2ROOTOLD):   $(G2ROOTOLDO)
-		$(F77LD) $(F77LDFLAGS) -o $@ $(G2ROOTOLDO) \
-		   $(CERNLIBDIR) $(CERNLIBS) $(SHIFTLIBDIR) \
-		   $(SHIFTLIB) $(F77LIBS) $(SYSLIBS)
-
-ifeq ($(BUILDHBOOK),yes)
-all-main:      $(ROOTEXE) $(ROOTNEXE) $(PROOFSERVEXE) $(PROOFSERVSH) \
-               $(HADD) $(SSH2RPD) $(H2ROOT) $(G2ROOT) $(G2ROOTOLD) \
-               $(ROOTSEXE) $(ROOTSSH)
+ifneq ($(F77),)
+all-$(MODNAME): $(ROOTEXE) $(ROOTNEXE) $(PROOFSERVEXE) $(PROOFSERVSH) \
+                $(HADD) $(SSH2RPD) $(H2ROOT) $(G2ROOT) \
+                $(ROOTSEXE) $(ROOTSSH)
 else
-all-main:      $(ROOTEXE) $(ROOTNEXE) $(PROOFSERVEXE) $(PROOFSERVSH) \
-               $(HADD) $(SSH2RPD) $(ROOTSEXE) $(ROOTSSH)
+all-$(MODNAME): $(ROOTEXE) $(ROOTNEXE) $(PROOFSERVEXE) $(PROOFSERVSH) \
+                $(HADD) $(SSH2RPD) $(ROOTSEXE) $(ROOTSSH)
 endif
 
-clean-main:
+clean-$(MODNAME):
 		@rm -f $(ROOTEXEO) $(PROOFSERVO) $(HADDO) $(H2ROOTO) \
-		   $(G2ROOTO) $(G2ROOTOLDO) $(SSH2RPDO) $(ROOTSEXEO)
+		   $(G2ROOTO) $(SSH2RPDO) $(ROOTSEXEO)
 
-clean::         clean-main
+clean::         clean-$(MODNAME)
 
-distclean-main: clean-main
+distclean-$(MODNAME): clean-$(MODNAME)
 		@rm -f $(ROOTEXEDEP) $(ROOTEXE) $(ROOTNEXE) $(PROOFSERVDEP) \
 		   $(PROOFSERVEXE) $(PROOFSERVSH) $(HADDDEP) $(HADD) \
-		   $(H2ROOTDEP) $(H2ROOT) $(G2ROOT) $(G2ROOTOLD) \
+		   $(H2ROOTDEP) $(H2ROOT) $(G2ROOT) \
 		   $(SSH2RPDDEP) $(SSH2RPD) $(ROOTSEXEDEP) $(ROOTSEXE) $(ROOTSSH)
 
-distclean::     distclean-main
+distclean::     distclean-$(MODNAME)
 
 ##### extra rules ######
 $(SSH2RPDO): PCHCXXFLAGS =

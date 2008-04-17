@@ -2747,7 +2747,7 @@ void TProofServ::HandleProcess(TMessage *mess)
                      dset->GetName());
                return;
             }
-            if (!(fDataSetManager->ParseDataSetUri(dset->GetName(), 0, 0, 0, &dsTree)))
+            if (!(fDataSetManager->ParseUri(dset->GetName(), 0, 0, 0, &dsTree)))
                dsTree = "";
 
             // Apply the lookup option requested by the client or the administartor
@@ -4251,16 +4251,18 @@ void TProofServ::ErrorHandler(Int_t level, Bool_t abort, const char *location,
        (level >= kBreak && level < kSysError)) {
       fprintf(stderr, "%s %5d %s | %s: %s\n", st(11,8).Data(), gSystem->GetPid(),
                      (gProofServ ? gProofServ->GetPrefix() : "proof"), type, msg);
-      buf.Form("%s:%s:%s:%s", (gProofServ ? gProofServ->GetUser() : "unknown"),
-                              (gProofServ ? gProofServ->GetPrefix() : "proof"),
-                              type, msg);
+      if (fgLogToSysLog)
+         buf.Form("%s:%s:%s:%s", (gProofServ ? gProofServ->GetUser() : "unknown"),
+                                 (gProofServ ? gProofServ->GetPrefix() : "proof"),
+                                 type, msg);
    } else {
       fprintf(stderr, "%s %5d %s | %s in <%s>: %s\n", st(11,8).Data(), gSystem->GetPid(),
                       (gProofServ ? gProofServ->GetPrefix() : "proof"),
                       type, location, msg);
-      buf.Form("%s:%s:%s:<%s>:%s", (gProofServ ? gProofServ->GetUser() : "unknown"),
-                                   (gProofServ ? gProofServ->GetPrefix() : "proof"),
-                                   type, location, msg);
+      if (fgLogToSysLog)
+         buf.Form("%s:%s:%s:<%s>:%s", (gProofServ ? gProofServ->GetUser() : "unknown"),
+                                      (gProofServ ? gProofServ->GetPrefix() : "proof"),
+                                       type, location, msg);
    }
    fflush(stderr);
 
@@ -4467,7 +4469,7 @@ Int_t TProofServ::CopyToCache(const char *macro, Int_t opt)
                      if (docp) {
                         gSystem->Exec(Form("%s %s", kRM, fncache.Data()));
                         PDB(kGlobal,2)
-                           Info("CopyFromCache","caching %s ...", e);
+                           Info("CopyToCache","caching %s ...", e);
                         gSystem->Exec(Form("%s %s %s", kCP, e, fncache.Data()));
                         savever = kTRUE;
                      }

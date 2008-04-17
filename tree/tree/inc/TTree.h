@@ -146,7 +146,10 @@ protected:
    virtual void     MakeIndex(TString& varexp, Int_t* index);
    virtual TBranch *BranchImp(const char* branchname, const char* classname, TClass* ptrClass, void* addobj, Int_t bufsize, Int_t splitlevel);
    virtual TBranch *BranchImp(const char* branchname, TClass* ptrClass, void* addobj, Int_t bufsize, Int_t splitlevel);
+   virtual TBranch *BranchImpRef(const char* branchname, TClass* ptrClass, EDataType datatype, void* addobj, Int_t bufsize, Int_t splitlevel);
    virtual Bool_t   CheckBranchAddressType(TBranch* branch, TClass* ptrClass, EDataType datatype, Bool_t ptr);
+   virtual TBranch *BronchExec(const char* name, const char* classname, void* addobj, Bool_t isptrptr, Int_t bufsize, Int_t splitlevel);
+   friend TBranch *TTreeBranchImpRef(TTree *tree, const char* branchname, TClass* ptrClass, EDataType datatype, void* addobj, Int_t bufsize, Int_t splitlevel);
 
    class TFriendLock {
       // Helper class to prevent infinite recursion in the
@@ -215,6 +218,11 @@ public:
    {
       // See BranchImp for details
       return BranchImp(name, TBuffer::GetClass(typeid(T)), addobj, bufsize, splitlevel);
+   }
+   template <class T> TBranch *Branch(const char* name, T* obj, Int_t bufsize = 32000, Int_t splitlevel = 99)
+   {
+      // See BranchImp for details
+      return BranchImpRef(name, TBuffer::GetClass(typeid(T)), TDataType::GetType(typeid(T)), obj, bufsize, splitlevel);
    }
    virtual TBranch        *Bronch(const char* name, const char* classname, void* addobj, Int_t bufsize = 32000, Int_t splitlevel = 99);
    virtual TBranch        *BranchOld(const char* name, const char* classname, void* addobj, Int_t bufsize = 32000, Int_t splitlevel = 1);
@@ -331,7 +339,7 @@ public:
    TPrincipal             *Principal(const char* varexp = "", const char* selection = "", Option_t* option = "np", Long64_t nentries = 1000000000, Long64_t firstentry = 0);
    virtual void            Print(Option_t* option = "") const; // *MENU*
    virtual Long64_t        Process(const char* filename, Option_t* option = "", Long64_t nentries = 1000000000, Long64_t firstentry = 0); // *MENU*
-#if defined(__CINT__) 
+#if defined(__CINT__)
 #if defined(R__MANUAL_DICT)
    virtual Long64_t        Process(void* selector, Option_t* option = "", Long64_t nentries = 1000000000, Long64_t firstentry = 0);
 #endif
@@ -427,7 +435,18 @@ public:
    Option_t          *GetOption() const;
    TObject           *Next();
    void               Reset() { SafeDelete(fLeafIter); SafeDelete(fTreeIter); }
-
+   bool operator !=(const TIterator&) const {
+      // TODO: Implement me
+      return false;
+   }
+   bool operator !=(const TTreeFriendLeafIter&) const {
+      // TODO: Implement me
+      return false;
+   }
+   TObject *operator*() const {
+      // TODO: Implement me
+      return nullptr;
+   }
    ClassDef(TTreeFriendLeafIter,0)  //Linked list iterator
  };
 
