@@ -59,32 +59,33 @@ include $(MAKEFILEDEP)
 ##### Modules to build #####
 
 MODULES       = build cint/cint core/metautils core/pcre core/utils core/base \
-                core/cont core/meta io math/mathcore net/net core/zip \
-                core/clib math/matrix core/newdelete \
-                hist/hist tree/tree freetype graf gpad g3d gui/gui math/minuit \
-                hist/histpainter tree/treeplayer gui/ged tree/treeviewer \
-                math/physics postscript core/rint core/thread html eg \
-                geom/geom geom/geompainter vmc \
-                math/fumili math/mlp math/quadp net/auth gui/guibuilder xml \
-                math/foam math/splot math/smatrix sql tmva \
+                core/cont core/meta io/io math/mathcore net/net core/zip \
+                core/clib math/matrix core/newdelete hist/hist tree/tree \
+                graf2d/freetype graf2d/graf graf2d/gpad graf3d/g3d \
+                gui/gui math/minuit hist/histpainter tree/treeplayer \
+                gui/ged tree/treeviewer math/physics graf2d/postscript \
+                core/rint core/thread html montecarlo/eg \
+                geom/geom geom/geompainter montecarlo/vmc \
+                math/fumili math/mlp math/quadp net/auth gui/guibuilder io/xml \
+                math/foam math/splot math/smatrix io/sql tmva \
                 geom/geombuilder hist/spectrum hist/spectrumpainter \
                 gui/fitpanel proof/proof proof/proofplayer \
                 gui/sessionviewer gui/guihtml
 
 ifeq ($(ARCH),win32)
-MODULES      += core/winnt win32gdk
+MODULES      += core/winnt graf2d/win32gdk
 MODULES      := $(filter-out core/newdelete,$(MODULES))
 SYSTEML       = $(WINNTL)
 SYSTEMO       = $(WINNTO)
 SYSTEMDO      = $(WINNTDO)
 else
 ifeq ($(ARCH),win32gcc)
-MODULES      += core/unix x11 x11ttf x3d rootx
+MODULES      += core/unix graf2d/x11 graf2d/x11ttf graf3d/x3d rootx
 SYSTEML       = $(UNIXL)
 SYSTEMO       = $(UNIXO)
 SYSTEMDO      = $(UNIXDO)
 else
-MODULES      += core/unix x11 x11ttf x3d rootx
+MODULES      += core/unix graf2d/x11 graf2d/x11ttf graf3d/x3d rootx
 SYSTEML       = $(UNIXL)
 SYSTEMO       = $(UNIXO)
 SYSTEMDO      = $(UNIXDO)
@@ -92,69 +93,69 @@ endif
 endif
 ifeq ($(BUILDGL),yes)
 ifeq ($(BUILDFTGL),yes)
-MODULES      += ftgl
+MODULES      += graf3d/ftgl
 endif
-MODULES      += gl eve
+MODULES      += graf3d/gl graf3d/eve
 endif
 ifeq ($(BUILDMYSQL),yes)
-MODULES      += mysql
+MODULES      += sql/mysql
 endif
 ifeq ($(BUILDORACLE),yes)
-MODULES      += oracle
+MODULES      += sql/oracle
 endif
 ifeq ($(BUILDPGSQL),yes)
-MODULES      += pgsql
+MODULES      += sql/pgsql
 endif
 ifeq ($(BUILDSAPDB),yes)
-MODULES      += sapdb
+MODULES      += sql/sapdb
 endif
 ifeq ($(BUILDODBC),yes)
-MODULES      += odbc
+MODULES      += sql/odbc
 endif
 ifeq ($(BUILDRFIO),yes)
-MODULES      += rfio
+MODULES      += io/rfio
 endif
 ifeq ($(BUILDCASTOR),yes)
-MODULES      += castor
+MODULES      += io/castor
 endif
 ifeq ($(BUILDDCAP),yes)
-MODULES      += dcache
+MODULES      += io/dcache
 endif
 ifeq ($(BUILDGFAL),yes)
-MODULES      += gfal
+MODULES      += io/gfal
 endif
 ifeq ($(BUILDG4ROOT),yes)
-MODULES      += g4root
+MODULES      += montecarlo/g4root
 endif
 ifeq ($(BUILDGLITE),yes)
 MODULES      += net/glite
 endif
 ifeq ($(BUILDCHIRP),yes)
-MODULES      += chirp
+MODULES      += io/chirp
 endif
 ifeq ($(BUILDASIMAGE),yes)
-MODULES      += asimage
+MODULES      += graf2d/asimage
 endif
 ifeq ($(BUILDFPYTHIA6),yes)
-MODULES      += pythia6
+MODULES      += montecarlo/pythia6
 endif
 ifeq ($(BUILDFPYTHIA8),yes)
-MODULES      += pythia8
+MODULES      += montecarlo/pythia8
 endif
 ifeq ($(BUILDFFTW3),yes)
 MODULES      += math/fftw
 endif
 ifeq ($(BUILDPYTHON),yes)
-MODULES      += pyroot
+MODULES      += bindings/pyroot
 endif
 ifeq ($(BUILDRUBY),yes)
-MODULES      += ruby
+MODULES      += bindings/ruby
 endif
 ifeq ($(BUILDXML),yes)
-MODULES      += xmlparser
+MODULES      += io/xmlparser
 endif
 ifeq ($(BUILDQT),yes)
-MODULES      += qt gui/qtroot
+MODULES      += graf2d/qt gui/qtroot
 endif
 ifeq ($(BUILDQTGSI),yes)
 MODULES      += gui/qtgsi
@@ -182,13 +183,13 @@ ifeq ($(BUILDCINTEX),yes)
 MODULES      += cint/cintex
 endif
 ifeq ($(BUILDROOFIT),yes)
-MODULES      += roofitcore roofit
+MODULES      += roofit/roofitcore roofit/roofit
 endif
 ifeq ($(BUILDGDML),yes)
 MODULES      += geom/gdml
 endif
 ifeq ($(BUILDTABLE),yes)
-MODULES      += table
+MODULES      += misc/table
 endif
 ifeq ($(BUILDSRPUTIL),yes)
 MODULES      += net/srputils
@@ -205,8 +206,10 @@ endif
 ifeq ($(BUILDGLOBUS),yes)
 MODULES      += net/globusauth
 endif
-ifeq ($(BUILDHBOOK),yes)
-MODULES      += hbook
+# comment out to test minicern
+F77 :=
+ifneq ($(F77),)
+MODULES      += misc/minicern hist/hbook
 endif
 ifeq ($(BUILDXRD),yes)
 ifneq ($(XROOTDDIR),)
@@ -237,17 +240,19 @@ endif
 -include MyModules.mk   # allow local modules
 
 ifneq ($(findstring $(MAKECMDGOALS),distclean maintainer-clean),)
-MODULES      += core/unix core/winnt x11 x11ttf win32gdk gl ftgl rfio castor \
-                pythia6 table mysql pgsql sapdb net/srputils x3d \
-                rootx net/rootd dcache chirp hbook asimage \
+MODULES      += core/unix core/winnt graf2d/x11 graf2d/x11ttf \
+                graf2d/win32gdk graf3d/gl graf3d/ftgl io/rfio io/castor \
+                montecarlo/pythia6 montecarlo/pythia8 misc/table \
+                sql/mysql sql/pgsql sql/sapdb net/srputils graf3d/x3d \
+                rootx net/rootd io/dcache io/chirp hist/hbook graf2d/asimage \
                 net/ldap net/krb5auth net/rpdutils net/globusauth \
-                pyroot ruby gfal \
-                qt gui/qtroot gui/qtgsi net/xrootd net/netx net/alien \
+                bindings/pyroot bindings/ruby io/gfal misc/minicern \
+                graf2d/qt gui/qtroot gui/qtgsi net/xrootd net/netx net/alien \
                 proof/proofd proof/proofx proof/clarens proof/peac \
-                oracle xmlparser math/mathmore cint/reflex cint/cintex \
-                roofitcore roofit \
-                math/minuit2 net/monalisa math/fftw odbc math/unuran \
-                geom/gdml eve g4root net/glite
+                sql/oracle io/xmlparser math/mathmore cint/reflex cint/cintex \
+                roofit/roofitcore roofit/roofit \
+                math/minuit2 net/monalisa math/fftw sql/odbc math/unuran \
+                geom/gdml graf3d/eve montecarlo/g4root net/glite
 MODULES      := $(sort $(MODULES))   # removes duplicates
 endif
 
@@ -487,12 +492,20 @@ G__%.o: G__%.cxx
 	   -I$(CINTDIR)/stl -- $<
 	$(CXX) $(NOOPT) $(CXXFLAGS) -I. $(CXXOUT)$@ -c $<
 
-cint/%.o: cint/%.cxx
-	$(MAKEDEP) -R -fcint/$*.d -Y -w 1000 -- $(CINTCXXFLAGS) -D__cplusplus -- $<
+cint/cint/%.o: cint/cint/%.cxx
+	$(MAKEDEP) -R -fcint/cint/$*.d -Y -w 1000 -- $(CINTCXXFLAGS) -D__cplusplus -- $<
 	$(CXX) $(OPT) $(CINTCXXFLAGS) $(CXXOUT)$@ -c $<
 
-cint/%.o: cint/%.c
-	$(MAKEDEP) -R -fcint/$*.d -Y -w 1000 -- $(CINTCFLAGS) -- $<
+cint/cint/%.o: cint/cint/%.c
+	$(MAKEDEP) -R -fcint/cint/$*.d -Y -w 1000 -- $(CINTCFLAGS) -- $<
+	$(CC) $(OPT) $(CINTCFLAGS) $(CXXOUT)$@ -c $<
+
+cint/cint7/%.o: cint/cint7/%.cxx
+	$(MAKEDEP) -R -fcint/cint7/$*.d -Y -w 1000 -- $(CINTCXXFLAGS) -D__cplusplus -- $<
+	$(CXX) $(OPT) $(CINTCXXFLAGS) $(CXXOUT)$@ -c $<
+
+cint/cint7/%.o: cint/cint7/%.c
+	$(MAKEDEP) -R -fcint/cint7/$*.d -Y -w 1000 -- $(CINTCFLAGS) -- $<
 	$(CC) $(OPT) $(CINTCFLAGS) $(CXXOUT)$@ -c $<
 
 build/%.o: build/%.cxx
@@ -521,10 +534,7 @@ endif
 .PHONY:         all fast config rootcint rootlibs rootexecs dist distsrc \
                 clean distclean maintainer-clean compiledata \
                 version html changelog install uninstall showbuild \
-                static map debian redhat skip postbin \
-                $(patsubst %,all-%,$(MODULES)) \
-                $(patsubst %,clean-%,$(MODULES)) \
-                $(patsubst %,distclean-%,$(MODULES))
+                static map debian redhat skip postbin
 
 ifneq ($(findstring map, $(MAKECMDGOALS)),)
 .NOTPARALLEL:

@@ -415,6 +415,12 @@ static int G__free_struct_upto(int tagnum)
       free((void*) G__struct.baseclass[G__struct.alltag]);
       G__struct.baseclass[G__struct.alltag] = 0;
 
+      // Free member functions
+      {
+         ::Reflex::Scope varscope = G__Dict::GetDict().GetScope(G__struct.alltag);
+         G__free_ifunc_table( varscope );
+      }
+
       // freeing _memfunc_setup and memvar_setup function pointers
       if (G__struct.incsetup_memvar[G__struct.alltag]) {
          G__struct.incsetup_memvar[G__struct.alltag]->clear();
@@ -719,7 +725,7 @@ int Cint::Internal::G__free_ifunc_table(::Reflex::Scope& scope)
       toberemoved.push_back(*i);
    }
    for (std::vector<Reflex::Member>::const_iterator j = toberemoved.begin(); j != toberemoved.end(); ++j) {
-      scope.RemoveDataMember(*j);
+      scope.RemoveFunctionMember(*j);
    }
    // Do not free ifunc because it can be a global or static object.
    return 0;
@@ -821,7 +827,7 @@ int Cint::Internal::G__destroy_upto(::Reflex::Scope& scope, int global, int inde
                      }
                   }
                   G__globalvarpointer = store_globalvarpointer;
-                  free(G__get_offset(var));
+                  delete [] (G__get_offset(var)); //  -8);
                   G__get_offset(var) = 0;
                }
                else {
