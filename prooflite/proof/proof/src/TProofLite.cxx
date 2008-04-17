@@ -867,7 +867,7 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
             Error("Process", "no such dataset on the master: %s", dset->GetName());
             return -1;
          }
-         if (!(fDataSetManager->ParseDataSetUri(dset->GetName(), 0, 0, 0, &dsTree)))
+         if (!(fDataSetManager->ParseUri(dset->GetName(), 0, 0, 0, &dsTree)))
             dsTree = "";
          // Apply the lookup option requested by the client or the administartor
          // (by default we trust the information in the dataset)
