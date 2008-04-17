@@ -605,6 +605,7 @@ Int_t TTreeCacheUnzip::GetUnzipBuffer(char **buf, Long64_t pos, Int_t len, Bool_
          ind = (TUnzipBufferInfo*)next();
          while (ind) {
             //delete if it was already read
+/*
             Int_t index = ind->GetNum(); 
             if( ind->GetRead() && !ind->GetBasket() ) {
                if ( fUnzipList->Remove(ind) )
@@ -615,6 +616,7 @@ Int_t TTreeCacheUnzip::GetUnzipBuffer(char **buf, Long64_t pos, Int_t len, Bool_
                ind = (TUnzipBufferInfo*)next();
                continue;
             }
+*/
 
             // it was found in the list
             if (ind->GetNum() == loc)
@@ -749,7 +751,7 @@ void TTreeCacheUnzip::SetBufferRead(Long64_t pos, Int_t len, TBasket *basket)
          Int_t    locLen = fUnzipLen[index]; // Gives the size in the buffer
 
          ind->SetRead(kTRUE);
-         ind->SetBasket(0);
+         //ind->SetBasket(0);
          if (gDebug > 0)
             Info("SetBufferRead", "Marking as READ and NOT USEDind:%p, pos:%lld, num:%d, basket:%p", ind, ind->GetPos(), index, basket);
 
@@ -1006,7 +1008,7 @@ Int_t TTreeCacheUnzip::UnzipCache()
             Int_t index = ind->GetNum();
 
             //delete if it was already read
-            if( ind->GetRead()  && !ind->GetBasket()) {
+            if( ind->GetRead()  /*&& !ind->GetBasket()*/) {
                if ( fUnzipList->Remove(ind) )
                   delete ind;
                fUnzipPos[index] = 0;
