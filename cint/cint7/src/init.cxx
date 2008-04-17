@@ -66,6 +66,7 @@ extern "C" void G__add_setup_func(const char *libname,G__incsetup func)
         G__struct.incsetup_memfunc[i] = 0;
         G__memsetup_init=1;
      }
+     G__platformMacro();
   }
 
    if (!G__setup_func_list) {
@@ -1957,7 +1958,8 @@ static void G__defineMacro(const char* name, long value,
 
   char* start = temp;
   if (cintname) {
-     sprintf(temp+3, "%s=%ld", cintname, value);
+     start += 3;
+     sprintf(start, "%s=%ld", cintname, value);
   } else {
      // generate CINT name:
      // leading '_' are skipped:
@@ -2018,7 +2020,7 @@ static void G__defineMacro(const char* name, long value,
 * (G__globalcomp == G__NOLINK) means first pass, before
 * G__globalcomp has been defined
 ******************************************************************/
-static void G__platformMacro() 
+static void G__platformMacro()
 {
      // Those are not really 'types' but so far they are used as such.
   // They correspond to the cint 'type' value:
@@ -2046,6 +2048,9 @@ static void G__platformMacro()
   G__DEFINE_MACRO(__linux);
 #elif defined(linux)
   G__DEFINE_MACRO(linux);
+#endif
+#if defined(_FreeBSD_) && !defined(__FreeBSD__)
+# define __FreeBSD__ _FreeBSD_
 #endif
 #ifdef __FreeBSD__   /* FreeBSD */
   G__DEFINE_MACRO_N(__FreeBSD__, "G__FBSD");
@@ -2258,12 +2263,12 @@ static void G__platformMacro()
   G__search_typename2("ssize_t",size_t_type,-1,0,-1);
   G__setnewtype(-1,NULL,0);
 
-   if (G__ignore_stdnamespace) {
-      Reflex::NamespaceBuilder("std");
-      Reflex::Scope std = Reflex::Scope::ByName("std");
-      if (std)
-         Reflex::Scope::GlobalScope().AddUsingDirective(std);
-   }
+  if (G__ignore_stdnamespace) {
+     Reflex::NamespaceBuilder("std");
+     Reflex::Scope std = Reflex::Scope::ByName("std");
+     if (std)
+        Reflex::Scope::GlobalScope().AddUsingDirective(std);
+  }
 
 }
 
