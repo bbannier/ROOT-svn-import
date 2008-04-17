@@ -312,20 +312,22 @@ namespace {
    }
 
 //____________________________________________________________________________
-   PyObject* TObjectExpand( PyObject*, PyObject* args )
+   PyObject* ObjectProxyExpand( PyObject*, PyObject* args )
    {
    // This method and is a helper for pickling for TObject derived classes.
       PyObject* pybuf = 0;
-      if ( ! PyArg_ParseTuple( args,
-                const_cast< char* >( "O!:__expand__" ), &PyString_Type, &pybuf ) )
+      const char* clname = 0;
+      if ( ! PyArg_ParseTuple( args, const_cast< char* >( "O!s:__expand__" ),
+                &PyString_Type, &pybuf, &clname ) )
          return 0;
 
-   // use the PyString macro's to by-pass error checking; do not copy the buffer
-   // as the TBufferFile is local to this function only
+   // use the PyString macro's to by-pass error checking; do not adopt the buffer,
+   // as the local TBufferFile can go out of scope (there is no copying)
       TBufferFile buf( TBuffer::kRead,
           PyString_GET_SIZE( pybuf ), PyString_AS_STRING( pybuf ), kFALSE );
-      TObject* result = buf.ReadObject( 0 );
-      return BindRootObject( result, result->IsA() );
+
+      void* result = buf.ReadObjectAny( 0 );
+      return BindRootObject( result, TClass::GetClass( clname ) );
    }
 
 //____________________________________________________________________________
@@ -399,7 +401,7 @@ static PyMethodDef gPyROOTMethods[] = {
      METH_VARARGS, (char*) "Create an object of given type, from given address" },
    { (char*) "MakeNullPointer", (PyCFunction)MakeNullPointer,
      METH_VARARGS, (char*) "Create a NULL pointer of the given type" },
-   { (char*) "_TObject__expand__", (PyCFunction)TObjectExpand,
+   { (char*) "_ObjectProxy__expand__", (PyCFunction)ObjectProxyExpand,
      METH_VARARGS, (char*) "Helper method for pickling" },
    { (char*) "SetMemoryPolicy", (PyCFunction)SetMemoryPolicy,
      METH_VARARGS, (char*) "Determines object ownership model" },
