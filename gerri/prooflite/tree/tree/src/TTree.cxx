@@ -64,32 +64,35 @@
 //            - L : a 64 bit signed integer (Long64_t)
 //            - l : a 64 bit unsigned integer (ULong64_t)
 //            - O : a boolean (Bool_t)
+//       * if address points to a single numerical variable, the leaflist is optional:
+//           int value;
+//           tree->Branch(branchname, &value);
 //
 //  ==> Case B
 //      ======
-//     TBranch *branch = tree->Branch(branchname, &p_object, bufsize, splitlevel)
+//     TBranch *branch = tree->Branch(branchname, &p_object, bufsize, splitlevel)/
 //     TBranch *branch = tree->Branch(branchname, className, &p_object, bufsize, splitlevel)
-//        p_object is a pointer to an object.
-//        If className is not specified, Branch uses the type of p_object to determine the
-//          type of the object.
-//        If className is used to specify explicitly the object type, the className must
-//          be of a type related to the one pointed to by the pointer.  It should be either 
-//          a parent or derived class.
-//        if splitlevel=0, the object is serialized in the branch buffer.
-//        if splitlevel=1 (default), this branch will automatically be split
-//          into subbranches, with one subbranch for each data member or object
-//          of the object itself. In case the object member is a TClonesArray,
-//          the mechanism described in case C is applied to this array.
-//        if splitlevel=2 ,this branch will automatically be split
-//          into subbranches, with one subbranch for each data member or object
-//          of the object itself. In case the object member is a TClonesArray,
-//          it is processed as a TObject*, only one branch.
+//       * p_object is a pointer to an object.
+//       * If className is not specified, Branch uses the type of p_object to determine the
+//           type of the object.
+//       * If className is used to specify explicitly the object type, the className must
+//           be of a type related to the one pointed to by the pointer.  It should be either 
+//           a parent or derived class.
+//       * if splitlevel=0, the object is serialized in the branch buffer.
+//       * if splitlevel=1 (default), this branch will automatically be split
+//           into subbranches, with one subbranch for each data member or object
+//           of the object itself. In case the object member is a TClonesArray,
+//           the mechanism described in case C is applied to this array.
+//       * if splitlevel=2 ,this branch will automatically be split
+//           into subbranches, with one subbranch for each data member or object
+//           of the object itself. In case the object member is a TClonesArray,
+//           it is processed as a TObject*, only one branch.
 //
-//        Note: The pointer whose address is passed to TTree::Branch must not
-//        be destroyed (i.e. go out of scope) until the TTree is deleted or
-//        TTree::ResetBranchAddress is called.
+//       Note: The pointer whose address is passed to TTree::Branch must not
+//             be destroyed (i.e. go out of scope) until the TTree is deleted or
+//             TTree::ResetBranchAddress is called.
 //
-//        Note: The pointer p_object must be initialized before calling TTree::Branch
+//       Note: The pointer p_object must be initialized before calling TTree::Branch
 //          Do either: 
 //             MyDataClass* p_object = 0;
 //             tree->Branch(branchname, &p_object);
@@ -99,6 +102,25 @@
 //
 //  ==> Case C
 //      ======
+//     MyClass object;
+//     TBranch *branch = tree->Branch(branchname, &object, bufsize, splitlevel)
+//
+//       Note: The 2nd parameter must be the address of a valid object.
+//              The object must not be destroyed (i.e. be deleted) until the TTree
+//               is deleted or TTree::ResetBranchAddress is called.
+//        
+//       * if splitlevel=0, the object is serialized in the branch buffer.
+//       * if splitlevel=1 (default), this branch will automatically be split
+//           into subbranches, with one subbranch for each data member or object
+//           of the object itself. In case the object member is a TClonesArray,
+//           the mechanism described in case C is applied to this array.
+//       * if splitlevel=2 ,this branch will automatically be split
+//           into subbranches, with one subbranch for each data member or object
+//           of the object itself. In case the object member is a TClonesArray,
+//           it is processed as a TObject*, only one branch.
+//
+//  ==> Case D
+//      ======
 //     TBranch *branch = tree->Branch(branchname,clonesarray, bufsize, splitlevel)
 //         clonesarray is the address of a pointer to a TClonesArray.
 //         The TClonesArray is a direct access list of objects of the same class.
@@ -106,7 +128,7 @@
 //         this function will create one subbranch for each data member of
 //         the object TTrack.
 //
-//  ==> Case D
+//  ==> Case E
 //      ======
 //     TBranch *branch = tree->Branch( branchname, STLcollection, buffsize, splitlevel );
 //         STLcollection is the address of a pointer to std::vector, std::list,
@@ -347,6 +369,40 @@ ClassImp(TTree)
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 //
+
+static char DataTypeToChar(EDataType datatype) 
+{
+   // Return the leaflist 'char' for a given datatype.
+
+   switch(datatype) {
+   case kChar_t:     return 'B';
+   case kUChar_t:    return 'b';
+   case kBool_t:     return 'O'; 
+   case kShort_t:    return 'S';
+   case kUShort_t:   return 's';
+   case kCounter:
+   case kInt_t:      return 'I';
+   case kUInt_t:     return 'i';
+   case kDouble_t:
+   case kDouble32_t: return 'D';
+   case kFloat_t: 
+   case kFloat16_t:  return 'F';
+   case kLong_t:     return 0; // unsupported
+   case kULong_t:    return 0; // unsupported?
+   case kchar:       return 0; // unsupported
+   case kLong64_t:   return 'L';
+   case kULong64_t:  return 'l';
+
+   case kCharStar:   return 'C';
+   case kBits:       return 0; //unsupported
+      
+   case kOther_t:
+   case kNoType_t: 
+   default:
+      return 0;
+   }
+   return 0;
+}
 
 //______________________________________________________________________________
 //  Helper class to prevent infinite recursion in the usage of TTree Friends.
@@ -1003,6 +1059,43 @@ TBranch* TTree::BranchImp(const char* branchname, TClass* ptrClass, void* addobj
 }
 
 //______________________________________________________________________________
+TBranch* TTree::BranchImpRef(const char* branchname, TClass* ptrClass, EDataType datatype, void* addobj, Int_t bufsize, Int_t splitlevel)
+{
+   // Same as TTree::Branch but automatic detection of the class name.
+   // See TTree::Branch for other details.
+
+   if (!ptrClass) {
+      if (datatype == kOther_t || datatype == kNoType_t) {
+         Error("Branch", "The pointer specified for %s is not of a class or type known to ROOT", branchname);
+      } else {
+         TString varname; varname.Form("%s/%c",branchname,DataTypeToChar(datatype));         
+         return Branch(branchname,addobj,varname.Data(),bufsize);
+      }
+      return 0;
+   }
+   TClass* actualClass = 0;
+   if (!addobj) {
+      Error("Branch", "Reference interface requires a valid object (for branch: %s)!", branchname);
+      return 0;
+   }
+   actualClass = ptrClass->GetActualClass(addobj);
+   if (!actualClass) {
+      Warning("Branch", "The actual TClass corresponding to the object provided for the definition of the branch \"%s\" is missing.\n\tThe object will be truncated down to its %s part", branchname, ptrClass->GetName());
+      actualClass = ptrClass;
+   } else if ((ptrClass != actualClass) && !actualClass->InheritsFrom(ptrClass)) {
+      Error("Branch", "The actual class (%s) of the object provided for the definition of the branch \"%s\" does not inherit from %s", actualClass->GetName(), branchname, ptrClass->GetName());
+      return 0;
+   }
+   if (actualClass && actualClass->GetCollectionProxy() && dynamic_cast<TEmulatedCollectionProxy*>(actualClass->GetCollectionProxy())) {
+      Error("Branch", "The class requested (%s) for the branch \"%s\" refer to an stl collection and do not have a compiled CollectionProxy.  "
+            "Please generate the dictionary for this class (%s)",
+            actualClass->GetName(), branchname, actualClass->GetName());
+      return 0;
+   }
+   return BronchExec(branchname, actualClass->GetName(), (void*) addobj, kFALSE, bufsize, splitlevel);
+}
+
+//______________________________________________________________________________
 Int_t TTree::Branch(TList* li, Int_t bufsize /* = 32000 */ , Int_t splitlevel /* = 99 */)
 {
    // Deprecated function. Use next function instead.
@@ -1464,27 +1557,14 @@ TBranch* TTree::BranchOld(const char* name, const char* classname, void* addobj,
                      break;
                   }
                }
-               if (code == 1) {
-                  // Note that we differentiate between strings and
-                  // char array by the fact that there is NO specified
-                  // size for a string (see next if (code == 1)
-                  leaflist.Form("%s[%s]/%s", &rdname[0], index, "B");
-               } else if (code == 11) {
-                  leaflist.Form("%s[%s]/%s", &rdname[0], index, "b");
-               } else if (code == 18) {
-                  leaflist.Form("%s[%s]/%s", &rdname[0], index, "O");
-               } else if (code == 2) {
-                  leaflist.Form("%s[%s]/%s", &rdname[0], index, "S");
-               } else if (code == 12) {
-                  leaflist.Form("%s[%s]/%s", &rdname[0], index, "s");
-               } else if (code == 3) {
-                  leaflist.Form("%s[%s]/%s", &rdname[0], index, "I");
-               } else if (code == 13) {
-                  leaflist.Form("%s[%s]/%s", &rdname[0], index, "i");
-               } else if (code == 5) {
-                  leaflist.Form("%s[%s]/%s", &rdname[0], index, "F");
-               } else if ((code == 8) || (code == 9)) {
-                  leaflist.Form("%s[%s]/%s", &rdname[0], index, "D");
+
+               char vcode = DataTypeToChar((EDataType)code);
+               // Note that we differentiate between strings and
+               // char array by the fact that there is NO specified
+               // size for a string (see next if (code == 1)
+
+               if (vcode) {
+                  leaflist.Form("%s[%s]/%c", &rdname[0], index, vcode);
                } else {
                   Error("BranchOld", "Cannot create branch for rdname: %s code: %d", branchname.Data(), code);
                   leaflist = "";
@@ -1514,26 +1594,10 @@ TBranch* TTree::BranchOld(const char* name, const char* classname, void* addobj,
          }
       } else if (dm->IsBasic()) {
          // We have a basic type.
-         if (code == 1) {
-            leaflist.Form("%s/%s", rdname, "B");
-         } else if (code == 11) {
-            leaflist.Form("%s/%s", rdname, "b");
-         } else if (code == 18) {
-            leaflist.Form("%s/%s", rdname, "O");
-         } else if (code == 2) {
-            leaflist.Form("%s/%s", rdname, "S");
-         } else if (code == 12) {
-            leaflist.Form("%s/%s", rdname, "s");
-         } else if (code == 3) {
-            leaflist.Form("%s/%s", rdname, "I");
-         } else if (code == 13) {
-            leaflist.Form("%s/%s", rdname, "i");
-         } else if (code == 5) {
-            leaflist.Form("%s/%s", rdname, "F");
-         } else if (code == 8) {
-            leaflist.Form("%s/%s", rdname, "D");
-         } else if (code == 9) {
-            leaflist.Form("%s/%s", rdname, "D");
+
+         char vcode = DataTypeToChar((EDataType)code);
+         if (vcode) {
+            leaflist.Form("%s/%c", rdname, vcode);
          } else {
             Error("BranchOld", "Cannot create branch for rdname: %s code: %d", branchname.Data(), code);
             leaflist = "";
@@ -1579,7 +1643,7 @@ TBranch* TTree::BranchRef()
 }
 
 //______________________________________________________________________________
-TBranch* TTree::Bronch(const char* name, const char* classname, void* add, Int_t bufsize /* = 32000 */, Int_t splitlevel /* = 99 */)
+TBranch* TTree::Bronch(const char* name, const char* classname, void* addr, Int_t bufsize /* = 32000 */, Int_t splitlevel /* = 99 */)
 {
    // Create a new TTree BranchElement.
    //
@@ -1592,8 +1656,12 @@ TBranch* TTree::Bronch(const char* name, const char* classname, void* add, Int_t
    //    The function is based on the new TStreamerInfo.
    //
    //    Build a TBranchElement for an object of class classname.
-   //    addobj is the address of a pointer to an object of class classname.
+   //
+   //    addr is the address of a pointer to an object of class classname.
    //    The class dictionary must be available (ClassDef in class header).
+   //
+   //    Note: See the comments in TBranchElement::SetAddress() for a more
+   //          detailed discussion of the meaning of the addr parameter.
    //
    //    This option requires access to the library where the corresponding class
    //    is defined. Accessing one single data member in the object implies
@@ -1629,6 +1697,14 @@ TBranch* TTree::Bronch(const char* name, const char* classname, void* add, Int_t
    //    Note: if the split level is set to the default (99),  TTree::Branch will
    //    not issue a warning if the class can not be split.
 
+   return BronchExec(name, classname, addr, kTRUE, bufsize, splitlevel);
+}
+
+//______________________________________________________________________________
+TBranch* TTree::BronchExec(const char* name, const char* classname, void* addr, Bool_t isptrptr, Int_t bufsize /* = 32000 */, Int_t splitlevel /* = 99 */)
+{
+   // Helper function implementing TTree::Bronch and TTree::Branch(const char *name, T &obj);
+
    gTree = this;
    TClass* cl = TClass::GetClass(classname);
    if (!cl) {
@@ -1648,10 +1724,15 @@ TBranch* TTree::Bronch(const char* name, const char* classname, void* add, Int_t
    // #pragma link C++ class TBits+;     rootflag = 4
    // #pragma link C++ class Txxxx+!;    rootflag = 6
 
-   char** ppointer = (char**) add;
+   char* objptr = 0;
+   if (!isptrptr) {
+      objptr = (char*)addr;
+   } else if (addr) {
+      objptr = *((char**) addr);
+   }
 
    if (cl == TClonesArray::Class()) {
-      TClonesArray* clones = (TClonesArray*) *ppointer;
+      TClonesArray* clones = (TClonesArray*) objptr;
       if (!clones) {
          Error("Bronch", "Pointer to TClonesArray is null");
          return 0;
@@ -1670,7 +1751,7 @@ TBranch* TTree::Bronch(const char* name, const char* classname, void* add, Int_t
             Warning("Bronch", "Using split mode on a class: %s with a custom Streamer", clones->GetClass()->GetName());
       } else {
          if (classinfo->RootFlag() & 1) clones->BypassStreamer(kFALSE);
-         TBranchObject *branch = new TBranchObject(this,name,classname,add,bufsize,0);
+         TBranchObject *branch = new TBranchObject(this,name,classname,addr,bufsize,0,isptrptr);
          fBranches.Add(branch);
          return branch;
       }
@@ -1709,7 +1790,11 @@ TBranch* TTree::Bronch(const char* name, const char* classname, void* add, Int_t
       else
          branch = new TBranchElement(this, name, collProxy, bufsize, splitlevel);
       fBranches.Add(branch);
-      branch->SetAddress(add);
+      if (isptrptr) {
+         branch->SetAddress(addr);
+      } else {
+         branch->SetObject(addr);
+      }
       return branch;
    }
 
@@ -1725,7 +1810,7 @@ TBranch* TTree::Bronch(const char* name, const char* classname, void* add, Int_t
    }
 
    if (splitlevel < 0 || ((splitlevel == 0) && hasCustomStreamer && cl->InheritsFrom(TObject::Class()))) {
-      TBranchObject* branch = new TBranchObject(this, name, classname, add, bufsize, 0);
+      TBranchObject* branch = new TBranchObject(this, name, classname, addr, bufsize, 0, isptrptr);
       fBranches.Add(branch);
       return branch;
    }
@@ -1736,9 +1821,13 @@ TBranch* TTree::Bronch(const char* name, const char* classname, void* add, Int_t
       // The streamer info is not rebuilt unoptimized.
       // No dummy top-level branch is created.
       // No splitting is attempted.
-      TBranchElement* branch = new TBranchElement(this, name, (TClonesArray*) *ppointer, bufsize, splitlevel%100);
+      TBranchElement* branch = new TBranchElement(this, name, (TClonesArray*) objptr, bufsize, splitlevel%100);
       fBranches.Add(branch);
-      branch->SetAddress(add);
+      if (isptrptr) {
+         branch->SetAddress(addr);
+      } else {
+         branch->SetObject(addr);
+      }
       return branch;
    }
 
@@ -1750,8 +1839,8 @@ TBranch* TTree::Bronch(const char* name, const char* classname, void* add, Int_t
 
    Bool_t delobj = kFALSE;
 
-   if (!(*ppointer)) {
-      *ppointer = (char*) cl->New();
+   if (!objptr) {
+      objptr = (char*) cl->New();
       delobj = kTRUE;
    }
 
@@ -1777,7 +1866,7 @@ TBranch* TTree::Bronch(const char* name, const char* classname, void* add, Int_t
    if (splitlevel > 0) {
       TStreamerInfo::Optimize(kFALSE);
    }
-   TStreamerInfo* sinfo = BuildStreamerInfo(cl, *ppointer);
+   TStreamerInfo* sinfo = BuildStreamerInfo(cl, objptr);
    TStreamerInfo::Optimize(optim);
 
    //
@@ -1802,7 +1891,7 @@ TBranch* TTree::Bronch(const char* name, const char* classname, void* add, Int_t
    if (splitlevel > 0) {
       id = -2;
    }
-   TBranchElement* branch = new TBranchElement(this, name, sinfo, id, *ppointer, bufsize, splitlevel);
+   TBranchElement* branch = new TBranchElement(this, name, sinfo, id, objptr, bufsize, splitlevel);
    fBranches.Add(branch);
 
    //
@@ -1816,7 +1905,7 @@ TBranch* TTree::Bronch(const char* name, const char* classname, void* add, Int_t
       TStreamerElement* element = 0;
       TString bname;
       for (id = 0; (element = (TStreamerElement*) next()); ++id) {
-         char* pointer = (char*) (*ppointer + element->GetOffset());
+         char* pointer = (char*) (objptr + element->GetOffset());
          // FIXME: This is not good enough, an STL container can be
          //        a base, and the test will fail.
          //        See TBranchElement::InitializeOffsets() for the
@@ -1887,11 +1976,15 @@ TBranch* TTree::Bronch(const char* name, const char* classname, void* add, Int_t
    // Setup our offsets into the user's i/o buffer.
    //
 
-   branch->SetAddress(add);
+   if (isptrptr) {
+      branch->SetAddress(addr);
+   } else {
+      branch->SetObject(addr);
+   }
 
    if (delobj) {
-      cl->Destructor(*ppointer);
-      *ppointer = 0;
+      cl->Destructor(objptr);
+      objptr = 0;
    }
 
    return branch;
@@ -3713,7 +3806,7 @@ TFile* TTree::GetCurrentFile() const
 {
    // Return pointer to the current file.
 
-   if (!fDirectory) {
+   if (!fDirectory || fDirectory==gROOT) {
       return 0;
    }
    return fDirectory->GetFile();
@@ -5188,7 +5281,7 @@ Long64_t TTree::ReadFile(const char* filename, const char* branchDescriptor)
 //______________________________________________________________________________
 void TTree::Refresh()
 {
-   //  -- Refresh contents of this tree and its branches from the current status on disk.
+   //  Refresh contents of this tree and its branches from the current status on disk.
    //
    //  One can call this function in case the tree file is being
    //  updated by another process.
@@ -5276,8 +5369,9 @@ void TTree::Reset(Option_t* option)
 //______________________________________________________________________________
 void TTree::ResetBranchAddress(TBranch *br)
 {
-   // Tell the branch to drop their current objects and allocate new ones
-   //    or to return to the default address (TNtuple and TNtupleD)
+   // Tell all of our branches to set their addresses to zero.
+   //
+   // Note: If any of our branches own any objects, they are deleted.
 
    if (br && br->GetTree()) {
       br->ResetAddress();
@@ -5401,6 +5495,10 @@ void TTree::SetBasketSize(const char* bname, Int_t buffsize)
 void TTree::SetBranchAddress(const char* bname, void* addr, TBranch** ptr)
 {
    // Change branch address, dealing with clone trees properly.
+   //
+   // Note: See the comments in TBranchElement::SetAddress() for the
+   //       meaning of the addr parameter.
+   //
 
    TBranch* branch = GetBranch(bname);
    if (!branch) {
@@ -5425,17 +5523,25 @@ void TTree::SetBranchAddress(const char* bname, void* addr, TBranch** ptr)
 }
 
 //_______________________________________________________________________
-void TTree::SetBranchAddress(const char* bname, void* add, TClass* ptrClass, EDataType datatype, Bool_t isptr)
+void TTree::SetBranchAddress(const char* bname, void* addr, TClass* ptrClass, EDataType datatype, Bool_t isptr)
 {
-   // Verify the validity of the type of add before calling SetBranchAddress.
+   // Verify the validity of the type of addr before calling SetBranchAddress.
+   //
+   // Note: See the comments in TBranchElement::SetAddress() for the
+   //       meaning of the addr parameter.
+   //
 
-   SetBranchAddress(bname, add, 0, ptrClass, datatype, isptr);
+   SetBranchAddress(bname, addr, 0, ptrClass, datatype, isptr);
 }
 
 //_______________________________________________________________________
-void TTree::SetBranchAddress(const char* bname, void* add, TBranch** ptr, TClass* ptrClass, EDataType datatype, Bool_t isptr)
+void TTree::SetBranchAddress(const char* bname, void* addr, TBranch** ptr, TClass* ptrClass, EDataType datatype, Bool_t isptr)
 {
-   // Verify the validity of the type of add before calling SetBranchAddress.
+   //  Verify the validity of the type of addr before calling SetBranchAddress.
+   //
+   // Note: See the comments in TBranchElement::SetAddress() for the
+   //       meaning of the addr parameter.
+   //
 
    TBranch* branch = GetBranch(bname);
    if (!branch) {
@@ -5446,7 +5552,7 @@ void TTree::SetBranchAddress(const char* bname, void* add, TBranch** ptr, TClass
       *ptr = branch;
    }
    CheckBranchAddressType(branch, ptrClass, datatype, isptr);
-   SetBranchAddress(bname, add);
+   SetBranchAddress(bname, addr);
 }
 
 //_______________________________________________________________________
@@ -5888,7 +5994,7 @@ void TTree::SetFileNumber(Int_t number)
 //______________________________________________________________________________
 void TTree::SetMaxTreeSize(Long64_t maxsize)
 {
-   // Set the maximum size of a Tree file -- (static function).
+   // Set the maximum size of a Tree file (static function).
    //
    // In TTree::Fill, when the file has a size > fgMaxTreeSize,
    // the function closes the current file and starts writing into

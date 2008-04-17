@@ -78,7 +78,7 @@ public:
       kAllowRegister = BIT(16),   // allow registration of a new dataset
       kAllowVerify   = BIT(17),   // allow verification of a dataset (requires registration permit)
       kAllowStaging  = BIT(18),   // allow staging of missing files (requires verification permit)
-      kIsSandbox     = BIT(19),   // dataset dir is in the user sandbox (simplified naming)
+      kIsSandbox     = BIT(19)    // dataset dir is in the user sandbox (simplified naming)
    };
 
    enum EDataSetWorkOpts { // General (bits 1-8)
@@ -91,21 +91,23 @@ public:
    TProofDataSetManager(const char *group = 0, const char *user = 0, const char *options = 0);
    virtual ~TProofDataSetManager();
 
+   static TString           CreateUri(const char *dsGroup = 0, const char *dsUser = 0,
+                                      const char *dsName = 0, const char *dsTree = 0);
    virtual TFileCollection *GetDataSet(const char *uri);
-   virtual TMap *GetDataSets(const char *uri, UInt_t /*option*/ = 0);
-   virtual Long64_t GetGroupQuota(const char *group);
-   virtual TMap *GetGroupQuotaMap() { return &fGroupQuota; }
-   virtual Long64_t GetGroupUsed(const char *group);
-   virtual Bool_t ExistsDataSet(const char *uri);
-   virtual void MonitorUsedSpace(TVirtualMonitoringWriter *monitoring);
-   virtual void ParseInitOpts(const char *opts);
-   Bool_t  ParseDataSetUri(const char *uri, TString *dsGroup = 0, TString *dsUser = 0,
-                           TString *dsName = 0, TString *dsTree = 0,
-                           Bool_t onlyCurrent = kFALSE, Bool_t wildcards = kFALSE);
-   virtual Bool_t RemoveDataSet(const char *uri);
-   virtual Int_t RegisterDataSet(const char *uri, TFileCollection *dataSet, const char *opt);
-   virtual Int_t ScanDataSet(const char *uri, UInt_t /*option*/ = 0);
-   virtual void ShowQuota(const char *opt);
+   virtual TMap            *GetDataSets(const char *uri, UInt_t /*option*/ = 0);
+   virtual Long64_t         GetGroupQuota(const char *group);
+   virtual TMap            *GetGroupQuotaMap() { return &fGroupQuota; }
+   virtual Long64_t         GetGroupUsed(const char *group);
+   virtual Bool_t           ExistsDataSet(const char *uri);
+   virtual void             MonitorUsedSpace(TVirtualMonitoringWriter *monitoring);
+   Bool_t                   ParseUri(const char *uri, TString *dsGroup = 0, TString *dsUser = 0,
+                                     TString *dsName = 0, TString *dsTree = 0,
+                                     Bool_t onlyCurrent = kFALSE, Bool_t wildcards = kFALSE);
+   virtual void             ParseInitOpts(const char *opts);
+   virtual Bool_t           RemoveDataSet(const char *uri);
+   virtual Int_t            RegisterDataSet(const char *uri, TFileCollection *dataSet, const char *opt);
+   virtual Int_t            ScanDataSet(const char *uri, UInt_t /*option*/ = 0);
+   virtual void             ShowQuota(const char *opt);
 
    ClassDef(TProofDataSetManager, 0)
 };

@@ -19,16 +19,17 @@ PROOFAEXE=bin/proofserva
 
 rm -f $ROOTALIB $ROOTAEXE $PROOFAEXE
 
-excl="main proof/proofd net/rootd net/xrootd rootx pythia pythia6 \
-      mysql pgsql rfio sapdb \
-      hbook core/newdelete table core/utils net/srputils net/krb5auth \
-      net/globusauth chirp dcache \
-      x11ttf net/alien asimage net/ldap pyroot qt qtroot math/quadp \
-      ruby vmc xml \
-      xmlparser gl roofit roofitcore oracle net/netx net/auth \
-      net/rpdutils math/mathmore \
-      math/minuit2 gfal net/monalisa proof/proofx math/fftw qtgsi odbc \
-      castor math/unuran geom/gdml cint/cint7 g4root eve net/glite"
+excl="main proof/proofd net/rootd net/xrootd rootx montecarlo/pythia6 \
+      montecarlo/pythia8 sql/mysql sql/pgsql io/rfio sql/sapdb \
+      hist/hbook core/newdelete misc/table core/utils net/srputils \
+      net/krb5auth net/globusauth io/chirp io/dcache graf2d/x11ttf net/alien \
+      graf2d/asimage net/ldap graf2d/qt gui/qtroot math/quadp \
+      bindings/pyroot bindings/ruby montecarlo/vmc \
+      io/xmlparser graf3d/gl graf3d/ftgl roofit/roofit roofit/roofitcore \
+      sql/oracle net/netx net/auth net/rpdutils math/mathmore \
+      math/minuit2 io/gfal net/monalisa proof/proofx math/fftw gui/qtgsi \
+      sql/odbc io/castor math/unuran geom/gdml cint/cint7 montecarlo/g4root \
+      graf3d/eve net/glite"
 
 objs=""
 gobjs=""

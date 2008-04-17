@@ -4413,7 +4413,7 @@ Int_t TProof::DisablePackageOnClient(const char *package)
    // Returns 0 in case of success and -1 in case of error.
 
    if (TestBit(TProof::kIsClient)) {
-      // remove package directory and par file
+      // remove the package directory and the par file
       fPackageLock->Lock();
       gSystem->Exec(Form("%s %s/%s", kRM, fPackageDir.Data(), package));
       gSystem->Exec(Form("%s %s/%s.par", kRM, fPackageDir.Data(), package));
