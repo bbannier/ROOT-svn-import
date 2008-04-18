@@ -29,7 +29,7 @@ static Int_t gCount = 0;
 
 //______________________________________________________________________________
 struct SEnumFunctor {
-   bool operator()(TObject *aObj) throw(exception) {     
+   bool operator()(TObject *aObj) const throw(exception) {
       if (!aObj)
          throw invalid_argument("SEnumFunctor: aObj is a NULL pointer");
 
@@ -44,15 +44,11 @@ struct SEnumFunctor {
 };
 
 //______________________________________________________________________________
-struct SFind {
-   SFind(const TString &aStr): fToFind(aStr) {
+struct SFind : binary_function<TObject*, TString, bool> {
+   bool operator()(TObject *_Obj, const TString &_ToFind) const {
+      TObjString *str(dynamic_cast<TObjString*>(_Obj));
+      return !str->String().CompareTo(_ToFind);
    }
-   bool operator()(TObject *aObj) {
-      TObjString *str(dynamic_cast<TObjString*>(aObj));
-      return !str->String().CompareTo(fToFind);
-   }
-private:
-   const TString fToFind;
 };
 
 //______________________________________________________________________________
@@ -60,7 +56,7 @@ private:
 template<class T>
 void TestContainer_for_each(const T &container, Int_t aSize) throw(exception)
 {
-   gCount = 0; // TODO: using gCount is a very bad method. Needs to be revised.
+   gCount = 0; // TODO: a use of gCount is a very bad method. Needs to be revised.
 
    TIter iter(&container);
    for_each(iter.Begin(), TIter::End(), SEnumFunctor());
@@ -76,10 +72,9 @@ void TestContainer_find_if(const T &container, const TString &aToFind) throw(exc
 {
    typedef TIterCategory<T> iterator_t;
 
-   SFind func(aToFind);
    iterator_t iter(&container);
    iterator_t found(
-      find_if(iter.Begin(), iterator_t::End(), func)
+      find_if(iter.Begin(), iterator_t::End(), bind2nd(SFind(), aToFind))
    );
    if (!(*found))
       throw runtime_error("Test case <TestContainer_find_if> has failed.");
@@ -88,7 +83,7 @@ void TestContainer_find_if(const T &container, const TString &aToFind) throw(exc
    if (!str)
       throw runtime_error("Test case <TestContainer_find_if> has failed.");
 
-   std::cout << "I found: " << str->String().Data() << std::endl;
+   cout << "I found: " << str->String().Data() << endl;
    cout << "->> Ok." << endl;
 }
 
@@ -99,12 +94,12 @@ void TestContainer_count_if(const T &container, const TString &aToFind) throw(ex
 {
    typedef TIterCategory<T> iterator_t;
 
-   SFind func(aToFind);
    iterator_t iter(&container);
    typename iterator_t::difference_type cnt(
-      count_if(iter.Begin(), iterator_t::End(), func)
+      count_if(iter.Begin(), iterator_t::End(), bind2nd(SFind(), aToFind))
    );
 
+   // we suppose to find exactly one match 
    if (1 != cnt)
       throw runtime_error("Test case <TestContainer_count_if> has failed.");
 
@@ -115,11 +110,11 @@ void TestContainer_count_if(const T &container, const TString &aToFind) throw(ex
 void stressIterators() throw(exception)
 {
    const Int_t size = 15;
-   
+
    ostringstream ss;
 
    // TList
-   TList list;   
+   TList list;
    for (int i = 0; i < size; ++i) {
       ss << "test string #" << i;
       TObjString *s(new TObjString(ss.str().c_str()));
@@ -152,7 +147,7 @@ void stressIterators() throw(exception)
    cout << "====================================" << endl;
    cout << "-----> " << "TestContainer_for_each<TObjArray>(obj_array, obj_array.GetSize())" << endl;
    TestContainer_for_each<TObjArray>(obj_array, obj_array.GetEntriesFast());
-   
+
    cout << "====================================" << endl;
    cout << "-----> " << "TestContainer_find_if<TObjArray>(obj_array, \"test string #3\")" << endl;
    TestContainer_find_if<TObjArray>(obj_array, "test string #3");
