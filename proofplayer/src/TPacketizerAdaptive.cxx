@@ -462,11 +462,12 @@ TPacketizerAdaptive::TPacketizerAdaptive(TDSet *dset, TList *slaves,
       Info("TPacketizerAdaptive", "Setting max number of workers per node to %ld",
            fgMaxSlaveCnt);
    } else {
-      // Use number of CPUs as default, cutting at 2
+      // Use number of CPUs (or minimum 2) as default
       SysInfo_t si;
       gSystem->GetSysInfo(&si);
-      fgMaxSlaveCnt =  (si.fCpus > 2) ? si.fCpus : 2;
-    }
+      if (si.fCpus > 2)
+         fgMaxSlaveCnt =  si.fCpus;
+   }
 
    // if forceLocal parameter is set to 1 then eliminate the cross-worker
    // processing;
