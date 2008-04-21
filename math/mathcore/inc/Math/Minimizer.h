@@ -13,8 +13,8 @@
 #ifndef ROOT_Math_Minimizer
 #define ROOT_Math_Minimizer
 
-#ifndef ROOT_Math_IFunctionfwd
-#include "Math/IFunctionfwd.h"
+#ifndef ROOT_Math_IFunction
+#include "Math/IFunction.h"
 #endif
 
 
@@ -126,7 +126,10 @@ public:
    virtual void SetFunction(const IObjFunction & func) = 0; 
 
    /// set a function to minimize using gradient 
-   virtual void SetFunction(const IGradObjFunction & func) = 0;
+   virtual void SetFunction(const IGradObjFunction & func) 
+   {
+      SetFunction(static_cast<const IObjFunction &> (func));
+   }
    
 
    /// add variables  . Return number of variables succesfully added

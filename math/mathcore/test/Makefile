@@ -11,9 +11,11 @@ include $(ROOTSYS)/test/Makefile.arch
 #------------------------------------------------------------------------------
 
 ifeq ($(PLATFORM),win32)
-EXTRALIBS        = -include:_G__cpp_setupG__MathCore  "$(ROOTSYS)/lib/libMathMore.lib"
+EXTRALIBS        = -include:_G__cpp_setupG__MathCore  "$(ROOTSYS)/lib/libMathMore.lib" \
+	"$(ROOTSYS)/lib/libTMVA.lib" "$(ROOTSYS)/lib/libMLP.lib" "$(ROOTSYS)/lib/libTreePlayer.lib" \
+	 "$(ROOTSYS)/lib/libMinuit.lib" "$(ROOTSYS)/lib/libMinuit2.lib"
 else
-EXTRALIBS        = -lMathMore
+EXTRALIBS        = -lMathMore -lTMVA -lMLP -lTreePlayer -lMinuit -lMinuit2
 CXXFLAGS += -g
 endif
 
@@ -48,6 +50,10 @@ endif
 TESTTMATHOBJ     = testTMath.$(ObjSuf)
 TESTTMATHSRC     = testTMath.$(SrcSuf)
 TESTTMATH        = testTMath$(ExeSuf)
+
+TESTGAMINOBJ     = testGAMinimizer.$(ObjSuf)
+TESTGAMINSRC     = testGAMinimizer.$(SrcSuf)
+TESTGAMIN        = testGAMinimizer$(ExeSuf)
 
 BSEARCHTIMEOBJ     = binarySearchTime.$(ObjSuf)
 BSEARCHTIMESRC     = binarySearchTime.$(SrcSuf)
@@ -103,10 +109,10 @@ ROOTFINDEROBJ      = testRootFinder.$(ObjSuf)
 ROOTFINDERSRC      = testRootFinder.$(SrcSuf)
 ROOTFINDER         = testRootFinder$(ExeSuf)
 
-OBJS          = $(SPECFUNBETAOBJ) $(SPECFUNBETAIOBJ) $(SPECFUNGAMMAOBJ) $(SPECFUNERFOBJ) $(TESTTMATHOBJ) $(BSEARCHTIMEOBJ)  $(TESTBSEARCHOBJ)  $(TESTSORTOBJ) $(TESTSORTORDEROBJ) $(STRESSTMATHOBJ) $(STRESSTF1OBJ)  $(INTEGRATIONOBJ) $(INTEGRATIONMULTIOBJ) $(ROOTFINDEROBJ)
+OBJS          = $(SPECFUNBETAOBJ) $(SPECFUNBETAIOBJ) $(SPECFUNGAMMAOBJ) $(SPECFUNERFOBJ) $(TESTTMATHOBJ) $(TESTGAMINOBJ) $(BSEARCHTIMEOBJ)  $(TESTBSEARCHOBJ)  $(TESTSORTOBJ) $(TESTSORTORDEROBJ) $(STRESSTMATHOBJ) $(STRESSTF1OBJ)  $(INTEGRATIONOBJ) $(INTEGRATIONMULTIOBJ) $(ROOTFINDEROBJ)
 
 
-PROGRAMS      =$(SPECFUNBETA) $(SPECFUNBETAI)  $(SPECFUNGAMMA) $(SPECFUNERF) $(TESTTMATH) $(BSEARCHTIME) $(TESTBSEARCH) $(TESTSORT) $(TESTSORTORDER) $(STRESSTMATH) $(STRESSTF1) $(ITERATOR)  $(INTEGRATION) $(INTEGRATIONMULTI) $(ROOTFINDER)
+PROGRAMS      =$(SPECFUNBETA) $(SPECFUNBETAI)  $(SPECFUNGAMMA) $(SPECFUNERF) $(TESTTMATH) $(TESTGAMIN) $(BSEARCHTIME) $(TESTBSEARCH) $(TESTSORT) $(TESTSORTORDER) $(STRESSTMATH) $(STRESSTF1) $(ITERATOR)  $(INTEGRATION) $(INTEGRATIONMULTI) $(ROOTFINDER)
 
 
 		  
@@ -127,6 +133,10 @@ $(STRESSTMATH):     $(STRESSTMATHOBJ)
 
 $(TESTTMATH):      $(TESTTMATHOBJ)
 		    $(LD) $(LDFLAGS) $^ $(LIBS)  $(OutPutOpt)$@
+		    @echo "$@ done"
+
+$(TESTGAMIN):      $(TESTGAMINOBJ)
+		    $(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) $(OutPutOpt)$@
 		    @echo "$@ done"
 
 $(BSEARCHTIME):      $(BSEARCHTIMEOBJ)
