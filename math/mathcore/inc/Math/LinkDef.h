@@ -52,7 +52,6 @@
 #pragma link C++ class ROOT::Math::GradFunctor1D-;
 
 #pragma link C++ class ROOT::Math::Minimizer+;
-#pragma link C++ class ROOT::Math::GeneticMinimizer+;
 #pragma link C++ class ROOT::Math::IntegratorOneDim+;
 #pragma link C++ class ROOT::Math::IntegratorMultiDim+;
 #pragma link C++ class ROOT::Math::VirtualIntegrator+;
