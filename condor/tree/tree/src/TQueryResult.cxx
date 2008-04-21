@@ -116,10 +116,12 @@ TQueryResult::~TQueryResult()
 }
 
 //______________________________________________________________________________
-TQueryResult *TQueryResult::CloneInfo()
+TQueryResult *TQueryResult::CloneInfo(Bool_t fillselector)
 {
    // Return an instance of TQueryResult containing only the local
-   // info fields, i.e. no outputlist, liblist, dset, selectors, etc..
+   // info fields, i.e. no outputlist, liblist, dset, etc..
+   // If fillselector is kTRUE the full selector code is filled in; otherwise
+   // only the name is saved in the related TMacros.
    // Used for fast retrieve of information about existing queries
    // and their status.
 
@@ -143,15 +145,23 @@ TQueryResult *TQueryResult::CloneInfo()
 
    qr->fSelecHdr = 0;
    if (GetSelecHdr()) {
-      qr->fSelecHdr = new TMacro();
-      qr->fSelecHdr->SetName(GetSelecHdr()->GetName());
-      qr->fSelecHdr->SetTitle(GetSelecHdr()->GetTitle());
+      if (fillselector) {
+         qr->fSelecHdr = new TMacro(*fSelecHdr);
+      } else {
+         qr->fSelecHdr = new TMacro();
+         qr->fSelecHdr->SetName(GetSelecHdr()->GetName());
+         qr->fSelecHdr->SetTitle(GetSelecHdr()->GetTitle());
+      }
    }
    qr->fSelecImp = 0;
    if (GetSelecImp()) {
-      qr->fSelecImp = new TMacro();
-      qr->fSelecImp->SetName(GetSelecImp()->GetName());
-      qr->fSelecImp->SetTitle(GetSelecImp()->GetTitle());
+      if (fillselector) {
+         qr->fSelecImp = new TMacro(*fSelecImp);
+      } else {
+         qr->fSelecImp = new TMacro();
+         qr->fSelecImp->SetName(GetSelecImp()->GetName());
+         qr->fSelecImp->SetTitle(GetSelecImp()->GetTitle());
+      }
    }
 
    // Name and title

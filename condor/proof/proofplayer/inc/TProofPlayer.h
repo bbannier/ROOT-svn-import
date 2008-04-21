@@ -129,7 +129,7 @@ public:
    void      HandleGetTreeHeader(TMessage *mess);
    void      HandleRecvHisto(TMessage *mess);
 
-   void      StopProcess(Bool_t abort, Int_t timeout = -1);
+   void      StopProcess(Bool_t abort, Int_t timeout = -1, Bool_t susp = kFALSE);
    void      AddInput(TObject *inp);
    void      ClearInput();
    TObject  *GetOutput(const char *name) const;
@@ -165,7 +165,10 @@ public:
    void           DeleteDrawFeedback(TDrawFeedback *f);
 
    TDSetElement *GetNextPacket(TSlave *slave, TMessage *r);
+   TDSet        *GetDSetToProcess(const char *, const char *, const char *,
+                                   Long64_t &, Long64_t &) { return 0; }
 
+   Int_t     InitSelector(const char *selec, Option_t *option = "");
    Int_t     ReinitSelector(TQueryResult *qr);
 
    void      UpdateAutoBin(const char *name,
@@ -182,6 +185,8 @@ public:
    void      SetDispatchTimer(Bool_t on = kTRUE);
    void      SetStopTimer(Bool_t on = kTRUE,
                           Bool_t abort = kFALSE, Int_t timeout = 0);
+
+   void           SetQueryOnHold(TProofQueryOnHold *) { }
 
    virtual void      SetInitTime() { }
    void              SetProcessing(Bool_t on = kTRUE);
@@ -230,6 +235,8 @@ private:
    TDSet              *fDSet;          //!tdset for current processing
    Bool_t              fMergeFiles;    // is True when merging output files centrally is needed
 
+   TProofQueryOnHold  *fQueryOnHold;   // Defined when processing a query onhold
+
    TList              *MergeFeedback();
    Bool_t              MergeOutputFiles();
 
@@ -243,7 +250,7 @@ protected:
 public:
    TProofPlayerRemote(TProof *proof = 0) : fProof(proof), fOutputLists(0), fFeedback(0),
                                            fFeedbackLists(0), fPacketizer(0),
-                                           fMergeFiles(kFALSE) {}
+                                           fMergeFiles(kFALSE), fQueryOnHold(0) { }
    virtual ~TProofPlayerRemote();   // Owns the fOutput list
    Long64_t       Process(TDSet *set, const char *selector,
                           Option_t *option = "", Long64_t nentries = -1,
@@ -254,7 +261,7 @@ public:
                              const char *selection, Option_t *option = "",
                              Long64_t nentries = -1, Long64_t firstentry = 0);
 
-   void           StopProcess(Bool_t abort, Int_t timeout = -1);
+   void           StopProcess(Bool_t abort, Int_t timeout = -1, Bool_t susp = kFALSE);
    void           StoreOutput(TList *out);   // Adopts the list
    void           StoreFeedback(TObject *slave, TList *out); // Adopts the list
    Int_t          Incorporate(TObject *obj, TList *out, Bool_t &merged);
@@ -274,8 +281,12 @@ public:
                            evtrti, mbrti); } // *SIGNAL*
    void           Feedback(TList *objs); // *SIGNAL*
    TDSetElement  *GetNextPacket(TSlave *slave, TMessage *r);
-
+   TDSet         *GetDSetToProcess(const char *name, const char *objname,
+                                   const char *dir,
+                                   Long64_t &toprocess, Long64_t &processed);
    Bool_t         IsClient() const;
+
+   void           SetQueryOnHold(TProofQueryOnHold *q);
 
    void           SetInitTime();
 
@@ -299,6 +310,7 @@ protected:
 
 public:
    TProofPlayerSlave(TSocket *socket = 0) : fSocket(socket), fFeedback(0) { }
+   virtual ~TProofPlayerSlave() { }
 
    void  HandleGetTreeHeader(TMessage *mess);
 

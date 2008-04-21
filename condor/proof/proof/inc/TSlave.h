@@ -108,7 +108,7 @@ protected:
    virtual Int_t SendGroupPriority(const char * /*grp*/, Int_t /*priority*/) { return 0; }
    virtual void  SetAlias(const char *alias);
    virtual void  SetStatus(Int_t st) { fStatus = st; }
-   virtual void  StopProcess(Bool_t abort, Int_t timeout);
+   virtual void  StopProcess(Bool_t abort, Int_t timeout, Bool_t susp);
 
 public:
    virtual ~TSlave();

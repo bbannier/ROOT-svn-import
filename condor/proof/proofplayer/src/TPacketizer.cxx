@@ -1099,3 +1099,59 @@ TDSetElement *TPacketizer::GetNextPacket(TSlave *sl, TMessage *r)
 
    return slstat->fCurElem;
 }
+
+//______________________________________________________________________________
+TDSet *TPacketizer::GetDSetToProcess(TDSet *dset)
+{
+   // Return a pointer to a TDSet representing the data not yet processed.
+   // If 'dset' is valid, the elements are added to it; this allows to create
+   // an empty dataset with the wanted names and get it fille inside here.
+   // Otherwise an new TDSet is created.
+   // Return dset (may be = 0) if all the data have been processed.
+
+   if (!fValid || !fFileNodes) return dset;
+
+   // Iterate over filenodes
+   TIter nxn(fFileNodes);
+   TFileNode *node = 0;
+   while ((node = (TFileNode *) nxn())) {
+
+      TFileStat *file = 0;
+      // Interate over files on this node
+      while ((file = node->GetNextUnAlloc())) {
+         // Get an element representing all the (remaining part of) file
+         TDSetElement *base = file->GetElement();
+         Long64_t first = file->GetNextEntry();
+         Long64_t last = base->GetFirst() + base->GetNum();
+         Long64_t num = last - first;
+         // Add the element
+         if (!dset) dset = new TDSet("???");
+         dset->Add(base->GetFileName(), base->GetObjName(), base->GetDirectory(),
+                   first, num);
+      }
+
+   }
+
+   // Add info about the files being currently analysed
+   TIter nxw(fSlaveStats);
+   TSlaveStat *wstat = 0;
+   while ((wstat = (TSlaveStat *)nxw())) {
+      TFileStat *file = wstat->fCurFile;
+      if (file) {
+         // Get an element representing all the (remaining part of) file
+         TDSetElement *base = file->GetElement();
+         Long64_t first = file->GetNextEntry();
+         Long64_t last = base->GetFirst() + base->GetNum();
+         Long64_t num = last - first;
+         Info("GetDSetToProcess","adding: %s, %s, %s, %lld, %lld",
+               base->GetFileName(), base->GetObjName(), base->GetDirectory(), first, num);
+         // Add the element
+         if (!dset) dset = new TDSet("???");
+         dset->Add(base->GetFileName(), base->GetObjName(), base->GetDirectory(),
+                   first, num);
+      }
+   }
+
+   // Done
+   return dset;
+}

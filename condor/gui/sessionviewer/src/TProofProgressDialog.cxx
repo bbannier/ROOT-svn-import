@@ -178,6 +178,15 @@ TProofProgressDialog::TProofProgressDialog(TProof *proof,
    height = TMath::Max(height, fStop->GetDefaultHeight());
    width  = TMath::Max(width, fStop->GetDefaultWidth()); ++nb;
 
+   if (PPD_SRV_NEWER(17)) {
+      fSuspend = new TGTextButton(hf3, "&Suspend");
+      fSuspend->SetToolTipText("Suspend the query (put-on-hold); can be resumed from this or another session");
+      fSuspend->Connect("Clicked()", "TProofProgressDialog", this, "DoSuspend()");
+      hf3->AddFrame(fSuspend, new TGLayoutHints(kLHintsCenterY | kLHintsExpandX, 7, 7, 0, 0));
+      height = TMath::Max(height, fSuspend->GetDefaultHeight());
+      width  = TMath::Max(width, fSuspend->GetDefaultWidth()); ++nb;
+   }
+
    fAbort = new TGTextButton(hf3, "&Cancel");
    fAbort->SetToolTipText("Cancel processing, Terminate() will NOT be executed");
    fAbort->Connect("Clicked()", "TProofProgressDialog", this, "DoAbort()");
@@ -317,6 +326,8 @@ void TProofProgressDialog::ResetProgressDialog(const char *selec,
 
    // Reset buttons
    fStop->SetState(kButtonUp);
+   fSuspend->SetState(kButtonUp);
+   fSuspend->SetText(TString("&Suspend"));
    fAbort->SetState(kButtonUp);
    fClose->SetState(kButtonDisabled);
 
@@ -402,6 +413,7 @@ void TProofProgressDialog::Progress(Long64_t total, Long64_t processed)
 
       // Set button state
       fStop->SetState(kButtonDisabled);
+      fSuspend->SetState(kButtonDisabled);
       fAbort->SetState(kButtonDisabled);
       fClose->SetState(kButtonUp);
       if (!fKeep)
@@ -432,6 +444,8 @@ void TProofProgressDialog::Progress(Long64_t total, Long64_t processed)
       if (processed < 0) {
          // And we disable the buttons
          fStop->SetState(kButtonDisabled);
+         if (fStatus != kSuspended)
+            fSuspend->SetState(kButtonDisabled);
          fAbort->SetState(kButtonDisabled);
          fClose->SetState(kButtonUp);
       }
@@ -551,6 +565,7 @@ void TProofProgressDialog::Progress(Long64_t total, Long64_t processed,
 
       // Set button state
       fStop->SetState(kButtonDisabled);
+      fSuspend->SetState(kButtonDisabled);
       fAbort->SetState(kButtonDisabled);
       fClose->SetState(kButtonUp);
       if (!fKeep)
@@ -590,6 +605,8 @@ void TProofProgressDialog::Progress(Long64_t total, Long64_t processed,
       if (processed < 0) {
          // And we disable the buttons
          fStop->SetState(kButtonDisabled);
+         if (fStatus != kSuspended)
+            fSuspend->SetState(kButtonDisabled);
          fAbort->SetState(kButtonDisabled);
          fClose->SetState(kButtonUp);
       }
@@ -642,10 +659,13 @@ void TProofProgressDialog::IndicateStop(Bool_t aborted)
 {
    // Indicate that Cancel or Stop was clicked.
 
-   if (aborted == kTRUE)
+   if (aborted == kTRUE) {
       fBar->SetBarColor("red");
-   else
+   } else if (fStatus == kSuspended) {
+      fBar->SetBarColor("cyan");
+   } else {
       fBar->SetBarColor("yellow");
+   }
 
    if (fProof) {
       fProof->Disconnect("Progress(Long64_t,Long64_t)", this,
@@ -657,6 +677,8 @@ void TProofProgressDialog::IndicateStop(Bool_t aborted)
                          "IndicateStop(Bool_t)");
       // These buttons are meaningless at this point
       fStop->SetState(kButtonDisabled);
+      if (fStatus != kSuspended)
+         fSuspend->SetState(kButtonDisabled);
       fAbort->SetState(kButtonDisabled);
    }
 
@@ -747,8 +769,43 @@ void TProofProgressDialog::DoStop()
 
    // Set buttons states
    fStop->SetState(kButtonDisabled);
+   fSuspend->SetState(kButtonDisabled);
    fAbort->SetState(kButtonDisabled);
    fClose->SetState(kButtonUp);
+}
+
+//______________________________________________________________________________
+void TProofProgressDialog::DoSuspend()
+{
+   // Handle Suspend button.
+
+   if (!fSuspend) return;
+
+   TString curtext(fSuspend->GetText()->GetString());
+   if (curtext == "Suspend") {
+      // Do not wait for ever, but al least 10 seconds
+      Long_t timeout = gEnv->GetValue("Proof.ShutdownTimeout", 60) / 2;
+      timeout = (timeout > 10) ? timeout : 10;
+      fProof->StopProcess(kFALSE, timeout, kTRUE);
+      fStatus = kSuspended;
+
+      // Set buttons states
+      fStop->SetState(kButtonDisabled);
+      fSuspend->SetState(kButtonUp);
+      fAbort->SetState(kButtonDisabled);
+      fClose->SetState(kButtonUp);
+      fSuspend->SetText(TString("&Resume"));
+   } else {
+      // Resume last query put on-hold
+      fProof->Resume("last");
+
+      // Set buttons states
+      fStop->SetState(kButtonUp);
+      fSuspend->SetState(kButtonUp);
+      fAbort->SetState(kButtonUp);
+      fClose->SetState(kButtonDisabled);
+      fSuspend->SetText(TString("&Suspend"));
+   }
 }
 
 //______________________________________________________________________________
@@ -761,6 +818,7 @@ void TProofProgressDialog::DoAbort()
 
    // Set buttons states
    fStop->SetState(kButtonDisabled);
+   fSuspend->SetState(kButtonDisabled);
    fAbort->SetState(kButtonDisabled);
    fClose->SetState(kButtonUp);
 }

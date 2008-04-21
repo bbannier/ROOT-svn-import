@@ -56,6 +56,8 @@ class TTimer;
 class TMutex;
 class TFileCollection;
 class TProofDataSetManager;
+class TProofQueryOnHold;
+class TSortedList;
 
 // Hook to external function setting up authentication related stuff
 // for old versions.
@@ -86,9 +88,11 @@ private:
    TString       fCacheDir;         //directory containing cache of user files
    TString       fQueryDir;         //directory containing query results and status
    TString       fDataSetDir;       //directory containing info about known data sets
+   TString       fOnHoldDir;        //directory containing postponed queries
    TProofLockPath *fPackageLock;    //package dir locker
    TProofLockPath *fCacheLock;      //cache dir locker
    TProofLockPath *fQueryLock;      //query dir locker
+   TProofLockPath *fOnHoldLock;     //onhold queries dir locker
    TString       fArchivePath;      //default archive path
    TSocket      *fSocket;           //socket connection to client
    TProof       *fProof;            //PROOF talking to slave servers
@@ -118,6 +122,7 @@ private:
    TList        *fPreviousQueries;  //list of TProofQueryResult objects from previous sections
    TList        *fWaitingQueries;   //list of TProofQueryResult wating to be processed
    Bool_t        fIdle;             //TRUE if idle
+   Int_t         fOnHoldQueries;    //number of postponed queries
 
    TString       fPrefix;           //Prefix identifying the node
 
@@ -163,13 +168,21 @@ private:
    Int_t         CleanupSession(const char *sessiontag);
    void          ScanPreviousQueries(const char *dir);
 
+   TProofQueryOnHold *ResumeOnHoldQuery(const char *tag);
+   Int_t         PutQueryOnHold(const char *tag, TMessage *mess, const char *selec,
+                                TDSet *d = 0, TList *output = 0,
+                                Long64_t toprocess = -1, Long64_t processed = 0);
+   Int_t         RemoveOnHoldQuery(const char *tag);
+   TSortedList  *GetListOfOnHoldQueries();
+
 protected:
    virtual void  HandleArchive(TMessage *mess);
    virtual Int_t HandleCache(TMessage *mess);
    virtual void  HandleCheckFile(TMessage *mess);
    virtual Int_t HandleDataSets(TMessage *mess);
    virtual void  HandleLibIncPath(TMessage *mess);
-   virtual void  HandleProcess(TMessage *mess);
+   virtual void  HandleOnHold(TMessage *mess);
+   virtual void  HandleProcess(TMessage *mess, TProofQueryOnHold *onhold = 0);
    virtual void  HandleQueryList(TMessage *mess);
    virtual void  HandleRemove(TMessage *mess);
    virtual void  HandleRetrieve(TMessage *mess);

@@ -415,3 +415,12 @@ TString TProofCondor::GetJobAd()
 
    return ad;
 }
+
+//______________________________________________________________________________
+Int_t TProofCondor::SetupOnHoldQuery(const char * /*pendingtag*/,
+                                     TDSet */*dset*/, TList */*input*/)
+{
+   // Get job Ad
+
+   return 0;
+}

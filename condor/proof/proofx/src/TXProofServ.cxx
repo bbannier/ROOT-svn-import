@@ -845,16 +845,18 @@ Bool_t TXProofServ::HandleInput(const void *in)
       switch (type) {
       case TXSocket::kStopProcess:
          {
-            // Abort or Stop ?
-            Bool_t abort = (hin->fInt3 != 0) ? kTRUE : kFALSE;
+            // Abort or Stop or Suspend?
+            Bool_t abort = kFALSE, susp = kFALSE;
+            if (hin->fInt3 == 1) abort = kTRUE;
+            if (hin->fInt3 == 2) susp = kTRUE;
             // Timeout
             Int_t timeout = hin->fInt4;
             // Act now
             if (fProof)
-               fProof->StopProcess(abort, timeout);
+               fProof->StopProcess(abort, timeout, susp);
             else
                if (fPlayer)
-                  fPlayer->StopProcess(abort, timeout);
+                  fPlayer->StopProcess(abort, timeout, susp);
          }
          break;
       default:

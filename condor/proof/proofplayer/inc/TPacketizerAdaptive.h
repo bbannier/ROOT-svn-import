@@ -110,6 +110,8 @@ public:
    Int_t         CalculatePacketSize(TObject *slstat);
    TDSetElement *GetNextPacket(TSlave *sl, TMessage *r);
 
+   TDSet        *GetDSetToProcess(TDSet *dset = 0);
+
    ClassDef(TPacketizerAdaptive,0)  //Generate work packets for parallel processing
 };
 

@@ -46,12 +46,13 @@ class TProofProgressDialog {
 friend class TProofProgressLog;
 
 private:
-   enum EQueryStatus { kRunning = 0, kDone, kStopped, kAborted, kIncomplete };
+   enum EQueryStatus { kRunning = 0, kDone, kStopped, kAborted, kIncomplete, kSuspended };
 
    TGTransientFrame   *fDialog;  // transient frame, main dialog window
    TGProgressBar      *fBar;     // progress bar
    TGTextButton       *fClose;
    TGTextButton       *fStop;
+   TGTextButton       *fSuspend;
    TGTextButton       *fAbort;
    TGTextButton       *fLog;
    TGTextButton       *fRatePlot;
@@ -109,6 +110,7 @@ public:
    void DoKeep(Bool_t on);
    void DoSetLogQuery(Bool_t on);
    void DoStop();
+   void DoSuspend();
    void DoAbort();
    void DoPlotRateGraph();
 

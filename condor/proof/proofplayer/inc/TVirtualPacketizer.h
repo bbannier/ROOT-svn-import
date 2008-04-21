@@ -106,6 +106,8 @@ public:
    virtual void            SetInitTime();
    virtual void            StopProcess(Bool_t abort);
 
+   virtual TDSet          *GetDSetToProcess(TDSet */*dset*/ = 0) { return 0; }
+
    Long64_t      GetBytesRead() const { return fBytesRead; }
    Float_t       GetInitTime() const { return fInitTime; }
    Float_t       GetProcTime() const { return fProcTime; }
