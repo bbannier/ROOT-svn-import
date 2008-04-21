@@ -33,6 +33,7 @@
 class TBtNode;
 class TBtInnerNode;
 class TBtLeafNode;
+class TBtreeIter;
 
 
 class TBtree : public TSeqCollection {
@@ -66,6 +67,8 @@ protected:
    Int_t IdxAdd(const TObject &obj);
 
 public:
+   typedef TBtreeIter Iterator_t;
+   
    TBtree(Int_t ordern = 3);  //create a TBtree of order n
    virtual     ~TBtree();
 #ifndef __CINT__
@@ -330,7 +333,10 @@ public:
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-class TBtreeIter : public TIterator {
+class TBtreeIter : public TIterator,
+                   public std::iterator<std::bidirectional_iterator_tag,
+                                        TObject*, std::ptrdiff_t,
+                                        const TObject**, const TObject*&> {
 
 private:
    const TBtree  *fTree;      //btree being iterated
