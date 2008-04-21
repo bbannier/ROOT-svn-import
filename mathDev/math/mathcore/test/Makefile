@@ -12,10 +12,8 @@ include $(ROOTSYS)/test/Makefile.arch
 
 ifeq ($(PLATFORM),win32)
 EXTRALIBS        = -include:_G__cpp_setupG__MathCore  "$(ROOTSYS)/lib/libMathMore.lib" \
-	"$(ROOTSYS)/lib/libTMVA.lib" "$(ROOTSYS)/lib/libMLP.lib" "$(ROOTSYS)/lib/libTreePlayer.lib" \
-	 "$(ROOTSYS)/lib/libMinuit.lib" "$(ROOTSYS)/lib/libMinuit2.lib"
 else
-EXTRALIBS        = -lMathMore -lTMVA -lMLP -lTreePlayer -lMinuit -lMinuit2
+EXTRALIBS        = -lMathMore
 CXXFLAGS += -g
 endif
 
