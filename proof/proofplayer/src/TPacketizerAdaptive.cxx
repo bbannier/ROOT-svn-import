@@ -200,11 +200,8 @@ public:
 
       // how many more events it has than obj
 
-      if (fgNetworkFasterThanHD) {
-         // The network bandwidth is greater than hard disk transfer.
-         // Smaller means having fewer workers processing its data.
-         // If equal, the numer of events left for processing decides.
-
+      if (TPacketizerAdaptive::fgStrategy == 1) {
+         // The default adaptive strategy.
          Int_t myVal = GetRunSlaveCnt();
          Int_t otherVal = obj->GetRunSlaveCnt();
          if (myVal < otherVal) {
@@ -221,76 +218,14 @@ public:
             }
          }
       } else {
-         // Network bandwidth is smaller than Hard Disk transfer
-         // TODO: Do more tests when such environment will be available.
-
-         // File nodes are sorted by number of remote workers.
-         // In addition filenodes with the same number of remote workers
-         // are sorted by number of their own ones.
-         // If that is equal as well,
-         // they are sorted by the number of events left per worker
-         // The decision can be reversed if the diffEvents
-         // is greater or smaller than half or 1/3 of avEventsLeft.
-
-         Long64_t diffEvents =
-            GetEventsLeftPerSlave() - obj->GetEventsLeftPerSlave();
-         Int_t myExtSlaves = GetExtSlaveCnt();
-         Int_t otherExtSlaves = obj->GetExtSlaveCnt();
-         Long64_t avEventsLeft = (GetEventsLeftPerSlave()
-                                  + obj->GetEventsLeftPerSlave())/2;
-         // # my workers processing remote files
-         Int_t mySlavesProcRemote = GetSlaveCnt() - GetRunSlaveCnt();
-         Int_t otherSlavesProcRemote = obj->GetSlaveCnt()
-                                       - obj->GetRunSlaveCnt();
-         if ( mySlavesProcRemote < otherSlavesProcRemote ) {
-            if (diffEvents < -(avEventsLeft / 2)
-                && obj->GetExtSlaveCnt() < TPacketizerAdaptive::fgMaxSlaveCnt)
-               return 1;
-            else
-               return -1;
-         } else if ( mySlavesProcRemote > otherSlavesProcRemote ) {
-            if (diffEvents > (avEventsLeft / 2)
-                && GetExtSlaveCnt() < TPacketizerAdaptive::fgMaxSlaveCnt)
-               return -1;
-            else
-               return 1;
-         } else if (myExtSlaves < otherExtSlaves) {
-            if (diffEvents < -(avEventsLeft / 3)
-                && obj->GetExtSlaveCnt() < TPacketizerAdaptive::fgMaxSlaveCnt)
-               return 1;
-            else
-               return -1;
-         } else if (myExtSlaves > otherExtSlaves) {
-            if (diffEvents > (avEventsLeft / 3)
-                && GetExtSlaveCnt() < TPacketizerAdaptive::fgMaxSlaveCnt)
-               return -1;
-            else
-               return 1;
+         Int_t myVal = GetSlaveCnt();
+         Int_t otherVal = obj->GetSlaveCnt();
+         if (myVal < otherVal) {
+            return -1;
+         } else if (myVal > otherVal) {
+            return 1;
          } else {
-            Int_t myOwnSlaves = GetMySlaveCnt();
-            Int_t otherOwnSlaves = obj->GetMySlaveCnt();
-            if (myOwnSlaves < otherOwnSlaves) {
-               // if the other node has much more to process
-               if (diffEvents < -(avEventsLeft / 3)
-                   && obj->GetExtSlaveCnt() < TPacketizerAdaptive::fgMaxSlaveCnt)
-                  return 1;
-               else
-                  return -1;
-            } else if (myOwnSlaves > otherOwnSlaves) {
-               if (diffEvents > (avEventsLeft / 3)
-                   && GetExtSlaveCnt() < TPacketizerAdaptive::fgMaxSlaveCnt)
-                  return -1;
-               else
-                  return 1;
-            } else {
-
-            if (diffEvents > 0) {
-                  return -1;
-               } else if (diffEvents < 0) {
-                  return 1;
-               } else
-                  return 0;
-            }
+            return 0;
          }
       }
    }
@@ -315,8 +250,9 @@ public:
 
 
 TPacketizerAdaptive::TFileNode::TFileNode(const char *name)
-   : fNodeName(name), fFiles(new TList), fUnAllocFileNext(0),fActFiles(new TList),
-     fActFileNext(0), fMySlaveCnt(0), fExtSlaveCnt(0), fProcessed(0), fEvents(0)
+   : fNodeName(name), fFiles(new TList), fUnAllocFileNext(0),
+     fActFiles(new TList), fActFileNext(0), fMySlaveCnt(0),
+     fExtSlaveCnt(0), fProcessed(0), fEvents(0)
 {
    // Constructor
 
@@ -415,7 +351,7 @@ ClassImp(TPacketizerAdaptive)
 Long_t   TPacketizerAdaptive::fgMaxSlaveCnt = 2;
 Int_t    TPacketizerAdaptive::fgPacketAsAFraction = 4;
 Double_t TPacketizerAdaptive::fgMinPacketTime = 3;
-Int_t    TPacketizerAdaptive::fgNetworkFasterThanHD = 1;
+Int_t    TPacketizerAdaptive::fgStrategy = 1;
 
 //______________________________________________________________________________
 TPacketizerAdaptive::TPacketizerAdaptive(TDSet *dset, TList *slaves,
@@ -509,10 +445,19 @@ TPacketizerAdaptive::TPacketizerAdaptive(TDSet *dset, TList *slaves,
       fgMinPacketTime = (Int_t) minPacketTime;
    }
 
-   fgNetworkFasterThanHD = gEnv->GetValue("ProofServ.NetworkFasterThanHD", 1);
-   if (fgNetworkFasterThanHD != 1)
-      Info("TPacketizerAdaptive","fgNetworkFasterThanHD set to %d",
-                                 fgNetworkFasterThanHD);
+   // The possibility to change packetizer strategy to the basic TPacketizer's
+   // one (in which workers always process their local data first).
+   Int_t strategy = -1;
+   if (TProof::GetParameter(input, "PROOF_PacketizerStrategy", strategy) != 0) {
+      // The user defined parameter has priority over the config file
+      strategy = gEnv->GetValue("ProofServ.PacketizerStrategy", -1);
+   }
+   if (strategy == 0) {
+      fgStrategy = 0;
+      Info("TPacketizerAdaptive", "using the basic strategy of TPacketizer");
+   } else if (strategy != -1)
+      Info("TPacketizerAdaptive",
+           "The only alternate value for PROOF_PacketizerStrategy is 0!");
 
    Double_t baseLocalPreference = 1.2;
    TProof::GetParameter(input, "PROOF_BaseLocalPreference", baseLocalPreference);
@@ -1348,7 +1293,7 @@ TDSetElement *TPacketizerAdaptive::GetNextPacket(TSlave *sl, TMessage *r)
                (firstNonLocalNode->GetExtSlaveCnt() < fgMaxSlaveCnt):0;
          openLocal = !nonLocalNodePossible;
          Float_t slaveRate = slstat->GetAvgRate();
-         if ( nonLocalNodePossible ) {
+         if ( nonLocalNodePossible && fgStrategy == 1) {
             // openLocal is set to kFALSE
             if ( slstat->GetFileNode()->GetRunSlaveCnt() >
                  slstat->GetFileNode()->GetMySlaveCnt() - 1 )
@@ -1358,7 +1303,8 @@ TDSetElement *TPacketizerAdaptive::GetNextPacket(TSlave *sl, TMessage *r)
             else if ( slaveRate == 0 ) { // first file for this slave
                // GetLocalEventsLeft() counts the potential slave
                // as running on its fileNode.
-               if ( slstat->GetLocalEventsLeft() * localPreference > (avgEventsLeftPerSlave))
+               if ( slstat->GetLocalEventsLeft() * localPreference
+                   > (avgEventsLeftPerSlave))
                   openLocal = kTRUE;
                else if ( (firstNonLocalNode->GetEventsLeftPerSlave())
                      < slstat->GetLocalEventsLeft() * localPreference )
@@ -1371,7 +1317,8 @@ TDSetElement *TPacketizerAdaptive::GetNextPacket(TSlave *sl, TMessage *r)
                // at this point slstat has a non zero avg rate > 0
                Float_t slaveTime = slstat->GetLocalEventsLeft()/slaveRate;
                // and thus fCumProcTime, fProcessed > 0
-               Float_t avgTime = avgEventsLeftPerSlave/(fProcessed/fCumProcTime);
+               Float_t avgTime = avgEventsLeftPerSlave
+                                 /(fProcessed/fCumProcTime);
                if (slaveTime * localPreference > avgTime)
                   openLocal = kTRUE;
                else if ((firstNonLocalNode->GetEventsLeftPerSlave())
@@ -1379,7 +1326,7 @@ TDSetElement *TPacketizerAdaptive::GetNextPacket(TSlave *sl, TMessage *r)
                   openLocal = kTRUE;
             }
          }
-         if (openLocal) {
+         if (openLocal || fgStrategy == 0) {
             // Try its own node
             file = slstat->GetFileNode()->GetNextUnAlloc();
             if (!file)
