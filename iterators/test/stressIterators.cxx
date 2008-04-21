@@ -20,6 +20,9 @@
 // 14 - TOrdCollection with std::for_each (Full iteration: from the Begin up to the End)
 // 15 - TOrdCollection with std::find_if
 // 16 - TOrdCollection with std::count_if
+// 17 - TRefArray with std::for_each (Full iteration: from the Begin up to the End)
+// 18 - TRefArray with std::find_if
+// 19 - TRefArray with std::count_if
 
 
 // STD
@@ -35,10 +38,41 @@
 #include "TMap.h"
 #include "TBtree.h"
 #include "TOrdCollection.h"
+#include "TRefArray.h"
 // Local
 #include "stressIterators.h"
 
+const char * const cszValue("value");
+
 using namespace std;
+
+template<class __T>
+void fill_container(__T* _container, Int_t _count)
+{
+   _container->SetOwner();
+
+   ostringstream ss;
+   for (int i = 0; i < _count; ++i) {
+      ss << "test string #" << i;
+      TObjString *s(new TObjString(ss.str().c_str()));
+      _container->Add(s);
+      ss.str("");
+   }
+}
+
+template<>
+void fill_container<TMap>(TMap* _container, Int_t _count)
+{
+   _container->SetOwner();
+
+   ostringstream ss;
+   for (int i = 0; i < _count; ++i) {
+      ss << "test string #" << i;
+      TObjString *s(new TObjString(ss.str().c_str()));
+      _container->Add(s, new TObjString(cszValue));
+      ss.str("");
+   }
+}
 
 //______________________________________________________________________________
 void stressIterators() throw(exception)
@@ -50,12 +84,7 @@ void stressIterators() throw(exception)
    {
       // TList
       TList list;
-      for (int i = 0; i < size; ++i) {
-         ss << "test string #" << i;
-         TObjString *s(new TObjString(ss.str().c_str()));
-         list.Add(s);
-         ss.str("");
-      }
+      fill_container(&list, size);
 
       cout << "#1 ====================================" << endl;
       cout << "-----> " << "TestContainer_for_each<TList>(list, list.GetSize())" << endl;
@@ -74,12 +103,7 @@ void stressIterators() throw(exception)
    {
       // TObjArray
       TObjArray obj_array(size);
-      for (int i = 0; i < size; ++i) {
-         ss << "test string #" << i;
-         TObjString *s(new TObjString(ss.str().c_str()));
-         obj_array.Add(s);
-         ss.str("");
-      }
+      fill_container(&obj_array, size);
 
       cout << "\n#4 ====================================" << endl;
       cout << "-----> " << "TestContainer_for_each<TObjArray>(obj_array, obj_array.GetSize())" << endl;
@@ -97,14 +121,8 @@ void stressIterators() throw(exception)
 
    {
       // TMap
-      const char * const cszValue("value");
       TMap map_container(size);
-      for (int i = 0; i < size; ++i) {
-         ss << "test string #" << i;
-         TObjString *s(new TObjString(ss.str().c_str()));
-         map_container.Add(s, new TObjString(cszValue));
-         ss.str("");
-      }
+      fill_container(&map_container, size);
 
       cout << "\n#7 ====================================" << endl;
       cout << "-----> " << "TestContainer_for_each<TMap>(map_container, map_container.GetSize())" << endl;
@@ -123,12 +141,7 @@ void stressIterators() throw(exception)
    {
       // TBtree
       TBtree btree_container;
-      for (int i = 0; i < size; ++i) {
-         ss << "test string #" << i;
-         TObjString *s(new TObjString(ss.str().c_str()));
-         btree_container.Add(s);
-         ss.str("");
-      }
+      fill_container(&btree_container, size);
 
       cout << "\n#11 ====================================" << endl;
       cout << "-----> " << "TestContainer_for_each<TBtree>(btree_container, btree_container.GetSize())" << endl;
@@ -144,12 +157,7 @@ void stressIterators() throw(exception)
    {
       // TOrdCollection
       TOrdCollection container;
-      for (int i = 0; i < size; ++i) {
-         ss << "test string #" << i;
-         TObjString *s(new TObjString(ss.str().c_str()));
-         container.Add(s);
-         ss.str("");
-      }
+      fill_container(&container, size);
 
       cout << "\n#14 ====================================" << endl;
       cout << "-----> " << "TestContainer_for_each<TOrdCollection>(container, container.GetSize())" << endl;
@@ -164,7 +172,18 @@ void stressIterators() throw(exception)
 
    {
       // TRefArray
+     TRefArray container;
+     fill_container(&container, size);
 
+     cout << "\n#17 ====================================" << endl;
+     cout << "-----> " << "TestContainer_for_each<TRefArray>(container, container.GetSize())" << endl;
+     TestContainer_for_each<TRefArray>(container, container.GetLast()+1); // TODO: why container.GetSize() returns 16 instead of 15
+     cout << "\n#18 ====================================" << endl;
+     cout << "-----> " << "TestContainer_find_if<TOrdCollection>(container, \"test string #3\");" << endl;
+     TestContainer_find_if<TRefArray>(container, "test string #3");
+     cout << "\n#19 ====================================" << endl;
+     cout << "-----> " << "TestContainer_count_if<TOrdCollection>(container, \"test string #3\", 1)" << endl;
+     TestContainer_count_if<TRefArray>(container, "test string #3", 1);
    }
 
 }
