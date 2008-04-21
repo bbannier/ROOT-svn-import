@@ -3113,6 +3113,7 @@ Int_t TTreeFormula::GetRealInstance(Int_t instance, Int_t codeindex) {
          check = kTRUE;
       }
 
+      TFormLeafInfo * info = 0;
       Int_t max_dim = fNdimensions[codeindex];
       if ( max_dim ) {
          virt_dim = 0;
@@ -3151,7 +3152,6 @@ Int_t TTreeFormula::GetRealInstance(Int_t instance, Int_t codeindex) {
             // are fixed!
 
             // NOTE: We could unroll some of this loops to avoid a few tests.
-            TFormLeafInfo * info = 0;
             if (fHasMultipleVarDim[codeindex]) {
                info = (TFormLeafInfo *)(fDataMembers.At(codeindex));
                // if (info && info->GetVarDim()==-1) info = 0;
@@ -3225,7 +3225,10 @@ Int_t TTreeFormula::GetRealInstance(Int_t instance, Int_t codeindex) {
                // Let's update fCumulSizes for the rest of the code.
                Int_t vdim = info->GetVarDim();
                Int_t isize = info->GetSize(local_index);
-               if (fIndexes[codeindex][vdim]>isize) {
+               if (fIndexes[codeindex][vdim]>=0) {
+                  info->SetSecondaryIndex(fIndexes[codeindex][vdim]); 
+               }
+               if  (isize!=1 && fIndexes[codeindex][vdim]>isize) {
                   // We are out of bounds!
                   return fNdata[0]+1;
                }
@@ -3271,13 +3274,17 @@ Int_t TTreeFormula::GetRealInstance(Int_t instance, Int_t codeindex) {
                }
             }
             if (fIndexes[codeindex][max_dim]>=0) {
-               real_instance += fIndexes[codeindex][max_dim];
+               if (!info) real_instance += fIndexes[codeindex][max_dim];
             } else {
                Int_t local_index;
                if (virt_dim && fManager->fCumulUsedSizes[virt_dim]>1) {
                   local_index = instance % fManager->fCumulUsedSizes[virt_dim];
                } else {
                   local_index = instance;
+               }
+               if (info && local_index>=fCumulSizes[codeindex][max_dim]) {
+                  // We are out of bounds! [Multiple var dims, See same message a few line above]
+                  return fNdata[0]+1;
                }
                if (fIndexes[codeindex][max_dim]==-2) {
                   if (fDidBooleanOptimization && local_index!=0) {
@@ -4468,6 +4475,24 @@ void TTreeFormula::ResetLoading()
    fNeedLoading = kTRUE;
    fDidBooleanOptimization = kFALSE;
 
+   for(Int_t i=0; i<fNcodes; ++i) {
+      UInt_t max_dim = fNdimensions[i];
+      for(UInt_t dim=0; dim<max_dim ;++dim) {
+         if (fVarIndexes[i][dim]) {
+            fVarIndexes[i][dim]->ResetLoading();
+         }
+      }
+   }
+   Int_t n = fAliases.GetLast();
+   if ( fNoper < n ) {
+      n = fNoper;
+   }
+   for(Int_t k=0; k<n; ++k) {
+      TTreeFormula *f = dynamic_cast<TTreeFormula*>(fAliases.UncheckedAt(k));
+      if (f) {
+         f->ResetLoading();
+      }
+   }
 }
 
 //______________________________________________________________________________
