@@ -11,6 +11,7 @@
 
 #include "TQuakeViz.h"
 #include "TEveTrans.h"
+#include "TEveRGBAPalette.h"
 
 #include "TVirtualPad.h"
 #include "TBuffer3D.h"
@@ -29,11 +30,16 @@ ClassImp(TQuakeViz);
 
 //______________________________________________________________________________
 TQuakeViz::TQuakeViz() :
-   TEveElementList("QuakeViz", "", kTRUE)
+   TEveElementList("QuakeViz", "", kTRUE),
+   fTransparency(50),
+   fPalette(0),
+   fLighting(kTRUE),
+   fLimitRange(kFALSE)
 {
    // Constructor.
 }
 
+//______________________________________________________________________________
 void TQuakeViz::ReadData(const Text_t* file)
 {
    fData.clear();
@@ -79,8 +85,27 @@ void TQuakeViz::ReadData(const Text_t* file)
           fMaxLat - fMinLat, fMaxLon - fMinLon, fMaxDepth - fMinDepth, fMaxStr - fMinStr);
 }
 
+//______________________________________________________________________________
+void TQuakeViz::InitVizState(Int_t dayHalfRange)
+{
+   // Init visualization state.
+   // Set the central date to the time of the last e-quake and
+   // set observation window to dayHalfRange in each direction.
+
+   UInt_t y, m, d, h;
+
+   fMaxTime.GetDate(kFALSE, 0, &y, &m, &d);
+   fMaxTime.GetTime(kFALSE, 0, &h, 0, 0); // No use minutes/secs
+   fYear  = y;
+   fMonth = m;
+   fDay   = d;
+   fHour  = h;
+   fDayHalfRange = dayHalfRange;
+}
+
 /******************************************************************************/
 
+//______________________________________________________________________________
 void TQuakeViz::ComputeBBox()
 {
    // Compute bounding-box of the data.
@@ -98,6 +123,7 @@ void TQuakeViz::ComputeBBox()
    }
 }
 
+//______________________________________________________________________________
 void TQuakeViz::Paint(Option_t* /*option*/)
 {
    // Paint point-set.
@@ -121,3 +147,28 @@ void TQuakeViz::Paint(Option_t* /*option*/)
       Error(eh, "only direct GL rendering supported.");
 }
 
+/******************************************************************************/
+
+//______________________________________________________________________________
+void TQuakeViz::SetPalette(TEveRGBAPalette* p)
+{
+   // Set TEveRGBAPalette pointer.
+
+   if (fPalette == p) return;
+   if (fPalette) fPalette->DecRefCount();
+   fPalette = p;
+   if (fPalette) fPalette->IncRefCount();
+}
+
+//______________________________________________________________________________
+TEveRGBAPalette* TQuakeViz::AssertPalette()
+{
+   // Make sure the TEveRGBAPalette pointer is not null.
+   // If it is not set, a new one is instantiated and the range is set
+   // to 0 - 100, as expected by the GL renderer.
+
+   if (fPalette == 0) {
+      fPalette = new TEveRGBAPalette(0, 100, kTRUE);
+   }
+   return fPalette;
+}

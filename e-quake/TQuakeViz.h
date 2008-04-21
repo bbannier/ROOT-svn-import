@@ -19,6 +19,8 @@
 
 #include <vector>
 
+class TEveRGBAPalette;
+
 class TQuakeViz : public TEveElementList,
 		  public TAttBBox
 {
@@ -53,11 +55,24 @@ protected:
 
    UChar_t    fTransparency;
 
+   TEveRGBAPalette *fPalette;        // Pointer to signal-color palette.
+
+   Bool_t           fLighting;
+   Bool_t           fLimitRange;
+
+   Int_t            fYear;
+   Int_t            fMonth;
+   Int_t            fDay;
+   Int_t            fHour;
+   Int_t            fDayHalfRange;
+
 public:
    TQuakeViz();
    virtual ~TQuakeViz() {}
 
    void ReadData(const Text_t* file);
+
+   void InitVizState(Int_t dayHalfRange=100);
 
    virtual Bool_t  CanEditMainTransparency() const { return kTRUE; }
    virtual UChar_t GetMainTransparency()     const { return fTransparency; }
@@ -65,6 +80,26 @@ public:
 
    virtual void ComputeBBox();
    virtual void Paint(Option_t* option="");
+
+   TEveRGBAPalette* GetPalette() const { return fPalette; }
+   void             SetPalette(TEveRGBAPalette* p);
+   TEveRGBAPalette* AssertPalette();
+
+   Bool_t GetLighting() const { return fLighting; }
+   void SetLighting(Bool_t x) { fLighting = x; }
+   Bool_t GetLimitRange() const { return fLimitRange; }
+   void SetLimitRange(Bool_t x) { fLimitRange = x; }
+
+   Int_t GetYear() const { return fYear; }
+   void SetYear(Int_t x) { fYear = x; }
+   Int_t GetMonth() const { return fMonth; }
+   void SetMonth(Int_t x) { fMonth = x; }
+   Int_t GetDay() const { return fDay; }
+   void SetDay(Int_t x) { fDay = x; }
+   Int_t GetHour() const { return fHour; }
+   void SetHour(Int_t x) { fHour = x; }
+   Int_t GetDayHalfRange() const { return fDayHalfRange; }
+   void SetDayHalfRange(Int_t x) { fDayHalfRange = x; }
 
    ClassDef(TQuakeViz, 1); // Short description.
 };

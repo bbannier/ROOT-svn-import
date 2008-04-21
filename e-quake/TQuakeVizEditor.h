@@ -18,6 +18,7 @@ class TGButton;
 class TGCheckButton;
 class TGNumberEntry;
 class TGColorSelect;
+class TEveGValuator;
 
 class TQuakeViz;
 
@@ -28,10 +29,16 @@ private:
    TQuakeVizEditor& operator=(const TQuakeVizEditor&); // Not implemented
 
 protected:
-   TQuakeViz            *fM; // Model object.
+   TQuakeViz             *fM; // Model object.
 
-   // Declare widgets
-   // TGSomeWidget*   fXYZZ;
+   TGCheckButton         *fLighting;
+   TGCheckButton         *fLimitRange;
+
+   TEveGValuator         *fYear;
+   TEveGValuator         *fMonth;
+   TEveGValuator         *fDay;
+   TEveGValuator         *fHour;
+   TEveGValuator         *fDayHalfRange;
 
 public:
    TQuakeVizEditor(const TGWindow* p=0, Int_t width=170, Int_t height=30,
@@ -40,8 +47,14 @@ public:
 
    virtual void SetModel(TObject* obj);
 
-   // Declare callback/slot methods
-   // void DoXYZZ();
+   void DoLighting();
+   void DoLimitRange();
+
+   void DoYear();
+   void DoMonth();
+   void DoDay();
+   void DoHour();
+   void DoDayHalfRange();
 
    ClassDef(TQuakeVizEditor, 0); // GUI editor for TQuakeViz.
 };
