@@ -34,6 +34,7 @@ class TMessage : public TBufferFile {
 
 friend class TAuthenticate;
 friend class TSocket;
+friend class TProofQueryOnHold;
 friend class TPSocket;
 friend class TXSocket;
 

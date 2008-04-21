@@ -37,6 +37,7 @@
 #pragma link C++ class TProofLogElem;
 #pragma link C++ class TSlave;
 #pragma link C++ class TVirtualProofPlayer+;
+#pragma link C++ class TProofQueryOnHold;
 #pragma link C++ class TProofQueryResult+;
 #pragma link C++ class TDSetProxy+;
 #pragma link C++ class TCondor+;

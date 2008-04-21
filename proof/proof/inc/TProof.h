@@ -108,9 +108,10 @@ class TMap;
 // 14 -> 15: add support for entry lists; new version of TFileInfo
 // 15 -> 16: add support for generic non-data based processing
 // 16 -> 17: new dataset handling system; support for TFileCollection processing 
+// 17 -> 18: support for put-on-hold / resume and pause / continue
 
 // PROOF magic constants
-const Int_t       kPROOF_Protocol        = 17;            // protocol version number
+const Int_t       kPROOF_Protocol        = 18;            // protocol version number
 const Int_t       kPROOF_Port            = 1093;          // IANA registered PROOF port
 const char* const kPROOF_ConfFile        = "proof.conf";  // default config file
 const char* const kPROOF_ConfDir         = "/usr/local/root";  // default config dir
@@ -119,9 +120,11 @@ const char* const kPROOF_CacheDir        = "cache";       // file cache dir, und
 const char* const kPROOF_PackDir         = "packages";    // package dir, under WorkDir
 const char* const kPROOF_QueryDir        = "queries";     // query dir, under WorkDir
 const char* const kPROOF_DataSetDir      = "datasets";    // dataset dir, under WorkDir
+const char* const kPROOF_OnHoldDir       = "onhold";      // on-hold queries dir, under WorkDir
 const char* const kPROOF_CacheLockFile   = "proof-cache-lock-";   // cache lock file
 const char* const kPROOF_PackageLockFile = "proof-package-lock-"; // package lock file
 const char* const kPROOF_QueryLockFile   = "proof-query-lock-";   // query lock file
+const char* const kPROOF_OnHoldLockFile  = "proof-onhold-lock-"; // postponed query lock file
 
 #ifndef R__WIN32
 const char* const kCP     = "/bin/cp -fp";
@@ -254,7 +257,8 @@ friend class TXProofServ;     // to access EUrgent
 public:
    // PROOF status bits
    enum EStatusBits {
-      kUsingSessionGui     = BIT(14)
+      kUsingSessionGui     = BIT(14),
+      kIsResuming          = BIT(17)
    };
    enum EQueryMode {
       kSync                = 0,
@@ -351,6 +355,11 @@ private:
    enum EProofShowQuotaOpt {
       kPerGroup = 0x1,
       kPerUser = 0x2
+   };
+   enum EOnHoldOptions {
+      kShowQueries         = 1,  //Show queries on hold
+      kResume              = 2,  //Resume a query put on hold
+      kRemove              = 3   //Remove a query put on hold
    };
 
    Bool_t          fValid;           //is this a valid proof object
@@ -578,6 +587,9 @@ public:
                        Long64_t firstentry = 0, TObject *enl = 0);
    Long64_t    Process(const char *selector, Long64_t nentries,
                        Option_t *option = "");
+
+   Long64_t    Resume(const char *querytag = 0, Option_t */*option*/ = 0);
+
    Long64_t    DrawSelect(TDSet *dset, const char *varexp,
                           const char *selection = "",
                           Option_t *option = "", Long64_t nentries = -1,
@@ -596,7 +608,7 @@ public:
    Int_t       Retrieve(Int_t query, const char *path = 0);
    Int_t       Retrieve(const char *queryref, const char *path = 0);
 
-   void        StopProcess(Bool_t abort, Int_t timeout = -1);
+   void        StopProcess(Bool_t abort, Int_t timeout = -1, Bool_t susp = kFALSE);
    void        Browse(TBrowser *b);
 
    Int_t       SetParallel(Int_t nodes = 9999, Bool_t random = kFALSE);
@@ -604,6 +616,10 @@ public:
 
    void        Close(Option_t *option="");
    void        Print(Option_t *option="") const;
+
+   //-- On-hold queries management
+   void        ShowOnHoldQueries();
+   void        RemoveOnHoldQuery(const char *tag);
 
    //-- cache and package management
    void        ShowCache(Bool_t all = kFALSE);
@@ -771,6 +787,9 @@ public:
 
    const char *GetDataPoolUrl() const { return fDataPoolUrl; }
    void        SetDataPoolUrl(const char *url) { fDataPoolUrl = url; }
+
+   virtual Int_t SetupOnHoldQuery(const char * /*pendingtag*/ = 0,
+                                  TDSet */*dset*/ = 0, TList */*input*/ = 0) { return 0; }
 
    // Opening and managing PROOF connections
    static TProof       *Open(const char *url = 0, const char *conffile = 0,

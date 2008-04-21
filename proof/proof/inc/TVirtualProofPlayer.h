@@ -31,20 +31,20 @@
 
 class TDSet;
 class TDSetElement;
-class TEventList;
-class TQueryResult;
 class TDrawFeedback;
+class TEventList;
 class TList;
-class TSlave;
 class TMessage;
 class TProof;
+class TProofQueryOnHold;
+class TQueryResult;
+class TSlave;
 class TSocket;
-
 
 class TVirtualProofPlayer : public TObject, public TQObject {
 
 public:
-   enum EExitStatus { kFinished, kStopped, kAborted };
+   enum EExitStatus { kFinished, kStopped, kAborted, kSuspended };
 
    TVirtualProofPlayer() { }
    virtual ~TVirtualProofPlayer() { }
@@ -60,7 +60,7 @@ public:
    virtual void      HandleGetTreeHeader(TMessage *mess) = 0;
    virtual void      HandleRecvHisto(TMessage *mess) = 0;
 
-   virtual void      StopProcess(Bool_t abort, Int_t timeout = -1) = 0;
+   virtual void      StopProcess(Bool_t abort, Int_t timeout = -1, Bool_t susp = kFALSE) = 0;
    virtual void      AddInput(TObject *inp) = 0;
    virtual void      ClearInput() = 0;
    virtual TObject  *GetOutput(const char *name) const = 0;
@@ -93,8 +93,14 @@ public:
    virtual void           DeleteDrawFeedback(TDrawFeedback *f) = 0;
 
    virtual TDSetElement *GetNextPacket(TSlave *slave, TMessage *r) = 0;
+   virtual TDSet    *GetDSetToProcess(const char *name, const char *objname,
+                                      const char *dir,
+                                      Long64_t &toprocess, Long64_t &processed) = 0;
 
+   virtual Int_t     InitSelector(const char *selec = "", Option_t *option = "") = 0;
    virtual Int_t     ReinitSelector(TQueryResult *qr) = 0;
+
+   virtual void      SetQueryOnHold(TProofQueryOnHold *q) = 0;
 
    virtual void      UpdateAutoBin(const char *name,
                                    Double_t& xmin, Double_t& xmax,

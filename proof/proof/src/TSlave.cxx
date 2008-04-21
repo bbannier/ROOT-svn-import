@@ -602,7 +602,7 @@ void TSlave::Interrupt(Int_t type)
 }
 
 //______________________________________________________________________________
-void TSlave::StopProcess(Bool_t abort, Int_t timeout)
+void TSlave::StopProcess(Bool_t abort, Int_t timeout, Bool_t susp)
 {
    // Sent stop/abort request to PROOF server.
 
@@ -611,6 +611,8 @@ void TSlave::StopProcess(Bool_t abort, Int_t timeout)
    msg << abort;
    if (fProof->fProtocol > 9)
       msg << timeout;
+   if (fProof->fProtocol > 17)
+      msg << susp;
    fSocket->Send(msg);
 }
 

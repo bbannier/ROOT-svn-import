@@ -83,7 +83,7 @@ protected:
 
    void            AddInput(TObject *obj);
    void            AddLogLine(const char *logline);
-   TQueryResult   *CloneInfo();
+   TQueryResult   *CloneInfo(Bool_t fillselector = kFALSE);
    virtual void    RecordEnd(EQueryStatus status, TList *outlist = 0);
    void            SaveSelector(const char *selec);
    void            SetArchived(const char *archfile);

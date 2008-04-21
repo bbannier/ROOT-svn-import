@@ -55,7 +55,7 @@ protected:
    Int_t    SendGroupPriority(const char *grp, Int_t priority);
    void     SetAlias(const char *alias);
    void     SetReady();
-   void     StopProcess(Bool_t abort, Int_t timeout);
+   void     StopProcess(Bool_t abort, Int_t timeout, Bool_t susp);
 
 public:
    TXSlave(const char *url, const char *ord, Int_t perf,

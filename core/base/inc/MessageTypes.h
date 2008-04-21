@@ -89,6 +89,7 @@ enum EMessageTypes {
    kPROOF_REALTIMELOG    = 1050,         //switch on/off real-time retrieval of log messages
    kPROOF_VERSARCHCOMP   = 1051,         //String with worker version/architecture/compiler follows
    kPROOF_ENDINIT        = 1052,         //signals end of initialization on worker
+   kPROOF_ONHOLD         = 1053,         //Handle queries put on-hold (show, resume, remove)
 
    //---- ROOTD message opcodes (2000 - 2099)
    kROOTD_USER           = 2000,         //user id follows

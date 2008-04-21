@@ -75,6 +75,7 @@
 #endif
 #include "TVirtualMonitoring.h"
 #include "TParameter.h"
+#include "TProofQueryOnHold.h"
 
 // Timeout exception
 #define kPEX_STOPPED  1001
@@ -239,7 +240,7 @@ void TProofPlayer::SetProcessing(Bool_t on)
 }
 
 //______________________________________________________________________________
-void TProofPlayer::StopProcess(Bool_t abort, Int_t timeout)
+void TProofPlayer::StopProcess(Bool_t abort, Int_t timeout, Bool_t)
 {
    // Stop the process after this event. If timeout is positive, start
    // a timer firing after timeout seconds to hard-stop time-expensive
@@ -452,6 +453,23 @@ TList *TProofPlayer::GetOutputList() const
 }
 
 //______________________________________________________________________________
+Int_t TProofPlayer::InitSelector(const char *selec, Option_t *option)
+{
+   // Init the selector object
+
+   SafeDelete(fSelector);
+   fSelectorClass = 0;
+   if (!(fSelector = TSelector::GetSelector(selec)))
+      return -1;
+   fSelectorClass = fSelector->IsA();
+   fSelector->SetInputList(fInput);
+   fSelector->SetOption(option);
+
+   // Done
+   return 0;
+}
+
+//______________________________________________________________________________
 Int_t TProofPlayer::ReinitSelector(TQueryResult *qr)
 {
    // Reinitialize fSelector using the selector files in the query result.
@@ -462,14 +480,14 @@ Int_t TProofPlayer::ReinitSelector(TQueryResult *qr)
 
    // Make sure we have a query
    if (!qr) {
-      Info("ReinitSelector", "query undefined - do nothing");
+      Error("ReinitSelector", "query undefined - do nothing");
       return -1;
    }
 
    // Selector name
    TString selec = qr->GetSelecImp()->GetName();
    if (selec.Length() <= 0) {
-      Info("ReinitSelector", "selector name undefined - do nothing");
+      Error("ReinitSelector", "selector name undefined - do nothing");
       return -1;
    }
 
@@ -502,7 +520,8 @@ Int_t TProofPlayer::ReinitSelector(TQueryResult *qr)
          md5hold = qr->GetSelecHdr()->Checksum();
 
          // If nothing has changed nothing to do
-         if (*md5hcur == *md5hold && *md5icur == *md5iold)
+         if (md5hcur && md5hold && md5icur && md5iold &&
+             *md5hcur == *md5hold && *md5icur == *md5iold)
             expandselec = kFALSE;
 
          SafeDelete(md5icur);
@@ -549,27 +568,19 @@ Int_t TProofPlayer::ReinitSelector(TQueryResult *qr)
       }
 
       if (!ok) {
-         Info("ReinitSelector", "problems locating or exporting selector files");
+         Error("ReinitSelector", "problems locating or exporting selector files");
          return -1;
       }
    }
-
-   // Cleanup previous stuff
-   SafeDelete(fSelector);
-   fSelectorClass = 0;
 
    // Init the selector now
    Int_t iglevelsave = gErrorIgnoreLevel;
    if (compselec)
       // Silent error printout on first attempt
       gErrorIgnoreLevel = kBreak;
-
-   if ((fSelector = TSelector::GetSelector(selec))) {
+   if (InitSelector(selec, qr->GetOptions()) == 0) {
       if (compselec)
          gErrorIgnoreLevel = iglevelsave; // restore ignore level
-      fSelectorClass = fSelector->IsA();
-      fSelector->SetOption(qr->GetOptions());
-
    } else {
       if (compselec) {
          gErrorIgnoreLevel = iglevelsave; // restore ignore level
@@ -591,15 +602,15 @@ Int_t TProofPlayer::ReinitSelector(TQueryResult *qr)
                }
                // Retry now, if the case
                if (retry)
-                  fSelector = TSelector::GetSelector(selec);
+                  InitSelector(selec, qr->GetOptions());
             }
          }
       }
       if (!fSelector) {
          if (compselec)
-            Info("ReinitSelector", "compiled selector re-init failed:"
-                                   " automatic reload unsuccessful:"
-                                   " please load manually the correct library");
+            Error("ReinitSelector", "compiled selector re-init failed:"
+                                    " automatic reload unsuccessful:"
+                                    " please load manually the correct library");
          rc = -1;
       }
    }
@@ -725,6 +736,9 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
    fSelectorClass = 0;
    Int_t version = -1;
    TRY {
+      // Get binaries to cache
+      gProofServ->CopyFromCache(selector_file);
+
       if (!(fSelector = TSelector::GetSelector(selector_file))) {
          Error("Process", "cannot load: %s", selector_file );
          return -1;
@@ -1113,6 +1127,19 @@ ClassImp(TProofPlayerLocal)
 
 ClassImp(TProofPlayerRemote)
 
+//______________________________________________________________________________
+void TProofPlayerRemote::SetQueryOnHold(TProofQueryOnHold *onhold)
+{
+   // Set the query-on-hold being processed. 
+   // If outputlist is non-null it will be used as starting-point output list,
+   // otherwise a new output list is created
+
+   fQueryOnHold = onhold;
+   if (fQueryOnHold && fQueryOnHold->OutputList()) {
+      SafeDelete(fOutput);
+      fOutput = fQueryOnHold->OutputList();
+   }
+}
 
 //______________________________________________________________________________
 TProofPlayerRemote::~TProofPlayerRemote()
@@ -1147,11 +1174,15 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
    fExitStatus = kFinished;
    fEventsProcessed = 0;
 
+   Bool_t notResuming = (!fProof->TestBit(TProof::kIsResuming) || fProof->IsMaster()) ?
+                         kTRUE : kFALSE;
+
    //   delete fOutput;
-   if (!fOutput)
+   if (!fOutput) {
       fOutput = new TList;
-   else
+   } else if (!fProof->TestBit(TProof::kIsResuming)) {
       fOutput->Clear();
+   }
 
    if (fProof->IsMaster()){
       TPerfStats::Start(fInput, fOutput);
@@ -1159,10 +1190,16 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
       TPerfStats::Setup(fInput);
    }
 
-   if(!SendSelector(selector_file)) return -1;
-
    TMessage mesg(kPROOF_PROCESS);
-   TString fn(gSystem->BaseName(selector_file));
+   TString fn;
+   if (notResuming) {
+      fn = gSystem->BaseName(selector_file);
+      if (IsClient())
+         if (!SendSelector(selector_file)) return -1;
+   } else {
+      mesg.Reset(kPROOF_ONHOLD);
+      mesg << Int_t(TProof::kResume) << TString(dset->GetName());
+   }
 
    // Parse option
    Bool_t sync = (fProof->GetQueryMode(option) == TProof::kSync);
@@ -1364,19 +1401,16 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
          Info("Process","starting new query");
       }
 
-      SafeDelete(fSelector);
-      fSelectorClass = 0;
-      if (!(fSelector = TSelector::GetSelector(selector_file))) {
-         if (!sync)
-            gSystem->RedirectOutput(0);
-         return -1;
-      }
-      fSelectorClass = fSelector->IsA();
-      fSelector->SetInputList(fInput);
-      fSelector->SetOption(option);
+      if (notResuming) {
 
-      PDB(kLoop,1) Info("Process","Call Begin(0)");
-      fSelector->Begin(0);
+         if (InitSelector(selector_file, option) != 0) {
+            if (!sync)
+               gSystem->RedirectOutput(0);
+            return -1;
+         }
+         PDB(kLoop,1) Info("Process","Call Begin(0)");
+         fSelector->Begin(0);
+      }
 
       if (!sync)
          gSystem->RedirectOutput(0);
@@ -1387,39 +1421,44 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
 
    TString opt = option;
 
-   // Old servers need a dedicated streamer
-   if (fProof->fProtocol < 13)
-      dset->SetWriteV3(kTRUE);
+   if (notResuming) {
+      // Old servers need a dedicated streamer
+      if (fProof->fProtocol < 13)
+         dset->SetWriteV3(kTRUE);
 
-   // Workers will get the entry ranges from the packetizer
-   Long64_t num = (gProofServ && gProofServ->IsMaster() && gProofServ->IsParallel()) ? -1 : nentries;
-   Long64_t fst = (gProofServ && gProofServ->IsMaster() && gProofServ->IsParallel()) ? -1 : first;
+      // Workers will get the entry ranges from the packetizer
+      Long64_t num = (gProofServ && gProofServ->IsMaster() && gProofServ->IsParallel()) ? -1 : nentries;
+      Long64_t fst = (gProofServ && gProofServ->IsMaster() && gProofServ->IsParallel()) ? -1 : first;
 
-   // Entry- or Event- list ?
-   TEntryList *enl = (!fProof->IsMaster()) ? dynamic_cast<TEntryList *>(set->GetEntryList())
-                                           : (TEntryList *)0;
-   TEventList *evl = (!fProof->IsMaster() && !enl) ? dynamic_cast<TEventList *>(set->GetEntryList())
-                                           : (TEventList *)0;
-   if (fProof->fProtocol > 14) {
-      mesg << set << fn << fInput << opt << num << fst << evl << sync << enl;
-   } else {
-      mesg << set << fn << fInput << opt << num << fst << evl << sync;
-      if (enl)
-         // Not supported remotely
-         Warning("Process","entry lists not supported by the server");
+      // Entry- or Event- list ?
+      TEntryList *enl = (!fProof->IsMaster()) ? dynamic_cast<TEntryList *>(set->GetEntryList())
+                                             : (TEntryList *)0;
+      TEventList *evl = (!fProof->IsMaster() && !enl) ? dynamic_cast<TEventList *>(set->GetEntryList())
+                                             : (TEventList *)0;
+      if (fProof->fProtocol > 14) {
+         mesg << set << fn << fInput << opt << num << fst << evl << sync << enl;
+      } else {
+         mesg << set << fn << fInput << opt << num << fst << evl << sync;
+         if (enl)
+            // Not supported remotely
+            Warning("Process","entry lists not supported by the server");
+      }
    }
 
    PDB(kGlobal,1) Info("Process","Calling Broadcast");
    fProof->Broadcast(mesg);
 
-   // Reset streamer choice
-   if (fProof->fProtocol < 13)
-      dset->SetWriteV3(kFALSE);
+   if (notResuming) {
+      // Reset streamer choice
+      if (fProof->fProtocol < 13)
+         dset->SetWriteV3(kFALSE);
+   }
 
    // Redirect logs from master to special log frame
    if (IsClient())
       fProof->fRedirLog = kTRUE;
 
+   fProof->fStatus = 0;
    if (!sync) {
       if (IsClient()) {
          // Asynchronous query: just make sure that asynchronous input
@@ -1462,11 +1501,40 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
       }
       StopFeedback();
 
-      if (!IsClient() || GetExitStatus() != TProofPlayer::kAborted)
-         return Finalize(kFALSE,sync);
-      else
-         return -1;
+      // If the query was put on-hold, just return
+      if (notResuming) {
+         TString o(option);
+         o.ToLower();
+         if (o.Contains(":h:") || o.Contains(":hold:"))
+            return fProof->fStatus;
+      }
+
+      if (GetExitStatus() == TProofPlayer::kSuspended) {
+         // Query has been suspended: the necessary will be done outside
+         return 0;
+      } else {
+         if ((!IsClient() || GetExitStatus() != TProofPlayer::kAborted))
+            return Finalize(kFALSE,sync);
+         else
+            return -1;
+      }
    }
+}
+
+//______________________________________________________________________________
+TDSet *TProofPlayerRemote::GetDSetToProcess(const char *name, const char *objname,
+                                            const char *dir,
+                                            Long64_t &toprocess, Long64_t &processed)
+{
+   // Get the dataset and the number of entries remaining to be processed
+
+   TDSet *rdset = new TDSet(name, objname, dir);
+   rdset = fPacketizer->GetDSetToProcess(rdset);
+
+   toprocess = fPacketizer->GetTotalEntries() - fPacketizer->GetEntriesProcessed();
+   processed = fPacketizer->GetEntriesProcessed();
+
+   return rdset;
 }
 
 //______________________________________________________________________________
@@ -1534,14 +1602,15 @@ Long64_t TProofPlayerRemote::Finalize(Bool_t force, Bool_t sync)
    } else {
       if (fExitStatus != kAborted) {
 
-         if (!sync) {
+         if (!sync || fProof->TestBit(TProof::kIsResuming)) {
             // Reinit selector (with multi-sessioning we must do this until
             // TSelector::GetSelector() is optimized to i) avoid reloading of an
             // unchanged selector and ii) invalidate existing instances of
             // reloaded selector)
             if (ReinitSelector(fQuery) == -1) {
-               Info("Finalize", "problems reinitializing selector \"%s\"",
-                    fQuery->GetSelecImp()->GetName());
+               TString selname = (fQuery &&  fQuery->GetSelecImp()) ?
+                                  fQuery->GetSelecImp()->GetName() : "***undef***";
+               Error("Finalize", "problems reinitializing selector \"%s\"", selname.Data());
                return -1;
             }
          }
@@ -1825,16 +1894,17 @@ void TProofPlayerRemote::Feedback(TList *objs)
 }
 
 //______________________________________________________________________________
-void TProofPlayerRemote::StopProcess(Bool_t abort, Int_t)
+void TProofPlayerRemote::StopProcess(Bool_t abort, Int_t, Bool_t susp)
 {
    // Stop process after this event.
 
    if (fPacketizer != 0)
       fPacketizer->StopProcess(abort);
-   if (abort == kTRUE)
+   if (abort == kTRUE) {
       fExitStatus = kAborted;
-   else
-      fExitStatus = kStopped;
+   } else {
+      fExitStatus = (susp) ? kSuspended : kStopped;
+   }
 }
 
 //______________________________________________________________________________

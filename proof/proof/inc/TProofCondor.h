@@ -54,6 +54,9 @@ public:
    virtual void SetActive() { TProof::SetActive(); }
    virtual void SetActive(Bool_t active);
 
+   Int_t SetupOnHoldQuery(const char */*pendingtag*/ = 0,
+                          TDSet */*dset*/ = 0, TList */*input*/ = 0);
+
    ClassDef(TProofCondor,0) //PROOF control class for slaves allocated by condor
 };
 

@@ -279,6 +279,9 @@ TProof::TProof(const char *masterurl, const char *conffile, const char *confdir,
    // Default query mode
    fQueryMode = kSync;
 
+   // resuming bit
+   ResetBit(TProof::kIsResuming);
+
    Init(masterurl, conffile, confdir, loglevel, alias);
 
    // If called by a manager, make sure it stays in last position
@@ -2833,6 +2836,47 @@ void TProof::Print(Option_t *option) const
 }
 
 //______________________________________________________________________________
+Long64_t TProof::Resume(const char *onholdtag, Option_t *option)
+{
+   // Resulme processing of on-hold query identified by 'onholdtag'.
+   // If onholdtag = 0 or "", resume the oldest known onhold query .
+   // Use onholdtag = "last" to resume the last suspended query.
+   // The return value is -1 in case of error and TSelector::GetStatus() in
+   // in case of success.
+
+   if (!IsValid()) return -1;
+
+   if (fProtocol < 18) {
+      Info("Process", "'resuming' not supported by the server");
+      return -1;
+   }
+
+   // Resolve query mode
+   fSync = (GetQueryMode(option) == kSync);
+
+   // deactivate the default application interrupt handler
+   // ctrl-c's will be forwarded to PROOF to stop the processing
+   TSignalHandler *sh = 0;
+   if (fSync) {
+      if (gApplication)
+         sh = gSystem->RemoveSignalHandler(gApplication->GetSignalHandler());
+   }
+
+   SetBit(TProof::kIsResuming);
+   TDSet *dset = new TDSet(Form("%s", (onholdtag ? onholdtag : "")));
+   Long64_t rv = fPlayer->Process(dset, "", option);
+   ResetBit(TProof::kIsResuming);
+
+   if (fSync) {
+      // reactivate the default application interrupt handler
+      if (sh)
+         gSystem->AddSignalHandler(sh);
+   }
+
+   return rv;
+}
+
+//______________________________________________________________________________
 Long64_t TProof::Process(TDSet *dset, const char *selector, Option_t *option,
                          Long64_t nentries, Long64_t first)
 {
@@ -2843,6 +2887,11 @@ Long64_t TProof::Process(TDSet *dset, const char *selector, Option_t *option,
    // in case of success.
 
    if (!IsValid()) return -1;
+
+   TString o(option);
+   o.ToLower();
+   if (fProtocol < 18 && ((o.Contains(":h:") || o.Contains(":hold:"))))
+      Warning("Process", "'put-on-hold' not supported by the server - ignoring");
 
    // Resolve query mode
    fSync = (GetQueryMode(option) == kSync);
@@ -2861,9 +2910,6 @@ Long64_t TProof::Process(TDSet *dset, const char *selector, Option_t *option,
    }
 
    Long64_t rv = fPlayer->Process(dset, selector, option, nentries, first);
-
-//   // Clear input list
-//   fPlayer->ClearInput();
 
    if (fSync) {
       // reactivate the default application interrupt handler
@@ -2892,37 +2938,15 @@ Long64_t TProof::Process(TFileCollection *fc, const char *selector,
       return -1;
    }
 
-   // Resolve query mode
-   fSync = (GetQueryMode(option) == kSync);
-
-   if (fSync && !IsIdle()) {
-      Info("Process","not idle, cannot submit synchronous query");
-      return -1;
-   }
-
-   // deactivate the default application interrupt handler
-   // ctrl-c's will be forwarded to PROOF to stop the processing
-   TSignalHandler *sh = 0;
-   if (fSync) {
-      if (gApplication)
-         sh = gSystem->RemoveSignalHandler(gApplication->GetSignalHandler());
-   }
-
-   Long64_t rv = -1;
-
    // We include the TFileCollection to the input list and we create a 
    // fake TDSet with infor about it
    TDSet *dset = new TDSet(Form("TFileCollection:%s", fc->GetName()));
    fPlayer->AddInput(fc);
-   rv = fPlayer->Process(dset, selector, option, nentries, first);
 
-   if (fSync) {
-      // reactivate the default application interrupt handler
-      if (sh)
-         gSystem->AddSignalHandler(sh);
-   }
-
-   return rv;
+   // Process
+   Long64_t retval = Process(dset, selector, option, nentries, first);
+   delete dset;
+   return retval;
 }
 
 //______________________________________________________________________________
@@ -2966,13 +2990,13 @@ Long64_t TProof::Process(const char *dsetname, const char *selector,
          name.Remove(idxc);
       } else if (idxs != kNPOS && idxc == kNPOS) {
          Error("Process", "bad name syntax (%s): specification of additional"
-                          " attributes needs a '#' after the dataset name", dsetname);
+                        " attributes needs a '#' after the dataset name", dsetname);
          return -1;
       }
    } else if (name.Index(":") != kNPOS && name.Index("://") == kNPOS) {
       // protection against using ':' instead of '#'
       Error("Process", "bad name syntax (%s): please use"
-                       " a '#' after the dataset name", dsetname);
+                     " a '#' after the dataset name", dsetname);
       return -1;
    }
 
@@ -2999,35 +3023,14 @@ Long64_t TProof::Process(const char *selector, Long64_t n, Option_t *option)
       return -1;
    }
 
-   // Resolve query mode
-   fSync = (GetQueryMode(option) == kSync);
-
-   if (fSync && !IsIdle()) {
-      Info("Process","not idle, cannot submit synchronous query");
-      return -1;
-   }
-
-   // deactivate the default application interrupt handler
-   // ctrl-c's will be forwarded to PROOF to stop the processing
-   TSignalHandler *sh = 0;
-   if (fSync) {
-      if (gApplication)
-         sh = gSystem->RemoveSignalHandler(gApplication->GetSignalHandler());
-   }
-
+   // We create an empty dataset
    TDSet *dset = new TDSet;
    dset->SetBit(TDSet::kEmpty);
 
-   Long64_t rv = fPlayer->Process(dset, selector, option, n);
-
-   if (fSync) {
-      // reactivate the default application interrupt handler
-      if (sh)
-         gSystem->AddSignalHandler(sh);
-   }
-
-   return rv;
-
+   // Process
+   Long64_t retval = Process(dset, selector, option, n);
+   delete dset;
+   return retval;
 }
 
 
@@ -3398,7 +3401,7 @@ Long64_t TProof::DrawSelect(const char *dsetname, const char *varexp,
 }
 
 //______________________________________________________________________________
-void TProof::StopProcess(Bool_t abort, Int_t timeout)
+void TProof::StopProcess(Bool_t abort, Int_t timeout, Bool_t susp)
 {
    // Send STOPPROCESS message to master and workers.
 
@@ -3413,7 +3416,7 @@ void TProof::StopProcess(Bool_t abort, Int_t timeout)
    SetRunStatus(rst);
 
    if (fPlayer)
-      fPlayer->StopProcess(abort, timeout);
+      fPlayer->StopProcess(abort, timeout, susp);
 
    // Stop any blocking 'Collect' request; on masters we do this only if
    // aborting; when stopping, we still need to receive the results 
@@ -3429,7 +3432,7 @@ void TProof::StopProcess(Bool_t abort, Int_t timeout)
    while ((sl = (TSlave *)next()))
       if (sl->IsValid())
          // Ask slave to progate the stop/abort request
-         sl->StopProcess(abort, timeout);
+         sl->StopProcess(abort, timeout, susp);
 }
 
 //______________________________________________________________________________
@@ -4192,6 +4195,35 @@ Int_t TProof::GoParallel(Int_t nodes, Bool_t attach, Bool_t random)
 
    PDB(kGlobal,1) Info("GoParallel", "got %d node%s", n, n == 1 ? "" : "s");
    return n;
+}
+
+//______________________________________________________________________________
+void TProof::ShowOnHoldQueries()
+{
+   // List the queries which are currently on-hold
+
+   if (!IsValid()) return;
+
+   TMessage mess(kPROOF_ONHOLD);
+   mess << Int_t(TProof::kShowQueries);
+   Broadcast(mess, kUnique);
+   Collect(kUnique, fCollectTimeout);
+}
+
+//______________________________________________________________________________
+void TProof::RemoveOnHoldQuery(const char *tag)
+{
+   // Remove on-hold query identified by 'tag'. If tag is 0, "" or "*" all
+   // on-hold queries are removed
+
+   if (!IsValid()) return;
+
+   TMessage mess(kPROOF_ONHOLD);
+   TString qtag = (tag) ? tag : "";
+   mess << Int_t(TProof::kRemove) << qtag;
+   Broadcast(mess, kUnique);
+
+   Collect(kAllUnique);
 }
 
 //______________________________________________________________________________

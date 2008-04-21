@@ -395,13 +395,14 @@ void TXSlave::Interrupt(Int_t type)
 }
 
 //______________________________________________________________________________
-void TXSlave::StopProcess(Bool_t abort, Int_t timeout)
+void TXSlave::StopProcess(Bool_t abort, Int_t timeout, Bool_t susp)
 {
    // Sent stop/abort request to PROOF server. It will be
    // processed asynchronously by a separate thread.
    if (!IsValid()) return;
 
-   ((TXSocket *)fSocket)->SendUrgent(TXSocket::kStopProcess, (Int_t)abort, timeout);
+   Int_t what = (abort) ? 1 : ((susp) ? 2 : 0);
+   ((TXSocket *)fSocket)->SendUrgent(TXSocket::kStopProcess, what, timeout);
    if (gDebug > 0)
       Info("StopProcess", "Request of type %d sent over", abort);
 }

@@ -64,6 +64,7 @@
 #include "TProof.h"
 #include "TVirtualProofPlayer.h"
 #include "TProofQueryResult.h"
+#include "TProofQueryOnHold.h"
 #include "TRegexp.h"
 #include "TROOT.h"
 #include "TSocket.h"
@@ -393,6 +394,7 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
    fPackageLock     = 0;
    fCacheLock       = 0;
    fQueryLock       = 0;
+   fOnHoldLock      = 0;
 
    fSeqNum          = 0;
    fDrawQueries     = 0;
@@ -401,6 +403,7 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
    fWaitingQueries  = new TList;
    fPreviousQueries = 0;
    fIdle            = kTRUE;
+   fOnHoldQueries   = 0;
 
    fRealTimeLog     = kFALSE;
 
@@ -984,6 +987,16 @@ void TProofServ::HandleSocketInput()
          SendLogFile();
          break;
 
+      case kPROOF_ONHOLD:
+         {  TProofServLogHandlerGuard hg(fLogFile, fSocket, "", fRealTimeLog);
+
+            PDB(kGlobal, 1) Info("HandleSocketInput:kPROOF_ONHOLD","enter");
+            HandleOnHold(mess);
+         }
+         // Notify
+         SendLogFile();
+         break;
+
       case kPROOF_QUERYLIST:
 
          HandleQueryList(mess);
@@ -1338,6 +1351,15 @@ void TProofServ::HandleSocketInputDuringProcess()
          }
          break;
 
+      case kPROOF_ONHOLD:
+         {  TProofServLogHandlerGuard hg(fLogFile, fSocket, "", fRealTimeLog);
+
+            HandleOnHold(mess);
+         }
+         // Notify
+         SendLogFile();
+         break;
+
       case kPROOF_GETSTATS:
          // Send statistics
          SendStatistics();
@@ -1396,11 +1418,12 @@ void TProofServ::HandleSocketInputDuringProcess()
             PDB(kGlobal, 1)
                Info("HandleSocketInputDuringProcess:kPROOF_STOPPROCESS",
                     "enter %d, %d", aborted, timeout);
-            if (fProof)
+            if (fProof) {
                fProof->StopProcess(aborted, timeout);
-            else
+            } else {
                if (fPlayer)
                   fPlayer->StopProcess(aborted, timeout);
+            }
          }
          break;
 
@@ -2354,6 +2377,20 @@ Int_t TProofServ::SetupCommon()
       if (ApplyMaxQueries() != 0)
          Warning("SetupCommon", "problems applying fMaxQueries");
 
+   if (IsMaster()) {
+      // check and make sure "pending" directory exists
+      fOnHoldDir = gEnv->GetValue("ProofServ.OnHoldDir",
+                                   Form("%s/%s", fWorkDir.Data(), kPROOF_OnHoldDir));
+      if (gSystem->AccessPathName(fOnHoldDir))
+         gSystem->MakeDirectory(fOnHoldDir);
+      if (gProofDebugLevel > 0)
+         Info("SetupCommon", "on-hold queries directory set to %s", fOnHoldDir.Data());
+      fOnHoldLock =
+         new TProofLockPath(Form("%s/%s%s",
+                           gSystem->TempDirectory(), kPROOF_OnHoldLockFile,
+                           TString(fOnHoldDir).ReplaceAll("/","%").Data()));
+   }
+
    // Send "ROOTversion|ArchCompiler" flag
    if (fProtocol > 12) {
       TString vac = gROOT->GetVersion();
@@ -3303,7 +3340,101 @@ void TProofServ::HandleArchive(TMessage *mess)
 }
 
 //______________________________________________________________________________
-void TProofServ::HandleProcess(TMessage *mess)
+void TProofServ::HandleOnHold(TMessage *mess)
+{
+   // Handle a request about on-hold queries.
+
+   PDB(kGlobal, 1)
+      Info("HandleOnHold", "Enter");
+
+   // We must be the top master
+   if (!IsTopMaster()) return;
+
+   // Message type
+   Int_t type = 0;
+   (*mess) >> type;
+
+   TSortedList *onholdList = 0;
+   TString onholdtag;
+
+   switch (type) {
+      case TProof::kShowQueries:
+         // Scan the on-hold directory
+         {  onholdList = GetListOfOnHoldQueries();
+            if (onholdList && onholdList->GetSize() > 0) {
+               Printf(" ++++++ %5d queries on-hold ++++++++++++++++++++++++++++++++++++++++++++++++ ",
+                      onholdList->GetSize());
+               Printf("       #   Tag                                        Put on-hold ");
+               // Printout
+               Int_t nq = 0;
+               TIter nxq(onholdList);
+               TNamed *n = 0;
+               while ((n = (TNamed *) nxq())) {
+                  TDatime da(TString(n->GetName()).Atoi());
+                  TString tag(n->GetTitle());
+                  if (tag.Length() < 40) tag.Resize(40);
+                  Printf("   %5d   %s   %s", ++nq, tag.Data(), da.AsString()); 
+               }
+               Printf(" +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ");
+            } else {
+               Printf(" ++++++ no queries on-hold +++++++++++++++++ ");
+            }
+         }
+         break;
+      case TProof::kResume:
+         {  (*mess) >> onholdtag;
+            if (onholdtag.IsNull() || onholdtag == "last") {
+               onholdList = GetListOfOnHoldQueries();
+               if (!onholdList || onholdList->GetSize() <= 0) {
+                  Printf(" ++++++ no queries on-hold +++++++++++++++++ ");
+                  break;
+               }
+               TNamed *n = (onholdtag == "last") ? (TNamed *) onholdList->Last()
+                                                 : (TNamed *) onholdList->First();
+               if (n) onholdtag = n->GetTitle();
+            }
+            if (onholdtag.IsNull()) {
+               Error("HandleOnHold", "unable to resolve tag for the query to resume");
+               break;
+            }
+            // Setup the query
+            TProofQueryOnHold *post = 0;
+            if (!(post = ResumeOnHoldQuery(onholdtag))) {
+               Error("HandleOnHold", "error setting up on-hold query '%s'", onholdtag.Data());
+               break;
+            }
+            // Get pointer to message
+            TMessage *rmsg = post->Message();
+            // Process
+            fProof->SetBit(TProof::kIsResuming);
+            HandleProcess(rmsg, post);
+            fProof->ResetBit(TProof::kIsResuming);
+            // Cleans-up also the message
+            SafeDelete(post);
+            // Remove the query for the directory
+            RemoveOnHoldQuery(onholdtag);
+         }
+         break;
+      case TProof::kRemove:
+         {  (*mess) >> onholdtag;
+            // Remove the requested on-hold queries
+            RemoveOnHoldQuery(onholdtag);
+         }
+         break;
+      default:
+         Error("HandleOnHold", "unknown message type: %d - do nothing", type);
+         break;
+   }
+
+   // Cleanup
+   SafeDelete(onholdList);
+
+   // Done
+   return;
+}
+
+//______________________________________________________________________________
+void TProofServ::HandleProcess(TMessage *mess, TProofQueryOnHold *onhold)
 {
    // Handle processing request.
 
@@ -3314,18 +3445,25 @@ void TProofServ::HandleProcess(TMessage *mess)
    if (!IsTopMaster() && !fIdle)
       return;
 
+   Bool_t isResuming = (fProof && fProof->TestBit(TProof::kIsResuming)) ? kTRUE : kFALSE;
+
    TDSet *dset;
    TString filename, opt;
    TList *input;
    Long64_t nentries, first;
    TEventList *evl = 0;
    TEntryList *enl = 0;
-   Bool_t sync;
+   Bool_t sync = kTRUE;
 
    (*mess) >> dset >> filename >> input >> opt >> nentries >> first >> evl >> sync;
    // Get entry list information, if any (support started with fProtocol == 15)
    if ((mess->BufferSize() > mess->Length()) && fProtocol > 14)
       (*mess) >> enl;
+
+   // Data set name
+   TString dsname(dset->GetName());
+
+   // Non-tree based analysis has a empty data set
    Bool_t hasNoData = (dset->TestBit(TDSet::kEmpty)) ? kTRUE : kFALSE;
 
    // Priority to the entry list
@@ -3338,82 +3476,138 @@ void TProofServ::HandleProcess(TMessage *mess)
 
    if (IsTopMaster()) {
 
-      if ((!hasNoData) && dset->GetListOfElements()->GetSize() == 0) {
-         TFileCollection* dataset = 0;
-         TString dsTree, lookupopt;         // The dataset maybe in the form of a TFileCollection in the input list
-         TString dsname(dset->GetName());
-         if (dsname.BeginsWith("TFileCollection:")) {
-            // Isolate the real name
-            dsname.ReplaceAll("TFileCollection:", "");
-            // Get the object
-            dataset = (TFileCollection *) input->FindObject(dset->GetName());
-            if (!dataset) {
-               SendAsynMessage(Form("HandleProcess on %s: TFileCollection %s not"
-                                    " found in input list",
-                                    fPrefix.Data(), dset->GetName()));
-               Error("HandleProcess", "TFileCollection %s not found in input list",
-                                      dset->GetName());
+      if (!isResuming) {
+         if ((!hasNoData) && dset->GetListOfElements()->GetSize() == 0) {
+            TFileCollection* dataset = 0;
+            TString dsTree, lookupopt; // The dataset maybe in the form of a TFileCollection in the input list
+            if (dsname.BeginsWith("TFileCollection:")) {
+               // Isolate the real name
+               dsname.ReplaceAll("TFileCollection:", "");
+               // Get the object
+               dataset = (TFileCollection *) input->FindObject(dset->GetName());
+               if (!dataset) {
+                  SendAsynMessage(Form("HandleProcess on %s: TFileCollection %s not"
+                                       " found in input list",
+                                       fPrefix.Data(), dset->GetName()));
+                  Error("HandleProcess", "TFileCollection %s not found in input list",
+                                       dset->GetName());
+                  return;
+               }
+               dsTree = dataset->GetDefaultTreeName();
+               // Make sure we lookup everything (unless the client or the administartor
+               // required something else)
+               if (TProof::GetParameter(input, "PROOF_LookupOpt", lookupopt) != 0) {
+                  lookupopt = gEnv->GetValue("Proof.LookupOpt", "all");
+                  input->Add(new TNamed("PROOF_LookupOpt", lookupopt.Data()));
+               }
+            }
+
+            // The received message included an empty dataset, with only the name
+            // defined: assume that a dataset, stored on the PROOF master by that
+            // name, should be processed.
+            if (!dataset && fDataSetManager) {
+               dataset = fDataSetManager->GetDataSet(dset->GetName());
+               if (!dataset) {
+                  SendAsynMessage(Form("HandleProcess on %s: no such dataset: %s",
+                                       fPrefix.Data(), dset->GetName()));
+                  Error("HandleProcess", "no such dataset on the master: %s",
+                        dset->GetName());
+                  return;
+               }
+               if (!(fDataSetManager->ParseUri(dset->GetName(), 0, 0, 0, &dsTree)))
+                  dsTree = "";
+
+               // Apply the lookup option requested by the client or the administartor
+               // (by default we trust the information in the dataset)
+               if (TProof::GetParameter(input, "PROOF_LookupOpt", lookupopt) != 0) {
+                  lookupopt = gEnv->GetValue("Proof.LookupOpt", "stageOnly");
+                  input->Add(new TNamed("PROOF_LookupOpt", lookupopt.Data()));
+               }
+            } else {
+               SendAsynMessage(Form("HandleProcess on %s: no dataset manager!", fPrefix.Data()));
+               Error("HandleProcess", "no dataset manager: cannot proceed");
                return;
             }
-            dsTree = dataset->GetDefaultTreeName();
-            // Make sure we lookup everything (unless the client or the administartor
-            // required something else)
-            if (TProof::GetParameter(input, "PROOF_LookupOpt", lookupopt) != 0) {
-               lookupopt = gEnv->GetValue("Proof.LookupOpt", "all");
-               input->Add(new TNamed("PROOF_LookupOpt", lookupopt.Data()));
+
+            // Transfer the list now
+            if (dataset) {
+               TList *missingFiles = new TList;
+               TSeqCollection* files = dataset->GetList();
+               Bool_t availableOnly = (lookupopt != "all") ? kTRUE : kFALSE;
+               if (!dset->Add(files, dsTree, availableOnly, missingFiles)) {
+                  SendAsynMessage(Form("HandleProcess on %s: error retrieving"
+                                       " dataset: %s", fPrefix.Data(), dset->GetName()));
+                  Error("HandleProcess", "error retrieving dataset %s",
+                        dset->GetName());
+                  delete dataset;
+                  return;
+               }
+               delete dataset;
+
+               // Make sure it will be sent back merged with other similar lists created
+               // during processing; this list will be transferred by the player to the
+               // output list, once the latter has been created (see TProofPlayerRemote::Process)
+               if (missingFiles && missingFiles->GetSize() > 0) {
+                  missingFiles->SetName("MissingFiles");
+                  input->Add(missingFiles);
+               }
             }
          }
 
-         // The received message included an empty dataset, with only the name
-         // defined: assume that a dataset, stored on the PROOF master by that
-         // name, should be processed.
-         if (!dataset && fDataSetManager) {
-            dataset = fDataSetManager->GetDataSet(dset->GetName());
-            if (!dataset) {
-               SendAsynMessage(Form("HandleProcess on %s: no such dataset: %s",
-                                    fPrefix.Data(), dset->GetName()));
-               Error("HandleProcess", "no such dataset on the master: %s",
-                     dset->GetName());
-               return;
-            }
-            if (!(fDataSetManager->ParseUri(dset->GetName(), 0, 0, 0, &dsTree)))
-               dsTree = "";
+      } else if (isResuming && onhold) {
+         if ((!hasNoData) && onhold->DSet()) {
+            // Delete current dset first
+            SafeDelete(dset);
+            dset = onhold->DSet();
+         }
+         // Take entries to be processed from the saved dataset
+         if (onhold->ToProcess() > 0)
+            nentries = onhold->ToProcess() ;
+      }
 
-            // Apply the lookup option requested by the client or the administartor
-            // (by default we trust the information in the dataset)
-            if (TProof::GetParameter(input, "PROOF_LookupOpt", lookupopt) != 0) {
-               lookupopt = gEnv->GetValue("Proof.LookupOpt", "stageOnly");
-               input->Add(new TNamed("PROOF_LookupOpt", lookupopt.Data()));
-            }
-         } else {
-            SendAsynMessage(Form("HandleProcess on %s: no dataset manager!", fPrefix.Data()));
-            Error("HandleProcess", "no dataset manager: cannot proceed");
+      // If we are asked to put the query on-hold do that and return
+      if (!isResuming &&
+         (opt.Contains(":H:", TString::kIgnoreCase) || opt.Contains(":hold:", TString::kIgnoreCase))) {
+         // Make sure we can load the selector
+         MakePlayer();
+         // Copy file from cache to working directory
+         CopyFromCache(filename);
+         if (!fPlayer || fPlayer->InitSelector(filename, opt) != 0) {
+            SendAsynMessage(Form("HandleProcess on %s: cannot instantiate the selector '%s'",
+                                 fPrefix.Data(), filename.Data()));
+            Error("HandleProcess", "cannot instantiate the selector '%s'", filename.Data());
+            // Make sure to cleanup everything
+            DeletePlayer();
             return;
          }
-
-         // Transfer the list now
-         if (dataset) {
-            TList *missingFiles = new TList;
-            TSeqCollection* files = dataset->GetList();
-            Bool_t availableOnly = (lookupopt != "all") ? kTRUE : kFALSE;
-            if (!dset->Add(files, dsTree, availableOnly, missingFiles)) {
-               SendAsynMessage(Form("HandleProcess on %s: error retrieving"
-                                    " dataset: %s", fPrefix.Data(), dset->GetName()));
-               Error("HandleProcess", "error retrieving dataset %s",
-                     dset->GetName());
-               delete dataset;
-               return;
-            }
-            delete dataset;
-
-            // Make sure it will be sent back merged with other similar lists created
-            // during processing; this list will be transferred by the player to the
-            // output list, once the latter has been created (see TProofPlayerRemote::Process)
-            if (missingFiles && missingFiles->GetSize() > 0) {
-               missingFiles->SetName("MissingFiles");
-               input->Add(missingFiles);
-            }
+         // Cleanup the player
+         DeletePlayer();
+         // Create unique tag
+         fOnHoldQueries++;
+         TString onholdtag = Form("%s-p%d", fSessionTag.Data(), fOnHoldQueries);
+         // This is a hook where dedicated TProof implementations an do something;
+         // for example, TProofCondor may want to create the Condor JDL at this point
+         if (fProof->SetupOnHoldQuery(onholdtag, dset, input) != 0) {
+            SendAsynMessage(Form("HandleProcess on %s: error running TProof specific setting for on-hold query '%s'",
+                                 fPrefix.Data(), onholdtag.Data()));
+            Error("HandleProcess", "error running TProof specific setting for on-hold query '%s'", onholdtag.Data());
+            // Make sure that there is no more track of this attempt
+            fOnHoldQueries--;
+            return;
          }
+         // Save the query in the dedicated area for later processing
+         if (PutQueryOnHold(onholdtag, mess, filename, dset) != 0) {
+            SendAsynMessage(Form("HandleProcess on %s: error putting query on-hold (tag: '%s')",
+                                 fPrefix.Data(), onholdtag.Data()));
+            Error("HandleProcess", "error putting query on-hold (tag: '%s')", onholdtag.Data());
+            // Make sure that there is no more track of this attempt
+            fOnHoldQueries--;
+            return;
+         }
+         SendAsynMessage(Form("HandleProcess on %s: query put on-hold: tag is '%s'",
+                                 fPrefix.Data(), onholdtag.Data()));
+         Info("HandleProcess", "query put on-hold: tag is '%s'", onholdtag.Data());
+         return;
       }
 
       TProofQueryResult *pq = 0;
@@ -3511,6 +3705,12 @@ void TProofServ::HandleProcess(TMessage *mess)
 
          // Create player
          MakePlayer();
+         if (!fPlayer) {
+            Error("HandleProcess", "could not init the player");
+            continue;
+         }
+         if (onhold)
+            fPlayer->SetQueryOnHold(onhold);
 
          // Add query results to the player lists
          fPlayer->AddQueryResult(pq);
@@ -3538,6 +3738,40 @@ void TProofServ::HandleProcess(TMessage *mess)
          fPlayer->Process(dset, filename, opt, nentries, first);
 
          // Return number of events processed
+         if (fPlayer->GetExitStatus() == TVirtualProofPlayer::kSuspended) {
+            // Copy file from cache to working directory
+            CopyFromCache(filename);
+            // Query has been put on-hold: do the necessary
+            Long64_t toprocess, processed;
+            TDSet *rdset = fPlayer->GetDSetToProcess(dset->GetName(), dset->GetObjName(),
+                                                     dset->GetDirectory(),
+                                                     toprocess, processed);
+            TString msg;
+            if (rdset) {
+               msg = Form("found: %d elements left (%lld entries); processed: %lld entries",
+                          rdset->GetListOfElements()->GetSize(), toprocess, processed);
+            } else {
+               msg = Form("found: %lld entries left; processed: %lld entries",
+                          toprocess, processed);
+            }
+            SendAsynMessage(Form("HandleProcess on %s: %s", fPrefix.Data(), msg.Data()));
+            Info("HandleProcess", "%s", msg.Data());
+            // Create unique tag
+            fOnHoldQueries++;
+            TString onholdtag = Form("%s-p%d", fSessionTag.Data(), fOnHoldQueries);
+            // Save the query in the dedicated area for later processing
+            if (PutQueryOnHold(onholdtag, mess, filename, rdset,
+                               fPlayer->GetOutputList(), toprocess, processed) != 0) {
+               Error("HandleProcess", "error putting query on-hold (tag: '%s')", onholdtag.Data());
+               // Make sure that there is no more track of this attempt
+               fOnHoldQueries--;
+               return;
+            }
+            SendAsynMessage(Form("HandleProcess on %s: query put on-hold: tag is '%s'",
+                                 fPrefix.Data(), onholdtag.Data()));
+            Info("HandleProcess", "query put on-hold: tag is '%s'", onholdtag.Data());
+         }
+         // Return number of events processed
          if (fPlayer->GetExitStatus() != TVirtualProofPlayer::kFinished) {
             Bool_t abort =
               (fPlayer->GetExitStatus() == TVirtualProofPlayer::kAborted) ? kTRUE : kFALSE;
@@ -3553,9 +3787,14 @@ void TProofServ::HandleProcess(TMessage *mess)
          // Complete filling of the TQueryResult instance
          FinalizeQuery(pq);
 
+         // Whether to send the results
+         Bool_t sendResults = (fPlayer->GetExitStatus() != TVirtualProofPlayer::kAborted &&
+                               fPlayer->GetExitStatus() != TVirtualProofPlayer::kSuspended &&
+                               fPlayer->GetOutputList()) ? kTRUE : kFALSE;
+
          // Send back the results
-         TQueryResult *pqr = pq->CloneInfo();
-         if (fPlayer->GetExitStatus() != TVirtualProofPlayer::kAborted && fPlayer->GetOutputList()) {
+         TQueryResult *pqr = pq->CloneInfo(isResuming);
+         if (sendResults) {
 
             PDB(kGlobal, 2) Info("HandleProcess","Sending results");
             if (fProtocol > 10) {
@@ -3608,9 +3847,11 @@ void TProofServ::HandleProcess(TMessage *mess)
                fSocket->SendObject(fPlayer->GetOutputList(), kPROOF_OUTPUTLIST);
             }
          } else {
-            if (fPlayer->GetExitStatus() != TVirtualProofPlayer::kAborted)
-               Warning("HandleProcess","The output list is empty!");
-            fSocket->SendObject(0, kPROOF_OUTPUTLIST);
+            if (fPlayer->GetExitStatus() != TVirtualProofPlayer::kSuspended) {
+               if (fPlayer->GetExitStatus() != TVirtualProofPlayer::kAborted)
+                  Warning("HandleProcess","The output list is empty!");
+               fSocket->SendObject(0, kPROOF_OUTPUTLIST);
+            }
          }
 
          // Remove aborted queries from the list
@@ -3940,7 +4181,9 @@ void TProofServ::HandleLibIncPath(TMessage *mess)
             // Add to the dynamic lib search path if it exists and can be read
             if (!gSystem->AccessPathName(xlib, kReadPermission)) {
                TString newlibpath = gSystem->GetDynamicPath();
-               // In the first position after the working dir
+               // Remove the path if already there ...
+               newlibpath.ReplaceAll(Form("%s:", xlib.Data()), "");
+               // ... to add it in the first position after the working dir
                Int_t pos = 0;
                if (newlibpath.BeginsWith(".:"))
                   pos = 2;
@@ -3966,15 +4209,17 @@ void TProofServ::HandleLibIncPath(TMessage *mess)
          while ((inc = (TObjString *) nxi())) {
             // Expand path
             TString xinc = inc->GetName();
-            gSystem->ExpandPathName(xinc);
+            TString txinc = inc->GetName();
+            txinc.ReplaceAll("\"", "");
+            gSystem->ExpandPathName(txinc);
             // Add to the dynamic lib search path if it exists and can be read
-            if (!gSystem->AccessPathName(xinc, kReadPermission)) {
+            if (!gSystem->AccessPathName(txinc, kReadPermission)) {
                TString curincpath = gSystem->GetIncludePath();
                if (curincpath.Index(xinc) == kNPOS)
                   gSystem->AddIncludePath(Form("-I%s", xinc.Data()));
             } else
                Info("HandleLibIncPath",
-                    "incpath %s does not exist or cannot be read - not added", xinc.Data());
+                    "incpath '%s' does not exist or cannot be read - not added", txinc.Data());
          }
 
          // Forward the request, if required
@@ -4177,8 +4422,6 @@ void TProofServ::HandleCheckFile(TMessage *mess)
       fCacheLock->Lock();
       TMD5 *md5local = TMD5::FileChecksum(cachef);
       if (md5local && md5 == (*md5local)) {
-         // copy file from cache to working directory
-         CopyFromCache(filenam);
          fSocket->Send(kPROOF_CHECKFILE);
          PDB(kPackage, 1)
             Info("HandleCheckFile", "file %s already on node", filenam.Data());
@@ -4918,21 +5161,14 @@ Int_t TProofServ::CopyFromCache(const char *macro)
    PDB(kGlobal,1)
       Info("CopyFromCache","enter: names: %s, %s", macro, name.Data());
 
-   // Atomic action
-   fCacheLock->Lock();
-
-   // Get source from the cache
-   PDB(kGlobal,2)
-      Info("CopyFromCache",
-           "retrieving %s/%s from cache", fCacheDir.Data(), name.Data());
-   gSystem->Exec(Form("%s %s/%s .", kCP, fCacheDir.Data(), name.Data()));
-
    // Create binary name template
+   Int_t dot = name.Last('.');
    TString binname = name;
-   Int_t dot = binname.Last('.');
+   TString allsourcename = name;
    if (dot != kNPOS) {
       binname.Replace(dot,1,"_");
       binname += ".";
+      allsourcename.Remove(dot);
    } else {
       PDB(kGlobal,2)
          Info("CopyFromCache",
@@ -4941,6 +5177,15 @@ Int_t TProofServ::CopyFromCache(const char *macro)
       fCacheLock->Unlock();
       return 0;
    }
+
+   // Atomic action
+   fCacheLock->Lock();
+
+   // Get source from the cache
+   PDB(kGlobal,2)
+      Info("CopyFromCache",
+           "retrieving %s/%s from cache", fCacheDir.Data(), name.Data());
+   gSystem->Exec(Form("%s %s/%s.* .", kCP, fCacheDir.Data(), allsourcename.Data()));
 
    // Binary version file name
    TString vername(Form(".%s", name.Data()));
@@ -5400,6 +5645,227 @@ Int_t TProofServ::HandleDataSets(TMessage *mess)
 
    // We are done
    return rc;
+}
+
+//______________________________________________________________________________
+Int_t TProofServ::PutQueryOnHold(const char *tag, TMessage *mess,
+                                 const char *selec, TDSet *d, TList *output,
+                                 Long64_t toprocess, Long64_t processed)
+{
+   // Save info about the postponed query 'tag'
+
+   if (!tag || strlen(tag) <= 0 || !mess) {
+      Error("PutQueryOnHold", "invalid inputs");
+      return -1;
+   }
+
+   Int_t rc = 0;
+   // There must be a file <filename>.ohqf in the onhold queries directory
+   // (this is not a ROOT- nor a text file: it is a dedicated binary file)
+   TString ppath = Form("%s/%s.ohqf", fOnHoldDir.Data(), tag);
+
+   fOnHoldLock->Lock();
+
+   // If the file existed already, warn and remove it
+   if (!gSystem->AccessPathName(ppath))
+      Warning("PutQueryOnHold", "file '%s' already existing - removing", ppath.Data());
+
+   // Create output object
+   TProofQueryOnHold post(tag, fEnabledPackages, gSystem->GetDynamicPath(),
+                          gSystem->GetIncludePath(), mess, selec, d, output);
+
+   // Fill entries
+   if (toprocess > 0)
+      post.SetToProcess(toprocess);
+   if (processed > 0)
+      post.SetProcessed(processed);
+
+   // save it to a file
+   if (!post.TestBit(TObject::kInvalidObject)) {
+      post.Save(ppath);
+   } else {
+      Error("PutQueryOnHold", "could not instantiated a valid TProofQueryOnHold object");
+      rc = -1;
+   }
+
+   fOnHoldLock->Unlock();
+
+   // Done
+   return rc;
+}
+
+//______________________________________________________________________________
+Int_t TProofServ::RemoveOnHoldQuery(const char *tag)
+{
+   // Remove on-hold query identified by 'tag'. If tag is null, "" or "*"
+   // remove all queries.
+
+   TString ppath;
+   Int_t nrq = 0;
+   if (!tag || strlen(tag) <= 0 || !strcmp(tag, "*")) {
+      Info("RemoveOnHold", "removing all on-hold queries");
+      fOnHoldLock->Lock();
+      void *dirs = gSystem->OpenDirectory(fOnHoldDir);
+      if (dirs) {
+         char *ohq = 0;
+         while ((ohq = (char *) gSystem->GetDirEntry(dirs))) {
+            // Full path
+            ppath = Form("%s/%s", fOnHoldDir.Data(), ohq);
+            if (!ppath.EndsWith(".ohqf")) continue;
+            // Remove on-hold query file
+            gSystem->Exec(Form("%s %s", kRM, ppath.Data()));
+            // Count
+            nrq++;
+         }
+      } else {
+         Error("RemoveOnHold", "on-hold dir %s cannot be open", fOnHoldDir.Data());
+      }
+      fOnHoldLock->Unlock();
+   } else {
+      // There must be a file <filename>.ohqf in the onhold queries directory
+      // (this is not a ROOT- nor a text file: it is a dedicated binary file)
+      ppath = Form("%s/%s.ohqf", fOnHoldDir.Data(), tag);
+      // Remove on-hold query file
+      fOnHoldLock->Lock();
+      gSystem->Exec(Form("%s %s", kRM, ppath.Data()));
+      fOnHoldLock->Unlock();
+      // Count
+      nrq++;
+   }
+
+   // Done
+   return nrq;
+}
+
+//______________________________________________________________________________
+TSortedList *TProofServ::GetListOfOnHoldQueries()
+{
+   // Return sorted (ascendingly, oldest first) list of on-hold queries or
+   // 0, if none is found. The returned list must be deleted by the caller
+
+   TSortedList *sl = 0;
+
+   void *dirs = gSystem->OpenDirectory(fOnHoldDir);
+   if (!dirs) {
+      Error("GetListOfOnHoldQueries", " on-hold dir %s cannot be open", fOnHoldDir.Data());
+      return sl;
+   }
+
+   char *ohq = 0;
+   while ((ohq = (char *) gSystem->GetDirEntry(dirs))) {
+      TString qtag(ohq);
+      // Keep only special files terminating with ".ohqf"
+      if (!qtag.EndsWith(".ohqf")) continue;
+      qtag.ReplaceAll(".ohqf", "");
+      // Full path
+      TString q = Form("%s/%s", fOnHoldDir.Data(), ohq);
+      // Get the creation date
+      FileStat_t st;
+      if (gSystem->GetPathInfo(q.Data(), st) != 0) continue;
+      // Add to the list
+      if (!sl) {
+         sl = new TSortedList;
+         sl->SetOwner();
+      }
+      if (sl)
+         sl->Add(new TNamed(Form("%d", st.fMtime), qtag.Data()));
+   }
+
+   // Done
+   return sl;
+}
+
+//______________________________________________________________________________
+TProofQueryOnHold *TProofServ::ResumeOnHoldQuery(const char *tag)
+{
+   // Get info about the postponed query 'tag' and setup the
+   // environment
+
+   TProofQueryOnHold *post = 0;
+   if (!tag || strlen(tag) <= 0) {
+      Error("ResumeOnHoldQuery", "invalid inputs");
+      return post;
+   }
+
+   // There must be a file <filename>.ohqf in the onhold queries directory
+   // (this is not a ROOT- nor a text file: it is a dedicated binary file)
+   TString ppath = Form("%s/%s.ohqf", fOnHoldDir.Data(), tag);
+
+   fOnHoldLock->Lock();
+
+   // If the file existed already, warn and remove it
+   if (gSystem->AccessPathName(ppath, kReadPermission)) {
+      Error("ResumeOnHoldQuery", "cannot open file '%s'", ppath.Data());
+      fOnHoldLock->Unlock();
+      return post;
+   }
+
+   // Get the object 
+   post = new TProofQueryOnHold(ppath.Data());
+   fOnHoldLock->Unlock();
+
+   if (post->TestBit(TObject::kInvalidObject)) {
+      Error("ResumeOnHoldQuery",
+            "could not instantiate a valid TProofQueryOnHold object - give up");
+      SafeDelete(post);
+      return post;
+   }
+
+   // Create the selector files, if required
+   if (post->SelecHdr()) {
+      post->SelecHdr()->SaveSource(post->SelecHdr()->GetName());
+   }
+   if (post->SelecImp()) {
+      post->SelecImp()->SaveSource(post->SelecImp()->GetName());
+   }
+
+   TMessage mess;
+
+   // Enable packages
+   if (post->Packages() && post->Packages()->GetSize() > 0) {
+      TIter nxp(post->Packages());
+      TObjString *os = 0;
+      while ((os = (TObjString *) nxp())) {
+         TString pac(os->GetName());
+         // Setup the build message
+         mess.SetWriteMode();
+         mess.Reset();
+         mess << Int_t(TProof::kBuildPackage) << pac;
+         mess.SetReadMode();
+         mess.SetBufferOffset(2 * sizeof(UInt_t));
+         HandleCache(&mess);
+         // Setup the load message
+         mess.SetWriteMode();
+         mess.Reset();
+         mess << Int_t(TProof::kLoadPackage) << pac;
+         mess.SetReadMode();
+         mess.SetBufferOffset(2 * sizeof(UInt_t));
+         HandleCache(&mess);
+      }
+   }
+
+   // Setup the dynamic path
+   mess.SetWriteMode();
+   mess.Reset();
+   TString dyn(post->LibPaths());
+   dyn.ReplaceAll(":", " ");
+   mess << TString("lib") << Bool_t(kTRUE) << dyn;
+   mess.SetReadMode();
+   mess.SetBufferOffset(2 * sizeof(UInt_t));
+   HandleLibIncPath(&mess);
+
+   // Setup the include path
+   mess.SetWriteMode();
+   mess.Reset();
+   TString incs(post->IncPaths());
+   incs.ReplaceAll("-I", " ");
+   mess << TString("inc") << Bool_t(kTRUE) << incs;
+   mess.SetReadMode();
+   mess.SetBufferOffset(2 * sizeof(UInt_t));
+   HandleLibIncPath(&mess);
+
+   // Done
+   return post;
 }
 
 //______________________________________________________________________________
