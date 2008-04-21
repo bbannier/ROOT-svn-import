@@ -30,6 +30,7 @@
 #endif
 
 class TSystem;
+class TRefArrayIter;
 
 class TRefArray : public TSeqCollection {
 
@@ -48,6 +49,8 @@ protected:
    TObject      *GetFromTable(Int_t idx) const;
 
 public:
+   typedef TRefArrayIter Iterator_t;
+  
    TRefArray(TProcessID *pid = 0);
    TRefArray(Int_t s, TProcessID *pid);
    TRefArray(Int_t s, Int_t lowerBound = 0, TProcessID *pid = 0);
@@ -105,7 +108,10 @@ public:
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-class TRefArrayIter : public TIterator {
+class TRefArrayIter : public TIterator,
+                      public std::iterator<std::bidirectional_iterator_tag, // TODO: ideally it should be a  randomaccess_iterator_tag
+                                           TObject*, std::ptrdiff_t,
+                                           const TObject**, const TObject*&> {
 
 private:
    const TRefArray  *fArray;      //array being iterated
