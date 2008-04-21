@@ -12,6 +12,10 @@
 #include "TQuakeVizGL.h"
 #include "TQuakeViz.h"
 
+#include "TEveRGBAPalette.h"
+
+#include "TMath.h"
+
 #include "TGLRnrCtx.h"
 #include "TGLIncludes.h"
 
@@ -27,7 +31,7 @@ TQuakeVizGL::TQuakeVizGL() :
 {
    // Constructor.
 
-   // fDLCache = kFALSE; // Disable display list.
+   fDLCache = kFALSE; // Disable display list.
 }
 
 /******************************************************************************/
@@ -62,16 +66,55 @@ void TQuakeVizGL::DirectDraw(TGLRnrCtx & rnrCtx) const
 
    // printf("TQuakeVizGL::DirectDraw LOD %d\n", rnrCtx.CombiLOD());
 
-   TGLCapabilitySwitch lights_off(GL_LIGHTING, kFALSE);
+   TEveRGBAPalette* pal = fM->AssertPalette();
 
-   for (TQuakeViz::vQData_i i = fM->fData.begin(); i != fM->fData.end(); ++i)
+   TTimeStamp midTime(fM->fYear, fM->fMonth, fM->fDay, fM->fHour, 0, 0);
+
+   Long64_t delta   = 3600*24*fM->fDayHalfRange;
+
+   Long64_t minTime = midTime.GetSec() - delta;
+   Long64_t maxTime = midTime.GetSec() + delta;
+
+   // For easier palette scaling.
+   // Palette initialized to 100 values, need 2*delta.
+   Double_t pfac = 50.0 / delta;
+
+   TGLCapabilitySwitch lights_off(GL_LIGHTING, fM->fLighting);
+
+   UChar_t c[4], alpha = UChar_t(255 * (1.0 - 0.01*fM->fTransparency));
+
+   if (fM->fLimitRange)
    {
-      glPushMatrix();
-      glTranslatef(i->fLat, i->fLon, i->fDepth);
-      // TGLUtil::Color4f
-      gluSphere(rnrCtx.GetGluQuadric(),
-                0.005f + (i->fStr - fM->fMinStr)*0.045f/(fM->fMaxStr - fM->fMinStr),
-                8, 8);
-      glPopMatrix();
+      for (TQuakeViz::vQData_i i = fM->fData.begin(); i != fM->fData.end(); ++i)
+      {
+         if (i->fTime.GetSec() >= minTime && i->fTime.GetSec() <= maxTime)
+         {
+            glPushMatrix();
+            glTranslatef(i->fLat, i->fLon, i->fDepth);
+
+            Int_t val = TMath::Nint(pfac*(i->fTime.GetSec() - minTime));
+            pal->ColorFromValue(val, -1, c);
+            c[3] = alpha;
+            TGLUtil::Color4ubv(c);
+
+            gluSphere(rnrCtx.GetGluQuadric(),
+                      0.005f + (i->fStr - fM->fMinStr)*0.045f/(fM->fMaxStr - fM->fMinStr),
+                      8, 8);
+            glPopMatrix();
+         }
+      }
+   }
+   else
+   {
+      for (TQuakeViz::vQData_i i = fM->fData.begin(); i != fM->fData.end(); ++i)
+      {
+         glPushMatrix();
+         glTranslatef(i->fLat, i->fLon, i->fDepth);
+
+         gluSphere(rnrCtx.GetGluQuadric(),
+                   0.005f + (i->fStr - fM->fMinStr)*0.045f/(fM->fMaxStr - fM->fMinStr),
+                   8, 8);
+         glPopMatrix();
+      }
    }
 }
