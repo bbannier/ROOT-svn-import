@@ -14,7 +14,12 @@
 // 8  - TMap with std::for_each (Partial iteration: from the Begin up to the 3rd element)
 // 9  - TMap with std::find_if
 // 10 - TMap with std::count_if
-
+// 11 - TBtree with std::for_each (Full iteration: from the Begin up to the End)
+// 12 - TBtree with std::find_if
+// 13 - TBtree with std::count_if
+// 14 - TOrdCollection with std::for_each (Full iteration: from the Begin up to the End)
+// 15 - TOrdCollection with std::find_if
+// 16 - TOrdCollection with std::count_if
 
 
 // STD
@@ -28,6 +33,8 @@
 #include "TObjString.h"
 #include "TObjArray.h"
 #include "TMap.h"
+#include "TBtree.h"
+#include "TOrdCollection.h"
 // Local
 #include "stressIterators.h"
 
@@ -40,73 +47,126 @@ void stressIterators() throw(exception)
 
    ostringstream ss;
 
-   // TList
-   TList list;
-   for (int i = 0; i < size; ++i) {
-      ss << "test string #" << i;
-      TObjString *s(new TObjString(ss.str().c_str()));
-      list.Add(s);
-      ss.str("");
+   {
+      // TList
+      TList list;
+      for (int i = 0; i < size; ++i) {
+         ss << "test string #" << i;
+         TObjString *s(new TObjString(ss.str().c_str()));
+         list.Add(s);
+         ss.str("");
+      }
+
+      cout << "#1 ====================================" << endl;
+      cout << "-----> " << "TestContainer_for_each<TList>(list, list.GetSize())" << endl;
+      TestContainer_for_each<TList>(list, list.GetSize());
+
+      cout << "\n#2 ====================================" << endl;
+      cout << "-----> " << "TestContainer_find_if<TList>(list, \"test string #3\")" << endl;
+      TestContainer_find_if<TList>(list, "test string #3");
+
+      cout << "\n#3 ====================================" << endl;
+      cout << "-----> " << "TestContainer_count_if<TList>(list, \"test string #3\", 1)" << endl;
+      // we suppose to find exactly one match
+      TestContainer_count_if<TList>(list, "test string #3", 1);
    }
 
-   cout << "#1 ====================================" << endl;
-   cout << "-----> " << "TestContainer_for_each<TList>(list, list.GetSize())" << endl;
-   TestContainer_for_each<TList>(list, list.GetSize());
+   {
+      // TObjArray
+      TObjArray obj_array(size);
+      for (int i = 0; i < size; ++i) {
+         ss << "test string #" << i;
+         TObjString *s(new TObjString(ss.str().c_str()));
+         obj_array.Add(s);
+         ss.str("");
+      }
 
-   cout << "\n#2 ====================================" << endl;
-   cout << "-----> " << "TestContainer_find_if<TList>(list, \"test string #3\")" << endl;
-   TestContainer_find_if<TList>(list, "test string #3");
+      cout << "\n#4 ====================================" << endl;
+      cout << "-----> " << "TestContainer_for_each<TObjArray>(obj_array, obj_array.GetSize())" << endl;
+      TestContainer_for_each<TObjArray>(obj_array, obj_array.GetSize());
 
-   cout << "\n#3 ====================================" << endl;
-   cout << "-----> " << "TestContainer_count_if<TList>(list, \"test string #3\", 1)" << endl;
-   // we suppose to find exactly one match
-   TestContainer_count_if<TList>(list, "test string #3", 1);
+      cout << "\n#5 ====================================" << endl;
+      cout << "-----> " << "TestContainer_find_if<TObjArray>(obj_array, \"test string #3\")" << endl;
+      TestContainer_find_if<TObjArray>(obj_array, "test string #3");
 
-
-   // TObjArray
-   TObjArray obj_array(size);
-   for (int i = 0; i < size; ++i) {
-      ss << "test string #" << i;
-      TObjString *s(new TObjString(ss.str().c_str()));
-      obj_array.Add(s);
-      ss.str("");
+      cout << "\n#6 ====================================" << endl;
+      cout << "-----> " << "TestContainer_count_if<TObjArray>(obj_array, \"test string #3\", 1)" << endl;
+      // we suppose to find exactly one match
+      TestContainer_count_if<TObjArray>(obj_array, "test string #3", 1);
    }
 
-   cout << "\n#4 ====================================" << endl;
-   cout << "-----> " << "TestContainer_for_each<TObjArray>(obj_array, obj_array.GetSize())" << endl;
-   TestContainer_for_each<TObjArray>(obj_array, obj_array.GetSize());
+   {
+      // TMap
+      const char * const cszValue("value");
+      TMap map_container(size);
+      for (int i = 0; i < size; ++i) {
+         ss << "test string #" << i;
+         TObjString *s(new TObjString(ss.str().c_str()));
+         map_container.Add(s, new TObjString(cszValue));
+         ss.str("");
+      }
 
-   cout << "\n#5 ====================================" << endl;
-   cout << "-----> " << "TestContainer_find_if<TObjArray>(obj_array, \"test string #3\")" << endl;
-   TestContainer_find_if<TObjArray>(obj_array, "test string #3");
-
-   cout << "\n#6 ====================================" << endl;
-   cout << "-----> " << "TestContainer_count_if<TObjArray>(obj_array, \"test string #3\", 1)" << endl;
-   // we suppose to find exactly one match
-   TestContainer_count_if<TObjArray>(obj_array, "test string #3", 1);
-
-   // TMap
-   const char * const cszValue("value");
-   TMap map_container(size);
-   for (int i = 0; i < size; ++i) {
-      ss << "test string #" << i;
-      TObjString *s(new TObjString(ss.str().c_str()));
-      map_container.Add(s, new TObjString(cszValue));
-      ss.str("");
+      cout << "\n#7 ====================================" << endl;
+      cout << "-----> " << "TestContainer_for_each<TMap>(map_container, map_container.GetSize())" << endl;
+      TestContainer_for_each<TMap>(map_container, map_container.GetSize());
+      cout << "\n#8 ====================================" << endl;
+      cout << "-----> " << "TestContainer_for_each2<TMap>(map_container)" << endl;
+      TestContainer_for_each2<TMap>(map_container);
+      cout << "\n#9 ====================================" << endl;
+      cout << "-----> " << "TestContainer_find_if<TMap>(map_container, cszValue)" << endl;
+      TestContainer_find_if<TMap>(map_container, cszValue);
+      cout << "\n#10 ====================================" << endl;
+      cout << "-----> " << "TestContainer_count_if<TMap>(map_container, cszValue, map_container.GetSize())" << endl;
+      TestContainer_count_if<TMap>(map_container, cszValue, map_container.GetSize());
    }
 
-   cout << "\n#7 ====================================" << endl;
-   cout << "-----> " << "TestContainer_for_each<TMap>(map_container, map_container.GetSize())" << endl;
-   TestContainer_for_each<TMap>(map_container, map_container.GetSize());
-   cout << "\n#8 ====================================" << endl;
-   cout << "-----> " << "TestContainer_for_each2<TMap>(map_container)" << endl;
-   TestContainer_for_each2<TMap>(map_container);
-   cout << "\n#9 ====================================" << endl;
-   cout << "-----> " << "TestContainer_find_if<TMap>(map_container, cszValue)" << endl;
-   TestContainer_find_if<TMap>(map_container, cszValue);
-   cout << "\n#10 ====================================" << endl;
-   cout << "-----> " << "TestContainer_count_if<TMap>(map_container, cszValue, map_container.GetSize());" << endl;
-   TestContainer_count_if<TMap>(map_container, cszValue, map_container.GetSize());
+   {
+      // TBtree
+      TBtree btree_container;
+      for (int i = 0; i < size; ++i) {
+         ss << "test string #" << i;
+         TObjString *s(new TObjString(ss.str().c_str()));
+         btree_container.Add(s);
+         ss.str("");
+      }
+
+      cout << "\n#11 ====================================" << endl;
+      cout << "-----> " << "TestContainer_for_each<TBtree>(btree_container, btree_container.GetSize())" << endl;
+      TestContainer_for_each<TBtree>(btree_container, btree_container.GetSize());
+      cout << "\n#12 ====================================" << endl;
+      cout << "-----> " << "TestContainer_find_if<TBtree>(btree_container, \"test string #3\")" << endl;
+      TestContainer_find_if<TBtree>(btree_container, "test string #3");
+      cout << "\n#13 ====================================" << endl;
+      cout << "-----> " << "TestContainer_count_if<TBtree>(btree_container, \"test string #3\", 1)" << endl;
+      TestContainer_count_if<TBtree>(btree_container, "test string #3", 1);
+   }
+
+   {
+      // TOrdCollection
+      TOrdCollection container;
+      for (int i = 0; i < size; ++i) {
+         ss << "test string #" << i;
+         TObjString *s(new TObjString(ss.str().c_str()));
+         container.Add(s);
+         ss.str("");
+      }
+
+      cout << "\n#14 ====================================" << endl;
+      cout << "-----> " << "TestContainer_for_each<TOrdCollection>(container, container.GetSize())" << endl;
+      TestContainer_for_each<TOrdCollection>(container, container.GetSize());
+      cout << "\n#15 ====================================" << endl;
+      cout << "-----> " << "TestContainer_find_if<TOrdCollection>(container, \"test string #3\");" << endl;
+      TestContainer_find_if<TOrdCollection>(container, "test string #3");
+      cout << "\n#16 ====================================" << endl;
+      cout << "-----> " << "TestContainer_count_if<TOrdCollection>(container, \"test string #3\", 1)" << endl;
+      TestContainer_count_if<TOrdCollection>(container, "test string #3", 1);
+   }
+
+   {
+      // TRefArray
+
+   }
+
 }
 
 //______________________________________________________________________________

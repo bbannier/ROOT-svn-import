@@ -51,6 +51,8 @@ private:
 
 public:
    enum { kDefaultCapacity = 1, kMinExpand = 8, kShrinkFactor = 2 };
+   
+   typedef TOrdCollectionIter Iterator_t;
 
    TOrdCollection(Int_t capacity = kDefaultCapacity);
    ~TOrdCollection();
@@ -90,7 +92,10 @@ public:
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-class TOrdCollectionIter : public TIterator {
+class TOrdCollectionIter : public TIterator,
+                           public std::iterator<std::bidirectional_iterator_tag,
+                                                TObject*, std::ptrdiff_t,
+                                                const TObject**, const TObject*&> {
 
 private:
    const TOrdCollection  *fCol;       //collection being iterated
