@@ -156,7 +156,7 @@ TTreeCacheUnzip::~TTreeCacheUnzip()
    // destructor. (in general called by the TFile destructor
    // destructor. (in general called by the TFile destructor)
 
-   ResetCache();
+   //ResetCache();
    fBufferCond->Signal();
 
    if (IsActiveThread())
@@ -436,9 +436,10 @@ Int_t TTreeCacheUnzip::StopThreadUnzip()
    if(fUnzipThread){
       fActiveThread = kFALSE;
       SendSignal();
-      if (fUnzipThread->Exists()) {
-         fUnzipThread->Join();
-      }
+      //if (fUnzipThread->Exists()) {
+      //   fUnzipThread->Join();
+      //}
+      fUnzipThread->Delete();
       fUnzipThread = 0;
       return 0;
    }
