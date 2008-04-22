@@ -175,7 +175,7 @@ void TBasket::DeleteFromBranch()
    
    if(fBranch){
       fBranch->GetTree()->IncrementTotalBuffers(-fBufferSize); 
-	  fBranch->DropBasket(this);
+      fBranch->DropBasket(this);
       return;
    }
 }
