@@ -184,12 +184,12 @@ bool Minuit2Minimizer::SetFixedVariable(unsigned int ivar , const std::string & 
 }
 
 
-void Minuit2Minimizer::SetFunction(const  IObjFunction & func) { 
+void Minuit2Minimizer::SetFunction(const  ROOT::Math::IMultiGenFunction & func) { 
    // set function to be minimized
    if (fMinuitFCN) delete fMinuitFCN;
    fDim = func.NDim(); 
    if (!fUseFumili) {
-      fMinuitFCN = new ROOT::Minuit2::FCNAdapter<IObjFunction> (func, ErrorUp() );
+      fMinuitFCN = new ROOT::Minuit2::FCNAdapter<ROOT::Math::IMultiGenFunction> (func, ErrorUp() );
    }
    else { 
       // for Fumili the fit method function interface is required
@@ -202,12 +202,12 @@ void Minuit2Minimizer::SetFunction(const  IObjFunction & func) {
    }
 }
 
-void Minuit2Minimizer::SetFunction(const  IGradObjFunction & func) { 
+void Minuit2Minimizer::SetFunction(const  ROOT::Math::IMultiGradFunction & func) { 
    // set function to be minimized
    fDim = func.NDim(); 
    if (fMinuitFCN) delete fMinuitFCN;
    if (!fUseFumili) { 
-      fMinuitFCN = new ROOT::Minuit2::FCNGradAdapter<IGradObjFunction> (func, ErrorUp() );
+      fMinuitFCN = new ROOT::Minuit2::FCNGradAdapter<ROOT::Math::IMultiGradFunction> (func, ErrorUp() );
    }
    else { 
       // for Fumili the fit method function interface is required
