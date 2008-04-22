@@ -1,83 +1,71 @@
-# $Header$
+###############################################################################
 
-LD       = ${CXX}
-LDEXT    = so
+include $(ROOTSYS)/test/Makefile.arch
 
-MAKEDEPEND = ${ROOTSYS}/bin/rmkdepend -Y -w 666 -f-
-MKDEPINC  := make_depend.inc
-ROOTCINT   = ${ROOTSYS}/bin/rootcint
+###############################################################################
 
-CPPFLAGS = -I. -I${ROOTSYS}/include
-CXXFLAGS = -g -fPIC -Wall -Woverloaded-virtual
-LDFLAGS  = -shared
+ifeq ($(PLATFORM),win32)
+EXTRAFLAGS   =
+EXTRALIBS    = "$(ROOTSYS)/lib/libRGL.lib" "$(ROOTSYS)/lib/libGed.lib" \
+               "$(ROOTSYS)/lib/libEve.lib" OpenGL32.lib Glu32.lib
+else
+EXTRAFLAGS   =
+EXTRALIBS    = 
+endif
 
-ROOTCINTFLAGS = -I.
+###############################################################################
 
-#--------------------------------------------------------------
-
-SRCS := $(wildcard *.cxx)
-HDRS := $(SRCS:.cxx=.h)
-OBJS := $(SRCS:.cxx=.o)
-LIBS := libQuakeViz.${LDEXT}
-EXES :=
+#SRCS := $(wildcard *.$(SrcSuf))
+SRCS := $(filter-out QuakeVizDict.$(SrcSuf),$(wildcard *.$(SrcSuf)))
+HDRS := $(SRCS:.$(SrcSuf)=.h)
+OBJS := $(SRCS:.$(SrcSuf)=.$(ObjSuf))
+QUAKEVIZSO := libQuakeViz.$(DllSuf)
+ifeq ($(PLATFORM),win32)
+QUAKEVIZLIB  := libQuakeViz.lib
+else
+QUAKEVIZLIB  := $(QUAKEVIZSO)
+endif
 
 ALLHDRS := ${HDRS} LinkDef.h
-ALLOBJS := ${OBJS} QuakeViz_Dict.o
+ALLOBJS := ${OBJS} QuakeVizDict.$(ObjSuf)
 
-#--------------------------------------------------------------
+###############################################################################
 
-.SUFFIXES:  .cxx .cc .h .o
-.SECONDARY: ${ALLOBJS} 
+.SUFFIXES: .$(SrcSuf) .$(ObjSuf) .$(DllSuf)
 
-.SILENT: ${ALLOBJS} 
+all: $(QUAKEVIZSO)
 
-%.o: %.cc
-	@echo --- Compiling $<
-	${CXX} ${CPPFLAGS} -c -o $@ ${CXXFLAGS} $<
+$(QUAKEVIZSO): $(ALLOBJS)
+ifeq ($(PLATFORM),win32)
+	bindexplib $* $^ > $*.def
+	lib -nologo -MACHINE:IX86 $^ -def:$*.def \
+	   $(OutPutOpt)$(QUAKEVIZLIB)
+	$(LD) $(SOFLAGS) $(LDFLAGS) $^ $*.exp $(ROOTGLIBS) \
+	   $(EXTRALIBS) $(OutPutOpt)$@
+	$(MT_DLL)
+else
+	$(LD) $(SOFLAGS) $(LDFLAGS) $^ $(ROOTGLIBS) $(EXTRALIBS) $(OutPutOpt)$@
+endif
+	@echo "$@ done"
 
-%.o: %.cxx
-	@echo --- Compiling $<
-	${CXX} ${CPPFLAGS} -c -o $@ ${CXXFLAGS} $<
+###############################################################################
 
-lib%.so: ${ALLOBJS}
-	${LD} ${LDFLAGS} -o $@ $^ ${ROOTLIBS} ${EXTLIBS}
-
-all: ${LIBS} ${EXES}
-
-QuakeViz_Dict.cc: ${ALLHDRS}
-	rootcint -f $@ -c -p ${ROOTCINTFLAGS} ${ALLHDRS}
-
-#--------------------------------------------------------------
-
-depend:
-	@rm -f ${MKDEPINC}
-
-${MKDEPINC}: ${HDRS} ${SRCS}
-	@echo "Creating dependencies."
-	@${MAKEDEPEND} -- -- ${SRCS} > ${MKDEPINC} 2>/dev/null
+QuakeVizDict.$(SrcSuf): $(ALLHDRS)
+		@echo "Generating dictionary $@..."
+		@rootcint -f $@ -c $^
 
 clean:
-	@rm -f ${ALLOBJS} *_Dict.* ${LIBS} ${EXES}
+		rm -f *.o *.obj *.res *.pdb *.def *.exp \
+		      *.lib *.ilk *.manifest *.d *.def *Dict.*
 
-distclean: clean
-	@rm -f ${MKDEPINC}
-	@(rm -f $(notdir ${LIBS}))
-	@(rm -f $(notdir ${EXES}))
+distclean:  clean
+		@rm -f $(QUAKEVIZSO)
 
-#--------------------------------------------------------------
+###############################################################################
 
-echo_hdrs:
-	@echo ${HDRS}
+.$(SrcSuf).$(ObjSuf):
+	$(CXX) $(CXXFLAGS) $(EXTRAFLAGS) -c $<
 
-echo_srcs:
-	@echo ${SRCS}
+###############################################################################
 
-echo_objs:
-	@echo ${OBJS}
 
-echo_libs:
-	@echo ${LIBS}
-
-#--------------------------------------------------------------
-
--include ${MKDEPINC}
