@@ -73,9 +73,6 @@ class Minimizer {
 
 public: 
 
-   typedef ROOT::Math::IMultiGenFunction IObjFunction; 
-   typedef ROOT::Math::IMultiGradFunction IGradObjFunction; 
-
    /** 
       Default constructor
    */ 
@@ -123,12 +120,12 @@ public:
    virtual void Clear() {}
 
    /// set the function to minimize
-   virtual void SetFunction(const IObjFunction & func) = 0; 
+   virtual void SetFunction(const ROOT::Math::IMultiGenFunction & func) = 0; 
 
    /// set a function to minimize using gradient 
-   virtual void SetFunction(const IGradObjFunction & func) 
+   virtual void SetFunction(const ROOT::Math::IMultiGradFunction & func) 
    {
-      SetFunction(static_cast<const IObjFunction &> (func));
+      SetFunction(static_cast<const ROOT::Math::IMultiGenFunction &> (func));
    }
    
 
