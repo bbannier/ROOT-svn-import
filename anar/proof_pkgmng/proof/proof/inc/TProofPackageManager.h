@@ -1,4 +1,4 @@
-// @(#)root/proof:$Id: TProofPackageManager.h 22828 2008-03-25 12:57:02Z anar $
+// @(#)root/proof:$Id$
 // Author: Anar Manafov 28/03/2008
 
 /*************************************************************************
