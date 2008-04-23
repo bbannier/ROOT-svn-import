@@ -129,8 +129,8 @@ template <typename T> double stressVector(unsigned int size, const char* type)
    totalUnitTime += Time(w)/ntest;
    totalTime += Time(w);
 
-   cout << "\nTotal Time:  "      << totalTime << "  (s)\n";
-//        << "Total Unit Time: " << totalUnitTime << "\n" << endl;
+   cout << "\nTotal Time :       "      << totalTime     << "  (s)\n"
+        <<   "Total Time/call :  " << totalUnitTime*1.E3 << "  (ms)\n" << endl;
 
    delete [] vector;
    delete [] index;
@@ -138,7 +138,7 @@ template <typename T> double stressVector(unsigned int size, const char* type)
    return totalUnitTime;
 }
 
-void stressTMath(unsigned int size, char * type) 
+void stressTMath(unsigned int size, const char * type) 
 {
    double totalTime = 0;
    
@@ -169,7 +169,7 @@ int main(int argc, char* argv[])
 {
    // Default size and data type
    unsigned int size = 100000;
-   char* type = "Double_t";
+   const char *  type = "Double_t";
       
    if ( argc > 1 ) { 
       if (strcmp(argv[1], "-h") == 0) { 

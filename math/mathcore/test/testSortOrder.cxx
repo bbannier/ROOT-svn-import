@@ -109,7 +109,7 @@ bool stdsort()
    return testSort<Int_t>(20);
 }
 
-int main(int /* argc */ , char /* **argv */ )
+int main(int /* argc */ , char ** /* argv */ )
 {
    bool equals = stdsort();
 
