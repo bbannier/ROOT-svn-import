@@ -32,6 +32,7 @@ class TCondition;
 class TSortedList;
 class TBasket;
 class TMutex;
+class TSemaphore;
 
 class TTreeCacheUnzip : public TTreeCache {
 
@@ -84,6 +85,7 @@ protected:
    TThread    *fUnzipThread;
    Bool_t      fActiveThread;
    TCondition *fUnzipCondition; 
+   //TSemaphore *fUnzipCondition; 
    Bool_t      fNewTransfer;    // Used to indicate the second thread taht a new transfer is in progress
    Bool_t      fParallel;       // Indicate if we want to activate the parallelism (for this instance)
 
@@ -118,6 +120,10 @@ protected:
    Int_t      fNFound;           //! number of blocks that were found in the cache
    Int_t      fNMissed;          //! number of blocks that were not found in the cache and were unzipped
 
+   Int_t      fUnzipStart;
+   Int_t      fUnzipEnd;
+   Int_t      fUnzipNext;
+
 private:
    TTreeCacheUnzip(const TTreeCacheUnzip &);            //this class cannot be copied
    TTreeCacheUnzip& operator=(const TTreeCacheUnzip &);
@@ -135,6 +141,7 @@ public:
    virtual void        AddBranch(const char *branch, Bool_t subbranches = kFALSE);
    Bool_t              FillBuffer();
    void                SetEntryRange(Long64_t emin,   Long64_t emax);
+   virtual void        StopLearningPhase();
    void                UpdateBranches(TTree *tree, Bool_t owner = kFALSE);
 
    // Methods related to the thread
