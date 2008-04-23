@@ -74,7 +74,7 @@ public:
    static void         SetLearnEntries(Int_t n = 100);
    virtual void        SetSkipZip(Bool_t skip = kTRUE) { (void)skip; return; } // This function is only used by TTreeCacheUnzip (ignore it)
    void                StartLearningPhase();
-   void                StopLearningPhase();
+   virtual void        StopLearningPhase();
    virtual void        UpdateBranches(TTree *tree, Bool_t owner = kFALSE);
 
    ClassDef(TTreeCache,2)  //Specialization of TFileCacheRead for a TTree

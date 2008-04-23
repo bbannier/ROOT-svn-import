@@ -42,6 +42,7 @@
 #include "TVirtualMutex.h"
 #include "TThread.h"
 #include "TCondition.h"
+#include "TSemaphore.h"
 #include "TSortedList.h"
 #include "TBasket.h"
 #include "TFile.h"
@@ -79,7 +80,10 @@ TTreeCacheUnzip::TTreeCacheUnzip() : TTreeCache(),
    fLastPos(0),
    fNUnzip(0),
    fNFound(0),
-   fNMissed(0)
+   fNMissed(0),
+   fUnzipStart(0),
+   fUnzipEnd(0),
+   fUnzipNext(0)
 {
    // Default Constructor.
 
@@ -105,7 +109,10 @@ TTreeCacheUnzip::TTreeCacheUnzip(TTree *tree, Int_t buffersize) : TTreeCache(tre
    fLastPos(0),
    fNUnzip(0),
    fNFound(0),
-   fNMissed(0)
+   fNMissed(0),
+   fUnzipStart(0),
+   fUnzipEnd(0),
+   fUnzipNext(0)
 {
    // Constructor.
 
@@ -122,6 +129,7 @@ void TTreeCacheUnzip::Init()
    fMutexBuffer      = new TMutex();
    fMutexList        = new TMutex();
    fUnzipCondition   = new TCondition();
+   //fUnzipCondition   = new TSemaphore(1,1);
    fBufferCond       = new TCondition();
 
    fUnzipList = new TSortedList();
@@ -162,17 +170,17 @@ TTreeCacheUnzip::~TTreeCacheUnzip()
    if (IsActiveThread())
       StopThreadUnzip();
 
-   delete fUnzipCondition;
-   delete [] fUnzipBuffer;
-   delete [] fTmpBuffer;
-   delete [] fUnzipLen;
-   delete [] fUnzipPos;
-
    delete fMutexCache;
    delete fMutexUnzipBuffer;
    delete fMutexBuffer;
    delete fMutexList;
    delete fBufferCond;
+
+   delete [] fUnzipBuffer;
+   delete [] fTmpBuffer;
+   delete [] fUnzipLen;
+   delete [] fUnzipPos;
+   delete fUnzipCondition;
 }
 
 //_____________________________________________________________________________
@@ -282,6 +290,15 @@ void TTreeCacheUnzip::SetEntryRange(Long64_t emin, Long64_t emax)
    R__LOCKGUARD(fMutexCache);
 
    TTreeCache::SetEntryRange(emin, emax);
+}
+
+//_____________________________________________________________________________
+void TTreeCacheUnzip::StopLearningPhase()
+{
+   // It's the same as TTreeCache::StopLearningPhase but we guarantee that
+   // we start the unzipping just after getting the buffers
+   TTreeCache::StopLearningPhase();
+   this->SendSignal();
 }
 
 //_____________________________________________________________________________
@@ -470,7 +487,6 @@ void* TTreeCacheUnzip::UnzipLoop(void *arg)
    while( unzipMng->IsActiveThread() ) {
       unzipMng->ProcessQueue();
       if(!unzipMng->IsActiveThread()) break;
-      TThread::CancelPoint();
       unzipMng->WaitForSignal();
    }
    return (void *)0;
@@ -529,6 +545,7 @@ void TTreeCacheUnzip::ResetCache()
    // delete the information about the unzipping buffers
    R__LOCKGUARD(fMutexList);
 
+   /*
    TUnzipBufferInfo *ind  = 0;
    TIter next(fUnzipList);
    while ((ind = (TUnzipBufferInfo*)next())) {
@@ -545,8 +562,14 @@ void TTreeCacheUnzip::ResetCache()
          //ind->SetRead(kTRUE);
       }
    }
+   
    // We invalidate the cache buffer but remove the pointers from the list
    fUnzipList->Delete();
+   */
+   if (gDebug > 0)
+      Info("GetUnzipBuffer", "Thread: %d -- Reseting the cache", TThread::SelfId());
+
+   fUnzipStart = fUnzipEnd = fUnzipNext = 0;
 
    fLastPos     = 0;
    fPosRead     = 0;
@@ -566,6 +589,7 @@ Int_t TTreeCacheUnzip::GetUnzipBuffer(char **buf, Long64_t pos, Int_t len, Bool_
    // responsability of the caller to free it... it is useful for example
    // to pass it to the creator of TBuffer
 
+   (void) basRef;
    if (fParallel){
       if ( fIsLearning ) {
          // We need to reset it for new transferences...
@@ -585,117 +609,65 @@ Int_t TTreeCacheUnzip::GetUnzipBuffer(char **buf, Long64_t pos, Int_t len, Bool_
          if (fFile->ReadBuffers(fBuffer,fPos,fLen,fNb)) {
 	    return -1;
          }
+
+	 // Try to start the unzipping thread since we just transfered the data
+	 this->SendSignal();
       }
 
       // be careful.. can be -1
       Int_t loc = (Int_t)TMath::BinarySearch(fNseek,fSeekSort,pos);
 
-      if (loc >= 0) {
+      if (loc >= 0 && (pos == fSeekSort[loc]) ) {
          // We shouldn't have to "wait" so a long Lock is not be very bad for the performance
          R__LOCKGUARD(fMutexList);
 
-         // Look for the index in the list of unzipped buffers...
-         TUnzipBufferInfo *ind  = 0;
-         TUnzipBufferInfo *last = 0;
-         Int_t i = 0;
-         Int_t n = fUnzipList->GetSize();
-         Bool_t oneLeft = kFALSE;
-         TIter next(fUnzipList);
-         ind = (TUnzipBufferInfo*)next();
-         while (ind) {
-            //delete if it was already read
-/*
-            Int_t index = ind->GetNum(); 
-            if( ind->GetRead() && !ind->GetBasket() ) {
-               if ( fUnzipList->Remove(ind) )
-                  delete ind;
-
-               fUnzipPos[index] = -1;
-               fUnzipLen[index] = -1;
-               ind = (TUnzipBufferInfo*)next();
-               continue;
-            }
-*/
-
-            // it was found in the list
-            if (ind->GetNum() == loc)
-               break;
-
-            ind = (TUnzipBufferInfo*)next();
-            if ( i==n-3 ){
-               if(( ind && (ind->GetNum() == loc) )) {
-                  oneLeft = kTRUE;
-               }
-            }
-            i++;
-            if (ind) last = ind;
-         }
-
-         // not found in the unzipped range... inflate all following buffers
-         // Trying the unzipping part if:
-         // 1 - It is the first buffer requested
-         // 2 - There is only one left (try to unzip next batch)
-         // 3 - If it was not found in the list and it's a "future" buffer
-         if ( ( !fUnzipList->GetSize() || oneLeft ||  ( (n == i) && last && (last->GetNum() < loc) ) )  && (!fIsLearning) ) {
-            fLastPos = loc + 1;
-            if (oneLeft)
-               fLastPos = loc + 3;
-
-            if (gDebug > 0)
-               Info("GetUnzipBuffer", " Sending Signal found in the list loc:%d, i:%d, fUnzipList->GetSize():%d, fLastPos:%d", 
-                    loc, i, fUnzipList->GetSize(), fLastPos);
-            this->SendSignal();
-
-            //maybe it was unzipped with the last signal
-            if(!ind) {
-               i = 0;
-               n = fUnzipList->GetSize();
-               oneLeft = kFALSE;
-               TIter next2(fUnzipList);
-               while ((ind = (TUnzipBufferInfo*)next2())) {
-                  // it was found in the list
-                  if (ind->GetNum() == loc)
-                     break;
-                  i++;
-               }
-            }
-         }
-
-         // is this buffer in the range unziped by the last unzipping call?
-         if ( ind && (ind->GetNum() == loc) && (pos == fSeekSort[loc]) ) {
+	 if( (loc >= fUnzipStart) && (loc < fUnzipEnd )) {
             // The second thread can modify this values after the signal fBufferCond->Signal() ... be careful
-            Long64_t locPos = fUnzipPos[loc]; // Gives the pos in the buffer
+	    Long64_t locPos = fUnzipPos[loc]; // Gives the pos in the buffer
             Int_t    locLen = fUnzipLen[loc]; // Gives the size in the buffer
 
             if (gDebug > 0)
-               Info("GetUnzipBuffer", "FOUND in the list loc:%d, pos:%lld ind:%p, ind->GetNum():%d", loc, pos, ind, ind->GetNum());  
+               Info("GetUnzipBuffer", "Thread: %d -- FOUND in the list loc:%d - fUnzipStart:%d, fUnzipEnd:%d, pos:%lld ", TThread::SelfId(), loc , fUnzipStart, fUnzipEnd, pos);  
+
+            if (gDebug > 0)
+               Info("GetUnzipBuffer", "Thread: %d -- FOUND in the list loc:%d - locPos:%lld, locLen:%d ", TThread::SelfId(), loc , locPos, locLen);  
 
             fMutexBuffer->Lock();
-            //if(!(*buf)) {
-            //   *buf = new char[locLen+1];
-            //   *free = kTRUE;
-            //}
-            //memcpy(*buf,&fUnzipBuffer[locPos], locLen);
-            *buf = &fUnzipBuffer[locPos];
-            *free = kFALSE;
+            if(!(*buf)) {
+               *buf = new char[locLen+1];
+               *free = kTRUE;
+            }
+            memcpy(*buf,&fUnzipBuffer[locPos], locLen);
+            //*buf = &fUnzipBuffer[locPos];
+            //*free = kFALSE;
             fMutexBuffer->UnLock();
-            ind->SetBasket(basRef);
             fNFound++;
-            return locLen;
-         }
-      }
-      if (gDebug > 0)
-         Info("GetUnzipBuffer", " loc:%d, Buffer pos: %lld,  len: %d, Was NOT FOUND in the cache...", 
-              loc, pos, len);
-      fBufferCond->Signal();
-   }
+            
+	    if((loc == fUnzipEnd - 1) && (loc == fUnzipNext - 1))
+	      this->SendSignal();
 
-   char *comp = new char[len];
+	    return locLen;
+	 }
+
+	 if (gDebug > 0)
+	    Info("GetUnzipBuffer", "Thread: %d -- loc:%d, Buffer pos: %lld,  len: %d, Was NOT FOUND in the cache...", TThread::SelfId(), 
+		 loc, pos, len);
+
+	 if (gDebug > 0)
+	   Info("GetUnzipBuffer", "Thread: %d -- Not found in the cahe fUnzipStart:%d, fUnzipEnd:%d, fNseek: %d, fUnzipNext: %d", TThread::SelfId(), fUnzipStart, fUnzipEnd, fNseek, fUnzipNext);
+
+
+	if (loc > fUnzipNext)
+	    this->SendSignal();
+	}
+      }
+
+  char *comp = new char[len];
    Bool_t found = kFALSE;
 
    if (fNseek > 0 && !fIsSorted) {
       if (gDebug > 0)
-         Info("GetUnzipBuffer", "This is a new transfer... must clean things up fNSeek:%d", fNseek);
+         Info("GetUnzipBuffer", "Thread: %d -- This is a new transfer... must clean things up fNSeek:%d", TThread::SelfId(), fNseek);
       ResetCache();
    }
 
@@ -716,7 +688,7 @@ Int_t TTreeCacheUnzip::GetUnzipBuffer(char **buf, Long64_t pos, Int_t len, Bool_
    if (!found) {
       fFile->Seek(pos);
       if(fFile->ReadBuffer(comp, len)){
-         Error("GetUnzipBuffer", " Error reading from TFile ... must go out");
+         Error("GetUnzipBuffer", "Thread: %d --  Error reading from TFile ... must go out", TThread::SelfId());
          delete [] comp;
          return -1;
       }
@@ -902,7 +874,7 @@ Int_t TTreeCacheUnzip::UnzipCache()
 
    if(!fIsSorted) {
       if (gDebug > 0)
-         Info("UnzipCache", "It is still in the learning phase");
+         Info("UnzipCache", "Thread: %d -- It is still in the learning phase", TThread::SelfId());
       return 0;
    }
 
@@ -915,11 +887,11 @@ Int_t TTreeCacheUnzip::UnzipCache()
       fUnzipBuffer = new char[fUnzipBufferSize];
       fMutexBuffer->UnLock(); //*** fMutexBuffer Lock
       if (gDebug > 0)
-         Info("UnzipCache", "Creating a buffer of %lld bytes ", fUnzipBufferSize);
+         Info("UnzipCache", "Thread: %d --Creating a buffer of %lld bytes ", TThread::SelfId(), fUnzipBufferSize);
    }
    if(fNseekMax < fNseek){
       if (gDebug > 0)
-         Info("UnzipCache", "Changing fNseekMax from:%d to:%d", fNseekMax, fNseek);
+         Info("UnzipCache", "Thread: %d --Changing fNseekMax from:%d to:%d", TThread::SelfId(), fNseekMax, fNseek);
 
       fMutexList->Lock();  //*** fMutexList Lock
       Int_t *aUnzipPos = new Int_t[fNseek];
@@ -938,36 +910,92 @@ Int_t TTreeCacheUnzip::UnzipCache()
       fNseekMax  = fNseek;
       fMutexList->UnLock(); //*** fMutexList UnLock
    }
-
-   // fLastPosf may change in the middle when two signals are sent.
-   Int_t localLastPos = fLastPos;
-   Int_t localNseek   = fNseek;
+   fMutexList->Lock();
 
    Long64_t locPos = 0; // Local values for each buffer... change them together to ease sync.
    Int_t    locLen = 0;
-   Int_t badread = 0;
    fNewTransfer = kFALSE;
-   for (Int_t i = localLastPos; i<localNseek; i++) {
-      // Always for a change before continuing
-      if (!IsActiveThread() || !fNseek || fIsLearning || fNewTransfer){
-         return 0;
-      }
+   fUnzipStart = fUnzipEnd;
+
+   if (gDebug > 0)
+     Info("UnzipCache", "Thread: %d -- fUnzipStart:%d, fUnzipEnd:%d, fNseek: %d", TThread::SelfId(), fUnzipStart, fUnzipEnd, fNseek);
+
+   Long64_t reqbuffer = 0;
+   Int_t reqmax = fUnzipEnd;
+   Int_t unzipend = fUnzipEnd;
+   for (Int_t reqi = unzipend; reqi<fNseek; reqi++) {
+     //if (gDebug > 0)
+     //   Info("UnzipCache", "Thread: %d -- 1 reqi:%d,  fUnzipEnd:%d, fNseek: %d", TThread::SelfId(), reqi, fUnzipStart, fUnzipEnd, fNseek);
 
       // This must have this lock because UnzipBuffer can access GetRecordHeader also
       fMutexUnzipBuffer->Lock();  //*** fMutexUnzipBuffer Lock
       const Int_t hlen=128;
       Int_t objlen=0, keylen=0;
       Int_t nbytes=0;
-      GetRecordHeader(&fBuffer[fSeekPos[i]], hlen, nbytes, objlen, keylen);
+      GetRecordHeader(&fBuffer[fSeekPos[reqi]], hlen, nbytes, objlen, keylen);
       Int_t len = (objlen > nbytes-keylen)? keylen+objlen : nbytes;
       fMutexUnzipBuffer->UnLock();  //*** fMutexUnzipBuffer UnLock
 
       // We need a protection here in case a buffer is bigger than
       // the whole unzipping cache... do it only at the first iteration
       // to guarantee that it indeed doesnt fit the cache...
-      if ((i == localLastPos) && (len > fUnzipBufferSize)) {
+      if ((reqi == unzipend) && (len > fUnzipBufferSize)) {
          if (gDebug > 0)
-            Info("UnzipCache", "One buffer is too big resizing from:%d to len*2:%d", fUnzipBufferSize, len*2);  
+            Info("UnzipCache", "Thread: %d --One buffer is too big resizing from:%d to len*2:%d", TThread::SelfId(), fUnzipBufferSize, len*2);  
+
+         fMutexBuffer->Lock();  //*** fMutexBuffer Lock
+         char *newBuffer = new char[len*2];
+         memcpy(newBuffer, fUnzipBuffer, fPosWrite);
+         delete [] fUnzipBuffer;
+
+         SetUnzipBufferSize((Long64_t)(len*2));
+         fUnzipBuffer = newBuffer;
+         fMutexBuffer->UnLock(); //*** fMutexBuffer UnLock
+      }
+      
+      // if it is going to exceed the buffer size then stop
+      if( (reqbuffer + len) > fUnzipBufferSize ){
+         if (gDebug > 0)
+            Info("UnzipCache", "Thread: %d -- Cache found the rigth size.. breaking ", TThread::SelfId() );
+         break;
+      }
+
+      reqmax++;
+      reqbuffer += len;
+   }
+   fUnzipNext = reqmax;
+   fMutexList->UnLock();
+
+   if (gDebug > 0)
+     Info("UnzipCache", "Thread: %d -- Cache found the rigth size fUnzipStart:%d, fUnzipEnd:%d, fNseek: %d, fUnzipNext: %d", TThread::SelfId(), fUnzipStart, fUnzipEnd, fNseek, fUnzipNext);
+
+   
+   for (Int_t reqi = unzipend; reqi<fNseek; reqi++) {
+     if (gDebug > 0)
+       Info("UnzipCache", "Thread: %d -- 1 reqi:%d,  fUnzipStart:%d, fUnzipEnd:%d, fNseek: %d", TThread::SelfId(), reqi, fUnzipStart, fUnzipEnd, fNseek);
+
+     if (!IsActiveThread() || !fNseek || fIsLearning || fNewTransfer) {
+     if (gDebug > 0)
+       Info("UnzipCache", "Thread: %d -- Breaking IsActiveThread(): %d, fNseek: %d, fIsLearning:%d, fNewTransfer:%d", TThread::SelfId(), IsActiveThread(), fNseek, fIsLearning, fNewTransfer);
+       return 0;
+     }
+
+
+      // This must have this lock because UnzipBuffer can access GetRecordHeader also
+      fMutexUnzipBuffer->Lock();  //*** fMutexUnzipBuffer Lock
+      const Int_t hlen=128;
+      Int_t objlen=0, keylen=0;
+      Int_t nbytes=0;
+      GetRecordHeader(&fBuffer[fSeekPos[reqi]], hlen, nbytes, objlen, keylen);
+      Int_t len = (objlen > nbytes-keylen)? keylen+objlen : nbytes;
+      fMutexUnzipBuffer->UnLock();  //*** fMutexUnzipBuffer UnLock
+
+      // We need a protection here in case a buffer is bigger than
+      // the whole unzipping cache... do it only at the first iteration
+      // to guarantee that it indeed doesnt fit the cache...
+      if (/*(reqi == unzipend) &&*/ (len > fUnzipBufferSize)) {
+         if (gDebug > 0)
+            Info("UnzipCache", "Thread: %d --One buffer is too big resizing from:%d to len*2:%d", TThread::SelfId(), fUnzipBufferSize, len*2);  
 
          fMutexBuffer->Lock();  //*** fMutexBuffer Lock
          char *newBuffer = new char[len*2];
@@ -979,9 +1007,9 @@ Int_t TTreeCacheUnzip::UnzipCache()
          fMutexBuffer->UnLock(); //*** fMutexBuffer UnLock
       }
 
-      if (i > localLastPos) {
+      if (reqi > unzipend) {
          fMutexList->Lock();   //*** fMutexList Lock
-         locPos = fUnzipPos[i-1] + fUnzipLen[i-1];
+         locPos = fUnzipPos[reqi-1] + fUnzipLen[reqi-1];
          locLen = 0; // just in case
          fMutexList->UnLock(); //*** fMutexList UnLock
       }
@@ -989,87 +1017,9 @@ Int_t TTreeCacheUnzip::UnzipCache()
       // if it is going to exceed the buffer size then stop
       if( (locPos + len) > fUnzipBufferSize ){
          if (gDebug > 0)
-            Info("UnzipCache", "Cache is full.. breaking i:%d, fUnzipBufferSize: %lld, locPos: %lld", 
-                 i, fUnzipBufferSize, locPos);
+            Info("UnzipCache", "Thread: %d --Cache is full.. breaking i:%d, fUnzipBufferSize: %lld, locPos: %lld", TThread::SelfId(), 
+                 reqi, fUnzipBufferSize, locPos);
          break;
-      }
-
-      // I know this is very very ugly but we need the scope for the mutex
-      {
-         R__LOCKGUARD(fMutexList);
-
-         TUnzipBufferInfo *ind = 0;
-         TIter next(fUnzipList);
-         while ( (fUnzipList->GetSize()>0) && (ind=(TUnzipBufferInfo*)next())) {
-            if (!IsActiveThread() || !fNseek || fIsLearning || fNewTransfer)
-               return 0;
-
-            Int_t index = ind->GetNum();
-
-            //delete if it was already read
-            if( ind->GetRead()  /*&& !ind->GetBasket()*/) {
-               if ( fUnzipList->Remove(ind) )
-                  delete ind;
-               fUnzipPos[index] = 0;
-               fUnzipLen[index] = 0;
-               continue;
-            }
-
-            // if the new buffer overlaps an old one
-            if( ((fUnzipPos[index] <= locPos) && (locPos < (fUnzipPos[index] + fUnzipLen[index])))
-                || ((fUnzipPos[index] >= locPos) && ((locPos + len) > fUnzipPos[index] )) ) {
-               if (gDebug > 0)
-                  Info("UnzipCache", "Removing from the list fUnzipList->Remove(ind) ind:%p, index:%d", ind, index);
-
-               if ( !ind->GetRead() ) {
-                  // We will get a deadlock in the next wait is this mutex is still locked and the other thread
-                  // tries to get a different buffer so we have to unlock it, but we it's risky since a ResetCache
-                  // can change our list... that's why we need to check the state exactly after obtaining the mutex 
-                  // again
-
-                  if (gDebug > 0)
-                     Info("UnzipCache", "Waiting 1 !!!");
-
-                  fMutexList->UnLock();  //*** fMutexList UnLock
-                  TThread::CancelPoint();
-                  fBufferCond->Wait();
-                  fMutexList->Lock();   //*** fMutexList Lock
-
-                  if (!IsActiveThread() || !fNseek || fIsLearning || fNewTransfer)
-                     return 0;
-
-                  //delete if it was already read (while we were waiting)
-                  Bool_t read = ind->GetRead();
-                  TBasket *basket=ind->GetBasket();
-                  if ( fUnzipList->Remove(ind) )
-                     delete ind;
-                  fUnzipPos[index] = 0;
-                  fUnzipLen[index] = 0;
-
-                  if(basket && !read) {
-                     // We will get a very nasty deadlock if we call DeleteFromBranch
-                     // while locking fMutexList.
-                     //
-                     // UnzipCache locks _fMutexList_
-                     // UnzipCache calls TBasket::DeleteFromBranch
-                     // TBasket::DeleteFromBranch calls TBranch::DropBasket
-                     // TBranch::DropBasket locks _fMutexBranch_
-                     //
-                     // and from the other thread
-                     // TBranch::GetEntry locks _fMutexBranch_
-                     //
-                     // and we wait to dead...
-                     fMutexList->UnLock(); //*** fMutexList UnLock
-                     basket->DeleteFromBranch();
-
-                     fMutexList->Lock();   //*** fMutexList Lock
-
-                     if (!IsActiveThread() || !fNseek || fIsLearning || fNewTransfer)
-                        return 0;
-                  }
-               }
-            }
-         }
       }
 
       // Initially we had fBuffer with all the buffers to be unzipped... we took
@@ -1079,49 +1029,37 @@ Int_t TTreeCacheUnzip::UnzipCache()
       // start the transfer and I have seen that is better to just copy the data to a 
       // "local variable"... but doing _new_ here wouldn't be very good also so
       // I use a preallocated buffer.
-      if(fTmpBufferSz < fSeekSortLen[i]) {
+      if(fTmpBufferSz < fSeekSortLen[reqi]) {
          delete [] fTmpBuffer;
-         fTmpBufferSz = fSeekSortLen[i]*2;
+         fTmpBufferSz = fSeekSortLen[reqi]*2;
          fTmpBuffer = new char[fTmpBufferSz];
       }
 
-      fMutexList->Lock();   //*** fMutexList Lock
-      memcpy(fTmpBuffer, &fBuffer[fSeekPos[i]], fSeekSortLen[i]);
-      fMutexList->UnLock(); //*** fMutexList UnLock
+      fMutexList->Lock();   // fMutexList Lock
+      memcpy(fTmpBuffer, &fBuffer[fSeekPos[reqi]], fSeekSortLen[reqi]);
+      fMutexList->UnLock(); // fMutexList UnLock
 
       char *ptr = &fUnzipBuffer[locPos];
       locLen = UnzipBuffer(&ptr, fTmpBuffer);
 
-      R__LOCKGUARD(fMutexList); //*** fMutexList LOCK until gong out of scope
+      R__LOCKGUARD(fMutexList); // fMutexList LOCK until gong out of scope
 
       if (!IsActiveThread() || !fNseek || fIsLearning || fNewTransfer)
          return 0;
 
       fPosWrite    = locPos + locLen;
-      fUnzipPos[i] = locPos;
-      fUnzipLen[i] = locLen;
+      fUnzipPos[reqi] = locPos;
+      fUnzipLen[reqi] = locLen;
       if (gDebug > 0)
-         Info("UnzipCache", "i:%d fUnzipPos[i]: %d,  fUnzipLen[i]: %d",
-              i, fUnzipPos[i], fUnzipLen[i]);
+         Info("UnzipCache", "Thread: %d -- reqi:%d, fUnzipEnd:%d, fUnzipPos[reqi]: %d,  fUnzipLen[reqi]: %d", TThread::SelfId(),
+              reqi, fUnzipEnd, fUnzipPos[reqi], fUnzipLen[reqi]);
 
-      // add it to the list of unzipped buffers
-      TUnzipBufferInfo *elem = new TUnzipBufferInfo(i);
-      elem->SetPos(fSeekSort[i]);
-      elem->SetLen(fSeekSortLen[i]);
-      fUnzipList->AddLast(elem);
-
-      if(gDebug > 0)
-         Info("UnzipCache", "Adding elem:%p, i:%d, pos:%lld, len:%d", elem, i, elem->GetPos(), elem->GetLen());
-
+      fUnzipEnd++;
       fNUnzip++;
-      localLastPos = i;
    }
-   R__LOCKGUARD(fMutexList); //*** fMutexList LOCK until gong out of scope
 
-   fLastPos = localLastPos;
-
-   if(!badread) fUnzipped = kTRUE;
-   return badread;
+   fUnzipped = kTRUE;
+   return 0;
 }
 
 //_____________________________________________________________________________
