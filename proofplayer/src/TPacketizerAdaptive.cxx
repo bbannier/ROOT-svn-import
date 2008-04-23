@@ -371,6 +371,19 @@ TPacketizerAdaptive::TPacketizerAdaptive(TDSet *dset, TList *slaves,
    fCumProcTime = 0;
    fMaxPerfIdx = 1;
 
+   // The possibility to change packetizer strategy to the basic TPacketizer's
+   // one (in which workers always process their local data first).
+   Int_t strategy = -1;
+   if (TProof::GetParameter(input, "PROOF_PacketizerStrategy", strategy) == 0) {
+      if (strategy == 0) {
+         fgStrategy = 0;
+         fgMaxSlaveCnt = 4; // can be overwritten by PROOF_MaxSlavesPerNode
+         Info("TPacketizerAdaptive", "using the basic strategy of TPacketizer");
+      } else
+         Info("TPacketizerAdaptive", "The only accepted value for the"
+              " PROOF_PacketizerStrategy parameter is 0!");
+   }
+
    Long_t maxSlaveCnt = 0;
    if (TProof::GetParameter(input, "PROOF_MaxSlavesPerNode", maxSlaveCnt) == 0) {
       if (maxSlaveCnt < 1) {
@@ -445,17 +458,6 @@ TPacketizerAdaptive::TPacketizerAdaptive(TDSet *dset, TList *slaves,
       fgMinPacketTime = (Int_t) minPacketTime;
    }
 
-   // The possibility to change packetizer strategy to the basic TPacketizer's
-   // one (in which workers always process their local data first).
-   Int_t strategy = -1;
-   if (TProof::GetParameter(input, "PROOF_PacketizerStrategy", strategy) == 0) {
-      if (strategy == 0) {
-         fgStrategy = 0;
-         Info("TPacketizerAdaptive", "using the basic strategy of TPacketizer");
-      } else
-         Info("TPacketizerAdaptive",
-              "The only alternate value for PROOF_PacketizerStrategy is 0!");
-   }
    Double_t baseLocalPreference = 1.2;
    TProof::GetParameter(input, "PROOF_BaseLocalPreference", baseLocalPreference);
    fBaseLocalPreference = (Float_t)baseLocalPreference;
@@ -1136,32 +1138,44 @@ Long64_t TPacketizerAdaptive::GetEntriesProcessed(TSlave *slave) const
 //______________________________________________________________________________
 Int_t TPacketizerAdaptive::CalculatePacketSize(TObject *slStatPtr)
 {
-   // Calculates the packet size based on performance of this slave
-   // and est. time left untill the end of the query.
+   // The result depends on the fgStrategy
 
-   TSlaveStat* slstat = (TSlaveStat*)slStatPtr;
    Long64_t num;
-   Float_t rate = slstat->GetCurRate();
-   if (!rate)
-      rate = slstat->GetAvgRate();
-   if (rate) {
-      Float_t avgProcRate = (fProcessed/(fCumProcTime / fSlaveStats->GetSize()));
-      Float_t packetTime;
-      packetTime = ((fTotalEntries - fProcessed)/avgProcRate)/fgPacketAsAFraction;
-      if (packetTime < fgMinPacketTime)
-         packetTime = fgMinPacketTime;
-      // in case the worker has suddenly slowed down
-      if (rate < 0.25 * slstat->GetAvgRate())
-         rate = (rate + slstat->GetAvgRate()) / 2;
-      num = (Long64_t)(rate * packetTime);
-   } else { //first packet for this slave in this query
-      Int_t packetSize = (fTotalEntries - fProcessed)
-                         / (6 * fgPacketAsAFraction * fSlaveStats->GetSize());
-      num = Long64_t(packetSize *
-            ((Float_t)slstat->fSlave->GetPerfIdx() / fMaxPerfIdx));
+   if (fgStrategy == 0) {
+      // TPacketizer's heuristic for starting packet size
+      // Constant packet size;
+      Int_t nslaves = fSlaveStats->GetSize();
+      if (nslaves > 0) {
+         num = fTotalEntries / (fgPacketAsAFraction * nslaves);
+      } else {
+         num = 1;
+      }
+   } else {
+      // The dynamic heuristic for setting the packet size (default)
+      // Calculates the packet size based on performance of this slave
+      // and estimated time left until the end of the query.
+      TSlaveStat* slstat = (TSlaveStat*)slStatPtr;
+      Float_t rate = slstat->GetCurRate();
+      if (!rate)
+         rate = slstat->GetAvgRate();
+      if (rate) {
+         Float_t avgProcRate = (fProcessed/(fCumProcTime / fSlaveStats->GetSize()));
+         Float_t packetTime;
+         packetTime = ((fTotalEntries - fProcessed)/avgProcRate)/fgPacketAsAFraction;
+         if (packetTime < fgMinPacketTime)
+            packetTime = fgMinPacketTime;
+         // in case the worker has suddenly slowed down
+         if (rate < 0.25 * slstat->GetAvgRate())
+            rate = (rate + slstat->GetAvgRate()) / 2;
+         num = (Long64_t)(rate * packetTime);
+      } else { //first packet for this slave in this query
+         Int_t packetSize = (fTotalEntries - fProcessed)
+                            / (6 * fgPacketAsAFraction * fSlaveStats->GetSize());
+         num = Long64_t(packetSize *
+               ((Float_t)slstat->fSlave->GetPerfIdx() / fMaxPerfIdx));
+      }
    }
    if (num < 1) num = 1;
-
    return num;
 }
 
