@@ -448,17 +448,14 @@ TPacketizerAdaptive::TPacketizerAdaptive(TDSet *dset, TList *slaves,
    // The possibility to change packetizer strategy to the basic TPacketizer's
    // one (in which workers always process their local data first).
    Int_t strategy = -1;
-   if (TProof::GetParameter(input, "PROOF_PacketizerStrategy", strategy) != 0) {
-      // The user defined parameter has priority over the config file
-      strategy = gEnv->GetValue("ProofServ.PacketizerStrategy", -1);
+   if (TProof::GetParameter(input, "PROOF_PacketizerStrategy", strategy) == 0) {
+      if (strategy == 0) {
+         fgStrategy = 0;
+         Info("TPacketizerAdaptive", "using the basic strategy of TPacketizer");
+      } else
+         Info("TPacketizerAdaptive",
+              "The only alternate value for PROOF_PacketizerStrategy is 0!");
    }
-   if (strategy == 0) {
-      fgStrategy = 0;
-      Info("TPacketizerAdaptive", "using the basic strategy of TPacketizer");
-   } else if (strategy != -1)
-      Info("TPacketizerAdaptive",
-           "The only alternate value for PROOF_PacketizerStrategy is 0!");
-
    Double_t baseLocalPreference = 1.2;
    TProof::GetParameter(input, "PROOF_BaseLocalPreference", baseLocalPreference);
    fBaseLocalPreference = (Float_t)baseLocalPreference;
