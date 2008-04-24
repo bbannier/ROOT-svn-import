@@ -10,39 +10,16 @@ include $(ROOTSYS)/test/Makefile.arch
 
 #------------------------------------------------------------------------------
 
+
 ifeq ($(PLATFORM),win32)
-LIBS        += -include:_G__cpp_setupG__MathCore  "$(ROOTSYS)/lib/libMathMore.lib" \
-	"$(ROOTSYS)/lib/libGenetic.lib" "$(ROOTSYS)/lib/libTMVA.lib" \
-	"$(ROOTSYS)/lib/libMLP.lib" "$(ROOTSYS)/lib/libTreePlayer.lib" \
-	"$(ROOTSYS)/lib/libMinuit.lib" "$(ROOTSYS)/lib/libMinuit2.lib"
+LIBS        += "$(ROOTSYS)/lib/libGenetic.lib" "$(ROOTSYS)/lib/libTMVA.lib" 
+#	"$(ROOTSYS)/lib/libMLP.lib" "$(ROOTSYS)/lib/libTreePlayer.lib" \
+#	"$(ROOTSYS)/lib/libMinuit.lib" "$(ROOTSYS)/lib/libMinuit2.lib"
 else
-LIBS        += -lGenetic -lMathMore -lTMVA -lMLP -lTreePlayer -lMinuit -lMinuit2
+LIBS        += -lGenetic -lTMVA
 CXXFLAGS += -g
 endif
 
-ifeq ($(DIM),2)
-CXXFLAGS += -DDIM_2
-endif
-ifeq ($(DIM),3)
-CXXFLAGS += -DDIM_3
-endif
-ifneq ($(USE_CLHEP),)
-CXXFLAGS += -DUSE_CLHEP
-endif
-ifneq ($(USE_ROOT),)
-CXXFLAGS += -DUSE_ROOT
-endif
-
-# if have clhep
-ifneq ($(CLHEPBASE),)
-CXXFLAGS+=  -I$(CLHEPBASE)/include -DHAVE_CLHEP
-ifeq ($(PLATFORM),win32)
-EXTRALIBS += "$(CLHEPBASE)/lib/CLHEP.lib"
-else
-#EXTRALIBS+=  $(CLHEPBASE)/lib/libCLHEP.a
-EXTRALIBS+=  -L$(CLHEPBASE)/lib -lCLHEP
-endif
-endif
 
 
 TESTGAMINOBJ     = testGAMinimizer.$(ObjSuf)
@@ -62,10 +39,10 @@ $(TESTGAMIN):      $(TESTGAMINOBJ)
 		    @echo "$@ done"
 
 clean:
-		@rm -f $(OBJS) core TrackDict.$(SrcSuf) TrackDict.h
+		@rm -f $(OBJS) core 
 
 distclean:      clean
-		@rm -f $(PROGRAMS) libTrackDict.*
+		@rm -f $(PROGRAMS) 
 
 
 .SUFFIXES: .$(SrcSuf)
