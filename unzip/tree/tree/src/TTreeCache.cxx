@@ -448,6 +448,7 @@ void TTreeCache::StartLearningPhase()
    fNbranches  = 0;
    fZipBytes   = 0;
    if (fBrNames) fBrNames->Delete();
+   fIsTransferred = kFALSE;
 }
 
 //_____________________________________________________________________________
@@ -471,6 +472,7 @@ void TTreeCache::StopLearningPhase()
 
       // Then we use the vectored read to read everything now
       fFile->ReadBuffers(fBuffer,fPos,fLen,fNb);
+      fIsTransferred = kTRUE;
    }
 }
 

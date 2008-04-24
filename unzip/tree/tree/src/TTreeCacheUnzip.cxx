@@ -276,6 +276,7 @@ void TTreeCacheUnzip::StopLearningPhase()
 {
    // It's the same as TTreeCache::StopLearningPhase but we guarantee that
    // we start the unzipping just after getting the buffers
+
    TTreeCache::StopLearningPhase();
    this->SendSignal();
 }
@@ -567,7 +568,8 @@ Int_t TTreeCacheUnzip::GetUnzipBuffer(char **buf, Long64_t pos, Int_t len, Bool_
          
          // Then we use the vectored read to read everything now
          if (fFile->ReadBuffers(fBuffer,fPos,fLen,fNb)) return -1;
-         
+         fIsTransferred = kTRUE;
+
          // Try to start the unzipping thread since we just transfered the data
          this->SendSignal();
       }
@@ -794,7 +796,7 @@ Int_t TTreeCacheUnzip::UnzipCache()
    // and for how long..
    // returns 0 in normal conditions or -1 if error
    
-   if(fIsLearning) {
+   if(!fIsTransferred) {
       if (gDebug > 0)
          Info("UnzipCache", "It is still in the learning phase");
       return 0;
@@ -893,7 +895,7 @@ Int_t TTreeCacheUnzip::UnzipCache()
    fMutexList->UnLock();  //*** fMutexList UnLock
    
    for (Int_t reqi = unzipend; reqi<fNseek; reqi++) {
-      if (!IsActiveThread() || !fNseek || fIsLearning || fNewTransfer) {
+      if (!IsActiveThread() || !fNseek || fIsLearning || fNewTransfer || !fIsTransferred) {
          if (gDebug > 0)
             Info("UnzipCache", "Sudden Break!!! IsActiveThread(): %d, fNseek: %d, fIsLearning:%d, fNewTransfer:%d", 
 		 IsActiveThread(), fNseek, fIsLearning, fNewTransfer);
@@ -948,7 +950,7 @@ Int_t TTreeCacheUnzip::UnzipCache()
       locLen = UnzipBuffer(&ptr, fTmpBuffer);
       
       R__LOCKGUARD(fMutexList); // fMutexList LOCK until going out of scope
-      if (!IsActiveThread() || !fNseek || fIsLearning || fNewTransfer)
+      if (!IsActiveThread() || !fNseek || fIsLearning || fNewTransfer || !fIsTransferred)
          return 0;
       
       fPosWrite       = locPos + locLen;  // keep a pointer to the end of the buffer
