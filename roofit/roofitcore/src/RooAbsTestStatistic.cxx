@@ -296,15 +296,15 @@ void RooAbsTestStatistic::constOptimizeTestStatistic(ConstOpCode opcode)
 
 
 
-void RooAbsTestStatistic::setMPSet(Int_t setNum, Int_t numSets) 
+void RooAbsTestStatistic::setMPSet(Int_t inSetNum, Int_t inNumSets) 
 {
-  _setNum = setNum ; _numSets = numSets ;
+  _setNum = inSetNum ; _numSets = inNumSets ;
   if (_gofOpMode==SimMaster) {
     // Forward to slaves
     initialize() ;
     Int_t i ;
     for (i=0 ; i<_nGof ; i++) {
-      if (_gofArray[i]) _gofArray[i]->setMPSet(setNum,numSets) ;
+      if (_gofArray[i]) _gofArray[i]->setMPSet(inSetNum,inNumSets) ;
     }
   } 
 }

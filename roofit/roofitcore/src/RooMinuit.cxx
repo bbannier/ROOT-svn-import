@@ -820,7 +820,7 @@ TH2F* RooMinuit::contour(RooRealVar& var1, RooRealVar& var2, Double_t n1, Double
 }
 
 
-Bool_t RooMinuit::setLogFile(const char* logfile) 
+Bool_t RooMinuit::setLogFile(const char* inLogfile) 
 {
   if (_logfile) {
     coutI(Minimization) << "RooMinuit::setLogFile: closing previous log file" << endl ;
@@ -828,9 +828,9 @@ Bool_t RooMinuit::setLogFile(const char* logfile)
     delete _logfile ;
     _logfile = 0 ;
   }
-  _logfile = new ofstream(logfile) ;
+  _logfile = new ofstream(inLogfile) ;
   if (!_logfile->good()) {
-    coutI(Minimization) << "RooMinuit::setLogFile: cannot open file " << logfile << endl ;
+    coutI(Minimization) << "RooMinuit::setLogFile: cannot open file " << inLogfile << endl ;
     _logfile->close() ;
     delete _logfile ;
     _logfile= 0;

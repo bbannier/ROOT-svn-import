@@ -463,23 +463,23 @@ RooHist* RooHist::makeResidHist(const RooCurve& curve,bool normalize) const {
     // Only calculate pull for bins inside curve range
     if (x<xstart || x>xstop) continue ;
 
-    Double_t y = point - curve.interpolate(x) ;
+    Double_t yy = point - curve.interpolate(x) ;
     Double_t dyl = GetErrorYlow(i) ;
     Double_t dyh = GetErrorYhigh(i) ;
     if (normalize) {
-        Double_t norm = (y>0?dyh:dyl);
+        Double_t norm = (yy>0?dyh:dyl);
 	if (norm==0.) {
 	  coutW(Plotting) << "RooHist::makeResisHist(" << GetName() << ") WARNING: point " << i << " has zero error, setting residual to zero" << endl ;
-	  y=0 ;
+	  yy=0 ;
 	  dyh=0 ;
 	  dyl=0 ;
 	} else {
-	  y   /= norm;
+	  yy   /= norm;
 	  dyh /= norm;
 	  dyl /= norm;
 	}
     }
-    hist->addBinWithError(x,y,dyl,dyh);
+    hist->addBinWithError(x,yy,dyl,dyh);
   }
   return hist ;
 }

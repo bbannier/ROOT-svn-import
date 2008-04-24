@@ -244,11 +244,11 @@ void RooRealMPFE::serverLoop()
 
     case LogEvalError:
       {
-      Bool_t flag ;
-      read(_pipeToServer[0],&flag,sizeof(Bool_t)) ;
-      RooAbsReal::enableEvalErrorLogging(flag) ;
+      Bool_t flag2 ;
+      read(_pipeToServer[0],&flag2,sizeof(Bool_t)) ;
+      RooAbsReal::enableEvalErrorLogging(flag2) ;
       if (_verboseServer) cout << "RooRealMPFE::serverLoop(" << GetName() 
-			       << ") IPC fromClient> LogEvalError flag = " << (flag?"kTRUE":"kFALSE") << endl ;       
+			       << ") IPC fromClient> LogEvalError flag = " << (flag2?"kTRUE":"kFALSE") << endl ;       
       }
       break ;
 

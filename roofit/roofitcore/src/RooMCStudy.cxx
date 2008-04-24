@@ -373,7 +373,7 @@ void RooMCStudy::addModule(RooAbsMCStudyModule& module)
 
 
 
-Bool_t RooMCStudy::run(Bool_t generate, Bool_t fit, Int_t nSamples, Int_t nEvtPerSample, Bool_t keepGenData, const char* asciiFilePat) 
+Bool_t RooMCStudy::run(Bool_t doGenerate, Bool_t DoFit, Int_t nSamples, Int_t nEvtPerSample, Bool_t keepGenData, const char* asciiFilePat) 
 {
   // Run engine. Generate and/or fit, according to flags, 'nSamples' samples of 'nEvtPerSample' events.
   // If keepGenData is set, all generated data sets will be kept in memory and can be accessed
@@ -395,14 +395,14 @@ Bool_t RooMCStudy::run(Bool_t generate, Bool_t fit, Int_t nSamples, Int_t nEvtPe
   while(nSamples--) {
     
     oocoutP(_fitModel,Generation) << "RooMCStudy::run: " ;
-    if (generate) ooccoutI(_fitModel,Generation) << "Generating " ;
-    if (generate && fit) ooccoutI(_fitModel,Generation) << "and " ;
-    if (fit) ooccoutI(_fitModel,Generation) << "fitting " ;
+    if (doGenerate) ooccoutI(_fitModel,Generation) << "Generating " ;
+    if (doGenerate && DoFit) ooccoutI(_fitModel,Generation) << "and " ;
+    if (DoFit) ooccoutI(_fitModel,Generation) << "fitting " ;
     ooccoutP(_fitModel,Generation) << "sample " << nSamples << endl ;
     
     _genSample = 0;
     Bool_t existingData = kFALSE ;
-    if (generate) {
+    if (doGenerate) {
       // Generate sample
       Int_t nEvt(nEvtPerSample) ;
 
@@ -422,9 +422,9 @@ Bool_t RooMCStudy::run(Bool_t generate, Bool_t fit, Int_t nSamples, Int_t nEvtPe
       }
 
       // Call module before-generation hook
-      list<RooAbsMCStudyModule*>::iterator iter ;
-      for (iter=_modList.begin() ; iter!= _modList.end() ; ++iter) {
-	(*iter)->processBeforeGen(nSamples) ;
+      list<RooAbsMCStudyModule*>::iterator iter2 ;
+      for (iter2=_modList.begin() ; iter2!= _modList.end() ; ++iter2) {
+	(*iter2)->processBeforeGen(nSamples) ;
       }  
 
       // Calculate the number of (extended) events for this run
@@ -465,20 +465,20 @@ Bool_t RooMCStudy::run(Bool_t generate, Bool_t fit, Int_t nSamples, Int_t nEvtPe
     }
 
     // Call module between generation and fitting hook
-    list<RooAbsMCStudyModule*>::iterator iter ;
-    for (iter=_modList.begin() ; iter!= _modList.end() ; ++iter) {
-      (*iter)->processBetweenGenAndFit(nSamples) ;
+    list<RooAbsMCStudyModule*>::iterator iter3 ;
+    for (iter3=_modList.begin() ; iter3!= _modList.end() ; ++iter3) {
+      (*iter3)->processBetweenGenAndFit(nSamples) ;
     }  
     
-    if (fit) fitSample(_genSample) ;
+    if (DoFit) fitSample(_genSample) ;
 
     // Call module between generation and fitting hook
-    for (iter=_modList.begin() ; iter!= _modList.end() ; ++iter) {
-      (*iter)->processAfterFit(nSamples) ;
+    for (iter3=_modList.begin() ; iter3!= _modList.end() ; ++iter3) {
+      (*iter3)->processAfterFit(nSamples) ;
     }  
     
     // Optionally write to ascii file
-    if (generate && asciiFilePat && *asciiFilePat) {
+    if (doGenerate && asciiFilePat && *asciiFilePat) {
       char asciiFile[1024] ;
       sprintf(asciiFile,asciiFilePat,nSamples) ;
       _genSample->write(asciiFile) ;
@@ -505,17 +505,17 @@ Bool_t RooMCStudy::run(Bool_t generate, Bool_t fit, Int_t nSamples, Int_t nEvtPe
 
   if (_genParData) {
     const RooArgSet* genPars = _genParData->get() ;
-    TIterator* iter = genPars->createIterator() ;
+    TIterator* iter2 = genPars->createIterator() ;
     RooAbsArg* arg ;
-    while((arg=(RooAbsArg*)iter->Next())) {
+    while((arg=(RooAbsArg*)iter2->Next())) {
       _genParData->changeObservableName(arg->GetName(),Form("%s_gen",arg->GetName())) ;
     }
-    delete iter ;
+    delete iter2 ;
    
     _fitParData->merge(_genParData) ;
   }
 
-  if (fit) calcPulls() ;
+  if (DoFit) calcPulls() ;
   return kFALSE ;
 }
 

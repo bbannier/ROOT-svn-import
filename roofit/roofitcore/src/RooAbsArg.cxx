@@ -459,8 +459,8 @@ void RooAbsArg::treeNodeServerList(RooAbsCollection* list, const RooAbsArg* arg,
     while ((server=(RooAbsArg*)sIter->Next())) {
 
       // Skip non-value server nodes if requested
-      Bool_t isValueServer = server->_clientListValue.FindObject((TObject*)arg)?kTRUE:kFALSE ;
-      if (valueOnly && !isValueServer) {
+      Bool_t isValueSrv = server->_clientListValue.FindObject((TObject*)arg)?kTRUE:kFALSE ;
+      if (valueOnly && !isValueSrv) {
 	continue ;
       }
       treeNodeServerList(list,server,doBranch,doLeaf,valueOnly,recurseFundamental) ;
@@ -868,8 +868,8 @@ Bool_t RooAbsArg::redirectServers(const RooAbsCollection& newSet, Bool_t mustRep
   // Process the proxies
   Bool_t allReplaced=kTRUE ;
   for (int i=0 ; i<numProxies() ; i++) {
-    Bool_t ret = getProxy(i)->changePointer(newSet,nameChange) ;
-    allReplaced &= ret ;
+    Bool_t ret2 = getProxy(i)->changePointer(newSet,nameChange) ;
+    allReplaced &= ret2 ;
   }
 
   if (mustReplaceAll && !allReplaced) {

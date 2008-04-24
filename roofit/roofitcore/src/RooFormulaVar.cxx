@@ -50,10 +50,10 @@
 ClassImp(RooFormulaVar)
 
 
-RooFormulaVar::RooFormulaVar(const char *name, const char *title, const char* formula, const RooArgList& dependents) : 
+RooFormulaVar::RooFormulaVar(const char *name, const char *title, const char* inFormula, const RooArgList& dependents) : 
   RooAbsReal(name,title), 
   _actualVars("actualVars","Variables used by formula expression",this),
-  _formula(0), _formExpr(formula)
+  _formula(0), _formExpr(inFormula)
 {  
   // Constructor with formula expression and list of input variables
 //   RooFormula tmpFormula(name,formula,dependents) ;

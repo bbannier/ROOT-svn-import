@@ -126,7 +126,7 @@ RooAddPdf::RooAddPdf(const char *name, const char *title,
 }
 
 
-RooAddPdf::RooAddPdf(const char *name, const char *title, const RooArgList& pdfList, const RooArgList& coefList, Bool_t recursiveFractions) :
+RooAddPdf::RooAddPdf(const char *name, const char *title, const RooArgList& inPdfList, const RooArgList& inCoefList, Bool_t recursiveFractions) :
   RooAbsPdf(name,title),
   _refCoefNorm("!refCoefNorm","Reference coefficient normalization set",this,kFALSE,kFALSE),
   _refCoefRangeName(0),
@@ -145,13 +145,13 @@ RooAddPdf::RooAddPdf(const char *name, const char *title, const RooArgList& pdfL
   //
   // All PDFs must inherit from RooAbsPdf. All coefficients must inherit from RooAbsReal
 
-  if (pdfList.getSize()>coefList.getSize()+1 || pdfList.getSize()<coefList.getSize()) {
+  if (inPdfList.getSize()>inCoefList.getSize()+1 || inPdfList.getSize()<inCoefList.getSize()) {
     coutE(InputArguments) << "RooAddPdf::RooAddPdf(" << GetName() 
 			  << ") number of pdfs and coefficients inconsistent, must have Npdf=Ncoef or Npdf=Ncoef+1" << endl ;
     assert(0) ;
   }
 
-  if (recursiveFractions && pdfList.getSize()!=coefList.getSize()+1) {
+  if (recursiveFractions && inPdfList.getSize()!=inCoefList.getSize()+1) {
     coutW(InputArguments) << "RooAddPdf::RooAddPdf(" << GetName() 
 			  << ") WARNING inconsistent input: recursive fractions options can only be used if Npdf=Ncoef+1, ignoring recursive fraction setting" << endl ;
   }
@@ -161,12 +161,12 @@ RooAddPdf::RooAddPdf(const char *name, const char *title, const RooArgList& pdfL
   _coefIter = _coefList.createIterator() ;
  
   // Constructor with N PDFs and N or N-1 coefs
-  TIterator* pdfIter = pdfList.createIterator() ;
-  TIterator* coefIter = coefList.createIterator() ;
+  TIterator* pdfIter = inPdfList.createIterator() ;
+  TIterator* coefIter = inCoefList.createIterator() ;
   RooAbsPdf* pdf ;
   RooAbsReal* coef ;
 
-  RooArgList partCoefList ;
+  RooArgList partinCoefList ;
 
   while((coef = (RooAbsPdf*)coefIter->Next())) {
     pdf = (RooAbsPdf*) pdfIter->Next() ;
@@ -186,8 +186,8 @@ RooAddPdf::RooAddPdf(const char *name, const char *title, const RooArgList& pdfL
     _pdfList.add(*pdf) ;
 
     if (recursiveFractions) {
-      partCoefList.add(*coef) ;
-      RooAbsReal* rfrac = new RooRecursiveFraction(Form("%s_recursive_fraction_%s",GetName(),pdf->GetName()),"Recursive Fraction",partCoefList) ;
+      partinCoefList.add(*coef) ;
+      RooAbsReal* rfrac = new RooRecursiveFraction(Form("%s_recursive_fraction_%s",GetName(),pdf->GetName()),"Recursive Fraction",partinCoefList) ;
       addOwnedComponents(*rfrac) ;
       _coefList.add(*rfrac) ;
     } else {
@@ -215,7 +215,7 @@ RooAddPdf::RooAddPdf(const char *name, const char *title, const RooArgList& pdfL
 
 
 
-RooAddPdf::RooAddPdf(const char *name, const char *title, const RooArgList& pdfList) :
+RooAddPdf::RooAddPdf(const char *name, const char *title, const RooArgList& inPdfList) :
   RooAbsPdf(name,title),
   _refCoefNorm("!refCoefNorm","Reference coefficient normalization set",this,kFALSE,kFALSE),
   _refCoefRangeName(0),
@@ -235,7 +235,7 @@ RooAddPdf::RooAddPdf(const char *name, const char *title, const RooArgList& pdfL
   _coefIter = _coefList.createIterator() ;
  
   // Constructor with N PDFs 
-  TIterator* pdfIter = pdfList.createIterator() ;
+  TIterator* pdfIter = inPdfList.createIterator() ;
   RooAbsPdf* pdf ;
   while((pdf = (RooAbsPdf*) pdfIter->Next())) {
     
@@ -405,19 +405,19 @@ RooAddPdf::CacheElem* RooAddPdf::getProjCache(const RooArgSet* nset, const RooAr
     
     // Recalculate projection integrals of PDFs 
     _pdfIter->Reset() ;
-    RooAbsPdf* pdf ;
+    RooAbsPdf* thePdf ;
 
-    while((pdf=(RooAbsPdf*)_pdfIter->Next())) {
+    while((thePdf=(RooAbsPdf*)_pdfIter->Next())) {
 
       // Calculate projection integral
       RooAbsReal* pdfProj ;
       if (!nset2->equals(_refCoefNorm)) {
-	pdfProj = pdf->createIntegral(*nset2,_refCoefNorm) ;
+	pdfProj = thePdf->createIntegral(*nset2,_refCoefNorm) ;
 	pdfProj->setOperMode(operMode()) ;
       } else {
 	TString name(GetName()) ;
 	name.Append("_") ;
-	name.Append(pdf->GetName()) ;
+	name.Append(thePdf->GetName()) ;
 	name.Append("_ProjectNorm") ;
 	pdfProj = new RooRealVar(name,"Unit Projection normalization integral",1.0) ;
       }
@@ -426,14 +426,14 @@ RooAddPdf::CacheElem* RooAddPdf::getProjCache(const RooArgSet* nset, const RooAr
 
       // Calculation optional supplemental normalization term
       RooArgSet supNormSet(_refCoefNorm) ;
-      RooArgSet* deps = pdf->getParameters(RooArgSet()) ;
+      RooArgSet* deps = thePdf->getParameters(RooArgSet()) ;
       supNormSet.remove(*deps,kTRUE,kTRUE) ;
       delete deps ;
 
       RooAbsReal* snorm ;
       TString name(GetName()) ;
       name.Append("_") ;
-      name.Append(pdf->GetName()) ;
+      name.Append(thePdf->GetName()) ;
       name.Append("_ProjSupNorm") ;
       if (supNormSet.getSize()>0) {
 	snorm = new RooRealIntegral(name,"Projection Supplemental normalization integral",
@@ -446,14 +446,14 @@ RooAddPdf::CacheElem* RooAddPdf::getProjCache(const RooArgSet* nset, const RooAr
       // Calculate reference range adjusted projection integral
       RooAbsReal* rangeProj1 ;
       if (_refCoefRangeName && _refCoefNorm.getSize()>0) {
-	rangeProj1 = pdf->createIntegral(_refCoefNorm,_refCoefNorm,RooNameReg::str(_refCoefRangeName)) ;
+	rangeProj1 = thePdf->createIntegral(_refCoefNorm,_refCoefNorm,RooNameReg::str(_refCoefRangeName)) ;
 	rangeProj1->setOperMode(operMode()) ;
       } else {
-	TString name(GetName()) ;
-	name.Append("_") ;
-	name.Append(pdf->GetName()) ;
-	name.Append("_RangeNorm1") ;
-	rangeProj1 = new RooRealVar(name,"Unit range normalization integral",1.0) ;
+	TString theName(GetName()) ;
+	theName.Append("_") ;
+	theName.Append(thePdf->GetName()) ;
+	theName.Append("_RangeNorm1") ;
+	rangeProj1 = new RooRealVar(theName,"Unit range normalization integral",1.0) ;
       }
       cache->_refRangeProjList.addOwned(*rangeProj1) ;
       
@@ -461,14 +461,14 @@ RooAddPdf::CacheElem* RooAddPdf::getProjCache(const RooArgSet* nset, const RooAr
       // Calculate range adjusted projection integral
       RooAbsReal* rangeProj2 ;
       if (rangeName && _refCoefNorm.getSize()>0) {
-	rangeProj2 = pdf->createIntegral(_refCoefNorm,_refCoefNorm,rangeName) ;
+	rangeProj2 = thePdf->createIntegral(_refCoefNorm,_refCoefNorm,rangeName) ;
 	rangeProj2->setOperMode(operMode()) ;
       } else {
-	TString name(GetName()) ;
-	name.Append("_") ;
-	name.Append(pdf->GetName()) ;
-	name.Append("_RangeNorm2") ;
-	rangeProj2 = new RooRealVar(name,"Unit range normalization integral",1.0) ;
+	TString theName(GetName()) ;
+	theName.Append("_") ;
+	theName.Append(thePdf->GetName()) ;
+	theName.Append("_RangeNorm2") ;
+	rangeProj2 = new RooRealVar(theName,"Unit range normalization integral",1.0) ;
       }
       cache->_rangeProjList.addOwned(*rangeProj2) ;
 

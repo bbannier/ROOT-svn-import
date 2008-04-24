@@ -707,14 +707,14 @@ RooHist* RooPlot::residHist(const char* histname, const char* curvename,bool nor
 }
 
 
-void RooPlot::DrawOpt::initialize(const char* rawOpt) 
+void RooPlot::DrawOpt::initialize(const char* inRawOpt) 
 {
-  if (!rawOpt) {
+  if (!inRawOpt) {
     drawOptions[0] = 0 ;
     invisible=kFALSE ;
     return ;
   }
-  strcpy(drawOptions,rawOpt) ;
+  strcpy(drawOptions,inRawOpt) ;
   strtok(drawOptions,":") ;
   const char* extraOpt = strtok(0,":") ;
   if (extraOpt) {

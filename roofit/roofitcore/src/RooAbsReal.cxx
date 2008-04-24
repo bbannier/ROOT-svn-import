@@ -90,9 +90,9 @@ RooAbsReal::RooAbsReal(const char *name, const char *title, const char *unit) :
 
 }
 
-RooAbsReal::RooAbsReal(const char *name, const char *title, Double_t minVal,
-		       Double_t maxVal, const char *unit) :
-  RooAbsArg(name,title), _plotMin(minVal), _plotMax(maxVal), _plotBins(100),
+RooAbsReal::RooAbsReal(const char *name, const char *title, Double_t inMinVal,
+		       Double_t inMaxVal, const char *unit) :
+  RooAbsArg(name,title), _plotMin(inMinVal), _plotMax(inMaxVal), _plotBins(100),
   _value(0), _unit(unit), _forceNumInt(kFALSE), _specIntegratorConfig(0), _treeVar(kFALSE)
 {
   // Constructor with plot range and unit label
@@ -703,16 +703,16 @@ const RooAbsReal *RooAbsReal::createPlotProjection(const RooArgSet &dependentVar
     coutE(Plotting) << "RooAbsPdf::createPlotProjection(" << GetName() << ") Couldn't deep-clone PDF, abort," << endl ;
     return 0 ;
   }
-  RooAbsReal *clone= (RooAbsReal*)cloneSet->find(GetName());
+  RooAbsReal *theClone= (RooAbsReal*)cloneSet->find(GetName());
 
   // The remaining entries in our list of leaf nodes are the the external
   // dependents (x) and parameters (p) of the projection. Patch them back
-  // into the clone. This orphans the nodes they replace, but the orphans
+  // into the theClone. This orphans the nodes they replace, but the orphans
   // are still in the cloneList and so will be cleaned up eventually.
   //cout << "redirection leafNodes : " ; leafNodes.Print("1") ;
 
   RooArgSet* plotLeafNodes = (RooArgSet*) leafNodes.selectCommon(dependentVars) ;
-  clone->recursiveRedirectServers(*plotLeafNodes,kFALSE,kFALSE,kFALSE);
+  theClone->recursiveRedirectServers(*plotLeafNodes,kFALSE,kFALSE,kFALSE);
 
   // Create the set of normalization variables to use in the projection integrand
   RooArgSet normSet(dependentVars);
@@ -728,7 +728,7 @@ const RooAbsReal *RooAbsReal::createPlotProjection(const RooArgSet &dependentVar
   name.Append("Projected");
   title.Prepend("Projection of ");
 
-  RooRealIntegral *projected= new RooRealIntegral(name.Data(),title.Data(),*clone,*projectedVars,&normSet,0,rangeName);
+  RooRealIntegral *projected= new RooRealIntegral(name.Data(),title.Data(),*theClone,*projectedVars,&normSet,0,rangeName);
   if(0 == projected || !projected->isValid()) {
     coutE(Plotting) << ClassName() << "::" << GetName() << ":createPlotProjection: cannot integrate out ";
     projectedVars->printStream(cout,kName|kArgs,kSingleLine);
@@ -919,13 +919,13 @@ RooDataHist* RooAbsReal::fillDataHist(RooDataHist *hist, Double_t scaleFactor) c
   
   // Make deep clone of self and attach to dataset observables
   RooArgSet* cloneSet = (RooArgSet*) RooArgSet(*this).snapshot(kTRUE) ;
-  RooAbsReal* clone = (RooAbsReal*) cloneSet->find(GetName()) ;
-  clone->attachDataSet(*hist) ;
+  RooAbsReal* theClone = (RooAbsReal*) cloneSet->find(GetName()) ;
+  theClone->attachDataSet(*hist) ;
 
   // Iterator over all bins of RooDataHist and fill weights
   for (Int_t i=0 ; i<hist->numEntries() ; i++) {
     const RooArgSet* obs = hist->get(i) ;
-    hist->set(clone->getVal(obs)*scaleFactor) ;
+    hist->set(theClone->getVal(obs)*scaleFactor) ;
   }
 
   delete cloneSet ;
@@ -1407,10 +1407,10 @@ RooPlot* RooAbsReal::plotOn(RooPlot *frame, PlotOpt o) const
       RooArgSet* sliceDataSet = (RooArgSet*) sliceSet.selectCommon(*o.projData->get()) ;
       TString cutString ;
       if (sliceDataSet->getSize()>0) {
-	TIterator* iter = sliceDataSet->createIterator() ;
+	TIterator* iter2 = sliceDataSet->createIterator() ;
 	RooAbsArg* sliceVar ; 
 	Bool_t first(kTRUE) ;
-	while((sliceVar=(RooAbsArg*)iter->Next())) {
+	while((sliceVar=(RooAbsArg*)iter2->Next())) {
 	  if (!first) {
 	    cutString.Append("&&") ;
 	  } else {
@@ -1425,7 +1425,7 @@ RooPlot* RooAbsReal::plotOn(RooPlot *frame, PlotOpt o) const
 	    cutString.Append(Form("%s==%d",cat->GetName(),cat->getIndex())) ;	    
 	  }
 	}
-	delete iter ;
+	delete iter2 ;
       }
       delete sliceDataSet ;
 
@@ -1443,13 +1443,13 @@ RooPlot* RooAbsReal::plotOn(RooPlot *frame, PlotOpt o) const
     if (!o.binProjData && dynamic_cast<RooDataSet*>(projDataSel)!=0) {
       
       // Determine if dataset contains only categories
-      TIterator* iter = projDataSel->get()->createIterator() ;
+      TIterator* iter2 = projDataSel->get()->createIterator() ;
       Bool_t allCat(kTRUE) ;
-      RooAbsArg* arg ;
-      while((arg=(RooAbsArg*)iter->Next())) {
-	if (!dynamic_cast<RooCategory*>(arg)) allCat = kFALSE ;
+      RooAbsArg* arg2 ;
+      while((arg2=(RooAbsArg*)iter2->Next())) {
+	if (!dynamic_cast<RooCategory*>(arg2)) allCat = kFALSE ;
       }
-      delete iter ;
+      delete iter2 ;
       if (allCat) {
 	o.binProjData = kTRUE ;
 	coutI(Plotting) << "RooAbsReal::plotOn(" << GetName() << ") unbinned projection dataset consist only of discrete variables,"

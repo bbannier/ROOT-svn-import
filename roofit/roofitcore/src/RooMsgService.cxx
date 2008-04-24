@@ -224,20 +224,20 @@ Int_t RooMsgService::addStream(MsgLevel level, const RooCmdArg& arg1, const RooC
   } else if (string(outFile).size()>0) {
 
     // See if we already opened the file
-    ostream* os = _files["outFile"] ;
+    ostream* os2 = _files["outFile"] ;
 
-    if (!os) {
+    if (!os2) {
 
       // To given file name, create owned stream for it
-      os = new ofstream(outFile) ;
+      os2 = new ofstream(outFile) ;
 
-      if (!*os) {
+      if (!*os2) {
 	cout << "RooMsgService::addReportingStream ERROR: cannot open output log file " << outFile << " reverting stream to stdout" << endl ;
-	delete os ;
+	delete os2 ;
 	newStream.os = &cout ;
       }
     }
-    _files["outFile"] = os ;
+    _files["outFile"] = os2 ;
         
   } else {
 

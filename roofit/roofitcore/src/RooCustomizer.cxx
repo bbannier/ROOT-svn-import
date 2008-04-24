@@ -323,9 +323,9 @@ RooAbsArg* RooCustomizer::doBuild(const char* masterCatState, Bool_t verbose)
 
 //   cout << "loop over " << nodeList.getSize() << " nodes" << endl ;
   while((node=(RooAbsArg*)nIter->Next())) {
-    RooAbsArg* splitArg = !_sterile?(RooAbsArg*) _splitArgList.FindObject(node->GetName()):0 ;
-    if (splitArg) {
-      RooAbsCategory* splitCat = (RooAbsCategory*) _splitCatList.At(_splitArgList.IndexOf(splitArg)) ;
+    RooAbsArg* theSplitArg = !_sterile?(RooAbsArg*) _splitArgList.FindObject(node->GetName()):0 ;
+    if (theSplitArg) {
+      RooAbsCategory* splitCat = (RooAbsCategory*) _splitCatList.At(_splitArgList.IndexOf(theSplitArg)) ;
       if (verbose) {
 	coutI(ObjectHandling) << "RooCustomizer::build(" << _masterPdf->GetName() 
 			      << "): tree node " << node->GetName() << " is split by category " << splitCat->GetName() << endl ;
@@ -386,9 +386,9 @@ RooAbsArg* RooCustomizer::doBuild(const char* masterCatState, Bool_t verbose)
       masterNodesToBeSplit.add(*node) ;     
     }
 
-    RooAbsArg* replaceArg = (RooAbsArg*) _replaceArgList.FindObject(node->GetName()) ;
-    if (replaceArg) {
-      RooAbsArg* substArg = (RooAbsArg*) _replaceSubList.At(_replaceArgList.IndexOf(replaceArg)) ;
+    RooAbsArg* ReplaceArg = (RooAbsArg*) _replaceArgList.FindObject(node->GetName()) ;
+    if (ReplaceArg) {
+      RooAbsArg* substArg = (RooAbsArg*) _replaceSubList.At(_replaceArgList.IndexOf(ReplaceArg)) ;
       if (verbose) {
 	coutI(ObjectHandling) << "RooCustomizer::build(" << _masterPdf->GetName() 
 			      << "): tree node " << node->GetName() << " will be replaced by " << substArg->GetName() << endl ;
