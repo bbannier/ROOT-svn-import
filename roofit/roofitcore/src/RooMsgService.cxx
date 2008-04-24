@@ -40,12 +40,12 @@
 #define INST_MSG_SERVICE
 
 #include <sys/types.h>
-#include <unistd.h>
 
 #include "RooFit.h"
 #include "RooAbsArg.h"
 #include "TClass.h"
 #include "TROOT.h"
+#include "TSystem.h"
 
 #include "RooMsgService.h"
 #include "RooCmdArg.h"
@@ -400,7 +400,7 @@ ostream& RooMsgService::log(const RooAbsArg* self, MsgLevel level, MsgTopic topi
     
   if (_streams[as].prefix && !skipPrefix) {
     if (_showPid) {
-      (*_streams[as].os) << "pid" << getpid() << " " ;
+      (*_streams[as].os) << "pid" << gSystem->GetPid() << " " ;
     }
     (*_streams[as].os) << "[#" << as << "] " << _levelNames[level] << ":" << _topicNames[topic]  << " -- " ;
   }
@@ -425,7 +425,7 @@ ostream& RooMsgService::log(const TObject* self, MsgLevel level, MsgTopic topic,
     
   if (_streams[as].prefix && !skipPrefix) {
     if (_showPid) {
-      (*_streams[as].os) << "pid" << getpid() << " " ;
+      (*_streams[as].os) << "pid" << gSystem->GetPid() << " " ;
     }
     (*_streams[as].os) << "[#" << as << "] " << _levelNames[level] << ":" << _topicNames[topic]  << " -- " ;
   }
