@@ -130,7 +130,6 @@ void TTreeCacheUnzip::Init()
    fMutexList        = new TMutex();
    fUnzipCondition   = new TCondition();
    //fUnzipCondition   = new TSemaphore(1,1);
-   fBufferCond       = new TCondition();
 
    fUnzipList = new TSortedList();
 
@@ -165,7 +164,6 @@ TTreeCacheUnzip::~TTreeCacheUnzip()
    // destructor. (in general called by the TFile destructor)
 
    //ResetCache();
-   fBufferCond->Signal();
 
    if (IsActiveThread())
       StopThreadUnzip();
@@ -174,7 +172,6 @@ TTreeCacheUnzip::~TTreeCacheUnzip()
    delete fMutexUnzipBuffer;
    delete fMutexBuffer;
    delete fMutexList;
-   delete fBufferCond;
 
    delete [] fUnzipBuffer;
    delete [] fTmpBuffer;
@@ -545,27 +542,6 @@ void TTreeCacheUnzip::ResetCache()
    // delete the information about the unzipping buffers
    R__LOCKGUARD(fMutexList);
 
-   /*
-   TUnzipBufferInfo *ind  = 0;
-   TIter next(fUnzipList);
-   while ((ind = (TUnzipBufferInfo*)next())) {
-      TBasket *basket=ind->GetBasket();
-      if(basket && !ind->GetRead()) {
-	 // dont use basket->DeleteFromBranch to avoid a possible (although not probable)
-	 // deadlock since that function will call TBranch::DropBasket which will lock
-         // fgMutexBranch...
-         // and in a second thread we would lock the mutexes in the inverse order.
-         // This shouldnt happen since GetEntry and ResetCache should be always called
-         // from the same thread... we say it's safe to do this
-         // this will work as an invalidation
-         basket->DeleteFromBranch();
-         //ind->SetRead(kTRUE);
-      }
-   }
-   
-   // We invalidate the cache buffer but remove the pointers from the list
-   fUnzipList->Delete();
-   */
    if (gDebug > 0)
       Info("GetUnzipBuffer", "Thread: %d -- Reseting the cache", TThread::SelfId());
 
@@ -622,7 +598,6 @@ Int_t TTreeCacheUnzip::GetUnzipBuffer(char **buf, Long64_t pos, Int_t len, Bool_
          R__LOCKGUARD(fMutexList);
          
          if( (loc >= fUnzipStart) && (loc < fUnzipEnd )) {
-            // The second thread can modify this values after the signal fBufferCond->Signal() ... be careful
             Long64_t locPos = fUnzipPos[loc]; // Gives the pos in the buffer
             Int_t    locLen = fUnzipLen[loc]; // Gives the size in the buffer
             
@@ -701,38 +676,6 @@ Int_t TTreeCacheUnzip::GetUnzipBuffer(char **buf, Long64_t pos, Int_t len, Bool_
    
    if (comp) delete [] comp;
    return res;
-}
-
-//_____________________________________________________________________________
-void TTreeCacheUnzip::SetBufferRead(Long64_t pos, Int_t len, TBasket *basket)
-{
-   // inform the cache that a buffer contained in it's memory has been read
-   // and is ready to be reused... a kind of trcky algorithm to avoid
-   R__LOCKGUARD(fMutexList);
-   
-   (void) len;
-   TUnzipBufferInfo *ind  = 0;
-   TIter next(fUnzipList);
-   while ((ind = (TUnzipBufferInfo*)next())) {
-      // it was found in the list
-      if ((ind->GetPos()) == pos && (ind->GetBasket()) == basket){
-         // mark as read and go out of the list
-         Int_t index = ind->GetNum();
-         Long64_t locPos = fUnzipPos[index]; // Gives the pos in the buffer
-         Int_t    locLen = fUnzipLen[index]; // Gives the size in the buffer
-         
-         ind->SetRead(kTRUE);
-         //ind->SetBasket(0);
-         if (gDebug > 0)
-            Info("SetBufferRead", "Marking as READ and NOT USEDind:%p, pos:%lld, num:%d, basket:%p", ind, ind->GetPos(), index, basket);
-         
-         // If the second thread is waiting fr this buffer to be read... inform it
-         if( (fPosRead <= fPosWrite) && (locPos + locLen >= fPosWrite)) {
-            fBufferCond->Signal();
-         }
-         fPosRead = locPos + locLen;
-      }
-   }
 }
 
 //_____________________________________________________________________________
@@ -872,7 +815,7 @@ Int_t TTreeCacheUnzip::UnzipCache()
    // and for how long..
    // returns 0 in normal conditions or -1 if error
    
-   if(!fIsSorted) {
+   if(fIsLearning) {
       if (gDebug > 0)
          Info("UnzipCache", "Thread: %d -- It is still in the learning phase", TThread::SelfId());
       return 0;

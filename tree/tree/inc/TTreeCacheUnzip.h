@@ -164,7 +164,6 @@ public:
    virtual Bool_t GetSkipZip() { return fSkipZip; }
    virtual void   ResetCache();
    Int_t          GetUnzipBuffer(char **buf, Long64_t pos, Int_t len, Bool_t *free, TBasket *basRef);
-   void           SetBufferRead(Long64_t pos, Int_t len, TBasket *basket);
    void           SetUnzipBufferSize(Long64_t bufferSize);
    virtual void   SetSkipZip(Bool_t skip = kTRUE) { fSkipZip = skip; }
    Int_t          UnzipBuffer(char **dest, char *src);

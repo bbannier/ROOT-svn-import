@@ -569,51 +569,6 @@ void TBranch::Browse(TBrowser* b)
 }
 
 //______________________________________________________________________________
-void TBranch::DropBasket(TBasket *b)
-{
-   // Delete the selected basket.
-
-   // fast algorithm in case of only a few baskets in memory
-   Int_t i,j;
-   TBasket *basket;
-   if (fNBasketRAM < kMaxRAM) {
-      for (i=0;i<kMaxRAM;i++) {
-         j = fBasketRAM[i];
-         if (j < 0) continue;
-         basket = (TBasket*)fBaskets.UncheckedAt(j);
-         if (!basket) continue;
-         if (b == basket) {
-	    fBaskets.RemoveAt(j); // this will set the basket to zero
-            delete basket;
-            return;
-	 }
-      }
-      if (fNBasketRAM < 0) {
-         Error("DropBaskets", "fNBasketRAM =%d",fNBasketRAM);
-         fNBasketRAM = 0;
-      }
-      // we assume we have walked through all the buffers and we are done
-      return;
-   }
-
-   //general algorithm looping on the full baskets table.
-   Int_t nbaskets = GetListOfBaskets()->GetEntriesFast();
-   for (j=0;j<nbaskets-1;j++) {
-      basket = (TBasket*)fBaskets.UncheckedAt(j);
-      if (!basket) continue;
-      if (b == basket) {
-         fBaskets.RemoveAt(j);
-         delete basket;
-         return;
-      }
-   }
-
-   // There is no need to process the subbranches
-   // TBranch::DropBasket is called by TBasket::DeleteFromBranch()
-   // and we know exactly to what branch the basket belongs to
-}
-
-//______________________________________________________________________________
 void TBranch::DropBaskets(Option_t* option)
 {
    // Loop on all branch baskets. Drop all except readbasket.
