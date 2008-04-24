@@ -443,8 +443,8 @@ void RooTreeData::loadValues(const char *filename, const char *treename,
     coutE(InputArguments) << "RooTreeData::loadValues: unable to open " << filename << endl;
   }
   else {
-    TTree* tree= (TTree*)gDirectory->Get(treename);
-    loadValues(tree,cutVar);
+    TTree* tree2= (TTree*)gDirectory->Get(treename);
+    loadValues(tree2,cutVar);
   }
 }
 
@@ -1547,7 +1547,7 @@ Roo1DTable* RooTreeData::table(const RooAbsCategory& cat, const char* cuts, cons
     tableName.Append(cuts) ;
     tableName.Append(")") ;    
   }
-  Roo1DTable* table = tableVar->createTable(tableName) ;
+  Roo1DTable* table2 = tableVar->createTable(tableName) ;
 
   // Make cut selector if cut is specified
   RooFormulaVar* cutVar = 0;
@@ -1565,13 +1565,13 @@ Roo1DTable* RooTreeData::table(const RooAbsCategory& cat, const char* cuts, cons
 
     if (cutVar && cutVar->getVal()==0) continue ;
     
-    table->fill(*tableVar,weight()) ;
+    table2->fill(*tableVar,weight()) ;
   }
 
   if (ownPlotVar) delete tableSet ;
   if (cutVar) delete cutVar ;
 
-  return table ;
+  return table2 ;
 }
 
 

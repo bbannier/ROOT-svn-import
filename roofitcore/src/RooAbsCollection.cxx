@@ -348,10 +348,10 @@ RooAbsArg *RooAbsCollection::addClone(const RooAbsArg& var, Bool_t silent) {
   _ownCont= kTRUE;
 
   // add a pointer to a clone of this variable to our list (we now own it!)
-  RooAbsArg *clone= (RooAbsArg*)var.Clone();
-  if(0 != clone) _list.Add((RooAbsArg*)clone);
+  RooAbsArg *clone2= (RooAbsArg*)var.Clone();
+  if(0 != clone2) _list.Add((RooAbsArg*)clone2);
 
-  return clone;
+  return clone2;
 }
 
 
@@ -745,15 +745,15 @@ RooPrintable::StyleOption RooAbsCollection::defaultPrintStyle(Option_t* opt) con
 
 void RooAbsCollection::printValue(ostream& os) const
 {
-  Bool_t first(kTRUE) ;
+  Bool_t first2(kTRUE) ;
   os << "(" ;
   TIterator* iter = createIterator() ;
   RooAbsArg* arg ;
   while((arg=(RooAbsArg*)iter->Next())) {
-    if (!first) {
+    if (!first2) {
       os << "," ;
     } else {
-      first = kFALSE ;
+      first2 = kFALSE ;
     }
     os << arg->GetName() ;
     
@@ -774,8 +774,8 @@ void RooAbsCollection::printMultiline(ostream&os, Int_t contents, Bool_t /*verbo
   
   // Adjust the with of the name field to fit the largest name, if requesed
   Int_t maxNameLen(1) ;
-  Int_t nameFieldLength = RooAbsArg::_nameLength ;
-  if (nameFieldLength==0) {
+  Int_t nameFieldLengthSaved = RooAbsArg::_nameLength ;
+  if (nameFieldLengthSaved==0) {
     while((next=(RooAbsArg*)iterator->Next())) {
       Int_t len = strlen(next->GetName()) ;
       if (len>maxNameLen) maxNameLen = len ;
@@ -791,7 +791,7 @@ void RooAbsCollection::printMultiline(ostream&os, Int_t contents, Bool_t /*verbo
   delete iterator;
   
   // Reset name field length, if modified
-  if (nameFieldLength!=0) RooPrintable::nameFieldLength(0) ;
+  if (nameFieldLengthSaved!=0) RooPrintable::nameFieldLength(0) ;
 }
 
 

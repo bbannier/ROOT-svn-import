@@ -39,13 +39,13 @@
 ClassImp(RooMultiCategory)
 ;
 
-RooMultiCategory::RooMultiCategory(const char *name, const char *title, const RooArgSet& inputCatList) :
+RooMultiCategory::RooMultiCategory(const char *name, const char *title, const RooArgSet& inputCatList2) :
   RooAbsCategory(name, title), _catSet("catSet","Input category set",this,kTRUE,kTRUE)
 {  
   // Constructor from list of input categories
 
   // Copy category list
-  TIterator* iter = inputCatList.createIterator() ;
+  TIterator* iter = inputCatList2.createIterator() ;
   RooAbsArg* arg ;
   while ((arg=(RooAbsArg*)iter->Next())) {
     if (!dynamic_cast<RooAbsCategory*>(arg)) {

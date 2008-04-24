@@ -146,11 +146,11 @@ void RooGenCategory::updateIndexList()
     TString typeName = evalUserFunc(catList) ;
 
     // Check if type exists for given name, register otherwise
-    const RooCatType* type = lookupType(typeName,kFALSE) ;
-    if (!type) type = defineType(typeName) ;
+    const RooCatType* theType = lookupType(typeName,kFALSE) ;
+    if (!theType) theType = defineType(typeName) ;
 
     // Fill map for this super-state
-    _map[superClone->getIndex()] = type->getVal() ;
+    _map[superClone->getIndex()] = theType->getVal() ;
     //cout << "updateIndexList(" << GetName() << ") _map[" << superClone->getLabel() << "] = " << type->GetName() << endl ;
   }
 

@@ -152,7 +152,7 @@ RooNumIntConfig& RooNumIntConfig::operator=(const RooNumIntConfig& other)
 }
 
 
-Bool_t RooNumIntConfig::addConfigSection(const RooAbsIntegrator* proto, const RooArgSet& defaultConfig)
+Bool_t RooNumIntConfig::addConfigSection(const RooAbsIntegrator* proto, const RooArgSet& inDefaultConfig)
 {
   // Add a configuration section for a particular integrator. Integrator name and capabilities are
   // automatically determined from instance passed as 'proto'. The defaultConfig object is associated
@@ -183,7 +183,7 @@ Bool_t RooNumIntConfig::addConfigSection(const RooAbsIntegrator* proto, const Ro
   }
   
   // Store default configuration parameters
-  RooArgSet* config = (RooArgSet*) defaultConfig.snapshot() ;
+  RooArgSet* config = (RooArgSet*) inDefaultConfig.snapshot() ;
   config->setName(name) ;
   _configSets.Add(config) ;
 

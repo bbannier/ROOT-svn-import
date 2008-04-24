@@ -133,7 +133,7 @@ RooProdPdf::RooProdPdf(const char *name, const char *title,
 
 
 
-RooProdPdf::RooProdPdf(const char* name, const char* title, const RooArgList& pdfList, Double_t cutOff) :
+RooProdPdf::RooProdPdf(const char* name, const char* title, const RooArgList& inPdfList, Double_t cutOff) :
   RooAbsPdf(name,title), 
   _cacheMgr(this,10),
   _genCode(10),
@@ -159,7 +159,7 @@ RooProdPdf::RooProdPdf(const char* name, const char* title, const RooArgList& pd
   // If a cutoff is specified, the PDFs most likely to be small should
   // be put first in the product. The default cutOff value is zero.
 
-  TIterator* iter = pdfList.createIterator() ;
+  TIterator* iter = inPdfList.createIterator() ;
   RooAbsArg* arg ;
   Int_t numExtended(0) ;
   while((arg=(RooAbsArg*)iter->Next())) {
@@ -362,19 +362,19 @@ void RooProdPdf::initializeFromCmdArgList(const RooArgSet& fullPdfSet, const Roo
    
       RooArgSet* pdfSet = (RooArgSet*) carg->getObject(0) ;
       RooArgSet* normSet = (RooArgSet*) carg->getObject(1) ;
-      TIterator* siter = pdfSet->createIterator() ;
-      RooAbsPdf* pdf ;
-      while((pdf=(RooAbsPdf*)siter->Next())) {
-	_pdfList.add(*pdf) ;
+      TIterator* siter2 = pdfSet->createIterator() ;
+      RooAbsPdf* thePdf ;
+      while((thePdf=(RooAbsPdf*)siter2->Next())) {
+	_pdfList.add(*thePdf) ;
 	_pdfNSetList.Add(normSet->snapshot()) ;       
 
-	if (pdf->canBeExtended()) {
-	  _extendedIndex = _pdfList.index(pdf) ;
+	if (thePdf->canBeExtended()) {
+	  _extendedIndex = _pdfList.index(thePdf) ;
 	  numExtended++ ;
 	}
 
       }
-      delete siter ;
+      delete siter2 ;
 
 
     } else if (TString(carg->GetName()).CompareTo("")) {
@@ -508,9 +508,9 @@ void RooProdPdf::factorizeProduct(const RooArgSet& normSet, const RooArgSet& int
 
     // Make list of normalization dependents for this PDF ;
     if (pdfNSet->getSize()>0) {
-      RooArgSet* tmp = (RooArgSet*) pdfAllDeps.selectCommon(*pdfNSet) ;
-      pdfNormDeps.add(*tmp) ;
-      delete tmp ;
+      RooArgSet* tmp2 = (RooArgSet*) pdfAllDeps.selectCommon(*pdfNSet) ;
+      pdfNormDeps.add(*tmp2) ;
+      delete tmp2 ;
     } else {
       pdfNormDeps.add(pdfAllDeps) ;
     }
@@ -836,11 +836,11 @@ void RooProdPdf::groupProductTerms(RooLinkedList& groupedTerms, RooArgSet& outer
 //       cout << "----" << endl ;
 
       // See if any term in this group depends in any ay on outerDepInt
-      RooArgSet* term ;
-      TIterator* tIter = group->MakeIterator() ;
-      while((term=(RooArgSet*)tIter->Next())) {
+      RooArgSet* term2 ;
+      TIterator* tIter2 = group->MakeIterator() ;
+      while((term2=(RooArgSet*)tIter2->Next())) {
 
-	Int_t termIdx = terms.IndexOf(term) ;
+	Int_t termIdx = terms.IndexOf(term2) ;
 	RooArgSet* termNormDeps = (RooArgSet*) norms.At(termIdx) ;
 	RooArgSet* termIntDeps = (RooArgSet*) ints.At(termIdx) ;
 	RooArgSet* termImpDeps = (RooArgSet*) imps.At(termIdx) ;
@@ -861,10 +861,10 @@ void RooProdPdf::groupProductTerms(RooLinkedList& groupedTerms, RooArgSet& outer
 	}
 	
 	// Add terms of this group to new term      
-	tIter->Reset() ;
-	while((term=(RooArgSet*)tIter->Next())) {
+	tIter2->Reset() ;
+	while((term2=(RooArgSet*)tIter->Next())) {
 // 	  cout << "transferring group term to new merged group" << endl ;
-	  newGroup->Add(term) ;	  
+	  newGroup->Add(term2) ;	  
 	}
 
 	// Remove this group from list and delete it (but not its contents)

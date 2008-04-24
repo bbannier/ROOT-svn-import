@@ -164,8 +164,8 @@ protected:
   class DrawOpt {
     public:
 
-    DrawOpt(const char* rawOpt=0) : invisible(kFALSE) { drawOptions[0] = 0 ; initialize(rawOpt) ; }
-    void initialize(const char* rawOpt) ;
+    DrawOpt(const char* _rawOpt=0) : invisible(kFALSE) { drawOptions[0] = 0 ; initialize(_rawOpt) ; }
+    void initialize(const char* _rawOpt) ;
     const char* rawOpt() const ;
 
     char drawOptions[128] ;

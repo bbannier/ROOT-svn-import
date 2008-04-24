@@ -112,9 +112,9 @@ RooCurve::RooCurve(const RooAbsReal &f, RooAbsRealLValue &x, Double_t xlo, Doubl
   // Adjust limits
   Int_t i ;
   for (i=0 ; i<GetN() ; i++) {    
-    Double_t x,y ;
-    GetPoint(i,x,y) ;
-    updateYAxisLimits(y);
+    Double_t x2,y2 ;
+    GetPoint(i,x2,y2) ;
+    updateYAxisLimits(y2);
   }
 }
 

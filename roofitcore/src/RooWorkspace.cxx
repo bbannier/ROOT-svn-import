@@ -104,9 +104,9 @@ RooWorkspace::RooWorkspace(const RooWorkspace& other) : TNamed(other), _classes(
   // Workspace copy constructor
   other._allOwnedNodes.snapshot(_allOwnedNodes,kTRUE) ;
   TIterator* iter = other._dataList.MakeIterator() ;
-  TObject* data ;
-  while((data=iter->Next())) {
-    _dataList.Add(data->Clone()) ;
+  TObject* data2 ;
+  while((data2=iter->Next())) {
+    _dataList.Add(data2->Clone()) ;
   }
   delete iter ;
 }
@@ -350,7 +350,7 @@ Bool_t RooWorkspace::import(const RooAbsArg& arg, const RooCmdArg& arg1, const R
 }
 
 
-Bool_t RooWorkspace::import(RooAbsData& data, const RooCmdArg& arg1, const RooCmdArg& arg2, const RooCmdArg& arg3) 
+Bool_t RooWorkspace::import(RooAbsData& inData, const RooCmdArg& arg1, const RooCmdArg& arg2, const RooCmdArg& arg3) 
 {
   //  Import a dataset (RooDataSet or RooDataHist) into the work space. The workspace will contain a copy of the data
   //  The dataset and its variables can be renamed upon insertion with the options below
@@ -360,7 +360,7 @@ Bool_t RooWorkspace::import(RooAbsData& data, const RooCmdArg& arg1, const RooCm
   //  RenameDataset(const char* suffix) -- Rename dataset upon insertion
   //  RenameVariable(const char* inputName, const char* outputName) -- Change names of observables in dataset upon insertion
 
-  coutI(ObjectHandling) << "RooWorkspace::import(" << GetName() << ") importing dataset " << data.GetName() << endl ;
+  coutI(ObjectHandling) << "RooWorkspace::import(" << GetName() << ") importing dataset " << inData.GetName() << endl ;
 
   RooLinkedList args ;
   args.Add((TObject*)&arg1) ;
@@ -393,10 +393,10 @@ Bool_t RooWorkspace::import(RooAbsData& data, const RooCmdArg& arg1, const RooCm
   // Rename dataset if required
   RooAbsData* clone ;
   if (dsetName) {
-    coutI(ObjectHandling) << "RooWorkSpace::import(" << GetName() << ") changing name of dataset from  " << data.GetName() << " to " << dsetName << endl ;
-    clone = (RooAbsData*) data.Clone(dsetName) ;
+    coutI(ObjectHandling) << "RooWorkSpace::import(" << GetName() << ") changing name of dataset from  " << inData.GetName() << " to " << dsetName << endl ;
+    clone = (RooAbsData*) inData.Clone(dsetName) ;
   } else {
-    clone = (RooAbsData*) data.Clone(data.GetName()) ;
+    clone = (RooAbsData*) inData.Clone(inData.GetName()) ;
   }
 
 
@@ -898,9 +898,9 @@ void RooWorkspace::Print(Option_t* /*opts*/) const
     cout << "datasets" << endl ;
     cout << "--------" << endl ;
     iter = _dataList.MakeIterator() ;
-    RooAbsData* data ;
-    while((data=(RooAbsData*)iter->Next())) {
-      cout << data->IsA()->GetName() << "::" << data->GetName() << *data->get() << endl ;
+    RooAbsData* data2 ;
+    while((data2=(RooAbsData*)iter->Next())) {
+      cout << data2->IsA()->GetName() << "::" << data2->GetName() << *data2->get() << endl ;
     }
     delete iter ;
     cout << endl ;
