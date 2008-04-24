@@ -832,11 +832,10 @@ Int_t TTreeCacheUnzip::UnzipCache()
       fNseekMax  = fNseek;
       fMutexList->UnLock(); //*** fMutexList UnLock
    }
-   fMutexList->Lock();
-   
+   fMutexList->Lock();  //*** fMutexList Lock
    Long64_t locPos = 0; // Local values for each buffer... change them together to ease sync.
    Int_t    locLen = 0;
-   fNewTransfer = kFALSE;
+   fNewTransfer    = kFALSE;  // abort unzipping if TFileCacheRead starts a new transfer
    
    // We will unzip all the buffers starting with fUnzipStart
    fUnzipStart = fUnzipEnd;
@@ -844,7 +843,7 @@ Int_t TTreeCacheUnzip::UnzipCache()
    Long64_t reqbuffer = 0;         // How much space do we need for this transfer list?
    Int_t    reqmax    = fUnzipEnd; // How many buffers?
    Int_t    unzipend  = fUnzipEnd; // starting fUnzipEnd since it will be changed later on
-   for (Int_t reqi = unzipend; reqi<fNseek; reqi++) {
+   for (Int_t reqi=unzipend;reqi<fNseek; reqi++) {
       // This for is inefficent since the onlz thing we want is to know how many
       // requests can fit our buffer and how big it's going to be... it migth be
       // better to just have a rough estimate but since that number is use in the first thread
@@ -886,12 +885,13 @@ Int_t TTreeCacheUnzip::UnzipCache()
       reqbuffer += len;
    }
    fUnzipNext = reqmax;  // Our new goal
-   fMutexList->UnLock();
-   
+
    if (gDebug > 0)
       Info("UnzipCache", "Cache found the rigth size fUnzipStart:%d, fUnzipEnd:%d, fUnzipNext: %d, fNseek: %d", 
            fUnzipStart, fUnzipEnd, fUnzipNext, fNseek);
-      
+
+   fMutexList->UnLock();  //*** fMutexList UnLock
+   
    for (Int_t reqi = unzipend; reqi<fNseek; reqi++) {
       if (!IsActiveThread() || !fNseek || fIsLearning || fNewTransfer) {
          if (gDebug > 0)
