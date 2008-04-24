@@ -286,7 +286,7 @@ Int_t TBasket::ReadBasketBuffers(Long64_t pos, Int_t len, TFile *file)
       TTreeCacheUnzip *tpfu = (TTreeCacheUnzip*)pf;
       char *buffer = 0;
       Bool_t free = kTRUE; // Must we free this buffer or does it make part of the cache? 
-      Int_t res = tpfu->GetUnzipBuffer(&buffer, pos, len, &free, this);
+      Int_t res = tpfu->GetUnzipBuffer(&buffer, pos, len, &free);
      
       // there was some error reading the buffer
 	  if (res == -1) {
