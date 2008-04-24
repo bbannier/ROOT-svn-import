@@ -110,16 +110,9 @@ TBasket::~TBasket()
 {
    // Basket destructor.
 
-   // fBufferRef and fBuffer were not here since this destructor is
-   // usually called after a DropBuffers but now it can also be called
-   // as a consequence of the DeleteFromBranch called from TTreeCache
-	   
    if (fDisplacement) delete [] fDisplacement;
    if (fEntryOffset)  delete [] fEntryOffset;
-   if (fBufferRef)    delete fBufferRef;
- 
-   fBufferRef   = 0;
-   fBuffer      = 0;
+
    fDisplacement= 0;
    fEntryOffset = 0;
 }
@@ -166,37 +159,12 @@ void TBasket::DeleteEntryOffset()
 }
 
 //_______________________________________________________________________
-void TBasket::DeleteFromBranch()
-{
-   // Delete this basket from its branch. It's done becase if we can not
-   // simpy delete it, we have to remove it from the branch.
-   // This is called from TTreeCache when the cache buffer is being 
-   // overwritten and will be no longer valid
-   
-   if(fBranch){
-      fBranch->GetTree()->IncrementTotalBuffers(-fBufferSize); 
-      fBranch->DropBasket(this);
-      return;
-   }
-}
-
-//_______________________________________________________________________
 Int_t TBasket::DropBuffers()
 {
    // Drop buffers of this basket if it is not the current basket.
 
    if (!fBuffer && !fBufferRef) return 0;
    
-   TFileCacheRead *pf = GetFile()->GetCacheRead();
-   if (pf && pf->InheritsFrom(TTreeCacheUnzip::Class())) {
-      TTreeCacheUnzip *tpfu = (TTreeCacheUnzip*)pf;
-
-     // we must inform the cache that this buffer is being use in case
-     // it's not a real buffer but a ref to the cache (it's ignored)
-     // if it can not be found in the cache
-      tpfu->SetBufferRead(fSeekKey, fNbytes, this);
-   }
-
    //   delete [] fBuffer;
    if (fDisplacement) delete [] fDisplacement;
    if (fEntryOffset)  delete [] fEntryOffset;
