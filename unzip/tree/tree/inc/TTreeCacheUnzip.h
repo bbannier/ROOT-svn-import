@@ -40,7 +40,7 @@ protected:
    // Members for paral. managing
    TThread    *fUnzipThread;
    Bool_t      fActiveThread;
-   TCondition *fUnzipCondition; 
+   TCondition *fUnzipCondition;
    Bool_t      fNewTransfer;      // Used to indicate the second thread taht a new transfer is in progress
    Bool_t      fParallel;         // Indicate if we want to activate the parallelism (for this instance)
 
@@ -50,7 +50,7 @@ protected:
 
    Int_t       fTmpBufferSz;      //!  Size for the fTmpBuffer (default is 10KB... used to unzip a buffer)
    char       *fTmpBuffer;        //! [fTmpBufferSz] buffer of contiguous unzipped blocks
-   
+
    static TString fgParallel;     // Indicate if we want to activate the parallelism
 
    // Members to keep track of the unzipping buffer
@@ -69,7 +69,7 @@ protected:
    Int_t       fUnzipStart;       //! This will give uf the start index (fSeekSort)
    Int_t       fUnzipEnd;         //! Unzipped buffers go from fUnzipStart to fUnzipEnd
    Int_t       fUnzipNext;        //! From fUnzipEnd to fUnzipNext we have to buffer that will be unzipped soon
- 
+
    // Members use to keep statistics
    Int_t       fNUnzip;           //! number of blocks that were unzipped
    Int_t       fNFound;           //! number of blocks that were found in the cache
@@ -97,11 +97,11 @@ public:
    void                UpdateBranches(TTree *tree, Bool_t owner = kFALSE);
 
    // Methods related to the thread
-   static Option_t *GetParallelUnzip();   
+   static Option_t *GetParallelUnzip();
    static Bool_t    IsParallelUnzip();
    Bool_t           IsActiveThread();
    Bool_t           IsQueueEmpty();
-   Int_t            ProcessQueue();   
+   Int_t            ProcessQueue();
    void             SendSignal();
    static Int_t     SetParallelUnzip(Option_t* option = "");
    void             WaitForSignal();
@@ -120,7 +120,7 @@ public:
    Int_t  GetNUnzip() { return fNUnzip; }
    Int_t  GetNFound() { return fNFound; }
    Int_t  GetNMissed(){ return fNMissed; }
-   
+
    // static members
    static void* UnzipLoop(void *arg);
    ClassDef(TTreeCacheUnzip,0)  //Specialization of TTreeCache for parallel unzipping
