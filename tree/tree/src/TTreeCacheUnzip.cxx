@@ -32,23 +32,14 @@
 
 #include "TTreeCacheUnzip.h"
 #include "TChain.h"
-#include "TList.h"
 #include "TBranch.h"
+#include "TFile.h"
 #include "TEventList.h"
-#include "TObjString.h"
-#include "TRegexp.h"
-#include "TLeaf.h"
-#include "TFriendElement.h"
 #include "TVirtualMutex.h"
 #include "TThread.h"
 #include "TCondition.h"
-#include "TSemaphore.h"
-#include "TSortedList.h"
-#include "TBasket.h"
-#include "TFile.h"
 #include "TMath.h"
 #include "Bytes.h"
-#include "TEnv.h"
 
 extern "C" void R__unzip(Int_t *nin, UChar_t *bufin, Int_t *lout, char *bufout, Int_t *nout);
 
@@ -68,22 +59,19 @@ TTreeCacheUnzip::TTreeCacheUnzip() : TTreeCache(),
    fNewTransfer(kFALSE),
    fTmpBufferSz(0),
    fTmpBuffer(0),
-   fPosRead(0),
    fPosWrite(0),
-   fUnzipped(kFALSE),
    fUnzipLen(0),
    fUnzipPos(0),
    fNseekMax(0),
    fUnzipBufferSize(0),
    fUnzipBuffer(0),
    fSkipZip(0),
-   fLastPos(0),
-   fNUnzip(0),
-   fNFound(0),
-   fNMissed(0),
    fUnzipStart(0),
    fUnzipEnd(0),
-   fUnzipNext(0)
+   fUnzipNext(0),
+   fNUnzip(0),
+   fNFound(0),
+   fNMissed(0)
 {
    // Default Constructor.
 
@@ -97,22 +85,19 @@ TTreeCacheUnzip::TTreeCacheUnzip(TTree *tree, Int_t buffersize) : TTreeCache(tre
    fNewTransfer(kFALSE),
    fTmpBufferSz(10000),
    fTmpBuffer(new char[fTmpBufferSz]),
-   fPosRead(0),
    fPosWrite(0),
-   fUnzipped(kFALSE),
    fUnzipLen(0),
    fUnzipPos(0),
    fNseekMax(0),
    fUnzipBufferSize(0),
    fUnzipBuffer(0),
    fSkipZip(0),
-   fLastPos(0),
-   fNUnzip(0),
-   fNFound(0),
-   fNMissed(0),
    fUnzipStart(0),
    fUnzipEnd(0),
-   fUnzipNext(0)
+   fUnzipNext(0),
+   fNUnzip(0),
+   fNFound(0),
+   fNMissed(0)
 {
    // Constructor.
 
@@ -129,9 +114,6 @@ void TTreeCacheUnzip::Init()
    fMutexBuffer      = new TMutex();
    fMutexList        = new TMutex();
    fUnzipCondition   = new TCondition();
-   //fUnzipCondition   = new TSemaphore(1,1);
-
-   fUnzipList = new TSortedList();
 
    if (fgParallel.Contains("d")) {
       fParallel = kFALSE;
@@ -307,8 +289,11 @@ void TTreeCacheUnzip::UpdateBranches(TTree *tree, Bool_t owner)
    TTreeCache::UpdateBranches(tree, owner);
 }
 
-//_____________________________________________________________________________
-//_____________________________________________________________________________
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// From now on we have the method concerning the threading part of the cache //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
 
 //_____________________________________________________________________________
 Option_t *TTreeCacheUnzip::GetParallelUnzip()
@@ -489,8 +474,11 @@ void* TTreeCacheUnzip::UnzipLoop(void *arg)
    return (void *)0;
 }
 
-//_____________________________________________________________________________
-//_____________________________________________________________________________
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// From now on we have the method concerning the nuzipping part of the cache //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
 
 //_____________________________________________________________________________
 Int_t TTreeCacheUnzip::GetRecordHeader(char *buf, Int_t maxbytes, Int_t &nbytes, Int_t &objlen, Int_t &keylen)
@@ -545,16 +533,13 @@ void TTreeCacheUnzip::ResetCache()
    if (gDebug > 0)
       Info("GetUnzipBuffer", "Thread: %d -- Reseting the cache", TThread::SelfId());
 
-   fUnzipStart = fUnzipEnd = fUnzipNext = 0;
-
-   fLastPos     = 0;
-   fPosRead     = 0;
+   fUnzipStart  = fUnzipEnd = fUnzipNext = 0;
    fPosWrite    = 0;
    fNewTransfer = kTRUE;
 }
 
 //_____________________________________________________________________________
-Int_t TTreeCacheUnzip::GetUnzipBuffer(char **buf, Long64_t pos, Int_t len, Bool_t *free, TBasket *basRef)
+Int_t TTreeCacheUnzip::GetUnzipBuffer(char **buf, Long64_t pos, Int_t len, Bool_t *free)
 {
    // We try to read a buffer that has already been unzipped
    // Returns -1 in case of read failure, 0 in case it's not in the
@@ -565,7 +550,6 @@ Int_t TTreeCacheUnzip::GetUnzipBuffer(char **buf, Long64_t pos, Int_t len, Bool_
    // responsability of the caller to free it... it is useful for example
    // to pass it to the creator of TBuffer
    
-   (void) basRef;
    if (fParallel){
       if ( fIsLearning ) {
          // We need to reset it for new transferences...
@@ -582,9 +566,7 @@ Int_t TTreeCacheUnzip::GetUnzipBuffer(char **buf, Long64_t pos, Int_t len, Bool_
          Sort();
          
          // Then we use the vectored read to read everything now
-         if (fFile->ReadBuffers(fBuffer,fPos,fLen,fNb)) {
-            return -1;
-         }
+         if (fFile->ReadBuffers(fBuffer,fPos,fLen,fNb)) return -1;
          
          // Try to start the unzipping thread since we just transfered the data
          this->SendSignal();
@@ -594,18 +576,12 @@ Int_t TTreeCacheUnzip::GetUnzipBuffer(char **buf, Long64_t pos, Int_t len, Bool_
       Int_t loc = (Int_t)TMath::BinarySearch(fNseek,fSeekSort,pos);
       
       if (loc >= 0 && (pos == fSeekSort[loc]) ) {
-         // We shouldn't have to "wait" so a long Lock is not be very bad for the performance
+	 // We shouldn't have to "wait" so a long Lock is not be very bad for the performance
          R__LOCKGUARD(fMutexList);
          
          if( (loc >= fUnzipStart) && (loc < fUnzipEnd )) {
             Long64_t locPos = fUnzipPos[loc]; // Gives the pos in the buffer
             Int_t    locLen = fUnzipLen[loc]; // Gives the size in the buffer
-            
-            if (gDebug > 0)
-               Info("GetUnzipBuffer", "Thread: %d -- FOUND in the list loc:%d - fUnzipStart:%d, fUnzipEnd:%d, pos:%lld ", TThread::SelfId(), loc , fUnzipStart, fUnzipEnd, pos);  
-            
-            if (gDebug > 0)
-               Info("GetUnzipBuffer", "Thread: %d -- FOUND in the list loc:%d - locPos:%lld, locLen:%d ", TThread::SelfId(), loc , locPos, locLen);  
             
             fMutexBuffer->Lock();
             if(!(*buf)) {
@@ -613,25 +589,30 @@ Int_t TTreeCacheUnzip::GetUnzipBuffer(char **buf, Long64_t pos, Int_t len, Bool_
                *free = kTRUE;
             }
             memcpy(*buf,&fUnzipBuffer[locPos], locLen);
-            //*buf = &fUnzipBuffer[locPos];
+            
+	    // We could pass the pointer to the buffer instead of allocating
+            // the space and copying it. I tried that and the management needed
+            // to keep track of the buffer is just too much, it's just cheaper to
+            // do the copy.
+	    //*buf = &fUnzipBuffer[locPos];
             //*free = kFALSE;
             fMutexBuffer->UnLock();
             fNFound++;
             
+            // If this is the last buffer from the unzipping list,
+            // send the signal to start unzipping the rest
             if((loc == fUnzipEnd - 1) && (loc == fUnzipNext - 1))
                this->SendSignal();
             
+            // We found it and copied to the buffer... we are done
             return locLen;
          }
          
          if (gDebug > 0)
-            Info("GetUnzipBuffer", "Thread: %d -- loc:%d, Buffer pos: %lld,  len: %d, Was NOT FOUND in the cache...", TThread::SelfId(), 
-                 loc, pos, len);
-         
-         if (gDebug > 0)
-            Info("GetUnzipBuffer", "Thread: %d -- Not found in the cahe fUnzipStart:%d, fUnzipEnd:%d, fNseek: %d, fUnzipNext: %d", TThread::SelfId(), fUnzipStart, fUnzipEnd, fNseek, fUnzipNext);
-         
-         
+            Info("GetUnzipBuffer", "NOT found in the unzip cahe fUnzipStart:%d, fUnzipEnd:%d, fUnzipNext: %d, pos:%lld, len:%d", 
+		 fUnzipStart, fUnzipEnd, fUnzipNext, pos, len);
+
+         // If we are in a new batch of transfer... inform the thread in case it's sleeping
          if (loc > fUnzipNext)
             this->SendSignal();
       }
@@ -642,11 +623,10 @@ Int_t TTreeCacheUnzip::GetUnzipBuffer(char **buf, Long64_t pos, Int_t len, Bool_
    
    if (fNseek > 0 && !fIsSorted) {
       if (gDebug > 0)
-         Info("GetUnzipBuffer", "Thread: %d -- This is a new transfer... must clean things up fNSeek:%d", TThread::SelfId(), fNseek);
+         Info("GetUnzipBuffer", "This is a new transfer... must clean things up fNSeek:%d", fNseek);
       ResetCache();
    }
    
-   //fMutexList->Lock();  // *** fMutexList  Lock
    if (TFileCacheRead::ReadBuffer(comp,pos,len) == 1){
       found = kTRUE;
    }
@@ -668,7 +648,6 @@ Int_t TTreeCacheUnzip::GetUnzipBuffer(char **buf, Long64_t pos, Int_t len, Bool_
          return -1;
       }
    }
-   //fMutexList->UnLock();  // *** fMutexList  UnLock
    
    Int_t res = UnzipBuffer(buf, comp);
    *free = kTRUE;
@@ -817,7 +796,7 @@ Int_t TTreeCacheUnzip::UnzipCache()
    
    if(fIsLearning) {
       if (gDebug > 0)
-         Info("UnzipCache", "Thread: %d -- It is still in the learning phase", TThread::SelfId());
+         Info("UnzipCache", "It is still in the learning phase");
       return 0;
    }
    
@@ -830,11 +809,11 @@ Int_t TTreeCacheUnzip::UnzipCache()
       fUnzipBuffer = new char[fUnzipBufferSize];
       fMutexBuffer->UnLock(); //*** fMutexBuffer Lock
       if (gDebug > 0)
-         Info("UnzipCache", "Thread: %d --Creating a buffer of %lld bytes ", TThread::SelfId(), fUnzipBufferSize);
+         Info("UnzipCache", "Creating a buffer of %lld bytes ", fUnzipBufferSize);
    }
    if(fNseekMax < fNseek){
       if (gDebug > 0)
-         Info("UnzipCache", "Thread: %d --Changing fNseekMax from:%d to:%d", TThread::SelfId(), fNseekMax, fNseek);
+         Info("UnzipCache", "Changing fNseekMax from:%d to:%d", fNseekMax, fNseek);
       
       fMutexList->Lock();  //*** fMutexList Lock
       Int_t *aUnzipPos = new Int_t[fNseek];
@@ -858,18 +837,19 @@ Int_t TTreeCacheUnzip::UnzipCache()
    Long64_t locPos = 0; // Local values for each buffer... change them together to ease sync.
    Int_t    locLen = 0;
    fNewTransfer = kFALSE;
+   
+   // We will unzip all the buffers starting with fUnzipStart
    fUnzipStart = fUnzipEnd;
    
-   if (gDebug > 0)
-      Info("UnzipCache", "Thread: %d -- fUnzipStart:%d, fUnzipEnd:%d, fNseek: %d", TThread::SelfId(), fUnzipStart, fUnzipEnd, fNseek);
-   
-   Long64_t reqbuffer = 0;
-   Int_t reqmax = fUnzipEnd;
-   Int_t unzipend = fUnzipEnd;
+   Long64_t reqbuffer = 0;         // How much space do we need for this transfer list?
+   Int_t    reqmax    = fUnzipEnd; // How many buffers?
+   Int_t    unzipend  = fUnzipEnd; // starting fUnzipEnd since it will be changed later on
    for (Int_t reqi = unzipend; reqi<fNseek; reqi++) {
-      //if (gDebug > 0)
-      //   Info("UnzipCache", "Thread: %d -- 1 reqi:%d,  fUnzipEnd:%d, fNseek: %d", TThread::SelfId(), reqi, fUnzipStart, fUnzipEnd, fNseek);
-      
+      // This for is inefficent since the onlz thing we want is to know how many
+      // requests can fit our buffer and how big it's going to be... it migth be
+      // better to just have a rough estimate but since that number is use in the first thread
+      // I'm not sure about how to do it.
+
       // This must have this lock because UnzipBuffer can access GetRecordHeader also
       fMutexUnzipBuffer->Lock();  //*** fMutexUnzipBuffer Lock
       const Int_t hlen=128;
@@ -884,7 +864,7 @@ Int_t TTreeCacheUnzip::UnzipCache()
       // to guarantee that it indeed doesnt fit the cache...
       if ((reqi == unzipend) && (len > fUnzipBufferSize)) {
          if (gDebug > 0)
-            Info("UnzipCache", "Thread: %d --One buffer is too big resizing from:%d to len*2:%d", TThread::SelfId(), fUnzipBufferSize, len*2);  
+            Info("UnzipCache", "One buffer is too big resizing from:%d to len*2:%d", fUnzipBufferSize, len*2);  
          
          fMutexBuffer->Lock();  //*** fMutexBuffer Lock
          char *newBuffer = new char[len*2];
@@ -899,30 +879,26 @@ Int_t TTreeCacheUnzip::UnzipCache()
       // if it is going to exceed the buffer size then stop
       if( (reqbuffer + len) > fUnzipBufferSize ){
          if (gDebug > 0)
-            Info("UnzipCache", "Thread: %d -- Cache found the rigth size.. breaking ", TThread::SelfId() );
+            Info("UnzipCache", "Cache found the rigth size: %lld ... breaking ", reqbuffer );
          break;
       }
-      
       reqmax++;
       reqbuffer += len;
    }
-   fUnzipNext = reqmax;
+   fUnzipNext = reqmax;  // Our new goal
    fMutexList->UnLock();
    
    if (gDebug > 0)
-      Info("UnzipCache", "Thread: %d -- Cache found the rigth size fUnzipStart:%d, fUnzipEnd:%d, fNseek: %d, fUnzipNext: %d", TThread::SelfId(), fUnzipStart, fUnzipEnd, fNseek, fUnzipNext);
-   
-   
-   for (Int_t reqi = unzipend; reqi<fNseek; reqi++) {
-      if (gDebug > 0)
-         Info("UnzipCache", "Thread: %d -- 1 reqi:%d,  fUnzipStart:%d, fUnzipEnd:%d, fNseek: %d", TThread::SelfId(), reqi, fUnzipStart, fUnzipEnd, fNseek);
+      Info("UnzipCache", "Cache found the rigth size fUnzipStart:%d, fUnzipEnd:%d, fUnzipNext: %d, fNseek: %d", 
+           fUnzipStart, fUnzipEnd, fUnzipNext, fNseek);
       
+   for (Int_t reqi = unzipend; reqi<fNseek; reqi++) {
       if (!IsActiveThread() || !fNseek || fIsLearning || fNewTransfer) {
          if (gDebug > 0)
-            Info("UnzipCache", "Thread: %d -- Breaking IsActiveThread(): %d, fNseek: %d, fIsLearning:%d, fNewTransfer:%d", TThread::SelfId(), IsActiveThread(), fNseek, fIsLearning, fNewTransfer);
+            Info("UnzipCache", "Sudden Break!!! IsActiveThread(): %d, fNseek: %d, fIsLearning:%d, fNewTransfer:%d", 
+		 IsActiveThread(), fNseek, fIsLearning, fNewTransfer);
          return 0;
       }
-      
       
       // This must have this lock because UnzipBuffer can access GetRecordHeader also
       fMutexUnzipBuffer->Lock();  //*** fMutexUnzipBuffer Lock
@@ -933,23 +909,7 @@ Int_t TTreeCacheUnzip::UnzipCache()
       Int_t len = (objlen > nbytes-keylen)? keylen+objlen : nbytes;
       fMutexUnzipBuffer->UnLock();  //*** fMutexUnzipBuffer UnLock
       
-      // We need a protection here in case a buffer is bigger than
-      // the whole unzipping cache... do it only at the first iteration
-      // to guarantee that it indeed doesnt fit the cache...
-      if (/*(reqi == unzipend) &&*/ (len > fUnzipBufferSize)) {
-         if (gDebug > 0)
-            Info("UnzipCache", "Thread: %d --One buffer is too big resizing from:%d to len*2:%d", TThread::SelfId(), fUnzipBufferSize, len*2);  
-         
-         fMutexBuffer->Lock();  //*** fMutexBuffer Lock
-         char *newBuffer = new char[len*2];
-         memcpy(newBuffer, fUnzipBuffer, fPosWrite);
-         delete [] fUnzipBuffer;
-         
-         SetUnzipBufferSize((Long64_t)(len*2));
-         fUnzipBuffer = newBuffer;
-         fMutexBuffer->UnLock(); //*** fMutexBuffer UnLock
-      }
-      
+      // Don't do it for the first buffer since we should had done in the last cycle
       if (reqi > unzipend) {
          fMutexList->Lock();   //*** fMutexList Lock
          locPos = fUnzipPos[reqi-1] + fUnzipLen[reqi-1];
@@ -958,9 +918,11 @@ Int_t TTreeCacheUnzip::UnzipCache()
       }
       
       // if it is going to exceed the buffer size then stop
+      // this is not needed since now we calculate how many buffers fit the cache
+      // keep it here just in case
       if( (locPos + len) > fUnzipBufferSize ){
          if (gDebug > 0)
-            Info("UnzipCache", "Thread: %d --Cache is full.. breaking i:%d, fUnzipBufferSize: %lld, locPos: %lld", TThread::SelfId(), 
+            Info("UnzipCache", "Cache is full.. breaking i:%d, fUnzipBufferSize: %lld, locPos: %lld", 
                  reqi, fUnzipBufferSize, locPos);
          break;
       }
@@ -985,25 +947,21 @@ Int_t TTreeCacheUnzip::UnzipCache()
       char *ptr = &fUnzipBuffer[locPos];
       locLen = UnzipBuffer(&ptr, fTmpBuffer);
       
-      R__LOCKGUARD(fMutexList); // fMutexList LOCK until gong out of scope
-      
+      R__LOCKGUARD(fMutexList); // fMutexList LOCK until going out of scope
       if (!IsActiveThread() || !fNseek || fIsLearning || fNewTransfer)
          return 0;
       
-      fPosWrite    = locPos + locLen;
+      fPosWrite       = locPos + locLen;  // keep a pointer to the end of the buffer
       fUnzipPos[reqi] = locPos;
       fUnzipLen[reqi] = locLen;
+
       if (gDebug > 0)
-         Info("UnzipCache", "Thread: %d -- reqi:%d, fUnzipEnd:%d, fUnzipPos[reqi]: %d,  fUnzipLen[reqi]: %d", TThread::SelfId(),
-              reqi, fUnzipEnd, fUnzipPos[reqi], fUnzipLen[reqi]);
-      
+         Info("UnzipCache", "reqi:%d, fSeekPos[reqi]:%d, fSeekSortLen[reqi]: %d, fUnzipPos[reqi]:%d, fUnzipLen[reqi]:%d", 
+	      reqi, fSeekPos[reqi], fSeekSortLen[reqi], fUnzipPos[reqi], fUnzipLen[reqi]);
+
       fUnzipEnd++;
       fNUnzip++;
    }
-   
-   fUnzipped = kTRUE;
    return 0;
 }
-
-//_____________________________________________________________________________
-//_____________________________________________________________________________
+ 
