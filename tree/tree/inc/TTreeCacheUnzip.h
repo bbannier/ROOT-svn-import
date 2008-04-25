@@ -44,7 +44,6 @@ protected:
    Bool_t      fNewTransfer;      // Used to indicate the second thread taht a new transfer is in progress
    Bool_t      fParallel;         // Indicate if we want to activate the parallelism (for this instance)
 
-   TMutex     *fMutexUnzipBuffer; // Dont access the same method of the same object at the same time
    TMutex     *fMutexBuffer;      // Mutex to protect the unzipping buffer 'fUnzipBuffer'
    TMutex     *fMutexList;        // Mutex to protect the list of inflated buffer
 

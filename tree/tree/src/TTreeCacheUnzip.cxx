@@ -110,7 +110,6 @@ void TTreeCacheUnzip::Init()
    // Initialization procedure common to all the constructors
 
    fMutexCache       = new TMutex(kTRUE);
-   fMutexUnzipBuffer = new TMutex();
    fMutexBuffer      = new TMutex();
    fMutexList        = new TMutex();
    fUnzipCondition   = new TCondition();
@@ -151,7 +150,6 @@ TTreeCacheUnzip::~TTreeCacheUnzip()
       StopThreadUnzip();
 
    delete fMutexCache;
-   delete fMutexUnzipBuffer;
    delete fMutexBuffer;
    delete fMutexList;
 
@@ -678,8 +676,6 @@ Int_t TTreeCacheUnzip::UnzipBuffer(char **dest, char *src)
    // to pass it to the creator of TBuffer
    // src is the original buffer with the record (header+compressed data)
    // *dest is the inflated buffer (including the header)
-   R__LOCKGUARD(fMutexUnzipBuffer);
-
    Int_t  uzlen = 0;
    Bool_t alloc = kFALSE;
 
@@ -851,14 +847,11 @@ Int_t TTreeCacheUnzip::UnzipCache()
       // better to just have a rough estimate but since that number is use in the first thread
       // I'm not sure about how to do it.
 
-      // This must have this lock because UnzipBuffer can access GetRecordHeader also
-      fMutexUnzipBuffer->Lock();  //*** fMutexUnzipBuffer Lock
       const Int_t hlen=128;
       Int_t objlen=0, keylen=0;
       Int_t nbytes=0;
       GetRecordHeader(&fBuffer[fSeekPos[reqi]], hlen, nbytes, objlen, keylen);
       Int_t len = (objlen > nbytes-keylen)? keylen+objlen : nbytes;
-      fMutexUnzipBuffer->UnLock();  //*** fMutexUnzipBuffer UnLock
 
       // We need a protection here in case a buffer is bigger than
       // the whole unzipping cache... do it only at the first iteration
@@ -903,13 +896,11 @@ Int_t TTreeCacheUnzip::UnzipCache()
       }
 
       // This must have this lock because UnzipBuffer can access GetRecordHeader also
-      fMutexUnzipBuffer->Lock();  //*** fMutexUnzipBuffer Lock
       const Int_t hlen=128;
       Int_t objlen=0, keylen=0;
       Int_t nbytes=0;
       GetRecordHeader(&fBuffer[fSeekPos[reqi]], hlen, nbytes, objlen, keylen);
       Int_t len = (objlen > nbytes-keylen)? keylen+objlen : nbytes;
-      fMutexUnzipBuffer->UnLock();  //*** fMutexUnzipBuffer UnLock
 
       // Don't do it for the first buffer since we should had done in the last cycle
       if (reqi > unzipend) {
