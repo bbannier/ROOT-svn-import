@@ -129,6 +129,54 @@ bool THtml::TModuleDefinition::GetModule(const TClass* cl, TString& out_modulena
    return true;
 }
 
+//______________________________________________________________________________
+void THtml::TFileDefinition::ExpandSearchPath(TString& path) const
+{
+   // Create all permutations of path and THtml's input path:
+   // path being PP/ and THtml's input being .:include/:src/ gives
+   // .:./PP/:include:include/PP/:src/:src/PP
+   THtml* owner = GetOwner();
+   if (!owner) return;
+
+   static const char* pathDelimiter = 
+#ifdef _WIN32
+   ";";
+#else
+   ":";
+#endif
+
+   TString pathext;
+   TString inputdir = owner->GetSourceDir();
+   TString tok;
+   Ssiz_t start = 0;
+   while (inputdir.Tokenize(tok, start, pathDelimiter)) {
+      if (pathext.Length())
+         pathext += pathDelimiter;
+      pathext += tok;
+      pathext += pathDelimiter + tok + "/" + path;
+   }
+   path = pathext;
+
+}
+
+//______________________________________________________________________________
+void THtml::TFileDefinition::SplitClassIntoDirFile(const TString& clname, TString& dir, TString& filename) const
+{
+   // Given a class name with a scope, split the class name into directory part
+   // and file name: A::B::C becomes module B, filename C.
+   TString token;
+   Ssiz_t from = 0;
+   filename = "";
+   dir = "";
+   while (clname.Tokenize(token, from, "::") ) {
+      dir = filename;
+      filename = token;
+   }
+
+   // convert from Scope, class to module, filename.h
+   dir.ToLower();
+}
+
 
 //______________________________________________________________________________
 bool THtml::TFileDefinition::GetDeclFileName(const TClass* cl, TString& out_filename) const
@@ -159,16 +207,9 @@ bool THtml::TFileDefinition::GetDeclFileName(const TClass* cl, TString& out_file
          out_filename = "";
          return false;
       }
-
-      TString token;
-      Ssiz_t from = 0;
-      while (out_filename.Tokenize(token, from, "::") ) {
-         possiblePath = possibleFileName;
-         possibleFileName = token;
-      }
+      SplitClassIntoDirFile(out_filename, possiblePath, possibleFileName);
 
       // convert from Scope, class to module, filename.h
-      possiblePath.ToLower();
       if (possibleFileName.Length())
          possibleFileName += ".h";
       if (possiblePath.Length())
@@ -179,29 +220,8 @@ bool THtml::TFileDefinition::GetDeclFileName(const TClass* cl, TString& out_file
       possibleFileName = gSystem->BaseName(decl);
    }
 
-   static const char* pathDelimiter = 
-#ifdef _WIN32
-   ";";
-#else
-   ":";
-#endif
-   THtml* owner = GetOwner();
-   if (possiblePath.Length() && owner) {
-      // Create the permutation of possiblePath and THtml's input path:
-      // possiblePath being PP/ and input being .:include/:src/ gives
-      // .:./PP/:include:include/PP/:src/:src/PP
-      TString possiblePathExt;
-      TString inputdir = owner->SetSourceDir();
-      TString tok;
-      Ssiz_t start = 0;
-      while (inputdir.Tokenize(tok, start, pathDelimiter)) {
-         if (possiblePathExt.Length())
-            possiblePathExt += pathDelimiter;
-         possiblePathExt += tok;
-         possiblePathExt += pathDelimiter + tok + "/" + possiblePath;
-      }
-      possiblePath = possiblePathExt;
-   }
+   if (possiblePath.Length())
+      ExpandSearchPath(possiblePath);
 
    return (gSystem->FindFile(possiblePath, possibleFileName, kReadPermission));
 }
@@ -234,16 +254,9 @@ bool THtml::TFileDefinition::GetImplFileName(const TClass* cl, TString& out_file
          out_filename = "";
          return false;
       }
-
-      TString token;
-      Ssiz_t from = 0;
-      while (out_filename.Tokenize(token, from, "::") ) {
-         possiblePath = possibleFileName;
-         possibleFileName = token;
-      }
+      SplitClassIntoDirFile(out_filename, possiblePath, possibleFileName);
 
       // convert from Scope, class to module, filename.cxx
-      possiblePath.ToLower();
       if (possibleFileName.Length())
          possibleFileName += ".cxx";
       if (possiblePath.Length())
@@ -254,31 +267,99 @@ bool THtml::TFileDefinition::GetImplFileName(const TClass* cl, TString& out_file
       possibleFileName = gSystem->BaseName(impl);
    }
 
-   static const char* pathDelimiter = 
-#ifdef _WIN32
-   ";";
-#else
-   ":";
-#endif
-   THtml* owner = GetOwner();
-   if (possiblePath.Length() && owner) {
-      // Create the permutation of possiblePath and THtml's input path:
-      // possiblePath being PP/ and input being .:include/:src/ gives
-      // .:./PP/:include:include/PP/:src/:src/PP
-      TString possiblePathExt;
-      TString inputdir = owner->SetSourceDir();
-      TString tok;
-      Ssiz_t start = 0;
-      while (inputdir.Tokenize(tok, start, pathDelimiter)) {
-         if (possiblePathExt.Length())
-            possiblePathExt += pathDelimiter;
-         possiblePathExt += tok;
-         possiblePathExt += pathDelimiter + tok + "/" + possiblePath;
-      }
-      possiblePath = possiblePathExt;
-   }
+   if (possiblePath.Length())
+      ExpandSearchPath(possiblePath);
 
    return (gSystem->FindFile(possiblePath, possibleFileName, kReadPermission));
+}
+
+//______________________________________________________________________________
+bool THtml::TPathDefinition::GetMacroPath(const TClass* cl, TString& out_dir) const
+{
+   // Determine the path to look for macros (see TDocMacroDirective) for
+   // a given class. If the path was sucessfuly determined return true.
+   // For ROOT, this directory is relative to the directory of cl's source file;
+   // the path returned is "../doc/macros:.".
+   //
+   // If your software cannot be mapped into this scheme then derive your
+   // own class from TPathDefinition and pass it to THtml::SetPathDefinition().
+
+   out_dir = "../doc/macros:.";
+   return true;
+}
+
+
+//______________________________________________________________________________
+bool THtml::TPathDefinition::GetDocDir(const TString& module, TString& doc_dir) const
+{
+   // Determine the module's documentation directory.
+   // If the path was sucessfuly determined return true.
+   // For ROOT, this directory is the subdir "doc/" in the
+   // module's path; the directory returned is module + "/doc".
+   //
+   // If your software cannot be mapped into this scheme then derive your
+   // own class from TPathDefinition and pass it to THtml::SetPathDefinition().
+
+   doc_dir = module + "doc";
+   return true;
+}
+
+
+//______________________________________________________________________________
+bool THtml::TPathDefinition::GetIncludeAs(const TClass* cl, TString& out_dir) const
+{
+   // Determine the path and filename used in an include statement for the
+   // header file of the given class. E.g. the class ROOT::Math::Boost is
+   // meant to be included as "Math/Genvector/Boost.h" - which is what
+   // out_dir is set to. GetIncludeAs() returns whether the include 
+   // statement's path was successfully determined.
+   //
+   // Any leading directory part that is part of fIncludePath (see SetIncludePath)
+   // will be removed. For ROOT, leading "include/" is removed; everything after
+   // is the include path. Only classes from TMVA are different; they are included
+   // as TMVA/ClassName.h.
+   //
+   // If your software cannot be mapped into this scheme then derive your
+   // own class from TPathDefinition and pass it to THtml::SetPathDefinition().
+
+   out_dir = "";
+   if (!cl || !GetOwner()) return false;
+
+   const char* clname = cl->GetName();
+   const char* hdr = GetOwner()->GetDeclFileName(cl);
+   if (!hdr) return false;
+
+   out_dir = hdr;
+   bool includePathMatches = false;
+   TString tok;
+   Ssiz_t pos = 0;
+   while (!includePathMatches && fIncludePath.Tokenize(tok, start, ":"))
+      if (out_dir.BeginsWith(tok)) {
+         out_dir = hdr + tok.Length();
+         includePathMatches = true;
+      }
+
+   if (!includePathMatches) {
+      // We probably have a file super/module/inc/optional/filename.h.
+      // That gets translated into optional/filename.h.
+      // Assume that only one occurrence of "/inc/" exists in hdr.
+      // If /inc/ is not part of the include file name then
+      // just return the full path.
+      // If we have matched any include path then this ROOT-only
+      // algorithm is skipped!
+      hdr = strstr(hdr, "/inc/");
+      if (!hdr) return true;
+      hdr += 5;
+      out_dir = hdr;
+
+      // TMVA special treatment:
+      // TMVA::Whatever claims to be in in math/tmva/inc/Whatever.h
+      // but it needs to get included as TMVA/Whatever.h
+      if (strstr(cl, "TMVA::"))
+         out_dir.Prepend("TMVA/");
+   }
+
+   return (out_dir.Length());
 }
 
 
@@ -1012,6 +1093,7 @@ void  THtml::GetModuleNameForClass(TString& module, TClass* cl) const
       return;
    module = cdi->GetModule()->GetName();
 }
+
 
 //______________________________________________________________________________
 void THtml::CreateListOfClasses(const char* filter)
