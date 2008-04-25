@@ -144,6 +144,9 @@ public:
    public:
       virtual bool GetDeclFileName(const TClass* cl, TString& out_filename) const;
       virtual bool GetImplFileName(const TClass* cl, TString& out_filename) const;
+   protected:
+      void SplitClassIntoDirFile(const TString& clname, TString& dir, TString& filename) const;
+      void ExpandSearchPath(TString& path) const;
    };
 
    //______________________________________________________________
