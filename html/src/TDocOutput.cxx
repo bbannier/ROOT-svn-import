@@ -865,8 +865,8 @@ void TDocOutput::CreateProductIndex()
    WriteHtmlHeader(out, GetHtml()->GetProductName() + " Reference Guide");
    out << "<h1>" << GetHtml()->GetProductName() + " Reference Guide</h1>" << std::endl;
 
-   if (GetHtml()->GetProductDocDir().Length())
-      ProcessDocInDir(out, GetHtml()->GetProductDocDir(), GetHtml()->GetOutputDir(), "./");
+   if (GetHtml()->GetDocPath().Length())
+      ProcessDocInDir(out, GetHtml()->GetDocPath(), GetHtml()->GetOutputDir(), "./");
 
    WriteModuleLinks(out);
 
