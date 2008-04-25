@@ -47,7 +47,7 @@ double poisson_pmf(double * x, double * p) {
 }
 double binomial_pmf(double * x, double * p) { 
 
-   double y = ROOT::Math::binomial_pdf(int(x[0]),p[1],int(p[0]));
+   double y = ROOT::Math::binomial_pdf(static_cast<unsigned int>(x[0]),p[1], static_cast<unsigned int>(p[0]));
 //   std::cout << x[0] << " f(x) = " << y << std::endl;
    return y; 
 }
