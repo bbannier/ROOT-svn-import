@@ -78,8 +78,10 @@ private:
 //
 class TModuleDocInfo: public TNamed {
 public:
-   TModuleDocInfo(const char* name, const char* doc = ""): 
-      TNamed(name, doc), fSelected(kTRUE) {}
+   TModuleDocInfo(const char* name, TModuleDocInfo* super, const char* doc = ""): 
+      TNamed(name, doc), fSuper(super), fSub(0), fSelected(kTRUE) {
+         if (super) super->GetSub()->Insert(this);
+      }
    virtual ~TModuleDocInfo() {}
 
    void        SetDoc(const char* doc) { SetTitle(doc); }
@@ -94,7 +96,12 @@ public:
    const TString& GetSourceDir() const { return fSourceDir; }
    void        SetSourceDir(const char* dir);
 
+   TModuleDocInfo* GetSuper() const { return fSuper; }
+   THashList&  GetSub() { return fSub; }
+
 private:
+   TModuleDocInfo* fSuper; // module containing this module
+   THashList   fSub; // modules contained in this module
    TList       fClasses;
    TString     fSourceDir; // (a) directory containing the modules' sources
    Bool_t      fSelected; // selected for doc output
