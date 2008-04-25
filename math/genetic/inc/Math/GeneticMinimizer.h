@@ -29,7 +29,7 @@ namespace ROOT {
    @ingroup MultiMin
 */
 
-class GeneticMinimizer {
+class GeneticMinimizer: public ROOT::Math::Minimizer {
 
 public: 
 
@@ -37,6 +37,7 @@ public:
    virtual ~GeneticMinimizer ();
 
    virtual void Clear();
+   using ROOT::Math::Minimizer::SetFunction;
    virtual void SetFunction(const ROOT::Math::IMultiGenFunction & func); 
 
    virtual bool SetLimitedVariable(unsigned int , const std::string& , double , double , double, double);
