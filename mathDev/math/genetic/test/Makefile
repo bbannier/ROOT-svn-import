@@ -21,20 +21,27 @@ CXXFLAGS += -g
 endif
 
 
-
 TESTGAMINOBJ     = testGAMinimizer.$(ObjSuf)
 TESTGAMINSRC     = testGAMinimizer.$(SrcSuf)
 TESTGAMIN        = testGAMinimizer$(ExeSuf)
 
-OBJS          = $(TESTGAMINOBJ)
+GATUTORIALOBJ     = GAMinTutorial.$(ObjSuf)
+GATUTORIALSRC     = GAMinTutorial.$(SrcSuf)
+GATUTORIAL        = GAMinTutorial$(ExeSuf)
 
-PROGRAMS      = $(TESTGAMIN)
+OBJS          = $(TESTGAMINOBJ) $(GATUTORIALOBJ)
+
+PROGRAMS      = $(TESTGAMIN) $(GATUTORIAL)
 
 .SUFFIXES: .$(SrcSuf) .$(ObjSuf) $(ExeSuf)
 
 all:            $(PROGRAMS) 
 
 $(TESTGAMIN):      $(TESTGAMINOBJ)
+		    $(LD) $(LDFLAGS) $^ $(LIBS)  $(OutPutOpt)$@
+		    @echo "$@ done"
+
+$(GATUTORIAL):      $(GATUTORIALOBJ)
 		    $(LD) $(LDFLAGS) $^ $(LIBS)  $(OutPutOpt)$@
 		    @echo "$@ done"
 

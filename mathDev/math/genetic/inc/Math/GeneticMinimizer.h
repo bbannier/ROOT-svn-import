@@ -58,7 +58,8 @@ public:
 
    virtual double CovMatrix(unsigned int i, unsigned int j) const;  
 
-   void SetParameters(Int_t nsteps, Int_t popSize, Int_t SC_steps, Int_t SC_rate, Double_t SC_factor, Double_t convCrit );
+   void SetParameters(Int_t nsteps=40, Int_t popSize=300, Int_t SC_steps=10, 
+                      Int_t SC_rate=5, Double_t SC_factor=0.95, Double_t convCrit=0.001 );
 
 protected:
    std::vector<TMVA::Interval*> fRanges;
