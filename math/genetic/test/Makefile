@@ -42,7 +42,7 @@ clean:
 		@rm -f $(OBJS) core 
 
 distclean:      clean
-		@rm -f $(PROGRAMS) 
+		@rm -f $(PROGRAMS) *.so
 
 
 .SUFFIXES: .$(SrcSuf)

@@ -1,7 +1,6 @@
 #include "Math/GeneticMinimizer.h"
 
 #include "TMVA/GeneticAlgorithm.h"
-#include "TMVA/GeneticFitter.h"
 #include "TMVA/IFitterTarget.h"
 
 #include "Math/IFunction.h"
@@ -31,7 +30,14 @@ public:
 };
 
 GeneticMinimizer::GeneticMinimizer(): fFitness(0)
-{ }
+{
+   fNsteps=40;
+   fPopSize=300;
+   fSC_steps=10;
+   fSC_rate=5;
+   fSC_factor=0.95;
+   fConvCrit=0.001;
+ }
 
 GeneticMinimizer::~GeneticMinimizer()
 {
@@ -73,16 +79,40 @@ bool GeneticMinimizer::SetVariable(unsigned int, const std::string&, double, dou
    return false;
 }
 
+void GeneticMinimizer::SetParameters(Int_t nsteps, Int_t popSize, Int_t SC_steps, 
+                                     Int_t SC_rate, Double_t SC_factor, Double_t convCrit )
+{
+   fNsteps = nsteps;
+   fPopSize = popSize;
+   fSC_steps = SC_steps;
+   fSC_rate = SC_rate;
+   fSC_factor = SC_factor;
+   fConvCrit = convCrit;   
+}
+
 bool GeneticMinimizer::Minimize() 
 {
-   const TString name( "GeneticMinimzer" );
-   const TString opts( "PopSize=100:Steps=30:Seed=0" );
+   TMVA::GeneticAlgorithm mg( *fFitness, fPopSize, fRanges );
    
-   TMVA::GeneticFitter mg( *fFitness, name, fRanges, opts);
-   //mg.SetParameters( 4, 30, 200, 10,5, 0.95, 0.001 );
+   do {
+      mg.Init();
+      
+      mg.CalculateFitness();
+      
+      // Just for debugging options
+      //mg.GetGeneticPopulation().Print(0);
+      
+      mg.GetGeneticPopulation().TrimPopulation();
+      
+      mg.SpreadControl( fSC_steps, fSC_rate, fSC_factor );
+      
+   } while (!mg.HasConverged( fNsteps, fConvCrit ));  // converged if: fitness-improvement < CONVCRIT within the last CONVSTEPS loops
    
-   // Run the GA and obtain the results
-   mg.Run(fResult);
+   TMVA::GeneticGenes* genes = mg.GetGeneticPopulation().GetGenes( 0 );
+   std::vector<Double_t> gvec;
+   gvec = genes->GetFactors();
+
+   fResult = gvec;   
 
    return true;
 }  
