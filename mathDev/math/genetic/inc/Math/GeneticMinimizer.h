@@ -58,11 +58,21 @@ public:
 
    virtual double CovMatrix(unsigned int i, unsigned int j) const;  
 
+   void SetParameters(Int_t nsteps, Int_t popSize, Int_t SC_steps, Int_t SC_rate, Double_t SC_factor, Double_t convCrit );
+
 protected:
    std::vector<TMVA::Interval*> fRanges;
    TMVA::IFitterTarget* fFitness;
 
    std::vector<double> fResult;
+
+
+   Int_t fNsteps;
+   Int_t fPopSize;
+   Int_t fSC_steps;
+   Int_t fSC_rate;
+   Double_t fSC_factor;
+   Double_t fConvCrit;
 }; 
 
    } // end namespace Math
