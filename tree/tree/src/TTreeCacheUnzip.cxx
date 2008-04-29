@@ -43,12 +43,12 @@
 
 extern "C" void R__unzip(Int_t *nin, UChar_t *bufin, Int_t *lout, char *bufout, Int_t *nout);
 
-TString  TTreeCacheUnzip::fgParallel = "e";
+ TTreeCacheUnzip::EParUnzipMode TTreeCacheUnzip::TTreeCacheUnzip::fgParallel = TTreeCacheUnzip::kEnable;
 
 // Unzip cache is 10% of TTreeCache.
 // if by default fBufferSize = 10MB
 // then 0.1=1MB 0.01=100KB 0.001=10KB 0.0001=1KB
-Double_t TTreeCacheUnzip::fgRelBuffSize = 0.1;
+Double_t TTreeCacheUnzip::fgRelBuffSize = 0.2;
 
 ClassImp(TTreeCacheUnzip)
 
@@ -114,15 +114,15 @@ void TTreeCacheUnzip::Init()
    fMutexList        = new TMutex();
    fUnzipCondition   = new TCondition();
 
-   if (fgParallel.Contains("d")) {
+   if (fgParallel == kDisable) {
       fParallel = kFALSE;
    }
-   else if(fgParallel.Contains("e") || fgParallel.IsNull() || fgParallel.Contains("f")){
+   else if(fgParallel == kEnable || fgParallel == kForce) {
       SysInfo_t info;
       gSystem->GetSysInfo(&info);
       Int_t ncpus = info.fCpus;
 
-      if(ncpus > 1 || fgParallel.Contains("f")) {
+      if(ncpus > 1 || fgParallel == kForce) {
          if(gDebug > 0)
             Info("TTreeCacheUnzip", "Enabling Parallel Unzipping, number of cpus:%d", ncpus);
 
@@ -295,7 +295,7 @@ void TTreeCacheUnzip::UpdateBranches(TTree *tree, Bool_t owner)
 ///////////////////////////////////////////////////////////////////////////////
 
 //_____________________________________________________________________________
-Option_t *TTreeCacheUnzip::GetParallelUnzip()
+TTreeCacheUnzip::EParUnzipMode TTreeCacheUnzip::GetParallelUnzip()
 {
    // Static function that returns the parallel option
    // (to indicate an additional thread)
@@ -309,13 +309,7 @@ Bool_t TTreeCacheUnzip::IsParallelUnzip()
    // Static function that tells wether the multithreading unzipping
    // is activated
 
-   TString opt(fgParallel);
-   opt.ToLower();
-
-   if (opt.Contains("d"))
-      return kFALSE;
-
-   if (opt.Contains("f") || opt.Contains("e"))
+   if (fgParallel == kEnable || fgParallel == kForce)
       return kTRUE;
 
    return kFALSE;
@@ -377,29 +371,19 @@ void TTreeCacheUnzip::SendSignal()
 }
 
 //_____________________________________________________________________________
-Int_t TTreeCacheUnzip::SetParallelUnzip(Option_t* option)
+Int_t TTreeCacheUnzip::SetParallelUnzip(TTreeCacheUnzip::EParUnzipMode option)
 {
    // Static function that(de)activates multithreading unzipping
    // The possible options are:
-   // "E" _Enable_ it, which causes an automatic detection and launches the
-   //  additional thread if the number of cores in the machine is greater than one.
-   // "D" _Disable_ will not activate the additional thread.
-   // "F" _Force_ will start the additional thread even if there is only one core.
-   // "" will be taken as "E".
+   // kEnable _Enable_ it, which causes an automatic detection and launches the
+   // additional thread if the number of cores in the machine is greater than one
+   // kDisable _Disable_ will not activate the additional thread.
+   // kForce _Force_ will start the additional thread even if there is only one core.
+   // the default will be taken as kEnable.
    // returns 0 if there was an error, 1 otherwise.
 
-   TString opt(option);
-   opt.ToLower();
-   if (opt.Contains("d")) {
-      fgParallel = "d";
-      return 1;
-   }
-   if (opt.Contains("f")) {
-      fgParallel = "f";
-      return 1;
-   }
-   if (opt.Contains("e") || opt.IsNull()) {
-      fgParallel = "e";
+   if(fgParallel == kEnable || fgParallel == kForce || fgParallel == kDisable) {
+      fgParallel = option;
       return 1;
    }
    return 0;
