@@ -33,6 +33,10 @@ class TBasket;
 class TMutex;
 
 class TTreeCacheUnzip : public TTreeCache {
+public:
+   // We have three possibilities for the unzipping mode:
+   // enable, disable and force
+   enum EParUnzipMode { kEnable, kDisable, kForce };
 
 protected:
    TMutex     *fMutexCache;
@@ -50,7 +54,7 @@ protected:
    Int_t       fTmpBufferSz;      //!  Size for the fTmpBuffer (default is 10KB... used to unzip a buffer)
    char       *fTmpBuffer;        //! [fTmpBufferSz] buffer of contiguous unzipped blocks
 
-   static TString fgParallel;     // Indicate if we want to activate the parallelism
+   static TTreeCacheUnzip::EParUnzipMode fgParallel;  // Indicate if we want to activate the parallelism
 
    // Members to keep track of the unzipping buffer
    Long64_t    fPosWrite;
@@ -96,14 +100,14 @@ public:
    void                UpdateBranches(TTree *tree, Bool_t owner = kFALSE);
 
    // Methods related to the thread
-   static Option_t *GetParallelUnzip();
-   static Bool_t    IsParallelUnzip();
-   Bool_t           IsActiveThread();
-   Bool_t           IsQueueEmpty();
-   Int_t            ProcessQueue();
-   void             SendSignal();
-   static Int_t     SetParallelUnzip(Option_t* option = "");
-   void             WaitForSignal();
+   static EParUnzipMode GetParallelUnzip();
+   static Bool_t        IsParallelUnzip();
+   Bool_t               IsActiveThread();
+   Bool_t               IsQueueEmpty();
+   Int_t                ProcessQueue();
+   void                 SendSignal();
+   static Int_t         SetParallelUnzip(TTreeCacheUnzip::EParUnzipMode option = TTreeCacheUnzip::kEnable);
+   void                 WaitForSignal();
 
    // Unzipping related methods
    Int_t          GetRecordHeader(char *buf, Int_t maxbytes, Int_t &nbytes, Int_t &objlen, Int_t &keylen);
