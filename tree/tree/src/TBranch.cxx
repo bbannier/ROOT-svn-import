@@ -1600,6 +1600,7 @@ void TBranch::ResetAddress()
       TLeaf* leaf = (TLeaf*) fLeaves.UncheckedAt(i);
       leaf->SetAddress(0);
    }
+
    Int_t nbranches = fBranches.GetEntriesFast();
    for (Int_t i = 0; i < nbranches; ++i)  {
       TBranch* abranch = (TBranch*) fBranches[i];
@@ -1619,7 +1620,6 @@ void TBranch::ResetCount()
 void TBranch::SetAddress(void* addr)
 {
    // Set address of this branch.
-
    if (TestBit(kDoNotProcess)) {
       return;
    }

@@ -112,7 +112,6 @@ TBasket::~TBasket()
 
    if (fDisplacement) delete [] fDisplacement;
    if (fEntryOffset)  delete [] fEntryOffset;
-
    fDisplacement= 0;
    fEntryOffset = 0;
 }
@@ -158,18 +157,17 @@ void TBasket::DeleteEntryOffset()
    fNevBufSize  = 0;
 }
 
+
 //_______________________________________________________________________
 Int_t TBasket::DropBuffers()
 {
    // Drop buffers of this basket if it is not the current basket.
 
    if (!fBuffer && !fBufferRef) return 0;
-   
    //   delete [] fBuffer;
    if (fDisplacement) delete [] fDisplacement;
    if (fEntryOffset)  delete [] fEntryOffset;
    if (fBufferRef)    delete fBufferRef;
- 
    fBufferRef   = 0;
    fBuffer      = 0;
    fDisplacement= 0;
@@ -408,10 +406,8 @@ Int_t TBasket::ReadBasketBuffers(Long64_t pos, Int_t len, TFile *file)
    }
    delete [] fEntryOffset;
    fEntryOffset = 0;
-
    fBufferRef->SetBufferOffset(fLast);
    fBufferRef->ReadArray(fEntryOffset);
-
    if (!fEntryOffset) {
       fEntryOffset = new Int_t[fNevBuf+1];
       fEntryOffset[0] = fKeylen;
@@ -427,6 +423,7 @@ Int_t TBasket::ReadBasketBuffers(Long64_t pos, Int_t len, TFile *file)
       // fBufferRef->BufferSize()
       fBufferRef->ReadArray(fDisplacement);
    }
+
    return badread;
 }
 
