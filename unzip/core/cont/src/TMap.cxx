@@ -468,3 +468,37 @@ void TMapIter::Reset()
 
    SafeDelete(fCursor);
 }
+
+//______________________________________________________________________________
+bool TMapIter::operator!=(const TIterator &aIter) const
+{
+   // This operator compares two TIterator objects.
+
+   if (nullptr == (&aIter))
+      return fCursor->operator*();
+
+   if (aIter.IsA() == TMapIter::Class()) {
+      const TMapIter &iter(dynamic_cast<const TMapIter &>(aIter));
+      return (fCursor->operator*() != iter.fCursor->operator*());
+   }
+   return false; // for base class we don't implement a comparison
+}
+
+//______________________________________________________________________________
+bool TMapIter::operator!=(const TMapIter &aIter) const
+{
+   // This operator compares two TMapIter objects.
+
+   if (nullptr == (&aIter))
+      return fCursor->operator*();
+
+   return (fCursor->operator*() != aIter.fCursor->operator*());
+}
+
+//______________________________________________________________________________
+TObject *TMapIter::operator*() const
+{
+   // Return pointer to current object (a TPair) or nullptr.
+
+   return (fCursor ? fCursor->operator*() : nullptr);
+}

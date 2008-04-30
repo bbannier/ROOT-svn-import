@@ -100,7 +100,7 @@ endif
 else
 ifeq ($(shell which gfortran 2>&1 | sed -ne "s/.*\/gfortran/gfortran/p"),gfortran)
 F77          := gfortran
-F77LIBS      := $(shell $(F77) -print-file-name=libgfortran.$(SOEXT))
+F77LIBS      := $(shell $(F77) -print-file-name=libgfortran.dylib)
 F77LIBS      += $(shell $(F77) -print-file-name=libgfortranbegin.a)
 endif
 endif
@@ -109,20 +109,7 @@ endif
 ifeq ($(F77),)
 ifeq ($(shell which g77 2>&1 | sed -ne "s/.*\/g77/g77/p"),g77)
 F77          := g77
-F77LIBS       =
-endif
-endif
-
-# We add libg2c only in case of ppc because then we probably have cernlib
-# compiled with g77. In case of Intel Mac it should be compiled with the
-# same fortran we use.
-ifeq ($(MACOSX_CPU),powerpc)
-F77LIBS += -L$(FINK_DIR)/lib -lg2c
-endif
-
-ifneq ($(F77),)
-ifeq ($(shell find $(FINK_DIR)/bin -name $(F77)),)
-BUILDHBOOK   := no
+F77LIBS      := -L$(FINK_DIR)/lib -lg2c
 endif
 endif
 

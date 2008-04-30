@@ -26,6 +26,7 @@
 #ifdef WIN32
 #include <io.h>
 #endif
+#include <string>
 #include <stdlib.h>
 #include <errno.h>
 
@@ -1909,7 +1910,7 @@ const char *TSystem::GetLibraries(const char *regexp, const char *options,
 
 #if defined(R__MACOSX) && !defined(MAC_OS_X_VERSION_10_5)
    if (so2dylib) {
-      TString libs = fListLibs;
+      TString libs2 = fListLibs;
       TString maclibs;
 
       TRegexp separator("[^ \\t\\s]+");
@@ -1918,12 +1919,12 @@ const char *TSystem::GetLibraries(const char *regexp, const char *options,
       Ssiz_t start, index, end;
       start = index = end = 0;
 
-      while ((start < libs.Length()) && (index != kNPOS)) {
-         index = libs.Index(separator, &end, start);
+      while ((start < libs2.Length()) && (index != kNPOS)) {
+         index = libs2.Index(separator, &end, start);
          if (index >= 0) {
             // Change .so into .dylib and remove the
             // path info if it is not accessible
-            TString s = libs(index, end);
+            TString s = libs2(index, end);
             if (s.Index(user_so) != kNPOS) {
                s.ReplaceAll(".so",".dylib");
                if ( GetPathInfo( s, 0, (Long_t*)0, 0, 0 ) != 0 ) {
@@ -2844,7 +2845,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
       AssignAndDelete(file, ConcatFileName(gSystem->HomeDirectory(), name) );
       mapfileStream << file << endl;
       mapfileStream << name << endl;
-      for (int i = 0; i < gInterpreter->GetRootMapFiles()->GetEntriesFast(); i++) {
+      for (i = 0; i < gInterpreter->GetRootMapFiles()->GetEntriesFast(); i++) {
          mapfileStream << ((TObjString*)gInterpreter->GetRootMapFiles()->At(i))->GetString() << endl;
       }
    }
@@ -3342,7 +3343,7 @@ void TSystem::SetMakeSharedLib(const char *directives)
    //
    // gSystem->SetMakeSharedLib(
    // "cl -DWIN32  -D_WIN32 -D_MT -D_DLL -MD /O2 /G5 /MD -DWIN32
-   //  -DVISUAL_CPLUSPLUS -D_WINDOWS $IncludePath $SourceFile
+   //  -D_WINDOWS $IncludePath $SourceFile
    //  /link -PDB:NONE /NODEFAULTLIB /INCREMENTAL:NO /RELEASE /NOLOGO
    //  $LinkedLibs -entry:_DllMainCRTStartup@12 -dll /out:$SharedLib")
 

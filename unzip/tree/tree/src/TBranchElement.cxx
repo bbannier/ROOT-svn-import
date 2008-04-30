@@ -783,9 +783,7 @@ TBranchElement::~TBranchElement()
    // -- Destructor.
 
    // Release any allocated I/O buffers.
-   // FIXME: Temporarily disable until we sort out the interface/documentation
-   // issues related the TTree ownership of the objects (See ReleaseObject)
-   // ResetAddress();
+   ResetAddress();
 
    delete[] fBranchOffset;
    fBranchOffset = 0;
@@ -1451,10 +1449,12 @@ void TBranchElement::InitInfo()
          if (cl == TClonesArray::Class()) {
             fClassVersion = TClonesArray::Class()->GetClassVersion();
          }
-         Bool_t optim = TVirtualStreamerInfo::CanOptimize();
-         TVirtualStreamerInfo::Optimize(kFALSE);
-         fInfo = (TStreamerInfo*)cl->GetStreamerInfo(fClassVersion);
-         TVirtualStreamerInfo::Optimize(optim);
+         {
+            Bool_t optim = TVirtualStreamerInfo::CanOptimize();
+            TVirtualStreamerInfo::Optimize(kFALSE);
+            fInfo = (TStreamerInfo*)cl->GetStreamerInfo(fClassVersion);
+            TVirtualStreamerInfo::Optimize(optim);
+         }
          // FIXME: Check that the found streamer info checksum matches our branch class checksum here.
          // Check to see if the class code was unloaded/reloaded
          // since we were created.
@@ -2040,7 +2040,7 @@ void TBranchElement::InitializeOffsets()
             fInitOffsets = kTRUE;
             return;
          }
-         Int_t localOffset = subBranchElement->GetOffset();
+         localOffset = subBranchElement->GetOffset();
 
          {
             Int_t streamerType = subBranchElement->GetType();
@@ -2441,10 +2441,8 @@ void TBranchElement::Print(Option_t* option) const
              GetClassName(), GetParentName(),
              (fBranchOffset&&parent) ? parent->fBranchOffset[ind] : 0,
              GetOffset(), GetObject());
-      TObjArray* brl = ((TBranchElement*)this)->GetListOfBranches();
-      Int_t nbranches = brl->GetEntriesFast();
       for (Int_t i = 0; i < nbranches; ++i) {
-         TBranchElement* subbranch = (TBranchElement*)brl->At(i);
+         TBranchElement* subbranch = (TBranchElement*)fBranches.At(i);
          subbranch->Print("debugAddressSub");
       }
       return;
@@ -2568,17 +2566,19 @@ void TBranchElement::ReadLeaves(TBuffer& b)
             }
          }
          fNdata = n[0];
-         if ( fType == 4)   {
-            Int_t i, nbranches = fBranches.GetEntriesFast();
+         if (fType == 4)   {
+            Int_t nbranches = fBranches.GetEntriesFast();
             switch(fSTLtype) {
                case TClassEdit::kSet:
                case TClassEdit::kMultiSet:
                case TClassEdit::kMap:
                case TClassEdit::kMultiMap:
-                  for (i=0;i<nbranches;i++) {
+                  for (Int_t i=0; i<nbranches; i++) {
                      TBranch *branch = (TBranch*)fBranches[i];
-                     Int_t    nb = branch->GetEntry(GetReadEntry(), 1);
-                     if (nb < 0) break;
+                     Int_t nb = branch->GetEntry(GetReadEntry(), 1);
+                     if (nb < 0) {
+                        break;
+                     }
                   }
                   break;
                default:
@@ -2813,14 +2813,14 @@ void TBranchElement::ReadLeaves(TBuffer& b)
       TVirtualCollectionProxy::TPushPop helper(proxy, fObject);
       // FIXME: What to do if this fails (which it will if fNdata is unreasonable)?
       void* env = proxy->Allocate(fNdata, true);
-      Int_t i, nbranches = fBranches.GetEntriesFast();
+      Int_t nbranches = fBranches.GetEntriesFast();
       switch (fSTLtype) {
          case TClassEdit::kSet:
          case TClassEdit::kMultiSet:
          case TClassEdit::kMap:
          case TClassEdit::kMultiMap:
-            for (i = 0; i < nbranches; ++i) {
-               TBranch* branch = (TBranch*) fBranches[i];
+            for (Int_t i = 0; i < nbranches; ++i) {
+               TBranch *branch = (TBranch*) fBranches[i];
                Int_t nb = branch->GetEntry(GetReadEntry(), 1);
                if (nb < 0) {
                   // Give up on i/o failure.
@@ -2908,10 +2908,11 @@ void TBranchElement::ReadLeaves(TBuffer& b)
       } else {
          fNdata = 1;
       }
-      if (!GetInfo()) {
+      TStreamerInfo *info = GetInfo();
+      if (!info) {
          return;
       }
-      GetInfo()->ReadBuffer(b, (char**) &fObject, fID);
+      info->ReadBuffer(b, (char**) &fObject, fID);
       if (fStreamerType == TVirtualStreamerInfo::kCounter) {
          fNdata = (Int_t) GetValue(0, 0);
       }
@@ -2923,28 +2924,6 @@ void TBranchElement::ReleaseObject()
 {
    // -- Delete any object we may have allocated on a previous call to SetAddress.
 
-   // Make sure kDeleteObject and fObject are valid before proceeding.
-   // Note: We are *not* allowed to call ValidateAddress() because it
-   //       may call SetAddress(), which may call us resulting in an
-   //       infinite loop.
-   //ValidateAddress();
-
-   return; // FIXME: Disable the deletion of object owned by the TTree until we add a missing interface.
-
-   if (fID < 0) {
-      // -- We are a top-level branch.
-      if (fAddress && (*((char**) fAddress) != fObject)) {
-         // The semantics of fAddress and fObject are violated.
-         // Assume the user changed the pointer on us.
-         if (TestBit(kDeleteObject)) {
-            Warning("ReleaseObject", "branch: %s, You have overwritten the pointer to an object which I owned!", GetName());
-            Warning("ReleaseObject", "This is a memory leak.  Please use SetAddress() to change the pointer instead.");
-            ResetBit(kDeleteObject);
-         }
-      }
-   }
-
-   // Delete any object we may have allocated during a call to SetAddress.
    if (fObject && TestBit(kDeleteObject)) {
       ResetBit(kDeleteObject);
       if (fType == 3) {
@@ -2961,7 +2940,7 @@ void TBranchElement::ReleaseObject()
          // -- We are an STL container master branch.
          TVirtualCollectionProxy* proxy = GetCollectionProxy();
          if (!proxy) {
-            Warning("ResetAddress", "Cannot delete allocated STL container because I do not have a proxy!  branch: %s", GetName());
+            Warning("ReleaseObject", "Cannot delete allocated STL container because I do not have a proxy!  branch: %s", GetName());
             fObject = 0;
          } else {
             proxy->Destructor(fObject);
@@ -2976,7 +2955,7 @@ void TBranchElement::ReleaseObject()
          // We are *not* a TClonesArray master branch and we are *not* an STL container master branch.
          TClass* cl = fBranchClass.GetClass();
          if (!cl) {
-            Warning("ResetAddress", "Cannot delete allocated object because I cannot instantiate a TClass object for its class!  branch: '%s' class: '%s'", GetName(), fBranchClass.GetClassName());
+            Warning("ReleaseObject", "Cannot delete allocated object because I cannot instantiate a TClass object for its class!  branch: '%s' class: '%s'", GetName(), fBranchClass.GetClassName());
             fObject = 0;
          } else {
             cl->Destructor(fObject);
@@ -3013,10 +2992,7 @@ void TBranchElement::Reset(Option_t* option)
 //______________________________________________________________________________
 void TBranchElement::ResetAddress()
 {
-   // -- Reset the branch user i/o buffer address.
-
-   // Make sure the user did not change the object pointer first.
-   ValidateAddress();
+   // Set branch address to zero and free all allocated memory.
 
    for (Int_t i = 0; i < fNleaves; ++i) {
       TLeaf* leaf = (TLeaf*) fLeaves.UncheckedAt(i);
@@ -3045,14 +3021,15 @@ void TBranchElement::ResetAddress()
 //______________________________________________________________________________
 void TBranchElement::ResetDeleteObject()
 {
-   // -- Clear the kDeleteObject flag (clones should not delete shared i/o buffers).
+   // -- Release ownership of any allocated objects.
+   //
+   // Note: This interface was added so that clone trees could
+   //       be told they do not own the allocated objects.
 
    ResetBit(kDeleteObject);
    Int_t nb = fBranches.GetEntriesFast();
    for (Int_t i = 0; i < nb; ++i)  {
       TBranch* br = (TBranch*) fBranches[i];
-      // FIXME: This is a tail recursion.
-      // FIXME: Change this to a dynamic cast attempt.
       if (br->InheritsFrom("TBranchElement")) {
          ((TBranchElement*) br)->ResetDeleteObject();
       }
@@ -3060,9 +3037,111 @@ void TBranchElement::ResetDeleteObject()
 }
 
 //______________________________________________________________________________
-void TBranchElement::SetAddress(void* add)
+void TBranchElement::SetAddress(void* addr)
 {
-   // -- Set user i/o buffer address of this branch.
+   // -- Point this branch at an object.
+   //
+   // For a sub-branch, addr is a pointer to the branch object.
+   //
+   // For a top-level branch the meaning of addr is as follows:
+   //
+   // If addr is zero, then we allocate a branch object
+   // internally and the branch is the owner of the allocated
+   // object, not the caller.  However the caller may obtain
+   // a pointer to the branch object with GetObject().
+   //
+   // Example:
+   //
+   //    branch->SetAddress(0);
+   //    Event* event = branch->GetObject();
+   //    ... Do some work.
+   //
+   // If addr is not zero, but the pointer addr points at is
+   // zero, then we allocate a branch object and set the passed
+   // pointer to point at the allocated object.  The caller
+   // owns the allocated object and is responsible for deleting
+   // it when it is no longer needed.
+   //
+   // Example:
+   //
+   //    Event* event = 0;
+   //    branch->SetAddress(&event);
+   //    ... Do some work.
+   //    delete event;
+   //    event = 0;
+   //
+   // If addr is not zero and the pointer addr points at is
+   // also not zero, then the caller has allocated a branch
+   // object and is asking us to use it.  The caller owns it
+   // and must delete it when it is no longer needed.
+   //
+   // Example:
+   //
+   //    Event* event = new Event();
+   //    branch->SetAddress(&event);
+   //    ... Do some work.
+   //    delete event;
+   //    event = 0;
+   //
+   // These rules affect users of TTree::Branch(),
+   // TTree::SetBranchAddress(), and TChain::SetBranchAddress()
+   // as well because those routines call this one.
+   //
+   // An example of a tree with branches with objects allocated
+   // and owned by us:
+   //
+   //    TFile* f1 = new TFile("myfile_original.root");
+   //    TTree* t1 = (TTree*) f->Get("MyTree");
+   //    TFile* f2 = new TFile("myfile_copy.root", "recreate");
+   //    TTree* t2 = t1->Clone(0);
+   //    for (Int_t i = 0; i < 10; ++i) {
+   //       t1->GetEntry(i);
+   //       t2->Fill();
+   //    }
+   //    t2->Write()
+   //    delete f2;
+   //    f2 = 0;
+   //    delete f1;
+   //    f1 = 0;
+   //    
+   // An example of a branch with an object allocated by us,
+   // but owned by the caller:
+   // 
+   //    TFile* f = new TFile("myfile.root", "recreate");
+   //    TTree* t = new TTree("t", "A test tree.")
+   //    Event* event = 0;
+   //    TBranchElement* br = t->Branch("event.", &event);
+   //    for (Int_t i = 0; i < 10; ++i) {
+   //       ... Fill event with meaningful data in some way.
+   //       t->Fill();
+   //    }
+   //    t->Write();
+   //    delete event;
+   //    event = 0;
+   //    delete f;
+   //    f = 0;
+   //
+   // Notice that the only difference between this example
+   // and the following example is that the event pointer
+   // is zero when the branch is created.
+   //
+   // An example of a branch with an object allocated and
+   // owned by the caller:
+   // 
+   //    TFile* f = new TFile("myfile.root", "recreate");
+   //    TTree* t = new TTree("t", "A test tree.")
+   //    Event* event = new Event();
+   //    TBranchElement* br = t->Branch("event.", &event);
+   //    for (Int_t i = 0; i < 10; ++i) {
+   //       ... Fill event with meaningful data in some way.
+   //       t->Fill();
+   //    }
+   //    t->Write();
+   //    delete event;
+   //    event = 0;
+   //    delete f;
+   //    f = 0;
+   //
 
    //
    //  Don't bother if we are disabled.
@@ -3085,8 +3164,9 @@ void TBranchElement::SetAddress(void* add)
    //  Special case when called from code generated by TTree::MakeClass.
    //
 
-   if (Long_t(add) == -1) {
+   if (Long_t(addr) == -1) {
       // FIXME: Do we have to release an object here?
+      // ReleaseObject();
       fAddress = (char*) -1;
       fObject = (char*) -1;
       ResetBit(kDeleteObject);
@@ -3123,8 +3203,10 @@ void TBranchElement::SetAddress(void* add)
    //  Remember the pointer to the pointer to our object.
    //
 
-   fAddress = (char*) add;
-   fObject = 0;
+   fAddress = (char*) addr;
+   if (fAddress != (char*)(&fObject)) {
+      fObject = 0;
+   }
    ResetBit(kDeleteObject);
 
    //
@@ -3287,7 +3369,7 @@ void TBranchElement::SetAddress(void* add)
                // -- We are a top-level branch.
                TClonesArray** pp = (TClonesArray**) fAddress;
                if (!*pp) {
-                  SetBit(kDeleteObject);
+                  // -- Caller wants us to allocate the clones array, but he will own it.
                   *pp = new TClonesArray(GetClonesName());
                }
                fObject = (char*) *pp;
@@ -3297,7 +3379,7 @@ void TBranchElement::SetAddress(void* add)
                //       or the i/o constructor can be lazy.
                TClonesArray** pp = (TClonesArray**) fAddress;
                if (!*pp) {
-                  SetBit(kDeleteObject);
+                  // -- Caller wants us to allocate the clones array, but he will own it.
                   *pp = new TClonesArray(GetClonesName());
                }
                fObject = (char*) *pp;
@@ -3340,6 +3422,8 @@ void TBranchElement::SetAddress(void* add)
              (fStreamerType == TVirtualStreamerInfo::kSTL)) {
             // We are *not* a top-level branch and we are *not* a pointer to an STL container.
             // Case of an embedded STL container.
+            // Note: We test for the kObject and kAny types to support
+            //       the (unwise) choice of inheriting from an STL container.
             fObject = fAddress;
          } else {
             // We are either a top-level branch or subbranch which is a pointer to an STL container.
@@ -3350,7 +3434,7 @@ void TBranchElement::SetAddress(void* add)
                // -- We are a top-level branch.
                void** pp = (void**) fAddress;
                if (!*pp) {
-                  SetBit(kDeleteObject);
+                  // -- Caller wants us to allocate the STL container, but he will own it.
                   *pp = proxy->New();
                   if (!(*pp)) {
                      Error("SetAddress", "Failed to allocate STL container for branch '%s'", GetName());
@@ -3367,7 +3451,7 @@ void TBranchElement::SetAddress(void* add)
                //       or the i/o constructor can be lazy.
                void** pp = (void**) fAddress;
                if (!*pp) {
-                  SetBit(kDeleteObject);
+                  // -- Caller wants us to allocate the STL container, but he will own it.
                   *pp = proxy->New();
                   if (!(*pp)) {
                      Error("SetAddress", "Failed to allocate STL container for branch '%s'", GetName());
@@ -3387,6 +3471,8 @@ void TBranchElement::SetAddress(void* add)
              (fStreamerType == TVirtualStreamerInfo::kSTL)) {
             // We are *not* a top-level branch and we are *not* a pointer to an STL container.
             // Case of an embedded STL container.
+            // Note: We test for the kObject and kAny types to support
+            //       the (unwise) choice of inheriting from an STL container.
             Error("SetAddress", "Embedded STL container given a zero address for branch '%s'", GetName());
          } else {
             // We are either a top-level branch or sub-branch which is a pointer to an STL container.
@@ -3427,15 +3513,10 @@ void TBranchElement::SetAddress(void* add)
       } else {
          // -- Caller did not provide an i/o buffer for us to use, we must make one for ourselves.
          if (clOfBranch) {
-            SetBit(kDeleteObject);
-            // FIXME:
-            // If we end up creating a histogram here, we might not
-            // want to add it to the current directory and
-            // take ownership instead.  If we let it get added
-            // to the directory, then it could be deleted by
-            // the directory without us getting notified, and
-            // then we would try to delete it a second time.
-            // So we might want to call TH1::AddDirectory(kFALSE);
+            if (!pp) {
+               // -- Caller wants us to own the object.
+               SetBit(kDeleteObject);
+            }
             fObject = (char*) clOfBranch->New();
             if (pp) {
                *pp = fObject;
@@ -3510,6 +3591,18 @@ void TBranchElement::SetBranchCount(TBranchElement* brOfCounter)
          Warning("SetBranchCount", "Branch %s has no leaves!", GetName());
       }
    }
+}
+
+//______________________________________________________________________________
+void TBranchElement::SetObject(void* obj)
+{
+   // Set object this branch is pointing to.
+
+   if (TestBit(kDoNotProcess)) {
+      return;
+   }
+   fObject = (char*)obj;
+   SetAddress( &fObject );
 }
 
 //______________________________________________________________________________
@@ -3944,9 +4037,9 @@ void TBranchElement::ValidateAddress() const
 
 
 	 // FIXME: Disable the check/warning TTree until we add a missing interface.
-         if (false && TestBit(kDeleteObject)) {
-            Warning("ValidateAddress", "branch: %s, You have overwritten the pointer to an object which I owned!", GetName());
-            Warning("ValidateAddress", "This is a memory leak.  Please use SetAddress() to change the pointer instead.");
+         if (TestBit(kDeleteObject)) {
+            // This should never happen!
+            Error("ValidateAddress", "We owned an object whose address changed!  our ptr: %p  new ptr: %p", fObject, *((char**) fAddress));
             const_cast<TBranchElement*>(this)->ResetBit(kDeleteObject);
          }
          const_cast<TBranchElement*>(this)->SetAddress(fAddress);

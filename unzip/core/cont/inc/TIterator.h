@@ -40,9 +40,11 @@ public:
    virtual ~TIterator() { }
    virtual const TCollection *GetCollection() const = 0;
    virtual Option_t *GetOption() const { return ""; }
-   virtual TObject *Next() = 0;
-   virtual void Reset() = 0;
-   TObject *operator()() { return Next(); }
+   virtual TObject  *Next() = 0;
+   virtual void      Reset() = 0;
+   TObject          *operator()() { return Next(); }
+   virtual bool      operator!=(const TIterator &) const;
+   virtual TObject  *operator*() const;
 
    ClassDef(TIterator,0)  //Iterator abstract base class
 };

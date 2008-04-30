@@ -32,6 +32,9 @@
 #include "THashTable.h"
 #endif
 
+#include <iterator>
+
+
 class THashTableIter;
 class TMapIter;
 class TBrowser;
@@ -48,6 +51,8 @@ private:
    TMap& operator=(const TMap& map);  // not implemented
 
 public:
+   typedef TMapIter Iterator_t;
+
    TMap(Int_t capacity = TCollection::kInitHashTableCapacity, Int_t rehash = 0);
    virtual           ~TMap();
    void              Add(TObject *obj);
@@ -123,7 +128,10 @@ typedef TPair   TAssoc;     // for backward compatibility
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-class TMapIter : public TIterator {
+class TMapIter : public TIterator,
+                 public std::iterator<std::bidirectional_iterator_tag,
+                                      TObject*, std::ptrdiff_t,
+                                      const TObject**, const TObject*&> {
 
 private:
    const TMap       *fMap;         //map being iterated
@@ -142,6 +150,9 @@ public:
    const TCollection *GetCollection() const { return fMap; }
    TObject           *Next();
    void               Reset();
+   bool               operator!=(const TIterator &aIter) const;
+   bool               operator!=(const TMapIter &aIter) const;
+   TObject           *operator*() const;
 
    ClassDef(TMapIter,0)  //Map iterator
 };

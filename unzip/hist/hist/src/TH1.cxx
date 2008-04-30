@@ -4788,20 +4788,20 @@ Long64_t TH1::Merge(TCollection *li)
          }
       }
       if (allHaveLabels) {
-         THashList* labels=h->GetXaxis()->GetLabels();
-         Bool_t haveOneLabel=kFALSE;
-         if (labels) {
-            TIter iL(labels);
+         THashList* hlabels=h->GetXaxis()->GetLabels();
+         Bool_t hasOneLabel=kFALSE;
+         if (hlabels) {
+            TIter iL(hlabels);
             TObjString* lb;
             while ((lb=(TObjString*)iL())) {
-               haveOneLabel |= (lb && lb->String().Length());
+               hasOneLabel |= (lb && lb->String().Length());
                if (!allLabels.FindObject(lb)) {
                   allLabels.Add(lb);
                   same = kFALSE;
                }
             }
          }
-         allHaveLabels&=(labels && haveOneLabel);
+         allHaveLabels&=(labels && hasOneLabel);
          if (!allHaveLabels)
             Warning("Merge","Not all histograms have labels. I will ignore labels,"
             " falling back to bin numbering mode.");
@@ -5241,7 +5241,7 @@ TH1 *TH1::Rebin(Int_t ngroup, const char*newname, const Double_t *xbins)
 
    if(!xbins && (fXaxis.GetXbins()->GetSize() > 0)){ // variable bin sizes
       Double_t *bins = new Double_t[newbins+1];
-      for(Int_t i = 0; i <= newbins; ++i) bins[i] = fXaxis.GetBinLowEdge(1+i*ngroup);
+      for(i = 0; i <= newbins; ++i) bins[i] = fXaxis.GetBinLowEdge(1+i*ngroup);
       hnew->SetBins(newbins,bins); //this also changes errors array (if any)
       delete [] bins;
    } else if (xbins) {
@@ -7302,7 +7302,10 @@ Double_t TH1::GetBinError(Int_t bin) const
    if (bin < 0) bin = 0;
    if (bin >= fNcells) bin = fNcells-1;
    if (fBuffer) ((TH1*)this)->BufferEmpty();
-   if (fSumw2.fN) return TMath::Sqrt(fSumw2.fArray[bin]);
+   if (fSumw2.fN) {
+      Double_t err2 = fSumw2.fArray[bin];
+      return TMath::Sqrt(err2);
+   }
    Double_t error2 = TMath::Abs(GetBinContent(bin));
    return TMath::Sqrt(error2);
 }

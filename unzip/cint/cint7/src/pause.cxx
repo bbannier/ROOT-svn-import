@@ -697,7 +697,10 @@ extern "C" int G__reloadfile(char *filename)
               it to */
            break;
         }
-        j=G__srcfile[j].included_from;
+        // sanity check; this can only happen if something went wrong during loadfile
+        if ( j != G__srcfile[j].included_from)
+           j = G__srcfile[j].included_from;
+        else break;
       }
       break;
     }
@@ -2196,7 +2199,7 @@ extern "C" int G__process_cmd(char *line,char *prompt,int *more,int *err
       else                        index=2;
       while(isspace(command[index])&&command[index]!='\0') index++;
       if((*(command+index))) {
-        if(strncmp(">>",com,2)!=0) {
+        if (index==2) { // strncmp("2>>", com, 3) != 0) {
           G__serr=fopen(command+index,"w");
           fclose(G__serr);
           /* fclose(G__sout); */
@@ -2336,7 +2339,7 @@ extern "C" int G__process_cmd(char *line,char *prompt,int *more,int *err
             }
          }
 #endif
-         if(type.RawType().IsFundamental() && 0==G__atevaluate(buf)) fprintf(G__sout,"%s\n",syscom);
+         if(Reflex::Tools::FundamentalType(type.RawType()) != Reflex::kVOID && 0==G__atevaluate(buf)) fprintf(G__sout,"%s\n",syscom);
 #ifdef G__SECURITY
          *err |= G__security_recover(G__serr);
 #endif

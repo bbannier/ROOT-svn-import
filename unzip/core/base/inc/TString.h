@@ -678,4 +678,3 @@ inline Bool_t operator!=(const char *s1, const TSubString &s2)
 { return !(s2 == s1); }
 
 #endif
-
