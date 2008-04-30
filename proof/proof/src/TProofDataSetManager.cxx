@@ -54,6 +54,19 @@ TProofDataSetManager::TProofDataSetManager(const char *group, const char *user,
    //
    // Main constructor
 
+   // Fill default group and user if none is given
+   if (fGroup.IsNull())
+      fGroup = "default";
+   if (fUser.IsNull()) {
+      fUser = "--nouser--";
+      // Get user logon name
+      UserGroup_t *pw = gSystem->GetUserInfo();
+      if (pw) {
+         fUser = pw->fUser;
+         delete pw;
+      }
+   }
+
    fGroupQuota.SetOwner();
    fGroupUsed.SetOwner();
    fUserUsed.SetOwner();
@@ -240,10 +253,14 @@ Bool_t TProofDataSetManager::ReadGroupConfig(const char *cf)
             TString sdq;
             if (!line.Tokenize(sdq, from, " ")) // No token
                continue;
-            if (sdq.IsDigit()) {
-               Long64_t quota = (Long64_t) 1024 * 1024 * 1024 * sdq.Atoi();
+            Long64_t quota = ToBytes(sdq);
+            if (quota > -1) {
                fGroupQuota.Add(new TObjString(grp),
                                new TParameter<Long64_t> ("group quota", quota));
+            } else {
+               Warning("ReadGroupConfig",
+                       "problems parsing string: wrong or unsupported suffix? %s",
+                        sdq.Data());
             }
          } else if (type == "commonuser") {
             // Read common user for this group
@@ -294,28 +311,56 @@ Bool_t TProofDataSetManager::ReadGroupConfig(const char *cf)
                Info("ReadGroupConfig","incomplete line: '%s'", line.Data());
             continue;
          }
-         // Determine factor
-         const char *unit[4] = {  "", "k", "M", "G"};
-         Int_t jj = 3;
-         while (jj > 0) {
-            if (avgsize.EndsWith(unit[jj], TString::kIgnoreCase)) {
-               avgsize.Remove(avgsize.Length()-1);
-               break;
-            }
-            jj--;
-         }
-         if (avgsize.IsDigit()) {
-            const Int_t fact[4] = { 1, 1024, 1048576, 1073741824};
-            fAvgFileSize = avgsize.Atoi() * fact[jj];
+         Long64_t avgsz = ToBytes(avgsize);
+         if (avgsz > -1) {
+            fAvgFileSize = avgsz;
          } else {
             Warning("ReadGroupConfig",
-                    "average size should be a number, not: %s", avgsize.Data());
+                    "problems parsing string: wrong or unsupported suffix? %s",
+                    avgsize.Data());
          }
       }
    }
    in.close();
 
    return kTRUE;
+}
+
+//______________________________________________________________________________
+Long64_t TProofDataSetManager::ToBytes(const char *size)
+{
+   // Static utility function to gt the number of bytes from a string
+   // representation in the form "<digit><sfx>" with <sfx> = {"", "k", "M", "G",
+   // "T", "P"} (case insensitive).
+   // Returns -1 if the format is wrong.
+
+   Long64_t lsize = -1;
+
+   // Check if valid
+   if (!size || strlen(size) <= 0) return lsize;
+
+   TString s(size);
+   // Determine factor
+   Long64_t fact = 1;
+   if (!s.IsDigit()) {
+      const char *unit[5] = { "k", "M", "G", "T", "P"};
+      fact = 1024;
+      Int_t jj = 0;
+      while (jj <= 4) {
+         if (s.EndsWith(unit[jj], TString::kIgnoreCase)) {
+            s.Remove(s.Length()-1);
+            break;
+         }
+         fact *= 1024;
+         jj++;
+      }
+   }
+   // Apply factor now
+   if (s.IsDigit())
+      lsize = s.Atoi() * fact;
+
+   // Done
+   return lsize;
 }
 
 //______________________________________________________________________________
@@ -607,14 +652,41 @@ Int_t TProofDataSetManager::RegisterDataSet(const char *,
 }
 
 //______________________________________________________________________________
-Bool_t TProofDataSetManager::ParseDataSetUri(const char *uri,
-                                             TString *dsGroup, TString *dsUser,
-                                             TString *dsName, TString *dsTree,
-                                             Bool_t onlyCurrent, Bool_t wildcards)
+TString TProofDataSetManager::CreateUri(const char *dsGroup, const char *dsUser,
+                                        const char *dsName, const char *dsObjPath)
+{
+   // Creates URI for the dataset manger in the form '[[/dsGroup/]dsUser/]dsName[#dsObjPath]',
+   // The optional dsObjPath can be in the form [subdir/]objname]'.
+
+   TString uri;
+
+   if (dsGroup && strlen(dsGroup) > 0) {
+      if (dsUser && strlen(dsUser) > 0) {
+         uri += Form("/%s/%s/", dsGroup, dsUser);
+      } else {
+         uri += Form("/%s/*/", dsGroup);
+      }
+   } else if (dsUser && strlen(dsUser) > 0) {
+      uri += Form("%s/", dsUser);
+   }
+   if (dsName && strlen(dsName) > 0)
+      uri += dsName;
+   if (dsObjPath && strlen(dsObjPath) > 0)
+      uri += Form("#%s", dsObjPath);
+
+   // Done
+   return uri;
+}
+
+//______________________________________________________________________________
+Bool_t TProofDataSetManager::ParseUri(const char *uri,
+                                      TString *dsGroup, TString *dsUser,
+                                      TString *dsName, TString *dsTree,
+                                      Bool_t onlyCurrent, Bool_t wildcards)
 {
    // Parses a (relative) URI that describes a DataSet on the cluster.
-   // The input 'uri' should be in the form 'dsname[#[subdir/]objname]', where
-   // 'objname' is the name of the object (e.g. the tree name) and the 'subdir'
+   // The input 'uri' should be in the form '[[/group/]user/]dsname[#[subdir/]objname]',
+   //  where 'objname' is the name of the object (e.g. the tree name) and the 'subdir'
    // is the directory in the file wher it should be looked for.
    // After resolving against a base URI consisting of proof://masterhost/group/user/
    // - meaning masterhost, group and user of the current session -
@@ -633,14 +705,14 @@ Bool_t TProofDataSetManager::ParseDataSetUri(const char *uri,
    // Resolve given URI agains the base
    TUri resolved = TUri::Transform(uristr, fBase);
    if (resolved.HasQuery())
-      Info ("ParseDataSetUri", "URI query part <%s> ignored", resolved.GetQuery().Data());
+      Info ("ParseUri", "URI query part <%s> ignored", resolved.GetQuery().Data());
 
    TString path(resolved.GetPath());
    // Must be in the form /group/user/dsname
    Int_t pc = path.CountChar('/');
    if (pc != 3) {
       if (!TestBit(TProofDataSetManager::kIsSandbox)) {
-         Error ("ParseDataSetUri", "illegal dataset path: %s", uri);
+         Error ("ParseUri", "illegal dataset path: %s", uri);
          return kFALSE;
       } else if (pc >= 0 && pc < 3) {
          // Add missing slashes
@@ -656,7 +728,7 @@ Bool_t TProofDataSetManager::ParseDataSetUri(const char *uri,
       }
    }
    if (gDebug > 1)
-      Info("ParseDataSetUri", "path: '%s'", path.Data());
+      Info("ParseUri", "path: '%s'", path.Data());
 
    // Get individual values from tokens
    Int_t from = 1;
@@ -667,20 +739,22 @@ Bool_t TProofDataSetManager::ParseDataSetUri(const char *uri,
 
    // The fragment may contain the subdir and the object name in the form '[subdir/]objname'
    TString tree = resolved.GetFragment();
+   if (tree.EndsWith("/"))
+      tree.Remove(tree.Length()-1);
 
    if (gDebug > 1)
-      Info("ParseDataSetUri", "group: '%s', user: '%s', dsname:'%s', seg: '%s'",
+      Info("ParseUri", "group: '%s', user: '%s', dsname:'%s', seg: '%s'",
                               group.Data(), user.Data(), name.Data(), tree.Data());
 
    // Check for unwanted use of wildcards
    if ((user == "*" || group == "*") && !wildcards) {
-      Error ("ParseDataSetUri", "no wildcards allowed for user/group in this context");
+      Error ("ParseUri", "no wildcards allowed for user/group in this context");
       return kFALSE;
    }
 
    // dsname may only be empty if wildcards expected
    if (name.IsNull() && !wildcards) {
-      Error ("ParseDataSetUri", "DataSet name is empty");
+      Error ("ParseUri", "DataSet name is empty");
       return kFALSE;
    }
 
@@ -689,28 +763,28 @@ Bool_t TProofDataSetManager::ParseDataSetUri(const char *uri,
 
    // Check for illegal characters in all components
    if (!wcExp.Match(group)) {
-      Error("ParseDataSetUri", "illegal characters in group");
+      Error("ParseUri", "illegal characters in group");
       return kFALSE;
    }
 
    if (!wcExp.Match(user)) {
-      Error("ParseDataSetUri", "illegal characters in user");
+      Error("ParseUri", "illegal characters in user");
       return kFALSE;
    }
 
    if (name.Contains(TRegexp("[^A-Za-z0-9-._]"))) {
-      Error("ParseDataSetUri", "illegal characters in dataset name");
+      Error("ParseUri", "illegal characters in dataset name");
       return kFALSE;
    }
 
    if (tree.Contains(TRegexp("[^A-Za-z0-9-/_]"))) {
-      Error("ParseDataSetUri", "Illegal characters in subdir/object name");
+      Error("ParseUri", "Illegal characters in subdir/object name");
       return kFALSE;
    }
 
    // Check user & group
    if (onlyCurrent && (group.CompareTo(fGroup) || user.CompareTo(fUser))) {
-      Error("ParseDataSetUri", "only datasets from your group/user allowed");
+      Error("ParseUri", "only datasets from your group/user allowed");
       return kFALSE;
    }
 

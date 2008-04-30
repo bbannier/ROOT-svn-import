@@ -121,8 +121,6 @@ void TTreeCache::AddBranch(TBranch *b, Bool_t subbranches /*= kFALSE*/)
    // Reject branch that are not from the cached tree.
    if (!b || fOwner->GetTree() != b->GetTree()) return;
 
-   Int_t nb = 0;
-
    //Is branch already in the cache?
    Bool_t isNew = kTRUE;
    for (int i=0;i<fNbranches;i++) {
@@ -134,7 +132,6 @@ void TTreeCache::AddBranch(TBranch *b, Bool_t subbranches /*= kFALSE*/)
       fBrNames->Add(new TObjString(b->GetName()));
       fZipBytes += b->GetZipBytes();
       fNbranches++;
-      nb++;
       if (gDebug > 0) printf("Entry: %lld, registering branch: %s\n",b->GetTree()->GetReadEntry(),b->GetName());
    }
    

@@ -313,7 +313,7 @@ Double_t TMVA::MethodCommittee::AdaBoost( TMVA::IMethod* method )
          boostFactor = (1-err)/err ;
       }
       else {
-         boostFactor =  pow((1-err)/err,adaBoostBeta) ;
+         boostFactor =  TMath::Power((1-err)/err,adaBoostBeta) ;
       }
    }
    else {
@@ -570,15 +570,15 @@ void TMVA::MethodCommittee::GetHelpMessage() const
    // typical length of text line: 
    //         "|--------------------------------------------------------------|"
    fLogger << Endl;
-   fLogger << Tools::Color("bold") << "--- Short description:" << Tools::Color("reset") << Endl;
+   fLogger << gTools().Color("bold") << "--- Short description:" << gTools().Color("reset") << Endl;
    fLogger << Endl;
    fLogger << "<None>" << Endl;
    fLogger << Endl;
-   fLogger << Tools::Color("bold") << "--- Performance optimisation:" << Tools::Color("reset") << Endl;
+   fLogger << gTools().Color("bold") << "--- Performance optimisation:" << gTools().Color("reset") << Endl;
    fLogger << Endl;
    fLogger << "<None>" << Endl;
    fLogger << Endl;
-   fLogger << Tools::Color("bold") << "--- Performance tuning via configuration options:" << Tools::Color("reset") << Endl;
+   fLogger << gTools().Color("bold") << "--- Performance tuning via configuration options:" << gTools().Color("reset") << Endl;
    fLogger << Endl;
    fLogger << "<None>" << Endl;
 }

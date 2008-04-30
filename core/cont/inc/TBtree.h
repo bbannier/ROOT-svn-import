@@ -30,9 +30,13 @@
 #include "TError.h"
 #endif
 
+#include <iterator>
+
+
 class TBtNode;
 class TBtInnerNode;
 class TBtLeafNode;
+class TBtreeIter;
 
 
 class TBtree : public TSeqCollection {
@@ -66,6 +70,8 @@ protected:
    Int_t IdxAdd(const TObject &obj);
 
 public:
+   typedef TBtreeIter Iterator_t;
+
    TBtree(Int_t ordern = 3);  //create a TBtree of order n
    virtual     ~TBtree();
 #ifndef __CINT__
@@ -330,14 +336,18 @@ public:
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-class TBtreeIter : public TIterator {
+class TBtreeIter : public TIterator,
+                   public std::iterator<std::bidirectional_iterator_tag,
+                                        TObject*, std::ptrdiff_t,
+                                        const TObject**, const TObject*&> {
 
 private:
    const TBtree  *fTree;      //btree being iterated
-   Int_t          fCursor;    //current position in btree
+   Int_t          fCurCursor; //current position in btree
+   Int_t          fCursor;    //next position in btree
    Bool_t         fDirection; //iteration direction
 
-   TBtreeIter() : fTree(0), fCursor(0) { }
+   TBtreeIter() : fTree(0), fCurCursor(0), fCursor(0), fDirection(kIterForward) { }
 
 public:
    TBtreeIter(const TBtree *t, Bool_t dir = kIterForward);
@@ -349,6 +359,9 @@ public:
    const TCollection  *GetCollection() const { return fTree; }
    TObject            *Next();
    void                Reset();
+   bool                operator!=(const TIterator &aIter) const;
+   bool                operator!=(const TBtreeIter &aIter) const;
+   TObject            *operator*() const;
 
    ClassDef(TBtreeIter,0)  //B-tree iterator
 };

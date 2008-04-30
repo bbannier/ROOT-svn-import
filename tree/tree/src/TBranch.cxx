@@ -567,11 +567,46 @@ void TBranch::Browse(TBrowser* b)
       if (gPad) gPad->Update();
    }
 }
+ 
+ //______________________________________________________________________________
+void TBranch::DeleteBaskets(Option_t* option)
+{
+   // Loop on all branch baskets. If the file where branch buffers reside is
+   // writable, free the disk space associated to the baskets of the branch,
+   // then call Reset(). If the option contains "all", delete also the baskets
+   // for the subbranches.
+   // The branch is reset.
+   // NOTE that this function must be used with extreme care. Deleting branch baskets
+   // fragments the file and may introduce inefficiencies when adding new entries
+   // in the Tree or later on when reading the Tree.
+
+   TString opt = option;
+   opt.ToLower();
+   TFile *file = GetFile(0);
+
+   if(fDirectory && (fDirectory != gROOT) && fDirectory->IsWritable()) {
+      for(Int_t i=0; i<fWriteBasket; i++) {
+         if (fBasketSeek[i]) file->MakeFree(fBasketSeek[i],fBasketSeek[i]+fBasketBytes[i]-1);
+      }
+   }
+
+   // process subbranches
+   if (opt.Contains("all")) {
+      TObjArray *lb = GetListOfBranches();
+      Int_t nb = lb->GetEntriesFast();
+      for (Int_t j = 0; j < nb; j++) {
+	 TBranch* branch = (TBranch*) lb->UncheckedAt(j);
+	 if (branch) branch->DeleteBaskets("all");
+      }
+   }
+   DropBaskets();
+   Reset();
+}
 
 //______________________________________________________________________________
 void TBranch::DropBaskets(Option_t* option)
 {
-   // Loop on all branch baskets. Drop all except readbasket.
+   // Loop on all branch baskets. Drop all baskets from memory except readbasket.
    // If the option contains "all", drop all baskets including
    // read- and write-baskets.
 
@@ -590,12 +625,14 @@ void TBranch::DropBaskets(Option_t* option)
          if (j < 0) continue;
          if ((j == fReadBasket || j == fWriteBasket) && !all) continue;
          basket = (TBasket*)fBaskets.UncheckedAt(j);
-         if (!basket) continue;
+         fBasketRAM[i] = -1;
+         fNBasketRAM--;
+         if (!basket) {
+            continue;
+         }
          basket->DropBuffers();
          GetListOfBaskets()->RemoveAt(j);
          delete basket;
-         fBasketRAM[i] = -1;
-         fNBasketRAM--;
       }
       if (fNBasketRAM < 0) {
          Error("DropBaskets", "fNBasketRAM =%d",fNBasketRAM);
@@ -631,7 +668,7 @@ void TBranch::DropBaskets(Option_t* option)
    if (all) {
       TObjArray *lb = GetListOfBranches();
       Int_t nb = lb->GetEntriesFast();
-      for (Int_t j = 0; j < nb; j++) {
+      for (j = 0; j < nb; j++) {
          TBranch* branch = (TBranch*) lb->UncheckedAt(j);
          if (!branch) continue;
          branch->DropBaskets("all");
@@ -854,7 +891,7 @@ TBranch* TBranch::FindBranch(const char* name)
    TIter next(GetListOfBranches());
    while ((branch = (TBranch*) next())) {
       std::string brname(branch->GetName());
-      std::size_t dim = brname.find_first_of("[");
+      dim = brname.find_first_of("[");
       if (dim != std::string::npos) {
          brname.erase(dim);
       }
@@ -898,7 +935,7 @@ TLeaf* TBranch::FindLeaf(const char* searchname)
       TBranch* branch = leaf->GetBranch();
       if (branch) {
         longname.Form("%s.%s",branch->GetName(),leafname.Data());
-         Ssiz_t dim = longname.First('[');
+         dim = longname.First('[');
          if (dim>=0) longname.Remove(dim);
          if (longname == searchname) return leaf;
 
@@ -1785,6 +1822,17 @@ void TBranch::SetFile(const char* fname)
    }
 }
 
+//______________________________________________________________________________
+void TBranch::SetObject(void * /* obj */)
+{
+   // Set object this branch is pointing to.
+
+   if (TestBit(kDoNotProcess)) {
+      return;
+   }
+   Warning("SetObject","is not supported in TBranch objects");
+}
+
 //_______________________________________________________________________
 void TBranch::Streamer(TBuffer& b)
 {
@@ -1808,10 +1856,10 @@ void TBranch::Streamer(TBuffer& b)
          }
          Int_t nbaskets = fBaskets.GetEntries();
          for (Int_t j=fWriteBasket,n=0;j>=0 && n<nbaskets;--j) {
-            TBasket *b = (TBasket*)fBaskets.UncheckedAt(j);
-            if (b) {
-               b->SetBranch(this);
-               GetTree()->IncrementTotalBuffers(b->GetBufferSize());
+            TBasket *bk = (TBasket*)fBaskets.UncheckedAt(j);
+            if (bk) {
+               bk->SetBranch(this);
+               GetTree()->IncrementTotalBuffers(bk->GetBufferSize());
                ++n;
             }
          }
@@ -1865,10 +1913,10 @@ void TBranch::Streamer(TBuffer& b)
          }
          Int_t nbaskets = fBaskets.GetEntries();
          for (j=fWriteBasket,n=0;j>0 && n<nbaskets;--j) {
-            TBasket *b = (TBasket*)fBaskets.UncheckedAt(j);
-            if (b) {
-               b->SetBranch(this);
-               GetTree()->IncrementTotalBuffers(b->GetBufferSize());
+            TBasket *bk = (TBasket*)fBaskets.UncheckedAt(j);
+            if (bk) {
+               bk->SetBranch(this);
+               GetTree()->IncrementTotalBuffers(bk->GetBufferSize());
                ++n;
             }
          }
@@ -1900,10 +1948,10 @@ void TBranch::Streamer(TBuffer& b)
       fBaskets.Streamer(b);
       Int_t nbaskets = fBaskets.GetEntries();
       for (j=fWriteBasket,n=0;j>0 && n<nbaskets;--j) {
-         TBasket *b = (TBasket*)fBaskets.UncheckedAt(j);
-         if (b) {
-            b->SetBranch(this);
-            GetTree()->IncrementTotalBuffers(b->GetBufferSize());
+         TBasket *bk = (TBasket*)fBaskets.UncheckedAt(j);
+         if (bk) {
+            bk->SetBranch(this);
+            GetTree()->IncrementTotalBuffers(bk->GetBufferSize());
             ++n;
          }
       }

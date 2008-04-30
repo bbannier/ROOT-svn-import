@@ -29,7 +29,11 @@
 #include "TProcessID.h"
 #endif
 
+#include <iterator>
+
+
 class TSystem;
+class TRefArrayIter;
 
 class TRefArray : public TSeqCollection {
 
@@ -48,6 +52,8 @@ protected:
    TObject      *GetFromTable(Int_t idx) const;
 
 public:
+   typedef TRefArrayIter Iterator_t;
+
    TRefArray(TProcessID *pid = 0);
    TRefArray(Int_t s, TProcessID *pid);
    TRefArray(Int_t s, Int_t lowerBound = 0, TProcessID *pid = 0);
@@ -59,7 +65,9 @@ public:
    virtual void     Delete(Option_t *option="");
    virtual void     Expand(Int_t newSize);   // expand or shrink an array
    Int_t            GetEntries() const;
-   Int_t            GetEntriesFast() const {return GetAbsLast()+1;}  //only OK when no gaps
+   Int_t            GetEntriesFast() const {
+      return GetAbsLast() + 1;   //only OK when no gaps
+   }
    Int_t            GetLast() const;
    TObject        **GetObjectRef(const TObject *obj) const;
    TProcessID      *GetPID() const {return fPID;}
@@ -103,25 +111,32 @@ public:
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-class TRefArrayIter : public TIterator {
+class TRefArrayIter : public TIterator,
+                      public std::iterator<std::bidirectional_iterator_tag, // TODO: ideally it should be a  randomaccess_iterator_tag
+                                           TObject*, std::ptrdiff_t,
+                                           const TObject**, const TObject*&> {
 
 private:
    const TRefArray  *fArray;      //array being iterated
-   Int_t             fCursor;     //current position in array
+   Int_t             fCurCursor;  //current position in array
+   Int_t             fCursor;     //next position in array
    Bool_t            fDirection;  //iteration direction
 
-   TRefArrayIter() : fArray(0), fCursor(0), fDirection(kIterForward) { }
+   TRefArrayIter() : fArray(0), fCurCursor(0), fCursor(0), fDirection(kIterForward) { }
 
 public:
    TRefArrayIter(const TRefArray *arr, Bool_t dir = kIterForward);
    TRefArrayIter(const TRefArrayIter &iter);
    ~TRefArrayIter() { }
-   TIterator     &operator=(const TIterator &rhs);
-   TRefArrayIter &operator=(const TRefArrayIter &rhs);
+   TIterator         &operator=(const TIterator &rhs);
+   TRefArrayIter     &operator=(const TRefArrayIter &rhs);
 
    const TCollection *GetCollection() const { return fArray; }
    TObject           *Next();
-   void              Reset();
+   void               Reset();
+   bool               operator!=(const TIterator &aIter) const;
+   bool               operator!=(const TRefArrayIter &aIter) const;
+   TObject           *operator*() const;
 
    ClassDef(TRefArrayIter,0)  //Object array iterator
 };

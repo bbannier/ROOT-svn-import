@@ -67,10 +67,6 @@ TProofDataSetManagerFile::TProofDataSetManagerFile(const char *group,
          }
       }
 
-      // If the MSS url was not given, check if one is defined via env
-      if (fMSSUrl.IsNull())
-         fMSSUrl = gEnv->GetValue("ProofDataSet.MSSUrl", "");
-
       // If not in sandbox, construct the base URI using session defaults
       // (group, user) (syntax: /group/user/dsname[#[subdir/]objname])
       if (!TestBit(TProofDataSetManager::kIsSandbox))
@@ -85,6 +81,10 @@ TProofDataSetManagerFile::TProofDataSetManagerFile(const char *group,
       // Limit in seconds after a lock automatically expires
       fLockFileTimeLimit = 120;
    }
+
+   // If the MSS url was not given, check if one is defined via env
+   if (fMSSUrl.IsNull())
+      fMSSUrl = gEnv->GetValue("ProofDataSet.MSSUrl", "");
 }
 
 //______________________________________________________________________________
@@ -169,6 +169,10 @@ Bool_t TProofDataSetManagerFile::BrowseDataSets(const char *group,
    Bool_t exporting = (option & kExport) ? kTRUE : kFALSE;
    Bool_t updating = (option & kQuotaUpdate) ? kTRUE : kFALSE;
 
+   // If printing is required add kReadShort to the options
+   if (printing || updating)
+      option |= kReadShort;
+
    // The last three options are mutually exclusive
    if (((Int_t)printing + (Int_t)exporting + (Int_t)updating) > 1) {
       Error("BrowseDataSets",
@@ -221,10 +225,10 @@ Bool_t TProofDataSetManagerFile::BrowseDataSets(const char *group,
                outmap->Add(new TObjString(mapGroup), userMap);
             }
 
-            if (!(datasetMap = dynamic_cast<TMap*> (outmap->GetValue(mapUser)))) {
+            if (!(datasetMap = dynamic_cast<TMap*> (userMap->GetValue(mapUser)))) {
                datasetMap = new TMap;
                datasetMap->SetOwner();
-               outmap->Add(new TObjString(mapUser), datasetMap);
+               userMap->Add(new TObjString(mapUser), datasetMap);
             }
          }
 
@@ -270,20 +274,23 @@ Bool_t TProofDataSetManagerFile::BrowseDataSets(const char *group,
 TMap *TProofDataSetManagerFile::GetDataSets(const char *group, const char *user,
                                             UInt_t option)
 {
+   // General purpose call to go through the existing datasets.
+   // If <user> is 0 or "*", act on all datasets for the given <group>.
+   // If <group> is 0 or "*", act on all datasets.
+   // Action depends on option; available options:
    //
-   // Returns all datasets for the given <group> and <user>.
-   // If <user> is 0, it returns all datasets for the given <group>.
-   // If <group> is 0, it returns all datasets.
-   // The returned TMap contains:
-   //    <group> --> <map of users> --> <map of datasets> --> <dataset> (TFileCollection)
+   //    kExport         Return a TMap object containing all the information about
+   //                    datasets in the form:
+   //                    { <group>, <map of users> }
+   //                                     |
+   //                             { <map of datasets>, <dataset>}
+   //                    (<dataset> are TFileCollection objects)
+   //    kShowDefault    as kExport with in addition a default selection including
+   //                    the datasets from the current user, the ones from the group
+   //                    and the common ones
    //
-   // The unsigned int 'option' is forwarded to GetDataSet and BrowseDataSet.
-   // Available options (to be .or.ed):
-   //    kShowDefault    a default selection is shown that include the ones from
-   //                    the current user, the ones from the group and the common ones
-   //    kPrint          print the dataset content
-   //    kQuotaUpdate    update quotas
-   //    kExport         use export naming
+   //    kPrint          print the dataset content; no output is returned
+   //    kQuotaUpdate    update {group, user} quotas; no output is returned
    //
    // NB1: options "kPrint", "kQuoatUpdate" and "kExport" are mutually exclusive
    // NB2: for options "kPrint" and "kQuoatUpdate" return is null.
@@ -575,7 +582,7 @@ Int_t TProofDataSetManagerFile::RegisterDataSet(const char *uri,
 
    // Get the dataset name
    TString dsName;
-   if (ParseDataSetUri(uri, 0, 0, &dsName, 0, kTRUE) == kFALSE) {
+   if (ParseUri(uri, 0, 0, &dsName, 0, kTRUE) == kFALSE) {
       Error("RegisterDataSet", "problem parsing uri: %s", uri);
       return -1;
    }
@@ -678,7 +685,7 @@ Int_t TProofDataSetManagerFile::ScanDataSet(const char *uri, UInt_t)
 
    TString dsName;
    if (TestBit(TProofDataSetManager::kAllowVerify)) {
-      if (ParseDataSetUri(uri, 0, 0, &dsName, 0, kTRUE)) {
+      if (ParseUri(uri, 0, 0, &dsName, 0, kTRUE)) {
          if (ScanDataSet(fGroup, fUser, dsName, (UInt_t)(kReopen | kDebug)) > 0)
             return GetNDisapparedFiles();
       }
@@ -740,7 +747,7 @@ Int_t TProofDataSetManagerFile::ScanDataSet(TFileCollection *dataset,
    // Parse options
    Bool_t notify = (gDebug > 0 || (option & kDebug)) ? kTRUE : kFALSE;
    // Max number of files
-   Int_t maxFiles = ((option & kMaxFiles) & filesmax > -1) ? filesmax : -1;
+   Int_t maxFiles = ((option & kMaxFiles) && (filesmax > -1)) ? filesmax : -1;
    if (maxFiles > -1 && notify)
       Info("ScanDataSet", "processing a maximum of %d files", maxFiles);
    // Reopen
@@ -791,7 +798,7 @@ Int_t TProofDataSetManagerFile::ScanDataSet(TFileCollection *dataset,
                  fileInfo->GetCurrentUrl()->GetUrl());
 
          // Check if file is still available, if touch is set actually read from the file
-         TFile *file = TFile::Open(Form("%s?filetype=rawmxredir=7", url.GetUrl()));
+         TFile *file = TFile::Open(Form("%s?filetype=raw&mxredir=2", url.GetUrl()));
          if (file) {
             if (touch) {
                // Actually access the file
@@ -1006,7 +1013,7 @@ TMap *TProofDataSetManagerFile::GetDataSets(const char *uri, UInt_t option)
    if (((option & kPrint) || (option & kExport)) && strlen(uri) <= 0)
       option |= kShowDefault;
 
-   if (ParseDataSetUri(uri, &dsGroup, &dsUser, 0, 0, kFALSE, kTRUE))
+   if (ParseUri(uri, &dsGroup, &dsUser, 0, 0, kFALSE, kTRUE))
       return GetDataSets(dsGroup, dsUser, option);
    return (TMap *)0;
 }
@@ -1017,7 +1024,7 @@ TFileCollection *TProofDataSetManagerFile::GetDataSet(const char *uri)
    // Utility function used in various methods for user dataset upload.
 
    TString dsUser, dsGroup, dsName;
-   if (ParseDataSetUri(uri, &dsGroup, &dsUser, &dsName))
+   if (ParseUri(uri, &dsGroup, &dsUser, &dsName))
       return GetDataSet(dsGroup, dsUser, dsName);
    return (TFileCollection *)0;
 }
@@ -1030,7 +1037,7 @@ Bool_t TProofDataSetManagerFile::RemoveDataSet(const char *uri)
    TString dsName;
 
    if (TestBit(TProofDataSetManager::kAllowRegister)) {
-      if (ParseDataSetUri(uri, 0, 0, &dsName, 0, kTRUE)) {
+      if (ParseUri(uri, 0, 0, &dsName, 0, kTRUE)) {
          Bool_t rc = RemoveDataSet(fGroup, fUser, dsName);
          if (rc) return kTRUE;
          Error("RemoveDataSet", "error removing dataset %s", dsName.Data());
@@ -1046,7 +1053,7 @@ Bool_t TProofDataSetManagerFile::ExistsDataSet(const char *uri)
 
    TString dsUser, dsGroup, dsName;
 
-   if (ParseDataSetUri(uri, &dsGroup, &dsUser, &dsName))
+   if (ParseUri(uri, &dsGroup, &dsUser, &dsName))
       return ExistsDataSet(dsGroup, dsUser, dsName);
    return kFALSE;
 }

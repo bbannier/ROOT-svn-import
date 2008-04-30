@@ -43,8 +43,8 @@ namespace FTypes {
    static const std::type_info & Double()     { static const std::type_info & t = Type::ByName("double").TypeInfo();             return t; }
    static const std::type_info & LonDouble()  { static const std::type_info & t = Type::ByName("long double").TypeInfo();        return t; }
    static const std::type_info & Void()       { static const std::type_info & t = Type::ByName("void").TypeInfo();               return t; }
-   static const std::type_info & LonLong()    { static const std::type_info & t = Type::ByName("longlong").TypeInfo();           return t; }
-   static const std::type_info & UnsLonLong() { static const std::type_info & t = Type::ByName("ulonglong").TypeInfo();          return t; }
+   static const std::type_info & LonLong()    { static const std::type_info & t = Type::ByName("long long").TypeInfo();          return t; }
+   static const std::type_info & UnsLonLong() { static const std::type_info & t = Type::ByName("unsigned long long").TypeInfo(); return t; }
 }
 
 //-------------------------------------------------------------------------------
@@ -122,12 +122,31 @@ std::string Tools::BuildTypeName( Type & t,
 std::vector<std::string> Tools::GenTemplateArgVec( const std::string & Name ) {
 //-------------------------------------------------------------------------------
 // Return a vector of template arguments from a template type string.
-   std::string tpl;
-   std::vector<std::string> tl;
-   unsigned long int pos1 = Name.find("<");
-   unsigned long int pos2 = Name.rfind(">");
-   if ( pos1 == std::string::npos && pos2 == std::string::npos ) return tl; 
-   tpl = Name.substr(pos1+1, pos2-pos1-1);
+
+   std::vector<std::string> vec;
+   std::string tname;
+   GetTemplateComponents( Name, tname, vec);
+   return vec;
+}
+
+void Tools::GetTemplateComponents( const std::string & Name, std::string &templatename, std::vector<std::string> &args) {
+
+   // Return the template name and a vector of template arguments.
+
+   size_t basepos = Tools::GetBasePosition( Name );
+   const char *argpos = strstr( Name.c_str()+basepos, "<" );
+
+   if (!argpos) return;
+
+   size_t pos1 = argpos - Name.c_str();
+
+   templatename = Name.substr(0, pos1);
+   
+   size_t pos2 = Name.rfind(">");
+
+   if ( pos2 == std::string::npos ) return; 
+
+   std::string tpl = Name.substr(pos1+1, pos2-pos1-1);
    if (tpl[tpl.size()-1] == ' ') {
       tpl = tpl.substr(0,tpl.size()-1);
    }
@@ -139,7 +158,7 @@ std::vector<std::string> Tools::GenTemplateArgVec( const std::string & Name ) {
       if ( c == ',' ) {
          if ( ! par ) {
             StringStrip(argName);
-            tl.push_back(argName);
+            args.push_back(argName);
             argName = "";
          }
          else {
@@ -154,9 +173,9 @@ std::vector<std::string> Tools::GenTemplateArgVec( const std::string & Name ) {
    }
    if ( argName.length() ) {
       StringStrip(argName);
-      tl.push_back(argName);
+      args.push_back(argName);
    }
-   return tl;
+   return;
 }
 
 
@@ -188,7 +207,7 @@ size_t Tools::GetBasePosition(const std::string& name) {
                     --j;
                  }
               }
-              for (; (j > -1) && (name[j] == ' '); --j);
+              for ( ; (j > -1) && (name[j] == ' '); --j) {}
               if ((j > -1) && (name[j] == 'r') && ((j - 7) > -1)) {
                  // -- We may have an operator name.
                  if (name.substr(j - 7, 8) == "operator") {
@@ -207,7 +226,7 @@ size_t Tools::GetBasePosition(const std::string& name) {
                     --j;
                  }
               }
-              for (; (j > -1) && (name[j] == ' '); --j);
+              for ( ; (j > -1) && (name[j] == ' '); --j) {}
               if ((j > -1) && (name[j] == 'r') && ((j - 7) > -1)) {
                  // -- We may have an operator name.
                  if (name.substr(j - 7, 8) == "operator") {
@@ -221,11 +240,11 @@ size_t Tools::GetBasePosition(const std::string& name) {
          case ')':
             {
               int j = i - 1;
-              for (; (j > -1) && (name[j] == ' '); --j);
+              for ( ; (j > -1) && (name[j] == ' '); --j) {}
               if (j > -1) {
                  if (name[j] == '(') {
                     --j;
-                    for (; (j > -1) && (name[j] == ' '); --j);
+                    for ( ; (j > -1) && (name[j] == ' '); --j) {}
                     if ((j > -1) && (name[j] == 'r') && ((j - 7) > -1)) {
                        // -- We may have an operator name.
                        if (name.substr(j - 7, 8) == "operator") {
@@ -241,7 +260,7 @@ size_t Tools::GetBasePosition(const std::string& name) {
          case '(':
             {
               int j = i - 1;
-              for (; (j > -1) && (name[j] == ' '); --j);
+              for ( ; (j > -1) && (name[j] == ' '); --j) {}
               if ((j > -1) && (name[j] == 'r') && ((j - 7) > -1)) {
                  // -- We may have an operator name.
                  if (name.substr(j - 7, 8) == "operator") {
@@ -314,10 +333,53 @@ std::string Tools::GetBaseName( const std::string & name,
 bool Tools::IsTemplated(const char * name ) {
 //-------------------------------------------------------------------------------
 // Check if a type name is templated.
-   for (size_t i = strlen(name)-1; i > 0; --i) {
-      if (( name[i] == '>' ) && ( strchr(name,'<') != 0 )) return true;
-      else if ( name[i] == ' ') break;
-      else return false;
+// Only check the current scope, i.e. IsTemplated("A<T>::B") will return false!
+// Functions are treated as templated if they have an explicit template argument
+// in front of their argument list, e.g. both "operator A<T>()" and "int f<T>()"
+// are determined to be templated.
+
+   // Watch out for A<T>::op>() - which we treat as non templated!
+   // So a trailing '>' is not sufficient, even if there is a '<' in
+   // the type name.
+
+   // level of nested parantheses, e.g. for the _not_ templated
+   // f(A<int>(*)(B<float>))
+   unsigned int paraLevel = 0;
+
+   size_t len = strlen(name);
+
+   if (len==0) return false;
+
+   for (size_t i = len - 1; i > 0; --i) {
+      if (name[i] == ')')
+         ++paraLevel;
+      else if (name[i] == '(') {
+         if (paraLevel)
+            --paraLevel;
+         else
+            std::cerr << "Reflex::Tool::IsTemplated(): ERROR: level of parantheses < 0 for "
+                      << name << std::endl;
+      } else if (!paraLevel) {
+         if (name[i] == ':' && name[i - 1] == ':')
+            // Reached the first scope that is not in a template arg.
+            // Only the last scope is tested here, so this type name
+            // is not templated.
+            return false;
+         if (name[i] == '>') {
+            // check for operator> or operator>> or operator->
+            if (i > 7) {
+               int j = i;
+               if (name[i - 1] == '>' || name[i - 1] == '-') --j;
+               while (j && isspace(name[j]))
+                  --j;
+               if (j > 7 && !strncmp(name + j - 8, "operator", 8))
+                  // it's the operator!
+                  return false;
+            }
+            // not the operator> or operator>>
+            return true;
+         }
+      }
    }
    return false;
    /* alpha 
@@ -575,7 +637,7 @@ std::string Tools::NormalizeName( const char * nam ) {
          if (!isalphanum(prev) || !isalpha(next)) {
             continue; // continue on non-word boundaries
          }
-      } else if (curr == '>' && prev == '>' || curr == '(' && prev != ')') {
+      } else if ((curr == '>' && prev == '>') || (curr == '(' && prev != ')')) {
          norm_name += ' ';
       }
       norm_name += (prev = curr);

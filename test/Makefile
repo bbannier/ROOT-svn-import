@@ -202,6 +202,10 @@ THREADSO      = threads.$(ObjSuf)
 THREADSS      = threads.$(SrcSuf)
 THREADS       = threads$(ExeSuf)
 
+STRESSITERO    = stressIterators.$(ObjSuf)
+STRESSITERS    = stressIterators.$(SrcSuf)
+STRESSITER     = stressIterators$(ExeSuf)
+
 OBJS          = $(EVENTO) $(MAINEVENTO) $(HWORLDO) $(HSIMPLEO) $(MINEXAMO) \
                 $(TSTRINGO) $(TCOLLEXO) $(VVECTORO) $(VMATRIXO) $(VLAZYO) \
                 $(HELLOO) $(ACLOCKO) $(STRESSO) $(TBENCHO) $(BENCHO) \
@@ -210,7 +214,7 @@ OBJS          = $(EVENTO) $(MAINEVENTO) $(HWORLDO) $(HSIMPLEO) $(MINEXAMO) \
                 $(CTORTUREO) $(QPRANDOMO) $(THREADSO) $(STRESSVECO) \
                 $(STRESSMATHO) $(STRESSFITO) $(STRESSHEPIXO) \
                 $(STRESSENTRYLISTO) $(STRESSROOFITO) $(STRESSPROOFO) \
-                $(STRESSMATHMOREO)
+                $(STRESSMATHMOREO) $(STRESSITERO)
 
 PROGRAMS      = $(EVENT) $(HWORLD) $(HSIMPLE) $(MINEXAM) $(TSTRING) \
                 $(TCOLLEX) $(TCOLLBM) $(VVECTOR) $(VMATRIX) $(VLAZY) \
@@ -219,7 +223,7 @@ PROGRAMS      = $(EVENT) $(HWORLD) $(HSIMPLE) $(MINEXAM) $(TSTRING) \
                 $(TESTBITS) $(CTORTURE) $(QPRANDOM) $(THREADS) $(STRESSSP) \
                 $(STRESSVEC) $(STRESSFIT) $(STRESSHEPIX) $(STRESSENTRYLIST) \
                 $(STRESSROOFIT) $(STRESSPROOF) $(STRESSMATH) $(STRESSTMVA) \
-                $(STRESSMATHMORE)
+                $(STRESSMATHMORE) $(STRESSITER)
 
 
 OBJS         += $(GUITESTO) $(GUIVIEWERO) $(TETRISO)
@@ -611,6 +615,11 @@ endif
 endif
 endif
 
+$(STRESSITER):	$(STRESSITERO) 
+		$(LD) $(LDFLAGS) $^ $(LIBS) $(OutPutOpt)$@
+		$(MT_EXE)
+		@echo "$@ done"
+
 clean:
 		@rm -f $(OBJS) $(TRACKMATHSRC) core
 
@@ -627,7 +636,8 @@ distclean:      clean
 .SUFFIXES: .$(SrcSuf)
 
 ###
-
+stressIterators.$(ObjSuf): stressIterators.h
+ 
 Event.$(ObjSuf): Event.h
 MainEvent.$(ObjSuf): Event.h
 
@@ -668,8 +678,6 @@ TrackMathCoreDict.$(SrcSuf): 	TrackMathCore.h TrackMathCoreLinkDef.h
 TrackMathCoreRflx.$(SrcSuf): 	TrackMathCore.h TrackMathCoreRflx.xml
 			@echo "Generating dictionary $@ using gccxml ..."
 			genreflex TrackMathCore.h --selection_file=TrackMathCoreRflx.xml -o TrackMathCoreRflx.cxx  -I$(ROOTSYS)/include
-
-
 
 .$(SrcSuf).$(ObjSuf):
 	$(CXX)  $(CXXFLAGS) -c $<

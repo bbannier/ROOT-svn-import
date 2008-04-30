@@ -20,6 +20,8 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
+#include <stdlib.h>
+
 #include "RConfigure.h"
 #include "TApplication.h"
 #include "TSlave.h"
@@ -34,7 +36,6 @@
 #include "TThread.h"
 #include "TSocket.h"
 #include "TObjString.h"
-#include <stdlib.h>
 
 ClassImp(TSlave)
 

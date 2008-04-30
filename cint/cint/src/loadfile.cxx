@@ -1346,7 +1346,26 @@ int G__loadfile(const char *filenamein)
        ){
       if(G__prerun==0 || G__debugtrace)
         if(G__dispmsg>=G__DISPNOTE) {
-          G__fprinterr(G__serr,"Note: File \"%s\" already loaded\n",filename);
+            static const char *excludelist [] = {
+                "stdfunc.dll","stdcxxfunc.dll","posix.dll","ipc.dll","posix.dll"
+                "string.dll","vector.dll","vectorbool.dll","list.dll","deque.dll",
+                "map.dll", "map2.dll","set.dll","multimap.dll","multimap2.dll",
+                "multiset.dll","stack.dll","queue.dll","valarray.dll",
+                "exception.dll","stdexcept.dll","complex.dll","climits.dll" };
+            static const unsigned int excludelistsize = sizeof(excludelist)/sizeof(excludelist[0]);
+            static int excludelen[excludelistsize] = {-1};
+            if (excludelen[0] == -1) {
+               for (unsigned int i = 0; i < excludelistsize; ++i)
+                  excludelen[i] = strlen(excludelist[i]);
+            }
+            bool cintdlls = false;
+            int len = strlen(filename);
+            for (unsigned int i = 0; !cintdlls && i < excludelistsize; ++i) {
+               if (len>excludelen[i]) {
+                  cintdlls = (!strncmp(filename+len-excludelen[i], excludelist[i], excludelen[i]));
+               }
+            }
+            if (!cintdlls) G__fprinterr(G__serr,"Note: File \"%s\" already loaded\n",filename);
         }
       /******************************************************
        * restore input file information to G__ifile
@@ -2599,9 +2618,19 @@ char* G__tmpnam(char *name)
   /* After all, mkstemp creates more problem than a solution. */
   static char tempname[G__MAXFILENAME];
   const char *appendix="_cint";
+  static char tmpdir[G__MAXFILENAME];
+
+  char *tmp;
+  if('\0'==tmpdir[0]) {
+    if((tmp=getenv("CINTTMPDIR"))) strcpy(tmpdir,tmp);
+    else if((tmp=getenv("TEMP"))) strcpy(tmpdir,tmp);
+    else if((tmp=getenv("TMP"))) strcpy(tmpdir,tmp);
+    else strcpy(tmpdir,"/tmp");
+  }
 
   if (name==0) name = tempname;
-  strcpy(name,"/tmp/XXXXXX");
+  strcpy(name, tmpdir);
+  strcat(name,"/XXXXXX");
   close(mkstemp(name));/*mkstemp not only generate file name but also opens the file*/
   remove(name); /* mkstemp creates this file anyway. Delete it. questionable */
   if(strlen(name)<G__MAXFILENAME-6) strcat(name,appendix);

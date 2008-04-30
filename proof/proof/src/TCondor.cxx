@@ -19,6 +19,8 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
+#include <stdlib.h>
+
 #include "TCondor.h"
 #include "TList.h"
 #include "TSystem.h"
@@ -28,7 +30,6 @@
 #include "Riostream.h"
 #include "TEnv.h"
 #include "TClass.h"
-#include <stdlib.h>
 
 ClassImp(TCondorSlave)
 ClassImp(TCondor)

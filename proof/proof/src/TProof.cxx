@@ -20,6 +20,7 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
+#include <stdlib.h>
 #include <fcntl.h>
 #include <errno.h>
 #ifdef WIN32
@@ -4390,14 +4391,17 @@ Int_t TProof::DisablePackageOnClient(const char *package)
    // Returns 0 in case of success and -1 in case of error.
 
    if (!IsMaster()) {
-      // remove package directory and par file
+      // remove the package directory and the par file
       fPackageLock->Lock();
       gSystem->Exec(Form("%s %s/%s", kRM, fPackageDir.Data(), package));
       gSystem->Exec(Form("%s %s/%s.par", kRM, fPackageDir.Data(), package));
       fPackageLock->Unlock();
+      if (gSystem->AccessPathName(Form("%s/%s.par", fPackageDir.Data(), package))
+          && gSystem->AccessPathName(Form("%s/%s", fPackageDir.Data(), package)))
+         return 0;
    }
 
-   return 0;
+   return -1;
 }
 
 //______________________________________________________________________________
@@ -5920,13 +5924,14 @@ TTree *TProof::GetTreeHeader(TDSet *dset)
    (*reply) >> s1;
    (*reply) >> t;
 
-   PDB(kGlobal, 1)
-      if (t)
+   PDB(kGlobal, 1) {
+      if (t) {
          Info("GetTreeHeader", Form("%s, message size: %d, entries: %d\n",
              s1.Data(), reply->BufferSize(), (int) t->GetMaxEntryLoop()));
-      else
+      } else {
          Info("GetTreeHeader", Form("%s, message size: %d\n", s1.Data(), reply->BufferSize()));
-
+      }
+   }
    delete reply;
 
    return t;
@@ -6482,15 +6487,15 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
          return kError;
       }
    }
-   if (opt & kOverwriteAllFiles && opt & kOverwriteNoFiles
-       || opt & kNoOverwriteDataSet && opt & kAppend
-       || opt & kOverwriteDataSet && opt & kAppend
-       || opt & kNoOverwriteDataSet && opt & kOverwriteDataSet
-       || opt & kAskUser && opt & (kOverwriteDataSet |
+   if (((opt & kOverwriteAllFiles) && (opt & kOverwriteNoFiles))
+       || ((opt & kNoOverwriteDataSet) && (opt & kAppend))
+       || ((opt & kOverwriteDataSet) && (opt & kAppend))
+       || ((opt & kNoOverwriteDataSet) && (opt & kOverwriteDataSet))
+       || ((opt & kAskUser) && (opt & (kOverwriteDataSet |
                                    kNoOverwriteDataSet |
                                    kAppend |
                                    kOverwriteAllFiles |
-                                   kOverwriteNoFiles)) {
+                                   kOverwriteNoFiles)))) {
       Error("UploadDataSet", "you specified contradicting options.");
       return kError;
    }

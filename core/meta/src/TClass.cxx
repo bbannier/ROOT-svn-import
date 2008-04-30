@@ -61,6 +61,7 @@
 #include "TGenericClassInfo.h"
 
 #include <cstdio>
+#include <cctype>
 #include <set>
 #include <sstream>
 #include <string>
@@ -285,8 +286,19 @@ void TDumpMembers::Inspect(TClass *cl, const char *pname, const char *mname, con
          if (!strcmp(membertype->GetTypeName(), "char")) {
             i = strlen(*ppointer);
             if (kvalue+i >= kline) i=kline-kvalue;
-            strncpy(&line[kvalue],*ppointer,i);
-            line[kvalue+i] = 0;
+            Bool_t isPrintable = kTRUE;
+            for (Int_t j = 0; j < i; j++) {
+               if (!std::isprint((*ppointer)[j])) {
+                  isPrintable = kFALSE;
+                  break;
+               }
+            }
+            if (isPrintable) {
+               strncpy(line + kvalue, *ppointer, i);
+               line[kvalue+i] = 0;
+            } else {
+               line[kvalue] = 0;
+            }
          } else {
             strcpy(&line[kvalue], membertype->AsString(p3pointer));
          }
@@ -294,8 +306,19 @@ void TDumpMembers::Inspect(TClass *cl, const char *pname, const char *mname, con
                  !strcmp(member->GetFullTypeName(), "const char*")) {
          i = strlen(*ppointer);
          if (kvalue+i >= kline) i=kline-kvalue;
-         strncpy(&line[kvalue],*ppointer,i);
-         line[kvalue+i] = 0;
+         Bool_t isPrintable = kTRUE;
+         for (Int_t j = 0; j < i; j++) {
+            if (!std::isprint((*ppointer)[j])) {
+               isPrintable = kFALSE;
+               break;
+            }
+         }
+         if (isPrintable) {
+            strncpy(line + kvalue, *ppointer, i);
+            line[kvalue+i] = 0;
+         } else {
+            line[kvalue] = 0;
+         }
       } else {
          sprintf(&line[kvalue],"->%lx ", (Long_t)p3pointer);
       }
@@ -573,8 +596,8 @@ void TAutoInspector::Inspect(TClass *cl, const char *tit, const char *name,
             char fmt[] = {"#%09d"};
             fmt[3]  = '0'+(int)log10(double(sz))+1;
             char buf[20];
-            for (int i=0;i<sz;i++) {
-               void *p = proxy->At(i);
+            for (int ii=0;ii<sz;ii++) {
+               void *p = proxy->At(ii);
 
                if (proxy->HasPointers()) {
                   p = *((void**)p);
@@ -583,7 +606,7 @@ void TAutoInspector::Inspect(TClass *cl, const char *tit, const char *name,
                   p = actualCl->DynamicCast(valueCl,p,0);
                }
                fCount++;
-               sprintf(buf,fmt,i);
+               sprintf(buf,fmt,ii);
                ts = bwname;
                ts += buf;
                fBrowser->Add( p, actualCl, ts );
@@ -857,9 +880,6 @@ void TClass::Init(const char *name, Version_t cversion,
                return;
             }
          }
-         if (!fClassInfo) {
-            isStl = TClassEdit::IsSTLCont(name);
-         }
       }
    }
    if (!fClassInfo && !isStl)
@@ -921,7 +941,7 @@ void TClass::Init(const char *name, Version_t cversion,
       TIter next( fgClassTypedefHash->GetListForObject (resolvedThis) );
       while ( TNameMapNode* htmp = static_cast<TNameMapNode*> (next()) ) {
          if (resolvedThis != htmp->String()) continue;
-         oldcl = gROOT->GetClass (htmp->fOrigName);
+         oldcl = (TClass*)gROOT->GetListOfClasses()->FindObject(htmp->fOrigName); // gROOT->GetClass (htmp->fOrigName, kFALSE);
          if (oldcl && oldcl != this) {
             ForceReload (oldcl);
          }
@@ -2055,7 +2075,7 @@ TClass *TClass::GetClass(const type_info& typeinfo, Bool_t load)
    VoidFuncPtr_t dict = TClassTable::GetDict(typeinfo);
    if (dict) {
       (dict)();
-      TClass *cl = GetClass(typeinfo,kFALSE);
+      cl = GetClass(typeinfo,kFALSE);
       if (cl) cl->PostLoadCheck();
       return cl;
    }
@@ -3796,7 +3816,7 @@ void TClass::PostLoadCheck()
       // loaded from a file) is consisten with the definition in the library we just loaded.
       // BuildCheck is not appropriate here since it check a streamerinfo against the
       // 'current streamerinfo' which, at time point, would be the same as 'info'!
-      if (info && GetListOfDataMembers()
+      if (info && GetListOfDataMembers() && !GetCollectionProxy()
           && (info->GetCheckSum()!=GetCheckSum() && info->GetCheckSum()!=GetCheckSum(1) && info->GetCheckSum()!=GetCheckSum(2)))
       {
          Bool_t warn = ! TestBit(kWarned);
@@ -4175,7 +4195,7 @@ UInt_t TClass::GetCheckSum(UInt_t code) const
 
          int dim = tdm->GetArrayDim();
          if (prop&kIsArray) {
-            for (int i=0;i<dim;i++) id = id*3+tdm->GetMaxIndex(i);
+            for (int ii=0;ii<dim;ii++) id = id*3+tdm->GetMaxIndex(ii);
          }
          if (code != 2) {
             const char *left = strstr(tdm->GetTitle(),"[");
