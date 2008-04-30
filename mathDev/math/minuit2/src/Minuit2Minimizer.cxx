@@ -262,11 +262,9 @@ bool Minuit2Minimizer::Minimize() {
 
    // check if Hesse needs to be run 
    if (fMinimum->IsValid() && IsValidError() && fMinimum->State().Error().Dcovar() != 0 ) {
-      // run Hesse
+      // run Hesse (Hesse will add results in the last state of fMinimum
       ROOT::Minuit2::MnHesse hesse(strategy );
-      ROOT::Minuit2::MnUserFcn mfcn(*GetFCN(), fMinimum->UserState().Trafo() );
-      ROOT::Minuit2::MinimumState st = hesse( *GetFCN(), fMinimum->State(), fMinimum->UserState().Trafo(), maxfcn); 
-      fMinimum->Add(st); 
+      hesse( *GetFCN(), *fMinimum, maxfcn); 
    }
 
 
