@@ -53,7 +53,6 @@ Minuit2Minimizer::Minuit2Minimizer(ROOT::Minuit2::EMinimizerType type ) :
    fMinimum(0)   
 {
    // Default constructor implementation depending on minimizer type 
-   SetTolerance(0.001);
    SetMinimizerType(type); 
 }
 
@@ -65,8 +64,7 @@ Minuit2Minimizer::Minuit2Minimizer(const char *  type ) :
    fMinimum(0)   
 {   
    // constructor from a string
-   SetTolerance(0.001);
-   // select type from the string
+
    std::string algoname(type);
    // tolower() is not an  std function (Windows)
    std::transform(algoname.begin(), algoname.end(), algoname.begin(), (int(*)(int)) tolower ); 
