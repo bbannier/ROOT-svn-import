@@ -3382,7 +3382,7 @@ void TProofServ::HandleProcess(TMessage *mess)
             // Apply the lookup option requested by the client or the administartor
             // (by default we trust the information in the dataset)
             if (TProof::GetParameter(input, "PROOF_LookupOpt", lookupopt) != 0) {
-               lookupopt = gEnv->GetValue("Proof.LookupOpt", "stageOnly");
+               lookupopt = gEnv->GetValue("Proof.LookupOpt", "stagedOnly");
                input->Add(new TNamed("PROOF_LookupOpt", lookupopt.Data()));
             }
          } else {
@@ -3409,7 +3409,7 @@ void TProofServ::HandleProcess(TMessage *mess)
                // before delete.
                TIter next(missingFiles);
                TObject *file;
-               while (file = next())
+               while ((file = next()))
                   dataset->GetList()->Remove(file);
             }
             delete dataset;
