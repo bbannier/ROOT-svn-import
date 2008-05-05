@@ -491,7 +491,21 @@ Long64_t TMath::LocMin(Long64_t n, const T *a) {
    // Return index of array with the minimum element.
    // If more than one element is minimum returns first found.
 
-   return (Long64_t) (std::min_element(a, a+n) - a);
+   // Implement here since this one is found to be faster (mainly on 64 bit machines) 
+   // than stl generic implementation. 
+   // When performing the comparison,  the STL implementation needs to de-reference both the array iterator
+   // and the iterator pointing to the resulting minimum location 
+
+   if  (n <= 0 || !a) return -1;
+   T xmin = a[0];
+   Long64_t loc = 0;
+   for  (Long64_t i = 1; i < n; i++) {
+      if (xmin > a[i])  {
+         xmin = a[i];
+         loc = i;
+      }
+   }
+   return loc;
 }
 
 template <typename Iterator>
@@ -506,7 +520,18 @@ Long64_t TMath::LocMax(Long64_t n, const T *a) {
    // Return index of array with the maximum element.
    // If more than one element is maximum returns first found.
 
-   return (Long64_t) (std::max_element(a, a+n) - a);
+   // Implement here since it is faster (see comment in LocMin function) 
+
+   if  (n <= 0 || !a) return -1;
+   T xmax = a[0];
+   Long64_t loc = 0;
+   for  (Long64_t i = 1; i < n; i++) {
+      if (xmax < a[i])  {
+         xmax = a[i];
+         loc = i;
+      }
+   }
+   return loc;
 }
 
 template <typename Iterator> 
