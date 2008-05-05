@@ -1,7 +1,7 @@
 #include "Math/Integrator.h"
 #include "Math/IntegratorMultiDim.h"
 #include "Math/AllIntegrationTypes.h"
-#include "Math/WrappedFunction.h"
+#include "Math/Functor.h"
 #include "Math/GaussIntegrator.h"
 
 #include <cmath>
@@ -22,7 +22,7 @@ int testIntegration1D() {
    const double RESULT = 0.5;
    int status = 0;
 
-   ROOT::Math::WrappedFunction<> wf(f);
+   ROOT::Math::Functor1D wf(&f);
    ROOT::Math::Integrator ig(ROOT::Math::IntegrationOneDim::ADAPTIVESINGULAR); 
    ig.SetFunction(wf);
    double val = ig.Integral(0,1);
@@ -55,7 +55,7 @@ int testIntegrationMultiDim() {
    const double RESULT = 1.0;
    int status = 0;
 
-   ROOT::Math::WrappedMultiFunction<> wf(f2,2);
+   ROOT::Math::Functor wf(&f2,2);
    double a[2] = {0,0};
    double b[2] = {1,1};
 
