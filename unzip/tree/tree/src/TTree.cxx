@@ -5760,7 +5760,7 @@ void TTree::SetCacheSize(Long64_t cacheSize)
       return;
    }
 
-   if(TTreeCacheUnzip::IsParallelUnzip())
+   if(TTreeCacheUnzip::IsParallelUnzip() && file->GetCompressionLevel() > 0)
       new TTreeCacheUnzip(this, cacheSize);
    else
       new TTreeCache(this, cacheSize);
