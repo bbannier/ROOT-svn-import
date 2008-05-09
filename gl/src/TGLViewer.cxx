@@ -88,9 +88,12 @@ TGLViewer::TGLViewer(TVirtualPad * pad, Int_t x, Int_t y,
    fPerspectiveCameraXOZ(TGLVector3(-1.0, 0.0, 0.0), TGLVector3(0.0, 1.0, 0.0)), // XOZ floor
    fPerspectiveCameraYOZ(TGLVector3( 0.0,-1.0, 0.0), TGLVector3(1.0, 0.0, 0.0)), // YOZ floor
    fPerspectiveCameraXOY(TGLVector3(-1.0, 0.0, 0.0), TGLVector3(0.0, 0.0, 1.0)), // XOY floor
-   fOrthoXOYCamera(TGLVector3( 0.0, 0.0, 1.0), TGLVector3(0.0, 1.0, 0.0)), // Looking down Z axis, X horz, Y vert
-   fOrthoXOZCamera(TGLVector3( 0.0,-1.0, 0.0), TGLVector3(0.0, 0.0, 1.0)), // Looking down Y axis, X horz, Z vert
-   fOrthoZOYCamera(TGLVector3(-1.0, 0.0, 0.0), TGLVector3(0.0, 1.0, 0.0)), // Looking down X axis, Z horz, Y vert
+   fOrthoXOYCamera (TGLOrthoCamera::kXOY,  TGLVector3( 0.0, 0.0, 1.0), TGLVector3(0.0, 1.0, 0.0)), // Looking down  Z axis,  X horz, Y vert
+   fOrthoXOZCamera (TGLOrthoCamera::kXOZ,  TGLVector3( 0.0,-1.0, 0.0), TGLVector3(0.0, 0.0, 1.0)), // Looking along Y axis,  X horz, Z vert
+   fOrthoZOYCamera (TGLOrthoCamera::kZOY,  TGLVector3(-1.0, 0.0, 0.0), TGLVector3(0.0, 1.0, 0.0)), // Looking along X axis,  Z horz, Y vert
+   fOrthoXnOYCamera(TGLOrthoCamera::kXnOY, TGLVector3( 0.0, 0.0,-1.0), TGLVector3(0.0, 1.0, 0.0)), // Looking along Z axis, -X horz, Y vert
+   fOrthoXnOZCamera(TGLOrthoCamera::kXnOZ, TGLVector3( 0.0, 1.0, 0.0), TGLVector3(0.0, 0.0, 1.0)), // Looking down  Y axis, -X horz, Z vert
+   fOrthoZnOYCamera(TGLOrthoCamera::kZnOY, TGLVector3( 1.0, 0.0, 0.0), TGLVector3(0.0, 1.0, 0.0)), // Looking down  X axis, -Z horz, Y vert
    fCurrentCamera(&fPerspectiveCameraXOZ),
 
    fLightSet          (0),
@@ -98,7 +101,8 @@ TGLViewer::TGLViewer(TVirtualPad * pad, Int_t x, Int_t y,
    fSelectedPShapeRef (0),
    fCurrentOvlElm     (0),
 
-   fPushAction(kPushStd), fAction(kDragNone),
+   fEventHandler(0),
+   fPushAction(kPushStd), fDragAction(kDragNone),
    fRedrawTimer(0),
    fMaxSceneDrawTimeHQ(5000),
    fMaxSceneDrawTimeLQ(100),
@@ -113,7 +117,7 @@ TGLViewer::TGLViewer(TVirtualPad * pad, Int_t x, Int_t y,
    fSmartRefresh(kFALSE),
    fDebugMode(kFALSE),
    fIsPrinting(kFALSE),
-   fGLWindow(0),
+   fGLWidget(0),
    fGLDevice(-1),
    fGLCtxId(0),
    fIgnoreSizesOnUpdate(kFALSE),
@@ -138,9 +142,12 @@ TGLViewer::TGLViewer(TVirtualPad * pad) :
    fPerspectiveCameraXOZ(TGLVector3(-1.0, 0.0, 0.0), TGLVector3(0.0, 1.0, 0.0)), // XOZ floor
    fPerspectiveCameraYOZ(TGLVector3( 0.0,-1.0, 0.0), TGLVector3(1.0, 0.0, 0.0)), // YOZ floor
    fPerspectiveCameraXOY(TGLVector3(-1.0, 0.0, 0.0), TGLVector3(0.0, 0.0, 1.0)), // XOY floor
-   fOrthoXOYCamera(TGLVector3( 0.0, 0.0, 1.0), TGLVector3(0.0, 1.0, 0.0)), // Looking down Z axis, X horz, Y vert
-   fOrthoXOZCamera(TGLVector3( 0.0,-1.0, 0.0), TGLVector3(0.0, 0.0, 1.0)), // Looking down Y axis, X horz, Z vert
-   fOrthoZOYCamera(TGLVector3(-1.0, 0.0, 0.0), TGLVector3(0.0, 1.0, 0.0)), // Looking down X axis, Z horz, Y vert
+   fOrthoXOYCamera (TGLOrthoCamera::kXOY,  TGLVector3( 0.0, 0.0, 1.0), TGLVector3(0.0, 1.0, 0.0)), // Looking down  Z axis,  X horz, Y vert
+   fOrthoXOZCamera (TGLOrthoCamera::kXOZ,  TGLVector3( 0.0,-1.0, 0.0), TGLVector3(0.0, 0.0, 1.0)), // Looking along Y axis,  X horz, Z vert
+   fOrthoZOYCamera (TGLOrthoCamera::kZOY,  TGLVector3(-1.0, 0.0, 0.0), TGLVector3(0.0, 1.0, 0.0)), // Looking along X axis,  Z horz, Y vert
+   fOrthoXnOYCamera(TGLOrthoCamera::kXnOY, TGLVector3( 0.0, 0.0,-1.0), TGLVector3(0.0, 1.0, 0.0)), // Looking along Z axis, -X horz, Y vert
+   fOrthoXnOZCamera(TGLOrthoCamera::kXnOZ, TGLVector3( 0.0, 1.0, 0.0), TGLVector3(0.0, 0.0, 1.0)), // Looking down  Y axis, -X horz, Z vert
+   fOrthoZnOYCamera(TGLOrthoCamera::kZnOY, TGLVector3( 1.0, 0.0, 0.0), TGLVector3(0.0, 1.0, 0.0)), // Looking down  X axis, -Z horz, Y vert
    fCurrentCamera(&fPerspectiveCameraXOZ),
 
    fLightSet          (0),
@@ -148,7 +155,8 @@ TGLViewer::TGLViewer(TVirtualPad * pad) :
    fSelectedPShapeRef (0),
    fCurrentOvlElm     (0),
 
-   fPushAction(kPushStd), fAction(kDragNone),
+   fEventHandler(0),
+   fPushAction(kPushStd), fDragAction(kDragNone),
    fRedrawTimer(0),
    fMaxSceneDrawTimeHQ(5000),
    fMaxSceneDrawTimeLQ(100),
@@ -163,7 +171,7 @@ TGLViewer::TGLViewer(TVirtualPad * pad) :
    fSmartRefresh(kFALSE),
    fDebugMode(kFALSE),
    fIsPrinting(kFALSE),
-   fGLWindow(0),
+   fGLWidget(0),
    fGLDevice(fPad->GetGLDevice()),
    fGLCtxId(0),
    fIgnoreSizesOnUpdate(kFALSE),
@@ -217,6 +225,12 @@ TGLViewer::~TGLViewer()
 
    delete fContextMenu;
    delete fRedrawTimer;
+
+   if (fEventHandler) {
+      fGLWidget->SetEventHandler(0);
+      delete fEventHandler;
+   }
+
    if (fPad)
       fPad->ReleaseViewer3D();
    if (fGLDevice != -1)
@@ -363,7 +377,7 @@ void TGLViewer::InitGL()
 }
 
 //______________________________________________________________________________
-void TGLViewer::RequestDraw(Short_t LOD)
+void TGLViewer::RequestDraw(Short_t LODInput)
 {
    // Post request for redraw of viewer at level of detail 'LOD'
    // Request is directed via cross thread gVirtualGL object.
@@ -371,8 +385,8 @@ void TGLViewer::RequestDraw(Short_t LOD)
    fRedrawTimer->Stop();
    // Ignore request if GL window or context not yet availible - we
    // will get redraw later
-   if (!fGLWindow && fGLDevice == -1) {
-      fRedrawTimer->RequestDraw(100, LOD);
+   if (!fGLWidget && fGLDevice == -1) {
+      fRedrawTimer->RequestDraw(100, LODInput);
       return;
    }
 
@@ -383,10 +397,10 @@ void TGLViewer::RequestDraw(Short_t LOD)
       if (gDebug>3) {
          Info("TGLViewer::RequestDraw", "viewer locked - requesting another draw.");
       }
-      fRedrawTimer->RequestDraw(100, LOD);
+      fRedrawTimer->RequestDraw(100, LODInput);
       return;
    }
-   fLOD = LOD;
+   fLOD = LODInput;
 
    if (!gVirtualX->IsCmdThread())
       gROOT->ProcessLineFast(Form("((TGLViewer *)0x%x)->DoDraw()", this));
@@ -432,6 +446,14 @@ void TGLViewer::DoDraw()
          Error("TGLViewer::DoDraw", "viewer is %s", LockName(CurrentLock()));
          return;
       }
+   }
+
+   if (fGLDevice == -1 && (fViewport.Width() <= 0 || fViewport.Height() <= 0)) {
+      ReleaseLock(kDrawLock);
+      if (gDebug > 2) {
+	 Info("TGLViewer::DoDraw()", "zero surface area, draw skipped.");
+      }
+      return;
    }
 
    if (fGLDevice != -1) {
@@ -485,7 +507,7 @@ void TGLViewer::DoDraw()
    }
 
    if (fLOD != TGLRnrCtx::kLODHigh &&
-       (fAction < kDragCameraRotate || fAction > kDragCameraDolly))
+       (fDragAction < kDragCameraRotate || fDragAction > kDragCameraDolly))
    {
       // Request final draw pass.
       fRedrawTimer->RequestDraw(100, TGLRnrCtx::kLODHigh);
@@ -631,7 +653,7 @@ void TGLViewer::MakeCurrent() const
 {
    // Make GL context current
    if (fGLDevice == -1)
-      fGLWindow->MakeCurrent();
+      fGLWidget->MakeCurrent();
    else
       gGLManager->MakeCurrent(fGLDevice);
 }
@@ -644,7 +666,7 @@ void TGLViewer::SwapBuffers() const
       Error("TGLViewer::SwapBuffers", "viewer is %s", LockName(CurrentLock()));
    }
    if (fGLDevice == -1)
-      fGLWindow->SwapBuffers();
+      fGLWidget->SwapBuffers();
    else {
       gGLManager->ReadGLBuffer(fGLDevice);
       gGLManager->Flush(fGLDevice);
@@ -911,7 +933,7 @@ void TGLViewer::SetViewport(Int_t x, Int_t y, Int_t width, Int_t height)
    fViewport.Set(x, y, width, height);
    fCurrentCamera->SetViewport(fViewport);
 
-   if (gDebug>2) {
+   if (gDebug > 2) {
       Info("TGLViewer::SetViewport", "updated - corner %d,%d dimensions %d,%d", x, y, width, height);
    }
 }
@@ -940,6 +962,12 @@ TGLCamera& TGLViewer::RefCamera(ECameraType cameraType)
          return fOrthoXOZCamera;
       case kCameraOrthoZOY:
          return fOrthoZOYCamera;
+      case kCameraOrthoXnOY:
+         return fOrthoXnOYCamera;
+      case kCameraOrthoXnOZ:
+         return fOrthoXnOZCamera;
+      case kCameraOrthoZnOY:
+         return fOrthoZnOYCamera;
       default:
          Error("TGLViewer::SetCurrentCamera", "invalid camera type");
          return *fCurrentCamera;
@@ -982,6 +1010,18 @@ void TGLViewer::SetCurrentCamera(ECameraType cameraType)
       }
       case kCameraOrthoZOY: {
          fCurrentCamera = &fOrthoZOYCamera;
+         break;
+      }
+      case kCameraOrthoXnOY: {
+         fCurrentCamera = &fOrthoXnOYCamera;
+         break;
+      }
+      case kCameraOrthoXnOZ: {
+         fCurrentCamera = &fOrthoXnOZCamera;
+         break;
+      }
+      case kCameraOrthoZnOY: {
+         fCurrentCamera = &fOrthoZnOYCamera;
          break;
       }
       default: {
@@ -1255,4 +1295,15 @@ void TGLViewer::PrintObjects()
    // Pass viewer for print capture by TGLOutput.
 
    TGLOutput::Capture(*this);
+}
+
+//______________________________________________________________________________
+void TGLViewer::SetEventHandler(TGEventHandler *handler)
+{
+   if (fEventHandler)
+      delete fEventHandler;
+
+   fEventHandler = handler;
+   if (fGLWidget)
+      fGLWidget->SetEventHandler(fEventHandler);
 }

@@ -55,8 +55,9 @@ class TGLViewer : public TVirtualViewer3D,
    friend class TGLEventHandler;
 public:
 
-   enum ECameraType { kCameraPerspXOZ, kCameraPerspYOZ, kCameraPerspXOY,
-                      kCameraOrthoXOY, kCameraOrthoXOZ, kCameraOrthoZOY };
+   enum ECameraType { kCameraPerspXOZ,  kCameraPerspYOZ,  kCameraPerspXOY,
+                      kCameraOrthoXOY,  kCameraOrthoXOZ,  kCameraOrthoZOY,
+                      kCameraOrthoXnOY, kCameraOrthoXnOZ, kCameraOrthoZnOY };
 
 private:
    TGLViewer(const TGLViewer &);             // Not implemented
@@ -79,6 +80,9 @@ protected:
    TGLOrthoCamera       fOrthoXOYCamera;       //!
    TGLOrthoCamera       fOrthoXOZCamera;       //!
    TGLOrthoCamera       fOrthoZOYCamera;       //!
+   TGLOrthoCamera       fOrthoXnOYCamera;       //!
+   TGLOrthoCamera       fOrthoXnOZCamera;       //!
+   TGLOrthoCamera       fOrthoZnOYCamera;       //!
    TGLCamera          * fCurrentCamera;        //!
 
    // Lights
@@ -94,7 +98,7 @@ protected:
    TGLOverlayElement  * fCurrentOvlElm;        //! current overlay element
    TGLOvlSelectRecord   fOvlSelRec;            //! select record from last overlay select
 
-   TGEventHandler      *fEventHandler;
+   TGEventHandler      *fEventHandler;         //! event handler
 
    // Mouse ineraction
 public:
@@ -105,7 +109,7 @@ public:
                         kDragOverlay };
 protected:
    EPushAction          fPushAction;
-   EDragAction          fAction;
+   EDragAction          fDragAction;
 
    // Redraw timer
    TGLRedrawTimer     * fRedrawTimer;        //! timer for triggering redraws
@@ -143,7 +147,7 @@ protected:
    void        SetupCameras(Bool_t reset);
 
 protected:
-   TGLWidget         *fGLWindow;
+   TGLWidget         *fGLWidget;
    Int_t              fGLDevice; //!for embedded gl viewer
    TGLContextIdentity*fGLCtxId;  //!for embedded gl viewer
 
@@ -184,6 +188,8 @@ public:
 
    virtual void   RefreshPadEditor(TObject* = 0) {}
 
+   TGLWidget* GetGLWidget() { return fGLWidget; }
+
    Int_t   GetDev()          const           { return fGLDevice; }
    Color_t GetClearColor()   const           { return fClearColor; }
    void    SetClearColor(Color_t col)        { fClearColor = col; }
@@ -210,7 +216,7 @@ public:
    void SetCameraMarkup(TGLCameraMarkupStyle* m) { fCameraMarkup = m; }
 
    EPushAction GetPushAction() const { return fPushAction; }
-   EDragAction GetAction()     const { return fAction; }
+   EDragAction GetDragAction() const { return fDragAction; }
 
    const TGLPhysicalShape * GetSelected() const;
 
@@ -262,9 +268,11 @@ public:
    virtual void DoubleClicked() { Emit("DoubleClicked()"); } // *SIGNAL*
 
    TGEventHandler *GetEventHandler() const { return fEventHandler; }
-   virtual void    SetEventHandler(TGEventHandler *handler) { fEventHandler = handler; }
+   virtual void    SetEventHandler(TGEventHandler *handler);
 
-//   Bool_t HandleTimer(TTimer *t);
+   TGLSelectRecord&    GetSelRec()    { return fSelRec; }
+   TGLOvlSelectRecord& GetOvlSelRec() { return fOvlSelRec; }
+   TGLOverlayElement*  GetCurrentOvlElm() const { return fCurrentOvlElm; }
 
    ClassDef(TGLViewer,0) // Standard ROOT GL viewer.
 };

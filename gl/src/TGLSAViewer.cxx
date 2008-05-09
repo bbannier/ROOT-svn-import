@@ -63,7 +63,9 @@ DIRECT SCENE INTERACTIONS\n\n\
    \tArrow Keys --- PAN (TRUCK) across scene\n\
    \tHome       --- reset current camera\n\n\
    You can ROTATE (ORBIT) the scene by holding the left mouse button and moving\n\
-   the mouse (perspective camera only).\n\n\
+   the mouse (perspective camera, needs to be enabled for orthograpic camers).\n\
+   By default, the scene will be rotated about its center. To select arbitrary center\n\
+   bring up the viewer-editor and use 'Camera center' controls in the 'Guides' tab.\n\n\
    You can PAN (TRUCK) the camera using the middle mouse button or arrow keys.\n\n\
    You can ZOOM (DOLLY) the camera by dragging side to side holding the right\n\
    mouse button or using the mouse wheel.\n\n\
@@ -131,7 +133,7 @@ MANIPULATORS\n\n\
 // The top level standalone viewer object - created via plugin manager. //
 //////////////////////////////////////////////////////////////////////////
 
-ClassImp(TGLSAViewer)
+ClassImp(TGLSAViewer);
 
 const Int_t TGLSAViewer::fgInitX = 0;
 const Int_t TGLSAViewer::fgInitY = 0;
@@ -156,7 +158,6 @@ TGLSAViewer::TGLSAViewer(TVirtualPad *pad) :
    fFileSaveMenu(0),
    fCameraMenu(0),
    fHelpMenu(0),
-   fGLArea(0),
    fLeftVerticalFrame(0),
    fGedEditor(0),
    fPShapeWrap(0),
@@ -198,7 +199,6 @@ TGLSAViewer::TGLSAViewer(const TGWindow *parent, TVirtualPad *pad, TGedEditor *g
    fFileMenu(0),
    fCameraMenu(0),
    fHelpMenu(0),
-   fGLArea(0),
    fLeftVerticalFrame(0),
    fGedEditor(ged),
    fPShapeWrap(0),
@@ -240,10 +240,6 @@ TGLSAViewer::~TGLSAViewer()
 
    fGedEditor->DisconnectFromCanvas();
 
-   if (fEventHandler) {
-      fGLWindow->SetEventHandler(0);
-      delete fEventHandler;
-   }
    delete fHelpMenu;
    delete fCameraMenu;
    delete fFileSaveMenu;
@@ -290,6 +286,9 @@ void TGLSAViewer::CreateMenus()
    fCameraMenu->AddEntry("Orthographic (XOY)", kGLXOY);
    fCameraMenu->AddEntry("Orthographic (XOZ)", kGLXOZ);
    fCameraMenu->AddEntry("Orthographic (ZOY)", kGLZOY);
+   fCameraMenu->AddEntry("Orthographic (XnOY)", kGLXnOY);
+   fCameraMenu->AddEntry("Orthographic (XnOZ)", kGLXnOZ);
+   fCameraMenu->AddEntry("Orthographic (ZnOY)", kGLZnOY);
    fCameraMenu->AddSeparator();
    fCameraMenu->AddEntry("Ortho allow rotate", kGLOrthoRotate);
    fCameraMenu->AddEntry("Ortho allow dolly",  kGLOrthoDolly);
@@ -342,13 +341,11 @@ void TGLSAViewer::CreateFrames()
    TGVerticalFrame *rightVerticalFrame = new TGVerticalFrame(compositeFrame, 10, 10, kSunkenFrame);
    compositeFrame->AddFrame(rightVerticalFrame, new TGLayoutHints(kLHintsRight | kLHintsExpandX | kLHintsExpandY,0,2,2,2));
 
-   fGLWindow = new TGLWidget(*rightVerticalFrame, kTRUE, 10, 10, 0);
-   // Direct events from the TGWindow directly to the base viewer
+   fGLWidget = new TGLWidget(*rightVerticalFrame, kTRUE, 10, 10, 0);
 
-   fEventHandler = new TGLEventHandler("Default", fGLWindow, this);
-   fGLWindow->SetEventHandler(fEventHandler);
+   SetEventHandler(new TGLEventHandler("Default", fGLWidget, this));
 
-   rightVerticalFrame->AddFrame(fGLWindow, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+   rightVerticalFrame->AddFrame(fGLWidget, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
 }
 
 
@@ -443,6 +440,15 @@ Bool_t TGLSAViewer::ProcessFrameMessage(Long_t msg, Long_t parm1, Long_t)
             break;
          case kGLZOY:
             SetCurrentCamera(TGLViewer::kCameraOrthoZOY);
+            break;
+         case kGLXnOY:
+            SetCurrentCamera(TGLViewer::kCameraOrthoXnOY);
+            break;
+         case kGLXnOZ:
+            SetCurrentCamera(TGLViewer::kCameraOrthoXnOZ);
+            break;
+         case kGLZnOY:
+            SetCurrentCamera(TGLViewer::kCameraOrthoZnOY);
             break;
          case kGLOrthoRotate:
             ToggleOrthoRotate();
