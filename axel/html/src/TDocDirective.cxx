@@ -292,9 +292,9 @@ Bool_t TDocMacroDirective::GetResult(TString& result)
          GetHtml()->GetModuleNameForClass(modulename, GetDocParser()->GetCurrentClass());
          TModuleDocInfo* module = 0;
          if (modulename.Length() 
-            && (module = (TModuleDocInfo*)GetHtml()->GetListOfModules()->FindObject(modulename)))
-            pwd = module->GetSourceDir();
-         else pwd = gSystem->pwd();
+            && (module = (TModuleDocInfo*)GetHtml()->GetListOfModules()->FindObject(modulename))) {
+            GetHtml()->GetPathDefinition().GetDocDir(modulename, pwd);
+         } else pwd = gSystem->pwd();
       } else pwd = gSystem->pwd();
       TString macroPath(GetHtml()->GetMacroPath());
       const char* pathDelimiter = ":"; // use ":" even on windows

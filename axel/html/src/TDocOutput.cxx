@@ -333,7 +333,7 @@ Bool_t TDocOutput::CopyHtmlFile(const char *sourceName, const char *destName)
 // Copy file to HTML directory
 //
 //
-//  Input: sourceName - source file name
+//  Input: sourceName - source file name (fully qualified i.e. file system path)
 //         destName   - optional destination name, if not
 //                      specified it would be the same
 //                      as the source file name
@@ -347,16 +347,7 @@ Bool_t TDocOutput::CopyHtmlFile(const char *sourceName, const char *destName)
 
    R__LOCKGUARD(GetHtml()->GetMakeClassMutex());
 
-   // source file name
-   char *tmp1 = gSystem->Which(fHtml->GetSourceDir(), sourceName, kReadPermission);
-   if (!tmp1) {
-      Error("Copy", "Can't copy file '%s' to '%s/%s' - can't find source file!", sourceName,
-            fHtml->GetOutputDir().Data(), destName);
-      return kFALSE;
-   }
-
-   TString sourceFile(tmp1);
-   delete[]tmp1;
+   TString sourceFile(sourceName);
 
    if (!sourceFile.Length()) {
       Error("Copy", "Can't copy file '%s' to '%s' directory - source file name invalid!", sourceName,
@@ -367,9 +358,9 @@ Bool_t TDocOutput::CopyHtmlFile(const char *sourceName, const char *destName)
    // destination file name
    TString destFile;
    if (!destName || !*destName)
-      destFile = fHtml->GetFileName(sourceFile);
+      destFile = gSystem->BaseName(sourceFile);
    else
-      destFile = fHtml->GetFileName(destName);
+      destFile = gSystem->BaseName(destName);
 
    gSystem->PrependPathName(fHtml->GetOutputDir(), destFile);
 
@@ -548,7 +539,7 @@ void TDocOutput::CreateClassIndex()
 void TDocOutput::CreateModuleIndex()
 {
    // Create the class index for each module, picking up documentation from the
-   // module's TModuleDocInfo::GetSourceDir() plus the (possibly relative)
+   // module's TModuleDocInfo::GetInputPath() plus the (possibly relative)
    // THtml::GetModuleDocPath(). Also creates the library dependency plot if dot
    // exists, see THtml::HaveDot().
 
@@ -578,17 +569,19 @@ void TDocOutput::CreateModuleIndex()
 
       std::vector<std::string> indexChars;
       TString filename(module->GetName());
+      filename.ToUpper();
+      filename.ReplaceAll("/","_");
       filename += "_Index.html";
       gSystem->PrependPathName(fHtml->GetOutputDir(), filename);
       std::ofstream outputFile(filename.Data());
       if (!outputFile.good()) {
-         Error("MakeIndex", "Can't open file '%s' !", filename.Data());
+         Error("CreateModuleIndex", "Can't open file '%s' !", filename.Data());
          continue;
       }
       Printf(fHtml->GetCounterFormat(), "", fHtml->GetCounter(), filename.Data());
 
       TString htmltitle("Index of ");
-      htmltitle += module->GetName();
+      htmltitle += TString(module->GetName()).ToUpper();
       htmltitle += " classes";
       WriteHtmlHeader(outputFile, htmltitle);
       outputFile << "<h2>" << htmltitle << "</h2>" << endl;
@@ -598,9 +591,8 @@ void TDocOutput::CreateModuleIndex()
          TString outdir(module->GetName());
          gSystem->PrependPathName(GetHtml()->GetOutputDir(), outdir);
 
-         TString moduleDocDir(GetHtml()->GetModuleDocPath());
-         if (!gSystem->IsAbsoluteFileName(moduleDocDir))
-            gSystem->PrependPathName(module->GetSourceDir(), moduleDocDir);
+         TString moduleDocDir;
+         GetHtml()->GetPathDefinition().GetDocDir(module->GetName(), moduleDocDir);
          ProcessDocInDir(outputFile, moduleDocDir, outdir, module->GetName());
       }
 
@@ -685,7 +677,7 @@ void TDocOutput::CreateModuleIndex()
 
          TClass *classPtr = cdi->GetClass();
          if (!classPtr) {
-            Error("MakeIndex", "Unknown class '%s' !", cdi->GetName());
+            Error("CreateModuleIndex", "Unknown class '%s' !", cdi->GetName());
             continue;
          }
 
@@ -865,8 +857,9 @@ void TDocOutput::CreateProductIndex()
    WriteHtmlHeader(out, GetHtml()->GetProductName() + " Reference Guide");
    out << "<h1>" << GetHtml()->GetProductName() + " Reference Guide</h1>" << std::endl;
 
-   if (GetHtml()->GetDocPath().Length())
-      ProcessDocInDir(out, GetHtml()->GetDocPath(), GetHtml()->GetOutputDir(), "./");
+   TString prodDoc;
+   if (GetHtml()->GetPathDefinition().GetDocDir("", prodDoc))
+      ProcessDocInDir(out, prodDoc, GetHtml()->GetOutputDir(), "./");
 
    WriteModuleLinks(out);
 
@@ -1130,11 +1123,9 @@ Bool_t TDocOutput::IsModified(TClass * classPtr, EFileType type)
    switch (type) {
    case kSource:
       if (classPtr->GetImplFileLine()) {
-         sourceFile = fHtml->GetImplFileName(classPtr);
-         fHtml->GetSourceFileName(sourceFile);
+         sourceFile = fHtml->GetImplFileName(classPtr, kTRUE);
       } else {
-         sourceFile = fHtml->GetDeclFileName(classPtr);
-         fHtml->GetSourceFileName(sourceFile);
+         sourceFile = fHtml->GetDeclFileName(classPtr, kTRUE);
       }
       dir = "src";
       gSystem->PrependPathName(fHtml->GetOutputDir(), dir);
@@ -1148,16 +1139,14 @@ Bool_t TDocOutput::IsModified(TClass * classPtr, EFileType type)
       break;
 
    case kInclude:
-      filename = fHtml->GetDeclFileName(classPtr);
-      sourceFile = filename;
-      fHtml->GetSourceFileName(sourceFile);
-      filename = fHtml->GetFileName(filename);
+      filename = fHtml->GetDeclFileName(classPtr, kFALSE);
+      filename = gSystem->BaseName(filename);
+      sourceFile = fHtml->GetDeclFileName(classPtr, kTRUE);
       gSystem->PrependPathName(fHtml->GetOutputDir(), filename);
       break;
 
    case kTree:
-      sourceFile = fHtml->GetDeclFileName(classPtr);
-      fHtml->GetSourceFileName(sourceFile);
+      sourceFile = fHtml->GetDeclFileName(classPtr, kTRUE);
       NameSpace2FileName(classname);
       gSystem->PrependPathName(fHtml->GetOutputDir(), classname);
       filename = classname;
@@ -1166,11 +1155,9 @@ Bool_t TDocOutput::IsModified(TClass * classPtr, EFileType type)
 
    case kDoc:
       if (classPtr->GetImplFileLine()) {
-         sourceFile = fHtml->GetImplFileName(classPtr);
-         fHtml->GetSourceFileName(sourceFile);
+         sourceFile = fHtml->GetImplFileName(classPtr, kTRUE);
       } else {
-         sourceFile = fHtml->GetDeclFileName(classPtr);
-         fHtml->GetSourceFileName(sourceFile);
+         sourceFile = fHtml->GetDeclFileName(classPtr, kTRUE);
       }
       filename = classname;
       NameSpace2FileName(filename);
@@ -1658,8 +1645,8 @@ void TDocOutput::WriteHtmlHeader(std::ostream& out, const char *titleNoSpecial,
 
          if (cls) {
             txt.ReplaceAll("%CLASS%", cls->GetName());
-            txt.ReplaceAll("%INCFILE%", fHtml->GetDeclFileName(cls));
-            txt.ReplaceAll("%SRCFILE%", fHtml->GetImplFileName(cls));
+            txt.ReplaceAll("%INCFILE%", fHtml->GetDeclFileName(cls, kFALSE));
+            txt.ReplaceAll("%SRCFILE%", fHtml->GetImplFileName(cls, kFALSE));
          }
 
          out << txt << endl;
