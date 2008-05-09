@@ -777,8 +777,8 @@ void TDocParser::ExpandCPPLine(TString& line, Ssiz_t& pos)
          if (line.Tokenize(filename, posEndFilename, "[>\"]")) {
             R__LOCKGUARD(fHtml->GetMakeClassMutex());
 
-            TString filesysFileName(filename);
-            if (gSystem->FindFile(fHtml->GetSourceDir(), filesysFileName, kReadPermission)) {
+            TString filesysFileName;
+            if (fHtml->GetPathDefinition().GetFileNameFromInclude(filename, filesysFileName)) {
                fDocOutput->CopyHtmlFile(filesysFileName);
 
                TString endOfLine(line(posEndFilename - 1, line.Length()));
@@ -787,7 +787,7 @@ void TDocParser::ExpandCPPLine(TString& line, Ssiz_t& pos)
                   fDocOutput->ReplaceSpecialChars(line, i);
 
                line += "<a href=\"../";
-               line += fHtml->GetFileName(filename);
+               line += gSystem->BaseName(filename);
                line += "\">";
                line += filename + "</a>" + endOfLine[0]; // add include file's closing '>' or '"'
                posEndOfLine = line.Length() - 1; // set the "processed up to" to it
@@ -1440,10 +1440,9 @@ void TDocParser::LocateMethods(std::ostream& out, const char* filename,
 
    TString sourceFileName(filename);
    fCurrentFile = filename;
-   fHtml->GetSourceFileName(sourceFileName);
    if (!sourceFileName.Length()) {
       Error("LocateMethods", "Can't find source file '%s' for class %s!", 
-         fHtml->GetImplFileName(fCurrentClass), fCurrentClass->GetName());
+         fHtml->GetImplFileName(fCurrentClass, kFALSE), fCurrentClass->GetName());
       return;
    }
    ifstream sourceFile(sourceFileName.Data());
@@ -1652,7 +1651,7 @@ void TDocParser::LocateMethodsInSource(std::ostream& out)
       pattern.Remove(0, posLastScope + 2);
    pattern += "::";
    
-   const char* implFileName = fHtml->GetImplFileName(fCurrentClass);
+   const char* implFileName = fHtml->GetImplFileName(fCurrentClass, kTRUE);
    if (implFileName && implFileName[0])
       LocateMethods(out, implFileName, kFALSE /*source info*/, useDocxxStyle, 
                     kFALSE /*allowPureVirtual*/, pattern, ".cxx.html");
@@ -1675,7 +1674,7 @@ void TDocParser::LocateMethodsInHeaderInline(std::ostream& out)
       pattern.Remove(0, posLastScope + 1);
    pattern += "::";
    
-   const char* declFileName = fHtml->GetDeclFileName(fCurrentClass);
+   const char* declFileName = fHtml->GetDeclFileName(fCurrentClass, kTRUE);
    if (declFileName && declFileName[0])
       LocateMethods(out, declFileName, kTRUE /*source info*/, useDocxxStyle, 
                     kFALSE /*allowPureVirtual*/, pattern, 0);
@@ -1688,7 +1687,7 @@ void TDocParser::LocateMethodsInHeaderClassDecl(std::ostream& out)
    // class declaration block, and extract documentation to out,
    // while beautifying the header file in parallel.
 
-   const char* declFileName = fHtml->GetDeclFileName(fCurrentClass);
+   const char* declFileName = fHtml->GetDeclFileName(fCurrentClass, kTRUE);
    if (declFileName && declFileName[0])
       LocateMethods(out, declFileName, kTRUE/*source info*/, kTRUE /*useDocxxStyle*/,
                     kTRUE /*allowPureVirtual*/, 0, ".h.html");

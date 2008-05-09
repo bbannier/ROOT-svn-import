@@ -97,8 +97,7 @@ void TClassDocOutput::Class2Html(Bool_t force)
    WriteClassDocHeader(classFile);
 
    // copy .h file to the Html output directory
-   TString declf(fHtml->GetDeclFileName(fCurrentClass));
-   fHtml->GetSourceFileName(declf);
+   TString declf(fHtml->GetDeclFileName(fCurrentClass, kTRUE));
    if (declf.Length())
       CopyHtmlFile(declf);
 
@@ -128,7 +127,7 @@ void TClassDocOutput::ListFunctions(std::ostream& classFile)
       classFile << "&nbsp;<br /><b>"
                 << tab4nbsp << "This is an abstract class, constructors will not be documented.<br />" << endl
                 << tab4nbsp << "Look at the <a href=\""
-                << fHtml->GetFileName(fHtml->GetDeclFileName(fCurrentClass))
+                << gSystem->BaseName(fHtml->GetDeclFileName(fCurrentClass, kFALSE))
                 << "\">header</a> to check for available constructors.</b><br />" << endl;
 
    for (Int_t access = TDocParser::kPublic; access >= 0 && !fHtml->IsNamespace(fCurrentClass); --access) {
@@ -860,19 +859,18 @@ Bool_t TClassDocOutput::CreateDotClassChartIncl(const char* filename) {
 
    std::map<std::string, std::string> filesToParse;
    std::list<std::string> listFilesToParse;
-   const char* declFileName = fHtml->GetDeclFileName(fCurrentClass);
-   const char* implFileName = fHtml->GetImplFileName(fCurrentClass);
+   const char* declFileName = fHtml->GetDeclFileName(fCurrentClass, kFALSE);
+   const char* implFileName = fHtml->GetImplFileName(fCurrentClass, kFALSE);
    if (declFileName && strlen(declFileName)) {
-      char* real = gSystem->Which(fHtml->GetSourceDir(), declFileName, kReadPermission);
+      const char* real = fHtml->GetDeclFileName(fCurrentClass, kTRUE);
       if (real) {
          filesToParse[declFileName] = real;
          listFilesToParse.push_back(declFileName);
-         delete [] real;
       }
    }
    /* do it only for the header
    if (implFileName && strlen(implFileName)) {
-      char* real = gSystem->Which(fHtml->GetSourceDir(), implFileName, kReadPermission);
+      char* real = gSystem->Which(fHtml->GetInputPath(), implFileName, kReadPermission);
       if (real) {
          filesToParse[implFileName] = real;
          listFilesToParse.push_back(implFileName);
@@ -916,11 +914,11 @@ Bool_t TClassDocOutput::CreateDotClassChartIncl(const char* filename) {
          if (pos == std::string::npos) continue;
          line.erase(pos);
          if (filesToParse.find(line) == filesToParse.end()) {
-            char* filename = gSystem->Which(fHtml->GetSourceDir(), line.c_str(), kReadPermission);
-            if (!filename) continue;
+            TString filename;
+            if (!GetHtml()->GetPathDefinition().GetFileNameFromInclude(line.c_str(), filename))
+               continue;
             listFilesToParse.push_back(line);
             filesToParse[line] = filename;
-            delete [] filename;
             if (*iFile == implFileName || *iFile == declFileName)
                outdot << "\"" << *iFile << "\" [style=filled,fillcolor=lightgray];" << endl;
          }
@@ -1373,28 +1371,7 @@ void TClassDocOutput::WriteClassDocHeader(std::ostream& classFile)
    TString sInclude;
    TString sLib;
    const char* lib=fCurrentClass->GetSharedLibs();
-   const char* incl=fHtml->GetDeclFileName(fCurrentClass);
-   if (incl) {
-      TString inclPath(GetHtml()->GetIncludePath());
-      Ssiz_t posDelim = 0;
-      TString inclDir;
-      TString sIncl(incl);
-#ifdef R__WIN32
-      const char* pdelim = ";";
-      static const char ddelim = '\\';
-#else
-      const char* pdelim = ":";
-      static const char ddelim = '/';
-#endif
-      while (inclPath.Tokenize(inclDir, posDelim, pdelim))
-         if (sIncl.BeginsWith(inclDir)) {
-            incl += inclDir.Length();
-            if (incl[0] == ddelim || incl[0] == '/')
-               ++incl;
-            break;
-         }
-      sInclude = incl;
-   }
+   GetHtml()->GetPathDefinition().GetIncludeAs(fCurrentClass, sInclude);
    if (lib) {
       char* libDup=StrDup(lib);
       char* libDupSpace=strchr(libDup,' ');
@@ -1424,8 +1401,16 @@ void TClassDocOutput::WriteClassDocHeader(std::ostream& classFile)
 
    TString module;
    fHtml->GetModuleNameForClass(module, fCurrentClass);
-   if (module.Length())
-      classFile << "<a class=\"descrheadentry\" href=\"./" << module << "_Index.html\">" << module << "</a> &#187; " << endl;
+   if (module.Length()) {
+      TString modulePart;
+      TString modulePath;
+      Ssiz_t pos = 0;
+      while (module.Tokenize(modulePart, pos, "/")) {
+         if (modulePath.Length()) modulePath += "_";
+         modulePath += modulePart;
+         classFile << "<a class=\"descrheadentry\" href=\"./" << modulePath << "_Index.html\">" << modulePart << "</a> &#187; " << endl;
+      }
+   }
 
    classFile << "<a class=\"descrheadentry\" href=\"#TopOfPage\">";
    ReplaceSpecialChars(classFile, fCurrentClass->GetName());
@@ -1453,10 +1438,10 @@ void TClassDocOutput::WriteClassDocHeader(std::ostream& classFile)
    TString classFileName(fCurrentClass->GetName());
    NameSpace2FileName(classFileName);
 
-   const char* headerFileName = fHtml->GetDeclFileName(fCurrentClass);
+   const char* headerFileName = fHtml->GetDeclFileName(fCurrentClass, kFALSE);
    if (headerFileName && !headerFileName[0])
       headerFileName = 0;
-   const char* sourceFileName = fHtml->GetImplFileName(fCurrentClass);
+   const char* sourceFileName = fHtml->GetImplFileName(fCurrentClass, kFALSE);
    if (sourceFileName && !sourceFileName[0])
       sourceFileName = 0;
 
