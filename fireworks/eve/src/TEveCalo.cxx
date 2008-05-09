@@ -49,8 +49,6 @@ TEveCaloViz::TEveCaloViz(const Text_t* n, const Text_t* t) :
    fPhi(0.),
    fPhiRng(TMath::Pi()),
 
-   fThreshold(0.001f),
-
    fBarrelRadius(-1.f),
    fEndCapPos(-1.f),
 
@@ -80,8 +78,6 @@ TEveCaloViz::TEveCaloViz(TEveCaloData* data, const Text_t* n, const Text_t* t) :
 
    fPhi(0.),
    fPhiRng(TMath::Pi()),
-
-   fThreshold(0.001f),
 
    fBarrelRadius(-1.f),
    fEndCapPos(-1.f),
@@ -151,8 +147,6 @@ void TEveCaloViz::AssignCaloVizParameters(TEveCaloViz* m)
 
    fPhi       = m->fPhi;
    fPhiRng    = m->fPhiRng;
-   fThreshold = m->fThreshold;
-
    fBarrelRadius = m->fBarrelRadius;
    fEndCapPos    = m->fEndCapPos;
 
@@ -384,10 +378,13 @@ ClassImp(TEveCaloLego);
 //______________________________________________________________________________
 TEveCaloLego::TEveCaloLego(const Text_t* n, const Text_t* t):
    TEveCaloViz(n, t),
-   fGridColor(kGray+3),
    fFontColor(0),
+   fGridColor(kGray+3),
    fFontSize(10),
-   fNZStep(5)
+   fNZStep(5),
+   fBinWidth(5),
+   fProjection(kAuto),
+   f2DMode(kValColor)
 {
    // Constructor.
 
@@ -398,10 +395,14 @@ TEveCaloLego::TEveCaloLego(const Text_t* n, const Text_t* t):
 //______________________________________________________________________________
 TEveCaloLego::TEveCaloLego(TEveCaloData* data):
    TEveCaloViz(data),
-   fGridColor(kGray+3),
    fFontColor(0),
+   fGridColor(kGray+3),
    fFontSize(10),
-   fNZStep(5)
+   fNZStep(5),
+   fBinWidth(5),
+   fProjection(kAuto),
+   f2DMode(kValColor),
+   fBoxMode(kBack)
 {
    // Constructor.
 

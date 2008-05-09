@@ -147,6 +147,7 @@ TGClient::TGClient(const char *dpyName)
    fGlobalNeedRedraw = kFALSE;
    fForceRedraw      = kFALSE;
    fWaitForWindow    = kNone;
+   fWaitForEvent     = kOtherEvent;
 
    fResourcePool    = new TGResourcePool(this);
 
@@ -644,8 +645,12 @@ void TGClient::WaitFor(TGWindow *w)
    fWaitForWindow = w->GetId();
    fWaitForEvent  = kDestroyNotify;
 
-   while (fWaitForWindow != kNone)
-      gSystem->InnerLoop();
+   while (fWaitForWindow != kNone) {
+      if (esave == kUnmapNotify)
+         wsave = kNone;
+      gSystem->ProcessEvents();//gSystem->InnerLoop();
+      gSystem->Sleep(5);
+   }
 
    fWaitForWindow = wsave;
    fWaitForEvent  = esave;
@@ -662,8 +667,10 @@ void TGClient::WaitForUnmap(TGWindow *w)
    fWaitForWindow = w->GetId();
    fWaitForEvent  = kUnmapNotify;
 
-   while (fWaitForWindow != kNone)
-      gSystem->InnerLoop();
+   while (fWaitForWindow != kNone) {
+      gSystem->ProcessEvents();//gSystem->InnerLoop();
+      gSystem->Sleep(5);
+   }
 
    fWaitForWindow = wsave;
    fWaitForEvent  = esave;

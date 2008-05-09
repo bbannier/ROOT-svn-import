@@ -348,7 +348,28 @@ void TGFileBrowser::BrowseObj(TObject *obj)
       fNewBrowser->SetActBrowser(this);
    obj->Browse(fBrowser);
    if (obj == gROOT) {
-      AddFSDirectory("/");
+      TList *volumes = 0; // gSystem->GetVolumes("all");
+      TList *curvol  = 0; // gSystem->GetVolumes("cur");
+      if (volumes && curvol) {
+         const char *curdrive;
+         TNamed *named = (TNamed *)curvol->At(0);
+         if (named)
+            curdrive = named->GetName();
+         else
+            curdrive = StrDup("C:");
+         TIter next(volumes);
+         TNamed *drive;
+         while ((drive = (TNamed *)next())) {
+            AddFSDirectory(Form("%s\\", drive->GetName()), drive->GetTitle(), 
+                           (strcmp(drive->GetName(), curdrive) == 0) ? 
+                           "SetRootDir" : "Add");
+         }
+         delete volumes;
+         delete curvol;
+      }
+      else {
+         AddFSDirectory("/");
+      }
       GotoDir(gSystem->WorkingDirectory());
    }
 }
@@ -475,17 +496,43 @@ void TGFileBrowser::Refresh(Bool_t /*force*/)
 /**************************************************************************/
 
 //______________________________________________________________________________
-void TGFileBrowser::AddFSDirectory(const char* /*entry*/, const char* path)
+void TGFileBrowser::AddFSDirectory(const char *entry, const char *path, 
+                                   Option_t *opt)
 {
    // Add file system directory in the list tree.
 
-   if (path == 0 && fRootDir == 0) {
-      fRootDir = fListTree->AddItem(0, rootdir);
-   } else {
+   TGListTreeItem *item = 0;
+   if ((opt == 0) || (strlen(opt) == 0)) {
+      if (fRootDir == 0 && !fListTree->FindChildByName(0, rootdir))
+         item = fRootDir = fListTree->AddItem(0, rootdir);
+      return;
+   }
+   if (strstr(opt, "SetRootDir")) {
+      if (!fListTree->FindChildByName(0, entry))
+         item = fRootDir = fListTree->AddItem(0, entry);
+   } 
+   else if (strstr(opt, "Add")) {
       // MT: i give up! wanted to place entries for selected
       // directories like home, pwd, alice-macros.
       // TGListTreeItem *lti = fListTree->AddItem(0, entry);
       //
+      if (!fListTree->FindChildByName(0, entry))
+         item = fListTree->AddItem(0, entry);
+   }
+   if (item && path) {
+      TString infos = path;
+      item->SetTipText(path);
+      TGPicture *pic = 0;
+      if (infos.Contains("Removable"))
+         pic = (TGPicture *)gClient->GetPicture("fdisk_t.xpm");
+      else if (infos.Contains("Local"))
+         pic = (TGPicture *)gClient->GetPicture("hdisk_t.xpm");
+      else if (infos.Contains("CD"))
+         pic = (TGPicture *)gClient->GetPicture("cdrom_t.xpm");
+      else if (infos.Contains("Network"))
+         pic = (TGPicture *)gClient->GetPicture("netdisk_t.xpm");
+      if (pic)
+         item->SetPictures(pic, pic);
    }
 }
 
@@ -673,18 +720,18 @@ void TGFileBrowser::Clicked(TGListTreeItem *item, Int_t btn, Int_t x, Int_t y)
       else {
          fListTree->GetPathnameFromItem(item, path);
          if (strlen(path) > 3) {
-            TString dirname = DirName(item);
-            gSystem->GetPathInfo(dirname.Data(), &id, &size, &flags, &modtime);
+            TString fullpath = FullPathName(item);
+            gSystem->GetPathInfo(fullpath.Data(), &id, &size, &flags, &modtime);
             if (flags & 2) {
                fCurrentDir = item;
                if (fDir) delete fDir;
-               fDir = new TSystemDirectory(item->GetText(), dirname.Data());
+               fDir = new TSystemDirectory(item->GetText(), fullpath.Data());
                fContextMenu->Popup(x, y, fDir);
             }
             else {
                fCurrentDir = item->GetParent();
                if (fFile) delete fFile;
-               fFile = new TSystemFile(item->GetText(), dirname.Data());
+               fFile = new TSystemFile(item->GetText(), fullpath.Data());
                fContextMenu->Popup(x, y, fFile);
             }
          }
@@ -700,8 +747,8 @@ void TGFileBrowser::Clicked(TGListTreeItem *item, Int_t btn, Int_t x, Int_t y)
       else {
          fListTree->GetPathnameFromItem(item, path);
          if (strlen(path) > 1) {
-            TString dirname = DirName(item);
-            gSystem->GetPathInfo(dirname.Data(), &id, &size, &flags, &modtime);
+            TString fullpath = FullPathName(item);
+            gSystem->GetPathInfo(fullpath.Data(), &id, &size, &flags, &modtime);
             if (flags & 2)
                fCurrentDir = item;
             else
@@ -712,18 +759,39 @@ void TGFileBrowser::Clicked(TGListTreeItem *item, Int_t btn, Int_t x, Int_t y)
 }
 
 //______________________________________________________________________________
-TString TGFileBrowser::DirName(TGListTreeItem* item)
+TString TGFileBrowser::FullPathName(TGListTreeItem* item)
 {
    // returns an absolute path
 
-   TGListTreeItem* parent;
-   TString dirname = item->GetText();
+   TGListTreeItem *parent, *itm = item;
+   TString dirname = itm->GetText();
 
-   while ((parent=item->GetParent())) {
+   while ((parent=itm->GetParent())) {
       dirname = gSystem->ConcatFileName(parent->GetText(),dirname);
-      item = parent;
+      itm = parent;
    }
 
+   return dirname;
+}
+
+//______________________________________________________________________________
+TString TGFileBrowser::DirName(TGListTreeItem* item)
+{
+   // returns the directory path
+
+   TString dirname;
+   TString fullpath = FullPathName(item);
+
+#ifdef WIN32
+   char   winDrive[256];
+   char   winDir[256];
+   char   winName[256];
+   char   winExt[256];
+   _splitpath(fullpath.Data(), winDrive, winDir, winName, winExt);
+   dirname = Form("%s%s", winDrive, winDir);
+#else
+   dirname = gSystem->DirName(fullpath);
+#endif
    return dirname;
 }
 
@@ -775,6 +843,7 @@ void TGFileBrowser::DoubleClicked(TGListTreeItem *item, Int_t /*btn*/)
 
    const TGPicture *pic=0;
    TString dirname = DirName(item);
+   TString fullpath = FullPathName(item);
    TGListTreeItem *itm;
    FileStat_t sbuf;
    Long64_t size;
@@ -853,14 +922,14 @@ void TGFileBrowser::DoubleClicked(TGListTreeItem *item, Int_t /*btn*/)
       }
    }
    flags = id = size = modtime = 0;
-   gSystem->GetPathInfo(dirname.Data(), &id, &size, &flags, &modtime);
+   gSystem->GetPathInfo(fullpath.Data(), &id, &size, &flags, &modtime);
    Int_t isdir = (Int_t)flags & 2;
 
    TString savdir = gSystem->WorkingDirectory();
    if (isdir) {
       fCurrentDir = item;
       //fListTree->DeleteChildren(item);
-      TSystemDirectory dir(item->GetText(),DirName(item));
+      TSystemDirectory dir(item->GetText(),FullPathName(item));
       TList *files = dir.GetListOfFiles();
       if (files) {
          files->Sort();
@@ -922,11 +991,11 @@ void TGFileBrowser::DoubleClicked(TGListTreeItem *item, Int_t /*btn*/)
    }
    else {
       fCurrentDir = item->GetParent();
-      TSystemFile f(item->GetText(), dirname.Data());
+      TSystemFile f(item->GetText(), fullpath.Data());
       TString fname = f.GetName();
       if (fname.EndsWith(".root")) {
          TDirectory *rfile = 0;
-         gSystem->ChangeDirectory(gSystem->DirName(dirname.Data()));
+         gSystem->ChangeDirectory(dirname.Data());
          rfile = (TDirectory *)gROOT->GetListOfFiles()->FindObject(obj);
          if (!rfile) {
             rfile = (TDirectory *)gROOT->ProcessLine(Form("new TFile(\"%s\")",fname.Data()));
@@ -935,10 +1004,10 @@ void TGFileBrowser::DoubleClicked(TGListTreeItem *item, Int_t /*btn*/)
             // replace actual user data (TObjString) by the TDirectory...
             if (item->GetUserData()) {
                // first delete the data to avoid memory leaks
-               TObject *obj = static_cast<TObject *>(item->GetUserData());
+               TObject *obj2 = static_cast<TObject *>(item->GetUserData());
                // only delete TObjString as they are the only objects
                // created who have to be deleted
-               delete dynamic_cast<TObjString *>(obj);
+               delete dynamic_cast<TObjString *>(obj2);
             }
             item->SetUserData(rfile);
             fNKeys = rfile->GetListOfKeys()->GetEntries();
@@ -949,11 +1018,11 @@ void TGFileBrowser::DoubleClicked(TGListTreeItem *item, Int_t /*btn*/)
          }
       }
       else if (fname.EndsWith(".png")) {
-         gSystem->ChangeDirectory(gSystem->DirName(dirname.Data()));
+         gSystem->ChangeDirectory(dirname.Data());
          XXExecuteDefaultAction(&f);
       }
-      else if (IsTextFile(dirname.Data())) {
-         gSystem->ChangeDirectory(gSystem->DirName(dirname.Data()));
+      else if (IsTextFile(fullpath.Data())) {
+         gSystem->ChangeDirectory(dirname.Data());
          if (fNewBrowser) {
             TGFrameElement *fe = 0;
             TGTab *tabRight = fNewBrowser->GetTabRight();
@@ -980,7 +1049,7 @@ void TGFileBrowser::DoubleClicked(TGListTreeItem *item, Int_t /*btn*/)
          }
       }
       else {
-         gSystem->ChangeDirectory(gSystem->DirName(dirname.Data()));
+         gSystem->ChangeDirectory(dirname.Data());
          XXExecuteDefaultAction(&f);
       }
    }
