@@ -87,16 +87,11 @@ public:
    // replaced by the user; see THtml::SetPathDefinition().
    class TPathDefinition: public THelperBase {
    public:
-      virtual bool GetMacroPath(const TClass* cl, TString& out_dir) const;
+      virtual bool GetMacroPath(const TString& module, TString& out_dir) const;
       virtual bool GetIncludeAs(TClass* cl, TString& out_include_as) const;
       virtual bool GetFileNameFromInclude(const char* included, TString& out_fsname) const;
       virtual bool GetDocDir(const TString& module, TString& doc_dir) const;
-
-      // Set the include path; first matching element (separated by ":") will be
-      // removed from classes' 
-      virtual void SetIncludePath(const char* include) { fIncludePath = include; }
    protected:
-      TString        fIncludePath;     // include path, removed from DeclFileName() for documentation ("include" for ROOT)
       ClassDef(TPathDefinition, 0); // helper class to determine directory layouts
    };
 
@@ -109,7 +104,9 @@ public:
       TFileSysEntry(const char* name, TFileSysDir* parent):
          fName(name), fParent(parent), fLevel(parent ? parent->GetLevel() + 1 : 0) {}
       const char* GetName() const { return fName; }
+      virtual ULong_t Hash() const { return fName.Hash(); }
       void GetFullName(TString& fullname) const {
+         fullname = "";
          if (fParent) {
             fParent->GetFullName(fullname);
             fullname += "/";
@@ -185,17 +182,19 @@ public:
 #else
          fInputPath("./:src/:include/"),
 #endif
+         fIncludePath("include"),
          // .whatever implicitly ignored, no need to add .svn!
-         fIgnorePath("\\b(include|CVS)\\b"),
+         fIgnorePath("\\b(include|CVS|test|tutorials|doc|lib|python|demo|freetype-|gdk|libAfterImage|etc|config|build|bin)\\b"),
          fDocPath("doc"),
-         fMacroPath(".:doc/macros"),
+         fMacroPath("macros:."),
          fOutputDir("htmldoc") {}
 
       EDotAccess     fFoundDot;        // whether dot is accessible
       TString        fInputPath;       // directories to look for classes; prepended to Decl/ImplFileName()
+      TString        fIncludePath;     // directory prefixes (":" delimited) to remove when quoting include files
       TString        fIgnorePath;      // regexp pattern for directories to ignore ("\b(CVS|\.svn)\b") for ROOT
       TString        fDocPath;         // subdir to check for module documentation ("doc" for ROOT)
-      TString        fMacroPath;       // subdir for macros run via the Begin/End Macro directive; ("doc/macros:." for ROOT)
+      TString        fMacroPath;       // subdir of fDocPath for macros run via the Begin/End Macro directive; ("macros" for ROOT)
       TString        fDotDir;          // directory of GraphViz's dot binary
       TString        fEtcDir;          // directory containing auxiliary files
       TString        fOutputDir;       // output directory
@@ -281,7 +280,8 @@ public:
    virtual void        CreateAuxiliaryFiles() const;
    virtual TClass*     GetClass(const char *name) const;
    const char*         GetCounter() const { return fCounter; }
-   virtual const char* GetDeclFileName(TClass* cl, Bool_t filesys) const;
+   void                GetModuleMacroPath(const TString& module, TString& out_path) const { GetPathDefinition().GetMacroPath(module, out_path); }
+   virtual bool        GetDeclFileName(TClass* cl, Bool_t filesys, TString& out_name) const;
    void                GetDerivedClasses(TClass* cl, std::map<TClass*, Int_t>& derived) const;
    static const char*  GetDirDelimiter() {
       // ";" on windows, ":" everywhere else
@@ -291,7 +291,7 @@ public:
       return ":";
 #endif
    }
-   virtual const char* GetImplFileName(TClass* cl, Bool_t filesys) const;
+   virtual bool        GetImplFileName(TClass* cl, Bool_t filesys, TString& out_name) const;
    virtual void        GetHtmlFileName(TClass *classPtr, TString& filename) const;
    virtual const char* GetHtmlFileName(const char* classname) const;
    TList*              GetLibraryDependencies() { return &fDocEntityInfo.fLibDeps; }
@@ -351,7 +351,7 @@ protected:
    virtual void    CreateStyleSheet() const;
    void            CreateListOfTypes();
    void            CreateListOfClasses(const char* filter);
-   virtual const char* GetDeclImplFileName(TClass* cl, bool filesys, bool decl) const;
+   virtual bool    GetDeclImplFileName(TClass* cl, bool filesys, bool decl, TString& out_name) const;
    void            MakeClass(void* cdi, Bool_t force=kFALSE);
    TClassDocInfo  *GetNextClass();
    void            SetLocalFiles() const;

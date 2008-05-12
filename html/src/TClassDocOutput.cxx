@@ -97,8 +97,8 @@ void TClassDocOutput::Class2Html(Bool_t force)
    WriteClassDocHeader(classFile);
 
    // copy .h file to the Html output directory
-   TString declf(fHtml->GetDeclFileName(fCurrentClass, kTRUE));
-   if (declf.Length())
+   TString declf;
+   if (fHtml->GetDeclFileName(fCurrentClass, kTRUE, declf))
       CopyHtmlFile(declf);
 
    // process a '.cxx' file
@@ -123,11 +123,13 @@ void TClassDocOutput::ListFunctions(std::ostream& classFile)
       << ":Function_Members\"></a>Function Members (Methods)</h2>" << endl;
 
    const char* tab4nbsp="&nbsp;&nbsp;&nbsp;&nbsp;";
+   TString declFile;
+   fHtml->GetDeclFileName(fCurrentClass, kFALSE, declFile);
    if (fCurrentClass->Property() & kIsAbstract)
       classFile << "&nbsp;<br /><b>"
                 << tab4nbsp << "This is an abstract class, constructors will not be documented.<br />" << endl
                 << tab4nbsp << "Look at the <a href=\""
-                << gSystem->BaseName(fHtml->GetDeclFileName(fCurrentClass, kFALSE))
+                << gSystem->BaseName(declFile)
                 << "\">header</a> to check for available constructors.</b><br />" << endl;
 
    for (Int_t access = TDocParser::kPublic; access >= 0 && !fHtml->IsNamespace(fCurrentClass); --access) {
@@ -193,6 +195,29 @@ void TClassDocOutput::ListFunctions(std::ostream& classFile)
          classFile << "</a>";
 
          fParser->DecorateKeywords(classFile, const_cast<TMethod*>(method)->GetSignature());
+         bool propSignal = false;
+         bool propMenu   = false;
+         bool propToggle = false;
+         bool propGetter = false;
+         if (method->GetTitle()) {
+            propSignal = (strstr(method->GetTitle(), "*SIGNAL*"));
+            propMenu   = (strstr(method->GetTitle(), "*MENU*"));
+            propToggle = (strstr(method->GetTitle(), "*TOGGLE*"));
+            propGetter = (strstr(method->GetTitle(), "*GETTER"));
+            if (propSignal || propMenu || propToggle || propGetter) {
+               classFile << "<span class=\"funcprop\">";
+               if (propSignal) classFile << "<abbr title=\"emits a signal\"/>SIGNAL</abbr> ";
+               if (propMenu) classFile << "<abbr title=\"has a popup menu entry\"/>MENU</abbr> ";
+               if (propToggle) classFile << "<abbr title=\"toggles a state\"/>TOGGLE</abbr> ";
+               if (propGetter) {
+                  TString getter(method->GetTitle());
+                  Ssiz_t posGetter = getter.Index("*GETTER=");
+                  getter.Remove(0, posGetter + 8);
+                  classFile << "<abbr title=\"use " + getter + "() as getter\"/>GETTER</abbr> ";
+               }
+               classFile << "</span>";
+            }
+         }
          classFile << "</td></tr>" << endl;
       }
       classFile << endl << "</table></div>" << endl;
@@ -859,13 +884,14 @@ Bool_t TClassDocOutput::CreateDotClassChartIncl(const char* filename) {
 
    std::map<std::string, std::string> filesToParse;
    std::list<std::string> listFilesToParse;
-   const char* declFileName = fHtml->GetDeclFileName(fCurrentClass, kFALSE);
-   const char* implFileName = fHtml->GetImplFileName(fCurrentClass, kFALSE);
-   if (declFileName && strlen(declFileName)) {
-      const char* real = fHtml->GetDeclFileName(fCurrentClass, kTRUE);
-      if (real) {
-         filesToParse[declFileName] = real;
-         listFilesToParse.push_back(declFileName);
+   TString declFileName;
+   TString implFileName;
+   fHtml->GetImplFileName(fCurrentClass, kFALSE, implFileName);
+   if (fHtml->GetDeclFileName(fCurrentClass, kFALSE, declFileName)) {
+      TString real;
+      if (fHtml->GetDeclFileName(fCurrentClass, kTRUE, real)) {
+         filesToParse[declFileName.Data()] = real.Data();
+         listFilesToParse.push_back(declFileName.Data());
       }
    }
    /* do it only for the header
@@ -1388,48 +1414,10 @@ void TClassDocOutput::WriteClassDocHeader(std::ostream& classFile)
    classFile << "<script type=\"text/javascript\">WriteFollowPageBox('" 
              << sTitle << "','" << sLib << "','" << sInclude << "');</script>" << endl;
 
-   // top links
-   classFile << "<div id=\"toplinks\">" << endl;
-
-   // make a link to the description
-   TString currClassNameMangled(fCurrentClass->GetName());
-   NameSpace2FileName(currClassNameMangled);
-   classFile << "<div class=\"descrhead\">" << endl
-      << "<span class=\"descrtitle\">Location:</span>" << endl;
-   const char *productName = fHtml->GetProductName();
-   classFile << "<a class=\"descrheadentry\" href=\"ClassIndex.html\">" << productName << "</a> &#187; " << endl;
-
-   TString module;
-   fHtml->GetModuleNameForClass(module, fCurrentClass);
-   if (module.Length()) {
-      TString modulePart;
-      TString modulePath;
-      Ssiz_t pos = 0;
-      while (module.Tokenize(modulePart, pos, "/")) {
-         if (modulePath.Length()) modulePath += "_";
-         modulePath += modulePart;
-         classFile << "<a class=\"descrheadentry\" href=\"./" << modulePath << "_Index.html\">" << modulePart << "</a> &#187; " << endl;
-      }
-   }
-
-   classFile << "<a class=\"descrheadentry\" href=\"#TopOfPage\">";
-   ReplaceSpecialChars(classFile, fCurrentClass->GetName());
-   classFile << "</a>" << endl
-      << "</div>" << endl;
-
-   classFile << "<div class=\"descrhead\">" << endl
-      << "<span class=\"descrtitle\">Quick Links:</span>" << endl;
-
-   // link to the user home page (if exist)
-   const char* userHomePage = GetHtml()->GetHomepage();
-   if (productName && !strcmp(productName, "ROOT"))
-      userHomePage = "";
-   if (userHomePage && *userHomePage)
-      classFile << "<a class=\"descrheadentry\" href=\"" << userHomePage << "\">" << productName << "</a>" << endl;
-   classFile << "<a class=\"descrheadentry\" href=\"http://root.cern.ch/root/Welcome.html\">ROOT</a>" << endl
-      << "<a class=\"descrheadentry\" href=\"./ClassIndex.html\">Class Index</a>" << endl
-      << "<a class=\"descrheadentry\" href=\"./ClassHierarchy.html\">Class Hierarchy</a>" << endl
-      << "</div>" << endl;
+   TString modulename;
+   fHtml->GetModuleNameForClass(modulename, fCurrentClass);
+   TModuleDocInfo* module = (TModuleDocInfo*) fHtml->GetListOfModules()->FindObject(modulename);
+   WriteTopLinks(classFile, module, fCurrentClass->GetName());
 
    classFile << "<div class=\"descrhead\">" << endl
       << "<span class=\"descrtitle\">Source:</span>" << endl;
@@ -1438,18 +1426,15 @@ void TClassDocOutput::WriteClassDocHeader(std::ostream& classFile)
    TString classFileName(fCurrentClass->GetName());
    NameSpace2FileName(classFileName);
 
-   const char* headerFileName = fHtml->GetDeclFileName(fCurrentClass, kFALSE);
-   if (headerFileName && !headerFileName[0])
-      headerFileName = 0;
-   const char* sourceFileName = fHtml->GetImplFileName(fCurrentClass, kFALSE);
-   if (sourceFileName && !sourceFileName[0])
-      sourceFileName = 0;
-
-   if (headerFileName)
+   TString headerFileName;
+   fHtml->GetDeclFileName(fCurrentClass, kFALSE, headerFileName);
+   TString sourceFileName;
+   fHtml->GetImplFileName(fCurrentClass, kFALSE, sourceFileName);
+   if (headerFileName.Length())
       classFile << "<a class=\"descrheadentry\" href=\"src/" << classFileName
                 << ".h.html\">header file</a>" << endl;
 
-   if (sourceFileName)
+   if (sourceFileName.Length())
       classFile << "<a class=\"descrheadentry\" href=\"src/" << classFileName
                 << ".cxx.html\">source file</a>" << endl;
 
@@ -1501,6 +1486,9 @@ void TClassDocOutput::WriteClassDocHeader(std::ostream& classFile)
          classFile << "<a class=\"descrheadentry\" href=\"" << link << "\">viewCVS source</a> ";
       }
    }
+
+   TString currClassNameMangled(fCurrentClass->GetName());
+   NameSpace2FileName(currClassNameMangled);
 
    TString wikiLink = GetHtml()->GetWikiURL();
    if (wikiLink.Length()) {
