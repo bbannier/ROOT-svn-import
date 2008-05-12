@@ -1117,6 +1117,7 @@ void TDocOutput::FixupAuthorSourceInfo(TString& authors)
             namePart.Strip(TString::kBoth);
             if (!namePart.Length())
                continue;
+            if (isdigit(namePart[0])) continue; //likely a date
             if (!firstNamePart)
                authors += '+';
             firstNamePart = kFALSE;
