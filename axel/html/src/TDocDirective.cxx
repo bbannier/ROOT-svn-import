@@ -641,7 +641,7 @@ void TDocLatexDirective::CreateLatex(const char* filename)
    latex.SetTextAlign(12);
 
    // calculate positions
-   TIter iLine(fLatex->GetListOfLines());
+   TIter iterLine(fLatex->GetListOfLines());
    TObjString* line = 0;
    TPRegexp regexp;
    if (fSeparator.Length()) {
@@ -649,7 +649,7 @@ void TDocLatexDirective::CreateLatex(const char* filename)
          regexp = TPRegexp(fSeparator);
    } else fSepIsRegexp = kFALSE;
 
-   while ((line = (TObjString*) iLine())) {
+   while ((line = (TObjString*) iterLine())) {
       const TString& str = line->String();
       TObjArray* split = 0;
       if (!fSepIsRegexp) {
