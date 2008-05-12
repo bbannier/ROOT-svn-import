@@ -485,11 +485,20 @@ bool THtml::TPathDefinition::GetFileNameFromInclude(const char* included, TStrin
    // basename(included) and with matching directory part, setting out_fsname
    // to the TFileSysEntry's path.
 
+   if (!included) return false;
+
    out_fsname = included;
+
+   if (!strncmp(included, "TMVA/", 5)) {
+      out_fsname.Remove(0, 4);
+      out_fsname.Prepend("tmva/inc");
+      return true;
+   }
 
    TString incBase(gSystem->BaseName(included));
    TList* bucket = GetOwner()->GetLocalFiles()->GetEntries().GetListForObject(incBase);
    if (!bucket) return false;
+
    TString alldir(gSystem->DirName(included));
    TObjArray* arrSubDirs = alldir.Tokenize("/");
    TIter iEntry(bucket);
@@ -499,16 +508,21 @@ bool THtml::TPathDefinition::GetFileNameFromInclude(const char* included, TStrin
       // find entry with matching enclosing directory
       THtml::TFileSysDir* parent = entry->GetParent();
       for (int i = arrSubDirs->GetEntries() - 1; parent && i >= 0; --i) {
-         if (((TObjString*)(*arrSubDirs)[i])->String() == parent->GetName())
+         const TString& subdir(((TObjString*)(*arrSubDirs)[i])->String());
+         if (!subdir.Length() || subdir == ".")
+            continue;
+         if (subdir == parent->GetName())
             parent = parent->GetParent();
          else parent = 0;
       }
       if (parent) {
          // entry found!
          entry->GetFullName(out_fsname);
+         delete arrSubDirs;
          return true;
       }
    }
+   delete arrSubDirs;
    return false;
 }
 
@@ -1088,6 +1102,7 @@ THtml::~THtml()
    delete fPathDef;
    delete fModuleDef;
    delete fFileDef;
+   delete fLocalFiles;
 }
 
 //______________________________________________________________________________
