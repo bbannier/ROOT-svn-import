@@ -368,8 +368,18 @@ class genDictionary(object) :
     self.selector = sel  # remember the selector
     if self.selector :
       for f in self.functions :
-        funcname = self.genTypeName(f['id'])
-        if self.selector.selfunction( funcname ) and not self.selector.excfunction( funcname ) :
+        id = f['id']
+        funcname = self.genTypeName(id)
+        attrs = self.xref[id]['attrs']
+        context = self.genTypeName(attrs['context'])
+        demangled = attrs.get('demangled')
+        if demangled and len(demangled) :
+          lencontext = len(context)
+          if lencontext > 2:
+            demangled = demangled[lencontext + 2:]
+        else :
+          demangled = ""
+        if self.selector.selfunction( funcname, demangled ) and not self.selector.excfunction( funcname, demangled ) :
           selec.append(f)
         elif 'extra' in f and f['extra'].get('autoselect') and f not in selec:
           selec.append(f)
@@ -548,7 +558,10 @@ class genDictionary(object) :
         if elem in ('Constructor',) : return 0
     #----Filter using the exclusion list in the selection file
     if self.selector and 'name' in attrs and  elem in ('Constructor','Destructor','Method','OperatorMethod','Converter') :
-      if self.selector.excmethod(self.genTypeName(attrs['context']), attrs['name'] ) : return 0
+      context = self.genTypeName(attrs['context'])
+      demangledMethod = attrs.get('demangled')
+      if demangledMethod: demangledMethod = demangledMethod[len(context) + 2:]
+      if self.selector.excmethod(self.genTypeName(attrs['context']), attrs['name'], demangledMethod ) : return 0
     return 1
 #----------------------------------------------------------------------------------
   def tmplclasses(self, local):
@@ -877,7 +890,15 @@ class genDictionary(object) :
       elif colon  : s = '::'
     return s
 #----------------------------------------------------------------------------------
-  def genTypeName(self, id, enum=False, const=False, colon=False, alltempl=False) :
+  def genTypeName(self, id, enum=False, const=False, colon=False, alltempl=False, _useCache=True,_cache={}) :
+    if _useCache:
+      key = (self,id,enum,const,colon,alltempl)
+      if _cache.has_key(key):
+        return _cache[key]
+      else:
+        ret = self.genTypeName(id,enum,const,colon,alltempl,False)
+        _cache[key] = ret
+        return ret
     elem  = self.xref[id]['elem']
     attrs = self.xref[id]['attrs']
     if self.isUnnamedType(attrs.get('demangled')) :
@@ -1058,7 +1079,10 @@ class genDictionary(object) :
       self.genTypeID(id)
       args = self.xref[id]['subelems']
       returns  = self.genTypeName(f['returns'], enum=True, const=True)
-      if not self.quiet : print  'function '+ name
+      demangled = self.xref[id]['attrs'].get('demangled')
+      if not demangled or not len(demangled):
+        demangled = name
+      if not self.quiet : print  'function '+ demangled
       s += 'static void* '
       if len(args) :
         s +=  'function%s( void*, const std::vector<void*>& arg, void*)\n{\n' % id 
@@ -1717,7 +1741,15 @@ def getTemplateArgString( cl ) :
 #---------------------------------------------------------------------------------------
 def normalizeClassAllTempl(name)   : return normalizeClass(name,True)
 def normalizeClassNoDefTempl(name) : return normalizeClass(name,False)
-def normalizeClass(name,alltempl) :
+def normalizeClass(name,alltempl,_useCache=True,_cache={}) :
+  if _useCache:
+    key = (name,alltempl)
+    if _cache.has_key(key):
+      return _cache[key]    
+    else:
+      ret = normalizeClass(name,alltempl,False)
+      _cache[key] = ret
+      return ret
   names, cnt = [], 0
   for s in string.split(name,'::') :
     if cnt == 0 : names.append(s)
@@ -1728,8 +1760,16 @@ def normalizeClass(name,alltempl) :
 #--------------------------------------------------------------------------------------
 def normalizeFragmentAllTempl(name)   : return normalizeFragment(name,True)
 def normalizeFragmentNoDefTempl(name) : return normalizeFragment(name) 
-def normalizeFragment(name,alltempl=False) :
+def normalizeFragment(name,alltempl=False,_useCache=True,_cache={}) :
   name = name.strip()
+  if _useCache:
+    key = (name,alltempl)
+    if _cache.has_key(key):
+      return _cache[key]    
+    else:
+      ret = normalizeFragment(name,alltempl,False)
+      _cache[key] = ret
+      return ret
   if name.find('<') == -1  : 
     nor =  name
     for e in [ ['long long unsigned int', 'unsigned long long'],

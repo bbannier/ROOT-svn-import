@@ -852,9 +852,10 @@ void  TBufferXML::WorkWithClass(TStreamerInfo* sinfo, const TClass* cl)
          stack = PushStack(classnode);
       }
 
-      if (fVersionBuf>=0) {
-         fXML->NewIntAttr(classnode, xmlio::ClassVersion, fVersionBuf);
-         fVersionBuf = -111;
+      if (fVersionBuf>=-1) {
+	if (fVersionBuf == -1) fVersionBuf = 1;
+	fXML->NewIntAttr(classnode, xmlio::ClassVersion, fVersionBuf);
+	fVersionBuf = -111;
       }
 
       if (IsUseNamespaces() && (GetXmlLayout()!=kGeneralized))
