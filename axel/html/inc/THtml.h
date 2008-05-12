@@ -302,6 +302,7 @@ public:
    virtual void        GetModuleNameForClass(TString& module, TClass* cl) const;
    const TPathInfo&    GetPathInfo() const { return fPathInfo; }
    Bool_t              HaveDot();
+   void                HelperDeleted(THelperBase* who);
    static Bool_t       IsNamespace(const TClass*cl);
    void                SetDeclFileName(TClass* cl, const char* filename);
    void                SetFoundDot(Bool_t found = kTRUE);
@@ -355,8 +356,6 @@ protected:
    void            MakeClass(void* cdi, Bool_t force=kFALSE);
    TClassDocInfo  *GetNextClass();
    void            SetLocalFiles() const;
-
-   void            HelperDeleted(THelperBase* who);
 
    static void    *MakeClassThreaded(void* info);
 

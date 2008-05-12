@@ -173,8 +173,7 @@ namespace {
 
 }
 
-
-namespace {
+extern "C" { // std::qsort on solaris wants the sorter to be extern "C"
 
    //______________________________________________________________________________
    static int CaseInsensitiveSort(const void *name1, const void *name2)
@@ -194,6 +193,9 @@ namespace {
 
       return (strcasecmp(*((char **) name1), *((char **) name2)));
    }
+}
+
+namespace {
 
    // std::list::sort(with_stricmp_predicate) doesn't work with Solaris CC...
    static void sort_strlist_stricmp(std::list<std::string>& l)

@@ -955,7 +955,7 @@ Bool_t TClassDocOutput::CreateDotClassChartIncl(const char* filename) {
                continue;
             listFilesToParse.push_back(line);
             filesToParse[line] = sysfilename;
-            if (*iFile == implFileName || *iFile == declFileName)
+            if (*iFile == implFileName.Data() || *iFile == declFileName.Data())
                outdot << "\"" << *iFile << "\" [style=filled,fillcolor=lightgray];" << endl;
          }
          outdot << "\"" << *iFile << "\" -> \"" << line << "\";" << endl;
