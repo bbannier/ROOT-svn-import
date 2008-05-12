@@ -739,75 +739,85 @@ Bool_t TClassDocOutput::CreateDotClassChartInhMem(const char* filename) {
       //Bool_t haveMembers = (cl->GetListOfDataMembers() && cl->GetListOfDataMembers()->GetSize());
       Bool_t haveFuncs = cl->GetListOfMethods() && cl->GetListOfMethods()->GetSize();
 
-      // make sure each member name is listed only once
-      // that's useless for data members, but symmetric to what we have for methods
-      std::map<std::string, TDataMember*> dmMap;
-      TIter iDM(cl->GetListOfDataMembers());
-      TDataMember* dm = 0;
-      while ((dm = (TDataMember*) iDM()))
-         dmMap[dm->GetName()] = dm;
+      // DATA MEMBERS
+      {
+         // make sure each member name is listed only once
+         // that's useless for data members, but symmetric to what we have for methods
+         std::map<std::string, TDataMember*> dmMap;
 
-      outdot << "subgraph \"clusterData0" << cl->GetName() << "\" {" << endl
-             << "  color=white;" << endl
-             << "  label=\"\";" << endl
-             << "  \"clusterNode0" << cl->GetName() << "\" [height=0,width=0,style=invis];" << endl;
-      TString prevColumnNode;
-      Int_t pos = dmMap.size();
-      Int_t column = 0;
-      Int_t newColumnEvery = (pos + numColumns - 1) / numColumns;
-      for (std::map<std::string, TDataMember*>::iterator iDM = dmMap.begin();
-         iDM != dmMap.end(); ++iDM, --pos) {
-         TDataMember* dm = iDM->second;
-         TString nodeName(cl->GetName());
-         nodeName += "::";
-         nodeName += dm->GetName();
-         if (iDM == dmMap.begin())
-            prevColumnNode = nodeName;
-
-         outdot << "\"" << nodeName << "\" [label=\""
-            << dm->GetName() << "\"";
-         if (dm->Property() & kIsPrivate)
-            outdot << ",color=\"#FFCCCC\"";
-         else if (dm->Property() & kIsProtected)
-            outdot << ",color=\"#FFFF77\"";
-         else
-            outdot << ",color=\"#CCFFCC\"";
-         outdot << "];" << endl;
-         if (pos % newColumnEvery == 1) {
-            ++column;
-            outdot << "};" << endl // end dataR
-                   << "subgraph \"clusterData" << column << cl->GetName() << "\" {" << endl
-                   << "  color=white;" << endl
-                   << "  label=\"\";" << endl
-                   << "  \"clusterNode" << column << cl->GetName() << "\" [height=0,width=0,style=invis];" << endl;
-         } else if (iDM != dmMap.begin() && pos % newColumnEvery == 0) {
-            ssDep << "\"" << prevColumnNode
-                  << "\" -> \"" << nodeName << "\""<< " [style=invis,weight=100];" << endl;
-            prevColumnNode = nodeName;
+         {
+            TIter iDM(cl->GetListOfDataMembers());
+            TDataMember* dm = 0;
+            while ((dm = (TDataMember*) iDM()))
+               dmMap[dm->GetName()] = dm;
          }
-      }
 
-      while (column < numColumns - 1) {
-         ++column;
-         outdot << "  \"clusterNode" << column << cl->GetName() << "\" [height=0,width=0,style=invis];" << endl;
-      }
+         outdot << "subgraph \"clusterData0" << cl->GetName() << "\" {" << endl
+                << "  color=white;" << endl
+                << "  label=\"\";" << endl
+                << "  \"clusterNode0" << cl->GetName() << "\" [height=0,width=0,style=invis];" << endl;
+         TString prevColumnNode;
+         Int_t pos = dmMap.size();
+         Int_t column = 0;
+         Int_t newColumnEvery = (pos + numColumns - 1) / numColumns;
+         for (std::map<std::string, TDataMember*>::iterator iDM = dmMap.begin();
+              iDM != dmMap.end(); ++iDM, --pos) {
+            TDataMember* dm = iDM->second;
+            TString nodeName(cl->GetName());
+            nodeName += "::";
+            nodeName += dm->GetName();
+            if (iDM == dmMap.begin())
+               prevColumnNode = nodeName;
 
-      outdot << "};" << endl; // subgraph dataL/R
+            outdot << "\"" << nodeName << "\" [label=\""
+                   << dm->GetName() << "\"";
+            if (dm->Property() & kIsPrivate)
+               outdot << ",color=\"#FFCCCC\"";
+            else if (dm->Property() & kIsProtected)
+               outdot << ",color=\"#FFFF77\"";
+            else
+               outdot << ",color=\"#CCFFCC\"";
+            outdot << "];" << endl;
+            if (pos % newColumnEvery == 1) {
+               ++column;
+               outdot << "};" << endl // end dataR
+                      << "subgraph \"clusterData" << column << cl->GetName() << "\" {" << endl
+                      << "  color=white;" << endl
+                      << "  label=\"\";" << endl
+                      << "  \"clusterNode" << column << cl->GetName() << "\" [height=0,width=0,style=invis];" << endl;
+            } else if (iDM != dmMap.begin() && pos % newColumnEvery == 0) {
+               ssDep << "\"" << prevColumnNode
+                     << "\" -> \"" << nodeName << "\""<< " [style=invis,weight=100];" << endl;
+               prevColumnNode = nodeName;
+            }
+         }
 
+         while (column < numColumns - 1) {
+            ++column;
+            outdot << "  \"clusterNode" << column << cl->GetName() << "\" [height=0,width=0,style=invis];" << endl;
+         }
+
+         outdot << "};" << endl; // subgraph dataL/R
+      } // DATA MEMBERS
+
+      // FUNCTION MEMBERS
       if (haveFuncs) {
          // make sure each member name is listed only once
          std::map<std::string, TMethod*> methMap;
-         TIter iMeth(cl->GetListOfMethods());
-         TMethod* meth = 0;
-         while ((meth = (TMethod*) iMeth())) 
-            methMap[meth->GetName()] = meth;
+
+         {
+            TIter iMeth(cl->GetListOfMethods());
+            TMethod* meth = 0;
+            while ((meth = (TMethod*) iMeth())) 
+               methMap[meth->GetName()] = meth;
+         }
 
          outdot << "subgraph \"clusterFunc0" << cl->GetName() << "\" {" << endl
                 << "  color=white;" << endl
                 << "  label=\"\";" << endl
                 << "  \"clusterNode0" << cl->GetName() << "\" [height=0,width=0,style=invis];" << endl;
 
-         TString prevColumnNode;
+         TString prevColumnNodeFunc;
          Int_t pos = methMap.size();
          Int_t column = 0;
          Int_t newColumnEvery = (pos + numColumns - 1) / numColumns;
@@ -818,7 +828,7 @@ Bool_t TClassDocOutput::CreateDotClassChartInhMem(const char* filename) {
             nodeName += "::";
             nodeName += meth->GetName();
             if (iMeth == methMap.begin())
-               prevColumnNode = nodeName;
+               prevColumnNodeFunc = nodeName;
 
             outdot << "\"" << nodeName << "\" [label=\"" << meth->GetName() << "\"";
             if (cl != fCurrentClass && 
@@ -838,9 +848,9 @@ Bool_t TClassDocOutput::CreateDotClassChartInhMem(const char* filename) {
                       << "  color=white;" << endl
                       << "  label=\"\";" << endl;
             } else if (iMeth != methMap.begin() && pos % newColumnEvery == 0) {
-               ssDep << "\"" << prevColumnNode
+               ssDep << "\"" << prevColumnNodeFunc
                      << "\" -> \"" << nodeName << "\""<< " [style=invis,weight=100];" << endl;
-               prevColumnNode = nodeName;
+               prevColumnNodeFunc = nodeName;
             }
          }
          outdot << "};" << endl; // subgraph funcL/R
@@ -940,11 +950,11 @@ Bool_t TClassDocOutput::CreateDotClassChartIncl(const char* filename) {
          if (pos == std::string::npos) continue;
          line.erase(pos);
          if (filesToParse.find(line) == filesToParse.end()) {
-            TString filename;
-            if (!GetHtml()->GetPathDefinition().GetFileNameFromInclude(line.c_str(), filename))
+            TString sysfilename;
+            if (!GetHtml()->GetPathDefinition().GetFileNameFromInclude(line.c_str(), sysfilename))
                continue;
             listFilesToParse.push_back(line);
-            filesToParse[line] = filename;
+            filesToParse[line] = sysfilename;
             if (*iFile == implFileName || *iFile == declFileName)
                outdot << "\"" << *iFile << "\" [style=filled,fillcolor=lightgray];" << endl;
          }
@@ -985,9 +995,13 @@ Bool_t TClassDocOutput::CreateDotClassChartLib(const char* filename) {
          firstLib.Remove(end, firstLib.Length());
          libs.Remove(0, end + 1);
       } else libs = "";
-      Ssiz_t posExt = firstLib.First(".");
-      if (posExt != kNPOS)
-         firstLib.Remove(posExt, firstLib.Length());
+
+      {
+         Ssiz_t posExt = firstLib.First(".");
+         if (posExt != kNPOS)
+            firstLib.Remove(posExt, firstLib.Length());
+      }
+
       outdot << "\"All Libraries\" -> \"" << firstLib << "\" [style=invis];" << endl;
       outdot << "\"" << firstLib << "\" -> {" << endl;
 

@@ -548,10 +548,10 @@ void TDocOutput::CreateModuleIndex()
    // exists, see THtml::HaveDot().
 
    const char* title = "LibraryDependencies";
-   TString filename(title);
-   gSystem->PrependPathName(fHtml->GetOutputDir(), filename);
+   TString dotfilename(title);
+   gSystem->PrependPathName(fHtml->GetOutputDir(), dotfilename);
 
-   std::ofstream libDepDotFile(filename + ".dot");
+   std::ofstream libDepDotFile(dotfilename + ".dot");
    libDepDotFile << "digraph G {" << endl
                  << "ratio=compress;" << endl
                  << "node [fontsize=22,labeldistance=0.1];" << endl
@@ -563,11 +563,11 @@ void TDocOutput::CreateModuleIndex()
                  << "K=0.1;" << endl;
 
    TModuleDocInfo* module = 0;
-   TIter iModule(fHtml->GetListOfModules());
+   TIter iterModule(fHtml->GetListOfModules());
 
    std::stringstream sstrCluster;
    std::stringstream sstrDeps;
-   while ((module = (TModuleDocInfo*)iModule())) {
+   while ((module = (TModuleDocInfo*)iterModule())) {
       if (!module->IsSelected())
          continue;
 
@@ -623,9 +623,12 @@ void TDocOutput::CreateModuleIndex()
             TString thisLib(libs);
             if (posDepLibs != kNPOS)
                thisLib.Remove(posDepLibs, thisLib.Length());
-            Ssiz_t posExt = thisLib.First('.');
-            if (posExt != kNPOS)
-               thisLib.Remove(posExt, thisLib.Length());
+
+            {
+               Ssiz_t posExt = thisLib.First('.');
+               if (posExt != kNPOS)
+                  thisLib.Remove(posExt, thisLib.Length());
+            }
 
             if (!thisLib.Length())
                continue;
@@ -785,7 +788,6 @@ void TDocOutput::CreateModuleIndex()
             sstrCluster << "Everything depends on ";
          sstrCluster << libinfo->GetName() << "\";" << endl;
 
-         const std::set<std::string>& modules = libinfo->GetModules();
          for (std::set<std::string>::const_iterator iModule = modules.begin();
               iModule != modules.end(); ++iModule) {
             sstrCluster << "\"" << *iModule << "\" [style=filled,color=white,URL=\""
@@ -830,14 +832,14 @@ void TDocOutput::CreateModuleIndex()
    libDepDotFile << "}" << endl;
    libDepDotFile.close();
 
-   std::ofstream out(filename + ".html");
+   std::ofstream out(dotfilename + ".html");
    if (!out.good()) {
       Error("CreateModuleIndex", "Can't open file '%s.html' !",
-            filename.Data());
+            dotfilename.Data());
       return;
    }
 
-   Printf(fHtml->GetCounterFormat(), "", fHtml->GetCounter(), (filename + ".html").Data());
+   Printf(fHtml->GetCounterFormat(), "", fHtml->GetCounter(), (dotfilename + ".html").Data());
    // write out header
    WriteHtmlHeader(out, "Library Dependencies");
 
@@ -846,7 +848,7 @@ void TDocOutput::CreateModuleIndex()
 
    out << "<h1>Library Dependencies</h1>" << endl;
 
-   RunDot(filename, &out, kFdp);
+   RunDot(dotfilename, &out, kFdp);
 
    out << "<img alt=\"Library Dependencies\" class=\"classcharts\" usemap=\"#Map" << title << "\" src=\"" << title << ".gif\"/>" << endl;
 
@@ -923,16 +925,20 @@ void TDocOutput::CreateTypeIndex()
    typesList << "<dl><dd>" << endl;
 
    // make loop on data types
-   TDataType *type;
-   TIter nextType(gROOT->GetListOfTypes());
-
    std::list<std::string> typeNames;
-   while ((type = (TDataType *) nextType()))
-      // no templates ('<' and '>'), no idea why the '(' is in here...
-      if (*type->GetTitle() && !strchr(type->GetName(), '(')
-          && !( strchr(type->GetName(), '<') && strchr(type->GetName(),'>'))
-          && type->GetName())
+
+   {
+      TDataType *type;
+      TIter nextType(gROOT->GetListOfTypes());
+
+      while ((type = (TDataType *) nextType()))
+         // no templates ('<' and '>'), no idea why the '(' is in here...
+         if (*type->GetTitle() && !strchr(type->GetName(), '(')
+             && !( strchr(type->GetName(), '<') && strchr(type->GetName(),'>'))
+             && type->GetName())
             typeNames.push_back(type->GetName());
+   }
+
    sort_strlist_stricmp(typeNames);
 
    std::vector<std::string> indexChars;
@@ -950,7 +956,6 @@ void TDocOutput::CreateTypeIndex()
 
    typesList << "<ul id=\"indx\">" << endl;
 
-   nextType.Reset();
    int idx = 0;
    UInt_t currentIndexEntry = 0;
 
@@ -1286,13 +1291,13 @@ void TDocOutput::ProcessDocInDir(std::ostream& out, const char* indir,
          // convert first
          outfile.Remove(outfile.Length()-3, 3);
          outfile += "html";
-         std::ifstream in(filename);
-         std::ofstream out(outfile);
-         if (in && out) {
-            out << "<pre>"; // this is what e.g. the html directive expects
+         std::ifstream inFurther(filename);
+         std::ofstream outFurther(outfile);
+         if (inFurther && outFurther) {
+            outFurther << "<pre>"; // this is what e.g. the html directive expects
             TDocParser parser(*this);
-            parser.Convert(out, in, "../");
-            out << "</pre>";
+            parser.Convert(outFurther, inFurther, "../");
+            outFurther << "</pre>";
          }
       } else {
          if (gSystem->CopyFile(filename, outfile, kTRUE) == -1)

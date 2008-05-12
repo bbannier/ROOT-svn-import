@@ -1470,13 +1470,14 @@ void THtml::CreateListOfClasses(const char* filter)
 
          TString parentModuleName(gSystem->DirName(modulename));
          TModuleDocInfo* super = 0;
-         if (parentModuleName.Length()) {
+         if (parentModuleName.Length() && parentModuleName != ".") {
             super = (TModuleDocInfo*) fDocEntityInfo.fModules.FindObject(parentModuleName);
             if (!super) {
                // create parents:
                TString token;
                Ssiz_t pos = 0;
                while (parentModuleName.Tokenize(token, pos, "/")) {
+                  if (!token.Length() || token == ".") continue;
                   super = new TModuleDocInfo(token, super);
                   super->SetSelected(moduleSelected);
                   fDocEntityInfo.fModules.Add(super);
@@ -1743,12 +1744,13 @@ bool THtml::GetDeclImplFileName(TClass * cl, bool filesys, bool decl, TString& o
 
    R__LOCKGUARD(GetMakeClassMutex());
    TClassDocInfo* cdi = (TClassDocInfo*) fDocEntityInfo.fClasses.FindObject(cl->GetName());
-   if (!cdi
-      || (decl && (filesys && (!cdi->GetDeclFileSysName() || !cdi->GetDeclFileSysName()[0])
-                   || (!filesys && (!cdi->GetDeclFileName() || !cdi->GetDeclFileName()[0]))))
-      || (!decl && (filesys && (!cdi->GetImplFileSysName() || !cdi->GetImplFileSysName()[0])
-                   || (!filesys && (!cdi->GetImplFileName() || !cdi->GetImplFileName()[0]))))) {
-
+   // whether we need to determine the fil name
+   bool determine = (!cdi); // no cdi
+   if (!determine) determine |=  decl &&  filesys && !cdi->GetDeclFileSysName()[0];
+   if (!determine) determine |=  decl && !filesys && !cdi->GetDeclFileName()[0];
+   if (!determine) determine |= !decl &&  filesys && !cdi->GetImplFileSysName()[0];
+   if (!determine) determine |= !decl && !filesys && !cdi->GetImplFileName()[0];
+   if (determine) {
       TString name;
       TString sysname;
       if (decl) {
