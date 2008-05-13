@@ -169,6 +169,10 @@ Bool_t TProofDataSetManagerFile::BrowseDataSets(const char *group,
    Bool_t exporting = (option & kExport) ? kTRUE : kFALSE;
    Bool_t updating = (option & kQuotaUpdate) ? kTRUE : kFALSE;
 
+   // If printing is required add kReadShort to the options
+   if (printing || updating)
+      option |= kReadShort;
+
    // The last three options are mutually exclusive
    if (((Int_t)printing + (Int_t)exporting + (Int_t)updating) > 1) {
       Error("BrowseDataSets",
@@ -260,10 +264,10 @@ Bool_t TProofDataSetManagerFile::BrowseDataSets(const char *group,
                datasetMap->Add(new TObjString(datasetName), fileList);
          }
       }
-  }
-  gSystem->FreeDirectory(userDir);
+   }
+   gSystem->FreeDirectory(userDir);
 
-  return kTRUE;
+   return kTRUE;
 }
 
 //______________________________________________________________________________
@@ -743,7 +747,7 @@ Int_t TProofDataSetManagerFile::ScanDataSet(TFileCollection *dataset,
    // Parse options
    Bool_t notify = (gDebug > 0 || (option & kDebug)) ? kTRUE : kFALSE;
    // Max number of files
-   Int_t maxFiles = ((option & kMaxFiles) & filesmax > -1) ? filesmax : -1;
+   Int_t maxFiles = ((option & kMaxFiles) && (filesmax > -1)) ? filesmax : -1;
    if (maxFiles > -1 && notify)
       Info("ScanDataSet", "processing a maximum of %d files", maxFiles);
    // Reopen
@@ -794,7 +798,7 @@ Int_t TProofDataSetManagerFile::ScanDataSet(TFileCollection *dataset,
                  fileInfo->GetCurrentUrl()->GetUrl());
 
          // Check if file is still available, if touch is set actually read from the file
-         TFile *file = TFile::Open(Form("%s?filetype=rawmxredir=7", url.GetUrl()));
+         TFile *file = TFile::Open(Form("%s?filetype=raw&mxredir=2", url.GetUrl()));
          if (file) {
             if (touch) {
                // Actually access the file
