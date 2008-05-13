@@ -70,6 +70,7 @@ protected:
    void     GetQuota(const char *group, const char *user, const char *dsName, TFileCollection *dataset);
    void     PrintUsedSpace();
    Bool_t   ReadGroupConfig(const char *cf = 0);
+   static Long64_t ToBytes(const char *size = 0);
    virtual void UpdateUsedSpace();
 
 public:
@@ -109,7 +110,7 @@ public:
    virtual Int_t            ScanDataSet(const char *uri, UInt_t /*option*/ = 0);
    virtual void             ShowQuota(const char *opt);
 
-   ClassDef(TProofDataSetManager, 0)
+   ClassDef(TProofDataSetManager, 0)  // Abstract data set manager class
 };
 
 #endif

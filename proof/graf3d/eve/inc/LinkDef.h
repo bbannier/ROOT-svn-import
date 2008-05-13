@@ -151,6 +151,7 @@
 // TEveDigitSet
 #pragma link C++ class TEveDigitSet+;
 #pragma link C++ class TEveDigitSetEditor+;
+#pragma link C++ typedef TEveDigitSet::Callback_foo;
 
 // TEveQuadSet
 #pragma link C++ class TEveQuadSet+;
@@ -215,6 +216,7 @@
 #pragma link C++ class TEveCaloLego+;
 #pragma link C++ class TEveCaloLegoEditor+;
 #pragma link C++ class TEveCaloLegoGL+;
+#pragma link C++ class TEveLegoEventHandler+;
 
 // Generic configuration
 #pragma link C++ class TEveParamList;

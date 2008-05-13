@@ -616,7 +616,7 @@ endif
 endif
 
 $(STRESSITER):	$(STRESSITERO) 
-		$(LD) $(LDFLAGS) $^ $(GLIBS) $(OutPutOpt)$@
+		$(LD) $(LDFLAGS) $^ $(LIBS) $(OutPutOpt)$@
 		$(MT_EXE)
 		@echo "$@ done"
 
@@ -636,7 +636,8 @@ distclean:      clean
 .SUFFIXES: .$(SrcSuf)
 
 ###
-
+stressIterators.$(ObjSuf): stressIterators.h
+ 
 Event.$(ObjSuf): Event.h
 MainEvent.$(ObjSuf): Event.h
 

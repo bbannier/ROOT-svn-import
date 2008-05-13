@@ -49,6 +49,7 @@ class genDictionary(object) :
     self.selectionname      = 'Reflex::Selection'
     self.unnamedNamespaces = []
     self.globalNamespaceID = ''
+    self.typedefs_for_usr = []
     # The next is to avoid a known problem with gccxml that it generates a
     # references to id equal '_0' which is not defined anywhere
     self.xref['_0'] = {'elem':'Unknown', 'attrs':{'id':'_0','name':''}, 'subelems':[]}
@@ -323,6 +324,7 @@ class genDictionary(object) :
               if not self.quiet:
                 print '--->> genreflex: INFO: Using typedef %s to select class %s' % (self.genTypeName(t['id']), self.genTypeName(catt['id']))
               selec.append(catt)
+              self.typedefs_for_usr.append(t)
       if self.resolvettd :
         newselector = self.resolveSelectorTypedefs( self.selector.sel_classes )
         if newselector:
@@ -1018,7 +1020,15 @@ class genDictionary(object) :
       elif colon  : s = '::'
     return s
 #----------------------------------------------------------------------------------
-  def genTypeName(self, id, enum=False, const=False, colon=False, alltempl=False) :
+  def genTypeName(self, id, enum=False, const=False, colon=False, alltempl=False, _useCache=True,_cache={}) :
+    if _useCache:
+      key = (self,id,enum,const,colon,alltempl)
+      if _cache.has_key(key):
+        return _cache[key]
+      else:
+        ret = self.genTypeName(id,enum,const,colon,alltempl,False)
+        _cache[key] = ret
+        return ret
     elem  = self.xref[id]['elem']
     attrs = self.xref[id]['attrs']
     if self.isUnnamedType(attrs.get('demangled')) :
@@ -1065,7 +1075,8 @@ class genDictionary(object) :
       if (attrs.get('const') == '1') : s += ' const'
       if (attrs.get('volatile') == '1') : s += ' volatile'
     elif elem == 'ArrayType' :
-      arr = '[%s]' % str(int(attrs['max'])+1)
+      max = attrs['max'].rstrip('u')
+      arr = '[%s]' % str(int(max)+1)
       typ = self.genTypeName(attrs['type'], enum, const, colon)
       if typ[-1] == ']' :
         pos = typ.find('[')
@@ -1861,7 +1872,15 @@ def getTemplateArgString( cl ) :
 #---------------------------------------------------------------------------------------
 def normalizeClassAllTempl(name)   : return normalizeClass(name,True)
 def normalizeClassNoDefTempl(name) : return normalizeClass(name,False)
-def normalizeClass(name,alltempl) :
+def normalizeClass(name,alltempl,_useCache=True,_cache={}) :
+  if _useCache:
+    key = (name,alltempl)
+    if _cache.has_key(key):
+      return _cache[key]    
+    else:
+      ret = normalizeClass(name,alltempl,False)
+      _cache[key] = ret
+      return ret
   names, cnt = [], 0
   for s in string.split(name,'::') :
     if cnt == 0 : names.append(s)
@@ -1872,8 +1891,16 @@ def normalizeClass(name,alltempl) :
 #--------------------------------------------------------------------------------------
 def normalizeFragmentAllTempl(name)   : return normalizeFragment(name,True)
 def normalizeFragmentNoDefTempl(name) : return normalizeFragment(name) 
-def normalizeFragment(name,alltempl=False) :
+def normalizeFragment(name,alltempl=False,_useCache=True,_cache={}) :
   name = name.strip()
+  if _useCache:
+    key = (name,alltempl)
+    if _cache.has_key(key):
+      return _cache[key]    
+    else:
+      ret = normalizeFragment(name,alltempl,False)
+      _cache[key] = ret
+      return ret
   if name.find('<') == -1  : 
     nor =  name
     if nor.find('int') == -1: return nor
@@ -1913,7 +1940,7 @@ def normalizeFragment(name,alltempl=False) :
       sargs = []
       for i in range(len(args)) :  
         if args[i].find(defargs[i]) == -1 : sargs.append(args[i])
-      sargs = [normalizeClass(a, alltempl) for a in sargs]
+    sargs = [normalizeClass(a, alltempl) for a in sargs]
 
   nor = clname + '<' + string.join(sargs,',')
   if nor[-1] == '>' : nor += ' >' + suffix

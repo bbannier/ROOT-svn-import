@@ -57,7 +57,8 @@ TGLEventHandler::TGLEventHandler(const char *name, TGWindow *w, TObject *obj,
    fLastMouseOverPos   (-1, -1),
    fLastMouseOverShape (0),
    fActiveButtonID     (0),
-   fLastEventState     (0)
+   fLastEventState     (0),
+   fInPointerGrab      (kFALSE)
 {
    // Constructor.
 
@@ -208,17 +209,20 @@ Bool_t TGLEventHandler::HandleEvent(Event_t *event)
    // and terminate any interaction in viewer.
 
    if (event->fType == kFocusIn) {
-      if (fGLViewer->fAction != kNone) {
-         Error("TGLEventHandler::HandleEvent", "active action at focus in");
+      if (fGLViewer->fDragAction != TGLViewer::kDragNone) {
+         Error("TGLEventHandler::HandleEvent", "active drag-action at focus-in.");
+         fGLViewer->fDragAction = TGLViewer::kDragNone;
       }
-      fGLViewer->fAction = TGLViewer::kDragNone;
       if (fMouseTimer) {
          fMouseTimer->Reset();
          fMouseTimer->TurnOn();
       }
    }
    if (event->fType == kFocusOut) {
-      fGLViewer->fAction = TGLViewer::kDragNone;
+      if (fGLViewer->fDragAction != TGLViewer::kDragNone) {
+         Warning("TGLEventHandler::HandleEvent", "drag-action active at focus-out.");
+         fGLViewer->fDragAction = TGLViewer::kDragNone;
+      }
       if (fMouseTimer) {
          fMouseTimer->Reset();
          fMouseTimer->TurnOff();
@@ -236,10 +240,10 @@ Bool_t TGLEventHandler::HandleFocusChange(Event_t *event)
 
    fGLViewer->MouseIdle(0, 0, 0);
    if (event->fType == kFocusIn) {
-      if (fGLViewer->fAction != kNone) {
-         Error("TGLEventHandler::HandleEvent", "active action at focus in");
+      if (fGLViewer->fDragAction != TGLViewer::kDragNone) {
+         Error("TGLEventHandler::HandleFocusChange", "active drag-action at focus-in.");
+         fGLViewer->fDragAction = TGLViewer::kDragNone;
       }
-      fGLViewer->fAction = TGLViewer::kDragNone;
       if (fMouseTimer) {
          fMouseTimer->Reset();
          fMouseTimer->TurnOn();
@@ -247,7 +251,10 @@ Bool_t TGLEventHandler::HandleFocusChange(Event_t *event)
       fGLViewer->Activated();
    }
    if (event->fType == kFocusOut) {
-      fGLViewer->fAction = TGLViewer::kDragNone;
+      if (fGLViewer->fDragAction != TGLViewer::kDragNone) {
+         Warning("TGLEventHandler::HandleFocusChange", "drag-action active at focus-out.");
+         fGLViewer->fDragAction = TGLViewer::kDragNone;
+      }
       if (fMouseTimer) {
          fMouseTimer->Reset();
          fMouseTimer->TurnOff();
@@ -265,10 +272,10 @@ Bool_t TGLEventHandler::HandleCrossing(Event_t *event)
 
    fGLViewer->MouseIdle(0, 0, 0);
    if (event->fType == kEnterNotify) {
-      if (fGLViewer->fAction != kNone) {
-         Error("TGLEventHandler::HandleEvent", "active action at focus in");
+      if (fGLViewer->fDragAction != TGLViewer::kDragNone) {
+         Error("TGLEventHandler::HandleCrossing", "active drag-action at enter-notify.");
+         fGLViewer->fDragAction = TGLViewer::kDragNone;
       }
-      fGLViewer->fAction = TGLViewer::kDragNone;
       if (fMouseTimer) {
          fMouseTimer->Reset();
          fMouseTimer->TurnOn();
@@ -277,7 +284,10 @@ Bool_t TGLEventHandler::HandleCrossing(Event_t *event)
       fGLViewer->Activated();
    }
    if (event->fType == kLeaveNotify) {
-      fGLViewer->fAction = TGLViewer::kDragNone;
+      if (fGLViewer->fDragAction != TGLViewer::kDragNone) {
+         Warning("TGLEventHandler::HandleCrossing", "drag-action active at leave-notify.");
+         fGLViewer->fDragAction = TGLViewer::kDragNone;
+      }
       if (fMouseTimer) {
          fMouseTimer->Reset();
          fMouseTimer->TurnOff();
@@ -307,7 +317,7 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
       // Allow a single action/button down/up pairing - block others
       fGLViewer->MouseIdle(0, 0, 0);
       fGLViewer->Activated();
-      if (fGLViewer->GetAction() != kNone)
+      if (fGLViewer->fDragAction != TGLViewer::kDragNone)
          return kFALSE;
       eventSt.fX = event->fX;
       eventSt.fY = event->fY;
@@ -336,13 +346,13 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
       // Record active button for release
       fActiveButtonID = event->fCode;
 
-      if (fGLViewer->GetAction() == TGLViewer::kDragNone && fGLViewer->fCurrentOvlElm)
+      if (fGLViewer->fDragAction == TGLViewer::kDragNone && fGLViewer->fCurrentOvlElm)
       {
          if (fGLViewer->fCurrentOvlElm->Handle(*fGLViewer->fRnrCtx, fGLViewer->fOvlSelRec, event))
          {
             handled     = kTRUE;
             grabPointer = kTRUE;
-            fGLViewer->fAction = TGLViewer::kDragOverlay;
+            fGLViewer->fDragAction = TGLViewer::kDragOverlay;
             fGLViewer->RequestDraw();
          }
       }
@@ -371,7 +381,7 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
                   }
                }
                if ( ! handled) {
-                  fGLViewer->fAction = TGLViewer::kDragCameraRotate;
+                  fGLViewer->fDragAction = TGLViewer::kDragCameraRotate;
                   grabPointer = kTRUE;
                   if (fMouseTimer) {
                      fMouseTimer->TurnOff();
@@ -383,7 +393,7 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
                // MID mouse button
             case kButton2:
             {
-               fGLViewer->fAction = TGLViewer::kDragCameraTruck;
+               fGLViewer->fDragAction = TGLViewer::kDragCameraTruck;
                grabPointer = kTRUE;
                break;
             }
@@ -401,32 +411,46 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
                      }
                      Int_t    x, y;
                      Window_t childdum;
-                     gVirtualX->TranslateCoordinates(fGLViewer->fGLWindow->GetId(),
+                     gVirtualX->TranslateCoordinates(fGLViewer->fGLWidget->GetId(),
                                                      gClient->GetDefaultRoot()->GetId(),
                                                      event->fX, event->fY, x, y, childdum);
                      selected->InvokeContextMenu(*fGLViewer->fContextMenu, x, y);
                   }
                } else {
-                  fGLViewer->fAction = TGLViewer::kDragCameraDolly;
+                  fGLViewer->fDragAction = TGLViewer::kDragCameraDolly;
                   grabPointer = kTRUE;
                }
                break;
             }
          }
       }
+
+      if (grabPointer)
+      {
+         gVirtualX->GrabPointer(fGLViewer->GetGLWidget()->GetContId(),
+                                kButtonPressMask | kButtonReleaseMask | kPointerMotionMask,
+                                kNone, kNone, kTRUE, kFALSE);
+         fInPointerGrab = kTRUE;
+      }
    }
    // Button UP
    else if (event->fType == kButtonRelease)
    {
-      if (fGLViewer->fAction == TGLViewer::kDragOverlay)
+      if (fInPointerGrab)
+      {
+         gVirtualX->GrabPointer(0, 0, 0, 0, kFALSE);
+         fInPointerGrab = kFALSE;
+      }
+
+      if (fGLViewer->fDragAction == TGLViewer::kDragOverlay)
       {
          fGLViewer->fCurrentOvlElm->Handle(*fGLViewer->fRnrCtx, fGLViewer->fOvlSelRec, event);
          fGLViewer->OverlayDragFinished();
          if (fGLViewer->RequestOverlaySelect(event->fX, event->fY))
             fGLViewer->RequestDraw();
       }
-      else if (fGLViewer->fAction >= TGLViewer::kDragCameraRotate &&
-               fGLViewer->fAction <= TGLViewer::kDragCameraDolly)
+      else if (fGLViewer->fDragAction >= TGLViewer::kDragCameraRotate &&
+               fGLViewer->fDragAction <= TGLViewer::kDragCameraDolly)
       {
          fGLViewer->RequestDraw(TGLRnrCtx::kLODHigh);
       }
@@ -452,7 +476,7 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
             break;
          }
       }
-      fGLViewer->fAction = TGLViewer::kDragNone;
+      fGLViewer->fDragAction = TGLViewer::kDragNone;
       if (fGLViewer->fGLDevice != -1)
          gGLManager->MarkForDirectCopy(fGLViewer->fGLDevice, kFALSE);
       if ((event->fX == eventSt.fX) &&
@@ -695,19 +719,19 @@ Bool_t TGLEventHandler::HandleMotion(Event_t * event)
    Bool_t mod1   = event->fState & kKeyControlMask;
    Bool_t mod2   = event->fState & kKeyShiftMask;
 
-   if (fGLViewer->fAction == TGLViewer::kDragNone)
+   if (fGLViewer->fDragAction == TGLViewer::kDragNone)
    {
       changed = fGLViewer->RequestOverlaySelect(event->fX, event->fY);
       if (fGLViewer->fCurrentOvlElm)
          processed = fGLViewer->fCurrentOvlElm->Handle(*fGLViewer->fRnrCtx, fGLViewer->fOvlSelRec, event);
       lod = TGLRnrCtx::kLODHigh;
-   } else if (fGLViewer->fAction == TGLViewer::kDragCameraRotate) {
+   } else if (fGLViewer->fDragAction == TGLViewer::kDragCameraRotate) {
       processed = fGLViewer->CurrentCamera().Rotate(xDelta, -yDelta, mod1, mod2);
-   } else if (fGLViewer->fAction == TGLViewer::kDragCameraTruck) {
+   } else if (fGLViewer->fDragAction == TGLViewer::kDragCameraTruck) {
       processed = fGLViewer->CurrentCamera().Truck(xDelta, -yDelta, mod1, mod2);
-   } else if (fGLViewer->fAction == TGLViewer::kDragCameraDolly) {
+   } else if (fGLViewer->fDragAction == TGLViewer::kDragCameraDolly) {
       processed = fGLViewer->CurrentCamera().Dolly(xDelta, mod1, mod2);
-   } else if (fGLViewer->fAction == TGLViewer::kDragOverlay) {
+   } else if (fGLViewer->fDragAction == TGLViewer::kDragOverlay) {
       processed = fGLViewer->fCurrentOvlElm->Handle(*fGLViewer->fRnrCtx, fGLViewer->fOvlSelRec, event);
    }
 
@@ -732,7 +756,7 @@ Bool_t TGLEventHandler::HandleTimer(TTimer *t)
    // If mouse delay timer times out emit signal.
 
    if (t != fMouseTimer) return kTRUE;
-   if (fGLViewer->fAction == TGLViewer::kDragNone) {
+   if (fGLViewer->fDragAction == TGLViewer::kDragNone) {
       if (fLastMouseOverPos != fLastPos) {
          fGLViewer->RequestSelect(fLastPos.fX, fLastPos.fY, kFALSE);
          if (fLastMouseOverShape != fGLViewer->fSelRec.GetPhysShape()) {

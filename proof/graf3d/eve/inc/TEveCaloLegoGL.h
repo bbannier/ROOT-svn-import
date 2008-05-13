@@ -22,9 +22,6 @@ class TEveCaloLego;
 
 class TEveCaloLegoGL : public TGLObject
 {
-public:
-   enum EMode { kDetailed, k2D };
-
 private:
    TEveCaloLegoGL(const TEveCaloLegoGL&);            // Not implemented
    TEveCaloLegoGL& operator=(const TEveCaloLegoGL&); // Not implemented
@@ -33,27 +30,23 @@ protected:
    Int_t   GetGridStep(Int_t axId, const TAxis* ax, TGLRnrCtx &rnrCtx) const;
 
    void    SetFont(Float_t axis_len, TGLRnrCtx &rnrCtx) const;
-   void    RnrText(const char* txt, Float_t x, Float_t y, Float_t z, 
+   void    RnrText(const char* txt, Float_t x, Float_t y, Float_t z,
                    const TGLFont &font, Int_t mode) const;
 
-   void    DrawZAxis(TGLRnrCtx &rnrCtx, Float_t x0, Float_t x1, Float_t y0, Float_t y1) const;
-   void    DrawZAxisSimplified(TGLRnrCtx &rnrCtx, Float_t x0, Float_t y0) const;
-   void    DrawXYAxis(TGLRnrCtx &rnrCtx, Float_t x0, Float_t x1, Float_t y0, Float_t y1) const;
-   void    DrawHistBase(TGLRnrCtx &rnrCtx) const;
+   void    DrawZScales3D(TGLRnrCtx &rnrCtx, Float_t x0, Float_t x1, Float_t y0, Float_t y1) const;
+   void    DrawZScales2D(TGLRnrCtx &rnrCtx, Float_t x0, Float_t y0) const;
+   void    DrawXYScales(TGLRnrCtx &rnrCtx, Float_t x0, Float_t x1, Float_t y0, Float_t y1) const;
+   void    DrawHistBase(TGLRnrCtx &rnrCtx, Bool_t is3D) const;
 
-   void    Draw2D(TGLRnrCtx & rnrCt) const;
-   void    Draw2DOrig() const;
-   void    Draw2DScaled(Int_t nEta, Int_t nPhi) const;
-   void    DrawDetailed(TGLRnrCtx & rnrCtx) const;
+   void    DrawCells2D(TGLRnrCtx & rnrCt) const;
 
-   void    MakeQuad(Float_t x, Float_t y, Float_t z, 
+   void    DrawCells3D(TGLRnrCtx & rnrCtx) const;
+   void    MakeQuad(Float_t x, Float_t y, Float_t z,
                     Float_t xw, Float_t yw, Float_t zh) const;
    void    MakeDisplayList() const;
 
    mutable Bool_t                   fDLCacheOK;
    mutable std::map< Int_t, UInt_t> fDLMap;
-
-   mutable EMode                    fMode;
 
    TEveCaloLego            *fM;  // Model object.
 
@@ -61,16 +54,20 @@ protected:
    mutable TGLFont          fSymbolFont;
    mutable Int_t            fFontSize; // font size in pixels
 
-   const   Float_t          fTMSize; // tick mark size
+   const   Float_t          fTMSize; //  XY tick-mark size in world coordinates
 
    // grid density modes
-   Float_t                  fMinBinWidth;
    Int_t                    fNBinSteps;
    Int_t*                   fBinSteps;
+
+   // event handling
+   Int_t                    fTowerPicked;
 
 public:
    TEveCaloLegoGL();
    virtual ~TEveCaloLegoGL();
+
+   void   SetTowerPicked(Int_t t) { fTowerPicked=t; }
 
    virtual Bool_t SetModel(TObject* obj, const Option_t* opt=0);
 
@@ -85,6 +82,7 @@ public:
    virtual Bool_t SupportsSecondarySelect() const { return kTRUE; }
    virtual void ProcessSelection(TGLRnrCtx & rnrCtx, TGLSelectRecord & rec);
 
+ 
    ClassDef(TEveCaloLegoGL, 0); // GL renderer class for TEveCaloLego.
 };
 

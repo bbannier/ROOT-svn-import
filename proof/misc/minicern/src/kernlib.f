@@ -56,26 +56,28 @@
 
       SUBROUTINE UBUNCH (MS,MT,NCHP)
       DIMENSION MS(99), MT(99), NCHP(9)
-      data iblan1/x'20202020'/
-      data mask1/x'000000ff'/
+*      data iblan1/x'20202020'/
+*      data mask1/x'000000ff'/
+      data iblan1/538976288/
+      data mask1/255/
       NCH = NCHP(1)
       IF (NCH) 91,39,11
-   11 NWT = ishftr (NCH,2)
-      NTRAIL = AND (NCH,3)
+   11 NWT = ISHFT (NCH,-2)
+      NTRAIL = IAND (NCH,3)
       JS = 0
       IF (NWT.EQ.0) GO TO 31
       DO 24 JT=1,NWT
-      MT(JT) = OR (OR (OR (
-     + AND(MS(JS+1),MASK1),
-     + LSHIFT (AND(MS(JS+2),MASK1), 8)),
-     + LSHIFT (IAND(MS(JS+3),MASK1),16)),
-     + LSHIFT (MS(JS+4), 24) )
+      MT(JT) = IOR (IOR (IOR (
+     + IAND(MS(JS+1),MASK1),
+     + ISHFT (IAND(MS(JS+2),MASK1), 8)),
+     + ISHFT (IAND(MS(JS+3),MASK1),16)),
+     + ISHFT (MS(JS+4), 24) )
    24 JS = JS + 4
       IF (NTRAIL.EQ.0) RETURN
    31 MWD = IBLAN1
       JS = NCH
       DO 34 JT=1,NTRAIL
-      MWD = OR (LSHIFT(MWD,8), AND(MS(JS),MASK1))
+      MWD = IOR (ISHFT(MWD,8), IAND(MS(JS),MASK1))
    34 JS = JS - 1
       MT(NWT+1) = MWD
    39 RETURN
@@ -117,11 +119,7 @@
 *-------------------------------------------------------------------------------
 
       FUNCTION JBIT (IZW,IZP)
-      IAND (IZV,IZW) = AND (IZV, IZW)
-      IOR (IZV,IZW) = OR (IZV, IZW)
-      IEOR (IZV,IZW) = XOR (IZV, IZW)
-      ISHFTL (IZW,NZB) = LSHIFT (IZW,NZB)
-      JBIT = IAND (ISHFTR(IZW, IZP-1), 1)
+      JBIT = IAND (ISHFT(IZW, -(IZP-1)), 1)
       END
 
 *-------------------------------------------------------------------------------
@@ -129,11 +127,7 @@
       FUNCTION JBYT (IZW,IZP,NZB)
       PARAMETER (NBITPW=32)
       PARAMETER (NCHAPW=4)
-      IAND (IZV,IZW) = AND (IZV, IZW)
-      IOR (IZV,IZW) = OR (IZV, IZW)
-      IEOR (IZV,IZW) = XOR (IZV, IZW)
-      ISHFTL (IZW,NZB) = LSHIFT (IZW,NZB)
-      JBYT = ISHFTR(ISHFTL(IZW,NBITPW+1-IZP-NZB), NBITPW-NZB)
+      JBYT = ISHFT(ISHFT(IZW,NBITPW+1-IZP-NZB), -(NBITPW-NZB))
       END
 
 *-------------------------------------------------------------------------------
@@ -181,33 +175,21 @@
       PARAMETER (NBITPW=32)
       PARAMETER (NCHAPW=4)
       PARAMETER (IALL11 = -1)
-      IAND (IZV,IZW) = AND (IZV, IZW)
-      IOR (IZV,IZW) = OR (IZV, IZW)
-      IEOR (IZV,IZW) = XOR (IZV, IZW)
-      ISHFTL (IZW,NZB) = LSHIFT (IZW,NZB)
-      MSK = ISHFTR (IALL11, NBITPW-NZB)
-      IZW = IOR ( IAND (IZW, NOT(ISHFTL(MSK,IZP-1)))
-     +, ISHFTL(IAND(IT,MSK),IZP-1))
+      MSK = ISHFT (IALL11, -(NBITPW-NZB))
+      IZW = IOR ( IAND (IZW, NOT(ISHFT(MSK,IZP-1)))
+     +, ISHFT(IAND(IT,MSK),IZP-1))
       END
 
 *-------------------------------------------------------------------------------
 
       SUBROUTINE SBIT1 (IZW,IZP)
-      IAND (IZV,IZW) = AND (IZV, IZW)
-      IOR (IZV,IZW) = OR (IZV, IZW)
-      IEOR (IZV,IZW) = XOR (IZV, IZW)
-      ISHFTL (IZW,NZB) = LSHIFT (IZW,NZB)
-      IZW = IOR (IZW, ISHFTL(1,IZP-1))
+      IZW = IOR (IZW, ISHFT(1,IZP-1))
       END
 
 *-------------------------------------------------------------------------------
 
       SUBROUTINE SBIT0 (IZW,IZP)
-      IAND (IZV,IZW) = AND (IZV, IZW)
-      IOR (IZV,IZW) = OR (IZV, IZW)
-      IEOR (IZV,IZW) = XOR (IZV, IZW)
-      ISHFTL (IZW,NZB) = LSHIFT (IZW,NZB)
-      IZW = IAND (IZW, NOT(ISHFTL(1,IZP-1)) )
+      IZW = IAND (IZW, NOT(ISHFT(1,IZP-1)) )
       END
 
 *-------------------------------------------------------------------------------
@@ -325,6 +307,12 @@
 
 *-------------------------------------------------------------------------------
 
+      SUBROUTINE UCOPYI (IA,IB,N)
+      DIMENSION IA(*),IB(*)
+      IF (N.EQ.0) RETURN
+         DO 21 I=1,N
+   21 IB(I)=IA(I)
+      END
       SUBROUTINE UCOPY (A,B,N)
       DIMENSION A(*),B(*)
       IF (N.EQ.0) RETURN
@@ -339,10 +327,7 @@
       PARAMETER (NBITPW=32)
       PARAMETER (NCHAPW=4)
       PARAMETER (IALL11 = -1)
-      IAND (IZV,IZW) = AND (IZV, IZW)
-      IOR (IZV,IZW) = OR (IZV, IZW)
-      IEOR (IZV,IZW) = XOR (IZV, IZW)
-      ISHFTL (IZW,NZB) = LSHIFT (IZW,NZB)
+
       JTH = JTHP(1)
       NINT = NINTP(1)
       IF (NINT.LE.0) RETURN
@@ -353,7 +338,7 @@
       MSKA = 1
       GO TO 12
    11 NPWD = NBITS(2)
-      MSKA = ISHFTR (IALL11, NBITPW-NZB)
+      MSKA = ISHFT (IALL11, -(NBITPW-NZB))
    12 JBV = 1
       JIV = 0
       IF (JTH.LT.2) GO TO 21
@@ -362,7 +347,7 @@
       IF (JPOS.EQ.0) GO TO 21
       NR = JPOS*NZB
       JIVE = NPWD - JPOS
-      IZW = ISHFTR (MBV(JBV), NR)
+      IZW = ISHFT (MBV(JBV), -NR)
       GO TO 22
    21 JIVE = JIV + NPWD
       IZW = MBV(JBV)
@@ -370,7 +355,7 @@
    24 JIV = JIV + 1
       MIV(JIV) = IAND (MSKA,IZW)
       IF (JIV.EQ.JIVE) GO TO 27
-      IZW = ISHFTR (IZW, NZB)
+      IZW = ISHFT (IZW, -NZB)
       GO TO 24
    27 IF (JIV.EQ.NINT) RETURN
       JBV = JBV + 1

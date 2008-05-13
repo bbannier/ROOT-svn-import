@@ -738,7 +738,7 @@ void TFormula::Analyze(const char *schain, Int_t &err, Int_t offset)
          if (j>2) {
             if (chaine[j-2] == 'e') {
                Bool_t isrightdecimal = 1;
-               int k;
+
                for(k=j-3; k>=0 && isrightdecimal; --k) {
                   t = chaine[k];
                   isrightdecimal = isrightdecimal && (strchr("0123456789.",t)!=0);
@@ -1144,7 +1144,7 @@ void TFormula::Analyze(const char *schain, Int_t &err, Int_t offset)
                      Bool_t isHexa = kFALSE;
                      Bool_t hasExpo= kFALSE;
                      if ((chaine(0,2)=="0x")||(chaine(0,2)=="0X")) isHexa=kTRUE;
-                     for (Int_t j=0; j<chaine.Length() && err==0; j++) {
+                     for (j=0; j<chaine.Length() && err==0; j++) {
                         t=chaine[j];
                         if (!isHexa) {
                            if (j>0 && (chaine(j,1)=="e" || chaine(j,2)=="e+" || chaine(j,2)=="e-")) {
@@ -1186,7 +1186,7 @@ void TFormula::Analyze(const char *schain, Int_t &err, Int_t offset)
                         vafConst = (Double_t) vafConst2;}
                         fExpr[fNoper] = chaine;
                         k = -1;
-                        for (Int_t j=0;j<fNconst;j++) {
+                        for (j=0;j<fNconst;j++) {
                            if (vafConst == fConst[j] ) k= j;
                         }
                         if ( k < 0) {  k = fNconst; fNconst++; fConst[k] = vafConst; }
@@ -1814,7 +1814,7 @@ void TFormula::Analyze(const char *schain, Int_t &err, Int_t offset)
                            SetAction(fNoper,actionCode,actionParam);
                            fNoper++;
                         }
- 
+
                      } else if (chaine(0,6) == "atan2(") {
                         compt = 6; nomb = 0; virgule = 0; nest=0;
                         while(compt != lchain) {
@@ -2050,12 +2050,12 @@ Int_t TFormula::Compile(const char *expression)
    TString chaine = GetTitle();
 
    if (chaine.Contains(";")) {
-      char *ctemp = new char[chaine.Length()+1];
-      strcpy(ctemp,chaine.Data());
-      char *semicol = (char*)strstr(ctemp,";");
+      char *sctemp = new char[chaine.Length()+1];
+      strcpy(sctemp,chaine.Data());
+      char *semicol = (char*)strstr(sctemp,";");
       if (semicol) *semicol = 0;
-      chaine = ctemp;
-      delete [] ctemp;
+      chaine = sctemp;
+      delete [] sctemp;
    }
 //  chaine.ToLower();
 
@@ -2530,19 +2530,19 @@ Double_t TFormula::EvalParOld(const Double_t *x, const Double_t *uparams)
          case katanh: if (TMath::Abs(tab[pos-1]) > 1) {tab[pos-1] = 0;} // indetermination
                         else tab[pos-1] = TMath::ATanH(tab[pos-1]); continue;
          case katan2: pos--; tab[pos-1] = TMath::ATan2(tab[pos-1],tab[pos]); continue;
- 
+
          case kfmod : pos--; tab[pos-1] = fmod(tab[pos-1],tab[pos]); continue;
          case kpow  : pos--; tab[pos-1] = TMath::Power(tab[pos-1],tab[pos]); continue;
          case ksq   : tab[pos-1] = tab[pos-1]*tab[pos-1]; continue;
          case ksqrt : tab[pos-1] = TMath::Sqrt(TMath::Abs(tab[pos-1])); continue;
- 
+
          case kstrstr : pos2 -= 2; pos-=2; pos++;
                         if (strstr(tab2[pos2],tab2[pos2+1])) tab[pos-1]=1;
                         else tab[pos-1]=0; continue;
 
          case kmin : pos--; tab[pos-1] = TMath::Min(tab[pos-1],tab[pos]); continue;
          case kmax : pos--; tab[pos-1] = TMath::Max(tab[pos-1],tab[pos]); continue;
- 
+
          case klog  : if (tab[pos-1] > 0) tab[pos-1] = TMath::Log(tab[pos-1]);
                         else {tab[pos-1] = 0;} //{indetermination }
                         continue;
@@ -2555,7 +2555,7 @@ Double_t TFormula::EvalParOld(const Double_t *x, const Double_t *uparams)
                         continue;
 
          case kpi   : pos++; tab[pos-1] = TMath::ACos(-1); continue;
- 
+
          case kabs  : tab[pos-1] = TMath::Abs(tab[pos-1]); continue;
          case ksign : if (tab[pos-1] < 0) tab[pos-1] = -1; else tab[pos-1] = 1; continue;
          case kint  : tab[pos-1] = Double_t(Int_t(tab[pos-1])); continue;
@@ -2613,7 +2613,7 @@ Double_t TFormula::EvalParOld(const Double_t *x, const Double_t *uparams)
 
             } else if (op == 2 && tab[pos-1] ) {
                // ||: skip the right part if the left part is already true
- 
+
                skip = kTRUE;
 
                // Preserve the existing behavior (i.e. the result of a||b is
@@ -2706,7 +2706,7 @@ Double_t TFormula::EvalParOld(const Double_t *x, const Double_t *uparams)
          case kxpol: R__POLY(0);
          case kypol: R__POLY(1);
          case kzpol: R__POLY(2);
- 
+
          case kDefinedVariable : {
             if (!precalculated) {
                precalculated = 1;
@@ -2715,7 +2715,7 @@ Double_t TFormula::EvalParOld(const Double_t *x, const Double_t *uparams)
             pos++; tab[pos-1] = param_calc[(oper & kTFOperMask)];
             continue;
          }
- 
+
          case kDefinedString : {
             int param = (oper & kTFOperMask);
             if (!precalculated_str) {
@@ -2757,7 +2757,7 @@ Double_t TFormula::EvalParOld(const Double_t *x, const Double_t *uparams)
             Double_t ret;
             method->Execute(args,ret);
             tab[pos-1] = ret; // check for the correct conversion!
- 
+
             continue;
          };
       }
@@ -2873,7 +2873,8 @@ TString TFormula::GetExpFormula(Option_t *option) const
             offset = -nargs;
             // The function name contains return type and parameters types we need
             // to trim them.
-            for(int i=0, depth=0;i<funcname.Length();++i) {
+            int depth;
+            for(i=0, depth=0;i<funcname.Length();++i) {
                switch (funcname[i]) {
                   case '<':
                      ++depth; break;
@@ -2905,7 +2906,7 @@ TString TFormula::GetExpFormula(Option_t *option) const
       if (spos > 0) ret = tab[spos-1];
       delete[] tab;
       delete[] ismulti;
-      
+
       //if option "p" is specified, return the real values of parameters instead of [0]
       TString opt = option;
       opt.ToLower();
@@ -2931,7 +2932,7 @@ TString TFormula::GetExpFormula(Option_t *option) const
 const TObject* TFormula::GetLinearPart(Int_t i)
 {
    // Return linear part.
-   
+
    if (!fLinearParts.IsEmpty())
       return fLinearParts.UncheckedAt(i);
    return 0;
@@ -3577,9 +3578,9 @@ void TFormula::Optimize()
             i+=2;
             fOperOffset[i].fType0=actionparam;
             fOperOffset[i].fOffset0=GetActionParamOptimized(i-1);
-            Int_t offset =  int(fConst[fOperOffset[i].fOffset0]+0.4);
-            fOperOffset[i].fOffset0=offset;
-            Int_t nparmax = offset+fPredefined[i]->fNParameters;
+            Int_t offset2 =  int(fConst[fOperOffset[i].fOffset0]+0.4);
+            fOperOffset[i].fOffset0=offset2;
+            Int_t nparmax = offset2+fPredefined[i]->fNParameters;
             if (nparmax>fNpar){ // increase expected number of parameters
                fNpar=nparmax;
             }
@@ -4213,9 +4214,8 @@ void TFormula::SetMaxima(Int_t maxop, Int_t maxpar, Int_t maxconst)
    // very complex formula, eg TFormula::SetMaxima(100000,1000,1000000);
    // If you process many functions with a small number of operations/parameters
    // you may gain some memory and performance by decreasing these values.
-   
+
    gMAXOP    = TMath::Max(10,maxop);
    gMAXPAR   = TMath::Max(10,maxpar);
    gMAXCONST = TMath::Max(10,maxconst);
-}   
-   
+}

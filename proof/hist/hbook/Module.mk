@@ -19,13 +19,10 @@ HBOOKDO      := $(HBOOKDS:.cxx=.o)
 HBOOKDH      := $(HBOOKDS:.cxx=.h)
 
 HBOOKH       := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
-HBOOKS1      := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-HBOOKS2      := $(MODDIRS)/hntvar2.f
-HBOOKO1      := $(HBOOKS1:.cxx=.o)
-HBOOKO2      := $(HBOOKS2:.f=.o)
-HBOOKO       := $(HBOOKO1) $(HBOOKO2)
+HBOOKS       := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
+HBOOKO       := $(HBOOKS:.cxx=.o)
 
-HBOOKDEP     := $(HBOOKS1:.cxx=.d) $(HBOOKDO:.o=.d)
+HBOOKDEP     := $(HBOOKO:.o=.d) $(HBOOKDO:.o=.d)
 
 HBOOKLIB     := $(LPATH)/libHbook.$(SOEXT)
 HBOOKMAP     := $(HBOOKLIB:.$(SOEXT)=.rootmap)
@@ -46,9 +43,8 @@ include/%.h:    $(HBOOKDIRI)/%.h
 
 $(HBOOKLIB):    $(HBOOKO) $(HBOOKDO) $(ORDER_) $(MAINLIBS) $(HBOOKLIBDEP)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
-		   "$(SOFLAGS)" libHbook.$(SOEXT) $@ "$(HBOOKO1) $(HBOOKDO)" \
-		   "$(HBOOKO2) $(CERNLIBDIR) $(CERNLIBS) \
-		    $(SHIFTLIBDIR) $(SHIFTLIB) $(HBOOKLIBEXTRA) $(F77LIBS)"
+		   "$(SOFLAGS)" libHbook.$(SOEXT) $@ "$(HBOOKO) $(HBOOKDO)" \
+		   "$(HBOOKLIBEXTRA)"
 
 $(HBOOKDS):     $(HBOOKH) $(HBOOKL) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."

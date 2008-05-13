@@ -110,7 +110,7 @@ $(GENVECTORMAP): $(RLIBMAP) $(MAKEFILEDEP) $(GENVECTORL) $(GENVECTORLINC) $(GENV
 all-$(MODNAME): $(GENVECTORLIB) $(GENVECTORMAP)
 
 clean-$(MODNAME):
-		@rm -f $(GENVECTORO) $(GENVECTORDO)
+		@rm -f $(GENVECTORO) $(GENVECTORDO) $(GENVECTORDO32)
 
 clean::         clean-$(MODNAME)
 
@@ -119,6 +119,7 @@ distclean-$(MODNAME): clean-$(MODNAME)
 		   $(GENVECTORDH) $(GENVECTORDH32) \
 		   $(GENVECTORLIB) $(GENVECTORMAP)
 		@rm -rf include/Math
+		@cd $(GENVECTORDIR)/test; make distclean
 
 distclean::     distclean-$(MODNAME)
 

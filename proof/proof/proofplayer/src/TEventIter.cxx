@@ -219,7 +219,10 @@ Long64_t TEventIterUnit::GetNextEvent()
       return -1;
 
    while (fElem == 0 || fCurrent == 0) {
-      fElem = fDSet->Next();
+
+      if (!(fElem = fDSet->Next()))
+         return -1;
+
       if (!fElem->TestBit(TDSetElement::kEmpty)) {
          Error("GetNextEvent", "data element must be set to kEmtpy");
          return -1;
@@ -349,7 +352,7 @@ Long64_t TEventIterObj::GetNextEvent()
 
       // Position within this element. TODO: more efficient?
       fNextKey->Reset();
-      for(fElemCur = -1; fElemCur < fElemFirst-1 ; fElemCur++, fNextKey->Next());
+      for(fElemCur = -1; fElemCur < fElemFirst-1 ; fElemCur++, fNextKey->Next()) { }
    }
 
    --fElemNum;

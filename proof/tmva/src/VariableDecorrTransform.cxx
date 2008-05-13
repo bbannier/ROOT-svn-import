@@ -139,7 +139,7 @@ void TMVA::VariableDecorrTransform::GetSQRMats( TTree* tr )
 
       GetCovarianceMatrix( tr, (i==0),  covMat );
 
-      fDecorrMatrix[i] = Tools::GetSQRootMatrix( covMat );
+      fDecorrMatrix[i] = gTools().GetSQRootMatrix( covMat );
       if (fDecorrMatrix[i] == 0) 
          fLogger << kFATAL << "<GetSQRMats> Zero pointer returned for SQR matrix" << Endl;
    }
@@ -195,13 +195,13 @@ void TMVA::VariableDecorrTransform::GetCovarianceMatrix( TTree* tr, Bool_t isSig
          ic++; // count used events
          for (ivar=0; ivar<nvar; ivar++) {
 
-            Double_t xi = ( (IsNormalised()) ? Tools::NormVariable( GetEventRaw().GetVal(ivar), xmin(ivar), xmax(ivar) )
+            Double_t xi = ( (IsNormalised()) ? gTools().NormVariable( GetEventRaw().GetVal(ivar), xmin(ivar), xmax(ivar) )
                             : GetEventRaw().GetVal(ivar) );
             vec(ivar) += xi;
             mat2(ivar, ivar) += (xi*xi);
 
             for (jvar=ivar+1; jvar<nvar; jvar++) {
-               Double_t xj =  ( (IsNormalised()) ? Tools::NormVariable( GetEventRaw().GetVal(jvar), xmin(ivar), xmax(ivar) )
+               Double_t xj =  ( (IsNormalised()) ? gTools().NormVariable( GetEventRaw().GetVal(jvar), xmin(ivar), xmax(ivar) )
                                 : GetEventRaw().GetVal(jvar) );
                mat2(ivar, jvar) += (xi*xj);
                mat2(jvar, ivar) = mat2(ivar, jvar); // symmetric matrix
@@ -289,17 +289,16 @@ void TMVA::VariableDecorrTransform::MakeFunction( std::ostream& fout, const TStr
 {
    // creates a decorrelation function
    TMatrixD* mat = fDecorrMatrix[0];
-   if (part==1) {
+   if (part == 1) {
       fout << std::endl;
       fout << "   double fSigTF["<<mat->GetNrows()<<"]["<<mat->GetNcols()<<"];" << std::endl;
       fout << "   double fBgdTF["<<mat->GetNrows()<<"]["<<mat->GetNcols()<<"];" << std::endl;
       fout << std::endl;
    }
 
-   if (part==2) {
+   if (part == 2) {
       fout << "inline void " << fcncName << "::InitTransform()" << std::endl;
       fout << "{" << std::endl;
-      TMatrixD* mat = fDecorrMatrix[0];
       for (int i=0; i<mat->GetNrows(); i++) {
          for (int j=0; j<mat->GetNcols(); j++) {
             fout << "   fSigTF["<<i<<"]["<<j<<"] = " << std::setprecision(12) << (*mat)[i][j] << ";" << std::endl;

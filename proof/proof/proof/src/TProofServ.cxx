@@ -33,6 +33,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <stdlib.h>
 
 #if (defined(__FreeBSD__) && (__FreeBSD__ < 4)) || \
     (defined(__APPLE__) && (!defined(MAC_OS_X_VERSION_10_3) || \
@@ -3068,7 +3069,7 @@ void TProofServ::RemoveQuery(const char *queryref)
    // Remove everything about query queryref.
 
    PDB(kGlobal, 1)
-      Info("RemoveQuery", "Enter");
+      Info("RemoveQuery", "Enter: %s", queryref);
 
    // Parse reference string
    Int_t qry = -1;
@@ -3536,10 +3537,14 @@ void TProofServ::HandleProcess(TMessage *mess)
 
          // Set input
          TIter next(input);
-         for (TObject *o; (o = next()); ) {
+         TObject *o = 0;
+         while ((o = next())) {
             PDB(kGlobal, 2) Info("HandleProcess", "adding: %s", o->GetName());
             fPlayer->AddInput(o);
          }
+
+         // Remove the list of the missing files from the original list, if any
+         if ((o = input->FindObject("MissingFiles"))) input->Remove(o);
 
          // Process
          PDB(kGlobal, 1) Info("HandleProcess", "calling %s::Process()", fPlayer->IsA()->GetName());
@@ -3549,7 +3554,7 @@ void TProofServ::HandleProcess(TMessage *mess)
          if (fPlayer->GetExitStatus() != TVirtualProofPlayer::kFinished) {
             Bool_t abort =
               (fPlayer->GetExitStatus() == TVirtualProofPlayer::kAborted) ? kTRUE : kFALSE;
-            TMessage m(kPROOF_STOPPROCESS);
+            m.Reset(kPROOF_STOPPROCESS);
             if (fProtocol > 8) {
                m << fPlayer->GetEventsProcessed() << abort;
             } else {
@@ -3581,7 +3586,7 @@ void TProofServ::HandleProcess(TMessage *mess)
                Int_t ns = 0;
                Int_t totsz = 0;
                TIter nxo(fPlayer->GetOutputList());
-               TObject *o = 0;
+               o = 0;
                while ((o = nxo())) {
                   ns++;
                   mbuf.Reset();
@@ -3631,6 +3636,7 @@ void TProofServ::HandleProcess(TMessage *mess)
                   fQueries->Add(pqr);
                // Remove from the fQueries list
                fQueries->Remove(pq);
+               SafeDelete(pq);
             }
          }
 
@@ -3654,7 +3660,8 @@ void TProofServ::HandleProcess(TMessage *mess)
 
       // Set input
       TIter next(input);
-      for (TObject *o; (o = next()); ) {
+      TObject *o = 0;
+      while ((o = next())) {
          PDB(kGlobal, 2) Info("HandleProcess", "adding: %s", o->GetName());
          fPlayer->AddInput(o);
       }
@@ -3682,7 +3689,7 @@ void TProofServ::HandleProcess(TMessage *mess)
             Int_t ns = 0;
             Int_t olsz = fPlayer->GetOutputList()->GetSize();
             TIter nxo(fPlayer->GetOutputList());
-            TObject *o = 0;
+            o = 0;
             while ((o = nxo())) {
                ns++;
                mbuf.Reset();
@@ -3698,9 +3705,15 @@ void TProofServ::HandleProcess(TMessage *mess)
          fSocket->SendObject(0, kPROOF_OUTPUTLIST);
       }
 
-      // Cleanup
+      // Cleanup the input data set info
       SafeDelete(dset);
-      fPlayer->GetInputList()->SetOwner();  // Make sure the input list objects are deleted
+      SafeDelete(enl);
+      SafeDelete(evl);
+
+      // Make also sure the input list objects are deleted
+      fPlayer->GetInputList()->SetOwner(0);
+      input->SetOwner();
+      SafeDelete(input);
 
       // Signal the master that we are idle
       fSocket->Send(kPROOF_SETIDLE);
@@ -4795,20 +4808,20 @@ void TProofServ::ErrorHandler(Int_t level, Bool_t abort, const char *location,
    if (gErrorIgnoreLevel == kUnset) {
       gErrorIgnoreLevel = 0;
       if (gEnv) {
-         TString level = gEnv->GetValue("Root.ErrorIgnoreLevel", "Print");
-         if (!level.CompareTo("Print", TString::kIgnoreCase))
+         TString lvl = gEnv->GetValue("Root.ErrorIgnoreLevel", "Print");
+         if (!lvl.CompareTo("Print", TString::kIgnoreCase))
             gErrorIgnoreLevel = kPrint;
-         else if (!level.CompareTo("Info", TString::kIgnoreCase))
+         else if (!lvl.CompareTo("Info", TString::kIgnoreCase))
             gErrorIgnoreLevel = kInfo;
-         else if (!level.CompareTo("Warning", TString::kIgnoreCase))
+         else if (!lvl.CompareTo("Warning", TString::kIgnoreCase))
             gErrorIgnoreLevel = kWarning;
-         else if (!level.CompareTo("Error", TString::kIgnoreCase))
+         else if (!lvl.CompareTo("Error", TString::kIgnoreCase))
             gErrorIgnoreLevel = kError;
-         else if (!level.CompareTo("Break", TString::kIgnoreCase))
+         else if (!lvl.CompareTo("Break", TString::kIgnoreCase))
             gErrorIgnoreLevel = kBreak;
-         else if (!level.CompareTo("SysError", TString::kIgnoreCase))
+         else if (!lvl.CompareTo("SysError", TString::kIgnoreCase))
             gErrorIgnoreLevel = kSysError;
-         else if (!level.CompareTo("Fatal", TString::kIgnoreCase))
+         else if (!lvl.CompareTo("Fatal", TString::kIgnoreCase))
             gErrorIgnoreLevel = kFatal;
       }
    }
@@ -5152,10 +5165,11 @@ void TProofServ::DeletePlayer()
 {
    // Delete player instance.
 
-   if (IsMaster())
+   if (IsMaster()) {
       if (fProof) fProof->SetPlayer(0);
-   else
+   } else {
       delete fPlayer;
+   }
    fPlayer = 0;
 }
 
@@ -5319,8 +5333,7 @@ Int_t TProofServ::HandleDataSets(TMessage *mess)
          {
             (*mess) >> uri;
             // Scan the existing datasets and print the content
-            UInt_t opt = (UInt_t)TProofDataSetManager::kPrint;
-            fDataSetManager->GetDataSets(uri, opt);
+            fDataSetManager->GetDataSets(uri, (UInt_t)TProofDataSetManager::kPrint);
          }
          break;
 
@@ -5328,8 +5341,7 @@ Int_t TProofServ::HandleDataSets(TMessage *mess)
          {
             (*mess) >> uri;
             // Get the datasets and fill a map
-            UInt_t opt = (UInt_t)TProofDataSetManager::kExport;
-            TMap *returnMap = fDataSetManager->GetDataSets(uri, opt);
+            TMap *returnMap = fDataSetManager->GetDataSets(uri, (UInt_t)TProofDataSetManager::kExport);
             if (returnMap) {
                // Send them back
                fSocket->SendObject(returnMap, kMESS_OK);

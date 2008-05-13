@@ -30,9 +30,13 @@
 #include "TError.h"
 #endif
 
+#include <iterator>
+
+
 class TBtNode;
 class TBtInnerNode;
 class TBtLeafNode;
+class TBtreeIter;
 
 
 class TBtree : public TSeqCollection {
@@ -66,9 +70,10 @@ protected:
    Int_t IdxAdd(const TObject &obj);
 
 public:
+   typedef TBtreeIter Iterator_t;
+
    TBtree(Int_t ordern = 3);  //create a TBtree of order n
    virtual     ~TBtree();
-#ifndef __CINT__
    void        Clear(Option_t *option="");
    void        Delete(Option_t *option="");
    TObject    *FindObject(const char *name) const;
@@ -95,7 +100,7 @@ public:
    Int_t       Order() { return fOrder; }
    TObject    *operator[](Int_t i) const;
    Int_t       Rank(const TObject *obj) const;
-#endif
+
    ClassDef(TBtree,0)  //A B-tree
 };
 
@@ -330,7 +335,10 @@ public:
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-class TBtreeIter : public TIterator {
+class TBtreeIter : public TIterator,
+                   public std::iterator<std::bidirectional_iterator_tag,
+                                        TObject*, std::ptrdiff_t,
+                                        const TObject**, const TObject*&> {
 
 private:
    const TBtree  *fTree;      //btree being iterated
