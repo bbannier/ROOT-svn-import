@@ -206,8 +206,6 @@ endif
 ifeq ($(BUILDGLOBUS),yes)
 MODULES      += net/globusauth
 endif
-# comment out to test minicern
-F77 :=
 ifneq ($(F77),)
 MODULES      += misc/minicern hist/hbook
 endif
@@ -268,7 +266,7 @@ CINTLIBS     := -lCint
 CINT7LIBS    := -lCint -lReflex
 NEWLIBS      := -lNew
 ROOTLIBS     := -lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad \
-                -lTree -lMatrix -lMathCore
+                -lTree -lMatrix -lMathCore -lThread
 BOOTLIBS     := -lCore -lCint -lMathCore
 ifneq ($(ROOTDICTTYPE),cint)
 ROOTLIBS     += -lCintex -lReflex
@@ -284,7 +282,7 @@ ROOTLIBS     := $(LPATH)/libCore.lib $(LPATH)/libCint.lib \
                 $(LPATH)/libHist.lib $(LPATH)/libGraf.lib \
                 $(LPATH)/libGraf3d.lib $(LPATH)/libGpad.lib \
                 $(LPATH)/libTree.lib $(LPATH)/libMatrix.lib \
-                $(LPATH)/libMathcore.lib
+                $(LPATH)/libMathcore.lib $(LPATH)/libThread.lib
 BOOTLIBS     := $(LPATH)/libCore.lib $(LPATH)/libCint.lib \
                 $(LPATH)/libMathcore.lib
 ifneq ($(ROOTDICTTYPE),cint)
@@ -314,6 +312,7 @@ ROOTULIBS    := -Wl,-u,.G__cpp_setupG__Net      \
                 -Wl,-u,.G__cpp_setupG__G3D      \
                 -Wl,-u,.G__cpp_setupG__GPad     \
                 -Wl,-u,.G__cpp_setupG__Tree     \
+                -Wl,-u,.G__cpp_setupG__Thread   \
                 -Wl,-u,.G__cpp_setupG__Matrix
 BOOTULIBS    := -Wl,-u,.G__cpp_setupG__MathCore
 else
@@ -324,6 +323,7 @@ ROOTULIBS    := -Wl,-u,_G__cpp_setupG__Net      \
                 -Wl,-u,_G__cpp_setupG__G3D      \
                 -Wl,-u,_G__cpp_setupG__GPad     \
                 -Wl,-u,_G__cpp_setupG__Tree     \
+                -Wl,-u,_G__cpp_setupG__Thread   \
                 -Wl,-u,_G__cpp_setupG__Matrix
 BOOTULIBS    := -Wl,-u,_G__cpp_setupG__MathCore
 endif
@@ -336,6 +336,7 @@ ROOTULIBS    := -include:_G__cpp_setupG__Net    \
                 -include:_G__cpp_setupG__G3D    \
                 -include:_G__cpp_setupG__GPad   \
                 -include:_G__cpp_setupG__Tree   \
+                -include:_G__cpp_setupG__Thread \
                 -include:_G__cpp_setupG__Matrix
 BOOTULIBS    := -include:_G__cpp_setupG__MathCore
 endif
@@ -423,6 +424,7 @@ MAKECOMPDATA  = build/unix/compiledata.sh
 MAKECHANGELOG = build/unix/makechangelog.sh
 MAKEHTML      = build/unix/makehtml.sh
 MAKELOGHTML   = build/unix/makeloghtml.sh
+MAKERELNOTES  = build/unix/makereleasenotes.sh
 MAKECINTDLL   = build/unix/makecintdll.sh
 MAKESTATIC    = build/unix/makestatic.sh
 RECONFIGURE   = build/unix/reconfigure.sh
@@ -534,7 +536,7 @@ endif
 .PHONY:         all fast config rootcint rootlibs rootexecs dist distsrc \
                 clean distclean maintainer-clean compiledata \
                 version html changelog install uninstall showbuild \
-                static map debian redhat skip postbin
+                releasenotes static map debian redhat skip postbin
 
 ifneq ($(findstring map, $(MAKECMDGOALS)),)
 .NOTPARALLEL:
@@ -803,7 +805,8 @@ endif
 	-@mv -f tutorials/quadp/stock.root- tutorials/quadp/stock.root
 	@rm -f bin/roota bin/proofserva lib/libRoot.a
 	@rm -f $(CINTDIR)/include/*.dll $(CINTDIR)/include/sys/*.dll
-	@rm -f $(CINTDIR)/stl/*.dll README/ChangeLog build/dummy.d
+	@rm -f $(CINTDIR)/stl/*.dll build/dummy.d
+	@rm -f README/ChangeLog README/ReleaseNotes
 	@rm -f $(CINTDIR)/lib/posix/a.out $(CINTDIR)/include/*.so*
 	@rm -f etc/daemons/rootd.rc.d etc/daemons/rootd.xinetd
 	@rm -f etc/daemons/proofd.rc.d etc/daemons/proofd.xinetd
@@ -830,7 +833,10 @@ static: rootlibs
 changelog:
 	@$(MAKECHANGELOG)
 
-html: $(ROOTEXE) changelog
+releasenotes:
+	@$(MAKERELNOTES)
+
+html: $(ROOTEXE) changelog releasenotes
 	@$(MAKELOGHTML)
 	@$(MAKEHTML)
 
@@ -876,10 +882,10 @@ install: all
 	   echo "Installing main/src/rmain.cxx in $(DESTDIR)$(INCDIR)"; \
 	   $(INSTALLDATA) main/src/rmain.cxx    $(DESTDIR)$(INCDIR); \
 	   echo "Installing cint/cint/include cint/cint/lib and cint/cint/stl in $(DESTDIR)$(CINTINCDIR)"; \
-	   $(INSTALLDIR)                        $(DESTDIR)$(CINTINCDIR); \
-	   $(INSTALLDATA) cint/cint/include     $(DESTDIR)$(CINTINCDIR); \
-	   $(INSTALLDATA) cint/cint/lib         $(DESTDIR)$(CINTINCDIR); \
-	   $(INSTALLDATA) cint/cint/stl         $(DESTDIR)$(CINTINCDIR); \
+	   $(INSTALLDIR)                        $(DESTDIR)$(CINTINCDIR)/cint; \
+	   $(INSTALLDATA) cint/cint/include     $(DESTDIR)$(CINTINCDIR)/cint; \
+	   $(INSTALLDATA) cint/cint/lib         $(DESTDIR)$(CINTINCDIR)/cint; \
+	   $(INSTALLDATA) cint/cint/stl         $(DESTDIR)$(CINTINCDIR)/cint; \
 	   find $(DESTDIR)$(CINTINCDIR) -name CVS -exec rm -rf {} \; >/dev/null 2>&1; \
 	   find $(DESTDIR)$(CINTINCDIR) -name .svn -exec rm -rf {} \; >/dev/null 2>&1; \
 	   echo "Installing icons in $(DESTDIR)$(ICONPATH)"; \

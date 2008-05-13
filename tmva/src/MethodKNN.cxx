@@ -265,7 +265,7 @@ Double_t TMVA::MethodKNN::GetMvaValue()
    // classifier response
 
    const Int_t nvar = GetNvar();
-   const Double_t weight = GetEventWeight();
+   const Double_t evweight = GetEventWeight();
    
    kNN::VarVec vvec(static_cast<UInt_t>(nvar), 0.0);
    
@@ -277,7 +277,7 @@ Double_t TMVA::MethodKNN::GetMvaValue()
 
    // search for fnkNN+1 nearest neighbors
    // most of CPU time is spent in this recursive function
-   fModule->Find(kNN::Event(vvec, weight, 3), knn + 1);
+   fModule->Find(kNN::Event(vvec, evweight, 3), knn + 1);
 
    const kNN::List &rlist = fModule->GetkNNList();
    if (rlist.size() != knn + 1) {
@@ -452,7 +452,7 @@ void TMVA::MethodKNN::ReadWeightsFromStream(istream& is)
          if (vstring.empty()) fLogger << kFATAL << "Failed to parse string" << Endl;
          
          if      (vcount == 0) ievent = atoi(vstring.c_str());
-         else if (vcount == 1) type = atoi(vstring.c_str());
+         else if (vcount == 1) type   = atoi(vstring.c_str());
          else if (vcount == 2) weight = atof(vstring.c_str());
          else if (vcount - 3 < vvec.size()) vvec[vcount - 3] = atof(vstring.c_str());
          else fLogger << kFATAL << "Wrong variable count" << Endl;
@@ -562,12 +562,12 @@ void TMVA::MethodKNN::GetHelpMessage() const
    // typical length of text line: 
    //         "|--------------------------------------------------------------|"
    fLogger << Endl;
-   fLogger << Tools::Color("bold") << "--- Short description:" << Tools::Color("reset") << Endl;
+   fLogger << gTools().Color("bold") << "--- Short description:" << gTools().Color("reset") << Endl;
    fLogger << Endl;
    fLogger << "k-nearest neighbor algorithm" << endl;
    fLogger << Endl;
-   fLogger << Tools::Color("bold") << "--- Performance tuning via configuration options:" 
-           << Tools::Color("reset") << Endl;
+   fLogger << gTools().Color("bold") << "--- Performance tuning via configuration options:" 
+           << gTools().Color("reset") << Endl;
    fLogger << Endl;
    fLogger << "<None>" << Endl;
 }

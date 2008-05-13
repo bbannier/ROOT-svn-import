@@ -32,7 +32,7 @@
 
 // initialize the static instances
 
-ROOT::Math::Minimizer::IObjFunction * TMinuitMinimizer::fgFunc = 0; 
+ROOT::Math::IMultiGenFunction * TMinuitMinimizer::fgFunc = 0; 
 TMinuit * TMinuitMinimizer::fgMinuit = 0; 
 
 ClassImp(TMinuitMinimizer)
@@ -44,7 +44,10 @@ TMinuitMinimizer::TMinuitMinimizer(ROOT::Minuit::EMinimizerType type ) :
    fType(type), 
    fMinuit(fgMinuit)
 {
-   // Default constructor implementation.
+   // Constructor for TMinuitMinimier class via an enumeration specifying the minimization 
+   // algorithm type. Supported types are : kMigrad, kSimplex, kCombined (a combined 
+   // Migrad + Simplex minimization) and kMigradImproved (a Migrad mininimization folloed by an 
+   // improved search for global minima). The default type is Migrad (kMigrad). 
 }
 
 TMinuitMinimizer::TMinuitMinimizer(const char *  type ) : 
@@ -52,7 +55,9 @@ TMinuitMinimizer::TMinuitMinimizer(const char *  type ) :
    fStrategy(1),
    fMinuit(fgMinuit)
 {
-   // constructor from a char *, used by PM
+   // constructor from a char * for the algorithm type, used by the plug-in manager
+   // The names supported (case unsensitive) are: 
+   //  Migrad (default), Simplex, Minimize (for the combined Migrad+ Simplex) and Migrad_imp 
 
    // select type from the string
    std::string algoname(type);
@@ -75,20 +80,22 @@ TMinuitMinimizer::~TMinuitMinimizer()
 TMinuitMinimizer::TMinuitMinimizer(const TMinuitMinimizer &) : 
    Minimizer()
 {
-   // Implementation of copy constructor.
+   // Implementation of copy constructor (it is private).
 }
 
 TMinuitMinimizer & TMinuitMinimizer::operator = (const TMinuitMinimizer &rhs) 
 {
-   // Implementation of assignment operator 
+   // Implementation of assignment operator (private)
    if (this == &rhs) return *this;  // time saving self-test
    return *this;
 }
 
 
 
-void TMinuitMinimizer::SetFunction(const  IObjFunction & func) { 
-   // Set the objective function to be minimized 
+void TMinuitMinimizer::SetFunction(const  ROOT::Math::IMultiGenFunction & func) { 
+   // Set the objective function to be minimized, by passing a function object implement the 
+   // basic multi-dim Function interface. In this case the derivatives will be 
+   // calculated by Minuit 
 
    // Here a TMinuit instance is created since only at this point we know the number of parameters 
    // needed to create TMinuit
@@ -109,7 +116,7 @@ void TMinuitMinimizer::SetFunction(const  IObjFunction & func) {
    fDim = func.NDim(); 
    
    // assign to the static pointer (NO Thread safety here)
-   fgFunc = const_cast<IObjFunction *>(&func); 
+   fgFunc = const_cast<ROOT::Math::IMultiGenFunction *>(&func); 
    fMinuit->SetFCN(&TMinuitMinimizer::Fcn);
 
    // set print level in TMinuit
@@ -122,7 +129,10 @@ void TMinuitMinimizer::SetFunction(const  IObjFunction & func) {
 
 }
 
-void TMinuitMinimizer::SetFunction(const  IGradObjFunction & func) { 
+void TMinuitMinimizer::SetFunction(const  ROOT::Math::IMultiGradFunction & func) { 
+   // Set the objective function to be minimized, by passing a function object implement the 
+   // multi-dim gradient Function interface. In this case the function derivatives are provided  
+   // by the user via this interface and there not calculated by Minuit. 
 
    fDim = func.NDim(); 
 
@@ -137,7 +147,7 @@ void TMinuitMinimizer::SetFunction(const  IGradObjFunction & func) {
    fDim = func.NDim(); 
    
    // assign to the static pointer (NO Thread safety here)
-   fgFunc = const_cast<IGradObjFunction *>(&func); 
+   fgFunc = const_cast<ROOT::Math::IMultiGradFunction *>(&func); 
    fMinuit->SetFCN(&TMinuitMinimizer::FcnGrad);
 
    // set print level in TMinuit
@@ -154,13 +164,16 @@ void TMinuitMinimizer::SetFunction(const  IGradObjFunction & func) {
 }
 
 void TMinuitMinimizer::Fcn( int &, double * , double & f, double * x , int /* iflag */) { 
-   // implementation of TMinuit FCN function using an IGenFunction
+   // implementation of FCN static function used internally by TMinuit.
+   // Adapt IMultiGenFunction interface to TMinuit FCN static function
    f = fgFunc->operator()(x);
 }
 
 void TMinuitMinimizer::FcnGrad( int &, double * g, double & f, double * x , int iflag ) { 
-   // implementation of TMinuit FCN function using an IGenFunction
-   IGradObjFunction * gFunc = dynamic_cast<IGradObjFunction *> ( fgFunc); 
+   // implementation of FCN static function used internally by TMinuit.
+   // Adapt IMultiGradFunciton interface to TMinuit FCN static function in the case of user 
+   // provided gradient.
+   ROOT::Math::IMultiGradFunction * gFunc = dynamic_cast<ROOT::Math::IMultiGradFunction *> ( fgFunc); 
 
    assert(gFunc != 0);
    f = gFunc->operator()(x);
@@ -210,8 +223,10 @@ bool TMinuitMinimizer::SetFixedVariable(unsigned int ivar, const std::string & n
 }
 
 bool TMinuitMinimizer::Minimize() { 
-   // perform the minimization using the chosen algorithm. By default Migrad is used. 
-   // return true if the found minimum is valid. 
+   // perform the minimization using the algorithm chosen previously by the user  
+   // By default Migrad is used. 
+   // Return true if the found minimum is valid and update internal chached values of 
+   // minimum values, errors and covariance matrix. 
 
    assert(fMinuit != 0 );
 
@@ -303,7 +318,7 @@ bool TMinuitMinimizer::Minimize() {
 }
 
 bool TMinuitMinimizer::GetMinosError(unsigned int i, double & errLow, double & errUp) { 
-   // Perform Minos analysis for the given parameter 
+   // Perform Minos analysis for the given parameter  i 
 
    // if Minos is not run run it 
    if (!fMinosRun) { 

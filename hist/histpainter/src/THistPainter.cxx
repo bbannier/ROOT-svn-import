@@ -193,7 +193,7 @@ Int_t THistPainter::DistancetoPrimitive(Int_t px, Int_t py)
    //     If a 3-D view exists, check distance to axis
    TView *view = gPad->GetView();
    Int_t d1,d2,d3;
-   if (view) {
+   if (view && Hoption.Contour != 14) {
       Double_t ratio;
       d3 = view->GetDistancetoAxis(3, px, py, ratio);
       if (d3 <= kMaxDiff) {gPad->SetSelected(fZaxis); return 0;}
@@ -409,12 +409,12 @@ void THistPainter::ExecuteEvent(Int_t event, Int_t px, Int_t py)
 
    case kButton1Motion:
 
-      if (gROOT->GetEditHistograms()) {
+   if (gROOT->GetEditHistograms()) {
          gVirtualX->DrawBox(px1, py1, px2, py2,TVirtualX::kHollow);  //    Draw the old box
          py2 += py - pyold;
          gVirtualX->DrawBox(px1, py1, px2, py2,TVirtualX::kHollow);  //    Draw the new box
          pyold = py;
-      }
+   }
 
       break;
 
@@ -3813,8 +3813,10 @@ void THistPainter::PaintH3(Option_t *option)
    //    "A"     : Suppress the axis.
 
    char *cmd;
-   if (fH->GetDrawOption() && (strstr(fH->GetDrawOption(),"box")
-                           ||  strstr(fH->GetDrawOption(),"lego"))) {
+   TString opt = fH->GetDrawOption();
+   opt.ToLower();
+
+   if (fH->GetDrawOption() && (strstr(opt,"box") ||  strstr(opt,"lego"))) {
       cmd = Form("TMarker3DBox::PaintH3((TH1 *)0x%lx,\"%s\");",(Long_t)fH,option);
    } else if (fH->GetDrawOption() && strstr(fH->GetDrawOption(),"iso")) {
       PaintH3Iso();
@@ -3827,7 +3829,7 @@ void THistPainter::PaintH3(Option_t *option)
    }
    gROOT->ProcessLine(cmd);
 
-   //Draw axis
+   // Draw axis
    if (Hoption.Same) return;
    TView *view = gPad->GetView();
    if (!view) return;
@@ -3838,7 +3840,18 @@ void THistPainter::PaintH3(Option_t *option)
    PaintLegoAxis(axis,90);
    delete axis;
 
-   //Draw title
+   // Draw palette. In case of 4D plot with TTree::Draw() the palette should
+   // be painted with the option colz.
+   if (fH->GetDrawOption() && strstr(opt,"colz")) {
+      Int_t ndiv   = fH->GetContour();
+      if (ndiv == 0 ) {
+         ndiv = gStyle->GetNumberContours();
+         fH->SetContour(ndiv);
+      }
+      PaintPalette();
+   }
+
+   // Draw title
    PaintTitle();
 
    //Draw stats and fit results

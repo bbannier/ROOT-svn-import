@@ -660,7 +660,7 @@ void G__make_ifunctable(char* funcheader)
             ) {
                const char* posEndType = oprtype;
                while (isalnum(*posEndType)
-                      || posEndType[0] == ':' && posEndType[1] == ':'
+                      || (posEndType[0] == ':' && posEndType[1] == ':')
                       || *posEndType == '_')
                   ++posEndType;
                char* ptrrefbuf = 0;
@@ -680,7 +680,7 @@ void G__make_ifunctable(char* funcheader)
                   const char* posEndType = oprtype;
                   bool isTemplate = (strchr(G__struct.name[oprtagnum], '<'));
                   while (isalnum(*posEndType)
-                         || posEndType[0] == ':' && posEndType[1] == ':' && (++posEndType)
+                         || (posEndType[0] == ':' && posEndType[1] == ':' && (++posEndType))
                          || *posEndType == '_') {
                      ++posEndType;
                      if (isTemplate && *posEndType == '<') {
@@ -3094,7 +3094,7 @@ unsigned int G__rate_inheritance(int basetagnum, int derivedtagnum)
                int derivedtagnum2 = derivedtagnum;
                while (0 == (derived2->herit[ii]->property&G__ISDIRECTINHERIT)) {
                   ++distance;
-                  while (ii && 0 == (derived2->herit[--ii]->property&G__ISDIRECTINHERIT));
+                  while (ii && 0 == (derived2->herit[--ii]->property&G__ISDIRECTINHERIT)) {}
                   derivedtagnum2 = derived2->herit[ii]->basetagnum;
                   derived2 = G__struct.baseclass[derivedtagnum2];
                   for (ii = 0;ii < derived2->basen;ii++) {
@@ -5821,7 +5821,11 @@ int G__interpret_func(G__value* result7, const char* funcname, G__param* libp, i
    //  Initialize the line number and filename and number.
    //
    G__ifile.line_number = p_ifunc->pentry[ifn]->line_number;
-   strcpy(G__ifile.name, G__srcfile[p_ifunc->pentry[ifn]->filenum].filename);
+   if (p_ifunc->pentry[ifn]->filenum>=0) {
+      strcpy(G__ifile.name, G__srcfile[p_ifunc->pentry[ifn]->filenum].filename);
+   } else {
+      strcpy(G__ifile.name, "unknown");
+   }
    G__ifile.filenum = p_ifunc->pentry[ifn]->filenum;
    //
    //  Stop at a breakpoint if necessary.

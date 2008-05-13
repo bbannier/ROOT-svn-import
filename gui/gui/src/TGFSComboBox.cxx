@@ -37,7 +37,6 @@
 #include "TSystem.h"
 #include "Riostream.h"
 
-
 const TGFont *TGTreeLBEntry::fgDefaultFont = 0;
 TGGC         *TGTreeLBEntry::fgDefaultGC = 0;
 
@@ -52,19 +51,7 @@ struct Lbc_t {
    Int_t       fFlags;  // flag
 };
 
-static struct Lbc_t gLbc[] = {
-   { "Root",        "/",                "hdisk_t.xpm",         1000, 0, 0 },
-   { "Floppy",      "/floppy",          "fdisk_t.xpm",         2000, 1, 0 },
-   { "CD-ROM",      "/cdrom",           "cdrom_t.xpm",         3000, 1, 0 },
-   { "Home",        "$HOME",            "home_t.xpm",          4000, 1, 0 },
-#ifndef ROOTPREFIX
-   { "RootSys",     "$ROOTSYS",		"root_t.xpm",          5000, 1, 0 },
-#else
-   { ROOTPREFIX,    ROOTPREFIX,         "root_t.xpm",          5000, 1, 0 },
-#endif
-   { 0,             0,                  0,                     6000, 0, 0 }
-};
-
+static struct Lbc_t gLbc[32];
 
 ClassImp(TGTreeLBEntry)
 ClassImp(TGFSComboBox)
@@ -241,6 +228,120 @@ TGFSComboBox::TGFSComboBox(const TGWindow *parent, Int_t id, UInt_t options,
    // const char *rootSys = ROOTPREFIX;
 #endif
 
+   Int_t idx = 0;
+   TList *volumes = gSystem->GetVolumes("all");
+   TList *curvol  = gSystem->GetVolumes("cur");
+   TString infos;
+   const char *curdrive = "";
+   if (volumes && curvol) {
+      TNamed *named = (TNamed *)curvol->At(0);
+      if (named) {
+         curdrive = named->GetName();
+         infos = named->GetTitle();
+         gLbc[idx].fName = StrDup(infos.Data());
+         gLbc[idx].fPath = StrDup(Form("%s\\", curdrive));
+         if (infos.Contains("Removable"))
+            gLbc[idx].fPixmap = StrDup("fdisk_t.xpm");
+         else if (infos.Contains("Local"))
+            gLbc[idx].fPixmap = StrDup("hdisk_t.xpm");
+         else if (infos.Contains("CD"))
+            gLbc[idx].fPixmap = StrDup("cdrom_t.xpm");
+         else if (infos.Contains("Network"))
+            gLbc[idx].fPixmap = StrDup("netdisk_t.xpm");
+         else
+            gLbc[idx].fPixmap = StrDup("hdisk_t.xpm");
+         gLbc[idx].fId     = 1000;
+         gLbc[idx].fIndent = 0; 
+         gLbc[idx].fFlags  = 0;
+         ++idx;
+      }
+      else {
+         gLbc[idx].fName = StrDup("Root");
+         gLbc[idx].fPath = StrDup("/");
+         gLbc[idx].fPixmap = StrDup("hdisk_t.xpm");
+         gLbc[idx].fId     = 1000;
+         gLbc[idx].fIndent = 1; 
+         gLbc[idx].fFlags  = 0;
+         ++idx;
+      }
+   }
+   else {
+      gLbc[idx].fName = StrDup("Root");
+      gLbc[idx].fPath = StrDup("/");
+      gLbc[idx].fPixmap = StrDup("hdisk_t.xpm");
+      gLbc[idx].fId     = 1000;
+      gLbc[idx].fIndent = 1; 
+      gLbc[idx].fFlags  = 0;
+      ++idx;
+      gLbc[idx].fName = StrDup("Floppy");
+      gLbc[idx].fPath = StrDup("/floppy");
+      gLbc[idx].fPixmap = StrDup("fdisk_t.xpm");
+      gLbc[idx].fId     = 2000;
+      gLbc[idx].fIndent = 1; 
+      gLbc[idx].fFlags  = 0;
+      ++idx;
+      gLbc[idx].fName = StrDup("CD-ROM");
+      gLbc[idx].fPath = StrDup("/cdrom");
+      gLbc[idx].fPixmap = StrDup("cdrom_t.xpm");
+      gLbc[idx].fId     = 3000;
+      gLbc[idx].fIndent = 1; 
+      gLbc[idx].fFlags  = 0;
+      ++idx;
+   }
+   gLbc[idx].fName   = StrDup("Home");
+   gLbc[idx].fPath   = StrDup("$HOME");
+   gLbc[idx].fPixmap = StrDup("home_t.xpm");
+   gLbc[idx].fId     = (idx+1) * 1000;
+   gLbc[idx].fIndent = 1; 
+   gLbc[idx].fFlags  = 0;
+   ++idx;
+#ifndef ROOTPREFIX
+   gLbc[idx].fName   = StrDup("RootSys");
+   gLbc[idx].fPath   = StrDup("$ROOTSYS");
+#else
+   gLbc[idx].fName   = StrDup(ROOTPREFIX);
+   gLbc[idx].fPath   = StrDup(ROOTPREFIX);
+#endif
+   gLbc[idx].fPixmap = StrDup("root_t.xpm");
+   gLbc[idx].fId     = (idx+1) * 1000;
+   gLbc[idx].fIndent = 1; 
+   gLbc[idx].fFlags  = 0;
+   ++idx;
+
+   if (volumes && curvol) {
+      TIter next(volumes);
+      TNamed *drive;
+      while ((drive = (TNamed *)next())) {
+         if (!strcmp(drive->GetName(), curdrive))
+            continue;
+         infos = drive->GetTitle();
+         gLbc[idx].fName   = StrDup(drive->GetTitle());
+         gLbc[idx].fPath   = StrDup(Form("%s\\", drive->GetName()));
+         if (infos.Contains("Removable"))
+            gLbc[idx].fPixmap = StrDup("fdisk_t.xpm");
+         else if (infos.Contains("Local"))
+            gLbc[idx].fPixmap = StrDup("hdisk_t.xpm");
+         else if (infos.Contains("CD"))
+            gLbc[idx].fPixmap = StrDup("cdrom_t.xpm");
+         else if (infos.Contains("Network"))
+            gLbc[idx].fPixmap = StrDup("netdisk_t.xpm");
+         else
+            gLbc[idx].fPixmap = StrDup("hdisk_t.xpm");
+         gLbc[idx].fId     = (idx+1) * 1000;
+         gLbc[idx].fIndent = 0;
+         gLbc[idx].fFlags  = 0;
+         ++idx;
+      }
+      delete volumes;
+      delete curvol;
+   }
+   gLbc[idx].fName   = 0;
+   gLbc[idx].fPath   = 0;
+   gLbc[idx].fPixmap = 0;
+   gLbc[idx].fId     = (idx+1) * 1000;
+   gLbc[idx].fIndent = 0;
+   gLbc[idx].fFlags  = 0;
+
    for (i = 0; gLbc[i].fPath != 0; ++i) {
       if (strstr(gLbc[i].fPath, "$HOME") != 0) {
          if (homeDir) {
@@ -261,19 +362,19 @@ TGFSComboBox::TGFSComboBox(const TGWindow *parent, Int_t id, UInt_t options,
       // already known, so the entries in the table above are actually
       // fully expanded.
       if (strstr(gLbc[i].fPath, "$ROOTSYS") != 0) {
-	  // Get the size of the prefix template
+         // Get the size of the prefix template
          const int plen = 8;
          if (rootSys) {
             int hlen = strlen(rootSys);
-	    // Allocate enough memory to hold prefix (hlen), and
-	    // what's in the path (strlen(gLbc[i].fPath)) minus the
-	    // prefix template size, and one character for terminating
-	    // null.
+            // Allocate enough memory to hold prefix (hlen), and
+            // what's in the path (strlen(gLbc[i].fPath)) minus the
+            // prefix template size, and one character for terminating
+            // null.
             int blen = hlen + strlen(gLbc[i].fPath) - plen + 1;
             p = new char[blen];
             strcpy(p, rootSys);
             strcat(p, &(gLbc[i].fPath[plen]));
-	    // Figure out where to put the terminating NULL
+            // Figure out where to put the terminating NULL
             int npos = hlen + strlen(&(gLbc[i].fPath[plen]));
             p[npos] = '\0';
             gLbc[i].fPath = p;

@@ -1325,7 +1325,26 @@ extern "C" int G__loadfile(const char *filenamein)
        ){
       if(G__prerun==0 || G__debugtrace)
         if(G__dispmsg>=G__DISPNOTE) {
-          G__fprinterr(G__serr,"Note: File \"%s\" already loaded\n",filename);
+            static const char *excludelist [] = {
+                "stdfunc.dll","stdcxxfunc.dll","posix.dll","ipc.dll","posix.dll"
+                "string.dll","vector.dll","vectorbool.dll","list.dll","deque.dll",
+                "map.dll", "map2.dll","set.dll","multimap.dll","multimap2.dll",
+                "multiset.dll","stack.dll","queue.dll","valarray.dll",
+                "exception.dll","stdexcept.dll","complex.dll","climits.dll" };
+            static const unsigned int excludelistsize = sizeof(excludelist)/sizeof(excludelist[0]);
+            static int excludelen[excludelistsize] = {-1};
+            if (excludelen[0] == -1) {
+               for (unsigned int i = 0; i < excludelistsize; ++i)
+                  excludelen[i] = strlen(excludelist[i]);
+            }
+            bool cintdlls = false;
+            int len = strlen(filename);
+            for (unsigned int i = 0; !cintdlls && i < excludelistsize; ++i) {
+               if (len>excludelen[i]) {
+                  cintdlls = (!strncmp(filename+len-excludelen[i], excludelist[i], excludelen[i]));
+               }
+            }
+            if (!cintdlls) G__fprinterr(G__serr,"Note: File \"%s\" already loaded\n",filename);
         }
       /******************************************************
        * restore input file information to G__ifile
@@ -2026,7 +2045,10 @@ extern "C" int G__loadfile(const char *filenamein)
       G__UnlockCriticalSection();
       return(G__LOADFILE_FAILURE);
     }
-    while (!G__eof && G__return<G__RETURN_EXIT1) G__exec_statement(&brace_level);
+    while (!G__eof && G__return<G__RETURN_EXIT1) {
+       int brace_level = 0;       
+       G__exec_statement(&brace_level);
+    }
   }
 #endif  /* of G__SHAREDLIB */
 

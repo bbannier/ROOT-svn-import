@@ -184,7 +184,7 @@ Double_t TRolke::Interval(Int_t x, Int_t y, Int_t z, Double_t bm, Double_t em,Do
 
    if (bp == 1 && x == 0 && bm > 0 ){
 
-      for(Int_t i = 0; i < 2; i++) {
+      for(i = 0; i < 2; i++) {
          x++;
          tempxy[i] = Interval(x,y,z,bm,em,e,mid,sde,sdb,tau,b,m);
       }
@@ -197,7 +197,7 @@ Double_t TRolke::Interval(Int_t x, Int_t y, Int_t z, Double_t bm, Double_t em,Do
 
    if (bp != 1 && x == 0){
 
-      for(Int_t i = 0; i < 2; i++) {
+      for(i = 0; i < 2; i++) {
          x++;
          tempxy[i] = Interval(x,y,z,bm,em,e,mid,sde,sdb,tau,b,m);
       }
@@ -209,7 +209,7 @@ Double_t TRolke::Interval(Int_t x, Int_t y, Int_t z, Double_t bm, Double_t em,Do
    }
 
    if (bp != 1  && bm == 0){
-      for(Int_t i = 0; i < 2; i++) {
+      for(i = 0; i < 2; i++) {
          bm++;
          limits[1] = Interval(x,y,z,bm,em,e,mid,sde,sdb,tau,b,m);
          tempxy[i] = limits[1];
@@ -266,7 +266,7 @@ Double_t TRolke::Interval(Int_t x, Int_t y, Int_t z, Double_t bm, Double_t em,Do
       high  = mu0;
       fhigh = maximum;
 
-      for(Int_t i = 0; i < maxiter; i++) {
+      for(i = 0; i < maxiter; i++) {
          l = (target-fhigh)/(flow-fhigh);
          if (l < 0.2) l = 0.2;
          if (l > 0.8) l = 0.8;
@@ -368,7 +368,7 @@ Double_t TRolke::Likelihood(Double_t mu, Int_t x, Int_t y, Int_t z, Double_t bm,
 }
 
 //_________________________________________________________________________
-Double_t TRolke::EvalLikeMod1(Double_t mu, Int_t x, Int_t y, Int_t z, Double_t e, Double_t tau, Double_t b, Int_t m, Int_t what)
+Double_t TRolke::EvalLikeMod1(Double_t mu, Int_t x, Int_t y, Int_t z, Double_t , Double_t tau, Double_t b, Int_t m, Int_t what)
 {
    // Calculates the Profile Likelihood for MODEL 1:
    //  Poisson background/ Binomial Efficiency
@@ -394,10 +394,11 @@ Double_t TRolke::EvalLikeMod1(Double_t mu, Int_t x, Int_t y, Int_t z, Double_t e
    if (what == 3) {
       if (mu == 0){
          b = (x+y)/(1.0+tau);
-         e = zm;
+         Double_t e = zm;
          f = LikeMod1(mu,b,e,x,y,z,tau,m);
       } else {
          TRolke g;
+         Double_t e = 0; 
          g.ProfLikeMod1(mu,b,e,x,y,z,tau,m);
          f = LikeMod1(mu,b,e,x,y,z,tau,m);
       }

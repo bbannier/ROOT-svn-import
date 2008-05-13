@@ -344,6 +344,7 @@
 #include "TSystem.h"
 #include "TTreeCloner.h"
 #include "TTreeCache.h"
+#include "TTreeCacheUnzip.h"
 #include "TVirtualCollectionProxy.h"
 #include "TEmulatedCollectionProxy.h"
 #include "TVirtualFitter.h"
@@ -2394,8 +2395,8 @@ TTree* TTree::CloneTree(Long64_t nentries /* = -1 */, Option_t* option /* = "" *
       if (!branch || !branch->TestBit(kDoNotProcess)) {
          continue;
       }
-      TObjArray* branches = newtree->GetListOfBranches();
-      Int_t nb = branches->GetEntriesFast();
+//      TObjArray* branches = newtree->GetListOfBranches();
+//      Int_t nb = branches->GetEntriesFast();
       for (Long64_t i = 0; i < nb; ++i) {
          TBranch* br = (TBranch*) branches->UncheckedAt(i);
          if (br == branch) {
@@ -3098,6 +3099,10 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //                 matched by
    //    tree->Draw("arr1-Alt$(arr2,0)");
    //
+   //  The ternary operator is not directly support in TTree::Draw however, to plot the
+   //  equivalent of 'var2<20 ? -99 : var1', you can use:
+   //     tree->Draw("(var2<20)*99+(var2>=20)*var1","");
+   // 
    //     Drawing a user function accessing the TTree data directly
    //     =========================================================
    //
@@ -3451,7 +3456,7 @@ TBranch* TTree::FindBranch(const char* branchname)
          continue;
       }
       // If the alias is present replace it with the real name.
-      char* subbranch = (char*) strstr(branchname, fe->GetName());
+      subbranch = (char*) strstr(branchname, fe->GetName());
       if (subbranch != branchname) {
          subbranch = 0;
       }
@@ -3540,7 +3545,7 @@ TLeaf* TTree::FindLeaf(const char* searchname)
       TBranch* branch = leaf->GetBranch();
       if (branch) {
          longname.Form("%s.%s",branch->GetName(),leafname.Data());
-         Ssiz_t dim = longname.First('[');
+         dim = longname.First('[');
          if (dim>=0) longname.Remove(dim);
          if (longname == searchname) {
             return leaf;
@@ -3583,7 +3588,7 @@ TLeaf* TTree::FindLeaf(const char* searchname)
          continue;
       }
       // If the alias is present replace it with the real name.
-      char* subsearchname = (char*) strstr(searchname, fe->GetName());
+      subsearchname = (char*) strstr(searchname, fe->GetName());
       if (subsearchname != searchname) {
          subsearchname = 0;
       }
@@ -4997,9 +5002,9 @@ void TTree::Print(Option_t* option) const
       TIter next(const_cast<TTree*>(this)->GetListOfBranches());
       TBranch::ResetCount();
       while ((br= (TBranch*)next())) {
-         TString s = br->GetName();
-         s.ReplaceAll("/","_");
-         if (s.Index(re) == kNPOS) continue;
+         TString st = br->GetName();
+         st.ReplaceAll("/","_");
+         if (st.Index(re) == kNPOS) continue;
          br->Print(option);
       }
    }
@@ -5758,7 +5763,11 @@ void TTree::SetCacheSize(Long64_t cacheSize)
    if (cacheSize <= 0) {
       return;
    }
-   new TTreeCache(this, cacheSize);
+
+   if(TTreeCacheUnzip::IsParallelUnzip() && file->GetCompressionLevel() > 0)
+      new TTreeCacheUnzip(this, cacheSize);
+   else
+      new TTreeCache(this, cacheSize);
 }
 
 //______________________________________________________________________________
@@ -5886,12 +5895,12 @@ Long64_t TTree::SetEntries(Long64_t n)
    Long64_t nMax = 0;
    TIter next(GetListOfBranches());
    while((b = (TBranch*) next())){
-      Long64_t n = b->GetEntries();
-      if (n < nMin) {
-         nMin = n;
+      Long64_t n2 = b->GetEntries();
+      if (n2 < nMin) {
+         nMin = n2;
       }
-      if (n > nMax) {
-         nMax = n;
+      if (n2 > nMax) {
+         nMax = n2;
       }
    }
    if (nMin != nMax) {

@@ -29,6 +29,7 @@ altld=
 
 deprecated_options="         \
    enable_mathcore           \
+   enable_cern               \
 "
 
 options="                    \
@@ -42,7 +43,6 @@ options="                    \
    enable_builtin_pcre       \
    enable_builtin_zlib       \
    enable_castor             \
-   enable_cern               \
    enable_chirp              \
    enable_cint7              \
    enable_cintex             \
@@ -56,6 +56,7 @@ options="                    \
    enable_g4root             \
    enable_glite              \
    enable_globus             \
+   enable_gsl_shared         \
    enable_krb5               \
    enable_ldap               \
    enable_genvector          \
@@ -91,7 +92,6 @@ options="                    \
    enable_xft                \
    enable_xml                \
    enable_xrootd             \
-   $deprecated_options       \
 "
 
 #
@@ -99,6 +99,7 @@ options="                    \
 # on per default explictly afterwards.
 #
 for c in $options ; do eval ${c}="yes" ; done
+for c in $deprecated_options ; do eval ${c}="yes" ; done
 for c in $options ; do eval ${c}_explicit="" ; done
 
 enable_afs=no
@@ -106,6 +107,7 @@ enable_cint7=no
 enable_gdml=no
 enable_globus=no
 enable_explicitlink=no
+enable_gsl_shared=no
 enable_pch=no
 enable_qt=no
 enable_qtgsi=no
@@ -142,7 +144,6 @@ CASTOR           \
 GFAL             \
 G4ROOT           \
 GSL              \
-CERNLIB          \
 PYTHIA6          \
 PYTHIA8          \
 FFTW3            \
@@ -888,7 +889,6 @@ enable/disable options, prefix with either --enable- or --disable-
   builtin-pcre       Built included libpcre, or use system libpcre
   builtin-zlib       Built included libz, or use system libz
   castor             CASTOR support, requires libshift from CASTOR >= 1.5.2
-  cern               CERNLIB usage, build h2root and g2root
   chirp              Chirp support (Condor remote I/O), requires libchirp_client
   cint7              Build the *experimental* new Cint library
   cintex             Build the libCintex Reflex interface library
@@ -902,6 +902,7 @@ enable/disable options, prefix with either --enable- or --disable-
   g4root             GEANT4 navigator based on TGeo, requires GEANT4 installed
   globus             Globus authentication support, requires Globus toolkit
   glite	             gLite support, requires libglite-api-wrapper v.3 from GSI (https://subversion.gsi.de/trac/dgrid/wiki)
+  gsl-shared         enable linking against shared libraries for GSL (default no)
   krb5               Kerberos5 support, requires Kerberos libs
   ldap               LDAP support, requires (Open)LDAP libs
   genvector          Build the new libGenVector library
@@ -945,7 +946,6 @@ with options, prefix with --with-, enables corresponding support
   alien-libdir       AliEn support, location of libapiUI
   castor-incdir      CASTOR support, location of stager_api.h
   castor-libdir      CASTOR support, location of libshift
-  cern-libdir        HBOOK converter, location of CERNLIB libraries
   chirp-incdir       Chirp support, location of chirp_client.h
   chirp-libdir       Chirp support, location of libchirp_client
   cppunit            Cppunit testing, directory of the cppunit installation
@@ -1145,7 +1145,7 @@ if test $# -gt 0 ; then
       --with-afterimage-libdir=*) afterimagelibdir=$optarg; enable_builtin_afterimage=no ;;
       --with-castor-incdir=*)  castorincdir=$optarg  ; enable_castor="yes"  ;;
       --with-castor-libdir=*)  castorlibdir=$optarg  ; enable_castor="yes"  ;;
-      --with-cern-libdir=*)    cernlibdir=$optarg    ; enable_cern="yes"    ;;
+      --with-cern-libdir=*)    echo "WARNING: option $1 is deprecated and ignored"'!' ;;
       --with-chirp-incdir=*)   chirpincdir=$optarg   ; enable_chirp="yes"   ;;
       --with-chirp-libdir=*)   chirplibdir=$optarg   ; enable_chirp="yes"   ;;
       --with-cppunit=*)        cppunit=$optarg       ;;
@@ -1239,6 +1239,11 @@ if test $# -gt 0 ; then
         eval ${f}=yes
         eval ${f}_explicit=yes
         for c in $options ; do
+           if test "x$c" = "x$f" ; then
+              f=""
+        fi
+        done
+        for c in $deprecated_options ; do
            if test "x$c" = "x$f" ; then
               f=""
         fi
@@ -1383,7 +1388,7 @@ fi
 # Mandatory test, must succeed
 # Check for X11 and Xpm library (for X11 use always shared lib)
 #
-if test ! "$platform" = "win32"; then
+if test ! "x$platform" = "xwin32"; then
     check_library "libX11" "yes" "$x11libdir" \
         /usr/lib /usr/X11R6/lib /usr/lib/X11 /usr/openwin/lib \
         /usr/local/lib /usr/local/lib/X11 /usr/local/X11R6/lib \
@@ -1445,7 +1450,7 @@ fi
 #
 ### echo %%%Xft support (X11 antialiased fonts)
 #
-if test "$platform" = "win32"; then
+if test "x$platform" = "xwin32"; then
    enable_xft="no"
 fi
 hasxft="undef"
@@ -1530,7 +1535,7 @@ hpuxia64acc)
     ;;
 esac
 if test "x$enable_thread" = "xyes" && \
-   test ! "$platform" = "win32"    && \
+   test ! "x$platform" = "xwin32"  && \
    test "x$threadlib" = "x" ; then
     check_library "libpthread" "$enable_shared" "$threadlibdir" \
 	$THREAD $THREAD/lib /usr/lib /usr/local/lib /usr/lib/X11 \
@@ -1546,7 +1551,7 @@ fi
 
 haspthread="undef"
 if test "x$enable_thread" = "xyes" && \
-   test ! "$platform" = "win32"; then
+   test ! "x$platform" = "xwin32"; then
    haspthread="define"
 fi
 
@@ -1696,7 +1701,7 @@ result "$enable_builtin_zlib"
 #
 # (see mesa3d.org)
 #
-if test ! "x$enable_opengl" = "xno" && test ! "$platform" = "win32" ; then
+if test ! "x$enable_opengl" = "xno" && test ! "x$platform" = "xwin32" ; then
     # Check for OpenGL compatible include and library
     check_header "GL/gl.h" "$openglincdir" $OPENGL $OPENGL/include \
 	/usr/include /usr/include/X11 /usr/X11/include \
@@ -1747,7 +1752,7 @@ check_explicit "$enable_opengl" "$enable_opengl_explicit" \
 #
 # On win32 we always have OpenGL available (is this true?)
 #
-if test "$platform" = "win32"; then
+if test "x$platform" = "xwin32"; then
    enable_opengl="yes"
    openglincdir="include"
 fi
@@ -2470,59 +2475,6 @@ check_explicit "$enable_fftw3" "$enable_fftw3_explicit" \
 
 ######################################################################
 #
-### echo %%% CERNLIB Usage - Third party libraries
-#
-# (See http://www.cern.ch)
-#
-# Check for CERN libs (libpacklib and libkernlib)
-#
-if test ! "x$enable_cern" = "xno"; then
-    cernlibdirs="$CERNLIB $CERNLIB/lib ${CERN}/${CERN_LEVEL}/lib  \
-	/cern/pro/lib /cern/new/lib /cern/old/lib /opt/cern/pro/lib \
-	/opt/cern/new/lib /opt/cern/old/lib /usr/local/cern/pro/lib \
-	/usr/local/cern/new/lib /usr/local/cern/old/lib /usr/lib \
-	/usr/lib/cern /usr/local/lib /usr/local/lib/cern $finkdir/lib"
-    check_library "libpacklib_noshift libpacklib packmd packlib" \
-	"$enable_shared" "${cernlibdir}" $cernlibdirs
-    packlib=$found_lib
-    packlibdir=$found_dir
-
-    check_library "libkernlib_noshift libkernlib kernmd kernlib" \
-	"$enable_shared" "${cernlibdir}" $cernlibdirs
-    kernlib=$found_lib
-    kernlibdir=$found_dir
-
-    if test ! "x$packlib" = "x" && test "x$enable_rfio" = "xno" ; then
-        # check if libpacklib contains rfio references, if yes make further check
-        check_symbol rfio "$packlib" "$packlibdir"
-        if test  $found_symbol -eq 1 ; then
-            # check if libpacklib contains rfio code (case of < 2002 version)
-            check_symbol rfio_connect "$packlib" "$packlibdir"
-            if test  $found_symbol -eq 0 ; then
-                result "### Need libshift with this version of $packlib"
-                if test "x$shiftold" = "xyes"; then
-                    result "### Found old version of libshift, please uprade to >=1.5.2"
-                else
-                    result "### Run configure with --enable-rfio or set --with-shift-libdir"
-                fi
-                packlib=""
-            fi
-        fi
-    fi
-
-    if test "x$packlib" = "x" || test "x$kernlib" = "x"; then
-        enable_cern="no"
-     else
-        cernlib="$packlib $kernlib"
-        cernlibdir="$packlibdir $kernlibdir"
-    fi
-fi
-check_explicit "$enable_cern" "$enable_cern_explicit" \
-     "Explicitly required CernLib dependencies not fulfilled"
-
-
-######################################################################
-#
 ### echo %%% Pythia6  Usage - Third party libraries
 #
 # (See http://root.cern.ch and Lund)
@@ -2971,6 +2923,10 @@ check_explicit "$enable_ruby" "$enable_ruby_explicit" \
 #
 if test ! "x$enable_xml" = "xno" ; then
     # Check for xml include and library
+    if test "x$platform" = "xmacosx"; then
+        # prefer native libxml2 over the one in Fink (/sw)
+        PATH=/usr/bin:$PATH
+    fi
     checking_msg "xml2-config"
     xml2_config=`$cwhich xml2-config 2> /dev/null`
     if test ! "x$xml2_config" = "x" && test -x "$xml2_config" && \
@@ -3994,9 +3950,10 @@ if test ! "x$enable_mathmore" = "xno"; then
     # Check for GSL include and library
     gslskip=
     hasmathmore="define"
-    # by default use now static GSL library everywhere
-    #enable_gsl_shared=$enable_shared"
-    enable_gsl_shared="no"
+    # by default use now static GSL library everywhere unless configure
+    # was run with --enable-gsl-shared option
+    # before the global --enable-shared was used:
+    # enable_gsl_shared=$enable_shared"
 
     check_header "gsl/gsl_version.h" "$gslincdir" $GSL $GSL/include \
 	$GSL/api /usr/local/include /usr/include /opt/gsl/include \
@@ -4082,10 +4039,13 @@ if test ! "x$enable_mathmore" = "xno"; then
 	        # and linker flags
 		result "ok"
 	        gslflags=`gsl-config --cflags`
-	        #gsllibs=`gsl-config --libs`
-		#use static libs
-		gslprefix=`gsl-config --prefix`
-		gsllibs="$gslprefix/lib/libgsl.a $gslprefix/lib/libgslcblas.a"
+	        if test "x$enable_gsl_shared" = "xyes"; then
+		    gsllibs=`gsl-config --libs`
+		else
+		    # use static libs
+		    gslprefix=`gsl-config --prefix`
+		    gsllibs="$gslprefix/lib/libgsl.a $gslprefix/lib/libgslcblas.a"
+	        fi
 		gsllibdir=""
                 gslversion=$gsl_version
             fi
@@ -4447,7 +4407,7 @@ freebsd*|openbsd|aix*|win32*)
     enable_explicitlink="yes"
     ;;
 esac
-if test "x$enable_explicitlink" = "xyes" && test ! "$platform" = "win32" ; then
+if test "x$enable_explicitlink" = "xyes" && test ! "x$platform" = "xwin32"; then
     mkliboption=$mkliboption"-x "
 fi
 
@@ -4507,7 +4467,7 @@ fi
 rm -f lib/libRXML* bin/libRXML* bin/xproofd etc/system.rootmap
 rm -f lib/libProofGui* bin/libProofGui* bin/xrdgsiproxy
 rm -f lib/libMySQL* bin/libMySQL* lib/libGedOld* bin/libGedOld*
-rm -f lib/libASPluginGS.*
+rm -f lib/libASPluginGS.* bin/g2rootold*
 rm -f math/mathcore/src/G__MathCore32.*
 rm -f xrootd/src/headers.d
 rm -f asimage/src/headers.d asimage/src/G__ASImageGS.*
@@ -4518,7 +4478,7 @@ rm -f asimage/src/headers.d asimage/src/G__ASImageGS.*
 #
 # First win32 does not support -L in ldflags, so remove @ldflags@.
 #
-if test "$platform" = "win32" ; then
+if test "x$platform" = "xwin32" ; then
     sed -e "s|@ldflags@||"        \
         < Makefile.tmp > Makefile.tmpp
     mv Makefile.tmpp Makefile.tmp
@@ -4666,8 +4626,6 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@builtinfreetype@|$enable_builtin_freetype|"      \
     -e "s|@builtinpcre@|$enable_builtin_pcre|"  \
     -e "s|@buildxrd@|$buildxrd|"                \
-    -e "s|@cernlibdir@|$cernlibdir|"            \
-    -e "s|@cernlibs@|$cernlib|"                 \
     -e "s|@castorincdir@|$castorincdir|"        \
     -e "s|@castorlib@|$castorlib|"              \
     -e "s|@castorlibdir@|$castorlibdir|"        \
@@ -4837,7 +4795,6 @@ sed -e "s|@srcdir@|$srcdir|"                    \
     -e "s|@xrdaddopts@|$xrdaddopts|"            \
     -e "s|@xrootddir@|$xrootddir|"              \
     -e "s|@buildgl@|$enable_opengl|"            \
-    -e "s|@buildhbook@|$enable_cern|"           \
     -e "s|@buildldap@|$enable_ldap|"            \
     -e "s|@buildmysql@|$enable_mysql|"          \
     -e "s|@buildpgsql@|$enable_pgsql|"          \
@@ -5060,7 +5017,7 @@ result "done"
 # etc/root.mimes
 #
 message "Writing $MIMEOUT"
-if test "$platform" = "win32" ; then
+if test "x$platform" = "xwin32" ; then
    cp -f $MIMEWIN32IN $MIMEOUT
 else
    cp -f $MIMEUNIXIN $MIMEOUT
@@ -5183,7 +5140,7 @@ sed -e "s|@bindir@|$bindir2|"           \
     -e "s|@mandir@|$mandir2|"           \
     < $THISROOTCSHIN > $THISROOTCSHOUT
 result "done"
-if test "$platform" = "win32"; then
+if test "x$platform" = "xwin32"; then
     message "Writing $THISROOTBATOUT"
     cp -f $THISROOTBATIN $THISROOTBATOUT
     result "done"
@@ -5216,7 +5173,7 @@ if test "x$enable_reflex" = "xyes"; then
     chmod a+x $GENREFLEXSHOUT
     result "done"
 
-    if test "$platform" = "win32"; then
+    if test "x$platform" = "xwin32"; then
         message "Writing $GENREFLEXBATOUT"
         if test "$prefix" = "\$(ROOTSYS)" ; then
             libdirreflex='%~d0%~p0\\..\\lib'
@@ -5238,7 +5195,7 @@ if test "x$enable_reflex" = "xyes"; then
     chmod a+x $GENREFLEXROOTCINTSHOUT
     result "done"
 
-    if test "$platform" = "win32"; then
+    if test "x$platform" = "xwin32"; then
         message "Writing $GENREFLEXROOTCINTBATOUT"
         if test "$prefix" = "\$(ROOTSYS)" ; then
             libdirreflex='%~d0%~p0\\..\\lib'

@@ -6,16 +6,34 @@
 //
 //------------------------------------------------------------------------------
 
-#include <sys/stat.h>
+#ifdef WIN32
+
+#include <io.h>
+typedef long off_t;
+
+#define cfclos_   __stdcall CFCLOS
+#define cfget_    __stdcall CFGET
+#define cfseek_   __stdcall CFSEEK
+#define ishftr_   __stdcall ISHFTR
+#define lshift_   __stdcall LSHIFT
+#define vxinvb_   __stdcall VXINVB
+#define vxinvc_   __stdcall VXINVC
+#define cfopei_   __stdcall CFOPEI
+#define cfstati_  __stdcall CFSTATI
+#define lnblnk_   __stdcall LNBLNK
+
+#else
+#include <unistd.h>
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 
-char *fchtak(ftext,lgtext)
-      char *ftext;
-      int  lgtext;
+char *fchtak(char *ftext, int lgtext)
 {
       char *ptalc, *ptuse;
       char *utext;
@@ -37,17 +55,21 @@ exit: return  ptalc;
 
 //------------------------------------------------------------------------------
 
-unsigned int ishftr_(arg,len)
-unsigned int *arg;
-int *len;
+unsigned int ishftr_(unsigned int *arg, int *len)
 {
    return(*arg >> *len);
 }
 
 //------------------------------------------------------------------------------
 
-void vxinvb_(ixv, n)
-   int *ixv, *n;
+unsigned int lshift_(unsigned int *arg, int *len)
+{
+   return(*arg << *len);
+}
+
+//------------------------------------------------------------------------------
+
+void vxinvb_(int *ixv, int *n)
 {
    int limit, jloop;
    int in;
@@ -65,8 +87,7 @@ void vxinvb_(ixv, n)
 
 //------------------------------------------------------------------------------
 
-void vxinvc_ (iv, ixv, n)
-int *iv, *ixv, *n;
+void vxinvc_ (int *iv, int *ixv, int *n)
 {
    int limit, jloop;
    int in;
@@ -83,14 +104,15 @@ int *iv, *ixv, *n;
 
 //------------------------------------------------------------------------------
 
-void cfget_(int *lundes, int *medium, int *nwrec, int *nwtak, char *mbuf, int *stat)
+void cfget_(int *lundes, int *medium, int *nwrec, int *nwtak, char *mbuf, 
+            int *astat)
 {
    int fildes;   
    int nbdn, nbdo;   
 
    if (medium) { }
 
-   *stat = 0;   
+   *astat = 0;   
    if (*nwtak <= 0) return;   
 		     
    fildes = *lundes;   
@@ -101,17 +123,17 @@ void cfget_(int *lundes, int *medium, int *nwrec, int *nwtak, char *mbuf, int *s
    *nwtak = (nbdn - 1) / 4 + 1;
    return;   
    heof:
-      *stat = -1;
+      *astat = -1;
       return;
    herror:
-      *stat = 0;
+      *astat = 0;
       printf ("error in CFGET\n");
       return;
 }
 
 //------------------------------------------------------------------------------
 
-void cfseek_(int *lundes, int *medium, int *nwrec, int *jcrec, int *stat)
+void cfseek_(int *lundes, int *medium, int *nwrec, int *jcrec, int *astat)
 {
    int fildes;
    int nbdo;
@@ -123,11 +145,11 @@ void cfseek_(int *lundes, int *medium, int *nwrec, int *jcrec, int *stat)
    nbdo = *jcrec * *nwrec * 4;
    isw = lseek (fildes, nbdo, 0); 
    if (isw < 0) goto trouble;
-   *stat = 0;
+   *astat = 0;
    return;
 
    trouble: 
-      *stat = -1;
+      *astat = -1;
       printf("error in CFSEEK\n");  
 }
 
@@ -143,11 +165,11 @@ void cfclos_(int *lundes, int *medium)
 }
 
 //------------------------------------------------------------------------------
-
-int cfstati_(fname, info, lgname)
-char *fname;
-int *lgname;
-int *info;
+#ifdef WIN32
+int cfstati_(char *fname, int lfname, int *info, int *lgname)
+#else
+int cfstati_(char *fname, int *info, int *lgname)
+#endif
 {
    struct stat buf;
    char *ptname, *fchtak();
@@ -163,17 +185,25 @@ int *info;
       info[4] = (int) buf.st_uid;
       info[5] = (int) buf.st_gid;
       info[6] = (int) buf.st_size;
-#ifdef __APPLE__
+#if defined(__APPLE__)
       info[7] = (int) buf.st_atimespec.tv_sec;
       info[8] = (int) buf.st_mtimespec.tv_sec;
       info[9] = (int) buf.st_ctimespec.tv_sec;
+      info[10] = (int) buf.st_blksize;
+      info[11] = (int) buf.st_blocks;
+#elif defined(WIN32)
+      info[7] = 0;
+      info[8] = 0;
+      info[9] = 0;
+      info[10] = 0;
+      info[11] = 0;
 #else
       info[7] = (int) buf.st_atim.tv_sec;
       info[8] = (int) buf.st_mtim.tv_sec;
       info[9] = (int) buf.st_ctim.tv_sec;
-#endif
       info[10] = (int) buf.st_blksize;
       info[11] = (int) buf.st_blocks;
+#endif
    };
    free(ptname);
    return istat;
@@ -182,15 +212,21 @@ int *info;
 //------------------------------------------------------------------------------
 
 int cfopen_perm = 0;
-void cfopei_(int *lundes,int *medium,int *nwrec,int *mode,int *nbuf,char *ftext,int *stat,int *lgtx)
+#ifdef WIN32
+void cfopei_(int *lundes, int *medium, int *nwrec, int *mode, int *nbuf,
+             char *ftext, int lftext, int *astat, int *lgtx)
+#else
+void cfopei_(int *lundes, int *medium, int *nwrec, int *mode, int *nbuf,
+             char *ftext, int *astat, int *lgtx)
+#endif
 {
    char *pttext, *fchtak();
-   int flags;
+   int flags = 0;
    int fildes;
    int perm;
    if (nwrec || nbuf) { }
    *lundes = 0;
-   *stat = -1;
+   *astat = -1;
    perm = cfopen_perm;
    cfopen_perm = 0;
    if (*medium == 1) goto fltp;
@@ -230,14 +266,25 @@ act:
    fildes = open (pttext, flags, perm);
    if (fildes < 0) goto errm;
    *lundes = fildes;
-   *stat = 0;
+   *astat = 0;
    goto done;
 errm: 
-   *stat = 0;
+   *astat = 0;
    printf("error in CFOPEN\n");
 done: 
    free(pttext);
    return;
+}
+
+//------------------------------------------------------------------------------
+
+int lnblnk_ (char *chline, int len)
+{
+   char  *chcur;
+   chcur = chline + len;
+   while (chcur > chline) { if (*--chcur != ' ') goto exit; }
+   return 0;
+   exit: return chcur+1 - chline;
 }
 
 //------------------------------------------------------------------------------

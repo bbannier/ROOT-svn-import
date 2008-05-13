@@ -1173,7 +1173,7 @@ Double_t TH1::Chi2Test(const TH1* h2, Option_t *option, Double_t *res) const
    //          the first histogram should be unweighted
    //       o "WW" = MC MC comparison (weighted-weighted)
    //       o "NORM" = to be used when one or both of the histograms is scaled
-   //          (unweighted-unweighted)
+   //                  but the histogram originally was unweighted
    //       o by default underflows and overlows are not included:
    //          * "OF" = overflows included
    //          * "UF" = underflows included
@@ -1495,22 +1495,25 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
    //        For unweighted unweighted  comparison
    //       igood=1'There is a bin in the 1st histogram with less than 1 event'
    //       igood=2'There is a bin in the 2nd histogram with less than 1 event'
+   //       igood=3'when the conditions for igood=1 and igood=2 are satisfied'
    //        For  unweighted weighted  comparison
    //       igood=1'There is a bin in the 1st histogram with less then 1 event'
-   //       igood=2'There is a bin in the 2nd histogram with less then 10 effective
-   //               number of events'
+   //       igood=2'There is a bin in the 2nd histogram with less then 10 effective number of events'
+   //       igood=3'when the conditions for igood=1 and igood=2 are satisfied'
    //        For  weighted weighted  comparison
    //       igood=1'There is a bin in the 1st  histogram with less then 10 effective
    //        number of events'
    //       igood=2'There is a bin in the 2nd  histogram with less then 10 effective
    //               number of events'
+   //       igood=3'when the conditions for igood=1 and igood=2 are satisfied'
+   //
    //  - chi2 - chisquare of the test
    //  - ndf  - number of degrees of freedom (important, when both histograms have the same
    //         empty bins)
    //  - res -  normalized residuals for further analysis
 
 
-   Int_t i, j, k;
+   Int_t i, j, k = 0;
    Int_t i_start, i_end;
    Int_t j_start, j_end;
    Int_t k_start, k_end;
@@ -1518,6 +1521,8 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
    Double_t bin1, bin2;
    Double_t err1,err2;
    Double_t sum1=0, sum2=0;
+   Double_t sumw1=0, sumw2=0;
+
 
    chi2 = 0;
    ndf = 0;
@@ -1590,26 +1595,46 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
 
    ndf = (i_end - i_start + 1)*(j_end - j_start + 1)*(k_end - k_start + 1) - 1;
 
+   Bool_t comparisonUU = opt.Contains("UU");
+   Bool_t comparisonUW = opt.Contains("UW");
+   Bool_t comparisonWW = opt.Contains("WW");
+   Bool_t scaledHistogram  = opt.Contains("NORM");
+   if (scaledHistogram && !comparisonUU) { 
+      Info("ChistatTestX","NORM option should be used together with UU option. It is ignored");
+   }
+   // look at histo global bin content and effective entries 
+   Stat_t s[kNstat];
+   this->GetStats(s);// s[1] sum of squares of weights, s[0] sum of weights
+   double sumBinContent1 = s[0]; 
+   double effEntries1 = (s[1] ? s[0]*s[0]/s[1] : 0.); 
 
-  //small number of events diagnostics
-   for(i=i_start; i<=i_end; i++) {
-      for (j=j_start; j<=j_end; j++) {
-         for (k=k_start; k<=k_end; k++) {
-            bin1 = this->GetBinContent(i,j,k);
-            bin2 = h2->GetBinContent(i,j,k);
-            if (!opt.Contains("UU") && bin2 <= 0){
-               Error("ChistatTestX","Hist2: zero events in bin (%d,%d,%d)\n", i,j,k);
-               return 0;
-            }
-            if (opt.Contains("WW") && bin1 <= 0){
-               Error("ChistatTestX","Hist1: zero events in bin (%d,%d,%d)\n", i,j,k);
-               return 0;
-            }
-         }
+   h2->GetStats(s);// s[1] sum of squares of weights, s[0] sum of weights
+   double sumBinContent2 = s[0]; 
+   double effEntries2 = (s[1] ? s[0]*s[0]/s[1] : 0.); 
+      
+   if (!comparisonUU && !comparisonUW && !comparisonWW ) { 
+      // deduce automatically from type of histogram
+      if (TMath::Abs(sumBinContent1 - effEntries1) < 1) { 
+         if ( TMath::Abs(sumBinContent2 - effEntries2) < 1) comparisonUU = true; 
+         else comparisonUW = true; 
+      }
+      else comparisonWW = true; 
+   }
+   // check unweighted histogram 
+   if (comparisonUW) { 
+      if (TMath::Abs(sumBinContent1 - effEntries1) >= 1) { 
+         Warning("ChistatTestX","First Histogram is not unweighted and option UW has been requested");
       }
    }
+   if ( (!scaledHistogram && comparisonUU)   ) { 
+      if ( ( TMath::Abs(sumBinContent1 - effEntries1) >= 1) || (TMath::Abs(sumBinContent2 - effEntries2) >= 1) ) { 
+         Warning("ChistatTestX","Histograms are not both unweighted and option UU has been requested");
+      }
+   }
+
+
    //get number of events in histogramm
-   if (opt.Contains("UU") && opt.Contains("NORM")) {
+   if (comparisonUU && scaledHistogram) {
       for (i=i_start; i<=i_end; i++) {
          for (j=j_start; j<=j_end; j++) {
             for (k=k_start; k<=k_end; k++) {
@@ -1617,18 +1642,27 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
                bin2 = h2->GetBinContent(i,j,k);
                err1 = this->GetBinError(i,j,k);
                err2 = h2->GetBinError(i,j,k);
-               if (err1==0) continue;            //otherwise divison by zero
-               if (err2==0) continue;
-               bin1 *= bin1/(err1*err1);
-               bin2 *= bin2/(err2*err2);
-               bin1 += 0.5;
-               bin2 += 0.5;
-               bin1 = Int_t(bin1);
-               bin2 = Int_t(bin2);
-               bin1 = Double_t(bin1);
-               bin2 = Double_t(bin2);
+               if (err1 > 0 ) { 
+                  bin1 *= bin1/(err1*err1);
+                  //avoid rounding errors
+                  bin1 = TMath::Floor(bin1+0.5);
+               }
+               else 
+                  bin1 = 0;
+
+               if (err2 > 0) { 
+                  bin2 *= bin2/(err2*err2);
+                  //avoid rounding errors
+                  bin2 = TMath::Floor(bin2+0.5);
+               }
+               else 
+                  bin2 = 0; 
+
+               // sum contents
                sum1 += bin1;
                sum2 += bin2;
+               sumw1 += err1*err1;
+               sumw2 += err2*err2;
             }
          }
       }
@@ -1638,6 +1672,14 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
             for (k=k_start; k<=k_end; k++) {
                sum1 += this->GetBinContent(i,j,k);
                sum2 += h2->GetBinContent(i,j,k);
+               if ( comparisonWW ) { 
+                  err1 = this->GetBinError(i,j,k);
+                  sumw1 += err1*err1;
+               }
+               if ( comparisonUW || comparisonWW ) {
+                  err2 = h2->GetBinError(i,j,k);
+                  sumw2 += err2*err2;
+               }
             }
          }
       }
@@ -1648,12 +1690,21 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
       Error("ChistatTestX","one of the histograms is empty");
       return 0;
    }
+   // check if errors are not zero in case of weighted histograms
+   if ( ( comparisonUW || comparisonWW)  && sumw2 <= 0){
+      Error("ChistatTestX","Hist2 has all errors zero\n", i,j,k);
+      return 0;
+   }
+   if ( comparisonWW  && sumw1 <= 0){
+      Error("ChistatTestX","Hist1 has all errors zero\n", i,j,k);
+      return 0;
+   }
 
    //THE TEST
    Int_t m=0, n=0;
 
    //Experiment - experiment comparison
-   if (opt.Contains("UU")) {
+   if (comparisonUU) {
       Double_t sum = sum1 + sum2;
       Double_t binsum,temp1,temp2,correc;
       for (i=i_start; i<=i_end; i++) {
@@ -1662,21 +1713,29 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
                bin1 = this->GetBinContent(i,j,k);
                bin2 = h2->GetBinContent(i,j,k);
 
-               if (bin1 == 0 || bin2 == 0) {
+               if ( (bin1 == 0)  && (bin2 == 0) ) {
                   --ndf;  //no data means one degree of freedom less
                } else {
-                  if (opt.Contains("NORM")) {
+                  if (scaledHistogram) {
+                     // scale bin value to effective bin entries
                      err1 = this->GetBinError(i,j,k);
+                     if (err1 > 0 ) { 
+                        bin1 *= bin1/(err1*err1);
+                        //avoid rounding errors
+                        bin1 = TMath::Floor(bin1+0.5);
+                     }
+                     else 
+                        bin1 = 0;
+
                      err2 = h2->GetBinError(i,j,k);
-                     bin1 *= bin1/(err1*err1);
-                     bin2 *= bin2/(err2*err2);
-                     //avoid rounding errors
-                     bin1 += 0.5;
-                     bin2 += 0.5;
-                     bin1 = Int_t(bin1);
-                     bin2 = Int_t(bin2);
-                     bin1 = Double_t(bin1);
-                     bin2 = Double_t(bin2);
+                     if (err2 > 0) { 
+                        bin2 *= bin2/(err2*err2);
+                        //avoid rounding errors
+                        bin2 = TMath::Floor(bin2+0.5);
+                     }
+                     else 
+                        bin2 = 0; 
+
                   }
 
 
@@ -1684,11 +1743,17 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
                   temp1 = binsum*sum1/sum;
                   temp2 = binsum*sum2/sum;
 
+//                  if(opt.Contains("P")) printf("bin %d p = %g\t",i,binsum/sum);
+
                   if (res)
                      res[i-i_start] = (bin1-temp1)/TMath::Sqrt(temp1);
 
-                  if (temp1 < 1) m++;
-                  if (temp2 < 1) n++;
+                  if (bin1 < 1) {
+                     m++;
+                  }
+                  if (bin2 < 1) { 
+                     n++;
+                  }
 
                   //Habermann correction for residuals
                   correc = (1-sum1/sum)*(1-binsum/sum);
@@ -1704,12 +1769,13 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
       }
 
       chi2 /= sum1*sum2;
+      // flag error only when of the two histogram is zero
       if (m) {
-         igood = 1;
+         igood += 1;
          Info("Chi2TestX","There is bin in Hist1 with less than 1 number of events.\n");
       }
       if (n) {
-         igood = 2;
+         igood += 2;
          Info("Chi2TestX","There is bin in Hist2 with less than 1 number of events.\n");
       }
 
@@ -1719,8 +1785,8 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
    }
 
 
-   //Experiment - MC comparison
-   if (opt.Contains("UW")) {
+   //unweighted - weighted  comparison
+   if ( comparisonUW ) {
       Double_t var1,var2;
       Double_t probb,temp,temp1,temp2;
       for (i=i_start; i<=i_end; i++) {
@@ -1731,11 +1797,28 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
                bin2 = h2->GetBinContent(i,j,k);
                err2 = h2->GetBinError(i,j,k);
 
+               // case both histogram have zero biin contents
+               if ( (bin1 == 0) && (bin2 == 0) ) {
+                  --ndf;  //no data means one degree of freedom less
+                  continue;
+               } 
+
+               // case weighted histogram has zero bin content and error 
+               if (bin2 == 0 && err2 == 0) { 
+                  // use as approximated  error from the total sum weight 
+                  //  and sum weight squared
+                  err2 = sum2/sumw2; 
+               }
+
                err2 *= err2;
+
+               if (bin1 < 1)  m++;
+               if (bin2*bin2/err2 < 10) n++;
 
                var1 = sum2*bin2 - sum1*err2;
                var2 = var1*var1 + 4*sum2*sum2*bin1*err2;
-
+               // if bin1 is zero and bin2=1 and sum1=sum2 var1=0 && var2 ==0
+               // approximate by adding +1 to bin1
                while (var1*var1+bin1 == 0 || var1+var2 == 0) {
                   sum1++;
                   bin1++;
@@ -1767,8 +1850,8 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
                temp1 = probb * sum1;
                temp2 = probb * sum2;
 
-               if (temp1 < 1) m++;
-               if (bin2*bin2/err2 < 10) n++;
+//               if(opt.Contains("P")) printf("bin %d p = %g\t",i,probb);
+
 
                temp = bin1 - temp1;
                chi2 += temp*temp/temp1;
@@ -1781,17 +1864,16 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
                if (res)
                   res[i-i_start] = temp/TMath::Sqrt(temp2);
 
-               //if (y) this->SetBinContent(i,j,k,bin1-x);
             }
          }
       }
 
       if (m) {
-         igood = 1;
+         igood += 1;
          Info("Chi2TestX","There is bin in Hist1 with less than 1 number of events.\n");
       }
       if (n) {
-         igood = 2;
+         igood += 2;
          Info("Chi2TestX","There is bin in Hist2 with less than 10 effective number of events.\n");
       }
 
@@ -1800,8 +1882,8 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
       return prob;
    }
 
-   //MC - MC comarison
-   if (opt.Contains("WW")) {
+   // weighted - weighted  comparison
+   if (comparisonWW) {
       Double_t temp,temp1,temp2,temp3;
       for (i=i_start; i<=i_end; i++) {
          for (j=j_start; j<=j_end; j++) {
@@ -1813,9 +1895,17 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
                err1 *= err1;
                err2 *= err2;
 
+               // case both histogram have zero biin contents
+               if ( (bin1 == 0) && (bin2 == 0) ) {
+                  --ndf;  //no data means one degree of freedom less
+                  continue;
+               } 
+
                temp  = sum1*sum1*err2 + sum2*sum2*err1;
                temp1 = sum2*bin1 - sum1*bin2;
                chi2 += temp1*temp1/temp;
+
+//               if(opt.Contains("P")) printf("bin %d p = %g\t",i, (bin1*sum1/err1 + bin2*sum2/err2)/(sum1*sum1/err1 + sum2*sum2/err2));
 
                temp2 = bin1*sum1*err2 + bin2*sum2*err1;
                temp2 *= sum1/temp;
@@ -1832,11 +1922,11 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
          }
       }
       if (m) {
-         igood = 1;
+         igood += 1;
          Info("Chi2TestX","There is bin in Hist1 with less than 10 effective number of events.\n");
       }
       if (n) {
-         igood = 2;
+         igood += 2;
          Info("Chi2TestX","There is bin in Hist2 with less than 10 effective number of events.\n");
       }
       Double_t prob = TMath::Prob(chi2,ndf);
@@ -4788,20 +4878,20 @@ Long64_t TH1::Merge(TCollection *li)
          }
       }
       if (allHaveLabels) {
-         THashList* labels=h->GetXaxis()->GetLabels();
-         Bool_t haveOneLabel=kFALSE;
-         if (labels) {
-            TIter iL(labels);
+         THashList* hlabels=h->GetXaxis()->GetLabels();
+         Bool_t hasOneLabel=kFALSE;
+         if (hlabels) {
+            TIter iL(hlabels);
             TObjString* lb;
             while ((lb=(TObjString*)iL())) {
-               haveOneLabel |= (lb && lb->String().Length());
+               hasOneLabel |= (lb && lb->String().Length());
                if (!allLabels.FindObject(lb)) {
                   allLabels.Add(lb);
                   same = kFALSE;
                }
             }
          }
-         allHaveLabels&=(labels && haveOneLabel);
+         allHaveLabels&=(labels && hasOneLabel);
          if (!allHaveLabels)
             Warning("Merge","Not all histograms have labels. I will ignore labels,"
             " falling back to bin numbering mode.");
@@ -5241,7 +5331,7 @@ TH1 *TH1::Rebin(Int_t ngroup, const char*newname, const Double_t *xbins)
 
    if(!xbins && (fXaxis.GetXbins()->GetSize() > 0)){ // variable bin sizes
       Double_t *bins = new Double_t[newbins+1];
-      for(Int_t i = 0; i <= newbins; ++i) bins[i] = fXaxis.GetBinLowEdge(1+i*ngroup);
+      for(i = 0; i <= newbins; ++i) bins[i] = fXaxis.GetBinLowEdge(1+i*ngroup);
       hnew->SetBins(newbins,bins); //this also changes errors array (if any)
       delete [] bins;
    } else if (xbins) {
@@ -6604,7 +6694,12 @@ Double_t TH1::KolmogorovTest(const TH1 *h2, Option_t *option) const
    Double_t sum1 = 0, sum2 = 0;
    Double_t ew1, ew2, w1 = 0, w2 = 0;
    Int_t bin;
-   for (bin=1;bin<=ncx1;bin++) {
+   Int_t ifirst = 1;
+   Int_t ilast = ncx1;
+   // integral of all bins (use underflow/overflow if option)
+   if (opt.Contains("U")) ifirst = 0; 
+   if (opt.Contains("O")) ilast = ncx1 +1; 
+   for (bin = ifirst; bin <= ilast; bin++) {
       sum1 += h1->GetBinContent(bin);
       sum2 += h2->GetBinContent(bin);
       ew1   = h1->GetBinError(bin);
@@ -6620,60 +6715,34 @@ Double_t TH1::KolmogorovTest(const TH1 *h2, Option_t *option) const
       Error("KolmogorovTest","Histogram2 %s integral is zero\n",h2->GetName());
       return 0;
    }
-   Double_t tsum1 = sum1;
-   Double_t tsum2 = sum2;
-   if (opt.Contains("U")) {
-      tsum1 += h1->GetBinContent(0);
-      tsum2 += h2->GetBinContent(0);
-   }
-   if (opt.Contains("O")) {
-      tsum1 += h1->GetBinContent(ncx1+1);
-      tsum2 += h2->GetBinContent(ncx1+1);
+
+   // calculate the effective entries.  
+   // the case when errors are zero (w1 == 0 or w2 ==0) are equivalent to 
+   // compare to a function. In that case the rescaling is done only on sqrt(esum2) or sqrt(esum1) 
+   Double_t esum1 = 0, esum2 = 0; 
+   if (w1 > 0) 
+      esum1 = sum1 * sum1 / w1; 
+   else 
+      afunc1 = kTRUE;    // use later for calculating z
+   
+   if (w2 > 0) 
+      esum2 = sum2 * sum2 / w2; 
+   else 
+      afunc2 = kTRUE;    // use later for calculating z
+   
+   if (afunc2 && afunc1) { 
+      Error("KolmogorovTest","Errors are zero for both histograms\n");
+      return 0;
    }
 
-   // Check if histograms are weighted.
-   // If number of entries = number of channels, probably histograms were
-   // not filled via Fill(), but via SetBinContent()
-   Double_t ne1 = h1->GetEntries();
-   Double_t ne2 = h2->GetEntries();
-   // look at first histogram
-   Double_t difsum1 = (ne1-tsum1)/tsum1;
-   Double_t esum1 = sum1;
-   if (difsum1 > difprec && Int_t(ne1) != ncx1) {
-      if (opt.Contains("U") || opt.Contains("O")) {
-         Warning("KolmogorovTest","U/O option with weighted events for hist:%s\n",h1->GetName());
-      }
-      if (h1->GetSumw2N() == 0) {
-         Warning("KolmogorovTest","Weighted events and no Sumw2, hist:%s\n",h1->GetName());
-      } else {
-         esum1 = sum1*sum1/w1;  //number of equivalent entries
-      }
-   }
-   // look at second histogram
-   Double_t difsum2 = (ne2-tsum2)/tsum2;
-   Double_t esum2   = sum2;
-   if (difsum2 > difprec && Int_t(ne2) != ncx1) {
-      if (opt.Contains("U") || opt.Contains("O")) {
-         Warning("KolmogorovTest","U/O option with weighted events for hist:%s\n",h2->GetName());
-      }
-      if (h2->GetSumw2N() == 0) {
-         Warning("KolmogorovTest","Weighted events and no Sumw2, hist:%s\n",h2->GetName());
-      } else {
-         esum2 = sum2*sum2/w2;  //number of equivalent entries
-      }
-   }
 
-   Double_t s1 = 1/tsum1;
-   Double_t s2 = 1/tsum2;
+   Double_t s1 = 1/sum1;
+   Double_t s2 = 1/sum2;
 
    // Find largest difference for Kolmogorov Test
    Double_t dfmax =0, rsum1 = 0, rsum2 = 0;
 
-   Int_t first = 1;
-   Int_t last  = ncx1;
-   if (opt.Contains("U")) first = 0;
-   if (opt.Contains("O")) last  = ncx1+1;
-   for (bin=first;bin<=last;bin++) {
+   for (bin=ifirst;bin<=ilast;bin++) {
       rsum1 += s1*h1->GetBinContent(bin);
       rsum2 += s2*h2->GetBinContent(bin);
       dfmax = TMath::Max(dfmax,TMath::Abs(rsum1-rsum2));
@@ -6681,19 +6750,25 @@ Double_t TH1::KolmogorovTest(const TH1 *h2, Option_t *option) const
 
    // Get Kolmogorov probability
    Double_t z, prb1=0, prb2=0, prb3=0;
-   if (afunc1)      z = dfmax*TMath::Sqrt(esum2);
-   else if (afunc2) z = dfmax*TMath::Sqrt(esum1);
-   else             z = dfmax*TMath::Sqrt(esum1*esum2/(esum1+esum2));
+
+   // case h1 is exact (has zero errors)
+  if  (afunc1)  
+      z = dfmax*TMath::Sqrt(esum2);
+  // case h2 has zero errors
+  else if (afunc2) 
+      z = dfmax*TMath::Sqrt(esum1);
+  else 
+     // for comparison between two data sets 
+     z = dfmax*TMath::Sqrt(esum1*esum2/(esum1+esum2));
 
    prob = TMath::KolmogorovProb(z);
 
-   if (opt.Contains("N")) {
+   // option N to combine normalization makes sense if both afunc1 and afunc2 are false
+   if (opt.Contains("N") && !(afunc1 || afunc2 ) ) {
       // Combine probabilities for shape and normalization,
       prb1 = prob;
-      Double_t resum1 = esum1;  if (afunc1) resum1 = 0;
-      Double_t resum2 = esum2;  if (afunc2) resum2 = 0;
       Double_t d12    = esum1-esum2;
-      Double_t chi2   = d12*d12/(resum1+resum2);
+      Double_t chi2   = d12*d12/(esum1+esum2);
       prb2 = TMath::Prob(chi2,1);
       // see Eadie et al., section 11.6.2
       if (prob > 0 && prb2 > 0) prob *= prb2*(1-TMath::Log(prob*prb2));
@@ -6701,14 +6776,14 @@ Double_t TH1::KolmogorovTest(const TH1 *h2, Option_t *option) const
    }
    // X option. Pseudo-experiments post-processor to determine KS probability
    const Int_t nEXPT = 1000;
-   if (opt.Contains("X")) { 
+   if (opt.Contains("X") && !(afunc1 || afunc2 ) ) { 
       Double_t dSEXPT;
       TH1 *hExpt = (TH1*)(gDirectory ? gDirectory->CloneObject(this,kFALSE) : gROOT->CloneObject(this,kFALSE));
       // make nEXPT experiments (this should be a parameter)
       prb3 = 0;
       for (Int_t i=0; i < nEXPT; i++) {
          hExpt->Reset();
-         hExpt->FillRandom(h1,(Int_t)ne2);
+         hExpt->FillRandom(h1,(Int_t)esum2);
          dSEXPT = KolmogorovTest(hExpt,"M");
          if (dSEXPT>dfmax) prb3 += 1.0;
       }
@@ -6718,8 +6793,8 @@ Double_t TH1::KolmogorovTest(const TH1 *h2, Option_t *option) const
 
    // debug printout
    if (opt.Contains("D")) {
-      printf(" Kolmo Prob  h1 = %s, sum1=%g\n",h1->GetName(),sum1);
-      printf(" Kolmo Prob  h2 = %s, sum2=%g\n",h2->GetName(),sum2);
+      printf(" Kolmo Prob  h1 = %s, sum bin content =%g  effective entries =%g\n",h1->GetName(),sum1,esum1);
+      printf(" Kolmo Prob  h2 = %s, sum bin content =%g  effective entries =%g\n",h2->GetName(),sum2,esum2);
       printf(" Kolmo Prob     = %g, Max Dist = %g\n",prob,dfmax);
       if (opt.Contains("N"))
          printf(" Kolmo Prob     = %f for shape alone, =%f for normalisation alone\n",prb1,prb2);
@@ -7302,7 +7377,10 @@ Double_t TH1::GetBinError(Int_t bin) const
    if (bin < 0) bin = 0;
    if (bin >= fNcells) bin = fNcells-1;
    if (fBuffer) ((TH1*)this)->BufferEmpty();
-   if (fSumw2.fN) return TMath::Sqrt(fSumw2.fArray[bin]);
+   if (fSumw2.fN) {
+      Double_t err2 = fSumw2.fArray[bin];
+      return TMath::Sqrt(err2);
+   }
    Double_t error2 = TMath::Abs(GetBinContent(bin));
    return TMath::Sqrt(error2);
 }

@@ -75,10 +75,10 @@ H2ROOTS2     := $(HBOOKS2)
 # Symbols in cfopei.obj is already provided in packmd.lib,
 #H2ROOTS3    := $(wildcard $(MAINDIRW)/*.c)
 H2ROOTS3     := $(filter-out $(MAINDIRW)/cfopei.c, $(wildcard $(MAINDIRW)/*.c))
-H2ROOTS4     := $(MAINDIRW)/tzvers.f
+#H2ROOTS4     := $(MAINDIRW)/tzvers.f
 H2ROOTO      := $(H2ROOTS1:.cxx=.o) $(H2ROOTS2:.f=.o)
 ifeq ($(PLATFORM),win32)
-H2ROOTO      += $(H2ROOTS3:.c=.o) $(H2ROOTS4:.f=.o)
+H2ROOTO      += $(H2ROOTS3:.c=.o)
 endif
 H2ROOTDEP    := $(H2ROOTS1:.cxx=.d)
 H2ROOT       := bin/h2root$(EXEEXT)
@@ -87,22 +87,11 @@ H2ROOT       := bin/h2root$(EXEEXT)
 G2ROOTS      := $(MODDIRS)/g2root.f
 G2ROOTO      := $(G2ROOTS:.f=.o)
 ifeq ($(PLATFORM),win32)
-G2ROOTO      += $(H2ROOTS3:.c=.o) $(H2ROOTS4:.f=.o)
+G2ROOTO      += $(H2ROOTS3:.c=.o)
 endif
 G2ROOT       := bin/g2root$(EXEEXT)
 ifeq ($(PLATFORM),win32)
 G2ROOT       :=
-endif
-
-##### g2rootold #####
-G2ROOTOLDS   := $(MODDIRS)/g2rootold.f
-G2ROOTOLDO   := $(G2ROOTOLDS:.f=.o)
-ifeq ($(PLATFORM),win32)
-G2ROOTOLDO   += $(H2ROOTS3:.c=.o) $(H2ROOTS4:.f=.o)
-endif
-G2ROOTOLD    := bin/g2rootold$(EXEEXT)
-ifeq ($(PLATFORM),win32)
-G2ROOTOLD    :=
 endif
 
 ##### ssh2rpd #####
@@ -118,7 +107,7 @@ endif
 ALLEXECS     += $(ROOTEXE) $(ROOTNEXE) $(PROOFSERVEXE) $(PROOFSERVSH) \
                 $(HADD) $(SSH2RPD) $(ROOTSEXE) $(ROOTSSH)
 ifneq ($(F77),)
-ALLEXECS     += $(H2ROOT) $(G2ROOT) $(G2ROOTOLD)
+ALLEXECS     += $(H2ROOT) $(G2ROOT)
 endif
 
 # include all dependency files
@@ -163,24 +152,19 @@ $(HADD):        $(HADDO) $(ROOTLIBSDEP)
 $(SSH2RPD):     $(SSH2RPDO) $(SNPRINTFO)
 		$(LD) $(LDFLAGS) -o $@ $(SSH2RPDO) $(SNPRINTFO) $(SYSLIBS)
 
-$(H2ROOT):      $(H2ROOTO) $(ROOTLIBSDEP)
+$(H2ROOT):      $(H2ROOTO) $(ROOTLIBSDEP) $(MINICERNLIB)
 		$(LD) $(LDFLAGS) -o $@ $(H2ROOTO) \
 		   $(RPATH) $(ROOTLIBS) $(MINICERNLIB) \
 		   $(F77LIBS) $(SYSLIBS)
 
-$(G2ROOT):      $(G2ROOTO)
+$(G2ROOT):      $(G2ROOTO) $(ORDER_) $(MINICERNLIB)
 		$(F77LD) $(F77LDFLAGS) -o $@ $(G2ROOTO) \
 		   $(RPATH) $(MINICERNLIB) \
 		   $(F77LIBS) $(SYSLIBS)
 
-$(G2ROOTOLD):   $(G2ROOTOLDO)
-		$(F77LD) $(F77LDFLAGS) -o $@ $(G2ROOTOLDO) \
-		   $(RPATH) $(ROOTLIBS) $(MINICERNLIB) \
-		   $(F77LIBS) $(SYSLIBS)
-
 ifneq ($(F77),)
 all-$(MODNAME): $(ROOTEXE) $(ROOTNEXE) $(PROOFSERVEXE) $(PROOFSERVSH) \
-                $(HADD) $(SSH2RPD) $(H2ROOT) $(G2ROOT) $(G2ROOTOLD) \
+                $(HADD) $(SSH2RPD) $(H2ROOT) $(G2ROOT) \
                 $(ROOTSEXE) $(ROOTSSH)
 else
 all-$(MODNAME): $(ROOTEXE) $(ROOTNEXE) $(PROOFSERVEXE) $(PROOFSERVSH) \
@@ -189,14 +173,14 @@ endif
 
 clean-$(MODNAME):
 		@rm -f $(ROOTEXEO) $(PROOFSERVO) $(HADDO) $(H2ROOTO) \
-		   $(G2ROOTO) $(G2ROOTOLDO) $(SSH2RPDO) $(ROOTSEXEO)
+		   $(G2ROOTO) $(SSH2RPDO) $(ROOTSEXEO)
 
 clean::         clean-$(MODNAME)
 
 distclean-$(MODNAME): clean-$(MODNAME)
 		@rm -f $(ROOTEXEDEP) $(ROOTEXE) $(ROOTNEXE) $(PROOFSERVDEP) \
 		   $(PROOFSERVEXE) $(PROOFSERVSH) $(HADDDEP) $(HADD) \
-		   $(H2ROOTDEP) $(H2ROOT) $(G2ROOT) $(G2ROOTOLD) \
+		   $(H2ROOTDEP) $(H2ROOT) $(G2ROOT) \
 		   $(SSH2RPDDEP) $(SSH2RPD) $(ROOTSEXEDEP) $(ROOTSEXE) $(ROOTSSH)
 
 distclean::     distclean-$(MODNAME)

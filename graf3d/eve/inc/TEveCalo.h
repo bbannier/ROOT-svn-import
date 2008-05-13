@@ -46,8 +46,6 @@ protected:
    Float_t      fPhi;
    Float_t      fPhiRng;
 
-   Float_t      fThreshold;  // cell value threshold
-
    Float_t      fBarrelRadius;  // barrel raidus in cm
    Float_t      fEndCapPos;     // end cap z coordinate in cm
 
@@ -167,6 +165,11 @@ class TEveCaloLego : public TEveCaloViz
 {
    friend class TEveCaloLegoGL;
 
+public:
+   enum EProjection_e { kAuto, k3D, k2D };
+   enum E2DMode_e     { kValColor, kValSize };
+   enum EBoxMode_e    { kNone, kFrontBack, kBack};
+
 private:
    TEveCaloLego(const TEveCaloLego&);            // Not implemented
    TEveCaloLego& operator=(const TEveCaloLego&); // Not implemented
@@ -180,6 +183,12 @@ protected:
    Int_t                   fFontSize; // font size in % of projected y axis
    Int_t                   fNZStep; // Z axis label step in GeV
 
+   Int_t                   fBinWidth; // distance in pixels of projected up and low edge
+
+   EProjection_e           fProjection;
+   E2DMode_e               f2DMode;
+   EBoxMode_e              fBoxMode;
+
 public:
    TEveCaloLego(const Text_t* n="TEveCaloLego", const Text_t* t="");
    TEveCaloLego(TEveCaloData* data);
@@ -187,16 +196,28 @@ public:
    virtual ~TEveCaloLego(){}
 
    Color_t  GetFontColor() const { return fFontColor; }
+   void     SetFontColor(Color_t ci) { fFontColor=ci; }
+
    Color_t  GetGridColor() const { return fGridColor; }
+   void     SetGridColor(Color_t ci) { fGridColor=ci; }
   
-   Int_t  GetFontSize() const { return fFontSize; }
+   Int_t    GetFontSize() const { return fFontSize; }
+   void     SetFontSize(Int_t fs) { fFontSize = fs; }
+
    Int_t  GetNZStep() const { return fNZStep; }
-
-   void   SetFontColor(Color_t ci) { fFontColor=ci; }
-   void   SetGridColor(Color_t ci) { fGridColor=ci; }
-
-   void   SetFontSize(Int_t fs) { fFontSize = fs; }
    void   SetNZStep(Int_t s) { fNZStep = s;}
+  
+   Int_t    GetBinWidth() const { return fBinWidth; }
+   void     SetBinWidth(Int_t bw) { fBinWidth = bw; }
+
+   void           SetProjection(EProjection_e p) { fProjection = p; }
+   EProjection_e  GetProjection() { return fProjection; }
+
+   void       Set2DMode(E2DMode_e p) { f2DMode = p; }
+   E2DMode_e  Get2DMode() { return f2DMode; }
+
+   void       SetBoxMode(EBoxMode_e p) { fBoxMode = p; }
+   EBoxMode_e  GetBoxMode() { return fBoxMode; }
 
    virtual Float_t GetDefaultCellHeight() const;
 

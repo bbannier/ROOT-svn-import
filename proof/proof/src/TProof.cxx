@@ -20,6 +20,7 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
+#include <stdlib.h>
 #include <fcntl.h>
 #include <errno.h>
 #ifdef WIN32
@@ -822,9 +823,9 @@ Bool_t TProof::StartSlaves(Bool_t parallel, Bool_t attach)
             gProofServ->GetSocket()->Send(m);
          }
 
-         TIter next(fSlaves);
+         TIter nxw(fSlaves);
          TSlave *sl = 0;
-         while ((sl = (TSlave *)next())) {
+         while ((sl = (TSlave *)nxw())) {
             if (sl->IsValid())
                fAllMonitor->Add(sl->GetSocket());
             else
@@ -2105,11 +2106,12 @@ Int_t TProof::CollectInputFrom(TSocket *s)
                }
             } else if (type > 0) {
                // Read object
-               TObject *obj = mess->ReadObject(TObject::Class());
+               TObject *o = mess->ReadObject(TObject::Class());
                // Add or merge it
-               if ((fPlayer->AddOutputObject(obj) == 1))
+               if ((fPlayer->AddOutputObject(o) == 1)) {
                   // Remove the object if it has been merged
-                  SafeDelete(obj);
+                  SafeDelete(o);
+               }
 
                if (type > 1 && !IsMaster()) {
                   TQueryResult *pq = fPlayer->GetCurrentQuery();
@@ -2910,7 +2912,7 @@ Long64_t TProof::Process(TFileCollection *fc, const char *selector,
 
    Long64_t rv = -1;
 
-   // We include the TFileCollection to the input list and we create a 
+   // We include the TFileCollection to the input list and we create a
    // fake TDSet with infor about it
    TDSet *dset = new TDSet(Form("TFileCollection:%s", fc->GetName()));
    fPlayer->AddInput(fc);
@@ -3416,7 +3418,7 @@ void TProof::StopProcess(Bool_t abort, Int_t timeout)
       fPlayer->StopProcess(abort, timeout);
 
    // Stop any blocking 'Collect' request; on masters we do this only if
-   // aborting; when stopping, we still need to receive the results 
+   // aborting; when stopping, we still need to receive the results
    if (!IsMaster() || abort)
       InterruptCurrentMonitor();
 
@@ -5092,12 +5094,10 @@ Int_t TProof::UploadPackageOnClient(const TString &par, EUploadPackageOpt opt, T
       TMD5 *md5local = TMD5::ReadChecksum(md5f);
       if (!md5local || (*md5) != (*md5local)) {
          // if not, unzip and untar package in package directory
-         Int_t st = 0;
          if ((opt & TProof::kRemoveOld)) {
             // remove any previous package directory with same name
-            st = gSystem->Exec(Form("%s %s/%s", kRM, fPackageDir.Data(),
-                               packnam.Data()));
-            if (st)
+            if (gSystem->Exec(Form("%s %s/%s", kRM, fPackageDir.Data(),
+                                   packnam.Data())))
                Error("UploadPackageOnClient", "failure executing: %s %s/%s",
                      kRM, fPackageDir.Data(), packnam.Data());
          }
@@ -5106,8 +5106,7 @@ Int_t TProof::UploadPackageOnClient(const TString &par, EUploadPackageOpt opt, T
                                        kExecutePermission);
          if (gunzip) {
             // untar package
-            st = gSystem->Exec(Form(kUNTAR2, gunzip, par.Data(), fPackageDir.Data()));
-            if (st)
+            if (gSystem->Exec(Form(kUNTAR2, gunzip, par.Data(), fPackageDir.Data())))
                Error("Uploadpackage", "failure executing: %s",
                      Form(kUNTAR2, gunzip, par.Data(), fPackageDir.Data()));
             delete [] gunzip;
@@ -5923,13 +5922,14 @@ TTree *TProof::GetTreeHeader(TDSet *dset)
    (*reply) >> s1;
    (*reply) >> t;
 
-   PDB(kGlobal, 1)
-      if (t)
+   PDB(kGlobal, 1) {
+      if (t) {
          Info("GetTreeHeader", Form("%s, message size: %d, entries: %d\n",
              s1.Data(), reply->BufferSize(), (int) t->GetMaxEntryLoop()));
-      else
+      } else {
          Info("GetTreeHeader", Form("%s, message size: %d\n", s1.Data(), reply->BufferSize()));
-
+      }
+   }
    delete reply;
 
    return t;
@@ -6485,15 +6485,15 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
          return kError;
       }
    }
-   if (opt & kOverwriteAllFiles && opt & kOverwriteNoFiles
-       || opt & kNoOverwriteDataSet && opt & kAppend
-       || opt & kOverwriteDataSet && opt & kAppend
-       || opt & kNoOverwriteDataSet && opt & kOverwriteDataSet
-       || opt & kAskUser && opt & (kOverwriteDataSet |
+   if (((opt & kOverwriteAllFiles) && (opt & kOverwriteNoFiles))
+       || ((opt & kNoOverwriteDataSet) && (opt & kAppend))
+       || ((opt & kOverwriteDataSet) && (opt & kAppend))
+       || ((opt & kNoOverwriteDataSet) && (opt & kOverwriteDataSet))
+       || ((opt & kAskUser) && (opt & (kOverwriteDataSet |
                                    kNoOverwriteDataSet |
                                    kAppend |
                                    kOverwriteAllFiles |
-                                   kOverwriteNoFiles)) {
+                                   kOverwriteNoFiles)))) {
       Error("UploadDataSet", "you specified contradicting options.");
       return kError;
    }
@@ -6624,8 +6624,8 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
       if ((fileCount = fileList->GetList()->GetSize()) == 0) {
          Info("UploadDataSet", "no files were copied. The dataset will not be saved");
       } else {
-         TString opt = (appendToDataSet) ? "" : "O";
-         if (!RegisterDataSet(dataSetName, fileList, opt)) {
+         TString o = (appendToDataSet) ? "" : "O";
+         if (!RegisterDataSet(dataSetName, fileList, o)) {
             Error("UploadDataSet", "Error while saving dataset: %s", dataSetName);
             fileCount = kError;
          }
@@ -6945,6 +6945,8 @@ Int_t TProof::RemoveDataSet(const char *uri, const char* optStr)
 //______________________________________________________________________________
 TList* TProof::FindDataSets(const char* /*searchString*/, const char* /*optStr*/)
 {
+   // Find datasets, returns in a TList all found datasets.
+
    Error ("FindDataSets", "not yet implemented");
    return (TList *) 0;
 }
@@ -7027,9 +7029,9 @@ void TProof::ShowDataSetQuota(Option_t* opt)
    // if opt contains "U" shows also distribution of usage on user-level
 
    if (fProtocol < 15) {
-     Info("ShowDataSetQuota",
-          "functionality not available: the server does not have dataset support");
-     return;
+      Info("ShowDataSetQuota",
+           "functionality not available: the server does not have dataset support");
+      return;
    }
 
    TSocket *master = 0;
@@ -7437,9 +7439,9 @@ Int_t TProof::GetParameter(TCollection *c, const char *par, TString &value)
 
    TObject *obj = c->FindObject(par);
    if (obj) {
-      TNamed *par = dynamic_cast<TNamed*>(obj);
-      if (par) {
-         value = par->GetTitle();
+      TNamed *p = dynamic_cast<TNamed*>(obj);
+      if (p) {
+         value = p->GetTitle();
          return 0;
       }
    }
@@ -7456,9 +7458,9 @@ Int_t TProof::GetParameter(TCollection *c, const char *par, Int_t &value)
 
    TObject *obj = c->FindObject(par);
    if (obj) {
-      TParameter<Int_t> *par = dynamic_cast<TParameter<Int_t>*>(obj);
-      if (par) {
-         value = par->GetVal();
+      TParameter<Int_t> *p = dynamic_cast<TParameter<Int_t>*>(obj);
+      if (p) {
+         value = p->GetVal();
          return 0;
       }
    }
@@ -7474,9 +7476,9 @@ Int_t TProof::GetParameter(TCollection *c, const char *par, Long_t &value)
 
    TObject *obj = c->FindObject(par);
    if (obj) {
-      TParameter<Long_t> *par = dynamic_cast<TParameter<Long_t>*>(obj);
-      if (par) {
-         value = par->GetVal();
+      TParameter<Long_t> *p = dynamic_cast<TParameter<Long_t>*>(obj);
+      if (p) {
+         value = p->GetVal();
          return 0;
       }
    }
@@ -7492,9 +7494,9 @@ Int_t TProof::GetParameter(TCollection *c, const char *par, Long64_t &value)
 
    TObject *obj = c->FindObject(par);
    if (obj) {
-      TParameter<Long64_t> *par = dynamic_cast<TParameter<Long64_t>*>(obj);
-      if (par) {
-         value = par->GetVal();
+      TParameter<Long64_t> *p = dynamic_cast<TParameter<Long64_t>*>(obj);
+      if (p) {
+         value = p->GetVal();
          return 0;
       }
    }
@@ -7510,9 +7512,9 @@ Int_t TProof::GetParameter(TCollection *c, const char *par, Double_t &value)
 
    TObject *obj = c->FindObject(par);
    if (obj) {
-      TParameter<Double_t> *par = dynamic_cast<TParameter<Double_t>*>(obj);
-      if (par) {
-         value = par->GetVal();
+      TParameter<Double_t> *p = dynamic_cast<TParameter<Double_t>*>(obj);
+      if (p) {
+         value = p->GetVal();
          return 0;
       }
    }

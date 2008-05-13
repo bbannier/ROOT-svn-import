@@ -737,6 +737,7 @@ SplitGLView::SplitGLView(const TGWindow *p, UInt_t w, UInt_t h, Bool_t embed) :
 
    dfrm = new TGDockableFrame(frm);
    dfrm->SetFixedSize(kFALSE);
+   dfrm->EnableHide(kFALSE);
    hfrm = new TGHorizontalFrame(dfrm);
    button= new TGPictureButton(hfrm, gClient->GetPicture("swap.png"));
    button->SetToolTipText("Swap to big view");
@@ -785,6 +786,7 @@ SplitGLView::SplitGLView(const TGWindow *p, UInt_t w, UInt_t h, Bool_t embed) :
    // create (embed) a GL viewer inside
    dfrm = new TGDockableFrame(frm);
    dfrm->SetFixedSize(kFALSE);
+   dfrm->EnableHide(kFALSE);
    hfrm = new TGHorizontalFrame(dfrm);
    button= new TGPictureButton(hfrm, gClient->GetPicture("swap.png"));
    button->SetToolTipText("Swap to big view");
@@ -827,6 +829,7 @@ SplitGLView::SplitGLView(const TGWindow *p, UInt_t w, UInt_t h, Bool_t embed) :
 
    dfrm = new TGDockableFrame(frm);
    dfrm->SetFixedSize(kFALSE);
+   dfrm->EnableHide(kFALSE);
    hfrm = new TGHorizontalFrame(dfrm);
    button= new TGPictureButton(hfrm, gClient->GetPicture("swap.png"));
    button->SetToolTipText("Swap to big view");
@@ -1225,7 +1228,7 @@ void SplitGLView::ItemClicked(TGListTreeItem *item, Int_t, Int_t, Int_t)
       //v->Activated();
       if (v->InheritsFrom("TGLEmbeddedViewer")) {
          TGLEmbeddedViewer *ev = (TGLEmbeddedViewer *)v;
-         gVirtualX->SetInputFocus(ev->GetGLWindow()->GetContainer()->GetId());
+         gVirtualX->SetInputFocus(ev->GetGLWidget()->GetContainer()->GetId());
       }
    }
 }
@@ -1402,3 +1405,14 @@ void SplitGLView::UpdateSummary()
 #pragma link C++ class SplitGLView;
 
 #endif
+
+#ifdef __CINT__
+void SplitGLView()
+{
+   printf("This script is used via ACLiC by the macro \"alice_esd_split.C\"\n");
+   printf("To see it in action, just run \".x alice_esd_split.C\"\n");
+   return;
+}
+#endif
+
+
