@@ -34,6 +34,7 @@
 #include "TMath.h"
 #include "TTree.h"
 #include "TTreeCache.h"
+#include "TTreeCacheUnzip.h"
 #include "TVirtualPad.h"
 
 #include <cstddef>
@@ -327,7 +328,7 @@ void TBranch::Init(const char* name, const char* leaflist, Int_t compress)
          }
          if (lenName == 0 || ctype == leafname) {
             Warning("TBranch","No name was given to the leaf number '%d' in the leaflist of the branch '%s'.",fNleaves,name);
-            sprintf(leafname,"__noname%d",fNleaves);            
+            sprintf(leafname,"__noname%d",fNleaves);
          }
          TLeaf* leaf = 0;
          if (*leaftype == 'C') {
@@ -566,7 +567,7 @@ void TBranch::Browse(TBrowser* b)
       if (gPad) gPad->Update();
    }
 }
- 
+
  //______________________________________________________________________________
 void TBranch::DeleteBaskets(Option_t* option)
 {
@@ -594,8 +595,8 @@ void TBranch::DeleteBaskets(Option_t* option)
       TObjArray *lb = GetListOfBranches();
       Int_t nb = lb->GetEntriesFast();
       for (Int_t j = 0; j < nb; j++) {
-	 TBranch* branch = (TBranch*) lb->UncheckedAt(j);
-	 if (branch) branch->DeleteBaskets("all");
+         TBranch* branch = (TBranch*) lb->UncheckedAt(j);
+         if (branch) branch->DeleteBaskets("all");
       }
    }
    DropBaskets();
@@ -980,8 +981,13 @@ TBasket* TBranch::GetBasket(Int_t basketnumber)
       fBasketBytes[basketnumber] = basket->ReadBasketBytes(fBasketSeek[basketnumber],file);
    }
    //add branch to cache (if any)
-   TTreeCache *tpf = (TTreeCache*)file->GetCacheRead();
-   if (tpf) tpf->AddBranch(this);
+   TFileCacheRead *pf = GetFile()->GetCacheRead();
+   if (pf && pf->InheritsFrom(TTreeCache::Class())){
+      TTreeCache *tpf = (TTreeCache*)pf;
+      tpf->AddBranch(this);
+      if (fSkipZip) tpf->SetSkipZip();
+   }
+
    //now read basket
    Int_t badread = basket->ReadBasketBuffers(fBasketSeek[basketnumber],fBasketBytes[basketnumber],file);
    if (badread || basket->GetSeekKey() != fBasketSeek[basketnumber]) {
@@ -999,7 +1005,7 @@ TBasket* TBranch::GetBasket(Int_t basketnumber)
             return 0;
          }
       }
-      Error("GetBasket","File: %s at byte:%lld, branch:%s, entry:%d, badread=%d",file->GetName(),basket->GetSeekKey(),GetName(),fReadEntry,badread);
+      Error("GetBasket","File: %s at byte:%lld, branch:%s, entry:%d, badread=%d, nerrors=%d, basketnumber=%d",file->GetName(),basket->GetSeekKey(),GetName(),fReadEntry,badread,nerrors,basketnumber);
       return 0;
    }
 
@@ -1230,7 +1236,7 @@ TFile* TBranch::GetFile(Int_t mode)
    delete [] bname;
 
    // Open file (new file if mode = 1)
-   { 
+   {
       TDirectory::TContext ctxt(0);
       if (mode) file = TFile::Open(bFileName, "recreate");
       else      file = TFile::Open(bFileName);

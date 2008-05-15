@@ -54,15 +54,20 @@ protected:
    mutable TGLFont          fSymbolFont;
    mutable Int_t            fFontSize; // font size in pixels
 
-   const   Float_t          fTMSize; // tick mark size
+   const   Float_t          fTMSize; //  XY tick-mark size in world coordinates
 
    // grid density modes
    Int_t                    fNBinSteps;
    Int_t*                   fBinSteps;
 
+   // event handling
+   Int_t                    fTowerPicked;
+
 public:
    TEveCaloLegoGL();
    virtual ~TEveCaloLegoGL();
+
+   void   SetTowerPicked(Int_t t) { fTowerPicked=t; }
 
    virtual Bool_t SetModel(TObject* obj, const Option_t* opt=0);
 
@@ -77,6 +82,7 @@ public:
    virtual Bool_t SupportsSecondarySelect() const { return kTRUE; }
    virtual void ProcessSelection(TGLRnrCtx & rnrCtx, TGLSelectRecord & rec);
 
+ 
    ClassDef(TEveCaloLegoGL, 0); // GL renderer class for TEveCaloLego.
 };
 

@@ -19,7 +19,8 @@
 #include "TMath.h"
 #include "TROOT.h"
 #include "TFrame.h"
-#include "Fit/FitConfig.h"
+//#include "Fit/FitConfig.h"
+
 
 
 TF1 *fitFcn;
@@ -42,11 +43,16 @@ Double_t fitFunction(Double_t *x, Double_t *par) {
 }
 
 void DoFit(const char* fitter, TVirtualPad *pad, Int_t npass) {   
+   printf("\n*********************************************************************************\n");
+   printf("\t %s \n",fitter);
+   printf("*********************************************************************************\n");
+
    gRandom = new TRandom3();
    TStopwatch timer;
    //   timer.Start();
    //TVirtualFitter::SetDefaultFitter(fitter);
    ROOT::Fit::FitConfig::SetDefaultMinimizer(fitter);
+   //ROOT::Fit::FitConfig::SetDefaultMinimizer(fitter);
    pad->SetGrid();
    pad->SetLogy();
    fitFcn->SetParameters(1,1,1,6,.03,1);
@@ -61,10 +67,7 @@ void DoFit(const char* fitter, TVirtualPad *pad, Int_t npass) {
       for (Int_t i=0;i<5000;i++) {
          histo->Fill(fitFcn->GetRandom());
       }
-      if (std::string(fitter) == "Fumili2") 
-         histo->Fit(fitFcn,"V");
-      else 
-         histo->Fit(fitFcn,"Q0");
+      histo->Fit(fitFcn,"Q0");
    }
 
    histo->Fit(fitFcn,"EV");

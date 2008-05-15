@@ -84,7 +84,7 @@ INCLUDEFILES += $(MATHCOREDEP)
 .PHONY:         all-$(MODNAME) clean-$(MODNAME) distclean-$(MODNAME) \
                 test-$(MODNAME)
 
- include/Math/%.h: $(MATHCOREDIRI)/Math/%.h
+include/Math/%.h: $(MATHCOREDIRI)/Math/%.h
 		@(if [ ! -d "include/Math" ]; then    \
 		   mkdir -p include/Math;             \
 		fi)
@@ -146,3 +146,4 @@ $(MATHCOREO): CXXFLAGS += -DUSE_ROOT_ERROR
 $(MATHCOREDO): CXXFLAGS += -DUSE_ROOT_ERROR 
 # add optimization to G__Math compilation
 $(MATHCOREDO1) : NOOPT = $(OPT)
+

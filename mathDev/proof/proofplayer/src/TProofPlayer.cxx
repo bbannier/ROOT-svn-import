@@ -219,6 +219,7 @@ TProofPlayer::~TProofPlayer()
 
    fInput->Clear("nodelete");
    SafeDelete(fInput);
+   SafeDelete(fOutput);      // owns the output list
    SafeDelete(fSelector);
    SafeDelete(fFeedbackTimer);
    SafeDelete(fEvIter);
@@ -915,9 +916,9 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
          }
       }
       if (gProofServ && !gProofServ->IsParallel()) {  // put all the canvases onto the output list
-         TIter next(gROOT->GetListOfCanvases());
-         while (TObject *o = next())
-            fOutput->Add(o);
+         TIter nxc(gROOT->GetListOfCanvases());
+         while (TObject *c = nxc())
+            fOutput->Add(c);
       }
    }
 
@@ -1215,7 +1216,8 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
          // A list for the missing files may already have been added to the
          // output list; otherwise, if needed it will be created inside
          if ((listOfMissingFiles = (TList *)fInput->FindObject("MissingFiles"))) {
-            // Move it to the output list
+            // The list will be registered into the output list:
+            // remove it from the input list to avoid problems at destruction
             fInput->Remove(listOfMissingFiles);
          } else {
             listOfMissingFiles = new TList;
@@ -2120,9 +2122,9 @@ void TProofPlayerRemote::StoreOutput(TList *out)
       TEventList *aList;
       while ( (aList = dynamic_cast<TEventList*> (it())) ) {
          // find file offset
-         TIter next(fDSet->GetListOfElements());
+         TIter nxe(fDSet->GetListOfElements());
          TDSetElement *elem;
-         while ( (elem = dynamic_cast<TDSetElement*> (next())) ) {
+         while ( (elem = dynamic_cast<TDSetElement*> (nxe())) ) {
             if (strcmp(elem->GetFileName(), aList->GetName()) == 0)
                break;
          }
@@ -2751,7 +2753,7 @@ Long64_t TProofPlayerSuperMaster::Process(TDSet *dset, const char *selector_file
          Int_t nelements = setelements->GetSize();
          for (Int_t i=0; i<nmasters; i++) {
 
-            Long64_t nentries = 0;
+            Long64_t nent = 0;
             TDSet set(dset->GetType(), dset->GetObjName(),
                       dset->GetDirectory());
             for (Int_t j = (i*nelements)/nmasters;
@@ -2762,7 +2764,7 @@ Long64_t TProofPlayerSuperMaster::Process(TDSet *dset, const char *selector_file
                set.Add(elem->GetFileName(), elem->GetObjName(),
                        elem->GetDirectory(), elem->GetFirst(),
                        elem->GetNum(), elem->GetMsd());
-               nentries+=elem->GetNum();
+               nent += elem->GetNum();
             }
 
             if (set.GetListOfElements()->GetSize()>0) {
@@ -2784,7 +2786,7 @@ Long64_t TProofPlayerSuperMaster::Process(TDSet *dset, const char *selector_file
                fSlaveProgress.Set(fSlaveProgress.GetSize()+1);
                fSlaveProgress[fSlaveProgress.GetSize()-1] = 0;
                fSlaveTotals.Set(fSlaveTotals.GetSize()+1);
-               fSlaveTotals[fSlaveTotals.GetSize()-1] = nentries;
+               fSlaveTotals[fSlaveTotals.GetSize()-1] = nent;
                fSlaveBytesRead.Set(fSlaveBytesRead.GetSize()+1);
                fSlaveBytesRead[fSlaveBytesRead.GetSize()-1] = 0;
                fSlaveInitTime.Set(fSlaveInitTime.GetSize()+1);

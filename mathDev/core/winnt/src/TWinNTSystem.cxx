@@ -1923,6 +1923,100 @@ FILE *TWinNTSystem::TempFileName(TString &base, const char *dir)
 //---- Paths & Files -----------------------------------------------------------
 
 //______________________________________________________________________________
+TList *TWinNTSystem::GetVolumes(Option_t *opt) const
+{
+   // Get list of volumes (drives) mounted on the system.
+   // The returned TList must be deleted by the user using "delete".
+
+   Int_t   drive, curdrive;
+   UInt_t  type;
+   TString sDrive, sType;
+   char    curdir[_MAX_PATH];
+   char    szFs[32];
+
+   if (!opt || !strlen(opt)) {
+      return 0;
+   }
+
+   TList *drives = new TList();
+   drives->SetOwner();
+   // Save current drive
+   curdrive = _getdrive();
+   if (strstr(opt, "cur")) {
+      *szFs='\0';
+      sDrive.Form("%c:", (curdrive + 'A' - 1));
+      sType.Form("Unknown Drive (%s)", sDrive.Data());
+      GetVolumeInformation(Form("%s\\", sDrive.Data()), NULL, 0, NULL, NULL, 
+                           NULL, (LPSTR)szFs, 32);
+      type = ::GetDriveType(sDrive.Data());
+      switch (type) {
+         case DRIVE_UNKNOWN:
+         case DRIVE_NO_ROOT_DIR:
+            break;
+         case DRIVE_REMOVABLE:
+            sType.Form("Removable Disk (%s)", sDrive.Data());
+            break;
+         case DRIVE_FIXED:
+            sType.Form("Local Disk (%s)", sDrive.Data());
+            break;
+         case DRIVE_REMOTE:
+            sType.Form("Network Drive (%s) (%s)", szFs, sDrive.Data());
+            break;
+         case DRIVE_CDROM:
+            sType.Form("CD/DVD Drive (%s)", sDrive.Data());
+            break;
+         case DRIVE_RAMDISK:
+            sType.Form("RAM Disk (%s)", sDrive.Data());
+            break;
+      }
+      drives->Add(new TNamed(sDrive.Data(), sType.Data()));
+   }
+   else if (strstr(opt, "all")) {
+      _getcwd(curdir, _MAX_PATH);
+      // If we can switch to the drive, it exists
+      // but skip floppy drives...
+      UINT nOldErrorMode = ::SetErrorMode(SEM_FAILCRITICALERRORS); 
+      for( drive = 3; drive <= 26; ++drive ) {
+         if( !_chdrive( drive ) ) {
+            *szFs='\0';
+            sDrive.Form("%c:", (drive + 'A' - 1));
+            sType.Form("Unknown Drive (%s)", sDrive.Data());
+            GetVolumeInformation(Form("%s\\", sDrive.Data()), NULL, 0, NULL,
+                                 NULL, NULL, (LPSTR)szFs, 32);
+            type = ::GetDriveType(sDrive.Data());
+            switch (type) {
+               case DRIVE_UNKNOWN:
+               case DRIVE_NO_ROOT_DIR:
+                  break;
+               case DRIVE_REMOVABLE:
+                  sType.Form("Removable Disk (%s)", sDrive.Data());
+                  break;
+               case DRIVE_FIXED:
+                  sType.Form("Local Disk (%s)", sDrive.Data());
+                  break;
+               case DRIVE_REMOTE:
+                  sType.Form("Network Drive (%s) (%s)", szFs, sDrive.Data());
+                  break;
+               case DRIVE_CDROM:
+                  sType.Form("CD/DVD Drive (%s)", sDrive.Data());
+                  break;
+               case DRIVE_RAMDISK:
+                  sType.Form("RAM Disk (%s)", sDrive.Data());
+                  break;
+            }
+            drives->Add(new TNamed(sDrive.Data(), sType.Data()));
+         }
+      }
+      ::SetErrorMode(nOldErrorMode);
+      // Restore original drive
+      _chdrive( curdrive );
+      if (curdir && strlen(curdir))
+         _chdir(curdir);
+   }
+   return drives;
+}
+
+//______________________________________________________________________________
 const char *TWinNTSystem::DirName(const char *pathname)
 {
    // Return the directory name in pathname. DirName of c:/user/root is /user.
