@@ -3405,6 +3405,14 @@ void TProofServ::HandleProcess(TMessage *mess)
                delete dataset;
                return;
             }
+            if (missingFiles) {
+               // The missing files objects have to be removed from the dataset
+               // before delete.
+               TIter next(missingFiles);
+               TObject *file;
+               while ((file = next()))
+                  dataset->GetList()->Remove(file);
+            }
             delete dataset;
 
             // Make sure it will be sent back merged with other similar lists created
@@ -3529,10 +3537,14 @@ void TProofServ::HandleProcess(TMessage *mess)
 
          // Set input
          TIter next(input);
-         for (TObject *o; (o = next()); ) {
+         TObject *o = 0;
+         while ((o = next())) {
             PDB(kGlobal, 2) Info("HandleProcess", "adding: %s", o->GetName());
             fPlayer->AddInput(o);
          }
+
+         // Remove the list of the missing files from the original list, if any
+         if ((o = input->FindObject("MissingFiles"))) input->Remove(o);
 
          // Process
          PDB(kGlobal, 1) Info("HandleProcess", "calling %s::Process()", fPlayer->IsA()->GetName());
@@ -3574,7 +3586,7 @@ void TProofServ::HandleProcess(TMessage *mess)
                Int_t ns = 0;
                Int_t totsz = 0;
                TIter nxo(fPlayer->GetOutputList());
-               TObject *o = 0;
+               o = 0;
                while ((o = nxo())) {
                   ns++;
                   mbuf.Reset();
@@ -3648,7 +3660,8 @@ void TProofServ::HandleProcess(TMessage *mess)
 
       // Set input
       TIter next(input);
-      for (TObject *o; (o = next()); ) {
+      TObject *o = 0;
+      while ((o = next())) {
          PDB(kGlobal, 2) Info("HandleProcess", "adding: %s", o->GetName());
          fPlayer->AddInput(o);
       }
@@ -3676,7 +3689,7 @@ void TProofServ::HandleProcess(TMessage *mess)
             Int_t ns = 0;
             Int_t olsz = fPlayer->GetOutputList()->GetSize();
             TIter nxo(fPlayer->GetOutputList());
-            TObject *o = 0;
+            o = 0;
             while ((o = nxo())) {
                ns++;
                mbuf.Reset();
@@ -3692,9 +3705,15 @@ void TProofServ::HandleProcess(TMessage *mess)
          fSocket->SendObject(0, kPROOF_OUTPUTLIST);
       }
 
-      // Cleanup
+      // Cleanup the input data set info
       SafeDelete(dset);
-      fPlayer->GetInputList()->SetOwner();  // Make sure the input list objects are deleted
+      SafeDelete(enl);
+      SafeDelete(evl);
+
+      // Make also sure the input list objects are deleted
+      fPlayer->GetInputList()->SetOwner(0);
+      input->SetOwner();
+      SafeDelete(input);
 
       // Signal the master that we are idle
       fSocket->Send(kPROOF_SETIDLE);

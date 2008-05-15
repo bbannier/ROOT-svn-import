@@ -60,11 +60,11 @@ include $(MAKEFILEDEP)
 
 MODULES       = build cint/cint core/metautils core/pcre core/utils core/base \
                 core/cont core/meta io/io math/mathcore net/net core/zip \
-                core/clib math/matrix core/newdelete hist/hist tree/tree \
-                graf2d/freetype graf2d/graf graf2d/gpad graf3d/g3d \
+                core/clib core/thread math/matrix core/newdelete hist/hist \
+                tree/tree graf2d/freetype graf2d/graf graf2d/gpad graf3d/g3d \
                 gui/gui math/minuit hist/histpainter tree/treeplayer \
                 gui/ged tree/treeviewer math/physics graf2d/postscript \
-                core/rint core/thread html montecarlo/eg \
+                core/rint html montecarlo/eg \
                 geom/geom geom/geompainter montecarlo/vmc \
                 math/fumili math/mlp math/quadp net/auth gui/guibuilder io/xml \
                 math/foam math/splot math/smatrix io/sql tmva \
@@ -266,7 +266,7 @@ CINTLIBS     := -lCint
 CINT7LIBS    := -lCint -lReflex
 NEWLIBS      := -lNew
 ROOTLIBS     := -lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad \
-                -lTree -lMatrix -lMathCore
+                -lTree -lMatrix -lMathCore -lThread
 BOOTLIBS     := -lCore -lCint -lMathCore
 ifneq ($(ROOTDICTTYPE),cint)
 ROOTLIBS     += -lCintex -lReflex
@@ -282,7 +282,7 @@ ROOTLIBS     := $(LPATH)/libCore.lib $(LPATH)/libCint.lib \
                 $(LPATH)/libHist.lib $(LPATH)/libGraf.lib \
                 $(LPATH)/libGraf3d.lib $(LPATH)/libGpad.lib \
                 $(LPATH)/libTree.lib $(LPATH)/libMatrix.lib \
-                $(LPATH)/libMathcore.lib
+                $(LPATH)/libMathcore.lib $(LPATH)/libThread.lib
 BOOTLIBS     := $(LPATH)/libCore.lib $(LPATH)/libCint.lib \
                 $(LPATH)/libMathcore.lib
 ifneq ($(ROOTDICTTYPE),cint)
@@ -312,6 +312,7 @@ ROOTULIBS    := -Wl,-u,.G__cpp_setupG__Net      \
                 -Wl,-u,.G__cpp_setupG__G3D      \
                 -Wl,-u,.G__cpp_setupG__GPad     \
                 -Wl,-u,.G__cpp_setupG__Tree     \
+                -Wl,-u,.G__cpp_setupG__Thread   \
                 -Wl,-u,.G__cpp_setupG__Matrix
 BOOTULIBS    := -Wl,-u,.G__cpp_setupG__MathCore
 else
@@ -322,6 +323,7 @@ ROOTULIBS    := -Wl,-u,_G__cpp_setupG__Net      \
                 -Wl,-u,_G__cpp_setupG__G3D      \
                 -Wl,-u,_G__cpp_setupG__GPad     \
                 -Wl,-u,_G__cpp_setupG__Tree     \
+                -Wl,-u,_G__cpp_setupG__Thread   \
                 -Wl,-u,_G__cpp_setupG__Matrix
 BOOTULIBS    := -Wl,-u,_G__cpp_setupG__MathCore
 endif
@@ -334,6 +336,7 @@ ROOTULIBS    := -include:_G__cpp_setupG__Net    \
                 -include:_G__cpp_setupG__G3D    \
                 -include:_G__cpp_setupG__GPad   \
                 -include:_G__cpp_setupG__Tree   \
+                -include:_G__cpp_setupG__Thread \
                 -include:_G__cpp_setupG__Matrix
 BOOTULIBS    := -include:_G__cpp_setupG__MathCore
 endif
@@ -421,6 +424,7 @@ MAKECOMPDATA  = build/unix/compiledata.sh
 MAKECHANGELOG = build/unix/makechangelog.sh
 MAKEHTML      = build/unix/makehtml.sh
 MAKELOGHTML   = build/unix/makeloghtml.sh
+MAKERELNOTES  = build/unix/makereleasenotes.sh
 MAKECINTDLL   = build/unix/makecintdll.sh
 MAKESTATIC    = build/unix/makestatic.sh
 RECONFIGURE   = build/unix/reconfigure.sh
@@ -532,7 +536,7 @@ endif
 .PHONY:         all fast config rootcint rootlibs rootexecs dist distsrc \
                 clean distclean maintainer-clean compiledata \
                 version html changelog install uninstall showbuild \
-                static map debian redhat skip postbin
+                releasenotes static map debian redhat skip postbin
 
 ifneq ($(findstring map, $(MAKECMDGOALS)),)
 .NOTPARALLEL:
@@ -801,7 +805,8 @@ endif
 	-@mv -f tutorials/quadp/stock.root- tutorials/quadp/stock.root
 	@rm -f bin/roota bin/proofserva lib/libRoot.a
 	@rm -f $(CINTDIR)/include/*.dll $(CINTDIR)/include/sys/*.dll
-	@rm -f $(CINTDIR)/stl/*.dll README/ChangeLog build/dummy.d
+	@rm -f $(CINTDIR)/stl/*.dll build/dummy.d
+	@rm -f README/ChangeLog README/ReleaseNotes
 	@rm -f $(CINTDIR)/lib/posix/a.out $(CINTDIR)/include/*.so*
 	@rm -f etc/daemons/rootd.rc.d etc/daemons/rootd.xinetd
 	@rm -f etc/daemons/proofd.rc.d etc/daemons/proofd.xinetd
@@ -828,7 +833,10 @@ static: rootlibs
 changelog:
 	@$(MAKECHANGELOG)
 
-html: $(ROOTEXE) changelog
+releasenotes:
+	@$(MAKERELNOTES)
+
+html: $(ROOTEXE) changelog releasenotes
 	@$(MAKELOGHTML)
 	@$(MAKEHTML)
 

@@ -55,8 +55,9 @@ class TGLViewer : public TVirtualViewer3D,
    friend class TGLEventHandler;
 public:
 
-   enum ECameraType { kCameraPerspXOZ, kCameraPerspYOZ, kCameraPerspXOY,
-                      kCameraOrthoXOY, kCameraOrthoXOZ, kCameraOrthoZOY };
+   enum ECameraType { kCameraPerspXOZ,  kCameraPerspYOZ,  kCameraPerspXOY,
+                      kCameraOrthoXOY,  kCameraOrthoXOZ,  kCameraOrthoZOY,
+                      kCameraOrthoXnOY, kCameraOrthoXnOZ, kCameraOrthoZnOY };
 
 private:
    TGLViewer(const TGLViewer &);             // Not implemented
@@ -79,6 +80,9 @@ protected:
    TGLOrthoCamera       fOrthoXOYCamera;       //!
    TGLOrthoCamera       fOrthoXOZCamera;       //!
    TGLOrthoCamera       fOrthoZOYCamera;       //!
+   TGLOrthoCamera       fOrthoXnOYCamera;       //!
+   TGLOrthoCamera       fOrthoXnOZCamera;       //!
+   TGLOrthoCamera       fOrthoZnOYCamera;       //!
    TGLCamera          * fCurrentCamera;        //!
 
    // Lights
@@ -265,6 +269,10 @@ public:
 
    TGEventHandler *GetEventHandler() const { return fEventHandler; }
    virtual void    SetEventHandler(TGEventHandler *handler);
+
+   TGLSelectRecord&    GetSelRec()    { return fSelRec; }
+   TGLOvlSelectRecord& GetOvlSelRec() { return fOvlSelRec; }
+   TGLOverlayElement*  GetCurrentOvlElm() const { return fCurrentOvlElm; }
 
    ClassDef(TGLViewer,0) // Standard ROOT GL viewer.
 };

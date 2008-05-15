@@ -266,6 +266,7 @@ bool Minuit2Minimizer::Minimize() {
    }
 
 
+
 #ifdef USE_ROOT_ERROR
 //restore previous printing level
    if (PrintLevel() ==0)  

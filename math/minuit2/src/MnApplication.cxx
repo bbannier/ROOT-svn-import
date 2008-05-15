@@ -40,6 +40,7 @@ FunctionMinimum MnApplication::operator()(unsigned int maxfcn, double toler) {
    unsigned int npar = VariableParameters();
    //   assert(npar > 0);
    if(maxfcn == 0) maxfcn = 200 + 100*npar + 5*npar*npar;
+
    const FCNBase * fcn = &(Fcnbase()); 
    if (fUseGrad) {
       // case of Gradient FCN implemented via the FCNGradientBase interface
@@ -81,6 +82,7 @@ FunctionMinimum MnApplication::operator()(unsigned int maxfcn, double toler) {
 
       return min;
    }
+
 }
 
 // facade: forward interface of MnUserParameters and MnUserTransformation

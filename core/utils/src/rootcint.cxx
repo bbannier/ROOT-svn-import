@@ -516,21 +516,21 @@ string R__tmpnam()
    static bool initialized = false;
    static list<R__tmpnamElement> tmpnamList;
 
-   
+
    if (!initialized) {
 #if R__USE_MKSTEMP
       // Unlike tmpnam mkstemp does not prepend anything
-      // to its result but must get the pattern as a 
+      // to its result but must get the pattern as a
       // full pathname.
       tmpdir = std::string(P_tmpdir) + "/";
 #endif
- 
+
       if (strlen(P_tmpdir) <= 2) {
          // tmpnam (see man page) prepends the value of the
          // P_tmpdir (defined in stdio.h) to its result.
          // If P_tmpdir is less that 2 character it is likely to
-         // just be '/' or '\\' and we do not want to write in 
-         // the root directory, so let's add the temp directory. 
+         // just be '/' or '\\' and we do not want to write in
+         // the root directory, so let's add the temp directory.
          char *tmp;
          if ((tmp = getenv("CINTTMPDIR"))) tmpdir = tmp;
          else if ((tmp=getenv("TEMP")))    tmpdir = tmp;
@@ -1667,7 +1667,7 @@ void WriteAuxFunctions(G__ClassInfo &cl)
                      << "      ((" << classname.c_str() << "*)p)->DirectoryAutoAdd(dir);" << std::endl
                      << "   }" << std::endl;
    }
-     
+
 
    (*dictSrcOut) << "} // end of namespace ROOT for class " << classname.c_str() << std::endl << std::endl;
 }
@@ -1896,17 +1896,17 @@ int STLContainerStreamer(G__DataMemberInfo &m, int rwmode)
       }
    }
    if (stltype==kMap || stltype==kMultiMap) {
-      G__TypeInfo &ti = TemplateArg(m,1);
-      if (ElementStreamer(ti, 0, rwmode)) {
+      G__TypeInfo &tmplti = TemplateArg(m,1);
+      if (ElementStreamer(tmplti, 0, rwmode)) {
          tcl2="R__tcl2";
-         const char *name = ti.Fullname();
+         const char *name = tmplti.Fullname();
          if (name) {
-            // the value return by ti.Fullname is a static buffer
+            // the value return by tmplti.Fullname is a static buffer
             // so we have to copy it immeditately
             fulName2 = name;
          } else {
-            // ti is a simple type name
-            fulName2 = ti.TrueName();
+            // tmplti is a simple type name
+            fulName2 = tmplti.TrueName();
          }
       }
    }
@@ -2290,7 +2290,7 @@ void WriteClassInit(G__ClassInfo &cl)
    if (HasDirectoryAutoAdd(cl)) {
       (*dictSrcOut)<< "   static void directoryAutoAdd_" << mappedname.c_str() << "(void *p, TDirectory *dir);" << std::endl;
    }
-      
+
    (*dictSrcOut) << std::endl
 
                  << "   // Function generating the singleton type initializer" << std::endl;
@@ -2357,8 +2357,8 @@ void WriteClassInit(G__ClassInfo &cl)
       delete [] proto;
 
       if (methodinfo.IsValid() &&
-          //          methodinfo.ifunc()->para_p_tagtable[methodinfo.Index()][0] == cl.Tagnum() &&
-          strstr(methodinfo.FileName(),"Rtypes.h") == 0) {
+         //          methodinfo.ifunc()->para_p_tagtable[methodinfo.Index()][0] == cl.Tagnum() &&
+         strstr(methodinfo.FileName(),"Rtypes.h") == 0) {
 
          // GetClassVersion was defined in the header file.
          //fprintf(fp, "GetClassVersion((%s *)0x0), ",classname.c_str());
@@ -3571,10 +3571,10 @@ void WriteShowMembers(G__ClassInfo &cl, bool outside = false)
       if (!cl.IsTmplt()) {
          WriteBodyShowMembers(cl, outside);
       } else {
-         string classname = GetLong64_Name( RStl::DropDefaultArg( cl.Fullname() ) );
-         string mappedname = G__map_cpp_name((char*)classname.c_str());
+         string clnameNoDefArg = GetLong64_Name( RStl::DropDefaultArg( cl.Fullname() ) );
+         string mappednameNoDefArg = G__map_cpp_name((char*)clnameNoDefArg.c_str());
 
-         (*dictSrcOut) <<  "   ::ROOT::" << mappedname.c_str() << "_ShowMembers(this, R__insp, R__parent);" << std::endl;
+         (*dictSrcOut) <<  "   ::ROOT::" << mappednameNoDefArg.c_str() << "_ShowMembers(this, R__insp, R__parent);" << std::endl;
       }
       (*dictSrcOut) << "}" << std::endl << std::endl;
 
@@ -3798,7 +3798,7 @@ const char *CopyArg(const char *original)
          {
             return slash+5;
          }
-      }   
+      }
       return original;
    }
 #else
@@ -4313,7 +4313,7 @@ int main(int argc, char **argv)
                ++ic;
                argvv[argcc++] = (char*)"-.";
                dicttype = atoi(argv[ic]);
-               argvv[argcc++] = argv[ic]; 
+               argvv[argcc++] = argv[ic];
                ++ic;
                continue;
             }
@@ -4323,7 +4323,7 @@ int main(int argc, char **argv)
             // the easiest way is to get it as a parameter
             if (!strcmp(argv[ic], "-L") ||  !strcmp(argv[ic], "--symbols-file")) {
                ++ic;
-               
+
                FILE *fpsym = fopen(argv[ic],"r");
                if (fpsym) // File exists
                   fclose(fpsym);
@@ -4333,7 +4333,7 @@ int main(int argc, char **argv)
                }
 
                argvv[argcc++] = (char*)"-L";
-               argvv[argcc++] = argv[ic]; 
+               argvv[argcc++] = argv[ic];
                ++ic;
                continue;
             }
@@ -4473,7 +4473,7 @@ int main(int argc, char **argv)
          ++ic;
          argvv[argcc++] = (char*)"-.";
          dicttype = atoi(argv[ic]);
-         argvv[argcc++] = argv[ic]; 
+         argvv[argcc++] = argv[ic];
          ++ic;
       }
 
@@ -4492,7 +4492,7 @@ int main(int argc, char **argv)
 
          ++ic;
          argvv[argcc++] = (char*)"-L";
-         argvv[argcc++] = argv[ic]; 
+         argvv[argcc++] = argv[ic];
          ++ic;
       }
    }
@@ -4517,17 +4517,17 @@ int main(int argc, char **argv)
          const char *basen = basename(header_c);
          string headerb(basen);
          string::size_type idx = headerb.rfind("Tmp");
-         
+
          int l;
          if(idx != string::npos) {
             l = idx;
-            headerb[l] = '\0';   
+            headerb[l] = '\0';
          }
          else{
             idx = headerb.rfind(".");
             if(idx != string::npos) {
                l = idx;
-               headerb[l] = '\0';   
+               headerb[l] = '\0';
             }
          }
 
@@ -4592,7 +4592,7 @@ int main(int argc, char **argv)
 
    if (!il) {
       // replace bundlename by headers for autolinkdef
-      char* bundle = argvv[argcc - 1];
+      char* bundleAutoLinkdef = argvv[argcc - 1];
       if (insertedBundle)
          --argcc;
       for (std::list<std::string>::const_iterator iHdr = includedFilesForBundle.begin();
@@ -4607,11 +4607,11 @@ int main(int argc, char **argv)
       argcc -= includedFilesForBundle.size();
       if (insertedBundle)
          ++argcc;
-      argvv[argcc - 1] = bundle;
+      argvv[argcc - 1] = bundleAutoLinkdef;
 
       argvv[argcc++] = autold;
    }
-   
+
 #ifdef G__NOSTUBS
    if(insertedBundle) G__setisfilebundled(1);
 #endif
@@ -4766,7 +4766,7 @@ int main(int argc, char **argv)
       (*dictSrcOut) << std::endl;
    }
 
-   //    if(dicttype==3){ 
+   //    if(dicttype==3){
    //      G__ClassInfo cl;
    //      cl.Init();
    //      bool has_input_error = false;
@@ -4794,7 +4794,7 @@ int main(int argc, char **argv)
    //        // We could add an option -k to keep the file even in case of error.
    //        CleanupOnExit(1);
    //        exit(1);
-   //      }     
+   //      }
    //    }
 
    G__ClassInfo cl;
@@ -4836,9 +4836,9 @@ int main(int argc, char **argv)
    }
 
    // 26-07-07
-   // dont generate the showmembers if we only want 
+   // dont generate the showmembers if we only want
    // all the memfunc_setup stuff (stub-less calls)
-   if(dicttype==0 || dicttype==1) {   
+   if(dicttype==0 || dicttype==1) {
       //
       // We will loop over all the classes several times.
       // In order we will call
@@ -4917,23 +4917,23 @@ int main(int argc, char **argv)
       // Loop over all classes and create Streamer() & Showmembers() methods
       //
 
-      G__ClassInfo cl;
-      cl.Init();
-      while (cl.Next()) {
-         if (cl.Linkage() == G__CPPLINK && !cl.IsLoaded()) {
-            Error(0,"A dictionary has been requested for %s but there is no declaration!\n",cl.Name());
+      G__ClassInfo clLocal;
+      clLocal.Init();
+      while (clLocal.Next()) {
+         if (clLocal.Linkage() == G__CPPLINK && !clLocal.IsLoaded()) {
+            Error(0,"A dictionary has been requested for %s but there is no declaration!\n",clLocal.Name());
             continue;
          }
-         if ((cl.Property() & (G__BIT_ISCLASS|G__BIT_ISSTRUCT)) && cl.Linkage() == G__CPPLINK) {
+         if ((clLocal.Property() & (G__BIT_ISCLASS|G__BIT_ISSTRUCT)) && clLocal.Linkage() == G__CPPLINK) {
 
             // Write Code for initialization object (except for STL containers)
-            if ( TClassEdit::IsSTLCont(cl.Name()) ) {
-               RStl::inst().GenerateTClassFor( cl.Name() );
+            if ( TClassEdit::IsSTLCont(clLocal.Name()) ) {
+               RStl::inst().GenerateTClassFor( clLocal.Name() );
             } else {
-               WriteClassInit(cl);
+               WriteClassInit(clLocal);
             }
-         } else if (((cl.Property() & (G__BIT_ISNAMESPACE)) && cl.Linkage() == G__CPPLINK)) {
-            WriteNamespaceInit(cl);
+         } else if (((clLocal.Property() & (G__BIT_ISNAMESPACE)) && clLocal.Linkage() == G__CPPLINK)) {
+            WriteNamespaceInit(clLocal);
          }
       }
 
@@ -4942,15 +4942,15 @@ int main(int argc, char **argv)
       // first to allow template specialisation to occur before template
       // instantiation (STK)
       //
-      cl.Init();
-      while (cl.Next()) {
-         if (!cl.IsLoaded()) {
+      clLocal.Init();
+      while (clLocal.Next()) {
+         if (!clLocal.IsLoaded()) {
             continue;
          }
-         if ((cl.Property() & (G__BIT_ISCLASS|G__BIT_ISSTRUCT)) && cl.Linkage() == G__CPPLINK) {
+         if ((clLocal.Property() & (G__BIT_ISCLASS|G__BIT_ISSTRUCT)) && clLocal.Linkage() == G__CPPLINK) {
             // Write Code for Class_Name() and static variable
-            if (cl.HasMethod("Class_Name")) {
-               WriteClassFunctions(cl, cl.IsTmplt());
+            if (clLocal.HasMethod("Class_Name")) {
+               WriteClassFunctions(clLocal, clLocal.IsTmplt());
             }
          }
       }
@@ -4971,7 +4971,7 @@ int main(int argc, char **argv)
       while (fgets(line, 256, fpld)) {
 
          bool skip = true;
-         bool force = false;
+         bool forceLink = false;
          strcpy(cline,line);
          strcpy(nline,line);
          int len = strlen(line);
@@ -4984,14 +4984,14 @@ int main(int argc, char **argv)
              (strcmp(strtok(0, " " ), "class") == 0)) {
 
             skip = false;
-            force = false;
+            forceLink = false;
 
          } else if ((strcmp(strtok(cline, " "), "#pragma") == 0) &&
                     (strcmp(strtok(0, " "), "create") == 0) &&
                     (strcmp(strtok(0, " "), "TClass") == 0)) {
 
             skip = false;
-            force = true;
+            forceLink = true;
 
          } else if ((strcmp(strtok(nline, " "), "#pragma") == 0) &&
                     (strcmp(strtok(0, " "), "link") == 0) &&
@@ -4999,7 +4999,7 @@ int main(int argc, char **argv)
                     (strcmp(strtok(0, " " ), "namespace") == 0)) {
 
             skip = false;
-            force = false;
+            forceLink = false;
 
          }
 
@@ -5010,7 +5010,7 @@ int main(int argc, char **argv)
             // these change (STK)
 
             int extraRootflag = 0;
-            if (force && len>2) {
+            if (forceLink && len>2) {
                char *endreq = line+len-2;
                bool ending = false;
                while (!ending) {
@@ -5035,20 +5035,20 @@ int main(int argc, char **argv)
             char *request = strtok(0, "-!+;");
             // just in case remove trailing space and tab
             while (*request == ' ') request++;
-            int len = strlen(request)-1;
-            while (request[len]==' ' || request[len]=='\t') request[len--] = '\0';
+            int reqlen = strlen(request)-1;
+            while (request[reqlen]==' ' || request[reqlen]=='\t') request[reqlen--] = '\0';
             request = Compress(request); //no space between tmpl arguments allowed
-            G__ClassInfo cl(request);
+            G__ClassInfo clRequest(request);
 
             string fullname;
-            if (cl.IsValid())
-               fullname = cl.Fullname();
+            if (clRequest.IsValid())
+               fullname = clRequest.Fullname();
             else {
                fullname = request;
             }
             // In order to upgrade the pragma create TClass we would need a new function in
             // CINT's G__ClassInfo.
-            // if (force && extraRootflag) cl.SetRootFlag(extraRootflag);
+            // if (forceLink && extraRootflag) clRequest.SetRootFlag(extraRootflag);
             //          fprintf(stderr,"DEBUG: request==%s processed==%s rootflag==%d\n",request,fullname.c_str(),extraRootflag);
             delete [] request;
 
@@ -5066,36 +5066,38 @@ int main(int argc, char **argv)
             clProcessed.push_back( fullname );
             ncls++;
 
-            if (force) {
-               if ((cl.Property() & (G__BIT_ISCLASS|G__BIT_ISSTRUCT)) && cl.Linkage() != G__CPPLINK) {
-                  if (NeedShadowClass(cl)) {
+            if (forceLink) {
+               if ((clRequest.Property() & (G__BIT_ISCLASS|G__BIT_ISSTRUCT)) && clRequest.Linkage() != G__CPPLINK) {
+                  if (NeedShadowClass(clRequest)) {
                      (*dictSrcOut) << "namespace ROOT {" << std::endl
                                    << "   namespace Shadow {" << std::endl;
-                     shadowMaker->WriteShadowClass(cl);
+                     shadowMaker->WriteShadowClass(clRequest);
                      (*dictSrcOut) << "   } // Of namespace ROOT::Shadow" << std::endl
                                    << "} // Of namespace ROOT" << std::endl << std::endl;
                   }
-                  if (G__ShadowMaker::IsSTLCont(cl.Name()) == 0 ) {
-                     WriteClassInit(cl);
+                  if (G__ShadowMaker::IsSTLCont(clRequest.Name()) == 0 ) {
+                     WriteClassInit(clRequest);
                   }
+               } else if ((clRequest.Property() & (G__BIT_ISNAMESPACE))) {
+                  WriteNamespaceInit(clRequest);
                }
             }
-            WriteClassCode(cl, force);
+            WriteClassCode(clRequest, forceLink);
          }
       }
 
       // Loop over all classes and create Streamer() & ShowMembers() methods
       // for classes not in clProcessed list (exported via
       // "#pragma link C++ defined_in")
-      cl.Init();
+      clLocal.Init();
 
-      while (cl.Next()) {
+      while (clLocal.Next()) {
          int nxt = 0;
          // skip utility class defined in ClassImp
-         if (!strncmp(cl.Fullname(), "R__Init", 7) ||
-             strstr(cl.Fullname(), "::R__Init"))
+         if (!strncmp(clLocal.Fullname(), "R__Init", 7) ||
+             strstr(clLocal.Fullname(), "::R__Init"))
             continue;
-         string fullname( cl.Fullname() );
+         string fullname( clLocal.Fullname() );
          for (i = 0; i < ncls; i++) {
             if ( clProcessed[i] == fullname ) {
                nxt++;
@@ -5104,7 +5106,7 @@ int main(int argc, char **argv)
          }
          if (nxt) continue;
 
-         WriteClassCode(cl);
+         WriteClassCode(clLocal);
       }
 
       //RStl::inst().WriteStreamer(fp); //replaced by new Markus code
@@ -5114,7 +5116,7 @@ int main(int argc, char **argv)
 
       if (!il) remove(autold);
       if (use_preprocessor) remove(bundlename.c_str());
-   
+
    } // (stub-less calls)
 
    // Append CINT dictionary to file containing Streamers and ShowMembers
@@ -5139,7 +5141,7 @@ int main(int argc, char **argv)
          // make name of dict include file "aapDict.cxx" -> "aapDict.h"
          int  nl = 0;
          char inclf[kMaxLen];
-         
+
          // 07-11-07
          // Include the temporaries here to get one file with everything
          char inclfTmp1[kMaxLen];
@@ -5156,7 +5158,7 @@ int main(int argc, char **argv)
             if (!strncmp(line, "#include", 8) && strstr(line, inclf))
                continue;
             fprintf(fpd, "%s", line);
-            
+
 
             // 'linesToSkip' is because we want to put it after #defined private/protected
             if (++nl == linesToSkip && icc) {
