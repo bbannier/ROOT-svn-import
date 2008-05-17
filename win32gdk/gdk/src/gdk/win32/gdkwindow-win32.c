@@ -1365,10 +1365,17 @@ void gdk_window_set_transient_for(GdkWindow * window, GdkWindow * parent)
    g_return_if_fail(window != NULL);
    g_return_if_fail(GDK_IS_WINDOW(window));
 
+   g_return_if_fail(parent != NULL);
+   g_return_if_fail(GDK_IS_WINDOW(parent));
+
    GDK_NOTE(MISC, g_print("gdk_window_set_transient_for: %#x %#x\n",
                           GDK_DRAWABLE_XID(window),
                           GDK_DRAWABLE_XID(parent)));
-   /* XXX */
+   SetLastError (0);
+   if (SetWindowLong (GDK_DRAWABLE_XID(window), GWL_HWNDPARENT, 
+       (long) GDK_DRAWABLE_XID(parent)) == 0 && GetLastError () != 0) {
+      WIN32_API_FAILED ("SetWindowLong");
+   }
 }
 
 void gdk_window_set_background(GdkWindow * window, GdkColor * color)
@@ -1912,8 +1919,8 @@ gdk_window_set_decorations(GdkWindow * window, GdkWMDecoration decorations)
        (WS_OVERLAPPED | WS_POPUP | WS_CHILD | WS_MINIMIZE | WS_VISIBLE |
         WS_DISABLED | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_MAXIMIZE);
 
-   exstyle &= (WS_EX_TOPMOST | WS_EX_TRANSPARENT);
-//  exstyle &= WS_EX_TRANSPARENT;
+//   exstyle &= (WS_EX_TOPMOST | WS_EX_TRANSPARENT);
+  exstyle &= WS_EX_TRANSPARENT;
 
    if (decorations & GDK_DECOR_ALL)
       style |=
@@ -1950,8 +1957,8 @@ void gdk_window_set_functions(GdkWindow * window, GdkWMFunction functions)
         WS_DISABLED | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_MAXIMIZE |
         WS_CAPTION | WS_BORDER | WS_SYSMENU);
 
-   exstyle &= (WS_EX_TOPMOST | WS_EX_TRANSPARENT);
-//  exstyle &= WS_EX_TRANSPARENT;
+//   exstyle &= (WS_EX_TOPMOST | WS_EX_TRANSPARENT);
+   exstyle &= WS_EX_TRANSPARENT;
 
    if (functions & GDK_FUNC_ALL)
       style |= (WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
