@@ -1384,12 +1384,12 @@ void TClassDocOutput::WriteClassDescription(std::ostream& out, const TString& de
    if (fCurrentClassesTypedefs && !fCurrentClassesTypedefs->IsEmpty()) {
       out << "<h4>This class is also known as (typedefs to this class)</h4>";
       TIter iTD(fCurrentClassesTypedefs);
-      bool first = true;
+      bool firsttd = true;
       TDataType* dt = 0;
       while ((dt = (TDataType*) iTD())) {
-         if (!first)
+         if (!firsttd)
             out << ", ";
-         else first = false;
+         else firsttd = false;
          fParser->DecorateKeywords(out, dt->GetName());
       }
    }
