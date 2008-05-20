@@ -219,7 +219,7 @@ extern "C" {
 #if defined(R__AIX)
 // #   define HAVE_XL_TRBK   // does not work as expected
 #endif
-#if defined(R__LINUX) || defined(R__HURD)
+#if (defined(R__LINUX) || defined(R__HURD)) && !defined(R__WINGCC)
 #   if __GLIBC__ == 2 && __GLIBC_MINOR__ >= 1
 #      define HAVE_BACKTRACE_SYMBOLS_FD
 #   endif
@@ -351,6 +351,23 @@ static void SigHandler(ESignals sig)
       ((TUnixSystem*)gSystem)->DispatchSignals(sig);
 }
 
+#if defined(HAVE_DLADDR)
+//______________________________________________________________________________
+static void SetRootSys()
+{
+#ifndef ROOTPREFIX
+   void *addr = (void *)SetRootSys;
+   Dl_info info;
+   if (dladdr(addr, &info) && info.dli_fname && info.dli_fname[0]) {
+      TString rs = gSystem->DirName(info.dli_fname);
+      gSystem->Setenv("ROOTSYS", gSystem->DirName(rs));
+   }
+#else
+   return;
+#endif
+}
+#endif
+
 #if defined(R__MACOSX)
 static TString gLinkedDylibs;
 
@@ -370,7 +387,12 @@ static void DylibAdded(const struct mach_header *mh, intptr_t /* vmaddr_slide */
 
    TString lib = _dyld_get_image_name(i++);
 
-   //printf("%s %p\n", lib.Data(), mh);
+#ifndef ROOTPREFIX
+   if (lib.EndsWith("libCore.dylib") || lib.EndsWith("libCore.so")) {
+      TString rs = gSystem->DirName(lib);
+      gSystem->Setenv("ROOTSYS", gSystem->DirName(rs));
+   }
+#endif
 
    // when libSystem.B.dylib is loaded we have finished loading all dylibs
    // explicitly linked against the executable. Additional dylibs
@@ -435,17 +457,20 @@ Bool_t TUnixSystem::Init()
    UnixSignal(kSigFloatingException,     SigHandler);
    UnixSignal(kSigWindowChanged,         SigHandler);
 
+#if defined(R__MACOSX)
+   // trap loading of all dylibs to register dylib name
+   // sets also ROOTSYS if built without ROOTPREFIX
+   _dyld_register_func_for_add_image(DylibAdded);
+#elif defined(HAVE_DLADDR)
+   SetRootSys();
+#endif
+
 #ifndef ROOTPREFIX
    gRootDir = Getenv("ROOTSYS");
    if (gRootDir == 0)
       gRootDir= "/usr/local/root";
 #else
    gRootDir = ROOTPREFIX;
-#endif
-
-#if defined(R__MACOSX)
-   // trap loading of all dylibs to register dylib name
-   _dyld_register_func_for_add_image(DylibAdded);
 #endif
 
    return kFALSE;

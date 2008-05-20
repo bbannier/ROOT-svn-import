@@ -43,6 +43,7 @@
 #include "TProcessUUID.h"
 #include "TUrl.h"
 #include "TError.h"
+#include <cstdlib>
 
 ClassImp(TAlienFile)
 
@@ -502,6 +503,7 @@ TAlienFile::~TAlienFile()
 //______________________________________________________________________________
 void TAlienFile::Close(Option_t * option)
 {
+   //close a file 
    if (!IsOpen()) return;
 
    // Close file.
