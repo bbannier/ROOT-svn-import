@@ -82,5 +82,4 @@
 #pragma link C++ class TGeoBuilder;
 #pragma link C++ class TGeoNavigator+;
 
-
 #endif

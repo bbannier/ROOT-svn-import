@@ -32,6 +32,7 @@
 
 // TEveVSD structs
 #pragma link C++ class TEveVector+;
+#pragma link C++ class TEveVector4+;
 #pragma link C++ class TEvePathMark+;
 #pragma link C++ class TEveMCTrack+;
 #pragma link C++ class TEveHit+;
@@ -85,6 +86,10 @@
 #pragma link C++ class std::set<TEveElement*>::iterator;
 #pragma link C++ typedef TEveElement::Set_t;
 #pragma link C++ typedef TEveElement::Set_i;
+
+// TEveCompound
+#pragma link C++ class TEveCompound+;
+#pragma link C++ class TEveCompoundProjected+;
 
 // TEveSelection
 #pragma link C++ class TEveSelection+;
@@ -217,6 +222,7 @@
 #pragma link C++ class TEveCaloLegoEditor+;
 #pragma link C++ class TEveCaloLegoGL+;
 #pragma link C++ class TEveLegoEventHandler+;
+#pragma link C++ class TEveLegoOverlay+;
 
 // Generic configuration
 #pragma link C++ class TEveParamList;
