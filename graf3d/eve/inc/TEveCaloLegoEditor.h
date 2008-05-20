@@ -34,10 +34,11 @@ protected:
    TEveCaloLego      *fM; // Model object.
 
    TGColorSelect*     fGridColor;
-
    TGColorSelect*     fFontColor;
-   TEveGValuator     *fFontSize;
-   TEveGValuator     *fNZStep;
+   TGColorSelect*     fPlaneColor;
+   TGNumberEntry*     fTransparency;
+
+   TEveGValuator     *fNZSteps;
    TEveGValuator     *fBinWidth;
 
    TGComboBox        *fProjection;
@@ -52,11 +53,13 @@ public:
    virtual void SetModel(TObject* obj);
 
    // Declare callback/slot methods
-   void DoFontColor(Pixel_t color);
    void DoGridColor(Pixel_t color);
+   void DoFontColor(Pixel_t color);
+   void DoPlaneColor(Pixel_t color);
+   void DoTransparency();
 
-   void DoFontSize();
-   void DoNZStep();
+
+   void DoNZSteps();
 
    void DoBinWidth();
 
