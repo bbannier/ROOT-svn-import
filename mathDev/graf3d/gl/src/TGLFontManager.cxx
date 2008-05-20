@@ -240,7 +240,7 @@ void TGLFontManager::RegisterFont(Int_t size, Int_t fileID, TGLFont::EMode mode,
 
 //______________________________________________________________________________
 void TGLFontManager::RegisterFont(Int_t size, const Text_t* name, TGLFont::EMode mode, TGLFont &out)
-{ 
+{
    TObjArray* farr = GetFontFileArray();
    TIter next(farr);
    TObjString* os;
@@ -293,6 +293,32 @@ TGLFontManager::FontSizeVec_t* TGLFontManager::GetFontSizeArray()
 
    if (fgStaticInitDone == kFALSE) InitStatics();
    return &fgFontSizeArray;
+}
+
+//______________________________________________________________________________
+Int_t TGLFontManager::GetFontSize(Float_t ds, Int_t min, Int_t max)
+{
+   // Get availabe font size.
+
+   if (fgStaticInitDone == kFALSE) InitStatics();
+
+   Int_t  nums = fgFontSizeArray.size();
+   Int_t i = 0;
+   while (i<nums)
+   {
+      if (ds<=fgFontSizeArray[i]) break;
+      i++;
+   }
+
+   Int_t fs =  fgFontSizeArray[i];
+
+   if (min>0 && fs<min)
+      fs = min;
+
+   if (max>0 && fs>max)
+      fs = max;
+
+   return fs;
 }
 
 //______________________________________________________________________________
