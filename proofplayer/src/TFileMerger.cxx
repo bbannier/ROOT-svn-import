@@ -113,8 +113,8 @@ Bool_t TFileMerger::AddFile(const char *url)
       fFileList->Add(newfile);
 
       if (!fMergeList)
-         fMergeList = new TList;  
-      TObjString *urlObj = new TObjString(url); 
+         fMergeList = new TList;
+      TObjString *urlObj = new TObjString(url);
       fMergeList->Add(urlObj);
 
       return  kTRUE;
@@ -186,7 +186,7 @@ Bool_t TFileMerger::Merge()
    gSystem->Unlink(path);
    fOutputFile = 0;
 
-   // Remove local copies if there are any 
+   // Remove local copies if there are any
    TIter next(fFileList);
    TFile *file;
    while ((file = (TFile*) next())) {
@@ -212,9 +212,13 @@ Bool_t TFileMerger::MergeRecursive(TDirectory *target, TList *sourcelist, Int_t 
    TString path( (char*)strstr( target->GetPath(), ":" ) );
    path.Remove( 0, 2 );
 
+   //gain time, do not add the objects in the list in memory
+   Bool_t addDirStat = TH1::AddDirectoryStatus();
+   TH1::AddDirectory(kFALSE);
+
    TDirectory *first_source = (TDirectory*)sourcelist->First();
    THashList allNames;
-   while(first_source) {
+   while (first_source) {
       TDirectory *current_sourcedir = first_source->GetDirectory(path);
       if (!current_sourcedir) {
          first_source = (TDirectory*)sourcelist->After(first_source);
@@ -225,8 +229,6 @@ Bool_t TFileMerger::MergeRecursive(TDirectory *target, TList *sourcelist, Int_t 
       TChain *globChain = 0;
       TIter nextkey( current_sourcedir->GetListOfKeys() );
       TKey *key, *oldkey=0;
-      //gain time, do not add the objects in the list in memory
-      TH1::AddDirectory(kFALSE);
 
       while ( (key = (TKey*)nextkey())) {
          if (current_sourcedir == target) break;
@@ -240,7 +242,7 @@ Bool_t TFileMerger::MergeRecursive(TDirectory *target, TList *sourcelist, Int_t 
          current_sourcedir->cd();
          TObject *obj = key->ReadObj();
 
-         if ( obj->IsA()->InheritsFrom( TH1::Class() ) ) {
+         if ( obj->IsA()->InheritsFrom( "TH1" ) ) {
             // descendant of TH1 -> merge it
 
             TH1 *h1 = (TH1*)obj;
@@ -345,6 +347,7 @@ Bool_t TFileMerger::MergeRecursive(TDirectory *target, TList *sourcelist, Int_t 
                }
                Warning("MergeRecursive", "object type without Merge function will be added unmerged, name: %s title: %s",
                        obj->GetName(), obj->GetTitle());
+               TH1::AddDirectory(addDirStat);
                return kTRUE;
             }
          }
@@ -377,5 +380,6 @@ Bool_t TFileMerger::MergeRecursive(TDirectory *target, TList *sourcelist, Int_t 
    // save modifications to target file
    target->SaveSelf(kTRUE);
    if (!isdir) sourcelist->Remove(sourcelist->First());
+   TH1::AddDirectory(addDirStat);
    return kTRUE;
 }
