@@ -2565,6 +2565,12 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdProtocol *p, void *input)
    // TMPDIR
    fprintf(fenv, "TMPDIR=%s\n", fMgr->TMPdir());
 
+   // RC file
+   ev = new char[strlen("ROOTRCFILE=")+rcfile.length()+2];
+   sprintf(ev, "ROOTRCFILE=%s", rcfile.c_str());
+   putenv(ev);
+   fprintf(fenv, "%s\n", ev);
+
    // ROOT version tag (needed in building packages)
    ev = new char[strlen("ROOTVERSIONTAG=")+strlen(p->Client()->ROOT()->Tag())+2];
    sprintf(ev, "ROOTVERSIONTAG=%s", p->Client()->ROOT()->Tag());
