@@ -338,7 +338,7 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
    // overloading.
 
    // Read session specific rootrc file
-   TString rcfile = gSystem->Getenv("ROOTRCFILE") ? gSystem->Getenv("ROOTRCFILE");
+   TString rcfile = gSystem->Getenv("ROOTRCFILE") ? gSystem->Getenv("ROOTRCFILE")
                                                   : "session.rootrc";
    if (!gSystem->AccessPathName(rcfile, kReadPermission))
       gEnv->ReadFile(rcfile, kEnvChange);
