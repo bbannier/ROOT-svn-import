@@ -18,8 +18,11 @@ EXTRALIBS        = -lMinuit2
 CXXFLAGS += -g      
 endif
 
+# for using with MPI
+ifneq ($(USE_OPENMPI),)
 CXX=mpic++
 LD=mpic++
+endif
 
 USERFUNCOBJ      = testUserFunc.$(ObjSuf)
 USERFUNCSRC      = testUserFunc.$(SrcSuf)
