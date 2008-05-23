@@ -556,7 +556,8 @@ void THtml::TFileSysDir::Recurse(TFileSysDB* db, const char* path)
    // can be a THtml::GetDirDelimiter() delimited list of paths.
 
    TString sPath(path);
-   Info("Recurse", "scanning %s...", path);
+   if (gDebug > 0 || GetLevel() < 2)
+      Info("Recurse", "scanning %s...", path);
    TString dir;
    Ssiz_t posPath = 0;
    TPMERegexp regexp(db->GetIgnore());
@@ -1517,20 +1518,56 @@ void THtml::CreateListOfClasses(const char* filter)
 
       // clear the typedefs; we fill them later
       cdi->GetListOfTypedefs().Clear();
+
+      if (gDebug > 0)
+         Info("CreateListOfClasses", "Adding class %s, module %s (%sselected)",
+              cdi->GetName(), module ? module->GetName() : "[UNKNOWN]",
+              cdi->IsSelected() ? "" : "not ");
    }
 
    // fill typedefs
    TIter iTypedef(gROOT->GetListOfTypes());
    TDataType* dt = 0;
+   TDocOutput output(*this);
    while ((dt = (TDataType*) iTypedef())) {
       if (dt->GetType() != -1) continue;
       TClassDocInfo* cdi = (TClassDocInfo*) fDocEntityInfo.fClasses.FindObject(dt->GetFullTypeName());
-      if (cdi)
+      if (cdi) {
          cdi->GetListOfTypedefs().Add(dt);
+         if (gDebug > 1)
+            Info("CreateListOfClasses", "Adding typedef %s to class %s",
+                 dt->GetName(), cdi->GetName());
+
+         bool inNamespace = true;
+         TString surroundingNamespace(dt->GetName());
+         Ssiz_t posTemplate = surroundingNamespace.Last('>');
+         inNamespace = inNamespace && (posTemplate == kNPOS);
+         if (inNamespace) {
+            Ssiz_t posColumn = surroundingNamespace.Last(':');
+            if (posColumn != kNPOS) {
+               surroundingNamespace.Remove(posColumn - 1);
+               TClass* clSurrounding = GetClass(surroundingNamespace);
+               inNamespace = inNamespace && (!clSurrounding || IsNamespace(clSurrounding));
+            }
+         }
+         if (inNamespace && cdi->GetModule()) {
+            TString htmlfilename(dt->GetName());
+            output.NameSpace2FileName(htmlfilename);
+            htmlfilename += ".html";
+            TClassDocInfo* cdiTD = new TClassDocInfo(dt, htmlfilename);
+            cdiTD->SetModule(cdi->GetModule());
+            cdiTD->SetSelected(cdi->IsSelected());
+            cdi->GetModule()->AddClass(cdiTD);
+         }
+      }
    }
 
    fDocEntityInfo.fClasses.Sort();
    fDocEntityInfo.fModules.Sort();
+   TIter iterModule(&fDocEntityInfo.fModules);
+   TModuleDocInfo* mdi = 0;
+   while ((mdi = (TModuleDocInfo*) iterModule()))
+      mdi->GetClasses()->Sort();
 
    if (fProductName == "(UNKNOWN PRODUCT)" 
       && fDocEntityInfo.fModules.FindObject("core/base") 
@@ -1617,7 +1654,7 @@ void THtml::GetDerivedClasses(TClass* cl, std::map<TClass*, Int_t>& derived) con
    TIter iClass(&fDocEntityInfo.fClasses);
    TClassDocInfo* cdi = 0;
    while ((cdi = (TClassDocInfo*) iClass())) {
-      TClass* candidate = cdi->GetClass();
+      TClass* candidate = dynamic_cast<TClass*>(cdi->GetClass());
       if (!candidate) continue;
       if (candidate != cl && candidate->InheritsFrom(cl)) {
          Int_t level = 0;
@@ -1737,7 +1774,7 @@ TClass *THtml::GetClass(const char *name1) const
 
    TClassDocInfo* cdi = (TClassDocInfo*)fDocEntityInfo.fClasses.FindObject(name1);
    if (!cdi) return 0;
-   TClass *cl=cdi->GetClass();
+   TClass *cl = dynamic_cast<TClass*>(cdi->GetClass());
    // hack to get rid of prec_stl types
    // TClassEdit checks are far too slow...
    /*
@@ -2004,10 +2041,11 @@ void THtml::MakeClass(void *cdi_void, Bool_t force)
       CreateListOfClasses("*");
 
    TClassDocInfo* cdi = (TClassDocInfo*) cdi_void;
-   TClass* currentClass = cdi->GetClass();
+   TClass* currentClass = dynamic_cast<TClass*>(cdi->GetClass());
 
    if (!currentClass) {
-      if (!TClassEdit::IsStdClass(cdi->GetName())) // stl classes won't be available, so no warning
+      if (!cdi->GetClass() &&
+          !TClassEdit::IsStdClass(cdi->GetName())) // stl classes won't be available, so no warning
          Error("MakeClass", "Class '%s' is known, but I cannot find its TClass object!", cdi->GetName());
       return;
    }
