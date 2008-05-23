@@ -83,6 +83,7 @@
 #pragma link C++ class TMacro+;
 #pragma link C++ class TMD5+;
 #pragma link C++ class TMemberInspector;
+#pragma link C++ class TMemPool+;
 #pragma link C++ class TMessageHandler+;
 #pragma link C++ class TNamed+;
 #pragma link C++ class TObjString+;
