@@ -17,6 +17,7 @@
 #include "TMath.h"
 #include "TTreeCache.h"
 #include "TTreeCacheUnzip.h"
+#include "TMemPool.h"
 
 extern "C" void R__zip (Int_t cxlevel, Int_t *nin, char *bufin, Int_t *lout, char *bufout, Int_t *nout);
 extern "C" void R__unzip(Int_t *nin, UChar_t *bufin, Int_t *lout, char *bufout, Int_t *nout);
@@ -328,7 +329,8 @@ Int_t TBasket::ReadBasketBuffers(Long64_t pos, Int_t len, TFile *file)
       len = fObjlen+fKeylen;
    }
    else{
-      fBufferRef = new TBufferFile(TBuffer::kRead, len);
+      char *buf = new (fBranch->GetMemPool()->GetMem(len)) char[len];
+      fBufferRef = new TBufferFile(TBuffer::kRead, len, buf, kFALSE);
       fBufferRef->SetParent(file);
 
       char *buffer = fBufferRef->Buffer();
