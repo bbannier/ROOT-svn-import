@@ -20,12 +20,15 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include "TMessage.h"
+#include "TVirtualStreamerInfo.h"
 #include "Bytes.h"
 #include "TFile.h"
 
 extern "C" void R__zip (Int_t cxlevel, Int_t *nin, char *bufin, Int_t *lout, char *bufout, Int_t *nout);
 extern "C" void R__unzip(Int_t *nin, UChar_t *bufin, Int_t *lout, char *bufout, Int_t *nout);
 const Int_t kMAXBUF = 0xffffff;
+
+Bool_t TMessage::fgEvolution = kFALSE;
 
 
 ClassImp(TMessage)
@@ -55,6 +58,8 @@ TMessage::TMessage(UInt_t what) : TBufferFile(TBuffer::kWrite)
    fBufComp    = 0;
    fBufCompCur = 0;
    fCompPos    = 0;
+   fInfos      = 0;
+   
 }
 
 //______________________________________________________________________________
@@ -72,6 +77,7 @@ TMessage::TMessage(void *buf, Int_t bufsize) : TBufferFile(TBuffer::kRead, bufsi
    fBufComp    = 0;
    fBufCompCur = 0;
    fCompPos    = 0;
+   fInfos      = 0;
 
    if (fWhat & kMESS_ZIP) {
       // if buffer has kMESS_ZIP set, move it to fBufComp and uncompress
@@ -97,6 +103,16 @@ TMessage::~TMessage()
    // Clean up compression buffer.
 
    delete [] fBufComp;
+   delete fInfos;
+}
+
+//______________________________________________________________________________
+void TMessage::EnableSchemaEvolution(Bool_t enable)
+{
+   //static function enabling or disabling the automatic schema evolution
+   //by default schema evolution support is off
+   
+   fgEvolution = enable;
 }
 
 //______________________________________________________________________________
@@ -113,6 +129,16 @@ void TMessage::Forward()
          fCompPos = fBufCur;
       }
    }
+}
+
+//______________________________________________________________________________
+void TMessage::IncrementLevel(TVirtualStreamerInfo* info)
+{
+   // Increment level.
+
+   TBufferFile::IncrementLevel(info);
+  
+   if (fgEvolution) fInfos->Add(info);
 }
 
 //______________________________________________________________________________
@@ -280,8 +306,9 @@ Int_t TMessage::Uncompress()
 
    Int_t buflen;
    Int_t hdrlen = 2*sizeof(UInt_t);
-   char *bufcur = fBufComp + hdrlen;
-   frombuf(bufcur, &buflen);
+   char *bufcur1 = fBufComp + hdrlen;
+   frombuf(bufcur1, &buflen);
+   UChar_t *bufcur = (UChar_t*)bufcur1;
    fBuffer  = new char[buflen];
    fBufSize = buflen;
    fBufCur  = fBuffer + sizeof(UInt_t) + sizeof(fWhat);
@@ -293,7 +320,7 @@ Int_t TMessage::Uncompress()
    while (1) {
       nin  = 9 + ((Int_t)bufcur[3] | ((Int_t)bufcur[4] << 8) | ((Int_t)bufcur[5] << 16));
       nbuf = (Int_t)bufcur[6] | ((Int_t)bufcur[7] << 8) | ((Int_t)bufcur[8] << 16);
-      R__unzip(&nin, (UChar_t*)bufcur, &nbuf, messbuf, &nout);
+      R__unzip(&nin, bufcur, &nbuf, messbuf, &nout);
       if (!nout) break;
       noutot += nout;
       if (noutot >= buflen - hdrlen) break;
@@ -305,4 +332,23 @@ Int_t TMessage::Uncompress()
    fCompress = 1;
 
    return 0;
+}
+
+//______________________________________________________________________________
+void TMessage::WriteObject(const TObject *obj)
+{
+   // Write object to message buffer.
+   // when support for schema evolution is enabled the list of TStreamerInfo
+   // used to stream this object is kept in fInfos. This information is used
+   // by TSocket::Send that sends this list through the socket. This list is in turn
+   // used by TSocket::Recv to store the TStreamerInfo objects in the relevant TClass
+   // in case the TClass does not know yet about a particular class version.
+   // This feature is implemented to support clients and servers with either different
+   // ROOT versions or different user classes versions.
+
+   if (fgEvolution) {
+      if (fInfos) fInfos->Clear();
+      else        fInfos = new TList();
+   }
+   WriteObjectAny(obj, TObject::Class());
 }
