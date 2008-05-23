@@ -106,7 +106,8 @@ private:
    bool                CheckErrorStatus(XrdClientMessage *, int &, const char *);
    bool                CheckResp(struct ServerResponseHeader *resp,
                                  const char *met);
-   virtual int         Connect();
+   virtual void        Connect();
+   virtual int         TryConnect();
    ESrvType            DoHandShake();
    virtual bool        GetAccessToSrv();
    virtual bool        Init(const char *url = 0);

@@ -90,6 +90,7 @@ class XrdProofdProofServMgr : public XrdProofdConfig {
    XrdScheduler      *fSched;     // System scheduler
    XrdSysLogger      *fLogger;    // Error logger
    int                fInternalWait;   // Timeout on replies from proofsrv
+   XrdOucString       fProofPlugin;    // String identifying the plug-in to be loaded, e.g. "condor:"
    XrdOucString       fProofServEnvs;  // Additional envs to be exported before proofserv
    XrdOucString       fProofServRCs;   // Additional rcs to be passed to proofserv
 

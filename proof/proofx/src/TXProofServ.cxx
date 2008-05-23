@@ -28,6 +28,7 @@
 #endif
 #include <sys/types.h>
 #include <netinet/in.h>
+#include <utime.h>
 
 #include "TXProofServ.h"
 #include "TObjString.h"
@@ -57,32 +58,12 @@
 // debug hook
 static volatile Int_t gProofServDebug = 1;
 
-//----- Interrupt signal handler -----------------------------------------------
-//______________________________________________________________________________
-class TXProofServInterruptHandler : public TSignalHandler {
-   TXProofServ  *fServ;
-public:
-   TXProofServInterruptHandler(TXProofServ *s)
-      : TSignalHandler(kSigUrgent, kFALSE) { fServ = s; }
-   Bool_t  Notify();
-};
-
-//______________________________________________________________________________
-Bool_t TXProofServInterruptHandler::Notify()
-{
-   fServ->HandleUrgentData();
-   if (TROOT::Initialized()) {
-      Throw(GetSignal());
-   }
-   return kTRUE;
-}
-
 //----- SigPipe signal handler -------------------------------------------------
 //______________________________________________________________________________
 class TXProofServSigPipeHandler : public TSignalHandler {
    TXProofServ  *fServ;
 public:
-   TXProofServSigPipeHandler(TXProofServ *s) : TSignalHandler(kSigPipe, kFALSE)
+   TXProofServSigPipeHandler(TXProofServ *s) : TSignalHandler(kSigInterrupt, kFALSE)
       { fServ = s; }
    Bool_t  Notify();
 };
@@ -193,6 +174,9 @@ Int_t TXProofServ::CreateServer()
          Error("CreateServer", "resolving the log file description number");
          return -1;
       }
+      // Hide the session start-up logs unless we are in verbose mode 
+      if (gProofDebugLevel <= 0)
+         lseek(fLogFileDes, (off_t) 0, SEEK_END);
    }
 
    // Global location string in TXSocket
@@ -248,9 +232,7 @@ Int_t TXProofServ::CreateServer()
    // Get socket descriptor
    Int_t sock = fSocket->GetDescriptor();
 
-   // Install interrupt and message input handlers
-   fInterruptHandler = new TXProofServInterruptHandler(this);
-   gSystem->AddSignalHandler(fInterruptHandler);
+   // Install message input handlers
    fInputHandler =
       TXSocketHandler::GetSocketHandler(new TXProofServInputHandler(this, sock), fSocket);
    gSystem->AddFileHandler(fInputHandler);
@@ -432,7 +414,8 @@ void TXProofServ::HandleUrgentData()
    TProofServLogHandlerGuard hg(fLogFile, fSocket, "", fRealTimeLog);
 
    // Get interrupt
-   Int_t iLev = ((TXSocket *)fSocket)->GetInterrupt();
+   Bool_t fw = kFALSE;
+   Int_t iLev = ((TXSocket *)fSocket)->GetInterrupt(fw);
    if (iLev < 0) {
       Error("HandleUrgentData", "error receiving interrupt");
       return;
@@ -451,19 +434,24 @@ void TXProofServ::HandleUrgentData()
             Info("HandleUrgentData", "*** Ping");
 
          // If master server, propagate interrupt to slaves
-         if (IsMaster()) {
-            Int_t nbad = fProof->fActiveSlaves->GetSize()-fProof->Ping();
+         if (fw && IsMaster()) {
+            Int_t nbad = fProof->fActiveSlaves->GetSize() - fProof->Ping();
             if (nbad > 0) {
                Info("HandleUrgentData","%d slaves did not reply to ping",nbad);
             }
          }
 
-         // Reply to ping
-         ((TXSocket *)fSocket)->Ping();
+         // Touch the admin path to show we are alive
+         if (fAdminPath.IsNull())
+            fAdminPath = gEnv->GetValue("ProofServ.AdminPath", "");
 
-         // Send log with result of ping
-         if (IsMaster())
-            SendLogFile();
+         if (!fAdminPath.IsNull()) {
+            // Update file time stamps
+            if (utime(fAdminPath.Data(), 0) != 0)
+               Info("HandleUrgentData", "problems touching path: %s", fAdminPath.Data());
+         } else {
+            Info("HandleUrgentData", "admin path undefined");
+         }
 
          break;
 
@@ -471,7 +459,7 @@ void TXProofServ::HandleUrgentData()
          Info("HandleUrgentData", "*** Hard Interrupt");
 
          // If master server, propagate interrupt to slaves
-         if (IsMaster())
+         if (fw && IsMaster())
             fProof->Interrupt(TProof::kHardInterrupt);
 
          // Flush input socket
@@ -486,7 +474,7 @@ void TXProofServ::HandleUrgentData()
          Info("HandleUrgentData", "Soft Interrupt");
 
          // If master server, propagate interrupt to slaves
-         if (IsMaster())
+         if (fw && IsMaster())
             fProof->Interrupt(TProof::kSoftInterrupt);
 
          Interrupt();
@@ -500,13 +488,13 @@ void TXProofServ::HandleUrgentData()
       case TProof::kShutdownInterrupt:
          Info("HandleUrgentData", "Shutdown Interrupt");
 
-         // When retuning for here connection are closed
+         // When returning for here connection are closed
          HandleTermination();
 
          break;
 
       default:
-         Error("HandleUrgentData", "unexpected type");
+         Error("HandleUrgentData", "unexpected type: %d", iLev);
          break;
    }
 
@@ -520,14 +508,8 @@ void TXProofServ::HandleSigPipe()
    // Called when the client is not alive anymore; terminate the session.
 
    // Real-time notification of messages
-   TProofServLogHandlerGuard hg(fLogFile, fSocket, "", fRealTimeLog);
 
-   // If master server, propagate interrupt to slaves
-   // (shutdown interrupt send internally).
-   if (IsMaster())
-      fProof->Close("S");
-
-   Terminate(0);  // will not return from here....
+   Info("HandleSigPipe","got sigpipe ... do nothing");
 }
 
 //______________________________________________________________________________
@@ -665,8 +647,12 @@ void TXProofServ::SendLogFile(Int_t status, Int_t start, Int_t end)
    // Determine the number of bytes left to be read from the log file.
    fflush(stdout);
 
-   off_t ltot, lnow;
-   Int_t left;
+   // Do not send logs to master
+   if (!IsMaster())
+      FlushLogFile();
+
+   off_t ltot = 0, lnow = 0;
+   Int_t left = -1;
 
    ltot = lseek(fileno(stdout),   (off_t) 0, SEEK_END);
    lnow = lseek(fLogFileDes, (off_t) 0, SEEK_CUR);
@@ -790,6 +776,17 @@ Bool_t TXProofServ::HandleError(const void *)
 {
    // Handle error on the input socket
 
+   // Try reconnection
+   if (fSocket && !fSocket->IsValid()) {
+
+      ((TXSocket *)fSocket)->Reconnect();
+      if (fSocket && fSocket->IsValid()) {
+         if (gDebug > 0)
+            Info("HandleError",
+               "%p: connection to local coordinator re-established", this);
+         return kFALSE;
+      }
+   }
    Printf("TXProofServ::HandleError: %p: got called ...", this);
 
    // If master server, propagate interrupt to slaves
@@ -959,7 +956,6 @@ void TXProofServ::Terminate(Int_t status)
    // Remove input and signal handlers to avoid spurious "signals"
    // for closing activities executed upon exit()
    gSystem->RemoveFileHandler(fInputHandler);
-   gSystem->RemoveSignalHandler(fInterruptHandler);
 
    // Stop processing events (set a flag to exit the event loop)
    gSystem->ExitLoop();
@@ -968,9 +964,6 @@ void TXProofServ::Terminate(Int_t status)
    // activity on this socket; this fake activity will make it return and
    // eventually exit the loop.
    TXSocket::PostPipe((TXSocket *)fSocket);
-
-   // Avoid communicating back anything to the coordinator (it is gone)
-   ((TXSocket *)fSocket)->SetSessionID(-1);
 
    // Notify
    Printf("Terminate: termination operations ended: quitting!");

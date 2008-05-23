@@ -33,14 +33,12 @@ private:
 
    bool                fChangeOwn;
    XrdOucString        fDir;
-   XrdOucString        fDSetDir;
    XrdOucString        fErrMsg;
    bool                fValid;
    XrdProofUI          fUI;
 
    int                 TrimSessionDirs();
 
-   static XrdOucString fgDSetdir;
    static int          fgMaxOldSessions;
    static XrdOucString fgWorkdir;
    static XrdProofUI   fgUI;
@@ -49,7 +47,6 @@ public:
    XrdProofdSandbox(XrdProofUI ui, bool full, bool changeown);
 
    const char *Dir() const { return fDir.c_str(); }
-   const char *DSetDir() const { return fDSetDir.c_str(); }
 
    int         GuessTag(XrdOucString &tag, int ridx = 1);
 
@@ -65,7 +62,6 @@ public:
                               XrdOucString *tag = 0);
 
    // The manager uses these to set configurable members
-   static void SetDSetdir(const char *ddir) { fgDSetdir = ddir; }
    static void SetMaxOldSessions(int mxses) { fgMaxOldSessions = mxses; }
    static void SetWorkdir(const char *wdir) { fgWorkdir = wdir; }
 };

@@ -987,6 +987,9 @@ void XrdProofdProofServMgr::RegisterDirectives()
                   new XrdProofdDirective("intwait", (void *)&fInternalWait, &DoDirectiveInt));
    Register("reconnto",
                   new XrdProofdDirective("reconnto", (void *)&fReconnectTimeOut, &DoDirectiveInt));
+   // Register config directives for strings
+   Register("proofplugin",
+                  new XrdProofdDirective("proofplugin", (void *)&fProofPlugin, &DoDirectiveString));
 }
 
 //______________________________________________________________________________
@@ -2407,7 +2410,7 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdProtocol *p, void *input)
    //  Path to file with group information
    if (fMgr->GroupsMgr() && fMgr->GroupsMgr()->GetCfgFile()) {
       fprintf(frc, "# File with group information\n");
-      fprintf(frc, "ProofDataSetManager.GroupFile: %s\n", fMgr->GroupsMgr()->GetCfgFile());
+      fprintf(frc, "Proof.GroupFile: %s\n", fMgr->GroupsMgr()->GetCfgFile());
    }
 
    // Work dir
@@ -2467,9 +2470,9 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdProtocol *p, void *input)
       if (fMgr->IsSuperMst()) {
          fprintf(frc, "# Config file\n");
          fprintf(frc, "ProofServ.ProofConfFile: sm:\n");
-      } else if (fMgr->ProofPlugin() && strlen(fMgr->ProofPlugin())) {
+      } else if (fProofPlugin.length() > 0) {
          fprintf(frc, "# Config file\n");
-         fprintf(frc, "ProofServ.ProofConfFile: %s\n", fMgr->ProofPlugin());
+         fprintf(frc, "ProofServ.ProofConfFile: %s\n", fProofPlugin.Data());
       }
    }
 
