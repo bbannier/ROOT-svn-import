@@ -95,8 +95,10 @@ public:
 
 inline void   Lock(XrdSysCondVar *CndVar)
                   {if (cnd) 
-                      if (cnd != CndVar) cnd->UnLock();
-                         else return;
+                      {if (cnd != CndVar)
+                          {cnd->UnLock();
+                          } else return;
+                      }
                    CndVar->Lock();
                    cnd = CndVar;
                   };
@@ -177,8 +179,10 @@ public:
 
 inline void   Lock(XrdSysMutex *Mutex)
                   {if (mtx) 
-                      if (mtx != Mutex) mtx->UnLock();
-                         else return;
+                      {if (mtx != Mutex)
+                          { mtx->UnLock();
+                          } else return;
+                      }
                    Mutex->Lock();
                    mtx = Mutex;
                   };
@@ -238,8 +242,9 @@ public:
 
 inline int  CondWait()
        {if (sem_trywait( &h_semaphore ))
-           if (errno == SEM_IS_BLOCKED) return 0;
+           {if (errno == SEM_IS_BLOCKED) return 0;
                else { throw "sem_CondWait() failed";}
+           }
         return 1;
        }
 

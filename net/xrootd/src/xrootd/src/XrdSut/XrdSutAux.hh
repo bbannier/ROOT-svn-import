@@ -11,7 +11,9 @@
 /*              DE-AC03-76-SFO0515 with the Department of Energy              */
 /******************************************************************************/
 
-#include <iostream>
+#ifndef WIN32
+#include "XrdSys/XrdSysHeaders.hh"
+#endif
 #ifndef __XPROTOCOL_H
 #include <XProtocol/XProtocol.hh>
 #endif

@@ -21,8 +21,6 @@ const char *XrdXrootdConfigCVSID = "$Id$";
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/un.h>
-#include <iostream>
-using namespace std;
 
 #include "XrdVersion.hh"
 
@@ -38,6 +36,7 @@ using namespace std;
 #include "XrdOuc/XrdOucTrace.hh"
 #include "XrdOuc/XrdOucUtils.hh"
 #include "XrdSys/XrdSysError.hh"
+#include "XrdSys/XrdSysHeaders.hh"
 #include "XrdSys/XrdSysLogger.hh"
 
 #include "XrdXrootd/XrdXrootdAdmin.hh"
@@ -89,6 +88,12 @@ extern          XrdOucTrace       *XrdXrootdTrace;
 
                 XrdOucReqID       *XrdXrootdReqID;
 
+                const char        *XrdXrootdInstance;
+
+                XrdInet           *XrdXrootdNetwork;
+
+                int                XrdXrootdPort;
+
 /******************************************************************************/
 /*                             C o n f i g u r e                              */
 /******************************************************************************/
@@ -126,6 +131,12 @@ int XrdXrootdProtocol::Configure(char *parms, XrdProtocol_Config *pi)
    Window       = pi->WSize;
    WANPort      = pi->WANPort;
    WANWindow    = pi->WANWSize;
+
+// Record globally accessible values
+//
+   XrdXrootdInstance = pi->myInst;
+   XrdXrootdNetwork  = pi->NetTCP;
+   XrdXrootdPort     = pi->Port;
 
 // Set the callback object static areas now!
 //
@@ -239,9 +250,21 @@ int XrdXrootdProtocol::Configure(char *parms, XrdProtocol_Config *pi)
    sprintf(buff, "udp://%s:%d/&L=%%d&U=%%s", pi->myName, pi->Port);
    Notify = strdup(buff);
 
+// Check if we are redirecting anything
+//
+   if ((xp = RPList.Next()))
+      {int k;
+       char buff[512];
+       do {k = xp->Opts();
+           sprintf(buff, " to %s:%d", Route[k].Host, Route[k].Port);
+           eDest.Say("Config redirecting ", xp->Path(), buff);
+           xp = xp->Next();
+          } while(xp);
+      }
+
 // Check if we are exporting anything
 //
-   if (!(xp = XPList.First()))
+   if (!(xp = XPList.Next()))
       {XPList.Insert("/tmp");
        eDest.Say("Config warning: only '/tmp' will be exported.");
       } else while(xp)
@@ -299,8 +322,10 @@ int XrdXrootdProtocol::Config(const char *ConfigFN)
    // Process items
    //
    while((var = Config.GetMyFirstWord()))
-        {if ((ismine = !strncmp("xrootd.", var, 7)) && var[7]) var += 7;
-            else if ((ismine = !strcmp("all.export", var)))    var += 4;
+        {     if ((ismine = !strncmp("xrootd.", var, 7)) && var[7]) var += 7;
+         else if ((ismine = !strcmp("all.export", var)))    var += 4;
+         else if ((ismine = !strcmp("all.seclib", var)))    var += 4;
+
          if (ismine)
             {     if TS_Xeq("async",         xasync);
              else if TS_Xeq("chksum",        xcksum);
@@ -787,13 +812,17 @@ int XrdXrootdProtocol::xprep(XrdOucStream &Config)
   
 /* Function: xred
 
-   Purpose:  To parse the directive: redirect <host>:<port> <funcs>
+   Purpose:  To parse the directive: redirect <host>:<port> {<funcs>|<path>}
 
              <funcs>   are one or more of the following functions that will
                        be immediately redirected to <host>:<port>. Each function
                        may be prefixed by a minus sign to disable redirection.
 
                        chmod dirlist locate mkdir mv prepare rm rmdir stat
+
+             <paths>   redirects the client when an attempt is made to open
+                       one of absolute <paths>. Up to 4 different redirect
+                       combinations may be specified.
 
   Output: 0 upon success or !0 upon failure.
 */
@@ -814,7 +843,7 @@ int XrdXrootdProtocol::xred(XrdOucStream &Config)
         {"stat",     RD_stat}
        };
     char rHost[512], *val, *pp;
-    int i, neg, rPort, numopts = sizeof(rdopts)/sizeof(struct rediropts);
+    int i, k, neg, rPort, numopts = sizeof(rdopts)/sizeof(struct rediropts);
 
 // Get the host and port
 //
@@ -832,6 +861,23 @@ int XrdXrootdProtocol::xred(XrdOucStream &Config)
 //
     if (!(val = Config.GetWord()))
        {eDest.Emsg("config", "redirect option not specified"); return 1;}
+
+    if (*val == '/')
+       {for (k = static_cast<int>(RD_open1); k < RD_Num; k++)
+            if (!Route[k].Host
+            || (strcmp(Route[k].Host, rHost) && Route[k].Port == rPort)) break;
+        if (k >= RD_Num)
+           {eDest.Emsg("Config", "too many diffrent path redirects"); return 1;}
+        xred_set(RD_func(k), rHost, rPort);
+        do {RPList.Insert(val, k, 0);
+            if ((val = Config.GetWord()) && *val != '/')
+               {eDest.Emsg("Config", "non-absolute redirect path -", val);
+                return 1;
+               }
+           } while(val);
+        return 0;
+       }
+
     while (val)
           {if (!strcmp(val, "all"))
               {for (i = 0; i < numopts; i++)

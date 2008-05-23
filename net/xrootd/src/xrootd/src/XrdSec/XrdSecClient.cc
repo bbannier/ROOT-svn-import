@@ -24,10 +24,9 @@ const char *XrdSecClientCVSID = "$Id$";
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <iostream>
-using namespace std;
 
 #include "XrdOuc/XrdOucErrInfo.hh"
+#include "XrdSys/XrdSysHeaders.hh"
 #include "XrdSys/XrdSysPthread.hh"
 #include "XrdSec/XrdSecPManager.hh"
 #include "XrdSec/XrdSecInterface.hh"
@@ -103,8 +102,9 @@ XrdSecProtocol *XrdSecGetProtocol(const char             *hostname,
 // Find a supported protocol.
 //
    if (!(protp = PManager.Get(hostname, netaddr, sectoken)))
-      if (einfo) einfo->setErrInfo(ENOPROTOOPT, noperr);
+      {if (einfo) einfo->setErrInfo(ENOPROTOOPT, noperr);
          else cerr <<noperr <<endl;
+      }
 
 // All done
 //

@@ -33,8 +33,6 @@ const char *XrdOlbConfigCVSID = "$Id$";
 #include <sys/types.h>
 #include <sys/un.h>
 #include <dirent.h>
-#include <iostream>
-using namespace std;
 
 #include "../XrdVersion.hh"
 #include "Xrd/XrdJob.hh"
@@ -66,6 +64,7 @@ using namespace std;
 #include "XrdOuc/XrdOucProg.hh"
 #include "XrdOuc/XrdOucTList.hh"
 #include "XrdOuc/XrdOucUtils.hh"
+#include "XrdSys/XrdSysHeaders.hh"
 #include "XrdSys/XrdSysPlatform.hh"
 #include "XrdSys/XrdSysPlugin.hh"
 #include "XrdSys/XrdSysPthread.hh"

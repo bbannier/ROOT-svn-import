@@ -45,6 +45,7 @@ friend class XrdLinkScan;
 friend class XrdPoll;
 friend class XrdPollPoll;
 friend class XrdPollDev;
+friend class XrdPollE;
 
 static XrdLink *Alloc(XrdNetPeer &Peer, int opts=0);
 
@@ -99,7 +100,10 @@ const char   *Name(sockaddr *ipaddr=0)
                       return (const char *)Lname;
                      }
 
-const char   *Host() {return (const char *)HostName;}
+const char   *Host(sockaddr *ipaddr=0)
+                     {if (ipaddr) memcpy(ipaddr, &InetAddr, sizeof(sockaddr));
+                      return (const char *)HostName;
+                     }
 
 int           Peek(char *buff, int blen, int timeout=-1);
 

@@ -1,4 +1,4 @@
-#              $Id: GNUmakefile,v 1.26.6.1 2008/01/12 12:42:11 ganis Exp $
+#              $Id: GNUmakefile,v 1.28 2008/05/07 14:11:15 abh Exp $
 
 #------------------------------------------------------------------------------#
 #                       C o m m o n   V a r i a b l e s                        #
@@ -200,7 +200,8 @@ $(OBJDIR)/XrdXrootdProtocol.o: XrdXrootdFile.hh       XrdXrootdFileLock.hh \
                                XrdSecEntity.hh \
                                XrdSysError.hh         XrdSysPthread.hh   \
                                XrdSysTimer.hh         XrdOucTrace.hh \
-                               XrdXrootdPio.hh        XrdXrootdProtocol.cc
+                               XrdXrootdPio.hh        \
+                               XrdXrootdProtocol.hh   XrdXrootdProtocol.cc
 	@echo Compiling XrdXrootdProtocol.cc 
 	$(ECHO)$(CC) -c $(CFLAGS) $(INCLUDE) -o $(OBJDIR)/XrdXrootdProtocol.o XrdXrootdProtocol.cc
 
