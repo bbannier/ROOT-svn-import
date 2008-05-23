@@ -25,8 +25,6 @@ const char *XrdSecProtocolkrb5CVSID = "$Id$";
 #include <pwd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <iostream>
-using namespace std;
 
 extern "C" {
 #include "krb5.h"
@@ -35,6 +33,7 @@ extern "C" {
 
 #include "XrdNet/XrdNetDNS.hh"
 #include "XrdOuc/XrdOucErrInfo.hh"
+#include "XrdSys/XrdSysHeaders.hh"
 #include "XrdSys/XrdSysPthread.hh"
 #include "XrdOuc/XrdOucTokenizer.hh"
 #include "XrdSec/XrdSecInterface.hh"
@@ -393,14 +392,15 @@ int XrdSecProtocolkrb5::Authenticate(XrdSecCredentials *cred,
    {  XrdSysPrivGuard pGuard(krb_kt_uid, krb_kt_gid);
       if (pGuard.Valid())
          {if (!rc)
-             if ((rc = krb5_rd_req(krb_context, &AuthContext, &inbuf,
+             {if ((rc = krb5_rd_req(krb_context, &AuthContext, &inbuf,
                                   (krb5_const_principal)krb_principal,
                                    krb_keytab, NULL, &Ticket)))
-                iferror = (char *)"Unable to authenticate credentials;";
-             else if ((rc = krb5_aname_to_localname(krb_context,
+                 iferror = (char *)"Unable to authenticate credentials;";
+              else if ((rc = krb5_aname_to_localname(krb_context,
                                           Ticket->enc_part2->client,
                                           sizeof(CName)-1, CName)))
                      iferror = (char *)"Unable to extract client name;";
+             }
       } else
          iferror = (char *)"Unable to acquire privileges to read the keytab;";
    }

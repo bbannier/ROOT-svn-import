@@ -76,14 +76,15 @@ int XrdAccCapability::Privs(      XrdAccPrivCaps &pathpriv,
            return 1;
        }
         else if (pathlen >= cp->plen)
-                if (!pathsub && !strncmp(pathname, cp->path, cp->plen)
-                ||   pathsub &&  cp->Subcomp(pathname,pathlen,pathsub,psl))
-                   {pathpriv.pprivs = (XrdAccPrivs)(pathpriv.pprivs |
+                {if ((!pathsub && !strncmp(pathname, cp->path, cp->plen))
+                 ||  (pathsub &&  cp->Subcomp(pathname,pathlen,pathsub,psl)))
+                    {pathpriv.pprivs = (XrdAccPrivs)(pathpriv.pprivs |
                                                     cp->priv.pprivs);
                     pathpriv.nprivs = (XrdAccPrivs)(pathpriv.nprivs |
                                                     cp->priv.nprivs);
                     return 1;
                    }
+                }
     } while ((cp = cp->next));
  return 0;
 }

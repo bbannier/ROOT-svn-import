@@ -1,4 +1,4 @@
-#              $Id: GNUmakefile,v 1.23.6.2 2008/01/12 12:42:19 ganis Exp $
+#              $Id: GNUmakefile,v 1.26 2008/05/19 02:52:07 abh Exp $
 
 #-----------------------------------------------------------------------------#
 #                            E n v i r o n m e n t                            #
@@ -129,12 +129,13 @@ $(OBJDIR)/XrdMain.o:   XrdConfig.hh    XrdLink.hh        XrdInet.hh \
 
 $(OBJDIR)/XrdPoll.o:   XrdLink.hh       XrdPoll.hh        XrdProtocol.hh   \
                        XrdPoll.cc       XrdPollDev.hh     XrdPollDev.icc \
+                                        XrdPollE.hh       XrdPollE.icc  \
                        XrdPollPoll.hh   XrdPollPoll.icc   XrdScheduler.hh \
                        XrdTrace.hh     \
                        XrdSysError.hh   XrdSysPlatform.hh XrdSysPthread.hh \
                        XrdOucTrace.hh
 	@echo Compiling XrdPoll.cc 
-	$(ECHO)$(CC) -c $(CFLAGS) $(CFDEVPOLL) $(INCLUDE) -o $(OBJDIR)/XrdPoll.o XrdPoll.cc
+	$(ECHO)$(CC) -c $(CFLAGS) $(CFDEVPOLL) $(CFEPOLL) $(INCLUDE) -o $(OBJDIR)/XrdPoll.o XrdPoll.cc
 
 $(OBJDIR)/XrdProtLoad.o: XrdJob.hh        XrdLink.hh     XrdPoll.hh \
                          XrdProtLoad.cc   XrdProtLoad.hh \

@@ -223,7 +223,10 @@
 /*     static void setblksize(const int bs);                                  */
 /*                                                                            */
 /******************************************************************************/
-#include <iostream>
+#include "XrdSys/XrdSysHeaders.hh"
+
+#include <stdarg.h>
+#include <stdlib.h>
 
 using namespace std;
 
@@ -286,6 +289,7 @@ public:
    void          append(const XrdOucString s);
    void          assign(const char *s, int j, int k = -1);
    void          assign(const XrdOucString s, int j, int k = -1);
+   int           form(const char *fmt, ...);
    int           keep(int start = 0, int size = 0);
    void          insert(const int i, int start = -1);
    void          insert(const char c, int start = -1);
@@ -308,6 +312,7 @@ public:
    void          upper(int pos, int size = 0);
    void          reset(const char c, int j = 0, int k = -1);
    void          hardreset();
+   void          setbuffer(char *buf);
 
    // Assignement operators
    XrdOucString &operator=(const int i);
@@ -337,9 +342,16 @@ public:
    int operator!=(const char *s) { return !(*this == s); }
    int operator!=(const XrdOucString s) { return !(*this == s); }
 
+   // Miscellanea
+   bool isdigit(int from = 0, int to = -1);
+   long atoi(int from = 0, int to = -1);
+
    // Static methods to change / monitor the default blksize
    static int getblksize();
    static void setblksize(const int bs);
+
+   // format a string
+   static int form(XrdOucString &str, const char *fmt, ...);
 };
 
 // Operator << is useful to print a string into a stream

@@ -21,8 +21,6 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/times.h>
-#include <iostream>
-using namespace std;
 
 // AFS support
 #ifdef R__AFS
@@ -45,6 +43,7 @@ void      ka_StringToKey(char *str, char *cell,
 }
 #endif
 
+#include "XrdSys/XrdSysHeaders.hh"
 #include <XrdSys/XrdSysLogger.hh>
 #include <XrdSys/XrdSysError.hh>
 #include <XrdOuc/XrdOucStream.hh>

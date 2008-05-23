@@ -23,11 +23,10 @@
 
 #if !defined(WINDOWS)
 #include <stdio.h>
+#include "XrdSys/XrdSysHeaders.hh"
 #include <unistd.h>
 #include <pwd.h>
 #include <errno.h>
-#include <iostream>
-using namespace std;
 
 #define NOUC ((uid_t)(-1))
 #define NOGC ((gid_t)(-1))

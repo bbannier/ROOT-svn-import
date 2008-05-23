@@ -273,7 +273,7 @@ int XrdXrootdProtocol::do_Chmod()
 // Preform the actual function
 //
    rc = osFS->chmod(argp->buff, (XrdSfsMode)mode, myError, CRED, opaque);
-   TRACEP(FS, "rc=" <<rc <<" chmod " <<std::oct <<mode <<std::dec <<' ' <<argp->buff);
+   TRACEP(FS, "chmod rc=" <<rc <<" mode=" <<std::oct <<mode <<std::dec <<' ' <<argp->buff);
    if (SFS_OK == rc) return Response.Send();
 
 // An error occured
@@ -904,6 +904,14 @@ int XrdXrootdProtocol::do_Open()
 // Check if opaque data has been provided
 //
    if (rpCheck(fn, &opaque)) return rpEmsg("Opening", fn);
+
+// Check if static redirection applies
+//
+   if (Route[RD_open1].Host && (popt = RPList.Validate(fn)))
+      return Response.Send(kXR_redirect,Route[popt].Port,Route[popt].Host);
+
+// Validate the path
+//
    if (!(popt = Squash(fn))) return vpEmsg("Opening", fn);
 
 // Get a file object
@@ -1075,15 +1083,15 @@ int XrdXrootdProtocol::do_Prepare()
 // Get a request ID for this prepare and check for static routine
 //
    if (opts & kXR_stage && !(opts & kXR_cancel)) 
-      XrdOucReqID::ID(reqid, sizeof(reqid));
-      else {reqid[0] = '*'; reqid[1] = '\0';}
+      {XrdOucReqID::ID(reqid, sizeof(reqid)); fsprep.opts = Prep_STAGE;}
+      else {reqid[0] = '*'; reqid[1] = '\0';  fsprep.opts = 0;}
 
 // Initialize the fsile system prepare arg list
 //
    fsprep.reqid   = reqid;
    fsprep.paths   = 0;
    fsprep.oinfo   = 0;
-   fsprep.opts    = Prep_PRTY0;
+   fsprep.opts   |= Prep_PRTY0;
    fsprep.notify  = 0;
 
 // Check if this is a cancel request
@@ -1251,6 +1259,86 @@ int XrdXrootdProtocol::do_Qconf()
 //
    return Response.Send(buff, sizeof(buff) - bleft);
 }
+  
+/******************************************************************************/
+/*                                d o _ Q f h                                 */
+/******************************************************************************/
+
+int XrdXrootdProtocol::do_Qfh()
+{
+   static const int fsctl_cmd1 = SFS_FCTL_STATV;
+   static XrdXrootdCallBack qryCB("query");
+   XrdOucErrInfo myError(Link->ID, &qryCB, ReqID.getID());
+   XrdXrootdFHandle fh(Request.query.fhandle);
+   XrdXrootdFile *fp;
+   short qopt = (short)ntohs(Request.query.infotype);
+   int rc, fsctl_cmd;
+
+// Update misc stats count
+//
+   UPSTATS(miscCnt);
+
+// Perform the appropriate query
+//
+   switch(qopt)
+         {case kXR_Qvisa:   fsctl_cmd = fsctl_cmd1;
+                            break;
+          default:          return Response.Send(kXR_ArgMissing, 
+                                   "Required query argument not present");
+         }
+
+// Find the file object
+//
+   if (!FTab || !(fp = FTab->Get(fh.handle)))
+      return Response.Send(kXR_FileNotOpen,
+                           "query does not refer to an open file");
+
+// Preform the actual function
+//
+   rc = fp->XrdSfsp->fctl(fsctl_cmd, 0, myError);
+   TRACEP(FS, "query rc=" <<rc <<" fh=" <<fh.handle);
+
+// Return appropriately
+//
+   if (SFS_OK != rc) return fsError(rc, myError);
+   return Response.Send();
+}
+  
+/******************************************************************************/
+/*                             d o _ Q s p a c e                              */
+/******************************************************************************/
+  
+int XrdXrootdProtocol::do_Qspace()
+{
+   static const int fsctl_cmd = SFS_FSCTL_STATLS;
+   XrdOucErrInfo myError(Link->ID);
+   const char *opaque;
+   int n, rc;
+
+// Check for static routing
+//
+   if (Route[RD_stat].Port) 
+      return Response.Send(kXR_redirect,Route[RD_stat].Port,Route[RD_stat].Host);
+
+// Prescreen the path
+//
+   if (rpCheck(argp->buff, &opaque)) return rpEmsg("Stating", argp->buff);
+   if (!Squash(argp->buff))          return vpEmsg("Stating", argp->buff);
+
+// Add back the opaque info
+//
+   if (opaque)
+      {n = strlen(argp->buff); argp->buff[n] = '?';
+       if ((argp->buff)+n != opaque-1) strcpy(&argp->buff[n+1], opaque);
+      }
+
+// Preform the actual function using the supplied logical FS name
+//
+   rc = osFS->fsctl(fsctl_cmd, argp->buff, myError, CRED);
+   TRACEP(FS, "rc=" <<rc <<" qspace '" <<argp->buff <<"'");
+   if (rc == SFS_OK) Response.Send("");
+   return fsError(rc, myError);
+}
 
 /******************************************************************************/
 /*                              d o _ Q u e r y                               */
@@ -1268,6 +1356,8 @@ int XrdXrootdProtocol::do_Query()
           case kXR_Qcksum:  return do_CKsum(0);
           case kXR_Qckscan: return do_CKsum(1);
           case kXR_Qconfig: return do_Qconf();
+          case kXR_Qspace:  return do_Qspace();
+          case kXR_Qxattr:  return do_Qxattr();
           default:          break;
          }
 
@@ -1277,6 +1367,35 @@ int XrdXrootdProtocol::do_Query()
                         "Invalid information query type code");
 }
 
+/******************************************************************************/
+/*                             d o _ Q x a t t r                              */
+/******************************************************************************/
+  
+int XrdXrootdProtocol::do_Qxattr()
+{
+   static XrdXrootdCallBack statCB("stat");
+   static const int fsctl_cmd = SFS_FSCTL_STATXA;
+   int rc;
+   const char *opaque;
+   XrdOucErrInfo myError(Link->ID, &statCB, ReqID.getID());
+
+// Check for static routing
+//
+   if (Route[RD_stat].Port) 
+      return Response.Send(kXR_redirect,Route[RD_stat].Port,Route[RD_stat].Host);
+
+// Prescreen the path
+//
+   if (rpCheck(argp->buff, &opaque)) return rpEmsg("Stating", argp->buff);
+   if (!Squash(argp->buff))          return vpEmsg("Stating", argp->buff);
+
+// Preform the actual function
+//
+   rc = osFS->fsctl(fsctl_cmd, argp->buff, myError, CRED);
+   TRACEP(FS, "rc=" <<rc <<" qxattr " <<argp->buff);
+   return fsError(rc, myError);
+}
+  
 /******************************************************************************/
 /*                               d o _ R e a d                                */
 /******************************************************************************/
@@ -1706,8 +1825,9 @@ int XrdXrootdProtocol::do_Set_Mon(XrdOucTokenizer &setargs)
   
 int XrdXrootdProtocol::do_Stat()
 {
-   int rc;
    static XrdXrootdCallBack statCB("stat");
+   static const int fsctl_cmd = SFS_FSCTL_STATFS;
+   int rc;
    const char *opaque;
    char xxBuff[256];
    struct stat buf;
@@ -1725,10 +1845,16 @@ int XrdXrootdProtocol::do_Stat()
 
 // Preform the actual function
 //
-   rc = osFS->stat(argp->buff, &buf, myError, CRED, opaque);
-   TRACEP(FS, "rc=" <<rc <<" stat " <<argp->buff);
-   if (rc != SFS_OK) return fsError(rc, myError);
-   return Response.Send(xxBuff, StatGen(buf, xxBuff));
+   if (Request.stat.options & kXR_vfs)
+      {rc = osFS->fsctl(fsctl_cmd, argp->buff, myError, CRED);
+       TRACEP(FS, "rc=" <<rc <<" statfs " <<argp->buff);
+       if (rc == SFS_OK) Response.Send("");
+      } else {
+       rc = osFS->stat(argp->buff, &buf, myError, CRED, opaque);
+       TRACEP(FS, "rc=" <<rc <<" stat " <<argp->buff);
+       if (rc == SFS_OK) return Response.Send(xxBuff, StatGen(buf, xxBuff));
+      }
+   return fsError(rc, myError);
 }
 
 /******************************************************************************/
@@ -1796,6 +1922,65 @@ int XrdXrootdProtocol::do_Sync()
    return Response.Send();
 }
 
+/******************************************************************************/
+/*                           d o _ T r u n c a t e                            */
+/******************************************************************************/
+  
+int XrdXrootdProtocol::do_Truncate()
+{
+   XrdXrootdFile *fp;
+   XrdXrootdFHandle fh(Request.truncate.fhandle);
+   long long theOffset;
+   int rc;
+
+// Unmarshall the data
+//
+   n2hll(Request.truncate.offset, theOffset);
+
+// Check if this is a truncate for an open file (no path given)
+//
+   if (!Request.header.dlen)
+      {
+       // Update misc stats count
+       //
+          UPSTATS(miscCnt);
+
+      // Find the file object
+      //
+         if (!FTab || !(fp = FTab->Get(fh.handle)))
+            return Response.Send(kXR_FileNotOpen,
+                                     "trunc does not refer to an open file");
+
+     // Truncate the file
+     //
+        rc = fp->XrdSfsp->truncate(theOffset);
+        TRACEP(FS, "trunc rc=" <<rc <<" sz=" <<theOffset <<" fh=" <<fh.handle);
+        if (SFS_OK != rc)
+           return Response.Send(kXR_FSError, fp->XrdSfsp->error.getErrText());
+
+   } else {
+
+       XrdOucErrInfo myError(Link->ID);
+       const char *opaque;
+
+    // Verify the path and extract out the opaque information
+    //
+       if (rpCheck(argp->buff,&opaque)) return rpEmsg("Truncating",argp->buff);
+       if (!Squash(argp->buff))         return vpEmsg("Truncating",argp->buff);
+
+    // Preform the actual function
+    //
+       rc = osFS->truncate(argp->buff, (XrdSfsFileOffset)theOffset, myError,
+                           CRED, opaque);
+       TRACEP(FS, "rc=" <<rc <<" trunc " <<theOffset <<' ' <<argp->buff);
+       if (SFS_OK != rc) return fsError(rc, myError);
+   }
+
+// Respond that all went well
+//
+   return Response.Send();
+}
+  
 /******************************************************************************/
 /*                              d o _ W r i t e                               */
 /******************************************************************************/

@@ -11,7 +11,7 @@
 ## Makefile/configure Author: Derek Feichtinger <derek.feichtinger@cern.ch>
 ## Initial version: 1.8.2005
 ##
-## Version info: $Id: Makefile.am,v 1.9 2007/06/04 15:53:02 dfeich Exp $
+## Version info: $Id: Makefile.am,v 1.11 2008/03/18 23:16:45 dfeich Exp $
 ## Checked in by $Author: dfeich $
 ################################################################################
 
@@ -104,11 +104,11 @@ utils/ooss_name2name.pm
 
 # Extra files/directories to go into the distribution tarball
 EXTRA_DIST = Doxyfile README.Maintainer bootstrap.sh config pthreads-win32 \
-             test/test1.sh test/testconfig.sh.in \
+             test/test1.sh test/test2.sh test/testconfig.sh.in \
              getAutotools.sh
 
 
-TESTS = test/test1.sh
+TESTS = test/test1.sh test/test2.sh
 
 
 

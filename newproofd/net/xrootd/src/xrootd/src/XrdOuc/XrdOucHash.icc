@@ -8,7 +8,7 @@
 /*              DE-AC03-76-SFO0515 with the Department of Energy              */
 /******************************************************************************/
 
-//          $Id: XrdOucHash.icc,v 1.8.6.1 2007/11/20 09:54:48 ganis Exp $
+//          $Id: XrdOucHash.icc,v 1.9 2007/11/20 09:44:02 ganis Exp $
 
 #include <errno.h>
 #include <string.h>

@@ -28,8 +28,7 @@ const char *XrdConfigCVSID = "$Id$";
 #include <sys/resource.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <iostream>
-using namespace std;
+
 #include "Xrd/XrdBuffer.hh"
 #include "Xrd/XrdConfig.hh"
 #include "Xrd/XrdInet.hh"
@@ -47,6 +46,7 @@ using namespace std;
 #include "XrdOuc/XrdOuca2x.hh"
 #include "XrdOuc/XrdOucEnv.hh"
 #include "XrdSys/XrdSysError.hh"
+#include "XrdSys/XrdSysHeaders.hh"
 #include "XrdSys/XrdSysLogger.hh"
 #include "XrdOuc/XrdOucStream.hh"
 #include "XrdSys/XrdSysTimer.hh"
