@@ -43,6 +43,7 @@ class TBrowser;
 class TDirectory;
 class TFile;
 class TClonesArray;
+class TMemPool;
 
    const Int_t kDoNotProcess = BIT(10); // Active bit for branches
    const Int_t kIsClone      = BIT(11); // to indicate a TBranchClones
@@ -89,6 +90,7 @@ protected:
    TList      *fBrowsables;      //! List of TVirtualBranchBrowsables used for Browse()
 
    Bool_t      fSkipZip;         //!After being read, the buffer will not be unziped.
+   TMemPool   *fMemPool;
 
    void     SetSkipZip(Bool_t skip = kTRUE) { fSkipZip = skip; }
    void     Init(const char *name, const char *leaflist, Int_t compress);
@@ -113,6 +115,7 @@ public:
    virtual TBranch  *FindBranch(const char *name);
    virtual TLeaf    *FindLeaf(const char *name);
    virtual char     *GetAddress() const {return fAddress;}
+   virtual TMemPool *GetMemPool() const {return fMemPool;}
    virtual Int_t     GetBasketSize() const {return fBasketSize;}
    virtual const char* GetClassName() const { return ""; }
    virtual Int_t     GetCompressionLevel() const {return fCompress;}

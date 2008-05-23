@@ -36,6 +36,7 @@
 #include "TTreeCache.h"
 #include "TTreeCacheUnzip.h"
 #include "TVirtualPad.h"
+#include "TMemPool.h"
 
 #include <cstddef>
 #include <string.h>
@@ -106,6 +107,7 @@ TBranch::TBranch()
    for (Int_t i = 0; i < kMaxRAM; ++i) {
       fBasketRAM[i] = -1;
    }
+   fMemPool = new TMemPool();
 }
 
 //______________________________________________________________________________
@@ -269,6 +271,7 @@ TBranch::TBranch(TBranch *parent, const char* name, void* address, const char* l
    //
    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
+   fMemPool = new TMemPool();
    Init(name,leaflist,compress);
 }
 
@@ -473,6 +476,7 @@ TBranch::~TBranch()
 
    fTree = 0;
    fDirectory = 0;
+   delete fMemPool;
 }
 
 //______________________________________________________________________________
@@ -1072,6 +1076,9 @@ Int_t TBranch::GetEntry(Long64_t entry, Int_t getall)
    if ((entry < fFirstEntry) || (entry >= fEntryNumber)) {
       return 0;
    }
+   // reset the memory pool for every entry
+   fMemPool->Reset();
+
    Int_t nbytes = 0;
    Long64_t first = fBasketEntry[fReadBasket];
    Long64_t last = 0;
