@@ -360,6 +360,7 @@ TProof::~TProof()
    SafeDelete(fAvailablePackages);
    SafeDelete(fEnabledPackages);
    SafeDelete(fEnabledPackagesOnClient);
+   SafeDelete(fLoadedMacros);
    SafeDelete(fPackageLock);
    SafeDelete(fGlobalPackageDirList);
    SafeDelete(fRecvMessages);
@@ -464,6 +465,9 @@ Int_t TProof::Init(const char *masterurl, const char *conffile,
    // Timeout for some collect actions
    fCollectTimeout = gEnv->GetValue("Proof.CollectTimeout", -1);
 
+   // Should the workers be started dynamically
+   fDynamicStartup = gEnv->GetValue("Proof.DynamicStartup", kTRUE);
+
    // Default entry point for the data pool is the master
    if (!IsMaster())
       fDataPoolUrl.Form("root://%s", fMaster.Data());
@@ -532,6 +536,7 @@ Int_t TProof::Init(const char *masterurl, const char *conffile,
 
    fPackageLock             = 0;
    fEnabledPackagesOnClient = 0;
+   fLoadedMacros            = 0;
    fGlobalPackageDirList    = 0;
    if (!IsMaster()) {
       fPackageDir = kPROOF_WorkDir;
@@ -614,10 +619,17 @@ Int_t TProof::Init(const char *masterurl, const char *conffile,
          }
       }
    }
-
-   // Start slaves
-   if (!StartSlaves(parallelStartup, attach))
-      return 0;
+   if (fDynamicStartup) {
+      if (!IsMaster()) {
+         // If on client - start the master
+         if (!StartSlaves(parallelStartup, attach))
+            return 0;
+      }
+   } else {
+      // Start slaves (the old, static, per-session way)
+      if (!StartSlaves(parallelStartup, attach))
+         return 0;
+   }
 
    if (fgSemaphore)
       SafeDelete(fgSemaphore);
@@ -668,6 +680,174 @@ void TProof::SetManager(TProofMgr *mgr)
       gROOT->GetListOfSockets()->Remove(mgr);
       gROOT->GetListOfSockets()->Add(mgr);
    }
+}
+
+//______________________________________________________________________________
+Int_t TProof::AddWorkers(TList *workerList)
+{
+   // Works on the master node only.
+   // It start workers on the machines in workerList and sets the paths and
+   // packages as on the master.
+   // It is a subbstitute for StartSlaves
+   // The code is mostly the master part of StartSlaves,
+   // with the parallel startup removed.
+
+
+   if (!IsMaster()) {
+      Error("AddWorkers", "AddWorkers can only be called on the master!");
+      return -1;
+   }
+
+   if (!workerList || !(workerList->GetSize())) {
+      Error("AddWorkers", "The list of workers should not be empty; NULL: %d",
+            workerList == 0);
+      return -2;
+   }
+
+
+   // Code taken from master part of StartSlaves with the parllel part removed
+
+      fImage = gProofServ->GetImage();
+      if (fImage.IsNull())
+         fImage = Form("%s:%s", TUrl(gSystem->HostName()).GetHostFQDN(),
+                                gProofServ->GetWorkDir());
+
+      // Get all workers
+      UInt_t nSlaves = workerList->GetSize();
+      UInt_t nSlavesDone = 0;
+      Int_t ord = 0;
+
+      // Loop over all workers and start them
+      TListIter next(workerList);
+      TObject *to;
+      TProofNodeInfo *worker;
+      while ((to = next())) {
+         // Get the next worker from the list
+         worker = (TProofNodeInfo *)to;
+
+         // Read back worker node info
+         const Char_t *image = worker->GetImage().Data();
+         const Char_t *workdir = worker->GetWorkDir().Data();
+         Int_t perfidx = worker->GetPerfIndex();
+         Int_t sport = worker->GetPort();
+         if (sport == -1)
+            sport = fUrl.GetPort();
+
+         // create slave server
+         TString fullord = TString(gProofServ->GetOrdinal()) + "." + ((Long_t) ord);
+/*         if (parallel) {
+...
+         else {  */
+            // create slave server
+            TUrl u(Form("%s:%d",worker->GetNodeName().Data(), sport));
+            // Add group info in the password firdl, if any
+            if (strlen(gProofServ->GetGroup()) > 0) {
+               // Set also the user, otherwise the password is not exported
+               if (strlen(u.GetUser()) <= 0)
+                  u.SetUser(gProofServ->GetUser());
+               u.SetPasswd(gProofServ->GetGroup());
+            }
+            TSlave *slave = CreateSlave(u.GetUrl(), fullord, perfidx,
+                                        image, workdir);
+
+            // Add to global list (we will add to the monitor list after
+            // finalizing the server startup)
+            Bool_t slaveOk = kTRUE;
+            if (slave->IsValid()) {
+               fSlaves->Add(slave);
+            } else {
+               slaveOk = kFALSE;
+               fBadSlaves->Add(slave);
+            }
+
+            PDB(kGlobal,3)
+               Info("StartSlaves", "worker on host %s created"
+                    " and added to list", worker->GetNodeName().Data());
+
+            // Notify opening of connection
+            nSlavesDone++;
+            TMessage m(kPROOF_SERVERSTARTED);
+            m << TString("Opening connections to workers") << nSlaves
+              << nSlavesDone << slaveOk;
+            gProofServ->GetSocket()->Send(m);
+// for parallel         }
+         ord++;
+      } //end of the worker loop
+
+      // Cleanup
+      SafeDelete(workerList);
+
+      nSlavesDone = 0;
+/*      if (parallel) {
+...
+for parllel*/
+         // Here we finalize the server startup: in this way the bulk
+         // of remote operations are almost parallelized
+         TIter nxsl(fSlaves);
+         TSlave *sl = 0;
+         while ((sl = (TSlave *) nxsl())) {
+
+            // Finalize setup of the server
+            if (sl->IsValid())
+               sl->SetupServ(TSlave::kSlave, 0);
+
+            // Monitor good slaves
+            Bool_t slaveOk = kTRUE;
+            if (sl->IsValid()) {
+               fAllMonitor->Add(sl->GetSocket());
+            } else {
+               slaveOk = kFALSE;
+               fBadSlaves->Add(sl);
+            }
+
+            // Notify end of startup operations
+            nSlavesDone++;
+            TMessage m(kPROOF_SERVERSTARTED);
+            m << TString("Setting up worker servers") << nSlaves
+              << nSlavesDone << slaveOk;
+            gProofServ->GetSocket()->Send(m);
+         }
+// for parllel      }
+
+
+   // Now set new state on the added workers (on all workers for simplicity)
+   // use fEnabledPackages, fLoadedMacros,
+   // gSystem->GetDynamicPath() and gSystem->GetIncludePath()
+
+   SetParallel(99999, 0);
+
+   TList *tmpEnabledPackages = gProofServ->GetEnabledPackages();
+
+   if (tmpEnabledPackages && tmpEnabledPackages->GetSize() > 0) {
+      TIter nxp(tmpEnabledPackages);
+      TObjString *os = 0;
+      while ((os = (TObjString *) nxp())) {
+         UploadPackage(os->GetName());
+         EnablePackage(os->GetName());
+      }
+   }
+
+
+   if (fLoadedMacros) {
+      TIter nxp(fLoadedMacros);
+      TObjString *os = 0;
+      while ((os = (TObjString *) nxp())) {
+         Printf("Loading a macro : %s", os->GetName());
+         Load(os->GetName());
+      }
+   }
+
+   TString dyn = gSystem->GetDynamicPath();
+   dyn.ReplaceAll(":", " ");
+   dyn.ReplaceAll("\"", " ");
+   AddDynamicPath(dyn);
+   TString inc = gSystem->GetIncludePath();
+   inc.ReplaceAll("-I", " ");
+   inc.ReplaceAll("\"", " ");
+   AddIncludePath(inc);
+
+   return kTRUE;
+
 }
 
 //______________________________________________________________________________
@@ -5215,6 +5395,13 @@ Int_t TProof::Load(const char *macro, Bool_t notOnClient)
       TMessage mess(kPROOF_CACHE);
       mess << Int_t(kLoadMacro) << basemacro;
       Broadcast(mess, kUnique);
+
+      Printf("Adding loaded macro: %s", macro);
+      if (!fLoadedMacros) {
+         fLoadedMacros = new TList();
+         fLoadedMacros->SetOwner();
+      }
+      fLoadedMacros->Add(new TObjString(macro));
    }
 
    // Done
