@@ -1076,8 +1076,6 @@ Int_t TBranch::GetEntry(Long64_t entry, Int_t getall)
    if ((entry < fFirstEntry) || (entry >= fEntryNumber)) {
       return 0;
    }
-   // reset the memory pool for every entry
-   fMemPool->Reset();
 
    Int_t nbytes = 0;
    Long64_t first = fBasketEntry[fReadBasket];
@@ -1092,6 +1090,9 @@ Int_t TBranch::GetEntry(Long64_t entry, Int_t getall)
       fReadBasket = TMath::BinarySearch(fWriteBasket + 1, fBasketEntry, entry);
       first = fBasketEntry[fReadBasket];
    }
+   // reset the memory pool for every entry
+   fMemPool->Reset();
+
    // We have found the basket containing this entry.
    // make sure basket buffers are in memory.
    TBasket* basket = (TBasket*) fBaskets.UncheckedAt(fReadBasket);
