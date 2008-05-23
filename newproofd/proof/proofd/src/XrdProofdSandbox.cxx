@@ -27,7 +27,6 @@
 #include "XrdProofdTrace.h"
 
 // Modified via config directives by the manager
-XrdOucString XrdProofdSandbox::fgDSetdir = "";
 int          XrdProofdSandbox::fgMaxOldSessions = 10;
 XrdOucString XrdProofdSandbox::fgWorkdir = "";
 XrdProofUI   XrdProofdSandbox::fgUI;
@@ -98,27 +97,6 @@ XrdProofdSandbox::XrdProofdSandbox(XrdProofUI ui, bool full, bool changeown)
       if (XrdProofdAux::AssertDir(dir.c_str(), ui, changeown) == -1) {
          fErrMsg += "unable to create dir: ";
          fErrMsg += dir;
-         TRACE(XERR, fErrMsg);
-         return;
-      }
-   }
-
-   // On masters assert the dataset directory
-   if (full) {
-      fDSetDir = fgDSetdir;
-      if (fDSetDir.length() > 0) {
-         fDSetDir += "/";
-         fDSetDir += ui.fGroup;
-         fDSetDir += "/";
-         fDSetDir += ui.fUser;
-      } else {
-         fDSetDir += fDir;
-         fDSetDir += "/datasets";
-      }
-      if (XrdProofdAux::AssertDir(fDSetDir.c_str(), ui, changeown) == -1) {
-         fErrMsg += "unable to assert dataset dir: ";
-         fErrMsg += fDSetDir;
-         fDSetDir = "";
          TRACE(XERR, fErrMsg);
          return;
       }

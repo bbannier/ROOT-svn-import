@@ -205,3 +205,37 @@
    fun:_ZN4TPad13PaintFillAreaEiPdS0_PKc
 }
 
+{
+   1st known libc bug in getaddrinfo as seen by XrdNetDNS
+   Memcheck:Cond
+   obj:/lib/ld-2.6.1.so
+   obj:/lib/libc-2.6.1.so
+   obj:/lib/ld-2.6.1.so
+   obj:/lib/libc-2.6.1.so
+   fun:__libc_dlsym
+   fun:__nss_lookup_function
+   obj:/lib/libc-2.6.1.so
+   fun:getaddrinfo
+   fun:_ZN9XrdNetDNS11getHostAddrEPKcP8sockaddriPPc
+   fun:_ZN9XrdNetDNS11getHostAddrEPKcR8sockaddrPPc
+   fun:_ZN9XrdNetDNS11getHostNameEPKcPPc
+   fun:_ZN9XrdConfig9ConfigureEiPPc
+}
+
+{
+   2nd known libc bug in getaddrinfo
+   Memcheck:Addr4
+   obj:/lib/ld-2.6.1.so
+   obj:/lib/libc-2.6.1.so
+   obj:/lib/ld-2.6.1.so
+   obj:/lib/libc-2.6.1.so
+   fun:__libc_dlopen_mode
+   fun:__nss_lookup_function
+   obj:/lib/libc-2.6.1.so
+   fun:__nss_services_lookup
+   fun:getservbyname_r
+   obj:/lib/libc-2.6.1.so
+   obj:/lib/libc-2.6.1.so
+   fun:getaddrinfo
+}
+

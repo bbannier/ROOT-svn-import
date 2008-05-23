@@ -86,6 +86,7 @@ private:
    TString       fCacheDir;         //directory containing cache of user files
    TString       fQueryDir;         //directory containing query results and status
    TString       fDataSetDir;       //directory containing info about known data sets
+   TString       fAdminPath;        //admin path for this session
    TProofLockPath *fPackageLock;    //package dir locker
    TProofLockPath *fCacheLock;      //cache dir locker
    TProofLockPath *fQueryLock;      //query dir locker
