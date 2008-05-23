@@ -247,10 +247,9 @@ void TDSetElement::Validate(TDSetElement *elem)
       return;
    }
 
-   const char *name = TUrl(GetFileName()).GetFileAndOptions();
-   const char *elemname = TUrl(elem->GetFileName()).GetFileAndOptions();
-
-   if (!strcmp(name, elemname) &&
+   TString name = TUrl(GetFileName()).GetFileAndOptions();
+   TString elemname = TUrl(elem->GetFileName()).GetFileAndOptions();
+   if ((name == elemname) &&
        !strcmp(GetDirectory(), elem->GetDirectory()) &&
        !strcmp(GetObjName(), elem->GetObjName())) {
       Long64_t entries = elem->fFirst + elem->fNum;
@@ -1344,7 +1343,7 @@ void TDSet::Lookup(Bool_t removeMissing, TList **listOfMissingFiles)
    // If the removeMissing option is set to kTRUE, remove the TDSetElements
    // that can not be located.
    // The method returns the list of removed TDSetElements in *listOfMissingFiles
-   // if the latter is defined (the list must be created outside).
+   // if the later is defined (the list must be created outside).
 
    // If an entry- or event- list has been given, assign the relevant portions
    // to each element; this allows to look-up only for the elements which have
