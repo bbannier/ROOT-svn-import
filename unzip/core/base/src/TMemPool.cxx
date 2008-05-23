@@ -116,7 +116,8 @@ char* TMemPool::GetMem(Long_t size)
       if( block->GetFree()>=size) {
          buff = block->GetPtr();
          block->AddUsed(size);
-         fUsed += size;         
+         fUsed += size;
+         Printf("GetMem -- Returning a Block:%d p:%p size:%d used:%d", size, block, block->GetSize(), block->GetUsed() );
          return buff;
       }
    }
@@ -128,8 +129,11 @@ char* TMemPool::GetMem(Long_t size)
          fFirst = new TMemBlock(size);
          fLast = fCurrent = fFirst;
       }
-      fLast->SetNext(new TMemBlock(fLast->GetSize()+size));
-      fLast = fLast->GetNext();
+      else {
+         fLast->SetNext(new TMemBlock(fLast->GetSize()+size));
+         fLast = fLast->GetNext();
+         fCurrent = fLast;
+      }
       fSize += fLast->GetSize();
 
       Printf("GetMem -- Allocating a new Block fLast->fSize:%d size:%d", fLast->GetSize(), size );
@@ -162,6 +166,9 @@ void TMemPool::Reset()
 {
    // Clear up this memory pool... don't delete anything, just put the
    // pointers to zero
+   if(fUsed==0)
+      return;
+   
    Printf("Reset -- Cleaning up all the blocks p:%p", this);
    
    for (TMemBlock* block=fFirst; block!=0; block=block->GetNext()) {
