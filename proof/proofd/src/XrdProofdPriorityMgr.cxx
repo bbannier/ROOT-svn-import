@@ -69,7 +69,7 @@ void *XrdProofdPriorityCron(void *p)
          // Parse type
          if (msg.Type() == XrdProofdPriorityMgr::kChangeStatus) {
             XrdOucString usr, grp;
-            int opt, pid, rc = 0;
+            int opt, pid;
             rc = msg.Get(opt);
             rc = (rc == 0) ? msg.Get(usr) : rc;
             rc = (rc == 0) ? msg.Get(grp) : rc;
@@ -89,7 +89,7 @@ void *XrdProofdPriorityCron(void *p)
             }
          } else if (msg.Type() == XrdProofdPriorityMgr::kSetGroupPriority) {
             XrdOucString grp;
-            int prio = -1, rc = 0;
+            int prio = -1;
             rc = msg.Get(grp);
             rc = (rc == 0) ? msg.Get(prio) : rc;
             if (rc != 0) {
