@@ -658,7 +658,7 @@ int XrdProofdProofServMgr::RecoverActiveSessions()
          // If all client sessions reconnected remove the client from the list
          {  XrdSysMutexHelper mhp(cls->fMutex);
             if (cls->fProofServs.size() <= 0) {
-               XrdSysMutexHelper mhp(fRecoverMutex);
+               XrdSysMutexHelper mhpr(fRecoverMutex);
                fRecoverClients->remove(cls);
                // We may be over
                if ((nrc = fRecoverClients->size()) <= 0)
@@ -1451,20 +1451,20 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
       char *argvv[6] = {0};
 
       // We add our PID to be able to identify processes coming from us
-      char cpid[10] = {0};
-      sprintf(cpid, "%d", getppid());
+      char spid[10] = {0};
+      sprintf(spid, "%d", getppid());
 
       // Log level
-      char clog[10] = {0};
-      sprintf(clog, "%d", loglevel);
+      char slog[10] = {0};
+      sprintf(slog, "%d", loglevel);
 
       // start server
       argvv[0] = (char *) xps->ROOT()->PrgmSrv();
       argvv[1] = (char *)((p->ConnType() == kXPD_MasterWorker) ? "proofslave"
                        : "proofserv");
       argvv[2] = (char *)"xpd";
-      argvv[3] = (char *)cpid;
-      argvv[4] = (char *)clog;
+      argvv[3] = (char *)spid;
+      argvv[4] = (char *)slog;
       argvv[5] = 0;
 
       // Set environment for proofserv
@@ -1482,9 +1482,9 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
       write(fp[1], &lfout, sizeof(lfout));
       if (lfout > 0) {
          int n, ns = 0;
-         char *buf = (char *) xps->Fileout();
+         char *xbuf = (char *) xps->Fileout();
          for (n = 0; n < lfout; n += ns) {
-            if ((ns = write(fp[1], buf + n, lfout - n)) <= 0) {
+            if ((ns = write(fp[1], xbuf + n, lfout - n)) <= 0) {
                TRACE(XERR, "SetProofServEnv did not return OK - EXIT");
                write(fp[1], &setupOK, sizeof(setupOK));
                close(fp[0]);
@@ -1544,10 +1544,10 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
          if (setupOK > 0) {
             // Receive path of the log file
             int lfout = setupOK;
-            char *buf = new char[lfout + 1];
+            char *xbuf = new char[lfout + 1];
             int n, nr = 0;
             for (n = 0; n < lfout; n += nr) {
-               while ((nr = read(fp[0], buf + n, lfout - n)) == -1 && errno == EINTR)
+               while ((nr = read(fp[0], xbuf + n, lfout - n)) == -1 && errno == EINTR)
                   errno = 0;   // probably a SIGCLD that was caught
                if (nr == 0)
                   break;          // EOF
@@ -1559,15 +1559,15 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
                }
             }
             if (setupOK > 0) {
-               buf[lfout] = 0;
-               xps->SetFileout(buf);
+               xbuf[lfout] = 0;
+               xps->SetFileout(xbuf);
                // Set also the session tag
-               XrdOucString stag(buf);
+               XrdOucString stag(xbuf);
                stag.erase(stag.rfind('/'));
                stag.erase(0, stag.find("session-") + strlen("session-"));
                xps->SetTag(stag.c_str());
             }
-            delete[] buf;
+            delete[] xbuf;
          } else {
             emsg += ": proofserv startup failed";
          }

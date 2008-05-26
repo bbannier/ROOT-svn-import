@@ -95,7 +95,7 @@ void *XrdProofdClientCron(void *p)
          if (msg.Type() == XrdProofdClientMgr::kClientDisconnect) {
             // Read admin path and pointer to the client instance
             XrdOucString adminpath;
-            int rc = msg.Get(adminpath);
+            rc = msg.Get(adminpath);
             XrdProofdClient *c = 0;
             rc = (rc == 0) ? msg.Get((void **)&c) : rc;
             int cid = -1;
@@ -559,8 +559,7 @@ int XrdProofdClientMgr::MapClient(XrdProofdProtocol *p, bool all)
          tid.form("xrd->%s", psrv->Ordinal());
          resp->SetTag(tid.c_str());
          resp->SetTraceID();
-         const char *rid = resp->TraceID();
-         TRACEI(rid, DBG, "proofsrv callback: link assigned to target session "<<psid);
+         TRACEI(resp->TraceID(), DBG, "proofsrv callback: link assigned to target session "<<psid);
       }
    } else {
 

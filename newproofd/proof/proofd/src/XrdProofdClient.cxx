@@ -226,7 +226,6 @@ int XrdProofdClient::CreateUNIXSock(XrdSysError *edest)
          return -1;
       }
       // Make sure that it worked out
-      struct stat st;
       if ((stat(fUNIXSockPath.c_str(), &st) != 0) || 
             (int) st.st_uid != fUI.fUid || (int) st.st_gid != fUI.fGid) {
          TRACE(XERR, "problems setting user ownership on UNIX socket");
