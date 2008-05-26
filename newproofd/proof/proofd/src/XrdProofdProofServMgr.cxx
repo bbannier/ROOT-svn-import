@@ -2394,17 +2394,6 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdProtocol *p, void *input)
    if (p->Client()->Group()) {
       fprintf(frc, "# Proof group\n");
       fprintf(frc, "ProofServ.ProofGroup: %s\n", p->Client()->Group());
-      // On master we should have the data set dir
-      if ((fMgr->SrvType() == kXPD_ClientMaster || fMgr->SrvType() == kXPD_AnyServer)) {
-         const char *dsetdir = p->Client()->Sandbox()->DSetDir();
-         if (dsetdir && strlen(dsetdir) > 0) {
-            fprintf(frc, "# User's dataset dir\n");
-            fprintf(frc, "ProofServ.DataSetDir: %s\n", dsetdir);
-         }
-         // Export also the dataset root (for location purposes)
-         fprintf(frc, "# Global root for datasets\n");
-         fprintf(frc, "ProofServ.DataSetRoot: %s\n", fMgr->DataSetDir());
-      }
    }
 
    //  Path to file with group information
@@ -2472,7 +2461,7 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdProtocol *p, void *input)
          fprintf(frc, "ProofServ.ProofConfFile: sm:\n");
       } else if (fProofPlugin.length() > 0) {
          fprintf(frc, "# Config file\n");
-         fprintf(frc, "ProofServ.ProofConfFile: %s\n", fProofPlugin.Data());
+         fprintf(frc, "ProofServ.ProofConfFile: %s\n", fProofPlugin.c_str());
       }
    }
 
