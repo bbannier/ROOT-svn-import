@@ -25,19 +25,27 @@ TESTGAMINOBJ     = testGAMinimizer.$(ObjSuf)
 TESTGAMINSRC     = testGAMinimizer.$(SrcSuf)
 TESTGAMIN        = testGAMinimizer$(ExeSuf)
 
+TIMEGAOBJ     = timeGA.$(ObjSuf)
+TIMEGASRC     = timeGA.$(SrcSuf)
+TIMEGA        = timeGA$(ExeSuf)
+
 GATUTORIALOBJ     = GAMinTutorial.$(ObjSuf)
 GATUTORIALSRC     = GAMinTutorial.$(SrcSuf)
 GATUTORIAL        = GAMinTutorial$(ExeSuf)
 
-OBJS          = $(TESTGAMINOBJ) $(GATUTORIALOBJ)
+OBJS          = $(TESTGAMINOBJ) $(TIMEGAOBJ)  $(GATUTORIALOBJ)
 
-PROGRAMS      = $(TESTGAMIN) $(GATUTORIAL)
+PROGRAMS      = $(TESTGAMIN) $(TIMEGA)  $(GATUTORIAL)
 
 .SUFFIXES: .$(SrcSuf) .$(ObjSuf) $(ExeSuf)
 
 all:            $(PROGRAMS) 
 
 $(TESTGAMIN):      $(TESTGAMINOBJ)
+		    $(LD) $(LDFLAGS) $^ $(LIBS)  $(OutPutOpt)$@
+		    @echo "$@ done"
+
+$(TIMEGA):      $(TIMEGAOBJ)
 		    $(LD) $(LDFLAGS) $^ $(LIBS)  $(OutPutOpt)$@
 		    @echo "$@ done"
 
