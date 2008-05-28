@@ -22,6 +22,7 @@
 #include "TStreamerInfo.h"
 #include "TVirtualCollectionProxy.h"
 #include "TContainerConverters.h"
+#include "TMemPool.h"
 
 //==========CPP macros
 
@@ -68,9 +69,10 @@
       name **f = (name**)(arr[index]+ioffset);  \
       int j;                                    \
       if (isArray) for(j=0;j<fLength[i];j++) {  \
-         delete [] f[j];                        \
+         /*delete [] f[j];*/                        \
          f[j] = 0; if (*l <=0) continue;        \
-         f[j] = new name[*l];                   \
+         f[j] = new (fMemPool->GetMem(sizeof(name)*(*l))) name[*l];                   \
+         /*f[j] = new name[*l];*/                   \
          b.ReadFastArray(f[j],*l);              \
       }                                         \
    }

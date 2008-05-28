@@ -41,6 +41,8 @@ class TMemberStreamer;
 class TStreamerElement;
 class TStreamerBasicType;
 class TClassStreamer;
+class TMemPool;
+
 namespace ROOT { class TCollectionProxyInfo; }
 
 class TStreamerInfo : public TVirtualStreamerInfo {
@@ -100,7 +102,8 @@ private:
    TObjArray        *fElements;          //Array of TStreamerElements
    Version_t         fOldVersion;        //! Version of the TStreamerInfo object read from the file
    Bool_t            fIsBuilt;           //! true if the TStreamerInfo has been 'built'
-
+   TMemPool         *fMemPool;
+   
    static  Int_t     fgCount;            //Number of TStreamerInfo instances
    static TStreamerElement *fgElement;   //Pointer to current TStreamerElement
    void              BuildUserInfo(const char *info);
