@@ -62,6 +62,8 @@
 
 #include "TMakeProject.h"
 
+#include "TMemPool.h"
+
 TStreamerElement *TStreamerInfo::fgElement = 0;
 Int_t   TStreamerInfo::fgCount = 0;
 
@@ -94,6 +96,7 @@ TStreamerInfo::TStreamerInfo()
    fOptimized = kFALSE;
    fOldVersion = Class()->GetClassVersion();
    fIsBuilt  = kFALSE;
+   fMemPool = new TMemPool();
 }
 
 //______________________________________________________________________________
@@ -123,6 +126,8 @@ TStreamerInfo::TStreamerInfo(TClass *cl, const char *info)
    fOldVersion = Class()->GetClassVersion();
 
    if (info) BuildUserInfo(info);
+   
+   fMemPool = new TMemPool();
 }
 
 //______________________________________________________________________________
@@ -194,6 +199,9 @@ TStreamerInfo::~TStreamerInfo()
    if (!fElements) return;
    fElements->Delete();
    delete fElements; fElements=0;
+
+   fMemPool->Print();
+   delete fMemPool;
 }
 
 //______________________________________________________________________________
