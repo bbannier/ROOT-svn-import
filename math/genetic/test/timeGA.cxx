@@ -114,7 +114,7 @@ int GAMinTutorial()
    t.Start();
    GAMinimize(chi2Func, x1,x2);
    t.Stop();
-   cout << "Time :\t " << t.RealTime() << endl;
+   cout << "Time :\t " << t.RealTime() << " " << t.CpuTime() << endl;
 
    return 0; 
 }
