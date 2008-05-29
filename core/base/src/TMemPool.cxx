@@ -15,12 +15,23 @@
 //  the idea is to avoid as many dew/delete as possible and the         //
 //  principal targets are the buffers needed to process data when       //
 //  reading a tree (entry by entry)                                     //
+//                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
 #include "TMemPool.h"
 #include "TROOT.h"
 #include <stdlib.h> // malloc
 
+////////////////////////////////////////////////////////////////////////////////
+//                                                                            //
+//  TMemPool::TMemBlock is the basic block of our memory pool, it's jsut      //
+//  a node in a linked list where in addition to the data pointer and the     //
+//  nwxt link, we have some variable to keep track of the used memory         //
+//                                                                            //
+////////////////////////////////////////////////////////////////////////////////
+Int_t TMemPool::TMemBlock::fgBlockSize = 4096;
+
+//______________________________________________________________________________
 TMemPool::TMemBlock::TMemBlock()
 {
    fData=0;
@@ -29,32 +40,44 @@ TMemPool::TMemBlock::TMemBlock()
    fNext=0;
 }
 
+//______________________________________________________________________________
 TMemPool::TMemBlock::TMemBlock(Long_t size)
 {
-   if(size<4096)
-      size=4096;
+   Int_t nblocks = ((Int_t)(size/fgBlockSize)) + ((size%fgBlockSize)?1:0);
+
+   size = nblocks*fgBlockSize;
    
    fData=(char*)malloc(size);
    fUsed=0;
    fNext=0;
-   fSize=size; 
+   fSize=size;
+   fFree=fSize;
 }
 
+//______________________________________________________________________________
 TMemPool::TMemBlock::~TMemBlock()
 { 
-   fUsed=0;
+   fFree=0;
    fSize=0;
-   delete fData;
+   fUsed=0;
+   free(fData);
 }
 
+////////////////////////////////////////////////////////////////////////////////
+//                                                                            //
+//  TMemPool is the actual memory pool that is a container for the linked     //
+//  list of TMemBlocks (with pointers to the first, last and current blocks)  //
+//  plus some additional info about the used memory                           //
+//                                                                            //
+////////////////////////////////////////////////////////////////////////////////
 ClassImp(TMemPool);
 
 //______________________________________________________________________________
 TMemPool::TMemPool()
 {
-   // Create the memory pool
-   //if (gDebug > 0) 
-   Printf("TMemPool -- New mem pool (everything is zero) p:%p", this);
+   // Create the memory pool, this will set all the variables to 0 so be careful
+   if (gDebug == -1) 
+      Printf("TMemPool -- New mem pool (everything is zero) p:%p", this);
 
    fFirst   = 0;
    fLast    = 0;
@@ -68,8 +91,8 @@ TMemPool::TMemPool()
 TMemPool::TMemPool(Long_t size)
 {
    // Create the memory pool with a first block of size "size"
-   //if (gDebug > 0) 
-   Printf("TMemPool New mem pool size: %d p:%p", size, this);
+   if (gDebug == -1)
+      Printf("TMemPool New mem pool size: %d p:%p", size, this);
 
    fFirst   = new TMemBlock(size);
    fLast    = fFirst;
@@ -82,15 +105,17 @@ TMemPool::TMemPool(Long_t size)
 //______________________________________________________________________________
 TMemPool::~TMemPool()
 {
+   // Delete our memory pool 
    Delete();
 }
 
 //______________________________________________________________________________
 void TMemPool::Delete()
 {
-   // Delete the list of blocks reserved for this pool
-   //if (gDebug > 0) 
-   Printf("~TMemPool -- Deleting mem pool p:%p", this);
+   // Delete the list of blocks reserved for this pool (each one of them)
+   // and change the information about the memory accordingly
+   if (gDebug == -1)
+      Printf("~TMemPool -- Deleting mem pool p:%p", this);
    
    TMemBlock* btmp;  // rem the next pointer
    for (TMemBlock* block=fFirst; block!=0; block=btmp) {
@@ -109,15 +134,21 @@ void TMemPool::Delete()
 char* TMemPool::GetMem(Long_t size)
 {
    // Do what you are suppose to do... return a valid pointer to a buffer of
-   // size "size"
+   // size "size". For the moment, we are using a next-fit strategy to find
+   // to block from which we will take the memory. This is probably the
+   // simplest (and fastest) algorithm if we don't have to garbage collect the
+   // memory.
+
    char *buff = 0;
-   for (TMemBlock* block=fFirst; block!=0; block=block->GetNext()) {
+   for (TMemBlock* block=fCurrent; block!=0; block=block->GetNext()) {
       // Do we have enough space in this buffer?
       if( block->GetFree()>=size) {
          buff = block->GetPtr();
          block->AddUsed(size);
          fUsed += size;
-         Printf("GetMem -- Returning a Block:%d p:%p size:%d used:%d", size, block, block->GetSize(), block->GetUsed() );
+	 if(fCurrent!=block) fCurrent = block;
+         if (gDebug == -1)
+            Printf("GetMem -- Returning a Block:%d p:%p size:%d used:%d", size, block, block->GetSize(), block->GetUsed() );
          return buff;
       }
    }
@@ -136,10 +167,11 @@ char* TMemPool::GetMem(Long_t size)
       }
       fSize += fLast->GetSize();
 
-      Printf("GetMem -- Allocating a new Block fLast->fSize:%d size:%d", fLast->GetSize(), size );
-      if( fLast->GetFree()>=size) {
-         buff = fLast->GetPtr();
-         fLast->AddUsed(size);
+      if (gDebug == -1)
+         Printf("GetMem -- Allocating a new Block fLast->fSize:%d size:%d", fLast->GetSize(), size );
+      if( fCurrent->GetFree()>=size) {
+         buff = fCurrent->GetPtr();
+         fCurrent->AddUsed(size);
          fUsed += size;
          Print();
          return buff;
@@ -152,12 +184,13 @@ char* TMemPool::GetMem(Long_t size)
 void TMemPool::Print()
 {
    // Print the Info about the mem pool...
-   
-   Printf("Print -- Total p:%p fSize:%d fUsed:%d", this, fSize, fUsed);
+   if (gDebug == -1)
+      Printf("Print -- Total p:%p fSize:%d fUsed:%d", this, fSize, fUsed);
 
    Int_t n=0;
    for (TMemBlock* block=fFirst; block!=0; block=block->GetNext(), n++) {
-      Printf("Print -- p:%p Block n.:%d block->fSize:%d block->fUsed:%d", this, n, block->GetSize(), block->GetUsed() );
+      if (gDebug == -1)
+         Printf("Print -- p:%p Block n.:%d block->fSize:%d block->fUsed:%d", this, n, block->GetSize(), block->GetUsed() );
    }   
 }
 
@@ -169,7 +202,8 @@ void TMemPool::Reset()
    if(fUsed==0)
       return;
    
-   Printf("Reset -- Cleaning up all the blocks p:%p", this);
+   if (gDebug == -1)
+      Printf("Reset -- Cleaning up all the blocks p:%p", this);
    
    for (TMemBlock* block=fFirst; block!=0; block=block->GetNext()) {
       block->SetUsed(0);

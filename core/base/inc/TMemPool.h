@@ -34,24 +34,27 @@ private:
       char*      fData;  // Pointer to the requested buffer
       Long_t     fSize;  // Total size of the buffer
       Long_t     fUsed;  // Used size of the buffer
+      Long_t     fFree;  // size-used have it here to avoid calculating it
       TMemBlock* fNext;  // We will have a linked list of blocks
    
+      static Int_t fgBlockSize; // minimum block size (it will be used as the factor)
+
    public:
       TMemBlock();
       TMemBlock(Long_t size);
       virtual ~TMemBlock();
 
-      Long_t AddUsed(Long_t used){ fUsed+=used; return fUsed;}
+      Long_t AddUsed(Long_t used){ fUsed+=used; fFree-=used; return fUsed;}
       
       char*      GetData(){ return fData; }
-      Long_t     GetFree(){ return fSize-fUsed; }
+      Long_t     GetFree(){ return fFree; }
       char*      GetPtr(){  return fData+fUsed; }
       TMemBlock* GetNext(){ return fNext; }
       Long_t     GetSize(){ return fSize; }
       Long_t     GetUsed(){ return fUsed; }
 
       void SetNext(TMemBlock* next){ fNext=next; }
-      void SetUsed(Long_t used){ fUsed=used; }
+      void SetUsed(Long_t used){ fUsed=used; fFree=fSize-used;}
    };
    
    TMemBlock* fFirst;   // Pointer to the first TMemBlock (it's a linked list)
