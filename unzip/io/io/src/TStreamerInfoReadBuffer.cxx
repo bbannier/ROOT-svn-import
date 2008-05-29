@@ -69,10 +69,26 @@
       name **f = (name**)(arr[index]+ioffset);  \
       int j;                                    \
       if (isArray) for(j=0;j<fLength[i];j++) {  \
-         /*delete [] f[j];*/                        \
+         delete [] f[j];                        \
          f[j] = 0; if (*l <=0) continue;        \
-         f[j] = new (fMemPool->GetMem(sizeof(name)*(*l))) name[*l];                   \
-         /*f[j] = new name[*l];*/                   \
+         f[j] = new name[*l];                   \
+         b.ReadFastArray(f[j],*l);              \
+      }                                         \
+   }
+
+#define ReadBasicPointerElemMemPool(name,index) \
+   {                                            \
+      Char_t isArray;                           \
+      b >> isArray;                             \
+      Int_t *l = (Int_t*)(arr[index]+imethod);  \
+      if (*l < 0 || *l > b.BufferSize()) continue;     \
+      name **f = (name**)(arr[index]+ioffset);  \
+      int j;                                    \
+      if (isArray) for(j=0;j<fLength[i];j++) {  \
+         /*delete [] f[j];*/                    \
+         f[j] = 0; if (*l <=0) continue;        \
+         f[j] = new (fMemPool->GetMem(sizeof(name)*(*l))) name[*l];   \
+         /*f[j] = new name[*l];*/               \
          b.ReadFastArray(f[j],*l);              \
       }                                         \
    }
@@ -83,11 +99,25 @@
       ReadBasicPointerElem(name,0);             \
    }
 
+#define ReadBasicPointerMemPool(name)           \
+   {                                            \
+      const int imethod = fMethod[i]+eoffset;   \
+      ReadBasicPointerElemMemPool(name,0);      \
+   }
+
 #define ReadBasicPointerLoop(name)              \
    {                                            \
       int imethod = fMethod[i]+eoffset;         \
       for(int k=0; k<narr; ++k) {               \
          ReadBasicPointerElem(name,k);          \
+      }                                         \
+   }
+
+#define ReadBasicPointerLoopMemPool(name)       \
+   {                                            \
+      int imethod = fMethod[i]+eoffset;         \
+      for(int k=0; k<narr; ++k) {               \
+         ReadBasicPointerElemMemPool(name,k);   \
       }                                         \
    }
 
@@ -785,19 +815,21 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
             continue;
          }
 
-         case TStreamerInfo::kOffsetP + TStreamerInfo::kBool    + kHaveLoop: ReadBasicPointerLoop(Bool_t);    continue;
-         case TStreamerInfo::kOffsetP + TStreamerInfo::kChar    + kHaveLoop: ReadBasicPointerLoop(Char_t);    continue;
-         case TStreamerInfo::kOffsetP + TStreamerInfo::kShort   + kHaveLoop: ReadBasicPointerLoop(Short_t);   continue;
-         case TStreamerInfo::kOffsetP + TStreamerInfo::kInt     + kHaveLoop: ReadBasicPointerLoop(Int_t);     continue;
-         case TStreamerInfo::kOffsetP + TStreamerInfo::kLong    + kHaveLoop: ReadBasicPointerLoop(Long_t);    continue;
-         case TStreamerInfo::kOffsetP + TStreamerInfo::kLong64  + kHaveLoop: ReadBasicPointerLoop(Long64_t);  continue;
-         case TStreamerInfo::kOffsetP + TStreamerInfo::kFloat   + kHaveLoop: ReadBasicPointerLoop(Float_t);   continue;
-         case TStreamerInfo::kOffsetP + TStreamerInfo::kDouble  + kHaveLoop: ReadBasicPointerLoop(Double_t);  continue;
-         case TStreamerInfo::kOffsetP + TStreamerInfo::kUChar   + kHaveLoop: ReadBasicPointerLoop(UChar_t);   continue;
-         case TStreamerInfo::kOffsetP + TStreamerInfo::kUShort  + kHaveLoop: ReadBasicPointerLoop(UShort_t);  continue;
-         case TStreamerInfo::kOffsetP + TStreamerInfo::kUInt    + kHaveLoop: ReadBasicPointerLoop(UInt_t);    continue;
-         case TStreamerInfo::kOffsetP + TStreamerInfo::kULong   + kHaveLoop: ReadBasicPointerLoop(ULong_t);   continue;
-         case TStreamerInfo::kOffsetP + TStreamerInfo::kULong64 + kHaveLoop: ReadBasicPointerLoop(ULong64_t); continue;
+
+         case TStreamerInfo::kOffsetP + TStreamerInfo::kBool    + kHaveLoop:  ReadBasicPointerLoopMemPool(Bool_t);  continue;
+         case TStreamerInfo::kOffsetP + TStreamerInfo::kChar    + kHaveLoop:  ReadBasicPointerLoopMemPool(Char_t);  continue;
+         case TStreamerInfo::kOffsetP + TStreamerInfo::kShort   + kHaveLoop:  ReadBasicPointerLoopMemPool(Short_t);  continue;
+         case TStreamerInfo::kOffsetP + TStreamerInfo::kInt     + kHaveLoop:  ReadBasicPointerLoopMemPool(Int_t);  continue;
+         case TStreamerInfo::kOffsetP + TStreamerInfo::kLong    + kHaveLoop:  ReadBasicPointerLoopMemPool(Long_t);  continue;
+         case TStreamerInfo::kOffsetP + TStreamerInfo::kLong64  + kHaveLoop:  ReadBasicPointerLoopMemPool(Long64_t);  continue;
+         case TStreamerInfo::kOffsetP + TStreamerInfo::kFloat   + kHaveLoop:  ReadBasicPointerLoopMemPool(Float_t);  continue;
+         case TStreamerInfo::kOffsetP + TStreamerInfo::kDouble  + kHaveLoop:  ReadBasicPointerLoopMemPool(Double_t);  continue;
+         case TStreamerInfo::kOffsetP + TStreamerInfo::kUChar   + kHaveLoop:  ReadBasicPointerLoopMemPool(UChar_t);  continue;
+
+         case TStreamerInfo::kOffsetP + TStreamerInfo::kUShort  + kHaveLoop: ReadBasicPointerLoopMemPool(UShort_t);  continue;
+         case TStreamerInfo::kOffsetP + TStreamerInfo::kUInt    + kHaveLoop: ReadBasicPointerLoopMemPool(UInt_t);    continue;
+         case TStreamerInfo::kOffsetP + TStreamerInfo::kULong   + kHaveLoop: ReadBasicPointerLoopMemPool(ULong_t);   continue;
+         case TStreamerInfo::kOffsetP + TStreamerInfo::kULong64 + kHaveLoop: ReadBasicPointerLoopMemPool(ULong64_t); continue;
          case TStreamerInfo::kOffsetP + TStreamerInfo::kFloat16 + kHaveLoop: {
             const int imethod = fMethod[i]+eoffset;
             for(Int_t k=0; k<narr; ++k) {
