@@ -26,6 +26,9 @@
 // Via ProjectedClass() method it returns a TClass instance for the
 // projected class and keeps references to the projected objects.
 //
+// It is assumed that all classes deriving from TEveProjectable are also
+// derived from TEveElement.
+//
 // See also TEveProjectionManager::ImportElements().
 
 ClassImp(TEveProjectable);
@@ -47,7 +50,8 @@ TEveProjectable::~TEveProjectable()
       TEveProjected* p = fProjectedList.front();
       p->UnRefProjectable(this);
       TEveElement* el = dynamic_cast<TEveElement*>(p);
-      if (el)
+      assert(el);
+      // if (el)
       {
          gEve->PreDeleteElement(el);
          delete el;
@@ -67,6 +71,50 @@ void TEveProjectable::AddProjectedsToSet(std::set<TEveElement*>& set)
    }
 }
 
+//==============================================================================
+
+//______________________________________________________________________________
+void TEveProjectable::PropagateVizParams(TEveElement* el)
+{
+   // Set visualization parameters of projecteds.
+   // Use element el as model. If el == 0 (default), this casted to
+   // TEveElement is used.
+
+   if (el == 0)
+      el = dynamic_cast<TEveElement*>(this);
+
+   for (ProjList_i i=fProjectedList.begin(); i!=fProjectedList.end(); ++i)
+   {
+      dynamic_cast<TEveElement*>(*i)->CopyVizParams(el);
+   }
+}
+
+//______________________________________________________________________________
+void TEveProjectable::PropagateRenderState(Bool_t rnr_self, Bool_t rnr_children)
+{
+   // Set render state of projecteds.
+
+   for (ProjList_i i=fProjectedList.begin(); i!=fProjectedList.end(); ++i)
+   {
+      TEveElement* el = dynamic_cast<TEveElement*>(*i);
+      if (el->SetRnrSelfChildren(rnr_self, rnr_children))
+         el->ElementChanged();
+   }
+}
+
+//______________________________________________________________________________
+void TEveProjectable::PropagateMainColor(Color_t color, Color_t old_color)
+{
+   // Set main color of projecteds if their color is the same as old_color.
+
+   for (ProjList_i i=fProjectedList.begin(); i!=fProjectedList.end(); ++i)
+   {
+      TEveElement* el = dynamic_cast<TEveElement*>(*i);
+      if (el->GetMainColor() == old_color)
+         el->SetMainColor(color);
+   }
+}
+
 
 //==============================================================================
 //==============================================================================
@@ -78,6 +126,8 @@ void TEveProjectable::AddProjectedsToSet(std::set<TEveElement*>& set)
 // Abstract base class for classes that hold results of a non-linear
 // projection transformation.
 //
+// It is assumed that all classes deriving from TEveProjected are also
+// derived from TEveElement.
 
 ClassImp(TEveProjected);
 

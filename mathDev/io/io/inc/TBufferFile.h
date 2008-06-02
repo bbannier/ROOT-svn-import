@@ -73,7 +73,7 @@ protected:
    void   CheckCount(UInt_t offset);
    UInt_t CheckObject(UInt_t offset, const TClass *cl, Bool_t readClass = kFALSE);
 
-   virtual  void     WriteObject(const void *actualObjStart, const TClass *actualClass);
+   virtual  void  WriteObjectClass(const void *actualObjStart, const TClass *actualClass);
 
 public:
    enum { kMapSize = 503 };
@@ -116,7 +116,7 @@ public:
    virtual void       IncrementLevel(TVirtualStreamerInfo* info);
    virtual void       SetStreamerElementNumber(Int_t) {}
    virtual void       DecrementLevel(TVirtualStreamerInfo*);
-   TVirtualStreamerInfo     *GetInfo() {return (TVirtualStreamerInfo*)fInfo;}
+   TVirtualStreamerInfo  *GetInfo() {return (TVirtualStreamerInfo*)fInfo;}
    virtual void       ClassBegin(const TClass*, Version_t = -1) {}
    virtual void       ClassEnd(const TClass*) {}
    virtual void       ClassMember(const char*, const char* = 0, Int_t = -1, Int_t = -1) {}

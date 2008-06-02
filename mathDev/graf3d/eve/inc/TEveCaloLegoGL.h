@@ -27,12 +27,15 @@ private:
    TEveCaloLegoGL& operator=(const TEveCaloLegoGL&); // Not implemented
 
    // cached variables
-   mutable Float_t    fDataMax;
-   mutable Int_t      fZAxisStep;
-   mutable Int_t      fZAxisMax;
+   mutable Float_t   fDataMax;
+   mutable Double_t  fZAxisStep;
+   mutable Double_t  fZAxisMax;
+
+   mutable TAxis*    fEtaAxis;
+   mutable TAxis*    fPhiAxis;
 
 protected:
-   Int_t   GetGridStep(Int_t axId, const TAxis* ax, TGLRnrCtx &rnrCtx) const;
+   Int_t   GetGridStep(Int_t axId, TGLRnrCtx &rnrCtx) const;
 
    void    SetFont(Float_t axis_len, TGLRnrCtx &rnrCtx) const;
    void    RnrText(const char* txt, Float_t x, Float_t y, Float_t z,
@@ -53,14 +56,16 @@ protected:
    void    MakeDisplayList() const;
 
    mutable Bool_t                   fDLCacheOK;
-   mutable std::map< Int_t, UInt_t> fDLMap;
+
+   typedef std::map<Int_t, UInt_t>           SliceDLMap_t;
+   typedef std::map<Int_t, UInt_t>::iterator SliceDLMap_i;
+
+   mutable SliceDLMap_t     fDLMap;
 
    TEveCaloLego            *fM;  // Model object.
 
    mutable TGLFont          fNumFont;
    mutable TGLFont          fSymbolFont;
-
-   const   Float_t          fTMSize; //  XY tick-mark size in world coordinates
 
    // grid density modes
    Int_t                    fNBinSteps;

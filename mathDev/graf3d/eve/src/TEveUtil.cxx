@@ -354,7 +354,7 @@ TEvePadHolder::~TEvePadHolder()
 // Functionality to lock-unlock via setting of a static lock in
 // TGeoManager should be added (new feature of TGeoManager).
 
-ClassImp(TEveGeoManagerHolder)
+ClassImp(TEveGeoManagerHolder);
 
 //______________________________________________________________________________
 TEveGeoManagerHolder::TEveGeoManagerHolder(TGeoManager* new_gmgr) :
@@ -462,19 +462,6 @@ void TEveRefBackPtr::DecRefCount(TEveElement* re)
 }
 
 /******************************************************************************/
-
-//______________________________________________________________________________
-void TEveRefBackPtr::UpdateBackPtrItems()
-{
-   // Call UpdateItems() on list of reverse references.
-
-   std::list<TEveElement*>::iterator i = fBackRefs.begin();
-   while (i != fBackRefs.end())
-   {
-      (*i)->UpdateItems();
-      ++i;
-   }
-}
 
 //______________________________________________________________________________
 void TEveRefBackPtr::StampBackPtrElements(UChar_t stamps)

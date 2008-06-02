@@ -12,6 +12,7 @@
 #include "TEveProjectionManager.h"
 #include "TEveManager.h"
 #include "TEveProjectionBases.h"
+#include "TEveCompound.h"
 
 #include "TAttBBox.h"
 #include "TBuffer3D.h"
@@ -87,7 +88,6 @@ void TEveProjectionManager::UpdateName()
    // Updates name to have consitent information with prjection.
 
    SetName(Form ("%s (%3.1f)", fProjection->GetName(), fProjection->GetDistortion()*1000));
-   UpdateItems();
 }
 
 //______________________________________________________________________________
@@ -209,8 +209,14 @@ TEveElement* TEveProjectionManager::ImportElementsRecurse(TEveElement* el,
       new_el->SetPickable    (el->IsPickable());
       parent->AddElement(new_el);
 
+      TEveCompound *cmpnd    = dynamic_cast<TEveCompound*>(el);
+      TEveCompound *cmpnd_pr = dynamic_cast<TEveCompound*>(new_el);
       for (List_i i=el->BeginChildren(); i!=el->EndChildren(); ++i)
-         ImportElementsRecurse(*i, new_el);
+      {
+         TEveElement* child_pr = ImportElementsRecurse(*i, new_el);
+         if (cmpnd && (*i)->GetCompound() == cmpnd)
+            child_pr->SetCompound(cmpnd_pr);
+      }
    }
 
    return new_el;

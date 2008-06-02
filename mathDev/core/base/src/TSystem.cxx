@@ -26,7 +26,6 @@
 #ifdef WIN32
 #include <io.h>
 #endif
-#include <string>
 #include <stdlib.h>
 #include <errno.h>
 
@@ -42,7 +41,6 @@
 #include "TString.h"
 #include "TOrdCollection.h"
 #include "TInterpreter.h"
-#include "G__ci.h"
 #include "TRegexp.h"
 #include "TTimer.h"
 #include "TObjString.h"
@@ -1646,8 +1644,9 @@ int TSystem::Load(const char *module, const char *entry, Bool_t system)
          if (!l.EndsWith("."))
             idx++;
          while (idx < len && libs[idx] != '.') {
-            if (libs[idx] == ' ' || idx+1 == len)
+            if (libs[idx] == ' ' || idx+1 == len) {
                return 1;
+            }
             ++idx;
          }
       }
@@ -1762,7 +1761,7 @@ Func_t TSystem::DynFindSymbol(const char * /*lib*/, const char *entry)
    AbstractMethod("DynFindSymbol");
    return 0;
 #else
-   return G__findsym(entry);
+   return gInterpreter->FindSym(entry);
 #endif
 }
 
@@ -1776,7 +1775,7 @@ void TSystem::Unload(const char *module)
 #else
    char *path;
    if ((path = DynamicPathName(module))) {
-      G__unloadfile(path);
+      gInterpreter->UnloadFile(path);
       delete [] path;
    }
 #endif
@@ -2408,7 +2407,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
       ::Info("ACLiC","script has already been loaded in interpreted mode");
       ::Info("ACLiC","unloading %s and compiling it", filename);
 
-      if ( G__unloadfile( (char*) filename ) != 0 ) {
+      if ( gInterpreter->UnloadFile( (char*) filename ) != 0 ) {
          // We can not unload it.
          return kFALSE;
       }
@@ -2624,7 +2623,6 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
         || strlen(GetLibraries(library,"D",kFALSE)) != 0 ) {
       // The library has already been built and loaded.
 
-
       Bool_t reload = kFALSE;
       TNamed *libinfo = (TNamed*)fCompiled->FindObject(library);
       if (libinfo) {
@@ -2640,7 +2638,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
 
          ::Info("ACLiC","%s has been modified and will be reloaded",
                 libname.Data());
-         if ( G__unloadfile( (char*) library.Data() ) != 0 ) {
+         if ( gInterpreter->UnloadFile( (char*) library.Data() ) != 0 ) {
             // The library is being used. We can not unload it.
             return kFALSE;
          }
@@ -2670,7 +2668,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
          // core dump at termination.
 
          ::Info("ACLiC","it will be regenerated and reloaded!");
-         if ( G__unloadfile( (char*) library.Data() ) != 0 ) {
+         if ( gInterpreter->UnloadFile( (char*) library.Data() ) != 0 ) {
             // The library is being used. We can not unload it.
             return kFALSE;
          }
@@ -2683,7 +2681,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    TString libmapfilename;
    AssignAndDelete( libmapfilename, ConcatFileName( build_loc, libname ) );
    libmapfilename += ".rootmap";
-#if defined(R__MACOSX) || defined(R__WIN32)
+#if (defined(R__MACOSX) && !defined(MAC_OS_X_VERSION_10_5)) || defined(R__WIN32)
    Bool_t produceRootmap = kTRUE;
 #else
    Bool_t produceRootmap = kFALSE;
@@ -2855,10 +2853,25 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
 
    // ======= Generate the rootcint command line
    TString rcint;
-#ifdef G__NOSTUBS
-   rcint = "rootcint_nostubs.sh --lib-list-prefix=";
+#ifndef ROOTBINDIR
+   rcint = gSystem->Getenv("ROOTSYS");
+#ifndef R__WIN32
+   rcint += "/bin/";
 #else
-   rcint = "rootcint --lib-list-prefix=";
+   rcint += "\\bin\\";
+#endif
+#else
+   rcint = ROOTBINDIR;
+#ifndef R__WIN32
+   rcint += "/";
+#else
+   rcint += "\\";
+#endif
+#endif
+#ifdef G__NOSTUBS
+   rcint += "rootcint_nostubs.sh --lib-list-prefix=";
+#else
+   rcint += "rootcint --lib-list-prefix=";
 #endif
    rcint += mapfile;
    rcint += " -f ";
@@ -2885,20 +2898,24 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
 
    // ======= Load the library the script might depend on
    if (result) {
+      TString linkedlibs = GetLibraries("", "S");
+      TString libtoload;
       ifstream liblist(mapfileout);
-      string libtoload;
 
       ofstream libmapfile;
       if (produceRootmap) {
-         libmapfile.open(libmapfilename.Data());
-         libmapfile << "Library." << libname.Data() << ": " << libname.Data();
+         libmapfile.open(libmapfilename);
+         libmapfile << "Library." << libname << ": " << libname;
       }
 
       while ( liblist >> libtoload ) {
          // Load the needed library except for the library we are currently building!
-         if (libtoload != library.Data() && libtoload != libname.Data() && libtoload != libname_ext.Data()) {
-            gROOT->LoadClass("",libtoload.c_str());
-            if (produceRootmap) libmapfile << " " << libtoload;
+         if (libtoload != library && libtoload != libname && libtoload != libname_ext) {
+            gROOT->LoadClass("", libtoload);
+            if (produceRootmap) {
+               if (!linkedlibs.Contains(libtoload))
+                  libmapfile << " " << libtoload;
+            }
          }
       }
 
@@ -2930,8 +2947,10 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    cmd.ReplaceAll("$LinkedLibs",linkLibraries);
    cmd.ReplaceAll("$LibName",libname);
    cmd.ReplaceAll("$BuildDir",build_loc);
-   if (mode==kDebug) cmd.ReplaceAll("$Opt",fFlagsDebug);
-   else cmd.ReplaceAll("$Opt",fFlagsOpt);
+   if (mode==kDebug)
+      cmd.ReplaceAll("$Opt",fFlagsDebug);
+   else
+      cmd.ReplaceAll("$Opt",fFlagsOpt);
 
 #ifdef WIN32
    R__FixLink(cmd);
@@ -2962,8 +2981,10 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    testcmd.ReplaceAll("$ExeName",exec);
    testcmd.ReplaceAll("$LinkedLibs",linkLibraries);
    testcmd.ReplaceAll("$BuildDir",build_loc);
-   if (mode==kDebug) testcmd.ReplaceAll("$Opt",fFlagsDebug);
-   else testcmd.ReplaceAll("$Opt",fFlagsOpt);
+   if (mode==kDebug)
+      testcmd.ReplaceAll("$Opt",fFlagsDebug);
+   else
+      testcmd.ReplaceAll("$Opt",fFlagsOpt);
 
 #ifdef WIN32
    R__FixLink(testcmd);
@@ -3077,7 +3098,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
 #ifndef NOCINT
       // This is intended to force a failure if not all symbols needed
       // by the library are present.
-      G__Set_RTLD_NOW();
+      gInterpreter->SetRTLD_NOW();
 #endif
       if (gInterpreter->GetSharedLibDeps(libname) !=0 ) {
          gInterpreter->UnloadLibraryMap(libmapfilename);
@@ -3087,7 +3108,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
       if (loadLib) result = !gSystem->Load(library);
       else result = kTRUE;
 #ifndef NOCINT
-      G__Set_RTLD_LAZY();
+      gInterpreter->SetRTLD_LAZY();
 #endif
 
       if ( !result ) {

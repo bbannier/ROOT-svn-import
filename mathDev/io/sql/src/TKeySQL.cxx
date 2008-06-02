@@ -225,6 +225,30 @@ TObject* TKeySQL::ReadObj()
 }
 
 //______________________________________________________________________________
+TObject* TKeySQL::ReadObjWithBuffer(char * /*bufferRead*/)
+{
+// Read object derived from TObject class
+// If it is not TObject or in case of error, return 0
+
+   TObject* tobj = (TObject*) ReadKeyObject(0, TObject::Class());
+   
+   if (tobj!=0) {
+      if (gROOT->GetForceStyle()) tobj->UseCurrentStyle();
+      if (tobj->IsA() == TDirectoryFile::Class()) {
+         TDirectoryFile *dir = (TDirectoryFile*) tobj;
+         dir->SetName(GetName());
+         dir->SetTitle(GetTitle());
+         dir->SetSeekDir(GetDBKeyId());
+         dir->SetMother(fMotherDir);
+         dir->ReadKeys();
+         fMotherDir->Append(dir);
+      }
+   }
+       
+   return tobj;
+}
+
+//______________________________________________________________________________
 void* TKeySQL::ReadObjectAny(const TClass* expectedClass)
 {
 // read object of any type from SQL database

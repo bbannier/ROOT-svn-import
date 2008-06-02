@@ -165,10 +165,9 @@
 #include <iostream>
 #include "cintdictversion.h"
 
-#if defined (G__NOSTUBS) && !defined(ROOTBUILD)
 #ifdef __APPLE__
 #include <libgen.h> // Needed for basename
-#endif
+#include <mach-o/dyld.h>
 #endif
 
 #ifdef fgets // in G__ci.h
@@ -312,12 +311,10 @@ const char *help =
 #ifdef system
 #undef system
 #endif
+#include <windows.h>
+#include <Tlhelp32.h> // for MAX_MODULE_NAME32
 #include <process.h>
 #include <errno.h>
-#endif
-
-#ifdef __MWERKS__
-#include <console.h>
 #endif
 
 #include <time.h>
@@ -489,6 +486,73 @@ void Fatal(const char *location, const char *va_(fmt), ...)
    va_end(ap);
 }
 
+//______________________________________________________________________________
+const char *GetExePath()
+{
+   // Returns the executable path name, used by SetRootSys().
+
+   static std::string exepath;
+   if (exepath == "") {
+#ifdef __APPLE__
+      exepath = _dyld_get_image_name(0);
+#endif
+#ifdef __linux
+      char linkname[64];  // /proc/<pid>/exe
+      char buf[1024];     // exe path name
+      pid_t pid;
+
+      // get our pid and build the name of the link in /proc
+      pid = getpid();
+      sprintf(linkname, "/proc/%i/exe", pid);
+      int ret = readlink(linkname, buf, 1024);
+      if (ret > 0 && ret < 1024) {
+         buf[ret] = 0;
+         exepath = buf;
+      }
+#endif
+#ifdef _WIN32
+   char *buf = new char[MAX_MODULE_NAME32 + 1];
+   ::GetModuleFileName(NULL, buf, MAX_MODULE_NAME32 + 1);
+   char* p = buf;
+   while ((p = strchr(p, '\\')))
+      *(p++) = '/';
+   exepath = buf;
+   delete buf;
+#endif
+   }
+   return exepath.c_str();
+}
+
+//______________________________________________________________________________
+void SetRootSys()
+{
+   // Set the ROOTSYS env var based on the executable location.
+
+   const char *exepath = GetExePath();
+   if (exepath && *exepath) {
+      char *ep = new char[strlen(exepath)+1];
+      strcpy(ep, exepath);
+      char *s;
+      if ((s = strrchr(ep, '/'))) {
+         // $ROOTSYS/bin/rootcint
+         int removesubdirs = 2;
+         if (!strncmp(s, "rootcint_tmp", 12))
+            // $ROOTSYS/core/utils/src/rootcint_tmp
+            removesubdirs = 4;
+         for (int i = 1; s && i < removesubdirs; ++i) {
+            *s = 0;
+            s = strrchr(ep, '/');
+         }
+         if (s) *s = 0;
+      }
+      char *env = new char[strlen(ep) + 10];
+      sprintf(env, "ROOTSYS=%s", ep);
+      putenv(env);
+      delete [] ep;
+   }
+}
+
+
 namespace {
    class R__tmpnamElement {
    public:
@@ -568,8 +632,7 @@ string R__tmpnam()
 #endif
 }
 
-#ifdef WIN32
-#include "windows.h"
+#ifdef _WIN32
 //______________________________________________________________________________
 // defined in newlink.c
 extern "C" FILE *FOpenAndSleep(const char *filename, const char *mode);
@@ -587,7 +650,8 @@ Recmap_t gAutoloads;
 string gLiblistPrefix;
 string gLibsNeeded;
 
-int AutoLoadCallbackImpl(char *c, char *) {
+int AutoLoadCallbackImpl(char *c, char *)
+{
    string need( gAutoloads[c] );
    if (need.length() && gLibsNeeded.find(need)==string::npos) {
       gLibsNeeded += " " + need;
@@ -595,12 +659,13 @@ int AutoLoadCallbackImpl(char *c, char *) {
    return 1;
 }
 
-extern "C" int AutoLoadCallback(char *c, char *l) {
+extern "C" int AutoLoadCallback(char *c, char *l)
+{
    return AutoLoadCallbackImpl(c,l);
 }
 
-void LoadLibraryMap() {
-
+void LoadLibraryMap()
+{
    string filelistname = gLiblistPrefix + ".in";
    ifstream filelist(filelistname.c_str());
 
@@ -707,7 +772,9 @@ extern "C" {
    G__parse_hook_t* G__set_beforeparse_hook (G__parse_hook_t* hook);
 }
 
-void EnableAutoLoading() {
+//______________________________________________________________________________
+void EnableAutoLoading()
+{
    G__set_class_autoloading_table((char*)"ROOT", (char*)"libCore.so");
    LoadLibraryMap();
    G__set_class_autoloading_callback(&AutoLoadCallback);
@@ -4055,10 +4122,6 @@ void CleanupOnExit(int code) {
 //______________________________________________________________________________
 int main(int argc, char **argv)
 {
-#ifdef __MWERKS__
-   argc = ccommand(&argv);
-#endif
-
    if (argc < 2) {
       fprintf(stderr,
               "Usage: %s [-v][-v0-4] [-cint|-reflex|-gccxml] [-l] [-f] [out.cxx] [-c] file1.h[+][-][!] file2.h[+][-][!]...[LinkDef.h]\n",
@@ -4260,27 +4323,21 @@ int main(int argc, char **argv)
    for (i = 0; i < 16; i++)
       path[i][0] = 0;
 
-#ifndef ROOTINCDIR
-# ifndef ROOTBUILD
+#ifndef ROOTBUILD
+# ifndef ROOTINCDIR
+   SetRootSys();
    if (getenv("ROOTSYS")) {
-#  ifdef __MWERKS__
-      sprintf(path[0], "-I%s:include", getenv("ROOTSYS"));
-      sprintf(path[1], "-I%s:src", getenv("ROOTSYS"));
-#  else
       sprintf(path[0], "-I%s/include", getenv("ROOTSYS"));
       sprintf(path[1], "-I%s/src", getenv("ROOTSYS"));
-#  endif
    } else {
       Error(0, "%s: environment variable ROOTSYS not defined\n", argv[0]);
       return 1;
    }
 # else
-   //sprintf(path[0], "-Ibase/inc");
-   //sprintf(path[1], "-Icont/inc");
-   sprintf(path[0], "-Iinclude");
+   sprintf(path[0], "-I%s", ROOTINCDIR);
 # endif
 #else
-   sprintf(path[0], "-I%s", ROOTINCDIR);
+   sprintf(path[0], "-Iinclude");
 #endif
 
    argvv[0] = argv[0];
@@ -4646,14 +4703,23 @@ int main(int argc, char **argv)
    if (dict_type==kDictTypeGCCXML) {
       string gccxml_rootcint_call;
 #ifndef ROOTBUILD
+# ifndef ROOTBINDIR
       if (getenv("ROOTSYS")) {
          gccxml_rootcint_call=getenv("ROOTSYS");
-# ifdef WIN32
+#  ifdef WIN32
          gccxml_rootcint_call+="\\bin\\";
-# else
+#  else
          gccxml_rootcint_call+="/bin/";
-# endif
+#  endif
       }
+# else
+      gccxml_rootcint_call=ROOTBINDIR;
+#  ifdef WIN32
+      gccxml_rootcint_call+="\\";
+#  else
+      gccxml_rootcint_call+="/";
+#  endif
+# endif
 #else
 # ifdef WIN32
       gccxml_rootcint_call="bin\\";

@@ -24,8 +24,11 @@
 
 #include "TGLSAViewer.h"
 
+#include "TGeoManager.h"
+#include "TObjString.h"
 #include "TROOT.h"
 #include "TFile.h"
+#include "TMap.h"
 #include "TMacro.h"
 #include "TFolder.h"
 #include "TBrowser.h"
@@ -46,14 +49,17 @@ TEveManager* gEve = 0;
 //______________________________________________________________________________
 // TEveManager
 //
-// Central aplicat manager for Reve.
+// Central aplication manager for Eve.
 // Manages elements, GUI, GL scenes and GL viewers.
 
-ClassImp(TEveManager)
+ClassImp(TEveManager);
 
 //______________________________________________________________________________
 TEveManager::TEveManager(UInt_t w, UInt_t h) :
    fExcHandler  (0),
+   fVizDB       (0),
+   fGeometries  (0),
+   fGeometryAliases (0),
    fBrowser     (0),
    fEditor      (0),
    fStatusBar   (0),
@@ -76,9 +82,7 @@ TEveManager::TEveManager(UInt_t w, UInt_t h) :
 
    fStampedElements(),
    fSelection      (0),
-   fHighlight      (0),
-
-   fGeometries     ()
+   fHighlight      (0)
 {
    // Constructor.
 
@@ -90,6 +94,10 @@ TEveManager::TEveManager(UInt_t w, UInt_t h) :
    gEve = this;
 
    fExcHandler = new TExceptionHandler;
+
+   fGeometries      = new TMap; fGeometries->SetOwnerKeyValue();
+   fGeometryAliases = new TMap; fGeometryAliases->SetOwnerKeyValue();
+   fVizDB           = new TMap; fVizDB->SetOwnerKeyValue();
 
    fSelection = new TEveSelection("Global Selection");
    fHighlight = new TEveSelection("Global Highlight");
@@ -164,6 +172,9 @@ TEveManager::~TEveManager()
 {
    // Destructor.
 
+   delete fGeometryAliases;
+   delete fGeometries;
+   delete fVizDB;
    delete fExcHandler;
 }
 
@@ -273,22 +284,34 @@ void TEveManager::DoRedraw3D()
 
    // printf("TEveManager::DoRedraw3D redraw triggered\n");
 
-   // fScenes ->RepaintChangedScenes (fDropLogicals);
+   // Process element visibility changes, mark relevant scenes as changed.
+   {
+      TEveElement::List_t scenes;
+      for (TEveElement::Set_i i = fStampedElements.begin(); i != fStampedElements.end(); ++i)
+      {
+         if ((*i)->GetChangeBits() & TEveElement::kCBVisibility)
+         {
+            (*i)->CollectSceneParents(scenes);
+         }
+      }
+      ScenesChanged(scenes);
+   }
+
+   // Process changes in scenes.
    fScenes ->ProcessSceneChanges(fDropLogicals, fStampedElements);
    fViewers->RepaintChangedViewers(fResetCameras, fDropLogicals);
 
+   // Process changed elements again, update GUI (just editor so far,
+   // but more can come).
    for (TEveElement::Set_i i = fStampedElements.begin(); i != fStampedElements.end(); ++i)
    {
       if (fEditor->GetModel() == (*i)->GetEditorObject(eh))
          EditElement((*i));
 
-      // !!!! so far better just to redraw the list-tree;
-      // !!!! UpdateItems is obsolete, anyway.
-      // (*i)->UpdateItems();
       (*i)->ClearStamps();
    }
    fStampedElements.clear();
-   GetListTree()->ClearViewPort(); // !!!! see above.
+   GetListTree()->ClearViewPort(); // Fix this when several list-trees can be added.
 
    fResetCameras = kFALSE;
    fDropLogicals = kFALSE;
@@ -471,9 +494,63 @@ Bool_t TEveManager::ElementPaste(TEveElement* element)
    return kFALSE;
 }
 
-/******************************************************************************/
-// GeoManager registration
-/******************************************************************************/
+
+//==============================================================================
+// VizDB interface
+//==============================================================================
+
+//______________________________________________________________________________
+Bool_t TEveManager::InsertVizDBEntry(const TString& tag, TEveElement* model,
+                                     Bool_t replace)
+{
+   // Insert a new visualization-parameter database entry. Returns
+   // true if the element is inserted successfully.
+   // If entry with the same key already exists the behaviour depends on the
+   // 'replace' flag:
+   //   true  - the old model is deleted and new one is inserted (default);
+   //   false - the old model is kept, false is returned.
+   // If insert is successful, the ownership of the model-element is
+   // transferred to the manager.
+
+   TPair* pair = (TPair*) fVizDB->FindObject(tag);
+   if (pair)
+   {
+      if (replace)
+      {
+         TEveElement* old_model = dynamic_cast<TEveElement*>(pair->Value());
+         old_model->DecDenyDestroy();
+         old_model->Destroy();
+         model->IncDenyDestroy();
+         model->SetRnrChildren(kFALSE);
+         pair->SetValue(dynamic_cast<TObject*>(model));
+         return kTRUE;
+      }
+      else
+      {
+         return kFALSE;
+      }
+   }
+   else
+   {
+      model->IncDenyDestroy();
+      model->SetRnrChildren(kFALSE);
+      fVizDB->Add(new TObjString(tag), dynamic_cast<TObject*>(model));
+      return kTRUE;
+   }
+}
+
+//______________________________________________________________________________
+TEveElement* TEveManager::FindVizDBEntry(const TString& tag)
+{
+   // Find a visualization-parameter database entry corresponding to tag.
+   // If the entry is not found 0 is returned.
+
+   return dynamic_cast<TEveElement*>(fVizDB->GetValue(tag));
+}
+
+//==============================================================================
+// GeoManager, geometry-alias registration
+//==============================================================================
 
 //______________________________________________________________________________
 TGeoManager* TEveManager::GetGeometry(const TString& filename)
@@ -490,11 +567,8 @@ TGeoManager* TEveManager::GetGeometry(const TString& filename)
    printf("%s loading: '%s' -> '%s'.\n", eh.Data(),
           filename.Data(), exp_filename.Data());
 
-   std::map<TString, TGeoManager*>::iterator geom = fGeometries.find(filename);
-   if (geom != fGeometries.end()) {
-      gGeoManager = geom->second;
-   } else {
-      gGeoManager = 0;
+   gGeoManager = (TGeoManager*) fGeometries->GetValue(filename);
+   if (!gGeoManager) {
       Bool_t locked = TGeoManager::IsLocked();
       if (locked) {
          Warning(eh, "TGeoManager is locked ... unlocking it.");
@@ -529,7 +603,7 @@ TGeoManager* TEveManager::GetGeometry(const TString& filename)
          }
       }
 
-      fGeometries[filename] = gGeoManager;
+      fGeometries->Add(new TObjString(filename), gGeoManager);
    }
    return gGeoManager;
 }
@@ -542,10 +616,10 @@ TGeoManager* TEveManager::GetGeometryByAlias(const TString& alias)
 
    static const TEveException eh("TEveManager::GetGeometry ");
 
-   std::map<TString, TString>::iterator i = fGeometryAliases.find(alias);
-   if (i == fGeometryAliases.end())
+   TObjString* full_name = (TObjString*) fGeometryAliases->GetValue(alias);
+   if (!full_name)
       throw(eh + "geometry alias '" + alias + "' not registered.");
-   return GetGeometry(i->second);
+   return GetGeometry(full_name->String());
 }
 
 //______________________________________________________________________________
@@ -565,8 +639,10 @@ void TEveManager::RegisterGeometryAlias(const TString& alias, const TString& fil
    // After that the geometry can be retrieved also by calling:
    //   gEve->GetGeometryByName(name);
 
-   fGeometryAliases[alias] = filename;
+   fGeometryAliases->Add(new TObjString(alias), new TObjString(filename));
 }
+
+//==============================================================================
 
 //______________________________________________________________________________
 void TEveManager::SetStatusLine(const char* text)
@@ -603,15 +679,16 @@ TEveManager* TEveManager::Create()
 }
 
 
-/******************************************************************************/
+//==============================================================================
+//==============================================================================
 // TEveManager::TExceptionHandler
-/******************************************************************************/
+//==============================================================================
 
 //______________________________________________________________________________
 //
 // Exception handler for Eve exceptions.
 
-ClassImp(TEveManager::TExceptionHandler)
+ClassImp(TEveManager::TExceptionHandler);
 
 //______________________________________________________________________________
 TStdExceptionHandler::EStatus
