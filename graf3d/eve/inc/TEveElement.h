@@ -73,10 +73,11 @@ public:
    typedef std::set<TEveElement*>::iterator     Set_i;
 
 protected:
-   TEveCompound    *fCompound;             //  Compound this object belongs to.
-
    List_t           fParents;              //  List of parents.
    List_t           fChildren;             //  List of children.
+   TEveCompound    *fCompound;             //  Compound this object belongs to.
+   TEveElement     *fVizModel;             //! Element used as model from VizDB.
+   TString          fVizTag;               //  Tag used to query VizDB for model element.
 
    Bool_t           fDestroyOnZeroRefCnt;  //  Auto-destruct when ref-count reaches zero.
    Int_t            fDenyDestroy;          //  Deny-destroy count.
@@ -105,6 +106,18 @@ public:
    virtual void SetElementName (const Text_t* name);
    virtual void SetElementTitle(const Text_t* title);
    virtual void SetElementNameTitle(const Text_t* name, const Text_t* title);
+
+   const TString& GetVizTag() const             { return fVizTag; }
+   void           SetVizTag(const TString& tag) { fVizTag = tag;  }
+
+   TEveElement*   GetVizModel() const           { return fVizModel; }
+   void           SetVizModel(TEveElement* model);
+
+   virtual void PropagateVizParamsToProjecteds();
+   virtual void CopyVizParams(const TEveElement* el);
+   virtual void CopyVizParamsFromDB();
+
+   void ApplyVizTag(const TString& tag) { SetVizTag(tag); CopyVizParamsFromDB(); }
 
    TEveElement*  GetMaster();
    TEveCompound* GetCompound()                { return fCompound; }
@@ -170,9 +183,8 @@ public:
                                             TGListTreeItem* parent_lti);
 
    virtual Int_t GetNItems() const { return fItems.size(); }
-   virtual void  UpdateItems();
 
-   void SpawnEditor();                          // *MENU*
+   void         SpawnEditor();                  // *MENU*
    virtual void ExportToCINT(Text_t* var_name); // *MENU*
 
    virtual Bool_t AcceptElement(TEveElement* el);
@@ -194,9 +206,11 @@ public:
    virtual Bool_t GetRnrSelf()     const { return fRnrSelf; }
    virtual Bool_t GetRnrChildren() const { return fRnrChildren; }
    virtual Bool_t GetRnrState()    const { return fRnrSelf && fRnrChildren; }
-   virtual void   SetRnrSelf(Bool_t rnr);
-   virtual void   SetRnrChildren(Bool_t rnr);
-   virtual void   SetRnrState(Bool_t rnr);
+   virtual Bool_t SetRnrSelf(Bool_t rnr);
+   virtual Bool_t SetRnrChildren(Bool_t rnr);
+   virtual Bool_t SetRnrSelfChildren(Bool_t rnr_self, Bool_t rnr_children);
+   virtual Bool_t SetRnrState(Bool_t rnr);
+   virtual void   PropagateRnrStateToProjecteds();
 
    virtual Bool_t CanEditMainColor() const  { return kFALSE; }
    Color_t* GetMainColorPtr()               { return fMainColorPtr; }
@@ -208,6 +222,7 @@ public:
    void            SetMainColorPixel(Pixel_t pixel);
    void            SetMainColorRGB(UChar_t r, UChar_t g, UChar_t b);
    void            SetMainColorRGB(Float_t r, Float_t g, Float_t b);
+   virtual void    PropagateMainColorToProjecteds(Color_t color, Color_t old_color);
 
    virtual Bool_t  CanEditMainTransparency() const { return kFALSE; }
    virtual UChar_t GetMainTransparency()     const { return 0; }
@@ -267,11 +282,12 @@ public:
 
    enum EChangeBits
    {
-      kCBColorSelection =  1, // Main color or select/hilite state changed.
-      kCBTransBBox      =  2, // Transformation matrix or bounding-box changed.
-      kCBObjProps       =  4  // Object changed, requires dropping its display-lists.
-      // kCBElementAdded   =  8, // Element was added to a new parent.
-      // kCBElementRemoved = 16  // Element was removed from a parent.
+      kCBColorSelection =  BIT(0), // Main color or select/hilite state changed.
+      kCBTransBBox      =  BIT(1), // Transformation matrix or bounding-box changed.
+      kCBObjProps       =  BIT(2), // Object changed, requires dropping its display-lists.
+      kCBVisibility     =  BIT(3)  // Rendering of self/children changed.
+      // kCBElementAdded   = BIT(), // Element was added to a new parent.
+      // kCBElementRemoved = BIT()  // Element was removed from a parent.
 
       // Deletions are handled in a special way in TEveManager::PreDeleteElement().
    };
@@ -284,11 +300,11 @@ public:
    void StampColorSelection() { AddStamp(kCBColorSelection); }
    void StampTransBBox()      { AddStamp(kCBTransBBox); }
    void StampObjProps()       { AddStamp(kCBObjProps); }
+   void StampVisibility()     { AddStamp(kCBVisibility); }
    // void StampElementAdded()   { AddStamp(kCBElementAdded); }
    // void StampElementRemoved() { AddStamp(kCBElementRemoved); }
-   void ClearStamps()         { fChangeBits = 0; }
-   void SetStamp(UChar_t bits);
-   void AddStamp(UChar_t bits);
+   virtual void AddStamp(UChar_t bits);
+   virtual void ClearStamps() { fChangeBits = 0; }
 
    UChar_t GetChangeBits() const { return fChangeBits; }
 

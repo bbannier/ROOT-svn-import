@@ -64,6 +64,9 @@ const TGPicture* TEveElement::fgListTreeIcons[8] = { 0 };
 TEveElement::TEveElement() :
    fParents             (),
    fChildren            (),
+   fCompound            (0),
+   fVizModel            (0),
+   fVizTag              (),
    fDestroyOnZeroRefCnt (kTRUE),
    fDenyDestroy         (0),
    fRnrSelf             (kTRUE),
@@ -88,6 +91,9 @@ TEveElement::TEveElement() :
 TEveElement::TEveElement(Color_t& main_color) :
    fParents             (),
    fChildren            (),
+   fCompound            (0),
+   fVizModel            (0),
+   fVizTag              (),
    fDestroyOnZeroRefCnt (kTRUE),
    fDenyDestroy         (0),
    fRnrSelf             (kTRUE),
@@ -200,18 +206,85 @@ void TEveElement::SetElementNameTitle(const Text_t* name, const Text_t* title)
       named->SetNameTitle(name, title);
 }
 
-/******************************************************************************/
+//******************************************************************************
 
+//______________________________________________________________________________
+void TEveElement::SetVizModel(TEveElement* model)
+{
+   // Set visualization-parameter model element.
+   // Direct calling of this function should in principle be avoided as
+   // it can lead to dissynchronization of viz-tag and viz-model.
+
+   if (fVizModel)
+      fVizModel->RemoveElement(this);
+   fVizModel = model;
+   if (fVizModel)
+      fVizModel->AddElement(this);
+}
+
+//______________________________________________________________________________
+void TEveElement::PropagateVizParamsToProjecteds()
+{
+   // Propagate visualization parameters to dependent elements.
+   //
+   // MainColor is propagated independently in SetMainColor().
+   // In this case, as fMainColor is a pointer to Color_t, it should
+   // be set in TProperClass::CopyVizParams().
+   //
+   // Render state is not propagated. Maybe it should be, at least optionally.
+
+   TEveProjectable* pable = dynamic_cast<TEveProjectable*>(this);
+   if (pable && pable->HasProjecteds())
+   {
+      pable->PropagateVizParams();
+   }
+}
+
+//______________________________________________________________________________
+void TEveElement::CopyVizParams(const TEveElement* /* el */)
+{
+   // Copy visualization parameters from element el.
+   // This method needs to be overriden by any class that introduces
+   // new parameters.
+   // See, for example, TEvePointSet::CopyVizParams(),
+   // TEveLine::CopyVizParams() and TEveTrack::CopyVizParams().
+
+   AddStamp(kCBColorSelection | kCBObjProps);
+}
+
+//______________________________________________________________________________
+void TEveElement::CopyVizParamsFromDB()
+{
+   // Copy visualization parameters from the data-base. The data-base
+   // entry to use as the model is chosen from the fVizTag and the
+   // class of the element.
+
+   TEveElement* model = gEve->FindVizDBEntry(fVizTag);
+   if (model) {
+      SetVizModel(model);
+      CopyVizParams(fVizModel);
+   } else {
+      Warning("TEveElement::CopyVizParamsFromDB",
+              "Model element not found for tag '%s'.", fVizTag.Data());
+   }
+}
+
+//******************************************************************************
+
+//______________________________________________________________________________
 TEveElement* TEveElement::GetMaster()
 {
    // Return the master element - that is the upwards compound not
    // inside another compound.
    // If this element is not in a compound, this is returned.
+   // For a projected object the projectable->GetMaster() is returned.
 
-   TEveElement* el = this;
-   while (el->fCompound != 0)
-      el = el->fCompound;
-   return el;
+   TEveProjected* proj = dynamic_cast<TEveProjected*>(this);
+   if (proj)
+      return dynamic_cast<TEveElement*>(proj->GetProjectable())->GetMaster();
+   if (fCompound)
+      return fCompound->GetMaster();
+   return this;
 }
 
 //******************************************************************************
@@ -498,17 +571,6 @@ TGListTreeItem* TEveElement::FindListTreeItem(TGListTree* ltree,
    return 0;
 }
 
-//______________________________________________________________________________
-void TEveElement::UpdateItems()
-{
-   // Update list-tree-items representing this element.
-
-   static const TEveException eh("TEveElement::UpdateItems ");
-
-   for (sLTI_i i=fItems.begin(); i!=fItems.end(); ++i)
-      i->fTree->ClearViewPort();
-}
-
 /******************************************************************************/
 
 //______________________________________________________________________________
@@ -568,53 +630,98 @@ void TEveElement::PadPaint(Option_t* option)
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveElement::SetRnrSelf(Bool_t rnr)
+Bool_t TEveElement::SetRnrSelf(Bool_t rnr)
 {
    // Set render state of this element, i.e. if it will be published
    // on next scene update pass.
+   // Returns true if the state has changed.
 
    if (SingleRnrState())
    {
-      SetRnrState(rnr);
-      return;
+      return SetRnrState(rnr);
    }
 
    if (rnr != fRnrSelf)
    {
       fRnrSelf = rnr;
-      UpdateItems();
+      StampVisibility();
+      PropagateRnrStateToProjecteds();
+      return kTRUE;
    }
+   return kFALSE;
 }
 
 //______________________________________________________________________________
-void TEveElement::SetRnrChildren(Bool_t rnr)
+Bool_t TEveElement::SetRnrChildren(Bool_t rnr)
 {
    // Set render state of this element's children, i.e. if they will
    // be published on next scene update pass.
+   // Returns true if the state has changed.
 
    if (SingleRnrState())
    {
-      SetRnrState(rnr);
-      return;
+      return SetRnrState(rnr);
    }
 
    if (rnr != fRnrChildren)
    {
       fRnrChildren = rnr;
-      UpdateItems();
+      StampVisibility();
+      PropagateRnrStateToProjecteds();
+      return kTRUE;
    }
+   return kFALSE;
 }
 
 //______________________________________________________________________________
-void TEveElement::SetRnrState(Bool_t rnr)
+Bool_t TEveElement::SetRnrSelfChildren(Bool_t rnr_self, Bool_t rnr_children)
+{
+   // Set state for rendering of this element and its children.
+   // Returns true if the state has changed.
+
+   if (SingleRnrState())
+   {
+      return SetRnrState(rnr_self);
+   }
+
+   if (fRnrSelf != rnr_self || fRnrChildren != rnr_children)
+   {
+      fRnrSelf     = rnr_self;
+      fRnrChildren = rnr_children;
+      StampVisibility();
+      PropagateRnrStateToProjecteds();
+      return kTRUE;
+   }
+   return kFALSE;
+}
+
+//______________________________________________________________________________
+Bool_t TEveElement::SetRnrState(Bool_t rnr)
 {
    // Set render state of this element and of its children to the same
    // value.
+   // Returns true if the state has changed.
 
    if (fRnrSelf != rnr || fRnrChildren != rnr)
    {
       fRnrSelf = fRnrChildren = rnr;
-      UpdateItems();
+      StampVisibility();
+      PropagateRnrStateToProjecteds();
+      return kTRUE;
+   }
+   return kFALSE;
+}
+
+//______________________________________________________________________________
+void TEveElement::PropagateRnrStateToProjecteds()
+{
+   // Propagate render state to the projected replicas of this element.
+   // Maybe this should be optional on gEve/element level.
+
+   TEveProjectable* pable = dynamic_cast<TEveProjectable*>(this);
+   if (pable && pable->HasProjecteds())
+   {
+      pable->PropagateRenderState(fRnrSelf, fRnrChildren);
    }
 }
 
@@ -626,17 +733,14 @@ void TEveElement::SetMainColor(Color_t color)
    // Set main color of the element.
    // List-tree-items are updated.
 
-   Color_t oldcol = GetMainColor();
-
-   // !!!!! WTF is this? At least should be moved somewhere else ...
-   for (List_i i=fChildren.begin(); i!=fChildren.end(); ++i) {
-      if ((*i)->GetMainColor() == oldcol) (*i)->SetMainColor(color);
-   }
+   Color_t old_color = GetMainColor();
 
    if (fMainColorPtr) {
       *fMainColorPtr = color;
       StampColorSelection();
    }
+
+   PropagateMainColorToProjecteds(color, old_color);
 }
 
 //______________________________________________________________________________
@@ -661,6 +765,19 @@ void TEveElement::SetMainColorRGB(Float_t r, Float_t g, Float_t b)
    // Convert RGB values to Color_t and call SetMainColor.
 
    SetMainColor(TColor::GetColor(r, g, b));
+}
+
+//______________________________________________________________________________
+void TEveElement::PropagateMainColorToProjecteds(Color_t color, Color_t old_color)
+{
+   // Convert RGB values to Color_t and call SetMainColor.
+   // Maybe this should be optional on gEve/element level.
+
+   TEveProjectable* pable = dynamic_cast<TEveProjectable*>(this);
+   if (pable && pable->HasProjecteds())
+   {
+      pable->PropagateMainColor(color, old_color);
+   }
 }
 
 /******************************************************************************/
@@ -1127,20 +1244,12 @@ UChar_t TEveElement::GetSelectedLevel() const
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveElement::SetStamp(UChar_t bits)
-{
-   // Set fChangeBits to bits.
-   // Register this element to gEve as stamped.
-
-   fChangeBits = bits;
-   if (!fDestructing) gEve->ElementStamped(this);
-}
-
-//______________________________________________________________________________
 void TEveElement::AddStamp(UChar_t bits)
 {
    // Add (bitwise or) given stamps to fChangeBits.
    // Register this element to gEve as stamped.
+   // This method is virtual so that sub-classes can add additional
+   // actions. The base-class method should still be called (or replicated).
 
    fChangeBits |= bits;
    if (!fDestructing) gEve->ElementStamped(this);

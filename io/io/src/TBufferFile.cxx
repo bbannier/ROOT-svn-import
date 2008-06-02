@@ -2264,7 +2264,7 @@ void TBufferFile::WriteObject(const TObject *obj)
 }
 
 //______________________________________________________________________________
-void TBufferFile::WriteObject(const void *actualObjectStart, const TClass *actualClass)
+void TBufferFile::WriteObjectClass(const void *actualObjectStart, const TClass *actualClass)
 {
    // Write object to I/O buffer.
    // This function assumes that the value of 'actualObjectStart' is the actual start of
@@ -2359,7 +2359,7 @@ Int_t TBufferFile::WriteObjectAny(const void *obj, const TClass *ptrClass)
    //  2: truncated success (i.e actual class is missing. Only ptrClass saved.)
 
    if (!obj) {
-      WriteObject(0, 0);
+      WriteObjectClass(0, 0);
       return 1;
    }
 
@@ -2378,15 +2378,15 @@ Int_t TBufferFile::WriteObjectAny(const void *obj, const TClass *ptrClass)
       Warning("WriteObjectAny",
               "An object of type %s (from type_info) passed through a %s pointer was truncated (due a missing dictionary)!!!",
               typeid(*d_ptr).name(),ptrClass->GetName());
-      WriteObject(obj, ptrClass);
+      WriteObjectClass(obj, ptrClass);
       return 2;
    } else if (clActual && (clActual != ptrClass)) {
       const char *temp = (const char*) obj;
       temp -= clActual->GetBaseClassOffset(ptrClass);
-      WriteObject(temp, clActual);
+      WriteObjectClass(temp, clActual);
       return 1;
    } else {
-      WriteObject(obj, ptrClass);
+      WriteObjectClass(obj, ptrClass);
       return 1;
    }
 }

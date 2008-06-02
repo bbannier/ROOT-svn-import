@@ -269,6 +269,32 @@ TObject* TKeyXML::ReadObj()
 }
 
 //______________________________________________________________________________
+TObject* TKeyXML::ReadObjWithBuffer(char * /*bufferRead*/)
+{
+   // read object derived from TObject class, from key
+   // if it is not TObject or in case of error, return 0
+
+   TObject* tobj = (TObject*) XmlReadAny(0, TObject::Class());
+   
+   if (tobj!=0) {
+      if (gROOT->GetForceStyle()) tobj->UseCurrentStyle(); 
+      if (tobj->IsA() == TDirectoryFile::Class()) {
+         TDirectoryFile *dir = (TDirectoryFile*) tobj;
+         dir->SetName(GetName());
+         dir->SetTitle(GetTitle());
+         dir->SetSeekDir(GetKeyId());
+         // set mother before reading keys
+         dir->SetMother(fMotherDir);
+         dir->ReadKeys();
+         fMotherDir->Append(dir);
+         fSubdir = kTRUE;
+      }
+   }
+       
+   return tobj;
+}
+
+//______________________________________________________________________________
 void* TKeyXML::ReadObjectAny(const TClass *expectedClass)
 {
    // read object of any type

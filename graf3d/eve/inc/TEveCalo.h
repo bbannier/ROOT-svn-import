@@ -38,18 +38,19 @@ private:
 protected:
    TEveCaloData* fData;  // event data reference
 
-   Float_t      fEtaLowLimit;
-   Float_t      fEtaHighLimit;
-   Float_t      fEtaMin;
-   Float_t      fEtaMax;
+   Double_t      fEtaMin;
+   Double_t      fEtaMax;
 
-   Float_t      fPhi;
-   Float_t      fPhiRng;
+   Double_t      fPhi;
+   Double_t      fPhiOffset;
 
-   Float_t      fBarrelRadius;  // barrel raidus in cm
-   Float_t      fEndCapPos;     // end cap z coordinate in cm
+   Float_t       fBarrelRadius;  // barrel raidus in cm
+   Float_t       fEndCapPos;     // end cap z coordinate in cm
 
-   Float_t      fCellZScale;
+   Float_t       fCellZScale;
+
+   Bool_t        fUseExternalZMax;
+   Float_t       fExternalZMax;
 
    Bool_t            fValueIsColor;   // Interpret signal value as RGBA color.
    TEveRGBAPalette*  fPalette;        // Pointer to signal-color palette.
@@ -79,6 +80,12 @@ public:
    virtual void    SetCellZScale(Float_t s) { fCellZScale = s; ResetBBox(); }
    virtual Float_t GetDefaultCellHeight() const { return fBarrelRadius*fCellZScale; }
 
+   void    SetUseExternalZMax(Bool_t x) { fUseExternalZMax = x; }
+   Bool_t  GetUseExternalZMax() const { return fUseExternalZMax; }
+
+   void    SetExternalZMax(Float_t val) { fExternalZMax = val; }
+   Float_t GetExternalZMax() const { return fExternalZMax; }
+
    Float_t GetTransitionEta() const;
    Float_t GetTransitionTheta() const;
 
@@ -87,12 +94,19 @@ public:
    TEveRGBAPalette* AssertPalette();
 
 
-   void SetEta(Float_t l, Float_t u) { fEtaMin=l; fEtaMax=u; InvalidateCache(); }
-   void SetEtaLimits(Float_t l, Float_t h) { fEtaLowLimit=l; fEtaHighLimit =h; InvalidateCache(); }
+   void SetEta(Float_t l, Float_t u);
+   Float_t GetEta() const { return (fEtaMin+fEtaMax)*0.5f;}
+   Float_t GetEtaMin() const {return fEtaMin;}
+   Float_t GetEtaMax() const {return fEtaMax;}
+   Float_t GetEtaRng() const {return fEtaMax-fEtaMin;}
 
-   void SetPhi(Float_t x)    { fPhi    = x; InvalidateCache(); }
-   void SetPhiRng(Float_t r) { fPhiRng = r; InvalidateCache(); }
-   void SetPhiWithRng(Float_t x, Float_t r) { fPhi = x; fPhiRng = r; InvalidateCache(); }
+   virtual void SetPhi(Float_t phi)    { SetPhiWithRng(phi, fPhiOffset); }
+   virtual void SetPhiRng(Float_t rng) { SetPhiWithRng(fPhi, rng); }
+   virtual void SetPhiWithRng(Float_t x, Float_t r);
+   Float_t GetPhi() const { return fPhi;}
+   Float_t GetPhiMin() const {return fPhi-fPhiOffset;}
+   Float_t GetPhiMax() const {return fPhi+fPhiOffset;}
+   Float_t GetPhiRng() const {return fPhiOffset*2;}
 
 
    virtual void ResetCache() = 0;
@@ -194,14 +208,11 @@ protected:
    Bool_t                  fDrawHPlane;
    Float_t                 fHPlaneVal;
 
-
 public:
    TEveCaloLego(const Text_t* n="TEveCaloLego", const Text_t* t="");
    TEveCaloLego(TEveCaloData* data);
 
    virtual ~TEveCaloLego(){}
-
-   Int_t  GetAxisStep(Float_t max) const;
 
    Color_t  GetFontColor() const { return fFontColor; }
    void     SetFontColor(Color_t ci) { fFontColor=ci; }

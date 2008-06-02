@@ -64,6 +64,7 @@ public:
 
    virtual Int_t     Read(TObject* obj);
    virtual TObject  *ReadObj();
+   virtual TObject  *ReadObjWithBuffer(char *bufferRead);
    virtual void     *ReadObjectAny(const TClass *expectedClass);
   
    virtual void      ReadBuffer(char *&) {}
