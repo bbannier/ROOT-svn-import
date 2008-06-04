@@ -64,6 +64,7 @@ const Text_t* TEveGeoNode::GetName()  const
    return fNode->GetName();
 }
 
+//______________________________________________________________________________
 const Text_t* TEveGeoNode::GetTitle() const
 {
    // Return title, taken from geo-node. Used via TObject.
@@ -79,6 +80,7 @@ const Text_t* TEveGeoNode::GetElementName()  const
    return fNode->GetName();
 }
 
+//______________________________________________________________________________
 const Text_t* TEveGeoNode::GetElementTitle() const
 {
    // Return title, taken from geo-node. Used via TEveElement.
@@ -88,6 +90,7 @@ const Text_t* TEveGeoNode::GetElementTitle() const
 
 /******************************************************************************/
 
+//______________________________________________________________________________
 void TEveGeoNode::ExpandIntoListTree(TGListTree* ltree,
                                      TGListTreeItem* parent)
 {
@@ -108,31 +111,17 @@ void TEveGeoNode::ExpandIntoListTree(TGListTree* ltree,
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveGeoNode::SetRnrSelf(Bool_t rnr)
+void TEveGeoNode::AddStamp(UChar_t bits)
 {
-   // Set render state of self, propagate also to TGeoNode.
+   // Override from TEveElement.
+   // Process visibility changes and forward them to fNode.
 
-   TEveElement::SetRnrSelf(rnr);
-   fNode->SetVisibility(rnr);
-}
-
-//______________________________________________________________________________
-void TEveGeoNode::SetRnrChildren(Bool_t rnr)
-{
-   // Set render state of children, propagate also to TGeoNode.
-
-   TEveElement::SetRnrChildren(rnr);
-   fNode->VisibleDaughters(rnr);
-}
-
-//______________________________________________________________________________
-void TEveGeoNode::SetRnrState(Bool_t rnr)
-{
-   // Set common render state, propagate also to TGeoNode.
-
-   TEveElement::SetRnrState(rnr);
-   fNode->SetVisibility(rnr);
-   fNode->VisibleDaughters(rnr);
+   TEveElement::AddStamp(bits);
+   if (bits & kCBVisibility)
+   {
+      fNode->SetVisibility(fRnrSelf);
+      fNode->VisibleDaughters(fRnrChildren);
+   }
 }
 
 /******************************************************************************/
@@ -142,8 +131,8 @@ void TEveGeoNode::SetMainColor(Color_t color)
 {
    // Set color, propagate to volume's line color.
 
+   TEveElement::SetMainColor(color);
    fNode->GetVolume()->SetLineColor(color);
-   UpdateItems();
 }
 
 /******************************************************************************/
@@ -162,10 +151,10 @@ void TEveGeoNode::UpdateNode(TGeoNode* node)
 
    // printf("%s node %s %p\n", eH.Data(), node->GetName(), node);
 
-   if(fNode == node)
-      UpdateItems();
+   if (fNode == node)
+      StampColorSelection();
 
-   for(List_i i=fChildren.begin(); i!=fChildren.end(); ++i) {
+   for (List_i i=fChildren.begin(); i!=fChildren.end(); ++i) {
       ((TEveGeoNode*)(*i))->UpdateNode(node);
    }
 
@@ -186,7 +175,7 @@ void TEveGeoNode::UpdateVolume(TGeoVolume* volume)
    // printf("%s volume %s %p\n", eH.Data(), volume->GetName(), volume);
 
    if(fNode->GetVolume() == volume)
-      UpdateItems();
+      StampColorSelection();
 
    for(List_i i=fChildren.begin(); i!=fChildren.end(); ++i) {
       ((TEveGeoNode*)(*i))->UpdateVolume(volume);
@@ -226,26 +215,28 @@ TEveGeoShapeExtract* TEveGeoNode::DumpShapeTree(TEveGeoNode* geon, TEveGeoShapeE
 {
    // Export the node hierarchy into tree of TEveGeoShapeExtract objects.
 
+   static const TEveException eh("TEveGeoNode::DumpShapeTree ");
+
    printf("dump_shape_tree %s \n", geon->GetName());
    TGeoNode*   tnode   = 0;
    TGeoVolume* tvolume = 0;
    TGeoShape*  tshape  = 0;
 
    tnode = geon->GetNode();
-   if(tnode == 0) {
-      printf("Null node for %s; assuming it's a holder and descending.\n", geon->GetName());
-      goto do_dump;
+   if (tnode == 0)
+   {
+      Info(eh, "Null TGeoNode for TEveGeoNode '%s': assuming it's a holder and descending.", geon->GetName());
+   }
+   else
+   {
+      tvolume = tnode->GetVolume();
+      if (tvolume == 0) {
+         Warning(eh, "Null TGeoVolume for TEveGeoNode '%s'; skipping its sub-tree.\n", geon->GetName());
+         return 0;
+      }
+      tshape  = tvolume->GetShape();
    }
 
-   tvolume = tnode->GetVolume();
-   if(tvolume == 0) {
-      printf("Null volume for %s; skipping.\n", geon->GetName());
-      return 0;
-   }
-
-   tshape  = tvolume->GetShape();
-
-do_dump:
    // transformation
    TEveTrans trans;
    if (parent) if (parent) trans.SetFromArray(parent->GetTrans());
@@ -262,7 +253,7 @@ do_dump:
    TEveGeoShapeExtract* gse = new TEveGeoShapeExtract(geon->GetName(), geon->GetTitle());
    gse->SetTrans(trans.Array());
    Int_t ci = 0;
-   if(tvolume) ci = tvolume->GetLineColor();
+   if (tvolume) ci = tvolume->GetLineColor();
    TColor* c = gROOT->GetColor(ci);
    Float_t rgba[4] = {1, 0, 0, 1};
    if (c) {
@@ -272,32 +263,33 @@ do_dump:
    }
    gse->SetRGBA(rgba);
    Bool_t rnr = geon->GetRnrSelf();
-   if(level > gGeoManager->GetVisLevel())
+   if (level > gGeoManager->GetVisLevel())
       rnr = kFALSE;
    gse->SetRnrSelf(rnr);
    gse->SetRnrElements(geon->GetRnrChildren());
 
-   if(dynamic_cast<TGeoShapeAssembly*>(tshape)){
-      //    printf("<TGeoShapeAssembly \n");
+   if (dynamic_cast<TGeoShapeAssembly*>(tshape)) {
+      Info(eh, "TGeoShapeAssembly name='%s' encountered in traversal. This is not supported.", tshape->GetName());
       tshape = 0;
    }
    gse->SetShape(tshape);
-   level ++;
-   if ( geon->GetNChildren())
+   ++level;
+   if (geon->GetNChildren())
    {
       TList* ele = new TList();
       gse->SetElements(ele);
       gse->GetElements()->SetOwner(true);
 
       TEveElement::List_i i = geon->BeginChildren();
-      while (i != geon->EndChildren()) {
+      while (i != geon->EndChildren())
+      {
          TEveGeoNode* l = dynamic_cast<TEveGeoNode*>(*i);
          DumpShapeTree(l, gse, level+1);
-         i++;
+         ++i;
       }
    }
 
-   if(parent)
+   if (parent)
       parent->GetElements()->Add(gse);
 
    return gse;
@@ -349,27 +341,13 @@ void TEveGeoTopNode::UseNodeTrans()
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveGeoTopNode::SetRnrSelf(Bool_t rnr)
+void TEveGeoTopNode::AddStamp(UChar_t bits)
 {
-   // Revert from GeoNode back to standard behaviour.
+   // Revert from TEveGeoNode back to standard behaviour, that is,
+   // do not pass visibility chanes to fNode as they are honoured
+   // in Paint() method.
 
-   TEveElement::SetRnrSelf(rnr);
-}
-
-//______________________________________________________________________________
-void TEveGeoTopNode::SetRnrChildren(Bool_t rnr)
-{
-   // Revert from GeoNode back to standard behaviour.
-
-   TEveElement::SetRnrChildren(rnr);
-}
-
-//______________________________________________________________________________
-void TEveGeoTopNode::SetRnrState(Bool_t rnr)
-{
-   // Revert from GeoNode back to standard behaviour.
-
-   TEveElement::SetRnrState(rnr);
+   TEveElement::AddStamp(bits);
 }
 
 /******************************************************************************/
@@ -418,8 +396,8 @@ void TEveGeoTopNode::VolumeVisChanged(TGeoVolume* volume)
 {
    // Callback for propagating volume visibility changes.
 
-   static const TEveException eH("TEveGeoTopNode::VolumeVisChanged ");
-   printf("%s volume %s %p\n", eH.Data(), volume->GetName(), (void*)volume);
+   static const TEveException eh("TEveGeoTopNode::VolumeVisChanged ");
+   printf("%s volume %s %p\n", eh.Data(), volume->GetName(), (void*)volume);
    UpdateVolume(volume);
 }
 
@@ -428,8 +406,8 @@ void TEveGeoTopNode::VolumeColChanged(TGeoVolume* volume)
 {
    // Callback for propagating volume parameter changes.
 
-   static const TEveException eH("TEveGeoTopNode::VolumeColChanged ");
-   printf("%s volume %s %p\n", eH.Data(), volume->GetName(), (void*)volume);
+   static const TEveException eh("TEveGeoTopNode::VolumeColChanged ");
+   printf("%s volume %s %p\n", eh.Data(), volume->GetName(), (void*)volume);
    UpdateVolume(volume);
 }
 
@@ -438,8 +416,8 @@ void TEveGeoTopNode::NodeVisChanged(TGeoNode* node)
 {
    // Callback for propagating node visibility changes.
 
-   static const TEveException eH("TEveGeoTopNode::NodeVisChanged ");
-   printf("%s node %s %p\n", eH.Data(), node->GetName(), (void*)node);
+   static const TEveException eh("TEveGeoTopNode::NodeVisChanged ");
+   printf("%s node %s %p\n", eh.Data(), node->GetName(), (void*)node);
    UpdateNode(node);
 }
 
@@ -456,7 +434,33 @@ void TEveGeoTopNode::NodeVisChanged(TGeoNode* node)
 // active TGeoManager) and simplified geometries (needed for NLT
 // projections).
 
+namespace
+{
+TGeoManager* init_geo_mangeur()
+{
+   // Create a phony geo manager that 
+   TGeoManager* old = gGeoManager;
+   TGeoManager* mgr = new TGeoManager("TEveGeoShape::fgGeoMangeur",
+                                      "Static geo manager used for wrapped TGeoShapes.");
+   gGeoManager = old;
+   return mgr;
+}
+}
+
 ClassImp(TEveGeoShape);
+
+TGeoManager* TEveGeoShape::fgGeoMangeur = init_geo_mangeur();
+
+//______________________________________________________________________________
+TGeoManager* TEveGeoShape::GetGeoMangeur()
+{
+   // Return static geo-manager that is used intenally to make shapes
+   // lead a happy life.
+   // Set gGeoManager to this object when creating TGeoShapes to be
+   // passed into TEveGeoShapes.
+
+   return fgGeoMangeur;
+}
 
 //______________________________________________________________________________
 TEveGeoShape::TEveGeoShape(const Text_t* name, const Text_t* title) :
@@ -484,6 +488,8 @@ void TEveGeoShape::SetShape(TGeoShape* s)
 {
    // Set TGeoShape shown by this object.
 
+   TEveGeoManagerHolder gmgr(fgGeoMangeur);
+
    if (fShape) {
       fShape->SetUniqueID(fShape->GetUniqueID() - 1);
       if (fShape->GetUniqueID() == 0)
@@ -502,8 +508,12 @@ void TEveGeoShape::Paint(Option_t* /*option*/)
 {
    // Paint object.
 
+   static const TEveException eh("TEveGeoShape::Paint ");
+
    if (fShape == 0)
       return;
+
+   TEveGeoManagerHolder gmgr(fgGeoMangeur);
 
    TBuffer3D& buff = (TBuffer3D&) fShape->GetBuffer3D
       (TBuffer3D::kCore, kFALSE);
@@ -519,12 +529,15 @@ void TEveGeoShape::Paint(Option_t* /*option*/)
    Int_t reqSec = gPad->GetViewer3D()->AddObject(buff);
 
    if (reqSec != TBuffer3D::kNone) {
+      // This shouldn't happen, but I suspect it does sometimes.
+      if (reqSec & TBuffer3D::kCore)
+         Warning(eh, "Core section required again for shape='%s'. This shouldn't happen.", GetName());
       fShape->GetBuffer3D(reqSec, kTRUE);
       reqSec = gPad->GetViewer3D()->AddObject(buff);
    }
 
    if (reqSec != TBuffer3D::kNone)
-      printf("spooky reqSec=%d for %s\n", reqSec, GetName());
+      Warning(eh, "Extra section required: reqSec=%d, shape=%s.", reqSec, GetName());
 }
 
 /******************************************************************************/
@@ -565,7 +578,7 @@ TEveGeoShapeExtract* TEveGeoShape::DumpShapeTree(TEveGeoShape* gsre,
    she->SetRnrSelf(gsre->GetRnrSelf());
    she->SetRnrElements(gsre->GetRnrChildren());
    she->SetShape(gsre->GetShape());
-   if ( gsre->GetNChildren())
+   if (gsre->GetNChildren())
    {
       TList* ele = new TList();
       she->SetElements(ele);
@@ -577,7 +590,7 @@ TEveGeoShapeExtract* TEveGeoShape::DumpShapeTree(TEveGeoShape* gsre,
          i++;
       }
    }
-   if(parent)
+   if (parent)
       parent->GetElements()->Add(she);
 
    return she;
@@ -589,10 +602,10 @@ TEveGeoShape* TEveGeoShape::ImportShapeExtract(TEveGeoShapeExtract* gse,
 {
    // Import a shape extract 'gse' under element 'parent'.
 
-   gEve->DisableRedraw();
+   TEveGeoManagerHolder gmgr(fgGeoMangeur);
+   TEveManager::TRedrawDisabler redrawOff(gEve);
    TEveGeoShape* gsre = SubImportShapeExtract(gse, parent);
    gsre->ElementChanged();
-   gEve->EnableRedraw();
    return gsre;
 }
 
@@ -651,6 +664,8 @@ TBuffer3D* TEveGeoShape::MakeBuffer3D()
       // !!!! TGeoShapeAssembly makes a bad TBuffer3D
       return 0;
    }
+
+   TEveGeoManagerHolder gmgr(fgGeoMangeur);
 
    TBuffer3D* buff  = fShape->MakeBuffer3D();
    TEveTrans& mx    = RefMainTrans();

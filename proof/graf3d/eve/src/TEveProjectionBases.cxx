@@ -71,6 +71,24 @@ void TEveProjectable::AddProjectedsToSet(std::set<TEveElement*>& set)
    }
 }
 
+//==============================================================================
+
+//______________________________________________________________________________
+void TEveProjectable::PropagateVizParams(TEveElement* el)
+{
+   // Set visualization parameters of projecteds.
+   // Use element el as model. If el == 0 (default), this casted to
+   // TEveElement is used.
+
+   if (el == 0)
+      el = dynamic_cast<TEveElement*>(this);
+
+   for (ProjList_i i=fProjectedList.begin(); i!=fProjectedList.end(); ++i)
+   {
+      dynamic_cast<TEveElement*>(*i)->CopyVizParams(el);
+   }
+}
+
 //______________________________________________________________________________
 void TEveProjectable::PropagateRenderState(Bool_t rnr_self, Bool_t rnr_children)
 {
@@ -78,7 +96,9 @@ void TEveProjectable::PropagateRenderState(Bool_t rnr_self, Bool_t rnr_children)
 
    for (ProjList_i i=fProjectedList.begin(); i!=fProjectedList.end(); ++i)
    {
-      dynamic_cast<TEveElement*>(*i)->SetRnrSelfChildren(rnr_self, rnr_children);
+      TEveElement* el = dynamic_cast<TEveElement*>(*i);
+      if (el->SetRnrSelfChildren(rnr_self, rnr_children))
+         el->ElementChanged();
    }
 }
 

@@ -449,7 +449,9 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
    //
    // Note: G__no_exec is always zero on entry.
    //
+#ifndef G__NEWINHERIT
    int func_now = -1; // FIXME: Used but not initialized!
+#endif
    int dobody = 0;
    G__ASSERT(G__prerun);
    ::Reflex::Scope store_ifunc = G__p_ifunc;
@@ -581,31 +583,31 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
    //
    G__BuilderInfo builder;
    G__funcentry builder_entry;
-   fgetpos(G__ifile.fp, &builder.prop.entry.pos);
-   builder.prop.entry.p = (void*) G__ifile.fp;
-   builder.prop.filenum = G__ifile.filenum;
-   builder.prop.linenum = G__ifile.line_number;
-   builder.prop.entry.line_number = G__ifile.line_number;
-   builder.prop.entry.filenum = G__ifile.filenum;
+   fgetpos(G__ifile.fp, &builder.fProp.entry.pos);
+   builder.fProp.entry.p = (void*) G__ifile.fp;
+   builder.fProp.filenum = G__ifile.filenum;
+   builder.fProp.linenum = G__ifile.line_number;
+   builder.fProp.entry.line_number = G__ifile.line_number;
+   builder.fProp.entry.filenum = G__ifile.filenum;
 #ifdef G__ASM_FUNC
-   builder.prop.entry.size = 0;
+   builder.fProp.entry.size = 0;
 #endif // G__ASM_FUNC
 #ifdef G__ASM_WHOLEFUNC
-   builder.prop.entry.bytecode = 0;
-   builder.prop.entry.bytecodestatus = G__BYTECODE_NOTYET;
+   builder.fProp.entry.bytecode = 0;
+   builder.fProp.entry.bytecodestatus = G__BYTECODE_NOTYET;
 #endif // G__ASM_WHOLEFUNC
    if (G__get_tagnum(G__p_ifunc.DeclaringScope()) == -1) {
-      builder.prop.globalcomp = G__default_link ? G__globalcomp : G__NOLINK;
+      builder.fProp.globalcomp = G__default_link ? G__globalcomp : G__NOLINK;
    }
    else {
-      builder.prop.globalcomp = G__globalcomp;
+      builder.fProp.globalcomp = G__globalcomp;
    }
 #ifdef G__FRIEND
    if (!G__friendtagnum) {
-      builder.prop.entry.friendtag = 0;
+      builder.fProp.entry.friendtag = 0;
    }
    else {
-      builder.prop.entry.friendtag = G__new_friendtag(G__get_tagnum(G__friendtagnum));
+      builder.fProp.entry.friendtag = G__new_friendtag(G__get_tagnum(G__friendtagnum));
    }
 #endif // G__FRIEND
    //
@@ -621,29 +623,29 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
 #ifndef __GNUC__
 #pragma message(FIXME("We no longer have the irregular constructor function setting preventing temp obj creation"))
 #endif // __GNUC__
-      builder.returnType = G__modify_type(G__def_tagnum, 0, G__reftype, G__constvar, 0, 0);
+      builder.fReturnType = G__modify_type(G__def_tagnum, 0, G__reftype, G__constvar, 0, 0);
       G__struct.isctor[G__get_tagnum(G__def_tagnum)] = 1;
    }
    else if (funcname.size() && funcname.at(0) == '~') {
       // -- This is a destructor, return type is void.
-      builder.returnType = ::Reflex::Type::ByName("void");
+      builder.fReturnType = ::Reflex::Type::ByName("void");
    }
    else if (G__typenum) {
       // -- The return type is a typedef.
-      builder.returnType = G__typenum;
+      builder.fReturnType = G__typenum;
       if (G__constvar & G__PCONSTVAR) {
          // const pointer to something
-         assert(builder.returnType.FinalType().IsPointer());
-         builder.returnType = ::Reflex::Type(builder.returnType, ::Reflex::CONST, Reflex::Type::APPEND);
+         assert(builder.fReturnType.FinalType().IsPointer());
+         builder.fReturnType = ::Reflex::Type(builder.fReturnType, ::Reflex::CONST, Reflex::Type::APPEND);
       } else if (G__constvar & G__CONSTVAR) {
-         if (builder.returnType.IsPointer()) {
+         if (builder.fReturnType.IsPointer()) {
             // Pointer to const something (const char*).
             // FIXME we do not conserve the modifiers of the pointer to.
-            Reflex::Type tmp = builder.returnType.ToType();
+            Reflex::Type tmp = builder.fReturnType.ToType();
             tmp = ::Reflex::Type(tmp, ::Reflex::CONST, Reflex::Type::APPEND);
-            builder.returnType = Reflex::PointerBuilder( tmp );
+            builder.fReturnType = Reflex::PointerBuilder( tmp );
          } else {
-            builder.returnType = ::Reflex::Type(builder.returnType, ::Reflex::CONST, Reflex::Type::APPEND);
+            builder.fReturnType = ::Reflex::Type(builder.fReturnType, ::Reflex::CONST, Reflex::Type::APPEND);
          }
       }
       int ref = G__REF(G__reftype);
@@ -653,13 +655,13 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
          ref = 1;
       }
       for (int i = 0; i < plvl; ++i) {
-         builder.returnType = ::Reflex::PointerBuilder(builder.returnType);
+         builder.fReturnType = ::Reflex::PointerBuilder(builder.fReturnType);
       }
       for (int i = 0; i < numstar; ++i) {
-         builder.returnType = ::Reflex::PointerBuilder(builder.returnType);
+         builder.fReturnType = ::Reflex::PointerBuilder(builder.fReturnType);
       }
       if (ref) {
-         builder.returnType = ::Reflex::Type(builder.returnType, ::Reflex::REFERENCE, Reflex::Type::APPEND);
+         builder.fReturnType = ::Reflex::Type(builder.fReturnType, ::Reflex::REFERENCE, Reflex::Type::APPEND);
       }
    }
    else {
@@ -676,15 +678,15 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
       }
       if (G__tagnum && !G__tagnum.IsNamespace()) {
          // -- The return type is either a class, enum, struct, or union.
-         builder.returnType = G__modify_type(G__tagnum, isupper(G__var_type), G__reftype, G__constvar, 0, 0);
+         builder.fReturnType = G__modify_type(G__tagnum, isupper(G__var_type), G__reftype, G__constvar, 0, 0);
       }
       else {
          // -- The return type is a fundamental type.
-         builder.returnType = G__get_from_type(G__var_type, 1, G__constvar);
-         builder.returnType = G__modify_type(builder.returnType, 0, G__reftype, G__constvar & ~G__CONSTVAR, 0, 0);
+         builder.fReturnType = G__get_from_type(G__var_type, 1, G__constvar);
+         builder.fReturnType = G__modify_type(builder.fReturnType, 0, G__reftype, G__constvar & ~G__CONSTVAR, 0, 0);
       }
    }
-   builder.isexplicit = G__isexplicit;
+   builder.fIsexplicit = G__isexplicit;
    G__isexplicit = 0;
    G__reftype = G__PARANORMAL;
 #ifndef G__NEWINHERIT
@@ -692,23 +694,23 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
 #endif // G__NEWINHERIT
    // member access control
    if (G__def_struct_member) {
-      builder.access = G__access;
+      builder.fAccess = G__access;
    }
    else {
-      builder.access = G__PUBLIC;
+      builder.fAccess = G__PUBLIC;
    }
-   builder.staticalloc = (char) G__static_alloc;
+   builder.fStaticalloc = (char) G__static_alloc;
    // initiazlize baseoffset
 #ifndef G__NEWINHERIT
    if (G__def_tagnum) {
-      builder.basetagnum = G__def_tagnum;
+      builder.fBasetagnum = G__def_tagnum;
    }
    else {
-      builder.basetagnum = G__tagdefining;
+      builder.fBasetagnum = G__tagdefining;
    }
 #endif // G__NEWINHERIT
-   builder.isvirtual = G__virtual;
-   builder.ispurevirtual = 0;
+   builder.fIsvirtual = G__virtual;
+   builder.fIspurevirtual = 0;
    if (
       // -- We are virtual and have no virtual offset calculated yet.
 #ifdef G__NEWINHERIT
@@ -744,14 +746,14 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
       // --
    }
    G__virtual = 0; // this position is not very best
-   builder.prop.comment.p.com = 0;
-   builder.prop.comment.filenum = -1;
+   builder.fProp.comment.p.com = 0;
+   builder.fProp.comment.filenum = -1;
    // initialize virtual table index
    //  TODO, may need to this this in other places too, need investigation
-   builder.prop.entry.vtblindex = -1;
-   builder.prop.entry.vtblbasetagnum = -1;
-   builder.prop.entry.busy = 0;
-   builder.prop.iscpplink = (char) G__iscpp;
+   builder.fProp.entry.vtblindex = -1;
+   builder.fProp.entry.vtblbasetagnum = -1;
+   builder.fProp.entry.busy = 0;
+   builder.fProp.iscpplink = (char) G__iscpp;
    //
    //  Remember the file position of the beginning of the parameters.
    //
@@ -762,13 +764,15 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
    //  Try to read in a single parameter declaration.
    //
    int isparam = 0;
-   char paraname[G__LONGLINE];
+   G__StrBuf paraname_sb(G__LONGLINE);
+   char *paraname = paraname_sb;
    int cin = G__fgetname_template(paraname, "<*&,()=");
    if (strlen(paraname) && isspace(cin)) {
       // -- There was an argument and the parsing was stopped by whitespace.
       // It is possible that we have a namespace name followed by '::', in
       // which case we have to grab more before stopping!
-      char more[G__LONGLINE];
+      G__StrBuf more_sb(G__LONGLINE);
+      char *more = more_sb;
       int namespace_tagnum = G__defined_tagname(paraname, 2);
       while (
          isspace(cin) &&
@@ -790,13 +794,13 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
    //  ansi-style function declaration.
    //
    int isvoid = 0;
-   builder.prop.entry.ansi = 0;
+   builder.fProp.entry.ansi = 0;
    if (!paraname[0]) {
       // -- No parameters given.
       isvoid = 1;
       if (G__iscpp || G__def_struct_member) {
          // -- We are C++, force ansi.
-         builder.prop.entry.ansi = 1;
+         builder.fProp.entry.ansi = 1;
       }
    }
    else {
@@ -811,11 +815,11 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
             case ')':
                // -- We have the special case of myfunc(void).
                isvoid = 1;
-               builder.prop.entry.ansi = 1;
+               builder.fProp.entry.ansi = 1;
                break;
             case '*':
             case '(':
-               builder.prop.entry.ansi = 1;
+               builder.fProp.entry.ansi = 1;
                break;
             default:
                G__genericerror("G__make_ifunctable: 823: Syntax error");
@@ -824,10 +828,10 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
          }
       }
       else if (!strcmp("register", paraname)) {
-         builder.prop.entry.ansi = 1;
+         builder.fProp.entry.ansi = 1;
       }
       else if (G__istypename(paraname) || strchr(paraname, '[') || G__friendtagnum) {
-         builder.prop.entry.ansi = 1;
+         builder.fProp.entry.ansi = 1;
       }
       else {
          if (G__def_struct_member) {
@@ -860,10 +864,10 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
    //            ^
    // and check type of paramaters and store it into G__ifunc
    //
-   if (builder.prop.entry.ansi) {
+   if (builder.fProp.entry.ansi) {
       if (isvoid | (funcheader[0] == '~')) {
-         // -- No parameters, initialize builder.params_type,
-         //    builder.params_names, and builder.default_vals
+         // -- No parameters, initialize builder.fParams_type,
+         //    builder.fParams_names, and builder.fDefault_vals
          //    to empty.
       }
       else {
@@ -879,7 +883,7 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
          G__ifile.line_number = store_line_number;
          // Parse the parameter declarations.
          //fprintf(stderr, "G__make_ifunctable: calling G__readansiproto for '%s'\n", funcheader);
-         G__readansiproto(builder.params_type, builder.params_name, builder.default_vals, &builder.prop.entry.ansi);
+         G__readansiproto(builder.fParams_type, builder.fParams_name, builder.fDefault_vals, &builder.fProp.entry.ansi);
          cin = ')';
          if (G__dispsource) {
             // -- Allow read characters to be seen again.
@@ -923,7 +927,7 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
       if (isparam) {
          fsetpos(G__ifile.fp, &temppos);
          G__ifile.line_number = store_line_number;
-         G__readansiproto(builder.params_type, builder.params_name, builder.default_vals, &builder.prop.entry.ansi);
+         G__readansiproto(builder.fParams_type, builder.fParams_name, builder.fDefault_vals, &builder.fProp.entry.ansi);
          cin = G__fignorestream(",;");
       }
       if (cin == ',') {
@@ -934,10 +938,10 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
          }
       }
       // entry fp = NULL means this is header
-      builder.prop.entry.p = 0;
-      builder.prop.entry.line_number = -1;
-      builder.prop.entry.filenum = -1;
-      builder.ispurevirtual = 0;
+      builder.fProp.entry.p = 0;
+      builder.fProp.entry.line_number = -1;
+      builder.fProp.entry.filenum = -1;
+      builder.fIspurevirtual = 0;
       // Key the class comment off of DeclFileLine rather than ClassDef
       // because ClassDef is removed by a preprocessor
       if (
@@ -966,13 +970,13 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
          G__genericerror("Error: invalid pure virtual function initializer");
       }
       // this is ANSI style func proto without param name
-      if (!builder.prop.entry.ansi) {
-         builder.prop.entry.ansi = 1;
+      if (!builder.fProp.entry.ansi) {
+         builder.fProp.entry.ansi = 1;
       }
       if (isparam) {
          fsetpos(G__ifile.fp, &temppos);
          G__ifile.line_number = store_line_number;
-         G__readansiproto(builder.params_type, builder.params_name, builder.default_vals, &builder.prop.entry.ansi);
+         G__readansiproto(builder.fParams_type, builder.fParams_name, builder.fDefault_vals, &builder.fProp.entry.ansi);
          cin = G__fignorestream(",;");
       }
       if (cin == ',') {
@@ -983,9 +987,9 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
          }
       }
       // entry fp = 0 means this is header
-      builder.prop.entry.p = 0;
-      builder.prop.entry.line_number = -1;
-      builder.ispurevirtual = 1;
+      builder.fProp.entry.p = 0;
+      builder.fProp.entry.line_number = -1;
+      builder.fIspurevirtual = 1;
       if (G__tagdefining) {
          //fprintf(stderr, "G__make_ifunctable: Incrementing abstract count of class '%s' cnt: %d  for: '%s'\n", G__tagdefining.Name(Reflex::SCOPED).c_str(), G__struct.isabstract[G__get_tagnum(G__tagdefining)], funcheader);
          ++G__struct.isabstract[G__get_tagnum(G__tagdefining)];
@@ -997,18 +1001,18 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
          }
       }
       if (!strncmp(paraname, "const", 5)) {
-         builder.isconst |= G__CONSTFUNC;
+         builder.fIsconst |= G__CONSTFUNC;
       }
    }
    else if (!strcmp(paraname, "const") || !strcmp(paraname, "const ")) {
       // this is ANSI style func proto without param name
-      if (!builder.prop.entry.ansi) {
-         builder.prop.entry.ansi = 1;
+      if (!builder.fProp.entry.ansi) {
+         builder.fProp.entry.ansi = 1;
       }
       if (isparam) {
          fsetpos(G__ifile.fp, &temppos);
          G__ifile.line_number = store_line_number;
-         G__readansiproto(builder.params_type, builder.params_name, builder.default_vals, &builder.prop.entry.ansi);
+         G__readansiproto(builder.fParams_type, builder.fParams_name, builder.fDefault_vals, &builder.fProp.entry.ansi);
          cin = G__fignorestream(",;{");
       }
       if (cin == ',') {
@@ -1028,11 +1032,11 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
       }
       else {
          // entry fp = NULL means this is header
-         builder.prop.entry.p = 0;
-         builder.prop.entry.line_number = -1;
+         builder.fProp.entry.p = 0;
+         builder.fProp.entry.line_number = -1;
       }
-      builder.ispurevirtual = 0;
-      builder.isconst |= G__CONSTFUNC;
+      builder.fIspurevirtual = 0;
+      builder.fIsconst |= G__CONSTFUNC;
    }
    else if (
       G__def_struct_member &&
@@ -1092,7 +1096,7 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
          //          ^ <--  ^
          fsetpos(G__ifile.fp, &temppos);
          G__ifile.line_number = store_line_number;
-         G__readansiproto(builder.params_type, builder.params_name, builder.default_vals, &builder.prop.entry.ansi);
+         G__readansiproto(builder.fParams_type, builder.fParams_name, builder.fDefault_vals, &builder.fProp.entry.ansi);
          cin = G__fignorestream("{");
       }
       if (!strcmp(funcname.c_str(), "main") && (G__def_tagnum == ::Reflex::Scope::GlobalScope())) {
@@ -1102,7 +1106,7 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
       if ((G__globalcomp == G__CPPLINK) || (G__globalcomp == R__CPPLINK)) {
          if (
             !strcmp(funcname.c_str(), "operator new") &&
-            (builder.params_type.size() == 2) &&
+            (builder.fParams_type.size() == 2) &&
             !(G__is_operator_newdelete & G__MASK_OPERATOR_NEW)
          ) {
             G__is_operator_newdelete |= G__IS_OPERATOR_NEW;
@@ -1114,8 +1118,8 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
             G__is_operator_newdelete |= G__IS_OPERATOR_DELETE;
          }
       }
-      if ((paraname[0] == ':') && !builder.prop.entry.ansi) {
-         builder.prop.entry.ansi = 1;
+      if ((paraname[0] == ':') && !builder.fProp.entry.ansi) {
+         builder.fProp.entry.ansi = 1;
       }
       if (cin != '{') {
          G__fignorestream("{");
@@ -1126,11 +1130,11 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
       }
       // skip body of the function surrounded by '{' '}'.
       // G__exec_statement(&brace_level); does the job
-      builder.ispurevirtual = 0;
+      builder.fIspurevirtual = 0;
       dobody = 1;
    }
    if (G__nonansi_func) {
-      builder.prop.entry.ansi = 0;
+      builder.fProp.entry.ansi = 0;
    }
 #ifdef G__DETECT_NEWDEL
    //
@@ -1151,7 +1155,7 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
       (strcmp(funcname.c_str(), "operator delete") == 0 || strcmp(funcname.c_str(), "operator delete[]") == 0) &&
       -1 != G__get_tagnum(G__p_ifunc)
    ) {
-      builder.staticalloc = 1;
+      builder.fStaticalloc = 1;
    }
    ::Reflex::Member newFunction = builder.Build(funcname);
    G__func_now = newFunction;
@@ -1271,7 +1275,8 @@ static int Cint::Internal::G__readansiproto(std::vector<Reflex::Type>& i_params_
          return 1;
       }
       int isconst = G__VARIABLE;
-      char buf[G__LONGLINE]; // Parsing I/O buffer.
+      G__StrBuf buf_sb(G__LONGLINE);
+      char *buf = buf_sb; // Parsing I/O buffer.
       buf[0] = '\0';
       // Get first keyword, id, or separator of the type specification.
       c = G__fgetname_template(buf, "&*[(=,)");
@@ -1288,7 +1293,8 @@ static int Cint::Internal::G__readansiproto(std::vector<Reflex::Type>& i_params_
                !strcmp("std", buf)
             )
          ) {
-            char more[G__LONGLINE];
+            G__StrBuf more_sb(G__LONGLINE);
+            char *more = more_sb;
             c = G__fgetname(more, "&*[(=,)");
             strcat(buf, more);
             namespace_tagnum = G__defined_tagname(buf, 2);
@@ -1517,7 +1523,8 @@ static int Cint::Internal::G__readansiproto(std::vector<Reflex::Type>& i_params_
       //
       int is_a_reference = 0;
       int has_a_default = 0;
-      char param_name[G__LONGLINE];
+      G__StrBuf param_name_sb(G__LONGLINE);
+      char *param_name = param_name_sb;
       param_name[0] = '\0';
       {
          int arydim = 0; // Track which array bound we are processing, so we can handle an unspecified length array.
@@ -1780,7 +1787,8 @@ static int Cint::Internal::G__readansiproto(std::vector<Reflex::Type>& i_params_
             }
             G__value* val = default_val;
             if (is_a_reference && !ptrcnt && (toupper(G__get_type(*val)) != toupper(type) || G__value_typenum(*val).RawType() != G__Dict::GetDict().GetType(tagnum).RawType())) {
-               char tmp[G__ONELINE];
+               G__StrBuf tmp_sb(G__ONELINE);
+               char *tmp = tmp_sb;
                sprintf(tmp, "%s(%s)", G__type2string(type, tagnum, -1, 0, 0), buf);
                *val = G__getexpr(tmp);
                if (G__get_type(*val) == 'u') {
@@ -2324,9 +2332,11 @@ static int G__param_match(char formal_type, const ::Reflex::Scope& formal_tagnum
          //
          //  Try finding constructor.
          //
-         char conv[G__ONELINE];
+         G__StrBuf conv_sb(G__ONELINE);
+         char *conv = conv_sb;
          {
-            char tmp[G__ONELINE];
+            G__StrBuf tmp_sb(G__ONELINE);
+            char *tmp = tmp_sb;
             if (param_type == 'u') {
                if (param->obj.i < 0) {
                   sprintf(tmp, "(%s)(%ld)", G__fulltagname(G__get_tagnum(param_tagnum), 1), param->obj.i);
@@ -2560,7 +2570,8 @@ static int G__param_match(char formal_type, const ::Reflex::Scope& formal_tagnum
       else if (G__get_tagnum(G__value_typenum(*param)) != -1) {
          char* store_struct_offset = G__store_struct_offset;
          ::Reflex::Scope store_tagnum = G__tagnum;
-         char conv[G__ONELINE];
+         G__StrBuf conv_sb(G__ONELINE);
+         char *conv = conv_sb;
          sprintf(conv, "operator %s()", G__type2string(formal_type, G__get_tagnum(formal_tagnum), -1, 0, 0));
          G__store_struct_offset = (char*)param->obj.i;
          G__tagnum = G__value_typenum(*param).RawType();
@@ -2648,7 +2659,8 @@ static int G__param_match(char formal_type, const ::Reflex::Scope& formal_tagnum
       else {
          match = 0;
          if (recursive && G__dispsource) {
-            char tmp[G__ONELINE];
+            G__StrBuf tmp_sb(G__ONELINE);
+            char *tmp = tmp_sb;
             G__valuemonitor(*param, tmp);
             G__fprinterr(G__serr, "!!!Recursive implicit conversion %s(%s) rejected\n", formal_tagnum.Name().c_str(), tmp);
          }
@@ -2766,6 +2778,9 @@ static unsigned int G__rate_inheritance(const ::Reflex::Type &basetagnum, const 
 //______________________________________________________________________________
 static int G__igrd(int formal_type)
 {
+
+   // this looks good but is actually nowhere to be found in the standard;
+   // it's not how conversions are to be ranked.
    switch (formal_type) {
       case 'g':
          return(1);
@@ -2874,183 +2889,93 @@ static void G__rate_parameter_match(G__param *libp, const ::Reflex::Member &func
       /* promotion */
       if (G__NOMATCH == funclist->p_rate[i]) {
          switch (formal_type) {
-            case 'd':
+         case 'd': /* 4.6: conv.fpprom */
+            switch (param_type) {
             case 'f':
-               switch (param_type) {
-                  case 'f':
-                     funclist->p_rate[i] = G__PROMOTIONMATCH;
-                     break;
-                  default:
-                     break;
-               }
+               funclist->p_rate[i] = G__PROMOTIONMATCH;
                break;
-            case 'l':
-               switch (param_type) {
-                  case 'b':
-                  case 'c':
-                  case 'r':
-                  case 's':
-                     /* case 'h': */
-                  case 'i':
-                     /* case 'k': */
-                  case 'l':
-                  case 'g':
-#ifndef G__OLDIMPLEMENTATION1959
-                     funclist->p_rate[i] = G__promotiongrade(formal_type, param_type);
-#else
-                     funclist->p_rate[i] = G__PROMOTIONMATCH;
-#endif
-                     break;
-                  default:
-                     break;
-               }
+            default:
                break;
-            case 'i':
-               switch (param_type) {
-                  case 'b':
-                  case 'c':
-                  case 'r':
-                  case 's':
-                     /* case 'h': */
-                  case 'i':
-                     /* case 'k': */
-                     /* case 'l': */
-                  case 'g':
-#ifndef G__OLDIMPLEMENTATION1959
-                     funclist->p_rate[i] = G__promotiongrade(formal_type, param_type);
-#else
-                     funclist->p_rate[i] = G__PROMOTIONMATCH;
-#endif
-                     break;
-                  case 'u':
-                     if ('e' == G__get_tagtype(param_tagnum)) {
-                        funclist->p_rate[i] = G__PROMOTIONMATCH;
-                     }
-                     break;
-                  default:
-                     break;
-               }
-               break;
-            case 's':
-               switch (param_type) {
-                  case 'b':
-                  case 'c':
-                     /* case 'r': */
-                  case 's':
-                     /* case 'h': */
-                     /* case 'i': */
-                     /* case 'k': */
-                     /* case 'l': */
-                  case 'g':
-#ifndef G__OLDIMPLEMENTATION1959
-                     funclist->p_rate[i] = G__promotiongrade(formal_type, param_type);
-#else
-                     funclist->p_rate[i] = G__PROMOTIONMATCH;
-#endif
-                     break;
-                  default:
-                     break;
-               }
-               break;
-            case 'k':
-               switch (param_type) {
-                  case 'b':
-                     /* case 'c': */
-                  case 'r':
-                     /* case 's': */
-                  case 'h':
-                     /* case 'i': */
-                  case 'k':
-                     /* case 'l': */
-                  case 'g':
-#ifndef G__OLDIMPLEMENTATION1959
-                     funclist->p_rate[i] = G__promotiongrade(formal_type, param_type);
-#else
-                     funclist->p_rate[i] = G__PROMOTIONMATCH;
-#endif
-                     break;
-                  default:
-                     break;
-               }
-               break;
-            case 'h':
-               switch (param_type) {
-                  case 'b':
-                     /* case 'c': */
-                  case 'r':
-                     /* case 's': */
-                  case 'h':
-                     /* case 'i': */
-                     /* case 'k': */
-                     /* case 'l': */
-                  case 'g':
-#ifndef G__OLDIMPLEMENTATION1959
-                     funclist->p_rate[i] = G__promotiongrade(formal_type, param_type);
-#else
-                     funclist->p_rate[i] = G__PROMOTIONMATCH;
-#endif
-                     break;
-                  default:
-                     break;
-               }
-               break;
+            }
+            break;
+         case 'i': /* 4.5: conv.prom */
+         case 'h': /* 4.5: conv.prom */
+            switch (param_type) {
+            case 'b':
+            case 'c':
             case 'r':
-               switch (param_type) {
-                  case 'b':
-                     /* case 'c': */
-                  case 'r':
-                     /* case 's': */
-                     /* case 'h': */
-                     /* case 'i': */
-                     /* case 'k': */
-                     /* case 'l': */
-                  case 'g':
-#ifndef G__OLDIMPLEMENTATION1959
-                     funclist->p_rate[i] = G__promotiongrade(formal_type, param_type);
-#else
-                     funclist->p_rate[i] = G__PROMOTIONMATCH;
-#endif
-                     break;
-                  default:
-                     break;
-               }
+            case 's':
+            case 'g':
+               funclist->p_rate[i] = G__promotiongrade(formal_type, param_type);
                break;
             case 'u':
-               if (0 <= G__get_tagnum(formal_tagnum) && 'e' == G__get_tagtype(formal_tagnum)) {
-                  switch (param_type) {
-                     case 'i':
-                     case 's':
-                     case 'l':
-                     case 'c':
-                     case 'h':
-                     case 'r':
-                     case 'k':
-                     case 'b':
-                        funclist->p_rate[i] = G__PROMOTIONMATCH;
-                        break;
-                     default:
-                        break;
-                  }
-               }
-            else {}
-               break;
-            case 'Y':
-               if (isupper(param_type) || 0 == libp->para[i].obj.i
-#ifndef G__OLDIMPLEMENTATION2191
-                     || '1' == param_type
-#endif
-                  ) {
-                  funclist->p_rate[i] = G__PROMOTIONMATCH + G__TOVOIDPMATCH;
+               if ('e' == G__get_tagtype(param_tagnum)) {
+                  funclist->p_rate[i] = G__PROMOTIONMATCH;
                }
                break;
             default:
                break;
+            }
+            break;
+         case 'l':
+         case 'k': /* only enums get promoted to (u)long! */
+            if (param_type == 'u' && 'e' == G__get_tagtype(param_tagnum)) {
+                  funclist->p_rate[i] = G__PROMOTIONMATCH;
+            }
+            break;
+         case 'Y':
+            if (isupper(param_type) || 0 == libp->para[i].obj.i
+#ifndef G__OLDIMPLEMENTATION2191
+                || '1' == param_type
+#endif
+                ) {
+               funclist->p_rate[i] = G__PROMOTIONMATCH + G__TOVOIDPMATCH;
+            }
+            break;
+         default:
+            break;
          }
       }
 
       /* standard conversion */
       if (G__NOMATCH == funclist->p_rate[i]) {
          switch (formal_type) {
+         /* no; f(enum E) cannot be called as f(1)!
+         case 'u':
+            if (0 <= G__get_tagnum(formal_tagnum) && 'e' == G__get_tagtype(formal_tagnum)) {
+               switch (param_type) {
+               case 'i':
+               case 's':
+               case 'l':
+               case 'c':
+               case 'h':
+               case 'r':
+               case 'k':
+               case 'b':
+                  funclist->p_rate[i] = G__PROMOTIONMATCH;
+                  break;
+               default:
+                  break;
+               }
+            }
+            else {}
+         */
+         case 'b':
+         case 'c':
+         case 'r':
+         case 's':
+         case 'h':
+         case 'i':
+         case 'k':
+         case 'l':
+         case 'g':
+         case 'n':
+         case 'm':
+         case 'd':
+         case 'f':
+            switch (param_type) {
+            case 'd':
+            case 'f':
             case 'b':
             case 'c':
             case 'r':
@@ -3062,67 +2987,96 @@ static void G__rate_parameter_match(G__param *libp, const ::Reflex::Member &func
             case 'g':
             case 'n':
             case 'm':
-               switch (param_type) {
-                  case 'd':
-                  case 'f':
-                  case 'b':
-                  case 'c':
-                  case 'r':
-                  case 's':
-                  case 'h':
-                  case 'i':
-                  case 'k':
-                  case 'l':
-                  case 'g':
-                  case 'n':
-                  case 'm':
-                  case 'q':
-                     funclist->p_rate[i] = G__STDCONVMATCH;
-                     break;
-                  default:
-                     break;
+            case 'q':
+               funclist->p_rate[i] = G__STDCONVMATCH;
+               break;
+            case 'u':
+               if ('e' == G__get_tagtype(param_tagnum)) {
+                  funclist->p_rate[i] = G__PROMOTIONMATCH;
                }
                break;
-            case 'd':
-            case 'f':
-               switch (param_type) {
-                  case 'b':
-                  case 'c':
-                  case 'r':
-                  case 's':
-                  case 'h':
-                  case 'i':
-                  case 'k':
-                  case 'l':
-                  case 'd':
-                  case 'f':
-                  case 'g':
-                  case 'n':
-                  case 'm':
-                     funclist->p_rate[i] = G__STDCONVMATCH;
-                     break;
-                  default:
-                     break;
+            default:
+               break;
+            }
+        case 'C':
+            switch (param_type) {
+            case 'i':
+            case 'l':
+               if (0 == libp->para[i].obj.i)
+                  funclist->p_rate[i] = G__STDCONVMATCH + G__I02PCONVMATCH;
+               break;
+            case 'Y':
+               if (G__PARANORMAL == param_reftype) {
+                  funclist->p_rate[i] = G__STDCONVMATCH;
                }
                break;
-            case 'C':
-               switch (param_type) {
-                  case 'i':
-                  case 'l':
-                     if (0 == libp->para[i].obj.i)
-                        funclist->p_rate[i] = G__STDCONVMATCH + G__I02PCONVMATCH;
-                     break;
-                  case 'Y':
-                     if (G__PARANORMAL == param_reftype) {
-                        funclist->p_rate[i] = G__STDCONVMATCH;
-                     }
-                     break;
-                  default:
-                     break;
+            default:
+               break;
+            }
+            break;
+         case 'Y':
+            if (isupper(param_type) || 0 == libp->para[i].obj.i) {
+               funclist->p_rate[i] = G__STDCONVMATCH;
+            }
+            break;
+#ifndef G__OLDIMPLEMENTATION2191
+         case '1': /* questionable */
+#else
+         case 'Q': /* questionable */
+#endif
+            if (
+#ifndef G__OLDIMPLEMENTATION2191
+                '1' == param_type
+#else
+                'Q' == param_type
+#endif
+                )
+               funclist->p_rate[i] = G__STDCONVMATCH;
+            else if ('Y' == param_type)
+               funclist->p_rate[i] = G__STDCONVMATCH + G__V2P2FCONVMATCH;
+            else if ('C' == param_type) {
+               if (
+                   G__get_funcproperties(func)->entry.size >= 0
+                   )
+                  funclist->p_rate[i] = G__STDCONVMATCH - G__C2P2FCONVMATCH;
+               else {
+                  funclist->p_rate[i] = G__STDCONVMATCH + G__C2P2FCONVMATCH;/*???*/
+               }
+            }
+            break;
+         case 'u':
+            switch (param_type) {
+            case 'u':
+               /* reference to derived class can be converted to reference to base
+                * class. add offset, modify char *parameter and G__value *param */
+               {
+                  unsigned int rate_inheritance =
+                     G__rate_inheritance(formal_tagnum, param_tagnum);
+                  if (G__NOMATCH != rate_inheritance) {
+                     funclist->p_rate[i] = G__STDCONVMATCH + rate_inheritance;
+                  }
+               }
+               break;
+            }
+            break;
+         case 'U':
+            switch (param_type) {
+            case 'U':
+               /* Pointer to derived class can be converted to
+                * pointer to base class.
+                * add offset, modify char *parameter and
+                * G__value *param
+                */
+               {
+                  unsigned int rate_inheritance =
+                     G__rate_inheritance(formal_tagnum, param_tagnum);
+                  if (G__NOMATCH != rate_inheritance) {
+                     funclist->p_rate[i] = G__STDCONVMATCH + rate_inheritance;
+                  }
                }
                break;
             case 'Y':
-               if (isupper(param_type) || 0 == libp->para[i].obj.i) {
+               if (G__PARANORMAL == param_reftype) {
                   funclist->p_rate[i] = G__STDCONVMATCH;
                }
                break;
@@ -3131,91 +3085,30 @@ static void G__rate_parameter_match(G__param *libp, const ::Reflex::Member &func
 #else
             case 'Q': /* questionable */
 #endif
-               if (
-#ifndef G__OLDIMPLEMENTATION2191
-                  '1' == param_type
-#else
-                  'Q' == param_type
-#endif
-               )
-                  funclist->p_rate[i] = G__STDCONVMATCH;
-               else if ('Y' == param_type)
-                  funclist->p_rate[i] = G__STDCONVMATCH + G__V2P2FCONVMATCH;
-               else if ('C' == param_type) {
-                  if (
-                     G__get_funcproperties(func)->entry.size >= 0
-                  )
-                     funclist->p_rate[i] = G__STDCONVMATCH - G__C2P2FCONVMATCH;
-                  else {
-                     funclist->p_rate[i] = G__STDCONVMATCH + G__C2P2FCONVMATCH;/*???*/
-                  }
-               }
+               funclist->p_rate[i] = G__STDCONVMATCH;
                break;
-            case 'u':
-               switch (param_type) {
-                  case 'u':
-                     /* reference to derived class can be converted to reference to base
-                      * class. add offset, modify char *parameter and G__value *param */
-                  {
-                     unsigned int rate_inheritance =
-                        G__rate_inheritance(formal_tagnum, param_tagnum);
-                     if (G__NOMATCH != rate_inheritance) {
-                        funclist->p_rate[i] = G__STDCONVMATCH + rate_inheritance;
-                     }
-                  }
-                  break;
-               }
-               break;
-            case 'U':
-               switch (param_type) {
-                  case 'U':
-                     /* Pointer to derived class can be converted to
-                      * pointer to base class.
-                      * add offset, modify char *parameter and
-                      * G__value *param
-                      */
-                  {
-                     unsigned int rate_inheritance =
-                        G__rate_inheritance(formal_tagnum, param_tagnum);
-                     if (G__NOMATCH != rate_inheritance) {
-                        funclist->p_rate[i] = G__STDCONVMATCH + rate_inheritance;
-                     }
-                  }
-                  break;
-                  case 'Y':
-                     if (G__PARANORMAL == param_reftype) {
-                        funclist->p_rate[i] = G__STDCONVMATCH;
-                     }
-                     break;
-#ifndef G__OLDIMPLEMENTATION2191
-                  case '1': /* questionable */
-#else
-                  case 'Q': /* questionable */
-#endif
-                     funclist->p_rate[i] = G__STDCONVMATCH;
-                     break;
-                  case 'i':
-                  case 0:
-                     if (0 == libp->para[0].obj.i) funclist->p_rate[i] = G__STDCONVMATCH;
-                     break;
-                  default:
-                     break;
-               }
+            case 'i':
+            case 0:
+               if (0 == libp->para[0].obj.i) funclist->p_rate[i] = G__STDCONVMATCH;
                break;
             default:
-               /* questionable */
-#ifndef G__OLDIMPLEMENTATION2191
-               if ((param_type == 'Y' || param_type == '1') &&
-                     (isupper(formal_type) || 'a' == formal_type)) {
-                  funclist->p_rate[i] = G__STDCONVMATCH;
-               }
-#else
-               if ((param_type == 'Y' || param_type == 'Q' || 0 == libp->para[0].obj.i) &&
-                     (isupper(formal_type) || 'a' == formal_type)) {
-                  funclist->p_rate[i] = G__STDCONVMATCH;
-               }
-#endif
                break;
+            }
+            break;
+         default:
+            /* questionable */
+#ifndef G__OLDIMPLEMENTATION2191
+            if ((param_type == 'Y' || param_type == '1') &&
+                (isupper(formal_type) || 'a' == formal_type)) {
+               funclist->p_rate[i] = G__STDCONVMATCH;
+            }
+#else
+            if ((param_type == 'Y' || param_type == 'Q' || 0 == libp->para[0].obj.i) &&
+                (isupper(formal_type) || 'a' == formal_type)) {
+               funclist->p_rate[i] = G__STDCONVMATCH;
+            }
+#endif
+            break;
          }
       }
 
@@ -3224,7 +3117,8 @@ static void G__rate_parameter_match(G__param *libp, const ::Reflex::Member &func
          if (formal_type == 'u') {
             int hash2;
             int ifn2;
-            char funcname2[G__ONELINE];
+            G__StrBuf funcname2_sb(G__ONELINE);
+            char *funcname2 = funcname2_sb;
             struct G__param para;
             G__incsetup_memfunc(formal_tagnum);
             para.paran = 1;
@@ -3245,7 +3139,8 @@ static void G__rate_parameter_match(G__param *libp, const ::Reflex::Member &func
       if (0 == recursive && G__NOMATCH == funclist->p_rate[i]) {
          if (param_type == 'u' && -1 != G__get_tagnum(param_tagnum)) {
             int hash2, ifn2;
-            char funcname2[G__ONELINE];
+            G__StrBuf funcname2_sb(G__ONELINE);
+            char *funcname2 = funcname2_sb;
             struct G__param para;
             G__incsetup_memfunc(param_tagnum);
             para.paran = 0;
@@ -4201,7 +4096,8 @@ struct G__funclist* Cint::Internal::G__add_templatefunc(char *funcnamein, G__par
          int itmp = 0;
          int ip = 1;
          int c;
-         char buf[G__ONELINE];
+         G__StrBuf buf_sb(G__ONELINE);
+         char *buf = buf_sb;
          do {
             c = G__getstream_template(ptmplt, &ip, buf, ",>");
             G__checkset_charlist(buf, &call_para, ++itmp, 'u');
@@ -4312,7 +4208,7 @@ struct G__funclist* Cint::Internal::G__add_templatefunc(char *funcnamein, G__par
 }
 
 //______________________________________________________________________________
-static struct G__funclist* G__rate_binary_operator(const ::Reflex::Scope &p_ifunc, G__param *libp, const ::Reflex::Type &tagnum, char* funcname, int hash, G__funclist *funclist, int isrecursive)
+static struct G__funclist* G__rate_binary_operator(const ::Reflex::Scope &p_ifunc, G__param *libp, const ::Reflex::Type &tagnum, char* funcname, int /*hash*/, G__funclist *funclist, int isrecursive)
 {
    int i;
    struct G__param fpara;
@@ -4596,7 +4492,8 @@ int Cint::Internal::G__interpret_func(G__value *result7, struct G__param *libp, 
 #ifndef __GNUC__
 #pragma message (FIXME("Remove static buf and this func's overload"))
 #endif // __GNUC__
-   char funcname[G__LONGLINE];
+   G__StrBuf funcname_sb(G__LONGLINE);
+   char *funcname = funcname_sb;
    strcpy(funcname, func.Name().c_str());
    return G__interpret_func(result7, funcname, libp, hash, func.DeclaringScope(), funcmatch, memfunc_flag);
 }
@@ -4612,9 +4509,12 @@ int Cint::Internal::G__interpret_func(G__value *result7, char* funcname, G__para
    FILE *prev_fp;
    fpos_t prev_pos /*,temppos */;
    /* paraname[][] is used only for K&R func param. length should be OK */
-   char paraname[G__MAXFUNCPARA][G__MAXNAME];
+   G__StrBuf paraname_buf(G__MAXFUNCPARA * G__MAXNAME);
+   typedef char namearray_t[G__MAXNAME];
+   namearray_t *paraname = (namearray_t*) paraname_buf.data();
 #ifdef G__OLDIMPLEMENTATION1802
-   char temp[G__ONELINE];
+   G__StrBuf temp_sb(G__ONELINE);
+   char *temp = temp_sb;
 #endif
    unsigned int ipara = 0;
    int cin = '\0';
@@ -4638,9 +4538,12 @@ int Cint::Internal::G__interpret_func(G__value *result7, char* funcname, G__para
    G__UINT32 store_security;
    int match_error = 0;
 #ifdef G__ASM_IFUNC
-   long asm_inst_g[G__MAXINST]; /* p-code instruction buffer */
-   G__value asm_stack_g[G__MAXSTACK]; /* data stack */
-   char asm_name[G__ASM_FUNCNAMEBUF];
+   G__StrBuf asm_inst_g_sb(G__MAXINST * sizeof(long));
+   long *asm_inst_g = (long*) asm_inst_g_sb.data(); /* p-code instruction buffer */
+   G__StrBuf asm_stack_g_sb(G__MAXSTACK * sizeof(G__value));
+   G__value* asm_stack_g = (G__value*) asm_stack_g_sb.data(); /* data stack */
+   G__StrBuf asm_name_sb(G__ASM_FUNCNAMEBUF);
+   char *asm_name = asm_name_sb;
    long *store_asm_inst;
    int store_asm_instsize;
    G__value *store_asm_stack;
@@ -5349,7 +5252,8 @@ asm_ifunc_start:   /* loop compilation execution label */
       ipara = 0;
       while (cin != ')') {
 #ifndef G__OLDIMPLEMENTATION1802
-         char temp[G__ONELINE];
+         G__StrBuf temp_sb(G__ONELINE);
+         char *temp = temp_sb;
 #endif
          cin = G__fgetstream(temp, ",)");
          if (temp[0] != '\0') {
@@ -5720,8 +5624,10 @@ asm_ifunc_start:   /* loop compilation execution label */
              * result7 contains pointer to the local variable
              * which will be destroyed right after this.
              ***************************************************/
+            {
 #ifndef G__OLDIMPLEMENTATION1802
-            char temp[G__ONELINE];
+            G__StrBuf temp_sb(G__ONELINE);
+            char *temp = temp_sb;
 #endif // G__OLDIMPLEMENTATION1802
             /* don't call copy constructor if returning reference type */
             if (G__PARANORMAL != G__get_reftype(ifn.TypeOf().ReturnType())) {
@@ -5756,7 +5662,8 @@ asm_ifunc_start:   /* loop compilation execution label */
                }
             }
             else {
-               char buf2[G__ONELINE];
+               G__StrBuf buf2_sb(G__ONELINE);
+               char *buf2 = buf2_sb;
                G__valuemonitor(*result7, buf2);
                sprintf(temp, "%s(%s)", ifn.TypeOf().ReturnType().RawType().Name().c_str(), buf2);
             }
@@ -5867,6 +5774,7 @@ asm_ifunc_start:   /* loop compilation execution label */
             }
 #endif // G__OLDIMPLEMENTATION1259
             break;
+            }
          case 'i':
             // -- Return value of constructor.
             if (-1 != G__get_tagnum(ifn.TypeOf().ReturnType())) {
@@ -6353,7 +6261,8 @@ int Cint::Internal::G__function_signature_match(const Reflex::Member& func1, con
 //______________________________________________________________________________
 void Cint::Internal::G__argtype2param(char *argtype, G__param *libp)
 {
-   char typenam[G__MAXNAME*2];
+   G__StrBuf typenam_sb(G__MAXNAME*2);
+   char *typenam = typenam_sb;
    int p = 0;
    int c;
    char *endmark = ",);";
