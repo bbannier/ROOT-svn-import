@@ -85,10 +85,8 @@
       name **f = (name**)(arr[index]+ioffset);  \
       int j;                                    \
       if (isArray) for(j=0;j<fLength[i];j++) {  \
-         /*delete [] f[j];*/                    \
          f[j] = 0; if (*l <=0) continue;        \
          f[j] = new (fMemPool->GetMem(sizeof(name)*(*l))) name[*l];   \
-         /*f[j] = new name[*l];*/               \
          b.ReadFastArray(f[j],*l);              \
       }                                         \
    }
@@ -102,7 +100,12 @@
 #define ReadBasicPointerMemPool(name)           \
    {                                            \
       const int imethod = fMethod[i]+eoffset;   \
-      ReadBasicPointerElemMemPool(name,0);      \
+      if (!fMemPool) {                          \
+         ReadBasicPointerElem(name,0);          \
+      }                                         \
+      else {                                    \
+         ReadBasicPointerElemMemPool(name,0);   \
+      }                                         \
    }
 
 #define ReadBasicPointerLoop(name)              \
@@ -117,7 +120,12 @@
    {                                            \
       int imethod = fMethod[i]+eoffset;         \
       for(int k=0; k<narr; ++k) {               \
-         ReadBasicPointerElemMemPool(name,k);   \
+         if (!fMemPool) {                       \
+            ReadBasicPointerElem(name,k);       \
+         }                                      \
+         else {                                 \
+            ReadBasicPointerElemMemPool(name,k);  \
+        }                                       \
       }                                         \
    }
 
@@ -771,19 +779,19 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
          }
 
          // read pointer to an array of basic types  array[n]
-         case TStreamerInfo::kOffsetP + TStreamerInfo::kBool:   ReadBasicPointer(Bool_t);  continue;
-         case TStreamerInfo::kOffsetP + TStreamerInfo::kChar:   ReadBasicPointer(Char_t);  continue;
-         case TStreamerInfo::kOffsetP + TStreamerInfo::kShort:  ReadBasicPointer(Short_t);  continue;
-         case TStreamerInfo::kOffsetP + TStreamerInfo::kInt:    ReadBasicPointer(Int_t);  continue;
-         case TStreamerInfo::kOffsetP + TStreamerInfo::kLong:   ReadBasicPointer(Long_t);  continue;
-         case TStreamerInfo::kOffsetP + TStreamerInfo::kLong64: ReadBasicPointer(Long64_t);  continue;
-         case TStreamerInfo::kOffsetP + TStreamerInfo::kFloat:  ReadBasicPointer(Float_t);  continue;
-         case TStreamerInfo::kOffsetP + TStreamerInfo::kDouble: ReadBasicPointer(Double_t);  continue;
-         case TStreamerInfo::kOffsetP + TStreamerInfo::kUChar:  ReadBasicPointer(UChar_t);  continue;
-         case TStreamerInfo::kOffsetP + TStreamerInfo::kUShort: ReadBasicPointer(UShort_t);  continue;
-         case TStreamerInfo::kOffsetP + TStreamerInfo::kUInt:   ReadBasicPointer(UInt_t);  continue;
-         case TStreamerInfo::kOffsetP + TStreamerInfo::kULong:  ReadBasicPointer(ULong_t);  continue;
-         case TStreamerInfo::kOffsetP + TStreamerInfo::kULong64:ReadBasicPointer(ULong64_t);  continue;
+         case TStreamerInfo::kOffsetP + TStreamerInfo::kBool:   ReadBasicPointerMemPool(Bool_t);  continue;
+         case TStreamerInfo::kOffsetP + TStreamerInfo::kChar:   ReadBasicPointerMemPool(Char_t);  continue;
+         case TStreamerInfo::kOffsetP + TStreamerInfo::kShort:  ReadBasicPointerMemPool(Short_t);  continue;
+         case TStreamerInfo::kOffsetP + TStreamerInfo::kInt:    ReadBasicPointerMemPool(Int_t);  continue;
+         case TStreamerInfo::kOffsetP + TStreamerInfo::kLong:   ReadBasicPointerMemPool(Long_t);  continue;
+         case TStreamerInfo::kOffsetP + TStreamerInfo::kLong64: ReadBasicPointerMemPool(Long64_t);  continue;
+         case TStreamerInfo::kOffsetP + TStreamerInfo::kFloat:  ReadBasicPointerMemPool(Float_t);  continue;
+         case TStreamerInfo::kOffsetP + TStreamerInfo::kDouble: ReadBasicPointerMemPool(Double_t);  continue;
+         case TStreamerInfo::kOffsetP + TStreamerInfo::kUChar:  ReadBasicPointerMemPool(UChar_t);  continue;
+         case TStreamerInfo::kOffsetP + TStreamerInfo::kUShort: ReadBasicPointerMemPool(UShort_t);  continue;
+         case TStreamerInfo::kOffsetP + TStreamerInfo::kUInt:   ReadBasicPointerMemPool(UInt_t);  continue;
+         case TStreamerInfo::kOffsetP + TStreamerInfo::kULong:  ReadBasicPointerMemPool(ULong_t);  continue;
+         case TStreamerInfo::kOffsetP + TStreamerInfo::kULong64:ReadBasicPointerMemPool(ULong64_t);  continue;
          case TStreamerInfo::kOffsetP + TStreamerInfo::kFloat16: {
             Char_t isArray;
             b >> isArray;
@@ -807,9 +815,10 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
             Double_t **f = (Double_t**)(arr[0]+ioffset);
             int j;
             for(j=0;j<fLength[i];j++) {
-               delete [] f[j];
+               if (!fMemPool) delete [] f[j];
                f[j] = 0; if (*l <=0) continue;
-               f[j] = new Double_t[*l];
+               if (!fMemPool) f[j] = new Double_t[*l];
+               else           f[j] = new (fMemPool->GetMem(sizeof(Double_t)*(*l))) Double_t[*l];
                b.ReadFastArrayDouble32(f[j],*l,aElement);
             }
             continue;
@@ -839,9 +848,10 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
                Float_t **f = (Float_t**)(arr[k]+ioffset);
                int j;
                for(j=0;j<fLength[i];j++) {
-                  delete [] f[j];
+		  if (!fMemPool) delete [] f[j];
                   f[j] = 0; if (*l <=0) continue;
-                  f[j] = new Float_t[*l];
+		  if (!fMemPool) f[j] = new Float_t[*l];
+                  else           f[j] = new (fMemPool->GetMem(sizeof(Float_t)*(*l))) Float_t[*l];
                   b.ReadFastArrayFloat16(f[j],*l,aElement);
                }
             }
@@ -856,9 +866,10 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
                Double_t **f = (Double_t**)(arr[k]+ioffset);
                int j;
                for(j=0;j<fLength[i];j++) {
-                  delete [] f[j];
+                  if (!fMemPool) delete [] f[j];
                   f[j] = 0; if (*l <=0) continue;
-                  f[j] = new Double_t[*l];
+                  if (!fMemPool) f[j] = new Double_t[*l];
+                  else           f[j] = new (fMemPool->GetMem(sizeof(Double_t)*(*l))) Double_t[*l];
                   b.ReadFastArrayDouble32(f[j],*l,aElement);
                }
             }
@@ -873,9 +884,10 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
             DOLOOP {
                Int_t nch; b >> nch;
                char **f = (char**)(arr[k]+ioffset);
-               delete [] *f;
+               if (!fMemPool) delete [] *f;
                *f = 0; if (nch <=0) continue;
-               *f = new char[nch+1];
+               if (!fMemPool) *f = new char[nch+1];
+               else           *f = new (fMemPool->GetMem(nch+1)) char[nch+1];
                b.ReadFastArray(*f,nch); (*f)[nch] = 0;
             }
          }
@@ -942,7 +954,18 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
          case TStreamerInfo::kAnyP:    // Class*  not derived from TObject with no comment field NOTE:: Re-added by Phil
          case TStreamerInfo::kAnyP+TStreamerInfo::kOffsetL: {
             DOLOOP {
-               b.ReadFastArray((void**)(arr[k]+ioffset),cle,fLength[i],isPreAlloc,pstreamer);
+	      ///if (!fMemPool) {
+                  b.ReadFastArray((void**)(arr[k]+ioffset),cle,fLength[i],isPreAlloc,pstreamer, 0);
+		  /*}
+               else {
+                  void **f = (void**)(arr[k]+ioffset);
+                  int j;
+                  for(j=0;j<fLength[i];j++) {
+                     f[j] = cle->New(fMemPool->GetMem(cle->Size()));
+                  }                    
+                  
+                  b.ReadFastArray((void**)(arr[k]+ioffset),cle,fLength[i],kTRUE,pstreamer);
+		  }*/
             }
          }
          continue;
