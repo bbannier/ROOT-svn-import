@@ -79,7 +79,8 @@ private:
    TString       fConfFile;         //file containing config information
    TString       fWorkDir;          //directory containing all proof related info
    TString       fImage;            //image name of the session
-   TString       fSessionTag;       //tag for the session
+   TString       fSessionTag;       //tag for the server session
+   TString       fTopSessionTag;    //tag for the global session
    TString       fSessionDir;       //directory containing session dependent files
    TString       fPackageDir;       //directory containing packages and user libs
    THashList    *fGlobalPackageDirList;  //list of directories containing global packages libs
@@ -201,7 +202,7 @@ public:
    const char    *GetGroup()      const { return fGroup; }
    const char    *GetWorkDir()    const { return fWorkDir; }
    const char    *GetImage()      const { return fImage; }
-   const char    *GetSessionTag() const { return fSessionTag; }
+   const char    *GetSessionTag() const { return fTopSessionTag; }
    const char    *GetSessionDir() const { return fSessionDir; }
    Int_t          GetProtocol()   const { return fProtocol; }
    const char    *GetOrdinal()    const { return fOrdinal; }
