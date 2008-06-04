@@ -24,9 +24,12 @@ double MnUserFcn::operator()(const MnAlgebraicVector& v) const {
    //return Fcn()( fTransform(v) );
    // make a new thread-safe implementation creating a vector each time
    // a bit slower few% in stressFit and 10% in Rosenbrock function but it is negligible in big fits
-   std::vector<double> vpar( fTransform.Params() );
-   unsigned int n = v.size(); 
+
+   // get first initial values of parameter (in case some one is fixed) 
+   std::vector<double> vpar(fTransform.InitialParValues().begin(), fTransform.InitialParValues().end()  );
+
    const std::vector<MinuitParameter>& parameters = fTransform.Parameters();
+   unsigned int n = v.size(); 
    for (unsigned int i = 0; i < n; i++) {
       int ext = fTransform.ExtOfInt(i);
       if (parameters[ext].HasLimits()) {
