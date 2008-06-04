@@ -127,7 +127,7 @@ public:
    Int_t            Lookup(Bool_t force = kFALSE);
    void             SetLookedUp() { SetBit(kHasBeenLookedUp); }
    TFileInfo       *GetFileInfo(const char *type = "TTree");
-
+   ULong_t          Hash() const;
 
    ClassDef(TDSetElement,6)  // A TDSet element
 };
