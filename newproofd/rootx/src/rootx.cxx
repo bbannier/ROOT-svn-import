@@ -27,8 +27,10 @@
 #include <errno.h>
 #include <netdb.h>
 #include <sys/socket.h>
+#include <string>
 #ifdef __APPLE__
 #include <AvailabilityMacros.h>
+#include <mach-o/dyld.h>
 #endif
 
 #if defined(__sgi) || defined(__sun)
@@ -94,6 +96,7 @@ extern void CloseDisplay();
 
 static STRUCT_UTMP *gUtmpContents;
 static bool gNoLogo = false;
+const  int  kMAXPATHLEN = 8192;
 
 
 static int GetErrno()
@@ -156,6 +159,51 @@ static STRUCT_UTMP *SearchEntry(int n, const char *tty)
       ue++;
    }
    return 0;
+}
+
+static const char *GetExePath()
+{
+   static std::string exepath;
+   if (exepath == "") {
+#ifdef __APPLE__
+      exepath = _dyld_get_image_name(0);
+#endif
+#ifdef __linux
+      char linkname[64];      // /proc/<pid>/exe
+      char buf[kMAXPATHLEN];  // exe path name
+      pid_t pid;
+
+      // get our pid and build the name of the link in /proc
+      pid = getpid();
+      sprintf(linkname, "/proc/%i/exe", pid);
+      int ret = readlink(linkname, buf, kMAXPATHLEN);
+      if (ret > 0 && ret < kMAXPATHLEN) {
+         buf[ret] = 0;
+         exepath = buf;
+      }
+#endif
+   }
+   return exepath.c_str();
+}
+
+static void SetRootSys()
+{
+   const char *exepath = GetExePath();
+   if (exepath && *exepath) {
+      char *ep = new char[strlen(exepath)+1];
+      strcpy(ep, exepath);
+      char *s;
+      if ((s = strrchr(ep, '/'))) {
+         *s = 0;
+         if ((s = strrchr(ep, '/'))) {
+            *s = 0;
+            char *env = new char[strlen(ep) + 10];
+            sprintf(env, "ROOTSYS=%s", ep);
+            putenv(env);
+         }
+      }
+      delete [] ep;
+   }
 }
 
 static void SetDisplay()
@@ -316,11 +364,14 @@ static void PrintUsage(char *pname)
 
 int main(int argc, char **argv)
 {
-   const int kMAXARGS = 256;
+   const int kMAXARGS = 4096;  // POSIX minimum
    char *argvv[kMAXARGS];
-   char  arg0[2048];
+   char  arg0[kMAXPATHLEN];
 
 #ifndef ROOTPREFIX
+   // Try to set ROOTSYS depending on pathname of the executable
+   SetRootSys();
+
    if (!getenv("ROOTSYS")) {
       fprintf(stderr, "%s: ROOTSYS not set. Set it before trying to run %s.\n",
               argv[0], argv[0]);

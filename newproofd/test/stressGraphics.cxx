@@ -24,6 +24,7 @@
 
 #ifndef __CINT__
 
+#include <stdlib.h>
 #include <Riostream.h>
 #include <time.h>
 #include <TString.h>
@@ -499,7 +500,6 @@ void TestReport1(TCanvas *C, const TString &title)
                                            gPNGRefNb[gTestNum-1],
                                            gPNGErrNb[gTestNum-1]);
 
-   gErrorIgnoreLevel = 0;
    gErrorIgnoreLevel = 0;
 
    return;

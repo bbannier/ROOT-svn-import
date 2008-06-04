@@ -26,6 +26,7 @@
 #include "TROOT.h"
 #include "TSystem.h"
 #include "TVirtualMutex.h"
+#include <string>
 
 namespace {
 
@@ -130,7 +131,7 @@ std::set<std::string>  TDocParser::fgKeywords;
 //______________________________________________________________________________
 TDocParser::TDocParser(TClassDocOutput& docOutput, TClass* cl):
    fHtml(docOutput.GetHtml()), fDocOutput(&docOutput), fLineNo(0),
-   fCurrentClass(cl), fDirectiveCount(0), fDocContext(kIgnore), 
+   fCurrentClass(cl), fCurrentModule(0), fDirectiveCount(0), fDocContext(kIgnore), 
    fCheckForMethod(kFALSE), fClassDocState(kClassDoc_Uninitialized), 
    fCommentAtBOL(kFALSE)
 {
@@ -227,8 +228,8 @@ void TDocParser::AddClassMethodsRecursively(TBaseClass* bc)
           !strcmp(method->GetName(), "DeclFileLine") ||
           !strcmp(method->GetName(), "ImplFileName") ||
           !strcmp(method->GetName(), "ImplFileLine") ||
-          bc && (method->GetName()[0] == '~' // d'tor
-             || !strcmp(method->GetName(), method->GetReturnTypeName())) // c'tor
+          (bc && (method->GetName()[0] == '~' // d'tor
+             || !strcmp(method->GetName(), method->GetReturnTypeName()))) // c'tor
           )
          continue;
 
@@ -503,17 +504,17 @@ void TDocParser::DecorateKeywords(TString& line)
          EParseContext context = Context();
          Bool_t closeString = context == kString
             && (  line[i] == '"' 
-               || line[i] == '\'' 
-                  && (  i > 1 && line[i - 2] == '\'' 
-                     || i > 3 && line[i - 2] == '\\' && line[i - 3] == '\'')
+               || (line[i] == '\'' 
+                   && (  (i > 1 && line[i - 2] == '\'') 
+                      || (i > 3 && line[i - 2] == '\\' && line[i - 3] == '\'')))
                || haveHtmlEscapedChar)
             && (i == 0 || line[i - 1] != '\\'); // but not "foo \"str...
          if (context == kCode || context == kComment) {
-            if (line[i] == '"' || line[i] == '\'' && (
+            if (line[i] == '"' || (line[i] == '\'' && (
                   // 'a'
-                  line.Length() > i + 2 && line[i + 2] == '\'' ||
+                  (line.Length() > i + 2 && line[i + 2] == '\'') ||
                   // '\a'
-                  line.Length() > i + 3 && line[i + 1] == '\'' && line[i + 3] == '\'')) {
+                  (line.Length() > i + 3 && line[i + 1] == '\'' && line[i + 3] == '\'')))) {
 
                fDocOutput->DecorateEntityBegin(line, i, kString);
                fParseContext.push_back(kString);
@@ -580,7 +581,7 @@ void TDocParser::DecorateKeywords(TString& line)
       TString word(line(i, endWord - i));
 
       // '"' escapes handling of "Begin_..."/"End_..."
-      if ((i == 0 || i > 0 && line[i - 1] != '"')
+      if ((i == 0 || (i > 0 && line[i - 1] != '"'))
          && HandleDirective(line, i, word, copiedToCommentUpTo)) {
          // something special happened; the currentType is gone.
          currentType.back() = 0;
@@ -641,6 +642,29 @@ void TDocParser::DecorateKeywords(TString& line)
             //TFunction *globFunc = gROOT->GetGlobalFunctionWithPrototype(word);
             //globFunc = 0;
          }
+         if (!subType && !subClass) {
+            // also try template
+            while (isspace(line[endWord])) ++endWord;
+            if (line[endWord] == '<' || line[endWord] == '>') {
+               // check for possible template
+               Ssiz_t endWordT = endWord + 1;
+               int templateLevel = 1;
+               while (endWordT < line.Length()
+                      && (templateLevel
+                          || IsName(line[endWordT])
+                          || line[endWordT] == '<' 
+                          || line[endWordT] == '>')) {
+                  if (line[endWordT] == '<')
+                     ++templateLevel;
+                  else if (line[endWordT] == '>')
+                     --templateLevel;
+                  endWordT++;
+               }
+               subClass = fHtml->GetClass(line(i, endWordT - i).Data());
+               if (subClass)
+                  word = line(i, endWordT - i);
+            }
+         }
       }
 
       if (lookupScope && !subType && !subClass) {
@@ -649,12 +673,40 @@ void TDocParser::DecorateKeywords(TString& line)
             subClassName += "::";
             subClassName += word;
             subClass = fHtml->GetClass(subClassName);
+            if (!subClass)
+               subType = gROOT->GetType(subClassName);
          }
-         if (!subClass) {
+         if (!subClass && !subType) {
             // also try A::B::c()
             datamem = lookupScope->GetDataMember(word);
             if (!datamem)
                meth = lookupScope->GetMethodAllAny(word);
+         }
+         if (!subClass && !subType && !datamem && !meth) {
+            // also try template
+            while (isspace(line[endWord])) ++endWord;
+            if (line[endWord] == '<' || line[endWord] == '>') {
+               // check for possible template
+               Ssiz_t endWordT = endWord + 1;
+               int templateLevel = 1;
+               while (endWordT < line.Length()
+                      && (templateLevel
+                          || IsName(line[endWordT])
+                          || line[endWordT] == '<' 
+                          || line[endWordT] == '>')) {
+                  if (line[endWordT] == '<')
+                     ++templateLevel;
+                  else if (line[endWordT] == '>')
+                     --templateLevel;
+                  endWordT++;
+               }
+               TString subClassName(lookupScope->GetName());
+               subClassName += "::";
+               subClassName += line(i, endWordT - i);
+               subClass = fHtml->GetClass(subClassName);
+               if (subClass)
+                  word = line(i, endWordT - i);
+            }
          }
       }
       // create the link
@@ -685,7 +737,8 @@ void TDocParser::DecorateKeywords(TString& line)
                if (retTypeName.BeginsWith("const "))
                   retTypeName.Remove(0,6);
                Ssiz_t pos=0;
-               while (IsWord(retTypeName[pos])) ++pos;
+               while (IsWord(retTypeName[pos]) || retTypeName[pos]=='<' || retTypeName[pos]=='>' || retTypeName[pos]==':')
+                  ++pos;
                retTypeName.Remove(pos, retTypeName.Length());
                if (retTypeName.Length())
                   currentType.back() = fHtml->GetClass(retTypeName);
@@ -750,6 +803,25 @@ void TDocParser::DecrementMethodCount(const char* name)
 }
 
 //______________________________________________________________________________
+void  TDocParser::DeleteDirectiveOutput() const
+{
+   // Delete output generated by prior runs of all known directives;
+   // the output file names might have changes.
+
+   TIter iClass(gROOT->GetListOfClasses());
+   TClass* cl = 0;
+   while ((cl = (TClass*) iClass()))
+      if (cl != TDocDirective::Class()
+         && cl->InheritsFrom(TDocDirective::Class())) {
+         TDocDirective* directive = (TDocDirective*) cl->New();
+         if (!directive) continue;
+         directive->SetParser(const_cast<TDocParser*>(this));
+         directive->DeleteOutput();
+         delete directive;
+      }
+}
+
+//______________________________________________________________________________
 void TDocParser::ExpandCPPLine(TString& line, Ssiz_t& pos)
 {
 // Expand preprocessor statements
@@ -776,8 +848,8 @@ void TDocParser::ExpandCPPLine(TString& line, Ssiz_t& pos)
          if (line.Tokenize(filename, posEndFilename, "[>\"]")) {
             R__LOCKGUARD(fHtml->GetMakeClassMutex());
 
-            TString filesysFileName(filename);
-            if (gSystem->FindFile(fHtml->GetSourceDir(), filesysFileName, kReadPermission)) {
+            TString filesysFileName;
+            if (fHtml->GetPathDefinition().GetFileNameFromInclude(filename, filesysFileName)) {
                fDocOutput->CopyHtmlFile(filesysFileName);
 
                TString endOfLine(line(posEndFilename - 1, line.Length()));
@@ -786,7 +858,7 @@ void TDocParser::ExpandCPPLine(TString& line, Ssiz_t& pos)
                   fDocOutput->ReplaceSpecialChars(line, i);
 
                line += "<a href=\"../";
-               line += fHtml->GetFileName(filename);
+               line += gSystem->BaseName(filename);
                line += "\">";
                line += filename + "</a>" + endOfLine[0]; // add include file's closing '>' or '"'
                posEndOfLine = line.Length() - 1; // set the "processed up to" to it
@@ -811,6 +883,15 @@ void TDocParser::ExpandCPPLine(TString& line, Ssiz_t& pos)
 
    fDocOutput->DecorateEntityEnd(line, posEndOfLine, kCPP);
    pos = posEndOfLine;
+}
+
+
+//______________________________________________________________________________
+void TDocParser::GetCurrentModule(TString& out_module) const {
+   // Return the name of module for which sources are currently parsed.
+   if (fCurrentModule) out_module = fCurrentModule;
+   else if (fCurrentClass) fHtml->GetModuleNameForClass(out_module, fCurrentClass);
+   else out_module = "(UNKNOWN MODULE WHILE PARSING)";
 }
 
 //______________________________________________________________________________
@@ -871,7 +952,7 @@ Bool_t TDocParser::HandleDirective(TString& line, Ssiz_t& pos, TString& word,
                      waitForClosing.push_back('\'');
                   break;
                case '(':
-                  if (waitForClosing.empty() || waitForClosing.back() != '"' && waitForClosing.back() != '\'')
+                  if (waitForClosing.empty() || (waitForClosing.back() != '"' && waitForClosing.back() != '\''))
                      waitForClosing.push_back(')');
                   break;
                case '\\':
@@ -1005,8 +1086,8 @@ UInt_t TDocParser::InContext(Int_t context) const
 
    for (std::list<UInt_t>::const_reverse_iterator iPC = fParseContext.rbegin();
       iPC != fParseContext.rend(); ++iPC)
-      if (!lowerContext || (lowerContext && ((*iPC & kParseContextMask) == lowerContext))
-         && (!contextFlag || contextFlag && (*iPC & contextFlag)))
+      if (!lowerContext || ((lowerContext && ((*iPC & kParseContextMask) == lowerContext))
+         && (!contextFlag || (contextFlag && (*iPC & contextFlag)))))
          return *iPC;
 
    return 0;
@@ -1123,7 +1204,7 @@ TClass* TDocParser::IsDirective(const TString& line, Ssiz_t pos,
 
    TClass* clDirective = fHtml->GetClass(tag);
 
-   if (!clDirective)
+   if (gDebug > 0 && !clDirective)
       Warning("IsDirective", "Unknown THtml directive %s in line %d!", word.Data(), fLineNo);
 
    return clDirective;
@@ -1402,6 +1483,8 @@ void TDocParser::Parse(std::ostream& out)
 
    fClassDocState = kClassDoc_LookingNothingFound;
 
+   DeleteDirectiveOutput();
+
    LocateMethodsInSource(out);
    LocateMethodsInHeaderInline(out);
    LocateMethodsInHeaderClassDecl(out);
@@ -1439,10 +1522,10 @@ void TDocParser::LocateMethods(std::ostream& out, const char* filename,
 
    TString sourceFileName(filename);
    fCurrentFile = filename;
-   fHtml->GetSourceFileName(sourceFileName);
    if (!sourceFileName.Length()) {
+      fHtml->GetImplFileName(fCurrentClass, kFALSE, sourceFileName);
       Error("LocateMethods", "Can't find source file '%s' for class %s!", 
-         fHtml->GetImplFileName(fCurrentClass), fCurrentClass->GetName());
+         sourceFileName.Data(), fCurrentClass->GetName());
       return;
    }
    ifstream sourceFile(sourceFileName.Data());
@@ -1651,8 +1734,8 @@ void TDocParser::LocateMethodsInSource(std::ostream& out)
       pattern.Remove(0, posLastScope + 2);
    pattern += "::";
    
-   const char* implFileName = fHtml->GetImplFileName(fCurrentClass);
-   if (implFileName && implFileName[0])
+   TString implFileName;
+   if (fHtml->GetImplFileName(fCurrentClass, kTRUE, implFileName))
       LocateMethods(out, implFileName, kFALSE /*source info*/, useDocxxStyle, 
                     kFALSE /*allowPureVirtual*/, pattern, ".cxx.html");
    else out << "</div>" << endl; // close class descr div
@@ -1674,8 +1757,8 @@ void TDocParser::LocateMethodsInHeaderInline(std::ostream& out)
       pattern.Remove(0, posLastScope + 1);
    pattern += "::";
    
-   const char* declFileName = fHtml->GetDeclFileName(fCurrentClass);
-   if (declFileName && declFileName[0])
+   TString declFileName;
+   if (fHtml->GetDeclFileName(fCurrentClass, kTRUE, declFileName))
       LocateMethods(out, declFileName, kTRUE /*source info*/, useDocxxStyle, 
                     kFALSE /*allowPureVirtual*/, pattern, 0);
 }
@@ -1687,8 +1770,8 @@ void TDocParser::LocateMethodsInHeaderClassDecl(std::ostream& out)
    // class declaration block, and extract documentation to out,
    // while beautifying the header file in parallel.
 
-   const char* declFileName = fHtml->GetDeclFileName(fCurrentClass);
-   if (declFileName && declFileName[0])
+   TString declFileName;
+   if (fHtml->GetDeclFileName(fCurrentClass, kTRUE, declFileName))
       LocateMethods(out, declFileName, kTRUE/*source info*/, kTRUE /*useDocxxStyle*/,
                     kTRUE /*allowPureVirtual*/, 0, ".h.html");
 }
@@ -1725,10 +1808,10 @@ Bool_t TDocParser::ProcessComment()
    if (!fCommentAtBOL) 
       posComment = commentLine.Index("<span class=\"comment\">", 0, TString::kIgnoreCase);
    Ssiz_t posSpanEnd = commentLine.Index("</span>", posComment == kNPOS?0:posComment, TString::kIgnoreCase);
-   while (mustDealWithCommentAtBOL && posSpanEnd != kNPOS || posComment != kNPOS) {
+   while ((mustDealWithCommentAtBOL && posSpanEnd != kNPOS) || posComment != kNPOS) {
       Int_t spanLevel = 1;
       Ssiz_t posSpan = commentLine.Index("<span", posComment + 1, TString::kIgnoreCase);
-      while (spanLevel > 1 || posSpan != kNPOS && posSpan < posSpanEnd) {
+      while (spanLevel > 1 || (posSpan != kNPOS && posSpan < posSpanEnd)) {
          // another span was opened, take the next </span>
          if (posSpan != kNPOS && posSpan < posSpanEnd) {
             ++spanLevel;
@@ -1756,7 +1839,10 @@ Bool_t TDocParser::ProcessComment()
    if (posComment != kNPOS)
       commentLine.Remove(posComment, 22);
 
-   Strip(commentLine);
+   // don't strip in C comments, do strip if opening:
+   if (!InContext(kComment) || (InContext(kComment) & kCXXComment)
+       || (fLineStripped[0] == '/' && fLineStripped[1] == '*'))
+      Strip(commentLine);
 
    // look for start tag of class description
    if ((fClassDocState == kClassDoc_LookingNothingFound
@@ -1813,6 +1899,7 @@ Bool_t TDocParser::ProcessComment()
 
    if (commentLine.Length() > 2 && Context() != kDirective)
       while (commentLine.Length() > 2
+             && !IsWord(commentLine[0])
              && commentLine[0] == commentLine[commentLine.Length() - 1])
          commentLine = commentLine.Strip(TString::kBoth, commentLine[0]);
    
@@ -1893,13 +1980,14 @@ void TDocParser::WriteMethod(std::ostream& out, TString& ret,
    TIter nextMethod(fCurrentClass->GetListOfMethods());
    while ((method = (TMethod *) nextMethod()))
       if (name == method->GetName()
-          && method->GetListOfMethodArgs()->GetSize() == nparams)
+          && method->GetListOfMethodArgs()->GetSize() == nparams) {
          if (guessedMethod) {
             // not unique, don't try to solve overload
             guessedMethod = 0;
             break;
          } else
             guessedMethod = method;
+      }
 
    dynamic_cast<TClassDocOutput*>(fDocOutput)->WriteMethod(out, ret, name, params, filename, anchor,
                                                            fComment, codeOneLiner, guessedMethod);

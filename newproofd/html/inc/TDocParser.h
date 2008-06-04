@@ -57,6 +57,8 @@ public:
       kInfoLastUpdate,
       kInfoAuthor,
       kInfoCopyright,
+      kInfoLastChanged,
+      kInfoLastGenerated,
       kNumSourceInfos
    };
    enum EAccess {
@@ -99,6 +101,7 @@ protected:
    TString        fFirstClassDoc;   // first class-doc found - per file, taken if fLastClassDoc is empty
    TString        fLastClassDoc;    // last class-doc found - becomes class doc at ClassImp or first method
    TClass*        fCurrentClass;    // current class context of sources being parsed
+   TString        fCurrentModule;   // current module context of sources being parsed
    TString        fCurrentMethodTag;// name_idx of the currently parsed method
    Int_t          fDirectiveCount;  // index of directive for current method
    TString        fCurrentFile;     // current source / header file name
@@ -128,7 +131,7 @@ protected:
    void           AddClassMethodsRecursively(TBaseClass* bc);
    void           AddClassDataMembersRecursively(TBaseClass* bc);
    void           AnchorFromLine(TString& anchor);
-   EParseContext  Context() const { return (EParseContext)(fParseContext.back() & kParseContextMask); }
+   EParseContext  Context() const { return fParseContext.empty() ? kComment : (EParseContext)(fParseContext.back() & kParseContextMask); }
    virtual void   ExpandCPPLine(TString& line, Ssiz_t& pos);
    virtual Bool_t HandleDirective(TString& keyword, Ssiz_t& pos, 
       TString& word, Ssiz_t& copiedToCommentUpTo);
@@ -164,12 +167,15 @@ public:
    void          DecrementMethodCount(const char* name);
    virtual void  DecorateKeywords(std::ostream& out, const char* text);
    virtual void  DecorateKeywords(TString& text);
+   virtual void  DeleteDirectiveOutput() const;
    const TList*  GetMethods(EAccess access) const { return &fMethods[access]; }
    TClass*       GetCurrentClass() const { return fCurrentClass; }
+   void          GetCurrentModule(TString& out_module) const;
    TDocOutput*   GetDocOutput() const { return fDocOutput; }
    const TList*  GetDataMembers(EAccess access) const { return &fDataMembers[access]; }
    const TList*  GetEnums(EAccess access) const { return &fDataMembers[access+3]; }
    const char*   GetSourceInfo(ESourceInfo type) const { return fSourceInfo[type]; }
+   void          SetCurrentModule(const char* module) { fCurrentModule = module; }
 
    UInt_t        InContext(Int_t context) const;
    static Bool_t IsName(UChar_t c);

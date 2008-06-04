@@ -10,6 +10,9 @@ void projection_test()
    gEve->GetDefViewer()->AddScene(s);
    TGLViewer* v = (TGLViewer *)gEve->GetGLViewer();
    v->SetCurrentCamera(TGLViewer::kCameraOrthoXOY);
+   TGLOrthoCamera* cam = (TGLOrthoCamera*) v->CurrentCamera();
+   cam->SetZoomMinMax(0.2, 20);
+
    TGLCameraMarkupStyle* mup = v->GetCameraMarkup();
    if(mup) mup->SetShow(kFALSE);
 
@@ -33,8 +36,16 @@ void projection_test()
    TEveGeoShape* gsre = TEveGeoShape::ImportShapeExtract(gse, 0);
    geom->Close();
    delete geom;
+   // gEve->AddToListTree(gsre);
    mng->ImportElements(gsre);
-   gsre->SetRnrState(kFALSE);
+
+   TEveLine* line = new TEveLine;
+   line->SetMainColor(kGreen);
+   for (Int_t i=0; i<160; ++i)
+      line->SetNextPoint(120*sin(0.2*i), 120*cos(0.2*i), 80-i);
+   gEve->AddElement(line);
+   mng->ImportElements(line);
+   line->SetRnrSelf(kFALSE);
 
    gEve->Redraw3D(kTRUE);
 }

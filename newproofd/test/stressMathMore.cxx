@@ -33,6 +33,7 @@
 #include <iomanip>
 #include <limits>
 #include <cmath>
+#include <stdlib.h>
 #include "TBenchmark.h"
 #include "TROOT.h"
 #include "TRandom3.h"
@@ -195,13 +196,10 @@ public:
    int TestDerivative(); 
 
    // test root finding algorithm for finding inverse of cdf 
-   template<class AlgoType>
-   int TestInverse1(); 
+   int TestInverse1(RootFinder::EType algotype); 
 
    // test root finding algorithm for finding inverse of cdf using drivatives
-   template<class AlgoType>
-   int TestInverse2(); 
-
+   int TestInverse2(RootFinder::EType algotype); 
 
    
    void SetScaleIg(double s) { fScaleIg = s; }  
@@ -338,8 +336,8 @@ struct InvFunc {
    double fY; 
 };
 
-template<class AlgoType>
-int StatFunction::TestInverse1() {
+
+int StatFunction::TestInverse1(RootFinder::EType algoType) {
 
    int iret = 0; 
    int maxitr = 2000;
@@ -354,7 +352,7 @@ int StatFunction::TestInverse1() {
    double vmax = Quantile(1.-dx/2);
 
    // test ROOT finder algorithm function without derivative
-   RootFinder<Roots::Brent> rf1; 
+   RootFinder  rf1(algoType); 
    for (int i = 1; i < NFuncTest; ++i) { 
       double v1 = dx*i;  // value used  for testing
       InvFunc finv(this,v1); 
@@ -381,8 +379,8 @@ int StatFunction::TestInverse1() {
    return iret; 
 
 }
-template <class AlgoType>
-int StatFunction::TestInverse2() {
+
+int StatFunction::TestInverse2(RootFinder::EType algoType) {
 
    int iret = 0; 
    int maxitr = 2000;
@@ -396,7 +394,7 @@ int StatFunction::TestInverse2() {
    // it is very sensible at the starting point
    double vstart = fStartRoot; //depends on function shape
    // test ROOT finder algorithm function with derivative
-   RootFinder<AlgoType> rf1; 
+   RootFinder rf1(algoType); 
    //RootFinder<Roots::Secant> rf1; 
 
    for (int i = 1; i < NFuncTest; ++i) { 
@@ -466,12 +464,12 @@ int testGammaFunction(int n = 100) {
       iret |= ret;
 
       PrintTest("\t test inverse with Brent method");
-      ret = dist.TestInverse1<Roots::Brent>();
+      ret = dist.TestInverse1(RootFinder::kGSL_BRENT);
       PrintStatus(ret);
       iret |= ret;
 
       PrintTest("\t test inverse with Steffenson algo");
-      ret = dist.TestInverse2<Roots::Steffenson>();
+      ret = dist.TestInverse2(RootFinder::kGSL_STEFFENSON);
       PrintStatus(ret);
       iret |= ret;
    }
@@ -514,13 +512,13 @@ int testBetaFunction(int n = 100) {
       iret |= ret;
 
       PrintTest("\t test inverse with Brent method");
-      ret = dist.TestInverse1<Roots::Brent>();
+      ret = dist.TestInverse1(RootFinder::kGSL_BRENT);
       PrintStatus(ret);
       iret |= ret;
 
       if (i < 5) {  // test failed for k=5
          PrintTest("\t test inverse with Steffenson algo");
-         ret = dist.TestInverse2<Roots::Steffenson>();
+         ret = dist.TestInverse2(RootFinder::kGSL_STEFFENSON);
          PrintStatus(ret);
          iret |= ret;
       }

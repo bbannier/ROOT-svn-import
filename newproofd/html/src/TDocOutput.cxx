@@ -23,11 +23,13 @@
 #include "TMethod.h"
 #include "TROOT.h"
 #include "TSystem.h"
+#include "TUrl.h"
 #include "TVirtualMutex.h"
 #include <vector>
 #include <list>
 #include <set>
 #include <sstream>
+#include <stdlib.h>
 
 namespace {
 
@@ -46,8 +48,8 @@ namespace {
    typedef std::list<TSectionInfo> SectionStarts_t;
 
    static void Sections_BuildIndex(SectionStarts_t& sectionStarts,
-      SectionStart_t begin, SectionStart_t end, 
-      size_t maxPerSection) 
+      SectionStart_t begin, SectionStart_t end,
+      size_t maxPerSection)
    {
       // for each assumed section border, check that previous entry's
       // char[selectionChar] differs, else move section start forward
@@ -70,31 +72,32 @@ namespace {
          SectionStart_t addWhichOne = prevSection->fStart;
 
          size_t selectionChar=1;
-         for (; selectionChar <= cursor->length() && addWhichOne == prevSection->fStart; 
+         for (; selectionChar <= cursor->length() && addWhichOne == prevSection->fStart;
             ++selectionChar) {
             SectionStart_t checkPrev = cursor;
-            while (--checkPrev != prevSection->fStart 
-               && !strncasecmp(checkPrev->c_str(), cursor->c_str(), selectionChar));
+            while (--checkPrev != prevSection->fStart
+               && !strncasecmp(checkPrev->c_str(), cursor->c_str(), selectionChar)) { }
 
             SectionStart_t checkNext = cursor;
             while (++checkNext != end
-               && !strncasecmp(checkNext->c_str(), cursor->c_str(), selectionChar));
+               && !strncasecmp(checkNext->c_str(), cursor->c_str(), selectionChar)) { }
 
             // if the previous matching one is closer but not previous section start, take it!
-            if (checkPrev != prevSection->fStart)
+            if (checkPrev != prevSection->fStart) {
                if ((cursor - checkPrev) <= (checkNext - cursor))
                   addWhichOne = ++checkPrev;
                else if (checkNext != end
                   && (size_t)(checkNext - cursor) < maxPerSection) {
                   addWhichOne = checkNext;
                }
+            }
          }
          if (addWhichOne == prevSection->fStart)
             addWhichOne = cursor;
 
          selectionChar = 1;
-         while (selectionChar <= prevSection->fStart->length() 
-            && selectionChar <= addWhichOne->length() 
+         while (selectionChar <= prevSection->fStart->length()
+            && selectionChar <= addWhichOne->length()
             && !strncasecmp(prevSection->fStart->c_str(), addWhichOne->c_str(), selectionChar))
             ++selectionChar;
 
@@ -134,12 +137,12 @@ namespace {
       }
    }
 
-   static void GetIndexChars(const Words_t& words, UInt_t numSectionsIn, 
+   static void GetIndexChars(const Words_t& words, UInt_t numSectionsIn,
       std::vector<std::string> &sectionMarkersOut)
    {
       // Given a list of words (class names, in this case), this function builds an
-      // optimal set of about numSectionIn sections (even if almost all words start 
-      // with a "T"...), and returns the significant characters for each section start 
+      // optimal set of about numSectionIn sections (even if almost all words start
+      // with a "T"...), and returns the significant characters for each section start
       // in sectionMarkersOut.
 
       const size_t maxPerSection = (words.size() + numSectionsIn - 1)/ numSectionsIn;
@@ -154,11 +157,11 @@ namespace {
       size_t idx = 0;
       for (SectionStarts_t::iterator iSectionStart = sectionStarts.begin();
          iSectionStart != sectionStarts.end(); ++iSectionStart)
-         sectionMarkersOut[idx++] = 
+         sectionMarkersOut[idx++] =
             iSectionStart->fStart->substr(0, iSectionStart->fChars);
    }
 
-   static void GetIndexChars(const std::list<std::string>& wordsIn, UInt_t numSectionsIn, 
+   static void GetIndexChars(const std::list<std::string>& wordsIn, UInt_t numSectionsIn,
       std::vector<std::string> &sectionMarkersOut)
    {
       // initialize word vector
@@ -171,8 +174,7 @@ namespace {
 
 }
 
-
-namespace {
+extern "C" { // std::qsort on solaris wants the sorter to be extern "C"
 
    //______________________________________________________________________________
    static int CaseInsensitiveSort(const void *name1, const void *name2)
@@ -192,6 +194,9 @@ namespace {
 
       return (strcasecmp(*((char **) name1), *((char **) name2)));
    }
+}
+
+namespace {
 
    // std::list::sort(with_stricmp_predicate) doesn't work with Solaris CC...
    static void sort_strlist_stricmp(std::list<std::string>& l)
@@ -235,7 +240,7 @@ namespace {
 // It invokes AT&T's GraphViz tool (dot) if available; charts benefit a lot
 // from it.
 //
-// TDocOutput also writes all pages' header and footer, which can be customized 
+// TDocOutput also writes all pages' header and footer, which can be customized
 // by calling THtml::SetHeader(), THtml::SetFooter().
 //______________________________________________________________________________
 
@@ -331,7 +336,7 @@ Bool_t TDocOutput::CopyHtmlFile(const char *sourceName, const char *destName)
 // Copy file to HTML directory
 //
 //
-//  Input: sourceName - source file name
+//  Input: sourceName - source file name (fully qualified i.e. file system path)
 //         destName   - optional destination name, if not
 //                      specified it would be the same
 //                      as the source file name
@@ -345,16 +350,7 @@ Bool_t TDocOutput::CopyHtmlFile(const char *sourceName, const char *destName)
 
    R__LOCKGUARD(GetHtml()->GetMakeClassMutex());
 
-   // source file name
-   char *tmp1 = gSystem->Which(fHtml->GetSourceDir(), sourceName, kReadPermission);
-   if (!tmp1) {
-      Error("Copy", "Can't copy file '%s' to '%s/%s' - can't find source file!", sourceName,
-            fHtml->GetOutputDir().Data(), destName);
-      return kFALSE;
-   }
-
-   TString sourceFile(tmp1);
-   delete[]tmp1;
+   TString sourceFile(sourceName);
 
    if (!sourceFile.Length()) {
       Error("Copy", "Can't copy file '%s' to '%s' directory - source file name invalid!", sourceName,
@@ -365,9 +361,9 @@ Bool_t TDocOutput::CopyHtmlFile(const char *sourceName, const char *destName)
    // destination file name
    TString destFile;
    if (!destName || !*destName)
-      destFile = fHtml->GetFileName(sourceFile);
+      destFile = gSystem->BaseName(sourceFile);
    else
-      destFile = fHtml->GetFileName(destName);
+      destFile = gSystem->BaseName(destName);
 
    gSystem->PrependPathName(fHtml->GetOutputDir(), destFile);
 
@@ -412,9 +408,12 @@ void TDocOutput::CreateHierarchy()
 
    // write out header
    WriteHtmlHeader(out, "Class Hierarchy");
+
+   WriteTopLinks(out, 0);
+   out << "</div></div>" << endl;
+
    out << "<h1>Class Hierarchy</h1>" << endl;
 
-   WriteSearch(out);
 
    // loop on all classes
    TClassDocInfo* cdi = 0;
@@ -424,13 +423,15 @@ void TDocOutput::CreateHierarchy()
          continue;
 
       // get class
-      TClass *basePtr = cdi->GetClass();
+      TDictionary *dictPtr = cdi->GetClass();
+      TClass *basePtr = dynamic_cast<TClass*>(dictPtr);
       if (basePtr == 0) {
-         Warning("THtml::CreateHierarchy", "skipping class %s\n", cdi->GetName());
+         if (!dictPtr)
+            Warning("THtml::CreateHierarchy", "skipping class %s\n", cdi->GetName());
          continue;
       }
 
-      TClassDocOutput cdo(*fHtml, basePtr);
+      TClassDocOutput cdo(*fHtml, basePtr, 0);
       cdo.CreateClassHierarchy(out, cdi->GetHtmlFileName());
    }
 
@@ -463,7 +464,10 @@ void TDocOutput::CreateClassIndex()
    // write indexFile header
    WriteHtmlHeader(indexFile, "Class Index");
 
-   indexFile << "<h1>Index</h1>" << endl;
+   WriteTopLinks(indexFile, 0);
+   indexFile << "</div></div>" << endl;
+
+   indexFile << "<h1>Class Index</h1>" << endl;
 
    WriteModuleLinks(indexFile);
 
@@ -491,8 +495,6 @@ void TDocOutput::CreateClassIndex()
       }
    }
 
-   WriteSearch(indexFile);
-
    indexFile << "<ul id=\"indx\">" << endl;
 
    // loop on all classes
@@ -505,15 +507,17 @@ void TDocOutput::CreateClassIndex()
          continue;
 
       // get class
-      TClass* currentClass = cdi->GetClass();
+      TDictionary *currentDict = cdi->GetClass();
+      TClass* currentClass = dynamic_cast<TClass*>(currentDict);
       if (!currentClass) {
-         Warning("THtml::CreateClassIndex", "skipping class %s\n", cdi->GetName());
+         if (!currentDict)
+            Warning("THtml::CreateClassIndex", "skipping class %s\n", cdi->GetName());
          continue;
       }
 
       indexFile << "<li class=\"idxl" << (i++)%2 << "\">";
       if (currentIndexEntry < indexChars.size()
-         && !strncmp(indexChars[currentIndexEntry].c_str(), cdi->GetName(), 
+         && !strncmp(indexChars[currentIndexEntry].c_str(), cdi->GetName(),
                      indexChars[currentIndexEntry].length()))
          indexFile << "<a name=\"idx" << currentIndexEntry++ << "\"></a>";
 
@@ -545,16 +549,16 @@ void TDocOutput::CreateClassIndex()
 //______________________________________________________________________________
 void TDocOutput::CreateModuleIndex()
 {
-   // Create the class index for each module, picking up documentation from the 
-   // module's TModuleDocInfo::GetSourceDir() plus the (possibly relative) 
+   // Create the class index for each module, picking up documentation from the
+   // module's TModuleDocInfo::GetInputPath() plus the (possibly relative)
    // THtml::GetModuleDocPath(). Also creates the library dependency plot if dot
    // exists, see THtml::HaveDot().
 
    const char* title = "LibraryDependencies";
-   TString filename(title);
-   gSystem->PrependPathName(fHtml->GetOutputDir(), filename);
+   TString dotfilename(title);
+   gSystem->PrependPathName(fHtml->GetOutputDir(), dotfilename);
 
-   std::ofstream libDepDotFile(filename + ".dot");
+   std::ofstream libDepDotFile(dotfilename + ".dot");
    libDepDotFile << "digraph G {" << endl
                  << "ratio=compress;" << endl
                  << "node [fontsize=22,labeldistance=0.1];" << endl
@@ -566,29 +570,36 @@ void TDocOutput::CreateModuleIndex()
                  << "K=0.1;" << endl;
 
    TModuleDocInfo* module = 0;
-   TIter iModule(fHtml->GetListOfModules());
+   TIter iterModule(fHtml->GetListOfModules());
 
    std::stringstream sstrCluster;
    std::stringstream sstrDeps;
-   while ((module = (TModuleDocInfo*)iModule())) {
+   while ((module = (TModuleDocInfo*)iterModule())) {
       if (!module->IsSelected())
          continue;
 
       std::vector<std::string> indexChars;
       TString filename(module->GetName());
+      filename.ToUpper();
+      filename.ReplaceAll("/","_");
       filename += "_Index.html";
       gSystem->PrependPathName(fHtml->GetOutputDir(), filename);
       std::ofstream outputFile(filename.Data());
       if (!outputFile.good()) {
-         Error("MakeIndex", "Can't open file '%s' !", filename.Data());
+         Error("CreateModuleIndex", "Can't open file '%s' !", filename.Data());
          continue;
       }
       Printf(fHtml->GetCounterFormat(), "", fHtml->GetCounter(), filename.Data());
 
       TString htmltitle("Index of ");
-      htmltitle += module->GetName();
-      htmltitle += " classes";
+      TString moduletitle(module->GetName());
+      moduletitle.ToUpper();
+      htmltitle += moduletitle;
       WriteHtmlHeader(outputFile, htmltitle);
+
+      WriteTopLinks(outputFile, module);
+      outputFile << "</div></div>" << endl;
+
       outputFile << "<h2>" << htmltitle << "</h2>" << endl;
 
       // Module doc
@@ -596,11 +607,12 @@ void TDocOutput::CreateModuleIndex()
          TString outdir(module->GetName());
          gSystem->PrependPathName(GetHtml()->GetOutputDir(), outdir);
 
-         TString moduleDocDir(GetHtml()->GetModuleDocPath());
-         if (!gSystem->IsAbsoluteFileName(moduleDocDir))
-            gSystem->PrependPathName(module->GetSourceDir(), moduleDocDir);
+         TString moduleDocDir;
+         GetHtml()->GetPathDefinition().GetDocDir(module->GetName(), moduleDocDir);
          ProcessDocInDir(outputFile, moduleDocDir, outdir, module->GetName());
       }
+
+      WriteModuleLinks(outputFile, module);
 
       std::list<std::string> classNames;
       {
@@ -613,20 +625,27 @@ void TDocOutput::CreateModuleIndex()
 
             if (classNames.size() > 1) continue;
 
-            TString libs(cdi->GetClass()->GetSharedLibs());
+            TClass* cdiClass = dynamic_cast<TClass*>(cdi->GetClass());
+            if (!cdiClass)
+               continue;
+
+            TString libs(cdiClass->GetSharedLibs());
             Ssiz_t posDepLibs = libs.Index(' ');
             TString thisLib(libs);
             if (posDepLibs != kNPOS)
                thisLib.Remove(posDepLibs, thisLib.Length());
-            Ssiz_t posExt = thisLib.First('.');
-            if (posExt != kNPOS)
-               thisLib.Remove(posExt, thisLib.Length());
+
+            {
+               Ssiz_t posExt = thisLib.First('.');
+               if (posExt != kNPOS)
+                  thisLib.Remove(posExt, thisLib.Length());
+            }
 
             if (!thisLib.Length())
                continue;
 
             // allocate entry, even if no dependencies
-            TLibraryDocInfo *libdeps = 
+            TLibraryDocInfo *libdeps =
                (TLibraryDocInfo*)fHtml->GetLibraryDependencies()->FindObject(thisLib);
             if (!libdeps) {
                libdeps = new TLibraryDocInfo(thisLib);
@@ -644,7 +663,7 @@ void TDocOutput::CreateModuleIndex()
                         libdeps->AddDependency(lib);
                      }
                      lib.erase();
-                  } else 
+                  } else
                      lib += libs[pos];
                }
                if (lib.length() && thisLib.Length()) {
@@ -657,22 +676,6 @@ void TDocOutput::CreateModuleIndex()
          } // while next class in module
       } // just a scope block
 
-      if (classNames.size() > 10) {
-         outputFile << "<div id=\"indxShortX\"><h4>Jump to</h4>" << endl;
-         UInt_t numSections = classNames.size() / 10;
-         if (numSections < 10) numSections = 10;
-         if (numSections > 50) numSections = 50;
-         // find index chars
-         GetIndexChars(classNames, numSections, indexChars);
-         for (UInt_t iIdxEntry = 0; iIdxEntry < indexChars.size(); ++iIdxEntry) {
-            outputFile << "<a href=\"#idx" << iIdxEntry << "\">";
-            ReplaceSpecialChars(outputFile, indexChars[iIdxEntry].c_str());
-            outputFile << "</a>" << endl;
-         }
-         outputFile << "</div><br />" << endl;
-      }
-      outputFile << "<ul id=\"indx\">" << endl;
-
       TIter iClass(module->GetClasses());
       TClassDocInfo* cdi = 0;
       UInt_t count = 0;
@@ -681,16 +684,37 @@ void TDocOutput::CreateModuleIndex()
          if (!cdi->IsSelected() || !cdi->HaveSource())
             continue;
 
-         TClass *classPtr = cdi->GetClass();
+         TDictionary *classPtr = cdi->GetClass();
          if (!classPtr) {
-            Error("MakeIndex", "Unknown class '%s' !", cdi->GetName());
+            Error("CreateModuleIndex", "Unknown class '%s' !", cdi->GetName());
             continue;
+         }
+
+         if (!count) {
+            outputFile << "<h2>Class Index</h2>" << endl;
+
+            if (classNames.size() > 10) {
+               outputFile << "<div id=\"indxShortX\"><h4>Jump to</h4>" << endl;
+               UInt_t numSections = classNames.size() / 10;
+               if (numSections < 10) numSections = 10;
+               if (numSections > 50) numSections = 50;
+               // find index chars
+               GetIndexChars(classNames, numSections, indexChars);
+               for (UInt_t iIdxEntry = 0; iIdxEntry < indexChars.size(); ++iIdxEntry) {
+                  outputFile << "<a href=\"#idx" << iIdxEntry << "\">";
+                  ReplaceSpecialChars(outputFile, indexChars[iIdxEntry].c_str());
+                  outputFile << "</a>" << endl;
+               }
+               outputFile << "</div><br />" << endl;
+            }
+
+            outputFile << "<ul id=\"indx\">" << endl;
          }
 
          // write a classname to an index file
          outputFile << "<li class=\"idxl" << (count++)%2 << "\">";
          if (currentIndexEntry < indexChars.size()
-            && !strncmp(indexChars[currentIndexEntry].c_str(), cdi->GetName(), 
+            && !strncmp(indexChars[currentIndexEntry].c_str(), cdi->GetName(),
                         indexChars[currentIndexEntry].length()))
             outputFile << "<a name=\"idx" << currentIndexEntry++ << "\"></a>";
 
@@ -713,7 +737,8 @@ void TDocOutput::CreateModuleIndex()
       }
 
 
-      outputFile << "</ul>" << endl;
+      if (count)
+         outputFile << "</ul>" << endl;
 
       // write outputFile footer
       WriteHtmlFooter(outputFile);
@@ -746,7 +771,7 @@ void TDocOutput::CreateModuleIndex()
          for (std::set<std::string>::const_iterator iDep2 = deps.begin();
               !already_indirect && iDep2 != deps.end(); ++iDep2) {
             if (iDep == iDep2) continue;
-            TLibraryDocInfo* libinfo2 = (TLibraryDocInfo*) 
+            TLibraryDocInfo* libinfo2 = (TLibraryDocInfo*)
                fHtml->GetLibraryDependencies()->FindObject(iDep2->c_str());
             if (!libinfo2) continue;
             const std::set<std::string>& deps2 = libinfo2->GetDependencies();
@@ -774,18 +799,17 @@ void TDocOutput::CreateModuleIndex()
             sstrCluster << "Everything depends on ";
          sstrCluster << libinfo->GetName() << "\";" << endl;
 
-         const std::set<std::string>& modules = libinfo->GetModules();
          for (std::set<std::string>::const_iterator iModule = modules.begin();
               iModule != modules.end(); ++iModule) {
-            sstrCluster << "\"" << *iModule << "\" [style=filled,color=white,URL=\"" 
+            sstrCluster << "\"" << *iModule << "\" [style=filled,color=white,URL=\""
                         << *iModule << "_Index.html\"];" << endl;
          }
-         sstrCluster << endl 
+         sstrCluster << endl
                      << "}" << endl;
       } else {
          // only one module
-         sstrCluster << "\"" << *modules.begin() 
-                     << "\" [label=\"" << libinfo->GetName() 
+         sstrCluster << "\"" << *modules.begin()
+                     << "\" [label=\"" << libinfo->GetName()
                      << "\",style=filled,color=lightgray,shape=box,URL=\""
                      << *modules.begin() << "_Index.html\"];" << endl;
       }
@@ -819,21 +843,23 @@ void TDocOutput::CreateModuleIndex()
    libDepDotFile << "}" << endl;
    libDepDotFile.close();
 
-   std::ofstream out(filename + ".html");
+   std::ofstream out(dotfilename + ".html");
    if (!out.good()) {
       Error("CreateModuleIndex", "Can't open file '%s.html' !",
-            filename.Data());
+            dotfilename.Data());
       return;
    }
 
-   Printf(fHtml->GetCounterFormat(), "", fHtml->GetCounter(), (filename + ".html").Data());
+   Printf(fHtml->GetCounterFormat(), "", fHtml->GetCounter(), (dotfilename + ".html").Data());
    // write out header
    WriteHtmlHeader(out, "Library Dependencies");
+
+   WriteTopLinks(out, 0);
+   out << "</div></div>" << endl;
+
    out << "<h1>Library Dependencies</h1>" << endl;
 
-   WriteSearch(out);
-
-   RunDot(filename, &out, kFdp);
+   RunDot(dotfilename, &out, kFdp);
 
    out << "<img alt=\"Library Dependencies\" class=\"classcharts\" usemap=\"#Map" << title << "\" src=\"" << title << ".gif\"/>" << endl;
 
@@ -861,10 +887,15 @@ void TDocOutput::CreateProductIndex()
    Printf(fHtml->GetCounterFormat(), "", "", outFile.Data());
 
    WriteHtmlHeader(out, GetHtml()->GetProductName() + " Reference Guide");
+
+   WriteTopLinks(out, 0);
+   out << "</div></div>" << endl;
+
    out << "<h1>" << GetHtml()->GetProductName() + " Reference Guide</h1>" << std::endl;
 
-   if (GetHtml()->GetProductDocDir().Length())
-      ProcessDocInDir(out, GetHtml()->GetProductDocDir(), GetHtml()->GetOutputDir(), "./");
+   TString prodDoc;
+   if (GetHtml()->GetPathDefinition().GetDocDir("", prodDoc))
+      ProcessDocInDir(out, prodDoc, GetHtml()->GetOutputDir(), "./");
 
    WriteModuleLinks(out);
 
@@ -879,6 +910,110 @@ void TDocOutput::CreateProductIndex()
       << "<p>A diagram showing all of " << GetHtml()->GetProductName() << "'s libraries and their dependencies</p>" << std::endl;
 
    WriteHtmlFooter(out);
+}
+
+//______________________________________________________________________________
+void TDocOutput::CreateClassTypeDefs()
+{
+   // Create a forwarding page for each typedef pointing to a class.
+   TDocParser parser(*this);
+
+   TIter iClass(GetHtml()->GetListOfClasses());
+   TClassDocInfo* cdi = 0;
+   while ((cdi = (TClassDocInfo*) iClass())) {
+      if (cdi->GetListOfTypedefs().IsEmpty())
+         continue;
+      TIter iTypedefs(&cdi->GetListOfTypedefs());
+      TDataType* dt = 0;
+      while ((dt = (TDataType*) iTypedefs())) {
+         if (gDebug > 0)
+            Info("CreateClassTypeDefs", "Creating typedef %s to class %s",
+                 dt->GetName(), cdi->GetName());
+         // create a filename
+         TString filename(dt->GetName());
+         NameSpace2FileName(filename);
+
+         gSystem->PrependPathName(fHtml->GetOutputDir(), filename);
+
+         filename += ".html";
+
+         // open class file
+         std::ofstream outfile(filename);
+
+         if (!outfile.good()) {
+            Error("CreateClassTypeDefs", "Can't open file '%s' !", filename.Data());
+            continue;
+         }
+
+         WriteHtmlHeader(outfile, dt->GetName());
+
+         outfile << "<a name=\"TopOfPage\"></a>" << endl;
+
+         TString dtName(dt->GetName());
+         ReplaceSpecialChars(dtName);
+         TString sTitle("typedef ");
+         sTitle += dtName;
+
+         TClass* cls = dynamic_cast<TClass*>(cdi->GetClass());
+         if (cls) {
+            // show box with lib, include
+            // needs to go first to allow title on the left
+            TString sInclude;
+            TString sLib;
+            const char* lib=cls->GetSharedLibs();
+            GetHtml()->GetPathDefinition().GetIncludeAs(cls, sInclude);
+            if (lib) {
+               char* libDup=StrDup(lib);
+               char* libDupSpace=strchr(libDup,' ');
+               if (libDupSpace) *libDupSpace = 0;
+               char* libDupEnd=libDup+strlen(libDup);
+               while (libDupEnd!=libDup)
+                  if (*(--libDupEnd)=='.') {
+                     *libDupEnd=0;
+                     break;
+                  }
+               sLib = libDup;
+               delete[] libDup;
+            }
+            outfile << "<script type=\"text/javascript\">WriteFollowPageBox('" 
+                    << sTitle << "','" << sLib << "','" << sInclude << "');</script>" << endl;
+         }
+
+         TString modulename;
+         fHtml->GetModuleNameForClass(modulename, cls);
+         TModuleDocInfo* module = (TModuleDocInfo*) fHtml->GetListOfModules()->FindObject(modulename);
+         WriteTopLinks(outfile, module, dt->GetName());
+
+         outfile << "</div><div class=\"dropshadow\"><div class=\"withshadow\">";
+         outfile << "<h1>" << sTitle << "</h1>" << endl
+            << "<div class=\"classdescr\">" << endl;
+
+         outfile << dtName << " is a typedef to ";
+         parser.DecorateKeywords(outfile, cls->GetName());
+         outfile << endl
+            << "</div>" << std::endl 
+            << "</div></div><div style=\"clear:both;\"></div>" << std::endl;
+
+         // the typedef isn't a data member, but the CSS is applicable nevertheless
+         outfile << endl << "<div id=\"datamembers\">" << endl
+            << "<table class=\"data\" cellspacing=\"0\">" << endl;
+         outfile << "<tr class=\"data";
+         outfile << "\"><td class=\"datatype\">typedef ";
+         parser.DecorateKeywords(outfile, dt->GetFullTypeName());
+         outfile << "</td><td class=\"dataname\">";
+         ReplaceSpecialChars(outfile, dt->GetName());
+         if (dt->GetTitle() && dt->GetTitle()[0]) {
+            outfile << "</td><td class=\"datadesc\">";
+            ReplaceSpecialChars(outfile, dt->GetTitle());
+         } else outfile << "</td><td>";
+         outfile << "</td></tr>" << endl
+            << "</table></div>" << endl;
+
+         // write footer
+         WriteHtmlFooter(outfile);
+
+      }
+   }
 }
 
 //______________________________________________________________________________
@@ -905,16 +1040,20 @@ void TDocOutput::CreateTypeIndex()
    typesList << "<dl><dd>" << endl;
 
    // make loop on data types
-   TDataType *type;
-   TIter nextType(gROOT->GetListOfTypes());
-
    std::list<std::string> typeNames;
-   while ((type = (TDataType *) nextType()))
-      // no templates ('<' and '>'), no idea why the '(' is in here...
-      if (*type->GetTitle() && !strchr(type->GetName(), '(')
-          && !( strchr(type->GetName(), '<') && strchr(type->GetName(),'>'))
-          && type->GetName())
+
+   {
+      TDataType *type;
+      TIter nextType(gROOT->GetListOfTypes());
+
+      while ((type = (TDataType *) nextType()))
+         // no templates ('<' and '>'), no idea why the '(' is in here...
+         if (*type->GetTitle() && !strchr(type->GetName(), '(')
+             && !( strchr(type->GetName(), '<') && strchr(type->GetName(),'>'))
+             && type->GetName())
             typeNames.push_back(type->GetName());
+   }
+
    sort_strlist_stricmp(typeNames);
 
    std::vector<std::string> indexChars;
@@ -932,16 +1071,15 @@ void TDocOutput::CreateTypeIndex()
 
    typesList << "<ul id=\"indx\">" << endl;
 
-   nextType.Reset();
    int idx = 0;
    UInt_t currentIndexEntry = 0;
 
-   for (std::list<std::string>::iterator iTypeName = typeNames.begin(); 
+   for (std::list<std::string>::iterator iTypeName = typeNames.begin();
       iTypeName != typeNames.end(); ++iTypeName) {
       TDataType* type = gROOT->GetType(iTypeName->c_str(), kFALSE);
       typesList << "<li class=\"idxl" << idx%2 << "\">";
       if (currentIndexEntry < indexChars.size()
-         && !strncmp(indexChars[currentIndexEntry].c_str(), iTypeName->c_str(), 
+         && !strncmp(indexChars[currentIndexEntry].c_str(), iTypeName->c_str(),
                      indexChars[currentIndexEntry].length()))
          typesList << "<a name=\"idx" << currentIndexEntry++ << "\"></a>" << endl;
       typesList << "<a name=\"";
@@ -1094,6 +1232,7 @@ void TDocOutput::FixupAuthorSourceInfo(TString& authors)
             namePart.Strip(TString::kBoth);
             if (!namePart.Length())
                continue;
+            if (isdigit(namePart[0])) continue; //likely a date
             if (!firstNamePart)
                authors += '+';
             firstNamePart = kFALSE;
@@ -1128,11 +1267,9 @@ Bool_t TDocOutput::IsModified(TClass * classPtr, EFileType type)
    switch (type) {
    case kSource:
       if (classPtr->GetImplFileLine()) {
-         sourceFile = fHtml->GetImplFileName(classPtr);
-         fHtml->GetSourceFileName(sourceFile);
+         fHtml->GetImplFileName(classPtr, kTRUE, sourceFile);
       } else {
-         sourceFile = fHtml->GetDeclFileName(classPtr);
-         fHtml->GetSourceFileName(sourceFile);
+         fHtml->GetDeclFileName(classPtr, kTRUE, sourceFile);
       }
       dir = "src";
       gSystem->PrependPathName(fHtml->GetOutputDir(), dir);
@@ -1146,16 +1283,14 @@ Bool_t TDocOutput::IsModified(TClass * classPtr, EFileType type)
       break;
 
    case kInclude:
-      filename = fHtml->GetDeclFileName(classPtr);
-      sourceFile = filename;
-      fHtml->GetSourceFileName(sourceFile);
-      filename = fHtml->GetFileName(filename);
+      fHtml->GetDeclFileName(classPtr, kFALSE, filename);
+      filename = gSystem->BaseName(filename);
+      fHtml->GetDeclFileName(classPtr, kTRUE, sourceFile);
       gSystem->PrependPathName(fHtml->GetOutputDir(), filename);
       break;
 
    case kTree:
-      sourceFile = fHtml->GetDeclFileName(classPtr);
-      fHtml->GetSourceFileName(sourceFile);
+      fHtml->GetDeclFileName(classPtr, kTRUE, sourceFile);
       NameSpace2FileName(classname);
       gSystem->PrependPathName(fHtml->GetOutputDir(), classname);
       filename = classname;
@@ -1164,11 +1299,9 @@ Bool_t TDocOutput::IsModified(TClass * classPtr, EFileType type)
 
    case kDoc:
       if (classPtr->GetImplFileLine()) {
-         sourceFile = fHtml->GetImplFileName(classPtr);
-         fHtml->GetSourceFileName(sourceFile);
+         fHtml->GetImplFileName(classPtr, kTRUE, sourceFile);
       } else {
-         sourceFile = fHtml->GetDeclFileName(classPtr);
-         fHtml->GetSourceFileName(sourceFile);
+         fHtml->GetDeclFileName(classPtr, kTRUE, sourceFile);
       }
       filename = classname;
       NameSpace2FileName(filename);
@@ -1201,18 +1334,18 @@ void TDocOutput::NameSpace2FileName(TString& name)
    // Replace "<", ">", " ", ",", "~", "=" in name by "_"
    const char* replaceWhat = ":<> ,~=";
    for (Ssiz_t i=0; i < name.Length(); ++i)
-      if (strchr(replaceWhat, name[i])) 
+      if (strchr(replaceWhat, name[i]))
          name[i] = '_';
 }
 
 //______________________________________________________________________________
-void TDocOutput::ProcessDocInDir(std::ostream& out, const char* indir, 
+void TDocOutput::ProcessDocInDir(std::ostream& out, const char* indir,
                                  const char* outdir, const char* linkdir)
 {
    // Write links to files indir/*.txt, indir/*.html (non-recursive) to out.
    // If one of the files is called "index.{html,txt}" it will be
-   // included in out (instead of copying it to outdir and generating a link 
-   // to linkdir). txt files are passed through Convert(). 
+   // included in out (instead of copying it to outdir and generating a link
+   // to linkdir). txt files are passed through Convert().
    // The files' links are sorted alphabetically.
 
    R__LOCKGUARD(GetHtml()->GetMakeClassMutex());
@@ -1238,7 +1371,7 @@ void TDocOutput::ProcessDocInDir(std::ostream& out, const char* indir,
             if (in) {
                out << "<pre>"; // this is what e.g. the html directive expects
                TDocParser parser(*this);
-               parser.Convert(out, in, "../");
+               parser.Convert(out, in, "./");
                out << "</pre>";
             }
          } else if (filename.EndsWith(".html", TString::kIgnoreCase)) {
@@ -1258,7 +1391,7 @@ void TDocOutput::ProcessDocInDir(std::ostream& out, const char* indir,
    for (std::list<std::string>::const_iterator iFile = files.begin();
       iFile != files.end(); ++iFile) {
       TString filename(iFile->c_str());
-      if (!filename.EndsWith(".txt", TString::kIgnoreCase) 
+      if (!filename.EndsWith(".txt", TString::kIgnoreCase)
          && !filename.EndsWith(".html", TString::kIgnoreCase))
          continue;
 
@@ -1274,13 +1407,13 @@ void TDocOutput::ProcessDocInDir(std::ostream& out, const char* indir,
          // convert first
          outfile.Remove(outfile.Length()-3, 3);
          outfile += "html";
-         std::ifstream in(filename);
-         std::ofstream out(outfile);
-         if (in && out) {
-            out << "<pre>"; // this is what e.g. the html directive expects
+         std::ifstream inFurther(filename);
+         std::ofstream outFurther(outfile);
+         if (inFurther && outFurther) {
+            outFurther << "<pre>"; // this is what e.g. the html directive expects
             TDocParser parser(*this);
-            parser.Convert(out, in, "../");
-            out << "</pre>";
+            parser.Convert(outFurther, inFurther, "../");
+            outFurther << "</pre>";
          }
       } else {
          if (gSystem->CopyFile(filename, outfile, kTRUE) == -1)
@@ -1391,10 +1524,23 @@ void TDocOutput::ReferenceEntity(TSubString& str, TDataType* entity, const char*
    //  str.Begin():  2
    //  str.Length(): 30
 
-   TString link("ListOfTypes.html#");
    TString mangledEntity(entity->GetName());
    NameSpace2FileName(mangledEntity);
-   link += mangledEntity;
+
+   TString link;
+   TClassDocInfo* cdi = 0;
+   bool isClassTypedef = entity->GetType() == -1;
+   if (isClassTypedef)
+      /* is class/ struct / union */
+      isClassTypedef = isClassTypedef && (entity->Property() & 7);
+   if (isClassTypedef)
+      cdi = (TClassDocInfo*) GetHtml()->GetListOfClasses()->FindObject(entity->GetFullTypeName());
+   if (cdi) {
+      link = mangledEntity + ".html";
+   } else {
+      link = "ListOfTypes.html#";
+      link += mangledEntity;
+   }
 
    if (comment && !strcmp(comment, entity->GetName()))
       comment = "";
@@ -1461,13 +1607,13 @@ Bool_t TDocOutput::ReferenceIsRelative(const char* reference) const
    // be prependen by relative paths. For HTML, check that it doesn't start
    // with "http://" or "https://"
 
-   return !reference || 
+   return !reference ||
       strncmp(reference, "http", 4) ||
-      strncmp(reference + 4, "://", 3) && strncmp(reference + 4, "s://", 4);
+      (strncmp(reference + 4, "://", 3) && strncmp(reference + 4, "s://", 4));
 }
 
 //______________________________________________________________________________
-const char* TDocOutput::ReplaceSpecialChars(const char c)
+const char* TDocOutput::ReplaceSpecialChars(char c)
 {
 // Replace ampersand, less-than and greater-than character, writing to out.
 // If 0 is returned, no replacement needs to be done.
@@ -1498,7 +1644,7 @@ void TDocOutput::ReplaceSpecialChars(TString& text, Ssiz_t &pos)
 //
 //
 // Input: text - text where replacement will happen,
-//        pos  - index of char to be replaced; will point to next char to be 
+//        pos  - index of char to be replaced; will point to next char to be
 //               replaced when function returns
 //
 
@@ -1544,12 +1690,12 @@ void TDocOutput::ReplaceSpecialChars(std::ostream& out, const char *string)
 }
 
 //______________________________________________________________________________
-Bool_t TDocOutput::RunDot(const char* filename, std::ostream* outMap /* =0 */, 
+Bool_t TDocOutput::RunDot(const char* filename, std::ostream* outMap /* =0 */,
                           EGraphvizTool gvwhat /*= kDot*/) {
 // Run filename".dot", creating filename".gif", and - if outMap is !=0,
 // filename".map", which gets then included literally into outMap.
 
-   if (!fHtml->HaveDot()) 
+   if (!fHtml->HaveDot())
       return kFALSE;
 
    TString runDot;
@@ -1583,7 +1729,7 @@ Bool_t TDocOutput::RunDot(const char* filename, std::ostream* outMap /* =0 */,
       std::string line;
       std::getline(inmap, line);
       if (inmap && !inmap.eof()) {
-         *outMap << "<map name=\"Map" << gSystem->BaseName(filename) 
+         *outMap << "<map name=\"Map" << gSystem->BaseName(filename)
             << "\" id=\"Map" << gSystem->BaseName(filename) << "\">" << endl;
          while (inmap && !inmap.eof()) {
             if (line.compare(0, 6, "<area ") == 0) {
@@ -1612,7 +1758,7 @@ Bool_t TDocOutput::RunDot(const char* filename, std::ostream* outMap /* =0 */,
 
 
 //______________________________________________________________________________
-void TDocOutput::WriteHtmlHeader(std::ostream& out, const char *titleNoSpecial, 
+void TDocOutput::WriteHtmlHeader(std::ostream& out, const char *titleNoSpecial,
                             const char* dir /*=""*/, TClass *cls /*=0*/,
                             const char* header)
 {
@@ -1627,6 +1773,11 @@ void TDocOutput::WriteHtmlHeader(std::ostream& out, const char *titleNoSpecial,
               "Can't open html header file %s\n", header);
       return;
    }
+
+   TString declFileName;
+   if (cls) fHtml->GetDeclFileName(cls, kFALSE, declFileName);
+   TString implFileName;
+   if (cls) fHtml->GetImplFileName(cls, kFALSE, implFileName);
 
    const TString& charset = GetHtml()->GetCharset();
    TDatime date;
@@ -1656,8 +1807,8 @@ void TDocOutput::WriteHtmlHeader(std::ostream& out, const char *titleNoSpecial,
 
          if (cls) {
             txt.ReplaceAll("%CLASS%", cls->GetName());
-            txt.ReplaceAll("%INCFILE%", fHtml->GetDeclFileName(cls));
-            txt.ReplaceAll("%SRCFILE%", fHtml->GetImplFileName(cls));
+            txt.ReplaceAll("%INCFILE%", declFileName);
+            txt.ReplaceAll("%SRCFILE%", implFileName);
          }
 
          out << txt << endl;
@@ -1666,7 +1817,7 @@ void TDocOutput::WriteHtmlHeader(std::ostream& out, const char *titleNoSpecial,
 }
 
 //______________________________________________________________________________
-void TDocOutput::WriteHtmlHeader(std::ostream& out, const char *title, 
+void TDocOutput::WriteHtmlHeader(std::ostream& out, const char *title,
                             const char* dir /*=""*/, TClass *cls/*=0*/)
 {
 // Write HTML header
@@ -1675,17 +1826,17 @@ void TDocOutput::WriteHtmlHeader(std::ostream& out, const char *title,
 // Input: out   - output file stream
 //        title - title for the HTML page
 //        cls   - current class
-//        dir   - relative directory to reach the top 
+//        dir   - relative directory to reach the top
 //                ("" for html doc, "../" for src/*cxx.html etc)
 //
 // evaluates the Root.Html.Header setting:
 // * if not set, the standard header is written. (ROOT)
-// * if set, and ends with a "+", the standard header is written and this file 
+// * if set, and ends with a "+", the standard header is written and this file
 //   included afterwards. (ROOT, USER)
-// * if set but doesn't end on "+" the file specified will be written instead 
+// * if set but doesn't end on "+" the file specified will be written instead
 //   of the standard header (USER)
 //
-// Any occurrence of "%TITLE%" (without the quotation marks) in the user 
+// Any occurrence of "%TITLE%" (without the quotation marks) in the user
 // provided header file will be replaced by the value of this method's
 // parameter "title" before written to the output file. %CLASS% is replaced by
 // the class name, %INCFILE% by the header file name as given by
@@ -1723,7 +1874,7 @@ void TDocOutput::WriteHtmlFooter(std::ostream& out, const char* /*dir*/,
 //
 // Internal method invoked by the overload
 
-   static const char* templateSITags[TDocParser::kNumSourceInfos] = { "%UPDATE%", "%AUTHOR%", "%COPYRIGHT%"};
+   static const char* templateSITags[TDocParser::kNumSourceInfos] = { "%UPDATE%", "%AUTHOR%", "%COPYRIGHT%", "%CHANGED%", "%GENERATED%"};
 
    TString datimeString;
    if (!lastUpdate || !strlen(lastUpdate)) {
@@ -1731,7 +1882,10 @@ void TDocOutput::WriteHtmlFooter(std::ostream& out, const char* /*dir*/,
       datimeString = date.AsString();
       lastUpdate = datimeString.Data();
    }
-   const char* siValues[TDocParser::kNumSourceInfos] = { lastUpdate, author, copyright };
+   TString today;
+   TDatime dtToday;
+   today.Form("%d-%02d-%02d %02d:%02d", dtToday.GetYear(), dtToday.GetMonth(), dtToday.GetDay(), dtToday.GetHour(), dtToday.GetMinute());
+   const char* siValues[TDocParser::kNumSourceInfos] = { lastUpdate, author, copyright, lastUpdate, today };
 
    ifstream addFooterFile(footer);
 
@@ -1753,11 +1907,12 @@ void TDocOutput::WriteHtmlFooter(std::ostream& out, const char* /*dir*/,
 
       for (Int_t siTag = 0; siTag < (Int_t) TDocParser::kNumSourceInfos; ++siTag) {
          Ssiz_t siPos = line.Index(templateSITags[siTag]);
-         if (siPos != kNPOS)
+         if (siPos != kNPOS) {
             if (siValues[siTag] && siValues[siTag][0])
                line.Replace(siPos, strlen(templateSITags[siTag]), siValues[siTag]);
             else
                line = ""; // skip e.g. %AUTHOR% lines if no author is set
+         }
       }
 
       out << line << std::endl;
@@ -1781,11 +1936,11 @@ void TDocOutput::WriteHtmlFooter(std::ostream& out, const char *dir,
 //        author     - author's name
 //        copyright  - copyright note
 //
-// Allows optional user provided footer to be written. Root.Html.Footer holds 
+// Allows optional user provided footer to be written. Root.Html.Footer holds
 // the file name for this footer. For details see THtml::WriteHtmlHeader (here,
-// the "+" means the user's footer is written in front of Root's!) Occurences 
-// of %AUTHOR%, %UPDATE%, and %COPYRIGHT% in the user's file are replaced by 
-// their corresponding values (author, lastUpdate, and copyright) before 
+// the "+" means the user's footer is written in front of Root's!) Occurences
+// of %AUTHOR%, %CHANGED%, %GENERATED%, and %COPYRIGHT% in the user's file are replaced by
+// their corresponding values (author, lastUpdate, today, and copyright) before
 // written to out.
 // If no author is set (author == "", e.g. for ClassIndex.html") skip the whole
 // line of the footer template containing %AUTHOR%. Accordingly for %COPYRIGHT%.
@@ -1811,17 +1966,53 @@ void TDocOutput::WriteHtmlFooter(std::ostream& out, const char *dir,
 //______________________________________________________________________________
 void TDocOutput::WriteModuleLinks(std::ostream& out)
 {
-   // Create a dov containing links to all modules
+   // Create a div containing links to all topmost modules
 
    if (fHtml->GetListOfModules()->GetSize()) {
       out << "<div id=\"indxModules\"><h4>Modules</h4>" << endl;
       // find index chars
+      fHtml->SortListOfModules();
       TIter iModule(fHtml->GetListOfModules());
       TModuleDocInfo* module = 0;
-      while ((module = (TModuleDocInfo*) iModule()))
-         if (module->IsSelected())
-            out << "<a href=\"" << module->GetName() << "_Index.html\">" 
-                      << module->GetName() << "</a>" << endl;
+      while ((module = (TModuleDocInfo*) iModule())) {
+         if (!module->GetName() || strchr(module->GetName(), '/'))
+            continue;
+         if (module->IsSelected()) {
+            TString name(module->GetName());
+            name.ToUpper();
+            out << "<a href=\"" << name << "_Index.html\">"
+                << name << "</a>" << endl;
+         }
+      }
+      out<< "</div><br />" << endl;
+   }
+}
+
+//______________________________________________________________________________
+void TDocOutput::WriteModuleLinks(std::ostream& out, TModuleDocInfo* super)
+{
+   // Create a div containing links to all modules
+
+   if (super->GetSub().GetSize()) {
+      TString superName(super->GetName());
+      superName.ToUpper();
+      out << "<div id=\"indxModules\"><h4>" << superName << " Modules</h4>" << endl;
+      // find index chars
+      super->GetSub().Sort();
+      TIter iModule(&super->GetSub());
+      TModuleDocInfo* module = 0;
+      while ((module = (TModuleDocInfo*) iModule())) {
+         if (module->IsSelected()) {
+            TString name(module->GetName());
+            name.ToUpper();
+            TString link(name);
+            link.ReplaceAll("/", "_");
+            Ssiz_t posSlash = name.Last('/');
+            if (posSlash != kNPOS)
+               name.Remove(0, posSlash + 1);
+            out << "<a href=\"" << link << "_Index.html\">" << name << "</a>" << endl;
+         }
+      }
       out<< "</div><br />" << endl;
    }
 }
@@ -1832,25 +2023,98 @@ void TDocOutput::WriteSearch(std::ostream& out)
    // Write a search link or a search box, based on THtml::GetSearchStemURL()
    // and THtml::GetSearchEngine(). The first one is preferred.
 
-   // e.g. searchCmd = "http://www.google.com/search?q=%s+site%3A%u";
+   // e.g. searchCmd = "http://www.google.com/search?q=%s+site%3A%u+-site%3A%u%2Fsrc%2F+-site%3A%u%2Fexamples%2F";
    const TString& searchCmd = GetHtml()->GetSearchStemURL();
+   const TString& searchEngine = GetHtml()->GetSearchEngine();
+
+   if (!searchCmd.Length() && !searchEngine.Length())
+      return;
+
    if (searchCmd.Length()) {
+      TUrl url(searchCmd);
+      TString serverName(url.GetHost());
+      if (serverName.Length()) {
+         serverName.Prepend(" title=\"");
+         serverName += "\" ";
+      }
       // create search input
       out << "<script type=\"text/javascript\">" << endl
-         << "function onSearch() {" << endl
-         << "var s='" << searchCmd <<"';" << endl
-         << "var ref=String(document.location.href).replace(/https?:\\/\\//,'').replace(/\\/[^\\/]*$/,'').replace(/\\//g,'%2F');" << endl
-         << "window.location.href=s.replace(/%u/ig,ref).replace(/%s/ig,escape(document.searchform.t.value));" << endl
-         << "return false;}" << endl
-         << "</script><form action=\"javascript:onSearch();\" id=\"searchform\" name=\"searchform\" onsubmit=\"return onSearch()\">" << endl
-         << "<input name=\"t\" value=\"Search documentation...\"  onfocus=\"if (document.searchform.t.value=='Search documentation...') document.searchform.t.value='';\"></input>" << endl
-         << "<button type=\"submit\">Search</button></form>" << endl;
-      return;
+          << "function onSearch() {" << endl
+          << "var s='" << searchCmd <<"';" << endl
+          << "var ref=String(document.location.href).replace(/https?:\\/\\//,'').replace(/\\/[^\\/]*$/,'').replace(/\\//g,'%2F');" << endl
+          << "window.location.href=s.replace(/%u/ig,ref).replace(/%s/ig,escape(document.searchform.t.value));" << endl
+          << "return false;}" << endl
+          << "</script>" << endl
+          << "<a class=\"descrheadentry\"> </a>" << endl
+          << "<form id=\"searchform\" name=\"searchform\" onsubmit=\"return onSearch()\" action=\"javascript:onSearch();\" method=\"post\">" << endl
+          << "<input name=\"t\" size=\"30\" value=\"Search documentation...\" onfocus=\"if (document.searchform.t.value=='Search documentation...') document.searchform.t.value='';\"></input></form>" << endl
+          << "<a id=\"searchlink\" " << serverName << " href=\"javascript:onSearch();\" onclick=\"return onSearch()\">Search</a>" << endl;
+   } else if (searchEngine.Length())
+      // create link to search engine page
+      out << "<a class=\"descrheadentry\" href=\"" << searchEngine
+          << "\">Search the Class Reference Guide</a>" << endl;
+}
+
+//______________________________________________________________________________
+void TDocOutput::WriteTopLinks(std::ostream& out, TModuleDocInfo* module, const char* classname)
+{
+   // Write the first part of the links shown ontop of each doc page;
+   // two <div>s have to be closed by caller so additional items can still
+   // be added.
+
+   out << "<div id=\"toplinks\">" << endl;
+
+   // make a link to the description
+   out << "<div class=\"descrhead\">" << endl
+      << "<span class=\"descrtitle\">Location:</span>" << endl;
+   const char *productName = fHtml->GetProductName();
+   out << "<a class=\"descrheadentry\" href=\"index.html\">" << productName << "</a>" << endl;
+
+   if (module) {
+      TString modulename(module->GetName());
+      modulename.ToUpper();
+      TString modulePart;
+      TString modulePath;
+      Ssiz_t pos = 0;
+      while (modulename.Tokenize(modulePart, pos, "/")) {
+         if (pos == kNPOS && !classname)
+            // we are documenting the module itself, no need to link it:
+            break;
+         if (modulePath.Length()) modulePath += "_";
+         modulePath += modulePart;
+         out << " &#187; <a class=\"descrheadentry\" href=\"./" << modulePath << "_Index.html\">" << modulePart << "</a>" << endl;
+      }
    }
 
-   const TString& searchEngine = GetHtml()->GetSearchEngine();
-   if (searchEngine.Length())
-      // create link to search engine page
-      out << "<h2><a href=\"" << searchEngine
-          << "\">Search the Class Reference Guide</a></h2>" << endl;
+   TString entityName;
+   if (classname) entityName = classname;
+   else if (module) {
+      entityName = module->GetName();
+      Ssiz_t posSlash = entityName.Last('/');
+      if (posSlash != kNPOS)
+         entityName.Remove(0, posSlash + 1);
+      entityName.ToUpper();
+   }
+   if (entityName.Length()) {
+      out << " &#187; <a class=\"descrheadentry\" href=\"#TopOfPage\">";
+      ReplaceSpecialChars(out, entityName);
+      out << "</a>" << endl;
+   }
+   out << "</div>" << endl;
+
+   out << "<div class=\"descrhead\">" << endl
+      << "<span class=\"descrtitle\">Quick Links:</span>" << endl;
+
+   // link to the user home page (if exist)
+   const char* userHomePage = GetHtml()->GetHomepage();
+   if (productName && !strcmp(productName, "ROOT"))
+      userHomePage = "";
+   if (userHomePage && *userHomePage)
+      out << "<a class=\"descrheadentry\" href=\"" << userHomePage << "\">" << productName << "</a>" << endl;
+   out << "<a class=\"descrheadentry\" href=\"http://root.cern.ch\">ROOT Homepage</a>" << endl
+      << "<a class=\"descrheadentry\" href=\"./ClassIndex.html\">Class Index</a>" << endl
+      << "<a class=\"descrheadentry\" href=\"./ClassHierarchy.html\">Class Hierarchy</a>" << endl;
+   WriteSearch(out);
+   out << "</div>" << endl;
+
 }
