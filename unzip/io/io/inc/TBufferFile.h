@@ -43,6 +43,7 @@ class TStreamerInfo;
 class TStreamerElement;
 class TClass;
 class TExMap;
+class TMemPool;
 
 class TBufferFile : public TBuffer {
 
@@ -200,7 +201,7 @@ public:
    virtual   void     ReadFastArrayFloat16(Float_t  *f, Int_t n, TStreamerElement *ele=0);
    virtual   void     ReadFastArrayDouble32(Double_t  *d, Int_t n, TStreamerElement *ele=0);
    virtual   void     ReadFastArray(void  *start , const TClass *cl, Int_t n=1, TMemberStreamer *s=0);
-   virtual   void     ReadFastArray(void **startp, const TClass *cl, Int_t n=1, Bool_t isPreAlloc=kFALSE, TMemberStreamer *s=0);
+   virtual   void     ReadFastArray(void **startp, const TClass *cl, Int_t n=1, Bool_t isPreAlloc=kFALSE, TMemberStreamer *s=0, TMemPool *mempool=0);
 
    virtual   void     WriteArray(const Bool_t    *b, Int_t n);
    virtual   void     WriteArray(const Char_t    *c, Int_t n);

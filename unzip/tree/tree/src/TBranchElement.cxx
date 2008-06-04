@@ -41,6 +41,7 @@
 #include "TVirtualCollectionProxy.h"
 #include "TVirtualPad.h"
 #include "TBranchSTL.h"
+#include "TMemPool.h"
 
 ClassImp(TBranchElement)
 
@@ -1528,6 +1529,8 @@ void TBranchElement::InitInfo()
          fInit = kTRUE;
       }
    }
+   // Use the mempool per branch 
+   fInfo->SetMemPool(fMemPool);
 }
 
 //______________________________________________________________________________
@@ -3513,11 +3516,14 @@ void TBranchElement::SetAddress(void* addr)
       } else {
          // -- Caller did not provide an i/o buffer for us to use, we must make one for ourselves.
          if (clOfBranch) {
-            if (!pp) {
+            if (!pp && !fMemPool) {
                // -- Caller wants us to own the object.
+               // and we are not using the memory pool either
                SetBit(kDeleteObject);
             }
-            fObject = (char*) clOfBranch->New();
+            if(!fMemPool)  fObject = (char*) clOfBranch->New();
+            else           fObject = (char*) clOfBranch->New(fMemPool->GetMem(clOfBranch->Size()));
+
             if (pp) {
                *pp = fObject;
             } else {

@@ -93,11 +93,13 @@
 #include "TStopwatch.h"
 
 #include "Event.h"
-
+#include <mcheck.h>
 
 //______________________________________________________________________________
 int main(int argc, char **argv)
 {
+  //mtrace();
+
    Int_t nevent = 400;     // by default create 400 events
    Int_t comp   = 1;       // by default file is compressed
    Int_t split  = 1;       // by default, split Event in sub branches
@@ -156,7 +158,7 @@ int main(int argc, char **argv)
       tree = (TTree*)hfile->Get("T");
       tree->SetCacheSize(10000000); //this is the default value: 10 MBytes
       TBranch *branch = tree->GetBranch("event");
-      branch->SetAddress(&event);
+      branch->SetAddress(event);
       Int_t nentries = (Int_t)tree->GetEntries();
       nevent = TMath::Max(nevent,nentries);
       if (read == 1) {  //read sequential
@@ -254,5 +256,7 @@ int main(int argc, char **argv)
       //printf("file compression factor = %f\n",hfile.GetCompressionFactor());
    }
    hfile->Close();
+   delete hfile;
+   //delete event;
    return 0;
 }

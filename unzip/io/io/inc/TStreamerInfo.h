@@ -188,6 +188,7 @@ public:
    Int_t               GetNumber()  const {return fNumber;}
    Int_t              *GetLengths() const {return fLength;}
    ULong_t            *GetMethods() const {return fMethod;}
+   TMemPool           *GetMemPool() const {return fMemPool;}
    Int_t              *GetNewTypes() const {return fNewType;}
    Int_t               GetOffset(const char *) const;
    Int_t              *GetOffsets() const {return fOffset;}
@@ -241,6 +242,7 @@ public:
    void                SetCheckSum(UInt_t checksum) {fCheckSum = checksum;}
    void                SetClass(TClass *cl) {fClass = cl;}
    void                SetClassVersion(Int_t vers) {fClassVersion=vers;}
+   void                SetMemPool(TMemPool* mem) { fMemPool = mem;}
    void                TagFile(TFile *fFile);
    Int_t               WriteBuffer(TBuffer &b, char *pointer, Int_t first);
    Int_t               WriteBufferClones(TBuffer &b, TClonesArray *clones, Int_t nc, Int_t first, Int_t eoffset);

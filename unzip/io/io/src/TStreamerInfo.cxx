@@ -96,7 +96,7 @@ TStreamerInfo::TStreamerInfo()
    fOptimized = kFALSE;
    fOldVersion = Class()->GetClassVersion();
    fIsBuilt  = kFALSE;
-   fMemPool = new TMemPool();
+   fMemPool = 0;
 }
 
 //______________________________________________________________________________
@@ -127,7 +127,7 @@ TStreamerInfo::TStreamerInfo(TClass *cl, const char *info)
 
    if (info) BuildUserInfo(info);
    
-   fMemPool = new TMemPool();
+   fMemPool = 0;
 }
 
 //______________________________________________________________________________
@@ -199,9 +199,6 @@ TStreamerInfo::~TStreamerInfo()
    if (!fElements) return;
    fElements->Delete();
    delete fElements; fElements=0;
-
-   fMemPool->Print();
-   delete fMemPool;
 }
 
 //______________________________________________________________________________

@@ -32,6 +32,7 @@
 #include "TStreamer.h"
 #include "TStreamerInfo.h"
 #include "TStreamerElement.h"
+#include "TMemPool.h"
 
 #if (defined(__linux) || defined(__APPLE__)) && defined(__i386__) && \
      defined(__GNUC__)
@@ -1415,7 +1416,8 @@ void TBufferFile::ReadFastArray(void  *start, const TClass *cl, Int_t n,
 
 //______________________________________________________________________________
 void TBufferFile::ReadFastArray(void **start, const TClass *cl, Int_t n,
-                                Bool_t isPreAlloc, TMemberStreamer *streamer)
+                                Bool_t isPreAlloc, TMemberStreamer *streamer,
+                                TMemPool *mempool)
 {
    // Read an array of 'n' objects from the I/O buffer.
    // The objects read are stored starting at the address '*start'
@@ -1466,7 +1468,12 @@ void TBufferFile::ReadFastArray(void **start, const TClass *cl, Int_t n,
    } else {	//case //-> in comment
 
       for (Int_t j=0; j<n; j++){
-         if (!start[j]) start[j] = ((TClass*)cl)->New();
+         if (!start[j]) {
+            if (!mempool)
+               start[j] = ((TClass*)cl)->New();
+            else
+               start[j] = ((TClass*)cl)->New(mempool->GetMem(cl->Size()));
+	 }
          ((TClass*)cl)->Streamer(start[j],*this);
       }
 
