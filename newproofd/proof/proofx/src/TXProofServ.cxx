@@ -374,7 +374,7 @@ Int_t TXProofServ::CreateServer()
                                                           fConfFile.Data(),
                                                           fConfDir.Data(),
                                                           fLogLevel,
-                                                          fSessionTag.Data()));
+                                                          fTopSessionTag.Data()));
       if (!fProof || !fProof->IsValid()) {
          Error("CreateServer", "plugin for TProof could not be executed");
          delete fProof;
@@ -442,8 +442,12 @@ void TXProofServ::HandleUrgentData()
          }
 
          // Touch the admin path to show we are alive
-         if (fAdminPath.IsNull())
+         if (fAdminPath.IsNull()) {
             fAdminPath = gEnv->GetValue("ProofServ.AdminPath", "");
+            TString spid = Form(".%d", getpid());
+            if (!fAdminPath.IsNull() && !fAdminPath.EndsWith(spid))
+               fAdminPath += spid;
+         }
 
          if (!fAdminPath.IsNull()) {
             // Update file time stamps
@@ -595,12 +599,26 @@ Int_t TXProofServ::Setup()
    fWorkDir = gEnv->GetValue("ProofServ.Sandbox", kPROOF_WorkDir);
 
    // Get Session tag
-   if ((fSessionTag = gEnv->GetValue("ProofServ.SessionTag", "-1")) == "-1") {
+   if ((fTopSessionTag = gEnv->GetValue("ProofServ.SessionTag", "-1")) == "-1") {
       Error("Setup", "Session tag missing");
       return -1;
    }
+   fSessionTag = fTopSessionTag;
+   // Make sure the process ID is in the tag
+   TString spid = Form("-%d", gSystem->GetPid());
+   if (!fSessionTag.EndsWith(spid)) {
+      Int_t nd = 0;
+      if ((nd = fSessionTag.CountChar('-')) == 3) {
+         Int_t id = fSessionTag.Index("-", fSessionTag.Index("-") + 1);
+         if (id != kNPOS) fSessionTag.Remove(id);
+      } else if (nd != 1) {
+         Warning("Setup", "Wrong number of '-' in session tag: protocol error? %s", fSessionTag.Data());
+      }
+      // Add this process ID
+      fSessionTag += spid;
+   }
    if (gProofDebugLevel > 0)
-      Info("Setup", "session tag is %s", fSessionTag.Data());
+      Info("Setup", "session tags: %s, %s", fTopSessionTag.Data(), fSessionTag.Data());
 
    // Get Session dir (sandbox)
    if ((fSessionDir = gEnv->GetValue("ProofServ.SessionDir", "-1")) == "-1") {
@@ -977,7 +995,7 @@ Int_t TXProofServ::LockSession(const char *sessiontag, TProofLockPath **lck)
    // unlocked via UnlockQueryFile(fid).
 
    // We do not need to lock our own session
-   if (strstr(sessiontag, fSessionTag))
+   if (strstr(sessiontag, fTopSessionTag))
       return 0;
 
    if (!lck) {
@@ -1012,7 +1030,7 @@ Int_t TXProofServ::LockSession(const char *sessiontag, TProofLockPath **lck)
 
    // Lock the query lock file
    TString qlock = fQueryLock->GetName();
-   qlock.ReplaceAll(fSessionTag, stag);
+   qlock.ReplaceAll(fTopSessionTag, stag);
 
    if (!gSystem->AccessPathName(qlock)) {
       *lck = new TProofLockPath(qlock);
