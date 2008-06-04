@@ -1,5 +1,5 @@
 // @(#)root/tmva $Id$
-// Author: Andreas Hoecker, Xavier Prudent, Joerg Stelzer, Helge Voss, Kai Voss 
+// Author: Andreas Hoecker, Xavier Prudent, Joerg Stelzer, Helge Voss, Kai Voss
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate Data analysis       *
@@ -272,8 +272,8 @@ void TMVA::MethodFisher::GetMean( void )
    // compute mean values of variables in each sample, and the overall means
 
    // init vectors
-   Double_t *sumS = new Double_t[(const Int_t)GetNvar()];
-   Double_t *sumB = new Double_t[(const Int_t)GetNvar()];
+   Double_t *sumS = new Double_t[(Int_t)GetNvar()];
+   Double_t *sumB = new Double_t[(Int_t)GetNvar()];
    for (Int_t ivar=0; ivar<GetNvar(); ivar++) { sumS[ivar] = sumB[ivar] = 0; }   
 
    // initialize internal sum-of-weights variables
@@ -329,8 +329,6 @@ void TMVA::MethodFisher::GetCov_WithinClass( void )
    Double_t *xval    = new Double_t[nvar];
    memset(sumSig,0,nvar2*sizeof(Double_t));
    memset(sumBgd,0,nvar2*sizeof(Double_t));
-
-   Int_t k=0;
    
    // 'within class' covariance
    for (Int_t ievt=0; ievt<Data().GetNEvtTrain(); ievt++) {
@@ -351,7 +349,7 @@ void TMVA::MethodFisher::GetCov_WithinClass( void )
          }
       }
    }
-   k=0;
+   Int_t k=0;
    for (Int_t x=0; x<nvar; x++) {
       for (Int_t y=0; y<nvar; y++) {
          (*fWith)(x, y) = (sumSig[k] + sumBgd[k])/(fSumOfWeightsS + fSumOfWeightsB);
@@ -518,7 +516,7 @@ void TMVA::MethodFisher::PrintCoefficients( void )
    }
    vars  .push_back( "(offset)" );
    coeffs.push_back( fF0 );
-   TMVA::Tools::FormattedOutput( coeffs, vars, "Variable" , "Coefficient", fLogger );   
+   TMVA::gTools().FormattedOutput( coeffs, vars, "Variable" , "Coefficient", fLogger );   
 
    if (IsNormalised()) {
       fLogger << kINFO << "NOTE: You have chosen to use the \"Normalise\" booking option. Hence, the" << Endl;
@@ -609,7 +607,7 @@ void TMVA::MethodFisher::GetHelpMessage() const
    // typical length of text line: 
    //         "|--------------------------------------------------------------|"
    fLogger << Endl;
-   fLogger << Tools::Color("bold") << "--- Short description:" << Tools::Color("reset") << Endl;
+   fLogger << gTools().Color("bold") << "--- Short description:" << gTools().Color("reset") << Endl;
    fLogger << Endl;
    fLogger << "Fisher discriminants select events by distinguishing the mean " << Endl;
    fLogger << "values of the signal and background distributions in a trans- " << Endl;
@@ -626,7 +624,7 @@ void TMVA::MethodFisher::GetHelpMessage() const
    fLogger << "    determined: the covariance matrix of the discriminating" << Endl;
    fLogger << "    variable space.)" << Endl;
    fLogger << Endl;
-   fLogger << Tools::Color("bold") << "--- Performance optimisation:" << Tools::Color("reset") << Endl;
+   fLogger << gTools().Color("bold") << "--- Performance optimisation:" << gTools().Color("reset") << Endl;
    fLogger << Endl;
    fLogger << "Optimal performance for Fisher discriminants is obtained for " << Endl;
    fLogger << "linearly correlated Gaussian-distributed variables. Any deviation" << Endl;
@@ -641,7 +639,7 @@ void TMVA::MethodFisher::GetHelpMessage() const
    fLogger << "to no separation. The simple transformation x -> |x| renders this " << Endl;
    fLogger << "variable powerful for the use in a Fisher discriminant." << Endl;
    fLogger << Endl;
-   fLogger << Tools::Color("bold") << "--- Performance tuning via configuration options:" << Tools::Color("reset") << Endl;
+   fLogger << gTools().Color("bold") << "--- Performance tuning via configuration options:" << gTools().Color("reset") << Endl;
    fLogger << Endl;
    fLogger << "<None>" << Endl;
 }

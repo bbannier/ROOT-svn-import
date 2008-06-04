@@ -63,6 +63,9 @@ CINTCFLAGS   += -wd1572
 USE_PCH       = -pch-use
 CREATE_PCH    = -pch-create
 ICC_GE_9      = 10
+ifneq ($(ICC_MINOR),0)
+ICC_GE_101    = 101
+endif
 endif
 
 # OS version
@@ -75,9 +78,19 @@ LD            = icpc
 LDFLAGS       = $(OPT) $(EXTRA_LDFLAGS)
 FORCELINK     = no
 MACOSXTARGET := MACOSX_DEPLOYMENT_TARGET=10.$(MACOSX_MINOR)
+ifeq ($(subst $(MACOSX_MINOR),,1234),1234)
+ifeq ($(USECONFIG),FALSE)
+SOFLAGS       = $(OPT) -dynamiclib -single_module \
+                -undefined dynamic_lookup -install_name @rpath/
+else
+SOFLAGS       = $(OPT) -dynamiclib -single_module \
+                -undefined dynamic_lookup -install_name $(LIBDIR)/
+endif
+else
 ifeq ($(subst $(MACOSX_MINOR),,123),123)
 SOFLAGS       = $(OPT) -dynamiclib -single_module \
                 -undefined dynamic_lookup -install_name $(LIBDIR)/
+endif
 endif
 #ifeq ($(subst $(MACOSX_MINOR),,1234),1234)
 # not yet supported by icc 10.1 xilibtool
@@ -93,15 +106,22 @@ XLIBS         = $(XPMLIBDIR) $(XPMLIB) $(X11LIBDIR) -lXext -lX11
 CILIBS        = -lm $(EXTRA_LDFLAGS) -ldl
 
 # Fortran:
-F77           = ifort
-F77FLAGS      =
-F77LIBS       =
+F77           =
+ifeq ($(shell which ifort 2>&1 | sed -ne "s/.*\/ifort/ifort/p"),ifort)
+F77          := ifort
+F77FLAGS     :=
+F77LIBS      :=
 ifneq ($(shell find $(FINK_DIR)/bin -name gfortran),)
-F77LIBS      := $(shell gfortran -print-file-name=libgfortran.$(SOEXT))
+F77LIBS      := $(shell gfortran -print-file-name=libgfortran.dylib)
 F77LIBS      += $(shell gfortran -print-file-name=libgfortranbegin.a)
 endif
 F77LIBS      += -L$(shell which ifort | sed -e 's|bin/ifort|lib|') \
                 -lifcore
+endif
+
+ifneq ($(F77),)
+F77LD        := $(F77)
+endif
 
 # Precompiled headers:
 PCHSUPPORTED := $(ENABLEPCH)

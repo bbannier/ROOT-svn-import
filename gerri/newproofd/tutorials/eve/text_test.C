@@ -1,3 +1,6 @@
+// @(#)root/eve:$Id$
+// Author: Alja Mrak-Tadel
+
 TEveText* text_test()
 {
    gSystem->IgnoreSignal(kSigSegmentationViolation, true);
@@ -20,9 +23,10 @@ TEveText* text_test()
    gEve->AddElement(marker);
 
    TEveText* t = new TEveText("DADA");
-   t->PtrMainHMTrans()->RotateLF(1, 3, TMath::PiOver2());
-   t->SetMainColor((Color_t)(kOrange-2));
+   t->PtrMainTrans()->RotateLF(1, 3, TMath::PiOver2());
+   t->SetMainColor(kOrange-2);
    t->SetFontSize(64);
+   t->SetFontMode(TGLFont::kExtrude);
    t->SetLighting(kTRUE);
    gEve->AddElement(t);
 

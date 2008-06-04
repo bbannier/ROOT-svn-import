@@ -47,6 +47,17 @@ LDFLAGS       = $(OPT) -m64 -bind_at_load
 FORCELINK     = yes
 NEEDFINK      = yes
 MACOSXTARGET := MACOSX_DEPLOYMENT_TARGET=10.$(MACOSX_MINOR)
+ifeq ($(subst $(MACOSX_MINOR),,1234),1234)
+ifeq ($(USECONFIG),FALSE)
+SOFLAGS       = $(OPT) -dynamiclib -single_module \
+                -undefined dynamic_lookup -install_name @rpath/
+else
+SOFLAGS       = $(OPT) -dynamiclib -single_module \
+                -undefined dynamic_lookup -install_name $(LIBDIR)/
+endif
+FORCELINK     = no
+NEEDFINK      = no
+else
 ifeq ($(subst $(MACOSX_MINOR),,123),123)
 SOFLAGS       = $(OPT) -m64 -dynamiclib -single_module \
                 -undefined dynamic_lookup -install_name $(LIBDIR)/
@@ -59,6 +70,7 @@ SOFLAGS       = $(OPT) -m64 -dynamiclib -single_module \
 else
 SOFLAGS       = $(OPT) -m64 -dynamiclib -single_module \
                 -undefined suppress -install_name $(LIBDIR)/
+endif
 endif
 endif
 ifeq ($(subst $(MACOSX_MINOR),,1234),1234)
@@ -79,13 +91,15 @@ ifeq ($(subst $(MACOSX_MINOR),,123),123)
 ifeq (g95,$(findstring g95,$(ROOTBUILD)))
 ifeq ($(shell which g95 2>&1 | sed -ne "s/.*\/g95/g95/p"),g95)
 F77          := g95
+F77FLAGS     := -m64
 F77LIBS      := -L`$(F77) -print-search-dirs | awk '/^install:/{print $$2}'` \
                 -lf95
 endif
 else
 ifeq ($(shell which gfortran 2>&1 | sed -ne "s/.*\/gfortran/gfortran/p"),gfortran)
 F77          := gfortran
-F77LIBS      := $(shell $(F77) -m64 -print-file-name=libgfortran.$(SOEXT))
+F77FLAGS     := -m64 -std=legacy
+F77LIBS      := $(shell $(F77) -m64 -print-file-name=libgfortran.dylib)
 F77LIBS      += $(shell $(F77) -m64 -print-file-name=libgfortranbegin.a)
 endif
 endif
@@ -94,22 +108,13 @@ endif
 ifeq ($(F77),)
 ifeq ($(shell which g77 2>&1 | sed -ne "s/.*\/g77/g77/p"),g77)
 F77          := g77
-F77LIBS       =
+F77FLAGS     := -m64
+F77LIBS      := -L$(FINK_DIR)/lib -lg2c
 endif
-endif
-F77FLAGS      = -m64
-
-# We add libg2c only in case of ppc because then we probably have cernlib
-# compiled with g77. In case of Intel Mac it should be compiled with the
-# same fortran we use.
-ifeq ($(MACOSX_CPU),powerpc)
-F77LIBS += -L$(FINK_DIR)/lib -lg2c
 endif
 
 ifneq ($(F77),)
-ifeq ($(shell find $(FINK_DIR)/bin -name $(F77)),)
-BUILDHBOOK   := no
-endif
+F77LD        := $(F77)
 endif
 
 # Override default in Makefile.config

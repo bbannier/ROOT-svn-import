@@ -5,6 +5,19 @@
 #
 # Author: Fons Rademakers, 06/06/99
 
+if [ "x$ROOTSYS" = "x" ]; then
+   progdir=`dirname $0`
+   runningdir=`pwd`
+   if echo $progdir | grep -q -s ^/ || echo $progdir | grep -q -s ^~ ; then
+      # absolute path
+      fullpath=$progdir
+   else
+      # relative path
+      fullpath=$runningdir/$progdir
+   fi
+   ROOTSYS=`dirname $fullpath`
+fi
+
 arch=@architecture@
 platform=@platform@
 bindir=@bindir@
@@ -34,7 +47,7 @@ fi
 
 newlib="-lNew"
 rootlibs="-lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad -lTree \
-          -lRint -lPostscript -lMatrix -lPhysics $zliblib"
+          -lRint -lPostscript -lMatrix -lPhysics -lMathCore -lThread $zliblib"
 rootglibs="-lGui"
 
 if test "$dicttype" = "reflex" || test "$dicttype" = "gccxml"; then
@@ -49,6 +62,7 @@ if test "$platform" = "win32"; then
               -include:_G__cpp_setupG__G3D        \
               -include:_G__cpp_setupG__GPad       \
               -include:_G__cpp_setupG__Tree       \
+              -include:_G__cpp_setupG__Thread     \
               -include:_G__cpp_setupG__Rint       \
               -include:_G__cpp_setupG__PostScript \
               -include:_G__cpp_setupG__Matrix     \
@@ -62,6 +76,7 @@ elif test "$platform" = "aix5"; then
               -Wl,-u,.G__cpp_setupG__G3D        \
               -Wl,-u,.G__cpp_setupG__GPad       \
               -Wl,-u,.G__cpp_setupG__Tree       \
+              -Wl,-u,.G__cpp_setupG__Thread     \
               -Wl,-u,.G__cpp_setupG__Rint       \
               -Wl,-u,.G__cpp_setupG__PostScript \
               -Wl,-u,.G__cpp_setupG__Matrix     \
@@ -75,6 +90,7 @@ else
               -Wl,-u,_G__cpp_setupG__G3D        \
               -Wl,-u,_G__cpp_setupG__GPad       \
               -Wl,-u,_G__cpp_setupG__Tree       \
+              -Wl,-u,_G__cpp_setupG__Thread     \
               -Wl,-u,_G__cpp_setupG__Rint       \
               -Wl,-u,_G__cpp_setupG__PostScript \
               -Wl,-u,_G__cpp_setupG__Matrix     \
@@ -418,11 +434,14 @@ case $arch in
       auxldflags="--exceptions $auxldflags"
    fi
    ;;
-freebsd*|linux*)
+freebsd* | openbsd* | linux*)
    for f in $features ; do
       if test "x$f" = "xthread" ; then
          auxcflags="-pthread $auxcflags"
          auxlibs="-pthread $auxlibs"
+      fi
+      if test "x$f" = "xrpath" ; then
+         auxlibs="-Wl,-rpath,$libdir $auxlibs"
       fi
    done
    ;;
@@ -435,6 +454,11 @@ macosx*)
          else
 	    auxcflags="-D_REENTRANT $auxcflags"
 	    auxlibs="-lpthread $auxlibs"
+         fi
+      fi
+      if test "x$f" = "xrpath" ; then
+         if [ $macosx_minor -ge 5 ]; then
+            auxlibs="-Wl,-rpath,$libdir $auxlibs"
          fi
       fi
    done
@@ -460,6 +484,8 @@ win32)
 esac
 
 ### end of machine and compiler dependent settings ###
+nostubs=@no_stubs@
+nostubstest=@no_stubs_test@
 
 
 prefix=@prefix@
@@ -480,7 +506,7 @@ Usage: root-config [--prefix[=DIR]] [--exec-prefix[=DIR]] [--version]\
  [--glibs] [--bindir] [--libdir] [--incdir] [--noauxcflags] [--noauxlibs]\
  [--noldflags] [--has-<feature>] [--arch] [--platform] [--dicttype]\
  [--config] [--features] [--svn-revision] [--python-version]\
- [--cc] [--cxx] [--f77] [--ld ][--help]"
+ [--cc] [--cxx] [--f77] [--ld ] [--nostubs] [--nostubstest] [--help]"
 
 if test $# -eq 0; then
    echo "${usage}" 1>&2
@@ -734,6 +760,14 @@ while test $# -gt 0; do
       ### output used Linker
       out="$out $altld"
       ;;
+    --nostubs)
+      ### Output the prefix
+      out="$out $nostubs"
+      ;;
+    --nostubstest)
+      ### Output the prefix
+      out="$out $nostubstest"
+      ;;
     --help)
       ### Print a help message
       echo "Usage: `basename $0` [options]"
@@ -766,6 +800,8 @@ while test $# -gt 0; do
       echo "  --cxx                 Print alternative C++ compiler specified when ROOT was built"
       echo "  --f77                 Print alternative Fortran compiler specified when ROOT was built"
       echo "  --ld                  Print alternative Linker specified when ROOT was built"
+      echo "  --nostubs             Print yes if we are using the stubless calls"
+      echo "  --nostubstest         Print yes if we are using the stubless calls (in test mode)"
       echo "  --help                Print this message"
       exit 0
       ;;

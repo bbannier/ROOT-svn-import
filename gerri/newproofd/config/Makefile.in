@@ -12,6 +12,8 @@ EXTRA_CXXFLAGS := -Iinclude @cflags@
 EXTRA_LDFLAGS  := @ldflags@
 WINRTDEBUG     := @winrtdebug@
 ENABLEPCH      := @enable_pch@
+NOSTUBS        := @no_stubs@
+NOSTUBSTEST    := @no_stubs_test@
 
 GLBPATCHFLAGS  := @glbpatchcflags@
 EXTRA_AUTHFLAGS:= @srpextracflags@ @krb5extracflags@ @glbextracflags@ @sslextracflags@
@@ -60,10 +62,6 @@ OPENGLLIBDIR   := @opengllibdir@
 OPENGLULIB     := @openglulib@
 OPENGLLIB      := @opengllib@
 OPENGLINCDIR   := $(filter-out /usr/include, @openglincdir@)
-
-BUILDHBOOK     := @buildhbook@
-CERNLIBDIR     := @cernlibdir@
-CERNLIBS       := @cernlibs@
 
 BUILDLDAP      := @buildldap@
 LDAPLIBDIR     := @ldaplibdir@
@@ -195,6 +193,7 @@ XMLINCDIR      := $(filter-out /usr/include, @xmlincdir@)
 
 BUILDXRD       := @buildxrd@
 XROOTDDIR      := @xrootddir@
+XRDADDOPTS     := @xrdaddopts@
 EXTRA_XRDFLAGS := @extraxrdflags@
 
 SRPLIBDIR      := @srplibdir@
@@ -246,7 +245,7 @@ SHADOWFLAGS    := @shadowpw@
 SHADOWLIB      :=
 SHADOWLIBDIR   :=
 
-BUILDMATHCORE  := @buildmathcore@
+BUILDGENVECTOR := @buildgenvector@
 
 BUILDMATHMORE  := @buildmathmore@
 GSLFLAGS       := $(filter-out -I/usr/include, @gslflags@)

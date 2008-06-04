@@ -183,6 +183,7 @@ void alice_esd()
       TEveGeoShape* gsre = TEveGeoShape::ImportShapeExtract(gse, 0);
       geom->Close();
       delete geom;
+      gEve->AddGlobalElement(gsre);
    }
 
    make_gui();
@@ -331,7 +332,7 @@ void alice_esd_read()
 
    if (track_list == 0) {
       track_list = new TEveTrackList("ESD Tracks"); 
-      track_list->SetMainColor(Color_t(6));
+      track_list->SetMainColor(6);
       track_list->SetMarkerColor(kYellow);
       track_list->SetMarkerStyle(4);
       track_list->SetMarkerSize(0.5);
@@ -340,7 +341,7 @@ void alice_esd_read()
    }
 
    TEveTrackPropagator* trkProp = track_list->GetPropagator();
-   trkProp->SetMagField( esdrun->fMagneticField );
+   trkProp->SetMagField( 0.1 * esdrun->fMagneticField ); // kGaus to Tesla
 
    for (Int_t n=0; n<tracks->GetEntriesFast(); ++n)
    {
