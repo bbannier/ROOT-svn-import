@@ -382,26 +382,28 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
    if (m->IsError()) {
       if (m->GetStatusCode() != XrdClientMessage::kXrdMSC_timeout) {
          if (gDebug > 0)
-            Info("ProcessUnsolicitedMsg","got error from underlying connection");
+            Info("ProcessUnsolicitedMsg","%p: got error from underlying connection", this);
          XHandleErr_t herr = {1, 0};
          if (!fHandler || fHandler->HandleError((const void *)&herr)) {
-            Error("ProcessUnsolicitedMsg","handler undefined or recovery failed");
+            Error("ProcessUnsolicitedMsg","%p: handler undefined or recovery failed", this);
             // Avoid to contact the server any more
             fSessionID = -1;
          }
       } else {
          // Time out
          if (gDebug > 2)
-            Info("ProcessUnsolicitedMsg", "underlying connection timed out");
+            Info("ProcessUnsolicitedMsg", "%p: underlying connection timed out", this);
       }
       // Propagate the message to other possible handlers
       return kUNSOL_CONTINUE;
    }
 
    // From now on make sure is for us
-   if (!fConn || !m->MatchStreamid(fConn->fStreamid))
+   if (!fConn || !m->MatchStreamid(fConn->fStreamid)) {
+      if (gDebug > 1)
+         Info("ProcessUnsolicitedMsg", "%p: IDs do not match: {%d, %d}", this, fConn->fStreamid, m->HeaderSID());
       return kUNSOL_CONTINUE;
-
+   }
 
    // Local processing ...
    if (!m) {
@@ -962,31 +964,40 @@ Int_t TXSocket::Flush()
    // Typically called when a kHardInterrupt is received.
    // Returns number of bytes in flushed buffers.
 
-   R__LOCKGUARD(fAMtx);
-
-   // Must have something to flush
    Int_t nf = 0;
-   if (fAQue.size() > 0) {
+   list<TXSockBuf *> splist;
+   list<TXSockBuf *>::iterator i;
 
-      // Save size for later semaphore cleanup
-      Int_t sz = fAQue.size();
-      // get the highest interrupt level
-      list<TXSockBuf *>::iterator i;
-      for (i = fAQue.begin(); i != fAQue.end(); i++) {
-         if (*i) {
-            {  fgSMtx.Lock();
-               fgSQue.push_back(*i);
-               fgSMtx.UnLock();
+   {  R__LOCKGUARD(fAMtx);
+
+      // Must have something to flush
+      if (fAQue.size() > 0) {
+
+         // Save size for later semaphore cleanup
+         Int_t sz = fAQue.size();
+         // get the highest interrupt level
+         for (i = fAQue.begin(); i != fAQue.end(); i++) {
+            if (*i) {
+               splist.push_back(*i);
+               fAQue.erase(i);
+               nf += (*i)->fLen;
             }
-            fAQue.erase(i);
-            nf += (*i)->fLen;
          }
-      }
 
-      // Reset the asynchronous queue
-      while (sz--)
-         fASem.TryWait();
-      fAQue.clear();
+         // Reset the asynchronous queue
+         while (sz--)
+            fASem.TryWait();
+         fAQue.clear();
+      }
+   }
+
+   // Move spares to the spare queue
+   if (splist.size() > 0) {
+      R__LOCKGUARD(&fgSMtx);
+      for (i = splist.begin(); i != splist.end(); i++) {
+         fgSQue.push_back(*i);
+         splist.erase(i);
+      }
    }
 
    // We are done
