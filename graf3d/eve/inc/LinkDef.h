@@ -22,7 +22,6 @@
 #pragma link C++ global gEve;
 
 #pragma link C++ class TEveManager::TExceptionHandler+;
-#pragma link C++ class TEveManager::TVizDBKey+;
 
 // Basic helper classes
 #pragma link C++ class TEveException+;
@@ -41,6 +40,7 @@
 #pragma link C++ class TEveRecTrack+;
 #pragma link C++ class TEveRecKink+;
 #pragma link C++ class TEveRecV0+;
+#pragma link C++ class TEveRecCascade+;
 #pragma link C++ class TEveMCRecCrossRef+;
 
 // TEveTrans
