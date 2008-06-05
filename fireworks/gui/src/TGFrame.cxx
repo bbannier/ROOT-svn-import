@@ -250,7 +250,9 @@ void TGFrame::DeleteWindow()
       if (gDNDManager->GetMainFrame() == this)
          gDNDManager->SetMainFrame(0);
    }
-   TTimer::SingleShot(150, IsA()->GetName(), this, "ReallyDelete()");
+   if (!TestBit(kDeleteWindowCalled))
+      TTimer::SingleShot(150, IsA()->GetName(), this, "ReallyDelete()");
+   SetBit(kDeleteWindowCalled);
 }
 
 //______________________________________________________________________________
@@ -1672,9 +1674,9 @@ const TGPicture *TGMainFrame::SetIconPixmap(const char *iconName)
 {
    // Set window icon pixmap by name. This is typically done via the window
    // manager. Icon can be in any image format supported by TImage, e.g.
-   // GIF, XPM, PNG, JPG .. or even PS, PDF (see EImageFileTypes in TImage.h 
+   // GIF, XPM, PNG, JPG .. or even PS, PDF (see EImageFileTypes in TImage.h
    // for the full list of supported formats).
-   // 
+   //
    // For example,
    //    main_frame->SetIconPixmap("/home/root/icons/bld_rgb.png");
 

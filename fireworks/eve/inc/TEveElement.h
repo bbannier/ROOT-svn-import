@@ -21,6 +21,7 @@ class TGListTree;
 class TGListTreeItem;
 class TGPicture;
 
+class TEveCompound;
 class TEveTrans;
 class TGeoMatrix;
 
@@ -72,24 +73,28 @@ public:
    typedef std::set<TEveElement*>::iterator     Set_i;
 
 protected:
-   // TRef     fSource;
+   List_t           fParents;              //  List of parents.
+   List_t           fChildren;             //  List of children.
+   TEveCompound    *fCompound;             //  Compound this object belongs to.
+   TEveElement     *fVizModel;             //! Element used as model from VizDB.
+   TString          fVizTag;               //  Tag used to query VizDB for model element.
 
-   List_t     fParents;              //  List of parents.
-   List_t     fChildren;             //  List of children.
+   Int_t            fParentIgnoreCnt;      //! Counter for parents that are ignored in ref-counting.
+   Int_t            fTopItemCnt;           //! Counter for top-level list-tree items that prevent automatic destruction.
+   Int_t            fDenyDestroy;          //! Deny-destroy count.
+   Bool_t           fDestroyOnZeroRefCnt;  //  Auto-destruct when ref-count reaches zero.
 
-   Bool_t     fDestroyOnZeroRefCnt;  //  Auto-destruct when ref-count reaches zero.
-   Int_t      fDenyDestroy;          //  Deny-destroy count.
+   Bool_t           fRnrSelf;              //  Render this element.
+   Bool_t           fRnrChildren;          //  Render children of this element.
+   Bool_t           fCanEditMainTrans;     //  Allow editing of main transformation.
 
-   Bool_t     fRnrSelf;              //  Render this element.
-   Bool_t     fRnrChildren;          //  Render children of this element.
-   Bool_t     fCanEditMainTrans;     //  Allow editing of main transformation.
+   Color_t         *fMainColorPtr;         //  Pointer to main-color variable.
+   TEveTrans       *fMainTrans;            //  Pointer to main transformation matrix.
 
-   Color_t   *fMainColorPtr;         //  Pointer to main-color variable.
-   TEveTrans *fMainTrans;            //  Pointer to main transformation matrix.
+   sLTI_t           fItems;                //! Set of list-tree-items.
 
-   sLTI_t     fItems;                //! Set of list-tree-items.
-
-   void      *fUserData;             //! Externally assigned and controlled user data.
+   TRef             fSource;               //  External object that is represented by this element.
+   void            *fUserData;             //! Externally assigned and controlled user data.
 
    virtual void RemoveElementsInternal();
 
@@ -104,6 +109,24 @@ public:
    virtual void SetElementTitle(const Text_t* title);
    virtual void SetElementNameTitle(const Text_t* name, const Text_t* title);
 
+   const TString& GetVizTag() const             { return fVizTag; }
+   void           SetVizTag(const TString& tag) { fVizTag = tag;  }
+
+   TEveElement*   GetVizModel() const           { return fVizModel; }
+   void           SetVizModel(TEveElement* model);
+   Bool_t         FindVizModel();
+
+   Bool_t         ApplyVizTag(const TString& tag);
+
+   virtual void PropagateVizParamsToProjecteds();
+   virtual void PropagateVizParamsToElements(TEveElement* el=0);
+   virtual void CopyVizParams(const TEveElement* el);
+   virtual void CopyVizParamsFromDB();
+
+   TEveElement*  GetMaster();
+   TEveCompound* GetCompound()                { return fCompound; }
+   void          SetCompound(TEveCompound* c) { fCompound = c;    }
+
    virtual void AddParent(TEveElement* re);
    virtual void RemoveParent(TEveElement* re);
    virtual void CheckReferenceCount(const TEveException& eh="TEveElement::CheckReferenceCount ");
@@ -111,13 +134,15 @@ public:
    virtual void CollectSceneParentsFromChildren(List_t& scenes,
                                                 TEveElement* parent);
 
-   List_i BeginParents() { return fParents.begin(); }
-   List_i EndParents()   { return fParents.end();   }
-   Int_t  GetNParents() const { return fParents.size(); }
+   List_i BeginParents()      { return  fParents.begin();  }
+   List_i EndParents()        { return  fParents.end();    }
+   Int_t  NumParents()  const { return  fParents.size();   }
+   Bool_t HasParents()  const { return !fParents.empty();  }
 
-   List_i BeginChildren() { return fChildren.begin(); }
-   List_i EndChildren()   { return fChildren.end();   }
-   Int_t  GetNChildren() const { return fChildren.size(); }
+   List_i BeginChildren()     { return  fChildren.begin(); }
+   List_i EndChildren()       { return  fChildren.end();   }
+   Int_t  NumChildren() const { return  fChildren.size();  }
+   Bool_t HasChildren() const { return !fChildren.empty(); }
 
    Bool_t       HasChild(TEveElement* el);
    TEveElement* FindChild(const TString& name, const TClass* cls=0);
@@ -140,15 +165,6 @@ public:
    virtual TObject* GetObject      (const TEveException& eh="TEveElement::GetObject ") const;
    virtual TObject* GetEditorObject(const TEveException& eh="TEveElement::GetEditorObject ") const { return GetObject(eh); }
    virtual TObject* GetRenderObject(const TEveException& eh="TEveElement::GetRenderObject ") const { return GetObject(eh); }
-
-   /*
-     TRef&    GetSource() { return fSource; }
-     TObject* GetSourceObject() const { return fSource.GetObject(); }
-     void SetSourceObject(TObject* o) { fSource.SetObject(o); }
-
-     void DumpSourceObject();    // *MENU*
-     void InspectSourceObject(); // *MENU*
-   */
 
    // --------------------------------
 
@@ -173,9 +189,8 @@ public:
                                             TGListTreeItem* parent_lti);
 
    virtual Int_t GetNItems() const { return fItems.size(); }
-   virtual void  UpdateItems();
 
-   void SpawnEditor();                          // *MENU*
+   void         SpawnEditor();                  // *MENU*
    virtual void ExportToCINT(Text_t* var_name); // *MENU*
 
    virtual Bool_t AcceptElement(TEveElement* el);
@@ -197,9 +212,11 @@ public:
    virtual Bool_t GetRnrSelf()     const { return fRnrSelf; }
    virtual Bool_t GetRnrChildren() const { return fRnrChildren; }
    virtual Bool_t GetRnrState()    const { return fRnrSelf && fRnrChildren; }
-   virtual void   SetRnrSelf(Bool_t rnr);
-   virtual void   SetRnrChildren(Bool_t rnr);
-   virtual void   SetRnrState(Bool_t rnr);
+   virtual Bool_t SetRnrSelf(Bool_t rnr);
+   virtual Bool_t SetRnrChildren(Bool_t rnr);
+   virtual Bool_t SetRnrSelfChildren(Bool_t rnr_self, Bool_t rnr_children);
+   virtual Bool_t SetRnrState(Bool_t rnr);
+   virtual void   PropagateRnrStateToProjecteds();
 
    virtual Bool_t CanEditMainColor() const  { return kFALSE; }
    Color_t* GetMainColorPtr()               { return fMainColorPtr; }
@@ -208,7 +225,10 @@ public:
    virtual Bool_t  HasMainColor() const { return fMainColorPtr != 0; }
    virtual Color_t GetMainColor() const { return fMainColorPtr ? *fMainColorPtr : 0; }
    virtual void    SetMainColor(Color_t color);
-   void            SetMainColor(Pixel_t pixel);
+   void            SetMainColorPixel(Pixel_t pixel);
+   void            SetMainColorRGB(UChar_t r, UChar_t g, UChar_t b);
+   void            SetMainColorRGB(Float_t r, Float_t g, Float_t b);
+   virtual void    PropagateMainColorToProjecteds(Color_t color, Color_t old_color);
 
    virtual Bool_t  CanEditMainTransparency() const { return kFALSE; }
    virtual UChar_t GetMainTransparency()     const { return 0; }
@@ -223,6 +243,14 @@ public:
 
    virtual void SetTransMatrix(Double_t* carr);
    virtual void SetTransMatrix(const TGeoMatrix& mat);
+
+   TRef&    GetSource()                 { return fSource; }
+   TObject* GetSourceObject()     const { return fSource.GetObject(); }
+   void     SetSourceObject(TObject* o) { fSource.SetObject(o); }
+   /*
+     void DumpSourceObject();    // *MENU*
+     void InspectSourceObject(); // *MENU*
+   */
 
    void* GetUserData() const { return fUserData; }
    void  SetUserData(void* ud) { fUserData = ud; }
@@ -260,11 +288,12 @@ public:
 
    enum EChangeBits
    {
-      kCBColorSelection =  1, // Main color or select/hilite state changed.
-      kCBTransBBox      =  2, // Transformation matrix or bounding-box changed.
-      kCBObjProps       =  4  // Object changed, requires dropping its display-lists.
-      // kCBElementAdded   =  8, // Element was added to a new parent.
-      // kCBElementRemoved = 16  // Element was removed from a parent.
+      kCBColorSelection =  BIT(0), // Main color or select/hilite state changed.
+      kCBTransBBox      =  BIT(1), // Transformation matrix or bounding-box changed.
+      kCBObjProps       =  BIT(2), // Object changed, requires dropping its display-lists.
+      kCBVisibility     =  BIT(3)  // Rendering of self/children changed.
+      // kCBElementAdded   = BIT(), // Element was added to a new parent.
+      // kCBElementRemoved = BIT()  // Element was removed from a parent.
 
       // Deletions are handled in a special way in TEveManager::PreDeleteElement().
    };
@@ -277,11 +306,11 @@ public:
    void StampColorSelection() { AddStamp(kCBColorSelection); }
    void StampTransBBox()      { AddStamp(kCBTransBBox); }
    void StampObjProps()       { AddStamp(kCBObjProps); }
+   void StampVisibility()     { AddStamp(kCBVisibility); }
    // void StampElementAdded()   { AddStamp(kCBElementAdded); }
    // void StampElementRemoved() { AddStamp(kCBElementRemoved); }
-   void ClearStamps()         { fChangeBits = 0; }
-   void SetStamp(UChar_t bits);
-   void AddStamp(UChar_t bits);
+   virtual void AddStamp(UChar_t bits);
+   virtual void ClearStamps() { fChangeBits = 0; }
 
    UChar_t GetChangeBits() const { return fChangeBits; }
 

@@ -81,7 +81,7 @@ void TGLOrthoCamera::Reset()
 
    TGLVector3 e = fVolume.Extents();
    switch (fType) {
-      case kXOY: 
+      case kXOY:
       case kXnOY:
       {
          // X -> X, Y -> Y, Z -> Z
@@ -150,6 +150,32 @@ Bool_t TGLOrthoCamera::Zoom(Int_t delta, Bool_t mod1, Bool_t mod2)
    else
    {
       return kFALSE;
+   }
+}
+
+//______________________________________________________________________________
+void TGLOrthoCamera::SetZoomMin(Double_t z)
+{
+   // Set minimum zoom factor. If current zoom is less than z it is
+   // set to z.
+
+   fZoomMin = z;
+   if (fZoom < fZoomMin) {
+      fZoom = fZoomMin;
+      IncTimeStamp();
+   }
+}
+
+//______________________________________________________________________________
+void TGLOrthoCamera::SetZoomMax(Double_t z)
+{
+   // Set maximum zoom factor. If current zoom is greater than z it
+   // is set to z.
+
+   fZoomMax = z;
+   if (fZoom > fZoomMax) {
+      fZoom = fZoomMax;
+      IncTimeStamp();
    }
 }
 

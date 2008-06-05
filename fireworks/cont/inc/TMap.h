@@ -34,6 +34,7 @@
 
 class THashTableIter;
 class TMapIter;
+class TPair;
 class TBrowser;
 
 
@@ -46,6 +47,9 @@ private:
 
    TMap(const TMap& map);             // not implemented
    TMap& operator=(const TMap& map);  // not implemented
+
+protected:
+   enum { kIsOwnerValue = BIT(15) };
 
 public:
    TMap(Int_t capacity = TCollection::kInitHashTableCapacity, Int_t rehash = 0);
@@ -61,12 +65,14 @@ public:
    void              DeleteKeys() { Delete(); }
    void              DeleteValues();
    void              DeleteAll();
+   Bool_t            DeleteEntry(TObject *key);
    TObject          *FindObject(const char *keyname) const;
    TObject          *FindObject(const TObject *key) const;
    TObject         **GetObjectRef(const TObject *obj) const { return fTable->GetObjectRef(obj); }
    const THashTable *GetTable() const { return fTable; }
    TObject          *GetValue(const char *keyname) const;
    TObject          *GetValue(const TObject *key) const;
+   Bool_t            IsOwnerValue() const { return TestBit(kIsOwnerValue); }
    TObject          *operator()(const char *keyname) const { return GetValue(keyname); }
    TObject          *operator()(const TObject *key) const { return GetValue(key); }
    TIterator        *MakeIterator(Bool_t dir = kIterForward) const;
@@ -74,6 +80,9 @@ public:
    void              Print(Option_t *wildcard, Option_t *option) const;
    void              Rehash(Int_t newCapacity, Bool_t checkObjValidity = kTRUE);
    TObject          *Remove(TObject *key);
+   TPair            *RemoveEntry(TObject *key);
+   virtual void      SetOwnerValue(Bool_t enable = kTRUE);
+   virtual void      SetOwnerKeyValue(Bool_t ownkeys = kTRUE, Bool_t ownvals = kTRUE);
 
    ClassDef(TMap,3)  //A (key,value) map
 };
