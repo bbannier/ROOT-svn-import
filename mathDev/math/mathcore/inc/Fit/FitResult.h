@@ -67,21 +67,28 @@ public:
 
 public: 
 
-   ///normalize errors using chi2/ndf for chi2 fits
-   void NormalizeErrors();
 
-   /// flag to chek if errors are normalized
-   bool NormalizedErrors() { return fNormalized; }
+   /** minimization quantities **/
+
+   /// minimizer type 
+   const std::string & MinimizerType() const { return fMinimType; } 
 
    /// True if fit successful, otherwise false.
    bool IsValid() const { return fValid; }
+ 
+   /// Return value of the objective function (chi2 or likelihood) used in the fit
+   double MinFcnValue() const { return fVal; } 
 
+   ///Number of function calls to find minimum
+   unsigned int NCalls() const { return fNCalls; }
+   
+   ///Expected distance from minimum 
+   double Edm() const { return fEdm; }
+
+   /** fitting quantities **/
 
    /// Return pointer to model (fit) function with fitted parameter values.
    const IModelFunction * FittedFunction() const { return fFitFunc; }
-
-   /// Return value of the objective function (chi2 or likelihood) used in the fit
-   double MinFcnValue() const { return fVal; } 
 
    /// Chi2 fit value
    /// in case of likelihood must be computed ? 
@@ -164,6 +171,14 @@ public:
 
    /// get index for parameter name (return -1 if not found)
    int Index(const std::string & name) const; 
+
+
+   ///normalize errors using chi2/ndf for chi2 fits
+   void NormalizeErrors();
+
+   /// flag to chek if errors are normalized
+   bool NormalizedErrors() { return fNormalized; }
+
 
    /// print the result and optionaly covariance matrix and correlations
    void Print(std::ostream & os, bool covmat = false) const;
