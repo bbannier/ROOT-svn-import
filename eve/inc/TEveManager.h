@@ -14,17 +14,15 @@
 
 #include "TEveElement.h"
 
-#include "TGeoManager.h"
 #include "TSysEvtHandler.h"
 #include "TTimer.h"
 #include "TVirtualPad.h"
 
-#include <list>
-#include <map>
-
+class TMap;
 class TMacro;
 class TFolder;
 class TCanvas;
+class TGeoManager;
 
 class TGTab;
 class TGStatusBar;
@@ -39,8 +37,6 @@ class TEveSelection;
 class TEveGListTreeEditorFrame;
 class TEveBrowser;
 class TEveGedEditor;
-
-class PadPrimitive;
 
 class TEveViewer; class TEveViewerList;
 class TEveScene;  class TEveSceneList;
@@ -81,6 +77,9 @@ public:
 
 private:
    TExceptionHandler        *fExcHandler;
+   TMap                     *fVizDB;
+   TMap                     *fGeometries;
+   TMap                     *fGeometryAliases;
 
    TEveBrowser              *fBrowser;
    TEveGListTreeEditorFrame *fLTEFrame;
@@ -112,10 +111,6 @@ protected:
    // Selection / hihglight elements
    TEveSelection            *fSelection;
    TEveSelection            *fHighlight;
-
-   // TGeo multiple geometry management
-   std::map<TString, TGeoManager*> fGeometries;
-   std::map<TString, TString>      fGeometryAliases;
 
 public:
    TEveManager(UInt_t w, UInt_t h);
@@ -188,6 +183,11 @@ public:
    void   ElementSelect(TEveElement* element);
    Bool_t ElementPaste(TEveElement* element);
 
+   // VizDB - Visualization-parameter data-base.
+   Bool_t       InsertVizDBEntry(const TString& tag, TEveElement* model,
+                                 Bool_t replace=kTRUE, Bool_t update=kTRUE);
+   TEveElement* FindVizDBEntry  (const TString& tag);
+
    // Geometry management.
    TGeoManager* GetGeometry(const TString& filename);
    TGeoManager* GetGeometryByAlias(const TString& alias);
@@ -198,7 +198,7 @@ public:
 
    static TEveManager* Create();
 
-   ClassDef(TEveManager, 0); // Reve application manager.
+   ClassDef(TEveManager, 0); // Eve application manager.
 };
 
 R__EXTERN TEveManager* gEve;

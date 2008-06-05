@@ -19,13 +19,16 @@
 
 #include "TClass.h"
 
-//______________________________________________________________________________
+//==============================================================================
 // TEveGedEditor
+//==============================================================================
+
+//______________________________________________________________________________
 //
 // Specialization of TGedEditor for proper update propagation to
 // TEveManager.
 
-ClassImp(TEveGedEditor)
+ClassImp(TEveGedEditor);
 
 //______________________________________________________________________________
 TEveGedEditor::TEveGedEditor(TCanvas* canvas, Int_t width, Int_t height) :
@@ -109,8 +112,8 @@ void TEveGedEditor::Update(TGedFrame* /*gframe*/)
    // Propagates changes to TEveElement and TEveManager.
 
    if (fElement) {
-      fElement->UpdateItems();
       fElement->ElementChanged();
+      fElement->PropagateVizParamsToProjecteds();
    }
 
    gEve->Redraw3D();

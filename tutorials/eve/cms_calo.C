@@ -10,11 +10,14 @@ void cms_calo()
   
   // event data
   TFile* hf = TFile::Open(histFile, "CACHEREAD");
-  TH2F* hcalHist = (TH2F*)hf->Get("hcalLego");
   TH2F* ecalHist = (TH2F*)hf->Get("ecalLego");
+  TH2F* hcalHist = (TH2F*)hf->Get("hcalLego");
   TEveCaloDataHist* data = new TEveCaloDataHist();
   data->AddHistogram(ecalHist);
   data->AddHistogram(hcalHist);
+  
+  // palette
+  gStyle->SetPalette(1, 0);
 
   // different calorimeter presentations
   TEveCalo3D* calo3d = MakeCalo3D(data);
@@ -27,18 +30,11 @@ void cms_calo()
 //______________________________________________________________________________
 TEveCalo3D* MakeCalo3D(TEveCaloDataHist* data)
 {
-  // palette
-  gStyle->SetPalette(1, 0);
-  TEveRGBAPalette* pal = new TEveRGBAPalette(0, 100);
-  pal->SetLimits(0, data->GetMaxVal());
-  pal->SetDefaultColor((Color_t)4);
-  pal->SetShowDefValue(kFALSE);
 
   // 3D towers
   TEveCalo3D* calo3d = new TEveCalo3D(data);
   calo3d->SetBarrelRadius(129);
   calo3d->SetEndCapPos(300);
-  calo3d->SetPalette(pal);
   gEve->AddElement(calo3d);
 
   return calo3d;
@@ -69,38 +65,25 @@ void MakeCalo2D(TEveCalo3D* calo3d)
 void MakeCaloLego(TEveCaloDataHist* data)
 {
   TEveViewer* v2 = gEve->SpawnNewViewer("Lego Viewer");
-  TGLViewer* v = v2->GetGLViewer();
+  TGLViewer*  v  = v2->GetGLViewer();
   v->SetCurrentCamera(TGLViewer::kCameraPerspXOY);
   v->SetEventHandler(new TEveLegoEventHandler("Lego", v->GetGLWidget(), v));
-
-  // histogram
-  TEveRGBAPalette* pal = new TEveRGBAPalette(0, 100);
-  pal->SetLimits(0, data->GetMaxVal());
-  pal->SetDefaultColor((Color_t)4);
   TEveScene*  s2 = gEve->SpawnNewScene("Lego");
   v2->AddScene(s2);
+  
+  // lego
   TEveCaloLego* lego = new TEveCaloLego(data);
-  lego->SetPalette(pal);
-  lego->SetGridColor(kGray+3);
+  lego->SetGridColor(kGray+2);
   lego->Set2DMode(TEveCaloLego::kValSize);
+  lego->SetName("TwoHistLego");
   gEve->AddElement(lego, s2);
   gEve->AddToListTree(lego, kTRUE);
-  
-  //random lines to demonstrate TEveLegoEventHandler
-  TRandom r(0);
-  gStyle->SetPalette(1, 0);
-  TEveRGBAPalette* pal = new TEveRGBAPalette(0, 130);
-  TEveQuadSet* q = new TEveQuadSet("LineXYFixedZ");
-  q->SetPalette(pal);
-  q->Reset(TEveQuadSet::kQT_LineXYFixedZ, kFALSE, 32);
-  for (Int_t i=0; i<10; ++i) {
-    q->AddLine(r.Uniform(-10, 10), r.Uniform(-10, 10), r.Uniform(-10, 10),
-	       r.Uniform(0.2, 1));
-    q->QuadValue(r.Uniform(0, 130));
-  }
-  q->RefitPlex();
-  TEveTrans& t = q->RefMainTrans();
-  Float_t  sc = 0.3;
-  t.SetScale(sc, sc, sc);
-  gEve->AddElement(q, s2);
+
+  // overlay lego1
+  gEve->DisableRedraw();
+  TEveLegoOverlay* overlay = new TEveLegoOverlay();
+  overlay->SetCaloLego(lego);
+  v->AddOverlayElement(overlay);
+  gEve->AddElement(overlay, s2);
+  gEve->EnableRedraw();
 }
