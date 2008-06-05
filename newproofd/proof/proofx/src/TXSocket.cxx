@@ -1776,11 +1776,11 @@ void TXSocket::InitEnvs()
 
    // Set debug level
    EnvPutInt(NAME_DEBUG, gEnv->GetValue("XProof.Debug", -1));
-   if (gEnv->GetValue("XProof.Debug", 0) > 0) {
+   if (gEnv->GetValue("XProof.Debug", -1) > 0) {
       XrdProofdTrace->What = TRACE_REQ;
-      if (gEnv->GetValue("XProof.Debug", 0) > 1) {
+      if (gEnv->GetValue("XProof.Debug", -1) > 1) {
          XrdProofdTrace->What = TRACE_DBG;
-         if (gEnv->GetValue("XProof.Debug", 0) > 2)
+         if (gEnv->GetValue("XProof.Debug", -1) > 2)
             XrdProofdTrace->What = TRACE_ALL;
       }
    }
