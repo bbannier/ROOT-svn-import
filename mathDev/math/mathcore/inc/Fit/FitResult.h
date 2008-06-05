@@ -22,6 +22,7 @@
 
 #include <vector>
 #include <string>
+#include <cmath>
 
 namespace ROOT { 
 
@@ -92,15 +93,6 @@ public:
    /// p value of the fit (chi2 probability)
    double Prob() const;  
 
-   /// retrieve covariance matrix element 
-   double CovMatrix (unsigned int i, unsigned int j) const { 
-      if ( i >= fErrors.size() || j >= fErrors.size() ) return 0; 
-      if (fCovMatrix.size() == 0) return 0; // nomatrix available in case of non-valid fits
-      if ( j < i ) 
-         return fCovMatrix[j + i* (i+1) / 2];
-      else 
-         return fCovMatrix[i + j* (j+1) / 2];
-   }
  
    /// parameter errors
    const std::vector<double> & Errors() const { return fErrors; }
@@ -123,11 +115,61 @@ public:
    /// upper Minos error
    double UpperError(unsigned int i) const { return fMinosErrors[i].second; }  
 
+   /// retrieve covariance matrix element 
+   double CovMatrix (unsigned int i, unsigned int j) const { 
+      if ( i >= fErrors.size() || j >= fErrors.size() ) return 0; 
+      if (fCovMatrix.size() == 0) return 0; // no matrix is available in case of non-valid fits
+      if ( j < i ) 
+         return fCovMatrix[j + i* (i+1) / 2];
+      else 
+         return fCovMatrix[i + j* (j+1) / 2];
+   }
+
+   /// retrieve correlation elements 
+   double Correlation(unsigned int i, unsigned int j ) const { 
+      if ( i >= fErrors.size() || j >= fErrors.size() ) return 0; 
+      if (fCovMatrix.size() == 0) return 0; // no matrix is available in case of non-valid fits
+      double tmp = CovMatrix(i,i)*CovMatrix(j,j); 
+      return ( tmp < 0) ? 0 : CovMatrix(i,j)/ std::sqrt(tmp); 
+   }
+   
+   /// fill covariance matrix elements using a generic symmetric matrix class implementing operator(i,j)
+   /// the matrix must be previously allocates with right size (npar * npar) 
+   template<class Matrix> 
+   void GetCovarianceMatrix(Matrix & mat) { 
+      int npar = fErrors.size(); 
+      for (int i = 0; i< npar; ++i) { 
+         for (int j = 0; j<=i; ++i) { 
+            mat(i,j) = fCovMatrix[j + i*(i+1)/2 ];
+         }
+      }
+   }
+
+   /// fill a correlation matrix elements using a generic symmetric matrix class implementing operator(i,j)
+   /// the matrix must be previously allocates with right size (npar * npar) 
+   template<class Matrix> 
+   void GetCorrelationMatrix(Matrix & mat) { 
+      int npar = fErrors.size(); 
+      for (int i = 0; i< npar; ++i) { 
+         for (int j = 0; j<=i; ++i) { 
+            double tmp = fCovMatrix[i * (i +3)/2 ] * fCovMatrix[ j * (j+3)/2 ]; 
+            if (tmp < 0) 
+               mat(i,j) = 0; 
+            else 
+               mat(i,j) = fCovMatrix[j + i*(i+1)/2 ] / std::sqrt(tmp); 
+         }
+      }
+   }
+
+
    /// get index for parameter name (return -1 if not found)
    int Index(const std::string & name) const; 
 
-   /// print the result 
-   void Print(std::ostream & os) const;
+   /// print the result and optionaly covariance matrix and correlations
+   void Print(std::ostream & os, bool covmat = false) const;
+
+   ///print error matrix and correlations
+   void PrintCovMatrix(std::ostream & os) const; 
 
 protected: 
 

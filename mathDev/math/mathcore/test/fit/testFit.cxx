@@ -354,7 +354,7 @@ int testHisto1DPolFit() {
    ROOT::Fit::Fitter fitter; 
    bool ret = fitter.Fit(d, f);
    if (ret)  
-      fitter.Result().Print(std::cout); 
+      fitter.Result().Print(std::cout,true); 
    else {
       std::cout << " Fit Failed " << std::endl;
       return -1; 
@@ -373,8 +373,10 @@ int testHisto1DPolFit() {
 
    fitter.Config().SetMinimizer("Linear");
    ret = fitter.Fit(d, pf);
-   if (ret)  
+   if (ret)  {
       fitter.Result().Print(std::cout); 
+      fitter.Result().PrintCovMatrix(std::cout); 
+   }
    else {
       std::cout << " Fit Failed " << std::endl;
       return -1; 
