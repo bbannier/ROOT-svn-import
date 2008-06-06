@@ -35,7 +35,8 @@ const int NGaus = 3;
 const int NPar = 8; // sum of 3 gaussians 
 const std::string branchType = "x[1]/D";
 
-const int NPoints = 1000000;
+// for 8 core testing use 1M points
+const int NPoints = 100000;
 double truePar[NPar]; 
 double iniPar[NPar]; 
 const int nfit = 1;
