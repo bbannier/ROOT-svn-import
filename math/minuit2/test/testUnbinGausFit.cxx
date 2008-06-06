@@ -31,9 +31,11 @@
 // test fit with many dimension
 
 const int N = 1; // 1d fit
-const int NPar = 5; // sum of two gaussians 
-const std::string branchType = "x[10]/D";
-const int NPoints = 100000;
+const int NGaus = 3; 
+const int NPar = 8; // sum of 3 gaussians 
+const std::string branchType = "x[1]/D";
+
+const int NPoints = 1000000;
 double truePar[NPar]; 
 double iniPar[NPar]; 
 const int nfit = 1;
@@ -41,7 +43,7 @@ const int strategy = 1;
 
 double gausnorm(const double *x, const double *p) { 
 
-   double invsig = 1./p[1]; 
+   double invsig = 1./std::abs(p[1]); 
    double tmp = (x[0]-p[0]) * invsig; 
    const double sqrt_2pi = 1./std::sqrt(2.* 3.14159 );
    return std::exp(-0.5 * tmp*tmp ) * sqrt_2pi * invsig; 
@@ -49,9 +51,12 @@ double gausnorm(const double *x, const double *p) {
 
 double gausSum(const double *x, const double *p) { 
 
-   double f = p[0] * gausnorm(x,p+1) + (1.-p[0] ) * gausnorm(x, p+ 3);
+   double f = gausnorm(x,p+2) + 
+      p[0] *  gausnorm(x,p+4) + 
+      p[1]  * gausnorm(x,p+6);
 
-   return f; 
+   double norm = 1. + p[0] + p[1]; 
+   return f/norm; 
 }
 
 struct MINUIT2 {
@@ -122,19 +127,23 @@ int DoUnBinFit(T * tree, Func & func, bool debug = false ) {
 
    if (debug) 
       fitter.Config().MinimizerOptions().SetPrintLevel(3);
+   else 
+      fitter.Config().MinimizerOptions().SetPrintLevel(1);
+
 
    // set tolerance 1 for tree to be same as in TTTreePlayer::UnBinFIt
-   fitter.Config().MinimizerOptions().SetTolerance(1);
+   fitter.Config().MinimizerOptions().SetTolerance(0.01);
 
    // set strategy (0 to avoid MnHesse
-   //   fitter.Config().MinimizerOptions().SetStrategy(strategy);
+   fitter.Config().MinimizerOptions().SetStrategy(strategy);
 
 
    // create the function
 
    fitter.SetFunction(func); 
    // need to set limits to constant term
-   fitter.Config().ParSettings(0).SetLimits(0.,1.);
+   fitter.Config().ParSettings(0).SetLowerLimit(0.);
+   fitter.Config().ParSettings(1).SetLowerLimit(0.);
 
    if (debug) 
      std::cout << "do fitting... " << std::endl;
@@ -149,28 +158,29 @@ int DoUnBinFit(T * tree, Func & func, bool debug = false ) {
 
    // check fit result
    double chi2 = 0;
-   if (fitter.Result().Value(0) <  0.5 ) { 
-     for (int i = 0; i < N; ++i) { 
-       double d = (truePar[i] - fitter.Result().Value(i) )/ (fitter.Result().Error(i) );
-       chi2 += d*d; 
-     }
+   //if (fitter.Result().Value(0) <  0.5 ) { 
+   for (int i = 0; i < NPar; ++i) { 
+      double d = (truePar[i] - fitter.Result().Value(i) )/ (fitter.Result().Error(i) );
+      chi2 += d*d; 
    }
-   else { 
-     double truePar2[NPar];
-     truePar2[0] = 1.-truePar[0];
-     truePar2[1] = truePar[3];
-     truePar2[2] = truePar[4];
-     truePar2[3] = truePar[1];
-     truePar2[4] = truePar[2];
-     for (int i = 0; i < N; ++i) { 
-       double d = ( truePar2[i] - fitter.Result().Value(i) )/ (fitter.Result().Error(i) );
-       chi2 += d*d; 
-     }
-   }
-   double prob = ROOT::Math::chisquared_cdf_c(chi2,N);
+//}
+//    else { 
+//      double truePar2[NPar];
+//      truePar2[0] = 1.-truePar[0];
+//      truePar2[1] = truePar[3];
+//      truePar2[2] = truePar[4];
+//      truePar2[3] = truePar[1];
+//      truePar2[4] = truePar[2];
+//      for (int i = 0; i < N; ++i) { 
+//        double d = ( truePar2[i] - fitter.Result().Value(i) )/ (fitter.Result().Error(i) );
+//        chi2 += d*d; 
+//      }
+//    }
+   double prob = ROOT::Math::chisquared_cdf_c(chi2,NPar);
    int iret =  (prob < 1.0E-6) ? -1 : 0;
    if (iret != 0) {
-      std::cout <<"Found difference in fitted values - prob = " << prob << std::endl;
+      std::cout <<"Found difference in fitted values - chi2 = " << chi2 
+                << " prob = " << prob << std::endl;
       fitter.Result().Print(std::cout);    
    }
 
@@ -209,7 +219,7 @@ int FitUsingNewFitter(FitObj * fitobj, Func & func ) {
    func.SetParameters(iniPar);
    iret |= DoFit<MinType>(fitobj,func,true );
    if (iret != 0) {
-     std::cout << "Fit failed " << std::endl;
+     std::cout << "Test  failed " << std::endl;
    }
 
 #else
@@ -217,7 +227,7 @@ int FitUsingNewFitter(FitObj * fitobj, Func & func ) {
       func.SetParameters(iniPar);
       iret = DoFit<MinType>(fitobj,func, false);
       if (iret != 0) {
-         std::cout << "Fit failed " << std::endl;
+         std::cout << "Test failed " << std::endl;
          break; 
       }
    }
@@ -253,28 +263,42 @@ int testNdimFit() {
 //          truePar[3*j+2] = s;
 // 	 tot += a;
 //       }
-   truePar[0] = 0.2; // first gaussian
-   truePar[1] = 1.;
-   truePar[2] = 2; 
-   truePar[3] = -1; 
-   truePar[4] = 5; 
+   truePar[0] = 0.2; // % second  gaussian
+   truePar[1] = 0.05;  // % third gaussian ampl
+   truePar[2] = 0.;      // mean first gaussian 
+   truePar[3] = 0.5;    // s1 
+   truePar[4] = 0.;   // mean secon gauss
+   truePar[5] = 1; 
+   truePar[6] = -3;   // mean third gaus
+   truePar[7] = 10; 
 
       
    
    //fill the tree
    TRandom3 r; 
+   double norm = (1+truePar[0] + truePar[1] );
+   double a = 1./norm; 
+   double b = truePar[0]/ norm;
+   double c = truePar[1]/ norm;
+   assert(a+b+c == 1.);
+   std::cout << " True amplitude gaussians " << a << "  " << b << "  " << c << std::endl;
    for (Int_t i=0;i<NPoints;i++) {
       for (int j = 0;  j < N; ++j) { 
-	if (r.Rndm() < truePar[0] ) { 
-	  double mu = truePar[1]; 
-	  double s  = truePar[2];  
+	if (r.Rndm() < a ) { 
+	  double mu = truePar[2]; 
+	  double s  = truePar[3];  
 	  x[j] = r.Gaus(mu,s);
 	}
-	else { 
-	  double mu = truePar[3]; 
-	  double s  = truePar[4];  
+	else if (r.Rndm() < b ) { 
+	  double mu = truePar[4]; 
+	  double s  = truePar[5];  
 	  x[j] = r.Gaus(mu,s);
 	}
+        else { 
+	  double mu = truePar[6]; 
+	  double s  = truePar[7];  
+	  x[j] = r.Gaus(mu,s);
+        }
       }
 
       ev = i;
@@ -284,14 +308,16 @@ int testNdimFit() {
    //t1.Draw("x"); // to select fit variable 
 
    iniPar[0] = 0.5; 
-   for (int i = 0; i <2; ++i) {
-      iniPar[2*i+1] = 0; 
-      iniPar[2*i+2] = 1; 
+   iniPar[1] = 0.05; 
+   for (int i = 0; i <NGaus; ++i) {
+      iniPar[2*i+2] = 0 ; 
+      iniPar[2*i+3] = 1. + 4*i;
+      std::cout << "inipar " << i << " = " << iniPar[2*i+2] << "  " << iniPar[2*i+3] << std::endl;
    }
 
    // use simply TF1 wrapper 
    //ROOT::Math::WrappedMultiTF1 f2(*f1); 
-   ROOT::Math::WrappedParamFunction<> f2(&gausSum,1,5,iniPar); 
+   ROOT::Math::WrappedParamFunction<> f2(&gausSum,1,NPar,iniPar); 
 
    int iret = 0; 
    iret |= FitUsingNewFitter<MINUIT2>(&t1,f2);
