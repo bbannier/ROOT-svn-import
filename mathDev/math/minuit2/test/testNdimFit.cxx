@@ -26,6 +26,7 @@
 
 #include "TStopwatch.h"
 
+//#define DEBUG
 
 // test fit with many dimension
 
@@ -35,7 +36,7 @@ const int NPoints = 100000;
 double truePar[2*N]; 
 double iniPar[2*N]; 
 const int nfit = 1;
-const int strategy = 1;
+const int strategy = 0;
 
 double gausnorm(const double *x, const double *p) { 
 
@@ -90,7 +91,10 @@ ROOT::Fit::UnBinData * FillUnBinData(TTree * tree ) {
    std::cout << "\n";
 #endif
    
+   delete tree; 
+   tree = 0; 
    return d; 
+   
 }
 
 
@@ -105,6 +109,7 @@ int DoUnBinFit(T * tree, Func & func, bool debug = false ) {
    //FillUnBinData(d,tree);
 
    //std::cout << "data size type and size  is " << typeid(*d).name() <<  "   " << d->Size() << std::endl;
+   std::cout << "Fit data size =  " << d->Size() << " dimension = " << d->NDim() << std::endl;
 
          
          
@@ -118,6 +123,8 @@ int DoUnBinFit(T * tree, Func & func, bool debug = false ) {
 
    if (debug) 
       fitter.Config().MinimizerOptions().SetPrintLevel(3);
+   else 
+      fitter.Config().MinimizerOptions().SetPrintLevel(0);
 
    // set tolerance 1 for tree to be same as in TTTreePlayer::UnBinFIt
    fitter.Config().MinimizerOptions().SetTolerance(1);
@@ -213,11 +220,11 @@ int testNdimFit() {
    std::cout << "\t UNBINNED TREE (GAUSSIAN MULTI-DIM)  FIT\n";
    std::cout << "************************************************************\n"; 
 
-   TTree t1("t2","a large Tree with gaussian variables");
+   TTree * t1 = new TTree("t2","a large Tree with gaussian variables");
    double  x[N];
    Int_t ev;
-   t1.Branch("x",x,branchType.c_str());
-   t1.Branch("ev",&ev,"ev/I");
+   t1->Branch("x",x,branchType.c_str());
+   t1->Branch("ev",&ev,"ev/I");
 
    // generate the true parameters 
       for (int j = 0;  j < N; ++j) {          
@@ -238,7 +245,7 @@ int testNdimFit() {
       }
 
       ev = i;
-      t1.Fill();
+      t1->Fill();
       
    }
    //t1.Draw("x"); // to select fit variable 
@@ -254,7 +261,7 @@ int testNdimFit() {
    ROOT::Math::WrappedParamFunction<> f2(&gausnormN,N,2*N,iniPar); 
 
    int iret = 0; 
-   iret |= FitUsingNewFitter<MINUIT2>(&t1,f2);
+   iret |= FitUsingNewFitter<MINUIT2>(t1,f2);
 
    return iret; 
 }
