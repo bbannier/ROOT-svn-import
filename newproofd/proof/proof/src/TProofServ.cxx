@@ -890,6 +890,8 @@ void TProofServ::HandleSocketInput()
    }
 
    what = mess->What();
+   PDB(kGlobal, 1)
+      Info("HandleSocketInput", "got type %d from '%s'", what, fSocket->GetTitle());
 
    timer.Start();
    fNcmd++;

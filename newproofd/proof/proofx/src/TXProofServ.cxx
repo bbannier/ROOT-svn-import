@@ -226,6 +226,14 @@ Int_t TXProofServ::CreateServer()
       return -1;
    }
 
+   // Set the title for debugging
+   TString tgt("client");
+   if (fOrdinal != "0") {
+      tgt = fOrdinal;
+      if (tgt.Last('.') != kNPOS) tgt.Remove(tgt.Last('.'));
+   }
+   fSocket->SetTitle(tgt);
+
    // Set the this as reference of this socket
    ((TXSocket *)fSocket)->fReference = this;
 
