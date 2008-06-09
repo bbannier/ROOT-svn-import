@@ -113,7 +113,7 @@ int XrdProofdAdmin::QueryROOTVersions(XrdProofdProtocol *p)
    response->Send((void *)msg.c_str(), msg.length()+1);
 
    // Over
-   return rc;
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -211,7 +211,7 @@ int XrdProofdAdmin::SetROOTVersion(XrdProofdProtocol *p)
    }
 
    // Over
-   return rc;
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -236,7 +236,7 @@ int XrdProofdAdmin::QueryWorkers(XrdProofdProtocol *p)
    response->Send(buf, len);
 
    // Over
-   return rc;
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -247,7 +247,6 @@ int XrdProofdAdmin::GetWorkers(XrdProofdProtocol *p)
 
    int rc = 1;
    XPD_SETRESP(p, "GetWorkers");
-
 
    // Unmarshall the data
    int psid = ntohl(p->Request()->proof.sid);
@@ -280,7 +279,7 @@ int XrdProofdAdmin::GetWorkers(XrdProofdProtocol *p)
    }
 
    // Over
-   return rc;
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -330,7 +329,7 @@ int XrdProofdAdmin::SetGroupProperties(XrdProofdProtocol *p)
    response->Send();
 
    // Over
-   return rc;
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -417,7 +416,7 @@ int XrdProofdAdmin::SendMsgToUser(XrdProofdProtocol *p)
    response->Send();
 
    // Over
-   return rc;
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -437,7 +436,7 @@ int XrdProofdAdmin::QuerySessions(XrdProofdProtocol *p)
    response->Send((void *)msg.c_str(), msg.length()+1);
 
    // Over
-   return rc;
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -590,7 +589,7 @@ int XrdProofdAdmin::QueryLogPaths(XrdProofdProtocol *p)
    response->Send((void *) rmsg.c_str(), rmsg.length()+1);
 
    // Over
-   return rc;
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -715,7 +714,7 @@ int XrdProofdAdmin::CleanupSessions(XrdProofdProtocol *p)
    response->Send();
 
    // Over
-   return rc;
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -756,7 +755,7 @@ int XrdProofdAdmin::SetSessionAlias(XrdProofdProtocol *p)
    response->Send();
 
    // Over
-   return rc;
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -796,6 +795,6 @@ int XrdProofdAdmin::SetSessionTag(XrdProofdProtocol *p)
    response->Send();
 
    // Over
-   return rc;
+   return 0;
 }
 

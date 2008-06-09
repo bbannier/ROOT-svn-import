@@ -1291,7 +1291,7 @@ int XrdProofdProofServMgr::Attach(XrdProofdProtocol *p)
    }
 
    // Over
-   return rc;
+   return 0;
 }
 
 //_________________________________________________________________________________
@@ -1660,7 +1660,7 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
    AddSession(p, xps);
 
    // Over
-   return rc;
+   return 0;
 }
 
 //_________________________________________________________________________________
@@ -1907,7 +1907,7 @@ int XrdProofdProofServMgr::Detach(XrdProofdProtocol *p)
    // Notify to user
    response->Send();
 
-   return rc;
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -1945,7 +1945,7 @@ int XrdProofdProofServMgr::Destroy(XrdProofdProtocol *p)
    response->Send();
 
    // Over
-   return rc;
+   return 0;
 }
 
 //______________________________________________________________________________

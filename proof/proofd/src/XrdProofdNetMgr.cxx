@@ -593,7 +593,7 @@ int XrdProofdNetMgr::ReadBuffer(XrdProofdProtocol *p)
    SafeDelArray(pattern);
 
    // Done
-   return rc;
+   return 0;
 }
 
 //______________________________________________________________________________
