@@ -234,6 +234,9 @@ void TXSlave::Init(const char *host, Int_t stype)
       return;
    }
 
+   // Set the ordinal in the title for debugging
+   fSocket->SetTitle(fOrdinal);
+
    // Check if the remote server supports user envs setting
    if (!fProof->GetManager() && !envlist.IsNull() &&
       ((TXSocket *)fSocket)->GetXrdProofdVersion() <= 1001) {

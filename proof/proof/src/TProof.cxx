@@ -1939,7 +1939,7 @@ Int_t TProof::CollectInputFrom(TSocket *s)
 
    PDB(kGlobal,3) {
       sl = FindSlave(s);
-      Info("CollectInputFrom","got %d from %s", what, (sl ? sl->GetOrdinal() : "undef"));
+      Info("CollectInputFrom","got type %d from '%s'", what, (sl ? sl->GetOrdinal() : "undef"));
    }
 
    switch (what) {
