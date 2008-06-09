@@ -7,12 +7,12 @@
 # This software is provided "as is" without express or implied warranty.
 
 import xml.parsers.expat
-import os, sys, string, time
+import os, sys, string, time, re
 import gccdemangler
 
 class genDictionary(object) :
 #----------------------------------------------------------------------------------
-  def __init__(self, hfile, opts):
+  def __init__(self, hfile, opts, gccxmlvers):
     self.classes    = []
     self.namespaces = []
     self.typeids    = []
@@ -50,6 +50,7 @@ class genDictionary(object) :
     self.unnamedNamespaces = []
     self.globalNamespaceID = ''
     self.typedefs_for_usr = []
+    self.gccxmlvers = gccxmlvers
     # The next is to avoid a known problem with gccxml that it generates a
     # references to id equal '_0' which is not defined anywhere
     self.xref['_0'] = {'elem':'Unknown', 'attrs':{'id':'_0','name':''}, 'subelems':[]}
@@ -76,6 +77,18 @@ class genDictionary(object) :
       self.functions.append(attrs)
     elif name in ('Constructor','Method','OperatorMethod') :
       if 'name' in attrs and attrs['name'][0:3] != '_ZT' :
+        if '>' not in attrs['name'] and 'demangled' in attrs :
+          # check whether this method is templated; GCCXML will
+          # not pass the real name foo<int> but only foo"
+          demangled = attrs['demangled']
+          posargs = demangled.rfind('(')
+          if posargs and posargs > 1 \
+                 and demangled[posargs - 1] == '>' \
+                 and (demangled[posargs - 2].isalnum() \
+                      or demangled[posargs - 2] == '_') :
+            posname = demangled.find(attrs['name'] + '<');
+            if posname :
+              attrs['name'] = demangled[posname : posargs]
         self.methods.append(attrs)
     elif name == 'Namespace' :
       self.namespaces.append(attrs)
@@ -778,7 +791,13 @@ class genDictionary(object) :
     elif notAccessibleType :
       sc += '  ClassBuilder("%s", typeid(%s%s), sizeof(%s), %s, %s)' % ( cls, self.xref[notAccessibleType]['attrs']['access'].title(), self.xref[attrs['id']]['elem'], '__shadow__::'+ string.translate(str(clf),self.transtable), mod, typ )
     else :
-      sc += '  ClassBuilder("%s", typeid(::%s), sizeof(::%s), %s, %s)' % (cls, cls, cls, mod, typ)
+      typeidtype = '::' + cls
+      # a funny bug in MSVC7.1: sizeof(::namesp::cl) doesn't work
+      if sys.platform == 'win32':
+         typeidtype = 'MSVC71_typeid_bug_workaround'
+         sc += '  typedef ::%s %s;\n' % (cls, typeidtype)
+      sc += '  ClassBuilder("%s", typeid(%s), sizeof(::%s), %s, %s)' \
+            % (cls, typeidtype, cls, mod, typ)
     if 'extra' in attrs :
       for pname, pval in attrs['extra'].items() :
         if pname not in ('name','pattern','n_name','file_name','file_pattern') :
@@ -875,65 +894,63 @@ class genDictionary(object) :
             c += self.genClassShadow(member['attrs'], inner + 1)
             
       #
-      # Is any of this really needed? We never instantiate the shadows,
-      # so which compiler complains about ambiguous overloads? See
-      # https://savannah.cern.ch/bugs/index.php?32874
-      #
-      
-      # Virtual methods.
+      # Virtual methods, see https://savannah.cern.ch/bugs/index.php?32874
       # Shadow classes inherit from the same bases as the shadowed class; if a
       # shadowed class is inherited from at least two bases and it defines
       # virtual methods of at least two bases then these virtual methods must
       # be declared in the shadow class or the compiler will complain about
       # ambiguous inheritance.
-#       allbases = []
-#       self.getAllBases(attrs['id'], allbases)
-#       if len(allbases) > 1 :
-#         allBasesMethods = {}
-#         # count method occurrences collected over all bases
-#         for b in allbases:
-#           baseattrs = self.xref[b[0]]['attrs']
-#           currentBaseName = baseattrs['demangled']
-#           basemem = baseattrs.get('members','')
-#           basememList = members.split()
-#           for bm in basememList:
-#             basemember = self.xref[bm]
-#             if basemember['elem'] in ('Method','OperatorMethod') \
-#                  and basemember['attrs'].get('virtual') == '1' \
-#                  and self.isTypePublic(basemember['attrs']['returns']) \
-#                  and not self.hasNonPublicArgs(basemember['subelems']):
-#               # This method is virtual and publicly accessible.
-#               # Remove the class name and the scope operator from the demangled method name.
-#               demangledBaseMethod = basemember['attrs'].get('demangled')[len(currentBaseName) + 2:]
-#               found = 0
-#               if demangledBaseMethod in allBasesMethods.keys():
-#                 # the method exists in another base.
-#                 # getAllBases collects the bases along each line of inheritance,
-#                 # i.e. either the method we found is in a derived class of b
-#                 # or it's in a different line and we have to write it out
-#                 # to prevent ambiguous inheritance.
-#                 for foundbases in allBasesMethods[demangledBaseMethod]['bases']:
-#                   if b in foundbases:
-#                     found = 1
-#                     break
-#                 if found == 0: found = 2
-#               if found != 1:
-#                 allbasebases = []
-#                 self.getAllBases(baseattrs['id'], allbasebases)
-#                 if found == 0:
-#                   allBasesMethods[demangledBaseMethod] = { 'bases': ( allbasebases ), 'returns': basemember['attrs'].get('returns') }
-#                 else:
-#                   allBasesMethods[demangledBaseMethod]['bases'].append( allbasebases )
-#                   allBasesMethods[demangledBaseMethod]['returns'] = basemember['attrs'].get('returns')
-#         # write out ambiguous methods
-#         for demangledMethod in allBasesMethods.keys() :
-#           member = allBasesMethods[demangledMethod]
-#           if len(member['bases']) > 1:
-#             ret = self.genTypeName(member['returns'])
-#             if not '(' in ret:
-#               # skip functions returning functions; we don't get the prototype right easily:
-#               cmem = '  virtual %s %s throw();' % (ret, demangledMethod)
-#               c += indent + cmem + '\n'
+      allbases = []
+      self.getAllBases(attrs['id'], allbases)
+      if len(allbases) > 1 :
+        allBasesMethods = {}
+        # count method occurrences collected over all bases
+        for b in allbases:
+          baseattrs = self.xref[b[0]]['attrs']
+          currentBaseName = baseattrs['demangled']
+          basemem = baseattrs.get('members','')
+          basememList = members.split()
+          for bm in basememList:
+            basemember = self.xref[bm]
+            if basemember['elem'] in ('Method','OperatorMethod') \
+                 and basemember['attrs'].get('virtual') == '1' \
+                 and self.isTypePublic(basemember['attrs']['returns']) \
+                 and not self.hasNonPublicArgs(basemember['subelems']):
+              # This method is virtual and publicly accessible.
+              # Remove the class name and the scope operator from the demangled method name.
+              demangledBaseMethod = basemember['attrs'].get('demangled')
+              posFuncName = demangledBaseMethod.rfind('::' + basemember['attrs'].get('name') + '(')
+              if posFuncName == -1 : continue
+              demangledBaseMethod = demangledBaseMethod[posFuncName + 2:]
+              found = 0
+              if demangledBaseMethod in allBasesMethods.keys():
+                # the method exists in another base.
+                # getAllBases collects the bases along each line of inheritance,
+                # i.e. either the method we found is in a derived class of b
+                # or it's in a different line and we have to write it out
+                # to prevent ambiguous inheritance.
+                for foundbases in allBasesMethods[demangledBaseMethod]['bases']:
+                  if b in foundbases:
+                    found = 1
+                    break
+                if found == 0: found = 2
+              if found != 1:
+                allbasebases = []
+                self.getAllBases(baseattrs['id'], allbasebases)
+                if found == 0:
+                  allBasesMethods[demangledBaseMethod] = { 'bases': ( allbasebases ), 'returns': basemember['attrs'].get('returns') }
+                else:
+                  allBasesMethods[demangledBaseMethod]['bases'].append( allbasebases )
+                  allBasesMethods[demangledBaseMethod]['returns'] = basemember['attrs'].get('returns')
+        # write out ambiguous methods
+        for demangledMethod in allBasesMethods.keys() :
+          member = allBasesMethods[demangledMethod]
+          if len(member['bases']) > 1:
+            ret = self.genTypeName(member['returns'])
+            if '(' not in ret:
+              # skip functions returning functions; we don't get the prototype right easily:
+              cmem = '  virtual %s %s throw();' % (ret, demangledMethod)
+              c += indent + cmem + '\n'
       # Data members.
       for m in memList :
         member = self.xref[m]
@@ -1059,7 +1076,7 @@ class genDictionary(object) :
       t = self.genTypeName(attrs['type'],enum, const, colon)
       if   t[-1] == ')' or t[-7:] == ') const' or t[-10:] == ') volatile' : s += t.replace('::*)','::**)').replace('::)','::*)').replace('(*)', '(**)').replace('()','(*)')
       elif t[-1] == ']' or t[-7:] == ') const' or t[-10:] == ') volatile' : s += t[:t.find('[')] + '(*)' + t[t.find('['):]
-      else              : s += t + '*'   
+      else              : s += t + '*'
     elif elem == 'ReferenceType' :
       s += self.genTypeName(attrs['type'],enum, const, colon)+'&'
     elif elem in ('FunctionType','MethodType') :
@@ -1100,7 +1117,13 @@ class genDictionary(object) :
       else : pass
     elif elem == 'OffsetType' :
       s += self.genTypeName(attrs['type'], enum, const, colon) + ' '
-      s += self.genTypeName(attrs['basetype'], enum, const, colon) + '::'  
+      s += self.genTypeName(attrs['basetype'], enum, const, colon) + '::'
+      # OffsetType A::*, different treatment for GCCXML 0.7 and 0.9:
+      # 0.7: basetype: A*
+      # 0.9: basetype: A - add a "*" here
+      version = float(re.compile('\\b\\d+\\.\\d+\\b').match(self.gccxmlvers).group())
+      if  version >= 0.9 : 
+        s += "*"
     else :
       if 'name' in attrs : s += attrs['name']
       s = normalizeClass(s,alltempl)                   # Normalize STL class names, primitives, etc.
@@ -1151,7 +1174,7 @@ class genDictionary(object) :
         elif elem == 'ReferenceType' :
           c += 'ReferenceBuilder(type'+attrs['type']+');\n'
         elif elem == 'ArrayType' :
-          mx = attrs['max']
+          mx = attrs['max'].rstrip('u')
           # check if array is bound (max='fff...' for unbound arrays)
           if mx.isdigit() : len = str(int(mx)+1)
           else            : len = '0' 
@@ -1792,6 +1815,7 @@ class genDictionary(object) :
 #----------------------------------------------------------------------------------
   def completeClass(self, attrs):
     # Complete class with "instantiated" templated methods or constructors
+    # for GCCXML 0.9: add default c'tor, copy c'tor, d'tor if not available.
     if 'members' in attrs : members = attrs['members'].split()
     else                  : members = []
     cid = attrs['id']
@@ -1811,6 +1835,57 @@ class genDictionary(object) :
             fname =  dname[1][dname[1].rfind('::' + m['name'])+2:]
             m['name'] = fname
         attrs['members'] += u' ' + m['id']
+    haveCtor    = 0
+    haveCtorCpy = 0
+    haveDtor    = 0
+    for m in members :
+      if self.xref[m]['elem'] == 'Constructor' :
+        haveCtor = 1
+        args = self.xref[m]['subelems']
+        if haveCtorCpy == 0 \
+               and (len(args) == 1 \
+                    or (len(args) > 1 and 'default' in args[1])) :
+          arg0type = args[0]['type']
+          elem = self.xref[arg0type]['elem']
+          while elem in ( 'ReferenceType', 'CvQualifiedType') :
+            arg0type = self.xref[arg0type]['attrs']['type']
+            elem = self.xref[arg0type]['elem']
+          if arg0type == cid: haveCtorCpy = 1
+      elif self.xref[m]['elem'] == 'Destructor' :
+        haveDtor = 1
+    if haveCtor == 0 :
+      id = u'_x%d' % self.x_id.next()
+      new_attrs = { 'name':attrs['name'], 'id':id, 'context':cid, 'artificial':'true', 'access':'public' }
+      self.xref[id] = {'elem':'Constructor', 'attrs':new_attrs, 'subelems':[] }
+      attrs['members'] += u' ' + id      
+    if haveCtorCpy == 0 :
+      ccid = cid + 'c'
+      # const cid exists?
+      if ccid not in self.xref :
+        new_attrs = { 'id':ccid, 'type':cid }
+        self.xref[ccid] = {'elem':'ReferenceType', 'attrs':new_attrs }
+      # const cid& exists?
+      crcid = 0
+      for xid in self.xref :
+        if self.xref[xid]['elem'] == 'ReferenceType' and self.xref[xid]['attrs']['type'] == ccid :
+          crcid = xid
+          break
+      if crcid == 0:
+        crcid = u'_x%d' % self.x_id.next()
+        new_attrs = { 'id':crcid, 'type':ccid, 'const':'1' }
+        self.xref[crcid] = {'elem':'ReferenceType', 'attrs':new_attrs }
+
+      # build copy ctor
+      id = u'_x%d' % self.x_id.next()
+      new_attrs = { 'name':attrs['name'], 'id':id, 'context':cid, 'artificial':'true', 'access':'public' }
+      arg = { 'type':crcid }
+      self.xref[id] = {'elem':'Constructor', 'attrs':new_attrs, 'subelems':[arg] }
+      attrs['members'] += u' ' + id
+    if haveDtor == 0 :
+      id = u'_x%d' % self.x_id.next()
+      new_attrs = { 'name':attrs['name'], 'id':id, 'context':cid, 'artificial':'true', 'access':'public' }
+      self.xref[id] = {'elem':'Destructor', 'attrs':new_attrs, 'subelems':[] }
+      attrs['members'] += u' ' + id      
 #---------------------------------------------------------------------------------------
 def getContainerId(c):
   if   c[-8:] == 'iterator' : return ('NOCONTAINER','')

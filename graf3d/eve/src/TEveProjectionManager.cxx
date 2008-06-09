@@ -12,6 +12,7 @@
 #include "TEveProjectionManager.h"
 #include "TEveManager.h"
 #include "TEveProjectionBases.h"
+#include "TEveCompound.h"
 
 #include "TAttBBox.h"
 #include "TBuffer3D.h"
@@ -44,7 +45,8 @@ TEveProjectionManager::TEveProjectionManager():
    TEveElementList("TEveProjectionManager",""),
    TAttBBox(),
    fProjection  (0),
-   fCurrentDepth(0)
+   fCurrentDepth(0),
+   fImportEmpty (kFALSE)
 {
    // Constructor.
 
@@ -87,7 +89,6 @@ void TEveProjectionManager::UpdateName()
    // Updates name to have consitent information with prjection.
 
    SetName(Form ("%s (%3.1f)", fProjection->GetName(), fProjection->GetDistortion()*1000));
-   UpdateItems();
 }
 
 //______________________________________________________________________________
@@ -144,7 +145,14 @@ Bool_t TEveProjectionManager::HandleElementPaste(TEveElement* el)
 //______________________________________________________________________________
 Bool_t TEveProjectionManager::ShouldImport(TEveElement* el)
 {
-   // Returns true if el or any of its children is NTLProjectable.
+   // Returns true if element el should be imported.
+   //
+   // Behaviour depends on the value of the fImportEmpty member:
+   //   false - el or any of its children must be projectable (default);
+   //   true  - always import.
+
+   if (fImportEmpty)
+      return kTRUE;
 
    if (el->IsA()->InheritsFrom(TEveProjectable::Class()))
       return kTRUE;
@@ -191,7 +199,6 @@ TEveElement* TEveProjectionManager::ImportElementsRecurse(TEveElement* el,
    {
       TEveProjected   *new_pr = 0;
       TEveProjectable *pble   = dynamic_cast<TEveProjectable*>(el);
-      // !!!! Do something for compounds here.
       if (pble)
       {
          new_el = (TEveElement*) pble->ProjectedClass()->New();
@@ -210,8 +217,14 @@ TEveElement* TEveProjectionManager::ImportElementsRecurse(TEveElement* el,
       new_el->SetPickable    (el->IsPickable());
       parent->AddElement(new_el);
 
+      TEveCompound *cmpnd    = dynamic_cast<TEveCompound*>(el);
+      TEveCompound *cmpnd_pr = dynamic_cast<TEveCompound*>(new_el);
       for (List_i i=el->BeginChildren(); i!=el->EndChildren(); ++i)
-         ImportElementsRecurse(*i, new_el);
+      {
+         TEveElement* child_pr = ImportElementsRecurse(*i, new_el);
+         if (cmpnd && (*i)->GetCompound() == cmpnd)
+            child_pr->SetCompound(cmpnd_pr);
+      }
    }
 
    return new_el;
@@ -294,7 +307,7 @@ void TEveProjectionManager::ComputeBBox()
 
    static const TEveException eH("TEveProjectionManager::ComputeBBox ");
 
-   if (GetNChildren() == 0) {
+   if (HasChildren() == kFALSE) {
       BBoxZero();
       return;
    }

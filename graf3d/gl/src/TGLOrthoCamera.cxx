@@ -154,6 +154,32 @@ Bool_t TGLOrthoCamera::Zoom(Int_t delta, Bool_t mod1, Bool_t mod2)
 }
 
 //______________________________________________________________________________
+void TGLOrthoCamera::SetZoomMin(Double_t z)
+{
+   // Set minimum zoom factor. If current zoom is less than z it is
+   // set to z.
+
+   fZoomMin = z;
+   if (fZoom < fZoomMin) {
+      fZoom = fZoomMin;
+      IncTimeStamp();
+   }
+}
+
+//______________________________________________________________________________
+void TGLOrthoCamera::SetZoomMax(Double_t z)
+{
+   // Set maximum zoom factor. If current zoom is greater than z it
+   // is set to z.
+
+   fZoomMax = z;
+   if (fZoom > fZoomMax) {
+      fZoom = fZoomMax;
+      IncTimeStamp();
+   }
+}
+
+//______________________________________________________________________________
 Bool_t TGLOrthoCamera::Truck(Int_t xDelta, Int_t yDelta, Bool_t mod1, Bool_t mod2)
 {
    // Truck the camera - 'move camera parallel to film plane'.
@@ -480,15 +506,13 @@ void TGLOrthoCamera::SetCamera()const
 }
 
 //______________________________________________________________________________
-void TGLOrthoCamera::Apply()const
+void TGLOrthoCamera::Apply(Double_t phi, Double_t theta)const
 {
    //Applies rotations and translations before drawing
    glTranslated(0., 0., -fShift);
    glMultMatrixd(fArcBall.GetRotMatrix());
-   glRotated(45., 1., 0., 0.);
-   glRotated(-45., 0., 1., 0.);
-   glRotated(-90., 0., 1., 0.);
-   glRotated(-90., 1., 0., 0.);
+   glRotated(theta - 90., 1., 0., 0.);
+   glRotated(phi, 0., 0., 1.);
    glTranslated(-fTruck[0], -fTruck[1], -fTruck[2]);
    glTranslated(-fCenter[0], -fCenter[1], -fCenter[2]);
 }

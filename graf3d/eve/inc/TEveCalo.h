@@ -38,18 +38,20 @@ private:
 protected:
    TEveCaloData* fData;  // event data reference
 
-   Float_t      fEtaLowLimit;
-   Float_t      fEtaHighLimit;
-   Float_t      fEtaMin;
-   Float_t      fEtaMax;
+   Double_t      fEtaMin;
+   Double_t      fEtaMax;
 
-   Float_t      fPhi;
-   Float_t      fPhiRng;
+   Double_t      fPhi;
+   Double_t      fPhiOffset;
 
-   Float_t      fBarrelRadius;  // barrel raidus in cm
-   Float_t      fEndCapPos;     // end cap z coordinate in cm
+   Float_t       fBarrelRadius;  // barrel raidus in cm
+   Float_t       fEndCapPos;     // end cap z coordinate in cm
 
-   Float_t      fCellZScale;
+   Float_t       fPlotEt;
+
+   Float_t           fMaxTowerH;
+   Bool_t            fScaleAbs;
+   Float_t           fMaxValAbs;
 
    Bool_t            fValueIsColor;   // Interpret signal value as RGBA color.
    TEveRGBAPalette*  fPalette;        // Pointer to signal-color palette.
@@ -58,7 +60,9 @@ protected:
 
    void AssignCaloVizParameters(TEveCaloViz* cv);
 
-   void SetupColorHeight(Float_t value, Int_t slice, Float_t& height, Bool_t &viz) const;
+   void SetupColorHeight(Float_t value, Int_t slice, Float_t& height) const;
+
+   virtual Float_t GetValToHeight() const;
 
 public:
    TEveCaloViz(const Text_t* n="TEveCaloViz", const Text_t* t="");
@@ -66,18 +70,23 @@ public:
 
    virtual ~TEveCaloViz();
 
-   void InvalidateCache() { fCacheOK = kFALSE; ResetBBox(); }
-
    TEveCaloData* GetData() const { return fData; }
    virtual void  SetData(TEveCaloData* d);
 
    Float_t GetBarrelRadius() const { return fBarrelRadius; }
-   void SetBarrelRadius(Float_t r) { fBarrelRadius = r; ResetBBox(); }
+   void    SetBarrelRadius(Float_t r) { fBarrelRadius = r; ResetBBox(); }
    Float_t GetEndCapPos   () const { return fEndCapPos; }
-   void SetEndCapPos   (Float_t z) { fEndCapPos = z; ResetBBox(); }
+   void    SetEndCapPos   (Float_t z) { fEndCapPos = z; ResetBBox(); }
 
-   virtual void    SetCellZScale(Float_t s) { fCellZScale = s; ResetBBox(); }
-   virtual Float_t GetDefaultCellHeight() const { return fBarrelRadius*fCellZScale; }
+   Bool_t  GetPlotEt() const { return fPlotEt; }
+   virtual void    SetPlotEt(Bool_t x);
+
+   void    SetMaxTowerH(Float_t x) { fMaxTowerH = x; }
+   Float_t GetMaxTowerH() const    { return fMaxTowerH; }
+   void    SetScaleAbs(Bool_t x) { fScaleAbs = x; }
+   Bool_t  GetScaleAbs() const { return fScaleAbs; }
+   void    SetMaxValAbs(Float_t x) { fMaxValAbs = x; }
+   Float_t GetMaxValAbs() const    { return fMaxValAbs; }
 
    Float_t GetTransitionEta() const;
    Float_t GetTransitionTheta() const;
@@ -86,16 +95,26 @@ public:
    void             SetPalette(TEveRGBAPalette* p);
    TEveRGBAPalette* AssertPalette();
 
+   Bool_t  GetValueIsColor() const { return fValueIsColor;}
+   void  SetValueIsColor(Bool_t x) { fValueIsColor = x;}
 
-   void SetEta(Float_t l, Float_t u) { fEtaMin=l; fEtaMax=u; InvalidateCache(); }
-   void SetEtaLimits(Float_t l, Float_t h) { fEtaLowLimit=l; fEtaHighLimit =h; InvalidateCache(); }
 
-   void SetPhi(Float_t x)    { fPhi    = x; InvalidateCache(); }
-   void SetPhiRng(Float_t r) { fPhiRng = r; InvalidateCache(); }
-   void SetPhiWithRng(Float_t x, Float_t r) { fPhi = x; fPhiRng = r; InvalidateCache(); }
+   void SetEta(Float_t l, Float_t u);
+   Float_t GetEta() const { return (fEtaMin+fEtaMax)*0.5f;}
+   Float_t GetEtaMin() const {return fEtaMin;}
+   Float_t GetEtaMax() const {return fEtaMax;}
+   Float_t GetEtaRng() const {return fEtaMax-fEtaMin;}
 
+   virtual void SetPhi(Float_t phi)    { SetPhiWithRng(phi, fPhiOffset); }
+   virtual void SetPhiRng(Float_t rng) { SetPhiWithRng(fPhi, rng); }
+   virtual void SetPhiWithRng(Float_t x, Float_t r);
+   Float_t GetPhi() const { return fPhi;}
+   Float_t GetPhiMin() const {return fPhi-fPhiOffset;}
+   Float_t GetPhiMax() const {return fPhi+fPhiOffset;}
+   Float_t GetPhiRng() const {return fPhiOffset*2;}
 
    virtual void ResetCache() = 0;
+   void InvalidateCache() { fCacheOK=kFALSE; ResetBBox(); } // compute bbox
 
    virtual void Paint(Option_t* option="");
 
@@ -118,8 +137,8 @@ protected:
    TEveCaloData::vCellId_t fCellList;
 
 public:
-   TEveCalo3D(const Text_t* n="TEveCalo3D", const Text_t* t=""):TEveCaloViz(n, t){ fCellZScale = 0.2;}
-   TEveCalo3D(TEveCaloData* data): TEveCaloViz(data) { SetElementName("TEveCalo3D"); fCellZScale = 0.2;}
+   TEveCalo3D(const Text_t* n="TEveCalo3D", const Text_t* t=""):TEveCaloViz(n, t){}
+   TEveCalo3D(TEveCaloData* data): TEveCaloViz(data) { SetElementName("TEveCalo3D");}
    virtual ~TEveCalo3D() {}
    virtual void ComputeBBox();
 
@@ -194,14 +213,11 @@ protected:
    Bool_t                  fDrawHPlane;
    Float_t                 fHPlaneVal;
 
-
 public:
    TEveCaloLego(const Text_t* n="TEveCaloLego", const Text_t* t="");
    TEveCaloLego(TEveCaloData* data);
 
    virtual ~TEveCaloLego(){}
-
-   Int_t  GetAxisStep(Float_t max) const;
 
    Color_t  GetFontColor() const { return fFontColor; }
    void     SetFontColor(Color_t ci) { fFontColor=ci; }
@@ -215,8 +231,8 @@ public:
    UChar_t  GetPlaneTransparency() const { return fPlaneTransparency; }
    void     SetPlaneTransparency(UChar_t t) { fPlaneTransparency=t; }
 
-   Int_t  GetNZSteps() const { return fNZSteps; }
-   void   SetNZSteps(Int_t s) { fNZSteps = s;}
+   Int_t    GetNZSteps() const { return fNZSteps; }
+   void     SetNZSteps(Int_t s) { fNZSteps = s;}
 
    Int_t    GetBinWidth() const { return fBinWidth; }
    void     SetBinWidth(Int_t bw) { fBinWidth = bw; }
@@ -230,13 +246,11 @@ public:
    void       SetBoxMode(EBoxMode_e p) { fBoxMode = p; }
    EBoxMode_e  GetBoxMode() { return fBoxMode; }
 
-   Bool_t GetDrawHPlane() const { return fDrawHPlane; }
-   void   SetDrawHPlane(Bool_t s) { fDrawHPlane = s;}
+   Bool_t   GetDrawHPlane() const { return fDrawHPlane; }
+   void     SetDrawHPlane(Bool_t s) { fDrawHPlane = s;}
 
    Float_t  GetHPlaneVal() const { return fHPlaneVal; }
    void     SetHPlaneVal(Float_t s) { fHPlaneVal = s;}
-
-   virtual Float_t GetDefaultCellHeight() const;
 
    virtual void ResetCache();
 
