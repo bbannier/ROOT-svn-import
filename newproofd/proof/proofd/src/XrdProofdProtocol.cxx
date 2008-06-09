@@ -760,13 +760,16 @@ int XrdProofdProtocol::SendMsg()
 
       // Send to proofsrv our client ID
       if (fCID == -1) {
+         TRACEP(this, REQ, "EXT: error getting clientSID");
          response->Send(kXP_ServerError,"EXT: getting clientSID");
          return rc;
       }
       if (SendData(xps, fCID)) {
+         TRACEP(this, REQ, "EXT: error sending message to proofserv");
          response->Send(kXP_reconnecting,"EXT: sending message to proofserv");
          return rc;
       }
+
       // Notify to user
       response->Send();
 
@@ -836,7 +839,7 @@ int XrdProofdProtocol::SendMsg()
    }
 
    // Over
-   return rc;
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -897,7 +900,7 @@ int XrdProofdProtocol::Urgent()
    TRACEP(this, DBG, "request propagated to proofsrv");
 
    // Over
-   return rc;
+   return 0;
 }
 
 //___________________________________________________________________________
@@ -949,7 +952,7 @@ int XrdProofdProtocol::Interrupt()
    }
 
    // Over
-   return rc;
+   return 0;
 }
 
 //___________________________________________________________________________
@@ -1049,7 +1052,7 @@ int XrdProofdProtocol::Ping()
       // Notify the client
       TRACEP(this, DBG, "EXT: notified the result to client: "<<pingres);
       response->Send(kXR_ok, pingres);
-      return rc;
+      return 0;
    }
 
    // Failure
@@ -1057,7 +1060,7 @@ int XrdProofdProtocol::Ping()
    response->Send(kXR_ok, pingres);
 
    // Done
-   return rc;
+   return 0;
 }
 
 //___________________________________________________________________________
