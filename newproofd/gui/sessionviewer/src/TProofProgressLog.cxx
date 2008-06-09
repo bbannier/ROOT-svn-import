@@ -169,7 +169,10 @@ TProofProgressLog::TProofProgressLog(TProofProgressDialog *d, Int_t w, Int_t h) 
 //____________________________________________________________________________
 TProofProgressLog::~TProofProgressLog()
 {
-   // Delete log window.
+   // Destructor
+
+   // Cleanup the log object
+   SafeDelete(fProofLog);
 
    // Detach from owner dialog
    fDialog->fLogWindow = 0;
@@ -239,18 +242,18 @@ TGListBox* TProofProgressLog::BuildLogList(TGFrame *parent)
    // of TProofLogElements
 
    TGListBox *c = new TGListBox(parent);
-   // c->AddEntry("all", 0);
-   char buf[150];
+
+   SafeDelete(fProofLog);
    fProofLog = TProof::Mgr(fDialog->fSessionUrl.Data())->GetSessionLogs();
    TList *elem = fProofLog->GetListOfLogs();
    TIter next(elem);
    TProofLogElem *pe = 0;
 
-   Int_t is=0; 
+   Int_t is = 0;
    while ((pe=(TProofLogElem*)next())){
       TUrl url(pe->GetTitle());
-      sprintf(buf,"%s %s",pe->GetName(), url.GetHost());     
-      c->AddEntry(buf, is);
+      TString buf = Form("%s %s", pe->GetName(), url.GetHost());
+      c->AddEntry(buf.Data(), is);
       is++;
    }
    return c;
@@ -273,19 +276,22 @@ void TProofProgressLog::DoLog(Bool_t grep)
       from = fLinesFrom->GetIntNumber();
       to = fLinesTo->GetIntNumber();
    }
+
    if (!grep) {
       if (!fProofLog || !fFullText || fDialog->fStatus==TProofProgressDialog::kRunning){
+         SafeDelete(fProofLog);
          fProofLog = TProof::Mgr(fDialog->fSessionUrl.Data())->GetSessionLogs();
-         fFullText = kTRUE;
+         if (!fDialog->fStatus==TProofProgressDialog::kRunning)
+            fFullText = kTRUE;
       }
    } else {
+      SafeDelete(fProofLog);
       fProofLog = TProof::Mgr(fDialog->fSessionUrl.Data())->GetSessionLogs(0, 0, greptext.Data());
       fFullText = kFALSE;
    }
    TList *selected = new TList;
    fLogList->GetSelectedEntries(selected);
    TIter next(selected);
-   TString ord;
    TGTextLBEntry *selentry;
    Bool_t logonly = fProofLog->LogToBox();
    fProofLog->SetLogToBox(kTRUE);
@@ -293,12 +299,10 @@ void TProofProgressLog::DoLog(Bool_t grep)
    fProofLog->Connect("Prt(const char*)", "TProofProgressLog",
                          this, "LogMessage(const char*, Bool_t)");
    while ((selentry=(TGTextLBEntry*)next())){
-      const char *name = selentry->GetText()->GetString();
-      Int_t i=0;
-      while (name[i]!=' ') i++;
-      ord.Append(name, i);
+      TString ord = selentry->GetText()->GetString();
+      Int_t is = ord.Index(" ");
+      if (is != kNPOS) ord.Remove(is);
       fProofLog->Display(ord.Data(), from, to);
-      ord="";
    }
    fProofLog->SetLogToBox(logonly);
    fProofLog->Disconnect("Prt(const char*)", this, "LogMessage(const char*, Bool_t)");

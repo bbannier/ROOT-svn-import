@@ -17,7 +17,7 @@
 #include "TVirtualPad.h"
 #include "TStyle.h"
 #include "TRandom.h"
-#include "Api.h"
+#include "TInterpreter.h"
 #include "TPluginManager.h"
 #include "TBrowser.h"
 #include "TColor.h"
@@ -547,7 +547,7 @@ TF1::TF1(const char *name,void *fcn, Double_t xmin, Double_t xmax, Int_t npar)
    SetFillStyle(0);
 
    if (!fcn) return;
-   char *funcname = G__p2f2funcname(fcn);
+   const char *funcname = gCint->Getp2f2funcname(fcn);
    SetTitle(funcname);
    if (funcname) {
       fMethodCall = new TMethodCall();
@@ -1469,7 +1469,7 @@ void TF1::ExecuteEvent(Int_t event, Int_t px, Int_t py)
    //
    //  This member function is called when a F1 is clicked with the locator
 
-   fHistogram->ExecuteEvent(event,px,py);
+   if (fHistogram) fHistogram->ExecuteEvent(event,px,py);
 
    if (!gPad->GetView()) {
       if (event == kMouseMotion)  gPad->SetCursor(kHand);

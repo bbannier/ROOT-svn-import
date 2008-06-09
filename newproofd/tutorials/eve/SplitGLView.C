@@ -1228,7 +1228,7 @@ void SplitGLView::ItemClicked(TGListTreeItem *item, Int_t, Int_t, Int_t)
       //v->Activated();
       if (v->InheritsFrom("TGLEmbeddedViewer")) {
          TGLEmbeddedViewer *ev = (TGLEmbeddedViewer *)v;
-         gVirtualX->SetInputFocus(ev->GetGLWidget()->GetContainer()->GetId());
+         gVirtualX->SetInputFocus(ev->GetGLWidget()->GetId());
       }
    }
 }
@@ -1360,7 +1360,8 @@ void SplitGLView::UpdateSummary()
             TEvePointSet *ps = (TEvePointSet *)el;
             TString ename  = ps->GetElementName();
             TString etitle = ps->GetElementTitle();
-            ename.Remove(ename.First('\''));
+            if (ename.First('\'') != kNPOS)
+               ename.Remove(ename.First('\''));
             etitle.Remove(0, 2);
             Int_t nel = atoi(etitle.Data());
             table = fgHtmlSummary->AddTable(ename, 0, nel);
@@ -1368,9 +1369,10 @@ void SplitGLView::UpdateSummary()
          else if (el->IsA() == TEveTrackList::Class()) {
             TEveTrackList *tracks = (TEveTrackList *)el;
             TString ename  = tracks->GetElementName();
-            ename.Remove(ename.First('\''));
+            if (ename.First('\'') != kNPOS)
+               ename.Remove(ename.First('\''));
             table = fgHtmlSummary->AddTable(ename.Data(), 5, 
-                     tracks->GetNChildren(), kTRUE, "first");
+                     tracks->NumChildren(), kTRUE, "first");
             table->SetLabel(0, "Momentum");
             table->SetLabel(1, "P_t");
             table->SetLabel(2, "Phi");

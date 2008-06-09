@@ -96,6 +96,7 @@ extern void CloseDisplay();
 
 static STRUCT_UTMP *gUtmpContents;
 static bool gNoLogo = false;
+const  int  kMAXPATHLEN = 8192;
 
 
 static int GetErrno()
@@ -168,15 +169,15 @@ static const char *GetExePath()
       exepath = _dyld_get_image_name(0);
 #endif
 #ifdef __linux
-      char linkname[64];  // /proc/<pid>/exe
-      char buf[1024];     // exe path name
+      char linkname[64];      // /proc/<pid>/exe
+      char buf[kMAXPATHLEN];  // exe path name
       pid_t pid;
 
       // get our pid and build the name of the link in /proc
       pid = getpid();
       sprintf(linkname, "/proc/%i/exe", pid);
-      int ret = readlink(linkname, buf, 1024);
-      if (ret > 0 && ret < 1024) {
+      int ret = readlink(linkname, buf, kMAXPATHLEN);
+      if (ret > 0 && ret < kMAXPATHLEN) {
          buf[ret] = 0;
          exepath = buf;
       }
@@ -363,9 +364,8 @@ static void PrintUsage(char *pname)
 
 int main(int argc, char **argv)
 {
-   const int kMAXARGS = 256;
-   char *argvv[kMAXARGS];
-   char  arg0[2048];
+   char **argvv;
+   char  arg0[kMAXPATHLEN];
 
 #ifndef ROOTPREFIX
    // Try to set ROOTSYS depending on pathname of the executable
@@ -473,6 +473,7 @@ int main(int argc, char **argv)
    // Child is going to overlay itself with the actual ROOT module...
 
    // Build argv vector
+   argvv = new char* [argc+2];
 #ifdef ROOTBINDIR
    sprintf(arg0, "%s/%s", ROOTBINDIR, ROOTBINARY);
 #else
@@ -481,9 +482,7 @@ int main(int argc, char **argv)
    argvv[0] = arg0;
    argvv[1] = (char *) "-splash";
 
-   int iargc = argc;
-   if (iargc > kMAXARGS-2) iargc = kMAXARGS-2;
-   for (i = 1; i < iargc; i++)
+   for (i = 1; i < argc; i++)
       argvv[1+i] = argv[i];
    argvv[1+i] = 0;
 

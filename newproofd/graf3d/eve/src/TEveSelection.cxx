@@ -11,6 +11,7 @@
 
 #include "TEveSelection.h"
 #include "TEveProjectionBases.h"
+#include "TEveCompound.h"
 #include "TEveManager.h"
 
 #include "TClass.h"
@@ -172,6 +173,28 @@ void TEveSelection::RemoveElementsLocal()
 }
 
 //______________________________________________________________________________
+void TEveSelection::RemoveImpliedSelected(TEveElement* el)
+{
+   // Remove element from all implied-selected sets.
+   //
+   // This is called as part of the element destruction from
+   // TEveManager::PreDeleteElement() and should not be called
+   // directly.
+
+   for (SelMap_i i = fImpliedSelected.begin(); i != fImpliedSelected.end(); ++i)
+   {
+      Set_i j = i->second.find(el);
+      if (j != i->second.end())
+         i->second.erase(j);
+   }
+}
+
+
+//******************************************************************************
+// Signals
+//******************************************************************************
+
+//______________________________________________________________________________
 void TEveSelection::SelectionAdded(TEveElement* el)
 {
    // Emit SelectionAdded signal.
@@ -231,6 +254,9 @@ TEveElement* TEveSelection::MapPickedToSelected(TEveElement* el)
    // the parent/ancestor element that should actually become the main
    // selected element according to current selection mode.
 
+   if (el == 0)
+      return 0;
+
    switch (fPickToSelect)
    {
       case kPS_Ignore:
@@ -243,17 +269,33 @@ TEveElement* TEveSelection::MapPickedToSelected(TEveElement* el)
       }
       case kPS_Projectable:
       {
-         TEveProjected* p = dynamic_cast<TEveProjected*>(el);
-         if (p) {
-            TEveElement* pm = dynamic_cast<TEveElement*>(p->GetProjectable());
-            if (pm)
-               return pm;
-         }
+         TEveProjected* pted = dynamic_cast<TEveProjected*>(el);
+         if (pted)
+            return dynamic_cast<TEveElement*>(pted->GetProjectable());
          return el;
       }
       case kPS_Compound:
       {
-         Error("TEveSelection::MapPickedToSelected", "Compound pick-to-select mode not supported.");
+         TEveElement* cmpnd = el->GetCompound();
+         if (cmpnd)
+            return cmpnd;
+         return el;
+      }
+      case kPS_PableCompound:
+      {
+         TEveProjected* pted = dynamic_cast<TEveProjected*>(el);
+         if (pted)
+            el = dynamic_cast<TEveElement*>(pted->GetProjectable());
+         TEveElement* cmpnd = el->GetCompound();
+         if (cmpnd)
+            return cmpnd;
+         return el;
+      }
+      case kPS_Master:
+      {
+         TEveElement* mstr = el->GetMaster();
+         if (mstr)
+            return mstr;
          return el;
       }
    }
@@ -270,7 +312,7 @@ void TEveSelection::UserPickedElement(TEveElement* el, Bool_t multi)
 
    el = MapPickedToSelected(el);
 
-   if (el || GetNChildren() > 0)
+   if (el || HasChildren())
    {
       if (!multi)
          RemoveElements();

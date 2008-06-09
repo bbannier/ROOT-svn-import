@@ -42,17 +42,12 @@ void TEveCompound::SetMainColor(Color_t color)
    Color_t old_color = GetMainColor();
 
    TEveElement::SetMainColor(color);
+
    for (List_i i=fChildren.begin(); i!=fChildren.end(); ++i)
    {
       if ((*i)->GetCompound() == this && (*i)->GetMainColor() == old_color)
          (*i)->SetMainColor(color);
    }
-}
-
-//______________________________________________________________________________
-void TEveCompound::PropagateVizParams()
-{
-   TEveElement::PropagateVizParams();
 }
 
 //******************************************************************************
@@ -108,7 +103,10 @@ void TEveCompound::FillImpliedSelectedSet(Set_t& impSelSet)
    for (List_i i=fChildren.begin(); i!=fChildren.end(); ++i)
    {
       if ((*i)->GetCompound() == this)
+      {
+         impSelSet.insert(*i);
          (*i)->FillImpliedSelectedSet(impSelSet);
+      }
 
    }
    TEveElementList::FillImpliedSelectedSet(impSelSet);
@@ -155,10 +153,4 @@ void TEveCompoundProjected::SetMainColor(Color_t color)
    // and we do not need to do this twice for projected-compound-elements.
 
    TEveElement::SetMainColor(color);
-}
-
-//______________________________________________________________________________
-void TEveCompoundProjected::PropagateVizParams()
-{
-
 }
