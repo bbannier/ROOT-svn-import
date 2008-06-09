@@ -1,4 +1,4 @@
-#              $Id: GNUmakefile,v 1.23 2007/12/10 04:11:47 abh Exp $
+#              $Id: GNUmakefile,v 1.25 2008/06/09 10:44:23 ganis Exp $
 
 #------------------------------------------------------------------------------#
 #                       C o m m o n   V a r i a b l e s                        #
@@ -50,6 +50,7 @@ TARGETS = $(LIBARCH) $(LIBRARY) $(TSTBINA) $(TSTBINB)
 #                           S e a r c h   P a t h s                            #
 #------------------------------------------------------------------------------#
 
+vpath XrdNet% ../XrdNet
 vpath XrdOuc% ../XrdOuc
 vpath XrdSys% ../XrdSys
 
@@ -109,6 +110,7 @@ $(OBJDIR)/XrdSecProtocolhost.o: XrdSecProtocolhost.cc XrdSecProtocolhost.hh \
 	@echo Compiling XrdSecProtocolhost.cc
 	$(ECHO)$(CC) -c $(CFLAGS) $(INCLUDE) -o $(OBJDIR)/XrdSecProtocolhost.o XrdSecProtocolhost.cc
 $(OBJDIR)/XrdSecServer.o: XrdSecServer.cc       XrdSecServer.hh \
+                          XrdNetDNS.hh \
                           XrdOucErrInfo.hh      XrdSysError.hh \
                           XrdSysLogger.hh       XrdOucStream.hh \
                           XrdSecInterface.hh    XrdSecPManager.hh \

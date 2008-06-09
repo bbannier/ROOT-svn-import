@@ -1,4 +1,4 @@
-#              $Id: GNUmakefile,v 1.28 2008/05/07 14:11:15 abh Exp $
+#              $Id: GNUmakefile,v 1.29 2008/06/03 01:50:37 abh Exp $
 
 #------------------------------------------------------------------------------#
 #                       C o m m o n   V a r i a b l e s                        #
@@ -6,7 +6,8 @@
   
 include ../GNUmake.env
 
-BINLIBS = -L$(LIBDIR) -lXrd -lXrdNet -lXrdOuc -lXrdSys $(OBJDIR)/XrdSfsNative.o
+BINLIBS = -L$(LIBDIR) -lXrd -lXrdNet -lXrdOuc -lXrdSys $(TYPELIBSF) \
+                      $(OBJDIR)/XrdSfsNative.o
 
 #------------------------------------------------------------------------------#
 #                             C o m p o n e n t s                              #

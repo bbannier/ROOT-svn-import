@@ -69,7 +69,7 @@ extern "C" {
 
 
 
-#define XRDCLI_VERSION            "(C) 2004 SLAC INFN $Revision: 1.20 $ - Xrootd version: "XrdVSTRING
+#define XRDCLI_VERSION            "(C) 2004 SLAC INFN $Revision: 1.21 $ - Xrootd version: "XrdVSTRING
 
 
 ///////////////////////////////////////////////////////////////////////

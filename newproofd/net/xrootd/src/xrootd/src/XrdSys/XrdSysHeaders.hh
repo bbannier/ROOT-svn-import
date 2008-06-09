@@ -10,7 +10,7 @@
 /*              DE-AC03-76-SFO0515 with the Department of Energy              */
 /******************************************************************************/
   
-//        $Id:$
+//        $Id$
 
 // This header has been introduced to help the transition to new versions
 // of the gcc compiler which deprecates or even not support some standard

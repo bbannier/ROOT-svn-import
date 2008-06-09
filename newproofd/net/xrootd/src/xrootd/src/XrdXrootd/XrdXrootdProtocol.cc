@@ -68,9 +68,15 @@ int                   XrdXrootdProtocol::as_maxperreq = 8;   // Max ops per requ
 int                   XrdXrootdProtocol::as_maxpersrv = 4096;// Max ops per server
 int                   XrdXrootdProtocol::as_segsize   = 131072;
 int                   XrdXrootdProtocol::as_miniosz   = 32768;
+#ifdef __solaris__
+int                   XrdXrootdProtocol::as_minsfsz   = 1;
+#else
+int                   XrdXrootdProtocol::as_minsfsz   = 8192;
+#endif
 int                   XrdXrootdProtocol::as_maxstalls = 5;
 int                   XrdXrootdProtocol::as_force     = 0;
 int                   XrdXrootdProtocol::as_noaio     = 0;
+int                   XrdXrootdProtocol::as_nosf      = 0;
 int                   XrdXrootdProtocol::as_syncw     = 0;
 
 const char           *XrdXrootdProtocol::myInst  = 0;
@@ -365,7 +371,7 @@ int XrdXrootdProtocol::Process2()
    if (Status & XRD_NEED_AUTH)
       if (Request.header.requestid == kXR_auth) return do_Auth();
          else {Response.Send(kXR_InvalidRequest,
-                             "Invalid request; user not logged in");
+                             "Invalid request; user not authenticated");
                return -1;
               }
 

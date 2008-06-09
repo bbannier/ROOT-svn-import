@@ -1,4 +1,4 @@
-#              $Id: GNUmakefile,v 1.12 2008/04/10 04:09:09 abh Exp $
+#              $Id: GNUmakefile,v 1.13 2008/06/02 22:09:43 abh Exp $
 
 #------------------------------------------------------------------------------#
 #                       C o m m o n   V a r i a b l e s                        #
@@ -6,7 +6,7 @@
   
 include ../GNUmake.env
 
-BINLIBS = -L$(LIBDIR) -lXrdOuc -lXrdNet -lXrdOuc -lXrd -lXrdSys
+BINLIBS = -L$(LIBDIR) -lXrdOuc -lXrdNet -lXrdOuc -lXrd -lXrdSys $(TYPELIBSF)
 
 LIBDEPS = $(LIBDIR)/libXrdOuc.a $(LIBDIR)/libXrdNet.a $(LIBDIR)/libXrdSys.a \
           $(LIBDIR)/libXrd.a
