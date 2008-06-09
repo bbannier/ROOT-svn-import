@@ -4,8 +4,8 @@
 ##
 ## Initial version: 1.8.2005
 ##
-## Version info: $Id: Makefile.am,v 1.27 2008/03/01 05:10:39 abh Exp $
-## Checked in by $Author: abh $
+## Version info: $Id: Makefile.am,v 1.29 2008/05/27 12:50:16 dfeich Exp $
+## Checked in by $Author: dfeich $
 #######################################################################
 
 
@@ -142,23 +142,34 @@ clean-local:
 # suitable swig is available, we instead create it anew
 # This needs to be done outside the ENABLE_PERLINT clause, to get a working
 # "make dist" target
-
+SWIG_TARGETS = XrdClientAdmin_c_wrap.cc XrdClientAdmin.pm
 if REBUILD_SWIGFILE
-XrdClientAdmin_c_wrap.cc: XrdClientAdmin_c.hh
+# This creates both the .cc file and the .pm perl module
+$(SWIG_TARGETS): XrdClientAdmin_c.hh
 	echo Creating swig perl interface
 	$(SWIG) -perl -o $@ $(srcdir)/XrdClientAdmin_c.hh
 else
 XrdClientAdmin_c_wrap.cc: XrdClientAdmin_c_wrap.c
 	cp $(srcdir)/XrdClientAdmin_c_wrap.c XrdClientAdmin_c_wrap.cc
+XrdClientAdmin.pm:
+	@if test -e $(srcdir)/XrdClientAdmin.pm; then \
+           cp $(srcdir)/XrdClientAdmin.pm XrdClientAdmin.pm; \
+        else \
+           echo "ERROR: You lost distribution's original $@. Refetch it."; \
+           exit 1; \
+        fi         
 endif
 
 if ENABLE_PERLINT
 
 libXrdClientAdmin_la_SOURCES = XrdClientAdmin_c.cc \
                                XrdClientAdmin_c_wrap.cc
+libXrdClientAdmin_la_LIBADD = $(clientlibs)                                                        
 
 libXrdClientAdmin_la_CXXFLAGS = $(PERL_CCOPTS)
+install-exec-local: libXrdClientAdmin.la XrdClientAdmin.pm
+	$(INSTALL) -m 644 XrdClientAdmin.pm  $(DESTDIR)/$(libdir)/XrdClientAdmin.pm
 endif
 
-# we need to include the pregenerated swig file in the disribution
+# we need to include the pregenerated swig file in the distribution
 EXTRA_DIST = XrdClientAdmin_c_wrap.c XrdClientAdmin.pm

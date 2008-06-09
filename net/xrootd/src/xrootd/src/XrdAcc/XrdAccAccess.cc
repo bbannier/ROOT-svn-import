@@ -117,7 +117,7 @@ XrdAccPrivs XrdAccAccess::Access(const XrdSecEntity    *Entity,
 // standard unix-username group mapping.
 //
    if (Atab.G_Hash)
-      {if (Entity->grps)
+      if (Entity->grps)
          {char gBuff[1024];
           XrdOucTokenizer gList(gBuff);
           strlcpy(gBuff, Entity->grps, sizeof(gBuff));
@@ -131,7 +131,6 @@ XrdAccPrivs XrdAccAccess::Access(const XrdSecEntity    *Entity,
                             cp->Privs(caps, path, plen, phash);
                     delete glp;
                    }
-      }
 
 // Now add in the netgroup privileges
 //

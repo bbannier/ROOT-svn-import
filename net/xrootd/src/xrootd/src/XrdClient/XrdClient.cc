@@ -68,7 +68,7 @@ XrdClient::XrdClient(const char *url) {
     if (!ConnectionManager)
 	Info(XrdClientDebug::kNODEBUG,
 	     "Create",
-	     "(C) 2004 SLAC INFN XrdClient $Revision: 1.115 $ - Xrootd version: " << XrdVSTRING);
+	     "(C) 2004 SLAC INFN XrdClient $Revision: 1.118 $ - Xrootd version: " << XrdVSTRING);
 
 #ifndef WIN32
     signal(SIGPIPE, SIG_IGN);
@@ -736,8 +736,10 @@ bool XrdClient::Write(const void *buf, long long offset, int len, bool docheckpo
       if (i < rl.GetSize()-1) {
 	XReqErrorType b = fConnModule->WriteToServer_Async(&writeFileRequest, cbuf, rl[i].streamtosend);
 	if (b != kOK) {
-           ret = false;
-           break;
+           // Try again the write op, but in sync mode
+           ret = fConnModule->SendGenCommand(&writeFileRequest, (void *)cbuf, 0, 0,
+					     FALSE, (char *)"Write");
+           if (!ret) break;
         }
         writtenok += rl[i].len;
       }
@@ -749,12 +751,17 @@ bool XrdClient::Write(const void *buf, long long offset, int len, bool docheckpo
 	  ret = fConnModule->SendGenCommand(&writeFileRequest, (void *)cbuf, 0, 0,
 					     FALSE, (char *)"Write");
           if (ret) writtenok += rl[i].len;
-          break;
+          else break;
 	}
 	else {
 	  ret = (fConnModule->WriteToServer_Async(&writeFileRequest, cbuf, rl[i].streamtosend) == kOK);
+
+          if (!ret)
+             ret = fConnModule->SendGenCommand(&writeFileRequest, (void *)cbuf, 0, 0,
+                                               FALSE, (char *)"Write");
+
           if (ret) writtenok += rl[i].len;
-          break;
+          else break;
         }
       
 
@@ -1451,19 +1458,25 @@ XReqErrorType XrdClient::Read_Async(long long offset, int len) {
 bool XrdClient::TrimReadRequest(kXR_int64 &offs, kXR_int32 &len, kXR_int32 rasize) {
 
     kXR_int64 newoffs;
-    kXR_int32 newlen, minlen, blksz;
+    kXR_int32 newlen, blksz;
 
     if (!fUseCache ) return false;
 
-    blksz = xrdmax(rasize, 16384);
+//    blksz = xrdmax(rasize, 16384);
 
-    newoffs = offs / blksz * blksz;
+//     kXR_int64 minlen;
+//     newoffs = offs / blksz * blksz;
+//     minlen = (offs + len - newoffs);
+//     newlen = ((minlen / blksz + 1) * blksz);
+//     newlen = xrdmax(rasize, newlen);
 
-    minlen = (offs + len - newoffs);
-    newlen = ((minlen / blksz + 1) * blksz);
-
-
-    newlen = xrdmax(rasize, newlen);
+    blksz = 128*1024;
+    kXR_int64 lastbyte;
+    newoffs = offs;
+    lastbyte = offs+len+blksz-1;
+    lastbyte = (lastbyte / blksz) * blksz - 1;
+    
+    newlen = lastbyte-newoffs+1;
 
     if (fConnModule->CacheWillFit(newlen)) {
 	offs = newoffs;

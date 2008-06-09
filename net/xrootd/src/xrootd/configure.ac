@@ -12,8 +12,8 @@
 ## Author: Derek Feichtinger <derek.feichtinger@cern.ch>
 ## Initial version: 1.8.2005
 ##
-## Version info: $Id: configure.ac,v 1.34 2008/05/19 11:36:17 dfeich Exp $
-## Checked in by $Author: dfeich $
+## Version info: $Id: configure.ac,v 1.35 2008/06/03 01:45:44 abh Exp $
+## Checked in by $Author: abh $
 #######################################################################
 
 # Note: All macros with the prefix ACX_ are custom macros. Their usage
@@ -759,6 +759,8 @@ AC_CHECK_FUNC([getprotobyname_r],[AC_DEFINE(HAS_PROTOR)],
               ])
 
 AC_CHECK_FUNC([strlcpy],[AC_DEFINE(HAS_STRLCPY)])
+
+AC_CHECK_FUNC([sendfile],[AC_DEFINE(HAS_SENDFILE)])
 
 #   note: needed for solaris
 AC_CHECK_LIB([rt],[sem_post],
