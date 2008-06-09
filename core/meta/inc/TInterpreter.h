@@ -125,6 +125,8 @@ public:
    virtual Long_t GetExecByteCode() const {return 0;}
    virtual Long_t Getgvp() const {return 0;}
    virtual const char *Getp2f2funcname(void * /* receiver */) const {return 0;}
+   virtual const char *GetTopLevelMacroName() const {return 0;};
+   virtual const char *GetCurrentMacroName()  const {return 0;};
    virtual int    GetSecurityError() const{return 0;}
    virtual int    LoadFile(const char * /* path */) const {return 0;}
    virtual void   LoadText(const char * /* text */) const {;}

@@ -274,7 +274,7 @@ TEveGeoShapeExtract* TEveGeoNode::DumpShapeTree(TEveGeoNode* geon, TEveGeoShapeE
    }
    gse->SetShape(tshape);
    ++level;
-   if (geon->GetNChildren())
+   if (geon->HasChildren())
    {
       TList* ele = new TList();
       gse->SetElements(ele);
@@ -440,8 +440,10 @@ TGeoManager* init_geo_mangeur()
 {
    // Create a phony geo manager that 
    TGeoManager* old = gGeoManager;
-   TGeoManager* mgr = new TGeoManager("TEveGeoShape::fgGeoMangeur",
-                                      "Static geo manager used for wrapped TGeoShapes.");
+   gGeoManager = 0;
+   TGeoManager* mgr = new TGeoManager();
+   mgr->SetNameTitle("TEveGeoShape::fgGeoMangeur",
+                     "Static geo manager used for wrapped TGeoShapes.");
    gGeoManager = old;
    return mgr;
 }
@@ -578,7 +580,7 @@ TEveGeoShapeExtract* TEveGeoShape::DumpShapeTree(TEveGeoShape* gsre,
    she->SetRnrSelf(gsre->GetRnrSelf());
    she->SetRnrElements(gsre->GetRnrChildren());
    she->SetShape(gsre->GetShape());
-   if (gsre->GetNChildren())
+   if (gsre->HasChildren())
    {
       TList* ele = new TList();
       she->SetElements(ele);
