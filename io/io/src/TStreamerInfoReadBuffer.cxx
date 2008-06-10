@@ -86,7 +86,7 @@
       int j;                                    \
       if (isArray) for(j=0;j<fLength[i];j++) {  \
          f[j] = 0; if (*l <=0) continue;        \
-         f[j] = new (fMemPool->GetMem(sizeof(name)*(*l))) name[*l];   \
+         f[j] = new (mempool->GetMem(sizeof(name)*(*l))) name[*l];   \
          b.ReadFastArray(f[j],*l);              \
       }                                         \
    }
@@ -100,7 +100,7 @@
 #define ReadBasicPointerMemPool(name)           \
    {                                            \
       const int imethod = fMethod[i]+eoffset;   \
-      if (!fMemPool) {                          \
+      if (!mempool) {                           \
          ReadBasicPointerElem(name,0);          \
       }                                         \
       else {                                    \
@@ -120,7 +120,7 @@
    {                                            \
       int imethod = fMethod[i]+eoffset;         \
       for(int k=0; k<narr; ++k) {               \
-         if (!fMemPool) {                       \
+         if (!mempool) {                        \
             ReadBasicPointerElem(name,k);       \
          }                                      \
          else {                                 \
@@ -636,6 +636,8 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
    b.IncrementLevel(thisVar);
 
    Int_t last;
+   TMemPool *mempool = b.GetMemPool();
+   //TMemPool *mempool = 0;
 
    if (!fType) {
       char *ptr = (arrayMode&1)? 0:arr[0];
@@ -815,10 +817,10 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
             Double_t **f = (Double_t**)(arr[0]+ioffset);
             int j;
             for(j=0;j<fLength[i];j++) {
-               if (!fMemPool) delete [] f[j];
+               if (!mempool) delete [] f[j];
                f[j] = 0; if (*l <=0) continue;
-               if (!fMemPool) f[j] = new Double_t[*l];
-               else           f[j] = new (fMemPool->GetMem(sizeof(Double_t)*(*l))) Double_t[*l];
+               if (!mempool) f[j] = new Double_t[*l];
+               else          f[j] = new (mempool->GetMem(sizeof(Double_t)*(*l))) Double_t[*l];
                b.ReadFastArrayDouble32(f[j],*l,aElement);
             }
             continue;
@@ -848,10 +850,10 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
                Float_t **f = (Float_t**)(arr[k]+ioffset);
                int j;
                for(j=0;j<fLength[i];j++) {
-		  if (!fMemPool) delete [] f[j];
+		  if (!mempool) delete [] f[j];
                   f[j] = 0; if (*l <=0) continue;
-		  if (!fMemPool) f[j] = new Float_t[*l];
-                  else           f[j] = new (fMemPool->GetMem(sizeof(Float_t)*(*l))) Float_t[*l];
+		  if (!mempool) f[j] = new Float_t[*l];
+                  else          f[j] = new (mempool->GetMem(sizeof(Float_t)*(*l))) Float_t[*l];
                   b.ReadFastArrayFloat16(f[j],*l,aElement);
                }
             }
@@ -866,10 +868,10 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
                Double_t **f = (Double_t**)(arr[k]+ioffset);
                int j;
                for(j=0;j<fLength[i];j++) {
-                  if (!fMemPool) delete [] f[j];
+                  if (!mempool) delete [] f[j];
                   f[j] = 0; if (*l <=0) continue;
-                  if (!fMemPool) f[j] = new Double_t[*l];
-                  else           f[j] = new (fMemPool->GetMem(sizeof(Double_t)*(*l))) Double_t[*l];
+                  if (!mempool) f[j] = new Double_t[*l];
+                  else          f[j] = new (mempool->GetMem(sizeof(Double_t)*(*l))) Double_t[*l];
                   b.ReadFastArrayDouble32(f[j],*l,aElement);
                }
             }
@@ -884,10 +886,10 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
             DOLOOP {
                Int_t nch; b >> nch;
                char **f = (char**)(arr[k]+ioffset);
-               if (!fMemPool) delete [] *f;
+               if (!mempool) delete [] *f;
                *f = 0; if (nch <=0) continue;
-               if (!fMemPool) *f = new char[nch+1];
-               else           *f = new (fMemPool->GetMem(nch+1)) char[nch+1];
+               if (!mempool) *f = new char[nch+1];
+               else          *f = new (mempool->GetMem(nch+1)) char[nch+1];
                b.ReadFastArray(*f,nch); (*f)[nch] = 0;
             }
          }
@@ -954,14 +956,14 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
          case TStreamerInfo::kAnyP:    // Class*  not derived from TObject with no comment field NOTE:: Re-added by Phil
          case TStreamerInfo::kAnyP+TStreamerInfo::kOffsetL: {
             DOLOOP {
-	      ///if (!fMemPool) {
-                  b.ReadFastArray((void**)(arr[k]+ioffset),cle,fLength[i],isPreAlloc,pstreamer, 0);
+	      ///if (!mempool) {
+                  b.ReadFastArray((void**)(arr[k]+ioffset),cle,fLength[i],isPreAlloc,pstreamer);
 		  /*}
                else {
                   void **f = (void**)(arr[k]+ioffset);
                   int j;
                   for(j=0;j<fLength[i];j++) {
-                     f[j] = cle->New(fMemPool->GetMem(cle->Size()));
+                     f[j] = cle->New(mempool->GetMem(cle->Size()));
                   }                    
                   
                   b.ReadFastArray((void**)(arr[k]+ioffset),cle,fLength[i],kTRUE,pstreamer);

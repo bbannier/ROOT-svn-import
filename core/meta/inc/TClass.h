@@ -52,6 +52,7 @@ class TMethodCall;
 class TVirtualIsAProxy;
 class TVirtualRefProxy;
 class THashTable;
+class TMemPool;
 
 namespace ROOT { class TGenericClassInfo; class TCollectionProxyInfo; }
 
@@ -195,7 +196,7 @@ public:
    void               AddImplFile(const char *filename, int line);
    void               AddRef(TClassRef *ref); 
    virtual void       Browse(TBrowser *b);
-   void               BuildRealData(void *pointer=0);
+   void               BuildRealData(void *pointer=0, TMemPool* mempool=0);
    void               BuildEmulatedRealData(const char *name, Long_t offset, TClass *cl);
    void               CalculateStreamerOffset();
    Bool_t             CanSplit() const;
@@ -256,7 +257,7 @@ public:
    ShowMembersFunc_t  GetShowMembersWrapper() const { return fShowMembers; }
    TClassStreamer    *GetStreamer() const; 
    TObjArray         *GetStreamerInfos() const { return fStreamerInfo; }
-   TVirtualStreamerInfo     *GetStreamerInfo(Int_t version=0) const;
+   TVirtualStreamerInfo     *GetStreamerInfo(Int_t version=0, TMemPool* mempool=0) const;
    const type_info   *GetTypeInfo() const { return fTypeInfo; };
    void               IgnoreTObjectStreamer(Bool_t ignore=kTRUE);
    Bool_t             InheritsFrom(const char *cl) const;
@@ -321,7 +322,7 @@ public:
 
    Int_t              Browse(void *obj, TBrowser *b) const;
    void               DeleteArray(void *ary, Bool_t dtorOnly = kFALSE);
-   void               Destructor(void *obj, Bool_t dtorOnly = kFALSE);
+   void               Destructor(void *obj, Bool_t dtorOnly = kFALSE, TMemPool* mempool = 0);
    void              *DynamicCast(const TClass *base, void *obj, Bool_t up = kTRUE);
    Bool_t             IsFolder(void *obj) const;
    void               Streamer(void *obj, TBuffer &b);

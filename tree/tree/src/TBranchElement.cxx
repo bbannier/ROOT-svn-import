@@ -41,7 +41,6 @@
 #include "TVirtualCollectionProxy.h"
 #include "TVirtualPad.h"
 #include "TBranchSTL.h"
-#include "TMemPool.h"
 
 ClassImp(TBranchElement)
 
@@ -1453,7 +1452,7 @@ void TBranchElement::InitInfo()
          {
             Bool_t optim = TVirtualStreamerInfo::CanOptimize();
             TVirtualStreamerInfo::Optimize(kFALSE);
-            fInfo = (TStreamerInfo*)cl->GetStreamerInfo(fClassVersion);
+            fInfo = (TStreamerInfo*)cl->GetStreamerInfo(fClassVersion, fMemPool);
             TVirtualStreamerInfo::Optimize(optim);
          }
          // FIXME: Check that the found streamer info checksum matches our branch class checksum here.
@@ -1529,8 +1528,6 @@ void TBranchElement::InitInfo()
          fInit = kTRUE;
       }
    }
-   // Use the mempool per branch 
-   fInfo->SetMemPool(fMemPool);
 }
 
 //______________________________________________________________________________
@@ -2961,7 +2958,7 @@ void TBranchElement::ReleaseObject()
             Warning("ReleaseObject", "Cannot delete allocated object because I cannot instantiate a TClass object for its class!  branch: '%s' class: '%s'", GetName(), fBranchClass.GetClassName());
             fObject = 0;
          } else {
-            cl->Destructor(fObject);
+            cl->Destructor(fObject, kFALSE, fMemPool);
             fObject = 0;
          }
       }
@@ -3516,13 +3513,11 @@ void TBranchElement::SetAddress(void* addr)
       } else {
          // -- Caller did not provide an i/o buffer for us to use, we must make one for ourselves.
          if (clOfBranch) {
-            if (!pp && !fMemPool) {
+            if (!pp) {
                // -- Caller wants us to own the object.
-               // and we are not using the memory pool either
                SetBit(kDeleteObject);
             }
-            if(!fMemPool)  fObject = (char*) clOfBranch->New();
-            else           fObject = (char*) clOfBranch->New(fMemPool->GetMem(clOfBranch->Size()));
+            fObject = (char*) clOfBranch->New();
 
             if (pp) {
                *pp = fObject;

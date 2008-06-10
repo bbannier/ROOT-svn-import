@@ -329,9 +329,7 @@ Int_t TBasket::ReadBasketBuffers(Long64_t pos, Int_t len, TFile *file)
       len = fObjlen+fKeylen;
    }
    else{
-      char *buf = new (fBranch->GetMemPool()->GetMem(len)) char[len];
-      fBufferRef = new TBufferFile(TBuffer::kRead, len, buf, kFALSE);
-      //fBufferRef = new TBufferFile(TBuffer::kRead, len);
+      fBufferRef = new TBufferFile(TBuffer::kRead, len, fBranch->GetMemPool());
 
       fBufferRef->SetParent(file);
       char *buffer = fBufferRef->Buffer();
@@ -367,6 +365,7 @@ Int_t TBasket::ReadBasketBuffers(Long64_t pos, Int_t len, TFile *file)
             return badread;
          }
          fBuffer = new char[fObjlen+fKeylen];
+         //fBuffer = (fBranch->GetMemPool())->GetMem(fObjlen+fKeylen);
          memcpy(fBuffer,buffer,fKeylen);
          char *objbuf = fBuffer + fKeylen;
          UChar_t *bufcur = (UChar_t *)&buffer[fKeylen];
@@ -377,7 +376,7 @@ Int_t TBasket::ReadBasketBuffers(Long64_t pos, Int_t len, TFile *file)
             nbuf = (Int_t)bufcur[6] | ((Int_t)bufcur[7] << 8) | ((Int_t)bufcur[8] << 16);
             if (oldCase && (nin > fObjlen || nbuf > fObjlen)) {
                //buffer was very likely not compressed in an old version
-               delete [] fBuffer;
+                delete [] fBuffer;
                 fBuffer = fBufferRef->Buffer();
                 goto AfterBuffer;
             }
@@ -392,7 +391,9 @@ Int_t TBasket::ReadBasketBuffers(Long64_t pos, Int_t len, TFile *file)
             Error("ReadBasketBuffers", "fNbytes = %d, fKeylen = %d, fObjlen = %d, noutot = %d, nout=%d, nin=%d, nbuf=%d", fNbytes,fKeylen,fObjlen, noutot,nout,nin,nbuf);
             badread = 1;
          }
+         // Don't adopt it since we are using the memory pool
          fBufferRef->SetBuffer(fBuffer, fObjlen+fKeylen );
+         
          len = fObjlen+fKeylen;
       } else {
          fBuffer = fBufferRef->Buffer();

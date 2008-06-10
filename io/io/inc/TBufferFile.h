@@ -83,8 +83,8 @@ public:
    enum { kTextBasedStreaming = BIT(18) }; //indicates if buffer used for XML/SQL object streaming
    enum { kUser1 = BIT(21), kUser2 = BIT(22), kUser3 = BIT(23)}; //free for user
 
-   TBufferFile(TBuffer::EMode mode);
-   TBufferFile(TBuffer::EMode mode, Int_t bufsiz);
+   TBufferFile(TBuffer::EMode mode, TMemPool *mempool = 0);
+   TBufferFile(TBuffer::EMode mode, Int_t bufsiz, TMemPool *mempool = 0);
    TBufferFile(TBuffer::EMode mode, Int_t bufsiz, void *buf, Bool_t adopt = kTRUE);
    virtual ~TBufferFile();
 
@@ -201,7 +201,7 @@ public:
    virtual   void     ReadFastArrayFloat16(Float_t  *f, Int_t n, TStreamerElement *ele=0);
    virtual   void     ReadFastArrayDouble32(Double_t  *d, Int_t n, TStreamerElement *ele=0);
    virtual   void     ReadFastArray(void  *start , const TClass *cl, Int_t n=1, TMemberStreamer *s=0);
-   virtual   void     ReadFastArray(void **startp, const TClass *cl, Int_t n=1, Bool_t isPreAlloc=kFALSE, TMemberStreamer *s=0, TMemPool *mempool=0);
+   virtual   void     ReadFastArray(void **startp, const TClass *cl, Int_t n=1, Bool_t isPreAlloc=kFALSE, TMemberStreamer *s=0);
 
    virtual   void     WriteArray(const Bool_t    *b, Int_t n);
    virtual   void     WriteArray(const Char_t    *c, Int_t n);

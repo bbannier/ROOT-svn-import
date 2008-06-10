@@ -20,6 +20,7 @@
 #include "TBuffer.h"
 #include "TClass.h"
 #include "TProcessID.h"
+#include "TMemPool.h"
 
 const Int_t  kExtraSpace        = 8;   // extra space at end of buffer (used for free block count)
 
@@ -35,11 +36,14 @@ static inline ULong_t Void_Hash(const void *ptr)
 
 
 //______________________________________________________________________________
-TBuffer::TBuffer(EMode mode)
+TBuffer::TBuffer(EMode mode, TMemPool *mempool /*= 0*/)
 {
    // Create an I/O buffer object. Mode should be either TBuffer::kRead or
    // TBuffer::kWrite. By default the I/O buffer has a size of
    // TBuffer::kInitialSize (1024) bytes.
+   // If mempool is valid then the user has passed a valid mempool and the
+   // buffer can request a chunk of memory from it instead of doing the
+   // allocation.
 
    fBufSize      = kInitialSize;
    fMode         = mode;
@@ -48,14 +52,21 @@ TBuffer::TBuffer(EMode mode)
 
    SetBit(kIsOwner);
 
-   fBuffer = new char[fBufSize+kExtraSpace];
+   fMemPool = mempool;
+   if(fMemPool) {
+      fBuffer = (char *) fMemPool->GetMem(fBufSize+kExtraSpace);
+      ResetBit(kIsOwner);
+   }
+   else {
+      fBuffer = new char[fBufSize+kExtraSpace];
+   }
 
    fBufCur = fBuffer;
    fBufMax = fBuffer + fBufSize;
 }
 
 //______________________________________________________________________________
-TBuffer::TBuffer(EMode mode, Int_t bufsiz)
+TBuffer::TBuffer(EMode mode, Int_t bufsiz, TMemPool *mempool /*= 0*/)
 {
    // Create an I/O buffer object. Mode should be either TBuffer::kRead or
    // TBuffer::kWrite.
@@ -68,7 +79,14 @@ TBuffer::TBuffer(EMode mode, Int_t bufsiz)
 
    SetBit(kIsOwner);
 
-   fBuffer = new char[fBufSize+kExtraSpace];
+   fMemPool = mempool;
+   if(fMemPool) {
+      fBuffer = (char *) fMemPool->GetMem(fBufSize+kExtraSpace);
+      ResetBit(kIsOwner);
+   }
+   else {
+      fBuffer = new char[fBufSize+kExtraSpace];
+   }
 
    fBufCur = fBuffer;
    fBufMax = fBuffer + fBufSize;
@@ -98,6 +116,8 @@ TBuffer::TBuffer(EMode mode, Int_t bufsiz, void *buf, Bool_t adopt)
       fBuffer = new char[fBufSize+kExtraSpace];
    fBufCur = fBuffer;
    fBufMax = fBuffer + fBufSize;
+
+   fMemPool = 0; // There is no need to set up the pool here
 }
 
 //______________________________________________________________________________
@@ -143,8 +163,32 @@ void TBuffer::Expand(Int_t newsize)
    // Expand the I/O buffer to newsize bytes.
 
    Int_t l  = Length();
-   fBuffer  = TStorage::ReAllocChar(fBuffer, newsize+kExtraSpace,
+
+   if(fMemPool) {
+      if (fBuffer == 0) {
+         fBuffer = (char *) fMemPool->GetMem(newsize+kExtraSpace);
+      }
+      else if(newsize == fBufSize) {
+         // Do nothing... leave it here to follow ReAllocChar impl.
+      }
+      else{
+         // Normal case newsize>fBufSize
+         char* vp = (char *) fMemPool->GetMem(newsize+kExtraSpace);
+         if(newsize>fBufSize) {
+            memcpy(vp, fBuffer, fBufSize+kExtraSpace);
+            memset((char*) vp+fBufSize+kExtraSpace, 0, newsize - fBufSize);
+         }
+         else {
+            memcpy(vp, fBuffer, newsize+kExtraSpace);
+         }
+         fBuffer = vp;
+      }
+   }
+   else {
+      fBuffer  = TStorage::ReAllocChar(fBuffer, newsize+kExtraSpace,
                                     fBufSize+kExtraSpace);
+   }
+
    fBufSize = newsize;
    fBufCur  = fBuffer + l;
    fBufMax  = fBuffer + fBufSize;
