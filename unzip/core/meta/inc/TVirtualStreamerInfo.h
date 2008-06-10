@@ -32,6 +32,8 @@ class TStreamerElement;
 class TStreamerBasicType;
 class TVirtualCollectionProxy;
 class TClassStreamer;
+class TMemPool;
+
 namespace ROOT { class TCollectionProxyInfo; }
 
 class TVirtualStreamerInfo : public TNamed {
@@ -97,7 +99,7 @@ public:
    virtual void        Build() = 0;
    virtual void        BuildCheck() = 0;
    virtual void        BuildEmulated(TFile *file) = 0;
-   virtual void        BuildOld() = 0;
+   virtual void        BuildOld(TMemPool* mempool=0) = 0;
    virtual void        Clear(Option_t *) = 0;
    virtual void        Compile() = 0;
    virtual void        ForceWriteInfo(TFile *file, Bool_t force=kFALSE) = 0;

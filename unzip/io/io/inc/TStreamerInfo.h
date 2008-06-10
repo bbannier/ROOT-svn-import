@@ -102,7 +102,6 @@ private:
    TObjArray        *fElements;          //Array of TStreamerElements
    Version_t         fOldVersion;        //! Version of the TStreamerInfo object read from the file
    Bool_t            fIsBuilt;           //! true if the TStreamerInfo has been 'built'
-   TMemPool         *fMemPool;
    
    static  Int_t     fgCount;            //Number of TStreamerInfo instances
    static TStreamerElement *fgElement;   //Pointer to current TStreamerElement
@@ -171,7 +170,7 @@ public:
    void                Build();
    void                BuildCheck();
    void                BuildEmulated(TFile *file);
-   void                BuildOld();
+   void                BuildOld(TMemPool *mempool = 0);
    void                Clear(Option_t *);
    void                Compile();
    void                ComputeSize();
@@ -188,7 +187,6 @@ public:
    Int_t               GetNumber()  const {return fNumber;}
    Int_t              *GetLengths() const {return fLength;}
    ULong_t            *GetMethods() const {return fMethod;}
-   TMemPool           *GetMemPool() const {return fMemPool;}
    Int_t              *GetNewTypes() const {return fNewType;}
    Int_t               GetOffset(const char *) const;
    Int_t              *GetOffsets() const {return fOffset;}
@@ -242,7 +240,6 @@ public:
    void                SetCheckSum(UInt_t checksum) {fCheckSum = checksum;}
    void                SetClass(TClass *cl) {fClass = cl;}
    void                SetClassVersion(Int_t vers) {fClassVersion=vers;}
-   void                SetMemPool(TMemPool* mem) { fMemPool = mem;}
    void                TagFile(TFile *fFile);
    Int_t               WriteBuffer(TBuffer &b, char *pointer, Int_t first);
    Int_t               WriteBufferClones(TBuffer &b, TClonesArray *clones, Int_t nc, Int_t first, Int_t eoffset);

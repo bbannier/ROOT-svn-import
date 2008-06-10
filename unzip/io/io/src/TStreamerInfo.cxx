@@ -59,10 +59,9 @@
 #include "TCollectionProxyFactory.h"
 #include "TVirtualCollectionProxy.h"
 #include "TInterpreter.h"
+#include "TMemPool.h"
 
 #include "TMakeProject.h"
-
-#include "TMemPool.h"
 
 TStreamerElement *TStreamerInfo::fgElement = 0;
 Int_t   TStreamerInfo::fgCount = 0;
@@ -96,7 +95,6 @@ TStreamerInfo::TStreamerInfo()
    fOptimized = kFALSE;
    fOldVersion = Class()->GetClassVersion();
    fIsBuilt  = kFALSE;
-   fMemPool = 0;
 }
 
 //______________________________________________________________________________
@@ -126,8 +124,6 @@ TStreamerInfo::TStreamerInfo(TClass *cl, const char *info)
    fOldVersion = Class()->GetClassVersion();
 
    if (info) BuildUserInfo(info);
-   
-   fMemPool = 0;
 }
 
 //______________________________________________________________________________
@@ -948,7 +944,7 @@ namespace {
 }
 
 //______________________________________________________________________________
-void TStreamerInfo::BuildOld()
+void TStreamerInfo::BuildOld(TMemPool* mempool)
 {
    // rebuild the TStreamerInfo structure
 
@@ -960,7 +956,7 @@ void TStreamerInfo::BuildOld()
    fIsBuilt = kTRUE;
 
    if (fClass->GetClassVersion() == fClassVersion) {
-      fClass->BuildRealData();
+      fClass->BuildRealData(0, mempool);
    }
    else {
       // This is to support the following case

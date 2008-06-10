@@ -44,6 +44,7 @@ protected:
    char           *fBufCur;        //Current position in buffer
    char           *fBufMax;        //End of buffer
    TObject        *fParent;        //Pointer to parent object owning this buffer
+   TMemPool       *fMemPool;       // Use this memory pool to create the buffer if possible
 
    // Default ctor
    TBuffer() : TObject(), fMode(0), fVersion(0), fBufSize(0), fBuffer(0),
@@ -67,14 +68,16 @@ public:
    enum { kCannotHandleMemberWiseStreaming = BIT(17)}; //if set TClonesArray should not use member wise streaming
    enum { kInitialSize = 1024, kMinimalSize = 128 };
 
-   TBuffer(EMode mode);
-   TBuffer(EMode mode, Int_t bufsiz);
+   TBuffer(EMode mode, TMemPool *mempool = 0);
+   TBuffer(EMode mode, Int_t bufsiz, TMemPool *mempool = 0);
    TBuffer(EMode mode, Int_t bufsiz, void *buf, Bool_t adopt = kTRUE);
    virtual ~TBuffer();
 
    Int_t    GetBufferVersion() const { return fVersion; }
+   TMemPool *GetMemPool() const {return fMemPool;}
    Bool_t   IsReading() const { return (fMode & kWrite) == 0; }
    Bool_t   IsWriting() const { return (fMode & kWrite) != 0; }
+   void     SetMemPool(TMemPool* mem) { fMemPool = mem;}
    void     SetReadMode();
    void     SetWriteMode();
    void     SetBuffer(void *buf, UInt_t bufsiz = 0, Bool_t adopt = kTRUE);
@@ -195,7 +198,7 @@ public:
    virtual   void     ReadFastArrayFloat16(Float_t  *f, Int_t n, TStreamerElement *ele=0) = 0;
    virtual   void     ReadFastArrayDouble32(Double_t  *d, Int_t n, TStreamerElement *ele=0) = 0;
    virtual   void     ReadFastArray(void  *start , const TClass *cl, Int_t n=1, TMemberStreamer *s=0) = 0;
-   virtual   void     ReadFastArray(void **startp, const TClass *cl, Int_t n=1, Bool_t isPreAlloc=kFALSE, TMemberStreamer *s=0, TMemPool *mempool=0) = 0;
+   virtual   void     ReadFastArray(void **startp, const TClass *cl, Int_t n=1, Bool_t isPreAlloc=kFALSE, TMemberStreamer *s=0) = 0;
 
    virtual   void     WriteArray(const Bool_t    *b, Int_t n) = 0;
    virtual   void     WriteArray(const Char_t    *c, Int_t n) = 0;

@@ -68,8 +68,8 @@ static inline ULong_t Void_Hash(const void *ptr)
 }
 
 //______________________________________________________________________________
-TBufferFile::TBufferFile(TBuffer::EMode mode)
-            :TBuffer(mode),
+TBufferFile::TBufferFile(TBuffer::EMode mode, TMemPool *mempool /*= 0*/)
+            :TBuffer(mode,mempool),
              fDisplacement(0),fPidOffset(0), fMap(0), fClassMap(0),
              fInfo(0), fInfoStack()
 {
@@ -86,8 +86,8 @@ TBufferFile::TBufferFile(TBuffer::EMode mode)
 }
 
 //______________________________________________________________________________
-TBufferFile::TBufferFile(TBuffer::EMode mode, Int_t bufsiz)
-            :TBuffer(mode,bufsiz),
+TBufferFile::TBufferFile(TBuffer::EMode mode, Int_t bufsiz, TMemPool *mempool /*= 0*/)
+            :TBuffer(mode,bufsiz,mempool),
              fDisplacement(0),fPidOffset(0), fMap(0), fClassMap(0),
              fInfo(0), fInfoStack()
 {
@@ -1416,8 +1416,7 @@ void TBufferFile::ReadFastArray(void  *start, const TClass *cl, Int_t n,
 
 //______________________________________________________________________________
 void TBufferFile::ReadFastArray(void **start, const TClass *cl, Int_t n,
-                                Bool_t isPreAlloc, TMemberStreamer *streamer,
-                                TMemPool *mempool)
+                                Bool_t isPreAlloc, TMemberStreamer *streamer)
 {
    // Read an array of 'n' objects from the I/O buffer.
    // The objects read are stored starting at the address '*start'
@@ -1469,10 +1468,7 @@ void TBufferFile::ReadFastArray(void **start, const TClass *cl, Int_t n,
 
       for (Int_t j=0; j<n; j++){
          if (!start[j]) {
-            if (!mempool)
-               start[j] = ((TClass*)cl)->New();
-            else
-               start[j] = ((TClass*)cl)->New(mempool->GetMem(cl->Size()));
+            start[j] = ((TClass*)cl)->New();
 	 }
          ((TClass*)cl)->Streamer(start[j],*this);
       }

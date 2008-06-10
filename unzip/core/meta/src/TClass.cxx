@@ -57,6 +57,7 @@
 #include "TVirtualMutex.h"
 #include "TVirtualPad.h"
 #include "THashTable.h"
+#include "TMemPool.h"
 
 #include "TGenericClassInfo.h"
 
@@ -1249,7 +1250,7 @@ void TClass::Browse(TBrowser *b)
 }
 
 //______________________________________________________________________________
-void TClass::BuildRealData(void* pointer)
+void TClass::BuildRealData(void* pointer, TMemPool *mempool)
 {
    // Build a full list of persistent data members.
    // Scans the list of all data members in the class itself and also
@@ -1290,7 +1291,10 @@ void TClass::BuildRealData(void* pointer)
       } else if (!strcmp(GetName(), "TGQt")) {
          realDataObject = gVirtualX;
       } else {
-         realDataObject = New();
+         if(mempool)
+	    realDataObject = New(mempool->GetMem(Size()));
+         else
+            realDataObject = New();
       }
    }
 
@@ -1369,7 +1373,7 @@ void TClass::BuildRealData(void* pointer)
       if (delta >= 0) {
          TObject* tobj = (TObject*) (((char*) realDataObject) + delta);
          tobj->SetBit(kZombie); //this info useful in object destructor
-         delete tobj;
+         if(!mempool) delete tobj;
          tobj = 0;
       } else {
          Destructor(realDataObject);
@@ -2867,7 +2871,7 @@ Int_t TClass::GetNmethods()
 }
 
 //______________________________________________________________________________
-TVirtualStreamerInfo* TClass::GetStreamerInfo(Int_t version) const
+TVirtualStreamerInfo* TClass::GetStreamerInfo(Int_t version, TMemPool* mempool) const
 {
    // returns a pointer to the TVirtualStreamerInfo object for version
    // If the object doest not exist, it is created
@@ -2929,7 +2933,7 @@ TVirtualStreamerInfo* TClass::GetStreamerInfo(Int_t version) const
          // Streamer info has not been compiled, but exists.
          // Therefore it was read in from a file and we have to do schema evolution?
          // Or it didn't have a dictionary before, but does now?
-         sinfo->BuildOld();
+         sinfo->BuildOld(mempool);
       }
       if (sinfo->IsOptimized() && !TVirtualStreamerInfo::CanOptimize()) {
          // Undo optimization if the global flag tells us to.
@@ -3412,7 +3416,7 @@ void *TClass::NewArray(Long_t nElements, void *arena, ENewType defConstructor)
 }
 
 //______________________________________________________________________________
-void TClass::Destructor(void *obj, Bool_t dtorOnly)
+void TClass::Destructor(void *obj, Bool_t dtorOnly, TMemPool* mempool /* = 0*/)
 {
    // Explicitly call destructor for object.
 
@@ -3426,7 +3430,8 @@ void TClass::Destructor(void *obj, Bool_t dtorOnly)
       fDestructor(p);
    } else if ((!dtorOnly) && fDelete) {
       // We have the delete wrapper, use it.
-      fDelete(p);
+      if(!mempool)
+         fDelete(p);
    } else if (fClassInfo) {
       // We have the dictionary but do not have the
       // destruct/delete wrapper, so the dictionary was

@@ -99,7 +99,7 @@
 int main(int argc, char **argv)
 {
   //mtrace();
-
+   gDebug=0;
    Int_t nevent = 400;     // by default create 400 events
    Int_t comp   = 1;       // by default file is compressed
    Int_t split  = 1;       // by default, split Event in sub branches
