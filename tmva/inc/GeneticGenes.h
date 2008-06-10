@@ -37,28 +37,31 @@
 #include <vector>
 
 namespace TMVA {
-
+   
    class GeneticGenes {
-
+      
    public:
-  
-      GeneticGenes() {}  
+      
+      GeneticGenes():fFitness(0) {}  
       GeneticGenes( std::vector<Double_t> & f );
       virtual ~GeneticGenes() {}  
-  
-      void Clear();  
-      void ClearResults();
-
+      
       std::vector<Double_t>& GetFactors() { return fFactors; }
-      std::vector<Double_t>& GetResults() { return fResults; }  
-
+      
+      void SetFitness(Double_t fitness) { fFitness = fitness; }
+      Double_t GetFitness() { return fFitness; }
+      
+      friend bool operator <(const GeneticGenes&, const GeneticGenes&);
+      
    private:
-
+      
       std::vector<Double_t> fFactors; // stores the factors (coefficients) of one individual
-      std::vector<Double_t> fResults; // stores the fitness-results of this individual
-  
+      Double_t fFitness;
+      
       ClassDef(GeneticGenes,0) // Genes definition for genetic algorithm
    };
+
+   bool operator <(const GeneticGenes&, const GeneticGenes&);
 
 } // namespace TMVA
 

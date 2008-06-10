@@ -203,7 +203,7 @@ double FitUtil::EvaluateChi2(IModelFunction & func, const BinData & data, const 
    int nRejected = 0; 
    
 
-   func.SetParameters(p); 
+   //func.SetParameters(p); 
 
    // get fit option and check case if using integral of bins
    const DataOptions & fitOpt = data.Opt();
@@ -234,7 +234,7 @@ double FitUtil::EvaluateChi2(IModelFunction & func, const BinData & data, const 
       double fval = 0;
 
       if (!fitOpt.fIntegral )
-         fval = func ( x ); 
+         fval = func ( x, p ); 
       else { 
          // calculate normalized integral (divided by bin volume)
          fval = igEval( x, data.Coords(i+1) ) ; 

@@ -70,3 +70,6 @@ distclean-$(MODNAME): clean-$(MODNAME)
 		@rm -rf include/TMVA
 
 distclean::     distclean-$(MODNAME)
+
+tmva/src/GeneticAlgorithm.o: CXXFLAGS += -D_GLIBCXX_PARALLEL -fopenmp
+tmva/src/GeneticPopulation.o: CXXFLAGS += -D_GLIBCXX_PARALLEL -fopenmp

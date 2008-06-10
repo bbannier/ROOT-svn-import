@@ -20,6 +20,9 @@ LIBS        += -lGenetic -lTMVA -lMLP -lTreePlayer -lMinuit -lMinuit2 -lThread
 CXXFLAGS += -g
 endif
 
+CXXFLAGS += -D_GLIBCXX_PARALLEL -fopenmp
+LDFLAGS += -fopenmp 
+
 
 TESTGAMINOBJ     = testGAMinimizer.$(ObjSuf)
 TESTGAMINSRC     = testGAMinimizer.$(SrcSuf)
