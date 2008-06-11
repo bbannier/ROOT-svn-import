@@ -161,9 +161,9 @@
 
 #include "RConfigure.h"
 #include "RConfig.h"
-#include "Shadow.h"
+#include "cint/Shadow.h"
 #include <iostream>
-#include "cintdictversion.h"
+#include "cint/cintdictversion.h"
 
 #ifdef __APPLE__
 #include <libgen.h> // Needed for basename

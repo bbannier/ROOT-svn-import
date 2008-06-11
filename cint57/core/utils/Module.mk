@@ -11,10 +11,7 @@ MODDIRI      := $(MODDIR)/inc
 # see also ModuleVars.mk
 
 ##### rootcint #####
-ROOTCINTS    := $(MODDIRS)/rootcint.cxx \
-                $(filter-out %_tmp.cxx,$(wildcard $(MODDIRS)/R*.cxx))
 ROOTCINTO    := $(ROOTCINTS:.cxx=.o)
-ROOTCINTTMPO := $(ROOTCINTS:.cxx=_tmp.o)
 ROOTCINTDEP  := $(ROOTCINTO:.o=.d) $(ROOTCINTTMPO:.o=.d) 
 
 ##### rlibmap #####
@@ -36,6 +33,16 @@ $(ROOTCINTTMPEXE): $(CINTTMPO) $(ROOTCINTTMPO) $(METAUTILSO) $(IOSENUM)
 		$(LD) $(LDFLAGS) -o $@ \
 		   $(ROOTCINTTMPO) $(METAUTILSO) $(CINTTMPO) $(CILIBS)
 
+ifneq ($(BUILDCINT7),)
+$(ROOTCINT7EXE): $(CINT7LIB) $(ROOTCINTO) $(METAUTILSO) $(IOSENUM)
+		$(LD) $(LDFLAGS) -o $@ $(ROOTCINTO) $(METAUTILSO) \
+		   $(RPATH) $(CINT7LIBS) $(CILIBS)
+
+$(ROOTCINT7TMPEXE): $(CINT7TMPO) $(ROOTCINTTMPO) $(METAUTILSO) $(IOSENUM) $(REFLEXO)
+		$(LD) $(LDFLAGS) -o $@ \
+		   $(ROOTCINTTMPO) $(METAUTILSO) $(CINT7TMPO) $(REFLEXO) $(CILIBS)
+endif
+
 $(RLIBMAP):     $(RLIBMAPO)
 ifneq ($(PLATFORM),win32)
 		$(LD) $(LDFLAGS) -o $@ $<
@@ -43,7 +50,9 @@ else
 		$(LD) $(LDFLAGS) -o $@ $< imagehlp.lib
 endif
 
-all-$(MODNAME): $(ROOTCINTTMPEXE) $(ROOTCINTEXE) $(RLIBMAP)
+all-$(MODNAME): $(ROOTCINTTMPEXE) $(ROOTCINTEXE) \
+                $(ROOTCINT7TMPEXE) $(ROOTCINT7EXE) \
+                $(RLIBMAP)
 
 clean-$(MODNAME):
 		@rm -f $(ROOTCINTTMPO) $(ROOTCINTO) $(RLIBMAPO)
