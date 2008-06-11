@@ -18,8 +18,11 @@
 #include "TGLSelectRecord.h"
 #include "TGLIncludes.h"
 
-//______________________________________________________________________________
+//==============================================================================
 // TEveQuadSetGL
+//==============================================================================
+
+//______________________________________________________________________________
 //
 // GL-renderer for TEveQuadSet class.
 
@@ -27,24 +30,13 @@ ClassImp(TEveQuadSetGL);
 
 /******************************************************************************/
 
+//______________________________________________________________________________
 TEveQuadSetGL::TEveQuadSetGL() : TGLObject(), fM(0)
 {
    // Constructor.
 
    // fDLCache = false; // Disable DL.
-}
-
-/******************************************************************************/
-
-//______________________________________________________________________________
-Bool_t TEveQuadSetGL::ShouldDLCache(const TGLRnrCtx & rnrCtx) const
-{
-   // Decide if render-pass given by rnrCtx should use the display-list cache.
-   // Virtual from TGLLogicalShape.
-
-   if (rnrCtx.DrawPass() == TGLRnrCtx::kPassOutlineLine)
-      return kFALSE;
-   return TGLObject::ShouldDLCache(rnrCtx);
+   fMultiColor = kTRUE;
 }
 
 /******************************************************************************/
@@ -100,9 +92,6 @@ void TEveQuadSetGL::DirectDraw(TGLRnrCtx & rnrCtx) const
 
    // printf("QuadSetGLRenderer::DirectDraw Style %d, LOD %d\n", rnrCtx.Style(), rnrCtx.LOD());
 
-   if (rnrCtx.DrawPass() == TGLRnrCtx::kPassOutlineLine)
-      return;
-
    TEveQuadSet& mQ = * fM;
 
    if (mQ.fFrame != 0 && ! rnrCtx.SecSelection())
@@ -126,7 +115,7 @@ void TEveQuadSetGL::DirectDraw(TGLRnrCtx & rnrCtx) const
 
    if (mQ.fRenderMode == TEveDigitSet::kRM_Fill)
       glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-   else if (mQ.fRenderMode == TEveDigitSet::kRM_TEveLine)
+   else if (mQ.fRenderMode == TEveDigitSet::kRM_Line)
       glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
    if (mQ.fDisableLigting)  glDisable(GL_LIGHTING);
@@ -149,7 +138,7 @@ void TEveQuadSetGL::RenderQuads(TGLRnrCtx & rnrCtx) const
    TEveQuadSet& mQ = * fM;
 
    GLenum primitiveType;
-   if (mQ.fRenderMode != TEveDigitSet::kRM_TEveLine)
+   if (mQ.fRenderMode != TEveDigitSet::kRM_Line)
    {
       primitiveType = GL_QUADS;
       if (mQ.fQuadType == TEveQuadSet::kQT_FreeQuad)
@@ -462,7 +451,7 @@ void TEveQuadSetGL::RenderHexagons(TGLRnrCtx & rnrCtx) const
 
    TEveQuadSet& mQ = * fM;
 
-   GLenum primitveType = (mQ.fRenderMode != TEveDigitSet::kRM_TEveLine) ?
+   GLenum primitveType = (mQ.fRenderMode != TEveDigitSet::kRM_Line) ?
       GL_POLYGON : GL_LINE_LOOP;
 
    glNormal3f(0, 0, 1);
