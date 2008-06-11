@@ -112,8 +112,9 @@ TBuffer::TBuffer(EMode mode, Int_t bufsiz, void *buf, Bool_t adopt)
    if (buf) {
       fBuffer = (char *)buf;
       if (!adopt) ResetBit(kIsOwner);
-   } else
+   } else {
       fBuffer = new char[fBufSize+kExtraSpace];
+   }
    fBufCur = fBuffer;
    fBufMax = fBuffer + fBufSize;
 
