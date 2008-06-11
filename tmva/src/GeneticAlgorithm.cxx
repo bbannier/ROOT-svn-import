@@ -30,7 +30,9 @@
 #include <iostream>
 #include <float.h>
 
+#ifdef _GLIBCXX_PARALLEL
 #include <omp.h>
+#endif
 
 #include "Riostream.h"
 
@@ -111,6 +113,8 @@ Double_t TMVA::GeneticAlgorithm::CalculateFitness()
    // this function calls implicitly (many times) the "fitnessFunction" which
    // has been overridden by the user. 
 
+#ifdef _GLIBCXX_PARALLEL
+
    const int nt = omp_get_num_threads();
    Double_t bests[nt];
    for ( int i =0; i < nt; ++i )
@@ -132,6 +136,20 @@ Double_t TMVA::GeneticAlgorithm::CalculateFitness()
    }
    
    fBestFitness = *max_element(bests, bests+nt);
+#else 
+
+   for ( int index = 0; index < fPopulation.GetPopulationSize(); ++index )
+   {
+         GeneticGenes* genes = fPopulation.GetGenes(index);
+         Double_t fitness = NewFitness( genes->GetFitness(), fFitterTarget.EstimatorFunction(genes->GetFactors()) );
+         genes->SetFitness( fitness );
+         
+         if ( fBestFitness  > fitness )
+            fBestFitness = fitness;
+      
+   }
+
+#endif
 
    return fBestFitness; 
 }

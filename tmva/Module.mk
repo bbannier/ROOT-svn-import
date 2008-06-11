@@ -71,5 +71,8 @@ distclean-$(MODNAME): clean-$(MODNAME)
 
 distclean::     distclean-$(MODNAME)
 
+#for parallelization with openmp
+ifneq ($(USE_OPENMPI),)
 tmva/src/GeneticAlgorithm.o: CXXFLAGS += -D_GLIBCXX_PARALLEL -fopenmp
 tmva/src/GeneticPopulation.o: CXXFLAGS += -D_GLIBCXX_PARALLEL -fopenmp
+endif
