@@ -82,10 +82,11 @@ namespace TMVA {
       // or just eliminated later on. They are used by the
       // GeneticFitter class.
 
-      void AddPopulation( GeneticPopulation *genePool );
-      void AddPopulation( GeneticPopulation &genePool );
+      void AddPopulation( GeneticPopulation *strangers );
+      void AddPopulation( GeneticPopulation &strangers );
       void TrimPopulation();
       void GiveHint( std::vector< Double_t >& hint, Double_t fitness = 0 );
+      void Sort();
 
    private:
       GeneticGenes MakeSex( GeneticGenes male, GeneticGenes female );

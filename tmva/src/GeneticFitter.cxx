@@ -27,6 +27,8 @@
 // Fitter using a Genetic Algorithm
 //_______________________________________________________________________
 
+#include <iostream>
+
 #include "TMVA/GeneticFitter.h"
 #include "TMVA/GeneticAlgorithm.h"
 #include "TMVA/Interval.h"
@@ -97,13 +99,12 @@ Double_t TMVA::GeneticFitter::Run( std::vector<Double_t>& pars )
    fLogger << kINFO << "<GeneticFitter> Optimisation, please be patient "
            << "... (note: inaccurate progress timing for GA)" << Endl;
 
-   GeneticAlgorithm gstore( GetFitterTarget(), fPopSize, fRanges ); 
+   GeneticAlgorithm gstore( GetFitterTarget(), 0, fRanges );
 
    // timing of GA
    Timer timer( 100*(fCycles), GetName() ); 
    timer.DrawProgressBar( 0 );
 
-   Double_t steps = (Double_t)fNsteps;
    Double_t progress = 0.;
 
    for (Int_t cycle = 0; cycle < fCycles; cycle++) {
@@ -112,15 +113,11 @@ Double_t TMVA::GeneticFitter::Run( std::vector<Double_t>& pars )
       // "m_ga_spread" times the number of variables
       GeneticAlgorithm ga( GetFitterTarget(), fPopSize, fRanges, fSeed ); 
 
-      if ( pars.size() == fRanges.size() ){
-          ga.GetGeneticPopulation().GiveHint( pars, 0.0 );
-      }
       if (cycle==fCycles-1) {
          ga.GetGeneticPopulation().AddPopulation( gstore.GetGeneticPopulation() );
+         ga.CalculateFitness();
+         ga.GetGeneticPopulation().TrimPopulation();
       }
-      
-      ga.CalculateFitness();
-      ga.GetGeneticPopulation().TrimPopulation();
 
       Double_t n=0.;
       do {
@@ -131,19 +128,24 @@ Double_t TMVA::GeneticFitter::Run( std::vector<Double_t>& pars )
 
          // monitor progrss
          if (ga.fConvCounter > n) n = Double_t(ga.fConvCounter);
-         progress = 100*((Double_t)cycle) + 100*(n/Double_t(steps)); 
+         progress = 100*((Double_t)cycle) + 100*(n/Double_t(fNsteps)); 
 
          timer.DrawProgressBar( (Int_t)progress );
-            
+          
+         // Copy the best genes of the generation
+         ga.GetGeneticPopulation().Sort();
          for ( Int_t i = 0; i<fSaveBestFromGeneration && i<fPopSize; i++ ) {
-            gstore.GetGeneticPopulation().GiveHint( ga.GetGeneticPopulation().GetGenes(i)->GetFactors(), 0.0 );
+            gstore.GetGeneticPopulation().GiveHint( ga.GetGeneticPopulation().GetGenes(i)->GetFactors(), 
+                                                    ga.GetGeneticPopulation().GetGenes(i)->GetFitness() );
          }
       } while (!ga.HasConverged( fNsteps, fConvCrit ));                
 
       timer.DrawProgressBar( 100*(cycle+1) );
       
-      for ( Int_t i = 0; i<fSaveBestFromCycle && i<fPopSize; i++ ) {
-         gstore.GetGeneticPopulation().GiveHint( ga.GetGeneticPopulation().GetGenes(i)->GetFactors(), 0.0 );
+      ga.GetGeneticPopulation().Sort();
+      for ( Int_t i = 0; i<fSaveBestFromGeneration && i<fPopSize; i++ ) {
+         gstore.GetGeneticPopulation().GiveHint( ga.GetGeneticPopulation().GetGenes(i)->GetFactors(), 
+                                                 ga.GetGeneticPopulation().GetGenes(i)->GetFitness() );
       }
 
    }
@@ -153,6 +155,7 @@ Double_t TMVA::GeneticFitter::Run( std::vector<Double_t>& pars )
            << "                            " << Endl;  
 
    Double_t fitness = gstore.CalculateFitness();
+   gstore.GetGeneticPopulation().Sort();
    pars.swap( gstore.GetGeneticPopulation().GetGenes(0)->GetFactors() );
 
    return fitness;
