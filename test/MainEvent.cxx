@@ -158,7 +158,7 @@ int main(int argc, char **argv)
       tree = (TTree*)hfile->Get("T");
       tree->SetCacheSize(10000000); //this is the default value: 10 MBytes
       TBranch *branch = tree->GetBranch("event");
-      branch->SetAddress(event);
+      branch->SetAddress(&event);
       Int_t nentries = (Int_t)tree->GetEntries();
       nevent = TMath::Max(nevent,nentries);
       if (read == 1) {  //read sequential

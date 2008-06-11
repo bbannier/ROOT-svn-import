@@ -1,4 +1,4 @@
-// @(#)root/tree:$Id$
+// @(#)root/tree:$Id: TBranch.cxx 24002 2008-05-23 22:41:54Z lfranco $
 // Author: Rene Brun   12/01/96
 
 /*************************************************************************
@@ -979,6 +979,7 @@ TBasket* TBranch::GetBasket(Int_t basketnumber)
      // create/decode basket parameters from buffer
    TFile *file = GetFile(0);
    basket = new TBasket(file);
+
    if (fSkipZip) basket->SetBit(TBufferFile::kNotDecompressed);
    basket->SetBranch(this);
    if (fBasketBytes[basketnumber] == 0) {
@@ -1131,7 +1132,16 @@ Int_t TBranch::GetEntry(Long64_t entry, Int_t getall)
    }
    // Remember which entry we are reading.
    fReadEntry = entry;
+
+   TMemPool* oldpool = buf->GetMemPool();
+   if(!oldpool && fMemPool) {
+      buf->SetMemPool(fMemPool);
+   }
    ReadLeaves(*buf);
+   if(!oldpool && fMemPool) {
+      buf->SetMemPool(0);
+   }
+
    nbytes = buf->Length() - bufbegin;
    return nbytes;
 }
