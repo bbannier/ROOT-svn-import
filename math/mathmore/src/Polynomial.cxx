@@ -117,18 +117,12 @@ Polynomial::Polynomial(double a, double b, double c, double d, double e) :
 // }
 
 
-double  Polynomial::DoEval (double x) const { 
-  
-    return gsl_poly_eval( &fParams.front(), fOrder + 1, x); 
-
-}
-
-
-double  Polynomial::operator() (double x, const double *  p) { 
+double  Polynomial::DoEvalPar (double x, const double * p) const { 
   
     return gsl_poly_eval( p, fOrder + 1, x); 
 
 }
+
 
 
 double  Polynomial::DoDerivative(double x) const{ 
@@ -140,7 +134,7 @@ double  Polynomial::DoDerivative(double x) const{
 
 }
 
-double Polynomial::DoParameterDerivative (double x, unsigned int ipar) const { 
+double Polynomial::DoParameterDerivative (double x, const double *, unsigned int ipar) const { 
 
       return gsl_pow_int(x, ipar); 
 }

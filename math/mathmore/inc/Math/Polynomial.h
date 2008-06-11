@@ -99,10 +99,8 @@ public:
 //    Polynomial & operator = (const Polynomial &);
 
     
-   double operator() ( double x, const double * p ); 
 
-
-   using ParamFunction::operator();
+//   using ParamFunction::operator();
 
 
    /**
@@ -138,11 +136,11 @@ public:
 
 private: 
 
-   double DoEval ( double x ) const ; 
+   double DoEvalPar ( double x, const double * p ) const ; 
 
    double DoDerivative (double x) const ; 
 
-   double DoParameterDerivative(double x, unsigned int ipar) const; 
+   double DoParameterDerivative(double x, const double * p, unsigned int ipar) const; 
    
 
    // cache order = number of params - 1)
