@@ -2213,7 +2213,7 @@ TProfile2D *TH3::Project3DProfile(Option_t *option) const
 
    // Fill the projected histogram taking into accounts underflow/overflows
    if (!fXaxis.TestBit(TAxis::kAxisRange)) {ixmin--; ixmax++;}
-   if (!fYaxis.TestBit(TAxis::kAxisRange)) {iymin--; izmax++;}
+   if (!fYaxis.TestBit(TAxis::kAxisRange)) {iymin--; iymax++;}
    if (!fZaxis.TestBit(TAxis::kAxisRange)) {izmin--; izmax++;}
    Double_t cont;
    Double_t entries  = 0;
