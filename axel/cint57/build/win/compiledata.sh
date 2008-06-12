@@ -80,7 +80,7 @@ echo "#define ROOTBUILD \"$ROOTBUILD\"" >> __compiledata
 
 echo "#define LINKEDLIBS \"-LIBPATH:%ROOTSYS% $ROOTLIBS $RINTLIBS \""  >> __compiledata
 
-echo "#define INCLUDEPATH \"-I$INCDIR\"" >> __compiledata
+echo "#define INCLUDEPATH \"\\\"-I$INCDIR\\\" \\\"-I$INCDIR/cint\\\"\"" >> __compiledata
 echo "#define OBJEXT \"obj\" " >> __compiledata
 echo "#define SOEXT \"$SOEXT\" " >> __compiledata
 
