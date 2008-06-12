@@ -217,8 +217,9 @@ private:
 */ 
 
 class IParametricGradFunctionMultiDim : 
-         public IParametricFunctionMultiDim, 
-         public IGradientFunctionMultiDim   {
+         public IParametricFunctionMultiDim 
+//         ,public IGradientFunctionMultiDim   
+{
 
 public: 
 
@@ -295,8 +296,9 @@ private:
 */ 
 
 class IParametricGradFunctionOneDim : 
-         public IParametricFunctionOneDim, 
-         public IGradientFunctionOneDim   {
+         public IParametricFunctionOneDim
+//         ,public IGradientFunctionOneDim
+{
 
 public: 
 
@@ -366,6 +368,7 @@ public:
    double ParameterDerivative(const double * x, const double * p, unsigned int ipar = 0) const { 
       return DoParameterDerivative(*x, p, ipar); 
    }
+
 
    /**
       Evaluate partial derivative using cached parameter values (multi-dim like interface)
