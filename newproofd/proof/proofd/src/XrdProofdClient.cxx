@@ -535,7 +535,7 @@ int XrdProofdClient::SetClientID(int cid, XrdProofdProtocol *p)
    XrdSysMutexHelper mh(fMutex);
 
    if (cid >= 0 && cid < (int) fClients.size()) {
-      if (fClients[cid])
+      if (fClients[cid] && (fClients[cid] != p))
          delete fClients[cid];
       fClients[cid] = p;
       return 0;
