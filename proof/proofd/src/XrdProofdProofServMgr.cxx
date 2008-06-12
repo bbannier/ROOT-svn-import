@@ -1849,7 +1849,7 @@ XrdProofdProofServ *XrdProofdProofServMgr::Accept(XrdProofdClient *c,
 
    if (go) {
       // Take a short-cut and process the initial request as a sticky request
-      if (xp->Process(linkpsrv) != 1) {
+      if (xp->Process(linkpsrv) != 0) {
          msg = "handshake with internal link failed: ";
          go = 0;
       }
@@ -1870,6 +1870,8 @@ XrdProofdProofServ *XrdProofdProofServMgr::Accept(XrdProofdClient *c,
 
    // Tight this protocol instance to the link
    linkpsrv->setProtocol(xp);
+
+   TRACE(DBG, "Protocol "<<xp<<" attached to link "<<linkpsrv<<" ("<< peerpsrv.InetName <<")");
 
    // Schedule it
    fSched->Schedule((XrdJob *)linkpsrv);

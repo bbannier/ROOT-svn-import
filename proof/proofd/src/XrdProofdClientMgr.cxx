@@ -614,7 +614,8 @@ int XrdProofdClientMgr::MapClient(XrdProofdProtocol *p, bool all)
       TRACEP(p, LOGIN, msg);
    }
 
-   return rc;
+   // Done
+   return 0;
 }
 
 //_____________________________________________________________________________
