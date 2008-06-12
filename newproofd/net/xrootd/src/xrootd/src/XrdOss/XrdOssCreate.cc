@@ -100,8 +100,9 @@ int XrdOssSys::Create(const char *tident, const char *path, mode_t access_mode,
    if (StageCreate)
       {struct stat buf;
        if (lstat(local_path, &buf))
-          if (errno != ENOENT) return -errno;
-             else return XrdOssSS->Stage(tident,path,env,Opts>>8,access_mode);
+          {if (errno != ENOENT) return -errno;
+              else return XrdOssSS->Stage(tident,path,env,Opts>>8,access_mode);
+          }
        return 0;
       }
 
@@ -245,8 +246,8 @@ int XrdOssSys::Alloc_Cache(const char *path, int Oflag, mode_t amode,
        else  if (!fuzz) {if (curfree > maxfree) 
                                  {fsp_sel = fsp; maxfree = curfree;}}
        else {diffree = (!(curfree + maxfree) ? 0.0
-                     : static_cast<double>(llabs(maxfree - curfree)) /
-                       static_cast<double>(      maxfree + curfree));
+                     : static_cast<double>(::llabs(maxfree - curfree)) /
+                       static_cast<double>(        maxfree + curfree));
              if (diffree > fuzz) {fsp_sel = fsp; maxfree = curfree;}
             }
       } while((fsp = fsp->next) != fspend);

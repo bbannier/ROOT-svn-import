@@ -324,9 +324,9 @@ int XrdLink::Close(int defer)
 // Close the file descriptor if it isn't being shared. Do it as the last
 // thing because closes and accepts and not interlocked.
 //
-   if (fd >= 2)
-      if (KeepFD) rc = 0;
-         else rc = (close(fd) < 0 ? errno : 0);
+   if (fd >= 2) {if (KeepFD) rc = 0;
+                    else rc = (close(fd) < 0 ? errno : 0);
+                }
    if (rc) XrdLog.Emsg("Link", rc, "close", ID);
    return rc;
 }
@@ -599,8 +599,9 @@ int XrdLink::Send(const char *Buff, int Blen)
 //
    while(bytesleft)
         {if ((retc = write(FD, Buff, bytesleft)) < 0)
-            if (errno == EINTR) continue;
-               else break;
+            {if (errno == EINTR) continue;
+                else break;
+            }
          BytesOut += retc; bytesleft -= retc; Buff += retc;
         }
 
@@ -646,8 +647,9 @@ int XrdLink::Send(const struct iovec *iov, int iocnt, int bytes)
               {retc -= n; iov++; iocnt--;}
          Buff = (const char *)iov->iov_base + retc; n -= retc; iov++; iocnt--;
          while(n) {if ((retc = write(FD, Buff, n)) < 0)
-                      if (errno == EINTR) continue;
-                         else break;
+                      {if (errno == EINTR) continue;
+                          else break;
+                      }
                    n -= retc; Buff += retc;
                   }
          if (retc < 0 || iocnt < 1) break;
@@ -719,7 +721,7 @@ int XrdLink::Send(const struct sfVec *sfP, int sfN)
 #elif defined(__linux__)
 
    static const int setON = 1, setOFF = 0;
-   ssize_t retc, bytesleft;
+   ssize_t retc = 0, bytesleft;
    off_t myOffset;
    int i, xfrbytes = 0, uncork = 1;
 
@@ -776,14 +778,15 @@ int XrdLink::Send(const struct sfVec *sfP, int sfN)
   
 int XrdLink::sendData(const char *Buff, int Blen)
 {
-   ssize_t retc, bytesleft = Blen;
+   ssize_t retc = 0, bytesleft = Blen;
 
 // Write the data out
 //
    while(bytesleft)
         {if ((retc = write(FD, Buff, bytesleft)) < 0)
-            if (errno == EINTR) continue;
-               else break;
+            {if (errno == EINTR) continue;
+                else break;
+            }
          bytesleft -= retc; Buff += retc;
         }
 
