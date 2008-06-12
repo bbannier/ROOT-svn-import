@@ -493,7 +493,7 @@ G__%.o: G__%.cxx
 	   -I$(CINTDIR)/stl -I$(CINTDIR)/inc -- $<
 	$(CXX) $(NOOPT) $(CXXFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
 
-G__%.o: G__%.c
+G__c_%.o: G__c_%.c
 	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
 	   $(CFLAGS) -I$(CINTDIR)/lib/prec_stl \
 	   -I$(CINTDIR)/stl -I$(CINTDIR)/inc -- $<
