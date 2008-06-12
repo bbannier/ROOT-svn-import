@@ -31,6 +31,8 @@
 #include "TSystem.h"
 #include "TRandom3.h"
 #include "TH1.h"
+#include <algorithm>
+
 
 ClassImp(TMVA::GeneticPopulation)
    
@@ -83,7 +85,7 @@ void TMVA::GeneticPopulation::MakeChildren()
    // children have a combination of the coefficients of their parents
    //
 
-   sort(fGenePool.begin(), fGenePool.end());
+   std::sort(fGenePool.begin(), fGenePool.end());
 
 #ifdef _GLIBCXX_PARALLEL
 #pragma omp parallel
@@ -278,7 +280,7 @@ void TMVA::GeneticPopulation::AddPopulation( GeneticPopulation &strangers )
 //_______________________________________________________________________
 void TMVA::GeneticPopulation::TrimPopulation()
 {
-   sort(fGenePool.begin(), fGenePool.end());
+   std::sort(fGenePool.begin(), fGenePool.end());
    while ( fGenePool.size() > (unsigned int) fPopulationSizeLimit )
       fGenePool.pop_back();
 }
@@ -295,6 +297,6 @@ void TMVA::GeneticPopulation::GiveHint( std::vector< Double_t >& hint, Double_t 
 //_______________________________________________________________________
 void TMVA::GeneticPopulation::Sort()
 {
-   sort(fGenePool.begin(), fGenePool.end());
+   std::sort(fGenePool.begin(), fGenePool.end());
 }
 
