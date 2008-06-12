@@ -1925,8 +1925,21 @@ Int_t TProof::CollectInputFrom(TSocket *s)
    Int_t     what;
    Bool_t    delete_mess = kTRUE;
 
-   if (s->Recv(mess) < 0) {
-      MarkBad(s, "problems receiving a message in TProof::CollectInputFrom(...)");
+   if ((rc = s->Recv(mess)) < 0) {
+      PDB(kGlobal,2)
+         Info("CollectInputFrom","%p: got %d from Recv()", s, rc);
+      Bool_t bad = kTRUE;
+      if (rc == -5) {
+         // Broken connection: try reconnection
+         if (fCurrentMonitor) fCurrentMonitor->Remove(s);
+         if (s->Reconnect() == 0) {
+            if (fCurrentMonitor) fCurrentMonitor->Add(s);
+            bad = kFALSE;
+         }
+      }
+      if (bad)
+         MarkBad(s, "problems receiving a message in TProof::CollectInputFrom(...)");
+      // Ignore this wake up
       return -1;
    }
    if (!mess) {
