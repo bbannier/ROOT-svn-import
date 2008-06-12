@@ -112,7 +112,7 @@ echo "#define CXXOPT \"$CXXOPT\"" >> __compiledata
 echo "#define CXXDEBUG \"$CXXDEBUG\"" >> __compiledata
 echo "#define ROOTBUILD \"$ROOTBUILD\"" >> __compiledata
 echo "#define LINKEDLIBS \"-L$LIBDIR $ROOTLIBS $RINTLIBS \""  >> __compiledata
-echo "#define INCLUDEPATH \"-I$INCDIR\"" >> __compiledata
+echo "#define INCLUDEPATH \"\\\"-I$INCDIR\\\" \\\"-I$INCDIR/cint\\\"\"" >> __compiledata
 echo "#define OBJEXT \"o\" " >> __compiledata
 echo "#define SOEXT \"$SOEXT\" " >> __compiledata
 
