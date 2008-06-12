@@ -241,15 +241,15 @@ public:
 
    unsigned int NDim() const { return 1; }
 
-   void Gradient(const double *x, double * grad) const { 
-      grad[0] = fFunc->Derivative( *x);  
-   }
+//    void Gradient(const double *x, double * grad) const { 
+//       grad[0] = fFunc->Derivative( *x);  
+//    }
 
    void ParameterGradient(const double *x, const double * p, double * grad) const { 
       fFunc->ParameterGradient(*x, p, grad); 
    } 
 
-   using IParamMultiGradFunction::BaseFunc::operator();
+   //  using IParamMultiGradFunction::BaseFunc::operator();
 
 private: 
 
@@ -258,9 +258,9 @@ private:
       return (*fFunc)(*x, p);
    }
 
-   double DoDerivative(const double * x, unsigned int ) const { 
-      return fFunc->Derivative(*x); 
-   } 
+//    double DoDerivative(const double * x, unsigned int ) const { 
+//       return fFunc->Derivative(*x); 
+//    } 
 
    double DoParameterDerivative(const double * x, const double * p, unsigned int ipar ) const { 
       return fFunc->ParameterDerivative(*x, p, ipar); 

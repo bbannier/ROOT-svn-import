@@ -48,12 +48,19 @@ namespace Math {
 
      The class provides also the method to find the roots of the polynomial.
      It uses analytical methods up to quartic polynomials. 
+
+     Implements both the Parameteric function interface and the gradient interface
+     since it provides the analytical gradient with respect to x
      
 
      @ingroup CppFunctions
   */
 
-class Polynomial : public ParamFunction {
+class Polynomial : public ParamFunction<IParamGradFunction>,  
+                   public IGradientFunctionOneDim  
+{
+
+   typedef  ParamFunction<IParamGradFunction> ParFunc; 
 
 public: 
   
@@ -87,16 +94,7 @@ public:
 
    virtual ~Polynomial() {}
 
-//    /**
-//       Copy constructor 
-//    */
-//    Polynomial(const Polynomial &); 
-
-    
-//    /**
-//       Copy operator 
-//    */
-//    Polynomial & operator = (const Polynomial &);
+   // use default copy-ctor and assignment operators
 
     
 
