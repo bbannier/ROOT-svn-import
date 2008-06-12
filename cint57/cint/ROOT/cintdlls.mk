@@ -208,11 +208,7 @@ ifeq ($(subst $(MACOSX_MINOR),,1234),1234)
 $(CINTDLLDIRL)/G__c_posix.c: MACOSX_UNIX03 = -D__DARWIN_UNIX03
 endif
 
-ifeq ($(BUILDINGCINT),5)
 $(CINTDLLDIRL)/G__c_%.o: CFLAGS += -I. -DG__SYSTYPES_H
-else
-$(CINTDLLDIRL)/G__c_%.o: CFLAGS += -I. -DG__SYSTYPES_H
-endif
 
 ##### posix special treatment
 $(CINTDLLDIRL)/posix/exten.o: $(CINTDLLDIRL)/posix/exten.c
