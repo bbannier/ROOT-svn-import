@@ -189,7 +189,7 @@ $(CINTDLLDIRDLLSTL)/G__cpp_%.cxx:
 	$(patsubst %lib/dll_stl/,%,$(dir $@))/main/cint_tmp \
            -w1 -z$(notdir $*) -n$@ $(subst $*,,$(patsubst %map2,-DG__MAP2,$*)) \
 	   -D__MAKECINT__ -DG__MAKECINT \
-           $(add-suffix lib/dll_stl lib,$(patsubst %lib/dll_stl/,-I%,$(dir $@))) \
+           $(addprefix $(patsubst %lib/dll_stl/,-I%,$(dir $@)),lib/dll_stl lib) \
 	   -c-1 -A -Z0 $(filter-out $(IOSENUM),$(filter %.h,$^))
 
 $(CINTDLLDIRL)/G__cpp_%.cxx:
