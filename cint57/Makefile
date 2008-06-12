@@ -487,6 +487,18 @@ INCLUDEFILES :=
 .PRECIOUS: include/%.h
 
 # special rules (need to be defined before generic ones)
+G__%.o: G__%.cxx
+	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
+	   $(CXXFLAGS) -D__cplusplus -I$(CINTDIR)/lib/prec_stl \
+	   -I$(CINTDIR)/stl -I$(CINTDIR)/inc -- $<
+	$(CXX) $(NOOPT) $(CXXFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
+
+G__%.o: G__%.c
+	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
+	   $(CFLAGS) -I$(CINTDIR)/lib/prec_stl \
+	   -I$(CINTDIR)/stl -I$(CINTDIR)/inc -- $<
+	$(CC) $(NOOPT) $(CFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
+
 cint/cint/%.o: cint/cint/%.cxx
 	$(MAKEDEP) -R -fcint/cint/$*.d -Y -w 1000 -- $(CINTCXXFLAGS) -I. -D__cplusplus -- $<
 	$(CXX) $(OPT) $(CINTCXXFLAGS) -I. $(CXXOUT)$@ -c $<
@@ -502,12 +514,6 @@ cint/cint7/%.o: cint/cint7/%.cxx
 cint/cint7/%.o: cint/cint7/%.c
 	$(MAKEDEP) -R -fcint/cint7/$*.d -Y -w 1000 -- $(CINT7CFLAGS) -I. -- $<
 	$(CC) $(OPT) $(CINT7CFLAGS) -I. $(CXXOUT)$@ -c $<
-
-G__%.o: G__%.cxx
-	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
-	   $(CXXFLAGS) -D__cplusplus -I$(CINTDIR)/lib/prec_stl \
-	   -I$(CINTDIR)/stl -I$(CINTDIR)/inc -- $<
-	$(CXX) $(NOOPT) $(CXXFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
 
 build/%.o: build/%.cxx
 	$(CXX) $(OPT) $(CXXFLAGS) $(CXXOUT)$@ -c $<
