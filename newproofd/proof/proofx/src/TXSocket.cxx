@@ -1585,13 +1585,14 @@ Int_t TXSocket::Recv(TMessage *&mess)
 {
    // Receive a TMessage object. The user must delete the TMessage object.
    // Returns length of message in bytes (can be 0 if other side of connection
-   // is closed) or -1 in case of error. In those case mess == 0.
+   // is closed) or -1 in case of error or -5 if pipe broken (connection invalid).
+   // In those case mess == 0.
 
    TSystem::ResetErrno();
 
    if (!IsValid()) {
       mess = 0;
-      return -1;
+      return -5;
    }
 
    Int_t  n;
@@ -1928,20 +1929,9 @@ Int_t TXSocket::Reconnect()
    }
 
    if (fConn) {
-
       if (gDebug > 0)
          Info("Reconnect", "%p: locking phyconn: %p", this, fConn->fPhyConn);
-
-      // Block any other attempt to use this connection
-      XrdClientPhyConnLocker pcl(fConn->fPhyConn);
-
-      fConn->Close();
-      int maxtry, timewait;
-      XrdProofConn::GetRetryParam(maxtry, timewait);
-      XrdProofConn::SetRetryParam(300, 1);
-      fConn->Connect();
-      XrdProofConn::SetRetryParam();
-
+      fConn->ReConnect();
       if (fConn->IsValid()) {
          // Create new proofserv if not client manager or administrator or internal mode
          if (fMode == 'm' || fMode == 's' || fMode == 'M' || fMode == 'A') {

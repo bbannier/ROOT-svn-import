@@ -66,7 +66,6 @@ public:
 private:
 
    char                fMode;          // Type of client
-   bool                fGetAsync;      // Switch ON/OFF receipt of async messages
    bool                fConnected;
    int                 fLogConnID;     // Logical connection ID of current object
    kXR_unt16           fStreamid;      // Streamid used for normal communications
@@ -107,7 +106,9 @@ private:
    bool                CheckResp(struct ServerResponseHeader *resp,
                                  const char *met);
    virtual void        Connect();
+   void                ReConnect();
    virtual int         TryConnect();
+
    ESrvType            DoHandShake();
    virtual bool        GetAccessToSrv();
    virtual bool        Init(const char *url = 0);

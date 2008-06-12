@@ -97,9 +97,10 @@ void         *XrdProofConn::fgSecGetProtocol = 0;  // Sec protocol getter
 //_____________________________________________________________________________
 XrdProofConn::XrdProofConn(const char *url, char m, int psid, char capver,
                            XrdClientAbsUnsolMsgHandler *uh, const char *logbuf)
-   : fMode(m), fConnected(0), fSessionID(psid), fLastErr(kXR_Unsupported),
-     fCapVer(capver), fLoginBuffer(logbuf), fMutex(0), fPhyConn(0),
-     fUnsolMsgHandler(uh)
+   : fMode(m), fConnected(0), fLogConnID(-1), fStreamid(0), fRemoteProtocol(-1),
+     fServerProto(-1), fServerType(kSTNone), fSessionID(psid),
+     fLastErr(kXR_Unsupported), fCapVer(capver), fLoginBuffer(logbuf), fMutex(0),
+     fPhyConn(0), fUnsolMsgHandler(uh)
 {
    // Constructor. Open the connection to a remote XrdProofd instance.
    // The mode 'm' indicates the role of this connection:
@@ -272,6 +273,32 @@ XrdProofConn::~XrdProofConn()
 
    // Cleanup mutex
    SafeDelete(fMutex);
+}
+
+//_____________________________________________________________________________
+void XrdProofConn::ReConnect()
+{
+   // Perform a reconnection attempt when a connection is not valid any more
+   XPDLOC(ALL, "Conn::ReConnect")
+
+   if (!IsValid()) {
+      if (fRemoteProtocol > 1004) {
+
+         // Block any other attempt to use this connection
+         XrdClientPhyConnLocker pcl(fPhyConn);
+
+         Close();
+         int maxtry, timewait;
+         XrdProofConn::GetRetryParam(maxtry, timewait);
+         XrdProofConn::SetRetryParam(300, 1);
+         Connect();
+         XrdProofConn::SetRetryParam();
+
+      } else {
+         TRACE(DBG, "server does not support reconnections (protocol: %d" <<
+                    fRemoteProtocol << " < 1005)");
+      }
+   }
 }
 
 //_____________________________________________________________________________
@@ -521,14 +548,6 @@ XrdClientMessage *XrdProofConn::SendReq(XPClientRequest *req, const void *reqDat
 
       TRACE(HDBG, this << " locking phyconn: "<<fPhyConn);
 
-      // If reconnecting we wait here ...
-      XrdClientPhyConnLocker pcl(fPhyConn);
-      // ... and we continue only if successful
-      if (!IsValid()) {
-         TRACE(XERR,"not connected: nothing to do");
-         break;
-      }
-
       // Ok, now we can try
       abortcmd = 0;
 
@@ -544,11 +563,20 @@ XrdClientMessage *XrdProofConn::SendReq(XPClientRequest *req, const void *reqDat
       // waiting for the server to come back
       retry++;
       if (!answMex || answMex->IsError()) {
+
          TRACE(DBG, "communication error detected with "<<URLTAG);
          if (retry > maxTry) {
             TRACE(XERR,"max number of retries reached - Abort");
             abortcmd = 1;
          } else {
+            if (!IsValid()) {
+               // Connection is gone: try to reconnect and if this fails, give up
+               ReConnect();
+               if (!IsValid()) {
+                  TRACE(XERR,"not connected: nothing to do");
+                  break;
+               }
+            }
             abortcmd = 0;
             // Restore the unmarshalled request
             memcpy(req, &reqsave, sizeof(XPClientRequest));
