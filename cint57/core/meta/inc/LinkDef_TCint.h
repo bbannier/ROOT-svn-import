@@ -13,6 +13,6 @@
 #pragma link C++ nestedtypedefs;
 #pragma link C++ nestedclasses;
 
-#pragma link C++ class TCint;
+#pragma link C++ options="nomap" class TCint;
 
 #endif
