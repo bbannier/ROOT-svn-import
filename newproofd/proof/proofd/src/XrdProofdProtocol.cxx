@@ -627,9 +627,8 @@ int XrdProofdProtocol::SendData(XrdProofdProofServ *xps,
       if (sid > -1) {
          if (TRACING(HDBG))
             msg.form("EXT: server ID: %d, sending: %d bytes", sid, quantum);
-         if (!response ||
-               response->Send(kXR_attn, kXPD_msgsid, sid,
-                              argp->buff, quantum) != 0) {
+         if (!response || response->Send(kXR_attn, kXPD_msgsid, sid,
+                                         argp->buff, quantum) != 0) {
             { XrdSysMutexHelper mh(fgBMutex); fgBPool->Release(argp); }
             msg.form("EXT: server ID: %d, problems sending: %d bytes to server",
                      sid, quantum);
