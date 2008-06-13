@@ -440,7 +440,8 @@ int XrdProofdClientMgr::Login(XrdProofdProtocol *p)
    // fails this will be removed at a later stage
    XrdProofdClient *c = GetClient(uname.c_str(), gname.c_str());
    if (c) {
-      c->SetROOT(fMgr->ROOTMgr()->DefaultVersion());
+      if (!c->ROOT())
+         c->SetROOT(fMgr->ROOTMgr()->DefaultVersion());
       if (c->IsValid()) {
          // Set the group, if any
          c->SetGroup(g->Name());
