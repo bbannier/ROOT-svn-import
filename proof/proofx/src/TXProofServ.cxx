@@ -727,7 +727,7 @@ Bool_t TXProofServ::HandleError(const void *)
    // Try reconnection
    if (fSocket && !fSocket->IsValid()) {
 
-      ((TXSocket *)fSocket)->Reconnect();
+      fSocket->Reconnect();
       if (fSocket && fSocket->IsValid()) {
          if (gDebug > 0)
             Info("HandleError",
