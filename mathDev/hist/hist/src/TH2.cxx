@@ -1098,9 +1098,16 @@ Double_t TH2::KolmogorovTest(const TH1 *h2, Option_t *option) const
    //         "O" include Overflows
    //         "N" include comparison of normalizations
    //         "D" Put out a line of "Debug" printout
+   //         "M" Return the Maximum Kolmogorov distance instead of prob
    //
    //   The returned function value is the probability of test
    //       (much less than one means NOT compatible)
+   //
+   //   The KS test uses the distance between the pseudo-CDF's obtained 
+   //   from the histogram. Since in 2D the order for generating the pseudo-CDF is 
+   //   arbitrary, two pairs of pseudo-CDF are used, one starting from the x axis the 
+   //   other from the y axis and the maximum distance is the average of the two maximum 
+   //   distances obtained. 
    //
    //  Code adapted by Rene Brun from original HBOOK routine HDIFF
 
@@ -1165,8 +1172,8 @@ Double_t TH2::KolmogorovTest(const TH1 *h2, Option_t *option) const
    Double_t w2    = 0;
    for (i = ibeg; i <= iend; i++) {
       for (j = jbeg; j <= jend; j++) {
-         sum1 += h1->GetCellContent(i,j);
-         sum2 += h1->GetCellContent(i,j);
+         sum1 += h1->GetBinContent(i,j);
+         sum2 += h2->GetBinContent(i,j);
          Double_t ew1   = h1->GetBinError(i,j);
          Double_t ew2   = h2->GetBinError(i,j);
          w1   += ew1*ew1;
@@ -1174,6 +1181,7 @@ Double_t TH2::KolmogorovTest(const TH1 *h2, Option_t *option) const
 
       }
    }
+
 //    Double_t sum2  = 0;
 //    Double_t tsum2 = 0;
 //    for (i=0;i<=ncx1+1;i++) {
