@@ -60,7 +60,7 @@ void TQuakeViz::ReadData(const Text_t* file)
                  ) == 10)
    {
       q.fTime.Set(year, month, day, hour, min, TMath::Nint(sec), 0, kFALSE, 0);
-      q.fDepth *= 0.01f; // Brutal fix of depth-scale.
+      q.fDepth *= -0.01f; // Brutal fix of depth-scale.
 
       if (q.fLat < fMinLat) fMinLat = q.fLat;
       if (q.fLat > fMaxLat) fMaxLat = q.fLat;
