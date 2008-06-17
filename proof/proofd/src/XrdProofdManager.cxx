@@ -157,6 +157,7 @@ int XrdProofdManager::CheckUser(const char *usr,
    // Check if the user is allowed to use the system
    // Return 0 if OK, -1 if not.
 
+   su = 0;
    // No 'root' logins
    if (!usr || strlen(usr) <= 0) {
       e = "CheckUser: 'usr' string is undefined ";
@@ -169,10 +170,12 @@ int XrdProofdManager::CheckUser(const char *usr,
       return -1;
    }
 
+   XrdSysMutexHelper mtxh(&fMutex);
+
    // Here we check if the user is known locally.
    // If not, we fail for now.
    // In the future we may try to get a temporary account
-   if (fChangeOwn && !fMultiUser) {
+   if (fChangeOwn) {
       if (XrdProofdAux::GetUserInfo(usr, ui) != 0) {
          e = "CheckUser: unknown ClientID: ";
          e += usr;
@@ -186,35 +189,73 @@ int XrdProofdManager::CheckUser(const char *usr,
       }
    }
 
-   XrdOucString us;
-   int from = 0;
-   // If we are in controlled mode we have to check if the user in the
-   // authorized list; otherwise we fail. Privileged users are always
-   // allowed to connect.
-   bool notok = 1;
+   // If we are in controlled mode we have to check if the user (and possibly
+   // its group) are in the authorized lists; otherwise we fail.
+   // Privileged users are always allowed to connect.
    if (fOperationMode == kXPD_OpModeControlled) {
-      while ((from = fAllowedUsers.tokenize(us, from, ',')) != -1) {
-         if (us == usr) {
-            notok = 0;
-            break;
+
+      // Policy: check first the general switch for groups; a user of a specific group can be
+      // rejected by prefixing a '-'.
+      // If a user is explicitely allowed we give the green light even if her/its group is
+      // disallowed. If fAllowedUsers is empty, we just apply the group rules.
+      //
+      // Example:
+      //
+      // xpd.allowedgroups z2
+      // xpd.allowedusers -jgrosseo,ganis
+      //
+      // accepts connections from all group 'z2' except user 'jgrosseo' and from user 'ganis'
+      // even if not belonging to group 'z2'.
+
+      bool usrok = 1;
+      // Check unix group
+      if (fAllowedGroups.Num() > 0) {
+         // Reset the flag
+         usrok = 0;
+         // Get full group info
+         XrdProofGI gi;
+         if (XrdProofdAux::GetGroupInfo(ui.fGid, gi) == 0) {
+            int *st = fAllowedGroups.Find(gi.fGroup.c_str());
+            if (st) {
+               usrok = 1;
+            } else {
+               e = "CheckUser: group '";
+               e += gi.fGroup;
+               e += "' is not allowed to connect";
+            }
          }
       }
-      if (notok) {
-         e = "CheckUser: controlled operations:"
-             " user not currently authorized to log in: ";
-         e += usr;
-         return -1;
+      // Check username
+      if (fAllowedUsers.Num() > 0) {
+         // Look into the hash
+         int *st = fAllowedUsers.Find(usr);
+         if (st) {
+            if (usrok && (*st == 0)) {
+               usrok = 0;
+               e = "CheckUser: user '";
+               e += usr;
+               e += "' is not allowed to connect";
+            } else if (!usrok && (*st == 1)) {
+               usrok = 1;
+            }
+         }
       }
-   }
+      if (fSuperUsers.length() > 0) {
+         // Check if super user
+         XrdOucString tkn;
+         int from = 0;
+         while ((from = fSuperUsers.tokenize(tkn, from, ',')) != -1) {
+            if (tkn == usr) {
+               usrok = 1;
+               e = "";
+               su = 1;
+               break;
+            }
+         }
+      }
 
-   // Check if this is a priviliged client
-   from = 0;
-   su = 0;
-   while ((from = fSuperUsers.tokenize(us, from, ',')) != -1) {
-      if (us == usr) {
-         su = 1;
-         break;
-      }
+      // Return now if disallowed
+      if (!usrok) return -1;
    }
 
    // OK
@@ -339,6 +380,29 @@ int XrdProofdManager::GetWorkers(XrdOucString &lw, XrdProofdProofServ *xps)
    }
 
    return rc;
+}
+
+//__________________________________________________________________________
+static int FillKeyValues(const char *k, int *d, void *s)
+{
+   // Add the key value in the string passed via the void argument
+
+   XrdOucString *ls = (XrdOucString *)s;
+
+   if (ls) {
+      if (*d == 1) {
+         // If not empty add a separation ','
+         if (ls->length() > 0) *ls += ",";
+         // Add the key
+         if (k) *ls += k;
+      }
+   } else {
+      // Not enough info: stop
+      return 1;
+   }
+
+   // Check next
+   return 0;
 }
 
 //__________________________________________________________________________
@@ -468,11 +532,26 @@ int XrdProofdManager::Config(bool rcf)
 
    // Notify controlled mode, if such
    if (fOperationMode == kXPD_OpModeControlled) {
-      fAllowedUsers += ',';
-      fAllowedUsers += fSuperUsers;
-      msg.form("running in controlled access mode: users allowed: %s",
-               fAllowedUsers.c_str());
-      TRACE(ALL, msg);
+      // Add superusers to the hash list of allowed users
+      int from = 0;
+      XrdOucString usr;
+      while ((from = fSuperUsers.tokenize(usr, from, ',')) != STR_NPOS) {
+         fAllowedUsers.Add(usr.c_str(), new int(1));
+      }
+      // Extract now the list of allowed users
+      XrdOucString uls;
+      fAllowedUsers.Apply(FillKeyValues, (void *)&uls);
+      if (uls.length()) {
+         msg.form("running in controlled access mode: users allowed: %s", uls.c_str());
+         TRACE(ALL, msg);
+      }
+      // Extract now the list of allowed groups
+      XrdOucString gls;
+      fAllowedGroups.Apply(FillKeyValues, (void *)&gls);
+      if (gls.length()) {
+         msg.form("running in controlled access mode: UNIX groups allowed: %s", gls.c_str());
+         TRACE(ALL, msg);
+      }
    }
 
    // Bare lib path
@@ -562,6 +641,7 @@ void XrdProofdManager::RegisterDirectives()
    Register("shutdown", new XrdProofdDirective("shutdown", this, &DoDirectiveClass));
    Register("maxoldlogs", new XrdProofdDirective("maxoldlogs", this, &DoDirectiveClass));
    Register("allow", new XrdProofdDirective("allow", this, &DoDirectiveClass));
+   Register("allowedgroups", new XrdProofdDirective("allowedgroups", this, &DoDirectiveClass));
    Register("allowedusers", new XrdProofdDirective("allowedusers", this, &DoDirectiveClass));
    Register("role", new XrdProofdDirective("role", this, &DoDirectiveClass));
    Register("cron", new XrdProofdDirective("cron", this, &DoDirectiveClass));
@@ -634,6 +714,8 @@ int XrdProofdManager::DoDirective(XrdProofdDirective *d,
       return DoDirectiveMaxOldLogs(val, cfg, rcf);
    } else if (d->fName == "allow") {
       return DoDirectiveAllow(val, cfg, rcf);
+   } else if (d->fName == "allowedgroups") {
+      return DoDirectiveAllowedGroups(val, cfg, rcf);
    } else if (d->fName == "allowedusers") {
       return DoDirectiveAllowedUsers(val, cfg, rcf);
    } else if (d->fName == "role") {
@@ -813,9 +895,10 @@ int XrdProofdManager::DoDirectiveAllow(char *val, XrdOucStream *cfg, bool)
 }
 
 //______________________________________________________________________________
-int XrdProofdManager::DoDirectiveAllowedUsers(char *val, XrdOucStream *cfg, bool)
+int XrdProofdManager::DoDirectiveAllowedGroups(char *val, XrdOucStream *cfg, bool)
 {
-   // Process 'allowedusers' directive
+   // Process 'allowedgroups' directive
+   XPDLOC(ALL, "Manager::DoDirectiveAllowedGroups")
 
    if (!val)
       // undefined inputs
@@ -826,9 +909,72 @@ int XrdProofdManager::DoDirectiveAllowedUsers(char *val, XrdOucStream *cfg, bool
       if (XrdProofdAux::CheckIf(cfg, Host()) == 0)
          return 0;
 
-   // Users allowed to use the cluster
-   fAllowedUsers = val;
+   // We are in controlled mode
    fOperationMode = kXPD_OpModeControlled;
+
+   // Input list (comma separated) of UNIX groups allowed to connect
+   XrdOucString s = val;
+   int from = 0;
+   XrdOucString grp;
+   XrdProofGI gi;
+   while ((from = s.tokenize(grp, from, ',')) != STR_NPOS) {
+      int st = 1;
+      if (grp.beginswith('-')) {
+         st = 0;
+         grp.erasefromstart(1);
+      }
+      int rc = 0;
+      if ((rc = XrdProofdAux::GetGroupInfo(grp.c_str(), gi)) == 0) {
+         // Group name is known to the system: add it to the list
+         fAllowedGroups.Add(grp.c_str(), new int(st));
+      } else {
+         TRACE(XERR, "problems getting info for group: '"<< grp<<"' - errno: "<<-rc);
+      }
+   }
+
+   // Done
+   return 0;
+}
+
+//______________________________________________________________________________
+int XrdProofdManager::DoDirectiveAllowedUsers(char *val, XrdOucStream *cfg, bool)
+{
+   // Process 'allowedusers' directive
+   XPDLOC(ALL, "Manager::DoDirectiveAllowedUsers")
+
+   if (!val)
+      // undefined inputs
+      return -1;
+
+   // Check deprecated 'if' directive
+   if (Host() && cfg)
+      if (XrdProofdAux::CheckIf(cfg, Host()) == 0)
+         return 0;
+
+   // We are in controlled mode
+   fOperationMode = kXPD_OpModeControlled;
+
+   // Input list (comma separated) of users allowed to connect
+   XrdOucString s = val;
+   int from = 0;
+   XrdOucString usr;
+   XrdProofUI ui;
+   while ((from = s.tokenize(usr, from, ',')) != STR_NPOS) {
+      int st = 1;
+      if (usr.beginswith('-')) {
+         st = 0;
+         usr.erasefromstart(1);
+      }
+      int rc = 0;
+      if ((rc = XrdProofdAux::GetUserInfo(usr.c_str(), ui)) == 0) {
+         // Username is known to the system: add it to the list
+         fAllowedUsers.Add(usr.c_str(), new int(st));
+      } else {
+         TRACE(XERR, "problems getting info for user: '"<< usr<<"' - errno: "<<-rc);
+      }
+   }
+
+   // Done
    return 0;
 }
 

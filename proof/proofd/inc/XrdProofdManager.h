@@ -139,7 +139,8 @@ class XrdProofdManager : public XrdProofdConfig {
    int               fCronFrequency;  // Frequency for running cron checks in secs
    //
    int               fOperationMode;  // Operation mode
-   XrdOucString      fAllowedUsers;   // Users allowed in controlled mode
+   XrdOucHash<int>   fAllowedUsers;   // UNIX users allowed in controlled mode
+   XrdOucHash<int>   fAllowedGroups;  // UNIX groups allowed in controlled mode
    bool              fMultiUser;      // Allow/disallow multi-user mode
    bool              fChangeOwn;      // TRUE is ownership has to be changed
 
@@ -150,6 +151,7 @@ class XrdProofdManager : public XrdProofdConfig {
 
 
    int               DoDirectiveAllow(char *, XrdOucStream *, bool);
+   int               DoDirectiveAllowedGroups(char *, XrdOucStream *, bool);
    int               DoDirectiveAllowedUsers(char *, XrdOucStream *, bool);
    int               DoDirectiveCron(char *, XrdOucStream *, bool);
    int               DoDirectiveGroupfile(char *, XrdOucStream *, bool);
