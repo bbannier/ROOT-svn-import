@@ -17,6 +17,7 @@
 #include "TMath.h"
 
 #include "TGLRnrCtx.h"
+#include "TGLSelectRecord.h"
 #include "TGLIncludes.h"
 
 //______________________________________________________________________________
@@ -66,6 +67,8 @@ void TQuakeVizGL::DirectDraw(TGLRnrCtx & rnrCtx) const
 
    // printf("TQuakeVizGL::DirectDraw LOD %d\n", rnrCtx.CombiLOD());
 
+   if (rnrCtx.Highlight()) return;
+
    TEveRGBAPalette* pal = fM->AssertPalette();
 
    TTimeStamp midTime(fM->fYear, fM->fMonth, fM->fDay, fM->fHour, 0, 0);
@@ -83,11 +86,14 @@ void TQuakeVizGL::DirectDraw(TGLRnrCtx & rnrCtx) const
 
    UChar_t c[4], alpha = UChar_t(255 * (1.0 - 0.01*fM->fTransparency));
 
+   glPushName(0);
+   Int_t idx = 0;
    if (fM->fLimitRange)
    {
-      for (TQuakeViz::vQData_i i = fM->fData.begin(); i != fM->fData.end(); ++i)
+      for (TQuakeViz::vQData_i i = fM->fData.begin(); i != fM->fData.end(); ++i, ++idx)
       {
-         if (i->fTime.GetSec() >= minTime && i->fTime.GetSec() <= maxTime)
+         if (fM->AcceptForDraw(*i) &&
+             i->fTime.GetSec() >= minTime && i->fTime.GetSec() <= maxTime)
          {
             glPushMatrix();
             glTranslatef(i->fLat, i->fLon, i->fDepth);
@@ -97,6 +103,7 @@ void TQuakeVizGL::DirectDraw(TGLRnrCtx & rnrCtx) const
             c[3] = alpha;
             TGLUtil::Color4ubv(c);
 
+            glLoadName(idx);
             gluSphere(rnrCtx.GetGluQuadric(),
                       0.005f + (i->fStr - fM->fMinStr)*0.045f/(fM->fMaxStr - fM->fMinStr),
                       8, 8);
@@ -106,15 +113,31 @@ void TQuakeVizGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    }
    else
    {
-      for (TQuakeViz::vQData_i i = fM->fData.begin(); i != fM->fData.end(); ++i)
+      for (TQuakeViz::vQData_i i = fM->fData.begin(); i != fM->fData.end(); ++i, ++idx)
       {
-         glPushMatrix();
-         glTranslatef(i->fLat, i->fLon, i->fDepth);
+         if (fM->AcceptForDraw(*i))
+         {
+            glPushMatrix();
+            glTranslatef(i->fLat, i->fLon, i->fDepth);
 
-         gluSphere(rnrCtx.GetGluQuadric(),
-                   0.005f + (i->fStr - fM->fMinStr)*0.045f/(fM->fMaxStr - fM->fMinStr),
-                   8, 8);
-         glPopMatrix();
+            glLoadName(idx);
+            gluSphere(rnrCtx.GetGluQuadric(),
+                      0.005f + (i->fStr - fM->fMinStr)*0.045f/(fM->fMaxStr - fM->fMinStr),
+                      8, 8);
+            glPopMatrix();
+         }
       }
    }
+   glPopName();
+}
+
+//______________________________________________________________________________
+void TQuakeVizGL::ProcessSelection(TGLRnrCtx & /*rnrCtx*/, TGLSelectRecord & rec)
+{
+   // Processes secondary selection from TGLViewer.
+   // Prints-out the dtails of the e-quake clicked on my Alt-Mouse-1.
+
+   if (rec.GetN() < 2) return;
+   printf("----------------------------------------------------------------\n");
+   fM->fData[rec.GetItem(1)].Print();
 }

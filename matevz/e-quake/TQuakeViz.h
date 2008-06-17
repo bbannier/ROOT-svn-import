@@ -39,6 +39,8 @@ public:
       Float_t    fLon;
       Float_t    fDepth;
       Float_t    fStr;
+
+      void Print() const;
    };
 
    typedef std::vector<QData_t>           vQData_t;
@@ -46,6 +48,7 @@ public:
 
 protected:
    vQData_t   fData;
+
    TTimeStamp fMinTime;
    TTimeStamp fMaxTime;
    Float_t    fMinLat,   fMaxLat,   fScaleLat;
@@ -58,8 +61,13 @@ protected:
    TEveRGBAPalette *fPalette;        // Pointer to signal-color palette.
 
    Bool_t           fLighting;
-   Bool_t           fLimitRange;
 
+   Float_t          fLimitStrMin;
+   Float_t          fLimitStrMax;
+   Float_t          fLimitDepthMin;
+   Float_t          fLimitDepthMax;
+
+   Bool_t           fLimitRange;
    Int_t            fYear;
    Int_t            fMonth;
    Int_t            fDay;
@@ -71,6 +79,10 @@ public:
    virtual ~TQuakeViz() {}
 
    void ReadData(const Text_t* file);
+
+   Bool_t AcceptForDraw(const QData_t& q) const
+   { return (q.fDepth >= fLimitDepthMin && q.fDepth <= fLimitDepthMax) &&
+         (q.fStr >= fLimitStrMin && q.fStr <= fLimitStrMax); }
 
    void InitVizState(Int_t dayHalfRange=100);
 
@@ -87,6 +99,21 @@ public:
 
    Bool_t GetLighting() const { return fLighting; }
    void SetLighting(Bool_t x) { fLighting = x; }
+
+   Float_t GetLimitStrMin() const { return fLimitStrMin; }
+   Float_t GetLimitStrMax() const { return fLimitStrMax; }
+   void SetLimitStrMin(Float_t x) { fLimitStrMin = x; }
+   void SetLimitStrMax(Float_t x) { fLimitStrMax = x; }
+   void SetLimitStr(Float_t min, Float_t max)
+   { fLimitStrMin = min; fLimitStrMax = max; }
+
+   Float_t GetLimitDepthMin() const { return fLimitDepthMin; }
+   Float_t GetLimitDepthMax() const { return fLimitDepthMax; }
+   void SetLimitDepthMin(Float_t x) { fLimitDepthMin = x; }
+   void SetLimitDepthMax(Float_t x) { fLimitDepthMax = x; }
+   void SetLimitDepth(Float_t min, Float_t max)
+   { fLimitDepthMin = min; fLimitDepthMax = max; }
+
    Bool_t GetLimitRange() const { return fLimitRange; }
    void SetLimitRange(Bool_t x) { fLimitRange = x; }
 

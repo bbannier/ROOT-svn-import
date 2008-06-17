@@ -37,6 +37,8 @@ TQuakeVizEditor::TQuakeVizEditor(const TGWindow *p, Int_t width, Int_t height,
    TGedFrame(p, width, height, options | kVerticalFrame, back),
    fM(0),
    fLighting(0),
+   fLimitStr(0),
+   fLimitDepth(0),
    fLimitRange(0),
    fYear(0),
    fMonth(0),
@@ -55,6 +57,28 @@ TQuakeVizEditor::TQuakeVizEditor(const TGWindow *p, Int_t width, Int_t height,
    AddFrame(fLighting); // new TGLayoutHints());
    fLighting->Connect("Clicked()", "TQuakeVizEditor", this,
                       "DoLighting()");
+
+   // --------------------------------
+
+   fLimitStr = new TEveGDoubleValuator(this, "Mag::", 40, 0);
+   fLimitStr->SetNELength(6);
+   fLimitStr->SetLabelWidth(labelW);
+   fLimitStr->Build();
+   fLimitStr->GetSlider()->SetWidth(195);
+   fLimitStr->SetLimits(0, 10, TGNumberFormat::kNESRealTwo);
+   fLimitStr->Connect("ValueSet()", "TQuakeVizEditor", this, "DoLimitStr()");
+   AddFrame(fLimitStr, new TGLayoutHints(kLHintsTop, 1, 1, 4, 5));
+
+   fLimitDepth = new TEveGDoubleValuator(this, "Depth:", 40, 0);
+   fLimitDepth->SetNELength(6);
+   fLimitDepth->SetLabelWidth(labelW);
+   fLimitDepth->Build();
+   fLimitDepth->GetSlider()->SetWidth(195);
+   fLimitDepth->SetLimits(0, 10, TGNumberFormat::kNESRealTwo);
+   fLimitDepth->Connect("ValueSet()", "TQuakeVizEditor", this, "DoLimitDepth()");
+   AddFrame(fLimitDepth, new TGLayoutHints(kLHintsTop, 1, 1, 4, 5));
+
+   // --------------------------------
 
    fLimitRange = new TGCheckButton(this, "Limit range");
    AddFrame(fLimitRange); // new TGLayoutHints());
@@ -100,7 +124,7 @@ TQuakeVizEditor::TQuakeVizEditor(const TGWindow *p, Int_t width, Int_t height,
    fDayHalfRange->SetLabelWidth(labelW + 30);
    fDayHalfRange->SetNELength(5);
    fDayHalfRange->Build();
-   fDayHalfRange->SetLimits(0, 1000, 101, TGNumberFormat::kNESInteger);
+   fDayHalfRange->SetLimits(0, 5000, 101, TGNumberFormat::kNESInteger);
    AddFrame(fDayHalfRange); // new TGLayoutHints());
    fDayHalfRange->Connect("ValueSet(Double_t)", "TQuakeVizEditor", this,
                           "DoDayHalfRange()");
@@ -116,6 +140,17 @@ void TQuakeVizEditor::SetModel(TObject* obj)
    fM = dynamic_cast<TQuakeViz*>(obj);
 
    fLighting  ->SetState(fM->GetLighting() ? kButtonDown : kButtonUp);
+
+   // --------------------------------
+
+   fLimitStr->SetLimits(fM->fMinStr, fM->fMaxStr);
+   fLimitStr->SetValues(fM->fLimitStrMin, fM->fLimitStrMax);
+
+   fLimitDepth->SetLimits(100*fM->fMinDepth, 100*fM->fMaxDepth);
+   fLimitDepth->SetValues(100*fM->fLimitDepthMin, 100*fM->fLimitDepthMax);
+
+   // --------------------------------
+
    fLimitRange->SetState(fM->GetLimitRange() ? kButtonDown : kButtonUp);
 
    UInt_t minY, maxY;
@@ -141,6 +176,24 @@ void TQuakeVizEditor::DoLighting()
    // Slot for Lighting.
 
    fM->SetLighting(fLighting->IsOn());
+   Update();
+}
+
+//______________________________________________________________________________
+void TQuakeVizEditor::DoLimitStr()
+{
+   // Slot for setting strength/magnitude range.
+
+   fM->SetLimitStr(fLimitStr->GetMin(), fLimitStr->GetMax());
+   Update();
+}
+
+//______________________________________________________________________________
+void TQuakeVizEditor::DoLimitDepth()
+{
+   // Slot for setting strength/magnitude range.
+
+   fM->SetLimitDepth(0.01*fLimitDepth->GetMin(), 0.01*fLimitDepth->GetMax());
    Update();
 }
 

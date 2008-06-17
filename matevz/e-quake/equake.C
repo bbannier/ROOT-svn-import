@@ -21,6 +21,9 @@ TQuakeViz* equake()
   gEve->Redraw3D(kTRUE);
 
   gEve->GetGLViewer()->SetCurrentCamera(TGLViewer::kCameraPerspXOY);
+  gEve->GetGLViewer()->SetClearColor(kWhite);
+  // Names from ROOT color wheel, relative offsets as in GUI widget.
+  // gEve->GetGLViewer()->SetClearColor(kCyan - 10);
 
   gEve->EditElement(qv);
 
