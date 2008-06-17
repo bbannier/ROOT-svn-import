@@ -112,7 +112,7 @@ Double_t TMVA::GeneticAlgorithm::CalculateFitness()
    //
    // this function calls implicitly (many times) the "fitnessFunction" which
    // has been overridden by the user. 
-
+    fBestFitness = DBL_MAX;
 #ifdef _GLIBCXX_PARALLEL
 
    const int nt = omp_get_num_threads();
@@ -127,7 +127,8 @@ Double_t TMVA::GeneticAlgorithm::CalculateFitness()
       for ( int index = 0; index < fPopulation.GetPopulationSize(); ++index )
       {
          GeneticGenes* genes = fPopulation.GetGenes(index);
-         Double_t fitness = NewFitness( genes->GetFitness(), fFitterTarget.EstimatorFunction(genes->GetFactors()) );
+         Double_t fitness = NewFitness( genes->GetFitness(), 
+                                        fFitterTarget.EstimatorFunction(genes->GetFactors()) );
          genes->SetFitness( fitness );
          
          if ( bests[thread_number] > fitness )
@@ -135,13 +136,15 @@ Double_t TMVA::GeneticAlgorithm::CalculateFitness()
       }
    }
    
-   fBestFitness = *max_element(bests, bests+nt);
+   fBestFitness = *min_element(bests, bests+nt);
+
 #else 
 
    for ( int index = 0; index < fPopulation.GetPopulationSize(); ++index )
    {
          GeneticGenes* genes = fPopulation.GetGenes(index);
-         Double_t fitness = NewFitness( genes->GetFitness(), fFitterTarget.EstimatorFunction(genes->GetFactors()) );
+         Double_t fitness = NewFitness( genes->GetFitness(),
+                                        fFitterTarget.EstimatorFunction(genes->GetFactors()) );
          genes->SetFitness( fitness );
          
          if ( fBestFitness  > fitness )
