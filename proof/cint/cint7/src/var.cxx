@@ -1233,44 +1233,25 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
             break;
       }
       // Check const variable.
-      if (
-         !G__test_const(var, G__VARIABLE) &&
-         !G__funcheader &&
-         !G__is_cppmacro(var)
-      ) {
-         if (
-            ((!G__prerun && !G__decl) || G__test_static(var, G__COMPILEDGLOBAL)) &&
-            (
-               std::islower(G__get_type(var.TypeOf())) ||
-               ('p' == G__var_type && G__test_const(var, G__PCONSTVAR)) ||
-               ('v' == G__var_type && G__test_const(var, G__CONSTVAR))
-            )
-         ) {
-            G__changeconsterror(var.Name().c_str(), "ignored const");
-            G__var_type = 'p';
+      { 
+        int constvar = G__get_isconst(var.TypeOf());
+        if (constvar &&
+            !G__funcheader &&
+            !G__is_cppmacro(var)) {
+           if (
+               ((!G__prerun && !G__decl) || G__test_static(var, G__COMPILEDGLOBAL)) &&
+               (
+                 islower(G__get_type(var.TypeOf())) ||
+                ((G__var_type == 'p') && (constvar & G__PCONSTVAR)) ||
+                ((G__var_type == 'v') && (constvar & G__CONSTVAR))
+                 )
+               ) {
+              G__changeconsterror(var.Name().c_str(), "ignored const");
+              G__var_type = 'p';
 
-
-
-            return result;
-         }
-      }
-      if (var.TypeOf().IsTypedef() && G__get_isconst(var.TypeOf().FinalType())) {
-         int constvar = G__get_isconst(var.TypeOf().FinalType());
-         if (
-            ((!G__prerun && !G__decl) || G__test_static(var, G__COMPILEDGLOBAL)) &&
-            (
-               islower(G__get_type(var.TypeOf())) ||
-               ((G__var_type == 'p') && (constvar & G__PCONSTVAR)) ||
-               ((G__var_type == 'v') && (constvar & G__CONSTVAR))
-            )
-         ) {
-            G__changeconsterror(var.Name().c_str(), "ignored const");
-            G__var_type = 'p';
-
-
-
-            return result;
-         }
+              return result;
+           }
+        }
       }
       //
       // Variable found, set done flag.
@@ -4456,8 +4437,8 @@ static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[
       case 'Z':
          // ROOT special object.
          G__get_offset(var) = (char*) malloc(2 * G__LONGALLOC);
-         *G__get_offset(var) = 0;
-         *(G__get_offset(var) + G__LONGALLOC) = 0;
+         *((long*) G__get_offset(var)) = 0L;
+         *((long*) (G__get_offset(var) + G__LONGALLOC)) = 0L;
          break;
 #endif // G__ROOT
 #ifndef G__OLDIMPLEMENTATION2191
@@ -6383,6 +6364,10 @@ G__value Cint::Internal::G__getvariable(char* item, int* known, const ::Reflex::
             // #define xxx "abc"
             //G__GET_PVAR(char, G__letint, long, tolower(G__get_type(variable.TypeOf())), 'C')
             G__get_pvar<char, long>(G__letint, (char) tolower(G__get_type(variable.TypeOf())), 'C', variable, local_G__struct_offset, paran, para, linear_index, secondary_linear_index, &result);
+            break;
+         case 'p':
+	   // case macroInt$
+	   G__letpointer(&result, *(long*)(local_G__struct_offset + ((size_t) G__get_offset(variable)) + (linear_index * G__LONGALLOC)),variable.TypeOf().FinalType()); // Not really a pointer operation .. but that will do since it copies obj.i (and the type is macroInt$).
             break;
          default:
             // case 'X' automatic variable

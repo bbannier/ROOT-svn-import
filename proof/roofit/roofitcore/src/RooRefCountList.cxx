@@ -14,11 +14,15 @@
  * listed in LICENSE (http://roofit.sourceforge.net/license.txt)             *
  *****************************************************************************/
 
-// -- CLASS DESCRIPTION [AUX] --
+//////////////////////////////////////////////////////////////////////////////
+//
+// BEGIN_HTML
 // A RooRefCountList is a RooLinkedList that keeps a reference counter
 // with each added node. Multiple Add()s of the same object will increase
 // the counter instead of adding multiple copies. Remove() decrements the 
 // reference count until zero, when the object is actually removed.
+// END_HTML
+//
 
 #include "RooFit.h"
 
@@ -32,14 +36,22 @@ ClassImp(RooRefCountList)
   ;
 
 
+
+//_____________________________________________________________________________
 RooRefCountList::RooRefCountList()
   : RooLinkedList(17) 
 { 
+  // Default constructor construct lists with initial hash table size of 17
 }
 
 
+
+//_____________________________________________________________________________
 void RooRefCountList::Add(TObject* obj, Int_t count) 
 {
+  // Add object to list with given reference count increment
+  // List takes ownership of object.
+
   // Check if we already have it
   TObject* listObj = FindObject(obj) ;
   if (!listObj) {
@@ -55,8 +67,13 @@ void RooRefCountList::Add(TObject* obj, Int_t count)
 }
 
 
+
+//_____________________________________________________________________________
 Bool_t RooRefCountList::Remove(TObject* obj) 
 {
+  // Remove object from list and if reference count 
+  // reaches zero delete object itself as well.
+
   RooLinkedListElem* link = findLink(obj) ;
   if (!link) {
     return 0 ;
@@ -71,14 +88,23 @@ Bool_t RooRefCountList::Remove(TObject* obj)
 }
 
 
+
+//_____________________________________________________________________________
 Bool_t RooRefCountList::RemoveAll(TObject* obj)
 {
+  // Remove object from list and delete object itself
+  // regardless of reference count
+
   return RooLinkedList::Remove(obj) ;
 }
 
 
+
+//_____________________________________________________________________________
 Int_t RooRefCountList::refCount(TObject* obj) 
 {
+  // Return reference count associated with 'obj'
+
   RooLinkedListElem* link = findLink(obj) ;
   if (!link) {
     return 0 ;

@@ -241,7 +241,13 @@ void TEveCaloVizEditor::SetModel(TObject* obj)
    fEtaRng->SetLimits((Float_t)min, (Float_t)max);
    fEtaRng->SetValues(fM->fEtaMin, fM->fEtaMax);
 
+   fM->GetData()->GetPhiLimits(min, max);
+   min = TMath::Ceil (min*TMath::RadToDeg());
+   max = TMath::Floor(max*TMath::RadToDeg());
+   fPhi->SetLimits((Int_t)min, (Int_t)max, (Int_t)(max - min + 1));
    fPhi->SetValue(fM->fPhi*TMath::RadToDeg());
+   Int_t delta = ((Int_t)(max - min + 1))/2;
+   fPhiOffset->SetLimits(0, delta, delta + 1);
    fPhiOffset->SetValue(fM->fPhiOffset*TMath::RadToDeg());
 
    MakeSliceInfo();
@@ -315,9 +321,7 @@ void TEveCaloVizEditor::DoSliceThreshold()
    // Slot for SliceThreshold.
 
    TEveGValuator *st = (TEveGValuator *) gTQSender;
-   fM->GetData()->RefSliceInfo(st->WidgetId()).fThreshold = st->GetValue();
-
-   fM->InvalidateCache();
+   fM->SetDataSliceThreshold(st->WidgetId(), st->GetValue());
    Update();
 }
 
@@ -327,7 +331,6 @@ void TEveCaloVizEditor::DoSliceColor(Pixel_t pixel)
    // Slot for slice info Color.
    
    TGColorSelect *cs = (TGColorSelect *) gTQSender;
-   fM->GetData()->RefSliceInfo(cs->WidgetId()).fColor = Color_t(TColor::GetColor(pixel));
-
+   fM->SetDataSliceColor(cs->WidgetId(), Color_t(TColor::GetColor(pixel)));
    Update();
 }

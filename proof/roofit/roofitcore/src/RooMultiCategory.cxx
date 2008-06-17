@@ -14,13 +14,17 @@
  * listed in LICENSE (http://roofit.sourceforge.net/license.txt)             *
  *****************************************************************************/
 
-// -- CLASS DESCRIPTION [CAT] --
+//////////////////////////////////////////////////////////////////////////////
+//
+// BEGIN_HTML
 // RooMultiCategory consolidates several RooAbsCategory objects into
 // a single category. The states of the multi-category consist of all the permutations
 // of the input categories. 
-//
+// <p>
 // RooMultiCategory state are automatically defined and updated whenever an input
 // category modifies its list of states
+// END_HTML
+//
 
 #include "RooFit.h"
 
@@ -39,10 +43,14 @@
 ClassImp(RooMultiCategory)
 ;
 
+
+//_____________________________________________________________________________
 RooMultiCategory::RooMultiCategory(const char *name, const char *title, const RooArgSet& inputCatList2) :
   RooAbsCategory(name, title), _catSet("input","Input category set",this,kTRUE,kTRUE)
 {  
-  // Constructor from list of input categories
+  // Construct a product of the given set of input RooAbsCategories in 'inInputCatList'
+  // The state names of this product category are {S1;S2,S3,...Sn} where Si are the state names
+  // of the input categories. A RooMultiCategory is not an lvalue
 
   // Copy category list
   TIterator* iter = inputCatList2.createIterator() ;
@@ -60,28 +68,33 @@ RooMultiCategory::RooMultiCategory(const char *name, const char *title, const Ro
 }
 
 
+
+//_____________________________________________________________________________
 RooMultiCategory::RooMultiCategory(const RooMultiCategory& other, const char *name) :
   RooAbsCategory(other,name), _catSet("input",this,other._catSet)
 {
   // Copy constructor
+
   updateIndexList() ;
 }
 
 
 
+//_____________________________________________________________________________
 RooMultiCategory::~RooMultiCategory() 
 {
   // Destructor
+
 }
 
 
 
+//_____________________________________________________________________________
 void RooMultiCategory::updateIndexList()
 {
   // Update the list of super-category states 
 
   // WVE broken if used with derived categories!
-
   clearTypes() ;
 
   RooMultiCatIter iter(_catSet) ;
@@ -96,6 +109,8 @@ void RooMultiCategory::updateIndexList()
 }
 
 
+
+//_____________________________________________________________________________
 TString RooMultiCategory::currentLabel() const
 {
   // Return the name of the current state, 
@@ -119,16 +134,19 @@ TString RooMultiCategory::currentLabel() const
 }
 
 
-RooCatType
-RooMultiCategory::evaluate() const
+
+//_____________________________________________________________________________
+RooCatType RooMultiCategory::evaluate() const
 {
   // Calculate the current value 
+
   if (isShapeDirty()) const_cast<RooMultiCategory*>(this)->updateIndexList() ;
   return *lookupType(currentLabel()) ;
 }
 
 
 
+//_____________________________________________________________________________
 void RooMultiCategory::printMultiline(ostream& os, Int_t content, Bool_t verbose, TString indent) const
 {
   // Print the state of this object to the specified output stream.
@@ -145,6 +163,8 @@ void RooMultiCategory::printMultiline(ostream& os, Int_t content, Bool_t verbose
 }
 
 
+
+//_____________________________________________________________________________
 Bool_t RooMultiCategory::readFromStream(istream& /*is*/, Bool_t /*compact*/, Bool_t /*verbose*/) 
 {
   // Read object contents from given stream
@@ -153,6 +173,7 @@ Bool_t RooMultiCategory::readFromStream(istream& /*is*/, Bool_t /*compact*/, Boo
 
 
 
+//_____________________________________________________________________________
 void RooMultiCategory::writeToStream(ostream& os, Bool_t compact) const
 {
   // Write object contents to given stream
