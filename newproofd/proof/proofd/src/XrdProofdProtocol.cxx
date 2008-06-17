@@ -1023,7 +1023,8 @@ int XrdProofdProtocol::Ping()
                response->Send(kXP_ServerError, "EXT: could not verify reuqest to proofsrv");
                return rc;
             }
-            // Wait for the action for fgMgr->SessionMgr()->VerifyTimeOut() secs, checking every 1 sec
+            // Wait for the action for fgMgr->SessionMgr()->VerifyTimeOut() secs,
+            // checking every 1 sec
             struct stat st1;
             int ns = fgMgr->SessionMgr()->VerifyTimeOut();
             while (ns--) {

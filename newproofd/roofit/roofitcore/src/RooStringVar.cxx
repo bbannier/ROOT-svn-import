@@ -14,8 +14,12 @@
  * listed in LICENSE (http://roofit.sourceforge.net/license.txt)             *
  *****************************************************************************/
 
-// -- CLASS DESCRIPTION [MISC] --
-// RooStringVar represents a fundamental string valued object.
+//////////////////////////////////////////////////////////////////////////////
+//
+// BEGIN_HTML
+// RooStringVar implements a string values RooAbsArg
+// END_HTML
+//
 
 #include "RooFit.h"
 #include "Riostream.h"
@@ -36,10 +40,13 @@ ClassImp(RooStringVar)
 
 
               
+
+//_____________________________________________________________________________
 RooStringVar::RooStringVar(const char *name, const char *title, const char* value, Int_t size) :
   RooAbsString(name, title, size)
 {
-  // Constructor with initial value
+  // Constructor with initial value and internal buffer size
+
   if(!isValidString(value)) {
     coutW(InputArguments) << "RooStringVar::RooStringVar(" << GetName() 
 	 << "): initial contents too long and ignored" << endl ;
@@ -52,6 +59,8 @@ RooStringVar::RooStringVar(const char *name, const char *title, const char* valu
 }  
 
 
+
+//_____________________________________________________________________________
 RooStringVar::RooStringVar(const RooStringVar& other, const char* name) :
   RooAbsString(other, name)
 {
@@ -59,20 +68,30 @@ RooStringVar::RooStringVar(const RooStringVar& other, const char* name) :
 }
 
 
+
+//_____________________________________________________________________________
 RooStringVar::~RooStringVar() 
 {
   // Destructor
 }
 
 
-RooStringVar::operator TString() {
+
+//_____________________________________________________________________________
+RooStringVar::operator TString() 
+{
+
   // Cast operator to TString
   return TString(_value) ;
 }
 
 
-void RooStringVar::setVal(const char* value) {
+
+//_____________________________________________________________________________
+void RooStringVar::setVal(const char* value) 
+{
   // Set value to given TString
+
   if (!isValidString(value)) {    
     coutW(InputArguments) << "RooStringVar::setVal(" << GetName() << "): new string too long and ignored" << endl ;
   } else {
@@ -86,9 +105,11 @@ void RooStringVar::setVal(const char* value) {
 
 
 
+//_____________________________________________________________________________
 RooAbsArg& RooStringVar::operator=(const char* newValue) 
 {
   // Set value to given TString
+
   if (!isValidString(newValue)) {
     coutW(InputArguments) << "RooStringVar::operator=(" << GetName() << "): new string too long and ignored" << endl ;
   } else {
@@ -104,9 +125,11 @@ RooAbsArg& RooStringVar::operator=(const char* newValue)
 
 
 
+//_____________________________________________________________________________
 Bool_t RooStringVar::readFromStream(istream& is, Bool_t compact, Bool_t verbose) 
 {
   // Read object contents from given stream
+
   TString token,errorPrefix("RooStringVar::readFromStream(") ;
   errorPrefix.Append(GetName()) ;
   errorPrefix.Append(")") ;
@@ -132,9 +155,12 @@ Bool_t RooStringVar::readFromStream(istream& is, Bool_t compact, Bool_t verbose)
   return ret ;
 }
 
+
+//_____________________________________________________________________________
 void RooStringVar::writeToStream(ostream& os, Bool_t /*compact*/) const
 {
   // Write object contents to given stream
+
   os << getVal() ;
 }
 

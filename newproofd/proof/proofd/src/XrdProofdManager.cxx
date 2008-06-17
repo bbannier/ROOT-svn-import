@@ -240,8 +240,8 @@ int XrdProofdManager::CheckUser(const char *usr,
             }
          }
       }
+      // Check if super user
       if (fSuperUsers.length() > 0) {
-         // Check if super user
          XrdOucString tkn;
          int from = 0;
          while ((from = fSuperUsers.tokenize(tkn, from, ',')) != -1) {

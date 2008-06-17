@@ -14,9 +14,14 @@
  * listed in LICENSE (http://roofit.sourceforge.net/license.txt)             *
  *****************************************************************************/
 
-// -- CLASS DESCRIPTION [PLOT] --
-// Classes inheriting from this class can be plotted and printed, and can
-// be dynamically cross-cast into TObject's.
+//////////////////////////////////////////////////////////////////////////////
+//
+// BEGIN_HTML
+// Class RooPotable is a base class for objects that can be inserted into RooPlots and take
+// advantage of its internal normalization and axis range adjustment features. The
+// most useful implementation of RooPlotable are RooHist and RooCurve.
+// END_HTML
+//
 
 #include "RooFit.h"
 
@@ -28,13 +33,20 @@
 ClassImp(RooPlotable)
 ;
 
+
+//_____________________________________________________________________________
 void RooPlotable::printMultiline(ostream& os, Int_t /*content*/, Bool_t /*verbose*/, TString indent) const {
+  // Print detailed information
   os << indent << "--- RooPlotable ---" << endl;
   os << indent << "  y-axis min = " << getYAxisMin() << endl
      << indent << "  y-axis max = " << getYAxisMax() << endl
      << indent << "  y-axis label \"" << getYAxisLabel() << "\"" << endl;
 }
 
+
+//_____________________________________________________________________________
 TObject *RooPlotable::crossCast() {
+  // Return cast of RooPlotable as TObject. Note that is this a cross
+  // cast that will change the pointer value in most cases
   return dynamic_cast<TObject*>(this);
 }
