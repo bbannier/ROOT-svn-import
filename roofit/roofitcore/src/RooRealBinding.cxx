@@ -14,9 +14,13 @@
  * listed in LICENSE (http://roofit.sourceforge.net/license.txt)             *
  *****************************************************************************/
 
-// -- CLASS DESCRIPTION [AUX] --
+//////////////////////////////////////////////////////////////////////////////
+//
+// BEGIN_HTML
 // Lightweight interface adaptor that binds a RooAbsReal object to a subset
-// of its servers.
+// of its servers and present it as a simple array oriented interface.
+// END_HTML
+//
 
 
 #include "RooFit.h"
@@ -36,9 +40,20 @@
 ClassImp(RooRealBinding)
 ;
 
+
+//_____________________________________________________________________________
 RooRealBinding::RooRealBinding(const RooAbsReal& func, const RooArgSet &vars, const RooArgSet* nset, Bool_t clipInvalid, const TNamed* rangeName) :
   RooAbsFunc(vars.getSize()), _func(&func), _vars(0), _nset(nset), _clipInvalid(clipInvalid), _xsave(0), _rangeName(rangeName)
 {
+  // Construct a lightweight function binding of RooAbsReal func to
+  // variables 'vars'.  Use the provided nset as normalization set to
+  // be passed to RooAbsReal::getVal() If rangeName is not null, use
+  // the range of with that name as range associated with the
+  // variables of this function binding. If clipInvalid is true,
+  // values requested to the function binding that are outside the
+  // defined range of the variables are clipped to fit in the defined
+  // range.
+
   // allocate memory
   _vars= new RooAbsRealLValue*[getDimension()];
   if(0 == _vars) {
@@ -60,14 +75,23 @@ RooRealBinding::RooRealBinding(const RooAbsReal& func, const RooArgSet &vars, co
   delete iter ;
 }
 
-RooRealBinding::~RooRealBinding() {
+
+//_____________________________________________________________________________
+RooRealBinding::~RooRealBinding() 
+{
+  // Destructor
+
   if(0 != _vars) delete[] _vars;
   if (_xsave) delete[] _xsave ;
 }
 
 
+
+//_____________________________________________________________________________
 void RooRealBinding::saveXVec() const
 {
+  // Save value of all variables
+
   if (!_xsave) {
     _xsave = new Double_t[getDimension()] ;    
     for (UInt_t i=0 ; i<getDimension() ; i++) {
@@ -76,8 +100,13 @@ void RooRealBinding::saveXVec() const
   }
 }
 
+
+//_____________________________________________________________________________
 void RooRealBinding::restoreXVec() const
 {
+  // Restore value of all variables to previously
+  // saved values by saveXVec()
+
   if (!_xsave) {
     return ;
   }
@@ -87,7 +116,13 @@ void RooRealBinding::restoreXVec() const
 }
 
 
-void RooRealBinding::loadValues(const Double_t xvector[]) const {
+
+//_____________________________________________________________________________
+void RooRealBinding::loadValues(const Double_t xvector[]) const 
+{
+  // Load the vector of variable values into the RooRealVars associated
+  // as variables with the bound RooAbsReal function
+
   _xvecValid = kTRUE ;
   for(UInt_t index= 0; index < _dimension; index++) {
     if (_clipInvalid && !_vars[index]->isValidReal(xvector[index])) {
@@ -98,7 +133,12 @@ void RooRealBinding::loadValues(const Double_t xvector[]) const {
   }
 }  
 
-Double_t RooRealBinding::operator()(const Double_t xvector[]) const {
+
+//_____________________________________________________________________________
+Double_t RooRealBinding::operator()(const Double_t xvector[]) const 
+{
+  // Evaluate the bound RooAbsReal at the variable values provided in xvector
+
   assert(isValid());
   _ncall++ ;
   loadValues(xvector);
@@ -106,17 +146,31 @@ Double_t RooRealBinding::operator()(const Double_t xvector[]) const {
   return _xvecValid ? _func->getVal(_nset) : 0. ;
 }
 
-Double_t RooRealBinding::getMinLimit(UInt_t index) const {
+
+//_____________________________________________________________________________
+Double_t RooRealBinding::getMinLimit(UInt_t index) const 
+{
+  // Return lower limit on i-th variable 
   assert(isValid());
+
   return _vars[index]->getMin(RooNameReg::str(_rangeName));
 }
 
-Double_t RooRealBinding::getMaxLimit(UInt_t index) const {
+
+//_____________________________________________________________________________
+Double_t RooRealBinding::getMaxLimit(UInt_t index) const 
+{
+  // Return upper limit on i-th variable 
+
   assert(isValid());
   return _vars[index]->getMax(RooNameReg::str(_rangeName));
 }
 
+
+//_____________________________________________________________________________
 const char* RooRealBinding::getName() const 
 { 
+  // Return name of function
+
   return _func->GetName() ; 
 } 

@@ -27,6 +27,11 @@
 
 #include "TGLUtil.h"
 
+
+//==============================================================================
+// TEveCaloViz
+//==============================================================================
+
 //______________________________________________________________________________
 //
 // Base class for calorimeter data visualization.
@@ -42,8 +47,8 @@ TEveCaloViz::TEveCaloViz(const Text_t* n, const Text_t* t) :
 
    fData(0),
 
-   fEtaMin(-1),
-   fEtaMax(1),
+   fEtaMin(-10),
+   fEtaMax(10),
 
    fPhi(0.),
    fPhiOffset(TMath::Pi()),
@@ -60,7 +65,7 @@ TEveCaloViz::TEveCaloViz(const Text_t* n, const Text_t* t) :
    fValueIsColor(kTRUE),
    fPalette(0),
 
-   fCacheOK(kFALSE)
+   fCellIdCacheOK(kFALSE)
 {
    // Constructor.
 
@@ -74,8 +79,8 @@ TEveCaloViz::TEveCaloViz(TEveCaloData* data, const Text_t* n, const Text_t* t) :
 
    fData(0),
 
-   fEtaMin(-1),
-   fEtaMax(1),
+   fEtaMin(-10),
+   fEtaMax(10),
 
    fPhi(0.),
    fPhiOffset(TMath::Pi()),
@@ -92,7 +97,7 @@ TEveCaloViz::TEveCaloViz(TEveCaloData* data, const Text_t* n, const Text_t* t) :
    fValueIsColor(kTRUE),
    fPalette(0),
 
-   fCacheOK(kFALSE)
+   fCellIdCacheOK(kFALSE)
 {
    // Constructor.
 
@@ -110,6 +115,38 @@ TEveCaloViz::~TEveCaloViz()
 }
 
 //______________________________________________________________________________
+Float_t TEveCaloViz::GetDataSliceThreshold(Int_t slice) const
+{
+   // Get threshold for given slice.
+
+   return fData->RefSliceInfo(slice).fThreshold;
+}
+
+//______________________________________________________________________________
+void TEveCaloViz::SetDataSliceThreshold(Int_t slice, Float_t val)
+{
+   // Set threshold for given slice.
+
+   fData->SetSliceThreshold(slice, val);
+}
+
+//______________________________________________________________________________
+Color_t TEveCaloViz::GetDataSliceColor(Int_t slice) const
+{
+   // Get slice color from data.
+
+   return fData->RefSliceInfo(slice).fColor;
+}
+
+//______________________________________________________________________________
+void TEveCaloViz::SetDataSliceColor(Int_t slice, Color_t col)
+{
+   // Set slice color in data.
+  
+   fData->SetSliceColor(slice, col);
+}
+
+//______________________________________________________________________________
 void TEveCaloViz::SetEta(Float_t l, Float_t u)
 {
    // Set eta range.
@@ -120,7 +157,7 @@ void TEveCaloViz::SetEta(Float_t l, Float_t u)
    if(fData && fData->GetEtaBins())
          fData->GetEtaBins()->SetRangeUser(l, u);
 
-   InvalidateCache();
+   InvalidateCellIdCache();
 }
 
 //______________________________________________________________________________
@@ -131,7 +168,7 @@ void TEveCaloViz::SetPlotEt(Bool_t isEt)
   fPlotEt=isEt;
   fPalette->SetLimits(0, TMath::CeilNint(fData->GetMaxVal(fPlotEt)));
 
-  InvalidateCache();
+  InvalidateCellIdCache();
 }
 
 //______________________________________________________________________________
@@ -144,7 +181,7 @@ void TEveCaloViz::SetPhiWithRng(Float_t phi, Float_t rng)
    fPhi = phi;
    fPhiOffset = rng;
 
-   InvalidateCache();
+   InvalidateCellIdCache();
 }
 
 //______________________________________________________________________________
@@ -171,35 +208,43 @@ void TEveCaloViz::SetData(TEveCaloData* data)
    // Set calorimeter event data.
 
    if (data == fData) return;
-   if (fData) fData->DecRefCount();
+   if (fData) fData->DecRefCount(this);
    fData = data;
-   if (fData) fData->IncRefCount();
+   if (fData) fData->IncRefCount(this);
 
-   fData->GetEtaLimits(fEtaMin, fEtaMax);
-   Double_t min, max;
+   DataChanged();
+}
+
+//______________________________________________________________________________
+void TEveCaloViz::DataChanged()
+{
+   // Update setting and cache on data changed.
+   // Called from TEvecaloData::BroadcastDataChange()
+
+   Double_t min, max, delta;
+
+   fData->GetEtaLimits(min, max);
+   if (fEtaMin < min) fEtaMin = min;
+   if (fEtaMax > max) fEtaMax = max;
+
    fData->GetPhiLimits(min, max);
-   fPhi = (max+min)*0.5;
-   fPhiOffset =(max-min)*0.5;
+   delta = 0.5*(max - min);
+   if (fPhi < min || fPhi > max) {
+      fPhi       = 0.5*(max + min);
+      fPhiOffset = delta;
+   } else {
+      if (fPhiOffset > delta) fPhiOffset = delta;
+   }
 
-   Float_t hlimit = fScaleAbs ? fMaxValAbs :data->GetMaxVal(fPlotEt);
-   if (fPalette == 0)
+   if (fPalette)
    {
-      AssertPalette();
-      fPalette->SetLimits(0, TMath::CeilNint(hlimit));
-      fPalette->SetMax(fPalette->GetHighLimit());
+      Int_t hlimit = TMath::CeilNint(fScaleAbs ? fMaxValAbs : fData->GetMaxVal(fPlotEt));
+      fPalette->SetLimits(0, hlimit);
+      fPalette->SetMin(0);
+      fPalette->SetMax(hlimit);
    }
-   else 
-   { 
-      if (!fScaleAbs)
-      {   
-         Float_t ratio = Float_t(fPalette->GetMinVal())/fPalette->GetHighLimit();
-        
-         fPalette->SetLimits(0, TMath::CeilNint(data->GetMaxVal(fPlotEt)));
-         fPalette->SetMin(Int_t(ratio*fPalette->GetHighLimit()));
-         fPalette->SetMax(fPalette->GetHighLimit());
-      }
-   }
-   InvalidateCache();
+
+   InvalidateCellIdCache();
 }
 
 //______________________________________________________________________________
@@ -213,17 +258,18 @@ void TEveCaloViz::AssignCaloVizParameters(TEveCaloViz* m)
    fEtaMax    = m->fEtaMax;
 
    fPhi       = m->fPhi;
-   fPhiOffset    = m->fPhiOffset;
+   fPhiOffset = m->fPhiOffset;
+
    fBarrelRadius = m->fBarrelRadius;
    fEndCapPos    = m->fEndCapPos;
 
-   TEveRGBAPalette& mp = * m->fPalette;
-   TEveRGBAPalette* p = new TEveRGBAPalette(mp.GetMinVal(), mp.GetMaxVal(),
-                                          mp.GetInterpolate());
-   p->SetDefaultColor(mp.GetDefaultColor());
-   SetPalette(p);
+   if (m->fPalette)
+   {
+      TEveRGBAPalette& mp = * m->fPalette;
+      TEveRGBAPalette* p = new TEveRGBAPalette(mp.GetMinVal(), mp.GetMaxVal(), mp.GetInterpolate());
+      p->SetDefaultColor(mp.GetDefaultColor());
+   }
 }
-
 
 //______________________________________________________________________________
 void TEveCaloViz::SetPalette(TEveRGBAPalette* p)
@@ -260,7 +306,13 @@ TEveRGBAPalette* TEveCaloViz::AssertPalette()
 
    if (fPalette == 0) {
       fPalette = new TEveRGBAPalette;
-      fPalette->SetDefaultColor((Color_t)4);
+      fPalette->SetDefaultColor((Color_t)4); 
+
+      Int_t hlimit = TMath::CeilNint(fScaleAbs ? fMaxValAbs : fData->GetMaxVal(fPlotEt));
+      fPalette->SetLimits(0, hlimit);
+      fPalette->SetMin(0);
+      fPalette->SetMax(hlimit);
+
    }
    return fPalette;
 }
@@ -298,7 +350,7 @@ TClass* TEveCaloViz::ProjectedClass() const
 }
 
 //______________________________________________________________________________
-void TEveCaloViz::SetupColorHeight(Float_t value, Int_t slice, Float_t &outH) const
+void TEveCaloViz::SetupColorHeight(Float_t value, Int_t slice, Float_t& outH) const
 {
    // Set color and height for a given value and slice using slice color or TEveRGBAPalette.
 
@@ -316,6 +368,11 @@ void TEveCaloViz::SetupColorHeight(Float_t value, Int_t slice, Float_t &outH) co
    }
 }
 
+
+//==============================================================================
+// TEveCalo3D
+//==============================================================================
+
 //______________________________________________________________________________
 //
 // Visualization of a calorimeter event data in 3D.
@@ -323,11 +380,14 @@ void TEveCaloViz::SetupColorHeight(Float_t value, Int_t slice, Float_t &outH) co
 ClassImp(TEveCalo3D);
 
 //______________________________________________________________________________
-void TEveCalo3D::ResetCache()
+void TEveCalo3D::BuildCellIdCache()
 {
-   // Clear list of drawn cell IDs. See TEveCalo3DGL::DirectDraw().
+   // Build list of drawn cell IDs. See TEveCalo3DGL::DirectDraw().
 
    fCellList.clear();
+
+   fData->GetCellList(GetEta(), GetEtaRng(), GetPhi(), GetPhiRng(), fCellList);
+   fCellIdCacheOK = kTRUE;
 }
 
 //______________________________________________________________________________
@@ -348,6 +408,11 @@ void TEveCalo3D::ComputeBBox()
    fBBox[5] =  fEndCapPos + th;
 }
 
+
+//==============================================================================
+// TEveCalo2D
+//==============================================================================
+
 //______________________________________________________________________________
 //
 // Visualization of a calorimeter event data in 2D.
@@ -361,7 +426,6 @@ TEveCalo2D::TEveCalo2D(const Text_t* n, const Text_t* t):
    fOldProjectionType(TEveProjection::kPT_Unknown)
 {
    // Constructor.
-
 }
 
 //______________________________________________________________________________
@@ -371,7 +435,7 @@ void TEveCalo2D::UpdateProjection()
 
    if (fManager->GetProjection()->GetType() != fOldProjectionType)
    {
-      fCacheOK=kFALSE;
+      fCellIdCacheOK=kFALSE;
       fOldProjectionType = fManager->GetProjection()->GetType();
    }
    ComputeBBox();
@@ -388,15 +452,60 @@ void TEveCalo2D::SetProjection(TEveProjectionManager* mng, TEveProjectable* mode
 }
 
 //______________________________________________________________________________
-void TEveCalo2D::ResetCache()
+void TEveCalo2D::BuildCellIdCache()
 {
-   // Clear lists of drawn cell IDs. See TEveCalo2DGL::DirecDraw().
+   // Build lists of drawn cell IDs. See TEveCalo2DGL::DirecDraw().
 
+   // clear old cache 
    for (std::vector<TEveCaloData::vCellId_t*>::iterator it = fCellLists.begin(); it != fCellLists.end(); it++)
-   {
       delete *it;
-   }
+
    fCellLists.clear();
+
+
+   TEveProjection::EPType_e pt = fManager->GetProjection()->GetType();
+   TEveCaloData::vCellId_t*  clv; // ids per phi bin in r-phi projection else ids per eta bins in rho-z projection  
+   if (pt == TEveProjection::kPT_RhoZ)
+   {
+      // build list on basis of phi bins
+      const TAxis* ax = fData->GetEtaBins();
+      Int_t nBins = ax->GetNbins();
+      for (Int_t ibin = 1; ibin <= nBins; ++ibin)
+      {
+         if (ax->GetBinLowEdge(ibin) > fEtaMin && ax->GetBinUpEdge(ibin) <= fEtaMax)
+         {
+            clv = new TEveCaloData::vCellId_t();
+            fData->GetCellList(ax->GetBinCenter(ibin), ax->GetBinWidth(ibin)+1e-5, fPhi, GetPhiRng(), *clv);
+           
+            if (clv->size()) 
+               fCellLists.push_back(clv);
+            else 
+               delete clv;
+         }
+      }
+   }
+   else if (pt == TEveProjection::kPT_RPhi)
+   {
+      // build list on basis of phi bins
+      const TAxis* ay = fData->GetPhiBins();
+      Int_t nBins = ay->GetNbins();
+      for (Int_t ibin = 1; ibin <= nBins; ++ibin)
+      {
+         if (TEveUtil::IsU1IntervalOverlappingByMinMax
+             (GetPhiMin(), GetPhiMax(), ay->GetBinLowEdge(ibin), ay->GetBinUpEdge(ibin)))
+         {
+            clv = new TEveCaloData::vCellId_t();
+            fData->GetCellList(GetEta(), GetEtaRng(), ay->GetBinCenter(ibin), ay->GetBinWidth(ibin),*clv);
+
+            if (clv->size()) 
+               fCellLists.push_back(clv);
+            else
+               delete clv;
+         }
+      }
+   }
+
+   fCellIdCacheOK= kTRUE;
 }
 
 //______________________________________________________________________________
@@ -440,9 +549,13 @@ void TEveCalo2D::ComputeBBox()
 }
 
 
+//==============================================================================
+// TEveCaloLego
+//==============================================================================
+
 //______________________________________________________________________________
 //
-// Visualization of a calorimeter eta, phi histogram
+// Visualization of calorimeter data as eta/phi histogram.
 
 ClassImp(TEveCaloLego);
 
@@ -458,7 +571,7 @@ TEveCaloLego::TEveCaloLego(const Text_t* n, const Text_t* t):
    fNZSteps(6),
    fZAxisStep(0.f),
 
-   fBinWidth(5),
+   fBinWidth(4),
 
    fProjection(kAuto),
    f2DMode(kValColor),
@@ -484,7 +597,7 @@ TEveCaloLego::TEveCaloLego(TEveCaloData* data):
    fNZSteps(6),
    fZAxisStep(0.f),
 
-   fBinWidth(5),
+   fBinWidth(4),
 
    fProjection(kAuto),
    f2DMode(kValColor),
@@ -502,11 +615,14 @@ TEveCaloLego::TEveCaloLego(TEveCaloData* data):
 }
 
 //______________________________________________________________________________
-void TEveCaloLego::ResetCache()
+void TEveCaloLego::BuildCellIdCache()
 {
-   // Clear list of drawn cell IDs. For more information see TEveCaloLegoGL:DirectDraw().
+   // Build list of drawn cell IDs. For more information see TEveCaloLegoGL:DirectDraw().
 
    fCellList.clear();
+
+   fData->GetCellList(GetEta(), GetEtaRng(), GetPhi(), GetPhiRng(), fCellList);
+   fCellIdCacheOK = kTRUE;
 }
 
 //______________________________________________________________________________
@@ -550,4 +666,3 @@ void TEveCaloLego::ComputeBBox()
       fBBox[5] =  fMaxTowerH*ex;
    } 
 }
-
