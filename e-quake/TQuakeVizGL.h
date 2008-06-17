@@ -38,8 +38,8 @@ public:
    virtual void DirectDraw(TGLRnrCtx & rnrCtx) const;
 
    // To support two-level selection
-   // virtual Bool_t SupportsSecondarySelect() const { return kTRUE; }
-   // virtual void ProcessSelection(TGLRnrCtx & rnrCtx, TGLSelectRecord & rec);
+   virtual Bool_t SupportsSecondarySelect() const { return kTRUE; }
+   virtual void   ProcessSelection(TGLRnrCtx & rnrCtx, TGLSelectRecord & rec);
 
    ClassDef(TQuakeVizGL, 0); // GL renderer class for TQuakeViz.
 };

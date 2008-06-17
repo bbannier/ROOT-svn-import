@@ -19,6 +19,7 @@ class TGCheckButton;
 class TGNumberEntry;
 class TGColorSelect;
 class TEveGValuator;
+class TEveGDoubleValuator;
 
 class TQuakeViz;
 
@@ -32,8 +33,11 @@ protected:
    TQuakeViz             *fM; // Model object.
 
    TGCheckButton         *fLighting;
-   TGCheckButton         *fLimitRange;
 
+   TEveGDoubleValuator   *fLimitStr;
+   TEveGDoubleValuator   *fLimitDepth;
+
+   TGCheckButton         *fLimitRange;
    TEveGValuator         *fYear;
    TEveGValuator         *fMonth;
    TEveGValuator         *fDay;
@@ -48,8 +52,11 @@ public:
    virtual void SetModel(TObject* obj);
 
    void DoLighting();
-   void DoLimitRange();
 
+   void DoLimitStr();
+   void DoLimitDepth();
+
+   void DoLimitRange();
    void DoYear();
    void DoMonth();
    void DoDay();

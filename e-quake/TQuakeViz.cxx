@@ -59,7 +59,7 @@ void TQuakeViz::ReadData(const Text_t* file)
                  &q.fLat, &q.fLon, &q.fDepth, &q.fStr
                  ) == 10)
    {
-      q.fTime.Set(year, month, day, hour, min, TMath::Nint(sec), 0, kFALSE, 0);
+      q.fTime.Set(year, month, day, hour, min, TMath::Nint(sec), 0, kTRUE, 0);
       q.fDepth *= -0.01f; // Brutal fix of depth-scale.
 
       if (q.fLat < fMinLat) fMinLat = q.fLat;
@@ -83,6 +83,12 @@ void TQuakeViz::ReadData(const Text_t* file)
    printf("  Last  data-point: %s\n", fMaxTime.AsString());
    printf("  D_lat = %.2f, D_lon = %.2f, D_depth = %.2f, D_str = %.2f\n",
           fMaxLat - fMinLat, fMaxLon - fMinLon, fMaxDepth - fMinDepth, fMaxStr - fMinStr);
+
+   fLimitStrMin   = fMinStr;
+   fLimitStrMax   = fMaxStr;
+   fLimitDepthMin = fMinDepth;
+   fLimitDepthMax = fMaxDepth;
+
 }
 
 //______________________________________________________________________________
@@ -171,4 +177,13 @@ TEveRGBAPalette* TQuakeViz::AssertPalette()
       fPalette = new TEveRGBAPalette(0, 100, kTRUE);
    }
    return fPalette;
+}
+
+//==============================================================================
+//==============================================================================
+
+void TQuakeViz::QData_t::Print() const
+{
+   printf("Time: %s\nLat=%.2f, Lon=%.2f, Depth=%.1f, Magnitude=%.1f\n",
+          fTime.AsString("s"), fLat, fLon, 100*fDepth, fStr);
 }
