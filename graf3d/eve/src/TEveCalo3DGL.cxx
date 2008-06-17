@@ -31,6 +31,8 @@ TEveCalo3DGL::TEveCalo3DGL() :
    TGLObject(), fM(0)
 {
    // Constructor.
+
+   fMultiColor = kTRUE;
 }
 
 //______________________________________________________________________________
@@ -52,21 +54,6 @@ void TEveCalo3DGL::SetBBox()
 
    // !! This ok if master sub-classed from TAttBBox
    SetAxisAlignedBBox(((TEveCalo3D*)fExternalObj)->AssertBBox());
-}
-
-//______________________________________________________________________________
-Bool_t TEveCalo3DGL::ShouldDLCache(const TGLRnrCtx & rnrCtx) const
-{
-   // Check if display-lists should be used.
-   // Compared to TGLLogicalShape version we also don't use them
-   // for outline-pass as colors are set internally.
-
-   if (!fScene || rnrCtx.SecSelection() ||
-       rnrCtx.DrawPass() == TGLRnrCtx::kPassOutlineLine)
-   {
-      return kFALSE;
-   }
-   return fDLCache;
 }
 
 //______________________________________________________________________________
@@ -302,16 +289,14 @@ void TEveCalo3DGL::DirectDraw(TGLRnrCtx &rnrCtx) const
 {
    // GL rendering.
 
-   if (fM->fCacheOK == kFALSE)
-   {
-      fM->ResetCache();
-      fM->fData->GetCellList(fM->GetEta(), fM->GetEtaRng(), fM->GetPhi(), fM->GetPhiRng(), fM->fCellList);
-      fM->fCacheOK= kTRUE;
-   }
+   if (fM->fCellIdCacheOK == kFALSE)
+      fM->BuildCellIdCache();
 
    glPushAttrib(GL_ENABLE_BIT | GL_POLYGON_BIT);
    glEnable(GL_NORMALIZE);
    glEnable(GL_LIGHTING);
+
+   fM->AssertPalette();
 
    TEveCaloData::CellData_t cellData;
    Float_t transEta = fM->GetTransitionEta();

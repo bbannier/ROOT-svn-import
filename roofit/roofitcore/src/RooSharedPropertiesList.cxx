@@ -14,7 +14,13 @@
  * listed in LICENSE (http://roofit.sourceforge.net/license.txt)             *
  *****************************************************************************/
 
-// -- CLASS DESCRIPTION [AUX] --
+//////////////////////////////////////////////////////////////////////////////
+//
+// BEGIN_HTML
+// Class RooSharedPropertiesList maintains the properties of RooRealVars
+// and RooCategories that are clones of each other.
+// END_HTML
+//
 
 #include "RooFit.h"
 #include "RooSharedPropertiesList.h"
@@ -29,25 +35,32 @@ ClassImp(RooSharedPropertiesList)
 ;
 
 
+
+//_____________________________________________________________________________
 RooSharedPropertiesList::RooSharedPropertiesList() 
 {
+  // Constructor
 } 
 
 
+
+//_____________________________________________________________________________
 RooSharedPropertiesList::~RooSharedPropertiesList() 
 {
-//   cout << "RooSharedPropertiesList::dtor" << endl ;
+  // Destructor
+
   // Delete all objects in property list
   TIterator* iter = _propList.MakeIterator() ;
   RooSharedProperties* prop ;
   while((prop=(RooSharedProperties*)iter->Next())) {
-//     cout << "deleting shared prop " << prop << endl ;
     delete prop ;
   }
   delete iter ;
 } 
 
 
+
+//_____________________________________________________________________________
 RooSharedProperties* RooSharedPropertiesList::registerProperties(RooSharedProperties* prop, Bool_t canDeleteIncoming) 
 {
   // Register property into list and take ownership. 
@@ -100,16 +113,17 @@ RooSharedProperties* RooSharedPropertiesList::registerProperties(RooSharedProper
 }
 
 
+
+//_____________________________________________________________________________
 void RooSharedPropertiesList::unregisterProperties(RooSharedProperties* prop) 
 {
-  // Decrease reference count
-//   cout << "RooSharedPropertiesList::unreg decreasing ref cout of prop " << prop << endl ;
+  // Decrease reference count of property. If reference count is at zero,
+  // delete the propery
+
   _propList.Remove(prop) ;
 
   // We own object if ref-counted list. If count drops to zero, delete object
   if (_propList.refCount(prop)==0) {
-    //cout << "RooSharedPropertiesList::unregisterProperties: deleting property " << prop << endl ;
-//     cout << "RooSharedPropertiesList::unreg deleting prop with zero ref count " << prop << endl ;
     delete prop ;
   }
 

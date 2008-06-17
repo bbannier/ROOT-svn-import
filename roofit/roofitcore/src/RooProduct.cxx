@@ -14,9 +14,14 @@
  * listed in LICENSE (http://roofit.sourceforge.net/license.txt)             *
  *****************************************************************************/
 
-// -- CLASS DESCRIPTION [REAL] --
+//////////////////////////////////////////////////////////////////////////////
 //
-// RooProduct calculates the product of a set of RooAbsReal terms.
+// BEGIN_HTML
+//
+// RooProduct a RooAbsReal implementation that represent the product
+// of a given set of other RooAbsReal objects
+//
+// END_HTML
 //
 
 
@@ -51,15 +56,22 @@ namespace {
 }
 
 
+
+//_____________________________________________________________________________
 RooProduct::RooProduct() :
   _compRIter( _compRSet.createIterator() ),
   _compCIter( _compCSet.createIterator() )
 {
+  // Default constructor
 }
 
 
+
+//_____________________________________________________________________________
 RooProduct::~RooProduct()
 {
+  // Destructor
+
   if (_compRIter) {
     delete _compRIter ;
   }
@@ -70,6 +82,8 @@ RooProduct::~RooProduct()
 }
 
 
+
+//_____________________________________________________________________________
 RooProduct::RooProduct(const char* name, const char* title, const RooArgSet& prodSet) :
   RooAbsReal(name, title),
   _compRSet("compRSet","Set of real product components",this),
@@ -78,6 +92,8 @@ RooProduct::RooProduct(const char* name, const char* title, const RooArgSet& pro
   _compCIter( _compCSet.createIterator() ),
   _cacheMgr(this,10)
 {
+  // Construct function representing the product of functions in prodSet
+
   TIterator* compIter = prodSet.createIterator() ;
   RooAbsArg* comp ;
   while((comp = (RooAbsArg*)compIter->Next())) {
@@ -96,6 +112,7 @@ RooProduct::RooProduct(const char* name, const char* title, const RooArgSet& pro
 
 
 
+//_____________________________________________________________________________
 RooProduct::RooProduct(const RooProduct& other, const char* name) :
   RooAbsReal(other, name), 
   _compRSet("compRSet",this,other._compRSet),
@@ -108,10 +125,13 @@ RooProduct::RooProduct(const RooProduct& other, const char* name) :
 }
 
 
+
+//_____________________________________________________________________________
 Bool_t RooProduct::forceAnalyticalInt(const RooAbsArg& dep) const
 {
-  // Force internal handling of integration of given observable
-  // if any of the product terms depend on it.
+  // Force internal handling of integration of given observable if any
+  // of the product terms depend on it.
+
   _compRIter->Reset() ;
   RooAbsReal* rcomp ;
   Bool_t depends(kFALSE);
@@ -122,8 +142,13 @@ Bool_t RooProduct::forceAnalyticalInt(const RooAbsArg& dep) const
 }
 
 
+
+//_____________________________________________________________________________
 RooProduct::ProdMap* RooProduct::groupProductTerms(const RooArgSet& allVars) const 
 {
+  // Group observables into subsets in which the product factorizes
+  // and that can thus be integrated separately
+
   ProdMap* map = new ProdMap ;
 
   // Do we have any terms which do not depend on the
@@ -179,9 +204,15 @@ RooProduct::ProdMap* RooProduct::groupProductTerms(const RooArgSet& allVars) con
 }
 
 
-Int_t
-RooProduct::getPartIntList(const RooArgSet* iset, const char *isetRange) const
+
+//_____________________________________________________________________________
+Int_t RooProduct::getPartIntList(const RooArgSet* iset, const char *isetRange) const
 {
+  // Return list of (partial) integrals whose product defines the integral of this
+  // RooProduct over the observables in iset in range isetRange. If no such list
+  // exists, create it now and store it in the cache for future use.
+
+
   // check if we already have integrals for this combination of factors
   Int_t sterileIndex(-1);
   CacheElem* cache = (CacheElem*) _cacheMgr.getObj(iset,iset,&sterileIndex,RooNameReg::ptr(isetRange));
@@ -236,11 +267,13 @@ RooProduct::getPartIntList(const RooArgSet* iset, const char *isetRange) const
   return code;
 }
 
+
+//_____________________________________________________________________________
 Int_t RooProduct::getAnalyticalIntegralWN(RooArgSet& allVars, RooArgSet& analVars,
                                             const RooArgSet* normSet,
                                             const char* rangeName) const
 {
-  // figure out if we can factorize the integration into a product of integrals
+  // Declare that we handle all integrations internally
 
   if (_forceNumInt) return 0 ;
 
@@ -253,8 +286,12 @@ Int_t RooProduct::getAnalyticalIntegralWN(RooArgSet& allVars, RooArgSet& analVar
   return code ;
 }
 
+
+//_____________________________________________________________________________
 Double_t RooProduct::analyticalIntegral(Int_t code, const char* rangeName) const
 {
+  // Calculate integral internally from appropriate partial integral cache
+
   // note: rangeName implicit encoded in code: see _cacheMgr.setObj in getPartIntList...
   CacheElem *cache = (CacheElem*) _cacheMgr.getObjByIndex(code-1);
   if (cache==0) { 
@@ -270,8 +307,12 @@ Double_t RooProduct::analyticalIntegral(Int_t code, const char* rangeName) const
   return calculate(cache->_prodList);
 }
 
+
+//_____________________________________________________________________________
 Double_t RooProduct::calculate(const RooArgList& partIntList) const
 {
+  // Calculate and return product of partial terms in partIntList
+
   RooAbsReal *term(0);
   Double_t val=1;
   std::auto_ptr<TIterator> i( partIntList.createIterator() );
@@ -282,24 +323,32 @@ Double_t RooProduct::calculate(const RooArgList& partIntList) const
   return val;
 }
 
+
+//_____________________________________________________________________________
 const char* RooProduct::makeFPName(const char *pfx,const RooArgSet& terms) const
 {
-    static TString pname;
-    pname = pfx;
-    std::auto_ptr<TIterator> i( terms.createIterator() );
-    RooAbsArg *arg;
-    Bool_t first(kTRUE);
-    while((arg=(RooAbsArg*)i->Next())) {
-        if (first) { first=kFALSE;}
-        else pname.Append("_X_");
-        pname.Append(arg->GetName());
-    }
-    return pname.Data();
+  // Construct automatic name for internal product terms
+
+  static TString pname;
+  pname = pfx;
+  std::auto_ptr<TIterator> i( terms.createIterator() );
+  RooAbsArg *arg;
+  Bool_t first(kTRUE);
+  while((arg=(RooAbsArg*)i->Next())) {
+    if (first) { first=kFALSE;}
+    else pname.Append("_X_");
+    pname.Append(arg->GetName());
+  }
+  return pname.Data();
 }
 
 
+
+//_____________________________________________________________________________
 Double_t RooProduct::evaluate() const 
 {
+  // Evaluate product of input functions
+
   Double_t prod(1) ;
 
   _compRIter->Reset() ;
@@ -317,12 +366,18 @@ Double_t RooProduct::evaluate() const
   return prod ;
 }
 
+
+//_____________________________________________________________________________
 RooProduct::CacheElem::~CacheElem() 
 {
+  // Destructor
 }
 
+
+//_____________________________________________________________________________
 RooArgList RooProduct::CacheElem::containedArgs(Action) 
 {
+  // Return list of all RooAbsArgs in cache element
   RooArgList ret(_ownedList) ;
   return ret ;
 }
@@ -332,6 +387,7 @@ namespace {
 
 std::pair<RPPMIter,RPPMIter> findOverlap2nd(RPPMIter i, RPPMIter end) 
 {
+  // Utility function finding pairs of overlapping input functions
   for (; i!=end; ++i) for ( RPPMIter j(i+1); j!=end; ++j) {
     if (i->second->overlaps(*j->second)) {
       return std::make_pair(i,j);
@@ -343,6 +399,7 @@ std::pair<RPPMIter,RPPMIter> findOverlap2nd(RPPMIter i, RPPMIter end)
   
 void dump_map(ostream& os, RPPMIter i, RPPMIter end) 
 {
+  // Utility dump function for debugging
   Bool_t first(kTRUE);
   os << " [ " ;
   for(; i!=end;++i) {
