@@ -616,7 +616,7 @@ Int_t TXProofServ::Setup()
    TString spid = Form("-%d", gSystem->GetPid());
    if (!fSessionTag.EndsWith(spid)) {
       Int_t nd = 0;
-      if ((nd = fSessionTag.CountChar('-')) == 3) {
+      if ((nd = fSessionTag.CountChar('-')) >= 2) {
          Int_t id = fSessionTag.Index("-", fSessionTag.Index("-") + 1);
          if (id != kNPOS) fSessionTag.Remove(id);
       } else if (nd != 1) {
