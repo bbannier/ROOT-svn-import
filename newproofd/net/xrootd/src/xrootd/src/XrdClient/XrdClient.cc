@@ -68,7 +68,7 @@ XrdClient::XrdClient(const char *url) {
     if (!ConnectionManager)
 	Info(XrdClientDebug::kNODEBUG,
 	     "Create",
-	     "(C) 2004 SLAC INFN XrdClient $Revision: 1.118 $ - Xrootd version: " << XrdVSTRING);
+	     "(C) 2004 SLAC INFN XrdClient $Revision: 1.119 $ - Xrootd version: " << XrdVSTRING);
 
 #ifndef WIN32
     signal(SIGPIPE, SIG_IGN);
@@ -1392,6 +1392,7 @@ XReqErrorType XrdClient::Read_Async(long long offset, int len) {
 
     if (fUseCache)
 	fConnModule->SubmitPlaceholderToCache(offset, offset+len-1);
+    else return kOK;
 
     // Prepare request
     ClientRequest readFileRequest;
