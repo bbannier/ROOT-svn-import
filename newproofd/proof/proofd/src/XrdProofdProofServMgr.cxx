@@ -772,14 +772,17 @@ int XrdProofdProofServMgr::CheckActiveSessions(bool verify)
          rmsession = 1;
       }
 
+      // For backward compatibility we need to check the session version
+      bool oldvers = (xps->ROOT() && xps->ROOT()->SrvProtVers() >= 18) ? 0 : 1;
+
       // If somebody is interested in this session, we give her/him some
       // more time by skipping the connected clients check this time
       int nc = -1;
-      if (!rmsession && !xps->SkipCheck()) {
+      if (!rmsession && (!xps->SkipCheck() || oldvers)) {
          // Check if we need to shutdown it
          if (!rmsession) {
             XrdSysMutexHelper mh(xps->Mutex());
-            if ((nc = xps->GetNClients()) <= 0 && !IsReconnecting()) {
+            if ((nc = xps->GetNClients()) <= 0 && (!IsReconnecting() || oldvers)) {
                if ((fShutdownOpt == 1 && (xps->IdleTime() >= fShutdownDelay)) ||
                   (fShutdownOpt == 2 && (xps->DisconnectTime() >= fShutdownDelay))) {
                   xps->TerminateProofServ(fMgr->ChangeOwn());
@@ -793,7 +796,7 @@ int XrdProofdProofServMgr::CheckActiveSessions(bool verify)
       // to touch the session file; all this will be done asynchronously;
       // the result will be checked next time.
       // We do not want further propagation at this stage.
-      if (!rmsession && verify) {
+      if (!rmsession && verify && !oldvers) {
          if (xps->VerifyProofServ(0) != 0) {
             // This means that the connection is already gone
             rmsession = 1;
