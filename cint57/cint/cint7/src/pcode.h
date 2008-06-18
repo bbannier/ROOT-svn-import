@@ -28,36 +28,36 @@ static bool G__getvalue_raw<bool>(const G__value& val)
 }
 
 template <>
-static unsigned char G__getvalue_raw<unsigned char>(const G__value& val)
+unsigned char G__getvalue_raw<unsigned char>(const G__value& val)
 { return (unsigned char)val.obj.ulo; }
 
 template <>
-static unsigned short G__getvalue_raw<unsigned short>(const G__value& val)
+unsigned short G__getvalue_raw<unsigned short>(const G__value& val)
 { return (unsigned short)val.obj.ulo; }
 
 template <>
-static unsigned int G__getvalue_raw<unsigned int>(const G__value& val)
+unsigned int G__getvalue_raw<unsigned int>(const G__value& val)
 { return (unsigned int)val.obj.ulo; }
 
 template <>
-static unsigned long G__getvalue_raw<unsigned long>(const G__value& val)
+unsigned long G__getvalue_raw<unsigned long>(const G__value& val)
 { return (unsigned long)val.obj.ulo; }
 
 template <>
-static G__int64 G__getvalue_raw<G__int64>(const G__value& val)
+G__int64 G__getvalue_raw<G__int64>(const G__value& val)
 { return val.obj.ll; }
 template <>
-static G__uint64 G__getvalue_raw<G__uint64>(const G__value& val)
+G__uint64 G__getvalue_raw<G__uint64>(const G__value& val)
 { return val.obj.ull; }
 
 template <>
-static long double G__getvalue_raw<long double>(const G__value& val)
+long double G__getvalue_raw<long double>(const G__value& val)
 { return val.obj.ld; }
 template <>
-static double G__getvalue_raw<double>(const G__value& val)
+double G__getvalue_raw<double>(const G__value& val)
 { return val.obj.d; }
 template <>
-static float G__getvalue_raw<float>(const G__value& val)
+float G__getvalue_raw<float>(const G__value& val)
 { return (float)val.obj.d; }
 
 
