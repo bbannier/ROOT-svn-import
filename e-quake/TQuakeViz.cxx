@@ -34,7 +34,11 @@ TQuakeViz::TQuakeViz() :
    fTransparency(50),
    fPalette(0),
    fLighting(kTRUE),
-   fLimitRange(kFALSE)
+   fLimitStrMin  (0), fLimitStrMax  (10),
+   fLimitDepthMin(0), fLimitDepthMax(500),
+   fLimitRange(kFALSE),
+   fYear(2007), fMonth(1), fDay(1), fHour(0),
+   fDaysShown(300),  fYearsShown(0)
 {
    // Constructor.
 }
