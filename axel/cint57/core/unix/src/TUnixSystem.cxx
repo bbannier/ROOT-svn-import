@@ -4143,12 +4143,7 @@ static const char *DynamicPath(const char *newpath = 0, Bool_t reset = kFALSE)
       else {
          dynpath = rdynpath; dynpath += ":"; dynpath += ldpath;
       }
-
-#ifdef CINTINCDIR
-         dynpath += ":"; dynpath += CINTINCDIR; dynpath += "/cint/stl";
-#else
-         dynpath += ":"; dynpath += gRootDir; dynpath += "/cint/cint/stl";
-#endif
+      dynpath += ":"; dynpath += gInterpreter->GetSTLIncludePath();
 #ifdef ROOTLIBDIR
       if (!dynpath.Contains(ROOTLIBDIR)) {
          dynpath += ":"; dynpath += ROOTLIBDIR;
