@@ -1203,7 +1203,7 @@ int XrdProofdProofServMgr::Attach(XrdProofdProtocol *p)
    // Handle a request to attach to an existing session
    XPDLOC(SMGR, "ProofServMgr::Attach")
 
-   int psid = -1, rc = 1;
+   int psid = -1, rc = 0;
    XPD_SETRESP(p, "Attach");
 
    // Unmarshall the data
@@ -1215,7 +1215,7 @@ int XrdProofdProofServMgr::Attach(XrdProofdProtocol *p)
    if (!c) {
       TRACEP(p, XERR, "client instance undefined");
       response->Send(kXR_ServerError,"client instance undefined");
-      return rc;
+      return 0;
    }
 
    // Find server session; sessions maybe recovering, so we need to take
@@ -1230,7 +1230,7 @@ int XrdProofdProofServMgr::Attach(XrdProofdProtocol *p)
             // Failure
             TRACEP(p, XERR, "session ID not found: "<<psid);
             response->Send(kXR_InvalidRequest,"session ID not found");
-            return rc;
+            return 0;
          } else {
             // Make dure we do not enter an infinite loop
             deadline = (deadline > 0) ? deadline : defdeadline;
@@ -1247,7 +1247,7 @@ int XrdProofdProofServMgr::Attach(XrdProofdProtocol *p)
    if (!xps || !xps->IsValid()) {
       TRACEP(p, XERR, "session ID not found");
       response->Send(kXR_InvalidRequest,"session ID not found");
-      return rc;
+      return 0;
    }
    TRACEP(p, DBG, "xps: "<<xps<<", status: "<< xps->Status());
 
@@ -1300,7 +1300,7 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
    // Handle a request to create a new session
    XPDLOC(SMGR, "ProofServMgr::Create")
 
-   int psid = -1, rc = 1;
+   int psid = -1, rc = 0;
    XPD_SETRESP(p, "Create");
 
    TRACEP(p, DBG, "enter");
@@ -1398,7 +1398,7 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
       xps->Reset();
       // Timeout acquire fork semaphore
       response->Send(kXP_ServerError, "timed-out acquiring fork semaphore");
-      return rc;
+      return 0;
    }
 
    // Pipe to communicate status of setup
@@ -1408,7 +1408,7 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
       // Failure creating pipe
       response->Send(kXP_ServerError,
                           "unable to create pipe for status-of-setup communication");
-      return rc;
+      return 0;
    }
 
    // Fork an agent process to handle this session
@@ -1518,7 +1518,7 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
       response->Send(kXP_ServerError, "could not fork agent");
       close(fp[0]);
       close(fp[1]);
-      return rc;
+      return 0;
    }
 
    // Read status-of-setup from pipe
@@ -1606,7 +1606,7 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
       xps->Reset();
       XrdProofdAux::KillProcess(pid, 1, p->Client()->UI(), fMgr->ChangeOwn());
       response->Send(kXP_ServerError, emsg.c_str());
-      return rc;
+      return 0;
    }
    // UNIX Socket is saved now
    p->Client()->SetUNIXSockSaved();
@@ -1629,7 +1629,7 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
       // Notify
       TRACEP(p, XERR, "problems accepting callback: " <<emsg);
       response->Send(kXR_attn, kXPD_errmsg, (char *) emsg.c_str(), emsg.length());
-      return rc;
+      return 0;
    }
 
    // Set the group, if any
@@ -1890,7 +1890,7 @@ int XrdProofdProofServMgr::Detach(XrdProofdProtocol *p)
    // Handle a request to detach from an existing session
    XPDLOC(SMGR, "ProofServMgr::Detach")
 
-   int psid = -1, rc = 1;
+   int psid = -1, rc = 0;
    XPD_SETRESP(p, "Detach");
 
    // Unmarshall the data
@@ -1902,7 +1902,7 @@ int XrdProofdProofServMgr::Detach(XrdProofdProtocol *p)
    if (!p->Client() || !(xps = p->Client()->GetProofServ(psid))) {
       TRACEP(p, XERR, "session ID not found");
       response->Send(kXR_InvalidRequest,"session ID not found");
-      return rc;
+      return 0;
    }
    xps->FreeClientID(p->Pid());
 
@@ -1918,7 +1918,7 @@ int XrdProofdProofServMgr::Destroy(XrdProofdProtocol *p)
    // Handle a request to shutdown an existing session
    XPDLOC(SMGR, "ProofServMgr::Destroy")
 
-   int psid = -1, rc = 1;
+   int psid = -1, rc = 0;
    XPD_SETRESP(p, "Destroy");
 
    // Unmarshall the data
@@ -1932,7 +1932,7 @@ int XrdProofdProofServMgr::Destroy(XrdProofdProtocol *p)
       if (!p->Client() || !(xpsref = p->Client()->GetProofServ(psid))) {
          TRACEP(p, XERR, "reference session ID not found");
          response->Send(kXR_InvalidRequest,"reference session ID not found");
-         return rc;
+         return 0;
       }
    }
 

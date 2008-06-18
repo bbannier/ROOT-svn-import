@@ -468,7 +468,7 @@ int XrdProofdNetMgr::ReadBuffer(XrdProofdProtocol *p)
    // Process a readbuf request
    XPDLOC(NMGR, "NetMgr::ReadBuffer")
 
-   int rc = 1;
+   int rc = 0;
    XPD_SETRESP(p, "ReadBuffer");
 
    XrdOucString emsg;
@@ -497,7 +497,7 @@ int XrdProofdNetMgr::ReadBuffer(XrdProofdProtocol *p)
       emsg = "file name not not found";
       TRACEP(p, XERR, emsg);
       response->Send(kXR_InvalidRequest, emsg.c_str());
-      return rc;
+      return 0;
    }
 
    // Unmarshall the data
@@ -565,13 +565,13 @@ int XrdProofdNetMgr::ReadBuffer(XrdProofdProtocol *p)
                TRACEP(p, DBG, emsg);
             }
             response->Send();
-            return rc;
+            return 0;
          } else {
             emsg.form("could not read buffer from %s %s",
                      (local) ? "local file " : "remote file ", file);
             TRACEP(p, XERR, emsg);
             response->Send(kXR_InvalidRequest, emsg.c_str());
-            return rc;
+            return 0;
          }
       } else {
          // Just got an empty buffer

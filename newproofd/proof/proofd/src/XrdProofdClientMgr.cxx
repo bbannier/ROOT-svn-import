@@ -258,7 +258,7 @@ int XrdProofdClientMgr::Login(XrdProofdProtocol *p)
    // Process a login request
    XPDLOC(CMGR, "ClientMgr::Login")
 
-   int rc = 1;
+   int rc = 0;
    XPD_SETRESP(p, "Login");
 
    TRACEP(p, HDBG, "enter");
@@ -272,7 +272,7 @@ int XrdProofdClientMgr::Login(XrdProofdProtocol *p)
                         "ignoring request ("<<p->Link()->Host()<<")");
          response->Send(kXR_InvalidRequest,
                             "master not allowed to connect - request ignored");
-         return rc;
+         return 0;
       }
    }
 
@@ -287,7 +287,7 @@ int XrdProofdClientMgr::Login(XrdProofdProtocol *p)
    // Make sure the user is not already logged in
    if ((p->Status() & XPD_LOGGEDIN)) {
       response->Send(kXR_InvalidRequest, "duplicate login; already logged in");
-      return rc;
+      return 0;
    }
 
    // Find out the connection type: 'i', internal, means this is a proofsrv calling back.
@@ -311,7 +311,7 @@ int XrdProofdClientMgr::Login(XrdProofdProtocol *p)
          TRACEP(p, XERR,"top master mode not allowed - ignoring request");
          response->Send(kXR_InvalidRequest,
                             "Server not allowed to be top master - ignoring request");
-         return rc;
+         return 0;
       }
       break;
    case 'm':
@@ -323,7 +323,7 @@ int XrdProofdClientMgr::Login(XrdProofdProtocol *p)
          TRACEP(p, XERR,"submaster mode not allowed - ignoring request");
          response->Send(kXR_InvalidRequest,
                              "Server not allowed to be submaster - ignoring request");
-         return rc;
+         return 0;
       }
       break;
    case 's':
@@ -335,7 +335,7 @@ int XrdProofdClientMgr::Login(XrdProofdProtocol *p)
          TRACEP(p, XERR,"worker mode not allowed - ignoring request");
          response->Send(kXR_InvalidRequest,
                         "Server not allowed to be worker - ignoring request");
-         return rc;
+         return 0;
       }
       break;
    default:
@@ -374,7 +374,7 @@ int XrdProofdClientMgr::Login(XrdProofdProtocol *p)
       if (iusr == -1) {
          TRACEP(p, XERR,"long user name not found");
          response->Send(kXR_InvalidRequest, "long user name not found");
-         return rc;
+         return 0;
       }
       uname.erase(0,iusr+5);
       uname.erase(uname.find("|"));
@@ -397,7 +397,7 @@ int XrdProofdClientMgr::Login(XrdProofdProtocol *p)
       emsg.form("username not allowed: %s", uname.c_str());
       TRACEP(p, XERR, emsg);
       response->Send(kXR_InvalidRequest, emsg.c_str());
-      return rc;
+      return 0;
    }
    if (su) {
       // Update superuser flag
@@ -416,13 +416,13 @@ int XrdProofdClientMgr::Login(XrdProofdProtocol *p)
             emsg.form("group unknown: %s", gname.c_str());
             TRACEP(p, XERR, emsg);
             response->Send(kXR_InvalidRequest, emsg.c_str());
-            return rc;
+            return 0;
          } else if (strncmp(g->Name(),"default",7) &&
                    !g->HasMember(uname.c_str())) {
             emsg.form("user %s is not member of group %s", uname.c_str(), gname.c_str());
             TRACEP(p, XERR, emsg);
             response->Send(kXR_InvalidRequest, emsg.c_str());
-            return rc;
+            return 0;
          } else {
             if (TRACING(DBG)) {
                TRACEP(p, DBG,"group: "<<gname<<" found");
@@ -455,7 +455,7 @@ int XrdProofdClientMgr::Login(XrdProofdProtocol *p)
       emsg += uname;
       TRACEP(p, XERR, emsg.c_str());
       response->Send(kXR_InvalidRequest, emsg.c_str());
-      return rc;
+      return 0;
    }
    // Save into the protocol instance
    p->SetClient(c);
@@ -474,7 +474,7 @@ int XrdProofdClientMgr::Login(XrdProofdProtocol *p)
       if (pp && i ) {
          response->SendI((kXR_int32)XPROOFD_VERSBIN, (void *)pp, i);
          p->SetStatus((XPD_NEED_MAP | XPD_NEED_AUTH));
-         return rc;
+         return 0;
       } else {
          response->SendI((kXR_int32)XPROOFD_VERSBIN);
          p->SetStatus(XPD_LOGGEDIN);
@@ -496,7 +496,7 @@ int XrdProofdClientMgr::MapClient(XrdProofdProtocol *p, bool all)
    // Process a login request
    XPDLOC(CMGR, "ClientMgr::MapClient")
 
-   int rc = 1;
+   int rc = 0;
    XPD_SETRESP(p, "MapClient");
 
    XrdOucString msg;
@@ -514,7 +514,7 @@ int XrdProofdClientMgr::MapClient(XrdProofdProtocol *p, bool all)
       TRACEP(p, DBG, "cannot find valid instance of XrdProofdClient");
       response->Send(kXP_ServerError,
                      "MapClient: cannot find valid instance of XrdProofdClient");
-      return rc;
+      return 0;
    }
 
    // Flag for internal connections
@@ -530,7 +530,7 @@ int XrdProofdClientMgr::MapClient(XrdProofdProtocol *p, bool all)
          TRACEP(p, XERR, "proofsrv callback: sent invalid session id");
          response->Send(kXR_InvalidRequest,
                         "MapClient: proofsrv callback: sent invalid session id");
-         return rc;
+         return 0;
       }
       protver = p->Request()->login.capver[0];
       TRACEP(p, DBG, "proofsrv callback for session: " <<psid);
