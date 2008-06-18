@@ -1899,7 +1899,7 @@ TH1 *TH3::Project3D(Option_t *option) const
    if (!fXaxis.TestBit(TAxis::kAxisRange)) {ixmin--; ixmax++;}
    if (!fYaxis.TestBit(TAxis::kAxisRange)) {iymin--; iymax++;}
    if (!fZaxis.TestBit(TAxis::kAxisRange)) {izmin--; izmax++;}
-   Float_t cont,e,e1;
+   Double_t cont,e,e1;
    Double_t entries  = 0;
    Double_t newerror = 0;
    for (Int_t ixbin=0;ixbin<=1+fXaxis.GetNbins();ixbin++){
