@@ -39,6 +39,7 @@ public:
       Float_t    fLon;
       Float_t    fDepth;
       Float_t    fStr;
+      Float_t    fX, fY;
 
       void Print() const;
    };
@@ -72,7 +73,8 @@ protected:
    Int_t            fMonth;
    Int_t            fDay;
    Int_t            fHour;
-   Int_t            fDayHalfRange;
+   Int_t            fDaysShown;
+   Int_t            fYearsShown;
 
 public:
    TQuakeViz();
@@ -125,8 +127,15 @@ public:
    void SetDay(Int_t x) { fDay = x; }
    Int_t GetHour() const { return fHour; }
    void SetHour(Int_t x) { fHour = x; }
-   Int_t GetDayHalfRange() const { return fDayHalfRange; }
-   void SetDayHalfRange(Int_t x) { fDayHalfRange = x; }
+   Int_t GetDaysShown() const { return fDaysShown; }
+   void SetDaysShown(Int_t x) { fDaysShown = x; }
+   Int_t GetYearsShown() const { return fYearsShown; }
+   void SetYearsShown(Int_t x) { fYearsShown = x; }
+
+   Long64_t   GetLimitTimeDelta();
+   TTimeStamp GetLimitTimeMean();
+   TTimeStamp GetLimitTimeMin();
+   TTimeStamp GetLimitTimeMax();
 
    ClassDef(TQuakeViz, 1); // Short description.
 };

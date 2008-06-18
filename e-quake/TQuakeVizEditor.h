@@ -42,7 +42,12 @@ protected:
    TEveGValuator         *fMonth;
    TEveGValuator         *fDay;
    TEveGValuator         *fHour;
-   TEveGValuator         *fDayHalfRange;
+   TEveGValuator         *fDaysShown;
+   TEveGValuator         *fYearsShown;
+
+   TGLabel               *fLabStart;
+   TGLabel               *fLabNow;
+   TGLabel               *fLabEnd;
 
 public:
    TQuakeVizEditor(const TGWindow* p=0, Int_t width=170, Int_t height=30,
@@ -61,7 +66,8 @@ public:
    void DoMonth();
    void DoDay();
    void DoHour();
-   void DoDayHalfRange();
+   void DoDaysShown();
+   void DoYearsShown();
 
    ClassDef(TQuakeVizEditor, 0); // GUI editor for TQuakeViz.
 };

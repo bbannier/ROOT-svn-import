@@ -44,7 +44,11 @@ TQuakeVizEditor::TQuakeVizEditor(const TGWindow *p, Int_t width, Int_t height,
    fMonth(0),
    fDay(0),
    fHour(0),
-   fDayHalfRange(0)
+   fDaysShown(0),
+   fYearsShown(0),
+   fLabStart(),
+   fLabNow(),
+   fLabEnd()
 {
    // Constructor.
 
@@ -60,7 +64,7 @@ TQuakeVizEditor::TQuakeVizEditor(const TGWindow *p, Int_t width, Int_t height,
 
    // --------------------------------
 
-   fLimitStr = new TEveGDoubleValuator(this, "Mag::", 40, 0);
+   fLimitStr = new TEveGDoubleValuator(this, "Mag:", 40, 0);
    fLimitStr->SetNELength(6);
    fLimitStr->SetLabelWidth(labelW);
    fLimitStr->Build();
@@ -120,14 +124,38 @@ TQuakeVizEditor::TQuakeVizEditor(const TGWindow *p, Int_t width, Int_t height,
    fHour->Connect("ValueSet(Double_t)", "TQuakeVizEditor", this,
                   "DoHour()");
 
-   fDayHalfRange = new TEveGValuator(this, "Days shown", 130, hh);
-   fDayHalfRange->SetLabelWidth(labelW + 30);
-   fDayHalfRange->SetNELength(5);
-   fDayHalfRange->Build();
-   fDayHalfRange->SetLimits(0, 5000, 101, TGNumberFormat::kNESInteger);
-   AddFrame(fDayHalfRange); // new TGLayoutHints());
-   fDayHalfRange->Connect("ValueSet(Double_t)", "TQuakeVizEditor", this,
-                          "DoDayHalfRange()");
+   fDaysShown = new TEveGValuator(this, "Days shown", 130, hh);
+   fDaysShown->SetLabelWidth(labelW + 30);
+   fDaysShown->SetNELength(5);
+   fDaysShown->Build();
+   fDaysShown->SetLimits(0, 500, 101, TGNumberFormat::kNESInteger);
+   AddFrame(fDaysShown); // new TGLayoutHints());
+   fDaysShown->Connect("ValueSet(Double_t)", "TQuakeVizEditor", this,
+                       "DoDaysShown()");
+
+   fYearsShown = new TEveGValuator(this, "Years", 130, hh);
+   fYearsShown->SetLabelWidth(labelW + 30);
+   fYearsShown->SetNELength(5);
+   fYearsShown->Build();
+   fYearsShown->SetLimits(0, 100, 101, TGNumberFormat::kNESInteger);
+   this->AddFrame(fYearsShown); // new TGLayoutHints());
+   fYearsShown->Connect("ValueSet(Double_t)", "TQuakeVizEditor", this,
+                        "DoYearsShown()");
+
+   fLabStart = new TGLabel(this);
+   fLabStart->SetTextJustify(kTextLeft);
+   this->AddFrame(fLabStart, new TGLayoutHints(kLHintsLeft|kLHintsExpandX,
+                                               8, 0, 2, 0));
+
+   fLabNow = new TGLabel(this);
+   fLabNow->SetTextJustify(kTextLeft);
+   this->AddFrame(fLabNow, new TGLayoutHints(kLHintsLeft|kLHintsExpandX,
+                                             8, 0, 2, 0));
+
+   fLabEnd = new TGLabel(this);
+   fLabEnd->SetTextJustify(kTextLeft);
+   this->AddFrame(fLabEnd, new TGLayoutHints(kLHintsLeft|kLHintsExpandX,
+                                             8, 0, 2, 0));
 }
 
 /******************************************************************************/
@@ -163,7 +191,12 @@ void TQuakeVizEditor::SetModel(TObject* obj)
    fMonth->SetValue(fM->GetMonth());
    fDay->SetValue(fM->GetDay());
    fHour->SetValue(fM->GetHour());
-   fDayHalfRange->SetValue(fM->GetDayHalfRange());
+   fDaysShown->SetValue(fM->GetDaysShown());
+   fYearsShown->SetValue(fM->GetYearsShown());
+
+   fLabStart->SetText(Form("Start: %s", fM->GetLimitTimeMin() .AsString("s")));
+   fLabNow  ->SetText(Form("Now:  %s",  fM->GetLimitTimeMean().AsString("s")));
+   fLabEnd  ->SetText(Form("End:  %s",  fM->GetLimitTimeMax() .AsString("s")));
 }
 
 /******************************************************************************/
@@ -243,10 +276,19 @@ void TQuakeVizEditor::DoHour()
 }
 
 //______________________________________________________________________________
-void TQuakeVizEditor::DoDayHalfRange()
+void TQuakeVizEditor::DoDaysShown()
 {
-   // Slot for DayHalfRange.
+   // Slot for DaysShown.
 
-   fM->SetDayHalfRange((Int_t) fDayHalfRange->GetValue());
+   fM->SetDaysShown((Int_t) fDaysShown->GetValue());
+   Update();
+}
+
+//______________________________________________________________________________
+void TQuakeVizEditor::DoYearsShown()
+{
+   // Slot for YearsShown.
+
+   fM->SetYearsShown((Int_t) fYearsShown->GetValue());
    Update();
 }

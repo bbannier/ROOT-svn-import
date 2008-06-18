@@ -71,16 +71,12 @@ void TQuakeVizGL::DirectDraw(TGLRnrCtx & rnrCtx) const
 
    TEveRGBAPalette* pal = fM->AssertPalette();
 
-   TTimeStamp midTime(fM->fYear, fM->fMonth, fM->fDay, fM->fHour, 0, 0);
-
-   Long64_t delta   = 3600*24*fM->fDayHalfRange;
-
-   Long64_t minTime = midTime.GetSec() - delta;
-   Long64_t maxTime = midTime.GetSec() + delta;
+   Long64_t minTime = fM->GetLimitTimeMin().GetSec();
+   Long64_t maxTime = fM->GetLimitTimeMax().GetSec();
 
    // For easier palette scaling.
    // Palette initialized to 100 values, need 2*delta.
-   Double_t pfac = 50.0 / delta;
+   Double_t pfac = 100.0 / (maxTime - minTime);
 
    TGLCapabilitySwitch lights_off(GL_LIGHTING, fM->fLighting);
 
@@ -104,6 +100,7 @@ void TQuakeVizGL::DirectDraw(TGLRnrCtx & rnrCtx) const
             TGLUtil::Color4ubv(c);
 
             glLoadName(idx);
+            // Draw sphere: void gluSphere(GLUquadric* quad, double radius, int slices, int stacks)
             gluSphere(rnrCtx.GetGluQuadric(),
                       0.005f + (i->fStr - fM->fMinStr)*0.045f/(fM->fMaxStr - fM->fMinStr),
                       8, 8);
@@ -121,6 +118,7 @@ void TQuakeVizGL::DirectDraw(TGLRnrCtx & rnrCtx) const
             glTranslatef(i->fLat, i->fLon, i->fDepth);
 
             glLoadName(idx);
+            // Draw sphere: void gluSphere(GLUquadric* quad, double radius, int slices, int stacks)
             gluSphere(rnrCtx.GetGluQuadric(),
                       0.005f + (i->fStr - fM->fMinStr)*0.045f/(fM->fMaxStr - fM->fMinStr),
                       8, 8);

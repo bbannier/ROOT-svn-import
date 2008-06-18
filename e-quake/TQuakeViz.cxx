@@ -89,6 +89,10 @@ void TQuakeViz::ReadData(const Text_t* file)
    fLimitDepthMin = fMinDepth;
    fLimitDepthMax = fMaxDepth;
 
+   // Loop over entries and calculate x, y coordinates in the local region.
+   // const Float_t R = 6300;
+   // Float_t x_c = R * TMath::XXX(0.5*(fMaxLon + fMinLon));
+   // Float_t y_c = R * TMath::XXX(0.5*(fMaxLat + fMinLat));
 }
 
 //______________________________________________________________________________
@@ -100,13 +104,13 @@ void TQuakeViz::InitVizState(Int_t dayHalfRange)
 
    UInt_t y, m, d, h;
 
-   fMaxTime.GetDate(kFALSE, 0, &y, &m, &d);
-   fMaxTime.GetTime(kFALSE, 0, &h, 0, 0); // No use minutes/secs
+   fMinTime.GetDate(kFALSE, 0, &y, &m, &d);
+   fMinTime.GetTime(kFALSE, 0, &h, 0, 0); // No use minutes/secs
    fYear  = y;
    fMonth = m;
    fDay   = d;
    fHour  = h;
-   fDayHalfRange = dayHalfRange;
+   fDaysShown = dayHalfRange;
 }
 
 /******************************************************************************/
@@ -177,6 +181,32 @@ TEveRGBAPalette* TQuakeViz::AssertPalette()
       fPalette = new TEveRGBAPalette(0, 100, kTRUE);
    }
    return fPalette;
+}
+
+Long64_t TQuakeViz::GetLimitTimeDelta()
+{
+  return 24*3600*(fDaysShown + 365*fYearsShown);
+}
+
+TTimeStamp TQuakeViz::GetLimitTimeMean()
+{
+  TTimeStamp t;
+  t.SetSec(GetLimitTimeMin().GetSec() + GetLimitTimeDelta()/2);
+  return t;
+}
+
+TTimeStamp TQuakeViz::GetLimitTimeMin()
+{
+  return TTimeStamp(fYear, fMonth, fDay, fHour, 0, 0);
+}
+
+TTimeStamp TQuakeViz::GetLimitTimeMax()
+{
+  TTimeStamp t;
+  t.SetSec(GetLimitTimeMin().GetSec() + GetLimitTimeDelta());
+  if (t < fMinTime)
+    t.SetSec(9223229239929568800ll);
+  return t;
 }
 
 //==============================================================================
