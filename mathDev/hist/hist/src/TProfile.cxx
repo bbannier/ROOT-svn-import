@@ -1438,6 +1438,8 @@ TH1D *TProfile::ProjectionX(const char *name, Option_t *option) const
 //       product of the bin content of the profile and the entries. 
 //       With this option the returned histogram will be equivalent to the one obtained by 
 //       filling directly a TH1D using the 2-nd value as a weight. 
+//       This makes sense only for profile filled with weights =1. If not, the error of the 
+//        projected histogram obtained with this option will not be correct.
 
 
    TString opt = option;
@@ -1466,7 +1468,6 @@ TH1D *TProfile::ProjectionX(const char *name, Option_t *option) const
    if (opt.Contains("e")) computeErrors = kTRUE;
    if (opt.Contains("w")) binWeight = kTRUE;
    if (opt.Contains("c=e")) {cequalErrors = kTRUE; computeErrors=kFALSE;}
-   if (computeErrors) h1->Sumw2();
    if (computeErrors || binWeight ) h1->Sumw2();
    if (pname != name)  delete [] pname;
 
@@ -1484,6 +1485,7 @@ TH1D *TProfile::ProjectionX(const char *name, Option_t *option) const
       // if option E projected histogram errors are same as profile
       if (computeErrors ) h1->SetBinError(bin , GetBinError(bin) );
       // in case of option W bin error is deduced from bin sum of z**2 values of profile
+      // this is correct only if the profile was filled with weights = 1. 
       if (binWeight)      h1->SetBinError(bin , TMath::Sqrt(fSumw2.fArray[bin] ) );
 
    }

@@ -1549,6 +1549,7 @@ TH2D *TProfile2D::ProjectionXY(const char *name, Option_t *option) const
          // if option E projected histogram errors are same as profile
          if (computeErrors ) h1->SetBinError(bin , GetBinError(bin) );
          // in case of option W bin error is deduced from bin sum of z**2 values of profile
+         // this is correct only if the wprofile has weights all 1. 
          if (binWeight)      h1->SetBinError(bin , TMath::Sqrt(fSumw2.fArray[bin] ) );
       }
    }
