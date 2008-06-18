@@ -96,6 +96,7 @@ public:
    const char *GetClassSharedLibs(const char *cls);
    const char *GetSharedLibDeps(const char *lib);
    const char *GetIncludePath();
+   virtual const char *GetSTLIncludePath() const;
    TObjArray  *GetRootMapFiles() const { return fRootmapFiles; }
    Int_t   InitializeDictionaries();
    Bool_t  IsLoaded(const char *filename) const;
