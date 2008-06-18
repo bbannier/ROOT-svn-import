@@ -23,7 +23,7 @@ CINT7DIRSD    := $(CINT7DIRS)/dict
 ##### libCint7 #####
 CINT7CONF     := $(CINT7DIRI)/configcint.h
 CINT7H        := $(filter-out $(CINT7CONF),$(wildcard $(CINT7DIRI)/*.h))
-CINT7HT       := $(patsubst $(CINT7DIRI)/%.h,include/cint7/%.h,$(CINT7H) $(CINT7CONF))
+CINT7HT       := $(sort $(patsubst $(CINT7DIRI)/%.h,include/cint7/%.h,$(CINT7H) $(CINT7CONF)))
 CINT7S1       := $(wildcard $(MODDIRS)/*.c)
 CINT7S2       := $(wildcard $(CINT7DIRS)/*.cxx) $(CINT7DIRSD)/longif.cxx $(CINT7DIRSD)/Apiif.cxx $(CINT7DIRSD)/stdstrct.o
 
