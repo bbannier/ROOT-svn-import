@@ -4143,7 +4143,7 @@ static const char *DynamicPath(const char *newpath = 0, Bool_t reset = kFALSE)
       else {
          dynpath = rdynpath; dynpath += ":"; dynpath += ldpath;
       }
-      dynpath += ":"; dynpath += gInterpreter->GetSTLIncludePath();
+
 #ifdef ROOTLIBDIR
       if (!dynpath.Contains(ROOTLIBDIR)) {
          dynpath += ":"; dynpath += ROOTLIBDIR;
@@ -4153,6 +4153,7 @@ static const char *DynamicPath(const char *newpath = 0, Bool_t reset = kFALSE)
          dynpath += ":"; dynpath += gRootDir; dynpath += "/lib";
       }
 #endif
+      dynpath += ":"; dynpath += gInterpreter->GetSTLIncludePath();
    }
    return dynpath;
 }
