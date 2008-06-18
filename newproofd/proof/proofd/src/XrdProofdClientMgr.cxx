@@ -163,6 +163,9 @@ XrdProofdClientMgr::XrdProofdClientMgr(XrdProofdManager *mgr,
       TRACE(XERR, "unable to generate the pipe");
       return;
    }
+
+   // Configuration directives
+   RegisterDirectives();
 }
 
 //__________________________________________________________________________
