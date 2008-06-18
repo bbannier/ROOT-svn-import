@@ -53,7 +53,7 @@ int XrdProofdAdmin::Process(XrdProofdProtocol *p, int type)
    // Process admin request
    XPDLOC(ALL, "Admin::Process")
 
-   int rc = 1;
+   int rc = 0;
    XPD_SETRESP(p, "Process");
 
    TRACEP(p, REQ, "req id: " << type << " ("<<
@@ -102,7 +102,7 @@ int XrdProofdAdmin::QueryROOTVersions(XrdProofdProtocol *p)
    // Handle request for list of ROOT versions
    XPDLOC(ALL, "Admin::QueryROOTVersions")
 
-   int rc = 1;
+   int rc = 0;
    XPD_SETRESP(p, "QueryROOTVersions");
 
    XrdOucString msg = fMgr->ROOTMgr()->ExportVersions(p->Client()->ROOT());
@@ -122,7 +122,7 @@ int XrdProofdAdmin::SetROOTVersion(XrdProofdProtocol *p)
    // Handle request for changing the default ROOT version
    XPDLOC(ALL, "Admin::SetROOTVersion")
 
-   int rc = 1;
+   int rc = 0;
    XPD_SETRESP(p, "SetROOTVersion");
 
    // Change default ROOT version
@@ -163,7 +163,7 @@ int XrdProofdAdmin::SetROOTVersion(XrdProofdProtocol *p)
             usr += "'";
             TRACEP(p, XERR, usr.c_str());
             response->Send(kXR_InvalidRequest, usr.c_str());
-            return rc;
+            return 0;
          }
          // Lookup the list
          if (!(c = fMgr->ClientMgr()->GetClient(usr.c_str(), grp.c_str()))) {
@@ -172,7 +172,7 @@ int XrdProofdAdmin::SetROOTVersion(XrdProofdProtocol *p)
             emsg += usr;
             TRACEP(p, XERR, emsg.c_str());
             response->Send(kXR_InvalidRequest, emsg.c_str());
-            return rc;
+            return 0;
          }
       }
    }
@@ -220,7 +220,7 @@ int XrdProofdAdmin::QueryWorkers(XrdProofdProtocol *p)
    // Handle request for getting the list of potential workers
    XPDLOC(ALL, "Admin::QueryWorkers")
 
-   int rc = 1;
+   int rc = 0;
    XPD_SETRESP(p, "QueryWorkers");
 
    // Send back a list of potentially available workers
@@ -245,7 +245,7 @@ int XrdProofdAdmin::GetWorkers(XrdProofdProtocol *p)
    // Handle request for getting the best set of workers
    XPDLOC(ALL, "Admin::GetWorkers")
 
-   int rc = 1;
+   int rc = 0;
    XPD_SETRESP(p, "GetWorkers");
 
    // Unmarshall the data
@@ -256,7 +256,7 @@ int XrdProofdAdmin::GetWorkers(XrdProofdProtocol *p)
    if (!p->Client() || !(xps = p->Client()->GetProofServ(psid))) {
       TRACEP(p, XERR, "session ID not found");
       response->Send(kXR_InvalidRequest,"session ID not found");
-      return rc;
+      return 0;
    }
    int pid = xps->SrvPID();
    TRACEP(p, REQ, "request from session "<<pid);
@@ -267,7 +267,7 @@ int XrdProofdAdmin::GetWorkers(XrdProofdProtocol *p)
    if (fMgr->GetWorkers(wrks, xps) !=0 ) {
       // Something wrong
       response->Send(kXR_InvalidRequest,"failure");
-      return rc;
+      return 0;
    } else {
       // Send buffer
       char *buf = (char *) wrks.c_str();
@@ -303,7 +303,7 @@ int XrdProofdAdmin::SetGroupProperties(XrdProofdProtocol *p)
       TRACEP(p, XERR, "received group does not match the user's one");
       response->Send(kXR_InvalidRequest,
                      "SetGroupProperties: received group does not match the user's one");
-      return rc;
+      return 0;
    }
 
    // The priority value
@@ -318,7 +318,7 @@ int XrdProofdAdmin::SetGroupProperties(XrdProofdProtocol *p)
          TRACEP(p, XERR, "problem sending message on the pipe");
          response->Send(kXR_ServerError,
                              "SetGroupProperties: problem sending message on the pipe");
-         return rc;
+         return 0;
       }
    }
 
@@ -338,7 +338,7 @@ int XrdProofdAdmin::SendMsgToUser(XrdProofdProtocol *p)
    // Handle request for sending a message to a user
    XPDLOC(ALL, "Admin::SendMsgToUser")
 
-   int rc = 1;
+   int rc = 0;
    XPD_SETRESP(p, "SendMsgToUser");
 
    // Target client (default us)
@@ -352,7 +352,7 @@ int XrdProofdAdmin::SendMsgToUser(XrdProofdProtocol *p)
       // No message: protocol error?
       TRACEP(p, XERR, "no message");
       response->Send(kXR_InvalidRequest,"SendMsgToUser: no message");
-      return rc;
+      return 0;
    }
 
    XrdOucString cmsg((const char *)p->Argp()->buff, len);
@@ -377,7 +377,7 @@ int XrdProofdAdmin::SendMsgToUser(XrdProofdProtocol *p)
             TRACEP(p, XERR, "target client not found");
             response->Send(kXR_InvalidRequest,
                            "SendMsgToUser: target client not found");
-            return rc;
+            return 0;
          }
       }
    }
@@ -387,7 +387,7 @@ int XrdProofdAdmin::SendMsgToUser(XrdProofdProtocol *p)
       TRACEP(p, XERR, "no message after user specification");
       response->Send(kXR_InvalidRequest,
                           "SendMsgToUser: no message after user specification");
-      return rc;
+      return 0;
    }
 
    // Check if allowed
@@ -397,13 +397,13 @@ int XrdProofdAdmin::SendMsgToUser(XrdProofdProtocol *p)
             TRACEP(p, XERR, "not allowed to send messages to usr '"<<usr<<"'");
             response->Send(kXR_InvalidRequest,
                                 "SendMsgToUser: not allowed to send messages to specified usr");
-            return rc;
+            return 0;
          }
       } else {
          TRACEP(p, XERR, "not allowed to send messages to connected users");
          response->Send(kXR_InvalidRequest,
                              "SendMsgToUser: not allowed to send messages to connected users");
-         return rc;
+         return 0;
       }
    } else {
       if (usr.length() <= 0) tgtclnt = 0;
@@ -425,7 +425,7 @@ int XrdProofdAdmin::QuerySessions(XrdProofdProtocol *p)
    // Handle request for list of sessions
    XPDLOC(ALL, "Admin::QuerySessions")
 
-   int rc = 1;
+   int rc = 0;
    XPD_SETRESP(p, "QuerySessions");
 
    XrdOucString msg = p->Client()->ExportSessions();
@@ -445,7 +445,7 @@ int XrdProofdAdmin::QueryLogPaths(XrdProofdProtocol *p)
    // Handle request for log paths 
    XPDLOC(ALL, "Admin::QueryLogPaths")
 
-   int rc = 1;
+   int rc = 0;
    XPD_SETRESP(p, "QueryLogPaths");
 
    int ridx = ntohl(p->Request()->proof.int2);
@@ -480,14 +480,14 @@ int XrdProofdAdmin::QueryLogPaths(XrdProofdProtocol *p)
    if (!client) {
       TRACEP(p, XERR, "query sess logs: client for '"<<user<<"' not found");
       response->Send(kXR_InvalidRequest,"QueryLogPaths: query log: client not found");
-      return rc;
+      return 0;
    }
 
    XrdOucString tag = (stag == "" && ridx >= 0) ? "last" : stag;
    if (stag == "" && client->Sandbox()->GuessTag(tag, ridx) != 0) {
       TRACEP(p, XERR, "query sess logs: session tag not found");
       response->Send(kXR_InvalidRequest,"QueryLogPaths: query log: session tag not found");
-      return rc;
+      return 0;
    }
 
    // Return message
@@ -512,7 +512,7 @@ int XrdProofdAdmin::QueryLogPaths(XrdProofdProtocol *p)
       msg += sdir; msg += " (errno: "; msg += errno; msg += ")";
       TRACEP(p, XERR, msg.c_str());
       response->Send(kXR_InvalidRequest, msg.c_str());
-      return rc;
+      return 0;
    }
    // Scan the directory to add the top master (only if top master)
    if (master.length() <= 0) {
@@ -598,7 +598,7 @@ int XrdProofdAdmin::CleanupSessions(XrdProofdProtocol *p)
    // Handle request of 
    XPDLOC(ALL, "Admin::CleanupSessions")
 
-   int rc = 1;
+   int rc = 0;
    XPD_SETRESP(p, "CleanupSessions");
 
    XrdOucString cmsg;
@@ -723,7 +723,7 @@ int XrdProofdAdmin::SetSessionAlias(XrdProofdProtocol *p)
    // Handle request for setting the session alias
    XPDLOC(ALL, "Admin::SetSessionAlias")
 
-   int rc = 1;
+   int rc = 0;
    XPD_SETRESP(p, "SetSessionAlias");
 
    //
@@ -733,7 +733,7 @@ int XrdProofdAdmin::SetSessionAlias(XrdProofdProtocol *p)
    if (!p->Client() || !(xps = p->Client()->GetProofServ(psid))) {
       TRACEP(p, XERR, "session ID not found");
       response->Send(kXR_InvalidRequest,"SetSessionAlias: session ID not found");
-      return rc;
+      return 0;
    }
 
    // Set session alias
@@ -764,7 +764,7 @@ int XrdProofdAdmin::SetSessionTag(XrdProofdProtocol *p)
    // Handle request for setting the session tag
    XPDLOC(ALL, "Admin::SetSessionTag")
 
-   int rc = 1;
+   int rc = 0;
    XPD_SETRESP(p, "SetSessionTag");
    //
    // Specific info about a session
@@ -773,7 +773,7 @@ int XrdProofdAdmin::SetSessionTag(XrdProofdProtocol *p)
    if (!p->Client() || !(xps = p->Client()->GetProofServ(psid))) {
       TRACEP(p, XERR, "session ID not found");
       response->Send(kXR_InvalidRequest,"SetSessionTag: session ID not found");
-      return rc;
+      return 0;
    }
 
    // Set session tag

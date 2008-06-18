@@ -189,6 +189,18 @@ int XrdProofdManager::CheckUser(const char *usr,
       }
    }
 
+   // Check if super user
+   if (fSuperUsers.length() > 0) {
+      XrdOucString tkn;
+      int from = 0;
+      while ((from = fSuperUsers.tokenize(tkn, from, ',')) != -1) {
+         if (tkn == usr) {
+            su = 1;
+            break;
+         }
+      }
+   }
+
    // If we are in controlled mode we have to check if the user (and possibly
    // its group) are in the authorized lists; otherwise we fail.
    // Privileged users are always allowed to connect.
@@ -240,20 +252,11 @@ int XrdProofdManager::CheckUser(const char *usr,
             }
          }
       }
-      // Check if super user
-      if (fSuperUsers.length() > 0) {
-         XrdOucString tkn;
-         int from = 0;
-         while ((from = fSuperUsers.tokenize(tkn, from, ',')) != -1) {
-            if (tkn == usr) {
-               usrok = 1;
-               e = "";
-               su = 1;
-               break;
-            }
-         }
+      // Super users are always allowed
+      if (!usrok && su) {
+         usrok = 1;
+         e = "";
       }
-
       // Return now if disallowed
       if (!usrok) return -1;
    }
@@ -1073,7 +1076,7 @@ int XrdProofdManager::Process(XrdProofdProtocol *p)
    // Process manager request
    XPDLOC(ALL, "Manager::Process")
 
-   int rc = 1;
+   int rc = 0;
    XPD_SETRESP(p, "Process");
 
    TRACEP(p, REQ, "req id: " << p->Request()->header.requestid << " (" <<
