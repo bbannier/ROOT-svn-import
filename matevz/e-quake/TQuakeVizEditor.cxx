@@ -133,7 +133,7 @@ TQuakeVizEditor::TQuakeVizEditor(const TGWindow *p, Int_t width, Int_t height,
    fDaysShown->Connect("ValueSet(Double_t)", "TQuakeVizEditor", this,
                        "DoDaysShown()");
 
-   fYearsShown = new TEveGValuator(this, "Years", 130, hh);
+   fYearsShown = new TEveGValuator(this, "Years shown", 130, hh);
    fYearsShown->SetLabelWidth(labelW + 30);
    fYearsShown->SetNELength(5);
    fYearsShown->Build();
