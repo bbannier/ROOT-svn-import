@@ -23,7 +23,8 @@ ROOTCINTTMPDEP = $(ROOTCINTTMPO) $(ORDER_) $(ROOTCINTTMPEXE)
 
 ##### rootcint7 #####
 ifneq ($(BUILDCINT7),)
-ROOTCINTTMPO := $(ROOTCINTS:.cxx=_tmp.o)
+ROOTCINT7S    := $(subst rootcint.cxx,rootcint7.cxx,$(ROOTCINTS))
+ROOTCINT7TMPO := $(ROOTCINT7S:.cxx=_tmp.o)
 
 ROOTCINT7TMPEXE:= $(UTILSDIRS)/rootcint7_tmp$(EXEEXT)
 ROOTCINT7EXE  := bin/rootcint7$(EXEEXT)
