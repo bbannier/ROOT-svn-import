@@ -285,7 +285,7 @@ distclean-$(MODNAME): clean-$(MODNAME)
 		   $(CINT) $(CINTTMP) $(MAKECINT) $(CINTDIRM)/*.exp \
 		   $(CINTDIRM)/*.lib $(CINTDIRS)/loadfile_tmp.cxx \
 		   $(CINTDIRDLLS)/sys/types.h $(CINTDIRDLLS)/systypes.h \
-		   $(CINTHT) $(CINTCONF)
+		   $(CINTHT) $(CINTCONF) $(CINTHT:include/cint/%=include/%)
 		@rm -rf include/cint
 
 distclean::     distclean-$(MODNAME)
