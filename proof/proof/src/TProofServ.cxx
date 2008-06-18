@@ -4849,13 +4849,21 @@ void TProofServ::ErrorHandler(Int_t level, Bool_t abort, const char *location,
    const char *type   = 0;
    ELogLevel loglevel = kLogInfo;
 
+   Int_t ipos = 0;
+
    if (level >= kPrint) {
       loglevel = kLogInfo;
       type = "Print";
    }
    if (level >= kInfo) {
       loglevel = kLogInfo;
-      type = "Info";
+      char *ps = (char *) strrchr(location, '|');
+      if (ps) {
+         ipos = (int)(ps - (char *)location);
+         type = "SvcMsg";
+      } else {
+         type = "Info";
+      }
    }
    if (level >= kWarning) {
       loglevel = kLogWarning;
@@ -4878,6 +4886,7 @@ void TProofServ::ErrorHandler(Int_t level, Bool_t abort, const char *location,
       type = "Fatal";
    }
 
+
    TString buf;
 
    // Time stamp
@@ -4894,13 +4903,13 @@ void TProofServ::ErrorHandler(Int_t level, Bool_t abort, const char *location,
                                  (gProofServ ? gProofServ->GetPrefix() : "proof"),
                                  type, msg);
    } else {
-      fprintf(stderr, "%s %5d %s | %s in <%s>: %s\n", st(11,8).Data(), gSystem->GetPid(),
+      fprintf(stderr, "%s %5d %s | %s in <%.*s>: %s\n", st(11,8).Data(), gSystem->GetPid(),
                       (gProofServ ? gProofServ->GetPrefix() : "proof"),
-                      type, location, msg);
+                      type, ipos, location, msg);
       if (fgLogToSysLog)
-         buf.Form("%s:%s:%s:<%s>:%s", (gProofServ ? gProofServ->GetUser() : "unknown"),
-                                      (gProofServ ? gProofServ->GetPrefix() : "proof"),
-                                       type, location, msg);
+         buf.Form("%s:%s:%s:<%.*s>:%s", (gProofServ ? gProofServ->GetUser() : "unknown"),
+                                        (gProofServ ? gProofServ->GetPrefix() : "proof"),
+                                        type, ipos, location, msg);
    }
    fflush(stderr);
 
